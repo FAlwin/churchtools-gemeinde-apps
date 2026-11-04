@@ -1,4 +1,5 @@
-// Feste Werkzeugleiste über dem Blatt (Protokolle S4-1, Entwurf 7). Am Handy waagrecht wischbar, breiter umbrechend.
+// Feste Werkzeugleiste über dem Blatt (Protokolle S4-1, Entwurf 7; seit K3a Variante B mit Menüs). Am Handy waagrecht
+// wischbar, breiter umbrechend.
 @use '@ui/design/mixins' as m;
 
 .leiste {
@@ -17,7 +18,7 @@
   }
 
   // Ab Tablet-Breite bricht sie um: Mit der Maus ließe sich die Leiste ohne sichtbaren Rollbalken kaum wischen, und die
-  // Knöpfe rechts (Zitat, Trennlinie, feste Punkte) wären unerreichbar (S4-3a, beim Durchklicken gefunden).
+  // Knöpfe rechts wären unerreichbar (S4-3a, beim Durchklicken gefunden). Seit K3a passt sie am PC in eine Zeile.
   @media (min-width: 560px) {
     flex-wrap: wrap;
     row-gap: 4px;
@@ -78,4 +79,167 @@
   color: var(--text);
   font: inherit;
   font-size: 14px;
+}
+
+// Menü-Knopf mit Wort (PC: „Markieren ▾“) – etwas mehr Luft als die Symbolknöpfe.
+.knopf.wort {
+  width: auto;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.knopf[aria-expanded='true'] {
+  background: var(--surface3);
+}
+
+.pfeil {
+  color: var(--text2);
+}
+
+// Menü-Knopf mit Zeichen (Handy) – Zeichen und Pfeil nebeneinander.
+.menueRahmen {
+  display: inline-flex;
+  flex: none;
+
+  .knopf {
+    width: auto;
+    gap: 1px;
+    padding: 0 4px 0 6px;
+  }
+}
+
+.aa {
+  font-size: 14px;
+}
+
+// Markieren am Handy: der Stift mit einem Strich in der Farbe unter dem Cursor.
+.farbsymbol {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 22px;
+
+  svg {
+    margin-top: -4px;
+  }
+
+  i {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    left: 2px;
+    height: 4px;
+    border-radius: 1px;
+  }
+}
+
+// Das aufgeklappte Menü – an `body`, unter dem Knopf.
+.menue {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(15, 23, 43, 0.18); // wie die anderen Aufklapp-Menüs (`OptionWaehlen`)
+}
+
+.abschnitt {
+  padding: 6px 8px 3px;
+  color: var(--text3);
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.punkt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--blue);
+    font-weight: 700;
+  }
+
+  &:disabled {
+    color: var(--text3);
+    cursor: default;
+  }
+}
+
+.punktZeichen {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  color: var(--text2);
+  font-size: 15px;
+
+  .punkt[aria-pressed='true'] & {
+    color: var(--blue);
+  }
+}
+
+// Farbfeld: „keine“ + neun Farben in zwei Reihen.
+.farben {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 2px 6px 6px;
+}
+
+.farbe {
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      outline: 2px solid var(--text3);
+      outline-offset: 1px;
+    }
+  }
+
+  &[aria-pressed='true'] {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+.keine {
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 400;
 }

@@ -178,10 +178,11 @@ describe('ProtokollSchreiben', () => {
   it('Blöcke, die der Editor nicht kennt: nur lesen – sonst gingen sie beim Speichern verloren', async () => {
     lesen.mockResolvedValue({
       kopf: KOPF,
-      dokument: [...BLOCKNOTE_DOKUMENT, { id: 't', type: 'table', content: [] }],
+      // Ein Bild – kennt BlockNote, unser Editor nicht (die Tabelle kennt er seit K3a).
+      dokument: [...BLOCKNOTE_DOKUMENT, { id: 'i', type: 'image', props: { url: 'x' } }],
     });
     zeige();
-    expect(await screen.findByText(/noch nicht bearbeiten kann \(table\)/)).toBeTruthy();
+    expect(await screen.findByText(/noch nicht bearbeiten kann \(image\)/)).toBeTruthy();
     expect(screen.queryByTestId('editor')).toBeNull();
   });
 

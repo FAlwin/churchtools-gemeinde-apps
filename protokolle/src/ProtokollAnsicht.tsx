@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
-import { ableiten, BLOCK, textAus, type Block } from '@shared/protokolle/dokument';
+import { ableiten, BLOCK, tabellenZeilen, textAus, type Block } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Thema } from '@ui/design/thema';
+import { useThema } from '@ui/design/useThema';
+import { farbWert } from './farben';
 import { FesterPunkt } from './FesterPunkt';
 import styles from './ProtokollAnsicht.module.scss';
 
@@ -29,7 +32,7 @@ function sichereAdresse(href: unknown): string | null {
   return typeof href === 'string' && /^(https?:|mailto:)/i.test(href.trim()) ? href.trim() : null;
 }
 
-function textStueck(t: TextStueck, key: number): ReactNode {
+function textStueck(t: TextStueck, key: number, thema: Thema): ReactNode {
   const s = t.styles ?? {};
   let el: ReactNode = t.text;
   if (s.code) el = <code>{el}</code>;
@@ -37,22 +40,31 @@ function textStueck(t: TextStueck, key: number): ReactNode {
   if (s.underline) el = <u>{el}</u>;
   if (s.italic) el = <em>{el}</em>;
   if (s.bold) el = <strong>{el}</strong>;
-  // Markieren (Werkzeugleiste, S4-1) – BlockNote speichert es als Hintergrundfarbe.
-  if (typeof s.backgroundColor === 'string' && s.backgroundColor !== 'default')
-    el = <mark>{el}</mark>;
-  return <span key={key}>{el}</span>;
+  // Markieren (K3a): Hintergrund und Schrift in den Farben des Editors (`farben.ts`), hell wie dunkel.
+  const hintergrund = farbWert(s.backgroundColor, 'hintergrund', thema);
+  const schrift = farbWert(s.textColor, 'schrift', thema);
+  return (
+    <span
+      key={key}
+      className={hintergrund ? styles.markiertText : undefined}
+      style={hintergrund || schrift ? { backgroundColor: hintergrund, color: schrift } : undefined}
+    >
+      {el}
+    </span>
+  );
 }
 
 /** Der Inhalt eines Blocks: Text mit Formatierung und Links. */
 export function Inhalt({ content }: { content: unknown }) {
+  const thema = useThema();
   if (!Array.isArray(content)) return null;
   return (
     <>
       {(content as (TextStueck | LinkStueck)[]).map((c, i) => {
-        if (c?.type === 'text') return textStueck(c, i);
+        if (c?.type === 'text') return textStueck(c, i, thema);
         if (c?.type === 'link') {
           const href = sichereAdresse(c.href);
-          const innen = (c.content ?? []).map((t, j) => textStueck(t, j));
+          const innen = (c.content ?? []).map((t, j) => textStueck(t, j, thema));
           return href ? (
             <a key={i} href={href} target="_blank" rel="noopener noreferrer">
               {innen}
@@ -196,6 +208,8 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           {kinder}
         </div>
       );
+    case 'table':
+      return <Tabelle content={b.content} />;
     case 'divider':
       // Trennlinie aus der Werkzeugleiste (S4-1) – ohne Text, bis dahin fiel sie hier still weg.
       return <hr className={styles.linie} />;
@@ -217,6 +231,41 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
       );
     }
   }
+}
+
+/** Eine Tabelle (K3a) – Kopfzeilen als `th`, verbundene Zellen und Zellfarben wie im Editor. */
+function Tabelle({ content }: { content: unknown }) {
+  const thema = useThema();
+  const zeilen = tabellenZeilen(content);
+  if (!zeilen?.length) return null;
+  return (
+    <div className={styles.tabelle}>
+      <table>
+        <tbody>
+          {zeilen.map((zellen, z) => (
+            <tr key={z}>
+              {zellen.map((c, s) => {
+                const Zelle = c.kopf ? 'th' : 'td';
+                return (
+                  <Zelle
+                    key={s}
+                    colSpan={c.spalten > 1 ? c.spalten : undefined}
+                    rowSpan={c.zeilen > 1 ? c.zeilen : undefined}
+                    style={{
+                      backgroundColor: farbWert(c.hintergrund, 'hintergrund', thema),
+                      color: farbWert(c.schrift, 'schrift', thema),
+                    }}
+                  >
+                    <Inhalt content={c.inhalt} />
+                  </Zelle>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export function ProtokollAnsicht({

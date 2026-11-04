@@ -12,15 +12,17 @@ import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './Edito
 
 /**
  * **Was im Protokoll-Editor stehen kann** (Bauplan S4-1, BlockNote 0.56): Text, Überschrift 1–3 (Stufe 1 = Tagesordnungs-
- * punkt), Aufzählung, Nummerierung, Checkliste, Zitat, Trennlinie – und unsere eigenen Blöcke aus `BLOCK`.
+ * punkt, 2 = Unterpunkt, 3 = Überschrift), Aufzählung, Nummerierung, Zitat, Trennlinie, **Tabelle** (K3a) – und unsere
+ * eigenen Blöcke aus `BLOCK`. Die **Checkliste** bleibt im Schema, damit alte Protokolle lesbar und bearbeitbar bleiben;
+ * Leiste und „/“-Menü bieten sie seit K3a nicht mehr an (nur noch To-Do).
  *
- * Bewusst **nicht** dabei: Bilder, Videos, Dateien, Code, Tabellen. Die Lese-Ansicht und das PDF zeigen sie nicht, und
- * was der Editor annimmt, aber keine Ansicht zeigt, wäre still verschwunden. (Tabellen aus Word kommen als Text an.)
+ * Bewusst **nicht** dabei: Bilder, Videos, Dateien, Code. Die Lese-Ansicht und das PDF zeigen sie nicht, und was der
+ * Editor annimmt, aber keine Ansicht zeigt, wäre still verschwunden. Tabellen zeigt die Lese-Ansicht seit K3a
+ * (`tabellenZeilen`); Tabellen aus Word kommen damit als Tabelle an.
  *
  * Die eigenen Blöcke tragen ihre Daten in `props` wie in `@shared/protokolle/dokument`; Aufgabe und Termin werden seit
  * S4-2 bedient (`EditorBloecke.tsx`), die festen Punkte (Verweis) seit S4-3a. **„[] “ + Leertaste macht eine Aufgabe**
- * (Alwin 24.10.2026, wie Entwurf 7) – die Regel läuft vor der von BlockNotes Checkliste, die Checkliste gibt es weiter
- * über Textart und „/“-Menü.
+ * (Alwin 24.10.2026, wie Entwurf 7) – die Regel läuft vor der von BlockNotes Checkliste.
  */
 
 const aufgabeKuerzel = createExtension({
@@ -60,7 +62,7 @@ const verweisBlock = createReactBlockSpec(
   { render: VerweisBlock },
 );
 
-const { paragraph, bulletListItem, numberedListItem, checkListItem, quote, divider } =
+const { paragraph, bulletListItem, numberedListItem, checkListItem, quote, divider, table } =
   defaultBlockSpecs;
 
 export const schema = BlockNoteSchema.create({
@@ -72,12 +74,19 @@ export const schema = BlockNoteSchema.create({
     checkListItem,
     quote,
     divider,
+    table,
     [BLOCK.aufgabe]: aufgabeBlock(),
     [BLOCK.beschluss]: beschlussBlock(),
     [BLOCK.termin]: terminBlock(),
     [BLOCK.verweis]: verweisBlock(),
   },
 });
+
+/**
+ * Tabellen (K3a): Kopfzeile und -spalte umschaltbar; verbundene Zellen und Zellfarben bewusst nicht – einfach halten.
+ * Eine Stelle für den Editor und die Tests, die ihn nachbauen.
+ */
+export const TABELLEN = { headers: true } as const;
 
 export type ProtokollEditor = BlockNoteEditor<
   typeof schema.blockSchema,

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { verbindungEinrichten } from '@ui/ct/verbindung';
 import { folgeChurchToolsThema } from '@ui/design/thema';
 import { untenNachfuehren } from '@ui/fenster/appHeight';
+import { zoomBeimTippenAus } from '@ui/fenster/tippZoom';
 import { App } from './App';
 import './main.scss';
 
@@ -16,6 +17,8 @@ document.documentElement.classList.add('ct-extension');
 untenNachfuehren();
 // Hell oder dunkel, wie in ChurchTools eingestellt (14.10.2026, `docs/entwicklung/dunkelmodus.md`).
 folgeChurchToolsThema();
+// Am iPhone beim Antippen eines Felds nicht hineinzoomen (`ui/fenster/tippZoom.ts`).
+zoomBeimTippenAus();
 
 // Ohne Recht: anlegen, einrichten, Kalender (A3) – deshalb allgemein, mit dem Weg zum Recht.
 verbindungEinrichten({

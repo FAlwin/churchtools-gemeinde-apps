@@ -4,9 +4,16 @@ import { render, screen } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
 import type { Block } from '@shared/protokolle/dokument';
+import { farbWert } from './farben';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 
 const text = (t: string, styles = {}) => ({ type: 'text', text: t, styles });
+
+/** jsdom schreibt Farben im `style` als `rgb(…)` – `#e03e3e` → `rgb(224, 62, 62)`. */
+const hexAlsRgb = (hex: string) => {
+  const n = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `rgb(${n.join(', ')})`;
+};
 
 describe('ProtokollAnsicht (S3-2) – das echte BlockNote-Dokument', () => {
   it('Tagesordnungspunkte nummeriert, Formatierung, Zitat, Link', () => {
@@ -98,12 +105,50 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
     expect(screen.getByText('Böse').closest('a')).toBeNull();
   });
 
-  it('Markiertes (Hintergrundfarbe aus dem Editor) erscheint als Markierung', () => {
+  it('Markiertes erscheint in der Farbe des Editors – Hintergrund und Schrift (K3a)', () => {
     const markiert: Block[] = [
-      { id: 'm', type: 'paragraph', content: [text('wichtig', { backgroundColor: 'yellow' })] },
+      {
+        id: 'm',
+        type: 'paragraph',
+        content: [
+          text('wichtig', { backgroundColor: 'yellow' }),
+          text('rot', { textColor: 'red' }),
+          text('blau hinterlegt', { backgroundColor: 'blue' }),
+          text('unbekannt', { backgroundColor: 'neonpink', textColor: 'default' }),
+        ],
+      },
     ];
     render(<ProtokollAnsicht dokument={markiert} />);
-    expect(screen.getByText('wichtig').closest('mark')).not.toBeNull();
+    const stil = (t: string) => screen.getByText(t).closest('span')?.getAttribute('style') ?? '';
+    expect(stil('wichtig')).toContain(
+      `background-color: ${farbWert('yellow', 'hintergrund', 'light')}`,
+    );
+    expect(stil('rot')).toContain(`color: ${hexAlsRgb(farbWert('red', 'schrift', 'light')!)}`);
+    expect(stil('blau hinterlegt')).toContain(
+      `background-color: ${hexAlsRgb(farbWert('blue', 'hintergrund', 'light')!)}`,
+    );
+    expect(stil('unbekannt')).toBe('');
+  });
+
+  it('dunkel: die Farben aus BlockNotes dunkler Tabelle (K3a)', () => {
+    document.documentElement.dataset.theme = 'dark';
+    try {
+      render(
+        <ProtokollAnsicht
+          dokument={[
+            { id: 'm', type: 'paragraph', content: [text('rot', { backgroundColor: 'red' })] },
+          ]}
+        />,
+      );
+      expect(screen.getByText('rot').closest('span')?.getAttribute('style')).toContain(
+        hexAlsRgb(farbWert('red', 'hintergrund', 'dark')!),
+      );
+      expect(farbWert('red', 'hintergrund', 'dark')).not.toBe(
+        farbWert('red', 'hintergrund', 'light'),
+      );
+    } finally {
+      delete document.documentElement.dataset.theme;
+    }
   });
 
   it('leeres Dokument: ein Satz', () => {

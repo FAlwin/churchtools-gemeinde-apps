@@ -89,9 +89,67 @@ export interface Ableitung {
   termine: TerminEintrag[];
 }
 
-/** Der reine Text eines Blocks (Auszeichnungen weg, Links mit ihrem Text). */
+/** Eine Zelle einer Tabelle (K3a), gleich wie BlockNote sie speichert – als Zelle mit `props` oder als bloßer Text. */
+export interface TabellenZelle {
+  /** Der Inhalt wie bei jedem Block: Text- und Link-Stücke. */
+  inhalt: unknown;
+  /** Kopfzeile oder Kopfspalte (BlockNote: `headerRows` / `headerCols`). */
+  kopf: boolean;
+  spalten: number;
+  zeilen: number;
+  hintergrund: unknown;
+  schrift: unknown;
+}
+
+/**
+ * **Die Zeilen einer Tabelle** (K3a, BlockNote `tableContent`) – EINE Lesart für Lese-Ansicht, Suche und später das
+ * PDF. `null`, wenn der Inhalt keine Tabelle ist. BlockNote speichert eine Zelle je nach Fassung als Liste von
+ * Textstücken oder als `{ type: 'tableCell', props, content }`; beides kommt hier gleich heraus.
+ */
+export function tabellenZeilen(content: unknown): TabellenZelle[][] | null {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) return null;
+  const t = content as {
+    type?: unknown;
+    rows?: unknown;
+    headerRows?: unknown;
+    headerCols?: unknown;
+  };
+  if (t.type !== 'tableContent' || !Array.isArray(t.rows)) return null;
+  const kopfZeilen = Number(t.headerRows) || 0;
+  const kopfSpalten = Number(t.headerCols) || 0;
+  return t.rows.map((r: unknown, z) => {
+    const zellen = (r as { cells?: unknown })?.cells;
+    return (Array.isArray(zellen) ? zellen : []).map((c: unknown, s): TabellenZelle => {
+      const zelle =
+        c &&
+        typeof c === 'object' &&
+        !Array.isArray(c) &&
+        (c as { type?: unknown }).type === 'tableCell'
+          ? (c as { props?: Record<string, unknown>; content?: unknown })
+          : { content: c };
+      const p = zelle.props ?? {};
+      return {
+        inhalt: zelle.content,
+        kopf: z < kopfZeilen || s < kopfSpalten,
+        spalten: Math.max(1, Number(p.colspan) || 1),
+        zeilen: Math.max(1, Number(p.rowspan) || 1),
+        hintergrund: p.backgroundColor,
+        schrift: p.textColor,
+      };
+    });
+  });
+}
+
+/** Der reine Text eines Blocks (Auszeichnungen weg, Links mit ihrem Text; eine Tabelle Zelle für Zelle). */
 export function textAus(content: unknown): string {
   if (typeof content === 'string') return content;
+  const tabelle = tabellenZeilen(content);
+  if (tabelle)
+    return tabelle
+      .flat()
+      .map((z) => textAus(z.inhalt))
+      .filter(Boolean)
+      .join(' ');
   if (!Array.isArray(content)) return '';
   return content
     .map((s: unknown) => {

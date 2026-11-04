@@ -89,6 +89,7 @@ export type IconName =
   | 'aufgabe'
   | 'stempel'
   | 'todo-liste'
+  | 'tabelle'
   | 'sortieren';
 
 interface IconProps {
@@ -553,6 +554,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="m3.5 6.5 1.6 1.6 2.6-2.8M3.5 16.5l1.6 1.6 2.6-2.8M11 7h9.5M11 17h9.5M11 12h6" />
+        </svg>
+      );
+    // Tabelle einfügen im Protokoll-Editor (K3a, Entwurf `k3-leiste-v1`).
+    case 'tabelle':
+      return (
+        <svg {...p}>
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M3 10h18M3 15h18M9 4v16M15 4v16" />
         </svg>
       );
     case 'stempel':

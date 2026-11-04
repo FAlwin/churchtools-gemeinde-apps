@@ -227,6 +227,10 @@ export function App() {
           zeitzone={zeitzone}
           onOeffnen={oeffnen}
           admin={fertig.admin}
+          onGeaendert={(a) => {
+            setAenderung(a);
+            laden();
+          }}
           onArchiv={
             fertig.anlegen.artId !== null
               ? () => {

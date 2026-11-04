@@ -1,18 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import {
-  STATUS,
-  archivListe,
-  istGruppenAdmin,
-  loeschenEndgueltig,
-  setzeStatus,
-  type Archiviert,
-} from './einrichten';
-import { Fehler } from './Bearbeiten';
-import { useSpeichern } from './useSpeichern';
+import { STATUS, archivListe, istGruppenAdmin, setzeStatus, type Archiviert } from './einrichten';
+import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
 import { datumText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
 import type { Aenderung } from './Rueckgaengig';
@@ -39,7 +30,6 @@ export function ArchivSeite({
   const [admin, setAdmin] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [loeschen, setLoeschen] = useState<Archiviert | null>(null);
-  const [bestaetigung, setBestaetigung] = useState('');
   const [zeilenFehler, setZeilenFehler] = useState<string | null>(null);
 
   const laden = useCallback(() => {
@@ -53,8 +43,6 @@ export function ArchivSeite({
     );
   }, [artId]);
   useEffect(laden, [laden]);
-
-  const { arbeitet, fehler: loeschFehler, speichern } = useSpeichern(() => {});
 
   async function wiederherstellen(x: Archiviert) {
     setZeilenFehler(null);
@@ -118,13 +106,7 @@ export function ArchivSeite({
                         Wiederherstellen
                       </FensterKnopf>
                       {admin && (
-                        <FensterKnopf
-                          art="loeschen"
-                          onClick={() => {
-                            setBestaetigung('');
-                            setLoeschen(x);
-                          }}
-                        >
+                        <FensterKnopf art="loeschen" onClick={() => setLoeschen(x)}>
                           Endgültig löschen
                         </FensterKnopf>
                       )}
@@ -138,47 +120,19 @@ export function ArchivSeite({
       )}
 
       {loeschen && (
-        <Sheet
-          title="Endgültig löschen?"
+        <EndgueltigLoeschenFenster
+          id={loeschen.id}
+          name={loeschen.name}
           onClose={() => setLoeschen(null)}
-          beschaeftigt={arbeitet}
-          knoepfe={
-            <FensterKnopf
-              art="gefahr"
-              disabled={bestaetigung.trim() !== loeschen.name.trim() || arbeitet}
-              onClick={() =>
-                speichern(
-                  () => loeschenEndgueltig(loeschen.id),
-                  () => {
-                    onGeaendert({
-                      text: `„${loeschen.name}“ wurde endgültig gelöscht.`,
-                      rueckgaengig: null,
-                    });
-                    setLoeschen(null);
-                    laden();
-                  },
-                )
-              }
-            >
-              {arbeitet ? 'Wird gelöscht …' : 'Endgültig löschen'}
-            </FensterKnopf>
-          }
-        >
-          <p className={f.fehler}>
-            „{loeschen.name}“ wird mit <b>allen Anmeldungen</b> aus ChurchTools gelöscht. Das lässt
-            sich nicht rückgängig machen.
-          </p>
-          <label className={f.feld}>
-            <span>Zum Bestätigen den Namen eintippen</span>
-            <input
-              className={f.eingabe}
-              value={bestaetigung}
-              autoComplete="off"
-              onChange={(e) => setBestaetigung(e.target.value)}
-            />
-          </label>
-          <Fehler text={loeschFehler} />
-        </Sheet>
+          onGeloescht={() => {
+            onGeaendert({
+              text: `„${loeschen.name}“ wurde endgültig gelöscht.`,
+              rueckgaengig: null,
+            });
+            setLoeschen(null);
+            laden();
+          }}
+        />
       )}
     </div>
   );

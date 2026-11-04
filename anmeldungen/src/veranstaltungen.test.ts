@@ -179,6 +179,66 @@ describe('ladeUebersicht', () => {
     ]);
   });
 
+  describe('A9-4: abgelaufen – Löschdatum erreicht, keine Anmeldungen mehr', () => {
+    /** Technik bekommt „Sommerfest“ (01.06.2026 → Löschdatum 01.09.2026, vor dem 12.10.). */
+    function mitSommerfest(mitglieder: unknown[], probe: number) {
+      const a = standard();
+      a['/groups/hierarchies'] = () =>
+        json(200, {
+          data: [
+            { groupId: 9, children: [40, 43, 46, 99] },
+            { groupId: 7, children: [52, 55] },
+          ],
+        });
+      a['/groups/7/children'] = () =>
+        json(200, {
+          data: [
+            kind(52, 'Grundkurs', beschreibung('2026-09-19T10:00')),
+            kind(55, 'Sommerfest', beschreibung('2026-06-01T10:00')),
+          ],
+        });
+      a['/groups?ids[]=40&ids[]=43&ids[]=46&ids[]=52&ids[]=55'] = () =>
+        seite([
+          { id: 40, settings: { maxMembers: 6, signUpOpeningDate: '2026-10-01T00:00:00Z' } },
+          { id: 43, settings: { maxMembers: 20 } },
+          { id: 46, settings: { maxMembers: 20, signUpOpeningDate: '2026-09-15T00:00:00Z' } },
+          { id: 52, settings: { maxMembers: 10 } },
+          { id: 55, settings: { maxMembers: 10 } },
+        ]);
+      a['/groups/55/members'] = () => seite(mitglieder);
+      a['/csrftoken'] = () => json(200, { data: 't' });
+      a['/groups/55?dry_run=true'] = (init) =>
+        init?.method === 'DELETE'
+          ? json(probe, probe === 409 ? { references: [] } : { message: 'Forbidden' })
+          : json(405, {});
+      return a;
+    }
+
+    it('Hinweis für alle in der Gruppe; den Knopf bekommt, wen der Probelauf lässt (409)', async () => {
+      const gefragt = ct(mitSommerfest([mitglied('active', undefined, 35)], 409));
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      const h = u.hinweise.find((x) => x.art === 'endgueltig');
+      expect(h).toMatchObject({ art: 'endgueltig', seit: '2026-09-01', darf: true });
+      expect(h && 'v' in h && h.v.id).toBe(55);
+      // Nur Grundkurs (Löschdatum noch nicht erreicht) bleibt ohne Mitglieder-Abfrage.
+      expect(gefragt).toContain('/groups/55/members');
+      expect(gefragt).not.toContain('/groups/52/members');
+    });
+
+    it('Probelauf 403 (Leitung, kein Admin) → Hinweis ohne Löschknopf', async () => {
+      ct(mitSommerfest([], 403));
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.find((x) => x.art === 'endgueltig')).toMatchObject({ darf: false });
+    });
+
+    it('noch Anmeldungen da → kein Hinweis und kein Probelauf', async () => {
+      const gefragt = ct(mitSommerfest([mitglied('active')], 409));
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.some((x) => x.art === 'endgueltig')).toBe(false);
+      expect(gefragt).not.toContain('/groups/55?dry_run=true');
+    });
+  });
+
   it('nicht freigegeben: Untergruppen laut Hierarchie, die man nicht sehen darf', async () => {
     ct(standard());
     const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);

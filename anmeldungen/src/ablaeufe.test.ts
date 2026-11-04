@@ -11,6 +11,7 @@ import {
   ablaeufeAbgleichen,
   ablaeufeEinrichten,
   ablaeufeLesen,
+  ablaeufeWiederAn,
   absenderAus,
   vorschauPerson,
 } from './ablaeufe';
@@ -29,6 +30,7 @@ vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   systemfelderNachziehen: vi.fn(),
   teilnehmerRolle: vi.fn(),
+  anmeldungenIn: vi.fn(),
 }));
 vi.mock('./rundmail', async (original) => ({
   ...(await original<typeof import('./rundmail')>()),
@@ -166,6 +168,7 @@ beforeEach(() => {
   });
   ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
   ei.teilnehmerRolle.mockResolvedValue(32);
+  ei.anmeldungenIn.mockResolvedValue(0);
   ru.platzhalterLaden.mockResolvedValue(PLATZHALTER);
   ct.ctDaten.mockImplementation(async (pfad: string) => {
     if (pfad === '/groups/165')
@@ -1069,5 +1072,86 @@ describe('Erinnerungen (A9-3b)', () => {
         { datum: '2026-11-12', an: true },
       ]);
     });
+  });
+});
+
+describe('Archiv (A9-4)', () => {
+  const ZONE = 'Europe/Berlin';
+  /** Termin am 01.07.2026 → Löschdatum 01.10.2026 – vor HEUTE (28.10.2026). */
+  const vorbei = () =>
+    ei.systemfelderNachziehen.mockResolvedValue({
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: '2026-07-01T10:00', ende: '2026-07-01T18:00', ort: '', terminId: 1 },
+      loeschfristMonate: 3,
+    });
+  const unsere = () => [...routinen.values()].filter((r) => (r.gruppe ?? 165) === 165);
+  /** Wie ChurchTools beim Archivieren (gemessen 24.10.2026): unsere Routinen gehen aus. */
+  const archivieren = () => unsere().forEach((r) => (r.isEnabled = false));
+
+  it('ablaeufeWiederAn: schaltet unsere abgeschalteten Routinen wieder ein, nachgelesen; fremde bleiben unberührt', async () => {
+    await ablaeufeEinrichten(165, 7);
+    archivieren();
+    routinen.set(5, {
+      id: 5,
+      name: 'Von Hand',
+      isEnabled: false,
+      steps: [],
+      rolle: 32,
+      status: 'x',
+    });
+    await ablaeufeWiederAn(165);
+    expect(
+      unsere()
+        .filter((r) => r.id !== 5)
+        .every((r) => r.isEnabled),
+    ).toBe(true);
+    expect(routinen.get(5)!.isEnabled).toBe(false);
+  });
+
+  it('ablaeufeWiederAn: ChurchTools übernimmt es nicht → Fehler statt „zurückgeholt“', async () => {
+    await ablaeufeEinrichten(165, 7);
+    archivieren();
+    schlucken = true;
+    await expect(ablaeufeWiederAn(165)).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+
+  it('D5: aus dem Archiv zurück, Löschdatum erreicht, noch Anmeldungen → erst Rückfrage mit Anzahl, nichts geschrieben', async () => {
+    vorbei();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      heute: HEUTE,
+      zeitzone: ZONE,
+      loeschenBestaetigt: true,
+    });
+    archivieren();
+    ei.anmeldungenIn.mockResolvedValue(12);
+    routinenPatches = [];
+    const f = await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      heute: HEUTE,
+      zeitzone: ZONE,
+    }).catch((x: unknown) => x);
+    expect(f).toBeInstanceOf(LoeschdatumVorbei);
+    expect((f as LoeschdatumVorbei).anzahl).toBe(12);
+    expect((f as Error).message).toMatch(/alle 12 Anmeldungen/);
+    expect(routinenPatches).toEqual([]);
+    expect(unsere().every((r) => !r.isEnabled)).toBe(true);
+    // Mit Bestätigung gehen sie wieder an.
+    await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      heute: HEUTE,
+      zeitzone: ZONE,
+      loeschenBestaetigt: true,
+    });
+    expect(unsere().every((r) => r.isEnabled)).toBe(true);
+  });
+
+  it('D5: ohne Anmeldungen keine Rückfrage – es gibt nichts zu entfernen', async () => {
+    vorbei();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      heute: HEUTE,
+      zeitzone: ZONE,
+      loeschenBestaetigt: true,
+    });
+    archivieren();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, { heute: HEUTE, zeitzone: ZONE });
+    expect(unsere().every((r) => r.isEnabled)).toBe(true);
   });
 });

@@ -8,7 +8,8 @@
  * - `GET /groups/{id}/children` – je eigene Gruppe: sichtbare Untergruppen samt Status und **voller**
  *   Beschreibung (darin unsere Einstellungen), auch Entwürfe; ohne Rechte leer;
  * - `GET /groups?ids[]=…` – einmal für alle Veranstaltungen: Plätze, Anmeldezeitraum, Warteliste;
- * - `GET /groups/{id}/members` – je **anstehender** Veranstaltung: Belegung, Warteliste, „bezahlt“.
+ * - `GET /groups/{id}/members` – je **anstehender** Veranstaltung: Belegung, Warteliste, „bezahlt“; dazu je vergangener
+ *   mit erreichtem Löschdatum (A9-4) – und für die ohne Anmeldungen der Lösch-Probelauf (`darfEndgueltigLoeschen`).
  * Listen mit Seiten (`members`, `groups`: 10 je Seite) über `ctAlleSeiten`.
  */
 import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
@@ -18,6 +19,7 @@ import { heuteImKalender } from '@shared/ct/zeit';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { einstellungenLesen, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
+  abgelaufen,
   aufmerksamkeit,
   belegungAus,
   einteilen,
@@ -34,7 +36,8 @@ import {
   type VeranstaltungRoh,
 } from '@shared/anmeldung/uebersicht';
 
-import { leitungsRollen, reparieren } from './einrichten';
+import { darfEndgueltigLoeschen, leitungsRollen, reparieren } from './einrichten';
+import { loeschDatum } from '@shared/anmeldung/ablaeufe';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
 
@@ -143,13 +146,18 @@ export async function ladeUebersicht(
     for (const g of await ctAlleSeiten<GruppeRoh>(`/groups?${ids}`)) details.set(g.id, g);
   }
 
-  // Mitglieder nur, wo es etwas zu zählen gibt: anstehend. Entwürfe haben keine, Vergangenes braucht keine.
+  // Mitglieder nur, wo es etwas zu zählen gibt: anstehend – und vergangen mit erreichtem Löschdatum (A9-4, D3: sind die
+  // Anmeldungen weg, bleibt endgültig löschen). Entwürfe haben keine, sonst braucht Vergangenes keine.
   const belegung = new Map<number, Belegung | null>();
-  const anstehend = lesbar.filter(
-    ({ r, e }) => phaseVon(r.statusId, e.termin, heute) === 'anstehend',
+  const abgelaufenKandidat = ({ r, e }: (typeof lesbar)[number]) => {
+    const datum = loeschDatum(e);
+    return phaseVon(r.statusId, e.termin, heute) === 'vorbei' && datum !== null && datum <= heute;
+  };
+  const zuZaehlen = lesbar.filter(
+    (x) => phaseVon(x.r.statusId, x.e.termin, heute) === 'anstehend' || abgelaufenKandidat(x),
   );
-  const leitung = anstehend.length ? await leitungsRollen() : new Set<number>();
-  await mapLimit(anstehend, PARALLEL, async ({ r, e: einstellungen }) => {
+  const leitung = zuZaehlen.length ? await leitungsRollen() : new Set<number>();
+  await mapLimit(zuZaehlen, PARALLEL, async ({ r, e: einstellungen }) => {
     try {
       const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
         `/groups/${r.id}/members`,
@@ -188,10 +196,20 @@ export async function ladeUebersicht(
     offen.set(g.id, liste.filter((v) => v.gruppeId === g.id && v.phase !== 'vorbei').length);
   }
 
+  // D4: Wer darf endgültig löschen? Der Probelauf von ChurchTools sagt es je Veranstaltung (nur für die abgelaufenen).
+  const loeschbar = new Set<number>();
+  await mapLimit(
+    liste.filter((v) => abgelaufen(v, heute)),
+    PARALLEL,
+    async (v) => {
+      if (await darfEndgueltigLoeschen(v.id)) loeschbar.add(v.id);
+    },
+  );
+
   const leitungIn = new Set(gruppen.filter((g) => g.leitung).map((g) => g.id));
   return {
     einteilung: einteilen(liste),
-    hinweise: aufmerksamkeit(liste, kaputt, leitungIn),
+    hinweise: aufmerksamkeit(liste, kaputt, leitungIn, heute, loeschbar),
     offen,
     verborgen,
   };

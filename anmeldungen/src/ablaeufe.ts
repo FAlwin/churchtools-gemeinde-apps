@@ -47,7 +47,7 @@ import {
   type MailArt,
   type RoutinenArt,
 } from '@shared/anmeldung/ablaeufe';
-import { systemfelderNachziehen, teilnehmerRolle } from './einrichten';
+import { anmeldungenIn, systemfelderNachziehen, teilnehmerRolle } from './einrichten';
 import { platzhalterLaden } from './rundmail';
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -137,9 +137,13 @@ export interface AblaufStand {
  * ausdrücklicher Rückfrage (`loeschenBestaetigt`).
  */
 export class LoeschdatumVorbei extends Error {
-  constructor(readonly datum: string) {
+  /** `anzahl`: so viele Anmeldungen entfernte ChurchTools – gezählt, wenn abgeschaltete Abläufe wieder angehen (D5). */
+  constructor(
+    readonly datum: string,
+    readonly anzahl?: number,
+  ) {
     super(
-      `Das Löschdatum (${tagPunkt(datum)}) ist schon erreicht – ChurchTools würde sofort alle Anmeldungen entfernen. Bitte unter „Datenschutz“ die Frist oder den Termin prüfen.`,
+      `Das Löschdatum (${tagPunkt(datum)}) ist schon erreicht – ChurchTools würde sofort ${anzahl === undefined ? 'alle Anmeldungen' : anzahl === 1 ? 'die eine Anmeldung' : `alle ${anzahl} Anmeldungen`} entfernen. Bitte unter „Datenschutz“ die Frist oder den Termin prüfen.`,
     );
     this.name = 'LoeschdatumVorbei';
   }
@@ -304,13 +308,17 @@ export async function ablaeufeEinrichten(
     );
   const datum = loeschDatum(e);
   const liste = erinnerungen(e, heute);
-  if (
-    datum !== null &&
-    datum <= heute &&
-    !loeschenBestaetigt &&
-    ROUTINEN.some((r) => wartetBis(unsereFuer(zuordnungen, rolle, r.status)) !== datum)
-  )
-    throw new LoeschdatumVorbei(datum);
+  if (datum !== null && datum <= heute && !loeschenBestaetigt) {
+    const unsere = ROUTINEN.map((r) => unsereFuer(zuordnungen, rolle, r.status));
+    if (unsere.some((r) => wartetBis(r) !== datum)) throw new LoeschdatumVorbei(datum);
+    // A9-4, D5: Das Datum steht schon so drin, aber die Abläufe sind aus (archiviert, dann wiederhergestellt). Gehen sie
+    // wieder an, entfernt ChurchTools sofort alle (gemessen 24.10.2026) – darum auch hier erst die Rückfrage, aber nur,
+    // wenn noch jemand da ist.
+    if (unsere.some((r) => r?.isEnabled !== true)) {
+      const anzahl = await anmeldungenIn(id);
+      if (anzahl > 0) throw new LoeschdatumVorbei(datum, anzahl);
+    }
+  }
   if (datum !== null) await anmeldeschlussBegrenzen(id, g, datum, zeitzone);
 
   for (const r of ROUTINEN) {
@@ -597,6 +605,27 @@ export async function ablaeufeAbgleichen(
     throw x;
   }
   return ablaeufeLesen(id);
+}
+
+/**
+ * **Abläufe wieder einschalten** (A9-4) – nach „Rückgängig“ beim Archivieren: ChurchTools schaltet unsere Routinen beim
+ * Archivieren ab und beim Zurückholen nicht wieder an (gemessen 24.10.2026). Ohne das blieben Mails und Löschen still
+ * aus, und der Abgleich ließe die Veranstaltung liegen (er gleicht nur ab, wo beide an sind). Wartende Läufe sind danach
+ * wieder da. Nachgelesen.
+ */
+export async function ablaeufeWiederAn(id: number): Promise<void> {
+  const [zuordnungen, rolle] = await Promise.all([
+    ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
+    teilnehmerRolle(id),
+  ]);
+  const aus = ROUTINEN.map((r) => unsereFuer(zuordnungen, rolle, r.status)).filter(
+    (r): r is RoutineRoh => !!r && r.isEnabled !== true,
+  );
+  for (const r of aus)
+    await ctAnfrage(`/routines/${r.id}`, { method: 'PATCH', body: json({ isEnabled: true }) });
+  for (const r of aus)
+    if ((await ctDaten<RoutineRoh>(`/routines/${r.id}`)).isEnabled !== true)
+      throw new NichtUebernommen('das Wiedereinschalten der Abläufe');
 }
 
 /**

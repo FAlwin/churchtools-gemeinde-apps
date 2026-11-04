@@ -6,8 +6,14 @@ import { ctBasis } from '@ui/ct/basis';
 import type { Hinweis, Veranstaltung } from '@shared/anmeldung/uebersicht';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
+import type { Aenderung } from './Rueckgaengig';
+import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
+import { insArchiv } from './archiv';
+import { STATUS } from './einrichten';
+import { fehlerMeldung } from './zustand';
 import { STAND_TEXT, anzahlText, datumText, kachel, monatTitel, schlussText } from './anzeige';
 import styles from './Startseite.module.scss';
+import f from './Formular.module.scss';
 
 /**
  * **Die Startseite der Anmeldungen** (A2, #480) – wie im Entwurf: links „Braucht deine Aufmerksamkeit“
@@ -28,6 +34,8 @@ interface Props {
   onArchiv?: () => void;
   /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5). */
   admin?: boolean;
+  /** Nach einer Änderung von hier aus (A9-4: endgültig gelöscht, ins Archiv) – meldet sie und lädt neu. */
+  onGeaendert?: (a: Aenderung) => void;
 }
 
 function gruppenUrl(id: number): string {
@@ -74,11 +82,18 @@ function HinweisZeile({
   gruppenName,
   onOeffnen,
   admin,
+  darfArchivieren,
+  onEndgueltig,
+  onInsArchiv,
 }: {
   h: Hinweis;
   gruppenName: (id: number) => string;
   onOeffnen: (id: number) => void;
   admin: boolean;
+  /** Leitung der Gruppe oder Admin – nur sie dürfen in ChurchTools archivieren (gemessen 13.10.2026). */
+  darfArchivieren: (gruppeId: number) => boolean;
+  onEndgueltig: (v: Veranstaltung) => void;
+  onInsArchiv: (v: Veranstaltung) => void;
 }) {
   if (h.art === 'kaputt') {
     return (
@@ -96,6 +111,33 @@ function HinweisZeile({
     );
   }
   const v = h.v;
+  if (h.art === 'endgueltig') {
+    // A9-4 (D3, D4, D8): Wer darf, löscht gleich; die Leitung ohne Recht legt ins Archiv, dort löscht ein Admin.
+    const archiv = !h.darf && darfArchivieren(v.gruppeId);
+    return (
+      <div className={styles.zeile}>
+        <Kachel tag={v.tag} grau />
+        <div className={styles.mitte}>
+          <b>{v.name}: Anmeldungen gelöscht</b>
+          <small>
+            Seit dem {datumText(h.seit)} – die Antworten stehen aber noch im Verlauf der Gruppe.{' '}
+            {h.darf ? 'Jetzt endgültig löschen?' : 'Endgültig löschen kann ein Admin – im Archiv.'}
+          </small>
+        </div>
+        {h.darf ? (
+          <FensterKnopf art="loeschen" onClick={() => onEndgueltig(v)}>
+            Endgültig löschen
+          </FensterKnopf>
+        ) : archiv ? (
+          <FensterKnopf art="zweit" onClick={() => onInsArchiv(v)}>
+            Ins Archiv
+          </FensterKnopf>
+        ) : (
+          <ZurGruppe id={v.id} name={v.name} />
+        )}
+      </div>
+    );
+  }
   const text =
     h.art === 'freigabe'
       ? {
@@ -213,8 +255,22 @@ export function Startseite({
   onOeffnen,
   onArchiv,
   admin = false,
+  onGeaendert = () => {},
 }: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
+  const [loeschen, setLoeschen] = useState<Veranstaltung | null>(null);
+  const [hinweisFehler, setHinweisFehler] = useState<string | null>(null);
+  const leitung = new Set(start.gruppen.filter((g) => g.leitung).map((g) => g.id));
+  const darfArchivieren = (gruppeId: number) => admin || leitung.has(gruppeId);
+  async function insArchivLegen(v: Veranstaltung) {
+    setHinweisFehler(null);
+    try {
+      // Abgelaufen heißt freigegeben (Status 1) – „Rückgängig“ holt sie samt Abläufen zurück.
+      onGeaendert(await insArchiv(v.id, v.name, STATUS.freigegeben));
+    } catch (e) {
+      setHinweisFehler(`„${v.name}“: ${fehlerMeldung(e).text}`);
+    }
+  }
   const [auswahl, setAuswahl] = useState<Set<number>>(
     () => new Set(start.gruppen.map((g) => g.id)),
   );
@@ -265,9 +321,17 @@ export function Startseite({
                   gruppenName={gruppenName}
                   onOeffnen={onOeffnen}
                   admin={admin}
+                  darfArchivieren={darfArchivieren}
+                  onEndgueltig={setLoeschen}
+                  onInsArchiv={(v) => void insArchivLegen(v)}
                 />
               ))}
             </div>
+            {hinweisFehler && (
+              <p className={f.fehler} role="alert">
+                {hinweisFehler}
+              </p>
+            )}
           </section>
         )}
 
@@ -397,6 +461,21 @@ export function Startseite({
           </p>
         </section>
       </div>
+      {loeschen && (
+        <EndgueltigLoeschenFenster
+          id={loeschen.id}
+          name={loeschen.name}
+          ohneAnmeldungen
+          onClose={() => setLoeschen(null)}
+          onGeloescht={() => {
+            onGeaendert({
+              text: `„${loeschen.name}“ wurde endgültig gelöscht.`,
+              rueckgaengig: null,
+            });
+            setLoeschen(null);
+          }}
+        />
+      )}
     </div>
   );
 }

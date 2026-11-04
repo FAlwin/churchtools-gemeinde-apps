@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import * as E from './einrichten';
+import * as AB from './ablaeufe';
 import { VerwaltenFenster } from './Verwalten';
 import { ArchivSeite } from './ArchivSeite';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
@@ -21,13 +22,25 @@ vi.mock('./einrichten', async (original) => {
   };
 });
 const m = vi.mocked(E);
+vi.mock('./ablaeufe', async (original) => ({
+  ...(await original<typeof import('./ablaeufe')>()),
+  ablaeufeWiederAn: vi.fn(),
+}));
+const ab = vi.mocked(AB);
 
 const TEAMS = [
   { id: 7, name: 'Technik', leitung: false },
   { id: 9, name: 'Lobpreisteam', leitung: true },
 ];
 
-function verwalten(mehr: { admin?: boolean; statusId?: number; anmeldungen?: number | null } = {}) {
+function verwalten(
+  mehr: {
+    admin?: boolean;
+    statusId?: number;
+    anmeldungen?: number | null;
+    loeschDatum?: string | null;
+  } = {},
+) {
   const geaendert = vi.fn<(a: Aenderung, weg: boolean) => void>();
   render(
     <VerwaltenFenster
@@ -38,6 +51,9 @@ function verwalten(mehr: { admin?: boolean; statusId?: number; anmeldungen?: num
       teams={TEAMS}
       admin={mehr.admin ?? false}
       anmeldungen={mehr.anmeldungen ?? 0}
+      // Fehlt die Angabe ganz, heißt das „wird nicht gelöscht“; `undefined` ausdrücklich = ließ sich nicht lesen.
+      loeschDatum={'loeschDatum' in mehr ? mehr.loeschDatum : null}
+      heute="2026-11-04"
       onClose={() => {}}
       onGeaendert={geaendert}
     />,
@@ -98,6 +114,20 @@ describe('Verwalten (A4-Nachtrag)', () => {
     expect(weg).toBe(true);
     await a.rueckgaengig!();
     expect(m.setzeStatus).toHaveBeenLastCalledWith(91, 1);
+    // A9-4: ChurchTools hat die Abläufe beim Archivieren abgeschaltet – „Rückgängig“ schaltet sie wieder ein.
+    expect(ab.ablaeufeWiederAn).toHaveBeenCalledWith(91);
+  });
+
+  it('A9-4: Rückgängig bei einem Entwurf stellt nur den Status her (die Abläufe gehen erst beim Freigeben an)', async () => {
+    m.setzeStatus.mockResolvedValue();
+    ab.ablaeufeWiederAn.mockClear();
+    const geaendert = verwalten({ statusId: 2 });
+    fireEvent.click(screen.getByRole('button', { name: /Löschen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ins Archiv verschieben' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    await geaendert.mock.calls[0][0].rueckgaengig!();
+    expect(m.setzeStatus).toHaveBeenLastCalledWith(91, 2);
+    expect(ab.ablaeufeWiederAn).not.toHaveBeenCalled();
   });
 
   it('Verschieben (Admin): in ein anderes Team, Rückgängig zurück ins alte', async () => {
@@ -118,6 +148,45 @@ describe('Verwalten (A4-Nachtrag)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ins Archiv verschieben' }));
     expect(await screen.findByText('Du darfst das nicht.')).toBeTruthy();
     expect(geaendert).not.toHaveBeenCalled();
+  });
+});
+
+describe('Löschen gesperrt bis zum Löschdatum (A9-4, D1/D2)', () => {
+  const loeschen = () => screen.getByRole('button', { name: /Löschen/ });
+
+  it('D1: mit Anmeldungen vor dem Löschdatum gesperrt – mit Datum und dem Hinweis auf „Freigabe zurücknehmen“', () => {
+    verwalten({ anmeldungen: 12, loeschDatum: '2027-02-20' });
+    expect(loeschen()).toHaveProperty('disabled', true);
+    expect(
+      screen.getByText(/Geht ab dem Sa, 20\.02\.2027 – dann sind die Anmeldungen gelöscht/),
+    ).toBeTruthy();
+    expect(screen.getByText(/„Freigabe zurücknehmen“/)).toBeTruthy();
+  });
+
+  it('D1: Tag erreicht, ChurchTools hat noch nicht gelöscht → weiter gesperrt („in der Nacht“)', () => {
+    verwalten({ anmeldungen: 3, loeschDatum: '2026-11-04' });
+    expect(loeschen()).toHaveProperty('disabled', true);
+    expect(screen.getByText(/in der Nacht/)).toBeTruthy();
+  });
+
+  it('ohne Anmeldungen frei – auch vor dem Löschdatum', () => {
+    verwalten({ anmeldungen: 0, loeschDatum: '2027-02-20' });
+    expect(loeschen()).toHaveProperty('disabled', false);
+  });
+
+  it('D2: ohne Löschdatum (kein Termin, keine Abläufe) mit Anmeldungen erlaubt – mit Hinweis im Fenster', () => {
+    verwalten({ anmeldungen: 5, loeschDatum: null });
+    fireEvent.click(loeschen());
+    expect(screen.getByText(/nicht von selbst/)).toBeTruthy();
+  });
+
+  it('Löschdatum unbekannt (ließ sich nicht lesen): mit Anmeldungen vorsichtshalber gesperrt, ohne frei', () => {
+    verwalten({ anmeldungen: 5, loeschDatum: undefined });
+    expect(loeschen()).toHaveProperty('disabled', true);
+    expect(screen.getByText(/ließ sich nicht lesen/)).toBeTruthy();
+    cleanup();
+    verwalten({ anmeldungen: 0, loeschDatum: undefined });
+    expect(loeschen()).toHaveProperty('disabled', false);
   });
 });
 
@@ -251,6 +320,8 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
         teams={TEAMS}
         admin
         anmeldungen={0}
+        loeschDatum={null}
+        heute="2026-11-04"
         onClose={onClose}
         onGeaendert={() => {}}
       />,
@@ -302,6 +373,8 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
         teams={[TEAMS[1]]}
         admin
         anmeldungen={0}
+        loeschDatum={null}
+        heute="2026-11-04"
         onClose={() => {}}
         onGeaendert={() => {}}
       />,

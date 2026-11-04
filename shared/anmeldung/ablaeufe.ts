@@ -382,6 +382,29 @@ export function loeschDatum(
   return gleicherTag < letzter ? gleicherTag : letzter;
 }
 
+/**
+ * **Darf eine Veranstaltung ins Archiv?** (A9-4, D1/D2) – Archivieren schaltet die Abläufe ab (gemessen 24.10.2026), danach
+ * löschte ChurchTools die Anmeldungen nie. Darum: ohne Anmeldungen frei; mit Anmeldungen erst, wenn ChurchTools sie
+ * gelöscht hat (`gesperrt`, `ab` = Löschdatum; `faellig`: der Tag ist da, die Routine läuft aber noch nicht – nachts).
+ * Löscht ChurchTools gar nicht (kein Termin, keine Abläufe), geht es mit Hinweis (`ohneLoeschen`). `loeschDatum`: wie es
+ * in ChurchTools steht (`AblaufStand`), nicht aus den Einstellungen – nur das löscht wirklich. `anzahl` unbekannt (`null`)
+ * gilt als „mit Anmeldungen“.
+ */
+export type ArchivStand =
+  | { art: 'frei' }
+  | { art: 'ohneLoeschen' }
+  | { art: 'gesperrt'; ab: string; faellig: boolean };
+
+export function archivStand(
+  anzahl: number | null,
+  loeschDatum: string | null,
+  heute: string,
+): ArchivStand {
+  if (anzahl === 0) return { art: 'frei' };
+  if (loeschDatum === null) return { art: 'ohneLoeschen' };
+  return { art: 'gesperrt', ab: loeschDatum, faellig: loeschDatum <= heute };
+}
+
 /** **Anmeldeschluss an einem Tag** – bis 23:59 Uhr Ortszeit, als Zeitpunkt für ChurchTools. Die eine Stelle dafür. */
 export function anmeldeschlussAm(tag: string, zeitzone: string): string {
   return utcAus(`${tag}T23:59`, zeitzone);

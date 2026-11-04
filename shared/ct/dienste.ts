@@ -21,6 +21,11 @@ export interface Dienst {
    * Live-Agenda weiterschalten (E6b-2, `darfLiveSteuern`).
    */
   liveSteuern: boolean;
+  /**
+   * Darf, wer eingeteilt ist, absagen (`allowDecline`, E7)? Ohne Angabe ja – ChurchTools entscheidet beim Absagen ohnehin
+   * selbst (403); hier geht es nur darum, ob der Knopf dasteht.
+   */
+  absagen: boolean;
 }
 
 interface RohDienst {
@@ -31,6 +36,7 @@ interface RohDienst {
   serviceGroupId?: unknown;
   groupIds?: unknown;
   allowControlLiveAgenda?: unknown;
+  allowDecline?: unknown;
 }
 
 /**
@@ -54,6 +60,7 @@ export function diensteAus(roh: RohDienst[] | null | undefined): Map<number, Die
       gruppenIds,
       sortKey: typeof r.sortKey === 'number' ? r.sortKey : Number.MAX_SAFE_INTEGER,
       liveSteuern: r.allowControlLiveAgenda === true,
+      absagen: r.allowDecline !== false,
     });
   }
   liste.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name, 'de'));

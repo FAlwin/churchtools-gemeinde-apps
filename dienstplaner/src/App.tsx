@@ -20,6 +20,8 @@ import {
   type ReiterId,
 } from './reiter';
 import { TerminAnsicht } from './TerminAnsicht';
+import { useAntworten } from './useAntworten';
+import { mitAntworten } from '@shared/dienstplan/antworten';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { tagAusIso } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
@@ -118,6 +120,17 @@ export function App() {
   const terminZeigen = (id: number) => {
     window.location.hash = adresseFuerTermin(id);
   };
+  // Anfragen beantworten (E7-1): Startseite und „Dienste“ teilen einen Zustand; nach jeder Antwort leise neu laden.
+  const antworten = useAntworten(start?.ichId ?? 0, () => {
+    if (start) termineLaden(start, geladen, true);
+  });
+  // Die Termine mit den eben gegebenen Antworten – zehn Minuten lang mit „Rückgängig“ (`mitAntworten`).
+  // Nur neu bauen, wenn sich etwas ändert – „Dienste“ erkennt ein laufendes Nachladen am selben Zustand (Objekt).
+  const termineSicht: TermineZustand | null = useMemo(() => {
+    if (termine?.art !== 'fertig') return termine;
+    return { ...termine, zeilen: mitAntworten(termine.zeilen, antworten.karte, antworten.jetzt) };
+  }, [termine, antworten.karte, antworten.jetzt]);
+
   // ‹ › in der Termin-Ansicht: die geladenen Termine in ihrer Reihenfolge (wie in Liste und Matrix).
   const reihe = termine?.art === 'fertig' ? termine.plan.spalten.map((sp) => sp.id) : [];
   const stelle = terminId === null ? -1 : reihe.indexOf(terminId);
@@ -167,7 +180,8 @@ export function App() {
       {start && terminId === null && aktiv === 'start' && (
         <Startseite
           start={start}
-          termine={termine}
+          termine={termineSicht}
+          antworten={antworten}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}
           onNochmal={() => termineLaden(start, wochen)}
           onTermin={terminZeigen}
@@ -180,7 +194,8 @@ export function App() {
       {terminId === null && aktiv === 'termine' && termine && start && (
         <Termine
           onTermin={terminZeigen}
-          zustand={termine}
+          zustand={termineSicht ?? termine}
+          antworten={antworten}
           planer={darfPlanen}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}

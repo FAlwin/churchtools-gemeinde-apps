@@ -1,17 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile, mein } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
 
 const z = zeile;
 
 const ZEILEN = [
   z(1, 'Gottesdienst', '2026-10-18', {
-    meine: [
-      { dienst: 'Ton', zugesagt: true },
-      { dienst: 'Gesang', zugesagt: false },
-    ],
+    meine: [mein('Ton', true), mein('Gesang', false)],
     geplant: 3,
     frei: 2,
   }),

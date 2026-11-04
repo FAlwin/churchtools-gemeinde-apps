@@ -1,0 +1,44 @@
+// Anfrage beantworten (E7-1): Zusagen/Absagen unter der Anfrage, danach „zugesagt“/„abgesagt“ mit „Rückgängig“.
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.hinweis {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.fehler {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  color: var(--red);
+  font-size: 12.5px;
+}
+
+.beantwortet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 8px;
+  padding: 4px 4px 4px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 13px;
+
+  &[data-art='zugesagt'] {
+    color: var(--green);
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}

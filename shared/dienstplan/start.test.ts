@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bisDahin, startUebersicht, NAECHSTE_DIENSTE } from './start';
-import { zeile } from './zeile.testutil';
+import { zeile, mein } from './zeile.testutil';
 
 const TECHNIK = { id: 3, name: 'Technik', fuerAlle: false };
 const MUSIK = { id: 4, name: 'Musik', fuerAlle: false };
@@ -25,16 +25,29 @@ describe('startUebersicht', () => {
 
   it('Für dich offen = angefragt; nächste Dienste = zugesagt ohne den Termin oben, höchstens vier', () => {
     const z = [
-      zeile(1, 'A', '2026-10-15', { meine: [{ dienst: 'Ton', zugesagt: true }] }),
-      zeile(2, 'B', '2026-10-16', { meine: [{ dienst: 'Gesang', zugesagt: false }] }),
+      zeile(1, 'A', '2026-10-15', { meine: [mein('Ton', true)] }),
+      zeile(2, 'B', '2026-10-16', { meine: [mein('Gesang', false)] }),
       ...[3, 4, 5, 6, 7].map((id) =>
-        zeile(id, 'G', `2026-10-${16 + id}`, { meine: [{ dienst: 'Licht', zugesagt: true }] }),
+        zeile(id, 'G', `2026-10-${16 + id}`, { meine: [mein('Licht', true)] }),
       ),
     ];
     const u = startUebersicht(z, O);
     expect(u.offen.map((d) => [d.termin.id, d.dienst])).toEqual([[2, 'Gesang']]);
     expect(u.naechsteDienste.map((d) => d.termin.id)).toEqual([3, 4, 5, 6]);
     expect(u.naechsteDienste).toHaveLength(NAECHSTE_DIENSTE);
+  });
+
+  it('eben beantwortet (E7-1) bleibt unter „offen“ – auch eine Zusage –, nicht unter „nächste Dienste“', () => {
+    const antwort = {
+      art: 'zugesagt' as const,
+      seit: 0,
+      letzte: null,
+      mein: mein('Gesang', false),
+    };
+    const z = [zeile(2, 'B', '2026-10-16', { meine: [mein('Gesang', true, { antwort })] })];
+    const u = startUebersicht(z, O);
+    expect(u.offen.map((d) => d.dienst)).toEqual(['Gesang']);
+    expect(u.naechsteDienste).toEqual([]);
   });
 
   it('Planen: freie Plätze je geplanter Gruppe in den nächsten 6 Wochen; abgesagte zählen nicht', () => {

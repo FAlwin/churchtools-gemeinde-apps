@@ -76,7 +76,9 @@ describe('ladeTermine', () => {
         tag: '2026-10-18',
         uhrzeit: '10:00',
         abgesagt: false,
-        meine: [{ dienst: 'Ton', zugesagt: true }],
+        meine: [
+          { dienst: 'Ton', zugesagt: true, ort: { serviceId: 6, index: null }, absagen: true },
+        ],
         geplant: 2,
         frei: 1,
         freiNachGruppe: { 3: 1 },
@@ -97,7 +99,9 @@ describe('ladeTermine', () => {
       },
     });
     const d = await ladeTermine(mitglied, 8, 'Europe/Berlin', new Date('2026-10-13T12:00:00Z'));
-    expect(d.zeilen[0].meine).toEqual([{ dienst: 'Ton', zugesagt: true }]);
+    expect(d.zeilen[0].meine).toEqual([
+      { dienst: 'Ton', zugesagt: true, ort: { serviceId: 6, index: null }, absagen: true },
+    ]);
     expect(d.plan.gruppen).toEqual([]);
     expect(d.plan.spalten[0]).toMatchObject({ plaetze: 0, besetzt: 0 });
   });

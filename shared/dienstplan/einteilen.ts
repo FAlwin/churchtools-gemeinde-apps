@@ -46,9 +46,17 @@ export type Grund =
   /** ChurchTools hat das Schreiben angenommen, am Platz steht aber nicht das Ziel. */
   | 'nicht-angekommen';
 
-export type Ergebnis =
-  | { ok: true; platzId: number }
-  | { ok: false; grund: Grund; jetzt?: Belegung };
+/** Rückgängig geht nicht mehr (400: nur die letzte Antwort, nur innerhalb von zehn Minuten – E7, gemessen). */
+export type ZuSpaet = 'zu-spaet';
+
+export type Ergebnis<G extends string = Grund> =
+  | {
+      ok: true;
+      platzId: number;
+      /** Die ID, auf die geschrieben wurde – fehlt, wenn das Ziel schon dastand und nichts geschrieben wurde. */
+      geschriebenAuf?: number;
+    }
+  | { ok: false; grund: G; jetzt?: Belegung };
 
 /** Der Anschluss an ChurchTools. */
 export interface DienstPort {
@@ -124,11 +132,14 @@ export function lesegrund(port: DienstPort, e: unknown): Grund {
   return 'voruebergehend';
 }
 
-/** Lesen; `Grund`, wenn es nicht geht. */
+/**
+ * Lesen; `Grund`, wenn es nicht geht. `unsichtbar`: Der Termin ist lesbar, der Platz steht aber nicht darin – gelöscht,
+ * oder man sieht ihn ohne Recht auf den Dienst nicht (`PlatzAenderung.unsichtbarFertig`).
+ */
 async function lesen(
   port: DienstPort,
   ort: PlatzOrt,
-): Promise<{ platz: RohPlatz } | { grund: Grund }> {
+): Promise<{ platz: RohPlatz } | { grund: Grund; unsichtbar?: true }> {
   let t: RohTermin;
   try {
     t = await port.termin(ort.eventId);
@@ -136,7 +147,79 @@ async function lesen(
     return { grund: lesegrund(port, e) };
   }
   const platz = platzFinden(t, ort);
-  return platz ? { platz } : { grund: 'weg' };
+  return platz ? { platz } : { grund: 'weg', unsichtbar: true };
+}
+
+/**
+ * **Eine Änderung an einem Platz** – was vorher dastehen muss, woran man den Erfolg erkennt und was geschrieben wird.
+ * Eine Regel für alle, die Plätze ändern: das Einteilen der Planer (`platzEinteilen`) und die eigenen Antworten
+ * (E7, `antworten.ts`).
+ */
+export interface PlatzAenderung<G extends string = never> {
+  /** Steht noch da, was man gesehen hat? Sonst `konflikt` – nichts wird überschrieben. */
+  vorher: (ist: Belegung) => boolean;
+  /** Steht das Ziel da? Dann ist es ein Erfolg – auch ohne Schreiben. */
+  fertig: (ist: Belegung) => boolean;
+  /** Was geschrieben wird – mit der frisch gelesenen Platz-ID. */
+  auftrag: (platzId: number) => { pfad: string; method: 'PUT' | 'POST'; json: unknown };
+  /** Was ein 400 heißt, wenn er etwas Bestimmtes bedeutet (Rückgängig zu spät) – sonst wird nachgelesen. */
+  bei400?: G;
+  /**
+   * **Ohne Recht auf den Dienst sieht man nur Plätze, an denen man selbst steht** (gemessen 03.11.2026 als Spike: nach
+   * der Absage fehlt der freie Gesang-Platz in seiner Antwort ganz). Für die eigenen Antworten heißt das:
+   * - `unsichtbarFertig`: Ist der Platz nach dem Schreiben nicht mehr zu sehen, steht man nicht mehr dort – fertig
+   *   (Absagen).
+   * - `unsichtbarSchreiben`: Ist der Platz vorher nicht zu sehen, wird dieser Auftrag trotzdem geschrieben – geprüft wird
+   *   danach (Rückgängig nach einer Absage: Danach steht man wieder dort und sieht ihn).
+   */
+  unsichtbarFertig?: boolean;
+  unsichtbarSchreiben?: () => { pfad: string; method: 'PUT' | 'POST'; json: unknown };
+}
+
+/**
+ * **Einen Platz ändern:** frisch lesen → steht das Ziel schon da, fertig; steht etwas anderes als gesehen da,
+ * `konflikt` → schreiben (nie wiederholt) → nachlesen. Erst was danach am Platz steht, zählt.
+ */
+export async function platzAendern<G extends string = never>(
+  port: DienstPort,
+  ort: PlatzOrt,
+  a: PlatzAenderung<G>,
+): Promise<Ergebnis<Grund | G>> {
+  // 1. Frisch lesen – nur die aktuelle Platz-ID taugt zum Schreiben.
+  const erst = await lesen(port, ort);
+  let geschriebenAuf: number | undefined;
+  let auftrag: { pfad: string; method: 'PUT' | 'POST'; json: unknown };
+  if ('grund' in erst) {
+    if (!erst.unsichtbar || !a.unsichtbarSchreiben) return { ok: false, grund: erst.grund };
+    auftrag = a.unsichtbarSchreiben();
+  } else {
+    const ist = belegungAus(erst.platz);
+    if (a.fertig(ist)) return { ok: true, platzId: erst.platz.id as number };
+    if (!a.vorher(ist)) return { ok: false, grund: 'konflikt', jetzt: ist };
+    geschriebenAuf = erst.platz.id as number;
+    auftrag = a.auftrag(geschriebenAuf);
+  }
+
+  // 2. Schreiben – nie wiederholt.
+  try {
+    await port.schreibe(auftrag.pfad, { method: auftrag.method, json: auftrag.json });
+  } catch (e) {
+    const s = port.status(e);
+    if (s === 401) return { ok: false, grund: 'abgemeldet' };
+    if (s === 403) return { ok: false, grund: 'kein-recht' };
+    if (s === 400 && a.bei400) return { ok: false, grund: a.bei400 };
+    // Alles andere: Vielleicht ist es doch angekommen – nachlesen statt raten (und statt nochmal schreiben).
+    return nachlesen(
+      port,
+      ort,
+      a,
+      s === 404 || s === 409 ? 'konflikt' : 'voruebergehend',
+      geschriebenAuf,
+    );
+  }
+
+  // 3. Nachlesen – erst was dann am Platz steht, ist der Erfolg.
+  return nachlesen(port, ort, a, 'nicht-angekommen', geschriebenAuf);
 }
 
 /**
@@ -144,50 +227,39 @@ async function lesen(
  * Steht inzwischen jemand anderes da, wird **nicht** überschrieben (`konflikt`). Steht das Ziel schon da –
  * etwa weil ein früheres Senden doch angekommen ist –, ist es ein Erfolg ohne erneutes Schreiben.
  */
-export async function platzEinteilen(
+export function platzEinteilen(
   port: DienstPort,
   ort: PlatzOrt,
   vorher: Belegung,
   ziel: Belegung,
 ): Promise<Ergebnis> {
-  // 1. Frisch lesen – nur die aktuelle Platz-ID taugt zum Schreiben.
-  const erst = await lesen(port, ort);
-  if ('grund' in erst) return { ok: false, grund: erst.grund };
-  const ist = belegungAus(erst.platz);
-  if (erfuellt(ist, ziel)) return { ok: true, platzId: erst.platz.id as number };
-  if (!gleicherStand(ist, vorher)) return { ok: false, grund: 'konflikt', jetzt: ist };
-
-  // 2. Schreiben – nie wiederholt.
-  const pfad = `/events/${ort.eventId}/servicerequests/${erst.platz.id as number}`;
-  try {
-    if (ziel.art === 'frei') {
-      await port.schreibe(`${pfad}/decline`, { method: 'POST', json: { comment: null } });
-    } else {
-      await port.schreibe(pfad, { method: 'PUT', json: rumpf(ziel) });
-    }
-  } catch (e) {
-    const s = port.status(e);
-    if (s === 401) return { ok: false, grund: 'abgemeldet' };
-    if (s === 403) return { ok: false, grund: 'kein-recht' };
-    // Alles andere: Vielleicht ist es doch angekommen – nachlesen statt raten (und statt nochmal schreiben).
-    return nachlesen(port, ort, ziel, s === 404 || s === 409 ? 'konflikt' : 'voruebergehend');
-  }
-
-  // 3. Nachlesen – erst die Person am Platz ist der Erfolg.
-  return nachlesen(port, ort, ziel, 'nicht-angekommen');
+  const pfad = (platzId: number) => `/events/${ort.eventId}/servicerequests/${platzId}`;
+  return platzAendern(port, ort, {
+    vorher: (ist) => gleicherStand(ist, vorher),
+    fertig: (ist) => erfuellt(ist, ziel),
+    auftrag: (platzId) =>
+      ziel.art === 'frei'
+        ? { pfad: `${pfad(platzId)}/decline`, method: 'POST', json: { comment: null } }
+        : { pfad: pfad(platzId), method: 'PUT', json: rumpf(ziel) },
+  });
 }
 
-async function nachlesen(
+async function nachlesen<G extends string>(
   port: DienstPort,
   ort: PlatzOrt,
-  ziel: Belegung,
+  a: PlatzAenderung<G>,
   sonst: Grund,
-): Promise<Ergebnis> {
+  geschriebenAuf: number | undefined,
+): Promise<Ergebnis<Grund | G>> {
   const neu = await lesen(port, ort);
+  // Nicht mehr zu sehen, wo das genau „ich stehe nicht mehr da“ heißt (eigene Absage ohne Recht auf den Dienst).
+  if ('grund' in neu && neu.unsichtbar && a.unsichtbarFertig && geschriebenAuf !== undefined) {
+    return { ok: true, platzId: geschriebenAuf, geschriebenAuf };
+  }
   // Nicht lesbar: Ob es angekommen ist, weiß niemand – nicht bestätigt, der Aufrufer behält die
   // Einteilung. Beim nächsten Senden erkennt Schritt 1, ob sie doch schon dasteht.
   if ('grund' in neu) return { ok: false, grund: neu.grund };
   const ist = belegungAus(neu.platz);
-  if (erfuellt(ist, ziel)) return { ok: true, platzId: neu.platz.id as number };
+  if (a.fertig(ist)) return { ok: true, platzId: neu.platz.id as number, geschriebenAuf };
   return { ok: false, grund: sonst, jetzt: ist };
 }

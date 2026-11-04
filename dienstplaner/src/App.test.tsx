@@ -7,7 +7,7 @@ import { App } from './App';
 import { ladeStart, type Start } from './start';
 import { ladeTermin, ladeTermine, ladeZeitraum } from './ladeTermine';
 import { startFuer } from './start.testutil';
-import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile, mein } from '@shared/dienstplan/zeile.testutil';
 import { planAus } from '@shared/dienstplan/plan';
 import type { RohTermin } from '@shared/dienstplan/termine';
 
@@ -378,7 +378,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
       planbar: () => false,
       ganzSichtbar: () => true,
     });
-  const MEIN = { meine: [{ dienst: 'Ton', zugesagt: true }] };
+  const MEIN = { meine: [mein('Ton', true)] };
 
   it('aus „Dienste“: Zeile antippen → #/termin/<id>; „Dienste“ bleibt hervorgehoben; ‹ › und zurück', async () => {
     breite(false);

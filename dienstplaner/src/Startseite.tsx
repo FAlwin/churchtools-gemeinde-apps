@@ -12,6 +12,10 @@ import { planbareDienstgruppen, type Start } from './start';
 import type { TermineZustand } from './Termine';
 import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
 import { Plakette } from './Plakette';
+import { plaketteArt } from './plaketteArt';
+import { AntwortKnoepfe } from './AntwortKnoepfe';
+import { Toast } from '@ui/fenster/Toast';
+import type { Antworten } from './useAntworten';
 import { adresseFuer, type ReiterId } from './reiter';
 import styles from './Startseite.module.scss';
 
@@ -26,6 +30,8 @@ interface Props {
   onMeineTermine: () => void;
   /** „Ablauf & Dienste“ → Termin-Ansicht (E6-1b). */
   onTermin?: (id: number) => void;
+  /** Anfragen beantworten (E7-1) – ohne: nur ansehen. */
+  antworten?: Antworten;
 }
 
 /** So viele aus dem Team stehen im Kasten „Als Nächstes“; der Rest als „und N weitere“. */
@@ -34,10 +40,18 @@ const TEAM_ZEIGEN = 5;
 /**
  * **Die Startseite des Dienstplaners** (Bauplan E3-3, Entwurf v17): „Als Nächstes“, deine offenen
  * Anfragen, deine nächsten Dienste, Abwesenheiten und – für Planer – wie viel in den nächsten sechs Wochen
- * noch frei ist. Nur lesen: Zusagen/Absagen kommt mit E7 (bis dahin in der ChurchTools-App), Live mit E6b;
- * „Ablauf & Dienste“ öffnet die Termin-Ansicht (E6-1b).
+ * noch frei ist. Offene Anfragen lassen sich zusagen oder absagen (E7-1, `AntwortKnoepfe`, zusätzlich zur
+ * ChurchTools-App); „Ablauf & Dienste“ öffnet die Termin-Ansicht (E6-1b).
  */
-export function Startseite({ start, termine, heute, onNochmal, onMeineTermine, onTermin }: Props) {
+export function Startseite({
+  start,
+  termine,
+  heute,
+  onNochmal,
+  onMeineTermine,
+  onTermin,
+  antworten,
+}: Props) {
   const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];
   const u = startUebersicht(zeilen, { jetzt: new Date(), heute, planbar });
@@ -55,6 +69,8 @@ export function Startseite({ start, termine, heute, onNochmal, onMeineTermine, o
       ),
     );
   const kommendeAbwesenheiten = abwesenheiten?.filter((a) => a.endDate >= heute).length;
+  // „Alle zusagen“ ab zwei unbeantworteten Anfragen (Entwurf E7-1).
+  const unbeantwortet = u.offen.filter((d) => d.mein.ort && !d.mein.zugesagt && !d.mein.antwort);
 
   return (
     <div className={styles.raster}>
@@ -82,16 +98,29 @@ export function Startseite({ start, termine, heute, onNochmal, onMeineTermine, o
           <section className={styles.karte} aria-labelledby="offen">
             <div className={styles.kopf}>
               <h2 id="offen">Für dich offen</h2>
+              {antworten && unbeantwortet.length > 1 && (
+                <button
+                  type="button"
+                  className={styles.klein}
+                  onClick={() =>
+                    void antworten.alleZusagen(
+                      unbeantwortet.map((d) => ({ terminId: d.termin.id, d: d.mein })),
+                    )
+                  }
+                >
+                  Alle zusagen
+                </button>
+              )}
             </div>
             <ul className={styles.liste}>
               {u.offen.map((d, i) => (
-                <DienstZeile key={i} d={d} abwesend={abwesendAm(d.termin)} />
+                <DienstZeile key={i} d={d} abwesend={abwesendAm(d.termin)}>
+                  {antworten && (
+                    <AntwortKnoepfe termin={d.termin} d={d.mein} antworten={antworten} />
+                  )}
+                </DienstZeile>
               ))}
             </ul>
-            <p className={styles.hinweis}>
-              Zu- und absagen kannst du vorerst in der ChurchTools-App; hier kommt es als Nächstes
-              dazu.
-            </p>
           </section>
         )}
       </div>
@@ -148,6 +177,7 @@ export function Startseite({ start, termine, heute, onNochmal, onMeineTermine, o
           </section>
         )}
       </div>
+      <Toast message={antworten?.meldung ?? null} />
     </div>
   );
 }
@@ -202,8 +232,8 @@ function AlsNaechstes({
       <div className={styles.tags}>
         {z.meine.length > 0 ? (
           z.meine.map((d, i) => (
-            <Plakette key={i} art={d.zugesagt ? 'zugesagt' : 'angefragt'} gross>
-              Du: <b>{d.dienst}</b> · {d.zugesagt ? 'zugesagt' : 'angefragt'}
+            <Plakette key={i} art={plaketteArt(d)} gross>
+              Du: <b>{d.dienst}</b> · {plaketteArt(d)}
             </Plakette>
           ))
         ) : (
@@ -238,7 +268,16 @@ function AlsNaechstes({
   );
 }
 
-function DienstZeile({ d, abwesend = false }: { d: DienstAmTermin; abwesend?: boolean }) {
+function DienstZeile({
+  d,
+  abwesend = false,
+  children,
+}: {
+  d: DienstAmTermin;
+  abwesend?: boolean;
+  /** Unter dem Text – Zusagen/Absagen (E7-1). */
+  children?: ReactNode;
+}) {
   const k = kachel(d.termin.tag);
   return (
     <li className={styles.zeile}>
@@ -253,6 +292,7 @@ function DienstZeile({ d, abwesend = false }: { d: DienstAmTermin; abwesend?: bo
         {abwesend && (
           <small className={styles.warnung}>Du bist an dem Tag als abwesend eingetragen.</small>
         )}
+        {children}
       </div>
     </li>
   );

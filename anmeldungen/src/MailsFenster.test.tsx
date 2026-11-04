@@ -213,7 +213,9 @@ describe('MailsFenster – Erinnerung (A9-3b)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Weitere Erinnerung/ }));
     fireEvent.click(screen.getByRole('button', { name: /Weitere Erinnerung/ }));
-    expect(screen.getByRole('button', { name: /Weitere Erinnerung/ }).disabled).toBe(true);
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: /Weitere Erinnerung/ }).disabled,
+    ).toBe(true);
     expect(feld('Betreff').getAttribute('placeholder')).toBe('Bald ist es so weit: Kinderfreizeit');
     expect(screen.getByText(/Wer sich ab dem Fr, 06\.11\.2026 anmeldet/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
@@ -230,7 +232,9 @@ describe('MailsFenster – Erinnerung (A9-3b)', () => {
     const eigen = screen.getByRole('textbox', { name: '1. Erinnerung: eigene Zahl' });
     fireEvent.change(eigen, { target: { value: '40' } });
     expect(screen.getByText(/bitte 1 bis 30 Tage/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Speichern' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Speichern' }).disabled).toBe(
+      true,
+    );
     fireEvent.change(eigen, { target: { value: '10' } });
     expect(screen.getByText('Di, 10.11.2026')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Weitere Erinnerung/ }));

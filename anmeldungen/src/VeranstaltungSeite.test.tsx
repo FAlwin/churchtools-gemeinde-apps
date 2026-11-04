@@ -197,10 +197,11 @@ beforeEach(() => {
     standardMail: false,
     absender: 'Alwin Friesen',
     absenderId: 1,
-    eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+    eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT, erinnerung: OHNE_EIGENEN_TEXT },
     qr: false,
     loeschDatum: null,
     anmeldeschluss: null,
+    erinnerungen: [],
   });
   // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
@@ -342,6 +343,8 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(within(fertig).getByText('Alwin Friesen')).toBeTruthy();
     // A9-2b: der Check-in-Code steht in der Karte – aus, solange er in ChurchTools aus ist.
     expect(within(fertig).getByText('Check-in-Code').nextSibling?.textContent).toBe('aus');
+    // A9-3b: ohne Erinnerungen steht „aus“.
+    expect(within(fertig).getByText('Erinnerung').nextSibling?.textContent).toBe('aus');
     cleanup();
     ab.ablaeufeLesen.mockResolvedValue({
       platz: false,
@@ -349,10 +352,11 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       standardMail: true,
       absender: null,
       absenderId: null,
-      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT, erinnerung: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
       anmeldeschluss: null,
+      erinnerungen: [],
     });
     stelle(true, 1);
     zeigen();
@@ -361,6 +365,31 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(within(alt).getByText(/Standard-Mail – ohne Betrag/)).toBeTruthy();
     // Noch nicht eingerichtet: nichts zu bearbeiten (das richtet erst A9-5 ein).
     expect(within(alt).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+  });
+
+  it('A9-3b: Karte „Mails“ zeigt je Erinnerung ihren Tag – vorbeie mit Hinweis (R7)', async () => {
+    const stand = await ab.ablaeufeLesen(91);
+    ab.ablaeufeLesen.mockResolvedValue({
+      ...stand,
+      eigen: { ...stand.eigen, erinnerung: { betreff: 'Bald!', absatz: '', gruss: '' } },
+      erinnerungen: [
+        { datum: '2020-01-01', an: false },
+        { datum: '2020-01-05', an: true },
+        { datum: '2099-01-01', an: true },
+      ],
+    });
+    stelle(false, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() => expect(within(karte).getByText(/01\.01\.2099/)).toBeTruthy());
+    expect(within(karte).getByText('Erinnerung', { selector: 'dt' }).nextSibling?.textContent).toBe(
+      [
+        'Mi, 01.01.2020 (vorbei)',
+        'So, 05.01.2020 (vorbei – geht noch an Spätangemeldete)',
+        'Do, 01.01.2099',
+      ].join(''),
+    );
+    expect(within(karte).getByText('Eigener Text').nextSibling?.textContent).toBe('Erinnerung');
   });
 
   it('A9-2a: mit Recht wird abgeglichen, ohne nur gelesen; „Bearbeiten“ öffnet das Fenster „Mails“', async () => {
@@ -1130,10 +1159,11 @@ describe('Löschen (A9-3a)', () => {
       standardMail: false,
       absender: 'Alwin Friesen',
       absenderId: 1,
-      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT, erinnerung: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
       anmeldeschluss: null,
+      erinnerungen: [],
       ...x,
     });
   const karte = () => screen.findByRole('region', { name: 'Datenschutz' });

@@ -38,6 +38,9 @@ export const ROUTINEN = [
 
 export type RoutinenArt = (typeof ROUTINEN)[number]['art'];
 
+/** Jede Mail mit eigenem Text: die beiden Routinen und die Erinnerung (A9-3b – sie steckt in der Routine „Platz“). */
+export type MailArt = RoutinenArt | 'erinnerung';
+
 export interface AblaufMail {
   betreff: string;
   html: string;
@@ -56,7 +59,8 @@ export const BETREFF_MAX = 200;
  * **Was Veranstalter an einer Mail selbst schreiben** (A9-2a, Alwin 26.10.2026: fester Rahmen + eigener Absatz). Leer
  * heißt: der Standard (`standardBetreff`, kein eigener Absatz, „Viele Grüße“). Steht als JSON in der **Beschreibung der
  * Routine** – nicht öffentlich, höchstens 1.000 Zeichen, Leerzeichen am Ende schneidet ChurchTools ab (gemessen
- * 26.10.2026); beim Neuschreiben der Schritte bleibt sie stehen.
+ * 26.10.2026); beim Neuschreiben der Schritte bleibt sie stehen. Der Text der Erinnerung (A9-3b, E4) steht mit in der
+ * Beschreibung der Routine „Platz“ – beide teilen sich die 1.000 Zeichen.
  */
 export interface EigenerText {
   betreff: string;
@@ -69,49 +73,139 @@ export const OHNE_EIGENEN_TEXT: EigenerText = { betreff: '', absatz: '', gruss: 
 /** Höchstlänge der Beschreibung einer Routine (Schnittstelle, gemessen: 1.001 → 400). */
 export const BESCHREIBUNG_MAX = 1000;
 
-const EigenSchema = z.object({
-  v: z.literal(1),
+const TextSchema = z.object({
   betreff: z.string().default(''),
   absatz: z.string().default(''),
   gruss: z.string().default(''),
 });
+const EigenSchema = TextSchema.extend({ v: z.literal(1), erinnerung: TextSchema.optional() });
 
-/** Der eigene Text aus der Beschreibung einer Routine. Was nicht von uns stammt (oder leer ist), gilt als „kein eigener“. */
-export function eigenerTextAus(beschreibung: string | null | undefined): EigenerText {
-  if (!beschreibung) return OHNE_EIGENEN_TEXT;
+/** Die Beschreibung gelesen – `null`, wenn sie nicht von uns stammt. */
+function beschreibungLesen(beschreibung: string | null | undefined) {
+  if (!beschreibung) return null;
   try {
     const r = EigenSchema.safeParse(JSON.parse(beschreibung));
-    return r.success
-      ? { betreff: r.data.betreff, absatz: r.data.absatz, gruss: r.data.gruss }
-      : OHNE_EIGENEN_TEXT;
+    return r.success ? r.data : null;
   } catch {
-    return OHNE_EIGENEN_TEXT;
+    return null;
   }
 }
 
-/** Der eigene Text als Beschreibung der Routine – `null`, wenn nichts Eigenes da ist. */
-export function eigenerTextAlsBeschreibung(t: EigenerText): string | null {
-  const x = { betreff: t.betreff.trim(), absatz: t.absatz.trim(), gruss: t.gruss.trim() };
-  if (!x.betreff && !x.absatz && !x.gruss) return null;
-  return JSON.stringify({ v: 1, ...x });
+const nurText = (t: z.infer<typeof TextSchema>): EigenerText => ({
+  betreff: t.betreff,
+  absatz: t.absatz,
+  gruss: t.gruss,
+});
+
+/** Der eigene Text aus der Beschreibung einer Routine. Was nicht von uns stammt (oder leer ist), gilt als „kein eigener“. */
+export function eigenerTextAus(beschreibung: string | null | undefined): EigenerText {
+  const b = beschreibungLesen(beschreibung);
+  return b ? nurText(b) : OHNE_EIGENEN_TEXT;
 }
 
-/** Was am eigenen Text nicht passt – `null`, wenn alles passt. Gezählt wird, was ChurchTools speichern muss. */
-export function eigenerTextFehler(t: EigenerText): string | null {
-  if (t.betreff.trim().length > BETREFF_MAX)
+/** Der eigene Text der Erinnerung (A9-3b) – aus der Beschreibung der Routine „Platz“. */
+export function erinnerungsTextAus(beschreibung: string | null | undefined): EigenerText {
+  const e = beschreibungLesen(beschreibung)?.erinnerung;
+  return e ? nurText(e) : OHNE_EIGENEN_TEXT;
+}
+
+const getrimmt = (t: EigenerText): EigenerText => ({
+  betreff: t.betreff.trim(),
+  absatz: t.absatz.trim(),
+  gruss: t.gruss.trim(),
+});
+const leer = (t: EigenerText) => !t.betreff && !t.absatz && !t.gruss;
+
+/**
+ * Der eigene Text als Beschreibung der Routine – `null`, wenn nichts Eigenes da ist. `erinnerung` nur bei der Routine
+ * „Platz“ (A9-3b): Sie steht mit in derselben Beschreibung.
+ */
+export function eigenerTextAlsBeschreibung(
+  t: EigenerText,
+  erinnerung: EigenerText = OHNE_EIGENEN_TEXT,
+): string | null {
+  const x = getrimmt(t);
+  const er = getrimmt(erinnerung);
+  if (leer(x) && leer(er)) return null;
+  return JSON.stringify({ v: 1, ...x, ...(leer(er) ? {} : { erinnerung: er }) });
+}
+
+/**
+ * Was am eigenen Text nicht passt – `null`, wenn alles passt. Gezählt wird, was ChurchTools speichern muss – bei der
+ * Routine „Platz“ Bestätigung und Erinnerung zusammen (E4).
+ */
+export function eigenerTextFehler(
+  t: EigenerText,
+  erinnerung: EigenerText = OHNE_EIGENEN_TEXT,
+): string | null {
+  if (t.betreff.trim().length > BETREFF_MAX || erinnerung.betreff.trim().length > BETREFF_MAX)
     return `Der Betreff hat höchstens ${BETREFF_MAX} Zeichen.`;
-  const laenge = eigenerTextAlsBeschreibung(t)?.length ?? 0;
+  const laenge = eigenerTextAlsBeschreibung(t, erinnerung)?.length ?? 0;
   if (laenge > BESCHREIBUNG_MAX)
     return `Eigener Absatz und Gruß sind zusammen zu lang (${laenge - BESCHREIBUNG_MAX} Zeichen zu viel).`;
   return null;
 }
 
 /** Der Betreff, wenn Veranstalter keinen eigenen schreiben. */
-export function standardBetreff(art: RoutinenArt, veranstaltung: string): string {
-  return `${veranstaltung}: ${art === 'platz' ? 'Anmeldung bestätigt' : 'Warteliste'}`.slice(
-    0,
-    BETREFF_MAX,
-  );
+export function standardBetreff(art: MailArt, veranstaltung: string): string {
+  const text =
+    art === 'erinnerung'
+      ? `Bald ist es so weit: ${veranstaltung}`
+      : `${veranstaltung}: ${art === 'platz' ? 'Anmeldung bestätigt' : 'Warteliste'}`;
+  return text.slice(0, BETREFF_MAX);
+}
+
+/** Höchstens so viele Erinnerungen je Veranstaltung (A9-3b, R2). */
+export const ERINNERUNGEN_MAX = 3;
+/** Die Vorschläge zum Antippen und der beim Einschalten gewählte (R3). */
+export const ERINNERUNG_VORSCHLAEGE = [1, 3, 7, 14] as const;
+export const ERINNERUNG_VORGABE = 3;
+/** Grenzen für „X Tage vorher“ (R3) – dieselben wie im Schema der Einstellungen. */
+export const ERINNERUNG_TAGE_MIN = 1;
+export const ERINNERUNG_TAGE_MAX = 30;
+
+/**
+ * **Was an den gewählten Tagen nicht passt** (Fenster „Mails“) – `null`, wenn alles passt. `null` in der Liste: Feld
+ * leer. Dieselben Grenzen wie im Schema der Einstellungen.
+ */
+export function erinnerungTageFehler(tage: readonly (number | null)[]): string | null {
+  if (tage.length > ERINNERUNGEN_MAX) return `Höchstens ${ERINNERUNGEN_MAX} Erinnerungen.`;
+  for (const [i, n] of tage.entries()) {
+    if (n === null || !Number.isInteger(n) || n < ERINNERUNG_TAGE_MIN || n > ERINNERUNG_TAGE_MAX)
+      return `${i + 1}. Erinnerung: bitte ${ERINNERUNG_TAGE_MIN} bis ${ERINNERUNG_TAGE_MAX} Tage.`;
+    if (tage.indexOf(n) !== i) return `${i + 1}. Erinnerung: Diese gibt es schon.`;
+  }
+  return null;
+}
+
+/** Eine Erinnerung mit ihrem Tag. `an`: Ihre Mail geht raus (R7). */
+export interface Erinnerung {
+  tage: number;
+  /** `JJJJ-MM-TT` – so nimmt ChurchTools es im Warte-Schritt. */
+  datum: string;
+  an: boolean;
+}
+
+/**
+ * **Die Erinnerungen einer Veranstaltung** (A9-3b) – früheste zuerst, so wie sie in der Routine stehen. Tag = Beginn
+ * des Termins minus die Tage; ohne Termin keine. **R7:** Ein Tag heute oder früher ist vorbei – ChurchTools ließe die
+ * Wartenden sofort durch und schickte die Mail an jede späte Anmeldung (gemessen M5-3). Von den vorbeien bleibt darum
+ * nur die zuletzt fällige an (Spätangemeldete bekommen sie mit der Bestätigung, wie E1); ältere sind aus – eine
+ * abgeschaltete Mail überspringt ChurchTools (M5-4).
+ */
+export function erinnerungen(
+  e: Pick<OeffentlicheEinstellungen, 'termin' | 'erinnerungTage'>,
+  heute: string,
+): Erinnerung[] {
+  if (!e.termin) return [];
+  const beginn = e.termin.beginn.slice(0, 10);
+  const liste = [...new Set(e.erinnerungTage ?? [])]
+    .filter((n) => Number.isInteger(n) && n >= ERINNERUNG_TAGE_MIN && n <= ERINNERUNG_TAGE_MAX)
+    .sort((a, b) => b - a)
+    .slice(0, ERINNERUNGEN_MAX)
+    .map((tage) => ({ tage, datum: plusTage(beginn, -tage) }));
+  const zuletztFaellig = liste.filter((x) => x.datum <= heute).at(-1);
+  return liste.map((x) => ({ ...x, an: x.datum > heute || x === zuletztFaellig }));
 }
 
 /** Was aus den Einstellungen kommt: HTML-sicher und ohne `{{`, damit ChurchTools nichts davon als Platzhalter liest. */
@@ -129,12 +223,12 @@ export function ablaufMails(
   e: OeffentlicheEinstellungen,
   veranstaltung: string,
   ctPlatzhalter: ReadonlyMap<string, string>,
-  eigen: Readonly<Record<RoutinenArt, EigenerText>> = {
+  eigen: Readonly<Record<RoutinenArt, EigenerText>> & { readonly erinnerung?: EigenerText } = {
     platz: OHNE_EIGENEN_TEXT,
     warte: OHNE_EIGENEN_TEXT,
   },
   qr = false,
-): { platz: AblaufMail; warte: AblaufMail; unbekannt: string[] } {
+): { platz: AblaufMail; warte: AblaufMail; erinnerung: AblaufMail; unbekannt: string[] } {
   const unbekannt = new Set<string>();
   /** Lesbaren Text mit `[…]` umwandeln; `§name§` wird danach durch `werte[name]` ersetzt. */
   const html = (vorlage: string, werte: Record<string, string> = {}): string => {
@@ -179,8 +273,8 @@ export function ablaufMails(
     return `<p>${zeilen.map((z) => wert(z)).join('<br>')}</p>`;
   };
   /** Der Betreff ist reiner Text – `{{` darin läse ChurchTools sonst als Platzhalter. */
-  const betreff = (art: RoutinenArt) =>
-    (eigen[art].betreff.trim() || standardBetreff(art, veranstaltung))
+  const betreff = (art: MailArt) =>
+    ((eigen[art] ?? OHNE_EIGENEN_TEXT).betreff.trim() || standardBetreff(art, veranstaltung))
       .replace(/\{\{/g, '{ {')
       .slice(0, BETREFF_MAX);
 
@@ -246,7 +340,19 @@ export function ablaufMails(
       gruss(eigen.warte),
     ].join(''),
   };
-  return { platz, warte, unbekannt: [...unbekannt] };
+  // A9-3b: der Termin mit Datum, nicht „in 3 Tagen“ – wer sich spät anmeldet, bekommt sie sofort (R7, Alwin 04.11.2026).
+  const er = eigen.erinnerung ?? OHNE_EIGENEN_TEXT;
+  const erinnerung: AblaufMail = {
+    betreff: betreff('erinnerung'),
+    html: [
+      hallo,
+      html('<p>bald ist es so weit: [Vorname] ist bei „§v§“ dabei – §termin§.', v) + nr + '</p>',
+      absatz(er),
+      link('absagen'),
+      gruss(er),
+    ].join(''),
+  };
+  return { platz, warte, erinnerung, unbekannt: [...unbekannt] };
 }
 
 /** Ein Schritt einer Routine, wie `PATCH /routines/{id}` ihn nimmt. */
@@ -302,11 +408,46 @@ export function anmeldeschlussVorLoeschen(
 }
 
 /**
- * **Die Schritte einer Routine** – die Mail (A9-1) und, mit Löschdatum, „warten bis“ + „entfernen“ (A9-3a; entfernen
- * muss der letzte Schritt sein, Schnittstelle). `vorher`: die Schritte, die ChurchTools schon hat; ihre Nummern werden
- * mitgeschickt, damit laufende Abläufe an ihrer Stelle bleiben (gemessen: ohne Nummer legt ChurchTools neue Schritte an).
- * `addSignOutUrl: false` – der Link von ChurchTools führte an „Deine Anmeldung“ vorbei. `mailAn: false` schaltet nur die
- * Mail aus – für das Nachstarten schon Angemeldeter (gemessen 28.10.2026).
+ * **Welcher Schritt welcher ist** (A9-3b) – nach seiner **Stellung**, nicht nach seiner Art: Bestätigung zuerst, dann je
+ * Erinnerung „warten bis“ + Mail, dann „warten bis zum Löschdatum“ + „entfernen“. Mit mehreren Erinnerungen gibt es
+ * mehrere Mail- und Warte-Schritte; „der erste Schritt dieser Art“ fände dann den falschen.
+ */
+export interface SchrittFolge {
+  bestaetigung?: number;
+  erinnerungen: { warte: number; mail: number }[];
+  loeschWarte?: number;
+  entfernen?: number;
+}
+
+export function schrittFolge(schritte: readonly { id: number; actionKey: string }[]): SchrittFolge {
+  const f: SchrittFolge = { erinnerungen: [] };
+  const ende = schritte.findIndex((s) => s.actionKey === 'remove-member');
+  const loesch = ende > 0 && schritte[ende - 1].actionKey === 'special:wait' ? ende - 1 : -1;
+  if (schritte[0]?.actionKey === 'send-member-email') f.bestaetigung = schritte[0].id;
+  const bis = loesch >= 0 ? loesch : schritte.length;
+  for (let i = f.bestaetigung === undefined ? 0 : 1; i + 1 < bis; i++)
+    if (
+      schritte[i].actionKey === 'special:wait' &&
+      schritte[i + 1].actionKey === 'send-member-email'
+    ) {
+      f.erinnerungen.push({ warte: schritte[i].id, mail: schritte[i + 1].id });
+      i++;
+    }
+  if (loesch >= 0) f.loeschWarte = schritte[loesch].id;
+  if (ende >= 0) f.entfernen = schritte[ende].id;
+  return f;
+}
+
+/**
+ * **Die Schritte einer Routine** – die Mail (A9-1), die Erinnerungen (A9-3b) und, mit Löschdatum, „warten bis“ +
+ * „entfernen“ (A9-3a; entfernen muss der letzte Schritt sein, Schnittstelle). `vorher`: die Schritte, die ChurchTools
+ * schon hat; ihre Nummern werden nach ihrer Stellung (`schrittFolge`) mitgeschickt, damit laufende Abläufe an ihrer
+ * Stelle bleiben (gemessen: ohne Nummer legt ChurchTools neue Schritte an). Erinnerungen bekommen die Nummern der
+ * bisherigen der Reihe nach. **Nie eine `emailId` mitschicken** – sie gehört zu genau einem Schritt; teilen sich
+ * Schritte eine, trägt die Bestätigung den Text der Erinnerung (gemessen M5-1). `addSignOutUrl: false` – der Link von
+ * ChurchTools führte an „Deine Anmeldung“ vorbei. `mailAn: false` schaltet nur die Bestätigung aus – für das
+ * Nachstarten schon Angemeldeter (gemessen 28.10.2026). Erinnerungen gibt es nur mit Löschdatum (beide brauchen den
+ * Termin).
  */
 export function routinenSchritte(
   mail: AblaufMail,
@@ -314,33 +455,49 @@ export function routinenSchritte(
   vorher: { id: number; actionKey: string }[] = [],
   loeschen: string | null = null,
   mailAn = true,
+  erinnerung: { mail: AblaufMail; liste: readonly Erinnerung[] } | null = null,
 ): RoutinenSchritt[] {
-  const nr = (key: string) => {
-    const id = vorher.find((s) => s.actionKey === key)?.id;
-    return id ? { id } : {};
-  };
+  const f = schrittFolge(vorher);
+  const nr = (id: number | undefined) => (id ? { id } : {});
+  const mailDaten = (m: AblaufMail) => ({
+    subject: m.betreff,
+    body: m.html,
+    addSignOutUrl: false as const,
+    senderId: absenderId,
+  });
   const schritte: RoutinenSchritt[] = [
     {
-      ...nr('send-member-email'),
+      ...nr(f.bestaetigung),
       actionKey: 'send-member-email',
       isEnabled: mailAn,
-      actionData: {
-        subject: mail.betreff,
-        body: mail.html,
-        addSignOutUrl: false,
-        senderId: absenderId,
-      },
+      actionData: mailDaten(mail),
     },
   ];
-  if (loeschen)
+  if (!loeschen) return schritte;
+  (erinnerung?.liste ?? []).forEach((x, i) =>
     schritte.push(
       {
-        ...nr('special:wait'),
+        ...nr(f.erinnerungen[i]?.warte),
         actionKey: 'special:wait',
         isEnabled: true,
-        actionData: { untilDate: loeschen },
+        actionData: { untilDate: x.datum },
       },
-      { ...nr('remove-member'), actionKey: 'remove-member', isEnabled: true, actionData: {} },
-    );
+      {
+        ...nr(f.erinnerungen[i]?.mail),
+        actionKey: 'send-member-email',
+        isEnabled: x.an,
+        actionData: mailDaten(erinnerung!.mail),
+      },
+    ),
+  );
+  schritte.push(
+    {
+      ...nr(f.loeschWarte),
+      actionKey: 'special:wait',
+      isEnabled: true,
+      actionData: { untilDate: loeschen },
+    },
+    { ...nr(f.entfernen), actionKey: 'remove-member', isEnabled: true, actionData: {} },
+  );
   return schritte;
 }

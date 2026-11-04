@@ -158,6 +158,11 @@
   font-size: 13px;
 }
 
+// Eine Zeile je Erinnerung in der Karte „Mails“ (A9-3b).
+.zeile {
+  display: block;
+}
+
 // „Probe rechnen“ bleibt beim Scrollen neben den Karten stehen (breiter Bildschirm).
 .klebt {
   @media (min-width: 861px) {

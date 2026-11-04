@@ -94,6 +94,8 @@ interface Lauf {
 const HEUTE = '2026-10-28';
 let laeufe: Lauf[];
 let mailsAnLaeufe: string[];
+/** Welche Mail an wen ging – „Person: Betreff“ (A9-3b: mehrere Mails in einer Routine). */
+let mailBetreffe: string[];
 let entfernt: string[];
 let restartFehler: boolean;
 /** ChurchTools übernimmt die Mail, verliert aber Warten und Entfernen. */
@@ -113,7 +115,10 @@ let offenBeimLoeschen: string[];
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
     if (s.actionKey === 'send-member-email') {
-      if (s.isEnabled) mailsAnLaeufe.push(l.person);
+      if (s.isEnabled) {
+        mailsAnLaeufe.push(l.person);
+        mailBetreffe.push(`${l.person}: ${String(s.actionData.subject)}`);
+      }
     } else if (s.actionKey === 'special:wait') {
       if (String(s.actionData.untilDate) > HEUTE) {
         l.status = 'waiting';
@@ -144,6 +149,7 @@ beforeEach(() => {
   routinenPatches = [];
   laeufe = [];
   mailsAnLaeufe = [];
+  mailBetreffe = [];
   entfernt = [];
   restartFehler = false;
   warteSchlucken = false;
@@ -154,7 +160,9 @@ beforeEach(() => {
   ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
     const m = /^\/routines\/(\d+)\/runs$/.exec(pfad);
     if (!m) throw new Error(`unerwartet: ${pfad}`);
-    return laeufe.filter((l) => l.routine === Number(m[1])).map((l) => ({ status: l.status }));
+    return laeufe
+      .filter((l) => l.routine === Number(m[1]))
+      .map((l) => ({ status: l.status, routineStepId: l.schritt }));
   });
   ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
   ei.teilnehmerRolle.mockResolvedValue(32);
@@ -213,17 +221,28 @@ beforeEach(() => {
       if ('description' in body && !beschreibungSchlucken)
         r.description = body.description as string | null;
       if ('isEnabled' in body) r.isEnabled = !!body.isEnabled;
+      // Gemessen 28.10. (`'finished'`) und 04.11.2026 (Nummer eines Warte-Schritts): Die Läufe dort starten von vorn.
       if ('restart' in body) {
         if (restartFehler) throw new ApiError(502, 'x');
-        for (const l of laeufe.filter((x) => x.routine === r.id && x.status === 'finished'))
-          laufWeiter(r, l, 0);
+        for (const was of body.restart as (string | number)[])
+          for (const l of laeufe.filter(
+            (x) =>
+              x.routine === r.id &&
+              (was === 'finished'
+                ? x.status === 'finished'
+                : x.status === 'waiting' && x.schritt === was),
+          ))
+            laufWeiter(r, l, 0);
       }
       if (!('steps' in body)) return null;
       let neu = (body.steps as Partial<Schritt>[]).map((s) => ({
         ...(s as Schritt),
         id: s.id ?? 100 + naechste++,
       }));
-      for (const w of neu.filter((s) => s.actionKey === 'special:wait')) {
+      // Das Löschdatum steht im Warte-Schritt direkt vor „entfernen“ – davor warten die Erinnerungen (A9-3b).
+      for (const w of neu.filter(
+        (s, i) => s.actionKey === 'special:wait' && neu[i + 1]?.actionKey === 'remove-member',
+      )) {
         const tag = String(w.actionData.untilDate);
         // Offen ist die Anmeldung am Löschtag, wenn sie keinen Schluss hat oder er (in UTC) erst an diesem Tag liegt.
         if (anmeldeschluss === null || anmeldeschluss.slice(0, 10) >= tag)
@@ -348,10 +367,11 @@ describe('ablaeufeLesen', () => {
       standardMail: true,
       absender: null,
       absenderId: null,
-      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT, erinnerung: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
       anmeldeschluss: null,
+      erinnerungen: [],
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -364,10 +384,11 @@ describe('ablaeufeLesen', () => {
       standardMail: false,
       absender: 'Anna Leitung',
       absenderId: 7,
-      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT, erinnerung: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
       anmeldeschluss: null,
+      erinnerungen: [],
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -441,6 +462,23 @@ describe('Eigener Text (A9-2a)', () => {
     expect(neu.steps[0].actionData.subject).toBe('Du bist dabei!');
     // Die Vorlage selbst bleibt unberührt.
     expect(routinen.get(5)!.steps).toEqual([]);
+  });
+
+  it('Kopie: auch der Erinnerungstext der Vorlage kommt mit (A9-3b)', async () => {
+    const er = { betreff: 'Bald!', absatz: 'Abfahrt 16 Uhr', gruss: '' };
+    routinen.set(5, {
+      id: 5,
+      name: 'Anmeldungen: Platz',
+      isEnabled: true,
+      steps: [],
+      rolle: 32,
+      status: 'active',
+      gruppe: 90,
+      description: JSON.stringify({ v: 1, ...OHNE_EIGENEN_TEXT, erinnerung: er }),
+    });
+    ei.systemfelderNachziehen.mockResolvedValue({ ...neueEinstellungen('kinder'), kopieVon: 90 });
+    await ablaeufeEinrichten(165, 7);
+    expect((await ablaeufeLesen(165)).eigen.erinnerung).toEqual(er);
   });
 
   it('zu lang → 422, bevor etwas geschrieben wird', async () => {
@@ -805,6 +843,231 @@ describe('Löschen (A9-3a)', () => {
       anmeldeschluss = '2027-02-15T22:59:00Z';
       await ablaeufeAbgleichen(165, HEUTE, ZONE);
       expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+    });
+  });
+});
+
+describe('Erinnerungen (A9-3b)', () => {
+  const ZONE = 'Europe/Berlin';
+  const optionen = { heute: HEUTE, zeitzone: ZONE };
+  /** Termin am So, 15.11.2026 (Löschen 15.02.2027); `tage` vor dem Beginn. */
+  const mitTagen = (tage?: number[], ende = '2026-11-15') => {
+    const e = {
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: `${ende}T10:00`, ende: `${ende}T18:00`, ort: '', terminId: 1 },
+      loeschfristMonate: 3,
+      ...(tage ? { erinnerungTage: tage } : {}),
+    };
+    ei.systemfelderNachziehen.mockResolvedValue(e);
+    return e;
+  };
+  const routine = (status: string) => [...routinen.values()].find((x) => x.status === status)!;
+  const schritte = (status: string) =>
+    routine(status).steps.map((s) =>
+      s.actionKey === 'special:wait' ? `warten ${String(s.actionData.untilDate)}` : s.actionKey,
+    );
+  /** Nummer des n-ten Warte-Schritts in „Platz“. */
+  const warten = (n: number) =>
+    routine('active').steps.filter((s) => s.actionKey === 'special:wait')[n].id;
+  const lauf = (person: string, schritt: number | null, status: Lauf['status'] = 'waiting') => ({
+    routine: routine('active').id,
+    person,
+    status,
+    schritt,
+  });
+  afterEach(() => expect(offenBeimLoeschen).toEqual([]));
+
+  it('eingeschaltet: „Platz“ wartet je Erinnerung und schickt sie, vor dem Löschen; die Warteliste nicht; Lesen zeigt sie', async () => {
+    mitTagen([3, 14]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(schritte('active')).toEqual([
+      'send-member-email',
+      'warten 2026-11-01',
+      'send-member-email',
+      'warten 2026-11-12',
+      'send-member-email',
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    expect(schritte('waiting')).toEqual([
+      'send-member-email',
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    const mails = routine('active').steps.filter((s) => s.actionKey === 'send-member-email');
+    expect(mails.map((s) => s.actionData.subject)).toEqual([
+      'Kinderfreizeit: Anmeldung bestätigt',
+      'Bald ist es so weit: Kinderfreizeit',
+      'Bald ist es so weit: Kinderfreizeit',
+    ]);
+    expect((await ablaeufeLesen(165)).erinnerungen).toEqual([
+      { datum: '2026-11-01', an: true },
+      { datum: '2026-11-12', an: true },
+    ]);
+  });
+
+  it('E7: wer schon am Löschen wartet, kommt ohne Mail an die erste Erinnerung; die Bestätigung ist danach an', async () => {
+    mitTagen();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', warten(0))];
+    mitTagen([14, 3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(laeufe.map((l) => [l.person, l.status, l.schritt])).toEqual([
+      ['Lena', 'waiting', warten(0)],
+    ]);
+    expect(mailBetreffe).toEqual([]);
+    expect(routine('active').steps[0].isEnabled).toBe(true);
+    expect(
+      routinenPatches.some((b) => JSON.stringify(b.restart) === JSON.stringify([warten(2)])),
+    ).toBe(true);
+  });
+
+  it('abgeschlossene Läufe (vor dem Löschen angemeldet) kommen ebenso ohne Mail an die erste Erinnerung', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Paul', null, 'finished')];
+    mitTagen([3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', warten(0)]]);
+    expect(mailBetreffe).toEqual([]);
+  });
+
+  it('wer schon an der richtigen Erinnerung wartet, wird nicht neu gestartet', async () => {
+    mitTagen([3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', warten(0))];
+    routinenPatches = [];
+    mitTagen([5]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(routinenPatches.some((b) => 'restart' in b)).toBe(false);
+    // Das Datum zieht mit, Lena bleibt an ihrem Schritt.
+    expect(laeufe.map((l) => l.schritt)).toEqual([warten(0)]);
+    expect(schritte('active')[1]).toBe('warten 2026-11-10');
+  });
+
+  it('Erinnerung entfernt, während jemand an ihr wartet: läuft ohne Mail weiter, kein 422, fällt nicht aus dem Löschen', async () => {
+    mitTagen([14, 3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', warten(1))];
+    mitTagen([14]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(schritte('active')).toEqual([
+      'send-member-email',
+      'warten 2026-11-01',
+      'send-member-email',
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    expect(mailBetreffe).toEqual([]);
+    expect(entfernt).toEqual([]);
+    // Neu gestartet steht sie an der verbliebenen Erinnerung – der Tag kommt noch.
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', warten(0)]]);
+  });
+
+  it('alle Erinnerungen aus: Wartende laufen ohne Mail bis zum Löschen', async () => {
+    mitTagen([3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', warten(0))];
+    mitTagen([]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(schritte('active')).toEqual(['send-member-email', 'warten 2027-02-15', 'remove-member']);
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', warten(0)]]);
+    expect(mailBetreffe).toEqual([]);
+  });
+
+  it('R7: Tag erreicht – beim Neustart schickt keine fällige Erinnerung; danach bleibt nur die zuletzt fällige an', async () => {
+    // Termin am 30.10. → 14 Tage = 16.10. und 3 Tage = 27.10. sind vorbei (HEUTE 28.10.), 1 Tag = 29.10. kommt.
+    mitTagen();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', null, 'finished')];
+    mitTagen([14, 3, 1], '2026-10-30');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(mailBetreffe).toEqual([]);
+    expect(laeufe.map((l) => l.schritt)).toEqual([warten(2)]);
+    expect((await ablaeufeLesen(165)).erinnerungen.map((x) => x.an)).toEqual([false, true, true]);
+  });
+
+  it('Termin entfernt: auch die Erinnerungen fallen weg, Wartende werden beendet statt entfernt', async () => {
+    mitTagen([14, 3]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [lauf('Lena', warten(1)), lauf('Paul', warten(2))];
+    ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(schritte('active')).toEqual(['send-member-email']);
+    expect(laeufe.map((l) => l.status)).toEqual(['finished', 'finished']);
+    expect(entfernt).toEqual([]);
+  });
+
+  it('eigener Text: steht mit in der Beschreibung von „Platz“, der Bestätigungstext bleibt; zusammen zu lang → 422 vorher', async () => {
+    mitTagen([3]);
+    const best = { betreff: 'Dabei!', absatz: 'Schlafsack', gruss: '' };
+    await ablaeufeEinrichten(165, 7, { platz: best }, undefined, optionen);
+    const er = { betreff: 'Bald!', absatz: 'Abfahrt 16 Uhr', gruss: '' };
+    await ablaeufeEinrichten(165, 7, { erinnerung: er }, undefined, optionen);
+    const stand = await ablaeufeLesen(165);
+    expect(stand.eigen.platz).toEqual(best);
+    expect(stand.eigen.erinnerung).toEqual(er);
+    const mails = routine('active').steps.filter((s) => s.actionKey === 'send-member-email');
+    expect(mails.map((s) => s.actionData.subject)).toEqual(['Dabei!', 'Bald!']);
+    expect(String(mails[1].actionData.body)).toContain('Abfahrt 16 Uhr');
+
+    const halb = { betreff: '', absatz: 'x'.repeat(480), gruss: '' };
+    aufrufe = [];
+    const f = await ablaeufeEinrichten(
+      165,
+      7,
+      { platz: halb, erinnerung: halb },
+      undefined,
+      optionen,
+    ).catch((x: unknown) => x);
+    expect(f).toMatchObject({ status: 422 });
+    expect(aufrufe.filter((a) => a.startsWith('PATCH'))).toEqual([]);
+  });
+
+  it('ChurchTools verliert eine Erinnerung → Fehler statt „gespeichert“', async () => {
+    mitTagen([3]);
+    datumSchlucken = true;
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    datumSchlucken = false;
+    mitTagen([5]);
+    datumSchlucken = true;
+    await expect(ablaeufeEinrichten(165, 7, undefined, undefined, optionen)).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+
+  describe('Abgleich', () => {
+    it('passt alles (mit Erinnerungen): nichts geschrieben', async () => {
+      mitTagen([14, 3]);
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      routinenPatches = [];
+      await ablaeufeAbgleichen(165, HEUTE, ZONE);
+      expect(routinenPatches).toEqual([]);
+    });
+
+    it('Tage in den Einstellungen geändert → die Erinnerungen ziehen mit', async () => {
+      mitTagen([14]);
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      mitTagen([14, 3]);
+      const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
+      expect(stand.erinnerungen.map((x) => x.datum)).toEqual(['2026-11-01', '2026-11-12']);
+    });
+
+    it('Termin verschoben → die Tage ziehen mit', async () => {
+      mitTagen([3]);
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      mitTagen([3], '2026-12-05');
+      const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
+      expect(stand.erinnerungen).toEqual([{ datum: '2026-12-02', an: true }]);
+    });
+
+    it('R7: ein späterer Tag – die ältere vorbeie wird ausgeschaltet, die zuletzt fällige bleibt an', async () => {
+      mitTagen([14, 3]);
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      const stand = await ablaeufeAbgleichen(165, '2026-11-13', ZONE);
+      expect(stand.erinnerungen).toEqual([
+        { datum: '2026-11-01', an: false },
+        { datum: '2026-11-12', an: true },
+      ]);
     });
   });
 });

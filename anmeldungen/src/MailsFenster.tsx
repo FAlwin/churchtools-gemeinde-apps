@@ -8,13 +8,15 @@ import {
   ablaufMails,
   eigenerTextAlsBeschreibung,
   eigenerTextFehler,
+  erinnerungTageFehler,
   standardBetreff,
   BESCHREIBUNG_MAX,
   type EigenerText,
-  type RoutinenArt,
+  type MailArt,
 } from '@shared/anmeldung/ablaeufe';
 import { ablaeufeEinrichten, vorschauPerson, type AblaufStand } from './ablaeufe';
-import { leitungsKandidaten, type LeitungsKandidat } from './einrichten';
+import { aendereEinstellungen, leitungsKandidaten, type LeitungsKandidat } from './einrichten';
+import { ErinnerungWahl } from './ErinnerungWahl';
 import { platzhalterLaden, vorschauLaden } from './rundmail';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
@@ -26,13 +28,16 @@ import bk from './Baukasten.module.scss';
  * (Bestätigung, Warteliste), der Absender und der Check-in-Code in der Bestätigung (A9-2b). Termin, Betrag, Bankdaten, Link und Kontakt setzt die Erweiterung selbst
  * ein (`ablaufMails`) – so kann niemand den Link zu „Deine Anmeldung“ versehentlich löschen. Gespeichert wird in den
  * Routinen von ChurchTools (der eigene Text in deren Beschreibung), danach nachgelesen. Die Vorschau rechnet ChurchTools
- * – mit dem Text, der gerade im Fenster steht, auch vor dem Speichern.
+ * – mit dem Text, der gerade im Fenster steht, auch vor dem Speichern. Reiter „Erinnerung“ (A9-3b): die Tage stehen in
+ * den Einstellungen der Veranstaltung (R1), ihr Text in der Beschreibung der Routine „Platz“ – mit der Bestätigung
+ * zusammen höchstens 1.000 Zeichen (E4).
  */
 export function MailsFenster({
   id,
   veranstaltung,
   e,
   stand,
+  heute,
   onClose,
   onGespeichert,
 }: {
@@ -40,11 +45,14 @@ export function MailsFenster({
   veranstaltung: string;
   e: OeffentlicheEinstellungen;
   stand: AblaufStand;
+  /** Heute im Kalender der Gemeinde – für den Tag jeder Erinnerung und ob sie schon vorbei ist. */
+  heute: string;
   onClose: () => void;
   onGespeichert: (text: string) => void;
 }) {
-  const [art, setArt] = useState<RoutinenArt>('platz');
-  const [texte, setTexte] = useState<Record<RoutinenArt, EigenerText>>(stand.eigen);
+  const [art, setArt] = useState<MailArt>('platz');
+  const [texte, setTexte] = useState<Record<MailArt, EigenerText>>(stand.eigen);
+  const [tage, setTage] = useState<(number | null)[]>(e.erinnerungTage ?? []);
   const [absender, setAbsender] = useState<number | null>(stand.absenderId);
   const [qr, setQr] = useState(stand.qr);
   const [leitung, setLeitung] = useState<LeitungsKandidat[] | null>(null);
@@ -73,10 +81,20 @@ export function MailsFenster({
     setVorschau(null);
   };
   const pruefung = useMemo(
-    () => eigenerTextFehler(texte.platz) ?? eigenerTextFehler(texte.warte),
-    [texte],
+    () =>
+      eigenerTextFehler(texte.platz, texte.erinnerung) ??
+      eigenerTextFehler(texte.warte) ??
+      erinnerungTageFehler(tage),
+    [texte, tage],
   );
-  const belegt = eigenerTextAlsBeschreibung(t)?.length ?? 0;
+  // Bestätigung und Erinnerung teilen sich die Beschreibung der Routine „Platz“ (E4).
+  const belegt =
+    (art === 'warte'
+      ? eigenerTextAlsBeschreibung(texte.warte)
+      : eigenerTextAlsBeschreibung(texte.platz, texte.erinnerung)
+    )?.length ?? 0;
+  const tageGeaendert =
+    JSON.stringify([...tage].sort()) !== JSON.stringify([...(e.erinnerungTage ?? [])].sort());
   // Wer nicht (mehr) zur Leitung gehört, bleibt wählbar, bis jemand anderes gewählt ist.
   const auswahl = useMemo(() => {
     const l = leitung ?? [];
@@ -92,10 +110,10 @@ export function MailsFenster({
     try {
       const [platzhalter, person] = await Promise.all([
         platzhalterLaden(id),
-        vorschauPerson(id, art, absender),
+        vorschauPerson(id, art === 'warte' ? 'warte' : 'platz', absender),
       ]);
       const mails = ablaufMails(e, veranstaltung, platzhalter, texte, qr);
-      const m = art === 'platz' ? mails.platz : mails.warte;
+      const m = mails[art];
       const r = await vorschauLaden(id, person.personId, m.betreff, m.html);
       setVorschau({ ...r, echt: person.echt });
     } catch (x) {
@@ -109,6 +127,14 @@ export function MailsFenster({
     setArbeitet(true);
     setFehler(null);
     try {
+      // Erst die Tage (die Routine liest sie aus den Einstellungen), dann die Routinen. Scheitert das Zweite, zieht der
+      // Abgleich beim nächsten Öffnen nach.
+      if (tageGeaendert)
+        await aendereEinstellungen(id, (x) => {
+          const { erinnerungTage: _alt, ...rest } = x;
+          const neu = tage.filter((n): n is number => n !== null);
+          return neu.length ? { ...rest, erinnerungTage: neu } : rest;
+        });
       await ablaeufeEinrichten(id, absender, texte, qr);
       onGespeichert('Mails gespeichert.');
       return;
@@ -136,12 +162,13 @@ export function MailsFenster({
         ChurchTools verschickt sie von selbst. Termin, Betrag, Bankdaten, der Link zu „Deine
         Anmeldung“ und der Kontakt kommen aus den Karten – hier steht, was ihr dazuschreibt.
       </p>
-      <Segment<RoutinenArt>
+      <Segment<MailArt>
         value={art}
         ariaLabel="Welche Mail"
         options={[
           { value: 'platz', label: 'Bestätigung' },
           { value: 'warte', label: 'Warteliste' },
+          { value: 'erinnerung', label: 'Erinnerung' },
         ]}
         onChange={(x) => {
           setArt(x);
@@ -151,43 +178,65 @@ export function MailsFenster({
       <p className={a.leise}>
         {art === 'platz'
           ? 'Kommt nach dem Anmelden und beim Nachrücken – an jede Person mit Platz.'
-          : 'Kommt, wenn jemand auf die Warteliste kommt – mit dem Platz auf der Warteliste.'}
+          : art === 'warte'
+            ? 'Kommt, wenn jemand auf die Warteliste kommt – mit dem Platz auf der Warteliste.'
+            : 'Kommt vor dem Termin an jede Person mit Platz – nicht an Wartende. Mit Datum, Ort und Link.'}
       </p>
-      <label className={f.feld}>
-        <span>Betreff</span>
-        <input
-          className={f.eingabe}
-          value={t.betreff}
-          placeholder={standardBetreff(art, veranstaltung)}
-          onChange={(ev) => aendern({ betreff: ev.target.value })}
+      {art === 'erinnerung' && (
+        <ErinnerungWahl
+          tage={tage}
+          onTage={(x) => {
+            setTage(x);
+            setVorschau(null);
+          }}
+          e={e}
+          heute={heute}
         />
-      </label>
-      <label className={f.feld}>
-        <span>Eigener Absatz (freiwillig)</span>
-        <textarea
-          className={`${f.eingabe} ${a.rundmailText}`}
-          value={t.absatz}
-          placeholder={
-            art === 'platz'
-              ? 'z. B. Bitte mitbringen: Schlafsack, Bibel, Taschenlampe.'
-              : 'z. B. Wir melden uns spätestens eine Woche vorher.'
-          }
-          onChange={(ev) => aendern({ absatz: ev.target.value })}
-        />
-      </label>
-      <label className={f.feld}>
-        <span>Gruß</span>
-        <textarea
-          className={f.eingabe}
-          rows={2}
-          value={t.gruss}
-          placeholder="Viele Grüße"
-          onChange={(ev) => aendern({ gruss: ev.target.value })}
-        />
-      </label>
-      <p className={pruefung ? f.fehler : a.leise}>
-        {pruefung ?? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`}
-      </p>
+      )}
+      {(art !== 'erinnerung' || tage.length > 0) && (
+        <>
+          <label className={f.feld}>
+            <span>Betreff</span>
+            <input
+              className={f.eingabe}
+              value={t.betreff}
+              placeholder={standardBetreff(art, veranstaltung)}
+              onChange={(ev) => aendern({ betreff: ev.target.value })}
+            />
+          </label>
+          <label className={f.feld}>
+            <span>Eigener Absatz (freiwillig)</span>
+            <textarea
+              className={`${f.eingabe} ${a.rundmailText}`}
+              value={t.absatz}
+              placeholder={
+                art === 'platz'
+                  ? 'z. B. Bitte mitbringen: Schlafsack, Bibel, Taschenlampe.'
+                  : art === 'warte'
+                    ? 'z. B. Wir melden uns spätestens eine Woche vorher.'
+                    : 'z. B. Abfahrt 16 Uhr am Gemeindehaus.'
+              }
+              onChange={(ev) => aendern({ absatz: ev.target.value })}
+            />
+          </label>
+          <label className={f.feld}>
+            <span>Gruß</span>
+            <textarea
+              className={f.eingabe}
+              rows={2}
+              value={t.gruss}
+              placeholder="Viele Grüße"
+              onChange={(ev) => aendern({ gruss: ev.target.value })}
+            />
+          </label>
+          <p className={pruefung ? f.fehler : a.leise}>
+            {pruefung ??
+              (art === 'warte'
+                ? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`
+                : `${belegt} von ${BESCHREIBUNG_MAX} Zeichen belegt – Bestätigung und Erinnerung zusammen.`)}
+          </p>
+        </>
+      )}
       {art === 'platz' && (
         <>
           <button
@@ -256,14 +305,16 @@ export function MailsFenster({
           />
         </div>
       ) : (
-        <button
-          type="button"
-          className={a.linkKnopf}
-          disabled={arbeitet || absender === null}
-          onClick={() => void zeigeVorschau()}
-        >
-          Vorschau
-        </button>
+        (art !== 'erinnerung' || tage.length > 0) && (
+          <button
+            type="button"
+            className={a.linkKnopf}
+            disabled={arbeitet || absender === null}
+            onClick={() => void zeigeVorschau()}
+          >
+            Vorschau
+          </button>
+        )
       )}
       {fehler && (
         <p className={f.fehler} role="alert">

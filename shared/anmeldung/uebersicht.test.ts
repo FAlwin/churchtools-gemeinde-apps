@@ -7,6 +7,7 @@ import {
 } from './formular';
 import {
   anmeldestand,
+  abgelaufen,
   aufmerksamkeit,
   belegungAus,
   einteilen,
@@ -312,5 +313,38 @@ describe('verborgeneUntergruppen', () => {
     expect(verborgeneUntergruppen([40, 41], [])).toBe(2);
     expect(verborgeneUntergruppen([40, 41], [40, 41])).toBe(0);
     expect(verborgeneUntergruppen([], [])).toBe(0);
+  });
+});
+
+describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6)', () => {
+  const LEITUNG = new Set([9]);
+  // Termin 01.06.2026, Frist 3 Monate → Löschdatum 01.09.2026; HEUTE 12.10.2026.
+  const juni = (belegung: Veranstaltung['belegung'], gruppeId = 9) =>
+    v(roh(5, 'Sommerfest', termin('2026-06-01T10:00'), { gruppeId }), belegung);
+  const leer = { aktiv: 0, wartend: 0, unbezahlt: null };
+
+  it('Löschdatum erreicht und keine Anmeldungen mehr → Hinweis; `darf` nur, wer löschen kann', () => {
+    const x = juni(leer);
+    expect(abgelaufen(x, HEUTE)).toBe('2026-09-01');
+    expect(aufmerksamkeit([x], [], LEITUNG, HEUTE, new Set([5]))).toEqual([
+      { art: 'endgueltig', v: x, seit: '2026-09-01', darf: true },
+    ]);
+    expect(aufmerksamkeit([x], [], LEITUNG, HEUTE)).toEqual([
+      { art: 'endgueltig', v: x, seit: '2026-09-01', darf: false },
+    ]);
+  });
+
+  it('D6: auch ohne Leitung in der Gruppe (anders als offene Zahlungen)', () => {
+    const x = juni(leer, 7);
+    expect(aufmerksamkeit([x], [], LEITUNG, HEUTE).map((h) => h.art)).toEqual(['endgueltig']);
+  });
+
+  it('noch Anmeldungen da (ChurchTools hat noch nicht gelöscht), Datum noch nicht erreicht oder Belegung unbekannt → nichts', () => {
+    expect(abgelaufen(juni({ aktiv: 1, wartend: 0, unbezahlt: null }), HEUTE)).toBeNull();
+    expect(abgelaufen(juni({ aktiv: 0, wartend: 2, unbezahlt: null }), HEUTE)).toBeNull();
+    expect(abgelaufen(juni(leer), '2026-08-31')).toBeNull();
+    expect(abgelaufen(juni(null), HEUTE)).toBeNull();
+    // Anstehend (Termin kommt noch) ist nie abgelaufen.
+    expect(abgelaufen(v(roh(6, 'Herbst', termin('2026-11-01T10:00')), leer), HEUTE)).toBeNull();
   });
 });

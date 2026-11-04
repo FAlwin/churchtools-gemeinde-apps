@@ -266,7 +266,8 @@ Veranstaltung. **Liegt das neue Datum heute oder früher, entfernt ChurchTools b
 (gemessen): Das Fenster fragt darum vorher („Jetzt 23 Anmeldungen löschen?“), und beim bloßen Öffnen schreibt die
 Erweiterung so ein Datum nie – die Karte zeigt dann „schon erreicht“. Entfernt wird die Mitgliedschaft; die Antworten
 bleiben im Verlauf von ChurchTools, bis die Gruppe gelöscht wird. Archivieren („Löschen“ unter „Verwalten“) schaltet die
-Abläufe ab – dann wird nicht mehr gelöscht.
+Abläufe ab – dann wird nicht mehr gelöscht. Darum geht „Löschen“ mit Anmeldungen erst, wenn ChurchTools sie gelöscht hat
+(siehe „Umbenennen, verschieben, löschen“).
 Mit dem Löschdatum schließt die Anmeldung spätestens am Tag davor (23:59 Uhr): Die Erweiterung zieht einen fehlenden oder
 späteren Anmeldeschluss vor, und im Fenster „Anmeldung“ lässt sich kein späterer speichern. Sonst bekäme, wer sich am
 Löschdatum noch anmeldet, die Bestätigung und wäre im selben Augenblick wieder entfernt (echte Prüfung 28.10.2026).
@@ -453,8 +454,21 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 - **Löschen schiebt ins Archiv.** Die Veranstaltung verschwindet aus der Liste, Gäste können sich nicht
   mehr anmelden, die Anmeldungen bleiben. Unter **„Gelöschte Veranstaltungen (Archiv)“** auf der
   Startseite lässt sie sich wiederherstellen (als Entwurf).
-- **Endgültig löschen** (mit allen Anmeldungen, nicht umkehrbar) geht nur aus dem Archiv und nur für
-  **Gruppen-Admins** – ebenso das Verschieben in ein anderes Team. Das legt ChurchTools so fest.
+- **Mit Anmeldungen erst nach dem Löschdatum** (A9-4): Archivieren schaltet in ChurchTools die Abläufe ab –
+  davor archiviert, würden die Anmeldungen nie gelöscht. „Löschen“ ist dann gesperrt und nennt den Tag; wer keine
+  weiteren Anmeldungen will, nimmt die Freigabe zurück. Ohne Anmeldungen geht es jederzeit. Ohne Löschdatum (kein
+  Termin) geht es mit dem Hinweis, dass ChurchTools dann nichts von selbst löscht. **„Rückgängig“** nach dem Archivieren
+  schaltet die Abläufe wieder ein.
+- **Nach dem Löschdatum** zeigt die Startseite allen in der Gruppe „…: Anmeldungen gelöscht“ – die Antworten stehen
+  noch im Verlauf, weg sind sie erst mit der Gruppe. Wer darf, löscht sie dort gleich **endgültig**; die Leitung legt
+  sie **ins Archiv**, dort löscht ein Admin.
+- **Endgültig löschen** (nicht umkehrbar, Namen eintippen) geht aus dem Archiv – oder, wenn ChurchTools die
+  Anmeldungen schon gelöscht hat, direkt von der Startseite. Das darf in ChurchTools nur ein **Gruppen-Admin**, eine
+  Leitung nicht (gemessen 04.11.2026); den Knopf zeigt die Erweiterung nach einem Lösch-Probelauf nur, wer ihn nutzen
+  kann. Das Verschieben in ein anderes Team dürfen ebenfalls nur Gruppen-Admins.
+- **Wiederherstellen** holt eine Veranstaltung als Entwurf zurück; die Abläufe gehen beim Freigeben wieder an. Ist das
+  Löschdatum dann schon vorbei und sind noch Anmeldungen da, fragt das Freigeben vorher – ChurchTools entfernte sie
+  sonst im selben Moment.
 
 ## Für Entwickler
 

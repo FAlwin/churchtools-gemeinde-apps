@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { einstellungenAlsText, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
   aufmerksamkeit,
@@ -13,6 +13,9 @@ import {
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { Startseite } from './Startseite';
+import * as E from './einrichten';
+import * as A from './archiv';
+import type { Aenderung } from './Rueckgaengig';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
 
@@ -20,6 +23,14 @@ import type { Uebersicht } from './veranstaltungen';
  * Die Startseite (A2, #480). Die Übersicht entsteht mit denselben Regeln wie im Betrieb
  * (`veranstaltungAus`, `einteilen`, `aufmerksamkeit`) – nicht als handgeschriebenes Ergebnis.
  */
+vi.mock('./einrichten', async (original) => ({
+  ...(await original<typeof import('./einrichten')>()),
+  loeschenEndgueltig: vi.fn(),
+}));
+vi.mock('./archiv', () => ({ insArchiv: vi.fn() }));
+const ei = vi.mocked(E);
+const ar = vi.mocked(A);
+
 const HEUTE = '2026-10-12';
 const JETZT = new Date('2026-10-12T10:00:00Z');
 
@@ -282,5 +293,79 @@ describe('Freigabe-Hinweis für Admins (A5, aus der A3-Abnahme)', () => {
       />,
     );
     expect(screen.getByText('Technik · Freigeben kannst du als Admin.')).toBeTruthy();
+  });
+});
+
+describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6–D8)', () => {
+  /** Sommerfest am 01.06.2026 → Löschdatum 01.09.2026; ChurchTools hat schon alle entfernt. */
+  function mitSommerfest(gruppeId: number, loeschbar: number[], admin = false) {
+    const x = v(
+      { id: 55, name: 'Sommerfest', gruppeId, statusId: 1, beginn: '2026-06-01T10:00' },
+      { aktiv: 0, wartend: 0, unbezahlt: null },
+    );
+    const geaendert = vi.fn<(a: Aenderung) => void>();
+    render(
+      <Startseite
+        start={START}
+        uebersicht={{
+          einteilung: einteilen([x]),
+          hinweise: aufmerksamkeit([x], [], new Set([9]), HEUTE, new Set(loeschbar)),
+          offen: new Map(),
+          verborgen: new Map(),
+        }}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={() => {}}
+        admin={admin}
+        onGeaendert={geaendert}
+      />,
+    );
+    return geaendert;
+  }
+  const bereich = () => within(abschnitt('Braucht deine Aufmerksamkeit'));
+
+  it('wer darf (Probelauf): „Endgültig löschen“ mit Namen eintippen, danach gemeldet – ohne Rückgängig', async () => {
+    ei.loeschenEndgueltig.mockResolvedValue();
+    const geaendert = mitSommerfest(9, [55]);
+    expect(bereich().getByText('Sommerfest: Anmeldungen gelöscht')).toBeTruthy();
+    expect(
+      bereich().getByText(/Seit dem Di, 01\.09\.2026 – die Antworten stehen aber noch im Verlauf/),
+    ).toBeTruthy();
+    fireEvent.click(bereich().getByRole('button', { name: 'Endgültig löschen' }));
+    const fenster = screen.getByRole('dialog', { name: 'Endgültig löschen?' });
+    expect(within(fenster).getByText(/Verlauf mit allen Antworten/)).toBeTruthy();
+    const los = within(fenster).getByRole<HTMLButtonElement>('button', {
+      name: 'Endgültig löschen',
+    });
+    expect(los.disabled).toBe(true);
+    fireEvent.change(within(fenster).getByRole('textbox'), { target: { value: 'Sommerfest' } });
+    fireEvent.click(los);
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    expect(ei.loeschenEndgueltig).toHaveBeenCalledWith(55);
+    expect(geaendert.mock.calls[0][0]).toEqual({
+      text: '„Sommerfest“ wurde endgültig gelöscht.',
+      rueckgaengig: null,
+    });
+  });
+
+  it('D8: Leitung ohne Löschrecht → „Ins Archiv“ und der Satz; danach gemeldet mit Rückgängig', async () => {
+    const meldung: Aenderung = {
+      text: '„Sommerfest“ ist im Archiv.',
+      rueckgaengig: async () => {},
+    };
+    ar.insArchiv.mockResolvedValue(meldung);
+    const geaendert = mitSommerfest(9, []);
+    expect(bereich().getByText(/Endgültig löschen kann ein Admin – im Archiv/)).toBeTruthy();
+    expect(bereich().queryByRole('button', { name: 'Endgültig löschen' })).toBeNull();
+    fireEvent.click(bereich().getByRole('button', { name: 'Ins Archiv' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalledWith(meldung));
+    expect(ar.insArchiv).toHaveBeenCalledWith(55, 'Sommerfest', E.STATUS.freigegeben);
+  });
+
+  it('D6: Mitglied ohne Leitung sieht den Hinweis, aber weder Löschen noch Archiv', () => {
+    mitSommerfest(7, []);
+    expect(bereich().getByText('Sommerfest: Anmeldungen gelöscht')).toBeTruthy();
+    expect(bereich().queryByRole('button', { name: 'Ins Archiv' })).toBeNull();
+    expect(bereich().queryByRole('button', { name: 'Endgültig löschen' })).toBeNull();
   });
 });

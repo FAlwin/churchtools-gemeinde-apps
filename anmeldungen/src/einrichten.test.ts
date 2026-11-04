@@ -37,6 +37,7 @@ import {
   STATUS,
   archivListe,
   loeschenEndgueltig,
+  darfEndgueltigLoeschen,
   setzeStatus,
   teamVon,
   umbenennen,
@@ -76,6 +77,8 @@ interface G {
 let gruppen: Map<number, G>;
 let naechste: number;
 let schlucken: Set<string>;
+/** Darf die angemeldete Person Gruppen löschen? Gemessen 04.11.2026: Admin ja (Probelauf 409), Leitung nein (403). */
+let loeschRecht: boolean;
 /** Neue Spalten: liefert `true` → ChurchTools legt sie mit anderem Namen an (nicht übernommen, A6-2b). */
 let schluckeNach: (() => boolean) | null = null;
 let termine: Map<number, Record<string, unknown>>;
@@ -285,6 +288,9 @@ function ct() {
       const g = gruppen.get(Number(r[1]));
       if (!g) return json(404, {});
       if (m === 'DELETE') {
+        if (!loeschRecht) return json(403, { message: `Forbidden to delete Group[${g.id}].` });
+        // Probelauf (gemessen 04.11.2026): 409 mit den Verweisen, gelöscht wird nichts.
+        if (url.searchParams.get('dry_run') === 'true') return json(409, { references: [] });
         if (!schlucken.has('DELETE')) gruppen.delete(g.id);
         return json(204, {});
       }
@@ -346,6 +352,7 @@ beforeEach(() => {
   gruppen = new Map();
   naechste = 100;
   schlucken = new Set();
+  loeschRecht = true;
   schluckeNach = null;
   termine = new Map();
   aufrufe = [];
@@ -829,8 +836,9 @@ describe('Verwalten (A4-Nachtrag)', () => {
     ]);
   });
 
-  it('endgültig löschen: nur aus dem Archiv; danach muss die Gruppe weg sein', async () => {
+  it('endgültig löschen: mit Anmeldungen nur aus dem Archiv; danach muss die Gruppe weg sein', async () => {
     const id = await neu();
+    mitglieder.set(id, [{ personId: 4, groupTypeRoleId: 32, groupMemberStatus: 'waiting' }]);
     await expect(loeschenEndgueltig(id)).rejects.toMatchObject({ status: 409 });
     expect(gruppen.has(id)).toBe(true);
     await setzeStatus(id, STATUS.archiviert);
@@ -839,6 +847,23 @@ describe('Verwalten (A4-Nachtrag)', () => {
     schlucken.delete('DELETE');
     await loeschenEndgueltig(id);
     expect(gruppen.has(id)).toBe(false);
+  });
+
+  it('A9-4 D3: ohne Anmeldungen (ChurchTools hat gelöscht) geht es auch ohne Archiv – die Leitung zählt nicht mit', async () => {
+    const id = await neu();
+    mitglieder.set(id, [{ personId: 1, groupTypeRoleId: 35, groupMemberStatus: 'active' }]);
+    await loeschenEndgueltig(id);
+    expect(gruppen.has(id)).toBe(false);
+  });
+
+  it('A9-4 D4: darf löschen? – über den Probelauf (409 = ja, 403 = nein); der Probelauf löscht nichts', async () => {
+    const id = await neu();
+    expect(await darfEndgueltigLoeschen(id)).toBe(true);
+    expect(gruppen.has(id)).toBe(true);
+    expect(aufrufe).toContain(`DELETE /groups/${id}`);
+    loeschRecht = false;
+    expect(await darfEndgueltigLoeschen(id)).toBe(false);
+    expect(gruppen.has(id)).toBe(true);
   });
 
   it('wiederherstellen: schreibt Name, Einstellungen, Plätze und Status zurück – nur was sich unterscheidet', async () => {

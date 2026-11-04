@@ -259,6 +259,24 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     warn.mockRestore();
   });
 
+  it('A9-4 D5: Freigeben entfernte sofort Anmeldungen (Löschdatum vorbei) → erst Rückfrage, dann mit Bestätigung', async () => {
+    stelle(true);
+    m.freigeben.mockResolvedValue();
+    ab.ablaeufeEinrichten.mockRejectedValueOnce(new AB.LoeschdatumVorbei('2026-10-01', 12));
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    const frage = await screen.findByRole('dialog', { name: 'Sofort löschen?' });
+    expect(within(frage).getByText(/alle 12 Anmeldungen/)).toBeTruthy();
+    expect(m.freigeben).not.toHaveBeenCalled();
+    fireEvent.click(within(frage).getByRole('button', { name: 'Trotzdem freigeben' }));
+    await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(ab.ablaeufeEinrichten).toHaveBeenLastCalledWith(91, 1, undefined, undefined, {
+      loeschenBestaetigt: true,
+    });
+  });
+
   it('mit Recht: Entwurf freigeben (nach Rückfrage) – erst Leitung und Vorgaben, dann frei, dann neu geladen', async () => {
     stelle(true);
     m.freigeben.mockResolvedValue();
@@ -283,7 +301,9 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       m.freigeben.mock.invocationCallOrder[0],
     );
     // A9-1: Bestätigungsmails vor dem Freigeben einrichten – Absender ist, wer freigibt (Alwin, 1).
-    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(91, 1);
+    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(91, 1, undefined, undefined, {
+      loeschenBestaetigt: false,
+    });
     expect(ab.ablaeufeEinrichten.mock.invocationCallOrder[0]).toBeGreaterThan(
       m.anmeldenVorbereiten.mock.invocationCallOrder[0],
     );

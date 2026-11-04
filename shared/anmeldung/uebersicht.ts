@@ -17,6 +17,7 @@ import {
   type TerminAngabe,
 } from './formular';
 import { anmeldungenAus, listenZahlen, mitgliederstandAus, type MitgliedRoh } from './liste';
+import { loeschDatum } from './ablaeufe';
 import { wartenTrotzPlatz } from './nachpruefung';
 import { preisKurz } from './preis';
 
@@ -231,7 +232,9 @@ export type Hinweis =
   | { art: 'freigabe'; v: Veranstaltung; darfFreigeben: boolean }
   /** `frei`: `null` ohne Platzgrenze. `wartend` zählt Personen, nicht Anmeldungen. */
   | { art: 'nachruecken'; v: Veranstaltung; frei: number | null; wartend: number }
-  | { art: 'zahlungen'; v: Veranstaltung; offen: number };
+  | { art: 'zahlungen'; v: Veranstaltung; offen: number }
+  /** A9-4 (D3): Anmeldungen gelöscht, die Antworten stehen noch im Verlauf. `darf`: endgültig löschen (D4). */
+  | { art: 'endgueltig'; v: Veranstaltung; seit: string; darf: boolean };
 
 /**
  * **„Braucht deine Aufmerksamkeit“**, wie im Entwurf:
@@ -239,17 +242,26 @@ export type Hinweis =
  * - Entwurf wartet auf Freigabe (freigeben darf die Leitung der Gruppe),
  * - Plätze frei, aber jemand wartet → nachrücken (das macht ChurchTools bewusst nicht von selbst),
  * - offene Zahlungen – **nur für die Leitung**, für alle anderen wäre es Lärm.
- * Vorbei ist vorbei: dort gibt es keine Hinweise.
+ * - A9-4 (D3, D6): Löschdatum erreicht und keine Anmeldungen mehr → endgültig löschen – **für alle in der Gruppe**;
+ *   den Knopf bekommt, wer darf (`loeschbar`, D4). Dafür braucht es die Belegung auch der vergangenen Veranstaltung.
+ * Sonst ist vorbei vorbei: dort gibt es keine Hinweise.
  */
 export function aufmerksamkeit(
   liste: Veranstaltung[],
   kaputt: KaputteVeranstaltung[],
   leitungIn: ReadonlySet<number>,
+  heute = '',
+  loeschbar: ReadonlySet<number> = new Set(),
 ): Hinweis[] {
   const out: Hinweis[] = kaputt.map((k) => ({ art: 'kaputt' as const, ...k }));
   for (const v of [...liste].sort(frueherZuerst)) {
     if (v.phase === 'entwurf') {
       out.push({ art: 'freigabe', v, darfFreigeben: leitungIn.has(v.gruppeId) });
+      continue;
+    }
+    const seit = abgelaufen(v, heute);
+    if (seit) {
+      out.push({ art: 'endgueltig', v, seit, darf: loeschbar.has(v.id) });
       continue;
     }
     if (v.phase !== 'anstehend' || !v.belegung) continue;
@@ -262,6 +274,17 @@ export function aufmerksamkeit(
     if (unbezahlt && leitungIn.has(v.gruppeId)) out.push({ art: 'zahlungen', v, offen: unbezahlt });
   }
   return out;
+}
+
+/**
+ * **Abgelaufen** (A9-4, D3): vorbei, das Löschdatum ist erreicht und ChurchTools hat keine Anmeldungen mehr – dann bleibt
+ * nur, die Gruppe samt Verlauf zu löschen. Liefert das Löschdatum oder `null`. Ohne Belegung (nicht geladen, kein Recht)
+ * nie – sonst hieße es „gelöscht“, obwohl noch jemand da sein kann.
+ */
+export function abgelaufen(v: Veranstaltung, heute: string): string | null {
+  if (v.phase !== 'vorbei' || !v.belegung || v.belegung.aktiv + v.belegung.wartend > 0) return null;
+  const datum = loeschDatum(v.einstellungen);
+  return datum !== null && datum <= heute ? datum : null;
 }
 
 /** Wie viele Untergruppen gibt es, die man nicht sehen darf? (Hierarchie ist für alle lesbar, A2.) */

@@ -7,7 +7,8 @@ import {
   type NeuePersonVorgaben,
   type Stammdaten,
 } from '@shared/anmeldung/vorbereiten';
-import { ablaeufeEinrichten, absenderAus } from './ablaeufe';
+import { LoeschdatumVorbei, ablaeufeEinrichten, absenderAus } from './ablaeufe';
+import { tagPunkt } from '@shared/ct/datum';
 import {
   anmeldeBedingungen,
   anmeldenVorbereiten,
@@ -55,6 +56,8 @@ export function FreigebenFenster({
   const [vorgaben, setVorgaben] = useState<Partial<NeuePersonVorgaben> | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** A9-4 (D5): Beim Freigeben entfernte ChurchTools sofort Anmeldungen – erst fragen. */
+  const [sofort, setSofort] = useState<LoeschdatumVorbei | null>(null);
   const [fehlt, setFehlt] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -90,14 +93,18 @@ export function FreigebenFenster({
       return neu;
     });
 
-  async function los() {
+  async function los(loeschenBestaetigt = false) {
     if (!vorgabenVollstaendig(vorgaben)) return;
     setArbeitet(true);
     setFehler(null);
+    setSofort(null);
     try {
       await anmeldenVorbereiten(id, [...gewaehlt], vorgaben);
       const mails = await darfAblaeufeEinrichten(id);
-      if (mails) await ablaeufeEinrichten(id, absenderAus(gewaehlt, ich));
+      if (mails)
+        await ablaeufeEinrichten(id, absenderAus(gewaehlt, ich), undefined, undefined, {
+          loeschenBestaetigt,
+        });
       await pflichtNachziehen(id);
       await freigeben(id);
       const offen = await anmeldeBedingungen(id);
@@ -111,10 +118,43 @@ export function FreigebenFenster({
       }
       setFehlt(offen);
     } catch (e) {
-      setFehler(fehlerMeldung(e).text);
+      // A9-4 (D5): z. B. aus dem Archiv zurückgeholt, das Löschdatum ist vorbei, und es sind noch Anmeldungen da.
+      if (e instanceof LoeschdatumVorbei) setSofort(e);
+      else setFehler(fehlerMeldung(e).text);
     }
     setArbeitet(false);
   }
+
+  if (sofort)
+    return (
+      <Sheet
+        title="Sofort löschen?"
+        onClose={onClose}
+        zurueck={() => setSofort(null)}
+        onAbbrechen={() => setSofort(null)}
+        beschaeftigt={arbeitet}
+        knoepfe={
+          <FensterKnopf art="gefahr" disabled={arbeitet} onClick={() => void los(true)}>
+            {arbeitet ? 'Einen Moment …' : 'Trotzdem freigeben'}
+          </FensterKnopf>
+        }
+      >
+        <p className={f.fehler}>
+          Das Löschdatum ({tagPunkt(sofort.datum)}) ist schon erreicht. Beim Freigeben entfernt
+          ChurchTools <b>sofort</b>{' '}
+          {sofort.anzahl === 1
+            ? 'die eine Anmeldung'
+            : sofort.anzahl === undefined
+              ? 'alle Anmeldungen'
+              : `alle ${sofort.anzahl} Anmeldungen`}
+          . Das lässt sich nicht rückgängig machen.
+        </p>
+        <p className={f.hinweis}>
+          Sollen sie bleiben: abbrechen und unter „Datenschutz“ die Frist verlängern oder den Termin
+          prüfen.
+        </p>
+      </Sheet>
+    );
 
   if (fehlt)
     return (

@@ -7,6 +7,7 @@ import { anmeldeLink, ortszeitAus, terminZeile } from '@shared/anmeldung/termin'
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
+import { loeschDatum } from '@shared/anmeldung/ablaeufe';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
@@ -789,6 +790,15 @@ export function VeranstaltungSeite({
           teams={teams}
           admin={daten.admin}
           anmeldungen={daten.anmeldungen}
+          // A9-4: Im Entwurf liest die Seite die Abläufe nicht – dort zählt das Datum aus den Einstellungen.
+          loeschDatum={
+            entwurf
+              ? loeschDatum(e)
+              : ablauf !== null && ablauf !== 'fehler'
+                ? ablauf.loeschDatum
+                : undefined
+          }
+          heute={heute}
           onClose={() => setFenster(null)}
           onGeaendert={(aenderung, weg) => {
             setFenster(null);

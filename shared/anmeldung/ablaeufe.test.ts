@@ -6,6 +6,7 @@ import {
   ROUTINEN,
   ablaufMails,
   anmeldeschlussAm,
+  archivStand,
   anmeldeschlussVorLoeschen,
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
@@ -489,5 +490,26 @@ describe('Erinnerungen (A9-3b)', () => {
   it('standardBetreff je Mail', () => {
     expect(standardBetreff('erinnerung', 'Camp')).toBe('Bald ist es so weit: Camp');
     expect(standardBetreff('platz', 'Camp')).toBe('Camp: Anmeldung bestätigt');
+  });
+});
+
+describe('archivStand (A9-4, D1/D2)', () => {
+  it('ohne Anmeldungen frei – egal, ob und wann gelöscht wird', () => {
+    expect(archivStand(0, '2027-02-20', '2026-11-04')).toEqual({ art: 'frei' });
+    expect(archivStand(0, null, '2026-11-04')).toEqual({ art: 'frei' });
+  });
+  it('D1: mit Anmeldungen gesperrt bis ChurchTools gelöscht hat – `faellig` ab dem Tag selbst', () => {
+    expect(archivStand(3, '2027-02-20', '2026-11-04')).toEqual({
+      art: 'gesperrt',
+      ab: '2027-02-20',
+      faellig: false,
+    });
+    expect(archivStand(3, '2026-11-04', '2026-11-04')).toMatchObject({ faellig: true });
+  });
+  it('D2: ohne Löschdatum (kein Termin, keine Abläufe) erlaubt, mit Hinweis', () => {
+    expect(archivStand(3, null, '2026-11-04')).toEqual({ art: 'ohneLoeschen' });
+  });
+  it('Anzahl unbekannt gilt als „mit Anmeldungen“', () => {
+    expect(archivStand(null, '2027-02-20', '2026-11-04').art).toBe('gesperrt');
   });
 });

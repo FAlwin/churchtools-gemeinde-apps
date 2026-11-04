@@ -974,12 +974,47 @@ export async function archivListe(artId: number): Promise<Archiviert[]> {
 }
 
 /**
- * **Endgültig löschen** – nur aus dem Archiv und nur für Gruppen-Admins. Löscht die Gruppe samt allen
- * Anmeldungen; ChurchTools kann das nicht zurückholen. Nachgeprüft: Danach muss die Gruppe 404 liefern.
+ * **Darf die angemeldete Person diese Veranstaltung endgültig löschen?** (A9-4, D4) – über den Probelauf von ChurchTools
+ * (`DELETE …?dry_run=true`), der nichts löscht. Gemessen 04.11.2026 (Achte Runde): Leitung → 403, Admin → 409 mit der
+ * Liste der Verweise. So sieht den Knopf genau, wer kann – auch wenn das Recht nur für einzelne Gruppen gilt. Antwortet
+ * ChurchTools anders (z. B. vorübergehend nicht), gilt „nein“: Dann bleibt der Weg über das Archiv, nichts geht verloren.
+ */
+export async function darfEndgueltigLoeschen(id: number): Promise<boolean> {
+  try {
+    await ctAnfrage(`/groups/${id}?dry_run=true`, { method: 'DELETE' });
+    return true;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) return true;
+    if (!(e instanceof ApiError && e.status === 403))
+      console.warn('Lösch-Probelauf ohne klare Antwort', id, e);
+    return false;
+  }
+}
+
+/** Wie viele Anmeldungen (Teilnehmende mit Platz oder wartend) die Veranstaltung in ChurchTools noch hat. */
+export async function anmeldungenIn(id: number): Promise<number> {
+  const [mitglieder, rolle] = await Promise.all([
+    ctAlleSeiten<{ groupTypeRoleId?: number }>(`/groups/${id}/members`, 200),
+    teilnehmerRolle(id),
+  ]);
+  return mitglieder.filter((m) => m.groupTypeRoleId === rolle).length;
+}
+
+/**
+ * **Endgültig löschen** – aus dem Archiv oder (A9-4, D3) wenn keine Anmeldungen mehr da sind (nach dem Löschdatum hat
+ * ChurchTools sie entfernt; ihre Antworten stehen aber noch im Verlauf der Gruppe). Darf in ChurchTools nur ein Admin
+ * (`darfEndgueltigLoeschen`). Löscht die Gruppe samt Verlauf; ChurchTools kann das nicht zurückholen. Nachgeprüft:
+ * Danach muss die Gruppe 404 liefern.
  */
 export async function loeschenEndgueltig(id: number): Promise<void> {
-  if ((await gruppe(id)).information?.groupStatusId !== STATUS.archiviert)
-    throw new ApiError(409, 'Endgültig löschen geht nur aus dem Archiv.');
+  if (
+    (await gruppe(id)).information?.groupStatusId !== STATUS.archiviert &&
+    (await anmeldungenIn(id)) > 0
+  )
+    throw new ApiError(
+      409,
+      'Endgültig löschen geht nur aus dem Archiv – oder wenn ChurchTools die Anmeldungen schon gelöscht hat.',
+    );
   await ctAnfrage(`/groups/${id}`, { method: 'DELETE' });
   const noch = await gruppe(id).then(
     () => true,

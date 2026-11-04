@@ -3,7 +3,10 @@ import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import type { MeineGruppe } from '@shared/ct/gruppen';
+import { archivStand } from '@shared/anmeldung/ablaeufe';
 import { STATUS, setzeStatus, umbenennen, verschieben } from './einrichten';
+import { insArchiv } from './archiv';
+import { datumText } from './anzeige';
 import { Fehler } from './Bearbeiten';
 import { useSpeichern } from './useSpeichern';
 import type { Aenderung } from './Rueckgaengig';
@@ -17,6 +20,9 @@ import f from './Formular.module.scss';
  * Gemessen (13.10.2026): Umbenennen, Freigabe zurücknehmen und Archivieren darf, wer einrichten darf;
  * Verschieben (und endgültig Löschen, im Archiv) nur Gruppen-Admins. **Löschen heißt hier: ins Archiv**
  * (Alwin: „erst Archiv“) – dort lässt es sich wiederherstellen.
+ *
+ * A9-4 (D1/D2): Archivieren schaltet die Abläufe ab – mit Anmeldungen geht es darum erst, wenn ChurchTools sie gelöscht
+ * hat (`archivStand`). Löscht ChurchTools gar nicht (kein Termin, keine Abläufe), geht es mit Hinweis.
  */
 
 type Ansicht = 'auswahl' | 'name' | 'zurueck' | 'verschieben' | 'archiv';
@@ -29,6 +35,8 @@ export function VerwaltenFenster({
   teams,
   admin,
   anmeldungen,
+  loeschDatum,
+  heute,
   onClose,
   onGeaendert,
 }: {
@@ -41,6 +49,12 @@ export function VerwaltenFenster({
   /** Gruppen-Admin: darf verschieben. */
   admin: boolean;
   anmeldungen: number | null;
+  /**
+   * Das Löschdatum, wie es in ChurchTools steht (A9-4) – `null`: es wird nicht gelöscht; `undefined`: ließ sich (noch)
+   * nicht lesen, dann ist Löschen mit Anmeldungen vorsichtshalber gesperrt.
+   */
+  loeschDatum: string | null | undefined;
+  heute: string;
   onClose: () => void;
   /** `zurUebersicht`: Die Veranstaltung ist nicht mehr zu sehen (archiviert) → zur Übersicht. */
   onGeaendert: (a: Aenderung, zurUebersicht: boolean) => void;
@@ -63,6 +77,12 @@ export function VerwaltenFenster({
    * gab es keinen Rückweg – „Abbrechen“ schloss das ganze Fenster.
    */
   const zurAuswahl = () => setAnsicht('auswahl');
+  const archiv =
+    loeschDatum === undefined
+      ? anmeldungen === 0
+        ? ({ art: 'frei' } as const)
+        : ({ art: 'unbekannt' } as const)
+      : archivStand(anmeldungen, loeschDatum, heute);
 
   if (ansicht === 'name') {
     const sauber = neuerName.trim();
@@ -203,16 +223,16 @@ export function VerwaltenFenster({
           <FensterKnopf
             art="gefahr"
             disabled={arbeitet}
-            onClick={() =>
-              tun(
-                () => setzeStatus(id, STATUS.archiviert),
-                {
-                  text: `„${name}“ ist im Archiv.`,
-                  rueckgaengig: () => setzeStatus(id, statusId),
+            onClick={() => {
+              // „Rückgängig“ holt sie samt Abläufen zurück (`insArchiv`) – ChurchTools schaltet sie beim Archivieren ab.
+              let a: Aenderung | null = null;
+              void speichern(
+                async () => {
+                  a = await insArchiv(id, name, statusId);
                 },
-                true,
-              )
-            }
+                () => a && onGeaendert(a, true),
+              );
+            }}
           >
             {arbeitet ? 'Wird archiviert …' : 'Ins Archiv verschieben'}
           </FensterKnopf>
@@ -223,6 +243,12 @@ export function VerwaltenFenster({
           können sich nicht mehr anmelden.{angemeldet} Wiederherstellen kannst du sie jederzeit
           unter „Archiv“ auf der Startseite.
         </p>
+        {archiv.art === 'ohneLoeschen' && (
+          <p className={f.hinweis}>
+            Ohne Löschdatum löscht ChurchTools die Anmeldungen <b>nicht von selbst</b> – im Archiv
+            lassen sie sich endgültig löschen (das darf ein Admin).
+          </p>
+        )}
         <Fehler text={fehler} />
       </Sheet>
     );
@@ -251,11 +277,27 @@ export function VerwaltenFenster({
         />
         <Aktion
           titel="Löschen"
-          text="Kommt ins Archiv und lässt sich dort wiederherstellen"
+          text={
+            archiv.art === 'gesperrt'
+              ? archiv.faellig
+                ? 'Geht, sobald ChurchTools die Anmeldungen gelöscht hat (in der Nacht)'
+                : `Geht ab dem ${datumText(archiv.ab)} – dann sind die Anmeldungen gelöscht`
+              : archiv.art === 'unbekannt'
+                ? 'Das Löschdatum ließ sich nicht lesen – bitte die Seite neu laden'
+                : 'Kommt ins Archiv und lässt sich dort wiederherstellen'
+          }
+          gesperrt={archiv.art === 'gesperrt' || archiv.art === 'unbekannt'}
           gefahr
           onClick={() => setAnsicht('archiv')}
         />
       </div>
+      {archiv.art === 'gesperrt' && (
+        <p className={f.hinweis}>
+          Im Archiv löschte ChurchTools die Anmeldungen nicht mehr – darum erst nach dem Löschdatum.
+          {statusId === STATUS.freigegeben &&
+            ' Sollen sich keine weiteren anmelden: „Freigabe zurücknehmen“.'}
+        </p>
+      )}
     </Sheet>
   );
 }

@@ -8,6 +8,7 @@ import {
   renameArrangementFile,
 } from './setlistBuilder.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
+import { liedAblage } from './ctLiedAblage.testutil.js';
 
 /**
  * #321: Die drei Wege der Dateiverwaltung – auflisten, hinzufügen, löschen.
@@ -299,12 +300,16 @@ describe('holeChordProAusSongSelect – erst holen, dann ersetzen', () => {
   /** Wie `mockCt`, aber mit CSRF-Token und der doppelt verpackten SongSelect-Antwort. */
   function mockSongSelect(opts: { downloadScheitert?: boolean; ohneText?: boolean } = {}) {
     const w: { method: string; url: string; body: string }[] = [];
+    const ablage = liedAblage(LIED, { basis: 'https://x.church.tools' });
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
       const method = init?.method ?? 'GET';
       if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
-      if (method === 'GET' && /\/api\/songs\/12$/.test(u)) return Promise.resolve(jsonRes(LIED));
+      if (method === 'GET' && /\/api\/songs\/12$/.test(u)) {
+        return Promise.resolve(jsonRes(ablage.lesen()));
+      }
       w.push({ method, url: u, body: String(init?.body ?? '') });
+      ablage.merke(u, init);
       if (u.includes('churchservice/ajax')) {
         if (opts.downloadScheitert) return Promise.resolve(jsonRes(null, 502));
         /**
@@ -418,17 +423,24 @@ describe('holeChordProAusSongSelect – erst holen, dann ersetzen', () => {
  */
 describe('originalNotenblattSchreiben – erst hochladen, dann ersetzen', () => {
   /** Wie `mockCt`, aber der Upload kann scheitern. */
-  function mockUpload(opts: { uploadScheitert?: boolean } = {}) {
+  function mockUpload(opts: { uploadScheitert?: boolean; uploadVerschwindet?: boolean } = {}) {
     const w: { method: string; url: string }[] = [];
+    const ablage = liedAblage(LIED, {
+      basis: 'https://x.church.tools',
+      uploadVerschwindet: opts.uploadVerschwindet,
+    });
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
       const method = init?.method ?? 'GET';
       if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
-      if (method === 'GET' && /\/api\/songs\/12$/.test(u)) return Promise.resolve(jsonRes(LIED));
+      if (method === 'GET' && /\/api\/songs\/12$/.test(u)) {
+        return Promise.resolve(jsonRes(ablage.lesen()));
+      }
       w.push({ method, url: u });
       if (opts.uploadScheitert && u.includes('/api/files/song_arrangement/')) {
         return Promise.resolve(jsonRes(null, 502));
       }
+      ablage.merke(u, init);
       return Promise.resolve(jsonRes(null, 200));
     });
     return w;
@@ -452,6 +464,23 @@ describe('originalNotenblattSchreiben – erst hochladen, dann ersetzen', () => 
     expect(geloescht.some((u) => u.endsWith('/api/files/3'))).toBe(false); // … nicht die Version
     expect(geloescht.some((u) => u.endsWith('/api/files/2'))).toBe(false); // … und nicht die PDF
     expect(geloescht).toHaveLength(1);
+  });
+
+  it('löscht NICHTS, wenn ChurchTools Erfolg meldet, aber nichts anlegt (#842)', async () => {
+    // Die Lehre vom 11.08.2026: Erst die neu gelesene Liste zählt, nicht das 2xx des Hochladens.
+    const w = mockUpload({ uploadVerschwindet: true });
+    await expect(originalNotenblattSchreiben(COOKIE, 12, 500, 'x')).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(w.some((x) => x.method === 'DELETE')).toBe(false);
+  });
+
+  it('liefert die Liste danach – mit dem neuen Original, ohne das alte', async () => {
+    mockUpload();
+    const liste = await originalNotenblattSchreiben(COOKIE, 12, 500, 'x');
+    const originale = liste.filter((d) => d.name === 'Treu.chordpro');
+    expect(originale).toHaveLength(1);
+    expect(originale[0].fileId).not.toBe(1);
   });
 
   it('löscht NICHTS, wenn der Upload scheitert – ein Lied ohne Blatt wäre schlimmer als ein Doppel', async () => {

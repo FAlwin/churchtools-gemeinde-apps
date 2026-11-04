@@ -75,6 +75,38 @@ function chordproHochladen(
   );
 }
 
+/**
+ * **Hochladen und nachlesen** – erst danach darf der Aufrufer die alte Fassung löschen (Lehre vom 11.08.2026, #842).
+ *
+ * ChurchTools kann eine Datei nicht ersetzen, also wird die neue daneben gelegt und die alte gelöscht. Bis zum
+ * 04.11.2026 wurde gelöscht, sobald das Hochladen **keinen Fehler warf** – antwortete ChurchTools mit 2xx, ohne die
+ * Datei anzulegen, war die Version weg. Jetzt zählt nur die neu gelesene Liste: Steht dort keine Datei, die vorher
+ * nicht da war und die passt, wird nichts gelöscht. Dieselbe Regel hat die Personen-Ablage (`ersetze` in
+ * `personenAblage.ts`). Neu und alt heißen oft gleich (Text geändert, Name nicht) – unterschieden wird über die ID.
+ *
+ * Liefert die Dateien des Arrangements, wie ChurchTools sie nach dem Hochladen liest.
+ */
+async function hochladenUndNachlesen(
+  s: CtNotenSchreiber,
+  songId: number,
+  arrangementId: number,
+  datei: HochzuladendeDatei,
+  meldungen: UploadMeldungen,
+  vorher: (number | null)[],
+  passt: (f: CtArrangementFile) => boolean,
+): Promise<CtArrangementFile[]> {
+  await s.hochladen(arrangementId, datei, meldungen);
+  const arr = arrangementAus(await s.song(songId), arrangementId, (st, m) => s.fehler(st, m));
+  const neu = arr.files.filter((f) => passt(f) && !vorher.includes(fileIdFromUrl(f.fileUrl)));
+  if (neu.length === 0) {
+    throw s.fehler(
+      502,
+      'ChurchTools hat das Speichern bestätigt, die Datei ist aber nicht da. Es wurde nichts gelöscht.',
+    );
+  }
+  return arr.files;
+}
+
 /** Löscht eine Datei in ChurchTools. „Schon weg" ist kein Fehler. */
 export async function dateiLoeschen(s: CtSchreiber, fileId: number): Promise<void> {
   await s.schreibe(`/files/${fileId}`, {
@@ -173,8 +205,19 @@ export async function versionAendern(
 
   // Text: neuer Text oder der bisherige Inhalt (bei reiner Umbenennung).
   const text = aenderung.text ?? (await s.dateiText(aktuell.file.fileUrl));
-  await chordproHochladen(s, arrangementId, versionFileName(songName, neuerName), text);
   const alteId = fileIdFromUrl(aktuell.file.fileUrl);
+  await hochladenUndNachlesen(
+    s,
+    songId,
+    arrangementId,
+    { filename: versionFileName(songName, neuerName), mime: 'text/plain', inhalt: text },
+    NOTEN_MELDUNGEN,
+    versionen.map((v) => fileIdFromUrl(v.file.fileUrl)),
+    (f) => {
+      const name = versionNameOf(f);
+      return name !== null && versionSlug(name) === neuerKey;
+    },
+  );
   if (alteId) await dateiLoeschen(s, alteId);
   return { key: neuerKey, name: neuerName, text, writtenKey: metaValue(text, 'key') };
 }
@@ -301,13 +344,22 @@ export async function notenblattSchreiben(
   const arr = arrangementAus(song, arrangementId, (st, m) => s.fehler(st, m));
   const vorher = arr.files.filter(isOriginalChordpro).map((f) => fileIdFromUrl(f.fileUrl));
 
-  await s.hochladen(
+  const danach = await hochladenUndNachlesen(
+    s,
+    songId,
     arrangementId,
     { filename: `${safeFileName(song.name)}.chordpro`, mime: 'text/plain', inhalt: text },
     DATEI_MELDUNGEN,
+    vorher,
+    isOriginalChordpro,
   );
+  const weg = new Set<number>();
   for (const id of vorher) {
-    if (id !== null) await dateiLoeschen(s, id).catch(() => undefined);
+    if (id === null) continue;
+    await dateiLoeschen(s, id).then(
+      () => weg.add(id),
+      () => undefined,
+    );
   }
-  return dateienListen(s, songId, arrangementId);
+  return arrangementFileEntries(danach.filter((f) => !weg.has(fileIdFromUrl(f.fileUrl) ?? -1)));
 }

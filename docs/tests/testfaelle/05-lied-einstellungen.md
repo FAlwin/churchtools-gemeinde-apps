@@ -252,7 +252,8 @@ hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
   Knöpfe je Zeile), `dateiVerwaltung.test.ts` (Größe, Doppel, Wortlaut der Rückfrage, Namensregel beim Umbenennen),
   `useArrangementDateien.test.tsx` (Meldung hängt nicht am Auffrischen; Datei- und Versionsweg beim Umbenennen),
   `DateiUmbenennenFenster.test.tsx`, `arrangementFileVerwaltung.test.ts` (Zugehörigkeit, Reihenfolge, Umbenennen mit
-  Nachlesen), `dateiController.umbenennen.test.ts`, `e2e/dateien-umbenennen.spec.ts` (Kette mit echtem Server). Von Hand bleiben das **Teilen-Menü auf dem iPad** (Punkt 2), der
+  Nachlesen; Original ersetzen nur, wenn das neue nachgelesen dasteht, #842), `ctWrite.test.ts` (Version ändern und
+  umbenennen: alte Datei erst weg, wenn die neue mit dem richtigen Namen dasteht, #842), `dateiController.umbenennen.test.ts`, `e2e/dateien-umbenennen.spec.ts` (Kette mit echtem Server). Von Hand bleiben das **Teilen-Menü auf dem iPad** (Punkt 2), der
   Blick nach ChurchTools (Punkte 3, 7, 8) und das Recht eines Nicht-Admins (Punkt 10).
 - **Historie:** #321; Umbenennen 31.10.2026 (gemessen: `musik-planung/docs/messung-datei-umbenennen-31.10.md`)
 

@@ -166,6 +166,14 @@ describe('Notenblatt aus SongSelect holen', () => {
     expect(await ct.geschrieben[1].datei?.text()).toBe('{key: D}');
   });
 
+  it('meldet ChurchTools beim Hochladen Erfolg, legt aber nichts an: das alte Original bleibt (#842)', async () => {
+    liedMitTonart('D');
+    ct.schreibAntworten[AJAX] = ccli({ data: { chordPro: '{title: Treu}\n{key: D}' } });
+    ct.uploadVerschwindet = true;
+    await expect(notenblattAusCcli(7, 70, 4330228)).rejects.toMatchObject({ status: 502 });
+    expect(ct.aufrufe.filter((a) => a.startsWith('DELETE'))).toEqual([]);
+  });
+
   it('liefert CCLI nichts, wird auch nichts gelöscht', async () => {
     liedMitTonart('D');
     ct.schreibAntworten[AJAX] = ccli({ data: { type: 'songChordPro' } });

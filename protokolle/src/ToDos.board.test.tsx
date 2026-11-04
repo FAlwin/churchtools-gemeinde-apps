@@ -8,6 +8,7 @@ import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
 import { merkSchluessel } from './useToDoEinstellungen';
 import { ToDos } from './ToDos';
+import { abgleich } from './ohneAbgleich.testutil';
 
 /**
  * Board der To-Dos (S7-3) – das Ziehen selbst ist eine Attrappe (was beim Loslassen geschieht, prüft
@@ -36,6 +37,10 @@ vi.mock('./lesen', async (orig) => ({
   ladeUebersicht: vi.fn(),
 }));
 vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn() }));
+// Ohne Netz: die Einstellungen gleichen sonst echt mit ChurchTools ab und loggen nach dem Testende (`ohneAbgleich`).
+vi.mock('./useToDoEinstellungen', async (orig) =>
+  (await import('./ohneAbgleich.testutil')).ohneAbgleich(orig),
+);
 vi.mock('./aufgabenSchreiben', async (orig) => ({
   ...(await orig<typeof import('./aufgabenSchreiben')>()),
   aufgabeAendern: vi.fn(),
@@ -124,6 +129,13 @@ beforeEach(() => {
 });
 
 describe('Board (S7-3)', () => {
+  it('gleicht die Einstellungen im Test ohne Netz ab (`ohneAbgleich`) – sonst loggt es nach dem Testende', async () => {
+    abgleich.mockClear();
+    zeige();
+    await screen.findByRole('button', { name: 'Board' });
+    await waitFor(() => expect(abgleich).toHaveBeenCalled());
+  });
+
   it('„Board“ gewählt und gemerkt; nach Status drei Spalten, „+ Neues To-Do“ belegt den Status vor', async () => {
     zeige();
     fireEvent.click(await screen.findByRole('button', { name: 'Board' }));

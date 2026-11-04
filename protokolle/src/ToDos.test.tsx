@@ -10,6 +10,7 @@ import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
 import { ToDos } from './ToDos';
 import { Startseite } from './Startseite';
+import { abgleich } from './ohneAbgleich.testutil';
 
 /** Reiter „To-Dos“ (S7-1) – Lesen und Schreiben sind Attrappen; was sie tun, prüfen `lesen.test.ts` und Co. */
 vi.mock('./lesen', async (orig) => ({
@@ -17,6 +18,10 @@ vi.mock('./lesen', async (orig) => ({
   ladeUebersicht: vi.fn(),
 }));
 vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn() }));
+// Ohne Netz: die Einstellungen gleichen sonst echt mit ChurchTools ab und loggen nach dem Testende (`ohneAbgleich`).
+vi.mock('./useToDoEinstellungen', async (orig) =>
+  (await import('./ohneAbgleich.testutil')).ohneAbgleich(orig),
+);
 vi.mock('./aufgabenSchreiben', async (orig) => ({
   ...(await orig<typeof import('./aufgabenSchreiben')>()),
   aufgabeAendern: vi.fn(),
@@ -136,6 +141,13 @@ beforeEach(() => {
 });
 
 describe('ToDos', () => {
+  it('gleicht die Einstellungen im Test ohne Netz ab (`ohneAbgleich`) – sonst loggt es nach dem Testende', async () => {
+    abgleich.mockClear();
+    zeige();
+    await screen.findByText('Raum prüfen');
+    await waitFor(() => expect(abgleich).toHaveBeenCalled());
+  });
+
   it('Sicht: als Leitung alle To-Dos der Gruppe, als Mitglied nur eigene und die ohne Zuständigen', async () => {
     zeige();
     await screen.findByText('Raum prüfen');

@@ -20,6 +20,8 @@ import {
   SideMenu,
   SideMenuController,
   SuggestionMenuController,
+  TableColumnHeaderItem,
+  TableRowHeaderItem,
   useBlockNoteEditor,
   useComponentsContext,
   useCreateBlockNote,
@@ -30,6 +32,7 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
 import { Icon } from '@ui/icons/icons';
+import { useThema } from '@ui/design/useThema';
 import {
   abschnittAblegen,
   abschnittLinie,
@@ -39,10 +42,11 @@ import {
   abschnittZiehenEndet,
   kannSchieben,
 } from './abschnittZiehen';
-import { aufgabenIdsSetzen, schema, type ProtokollEditor } from './editorSchema';
+import { aufgabenIdsSetzen, schema, TABELLEN, type ProtokollEditor } from './editorSchema';
 import { blockInhalt, griffVersatz } from './griffLage';
 import { FESTE_PUNKTE } from './anzeige';
 import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
+import { tabelleEinfuegen } from './tabelleEinfuegen';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
 import './DokumentEditor.scss';
@@ -55,7 +59,8 @@ import styles from './ProtokollSchreiben.module.scss';
  *
  * - **Normaler Text hat keinen Griff** (Alwin 22.10.2026): Verschieben gibt es für Überschriften, Listen, Zitate und
  *   die eigenen Blöcke – ein Absatz ist einfach Text.
- * - Das Griff-Menü kennt nur „Löschen“ – Farben gäbe es zwar in BlockNote, Lese-Ansicht und PDF zeigen sie aber nicht.
+ * - Das Griff-Menü kennt „Löschen“, an Überschriften „Nach oben/unten“ und an Tabellen Kopfzeile/Kopfspalte (K3a).
+ *   Blockfarben bietet es nicht an – markiert wird Text, über die Leiste („Markieren ▾“).
  * - **Einfügen aus Word**: Listen werden vorher zu echten Listen (`wordListen.ts`).
  */
 
@@ -80,13 +85,19 @@ const TEXTE = {
       title: 'Tagesordnungspunkt',
       subtext: 'Überschrift 1 – wird nummeriert',
     },
+    // Stufe 2 und 3 heißen seit K3a wie in der Leiste (Alwin 04.11.2026).
+    heading_2: { ...de.slash_menu.heading_2, title: 'Unterpunkt', subtext: 'Überschrift 2' },
+    heading_3: { ...de.slash_menu.heading_3, title: 'Überschrift', subtext: 'Überschrift 3' },
     paragraph: { ...de.slash_menu.paragraph, title: 'Text', subtext: 'Normaler Text' },
     bullet_list: { ...de.slash_menu.bullet_list, title: 'Aufzählung' },
     numbered_list: { ...de.slash_menu.numbered_list, title: 'Nummerierung' },
   },
 };
 
-/** Was das „/“-Menü anbietet – die Blockarten aus `editorSchema`, nichts sonst. */
+/**
+ * Was das „/“-Menü von BlockNote übernimmt – die Blockarten aus `editorSchema`, nichts sonst. Ohne Checkliste (seit K3a
+ * nur noch To-Do) und ohne BlockNotes Tabelle: Die kommt mit Kopfzeile aus `tabelleEinfuegen`, wie in der Leiste.
+ */
 const MENUE = new Set(
   (
     [
@@ -96,7 +107,6 @@ const MENUE = new Set(
       'heading_3',
       'bullet_list',
       'numbered_list',
-      'check_list',
       'quote',
       'divider',
     ] as const
@@ -201,6 +211,8 @@ function Griff() {
                     Nach unten
                   </SchiebenEintrag>
                 )}
+                {art === 'table' && <TableRowHeaderItem>Kopfzeile</TableRowHeaderItem>}
+                {art === 'table' && <TableColumnHeaderItem>Kopfspalte</TableColumnHeaderItem>}
                 <RemoveBlockItem>Löschen</RemoveBlockItem>
               </DragHandleMenu>
             )}
@@ -209,18 +221,6 @@ function Griff() {
       </SideMenu>
     </div>
   );
-}
-
-/** Hell oder dunkel – folgt `html[data-theme]` (das setzt die Erweiterung nach ChurchTools). */
-function useThema(): 'light' | 'dark' {
-  const lies = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
-  const [thema, setThema] = useState<'light' | 'dark'>(lies);
-  useEffect(() => {
-    const b = new MutationObserver(() => setThema(lies()));
-    b.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => b.disconnect();
-  }, []);
-  return thema;
 }
 
 /** Was der Bildschirm am Editor braucht. */
@@ -249,6 +249,7 @@ export function DokumentEditor({
       schema,
       dictionary: TEXTE,
       initialContent: start.length ? (start as Teil[]) : undefined,
+      tables: TABELLEN,
       // Beim Ziehen eines Abschnitts steht die Linie dort, wo er landet (K1) – dieselbe Rechnung wie beim Ablegen.
       dropCursor: {
         hooks: {
@@ -364,6 +365,14 @@ export function DokumentEditor({
                         onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: x.art }),
                       }),
                     ),
+                    {
+                      title: 'Tabelle',
+                      subtext: 'Mit Kopfzeile – Zeilen und Spalten über die Griffe',
+                      aliases: ['tabelle', 'table'],
+                      group: 'Protokoll',
+                      icon: <Icon name="tabelle" size={18} />,
+                      onItemClick: () => tabelleEinfuegen(editor),
+                    },
                     ...FESTE.map(
                       (f): DefaultReactSuggestionItem => ({
                         title: FESTE_PUNKTE[f.art].titel,

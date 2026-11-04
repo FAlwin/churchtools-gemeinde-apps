@@ -5,8 +5,10 @@ import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
 import { ableiten, fremdeTypen, textAus, type Block } from '@shared/protokolle/dokument';
 import { dokumentAusTeilen, teileBauen } from '@shared/protokolle/speicher';
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
-import { aufgabenIdsSetzen, EDITOR_TYPEN, schema } from './editorSchema';
+import { aufgabenIdsSetzen, EDITOR_TYPEN, schema, TABELLEN } from './editorSchema';
+import { farbWert } from './farben';
 import { festenPunktEinfuegen } from './festenPunktEinfuegen';
+import { tabelleEinfuegen } from './tabelleEinfuegen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { aushaengen, einhaengen } from './editorTest.testutil';
 
@@ -22,7 +24,7 @@ type Teil = PartialBlock<
 >;
 
 const editorMit = (dok: readonly Block[]) =>
-  BlockNoteEditor.create({ schema, initialContent: dok as Teil[] });
+  BlockNoteEditor.create({ schema, tables: TABELLEN, initialContent: dok as Teil[] });
 
 const PROTOKOLL: Block[] = [
   { id: 'p1', type: 'heading', props: { level: 1 }, content: 'Andacht' },
@@ -47,6 +49,15 @@ const PROTOKOLL: Block[] = [
   { id: 'v1', type: 'verweis', props: { art: 'letztes-protokoll' } },
   { id: 'q1', type: 'quote', content: 'Zitat' },
   { id: 'd1', type: 'divider' },
+  {
+    id: 'tb1',
+    type: 'table',
+    content: {
+      type: 'tableContent',
+      headerRows: 1,
+      rows: [{ cells: ['Was', 'Wer'] }, { cells: ['Grill', 'Männerkreis'] }],
+    },
+  },
 ];
 
 describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
@@ -93,7 +104,9 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
       { sitzung: 's1', stand },
       werte.map((w) => JSON.parse(w)),
     );
-    expect(zurueck).toEqual(doc);
+    // Gespeichert wird JSON: Aus einer leeren Spaltenbreite der Tabelle wird `null` – der Editor macht beim Laden wieder
+    // dasselbe Dokument daraus.
+    expect(zurueck).toEqual(JSON.parse(JSON.stringify(doc)));
     expect(editorMit(zurueck!).document).toEqual(doc);
   });
 
@@ -122,14 +135,62 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
     expect([...EDITOR_TYPEN].filter((t) => !gezeigt.has(t))).toEqual([]);
   });
 
-  it('Markieren im Editor erscheint in der Lese-Ansicht als Markierung', () => {
-    const e = editorMit([{ id: 'm', type: 'paragraph', content: 'ganz wichtig' }]);
-    e.setTextCursorPosition('m', 'start');
-    e.updateBlock('m', {
-      content: [{ type: 'text', text: 'ganz wichtig', styles: { backgroundColor: 'yellow' } }],
-    });
+  it('Markieren im Editor (Hintergrund + Schrift, wie die Leiste) erscheint in der Lese-Ansicht (K3a)', () => {
+    const e = einhaengen(editorMit([{ id: 'm', type: 'paragraph', content: 'ganz wichtig' }]));
+    // Den ganzen Text markieren, wie mit der Maus – dann färben wie „Markieren ▾“ (`farbeSetzen`).
+    e._tiptapEditor.commands.selectAll();
+    e.addStyles({ backgroundColor: 'yellow', textColor: 'red' });
+    const stueck = (e.document[0].content as { styles: Record<string, unknown> }[])[0];
+    expect(stueck.styles).toMatchObject({ backgroundColor: 'yellow', textColor: 'red' });
     render(<ProtokollAnsicht dokument={e.document as Block[]} />);
-    expect(screen.getByText('ganz wichtig').closest('mark')).not.toBeNull();
+    const stil = screen.getByText('ganz wichtig').closest('span')?.getAttribute('style') ?? '';
+    expect(stil).toContain(`background-color: ${farbWert('yellow', 'hintergrund', 'light')}`);
+    expect(stil).toContain('color: rgb(224, 62, 62)'); // BlockNotes Rot, #e03e3e
+  });
+
+  it('Kopfzeile und -spalte lassen sich umschalten – BlockNote zeigt die Menüpunkte nur mit dieser Einstellung (K3a)', () => {
+    expect(editorMit([{ id: 'p', type: 'paragraph' }]).settings.tables).toMatchObject({
+      headers: true,
+      splitCells: false,
+    });
+  });
+
+  it('Tabelle aus der Leiste: Kopfzeile, Zellen, Suche und Speicher verstehen sie (K3a)', () => {
+    const e = einhaengen(editorMit([{ id: 'p', type: 'paragraph', content: '' }]));
+    e.setTextCursorPosition('p', 'start');
+    tabelleEinfuegen(e);
+    const t = e.document.find((b) => b.type === 'table');
+    expect(t).toBeDefined();
+    expect(t?.content).toMatchObject({ type: 'tableContent', headerRows: 1 });
+    // Text in die Zellen, wie beim Tippen – Kopfzeile und erste Zeile.
+    const inhalt = t!.content as { rows: { cells: unknown[] }[] };
+    e.updateBlock(t!.id, {
+      content: {
+        ...inhalt,
+        rows: inhalt.rows.map((r, z) => ({
+          ...r,
+          cells: r.cells.map((_, s) => (z < 2 ? `Z${z}S${s}` : '')),
+        })),
+      },
+    } as Teil);
+    const doc = e.document as Block[];
+    const { container } = render(<ProtokollAnsicht dokument={doc} />);
+    expect([...container.querySelectorAll('th')].map((x) => x.textContent)).toEqual([
+      'Z0S0',
+      'Z0S1',
+      'Z0S2',
+    ]);
+    expect(container.querySelectorAll('td')).toHaveLength(6);
+    expect(container.querySelector('td')?.textContent).toBe('Z1S0');
+    expect(textAus(doc.find((b) => b.type === 'table')?.content)).toBe(
+      'Z0S0 Z0S1 Z0S2 Z1S0 Z1S1 Z1S2',
+    );
+    const { stand, werte } = teileBauen(doc, 's1');
+    const zurueck = dokumentAusTeilen(
+      { sitzung: 's1', stand },
+      werte.map((w) => JSON.parse(w)),
+    );
+    expect(editorMit(zurueck!).document).toEqual(doc);
   });
 
   it('Aufgaben-IDs: gesetzt für neue und doppelte, Rückgängig nimmt sie NICHT wieder weg (S4-2)', () => {

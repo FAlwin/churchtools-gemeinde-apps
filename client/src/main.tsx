@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SwUpdateProvider } from './hooks/useSwUpdate';
 import { initPwaInstall } from './services/pwaInstall';
 import { syncAppHeight } from '@ui/fenster/appHeight';
+import { zoomBeimTippenAus } from '@ui/fenster/tippZoom';
 import { istExtension } from './services/modus';
 import { latoMitbringen } from '@ui/design/schrift';
 import './styles/main.scss';
@@ -25,6 +26,9 @@ if (istExtension) document.documentElement.classList.add('ct-extension');
 // Schrift wie ChurchTools (#654): In ChurchTools ist Lato schon da, als PWA bringt die App sie mit.
 else void latoMitbringen();
 
+// Am iPhone beim Antippen eines Felds nicht hineinzoomen (`ui/fenster/tippZoom.ts`) – in der Erweiterung gilt die
+// Viewport-Angabe von ChurchTools, nicht die aus unserer `index.html`.
+zoomBeimTippenAus();
 syncAppHeight();
 window.addEventListener('resize', syncAppHeight);
 window.addEventListener('orientationchange', syncAppHeight);

@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 (30.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3a (04.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
@@ -141,12 +141,21 @@ letzten Eingabe; oben steht „gespeichert 19:42 Uhr“ oder „nicht gespeicher
 dabei im Editor). Mit der ersten Änderung entsteht eine **Schreibsperre**: Wer das Protokoll währenddessen öffnet,
 sieht „Johann schreibt gerade“, liest den gespeicherten Stand mit (alle 30 Sekunden) und kann mit Rückfrage
 **„Schreiben übernehmen“**. Das gilt auch für dieselbe Person in einem zweiten Fenster oder auf einem zweiten Gerät.
-Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte Listen bleiben Listen. Am Handy lässt
-sich die Werkzeugleiste waagrecht wischen, am Rechner bricht sie um. Der Umschalter **„Schreiben | Lesen“** zeigt
-dasselbe Protokoll als Lese-Ansicht – ohne Sperre; was noch nicht gespeichert war, wird beim Umschalten gespeichert.
+Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte Listen und Tabellen bleiben Listen und
+Tabellen. Der Umschalter **„Schreiben | Lesen“** zeigt dasselbe Protokoll als Lese-Ansicht – ohne Sperre; was noch
+nicht gespeichert war, wird beim Umschalten gespeichert.
 
-**Aufgaben, Beschlüsse, Termine (S4-2):** über die Knöpfe der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
-(Aufgabe). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter
+**Die Werkzeugleiste (K3a):** vorn Rückgängig/Wiederholen, die **Textart** (Text · Tagesordnungspunkt · Unterpunkt ·
+Überschrift) und Fett · Kursiv · Unterstrichen · Durchgestrichen · Formatierung entfernen; dahinter drei Menüs:
+**Markieren** (Hintergrund und Schrift in den neun Farben des Editors, „keine“/„auto“ nimmt sie weg), **Absatz**
+(Aufzählung, Nummerierung, Aus- und Einrücken, Zitat) und **Einfügen** (To-Do, Beschluss, Termin, Tabelle, die festen
+Punkte, Trennlinie). Am Rechner steht alles in einer Zeile. Am Handy stehen Fett und „Aa“ (Textart, Kursiv & Co.) vorn,
+die drei Menüs nur als Zeichen. Die **Checkliste** gibt es nicht mehr zum Einfügen – nur noch To-Dos; alte Checklisten
+bleiben lesbar und lassen sich über die Textart in Text verwandeln. Eine **Tabelle** hat eine Kopfzeile; Zeilen und
+Spalten kommen über die Griffe an der Tabelle dazu, „Kopfzeile“/„Kopfspalte“ schaltet man im Griff-Menü links.
+
+**Aufgaben, Beschlüsse, Termine (S4-2):** über „Einfügen“ in der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
+(Aufgabe; in Leiste und Menü heißt sie seit K3a „To-Do“). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter
 „Meine offenen To-Dos“, auch solange das Protokoll Entwurf ist. An der Aufgabe: Status-Kreis (offen → in Arbeit →
 erledigt), „Wer?“ (Mitglieder der Gruppe, dazu ein externer Name ohne eigenen Zugang) und „Bis“. Das Protokoll führt:
 geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do als gelöscht vermerkt (nie endgültig),
@@ -156,7 +165,7 @@ geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do
 zuerst) mit Status-Kreis, Wer und Bis; darunter eingeklappt „Seit der Sitzung am … erledigt“. Im Editor hakt man sie
 am Kreis ab, in der Lese-Ansicht ist es nur Anzeige. „Protokoll der letzten Sitzung“ zeigt das letzte **freigegebene**
 Protokoll der Gruppe vor dieser Sitzung; „Öffnen“ zeigt es im Fenster. Beide füllen sich **bis zur Freigabe live**;
-bei der Freigabe (S6) merkt sich das Protokoll, was sie zeigten. Einfügen über die Werkzeugleiste oder das „/“-Menü
+bei der Freigabe (S6) merkt sich das Protokoll, was sie zeigten. Einfügen über „Einfügen“ in der Werkzeugleiste oder das „/“-Menü
 (Gruppe „Feste Punkte“) – als Tagesordnungspunkt mit Titel, den man umbenennen kann.
 
 **Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten

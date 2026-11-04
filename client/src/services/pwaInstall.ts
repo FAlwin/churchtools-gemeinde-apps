@@ -7,6 +7,8 @@
  * - iOS/iPadOS Safari: KEIN Event (Apple erlaubt keine programmatische Installation) → nur Anleitung.
  */
 
+import { istIos } from '@ui/fenster/tippZoom';
+
 /** Das nicht-standardisierte, aber breit unterstützte Chrome-Event. */
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -61,14 +63,6 @@ export function isStandalone(): boolean {
   );
 }
 
-/** iPhone/iPad (inkl. iPadOS 13+, das sich als „MacIntel" mit Touch meldet). */
-function isIos(): boolean {
-  const ua = navigator.userAgent;
-  const iPhoneOrPad = /iphone|ipad|ipod/i.test(ua);
-  const iPadOs13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-  return iPhoneOrPad || iPadOs13Plus;
-}
-
 /** Echtes Safari (nicht Chrome/Edge/Firefox mit „Safari" im UA). */
 function isSafari(): boolean {
   const ua = navigator.userAgent;
@@ -95,7 +89,7 @@ function isAndroid(): boolean {
  *  - 'other'     → generischer Hinweis (Desktop-Firefox u. a.)
  */
 export function installPlatform(): 'ios' | 'macSafari' | 'android' | 'other' {
-  if (isIos()) return 'ios';
+  if (istIos()) return 'ios';
   if (isMacSafari()) return 'macSafari';
   if (isAndroid()) return 'android';
   return 'other';

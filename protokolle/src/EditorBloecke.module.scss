@@ -152,7 +152,10 @@
     flex-wrap: wrap;
   }
 
-  .schilder {
+  // Nur am To-Do: Dort bricht die Zeile um, Wer/Bis stehen darunter. Galt es für alle Schildchen, nahm das Datum des
+  // Termins die ganze Breite – sein Text war 0 px breit, als Buchstabensäule rechts daneben, und die Seite ließ sich
+  // seitlich schieben (am iPhone gefunden 04.11.2026, K3a; seit S4-2 so).
+  .aufgabe .schilder {
     width: 100%;
     margin-left: 30px;
   }

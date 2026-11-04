@@ -304,8 +304,8 @@ ChurchTools als Homescreen-App (Safari → Teilen → „Zum Home-Bildschirm"). 
 und ein Rechner mit Chrome oder Edge. Ein Lied mit Notenblatt, ein Ablauf.
 
 **Das muss passieren:** Der Knopf mit den vier Ecken steht auf **jeder** Seite an derselben Stelle,
-ganz rechts oben (Termine, Lieder, Mehr, Ablauf, Liedblatt – den Tab „Abwesenheiten" gibt es in der
-Erweiterung nicht). Er legt die App über die
+ganz rechts oben (Termine, Lieder, Abwesenheiten, Mehr, Ablauf, Liedblatt – „Abwesenheiten" gibt es in der Erweiterung seit
+Dienstplaner E7-2b). Er legt die App über die
 Leiste von ChurchTools – in jedem Browser, ohne X
 und ohne Hinweis von Safari, ohne Flackern. Mit ChurchTools als Homescreen-App ist dann der ganze
 Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt.

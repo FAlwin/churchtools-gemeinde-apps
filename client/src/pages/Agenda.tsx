@@ -13,7 +13,7 @@ import { AblaufAnlegenFenster } from '../components/AblaufAnlegenFenster';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
 import { heuteIso } from '../utils/heute';
-import { monatLabel, monatVon } from '../utils/monate';
+import { monatLabel, monatVon } from '@shared/ct/monate';
 import { saveServiceOffline } from '../services/offline';
 import { liedAnzahl } from '../utils/songFilter';
 import { queryClient } from '../queryClient';

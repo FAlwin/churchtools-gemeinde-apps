@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Absence } from '@shared/types/index';
 import { AbsenceSheet } from './AbsenceSheet';
-import { schnellwahlZeitraum } from '../utils/schnellwahl';
-import { knopfFolge } from '@ui/fenster/fenster.testutil';
+import { schnellwahlZeitraum } from './schnellwahl';
+import { knopfFolge } from '../fenster/fenster.testutil';
 
 /**
  * Das eine Fenster für Eintragen UND Ändern (#177, 05.09.2026). Geprüft wird, was Alwin an den
@@ -138,7 +138,9 @@ describe('AbsenceSheet – ändern', () => {
       comment: 'Kur',
     });
 
+    // Löschen fragt seit 04.11.2026 immer nach (eigener Test unten).
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, löschen' }));
     expect(onDelete).toHaveBeenCalledWith(EIGENE);
   });
 });
@@ -174,26 +176,26 @@ describe('AbsenceSheet – Grund aus ChurchTools', () => {
   });
 });
 
-describe('AbsenceSheet – Löschen fragt bei fremden Einträgen nach', () => {
-  it('ein App-Eintrag wird mit einem Tipp gelöscht', () => {
-    const { onDelete } = zeige({ entwurf: { art: 'aendern', absence: EIGENE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
-    expect(onDelete).toHaveBeenCalledWith(EIGENE);
-  });
-
-  it('ein ChurchTools-Eintrag erst nach Rückfrage – und „Behalten" bricht ab', () => {
-    const fremd = { ...EIGENE, vonApp: false, reason: 'Urlaub', reasonId: 2 };
-    const { onDelete } = zeige({ entwurf: { art: 'aendern', absence: fremd } });
+describe('AbsenceSheet – Löschen fragt immer nach (seit 04.11.2026, kein Kennzeichen mehr)', () => {
+  it.each([
+    ['ein Eintrag aus der App', EIGENE],
+    [
+      'ein in ChurchTools gemachter Eintrag',
+      { ...EIGENE, vonApp: false, reason: 'Urlaub', reasonId: 2 },
+    ],
+  ])('%s erst nach Rückfrage – „Behalten“ bricht ab', (_name, absence) => {
+    const { onDelete } = zeige({ entwurf: { art: 'aendern', absence } });
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(onDelete).not.toHaveBeenCalled();
-    expect(screen.getByText(/stammt aus ChurchTools/)).not.toBeNull();
+    expect(screen.getByText(/der Eintrag verschwindet auch in ChurchTools/)).not.toBeNull();
+    expect(screen.getByText('Abwesenheit löschen?')).not.toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Behalten' }));
-    expect(screen.queryByText(/stammt aus ChurchTools/)).toBeNull();
+    expect(screen.queryByText(/verschwindet auch in ChurchTools/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Ja, löschen' }));
-    expect(onDelete).toHaveBeenCalledWith(fremd);
+    expect(onDelete).toHaveBeenCalledWith(absence);
   });
 });
 

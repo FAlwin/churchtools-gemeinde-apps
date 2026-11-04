@@ -193,9 +193,9 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     weg; 404 bei fremder ID), Personen-ID aus der
     Sitzung bei Lesen UND Schreiben, Datumsprüfung (Ende vor Anfang, > 1 Jahr); `churchtools.capabilities.test`
     – `computeAvailabilityAllowed` ohne Rollen-Filter, strenger bleibt nur Team-Notizen. Client
-    `utils/absenceDatum.test` (Tagesvergleich als Text, eigene vor manueller), `hooks/useAvailability.test`
-    (Schreiben verwirft die Liste, nicht die Termine), `utils/wochen.test` (Montag auch für Sonntage,
-    Jahreswechsel, Tages-Helfer), `components/AbsenceSheet.test` (Schnellauswahl
+    `ui/abwesenheiten/absenceDatum.test` (Tagesvergleich als Text; seit E7-2b Uhrzeit vor ganztägig statt eigene vor manueller), `hooks/useAvailability.test`
+    (Schreiben verwirft die Liste, nicht die Termine), `shared/ct/wochen.test` (Montag auch für Sonntage,
+    Jahreswechsel, Tages-Helfer), `ui/abwesenheiten/AbsenceSheet.test` (Schnellauswahl
     rechnet die vier Fälle, ein späteres „Von" schiebt „Bis" mit, Löschen nur beim Ändern),
     `pages/Availability.test` (Stand des Neubaus vom 19.09.2026: Kopf mit Schalter Termine | Einträge
     und laufendem Monat, Monatswechsel und „Heute"; Häkchen sind **vorgemerkt**, erst „Speichern"
@@ -209,8 +209,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Marker** bei einem ChurchTools-Eintrag erhalten bleiben, 409 nur bei einem ANDEREN eigenen
     Eintrag und `zuGruenden` gegen die gemessene `absent_reason`-Struktur;
     `services/absenceGrund.test` die Übersetzung der Gründe-Schlüssel und den Marker als reines
-    Herkunftskennzeichen; `components/AbsenceSheet.test` die Grund-Auswahl (Standard ist NICHT der
-    erste der Liste) und die Rückfrage vor dem Löschen fremder Einträge. Von Hand bleibt, dass die
+    Herkunftskennzeichen; `ui/abwesenheiten/AbsenceSheet.test` die Grund-Auswahl (Standard ist NICHT der
+    erste der Liste) und die Rückfrage vor dem Löschen (seit E7-2b bei jedem Eintrag). Von Hand bleibt, dass die
     Abwesenheit wirklich in ChurchTools steht, nach dem Ändern genau EIN Eintrag übrig ist und der
     Grund dabei nicht kippt (TF-VERF-01…06).
   - **iOS-Systemleiste (22.09.2026):** `hooks/useSettings.test` hält die Farbe der Systemleiste am
@@ -238,7 +238,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Feld fiel ihm nicht auf). `config.secret.test` prüft die Geheimnis-Regel (Länge, Platzhalter,
     und dass außerhalb der Produktion nichts geprüft wird).
 
-  - **Release v2.25.0 (20./21.09.2026):** `utils/terminFilter.test` (#400: `artVon` = erste passende
+  - **Release v2.25.0 (20./21.09.2026):** `ui/abwesenheiten/terminFilter.test` (damals `utils/`) (#400: `artVon` = erste passende
     Art, sonst „Sonstige"; `knoepfeAus`; `wirksameAuswahl` verwirft unbekannte IDs und nimmt höchstens
     eine; `filtereTermine`; `umschalten` = eins oder alles) und `components/TerminArtenManager.test`
     (Admin-Pflege). `utils/arrangementFormular.test` (#396: Länge Sekunden ↔ Minuten:Sekunden hin und

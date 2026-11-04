@@ -198,7 +198,7 @@ async function gemeindeName(): Promise<string> {
  * `GET /api/capabilities` – die Rechte aus ChurchTools, mit derselben Regel wie im Server.
  *
  * Team-Notizen seit 3b-4b: wie im Server aus den Gruppen und Rollen der Gemeinde-Einstellungen und den
- * eigenen Mitgliedschaften (`@shared/ct/gruppen`). Abwesenheiten bleiben bis 3b-3 aus.
+ * eigenen Mitgliedschaften (`@shared/ct/gruppen`). Abwesenheiten seit Dienstplaner E7-2b für alle, die die App öffnen.
  */
 export async function meineRechte(): Promise<UserCapabilities> {
   const roh = await ctDaten<Record<string, Record<string, unknown>>>('/permissions/global');
@@ -208,11 +208,16 @@ export async function meineRechte(): Promise<UserCapabilities> {
     (status, meldung) => new ApiError(status, meldung),
   );
   // Seit 3b-5 schreibt und liest die Extension alles selbst, auch SongSelect (`ctSongSelect.ts`) –
-  // die Rechte gelten, wie ChurchTools sie meldet. Abwesenheiten bleiben aus (`canUseAvailability`,
-  // in `rechteAus` false), bis sie gebaut sind.
+  // die Rechte gelten, wie ChurchTools sie meldet.
   return {
     ...rechte,
     canUseGlobalNotes: await darfTeamNotizen(),
+    /**
+     * **Abwesenheiten für alle, die die Musik-App öffnen** (Rechtekonzept E2, Alwin 04.11.2026). Die eigenen
+     * Abwesenheiten darf in ChurchTools jede Person pflegen (gemessen als Spike) – ein Recht braucht es nicht, und
+     * die Musikteam-Gruppen der Verwaltung entscheiden hier nicht mehr (auf dem NAS weiter, der Server bleibt).
+     */
+    canUseAvailability: true,
     ...(await gruppenSicht(roh)),
   };
 }
@@ -234,9 +239,9 @@ async function gruppenSicht(
 }
 
 /**
- * Darf ich Team-Notizen nutzen? Kein Admin-Bypass, wie im Server. Ein Fehler hier (Einstellungen oder
- * Mitgliedschaften nicht lesbar) heißt „gerade nicht" – die Knöpfe fehlen dann, bis die Rechte neu
- * geladen werden. Verworfen wird dabei nichts; die Rechte als Ganzes scheitern daran nicht.
+ * Darf ich Team-Notizen nutzen? Kein Admin-Bypass, wie im Server: Gruppe UND freigegebene Rolle. Ein Fehler
+ * hier (Einstellungen oder Mitgliedschaften nicht lesbar) heißt „gerade nicht" – die Knöpfe fehlen dann, bis
+ * die Rechte neu geladen werden. Verworfen wird dabei nichts; die Rechte als Ganzes scheitern daran nicht.
  */
 async function darfTeamNotizen(): Promise<boolean> {
   try {

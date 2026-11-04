@@ -1,8 +1,8 @@
-import { plusTage, wochenStart } from './wochen';
+import { plusTage, wochenStart } from '@shared/ct/wochen';
 
 /*
  * Die Schnellwahl im Fenster „Zeitraum eintragen" (#177) – reine Logik, deshalb hier und nicht in
- * `components/AbsenceSheet.tsx`: Eine Komponentendatei, die zusätzlich Funktionen exportiert, bricht
+ * `AbsenceSheet.tsx`: Eine Komponentendatei, die zusätzlich Funktionen exportiert, bricht
  * das Fast Refresh von Vite (#406, Lint-Regel `react-refresh/only-export-components`).
  */
 

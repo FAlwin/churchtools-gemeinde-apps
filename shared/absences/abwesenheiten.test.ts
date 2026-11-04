@@ -9,6 +9,7 @@ import {
   gruendeAus,
   meineAbwesenheiten,
   pruefen,
+  termineAus,
   zuAbwesenheit,
   type AbwesenheitPort,
   type CtRumpf,
@@ -476,5 +477,31 @@ describe('abwesenheitLoeschen', () => {
     const ct = nachbau({ einerWirft: 503 });
     const id = ct.lege(ICH, ganzTag('2027-03-10', '2027-03-10'));
     await expect(abwesenheitLoeschen(ct.port, ICH, id)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+describe('termineAus', () => {
+  it('der Tag ist der in der Gemeinde: 0:30 Uhr am 15. ist `23:30Z` des 14.', () => {
+    expect(
+      termineAus(
+        [
+          {
+            id: 1,
+            name: 'Nacht',
+            startDate: '2027-03-14T23:30:00Z',
+            endDate: '2027-03-15T01:00:00Z',
+          },
+        ],
+        TZ,
+      ),
+    ).toEqual([
+      {
+        id: 1,
+        name: 'Nacht',
+        date: '2027-03-15',
+        startDate: '2027-03-14T23:30:00Z',
+        endDate: '2027-03-15T01:00:00Z',
+      },
+    ]);
   });
 });

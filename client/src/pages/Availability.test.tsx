@@ -17,16 +17,32 @@ const events = vi.fn();
 const anlegen = vi.fn();
 const aendern = vi.fn();
 const loeschen = vi.fn();
-const sichern = vi.fn();
+const refresh = vi.fn();
 vi.mock('../hooks/useAvailability', () => ({
   useMyAbsences: (...a: unknown[]) => absences(...a),
   useAbsenceEvents: (...a: unknown[]) => events(...a),
   useAbsenceReasons: () => ({ data: GRUENDE }),
-  useCreateAbsence: () => ({ mutate: anlegen, isPending: false }),
-  useUpdateAbsence: () => ({ mutate: aendern, isPending: false }),
-  useDeleteAbsence: () => ({ mutate: loeschen, isPending: false }),
-  useSaveAbsenceChanges: () => ({ mutate: sichern, isPending: false }),
+  useAbsencesRefresh: () => refresh,
 }));
+// Geschrieben wird seit E7-2b über `services/availability` (NAS: Server, ChurchTools: direkt) – hier Attrappen.
+vi.mock('../services/availability', () => ({
+  createAbsence: (...a: unknown[]) => anlegen(...a),
+  updateAbsence: (...a: unknown[]) => aendern(...a),
+  deleteAbsence: (...a: unknown[]) => loeschen(...a),
+}));
+
+/** Was „Speichern“ geschrieben hat – in Aufruf-Reihenfolge. */
+const gesichert = () => ({
+  eintragen: anlegen.mock.calls.map((c) => c[0]),
+  loeschen: loeschen.mock.calls.map((c) => c[0]),
+});
+/** Klick, danach die Versprechen auslaufen lassen (Schreiben ist asynchron). */
+const klickUndWarte = async (name: string) => {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name }));
+    await Promise.resolve();
+  });
+};
 vi.mock('../components/Coachmarks', () => ({ Coachmarks: () => null }));
 // Die Termin-Arten kommen aus der Site-Konfiguration (#400) – hier als Attrappe, je Test änderbar.
 const siteConfig = vi.fn();
@@ -116,6 +132,9 @@ const FRUEHER: Absence = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  anlegen.mockResolvedValue({});
+  aendern.mockResolvedValue({});
+  loeschen.mockResolvedValue(undefined);
   // Der Termin-Filter wird auf dem Gerät gemerkt – jeder Test beginnt ohne Auswahl.
   localStorage.clear();
   siteConfig.mockReturnValue({ data: { ...DEFAULT_SITE_CONFIG, terminArten: ARTEN } });
@@ -229,7 +248,7 @@ describe('Abwesenheiten – Kopf und Monat', () => {
 });
 
 describe('Abwesenheiten – Häkchen sind vorgemerkt, Speichern schreibt alle', () => {
-  it('ein Haken zeigt die Leiste, schreibt aber noch nichts; Speichern trägt den Termin ein', () => {
+  it('ein Haken zeigt die Leiste, schreibt aber noch nichts; Speichern trägt den Termin ein', async () => {
     const { onToast } = zeige();
     expect(leiste()).toBeNull();
     const k = kasten(/Abwesend – Gottesdienst, So, 04\.10\./);
@@ -237,13 +256,12 @@ describe('Abwesenheiten – Häkchen sind vorgemerkt, Speichern schreibt alle', 
     fireEvent.click(k);
     expect(k.getAttribute('aria-pressed')).toBe('true');
     expect(leiste()?.textContent).toContain('1 Änderung vorgemerkt');
-    expect(sichern).not.toHaveBeenCalled();
+    expect(anlegen).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(sichern).toHaveBeenCalledTimes(1);
+    await klickUndWarte('Speichern');
     // Mit dem ZEITFENSTER des Termins (22.09.2026) – nur so lassen sich zwei Termine am selben Tag
     // einzeln abhaken.
-    expect(sichern.mock.calls[0][0]).toEqual({
+    expect(gesichert()).toEqual({
       eintragen: [
         {
           startDate: '2026-10-04',
@@ -254,8 +272,8 @@ describe('Abwesenheiten – Häkchen sind vorgemerkt, Speichern schreibt alle', 
       ],
       loeschen: [],
     });
-    // Erfolg meldet die Zahl und räumt auf (der Rückruf kommt von außen → act)
-    void act(() => sichern.mock.calls[0][1].onSuccess(1));
+    // Erfolg meldet die Zahl, räumt auf und lässt die Liste neu holen.
+    expect(refresh).toHaveBeenCalled();
     expect(onToast).toHaveBeenCalledWith(expect.stringContaining('1 Änderung gespeichert'));
     expect(leiste()).toBeNull();
   });
@@ -269,14 +287,14 @@ describe('Abwesenheiten – Häkchen sind vorgemerkt, Speichern schreibt alle', 
     expect(leiste()).toBeNull();
   });
 
-  it('ein eigener Eintrag hat den Haken; ihn entfernen merkt das Löschen vor', () => {
+  it('ein eigener Eintrag hat den Haken; ihn entfernen merkt das Löschen vor', async () => {
     zeige();
     const k = kasten(/So, 11\.10\./);
     expect(k.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(k);
     expect(k.getAttribute('aria-pressed')).toBe('false');
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(sichern.mock.calls[0][0]).toEqual({ eintragen: [], loeschen: [10] });
+    await klickUndWarte('Speichern');
+    expect(gesichert()).toEqual({ eintragen: [], loeschen: [10] });
   });
 
   it('„Verwerfen" nimmt alles zurück', () => {
@@ -296,13 +314,43 @@ describe('Abwesenheiten – Häkchen sind vorgemerkt, Speichern schreibt alle', 
     expect(screen.queryByRole('button', { name: 'Zeitraum eintragen' })).toBeNull();
   });
 
-  it('ein Fehler beim Speichern behält die Vormerkung – man kann es noch einmal versuchen', () => {
+  it('ein Fehler beim Speichern behält die Vormerkung – man kann es noch einmal versuchen', async () => {
+    anlegen.mockRejectedValueOnce(new Error('429'));
     const { onToast } = zeige();
     fireEvent.click(kasten(/So, 04\.10\./));
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    void act(() => sichern.mock.calls[0][1].onError(new Error('429')));
+    await klickUndWarte('Speichern');
     expect(onToast).toHaveBeenCalledWith(expect.stringContaining('Konnte nicht gespeichert'));
     expect(leiste()?.textContent).toContain('1 Änderung vorgemerkt');
+    // Auch nach einem Fehlschlag in der Mitte holt die Liste den wahren Stand.
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('erst eintragen, dann löschen – nacheinander, nicht gleichzeitig (ChurchTools drosselt, #383)', async () => {
+    const reihenfolge: string[] = [];
+    let frei: () => void = () => {};
+    anlegen.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          reihenfolge.push('anlegen');
+          frei = () => r();
+        }),
+    );
+    loeschen.mockImplementation(async () => void reihenfolge.push('loeschen'));
+    zeige();
+    fireEvent.click(kasten(/So, 04\.10\./));
+    fireEvent.click(kasten(/So, 11\.10\./));
+    await klickUndWarte('Speichern');
+    // Solange das Eintragen läuft, wird noch nicht gelöscht – und „Speichern“ ist gesperrt.
+    expect(reihenfolge).toEqual(['anlegen']);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Speichert …' }).disabled).toBe(
+      true,
+    );
+    await act(async () => {
+      frei();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(reihenfolge).toEqual(['anlegen', 'loeschen']);
   });
 });
 
@@ -318,15 +366,15 @@ describe('Abwesenheiten – ein Termin in einem Zeitraum fragt nach', () => {
     expect(leiste()).toBeNull(); // noch nichts vorgemerkt
   });
 
-  it('„Zeitraum löschen" merkt den ganzen Zeitraum vor – Speichern löscht ihn', () => {
+  it('„Zeitraum löschen" merkt den ganzen Zeitraum vor – Speichern löscht ihn', async () => {
     zeige();
     fireEvent.click(kasten(/Jugendabend/));
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum löschen' }));
     expect(screen.queryByText('Teil eines Zeitraums')).toBeNull();
     expect(kasten(/Jugendabend/).getAttribute('aria-pressed')).toBe('false');
     expect(leiste()?.textContent).toContain('1 Änderung vorgemerkt');
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(sichern.mock.calls[0][0]).toEqual({ eintragen: [], loeschen: [11] });
+    await klickUndWarte('Speichern');
+    expect(gesichert()).toEqual({ eintragen: [], loeschen: [11] });
   });
 
   it('ein weiterer Tipp nimmt die vorgemerkte Löschung zurück – ohne neue Rückfrage', () => {
@@ -360,7 +408,8 @@ describe('Abwesenheiten – Seite „Einträge"', () => {
       name: /Abwesenheit Mi, 14\.10\. – Di, 20\.10\. ändern/,
     });
     expect(urlaub.textContent).toContain('trifft Fr, 16.10.');
-    expect(urlaub.textContent).toContain('in ChurchTools eingetragen');
+    // Seit E7-2b sehen alle Einträge gleich aus – kein „in ChurchTools eingetragen“ mehr (kein Kennzeichen).
+    expect(urlaub.textContent).not.toContain('in ChurchTools eingetragen');
     expect(screen.queryByText(/Sommer/)).toBeNull();
   });
 
@@ -378,13 +427,17 @@ describe('Abwesenheiten – Seite „Einträge"', () => {
     expect(screen.queryByRole('button', { name: 'Löschen' })).toBeNull();
   });
 
-  it('ein anstehender Eintrag öffnet „Abwesenheit ändern" und lässt sich löschen', () => {
-    zeige();
+  it('ein anstehender Eintrag öffnet „Abwesenheit ändern" und lässt sich nach Rückfrage löschen', async () => {
+    const { onToast } = zeige();
     fireEvent.click(screen.getByRole('button', { name: /Einträge/ }));
     fireEvent.click(screen.getByRole('button', { name: /Abwesenheit So, 11\.10\. ändern/ }));
     expect(screen.getByText('Abwesenheit ändern')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
-    expect(loeschen).toHaveBeenCalledWith(10, expect.anything());
+    expect(loeschen).not.toHaveBeenCalled();
+    await klickUndWarte('Ja, löschen');
+    expect(loeschen).toHaveBeenCalledWith(10);
+    expect(onToast).toHaveBeenCalledWith('Gelöscht.');
+    expect(refresh).toHaveBeenCalled();
   });
 });
 
@@ -424,17 +477,17 @@ describe('Abwesenheiten – das Plus je Bildschirm (Scheibe S2)', () => {
 });
 
 describe('Abwesenheiten – Plus und offline', () => {
-  it('das Plus öffnet „Zeitraum eintragen" mit dem nächsten Termin als Start', () => {
+  it('das Plus öffnet „Zeitraum eintragen" mit dem nächsten Termin als Start', async () => {
     zeige();
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum eintragen' }));
     expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).not.toBeNull();
     expect(screen.getByLabelText<HTMLInputElement>('Von').value).toBe('2026-10-04');
     fireEvent.click(screen.getByRole('button', { name: '1 Woche' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Eintragen (7 Tage)' }));
+    await klickUndWarte('Eintragen (7 Tage)');
     expect(anlegen).toHaveBeenCalledWith(
       expect.objectContaining({ startDate: '2026-10-04', endDate: '2026-10-10', reasonId: 1 }),
-      expect.anything(),
     );
+    expect(screen.queryByRole('dialog', { name: 'Zeitraum eintragen' })).toBeNull();
   });
 
   it('offline sind Kästchen und Plus gesperrt, Ansehen geht', () => {
@@ -667,7 +720,7 @@ describe('Abwesenheiten – mehrere Termine am selben Tag', () => {
     });
   });
 
-  it('ein Haken am Vormittagstermin lässt den Nachmittag frei', () => {
+  it('ein Haken am Vormittagstermin lässt den Nachmittag frei', async () => {
     absences.mockReturnValue({ data: [], isLoading: false, isError: false, refetch: vi.fn() });
     zeige();
     const vormittags = kasten(/Abwesend – Gottesdienst/);
@@ -679,8 +732,8 @@ describe('Abwesenheiten – mehrere Termine am selben Tag', () => {
     expect(nachmittags.getAttribute('aria-pressed')).toBe('false');
     expect(leiste()?.textContent).toContain('1 Änderung vorgemerkt');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(sichern.mock.calls[0][0]).toEqual({
+    await klickUndWarte('Speichern');
+    expect(gesichert()).toEqual({
       eintragen: [
         {
           startDate: '2026-10-04',

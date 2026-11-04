@@ -15,7 +15,7 @@ import allgemein from '../pages/Settings.module.scss';
  * Admin-Verwaltung der **Termin-Arten** für den Filter im Tab „Abwesenheiten" (#400).
  *
  * Eine Art = Knopfname + Suchwort. Ein Termin gehört zur ersten Art, deren Suchwort in seinem Namen
- * vorkommt; der Rest fällt unter „Sonstige" (Regeln in `utils/terminFilter.ts`). Die Reihenfolge
+ * vorkommt; der Rest fällt unter „Sonstige" (Regeln in `@ui/abwesenheiten/terminFilter.ts`). Die Reihenfolge
  * hier ist die Reihenfolge der Knöpfe – und die Reihenfolge, in der die Suchwörter geprüft werden:
  * Wer „Gottesdienst" vor „Jugendgottesdienst" stellt, bekommt den Jugendgottesdienst unter
  * „Gottesdienst". Das steht als Hinweis im Fenster, nicht nur hier.

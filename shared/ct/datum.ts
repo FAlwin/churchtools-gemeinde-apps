@@ -8,7 +8,7 @@
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 /**
  * **Die Monatsnamen – einmal für alle Apps.** Standen bis 14.10.2026 viermal von Hand da (hier, in
- * `client/src/utils/monate.ts`, `client/src/pages/Agenda.tsx` und `shared/ct/mapEvent.ts`).
+ * `shared/ct/monate.ts`, `client/src/pages/Agenda.tsx` und `shared/ct/mapEvent.ts`).
  */
 export const MONATE = [
   'Januar',

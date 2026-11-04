@@ -530,3 +530,36 @@ einer Antwort in der App, und für zehn Minuten lässt sich die Antwort zurückn
 - **Historie:** E7-1 (03.11.2026, Entwurf `e7-anfragen.html` Variante A)
 
 </details>
+
+### TF-ABLAUF-21 · Dienste tauschen
+
+**Das brauchst du:** Zwei Konten ohne Admin-Recht (z. B. Spike und eine zweite Person) mit **demselben Dienst** an zwei
+verschiedenen kommenden Terminen, in der Test-Instanz; zum Gegenprüfen die Dienstplan-Liste von ChurchTools.
+
+**Das muss passieren:** Wer einen Dienst nicht wahrnehmen kann, bietet ihn jemandem mit demselben Dienst an einem
+anderen Termin zum Tausch an (auch einem früheren). Getauscht wird erst, wenn die andere Person annimmt – dann sind beide zugesagt.
+
+1. Als A: Start → „Deine nächsten Dienste“ (oder Dienste → Meine): am Dienst **„Tauschen“**. Bei einer offenen Anfrage
+   steht es neben „Zusagen“/„Absagen“.
+2. **Tauschen** → Fenster „Dienst tauschen“ mit allen, die denselben Dienst an einem anderen Termin haben (Name, Termin, Tag) – auch
+   an früheren Terminen.
+   „Tausch anfragen“ geht erst nach einer Wahl. B wählen → **Tausch anfragen** → am Dienst steht „**Tausch angefragt**
+   bei B (Tag)“ mit „Zurückziehen“. Die Einteilungen in ChurchTools sind unverändert.
+3. Als B: Start → „Für dich offen“: „**Tausch-Anfrage · Dienst** – A möchte tauschen: Du bekämst … am … und gibst
+   deinen am … ab.“ mit **Annehmen** und **Ablehnen**.
+4. **Ablehnen** → die Zeile verschwindet. Als A: am Dienst „B hat den Tausch **abgelehnt**“ mit „Andere fragen“.
+5. Als A erneut anfragen; als B **Annehmen** → „Getauscht – du hast jetzt … am …“. In ChurchTools stehen A und B
+   vertauscht, beide zugesagt; die Listen laden neu.
+6. Als A anfragen, dann **Zurückziehen** → wieder „Tauschen“; bei B ist nichts mehr offen.
+7. Als A den Termin öffnen (Termin-Ansicht): In der Karte „Dienste“ steht unter dem eigenen Platz „Tauschen“ bzw. der
+   Stand der Anfrage – an keinem anderen Dienst.
+8. Ein Dienst, den sonst niemand an einem anderen Termin hat → das Fenster sagt „Gerade hat niemand sonst … – frag … oder sag ab.“
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/tausch.ts`, `dienstplaner/src/tauschPort.ts`, `dienstplaner/src/useTausch.ts`, `dienstplaner/src/TauschTeile.tsx`, `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/App.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/tausch.test.ts` (Kern gegen den Nachbau wie gemessen: frische ID, eine Anfrage je Dienst, Nachlesen nach jedem Schreiben, Annehmen erst mit Tausch belegt), `dienstplaner/src/Tausch.test.tsx` (Fenster, Anfragen, Zurückziehen, Annehmen, Ablehnen, Leer- und Fehlerfall), `Startseite.test.tsx`/`Termine.test.tsx`/`TerminAnsicht.test.tsx` (Einbindung); von Hand bleiben die Mitteilungen von ChurchTools und der Blick in die Dienstplan-Liste
+- **Historie:** E7-3 (04.11.2026, Entwurf `e7-3-tausch.html`)
+
+</details>

@@ -17,6 +17,8 @@ import { InfosFenster } from './InfosFenster';
 import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
 import { TerminAblauf } from './TerminAblauf';
+import { TauschAmDienst } from './TauschTeile';
+import type { Tausch } from './useTausch';
 import styles from './TerminAnsicht.module.scss';
 
 type Zustand =
@@ -37,6 +39,9 @@ type Zustand =
  *
  * Geladen wird der Termin frisch (`ladeTermin`, dieselbe Regel wie Liste und Matrix) – er kann auch außerhalb des
  * geladenen Zeitraums liegen (aus „Planen“ mit eigenem Zeitraum).
+ *
+ * **Tauschen** (E7-3, Entwurf `e7-3-tausch.html`): An meinem eigenen Platz steht unter den Plätzen „Tauschen“ bzw. der
+ * Stand der Anfrage – derselbe Baustein und derselbe Zustand wie auf der Startseite und in „Dienste“.
  */
 export function TerminAnsicht({
   start,
@@ -48,6 +53,7 @@ export function TerminAnsicht({
   onTermin,
   onZurueck,
   onGeaendert,
+  tausch,
 }: {
   start: Start;
   terminId: number;
@@ -61,6 +67,8 @@ export function TerminAnsicht({
   onZurueck: () => void;
   /** Infos oder Dateien haben sich geändert – die Termine anderswo (Matrix, Liste) sind damit veraltet. */
   onGeaendert?: () => void;
+  /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
+  tausch?: Tausch;
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
@@ -156,6 +164,8 @@ export function TerminAnsicht({
   const infos = infosNeu ?? s.infos;
   // Infos und Dateien ändern darf, wer den Termin ändern darf – dieselbe Regel (gemessen 02.11.2026).
   const darf = terminAenderbar(start, s.ablaufTermin);
+  // Meine Plätze an diesem Termin (dieselbe Zeile wie in der Liste) – je Dienst „Tauschen“ darunter.
+  const meine = tausch ? (zustand.daten.zeilen[0]?.meine ?? []) : [];
   // Das ⓘ wie in ChurchTools (Entwurf T, Variante B): wo es Infos gibt oder man welche schreiben darf.
   const infoKnopf = (infos !== '' || darf) && (
     <KopfKnopf
@@ -278,12 +288,33 @@ export function TerminAnsicht({
               gruppen.map((g) => (
                 <div key={g.gruppe?.id ?? 'weitere'} className={styles.gruppe}>
                   <h4>{gruppenName(g)}</h4>
-                  {g.zeilen.map((z) => (
-                    <div key={z.dienst.id} className={styles.dienst}>
-                      <span>{z.dienst.name}</span>
-                      <Plaetze plaetze={z.zellen[0] ?? []} ichId={start.ichId} />
-                    </div>
-                  ))}
+                  {g.zeilen.map((z) => {
+                    const eigene = meine.filter((d) => d.ort?.serviceId === z.dienst.id);
+                    return (
+                      <div key={z.dienst.id} className={styles.dienst}>
+                        <span>{z.dienst.name}</span>
+                        <div className={styles.platzSpalte}>
+                          <Plaetze plaetze={z.zellen[0] ?? []} ichId={start.ichId} />
+                          {tausch &&
+                            eigene.map((d, i) => (
+                              <div key={i} className={styles.tausch}>
+                                <TauschAmDienst
+                                  d={{
+                                    terminId: s.id,
+                                    termin: s.name,
+                                    tag: s.tag,
+                                    dienst: d.dienst,
+                                    ort: d.ort!,
+                                  }}
+                                  tausch={tausch}
+                                  zeitzone={zeitzone}
+                                />
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ))
             )}

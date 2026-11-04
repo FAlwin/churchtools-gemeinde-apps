@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { LEERER_PLAN, zeile, mein } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
+import type { Tausch } from './useTausch';
+import { tauschAttrappe } from './tausch.testutil';
 
 const z = zeile;
 
@@ -18,14 +20,15 @@ const ZEILEN = [
   z(5, 'Gemeindeversammlung', '2026-11-08', { abgesagt: true }),
 ];
 
-function zeige(planer = true) {
+function zeige(planer = true, tausch?: Tausch, zeilen = ZEILEN) {
   const onMehr = vi.fn();
   render(
     <Termine
-      zustand={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
+      zustand={{ art: 'fertig', zeilen, plan: LEERER_PLAN, wochen: 8 }}
       planer={planer}
       onNochmal={() => {}}
       onMehr={onMehr}
+      tausch={tausch}
     />,
   );
   return { onMehr };
@@ -195,5 +198,19 @@ describe('Termine → Termin-Ansicht (E6-1b)', () => {
     cleanup();
     zeige();
     expect(screen.queryByRole('button', { name: /Gottesdienst/ })).toBeNull();
+  });
+});
+
+describe('Dienste: Tauschen (E7-3)', () => {
+  it('an jedem eigenen Dienst „Tauschen“ – auch an zugesagten', () => {
+    // Mit bekanntem Platz – ohne `ort` gibt es nichts zu tauschen.
+    const mitPlatz = ZEILEN.map((z) => ({
+      ...z,
+      meine: z.meine.map((d, i) => ({ ...d, ort: { serviceId: 1, index: i } })),
+    }));
+    zeige(false, tauschAttrappe(), mitPlatz);
+    const eigene = mitPlatz.reduce((n, z) => n + z.meine.length, 0);
+    expect(eigene).toBeGreaterThan(1);
+    expect(screen.getAllByRole('button', { name: /Tauschen/ })).toHaveLength(eigene);
   });
 });

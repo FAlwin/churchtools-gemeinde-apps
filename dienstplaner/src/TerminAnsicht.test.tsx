@@ -6,6 +6,9 @@ import { diensteAus } from '@shared/ct/dienste';
 import { startFuer } from './start.testutil';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
+import { einteilungSchluessel } from '@shared/dienstplan/tausch';
+import { tauschAttrappe } from './tausch.testutil';
+import type { Tausch } from './useTausch';
 
 /**
  * Die Termin-Ansicht (E6-1b) – mit dem echten Laden (`ladeTermin`, `ladeAblauf`), nur ChurchTools ist ersetzt.
@@ -64,7 +67,12 @@ function ct({
 }
 
 function zeige(
-  p: { vorher?: number | null; nachher?: number | null; start?: ReturnType<typeof startFuer> } = {},
+  p: {
+    vorher?: number | null;
+    nachher?: number | null;
+    start?: ReturnType<typeof startFuer>;
+    tausch?: Tausch;
+  } = {},
 ) {
   const onTermin = vi.fn();
   const onZurueck = vi.fn();
@@ -80,6 +88,7 @@ function zeige(
       onTermin={onTermin}
       onZurueck={onZurueck}
       onGeaendert={onGeaendert}
+      tausch={p.tausch}
     />
   );
   const { rerender } = render(ansicht(7));
@@ -141,6 +150,38 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(within(dienste).getByText('frei')).toBeTruthy();
     // Nur ansehen: kein Platz ist ein Knopf.
     expect(within(dienste).queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('„Tauschen“ (E7-3) nur an meinem eigenen Platz – nicht am freien, nicht ohne Tausch-Zustand', async () => {
+    ct();
+    const tausch = tauschAttrappe();
+    zeige({ tausch });
+    const dienste = await screen.findByRole('region', { name: 'Dienste' });
+    const knoepfe = within(dienste).getAllByRole('button', { name: /Tauschen/ });
+    expect(knoepfe).toHaveLength(1);
+    // Er steht in der Zeile „Ton“ – dort ist Alwin eingeteilt (serviceId 6).
+    expect(knoepfe[0].closest('div[class*="dienst"]')?.textContent).toContain('Ton');
+    fireEvent.click(knoepfe[0]);
+    expect(await screen.findByText(/Ton · Gottesdienst/)).toBeTruthy();
+    expect(tausch.kandidaten).toHaveBeenCalledWith(
+      einteilungSchluessel({ eventId: 7, serviceId: 6, index: null }),
+    );
+  });
+
+  it('läuft am eigenen Platz eine Anfrage, steht dort ihr Stand mit „Zurückziehen“ statt „Tauschen“', async () => {
+    ct();
+    const tausch: Tausch = {
+      ...tauschAttrappe(),
+      stand: (terminId, ort) =>
+        terminId === 7 && ort.serviceId === 6
+          ? { art: 'offen', id: 12, name: 'Spike Musiker', beginn: '2027-01-10T09:00:00Z' }
+          : null,
+    };
+    zeige({ tausch });
+    const dienste = await screen.findByRole('region', { name: 'Dienste' });
+    expect(await within(dienste).findByText(/bei Spike Musiker \(So, 10\.01\.\)/)).toBeTruthy();
+    expect(within(dienste).getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
+    expect(within(dienste).queryByRole('button', { name: /Tauschen/ })).toBeNull();
   });
 
   it('kein Ablauf (404) → „Noch kein Ablauf.“; leerer Ablauf → „noch leer“; die Dienste stehen trotzdem', async () => {

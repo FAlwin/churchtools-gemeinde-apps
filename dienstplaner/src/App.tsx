@@ -21,6 +21,7 @@ import {
 } from './reiter';
 import { TerminAnsicht } from './TerminAnsicht';
 import { useAntworten } from './useAntworten';
+import { useTausch } from './useTausch';
 import { mitAntworten } from '@shared/dienstplan/antworten';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { tagAusIso } from '@shared/ct/zeit';
@@ -121,8 +122,14 @@ export function App() {
     window.location.hash = adresseFuerTermin(id);
   };
   // Anfragen beantworten (E7-1): Startseite und „Dienste“ teilen einen Zustand; nach jeder Antwort leise neu laden.
+  // Dienste tauschen (E7-3): nach einem Tausch die Termine neu; nach jeder Antwort auch den Tausch-Stand – die
+  // Einteilung hat dann eine neue ID, und ein Ausgang hängt an ihr.
+  const tausch = useTausch(start?.ichId ?? 0, zeitzone, () => {
+    if (start) termineLaden(start, geladen, true);
+  });
   const antworten = useAntworten(start?.ichId ?? 0, () => {
     if (start) termineLaden(start, geladen, true);
+    tausch.neuLaden();
   });
   // Die Termine mit den eben gegebenen Antworten – zehn Minuten lang mit „Rückgängig“ (`mitAntworten`).
   // Nur neu bauen, wenn sich etwas ändert – „Dienste“ erkennt ein laufendes Nachladen am selben Zustand (Objekt).
@@ -175,6 +182,7 @@ export function App() {
           // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
           // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
           onGeaendert={() => termineLaden(start, geladen, true)}
+          tausch={tausch}
         />
       )}
       {start && terminId === null && aktiv === 'start' && (
@@ -182,6 +190,8 @@ export function App() {
           start={start}
           termine={termineSicht}
           antworten={antworten}
+          tausch={tausch}
+          zeitzone={zeitzone}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}
           onNochmal={() => termineLaden(start, wochen)}
           onTermin={terminZeigen}
@@ -196,6 +206,8 @@ export function App() {
           onTermin={terminZeigen}
           zustand={termineSicht ?? termine}
           antworten={antworten}
+          tausch={tausch}
+          zeitzone={zeitzone}
           planer={darfPlanen}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}

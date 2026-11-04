@@ -1,0 +1,123 @@
+// Dienste tauschen (E7-3, Entwurf `e7-3-tausch.html`): Knopf am Dienst, Band für offene/abgelehnte Anfragen, Fenster.
+
+.knopf {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.fehler {
+  margin: 4px 0 0;
+  color: var(--red);
+  font-size: 12.5px;
+}
+
+// „Tausch angefragt bei …“ / „… hat abgelehnt“ / „Getauscht“ – wie das Band nach einer Antwort (E7-1).
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+  padding: 4px 4px 4px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+
+  > span {
+    margin-right: auto;
+  }
+
+  b {
+    font-size: inherit;
+    font-weight: 700;
+  }
+}
+
+.nein {
+  background: var(--surface3);
+  color: var(--text2);
+}
+
+.ok {
+  flex: 1;
+  margin-top: 0;
+  // Wie „zugesagt“ nach einer Antwort (E7-1): grüne Schrift auf der Sekundärfläche.
+  background: var(--surface3);
+  color: var(--green);
+}
+
+// Partnerwahl im Fenster.
+.wahl {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-ctrl);
+  overflow: hidden;
+}
+
+.wahlZeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.an {
+  background: var(--blue-soft);
+}
+
+.punkt {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--hair);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+
+  .an & {
+    border-color: var(--blue);
+
+    &::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+  }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}

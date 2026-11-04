@@ -19,7 +19,7 @@
 import type { CtAbsence } from '../ct/typen';
 import { ctId } from '../ct/ctId';
 import { tagAusIso } from '../ct/zeit';
-import type { Absence, AbsenceReason, NeueAbsence } from '../types/index';
+import type { Absence, AbsenceEvent, AbsenceReason, NeueAbsence } from '../types/index';
 import { grundLesbar, istMarkerEintrag, markerFreitext } from './index';
 
 /** Der Weg zu ChurchTools – im Browser `abwesenheitPort` (`@ui/ct/abwesenheitPort`), im Test ein Nachbau. */
@@ -316,4 +316,27 @@ export async function abwesenheitLoeschen(
   await port.loeschen(ich, id);
   if (await port.einer(ich, id)) return { ok: false, grund: 'nicht-geloescht' };
   return { ok: true, schonWeg: false };
+}
+
+/**
+ * **Termine → Liste zum Abhaken:** Tag in der Gemeinde, nach Beginn sortiert. Ohne Ende steht dort der Start – dann
+ * wird ein Haken ganztägig (`zeitfensterFuer`). Wie `zuEvents` im NAS-Server (der bleibt unberührt und fällt weg).
+ */
+export function termineAus(
+  events: { id: number; name?: string | null; startDate?: unknown; endDate?: unknown }[],
+  zeitzone: string,
+): AbsenceEvent[] {
+  return events
+    .filter(
+      (e): e is typeof e & { startDate: string } =>
+        typeof e.startDate === 'string' && e.startDate.length >= 10,
+    )
+    .map((e) => ({
+      id: e.id,
+      name: e.name ?? '',
+      date: tagAusIso(e.startDate, zeitzone),
+      startDate: e.startDate,
+      endDate: typeof e.endDate === 'string' && e.endDate ? e.endDate : e.startDate,
+    }))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 }

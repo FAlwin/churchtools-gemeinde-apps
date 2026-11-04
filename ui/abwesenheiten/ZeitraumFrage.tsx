@@ -1,8 +1,8 @@
 import type { Absence } from '@shared/types/index';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Sheet } from '@ui/fenster/Sheet';
-import { tagKurz, zeitraumKurz } from '../utils/absenceDatum';
-import styles from '../pages/Availability.module.scss';
+import { FensterKnopf } from '../fenster/FensterKnopf';
+import { Sheet } from '../fenster/Sheet';
+import { tagKurz, zeitraumKurz } from './absenceDatum';
+import styles from './Abwesenheiten.module.scss';
 
 interface ZeitraumFrageProps {
   /** Der Termintag, dessen Haken entfernt werden soll. */

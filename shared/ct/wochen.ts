@@ -9,10 +9,10 @@
  * Schnellwahl „Wochenende" im Fenster.
  */
 
-import { plusTage } from '@shared/ct/datum';
+import { plusTage } from './datum';
 
 // Seit 14.10.2026 gemeinsam mit dem Dienstplaner in `shared/ct/datum.ts`.
-export { plusTage } from '@shared/ct/datum';
+export { plusTage } from './datum';
 
 const TAG_MS = 86_400_000;
 

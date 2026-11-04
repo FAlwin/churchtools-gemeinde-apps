@@ -1,6 +1,6 @@
 import type { Absence, AbsenceEvent } from '@shared/types/index';
 import { decktTermin } from '@shared/absences/index';
-import { wochentagKurz } from './wochen';
+import { wochentagKurz } from '@shared/ct/wochen';
 
 /**
  * Datums-Helfer für die Verfügbarkeit (#177). Alles rein und ohne Zeitzone: Die Tage kommen als
@@ -9,8 +9,9 @@ import { wochentagKurz } from './wochen';
  */
 
 /**
- * Die Abwesenheit, die **diesen Termin** abdeckt – eigene zuerst, damit „Abmelden zurücknehmen" sie
- * trifft.
+ * Die Abwesenheit, die **diesen Termin** abdeckt – ein Eintrag mit Uhrzeit zuerst: Er gehört genau zu diesem Termin
+ * (ein Haken trägt sein Zeitfenster ein), und „Haken weg“ soll ihn treffen, nicht den ganztägigen Urlaub daneben. Bis
+ * zum 04.11.2026 entschied das Kennzeichen „[Musikteam]“ (eigene zuerst); das gibt es nicht mehr (Dienstplaner E7-2).
  *
  * Bis zum 22.09.2026 fragte die Seite nach dem **Tag**. Damit hingen zwei Termine am selben Tag
  * zusammen, und Alwin konnte sich nicht für den Vormittag abmelden und für den Nachmittag zusagen.
@@ -18,7 +19,9 @@ import { wochentagKurz } from './wochen';
  * weil der Server dieselbe Regel für die Doppel-Erkennung braucht).
  */
 export function abwesenheitFuerTermin(alle: Absence[], ev: AbsenceEvent): Absence | undefined {
-  return alle.find((a) => a.vonApp && decktTermin(a, ev)) ?? alle.find((a) => decktTermin(a, ev));
+  return (
+    alle.find((a) => !!a.startTime && decktTermin(a, ev)) ?? alle.find((a) => decktTermin(a, ev))
+  );
 }
 
 /**

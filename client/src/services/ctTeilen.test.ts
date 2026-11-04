@@ -296,7 +296,7 @@ describe('Inhaltsverzeichnis: Lieder im Eintrag (#554)', () => {
   });
 });
 
-describe('Recht auf Team-Notizen (wie im Server)', () => {
+describe('Recht auf Team-Notizen und Abwesenheiten (wie im Server)', () => {
   const MUSIKTEAM = 9;
 
   beforeEach(async () => {
@@ -343,8 +343,18 @@ describe('Recht auf Team-Notizen (wie im Server)', () => {
     expect(r.canViewSongs).toBe(true);
   });
 
-  it('Abwesenheiten bleiben bis 3b-3 aus – auch für Mitglieder', async () => {
-    mitglied(15);
+  it('Abwesenheiten (seit Dienstplaner E7-2b): jedes aktive Mitglied der Gruppen – ohne Rollen-Filter', async () => {
+    mitglied(16);
+    const r = await meineRechte();
+    expect(r.canUseAvailability).toBe(true);
+    expect(r.canUseGlobalNotes).toBe(false);
+    mitglied(16, 'requested');
+    expect((await meineRechte()).canUseAvailability).toBe(false);
+  });
+
+  it('Mitgliedschaften nicht lesbar → auch die Abwesenheiten vorerst aus', async () => {
+    ct.liefere(`/api/persons/${ICH}/groups`, {}, 500);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect((await meineRechte()).canUseAvailability).toBe(false);
   });
 });

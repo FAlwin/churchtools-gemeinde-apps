@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { Absence, AbsenceReason, NeueAbsence } from '@shared/types/index';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Sheet } from '@ui/fenster/Sheet';
-import { anzahlTage } from '../utils/wochen';
-import { SCHNELLWAHL, schnellwahlZeitraum, type SchnellwahlId } from '../utils/schnellwahl';
-import styles from '../pages/Availability.module.scss';
+import { FensterKnopf } from '../fenster/FensterKnopf';
+import { Sheet } from '../fenster/Sheet';
+import { anzahlTage } from '@shared/ct/wochen';
+import { SCHNELLWAHL, schnellwahlZeitraum, type SchnellwahlId } from './schnellwahl';
+import { zeitraumKurz } from './absenceDatum';
+import styles from './Abwesenheiten.module.scss';
 
 /** Was das Fenster gerade tut: neu eintragen (mit Starttag) oder einen eigenen Eintrag ändern. */
 export type Entwurf = { art: 'neu'; tag: string } | { art: 'aendern'; absence: Absence };
@@ -197,15 +198,15 @@ export function AbsenceSheet({
       {entwurf.art === 'aendern' &&
         !nurLesen &&
         /**
-         * **Löschen fragt nach, wenn der Eintrag nicht aus der App stammt.** Er wurde dann direkt in
-         * ChurchTools gemacht (Urlaub, krank) – dass er hier verschwindet, soll niemanden überraschen.
-         * Bei eigenen App-Einträgen bleibt es beim einen Tipp.
+         * **Löschen fragt immer nach** (Alwin 04.11.2026, Dienstplaner E7-2): Seit es kein Kennzeichen mehr gibt, sieht
+         * jeder Eintrag aus wie in ChurchTools gemacht – und ein gelöschter Urlaub ist weg. Bis dahin fragte nur ein
+         * Eintrag ohne „[Musikteam]“ nach.
          */
         (loeschFrage ? (
           <div className={styles.loeschFrage}>
             <p>
-              Dieser Eintrag stammt aus ChurchTools
-              {entwurf.absence.reason ? ` („${entwurf.absence.reason}")` : ''}. Wirklich löschen?
+              <b>Abwesenheit löschen?</b> {entwurf.absence.reason ?? 'Abwesend'}{' '}
+              {zeitraumKurz(entwurf.absence)} – der Eintrag verschwindet auch in ChurchTools.
             </p>
             <div className={styles.zwei}>
               <button className={styles.behalten} onClick={() => setLoeschFrage(false)}>
@@ -224,9 +225,7 @@ export function AbsenceSheet({
           <button
             className={styles.loeschenWide}
             disabled={loeschtGerade}
-            onClick={() =>
-              entwurf.absence.vonApp ? onDelete(entwurf.absence) : setLoeschFrage(true)
-            }
+            onClick={() => setLoeschFrage(true)}
           >
             {loeschtGerade ? 'Wird gelöscht …' : 'Löschen'}
           </button>

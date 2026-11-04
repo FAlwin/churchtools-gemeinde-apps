@@ -68,7 +68,7 @@ bekommt **keinen** Marker.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ZeitraumFrage.tsx`, `client/src/pages/Availability.tsx`, `client/src/components/AbsenceSheet.tsx`, `server/src/services/absences.ts`, `shared/absences/index.ts`
+- **Betrifft:** `ui/abwesenheiten/ZeitraumFrage.tsx`, `client/src/pages/Availability.tsx`, `ui/abwesenheiten/AbsenceSheet.tsx`, `server/src/services/absences.ts`, `shared/absences/index.ts`
 - **Automatisiert:** teilweise – `client/src/pages/Availability.test.tsx` (Rückfrage, löschen vormerken, zurücknehmen, anpassen öffnet das Fenster), `server/src/services/absences.test.ts` (Grund und fehlender Marker bleiben beim Ändern), `server/src/services/absenceGrund.test.ts`; von Hand bleibt der echte ChurchTools-Eintrag
 - **Historie:** #177 (Runde 8, 19.09.2026)
 
@@ -103,7 +103,9 @@ unten rechts, am iPad/Rechner der grüne Knopf **„+ Zeitraum eintragen“** ob
 ChurchTools); solange Häkchen vorgemerkt sind, gibt es beides nicht. Nach dem Eintragen
 steht der Zeitraum unter **Einträge → Anstehend** mit den Terminen, die er trifft. Ein Tipp auf die
 Zeile öffnet „Abwesenheit ändern"; nach dem Speichern steht in ChurchTools **genau ein** Eintrag mit
-den neuen Werten – der alte ist weg, der Marker `[Musikteam]` geblieben.
+den neuen Werten – der alte ist weg, der Marker `[Musikteam]` geblieben (so schreibt es der NAS-Server; in ChurchTools
+siehe TF-VERF-09). Alle Einträge sehen gleich aus – seit 04.11.2026 gibt es kein graues „in ChurchTools eingetragen“
+mehr.
 
 1. Am Handy unten rechts auf das **Plus**, am Rechner oben auf **„+ Zeitraum eintragen“** → Fenster „Zeitraum
    eintragen", Von = nächster Termin. **„1 Woche"**
@@ -116,15 +118,16 @@ den neuen Werten – der alte ist weg, der Marker `[Musikteam]` geblieben.
    hinten, Kommentar ändern, **Speichern** → „Geändert.", die Zeile zeigt den neuen Zeitraum.
 4. In ChurchTools nachsehen: **ein** Eintrag mit den neuen Daten und Kommentar `[Musikteam] …` –
    kein zweiter, kein alter.
-5. Die Zeile erneut antippen → **Löschen** → „Gelöscht.", in ChurchTools ist der Eintrag weg. Bei
-   einem Eintrag, der direkt in ChurchTools gemacht wurde (TF-VERF-02), kommt vor dem Löschen die
-   Rückfrage „stammt aus ChurchTools".
+5. Die Zeile erneut antippen → **Löschen** → im Fenster die Rückfrage **„Abwesenheit löschen?"** mit Grund und
+   Zeitraum; **Behalten** bricht ab. Noch einmal **Löschen** → **Ja, löschen** → „Gelöscht.", in ChurchTools ist
+   der Eintrag weg. Seit 04.11.2026 fragt das **jeder** Eintrag – auch einer aus der App (vorher nur einer, der
+   direkt in ChurchTools gemacht wurde).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `server/src/services/absences.ts`, `server/src/controllers/absencesController.ts`, `client/src/components/AbsenceSheet.tsx`, `client/src/pages/Availability.tsx`
-- **Automatisiert:** teilweise – `server/src/services/absences.test.ts` (Reihenfolge anlegen→löschen, 403, 409, Fehlschlag beim Aufräumen), `client/src/components/AbsenceSheet.test.tsx`, `client/src/pages/Availability.test.tsx` (Plus mit nächstem Termin, Einträge nach Monat mit „trifft", Löschen); von Hand bleibt, dass in ChurchTools wirklich nur ein Eintrag übrig bleibt
+- **Betrifft:** `server/src/services/absences.ts`, `server/src/controllers/absencesController.ts`, `ui/abwesenheiten/AbsenceSheet.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `client/src/pages/Availability.tsx`
+- **Automatisiert:** teilweise – `server/src/services/absences.test.ts` (Reihenfolge anlegen→löschen, 403, 409, Fehlschlag beim Aufräumen), `ui/abwesenheiten/AbsenceSheet.test.tsx`, `client/src/pages/Availability.test.tsx` (Plus mit nächstem Termin, Einträge nach Monat mit „trifft", Löschen); von Hand bleibt, dass in ChurchTools wirklich nur ein Eintrag übrig bleibt
 - **Historie:** #177 (Runde 8, 19.09.2026)
 
 </details>
@@ -152,8 +155,8 @@ unter **Einträge → Früher**, nur zum Ansehen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `ui/bedienung/ZeitraumKnopf.tsx`, `shared/ct/zeitraum.ts`, `client/src/utils/monate.ts`, `client/src/pages/Availability.tsx`, `client/src/components/AbsenceSheet.tsx`, `server/src/services/absences.ts`
-- **Automatisiert:** teilweise – `ui/bedienung/ZeitraumKnopf.test.tsx`, `shared/ct/zeitraum.test.ts`, `client/src/utils/monate.test.ts`, `client/src/pages/Availability.test.tsx` (ab heute vier Wochen, nächster/dieser Monat, eigener Zeitraum über zwei Monate, leerer Zeitraum, Nachladen über ein Jahr hinaus, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt die Bedienung am Gerät
+- **Betrifft:** `ui/bedienung/ZeitraumKnopf.tsx`, `shared/ct/zeitraum.ts`, `shared/ct/monate.ts`, `client/src/pages/Availability.tsx`, `ui/abwesenheiten/AbsenceSheet.tsx`, `server/src/services/absences.ts`
+- **Automatisiert:** teilweise – `ui/bedienung/ZeitraumKnopf.test.tsx`, `shared/ct/zeitraum.test.ts`, `shared/ct/monate.test.ts`, `client/src/pages/Availability.test.tsx` (ab heute vier Wochen, nächster/dieser Monat, eigener Zeitraum über zwei Monate, leerer Zeitraum, Nachladen über ein Jahr hinaus, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt die Bedienung am Gerät
 - **Historie:** #177 (Runde 8, 19.09.2026); Zeitraum-Knopf statt Monatsleiste 28.10.2026 (Entwurf A, Alwin)
 
 </details>
@@ -190,8 +193,8 @@ Filter noch so.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/pages/Availability.tsx`, `client/src/utils/terminFilter.ts`, `ui/bedienung/FilterKnopf.tsx`, `client/src/components/TerminArtenManager.tsx`, `client/src/pages/Settings.tsx`, `client/src/components/VerwaltungFenster.tsx`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/utils/devicePrefs.ts`, `server/src/services/siteConfig.ts`
-- **Automatisiert:** überwiegend – `client/src/utils/terminFilter.test.ts` (Suchwort, Reihenfolge, Sonstige, Ausblenden, Umrechnen der alten Wahl), `ui/bedienung/FilterKnopf.test.tsx`, `client/src/pages/Availability.test.tsx` (Häkchen, Zahl am Knopf, mehrere ausblenden, Sonstige, Merken, alte Wahl umgerechnet, Häkchen übersteht den Wechsel, kein Filter ohne Arten), `client/src/components/TerminArtenManager.test.tsx` (trimmen, halbe Zeile, löschen), `server/src/services/siteConfig.test.ts` (Schema, Rundlauf, doppelte IDs); von Hand bleibt der Weg über den echten Admin-Bereich
+- **Betrifft:** `client/src/pages/Availability.tsx`, `ui/abwesenheiten/terminFilter.ts`, `ui/bedienung/FilterKnopf.tsx`, `client/src/components/TerminArtenManager.tsx`, `client/src/pages/Settings.tsx`, `client/src/components/VerwaltungFenster.tsx`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/utils/devicePrefs.ts`, `server/src/services/siteConfig.ts`
+- **Automatisiert:** überwiegend – `ui/abwesenheiten/terminFilter.test.ts` (Suchwort, Reihenfolge, Sonstige, Ausblenden, Umrechnen der alten Wahl), `ui/bedienung/FilterKnopf.test.tsx`, `client/src/pages/Availability.test.tsx` (Häkchen, Zahl am Knopf, mehrere ausblenden, Sonstige, Merken, alte Wahl umgerechnet, Häkchen übersteht den Wechsel, kein Filter ohne Arten), `client/src/components/TerminArtenManager.test.tsx` (trimmen, halbe Zeile, löschen), `server/src/services/siteConfig.test.ts` (Schema, Rundlauf, doppelte IDs); von Hand bleibt der Weg über den echten Admin-Bereich
 - **Historie:** #400 (20.09.2026), Wunsch Alwin; erster Bau nach Kalender verworfen (bei der ECG ein Kalender für alles); Filter-Knopf mit Häkchen wie im Dienstplaner statt Kapseln „eins oder alles“ 28.10.2026
 
 </details>
@@ -222,8 +225,8 @@ Nachmittag frei – in ChurchTools steht eine Abwesenheit **mit Uhrzeit**, nicht
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/absences/index.ts`, `client/src/pages/Availability.tsx`, `client/src/utils/absenceDatum.ts`, `client/src/hooks/useAvailability.ts`, `server/src/services/absences.ts`, `server/src/services/ctWrite.ts`, `server/src/controllers/absencesController.ts`
-- **Automatisiert:** teilweise – `client/src/utils/absenceDatum.test.ts` (Fenster trennt Vormittag/Nachmittag, ganztägig deckt beides, Grenzen offen), `client/src/pages/Availability.test.tsx` (Haken lässt den zweiten Termin frei), `server/src/services/absences.test.ts` (Doppel-Erkennung mit Fenster, Uhrzeit überlebt eine Änderung); von Hand bleibt, dass ChurchTools die Uhrzeit wirklich speichert und anzeigt
+- **Betrifft:** `shared/absences/index.ts`, `client/src/pages/Availability.tsx`, `ui/abwesenheiten/absenceDatum.ts`, `client/src/hooks/useAvailability.ts`, `server/src/services/absences.ts`, `server/src/services/ctWrite.ts`, `server/src/controllers/absencesController.ts`
+- **Automatisiert:** teilweise – `ui/abwesenheiten/absenceDatum.test.ts` (Fenster trennt Vormittag/Nachmittag, ganztägig deckt beides, Grenzen offen), `client/src/pages/Availability.test.tsx` (Haken lässt den zweiten Termin frei), `server/src/services/absences.test.ts` (Doppel-Erkennung mit Fenster, Uhrzeit überlebt eine Änderung); von Hand bleibt, dass ChurchTools die Uhrzeit wirklich speichert und anzeigt
 - **Historie:** Alwin 22.09.2026 („das muss in der logik geändert werden"). Am 24.09.2026 lehnte ChurchTools jeden Eintrag mit Uhrzeit ab (Schritt 2 → Fehlermeldung), ohne neue Versionsnummer – seitdem gehen die Tage als Zeitpunkte hinaus (`fuerChurchTools`). **Schritt 4 ist deshalb der wichtigste:** Er bemerkt, wenn ChurchTools sein Verhalten wieder ändert.
 
 </details>
@@ -249,5 +252,36 @@ Zeiten intern in UTC, und 0:30 Uhr deutscher Zeit ist dort noch der Vortag (#414
 - **Betrifft:** `server/src/utils/isoTag.ts`, `server/src/config.ts`, `server/src/services/absences.ts`, `server/src/services/ctWrite.ts`, `shared/ct/mapEvent.ts`, `server/src/services/setlistBuilder.ts`
 - **Automatisiert:** überwiegend – `server/src/utils/isoTag.test.ts` (Winter-/Sommerzeit, 23:59, Versatz, andere Zeitzone), `server/src/services/absences.test.ts` (0:30 Uhr gehört zum deutschen Tag, Termin über Mitternacht endet am Folgetag), `server/src/config.zeitzone.test.ts`; von Hand bleibt, dass ChurchTools den Eintrag am selben Tag anlegt
 - **Historie:** #414 (24.09.2026). An der Test-Instanz gemessen: ChurchTools legt eine Abwesenheit ab `2026-12-03T23:30:00Z` selbst am **04.12.** an – es rechnet also in deutscher Zeit, genau wie die App jetzt
+
+</details>
+
+### TF-VERF-09 · Abwesenheiten in der Musik-App in ChurchTools (Erweiterung)
+
+**Das brauchst du:** Die Musik-App als Erweiterung in der **Test-Instanz**, ein Konto, das aktives Mitglied einer der
+Musikteam-Gruppen ist (z. B. Spike), und Zugriff auf ChurchTools zum Nachsehen (Personen → Profil → Abwesenheiten).
+
+**Das muss passieren:** Der Reiter **„Abwesenheiten"** ist da (bis E7-2b fehlte er in der Erweiterung) und arbeitet
+direkt mit ChurchTools – ohne den NAS-Server. Neue Einträge tragen **kein** `[Musikteam]`; Ändern bleibt **derselbe**
+Eintrag; Löschen fragt immer nach.
+
+1. Musik-App in ChurchTools öffnen → unten der Reiter **Abwesenheiten**. Ein Konto ohne Musikteam-Gruppe sieht ihn
+   nicht.
+2. Einen Termin **Abwesend** abhaken, **Speichern** → „1 Änderung gespeichert …". In ChurchTools: ein Eintrag mit
+   der **Uhrzeit des Termins**, Grund **Abwesend**, Kommentar **leer** (kein `[Musikteam]`).
+3. Denselben Termin noch einmal in einem zweiten Tab abhaken und speichern → in ChurchTools steht **kein zweiter**
+   Eintrag.
+4. Über **+ Zeitraum eintragen** eine Woche mit Grund **Urlaub** eintragen. Unter **Einträge** antippen, **Bis**
+   verlängern und den Kommentar ändern → **Speichern**. In ChurchTools: derselbe Eintrag (gleiche Stelle in der Liste),
+   neue Daten, Grund **Urlaub** geblieben.
+5. Einen Eintrag, der direkt in ChurchTools gemacht wurde, unter **Einträge** öffnen → er sieht aus wie alle anderen
+   (kein Grau). **Löschen** → Rückfrage → **Ja, löschen** → in ChurchTools ist er weg.
+6. Aufräumen: die Einträge aus Schritt 2–4 löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/absences/abwesenheiten.ts`, `ui/ct/abwesenheitPort.ts`, `ui/abwesenheiten/ctDienst.ts`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `client/src/services/availability.ts`, `client/src/services/ctLesen.ts`
+- **Automatisiert:** überwiegend – `shared/absences/abwesenheiten.test.ts` (Nachbau von ChurchTools wie gemessen: Doppel, PUT ersetzt ganz, Tage + Uhrzeit = 400, Lesefenster einen Tag weiter, DELETE ohne Wirkung), `ui/abwesenheiten/ctDienst.test.ts` (Meldungen, vorgewählter Grund, Termine), `client/src/services/ctTeilen.test.ts` (Recht wie im Server); von Hand bleibt, dass ChurchTools die Einträge wirklich so zeigt
+- **Historie:** Dienstplaner E7-2a/E7-2b (04.11.2026): nur noch die Erweiterung zählt, kein Kennzeichen mehr
 
 </details>

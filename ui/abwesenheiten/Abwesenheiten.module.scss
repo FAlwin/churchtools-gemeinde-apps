@@ -1,7 +1,7 @@
 @use '@ui/design/mixins' as m;
 
 // Abwesenheiten (#177) – Aufbau nach Entwurfsrunde 8 (19.09.2026). Die Klassen ab „Formular im
-// Fenster" nutzen auch `components/AbsenceSheet.tsx` und `components/ZeitraumFrage.tsx`.
+// Fenster" nutzen auch `AbsenceSheet.tsx` und `ZeitraumFrage.tsx`.
 
 // Unten Platz für das schwebende Plus (`--plus-boden` + 78px, siehe `SchwebePlus`) – sonst läge es am Listenende auf
 // dem letzten Termin.
@@ -115,11 +115,6 @@
   background: color-mix(in srgb, var(--red) 14%, var(--surface2));
   color: var(--red);
 }
-.datumGrau {
-  background: var(--surface3);
-  color: var(--text2);
-}
-
 .text {
   flex: 1;
   min-width: 0;
@@ -205,10 +200,6 @@
     background: var(--red);
     border-color: var(--red);
   }
-}
-.kastenCt .box {
-  background: var(--text2);
-  border-color: var(--text2);
 }
 .vorgemerkt .box {
   box-shadow: 0 0 0 3px var(--blue-soft);

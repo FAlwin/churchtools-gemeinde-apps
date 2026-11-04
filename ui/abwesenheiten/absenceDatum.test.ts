@@ -26,12 +26,17 @@ const ev = (p: Partial<AbsenceEvent> = {}): AbsenceEvent => ({
 });
 
 describe('absenceDatum', () => {
-  it('abwesenheitFuerTermin nimmt die eigene vor der manuellen', () => {
-    const manuell = ab({ id: 2, vonApp: false });
-    const eigene = ab({ id: 3 });
-    expect(abwesenheitFuerTermin([manuell, eigene], ev())?.id).toBe(3);
-    expect(abwesenheitFuerTermin([manuell], ev())?.id).toBe(2);
-    expect(abwesenheitFuerTermin([manuell], ev({ date: '2026-10-05' }))).toBeUndefined();
+  it('abwesenheitFuerTermin nimmt den Eintrag mit Uhrzeit vor dem ganztägigen – egal, woher er stammt', () => {
+    const ganztags = ab({ id: 2 });
+    const fenster = ab({
+      id: 3,
+      vonApp: false,
+      startTime: '2026-10-04T10:00:00Z',
+      endTime: '2026-10-04T12:00:00Z',
+    });
+    expect(abwesenheitFuerTermin([ganztags, fenster], ev())?.id).toBe(3);
+    expect(abwesenheitFuerTermin([ganztags], ev())?.id).toBe(2);
+    expect(abwesenheitFuerTermin([ganztags], ev({ date: '2026-10-05' }))).toBeUndefined();
   });
 
   /**

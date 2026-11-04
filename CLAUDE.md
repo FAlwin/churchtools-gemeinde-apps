@@ -1560,7 +1560,7 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   ChurchTools entscheidet den Rest. Der Bereich zeigt **alle** Termine, die das Konto sehen darf –
   unabhängig von der Dienst-Einteilung; die Überschrift sagt das, weil beim Durchklicken die Frage kam,
   ob es die eigenen Dienste seien. Seit #400 lässt sich nach **Termin-Art** filtern: Suchwort im
-  Terminnamen (`utils/terminFilter.ts`), Arten pflegt der Admin in `SiteConfig.terminArten`, genau
+  Terminnamen (`ui/abwesenheiten/terminFilter.ts`), Arten pflegt der Admin in `SiteConfig.terminArten`, genau
   eine Art oder alles, Wahl je Gerät gemerkt.
   Kern: `services/absences.ts` – dort auch die Regel, dass **Ändern = neu anlegen, dann alten
   löschen** ist (ChurchTools kennt kein Ändern von Abwesenheiten; die Reihenfolge ist der Schutz gegen
@@ -1580,17 +1580,25 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   vorab geholt, ein eigener Zeitraum darüber hinaus holt nach; Filter mit Häkchen = ausgeblendete Arten,
   `worship:abwesenheiten-ausgeblendet`, die alte Einzelwahl wird einmal umgerechnet). Vorher Monats-Kapseln
   (`MonatsLeiste`, gelöscht). Je Termin ein **Abhakfeld** – Häkchen sind nur **vorgemerkt** (blauer Ring), die
-  Speichern-Leiste schreibt alle auf einmal über `useSaveAbsenceChanges` (erst anlegen, dann löschen,
+  Speichern-Leiste schreibt alle auf einmal (`speichernAlles` in der Seite; erst anlegen, dann löschen,
   nacheinander; **kein Bearbeiten-Modus**, Entscheidung Alwin + Frau: wie im alten Planner). Ein Termin in
-  einem mehrtägigen Zeitraum fragt über `components/ZeitraumFrage.tsx` (löschen vormerken / anpassen). Das
-  runde Plus (am iPad/Rechner seit S2 der grüne Kopfknopf) öffnet `components/AbsenceSheet.tsx` („Zeitraum
+  einem mehrtägigen Zeitraum fragt über `ZeitraumFrage.tsx` (löschen vormerken / anpassen). Das
+  runde Plus (am iPad/Rechner seit S2 der grüne Kopfknopf) öffnet `AbsenceSheet.tsx` („Zeitraum
   eintragen", Schnellwahl); „Einträge" zeigt
   Anstehend/Früher, Vergangenes mit `nurLesen`. Der Wochenstreifen (`WochenStreifen.tsx`, `wochenAb`) ist
-  weg; `utils/wochen.ts` behält nur Tages-Helfer (UTC-Rechnen), während **„welcher Tag ist heute"**
+  weg; `shared/ct/wochen.ts` behält nur Tages-Helfer (UTC-Rechnen), während **„welcher Tag ist heute"**
   seit v2.25.1 in `utils/heute.ts` steht und **lokal** rechnet – UTC lieferte zwischen 0 und 2 Uhr den
   Vortag. Server: `GET /api/absences/events?to=` (Tag statt
-  Wochen). Tour `verfuegbarkeit-v5` (v5 = Schritt „Nur bestimmte Termine", #400), Testfälle TF-VERF-01…06.
+  Wochen). Tour `verfuegbarkeit-v5` (v5 = Schritt „Nur bestimmte Termine", #400), Testfälle TF-VERF-01…09.
   **Kein Excel im App-Code** – der ECG-Sync ist ein eigener Dienst (`excel-sync/`, PR 2).
+  **Seit Dienstplaner E7-2 (04.11.2026): gemeinsamer Baustein, auch in ChurchTools.** Die Seite samt Fenstern und
+  Helfern liegt in `ui/abwesenheiten/` (`AbwesenheitenSeite.tsx`, Daten/Schreiben/Rahmen kommen je App von außen);
+  `pages/Availability.tsx` ist nur noch der Rahmen der Musik-App (Seitengerüst, Zwischenspeicher, Tour). **In der
+  Erweiterung** liest und schreibt sie direkt (`ui/abwesenheiten/ctDienst.ts` → Kern `shared/absences/abwesenheiten.ts`
+  → `ui/ct/abwesenheitPort.ts`): Ändern = `PUT` auf dieselbe ID, mit Uhrzeit nur `startTime/endTime`, Liste einen Tag
+  weiter lesen, Löschen nachlesen, Gründe aus `/event/masterdata`. **Kein Kennzeichen mehr** (Alwin 04.11.2026): neue
+  Einträge ohne `[Musikteam]`, alle sehen gleich aus, Löschen fragt immer nach; der NAS-Server schreibt weiter mit
+  Marker und bleibt unberührt (fällt weg).
 
 ## Schreibzugriff (Editor) – ChurchTools-Eigenheiten
 

@@ -5,6 +5,8 @@
  */
 import { ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
+import { abwesenheitPort } from '@ui/ct/abwesenheitPort';
+import { ctAbwesenheiten } from '@shared/absences/abwesenheiten';
 import type { CtAbsence, CtAgenda, CtSong } from '@shared/ct/typen';
 
 /**
@@ -36,16 +38,12 @@ export async function ladeAblauf(eventId: number): Promise<CtAgenda | null> {
   }
 }
 
-/** Die eigenen Abwesenheiten von `von` bis `bis` (`YYYY-MM-DD`). Wirft, wenn keine Liste kommt. */
-export async function ladeAbwesenheiten(
-  ichId: number,
-  von: string,
-  bis: string,
-): Promise<CtAbsence[]> {
-  const q = new URLSearchParams({ from: von, to: bis, limit: '500' });
-  const liste = await ctDaten<unknown>(`/persons/${ichId}/absences?${q.toString()}`);
-  if (!Array.isArray(liste)) throw new ApiError(502, 'Abwesenheiten kamen nicht als Liste.');
-  return liste as CtAbsence[];
+/**
+ * Die eigenen Abwesenheiten von `von` bis `bis` (`YYYY-MM-DD`). Wirft, wenn keine Liste kommt – über den gemeinsamen
+ * Kern (`ctAbwesenheiten`, E7-2a): Er liest einen Tag weiter, sonst fehlte ein Eintrag mit Uhrzeit am letzten Tag.
+ */
+export function ladeAbwesenheiten(ichId: number, von: string, bis: string): Promise<CtAbsence[]> {
+  return ctAbwesenheiten(abwesenheitPort, ichId, von, bis);
 }
 
 /**

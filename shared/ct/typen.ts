@@ -56,7 +56,12 @@ export interface CtAbsence {
   startTime?: string | null;
   endTime?: string | null;
   comment?: string | null;
-  absenceReason?: { id?: number | string; name?: string | null } | null;
+  /** `nameTranslated` liefert ChurchTools schon deutsch (gemessen 04.11.2026), `name` ist der Schlüssel. */
+  absenceReason?: {
+    id?: number | string;
+    name?: string | null;
+    nameTranslated?: string | null;
+  } | null;
 }
 
 export interface CtAgendaSong {

@@ -24,8 +24,11 @@
 }
 
 // Zeitraum-Knopf links, Filter-Knopf rechts – wie die Werkzeugzeile in Dienstplaner › Planen (28.10.2026).
+// Bricht um, wenn Zeitraum und Filter nicht nebeneinander passen (sehr schmal, z. B. der Dienstplaner in einer
+// schmalen Spalte) – sonst ragte der Filter über den Rand (gefunden bei der Abnahme E7-2c, 04.11.2026).
 .werkzeug {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;

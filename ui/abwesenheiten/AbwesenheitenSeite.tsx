@@ -90,14 +90,22 @@ export interface AbwesenheitenSeiteProps {
   /** Holt Einträge (von–bis), Termine (bis) und Gründe. Ein Hook – immer dieselbe Funktion übergeben. */
   useDaten: (bereich: { von: string; bis: string }) => AbwesenheitenDaten;
   schreiben: AbwesenheitenSchreiben;
-  /** Die Termin-Arten der Gemeinde (#400) – für den Filter-Knopf. */
-  arten: TerminArt[];
+  /**
+   * Die Termin-Arten für den Filter-Knopf: in der Musik-App die der Gemeinde (#400), im Dienstplaner aus den Terminen
+   * gebildet (Funktion – immer dieselbe übergeben, sonst rechnet der Filter bei jedem Zeichnen neu).
+   */
+  arten: TerminArt[] | ((termine: AbsenceEvent[]) => TerminArt[]);
   /** Die ausgeblendeten Arten, auf dem Gerät gemerkt. `lesen` liefert `null`, solange nichts gemerkt ist. */
   filter: {
     lesen: () => string[] | null;
     schreiben: (ids: string[]) => void;
     alteWahl: () => string[];
   };
+  /**
+   * Was unter einem Termin zusätzlich steht – im Dienstplaner die eigenen Dienste (E7-2c). `abwesend` = der Haken
+   * sitzt (auch vorgemerkt), damit die App warnen kann („bitte auch den Dienst absagen“). Ohne: nichts.
+   */
+  terminZusatz?: (ev: AbsenceEvent, abwesend: boolean) => ReactNode;
   /** Setzt die Teile in den Rahmen der App. */
   rahmen: (teile: AbwesenheitenTeile) => ReactNode;
 }
@@ -142,8 +150,9 @@ export function AbwesenheitenSeite({
   heute,
   useDaten,
   schreiben,
-  arten,
+  arten: artenVorgabe,
   filter,
+  terminZusatz,
   rahmen,
 }: AbwesenheitenSeiteProps) {
   const laufend = monatVon(heute);
@@ -202,6 +211,11 @@ export function AbwesenheitenSeite({
    * Auswahl wirkt auf die Liste UND auf die Zahl am Zeitraum-Knopf; die vorgemerkten Häkchen „Abwesend“ hängen am
    * Termin, nicht an der Liste, und überstehen jeden Filterwechsel. Die Regeln stehen in `terminFilter.ts`.
    */
+  // Die Arten: fest (Musik-App, vom Admin gepflegt) oder aus den Terminen gebildet (Dienstplaner, wie in „Dienste“).
+  const arten = useMemo(
+    () => (typeof artenVorgabe === 'function' ? artenVorgabe(alleEvents) : artenVorgabe),
+    [artenVorgabe, alleEvents],
+  );
   const knoepfe = useMemo(() => knoepfeAus(arten, alleEvents), [arten, alleEvents]);
   // Noch nichts gemerkt: die Wahl der alten Art („nur Gottesdienst“) einmal umrechnen – gespeichert wird erst beim
   // ersten Häkchen, bis dahin gilt die Umrechnung bei jedem Öffnen gleich.
@@ -399,6 +413,7 @@ export function AbwesenheitenSeite({
                 }`
               : ''}
           </span>
+          {terminZusatz?.(ev, k.soll)}
         </div>
         <button
           className={`${styles.kasten}${k.soll ? ' ' + styles.kastenAn : ''}${k.vorgemerkt ? ' ' + styles.vorgemerkt : ''}`}

@@ -225,8 +225,8 @@ seine Standard-Mail (ohne Betrag). Ältere Veranstaltungen (vor A9 freigegeben) 
 eingerichtet werden. In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
 nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erweiterung stehen.
 
-**Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung** und
-**Warteliste** – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der
+**Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung**,
+**Warteliste** und **Erinnerung** (A9-3b, siehe unten) – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der
 **Absender** aus der Leitung der Veranstaltung. Termin, Betrag, Bankdaten, Link und Kontakt setzt die Erweiterung
 selbst ein. „Vorschau“ lässt ChurchTools die Mail mit dem Text im Fenster rechnen – für jemanden, der schon so
 angemeldet ist (sonst ohne Betrag, Nr. und Link). Der eigene Text steht in der **Beschreibung** der jeweiligen Routine
@@ -242,6 +242,20 @@ ChurchTools selbst umgeschaltet, zieht die Erweiterung die Mail beim nächsten �
 Schaltet jemand in ChurchTools bei laufendem Check-in die Mail mit dem Code ein, schickt ChurchTools sie **sofort an
 alle** Angemeldeten (echte Prüfung 28.10.2026) – die Erweiterung stellt sie erst beim nächsten Öffnen wieder ab. „Leitung
 benachrichtigen“ gibt es bewusst nicht: ChurchTools schickte dabei in keinem Versuch eine Mail (gemessen 26./28.10.2026).
+
+**Erinnerung** (A9-3b): Im Reiter **Erinnerung** des Fensters „Mails“ lassen sich bis zu **drei Erinnerungen** vor dem
+Termin einschalten – je 1–30 Tage vorher, als Vorschlag (1, 3, 7, 14 Tage) oder eigene Zahl; beim Einschalten ist „3
+Tage“ gewählt. Standard ist aus. Die Erinnerung geht an jede Person mit Platz (nicht an Wartende, je Person eine Mail
+wie die Bestätigung) und nennt den Termin **mit Datum**, Ort, Anmelde-Nr. und den Link zu „Deine Anmeldung“ – keine
+Bankdaten, denn die Mail weiß nicht, ob schon bezahlt ist. Betreff, eigener Absatz und Gruß gelten für alle
+Erinnerungen; sie stehen mit dem Text der Bestätigung in der Beschreibung der Routine „Anmeldungen: Platz“, beide
+zusammen höchstens 1.000 Zeichen. Die Tage stehen in den Einstellungen der Veranstaltung (eine Kopie übernimmt sie);
+wird der Termin verschoben, ziehen die Tage beim nächsten Öffnen mit. Ohne Termin gibt es keine Erinnerung.
+In ChurchTools hängt die Erweiterung je Erinnerung „warten bis“ und eine Mail vor das Löschen. Wer schon angemeldet ist,
+bekommt neu eingeschaltete Erinnerungen auch (ohne Mail beim Einrichten). **Ist ein Erinnerungstag schon vorbei**, bekäme
+jede spätere Anmeldung die Erinnerung sofort mit der Bestätigung (gemessen) – die Erweiterung lässt darum nur die
+**zuletzt fällige** an und schaltet ältere ab. Das geschieht beim Speichern und beim Öffnen der Veranstaltung, nicht von
+selbst am Tag; bis jemand sie öffnet, können noch mehrere fällige mitkommen.
 
 **Daten löschen** (A9-3a): Die Karte „Datenschutz“ zeigt die Frist („3 Monate nach dem Ende“, 1–36 Monate) und das
 Datum, an dem ChurchTools alle Anmeldungen entfernt – Ende des Termins (ohne Ende: der Beginn) plus Frist. Dafür hängt

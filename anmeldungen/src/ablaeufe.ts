@@ -20,6 +20,9 @@
  *   Läufe erreichen neue Schritte nicht; mit ausgeschalteter Mail und `restart: ['finished']` kommen sie ohne Mail ins
  *   Warten. `reposition` auf den Warte-Schritt gilt als „schon gewartet“ und entfernt sofort – nie benutzen. Einen
  *   Schritt, an dem Läufe warten, nimmt ChurchTools nur mit `finish` (oder `reposition`) weg, sonst 422.
+ * - A9-3b (gemessen 04.11.2026, Siebte Runde): Mehrere Erinnerungen = je „warten bis“ + Mail vor dem Löschen. Ist ein
+ *   Tag erreicht, geht die Mail raus und der Lauf wartet auf die nächste. Eine abgeschaltete Mail wird übersprungen.
+ *   `restart: [Schritt]` startet die Läufe, die dort warten, von vorn. Eine `emailId` gehört zu genau einem Schritt.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -32,11 +35,16 @@ import {
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
+  erinnerungen,
+  erinnerungsTextAus,
   anmeldeschlussVorLoeschen,
   loeschDatum,
   routinenSchritte,
+  schrittFolge,
   type AblaufMail,
   type EigenerText,
+  type Erinnerung,
+  type MailArt,
   type RoutinenArt,
 } from '@shared/anmeldung/ablaeufe';
 import { systemfelderNachziehen, teilnehmerRolle } from './einrichten';
@@ -107,8 +115,8 @@ export interface AblaufStand {
   absender: string | null;
   /** Dessen Personen-Nummer (A9-2a: im Fenster „Mails“ wählbar). */
   absenderId: number | null;
-  /** Der eigene Text je Mail (A9-2a) – aus der Beschreibung der Routine. */
-  eigen: Record<RoutinenArt, EigenerText>;
+  /** Der eigene Text je Mail (A9-2a) – aus der Beschreibung der Routine; die Erinnerung aus der von „Platz“ (A9-3b). */
+  eigen: Record<MailArt, EigenerText>;
   /** Check-in-Code in der Bestätigung (A9-2b) – `qrCodeCheckin` der Gruppe. */
   qr: boolean;
   /** Löschdatum, wie es in ChurchTools steht (A9-3a) – `null`: es wird nicht gelöscht. */
@@ -120,6 +128,8 @@ export interface AblaufStand {
   loeschenOffen?: string;
   /** Anmeldeschluss, wie er in ChurchTools steht – das Löschen kann ihn vorziehen (`anmeldeschlussVorLoeschen`). */
   anmeldeschluss: string | null;
+  /** Die Erinnerungen, wie sie in ChurchTools stehen (A9-3b) – früheste zuerst; `an`: Ihre Mail geht raus. */
+  erinnerungen: { datum: string; an: boolean }[];
 }
 
 /**
@@ -135,12 +145,27 @@ export class LoeschdatumVorbei extends Error {
   }
 }
 
-const mailSchritt = (r: RoutineRoh | null | undefined) =>
-  r?.steps?.find((s) => s.actionKey === 'send-member-email');
+/** Ein Schritt nach seiner Nummer. */
+const schritt = (r: RoutineRoh | null | undefined, id: number | undefined) =>
+  id === undefined ? undefined : r?.steps?.find((s) => s.id === id);
 
-/** Bis wann der Lösch-Schritt einer Routine wartet – `undefined`: Sie löscht nicht. */
+/** Die Bestätigung – der erste Schritt (`schrittFolge`; mit Erinnerungen gibt es mehrere Mails). */
+const mailSchritt = (r: RoutineRoh | null | undefined) =>
+  schritt(r, schrittFolge(r?.steps ?? []).bestaetigung);
+
+/** Bis wann der Lösch-Schritt einer Routine wartet – `undefined`: Sie löscht nicht. Nicht der erste Warte-Schritt: Vor
+ * ihm können Erinnerungen warten (A9-3b). */
 const wartetBis = (r: RoutineRoh | null | undefined) =>
-  r?.steps?.find((s) => s.actionKey === 'special:wait')?.actionData?.untilDate;
+  schritt(r, schrittFolge(r?.steps ?? []).loeschWarte)?.actionData?.untilDate;
+
+/** Die Erinnerungen einer Routine, wie sie in ChurchTools stehen (A9-3b). */
+function erinnerungenIn(r: RoutineRoh | null | undefined) {
+  return schrittFolge(r?.steps ?? []).erinnerungen.map((x) => ({
+    datum: schritt(r, x.warte)?.actionData?.untilDate ?? '',
+    an: schritt(r, x.mail)?.isEnabled === true,
+    mail: schritt(r, x.mail)?.actionData,
+  }));
+}
 
 /** Unsere Routine für einen Status – fremde (eigene Routinen aus ChurchTools) zählen nicht. */
 function unsereFuer(zuordnungen: ZuordnungRoh[], rolle: number, status: string): RoutineRoh | null {
@@ -169,13 +194,21 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
     standardMail: g.settings?.sendDefaultSignUpMail !== false,
     absender: mail?.actionData?.sender?.title ?? null,
     absenderId: mail?.actionData?.senderId ?? null,
-    eigen: {
-      platz: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'active')?.description),
-      warte: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'waiting')?.description),
-    },
+    eigen: texteVon(zuordnungen, rolle),
     qr: checkinAn(g),
     loeschDatum: wartetBis(platz) ?? null,
     anmeldeschluss: g.settings?.signUpClosingDate ?? null,
+    erinnerungen: erinnerungenIn(platz).map(({ datum, an }) => ({ datum, an })),
+  };
+}
+
+/** Der eigene Text aller Mails aus den Beschreibungen der Routinen – die Erinnerung steht in der von „Platz“. */
+function texteVon(zuordnungen: ZuordnungRoh[], rolle: number): Record<MailArt, EigenerText> {
+  const platz = unsereFuer(zuordnungen, rolle, 'active')?.description;
+  return {
+    platz: eigenerTextAus(platz),
+    warte: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'waiting')?.description),
+    erinnerung: erinnerungsTextAus(platz),
   };
 }
 
@@ -185,18 +218,19 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
  */
 async function textVonVorlage(
   vorlageId: number | undefined,
-): Promise<Record<RoutinenArt, EigenerText>> {
-  const ohne = { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT };
+): Promise<Record<MailArt, EigenerText>> {
+  const ohne = {
+    platz: OHNE_EIGENEN_TEXT,
+    warte: OHNE_EIGENEN_TEXT,
+    erinnerung: OHNE_EIGENEN_TEXT,
+  };
   if (!vorlageId) return ohne;
   try {
     const [zuordnungen, rolle] = await Promise.all([
       ctDaten<ZuordnungRoh[]>(`/groups/${vorlageId}/members/routines`),
       teilnehmerRolle(vorlageId),
     ]);
-    return {
-      platz: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'active')?.description),
-      warte: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'waiting')?.description),
-    };
+    return texteVon(zuordnungen, rolle);
   } catch (x) {
     console.warn('Mailtext der Vorlage nicht gelesen', vorlageId, x);
     return ohne;
@@ -219,7 +253,7 @@ async function textVonVorlage(
 export async function ablaeufeEinrichten(
   id: number,
   absenderId: number,
-  eigen?: Partial<Record<RoutinenArt, EigenerText>>,
+  eigen?: Partial<Record<MailArt, EigenerText>>,
   qr?: boolean,
   {
     loeschenBestaetigt = false,
@@ -227,6 +261,7 @@ export async function ablaeufeEinrichten(
     zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
   } = {},
 ): Promise<void> {
+  // Die Erinnerung zählt mit der Bestätigung zusammen (E4) – geprüft wird darum je Beschreibung, unten.
   for (const t of Object.values(eigen ?? {})) {
     const fehler = eigenerTextFehler(t);
     if (fehler) throw new ApiError(422, fehler);
@@ -241,15 +276,25 @@ export async function ablaeufeEinrichten(
   ]);
   // Je Mail der Text, der gelten soll – und ob er in die Beschreibung geschrieben werden muss.
   const vorlage = await textVonVorlage(e.kopieVon);
-  const texte = {} as Record<RoutinenArt, EigenerText>;
+  const da = texteVon(zuordnungen, rolle);
+  const texte = {} as Record<MailArt, EigenerText>;
+  for (const art of ['platz', 'warte', 'erinnerung'] as const) {
+    const routine = unsereFuer(zuordnungen, rolle, art === 'warte' ? 'waiting' : 'active');
+    texte[art] = eigen?.[art] ?? (routine ? da[art] : vorlage[art]);
+  }
+  const beschreibung = (art: RoutinenArt) =>
+    art === 'platz'
+      ? eigenerTextAlsBeschreibung(texte.platz, texte.erinnerung)
+      : eigenerTextAlsBeschreibung(texte.warte);
   const schreiben = {} as Record<RoutinenArt, boolean>;
   for (const r of ROUTINEN) {
-    const da = unsereFuer(zuordnungen, rolle, r.status);
-    const neu = eigen?.[r.art];
-    texte[r.art] = neu ?? (da ? eigenerTextAus(da.description) : vorlage[r.art]);
-    schreiben[r.art] =
-      neu !== undefined || (!da && eigenerTextAlsBeschreibung(vorlage[r.art]) !== null);
+    const geaendert =
+      eigen?.[r.art] !== undefined || (r.art === 'platz' && eigen?.erinnerung !== undefined);
+    const neuAnzulegen = !unsereFuer(zuordnungen, rolle, r.status);
+    schreiben[r.art] = geaendert || (neuAnzulegen && beschreibung(r.art) !== null);
   }
+  const zuLang = eigenerTextFehler(texte.platz, texte.erinnerung);
+  if (zuLang) throw new ApiError(422, zuLang);
   const mitQr = qr ?? checkinAn(g);
   const mails = ablaufMails(e, g.name, platzhalter, texte, mitQr);
   if (mails.unbekannt.length)
@@ -258,6 +303,7 @@ export async function ablaeufeEinrichten(
       `Für die Bestätigungsmail fehlen in ChurchTools: ${mails.unbekannt.join(', ')}.`,
     );
   const datum = loeschDatum(e);
+  const liste = erinnerungen(e, heute);
   if (
     datum !== null &&
     datum <= heute &&
@@ -291,34 +337,70 @@ export async function ablaeufeEinrichten(
       if (typeof routineId !== 'number') throw new NichtUebernommen('den Ablauf „' + r.name + '“');
     }
     const mail = r.art === 'platz' ? mails.platz : mails.warte;
-    const beschreibung = eigenerTextAlsBeschreibung(texte[r.art]);
     const vorher = vorhanden?.routine?.steps ?? [];
-    // Ohne Löschdatum (Termin entfernt) fällt der Warte-Schritt weg – wer dort wartet, wird beendet, nicht entfernt.
-    const warteSchritt = vorher.find((s) => s.actionKey === 'special:wait')?.id;
+    const folge = schrittFolge(vorher);
+    // Erinnerungen nur in „Platz“ (A9-3b) – und nur mit Löschdatum (beide brauchen den Termin).
+    const er = r.art === 'platz' && datum !== null ? { mail: mails.erinnerung, liste } : null;
+    const fallenWeg = folge.erinnerungen.length - (er?.liste.length ?? 0);
+    if (datum !== null && er && fallenWeg > 0) {
+      // Erst ohne Mail auf heute: Wer an einer wegfallenden Erinnerung wartet, läuft weiter (gemessen M5-5) – einen
+      // Schritt mit Wartenden nähme ChurchTools sonst nur mit `finish` weg, und die fielen aus dem Löschen.
+      const weg: Erinnerung[] = Array.from({ length: fallenWeg }, () => ({
+        tage: 0,
+        datum: heute,
+        an: false,
+      }));
+      await ctAnfrage(`/routines/${routineId}`, {
+        method: 'PATCH',
+        body: json({
+          steps: routinenSchritte(mail, absenderId, vorher, datum, true, {
+            ...er,
+            liste: [...er.liste, ...weg],
+          }),
+        }),
+      });
+    }
+    // Ohne Löschdatum (Termin entfernt) fallen alle Warte-Schritte weg – wer dort wartet, wird beendet, nicht entfernt.
+    const warteSchritte = [
+      ...folge.erinnerungen.map((x) => x.warte),
+      ...(folge.loeschWarte === undefined ? [] : [folge.loeschWarte]),
+    ];
+    const beschr = beschreibung(r.art);
     await ctAnfrage(`/routines/${routineId}`, {
       method: 'PATCH',
       body: json({
         isEnabled: true,
-        steps: routinenSchritte(mail, absenderId, vorher, datum),
-        ...(datum === null && warteSchritt !== undefined ? { finish: [warteSchritt] } : {}),
-        ...(schreiben[r.art] ? { description: beschreibung } : {}),
+        steps: routinenSchritte(mail, absenderId, vorher, datum, true, er),
+        ...(datum === null && warteSchritte.length ? { finish: warteSchritte } : {}),
+        ...(schreiben[r.art] ? { description: beschr } : {}),
       }),
     });
     // Nachlesen: Ein 200 allein beweist nicht, dass ChurchTools die Mail auch so verschickt.
     const nachher = await ctDaten<RoutineRoh>(`/routines/${routineId}`);
-    const s = nachher.steps?.find((x) => x.actionKey === 'send-member-email');
+    const s = mailSchritt(nachher);
+    const sollEr = er?.liste ?? [];
+    const istEr = erinnerungenIn(nachher);
     if (
       nachher.isEnabled !== true ||
       !s?.isEnabled ||
       s.actionData?.subject !== mail.betreff ||
       s.actionData?.addSignOutUrl !== false ||
       s.actionData?.senderId !== absenderId ||
-      (schreiben[r.art] && (nachher.description ?? null) !== beschreibung) ||
+      (schreiben[r.art] && (nachher.description ?? null) !== beschr) ||
       (wartetBis(nachher) ?? null) !== datum ||
-      (datum !== null && nachher.steps?.at(-1)?.actionKey !== 'remove-member')
+      (datum !== null && nachher.steps?.at(-1)?.actionKey !== 'remove-member') ||
+      istEr.length !== sollEr.length ||
+      istEr.some(
+        (x, i) =>
+          x.datum !== sollEr[i].datum ||
+          x.an !== sollEr[i].an ||
+          x.mail?.subject !== er?.mail.betreff ||
+          x.mail?.senderId !== absenderId,
+      )
     )
       throw new NichtUebernommen('den Ablauf „' + r.name + '“');
-    if (datum !== null) await nachstarten(routineId, mail, absenderId, nachher.steps ?? [], datum);
+    if (datum !== null)
+      await nachstarten(routineId, mail, absenderId, nachher.steps ?? [], datum, er, heute);
   }
 
   // Check-in in einem Aufruf mit der eigenen Code-Mail aus – sonst bekämen beim Einschalten alle schon Angemeldeten eine
@@ -363,10 +445,14 @@ async function anmeldeschlussBegrenzen(
 }
 
 /**
- * **Schon Angemeldete ins Warten bringen** (A9-3a, E6): Wer sich vor dem Löschen angemeldet hat, dessen Lauf ist
- * abgeschlossen – neue Schritte erreichen ihn nicht. Gemessener Weg (28.10.2026): Mail aus → `restart: ['finished']` →
- * Mail wieder an; die Läufe gehen dabei ohne Mail bis zum Warten. Nur, wenn es solche Läufe gibt – solange die Mail aus
- * ist, bekäme eine neue Anmeldung keine Bestätigung. Die Mail wird darum auch nach einem Fehler wieder eingeschaltet.
+ * **Schon Angemeldete an die richtige Stelle bringen** (A9-3a E6, A9-3b E7): Richtig wartet ein Lauf am ersten
+ * Warte-Schritt, dessen Tag noch kommt – an der nächsten Erinnerung oder am Löschen. Wer sich vor dem Löschen angemeldet
+ * hat, dessen Lauf ist abgeschlossen; wer wartet, als eine frühere Erinnerung dazukam, wartet zu weit hinten – neue
+ * Schritte erreichen beide nicht. Gemessener Weg (28.10. und 04.11.2026): Bestätigung aus → `restart` (`'finished'` bzw.
+ * die Nummer des Warte-Schritts) → wieder an; die Läufe gehen ohne Mail bis zum richtigen Warten. Dabei sind auch die
+ * Erinnerungen aus, deren Tag schon da ist – sonst bekämen alle sie beim Neustart. Nur, wenn es solche Läufe gibt –
+ * solange die Bestätigung aus ist, bekäme eine neue Anmeldung keine. Sie wird darum auch nach einem Fehler wieder
+ * eingeschaltet.
  */
 async function nachstarten(
   routineId: number,
@@ -374,20 +460,65 @@ async function nachstarten(
   absenderId: number,
   schritte: { id: number; actionKey: string }[],
   datum: string,
+  erinnerung: { mail: AblaufMail; liste: readonly Erinnerung[] } | null,
+  heute: string,
 ): Promise<void> {
-  const laeufe = await ctAlleSeiten<{ status?: string }>(`/routines/${routineId}/runs`);
-  if (!laeufe.some((l) => l.status === 'finished')) return;
+  const laeufe = await ctAlleSeiten<{ status?: string; routineStepId?: number | null }>(
+    `/routines/${routineId}/runs`,
+  );
+  const folge = schrittFolge(schritte);
+  const liste = erinnerung?.liste ?? [];
+  const warten = [
+    ...folge.erinnerungen.map((x, i) => ({ id: x.warte, bis: liste[i]?.datum ?? '' })),
+    { id: folge.loeschWarte, bis: datum },
+  ];
+  const ziel = warten.find((w) => w.bis > heute)?.id;
+  const fertig = laeufe.some((l) => l.status === 'finished');
+  const falsch =
+    ziel === undefined
+      ? []
+      : [
+          ...new Set(
+            laeufe
+              .filter(
+                (l) =>
+                  l.status === 'waiting' &&
+                  l.routineStepId !== ziel &&
+                  warten.some((w) => w.id === l.routineStepId),
+              )
+              .map((l) => l.routineStepId!),
+          ),
+        ];
+  if (!fertig && !falsch.length) return;
   const mitMail = (an: boolean) =>
     ctAnfrage(`/routines/${routineId}`, {
       method: 'PATCH',
-      body: json({ steps: routinenSchritte(mail, absenderId, schritte, datum, an) }),
+      body: json({
+        steps: routinenSchritte(
+          mail,
+          absenderId,
+          schritte,
+          datum,
+          an,
+          erinnerung && {
+            ...erinnerung,
+            liste: an ? liste : liste.map((x) => ({ ...x, an: x.an && x.datum > heute })),
+          },
+        ),
+      }),
     });
   await mitMail(false);
   try {
-    await ctAnfrage(`/routines/${routineId}`, {
-      method: 'PATCH',
-      body: json({ restart: ['finished'] }),
-    });
+    if (fertig)
+      await ctAnfrage(`/routines/${routineId}`, {
+        method: 'PATCH',
+        body: json({ restart: ['finished'] }),
+      });
+    if (falsch.length)
+      await ctAnfrage(`/routines/${routineId}`, {
+        method: 'PATCH',
+        body: json({ restart: falsch }),
+      });
   } finally {
     await mitMail(true);
   }
@@ -431,7 +562,18 @@ export async function ablaeufeAbgleichen(
   const soll = ablaufMails(e, g.name, platzhalter, stand.eigen, mitQr);
   if (soll.unbekannt.length) return stand;
   const datum = loeschDatum(e);
+  // A9-3b: Termin oder Tage geändert, oder ein Tag erreicht (R7: ältere vorbeie aus) → die Erinnerungen ziehen mit.
+  const sollEr = datum === null ? [] : erinnerungen(e, heute);
+  const istEr = erinnerungenIn(unsereFuer(zuordnungen, rolle, 'active'));
   const passt =
+    istEr.length === sollEr.length &&
+    istEr.every(
+      (x, i) =>
+        x.datum === sollEr[i].datum &&
+        x.an === sollEr[i].an &&
+        x.mail?.subject === soll.erinnerung.betreff &&
+        x.mail?.body === soll.erinnerung.html,
+    ) &&
     !(mitQr && qrMailAn(g)) &&
     ROUTINEN.every((r) => {
       const s = mailSchritt(unsereFuer(zuordnungen, rolle, r.status))?.actionData;

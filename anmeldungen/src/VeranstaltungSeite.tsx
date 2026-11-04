@@ -215,10 +215,12 @@ function DatenschutzKarte({
 function MailsKarte({
   stand,
   kostet,
+  heute,
   onBearbeiten,
 }: {
   stand: AblaufStand | 'entwurf' | 'fehler' | null;
   kostet: boolean;
+  heute: string;
   onBearbeiten?: () => void;
 }) {
   if (stand === 'entwurf')
@@ -249,9 +251,10 @@ function MailsKarte({
       </Karte>
     );
   const fehlt = <span className={v.fehlt}>nicht eingerichtet</span>;
-  const eigen = (['platz', 'warte'] as const).filter(
+  const eigen = (['platz', 'warte', 'erinnerung'] as const).filter(
     (x) => stand.eigen[x].betreff || stand.eigen[x].absatz || stand.eigen[x].gruss,
   );
+  const EIGEN_NAME = { platz: 'Bestätigung', warte: 'Warteliste', erinnerung: 'Erinnerung' };
   return (
     <Karte titel="Mails" onBearbeiten={stand.platz && stand.warte ? onBearbeiten : undefined}>
       <Zeile titel="Nach dem Anmelden">
@@ -259,12 +262,22 @@ function MailsKarte({
       </Zeile>
       <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>
       <Zeile titel="Nachrücken">{stand.platz ? '✓ Bestätigung wie oben' : fehlt}</Zeile>
+      <Zeile titel="Erinnerung">
+        {stand.erinnerungen.length === 0
+          ? 'aus'
+          : stand.erinnerungen.map((x) => (
+              // A9-3b, R7: vorbei und an = die zuletzt fällige, sie geht noch an Spätangemeldete.
+              <span key={x.datum} className={v.zeile}>
+                {datumText(x.datum)}
+                {x.datum <= heute &&
+                  (x.an ? ' (vorbei – geht noch an Spätangemeldete)' : ' (vorbei)')}
+              </span>
+            ))}
+      </Zeile>
       <Zeile titel="Check-in-Code">{stand.qr ? '✓ in der Bestätigung' : 'aus'}</Zeile>
       {stand.absender && <Zeile titel="Absender">{stand.absender}</Zeile>}
       <Zeile titel="Eigener Text">
-        {eigen.length === 0
-          ? 'keiner'
-          : eigen.map((x) => (x === 'platz' ? 'Bestätigung' : 'Warteliste')).join(', ')}
+        {eigen.length === 0 ? 'keiner' : eigen.map((x) => EIGEN_NAME[x]).join(', ')}
       </Zeile>
     </Karte>
   );
@@ -664,6 +677,7 @@ export function VeranstaltungSeite({
               <MailsKarte
                 stand={entwurf ? 'entwurf' : ablauf}
                 kostet={kostet}
+                heute={heute}
                 onBearbeiten={bearbeiten('mails')}
               />
               <DatenschutzKarte
@@ -814,6 +828,7 @@ export function VeranstaltungSeite({
           veranstaltung={daten.name}
           e={e}
           stand={ablauf}
+          heute={heute}
           onClose={() => setFenster(null)}
           // Kein „Rückgängig“ über die Einstellungen – der Text steht in den Routinen, nicht in den Einstellungen.
           onGespeichert={(text) => {

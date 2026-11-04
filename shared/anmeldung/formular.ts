@@ -540,6 +540,11 @@ export interface OeffentlicheEinstellungen {
   plaetze: { zeigen: 'immer' | 'knapp' | 'nie'; knappUnter: number };
   /** Monate nach dem Ende, nach denen die Anmeldungen gelöscht werden (A3; die Routine dazu baut A9). */
   loeschfristMonate: number;
+  /**
+   * **Erinnerungen vor dem Termin** (A9-3b, R1–R3): Tage vor dem Beginn, je 1–30, höchstens drei – nur, wenn welche
+   * eingeschaltet sind (hält die Einstellungen kurz). Die Routine dazu baut `erinnerungen` in `ablaeufe.ts`.
+   */
+  erinnerungTage?: number[];
   /** Konto, Zahlungsfrist, Verwendungszweck (A4) – öffentlich lesbar, siehe `bezahlung.ts`. */
   bezahlung: Bezahlung;
   /**
@@ -724,6 +729,8 @@ const einstellungenSchema = z.object({
   }),
   // Seit A3 (#486). Mit Standardwert: Einstellungen, die vor dem Feld geschrieben wurden, bleiben lesbar.
   loeschfristMonate: z.number().int().min(1).max(36).default(3),
+  // Seit A9-3b: nur, wenn Erinnerungen eingeschaltet sind.
+  erinnerungTage: z.array(z.number().int().min(1).max(30)).max(3).optional(),
   // Seit A4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben. (Zod gibt beim Lesen ohnehin ein
   // neues Objekt zurück – getestet in formular.test.ts –, die Funktion macht das nur ausdrücklich.)
   bezahlung: z

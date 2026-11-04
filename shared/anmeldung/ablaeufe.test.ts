@@ -10,8 +10,11 @@ import {
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
+  erinnerungen,
+  erinnerungsTextAus,
   loeschDatum,
   routinenSchritte,
+  schrittFolge,
   standardBetreff,
 } from './ablaeufe';
 import { bankZeilen } from './bezahlung';
@@ -157,12 +160,18 @@ describe('routinenSchritte', () => {
       },
     ]);
   });
-  it('vorhandener Mail-Schritt behält seine Nummer (laufende Abläufe bleiben an ihrer Stelle)', () => {
-    const s = routinenSchritte(mail, 7, [
-      { id: 33, actionKey: 'special:wait' },
-      { id: 30, actionKey: 'send-member-email' },
-    ]);
-    expect(s[0].id).toBe(30);
+  it('vorhandene Schritte behalten ihre Nummer – nach ihrer Stellung (laufende Abläufe bleiben an ihrer Stelle)', () => {
+    const s = routinenSchritte(
+      mail,
+      7,
+      [
+        { id: 30, actionKey: 'send-member-email' },
+        { id: 33, actionKey: 'special:wait' },
+        { id: 36, actionKey: 'remove-member' },
+      ],
+      '2027-02-20',
+    );
+    expect(s.map((x) => x.id)).toEqual([30, 33, 36]);
   });
   it('zwei Routinen: Platz (aktiv) und Warteliste (wartend), eindeutige Namen', () => {
     expect(ROUTINEN.map((r) => r.status)).toEqual(['active', 'waiting']);
@@ -326,5 +335,159 @@ describe('Löschen (A9-3a)', () => {
     // ChurchTools liefert den Zeitpunkt auch in anderer Schreibweise – verglichen wird der Zeitpunkt, nicht der Text.
     expect(anmeldeschlussVorLoeschen('2027-02-14T23:59:00+01:00', '2027-02-15', z)).toBeNull();
     expect(anmeldeschlussVorLoeschen('2026-11-10T22:59:00Z', '2027-02-15', z)).toBeNull();
+  });
+});
+
+describe('Erinnerungen (A9-3b)', () => {
+  /** Kinder-Event am Fr, 20.11.2026 (senden.testdaten). */
+  const mitTagen = (tage: number[]) => ({ ...einstellungen(), erinnerungTage: tage });
+
+  it('Tag = Beginn minus Tage, früheste zuerst; doppelte, ungültige und mehr als drei fallen weg', () => {
+    expect(erinnerungen(mitTagen([3, 14, 1]), '2026-11-04')).toEqual([
+      { tage: 14, datum: '2026-11-06', an: true },
+      { tage: 3, datum: '2026-11-17', an: true },
+      { tage: 1, datum: '2026-11-19', an: true },
+    ]);
+    expect(
+      erinnerungen(mitTagen([3, 3, 0, 31, 7, 14, 1]), '2026-11-04').map((x) => x.tage),
+    ).toEqual([14, 7, 3]);
+  });
+
+  it('ohne Termin oder ohne Tage: keine', () => {
+    expect(erinnerungen({ ...mitTagen([3]), termin: null }, '2026-11-04')).toEqual([]);
+    expect(erinnerungen(einstellungen(), '2026-11-04')).toEqual([]);
+  });
+
+  it('R7: von den vorbeien (Tag heute oder früher) bleibt nur die zuletzt fällige an', () => {
+    expect(erinnerungen(mitTagen([14, 3, 1]), '2026-11-18').map((x) => [x.tage, x.an])).toEqual([
+      [14, false],
+      [3, true],
+      [1, true],
+    ]);
+    // Am Tag selbst gilt sie als fällig – ChurchTools ließe die Wartenden sofort durch.
+    expect(erinnerungen(mitTagen([14, 3]), '2026-11-17').map((x) => [x.tage, x.an])).toEqual([
+      [14, false],
+      [3, true],
+    ]);
+    // Alle vorbei: die letzte bleibt an.
+    expect(erinnerungen(mitTagen([14, 3]), '2026-11-25').map((x) => x.an)).toEqual([false, true]);
+  });
+
+  it('Mail: Termin mit Datum statt „in X Tagen“ (Spätangemeldete bekommen sie sofort), Link, eigener Text', () => {
+    const m = ablaufMails(mitKonto(), 'Kinderfreizeit', CT, {
+      platz: OHNE_EIGENEN_TEXT,
+      warte: OHNE_EIGENEN_TEXT,
+      erinnerung: { betreff: '', absatz: 'Bitte Schlafsack mitbringen.', gruss: 'Bis bald!' },
+    }).erinnerung;
+    expect(m.betreff).toBe('Bald ist es so weit: Kinderfreizeit');
+    expect(m.html).toContain(
+      '{{person.firstName}} ist bei „Kinderfreizeit“ dabei – Fr, 20.11.2026',
+    );
+    expect(m.html).not.toMatch(/in \d+ Tagen|morgen/);
+    expect(m.html).toContain('<p>Bitte Schlafsack mitbringen.</p>');
+    expect(m.html).toContain(platz('Link zur Anmeldung'));
+    expect(m.html).toContain('Bis bald!');
+    // Keine Bankdaten (R5): Die Mail weiß nicht, ob schon bezahlt ist.
+    expect(m.html).not.toContain('DE89');
+    expect(m.html).not.toMatch(/\[[^\]]+\]/);
+  });
+
+  it('eigener Text der Erinnerung steht mit in der Beschreibung von „Platz“ – zusammen höchstens 1.000 Zeichen', () => {
+    const er = { betreff: 'Bald!', absatz: 'Schlafsack', gruss: '' };
+    const b = eigenerTextAlsBeschreibung(OHNE_EIGENEN_TEXT, er);
+    expect(erinnerungsTextAus(b)).toEqual(er);
+    expect(eigenerTextAus(b)).toEqual(OHNE_EIGENEN_TEXT);
+    // Ohne Erinnerungstext bleibt die Beschreibung, wie sie vor A9-3b war.
+    const t = { betreff: 'B', absatz: 'A', gruss: 'G' };
+    expect(eigenerTextAlsBeschreibung(t)).toBe(JSON.stringify({ v: 1, ...t }));
+    expect(erinnerungsTextAus(eigenerTextAlsBeschreibung(t))).toEqual(OHNE_EIGENEN_TEXT);
+    const halb = { betreff: '', absatz: 'x'.repeat(480), gruss: '' };
+    expect(eigenerTextFehler(halb)).toBeNull();
+    expect(eigenerTextFehler(halb, halb)).toMatch(/zu lang/);
+  });
+
+  it('schrittFolge: nach der Stellung – Bestätigung, Paare je Erinnerung, Löschen', () => {
+    const f = schrittFolge([
+      { id: 1, actionKey: 'send-member-email' },
+      { id: 2, actionKey: 'special:wait' },
+      { id: 3, actionKey: 'send-member-email' },
+      { id: 4, actionKey: 'special:wait' },
+      { id: 5, actionKey: 'send-member-email' },
+      { id: 6, actionKey: 'special:wait' },
+      { id: 7, actionKey: 'remove-member' },
+    ]);
+    expect(f).toEqual({
+      bestaetigung: 1,
+      erinnerungen: [
+        { warte: 2, mail: 3 },
+        { warte: 4, mail: 5 },
+      ],
+      loeschWarte: 6,
+      entfernen: 7,
+    });
+    // Ohne Erinnerungen wie bisher.
+    expect(
+      schrittFolge([
+        { id: 1, actionKey: 'send-member-email' },
+        { id: 6, actionKey: 'special:wait' },
+        { id: 7, actionKey: 'remove-member' },
+      ]),
+    ).toEqual({ bestaetigung: 1, erinnerungen: [], loeschWarte: 6, entfernen: 7 });
+  });
+
+  it('routinenSchritte: Erinnerungen vor dem Löschen, Nummern der Reihe nach, aus = Mail aus, nie eine emailId', () => {
+    const best = { betreff: 'B', html: '<p>B</p>' };
+    const er = { betreff: 'E', html: '<p>E</p>' };
+    const vorher = [
+      { id: 1, actionKey: 'send-member-email' },
+      { id: 2, actionKey: 'special:wait' },
+      { id: 3, actionKey: 'send-member-email' },
+      { id: 6, actionKey: 'special:wait' },
+      { id: 7, actionKey: 'remove-member' },
+    ];
+    const s = routinenSchritte(best, 9, vorher, '2027-02-20', true, {
+      mail: er,
+      liste: [
+        { tage: 14, datum: '2026-11-06', an: false },
+        { tage: 3, datum: '2026-11-17', an: true },
+      ],
+    });
+    expect(s.map((x) => [x.id, x.actionKey, x.isEnabled])).toEqual([
+      [1, 'send-member-email', true],
+      [2, 'special:wait', true],
+      [3, 'send-member-email', false],
+      [undefined, 'special:wait', true],
+      [undefined, 'send-member-email', true],
+      [6, 'special:wait', true],
+      [7, 'remove-member', true],
+    ]);
+    expect(s.map((x) => ('untilDate' in x.actionData ? x.actionData.untilDate : null))).toEqual([
+      null,
+      '2026-11-06',
+      null,
+      '2026-11-17',
+      null,
+      '2027-02-20',
+      null,
+    ]);
+    expect(JSON.stringify(s)).not.toContain('emailId');
+    expect(s.filter((x) => x.actionKey === 'send-member-email').map((x) => x.actionData)).toEqual([
+      { subject: 'B', body: '<p>B</p>', addSignOutUrl: false, senderId: 9 },
+      { subject: 'E', body: '<p>E</p>', addSignOutUrl: false, senderId: 9 },
+      { subject: 'E', body: '<p>E</p>', addSignOutUrl: false, senderId: 9 },
+    ]);
+  });
+
+  it('routinenSchritte: ohne Löschdatum keine Erinnerungen (beide brauchen den Termin)', () => {
+    const s = routinenSchritte({ betreff: 'B', html: '' }, 9, [], null, true, {
+      mail: { betreff: 'E', html: '' },
+      liste: [{ tage: 3, datum: '2026-11-17', an: true }],
+    });
+    expect(s.map((x) => x.actionKey)).toEqual(['send-member-email']);
+  });
+
+  it('standardBetreff je Mail', () => {
+    expect(standardBetreff('erinnerung', 'Camp')).toBe('Bald ist es so weit: Camp');
+    expect(standardBetreff('platz', 'Camp')).toBe('Camp: Anmeldung bestätigt');
   });
 });

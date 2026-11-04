@@ -257,15 +257,16 @@ Zeiten intern in UTC, und 0:30 Uhr deutscher Zeit ist dort noch der Vortag (#414
 
 ### TF-VERF-09 · Abwesenheiten in der Musik-App in ChurchTools (Erweiterung)
 
-**Das brauchst du:** Die Musik-App als Erweiterung in der **Test-Instanz**, ein Konto, das aktives Mitglied einer der
-Musikteam-Gruppen ist (z. B. Spike), und Zugriff auf ChurchTools zum Nachsehen (Personen → Profil → Abwesenheiten).
+**Das brauchst du:** Die Musik-App als Erweiterung in der **Test-Instanz**, ein Konto ohne Admin-Recht, das die
+Musik-App öffnen darf (z. B. Spike – auch ohne Musikteam), und Zugriff auf ChurchTools zum Nachsehen (Personen →
+Profil → Abwesenheiten).
 
 **Das muss passieren:** Der Reiter **„Abwesenheiten"** ist da (bis E7-2b fehlte er in der Erweiterung) und arbeitet
 direkt mit ChurchTools – ohne den NAS-Server. Neue Einträge tragen **kein** `[Musikteam]`; Ändern bleibt **derselbe**
 Eintrag; Löschen fragt immer nach.
 
-1. Musik-App in ChurchTools öffnen → unten der Reiter **Abwesenheiten**. Ein Konto ohne Musikteam-Gruppe sieht ihn
-   nicht.
+1. Musik-App in ChurchTools öffnen → unten der Reiter **Abwesenheiten** – für **jeden**, der die App öffnet, auch ohne
+   Musikteam-Gruppe (Rechtekonzept E2, 04.11.2026; auf dem NAS weiter nur das Musikteam).
 2. Einen Termin **Abwesend** abhaken, **Speichern** → „1 Änderung gespeichert …". In ChurchTools: ein Eintrag mit
    der **Uhrzeit des Termins**, Grund **Abwesend**, Kommentar **leer** (kein `[Musikteam]`).
 3. Denselben Termin noch einmal in einem zweiten Tab abhaken und speichern → in ChurchTools steht **kein zweiter**

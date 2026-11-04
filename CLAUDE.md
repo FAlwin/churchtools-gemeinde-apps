@@ -1552,7 +1552,7 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   eigentlichen Team-Notizen sind **seit v2.9.0 fertig** (#124 geschlossen, PCO-Modell: Anmerkungen
   bleiben pro Konto, wer mag teilt sie, Berechtigte sehen/importieren sie – `teamNotesController.ts`).
   Die früher geplante gemeinsame „Team-Ebene" (`_shared.json`) wurde bewusst verworfen.
-- **Verfügbarkeit (#177, 05.09.2026):** `canUseAvailability` = aktives Mitglied **einer** der
+- **Verfügbarkeit (#177, 05.09.2026):** `canUseAvailability` = **auf dem NAS** aktives Mitglied **einer** der
   `musicianGroupIds` – **ohne** Rollen-Filter (die `noteRoles` regeln nur Team-Notizen). Dieselbe
   Mitgliedschafts-Abfrage liefert beide Ableitungen (`computeTeamNotesAllowed` /
   `computeAvailabilityAllowed`). Der Bereich arbeitet nur auf dem eigenen Konto: Die Personen-ID kommt
@@ -1599,6 +1599,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   weiter lesen, Löschen nachlesen, Gründe aus `/event/masterdata`. **Kein Kennzeichen mehr** (Alwin 04.11.2026): neue
   Einträge ohne `[Musikteam]`, alle sehen gleich aus, Löschen fragt immer nach; der NAS-Server schreibt weiter mit
   Marker und bleibt unberührt (fällt weg).
+  **Reiter in ChurchTools für alle, die die App öffnen** (Rechtekonzept E2, Alwin 04.11.2026): `meineRechte` setzt
+  `canUseAvailability: true`; die Musikteam-Gruppen gelten dort nur noch für Team-Notizen.
 
 ## Schreibzugriff (Editor) – ChurchTools-Eigenheiten
 

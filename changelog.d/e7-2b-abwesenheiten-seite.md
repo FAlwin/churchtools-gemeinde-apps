@@ -1,8 +1,8 @@
 ### Neu (Musik-App)
 
 - **Abwesenheiten jetzt auch in der Musik-App in ChurchTools** (Dienstplaner E7-2b, Alwin 04.11.2026: nur noch die
-  Erweiterung zählt). Der Reiter „Abwesenheiten“ ist für aktive Mitglieder der Musikteam-Gruppen da – wie auf dem
-  NAS – und schreibt direkt in ChurchTools: Termine abhaken, Zeitraum eintragen, ändern, löschen. Ändern bleibt
+  Erweiterung zählt). Der Reiter „Abwesenheiten“ ist **für alle da, die die Musik-App öffnen** (Rechtekonzept E2,
+  Alwin 04.11.2026 – auf dem NAS weiter nur fürs Musikteam), und schreibt direkt in ChurchTools: Termine abhaken, Zeitraum eintragen, ändern, löschen. Ändern bleibt
   derselbe Eintrag, denselben Zeitraum gibt es nie doppelt.
 
 ### Geändert (Musik-App)

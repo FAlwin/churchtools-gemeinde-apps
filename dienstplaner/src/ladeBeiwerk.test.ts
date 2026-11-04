@@ -88,17 +88,18 @@ describe('ladeLiedDaten / autorVon (Lied-Ansicht, E6-O O4)', () => {
 });
 
 describe('ladeAbwesenheiten', () => {
-  it('nur die eigenen, mit from/to/limit wie im Server (ctRead.getAbsences)', async () => {
+  it('nur die eigenen, mit from/to/limit – `to` einen Tag weiter', async () => {
     const spy = ct(() => json(200, { data: [] }));
     await ladeAbwesenheiten(1, '2026-10-14', '2027-10-14');
     expect(String(spy.mock.calls[0][0])).toBe(
-      'https://ct.test/api/persons/1/absences?from=2026-10-14&to=2027-10-14&limit=500',
+      // `to` einen Tag weiter: ChurchTools liefert ein Fenster am letzten Tag sonst nicht (E7-2a).
+      'https://ct.test/api/persons/1/absences?from=2026-10-14&to=2027-10-15&limit=500',
     );
   });
 
   it('keine Liste → Fehler (sonst stünde „nichts eingetragen“ da)', async () => {
     ct(() => json(200, { data: null }));
-    await expect(ladeAbwesenheiten(1, 'a', 'b')).rejects.toBeInstanceOf(ApiError);
+    await expect(ladeAbwesenheiten(1, '2026-10-14', '2027-10-14')).rejects.toBeInstanceOf(ApiError);
   });
 });
 

@@ -286,3 +286,31 @@ Eintrag; Löschen fragt immer nach.
 - **Historie:** Dienstplaner E7-2a/E7-2b (04.11.2026): nur noch die Erweiterung zählt, kein Kennzeichen mehr
 
 </details>
+
+### TF-VERF-10 · Abwesenheiten im Dienstplaner, mit den eigenen Diensten
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein Konto ohne Admin-Recht mit mindestens einem
+kommenden Dienst (eingeteilt) und einer offenen Anfrage (z. B. Spike), Zugriff auf ChurchTools zum Nachsehen.
+
+**Das muss passieren:** Der Reiter **„Abwesenheiten"** zeigt dieselbe Seite wie die Musik-App (Termine | Einträge,
+Zeitraum, Filter, Speichern-Leiste, Fenster) – für jeden, ohne eigenes Recht. Unter jedem Termin stehen die eigenen
+Dienste; wer einen Termin mit Dienst abhakt, sieht in Rot, dass er auch den Dienst absagen soll.
+
+1. Dienstplaner öffnen → Reiter **Abwesenheiten** (am Handy unten, am Rechner oben). Statt „Hier trägst du bald ein …"
+   steht die Terminliste ab heute, darüber Zeitraum und – wenn eine Veranstaltung mehrfach vorkommt – **Filter**.
+2. Unter dem Termin mit Dienst: **„Du bist eingeteilt: …"**, unter dem mit Anfrage **„Angefragt: …"**.
+3. Den Termin mit Dienst **Abwesend** abhaken → die Zeile darunter wird rot: **„… – bitte auch den Dienst absagen"**.
+   **Speichern** → in ChurchTools ein Eintrag mit der Uhrzeit des Termins, ohne Kennzeichen. Der Dienst selbst bleibt
+   (absagen geht über „Dienste" bzw. die Startseite).
+4. Über **+ Zeitraum eintragen** eine Woche eintragen, unter **Einträge** ändern und löschen (Rückfrage) – wie TF-VERF-04.
+5. Startseite: die Karte **„Abwesenheiten"** führt in diesen Reiter.
+6. Aufräumen: Einträge aus 3–4 löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/Abwesenheiten.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `ui/abwesenheiten/ctDienst.ts`, `shared/dienstplan/meineDienste.ts`, `dienstplaner/src/ladeBeiwerk.ts`
+- **Automatisiert:** überwiegend – `dienstplaner/src/Abwesenheiten.test.tsx` (Termine ab heute, Dienst-Hinweis, rote Warnung, Speichern mit Fenster, Neuladen, Filter, Fehler), `shared/dienstplan/meineDienste.test.ts`; Kern und Anschluss wie TF-VERF-09; von Hand bleibt, dass ChurchTools den Eintrag so zeigt und die eigenen Dienste stimmen
+- **Historie:** Dienstplaner E7-2c (04.11.2026), Entwurf `e7-2-abwesenheiten.html`
+
+</details>

@@ -352,6 +352,17 @@ function daten(fall: string): Record<string, unknown> {
         },
       ],
     },
+    // Reiter „Abwesenheiten“ (E7-2c): Gründe wie gemessen; eigene Dienste je Termin bleiben in der Demo leer.
+    '/api/event/masterdata': {
+      data: {
+        absenceReasons: [
+          { id: 3, name: 'absent.reason.sick', nameTranslated: 'Krank', sortKey: 0 },
+          { id: 2, name: 'absent.reason.vacation', nameTranslated: 'Urlaub', sortKey: 1 },
+          { id: 1, name: 'absent.reason.absence', nameTranslated: 'Abwesend', sortKey: 2 },
+        ],
+      },
+    },
+    '/api/persons/1/servicerequests': { data: [], meta: { pagination: { lastPage: 1 } } },
     '/api/services': {
       data: [
         // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).

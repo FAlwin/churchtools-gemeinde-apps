@@ -6,7 +6,7 @@ import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { ladeStart, planbareDienstgruppen, type Start } from './start';
 import { Startseite } from './Startseite';
-import { Demnaechst } from './Demnaechst';
+import { Abwesenheiten } from './Abwesenheiten';
 import { Planen } from './Planen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
@@ -216,7 +216,13 @@ export function App() {
           ablauf={{ start, zeitzone }}
         />
       )}
-      {terminId === null && aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}
+      {terminId === null && aktiv === 'abwesenheiten' && start && (
+        <Abwesenheiten
+          ichId={start.ichId}
+          zeitzone={zeitzone}
+          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+        />
+      )}
     </ErweiterungsSeite>
   );
 }

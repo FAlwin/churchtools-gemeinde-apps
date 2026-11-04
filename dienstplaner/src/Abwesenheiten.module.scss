@@ -1,0 +1,54 @@
+@use '@ui/design/mixins' as m;
+
+// Reiter „Abwesenheiten“ (E7-2c) – der Rahmen um die gemeinsame Seite (`@ui/abwesenheiten`), wie die Karte in „Dienste“.
+.karte {
+  @include m.card-list;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.rechts {
+  margin-left: auto;
+}
+
+.hinweis {
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+// Die Speichern-Leiste bleibt beim Scrollen unten sichtbar – die Seite scrollt hier in ChurchTools, nicht in einem
+// eigenen Gerüst wie in der Musik-App.
+.unten {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+// Eigene Dienste unter dem Termin; abgehakt in Rot.
+.dienst {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--text2);
+  font-size: 13px;
+
+  :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.warn {
+  color: var(--red);
+  font-weight: 700;
+}

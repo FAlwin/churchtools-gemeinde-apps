@@ -3,7 +3,8 @@
  * die eigenen Abwesenheiten und den Weg zur Musik-App. Alles davon ist Beiwerk – scheitert es, zeigt die
  * Startseite die Angabe nicht, statt etwas Falsches zu sagen (z. B. „keine Abwesenheiten“).
  */
-import { ctBasis, ctDaten } from '@ui/ct/verbindung';
+import { ctAlleSeiten, ctBasis, ctDaten } from '@ui/ct/verbindung';
+import { dienstAusAnfragen, type MeinDienstKurz } from '@shared/dienstplan/meineDienste';
 import { ApiError } from '@ui/ct/fehler';
 import { abwesenheitPort } from '@ui/ct/abwesenheitPort';
 import { ctAbwesenheiten } from '@shared/absences/abwesenheiten';
@@ -44,6 +45,13 @@ export async function ladeAblauf(eventId: number): Promise<CtAgenda | null> {
  */
 export function ladeAbwesenheiten(ichId: number, von: string, bis: string): Promise<CtAbsence[]> {
   return ctAbwesenheiten(abwesenheitPort, ichId, von, bis);
+}
+
+/** Die eigenen kommenden Dienste je Termin – offen und zugesagt (`@shared/dienstplan/meineDienste`). */
+export async function ladeMeineDienste(ichId: number): Promise<Map<number, MeinDienstKurz[]>> {
+  return dienstAusAnfragen(
+    await ctAlleSeiten<unknown>(`/persons/${ichId}/servicerequests?only_future=true`),
+  );
 }
 
 /**

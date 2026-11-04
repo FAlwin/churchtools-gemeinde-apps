@@ -7,6 +7,7 @@ import { Startseite } from './Startseite';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
+import { EINE_TAUSCHANFRAGE, tauschAttrappe } from './tausch.testutil';
 
 vi.mock('./ladeBeiwerk', () => ({
   ladeLieder: vi.fn(),
@@ -193,5 +194,28 @@ describe('Startseite → Termin-Ansicht (E6-1b)', () => {
     fireEvent.click(held().getByRole('button', { name: 'Ablauf & Dienste' }));
     expect(onTermin).toHaveBeenCalledWith(1);
     await waitFor(() => expect(lieder).toHaveBeenCalled());
+  });
+});
+
+describe('Startseite: Tauschen (E7-3)', () => {
+  it('„Tauschen“ an den eigenen Diensten; eine Tausch-Anfrage zeigt „Für dich offen“ auch ohne offene Dienst-Anfrage', async () => {
+    // Mit bekanntem Platz – ohne `ort` gibt es nichts zu tauschen.
+    const nurZugesagt = ZEILEN.map((z) => ({
+      ...z,
+      meine: z.meine
+        .filter((d) => d.zugesagt)
+        .map((d, i) => ({ ...d, ort: { serviceId: 1, index: i } })),
+    }));
+    zeige(nurZugesagt, { tausch: tauschAttrappe([EINE_TAUSCHANFRAGE]) });
+    const offen = await screen.findByRole('region', { name: 'Für dich offen' });
+    expect(within(offen).getByText('Tausch-Anfrage · Gesang')).toBeTruthy();
+    expect(within(offen).getByRole('button', { name: 'Annehmen' })).toBeTruthy();
+    const dienste = screen.getByRole('region', { name: 'Deine nächsten Dienste' });
+    expect(within(dienste).getAllByRole('button', { name: /Tauschen/ }).length).toBeGreaterThan(0);
+  });
+
+  it('ohne Tausch-Zustand kein „Tauschen“ (nur ansehen)', () => {
+    zeige();
+    expect(screen.queryByRole('button', { name: /Tauschen/ })).toBeNull();
   });
 });

@@ -20,6 +20,8 @@ import { plaketteArt } from './plaketteArt';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
 import { Toast } from '@ui/fenster/Toast';
 import type { Antworten } from './useAntworten';
+import type { Tausch } from './useTausch';
+import { TauschAmDienst } from './TauschTeile';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import styles from './Termine.module.scss';
 
@@ -46,6 +48,9 @@ interface Props {
   onTermin?: (id: number) => void;
   /** Anfragen beantworten (E7-1) – ohne: nur ansehen. */
   antworten?: Antworten;
+  /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
+  tausch?: Tausch;
+  zeitzone?: string;
 }
 
 /**
@@ -54,7 +59,16 @@ interface Props {
  * Dienstgruppen. Eine Zeile öffnet die Termin-Ansicht (E6-1b); offene Anfragen lassen sich darunter zusagen oder absagen
  * (E7-1, `AntwortKnoepfe`).
  */
-export function Termine({ zustand, planer, onNochmal, onMehr, onTermin, antworten }: Props) {
+export function Termine({
+  zustand,
+  planer,
+  onNochmal,
+  onMehr,
+  onTermin,
+  antworten,
+  tausch,
+  zeitzone = 'Europe/Berlin',
+}: Props) {
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in
   // diesem Bild vorbei. Vorher räumte ein Effekt das ein Bild zu spät weg – dann stand „wird geladen …“ neben
@@ -133,6 +147,8 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin, antworte
                   planer={planer}
                   onTermin={onTermin}
                   antworten={antworten}
+                  tausch={tausch}
+                  zeitzone={zeitzone}
                 />
               ))}
             </ul>
@@ -152,7 +168,7 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin, antworte
           </div>
         )}
       </section>
-      <Toast message={antworten?.meldung ?? null} />
+      <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
       <p className={styles.fussnote}>
         Welche Termine du unter „Alle“ siehst, entscheidet ChurchTools (Kalender-Rechte). Termine,
         in denen du eingeteilt bist, siehst du immer.
@@ -166,11 +182,15 @@ function TerminReihe({
   planer,
   onTermin,
   antworten,
+  tausch,
+  zeitzone,
 }: {
   z: TerminZeile;
   planer: boolean;
   onTermin?: (id: number) => void;
   antworten?: Antworten;
+  tausch?: Tausch;
+  zeitzone: string;
 }) {
   const k = kachel(z.tag);
   const inhalt = (
@@ -206,12 +226,24 @@ function TerminReihe({
   );
   // Offene oder eben beantwortete Anfragen: Zusagen/Absagen unter der Zeile (E7-1) – nicht im Knopf der Zeile, ein Knopf
   // in einem Knopf geht nicht.
+  // Tauschen (E7-3) an jedem eigenen Dienst – zugesagt oder offen, nicht nach einer eben gegebenen Absage.
   const offen = antworten ? z.meine.filter((d) => d.ort && (!d.zugesagt || d.antwort)) : [];
-  const knoepfe = offen.length > 0 && antworten && (
+  const tauschbar = tausch ? z.meine.filter((d) => d.ort && d.antwort?.art !== 'abgesagt') : [];
+  const knoepfe = (offen.length > 0 || tauschbar.length > 0) && (
     <div className={styles.antworten}>
-      {offen.map((d, i) => (
-        <AntwortKnoepfe key={i} termin={z} d={d} antworten={antworten} mitDienst />
-      ))}
+      {antworten &&
+        offen.map((d, i) => (
+          <AntwortKnoepfe key={i} termin={z} d={d} antworten={antworten} mitDienst />
+        ))}
+      {tausch &&
+        tauschbar.map((d, i) => (
+          <TauschAmDienst
+            key={`t${i}`}
+            d={{ terminId: z.id, termin: z.name, tag: z.tag, dienst: d.dienst, ort: d.ort! }}
+            tausch={tausch}
+            zeitzone={zeitzone}
+          />
+        ))}
     </div>
   );
   // Antippen öffnet die Termin-Ansicht mit Ablauf und Diensten (E6-1b).

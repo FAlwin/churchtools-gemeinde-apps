@@ -363,6 +363,8 @@ function daten(fall: string): Record<string, unknown> {
       },
     },
     '/api/persons/1/servicerequests': { data: [], meta: { pagination: { lastPage: 1 } } },
+    // Tausch (E7-3): keine Tausch-Anfragen in der Demo.
+    '/api/persons/1/exchangerequests': { data: [] },
     '/api/services': {
       data: [
         // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).

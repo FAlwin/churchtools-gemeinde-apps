@@ -16,6 +16,8 @@ import { plaketteArt } from './plaketteArt';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
 import { Toast } from '@ui/fenster/Toast';
 import type { Antworten } from './useAntworten';
+import type { Tausch } from './useTausch';
+import { TauschAmDienst, TauschEingang, TauschGetauscht, type EigenerDienst } from './TauschTeile';
 import { adresseFuer, type ReiterId } from './reiter';
 import styles from './Startseite.module.scss';
 
@@ -32,6 +34,23 @@ interface Props {
   onTermin?: (id: number) => void;
   /** Anfragen beantworten (E7-1) – ohne: nur ansehen. */
   antworten?: Antworten;
+  /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“, keine Tausch-Anfragen. */
+  tausch?: Tausch;
+  /** Zeitzone der Gemeinde – für die Tage der Tausch-Anfragen. */
+  zeitzone?: string;
+}
+
+/** Der eigene Dienst einer Zeile, wie der Tausch ihn braucht – `null` ohne bekannten Platz. */
+function eigener(d: DienstAmTermin): EigenerDienst | null {
+  return d.mein.ort
+    ? {
+        terminId: d.termin.id,
+        termin: d.termin.name,
+        tag: d.termin.tag,
+        dienst: d.dienst,
+        ort: d.mein.ort,
+      }
+    : null;
 }
 
 /** So viele aus dem Team stehen im Kasten „Als Nächstes“; der Rest als „und N weitere“. */
@@ -51,6 +70,8 @@ export function Startseite({
   onMeineTermine,
   onTermin,
   antworten,
+  tausch,
+  zeitzone = 'Europe/Berlin',
 }: Props) {
   const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];
@@ -94,7 +115,7 @@ export function Startseite({
             </section>
           ))}
 
-        {u.offen.length > 0 && (
+        {(u.offen.length > 0 || !!tausch?.eingang.length || !!tausch?.getauscht.length) && (
           <section className={styles.karte} aria-labelledby="offen">
             <div className={styles.kopf}>
               <h2 id="offen">Für dich offen</h2>
@@ -118,7 +139,16 @@ export function Startseite({
                   {antworten && (
                     <AntwortKnoepfe termin={d.termin} d={d.mein} antworten={antworten} />
                   )}
+                  {tausch && eigener(d) && d.mein.antwort?.art !== 'abgesagt' && (
+                    <TauschAmDienst d={eigener(d)!} tausch={tausch} zeitzone={zeitzone} />
+                  )}
                 </DienstZeile>
+              ))}
+              {tausch?.getauscht.map((g) => (
+                <TauschGetauscht key={`g${g.id}`} text={g.text} />
+              ))}
+              {tausch?.eingang.map((e) => (
+                <TauschEingang key={`t${e.id}`} e={e} tausch={tausch} zeitzone={zeitzone} />
               ))}
             </ul>
           </section>
@@ -135,7 +165,11 @@ export function Startseite({
           </div>
           <ul className={styles.liste}>
             {u.naechsteDienste.map((d, i) => (
-              <DienstZeile key={i} d={d} />
+              <DienstZeile key={i} d={d}>
+                {tausch && eigener(d) && (
+                  <TauschAmDienst d={eigener(d)!} tausch={tausch} zeitzone={zeitzone} />
+                )}
+              </DienstZeile>
             ))}
             {termine?.art === 'fertig' && u.naechsteDienste.length === 0 && (
               <li className={styles.zeile}>
@@ -177,7 +211,7 @@ export function Startseite({
           </section>
         )}
       </div>
-      <Toast message={antworten?.meldung ?? null} />
+      <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
     </div>
   );
 }

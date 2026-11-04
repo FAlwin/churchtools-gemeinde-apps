@@ -188,6 +188,15 @@
   }
 }
 
+.platzSpalte {
+  min-width: 0;
+}
+
+/* „Tauschen“ bzw. der Stand der Anfrage unter meinem Platz (E7-3). */
+.tausch {
+  margin-top: 6px;
+}
+
 @media (max-width: 759px) {
   .termin {
     order: 3;

@@ -567,15 +567,26 @@ export function antwortText(
 export const MEHRFACH_TRENNER = ' · ';
 
 /**
+ * **Welche bekannten Namen in einem Text mit Trenner stehen** – ChurchTools hält Mehrfachauswahl und Extras als Text
+ * „A, B“. Gesucht wird jeder Name als ganzes Stück, damit „Sa, abends“ oder „Bettwäsche, Handtuch“ nicht am eigenen
+ * Komma zerfällt. Grenze: Überlappen sich zwei Namen („Bettwäsche“ und „Bettwäsche, Handtuch“), gilt mit dem längeren
+ * auch der kürzere als gewählt.
+ */
+export function ganzeStuecke(
+  bekannt: readonly string[],
+  text: string | null | undefined,
+  trenner = ', ',
+): string[] {
+  if (!text) return [];
+  const rein = `${trenner}${text}${trenner}`;
+  return bekannt.filter((a) => rein.includes(`${trenner}${a}${trenner}`));
+}
+
+/**
  * **Die gewählten Antworten einer Mehrfachauswahl** – aus dem Text in ChurchTools („Fr, Sa“, A0) oder aus `antwortText`
- * („Fr · Sa“; davon zählt die Summenzeile). Gesucht wird jede bekannte Antwort als ganzes Stück, damit „Sa, So“ nicht
- * in „Sa“ und „So“ zerfällt, wenn eine Antwort selbst ein Komma enthält.
+ * („Fr · Sa“; davon zählt die Summenzeile).
  */
 export function mehrfachAntworten(f: Feld, text: string | null): string[] {
-  if (!text) return [];
-  const trenner = text.includes(MEHRFACH_TRENNER) ? MEHRFACH_TRENNER : ', ';
-  const rein = `${trenner}${text}${trenner}`;
-  return [...f.antworten, ...(f.verborgen ?? [])].filter((a) =>
-    rein.includes(`${trenner}${a}${trenner}`),
-  );
+  const trenner = text?.includes(MEHRFACH_TRENNER) ? MEHRFACH_TRENNER : ', ';
+  return ganzeStuecke([...f.antworten, ...(f.verborgen ?? [])], text, trenner);
 }

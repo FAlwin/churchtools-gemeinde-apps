@@ -6,6 +6,7 @@
 import type { Antworten, OeffentlicheEinstellungen } from './formular';
 import type { Preisergebnis } from './preis';
 import { betragAus } from './senden';
+import { ganzeStuecke } from './liste';
 
 export interface SollPerson {
   geburtstag: string | null;
@@ -30,7 +31,13 @@ export function sollBetrag(
 ): Sollbetrag {
   const g = e.preis.grundpreis;
   const option = g.art === 'auswahl' ? g.optionen.findIndex((o) => o.name === a.auswahl) : 0;
-  const gewaehlt = new Set((a.extras ?? '').split(', ').filter(Boolean));
+  // Als ganze Stücke – ein Extra „Bettwäsche, Handtuch“ zerfiel am eigenen Komma und fehlte im Betrag.
+  const gewaehlt = new Set(
+    ganzeStuecke(
+      e.preis.extras.map((x) => x.bezeichnung),
+      a.extras,
+    ),
+  );
   const antworten: Antworten = {
     anmeldung: {},
     personen: a.personen.map((p) => ({ birth: p.geburtstag ?? undefined })),

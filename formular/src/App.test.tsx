@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
-import { WARTEN_MS } from './laden';
+import { WARTEN_MS, vergissInstanzen } from './laden';
 
 /**
  * Das öffentliche Formular (A6-1, #542) gegen ein nachgestelltes ChurchTools – so, wie es ohne Login antwortet
@@ -40,7 +40,10 @@ function antwort(a: Antwort, signal?: AbortSignal | null): Promise<Response> {
 
 beforeEach(() => {
   aufrufe = [];
+  vergissInstanzen();
   antworten = {
+    // Die Liste der Gemeinde auf dem Webspace (#843) – ohne sie spricht das Formular kein ChurchTools an.
+    '/instanzen.json': [{ status: 200, body: ['test.church.tools'] }],
     '/api/publicgroups/66': [{ status: 200, body: { data: GRUPPE } }],
     '/api/info': [{ status: 200, body: { siteName: 'Gemeinde Test' } }],
   };
@@ -58,11 +61,64 @@ afterEach(() => {
   window.location.hash = '';
 });
 
+describe('Nur die Instanzen der Gemeinde (#843)', () => {
+  const anCt = () => aufrufe.filter((a) => !a.url.endsWith('/instanzen.json'));
+
+  it('Link auf eine fremde Instanz → „gibt es hier nicht“, und die fremde Seite wird NICHT gefragt', async () => {
+    // Der Angriff: ein Link mit fremder Instanz, dort eine nachgebaute Schnittstelle mit fremder IBAN.
+    window.location.hash = '#fremde-seite.example/66';
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'Diese Anmeldung gibt es hier nicht' }),
+    ).toBeTruthy();
+    expect(anCt()).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'Noch einmal versuchen' })).toBeNull();
+  });
+
+  it('Groß geschrieben im Link ist dieselbe Instanz', async () => {
+    window.location.hash = '#TEST.church.tools/66';
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Kindertag' })).toBeTruthy();
+  });
+
+  it('fehlt instanzen.json auf dem Webspace → „noch nicht eingerichtet“, keine Anfrage an ChurchTools', async () => {
+    antworten['/instanzen.json'] = [{ status: 404 }];
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Diese Anmeldeseite ist noch nicht eingerichtet',
+      }),
+    ).toBeTruthy();
+    expect(anCt()).toEqual([]);
+  });
+
+  it('steht keine gültige Instanz in der Datei → ebenfalls „noch nicht eingerichtet“', async () => {
+    antworten['/instanzen.json'] = [{ status: 200, body: ['https://test.church.tools/', 7] }];
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Diese Anmeldeseite ist noch nicht eingerichtet',
+      }),
+    ).toBeTruthy();
+    expect(anCt()).toEqual([]);
+  });
+
+  it('ist die Datei vorübergehend nicht zu lesen (503) → „Nochmal“, und der zweite Versuch liest sie neu', async () => {
+    // Vorübergehend ist nicht ungültig: Gemerkt wird nur eine gelesene Liste.
+    antworten['/instanzen.json'] = [{ status: 503 }, { status: 200, body: ['test.church.tools'] }];
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Noch einmal versuchen' }));
+    expect(await screen.findByRole('heading', { name: 'Kindertag' })).toBeTruthy();
+  });
+});
+
 describe('Öffentliches Formular (A6-1)', () => {
   it('zeigt die Veranstaltung – ohne Login gelesen, an der Instanz aus dem Link', async () => {
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Kindertag' })).toBeTruthy();
     expect(aufrufe.map((a) => a.url)).toEqual([
+      // Zuerst die Liste der Gemeinde (#843): Erst danach geht eine Anfrage an die Instanz aus dem Link.
+      `${window.location.origin}/instanzen.json`,
       'https://test.church.tools/api/publicgroups/66',
       'https://test.church.tools/api/info',
     ]);
@@ -131,6 +187,11 @@ describe('Öffentliches Formular (A6-1)', () => {
     vi.useFakeTimers({ shouldAdvanceTime: false });
     antworten['/api/publicgroups/66'] = ['haengt'];
     render(<App />);
+    // Erst wenn die Anfrage an ChurchTools unterwegs ist, läuft ihre Uhr – davor wird `instanzen.json` gelesen (#843).
+    for (let i = 0; i < 50 && !aufrufe.some((a) => a.url.endsWith('/publicgroups/66')); i++) {
+      await act(() => Promise.resolve());
+    }
+    expect(aufrufe.some((a) => a.url.endsWith('/publicgroups/66'))).toBe(true);
     await act(async () => {
       vi.advanceTimersByTime(WARTEN_MS - 1);
     });

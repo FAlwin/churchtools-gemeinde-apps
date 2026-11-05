@@ -4,6 +4,7 @@ import { neueEinstellungen } from './vorlagen';
 import { anmeldeLink } from './termin';
 import {
   LADE_FEHLER_TEXT,
+  erlaubteInstanzenAus,
   apiBasis,
   formularAdresseAus,
   abmeldeDatenAus,
@@ -266,5 +267,33 @@ describe('platzStandAus (#619) – wer wartet, kommt zuerst', () => {
         requestedWaitinglistSeatsCount: 3,
       }).freiePlaetze,
     ).toBeNull();
+  });
+});
+
+describe('erlaubteInstanzenAus (#843)', () => {
+  it('nimmt nur Rechnernamen – klein geschrieben, ohne Leerraum', () => {
+    expect(
+      erlaubteInstanzenAus([' ECG-Donrath.church.tools ', 'test-ecg-donrath.church.tools']),
+    ).toEqual(new Set(['ecg-donrath.church.tools', 'test-ecg-donrath.church.tools']));
+  });
+
+  it('Adressen mit Schema, Pfad oder Port, Zahlen und andere Formen zählen nicht', () => {
+    expect(
+      erlaubteInstanzenAus([
+        'https://x.church.tools',
+        'x.church.tools/',
+        'x.church.tools:443',
+        7,
+        null,
+      ]),
+    ).toBeNull();
+    expect(erlaubteInstanzenAus({ instanzen: ['x.church.tools'] })).toBeNull();
+    expect(erlaubteInstanzenAus('x.church.tools')).toBeNull();
+    expect(erlaubteInstanzenAus([])).toBeNull();
+  });
+
+  it('jede Fehlerart hat einen Text – auch die beiden neuen', () => {
+    expect(LADE_FEHLER_TEXT['fremde-instanz'].nochmal).toBe(false);
+    expect(LADE_FEHLER_TEXT['nicht-eingerichtet'].nochmal).toBe(false);
   });
 });

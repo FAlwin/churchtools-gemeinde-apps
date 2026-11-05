@@ -4,6 +4,7 @@ import {
   assetsAus,
   curlKonfig,
   fremdeDateien,
+  instanzenListe,
   ordnerPfad,
 } from './formular-hochladen.mjs';
 
@@ -32,6 +33,24 @@ describe('Formular hochladen (15.10.2026)', () => {
     // Leerer Ordner oder nur unser Paket → frei.
     expect(fremdeDateien(['.', '..', ''])).toEqual([]);
     expect(fremdeDateien(['index.html', 'assets'])).toEqual([]);
+  });
+
+  it('die eigene Liste der Instanzen ist kein fremder Inhalt (#843) – sonst bräche das zweite Hochladen ab', () => {
+    expect(
+      fremdeDateien(['index.html', 'assets', 'instanzen.json', 'instanzen.beispiel.json']),
+    ).toEqual([]);
+  });
+
+  it('ANMELDUNG_CT_INSTANZEN: kommagetrennt, klein, ohne Doppelte; Adressen statt Namen brechen ab (#843)', () => {
+    expect(
+      instanzenListe(
+        ' ECG-Donrath.church.tools, test-ecg-donrath.church.tools,ecg-donrath.church.tools ',
+      ),
+    ).toEqual(['ecg-donrath.church.tools', 'test-ecg-donrath.church.tools']);
+    expect(() => instanzenListe('https://ecg-donrath.church.tools')).toThrow(/nicht „https:/);
+    expect(() => instanzenListe('ecg-donrath.church.tools/')).toThrow();
+    expect(() => instanzenListe(' , ')).toThrow(/Rechnernamen/);
+    expect(() => instanzenListe(undefined)).toThrow();
   });
 
   it('Zugangsdaten mit Anführungszeichen und Backslash bleiben eine gültige curl-Zeile', () => {

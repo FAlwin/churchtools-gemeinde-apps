@@ -36,6 +36,27 @@ export function ortAusLink(hash: string): AnmeldeOrt | null {
   return gruppeId > 0 ? { instanz, gruppeId } : null;
 }
 
+/**
+ * **Welche ChurchTools-Instanzen dieses Formular ansprechen darf** (#843, entschieden 05.11.2026): eine Datei neben
+ * `index.html` auf dem Webspace der Gemeinde, z. B. `["ecg-donrath.church.tools", "test-ecg-donrath.church.tools"]`.
+ *
+ * Bis dahin nahm das Formular jede Instanz aus dem Link. Wer einen Link `…/#fremde-seite.example/1` verschickte und
+ * dort eine nachgebaute Schnittstelle hinstellte, zeigte unter der Adresse der Gemeinde ein fremdes Formular – mit
+ * fremder IBAN, und die Eingaben gingen an ihn. Das Release-Paket enthält die Datei bewusst NICHT: Ein Update ersetzt
+ * den Inhalt des Ordners und überschriebe sonst die Liste der Gemeinde.
+ */
+export const INSTANZEN_DATEI = 'instanzen.json';
+
+/** Die erlaubten Instanzen aus dem Inhalt von `instanzen.json` – `null`, wenn keine einzige gültige drinsteht. */
+export function erlaubteInstanzenAus(roh: unknown): Set<string> | null {
+  const liste = Array.isArray(roh) ? (roh as unknown[]) : [];
+  const gueltig = liste
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => RECHNER.test(x));
+  return gueltig.length ? new Set(gueltig) : null;
+}
+
 /** „Deine Anmeldung“ (A6-4): wo die Anmeldung liegt und mit welchem Schlüssel aus der Mail. */
 export interface AbmeldeOrt extends AnmeldeOrt {
   token: string;
@@ -239,6 +260,8 @@ export function freiePlaetzeAus(
 /** Warum die Seite nichts zeigen kann – je Fall eine eigene Meldung. */
 export type LadeFehler =
   | 'link' // kein gültiger Link
+  | 'fremde-instanz' // der Link zeigt auf eine Instanz, die nicht in `instanzen.json` steht (#843)
+  | 'nicht-eingerichtet' // `instanzen.json` fehlt auf dem Webspace oder enthält keine gültige Instanz (#843)
   | 'abmeldelink' // „Deine Anmeldung“: der Schlüssel aus der Mail passt nicht (404, A6-4)
   | 'nicht-freigegeben' // 403
   | 'nicht-gefunden' // 404
@@ -265,6 +288,16 @@ export const LADE_FEHLER_TEXT: Record<
   link: {
     titel: 'Dieser Link ist unvollständig',
     text: 'Bitte den Link zur Anmeldung noch einmal vollständig aus der Einladung kopieren.',
+    nochmal: false,
+  },
+  'fremde-instanz': {
+    titel: 'Diese Anmeldung gibt es hier nicht',
+    text: 'Der Link gehört nicht zu dieser Anmeldeseite. Bitte den Link aus der Einladung der Gemeinde nehmen.',
+    nochmal: false,
+  },
+  'nicht-eingerichtet': {
+    titel: 'Diese Anmeldeseite ist noch nicht eingerichtet',
+    text: 'Die Gemeinde muss hier noch festlegen, zu welchem ChurchTools die Seite gehört. Bitte der Gemeinde Bescheid geben.',
     nochmal: false,
   },
   abmeldelink: {

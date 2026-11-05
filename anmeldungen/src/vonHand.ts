@@ -25,6 +25,7 @@ import {
 import { angemeldeteId } from '@ui/ct/ich';
 import { personenRoh } from './mitglieder';
 import { personenSuchen, type Gefunden } from '@ui/ct/personen';
+import { mitgliedAnlegen, mitgliedEntfernen, mitgliedOderNichts } from '@ui/ct/mitglieder';
 
 /** Vor- und Nachname der angemeldeten Person – für den Vermerk „Unterschrift auf Papier“. */
 export async function meinName(): Promise<string> {
@@ -128,18 +129,8 @@ interface MitgliedRoh {
   fields?: { id?: unknown; value?: unknown }[];
 }
 
-const mitglied = (id: number, personId: number) =>
-  ctDaten<MitgliedRoh>(`/groups/${id}/members/${personId}`);
-
-/** Das Mitglied – oder `null`, wenn die Person (noch) nicht in der Gruppe ist (404, gemessen). */
-async function mitgliedOderNichts(id: number, personId: number): Promise<MitgliedRoh | null> {
-  try {
-    return await mitglied(id, personId);
-  } catch (x) {
-    if (x instanceof ApiError && x.status === 404) return null;
-    throw x;
-  }
-}
+/** Das Mitglied – oder `null`, wenn die Person (noch) nicht in der Gruppe ist (404, gemessen; `@ui/ct/mitglieder`). */
+const mitgliedDa = (id: number, personId: number) => mitgliedOderNichts<MitgliedRoh>(id, personId);
 
 /** Was von Hand angemeldet wird. */
 export interface VonHandPlan {
@@ -178,7 +169,7 @@ export async function vonHandAnmelden(
   } else {
     personId = plan.person.personId;
     // Schon dabei (auch wartend)? Dann nichts überschreiben – das wäre eine andere Anmeldung.
-    if (await mitgliedOderNichts(id, personId))
+    if (await mitgliedDa(id, personId))
       throw new ApiError(409, 'Diese Person ist schon bei dieser Veranstaltung angemeldet.');
     if (plan.person.geburtstagNachtragen) {
       await ctAnfrage(`/persons/${personId}`, {
@@ -210,24 +201,20 @@ export async function vonHandAnmelden(
   const wartet = plan.platz.status === 'waiting';
   let warteplatz: number | null = null;
   try {
-    await ctAnfrage(`/groups/${id}/members/${personId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        groupTypeRoleId: rolle,
-        groupMemberStatus: plan.platz.status,
-        ...(wartet && plan.platz.warteplatz ? { waitinglistPosition: plan.platz.warteplatz } : {}),
-        fields: plan.felder,
-        only_add: true,
-      }),
+    await mitgliedAnlegen(id, personId, {
+      groupTypeRoleId: rolle,
+      groupMemberStatus: plan.platz.status,
+      ...(wartet && plan.platz.warteplatz ? { waitinglistPosition: plan.platz.warteplatz } : {}),
+      fields: plan.felder,
     });
-    const m = await mitgliedOderNichts(id, personId);
+    const m = await mitgliedDa(id, personId);
     const nr = plan.nrFeld === undefined ? undefined : plan.felder[plan.nrFeld];
     const nrDa =
       nr === undefined ||
       (m?.fields ?? []).some((f) => Number(f.id) === plan.nrFeld && f.value === nr);
     if (!m || m.groupMemberStatus !== plan.platz.status || !nrDa) {
       // Halb übernommen (falscher Status, Nr. fehlt): wieder heraus – ein Fehler lässt nichts halb stehen.
-      if (m) await ctAnfrage(`/groups/${id}/members/${personId}`, { method: 'DELETE' });
+      if (m) await mitgliedEntfernen(id, personId);
       throw new NichtUebernommen('die Anmeldung');
     }
     if (wartet) warteplatz = m.waitinglistPosition ?? plan.platz.warteplatz;
@@ -242,8 +229,8 @@ export async function vonHandAnmelden(
     personId,
     warteplatz,
     rueckgaengig: async () => {
-      await ctAnfrage(`/groups/${id}/members/${personId}`, { method: 'DELETE' });
-      if (await mitgliedOderNichts(id, personId)) throw new NichtUebernommen('das Zurücknehmen');
+      await mitgliedEntfernen(id, personId);
+      if (await mitgliedDa(id, personId)) throw new NichtUebernommen('das Zurücknehmen');
       await plaetzeZurueck();
     },
   };

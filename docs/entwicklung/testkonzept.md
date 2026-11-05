@@ -91,6 +91,10 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `keepalive`. Dazu an den Diensten: Einstellungen in EINEM Upload, Anmerkungen „neuer Strich gewinnt, alter Zoom
   bleibt“ bei Weiterzeichnen während eines scheiternden Uploads. Gegenprobe je Regel; einzig das Timer-Räumen beim
   Weglegen ist nicht beobachtbar (der alte Timer fände eine leere Schlange)
+- `ui/ct/mitglieder` – Mitgliedschafts-Baustein (#848): anlegen = `PUT` mit `only_add` (auch gegen ein mitgegebenes
+  `only_add: false`), ändern = `PATCH` ohne, entfernen = `DELETE`, Meldung bei fehlendem Recht, 404 = `null`, ein
+  vorübergehender Fehler wirft. Wächter `ui/design/eineMitgliedschaft`: keine Einzel-Adresse außerhalb des Bausteins
+  (mit Erkennungs-Gegenprobe; Listen, Verlauf, Abläufe und Anwesenheit bleiben erlaubt)
 - `ui/design/eineZeitzone` – Wächter (#847): keine eigene Zeitzone (`resolvedOptions().timeZone`, `'Europe/Berlin'`),
   kein eigenes „heute“ (`tagAusIso(new Date()…)`, `getFullYear()`), keine Anzeige in Gerätezeit (`Intl.DateTimeFormat`
   / `toLocale…String` ohne `timeZone`) – mit Gegenprobe, dass jede Form erkannt wird, und Ausnahmen, die es geben

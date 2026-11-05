@@ -8,7 +8,6 @@
  *   ChurchTools selbst; mit eingerichteten Abläufen kommt die Bestätigung noch einmal (A9-1, echt geprüft 24.10.2026).
  * Jede Person wird vor dem Schreiben frisch gelesen (nicht aus der Liste), jeder Schritt nachgelesen.
  */
-import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { einmalFelder } from '@shared/anmeldung/liste';
@@ -16,6 +15,12 @@ import type { AbsagePlan, NachrueckPlan } from '@shared/anmeldung/bewegung';
 import { euroText } from '@shared/anmeldung/preis';
 import { NichtUebernommen, anmeldungVon, speichereAnmeldung } from './einrichten';
 import { felderSchreiben } from './zahlung';
+import {
+  mitgliedAendern,
+  mitgliedAnlegen,
+  mitgliedEntfernen,
+  mitgliedLesen,
+} from '@ui/ct/mitglieder';
 
 interface MitgliedRoh {
   personId?: number;
@@ -27,8 +32,7 @@ interface MitgliedRoh {
 
 type Feldwerte = Record<number, string | boolean | null>;
 
-const mitglied = (id: number, personId: number) =>
-  ctDaten<MitgliedRoh>(`/groups/${id}/members/${personId}`);
+const mitglied = (id: number, personId: number) => mitgliedLesen<MitgliedRoh>(id, personId);
 
 /** Die Felder einer Person, wie ChurchTools sie hält (Auswahl als Options-ID) – zum Kopieren und Zurückschreiben. */
 function rohWerte(m: MitgliedRoh): Map<number, string | null> {
@@ -68,10 +72,7 @@ export async function nachrueckenLassen(
   const vorher = rohWerte(await mitglied(id, plan.personId));
   if (Object.keys(felder).length) await felderSchreiben(id, plan.personId, felder, 'die Zahlung');
   try {
-    await ctAnfrage(`/groups/${id}/members/${plan.personId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ groupMemberStatus: 'active' }),
-    });
+    await mitgliedAendern(id, plan.personId, { groupMemberStatus: 'active' });
     if ((await mitglied(id, plan.personId)).groupMemberStatus !== 'active')
       throw new NichtUebernommen('das Nachrücken');
   } catch (x) {
@@ -133,7 +134,7 @@ export async function absagenLassen(
   }
 
   try {
-    await ctAnfrage(`/groups/${id}/members/${plan.personId}`, { method: 'DELETE' });
+    await mitgliedEntfernen(id, plan.personId);
     await mitglied(id, plan.personId);
     throw new NichtUebernommen('die Absage');
   } catch (x) {
@@ -147,18 +148,14 @@ export async function absagenLassen(
   return async () => {
     const felder: Feldwerte = {};
     for (const [k, v] of wegWerte) if (v !== null && v !== '' && v !== '0') felder[k] = v;
-    await ctAnfrage(`/groups/${id}/members/${plan.personId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        groupTypeRoleId: weg.groupTypeRoleId,
-        groupMemberStatus: weg.groupMemberStatus,
-        ...(weg.groupMemberStatus === 'waiting' && weg.waitinglistPosition
-          ? { waitinglistPosition: weg.waitinglistPosition }
-          : {}),
-        fields: felder,
-        // Neu anlegen, nie überschreiben – ist sie inzwischen wieder dabei, lehnt ChurchTools ab (403).
-        only_add: true,
-      }),
+    // Neu anlegen, nie überschreiben – ist sie inzwischen wieder dabei, lehnt ChurchTools ab (403).
+    await mitgliedAnlegen(id, plan.personId, {
+      groupTypeRoleId: weg.groupTypeRoleId,
+      groupMemberStatus: weg.groupMemberStatus,
+      ...(weg.groupMemberStatus === 'waiting' && weg.waitinglistPosition
+        ? { waitinglistPosition: weg.waitinglistPosition }
+        : {}),
+      fields: felder,
     });
     const zurueck = await mitglied(id, plan.personId);
     if (zurueck.groupMemberStatus !== weg.groupMemberStatus)

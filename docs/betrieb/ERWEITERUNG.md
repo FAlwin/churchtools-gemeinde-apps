@@ -36,43 +36,70 @@ Die Musik App gibt es in zwei Formen:
 ## Rechte einrichten
 
 Die App kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit deren
-Sitzung. Welche Rechte wofür nötig sind, steht hier **an einer Stelle**. Vergeben werden sie unter
-**Berechtigungen** (am einfachsten über den Status oder die Gruppe eures Musikteams). ChurchTools zeigt
-hinter jedem Recht seinen Schlüssel in Klammern – danach könnt ihr suchen.
+Sitzung. Vergeben werden die Rechte unter **Administration → Berechtigungen**, am einfachsten über einen
+Status oder die Rollen einer Gruppe. ChurchTools zeigt hinter jedem Recht seinen Schlüssel in Klammern –
+danach könnt ihr suchen. **Diese Übersicht ist die eine Stelle für alle Rechte der Musik App**; braucht
+eine neue Funktion ein Recht, kommt es hier dazu (eine Prüfung in der CI achtet darauf).
 
-| Wofür                                                             | Wer braucht es                                                                                   | Recht in ChurchTools                                                                                                                                                                                           |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Den Menüpunkt „Musik App" sehen                                   | alle, die die App nutzen                                                                         | Erweiterung: **„Musik App" sehen** (`view`)                                                                                                                                                                    |
-| Lieder sehen                                                      | alle, die die App nutzen                                                                         | Events: Lieder sehen (`view songcategory`) – für die Kategorien, die sie sehen sollen                                                                                                                          |
-| Termine und Abläufe sehen                                         | alle, die die App nutzen                                                                         | Events: Abläufe sehen (`view agenda`)                                                                                                                                                                          |
-| Anmerkungen, Tonart, Zoom speichern                               | alle, die die App nutzen                                                                         | Personen: **Eigene Personendaten bearbeiten** (bei uns über den Status „Mitglied")                                                                                                                             |
-| Gemeinde-Einstellungen bekommen (Links, „PDF zuerst")             | alle, die die App nutzen                                                                         | Erweiterung: **Kategorien sehen** (`view custom category`) und **Daten in Kategorie sehen** (`view custom data`) für „Einstellungen der Musik App"                                                             |
-| Abwesenheiten (Reiter „Abwesenheiten")                            | alle, die die App öffnen (seit 04.11.2026; auf dem NAS nur die Musikteam-Gruppen der Verwaltung) | **kein eigenes Recht** – die eigenen Abwesenheiten darf jede Person in ChurchTools selbst pflegen (gemessen 04.11.2026 als Spike; fremde → 403)                                                                |
-| Team-Notizen nutzen („Notizen von …", „Meine Anmerkungen teilen") | Musiker der in der Verwaltung gewählten Gruppen und Rollen                                       | Erweiterung, für „Team-Notizen der Musik App": `view custom category`, `view custom data`, **Daten in Kategorie erstellen** (`create custom data`), **Daten in Kategorie löschen** (`delete custom data`)      |
-| Lied-Statistik („Häufigkeit", „Zuletzt" bei den Liedern)          | wer die Statistik sehen soll (bei uns: nur die Musiker)                                          | Events: **Song-Statistik sehen** (`view song statistics`) – ohne gibt es die Reiter nicht. Am besten dort vergeben, wo die Musiker ihre Lied-Rechte bekommen (z. B. ihre Gruppe), nicht beim Status „Mitglied" |
-| Ablauf bearbeiten                                                 | wer Abläufe pflegt                                                                               | Events: Abläufe bearbeiten (`edit agenda`) – **je Kalender**; Admins eines Termins dürfen dessen Ablauf auch ohne (#635)                                                                                       |
-| Lieder, Arrangements, Notenblätter, Tempo ändern                  | wer Lieder pflegt                                                                                | Events: Lieder bearbeiten (`edit songcategory`) – je Kategorie                                                                                                                                                 |
-| CCLI SongSelect (suchen, Lied anlegen, Notenblatt holen)          | wer Lieder pflegt – nur mit SongSelect-Abo der Gemeinde in ChurchTools                           | Events: SongSelect nutzen (`use ccli`) – was aufs Kontingent zählt: [songselect-kontingent.md](songselect-kontingent.md)                                                                                       |
-| Verwaltung in der App (unter **Mehr**)                            | Admins                                                                                           | `administer persons` (Personen administrieren) – Admins haben es meist schon                                                                                                                                   |
-| Gemeinde-Einstellungen und Team-Gruppen speichern                 | Admins                                                                                           | Erweiterung: **Kategorien erstellen** (`create custom category`), dazu für „Einstellungen der Musik App" `create custom data` und **Daten in Kategorie bearbeiten** (`edit custom data`)                       |
+**Reihenfolge:**
 
-**Beispiel ECG – Liederbuch für alle Mitglieder** (Status „Mitglied", ohne Abläufe): Veranstaltungen:
-„Veranstaltungen" sehen (`view`) und Einzelne Song-Kategorien sehen (`view songcategory`) für die
-Kategorien, die alle sehen sollen; Erweiterung: „Musik App" sehen (`view`), dazu Kategorien sehen und
-Daten in Kategorie sehen **nur** für „Einstellungen der Musik App". Ohne `view agenda` öffnet die App
-direkt bei „Lieder", einen Reiter „Termine" gibt es dann nicht. Die Musiker bekommen über die Rollen
-ihrer Gruppe zusätzlich Abläufe, „Song-Statistik sehen", die Team-Notizen und das Bearbeiten.
+1. Erweiterung hochladen, Kürzel genau `musik-app` (siehe oben).
+2. Als Admin in der App unter **Mehr → Verwaltung** eine Einstellung ändern (z. B. „Liedblatt:
+   Standard-Ansicht") und bei **„Anmerkungen"** die Musikteam-Gruppe wählen. Dabei legt die App ihre zwei
+   Kategorien an: „Einstellungen der Musik App" und „Team-Notizen der Musik App".
+3. Erst jetzt die Rechte vergeben – vorher stehen die beiden Kategorien nicht zur Auswahl.
 
-**Mehr braucht ein Musiker nicht – und sollte er nicht haben:** kein „-- Alle --" (gilt sonst auch für
-jede künftige Kategorie), kein Kategorien bearbeiten/löschen und bei „Einstellungen der Musik App" weder
-Daten erstellen noch bearbeiten noch löschen. Sonst könnte jeder Musiker die Gemeinde-Einstellungen
-überschreiben oder eine Kategorie der App löschen. ChurchTools schützt die Daten einer Kategorie nicht
-je Eintrag – wer dort schreiben darf, darf alles darin.
+### Rechte der Erweiterung „Musik App"
 
-Die beiden Kategorien „Einstellungen der Musik App" und „Team-Notizen der Musik App" legt die App selbst
-an, wenn ein Admin zum ersten Mal speichert (Team-Notizen: sobald eine Gruppe gewählt ist). **Erst danach
-lassen sie sich bei den Rechten auswählen** – also: als Admin einmal speichern, dann die Rechte vergeben.
-Die Kategorien nicht löschen; sie gehören der App.
+Diese Rechte braucht die App, damit sie funktioniert. **Nutzer** = alle, die die App öffnen sollen ·
+**Musiker** = wer Team-Notizen teilt · **Admin** = wer die App verwaltet.
+
+| Recht                                               | Einstellungen: Nutzer | Musiker | Admin | Team-Notizen: Nutzer | Musiker | Admin |
+| --------------------------------------------------- | :-------------------: | :-----: | :---: | :------------------: | :-----: | :---: |
+| „Musik App" sehen (`view`)                          |           ✓           |    ✓    |   ✓   |          ✓           |    ✓    |   ✓   |
+| Kategorien sehen (`view custom category`)           |           ✓           |    ✓    |   ✓   |          –           |    ✓    |   ✓   |
+| Kategorien erstellen (`create custom category`)     |           –           |    –    |   ✓   |          –           |    –    |   ✓   |
+| Kategorien bearbeiten (`edit custom category`)      |           –           |    –    |   –   |          –           |    –    |   –   |
+| Kategorien löschen (`delete custom category`)       |           –           |    –    |   –   |          –           |    –    |   –   |
+| Daten in Kategorie sehen (`view custom data`)       |           ✓           |    ✓    |   ✓   |          –           |    ✓    |   ✓   |
+| Daten in Kategorie erstellen (`create custom data`) |           –           |    –    |   ✓   |          –           |    ✓    |   ✓   |
+| Daten in Kategorie bearbeiten (`edit custom data`)  |           –           |    –    |   ✓   |          –           |    –    |   –   |
+| Daten in Kategorie löschen (`delete custom data`)   |           –           |    –    |   –   |          –           |    ✓    |   ✓   |
+
+„Musik App" sehen und Kategorien erstellen gibt es in ChurchTools nur einmal, nicht je Kategorie – sie
+gelten für beide Spalten gleich.
+
+> **Den Unterpunkt „-- Alle --" nirgends anhaken** – er gilt sonst auch für jede künftige Kategorie. Und
+> nicht mehr vergeben als oben: ChurchTools schützt die Daten einer Kategorie nicht je Eintrag. Wer
+> „Einstellungen der Musik App" bearbeiten darf, kann die Einstellungen der ganzen Gemeinde überschreiben;
+> wer Kategorien löschen darf, kann die App lahmlegen. Die beiden Kategorien gehören der App – nicht löschen.
+
+### Weitere Rechte – Vorschlag
+
+Wer was sehen und bearbeiten darf, entscheidet jede Gemeinde selbst. Die App zeigt nur, was ChurchTools
+der Person erlaubt.
+
+| Funktion in der App                                | Recht in ChurchTools                                                                                                                                          | Vorschlag                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Lieder sehen                                       | Veranstaltungen: „Veranstaltungen" sehen (`view`) und Einzelne Song-Kategorien sehen (`view songcategory`), je Kategorie                                      | Musiker; wer will, auch alle als Liederbuch |
+| Anmerkungen, Tonart, Zoom speichern                | Personen: Eigene Personendaten bearbeiten                                                                                                                     | alle Nutzer                                 |
+| Abwesenheiten                                      | kein eigenes Recht – die eigenen pflegt jede Person selbst (fremde → 403, gemessen)                                                                           | –                                           |
+| Termine und Abläufe                                | Events: Abläufe sehen (`view agenda`)                                                                                                                         | Musiker                                     |
+| Info-Spalten im Ablauf (z. B. Technik)             | Events: Dienstgruppe sehen (`view servicegroup`) bzw. bearbeiten (`edit servicegroup`), je Dienstgruppe                                                       | Musiker, für die passenden Dienstgruppen    |
+| Lied-Statistik („Häufigkeit", „Zuletzt")           | Events: Song-Statistik sehen (`view song statistics`) – ohne gibt es die Reiter nicht                                                                         | Musiker                                     |
+| Ablauf bearbeiten                                  | Events: Abläufe bearbeiten (`edit agenda`), je Kalender – Admins eines Termins dürfen dessen Ablauf auch ohne (#635)                                          | wer Abläufe plant                           |
+| Lieder, Arrangements, Notenblätter, Dateien, Tempo | Events: Lieder bearbeiten (`edit songcategory`), je Kategorie                                                                                                 | wer Lieder pflegt                           |
+| CCLI SongSelect                                    | Events: SongSelect nutzen (`use ccli`) – nur mit SongSelect-Abo der Gemeinde; was aufs Kontingent zählt: [songselect-kontingent.md](songselect-kontingent.md) | wer Lieder pflegt                           |
+| Verwaltung in der App (unter **Mehr**)             | Personen: Personen administrieren (`administer persons`)                                                                                                      | Admins                                      |
+
+Info-Spalten: Man sieht nur die Spalten der Dienstgruppen, die man sehen darf. Wer nicht alle sieht,
+bekommt beim Bearbeiten eines Ablaufs einen Hinweis – ChurchTools löscht beim Speichern die Infos der
+Gruppen, die man nicht sieht.
+
+**Beispiel ECG:** Alle Mitglieder (Status „Mitglied") bekommen die App als Liederbuch – Lieder sehen für
+die Kategorien, die alle sehen sollen, aber **keine Abläufe**. Ohne `view agenda` öffnet die App direkt
+bei „Lieder", einen Reiter „Termine" gibt es dann nicht. Die Musiker bekommen über die Rollen ihrer
+Gruppe zusätzlich Abläufe, Info-Spalten, „Song-Statistik sehen", die Team-Notizen und das Bearbeiten.
 
 **Was passiert, wenn ein Recht fehlt:**
 

@@ -391,6 +391,16 @@ Die Erweiterung bietet beim Anlegen genau diese Kalender an. Fehlt das Recht, me
 In **vorhandene** Termine trägt die Erweiterung nichts ein (ChurchTools ersetzt einen Termin beim Ändern
 ganz – Räume, Dienste oder Bild gingen verloren); dort steht „Link zur Anmeldung kopieren“.
 
+**Termin im Kalender verschoben** (K1): Datum und Ort sind eine Kopie. Öffnet jemand mit Bearbeiten-Recht die
+Veranstaltung, liest die Erweiterung den Termin im Kalender nach und übernimmt einen neuen Tag, eine neue Uhrzeit, einen
+neuen Ort oder Kalender – Formular, Löschdatum und Erinnerungen ziehen mit. Oben auf der Seite steht dann, was vorher
+galt und was jetzt gilt, und dass die Angemeldeten es noch nicht wissen („Rundmail schreiben“ öffnet die Rundmail;
+verschickt wird nur, was ihr schreibt). Den Hinweis sieht jede Person einmal („Verstanden“, gemerkt je Gerät). Ist der
+Termin im Kalender gelöscht – oder bei einer Serie genau diese Wiederholung verschoben oder abgesagt (ChurchTools macht
+daraus einen neuen, fremden Termin) –, bleibt das Datum stehen und die Karte „Termin“ bittet, ihn neu zu wählen.
+Antwortet ChurchTools gerade nicht, ändert sich nichts. Hinweis: Im Kalender von ChurchTools ist beim Bearbeiten „Alle
+Infos auch per E-Mail zustellen“ schon angehakt.
+
 ### 5. Den Menüpunkt sehen
 
 Erweiterung **„Anmeldungen“ sehen** (`view`, Bereich „anmeldungen“ in den Berechtigungen) – für alle, die

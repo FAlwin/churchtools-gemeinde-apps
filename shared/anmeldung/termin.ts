@@ -47,6 +47,75 @@ export function terminAusCt(
 }
 
 /**
+ * **Wann, in Worten** – „Mo, 31.08.2026, 10:00 Uhr bis 12:00 Uhr“ (mehrtägig mit dem Endtag). Die eine Schreibweise für
+ * die Karte „Termin“ und den Hinweis „im Kalender verschoben“ (K1).
+ */
+export function terminWann(t: Pick<TerminAngabe, 'beginn' | 'ende'>): string {
+  const tag = (x: string) => datumText(x.slice(0, 10));
+  const bis = !t.ende
+    ? ''
+    : t.ende.slice(0, 10) === t.beginn.slice(0, 10)
+      ? ` bis ${t.ende.slice(11)} Uhr`
+      : ` bis ${tag(t.ende)}, ${t.ende.slice(11)} Uhr`;
+  return `${tag(t.beginn)}, ${t.beginn.slice(11)} Uhr${bis}`;
+}
+
+/**
+ * **Einen Termin von Hand wählen** (K1) – im Termin-Fenster und beim Kopieren. „Im Kalender verschoben“ gehört zur
+ * alten Wahl: Bliebe es stehen, meldete der Hinweis eine Verschiebung zum neu gewählten Termin. Die eine Stelle dafür.
+ */
+export function mitGewaehltemTermin(
+  e: OeffentlicheEinstellungen,
+  termin: TerminAngabe | null,
+): OeffentlicheEinstellungen {
+  const { terminVerschoben: _alt, ...rest } = e;
+  return { ...rest, termin };
+}
+
+/** Ein Termin, wie ChurchTools ihn einzeln liefert (`GET /calendars/{k}/appointments/{id}`, gemessen 05.11.2026). */
+export interface CtTerminEinzeln {
+  appointment: CtTermin & { repeatId?: number | null; calendar?: { id?: number } | null };
+  /** Bei Serien: je Tag (`JJJJ-MM-TT`) Beginn und Ende; ein einzeln verschobener oder abgesagter Tag fehlt. */
+  calculatedDates?: Record<string, { startDate: string; endDate: string }> | null;
+}
+
+export type KalenderVergleich =
+  | { art: 'gleich' }
+  /** `sichtbar`: Datum oder Ort sind anders – nicht nur der Kalender (der zieht still mit). */
+  | { art: 'geaendert'; neu: TerminAngabe; sichtbar: boolean }
+  /** Gelöscht, oder bei einer Serie die Wiederholung verschoben/abgesagt – den neuen Tag kennt ChurchTools nur als
+   *  fremden Einzeltermin (gemessen 05.11.2026). Das Datum bleibt dann stehen. */
+  | { art: 'weg' };
+
+/**
+ * **Steht der Termin im Kalender noch so?** (K1, gemessen 05.11.2026, Zehnte Runde) – Datum und Ort sind eine Kopie;
+ * wer den Termin nur im Kalender verschiebt, ändert sie nicht. Ein Einzeltermin behält dabei seine Nummer. `gelesen`:
+ * `null` = nicht gefunden (404). Verglichen wird, was `terminAusCt` daraus macht – dieselbe Umrechnung wie beim Wählen.
+ */
+export function terminImKalender(
+  gespeichert: TerminAngabe,
+  gelesen: CtTerminEinzeln | null,
+  zeitzone: string,
+): KalenderVergleich {
+  if (!gelesen) return { art: 'weg' };
+  const a = gelesen.appointment;
+  let basis: CtTermin = a;
+  if ((a.repeatId ?? 0) > 0) {
+    // Serie: Die gewählte Wiederholung ist der Tag des Beginns.
+    const tag = gelesen.calculatedDates?.[gespeichert.beginn.slice(0, 10)];
+    if (!tag) return { art: 'weg' };
+    basis = { ...a, startDate: tag.startDate, endDate: tag.endDate };
+  }
+  const neu = terminAusCt(basis, zeitzone, a.calendar?.id ?? gespeichert.kalenderId ?? null);
+  const sichtbar =
+    neu.beginn !== gespeichert.beginn ||
+    neu.ende !== gespeichert.ende ||
+    neu.ort !== gespeichert.ort;
+  const kalender = (neu.kalenderId ?? null) !== (gespeichert.kalenderId ?? null);
+  return sichtbar || kalender ? { art: 'geaendert', neu, sichtbar } : { art: 'gleich' };
+}
+
+/**
  * **Der Link zur Anmeldung**: Formular-Seite der Gemeinde + Instanz + Gruppe. Die Formular-Seite legt jede Gemeinde
  * selbst auf ihren Webspace (Alwin, 14.10.2026: „Voraussetzung für diese Extension – auf keinen Fall soll unsere
  * Domain da sichtbar werden“); die Adresse steht in den Einstellungen der Gemeinde (`formularAdresseAus`).

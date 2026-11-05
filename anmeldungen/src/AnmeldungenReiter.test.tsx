@@ -68,6 +68,7 @@ function zeigen(
   entwurf = false,
   darf = true,
   mitBestaetigung = false,
+  startRundmail = false,
 ) {
   const onNeuLaden = vi.fn();
   const onGespeichert = vi.fn();
@@ -88,6 +89,7 @@ function zeigen(
       onNeuLaden={onNeuLaden}
       onGespeichert={onGespeichert}
       mitBestaetigung={mitBestaetigung}
+      startRundmail={startRundmail}
     />,
   );
   return Object.assign(onNeuLaden, { onGespeichert });
@@ -972,6 +974,17 @@ describe('Mail schreiben', () => {
     cleanup();
     render(<MailAnsicht mail={mail} kopiert="nein" />);
     expect(screen.getByText(/Kopieren ging nicht/)).toBeTruthy();
+  });
+});
+
+describe('Rundmail aus dem Hinweis „verschoben“ (K1, V6)', () => {
+  beforeEach(() => rm.platzhalterLaden.mockResolvedValue(new Map()));
+  it('öffnet sich, sobald die Liste da ist – einmal; ohne Recht nicht', async () => {
+    zeigen(fertig(), 10, false, true, false, true);
+    expect(await screen.findByRole('dialog', { name: /Rundmail/ })).toBeTruthy();
+    cleanup();
+    zeigen(fertig(), 10, false, false, false, true);
+    expect(screen.queryByRole('dialog', { name: /Rundmail/ })).toBeNull();
   });
 });
 

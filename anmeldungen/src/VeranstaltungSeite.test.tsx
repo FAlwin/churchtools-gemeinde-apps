@@ -35,6 +35,7 @@ vi.mock('./einrichten', async (original) => {
     darfVeranstaltungEinrichten: vi.fn(),
     darfAblaeufeEinrichten: vi.fn(),
     anmeldungenIn: vi.fn(),
+    terminNachziehen: vi.fn(),
     freigeben: vi.fn(),
     leitungsKandidaten: vi.fn(),
     meineId: vi.fn(),
@@ -207,6 +208,8 @@ beforeEach(() => {
   });
   // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
+  // K1: ohne Termin aus dem Kalender gibt es nichts nachzuziehen.
+  m.terminNachziehen.mockResolvedValue(null);
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -635,6 +638,40 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       // A5: der Kalender wird mit gemerkt – das Termin-Fenster beginnt dann dort.
       kalenderId: 1,
     });
+    // K1: Ein neu gewählter Termin hat keine Verschiebung – der alte Hinweis fällt weg.
+    const mitAltem = {
+      ...neueEinstellungen('einfach'),
+      terminVerschoben: { vorher: { beginn: '2026-11-01T10:00', ende: null, ort: '' }, am: 'x' },
+    };
+    expect(aendern(mitAltem).terminVerschoben).toBeUndefined();
+  });
+
+  it('vorhandenen Termin wählen: übernommen wie gewählt, ein alter Hinweis „verschoben“ fällt weg (K1)', async () => {
+    stelle(true, 2);
+    m.kalenderListe.mockResolvedValue([{ id: 1, name: 'Sonstige Veranstaltung', schreiben: true }]);
+    m.termineIn.mockResolvedValue([
+      {
+        id: 77,
+        title: 'Herbstfest',
+        startDate: '2026-11-28T14:00:00Z',
+        endDate: '2026-11-28T17:00:00Z',
+        address: { name: 'Garten' },
+      },
+    ]);
+    zeigen();
+    const termin = await screen.findByRole('region', { name: 'Termin' });
+    fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
+    const wahl = await screen.findByRole('button', { name: /Herbstfest/ });
+    expect(wahl.textContent).toContain('Sa, 28.11.2026, 15:00 Uhr · Garten');
+    fireEvent.click(wahl);
+    await waitFor(() => expect(m.aendereEinstellungen).toHaveBeenCalled());
+    const aendern = m.aendereEinstellungen.mock.calls[0][1];
+    const neu = aendern({
+      ...neueEinstellungen('einfach'),
+      terminVerschoben: { vorher: { beginn: '2026-11-01T10:00', ende: null, ort: '' }, am: 'x' },
+    });
+    expect(neu.termin).toMatchObject({ beginn: '2026-11-28T15:00', terminId: 77, kalenderId: 1 });
+    expect(neu.terminVerschoben).toBeUndefined();
   });
 
   it('das Termin-Fenster beginnt beim Kalender des gewählten Termins (A5)', async () => {
@@ -1585,5 +1622,127 @@ describe('Seitengerüst (U1): zwei Bereiche, Einstieg je nach Stand', () => {
     seite();
     fireEvent.click(await screen.findByRole('button', { name: 'Termin wählen' }));
     expect(await screen.findByRole('dialog', { name: 'Termin' })).toBeTruthy();
+  });
+});
+
+describe('Termin im Kalender verschoben (K1, V1–V7)', () => {
+  const VORHER = { beginn: '2026-11-20T10:00', ende: '2026-11-20T12:00', ort: 'Saal A' };
+  const JETZT = { beginn: '2026-11-21T15:00', ende: '2026-11-21T17:00', ort: 'Saal A' };
+  const mitTermin = (x: Partial<OeffentlicheEinstellungen> = {}) => ({
+    ...neueEinstellungen('einfach'),
+    termin: { ...JETZT, terminId: 263, kalenderId: 1 },
+    ...x,
+  });
+  const verschoben = (am = '2026-11-05T12:00:00.000Z', vorher = VORHER) =>
+    mitTermin({ terminVerschoben: { vorher, am } });
+  beforeEach(() => localStorage.clear());
+  const hinweis = () => screen.queryByRole('region', { name: 'Termin verschoben' });
+
+  it('Hinweis: vorher – jetzt, angepasst, Angemeldete wissen es nicht; „Rundmail schreiben“ führt in die Liste', async () => {
+    stelle(true, 1, verschoben());
+    m.anmeldungenZahl.mockResolvedValue(12);
+    const onReiter = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        onReiter={onReiter}
+        zeitzone={ZONE}
+        onZurueck={() => {}}
+      />,
+    );
+    const h = await screen.findByRole('region', { name: 'Termin verschoben' });
+    expect(h.textContent).toContain(
+      'Der Termin wurde im Kalender verschoben: vorher Fr, 20.11.2026, 10:00 Uhr bis 12:00 Uhr – jetzt Sa, 21.11.2026, 15:00 Uhr bis 17:00 Uhr.',
+    );
+    expect(h.textContent).toContain('Formular, Löschdatum und Erinnerungen sind angepasst.');
+    expect(h.textContent).toContain('Die 12 Angemeldeten wissen davon noch nichts.');
+    fireEvent.click(within(h).getByRole('button', { name: 'Rundmail schreiben' }));
+    expect(onReiter).toHaveBeenCalledWith('anmeldungen');
+  });
+
+  it('„Verstanden“: für diese Person weg (auch nach neuem Öffnen); eine neue Verschiebung zeigt ihn wieder', async () => {
+    stelle(true, 1, verschoben());
+    zeigen();
+    fireEvent.click(
+      within(await screen.findByRole('region', { name: 'Termin verschoben' })).getByRole('button', {
+        name: 'Verstanden',
+      }),
+    );
+    expect(hinweis()).toBeNull();
+    cleanup();
+    zeigen();
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(hinweis()).toBeNull();
+    cleanup();
+    stelle(true, 1, verschoben('2026-11-09T08:00:00.000Z'));
+    zeigen();
+    expect(await screen.findByRole('region', { name: 'Termin verschoben' })).toBeTruthy();
+  });
+
+  it('nur der Ort: „Der Ort wurde im Kalender geändert“ – das Formular ist angepasst', async () => {
+    stelle(true, 1, verschoben(undefined, { ...JETZT, ort: 'Saal B' }));
+    zeigen();
+    const h = await screen.findByRole('region', { name: 'Termin verschoben' });
+    expect(h.textContent).toContain(
+      'Der Ort wurde im Kalender geändert: vorher „Saal B“ – jetzt „Saal A“.',
+    );
+    expect(h.textContent).toContain('Das Formular ist angepasst.');
+    expect(within(h).queryByRole('button', { name: 'Rundmail schreiben' })).toBeNull();
+  });
+
+  it('beim Öffnen nachgezogen: der Abgleich der Mails startet erst, wenn der Termin fertig ist; Karte und Hinweis zeigen den neuen Stand', async () => {
+    stelle(true, 1, mitTermin({ termin: { ...VORHER, terminId: 263, kalenderId: 1 } }));
+    // Selbst aufgelöst: So zeigt sich, ob der Abgleich wirklich auf das Ende wartet – nicht nur später beginnt.
+    let fertig: (r: Awaited<ReturnType<typeof E.terminNachziehen>>) => void = () => {};
+    m.terminNachziehen.mockReturnValue(new Promise((r) => (fertig = r)));
+    zeigen();
+    await screen.findByRole('region', { name: 'Termin' });
+    await waitFor(() => expect(m.terminNachziehen).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(ab.ablaeufeAbgleichen).not.toHaveBeenCalled();
+    fertig({
+      vergleich: {
+        art: 'geaendert',
+        sichtbar: true,
+        neu: { ...JETZT, terminId: 263, kalenderId: 1 },
+      },
+      einstellungen: verschoben(),
+    });
+    expect(await screen.findByRole('region', { name: 'Termin verschoben' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Termin' }).textContent).toContain(
+      'Sa, 21.11.2026, 15:00 Uhr bis 17:00 Uhr',
+    );
+    await waitFor(() => expect(ab.ablaeufeAbgleichen).toHaveBeenCalled());
+  });
+
+  it('im Kalender nicht mehr da: Hinweis an der Karte, das Datum bleibt', async () => {
+    stelle(true, 1, mitTermin());
+    m.terminNachziehen.mockResolvedValue({ vergleich: { art: 'weg' }, einstellungen: mitTermin() });
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Termin' });
+    await waitFor(() =>
+      expect(karte.textContent).toContain(
+        'Im Kalender nicht mehr da (gelöscht, verschoben oder abgesagt)',
+      ),
+    );
+    expect(karte.textContent).toContain('Sa, 21.11.2026, 15:00 Uhr bis 17:00 Uhr');
+  });
+
+  it('ohne Bearbeiten-Recht: nichts nachgezogen (V2)', async () => {
+    stelle(false, 1, mitTermin());
+    zeigen();
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(m.terminNachziehen).not.toHaveBeenCalled();
+  });
+
+  it('Lesen scheitert (vorübergehend): Seite und Mails laufen weiter, kein Hinweis', async () => {
+    stelle(true, 1, mitTermin());
+    m.terminNachziehen.mockRejectedValue(new ApiError(502, 'x'));
+    zeigen();
+    await waitFor(() => expect(ab.ablaeufeAbgleichen).toHaveBeenCalled());
+    expect(screen.getByRole('region', { name: 'Termin' }).textContent).not.toContain(
+      'nicht mehr da',
+    );
   });
 });

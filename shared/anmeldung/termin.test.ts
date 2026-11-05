@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { anmeldeLink, ortszeitAus, terminAusCt, terminZeile, utcAus } from './termin';
+import { neueEinstellungen } from './vorlagen';
+import {
+  anmeldeLink,
+  mitGewaehltemTermin,
+  ortszeitAus,
+  terminAusCt,
+  terminImKalender,
+  terminWann,
+  terminZeile,
+  utcAus,
+  type CtTerminEinzeln,
+} from './termin';
 
 const B = 'Europe/Berlin';
 
@@ -84,5 +95,141 @@ describe('terminZeile (Formular und Aushang)', () => {
       'Sa, 21.11.2026 · Gemeindehaus',
     );
     expect(terminZeile({ termin: null })).toBe('Termin folgt');
+  });
+});
+
+describe('terminWann (Karte „Termin“, Hinweis „verschoben“)', () => {
+  it('ein Tag mit Ende, ohne Ende, mehrtägig', () => {
+    expect(terminWann({ beginn: '2026-08-31T10:00', ende: '2026-08-31T12:00' })).toBe(
+      'Mo, 31.08.2026, 10:00 Uhr bis 12:00 Uhr',
+    );
+    expect(terminWann({ beginn: '2026-08-31T10:00', ende: null })).toBe(
+      'Mo, 31.08.2026, 10:00 Uhr',
+    );
+    expect(terminWann({ beginn: '2026-12-28T15:00', ende: '2027-01-02T11:00' })).toBe(
+      'Mo, 28.12.2026, 15:00 Uhr bis Sa, 02.01.2027, 11:00 Uhr',
+    );
+  });
+});
+
+describe('terminImKalender (K1, gemessen 05.11.2026)', () => {
+  /** Einzeltermin 263, wie gemessen: Nummer bleibt beim Verschieben, Kalender steht am Termin. */
+  const einzeln = (start: string, ende: string, ort = 'Saal A', kalender = 1): CtTerminEinzeln => ({
+    appointment: {
+      id: 263,
+      startDate: start,
+      endDate: ende,
+      address: { name: ort, city: null },
+      repeatId: 0,
+      calendar: { id: kalender },
+    },
+  });
+  // Gespeichert wird, was `terminAusCt` beim Wählen daraus macht – nicht ein handgeschriebenes Literal.
+  const gewaehlt = terminAusCt(
+    einzeln('2026-11-20T09:00:00Z', '2026-11-20T11:00:00Z').appointment,
+    B,
+    1,
+  );
+
+  it('unverändert → gleich', () => {
+    expect(
+      terminImKalender(gewaehlt, einzeln('2026-11-20T09:00:00Z', '2026-11-20T11:00:00Z'), B),
+    ).toEqual({ art: 'gleich' });
+  });
+
+  it('verschoben (21.11., 15–17 Uhr) → übernehmen, sichtbar; der neue Stand wie beim Wählen', () => {
+    const gelesen = einzeln('2026-11-21T14:00:00Z', '2026-11-21T16:00:00Z');
+    expect(terminImKalender(gewaehlt, gelesen, B)).toEqual({
+      art: 'geaendert',
+      sichtbar: true,
+      neu: terminAusCt(gelesen.appointment, B, 1),
+    });
+  });
+
+  it('nur der Ort geändert → auch sichtbar', () => {
+    const k = terminImKalender(
+      gewaehlt,
+      einzeln('2026-11-20T09:00:00Z', '2026-11-20T11:00:00Z', 'Saal B'),
+      B,
+    );
+    expect(k).toMatchObject({ art: 'geaendert', sichtbar: true, neu: { ort: 'Saal B' } });
+  });
+
+  it('nur in einen anderen Kalender gelegt → still nachziehen (kein Hinweis)', () => {
+    const k = terminImKalender(
+      gewaehlt,
+      einzeln('2026-11-20T09:00:00Z', '2026-11-20T11:00:00Z', 'Saal A', 3),
+      B,
+    );
+    expect(k).toMatchObject({ art: 'geaendert', sichtbar: false, neu: { kalenderId: 3 } });
+  });
+
+  it('gelöscht (404) → weg; das Datum bleibt beim Aufrufer stehen', () => {
+    expect(terminImKalender(gewaehlt, null, B)).toEqual({ art: 'weg' });
+  });
+
+  describe('Serie', () => {
+    const serie = (tage: Record<string, [string, string]>): CtTerminEinzeln => ({
+      appointment: {
+        id: 266,
+        startDate: '2026-11-23T17:00:00Z',
+        endDate: '2026-11-23T18:00:00Z',
+        address: { name: 'Saal C', city: null },
+        repeatId: 7,
+        calendar: { id: 1 },
+      },
+      calculatedDates: Object.fromEntries(
+        Object.entries(tage).map(([k, [a, e]]) => [k, { startDate: a, endDate: e }]),
+      ),
+    });
+    // Gewählt: die Wiederholung am 30.11. – so liefert sie die Kalenderliste (`calculated`).
+    const am30 = terminAusCt(
+      {
+        id: 266,
+        startDate: '2026-11-30T17:00:00Z',
+        endDate: '2026-11-30T18:00:00Z',
+        address: { name: 'Saal C', city: null },
+      },
+      B,
+      1,
+    );
+
+    it('die Wiederholung steht noch so da → gleich', () => {
+      const s = serie({
+        '2026-11-23': ['2026-11-23T17:00:00Z', '2026-11-23T18:00:00Z'],
+        '2026-11-30': ['2026-11-30T17:00:00Z', '2026-11-30T18:00:00Z'],
+      });
+      expect(terminImKalender(am30, s, B)).toEqual({ art: 'gleich' });
+    });
+
+    it('nur diese Wiederholung verschoben oder abgesagt (Ausnahme, fehlt) → weg', () => {
+      const s = serie({ '2026-11-23': ['2026-11-23T17:00:00Z', '2026-11-23T18:00:00Z'] });
+      expect(terminImKalender(am30, s, B)).toEqual({ art: 'weg' });
+    });
+
+    it('die ganze Serie eine Stunde später → übernehmen', () => {
+      const s = serie({ '2026-11-30': ['2026-11-30T18:00:00Z', '2026-11-30T19:00:00Z'] });
+      expect(terminImKalender(am30, s, B)).toMatchObject({
+        art: 'geaendert',
+        sichtbar: true,
+        neu: { beginn: '2026-11-30T19:00', terminId: 266 },
+      });
+    });
+  });
+});
+
+describe('mitGewaehltemTermin (K1)', () => {
+  it('setzt den Termin und verwirft „im Kalender verschoben“ der alten Wahl – sonst bleibt alles', () => {
+    const e = {
+      ...neueEinstellungen('einfach'),
+      loeschfristMonate: 5,
+      terminVerschoben: { vorher: { beginn: '2026-11-01T10:00', ende: null, ort: '' }, am: 'x' },
+    };
+    const t = { beginn: '2026-12-01T10:00', ende: null, ort: 'Saal', terminId: 9, kalenderId: 1 };
+    const neu = mitGewaehltemTermin(e, t);
+    expect(neu.termin).toEqual(t);
+    expect(neu.terminVerschoben).toBeUndefined();
+    expect(neu.loeschfristMonate).toBe(5);
+    expect(mitGewaehltemTermin(e, null).termin).toBeNull();
   });
 });

@@ -22,6 +22,7 @@ import {
   sicherungLesen,
   sicherungTeile,
   type OeffentlicheEinstellungen,
+  type TerminAngabe,
 } from '@shared/anmeldung/formular';
 import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
 import { optionenBelegt } from '@shared/anmeldung/kontingent';
@@ -37,7 +38,14 @@ import {
 import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
-import { utcAus, type CtTermin } from '@shared/anmeldung/termin';
+import {
+  mitGewaehltemTermin,
+  terminImKalender,
+  utcAus,
+  type CtTermin,
+  type CtTerminEinzeln,
+  type KalenderVergleich,
+} from '@shared/anmeldung/termin';
 import {
   darfAblaeufe,
   darfAnlegen,
@@ -499,10 +507,10 @@ export async function kopiereVeranstaltung(quelleId: number, name: string): Prom
   await ohneBestaetigungsmail(id);
   const [alt, neu] = await Promise.all([gruppenfelder(quelleId), gruppenfelder(id)]);
   await einstellungenSchreiben(id, {
-    ...quelle,
+    // Ohne Datum (die Kopie fände sonst „gestern“ statt) – und ohne „verschoben“ der Vorlage (K1).
+    ...mitGewaehltemTermin(quelle, null),
     // A9-2a: Der eigene Mailtext steht in den Routinen der Vorlage – die kopiert ChurchTools nicht mit.
     kopieVon: quelleId,
-    termin: null,
     ctFelder: felderNeuZuordnen(quelle.ctFelder, alt, neu),
     bezahlung: {
       ...quelle.bezahlung,
@@ -1122,6 +1130,52 @@ export async function legeTerminAn(t: {
     throw new NichtUebernommen('den Termin');
   }
   return base;
+}
+
+/**
+ * **Den gewählten Termin im Kalender lesen** (K1, gemessen 05.11.2026): über seine Nummer – der Kalender im Pfad ist
+ * dabei gleich, ChurchTools liefert ihn auch nach einem Wechsel des Kalenders. Ältere Einstellungen ohne Kalender nehmen
+ * den ersten. `null` heißt gelöscht (404 „not found“); alles andere kann vorübergehend sein und wirft.
+ */
+async function terminGelesen(t: TerminAngabe): Promise<CtTerminEinzeln | null> {
+  const kalender = t.kalenderId ?? (await kalenderListe())[0]?.id;
+  if (kalender === undefined) throw new ApiError(422, 'Es gibt keinen Kalender.');
+  try {
+    return await ctDaten<CtTerminEinzeln>(`/calendars/${kalender}/appointments/${t.terminId}`);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * **Termin aus dem Kalender nachziehen** (K1, V1/V2) – beim Öffnen der Veranstaltung, wer sie bearbeiten darf. Wurde
+ * der Termin im Kalender verschoben (Datum, Ort, Kalender), werden die Einstellungen angepasst; ist Datum oder Ort anders,
+ * merken sie sich den Stand von vorher für den Hinweis oben (`terminVerschoben`). Gelöscht oder bei einer Serie die
+ * Wiederholung weg: nichts schreiben, das Datum bleibt (V3, V7). Ohne Termin aus dem Kalender: `null`.
+ */
+export async function terminNachziehen(
+  id: number,
+  zeitzone: string,
+): Promise<{ vergleich: KalenderVergleich; einstellungen: OeffentlicheEinstellungen } | null> {
+  const e = await einstellungenVon(id);
+  const t = e.termin;
+  if (!t?.terminId) return null;
+  const vergleich = terminImKalender(t, await terminGelesen(t), zeitzone);
+  if (vergleich.art !== 'geaendert') return { vergleich, einstellungen: e };
+  const einstellungen = await aendereEinstellungen(id, (x) => ({
+    ...x,
+    termin: vergleich.neu,
+    ...(vergleich.sichtbar
+      ? {
+          terminVerschoben: {
+            vorher: { beginn: t.beginn, ende: t.ende, ort: t.ort },
+            am: new Date().toISOString(),
+          },
+        }
+      : {}),
+  }));
+  return { vergleich, einstellungen };
 }
 
 /** Alle Veranstaltungen eines Teams (auch vergangene) – Auswahl für „wie eine frühere“. */

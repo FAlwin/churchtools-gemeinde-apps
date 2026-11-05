@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { schriftNichtEinbetten } from '../ui/design/schrift';
 
 /**
  * Das öffentliche Formular (#474) – eine statische Seite, die jede Gemeinde auf ihren eigenen Webspace legt.
@@ -18,5 +19,6 @@ export default defineConfig({
     ],
   },
   css: { preprocessorOptions: { scss: { api: 'modern-compiler' } } },
+  build: { assetsInlineLimit: schriftNichtEinbetten },
   server: { port: 5177 },
 });

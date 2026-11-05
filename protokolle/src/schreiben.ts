@@ -28,6 +28,7 @@ import {
   type Schreiber,
   type Sperre,
 } from '@shared/protokolle/speicher';
+import { NichtUebernommen } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 
 /** Wo das Protokoll liegt. */
@@ -219,4 +220,19 @@ export async function sperreFreigeben(
   await kopfSchreiben(ort, f.kopf.id, { ...f.kopf.inhalt, sperre: null });
   const danach = await frisch(ort);
   return danach.kopf?.inhalt.sperre === null;
+}
+
+/**
+ * **Gruppentreffen verknüpfen** (S5-3, „Gruppentreffen anlegen“ im festen Punkt „Anwesenheit“): die ID in den Kopf –
+ * auf dem frisch gelesenen, Sperre, Stand und Dokument bleiben – und nachlesen. Speichert der Editor gleichzeitig, liest
+ * er den Kopf ebenfalls frisch und behält das Treffen.
+ */
+export async function treffenVerknuepfen(ort: ProtokollOrt, treffen: number): Promise<void> {
+  const f = await frisch(ort);
+  if (!f.kopf) throw new Error('Das Protokoll ist gerade nicht lesbar.');
+  if (f.kopf.inhalt.treffen === treffen) return;
+  await kopfSchreiben(ort, f.kopf.id, { ...f.kopf.inhalt, treffen });
+  const f2 = await frisch(ort);
+  if (f2.kopf?.inhalt.treffen !== treffen)
+    throw new NichtUebernommen('das Gruppentreffen am Protokoll');
 }

@@ -135,6 +135,7 @@ describe('Werkzeugleiste (K3a)', () => {
       'Termin',
       'Tabelle',
       'Offene To-Dos',
+      'Anwesenheit',
       'Früheres Protokoll',
       'Trennlinie',
     ]);

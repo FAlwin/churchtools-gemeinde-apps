@@ -18,6 +18,11 @@
  * `splitUntilEnd: false` setzt die Ausnahme, `true` endet die Serie am Vortag (am ersten Termin: 422); der neue Termin
  * hat keine Einladungen – außer mit `meetingrequests`, dann mailt ChurchTools „geändert“ (irreführend, gemessen). Löschen einer Serie mailt „Terminserie gelöscht“. Bleibt nur ein Termin übrig, wird
  * daraus ein Einzeltermin. `teilenFehler` wie `terminFehler`.
+ *
+ * Anwesenheit (S5-3, gemessen 05.11.2026): `GET …/meetings/{m}/members` liefert je Mitglied (`teilnehmer`) den Status
+ * (`unsure`, solange nichts eingetragen ist); `POST /groups/{g}/checkin/{p}` = anwesend, `DELETE …/members/{p}` mit
+ * `{status}` (ohne: `absent`). Jeder Eintrag setzt `hasEditingStarted` am Treffen. `teilnahmeSchlucken` antwortet 200
+ * und speichert nichts.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -99,9 +104,15 @@ export interface Nachbau {
       isCanceled?: boolean;
       isCompleted?: boolean;
       comment?: string | null;
+      hasEditingStarted?: boolean;
     }[]
   >;
   treffenVerboten: boolean;
+  /** Die Mitglieder, die jedes Gruppentreffen kennt (S5-3). */
+  teilnehmer: { person: number; vor: string; nach: string }[];
+  /** Anwesenheit je Treffen: Person → `present` / `absent` / `unsure`. */
+  teilnahme: Map<number, Map<number, string>>;
+  teilnahmeSchlucken: boolean;
   /** Zuletzt angefragter Zeitraum der Termine (`from`/`to`) – zum Prüfen. */
   terminAnfrage: string | null;
   definitionen: unknown;
@@ -138,13 +149,23 @@ export function nachbauStarten(): Nachbau {
     treffenFehler: null,
     treffen: new Map(),
     treffenVerboten: false,
+    teilnehmer: [
+      { person: 1, vor: 'Alwin', nach: 'Friesen' },
+      { person: 19, vor: 'Spike', nach: 'Musiker' },
+    ],
+    teilnahme: new Map(),
+    teilnahmeSchlucken: false,
     terminAnfrage: null,
     definitionen: DEFINITIONEN,
   };
-  vi.stubGlobal('window', {
-    settings: { base_url: 'https://ct.test/' },
-    location: { origin: 'https://ct.test' },
-  });
+  // In Node ein schmales `window`; in jsdom (Komponenten-Tests, S5-3) bleibt das echte – sonst fehlte React alles
+  // außer der Adresse – und bekommt nur die Adresse von ChurchTools.
+  if (typeof document === 'undefined')
+    vi.stubGlobal('window', {
+      settings: { base_url: 'https://ct.test/' },
+      location: { origin: 'https://ct.test' },
+    });
+  else (window as { settings?: { base_url?: string } }).settings = { base_url: 'https://ct.test/' };
   const antwort = (input: string | URL | Request, init: RequestInit | undefined): Response => {
     const tagVon = (iso: string) => iso.slice(0, 10);
     // Die Termine eines Eintrags – bei einer wöchentlichen Serie jede Woche bis `repeatUntil`, ohne Ausnahmen.
@@ -407,6 +428,52 @@ export function nachbauStarten(): Nachbau {
       if (!f || f.angelegt) liste.push({ id, startDate: String(body.startDate) });
       return f ? fehlerAntwort(f) : json(201, { data: { id } });
     }
+    // Anwesenheit (S5-3).
+    const leute = /^\/groups\/(\d+)\/meetings\/(\d+)\/members$/.exec(pfad);
+    if (leute && m === 'GET') {
+      const stand = s.teilnahme.get(Number(leute[2]));
+      // Seitenweise wie andere ChurchTools-Listen (#480): ohne `limit` 10 je Seite.
+      const limit = Number(adresse.searchParams.get('limit') ?? 10);
+      const seite = Number(adresse.searchParams.get('page') ?? 1);
+      return json(200, {
+        meta: {
+          count: s.teilnehmer.length,
+          pagination: { lastPage: Math.max(1, Math.ceil(s.teilnehmer.length / limit)) },
+        },
+        data: s.teilnehmer.slice((seite - 1) * limit, seite * limit).map((t) => ({
+          personId: t.person,
+          status: stand?.get(t.person) ?? 'unsure',
+          member: {
+            personId: t.person,
+            person: {
+              title: `${t.vor} ${t.nach}`,
+              domainAttributes: { firstName: t.vor, lastName: t.nach },
+            },
+          },
+        })),
+      });
+    }
+    const checkin = /^\/groups\/(\d+)\/checkin\/(\d+)$/.exec(pfad);
+    const austragen = /^\/groups\/(\d+)\/meetings\/(\d+)\/members\/(\d+)$/.exec(pfad);
+    if ((checkin && m === 'POST') || (austragen && m === 'DELETE')) {
+      if (s.treffenVerboten)
+        return json(403, { message: 'Forbidden', messageKey: 'error.forbidden.edit' });
+      const g = Number((checkin ?? austragen)![1]);
+      const id = checkin ? Number(body.groupMeetingId) : Number(austragen![2]);
+      const person = Number(checkin ? checkin[2] : austragen![3]);
+      const t = (s.treffen.get(g) ?? []).find((x) => x.id === id);
+      if (!t) return json(404, { message: 'weg' });
+      if (!s.teilnahmeSchlucken) {
+        const stand = s.teilnahme.get(id) ?? new Map<number, string>();
+        stand.set(
+          person,
+          checkin ? 'present' : typeof body.status === 'string' ? body.status : 'absent',
+        );
+        s.teilnahme.set(id, stand);
+        t.hasEditingStarted = true;
+      }
+      return json(200, { data: {} });
+    }
     const einTr = /^\/groups\/(\d+)\/meetings\/(\d+)$/.exec(pfad);
     if (einTr) {
       if (s.treffenVerboten)
@@ -503,6 +570,7 @@ export function nachbauStarten(): Nachbau {
 }
 
 export function nachbauEnde(): void {
+  if (typeof document !== 'undefined') delete (window as { settings?: unknown }).settings;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 }

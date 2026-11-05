@@ -12,6 +12,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import * as M from './mitglieder';
 import * as S from './schreiben';
 import * as A from './aufgabenSchreiben';
+import * as P from './planen';
 import { neueAufgabe } from '@shared/protokolle/aufgaben';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 
@@ -22,7 +23,9 @@ vi.mock('./schreiben', () => ({
   speichern: vi.fn(),
   sperreFreigeben: vi.fn(() => Promise.resolve(true)),
   sperreNehmen: vi.fn(),
+  treffenVerknuepfen: vi.fn(() => Promise.resolve()),
 }));
+vi.mock('./planen', () => ({ treffenAnlegen: vi.fn(() => Promise.resolve(88)) }));
 vi.mock('./aufgabenSchreiben', () => ({
   aufgabenWerte: vi.fn(() => Promise.resolve([])),
   aufgabenSchreiben: vi.fn(() => Promise.resolve([])),
@@ -36,6 +39,7 @@ vi.mock('./mitglieder', () => ({
 vi.mock('./DokumentEditor', async () => {
   const { useContext, useImperativeHandle } = await import('react');
   const { AufgabenKontext } = await import('./aufgabenKontext');
+  const { FestePunkteKontext } = await import('./festePunkteKontext');
   return {
     DokumentEditor: ({
       bearbeitbar,
@@ -47,6 +51,7 @@ vi.mock('./DokumentEditor', async () => {
       griff: { current: unknown };
     }) => {
       const k = useContext(AufgabenKontext);
+      const feste = useContext(FestePunkteKontext);
       useImperativeHandle(griff, () => ({
         dokument: () => MIT_AUFGABE,
         ersetzen: () => undefined,
@@ -64,6 +69,10 @@ vi.mock('./DokumentEditor', async () => {
             wer
           </button>
           <span data-testid="todos">{k ? [...k.todos.keys()].join(',') : 'kein Kontext'}</span>
+          <button type="button" onClick={() => void feste?.treffenAnlegen?.()}>
+            treffen anlegen
+          </button>
+          <span data-testid="treffen">{String(feste?.treffen ?? 'kein Treffen')}</span>
         </div>
       );
     },
@@ -377,6 +386,24 @@ describe('ProtokollSchreiben', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Trotzdem verlassen' }));
     await waitFor(() => expect(onZurueck).toHaveBeenCalled());
     expect(onZuSitzung).not.toHaveBeenCalled();
+  });
+
+  it('„Gruppentreffen anlegen“ (S5-3): anlegen, mit dem Protokoll verknüpfen – danach kennt der Kontext es', async () => {
+    zeige();
+    await screen.findByText('bearbeitbar');
+    expect(screen.getByTestId('treffen').textContent).toBe('kein Treffen');
+    fireEvent.click(screen.getByRole('button', { name: 'treffen anlegen' }));
+    await waitFor(() => expect(screen.getByTestId('treffen').textContent).toBe('88'));
+    expect(P.treffenAnlegen).toHaveBeenCalledWith(
+      194,
+      SITZUNG.beginn,
+      SITZUNG.beginn,
+      'Europe/Berlin',
+    );
+    expect(S.treffenVerknuepfen).toHaveBeenCalledWith(
+      { modul: 24, kategorie: 62, sitzung: 's1' },
+      88,
+    );
   });
 
   it('Mitgliederliste verborgen: im festen Punkt steht bei eigenen To-Dos trotzdem der eigene Name (S7-2a)', async () => {

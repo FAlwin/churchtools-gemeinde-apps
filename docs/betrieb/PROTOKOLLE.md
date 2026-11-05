@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3a + K3b (05.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3 + S5-3 (05.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
@@ -160,6 +160,15 @@ bis zum Tagesordnungspunkt. Ein Unterpunkt steht höchstens eine Ebene unter dem
 Punkt. Die Nummern stehen im Editor, beim Lesen, in den Bereichen und in der Suche gleich; was unter einem Unterpunkt
 steht, heißt dort „Punkt 4.2 · Essen“. Text rückt wie gewohnt ein – auch mehrere markierte Zeilen auf einmal. Die
 Textart „Überschrift“ hat keine Nummer.
+
+**Anwesenheit (S5-3):** ein fester Punkt wie „Offene To-Dos“ – über „Einfügen → Anwesenheit“, das „/“-Menü oder
+schon in der Vorlage (die Standard-Vorlage „Leitungssitzung“ beginnt damit). Er zeigt die Mitglieder aus dem
+ChurchTools-**Gruppentreffen** mit ihrer Antwort auf die Einladung; beim Schreiben je Person **Anwesend / Abwesend**
+(nochmal tippen = wieder offen). Jeder Tipp steht sofort im Gruppentreffen. Beim ersten Öffnen ist er **von selbst
+vorbelegt** (Zusage = anwesend, Absage = abwesend), solange am Treffen noch niemand etwas eingetragen hat. **Gäste**
+trägt man als freien Namen ein; sie stehen nur im Protokoll. Zugeklappt (beim Lesen von selbst) steht die Kurzform
+„Anwesend (n): … · Abwesend: …“. Gibt es zur Sitzung kein Gruppentreffen, legt „Gruppentreffen anlegen“ eins an (ohne
+Mail). Eintragen darf, wer in der Gruppe „Gruppentreffen pflegen“ hat – das gibt „Gruppe einrichten“ der Leitung.
 
 **Früheres Protokoll (K3b-2):** „Einfügen → Früheres Protokoll“ (auch im „/“-Menü) fragt, **welches** – alle
 freigegebenen Protokolle der Gruppe, das letzte vorgewählt. Der Kasten zeigt es mit **„Ansehen“** im kleinen Fenster;

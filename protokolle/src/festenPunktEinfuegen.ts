@@ -6,6 +6,7 @@ import type { ProtokollEditor } from './editorSchema';
 /** Feste Punkte (S4-3a) – Knöpfe in der Leiste, Einträge im „/“-Menü. */
 export const FESTE: readonly { art: VerweisArt; icon: IconName }[] = [
   { art: 'offene-aufgaben', icon: 'todo-liste' },
+  { art: 'anwesenheit', icon: 'people' },
   { art: 'letztes-protokoll', icon: 'dokument' },
 ];
 

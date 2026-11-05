@@ -27,4 +27,5 @@ export function festeImMenue(
 const FESTE_ALIASE = {
   'offene-aufgaben': ['offen', 'todos', 'to-dos', 'fest'],
   'letztes-protokoll': ['letztes', 'protokoll', 'fest', 'früher', 'frueher'],
+  anwesenheit: ['anwesend', 'anwesenheit', 'teilnehmer', 'fest'],
 } as const;

@@ -230,7 +230,7 @@ export async function gruppeEinrichten(
     kalender: wahl.kalender,
     versteckt: gruppe.versteckt,
   };
-  // Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (Kalender, 10119) – nur die darf sie entziehen.
+  // Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (Kalender, 10119, Gruppentreffen) – nur die darf sie entziehen.
   // Ihre Rollen werden mitgelesen, auch wenn eine davon heute nicht mehr in der Wahl steht.
   const alt = await einstellungLesen(modul, gruppe.id);
   const vergeben = alt?.inhalt.vergeben ?? [];

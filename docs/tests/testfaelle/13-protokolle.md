@@ -167,3 +167,32 @@ mit mindestens zwei freigegebenen Protokollen.
 - **Historie:** K3b-2 (05.11.2026)
 
 </details>
+
+### TF-PROT-07 · Anwesenheit: von selbst vorbelegt, tippen, Gäste, Gruppentreffen anlegen
+
+**Das brauchst du:** In der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel beginnt mit „TEST“), dessen Termin
+Zu- und Absagen hat; für den zweiten Teil eins ohne Gruppentreffen. Nach dem Test in ChurchTools am Gruppentreffen
+nachsehen.
+
+**Das muss passieren:** Der Punkt „Anwesenheit“ zeigt alle Mitglieder; Zusagen sind anwesend, Absagen abwesend. Jeder
+Tipp steht sofort im ChurchTools-Gruppentreffen, nochmal tippen macht wieder offen. Gäste stehen nur im Protokoll.
+
+1. In ChurchTools im Menü auf **Protokolle**, das Test-Protokoll öffnen (Schreiben).
+2. Im Punkt **Anwesenheit**: Wer zugesagt hat, steht auf „Anwesend“, wer abgesagt hat, auf „Abwesend“, der Rest ist offen.
+   Oben steht „Anwesend n · Abwesend n · Offen n“.
+3. Bei einer zugesagten Person **Abwesend** tippen; bei einer offenen **Anwesend**. Die Liste springt dabei nicht.
+4. Bei der anwesenden Person nochmal **Anwesend** tippen: wieder offen.
+5. **Gast hinzufügen** – einen Namen eintippen, **Hinzufügen**: Er steht als „Gast“ in der Liste; mit × wieder weg.
+6. Oben **Lesen**: Der Punkt ist zugeklappt und zeigt „Anwesend (n): … · Abwesend: … · Gäste: …“.
+7. In ChurchTools die Gruppe → Gruppentreffen dieses Tages öffnen: Dort steht dieselbe Anwesenheit, die Gäste nicht.
+8. Im Test-Protokoll ohne Gruppentreffen: Der Punkt sagt „noch kein Gruppentreffen“ – **Gruppentreffen anlegen**: Die
+   Mitglieder erscheinen; keine Mail.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/anwesenheit.ts`, `protokolle/src/anwesenheitSchreiben.ts`, `protokolle/src/Anwesenheit.tsx`, `protokolle/src/FesterPunkt.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/FestePunkteRahmen.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/schreiben.ts`, `shared/protokolle/einrichten.ts`, `shared/protokolle/vorlagen.ts`
+- **Automatisiert:** ja – `protokolle/src/Anwesenheit.test.tsx` (mit dem ChurchTools-Nachbau: Vorbelegung, Tippen, Gäste, Treffen anlegen, abgeschlossen, Lesen), `protokolle/src/anwesenheitSchreiben.test.ts`, `shared/protokolle/anwesenheit.test.ts`, `protokolle/src/schreiben.test.ts`, `protokolle/src/ProtokollSchreiben.test.tsx`; ob Nicht-Admins mit 10124/10111 eintragen dürfen, nur in der Test-Instanz mit einer Leitungsperson ohne Admin-Rechte
+- **Historie:** S5-3 (05.11.2026)
+
+</details>

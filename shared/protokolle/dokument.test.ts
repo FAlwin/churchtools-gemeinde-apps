@@ -4,6 +4,8 @@ import {
   BLOCK,
   fremdeTypen,
   istDokument,
+  istVerweisArt,
+  VERWEIS_ARTEN,
   mitNeuenIds,
   punktBeschriftung,
   punktEbene,
@@ -63,6 +65,7 @@ describe('ableiten – aus dem Startdokument einer Vorlage', () => {
     const dok = startDokument(STANDARD_VORLAGEN[0], neueId);
     const a = ableiten(dok);
     expect(a.punkte.map((p) => p.titel)).toEqual([
+      'Anwesenheit',
       'Andacht & Gebet',
       'Protokoll der letzten Sitzung',
       'Offene To-Dos',
@@ -73,7 +76,8 @@ describe('ableiten – aus dem Startdokument einer Vorlage', () => {
     expect(a.aufgaben[0]).toMatchObject({
       text: 'Raum für die nächste Sitzung prüfen',
       aufgabe: null,
-      punkt: a.punkte[4].blockId,
+      // „Verschiedenes“ – seit S5-3 der sechste Punkt (Anwesenheit steht vorn).
+      punkt: a.punkte[5].blockId,
     });
   });
 });
@@ -260,5 +264,14 @@ describe('Unterpunkte (K3b)', () => {
     expect(punktNummer({ nummer: '4', tiefe: 0 })).toBe('4.');
     expect(punktNummer({ nummer: '4.1', tiefe: 1 })).toBe('4.1');
     expect(punktBeschriftung({ nummer: '4.2', titel: 'Essen' })).toBe('Punkt 4.2 · Essen');
+  });
+});
+
+describe('Feste Punkte: die eine Liste der Arten (S5-3)', () => {
+  it('kennt Offene To-Dos, Letztes Protokoll und Anwesenheit – sonst nichts', () => {
+    expect([...VERWEIS_ARTEN]).toEqual(['offene-aufgaben', 'letztes-protokoll', 'anwesenheit']);
+    expect(VERWEIS_ARTEN.every(istVerweisArt)).toBe(true);
+    expect(istVerweisArt('beschluesse')).toBe(false);
+    expect(istVerweisArt(undefined)).toBe(false);
   });
 });

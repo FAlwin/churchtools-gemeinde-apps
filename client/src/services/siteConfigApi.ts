@@ -36,7 +36,7 @@ interface CtGroup {
   name: string;
 }
 
-/** ChurchTools-Kalender für „Termine ohne Ablauf" (nur Admin, 13.10.2026). */
+/** ChurchTools-Kalender, die man sehen darf – Namen für den Filter der Terminliste (seit 05.11.2026 für alle). */
 export function getKalender(): Promise<Kalender[]> {
   if (istExtension) return kalender();
   return apiFetch<Kalender[]>('/api/kalender');

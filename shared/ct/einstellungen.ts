@@ -80,7 +80,7 @@ export const siteConfigSchema = z
     standardAnsicht: z.enum(['akkorde', 'dokument']).optional().default('akkorde'),
     // Liedblatt: Logo zeigen (19.10.2026); fehlt es (Bestand), wird es gezeigt.
     liedblattLogo: z.boolean().optional().default(true),
-    // Termine ohne Ablauf (13.10.2026); fehlt es (Bestand), ist die Funktion aus.
+    // Termine ohne Ablauf (13.10.2026) – seit 05.11.2026 nur noch Startwert des Filters (`SiteConfig.ablaufAnlegen`).
     ablaufAnlegen: z
       .object({
         kalenderIds: z

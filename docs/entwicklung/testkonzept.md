@@ -139,11 +139,14 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   vorher weiter); der `errorHandler` macht aus einer Zeitüberschreitung beim Lesen der Antwort 504
   ohne Stacktrace
 - `shared/ct/ablaufAnlegen` – Ablauf anlegen (13.10.2026): welche Termine ohne Ablauf erscheinen
-  (Kalender + Suchwort, Gebetsabend bleibt draußen), nur passende werden gefragt, Bremse wirft den Lauf,
+  (nur die gewählten Kalender, seit 05.11.2026 ohne Suchwort), nur passende werden gefragt, Bremse wirft den Lauf,
   andere Fehler lassen nur den Termin weg; Anlegen mit Vorlage/Kopie/leer, vorher nachlesen (409 ohne zu
   schreiben), hinterher nachlesen (502). Dazu `AblaufAnlegenFenster` („Vorlage zuerst", Quelle, Fehler im
-  Fenster), `Agenda.ohneAblauf` (nie doppelt, Knopf nur mit Recht, ohne Regel keine Abfrage) und
-  `e2e/ablauf-anlegen.spec.ts` (Verwaltung → Liste → Anlegen über den echten Server, eigener Stub-Admin)
+  Fenster), `Agenda.ohneAblauf` (nie doppelt, Knopf nur mit Recht, ohne Kalender keine Abfrage; Filter: Startwert der
+  Gemeinde, Wahl des Geräts gilt vor, ausblenden auch mit Ablauf, ohne Kalender-Recht keine Abfrage),
+  `utils/kalenderFilter` (die Regeln des Filters), `setlistController.ohneAblauf` (Kalender aus der Anfrage, Grenze 50)
+  und `e2e/ablauf-anlegen.spec.ts` (Filter → Liste → Anlegen über den echten Server, eigener Stub-Admin; der Musiker
+  bekommt „auch ohne Ablauf“ nur für seinen Kalender)
 - `shared/ct/ablaufNeu` – Ablauf neu aufsetzen (E6-5b, #691), gegen eine Attrappe, die sich wie gemessen verhält
   (neue Punkt-IDs, geteilter Ablauf, `DELETE` löst nur die Verbindung, abgeschlossen → 403): Vorlage/Kopie/leer,
   412 bei jeder Änderung seit der Nachfrage (Punkte, Stempel, Verbindung, weg – ohne Stempel kein Konflikt), 423

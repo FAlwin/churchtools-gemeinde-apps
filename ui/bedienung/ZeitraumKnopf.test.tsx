@@ -33,28 +33,88 @@ const gedrueckt = () =>
     .join();
 
 describe('ZeitraumKnopf (14.10.2026)', () => {
-  it('Knopf sagt, was zu sehen ist; Menü: ab heute, dieser/nächster Monat (über den Jahreswechsel)', () => {
+  it('Knopf sagt, was zu sehen ist; Menü: ab heute und zwölf Monatsfelder – ein Klick zeigt den Monat (E9-3)', () => {
     const { onWahl } = zeige();
     expect(screen.getByRole('button', { name: /^Zeitraum:/ }).getAttribute('aria-label')).toBe(
       'Zeitraum: 18.10. – 08.11.2026, 4 Termine · passend zur Fensterbreite',
     );
-    expect(screen.getByRole('button', { name: /^Dieser Monat/ }).textContent).toBe(
-      'Dieser MonatDezember',
-    );
-    expect(screen.getByRole('button', { name: /^Nächster Monat/ }).textContent).toBe(
-      'Nächster MonatJanuar',
-    );
+    expect(screen.queryByRole('button', { name: /Dieser Monat|Nächster Monat/ })).toBeNull();
     expect(gedrueckt()).toBe('Ab heute');
-    fireEvent.click(screen.getByRole('button', { name: /^Nächster Monat/ }));
+    // Das Jahr von heute, der laufende Monat mit Punkt.
+    expect(screen.getByText('2026')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Dezember 2026' }).className).toMatch(/heute/);
+    expect(screen.getByRole('button', { name: 'November 2026' }).className).not.toMatch(/heute/);
+    // Über den Jahreswechsel: Jahr weiter, dann Januar.
+    fireEvent.click(screen.getByRole('button', { name: 'Jahr danach' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Januar 2027' }));
     expect(onWahl).toHaveBeenCalledWith({ art: 'monat', monat: '2027-01' });
     expect(screen.queryByRole('dialog')).toBeNull(); // nach der Wahl zu
   });
 
-  it('der gewählte Monat ist markiert; die Felder stehen auf seinem ersten und letzten Tag', () => {
+  it('auch Vergangenes: Jahr zurück, März 2025', () => {
+    const { onWahl } = zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Jahr davor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'März 2025' }));
+    expect(onWahl).toHaveBeenCalledWith({ art: 'monat', monat: '2025-03' });
+  });
+
+  it('der gewählte Monat ist markiert – auch mit ＋ daneben; die Felder stehen auf seinem ersten und letzten Tag', () => {
     zeige({ art: 'monat', monat: '2026-12' });
-    expect(gedrueckt()).toBe('Dieser Monat');
+    expect(gedrueckt()).toBe('Dez');
     expect(screen.getByLabelText<HTMLInputElement>('von').value).toBe('2026-12-01');
     expect(screen.getByLabelText<HTMLInputElement>('bis').value).toBe('2026-12-31');
+    cleanup();
+    zeige({ art: 'monat', monat: '2027-02', dazu: { davor: 1, danach: 0 } });
+    // Das Jahr der Felder ist das des gezeigten Monats.
+    expect(screen.getByText('2027')).not.toBeNull();
+    expect(gedrueckt()).toBe('Feb');
+  });
+
+  it('„Wer wie oft?“ (`vergangenheit`): oben die letzten 3, 6, 12 Monate statt „Ab heute“', () => {
+    const onWahl = vi.fn();
+    render(
+      <ZeitraumKnopf
+        zeitraum={{ art: 'letzte', monate: 3 }}
+        zeile1="x"
+        zeile2="y"
+        heute="2026-11-05"
+        abHeuteZusatz="passend zur Fensterbreite"
+        vergangenheit
+        onWahl={onWahl}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    expect(screen.queryByRole('button', { name: /^Ab heute/ })).toBeNull();
+    expect(gedrueckt()).toBe('Letzte 3 Monate');
+    expect(screen.getByLabelText<HTMLInputElement>('von').value).toBe('2026-08-05');
+    fireEvent.click(screen.getByRole('button', { name: /^Letzte 12 Monate/ }));
+    expect(onWahl).toHaveBeenCalledWith({ art: 'letzte', monate: 12 });
+  });
+
+  it('`fruehestens`/`spaetestens` sperren Monate und Jahre außerhalb (Abwesenheiten)', () => {
+    render(
+      <ZeitraumKnopf
+        zeitraum={{ art: 'abHeute' }}
+        zeile1="x"
+        zeile2="y"
+        heute="2026-11-05"
+        abHeuteZusatz="die nächsten 4 Wochen"
+        fruehestens="2026-11-01"
+        spaetestens="2027-11-04"
+        onWahl={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    const gesperrt = (name: string) =>
+      screen.getByRole<HTMLButtonElement>('button', { name }).disabled;
+    expect(gesperrt('Oktober 2026')).toBe(true);
+    expect(gesperrt('November 2026')).toBe(false);
+    expect(gesperrt('Jahr davor')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Jahr danach' }));
+    expect(gesperrt('November 2027')).toBe(false);
+    expect(gesperrt('Dezember 2027')).toBe(true);
+    expect(gesperrt('Jahr danach')).toBe(true);
+    expect(screen.getByLabelText('von').getAttribute('min')).toBe('2026-11-01');
   });
 
   it('nach ‹ › zeigen die Felder beim nächsten Öffnen den neuen Zeitraum, nicht den vom ersten Mal', () => {
@@ -73,6 +133,11 @@ describe('ZeitraumKnopf (14.10.2026)', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
     expect(screen.getByLabelText<HTMLInputElement>('von').value).toBe('2027-02-01');
     expect(screen.getByLabelText<HTMLInputElement>('bis').value).toBe('2027-02-28');
+    // Auch die Monatsfelder stehen im Jahr des neuen Zeitraums (E9-3).
+    expect(screen.getByText('2027')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Februar 2027' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 
   it('bei „ab heute“ schlagen die Felder heute bis in vier Wochen vor', () => {

@@ -179,17 +179,21 @@ describe('Abwesenheiten – Kopf und Monat', () => {
     expect(screen.queryByRole('button', { name: /01\.11\./ })).toBeNull();
   });
 
-  it('Zeitraum-Knopf: „Nächster Monat“ zeigt November, „Dieser Monat“ wieder Oktober', () => {
+  it('Zeitraum-Knopf: das Monatsfeld November zeigt November, Oktober wieder Oktober (E9-3)', () => {
     zeige();
     fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Nächster Monat/ }));
+    // Vergangenes zeigt diese Seite nicht – die Monate davor sind gesperrt.
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'September 2026' }).disabled).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'November 2026' }));
     // Der Knopf nennt den Monat, darunter steht er als Überschrift.
     expect(
       screen.getByRole('button', { name: /^Zeitraum: November 2026, 1 Termin$/ }),
     ).not.toBeNull();
     expect(screen.getAllByText('November 2026')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Oktober 2026' }));
     expect(
       screen.getByRole('button', { name: /^Zeitraum: Oktober 2026, 3 Termine$/ }),
     ).not.toBeNull();
@@ -207,10 +211,10 @@ describe('Abwesenheiten – Kopf und Monat', () => {
     expect(screen.queryByRole('button', { name: /04\.10\./ })).toBeNull();
   });
 
-  it('Vergangenes steht nicht unter „Termine“ – auch nicht in „Dieser Monat“', () => {
+  it('Vergangenes steht nicht unter „Termine“ – auch nicht im laufenden Monat', () => {
     zeige(true, '2026-10-12');
     fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Oktober 2026' }));
     expect(screen.queryByRole('button', { name: /04\.10\./ })).toBeNull();
     expect(screen.queryByRole('button', { name: /11\.10\./ })).toBeNull();
     expect(kasten(/16\.10\./)).not.toBeNull();

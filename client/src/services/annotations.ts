@@ -12,13 +12,13 @@
  * Merker `worship_anno_pending_v1` in localStorage die offenen Schlüssel (#256). Beide Wege schützen
  * dieselbe Stelle: `pullAnnotations` darf eine Seite mit ausstehendem Upload NICHT überschreiben.
  */
-import { apiFetch, ApiError } from './api';
-import { istExtension, KeinSpeicherRecht } from './ctRuntime';
+import { apiFetch } from './api';
+import { istExtension } from './ctRuntime';
 import { verwaisteEntfernen } from './verwaisteEintraege';
 import { holeAnmerkungen, schreibeAnmerkung } from './personenAblage';
-import { getReachable } from './reachability';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
+import { erstelleSchreibSchlange } from './schreibSchlange';
 import {
   ANNO_DRAW_NS,
   ANNO_ZOOM_NS,
@@ -68,26 +68,13 @@ const weg = istExtension
         }),
     };
 
-// Sync abschalten, wenn nicht angemeldet (Demo / 401) – dann bleibt alles rein lokal.
-let disabled = false;
-
-/**
- * Ein Recht fehlt dauerhaft (nur in der Extension, #334): Abgleich aus, und SAGEN warum – sonst
- * zeichnete jemand weiter und wunderte sich auf dem nächsten Gerät. Die Merker bleiben stehen; wird das
- * Recht nachgereicht, holt der nächste Start alles nach.
- */
-function keinRecht(e: KeinSpeicherRecht): void {
-  disabled = true;
-  syncErrorHandler?.(e.message);
-}
-
 /**
  * Sync wieder einschalten – MUSS nach jeder erfolgreichen Anmeldung passieren (#211). Ohne das
- * blieb `disabled` nach einem automatischen Abmelden für den Rest der Seiten-Lebensdauer stehen:
+ * blieb der Abgleich nach einem automatischen Abmelden für den Rest der Seiten-Lebensdauer aus:
  * Anmerkungen wurden dann nur noch lokal gespeichert und gingen geräteübergreifend still verloren.
  */
 export function resetSync(): void {
-  disabled = false;
+  schlange.einschalten();
 }
 
 /** localStorage-Key → Server-Eintrags-Schlüssel (song<id>_v<version>_<seite>). */
@@ -98,16 +85,14 @@ function serverKeyOf(lsKey: string): string {
 // ── Pull: Server → localStorage ──────────────────────────────
 /** Holt alle Anmerkungen des Kontos zu diesen Liedern und spiegelt sie in localStorage. */
 export async function pullAnnotations(songIds: number[]): Promise<void> {
-  if (disabled || songIds.length === 0) return;
+  if (schlange.istAus() || songIds.length === 0) return;
   try {
     const data = await weg.holen(songIds);
-    // Der Merker aus localStorage zählt mit (#256): Nach einem Neustart ist die Speicher-Warteschlange
-    // leer, die Seite aber weiterhin nicht hochgeladen – ohne diese Prüfung gewinnt der alte Stand.
-    const stillPending = pendingStore.read();
+    // Seiten mit wartender, gerade hochladender oder laut Merker (nach einem Neustart, #256) noch fehlender
+    // lokaler Änderung NICHT überschreiben – sonst gehen frische Anmerkungen an den alten Server-Stand verloren.
+    const geschuetzt = schlange.schutz();
     for (const [key, a] of Object.entries(data)) {
-      // Seiten mit noch nicht hochgeladener ODER gerade hochladender lokaler Änderung NICHT
-      // überschreiben (sonst gehen frische Anmerkungen/Zooms an den alten Server-Stand verloren).
-      if (pendingFields.has(key) || inflight.has(key) || stillPending.has(key)) continue;
+      if (geschuetzt(key)) continue;
       // `lokalSchreiben` wirft nie (#457): Ein voller Gerätespeicher bräche sonst den ganzen Abgleich ab.
       if (a.strokes) lokalSchreiben(DRAW + key, a.strokes);
       else localStorage.removeItem(DRAW + key);
@@ -124,12 +109,11 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       liedVon: songIdOfAnnoKey,
       songIds,
       aufDemKonto: (key) => key in data,
-      geschuetzt: (key) => pendingFields.has(key) || inflight.has(key) || stillPending.has(key),
+      geschuetzt,
       freigegeben: localStorage.getItem(MIGRATED_FLAG) !== null,
     });
   } catch (e) {
-    if (e instanceof KeinSpeicherRecht) keinRecht(e);
-    else if (e instanceof ApiError && e.status === 401) disabled = true;
+    schlange.fehlerBewerten(e);
   }
 }
 
@@ -171,25 +155,19 @@ function annotationFromStorage(key: string): PageAnnotation | null {
  * wird nur aus dem Merker entfernt.
  */
 export async function resumePendingAnnotations(): Promise<void> {
-  if (disabled) return;
+  if (schlange.istAus()) return;
   for (const key of pendingStore.read()) {
     const body = annotationFromStorage(key);
     if (!body) {
       pendingStore.unmark(key);
       continue;
     }
-    pendingFields.set(key, body);
-    await flush(key);
+    schlange.einreihen(key, body);
   }
+  await schlange.abschicken();
 }
 
 // ── Push: localStorage-Änderung → Server (gebündelt) ─────────
-const pendingFields = new Map<string, PageAnnotation>();
-const timers = new Map<string, ReturnType<typeof setTimeout>>();
-// Schlüssel, deren Upload gerade LÄUFT – solange darf ein paralleler Pull den lokalen Stand
-// nicht mit dem (noch alten) Server-Stand überschreiben.
-const inflight = new Set<string>();
-
 /**
  * Meldet dem Nutzer, dass eine Anmerkung NICHT gespeichert werden konnte (#245). Registriert wird der
  * Handler in `App.tsx` (Toast) – wie der Zwilling für die Einstellungen (#213).
@@ -200,100 +178,44 @@ export function setAnnotationsSyncErrorHandler(fn: ((msg: string) => void) | nul
 }
 
 /**
- * Einen fehlgeschlagenen Stand zurück in die Warteschlange legen (#245).
+ * Warteschlange, Wiederholen, Merker und Fehlerzweige liegen in `schreibSchlange.ts` – EIN Baustein mit
+ * `userSettings.ts` (#846). Die Anmerkungen gehen **je Seite** hoch.
  *
- * Feld-weise, und **neuere Werte gewinnen**: Hat der Nutzer während des laufenden Requests weiter
- * gezeichnet, steht das neue `strokes` schon in der Warteschlange – es darf nicht vom alten
- * überschrieben werden. Ergänzt werden nur Felder, die inzwischen NICHT neu gesetzt wurden.
+ * Zurücklegen nach einem Fehlschlag (#245) feldweise, und **neuere Werte gewinnen**: Hat der Nutzer während des
+ * laufenden Requests weiter gezeichnet, steht das neue `strokes` schon in der Warteschlange – es darf nicht vom
+ * alten überschrieben werden. Ergänzt werden nur Felder, die inzwischen NICHT neu gesetzt wurden.
  */
-function requeue(key: string, body: PageAnnotation): void {
-  const current = pendingFields.get(key);
-  if (!current) {
-    pendingFields.set(key, body);
-    return;
-  }
-  for (const [field, value] of Object.entries(body)) {
-    if (!(field in current)) (current as Record<string, unknown>)[field] = value;
-  }
-}
-
-async function flush(key: string, keepalive = false): Promise<void> {
-  const body = pendingFields.get(key);
-  pendingFields.delete(key);
-  timers.delete(key);
-  if (!body || disabled) return;
-  inflight.add(key);
-  try {
-    await weg.schreiben(key, body, keepalive);
-    pendingStore.unmark(key); // durch – der Merker darf weg (#256)
-  } catch (e) {
-    if (e instanceof KeinSpeicherRecht) {
-      requeue(key, body); // nichts verwerfen – der Merker trägt es zum nächsten Start
-      keinRecht(e);
-      return;
-    }
-    if (e instanceof ApiError && e.status === 401) {
-      disabled = true;
-      return;
-    }
-    if (e instanceof ApiError && e.status === 413) {
-      // Konto-Obergrenze erreicht (#139): ein erneuter Versuch würde genauso scheitern → nicht
-      // zurücklegen, aber sagen, was los ist (lokal bleibt die Anmerkung erhalten).
-      pendingStore.unmark(key); // endgültig – sonst versucht es jeder Start erneut (#256)
-      syncErrorHandler?.(e.message);
-      return;
-    }
-    // Netz-/Serverfehler: zurücklegen, sonst ist die Anmerkung weg (#245). Vorher wurde der Eintrag
-    // VOR dem Request entnommen und im Fehlerfall nicht zurückgelegt – danach überschrieb der nächste
-    // `pullAnnotations` den lokalen Stand mit dem älteren Server-Stand und der Strich verschwand
-    // sichtbar. (Dieselbe Lehre hatte `userSettings.ts` unter #213 schon gezogen.)
-    requeue(key, body);
-    // Nur erneut ansetzen, wenn der Server grundsätzlich erreichbar ist – sonst wartet der Eintrag
-    // auf die nächste Änderung bzw. auf `flushPendingAnnotations` beim Verlassen der App, statt
-    // offline alle paar Sekunden vergeblich zu funken.
-    if (getReachable() && !timers.has(key)) {
-      timers.set(
-        key,
-        setTimeout(() => void flush(key), 5000),
-      );
-    }
-  } finally {
-    inflight.delete(key);
-  }
-}
+const schlange = erstelleSchreibSchlange<PageAnnotation>({
+  merker: pendingStore,
+  schreiben: (stapel, keepalive) => {
+    const [[key, body]] = stapel; // je Seite ein Stapel mit genau einem Eintrag
+    return weg.schreiben(key, body, keepalive);
+  },
+  buendeln: 'je-schluessel',
+  zusammenfuehren: (neuer, fehlgeschlagen) => ({ ...fehlgeschlagen, ...neuer }),
+  melden: (meldung) => syncErrorHandler?.(meldung),
+});
 
 /** Alle noch ausstehenden Uploads SOFORT abschicken – beim Verlassen/Backgrounding der App.
  *  Ohne das friert iOS die 600-ms-Debounce-Timer ein und ein gerade gesetzter Zoom erreicht
  *  den Server nie („Zoom bleibt nicht gespeichert" nach App-Neustart). */
 export function flushPendingAnnotations(): void {
-  for (const t of timers.values()) clearTimeout(t);
-  timers.clear();
-  for (const key of [...pendingFields.keys()]) void flush(key, true);
+  schlange.jetztAbschicken();
 }
 
 onAppHidden(flushPendingAnnotations);
 
 /** Eine Feld-Änderung (strokes/texts/zoom) einer Seite zum Server schreiben (debounced, Feld-Merge). */
 export function pushField(lsKey: string, field: keyof PageAnnotation, value: unknown): void {
-  if (disabled) return;
   const key = serverKeyOf(lsKey);
   if (!KEY_RE.test(key)) return; // nur Lied-Seiten synchronisieren (Dokumente bleiben lokal)
-  const cur = pendingFields.get(key) ?? {};
-  (cur as Record<string, unknown>)[field] = value;
-  pendingFields.set(key, cur);
-  pendingStore.mark(key); // übersteht das Schließen der App (#256)
-  const t = timers.get(key);
-  if (t) clearTimeout(t);
-  timers.set(
-    key,
-    setTimeout(() => void flush(key), 600),
-  );
+  schlange.vormerken(key, (bisher) => ({ ...bisher, [field]: value }));
 }
 
 // ── Migration: bestehende Geräte-Anmerkungen einmalig aufs Konto ──
 /** Lädt vorhandene lokale Anmerkungen einmalig aufs Konto (danach gesetzter Merker). */
 export async function migrateLocalAnnotations(): Promise<void> {
-  if (disabled || localStorage.getItem(MIGRATED_FLAG)) return;
+  if (schlange.istAus() || localStorage.getItem(MIGRATED_FLAG)) return;
   // Alle Ebenen-Schlüssel im Speicher finden; die Anmerkung selbst baut `annotationFromStorage`
   // (dieselbe Funktion wie bei der Wiederaufnahme – nicht ein zweites Mal zusammengesetzt, #256).
   // Die ORIGINAL-Schlüssel sammeln (so, wie sie im Speicher stehen) – gelesen wird darunter, und
@@ -332,20 +254,12 @@ export async function migrateLocalAnnotations(): Promise<void> {
     try {
       await weg.schreiben(key, entries[key]);
     } catch (e) {
-      if (e instanceof KeinSpeicherRecht) {
-        keinRecht(e);
-        return; // Merker NICHT setzen – mit dem Recht wird es nachgeholt
-      }
-      if (e instanceof ApiError && e.status === 401) {
-        disabled = true;
-        return; // nicht angemeldet → Merker NICHT setzen, später erneut versuchen
-      }
-      if (e instanceof ApiError && e.status === 413) {
-        // Zu groß fürs Konto: ein erneuter Versuch scheitert genauso → diesen Schlüssel endgültig
-        // überspringen (lokal bleibt er erhalten) und den Vorgang trotzdem abschließen.
-        syncErrorHandler?.(e.message);
-        continue;
-      }
+      const art = schlange.fehlerBewerten(e);
+      // Kein Recht / nicht angemeldet → Merker NICHT setzen, mit dem Recht bzw. der Anmeldung wird es nachgeholt.
+      if (art === 'kein-recht' || art === 'abgemeldet') return;
+      // Zu groß fürs Konto (gemeldet): ein erneuter Versuch scheitert genauso → diesen Schlüssel endgültig
+      // überspringen (lokal bleibt er erhalten) und den Vorgang trotzdem abschließen.
+      if (art === 'zu-gross') continue;
       retryLater = true; // Netz-/Serverfehler → nächster Start versucht es erneut
     }
   }

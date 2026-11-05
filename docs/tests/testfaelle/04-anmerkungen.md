@@ -198,7 +198,7 @@ Stelle** in **derselben Größe**.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/services/annotations.ts`, `client/src/hooks/usePageDraw.ts`, `server/src/services/annotations.ts`, `server/src/controllers/annotationsController.ts`
+- **Betrifft:** `client/src/services/annotations.ts`, `client/src/services/schreibSchlange.ts`, `client/src/hooks/usePageDraw.ts`, `server/src/services/annotations.ts`, `server/src/controllers/annotationsController.ts`
 - **Automatisiert:** teilweise – `client/src/services/annotations.sync.test.ts`, `server/src/services/annotations.test.ts`
 - **Historie:** #124
 
@@ -255,7 +255,7 @@ Gerät bleibt sie erhalten.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/annotations.ts`, `client/src/services/reachability.ts`, `client/src/App.tsx`
+- **Betrifft:** `client/src/services/annotations.ts`, `client/src/services/schreibSchlange.ts`, `client/src/services/reachability.ts`, `client/src/App.tsx`
 - **Automatisiert:** teilweise – `client/src/services/annotations.flush.test.ts` (Zurücklegen, Wiederholung, Pull-Schutz, 413/401); von Hand bleibt die echte Netztrennung am Gerät
 - **Historie:** #245
 

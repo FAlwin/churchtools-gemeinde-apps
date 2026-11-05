@@ -143,7 +143,7 @@ ist wieder alles einheitlich.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/userSettings.ts`, `server/src/services/userSettings.ts`, `server/src/controllers/userSettingsController.ts`
+- **Betrifft:** `client/src/services/userSettings.ts`, `client/src/services/schreibSchlange.ts`, `server/src/services/userSettings.ts`, `server/src/controllers/userSettingsController.ts`
 - **Automatisiert:** teilweise – `server/src/services/userSettings.test.ts`
 - **Historie:** #195, #213
 
@@ -202,7 +202,7 @@ Sammel-Pause ein).
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/userSettings.ts`, `client/src/services/pendingKeys.ts`, `client/src/services/appHidden.ts`, `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartSync.ts`
+- **Betrifft:** `client/src/services/userSettings.ts`, `client/src/services/schreibSchlange.ts`, `client/src/services/pendingKeys.ts`, `client/src/services/appHidden.ts`, `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartSync.ts`
 - **Automatisiert:** teilweise – `client/src/services/userSettings.pending.test.ts` (Merker, Abgleich-Schutz, Flush beim Weglegen) und `client/src/services/pendingKeys.test.ts`; von Hand bleiben der echte Flugmodus, das echte Beenden durch iOS und das Zusammenspiel zweier Geräte
 - **Historie:** #275 (Vorbild: #245/#256 bei den Anmerkungen)
 

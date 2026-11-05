@@ -51,7 +51,7 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/personenAblage.ts`, `client/src/services/annotations.ts`, `client/src/services/userSettings.ts`
+- **Betrifft:** `client/src/services/personenAblage.ts`, `client/src/services/annotations.ts`, `client/src/services/schreibSchlange.ts`, `client/src/services/userSettings.ts`
 - **Automatisiert:** teilweise – `personenAblage.test.ts`; der Weg über die echte
   Einbettung nur hier
 - **Historie:** #334, #335

@@ -3,14 +3,14 @@
  * Schrift, Nur-Text, Abschnitte, gewählte Version, Anzeige-Quelle). localStorage bleibt der
  * schnelle Arbeitsspeicher; dieser Layer spiegelt vom/zum Server.
  */
-import { apiFetch, ApiError } from './api';
-import { istExtension, KeinSpeicherRecht } from './ctRuntime';
+import { apiFetch } from './api';
+import { istExtension } from './ctRuntime';
 import { holeEinstellungen, schreibeEinstellungen } from './personenAblage';
-import { getReachable } from './reachability';
 import { KONTO_ID, SETTINGS_KEY_RE, songIdOfSettingsKey } from '@shared/keys/index';
 import { verwaisteEntfernen } from './verwaisteEintraege';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
+import { erstelleSchreibSchlange } from './schreibSchlange';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Grammatik aus @shared/keys (#250) – Client und Server teilen sie jetzt wirklich.
@@ -49,35 +49,34 @@ const weg = istExtension
         }),
     };
 
-let disabled = false;
-
-/** Ein Recht fehlt dauerhaft (nur Extension, #334): Abgleich aus und sagen warum – wie `annotations.ts`. */
-function keinRecht(e: KeinSpeicherRecht): void {
-  disabled = true;
-  syncErrorHandler?.(e.message);
-}
+/**
+ * Warteschlange, Wiederholen, Merker und Fehlerzweige liegen in `schreibSchlange.ts` – EIN Baustein mit
+ * `annotations.ts` (#846). Die Einstellungen gehen gebündelt in einem Upload; neuere Werte gewinnen ganz.
+ */
+const schlange = erstelleSchreibSchlange<string | null>({
+  merker: pendingStore,
+  schreiben: (stapel, keepalive) => weg.schreiben(Object.fromEntries(stapel), keepalive),
+  buendeln: 'alle',
+  melden: (meldung) => syncErrorHandler?.(meldung),
+});
 
 /** Sync nach erfolgreicher Anmeldung wieder einschalten – siehe `annotations.resetSync` (#211). */
 export function resetSync(): void {
-  disabled = false;
+  schlange.einschalten();
 }
 
 /** Server → localStorage: vorhandene Einstellungen dieser Lieder spiegeln (setzt nur vorhandene Werte). */
 export async function pullSettings(liedIds: number[]): Promise<void> {
-  if (disabled || liedIds.length === 0) return;
+  if (schlange.istAus() || liedIds.length === 0) return;
   // Die Konto-Einstellungen („Lieder öffnen mit“) stehen unter der Pseudo-ID 0 und kommen immer mit – auch beim
   // Aufräumen unten, sonst bliebe eine auf einem anderen Gerät zurückgesetzte Wahl hier ewig stehen.
   const songIds = liedIds.includes(KONTO_ID) ? liedIds : [...liedIds, KONTO_ID];
   try {
     const data = await weg.holen(songIds);
-    // Drei Gründe, einen Schlüssel NICHT zu überschreiben (#275):
-    //  - `pending`: Änderung wartet noch auf ihren Upload
-    //  - `inflight`: Upload läuft gerade – der Server kennt den neuen Wert noch nicht
-    //  - Merker aus localStorage: nach einem Neustart ist die Speicher-Warteschlange leer, die
-    //    Einstellung aber weiterhin nicht hochgeladen. Ohne diese Prüfung gewinnt der alte Stand.
-    const stillPending = pendingStore.read();
+    // Nicht überschreiben, was noch wartet, gerade hochlädt oder laut Merker nach einem Neustart noch fehlt (#275).
+    const geschuetzt = schlange.schutz();
     for (const [k, v] of Object.entries(data)) {
-      if (pending.has(k) || inflight.has(k) || stillPending.has(k)) continue;
+      if (geschuetzt(k)) continue;
       if (SETTINGS_KEY_RE.test(k)) lokalSchreiben(k, v); // wirft nie (#457)
     }
     // Anderswo zurückgesetzte Einstellungen auch hier entfernen – Regel und Schutz dort.
@@ -86,22 +85,13 @@ export async function pullSettings(liedIds: number[]): Promise<void> {
       liedVon: songIdOfSettingsKey,
       songIds,
       aufDemKonto: (k) => k in data,
-      geschuetzt: (k) => pending.has(k) || inflight.has(k) || stillPending.has(k),
+      geschuetzt,
       freigegeben: localStorage.getItem(MIGRATED_FLAG) !== null,
     });
   } catch (e) {
-    if (e instanceof KeinSpeicherRecht) keinRecht(e);
-    else if (e instanceof ApiError && e.status === 401) disabled = true;
+    schlange.fehlerBewerten(e);
   }
 }
-
-// Änderungen gebündelt schreiben (mehrere Einstellungen in einem PUT).
-const pending = new Map<string, string | null>();
-let timer: ReturnType<typeof setTimeout> | null = null;
-// Schlüssel, deren Upload gerade LÄUFT – solange darf ein paralleler Pull sie nicht mit dem
-// (noch alten) Server-Stand überschreiben. Vorher wurde `pending` VOR dem Request geleert, ein
-// gleichzeitig laufender 30-s-Pull sah also nichts und drehte die frische Einstellung zurück (#275).
-const inflight = new Set<string>();
 
 /**
  * Meldet dem Nutzer, dass Einstellungen NICHT gespeichert werden konnten (#213). Registriert wird
@@ -112,46 +102,6 @@ export function setSettingsSyncErrorHandler(fn: ((msg: string) => void) | null):
   syncErrorHandler = fn;
 }
 
-async function flush(keepalive = false): Promise<void> {
-  timer = null;
-  if (disabled || pending.size === 0) return;
-  // Stapel herausnehmen, aber bei einem vorübergehenden Fehler zurücklegen (#213): Vorher wurde
-  // `pending` VOR dem Request geleert – schlug er fehl, war die Einstellung still weg.
-  const batch = new Map(pending);
-  pending.clear();
-  for (const k of batch.keys()) inflight.add(k);
-  try {
-    await weg.schreiben(Object.fromEntries(batch), keepalive);
-    for (const k of batch.keys()) pendingStore.unmark(k); // durch – der Merker darf weg (#275)
-  } catch (e) {
-    if (e instanceof KeinSpeicherRecht) {
-      for (const [k, v] of batch) if (!pending.has(k)) pending.set(k, v); // nichts verwerfen
-      keinRecht(e);
-      return;
-    }
-    if (e instanceof ApiError && e.status === 401) {
-      disabled = true;
-      return;
-    }
-    if (e instanceof ApiError && e.status === 413) {
-      // Konto-Obergrenze erreicht: Ein erneuter Versuch würde genauso scheitern → nicht
-      // zurücklegen, aber sagen, was los ist (lokal gilt die Einstellung weiter).
-      // Merker ebenfalls weg, sonst versucht es jeder App-Start erneut (wie #256 bei den Anmerkungen).
-      for (const k of batch.keys()) pendingStore.unmark(k);
-      syncErrorHandler?.(e.message);
-      return;
-    }
-    // Netz-/Serverfehler: zurücklegen, damit nichts verloren geht – neuere Werte gewinnen.
-    // Die Merker bleiben stehen: Wird die App jetzt geschlossen, holt `resumePendingSettings` es nach.
-    for (const [k, v] of batch) if (!pending.has(k)) pending.set(k, v);
-    // Nur erneut ansetzen, wenn der Server grundsätzlich erreichbar ist; sonst wartet der Stapel
-    // auf die nächste Änderung (statt im Offline-Fall alle paar Sekunden vergeblich zu funken).
-    if (getReachable() && !timer) timer = setTimeout(() => void flush(), 5000);
-  } finally {
-    for (const k of batch.keys()) inflight.delete(k);
-  }
-}
-
 /**
  * Alle noch ausstehenden Einstellungen SOFORT abschicken – beim Verlassen/Backgrounding der App (#275).
  *
@@ -160,9 +110,7 @@ async function flush(keepalive = false): Promise<void> {
  * Behandlung seit #193/#256 – den Einstellungen fehlte sie.
  */
 export function flushPendingSettings(): void {
-  if (timer) clearTimeout(timer);
-  timer = null;
-  void flush(true);
+  schlange.jetztAbschicken();
 }
 
 onAppHidden(flushPendingSettings);
@@ -175,7 +123,7 @@ onAppHidden(flushPendingSettings);
  * **Entfernen** (`null`) und genau das wird nachgeholt.
  */
 export async function resumePendingSettings(): Promise<void> {
-  if (disabled) return;
+  if (schlange.istAus()) return;
   const keys = pendingStore.read();
   if (keys.size === 0) return;
   for (const key of keys) {
@@ -183,23 +131,20 @@ export async function resumePendingSettings(): Promise<void> {
       pendingStore.unmark(key); // Altlast/Unsinn – nicht endlos mitschleppen
       continue;
     }
-    pending.set(key, localStorage.getItem(key));
+    schlange.einreihen(key, localStorage.getItem(key));
   }
-  await flush();
+  await schlange.abschicken();
 }
 
 /** Eine geänderte Einstellung zum Server schreiben (debounced, gebündelt). null/'' = entfernen. */
 export function pushSetting(key: string, value: string | null): void {
-  if (disabled || !SETTINGS_KEY_RE.test(key)) return;
-  pending.set(key, value);
-  pendingStore.mark(key); // übersteht das Schließen der App (#275)
-  if (timer) clearTimeout(timer);
-  timer = setTimeout(() => void flush(), 600);
+  if (!SETTINGS_KEY_RE.test(key)) return;
+  schlange.vormerken(key, () => value);
 }
 
 /** Einmalig: bestehende lokale Einstellungen aufs Konto hochladen (danach Merker gesetzt). */
 export async function migrateLocalSettings(): Promise<void> {
-  if (disabled || localStorage.getItem(MIGRATED_FLAG)) return;
+  if (schlange.istAus() || localStorage.getItem(MIGRATED_FLAG)) return;
   const body: Record<string, string> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -216,8 +161,7 @@ export async function migrateLocalSettings(): Promise<void> {
     await weg.schreiben(body);
     lokalSchreiben(MIGRATED_FLAG, '1');
   } catch (e) {
-    if (e instanceof KeinSpeicherRecht) keinRecht(e);
-    else if (e instanceof ApiError && e.status === 401) disabled = true;
-    // sonst: Merker NICHT setzen → nächster Versuch beim nächsten Laden
+    schlange.fehlerBewerten(e);
+    // Merker NICHT setzen → nächster Versuch beim nächsten Laden
   }
 }

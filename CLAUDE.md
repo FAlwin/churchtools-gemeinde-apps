@@ -614,9 +614,10 @@ Uploads werden beim App-Verlassen sofort via `keepalive` geschickt). Pro-Lied-Ei
 eine Weiche `weg` (`istExtension` aus `services/ctRuntime.ts`) – in der Extension holen und schreiben
 sie über `services/personenAblage.ts` (Personen-Dateien in ChurchTools: je Seite ein PNG
 `musikapp_<schlüssel>.png`, alles andere in `musikapp_daten.json`, Feld-Merge nach Zeitstempel).
-**Warteschlange, Wiederholen und Nachholen bleiben EINMAL in `annotations.ts`/`userSettings.ts`** –
-nie in die Ablage kopieren. `KeinSpeicherRecht` (fehlendes Recht, auch das irreführende CT-401) schaltet
-den Abgleich ab und meldet es.
+**Warteschlange, Wiederholen, Merker und Fehlerzweige liegen EINMAL in `services/schreibSchlange.ts`** (#846) –
+beide Dienste liefern nur Transport und Wert (Einstellungen gebündelt, Anmerkungen je Seite mit Feld-Merge); nie
+in die Ablage oder einen Dienst kopieren. `fehlerBewerten` gilt auch für Abgleich und Migration: `KeinSpeicherRecht`
+(fehlendes Recht, auch das irreführende CT-401) schaltet ab und meldet es, 401 schaltet ab, 413 ist endgültig.
 
 **Zwei Auslieferungen (Extension, #335):** `vite build --mode extension` (`npm run build:extension -w
 client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/ccm/<Kürzel>/`. Regeln:
@@ -1279,6 +1280,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   danebenbauen:
   - `server/src/services/jsonStore.ts` – Lesen/Schreiben ALLER JSON-Ablagen. Nur `ENOENT` heißt „leer".
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
+  - `client/src/services/schreibSchlange.ts` – die Speicher-Warteschlange selbst (Anmerkungen UND Einstellungen, #846).
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.
   - `server/src/utils/songIdsQuery.ts` – `?songs=…` auswerten (Express liefert dort auch Arrays/Objekte).
   - `shared/keys` `songIdOfAnnoKey`/`songIdOfSettingsKey` – zu welchem Lied ein Schlüssel gehört (stand

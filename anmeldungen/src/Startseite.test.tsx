@@ -15,6 +15,7 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { Startseite } from './Startseite';
 import * as E from './einrichten';
 import * as A from './archiv';
+import * as AB from './ablaeufe';
 import type { Aenderung } from './Rueckgaengig';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
@@ -26,10 +27,17 @@ import type { Uebersicht } from './veranstaltungen';
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   loeschenEndgueltig: vi.fn(),
+  einstellungenVon: vi.fn(),
+  anmeldungenIn: vi.fn(),
 }));
 vi.mock('./archiv', () => ({ insArchiv: vi.fn() }));
+vi.mock('./ablaeufe', async (original) => ({
+  ...(await original<typeof import('./ablaeufe')>()),
+  ablaeufeNachholen: vi.fn(),
+}));
 const ei = vi.mocked(E);
 const ar = vi.mocked(A);
+const ab = vi.mocked(AB);
 
 const HEUTE = '2026-10-12';
 const JETZT = new Date('2026-10-12T10:00:00Z');
@@ -367,5 +375,99 @@ describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6–D8)', () => {
     expect(bereich().getByText('Sommerfest: Anmeldungen gelöscht')).toBeTruthy();
     expect(bereich().queryByRole('button', { name: 'Ins Archiv' })).toBeNull();
     expect(bereich().queryByRole('button', { name: 'Endgültig löschen' })).toBeNull();
+  });
+});
+
+describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', () => {
+  /** Grundkurs (14.11.2026, 12 €) ist freigegeben, hat aber keine Abläufe – 2 sind angemeldet. */
+  function mitGrundkurs(darf: boolean) {
+    const x = v(
+      {
+        id: 52,
+        name: 'Grundkurs',
+        gruppeId: 7,
+        statusId: 1,
+        beginn: '2026-11-14T09:30',
+        betragCent: 1200,
+      },
+      { aktiv: 2, wartend: 0, unbezahlt: null },
+    );
+    ei.einstellungenVon.mockResolvedValue(x.einstellungen);
+    ei.anmeldungenIn.mockResolvedValue(2);
+    const geaendert = vi.fn<(a: Aenderung) => void>();
+    const oeffnen = vi.fn();
+    render(
+      <Startseite
+        start={START}
+        uebersicht={{
+          einteilung: einteilen([x]),
+          hinweise: aufmerksamkeit([x], [], new Set(), HEUTE, new Set(), new Map([[52, darf]])),
+          offen: new Map(),
+          verborgen: new Map(),
+        }}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={oeffnen}
+        onGeaendert={geaendert}
+      />,
+    );
+    return { geaendert, oeffnen };
+  }
+  const bereich = () => within(abschnitt('Braucht deine Aufmerksamkeit'));
+
+  it('wer darf: „Einrichten“ öffnet gleich die Rückfrage; danach gemeldet, ohne Rückgängig', async () => {
+    ab.ablaeufeNachholen.mockResolvedValue();
+    const { geaendert } = mitGrundkurs(true);
+    expect(bereich().getByText('Grundkurs: Mails und Löschen einrichten')).toBeTruthy();
+    expect(bereich().getByText('Bisher löscht ChurchTools die Anmeldungen nie.')).toBeTruthy();
+    fireEvent.click(bereich().getByRole('button', { name: 'Einrichten' }));
+    const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
+    await waitFor(() =>
+      expect(
+        within(fenster).getByText(
+          'Die 2 schon Angemeldeten bekommen keine neue Mail, für sie gilt das Löschdatum (So, 14.02.2027).',
+        ),
+      ).toBeTruthy(),
+    );
+    expect(within(fenster).getByText(/mit Betrag, Bankdaten und Link/)).toBeTruthy();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Jetzt einrichten' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    expect(ab.ablaeufeNachholen).toHaveBeenCalledWith(52, { loeschenBestaetigt: false });
+    expect(geaendert.mock.calls[0][0]).toEqual({
+      text: '„Grundkurs“: Mails und Löschen eingerichtet.',
+      rueckgaengig: null,
+    });
+  });
+
+  it('Löschdatum schon erreicht und noch Anmeldungen → erst „Sofort löschen?“, dann mit Bestätigung', async () => {
+    ab.ablaeufeNachholen
+      .mockRejectedValueOnce(new AB.LoeschdatumVorbei('2026-09-01', 2))
+      .mockResolvedValueOnce();
+    const { geaendert } = mitGrundkurs(true);
+    fireEvent.click(bereich().getByRole('button', { name: 'Einrichten' }));
+    const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
+    await waitFor(() =>
+      expect(
+        within(fenster).getByRole<HTMLButtonElement>('button', { name: 'Jetzt einrichten' })
+          .disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Jetzt einrichten' }));
+    const frage = await screen.findByRole('dialog', { name: 'Sofort löschen?' });
+    expect(within(frage).getByText(/Beim Einrichten entfernt ChurchTools/)).toBeTruthy();
+    expect(within(frage).getByText(/alle 2 Anmeldungen/)).toBeTruthy();
+    fireEvent.click(within(frage).getByRole('button', { name: 'Trotzdem einrichten' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    expect(ab.ablaeufeNachholen).toHaveBeenLastCalledWith(52, { loeschenBestaetigt: true });
+  });
+
+  it('ohne Recht für Routinen: derselbe Hinweis mit dem Satz, statt „Einrichten“ nur „Ansehen“', () => {
+    const { oeffnen } = mitGrundkurs(false);
+    expect(
+      bereich().getByText(/Einrichten kann, wer in ChurchTools Routinen verwalten darf/),
+    ).toBeTruthy();
+    expect(bereich().queryByRole('button', { name: 'Einrichten' })).toBeNull();
+    fireEvent.click(bereich().getByRole('button', { name: 'Ansehen' }));
+    expect(oeffnen).toHaveBeenCalledWith(52);
   });
 });

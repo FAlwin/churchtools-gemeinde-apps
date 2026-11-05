@@ -614,9 +614,10 @@ Uploads werden beim App-Verlassen sofort via `keepalive` geschickt). Pro-Lied-Ei
 eine Weiche `weg` (`istExtension` aus `services/ctRuntime.ts`) – in der Extension holen und schreiben
 sie über `services/personenAblage.ts` (Personen-Dateien in ChurchTools: je Seite ein PNG
 `musikapp_<schlüssel>.png`, alles andere in `musikapp_daten.json`, Feld-Merge nach Zeitstempel).
-**Warteschlange, Wiederholen und Nachholen bleiben EINMAL in `annotations.ts`/`userSettings.ts`** –
-nie in die Ablage kopieren. `KeinSpeicherRecht` (fehlendes Recht, auch das irreführende CT-401) schaltet
-den Abgleich ab und meldet es.
+**Warteschlange, Wiederholen, Merker und Fehlerzweige liegen EINMAL in `services/schreibSchlange.ts`** (#846) –
+beide Dienste liefern nur Transport und Wert (Einstellungen gebündelt, Anmerkungen je Seite mit Feld-Merge); nie
+in die Ablage oder einen Dienst kopieren. `fehlerBewerten` gilt auch für Abgleich und Migration: `KeinSpeicherRecht`
+(fehlendes Recht, auch das irreführende CT-401) schaltet ab und meldet es, 401 schaltet ab, 413 ist endgültig.
 
 **Zwei Auslieferungen (Extension, #335):** `vite build --mode extension` (`npm run build:extension -w
 client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/ccm/<Kürzel>/`. Regeln:
@@ -729,14 +730,18 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 - [x] .env + .gitignore korrekt eingerichtet
 - [x] Zod-Validierung auf allen API-Routen
 - [x] helmet eingerichtet
-- [x] express-rate-limit eingerichtet (zusätzlich striktes Limit am Login)
+- [x] express-rate-limit eingerichtet, VOR dem Lesen des Rumpfs (zusätzlich striktes Limit am Login)
 - [x] Öffentliches Repo unter MIT-Lizenz (`FAlwin/churchtools-gemeinde-apps`); keine Secrets im Code/in der Historie (`.env` nie eingecheckt)
 - [x] Authentifizierung: persönlicher ChurchTools-Login, Session in signiertem httpOnly-Cookie
 - [x] HTTPS extern via Synology Reverse Proxy + Let's Encrypt (`musik.ecg-donrath.de`)
-- [x] npm audit: zuletzt geprüft am 26.07.2026 – Funde betreffen **ausschließlich Build-/Lint-/
-      Test-Werkzeuge** (sass, eslint, vitest), zur Laufzeit nicht erreichbar; Prod-Pfad unbetroffen
-      (Details in Issue #199). Frühere Prüfung 16.07.2026 – **0 Schwachstellen** (die früheren 3 moderaten
-      esbuild/vite-Funde sind mit den aktuellen Dev-Deps nicht mehr vorhanden)
+- [x] npm audit: zuletzt geprüft am 05.11.2026 (#844) – `npm audit --omit=dev` meldet nur noch **zod 3.25**
+      (hoch, Speicher bei übergroßen Sammlungen): nur angemeldet erreichbar und durch die Rumpf-Grenze gedeckelt,
+      Behebung erst mit zod 4 (eigene Aufgabe). `body-parser` (DoS, anonym erreichbar), `dompurify` (über jsPDF,
+      `.html()` ungenutzt) und `qs` gezielt angehoben. Die übrigen Funde des vollen `npm audit` betreffen Build-/
+      Test-Werkzeuge (vite, vitest, glob …). **Bewerten nach Erreichbarkeit, nicht nach Prod/Dev** – die frühere
+      Aussage „ausschließlich Build-Werkzeuge“ (26.07.) stimmte am 04.11. nicht mehr.
+- [x] Eingang des Servers (`middleware/apiEingang.ts`, #844): **erst Rate-Limit, dann Rumpf lesen**; Rumpf-Grenze
+      1 MB, 8 MB nur für `/api/annotations` und `/api/settings`. Zu groß → 413, kaputtes JSON → 400 (vorher 500).
 
 ## Deployment
 
@@ -1275,6 +1280,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   danebenbauen:
   - `server/src/services/jsonStore.ts` – Lesen/Schreiben ALLER JSON-Ablagen. Nur `ENOENT` heißt „leer".
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
+  - `client/src/services/schreibSchlange.ts` – die Speicher-Warteschlange selbst (Anmerkungen UND Einstellungen, #846).
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.
   - `server/src/utils/songIdsQuery.ts` – `?songs=…` auswerten (Express liefert dort auch Arrays/Objekte).
   - `shared/keys` `songIdOfAnnoKey`/`songIdOfSettingsKey` – zu welchem Lied ein Schlüssel gehört (stand

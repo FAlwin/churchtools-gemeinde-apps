@@ -33,6 +33,20 @@ export function istZeitueberschreitung(e: unknown): boolean {
 export const CT_ANTWORTET_NICHT =
   'ChurchTools antwortet gerade nicht. Bitte später erneut versuchen.';
 
+/**
+ * Ein abgewiesener Rumpf (#844): zu groß, kein gültiges JSON, falsche Zeichenkodierung. Die Parser von
+ * Express (body-parser) melden das als `http-errors`-Fehler mit Status 4xx und `expose: true`. Das ist
+ * eine falsche Anfrage, kein Programmfehler – vorher wurde daraus ein 500 samt Stacktrace im Log, und
+ * jede anonyme Anfrage mit kaputtem JSON schrieb eine Fehlerzeile.
+ */
+export function rumpfFehlerStatus(e: unknown): number | null {
+  if (typeof e !== 'object' || e === null) return null;
+  const { status, expose } = e as { status?: unknown; expose?: unknown };
+  return expose === true && typeof status === 'number' && status >= 400 && status < 500
+    ? status
+    : null;
+}
+
 /** 404 für unbekannte Routen. */
 export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({ error: 'Nicht gefunden' });
@@ -42,6 +56,13 @@ export const notFoundHandler: RequestHandler = (_req, res) => {
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ZodError) {
     res.status(400).json({ error: 'Ungültige Eingabe', details: err.flatten() });
+    return;
+  }
+  const rumpfStatus = rumpfFehlerStatus(err);
+  if (rumpfStatus !== null) {
+    res
+      .status(rumpfStatus)
+      .json({ error: rumpfStatus === 413 ? 'Die Daten sind zu groß.' : 'Ungültige Eingabe' });
     return;
   }
   if (err instanceof HttpError) {

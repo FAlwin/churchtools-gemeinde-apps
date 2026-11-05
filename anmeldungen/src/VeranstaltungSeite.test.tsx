@@ -34,6 +34,7 @@ vi.mock('./einrichten', async (original) => {
     anmeldungVon: vi.fn(),
     darfVeranstaltungEinrichten: vi.fn(),
     darfAblaeufeEinrichten: vi.fn(),
+    anmeldungenIn: vi.fn(),
     freigeben: vi.fn(),
     leitungsKandidaten: vi.fn(),
     meineId: vi.fn(),
@@ -63,6 +64,7 @@ vi.mock('./ablaeufe', async (original) => ({
   ablaeufeEinrichten: vi.fn(),
   ablaeufeLesen: vi.fn(),
   ablaeufeAbgleichen: vi.fn(),
+  ablaeufeNachholen: vi.fn(),
 }));
 const ab = vi.mocked(AB);
 const gm = vi.mocked(G);
@@ -269,6 +271,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     const frage = await screen.findByRole('dialog', { name: 'Sofort löschen?' });
     expect(within(frage).getByText(/alle 12 Anmeldungen/)).toBeTruthy();
+    expect(within(frage).getByText(/Beim Freigeben entfernt ChurchTools/)).toBeTruthy();
     expect(m.freigeben).not.toHaveBeenCalled();
     fireEvent.click(within(frage).getByRole('button', { name: 'Trotzdem freigeben' }));
     await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
@@ -382,9 +385,101 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     zeigen();
     const alt = await screen.findByRole('region', { name: 'Mails' });
     await waitFor(() => expect(within(alt).getByText('noch nicht eingerichtet')).toBeTruthy());
-    expect(within(alt).getByText(/Standard-Mail – ohne Betrag/)).toBeTruthy();
-    // Noch nicht eingerichtet: nichts zu bearbeiten (das richtet erst A9-5 ein).
+    expect(
+      within(alt).getByText(
+        'Bisher schickt ChurchTools seine Standard-Mail, und gelöscht wird nie.',
+      ),
+    ).toBeTruthy();
+    // Noch nicht eingerichtet: nichts zu bearbeiten – A9-5 bietet „Jetzt einrichten“.
     expect(within(alt).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+    await waitFor(() =>
+      expect(within(alt).getByRole('button', { name: 'Jetzt einrichten' })).toBeTruthy(),
+    );
+  });
+
+  describe('A9-5: „Jetzt einrichten“ an der Karte „Mails“', () => {
+    const ohne = (x: Partial<AB.AblaufStand> = {}) =>
+      ab.ablaeufeLesen.mockResolvedValue({
+        platz: false,
+        warte: false,
+        standardMail: true,
+        absender: null,
+        absenderId: null,
+        eigen: {
+          platz: OHNE_EIGENEN_TEXT,
+          warte: OHNE_EIGENEN_TEXT,
+          erinnerung: OHNE_EIGENEN_TEXT,
+        },
+        qr: false,
+        loeschDatum: null,
+        anmeldeschluss: null,
+        erinnerungen: [],
+        ...x,
+      });
+
+    it('öffnet die Rückfrage; ohne Termin „Ohne Termin wird nicht gelöscht.“; danach gemeldet und neu geladen', async () => {
+      ohne();
+      stelle(true, 1);
+      m.anmeldungenIn.mockResolvedValue(3);
+      ab.ablaeufeNachholen.mockResolvedValue();
+      const geaendert = vi.fn();
+      render(
+        <VeranstaltungSeite
+          id={91}
+          reiter="vorbereiten"
+          zeitzone={ZONE}
+          onZurueck={() => {}}
+          onGeaendert={geaendert}
+        />,
+      );
+      const karte = await screen.findByRole('region', { name: 'Mails' });
+      fireEvent.click(await within(karte).findByRole('button', { name: 'Jetzt einrichten' }));
+      const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
+      expect(
+        await within(fenster).findByText(
+          'Die 3 schon Angemeldeten bekommen keine neue Mail. Ohne Termin wird nicht gelöscht.',
+        ),
+      ).toBeTruthy();
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Jetzt einrichten' }));
+      await waitFor(() => expect(geaendert).toHaveBeenCalled());
+      expect(ab.ablaeufeNachholen).toHaveBeenCalledWith(91, { loeschenBestaetigt: false });
+      expect(geaendert.mock.calls[0]).toEqual([
+        { text: 'Mails und Löschen eingerichtet.', rueckgaengig: null },
+        false,
+      ]);
+    });
+
+    it('nur einer der beiden Abläufe da (z. B. einer aus): auch dann „Jetzt einrichten“ statt „Bearbeiten“', async () => {
+      ohne({ platz: true, absender: 'Alwin Friesen', absenderId: 1 });
+      stelle(true, 1);
+      zeigen();
+      const karte = await screen.findByRole('region', { name: 'Mails' });
+      expect(await within(karte).findByRole('button', { name: 'Jetzt einrichten' })).toBeTruthy();
+      expect(within(karte).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+    });
+
+    it('ohne Recht für Routinen: kein Knopf, dafür der Satz', async () => {
+      ohne();
+      stelle(true, 1);
+      m.darfAblaeufeEinrichten.mockResolvedValue(false);
+      zeigen();
+      const karte = await screen.findByRole('region', { name: 'Mails' });
+      expect(
+        await within(karte).findByText(
+          /Einrichten kann, wer in ChurchTools Routinen verwalten darf/,
+        ),
+      ).toBeTruthy();
+      expect(within(karte).queryByRole('button', { name: 'Jetzt einrichten' })).toBeNull();
+    });
+
+    it('eingerichtet: kein Rechte-Abruf – nur, wenn etwas fehlt', async () => {
+      stelle(true, 1);
+      m.darfAblaeufeEinrichten.mockClear();
+      zeigen();
+      const karte = await screen.findByRole('region', { name: 'Mails' });
+      await waitFor(() => expect(within(karte).getByText('✓ Mitteilung mit Platz')).toBeTruthy());
+      expect(m.darfAblaeufeEinrichten).not.toHaveBeenCalled();
+    });
   });
 
   it('A9-3b: Karte „Mails“ zeigt je Erinnerung ihren Tag – vorbeie mit Hinweis (R7)', async () => {

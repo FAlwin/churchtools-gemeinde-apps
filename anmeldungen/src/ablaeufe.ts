@@ -23,6 +23,9 @@
  * - A9-3b (gemessen 04.11.2026, Siebte Runde): Mehrere Erinnerungen = je „warten bis“ + Mail vor dem Löschen. Ist ein
  *   Tag erreicht, geht die Mail raus und der Lauf wartet auf die nächste. Eine abgeschaltete Mail wird übersprungen.
  *   `restart: [Schritt]` startet die Läufe, die dort warten, von vorn. Eine `emailId` gehört zu genau einem Schritt.
+ * - A9-5 (gemessen 05.11.2026, Neunte Runde): Wer schon vor den Routinen angemeldet war, hat **keinen** Lauf – nur mit
+ *   `?with_potential_domain_objects=true` steht er als `not-started` da. `restart: ['not-started']` holt ihn nach; mit
+ *   ausgeschalteter Bestätigung und fälligen Erinnerungen ohne Mail bis zum nächsten Warten.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -47,7 +50,13 @@ import {
   type RoutinenArt,
 } from '@shared/anmeldung/ablaeufe';
 import { loeschDatum } from '@shared/anmeldung/termin';
-import { anmeldungenIn, systemfelderNachziehen, teilnehmerRolle } from './einrichten';
+import {
+  anmeldungenIn,
+  leitungsKandidaten,
+  meineId,
+  systemfelderNachziehen,
+  teilnehmerRolle,
+} from './einrichten';
 import { platzhalterLaden } from './rundmail';
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -179,6 +188,46 @@ function unsereFuer(zuordnungen: ZuordnungRoh[], rolle: number, status: string):
   return istUnsere(r) ? r! : null;
 }
 
+/** Unsere Routine für diesen Status, wenn sie an ist – sonst `null`. */
+function unsereAn(zuordnungen: ZuordnungRoh[], rolle: number, status: string): RoutineRoh | null {
+  const r = unsereFuer(zuordnungen, rolle, status);
+  return r?.isEnabled === true ? r : null;
+}
+
+/**
+ * **Fehlen die Abläufe?** (A9-5) – für den Hinweis auf der Startseite, ohne alles zu lesen. Dieselbe Regel wie die Karte
+ * „Mails“ (`ablaeufeLesen`): eingerichtet heißt, „Platz“ und „Warteliste“ sind da und an.
+ */
+export async function ablaeufeFehlen(id: number): Promise<boolean> {
+  const [zuordnungen, rolle] = await Promise.all([
+    ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
+    teilnehmerRolle(id),
+  ]);
+  return !unsereAn(zuordnungen, rolle, 'active') || !unsereAn(zuordnungen, rolle, 'waiting');
+}
+
+/**
+ * **Mails und Löschen nachträglich einrichten** (A9-5, F1/F2) – für Veranstaltungen, die vor A9-1 freigegeben wurden
+ * (oder deren Abläufe aus sind). Wie beim Freigeben, nur ohne Leitung zu wählen: Absender ist, wer einrichtet, wenn er
+ * zur Leitung gehört, sonst die erste. Schon Angemeldete bekommen keine Mail (`nachstarten`); liegt das Löschdatum
+ * zurück und sind noch welche da, kommt erst `LoeschdatumVorbei`.
+ */
+export async function ablaeufeNachholen(
+  id: number,
+  { loeschenBestaetigt = false } = {},
+): Promise<void> {
+  const [kandidaten, ich] = await Promise.all([leitungsKandidaten(id), meineId()]);
+  const leitung = new Set(kandidaten.filter((k) => k.leitung).map((k) => k.personId));
+  if (leitung.size === 0)
+    throw new ApiError(
+      422,
+      'Diese Veranstaltung hat keine Leitung – die Mails brauchen sie als Absender. Bitte in ChurchTools jemanden als Leitung eintragen.',
+    );
+  await ablaeufeEinrichten(id, absenderAus(leitung, ich), undefined, undefined, {
+    loeschenBestaetigt,
+  });
+}
+
 /** **Wie es steht** – für die Karte „Mails“. */
 export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
   const [zuordnungen, g, rolle] = await Promise.all([
@@ -186,15 +235,11 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
     ctDaten<GruppeRoh>(`/groups/${id}`),
     teilnehmerRolle(id),
   ]);
-  const an = (status: string) => {
-    const r = unsereFuer(zuordnungen, rolle, status);
-    return r?.isEnabled === true ? r : null;
-  };
-  const platz = an('active');
+  const platz = unsereAn(zuordnungen, rolle, 'active');
   const mail = mailSchritt(platz);
   return {
     platz: !!platz,
-    warte: !!an('waiting'),
+    warte: !!unsereAn(zuordnungen, rolle, 'waiting'),
     standardMail: g.settings?.sendDefaultSignUpMail !== false,
     absender: mail?.actionData?.sender?.title ?? null,
     absenderId: mail?.actionData?.senderId ?? null,
@@ -455,9 +500,10 @@ async function anmeldeschlussBegrenzen(
 /**
  * **Schon Angemeldete an die richtige Stelle bringen** (A9-3a E6, A9-3b E7): Richtig wartet ein Lauf am ersten
  * Warte-Schritt, dessen Tag noch kommt – an der nächsten Erinnerung oder am Löschen. Wer sich vor dem Löschen angemeldet
- * hat, dessen Lauf ist abgeschlossen; wer wartet, als eine frühere Erinnerung dazukam, wartet zu weit hinten – neue
- * Schritte erreichen beide nicht. Gemessener Weg (28.10. und 04.11.2026): Bestätigung aus → `restart` (`'finished'` bzw.
- * die Nummer des Warte-Schritts) → wieder an; die Läufe gehen ohne Mail bis zum richtigen Warten. Dabei sind auch die
+ * hat, dessen Lauf ist abgeschlossen; wer wartet, als eine frühere Erinnerung dazukam, wartet zu weit hinten; wer schon
+ * vor den Routinen angemeldet war (ältere Veranstaltung, A9-5), hat gar keinen (`not-started`) – neue Schritte erreichen
+ * sie alle nicht. Gemessener Weg (28.10., 04.11. und 05.11.2026): Bestätigung aus → `restart` (`'finished'`,
+ * `'not-started'` bzw. die Nummer des Warte-Schritts) → wieder an; die Läufe gehen ohne Mail bis zum richtigen Warten. Dabei sind auch die
  * Erinnerungen aus, deren Tag schon da ist – sonst bekämen alle sie beim Neustart. Nur, wenn es solche Läufe gibt –
  * solange die Bestätigung aus ist, bekäme eine neue Anmeldung keine. Sie wird darum auch nach einem Fehler wieder
  * eingeschaltet.
@@ -471,8 +517,9 @@ async function nachstarten(
   erinnerung: { mail: AblaufMail; liste: readonly Erinnerung[] } | null,
   heute: string,
 ): Promise<void> {
+  // Ohne den Zusatz fehlen die noch nie Gestarteten (A9-5, gemessen 05.11.2026).
   const laeufe = await ctAlleSeiten<{ status?: string; routineStepId?: number | null }>(
-    `/routines/${routineId}/runs`,
+    `/routines/${routineId}/runs?with_potential_domain_objects=true`,
   );
   const folge = schrittFolge(schritte);
   const liste = erinnerung?.liste ?? [];
@@ -482,6 +529,8 @@ async function nachstarten(
   ];
   const ziel = warten.find((w) => w.bis > heute)?.id;
   const fertig = laeufe.some((l) => l.status === 'finished');
+  // A9-5: vor den Routinen angemeldet (ältere Veranstaltung) – sonst nähmen sie weder Erinnerung noch Löschen mit.
+  const nieGestartet = laeufe.some((l) => l.status === 'not-started');
   const falsch =
     ziel === undefined
       ? []
@@ -497,7 +546,7 @@ async function nachstarten(
               .map((l) => l.routineStepId!),
           ),
         ];
-  if (!fertig && !falsch.length) return;
+  if (!fertig && !nieGestartet && !falsch.length) return;
   const mitMail = (an: boolean) =>
     ctAnfrage(`/routines/${routineId}`, {
       method: 'PATCH',
@@ -521,6 +570,11 @@ async function nachstarten(
       await ctAnfrage(`/routines/${routineId}`, {
         method: 'PATCH',
         body: json({ restart: ['finished'] }),
+      });
+    if (nieGestartet)
+      await ctAnfrage(`/routines/${routineId}`, {
+        method: 'PATCH',
+        body: json({ restart: ['not-started'] }),
       });
     if (falsch.length)
       await ctAnfrage(`/routines/${routineId}`, {
@@ -549,7 +603,8 @@ export function absenderAus(gewaehlt: ReadonlySet<number>, ich: number | null): 
  * den Einstellungen ergibt (Termin, Bezahlung, Kontakt, Preise oder Name geändert – auch über „Rückgängig“ oder in
  * ChurchTools selbst), wird sie neu geschrieben: mit dem Absender und dem eigenen Text, die dort stehen. Die eine Stelle
  * dafür, statt eines Aufrufs nach jedem Speichern. Nur, wo beide Abläufe eingerichtet und an sind – ältere
- * Veranstaltungen richtet erst A9-5 ein, und abgeschaltete (archiviert) bleiben aus.
+ * Veranstaltungen richtet erst „Jetzt einrichten“ ein (A9-5, `ablaeufeNachholen`), nie still beim Öffnen, und
+ * abgeschaltete (archiviert) bleiben aus.
  */
 export async function ablaeufeAbgleichen(
   id: number,

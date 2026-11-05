@@ -2,6 +2,7 @@
  * Der Tag eines ChurchTools-Zeitpunkts in der Zeitzone der Gemeinde – geteilt von Server und
  * ChurchTools-Extension (#335). Lag bis dahin in `server/src/utils/isoTag.ts`.
  */
+import { tagPunkt } from './datum';
 
 /**
  * **Ein Zeitpunkt als `YYYY-MM-DD` (UTC)** – für Zeitfenster an ChurchTools (`from`/`to`), die eine
@@ -154,8 +155,33 @@ export function _vergissGemeindeZeitzone(): void {
  * **Heute im Kalender der Gemeinde** (`YYYY-MM-DD`) – die eine Stelle dafür (Formular und Erweiterungen). Bis zum
  * 05.11.2026 war es der Kalender des Geräts; im Ausland lag „heute“ dann neben dem Tag der Termine (#847).
  */
-export function heuteImKalender(jetzt = new Date()): string {
-  return tagAusIso(jetzt.toISOString(), gemeindeZeitzone());
+export function heuteImKalender(jetzt = new Date(), zeitzone = gemeindeZeitzone()): string {
+  return tagAusIso(jetzt.toISOString(), zeitzone);
+}
+
+// ── Anzeigen in der Uhr der Gemeinde (#847) – auf `ortszeitAus` gebaut, nicht mit `toLocaleString` nachgerechnet ──
+// `toLocaleString` & Co. nehmen ohne `timeZone` still die Uhr des Geräts. Nur das Datum: `tagPunkt(tagAusIso(…))`.
+
+// Ein ungültiges `Date` würfe bei `toISOString` – dann gibt es eben keinen Text.
+const alsText = (zeitpunkt: string | Date) =>
+  typeof zeitpunkt === 'string'
+    ? zeitpunkt
+    : Number.isNaN(zeitpunkt.getTime())
+      ? ''
+      : zeitpunkt.toISOString();
+
+const MIT_UHR = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/** „11:05“ – die Uhrzeit eines Zeitpunkts in der Uhr der Gemeinde. `''`, wenn er nicht lesbar ist. */
+export function uhrText(zeitpunkt: string | Date, zeitzone = gemeindeZeitzone()): string {
+  const l = ortszeitAus(alsText(zeitpunkt), zeitzone);
+  return MIT_UHR.test(l) ? l.slice(11, 16) : '';
+}
+
+/** „03.11.2026 11:05“ – Datum und Uhrzeit eines Zeitpunkts in der Uhr der Gemeinde. `''`, wenn er nicht lesbar ist. */
+export function datumUhrText(zeitpunkt: string | Date, zeitzone = gemeindeZeitzone()): string {
+  const l = ortszeitAus(alsText(zeitpunkt), zeitzone);
+  return MIT_UHR.test(l) ? `${tagPunkt(l)} ${l.slice(11, 16)}` : '';
 }
 
 /**
@@ -165,6 +191,6 @@ export function heuteImKalender(jetzt = new Date()): string {
 export function wannText(zeitpunkt: string, zeitzone: string, jetzt = new Date()): string {
   const lokal = ortszeitAus(zeitpunkt, zeitzone);
   const uhr = lokal.slice(11, 16);
-  if (lokal.slice(0, 10) === tagAusIso(jetzt.toISOString(), zeitzone)) return `heute ${uhr}`;
+  if (lokal.slice(0, 10) === heuteImKalender(jetzt, zeitzone)) return `heute ${uhr}`;
   return `${lokal.slice(8, 10)}.${lokal.slice(5, 7)}. ${uhr}`;
 }

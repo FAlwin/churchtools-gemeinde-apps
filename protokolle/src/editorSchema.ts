@@ -58,7 +58,12 @@ const verweisBlock = createReactBlockSpec(
   {
     type: BLOCK.verweis,
     // `fest`: was der Punkt bei der Freigabe zeigte (JSON, `festePunkteFesthalten`) – leer = live (S4-3a).
-    propSchema: { art: { default: 'offene-aufgaben' }, fest: { default: '' } },
+    // `gaeste`: freie Namen beim festen Punkt „Anwesenheit“ (JSON, S5-3).
+    propSchema: {
+      art: { default: 'offene-aufgaben' },
+      fest: { default: '' },
+      gaeste: { default: '' },
+    },
     content: 'none',
   },
   { render: VerweisBlock },

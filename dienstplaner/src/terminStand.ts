@@ -7,7 +7,7 @@
  * nicht gelöscht).
  */
 import { mapLimit } from '@shared/ct/mapLimit';
-import { tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
 import { ApiError } from '@ui/ct/fehler';
 import { ctDaten } from '@ui/ct/verbindung';
 
@@ -18,7 +18,7 @@ export type TerminStand =
 
 export async function ladeTerminStaende(
   ids: readonly number[],
-  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  zeitzone = gemeindeZeitzone(),
 ): Promise<Map<number, TerminStand>> {
   const staende = new Map<number, TerminStand>();
   await mapLimit([...new Set(ids)], 4, async (id) => {

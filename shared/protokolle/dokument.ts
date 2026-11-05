@@ -13,7 +13,8 @@
  *   Bis und Status, damit Abhaken das Protokoll nicht berührt; Bauplan 3.3);
  * - `beschluss` – Text = der Beschluss;
  * - `termin` – Text = was stattfindet, `props.datum` = `JJJJ-MM-TT`;
- * - `verweis` – fester Punkt ohne eigenen Text: `props.art` = `offene-aufgaben` | `letztes-protokoll`.
+ * - `verweis` – fester Punkt ohne eigenen Text: `props.art` = `offene-aufgaben` | `letztes-protokoll` | `anwesenheit`
+ *   (S5-3; `props.gaeste` = freie Namen als JSON-Liste, die Anwesenheit selbst steht im ChurchTools-Gruppentreffen).
  *
  * Ein **Tagesordnungspunkt** ist eine Überschrift der Stufe 1 auf oberster Ebene; alles bis zur nächsten
  * gehört zu ihm (auch in Unterpunkten). Ein **Unterpunkt** (K3b, 4.1 bis 4.1.1.1.1) ist eine Überschrift der Stufe
@@ -54,7 +55,14 @@ export const BLOCK = {
   verweis: 'verweis',
 } as const;
 
-export type VerweisArt = 'offene-aufgaben' | 'letztes-protokoll';
+/** Die festen Punkte – die EINE Liste, nach der Vorlagen, Leiste, „/“-Menü und Freigabe fragen. */
+export const VERWEIS_ARTEN = ['offene-aufgaben', 'letztes-protokoll', 'anwesenheit'] as const;
+export type VerweisArt = (typeof VERWEIS_ARTEN)[number];
+
+/** Ist das eine Art, die diese Fassung kennt? */
+export function istVerweisArt(x: unknown): x is VerweisArt {
+  return (VERWEIS_ARTEN as readonly unknown[]).includes(x);
+}
 
 export interface Punkt {
   blockId: string;

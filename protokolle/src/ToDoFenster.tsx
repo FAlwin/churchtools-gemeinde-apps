@@ -7,7 +7,7 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
 import { tagKurz } from '@shared/ct/datum';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
@@ -28,7 +28,6 @@ import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoS
 import felder from './Fensterfelder.module.scss';
 import styles from './ToDoFenster.module.scss';
 
-const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const ZEICHEN = { offen: 'kreis', arbeit: 'kreis-halb', erledigt: 'kreis-haken' } as const;
 const STATUS: AufgabenStatus[] = ['offen', 'arbeit', 'erledigt'];
@@ -468,7 +467,7 @@ export function ToDoFenster({
           <ul className={styles.verlauf}>
             {[...a.verlauf].reverse().map((v, i) => (
               <li key={i}>
-                <time>{tagKurz(tagAusIso(v.am, zeitzone))}</time>
+                <time>{tagKurz(tagAusIso(v.am, gemeindeZeitzone()))}</time>
                 <span>
                   <b>{v.von === ich.person ? ich.name : name(v.von)}</b>{' '}
                   {verlaufText(v, (p) => (p === ich.person ? ich.name : name(p)))}

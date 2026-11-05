@@ -5,7 +5,7 @@ import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { wannText } from '@shared/ct/zeit';
+import { gemeindeZeitzone, wannText } from '@shared/ct/zeit';
 import type { SpeicherErgebnis, Versioniert } from '@shared/ct/versionierterWert';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import {
@@ -42,8 +42,6 @@ const MARKE_STIL: Record<PlanMarke, string> = {
   umbenannt: styles.mName,
   'wird archiviert': styles.mArch,
 };
-
-const zeitzone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /**
  * **Reiter „Neue Gliederung“** (Bauplan O7-2, Entwurf `o7-plan-v1` abgenommen 24.10.2026) – nur für Gruppen-Admins.
@@ -295,7 +293,7 @@ export function NeueGliederung({
             <span className={baum.meta}>
               {arbeitet
                 ? 'Wird gespeichert …'
-                : `Gespeichert von ${stand.plan.von.name}, ${wannText(stand.plan.zeit, zeitzone())} · für alle Gruppen-Admins`}
+                : `Gespeichert von ${stand.plan.von.name}, ${wannText(stand.plan.zeit, gemeindeZeitzone())} · für alle Gruppen-Admins`}
             </span>
             <span className={styles.rechts}>
               {/* Die Knöpfe des Seitenkopfs: so hoch wie der Umschalter daneben (vorher 31 px, und „Neuer Bereich“ hatte

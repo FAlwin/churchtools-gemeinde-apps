@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
 import { zielText, type Entwurf, type EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
-import { wannText } from '@shared/ct/zeit';
+import { gemeindeZeitzone, wannText } from '@shared/ct/zeit';
 import type { FreierPlatz } from './WerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
@@ -29,7 +29,7 @@ export function EntwurfFach({
   onEntfernen,
   onAnderePerson,
   onClose,
-  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  zeitzone = gemeindeZeitzone(),
 }: {
   platz: FreierPlatz;
   entwurf: Entwurf;

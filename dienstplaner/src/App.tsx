@@ -24,7 +24,7 @@ import { useAntworten } from './useAntworten';
 import { useTausch } from './useTausch';
 import { mitAntworten } from '@shared/dienstplan/antworten';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
-import { tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
 
 /**
@@ -40,7 +40,7 @@ export function App() {
   // Termine erst laden, wenn jemand den Reiter öffnet; beim Wechseln bleiben sie erhalten.
   const [termine, setTermine] = useState<TermineZustand | null>(null);
   const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);
-  const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zeitzone = gemeindeZeitzone();
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -192,7 +192,7 @@ export function App() {
           antworten={antworten}
           tausch={tausch}
           zeitzone={zeitzone}
-          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          heute={heuteImKalender()}
           onNochmal={() => termineLaden(start, wochen)}
           onTermin={terminZeigen}
           onMeineTermine={() => {
@@ -223,17 +223,13 @@ export function App() {
           onAktualisieren={() => termineLaden(start, geladen, true)}
           mehrMoeglich={geladen < MAX_WOCHEN}
           ladeZeitraum={zeitraumLaden}
-          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          heute={heuteImKalender()}
           entwuerfe={entwuerfe}
           ablauf={{ start, zeitzone }}
         />
       )}
       {terminId === null && aktiv === 'abwesenheiten' && start && (
-        <Abwesenheiten
-          ichId={start.ichId}
-          zeitzone={zeitzone}
-          heute={tagAusIso(new Date().toISOString(), zeitzone)}
-        />
+        <Abwesenheiten ichId={start.ichId} zeitzone={zeitzone} heute={heuteImKalender()} />
       )}
     </ErweiterungsSeite>
   );

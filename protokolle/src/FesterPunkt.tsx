@@ -9,7 +9,9 @@ import {
   offeneVonFrueher,
 } from '@shared/protokolle/festePunkte';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { istVerweisArt } from '@shared/protokolle/dokument';
 import { VERWEIS_TEXT } from './anzeige';
+import { Anwesenheit } from './Anwesenheit';
 import { FestePunkteKontext, type FestePunkteWert } from './festePunkteKontext';
 import { StatusKreis } from './StatusKreis';
 import ansicht from './ProtokollAnsicht.module.scss';
@@ -31,20 +33,35 @@ export function FesterPunkt({
   fest,
   abhaken,
   aendern,
+  gaeste,
+  gaesteSetzen,
 }: {
   art: unknown;
   fest: unknown;
   abhaken: boolean;
   /** Nur im Editor, wenn man schreiben darf: „Ändern“ am früheren Protokoll (K3b-2). */
   aendern?: () => void;
+  /** „Anwesenheit“ (S5-3): `props.gaeste` des Blocks. */
+  gaeste?: unknown;
+  /** „Anwesenheit“ beim Schreiben: Gäste ändern – fehlt es, wird nur gelesen. */
+  gaesteSetzen?: (gaeste: string[]) => void;
 }) {
   const w = useContext(FestePunkteKontext);
-  if (!w) return <p className={ansicht.verweis}>{VERWEIS_TEXT[String(art)] ?? 'Fester Punkt'}</p>;
-  return art === 'letztes-protokoll' ? (
-    <LetztesProtokoll w={w} fest={fest} aendern={aendern} />
-  ) : (
-    <OffeneToDos w={w} fest={fest} abhaken={abhaken} />
-  );
+  const ohne = istVerweisArt(art) ? VERWEIS_TEXT[art] : 'Fester Punkt';
+  if (!w) return <p className={ansicht.verweis}>{ohne}</p>;
+  // Je Art ausdrücklich – eine Art, die diese Fassung nicht kennt, wird nicht als „Offene To-Dos“ gezeigt.
+  if (art === 'letztes-protokoll') return <LetztesProtokoll w={w} fest={fest} aendern={aendern} />;
+  if (art === 'offene-aufgaben') return <OffeneToDos w={w} fest={fest} abhaken={abhaken} />;
+  if (art === 'anwesenheit')
+    return (
+      <Anwesenheit
+        w={w}
+        gaeste={gaeste}
+        bearbeitbar={gaesteSetzen !== undefined}
+        gaesteSetzen={gaesteSetzen}
+      />
+    );
+  return <p className={ansicht.verweis}>{ohne}</p>;
 }
 
 function OffeneToDos({

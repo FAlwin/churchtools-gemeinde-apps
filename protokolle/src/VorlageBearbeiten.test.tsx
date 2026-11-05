@@ -39,7 +39,7 @@ describe('Karte „Vorlagen“ (S2-3)', () => {
       .getAllByRole('button')
       .map((b) => b.textContent);
     expect(zeilen[0]).toBe(
-      'Leitungssitzung5 Punkte · 1 feste Aufgabe · Andacht & Gebet · Protokoll der letzten Sitzung · Offene To-Dos · Termine & Gemeindeleben · Verschiedenes',
+      'Leitungssitzung6 Punkte · 1 feste Aufgabe · Anwesenheit · Andacht & Gebet · Protokoll der letzten Sitzung · Offene To-Dos · Termine & Gemeindeleben · Verschiedenes',
     );
   });
 

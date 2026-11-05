@@ -19,6 +19,7 @@ import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { kachelVon } from './anzeige';
 import { Marke } from './Marke';
 import styles from './Suche.module.scss';
+import { gemeindeZeitzone } from '@shared/ct/zeit';
 
 const ARTEN: { wert: SuchArt | 'alles'; text: string }[] = [
   { wert: 'alles', text: 'Alles' },
@@ -42,8 +43,6 @@ type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; uebersicht: GruppenUebersicht[] };
-
-const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /** Text mit hervorgehobenen Fundstellen. */
 function Markiert({ text, woerter }: { text: string; woerter: readonly string[] }) {
@@ -94,7 +93,7 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
   const laden = useCallback(() => {
     if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
     setZustand({ art: 'laedt' });
-    ladeUebersicht(modul, gruppen, zeitzone).then(
+    ladeUebersicht(modul, gruppen, gemeindeZeitzone()).then(
       (uebersicht) => setZustand({ art: 'fertig', uebersicht }),
       (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
@@ -180,7 +179,7 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
                   <>
                     {e.sitzung ? (
                       <DatumKachel
-                        {...kachelVon(e.sitzung.beginn, zeitzone)}
+                        {...kachelVon(e.sitzung.beginn, gemeindeZeitzone())}
                         gedimmt={e.art === 'aufgabe' && e.aufgabe?.status === 'erledigt'}
                       />
                     ) : (

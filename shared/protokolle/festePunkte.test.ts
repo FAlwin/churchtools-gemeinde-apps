@@ -229,3 +229,19 @@ describe('Früheres Protokoll (K3b-2)', () => {
     expect(frei.props?.fest).toBe(festesProtokollWert('okt'));
   });
 });
+
+describe('Festhalten bei der Freigabe: je Art (S5-3)', () => {
+  it('„Anwesenheit“ bekommt nichts – die steht im Gruppentreffen; die anderen wie bisher', () => {
+    const [anw, offen, letztes] = festePunkteFesthalten(
+      [
+        { id: 'a', type: BLOCK.verweis, props: { art: 'anwesenheit', gaeste: '["Hans"]' } },
+        { id: 'o', type: BLOCK.verweis, props: { art: 'offene-aufgaben' } },
+        { id: 'l', type: BLOCK.verweis, props: { art: 'letztes-protokoll' } },
+      ],
+      { offen: { offen: [], erledigt: [], seit: null }, letztes: 'okt' },
+    );
+    expect(anw.props).toEqual({ art: 'anwesenheit', gaeste: '["Hans"]' });
+    expect(festeAufgabenAus(offen.props?.fest)).toEqual({ offen: [], erledigt: [], seit: null });
+    expect(festesProtokollAus(letztes.props?.fest)).toEqual({ sitzung: 'okt' });
+  });
+});

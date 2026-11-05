@@ -228,7 +228,14 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
       return <hr className={styles.linie} />;
     case BLOCK.verweis:
       // Fester Punkt (S4-3a) – in der Lese-Ansicht nur Anzeige (Alwin 26.10.2026).
-      return <FesterPunkt art={b.props?.art} fest={b.props?.fest} abhaken={false} />;
+      return (
+        <FesterPunkt
+          art={b.props?.art}
+          fest={b.props?.fest}
+          gaeste={b.props?.gaeste}
+          abhaken={false}
+        />
+      );
     default: {
       // Absatz – und jeder unbekannte Block: sein Text bleibt sichtbar. Leere Absätze sind nur Abstand.
       if (!textAus(b.content) && !kinder) return null;

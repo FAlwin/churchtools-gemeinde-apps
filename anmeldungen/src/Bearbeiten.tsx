@@ -4,7 +4,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useLinkKopieren } from './useLinkKopieren';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
-import { tagAusIso } from '@shared/ct/zeit';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { mailGueltig, mitWer, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
   NACHNAME,
@@ -120,7 +120,7 @@ export function TerminFenster({
   onClose: () => void;
   onGespeichert: () => void;
 }) {
-  const heute = tagAusIso(new Date().toISOString(), zeitzone);
+  const heute = heuteImKalender();
   const [art, setArt] = useState<'vorhanden' | 'neu'>('vorhanden');
   const [kalender, setKalender] = useState<Kalender[] | null>(null);
   // Beim Kalender des gewählten Termins beginnen (A3-Abnahme: es begann beim ersten, z. B. „Bandproben“).

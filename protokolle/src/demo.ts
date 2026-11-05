@@ -114,7 +114,8 @@ function protokollWerte(
         titel: 'Leitungssitzung',
         status,
         beginn,
-        termin: null,
+        // Der Entwurf hängt an einem Termin mit Zu- und Absagen (S5-3: Vorbelegung der Anwesenheit), noch ohne Treffen.
+        termin: sitzung === 'demo-entwurf' ? { kalender: 4, id: 121 } : null,
         treffen: null,
         freigabe: status === 'frei' ? { von: 1, am: '2026-10-15T08:00:00Z' } : null,
         sperre:
@@ -140,6 +141,12 @@ const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: st
   '114': [
     { person: { domainIdentifier: '1' }, state: 'accepted' },
     { person: { domainIdentifier: '19' }, state: 'declined' },
+  ],
+  '121': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '7' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'declined' },
+    { person: { domainIdentifier: '23' }, state: 'pending' },
   ],
   '120': [
     { person: { domainIdentifier: '1' }, state: 'accepted' },
@@ -227,6 +234,8 @@ interface Speicher {
     anfragen: { person: { domainIdentifier: string }; state: string }[];
   }[];
   treffen: { id: number; startDate: string; isCanceled: boolean }[];
+  /** Anwesenheit je Gruppentreffen (S5-3) – Person → `present` / `absent`; fehlt = `unsure`. */
+  anwesenheit: Map<number, Map<number, string>>;
 }
 
 function speicherAnlegen(fall: string): Speicher {
@@ -274,8 +283,17 @@ function speicherAnlegen(fall: string): Speicher {
     naechste: 100,
     termine: [],
     treffen: [],
+    anwesenheit: new Map(),
   };
 }
+
+/** Die Mitglieder des Leitungsteams – für „Wer kümmert sich?“ und die Anwesenheit dieselben. */
+const LEITUNGSTEAM: [number, string, string][] = [
+  [1, 'Alwin', 'Friesen'],
+  [7, 'Johann', 'Becker'],
+  [19, 'Peter', 'Wiens'],
+  [23, 'Daniel', 'Schmidt'],
+];
 
 const ROLLEN: Record<number, { id: number; nameTranslated: string; isLeader: boolean }[]> = {
   7: [
@@ -328,14 +346,9 @@ function antwort(
   if (/^\/api\/groups\/\d+\/members$/.test(pfad))
     return {
       status: 200,
-      data: [
-        [1, 'Alwin Friesen'],
-        [7, 'Johann Becker'],
-        [19, 'Peter Wiens'],
-        [23, 'Daniel Schmidt'],
-      ].map(([personId, title]) => ({
+      data: LEITUNGSTEAM.map(([personId, vor, nach]) => ({
         personId,
-        person: { title },
+        person: { title: `${vor} ${nach}` },
         groupTypeRoleId: 9,
         groupMemberStatus: 'active',
         memberEndDate: null,
@@ -379,6 +392,10 @@ function antwort(
           calculated: { startDate: heuteUm(19) },
         },
         {
+          base: { id: 121, title: 'Leitungssitzung', calendar: { id: 4 } },
+          calculated: { startDate: '2026-10-21T17:00:00Z' },
+        },
+        {
           base: { id: 114, title: 'Leitungssitzung', calendar: { id: 4 } },
           calculated: { startDate: '2027-03-17T17:00:00Z' },
         },
@@ -415,6 +432,37 @@ function antwort(
         s.termine.find((t) => t.id === Number(anfragen[1]))?.anfragen ??
         [],
     };
+  // Anwesenheit (S5-3) – Formen wie gemessen (`messung-s5-3-2026-11-05.md`).
+  const einTreffen = /^\/api\/groups\/11\/meetings\/(\d+)(\/members)?$/.exec(pfad);
+  if (einTreffen && methode === 'GET') {
+    const id = Number(einTreffen[1]);
+    const stand = s.anwesenheit.get(id);
+    if (!einTreffen[2])
+      return { status: 200, data: { id, isCompleted: false, hasEditingStarted: !!stand } };
+    return {
+      status: 200,
+      data: LEITUNGSTEAM.map(([personId, firstName, lastName]) => ({
+        personId,
+        status: stand?.get(personId) ?? 'unsure',
+        member: {
+          person: { title: `${firstName} ${lastName}`, domainAttributes: { firstName, lastName } },
+        },
+      })),
+    };
+  }
+  const checkin = /^\/api\/groups\/11\/checkin\/(\d+)$/.exec(pfad);
+  const austragen = /^\/api\/groups\/11\/meetings\/(\d+)\/members\/(\d+)$/.exec(pfad);
+  if ((checkin && methode === 'POST') || (austragen && methode === 'DELETE')) {
+    const id = checkin ? Number(rumpf.groupMeetingId) : Number(austragen![1]);
+    const person = Number((checkin ?? austragen!)[checkin ? 1 : 2]);
+    const stand = s.anwesenheit.get(id) ?? new Map<number, string>();
+    stand.set(
+      person,
+      checkin ? 'present' : typeof rumpf.status === 'string' ? rumpf.status : 'absent',
+    );
+    s.anwesenheit.set(id, stand);
+    return { status: 200, data: {} };
+  }
   const treffen = /^\/api\/groups\/(\d+)\/meetings$/.exec(pfad);
   if (treffen && treffen[1] === '11' && methode === 'POST') {
     const id = s.naechste++;

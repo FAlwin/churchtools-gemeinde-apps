@@ -24,6 +24,7 @@ import type { Tausch } from './useTausch';
 import { TauschAmDienst } from './TauschTeile';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import styles from './Termine.module.scss';
+import { gemeindeZeitzone } from '@shared/ct/zeit';
 
 export type TermineZustand =
   | { art: 'laedt' }
@@ -67,7 +68,7 @@ export function Termine({
   onTermin,
   antworten,
   tausch,
-  zeitzone = 'Europe/Berlin',
+  zeitzone = gemeindeZeitzone(),
 }: Props) {
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in

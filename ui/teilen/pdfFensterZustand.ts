@@ -1,22 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { jsPDF } from 'jspdf';
+import { datumUhrText } from '@shared/ct/zeit';
 
 /**
  * Der Zustand der Teilen-Fenster der Blätter (E8) – Stand und Bau des PDF. Getrennt von `pdfFenster.tsx`, damit jene
  * Datei nur Komponenten exportiert.
  */
 
-const stempel = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
 /** „Stand 05.11.2026, 14:00“ – einmal beim Öffnen des Fensters festgehalten. */
 export function useStand(): string {
-  const [stand] = useState(() => `Stand ${stempel.format(new Date())}`);
+  // In der Uhr der Gemeinde, nicht des Geräts (#847, Z2 – vorher ein eigener `Intl`-Stempel im Termin-Fenster).
+  const [stand] = useState(() => `Stand ${datumUhrText(new Date())}`);
   return stand;
 }
 

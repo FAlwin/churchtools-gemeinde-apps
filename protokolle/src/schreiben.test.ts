@@ -14,6 +14,7 @@ import {
   speichern,
   sperreFreigeben,
   sperreNehmen,
+  treffenVerknuepfen,
   type ProtokollOrt,
 } from './schreiben';
 import { MODUL, nachbauEnde, nachbauStarten, werteVon, type Nachbau } from './nachbau.testhilfe';
@@ -275,5 +276,26 @@ describe('speichern mit Abgleich vorher (S4-2)', () => {
     ).rejects.toThrow('Mitarbeit weg');
     expect(schreibAufrufe()).toEqual([]);
     expect(kopfImSpeicher().stand).toBe(alt);
+  });
+});
+
+describe('treffenVerknuepfen (S5-3)', () => {
+  it('setzt nur das Treffen im Kopf – Sperre, Stand und Dokument bleiben', async () => {
+    const stand = ablegen({ treffen: null, sperre: sperreVon(ICH, JETZT) });
+    await treffenVerknuepfen(ORT, 77);
+    expect(kopfImSpeicher()).toMatchObject({ treffen: 77, stand, sperre: sperreVon(ICH, JETZT) });
+    expect((await protokollLesen(ORT)).dokument).toEqual(BLOCKNOTE_DOKUMENT);
+  });
+
+  it('schon verknüpft: schreibt nichts', async () => {
+    ablegen({ treffen: 77 });
+    await treffenVerknuepfen(ORT, 77);
+    expect(schreibAufrufe()).toEqual([]);
+  });
+
+  it('ChurchTools übernimmt es nicht: wirft', async () => {
+    ablegen({ treffen: null });
+    ct.schlucken.add('PUT WERT');
+    await expect(treffenVerknuepfen(ORT, 77)).rejects.toThrow(/Gruppentreffen am Protokoll/);
   });
 });

@@ -1282,7 +1282,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
   - `client/src/services/schreibSchlange.ts` – die Speicher-Warteschlange selbst (Anmerkungen UND Einstellungen, #846).
   - `shared/ct/zeit.ts` `gemeindeZeitzone`/`heuteImKalender` – Zeitzone der Gemeinde aus `/api/config` und „heute“ (#847,
-    Entscheidung in `docs/entwicklung/entscheidungen.md`). Nie `Intl…timeZone` oder `'Europe/Berlin'` danebenschreiben.
+    Entscheidung in `docs/entwicklung/entscheidungen.md`). Nie `Intl…timeZone`, `'Europe/Berlin'` oder `toLocaleString` ohne Zeitzone danebenschreiben – Anzeigen über `uhrText`/`datumUhrText`; der Wächter `ui/design/eineZeitzone.test.ts` hält das fest.
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.
   - `server/src/utils/songIdsQuery.ts` – `?songs=…` auswerten (Express liefert dort auch Arrays/Objekte).
   - `shared/keys` `songIdOfAnnoKey`/`songIdOfSettingsKey` – zu welchem Lied ein Schlüssel gehört (stand

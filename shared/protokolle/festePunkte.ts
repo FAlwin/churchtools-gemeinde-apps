@@ -179,8 +179,16 @@ export function festePunkteFesthalten(
   const halten = (b: Block): Block => {
     const kinder = b.children?.length ? { children: b.children.map(halten) } : {};
     if (b.type !== BLOCK.verweis || gelesen(b.props?.fest)) return { ...b, ...kinder };
+    // Je Art ausdrücklich: „Anwesenheit“ (S5-3) hält ChurchTools am Gruppentreffen fest – hier nichts. Vorher bekam
+    // jeder Punkt außer „Letztes Protokoll“ den Stand der To-Dos.
+    const art = b.props?.art;
     const fest =
-      b.props?.art === 'letztes-protokoll' ? festesProtokollWert(q.letztes) : JSON.stringify(stand);
+      art === 'letztes-protokoll'
+        ? festesProtokollWert(q.letztes)
+        : art === 'offene-aufgaben'
+          ? JSON.stringify(stand)
+          : null;
+    if (fest === null) return { ...b, ...kinder };
     return { ...b, props: { ...b.props, fest }, ...kinder };
   };
   return dokument.map(halten);

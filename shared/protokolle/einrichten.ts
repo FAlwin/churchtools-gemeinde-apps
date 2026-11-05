@@ -13,10 +13,13 @@
  * - Setzen darf nur, wer „Personen administrieren“ hat (`churchcore: administer persons`); ein Mitglied bekommt
  *   403 (gemessen S2-1).
  * - Versteckte Gruppen: ihre Mitglieder sehen die Gruppe nur mit „versteckte Gruppe sehen“ (10119) an der Rolle.
+ * - Anwesenheit (S5-3, gemessen 05.11.2026): gruppenintern „Gruppentreffen pflegen“ = 10124, „Gruppentreffen
+ *   durchführen“ = 10111 – beide an die Leitung (Dienst- und Kleingruppen-Leiter haben sie schon über den Gruppentyp,
+ *   andere Gruppentypen nicht).
  * - Vorlagen lesen nur Nutzende eingerichteter Gruppen (Alwin, 22.10.2026) → Recht an deren Rollen.
  *
  * **Was hier ausgerichtet wird:** die Rechte auf UNSERE Kategorien (vollständig: hinzufügen und entziehen).
- * **Zusatzrechte** (Kalender, 10119) werden nur dann entzogen, wenn die Verwaltung sie **selbst gesetzt** hat –
+ * **Zusatzrechte** (Kalender, 10119, Gruppentreffen) werden nur dann entzogen, wenn die Verwaltung sie **selbst gesetzt** hat –
  * das merkt sich die Einstellung der Gruppe (`vergeben`, Alwin 22.10.2026). Was vorher schon von Hand da war,
  * wird nie gemerkt und darum nie entzogen.
  */
@@ -31,6 +34,10 @@ export const STUFEN: { wert: Stufe; text: string }[] = [
 
 /** Gruppenintern „versteckte Gruppe sehen“ (gemessen 16.10.2026; steht nicht in den Definitionen). */
 export const VERSTECKTE_GRUPPE_SEHEN = 10119;
+
+/** Gruppenintern „Gruppentreffen pflegen“ und „… durchführen“ (gemessen 05.11.2026, `messung-s5-3`). */
+export const GRUPPENTREFFEN_PFLEGEN = 10124;
+export const GRUPPENTREFFEN_DURCHFUEHREN = 10111;
 
 export interface RechteNummern {
   /** Das Modul überhaupt sehen (Menüpunkt) – ohne Daten. */
@@ -112,6 +119,9 @@ export function sollRechte(e: Einrichtung, n: RechteNummern): Recht[] {
       add(rolle, n.datenAnlegen, protokolle);
       add(rolle, n.datenAendern, protokolle);
       add(rolle, n.datenLoeschen, protokolle); // alte Teile nach dem Speichern aufräumen (Bauplan 3.3)
+      // Anwesenheit eintragen und Gruppentreffen anlegen (S5-3).
+      add(rolle, GRUPPENTREFFEN_PFLEGEN, null);
+      add(rolle, GRUPPENTREFFEN_DURCHFUEHREN, null);
     }
     if (e.kalender !== null) {
       add(rolle, n.kalenderSehen, e.kalender);
@@ -167,12 +177,17 @@ export function ausrichten(
   return { setzen, entziehen, nachschieben: bleibt[0] ?? ersatz };
 }
 
-/** Kalender-Rechte und „versteckte Gruppe sehen“ – die Rechte, die auch aus anderem Grund gesetzt sein können. */
+/**
+ * Kalender-Rechte, „versteckte Gruppe sehen“ und die Gruppentreffen-Rechte – die Rechte, die auch aus anderem Grund
+ * gesetzt sein können.
+ */
 export function istZusatzrecht(r: Recht, n: RechteNummern): boolean {
   return (
     r.authId === n.kalenderSehen ||
     r.authId === n.kalenderBearbeiten ||
-    r.authId === VERSTECKTE_GRUPPE_SEHEN
+    r.authId === VERSTECKTE_GRUPPE_SEHEN ||
+    r.authId === GRUPPENTREFFEN_PFLEGEN ||
+    r.authId === GRUPPENTREFFEN_DURCHFUEHREN
   );
 }
 
@@ -230,7 +245,7 @@ export interface GruppenEinstellung {
   punkte: PunkteVonMitgliedern;
   kalender: number | null;
   /**
-   * Zusatzrechte (Kalender, 10119), die die Verwaltung selbst gesetzt hat – nur diese entzieht sie wieder.
+   * Zusatzrechte (Kalender, 10119, Gruppentreffen), die die Verwaltung selbst gesetzt hat – nur diese entzieht sie wieder.
    * Fehlt bei Einstellungen von vor S2-2 (dann: keine).
    */
   vergeben?: Recht[];

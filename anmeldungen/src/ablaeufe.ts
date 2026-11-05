@@ -28,7 +28,7 @@
  *   ausgeschalteter Bestätigung und fälligen Erinnerungen ohne Mail bis zum nächsten Warten.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
-import { heuteImKalender } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { tagPunkt } from '@shared/ct/datum';
 import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import {
@@ -304,11 +304,7 @@ export async function ablaeufeEinrichten(
   absenderId: number,
   eigen?: Partial<Record<MailArt, EigenerText>>,
   qr?: boolean,
-  {
-    loeschenBestaetigt = false,
-    heute = heuteImKalender(),
-    zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
-  } = {},
+  { loeschenBestaetigt = false, heute = heuteImKalender(), zeitzone = gemeindeZeitzone() } = {},
 ): Promise<void> {
   // Die Erinnerung zählt mit der Bestätigung zusammen (E4) – geprüft wird darum je Beschreibung, unten.
   for (const t of Object.values(eigen ?? {})) {
@@ -609,7 +605,7 @@ export function absenderAus(gewaehlt: ReadonlySet<number>, ich: number | null): 
 export async function ablaeufeAbgleichen(
   id: number,
   heute = heuteImKalender(),
-  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  zeitzone = gemeindeZeitzone(),
 ): Promise<AblaufStand> {
   const stand = await ablaeufeLesen(id);
   if (!stand.platz || !stand.warte || stand.absenderId === null) return stand;

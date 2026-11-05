@@ -15,12 +15,14 @@ import {
 import { FesterPunkt } from './FesterPunkt';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { fruehesAendern } from './fruehesProtokoll';
+import { gaesteWert } from '@shared/protokolle/anwesenheit';
 import type { ProtokollEditor } from './editorSchema';
 import { AufgabenKontext } from './aufgabenKontext';
 import { StatusKreis } from './StatusKreis';
 // Dieselben Marken wie in der Lese-Ansicht – Aufgabe, Beschluss und Termin sehen beim Schreiben aus wie beim Lesen.
 import ansicht from './ProtokollAnsicht.module.scss';
 import styles from './EditorBloecke.module.scss';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 /**
  * **Wie die eigenen Blöcke im Editor aussehen und bedient werden** (S4-1/S4-2, Entwurf 7) – die Darstellung zu den
@@ -34,12 +36,6 @@ import styles from './EditorBloecke.module.scss';
 
 interface Inhalt {
   contentRef: (el: HTMLElement | null) => void;
-}
-
-/** Heute als `JJJJ-MM-TT` in der Zeitzone des Geräts. */
-function heute(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Ein Schildchen, das ein kleines Feld darunter aufklappt; schließt bei Klick daneben und mit Esc. */
@@ -147,7 +143,7 @@ export function AufgabeBlock({
     ...(sicht?.wer ?? []).map(nameVon),
     ...(sicht?.extern ? [`${sicht.extern} (extern)`] : []),
   ];
-  const ueber = !!a && istUeberfaellig(a, heute());
+  const ueber = !!a && istUeberfaellig(a, heuteImKalender());
 
   return (
     <div className={`${ansicht.marke} ${ansicht.aufgabe} ${styles.aufgabe}`}>
@@ -315,15 +311,20 @@ export function TerminBlock({
  * Browser den Cursor in den Kasten, und Tippen löschte ihn und zog zwei Tagesordnungspunkte zusammen. Deshalb weder
  * Cursor noch Markierung (`preventDefault`) und kein Editor (`stopPropagation`, am Element selbst: der Editor hört an
  * seiner Fläche, bevor React das Ereignis sieht). Die Knöpfe im Kasten reagieren auf `click` und bleiben bedienbar.
+ * Ein **Eingabefeld** im Kasten (Gäste der Anwesenheit, S5-3) bekommt den Klick: dort nur `stopPropagation`, sonst
+ * käme es nie zum Fokus.
  */
 export function VerweisBlock({
   block,
   editor,
 }: {
-  block: { id: string; props: { art: string; fest: string } };
+  block: { id: string; props: { art: string; fest: string; gaeste?: string } };
   // Schmal wie bei den anderen Blöcken: Der volle `ProtokollEditor` entsteht erst aus dem Schema mit diesem Block –
   // in der Signatur wäre das ein Typ-Kreis. Zur Laufzeit ist es derselbe Editor.
-  editor: { isEditable: boolean };
+  editor: {
+    isEditable: boolean;
+    updateBlock: (b: string, u: { props: { gaeste: string } }) => unknown;
+  };
 }) {
   const w = useContext(FestePunkteKontext);
   const kasten = useRef<HTMLDivElement>(null);
@@ -331,7 +332,7 @@ export function VerweisBlock({
     const el = kasten.current;
     if (!el) return;
     const halt = (e: MouseEvent) => {
-      e.preventDefault();
+      if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
       e.stopPropagation();
     };
     el.addEventListener('mousedown', halt);
@@ -347,6 +348,13 @@ export function VerweisBlock({
         aendern={
           w && editor.isEditable && block.props.art === 'letztes-protokoll'
             ? () => fruehesAendern(editor as unknown as ProtokollEditor, block.id, w)
+            : undefined
+        }
+        gaeste={block.props.gaeste}
+        // Anwesenheit (S5-3): beim Schreiben tippen und Gäste ändern; im gesperrten Editor nur lesen.
+        gaesteSetzen={
+          editor.isEditable && block.props.art === 'anwesenheit'
+            ? (g) => editor.updateBlock(block.id, { props: { gaeste: gaesteWert(g) } })
             : undefined
         }
       />

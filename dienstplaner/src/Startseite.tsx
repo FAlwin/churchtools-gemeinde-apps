@@ -3,7 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { kachel, tagKurz } from '@shared/ct/datum';
-import { isoTag } from '@shared/ct/zeit';
+import { gemeindeZeitzone, isoTag } from '@shared/ct/zeit';
 import { decktTermin } from '@shared/absences/index';
 import type { CtAbsence } from '@shared/ct/typen';
 import type { TerminZeile } from '@shared/dienstplan/termine';
@@ -71,7 +71,7 @@ export function Startseite({
   onTermin,
   antworten,
   tausch,
-  zeitzone = 'Europe/Berlin',
+  zeitzone = gemeindeZeitzone(),
 }: Props) {
   const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];

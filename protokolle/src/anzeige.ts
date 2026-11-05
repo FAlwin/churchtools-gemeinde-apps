@@ -39,10 +39,16 @@ export const FESTE_PUNKTE: Record<VerweisArt, { titel: string; menue: string; hi
     menue: 'Früheres Protokoll',
     hinweis: 'Zeigt ein früheres Protokoll der Gruppe – du wählst, welches.',
   },
+  anwesenheit: {
+    titel: 'Anwesenheit',
+    menue: 'Anwesenheit',
+    hinweis: 'Wer da ist – aus den Zusagen vorbelegt, steht im Gruppentreffen.',
+  },
 };
 
 /** Was ein fester Punkt sagt, wenn er nichts anzeigen kann (ohne Sitzung dahinter) – Lese-Ansicht und Editor. */
-export const VERWEIS_TEXT: Record<string, string> = {
+export const VERWEIS_TEXT: Record<VerweisArt, string> = {
   'offene-aufgaben': 'Hier stehen die offenen To-Dos der Gruppe.',
   'letztes-protokoll': 'Hier steht das Protokoll der letzten Sitzung.',
+  anwesenheit: 'Hier steht, wer anwesend war.',
 };

@@ -10,6 +10,8 @@ import {
   rechtRumpf,
   sollRechte,
   VERSTECKTE_GRUPPE_SEHEN,
+  GRUPPENTREFFEN_DURCHFUEHREN,
+  GRUPPENTREFFEN_PFLEGEN,
   type Einrichtung,
   type RechteNummern,
 } from './einrichten';
@@ -83,7 +85,7 @@ describe('sollRechte', () => {
   const von = (rolle: number): string[] =>
     soll.filter((r) => r.rolle === rolle).map((r) => `${r.authId}:${r.dataId}`);
 
-  it('Leitung: lesen überall, schreiben Protokolle + Mitarbeit, Kalender bearbeiten, versteckte Gruppe sehen', () => {
+  it('Leitung: lesen überall, schreiben Protokolle + Mitarbeit, Kalender bearbeiten, versteckte Gruppe sehen, Gruppentreffen pflegen', () => {
     expect(von(72).sort()).toEqual(
       [
         '2090:null',
@@ -101,6 +103,8 @@ describe('sollRechte', () => {
         '403:15',
         '404:15',
         `${VERSTECKTE_GRUPPE_SEHEN}:null`,
+        `${GRUPPENTREFFEN_PFLEGEN}:null`,
+        `${GRUPPENTREFFEN_DURCHFUEHREN}:null`,
       ].sort(),
     );
   });
@@ -206,7 +210,15 @@ describe('Zusatzrechte (Kalender, 10119): nur selbst gesetzte werden entzogen', 
 
   it('vergebenNachher: gerade gesetzte und früher gesetzte Zusatzrechte im Soll – keine von Hand', () => {
     const soll = sollRechte(EINRICHTUNG, N);
-    const zusatz = soll.filter((r) => [403, 404, VERSTECKTE_GRUPPE_SEHEN].includes(r.authId));
+    const zusatz = soll.filter((r) =>
+      [
+        403,
+        404,
+        VERSTECKTE_GRUPPE_SEHEN,
+        GRUPPENTREFFEN_PFLEGEN,
+        GRUPPENTREFFEN_DURCHFUEHREN,
+      ].includes(r.authId),
+    );
     // zusatz[0] war schon von Hand da – also nicht in `setzen` und nicht gemerkt.
     const gesetzt = zusatz.slice(1);
     expect(vergebenNachher(soll, gesetzt, [], N)).toEqual(gesetzt);

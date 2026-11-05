@@ -83,4 +83,10 @@ describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
     );
     expect(leer.container.textContent).toBe('');
   });
+
+  it('am Handy nur das Symbol – „Filter“ steht in eigenem Element, die Zahl daneben (E8-3, 05.11.2026)', () => {
+    render(<Mit start={['Gebetsabend']} />);
+    const knopf = screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' });
+    expect([...knopf.querySelectorAll('span')].map((s) => s.textContent)).toEqual(['Filter', '1']);
+  });
 });

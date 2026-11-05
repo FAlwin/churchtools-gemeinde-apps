@@ -24,6 +24,26 @@
   border-color: transparent;
 }
 
+// Am Handy nur das Symbol – wie die Kopfknöpfe daneben (`KopfKnopf.module.scss`, gleiche Grenze); sonst passt „Teilen“
+// unter Dienste → Meine nicht mehr in die Zeile (E8-3, Probe 05.11.2026). Die Zahl bleibt sichtbar.
+@media (max-width: 759px) {
+  .knopf {
+    justify-content: center;
+    width: var(--knopf-hoehe);
+    padding: 0;
+
+    .text {
+      display: none;
+    }
+  }
+  // Mit Zahl knapp – mit 61 px rutschte „Teilen“ unter Dienste → Meine wieder in eine eigene Zeile (Probe 05.11.2026).
+  .knopf.mitZahl {
+    gap: 4px;
+    width: auto;
+    padding: 0 8px;
+  }
+}
+
 .zahl {
   min-width: 18px;
   padding: 0 5px;

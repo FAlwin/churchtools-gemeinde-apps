@@ -16,6 +16,8 @@ import { merkeGemeindeZeitzone } from '@shared/ct/zeit';
 export interface Ich {
   id: number;
   vorname: string;
+  /** Aus derselben Antwort – fürs Blatt „Meine Dienste“ (E8-3). Optional, damit Attrappen ohne ihn auskommen. */
+  nachname?: string;
   /** `null`, wenn ChurchTools keinen Namen nennt oder `/info` gerade nicht antwortet. */
   gemeinde: string | null;
   mitgliedschaften: RohMitgliedschaft[];
@@ -48,7 +50,9 @@ export function angemeldeteId(daten: unknown): number {
  * Beiwerk und darf fehlen.
  */
 export async function ladeIch(): Promise<Ich> {
-  const ich = await ctDaten<{ id?: unknown; firstName?: unknown } | null>('/whoami');
+  const ich = await ctDaten<{ id?: unknown; firstName?: unknown; lastName?: unknown } | null>(
+    '/whoami',
+  );
   const id = angemeldeteId(ich);
   const [mitgliedschaften, rollen, gemeinde] = await Promise.all([
     ctDaten<RohMitgliedschaft[] | null>(`/persons/${id}/groups`),
@@ -62,5 +66,6 @@ export async function ladeIch(): Promise<Ich> {
     throw new ApiError(502, 'ChurchTools hat die Gruppen nicht vollständig geliefert.');
   }
   const vorname = typeof ich?.firstName === 'string' ? ich.firstName.trim() : '';
-  return { id, vorname, gemeinde, mitgliedschaften, rollen };
+  const nachname = typeof ich?.lastName === 'string' ? ich.lastName.trim() : '';
+  return { id, vorname, nachname, gemeinde, mitgliedschaften, rollen };
 }

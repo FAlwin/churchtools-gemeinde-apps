@@ -208,6 +208,11 @@ export function App() {
           antworten={antworten}
           tausch={tausch}
           zeitzone={zeitzone}
+          ich={{
+            id: start.ichId,
+            name: [start.vorname, start.nachname].filter(Boolean).join(' '),
+            gemeinde: start.gemeinde,
+          }}
           planer={darfPlanen}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}

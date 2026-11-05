@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { jsPDF } from 'jspdf';
+import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
@@ -7,6 +6,7 @@ import { Icon } from '@ui/icons/icons';
 import { svgSeitenPdf } from '@ui/teilen/svgSeitenPdf';
 import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
+import { useLaden } from '@ui/ct/useLaden';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { sichtFarbe } from '@shared/organigramm/farbe';
 import type { Rolle } from '@shared/organigramm/mitglieder';
@@ -98,13 +98,9 @@ export function PdfFenster({
   );
   const [papierWahl, setPapierWahl] = useState<PapierWahl>('passend');
   const [alles, setAlles] = useState(true);
-  const [logo, setLogo] = useState<string | null>(null);
   const [mitLogo, setMitLogo] = useState(true);
   const [mitPersonen, setMitPersonen] = useState(personen.wahl !== 'aus');
   const [blatt, setBlatt] = useState(0);
-  const [pdf, setPdf] = useState<jsPDF | null>(null);
-  const [fehler, setFehler] = useState(false);
-  const [versuch, setVersuch] = useState(0);
   const [datum] = useState(() => heute ?? new Date());
 
   const messRef = useRef<HTMLDivElement>(null);
@@ -123,16 +119,8 @@ export function PdfFenster({
   const seitenRef = useRef<(SVGSVGElement | null)[]>([]);
 
   // Das Logo ist Beiwerk: Lädt es nicht, steht das Blatt ohne da.
-  useEffect(() => {
-    let aktuell = true;
-    ladeGemeindeLogo().then(
-      (l) => aktuell && setLogo(l),
-      () => undefined,
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, []);
+  const logoStand = useLaden(() => ladeGemeindeLogo(), []).stand;
+  const logo = logoStand.art === 'fertig' ? logoStand.daten : null;
 
   const sicht = useMemo(
     () => sichtbarerBaum(baum, gemeinde, ausschnitt, offen, alles),
@@ -175,25 +163,21 @@ export function PdfFenster({
 
   // Nach jedem Zeichnen die PDF zu genau diesen Seiten. Wer während des Bauens umschaltet, bekommt die PDF zur NEUEN
   // Wahl – die alte wird verworfen.
-  useEffect(() => {
-    let aktuell = true;
-    setPdf(null);
-    setFehler(false);
+  const gebaut = useLaden(() => {
     // Mit Personen erst, wenn die Mitglieder da sind – sonst gab es kurz eine PDF ohne Personen zum Herunterladen
     // (Test-Instanz 29.10.2026: „PDF / Drucken“ gleich nach dem Öffnen der Seite).
-    if (wartet) return;
+    if (wartet) return null;
     const seiten = seitenRef.current
       .slice(0, seitenZahl)
       .filter((s): s is SVGSVGElement => s !== null)
       .map((svg) => ({ svg, breite: papier.breite, hoehe: papier.hoehe }));
-    svgSeitenPdf(seiten, { titel: `Organigramm – ${sicht.name}`, thema: stand }).then(
-      (doc) => aktuell && setPdf(doc),
-      () => aktuell && setFehler(true),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [anordnung, listen, papier, kopf, kuerzen, sicht.name, stand, seitenZahl, versuch, wartet]);
+    return svgSeitenPdf(seiten, { titel: `Organigramm – ${sicht.name}`, thema: stand });
+    // Gelesen wird das GEZEICHNETE Blatt (`seitenRef`) – was es zeichnet (Anordnung, Liste, Kopf, Kürzen), steht deshalb
+    // in den deps, ohne im Rumpf vorzukommen. Für `useLaden` hält die Prüfregel das für überflüssig (für `useEffect` nicht).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anordnung, listen, papier, kopf, kuerzen, sicht.name, stand, seitenZahl, wartet]);
+  const pdf = gebaut.stand.art === 'fertig' ? gebaut.stand.daten : null;
+  const fehler = gebaut.stand.art === 'fehler';
 
   const pt = lage ? schriftPt(lage.massstab) : null;
   const hinweis = listen
@@ -355,7 +339,7 @@ export function PdfFenster({
       {fehler && (
         <p className={fenster.fehler} role="alert">
           Die PDF ließ sich gerade nicht erstellen.{' '}
-          <button type="button" className={fenster.link} onClick={() => setVersuch((v) => v + 1)}>
+          <button type="button" className={fenster.link} onClick={gebaut.neu}>
             Noch einmal versuchen
           </button>
         </p>

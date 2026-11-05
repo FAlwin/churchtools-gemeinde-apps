@@ -114,6 +114,9 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // `useLaden(() => …, [deps])` (`ui/ct/useLaden.ts`, #845) wie `useEffect` prüfen – sonst fehlt eine Abhängigkeit
+      // still, und nach einer Änderung wird nicht neu geladen.
+      'react-hooks/exhaustive-deps': ['warn', { additionalHooks: '^useLaden$' }],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       /**
        * Ein Effekt gibt NUR seine Aufräum-Funktion zurück. `useEffect(() => el.scrollIntoView())` gab still den

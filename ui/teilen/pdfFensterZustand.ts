@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { jsPDF } from 'jspdf';
 import { datumUhrText } from '@shared/ct/zeit';
+import { useLaden } from '../ct/useLaden';
 
 /**
  * Der Zustand der Teilen-Fenster der Blätter (E8) – Stand und Bau des PDF. Getrennt von `pdfFenster.tsx`, damit jene
@@ -21,21 +22,18 @@ export type PdfStand = { art: 'baut' } | { art: 'fertig'; doc: jsPDF } | { art: 
  * NEUEN Wahl; ein später fertiges altes zählt nicht.
  */
 export function useGebautesPdf<B>(blatt: B, bauen: (b: B) => Promise<jsPDF>) {
-  const [stand, setStand] = useState<PdfStand>({ art: 'baut' });
+  // `bauen` ist eine feste Funktion des Aufrufers – neu gebaut wird nach dem Blatt.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const gebaut = useLaden(() => bauen(blatt), [blatt]).stand;
   const [geladen, setGeladen] = useState(false);
   useEffect(() => {
-    let aktuell = true;
-    setStand({ art: 'baut' });
     setGeladen(false);
-    bauen(blatt).then(
-      (doc) => aktuell && setStand({ art: 'fertig', doc }),
-      () => aktuell && setStand({ art: 'fehler' }),
-    );
-    return () => {
-      aktuell = false;
-    };
-    // `bauen` ist eine feste Funktion des Aufrufers – neu gebaut wird nach dem Blatt.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blatt]);
+  const stand: PdfStand =
+    gebaut.art === 'fertig'
+      ? { art: 'fertig', doc: gebaut.daten }
+      : gebaut.art === 'fehler'
+        ? { art: 'fehler' }
+        : { art: 'baut' };
   return { stand, geladen, setGeladen };
 }

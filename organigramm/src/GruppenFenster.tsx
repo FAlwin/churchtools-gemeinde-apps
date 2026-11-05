@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { RueckgaengigImFenster } from '@ui/fenster/Rueckgaengig';
@@ -8,6 +8,7 @@ import type { Gefunden } from '@ui/ct/personen';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { ctBasis } from '@ui/ct/basis';
+import { useLaden } from '@ui/ct/useLaden';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import type { Knoten, OrgGruppe } from '@shared/organigramm/gruppen';
 import {
@@ -15,7 +16,6 @@ import {
   darfStruktur,
   KEINE_GRUPPENRECHTE,
   mitgliederRechte,
-  type GruppenRechte,
 } from '@shared/organigramm/rechte';
 import {
   aufnehmen,
@@ -116,24 +116,13 @@ export function GruppenFenster({
   // dann aus ChurchTools, wenn die globalen nicht schon alles erlauben. Nicht ladbar → nur die globalen (sicher zu).
   const global = mitgliederRechte(start.rechte, KEINE_GRUPPENRECHTE, g);
   const allesGlobal = global.aufnehmen && global.rolleAendern && global.beenden;
-  const [intern, setIntern] = useState<GruppenRechte | 'laedt' | 'fehler'>(
-    allesGlobal ? KEINE_GRUPPENRECHTE : 'laedt',
-  );
-  useEffect(() => {
-    if (allesGlobal) return;
-    let aktiv = true;
-    ladeGruppenRechte(g.id).then(
-      (r) => aktiv && setIntern(r),
-      () => aktiv && setIntern('fehler'),
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [g.id, allesGlobal]);
+  const internStand = useLaden(
+    () => (allesGlobal ? null : ladeGruppenRechte(g.id)),
+    [g.id, allesGlobal],
+  ).stand;
+  const intern = internStand.art === 'fertig' ? internStand.daten : KEINE_GRUPPENRECHTE;
   const pflege =
-    stand?.art === 'sichtbar'
-      ? mitgliederRechte(start.rechte, typeof intern === 'string' ? KEINE_GRUPPENRECHTE : intern, g)
-      : KEINE_GRUPPENRECHTE;
+    stand?.art === 'sichtbar' ? mitgliederRechte(start.rechte, intern, g) : KEINE_GRUPPENRECHTE;
   // Was nach „Rückgängig“ neu geladen wird – dasselbe wie nach der Änderung selbst.
   const [ladenNachZurueck, setLadenNachZurueck] = useState<() => Promise<boolean>>(
     () => onStruktur,
@@ -574,7 +563,7 @@ export function GruppenFenster({
           ＋ Person aufnehmen
         </button>
       )}
-      {stand?.art === 'sichtbar' && intern === 'fehler' && (
+      {stand?.art === 'sichtbar' && internStand.art === 'fehler' && (
         <p className={styles.leise}>
           Deine Rechte für diese Gruppe ließen sich gerade nicht laden – Mitglieder pflegen geht
           hier erst nach dem Neuladen.

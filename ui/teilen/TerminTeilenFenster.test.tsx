@@ -92,6 +92,22 @@ describe('Termin teilen – Hauptseite (E8-1)', () => {
     expect(z.disabled).toBe(true);
   });
 
+  it('ohne Dienste am Termin – oder mit Hinweis des Aufrufers – führt die Zeile „Dienste“ nirgends hin', () => {
+    zeige({ ...QUELLE, dienste: [] });
+    const z = zeile('Dienste') as HTMLButtonElement;
+    expect(z.textContent).toContain('An diesem Termin sind keine Dienste vorgesehen.');
+    expect(z.disabled).toBe(true);
+    cleanup();
+    render(
+      <TerminTeilenFenster
+        quelle={QUELLE}
+        onClose={vi.fn()}
+        diensteHinweis="Dienste werden geladen …"
+      />,
+    );
+    expect(zeile('Dienste').textContent).toContain('Dienste werden geladen …');
+  });
+
   it('ohne sichtbare Infos-Gruppen gibt es keine Zeile „Infos“', () => {
     zeige({ ...QUELLE, infoGruppen: [] });
     expect(screen.queryByRole('button', { name: /^Infos/ })).toBeNull();

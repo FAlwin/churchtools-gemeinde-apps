@@ -14,6 +14,8 @@
   border-radius: var(--r-ctrl);
   font-size: 14px;
   white-space: nowrap;
+  // Auch als Verweis (`KopfLink`) – ohne Unterstrich, wie die Knöpfe daneben.
+  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 
   &:focus-visible {

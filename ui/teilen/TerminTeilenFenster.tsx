@@ -41,9 +41,21 @@ type Stand = { art: 'baut' } | { art: 'fertig'; doc: jsPDF } | { art: 'fehler' }
 export function TerminTeilenFenster({
   quelle,
   onClose,
+  kopf,
+  einblenden = true,
+  diensteHinweis,
 }: {
   quelle: Omit<BlattQuelle, 'stand'>;
   onClose: () => void;
+  /** Oben auf der Hauptseite – in der Musik-App die Wahl „Liedblätter | Termin-Blatt“ (E8-1b). */
+  kopf?: ReactNode;
+  /** `false`, wenn das Fenster ein gleiches ersetzt (Umschalten in der Musik-App) – dann blendet es nicht neu ein. */
+  einblenden?: boolean;
+  /**
+   * Die Dienste sind gerade nicht zu haben („werden geladen …“, „nur in ChurchTools“, Fehler) – dann steht das in der
+   * Zeile „Dienste“, sie führt nirgends hin, und aufs Blatt kommen keine.
+   */
+  diensteHinweis?: string;
 }) {
   const [stand] = useState(() => `Stand ${stempel.format(new Date())}`);
   const [wahl, setWahlRoh] = useState<BlattEinstellungen>(leseWahl);
@@ -88,6 +100,10 @@ export function TerminTeilenFenster({
   }, [blatt]);
 
   const zurueck = () => setSeite('haupt');
+  // Ohne Dienste am Termin führt die Zeile nirgends hin – „keine Gruppe gewählt“ wäre falsch.
+  const ohneDienste =
+    diensteHinweis ??
+    (quelle.dienste.length === 0 ? 'An diesem Termin sind keine Dienste vorgesehen.' : undefined);
   if (seite === 'dienste')
     return (
       <Sheet title="Dienste" onClose={onClose} zurueck={zurueck} knoepfe={null} einblenden={false}>
@@ -113,7 +129,7 @@ export function TerminTeilenFenster({
     <Sheet
       title="Termin teilen"
       onClose={onClose}
-      einblenden={!gewechselt}
+      einblenden={einblenden && !gewechselt}
       knoepfe={
         <>
           <FensterKnopf
@@ -147,11 +163,13 @@ export function TerminTeilenFenster({
       }
     >
       <div className={styles.inhalt}>
+        {kopf}
         <div className={styles.liste}>
           <ZeilenWahl
             titel="Dienste"
-            text={diensteText(quelle, wahl)}
+            text={ohneDienste ?? diensteText(quelle, wahl)}
             onClick={() => setSeite('dienste')}
+            gesperrt={ohneDienste !== undefined}
           />
           <ZeilenWahl
             titel="Ablauf"

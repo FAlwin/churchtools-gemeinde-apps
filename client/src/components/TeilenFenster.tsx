@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { jsPDF } from 'jspdf';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -23,6 +23,10 @@ interface TeilenFensterProps {
   /** Baut das PDF – mit oder ohne die eigenen Anmerkungen. */
   bauen: (mitAnmerkungen: boolean) => Promise<GebautesPdf>;
   onClose: () => void;
+  /** Oben im Fenster, z. B. die Wahl „Liedblätter | Termin-Blatt“ (E8-1b). */
+  kopf?: ReactNode;
+  /** `false`, wenn es ein gleiches Fenster ersetzt (Umschalten auf das Termin-Blatt) – dann blendet es nicht neu ein. */
+  einblenden?: boolean;
 }
 
 type Stand =
@@ -45,7 +49,14 @@ type Stand =
  * „Herunterladen" – direkt, ohne Teilen-Menü. Das Fenster bleibt danach offen; man kann es auch noch
  * teilen.
  */
-export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFensterProps) {
+export function TeilenFenster({
+  titel,
+  dateiname,
+  bauen,
+  onClose,
+  kopf,
+  einblenden,
+}: TeilenFensterProps) {
   const [mitAnmerkungen, setMitAnmerkungen] = useState(getTeilenMitAnmerkungen);
   const [stand, setStand] = useState<Stand>({ art: 'baut' });
   const [geladen, setGeladen] = useState(false);
@@ -85,6 +96,7 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
     <Sheet
       title={titel}
       onClose={onClose}
+      einblenden={einblenden}
       knoepfe={
         <>
           <FensterKnopf
@@ -117,6 +129,7 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
         </>
       }
     >
+      {kopf && <div className={styles.fensterKopf}>{kopf}</div>}
       <div className={styles.cardList}>
         <SchalterZeile
           label="Meine Anmerkungen"

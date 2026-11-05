@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { KopfKnopf, KopfLink } from '@ui/bedienung/KopfKnopf';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -16,7 +16,7 @@ import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
 import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
-import { blattGruppenAus } from './terminBlattDienste';
+import { blattGruppenAus } from '@shared/dienstplan/terminBlattDienste';
 import { TerminAblauf } from './TerminAblauf';
 import { TauschAmDienst } from './TauschTeile';
 import type { Tausch } from './useTausch';
@@ -268,15 +268,11 @@ export function TerminAnsicht({
                 {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (
-                  <a
-                    className={styles.leise}
+                  <KopfLink
                     href={musikAppDirektLink(musikApp, s.id, null, s.tag)}
-                    aria-label="Musik-App"
-                    title="Musik-App"
-                  >
-                    <Icon name="music" size={16} />
-                    <span className={styles.leiseText}>Musik-App</span>
-                  </a>
+                    label="Musik-App"
+                    symbol={<Icon name="music" size={16} stroke={2.2} />}
+                  />
                 )}
                 {/* Auch bei einem leeren Ablauf – sonst ließe er sich nicht füllen (wie in der Musik-App). */}
                 {/* „Bearbeiten“ mit Wort wie in der Musik-App und der Matrix – grau, blau erst „Fertig“ (E6-Abschluss,

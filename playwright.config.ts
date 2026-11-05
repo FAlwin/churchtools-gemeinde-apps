@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { ERWEITERUNGEN } from './e2e/erweiterungen';
 
 /**
  * E2E-Tests. Zwei Ebenen:
@@ -56,5 +57,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
+    // Die Erweiterungen (#845): je ein Dev-Server, denn `?demo` gibt es nur dort (`ui/erweiterung/starten.tsx`).
+    ...ERWEITERUNGEN.map(({ app, port }) => ({
+      command: `npm run dev --workspace=${app} -- --port ${port} --strictPort`,
+      url: `http://localhost:${port}/ccm/${app}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    })),
   ],
 });

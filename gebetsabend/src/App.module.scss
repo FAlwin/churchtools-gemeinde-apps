@@ -1,7 +1,33 @@
-// Die Spalte der Seite (Bauplan Gebetsabend G2): Technik, Termin, Zuhören untereinander. Breit ist sie wie die Seite
-// (`ErweiterungsSeite schmal`) – die Breite steht nur dort.
+// Zuhörer (Bauplan Gebetsabend G2): eine Karte in der schmalen Mitte (`ErweiterungsSeite schmal`) – die Breite steht
+// nur dort.
 .spalte {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+// Technik (Entwurf v4, Aufbau B): zwei Spalten wie die Startseite des Dienstplaners (Verhältnis, Abstand und Grenze
+// von dort). Links „Übertragung“ über die ganze Höhe, rechts „Wer hört zu?“ und der Gebetsabend untereinander. Die
+// letzte Reihe ist `1fr`: Dort nimmt die hohe linke Karte ihren Platz, ohne die Reihen rechts zu dehnen – sonst stünde
+// zwischen „Wer hört zu?“ und dem Gebetsabend eine Lücke. Am Handy alles untereinander, in dieser Reihenfolge.
+.raster {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 16px;
+  align-items: start;
+
+  > :first-child {
+    grid-row: 1 / -1;
+    grid-column: 1;
+  }
+
+  > :not(:first-child) {
+    grid-column: 2;
+  }
+
+  @media (max-width: 860px) {
+    display: flex;
+    flex-direction: column;
+  }
 }

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { uhrText } from '@shared/ct/zeit';
-import { ERLAUBNIS_ZUHOERER, VDO_BASIS, zuhoererLink } from '@shared/gebetsabend/links';
+import { ERLAUBNIS_ZUHOERER, VDO_HERKUNFT, zuhoererLink } from '@shared/gebetsabend/links';
 import {
   istVdoMeldung,
   meldungAus,
@@ -20,13 +20,13 @@ import {
   PLAYER_TEXT,
   vorStart,
 } from '@shared/gebetsabend/zuhoeren';
+import type { GebetsTermin } from '@shared/gebetsabend/termin';
 import type { Zugang } from '@shared/gebetsabend/zugang';
 import { TECHNIK_TEXT } from '@shared/gebetsabend/technik';
 import { ladeZugang } from './lesen';
+import { TerminKopf } from './TerminKarte';
 import { ZustandZeile } from './ZustandZeile';
 import styles from './Zuhoeren.module.scss';
-
-const VDO_HERKUNFT = new URL(VDO_BASIS).origin;
 
 interface Props {
   modul: number;
@@ -41,12 +41,15 @@ interface Props {
   sendetHier?: boolean;
   /** Zählt hoch, wenn die Technik auf diesem Gerät gespeichert hat – dann sofort nachfragen statt nach bis zu 20 s. */
   aktualisiert?: number;
+  /** Der nächste Gebetsabend als Kopf der Karte (Entwurf v4) – ohne ihn steht schlicht „Gebetsabend“ oben. */
+  termin?: GebetsTermin | null;
 }
 
 type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art: 'da' };
 
 /**
- * **Zuhören** (Bauplan Gebetsabend G2, Entwurf v2): ein großer Knopf, danach der Player ohne VDO.Ninja-Bedienung
+ * **Zuhören** (Bauplan Gebetsabend G2, Entwurf v2/v4): eine Karte mit dem nächsten Termin oben wie „Als Nächstes“ im
+ * Dienstplaner und dem Knopf „Gebetsabend zuhören“, danach der Player ohne VDO.Ninja-Bedienung
  * (bis auf den Wiedergabe-Knopf, falls der Browser das Abspielen sperrt – `links.ts`).
  *
  * - Vor dem Zuhören zählt der Merker „läuft seit“; ohne ihn steht „Noch keine Übertragung“ da, und die Seite fragt
@@ -59,7 +62,14 @@ type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art
  * - Das iframe entsteht erst beim Tippen. Am iPhone reicht das nicht immer: Safari sperrt das Abspielen im fremden
  *   iframe, bis man dort selbst tippt (05.11.2026) – daher der Hinweis unter dem Bild.
  */
-export function Zuhoeren({ modul, kategorie, name, sendetHier = false, aktualisiert = 0 }: Props) {
+export function Zuhoeren({
+  modul,
+  kategorie,
+  name,
+  sendetHier = false,
+  aktualisiert = 0,
+  termin = null,
+}: Props) {
   const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
   const [zugang, setZugang] = useState<Zugang | null>(null);
   /** Womit der Player geladen ist – `null` = er ist zu. */
@@ -136,70 +146,78 @@ export function Zuhoeren({ modul, kategorie, name, sendetHier = false, aktualisi
     return <FehlerKasten fehler={laden.fehler} onNochmal={() => nachfragen(true)} />;
 
   const vor = vorStart(zugang);
-  if (sendetHier)
-    return (
-      <section className={styles.karte} aria-label="Zuhören">
-        <ZustandZeile gut={vor.art === 'laeuft'}>
-          {vor.art === 'laeuft' ? `Läuft seit ${uhrText(vor.seit)} Uhr` : 'Noch keine Übertragung'}
-        </ZustandZeile>
-        <p className={styles.text}>{TECHNIK_TEXT.nichtHierZuhoeren}</p>
-      </section>
-    );
-  return (
-    <section className={styles.karte} aria-label="Zuhören">
-      {gehoert ? (
-        <>
-          <ZustandZeile gut={PLAYER_GUT[player]}>
-            {gehoert.laeuftSeit ? `Läuft seit ${uhrText(gehoert.laeuftSeit)} Uhr` : 'Läuft'}
-          </ZustandZeile>
-          <iframe
-            key={`${gehoert.streamId}-${gehoert.mitBild ? 'bild' : 'ton'}`}
-            ref={fenster}
-            className={gehoert.mitBild ? styles.player : `${styles.player} ${styles.nurTon}`}
-            title="Übertragung des Gebetsabends"
-            src={zuhoererLink(gehoert, name)}
-            allow={ERLAUBNIS_ZUHOERER}
-            allowFullScreen
-            onLoad={() => fenster.current?.contentWindow?.postMessage(PEGEL_AN, VDO_HERKUNFT)}
-          />
-          <p className={styles.leise}>{PLAYER_TEXT[player]}</p>
-          <p className={styles.text}>{HINWEIS_TIPPEN}</p>
-          <p className={styles.leise}>Der Ton läuft auch weiter, wenn du das Handy sperrst.</p>
-          <p className={styles.leise}>Die Technik sieht, dass du zuhörst.</p>
-          <div className={styles.rechts}>
-            <KopfKnopf
-              raster
-              label="Nicht mehr zuhören"
-              symbol={<Icon name="x" />}
-              onClick={aufhoeren}
-            />
-          </div>
-        </>
+  const laeuftText =
+    vor.art === 'laeuft' ? `Läuft seit ${uhrText(vor.seit)} Uhr` : 'Noch keine Übertragung';
+  /** Die Karte – oben der Termin oder schlicht „Gebetsabend“. */
+  const karte = (inhalt: ReactNode) => (
+    <section className={styles.karte} aria-labelledby="gebetsabend">
+      {termin ? (
+        <div className={styles.inhalt}>
+          <TerminKopf termin={termin} />
+          {inhalt}
+        </div>
       ) : (
         <>
-          <ZustandZeile gut={vor.art === 'laeuft'}>
-            {vor.art === 'laeuft'
-              ? `Läuft seit ${uhrText(vor.seit)} Uhr`
-              : 'Noch keine Übertragung'}
-          </ZustandZeile>
-          {vor.art === 'aus' && (
-            <p className={styles.text}>
-              {beendet
-                ? 'Die Übertragung ist beendet. Danke fürs Mitbeten!'
-                : 'Die Übertragung beginnt kurz vor dem Gebetsabend. Lass diese Seite einfach offen – sie merkt von selbst, wenn es losgeht.'}
-            </p>
-          )}
-          <button
-            type="button"
-            className={styles.gross}
-            disabled={vor.art !== 'laeuft'}
-            onClick={zuhoeren}
-          >
-            <Icon name="play" />
-            Gebetsabend zuhören
-          </button>
+          <div className={styles.kopf}>
+            <h2 id="gebetsabend">Gebetsabend</h2>
+          </div>
+          <div className={styles.inhalt}>{inhalt}</div>
         </>
       )}
     </section>
+  );
+
+  if (sendetHier)
+    return karte(
+      <>
+        <ZustandZeile gut={vor.art === 'laeuft'}>{laeuftText}</ZustandZeile>
+        <p className={styles.text}>{TECHNIK_TEXT.nichtHierZuhoeren}</p>
+      </>,
+    );
+  if (gehoert)
+    return karte(
+      <>
+        <ZustandZeile gut={PLAYER_GUT[player]}>
+          {gehoert.laeuftSeit ? `Läuft seit ${uhrText(gehoert.laeuftSeit)} Uhr` : 'Läuft'}
+        </ZustandZeile>
+        <iframe
+          key={`${gehoert.streamId}-${gehoert.mitBild ? 'bild' : 'ton'}`}
+          ref={fenster}
+          className={gehoert.mitBild ? styles.player : `${styles.player} ${styles.nurTon}`}
+          title="Übertragung des Gebetsabends"
+          src={zuhoererLink(gehoert, name)}
+          allow={ERLAUBNIS_ZUHOERER}
+          allowFullScreen
+          onLoad={() => fenster.current?.contentWindow?.postMessage(PEGEL_AN, VDO_HERKUNFT)}
+        />
+        <p className={styles.leise}>{PLAYER_TEXT[player]}</p>
+        <p className={styles.text}>{HINWEIS_TIPPEN}</p>
+        <p className={styles.leise}>Der Ton läuft auch weiter, wenn du das Handy sperrst.</p>
+        <p className={styles.leise}>Die Technik sieht, dass du zuhörst.</p>
+        <div className={styles.knoepfe}>
+          <FensterKnopf art="zweit" onClick={aufhoeren}>
+            <Icon name="x" size={16} />
+            Nicht mehr zuhören
+          </FensterKnopf>
+        </div>
+      </>,
+    );
+  return karte(
+    <>
+      <ZustandZeile gut={vor.art === 'laeuft'}>{laeuftText}</ZustandZeile>
+      {vor.art === 'aus' && (
+        <p className={styles.text}>
+          {beendet
+            ? 'Die Übertragung ist beendet. Danke fürs Mitbeten!'
+            : 'Die Übertragung beginnt kurz vor dem Gebetsabend. Lass diese Seite einfach offen – sie merkt von selbst, wenn es losgeht.'}
+        </p>
+      )}
+      <div className={styles.knoepfe}>
+        <FensterKnopf disabled={vor.art !== 'laeuft'} onClick={zuhoeren}>
+          <Icon name="play" size={16} />
+          Gebetsabend zuhören
+        </FensterKnopf>
+      </div>
+    </>,
   );
 }

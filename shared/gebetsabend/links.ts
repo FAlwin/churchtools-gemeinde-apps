@@ -18,6 +18,8 @@
 import type { Zugang } from './zugang';
 
 export const VDO_BASIS = 'https://vdo.ninja/';
+/** Von hier kommen die Meldungen der VDO.Ninja-iframes (`istVdoMeldung`) – Player und Sender. */
+export const VDO_HERKUNFT = new URL(VDO_BASIS).origin;
 
 /**
  * Auflösung des Senders: `0` = 1920×1080 (VDO.Ninja `&quality`; ohne Angabe wählt es je Gerät selbst, „nicht immer

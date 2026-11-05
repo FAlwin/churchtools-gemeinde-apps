@@ -68,13 +68,15 @@ beendet, schließt er sich mit „Die Übertragung ist beendet“.
 **Das muss passieren:** Die Technik sieht die Karte „Übertragung“. „Übertragung starten“ setzt neue Zugangsdaten und
 startet den Sender in der Seite; erst danach meldet die Seite „läuft“. Auf dem Sender-Gerät gibt es kein Zuhören. Nach
 dem Neuladen startet der Sender nicht von selbst, „Sender hier starten“ nimmt dieselben Daten. Beenden fragt nach und
-trennt alle. Unter dem Zahnrad lassen sich Kalender und Suchwort ändern; der Termin folgt sofort. Wer nicht zur
+trennt alle. Unter „Einstellungen“ lassen sich Kalender und Suchwort ändern; der Termin folgt sofort. Wer nicht zur
 Technik gehört, sieht nichts davon.
 
-1. Als Technik auf **Gebetsabend**: Karte „Übertragung · nur Technik“, „Nicht gestartet“, „Bild + Ton“ gewählt.
+1. Als Technik auf **Gebetsabend**: am Computer zwei Spalten – links die Karte „Übertragung“ (rechts im Kopf „nur
+   Technik“), „Nicht gestartet“, „Bild + Ton“ gewählt; rechts der Gebetsabend. Neben „Hallo …“ der Knopf
+   **Einstellungen** mit demselben Zahnrad wie „System-Einstellungen“ in ChurchTools.
 2. **Übertragung starten**: Der Browser fragt nach Kamera und Mikrofon (beim ersten Mal) – erlauben. Das Kamerabild
-   steht in der Karte, darüber „Läuft seit … Uhr · Sender auf diesem Gerät“. Unten statt „Gebetsabend zuhören“ der
-   Hinweis, ein anderes Gerät zu nehmen.
+   steht in der Karte, darüber „Läuft seit … Uhr · Sender auf diesem Gerät“. Rechts erscheint die Karte „Wer hört zu?“,
+   darunter beim Gebetsabend statt „Gebetsabend zuhören“ der Hinweis, ein anderes Gerät zu nehmen.
 3. Am zweiten Gerät zuhören: Bild und Ton kommen (TF-GEBET-02, Schritt 3).
 4. Am Laptop die Seite neu laden: „Läuft – der Sender ist auf diesem Gerät nicht aktiv“, kein Kamerabild. Das zweite
    Gerät zeigt „Kurz unterbrochen …“. **Sender hier starten**: Kamerabild wieder da, das zweite Gerät spielt weiter.
@@ -82,17 +84,45 @@ Technik gehört, sieht nichts davon.
 6. **Übertragung beenden** → Rückfrage → **Beenden**: „Nicht gestartet“; am zweiten Gerät nach höchstens 20 Sekunden
    „Die Übertragung ist beendet“.
 7. Noch einmal starten: Am zweiten Gerät öffnet „Gebetsabend zuhören“ die neue Übertragung (neue Zugangsdaten).
-8. **Zahnrad**: Kalender und Wort ändern, **Speichern** – der Termin auf der Seite wechselt sofort. Fenster neu öffnen:
+8. **Einstellungen**: Kalender und Wort ändern, **Speichern** – der Termin auf der Seite wechselt sofort. Fenster neu öffnen:
    der gespeicherte Stand steht da.
 9. „Nur Ton“ wählen und starten: VDO.Ninja zeigt im Sender eine Geräteauswahl – Mikrofon bestätigen; am zweiten Gerät
    kommt nur Ton. Danach beenden.
-10. Die Person ohne Rechte simulieren: keine Karte „Übertragung“, kein Zahnrad. Simulation beenden.
+10. Die Person ohne Rechte simulieren: nur die Karte „Gebetsabend“ schmal in der Mitte, keine „Übertragung“, kein
+    Knopf „Einstellungen“. Simulation beenden.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `gebetsabend/src/Technik.tsx`, `gebetsabend/src/Technik.module.scss`, `gebetsabend/src/EinstellungenFenster.tsx`, `gebetsabend/src/App.tsx`, `gebetsabend/src/speicher.ts`, `gebetsabend/src/start.ts`, `shared/gebetsabend/technik.ts`, `shared/gebetsabend/ablage.ts`
 - **Automatisiert:** teilweise – `gebetsabend/src/Technik.test.tsx` (Starten erst nach Speichern, Konflikt, vorübergehender Fehler, nie von selbst „hier“, neu starten, beenden mit Rückfrage, fremder Neustart stoppt den Sender, mit Fake-Timern), `gebetsabend/src/EinstellungenFenster.test.tsx`, `gebetsabend/src/Zuhoeren.test.tsx` (kein Zuhören auf dem Sender-Gerät), `shared/gebetsabend/ablage.test.ts`, `shared/gebetsabend/technik.test.ts`; Kamera, Mikrofon und echte Übertragung nur in der Test-Instanz
-- **Historie:** neu mit G3 (05.11.2026); Entwurf v3 (`gebetsabend-planung/entwurf/gebetsabend-v3.html`)
+- **Historie:** neu mit G3 (05.11.2026); Entwurf v3 (`gebetsabend-planung/entwurf/gebetsabend-v3.html`); Aufbau B im
+  ChurchTools-Look nach Entwurf v4 (05.11.2026, `gebetsabend-v4.html`)
 
 </details>
+
+### TF-GEBET-04 · „Wer hört zu?“: Namen kommen und gehen, neu verbunden einmal, ohne Namen erkennbar
+
+**Das brauchst du:** Den Laptop der Technik mit laufendem Sender (TF-GEBET-03), ein iPhone und ein zweites Gerät mit
+Recht an der Erweiterung, dazu den Zuhörer-Link aus der Kategorie „Zugang“ für einen Aufruf ohne ChurchTools.
+
+**Das muss passieren:** Neben dem Sender (am Handy darunter) steht die Karte „Wer hört zu?“ mit der Zahl im Kopf. Wer über ChurchTools zuhört, steht mit Vor- und
+Nachnamen und „seit … Uhr“ da und verschwindet beim Aufhören sofort. Eine stille Neuverbindung bleibt eine Zeile. Ein
+Aufruf ohne ChurchTools-Namen steht als „Ohne Namen“. Nach „Sender neu starten“ beginnt die Liste leer und füllt sich
+von selbst wieder.
+
+1. Am Laptop: Karte „Wer hört zu?“ mit 0, darunter „Noch hört niemand zu.“
+2. Am iPhone zuhören: Nach wenigen Sekunden steht der eigene Name mit Kreis (Initialen) und „seit … Uhr“, die Zahl
+   ist 1.
+3. Am zweiten Gerät zuhören: zwei Namen, alphabetisch, Zahl 2.
+4. iPhone sperren und entsperren: Der Name bleibt (höchstens kurz weg), keine zweite Zeile.
+5. Am zweiten Gerät „Nicht mehr zuhören“: Der Name ist sofort weg.
+6. Den Zuhörer-Link ohne `&label` in einem Browser öffnen: eine Zeile „Ohne Namen“.
+7. **Sender neu starten**: Die Liste ist leer und füllt sich wieder, sobald die Zuhörer neu verbunden sind.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `gebetsabend/src/Sender.tsx`, `gebetsabend/src/WerHoertZu.tsx`, `gebetsabend/src/Technik.tsx`, `gebetsabend/src/Technik.module.scss`, `shared/gebetsabend/werHoert.ts`, `shared/gebetsabend/zustand.ts`
+- **Automatisiert:** teilweise – `shared/gebetsabend/werHoert.test.ts` (Kommen, Gehen, altes `new-push-connection`, Name, Zusammenfassen je Person, ohne Namen, Zahl, Reihenfolge), `gebetsabend/src/Sender.test.tsx` (nur Meldungen aus dem eigenen iframe von `https://vdo.ninja`), `gebetsabend/src/WerHoertZu.test.tsx` (Zahl, Namen mit Initialen, Geräte, ohne Namen), `gebetsabend/src/Technik.test.tsx` (eigene Karte nur beim Senden, Neustart leert die Liste); echte Verbindungen nur in der Test-Instanz
+- **Historie:** neu mit G4 (05.11.2026); Grundlage Messung G0-3

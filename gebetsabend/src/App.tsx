@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { Icon } from '@ui/icons/icons';
 import { einrichtungsStand } from '@shared/gebetsabend/einrichten';
 import { ladeStart, type Start } from './start';
 import { Einrichtung } from './Einrichtung';
-import { NaechsterTermin } from './TerminKarte';
+import { useNaechsterTermin } from './naechsterTermin';
 import { Technik } from './Technik';
 import { EinstellungenFenster } from './EinstellungenFenster';
 import type { Zugang } from '@shared/gebetsabend/zugang';
@@ -18,6 +20,11 @@ import styles from './App.module.scss';
  *
  * Ob DIESES Gerät sendet (`gesendet`), weiß nur die Seite – Technik und Zuhören brauchen es beide (kein Zuhören auf
  * dem Sender-Gerät).
+ *
+ * **Aufbau wie Dienstplaner und Anmeldungen** (Entwurf v4, Alwin 05.11.2026: „sieht noch nicht wie die anderen und wie
+ * eine von ChurchTools aus“ – Aufbau B): Die Technik bekommt am Computer zwei Spalten, links „Übertragung“ mit dem Bild,
+ * rechts „Wer hört zu?“ und den Gebetsabend. Alle anderen haben nur die eine Karte – sie steht schmal in der Mitte.
+ * „Einstellungen“ steht als Knopf neben „Hallo …“ wie in Anmeldungen und Organigramm.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
@@ -46,46 +53,61 @@ export function App() {
     start &&
     zugang !== null &&
     einrichtungsStand(start.einrichtung, start.darfAnlegen) === 'fertig';
+  const termin = useNaechsterTermin(
+    start?.modul ?? 0,
+    fertig ? (start.einrichtung.einstellungen ?? null) : null,
+    einstellungenNeu,
+  );
+  const technik = !!fertig && start.technik;
+  const einstellungen =
+    fertig && start.einstellungenAendern && start.einrichtung.einstellungen !== null;
   return (
-    <ErweiterungsSeite app="Gebetsabend" zustand={zustand} onNochmal={laden} schmal>
+    <ErweiterungsSeite
+      app="Gebetsabend"
+      zustand={zustand}
+      onNochmal={laden}
+      schmal={!technik}
+      kopfAktion={
+        einstellungen && (
+          <KopfKnopf
+            label="Einstellungen"
+            title="Kalender und Termin des Gebetsabends"
+            symbol={<Icon name="zahnrad" size={16} />}
+            onClick={() => setEinstellungenOffen(true)}
+          />
+        )
+      }
+    >
       {start && !fertig && <Einrichtung start={start} onEingerichtet={laden} />}
       {start && fertig && zugang !== null && (
-        <div className={styles.spalte}>
-          {start.technik && (
+        <div className={technik ? styles.raster : styles.spalte}>
+          {technik && (
             <Technik
               start={start}
               kategorie={zugang}
               gesendet={gesendet}
               onGesendet={setGesendet}
               onGeaendert={() => setZugangNeu((n) => n + 1)}
-              onEinstellungen={
-                start.einstellungenAendern && start.einrichtung.einstellungen !== null
-                  ? () => setEinstellungenOffen(true)
-                  : undefined
-              }
             />
           )}
-          <NaechsterTermin
-            modul={start.modul}
-            kategorie={start.einrichtung.einstellungen}
-            aktualisiert={einstellungenNeu}
-          />
           <Zuhoeren
             modul={start.modul}
             kategorie={zugang}
             name={start.name}
             sendetHier={gesendet !== null}
             aktualisiert={zugangNeu}
+            termin={termin}
           />
-          {einstellungenOffen && start.einrichtung.einstellungen !== null && (
-            <EinstellungenFenster
-              start={start}
-              kategorie={start.einrichtung.einstellungen}
-              onGespeichert={() => setEinstellungenNeu((n) => n + 1)}
-              onSchliessen={() => setEinstellungenOffen(false)}
-            />
-          )}
         </div>
+      )}
+      {/* Außerhalb der Spalten – das Fenster soll keinen Platz im Raster belegen. */}
+      {start && einstellungenOffen && start.einrichtung.einstellungen !== null && (
+        <EinstellungenFenster
+          start={start}
+          kategorie={start.einrichtung.einstellungen}
+          onGespeichert={() => setEinstellungenNeu((n) => n + 1)}
+          onSchliessen={() => setEinstellungenOffen(false)}
+        />
       )}
     </ErweiterungsSeite>
   );

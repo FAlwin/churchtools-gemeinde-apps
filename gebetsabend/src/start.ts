@@ -27,7 +27,7 @@ export interface Start {
   darfAnlegen: boolean;
   /** Darf die Zugangsdaten schreiben (anlegen, ändern UND löschen in „Zugang“) → gehört zur Technik. */
   technik: boolean;
-  /** Darf die Einstellungen ändern (Kategorie „Einstellungen“) → sieht das Zahnrad (G3). */
+  /** Darf die Einstellungen ändern (Kategorie „Einstellungen“) → sieht den Knopf „Einstellungen“ (G3). */
   einstellungenAendern: boolean;
 }
 

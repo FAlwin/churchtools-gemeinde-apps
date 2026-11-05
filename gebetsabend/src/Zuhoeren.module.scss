@@ -1,43 +1,85 @@
-// Zuhören und nächster Termin (Bauplan Gebetsabend G2, Entwurf v2) – Karten im ChurchTools-Look, ein großer blauer
-// Knopf, Zustand mit Punkt (grün = läuft, grau = wartet/stockt).
+// Die Karten des Gebetsabends (Bauplan G2–G4, Entwurf v4 vom 05.11.2026) – aufgebaut wie die Startseiten von
+// Dienstplaner und Anmeldungen: Kopf mit Titel und Haarlinie, darunter der Inhalt. Zustand mit Punkt (grün = läuft,
+// grau = wartet/stockt). Knöpfe kommen aus `FensterKnopf` (ui/fenster), nicht von hier.
 @use '@ui/design/mixins' as m;
 
 .karte {
   @include m.card-list;
+}
+
+// Kopf wie „Deine nächsten Dienste“ (dienstplaner/src/Startseite.module.scss).
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.inhalt {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 14px;
 }
 
-.termin {
-  flex-direction: row;
+// Hinweis unten in der Karte – abgesetzt wie eine Fußzeile.
+.fuss {
+  padding: 10px 14px;
+  border-top: 1px solid var(--hair);
+  background: var(--section);
+}
+
+// „Als Nächstes · in 7 Tagen“ – wie im Dienstplaner.
+.vorzeile {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue-ink);
+}
+
+.terminKopf {
+  display: flex;
   align-items: center;
-  gap: 12px;
-}
+  gap: 14px;
 
-.titel {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+  }
 }
 
 .text {
-  font-size: 14.5px;
+  font-size: 14px;
   color: var(--text2);
 }
 
 .leise {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text2);
+}
+
+.leiser {
+  font-size: 13px;
+  color: var(--text3);
 }
 
 .zustand {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text2);
 
   &.an {
@@ -46,8 +88,8 @@
 }
 
 .punkt {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--text3);
 
@@ -56,14 +98,10 @@
   }
 }
 
-// Der eine Knopf der Seite – breit und groß, damit ihn auch wenig Geübte finden (Übergabe: „ein Knopf“).
-.gross {
-  @include m.hauptKnopfBreit;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
 }
 
 .player {
@@ -79,10 +117,4 @@
 .nurTon {
   aspect-ratio: auto;
   height: 64px;
-}
-
-.rechts {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }

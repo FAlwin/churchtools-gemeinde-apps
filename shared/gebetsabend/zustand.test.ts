@@ -63,6 +63,13 @@ describe('Player-Zustand aus den VDO.Ninja-Meldungen', () => {
 
   it('fremde Nachrichten und Statistik ohne `action` ändern nichts', () => {
     expect(meldungAus('hallo')).toBeNull();
+    // Die Verbindung (UUID) kommt mit – der Sender braucht sie für „Wer hört zu?“ (G4).
+    expect(meldungAus({ action: 'push-connection', value: true, UUID: 'u1' })).toEqual({
+      action: 'push-connection',
+      value: true,
+      uuid: 'u1',
+    });
+    expect(meldungAus({ action: 'x', value: 1, UUID: 7 })).toEqual({ action: 'x', value: 1 });
     expect(meldungAus(null)).toBeNull();
     expect(meldungAus({ stats: { inbound: {} } })).toBeNull();
     expect(ablauf([{ stats: {} }, 'x', { action: 'aspect-ratio', value: '1.33' }])).toEqual([

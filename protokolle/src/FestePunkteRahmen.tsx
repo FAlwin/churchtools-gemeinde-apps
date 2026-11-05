@@ -31,6 +31,7 @@ export function FestePunkteRahmen({
   status,
   imFenster = false,
   onZuSitzung,
+  onTreffenAnlegen,
   children,
 }: {
   sitzung: Sitzung;
@@ -46,9 +47,14 @@ export function FestePunkteRahmen({
   imFenster?: boolean;
   /** „Öffnen“ im Fenster: zu dieser Sitzung springen (K3b-2) – fehlt, bleibt das Fenster ohne Knopf. */
   onZuSitzung?: (s: Sitzung) => void;
+  /** „Gruppentreffen anlegen“ (S5-3, nur beim Schreiben): legt an, verknüpft und gibt die ID zurück. */
+  onTreffenAnlegen?: () => Promise<number>;
   children: ReactNode;
 }) {
   const [offen, setOffen] = useState<Sitzung | null>(null);
+  // Ein eben angelegtes Gruppentreffen (S5-3) – bis die Liste dahinter es beim nächsten Laden selbst kennt.
+  const [neuesTreffen, setNeuesTreffen] = useState<number | null>(null);
+  const treffen = neuesTreffen ?? sitzung.kopf?.treffen ?? sitzung.treffen;
   const [wahl, setWahl] = useState<{
     titel: string;
     knopf: string;
@@ -69,8 +75,25 @@ export function FestePunkteRahmen({
       status,
       oeffnen: imFenster ? undefined : setOffen,
       waehlen: imFenster ? undefined : (q, fertig) => setWahl({ ...q, fertig }),
+      treffen,
+      anfragen: sitzung.anfragen,
+      treffenAnlegen:
+        imFenster || !onTreffenAnlegen
+          ? undefined
+          : async () => setNeuesTreffen(await onTreffenAnlegen()),
     }),
-    [sitzung, gruppe, zeitzone, aufgaben, protokolle, name, status, imFenster],
+    [
+      sitzung,
+      gruppe,
+      zeitzone,
+      aufgaben,
+      protokolle,
+      name,
+      status,
+      imFenster,
+      treffen,
+      onTreffenAnlegen,
+    ],
   );
   const dokument = offen ? dokumentDerSitzung(offen.kopf, teile) : null;
   return (

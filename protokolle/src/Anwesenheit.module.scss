@@ -1,0 +1,190 @@
+// Fester Punkt „Anwesenheit“ (S5-3, Entwurf s5-3-anwesenheit-v2) – derselbe ruhige Kasten wie die anderen festen
+// Punkte (`FesterPunkt.module.scss`); Farben nur aus den gemeinsamen Werten (#654).
+.kasten {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 2px 0 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  font-size: 14.5px;
+}
+
+.klapp {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  > svg {
+    flex: none;
+    margin-top: 3px;
+    color: var(--text2);
+  }
+}
+
+.kurz {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  b {
+    font-weight: 700;
+  }
+}
+
+.zahlen {
+  color: var(--text2);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.innen {
+  margin-top: 8px;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap; // am Handy rutscht der Umschalter unter den Namen
+    align-items: center;
+    gap: 6px 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--hair);
+  }
+
+  li:first-child {
+    border-top: 0;
+  }
+}
+
+.wer {
+  display: flex;
+  flex: 1 1 160px;
+  flex-direction: column;
+  min-width: 0;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.wer small.zugesagt {
+  color: var(--green);
+}
+
+.wer small.abgesagt {
+  color: var(--red);
+}
+
+.stand {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.da {
+  color: var(--green);
+}
+
+.weg {
+  color: var(--red);
+}
+
+.offen {
+  color: var(--text3);
+}
+
+.entfernen {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface2);
+      color: var(--red);
+    }
+  }
+}
+
+.gast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+
+  input {
+    flex: 1 1 180px;
+    min-width: 0;
+    height: var(--knopf-hoehe);
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px; // unter 16 px zoomt Safari am iPhone beim Antippen hinein (K3a)
+  }
+}
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--knopf-hoehe);
+  margin-top: 0;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--blue);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--text3);
+    cursor: default;
+  }
+}
+
+.leise {
+  margin: 6px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.kasten > .leise:first-child {
+  margin-top: 0;
+}
+
+.fehler {
+  margin: 6px 0 0;
+  color: var(--red);
+  font-size: 13.5px;
+  font-weight: 600;
+}

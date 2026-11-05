@@ -5,7 +5,15 @@
  *
  * Lesen dürfen sie nur Nutzende **eingerichteter Gruppen** (Alwin, 22.10.2026), schreiben nur Admins (S2).
  */
-import { BLOCK, mitNeuenIds, punktEbene, textAus, type Block } from './dokument';
+import {
+  BLOCK,
+  istVerweisArt,
+  mitNeuenIds,
+  punktEbene,
+  textAus,
+  type Block,
+  type VerweisArt,
+} from './dokument';
 import { TITEL_LETZTES_PROTOKOLL } from './festePunkte';
 
 export interface Vorlage {
@@ -30,7 +38,7 @@ const absatz = (id: string, t: string): Block => ({
   content: text(t),
   children: [],
 });
-const verweis = (id: string, art: 'offene-aufgaben' | 'letztes-protokoll'): Block => ({
+const verweis = (id: string, art: VerweisArt): Block => ({
   id,
   type: BLOCK.verweis,
   props: { art },
@@ -55,6 +63,9 @@ export const STANDARD_VORLAGEN: readonly Vorlage[] = [
     id: 'leitungssitzung',
     name: 'Leitungssitzung',
     bloecke: [
+      // S5-3: Anwesenheit als erster Punkt (Alwin 05.11.2026) – nur für neue Gruppen, eingerichtete Vorlagen bleiben.
+      punkt('l0', 'Anwesenheit'),
+      verweis('l0v', 'anwesenheit'),
       punkt('l1', 'Andacht & Gebet'),
       punkt('l2', TITEL_LETZTES_PROTOKOLL),
       verweis('l2v', 'letztes-protokoll'),
@@ -148,7 +159,7 @@ export interface VorlagenFormular {
   aufgaben: string[];
 }
 
-export type VerweisArt = 'offene-aufgaben' | 'letztes-protokoll';
+export type { VerweisArt };
 
 /**
  * Vorlage → Formular. Jede Überschrift (Ebene 1) beginnt einen Punkt, Absätze darunter werden sein Text (eine Zeile
@@ -169,7 +180,7 @@ export function alsFormular(v: Vorlage): VorlagenFormular {
       if (t) p.text = p.text ? `${p.text}\n${t}` : t;
     } else if (b.type === BLOCK.verweis) {
       const art = b.props?.art;
-      if (art === 'offene-aufgaben' || art === 'letztes-protokoll') aktuell().verweis = art;
+      if (istVerweisArt(art)) aktuell().verweis = art;
     } else if (b.type === BLOCK.aufgabe) {
       const t = textAus(b.content);
       if (t) f.aufgaben.push(t);

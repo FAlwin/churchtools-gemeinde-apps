@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
+import { GRUPPENTREFFEN_DURCHFUEHREN, GRUPPENTREFFEN_PFLEGEN } from '@shared/protokolle/einrichten';
 import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
 import { gruppeEinrichten, ladeGruppe, ladeVerwaltung, type Wahl } from './einrichten';
 import {
@@ -113,7 +114,15 @@ describe('gruppeEinrichten', () => {
     expect(von(TEILNEHMER)).not.toContain(schl(403, 4));
     expect(von(LEITER)).not.toContain(schl(404, 4));
     expect(von(LEITER)).toContain(schl(403, 4)); // von Hand – bleibt
-    expect(einstellungen()).toEqual([expect.objectContaining({ vergeben: [] })]);
+    // Gemerkt bleiben nur die Gruppentreffen-Rechte der Leitung (S5-3) – sie sind weiter im Soll.
+    expect(einstellungen()).toEqual([
+      expect.objectContaining({
+        vergeben: [
+          { rolle: LEITER, authId: GRUPPENTREFFEN_PFLEGEN, dataId: null },
+          { rolle: LEITER, authId: GRUPPENTREFFEN_DURCHFUEHREN, dataId: null },
+        ],
+      }),
+    ]);
   });
 
   it('Rolle fehlt in der neuen Wahl (z. B. gelöscht): ihre selbst gesetzten Kalender-Rechte gehen trotzdem', async () => {

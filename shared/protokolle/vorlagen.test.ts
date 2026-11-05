@@ -108,6 +108,7 @@ describe('Vorlage ↔ Formular (S2-3)', () => {
   it('liest Punkte, Text, feste Punkte und Aufgaben wie im Entwurf', () => {
     const f = alsFormular(STANDARD_VORLAGEN[0]);
     expect(f.punkte.map((p) => [p.titel, p.verweis, p.text])).toEqual([
+      ['Anwesenheit', 'anwesenheit', ''],
       ['Andacht & Gebet', null, ''],
       ['Protokoll der letzten Sitzung', 'letztes-protokoll', ''],
       ['Offene To-Dos', 'offene-aufgaben', ''],
@@ -157,7 +158,7 @@ describe('Vorlage ↔ Formular (S2-3)', () => {
     expect(istVorlage(STANDARD_VORLAGEN[0])).toBe(true);
     expect(istVorlage({ ...STANDARD_VORLAGEN[0], art: 'einstellung' })).toBe(false);
     expect(istVorlage(null)).toBe(false);
-    expect(vorlageKurz(STANDARD_VORLAGEN[0])).toBe('5 Punkte · 1 feste Aufgabe');
+    expect(vorlageKurz(STANDARD_VORLAGEN[0])).toBe('6 Punkte · 1 feste Aufgabe');
     expect(vorlageKurz(STANDARD_VORLAGEN[1])).toBe('4 Punkte');
   });
 });

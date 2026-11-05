@@ -4,7 +4,7 @@
  * Kontext; bereitgestellt von `FestePunkteRahmen`.
  */
 import { createContext } from 'react';
-import type { Sitzung } from '@shared/protokolle/sitzungen';
+import type { Anfrage, Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe, AufgabenStatus } from '@shared/protokolle/aufgaben';
 
 export interface FestePunkteWert {
@@ -36,6 +36,12 @@ export interface FestePunkteWert {
     q: { titel: string; knopf: string; vorgewaehlt: string | null },
     fertig: (s: Sitzung) => void,
   ) => void;
+  /** Das Gruppentreffen der Sitzung (S5-3) – `null`, solange es keins gibt. */
+  treffen: number | null;
+  /** Die Antworten auf die Einladung – für die Vorbelegung der Anwesenheit. */
+  anfragen: readonly Anfrage[];
+  /** „Gruppentreffen anlegen“ (S5-3) – nur beim Schreiben; legt an und verknüpft es mit dem Protokoll. */
+  treffenAnlegen?: () => Promise<void>;
 }
 
 export const FestePunkteKontext = createContext<FestePunkteWert | null>(null);

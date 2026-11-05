@@ -43,8 +43,10 @@ import {
   speichern,
   sperreFreigeben,
   sperreNehmen,
+  treffenVerknuepfen,
   type ProtokollOrt,
 } from './schreiben';
+import { treffenAnlegen } from './planen';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
 import ansicht from './SitzungAnsicht.module.scss';
 import styles from './ProtokollSchreiben.module.scss';
@@ -406,6 +408,18 @@ export function ProtokollSchreiben({
 
   const aufgaben = useMemo(() => [...todos.values()].filter((a) => !a.geloescht), [todos]);
 
+  // „Gruppentreffen anlegen“ im festen Punkt „Anwesenheit“ (S5-3): anlegen (ohne Mail), mit dem Protokoll verknüpfen.
+  const neuesTreffen = useCallback(async () => {
+    const id = await treffenAnlegen(
+      gruppeId,
+      sitzung.beginn,
+      sitzung.ende ?? sitzung.beginn,
+      zeitzone,
+    );
+    await treffenVerknuepfen(ort, id);
+    return id;
+  }, [gruppeId, sitzung.beginn, sitzung.ende, zeitzone, ort]);
+
   // Feste Punkte (S4-3a) – derselbe Rahmen für Editor, Lese-Ansicht und „nur lesen“.
   const rahmen = (inhalt: ReactNode) => (
     <FestePunkteRahmen
@@ -417,6 +431,7 @@ export function ProtokollSchreiben({
       zeitzone={zeitzone}
       name={nameVon}
       status={mOrt ? statusFest : undefined}
+      onTreffenAnlegen={neuesTreffen}
       onZuSitzung={
         onZuSitzung
           ? (s) => {

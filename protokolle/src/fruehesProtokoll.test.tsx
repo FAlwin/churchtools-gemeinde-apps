@@ -257,10 +257,16 @@ describe('„/“-Menü (K3b-2)', () => {
       letztes: OKT,
       fruehere: [OKT, SEPT],
       waehlen,
+      treffen: null,
+      anfragen: [],
     };
     const items = festeImMenue(e, w);
-    expect(items.map((i) => i.title)).toEqual(['Offene To-Dos', 'Früheres Protokoll']);
-    items[1].onItemClick();
+    expect(items.map((i) => i.title)).toEqual([
+      'Offene To-Dos',
+      'Anwesenheit',
+      'Früheres Protokoll',
+    ]);
+    items[2].onItemClick();
     expect(waehlen).toHaveBeenCalledWith(
       expect.objectContaining({ titel: 'Früheres Protokoll einfügen', vorgewaehlt: 'okt' }),
       expect.any(Function),

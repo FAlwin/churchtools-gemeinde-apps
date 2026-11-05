@@ -1,8 +1,8 @@
 # Gebetsabend – ChurchTools-Erweiterung
 
-> **Stand: G1 (05.11.2026)** – Gerüst: Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei
-> Kategorien an); sie zeigt, ob sie eingerichtet ist und ob man zur Technik gehört. **Zuhören (G2) und Übertragen
-> (G3) folgen** (Bauplan `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: G2 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
+> an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend zuhören“**. **Übertragen starten und beenden (G3)
+> und „Wer hört zu?“ (G4) folgen** (Bauplan `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Der Gebetsabend wird für Gemeindeglieder übertragen, die nicht kommen können – mit Bild und Ton, nur für Personen mit
 ChurchTools-Zugang und Recht an der Erweiterung. Übertragen wird mit **VDO.Ninja** (Peer-to-Peer im Browser) im
@@ -35,6 +35,28 @@ Einmal, von jemandem mit dem Recht **„Kategorien erstellen“** bei der Erweit
 - **„Gebetsabend: Einstellungen“** (Kürzel `einstellungen`) – der Kalender des Gebetsabends.
 
 Erst danach lassen sich die Rechte auf diese Kategorien vergeben (vorher stehen sie nicht zur Auswahl).
+
+## Zuhören
+
+Die Seite zeigt oben den **nächsten Gebetsabend** aus dem gewählten Kalender (Titel enthält „Gebet“; einstellbar mit G3)
+und darunter einen großen Knopf **„Gebetsabend zuhören“**:
+
+- **Noch keine Übertragung:** Der Knopf ist aus, darüber steht, dass es kurz vor dem Gebetsabend losgeht. Die Seite
+  fragt alle 20 Sekunden nach und schaltet den Knopf von selbst frei – Neuladen ist nicht nötig.
+- **Läuft:** Ein Tippen öffnet Bild und Ton (ohne Bedienelemente von VDO.Ninja). Am iPhone sperrt
+  Safari das Abspielen im eingebetteten Fenster manchmal, bis man selbst ins Bild tippt – dann zeigt das Bild einen
+  Wiedergabe-Knopf, und darunter steht „Bleibt das Bild schwarz? Einmal ins Bild tippen.“ Unter dem Bild steht, was gerade
+  passiert („Verbindet …“, „Der Ton kommt an.“, „Kurz unterbrochen – verbindet von selbst wieder …“). Der Ton läuft auch
+  bei gesperrtem Handy weiter (gemessen an iPhone und iPad).
+- **Vollbild:** Unter dem Bild „Vollbild“ (Computer, iPad, Android) bzw. am iPhone **„Großansicht“** – Safari erlaubt
+  dort kein Vollbild für Webseiten; das Bild legt sich dann über die ganze Seite, quer gedreht füllt es fast den
+  Bildschirm. „Schließen“ oben rechts (oder Escape) führt zurück. Bild und Ton laufen dabei ohne Unterbrechung weiter.
+- **Bildqualität:** Der Sender schickt fest **1920×1080** (`&quality=0`), jeder Zuhörer bekommt höchstens **2 Mbit/s**
+  Bild. VDO.Ninja passt die Auflösung je Zuhörer an die Playergröße an (im Vollbild mehr) und tastet sich am Anfang
+  hoch – die ersten Sekunden sind oft unscharf.
+- **Neu gestartet / beendet:** Startet die Technik neu, lädt der Player die neuen Daten selbst; beendet sie, schließt
+  er sich mit „Die Übertragung ist beendet“. Antwortet ChurchTools dabei kurz nicht, bleibt alles, wie es ist.
+- Zuhörer melden sich beim Sender mit **Vor- und Nachnamen** an – die Technik sieht später, wer zuhört (G4).
 
 ## Rechte
 
@@ -71,9 +93,11 @@ Geräten; den Verbindungsaufbau (und, wo nötig, die Umleitung) übernehmen Serv
 
 - Regeln (ohne Oberfläche, getestet): `shared/gebetsabend/` – `zugang.ts` (StreamID/Passwort, nur Buchstaben und
   Ziffern), `links.ts` (Sender- und Zuhörer-Adresse, eine Stelle), `zustand.ts` (Player-Zustand aus den
-  VDO.Ninja-Meldungen), `einrichten.ts` (Kategorien, Stand der Einrichtung).
+  VDO.Ninja-Meldungen; `istVdoMeldung` nimmt nur Nachrichten aus dem eigenen iframe von `https://vdo.ninja` an),
+  `einrichten.ts` (Kategorien, Stand der Einrichtung), `einstellungen.ts` (Kalender, Suchwort), `termin.ts` (nächster
+  Termin), `zuhoeren.ts` (Texte, Nachfragen, „neu laden / beendet“).
 - Erweiterung: `gebetsabend/` (`npm run dev -w gebetsabend`, dann `http://localhost:5193/ccm/gebetsabend/?demo`;
-  Fälle `?demo=technik`, `?demo=mitglied`, `?demo=fehler`).
+  Fälle `?demo=zuhoerer`, `?demo=aus`, `?demo=technik`, `?demo=mitglied`, `?demo=fehler`).
 - Messungen: `gebetsabend-planung/s0-messung.md` (S0, S0b, G0 – Einbettung, Rechte, VDO.Ninja-Parameter und
   -Meldungen).
 - Release: Tag `gebetsabend-vX.Y.Z` (Workflow `gebetsabend-release.yml`, immer `make_latest: false`).

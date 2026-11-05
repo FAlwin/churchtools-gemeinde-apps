@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -23,8 +23,14 @@ import type { Antworten } from './useAntworten';
 import type { Tausch } from './useTausch';
 import { TauschAmDienst } from './TauschTeile';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import styles from './Termine.module.scss';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
+
+/** „Meine Dienste teilen“ (E8-3) erst beim Antippen laden – es bringt pdf.js mit (wie die anderen Teilen-Fenster). */
+const MeineTeilenFenster = lazy(() =>
+  import('./MeineTeilenFenster').then((m) => ({ default: m.MeineTeilenFenster })),
+);
 
 export type TermineZustand =
   | { art: 'laedt' }
@@ -52,6 +58,8 @@ interface Props {
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
   tausch?: Tausch;
   zeitzone?: string;
+  /** Wer man ist – für „Meine Dienste teilen“ (E8-3); ohne: kein „Teilen“. */
+  ich?: { id: number; name: string; gemeinde: string | null };
 }
 
 /**
@@ -69,7 +77,9 @@ export function Termine({
   antworten,
   tausch,
   zeitzone = gemeindeZeitzone(),
+  ich,
 }: Props) {
+  const [teilenOffen, setTeilenOffen] = useState(false);
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in
   // diesem Bild vorbei. Vorher räumte ein Effekt das ein Bild zu spät weg – dann stand „wird geladen …“ neben
@@ -119,7 +129,24 @@ export function Termine({
               },
             ]}
           />
+          {/* Nur bei „Meine“ (Entwurf E8): alle kommenden eigenen Dienste als PDF. */}
+          {ich && auswahl.nurMeine && (
+            <KopfKnopf
+              onClick={() => setTeilenOffen(true)}
+              label="Teilen"
+              title="Meine Dienste als PDF teilen"
+              symbol={<Icon name="share" size={16} />}
+            />
+          )}
         </div>
+        {teilenOffen && ich && (
+          <Suspense fallback={null}>
+            <MeineTeilenFenster
+              wer={{ ichId: ich.id, name: ich.name, gemeinde: ich.gemeinde, zeitzone }}
+              onClose={() => setTeilenOffen(false)}
+            />
+          </Suspense>
+        )}
 
         {zustand.art === 'laedt' && <p className={styles.hinweis}>Termine werden geladen …</p>}
 

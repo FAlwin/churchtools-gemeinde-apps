@@ -12,9 +12,12 @@ import { ctDaten } from '@ui/ct/verbindung';
 import { kategorienLesen } from '@shared/ct/modulDaten';
 import { modulRechteAus } from '@shared/ct/modulRechte';
 import { einrichtungAus, type Einrichtung } from '@shared/gebetsabend/einrichten';
+import { zuhoererName } from '@shared/gebetsabend/zuhoeren';
 
 export interface Start {
   vorname: string;
+  /** Vor- und Nachname – der Name, mit dem man beim Sender ankommt („Wer hört zu?“). */
+  name: string;
   gemeinde: string | null;
   modul: number;
   einrichtung: Einrichtung;
@@ -36,6 +39,7 @@ export async function ladeStart(): Promise<Start> {
   );
   return {
     vorname: ich.vorname,
+    name: zuhoererName(ich.vorname, ich.nachname),
     gemeinde: ich.gemeinde,
     modul,
     einrichtung,

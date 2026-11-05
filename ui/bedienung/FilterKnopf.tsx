@@ -40,14 +40,14 @@ export function FilterKnopf({
     <div className={`${styles.rahmen}${className ? ' ' + className : ''}`} ref={rahmen}>
       <button
         type="button"
-        className={`${styles.knopf}${ausgeblendet ? ' ' + styles.aktiv : ''}`}
+        className={`${styles.knopf}${ausgeblendet ? ' ' + styles.aktiv + ' ' + styles.mitZahl : ''}`}
         aria-expanded={offen}
         aria-controls={id}
         aria-label={ausgeblendet ? `Filter, ${ausgeblendet} ausgeblendet` : 'Filter'}
         onClick={() => setOffen(!offen)}
       >
         <Icon name="regler" size={15} />
-        Filter
+        <span className={styles.text}>Filter</span>
         {ausgeblendet > 0 && <span className={styles.zahl}>{ausgeblendet}</span>}
       </button>
       {offen && (

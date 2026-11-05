@@ -625,3 +625,28 @@ als Liste der offenen Dienste ohne Namen.
 - **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`)
 
 </details>
+
+### TF-ABLAUF-24 · Meine Dienste teilen
+
+**Das brauchst du:** Ein Konto mit mehreren kommenden Diensten – einer zugesagt, einer angefragt, einer davon weiter
+weg als die geladenen Wochen.
+
+**Das muss passieren:** Die eigenen kommenden Dienste kommen als PDF, z. B. für den Familienkalender.
+
+1. Dienste → **Meine**: neben „Meine | Alle“ steht **Teilen** (bei „Alle“ nicht). Am Handy stehen Filter und Teilen
+   nur als Symbol in derselben Zeile wie „Dienste | Meine | Alle“.
+2. **Teilen** → „Meine Dienste teilen“, kurz „Deine Dienste werden geladen …“, dann „Fertig · 1 Seite · Meine Dienste
+   <Name>.pdf“ und die Vorschau.
+3. Das Blatt: Kopf „Meine Dienste“, darunter Name und Zeitraum; Tabelle Datum (mit Uhrzeit), Termin, Dienst, Stand –
+   „zugesagt“ bzw. grau „angefragt“; nach Datum sortiert, auch Dienste nach den geladenen Wochen; abgesagte fehlen.
+4. Ohne kommende Dienste → „Du hast keine kommenden Dienste.“
+5. **Herunterladen** / **Teilen** wie bei den anderen Blättern.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/meineBlatt.ts`, `dienstplaner/src/MeineTeilenFenster.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/App.tsx`, `ui/ct/ich.ts`, `ui/teilen/planBlattPdf.ts`, `ui/bedienung/FilterKnopf.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/meineBlatt.test.ts` (aus `einteilungenAus`: Sortierung, Ortszeit, zugesagt/angefragt, leer), `dienstplaner/src/MeineTeilen.test.tsx` (Knopf nur bei „Meine“, frisch gelesen, Fehler mit „Erneut versuchen“), `ui/ct/ich.test.ts` und `dienstplaner/src/start.test.ts` (Nachname), `ui/bedienung/FilterKnopf.test.tsx` + `ui/bedienung/leistenKnoepfe.test.ts` (Filter am Handy nur Symbol); von Hand bleiben Aussehen und Teilen-Menü
+- **Historie:** E8-3 (05.11.2026, Entwurf `e8-teilen.html`)
+
+</details>

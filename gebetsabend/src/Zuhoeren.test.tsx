@@ -1,0 +1,168 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { ApiError } from '@ui/ct/fehler';
+import { VDO_BASIS } from '@shared/gebetsabend/links';
+import { NACHFRAGEN_MS, PLAYER_TEXT } from '@shared/gebetsabend/zuhoeren';
+import { neuerZugang, type Zugang } from '@shared/gebetsabend/zugang';
+import * as L from './lesen';
+import { Zuhoeren } from './Zuhoeren';
+
+vi.mock('./lesen', async (orig) => ({
+  ...(await orig<typeof import('./lesen')>()),
+  ladeZugang: vi.fn(),
+}));
+const laden = vi.mocked(L.ladeZugang);
+
+const HERKUNFT = new URL(VDO_BASIS).origin;
+/** Geprüft wird mit erzeugten Zugängen, nicht mit abgeschriebenen Werten. */
+const laeuft = (): Zugang => neuerZugang(true, '2026-11-12T18:32:00.000Z');
+
+/** Eine Meldung von VDO.Ninja nachstellen – aus dem echten iframe der Seite oder von woanders. */
+function melden(daten: unknown, opt: { herkunft?: string; vonPlayer?: boolean } = {}) {
+  const iframe = document.querySelector('iframe');
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: daten,
+        origin: opt.herkunft ?? HERKUNFT,
+        source: opt.vonPlayer === false ? window : (iframe?.contentWindow ?? null),
+      }),
+    );
+  });
+}
+
+async function nachfrage() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(NACHFRAGEN_MS);
+  });
+}
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+async function zeigen(z: Zugang | null) {
+  laden.mockResolvedValue(z);
+  render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
+
+describe('Zuhoeren', () => {
+  it('ohne Übertragung: kein Player, Knopf aus – und sobald die Technik startet, geht er an (ohne Neuladen)', async () => {
+    await zeigen({ ...laeuft(), laeuftSeit: null });
+    expect(screen.getByText('Noch keine Übertragung')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(document.querySelector('iframe')).toBeNull();
+
+    laden.mockResolvedValue(laeuft());
+    await nachfrage();
+    expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('ein Tippen öffnet den Player mit Name und ohne VDO.Ninja-Bedienung', async () => {
+    const z = laeuft();
+    await zeigen(z);
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    const src = new URL(document.querySelector('iframe')!.src);
+    expect(src.searchParams.get('view')).toBe(z.streamId);
+    expect(src.searchParams.get('label')).toBe('Helene Wiebe');
+    expect(src.searchParams.has('cleanish')).toBe(true);
+    expect(screen.getByText(PLAYER_TEXT.verbindet)).toBeTruthy();
+  });
+
+  it('Meldungen aus dem eigenen Player ändern den Zustand – fremde Herkunft oder fremdes Fenster nicht', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    melden({ action: 'new-audio-track-added', value: true }, { herkunft: 'https://boese.example' });
+    melden({ action: 'new-audio-track-added', value: true }, { vonPlayer: false });
+    expect(screen.getByText(PLAYER_TEXT.verbindet)).toBeTruthy();
+    melden({ action: 'new-audio-track-added', value: true });
+    expect(screen.getByText(PLAYER_TEXT.ton)).toBeTruthy();
+  });
+
+  it('vorübergehender Fehler beim Nachfragen schließt den laufenden Player NICHT', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    laden.mockRejectedValue(new ApiError(504, 'Zeitüberschreitung'));
+    await nachfrage();
+    await nachfrage();
+    expect(document.querySelector('iframe')).not.toBeNull();
+  });
+
+  it('Technik startet neu → Player lädt die neuen Daten; Technik beendet → Player zu, „beendet“', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    const neu = laeuft();
+    laden.mockResolvedValue(neu);
+    await nachfrage();
+    expect(new URL(document.querySelector('iframe')!.src).searchParams.get('view')).toBe(
+      neu.streamId,
+    );
+
+    laden.mockResolvedValue({ ...neu, laeuftSeit: null });
+    await nachfrage();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByText(/Die Übertragung ist beendet/)).toBeTruthy();
+  });
+
+  it('„Nicht mehr zuhören“ schließt den Player, der Knopf ist wieder da', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nicht mehr zuhören/ }));
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
+  });
+
+  it('Großansicht (iPhone, kein Browser-Vollbild): legt die Bühne groß, OHNE das iframe neu zu laden', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    const vorher = document.querySelector('iframe');
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).not.toBeNull();
+    expect(document.querySelector('iframe')).toBe(vorher);
+    fireEvent.click(screen.getByRole('button', { name: /Schließen/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+    expect(document.querySelector('iframe')).toBe(vorher);
+  });
+
+  it('Escape schließt die Großansicht; „Nicht mehr zuhören“ beendet sie mit', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nicht mehr zuhören/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+  });
+
+  it('„Nur Ton“: kein Knopf für Großansicht oder Vollbild', async () => {
+    await zeigen({ ...laeuft(), mitBild: false });
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(screen.queryByRole('button', { name: /Großansicht|Vollbild/ })).toBeNull();
+  });
+
+  it('scheitert schon das erste Laden, steht der Fehler da (nicht „keine Übertragung“)', async () => {
+    laden.mockRejectedValue(new ApiError(502, 'kaputt'));
+    render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByText('Noch keine Übertragung')).toBeNull();
+    expect(screen.getByRole('alert')).toBeTruthy();
+  });
+});

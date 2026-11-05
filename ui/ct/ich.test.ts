@@ -34,7 +34,7 @@ const MITGLIEDSCHAFT = {
 const ROLLEN = [{ id: 16, name: 'Leiter', isLeader: true }];
 
 const GUT: Antworten = {
-  '/whoami': () => json(200, { data: { id: 1, firstName: ' Alwin ' } }),
+  '/whoami': () => json(200, { data: { id: 1, firstName: ' Alwin ', lastName: ' Friesen ' } }),
   '/persons/1/groups': () => json(200, { data: [MITGLIEDSCHAFT] }),
   '/group/roles': () => json(200, { data: ROLLEN }),
   // /info kommt ohne `data`-Hülle (gemessen).
@@ -61,10 +61,17 @@ describe('ladeIch', () => {
     expect(await ladeIch()).toEqual({
       id: 1,
       vorname: 'Alwin',
+      // Fürs Blatt „Meine Dienste“ (E8-3).
+      nachname: 'Friesen',
       gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
       mitgliedschaften: [MITGLIEDSCHAFT],
       rollen: ROLLEN,
     });
+  });
+
+  it('ohne Nachnamen (fehlt in der Antwort) → leerer Text, kein Fehler', async () => {
+    ct({ ...GUT, '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin' } }) });
+    expect((await ladeIch()).nachname).toBe('');
   });
 
   it('niemand angemeldet (id -1) → 401, keine weiteren Anfragen', async () => {

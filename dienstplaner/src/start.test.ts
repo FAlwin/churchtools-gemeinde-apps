@@ -26,7 +26,7 @@ function ct(antworten: Antworten) {
 }
 
 const GUT: Antworten = {
-  '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin' } }),
+  '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin', lastName: 'Friesen' } }),
   '/persons/1/groups': () =>
     json(200, {
       data: [
@@ -75,6 +75,7 @@ describe('ladeStart (Dienstplaner)', () => {
     expect(await ladeStart()).toEqual({
       ichId: 1,
       vorname: 'Alwin',
+      nachname: 'Friesen',
       gemeinde: 'ECG',
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],
       dienstgruppen: [

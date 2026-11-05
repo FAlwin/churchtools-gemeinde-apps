@@ -737,9 +737,9 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 - [x] Öffentliches Repo unter MIT-Lizenz (`FAlwin/churchtools-gemeinde-apps`); keine Secrets im Code/in der Historie (`.env` nie eingecheckt)
 - [x] Authentifizierung: persönlicher ChurchTools-Login, Session in signiertem httpOnly-Cookie
 - [x] HTTPS extern via Synology Reverse Proxy + Let's Encrypt (`musik.ecg-donrath.de`)
-- [x] npm audit: zuletzt geprüft am 05.11.2026 (#844) – `npm audit --omit=dev` meldet nur noch **zod 3.25**
-      (hoch, Speicher bei übergroßen Sammlungen): nur angemeldet erreichbar und durch die Rumpf-Grenze gedeckelt,
-      Behebung erst mit zod 4 (eigene Aufgabe). `body-parser` (DoS, anonym erreichbar), `dompurify` (über jsPDF,
+- [x] npm audit: zuletzt geprüft am 05.11.2026 (#844, #849) – `npm audit --omit=dev` meldet **0 Schwachstellen**.
+      zod ist seit #849 auf 4.6.7 (GHSA-mrhx-c7xc-m3w5); zod 4 prüft `datetime` strenger (mit Sekunden, Abstand mit
+      Doppelpunkt) – ChurchTools liefert so, gemessen. `body-parser` (DoS, anonym erreichbar), `dompurify` (über jsPDF,
       `.html()` ungenutzt) und `qs` gezielt angehoben. Die übrigen Funde des vollen `npm audit` betreffen Build-/
       Test-Werkzeuge (vite, vitest, glob …). **Bewerten nach Erreichbarkeit, nicht nach Prod/Dev** – die frühere
       Aussage „ausschließlich Build-Werkzeuge“ (26.07.) stimmte am 04.11. nicht mehr.

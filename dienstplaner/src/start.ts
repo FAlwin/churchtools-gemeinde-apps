@@ -29,6 +29,8 @@ export interface Start {
   /** Die eigene Person – daran erkennt die Termine-Liste die eigenen Dienste. */
   ichId: number;
   vorname: string;
+  /** Fürs Blatt „Meine Dienste“ (E8-3). */
+  nachname?: string;
   gemeinde: string | null;
   gruppen: MeineGruppe[];
   dienstgruppen: Dienstgruppe[];
@@ -54,6 +56,7 @@ export async function ladeStart(): Promise<Start> {
   return {
     ichId: ich.id,
     vorname: ich.vorname,
+    nachname: ich.nachname,
     gemeinde: ich.gemeinde,
     gruppen: meineGruppen(ich.mitgliedschaften, ich.rollen),
     dienstgruppen: dienstgruppenAus(dienstgruppenRoh),

@@ -21,6 +21,7 @@ import { StatusKreis } from './StatusKreis';
 // Dieselben Marken wie in der Lese-Ansicht – Aufgabe, Beschluss und Termin sehen beim Schreiben aus wie beim Lesen.
 import ansicht from './ProtokollAnsicht.module.scss';
 import styles from './EditorBloecke.module.scss';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 /**
  * **Wie die eigenen Blöcke im Editor aussehen und bedient werden** (S4-1/S4-2, Entwurf 7) – die Darstellung zu den
@@ -34,12 +35,6 @@ import styles from './EditorBloecke.module.scss';
 
 interface Inhalt {
   contentRef: (el: HTMLElement | null) => void;
-}
-
-/** Heute als `JJJJ-MM-TT` in der Zeitzone des Geräts. */
-function heute(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Ein Schildchen, das ein kleines Feld darunter aufklappt; schließt bei Klick daneben und mit Esc. */
@@ -147,7 +142,7 @@ export function AufgabeBlock({
     ...(sicht?.wer ?? []).map(nameVon),
     ...(sicht?.extern ? [`${sicht.extern} (extern)`] : []),
   ];
-  const ueber = !!a && istUeberfaellig(a, heute());
+  const ueber = !!a && istUeberfaellig(a, heuteImKalender());
 
   return (
     <div className={`${ansicht.marke} ${ansicht.aufgabe} ${styles.aufgabe}`}>

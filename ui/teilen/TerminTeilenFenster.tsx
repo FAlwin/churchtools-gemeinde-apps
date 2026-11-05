@@ -17,14 +17,7 @@ import { downloadPdf, sharePdf } from './sharePdf';
 import { terminBlattPdf } from './terminBlattPdf';
 import { leseWahl, merkeWahl } from './terminBlattWahl';
 import styles from './TerminTeilenFenster.module.scss';
-
-const stempel = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
+import { datumUhrText } from '@shared/ct/zeit';
 
 type Seite = 'haupt' | 'dienste' | 'ablauf' | 'infos';
 type Stand = { art: 'baut' } | { art: 'fertig'; doc: jsPDF } | { art: 'fehler' };
@@ -45,7 +38,7 @@ export function TerminTeilenFenster({
   quelle: Omit<BlattQuelle, 'stand'>;
   onClose: () => void;
 }) {
-  const [stand] = useState(() => `Stand ${stempel.format(new Date())}`);
+  const [stand] = useState(() => `Stand ${datumUhrText(new Date())}`);
   const [wahl, setWahlRoh] = useState<BlattEinstellungen>(leseWahl);
   const [seite, setSeiteRoh] = useState<Seite>('haupt');
   // Nach dem ersten Wechsel blendet das Fenster nicht noch einmal ein – es ist dasselbe Fenster mit anderer Seite.

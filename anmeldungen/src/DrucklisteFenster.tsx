@@ -22,14 +22,7 @@ import { fehlerMeldung } from './zustand';
 import s from './Startseite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import d from './DrucklisteFenster.module.scss';
-
-const stempel = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
+import { datumUhrText } from '@shared/ct/zeit';
 
 /**
  * **Druckliste** (A8, Entwurf `a8-druckliste-v1`, abgenommen 23.10.2026) – Listen als PDF, auf Wunsch mit Warteliste;
@@ -80,7 +73,7 @@ export function DrucklisteFenster({
   // Dieselben Zahlen wie oben im Reiter.
   const { belegt: mitPlatz, wartend } = listenZahlen(e, liste);
   const titel = gemeinde ? `${gemeinde} · ${veranstaltung}` : veranstaltung;
-  const [stand] = useState(() => `Stand ${stempel.format(new Date())}`);
+  const [stand] = useState(() => `Stand ${datumUhrText(new Date())}`);
 
   useEffect(() => {
     // Wer während des Bauens umschaltet, bekommt das PDF zur NEUEN Wahl – das alte wird verworfen.

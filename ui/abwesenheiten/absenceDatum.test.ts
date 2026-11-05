@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import type { Absence, AbsenceEvent } from '@shared/types/index';
-import { abwesenheitFuerTermin, tagKurz, zeitraumKurz } from './absenceDatum';
+import { _vergissGemeindeZeitzone, merkeGemeindeZeitzone } from '@shared/ct/zeit';
+import { abwesenheitFuerTermin, tagKurz, uhrzeit, zeitraumKurz } from './absenceDatum';
 
 const ab = (p: Partial<Absence>): Absence => ({
   id: 1,
@@ -128,5 +129,21 @@ describe('absenceDatum', () => {
     expect(zeitraumKurz({ startDate: '2026-10-03', endDate: '2026-10-11' }, heute)).toBe(
       'Sa, 03.10. – So, 11.10.',
     );
+  });
+});
+
+describe('in der Uhr der Gemeinde (#847)', () => {
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('uhrzeit: die Uhrzeit in der Gemeinde, nicht auf dem Gerät', () => {
+    merkeGemeindeZeitzone({ timezone: 'Pacific/Kiritimati' }); // UTC+14
+    expect(uhrzeit('2026-10-04T08:00:00Z')).toBe('22:00');
+    expect(uhrzeit('kaputt')).toBe('');
+  });
+
+  it('tagKurz: das laufende Jahr ist das der Gemeinde', () => {
+    merkeGemeindeZeitzone({ timezone: 'Pacific/Kiritimati' });
+    // Silvester 12 Uhr UTC: in UTC+14 schon 2027 – ein Tag 2027 steht dann ohne Jahr da.
+    expect(tagKurz('2027-01-03', new Date('2026-12-31T12:00:00Z'))).toBe('So, 03.01.');
   });
 });

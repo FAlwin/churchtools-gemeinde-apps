@@ -10,7 +10,7 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import { WahlKnopf } from '@ui/bedienung/WahlKnopf';
 import { tagKurz } from '@shared/ct/datum';
-import { heuteImKalender } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
@@ -53,8 +53,6 @@ type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; uebersicht: GruppenUebersicht[] };
-
-const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /*
  * Gemerkt (`useToDoEinstellungen`): Ansicht, Einteilung, Filter, Sortierung, meine Reihenfolge. Ältere Erledigte sind
@@ -158,7 +156,7 @@ export function ToDos({
     (still: boolean) => {
       if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
       if (!still) setZustand({ art: 'laedt' });
-      ladeUebersicht(modul, gruppen, zeitzone).then(
+      ladeUebersicht(modul, gruppen, gemeindeZeitzone()).then(
         (uebersicht) => setZustand({ art: 'fertig', uebersicht }),
         (e: unknown) =>
           still

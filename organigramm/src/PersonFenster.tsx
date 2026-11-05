@@ -9,15 +9,11 @@ import type { EinsaetzeStand } from './ladeEinsaetze';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
 import styles from './GruppenFenster.module.scss';
+import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
+import { tagPunkt } from '@shared/ct/datum';
 
-const datum = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : '–';
+/** Der Tag eines Einsatzes in der Uhr der Gemeinde (#847) – nicht `toLocaleDateString`, das nähme die des Geräts. */
+const datum = (iso: string | null) => (iso ? tagPunkt(tagAusIso(iso, gemeindeZeitzone())) : '–');
 
 interface Props {
   start: Start;

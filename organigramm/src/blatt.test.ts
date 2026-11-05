@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { _vergissGemeindeZeitzone, merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import {
   anfangsOffen,
   anordnen,
@@ -120,6 +121,15 @@ describe('Liste auf Seiten', () => {
 });
 
 describe('pdfDateiname', () => {
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('das Datum ist der Tag in der Gemeinde, wie beim „Stand“ (#847)', () => {
+    merkeGemeindeZeitzone({ timezone: 'Pacific/Kiritimati' }); // UTC+14
+    expect(pdfDateiname('Gemeinde', new Date('2026-10-28T12:00:00Z'))).toBe(
+      'Organigramm-Gemeinde-2026-10-29.pdf',
+    );
+  });
+
   it('nur Buchstaben, Ziffern und Striche, mit Datum', () => {
     expect(pdfDateiname('Gottesdienst | Gottesdienste', new Date(2026, 9, 28))).toBe(
       'Organigramm-Gottesdienst-Gottesdienste-2026-10-28.pdf',

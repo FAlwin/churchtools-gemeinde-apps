@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { tagPunkt } from '@shared/ct/datum';
-import { tagAusIso } from '@shared/ct/zeit';
+import { heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { fruehereProtokolle, letztesProtokoll } from '@shared/protokolle/festePunkte';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
@@ -59,7 +59,7 @@ export function FestePunkteRahmen({
     () => ({
       sitzung: sitzung.kopf?.sitzung ?? '',
       gruppe,
-      heute: tagAusIso(new Date().toISOString(), zeitzone),
+      heute: heuteImKalender(),
       zeitzone,
       aufgaben,
       protokolle,

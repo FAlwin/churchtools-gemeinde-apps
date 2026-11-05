@@ -113,6 +113,8 @@ export function Sitzungen({
   // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
   const wunsch = useRef(auswahl?.sitzung);
   const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
+  // „Öffnen“ im Fenster eines früheren Protokolls (K3b-2): Woher man kam – „Zurück“ führt wieder dorthin.
+  const [herkunft, setHerkunft] = useState<string | null>(null);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -278,6 +280,17 @@ export function Sitzungen({
             setOffen(null);
             if (geaendert) laden();
           }}
+          onZuSitzung={(s, geaendert) => {
+            setHerkunft(offen.schluessel);
+            setZuPunkt(null);
+            if (!geaendert) {
+              setOffen(s);
+              return;
+            }
+            // Gespeichert: neu laden (wie „Zurück“) und danach gleich das gewählte Protokoll öffnen.
+            wunsch.current = s.schluessel;
+            laden();
+          }}
         />
       </Suspense>
     );
@@ -301,7 +314,19 @@ export function Sitzungen({
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={() => {
             setZuPunkt(null);
-            setOffen(null);
+            setHerkunft(null);
+            setOffen(
+              (herkunft &&
+                [...zustand.daten.kommend, ...zustand.daten.protokolle].find(
+                  (x) => x.schluessel === herkunft,
+                )) ||
+                null,
+            );
+          }}
+          onZuSitzung={(s) => {
+            setHerkunft(offen.schluessel);
+            setZuPunkt(null);
+            setOffen(s);
           }}
         />
         {beginnt && gruppe.protokolle !== null && (

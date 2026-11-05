@@ -31,6 +31,7 @@ export function SitzungAnsicht({
   onBeginnen,
   onBearbeiten,
   onZurueck,
+  onZuSitzung,
 }: {
   sitzung: Sitzung;
   gruppe: string;
@@ -49,6 +50,8 @@ export function SitzungAnsicht({
   /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
   onBearbeiten?: () => void;
   onZurueck: () => void;
+  /** „Öffnen“ im Fenster eines früheren Protokolls: zu dieser Sitzung springen (K3b-2). */
+  onZuSitzung?: (s: Sitzung) => void;
 }) {
   const kopf = sitzung.kopf;
   const dokument = dokumentDerSitzung(kopf, teile);
@@ -127,6 +130,7 @@ export function SitzungAnsicht({
           teile={teile}
           aufgaben={aufgaben}
           zeitzone={zeitzone}
+          onZuSitzung={onZuSitzung}
         >
           <section className={styles.karte} aria-label="Protokoll">
             <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />

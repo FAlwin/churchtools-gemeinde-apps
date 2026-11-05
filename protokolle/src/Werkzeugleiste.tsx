@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useEditorState } from '@blocknote/react';
 import { Icon, type IconName } from '@ui/icons/icons';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
@@ -10,7 +10,9 @@ import { FESTE_PUNKTE } from './anzeige';
 import type { ProtokollEditor } from './editorSchema';
 import { kannRuecken, ruecken } from './einruecken';
 import { farbWert, MARKIER_FARBEN, type FarbArt } from './farben';
-import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
+import { FESTE } from './festenPunktEinfuegen';
+import { FestePunkteKontext } from './festePunkteKontext';
+import { festenPunktAnbieten } from './fruehesProtokoll';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
 import styles from './Werkzeugleiste.module.scss';
 
@@ -318,6 +320,7 @@ const farbName = (x: unknown): string | null =>
 export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const thema = useThema();
+  const feste = useContext(FestePunkteKontext);
   const z = useEditorState({
     editor,
     // `editor` aus der Hülle – der Schnappschuss reicht ihn nur untypisiert durch.
@@ -497,10 +500,10 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
             <MenuePunkt
               key={f.art}
               icon={f.icon}
-              text={FESTE_PUNKTE[f.art].titel}
+              text={FESTE_PUNKTE[f.art].menue}
               onKlick={() => {
                 zu();
-                festenPunktEinfuegen(editor, f.art);
+                festenPunktAnbieten(editor, f.art, feste);
               }}
             />
           ))}

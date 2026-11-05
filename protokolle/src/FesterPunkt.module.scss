@@ -93,8 +93,9 @@
 
 .letztes {
   display: flex;
+  flex-wrap: wrap; // wenig Platz (Handy): die Knöpfe rutschen unter den Text statt ihn zu quetschen (K3b-2)
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
 
   > svg {
     flex: none;
@@ -102,12 +103,20 @@
   }
 
   .text {
+    flex: 1 1 200px; // unter 200 px bricht die Zeile um (die Knöpfe gehen nach unten)
     padding-top: 0;
   }
 
   .leise {
     margin: 0;
   }
+}
+
+// „Ändern“ und „Ansehen“ (K3b-2) – rechts, bei wenig Platz in einer eigenen Zeile darunter.
+.knoepfe {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
 }
 
 .oeffnen {
@@ -126,4 +135,9 @@
       background: var(--blue-soft);
     }
   }
+}
+
+// „Ändern“ leiser als „Ansehen“ (Entwurf k3b-v1) – nach `.oeffnen`, sonst gewinnt dessen Blau.
+.oeffnen.leiseKnopf {
+  color: var(--text2);
 }

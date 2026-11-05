@@ -111,6 +111,56 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
   });
 
+  it('Früheres Protokoll (K3b-2): „Öffnen“ im Fenster springt dorthin, „Zurück“ führt wieder her', async () => {
+    const nov = teileBauen(
+      [
+        {
+          id: 'n1',
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Rückblick', styles: {} }],
+          children: [],
+        },
+        { id: 'n2', type: 'verweis', props: { art: 'letztes-protokoll' }, children: [] },
+      ],
+      'nov',
+    );
+    const NOV: Sitzung = {
+      ...PROTOKOLL,
+      schluessel: 'p:nov',
+      beginn: '2026-11-11T18:00:00Z',
+      titel: 'Novembersitzung',
+      kopf: {
+        ...KOPF,
+        sitzung: 'nov',
+        titel: 'Novembersitzung',
+        beginn: '2026-11-11T18:00:00Z',
+        stand: nov.stand,
+      },
+    };
+    m.ladeSitzungen.mockResolvedValue({
+      ...DATEN,
+      protokolle: [NOV, PROTOKOLL],
+      teile: [
+        ...DATEN.teile,
+        ...nov.werte.map((w) => JSON.parse(w) as L.GruppenSitzungen['teile'][number]),
+      ],
+    });
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    fireEvent.click(await screen.findByText('Novembersitzung'));
+    expect(await screen.findByText('Rückblick')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Öffnen' }));
+    // Jetzt das Protokoll vom 14.10. – nicht mehr das vom November.
+    expect(await screen.findByText('Andacht & Gebet')).toBeTruthy();
+    expect(screen.queryByText('Rückblick')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('Rückblick')).toBeTruthy();
+    // Von dort führt „Zurück“ wie immer zur Liste.
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
+  });
+
   it('Sitzung ohne Protokoll: sagt das', async () => {
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     fireEvent.click(await screen.findByText('Klausur'));

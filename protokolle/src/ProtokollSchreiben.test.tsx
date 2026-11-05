@@ -2,7 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
-import { sperreVon, type ProtokollKopf } from '@shared/protokolle/speicher';
+import {
+  sperreVon,
+  teileBauen,
+  type ProtokollKopf,
+  type ProtokollTeil,
+} from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import * as M from './mitglieder';
 import * as S from './schreiben';
@@ -74,6 +79,8 @@ const MIT_AUFGABE = [
     content: [{ type: 'text', text: 'Beamer', styles: {} }],
     children: [],
   },
+  // Ein früheres Protokoll (K3b-2) – damit „Öffnen“ aus dem Fenster auch nach dem Tippen geprüft werden kann.
+  { id: 'v', type: 'verweis', props: { art: 'letztes-protokoll' }, children: [] },
 ];
 
 const lesen = vi.mocked(S.protokollLesen);
@@ -251,6 +258,125 @@ describe('ProtokollSchreiben', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schreiben' }));
     expect(screen.getByTestId('editor').closest('[hidden]')).toBeNull();
     expect(screen.queryByText('Beamer von früher')).toBeNull();
+  });
+
+  it('„Öffnen“ im Fenster eines früheren Protokolls: erst Sperre lösen wie bei „Zurück“, dann dorthin (K3b-2)', async () => {
+    const alt = teileBauen(
+      [{ id: 'x', type: 'heading', props: { level: 1 }, content: 'Alt', children: [] }],
+      'alt',
+    );
+    const ALT = {
+      schluessel: 'p:alt',
+      titel: 'Leitungssitzung',
+      beginn: '2026-10-14T17:00:00Z',
+      kopf: {
+        ...KOPF,
+        sitzung: 'alt',
+        status: 'frei',
+        beginn: '2026-10-14T17:00:00Z',
+        stand: alt.stand,
+      },
+    } as unknown as Sitzung;
+    lesen.mockResolvedValue({
+      kopf: KOPF,
+      dokument: [
+        ...DOK,
+        { id: 'v', type: 'verweis', props: { art: 'letztes-protokoll' }, children: [] },
+      ],
+    });
+    const onZurueck = vi.fn();
+    const onZuSitzung = vi.fn();
+    render(
+      <ProtokollSchreiben
+        sitzung={SITZUNG}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[ALT]}
+        teile={alt.werte.map((w) => JSON.parse(w) as ProtokollTeil)}
+        zeitzone="Europe/Berlin"
+        ich={{ person: 1, name: 'Alwin' }}
+        onZurueck={onZurueck}
+        onZuSitzung={onZuSitzung}
+      />,
+    );
+    await screen.findByText('bearbeitbar');
+    // Erst tippen: Das nimmt die Sperre – die muss „Öffnen“ wieder lösen.
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    await screen.findByText(/gespeichert/);
+    vi.mocked(S.sperreFreigeben).mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    await waitFor(() => expect(onZuSitzung).toHaveBeenCalledWith(ALT, true));
+    expect(S.sperreFreigeben).toHaveBeenCalled();
+    expect(onZurueck).not.toHaveBeenCalled();
+  });
+
+  it('„Öffnen“ abgebrochen („Hierbleiben“): das spätere „Zurück“ führt zur Liste, nicht zum früheren Protokoll', async () => {
+    const alt = teileBauen(
+      [{ id: 'x', type: 'heading', props: { level: 1 }, content: 'Alt', children: [] }],
+      'alt',
+    );
+    const ALT = {
+      schluessel: 'p:alt',
+      titel: 'Leitungssitzung',
+      beginn: '2026-10-14T17:00:00Z',
+      kopf: {
+        ...KOPF,
+        sitzung: 'alt',
+        status: 'frei',
+        beginn: '2026-10-14T17:00:00Z',
+        stand: alt.stand,
+      },
+    } as unknown as Sitzung;
+    lesen.mockResolvedValue({
+      kopf: KOPF,
+      dokument: [
+        ...DOK,
+        { id: 'v', type: 'verweis', props: { art: 'letztes-protokoll' }, children: [] },
+      ],
+    });
+    const onZurueck = vi.fn();
+    const onZuSitzung = vi.fn();
+    render(
+      <ProtokollSchreiben
+        sitzung={SITZUNG}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[ALT]}
+        teile={alt.werte.map((w) => JSON.parse(w) as ProtokollTeil)}
+        zeitzone="Europe/Berlin"
+        ich={{ person: 1, name: 'Alwin' }}
+        onZurueck={onZurueck}
+        onZuSitzung={onZuSitzung}
+      />,
+    );
+    await screen.findByText('bearbeitbar');
+    // Erst tippen: Das nimmt die Sperre – die muss „Öffnen“ wieder lösen.
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    await screen.findByText(/gespeichert/);
+    // Jetzt scheitert das Speichern: „Öffnen“ fragt, ob man trotzdem gehen will – man bleibt.
+    vi.mocked(S.speichern).mockRejectedValue(new Error('Netz weg'));
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Hierbleiben' }));
+    // Später „Zurück“ und „Trotzdem verlassen“: zur Liste.
+    fireEvent.click(screen.getByRole('button', { name: /Sitzungen/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Trotzdem verlassen' }));
+    await waitFor(() => expect(onZurueck).toHaveBeenCalled());
+    expect(onZuSitzung).not.toHaveBeenCalled();
   });
 
   it('Mitgliederliste verborgen: im festen Punkt steht bei eigenen To-Dos trotzdem der eigene Name (S7-2a)', async () => {

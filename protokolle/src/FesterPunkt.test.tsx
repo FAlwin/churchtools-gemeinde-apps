@@ -152,15 +152,15 @@ describe('Fester Punkt „Offene To-Dos“', () => {
 });
 
 describe('Fester Punkt „Letztes Protokoll“', () => {
-  it('zeigt das letzte freigegebene und öffnet es im Fenster – dort ohne weiteres „Öffnen“', () => {
+  it('zeigt das letzte freigegebene und zeigt es mit „Ansehen“ im Fenster – dort ohne weiteres „Ansehen“', () => {
     zeige();
     expect(screen.getByText(/vom 14\.10\.2026 · freigegeben am 15\.10\.2026/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
     const fenster = screen.getByRole('dialog', { name: 'Leitungssitzung · 14.10.2026' });
     expect(within(fenster).getByText('Budget freigegeben')).toBeTruthy();
     // Im alten Protokoll: dessen eigenes „Letztes Protokoll“ (September) – aber kein Fenster im Fenster.
     expect(within(fenster).getByText(/vom 09\.09\.2026/)).toBeTruthy();
-    expect(within(fenster).queryByRole('button', { name: 'Öffnen' })).toBeNull();
+    expect(within(fenster).queryByRole('button', { name: 'Ansehen' })).toBeNull();
     fireEvent.click(within(fenster).getAllByRole('button', { name: 'Fenster schließen' })[0]);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -187,7 +187,10 @@ describe('Fester Punkt im Editor', () => {
         aufgaben={AUFGABEN}
         zeitzone="Europe/Berlin"
       >
-        <VerweisBlock block={{ props: { art: 'letztes-protokoll', fest: '' } }} />
+        <VerweisBlock
+          block={{ id: 'v', props: { art: 'letztes-protokoll', fest: '' } }}
+          editor={{ isEditable: false }}
+        />
       </FestePunkteRahmen>,
       { container: editor },
     );
@@ -196,7 +199,7 @@ describe('Fester Punkt im Editor', () => {
     text.dispatchEvent(druck);
     expect(druck.defaultPrevented).toBe(true);
     expect(editorHoert).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     editor.remove();
   });

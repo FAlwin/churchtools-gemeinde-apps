@@ -139,3 +139,31 @@ zeigen dieselbe Nummer.
 - **Historie:** K3b-1 (04.11.2026: Tab auf einem Tagesordnungspunkt hängte ihn als Kind unter den Block davor – Nummer weg, Beschlüsse darunter zählten zum Punkt davor; markierte Zeilen ließen sich nicht einrücken)
 
 </details>
+
+### TF-PROT-06 · Früheres Protokoll wählen, ansehen und öffnen
+
+**Das brauchst du:** In der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel beginnt mit „TEST“) in einer Gruppe
+mit mindestens zwei freigegebenen Protokollen.
+
+**Das muss passieren:** Einfügen fragt, welches Protokoll; der Titel passt zur Wahl. „Ändern“ wählt ein anderes,
+„Ansehen“ zeigt es im kleinen Fenster, „Öffnen“ springt dorthin, „Zurück“ wieder zum Test-Protokoll.
+
+1. In ChurchTools im Menü auf **Protokolle**, das Test-Protokoll öffnen (Schreiben).
+2. In eine leere Zeile, **Einfügen → Früheres Protokoll**: Ein Fenster listet die freigegebenen Protokolle, neueste oben,
+   das letzte ist gewählt und als „letzte Sitzung“ markiert.
+3. Ein **älteres** wählen, **Einfügen**: Der neue Punkt heißt „Protokoll vom …“ mit dessen Datum, der Kasten zeigt es.
+4. Am Kasten des Punkts „Protokoll der letzten Sitzung“ aus der Vorlage steht „immer die letzte Sitzung“. **Ändern** →
+   ein anderes wählen → **Übernehmen**: Titel und Kasten wechseln.
+5. **Ansehen**: Das kleine Fenster zeigt das Protokoll. **Öffnen**: Die Seite wechselt zu diesem Protokoll (vorher wird
+   gespeichert).
+6. Oben **Sitzungen** (Zurück): Man ist wieder im Test-Protokoll, nicht in der Liste.
+7. Am Handy: Beim Kasten stehen „Ändern“ und „Ansehen“ unter dem Text, der Text steht lesbar in einer Zeile.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/festePunkte.ts`, `protokolle/src/fruehesProtokoll.ts`, `protokolle/src/FruehesWahl.tsx`, `protokolle/src/FestePunkteRahmen.tsx`, `protokolle/src/FesterPunkt.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/Sitzungen.tsx`
+- **Automatisiert:** ja – `protokolle/src/fruehesProtokoll.test.tsx` (Einfügen, Ändern, Ansehen, Öffnen mit dem echten Editor), `protokolle/src/Sitzungen.test.tsx` (Öffnen und Zurück), `protokolle/src/ProtokollSchreiben.test.tsx` (erst speichern und Sperre lösen), `shared/protokolle/festePunkte.test.ts`; wie der Kasten am Handy umbricht, nur am Gerät
+- **Historie:** K3b-2 (05.11.2026)
+
+</details>

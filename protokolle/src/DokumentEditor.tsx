@@ -1,4 +1,5 @@
 import {
+  useContext,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -44,8 +45,8 @@ import {
 } from './abschnittZiehen';
 import { aufgabenIdsSetzen, schema, TABELLEN, type ProtokollEditor } from './editorSchema';
 import { blockInhalt, griffVersatz } from './griffLage';
-import { FESTE_PUNKTE } from './anzeige';
-import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
+import { FestePunkteKontext } from './festePunkteKontext';
+import { festeImMenue } from './festeImMenue';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
@@ -117,10 +118,6 @@ const EIGENE_TEXT = {
   aufgabe: 'To-Do mit Wer und Bis – erscheint gleich bei den Zuständigen',
   beschluss: 'Erscheint unter „Beschlüsse“',
   termin: 'Mit Datum – erscheint unter „Termine“',
-} as const;
-const FESTE_ALIASE = {
-  'offene-aufgaben': ['offen', 'todos', 'to-dos', 'fest'],
-  'letztes-protokoll': ['letztes', 'protokoll', 'fest'],
 } as const;
 const EIGENE_ALIASE = {
   aufgabe: ['todo', 'to-do', 'aufgabe', 'aufgaben'],
@@ -244,6 +241,7 @@ export function DokumentEditor({
   /** Gehört diese To-Do-ID einer anderen Sitzung? (dann bekommt die Aufgabe eine neue, `aufgabenIdsVergeben`) */
   fremdeAufgabe?: (id: string) => boolean;
 }) {
+  const feste = useContext(FestePunkteKontext);
   const editor: ProtokollEditor = useCreateBlockNote(
     {
       schema,
@@ -373,16 +371,7 @@ export function DokumentEditor({
                       icon: <Icon name="tabelle" size={18} />,
                       onItemClick: () => tabelleEinfuegen(editor),
                     },
-                    ...FESTE.map(
-                      (f): DefaultReactSuggestionItem => ({
-                        title: FESTE_PUNKTE[f.art].titel,
-                        subtext: FESTE_PUNKTE[f.art].hinweis,
-                        aliases: [...FESTE_ALIASE[f.art]],
-                        group: 'Feste Punkte',
-                        icon: <Icon name={f.icon} size={18} />,
-                        onItemClick: () => festenPunktEinfuegen(editor, f.art),
-                      }),
-                    ),
+                    ...festeImMenue(editor, feste),
                     ...getDefaultReactSlashMenuItems(editor).filter((i) => MENUE.has(i.title)),
                   ],
                   q,

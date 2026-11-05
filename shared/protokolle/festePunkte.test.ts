@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
-import { BLOCK, type Block } from './dokument';
+import { BLOCK, textAus, type Block } from './dokument';
 import {
   festeAufgabenAus,
   festePunkteFesthalten,
   festesProtokollAus,
+  festesProtokollWert,
+  fruehereProtokolle,
+  fruehererTitel,
+  istFruehererTitel,
   letztesProtokoll,
   offeneVonFrueher,
+  TITEL_LETZTES_PROTOKOLL,
 } from './festePunkte';
 import { STANDARD_VORLAGEN, startDokument, wieLetztesMal } from './vorlagen';
 
@@ -181,5 +186,46 @@ describe('festePunkteFesthalten', () => {
     expect(kopie[0].props).toEqual({ art: 'offene-aufgaben' });
     const vorlage = { ...STANDARD_VORLAGEN[0], bloecke: fest };
     expect(startDokument(vorlage, () => 'neu')[0].props).toEqual({ art: 'offene-aufgaben' });
+  });
+});
+
+describe('Früheres Protokoll (K3b-2)', () => {
+  it('zur Wahl: nur freigegebene, ohne diese Sitzung, neueste zuerst', () => {
+    const liste = [
+      sitzung('sept', '2026-09-09T17:00:00Z', 'frei'),
+      sitzung('entwurf', '2026-10-01T17:00:00Z', 'entwurf'),
+      sitzung('okt', '2026-10-14T17:00:00Z', 'frei'),
+      sitzung('heute', '2026-10-28T17:00:00Z', 'frei'),
+    ];
+    const diese = sitzung('heute', '2026-10-28T17:00:00Z', 'entwurf');
+    expect(fruehereProtokolle(liste, diese).map((s) => s.kopf.sitzung)).toEqual(['okt', 'sept']);
+  });
+
+  it('Titel: das letzte heißt wie der feste Punkt der Vorlage, sonst „Protokoll vom …“', () => {
+    expect(fruehererTitel('okt', 'okt', '14.10.2026')).toBe(TITEL_LETZTES_PROTOKOLL);
+    expect(fruehererTitel('sept', 'okt', '09.09.2026')).toBe('Protokoll vom 09.09.2026');
+    // Der Punkt der Standard-Vorlage trägt genau diesen Titel – „Ändern“ erkennt ihn als selbstgesetzt.
+    const titel = startDokument(STANDARD_VORLAGEN[0], () => 'x')
+      .filter((x) => x.type === 'heading')
+      .map((x) => textAus(x.content));
+    expect(titel).toContain(TITEL_LETZTES_PROTOKOLL);
+    expect(istFruehererTitel(TITEL_LETZTES_PROTOKOLL)).toBe(true);
+  });
+
+  it('istFruehererTitel erkennt nur die selbstgesetzten Titel', () => {
+    expect(istFruehererTitel(fruehererTitel('sept', 'okt', '09.09.2026'))).toBe(true);
+    expect(istFruehererTitel(fruehererTitel('okt', 'okt', '14.10.2026'))).toBe(true);
+    expect(istFruehererTitel('Protokoll vom Sommerfest')).toBe(false);
+    expect(istFruehererTitel('Rückblick')).toBe(false);
+  });
+
+  it('festesProtokollWert ist, was festesProtokollAus liest – dieselbe Schreibweise wie bei der Freigabe', () => {
+    expect(festesProtokollAus(festesProtokollWert('sept'))).toEqual({ sitzung: 'sept' });
+    expect(festesProtokollAus(festesProtokollWert(null))).toEqual({ sitzung: null });
+    const [frei] = festePunkteFesthalten(
+      [{ id: 'v', type: BLOCK.verweis, props: { art: 'letztes-protokoll' } }],
+      { offen: { offen: [], erledigt: [], seit: null }, letztes: 'okt' },
+    );
+    expect(frei.props?.fest).toBe(festesProtokollWert('okt'));
   });
 });

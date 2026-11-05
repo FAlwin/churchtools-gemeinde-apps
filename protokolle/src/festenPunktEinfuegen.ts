@@ -12,18 +12,23 @@ export const FESTE: readonly { art: VerweisArt; icon: IconName }[] = [
 /**
  * **Einen festen Punkt einfügen** (S4-3a): Tagesordnungspunkt mit seinem Titel, darunter der Punkt und eine leere Zeile
  * für Notizen. Er kommt hinter den Block auf oberster Ebene, in dem man steht – ein Tagesordnungspunkt ist nie
- * eingerückt. Steht man in einer leeren Zeile (etwa nach „/“), tritt er an ihre Stelle.
+ * eingerückt. Steht man in einer leeren Zeile (etwa nach „/“), tritt er an ihre Stelle. `mit` (K3b-2): ein anderer
+ * Titel und gleich festgehalten, was der Punkt zeigt – für ein gewähltes früheres Protokoll.
  */
-export function festenPunktEinfuegen(editor: ProtokollEditor, art: VerweisArt): void {
+export function festenPunktEinfuegen(
+  editor: ProtokollEditor,
+  art: VerweisArt,
+  mit?: { titel: string; fest: string },
+): void {
   let hier = editor.getTextCursorPosition().block;
   for (let p = editor.getParentBlock(hier); p; p = editor.getParentBlock(hier)) hier = p;
   const neu = [
     {
       type: 'heading' as const,
       props: { level: 1 as const },
-      content: FESTE_PUNKTE[art].titel,
+      content: mit?.titel ?? FESTE_PUNKTE[art].titel,
     },
-    { type: 'verweis' as const, props: { art } },
+    { type: 'verweis' as const, props: { art, ...(mit ? { fest: mit.fest } : {}) } },
     { type: 'paragraph' as const },
   ];
   const leer =

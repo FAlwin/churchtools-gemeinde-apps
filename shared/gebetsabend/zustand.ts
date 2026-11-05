@@ -15,6 +15,8 @@ export type PlayerZustand = 'verbindet' | 'wartet' | 'laeuft' | 'ton' | 'unterbr
 export interface Meldung {
   action: string;
   value: unknown;
+  /** Welche Verbindung – beim Sender je Zuhörer eine eigene (G0-3, „Wer hört zu?“). */
+  uuid?: string;
 }
 
 /**
@@ -33,8 +35,11 @@ export function istVdoMeldung(
 /** Eine Meldung von VDO.Ninja – alles andere (fremde Nachrichten, Statistik ohne `action`) ist `null`. */
 export function meldungAus(daten: unknown): Meldung | null {
   if (!daten || typeof daten !== 'object') return null;
-  const d = daten as { action?: unknown; value?: unknown };
-  return typeof d.action === 'string' ? { action: d.action, value: d.value } : null;
+  const d = daten as { action?: unknown; value?: unknown; UUID?: unknown };
+  if (typeof d.action !== 'string') return null;
+  return typeof d.UUID === 'string'
+    ? { action: d.action, value: d.value, uuid: d.UUID }
+    : { action: d.action, value: d.value };
 }
 
 /**

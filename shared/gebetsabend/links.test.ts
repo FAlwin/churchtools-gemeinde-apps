@@ -38,6 +38,8 @@ describe('zuhoererLink', () => {
     expect(p.has('cleanish')).toBe(true);
     expect(p.has('cleanoutput')).toBe(false);
     expect(p.get('bitrate')).toBe(String(BITRATE));
+    // Apple-Leiste im Bild: echtes Vollbild am iPhone, auch in der PWA (Messung 05.11.2026).
+    expect(p.has('videocontrols')).toBe(true);
     expect(p.has('novideo')).toBe(false);
     expect(p.get('label')).toBe('Helene Wiebe');
   });
@@ -46,6 +48,7 @@ describe('zuhoererLink', () => {
     const p = parameter(zuhoererLink({ ...zugang, mitBild: false }, 'Helene Wiebe'));
     expect(p.has('novideo')).toBe(true);
     expect(p.has('bitrate')).toBe(false);
+    expect(p.has('videocontrols')).toBe(false);
   });
 
   it('Sonderzeichen im Namen bleiben heil, leerer Name wird „Gast“', () => {

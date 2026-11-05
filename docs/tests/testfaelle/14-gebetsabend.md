@@ -45,15 +45,16 @@ beendet, schließt er sich mit „Die Übertragung ist beendet“.
    zeigt es einen Wiedergabe-Knopf; ein Tippen ins Bild startet es (Hinweis darunter).
 4. iPhone sperren, 30 Sekunden warten, entsperren: Ton lief weiter, Bild läuft.
 5. Neu starten (neue Zugangsdaten): Nach höchstens 20 Sekunden lädt der Player neu und spielt wieder.
-6. **Großansicht** tippen: Das Bild liegt über der ganzen Seite, Ton läuft ohne Unterbrechung weiter; Handy quer drehen
-   → fast bildschirmfüllend. **Schließen** → zurück, Bild läuft weiter.
+6. Ins Bild tippen: Apples Leiste erscheint. **Vollbild** (zwei Pfeile) → das Bild füllt den ganzen Bildschirm, auch
+   quer und auch in der ChurchTools-App vom Home-Bildschirm; X → zurück, Ton läuft weiter. In **Safari** (nicht in der
+   App vom Home-Bildschirm) gibt es dort auch **Bild-in-Bild**.
 7. Beenden: Nach höchstens 20 Sekunden ist der Player weg, „Die Übertragung ist beendet“.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `gebetsabend/src/Zuhoeren.tsx`, `gebetsabend/src/Zuhoeren.module.scss`, `ui/bedienung/useVollbild.ts`, `gebetsabend/src/lesen.ts`, `shared/gebetsabend/zuhoeren.ts`, `shared/gebetsabend/zustand.ts`, `shared/gebetsabend/links.ts`
-- **Automatisiert:** teilweise – `gebetsabend/src/Zuhoeren.test.tsx` (Nachfragen mit Fake-Timern, Herkunft, Neustart, Ende, vorübergehender Fehler), `shared/gebetsabend/zuhoeren.test.ts`, `shared/gebetsabend/zustand.test.ts`; Bild, Ton und Sperren nur am Gerät
+- **Betrifft:** `gebetsabend/src/Zuhoeren.tsx`, `gebetsabend/src/Zuhoeren.module.scss`, `gebetsabend/src/lesen.ts`, `shared/gebetsabend/zuhoeren.ts`, `shared/gebetsabend/zustand.ts`, `shared/gebetsabend/links.ts`
+- **Automatisiert:** teilweise – `gebetsabend/src/Zuhoeren.test.tsx` (Nachfragen mit Fake-Timern, Herkunft, Neustart, Ende, vorübergehender Fehler, Apple-Leiste und Erlaubnisse des Players), `shared/gebetsabend/zuhoeren.test.ts`, `shared/gebetsabend/zustand.test.ts`; Bild, Ton, Sperren, Vollbild und Bild-in-Bild nur am Gerät
 - **Historie:** neu mit G2 (05.11.2026); Grundlage Messung S0/S0b/G0
 
 </details>

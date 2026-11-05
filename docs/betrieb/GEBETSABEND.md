@@ -48,9 +48,11 @@ und darunter einen großen Knopf **„Gebetsabend zuhören“**:
   Wiedergabe-Knopf, und darunter steht „Bleibt das Bild schwarz? Einmal ins Bild tippen.“ Unter dem Bild steht, was gerade
   passiert („Verbindet …“, „Der Ton kommt an.“, „Kurz unterbrochen – verbindet von selbst wieder …“). Der Ton läuft auch
   bei gesperrtem Handy weiter (gemessen an iPhone und iPad).
-- **Vollbild:** Unter dem Bild „Vollbild“ (Computer, iPad, Android) bzw. am iPhone **„Großansicht“** – Safari erlaubt
-  dort kein Vollbild für Webseiten; das Bild legt sich dann über die ganze Seite, quer gedreht füllt es fast den
-  Bildschirm. „Schließen“ oben rechts (oder Escape) führt zurück. Bild und Ton laufen dabei ohne Unterbrechung weiter.
+- **Vollbild und Bild-in-Bild:** Ein Tippen ins Bild zeigt die Steuerleiste des Geräts – am iPhone Apples eigener
+  Player. Dort gibt es **Vollbild** über den ganzen Bildschirm, auch in der ChurchTools-App vom Home-Bildschirm.
+  **Bild-in-Bild** (kleines Fenster, während man etwas anderes macht) bietet Apple nur an, wenn ChurchTools in
+  **Safari** geöffnet ist – in der App vom Home-Bildschirm sperrt Apple es, das lässt sich nicht einbauen (gemessen
+  05.11.2026).
 - **Bildqualität:** Der Sender schickt fest **1920×1080** (`&quality=0`), jeder Zuhörer bekommt höchstens **2 Mbit/s**
   Bild. VDO.Ninja passt die Auflösung je Zuhörer an die Playergröße an (im Vollbild mehr) und tastet sich am Anfang
   hoch – die ersten Sekunden sind oft unscharf.

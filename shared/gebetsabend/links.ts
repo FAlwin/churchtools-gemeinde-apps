@@ -10,6 +10,9 @@
  *    tippte – ohne jeden Hinweis (Test-Instanz 05.11.2026, 15:47). Unser Tippen auf „zuhören“ zählt für das fremde
  *    iframe nicht, dessen Verbindung steht erst Sekunden später. Läuft danach am
  *    iPhone nach dem Entsperren weiter. `&bitrate=` begrenzt den Upload je Zuhörer (`BITRATE`).
+ *  - Zuhörer mit Bild `&videocontrols`: die Steuerleiste des Geräts im Bild – am iPhone Apples Player mit **echtem
+ *    Vollbild**, auch in der ChurchTools-PWA (Messung 05.11.2026, test-05.11e). **Bild-in-Bild** bietet Apple nur in
+ *    Safari an, in der PWA nicht – unabhängig vom Player (gegengeprüft mit eigenem `<video>` über das VDO.Ninja-SDK).
  *  - `&label=` des Zuhörers kommt beim Sender als `push-connection-info.label` an („Wer hört zu?“, G4).
  */
 import type { Zugang } from './zugang';
@@ -32,8 +35,8 @@ export const BITRATE = 2000;
 
 /** Was das iframe des Senders darf (G0-3: Kamera und Mikro fragt der Browser für die ChurchTools-Adresse ab). */
 export const ERLAUBNIS_SENDER = 'camera; microphone; autoplay; fullscreen';
-/** Was das iframe eines Zuhörers darf – kein Mikrofon, Mitmachen gibt es erst in V2. */
-export const ERLAUBNIS_ZUHOERER = 'autoplay; fullscreen';
+/** Was das iframe eines Zuhörers darf – Vollbild und Bild-in-Bild der Apple-Leiste; kein Mikrofon (Mitmachen erst V2). */
+export const ERLAUBNIS_ZUHOERER = 'autoplay; fullscreen; picture-in-picture';
 
 /** Name des Senders, den die Zuhörer sehen (`view-connection-info.label`). */
 export const SENDER_NAME = 'Technik';
@@ -52,7 +55,7 @@ export function zuhoererLink(
   z: Pick<Zugang, 'streamId' | 'passwort' | 'mitBild'>,
   name: string,
 ): string {
-  const bild = z.mitBild ? `&bitrate=${BITRATE}` : '&novideo';
+  const bild = z.mitBild ? `&bitrate=${BITRATE}&videocontrols` : '&novideo';
   return (
     `${VDO_BASIS}?view=${teil(z.streamId)}&password=${teil(z.passwort)}` +
     `${bild}&cleanish&label=${teil(name.trim() || 'Gast')}`

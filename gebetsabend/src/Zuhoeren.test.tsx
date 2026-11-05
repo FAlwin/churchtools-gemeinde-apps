@@ -125,34 +125,25 @@ describe('Zuhoeren', () => {
     expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
   });
 
-  it('Großansicht (iPhone, kein Browser-Vollbild): legt die Bühne groß, OHNE das iframe neu zu laden', async () => {
+  it('Vollbild und Bild-in-Bild aus der Apple-Leiste im Bild – kein eigener Vollbild-Knopf mehr', async () => {
     await zeigen(laeuft());
     fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
-    const vorher = document.querySelector('iframe');
-    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
-    expect(document.querySelector('[class*="grossansicht"]')).not.toBeNull();
-    expect(document.querySelector('iframe')).toBe(vorher);
-    fireEvent.click(screen.getByRole('button', { name: /Schließen/ }));
-    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
-    expect(document.querySelector('iframe')).toBe(vorher);
+    const iframe = document.querySelector('iframe')!;
+    expect(new URL(iframe.src).searchParams.has('videocontrols')).toBe(true);
+    // Ohne diese Erlaubnis bietet die Leiste im fremden iframe kein Vollbild bzw. Bild-in-Bild an.
+    expect((iframe.getAttribute('allow') ?? '').split(';').map((t) => t.trim())).toEqual(
+      expect.arrayContaining(['fullscreen', 'picture-in-picture']),
+    );
+    expect(iframe.hasAttribute('allowfullscreen')).toBe(true);
+    expect(screen.queryByRole('button', { name: /Großansicht|Vollbild/ })).toBeNull();
   });
 
-  it('Escape schließt die Großansicht; „Nicht mehr zuhören“ beendet sie mit', async () => {
-    await zeigen(laeuft());
-    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
-    fireEvent.keyDown(window, { key: 'Escape' });
-    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Nicht mehr zuhören/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
-    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
-  });
-
-  it('„Nur Ton“: kein Knopf für Großansicht oder Vollbild', async () => {
+  it('„Nur Ton“: keine Bild-Leiste, kein Vollbild-Knopf', async () => {
     await zeigen({ ...laeuft(), mitBild: false });
     fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(new URL(document.querySelector('iframe')!.src).searchParams.has('videocontrols')).toBe(
+      false,
+    );
     expect(screen.queryByRole('button', { name: /Großansicht|Vollbild/ })).toBeNull();
   });
 

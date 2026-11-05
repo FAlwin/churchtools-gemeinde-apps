@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
+import { tagKurz } from '@shared/ct/datum';
+import { gemeindeZeitzone, tagAusIso, uhrText } from '@shared/ct/zeit';
 import { VDO_BASIS } from '@shared/gebetsabend/links';
 import { NACHFRAGEN_MS, PLAYER_TEXT } from '@shared/gebetsabend/zuhoeren';
 import { neuerZugang, type Zugang } from '@shared/gebetsabend/zugang';
@@ -203,7 +205,11 @@ describe('Zuhoeren', () => {
     );
     const karte = screen.getByRole('region', { name: 'Gebetsabend im Saal' });
     expect(karte.textContent).toMatch(/^Als Nächstes · /);
-    expect(karte.textContent).toContain('Do, 12.11. · 19:30 Uhr');
+    // Erwartung aus denselben Erzeugern – die CI läuft in UTC, hier in Deutschland (sonst 18:30 statt 19:30).
+    const beginn = '2026-11-12T18:30:00Z';
+    expect(karte.textContent).toContain(
+      `${tagKurz(tagAusIso(beginn, gemeindeZeitzone()))} · ${uhrText(beginn)} Uhr`,
+    );
     expect(within(karte).getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
   });
 

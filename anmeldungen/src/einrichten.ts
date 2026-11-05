@@ -58,6 +58,7 @@ import {
   type Stammdaten,
   type Stammdatum,
 } from '@shared/anmeldung/vorbereiten';
+import { mitgliedAendern, mitgliedAnlegen } from '@ui/ct/mitglieder';
 
 // Steht seit S2-1 der Protokolle in `ui/ct/fehler.ts` (eine Klasse für alle Erweiterungen); hier weiterhin
 // ausgeführt, damit die vielen Aufrufer und Tests der Anmeldungen unverändert bleiben.
@@ -825,13 +826,9 @@ export async function anmeldenVorbereiten(
     (await ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`)).map((m) => m.personId),
   );
   for (const personId of leitung)
-    await ctAnfrage(`/groups/${id}/members/${personId}`, {
-      method: dabei.has(personId) ? 'PATCH' : 'PUT',
-      body: json({
-        groupTypeRoleId: rolle,
-        groupMemberStatus: 'active',
-        ...(dabei.has(personId) ? {} : { only_add: true }),
-      }),
+    await (dabei.has(personId) ? mitgliedAendern : mitgliedAnlegen)(id, personId, {
+      groupTypeRoleId: rolle,
+      groupMemberStatus: 'active',
     });
   const mitglieder = await ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`);
   if (

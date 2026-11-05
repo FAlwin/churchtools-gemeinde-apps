@@ -1,11 +1,11 @@
 import type { AgendaItem } from '@shared/types/index';
 import { saveOfflineNow } from '../queryClient';
-import { heuteIso } from '../utils/heute';
 import { istExtension, ohneServer } from './ctRuntime';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
 // Die eine Fassung für Server, Erweiterung und Offline-Vorrat – vorher stand hier eine eigene (#463).
 import { mapLimit } from '@shared/ct/mapLimit';
 import { liedDateiPfad } from './apiBase';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 // ── Offline-Verzeichnis: welcher Gottesdienst liegt (vollständig) offline vor? ────────────────
 // Dauerhaft in localStorage – Grundlage für das Offline-Symbol am Termin, das Ausgrauen ohne Netz
@@ -49,7 +49,7 @@ export function clearOfflineRegistry(): void {
 
 /** Vergangene Gottesdienste aus dem Verzeichnis räumen (ihr Datei-Cache läuft separat ab). */
 export function pruneOfflineRegistry(): void {
-  const today = heuteIso();
+  const today = heuteImKalender();
   const reg = getOfflineRegistry();
   let changed = false;
   for (const [id, e] of Object.entries(reg)) {

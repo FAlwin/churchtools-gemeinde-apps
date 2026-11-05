@@ -3,8 +3,8 @@ import type { Service } from '@shared/types/index';
 import { queryClient } from '../queryClient';
 import { getOfflineRegistry, saveServiceOffline } from '../services/offline';
 import { isOfflineAutoEnabled } from '../services/offlineAuto';
-import { heuteIso } from '../utils/heute';
 import { agendaAbfrage } from './abfrageSchluessel';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 /**
  * Hält Gottesdienste automatisch offline bereit (#32): den NÄCHSTEN kommenden immer (sofern der
@@ -17,7 +17,7 @@ export function useOfflineAutoSync(services: Service[] | undefined): void {
   useEffect(() => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     if (!services || services.length === 0) return;
-    const today = heuteIso();
+    const today = heuteImKalender();
     const upcoming = services
       .filter((s) => s.date >= today)
       .sort((a, b) => a.start.localeCompare(b.start));

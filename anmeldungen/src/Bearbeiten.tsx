@@ -44,6 +44,7 @@ import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
 import s from './Startseite.module.scss';
+import { plusTage } from '@shared/ct/datum';
 
 /**
  * **Die Fenster zum Einrichten einer Veranstaltung** (A3, #486). Jedes speichert über `einrichten.ts`
@@ -91,9 +92,6 @@ function LinkKopieren({ link }: { link: string }) {
     </div>
   );
 }
-
-const plusTage = (tag: string, n: number) =>
-  new Date(Date.parse(`${tag}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 // ── Termin ──────────────────────────────────────────────────────────────────────────────────────
 

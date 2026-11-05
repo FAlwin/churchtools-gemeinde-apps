@@ -27,3 +27,35 @@ describe('mapEventToService – Monat der Terminkarte', () => {
     expect(s.month).toBe('Nov');
   });
 });
+
+/**
+ * #847: Tag, Monat, Wochentag und Uhrzeit standen fest auf Berlin, nur `date` folgte der Zone (halb umgesetzte Regel).
+ * Geprüft mit UTC+14 – mit fest Berlin käme hier „00:30 Uhr“.
+ */
+describe('mapEventToService – alles in der Zone der Gemeinde (#847)', () => {
+  it('Tag, Monat, Wochentag, Uhrzeit und Datum aus derselben Zone', () => {
+    const s = mapEventToService(
+      { id: 1, name: 'GD', startDate: '2026-11-03T23:30:00Z', endDate: '2026-11-04T01:00:00Z' },
+      0,
+      null,
+      'Pacific/Kiritimati',
+    );
+    expect(s).toMatchObject({
+      date: '2026-11-04',
+      day: '04',
+      month: 'Nov',
+      weekday: 'Mittwoch',
+      time: '13:30 Uhr',
+    });
+  });
+
+  it('Berlin wie bisher', () => {
+    const s = mapEventToService(
+      { id: 1, name: 'GD', startDate: '2026-10-18T08:00:00Z', endDate: '2026-10-18T09:30:00Z' },
+      0,
+      null,
+      'Europe/Berlin',
+    );
+    expect(s).toMatchObject({ day: '18', month: 'Okt', weekday: 'Sonntag', time: '10:00 Uhr' });
+  });
+});

@@ -40,7 +40,7 @@
 
 - `GET  /api/health` → `{status, env}` (öffentlich, für Reverse-Proxy/Monitoring)
 - `GET  /api/update-check` → neueste veröffentlichte Version (liest GitHub-Release; für den In-App-Hinweis)
-- `GET  /api/site-config` → öffentlich `{ appName, description, orgName, links, standardAnsicht }` plus leere `musicianGroupIds`/`noteRoles`; **angemeldet die vollständige Konfiguration** (die internen Gruppen-/Rollen-IDs gelangen so nicht unauthentifiziert nach außen)
+- `GET  /api/site-config` → öffentlich `{ zeitzone, appName, description, orgName, links, standardAnsicht }` plus leere `musicianGroupIds`/`noteRoles` (`zeitzone` = `ZEITZONE`, nur gelesen – die App rechnet „heute“ und alle Uhrzeiten damit, #847); **angemeldet die vollständige Konfiguration** (die internen Gruppen-/Rollen-IDs gelangen so nicht unauthentifiziert nach außen)
 - `PUT  /api/site-config` → Gemeinde-Name/Anmerkungs-Zuweisungen speichern (nur Admin, Zod-validiert) Seit #400 auch `terminArten` –
   `{id, name, suchwort}[]` für den Filter im Tab „Abwesenheiten" (Admin: Mehr → Verwaltung →
   „Abwesenheiten: Termin-Arten"); Name/Suchwort getrimmt, Längen aus `SITE_CONFIG_GRENZEN`

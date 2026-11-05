@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { jsPDF } from 'jspdf';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   gruppenSchluessel,
   terminBlatt,
@@ -7,20 +6,16 @@ import {
   type BlattQuelle,
 } from '@shared/ct/terminBlatt';
 import { Sheet } from '../fenster/Sheet';
-import { FensterKnopf } from '../fenster/FensterKnopf';
 import { Schalter } from '../bedienung/Schalter';
 import { Segment } from '../bedienung/Segment';
-import { Spinner } from '../bedienung/Spinner';
 import { Icon } from '../icons/icons';
-import { PdfSeitenVorschau } from './PdfSeitenVorschau';
-import { downloadPdf, sharePdf } from './sharePdf';
+import { PdfKnoepfe, PdfStandUndVorschau } from './pdfFenster';
+import { useGebautesPdf, useStand } from './pdfFensterZustand';
 import { terminBlattPdf } from './terminBlattPdf';
 import { leseWahl, merkeWahl } from './terminBlattWahl';
-import styles from './TerminTeilenFenster.module.scss';
-import { datumUhrText } from '@shared/ct/zeit';
+import styles from './TeilenFenster.module.scss';
 
 type Seite = 'haupt' | 'dienste' | 'ablauf' | 'infos';
-type Stand = { art: 'baut' } | { art: 'fertig'; doc: jsPDF } | { art: 'fehler' };
 
 /**
  * **„Termin teilen“** (Bauplan E8-1, Entwurf `e8-teilen.html` Version 5) – das Termin-Blatt als PDF. Die Hauptseite
@@ -50,7 +45,7 @@ export function TerminTeilenFenster({
    */
   diensteHinweis?: string;
 }) {
-  const [stand] = useState(() => `Stand ${datumUhrText(new Date())}`);
+  const stand = useStand();
   const [wahl, setWahlRoh] = useState<BlattEinstellungen>(leseWahl);
   const [seite, setSeiteRoh] = useState<Seite>('haupt');
   // Nach dem ersten Wechsel blendet das Fenster nicht noch einmal ein – es ist dasselbe Fenster mit anderer Seite.
@@ -59,8 +54,6 @@ export function TerminTeilenFenster({
     setGewechselt(true);
     setSeiteRoh(s);
   };
-  const [pdf, setPdf] = useState<Stand>({ art: 'baut' });
-  const [geladen, setGeladen] = useState(false);
 
   const setWahl = (f: (w: BlattEinstellungen) => void) =>
     setWahlRoh((alt) => {
@@ -77,20 +70,7 @@ export function TerminTeilenFenster({
     () => terminBlatt({ ...(JSON.parse(quelleText) as typeof quelle), stand }, wahl),
     [quelleText, stand, wahl],
   );
-
-  useEffect(() => {
-    // Wer während des Bauens umschaltet, bekommt das PDF zur NEUEN Wahl – ein später fertiges altes zählt nicht.
-    let aktuell = true;
-    setPdf({ art: 'baut' });
-    setGeladen(false);
-    terminBlattPdf(blatt).then(
-      (doc) => aktuell && setPdf({ art: 'fertig', doc }),
-      () => aktuell && setPdf({ art: 'fehler' }),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [blatt]);
+  const { stand: pdf, geladen, setGeladen } = useGebautesPdf(blatt, terminBlattPdf);
 
   const zurueck = () => setSeite('haupt');
   // Ohne Dienste am Termin führt die Zeile nirgends hin – „keine Gruppe gewählt“ wäre falsch.
@@ -116,43 +96,18 @@ export function TerminTeilenFenster({
       </Sheet>
     );
 
-  const fertig = pdf.art === 'fertig' ? pdf.doc : null;
-  const seiten = fertig?.getNumberOfPages() ?? 0;
   return (
     <Sheet
       title="Termin teilen"
       onClose={onClose}
       einblenden={einblenden && !gewechselt}
       knoepfe={
-        <>
-          <FensterKnopf
-            art="hell"
-            disabled={!fertig}
-            onClick={() => {
-              if (!fertig) return;
-              downloadPdf(fertig, blatt.dateiname);
-              setGeladen(true);
-            }}
-          >
-            <Icon name="download" size={18} /> Herunterladen
-          </FensterKnopf>
-          <FensterKnopf
-            disabled={!fertig}
-            onClick={() => {
-              if (!fertig) return;
-              void sharePdf(fertig, blatt.dateiname);
-              onClose();
-            }}
-          >
-            {pdf.art === 'baut' ? (
-              <Spinner />
-            ) : (
-              <>
-                <Icon name="share" size={18} /> Teilen
-              </>
-            )}
-          </FensterKnopf>
-        </>
+        <PdfKnoepfe
+          pdf={pdf}
+          dateiname={blatt.dateiname}
+          onGeladen={() => setGeladen(true)}
+          onClose={onClose}
+        />
       }
     >
       <div className={styles.inhalt}>
@@ -191,19 +146,7 @@ export function TerminTeilenFenster({
             ariaLabel="Seite"
           />
         </div>
-        <p className={styles.stand} role="status">
-          {pdf.art === 'baut'
-            ? 'PDF wird erstellt …'
-            : pdf.art === 'fehler'
-              ? 'Das PDF konnte nicht erstellt werden – bitte noch einmal öffnen.'
-              : [
-                  `Fertig · ${seiten} ${seiten === 1 ? 'Seite' : 'Seiten'} · ${blatt.dateiname}.pdf`,
-                  geladen ? 'Heruntergeladen' : '',
-                ]
-                  .filter(Boolean)
-                  .join('. ')}
-        </p>
-        {fertig && <PdfSeitenVorschau doc={fertig} />}
+        <PdfStandUndVorschau pdf={pdf} dateiname={blatt.dateiname} geladen={geladen} />
       </div>
     </Sheet>
   );

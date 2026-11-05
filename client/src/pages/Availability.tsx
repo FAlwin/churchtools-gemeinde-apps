@@ -21,13 +21,13 @@ import {
   setAbwesenheitenAusgeblendet,
 } from '../utils/devicePrefs';
 import { useSiteConfig } from '../hooks/useSiteConfig';
-import { heuteIso } from '../utils/heute';
 import {
   TOUR_VERFUEGBARKEIT,
   VERFUEGBARKEIT_STEPS,
   isTourDone,
   markTourDone,
 } from '../utils/onboarding';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 interface AvailabilityProps {
   /** Schreiben braucht Netz (ChurchTools). Lesen kommt aus dem Cache. */
@@ -64,7 +64,7 @@ const filter = {
  * Dienstplaner E7-2b): Seitengerüst, Zwischenspeicher, Termin-Arten der Gemeinde und die Einführung. Geschrieben wird
  * über `services/availability` – auf dem NAS über den eigenen Server, in ChurchTools direkt (`@shared/absences`).
  */
-export function Availability({ online, onToast, heute = heuteIso() }: AvailabilityProps) {
+export function Availability({ online, onToast, heute = heuteImKalender() }: AvailabilityProps) {
   const refresh = useAbsencesRefresh();
   // Die Termin-Arten des Admins (#400) – die Konfiguration ist ohnehin geladen (Branding).
   const site = useSiteConfig();

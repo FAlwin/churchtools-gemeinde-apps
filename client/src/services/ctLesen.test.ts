@@ -1,4 +1,8 @@
+/// <reference types="node" />
+// Node-Typen fordert diese Datei selbst an (sie liest Dateien bzw. rechnet sha256 wie der Server). Bis #847 kamen sie
+// still über `utils/heute.test.ts` ins ganze Client-Projekt – mit dessen Wegfall fehlten sie hier.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { _vergissGemeindeZeitzone, geraeteZeitzone, merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import { createHash } from 'node:crypto';
 import { fingerprintRohtext } from '@shared/ct/agendaDiff';
 import {
@@ -130,6 +134,26 @@ describe('Rechte', () => {
     expect(r.canEditSongs).toBe(true);
     // Seit 3b-5 auch SongSelect – wie ChurchTools es meldet.
     expect(r.canUseCcli).toBe(true);
+  });
+});
+
+describe('Zeitzone der Gemeinde (#847)', () => {
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('kommt aus /api/config', async () => {
+    ct.liefere('/api/config', { timezone: 'Pacific/Kiritimati' });
+    expect((await gemeindeKonfiguration()).zeitzone).toBe('Pacific/Kiritimati');
+  });
+
+  it('antwortet /api/config nicht, startet die App trotzdem – ohne Zone', async () => {
+    ct.liefere('/api/config', {}, 500);
+    expect((await gemeindeKonfiguration()).zeitzone).toBeUndefined();
+  });
+
+  it('`leser` entsteht beim Import – seine Zone ist trotzdem die gemerkte (Getter)', () => {
+    expect(leser.zeitzone).toBe(geraeteZeitzone());
+    merkeGemeindeZeitzone({ timezone: 'Pacific/Kiritimati' });
+    expect(leser.zeitzone).toBe('Pacific/Kiritimati');
   });
 });
 

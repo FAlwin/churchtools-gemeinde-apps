@@ -455,7 +455,8 @@ fehlschlagen).
 
 **Der Tag eines Termins ist der Tag IN DER GEMEINDE (#414, 24.09.2026).** ChurchTools liefert
 Zeitpunkte in UTC; `tagAusIso` (`server/src/utils/isoTag.ts`, die eine Stelle) rechnet sie in die
-Zeitzone aus `ZEITZONE` um (Standard `Europe/Berlin`, ein Tippfehler bricht den Start ab). ChurchTools
+Zeitzone aus `ZEITZONE` um (Standard `Europe/Berlin`, ein Tippfehler bricht den Start ab; seit #847 geht sie über
+`GET /api/site-config` auch an die App – die Erweiterung liest sie aus ChurchTools `/api/config`). ChurchTools
 selbst rechnet genauso – gemessen: eine Abwesenheit ab `23:30Z` legt es am Folgetag an. **Mit Uhrzeit
 gehen die Tage einer Abwesenheit als Zeitpunkte an ChurchTools** (`fuerChurchTools` in `ctWrite.ts`):
 Seit dem 24.09.2026 lehnt ChurchTools `endDate: YYYY-MM-DD` neben einer `startTime` ab („'endDate'
@@ -1281,6 +1282,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   - `server/src/services/jsonStore.ts` – Lesen/Schreiben ALLER JSON-Ablagen. Nur `ENOENT` heißt „leer".
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
   - `client/src/services/schreibSchlange.ts` – die Speicher-Warteschlange selbst (Anmerkungen UND Einstellungen, #846).
+  - `ui/ct/mitglieder.ts` – eine Mitgliedschaft lesen/anlegen/ändern/entfernen (#848): anlegen nur `PUT` + `only_add`,
+    ändern nur `PATCH` (PUT-Ändern löscht Kommentar/Enddatum, #759), 404 = nicht dabei. Wächter
+    `ui/design/eineMitgliedschaft.test.ts`: niemand sonst baut `/groups/${g}/members/${p}`.
   - `shared/ct/zeit.ts` `gemeindeZeitzone`/`heuteImKalender` – Zeitzone der Gemeinde aus `/api/config` und „heute“ (#847,
     Entscheidung in `docs/entwicklung/entscheidungen.md`). Nie `Intl…timeZone`, `'Europe/Berlin'` oder `toLocaleString` ohne Zeitzone danebenschreiben – Anzeigen über `uhrText`/`datumUhrText`; der Wächter `ui/design/eineZeitzone.test.ts` hält das fest.
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.
@@ -1595,8 +1599,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   eintragen", Schnellwahl); „Einträge" zeigt
   Anstehend/Früher, Vergangenes mit `nurLesen`. Der Wochenstreifen (`WochenStreifen.tsx`, `wochenAb`) ist
   weg; `shared/ct/wochen.ts` behält nur Tages-Helfer (UTC-Rechnen), während **„welcher Tag ist heute"**
-  seit v2.25.1 in `utils/heute.ts` steht und **lokal** rechnet – UTC lieferte zwischen 0 und 2 Uhr den
-  Vortag. Server: `GET /api/absences/events?to=` (Tag statt
+  seit #847 `heuteImKalender` (`shared/ct/zeit.ts`) in der Uhr der Gemeinde rechnet – UTC lieferte zwischen 0 und
+  2 Uhr den Vortag (vorher `utils/heute.ts`, lokal). Server: `GET /api/absences/events?to=` (Tag statt
   Wochen). Tour `verfuegbarkeit-v5` (v5 = Schritt „Nur bestimmte Termine", #400), Testfälle TF-VERF-01…09.
   **Kein Excel im App-Code** – der ECG-Sync ist ein eigener Dienst (`excel-sync/`, PR 2).
   **Seit Dienstplaner E7-2 (04.11.2026): gemeinsamer Baustein, auch in ChurchTools.** Die Seite samt Fenstern und

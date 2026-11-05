@@ -858,6 +858,11 @@ export interface SiteLink {
  * `site.json` gelesen/geschrieben.
  */
 export interface SiteConfig {
+  /**
+   * Zeitzone der Gemeinde (#847) – **nur gelesen**, nie gespeichert (das Schema lässt das Feld fallen). Server:
+   * `ZEITZONE`; Erweiterung: `GET /api/config` → `timezone`. `getSiteConfig` merkt sie sich für die ganze App.
+   */
+  zeitzone?: string;
   /** Voller App-Name (fest). */
   appName: string;
   /** Beschreibung (fest). */

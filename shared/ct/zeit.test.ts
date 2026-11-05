@@ -125,3 +125,21 @@ describe('Anzeigen in der Uhr der Gemeinde (#847)', () => {
     );
   });
 });
+
+/**
+ * Aus `client/src/utils/heute.test.ts` übernommen (#847, die Datei ist weg): **Der Test, der die Zeitzone wirklich
+ * prüft.** `toISOString().slice(0, 10)` liefert den Tag in UTC – in Deutschland zwischen Mitternacht und 2 Uhr den
+ * Vortag. Die Zone steht ausdrücklich auf Berlin, sonst wären auf der CI (UTC) beide Wege gleich.
+ */
+describe('heuteImKalender – der Tag der Gemeinde, nicht der in UTC', () => {
+  it('halb eins nachts in Berlin ist schon der nächste Tag', () => {
+    const nachtsHalbEins = new Date(Date.UTC(2026, 8, 20, 22, 30));
+    expect(heuteImKalender(nachtsHalbEins, BERLIN)).toBe('2026-09-21');
+    expect(nachtsHalbEins.toISOString().slice(0, 10)).toBe('2026-09-20');
+  });
+
+  it('am Tag stimmen beide, Monat und Tag zweistellig', () => {
+    expect(heuteImKalender(new Date(Date.UTC(2026, 8, 21, 10, 0)), BERLIN)).toBe('2026-09-21');
+    expect(heuteImKalender(new Date(Date.UTC(2026, 0, 5, 12, 0)), BERLIN)).toBe('2026-01-05');
+  });
+});

@@ -91,10 +91,16 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `keepalive`. Dazu an den Diensten: Einstellungen in EINEM Upload, Anmerkungen „neuer Strich gewinnt, alter Zoom
   bleibt“ bei Weiterzeichnen während eines scheiternden Uploads. Gegenprobe je Regel; einzig das Timer-Räumen beim
   Weglegen ist nicht beobachtbar (der alte Timer fände eine leere Schlange)
+- `ui/ct/mitglieder` – Mitgliedschafts-Baustein (#848): anlegen = `PUT` mit `only_add` (auch gegen ein mitgegebenes
+  `only_add: false`), ändern = `PATCH` ohne, entfernen = `DELETE`, Meldung bei fehlendem Recht, 404 = `null`, ein
+  vorübergehender Fehler wirft. Wächter `ui/design/eineMitgliedschaft`: keine Einzel-Adresse außerhalb des Bausteins
+  (mit Erkennungs-Gegenprobe; Listen, Verlauf, Abläufe und Anwesenheit bleiben erlaubt)
 - `ui/design/eineZeitzone` – Wächter (#847): keine eigene Zeitzone (`resolvedOptions().timeZone`, `'Europe/Berlin'`),
   kein eigenes „heute“ (`tagAusIso(new Date()…)`, `getFullYear()`), keine Anzeige in Gerätezeit (`Intl.DateTimeFormat`
   / `toLocale…String` ohne `timeZone`) – mit Gegenprobe, dass jede Form erkannt wird, und Ausnahmen, die es geben
-  muss. Dazu in `shared/ct/zeit`, `absenceDatum` und `blatt` Tests mit UTC+14 (kein Testgerät hat sie)
+  muss, und `Date.parse(`…T00:00:00Z`) + …` (→ `plusTage`). Dazu Tests mit UTC+14 (kein Testgerät hat sie) in
+  `shared/ct/zeit`, `absenceDatum`, `blatt`, `mapEvent`, `zeitstempel`, `ctLesen` und `siteConfigApi.extension`;
+  der Server-Test `siteConfigController.trim` prüft, dass `/api/site-config` die Zone mitgibt
 - `middleware/apiEingang` – Eingang des Servers (#844), echter Mini-Server mit echtem Fehler-Handler: über dem
   Kontingent kommt 429, **bevor** der Rumpf gelesen wird (kaputtes JSON → 429, nicht 400); 2 MB an eine gewöhnliche
   Route und an den Login → 413 mit Meldung, 500 kB gehen durch, 6 MB Anmerkungen und 2 MB Einstellungen gehen durch,
@@ -237,9 +243,9 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     drei Fälle, mit dem alten Weg über das Gerät ebenfalls.
 
   - **Code-Check-Runde (21.09.2026) – die Tests, die eine Regel an EINER Stelle festnageln:**
-    `utils/heute.test` (Client) stellt die Zeitzone auf **Europe/Berlin** und prüft, dass 22:30 UTC
-    schon der nächste Tag ist – in UTC wären lokaler und UTC-Weg gleich, der Test wäre auf der CI
-    wertlos. `utils/ids.test` prüft den Rückfall ohne `crypto.randomUUID` (LAN über HTTP).
+    „heute“ (seit #847 `heuteImKalender` in `shared/ct/zeit.test`, vorher `utils/heute.test`) prüft mit der Zone
+    **Europe/Berlin**, dass 22:30 UTC schon der nächste Tag ist – in UTC wären Gemeinde- und UTC-Weg gleich, der
+    Test wäre auf der CI wertlos. `utils/ids.test` prüft den Rückfall ohne `crypto.randomUUID` (LAN über HTTP).
     `utils/arrangementFormular.test` hält den Tempo-Bereich gegen `@shared/tempo` statt gegen
     Literale und prüft, dass der Speichern-Knopf bei einem unspielbaren Tempo gesperrt bleibt.
     `components/TerminArtenManager.test` vergleicht die `maxLength` der Felder mit

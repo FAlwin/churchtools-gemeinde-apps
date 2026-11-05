@@ -11,7 +11,6 @@ import {
   type SongSelectSuchergebnis,
 } from '@shared/types/index';
 import { sucheArt } from '../utils/liedFormular';
-import { heuteIso } from '../utils/heute';
 import { plusTage } from '@shared/ct/datum';
 import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
@@ -19,6 +18,7 @@ import type { AblaufStand } from '@shared/ct/ablaufNeu';
 import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 import { agendaAbfrage, liedblattAbfrage, schluessel } from './abfrageSchluessel';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 // Kurze Frische für die aktuellen (aktiven) Daten: So erscheinen ChurchTools-Änderungen
 // (verschobene Punkte, geänderte Setlist) zeitnah – die Query gilt schon nach 30 s als veraltet
@@ -129,11 +129,11 @@ export function useSetlistVersion(eventId: number | null, enabled: boolean) {
   });
 }
 
-/** Datum vor `monthsBack` Monaten als ISO-Datum (YYYY-MM-DD) – lokal, wie `heuteIso`. */
+/** Datum vor `monthsBack` Monaten als ISO-Datum (YYYY-MM-DD) – lokal, wie `heuteImKalender`. */
 function monthsAgoIso(monthsBack: number): string {
   const d = new Date();
   d.setMonth(d.getMonth() - monthsBack);
-  return heuteIso(d);
+  return heuteImKalender(d);
 }
 
 /** Lädt vergangene Gottesdienste der letzten `monthsBack` Monate (lazy, nur wenn enabled). */
@@ -143,7 +143,7 @@ export function usePastServices(monthsBack: number, enabled: boolean) {
     queryFn: () =>
       api.getServices({
         from: monthsAgoIso(monthsBack),
-        to: heuteIso(),
+        to: heuteImKalender(),
       }),
     enabled,
     staleTime: 1000 * 60 * 5,

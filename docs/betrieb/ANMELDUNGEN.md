@@ -240,7 +240,9 @@ ist; ab drei stehen sie zusammen in einer Zeile, „Anzeigen“ klappt sie auf).
 Mail**, für sie gelten aber Erinnerung und Löschdatum. Absender ist, wer einrichtet (wenn Leitung), sonst die erste
 Leitung. Ist das Löschdatum schon vorbei und noch jemand da, fragt erst „Sofort löschen?“. Dasselbe gilt für jede
 Veranstaltung, deren Abläufe aus sind. Auch beim gewöhnlichen Einrichten holt die Erweiterung jetzt Personen nach, die
-vor den Abläufen angemeldet waren – sonst würden sie nie gelöscht (gemessen 05.11.2026).
+vor den Abläufen angemeldet waren – sonst würden sie nie gelöscht (gemessen 05.11.2026). Das geschieht erst, wenn die Veranstaltung
+freigegeben ist: Im Entwurf laufen Abläufe nicht, und die nachgeholten Läufe liefen sonst beim Freigeben über die
+Bestätigung (gefunden bei der echten Prüfung am 05.11.2026).
 
 **Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung**,
 **Warteliste** und **Erinnerung** (A9-3b, siehe unten) – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der

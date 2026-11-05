@@ -14,11 +14,6 @@ import { dateien, ORDNER, WURZEL } from './quelltexte.testutil';
 const AUSNAHMEN: Record<string, string> = {
   'shared/ct/zeit.ts': 'die eine Stelle',
   'server/src/config.ts': 'Vorgabe für ZEITZONE – der Server reicht sie ausdrücklich weiter',
-  // Schritt Z3 von #847 – diese Liste muss danach leer sein (bis auf die zwei oben).
-  'client/src/services/ctLesen.ts': 'Z3',
-  'client/src/utils/heute.ts': 'Z3',
-  'client/src/utils/zeitstempel.ts': 'Z3',
-  'shared/ct/mapEvent.ts': 'Z3',
 };
 
 /** Was in einer Datei gegen die eine Uhr verstößt – als „Zeile  Grund“. */
@@ -33,6 +28,7 @@ export function verstoesse(text: string): string[] {
       '„heute“ nachgebaut – heuteImKalender()',
     ],
     [/\.getFullYear\(\)/g, 'Kalender des Geräts – heuteImKalender()'],
+    [/Date\.parse\(`\$\{\w+\}T\d{2}:00:00Z`\)\s*\+/g, 'Tage nachgerechnet – plusTage()'],
   ];
   for (const [re, grund] of regeln) {
     for (const m of text.matchAll(re)) funde.push(`${zeile(m.index)}  ${grund}`);
@@ -70,6 +66,11 @@ describe('Eine Uhr: die der Gemeinde (#847)', () => {
     expect(verstoesse("zeitzone = 'Europe/Berlin',")).toHaveLength(1);
     expect(verstoesse('heute={tagAusIso(new Date().toISOString(), zeitzone)}')).toHaveLength(1);
     expect(verstoesse('const j = d.getFullYear();')).toHaveLength(1);
+    expect(
+      verstoesse(
+        'new Date(Date.parse(`${tag}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)',
+      ),
+    ).toHaveLength(1);
     expect(verstoesse("new Intl.DateTimeFormat('de-DE', {\n  day: '2-digit',\n})")).toHaveLength(1);
     expect(verstoesse("am.toLocaleString('de-DE', { hour: '2-digit' })")).toHaveLength(1);
     expect(verstoesse("d.toLocaleDateString('de-DE')")).toHaveLength(1);

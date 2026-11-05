@@ -21,6 +21,7 @@ import { ctId } from '../ct/ctId';
 import { tagAusIso } from '../ct/zeit';
 import type { Absence, AbsenceEvent, AbsenceReason, NeueAbsence } from '../types/index';
 import { grundLesbar, istMarkerEintrag, markerFreitext } from './index';
+import { plusTage } from '../ct/datum';
 
 /** Der Weg zu ChurchTools – im Browser `abwesenheitPort` (`@ui/ct/abwesenheitPort`), im Test ein Nachbau. */
 export interface AbwesenheitPort {
@@ -147,13 +148,8 @@ export async function ctAbwesenheiten(
   von: string,
   bis: string,
 ): Promise<CtAbsence[]> {
-  const liste = await port.liste(ich, von, tagDanach(bis));
+  const liste = await port.liste(ich, von, plusTage(bis, 1));
   return liste.filter((a) => a.startDate <= bis && a.endDate >= von);
-}
-
-/** Der Tag nach `tag` (`YYYY-MM-DD`). */
-function tagDanach(tag: string): string {
-  return new Date(Date.parse(`${tag}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 }
 
 /**

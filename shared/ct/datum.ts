@@ -61,6 +61,11 @@ const WOCHENTAG_LANG = [
   'Samstag',
 ];
 
+/** „Sonntag“ – der Wochentag eines Kalendertags (UTC-Parsen wie überall hier). Die eine Stelle dafür (#847). */
+export function wochentagName(tag: string): string {
+  return WOCHENTAG_LANG[datum(tag).getUTCDay()];
+}
+
 /** „Sonntag, 1. November“ – ausgeschrieben unter der Uhr der Ablauf-Anzeige (E6b-1). */
 export function tagLang(tag: string): string {
   const d = datum(tag);

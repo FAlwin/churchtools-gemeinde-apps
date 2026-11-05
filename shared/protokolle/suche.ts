@@ -9,7 +9,7 @@
  *   Zuordnung dieselben sind wie im Protokoll selbst.
  */
 import type { Aufgabe } from './aufgaben';
-import { ableiten, BLOCK, textAus, type Ableitung, type Block } from './dokument';
+import { ableiten, BLOCK, textAus, type Ableitung, type Block, type Punkt } from './dokument';
 import { dokumentDerSitzung, type ProtokollTeil } from './speicher';
 import type { Sitzung } from './sitzungen';
 
@@ -22,8 +22,8 @@ export interface SuchEintrag {
   gruppe: { id: number; name: string };
   /** Die Sitzung, in der der Eintrag steht – `null` bei einem To-Do, dessen Protokoll nicht (mehr) da ist. */
   sitzung: { schluessel: string; titel: string; beginn: string } | null;
-  /** Der Tagesordnungspunkt – `null` vor dem ersten Punkt oder ohne Protokoll. */
-  punkt: { blockId: string; nummer: number; titel: string } | null;
+  /** Der Tagesordnungspunkt oder Unterpunkt – `null` vor dem ersten Punkt oder ohne Protokoll. */
+  punkt: Punkt | null;
   text: string;
   /** Nur Termine: `JJJJ-MM-TT` oder `null`. */
   datum?: string | null;
@@ -53,7 +53,7 @@ interface Gelesen {
   sitzung: Sitzung;
   dokument: Block[];
   ableitung: Ableitung;
-  punkte: Map<string, { blockId: string; nummer: number; titel: string }>;
+  punkte: Map<string, Punkt>;
   /** Block-ID → Position im Dokument (für die Reihenfolge). */
   stelle: Map<string, number>;
   /** Block-ID → Tagesordnungspunkt. */

@@ -129,3 +129,20 @@ describe('abschnittVerschoben', () => {
     expect([...ids(neu)].sort()).toEqual([...ids(DOK)].sort());
   });
 });
+
+describe('Abschnitte mit Unterpunkten (K3b): der Rang zählt, nicht die gespeicherte Stufe', () => {
+  // A · 1.1 (Stufe 2) · 1.1.1 (Stufe 4) · „Überschrift“ (Stufe 3) · 1.2 (Stufe 2)
+  const D: Block[] = [h('A'), h('A1', 2), h('A1a', 4), h('Ue', 3), p('x'), h('A2', 2), p('y')];
+
+  it('eine „Überschrift“ (Stufe 3) zerschneidet keinen Unterpunkt 1.1.1 (Stufe 4)', () => {
+    expect(abschnittEnde(D, 2)).toBe(5);
+  });
+
+  it('Unterpunkt 1.1 nimmt 1.1.1 und die „Überschrift“ mit, endet vor 1.2', () => {
+    expect(abschnittEnde(D, 1)).toBe(5);
+  });
+
+  it('„Nach unten“ springt von 1.1 hinter 1.2', () => {
+    expect(nachbarStelle(D, 1, 'runter')).toBe(7);
+  });
+});

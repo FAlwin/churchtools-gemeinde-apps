@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { tagPunkt } from '@shared/ct/datum';
-import { ableiten, type Block } from '@shared/protokolle/dokument';
+import { ableiten, punktBeschriftung, type Block } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
 import styles from './SitzungAnsicht.module.scss';
 
@@ -23,7 +23,7 @@ export function Bereiche({
   const a = ableiten(dokument);
   const punktText = (id: string | null): string => {
     const p = a.punkte.find((x) => x.blockId === id);
-    return p ? `Punkt ${p.nummer} · ${p.titel}` : 'vor dem ersten Punkt';
+    return p ? punktBeschriftung(p) : 'vor dem ersten Punkt';
   };
   const aufgabeVon = new Map(aufgaben.map((x) => [x.id, x]));
   return (

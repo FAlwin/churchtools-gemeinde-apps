@@ -9,10 +9,12 @@ import { createReactBlockSpec } from '@blocknote/react';
 import { BLOCK } from '@shared/protokolle/dokument';
 import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
 import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
+import { einrueckenTasten } from './einruecken';
+import { punktNummern } from './punktNummern';
 
 /**
- * **Was im Protokoll-Editor stehen kann** (Bauplan S4-1, BlockNote 0.56): Text, Überschrift 1–3 (Stufe 1 = Tagesordnungs-
- * punkt, 2 = Unterpunkt, 3 = Überschrift), Aufzählung, Nummerierung, Zitat, Trennlinie, **Tabelle** (K3a) – und unsere
+ * **Was im Protokoll-Editor stehen kann** (Bauplan S4-1, BlockNote 0.56): Text, Überschrift 1–6 (Stufe 1 = Tagesordnungs-
+ * punkt, 2/4/5/6 = Unterpunkt 4.1 bis 4.1.1.1.1 seit K3b, 3 = Überschrift ohne Nummer), Aufzählung, Nummerierung, Zitat, Trennlinie, **Tabelle** (K3a) – und unsere
  * eigenen Blöcke aus `BLOCK`. Die **Checkliste** bleibt im Schema, damit alte Protokolle lesbar und bearbeitbar bleiben;
  * Leiste und „/“-Menü bieten sie seit K3a nicht mehr an (nur noch To-Do).
  *
@@ -65,10 +67,20 @@ const verweisBlock = createReactBlockSpec(
 const { paragraph, bulletListItem, numberedListItem, checkListItem, quote, divider, table } =
   defaultBlockSpecs;
 
+// Überschriften tragen die Nummern im Editor und Tab/Umschalt+Tab für Punkt ⇄ Unterpunkt (K3b).
+const ueberschrift = createHeadingBlockSpec({
+  levels: [1, 2, 3, 4, 5, 6],
+  allowToggleHeadings: false,
+});
+const heading = {
+  ...ueberschrift,
+  extensions: [...(ueberschrift.extensions ?? []), einrueckenTasten, punktNummern],
+};
+
 export const schema = BlockNoteSchema.create({
   blockSpecs: {
     paragraph,
-    heading: createHeadingBlockSpec({ levels: [1, 2, 3], allowToggleHeadings: false }),
+    heading,
     bulletListItem,
     numberedListItem,
     checkListItem,

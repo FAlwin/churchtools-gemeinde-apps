@@ -112,6 +112,12 @@
 
 // Aus der Suche hierher gesprungen (S3-4b): kurz hellblau hinterlegt, dann wie immer. Mit Abstand nach oben, damit
 // der Punkt beim Springen nicht an der Kante klebt.
+// Unterpunkt (K3b, 4.1 bis 4.1.1.1.1): Nummer und Titel wie beim Tagesordnungspunkt nebeneinander.
+.unterpunkt {
+  display: flex;
+  gap: 6px;
+}
+
 .markiert {
   scroll-margin-top: 16px;
   border-radius: var(--r-ctrl);

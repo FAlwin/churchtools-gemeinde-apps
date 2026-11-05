@@ -5,8 +5,10 @@ import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { useAufklapp } from '@ui/bedienung/useAufklapp';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useThema } from '@ui/design/useThema';
+import { punktEbene } from '@shared/protokolle/dokument';
 import { FESTE_PUNKTE } from './anzeige';
 import type { ProtokollEditor } from './editorSchema';
+import { kannRuecken, ruecken } from './einruecken';
 import { farbWert, MARKIER_FARBEN, type FarbArt } from './farben';
 import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
@@ -45,8 +47,10 @@ const ZUR_WAHL: readonly Textart[] = ['paragraph', 'heading-1', 'heading-2', 'he
 const istTextart = (x: string): x is Textart => TEXTARTEN.some((t) => t.wert === x);
 const textartText = (x: Textart): string => TEXTARTEN.find((t) => t.wert === x)?.text ?? x;
 
+/** Unterpunkte aller Ebenen (4.1 bis 4.1.1.1.1, K3b) zeigt die Auswahl als „Unterpunkt“. */
 function artVon(b: { type: string; props: Record<string, unknown> }): string {
-  return b.type === 'heading' ? `heading-${Number(b.props.level ?? 1)}` : b.type;
+  if (b.type !== 'heading') return b.type;
+  return (punktEbene(b) ?? 0) >= 1 ? 'heading-2' : `heading-${Number(b.props.level ?? 1)}`;
 }
 
 function ausgewaehlt(editor: ProtokollEditor) {
@@ -332,8 +336,8 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
         durch: !!s.strike,
         hintergrund: farbName(s.backgroundColor),
         schrift: farbName(s.textColor),
-        ein: e.canNestBlock(),
-        aus: e.canUnnestBlock(),
+        ein: kannRuecken(e, 1),
+        aus: kannRuecken(e, -1),
       };
     },
   });
@@ -438,7 +442,7 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
               text="Ausrücken (Umschalt+Tab)"
               aus={!z.aus}
               onKlick={tun(() => {
-                editor.unnestBlock();
+                ruecken(editor, -1);
                 editor.focus();
               })}
             />
@@ -447,7 +451,7 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
               text="Einrücken (Tab)"
               aus={!z.ein}
               onKlick={tun(() => {
-                editor.nestBlock();
+                ruecken(editor, 1);
                 editor.focus();
               })}
             />

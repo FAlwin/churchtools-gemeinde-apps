@@ -19,7 +19,8 @@ type Laden =
 /** Die Tagesordnungspunkte eines Dokuments – für die kleine Zeile unter jeder Wahl. */
 const punkte = (dok: readonly Block[]): string =>
   ableiten(dok)
-    .punkte.map((p) => p.titel)
+    .punkte.filter((p) => p.tiefe === 0)
+    .map((p) => p.titel)
     .join(' · ');
 
 /**

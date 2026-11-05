@@ -17,6 +17,19 @@ export interface Meldung {
   value: unknown;
 }
 
+/**
+ * **Kommt die Nachricht wirklich aus unserem Player?** Nur dann wird sie gelesen: Absender ist das eigene iframe
+ * **und** die Herkunft ist VDO.Ninja. Sonst könnte eine fremde Seite (ein anderes Fenster, eine andere Erweiterung)
+ * „läuft“ vortäuschen – dieselbe Lehre wie `adresseInInstanz` in `shared/ct/sichereAdresse.ts` (#870).
+ */
+export function istVdoMeldung(
+  e: { origin: string; source: unknown },
+  fenster: unknown,
+  vdoHerkunft: string,
+): boolean {
+  return fenster != null && e.source === fenster && e.origin === vdoHerkunft;
+}
+
 /** Eine Meldung von VDO.Ninja – alles andere (fremde Nachrichten, Statistik ohne `action`) ist `null`. */
 export function meldungAus(daten: unknown): Meldung | null {
   if (!daten || typeof daten !== 'object') return null;

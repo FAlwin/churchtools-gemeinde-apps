@@ -69,6 +69,11 @@ describe('ladeIch', () => {
     });
   });
 
+  it('ohne Nachnamen (fehlt in der Antwort) → leerer Text, kein Fehler', async () => {
+    ct({ ...GUT, '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin' } }) });
+    expect((await ladeIch()).nachname).toBe('');
+  });
+
   it('niemand angemeldet (id -1) → 401, keine weiteren Anfragen', async () => {
     ct({ ...GUT, '/whoami': () => json(200, { data: { id: -1, lastName: 'Anonymous' } }) });
     const e = await ladeIch().catch((x: unknown) => x);

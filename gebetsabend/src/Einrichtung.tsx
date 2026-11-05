@@ -15,8 +15,9 @@ interface Props {
 }
 
 /**
- * **Stand der Einrichtung** (Bauplan Gebetsabend G1). Wer Kategorien anlegen darf, richtet hier mit einem Knopf ein;
- * alle anderen sehen nur, ob es schon geht. Danach vergibt die Verwaltung die Rechte (`docs/betrieb/GEBETSABEND.md`).
+ * **Noch nicht eingerichtet** (Bauplan Gebetsabend G1). Wer Kategorien anlegen darf, richtet hier mit einem Knopf ein;
+ * alle anderen sehen den Hinweis. Danach vergibt die Verwaltung die Rechte (`docs/betrieb/GEBETSABEND.md`). Ist alles
+ * eingerichtet, zeigt die Seite statt dieser Karte das Zuhören (`App.tsx`).
  */
 export function Einrichtung({ start, onEingerichtet }: Props) {
   const [laeuft, setLaeuft] = useState(false);
@@ -41,13 +42,6 @@ export function Einrichtung({ start, onEingerichtet }: Props) {
   return (
     <section className={styles.karte} aria-labelledby="einrichtung-titel">
       <h2 id="einrichtung-titel">Gebetsabend</h2>
-      {stand === 'fertig' && (
-        <>
-          <p>Der Gebetsabend ist eingerichtet.</p>
-          {start.technik && <p className={styles.leise}>Du gehörst zur Technik.</p>}
-          <p className={styles.leise}>Zuhören und Übertragen kommen mit dem nächsten Update.</p>
-        </>
-      )}
       {stand === 'einrichten' && (
         <>
           <p>Der Gebetsabend ist noch nicht eingerichtet.</p>

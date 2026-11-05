@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ablaufRechteAus, darfAblaufBearbeiten, terminAdminIds } from './ablaufRecht';
+import {
+  ablaufRechteAus,
+  darfAblaufBearbeiten,
+  darfAblaufImKalender,
+  terminAdminIds,
+} from './ablaufRecht';
 import { mapEventToService } from './mapEvent';
 import { rechteAus } from './rechte';
 
@@ -58,6 +63,24 @@ describe('darfAblaufBearbeiten (#635)', () => {
     expect(termin(undefined).kalenderId).toBeUndefined();
     expect(darfAblaufBearbeiten(rechte([1]), termin(undefined), 1)).toBe(true);
     expect(darfAblaufBearbeiten(rechte([]), termin(undefined), 1)).toBe(false);
+  });
+});
+
+describe('darfAblaufImKalender – „auch ohne Ablauf“ im Filter der Terminliste (05.11.2026)', () => {
+  it('nur Kalender aus dem Recht; Admin und Recht für alle Kalender überall', () => {
+    expect(darfAblaufImKalender(rechte([2]), 2)).toBe(true);
+    expect(darfAblaufImKalender(rechte([2]), 3)).toBe(false);
+    expect(darfAblaufImKalender(rechte([]), 2)).toBe(false);
+    expect(darfAblaufImKalender(rechte([], true), 2)).toBe(true);
+    expect(darfAblaufImKalender(rechte(true), 7)).toBe(true);
+  });
+
+  it('stimmt mit darfAblaufBearbeiten überein, solange der Termin einen Kalender hat und kein Termin-Admin zählt', () => {
+    for (const r of [rechte([2]), rechte([]), rechte([], true), rechte(true)]) {
+      for (const k of [2, 3]) {
+        expect(darfAblaufImKalender(r, k)).toBe(darfAblaufBearbeiten(r, termin(String(k)), 1));
+      }
+    }
   });
 });
 

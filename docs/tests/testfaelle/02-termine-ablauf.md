@@ -234,32 +234,35 @@ Gottesdienstes **nicht** in den Vorlauf (der Balken „Beginn" bleibt, wo er hin
 
 ### TF-ABLAUF-11 · Ablauf direkt in der App anlegen
 
-**Das brauchst du:** Admin für die Verwaltung, Recht „Ablauf bearbeiten", in ChurchTools mindestens eine
-**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** – darunter eine, die nicht passen soll
-(z. B. ein Gebetsabend im selben Kalender). **Nur in der Test-Instanz** (Erweiterung oder lokaler Server):
-Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
+**Das brauchst du:** Recht „Ablauf bearbeiten" für einen Kalender, in ChurchTools mindestens eine
+**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** in diesem Kalender. **Nur in der Test-Instanz**
+(Erweiterung oder lokaler Server): Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
 
-**Das muss passieren:** Veranstaltungen ohne Ablauf aus den gewählten Kalendern stehen mit grauer
-Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen". Termine, deren Name das
-Suchwort nicht enthält, fehlen. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen
-Kalenders zuerst). Nach „Anlegen" öffnet sich der neue Ablauf mit den Punkten der Vorlage; in der Liste
-steht der Termin danach als normaler Termin – nur einmal.
+**Das muss passieren:** Mit „auch ohne Ablauf“ im Filter stehen die Veranstaltungen ohne Ablauf aus diesem Kalender
+mit grauer Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen" – alle, ein Suchwort gibt es
+nicht mehr. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen Kalenders zuerst). Nach „Anlegen" öffnet
+sich der neue Ablauf mit den Punkten der Vorlage; in der Liste steht der Termin danach als normaler Termin – nur
+einmal.
 
-1. **Mehr → Termine ohne Ablauf**: den Kalender anhaken, Suchwort „Gottesdienst", Speichern.
-2. **Termine**: Der Gottesdienst ohne Ablauf steht da, der Gebetsabend nicht.
+1. **Termine → Filter**: beim Kalender das eingerückte Häkchen **auch ohne Ablauf** setzen.
+2. Die Veranstaltungen ohne Ablauf aus dem Kalender stehen da (z. B. auch ein Gebetsabend im selben Kalender).
 3. Zeile antippen → Vorlage gewählt lassen → **Anlegen**. Der Ablauf öffnet sich; in ChurchTools nachsehen.
 4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
    Liedern und Balken „Beginn" mit.
 5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
-6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Die Termine stehen mit „Kein Ablauf"
-   da, aber ohne „Ablauf anlegen". Ist das Konto **Admin des Termins**, gibt es „Ablauf anlegen" trotzdem (#635).
+6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Der Filter bietet dort kein „auch ohne
+   Ablauf“ an, die Termine ohne Ablauf erscheinen nicht. Ein Termin mit Ablauf, dessen **Admin** das Konto ist, lässt
+   sich trotzdem bearbeiten (#635).
+7. **Filter** → beim Kalender das Häkchen selbst wegnehmen: Alle Termine des Kalenders verschwinden, auch die mit
+   Ablauf; am Knopf steht „1“. App neu laden: Die Wahl ist noch da (auf dem Gerät gemerkt).
+8. **Mehr**: Die Zeile „Termine ohne Ablauf“ gibt es in der Verwaltung nicht mehr.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
-- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/utils/kalenderFilter.ts`, `client/src/hooks/useTerminFilter.ts`, `ui/bedienung/FilterKnopf.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635; Filter), `client/src/utils/kalenderFilter.test.ts`, `server/src/controllers/setlistController.ohneAblauf.test.ts`, `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach. 05.11.2026: Kalender je Person im Filter der Terminliste statt Verwaltung, Suchwort weg (Alwin: Frauentreff).
 
 </details>
 
@@ -648,5 +651,36 @@ weg als die geladenen Wochen.
 - **Betrifft:** `shared/dienstplan/meineBlatt.ts`, `dienstplaner/src/MeineTeilenFenster.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/App.tsx`, `ui/ct/ich.ts`, `ui/teilen/planBlattPdf.ts`, `ui/bedienung/FilterKnopf.tsx`
 - **Automatisiert:** ja – `shared/dienstplan/meineBlatt.test.ts` (aus `einteilungenAus`: Sortierung, Ortszeit, zugesagt/angefragt, leer), `dienstplaner/src/MeineTeilen.test.tsx` (Knopf nur bei „Meine“, frisch gelesen, Fehler mit „Erneut versuchen“), `ui/ct/ich.test.ts` und `dienstplaner/src/start.test.ts` (Nachname), `ui/bedienung/FilterKnopf.test.tsx` + `ui/bedienung/leistenKnoepfe.test.ts` (Filter am Handy nur Symbol); von Hand bleiben Aussehen und Teilen-Menü
 - **Historie:** E8-3 (05.11.2026, Entwurf `e8-teilen.html`)
+
+</details>
+
+### TF-ABLAUF-25 · Planen: Monat anklicken, ＋ im Zeitraum, „Wer wie oft?“ mit eigenem Zeitraum, Scroll-Leiste
+
+**Das brauchst du:** Planen am Rechner mit Terminen in mehreren Monaten, vergangene mit Einteilungen; eine Maus ohne
+seitliches Rad (oder das Trackpad nicht benutzen).
+
+**Das muss passieren:** Der Zeitraum lässt sich direkt per Monat wählen, um einzelne Termine erweitern, und „Wer wie
+oft?“ hat einen eigenen Zeitraum für die Vergangenheit. Dass die Matrix seitlich weitergeht, sieht man an der Leiste.
+
+1. Zeitraum-Knopf → Menü: **Ab heute**, darunter **Monat** mit Jahr ‹ › und zwölf Monatsfeldern (Punkt = laufender
+   Monat), darunter **Eigener Zeitraum**. **Dez** → das Menü schließt, die Matrix zeigt alle Dezember-Termine. Mit ‹ beim
+   Jahr gehen auch vergangene Monate.
+2. Neben dem Knopf **＋** rechts → ein einzelner Termin nach dem Dezember kommt dazu (nicht der ganze Januar); der Knopf
+   zeigt die Spanne und darunter „Dezember 2026 + 1 Termin · n Termine“. Die Matrix bleibt dabei stehen (kein „wird
+   geladen“). **＋** links nimmt einen Termin davor dazu. Ausgeblendete Veranstaltungen (Filter) zählen nicht.
+3. Im Menü ist der Dezember weiter blau. **›** springt zum Januar – das ＋ fällt weg.
+4. **Wer wie oft?** → der Knopf zeigt „Letzte 3 Monate · n Termine“ mit der Spanne bis heute; gezählt wird dort. Im
+   Menü oben **Letzte 3/6/12 Monate** statt „Ab heute“, darunter Monatsfelder und eigener Zeitraum.
+5. Zurück auf **Matrix** → die Matrix hat ihren eigenen Zeitraum behalten. Seite neu laden → beide Zeiträume sind noch da.
+6. Viele Termine (z. B. ein Monat mit Gebetsabenden): unten an der Matrix steht **immer** eine graue Scroll-Leiste, auch
+   ohne zu scrollen; mit der Maus ziehen schiebt die Termine seitlich.
+7. Abwesenheiten (Musik-App): dort sind die Monatsfelder vor dem laufenden Monat gesperrt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/zeitraum.ts`, `shared/dienstplan/plan.ts`, `ui/bedienung/ZeitraumKnopf.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/Planen.module.scss`
+- **Automatisiert:** ja – `shared/ct/zeitraum.test.ts` (Letzte N Monate, ＋ zählt nach Filter, Vorlauf, gemerkt), `shared/dienstplan/plan.test.ts` (`planAusschnitt` aus `planAus`), `ui/bedienung/ZeitraumKnopf.test.tsx` (Monatsfelder, Jahr, Vergangenheit, Grenzen), `dienstplaner/src/Planen.test.tsx` (Monat, ＋ ohne Vorgeladenes, leises Nachladen, eigener Zeitraum „Wer wie oft?“ getrennt gemerkt), `ui/design/matrixScrollLeiste.test.ts` (Regel für die Scroll-Leiste), `client/src/pages/Availability.test.tsx`; von Hand bleibt, ob die Leiste im Browser wirklich dauerhaft steht
+- **Historie:** E9-3 (05.11.2026, Entwurf `e9-zeitraum-scrollen.html`, Wünsche aus dem ersten Planen in Live)
 
 </details>

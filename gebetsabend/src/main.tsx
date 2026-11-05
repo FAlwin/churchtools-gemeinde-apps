@@ -4,7 +4,7 @@ import './main.scss';
 
 /**
  * Start des Gebetsabends (Bauplan Gebetsabend G1). Er läuft nur als ChurchTools-Erweiterung.
- * Was jede Erweiterung beim Start tut, steht in `ui/erweiterung/starten.tsx`.
+ * Was jede Erweiterung beim Start tut, steht in `ui/erweiterung/starten.tsx` (#845).
  */
 void erweiterungStarten({
   App,

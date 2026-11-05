@@ -8,7 +8,9 @@ import { Spinner } from '@ui/bedienung/Spinner';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { usePastServices, useServicesOhneAblauf } from '../hooks/useServices';
-import { useSiteConfig } from '../hooks/useSiteConfig';
+import { useTerminFilter } from '../hooks/useTerminFilter';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import { abschnittMitWahl } from '@ui/bedienung/filterAbschnitt';
 import { AblaufAnlegenFenster } from '../components/AblaufAnlegenFenster';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
@@ -41,6 +43,11 @@ interface AgendaProps {
    * Liste – nur ohne „Ablauf anlegen".
    */
   kannAblaufAnlegen?: (s: Service) => boolean;
+  /**
+   * Darf in diesem Kalender Abläufe anlegen (`darfAblaufImKalender`) – nur dort bietet der Filter „auch ohne Ablauf“
+   * (05.11.2026).
+   */
+  darfAblaufImKalender?: (kalenderId: number) => boolean;
 }
 
 const OFFLINE_HINT = 'Offline nicht verfügbar – einmal online öffnen oder vorher speichern.';
@@ -69,6 +76,7 @@ export function Agenda({
   onSelect,
   onOpenSongs,
   kannAblaufAnlegen = () => false,
+  darfAblaufImKalender = () => false,
 }: AgendaProps) {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [monthsBack, setMonthsBack] = useState(1);
@@ -87,11 +95,10 @@ export function Agenda({
 
   const today = heuteImKalender();
   const pastQuery = usePastServices(monthsBack, tab === 'past' && online);
-  // Termine ohne Ablauf (13.10.2026) – nur, wenn die Verwaltung Kalender dafür gewählt hat.
-  const regel = useSiteConfig().data.ablaufAnlegen;
-  const ohneQuery = useServicesOhneAblauf(
-    online && tab === 'upcoming' && (regel?.kalenderIds.length ?? 0) > 0,
-  );
+  // Filter der Terminliste (05.11.2026): Kalender ausblenden, je Kalender „auch ohne Ablauf“ – auf dem Gerät gemerkt.
+  const filter = useTerminFilter([...services, ...(pastQuery.data ?? [])], darfAblaufImKalender);
+  // Termine ohne Ablauf (13.10.2026) – nur aus den Kalendern, die im Filter „auch ohne Ablauf“ haben.
+  const ohneQuery = useServicesOhneAblauf(filter.ohneAblauf, online && tab === 'upcoming');
   const [anlegenFuer, setAnlegenFuer] = useState<Service | null>(null);
   const mitAblaufIds = new Set(services.map((s) => s.id));
   // Hat einer inzwischen einen Ablauf (in ChurchTools angelegt), steht er nur noch oben – nie doppelt.
@@ -100,11 +107,12 @@ export function Agenda({
   );
   const ohneIds = new Set(ohneAblauf.map((s) => s.id));
   const upcoming = [...services, ...ohneAblauf]
-    .filter((s) => s.date >= today)
+    .filter((s) => s.date >= today && filter.sichtbar(s))
     .sort((a, b) => a.start.localeCompare(b.start));
   const past = [...(pastQuery.data ?? [])]
-    .filter((s) => s.date < today)
+    .filter((s) => s.date < today && filter.sichtbar(s))
     .sort((a, b) => b.start.localeCompare(a.start));
+  const leerZusatz = filter.blendetAus ? ' Der Filter blendet Kalender aus.' : '';
 
   /** Lädt einen kommenden Gottesdienst komplett in den Offline-Vorrat (Zeilen-Knopf). */
   async function saveRow(s: Service) {
@@ -273,6 +281,14 @@ export function Agenda({
           }}
         />
       }
+      aktionen={
+        // Nur mit etwas zu wählen – sonst zeigte die Einführung auf einen leeren Rahmen.
+        abschnittMitWahl(filter.abschnitt) && (
+          <div data-tour="termine-filter">
+            <FilterKnopf abschnitte={[filter.abschnitt]} />
+          </div>
+        )
+      }
       onNeuLaden={
         tab === 'upcoming'
           ? () => Promise.all([onRetry?.(), ohneQuery.isEnabled ? ohneQuery.refetch() : null])
@@ -308,7 +324,7 @@ export function Agenda({
             onRetry={onRetry}
           />
         ) : upcoming.length === 0 ? (
-          <CenterMessage icon="calendar" text="Keine kommenden Gottesdienste." />
+          <CenterMessage icon="calendar" text={`Keine kommenden Gottesdienste.${leerZusatz}`} />
         ) : (
           groups(upcoming)
         )
@@ -328,7 +344,10 @@ export function Agenda({
       ) : (
         <>
           {past.length === 0 ? (
-            <CenterMessage icon="calendar" text="Keine vergangenen Gottesdienste im Zeitraum." />
+            <CenterMessage
+              icon="calendar"
+              text={`Keine vergangenen Gottesdienste im Zeitraum.${leerZusatz}`}
+            />
           ) : (
             groups(past)
           )}

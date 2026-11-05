@@ -63,7 +63,7 @@
 ## Termine / Ablauf
 
 - `GET  /api/services?from=&to=` → `Service[]` (nur mit Setlist; Default-Fenster -7d…+42d; enthält `setlistChanged`-Markierung je Konto). Der Termin-**Untertitel** kommt aus einem 10-Minuten-Memo je Konto+Kalender+Termin (#306) – er war die Hälfte der Dauerlast. Ein Fehler wird bewusst NICHT gemerkt.
-- `GET  /api/services/ohne-ablauf` → `Service[]` (13.10.2026): Veranstaltungen **ohne** Ablauf ab heute bis +42 Tage, die laut `SiteConfig.ablaufAnlegen` einen bekommen sollen (gewählte Kalender, optional Suchwort im Namen). Leer, solange keine Kalender gewählt sind. Eigene Abfrage neben `/api/services`, damit Offline-Vorrat, Liederheft und Navigation weiter nur Termine mit Ablauf sehen. Gefragt wird nur bei den passenden Veranstaltungen; „kein Ablauf" heißt ausschließlich 404.
+- `GET  /api/services/ohne-ablauf?kalender=2,5` → `Service[]` (13.10.2026): Veranstaltungen **ohne** Ablauf ab heute bis +42 Tage aus den genannten Kalendern – seit 05.11.2026 aus dem Filter der Person (vorher `SiteConfig.ablaufAnlegen` samt Suchwort). Höchstens 50 Kalender (sonst 400), gelesen über `songIdsFromQuery`. Leer ohne Kalender. Eigene Abfrage neben `/api/services`, damit Offline-Vorrat, Liederheft und Navigation weiter nur Termine mit Ablauf sehen. Gefragt wird nur bei den passenden Veranstaltungen; „kein Ablauf" heißt ausschließlich 404.
 - `GET  /api/ablauf-vorlagen` → `AblaufVorlage[]` (`GET /agendatemplates`, nach Namen sortiert)
 - `POST /api/services/:eventId/agenda` {kalenderId, quelle: {art:'vorlage', vorlageId} | {art:'kopie', eventId} | {art:'leer'}} → Ablauf anlegen (13.10.2026): `PUT /events/{id}/agenda` mit `?template_id=` bzw. `?event_id=`, Kalender im Rumpf. Liest **vorher** nach (gibt es schon einen → **409**, ohne zu schreiben) und **hinterher** (kein Ablauf da → **502**). Kopie aus sich selbst → 400.
 - `GET  /api/services/:eventId/agenda/bestand` → `AblaufBestand` {punkte, geaendert, verbunden: [{id, name, beginn}]} (E6-5b, #691): was die Nachfrage „Neu aufsetzen“ zeigt – die Punkt-IDs, `meta.modifiedDate` und die Termine, die denselben Ablauf teilen (erkannt an den `startTimes`-Schlüsseln; ein leerer geteilter Ablauf ist nicht erkennbar). `beginn` ist Ortszeit der Gemeinde (`YYYY-MM-DDTHH:mm`, `ZEITZONE`). Ein verbundener Termin, der sich nicht lesen lässt, steht mit `name: null` da.
@@ -275,6 +275,6 @@ Speichern, `liederMelden`): `sharers` liest nur die Dateien derer, die zu den ge
 
 ## Admin (nur mit Admin-Recht)
 
-- `GET  /api/kalender` → ChurchTools-Kalender (Verwaltung „Termine ohne Ablauf", 13.10.2026)
+- `GET  /api/kalender` → ChurchTools-Kalender, die die Person sehen darf – Namen für den Filter der Terminliste (13.10.2026; seit 05.11.2026 für alle Angemeldeten, vorher nur Admin)
 - `GET  /api/groups` → ChurchTools-Gruppen (Dropdown „Gruppen-Zuweisung" für Team-Notizen)
 - `GET  /api/groups/:id/roles` → Rollen einer Gruppe (Rollen-Zuweisung)

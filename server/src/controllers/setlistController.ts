@@ -20,7 +20,6 @@ import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js'
 import { getUserId } from '../services/ctAuth.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
 import { getAblaufBestand, getAblaufVorlagen, getCtServices } from '../services/ctRead.js';
-import { getSiteConfig } from '../services/siteConfig.js';
 import {
   createAgendaItem,
   deleteAgendaItem,
@@ -38,6 +37,7 @@ import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
 import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
+import { songIdsFromQuery } from '../utils/songIdsQuery.js';
 import { idSchema } from './idSchemas.js';
 
 const dateSchema = z
@@ -74,15 +74,20 @@ export async function getServices(req: Request, res: Response): Promise<void> {
   res.json(services);
 }
 
+/** Mehr Kalender fragt niemand ab – eine Grenze, damit eine Anfrage nicht beliebig viele Abrufe auslöst. */
+const MAX_KALENDER = 50;
+
 /**
- * GET /api/services/ohne-ablauf – Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen
- * sollen (13.10.2026). Eigene Abfrage neben `/api/services`, damit alles, was dort einen Ablauf
- * voraussetzt (Offline-Vorrat, Liederheft, Navigation), unverändert bleibt.
+ * GET /api/services/ohne-ablauf?kalender=2,5 – Veranstaltungen ohne Ablauf aus diesen Kalendern (13.10.2026). Seit dem
+ * 05.11.2026 schickt die App die Kalender aus dem Filter der Person mit; vorher las der Server eine Einstellung der
+ * Gemeinde. Was jemand sehen darf, entscheidet ChurchTools mit seiner Sitzung. Eigene Abfrage neben `/api/services`,
+ * damit alles, was dort einen Ablauf voraussetzt (Offline-Vorrat, Liederheft, Navigation), unverändert bleibt.
  */
 export async function getServicesOhneAblaufCtrl(req: Request, res: Response): Promise<void> {
   const cookie = ctCookie(req);
-  const regel = (await getSiteConfig()).ablaufAnlegen;
-  res.json(await getServicesOhneAblauf(cookie, accountKey(req.ctUserId, cookie), regel));
+  const kalender = [...new Set(songIdsFromQuery(req.query.kalender))];
+  if (kalender.length > MAX_KALENDER) throw new HttpError(400, 'Zu viele Kalender.');
+  res.json(await getServicesOhneAblauf(cookie, accountKey(req.ctUserId, cookie), kalender));
 }
 
 /** GET /api/ablauf-vorlagen – die Ablauf-Vorlagen aus ChurchTools (13.10.2026). */

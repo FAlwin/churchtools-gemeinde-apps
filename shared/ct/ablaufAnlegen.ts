@@ -6,19 +6,18 @@
  * regelt `brauchtAblauf`), und ein Ablauf entsteht direkt – aus einer Vorlage, als Kopie einer
  * anderen Veranstaltung oder leer.
  *
+ * **Aus welchen Kalendern, wählt seit dem 05.11.2026 jede Person selbst** – im Filter der Terminliste („auch ohne
+ * Ablauf“, auf dem Gerät gemerkt). Vorher legte es ein Admin für alle fest (Verwaltung „Termine ohne Ablauf“, mit
+ * Suchwort); Alwin wollte für den Frauentreff spontan einen Ablauf anlegen und musste dafür die Einstellung der ganzen
+ * Gemeinde umstellen. Das Suchwort ist mit weggefallen (Entscheidung Alwin).
+ *
  * ChurchTools kann das mit EINEM Aufruf: `PUT /events/{id}/agenda` legt an oder ändert, mit
  * `?template_id=` aus einer Vorlage, mit `?event_id=` als Kopie (Schnittstellenbeschreibung der
  * Test-Instanz, 13.10.2026). Genau dieses „oder ändert" ist die Gefahr: Ein zweiter Aufruf auf eine
  * Veranstaltung, die inzwischen einen Ablauf hat, darf ihn nicht überschreiben. Deshalb wird vorher
  * nachgelesen – und hinterher auch, denn ein Erfolgssignal ist kein Beleg (Lehre 11.08.2026).
  */
-import type {
-  AblaufAnlegenRegel,
-  AblaufQuelle,
-  AblaufVorlage,
-  Kalender,
-  Service,
-} from '../types/index';
+import type { AblaufQuelle, AblaufVorlage, Kalender, Service } from '../types/index';
 import { ctId } from './ctId';
 import { kalenderVon } from './ablaufRecht';
 import { mapEventToService } from './mapEvent';
@@ -29,16 +28,12 @@ import type { CtSchreiber } from './schreibKern';
 import type { CtAblaufVorlage, CtEvent, CtKalender } from './typen';
 
 /**
- * Soll diese Veranstaltung in der Liste stehen, wenn sie keinen Ablauf hat? Nur aus den gewählten
- * Kalendern, und – wenn ein Suchwort gesetzt ist – nur, wenn ihr Name es enthält (Groß-/Kleinschreibung
- * egal). Das Suchwort gibt es, weil bei der ECG Gottesdienst und Gebetsabend im selben Kalender liegen.
+ * Soll diese Veranstaltung in der Liste stehen, wenn sie keinen Ablauf hat? Nur aus den gewählten Kalendern. Ein Termin
+ * ohne lesbaren Kalender gehört nie dazu.
  */
-export function brauchtAblauf(ev: CtEvent, regel: AblaufAnlegenRegel | undefined): boolean {
-  if (!regel || regel.kalenderIds.length === 0) return false;
+export function brauchtAblauf(ev: CtEvent, kalenderIds: readonly number[]): boolean {
   const kalender = kalenderVon(ev);
-  if (kalender === null || !regel.kalenderIds.includes(kalender)) return false;
-  const wort = regel.suchwort.trim().toLocaleLowerCase('de');
-  return wort === '' || ev.name.toLocaleLowerCase('de').includes(wort);
+  return kalender !== null && kalenderIds.includes(kalender);
 }
 
 /**
@@ -64,10 +59,10 @@ export async function termineOhneAblauf(
   leser: CtLeser,
   from: string,
   to: string,
-  regel: AblaufAnlegenRegel | undefined,
+  kalenderIds: readonly number[],
 ): Promise<Service[]> {
-  if (!regel || regel.kalenderIds.length === 0) return [];
-  const kandidaten = (await leser.events(from, to)).filter((ev) => brauchtAblauf(ev, regel));
+  if (kalenderIds.length === 0) return [];
+  const kandidaten = (await leser.events(from, to)).filter((ev) => brauchtAblauf(ev, kalenderIds));
   const ohne: { service: Service; start: string }[] = [];
   let ueberlastung: unknown = null;
   await mapLimit(kandidaten, 8, async (ev) => {

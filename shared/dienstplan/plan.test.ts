@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { diensteAus } from '../ct/dienste';
 import { dateienAus } from '../ct/terminDateien';
-import { planAus, platzAus } from './plan';
+import { planAus, planAusschnitt, platzAus } from './plan';
 import type { RohTermin } from './termine';
 
 const ICH = 1;
@@ -327,5 +327,35 @@ describe('planAus – was der Ablauf je Spalte braucht (E6-6a)', () => {
       ['2026-10-18T08:00:00Z', { kalenderId: 2, terminAdminIds: [7, 8] }],
       ['2026-10-25T09:00:00Z', { kalenderId: null, terminAdminIds: [] }],
     ]);
+  });
+});
+
+describe('planAusschnitt (E9-3: was ＋ vorlud, aber nicht dazunahm)', () => {
+  const ton = (personId: number | null) => ({
+    serviceId: 6,
+    personId,
+    name: personId ? 'Anna' : null,
+    isAccepted: true,
+  });
+  const p = plan([
+    termin(1, '2026-11-29T09:00:00Z', [ton(null)]),
+    termin(2, '2026-12-06T09:00:00Z', [ton(5)]),
+    termin(3, '2027-01-03T09:00:00Z', [ton(null), ton(null)]),
+  ]);
+
+  it('behält nur die Termine im Zeitraum – Spalten, Plätze und „frei“ bleiben zueinander passend', () => {
+    const a = planAusschnitt(p, '2026-12-01', '2026-12-31');
+    expect(a.spalten.map((s) => s.id)).toEqual([2]);
+    const technik = a.gruppen.find((g) => g.gruppe?.id === 3)!;
+    expect(technik.frei).toEqual([0]);
+    expect(technik.zeilen.find((z) => z.dienst.id === 6)!.zellen[0]!.map((pl) => pl.art)).toEqual([
+      'zugesagt',
+    ]);
+    const mitJanuar = planAusschnitt(p, '2026-12-01', '2027-01-03');
+    expect(mitJanuar.gruppen.find((g) => g.gruppe?.id === 3)!.frei).toEqual([0, 2]);
+  });
+
+  it('bleibt alles, ist es derselbe Plan', () => {
+    expect(planAusschnitt(p, '2026-01-01', '2027-12-31')).toBe(p);
   });
 });

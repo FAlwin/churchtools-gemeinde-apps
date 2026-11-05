@@ -4,7 +4,6 @@
  *  - die Songs einer Setlist inkl. heruntergeladenem ChordPro-Inhalt
  */
 import { fensterOhneAblauf, termineOhneAblauf } from '@shared/ct/ablaufAnlegen';
-import type { AblaufAnlegenRegel } from '@shared/types/index';
 import type {
   AgendaItem,
   ArrangementFileEntry,
@@ -86,16 +85,16 @@ export async function getServicesWithSetlists(
 }
 
 /**
- * Veranstaltungen ohne Ablauf, die laut Einstellung einen bekommen sollen (13.10.2026) – Regel in
- * `@shared/ct/ablaufAnlegen`. Eigene Abfrage: Die Terminliste oben bleibt „nur mit Ablauf".
+ * Veranstaltungen ohne Ablauf aus den Kalendern, die die Person im Filter gewählt hat (13.10.2026, seit 05.11.2026 je
+ * Person) – Regel in `@shared/ct/ablaufAnlegen`. Eigene Abfrage: Die Terminliste oben bleibt „nur mit Ablauf".
  */
 export function getServicesOhneAblauf(
   cookie: string,
   account: string,
-  regel: AblaufAnlegenRegel | undefined,
+  kalenderIds: readonly number[],
 ): Promise<Service[]> {
   const { from, to } = fensterOhneAblauf();
-  return termineOhneAblauf(leserFuer(cookie, account), from, to, regel);
+  return termineOhneAblauf(leserFuer(cookie, account), from, to, kalenderIds);
 }
 
 /** Findet die ChurchTools-fileUrl einer Datei (per Datei-ID) zum Durchreichen – oder 404. */

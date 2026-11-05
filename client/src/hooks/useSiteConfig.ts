@@ -45,7 +45,10 @@ export function useGroups(enabled: boolean) {
   });
 }
 
-/** Lädt die ChurchTools-Kalender (Verwaltung „Termine ohne Ablauf", 13.10.2026; nur wenn `enabled`). */
+/**
+ * Lädt die ChurchTools-Kalender, die man sehen darf – ihre Namen für den Filter der Terminliste (seit 05.11.2026;
+ * vorher für die Verwaltung „Termine ohne Ablauf“). Nur wenn `enabled`.
+ */
 export function useKalender(enabled: boolean) {
   return useQuery({
     queryKey: schluessel.kalender(),

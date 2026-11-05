@@ -9,7 +9,6 @@ export interface VerwaltungsFenster {
   org: boolean;
   links: boolean;
   terminArten: boolean;
-  ablaufAnlegen: boolean;
   ansicht: boolean;
   notes: boolean;
   groups: boolean;
@@ -34,8 +33,6 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
   const [showLinks, setShowLinks] = useState(false);
   // Verwaltung → „Abwesenheiten: Termin-Arten" – die Knöpfe des Filters (#400).
   const [showTerminArten, setShowTerminArten] = useState(false);
-  // Verwaltung → „Termine ohne Ablauf" (13.10.2026).
-  const [showAblaufAnlegen, setShowAblaufAnlegen] = useState(false);
   // Verwaltung → „Liedblatt: Standard-Ansicht" (07.10.2026).
   const [showAnsicht, setShowAnsicht] = useState(false);
   const [ansichtDraft, setAnsichtDraft] = useState<StandardAnsicht>('akkorde');
@@ -128,7 +125,6 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     org: showOrg,
     links: showLinks,
     terminArten: showTerminArten,
-    ablaufAnlegen: showAblaufAnlegen,
     ansicht: showAnsicht,
     notes: showNotes,
     groups: showGroups,
@@ -161,8 +157,6 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     closeLinks: () => setShowLinks(false),
     openTerminArten: () => setShowTerminArten(true),
     closeTerminArten: () => setShowTerminArten(false),
-    openAblaufAnlegen: () => setShowAblaufAnlegen(true),
-    closeAblaufAnlegen: () => setShowAblaufAnlegen(false),
     openNotes: () => setShowNotes(true),
     closeNotes: () => setShowNotes(false),
     openGroups,

@@ -142,12 +142,12 @@ export function createAgendaItem(eventId: number, data: NeuerPunkt): Promise<{ o
 }
 
 /**
- * Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen sollen (13.10.2026) – getrennt von
- * `getServices`, das weiter nur Termine mit Ablauf liefert.
+ * Veranstaltungen ohne Ablauf aus diesen Kalendern (13.10.2026, Kalender seit 05.11.2026 aus dem Filter) – getrennt
+ * von `getServices`, das weiter nur Termine mit Ablauf liefert.
  */
-export function getServicesOhneAblauf(): Promise<Service[]> {
-  if (istExtension) return ext.termineOhneAblaufListe();
-  return apiFetch<Service[]>('/api/services/ohne-ablauf');
+export function getServicesOhneAblauf(kalenderIds: readonly number[]): Promise<Service[]> {
+  if (istExtension) return ext.termineOhneAblaufListe(kalenderIds);
+  return apiFetch<Service[]>(`/api/services/ohne-ablauf?kalender=${kalenderIds.join(',')}`);
 }
 
 /** Die Ablauf-Vorlagen aus ChurchTools (13.10.2026). */

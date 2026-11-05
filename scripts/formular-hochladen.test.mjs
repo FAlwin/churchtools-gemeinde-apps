@@ -85,6 +85,8 @@ describe('Sicherheits-Header des Formulars (#849)', () => {
       "img-src 'self' data: blob: https://a.church.tools https://test-a.church.tools",
     );
     expect(teil(t, 'script-src')).toBe("script-src 'self'");
+    // Schriften kommen als eigene Dateien (ui/design/schrift.ts) – kein `data:` nötig.
+    expect(teil(t, 'font-src')).toBe("font-src 'self'");
     expect(teil(t, 'default-src')).toBe("default-src 'self'");
     expect(csp(t)).not.toContain('unsafe-eval');
   });

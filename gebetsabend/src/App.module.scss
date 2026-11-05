@@ -1,0 +1,12 @@
+// Die Spalte der Seite (Bauplan Gebetsabend G2): Termin, Zuhören, Hinweis untereinander – so schmal wie die Karten.
+.spalte {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.hinweis {
+  font-size: 13.5px;
+  color: var(--text2);
+}

@@ -1,0 +1,23 @@
+name: Release Gebetsabend
+
+# Der Gebetsabend hat seinen eigenen Release-Weg – getrennt von der Musik-App (Bauplan Gebetsabend G1):
+# Tag `gebetsabend-vX.Y.Z` → Erweiterung bauen und packen → GitHub Release mit der ZIP (`make_latest: false`,
+# siehe Vorlage). Der Tag-Filter `v*` der Musik-App greift hier nicht: `gebetsabend-v…` beginnt nicht mit `v`.
+#
+# Ablauf: erst in main mergen (CI grün) → `git tag gebetsabend-vX.Y.Z && git push origin gebetsabend-vX.Y.Z`.
+on:
+  push:
+    tags:
+      - 'gebetsabend-v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/erweiterung-release.yml
+    with:
+      praefix: gebetsabend-
+      workspace: gebetsabend
+      kuerzel: gebetsabend
+      titel: Gebetsabend
+      anleitung: docs/betrieb/GEBETSABEND.md

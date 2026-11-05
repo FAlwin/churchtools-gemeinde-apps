@@ -1,0 +1,89 @@
+// Zuhören und nächster Termin (Bauplan Gebetsabend G2, Entwurf v2) – Karten im ChurchTools-Look, ein großer blauer
+// Knopf, Zustand mit Punkt (grün = läuft, grau = wartet/stockt).
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 640px;
+  padding: 14px 16px;
+}
+
+.termin {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.titel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.text {
+  font-size: 14.5px;
+  color: var(--text2);
+}
+
+.leise {
+  font-size: 13.5px;
+  color: var(--text2);
+}
+
+.zustand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text2);
+
+  &.an {
+    color: var(--green);
+  }
+}
+
+.punkt {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text3);
+
+  .an & {
+    background: var(--green);
+  }
+}
+
+// Der eine Knopf der Seite – breit und groß, damit ihn auch wenig Geübte finden (Übergabe: „ein Knopf“).
+.gross {
+  @include m.hauptKnopfBreit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  // Eine Videofläche ist in hell und dunkel schwarz (wie der Player in ChurchTools) – kein Farbwert der Oberfläche.
+  background: #000;
+}
+
+// „Nur Ton“: kein Bild, nur ein schmaler Streifen für den Player.
+.nurTon {
+  aspect-ratio: auto;
+  height: 64px;
+}
+
+.rechts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -3,6 +3,7 @@ import { defineConfig, mergeConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { erweiterungsBau } from '../ui/erweiterung/viteErweiterung';
+import { schriftNichtEinbetten } from '../ui/design/schrift';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -82,6 +83,8 @@ export default defineConfig(({ mode }) => {
             }),
           ]),
     ],
+    // Lato als eigene Dateien, nicht als `data:` – die CSP erlaubt Schriften nur von 'self' (ui/design/schrift.ts).
+    build: { assetsInlineLimit: schriftNichtEinbetten },
     // Moderne Sass-API verwenden (vermeidet die „legacy-js-api"-Deprecation-Warnung)
     css: {
       preprocessorOptions: {

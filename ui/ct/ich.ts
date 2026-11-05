@@ -16,7 +16,10 @@ import { merkeGemeindeZeitzone } from '@shared/ct/zeit';
 export interface Ich {
   id: number;
   vorname: string;
-  /** Aus derselben Antwort – fürs Blatt „Meine Dienste“ (E8-3). Optional, damit Attrappen ohne ihn auskommen. */
+  /**
+   * Aus derselben Antwort – fürs Blatt „Meine Dienste“ (E8-3) und für den Namen, mit dem Zuhörer beim Sender des
+   * Gebetsabends ankommen (G2). Optional, damit Attrappen ohne ihn auskommen.
+   */
   nachname?: string;
   /** `null`, wenn ChurchTools keinen Namen nennt oder `/info` gerade nicht antwortet. */
   gemeinde: string | null;

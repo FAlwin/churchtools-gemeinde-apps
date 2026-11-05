@@ -66,6 +66,10 @@ jobs:
       - name: Protokolle-Erweiterung packen
         run: npm run paket -w protokolle
 
+      # Der Gebetsabend (Bauplan Gebetsabend G1) ist ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Gebetsabend-Erweiterung packen
+        run: npm run paket -w gebetsabend
+
       - name: Test
         run: npm test
 

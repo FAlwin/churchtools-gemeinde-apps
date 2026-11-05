@@ -9,15 +9,26 @@
  *    Mit `&cleanoutput` (bis G2) fehlte er: Im ChurchTools-iframe am iPhone blieb das Bild schwarz, bis man ins Feld
  *    tippte – ohne jeden Hinweis (Test-Instanz 05.11.2026, 15:47). Unser Tippen auf „zuhören“ zählt für das fremde
  *    iframe nicht, dessen Verbindung steht erst Sekunden später. Läuft danach am
- *    iPhone nach dem Entsperren weiter. `&bitrate=1000` begrenzt den Upload je Zuhörer (≈ 1 Mbit/s).
+ *    iPhone nach dem Entsperren weiter. `&bitrate=` begrenzt den Upload je Zuhörer (`BITRATE`).
  *  - `&label=` des Zuhörers kommt beim Sender als `push-connection-info.label` an („Wer hört zu?“, G4).
  */
 import type { Zugang } from './zugang';
 
 export const VDO_BASIS = 'https://vdo.ninja/';
 
-/** Kbit/s, die ein Zuhörer mit Bild anfordert (S0b). */
-export const BITRATE = 1000;
+/**
+ * Auflösung des Senders: `0` = 1920×1080 (VDO.Ninja `&quality`; ohne Angabe wählt es je Gerät selbst, „nicht immer
+ * 720p“). Alwin, 05.11.2026: fest Full HD. Wie scharf es beim Zuhörer ankommt, begrenzt `BITRATE` – und VDO.Ninja
+ * verkleinert das Bild je Zuhörer auf dessen Playergröße (gemessen G0: 36 % am Mac, 86 % am iPhone).
+ */
+export const QUALITAET = 0;
+
+/**
+ * Kbit/s, die ein Zuhörer mit Bild höchstens anfordert. Jeder Zuhörer bekommt einen eigenen Strom vom Gerät im Raum
+ * (P2P): Bei 40 Mbit/s Upload im Gemeindehaus (Alwin, 05.11.2026) sind 10 Zuhörer = 20 Mbit/s, 15 = 30 Mbit/s – Reserve
+ * für alles andere. Bis dahin 1000 (S0b).
+ */
+export const BITRATE = 2000;
 
 /** Was das iframe des Senders darf (G0-3: Kamera und Mikro fragt der Browser für die ChurchTools-Adresse ab). */
 export const ERLAUBNIS_SENDER = 'camera; microphone; autoplay; fullscreen';
@@ -32,7 +43,7 @@ const teil = (s: string) => encodeURIComponent(s);
 export function senderLink(z: Pick<Zugang, 'streamId' | 'passwort' | 'mitBild'>): string {
   return (
     `${VDO_BASIS}?push=${teil(z.streamId)}&password=${teil(z.passwort)}` +
-    `&audiodevice=1&videodevice=${z.mitBild ? 1 : 0}&autostart&label=${teil(SENDER_NAME)}`
+    `&audiodevice=1&videodevice=${z.mitBild ? `1&quality=${QUALITAET}` : 0}&autostart&label=${teil(SENDER_NAME)}`
   );
 }
 

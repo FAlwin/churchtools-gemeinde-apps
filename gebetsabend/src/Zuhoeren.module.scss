@@ -85,4 +85,51 @@
 .rechts {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+// Die Bühne um den Player – im Vollbild und in der Großansicht wird sie groß, das iframe bleibt, wo es ist.
+.buehne {
+  position: relative;
+}
+
+// Echtes Vollbild (Computer, iPad, Android): schwarz, Bild mittig so groß wie möglich.
+.vollbild {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000; // Videofläche, in hell und dunkel schwarz (wie `.player`)
+
+  .player {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+}
+
+// Großansicht (iPhone, kein Vollbild für Seiten): dieselbe Bühne liegt über der ganzen Erweiterung. In ChurchTools ist
+// das der Bereich unter der ChurchTools-Leiste (`#root` hat dort ein `transform`, `fixed` hängt daran) – quer gedreht
+// füllt das Bild fast den ganzen Bildschirm.
+.grossansicht {
+  @extend .vollbild;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  // Unten frei für den Home-Strich des iPhones (`--unten-strich`, wie Präsentation und Ablauf-Anzeige) – sonst läge das
+  // Bild darunter.
+  padding-bottom: var(--unten-strich);
+}
+
+.schliessen {
+  @include m.aktionKnopf;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--knopf-hoehe);
+  padding: 0 14px;
+  border-radius: var(--r-ctrl);
 }

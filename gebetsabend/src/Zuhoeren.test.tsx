@@ -125,6 +125,37 @@ describe('Zuhoeren', () => {
     expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
   });
 
+  it('Großansicht (iPhone, kein Browser-Vollbild): legt die Bühne groß, OHNE das iframe neu zu laden', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    const vorher = document.querySelector('iframe');
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).not.toBeNull();
+    expect(document.querySelector('iframe')).toBe(vorher);
+    fireEvent.click(screen.getByRole('button', { name: /Schließen/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+    expect(document.querySelector('iframe')).toBe(vorher);
+  });
+
+  it('Escape schließt die Großansicht; „Nicht mehr zuhören“ beendet sie mit', async () => {
+    await zeigen(laeuft());
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Großansicht/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nicht mehr zuhören/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(document.querySelector('[class*="grossansicht"]')).toBeNull();
+  });
+
+  it('„Nur Ton“: kein Knopf für Großansicht oder Vollbild', async () => {
+    await zeigen({ ...laeuft(), mitBild: false });
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(screen.queryByRole('button', { name: /Großansicht|Vollbild/ })).toBeNull();
+  });
+
   it('scheitert schon das erste Laden, steht der Fehler da (nicht „keine Übertragung“)', async () => {
     laden.mockRejectedValue(new ApiError(502, 'kaputt'));
     render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);

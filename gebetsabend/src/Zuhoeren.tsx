@@ -3,6 +3,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useVollbild } from '@ui/bedienung/useVollbild';
 import { uhrText } from '@shared/ct/zeit';
 import { ERLAUBNIS_ZUHOERER, VDO_BASIS, zuhoererLink } from '@shared/gebetsabend/links';
 import {
@@ -45,6 +46,9 @@ type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art
  * - Beim Zuhören zählt der Player (VDO.Ninja-Meldungen, nur aus dem eigenen iframe von vdo.ninja). Startet die Technik
  *   neu, lädt der Player die neuen Daten; beendet sie, schließt er sich.
  * - **Vorübergehend ist nicht beendet:** Scheitert eine Nachfrage, bleibt alles, wie es ist.
+ * - **Vollbild** über den gemeinsamen Baustein; am iPhone (kein Vollbild für Seiten) die **Großansicht**: dieselbe
+ *   Bühne legt sich per CSS über die Seite. Das iframe wird dabei nicht umgehängt – ein umgehängtes iframe lädt neu,
+ *   und Bild und Ton brächen ab.
  * - Das iframe entsteht erst beim Tippen. Am iPhone reicht das nicht immer: Safari sperrt das Abspielen im fremden
  *   iframe, bis man dort selbst tippt (05.11.2026) – daher der Hinweis unter dem Bild.
  */
@@ -56,6 +60,9 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
   const [player, setPlayer] = useState<PlayerZustand>('verbindet');
   const [beendet, setBeendet] = useState(false);
   const fenster = useRef<HTMLIFrameElement>(null);
+  const buehne = useRef<HTMLDivElement>(null);
+  const vollbild = useVollbild(buehne, { ersatz: true });
+  const { art: vollbildArt, an: vollbildAn, beenden: vollbildBeenden } = vollbild;
   const gehoertRef = useRef<Zugang | null>(null);
   useEffect(() => {
     gehoertRef.current = gehoert;
@@ -74,6 +81,7 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
             setGehoert(z);
             setPlayer('verbindet');
           } else if (was === 'beendet') {
+            vollbildBeenden();
             setGehoert(null);
             setBeendet(true);
           }
@@ -84,7 +92,7 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
         },
       );
     },
-    [modul, kategorie],
+    [modul, kategorie, vollbildBeenden],
   );
 
   useEffect(() => {
@@ -102,6 +110,21 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
     window.addEventListener('message', hoeren);
     return () => window.removeEventListener('message', hoeren);
   }, []);
+
+  // Großansicht (iPhone): Escape schließt sie wie das echte Vollbild – für Tastaturen am iPad.
+  useEffect(() => {
+    if (vollbildArt !== 'ersatz' || !vollbildAn) return;
+    const taste = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') vollbildBeenden();
+    };
+    window.addEventListener('keydown', taste);
+    return () => window.removeEventListener('keydown', taste);
+  }, [vollbildArt, vollbildAn, vollbildBeenden]);
+
+  const aufhoeren = () => {
+    vollbildBeenden();
+    setGehoert(null);
+  };
 
   const zuhoeren = () => {
     if (!zugang) return;
@@ -122,25 +145,48 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
           <Zustand gut={PLAYER_GUT[player]}>
             {gehoert.laeuftSeit ? `Läuft seit ${uhrText(gehoert.laeuftSeit)} Uhr` : 'Läuft'}
           </Zustand>
-          <iframe
-            key={`${gehoert.streamId}-${gehoert.mitBild ? 'bild' : 'ton'}`}
-            ref={fenster}
-            className={gehoert.mitBild ? styles.player : `${styles.player} ${styles.nurTon}`}
-            title="Übertragung des Gebetsabends"
-            src={zuhoererLink(gehoert, name)}
-            allow={ERLAUBNIS_ZUHOERER}
-            onLoad={() => fenster.current?.contentWindow?.postMessage(PEGEL_AN, VDO_HERKUNFT)}
-          />
+          <div
+            ref={buehne}
+            className={
+              vollbildAn
+                ? `${styles.buehne} ${vollbildArt === 'ersatz' ? styles.grossansicht : styles.vollbild}`
+                : styles.buehne
+            }
+          >
+            <iframe
+              key={`${gehoert.streamId}-${gehoert.mitBild ? 'bild' : 'ton'}`}
+              ref={fenster}
+              className={gehoert.mitBild ? styles.player : `${styles.player} ${styles.nurTon}`}
+              title="Übertragung des Gebetsabends"
+              src={zuhoererLink(gehoert, name)}
+              allow={ERLAUBNIS_ZUHOERER}
+              onLoad={() => fenster.current?.contentWindow?.postMessage(PEGEL_AN, VDO_HERKUNFT)}
+            />
+            {vollbildAn && (
+              <button type="button" className={styles.schliessen} onClick={vollbildBeenden}>
+                <Icon name="x" />
+                Schließen
+              </button>
+            )}
+          </div>
           <p className={styles.leise}>{PLAYER_TEXT[player]}</p>
           <p className={styles.text}>{HINWEIS_TIPPEN}</p>
           <p className={styles.leise}>Der Ton läuft auch weiter, wenn du das Handy sperrst.</p>
           <p className={styles.leise}>Die Technik sieht, dass du zuhörst.</p>
           <div className={styles.rechts}>
+            {gehoert.mitBild && vollbild.kann && (
+              <KopfKnopf
+                raster
+                label={vollbildArt === 'ersatz' ? 'Großansicht' : 'Vollbild'}
+                symbol={<Icon name="vollbild" />}
+                onClick={vollbild.umschalten}
+              />
+            )}
             <KopfKnopf
               raster
               label="Nicht mehr zuhören"
               symbol={<Icon name="x" />}
-              onClick={() => setGehoert(null)}
+              onClick={aufhoeren}
             />
           </div>
         </>

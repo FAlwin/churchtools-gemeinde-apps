@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BITRATE, SENDER_NAME, senderLink, VDO_BASIS, zuhoererLink } from './links';
+import { BITRATE, QUALITAET, SENDER_NAME, senderLink, VDO_BASIS, zuhoererLink } from './links';
 import { neuerZugang } from './zugang';
 
 /** Geprüft wird gegen einen erzeugten Zugang, nicht gegen handgeschriebene Werte. */
@@ -15,12 +15,17 @@ describe('senderLink', () => {
     expect(p.get('password')).toBe(zugang.passwort);
     expect(p.get('audiodevice')).toBe('1');
     expect(p.get('videodevice')).toBe('1');
+    // Fest Full HD (Alwin, 05.11.2026) statt der Geräte-Automatik.
+    expect(p.get('quality')).toBe(String(QUALITAET));
+    expect(QUALITAET).toBe(0);
     expect(p.has('autostart')).toBe(true);
     expect(p.get('label')).toBe(SENDER_NAME);
   });
 
   it('„Nur Ton“ schaltet die Kamera ab', () => {
-    expect(parameter(senderLink({ ...zugang, mitBild: false })).get('videodevice')).toBe('0');
+    const p = parameter(senderLink({ ...zugang, mitBild: false }));
+    expect(p.get('videodevice')).toBe('0');
+    expect(p.has('quality')).toBe(false);
   });
 });
 

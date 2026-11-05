@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -16,10 +16,19 @@ import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
 import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
+import { blattGruppenAus } from './terminBlattDienste';
 import { TerminAblauf } from './TerminAblauf';
 import { TauschAmDienst } from './TauschTeile';
 import type { Tausch } from './useTausch';
 import styles from './TerminAnsicht.module.scss';
+
+/**
+ * „Termin teilen“ erst beim Antippen laden: Es bringt pdf.js samt Worker mit (Vorschau) – beim Start des Dienstplaners
+ * legte das sonst jedes Mal einen Worker an, auch ohne dass jemand teilt (volle Prüfung E8-1).
+ */
+const TerminTeilenFenster = lazy(() =>
+  import('@ui/teilen/TerminTeilenFenster').then((m) => ({ default: m.TerminTeilenFenster })),
+);
 
 type Zustand =
   | { art: 'laedt' }
@@ -36,6 +45,10 @@ type Zustand =
  * (`ui/ablauf/useAblaufBearbeiten`), ohne Liedwahl (Lieder wählt man in der Musik-App). Gespeichert wird sofort in
  * ChurchTools; danach wird der Ablauf neu gelesen. Was zum Ablauf gehört, steht seit E6-6a in `TerminAblauf` – dieselbe
  * Stelle wie in den Spalten der Matrix.
+ *
+ * **Teilen** (E8-1, Entwurf `e8-teilen.html`): Der Knopf gehört zum Titel und steht direkt dahinter – am Handy rutscht
+ * die Titelzeile unter die Knöpfe, dort ist Platz (Alwin 05.11.2026: neben ⓘ verdeckte er zu viel). Er öffnet
+ * „Termin teilen“ mit Diensten und Ablauf auf einem Blatt.
  *
  * Geladen wird der Termin frisch (`ladeTermin`, dieselbe Regel wie Liste und Matrix) – er kann auch außerhalb des
  * geladenen Zeitraums liegen (aus „Planen“ mit eigenem Zeitraum).
@@ -81,6 +94,7 @@ export function TerminAnsicht({
   // Die Dateien (T2a): das Fenster und die frische Liste daraus (bis der Termin neu geladen wird).
   const [dateienOffen, setDateienOffen] = useState(false);
   const [dateienNeu, setDateienNeu] = useState<TerminDatei[] | null>(null);
+  const [teilenOffen, setTeilenOffen] = useState(false);
 
   useEffect(() => {
     let aktuell = true;
@@ -89,6 +103,7 @@ export function TerminAnsicht({
     setInfosNeu(null);
     setDateienOffen(false);
     setDateienNeu(null);
+    setTeilenOffen(false);
     setZustand({ art: 'laedt' });
     Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
       ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
@@ -230,6 +245,13 @@ export function TerminAnsicht({
                   </button>
                 )}
               </div>
+              <KopfKnopf
+                onClick={() => setTeilenOffen(true)}
+                label="Teilen"
+                title="Termin als PDF teilen"
+                symbol={<Icon name="share" size={16} />}
+                nurSymbol
+              />
             </div>
             {infoKnopf}
             {dateiKnopf}
@@ -332,6 +354,24 @@ export function TerminAnsicht({
               }}
               onClose={() => setInfosOffen(false)}
             />
+          )}
+          {teilenOffen && (
+            <Suspense fallback={null}>
+              <TerminTeilenFenster
+                quelle={{
+                  titel: s.name,
+                  tag: s.tag,
+                  beginn: s.uhrzeit,
+                  gemeinde: start.gemeinde,
+                  app: 'Dienstplaner',
+                  zeilen: ablauf === null ? null : teile.zeilen,
+                  dienste: blattGruppenAus(gruppen),
+                  infoGruppen: teile.infoGruppen,
+                  ansichtInfos: teile.infoSpalten,
+                }}
+                onClose={() => setTeilenOffen(false)}
+              />
+            </Suspense>
           )}
           {dateienOffen && (
             <DateienFenster

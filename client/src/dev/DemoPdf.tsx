@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import '../pdfSetup';
+import '@ui/teilen/pdfSetup';
 import type { SetlistSong } from '@shared/types/index';
 import { generateChordPdf } from '../utils/chordPdf';
 import { useAppLogo } from '../hooks/useAppLogo';

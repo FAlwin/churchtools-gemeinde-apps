@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url';
 import { loadEnv, type UserConfig } from 'vite';
 import { cssBereich } from './cssBereich';
 import { kopfInDenInhalt } from './kopfInDenInhalt';
@@ -13,6 +14,9 @@ import { kopfInDenInhalt } from './kopfInDenInhalt';
  * - `cssBereich`: unsere globalen Stilregeln dürfen ChurchTools nicht treffen. **Nur EIN `css`-Schlüssel**
  *   – ein zweiter hatte das schon einmal still abgeschaltet; deshalb wird dies hier mit `mergeConfig`
  *   in die App-Konfiguration gemischt, nicht daneben geschrieben.
+ * - der **pdf.js-Worker als eigene Datei** (`ui/teilen/pdfWorkerDatei.ts`): ChurchTools verbietet Worker aus `blob:`
+ *   (CSP `child-src * data`, gemessen 07.10.2026, #335). Bis E8-1 stand das nur in der Musik-App; seit der
+ *   Dienstplaner die PDF-Vorschau hat, gilt es für jede Erweiterung.
  *
  * Das Kürzel kommt aus `VITE_KEY` (Release: fest), sonst gilt `standardKuerzel`.
  */
@@ -20,6 +24,14 @@ export function erweiterungsBau(mode: string, standardKuerzel: string): UserConf
   const kuerzel = loadEnv(mode, process.cwd(), '').VITE_KEY || standardKuerzel;
   return {
     base: `/ccm/${kuerzel}/`,
+    resolve: {
+      alias: [
+        {
+          find: /^\.\/pdfWorker$/,
+          replacement: fileURLToPath(new URL('../teilen/pdfWorkerDatei.ts', import.meta.url)),
+        },
+      ],
+    },
     build: { outDir: 'dist-extension', emptyOutDir: true },
     plugins: [kopfInDenInhalt()],
     css: { postcss: { plugins: [cssBereich()] } },

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import type { SetlistPageOwner } from '../utils/chordPdf';
 import { ladeDokument } from '../services/fileDownload';
-import { dokumentSeiten, renderPdfToCanvases } from '../utils/dokumentSeiten';
+import { renderPdfToCanvases } from '@ui/teilen/pdfSeiten';
+import { dokumentSeiten } from '../utils/dokumentSeiten';
 import type { SongSettings } from '../utils/chartSettings';
 import {
   composeStream,

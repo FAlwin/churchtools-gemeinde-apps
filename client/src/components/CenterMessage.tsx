@@ -1,4 +1,4 @@
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { Icon, type IconName } from '@ui/icons/icons';
 import styles from './CenterMessage.module.scss';
 

@@ -3,12 +3,12 @@ import type { jsPDF } from 'jspdf';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { SchalterZeile } from './SchalterZeile';
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { getTeilenMitAnmerkungen, setTeilenMitAnmerkungen } from '../utils/devicePrefs';
 import { downloadPdf, sharePdf } from '@ui/teilen/sharePdf';
 import { Icon } from '@ui/icons/icons';
-import { PdfSeitenVorschau } from './PdfSeitenVorschau';
+import { PdfSeitenVorschau } from '@ui/teilen/PdfSeitenVorschau';
 import styles from '../pages/Settings.module.scss';
 
 /** Was das Bauen liefert: das PDF und ein Hinweis auf Lieder, die nicht wie gezeigt dabei sind. */

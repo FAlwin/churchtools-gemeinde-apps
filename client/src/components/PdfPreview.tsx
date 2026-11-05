@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-// Worker inline im Bundle (../pdfSetup) → funktioniert auch offline (#32).
-import '../pdfSetup';
+// Worker inline im Bundle (@ui/teilen/pdfSetup) → funktioniert auch offline (#32).
+import '@ui/teilen/pdfSetup';
 import { type ChordPdfSong, generateChordPdf } from '../utils/chordPdf';
 import { parseMetadata } from '../utils/chordpro';
-import { wirksamerMassstab } from '../utils/leinwand';
+import { wirksamerMassstab } from '@ui/teilen/leinwand';
 import { useAppLogo } from '../hooks/useAppLogo';
 import styles from './PdfPreview.module.scss';
 

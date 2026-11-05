@@ -4,7 +4,7 @@ import type { Theme } from '../types/index';
 import { Screen } from '../components/Screen';
 import { loginErrorMessage, isConnectionProblem } from '../utils/loginError';
 import { probeReachable } from '../services/reachability';
-import { Spinner } from '../components/Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { Icon } from '@ui/icons/icons';
 import { SupportBox } from '../components/SupportBox';
 import styles from './Login.module.scss';

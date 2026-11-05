@@ -18,7 +18,7 @@ import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import { liveListe } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
-import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
+import type { AblaufQuelle, AblaufVorlage, InfoGruppe } from '@shared/types/index';
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
 import { ablaufAktionen, GESPERRT } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
@@ -84,6 +84,13 @@ export interface AblaufTeile {
    * Ablauf oder ohne Punkt mit Uhrzeit – dann steht kein Ende da.
    */
   ende: string | null;
+  /**
+   * Fürs Teilen (E8-1): die Zeilen, wie die Ansicht sie zeigt, die Infos-Gruppen, die man sieht, und die unter
+   * „Spalten“ gewählten – damit das Termin-Blatt nichts davon ein zweites Mal rechnet.
+   */
+  zeilen: readonly AblaufZeile[];
+  infoGruppen: readonly InfoGruppe[];
+  infoSpalten: readonly number[];
 }
 
 /**
@@ -476,6 +483,9 @@ export function TerminAblauf({
     darf,
     fehlerLoeschen: liste.fehlerLoeschen,
     ende,
+    zeilen,
+    infoGruppen: gruppen,
+    infoSpalten: spalten.ids,
     spaltenKnopf: ansichtKnoepfe ? (
       <InfoSpaltenKnopf
         gruppen={gruppen}

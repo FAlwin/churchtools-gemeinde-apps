@@ -563,3 +563,36 @@ anderen Termin zum Tausch an (auch einem früheren). Getauscht wird erst, wenn d
 - **Historie:** E7-3 (04.11.2026, Entwurf `e7-3-tausch.html`)
 
 </details>
+
+### TF-ABLAUF-22 · Termin als PDF teilen
+
+**Das brauchst du:** Einen Termin mit Ablauf (mit Vorlauf, Abschnitten, einem Lied mit Tonart) und Diensten in
+mindestens zwei Gruppen, einer davon frei und einer angefragt; Infos einer Gruppe an mindestens einem Eintrag.
+
+**Das muss passieren:** Das Termin-Blatt zeigt Dienste und Ablauf übersichtlich im ChurchTools-Look; was aufs Blatt
+kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
+
+1. Termin öffnen → hinter dem Titel **„Teilen“** (am Handy rechts in der Titelzeile, nichts verdeckt).
+2. **Teilen** → „Termin teilen“ mit drei Zeilen: **Dienste** (Gruppen · über dem Ablauf), **Ablauf** (Uhrzeit, Dauer,
+   Zuständig · Lieder mit Tonart), **Infos** (Gruppen wie unter „Spalten“ – wie in der Ansicht); darunter
+   „Fertig · N Seiten · Titel TT.MM.JJJJ.pdf“ und die Seiten als Vorschau.
+3. Vorschau antippen → Seite groß. Das Blatt: oben Titel, Datum mit Beginn–Ende, Gemeinde und Stand; Dienste je
+   Gruppe in Spalten (Dienst grau, Person fett, „frei“ rot, „angefragt“ grau); Ablauf mit dunklem **Beginn** und
+   **Ende** (mit Dauer), Vorlauf grau, Abschnitte mit „ca. … Min“, Lied mit Tonart-Schild; nur Info-Spalten mit Text;
+   ganze Teams nur als Dienst-Name.
+4. **Dienste** antippen → Unterseite mit ‹; „Dienste aufs Blatt“ aus → zurück: „nicht auf dem Blatt“, die Vorschau
+   ohne Dienste. Wieder an, eine Gruppe abwählen, **Unter dem Ablauf** → Vorschau entsprechend.
+5. **Ablauf** → „Zuständig: Unter dem Eintrag“, Notiz und Tempo an → Vorschau entsprechend.
+6. **Infos** → eine Gruppe dazu → Hauptseite ohne „wie in der Ansicht“; **Wieder wie in der Ansicht** stellt zurück.
+7. **Querformat** → Vorschau quer. Fenster schließen, neu öffnen → die Wahl ist noch da.
+8. **Herunterladen** → PDF mit Dateiname „Titel TT.MM.JJJJ.pdf“; **Teilen** → Teilen-Menü (am Rechner Download).
+9. Termin ohne Ablauf → Zeile „Ablauf“: „Dieser Termin hat keinen Ablauf.“, nicht antippbar; das Blatt nur mit Diensten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** mittel
+- **Betrifft:** `shared/ct/terminBlatt.ts`, `ui/teilen/terminBlattPdf.ts`, `ui/teilen/TerminTeilenFenster.tsx`, `ui/teilen/terminBlattWahl.ts`, `ui/teilen/PdfSeitenVorschau.tsx`, `ui/teilen/pdfSeiten.ts`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/terminBlattDienste.ts`, `dienstplaner/src/TerminAblauf.tsx`
+- **Automatisiert:** ja – `shared/ct/terminBlatt.test.ts` (Beginn/Ende, Abschnittsdauer, Spalten ohne leere, Teams kurz, Einstellungen), `ui/teilen/terminBlattPdf.test.ts` (Kopf/Fuß je Seite, Zeit bricht nie um, Ende nie allein, quer), `ui/teilen/TerminTeilenFenster.test.tsx` (Hauptseite, Unterseiten, gemerkte Wahl), `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf, Blatt aus echten Plan-Daten); von Hand bleiben Aussehen des PDF, Vorschau und Teilen-Menü am Gerät
+- **Historie:** E8-1 (05.11.2026, Entwurf `e8-teilen.html` Version 5)
+
+</details>

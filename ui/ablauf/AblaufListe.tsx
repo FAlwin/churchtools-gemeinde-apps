@@ -231,7 +231,8 @@ export function AblaufListe({
       {kopf}
       {alsSpalten && (
         <div className={styles.infoKopf}>
-          <span className={`${styles.infoKopfPunkt} ${styles.punktZelle}`}>Punkt</span>
+          {/* „Eintrag“ wie beim Hinzufügen und im Termin-Blatt (Alwin 05.11.2026), nicht mehr „Punkt“. */}
+          <span className={`${styles.infoKopfPunkt} ${styles.punktZelle}`}>Eintrag</span>
           {infos.map((g, i) => {
             const n = sichtbar.filter((z) => infoText(z, g.id)).length;
             return (

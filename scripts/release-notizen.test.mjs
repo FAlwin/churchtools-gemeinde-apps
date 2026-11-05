@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { zusammenfuehren } from './changelog-sammeln.mjs';
-import { abschnitte, notizen, ueberschriftFehler, vorigerTag } from './release-notizen.mjs';
+import {
+  abschnitte,
+  beschreibung,
+  notizen,
+  ueberschriftFehler,
+  vorigerTag,
+} from './release-notizen.mjs';
 
 describe('Release-Beschreibung je App (30.10.2026)', () => {
   const EINTRAG = [
@@ -79,6 +85,17 @@ describe('Release-Beschreibung je App (30.10.2026)', () => {
   it('eine Vorabversion ist nie der Vergleichsstand – sonst fehlte, was zwischen ihr und dem vorigen Release kam', () => {
     expect(vorigerTag('v2.12.0', ['v2.10.0', 'v2.11.0-rc1'])).toBe('v2.10.0');
     expect(vorigerTag('v2.12.0', ['v2.11.0-rc1', 'v2.11.0'])).toBe('v2.11.0');
+  });
+
+  it('das erste Release einer App zeigt keine Liste – nur „Erste Version“ (E9-1, 05.11.2026)', () => {
+    const tags = ['v2.38.0', 'organigramm-v0.1.2'];
+    const erste = beschreibung(vorigerTag('dienstplan-v0.1.0', tags), '### Neu\n\n- alles');
+    expect(erste).toContain('## Erste Version');
+    expect(erste).not.toContain('alles');
+    expect(beschreibung(vorigerTag('organigramm-v0.1.3', tags), '### Neu\n\n- Kachel')).toBe(
+      '## Was sich geändert hat seit organigramm-v0.1.2\n\n### Neu\n\n- Kachel',
+    );
+    expect(beschreibung('organigramm-v0.1.2', '')).toContain('nur Internes');
   });
 
   it('prüft, dass eine gezeigte Überschrift die App nennt', () => {

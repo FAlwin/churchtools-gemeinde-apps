@@ -117,6 +117,17 @@ export function vorigerTag(tag, tags) {
     .sort((a, b) => kleiner(b.z, a.z))[0]?.t;
 }
 
+/**
+ * **Der Text unter dem Installieren-Teil.** Beim **ersten** Release einer App (kein voriger Tag) keine Liste: sonst
+ * stünde dort alles, was je für sie entstanden ist – beim Dienstplaner 164 Einträge (E9-1, 05.11.2026). Was eine
+ * erste Version kann, sagt die Anleitung.
+ */
+export function beschreibung(vorher, text) {
+  if (!vorher)
+    return '## Erste Version\n\nDie erste veröffentlichte Version – was sie kann, steht in der Anleitung oben.';
+  return `## Was sich geändert hat seit ${vorher}\n\n${text || '_Keine sichtbaren Änderungen – nur Internes._'}`;
+}
+
 const git = (...args) => execFileSync('git', args, { cwd: WURZEL, encoding: 'utf8' });
 
 /** Alle Abschnitte aus CHANGELOG.md und changelog.d/ beim Stand `ref`. */
@@ -138,11 +149,8 @@ function main() {
   if (!app || !tag) throw new Error('Aufruf: --app <app> --tag <tag> [--vorher <tag>]');
   const vorher =
     wert('--vorher') ?? vorigerTag(tag, git('tag', '--list').split('\n').filter(Boolean));
-  const text = notizen(abschnitteBei(tag), vorher ? abschnitteBei(vorher) : [], app);
-  const seit = vorher ? ` seit ${vorher}` : '';
-  console.log(
-    `## Was sich geändert hat${seit}\n\n${text || '_Keine sichtbaren Änderungen – nur Internes._'}`,
-  );
+  const text = vorher ? notizen(abschnitteBei(tag), abschnitteBei(vorher), app) : '';
+  console.log(beschreibung(vorher, text));
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

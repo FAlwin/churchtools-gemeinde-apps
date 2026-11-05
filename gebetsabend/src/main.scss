@@ -1,0 +1,12 @@
+@use '@ui/design/variables' as *;
+// Reset, Erweiterungs-Lehren (Bereich unter der ChurchTools-Leiste, fette Schrift, Symbole), Fokus und
+// Bewegung – dieselben Grundregeln wie Musik-App, Anmeldungen und Dienstplaner.
+@use '@ui/design/grundregeln';
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
+}

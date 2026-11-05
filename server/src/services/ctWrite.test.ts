@@ -24,6 +24,7 @@ import * as noten from '@shared/ct/notenblaetter';
 import { arrangementAendern } from '@shared/ct/schreibKern';
 import { verwalterFuer } from './ctVerwalter.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
+import { liedAblage } from './ctLiedAblage.testutil.js';
 
 /**
  * #280: Alle Schreiboperationen teilen sich seit dem Aufteilen EINEN Helfer (`schreibe`). Vorher stand
@@ -108,9 +109,12 @@ function lesen(u: string, method: string): Response | null {
     return jsonRes({ items: [] });
   }
   if (u.includes('/agenda')) return jsonRes({ items: [PUNKT] });
-  if (u.includes('/api/songs/')) return jsonRes(LIED);
+  if (u.includes('/api/songs/')) return jsonRes(liedStand.lesen());
   return null;
 }
+
+/** Das Lied, wie ChurchTools es nach Uploads liest (#842) – `notenblattSchreiben` liest nach dem Hochladen nach. */
+let liedStand = liedAblage(LIED);
 
 /**
  * Beantwortet Token- und Lese-Abrufe normal, lässt aber **jeden Schreibvorgang** an einem 403
@@ -254,6 +258,7 @@ describe('SCHREIBER ist vollständig', () => {
 beforeEach(() => {
   __resetSessionMemosForTests();
   ablaufStand.angelegt = false;
+  liedStand = liedAblage(LIED);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -287,6 +292,7 @@ describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher ni
       if (gelesen) return Promise.resolve(gelesen);
       if (u.includes(OHNE_ABLAUF)) ablaufStand.angelegt = true;
       if (u.includes(MIT_ABLAUF)) neuStand.ersetzt = true;
+      liedStand.merke(u, init);
       // Mit ID: Die Anlege-Funktionen verlangen sie (`neueId`), die übrigen übergehen sie.
       return Promise.resolve(jsonRes({ id: 1 }, 200));
     });
@@ -594,15 +600,24 @@ describe('versionAendern – die alte Datei geht erst, wenn die neue liegt', () 
     ],
   };
 
-  function mock(uploadStatus: number) {
+  /** Wie ChurchTools: nach einem gelungenen Upload steht die neue Datei (neue ID) am Arrangement (#842). */
+  function mock(
+    uploadStatus: number,
+    opts: { uploadVerschwindet?: boolean; ablageName?: (n: string) => string } = {},
+  ) {
     const schritte: string[] = [];
+    const ablage = liedAblage(MIT_VERSION, opts);
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
       const method = init?.method ?? 'GET';
       if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
-      if (method === 'GET') return Promise.resolve(jsonRes(MIT_VERSION));
+      if (method === 'GET') return Promise.resolve(jsonRes(ablage.lesen()));
       schritte.push(`${method} ${u.replace(/^https?:\/\/[^/]+/, '')}`);
-      if (method === 'POST') return Promise.resolve(jsonRes(null, uploadStatus));
+      if (method === 'POST') {
+        if (uploadStatus < 300) ablage.merke(u, init);
+        return Promise.resolve(jsonRes(null, uploadStatus));
+      }
+      ablage.merke(u, init);
       return Promise.resolve(new Response(null, { status: 204 }));
     });
     return schritte;
@@ -631,12 +646,14 @@ describe('versionAendern – die alte Datei geht erst, wenn die neue liegt', () 
         },
       ],
     };
+    const ablage = liedAblage(MIT_STRICH);
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
       const method = init?.method ?? 'GET';
       if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
-      if (method === 'GET') return Promise.resolve(jsonRes(MIT_STRICH));
+      if (method === 'GET') return Promise.resolve(jsonRes(ablage.lesen()));
       schritte.push(`${method} ${u.replace(/^https?:\/\/[^/]+/, '')}`);
+      ablage.merke(u, init);
       return Promise.resolve(
         method === 'POST' ? jsonRes(null, 200) : new Response(null, { status: 204 }),
       );
@@ -647,6 +664,46 @@ describe('versionAendern – die alte Datei geht erst, wenn die neue liegt', () 
     });
     expect(v.key).toBe('akustik');
     expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/556']);
+  });
+
+  it('meldet ChurchTools Erfolg, legt aber nichts an, bleibt die alte Datei liegen (#842)', async () => {
+    // Die Lehre vom 11.08.2026: Ein 2xx beweist nicht, dass die Datei da ist – erst die neu gelesene Liste zählt.
+    const schritte = mock(200, { uploadVerschwindet: true });
+    await expect(
+      noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', { text: '[D]neu' }),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70']);
+  });
+
+  it('beim Umbenennen zählt nur eine Datei mit dem NEUEN Namen – die alte Version beweist nichts', async () => {
+    const schritte = mock(200, { uploadVerschwindet: true });
+    // Mit Text: Sonst läse `versionAendern` erst den alten Inhalt, und der Test scheiterte schon dort (Gegenprobe).
+    await expect(
+      noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', {
+        name: 'Leise',
+        text: '[D]x',
+      }),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70']);
+  });
+
+  it('beim Umbenennen gelingt es, wenn die Datei mit dem neuen Namen dasteht', async () => {
+    const schritte = mock(200);
+    const v = await noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', {
+      name: 'Leise',
+      text: '[D]x',
+    });
+    expect(v.key).toBe('leise');
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/555']);
+  });
+
+  it('liegt danach nur eine Datei unter anderem Namen da, zählt sie nicht – die Version bleibt (#842)', async () => {
+    // Etwa wenn ChurchTools den Namen anders ablegt: Dann ist die neue Fassung keine erkennbare Version.
+    const schritte = mock(200, { ablageName: () => 'Treu.chordpro' });
+    await expect(
+      noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', { text: '[D]neu' }),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(schritte.filter((x) => x.startsWith('DELETE'))).toEqual([]);
   });
 
   it('scheitert das Hochladen, bleibt die alte Datei liegen', async () => {

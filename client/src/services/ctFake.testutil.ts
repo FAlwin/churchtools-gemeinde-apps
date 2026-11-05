@@ -29,8 +29,15 @@ export class FakeCt {
   private naechsteId = 100;
   /** Aufrufe als „METHODE pfad" – zum Zählen. */
   aufrufe: string[] = [];
-  /** Hochladen meldet Erfolg, legt aber nichts ab (lügender Erfolg, Lehre 11.08.2026). */
+  /** Hochladen meldet Erfolg, legt aber nichts ab (lügender Erfolg, Lehre 11.08.2026) – an Personen und Arrangements. */
   uploadVerschwindet = false;
+  /**
+   * Was an Arrangements hochgeladen wurde (#842): Es steht beim nächsten Lesen eines hinterlegten Lieds
+   * (`/api/songs/<id>`) mit neuer ID am Arrangement, wie gemessen – gleiche Namen erlaubt.
+   */
+  arrangementDateien: { arrangementId: number; id: number; name: string }[] = [];
+  /** Gelöschte Datei-IDs – ein hinterlegtes Lied zeigt sie danach nicht mehr. */
+  geloeschteIds = new Set<number>();
   /** Löschen scheitert vorübergehend (500). */
   loeschenScheitert = false;
   /** Herunterladen scheitert mit einem Netzfehler. */
@@ -78,6 +85,22 @@ export class FakeCt {
         status,
         headers: { 'Content-Type': 'application/json', ...headers },
       });
+  }
+
+  /** Ein hinterlegtes Lied, wie ChurchTools es jetzt liest: mit hochgeladenen, ohne gelöschte Dateien (#842). */
+  private async liedJetzt(r: Response): Promise<Response> {
+    const body = (await r.json()) as {
+      data?: { arrangements?: { id: number; files?: { name: string; fileUrl: string }[] }[] };
+    };
+    for (const a of body.data?.arrangements ?? []) {
+      const dazu = this.arrangementDateien
+        .filter((d) => d.arrangementId === a.id)
+        .map((d) => ({ name: d.name, fileUrl: `${BASIS}/?q=public/filedownload&id=${d.id}` }));
+      a.files = [...(a.files ?? []), ...dazu].filter(
+        (f) => !this.geloeschteIds.has(Number(new URL(f.fileUrl).searchParams.get('id'))),
+      );
+    }
+    return this.json(r.status, body);
   }
 
   /** Eine Datei ablegen, als käme sie von einem anderen Gerät desselben Kontos. */
@@ -205,7 +228,10 @@ export class FakeCt {
       });
     }
     const hinterlegt = this.antworten[pfad.split('?')[0]] ?? this.antworten[pfad];
-    if (hinterlegt && method === 'GET') return hinterlegt();
+    if (hinterlegt && method === 'GET') {
+      if (/^\/api\/songs\/\d+$/.test(pfad)) return this.liedJetzt(hinterlegt());
+      return hinterlegt();
+    }
     if (pfad === '/api/whoami') return this.json(200, { data: { id: this.ich } });
     if (pfad === '/api/csrftoken') return this.json(200, { data: 'csrf-123' });
 
@@ -246,6 +272,7 @@ export class FakeCt {
     if (loeschen && method === 'DELETE') {
       if (this.loeschenScheitert) return this.json(500, { message: 'Serverfehler' });
       const id = Number(loeschen[1]);
+      this.geloeschteIds.add(id);
       const vorher = this.dateien.length;
       this.dateien = this.dateien.filter((d) => d.id !== id);
       return this.dateien.length < vorher ? this.json(204, null) : this.json(404, {});
@@ -258,6 +285,14 @@ export class FakeCt {
       const felder =
         init?.body instanceof URLSearchParams ? Object.fromEntries(init.body) : undefined;
       const teil = init?.body instanceof FormData ? init.body.get('files[]') : null;
+      const anArrangement = pfad.match(/^\/api\/files\/song_arrangement\/(\d+)$/);
+      if (anArrangement && method === 'POST' && teil instanceof File && !this.uploadVerschwindet) {
+        this.arrangementDateien.push({
+          arrangementId: Number(anArrangement[1]),
+          id: this.naechsteId++,
+          name: teil.name,
+        });
+      }
       // Nur, was es gibt – sonst müsste jeder Test, der einen JSON-Schreibvorgang vergleicht, leere
       // Felder mitschreiben.
       this.geschrieben.push({

@@ -52,6 +52,14 @@ function ersteDatei(rumpf, contentType) {
   return { name, inhalt: Buffer.from(teil.subarray(kopfEnde + 4)) };
 }
 
+/**
+ * Dateien, die an ein Arrangement hochgeladen wurden (#842): Inhalt je Datei-ID. Wie gemessen hängt eine
+ * hochgeladene Datei danach mit **neuer ID** am Arrangement (gleiche Namen erlaubt), eine gelöschte ist weg – die
+ * App liest seit dem 04.11.2026 nach dem Hochladen nach und löscht die alte Fassung erst, wenn die neue dasteht.
+ */
+const arrangementDateiInhalt = new Map();
+let arrangementDateiId = 78000;
+
 /** Abwesenheiten (#177): eine manuelle (ohne Marker) liegt vor, damit das Schloss zu sehen ist. */
 let absenceId = 9000;
 
@@ -743,6 +751,11 @@ const server = createServer((req, res) => {
         liste.filter((f) => f.id !== Number(loeschId[1])),
       );
     }
+    // Auch eine Datei am Arrangement (#842) – sonst stünde die alte Fassung neben der neuen.
+    for (const a of SONG.arrangements) {
+      a.files = a.files.filter((f) => !f.fileUrl.endsWith(`id=${loeschId[1]}`));
+    }
+    arrangementDateiInhalt.delete(Number(loeschId[1]));
     return json(res, { data: {} });
   }
   const personDatei = [...personenDateien.values()]
@@ -751,6 +764,12 @@ const server = createServer((req, res) => {
   if (url.searchParams.get('q') === 'public/filedownload' && personDatei) {
     res.writeHead(200, { 'Content-Type': 'application/unknown' });
     return res.end(personDatei.inhalt);
+  }
+
+  const hochgeladen = arrangementDateiInhalt.get(Number(url.searchParams.get('id')));
+  if (url.searchParams.get('q') === 'public/filedownload' && hochgeladen) {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end(hochgeladen);
   }
 
   // Datei-Download (ChordPro) – ChurchTools liefert das über einen Query-Pfad aus.
@@ -1175,11 +1194,27 @@ const server = createServer((req, res) => {
   if (path === '/api/groups') return json(res, { data: [] });
   if (path === '/api/services') return json(res, { data: [] });
 
-  // Datei-Upload an ein Arrangement und Löschen einer Datei – der Editor nach dem Anlegen schreibt das
-  // Original-Notenblatt darüber (04.09.2026). Der Stub bestätigt nur; was hochgeladen wurde, prüft der
-  // Server-Test am protokollierten fetch.
-  if (path.startsWith('/api/files/song_arrangement/') && req.method === 'POST') {
-    return json(res, { data: [] });
+  // Datei-Upload an ein Arrangement – der Editor nach dem Anlegen schreibt das Original-Notenblatt darüber
+  // (04.09.2026). Seit #842 (04.11.2026) legt der Stub die Datei wirklich ab: Die App liest nach dem Hochladen nach,
+  // ein Stub, der nur bestätigte, ließe ihren Fehlerfall „Datei ist nicht da“ feuern.
+  const anArrangement = /^\/api\/files\/song_arrangement\/(\d+)$/.exec(path);
+  if (anArrangement && req.method === 'POST') {
+    const teile = [];
+    req.on('data', (c) => teile.push(c));
+    req.on('end', () => {
+      const datei = ersteDatei(Buffer.concat(teile), req.headers['content-type']);
+      const arr = SONG.arrangements.find((a) => a.id === Number(anArrangement[1]));
+      if (!datei || !arr)
+        return json(res, { message: 'stub: keine Datei oder kein Arrangement' }, 400);
+      const id = arrangementDateiId++;
+      arrangementDateiInhalt.set(id, datei.inhalt);
+      arr.files.push({
+        name: datei.name,
+        fileUrl: `http://localhost:${PORT}/?q=public/filedownload&id=${id}`,
+      });
+      json(res, { data: [] });
+    });
+    return;
   }
   if (path.startsWith('/api/files/') && req.method === 'DELETE') return json(res, { data: {} });
   // Umbenennen (31.10.2026) – wie gemessen: `PATCH /files/<id> {name}` → 204, und der Name in der Liste ist danach ein

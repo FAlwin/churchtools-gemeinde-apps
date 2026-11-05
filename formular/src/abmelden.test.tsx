@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
+import { vergissInstanzen } from './laden';
 
 /**
  * „Deine Anmeldung“ (A6-4) gegen ein nachgestelltes ChurchTools – `signoutdata` und `signout` so, wie am 16.10.2026
@@ -54,7 +55,10 @@ let aufrufe: {
 
 beforeEach(() => {
   aufrufe = [];
+  vergissInstanzen();
   antworten = {
+    // Die Liste der Gemeinde auf dem Webspace (#843) – ohne sie spricht das Formular kein ChurchTools an.
+    'GET /instanzen.json': [{ status: 200, body: ['test.church.tools'] }],
     'GET /api/publicgroups/66': [{ status: 200, body: { data: GRUPPE } }],
     'GET /api/info': [{ status: 200, body: { siteName: 'Gemeinde Test' } }],
     'GET /api/publicgroups/66/signoutdata': [BEIDE],
@@ -157,6 +161,15 @@ describe('Deine Anmeldung (A6-4)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ja, absagen' }));
     expect(await screen.findByText(/– abgesagt/)).toBeTruthy();
     expect(signouts()).toHaveLength(2);
+  });
+
+  it('„Austreten“-Link mit fremder Instanz (#843) → „gibt es hier nicht“, kein Schlüssel geht an die fremde Seite', async () => {
+    window.location.hash = '#fremde-seite.example/66/abmelden/ltmB5wFTNw2N8Izw1bJ3';
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'Diese Anmeldung gibt es hier nicht' }),
+    ).toBeTruthy();
+    expect(aufrufe.filter((a) => a.pfad !== '/instanzen.json')).toEqual([]);
   });
 
   it('falscher oder verbrauchter Link (404) → „Dieser Link gilt nicht“, ohne „Nochmal“', async () => {

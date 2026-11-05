@@ -47,3 +47,6 @@ shared/types/*.js
 # ChurchTools-Erweiterungen (#335, #474): Build und gepackte ZIPs – jede App hat ihre eigenen
 */dist-extension/
 */releases/
+
+# Liste der Instanzen fürs öffentliche Formular (#843) – nur auf dem Webspace der Gemeinde, nie im Paket.
+formular/public/instanzen.json

@@ -78,7 +78,7 @@ describe('Zuhoeren', () => {
     const src = new URL(document.querySelector('iframe')!.src);
     expect(src.searchParams.get('view')).toBe(z.streamId);
     expect(src.searchParams.get('label')).toBe('Helene Wiebe');
-    expect(src.searchParams.has('cleanoutput')).toBe(true);
+    expect(src.searchParams.has('cleanish')).toBe(true);
     expect(screen.getByText(PLAYER_TEXT.verbindet)).toBeTruthy();
   });
 

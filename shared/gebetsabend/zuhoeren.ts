@@ -24,9 +24,17 @@ export const PLAYER_TEXT: Record<PlayerZustand, string> = {
   verbindet: 'Verbindet …',
   wartet: 'Verbunden – die Übertragung beginnt gleich.',
   laeuft: 'Verbunden – der Ton kommt gleich.',
-  ton: 'Du hörst zu.',
+  // „Ton kommt an“, nicht „du hörst“: VDO.Ninja meldet den angekommenen Ton, nicht ob er schon abgespielt wird
+  // (iPhone: gemeldet, aber noch gesperrt – 05.11.2026).
+  ton: 'Der Ton kommt an.',
   unterbrochen: 'Kurz unterbrochen – verbindet von selbst wieder …',
 };
+
+/**
+ * Steht unter dem Player, solange er offen ist: Sperrt der Browser das Abspielen, zeigt VDO.Ninja seinen
+ * Wiedergabe-Knopf (`&cleanish`) – ein Tippen ins Bild startet es.
+ */
+export const HINWEIS_TIPPEN = 'Bleibt das Bild schwarz? Einmal ins Bild tippen.';
 
 /** Ist der Player „gut“ (grüner Punkt) oder wartet/stockt er (grauer Punkt)? */
 export const PLAYER_GUT: Record<PlayerZustand, boolean> = {

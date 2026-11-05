@@ -41,7 +41,8 @@ beendet, schließt er sich mit „Die Übertragung ist beendet“.
 
 1. Am iPhone im Menü auf **Gebetsabend**: Karte „Noch keine Übertragung“, Knopf grau.
 2. Übertragung starten (Laptop): Nach höchstens 20 Sekunden steht „Läuft seit … Uhr“, der Knopf ist blau.
-3. **Gebetsabend zuhören** tippen: Bild und Ton kommen; unter dem Bild „Du hörst zu.“.
+3. **Gebetsabend zuhören** tippen: Bild und Ton kommen; unter dem Bild „Der Ton kommt an.“. Bleibt das Bild schwarz,
+   zeigt es einen Wiedergabe-Knopf; ein Tippen ins Bild startet es (Hinweis darunter).
 4. iPhone sperren, 30 Sekunden warten, entsperren: Ton lief weiter, Bild läuft.
 5. Neu starten (neue Zugangsdaten): Nach höchstens 20 Sekunden lädt der Player neu und spielt wieder.
 6. Beenden: Nach höchstens 20 Sekunden ist der Player weg, „Die Übertragung ist beendet“.

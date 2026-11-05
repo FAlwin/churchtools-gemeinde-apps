@@ -14,6 +14,7 @@ import {
 } from '@shared/gebetsabend/zustand';
 import {
   nachNachfrage,
+  HINWEIS_TIPPEN,
   NACHFRAGEN_MS,
   PLAYER_GUT,
   PLAYER_TEXT,
@@ -36,14 +37,16 @@ interface Props {
 type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art: 'da' };
 
 /**
- * **Zuhören** (Bauplan Gebetsabend G2, Entwurf v2): ein großer Knopf, danach der Player ohne VDO.Ninja-Bedienung.
+ * **Zuhören** (Bauplan Gebetsabend G2, Entwurf v2): ein großer Knopf, danach der Player ohne VDO.Ninja-Bedienung
+ * (bis auf den Wiedergabe-Knopf, falls der Browser das Abspielen sperrt – `links.ts`).
  *
  * - Vor dem Zuhören zählt der Merker „läuft seit“; ohne ihn steht „Noch keine Übertragung“ da, und die Seite fragt
  *   alle 20 s nach – kein Neuladen nötig.
  * - Beim Zuhören zählt der Player (VDO.Ninja-Meldungen, nur aus dem eigenen iframe von vdo.ninja). Startet die Technik
  *   neu, lädt der Player die neuen Daten; beendet sie, schließt er sich.
  * - **Vorübergehend ist nicht beendet:** Scheitert eine Nachfrage, bleibt alles, wie es ist.
- * - Das iframe entsteht erst beim Tippen – der Browser erlaubt den Ton dann (gemessen S0/G0: ein Tippen genügt).
+ * - Das iframe entsteht erst beim Tippen. Am iPhone reicht das nicht immer: Safari sperrt das Abspielen im fremden
+ *   iframe, bis man dort selbst tippt (05.11.2026) – daher der Hinweis unter dem Bild.
  */
 export function Zuhoeren({ modul, kategorie, name }: Props) {
   const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
@@ -129,6 +132,7 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
             onLoad={() => fenster.current?.contentWindow?.postMessage(PEGEL_AN, VDO_HERKUNFT)}
           />
           <p className={styles.leise}>{PLAYER_TEXT[player]}</p>
+          <p className={styles.text}>{HINWEIS_TIPPEN}</p>
           <p className={styles.leise}>Der Ton läuft auch weiter, wenn du das Handy sperrst.</p>
           <p className={styles.leise}>Die Technik sieht, dass du zuhörst.</p>
           <div className={styles.rechts}>

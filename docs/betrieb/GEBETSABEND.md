@@ -43,8 +43,10 @@ und darunter einen großen Knopf **„Gebetsabend zuhören“**:
 
 - **Noch keine Übertragung:** Der Knopf ist aus, darüber steht, dass es kurz vor dem Gebetsabend losgeht. Die Seite
   fragt alle 20 Sekunden nach und schaltet den Knopf von selbst frei – Neuladen ist nicht nötig.
-- **Läuft:** Ein Tippen öffnet Bild und Ton (ohne Bedienelemente von VDO.Ninja). Unter dem Bild steht, was gerade
-  passiert („Verbindet …“, „Du hörst zu.“, „Kurz unterbrochen – verbindet von selbst wieder …“). Der Ton läuft auch
+- **Läuft:** Ein Tippen öffnet Bild und Ton (ohne Bedienelemente von VDO.Ninja). Am iPhone sperrt
+  Safari das Abspielen im eingebetteten Fenster manchmal, bis man selbst ins Bild tippt – dann zeigt das Bild einen
+  Wiedergabe-Knopf, und darunter steht „Bleibt das Bild schwarz? Einmal ins Bild tippen.“ Unter dem Bild steht, was gerade
+  passiert („Verbindet …“, „Der Ton kommt an.“, „Kurz unterbrochen – verbindet von selbst wieder …“). Der Ton läuft auch
   bei gesperrtem Handy weiter (gemessen an iPhone und iPad).
 - **Neu gestartet / beendet:** Startet die Technik neu, lädt der Player die neuen Daten selbst; beendet sie, schließt
   er sich mit „Die Übertragung ist beendet“. Antwortet ChurchTools dabei kurz nicht, bleibt alles, wie es ist.

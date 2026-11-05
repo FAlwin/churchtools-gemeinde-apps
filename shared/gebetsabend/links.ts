@@ -5,7 +5,10 @@
  * Gemessen (Messung S0/S0b/G0, 05.11.2026):
  *  - Sender `&audiodevice=1&videodevice=1&autostart`: Standard-Mikrofon und -Kamera ohne Auswahl. Mit
  *    `&videodevice=0` (nur Ton) zeigt VDO.Ninja dagegen eine Auswahl, dort greift `autostart` nicht.
- *  - Zuhörer `&cleanoutput`: nur das Bild, keine VDO.Ninja-Bedienung; spielt nach einem Tippen ab und läuft am
+ *  - Zuhörer `&cleanish`: nur das Bild, **außer** VDO.Ninjas Wiedergabe-Knopf, wenn der Browser das Abspielen sperrt.
+ *    Mit `&cleanoutput` (bis G2) fehlte er: Im ChurchTools-iframe am iPhone blieb das Bild schwarz, bis man ins Feld
+ *    tippte – ohne jeden Hinweis (Test-Instanz 05.11.2026, 15:47). Unser Tippen auf „zuhören“ zählt für das fremde
+ *    iframe nicht, dessen Verbindung steht erst Sekunden später. Läuft danach am
  *    iPhone nach dem Entsperren weiter. `&bitrate=1000` begrenzt den Upload je Zuhörer (≈ 1 Mbit/s).
  *  - `&label=` des Zuhörers kommt beim Sender als `push-connection-info.label` an („Wer hört zu?“, G4).
  */
@@ -41,6 +44,6 @@ export function zuhoererLink(
   const bild = z.mitBild ? `&bitrate=${BITRATE}` : '&novideo';
   return (
     `${VDO_BASIS}?view=${teil(z.streamId)}&password=${teil(z.passwort)}` +
-    `${bild}&cleanoutput&label=${teil(name.trim() || 'Gast')}`
+    `${bild}&cleanish&label=${teil(name.trim() || 'Gast')}`
   );
 }

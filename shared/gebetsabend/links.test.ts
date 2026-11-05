@@ -25,11 +25,13 @@ describe('senderLink', () => {
 });
 
 describe('zuhoererLink', () => {
-  it('ohne VDO.Ninja-Bedienung, Bild begrenzt, Name aus ChurchTools', () => {
+  it('ohne VDO.Ninja-Bedienung außer dem Wiedergabe-Knopf, Bild begrenzt, Name aus ChurchTools', () => {
     const p = parameter(zuhoererLink(zugang, 'Helene Wiebe'));
     expect(p.get('view')).toBe(zugang.streamId);
     expect(p.get('password')).toBe(zugang.passwort);
-    expect(p.has('cleanoutput')).toBe(true);
+    // `cleanish`, nicht `cleanoutput`: Der Wiedergabe-Knopf muss bleiben, sonst sieht man am iPhone nur Schwarz.
+    expect(p.has('cleanish')).toBe(true);
+    expect(p.has('cleanoutput')).toBe(false);
     expect(p.get('bitrate')).toBe(String(BITRATE));
     expect(p.has('novideo')).toBe(false);
     expect(p.get('label')).toBe('Helene Wiebe');

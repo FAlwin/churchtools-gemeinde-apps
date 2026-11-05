@@ -20,7 +20,9 @@ import styles from './FesterPunkt.module.scss';
  * - **„Offene To-Dos“:** die offenen To-Dos der Gruppe von früher mit Status-Kreis, Wer und Bis; darunter eingeklappt
  *   „Seit der Sitzung am … erledigt“. Abhaken nur im Editor (`abhaken`); in der Lese-Ansicht nur Anzeige (Alwin
  *   26.10.2026 – der Kreis dort kommt mit S7).
- * - **„Letztes Protokoll“:** Titel, Datum, Freigabe – „Öffnen“ zeigt es im Fenster.
+ * - **„Letztes Protokoll“:** Titel, Datum, Freigabe – „Ansehen“ zeigt es im Fenster (bis K3b-2 hieß der Knopf
+ *   „Öffnen“; „Öffnen“ springt jetzt aus dem Fenster zur Sitzung). Im Editor wählt **„Ändern“** ein anderes früheres
+ *   Protokoll (`aendern`); ein Kasten ohne Wahl sagt „immer die letzte Sitzung“.
  *
  * Was drinsteht, bestimmt `offeneVonFrueher` bzw. `letztesProtokoll` (bis zur Freigabe live, danach festgehalten).
  */
@@ -28,15 +30,18 @@ export function FesterPunkt({
   art,
   fest,
   abhaken,
+  aendern,
 }: {
   art: unknown;
   fest: unknown;
   abhaken: boolean;
+  /** Nur im Editor, wenn man schreiben darf: „Ändern“ am früheren Protokoll (K3b-2). */
+  aendern?: () => void;
 }) {
   const w = useContext(FestePunkteKontext);
   if (!w) return <p className={ansicht.verweis}>{VERWEIS_TEXT[String(art)] ?? 'Fester Punkt'}</p>;
   return art === 'letztes-protokoll' ? (
-    <LetztesProtokoll w={w} fest={fest} />
+    <LetztesProtokoll w={w} fest={fest} aendern={aendern} />
   ) : (
     <OffeneToDos w={w} fest={fest} abhaken={abhaken} />
   );
@@ -125,7 +130,15 @@ function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boo
   );
 }
 
-function LetztesProtokoll({ w, fest }: { w: FestePunkteWert; fest: unknown }) {
+function LetztesProtokoll({
+  w,
+  fest,
+  aendern,
+}: {
+  w: FestePunkteWert;
+  fest: unknown;
+  aendern?: () => void;
+}) {
   const f = festesProtokollAus(fest);
   // Festgehalten: genau das damalige – fehlt es inzwischen, sagt der Punkt das, statt ein anderes zu zeigen.
   const s: Sitzung | null | 'weg' = !f
@@ -150,19 +163,34 @@ function LetztesProtokoll({ w, fest }: { w: FestePunkteWert; fest: unknown }) {
                 {s.kopf?.freigabe
                   ? ` · freigegeben am ${tagPunkt(tagAusIso(s.kopf.freigabe.am, w.zeitzone))}`
                   : ''}
+                {!f && aendern ? ' · immer die letzte Sitzung' : ''}
               </small>
             </span>
-            {w.oeffnen && (
+          </>
+        )}
+        {(aendern || (w.oeffnen && s !== null && s !== 'weg')) && (
+          <span className={styles.knoepfe}>
+            {aendern && w.fruehere.length > 0 && (
+              <button
+                type="button"
+                className={`${styles.oeffnen} ${styles.leiseKnopf}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={aendern}
+              >
+                Ändern
+              </button>
+            )}
+            {w.oeffnen && s !== null && s !== 'weg' && (
               <button
                 type="button"
                 className={styles.oeffnen}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => w.oeffnen?.(s)}
               >
-                Öffnen
+                Ansehen
               </button>
             )}
-          </>
+          </span>
         )}
       </div>
     </div>

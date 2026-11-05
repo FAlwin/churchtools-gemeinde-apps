@@ -13,6 +13,9 @@ import {
   zustaendigSetzen,
 } from '@shared/protokolle/aufgaben';
 import { FesterPunkt } from './FesterPunkt';
+import { FestePunkteKontext } from './festePunkteKontext';
+import { fruehesAendern } from './fruehesProtokoll';
+import type { ProtokollEditor } from './editorSchema';
 import { AufgabenKontext } from './aufgabenKontext';
 import { StatusKreis } from './StatusKreis';
 // Dieselben Marken wie in der Lese-Ansicht – Aufgabe, Beschluss und Termin sehen beim Schreiben aus wie beim Lesen.
@@ -313,7 +316,16 @@ export function TerminBlock({
  * Cursor noch Markierung (`preventDefault`) und kein Editor (`stopPropagation`, am Element selbst: der Editor hört an
  * seiner Fläche, bevor React das Ereignis sieht). Die Knöpfe im Kasten reagieren auf `click` und bleiben bedienbar.
  */
-export function VerweisBlock({ block }: { block: { props: { art: string; fest: string } } }) {
+export function VerweisBlock({
+  block,
+  editor,
+}: {
+  block: { id: string; props: { art: string; fest: string } };
+  // Schmal wie bei den anderen Blöcken: Der volle `ProtokollEditor` entsteht erst aus dem Schema mit diesem Block –
+  // in der Signatur wäre das ein Typ-Kreis. Zur Laufzeit ist es derselbe Editor.
+  editor: { isEditable: boolean };
+}) {
+  const w = useContext(FestePunkteKontext);
   const kasten = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = kasten.current;
@@ -327,7 +339,17 @@ export function VerweisBlock({ block }: { block: { props: { art: string; fest: s
   }, []);
   return (
     <div ref={kasten} className={styles.festerPunkt} contentEditable={false}>
-      <FesterPunkt art={block.props.art} fest={block.props.fest} abhaken />
+      <FesterPunkt
+        art={block.props.art}
+        fest={block.props.fest}
+        abhaken
+        // „Ändern“ (K3b-2) nur, wo man schreibt – in einem gesperrten Editor nicht.
+        aendern={
+          w && editor.isEditable && block.props.art === 'letztes-protokoll'
+            ? () => fruehesAendern(editor as unknown as ProtokollEditor, block.id, w)
+            : undefined
+        }
+      />
     </div>
   );
 }

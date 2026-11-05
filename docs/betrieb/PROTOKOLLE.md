@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3a + K3b-1 (04.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3a + K3b (05.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
@@ -160,6 +160,12 @@ bis zum Tagesordnungspunkt. Ein Unterpunkt steht höchstens eine Ebene unter dem
 Punkt. Die Nummern stehen im Editor, beim Lesen, in den Bereichen und in der Suche gleich; was unter einem Unterpunkt
 steht, heißt dort „Punkt 4.2 · Essen“. Text rückt wie gewohnt ein – auch mehrere markierte Zeilen auf einmal. Die
 Textart „Überschrift“ hat keine Nummer.
+
+**Früheres Protokoll (K3b-2):** „Einfügen → Früheres Protokoll“ (auch im „/“-Menü) fragt, **welches** – alle
+freigegebenen Protokolle der Gruppe, das letzte vorgewählt. Der Kasten zeigt es mit **„Ansehen“** im kleinen Fenster;
+dort springt **„Öffnen“** zu dieser Sitzung (aus dem Editor wird vorher gespeichert), „Zurück“ führt wieder her. Beim
+Schreiben wählt **„Ändern“** am Kasten ein anderes. Der Kasten aus der Vorlage zeigt „immer die letzte Sitzung“, bis man
+ändert; bei der Freigabe wird festgehalten, welches es war.
 
 **Aufgaben, Beschlüsse, Termine (S4-2):** über „Einfügen“ in der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
 (Aufgabe; in Leiste und Menü heißt sie seit K3a „To-Do“). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter

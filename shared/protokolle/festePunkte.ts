@@ -6,7 +6,9 @@
  * - **Offene To-Dos:** die offenen To-Dos der Gruppe aus früheren Sitzungen – **bis zur Freigabe live**; bei der Freigabe
  *   merkt sich das Protokoll, welche es waren (`props.fest`, `festePunkteFesthalten`). Der Status-Kreis zeigt immer
  *   den heutigen Stand. Darunter eingeklappt: **„Seit der Sitzung am … erledigt“**.
- * - **Letztes Protokoll:** das letzte freigegebene Protokoll der Gruppe vor dieser Sitzung.
+ * - **Letztes Protokoll:** das letzte freigegebene Protokoll der Gruppe vor dieser Sitzung – oder seit K3b-2 ein
+ *   **gewähltes früheres Protokoll** (Einfügen fragt, welches; „Ändern“ am Kasten). Die Wahl steht gleich in
+ *   `props.fest`, wie sonst erst bei der Freigabe; ein Kasten ohne Wahl (aus der Vorlage) bleibt live.
  *
  * „Seit“ ist der Beginn genau dieses letzten Protokolls – beide Punkte meinen dieselbe „letzte Sitzung“.
  */
@@ -49,6 +51,37 @@ export function letztesProtokoll<T extends SitzungsBezug>(
     if (!best || t > Date.parse(best.beginn)) best = s;
   }
   return best;
+}
+
+/**
+ * **Die früheren Protokolle zur Wahl** (K3b-2): alle freigegebenen der Gruppe außer dieser Sitzung selbst, neueste
+ * zuerst.
+ */
+export function fruehereProtokolle<T extends SitzungsBezug>(
+  sitzungen: readonly T[],
+  diese: SitzungsBezug,
+): T[] {
+  return sitzungen
+    .filter((s) => s.kopf?.status === 'frei' && s.kopf.sitzung !== diese.kopf?.sitzung)
+    .sort((a, b) => Date.parse(b.beginn) - Date.parse(a.beginn));
+}
+
+/** Der Titel des festen Punkts – in der Standard-Vorlage, beim Einfügen und in der Leiste derselbe. */
+export const TITEL_LETZTES_PROTOKOLL = 'Protokoll der letzten Sitzung';
+
+/** Titel des Tagesordnungspunkts über dem Kasten: „Protokoll der letzten Sitzung“ oder „Protokoll vom 09.09.2026“. */
+export function fruehererTitel(gewaehlt: string, letztes: string | null, tag: string): string {
+  return gewaehlt === letztes ? TITEL_LETZTES_PROTOKOLL : `Protokoll vom ${tag}`;
+}
+
+/** Ist das ein Titel, den `fruehererTitel` gesetzt hat? Nur so einen ändert „Ändern“ mit – einen eigenen nie. */
+export function istFruehererTitel(titel: string): boolean {
+  return titel === TITEL_LETZTES_PROTOKOLL || /^Protokoll vom \d{2}\.\d{2}\.\d{4}$/.test(titel);
+}
+
+/** `props.fest` für „dieses Protokoll“ (`null` = keins) – beim Wählen und bei der Freigabe dieselbe Schreibweise. */
+export function festesProtokollWert(sitzung: string | null): string {
+  return JSON.stringify({ sitzung } satisfies FestesProtokoll);
 }
 
 const gelesen = (x: unknown): Record<string, unknown> | null => {
@@ -147,9 +180,7 @@ export function festePunkteFesthalten(
     const kinder = b.children?.length ? { children: b.children.map(halten) } : {};
     if (b.type !== BLOCK.verweis || gelesen(b.props?.fest)) return { ...b, ...kinder };
     const fest =
-      b.props?.art === 'letztes-protokoll'
-        ? JSON.stringify({ sitzung: q.letztes } satisfies FestesProtokoll)
-        : JSON.stringify(stand);
+      b.props?.art === 'letztes-protokoll' ? festesProtokollWert(q.letztes) : JSON.stringify(stand);
     return { ...b, props: { ...b.props, fest }, ...kinder };
   };
   return dokument.map(halten);

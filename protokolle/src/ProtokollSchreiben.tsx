@@ -87,6 +87,7 @@ export function ProtokollSchreiben({
   naechste,
   onBearbeiten,
   onZurueck,
+  onZuSitzung,
 }: {
   sitzung: Sitzung;
   gruppe: string;
@@ -107,6 +108,11 @@ export function ProtokollSchreiben({
   onBearbeiten?: () => void;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
+  /**
+   * „Öffnen“ im Fenster eines früheren Protokolls (K3b-2): erst speichern und die Sperre lösen – wie „Zurück“ –, dann
+   * dorthin. `geaendert` wie bei `onZurueck`.
+   */
+  onZuSitzung?: (s: Sitzung, geaendert: boolean) => void;
 }) {
   // Ort und Schreiber bleiben für die Lebenszeit des Editors gleich – hinge „Öffnen“ an einem Objekt, das bei jedem
   // Neuzeichnen der Liste neu entsteht, lüde der Editor mitten im Tippen neu (beim Durchklicken 24.10.2026 gefunden).
@@ -372,6 +378,9 @@ export function ProtokollSchreiben({
     );
   };
 
+  // Wohin „Zurück“ führt: `null` = zur Liste, sonst zu einem früheren Protokoll („Öffnen“, K3b-2). Gemerkt, weil die
+  // Frage „Trotzdem verlassen?“ dazwischenkommen kann.
+  const ziel = useRef<Sitzung | null>(null);
   const zurueck = async (trotzdem = false) => {
     const s = steuerung.current;
     if (s && s.zustand.lage === 'schreibe' && !trotzdem) {
@@ -386,7 +395,8 @@ export function ProtokollSchreiben({
     s?.stoppen();
     if (s?.zustand.lage === 'schreibe') void sperreFreigeben(ort, schreiber).catch(() => undefined);
     steuerung.current = null;
-    onZurueck(gespeichert.current);
+    if (ziel.current && onZuSitzung) onZuSitzung(ziel.current, gespeichert.current);
+    else onZurueck(gespeichert.current);
   };
 
   const neuLaden = () => {
@@ -407,6 +417,14 @@ export function ProtokollSchreiben({
       zeitzone={zeitzone}
       name={nameVon}
       status={mOrt ? statusFest : undefined}
+      onZuSitzung={
+        onZuSitzung
+          ? (s) => {
+              ziel.current = s;
+              void zurueck();
+            }
+          : undefined
+      }
     >
       {inhalt}
     </FestePunkteRahmen>
@@ -417,7 +435,10 @@ export function ProtokollSchreiben({
       <button
         type="button"
         className={ansicht.zurueck}
-        onClick={() => void zurueck()}
+        onClick={() => {
+          ziel.current = null; // „Zurück“ führt immer zur Liste – auch nach einem abgebrochenen „Öffnen“
+          void zurueck();
+        }}
         disabled={beschaeftigt}
       >
         <Icon name="chev-left" size={18} />

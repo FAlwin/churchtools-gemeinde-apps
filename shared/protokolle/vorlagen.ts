@@ -6,6 +6,7 @@
  * Lesen dürfen sie nur Nutzende **eingerichteter Gruppen** (Alwin, 22.10.2026), schreiben nur Admins (S2).
  */
 import { BLOCK, mitNeuenIds, punktEbene, textAus, type Block } from './dokument';
+import { TITEL_LETZTES_PROTOKOLL } from './festePunkte';
 
 export interface Vorlage {
   art: 'vorlage';
@@ -55,7 +56,7 @@ export const STANDARD_VORLAGEN: readonly Vorlage[] = [
     name: 'Leitungssitzung',
     bloecke: [
       punkt('l1', 'Andacht & Gebet'),
-      punkt('l2', 'Protokoll der letzten Sitzung'),
+      punkt('l2', TITEL_LETZTES_PROTOKOLL),
       verweis('l2v', 'letztes-protokoll'),
       punkt('l3', 'Offene To-Dos'),
       verweis('l3v', 'offene-aufgaben'),

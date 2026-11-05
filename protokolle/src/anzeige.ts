@@ -5,6 +5,7 @@
 import { datumText, kachel } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { VerweisArt } from '@shared/protokolle/dokument';
+import { TITEL_LETZTES_PROTOKOLL } from '@shared/protokolle/festePunkte';
 
 /** „Mi, 14.10.2026 · 19:00 Uhr“ in der Zeitzone der Gemeinde. */
 export function wannLang(beginn: string, zeitzone: string): string {
@@ -23,17 +24,20 @@ export function kachelVon(beginn: string, zeitzone: string): { tag: string; mona
 }
 
 /**
- * **Die festen Punkte** – Titel des Tagesordnungspunkts und was er tut. Die eine Stelle für Vorlagen-Fenster,
- * Werkzeugleiste und „/“-Menü (S2-3, S4-3a).
+ * **Die festen Punkte** – Titel des Tagesordnungspunkts, was er tut und wie er im Menü „Einfügen“ heißt. Die eine
+ * Stelle für Vorlagen-Fenster, Werkzeugleiste und „/“-Menü (S2-3, S4-3a). Seit K3b-2 heißt „Protokoll der letzten
+ * Sitzung“ im Menü „Früheres Protokoll“ – beim Einfügen fragt ein Fenster, welches.
  */
-export const FESTE_PUNKTE: Record<VerweisArt, { titel: string; hinweis: string }> = {
+export const FESTE_PUNKTE: Record<VerweisArt, { titel: string; menue: string; hinweis: string }> = {
   'offene-aufgaben': {
     titel: 'Offene To-Dos',
+    menue: 'Offene To-Dos',
     hinweis: 'Füllt sich selbst mit den offenen To-Dos der Gruppe.',
   },
   'letztes-protokoll': {
-    titel: 'Protokoll der letzten Sitzung',
-    hinweis: 'Zeigt das letzte Protokoll der Gruppe.',
+    titel: TITEL_LETZTES_PROTOKOLL,
+    menue: 'Früheres Protokoll',
+    hinweis: 'Zeigt ein früheres Protokoll der Gruppe – du wählst, welches.',
   },
 };
 

@@ -26,6 +26,16 @@ export interface FestePunkteWert {
   status?: (a: Aufgabe, neu: AufgabenStatus) => void;
   /** Ein Protokoll im Fenster öffnen – fehlt im Fenster selbst (kein Fenster im Fenster). */
   oeffnen?: (s: Sitzung) => void;
+  /** Die früheren Protokolle zur Wahl (`fruehereProtokolle`, K3b-2) – neueste zuerst. */
+  fruehere: readonly Sitzung[];
+  /**
+   * Das Fenster „Früheres Protokoll“ zeigen (K3b-2): `vorgewaehlt` = `kopf.sitzung`, `fertig` bekommt die Wahl.
+   * Fehlt im Fenster selbst.
+   */
+  waehlen?: (
+    q: { titel: string; knopf: string; vorgewaehlt: string | null },
+    fertig: (s: Sitzung) => void,
+  ) => void;
 }
 
 export const FestePunkteKontext = createContext<FestePunkteWert | null>(null);

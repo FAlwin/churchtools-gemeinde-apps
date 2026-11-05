@@ -522,6 +522,50 @@ describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prü
     expect(bereich().queryByText('Alt 2: Mails und Löschen einrichten')).toBeNull();
   });
 
+  it('aufgeklappt stehen alle gleich unter der Sammelzeile – nicht verstreut zwischen anderen Hinweisen', () => {
+    const [a1, a2] = alte(2);
+    const spaeter = v(
+      { id: 70, name: 'Alt 3', gruppeId: 9, statusId: 1, beginn: '2026-11-25T10:00' },
+      { aktiv: 1, wartend: 0, unbezahlt: null },
+    );
+    const entwurf = v(
+      { id: 71, name: 'Dazwischen', gruppeId: 9, statusId: 2, beginn: '2026-11-21T10:00' },
+      null,
+    );
+    const liste = [a1, a2, spaeter, entwurf];
+    render(
+      <Startseite
+        start={START}
+        uebersicht={{
+          einteilung: einteilen(liste),
+          hinweise: aufmerksamkeit(
+            liste,
+            [],
+            new Set([9]),
+            HEUTE,
+            new Set(),
+            new Map([a1, a2, spaeter].map((x) => [x.id, true])),
+          ),
+          offen: new Map(),
+          verborgen: new Map(),
+        }}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={() => {}}
+      />,
+    );
+    fireEvent.click(bereich().getByRole('button', { name: 'Anzeigen' }));
+    const titel = abschnitt('Braucht deine Aufmerksamkeit').querySelectorAll('b');
+    // Die Kacheln tragen den Tag ebenfalls fett – gezählt werden nur die Überschriften.
+    expect([...titel].map((b) => b.textContent).filter((t) => !/^\d+$/.test(t ?? ''))).toEqual([
+      '3 Veranstaltungen: Mails und Löschen einrichten',
+      'Alt 1: Mails und Löschen einrichten',
+      'Alt 2: Mails und Löschen einrichten',
+      'Alt 3: Mails und Löschen einrichten',
+      'Dazwischen wartet auf Freigabe',
+    ]);
+  });
+
   it('zwei: einzeln, ohne Sammelzeile', () => {
     zeigeAlte(2);
     expect(bereich().queryByText(/Veranstaltungen: Mails und Löschen einrichten/)).toBeNull();

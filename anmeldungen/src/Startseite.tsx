@@ -388,23 +388,20 @@ export function Startseite({
             </div>
             <div className={styles.liste}>
               {hinweise.map((h, i) => {
-                // Viele ohne Abläufe: an der Stelle der ersten eine Sammelzeile, die einzelnen erst aufgeklappt.
-                if (h.art === 'einrichten' && sammeln) {
-                  const erste = hinweise.findIndex((x) => x.art === 'einrichten') === i;
-                  if (!erste && !einrichtenOffen) return null;
-                  if (erste)
-                    return (
-                      <Fragment key="einrichten-alle">
-                        <EinrichtenSammelZeile
-                          anzahl={zahlEinrichten}
-                          offen={einrichtenOffen}
-                          onUmschalten={() => setEinrichtenOffen((x) => !x)}
-                        />
-                        {einrichtenOffen && zeile(h)}
-                      </Fragment>
-                    );
-                }
-                return zeile(h);
+                // Viele ohne Abläufe: an der Stelle der ersten eine Sammelzeile; aufgeklappt stehen alle gleich darunter –
+                // nicht verstreut zwischen den anderen Hinweisen (echte Prüfung 05.11.2026).
+                if (h.art !== 'einrichten' || !sammeln) return zeile(h);
+                if (hinweise.findIndex((x) => x.art === 'einrichten') !== i) return null;
+                return (
+                  <Fragment key="einrichten-alle">
+                    <EinrichtenSammelZeile
+                      anzahl={zahlEinrichten}
+                      offen={einrichtenOffen}
+                      onUmschalten={() => setEinrichtenOffen((x) => !x)}
+                    />
+                    {einrichtenOffen && hinweise.filter((x) => x.art === 'einrichten').map(zeile)}
+                  </Fragment>
+                );
               })}
             </div>
             {hinweisFehler && (

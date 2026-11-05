@@ -1,19 +1,22 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: E6-5b (23.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
-> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Termin-Ansicht** (E6-1b): Zeile in „Dienste“,
-> „Ablauf & Dienste“ auf der Startseite oder der Name im Spaltenkopf von „Planen“ → Ablauf wie in der Musik-App
-> (seit E6-O1 wie die ChurchTools-App: Liste mit feinen Linien, Dauer unter der Uhrzeit, Zuständige grau, Kürzel/Fotos rechts, Lied-Karte mit Autor) und die Dienste des Termins, ‹ › blättert; mit Ablauf-Recht **Stift** → bearbeiten wie in der Musik-App (E6-3a, ohne Liedwahl), auch **„An diesem Termin weglassen“** (Auge, E6-3b); ändert jemand gleichzeitig denselben Punkt, fragt das Fenster „Trotzdem speichern oder verwerfen?“ (E6-3c). Ohne Ablauf: **„Ablauf anlegen“** aus Vorlage, wie ein früherer Termin oder leer (E6-5a); mit Ablauf im Bearbeiten **„Neu aufsetzen …“** – dieselben drei Wege, dann eine klare Nachfrage, bei geteiltem Ablauf „Für alle“ oder „Nur für diesen Termin neu“ (E6-5b). **Planen**:
-> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
-> einteilen darf: „nur ansehen“); freien Platz antippen →
-> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); **Zauberstab** in der Gruppenzeile bzw. im Gruppenkopf → Vorschläge nach der ChurchTools-Rangfolge zum Prüfen, übernommen als Entwurf (E5); **Stift** neben einem Namen (Zauberstab, „Wer kann?“) → Vorlieben der Person für die Gruppe, sofort in ChurchTools (E5); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
-> Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
-> Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
-> Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
-> Start · Dienste · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
-> Planer). **Dienste** (bis 28.10.2026 „Termine“): Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
-> Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
-> Dienstgruppen. Zauberstab und Abwesenheiten folgen (Bauplan E5–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
+> **Stand: erste Version v0.1.0 (05.11.2026, Bauplan E0–E8).** Was die Reiter können:
+>
+> - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
+>   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen.
+> - **Dienste:** Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung. Offene Anfragen zusagen oder absagen,
+>   eigene Dienste **tauschen**; unter „Meine“ **Teilen** = alle kommenden eigenen Dienste als PDF.
+> - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App, mit Recht **bearbeiten** (Stift, Ziehen,
+>   „An diesem Termin weglassen“, „Ablauf anlegen“ / „Neu aufsetzen …“), die Dienste des Termins, **Infos & Dateien**
+>   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
+>   als PDF, Sprung in die Musik-App.
+> - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
+>   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
+>   Vorlieben je Person (Stift), Platzzahl (Regler), „Infos & Dateien“ je Termin, „Wer wie oft?“, **Ansehen und senden**, **Teilen** = Plan,
+>   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
+> - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
+>
+> Hell oder dunkel wie in ChurchTools gewählt. Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.

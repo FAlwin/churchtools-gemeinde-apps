@@ -4,6 +4,8 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -19,6 +21,7 @@ import { useToast } from '@ui/fenster/useToast';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
 import {
   gruppenName,
+  planAusschnitt,
   type Plan,
   type PlanGruppe,
   type PlanPlatz,
@@ -48,6 +51,9 @@ import {
 } from '@shared/dienstplan/entwuerfe';
 import type { Belegung, PlatzOrt } from '@shared/dienstplan/einteilen';
 import {
+  ladeGrenzen,
+  mitDazu,
+  zeitraumDazu,
   zeitraumGrenzen,
   spanneText,
   zeitraumText,
@@ -345,37 +351,53 @@ export function Planen({
     return r;
   };
 
+  // Jede Unteransicht hat ihren eigenen Zeitraum (E9-3, Alwin 05.11.2026): die Matrix z. B. den Dezember, „Wer wie
+  // oft?“ die letzten 3 Monate. Alles Weitere richtet sich nach dem der gezeigten Ansicht.
+  const personen = ansicht.unteransicht === 'personen';
+  const z = personen ? ansicht.zeitraumWer : ansicht.zeitraum;
+  const setzeZeitraum = (neu: Zeitraum) =>
+    setAnsicht(personen ? { ...ansicht, zeitraumWer: neu } : { ...ansicht, zeitraum: neu });
+
   // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
-  // Bereich zählt nicht mehr.
-  const grenzen = zeitraumGrenzen(ansicht.zeitraum);
-  const bereich = grenzen ? `${grenzen.von}|${grenzen.bis}` : null;
+  // Bereich zählt nicht mehr. Geladen wird mit dem Vorlauf für ＋ (`ladeGrenzen`).
+  const grenzen = zeitraumGrenzen(z, heute);
+  const laden = ladeGrenzen(z, heute);
+  const bereich = laden ? `${laden.von}|${laden.bis}` : null;
   const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
   const [versuch, setVersuch] = useState(0);
   // Nach dem Senden leise neu laden: Das Bisherige bleibt stehen, bis das Neue da ist (wie „ab heute“).
   const leiseNeu = useRef(false);
+  // ＋ bei gewähltem Zeitraum lädt weiter aus – bis das da ist, bleibt der bisherige Stand stehen (für diesen Bereich).
+  const [leiseFuer, setLeiseFuer] = useState<string | null>(null);
   useEffect(() => {
-    if (!grenzen || !bereich) return;
+    if (!laden || !bereich) return;
     let aktuell = true;
-    if (!leiseNeu.current) setEigen({ bereich, zustand: { art: 'laedt' } });
+    if (!leiseNeu.current && leiseFuer !== bereich)
+      setEigen({ bereich, zustand: { art: 'laedt' } });
     leiseNeu.current = false;
-    ladeZeitraum(grenzen.von, grenzen.bis).then(
-      (d) =>
-        aktuell &&
+    ladeZeitraum(laden.von, laden.bis).then(
+      (d) => {
+        if (!aktuell) return;
         setEigen({
           bereich,
           zustand: { art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: 0 },
-        }),
-      (e: unknown) =>
-        aktuell && setEigen({ bereich, zustand: { art: 'fehler', fehler: fehlerMeldung(e) } }),
+        });
+        setLeiseFuer((l) => (l === bereich ? null : l));
+      },
+      (e: unknown) => {
+        if (!aktuell) return;
+        setEigen({ bereich, zustand: { art: 'fehler', fehler: fehlerMeldung(e) } });
+        setLeiseFuer((l) => (l === bereich ? null : l));
+      },
     );
     return () => {
       aktuell = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `grenzen` steckt vollständig in `bereich`
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `laden` steckt vollständig in `bereich`
   }, [bereich, ladeZeitraum, versuch]);
   const quelle: TermineZustand = !bereich
     ? zustand
-    : eigen?.bereich === bereich
+    : eigen && (eigen.bereich === bereich || leiseFuer === bereich)
       ? eigen.zustand
       : { art: 'laedt' };
 
@@ -405,12 +427,36 @@ export function Planen({
   const laedtNach = nachLaden !== null && !(zustand.art === 'fertig' && zustand.nachladeFehler);
   const kannNachladen = !bereich && mehrMoeglich && !laedtNach;
 
-  const waehleZeitraum = (z: Zeitraum) => {
-    if (z.art === 'abHeute') setFenster((f) => schritt(f, 'passend', 0, 0));
-    setAnsicht({ ...ansicht, zeitraum: z });
+  const waehleZeitraum = (neu: Zeitraum) => {
+    if (neu.art === 'abHeute') setFenster((f) => schritt(f, 'passend', 0, 0));
+    setzeZeitraum(neu);
+  };
+  /** ＋ bei gewähltem Zeitraum (E9-3): eine Veranstaltung mehr davor bzw. danach – leise, ohne „wird geladen“. */
+  const nimmDazu = (richtung: 1 | -1) => {
+    const neu = zeitraumDazu(z, richtung);
+    const l = ladeGrenzen(neu, heute);
+    if (l) setLeiseFuer(`${l.von}|${l.bis}`);
+    setzeZeitraum(neu);
   };
 
-  const plan = quelle.art === 'fertig' ? quelle.plan : null;
+  // Was geladen ist – bei ＋ mit ein paar Wochen Vorlauf. Die Matrix bekommt davon nur den Zeitraum und die Termine,
+  // die ＋ dazunahm (gezählt nach dem Filter „Veranstaltungen“, wie ＋ bei „ab heute“).
+  const geladen = quelle.art === 'fertig' ? quelle.plan : null;
+  const dazu = z.art === 'abHeute' ? undefined : z.dazu;
+  const rand = useMemo(() => {
+    if (!grenzen) return null;
+    const arten = geladen ? veranstaltungsArten(geladen.spalten) : [];
+    const tage = (geladen?.spalten ?? []).map((sp) => ({
+      tag: sp.tag,
+      sichtbar: !ansicht.ausgeblendeteArten.includes(artVon(sp, arten)),
+    }));
+    return mitDazu(tage, grenzen, dazu);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `grenzen` und `dazu` stecken in `bereich` und `z`
+  }, [geladen, bereich, JSON.stringify(z), ansicht.ausgeblendeteArten]);
+  const plan = useMemo(
+    () => (geladen && rand && dazu ? planAusschnitt(geladen, rand.von, rand.bis) : geladen),
+    [geladen, rand, dazu],
+  );
 
   // Entwürfe ohne Platz (#582): Am geladenen Termin passt die Platznummer nicht mehr (Platzzahl in ChurchTools
   // geändert – gemessen: dann wird neu nummeriert) → Schild beim Dienst. Gehört der Dienst nicht mehr zum Termin,
@@ -503,10 +549,15 @@ export function Planen({
   const teilenSpalten = handy || bereich ? (d?.gefiltert ?? []) : imFenster;
   const anzahl = teilenSpalten.length;
   const terminText = `${anzahl} ${anzahl === 1 ? 'Termin' : 'Termine'}`;
-  const z = ansicht.zeitraum;
+  // Mit ＋ (oder bei „Letzte N Monate“) steht oben die echte Spanne, darunter, woraus sie besteht:
+  // „Dezember 2026 + 1 Termin · 10 Termine“.
+  const extra = rand ? rand.davor + rand.danach : 0;
+  const mitSpanne = z.art === 'letzte' || extra > 0;
   const zeile1 =
     z.art !== 'abHeute'
-      ? zeitraumText(z)
+      ? mitSpanne && rand
+        ? spanneText(rand.von, rand.bis)
+        : zeitraumText(z)
       : handy || !plan || imFenster.length === 0
         ? 'Ab heute'
         : spanneText(
@@ -520,7 +571,9 @@ export function Planen({
         ? 'weitere Termine werden geladen …'
         : z.art === 'abHeute' && !handy && fenster.anzahl === null
           ? `${terminText} · passend zur Fensterbreite`
-          : terminText;
+          : z.art !== 'abHeute' && mitSpanne
+            ? `${zeitraumText(z)}${extra > 0 ? ` + ${extra} ${extra === 1 ? 'Termin' : 'Termine'}` : ''} · ${terminText}`
+            : terminText;
 
   const knopf = (
     <ZeitraumKnopf
@@ -529,6 +582,7 @@ export function Planen({
       zeile2={zeile2}
       heute={heute}
       abHeuteZusatz={handy ? 'die nächsten Termine' : 'passend zur Fensterbreite'}
+      vergangenheit={personen}
       onWahl={waehleZeitraum}
     />
   );
@@ -540,7 +594,8 @@ export function Planen({
       davor={bereich ? true : f.davor}
       danach={bereich ? true : f.danach || kannNachladen}
       onSchritt={gehe}
-      onVerschieben={(r) => setAnsicht({ ...ansicht, zeitraum: zeitraumVerschieben(z, r) })}
+      onVerschieben={(r) => setzeZeitraum(zeitraumVerschieben(z, r, heute))}
+      onDazu={nimmDazu}
     />
   );
 
@@ -656,9 +711,11 @@ export function Planen({
     inhalt = hinweis(
       z.art === 'abHeute'
         ? `In den nächsten ${quelle.wochen} Wochen stehen keine Termine an.`
-        : z.art === 'monat'
-          ? `Im ${zeitraumText(z)} stehen keine Termine an.`
-          : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
+        : z.art === 'letzte'
+          ? `In den letzten ${z.monate} Monaten gab es keine Termine.`
+          : z.art === 'monat'
+            ? `Im ${zeitraumText(z)} stehen keine Termine an.`
+            : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
     );
   else {
     const gruppen = plan.gruppen.filter(
@@ -1202,8 +1259,9 @@ function fensterDaten(plan: Plan, ansicht: PlanenAnsicht, platz: number) {
 }
 
 /**
- * Die Terminleiste: ‹ ＋ [Zeitraum] ＋ › bei „ab heute“, ‹ [Zeitraum] › bei gewähltem Bereich. Am Handy nur
- * Knopf und ‹ › für einen gewählten Bereich – geblättert wird dort in der Datumsleiste.
+ * Die Terminleiste: ‹ ＋ [Zeitraum] ＋ › – bei „ab heute“ blättern ‹ › und ＋ im Fenster, bei gewähltem Bereich springen
+ * ‹ › um den ganzen Bereich und ＋ nimmt eine einzelne Veranstaltung davor/danach dazu (E9-3, Alwin 05.11.2026). Am
+ * Handy nur Knopf und ‹ › für einen gewählten Bereich – geblättert wird dort in der Datumsleiste.
  */
 function Terminleiste({
   knopf,
@@ -1213,6 +1271,7 @@ function Terminleiste({
   danach,
   onSchritt,
   onVerschieben,
+  onDazu,
 }: {
   knopf: ReactNode;
   bereich: boolean;
@@ -1221,6 +1280,8 @@ function Terminleiste({
   danach: boolean;
   onSchritt: (was: FensterSchritt) => void;
   onVerschieben: (richtung: 1 | -1) => void;
+  /** ＋ bei gewähltem Zeitraum (E9-3): eine Veranstaltung davor (`-1`) bzw. danach (`1`) dazunehmen. */
+  onDazu: (richtung: 1 | -1) => void;
 }) {
   const pfeil = (richtung: 1 | -1, aktiv: boolean) => (
     <button
@@ -1251,7 +1312,7 @@ function Terminleiste({
       aria-label={
         was === 'frueherDazu' ? 'Früheren Termin dazunehmen' : 'Späteren Termin dazunehmen'
       }
-      onClick={() => onSchritt(was)}
+      onClick={() => (bereich ? onDazu(was === 'frueherDazu' ? -1 : 1) : onSchritt(was))}
     >
       <Icon name="plus" size={16} />
     </button>
@@ -1264,9 +1325,9 @@ function Terminleiste({
       aria-label="Zeitraum"
     >
       {blaettern && pfeil(-1, davor)}
-      {!bereich && !handy && dazu('frueherDazu', davor)}
+      {!handy && dazu('frueherDazu', davor)}
       {knopf}
-      {!bereich && !handy && dazu('spaeterDazu', danach)}
+      {!handy && dazu('spaeterDazu', danach)}
       {blaettern && pfeil(1, danach)}
     </div>
   );
@@ -1360,8 +1421,42 @@ function GruppenKnopf({
   );
 }
 
+/**
+ * **Der Rollbereich reicht genau bis über den Fensterrand** (E9-3, Abnahme 05.11.2026): Mit dem festen
+ * `calc(100vh - 220px)` endete er in ChurchTools 4 px unter dem Fenster (die Matrix beginnt dort bei 224 px), und
+ * mit offenen Entwürfen lag die klebende Leiste „Noch nicht gesendet“ über seinem unteren Rand – beides genau auf der
+ * Scroll-Leiste, die man nun immer sehen soll. Gemessen wird die Oberkante und, falls da, die Senden-Leiste; neu bei
+ * jeder Größenänderung der Seite (die Leiste kommt und geht). Ohne Messung gilt die Regel aus dem Stil.
+ */
+function useBisUnten() {
+  // Als Zustand statt `useRef`: Der Rahmen kann später erscheinen („Wer wie oft?“ ist erst leer) – dann wird gemessen.
+  const [el, ref] = useState<HTMLDivElement | null>(null);
+  const [hoehe, setHoehe] = useState<number>();
+  useLayoutEffect(() => {
+    if (!el) return;
+    const messen = () => {
+      const leiste = el
+        .closest(`.${styles.planen}`)
+        ?.querySelector<HTMLElement>(`.${styles.sendeLeiste}`);
+      const unten = 16 + (leiste ? leiste.offsetHeight + 24 : 0);
+      const oben = el.getBoundingClientRect().top + window.scrollY;
+      setHoehe(Math.max(320, Math.floor(window.innerHeight - oben - unten)));
+    };
+    messen();
+    window.addEventListener('resize', messen);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(messen);
+    ro?.observe(document.body);
+    return () => {
+      window.removeEventListener('resize', messen);
+      ro?.disconnect();
+    };
+  }, [el]);
+  return { ref, style: hoehe ? { maxHeight: hoehe } : undefined };
+}
+
 function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
   const { plan, spalten, gruppen, zugeklappt, neben, onUmschalten } = sicht;
+  const bisUnten = useBisUnten();
   // Schmal/breit ist die Spaltenbreite selbst – fest, ohne Strecken (Alwin, 28.10.2026: „S/M kein Unterschied“; seit
   // 29.10.2026 nur noch zwei Breiten). Vorher füllten die Spalten die Breite; dann sahen S und M fast gleich aus.
   // Wie viele Termine ins Fenster passen, rechnet `passendeAnzahl` mit derselben Breite – übrig bleibt höchstens
@@ -1370,7 +1465,7 @@ function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
   const zelleKlasse = (s: PlanSpalte) =>
     `${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}${neben(s) ? ' ' + styles.neben : ''}`;
   return (
-    <div className={styles.rahmen}>
+    <div className={styles.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
       {/* Feste Breiten: Sonst dehnt der Inhalt die Spalten, und „passend“ passt nicht mehr – dann rutscht
           der erste Termin beim Wischen unter die Dienst-Spalte (Alwin, 14.10.2026). */}
       <table
@@ -1679,6 +1774,7 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
     gruppeSichtbar: (id) => sichtbar.has(id),
   });
   const meiste = Math.max(1, ...personen.map((p) => p.einsaetze.length));
+  const bisUnten = useBisUnten();
   if (personen.length === 0) {
     return (
       <section className={styles.karte}>
@@ -1689,7 +1785,7 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
     );
   }
   return (
-    <div className={styles.rahmen}>
+    <div className={styles.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
       <table className={styles.personen}>
         <thead>
           <tr>

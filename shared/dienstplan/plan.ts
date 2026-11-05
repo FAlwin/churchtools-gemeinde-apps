@@ -232,3 +232,21 @@ export function planAus(
   }
   return { spalten, gruppen };
 }
+
+/**
+ * **Nur die Termine von `von` bis `bis`** (E9-3): Für ＋ bei gewähltem Zeitraum lädt die Matrix ein paar Wochen über den
+ * Zeitraum hinaus; was ＋ davon nicht dazunahm, fällt hier weg – sonst stünde es in „Ansehen und senden“, im Teilen und
+ * im Zauberstab, ohne dass man es sieht. Unverändert (dasselbe Objekt), wenn alles bleibt.
+ */
+export function planAusschnitt(plan: Plan, von: string, bis: string): Plan {
+  const behalten = plan.spalten.flatMap((s, i) => (s.tag >= von && s.tag <= bis ? [i] : []));
+  if (behalten.length === plan.spalten.length) return plan;
+  return {
+    spalten: behalten.map((i) => plan.spalten[i]),
+    gruppen: plan.gruppen.map((g) => ({
+      ...g,
+      frei: behalten.map((i) => g.frei[i]),
+      zeilen: g.zeilen.map((z) => ({ ...z, zellen: behalten.map((i) => z.zellen[i]) })),
+    })),
+  };
+}

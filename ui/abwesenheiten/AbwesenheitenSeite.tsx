@@ -159,7 +159,7 @@ export function AbwesenheitenSeite({
   const bisMonat = monatPlus(laufend, RASTER_MONATE - 1);
   /** Gezeigter Zeitraum – beim Öffnen „ab heute“, nicht gemerkt (Vergangenes zählt hier nicht). */
   const [zeitraum, setZeitraum] = useState<Zeitraum>(AB_HEUTE);
-  const grenzen = zeitraumGrenzen(zeitraum) ?? {
+  const grenzen = zeitraumGrenzen(zeitraum, heute) ?? {
     von: heute,
     bis: plusTage(heute, AB_HEUTE_TAGE - 1),
   };
@@ -501,6 +501,7 @@ export function AbwesenheitenSeite({
             heute={heute}
             abHeuteZusatz="die nächsten 4 Wochen"
             spaetestens={spaetestens}
+            fruehestens={`${laufend}-01`}
             onWahl={setZeitraum}
           />
         </div>

@@ -84,6 +84,13 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - `services/userSettings` – Altbestand der Lied-Einstellungen: Schlüssel-Filter (#215, #145 – jede
   erlaubte Einstellung findet ihr Lied), Lesefehler wirft (#273). `putSettings` samt Obergrenzen
   (#195, #213) ist am 12.10.2026 entfallen. Altdaten legen Tests über `server/src/testHilfen/altbestand.ts` an.
+- `client/src/services/schreibSchlange` – die gemeinsame Speicher-Warteschlange (#846), Fake-Timer überall:
+  Verzögern/Bündeln (`alle` vs. `je-schluessel`), Merker (bleibt stehen, wenn während des Uploads neu geändert),
+  jeder Fehlerzweig einzeln (vorübergehend + Wiederholen, offline ohne Dauerfunken, 413, 401, kein Recht),
+  Zurücklegen mit `zusammenfuehren`, abgeschaltet liegen lassen, Schutz (wartend/läuft/Merker), Weglegen mit
+  `keepalive`. Dazu an den Diensten: Einstellungen in EINEM Upload, Anmerkungen „neuer Strich gewinnt, alter Zoom
+  bleibt“ bei Weiterzeichnen während eines scheiternden Uploads. Gegenprobe je Regel; einzig das Timer-Räumen beim
+  Weglegen ist nicht beobachtbar (der alte Timer fände eine leere Schlange)
 - `middleware/apiEingang` – Eingang des Servers (#844), echter Mini-Server mit echtem Fehler-Handler: über dem
   Kontingent kommt 429, **bevor** der Rumpf gelesen wird (kaputtes JSON → 429, nicht 400); 2 MB an eine gewöhnliche
   Route und an den Login → 413 mit Meldung, 500 kB gehen durch, 6 MB Anmerkungen und 2 MB Einstellungen gehen durch,

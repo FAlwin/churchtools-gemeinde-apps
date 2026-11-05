@@ -41,7 +41,7 @@ App. Die Notiz lässt sich offline malen und ist nach Schritt 7 auf dem zweiten 
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/services/offline.ts`, `client/src/services/reachability.ts`, `client/src/services/annotations.ts`, `client/src/hooks/useSetlistPages.ts`
+- **Betrifft:** `client/src/services/offline.ts`, `client/src/services/reachability.ts`, `client/src/services/annotations.ts`, `client/src/services/schreibSchlange.ts`, `client/src/hooks/useSetlistPages.ts`
 - **Automatisiert:** nein – braucht echte Netztrennung
 - **Historie:** #32
 

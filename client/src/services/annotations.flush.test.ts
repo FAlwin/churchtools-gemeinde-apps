@@ -216,6 +216,32 @@ describe('annotations – Upload schlägt fehl (#245)', () => {
     expect(sent.strokes).toBe('NEUER_STRICH');
     expect(sent.zoom).toEqual({ x: 1, y: 2, scale: 3 });
   });
+
+  it('weitergezeichnet, WÄHREND der Upload läuft und dann scheitert: neuer Strich gewinnt, alter Zoom bleibt', async () => {
+    // Nur hier treffen zurückgelegter und neuer Stand aufeinander – die Feld-Regel der Anmerkungen (#245, #846).
+    let ablehnen: () => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise<Response>((resolve) => (ablehnen = () => resolve(jsonResponse(500)))),
+      );
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse(200)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    pushField(`${DRAW}${KEY}`, 'strokes', 'ALT');
+    pushField(`${DRAW}${KEY}`, 'zoom', { x: 1, y: 2, scale: 3 });
+    await runFlush(); // Upload läuft und hängt
+    pushField(`${DRAW}${KEY}`, 'strokes', 'NEU'); // Nutzer zeichnet weiter
+    ablehnen(); // erst jetzt scheitert der Upload → ALT + Zoom werden zurückgelegt
+    await runFlush();
+
+    const sent = JSON.parse(String(fetchMock.mock.calls.at(-1)![1].body)) as Record<
+      string,
+      unknown
+    >;
+    expect(sent.strokes).toBe('NEU');
+    expect(sent.zoom).toEqual({ x: 1, y: 2, scale: 3 });
+  });
 });
 
 /**

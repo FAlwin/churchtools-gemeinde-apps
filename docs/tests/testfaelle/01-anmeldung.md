@@ -109,7 +109,7 @@ Neu-Anmelden alles nur auf dem Gerät liegen – ohne jeden Hinweis, dass nichts
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/annotations.ts`, `client/src/services/userSettings.ts`, `client/src/services/api.ts`
+- **Betrifft:** `client/src/services/annotations.ts`, `client/src/services/schreibSchlange.ts`, `client/src/services/userSettings.ts`, `client/src/services/api.ts`
 - **Automatisiert:** teilweise – `client/src/services/api.session401.test.ts`
 - **Historie:** #211
 

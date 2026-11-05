@@ -142,27 +142,28 @@ describe('Merker übersteht den App-Neustart (#275)', () => {
 
 describe('inflight-Schutz gegen den parallelen Pull (#275)', () => {
   it('ein Pull während des laufenden Uploads dreht den frischen Wert nicht zurück', async () => {
+    vi.useFakeTimers();
     const mod = await neuStarten();
     // Upload hängt, bis wir ihn freigeben – so überlappt der Pull garantiert.
     let uploadFreigeben: () => void = () => {};
     const upload = new Promise<Response>((resolve) => {
       uploadFreigeben = () => resolve(jsonResponse(200));
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((_url: string, init?: RequestInit) => {
-        if (init?.method === 'PUT') return upload;
-        return Promise.resolve(jsonResponse(200, { [KEY]: 'C' })); // Server kennt noch C
-      }),
-    );
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') return upload;
+      return Promise.resolve(jsonResponse(200, { [KEY]: 'C' })); // Server kennt noch C
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
     localStorage.setItem(KEY, 'D');
     mod.pushSetting(KEY, 'D');
-    // Debounce echt ablaufen lassen (keine FakeTimers, damit der hängende Upload sauber überlappt).
-    await new Promise((r) => setTimeout(r, 650));
+    // Fake-Timer (#846): vorher wartete der Test echt 650 ms auf die Verzögerung.
+    await vi.advanceTimersByTimeAsync(600);
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true); // Upload läuft
 
     await mod.pullSettings([42]); // läuft, WÄHREND der Upload noch offen ist
     expect(localStorage.getItem(KEY)).toBe('D');
+    // Den reinen „läuft"-Schutz (ohne Merker) prüft `schreibSchlange.test.ts`: Hier schützt auch der Merker.
 
     uploadFreigeben();
     await upload;

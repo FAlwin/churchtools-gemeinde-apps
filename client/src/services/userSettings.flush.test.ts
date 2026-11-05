@@ -42,6 +42,24 @@ async function runFlush(): Promise<void> {
   await vi.advanceTimersByTimeAsync(700);
 }
 
+describe('userSettings – gebündelt (#846)', () => {
+  it('mehrere Einstellungen gehen in EINEM Upload hoch', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    pushSetting('worship_key_7', 'G');
+    pushSetting('worship_capo_7', '2');
+    await runFlush();
+
+    const puts = fetchMock.mock.calls.filter((c) => (c[1] as RequestInit).method === 'PUT');
+    expect(puts).toHaveLength(1);
+    expect(JSON.parse(String((puts[0][1] as RequestInit).body))).toEqual({
+      worship_key_7: 'G',
+      worship_capo_7: '2',
+    });
+  });
+});
+
 describe('userSettings – Speichern schlägt fehl (#213)', () => {
   it('413 meldet dem Nutzer die Ursache (statt still zu verschwinden)', async () => {
     const onError = vi.fn();

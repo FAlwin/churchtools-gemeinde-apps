@@ -20,8 +20,9 @@
   Messungen S0/S0b/G0 vom 05.11.2026 (`gebetsabend-planung/s0-messung.md`). Meldungen von VDO.Ninja nur aus dem
   eigenen iframe **und** von `https://vdo.ninja` (`istVdoMeldung`). Gegenprobe je Teil, Komponenten-Test mit
   Fake-Timern.
-- Vollbild und Bild-in-Bild kommen aus der Steuerleiste des Geräts (`&videocontrols`, iframe mit `fullscreen;
-  picture-in-picture`), kein eigener Knopf. Gemessen am iPhone (05.11.2026): Vollbild geht auch in der PWA,
-  Bild-in-Bild sperrt Apple in der PWA unabhängig vom Player (gegengeprüft mit eigenem `<video>` über das VDO.Ninja-SDK).
+- Vollbild und Bild-in-Bild kommen aus der Steuerleiste des Geräts (`&videocontrols`, iframe-Erlaubnis
+  `fullscreen; picture-in-picture`), kein eigener Knopf. Gemessen am iPhone (05.11.2026): Vollbild geht auch in der
+  PWA, Bild-in-Bild sperrt Apple in der PWA unabhängig vom Player (gegengeprüft mit eigenem `<video>` über das
+  VDO.Ninja-SDK).
 - Eingetragen in Workspaces, Build, Lint, Testlauf, CI-Paket, Release-Weg `gebetsabend-v*`, Release-Notizen. Die
   CSS-Klassen-Prüfung (`client/src/cssKlassen.test.ts`) prüft jetzt auch das Organigramm, das dort fehlte.

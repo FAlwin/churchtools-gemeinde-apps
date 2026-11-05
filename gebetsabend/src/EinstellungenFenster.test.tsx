@@ -56,8 +56,8 @@ async function oeffnen(kalender: number | null = 2) {
   });
 }
 
-const auswahl = () => screen.getByLabelText('Kalender des Gebetsabends');
-const wort = () => screen.getByLabelText('Termin erkennen am Wort im Titel');
+const auswahl = () => screen.getByLabelText<HTMLSelectElement>('Kalender des Gebetsabends');
+const wort = () => screen.getByLabelText<HTMLInputElement>('Termin erkennen am Wort im Titel');
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -440,6 +440,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
           'Die 3 schon Angemeldeten bekommen keine neue Mail. Ohne Termin wird nicht gelöscht.',
         ),
       ).toBeTruthy();
+      expect(within(fenster).getByText(/Für „Gemeindeessen“ schickt ChurchTools/)).toBeTruthy();
       fireEvent.click(within(fenster).getByRole('button', { name: 'Jetzt einrichten' }));
       await waitFor(() => expect(geaendert).toHaveBeenCalled());
       expect(ab.ablaeufeNachholen).toHaveBeenCalledWith(91, { loeschenBestaetigt: false });

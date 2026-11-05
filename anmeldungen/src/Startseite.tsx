@@ -1,5 +1,5 @@
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
@@ -75,6 +75,35 @@ function ZurGruppe({
       <span className={styles.linkText}>{text}</span>
       <Icon name="external" size={14} />
     </a>
+  );
+}
+
+/**
+ * Ab so vielen Veranstaltungen ohne Abläufe steht auf der Startseite eine Zeile für alle (Alwin, 05.11.2026 – in der
+ * Test-Instanz waren es acht, „Braucht deine Aufmerksamkeit“ lief damit voll). Aufgeklappt stehen sie einzeln da.
+ */
+const EINRICHTEN_ZUSAMMEN = 3;
+
+function EinrichtenSammelZeile({
+  anzahl,
+  offen,
+  onUmschalten,
+}: {
+  anzahl: number;
+  offen: boolean;
+  onUmschalten: () => void;
+}) {
+  return (
+    <div className={styles.zeile}>
+      <Kachel tag={null} grau />
+      <div className={styles.mitte}>
+        <b>{anzahl} Veranstaltungen: Mails und Löschen einrichten</b>
+        <small>Bisher löscht ChurchTools ihre Anmeldungen nie.</small>
+      </div>
+      <FensterKnopf art="zweit" aria-expanded={offen} onClick={onUmschalten}>
+        {offen ? 'Ausblenden' : 'Anzeigen'}
+      </FensterKnopf>
+    </div>
   );
 }
 
@@ -286,6 +315,7 @@ export function Startseite({
   const [reiter, setReiter] = useState<Reiter>('anstehend');
   const [loeschen, setLoeschen] = useState<Veranstaltung | null>(null);
   const [einrichten, setEinrichten] = useState<Veranstaltung | null>(null);
+  const [einrichtenOffen, setEinrichtenOffen] = useState(false);
   const [hinweisFehler, setHinweisFehler] = useState<string | null>(null);
   const leitung = new Set(start.gruppen.filter((g) => g.leitung).map((g) => g.id));
   const darfArchivieren = (gruppeId: number) => admin || leitung.has(gruppeId);
@@ -331,6 +361,22 @@ export function Startseite({
       return neu;
     });
 
+  const zahlEinrichten = hinweise.filter((h) => h.art === 'einrichten').length;
+  const sammeln = zahlEinrichten >= EINRICHTEN_ZUSAMMEN;
+  const zeile = (h: Hinweis) => (
+    <HinweisZeile
+      key={`${h.art}-${h.art === 'kaputt' ? h.id : h.v.id}`}
+      h={h}
+      gruppenName={gruppenName}
+      onOeffnen={onOeffnen}
+      admin={admin}
+      darfArchivieren={darfArchivieren}
+      onEndgueltig={setLoeschen}
+      onEinrichten={setEinrichten}
+      onInsArchiv={(v) => void insArchivLegen(v)}
+    />
+  );
+
   return (
     <div className={styles.raster}>
       <div className={styles.spalte}>
@@ -341,19 +387,25 @@ export function Startseite({
               <span className={styles.leise}>{hinweise.length}</span>
             </div>
             <div className={styles.liste}>
-              {hinweise.map((h) => (
-                <HinweisZeile
-                  key={`${h.art}-${h.art === 'kaputt' ? h.id : h.v.id}`}
-                  h={h}
-                  gruppenName={gruppenName}
-                  onOeffnen={onOeffnen}
-                  admin={admin}
-                  darfArchivieren={darfArchivieren}
-                  onEndgueltig={setLoeschen}
-                  onEinrichten={setEinrichten}
-                  onInsArchiv={(v) => void insArchivLegen(v)}
-                />
-              ))}
+              {hinweise.map((h, i) => {
+                // Viele ohne Abläufe: an der Stelle der ersten eine Sammelzeile, die einzelnen erst aufgeklappt.
+                if (h.art === 'einrichten' && sammeln) {
+                  const erste = hinweise.findIndex((x) => x.art === 'einrichten') === i;
+                  if (!erste && !einrichtenOffen) return null;
+                  if (erste)
+                    return (
+                      <Fragment key="einrichten-alle">
+                        <EinrichtenSammelZeile
+                          anzahl={zahlEinrichten}
+                          offen={einrichtenOffen}
+                          onUmschalten={() => setEinrichtenOffen((x) => !x)}
+                        />
+                        {einrichtenOffen && zeile(h)}
+                      </Fragment>
+                    );
+                }
+                return zeile(h);
+              })}
             </div>
             {hinweisFehler && (
               <p className={f.fehler} role="alert">
@@ -492,6 +544,7 @@ export function Startseite({
       {einrichten && (
         <EinrichtenFenster
           id={einrichten.id}
+          name={einrichten.name}
           onClose={() => setEinrichten(null)}
           onEingerichtet={(text) => {
             onGeaendert({ text: `„${einrichten.name}“: ${text}`, rueckgaengig: null });

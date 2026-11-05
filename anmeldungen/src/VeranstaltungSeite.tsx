@@ -861,6 +861,7 @@ export function VeranstaltungSeite({
       {fenster === 'einrichten' && (
         <EinrichtenFenster
           id={id}
+          name={daten.name}
           onClose={() => setFenster(null)}
           // Kein „Rückgängig“ – zurück ginge nur, indem die Routinen wieder gelöscht würden.
           onEingerichtet={(text) => {

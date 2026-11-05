@@ -18,10 +18,13 @@ import f from './Formular.module.scss';
  */
 export function EinrichtenFenster({
   id,
+  name,
   onClose,
   onEingerichtet,
 }: {
   id: number;
+  /** Steht im Text – von der Startseite aus wüsste man sonst nicht, welche (Fund der echten Prüfung, 05.11.2026). */
+  name: string;
   onClose: () => void;
   onEingerichtet: (text: string) => void;
 }) {
@@ -99,7 +102,7 @@ export function EinrichtenFenster({
       {stand && (
         <>
           <p>
-            Ab jetzt schickt ChurchTools die Bestätigung
+            Für „{name}“ schickt ChurchTools ab jetzt die Bestätigung
             {stand.kostet ? ' mit Betrag, Bankdaten und Link' : ' mit Link'} – seine Standard-Mail
             geht aus.
           </p>

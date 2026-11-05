@@ -430,6 +430,8 @@ describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', (
       ).toBeTruthy(),
     );
     expect(within(fenster).getByText(/mit Betrag, Bankdaten und Link/)).toBeTruthy();
+    // Von der Startseite aus muss klar sein, welche Veranstaltung (Fund der echten Prüfung).
+    expect(within(fenster).getByText(/Für „Grundkurs“ schickt ChurchTools ab jetzt/)).toBeTruthy();
     fireEvent.click(within(fenster).getByRole('button', { name: 'Jetzt einrichten' }));
     await waitFor(() => expect(geaendert).toHaveBeenCalled());
     expect(ab.ablaeufeNachholen).toHaveBeenCalledWith(52, { loeschenBestaetigt: false });
@@ -469,5 +471,61 @@ describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', (
     expect(bereich().queryByRole('button', { name: 'Einrichten' })).toBeNull();
     fireEvent.click(bereich().getByRole('button', { name: 'Ansehen' }));
     expect(oeffnen).toHaveBeenCalledWith(52);
+  });
+});
+
+describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prüfung)', () => {
+  const alte = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      v(
+        { id: 60 + i, name: `Alt ${i + 1}`, gruppeId: 9, statusId: 1, beginn: '2026-11-20T10:00' },
+        { aktiv: 1, wartend: 0, unbezahlt: null },
+      ),
+    );
+  function zeigeAlte(n: number) {
+    const liste = alte(n);
+    render(
+      <Startseite
+        start={START}
+        uebersicht={{
+          einteilung: einteilen(liste),
+          hinweise: aufmerksamkeit(
+            liste,
+            [],
+            new Set(),
+            HEUTE,
+            new Set(),
+            new Map(liste.map((x) => [x.id, true])),
+          ),
+          offen: new Map(),
+          verborgen: new Map(),
+        }}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={() => {}}
+      />,
+    );
+  }
+  const bereich = () => within(abschnitt('Braucht deine Aufmerksamkeit'));
+
+  it('drei: eine Zeile für alle, die einzelnen erst nach „Anzeigen“; „Ausblenden“ klappt wieder zu', () => {
+    zeigeAlte(3);
+    expect(bereich().getByText('3 Veranstaltungen: Mails und Löschen einrichten')).toBeTruthy();
+    expect(bereich().queryByText('Alt 1: Mails und Löschen einrichten')).toBeNull();
+    const knopf = bereich().getByRole('button', { name: 'Anzeigen' });
+    expect(knopf.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(knopf);
+    for (const n of [1, 2, 3])
+      expect(bereich().getByText(`Alt ${n}: Mails und Löschen einrichten`)).toBeTruthy();
+    expect(bereich().getAllByRole('button', { name: 'Einrichten' })).toHaveLength(3);
+    fireEvent.click(bereich().getByRole('button', { name: 'Ausblenden' }));
+    expect(bereich().queryByText('Alt 2: Mails und Löschen einrichten')).toBeNull();
+  });
+
+  it('zwei: einzeln, ohne Sammelzeile', () => {
+    zeigeAlte(2);
+    expect(bereich().queryByText(/Veranstaltungen: Mails und Löschen einrichten/)).toBeNull();
+    expect(bereich().getByText('Alt 1: Mails und Löschen einrichten')).toBeTruthy();
+    expect(bereich().getByText('Alt 2: Mails und Löschen einrichten')).toBeTruthy();
   });
 });

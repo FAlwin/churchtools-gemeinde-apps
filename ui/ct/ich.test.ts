@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './fehler';
 import { _bremseLoesen, _vergissCsrf } from './verbindung';
 import { angemeldeteId, ladeIch } from './ich';
+import { _vergissGemeindeZeitzone, gemeindeZeitzone, geraeteZeitzone } from '@shared/ct/zeit';
 
 /**
  * Wer angemeldet ist – gegen eine nachgestellte ChurchTools-Instanz in der Form, die an der
@@ -51,6 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  _vergissGemeindeZeitzone();
 });
 
 describe('ladeIch', () => {
@@ -120,5 +122,19 @@ describe('angemeldeteId – drei Ausgänge, zwei Fehler (#491)', () => {
       expect(f).toBeInstanceOf(ApiError);
       expect(f).toMatchObject({ status: 503 });
     }
+  });
+});
+
+describe('ladeIch lädt die Zeitzone der Gemeinde mit (#847)', () => {
+  it('aus /config – danach rechnen alle Apps mit ihr', async () => {
+    ct({ ...GUT, '/config': () => json(200, { timezone: 'Pacific/Kiritimati' }) });
+    await ladeIch();
+    expect(gemeindeZeitzone()).toBe('Pacific/Kiritimati');
+  });
+
+  it('antwortet /config nicht, startet die App trotzdem – mit der Zeitzone des Geräts', async () => {
+    ct({ ...GUT, '/config': () => json(500, {}) });
+    expect((await ladeIch()).id).toBe(1);
+    expect(gemeindeZeitzone()).toBe(geraeteZeitzone());
   });
 });

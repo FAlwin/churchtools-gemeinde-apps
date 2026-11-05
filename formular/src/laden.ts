@@ -1,4 +1,5 @@
 import { gemeindeNameAus } from '@shared/ct/info';
+import { merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import {
   INSTANZEN_DATEI,
   abmeldeDatenAus,
@@ -114,6 +115,8 @@ export async function ladeVeranstaltung(ort: AnmeldeOrt): Promise<Geladen> {
   const [gruppe, info] = await Promise.all([
     anfrage(`${basis}/publicgroups/${ort.gruppeId}`),
     anfrage(`${basis}/info`).catch(() => null),
+    // Die Zeitzone der Gemeinde für „heute“ (Anmeldeschluss, Alter am Stichtag, #847) – Beiwerk wie der Name.
+    anfrage(`${basis}/config`).then(merkeGemeindeZeitzone, () => undefined),
   ]);
   const veranstaltung = veranstaltungAus(
     (gruppe as { data?: OeffentlicheGruppeRoh } | null)?.data ?? {},

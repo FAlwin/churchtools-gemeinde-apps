@@ -1,5 +1,16 @@
-import { describe, expect, it } from 'vitest';
-import { ortszeitAus, tagAusIso, utcAus, wannText } from './zeit';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  _vergissGemeindeZeitzone,
+  gemeindeZeitzone,
+  geraeteZeitzone,
+  heuteImKalender,
+  merkeGemeindeZeitzone,
+  ortszeitAus,
+  tagAusIso,
+  utcAus,
+  wannText,
+  zeitzoneAusKonfig,
+} from './zeit';
 
 const BERLIN = 'Europe/Berlin';
 
@@ -42,5 +53,45 @@ describe('wannText (E4-3-3)', () => {
     expect(wannText('2026-10-12T07:05:00.000Z', 'Europe/Berlin', jetzt)).toBe('12.10. 09:05');
     // 23:30 UTC am 13. ist in Berlin schon der 14. – also „heute“.
     expect(wannText('2026-10-13T22:30:00.000Z', 'Europe/Berlin', jetzt)).toBe('heute 00:30');
+  });
+});
+
+/**
+ * #847: Die Zeitzone der Gemeinde kommt aus ChurchTools (`/api/config`). Geprüft mit einer Zone, die KEIN Gerät der
+ * Testläufe hat (UTC+14) – sonst wäre jeder Test auch mit der Gerätezeitzone grün.
+ */
+describe('Zeitzone der Gemeinde (#847)', () => {
+  const WEIT_WEG = 'Pacific/Kiritimati';
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('aus /api/config gelesen, Leerzeichen weg', () => {
+    expect(zeitzoneAusKonfig({ timezone: ' Europe/Berlin ' })).toBe('Europe/Berlin');
+  });
+
+  it('fehlend, leer, kein Text oder dem Browser unbekannt → null', () => {
+    expect(zeitzoneAusKonfig(null)).toBeNull();
+    expect(zeitzoneAusKonfig({})).toBeNull();
+    expect(zeitzoneAusKonfig({ timezone: '  ' })).toBeNull();
+    expect(zeitzoneAusKonfig({ timezone: 7 })).toBeNull();
+    expect(zeitzoneAusKonfig({ timezone: 'Mars/Olympus_Mons' })).toBeNull();
+  });
+
+  it('nicht geladen → die des Geräts', () => {
+    expect(gemeindeZeitzone()).toBe(geraeteZeitzone());
+  });
+
+  it('geladen → die der Gemeinde; eine unbrauchbare Angabe danach ändert nichts', () => {
+    merkeGemeindeZeitzone({ timezone: WEIT_WEG });
+    expect(gemeindeZeitzone()).toBe(WEIT_WEG);
+    merkeGemeindeZeitzone({ timezone: 'Mars/Olympus_Mons' });
+    merkeGemeindeZeitzone(null);
+    expect(gemeindeZeitzone()).toBe(WEIT_WEG);
+  });
+
+  it('„heute“ ist der Tag in der Gemeinde, nicht auf dem Gerät', () => {
+    const jetzt = new Date('2026-11-05T11:30:00Z'); // in UTC+14 schon der 6.
+    expect(heuteImKalender(jetzt)).toBe(tagAusIso(jetzt.toISOString(), geraeteZeitzone()));
+    merkeGemeindeZeitzone({ timezone: WEIT_WEG });
+    expect(heuteImKalender(jetzt)).toBe('2026-11-06');
   });
 });

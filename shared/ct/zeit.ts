@@ -100,9 +100,62 @@ export function tagAusIso(zeitpunkt: string, zeitzone: string): string {
   return ortszeitAus(zeitpunkt, zeitzone).slice(0, 10);
 }
 
-/** **Heute im Kalender dieses Geräts** (`YYYY-MM-DD`) – die eine Stelle dafür (Formular und Erweiterung). */
+// ── Die Zeitzone der Gemeinde (#847) ─────────────────────────────────────────────────────────────────────────
+
+/** Die Zeitzone dieses Geräts – nur noch der Ersatz, solange die der Gemeinde nicht bekannt ist. */
+export function geraeteZeitzone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * **Die Zeitzone der Gemeinde aus ChurchTools** – `GET /api/config` → `timezone` (gemessen 05.11.2026: „Europe/Berlin“,
+ * live und Test, auch ohne Anmeldung; ohne `data`-Hülle). `null`, wenn keine drinsteht oder der Browser sie nicht
+ * kennt – dann rechnete `Intl` sonst mit einer Ausnahme statt mit einer Uhrzeit.
+ */
+export function zeitzoneAusKonfig(konfig: unknown): string | null {
+  const z = (konfig as { timezone?: unknown } | null | undefined)?.timezone;
+  if (typeof z !== 'string' || z.trim() === '') return null;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: z.trim() });
+    return z.trim();
+  } catch {
+    return null;
+  }
+}
+
+let gemeindeZone: string | null = null;
+
+/**
+ * Die gelesene Konfiguration merken – einmal beim Start (`ladeIch` in `ui/ct/ich.ts`, im Formular `ladeVeranstaltung`).
+ * Eine unbrauchbare Angabe ändert nichts: Dann bleibt, was vorher galt.
+ *
+ * ⚠️ Nur im Browser. Der Server rechnet mit `config.zeitzone` und reicht sie ausdrücklich weiter.
+ */
+export function merkeGemeindeZeitzone(konfig: unknown): void {
+  const z = zeitzoneAusKonfig(konfig);
+  if (z) gemeindeZone = z;
+}
+
+/**
+ * **Die Zeitzone der Gemeinde** – die eine Stelle dafür in Erweiterungen und Formular (#847). Bis sie geladen ist,
+ * oder wenn ChurchTools beim Start nicht antwortete, gilt die des Geräts: Ein Aussetzer darf den Start nicht
+ * blockieren, und in der Gemeinde selbst ist es dieselbe Uhr.
+ */
+export function gemeindeZeitzone(): string {
+  return gemeindeZone ?? geraeteZeitzone();
+}
+
+/** Nur für Tests. */
+export function _vergissGemeindeZeitzone(): void {
+  gemeindeZone = null;
+}
+
+/**
+ * **Heute im Kalender der Gemeinde** (`YYYY-MM-DD`) – die eine Stelle dafür (Formular und Erweiterungen). Bis zum
+ * 05.11.2026 war es der Kalender des Geräts; im Ausland lag „heute“ dann neben dem Tag der Termine (#847).
+ */
 export function heuteImKalender(jetzt = new Date()): string {
-  return tagAusIso(jetzt.toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+  return tagAusIso(jetzt.toISOString(), gemeindeZeitzone());
 }
 
 /**

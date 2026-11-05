@@ -446,3 +446,18 @@ Die Vergleichsregel (getrimmter Text, nie eine Zahl – sonst verliert „0123" 
 `Number('')` träfe jedes Lied ohne Nummer) liegt seit diesem Schritt in `@shared/lieder` als
 `ccliSchluessel`. Vorher stand sie nur im Server; als zweite Kopie im Client wäre genau dort die nächste
 Abweichung gelandet.
+
+## Es gilt die Uhr der Gemeinde, nicht die des Geräts (#847, 05.11.2026)
+
+„Heute“ und alle Uhrzeiten gehen in allen Apps nach der **Zeitzone der Gemeinde**. ChurchTools liefert sie selbst:
+`GET /api/config` → `timezone` (gemessen 05.11.2026, live und Test „Europe/Berlin“, auch ohne Anmeldung). Vorher
+nahmen Protokolle, Organigramm und Teile von Dienstplaner und Anmeldungen die Zeitzone des Geräts, die Musik-App fest
+Berlin, der Server `ZEITZONE` – in Deutschland fiel das nicht auf, im Ausland lag „heute“ neben dem Tag der Termine.
+
+- **Eine Stelle:** `gemeindeZeitzone()` und `heuteImKalender()` in `shared/ct/zeit.ts`. Geladen wird einmal beim
+  Start – in den Erweiterungen in `ladeIch` (`ui/ct/ich.ts`), im Formular in `ladeVeranstaltung`.
+- **Ersatz ist die Zeitzone des Geräts**, solange nichts geladen ist oder ChurchTools beim Start nicht antwortet.
+  Ein Aussetzer darf den Start nicht blockieren, und in der Gemeinde ist es dieselbe Uhr.
+- **Der Server** rechnet weiter mit `config.zeitzone` und reicht sie ausdrücklich weiter; die Ablage im Modul gilt
+  nur im Browser.
+- Umgestellt wird in drei Schritten: Z1 Quelle, Z2 Erweiterungen und Formular, Z3 Musik-App und `plusTage`-Nachbauten.

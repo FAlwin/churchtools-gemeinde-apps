@@ -5,6 +5,7 @@ import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
 import { WARTEN_MS, vergissInstanzen } from './laden';
+import { _vergissGemeindeZeitzone, gemeindeZeitzone, geraeteZeitzone } from '@shared/ct/zeit';
 
 /**
  * Das öffentliche Formular (A6-1, #542) gegen ein nachgestelltes ChurchTools – so, wie es ohne Login antwortet
@@ -57,8 +58,25 @@ beforeEach(() => {
   window.location.hash = '#test.church.tools/66';
 });
 afterEach(() => {
+  _vergissGemeindeZeitzone();
   vi.useRealTimers();
   window.location.hash = '';
+});
+
+describe('Zeitzone der Gemeinde (#847)', () => {
+  it('wird beim Laden aus /api/config der Instanz gelesen', async () => {
+    antworten['/api/config'] = [{ status: 200, body: { timezone: 'Pacific/Kiritimati' } }];
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Kindertag' })).toBeTruthy();
+    expect(gemeindeZeitzone()).toBe('Pacific/Kiritimati');
+  });
+
+  it('antwortet /api/config nicht, steht das Formular trotzdem da – mit der Zeitzone des Geräts', async () => {
+    antworten['/api/config'] = [{ status: 503 }];
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Kindertag' })).toBeTruthy();
+    expect(gemeindeZeitzone()).toBe(geraeteZeitzone());
+  });
 });
 
 describe('Nur die Instanzen der Gemeinde (#843)', () => {
@@ -121,6 +139,8 @@ describe('Öffentliches Formular (A6-1)', () => {
       `${window.location.origin}/instanzen.json`,
       'https://test.church.tools/api/publicgroups/66',
       'https://test.church.tools/api/info',
+      // Die Zeitzone der Gemeinde (#847).
+      'https://test.church.tools/api/config',
     ]);
     expect(aufrufe.every((a) => a.credentials === 'omit')).toBe(true);
     // Ohne `?probe` ist es kein Probelauf mehr (A6-2).

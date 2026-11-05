@@ -7,7 +7,7 @@
  *    Player lädt die echte VDO.Ninja-Seite mit einer erfundenen StreamID – er wartet also („beginnt gleich“).
  *  - `?demo=aus` – wie `zuhoerer`, aber noch keine Übertragung.
  *  - `?demo=technik` – wie `aus`, gehört zur Technik: „Übertragung starten“ schreibt in den Browser-Speicher, der
- *    Sender öffnet die echte VDO.Ninja-Seite (Kamera-Abfrage). Zahnrad → Einstellungen mit erfundenen Kalendern.
+ *    Sender öffnet die echte VDO.Ninja-Seite (Kamera-Abfrage). „Einstellungen“ mit erfundenen Kalendern.
  *  - `?demo=mitglied` – Mitglied, sieht keine Kategorie (Rechte fehlen).
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
  */

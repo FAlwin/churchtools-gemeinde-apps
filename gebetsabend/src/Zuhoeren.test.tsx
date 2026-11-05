@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { VDO_BASIS } from '@shared/gebetsabend/links';
 import { NACHFRAGEN_MS, PLAYER_TEXT } from '@shared/gebetsabend/zuhoeren';
@@ -183,6 +183,28 @@ describe('Zuhoeren', () => {
       'disabled',
       false,
     );
+  });
+
+  it('der nächste Termin steht oben in der Karte wie „Als Nächstes“ – ohne Termin schlicht „Gebetsabend“', async () => {
+    laden.mockResolvedValue(laeuft());
+    const { rerender } = render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole('region', { name: 'Gebetsabend' })).toBeTruthy();
+    expect(screen.queryByText(/Als Nächstes/)).toBeNull();
+    rerender(
+      <Zuhoeren
+        modul={29}
+        kategorie={77}
+        name="Helene Wiebe"
+        termin={{ id: 1, titel: 'Gebetsabend im Saal', beginn: '2026-11-12T18:30:00Z', ende: null }}
+      />,
+    );
+    const karte = screen.getByRole('region', { name: 'Gebetsabend im Saal' });
+    expect(karte.textContent).toMatch(/^Als Nächstes · /);
+    expect(karte.textContent).toContain('Do, 12.11. · 19:30 Uhr');
+    expect(within(karte).getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
   });
 
   it('scheitert schon das erste Laden, steht der Fehler da (nicht „keine Übertragung“)', async () => {

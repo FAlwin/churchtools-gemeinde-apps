@@ -1,41 +1,22 @@
-// Technik-Karte (Bauplan Gebetsabend G3, Entwurf v3) – Karte, Zustand, großer Knopf und Player kommen aus
-// `Zuhoeren.module.scss`; hier nur, was die Technik zusätzlich hat.
-.kopf {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.titel {
-  font-size: 15px;
-  font-weight: 900;
-  color: var(--text);
-}
-
-.anm {
-  margin-left: auto;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text3);
-}
+// Technik-Karten (Bauplan Gebetsabend G3/G4, Entwurf v4) – Karte, Kopf, Zustand und Player kommen aus
+// `Zuhoeren.module.scss`; hier nur, was „Übertragung“ und „Wer hört zu?“ zusätzlich haben.
 
 // „Senden – Bild + Ton | Nur Ton“: Beschriftung links, Umschalter rechts; am Handy darunter.
 .zeile {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--hair);
-  border-bottom: 1px solid var(--hair);
 }
 
+// Zwei Zeilen untereinander: „Senden“ mit Hinweis, in der Liste Name mit „seit …“.
 .wer {
   display: flex;
   flex: 1 1 180px;
   flex-direction: column;
-  font-size: 14.5px;
+  min-width: 0;
+  font-size: 14px;
   color: var(--text);
 
   small {
@@ -55,53 +36,37 @@
   color: var(--red);
 }
 
-// „Wer hört zu?“ (G4, Entwurf v2/v3): Name links, Geräte und „seit“ rechts, Haarlinien wie die ChurchTools-Listen.
-.werKopf {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0 0;
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--text);
-}
-
+// Die Zahl im Kopf von „Wer hört zu?“ – wie die 17 bei „Braucht deine Aufmerksamkeit“.
 .anzahl {
+  font-size: 14px;
   font-weight: 700;
-  color: var(--text3);
+  color: var(--text2);
 }
 
+// „Wer hört zu?“: Kreis, Name und „seit …“ – Zeilen mit Haarlinien wie die ChurchTools-Listen.
 .liste {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--hair);
 
   li {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 4px 10px;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--hair);
+    gap: 12px;
+    padding: 10px 14px;
+  }
+
+  li + li {
+    border-top: 1px solid var(--hair);
   }
 }
 
 .name {
-  flex: 1 1 160px;
-  font-size: 14.5px;
   font-weight: 700;
-  color: var(--text);
 }
 
 .ohneName {
   font-weight: 400;
   font-style: italic;
-  color: var(--text2);
-}
-
-.geraete,
-.seit {
-  font-size: 12.5px;
   color: var(--text2);
 }

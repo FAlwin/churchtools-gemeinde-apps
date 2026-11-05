@@ -39,9 +39,10 @@ Erst danach lassen sich die Rechte auf diese Kategorien vergeben (vorher stehen 
 
 ## Zuhören
 
-Die Seite zeigt oben den **nächsten Gebetsabend** aus dem gewählten Kalender (Titel enthält „Gebet“; die Technik
-stellt beides unter dem Zahnrad ein)
-und darunter einen großen Knopf **„Gebetsabend zuhören“**:
+Die Seite zeigt eine Karte wie „Als Nächstes“ im Dienstplaner: oben den **nächsten Gebetsabend** aus dem gewählten
+Kalender (Titel enthält „Gebet“; die Technik stellt beides unter **„Einstellungen“** neben „Hallo …“ ein), darunter den
+Knopf **„Gebetsabend zuhören“**. Ohne passenden Termin steht schlicht „Gebetsabend“ oben. Wer nicht zur Technik
+gehört, sieht nur diese eine Karte, schmal in der Mitte:
 
 - **Noch keine Übertragung:** Der Knopf ist aus, darüber steht, dass es kurz vor dem Gebetsabend losgeht. Die Seite
   fragt alle 20 Sekunden nach und schaltet den Knopf von selbst frei – Neuladen ist nicht nötig.
@@ -65,7 +66,9 @@ und darunter einen großen Knopf **„Gebetsabend zuhören“**:
 
 ## Übertragen (Technik)
 
-Wer zur Technik gehört (die Kategorie „Zugang“ bearbeiten darf), sieht über allem die Karte **„Übertragung“**:
+Wer zur Technik gehört (die Kategorie „Zugang“ bearbeiten darf), sieht die Seite in **zwei Spalten** wie die Startseite
+des Dienstplaners: links die Karte **„Übertragung“** mit dem Kamerabild, rechts „Wer hört zu?“ und den Gebetsabend; am
+Handy steht alles untereinander.
 
 - **Starten:** „Bild + Ton“ oder „Nur Ton“ wählen und **„Übertragung starten“** tippen – auf dem Gerät im Raum. Das
   setzt eine neue StreamID und ein neues Passwort, startet den Sender **in der Seite** (Kamerabild in der Karte) und
@@ -82,12 +85,12 @@ Wer zur Technik gehört (die Kategorie „Zugang“ bearbeiten darf), sieht übe
 - **Kein Zuhören auf dem Sender-Gerät:** Dort stünde der Ton wieder im Mikrofon – statt des Knopfs steht ein Hinweis.
 - **Zwei Geräte gleichzeitig:** Startet oder beendet ein anderes Technik-Gerät inzwischen, wird nichts überschrieben;
   die Seite zeigt, was jetzt gilt. Hat ein anderes Gerät neu gestartet, hört der Sender hier von selbst auf.
-- **Wer hört zu?** Unter dem Sender steht, wer gerade zuhört – Vor- und Nachname aus ChurchTools und seit wann. Wer
+- **Wer hört zu?** Eine eigene Karte neben dem Sender zeigt, wer gerade zuhört – Vor- und Nachname aus ChurchTools und seit wann. Wer
   sich still neu verbindet (das iPhone tut das manchmal) oder mit zwei Geräten zuhört, steht einmal da („2 Geräte“).
   **„Ohne Namen“** heißt meist: Jemand hört mit einem weitergegebenen Link zu. Die Liste gibt es nur auf dem Gerät,
   das sendet, und nur solange der Sender dort läuft; gespeichert wird nichts. Den Namen setzt der Zuhörer selbst –
   die Liste ist ein Hinweis, kein Schutz.
-- **Einstellungen (Zahnrad, nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
+- **Einstellungen (Knopf neben „Hallo …“, nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
   und an welchem Wort im Titel er erkannt wird. Zur Auswahl stehen die Kalender, die man selbst sieht.
 
 Zugang und Einstellungen liegen je als ein Eintrag **mit Versionsnummer** in ihrer Kategorie (wie der Plan im

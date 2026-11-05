@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { einrichtungsStand } from '@shared/gebetsabend/einrichten';
 import type { Start } from './start';
@@ -50,15 +50,10 @@ export function Einrichtung({ start, onEingerichtet }: Props) {
             „Einstellungen“. Danach vergibst du die Rechte für die Mitglieder und die Technik.
           </p>
           <div className={styles.knoepfe}>
-            {/* `raster`: auch am Handy mit Wort – ein Haken allein sagt nicht, was der Knopf tut. */}
-            <KopfKnopf
-              haupt
-              raster
-              label={laeuft ? 'Wird eingerichtet …' : 'Einrichten'}
-              symbol={<Icon name="check" />}
-              disabled={laeuft}
-              onClick={los}
-            />
+            <FensterKnopf disabled={laeuft} onClick={los}>
+              <Icon name="check" size={16} />
+              {laeuft ? 'Wird eingerichtet …' : 'Einrichten'}
+            </FensterKnopf>
           </div>
           {fehler && <FehlerKasten fehler={fehler} onNochmal={los} />}
         </>

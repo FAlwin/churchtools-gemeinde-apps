@@ -45,14 +45,7 @@ function Seite({ anfang = null }: { anfang?: Zugang | null }) {
   const [g, setG] = useState<Zugang | null>(anfang);
   gesendet = g;
   return (
-    <Technik
-      start={START}
-      kategorie={77}
-      gesendet={g}
-      onGesendet={setG}
-      onGeaendert={geaendert}
-      onEinstellungen={() => undefined}
-    />
+    <Technik start={START} kategorie={77} gesendet={g} onGesendet={setG} onGeaendert={geaendert} />
   );
 }
 
@@ -152,6 +145,15 @@ describe('Technik', () => {
     expect(nachher).not.toBe(vorher);
     expect(nachher!.src).toBe(senderLink(z));
     expect(speichern).not.toHaveBeenCalled();
+  });
+
+  it('„Wer hört zu?“ steht als eigene Karte neben „Übertragung“ – nur, solange der Sender hier läuft', async () => {
+    const z = laeuft();
+    await zeigen(z);
+    expect(screen.queryByRole('region', { name: 'Wer hört zu?' })).toBeNull();
+    await tippen(/Sender hier starten/);
+    const karte = screen.getByRole('region', { name: 'Wer hört zu?' });
+    expect(screen.getByRole('region', { name: 'Übertragung' }).contains(karte)).toBe(false);
   });
 
   it('„Sender neu starten“ beginnt „Wer hört zu?“ leer – die Zuhörer melden sich beim neuen Sender neu an', async () => {

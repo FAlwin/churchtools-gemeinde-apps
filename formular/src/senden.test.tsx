@@ -55,6 +55,7 @@ beforeEach(() => {
     'GET /instanzen.json': [{ status: 200, body: ['test.church.tools'] }],
     'GET /api/publicgroups/66': [{ status: 200, body: { data: GRUPPE } }],
     'GET /api/info': [{ status: 200, body: { siteName: 'Gemeinde Test' } }],
+    'GET /api/config': [{ status: 200, body: { timezone: 'Europe/Berlin' } }],
     'POST /api/publicgroups/66/token': [{ status: 200, body: { data: { token: 'T1' } } }],
     'GET /api/publicgroups/66/form': [{ status: 200, body: { data: { token: 'T1', ...FORM } } }],
     'POST /api/publicgroups/66/signup': [
@@ -121,9 +122,10 @@ describe('Echt anmelden (A6-2)', () => {
   it('Token → Formular → Anmeldung, ohne Login; nur die Teilnehmenden, Kontakt bei der ersten Person', async () => {
     await ausfuellenUndAbschicken();
     expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
-    // Ohne den einen Abruf der Liste erlaubter Instanzen (#843, nur beim ersten Laden) und die zwei Ladeaufrufe.
+    // Ohne den einen Abruf der Liste erlaubter Instanzen (#843, nur beim ersten Laden) und die drei Ladeaufrufe
+    // (Gruppe, Name, Zeitzone #847).
     const anCt = aufrufe.filter((a) => a.pfad !== '/instanzen.json');
-    expect(anCt.map((a) => `${a.methode} ${a.pfad}`).slice(2)).toEqual([
+    expect(anCt.map((a) => `${a.methode} ${a.pfad}`).slice(3)).toEqual([
       // #602/A6-5a: zuerst frisch nachsehen, wer einen Platz bekommt (Betrag), für die erste Person gleich mitbenutzt.
       'GET /api/publicgroups/66',
       'POST /api/publicgroups/66/token',

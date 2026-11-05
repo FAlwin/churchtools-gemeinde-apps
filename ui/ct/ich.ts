@@ -11,6 +11,7 @@ import { ApiError } from './fehler';
 import { whoamiId } from '@shared/ct/whoami';
 import type { RohMitgliedschaft } from '@shared/ct/gruppen';
 import { gemeindeNameAus } from '@shared/ct/info';
+import { merkeGemeindeZeitzone } from '@shared/ct/zeit';
 
 export interface Ich {
   id: number;
@@ -53,6 +54,9 @@ export async function ladeIch(): Promise<Ich> {
     ctDaten<RohMitgliedschaft[] | null>(`/persons/${id}/groups`),
     ctDaten<{ id?: unknown; isLeader?: unknown }[] | null>('/group/roles'),
     ctAnfrage<unknown>('/info').then(gemeindeNameAus, () => null),
+    // Die Zeitzone der Gemeinde für „heute“ und alle Uhrzeiten (#847) – hier, weil jede Erweiterung so startet.
+    // Beiwerk wie der Name: Antwortet ChurchTools nicht, bleibt die des Geräts.
+    ctAnfrage<unknown>('/config').then(merkeGemeindeZeitzone, () => undefined),
   ]);
   if (!Array.isArray(mitgliedschaften) || !Array.isArray(rollen)) {
     throw new ApiError(502, 'ChurchTools hat die Gruppen nicht vollständig geliefert.');

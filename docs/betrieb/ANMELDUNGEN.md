@@ -235,7 +235,7 @@ nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erwei
 **Ältere Veranstaltungen** (A9-5): Wer vor A9 freigegeben hat, hat keine Abläufe – ChurchTools schickt seine
 Standard-Mail und **löscht die Anmeldungen nie**. Die Karte „Mails“ sagt das und bietet **„Jetzt einrichten“**; die
 Startseite zeigt allen in der Gruppe „…: Mails und Löschen einrichten“ (vergangene nur, solange noch jemand angemeldet
-ist). Den Knopf hat, wer Routinen verwalten darf; alle anderen lesen, wer es kann. Die Rückfrage nennt, was sich
+ist; ab drei stehen sie zusammen in einer Zeile, „Anzeigen“ klappt sie auf). Den Knopf hat, wer Routinen verwalten darf; alle anderen lesen, wer es kann. Die Rückfrage nennt die Veranstaltung und, was sich
 ändert: Ab jetzt kommt die Bestätigung mit Betrag, Bankdaten und Link; **die schon Angemeldeten bekommen keine neue
 Mail**, für sie gelten aber Erinnerung und Löschdatum. Absender ist, wer einrichtet (wenn Leitung), sonst die erste
 Leitung. Ist das Löschdatum schon vorbei und noch jemand da, fragt erst „Sofort löschen?“. Dasselbe gilt für jede

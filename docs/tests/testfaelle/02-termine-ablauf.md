@@ -596,3 +596,32 @@ kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 - **Historie:** E8-1 (05.11.2026, Entwurf `e8-teilen.html` Version 5)
 
 </details>
+
+### TF-ABLAUF-23 · Plan teilen: ganzer Plan, eine Gruppe, „Wir suchen noch …“
+
+**Das brauchst du:** „Planen“ mit mehreren Terminen und mindestens zwei Dienstgruppen, darunter freie und angefragte
+Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
+
+**Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, je Gruppe oder
+als Liste der offenen Dienste ohne Namen.
+
+1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit **Ganzer Plan**, **Nur
+   <Gruppe>** je eingeblendeter Gruppe und **Wir suchen noch …**; darunter Zeitraum und Zahl der Termine – dieselben wie
+   im Zeitraum-Knopf.
+2. **Ganzer Plan** → Vorschau: je Gruppe ein graues Band und eine Tabelle (Termin, dann die Dienste); Namen, angefragte
+   mit „(angefragt)“, freie Plätze rot „frei“; keine Spalte für einen Dienst, der an keinem Termin vorgesehen ist.
+3. **Nur <Gruppe>** → Titel „Dienstplan <Gruppe>“, nur diese Tabelle. Fenster schließen und neu öffnen → die Wahl ist
+   noch da. Die Gruppe im Filter ausblenden, neu öffnen → „Ganzer Plan“ ist gewählt.
+4. **Wir suchen noch …** → nur Termine mit freien Plätzen, „Gesucht: Ton, Gesang ×2“, keine Namen; abgesagte Termine
+   fehlen; ist alles besetzt, steht das da.
+5. Viele Termine → mehrere Seiten, auf jeder Kopf, Tabellenkopf und „Seite x von y“; ab sechs Spalten quer.
+6. **Herunterladen** → „Dienstplan <Gruppe> TT.MM.-TT.MM.JJJJ.pdf“; **Teilen** → Teilen-Menü.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, „Wir suchen noch“ ohne Namen und ohne Abgesagte, keine leeren Spalten, quer), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Wahl, gemerkt, ausgeblendete Gruppe, verborgene Namen); von Hand bleiben Aussehen und Teilen-Menü am Gerät
+- **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`)
+
+</details>

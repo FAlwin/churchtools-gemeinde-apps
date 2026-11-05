@@ -25,6 +25,8 @@ export const SESSION_SECRET_MIN_LAENGE = 32;
  */
 const VERBOTENE_GEHEIMNISSE = new Set([
   'bitte-langen-zufallsstring-eintragen',
+  // Der frühere Platzhalter der Vorlage (bis 2026) – steht in alten `.env`-Kopien noch (#849).
+  'hier-langen-zufallsstring-eintragen',
   'dev-only-insecure-secret',
   'change-me',
   'changeme',

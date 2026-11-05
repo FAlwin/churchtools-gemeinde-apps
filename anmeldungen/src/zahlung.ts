@@ -4,10 +4,10 @@
  * `{fields: {<Nummer>: Wert}}` ändert nur die geschickten Felder, keine Mail. **Jeder Schreibschritt wird nachgelesen**
  * – ein 200 beweist nichts (`NichtUebernommen`).
  */
-import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import { euroText } from '@shared/anmeldung/preis';
 import { aufschluesselungMitHand } from '@shared/anmeldung/zahlung';
 import { NichtUebernommen, einstellungenVon, systemfelderNachziehen } from './einrichten';
+import { mitgliedAendern, mitgliedLesen } from '@ui/ct/mitglieder';
 
 interface MitgliedFelder {
   fields?: { id?: unknown; value?: unknown }[];
@@ -20,11 +20,8 @@ export async function felderSchreiben(
   felder: Record<number, string | boolean | null>,
   was: string,
 ): Promise<void> {
-  await ctAnfrage(`/groups/${id}/members/${personId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ fields: felder }),
-  });
-  const m = await ctDaten<MitgliedFelder>(`/groups/${id}/members/${personId}`);
+  await mitgliedAendern(id, personId, { fields: felder });
+  const m = await mitgliedLesen<MitgliedFelder>(id, personId);
   const steht = new Map((m.fields ?? []).map((f) => [Number(f.id), f.value]));
   for (const [feld, soll] of Object.entries(felder)) {
     const ist = steht.get(Number(feld));

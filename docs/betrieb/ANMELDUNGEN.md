@@ -240,7 +240,9 @@ ist; ab drei stehen sie zusammen in einer Zeile, „Anzeigen“ klappt sie auf).
 Mail**, für sie gelten aber Erinnerung und Löschdatum. Absender ist, wer einrichtet (wenn Leitung), sonst die erste
 Leitung. Ist das Löschdatum schon vorbei und noch jemand da, fragt erst „Sofort löschen?“. Dasselbe gilt für jede
 Veranstaltung, deren Abläufe aus sind. Auch beim gewöhnlichen Einrichten holt die Erweiterung jetzt Personen nach, die
-vor den Abläufen angemeldet waren – sonst würden sie nie gelöscht (gemessen 05.11.2026).
+vor den Abläufen angemeldet waren – sonst würden sie nie gelöscht (gemessen 05.11.2026). Das geschieht erst, wenn die Veranstaltung
+freigegeben ist: Im Entwurf laufen Abläufe nicht, und die nachgeholten Läufe liefen sonst beim Freigeben über die
+Bestätigung (gefunden bei der echten Prüfung am 05.11.2026).
 
 **Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung**,
 **Warteliste** und **Erinnerung** (A9-3b, siehe unten) – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der
@@ -388,6 +390,16 @@ Die Erweiterung bietet beim Anlegen genau diese Kalender an. Fehlt das Recht, me
 
 In **vorhandene** Termine trägt die Erweiterung nichts ein (ChurchTools ersetzt einen Termin beim Ändern
 ganz – Räume, Dienste oder Bild gingen verloren); dort steht „Link zur Anmeldung kopieren“.
+
+**Termin im Kalender verschoben** (K1): Datum und Ort sind eine Kopie. Öffnet jemand mit Bearbeiten-Recht die
+Veranstaltung, liest die Erweiterung den Termin im Kalender nach und übernimmt einen neuen Tag, eine neue Uhrzeit, einen
+neuen Ort oder Kalender – Formular, Löschdatum und Erinnerungen ziehen mit. Oben auf der Seite steht dann, was vorher
+galt und was jetzt gilt, und dass die Angemeldeten es noch nicht wissen („Rundmail schreiben“ öffnet die Rundmail;
+verschickt wird nur, was ihr schreibt). Den Hinweis sieht jede Person einmal („Verstanden“, gemerkt je Gerät). Ist der
+Termin im Kalender gelöscht – oder bei einer Serie genau diese Wiederholung verschoben oder abgesagt (ChurchTools macht
+daraus einen neuen, fremden Termin) –, bleibt das Datum stehen und die Karte „Termin“ bittet, ihn neu zu wählen.
+Antwortet ChurchTools gerade nicht, ändert sich nichts. Hinweis: Im Kalender von ChurchTools ist beim Bearbeiten „Alle
+Infos auch per E-Mail zustellen“ schon angehakt.
 
 ### 5. Den Menüpunkt sehen
 

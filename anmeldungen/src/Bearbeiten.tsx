@@ -19,8 +19,10 @@ import {
 import { zahlartenFuer } from '@shared/anmeldung/zahlung';
 import {
   anmeldeLink,
+  mitGewaehltemTermin,
   ortszeitAus,
   terminAusCt,
+  terminWann,
   utcAus,
   type CtTermin,
 } from '@shared/anmeldung/termin';
@@ -199,10 +201,9 @@ export function TerminFenster({
                   link: formularAdresse ? anmeldeLink(formularAdresse, ctBasis(), id) : null,
                   zeitzone,
                 });
-                await aendereEinstellungen(id, (e) => ({
-                  ...e,
-                  termin: terminAusCt(termin, zeitzone, kalenderId),
-                }));
+                await aendereEinstellungen(id, (e) =>
+                  mitGewaehltemTermin(e, terminAusCt(termin, zeitzone, kalenderId)),
+                );
               })
             }
           >
@@ -269,12 +270,12 @@ export function TerminFenster({
                       className={f.option}
                       disabled={arbeitet}
                       onClick={() =>
-                        speichern(() => aendereEinstellungen(id, (e) => ({ ...e, termin: k })))
+                        speichern(() => aendereEinstellungen(id, (e) => mitGewaehltemTermin(e, k)))
                       }
                     >
                       {t.title}
                       <small>
-                        {datumText(k.beginn.slice(0, 10))}, {k.beginn.slice(11)} Uhr
+                        {terminWann({ beginn: k.beginn, ende: null })}
                         {k.ort ? ` · ${k.ort}` : ''}
                       </small>
                     </button>

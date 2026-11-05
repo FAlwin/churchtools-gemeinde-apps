@@ -9,6 +9,7 @@
  * jeder mit Schreibrecht an der Kategorie ändern kann.
  */
 import { z } from 'zod';
+import { sichererLink } from './sichereAdresse';
 import { DEFAULT_SITE_CONFIG, SITE_CONFIG_GRENZEN, type SiteConfig } from '../types/index';
 
 /** Nur echte Web-Links zulassen – verhindert `javascript:`/`data:`-XSS in gerenderten Links. */
@@ -19,7 +20,7 @@ const linkSchema = z.object({
     .string()
     .trim()
     .max(SITE_CONFIG_GRENZEN.linkUrl)
-    .refine((u) => /^https?:\/\//i.test(u), 'Nur http(s)-Adressen sind erlaubt.'),
+    .refine((u) => sichererLink(u) !== null, 'Nur http(s)-Adressen sind erlaubt.'),
   showOnLogin: z.boolean(),
 });
 

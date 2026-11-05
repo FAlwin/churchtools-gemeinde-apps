@@ -1282,6 +1282,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   - `server/src/services/jsonStore.ts` – Lesen/Schreiben ALLER JSON-Ablagen. Nur `ENOENT` heißt „leer".
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
   - `client/src/services/schreibSchlange.ts` – die Speicher-Warteschlange selbst (Anmerkungen UND Einstellungen, #846).
+  - `shared/ct/sichereAdresse.ts` – `sichererLink` (nur http(s), auf Wunsch mailto) und `adresseInInstanz` für JEDE
+    Adresse aus ChurchTools-Daten in `href`/`src` (#849; React blockt `javascript:` nicht). ESLint sperrt geschriebene
+    `javascript:`-Adressen.
+  - `server/src/middleware/apiEingang.ts` `nurEigeneSeite` – schreibende Anfragen nur mit `Sec-Fetch-Site: same-origin`
+    (#849; SameSite=Lax lässt andere `*.ecg-donrath.de`-Seiten durch). Fehlt der Kopf, bleibt es beim alten Verhalten.
+  - `ui/ct/mitglieder.ts` – eine Mitgliedschaft lesen/anlegen/ändern/entfernen (#848): anlegen nur `PUT` + `only_add`,
+    ändern nur `PATCH` (PUT-Ändern löscht Kommentar/Enddatum, #759), 404 = nicht dabei. Wächter
+    `ui/design/eineMitgliedschaft.test.ts`: niemand sonst baut `/groups/${g}/members/${p}`.
   - `shared/ct/zeit.ts` `gemeindeZeitzone`/`heuteImKalender` – Zeitzone der Gemeinde aus `/api/config` und „heute“ (#847,
     Entscheidung in `docs/entwicklung/entscheidungen.md`). Nie `Intl…timeZone`, `'Europe/Berlin'` oder `toLocaleString` ohne Zeitzone danebenschreiben – Anzeigen über `uhrText`/`datumUhrText`; der Wächter `ui/design/eineZeitzone.test.ts` hält das fest.
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.

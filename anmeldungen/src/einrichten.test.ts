@@ -40,6 +40,7 @@ import {
   darfEndgueltigLoeschen,
   setzeStatus,
   teamVon,
+  terminNachziehen,
   umbenennen,
   verschieben,
   wiederherstellen,
@@ -53,6 +54,7 @@ import {
   feldTypAendern,
 } from './formularFelder';
 import type { Feld } from '@shared/anmeldung/formular';
+import { terminAusCt } from '@shared/anmeldung/termin';
 import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 import { LOGO_KENNUNG } from '@shared/anmeldung/uebersicht';
 
@@ -82,6 +84,8 @@ let loeschRecht: boolean;
 /** Neue Spalten: liefert `true` → ChurchTools legt sie mit anderem Namen an (nicht übernommen, A6-2b). */
 let schluckeNach: (() => boolean) | null = null;
 let termine: Map<number, Record<string, unknown>>;
+/** ChurchTools antwortet beim Lesen eines Termins nicht (502). */
+let terminFehler: boolean;
 let aufrufe: string[];
 /** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
 interface Mitglied {
@@ -338,10 +342,25 @@ function ct() {
       return json(201, { data: { id } });
     }
     r = /^\/calendars\/(\d+)\/appointments\/(\d+)$/.exec(pfad);
-    if (r)
+    if (r) {
+      // Gemessen 05.11.2026: einzeln `data.appointment` (Ort als `address.name`, Kalender am Termin) – über jeden
+      // Kalender-Pfad; gelöscht → 404 „not found“.
+      if (terminFehler) return json(502, { message: 'Bad Gateway' });
+      const t = termine.get(Number(r[2]));
+      if (!t) return json(404, { message: `appointment [${r[2]}] not found.` });
+      const { address, calendarId, ...rest } = t;
+      const ort = (address as { meetingAt?: string } | null | undefined)?.meetingAt ?? null;
       return json(200, {
-        data: { appointment: { base: { id: Number(r[2]), ...termine.get(Number(r[2])) } } },
+        data: {
+          appointment: {
+            id: Number(r[2]),
+            ...rest,
+            address: address ? { name: ort, city: null } : null,
+            calendar: { id: calendarId },
+          },
+        },
       });
+    }
     return json(404, { message: `nicht nachgestellt: ${m} ${pfad}` });
   });
 }
@@ -355,6 +374,7 @@ beforeEach(() => {
   loeschRecht = true;
   schluckeNach = null;
   termine = new Map();
+  terminFehler = false;
   aufrufe = [];
   mitglieder = new Map();
   naechsteOption = 1;
@@ -437,12 +457,18 @@ describe('kopiereVeranstaltung', () => {
     await aendereEinstellungen(quelle, (x) => ({
       ...mitSpaltenWahl(x, 'anmeldung', spalten),
       termin: { beginn: '2026-11-15T12:00', ende: null, ort: 'Saal', terminId: 5 },
+      // K1: „im Kalender verschoben“ gehört zur Vorlage, nicht zur Kopie.
+      terminVerschoben: {
+        vorher: { beginn: '2026-11-14T12:00', ende: null, ort: 'Saal' },
+        am: '2026-11-05T12:00:00.000Z',
+      },
       druck: { spalten: ['alter'], sortierung: 'alter' },
     }));
     expect(einstellungenLesen(g.note)?.termin).not.toBeNull();
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
     expect(k.termin).toBeNull();
+    expect(k.terminVerschoben).toBeUndefined();
     expect(k.tabelle).toEqual({ anmeldung: spalten });
     expect(k.druck).toEqual({ spalten: ['alter'], sortierung: 'alter' });
     // A9-2a: Die Kopie merkt sich die Vorlage – deren eigener Mailtext steht in Routinen, die nicht mitkopiert werden.
@@ -1429,5 +1455,88 @@ describe('Anmelden vorbereiten (A6-2, #548)', () => {
       { personId: 4, name: 'Bea Team', leitung: false },
       { personId: 1, name: 'P1 Test', leitung: true },
     ]);
+  });
+});
+
+describe('Termin aus dem Kalender nachziehen (K1, gemessen 05.11.2026)', () => {
+  const ZONE = 'Europe/Berlin';
+  /** Veranstaltung mit einem Termin aus dem Kalender – gewählt, wie das Termin-Fenster es macht (`terminAusCt`). */
+  async function mitTermin() {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const t = await legeTerminAn({
+      kalenderId: 1,
+      titel: 'X',
+      beginn: '2026-11-20T10:00',
+      ende: '2026-11-20T12:00',
+      ort: 'Saal A',
+      link: null,
+      zeitzone: ZONE,
+    });
+    await aendereEinstellungen(id, (x) => ({ ...x, termin: terminAusCt(t, ZONE, 1) }));
+    return { id, terminId: t.id };
+  }
+  const imKalender = (terminId: number, x: Record<string, unknown>) =>
+    termine.set(terminId, { ...termine.get(terminId), ...x });
+  const notizen = () => aufrufe.filter((a) => a.endsWith('[note]')).length;
+
+  it('verschoben (Tag, Uhrzeit, Ort): übernommen – der Stand von vorher bleibt für den Hinweis', async () => {
+    const { id, terminId } = await mitTermin();
+    imKalender(terminId, {
+      startDate: '2026-11-21T14:00:00Z',
+      endDate: '2026-11-21T16:00:00Z',
+      address: { meetingAt: 'Saal B' },
+    });
+    const r = await terminNachziehen(id, ZONE);
+    expect(r?.vergleich).toMatchObject({ art: 'geaendert', sichtbar: true });
+    const e = await einstellungenVon(id);
+    expect(e.termin).toMatchObject({
+      beginn: '2026-11-21T15:00',
+      ende: '2026-11-21T17:00',
+      ort: 'Saal B',
+    });
+    expect(e.terminVerschoben?.vorher).toEqual({
+      beginn: '2026-11-20T10:00',
+      ende: '2026-11-20T12:00',
+      ort: 'Saal A',
+    });
+    expect(r?.einstellungen).toEqual(e);
+  });
+
+  it('unverändert: nichts geschrieben', async () => {
+    const { id } = await mitTermin();
+    const vorher = notizen();
+    expect((await terminNachziehen(id, ZONE))?.vergleich).toEqual({ art: 'gleich' });
+    expect(notizen()).toBe(vorher);
+  });
+
+  it('nur in einen anderen Kalender gelegt: still nachgezogen, ohne Hinweis', async () => {
+    const { id, terminId } = await mitTermin();
+    imKalender(terminId, { calendarId: 3 });
+    expect((await terminNachziehen(id, ZONE))?.vergleich).toMatchObject({ sichtbar: false });
+    const e = await einstellungenVon(id);
+    expect(e.termin?.kalenderId).toBe(3);
+    expect(e.terminVerschoben).toBeUndefined();
+  });
+
+  it('im Kalender gelöscht (404): „weg“, das Datum bleibt, nichts geschrieben', async () => {
+    const { id, terminId } = await mitTermin();
+    termine.delete(terminId);
+    const vorher = notizen();
+    expect((await terminNachziehen(id, ZONE))?.vergleich).toEqual({ art: 'weg' });
+    expect((await einstellungenVon(id)).termin?.beginn).toBe('2026-11-20T10:00');
+    expect(notizen()).toBe(vorher);
+  });
+
+  it('ChurchTools antwortet nicht (502): Fehler, nichts geschrieben – vorübergehend ist nicht „gelöscht“', async () => {
+    const { id } = await mitTermin();
+    terminFehler = true;
+    const vorher = notizen();
+    await expect(terminNachziehen(id, ZONE)).rejects.toMatchObject({ status: 502 });
+    expect(notizen()).toBe(vorher);
+  });
+
+  it('ohne Termin aus dem Kalender: nichts zu tun', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    expect(await terminNachziehen(id, ZONE)).toBeNull();
   });
 });

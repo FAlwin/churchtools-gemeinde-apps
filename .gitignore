@@ -50,3 +50,9 @@ shared/types/*.js
 
 # Liste der Instanzen fürs öffentliche Formular (#843) – nur auf dem Webspace der Gemeinde, nie im Paket.
 formular/public/instanzen.json
+
+# Sicherheitsnetz für echte Namen (#849): Entwürfe mit echten Daten liegen bewusst außerhalb des Repos
+# (z. B. `organigramm-planung/entwurf/daten.local.js`). Landet so eine Datei doch einmal hier, wird sie nie eingecheckt.
+*.local.js
+fotos.local/
+rohdaten.local/

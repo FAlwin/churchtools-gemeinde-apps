@@ -47,6 +47,11 @@
   gap: 16px;
 }
 
+// Schmale Seite (`schmal`): eine Spalte Karten von 640 px plus Rand, in der Mitte (Gebetsabend).
+.schmal {
+  max-width: 672px;
+}
+
 .kopf {
   display: flex;
   flex-direction: column;

@@ -7,6 +7,8 @@
   Dazu **„Sender neu starten“** und **„Übertragung beenden“** (mit Rückfrage). Auf dem Gerät, das sendet, gibt es kein
   Zuhören – der Ton liefe sonst wieder ins Mikrofon. Unter dem **Zahnrad** stellt die Technik ein, aus welchem
   Kalender der nächste Termin kommt und an welchem Wort im Titel er erkannt wird.
+- **Die Seite steht in der Mitte.** Am Computer hingen die Karten links mit leerer Fläche rechts; jetzt stehen Kopf,
+  Karten und Version schmal und mittig untereinander.
 
 ### Intern (Gebetsabend)
 
@@ -18,3 +20,6 @@
 - Regeln der Technik ohne Oberfläche in `shared/gebetsabend/technik.ts` (Stand „aus / hier / woanders“, wann der
   Sender aufhört, Texte). Die Zustandszeile mit Punkt ist ein Baustein für Zuhören und Technik (`ZustandZeile`).
   Gegenprobe je Teil (12 Teile), Komponenten-Tests mit Fake-Timern.
+- `ErweiterungsSeite` kann `schmal` (eine Spalte in der Mitte, 640 px Inhalt) – nur der Gebetsabend schaltet es ein,
+  die anderen Erweiterungen bleiben bei 1120 px. Die Breite 640 px stand vorher an drei Stellen im Gebetsabend und
+  steht jetzt nur noch dort.

@@ -1,7 +1,7 @@
-// Die Spalte der Seite (Bauplan Gebetsabend G2): Technik, Termin, Zuhören untereinander – so schmal wie die Karten.
+// Die Spalte der Seite (Bauplan Gebetsabend G2): Technik, Termin, Zuhören untereinander. Breit ist sie wie die Seite
+// (`ErweiterungsSeite schmal`) – die Breite steht nur dort.
 .spalte {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 640px;
 }

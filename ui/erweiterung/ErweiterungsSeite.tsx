@@ -19,13 +19,16 @@ export type SeitenZustand =
 export function ErweiterungsRahmen({
   children,
   unten,
+  schmal = false,
 }: {
   children?: ReactNode;
   unten?: ReactNode;
+  /** Schmale Seite in der Mitte statt 1120 px (siehe `ErweiterungsSeite`). */
+  schmal?: boolean;
 }) {
   const rolle = (
     <div className={styles.rolle}>
-      <main className={styles.seite}>
+      <main className={schmal ? `${styles.seite} ${styles.schmal}` : styles.seite}>
         {children}
         <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
       </main>
@@ -84,6 +87,12 @@ interface Props {
   gruss?: boolean;
   /** Unter dem Rollbereich, z. B. die Reiterleiste am Handy (siehe `ErweiterungsRahmen`). */
   unten?: ReactNode;
+  /**
+   * **Schmale Seite in der Mitte** – für Erweiterungen mit nur einer Spalte Karten (Gebetsabend, Alwin 05.11.2026: „kann
+   * der Screen mittig kommen?“). Ohne die Angabe 1120 px wie bisher; dort hingen schmale Karten links mit leerer Fläche
+   * rechts. Kopf, Inhalt und Version bleiben bündig untereinander.
+   */
+  schmal?: boolean;
   /** „Erneut versuchen“ – erscheint nur, wenn der Fehler vorübergehend ist (`fehlerMeldung`). */
   onNochmal: () => void;
   /** Der Inhalt – nur bei `fertig`. */
@@ -103,6 +112,7 @@ export function ErweiterungsSeite({
   reiter,
   gruss = true,
   unten,
+  schmal = false,
   onNochmal,
   children,
 }: Props) {
@@ -113,7 +123,7 @@ export function ErweiterungsSeite({
     </p>
   );
   return (
-    <ErweiterungsRahmen unten={unten}>
+    <ErweiterungsRahmen unten={unten} schmal={schmal}>
       <header className={styles.kopf}>
         {reiter ? (
           <div className={styles.appzeile}>

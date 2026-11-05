@@ -47,7 +47,7 @@ export function App() {
     zugang !== null &&
     einrichtungsStand(start.einrichtung, start.darfAnlegen) === 'fertig';
   return (
-    <ErweiterungsSeite app="Gebetsabend" zustand={zustand} onNochmal={laden}>
+    <ErweiterungsSeite app="Gebetsabend" zustand={zustand} onNochmal={laden} schmal>
       {start && !fertig && <Einrichtung start={start} onEingerichtet={laden} />}
       {start && fertig && zugang !== null && (
         <div className={styles.spalte}>

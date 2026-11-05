@@ -120,6 +120,8 @@ let schlussSchlucken: boolean;
 let offenBeimLoeschen: string[];
 /** A9-5: Wer schon vor den Routinen angemeldet war (ältere Veranstaltung) – je Person ihr Status in der Gruppe. */
 let vorherAngemeldet: { person: string; status: 'active' | 'waiting' }[];
+/** Status der Gruppe: 1 freigegeben, 2 Entwurf (dort laufen Routinen nicht – echte Prüfung #866, 05.11.2026). */
+let gruppenStatus: number;
 
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
@@ -167,6 +169,7 @@ beforeEach(() => {
   schlussSchlucken = false;
   offenBeimLoeschen = [];
   vorherAngemeldet = [];
+  gruppenStatus = 1;
   ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
     const m = /^\/routines\/(\d+)\/runs(\?with_potential_domain_objects=true)?$/.exec(pfad);
     if (!m) throw new Error(`unerwartet: ${pfad}`);
@@ -183,6 +186,7 @@ beforeEach(() => {
     if (pfad === '/groups/165')
       return {
         name: 'Kinderfreizeit',
+        information: { groupStatusId: gruppenStatus },
         settings: {
           sendDefaultSignUpMail: standardMail,
           qrCodeCheckin: checkin,
@@ -1230,6 +1234,24 @@ describe('Ältere Veranstaltungen (A9-5)', () => {
     mitTermin([14, 30]); // 30 Tage → 16.10. (vorbei), 14 Tage → 01.11.
     await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
     expect(wo('Ada')).toBe('waiting 2026-11-01');
+    expect(mailsAnLaeufe).toEqual([]);
+  });
+
+  it('im Entwurf kein Neustart – erst freigegeben (sonst liefen die Läufe beim Freigeben mit der Bestätigung los)', async () => {
+    vorherAngemeldet = [
+      { person: 'Ada', status: 'active' },
+      { person: 'Ben', status: 'waiting' },
+    ];
+    mitTermin();
+    gruppenStatus = 2;
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(routinenPatches.some((b) => 'restart' in b)).toBe(false);
+    expect(wo('Ada')).toBe('not-started –');
+    // Nach dem Freigeben richtet das Fenster noch einmal ein – jetzt ohne Mail ins Warten.
+    gruppenStatus = 1;
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(wo('Ada')).toBe('waiting 2027-02-15');
+    expect(wo('Ben')).toBe('waiting 2027-02-15');
     expect(mailsAnLaeufe).toEqual([]);
   });
 

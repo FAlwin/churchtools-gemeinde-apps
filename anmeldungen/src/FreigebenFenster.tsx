@@ -101,12 +101,15 @@ export function FreigebenFenster({
     try {
       await anmeldenVorbereiten(id, [...gewaehlt], vorgaben);
       const mails = await darfAblaeufeEinrichten(id);
+      const absender = absenderAus(gewaehlt, ich);
       if (mails)
-        await ablaeufeEinrichten(id, absenderAus(gewaehlt, ich), undefined, undefined, {
-          loeschenBestaetigt,
-        });
+        await ablaeufeEinrichten(id, absender, undefined, undefined, { loeschenBestaetigt });
       await pflichtNachziehen(id);
       await freigeben(id);
+      // Schon Angemeldete (Freigabe zurückgenommen, ältere Veranstaltung) erst jetzt nachholen: Im Entwurf liefen ihre Läufe
+      // nicht los – und beim Freigeben dann über die wieder eingeschaltete Bestätigung (echte Prüfung #866, 05.11.2026).
+      if (mails)
+        await ablaeufeEinrichten(id, absender, undefined, undefined, { loeschenBestaetigt });
       const offen = await anmeldeBedingungen(id);
       if (offen.length === 0) {
         onFreigegeben(

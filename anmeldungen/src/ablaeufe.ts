@@ -51,6 +51,7 @@ import {
 } from '@shared/anmeldung/ablaeufe';
 import { loeschDatum } from '@shared/anmeldung/termin';
 import {
+  STATUS,
   anmeldungenIn,
   leitungsKandidaten,
   meineId,
@@ -78,6 +79,7 @@ interface SchrittRoh {
 /** Was die Erweiterung an den Einstellungen der Gruppe liest. */
 interface GruppeRoh {
   name: string;
+  information?: { groupStatusId?: number };
   settings?: {
     sendDefaultSignUpMail?: boolean;
     qrCodeCheckin?: boolean;
@@ -448,7 +450,10 @@ export async function ablaeufeEinrichten(
       )
     )
       throw new NichtUebernommen('den Ablauf „' + r.name + '“');
-    if (datum !== null)
+    // Nur in einer freigegebenen Gruppe: Im Entwurf laufen Routinen nicht – neu gestartete Läufe blieben am Anfang stehen
+    // und liefen beim Freigeben über die längst wieder eingeschaltete Bestätigung (echte Prüfung #866, 05.11.2026: zwei
+    // Mails). Das Freigeben richtet darum nach dem Statuswechsel noch einmal ein (`FreigebenFenster`).
+    if (datum !== null && g.information?.groupStatusId === STATUS.freigegeben)
       await nachstarten(routineId, mail, absenderId, nachher.steps ?? [], datum, er, heute);
   }
 

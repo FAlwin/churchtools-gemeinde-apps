@@ -313,6 +313,13 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(ab.ablaeufeEinrichten.mock.invocationCallOrder[0]).toBeLessThan(
       m.freigeben.mock.invocationCallOrder[0],
     );
+    // Echte Prüfung #866: Im Entwurf laufen Routinen nicht – schon Angemeldete holt erst das zweite Einrichten NACH dem
+    // Freigeben nach (sonst liefen sie beim Freigeben über die Bestätigung).
+    await waitFor(() => expect(ab.ablaeufeEinrichten).toHaveBeenCalledTimes(2));
+    expect(ab.ablaeufeEinrichten.mock.invocationCallOrder[1]).toBeGreaterThan(
+      m.freigeben.mock.invocationCallOrder[0],
+    );
+    expect(ab.ablaeufeEinrichten.mock.calls[1]).toEqual(ab.ablaeufeEinrichten.mock.calls[0]);
     // #597: vor dem Freigeben „Pflicht“ von den Spalten der Anmeldung nehmen.
     expect(ff.pflichtNachziehen).toHaveBeenCalledWith(91);
     expect(ff.pflichtNachziehen.mock.invocationCallOrder[0]).toBeLessThan(

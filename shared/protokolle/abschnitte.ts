@@ -5,7 +5,9 @@
  *
  * Entschieden 28.10.2026 (Alwin):
  * - Eine **Überschrift nimmt ihren Abschnitt mit** – alles bis zur nächsten Überschrift gleicher oder höherer Stufe
- *   (Überschrift 1 = Tagesordnungspunkt bis zum nächsten Tagesordnungspunkt; 2 und 3 nach derselben Regel).
+ *   (Tagesordnungspunkt bis zum nächsten Tagesordnungspunkt; Unterpunkte und „Überschrift“ nach derselben Regel).
+ *   Seit K3b zählt der Rang, nicht die gespeicherte Stufe: Punkt › Unterpunkt 4.1 › … › 4.1.1.1.1 › „Überschrift“ –
+ *   eine „Überschrift“ (Stufe 3) zerschneidet also nie einen Unterpunkt 4.1.1 (Stufe 4).
  * - **Abgelegt wird nur an Abschnittsgrenzen:** Fällt ein Abschnitt mitten in einen anderen, rückt er an die nächste
  *   Grenze – ein anderer Punkt wird nie zerschnitten.
  * - **„Nach oben“ / „Nach unten“** springt um einen ganzen Abschnitt derselben Stufe, nie über die übergeordnete
@@ -13,13 +15,13 @@
  *
  * Stellen sind Einfügestellen in der Geschwisterliste: `p` heißt „vor dem Block an Index `p`“, `length` = ans Ende.
  */
-import type { Block } from './dokument';
+import { punktEbene, TIEFSTE_EBENE, type Block } from './dokument';
 
-/** Stufe einer Überschrift (1–3), sonst `null`. */
+/** Rang einer Überschrift (1 = Tagesordnungspunkt, 2–5 = Unterpunkt, 6 = „Überschrift“), sonst `null`. */
 export function ueberschriftStufe(b: Block | undefined): number | null {
   if (b?.type !== 'heading') return null;
-  const n = Number(b.props?.level ?? 1);
-  return Number.isFinite(n) ? n : 1;
+  const ebene = punktEbene(b);
+  return ebene === null ? TIEFSTE_EBENE + 2 : ebene + 1;
 }
 
 /** Ende (ausschließlich) des Abschnitts ab Index `start` – ohne Überschrift ist es nur der Block selbst. */

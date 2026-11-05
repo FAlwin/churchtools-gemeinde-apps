@@ -20,6 +20,8 @@ const beginnen = vi.mocked(B.protokollBeginnen);
 const t = (text: string) => [{ type: 'text', text, styles: {} }];
 const ALT_DOK: Block[] = [
   { id: 'p', type: 'heading', props: { level: 1 }, content: t('Finanzen'), children: [] },
+  // Ein Unterpunkt (K3b) gehört nicht in die Zeile „Tagesordnung vom …“ – dort stehen nur Tagesordnungspunkte.
+  { id: 'u', type: 'heading', props: { level: 2 }, content: t('Kasse'), children: [] },
   { id: 'x', type: 'paragraph', content: t('Notiz'), children: [] },
 ];
 const alt = teileBauen(ALT_DOK, 'okt');

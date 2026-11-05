@@ -5,7 +5,7 @@
  *
  * Lesen dürfen sie nur Nutzende **eingerichteter Gruppen** (Alwin, 22.10.2026), schreiben nur Admins (S2).
  */
-import { BLOCK, mitNeuenIds, textAus, type Block } from './dokument';
+import { BLOCK, mitNeuenIds, punktEbene, textAus, type Block } from './dokument';
 
 export interface Vorlage {
   art: 'vorlage';
@@ -125,10 +125,7 @@ export function startDokument(vorlage: Vorlage, neueId: () => string): Block[] {
  */
 export function wieLetztesMal(letztes: readonly Block[], neueId: () => string): Block[] {
   const behalten = letztes
-    .filter(
-      (b) =>
-        (b.type === 'heading' && Number(b.props?.level ?? 1) === 1) || b.type === BLOCK.verweis,
-    )
+    .filter((b) => punktEbene(b) === 0 || b.type === BLOCK.verweis)
     .map((b) => ({
       id: b.id,
       type: b.type,
@@ -164,8 +161,7 @@ export function alsFormular(v: Vorlage): VorlagenFormular {
     return f.punkte[f.punkte.length - 1];
   };
   for (const b of v.bloecke) {
-    if (b.type === 'heading' && Number(b.props?.level ?? 1) === 1)
-      f.punkte.push({ titel: textAus(b.content), text: '', verweis: null });
+    if (punktEbene(b) === 0) f.punkte.push({ titel: textAus(b.content), text: '', verweis: null });
     else if (b.type === 'paragraph') {
       const p = aktuell();
       const t = textAus(b.content);

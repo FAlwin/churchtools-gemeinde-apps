@@ -132,9 +132,9 @@ describe('Suche (S3-4b)', () => {
     await geladen('Alle Beschlüsse');
     expect(gedrueckt('Art')).toEqual(['Beschlüsse']);
     expect(liste()).toEqual([
-      '14OKTZweites Beamer-Angebot wird angenommen.BeschlussLeitungsteam · Leitungssitzung · 1. Technik',
-      '14OKTGemeindefreizeit im Hunsrück.BeschlussLeitungsteam · Leitungssitzung · 2. Freizeit',
-      '2OKTJugendraum wird gestrichen.BeschlussJugendleitung · Leitungssitzung · 1. Räume',
+      '14OKTZweites Beamer-Angebot wird angenommen.BeschlussLeitungsteam · Leitungssitzung · Punkt 1 · Technik',
+      '14OKTGemeindefreizeit im Hunsrück.BeschlussLeitungsteam · Leitungssitzung · Punkt 2 · Freizeit',
+      '2OKTJugendraum wird gestrichen.BeschlussJugendleitung · Leitungssitzung · Punkt 1 · Räume',
     ]);
     expect(m.ladeUebersicht).toHaveBeenCalledWith(24, GRUPPEN, expect.any(String));
   });
@@ -144,8 +144,8 @@ describe('Suche (S3-4b)', () => {
     await geladen('Treffer');
     expect(gedrueckt('Art')).toEqual(['Alles']);
     expect(liste()).toEqual([
-      '14OKTDer alte Beamer fällt aus.ProtokolltextLeitungsteam · Leitungssitzung · 1. Technik',
-      '14OKTZweites Beamer-Angebot wird angenommen.BeschlussLeitungsteam · Leitungssitzung · 1. Technik',
+      '14OKTDer alte Beamer fällt aus.ProtokolltextLeitungsteam · Leitungssitzung · Punkt 1 · Technik',
+      '14OKTZweites Beamer-Angebot wird angenommen.BeschlussLeitungsteam · Leitungssitzung · Punkt 1 · Technik',
       'Beamer-Kabel kaufenTo-DoLeitungsteam · offen',
     ]);
     expect([...document.querySelectorAll('mark')].map((x) => x.textContent)).toEqual([
@@ -185,7 +185,7 @@ describe('Suche (S3-4b)', () => {
     await geladen('Alle Beschlüsse');
     fireEvent.click(screen.getByRole('button', { name: 'Termine' }));
     expect(liste()).toEqual([
-      '14OKT15.01.2027 – Anmeldung öffnetTerminLeitungsteam · Leitungssitzung · 2. Freizeit',
+      '14OKT15.01.2027 – Anmeldung öffnetTerminLeitungsteam · Leitungssitzung · Punkt 2 · Freizeit',
     ]);
   });
 

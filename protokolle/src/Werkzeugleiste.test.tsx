@@ -180,6 +180,45 @@ describe('Werkzeugleiste (K3a)', () => {
     expect(e.document[0].type).toBe('bulletListItem');
   });
 
+  it('Absatz → Einrücken macht aus dem Punkt einen Unterpunkt; am ersten Punkt ist Einrücken aus (K3b)', () => {
+    const titel = (id: string) =>
+      ({ id, type: 'heading', props: { level: 1 }, content: id }) as Block;
+    // Mit einer Zeile davor könnte BlockNote „A“ einrücken (als Kind) – die Regel sagt: der erste Punkt bleibt Punkt.
+    const e = editorMit([
+      { id: 'vor', type: 'paragraph', content: 'Vorspann' },
+      titel('A'),
+      titel('B'),
+    ]);
+    e.setTextCursorPosition('A', 'end');
+    const { rerender } = render(<Werkzeugleiste editor={e} />);
+    const einruecken = within(menue('Absatz')).getByRole<HTMLButtonElement>('menuitem', {
+      name: 'Einrücken (Tab)',
+    });
+    expect(einruecken.disabled).toBe(true);
+    act(() => e.setTextCursorPosition('B', 'end'));
+    rerender(<Werkzeugleiste editor={e} />);
+    const m = screen.getByRole('menu', { name: 'Absatz' });
+    fireEvent.click(within(m).getByRole('menuitem', { name: 'Einrücken (Tab)' }));
+    const stufe = (b: (typeof e.document)[number]) => ('level' in b.props ? b.props.level : null);
+    expect(e.document.map((b) => [b.id, stufe(b), b.children.length])).toEqual([
+      ['vor', null, 0],
+      ['A', 1, 0],
+      ['B', 2, 0],
+    ]);
+  });
+
+  it('ein Unterpunkt jeder Ebene heißt in der Auswahl „Unterpunkt“ (K3b)', () => {
+    const e = editorMit([
+      { id: 'A', type: 'heading', props: { level: 1 }, content: 'A' },
+      { id: 'A1', type: 'heading', props: { level: 2 }, content: 'A1' },
+      { id: 'A1a', type: 'heading', props: { level: 4 }, content: 'A1a' },
+    ] as Block[]);
+    e.setTextCursorPosition('A1a', 'end');
+    render(<Werkzeugleiste editor={e} />);
+    const wahl = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Textart' });
+    expect(wahl.selectedOptions[0].textContent).toBe('Unterpunkt');
+  });
+
   it('eine alte Checkliste bleibt lesbar: die Auswahl zeigt sie und macht Text daraus', () => {
     const e = editorMit([{ id: 'c', type: 'checkListItem', content: 'erledigt?' }]);
     e.setTextCursorPosition('c', 'start');

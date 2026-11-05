@@ -42,20 +42,16 @@
   --level: 14px;
 }
 
-// Tagesordnungspunkte (Überschrift 1 auf oberster Ebene) zählen mit – wie `ableiten`, Lese-Ansicht und PDF.
-.bn-container .bn-editor > .bn-block-group {
-  counter-reset: top-punkt;
+// Unterpunkte 4.1.1 bis 4.1.1.1.1 (Stufe 4–6, K3b) so groß wie 4.1.
+.bn-container
+  [data-content-type='heading']:is([data-level='4'], [data-level='5'], [data-level='6']) {
+  --level: 15px;
 }
 
-.bn-container
-  .bn-editor
-  > .bn-block-group
-  > .bn-block-outer
-  > .bn-block
-  > .bn-block-content[data-content-type='heading']:not([data-level])
-  > h1::before {
-  counter-increment: top-punkt;
-  content: counter(top-punkt) '.';
+// Nummern von Tagesordnungspunkt (4.) und Unterpunkt (4.1) – aus `ableiten`, gesetzt von `punktNummern.ts` (K3b; bis
+// K3a ein eigener CSS-Zähler).
+.bn-container .bn-block-content[data-nummer] > :is(h1, h2, h3, h4, h5, h6)::before {
+  content: var(--punkt-nummer);
   margin-right: 6px;
   color: var(--text2);
 }

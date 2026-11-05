@@ -545,6 +545,11 @@ export interface OeffentlicheEinstellungen {
    * eingeschaltet sind (hält die Einstellungen kurz). Die Routine dazu baut `erinnerungen` in `ablaeufe.ts`.
    */
   erinnerungTage?: number[];
+  /**
+   * **Im Kalender verschoben** (K1): Datum oder Ort, wie sie VOR der Übernahme aus dem Kalender waren, und wann
+   * übernommen wurde. Der Hinweis oben auf der Seite zeigt es jeder Person einmal; die nächste Übernahme ersetzt es.
+   */
+  terminVerschoben?: { vorher: Pick<TerminAngabe, 'beginn' | 'ende' | 'ort'>; am: string };
   /** Konto, Zahlungsfrist, Verwendungszweck (A4) – öffentlich lesbar, siehe `bezahlung.ts`. */
   bezahlung: Bezahlung;
   /**
@@ -731,6 +736,13 @@ const einstellungenSchema = z.object({
   loeschfristMonate: z.number().int().min(1).max(36).default(3),
   // Seit A9-3b: nur, wenn Erinnerungen eingeschaltet sind.
   erinnerungTage: z.array(z.number().int().min(1).max(30)).max(3).optional(),
+  // Seit K1: nur, nachdem der Termin aus dem Kalender nachgezogen wurde.
+  terminVerschoben: z
+    .object({
+      vorher: z.object({ beginn: zeitpunkt, ende: zeitpunkt.nullable(), ort: z.string().max(200) }),
+      am: z.string().max(40),
+    })
+    .optional(),
   // Seit A4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben. (Zod gibt beim Lesen ohnehin ein
   // neues Objekt zurück – getestet in formular.test.ts –, die Funktion macht das nur ausdrücklich.)
   bezahlung: z

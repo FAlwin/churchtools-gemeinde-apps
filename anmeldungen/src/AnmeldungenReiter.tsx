@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
@@ -532,6 +532,7 @@ export function AnmeldungenReiter({
   onGespeichert,
   mitBestaetigung = false,
   startFilter = 'alle',
+  startRundmail = false,
 }: {
   id: number;
   /** Name der Veranstaltung – für die Mail an die Familie (A7-3). */
@@ -560,6 +561,8 @@ export function AnmeldungenReiter({
   mitBestaetigung?: boolean;
   /** Womit die Liste beginnt – die Kennzahl-Kacheln oben auf der Seite springen so in die passende Ansicht (U1). */
   startFilter?: ListenFilter;
+  /** „Rundmail schreiben“ aus dem Hinweis „im Kalender verschoben“ (K1, V6): öffnet sie, sobald die Liste da ist. */
+  startRundmail?: boolean;
 }) {
   const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
@@ -588,6 +591,7 @@ export function AnmeldungenReiter({
     vonHand?: { dazu: ListenAnmeldung | null };
   } | null>(null);
   const [rundmail, setRundmail] = useState(false);
+  const rundmailGewuenscht = useRef(startRundmail);
   const [druck, setDruck] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
@@ -610,6 +614,12 @@ export function AnmeldungenReiter({
     () => (stand ? anmeldungenAus(e, stand, stichtag) : []),
     [e, stand, stichtag],
   );
+  // K1 (V6): Wie der Knopf „Rundmail“ – erst, wenn es jemanden gibt, an den sie gehen kann; dann genau einmal.
+  useEffect(() => {
+    if (!rundmailGewuenscht.current || !darf || liste.length === 0) return;
+    rundmailGewuenscht.current = false;
+    setRundmail(true);
+  }, [darf, liste.length]);
 
   if (entwurf || !zustand)
     return (

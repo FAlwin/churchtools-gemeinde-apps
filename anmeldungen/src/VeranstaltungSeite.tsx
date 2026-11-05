@@ -3,7 +3,13 @@ import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
-import { anmeldeLink, ortszeitAus, terminZeile } from '@shared/anmeldung/termin';
+import {
+  anmeldeLink,
+  ortszeitAus,
+  terminWann,
+  terminZeile,
+  type KalenderVergleich,
+} from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
@@ -17,6 +23,7 @@ import {
   wiederherstellen,
   darfAblaeufeEinrichten,
   darfVeranstaltungEinrichten,
+  terminNachziehen,
   einstellungenVon,
   belegungNachziehen,
   kopfVon,
@@ -214,6 +221,83 @@ function DatenschutzKarte({
   );
 }
 
+/** Merkt sich je Gerät, welchen Hinweis „verschoben“ man gesehen hat (K1, V5) – ohne Speicher eben jedes Mal. */
+function gesehenLesen(id: number): string | null {
+  try {
+    return localStorage.getItem(`anmeldungen.verschoben.${id}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * **Hinweis „im Kalender verschoben“** (K1, V1/V5/V6, Alwin 05.11.2026) – wer nur in der Erweiterung arbeitet, soll nicht
+ * überrascht sein: was vorher stand, was jetzt gilt, und dass die Angemeldeten es noch nicht wissen („Rundmail
+ * schreiben“). Jede Person sieht ihn einmal („Verstanden“, je Gerät); eine neue Verschiebung zeigt ihn wieder.
+ */
+function VerschobenHinweis({
+  id,
+  e,
+  anmeldungen,
+  onRundmail,
+}: {
+  id: number;
+  e: OeffentlicheEinstellungen;
+  anmeldungen: number;
+  onRundmail?: () => void;
+}) {
+  const [gesehen, setGesehen] = useState(() => gesehenLesen(id));
+  const vs = e.terminVerschoben;
+  const t = e.termin;
+  if (!vs || !t || gesehen === vs.am) return null;
+  const tag = vs.vorher.beginn !== t.beginn || vs.vorher.ende !== t.ende;
+  const ort = vs.vorher.ort !== t.ort;
+  const ortText = (x: string) => (x ? `„${x}“` : 'kein Ort');
+  const verstanden = () => {
+    try {
+      localStorage.setItem(`anmeldungen.verschoben.${id}`, vs.am);
+    } catch {
+      // Ohne Speicher (privates Fenster): nur für jetzt ausblenden.
+    }
+    setGesehen(vs.am);
+  };
+  return (
+    <section className={s.karte} aria-label="Termin verschoben">
+      <p>
+        {tag ? (
+          <>
+            <b>Der Termin wurde im Kalender verschoben:</b> vorher {terminWann(vs.vorher)} – jetzt{' '}
+            {terminWann(t)}.
+            {ort && ` Ort: jetzt ${ortText(t.ort)} (vorher ${ortText(vs.vorher.ort)}).`}
+          </>
+        ) : (
+          <>
+            <b>Der Ort wurde im Kalender geändert:</b> vorher {ortText(vs.vorher.ort)} – jetzt{' '}
+            {ortText(t.ort)}.
+          </>
+        )}{' '}
+        {tag
+          ? 'Formular, Löschdatum und Erinnerungen sind angepasst.'
+          : 'Das Formular ist angepasst.'}
+        {anmeldungen > 0 &&
+          (anmeldungen === 1
+            ? ' Die eine angemeldete Person weiß davon noch nichts.'
+            : ` Die ${anmeldungen} Angemeldeten wissen davon noch nichts.`)}
+      </p>
+      <div className={v.aktionen}>
+        {anmeldungen > 0 && onRundmail && (
+          <FensterKnopf art="zweit" onClick={onRundmail}>
+            Rundmail schreiben
+          </FensterKnopf>
+        )}
+        <FensterKnopf art="zweit" onClick={verstanden}>
+          Verstanden
+        </FensterKnopf>
+      </div>
+    </section>
+  );
+}
+
 /**
  * **Karte „Mails“** (A9-1, Entwurf `a9-ablaeufe-v1`) – was ChurchTools nach dem Anmelden verschickt. Eingerichtet wird
  * beim Freigeben; „Bearbeiten“ (A9-2a) öffnet das Fenster „Mails“, sobald beide Abläufe da sind. Fehlt einer (vor A9-1
@@ -348,10 +432,12 @@ export function VeranstaltungSeite({
   // A9-5 (F3): Darf man fehlende Abläufe einrichten? Nur gefragt, wenn welche fehlen – sonst braucht es niemand.
   const [darfMails, setDarfMails] = useState(false);
   // U1: Eine Kennzahl-Kachel springt in eine Ansicht der Liste – `n` zählt hoch, damit derselbe Sprung neu beginnt.
-  const [sprung, setSprung] = useState<{ filter: ListenFilter; n: number }>({
+  const [sprung, setSprung] = useState<{ filter: ListenFilter; n: number; rundmail?: boolean }>({
     filter: 'alle',
     n: 0,
   });
+  // K1: Wie der Termin im Kalender steht – nur für den Hinweis „nicht mehr da“ an der Karte (V3, V7).
+  const [kalender, setKalender] = useState<KalenderVergleich | null>(null);
 
   const mitgliederLaden = useCallback(
     (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
@@ -392,35 +478,51 @@ export function VeranstaltungSeite({
           belegungNachziehen(id).catch((x: unknown) =>
             console.warn('Belegung der Auswahl nicht nachgezogen', x),
           );
+        // K1 (V1, V2): Wer bearbeiten darf, zieht zuerst den Termin aus dem Kalender nach – der Abgleich der Mails danach
+        // nimmt Löschdatum und Erinnerungen dann schon vom neuen Tag. Scheitert das Lesen (vorübergehend), bleibt alles.
+        const nachgezogen =
+          darf && einstellungen.termin?.terminId
+            ? terminNachziehen(id, zeitzone).then(
+                (r) => {
+                  if (!r) return;
+                  setKalender(r.vergleich);
+                  if (r.vergleich.art === 'geaendert')
+                    setDaten((d) => d && { ...d, einstellungen: r.einstellungen });
+                },
+                (x: unknown) => console.warn('Termin im Kalender nicht gelesen', x),
+              )
+            : Promise.resolve();
         // A9-2a: Wer einrichten darf, gleicht die Mails mit den Einstellungen ab (Termin, Bezahlung … geändert). Fehlt
         // das Recht für Routinen, bleibt es beim Lesen.
         if (kopf.statusId !== 2)
-          (darf
-            ? ablaeufeAbgleichen(id).catch((x: unknown) => {
-                console.warn('Mails nicht abgeglichen', x);
-                return ablaeufeLesen(id);
-              })
-            : ablaeufeLesen(id)
-          ).then(
-            (stand) => {
-              setAblauf(stand);
-              if (darf && (!stand.platz || !stand.warte))
-                darfAblaeufeEinrichten(id).then(setDarfMails, (x: unknown) =>
-                  console.warn('Recht für Routinen nicht gelesen', x),
+          void nachgezogen.then(() =>
+            (darf
+              ? ablaeufeAbgleichen(id).catch((x: unknown) => {
+                  console.warn('Mails nicht abgeglichen', x);
+                  return ablaeufeLesen(id);
+                })
+              : ablaeufeLesen(id)
+            ).then(
+              (stand) => {
+                setAblauf(stand);
+                if (darf && (!stand.platz || !stand.warte))
+                  darfAblaeufeEinrichten(id).then(setDarfMails, (x: unknown) =>
+                    console.warn('Recht für Routinen nicht gelesen', x),
+                  );
+                // A9-3a: Der Abgleich kann den Anmeldeschluss vorgezogen haben – die Karte „Anmeldung“ zeigt ihn gleich. Er
+                // zieht ihn nur vor, leert ihn nie; ein leerer Stand ändert darum nichts.
+                const schluss = stand.anmeldeschluss;
+                setDaten((d) =>
+                  d && schluss !== null && d.anmeldung.bis !== schluss
+                    ? { ...d, anmeldung: { ...d.anmeldung, bis: schluss } }
+                    : d,
                 );
-              // A9-3a: Der Abgleich kann den Anmeldeschluss vorgezogen haben – die Karte „Anmeldung“ zeigt ihn gleich. Er
-              // zieht ihn nur vor, leert ihn nie; ein leerer Stand ändert darum nichts.
-              const schluss = stand.anmeldeschluss;
-              setDaten((d) =>
-                d && schluss !== null && d.anmeldung.bis !== schluss
-                  ? { ...d, anmeldung: { ...d.anmeldung, bis: schluss } }
-                  : d,
-              );
-            },
-            (x: unknown) => {
-              console.warn('Stand der Mails nicht gelesen', x);
-              setAblauf('fehler');
-            },
+              },
+              (x: unknown) => {
+                console.warn('Stand der Mails nicht gelesen', x);
+                setAblauf('fehler');
+              },
+            ),
           );
         // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
         if (kopf.statusId !== 2) mitgliederLaden(einstellungen, anmeldung.maxPlaetze);
@@ -428,7 +530,7 @@ export function VeranstaltungSeite({
       },
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
-  }, [id, mitgliederLaden]);
+  }, [id, zeitzone, mitgliederLaden]);
 
   useEffect(laden, [laden]);
 
@@ -543,6 +645,19 @@ export function VeranstaltungSeite({
           Einrichten und freigeben kann die Leitung der Gruppe. Du kannst alles ansehen.
         </p>
       )}
+      <VerschobenHinweis
+        id={id}
+        e={e}
+        anmeldungen={entwurf ? 0 : (daten.anmeldungen ?? 0)}
+        onRundmail={
+          darf
+            ? () => {
+                setSprung((x) => ({ filter: 'alle', n: x.n + 1, rundmail: true }));
+                onReiter('anmeldungen');
+              }
+            : undefined
+        }
+      />
 
       {/* Einstieg (U1, Variante D): vor der Freigabe die Schritte, danach die Kennzahlen. */}
       {entwurf ? (
@@ -620,15 +735,18 @@ export function VeranstaltungSeite({
               <Karte titel="Termin" onBearbeiten={bearbeiten('termin')}>
                 {t ? (
                   <>
-                    <Zeile titel="Wann">
-                      {datumText(t.beginn.slice(0, 10))}, {t.beginn.slice(11)} Uhr
-                      {t.ende &&
-                        (t.ende.slice(0, 10) === t.beginn.slice(0, 10)
-                          ? ` bis ${t.ende.slice(11)} Uhr`
-                          : ` bis ${datumText(t.ende.slice(0, 10))}, ${t.ende.slice(11)} Uhr`)}
-                    </Zeile>
+                    <Zeile titel="Wann">{terminWann(t)}</Zeile>
                     <Zeile titel="Ort">{t.ort || '–'}</Zeile>
-                    <Zeile titel="Kalender">{t.terminId ? `Termin Nr. ${t.terminId}` : '–'}</Zeile>
+                    <Zeile titel="Kalender">
+                      {t.terminId ? `Termin Nr. ${t.terminId}` : '–'}
+                      {kalender?.art === 'weg' && (
+                        // K1 (V3, V7): Das Datum bleibt – Formular und Löschdatum stimmen so weiter.
+                        <small className={v.fehlt}>
+                          Im Kalender nicht mehr da (gelöscht, verschoben oder abgesagt) – bitte den
+                          Termin neu wählen.
+                        </small>
+                      )}
+                    </Zeile>
                   </>
                 ) : (
                   <Zeile titel="Wann">noch kein Termin gewählt</Zeile>
@@ -727,6 +845,7 @@ export function VeranstaltungSeite({
           <AnmeldungenReiter
             key={sprung.n}
             startFilter={sprung.filter}
+            startRundmail={sprung.rundmail}
             id={id}
             veranstaltung={daten.name}
             e={e}

@@ -1,9 +1,9 @@
 # Gebetsabend – ChurchTools-Erweiterung
 
-> **Stand: G3 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
+> **Stand: G4 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
 > an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend zuhören“**; die Technik **startet und beendet** die
-> Übertragung direkt in der Seite und stellt den Kalender ein. **„Wer hört zu?“ (G4) folgt** (Bauplan
-> `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> Übertragung direkt in der Seite, sieht **wer zuhört** und stellt den Kalender ein. Es folgen die Anleitung für Helfer
+> (G5) und der Pilot (G6) (Bauplan `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Der Gebetsabend wird für Gemeindeglieder übertragen, die nicht kommen können – mit Bild und Ton, nur für Personen mit
 ChurchTools-Zugang und Recht an der Erweiterung. Übertragen wird mit **VDO.Ninja** (Peer-to-Peer im Browser) im
@@ -60,7 +60,8 @@ und darunter einen großen Knopf **„Gebetsabend zuhören“**:
   hoch – die ersten Sekunden sind oft unscharf.
 - **Neu gestartet / beendet:** Startet die Technik neu, lädt der Player die neuen Daten selbst; beendet sie, schließt
   er sich mit „Die Übertragung ist beendet“. Antwortet ChurchTools dabei kurz nicht, bleibt alles, wie es ist.
-- Zuhörer melden sich beim Sender mit **Vor- und Nachnamen** an – die Technik sieht später, wer zuhört (G4).
+- Zuhörer melden sich beim Sender mit **Vor- und Nachnamen** an – die Technik sieht, wer zuhört (darunter steht „Die
+  Technik sieht, dass du zuhörst.“).
 
 ## Übertragen (Technik)
 
@@ -81,6 +82,11 @@ Wer zur Technik gehört (die Kategorie „Zugang“ bearbeiten darf), sieht übe
 - **Kein Zuhören auf dem Sender-Gerät:** Dort stünde der Ton wieder im Mikrofon – statt des Knopfs steht ein Hinweis.
 - **Zwei Geräte gleichzeitig:** Startet oder beendet ein anderes Technik-Gerät inzwischen, wird nichts überschrieben;
   die Seite zeigt, was jetzt gilt. Hat ein anderes Gerät neu gestartet, hört der Sender hier von selbst auf.
+- **Wer hört zu?** Unter dem Sender steht, wer gerade zuhört – Vor- und Nachname aus ChurchTools und seit wann. Wer
+  sich still neu verbindet (das iPhone tut das manchmal) oder mit zwei Geräten zuhört, steht einmal da („2 Geräte“).
+  **„Ohne Namen“** heißt meist: Jemand hört mit einem weitergegebenen Link zu. Die Liste gibt es nur auf dem Gerät,
+  das sendet, und nur solange der Sender dort läuft; gespeichert wird nichts. Den Namen setzt der Zuhörer selbst –
+  die Liste ist ein Hinweis, kein Schutz.
 - **Einstellungen (Zahnrad, nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
   und an welchem Wort im Titel er erkannt wird. Zur Auswahl stehen die Kalender, die man selbst sieht.
 
@@ -126,7 +132,8 @@ Geräten; den Verbindungsaufbau (und, wo nötig, die Umleitung) übernehmen Serv
   `einrichten.ts` (Kategorien, Stand der Einrichtung), `einstellungen.ts` (Kalender, Suchwort), `termin.ts` (nächster
   Termin), `zuhoeren.ts` (Texte, Nachfragen, „neu laden / beendet“), `ablage.ts` (Zugang und Einstellungen als Dokument
   mit Version über `@shared/ct/versionierterWert`), `technik.ts` (Technik-Stand „aus / hier / woanders“, wann der Sender
-  aufhört, Texte).
+  aufhört, Texte), `werHoert.ts` („Wer hört zu?“ aus den Meldungen des Sender-iframes: je Verbindung, angezeigt je
+  Person).
 - Erweiterung: `gebetsabend/` (`npm run dev -w gebetsabend`, dann `http://localhost:5193/ccm/gebetsabend/?demo`;
   Fälle `?demo=zuhoerer`, `?demo=aus`, `?demo=technik`, `?demo=mitglied`, `?demo=fehler`).
 - Messungen: `gebetsabend-planung/s0-messung.md` (S0, S0b, G0 – Einbettung, Rechte, VDO.Ninja-Parameter und

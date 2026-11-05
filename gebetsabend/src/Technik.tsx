@@ -7,7 +7,6 @@ import { Segment } from '@ui/bedienung/Segment';
 import { uhrText } from '@shared/ct/zeit';
 import { zugangLesen, zugangSpeichern, type Stand } from '@shared/gebetsabend/ablage';
 import { KATEGORIE_ZUGANG } from '@shared/gebetsabend/einrichten';
-import { ERLAUBNIS_SENDER, senderLink } from '@shared/gebetsabend/links';
 import {
   beendet,
   senderBleibt,
@@ -19,6 +18,7 @@ import { NACHFRAGEN_MS } from '@shared/gebetsabend/zuhoeren';
 import { neuerZugang, type Zugang } from '@shared/gebetsabend/zugang';
 import { NUR_TECHNIK_ZUGANG, port } from './speicher';
 import type { Start } from './start';
+import { Sender } from './Sender';
 import { ZustandZeile } from './ZustandZeile';
 import karte from './Zuhoeren.module.scss';
 import styles from './Technik.module.scss';
@@ -42,8 +42,8 @@ type Laden =
   | { art: 'da'; stand: Stand<Zugang | null> };
 
 /**
- * **Die Technik-Karte** (Bauplan Gebetsabend G3, Entwurf v3 vom 05.11.2026): starten, Sender auf diesem Gerät,
- * neu starten, beenden – nur für die Technik (wer „Zugang“ bearbeiten darf).
+ * **Die Technik-Karte** (Bauplan Gebetsabend G3/G4, Entwurf v3 vom 05.11.2026): starten, Sender auf diesem Gerät mit
+ * „Wer hört zu?“ (`Sender.tsx`), neu starten, beenden – nur für die Technik (wer „Zugang“ bearbeiten darf).
  *
  * - **Ein Klick „Übertragung starten“:** neue StreamID + neues Passwort → speichern → **nachgelesen** → erst dann
  *   startet der Sender hier. Ein Fehler oder Konflikt startet nichts.
@@ -212,31 +212,32 @@ export function Technik({
           <ZustandZeile
             gut
           >{`Läuft seit ${uhrText(zugang.laeuftSeit)} Uhr · Sender auf diesem Gerät`}</ZustandZeile>
-          <iframe
+          <Sender
             key={`${gesendet.streamId}-${lauf}`}
-            className={gesendet.mitBild ? karte.player : `${karte.player} ${styles.senderTon}`}
-            title="Sender des Gebetsabends"
-            src={senderLink(gesendet)}
-            allow={ERLAUBNIS_SENDER}
+            zugang={gesendet}
+            mitte={
+              <>
+                <p className={karte.text}>
+                  <b>{TECHNIK_TEXT.offenLassen}</b>
+                </p>
+                <div className={karte.rechts}>
+                  <KopfKnopf
+                    raster
+                    label="Sender neu starten"
+                    symbol={<Icon name="refresh" />}
+                    onClick={() => setLauf((n) => n + 1)}
+                  />
+                  <KopfKnopf
+                    raster
+                    label="Übertragung beenden"
+                    symbol={<Icon name="x" />}
+                    disabled={arbeitet}
+                    onClick={() => setFragen(true)}
+                  />
+                </div>
+              </>
+            }
           />
-          <p className={karte.text}>
-            <b>{TECHNIK_TEXT.offenLassen}</b>
-          </p>
-          <div className={karte.rechts}>
-            <KopfKnopf
-              raster
-              label="Sender neu starten"
-              symbol={<Icon name="refresh" />}
-              onClick={() => setLauf((n) => n + 1)}
-            />
-            <KopfKnopf
-              raster
-              label="Übertragung beenden"
-              symbol={<Icon name="x" />}
-              disabled={arbeitet}
-              onClick={() => setFragen(true)}
-            />
-          </div>
         </>
       )}
 

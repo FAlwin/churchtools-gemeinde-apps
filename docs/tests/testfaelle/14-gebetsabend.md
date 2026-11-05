@@ -96,3 +96,28 @@ Technik gehört, sieht nichts davon.
 - **Historie:** neu mit G3 (05.11.2026); Entwurf v3 (`gebetsabend-planung/entwurf/gebetsabend-v3.html`)
 
 </details>
+
+### TF-GEBET-04 · „Wer hört zu?“: Namen kommen und gehen, neu verbunden einmal, ohne Namen erkennbar
+
+**Das brauchst du:** Den Laptop der Technik mit laufendem Sender (TF-GEBET-03), ein iPhone und ein zweites Gerät mit
+Recht an der Erweiterung, dazu den Zuhörer-Link aus der Kategorie „Zugang“ für einen Aufruf ohne ChurchTools.
+
+**Das muss passieren:** Unter dem Sender steht „Wer hört zu?“ mit Zahl. Wer über ChurchTools zuhört, steht mit Vor- und
+Nachnamen und „seit … Uhr“ da und verschwindet beim Aufhören sofort. Eine stille Neuverbindung bleibt eine Zeile. Ein
+Aufruf ohne ChurchTools-Namen steht als „Ohne Namen“. Nach „Sender neu starten“ beginnt die Liste leer und füllt sich
+von selbst wieder.
+
+1. Am Laptop: „Wer hört zu? 0“, darunter „Noch hört niemand zu.“
+2. Am iPhone zuhören: Nach wenigen Sekunden steht der eigene Name mit „seit … Uhr“, die Zahl ist 1.
+3. Am zweiten Gerät zuhören: zwei Namen, alphabetisch, Zahl 2.
+4. iPhone sperren und entsperren: Der Name bleibt (höchstens kurz weg), keine zweite Zeile.
+5. Am zweiten Gerät „Nicht mehr zuhören“: Der Name ist sofort weg.
+6. Den Zuhörer-Link ohne `&label` in einem Browser öffnen: eine Zeile „Ohne Namen“.
+7. **Sender neu starten**: Die Liste ist leer und füllt sich wieder, sobald die Zuhörer neu verbunden sind.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `gebetsabend/src/Sender.tsx`, `gebetsabend/src/Technik.tsx`, `gebetsabend/src/Technik.module.scss`, `shared/gebetsabend/werHoert.ts`, `shared/gebetsabend/zustand.ts`
+- **Automatisiert:** teilweise – `shared/gebetsabend/werHoert.test.ts` (Kommen, Gehen, altes `new-push-connection`, Name, Zusammenfassen je Person, ohne Namen, Zahl, Reihenfolge), `gebetsabend/src/Sender.test.tsx` (nur Meldungen aus dem eigenen iframe von `https://vdo.ninja`), `gebetsabend/src/Technik.test.tsx` (Neustart leert die Liste); echte Verbindungen nur in der Test-Instanz
+- **Historie:** neu mit G4 (05.11.2026); Grundlage Messung G0-3

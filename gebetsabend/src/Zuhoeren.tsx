@@ -4,7 +4,7 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { uhrText } from '@shared/ct/zeit';
-import { ERLAUBNIS_ZUHOERER, VDO_BASIS, zuhoererLink } from '@shared/gebetsabend/links';
+import { ERLAUBNIS_ZUHOERER, VDO_HERKUNFT, zuhoererLink } from '@shared/gebetsabend/links';
 import {
   istVdoMeldung,
   meldungAus,
@@ -25,8 +25,6 @@ import { TECHNIK_TEXT } from '@shared/gebetsabend/technik';
 import { ladeZugang } from './lesen';
 import { ZustandZeile } from './ZustandZeile';
 import styles from './Zuhoeren.module.scss';
-
-const VDO_HERKUNFT = new URL(VDO_BASIS).origin;
 
 interface Props {
   modul: number;

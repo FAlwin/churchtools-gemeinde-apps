@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import * as A from '@shared/gebetsabend/ablage';
-import { ERLAUBNIS_SENDER, senderLink } from '@shared/gebetsabend/links';
+import { ERLAUBNIS_SENDER, senderLink, VDO_HERKUNFT } from '@shared/gebetsabend/links';
 import { beendet, TECHNIK_TEXT } from '@shared/gebetsabend/technik';
 import { NACHFRAGEN_MS } from '@shared/gebetsabend/zuhoeren';
 import { istGueltigeId, neuerZugang, type Zugang } from '@shared/gebetsabend/zugang';
@@ -152,6 +152,23 @@ describe('Technik', () => {
     expect(nachher).not.toBe(vorher);
     expect(nachher!.src).toBe(senderLink(z));
     expect(speichern).not.toHaveBeenCalled();
+  });
+
+  it('„Sender neu starten“ beginnt „Wer hört zu?“ leer – die Zuhörer melden sich beim neuen Sender neu an', async () => {
+    const z = laeuft();
+    await zeigen(z, z);
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: { action: 'push-connection-info', value: { label: 'Maria Klassen' }, UUID: 'a' },
+          origin: VDO_HERKUNFT,
+          source: document.querySelector('iframe')!.contentWindow,
+        }),
+      );
+    });
+    expect(screen.getByText('Maria Klassen')).toBeTruthy();
+    await tippen(/Sender neu starten/);
+    expect(screen.queryByText('Maria Klassen')).toBeNull();
   });
 
   it('„Übertragung beenden“ fragt nach; „Beenden“ speichert ohne „läuft seit“ und stoppt den Sender', async () => {

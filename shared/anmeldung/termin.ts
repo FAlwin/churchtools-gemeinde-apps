@@ -8,7 +8,7 @@
  * Datum und Ort sind eine Kopie, `terminId` merkt sich die Herkunft.
  */
 import type { OeffentlicheEinstellungen, TerminAngabe } from './formular';
-import { datumText } from '../ct/datum';
+import { datumText, letzterTag, monatPlus } from '../ct/datum';
 import { ortszeitAus, utcAus } from '../ct/zeit';
 
 // Die Umrechnung UTC ↔ Ortszeit steht für alle Apps in `shared/ct/zeit.ts` (Dienstplaner E3-2).
@@ -64,4 +64,22 @@ export function terminZeile(e: Pick<OeffentlicheEinstellungen, 'termin'>): strin
   return t
     ? `${datumText(t.beginn.slice(0, 10))}${t.ende && t.ende.slice(0, 10) !== t.beginn.slice(0, 10) ? ` – ${datumText(t.ende.slice(0, 10))}` : ''}${t.ort ? ` · ${t.ort}` : ''}`
     : 'Termin folgt';
+}
+
+/**
+ * **Das Löschdatum** (A9-3a): Ende des Termins (ohne Ende: der Beginn) plus die Frist in Monaten, als `JJJJ-MM-TT` –
+ * nur so nimmt ChurchTools es im Warte-Schritt (gemessen 28.10.2026). Gibt es den Tag im Zielmonat nicht (31.01. + 1),
+ * gilt der letzte. Ohne Termin: `null` – dann wird nicht gelöscht. Steht hier (nicht in `ablaeufe.ts`), damit das
+ * öffentliche Formular Gästen denselben Tag nennt, an dem ChurchTools löscht – es rechnete vorher selbst nach und
+ * nannte an Monatsenden einen späteren (30.11. + 3 → 02.03. statt 28.02.).
+ */
+export function loeschDatum(
+  e: Pick<OeffentlicheEinstellungen, 'termin' | 'loeschfristMonate'>,
+): string | null {
+  if (!e.termin) return null;
+  const tag = (e.termin.ende ?? e.termin.beginn).slice(0, 10);
+  const ziel = monatPlus(tag.slice(0, 7), e.loeschfristMonate);
+  const gleicherTag = `${ziel}-${tag.slice(8, 10)}`;
+  const letzter = letzterTag(ziel);
+  return gleicherTag < letzter ? gleicherTag : letzter;
 }

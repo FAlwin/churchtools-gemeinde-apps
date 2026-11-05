@@ -263,8 +263,9 @@ die Erweiterung an beide Abläufe „warten bis zum Löschdatum“ und „entfer
 kommt beim Einrichten ohne Mail mit ins Warten. Ohne Termin wird nicht gelöscht. Wird der Termin verschoben oder die
 Frist geändert, zieht das Datum mit – beim Speichern im Fenster „Daten löschen“ oder beim nächsten Öffnen der
 Veranstaltung. **Liegt das neue Datum heute oder früher, entfernt ChurchTools beim Speichern sofort alle Anmeldungen**
-(gemessen): Das Fenster fragt darum vorher („Jetzt 23 Anmeldungen löschen?“), und beim bloßen Öffnen schreibt die
-Erweiterung so ein Datum nie – die Karte zeigt dann „schon erreicht“. Entfernt wird die Mitgliedschaft; die Antworten
+(gemessen): Das Fenster fragt darum vorher („Jetzt 23 Anmeldungen löschen?“), ebenso das Freigeben, und beim bloßen
+Öffnen schreibt die Erweiterung so ein Datum nie – die Karte zeigt dann „schon erreicht“. Ist niemand angemeldet, geht
+nichts verloren: dann ohne Rückfrage. Das öffentliche Formular nennt Gästen beim Einverständnis denselben Tag. Entfernt wird die Mitgliedschaft; die Antworten
 bleiben im Verlauf von ChurchTools, bis die Gruppe gelöscht wird. Archivieren („Löschen“ unter „Verwalten“) schaltet die
 Abläufe ab – dann wird nicht mehr gelöscht. Darum geht „Löschen“ mit Anmeldungen erst, wenn ChurchTools sie gelöscht hat
 (siehe „Umbenennen, verschieben, löschen“).

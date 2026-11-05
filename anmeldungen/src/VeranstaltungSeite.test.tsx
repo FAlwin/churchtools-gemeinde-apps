@@ -1275,6 +1275,44 @@ describe('Löschen (A9-3a)', () => {
     expect(screen.getByRole('button', { name: 'Jetzt eine Anmeldung löschen' })).toBeTruthy();
   });
 
+  it('Datum erreicht, aber niemand angemeldet: keine Rückfrage – es geht nichts verloren, Rückgängig bleibt', async () => {
+    stand({ loeschDatum: '2099-04-15' });
+    stelle(true, 1, termin('2020-01-15'));
+    m.anmeldungenZahl.mockResolvedValue(0);
+    const geaendert = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        zeitzone={ZONE}
+        onZurueck={() => {}}
+        onGeaendert={geaendert}
+      />,
+    );
+    const k = await karte();
+    await waitFor(() => expect(within(k).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy());
+    fireEvent.click(within(k).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    expect(screen.queryByText('Sofort löschen?')).toBeNull();
+    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(91, 1, undefined, undefined, {
+      loeschenBestaetigt: false,
+      heute: expect.any(String),
+    });
+    expect(geaendert.mock.calls[0][0].rueckgaengig).toBeTypeOf('function');
+  });
+
+  it('Karte „Datenschutz“: „1 Monat“, ab 2 „Monate“', async () => {
+    stelle(true, 2, termin('2099-01-15'));
+    zeigen();
+    const k = await karte();
+    expect(k.textContent).toMatch(/3 Monate nach dem Ende/);
+    cleanup();
+    stelle(true, 2, { ...termin('2099-01-15'), loeschfristMonate: 1 });
+    zeigen();
+    expect((await karte()).textContent).toMatch(/1 Monat nach dem Ende/);
+  });
+
   it('Datum in der Zukunft: ohne Rückfrage gespeichert und in die Abläufe geschrieben, mit Rückgängig', async () => {
     stand({ loeschDatum: '2099-04-15' });
     stelle(true, 1, termin('2099-01-15'));

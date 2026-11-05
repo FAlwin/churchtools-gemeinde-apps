@@ -23,7 +23,7 @@ import { SYSTEMFELDER, type OeffentlicheEinstellungen } from './formular';
 import { kannEtwasKosten } from './preis';
 import { htmlSicher, mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
-import { letzterTag, monatPlus, plusTage } from '../ct/datum';
+import { plusTage } from '../ct/datum';
 import { utcAus } from '../ct/zeit';
 
 /** Name eines Systemfelds – so heißt es auch als Platzhalter bei ChurchTools (`/placeholders/group/{id}`). */
@@ -365,22 +365,6 @@ export type RoutinenSchritt =
     }
   | { id?: number; actionKey: 'special:wait'; isEnabled: true; actionData: { untilDate: string } }
   | { id?: number; actionKey: 'remove-member'; isEnabled: true; actionData: Record<string, never> };
-
-/**
- * **Das Löschdatum** (A9-3a): Ende des Termins (ohne Ende: der Beginn) plus die Frist in Monaten, als `JJJJ-MM-TT` –
- * nur so nimmt ChurchTools es im Warte-Schritt (gemessen 28.10.2026). Gibt es den Tag im Zielmonat nicht (31.01. + 1),
- * gilt der letzte. Ohne Termin: `null` – dann wird nicht gelöscht.
- */
-export function loeschDatum(
-  e: Pick<OeffentlicheEinstellungen, 'termin' | 'loeschfristMonate'>,
-): string | null {
-  if (!e.termin) return null;
-  const tag = (e.termin.ende ?? e.termin.beginn).slice(0, 10);
-  const ziel = monatPlus(tag.slice(0, 7), e.loeschfristMonate);
-  const gleicherTag = `${ziel}-${tag.slice(8, 10)}`;
-  const letzter = letzterTag(ziel);
-  return gleicherTag < letzter ? gleicherTag : letzter;
-}
 
 /**
  * **Darf eine Veranstaltung ins Archiv?** (A9-4, D1/D2) – Archivieren schaltet die Abläufe ab (gemessen 24.10.2026), danach

@@ -7,6 +7,8 @@ import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formu
 import { AnmeldeFormular } from './AnmeldeFormular';
 import { SCHRIFT, musterAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
+import { loeschDatum } from '@shared/anmeldung/termin';
+import { datumText } from '@shared/ct/datum';
 import type { Abgeschickt } from '@shared/anmeldung/senden';
 
 const HEUTE = '2026-10-13';
@@ -124,6 +126,18 @@ describe('Anmeldeformular (A5)', () => {
     zeigen(freizeit());
     // Ende 02.01.2027 + 3 Monate
     expect(screen.getByText(/Sie werden am Fr, 02.04.2027 gelöscht/)).toBeTruthy();
+  });
+
+  it('nennt denselben Tag, an dem ChurchTools löscht – auch am Monatsende (30.11. + 3 → 28.02.)', () => {
+    const e = freizeit();
+    e.termin = { beginn: '2027-11-27T15:00', ende: '2027-11-30T11:00', ort: '', terminId: 1 };
+    e.loeschfristMonate = 3;
+    zeigen(e);
+    // Gegen den Erzeuger: die Regel, nach der auch die Routine schreibt. Vorher rechnete das Formular selbst (02.03.).
+    expect(loeschDatum(e)).toBe('2028-02-29');
+    expect(
+      screen.getByText(new RegExp(`Sie werden am ${datumText(loeschDatum(e)!)} gelöscht`)),
+    ).toBeTruthy();
   });
 
   it('Kinder-Event: Eltern als Kontakt, „Weiteres Kind“; Einzelpersonen: keine weitere Person', () => {

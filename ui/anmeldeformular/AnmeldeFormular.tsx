@@ -10,7 +10,7 @@ import {
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { datumText } from '@shared/ct/datum';
-import { terminZeile } from '@shared/anmeldung/termin';
+import { loeschDatum, terminZeile } from '@shared/anmeldung/termin';
 import {
   betragAus,
   neueAnmeldeNr,
@@ -110,16 +110,6 @@ const ERGEBNIS_TEXT: Record<PersonErgebnis, string> = {
   ausgebucht: 'kein Platz mehr',
   offen: 'nicht angemeldet',
 };
-
-/** Löschdatum: Ende (sonst Beginn) der Veranstaltung plus Löschfrist. */
-function loeschTag(e: OeffentlicheEinstellungen): string | null {
-  const t = e.termin;
-  if (!t) return null;
-  const ende = (t.ende ?? t.beginn).slice(0, 10);
-  const d = new Date(`${ende}T00:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() + e.loeschfristMonate);
-  return d.toISOString().slice(0, 10);
-}
 
 function Pflicht({ f }: { f: Feld }) {
   if (f.zustand === 'pflicht')
@@ -542,7 +532,8 @@ export function AnmeldeFormular({
   const ende = e.formular.anmeldung.filter((f) => sichtbar(f) && f.typ === 'privacy');
   const preisFeld = e.formular.anmeldung.find((f) => f.typ === 'price' && sichtbar(f));
   const personFelder = e.formular.person.filter(sichtbar);
-  const loeschtag = loeschTag(e);
+  // Derselbe Tag, an dem ChurchTools löscht – die eine Regel aus `termin.ts`.
+  const loeschtag = loeschDatum(e);
   // Dieselbe Buchung wie beim Abschicken (`buchungAus`) – angezeigter und gespeicherter Betrag sind eine Regel.
   // A6-5a: Wer auf die Warteliste kommt, zählt nicht im Betrag – dieselbe Regel wie beim Abschicken (`betragAus`).
   const betrag = useMemo(

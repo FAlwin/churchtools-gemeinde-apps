@@ -37,7 +37,7 @@ import {
 } from '@shared/anmeldung/uebersicht';
 
 import { darfEndgueltigLoeschen, leitungsRollen, reparieren } from './einrichten';
-import { loeschDatum } from '@shared/anmeldung/ablaeufe';
+import { loeschDatum } from '@shared/anmeldung/termin';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
 

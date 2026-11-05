@@ -494,10 +494,10 @@ export async function datei(songId: number, fileId: number): Promise<Blob> {
 
 // ── Ablauf anlegen (13.10.2026) – Regeln in `@shared/ct/ablaufAnlegen` ─────────────────────────
 
-/** `GET /api/services/ohne-ablauf` – Veranstaltungen ohne Ablauf, die laut Einstellung einen bekommen sollen. */
-export async function termineOhneAblaufListe(): Promise<Service[]> {
+/** `GET /api/services/ohne-ablauf` – Veranstaltungen ohne Ablauf aus den Kalendern, die der Filter nennt. */
+export async function termineOhneAblaufListe(kalenderIds: readonly number[]): Promise<Service[]> {
   const { from, to } = fensterOhneAblauf();
-  return termineOhneAblauf(leser, from, to, (await gemeindeKonfiguration()).ablaufAnlegen);
+  return termineOhneAblauf(leser, from, to, kalenderIds);
 }
 
 /** `GET /api/ablauf-vorlagen` – die Ablauf-Vorlagen aus ChurchTools. */
@@ -510,7 +510,7 @@ export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
   return ablaufBestandLesen(browserAblaufLeser, eventId, gemeindeZeitzone());
 }
 
-/** `GET /api/kalender` – die Kalender, für die Verwaltung „Termine ohne Ablauf". */
+/** `GET /api/kalender` – die Kalender, die man sehen darf (Namen für den Filter der Terminliste). */
 export async function kalender(): Promise<Kalender[]> {
   return kalenderAus(await ctDaten<CtKalender[]>('/calendars'));
 }

@@ -63,17 +63,23 @@ export function darfAblaufBearbeiten(
   termin: AblaufTermin,
   ichId: number | null,
 ): boolean {
-  if (rechte.isAdmin) return true;
-  if (rechte.ablaufKalender === null) return true;
   const kalender = termin.kalenderId ?? null;
+  if (kalender !== null && darfAblaufImKalender(rechte, kalender)) return true;
+  if (rechte.isAdmin || rechte.ablaufKalender === null) return true;
   // Kalender unbekannt (ältere Server liefern ihn nicht, `Service.kalenderId` ist optional): wie bisher –
   // irgendein `edit agenda` genügt, ChurchTools entscheidet. Sonst verlöre, wer Rechte hat, den Stift.
-  if (
-    kalender === null ? rechte.ablaufKalender.length > 0 : rechte.ablaufKalender.includes(kalender)
-  ) {
-    return true;
-  }
+  if (kalender === null && rechte.ablaufKalender.length > 0) return true;
   return ichId !== null && (termin.terminAdminIds ?? []).includes(ichId);
+}
+
+/**
+ * Darf man in diesem Kalender Abläufe bearbeiten – unabhängig von einem bestimmten Termin? Der Filter der Terminliste
+ * bietet „auch ohne Ablauf“ nur dort an (05.11.2026): Termin-Admins sind hier kein Grund, ihr Recht gilt je Termin.
+ */
+export function darfAblaufImKalender(rechte: AblaufRechte, kalenderId: number): boolean {
+  return (
+    rechte.isAdmin || rechte.ablaufKalender === null || rechte.ablaufKalender.includes(kalenderId)
+  );
 }
 
 /**

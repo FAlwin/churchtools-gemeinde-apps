@@ -23,7 +23,9 @@ const PREFIX = 'worship:onboard-';
 // Versionssprung, belegt:** `termine-v3` steckt in v2.22.0 (Prod) mit einem Text, der genau dieses
 // Verhalten beschreibt („durchsuchst du alle Lieder"); der Umschalter-Text war nie draußen. Für
 // Bestandsnutzer hat sich am Liederheft nichts geändert – ein erneutes Zeigen wäre Lärm.
-export const TOUR_TERMINE = 'termine-v3';
+// termine-v4 (05.11.2026): neuer Schritt „Filter“ – Kalender ausblenden und „auch ohne Ablauf“ direkt in der
+// Terminliste (vorher Mehr → Verwaltung, nur Admin). Neue Bedienung → Versionssprung, damit alle ihn einmal sehen.
+export const TOUR_TERMINE = 'termine-v4';
 // chart-v4: Der Tempo-Knopf oeffnet jetzt ein MENUE (#145 Folge) statt nur den Puls zu schalten –
 // und er ist neuerdings auch bei Liedern OHNE gepflegtes Tempo da, weil man genau dort eins
 // antippen will. Beides sieht man dem Knopf nicht an, also gehoert es in die Einfuehrung.
@@ -143,6 +145,11 @@ export const TERMINE_STEPS: CoachStep[] = [
     selector: '[data-tour="termine-liste"]',
     title: 'Eure Gottesdienste',
     body: 'Hier findest du die kommenden Gottesdienste mit ihrem Ablauf. Tippe einen an, um ihn zu öffnen.',
+  },
+  {
+    selector: '[data-tour="termine-filter"]',
+    title: 'Filter',
+    body: 'Hier blendest du Kalender aus, die du nicht brauchst. Wo du Abläufe anlegen darfst, holt „auch ohne Ablauf“ auch Termine ohne Ablauf in die Liste – dann legst du den Ablauf direkt hier an. Die Auswahl merkt sich dieses Gerät.',
   },
   {
     selector: '[data-tour="songbook"]',

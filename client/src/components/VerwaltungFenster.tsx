@@ -6,7 +6,6 @@ import { Spinner } from '@ui/bedienung/Spinner';
 import { Icon } from '@ui/icons/icons';
 import { LinksManager } from './LinksManager';
 import { TerminArtenManager } from './TerminArtenManager';
-import { AblaufAnlegenManager } from './AblaufAnlegenManager';
 import { useGroupRoles } from '../hooks/useSiteConfig';
 import type { Verwaltung } from '../hooks/useVerwaltung';
 import styles from '../pages/Settings.module.scss';
@@ -65,8 +64,6 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
       {v.offen.links && <LinksManager site={site} onClose={v.closeLinks} />}
 
       {v.offen.terminArten && <TerminArtenManager site={site} onClose={v.closeTerminArten} />}
-
-      {v.offen.ablaufAnlegen && <AblaufAnlegenManager site={site} onClose={v.closeAblaufAnlegen} />}
 
       {v.offen.ansicht && (
         <Sheet

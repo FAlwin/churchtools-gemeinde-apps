@@ -24,8 +24,12 @@ export const schluessel = {
 
   /** Alle Terminlisten – die aktuelle UND die vergangenen Monate. */
   termine: () => ['services'] as const,
-  /** Termine ohne Ablauf (13.10.2026) – unter `termine()`, damit ein Erneuern der Liste sie mitnimmt. */
-  termineOhneAblauf: () => [...schluessel.termine(), 'ohne-ablauf'] as const,
+  /**
+   * Termine ohne Ablauf (13.10.2026) – unter `termine()`, damit ein Erneuern der Liste sie mitnimmt. Seit 05.11.2026
+   * je Kalenderwahl im Filter: Eine andere Wahl ist eine andere Liste.
+   */
+  termineOhneAblauf: (kalenderIds: readonly number[]) =>
+    [...schluessel.termine(), 'ohne-ablauf', kalenderIds.join(',')] as const,
   ablaufVorlagen: () => ['ablauf-vorlagen'] as const,
   kalender: () => ['kalender'] as const,
   termineVergangen: (monateZurueck: number) =>

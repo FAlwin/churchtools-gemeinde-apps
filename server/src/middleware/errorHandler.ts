@@ -1,5 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 
 /**
  * Eigene Fehlerklasse mit HTTP-Statuscode.
@@ -55,7 +55,7 @@ export const notFoundHandler: RequestHandler = (_req, res) => {
 /** Zentrale Fehlerbehandlung – immer als Letztes registrieren. */
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ZodError) {
-    res.status(400).json({ error: 'Ungültige Eingabe', details: err.flatten() });
+    res.status(400).json({ error: 'Ungültige Eingabe', details: z.flattenError(err) });
     return;
   }
   const rumpfStatus = rumpfFehlerStatus(err);

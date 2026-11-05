@@ -512,7 +512,7 @@ kommt erst nach dem Ausmessen, `kerneAufSeite` schreibt nur zurück, was die Rol
 `anmerkungsquelleFuer` (chartPageKeys) liefert je Seite die
 Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream` übernimmt `localPage` und
 `abbildung` aus dem Blatt (nicht neu zählen!). jsPDF-`addPage()` ohne Format nimmt das der VORIGEN Seite. Leinwand-Deckel für iOS
-`utils/leinwand.ts`. Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht.
+`ui/teilen/leinwand.ts` (seit E8-1 in `ui/`, mit der PDF-Vorschau). Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht.
 **Neuer Lied-Editor in Scheiben L0–L6** (seit 22.10.2026; Bauplan + L0-Messung außerhalb des Repos in
 `~/ecg-donrath/gemeinde-apps/musik-planung/docs/`): gespeichert bleibt ChordPro Zeichen für Zeichen, neu ist nur
 die Darstellung. L1 = Kopf im CT-Look + Karten (breit Text/Vorschau nebeneinander, schmal `Segment` „Text | Vorschau“,

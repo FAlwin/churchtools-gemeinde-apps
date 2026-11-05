@@ -359,7 +359,7 @@ Vor dem Teilen zeigt das Fenster die Seiten; „Herunterladen" speichert ohne Te
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `client/src/components/PdfSeitenVorschau.tsx`, `ui/teilen/sharePdf.ts`, `ui/teilen/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
+- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `ui/teilen/PdfSeitenVorschau.tsx`, `ui/teilen/pdfSeiten.ts`, `ui/teilen/sharePdf.ts`, `ui/teilen/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
 - **Automatisiert:** teilweise – `ablaufPdf.test.ts` (Reihenfolge, Dokument-Seiten, Ersatz/Fehlen,
   Seitenbesitzer und Ebene je Seite), `TeilenFenster.test.tsx` (Vorgabe, Merken, veraltetes PDF, Vorschau, Großansicht, Herunterladen);
   gegen den ChurchTools-Stub durchgeklickt und das heruntergeladene PDF angesehen. Von Hand bleibt das

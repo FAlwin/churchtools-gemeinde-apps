@@ -12,7 +12,7 @@
   dunkle Bänder, Abschnitten mit ihrer Dauer, Liedern mit Tonart. Keine leeren Info-Spalten; ganze Teams stehen nur als
   Dienst-Name. Auf jeder Seite Kopf und „Seite x von y“.
 
-### Geändert
+### Geändert (Musik-App + Dienstplaner)
 
 - **„Eintrag“ statt „Punkt“** in der Kopfzeile der Info-Spalten des Ablaufs (Musik-App und Dienstplaner) – so heißt es
   schon beim Hinzufügen.

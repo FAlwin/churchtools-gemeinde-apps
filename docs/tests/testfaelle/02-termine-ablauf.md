@@ -590,7 +590,7 @@ kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 
 <details><summary>Technisches</summary>
 
-- **Priorität:** mittel
+- **Priorität:** normal
 - **Betrifft:** `shared/ct/terminBlatt.ts`, `ui/teilen/terminBlattPdf.ts`, `ui/teilen/TerminTeilenFenster.tsx`, `ui/teilen/terminBlattWahl.ts`, `ui/teilen/PdfSeitenVorschau.tsx`, `ui/teilen/pdfSeiten.ts`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/terminBlattDienste.ts`, `dienstplaner/src/TerminAblauf.tsx`
 - **Automatisiert:** ja – `shared/ct/terminBlatt.test.ts` (Beginn/Ende, Abschnittsdauer, Spalten ohne leere, Teams kurz, Einstellungen), `ui/teilen/terminBlattPdf.test.ts` (Kopf/Fuß je Seite, Zeit bricht nie um, Ende nie allein, quer), `ui/teilen/TerminTeilenFenster.test.tsx` (Hauptseite, Unterseiten, gemerkte Wahl), `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf, Blatt aus echten Plan-Daten); von Hand bleiben Aussehen des PDF, Vorschau und Teilen-Menü am Gerät
 - **Historie:** E8-1 (05.11.2026, Entwurf `e8-teilen.html` Version 5)

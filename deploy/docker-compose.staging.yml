@@ -40,6 +40,8 @@ services:
       CHURCHTOOLS_ABSENCE_REASON_ID: ${CHURCHTOOLS_ABSENCE_REASON_ID:-1}
       # Zeitzone der Gemeinde (#414): an welchem Tag ein Termin stattfindet. Standard Europe/Berlin.
       ZEITZONE: ${ZEITZONE:-Europe/Berlin}
+      # Hinter dem Reverse-Proxy: ihm die Absender-Adresse glauben (#849; ohne Proxy „aus“, siehe docker-compose.yml).
+      TRUST_PROXY: ${TRUST_PROXY:-an}
       # Sicher als Standard (#196): Das Cookie darf nur über HTTPS übertragen werden. Setzt den
       # Reverse Proxy voraus (siehe Einrichtung unten) – ohne HTTPS speichert der Browser das Cookie
       # nicht und die Anmeldung schlägt fehl. Nur für einen bewussten Test ohne Proxy:

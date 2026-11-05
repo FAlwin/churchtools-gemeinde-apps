@@ -3,10 +3,14 @@ import {
   alteAssets,
   assetsAus,
   curlKonfig,
+  einbettenListe,
   fremdeDateien,
+  htaccessAus,
   instanzenListe,
+  istUnsereHtaccess,
   ordnerPfad,
 } from './formular-hochladen.mjs';
+import { readFileSync } from 'node:fs';
 
 describe('Formular hochladen (15.10.2026)', () => {
   it('liest die Dateien, auf die index.html verweist – so wie Vite sie schreibt', () => {
@@ -62,5 +66,73 @@ describe('Formular hochladen (15.10.2026)', () => {
     expect(ordnerPfad('')).toBe('/');
     expect(ordnerPfad('anmeldung')).toBe('/anmeldung/');
     expect(ordnerPfad('/a/b/')).toBe('/a/b/');
+  });
+});
+
+describe('Sicherheits-Header des Formulars (#849)', () => {
+  const csp = (text) => /Content-Security-Policy "([^"]+)"/.exec(text)[1];
+  const teil = (text, name) =>
+    csp(text)
+      .split('; ')
+      .find((t) => t.startsWith(`${name} `));
+
+  it('Daten und Bilder nur von den Instanzen aus instanzen.json – sonst nur die eigene Seite', () => {
+    const t = htaccessAus(['a.church.tools', 'test-a.church.tools']);
+    expect(teil(t, 'connect-src')).toBe(
+      "connect-src 'self' https://a.church.tools https://test-a.church.tools",
+    );
+    expect(teil(t, 'img-src')).toBe(
+      "img-src 'self' data: blob: https://a.church.tools https://test-a.church.tools",
+    );
+    expect(teil(t, 'script-src')).toBe("script-src 'self'");
+    expect(teil(t, 'default-src')).toBe("default-src 'self'");
+    expect(csp(t)).not.toContain('unsafe-eval');
+  });
+
+  it('einbetten: ohne Angabe nur die eigene Seite, sonst die genannten', () => {
+    expect(teil(htaccessAus(['a.church.tools']), 'frame-ancestors')).toBe("frame-ancestors 'self'");
+    expect(
+      teil(htaccessAus(['a.church.tools'], ['https://a.de', 'https://*.a.de']), 'frame-ancestors'),
+    ).toBe("frame-ancestors 'self' https://a.de https://*.a.de");
+  });
+
+  it('nur wirksam mit mod_headers – ohne bleibt die Seite erreichbar statt Fehler 500', () => {
+    const t = htaccessAus(['a.church.tools']);
+    expect(t).toMatch(/^<IfModule mod_headers\.c>$/m);
+    expect(t).toMatch(/^<\/IfModule>$/m);
+  });
+
+  it('ANMELDUNG_EINBETTEN: nur https-Adressen ohne Pfad, Platzhalter nur vorn', () => {
+    expect(einbettenListe(undefined)).toEqual([]);
+    expect(einbettenListe(' https://A.de , https://*.a.de,https://a.de')).toEqual([
+      'https://a.de',
+      'https://*.a.de',
+    ]);
+    expect(() => einbettenListe('http://a.de')).toThrow(/ANMELDUNG_EINBETTEN/);
+    expect(() => einbettenListe('https://a.de/pfad')).toThrow();
+    expect(() => einbettenListe('a.de')).toThrow();
+    expect(() => einbettenListe('https://a.*.de')).toThrow();
+  });
+
+  it('die Vorlage im Paket ist genau das, was der Erzeuger schreibt', () => {
+    const vorlage = readFileSync(
+      new URL('../formular/public/htaccess.beispiel', import.meta.url),
+      'utf8',
+    );
+    expect(vorlage).toBe(
+      htaccessAus(['deine-gemeinde.church.tools', 'test-deine-gemeinde.church.tools']),
+    );
+  });
+
+  it('die Vorlage zählt zum Paket; eine .htaccess nur, wenn sie unsere ist', () => {
+    expect(fremdeDateien(['htaccess.beispiel', 'index.html'])).toEqual([]);
+    expect(fremdeDateien(['.htaccess', 'index.html'])).toEqual(['.htaccess']);
+    expect(fremdeDateien(['.htaccess', 'index.html'], { htaccessUnsere: true })).toEqual([]);
+  });
+
+  it('erkennt die eigene .htaccess am Kopf – die von WordPress ist fremd', () => {
+    expect(istUnsereHtaccess(htaccessAus(['a.church.tools']))).toBe(true);
+    expect(istUnsereHtaccess('# BEGIN WordPress\n<IfModule mod_rewrite.c>\n')).toBe(false);
+    expect(istUnsereHtaccess(null)).toBe(false);
   });
 });

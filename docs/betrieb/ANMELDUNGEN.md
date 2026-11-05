@@ -53,11 +53,18 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
    zeigen. Fehlt die Datei, zeigt das Formular „Diese Anmeldeseite ist noch nicht eingerichtet“. Das Paket enthält
    sie bewusst nicht: Beim Aktualisieren bleibt eure Liste stehen. Nutzt ihr eine Test-Instanz mit derselben Seite,
    gehört sie mit in die Liste.
+   **Empfohlen: `.htaccess` mit Sicherheits-Headern** (seit #849) – `htaccess.beispiel` aus dem Paket in `.htaccess`
+   umbenennen und `deine-gemeinde` durch eure Instanzen ersetzen (dieselben wie in `instanzen.json`). Sie sagt dem
+   Browser, dass die Seite nur eure Instanzen ansprechen und nirgends eingebettet werden darf (Webspace mit Apache und
+   `mod_headers`, z. B. Hetzner). Liegt im Ordner schon eine `.htaccess` (etwa die eurer Website), ist es der falsche
+   Ordner.
    **Per Skript (macOS):** Zugangsdaten einmal im Schlüsselbund ablegen –
    `security add-internet-password -s <FTP-Server> -a <FTP-Benutzer> -r "ftp " -w` (fragt nach dem Passwort) –,
    danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.…
 ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools npm run formular:hochladen` (Instanzen kommagetrennt; das Skript
-   schreibt `instanzen.json` und liest sie im Netz nach; optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
+   schreibt `instanzen.json` und die `.htaccess` und prüft im Netz, dass beide ankommen – die Header am Antwort-Kopf;
+   eine fremde `.htaccess` im Ordner bricht ab; optional `ANMELDUNG_EINBETTEN` (wo das Formular eingebettet werden darf,
+   z. B. `https://eure-gemeinde.de,https://*.eure-gemeinde.de`) und `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
    Schlüsselbund-Einträge gibt). Am besten ein **eigener FTP-Zugang nur für den Ordner der Subdomain**, nicht der der Website. Das Skript baut das Formular, lädt per FTPS erst die neuen
    Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
    nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
@@ -65,7 +72,8 @@ ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools npm run formular:hochladen` (Insta
    **ECG Donrath** (eingerichtet 16.10.2026, Webspace bei Hetzner, verwaltet von Willi Heidebrecht): Formular unter
    `https://anmeldung.ecg-donrath.de`, FTP-Server `www622.your-server.de`, eigener FTP-Benutzer `whebde_1` nur für den
    Ordner der Subdomain (Passwort im Schlüsselbund auf Alwins Mac). Hochladen:
-   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de ANMELDUNG_CT_INSTANZEN=ecg-donrath.church.tools,test-ecg-donrath.church.tools npm run formular:hochladen`.
+   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de ANMELDUNG_CT_INSTANZEN=ecg-donrath.church.tools,test-ecg-donrath.church.tools ANMELDUNG_EINBETTEN=https://ecg-donrath.de,https://*.ecg-donrath.de npm run formular:hochladen`
+   (Einbetten unter ecg-donrath.de erlaubt, weil nicht sicher ist, ob die Website das Formular einbettet – #849).
    Nie `whebde_0` nehmen – das ist der Zugang der Website (WordPress); das Skript bricht dort ohnehin ab.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser

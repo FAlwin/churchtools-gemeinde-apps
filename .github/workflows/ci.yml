@@ -21,6 +21,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Bekannte Lücken in Laufzeit-Abhängigkeiten (#849): ab „hoch“ rot – dann wird gehandelt, bevor gemergt wird.
+      # Nur Laufzeit (`--omit=dev`), weil seit dem zweistufigen Image nur sie ausgeliefert werden.
+      - name: npm audit (Laufzeit)
+        run: npm audit --omit=dev --audit-level=high
+
       # Formatierung zuerst: billigster Schritt, und ein Format-Diff macht jede spätere
       # Fehlermeldung schwerer lesbar. ESLint prüft Formatierung NICHT (eslint-config-prettier
       # schaltet die Regeln ab) – ohne diesen Schritt driftet der Stil unbemerkt weiter.
@@ -89,3 +94,37 @@ jobs:
       # ChurchTools-Stub (#174) – Playwright startet Stub, Server und Client selbst.
       - name: E2E (Render-Smoke + Auth-Flow gegen CT-Stub)
         run: npm run test:e2e
+
+  # Das ausgelieferte Image wirklich bauen und starten (#849): Seit es zweistufig ist, fehlen im Laufzeit-Teil die
+  # Entwickler-Pakete – fehlt dort etwas, das der Server braucht, merkt das sonst erst Staging (oder Watchtower in Prod).
+  docker-start:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Image bauen
+        run: docker build -t musik-app-probe .
+
+      - name: Starten und prüfen
+        run: |
+          docker run -d --name probe -p 3001:3001 \
+            -e NODE_ENV=production \
+            -e CHURCHTOOLS_BASE_URL=https://example.church.tools \
+            -e SESSION_SECRET="$(openssl rand -hex 32)" \
+            -e ABLAGE_UMZUG=aus \
+            musik-app-probe
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3001/api/health && break; sleep 2; done
+          curl -fsS http://127.0.0.1:3001/api/health | grep -q '"status":"ok"'
+          # Die Web-App kommt aus Stufe 1 mit.
+          curl -fsS http://127.0.0.1:3001/ | grep -q '<div id="root"'
+          # Läuft als „node“, nicht als root.
+          test "$(docker exec probe stat -c %U /proc/1)" = "node"
+          # Keine Entwickler-Werkzeuge im Laufzeit-Image, aber tsx (der Server läuft damit).
+          docker exec probe test ! -e /app/node_modules/vite
+          docker exec probe test ! -e /app/node_modules/vitest
+          docker exec probe test ! -e /app/node_modules/eslint
+          docker exec probe test -e /app/node_modules/tsx
+
+      - name: Protokoll bei Fehler
+        if: failure()
+        run: docker logs probe || true

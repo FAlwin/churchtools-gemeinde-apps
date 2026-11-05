@@ -123,6 +123,9 @@ So wird `https://musik.deine-gemeinde.de` erreichbar. Reihenfolge wichtig:
 - **Nur über den Reverse Proxy:** Die Prod-Vorlage lauscht an `127.0.0.1:3001` und setzt
   `COOKIE_SECURE=true` – `http://<NAS-IP>:3001` ist von anderen Geräten nicht erreichbar und meldet
   nicht an. Auch im WLAN die HTTPS-Adresse nehmen.
+- **`TRUST_PROXY`** (#849): Die Prod- und Staging-Vorlage setzen `an` – die App glaubt dem Reverse Proxy die
+  Absender-Adresse, sonst teilten sich alle Geräte ein Login-Kontingent. Die einfache Vorlage `docker-compose.yml`
+  (ohne Proxy, Port im LAN) setzt `aus`; wer dort einen Proxy davorsetzt, stellt sie mit `COOKIE_SECURE=true` auf `an`.
 - Auf iPad/iPhone: Teilen-Symbol → **„Zum Home-Bildschirm"** → läuft als PWA im Vollbild.
 - Von außen: `https://musik.deine-gemeinde.de`.
 

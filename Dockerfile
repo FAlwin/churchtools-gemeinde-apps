@@ -1,4 +1,24 @@
-# Ein Image: baut die Web-App und startet den Server, der API + App ausliefert.
+# Zwei Stufen (#849): Die erste baut die Web-App mit allen Werkzeugen, die zweite enthält nur, was zur Laufzeit
+# gebraucht wird – Server, geteilte Regeln, die fertige Web-App und die Laufzeit-Abhängigkeiten. Vorher steckten
+# Vite, Vitest, ESLint & Co. im ausgelieferten Image (und damit jede ihrer Lücken); `npm audit --omit=dev` sah sie
+# nicht, obwohl sie im Container lagen. Geprüft wird das Image in der CI (`ci.yml`, Job „docker-start“).
+
+# ── Stufe 1: die Web-App bauen ─────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS bau
+WORKDIR /app
+# Erst nur die Manifeste kopieren (besseres Caching der Installation)
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/
+COPY server/package.json ./server/
+COPY shared/package.json ./shared/
+RUN npm ci
+COPY . .
+# App-Version: vom CI aus dem Git-Tag als Build-Arg übergeben (z. B. v2.1.5); lokal „dev".
+# Vite stellt VITE_*-Variablen zur Build-Zeit als import.meta.env bereit → Anzeige im Mehr-Tab.
+ARG APP_VERSION=dev
+RUN VITE_APP_VERSION="$APP_VERSION" npm run build --workspace=client
+
+# ── Stufe 2: Laufzeit ────────────────────────────────────────────────────────────────────────────
 FROM node:22-alpine
 
 # su-exec: erlaubt dem Entrypoint, nach dem Übereignen des Volumes die Rechte sauber abzugeben
@@ -7,20 +27,22 @@ RUN apk add --no-cache su-exec
 
 WORKDIR /app
 
-# Erst nur die Manifeste kopieren (besseres Caching der Installation)
+# Nur die Laufzeit-Abhängigkeiten von Server und geteilten Regeln. `tsx` gehört dazu (der Server läuft als
+# TypeScript, siehe `server/package.json` → `start`).
 COPY package.json package-lock.json ./
-COPY client/package.json ./client/
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
-RUN npm ci
+RUN npm ci --omit=dev --workspace=server --workspace=shared && npm cache clean --force
 
-# Restlichen Quellcode kopieren und die Web-App bauen
-COPY . .
-# App-Version: vom CI aus dem Git-Tag als Build-Arg übergeben (z. B. v2.1.5); lokal „dev".
-# Vite stellt VITE_*-Variablen zur Build-Zeit als import.meta.env bereit → Anzeige im Mehr-Tab.
-ARG APP_VERSION=dev
-RUN VITE_APP_VERSION="$APP_VERSION" npm run build --workspace=client
+# Server + geteilte Regeln als Quelltext (tsx liest die Pfade aus server/tsconfig.json → tsconfig.base.json),
+# die Web-App fertig gebaut aus Stufe 1.
+COPY tsconfig.base.json ./
+COPY server ./server
+COPY shared ./shared
+COPY --from=bau /app/client/dist ./client/dist
+
 # Auch der Server kennt seine Version – Staging (`staging-…`) zieht die alte Ablage nicht nach ChurchTools um.
+ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION
 
 ENV NODE_ENV=production

@@ -6,7 +6,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { config } from './config.js';
-import { vertrauterProxy } from './utils/vertrauterProxy.js';
+import { proxyRegel } from './utils/vertrauterProxy.js';
 import { abmeldungenLaden } from './services/abmeldungen.js';
 import { aufraeumen } from './services/ablageUmzug.js';
 import { dropUnusableSessionCookie } from './middleware/session.js';
@@ -37,7 +37,8 @@ const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 //
 // Seit #459 eine eigene Regel statt `'loopback'`: Hinter Docker kommt die Verbindung vom Docker-
 // Gateway (privat, nicht Loopback) – siehe `utils/vertrauterProxy.ts`.
-if (config.isProduction) app.set('trust proxy', vertrauterProxy);
+// Ohne Reverse-Proxy (`TRUST_PROXY=aus`, #849) niemandem – sonst könnte jedes Gerät im LAN seine Adresse erfinden.
+if (config.isProduction) app.set('trust proxy', proxyRegel(config.trustProxy));
 
 // ── Sicherheit & Basis-Middleware ───────────────────────────
 // Content-Security-Policy: In Produktion restriktiv (zusätzliche Schutzschicht gegen XSS),

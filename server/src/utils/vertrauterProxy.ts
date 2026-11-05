@@ -41,3 +41,11 @@ export function vertrauterProxy(addr: string, hop: number): boolean {
   if (liegtIn(lokal, addr)) return true;
   return hop === 0 && liegtIn(privat, addr);
 }
+
+/**
+ * **Die Regel für `trust proxy` aus dem Schalter `TRUST_PROXY`** (#849): `an` = `vertrauterProxy`, `aus` = niemandem
+ * (`false`, dann zählt die Adresse der Verbindung selbst). Hier und nicht in `index.ts`, damit sie getestet ist.
+ */
+export function proxyRegel(an: boolean): typeof vertrauterProxy | false {
+  return an ? vertrauterProxy : false;
+}

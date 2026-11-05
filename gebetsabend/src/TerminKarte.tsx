@@ -27,7 +27,16 @@ export function TerminKarte({ termin }: { termin: GebetsTermin }) {
  * **Lädt den nächsten Termin und zeigt ihn** – oder nichts: ohne gewählten Kalender, ohne passenden Termin und auch,
  * wenn ChurchTools gerade nicht antwortet. Der Termin ist Beiwerk; das Zuhören darf daran nicht hängen.
  */
-export function NaechsterTermin({ modul, kategorie }: { modul: number; kategorie: number | null }) {
+export function NaechsterTermin({
+  modul,
+  kategorie,
+  aktualisiert = 0,
+}: {
+  modul: number;
+  kategorie: number | null;
+  /** Zählt hoch, wenn die Einstellungen gespeichert wurden – dann neu laden (G3). */
+  aktualisiert?: number;
+}) {
   const [termin, setTermin] = useState<GebetsTermin | null>(null);
   useEffect(() => {
     if (kategorie === null) return;
@@ -43,6 +52,6 @@ export function NaechsterTermin({ modul, kategorie }: { modul: number; kategorie
     return () => {
       aktuell = false;
     };
-  }, [modul, kategorie]);
+  }, [modul, kategorie, aktualisiert]);
   return termin ? <TerminKarte termin={termin} /> : null;
 }

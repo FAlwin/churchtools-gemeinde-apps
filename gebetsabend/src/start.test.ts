@@ -48,7 +48,13 @@ describe('ladeStart', () => {
     expect(kategorien).toHaveBeenCalledWith(expect.anything(), 26);
     expect(daten).toHaveBeenCalledWith('/permissions/global');
     expect(s.einrichtung).toEqual({ zugang: 74, einstellungen: 75 });
-    expect(s).toMatchObject({ vorname: 'Helene', darfAnlegen: false, technik: false });
+    expect(s).toMatchObject({
+      ichId: 1,
+      vorname: 'Helene',
+      darfAnlegen: false,
+      technik: false,
+      einstellungenAendern: false,
+    });
   });
 
   it('Technik = anlegen, ändern UND löschen in „Zugang“ – unter dem Kürzel der Erweiterung', async () => {
@@ -65,10 +71,15 @@ describe('ladeStart', () => {
         'delete custom data': [74],
       },
     });
-    expect(await ladeStart()).toMatchObject({ darfAnlegen: true, technik: true });
+    // Nur „Zugang“: Starten ja, das Zahnrad (Einstellungen) nicht.
+    expect(await ladeStart()).toMatchObject({
+      darfAnlegen: true,
+      technik: true,
+      einstellungenAendern: false,
+    });
   });
 
-  it('nur „Einstellungen“ schreiben macht noch nicht zur Technik', async () => {
+  it('nur „Einstellungen“ schreiben macht noch nicht zur Technik – aber zeigt das Zahnrad', async () => {
     daten.mockResolvedValue({
       gebetsabend: {
         'create custom data': [75],
@@ -76,7 +87,7 @@ describe('ladeStart', () => {
         'delete custom data': [75],
       },
     });
-    expect((await ladeStart()).technik).toBe(false);
+    expect(await ladeStart()).toMatchObject({ technik: false, einstellungenAendern: true });
   });
 
   it('ohne sichtbare Kategorie „Zugang“ ist niemand Technik, auch mit Schreibrecht auf eine fremde ID', async () => {

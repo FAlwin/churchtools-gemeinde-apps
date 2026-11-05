@@ -1,0 +1,56 @@
+// Technik-Karte (Bauplan Gebetsabend G3, Entwurf v3) – Karte, Zustand, großer Knopf und Player kommen aus
+// `Zuhoeren.module.scss`; hier nur, was die Technik zusätzlich hat.
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.titel {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.anm {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text3);
+}
+
+// „Senden – Bild + Ton | Nur Ton“: Beschriftung links, Umschalter rechts; am Handy darunter.
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+
+.wer {
+  display: flex;
+  flex: 1 1 180px;
+  flex-direction: column;
+  font-size: 14.5px;
+  color: var(--text);
+
+  small {
+    font-size: 12.5px;
+    color: var(--text2);
+  }
+}
+
+// Sender „Nur Ton“: VDO.Ninja zeigt dort die Geräteauswahl (S0b) – sie braucht Platz, kein 16:9-Bild.
+.senderTon {
+  aspect-ratio: auto;
+  height: 240px;
+}
+
+.problem {
+  font-size: 14px;
+  color: var(--red);
+}

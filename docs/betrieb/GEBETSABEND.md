@@ -1,8 +1,9 @@
 # Gebetsabend – ChurchTools-Erweiterung
 
-> **Stand: G2 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
-> an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend zuhören“**. **Übertragen starten und beenden (G3)
-> und „Wer hört zu?“ (G4) folgen** (Bauplan `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: G3 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
+> an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend zuhören“**; die Technik **startet und beendet** die
+> Übertragung direkt in der Seite und stellt den Kalender ein. **„Wer hört zu?“ (G4) folgt** (Bauplan
+> `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Der Gebetsabend wird für Gemeindeglieder übertragen, die nicht kommen können – mit Bild und Ton, nur für Personen mit
 ChurchTools-Zugang und Recht an der Erweiterung. Übertragen wird mit **VDO.Ninja** (Peer-to-Peer im Browser) im
@@ -38,7 +39,8 @@ Erst danach lassen sich die Rechte auf diese Kategorien vergeben (vorher stehen 
 
 ## Zuhören
 
-Die Seite zeigt oben den **nächsten Gebetsabend** aus dem gewählten Kalender (Titel enthält „Gebet“; einstellbar mit G3)
+Die Seite zeigt oben den **nächsten Gebetsabend** aus dem gewählten Kalender (Titel enthält „Gebet“; die Technik
+stellt beides unter dem Zahnrad ein)
 und darunter einen großen Knopf **„Gebetsabend zuhören“**:
 
 - **Noch keine Übertragung:** Der Knopf ist aus, darüber steht, dass es kurz vor dem Gebetsabend losgeht. Die Seite
@@ -59,6 +61,31 @@ und darunter einen großen Knopf **„Gebetsabend zuhören“**:
 - **Neu gestartet / beendet:** Startet die Technik neu, lädt der Player die neuen Daten selbst; beendet sie, schließt
   er sich mit „Die Übertragung ist beendet“. Antwortet ChurchTools dabei kurz nicht, bleibt alles, wie es ist.
 - Zuhörer melden sich beim Sender mit **Vor- und Nachnamen** an – die Technik sieht später, wer zuhört (G4).
+
+## Übertragen (Technik)
+
+Wer zur Technik gehört (die Kategorie „Zugang“ bearbeiten darf), sieht über allem die Karte **„Übertragung“**:
+
+- **Starten:** „Bild + Ton“ oder „Nur Ton“ wählen und **„Übertragung starten“** tippen – auf dem Gerät im Raum. Das
+  setzt eine neue StreamID und ein neues Passwort, startet den Sender **in der Seite** (Kamerabild in der Karte) und
+  meldet allen „läuft“. Erst wenn ChurchTools das nachgelesen bestätigt, startet der Sender; sonst steht da, was
+  schiefging. Beim ersten Mal fragt der Browser nach Kamera und Mikrofon – „Erlauben“, am besten dauerhaft.
+  Empfohlen wird Chrome auf dem Gerät im Raum. Bei „Nur Ton“ zeigt VDO.Ninja eine Geräteauswahl, dort einmal das
+  Mikrofon bestätigen.
+- **Seite offen lassen:** Der Sender läuft nur, solange die Seite offen ist und das Gerät nicht gesperrt wird.
+- **Seite neu geladen oder anderes Gerät:** Dann steht „Läuft – der Sender ist auf diesem Gerät nicht aktiv“. Die
+  Seite startet den Sender **nie von selbst** (sonst könnten zwei Geräte gleichzeitig senden). **„Sender hier
+  starten“** nimmt dieselben Zugangsdaten – die Zuhörer bleiben verbunden.
+- **Sender neu starten:** lädt den Sender mit demselben Passwort neu, etwa wenn Kamera oder Mikrofon hängen.
+- **Übertragung beenden:** mit Rückfrage. Alle Zuhörer werden getrennt; beim nächsten Start gibt es neue Zugangsdaten.
+- **Kein Zuhören auf dem Sender-Gerät:** Dort stünde der Ton wieder im Mikrofon – statt des Knopfs steht ein Hinweis.
+- **Zwei Geräte gleichzeitig:** Startet oder beendet ein anderes Technik-Gerät inzwischen, wird nichts überschrieben;
+  die Seite zeigt, was jetzt gilt. Hat ein anderes Gerät neu gestartet, hört der Sender hier von selbst auf.
+- **Einstellungen (Zahnrad, nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
+  und an welchem Wort im Titel er erkannt wird. Zur Auswahl stehen die Kalender, die man selbst sieht.
+
+Zugang und Einstellungen liegen je als ein Eintrag **mit Versionsnummer** in ihrer Kategorie (wie der Plan im
+Organigramm). Ein Eintrag aus G2 (ohne Version, nur in der Test-Instanz) gilt als „noch nichts gespeichert“.
 
 ## Rechte
 
@@ -97,7 +124,9 @@ Geräten; den Verbindungsaufbau (und, wo nötig, die Umleitung) übernehmen Serv
   Ziffern), `links.ts` (Sender- und Zuhörer-Adresse, eine Stelle), `zustand.ts` (Player-Zustand aus den
   VDO.Ninja-Meldungen; `istVdoMeldung` nimmt nur Nachrichten aus dem eigenen iframe von `https://vdo.ninja` an),
   `einrichten.ts` (Kategorien, Stand der Einrichtung), `einstellungen.ts` (Kalender, Suchwort), `termin.ts` (nächster
-  Termin), `zuhoeren.ts` (Texte, Nachfragen, „neu laden / beendet“).
+  Termin), `zuhoeren.ts` (Texte, Nachfragen, „neu laden / beendet“), `ablage.ts` (Zugang und Einstellungen als Dokument
+  mit Version über `@shared/ct/versionierterWert`), `technik.ts` (Technik-Stand „aus / hier / woanders“, wann der Sender
+  aufhört, Texte).
 - Erweiterung: `gebetsabend/` (`npm run dev -w gebetsabend`, dann `http://localhost:5193/ccm/gebetsabend/?demo`;
   Fälle `?demo=zuhoerer`, `?demo=aus`, `?demo=technik`, `?demo=mitglied`, `?demo=fehler`).
 - Messungen: `gebetsabend-planung/s0-messung.md` (S0, S0b, G0 – Einbettung, Rechte, VDO.Ninja-Parameter und

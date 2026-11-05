@@ -1,28 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { inhaltAus } from '../ct/modulDaten';
-import {
-  EINSTELLUNGEN_ART,
-  EINSTELLUNGEN_FASSUNG,
-  einstellungenAlsWert,
-  einstellungenAus,
-  STANDARD_EINSTELLUNGEN,
-} from './einstellungen';
+import { einstellungenAus, STANDARD_EINSTELLUNGEN } from './einstellungen';
 
-/** So liest die Seite den Wert: `inhaltAus` (gemeinsam für alle Erweiterungen) und dann `einstellungenAus`. */
-const lesen = (value: string) =>
-  einstellungenAus(
-    inhaltAus({ id: 1, dataCategoryId: 2, value }, EINSTELLUNGEN_ART, EINSTELLUNGEN_FASSUNG),
-  );
+// Hin und zurück durch den Speicher prüft `ablage.test.ts`; hier nur, was aus einem Inhalt wird.
 
 describe('Einstellungen', () => {
-  it('hin und zurück unverändert', () => {
+  it('gültige Einstellungen bleiben unverändert', () => {
     const e = { kalender: 1, suchwort: 'Gebetsabend' };
-    expect(lesen(einstellungenAlsWert(e))).toEqual(e);
+    expect(einstellungenAus(JSON.parse(JSON.stringify(e)))).toEqual(e);
   });
 
   it('nichts gespeichert oder fremder Wert → Vorgabe (kein Kalender, Suchwort „Gebet“)', () => {
     expect(einstellungenAus(null)).toEqual(STANDARD_EINSTELLUNGEN);
-    expect(lesen('kein json')).toEqual(STANDARD_EINSTELLUNGEN);
+    expect(einstellungenAus('kein Objekt')).toEqual(STANDARD_EINSTELLUNGEN);
     expect(STANDARD_EINSTELLUNGEN).toEqual({ kalender: null, suchwort: 'Gebet' });
   });
 

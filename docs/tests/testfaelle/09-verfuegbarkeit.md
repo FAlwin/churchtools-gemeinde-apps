@@ -31,7 +31,7 @@ eine Abwesenheit mit dessen **Uhrzeit** und dem Kommentar `[Musikteam]` an, alle
 6. Zurück in der App: den Haken wegnehmen → Leiste, **Speichern** → in ChurchTools ist der Eintrag weg.
 7. **Zwei auf einmal:** zwei Termine abhaken, einmal Speichern → Meldung „2 Änderungen gespeichert",
    in ChurchTools zwei Einträge. Dann beide wieder weg, Speichern.
-8. **Unter „Termine" fehlt Vergangenes:** Auch „Dieser Monat“ zeigt nur Termine ab heute.
+8. **Unter „Termine" fehlt Vergangenes:** Auch der laufende Monat zeigt nur Termine ab heute.
 
 <details><summary>Technisches</summary>
 
@@ -142,9 +142,10 @@ Monats-Kapseln). Gezeigt wird nur nach vorn; beim Öffnen „ab heute“ (die n�
 unter **Einträge → Früher**, nur zum Ansehen.
 
 1. Der Knopf zeigt die Spanne der nächsten vier Wochen und darunter „n Termine · ab heute“. Antippen → Menü: **Ab
-   heute** (die nächsten 4 Wochen), **Dieser Monat**, **Nächster Monat**, darunter **Eigener Zeitraum** von–bis mit
-   „Anzeigen“. Tipp daneben oder Escape schließt es.
-2. **Nächster Monat** → Knopf „November 2026“, darunter die Überschrift „November 2026“ und seine Termine.
+   heute** (die nächsten 4 Wochen), darunter **Monat** mit Jahr ‹ › und zwölf Monatsfeldern (der laufende mit Punkt,
+   die vergangenen gesperrt), darunter **Eigener Zeitraum** von–bis mit „Anzeigen“. Tipp daneben oder Escape schließt
+   es.
+2. Monatsfeld **Nov** → Knopf „November 2026“, darunter die Überschrift „November 2026“ und seine Termine.
 3. **Eigener Zeitraum** über zwei Monate → je Monat eine Überschrift mit eigener Zahl. Ein Zeitraum ohne Termine sagt
    „Kein Termin in diesem Zeitraum.“ Ein Zeitraum weit über ein Jahr hinaus lädt kurz nach und zeigt dann seine
    Termine.
@@ -156,8 +157,8 @@ unter **Einträge → Früher**, nur zum Ansehen.
 
 - **Priorität:** normal
 - **Betrifft:** `ui/bedienung/ZeitraumKnopf.tsx`, `shared/ct/zeitraum.ts`, `shared/ct/monate.ts`, `client/src/pages/Availability.tsx`, `ui/abwesenheiten/AbsenceSheet.tsx`, `server/src/services/absences.ts`
-- **Automatisiert:** teilweise – `ui/bedienung/ZeitraumKnopf.test.tsx`, `shared/ct/zeitraum.test.ts`, `shared/ct/monate.test.ts`, `client/src/pages/Availability.test.tsx` (ab heute vier Wochen, nächster/dieser Monat, eigener Zeitraum über zwei Monate, leerer Zeitraum, Nachladen über ein Jahr hinaus, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt die Bedienung am Gerät
-- **Historie:** #177 (Runde 8, 19.09.2026); Zeitraum-Knopf statt Monatsleiste 28.10.2026 (Entwurf A, Alwin)
+- **Automatisiert:** teilweise – `ui/bedienung/ZeitraumKnopf.test.tsx`, `shared/ct/zeitraum.test.ts`, `shared/ct/monate.test.ts`, `client/src/pages/Availability.test.tsx` (ab heute vier Wochen, Monatsfelder mit gesperrter Vergangenheit, eigener Zeitraum über zwei Monate, leerer Zeitraum, Nachladen über ein Jahr hinaus, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt die Bedienung am Gerät
+- **Historie:** #177 (Runde 8, 19.09.2026); Zeitraum-Knopf statt Monatsleiste 28.10.2026 (Entwurf A, Alwin); Monatsfelder statt „Dieser/Nächster Monat“ E9-3 (05.11.2026)
 
 </details>
 

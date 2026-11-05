@@ -13,6 +13,29 @@
   overflow: auto;
   max-height: calc(100vh - 220px);
   min-height: 320px;
+
+  // Scroll-Leisten immer sichtbar (E9-3, Alwin 05.11.2026, Entwurf `e9-zeitraum-scrollen.html` Variante A): macOS
+  // blendet sie sonst aus, bis man scrollt – und ohne seitliches Mausrad scrollt man nicht, man sah also nie, dass die
+  // Matrix rechts weitergeht. Mit eigener Gestalt zeigen Chrome und Safari sie dauerhaft und mit der Maus ziehbar.
+  // Die Höhe bis knapp über den Fensterrand (und über die Senden-Leiste) misst `useBisUnten` in `Planen.tsx` – so steht
+  // die untere Leiste immer im Bild; `max-height` oben gilt nur, bis gemessen ist.
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: var(--surface3);
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--text3);
+    border: 3px solid var(--surface3);
+    border-radius: var(--r-card);
+  }
+  // Firefox kennt die Gestalt oben nicht – dort wenigstens dieselben Farben.
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-color: var(--text3) var(--surface3);
+  }
 }
 
 .plan {

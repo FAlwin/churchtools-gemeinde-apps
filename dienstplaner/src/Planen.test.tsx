@@ -383,18 +383,66 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
 describe('Planen – Wer wie oft? (E3-5)', () => {
   afterEach(() => localStorage.clear());
 
-  it('Einsätze je Person im Zeitraum, meiste zuerst, mit Schnitt', () => {
-    zeige2();
+  const umschalten = (name: 'Matrix' | 'Wer wie oft?') =>
     fireEvent.click(
-      within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', {
-        name: 'Wer wie oft?',
-      }),
+      within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name }),
     );
-    const zeilen = within(screen.getByRole('table'))
+
+  it('Einsätze je Person im eigenen Zeitraum – ohne Wahl die letzten 3 Monate (E9-3) –, meiste zuerst, mit Schnitt', async () => {
+    const laden = vi.fn(() => Promise.resolve({ zeilen: [] as [], plan: PLAN2 }));
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        ladeZeitraum={laden}
+      />,
+    );
+    umschalten('Wer wie oft?');
+    expect(laden).toHaveBeenLastCalledWith('2026-07-14', '2026-10-14');
+    const zeilen = within(await screen.findByRole('table'))
       .getAllByRole('rowheader')
       .map((r) => r.textContent);
     expect(zeilen).toEqual(['Anna Test', 'Ben Test']);
     expect(screen.getByText('Einsätze (Ø 1,5)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Zeitraum:/ }).getAttribute('aria-label')).toBe(
+      'Zeitraum: 14.07. – 14.10.2026, Letzte 3 Monate · 4 Termine',
+    );
+    // Im Menü die Vergangenheit statt „Ab heute“.
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    expect(screen.queryByRole('button', { name: /^Ab heute/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Letzte 6 Monate/ }));
+    expect(laden).toHaveBeenLastCalledWith('2026-04-14', '2026-10-14');
+    // Die Matrix behält ihren eigenen Zeitraum (ab heute) – getrennt gemerkt.
+    umschalten('Matrix');
+    expect(screen.getByRole('button', { name: /^Zeitraum:/ }).getAttribute('aria-label')).toMatch(
+      /passend zur Fensterbreite$/,
+    );
+    expect(JSON.parse(localStorage.getItem('dienstplaner.planen.ansicht')!)).toMatchObject({
+      zeitraum: { art: 'abHeute' },
+      zeitraumWer: { art: 'letzte', monate: 6 },
+    });
+  });
+
+  it('der Zeitraum von „Wer wie oft?“ kommt beim nächsten Öffnen aus dem Gerät zurück', () => {
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ unteransicht: 'personen', zeitraumWer: { art: 'letzte', monate: 12 } }),
+    );
+    const laden = vi.fn(() => new Promise<never>(() => {}));
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        ladeZeitraum={laden}
+      />,
+    );
+    expect(laden).toHaveBeenLastCalledWith('2025-10-14', '2026-10-14');
   });
 });
 
@@ -556,7 +604,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
 
   type Daten = { zeilen: []; plan: Plan };
   const daten = (plan = PLAN2): Daten => ({ zeilen: [], plan });
-  const waehle = (option: RegExp) => {
+  const waehle = (option: RegExp | string) => {
     fireEvent.click(knopf());
     fireEvent.click(screen.getByRole('button', { name: option }));
   };
@@ -576,7 +624,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     schmal(); // nur eine Spalte passt – im Monat stehen trotzdem alle
     const laden = vi.fn(() => Promise.resolve(daten()));
     zeigeZ(laden);
-    waehle(/^Dieser Monat/);
+    waehle('Oktober 2026');
     expect(laden).toHaveBeenLastCalledWith('2026-10-01', '2026-10-31');
     expect(
       await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 4 Termine' }),
@@ -591,8 +639,82 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum davor' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum davor' }));
     expect(laden).toHaveBeenLastCalledWith('2026-09-01', '2026-09-30');
-    // Dieselben Knöpfe wie „ab heute“ gibt es dann nicht – kein „＋“.
-    expect(screen.queryByRole('button', { name: 'Späteren Termin dazunehmen' })).toBeNull();
+  });
+
+  // Lädt wie ChurchTools: nur, was im Bereich liegt – dazu ein Gottesdienst am 08.11.
+  const ROH_MEHR = [
+    ...ROH2,
+    t(5, 'Gottesdienst', '2026-11-08T09:00:00Z', [{ serviceId: 6, personId: null, name: null }]),
+  ];
+  const wieCt = (von: string, bis: string) =>
+    Promise.resolve(
+      daten(
+        planAus(
+          ROH_MEHR.filter(
+            (x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis,
+          ),
+          OPT2,
+        ),
+      ),
+    );
+
+  it('＋ im Monat nimmt eine einzelne Veranstaltung danach dazu – nicht alles, was dafür vorgeladen wurde (E9-3)', async () => {
+    const laden = vi.fn(wieCt);
+    zeigeZ(laden);
+    waehle('Oktober 2026');
+    expect(
+      await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    // Neun Wochen Vorlauf – darin liegen der 01.11. und der 08.11.; gezeigt wird nur der erste.
+    expect(laden).toHaveBeenLastCalledWith('2026-10-01', '2027-01-02');
+    expect(
+      await screen.findByRole('button', {
+        name: 'Zeitraum: 01.10. – 01.11.2026, Oktober 2026 + 1 Termin · 4 Termine',
+      }),
+    ).toBeTruthy();
+    expect(spaltenNamen()).toHaveLength(4);
+    // Gemerkt – mit dem ＋; und im Menü ist der Oktober weiter gewählt.
+    expect(JSON.parse(localStorage.getItem('dienstplaner.planen.ansicht')!).zeitraum).toEqual({
+      art: 'monat',
+      monat: '2026-10',
+      dazu: { davor: 0, danach: 1 },
+    });
+    fireEvent.click(knopf());
+    expect(screen.getByRole('button', { name: 'Oktober 2026' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(knopf());
+    // › springt um den Monat – das ＋ fällt weg.
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum danach' }));
+    expect(laden).toHaveBeenLastCalledWith('2026-11-01', '2026-11-30');
+  });
+
+  it('während ＋ nachlädt, bleibt die Matrix stehen – kein „wird geladen“', async () => {
+    let fertig: (d: Daten) => void = () => {};
+    const laden = vi.fn((von: string, bis: string) =>
+      bis === '2026-10-31' ? wieCt(von, bis) : new Promise<Daten>((r) => (fertig = r)),
+    );
+    zeigeZ(laden);
+    waehle('Oktober 2026');
+    await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
+    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    expect(screen.queryByText('Termine werden geladen …')).toBeNull();
+    expect(spaltenNamen()).toHaveLength(3);
+    await act(async () => fertig(await wieCt('2026-10-01', '2027-01-02')));
+    expect(spaltenNamen()).toHaveLength(4);
+  });
+
+  it('＋ davor ohne frühere Veranstaltung ändert nichts an der Spanne', async () => {
+    const laden = vi.fn(wieCt);
+    zeigeZ(laden);
+    waehle('Oktober 2026');
+    await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
+    fireEvent.click(screen.getByRole('button', { name: 'Früheren Termin dazunehmen' }));
+    expect(laden).toHaveBeenLastCalledWith('2026-07-30', '2026-10-31');
+    await waitFor(() =>
+      expect(knopf().getAttribute('aria-label')).toBe('Zeitraum: Oktober 2026, 3 Termine'),
+    );
   });
 
   it('eigener Zeitraum: „Anzeigen“ erst bei gültigen Tagen; › schiebt um die eigene Länge', async () => {
@@ -617,7 +739,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
   it('eine späte Antwort für einen schon verlassenen Zeitraum zählt nicht', async () => {
     const offen: Record<string, (d: Daten) => void> = {};
     zeigeZ((von) => new Promise<Daten>((r) => (offen[von] = r)));
-    waehle(/^Dieser Monat/);
+    waehle('Oktober 2026');
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum danach' }));
     await act(async () => offen['2026-11-01'](daten()));
     expect(spaltenNamen()).toHaveLength(4);
@@ -632,7 +754,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
       .mockRejectedValueOnce(new Error('weg'))
       .mockResolvedValue(daten());
     zeigeZ(laden);
-    waehle(/^Dieser Monat/);
+    waehle('Oktober 2026');
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     expect(laden).toHaveBeenCalledTimes(2);
     expect(laden).toHaveBeenLastCalledWith('2026-10-01', '2026-10-31');
@@ -641,7 +763,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
 
   it('leerer Monat bzw. Zeitraum → sagt es mit dem Zeitraum', async () => {
     zeigeZ(() => Promise.resolve(daten({ spalten: [], gruppen: [] })));
-    waehle(/^Nächster Monat/);
+    waehle('November 2026');
     expect(await screen.findByText('Im November 2026 stehen keine Termine an.')).toBeTruthy();
   });
 });
@@ -968,6 +1090,30 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
   const SPIKE = { personId: 19, name: 'Spike' };
   const offenTexte = () =>
     screen.queryByRole('status', { name: 'Noch nicht gesendet' })?.textContent ?? null;
+
+  it('der Rollbereich endet über dem Fensterrand – mit offenen Entwürfen auch über der Senden-Leiste (E9-3)', async () => {
+    // Wie in ChurchTools gemessen: die Matrix beginnt bei 224 px, das Fenster ist 1260 px hoch, die Leiste 54 px.
+    vi.stubGlobal('innerHeight', 1260);
+    const oben = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ top: 224 } as DOMRect);
+    const leiste = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(54);
+    try {
+      const rahmen = () => screen.getByRole('table').parentElement!.style.maxHeight;
+      zeige4({ laden: () => Promise.resolve(daten([])) });
+      await waitFor(() => expect(rahmen()).toBe('1020px')); // 1260 − 224 − 16
+      cleanup();
+      zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE })])) });
+      await waitFor(() => expect(offenTexte()).not.toBeNull());
+      // Die Leiste kommt nach dem ersten Messen – neu gemessen wird bei jeder Größenänderung der Seite.
+      fireEvent(window, new Event('resize'));
+      expect(rahmen()).toBe('942px'); // 1260 − 224 − 16 − (54 + 24)
+    } finally {
+      oben.mockRestore();
+      leiste.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
 
   it('Entwurf antippen öffnet das Fach – nur wo man die Schublade ändern darf', async () => {
     zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE })])) });

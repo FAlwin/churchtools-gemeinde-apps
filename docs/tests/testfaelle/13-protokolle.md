@@ -134,7 +134,7 @@ zeigen dieselbe Nummer.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/protokolle/dokument.ts` (`ableiten`, `punktEbene`), `shared/protokolle/abschnitte.ts`, `protokolle/src/einruecken.ts`, `protokolle/src/punktNummern.ts`, `protokolle/src/editorSchema.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/Bereiche.tsx`, `protokolle/src/Suche.tsx`
+- **Betrifft:** `shared/protokolle/dokument.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/einruecken.ts`, `protokolle/src/punktNummern.ts`, `protokolle/src/editorSchema.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/Bereiche.tsx`, `protokolle/src/Suche.tsx`
 - **Automatisiert:** ja – `protokolle/src/einruecken.test.ts` (Tab mit dem echten Editor), `protokolle/src/punktNummern.test.ts`, `shared/protokolle/dokument.test.ts`, `shared/protokolle/abschnitte.test.ts`, `protokolle/src/Werkzeugleiste.test.tsx`, `protokolle/src/ProtokollAnsicht.test.tsx`; die Gegenprobe zeigt: ohne die eigene Tab-Taste rücken auch dort mehrere markierte Zeilen nicht ein
 - **Historie:** K3b-1 (04.11.2026: Tab auf einem Tagesordnungspunkt hängte ihn als Kind unter den Block davor – Nummer weg, Beschlüsse darunter zählten zum Punkt davor; markierte Zeilen ließen sich nicht einrücken)
 

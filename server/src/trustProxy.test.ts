@@ -2,7 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import express from 'express';
 import type { Server } from 'node:http';
 import { ipRateKey } from './utils/ipKey.js';
-import { vertrauterProxy } from './utils/vertrauterProxy.js';
+import { proxyRegel, vertrauterProxy } from './utils/vertrauterProxy.js';
+import { pruefeTrustProxy } from './config.js';
 
 /**
  * #214: Von `trust proxy` hängt die gesamte IP-Härtung ab – vor allem das Login-Limit, das mangels
@@ -17,7 +18,9 @@ import { vertrauterProxy } from './utils/vertrauterProxy.js';
 let server: Server | null = null;
 
 /** Startet einen Mini-Server mit der gewünschten trust-proxy-Einstellung; liefert die Basis-URL. */
-async function startWith(trust: string | number | typeof vertrauterProxy): Promise<string> {
+async function startWith(
+  trust: string | number | boolean | typeof vertrauterProxy,
+): Promise<string> {
   const app = express();
   app.set('trust proxy', trust);
   app.get('/ip', (req, res) => res.json({ ip: req.ip, key: ipRateKey(req.ip) }));
@@ -123,5 +126,42 @@ describe('trust proxy: vertrauterProxy (#459)', () => {
     const base = await startWith(vertrauterProxy);
     expect((await ipFor(base, '203.0.113.7')).ip).toBe('203.0.113.7');
     expect((await ipFor(base, '203.0.113.7, 127.0.0.1')).ip).toBe('203.0.113.7');
+  });
+});
+
+/**
+ * #849: Ohne Reverse-Proxy (die einfache Vorlage, Port im LAN) ist jedes Gerät selbst der „private Nachbar“, dem
+ * `vertrauterProxy` glaubt – es könnte eine erfundene Adresse mitschicken. `TRUST_PROXY=aus` glaubt niemandem.
+ */
+describe('TRUST_PROXY (#849)', () => {
+  it('ohne Angabe wie bisher an; an/aus und true/false/1/0, groß oder klein', () => {
+    expect(pruefeTrustProxy(undefined)).toBe(true);
+    expect(pruefeTrustProxy('')).toBe(true);
+    expect(pruefeTrustProxy(' An ')).toBe(true);
+    expect(pruefeTrustProxy('true')).toBe(true);
+    expect(pruefeTrustProxy('1')).toBe(true);
+    expect(pruefeTrustProxy('AUS')).toBe(false);
+    expect(pruefeTrustProxy('false')).toBe(false);
+    expect(pruefeTrustProxy('0')).toBe(false);
+  });
+
+  it('ein Tippfehler bricht den Start ab, statt still eine Regel zu wählen', () => {
+    expect(() => pruefeTrustProxy('ja')).toThrow(/TRUST_PROXY/);
+  });
+
+  it('an → die Regel für den eigenen Proxy, aus → niemandem', () => {
+    expect(proxyRegel(true)).toBe(vertrauterProxy);
+    expect(proxyRegel(false)).toBe(false);
+  });
+
+  it('aus: eine erfundene Absender-Adresse zählt nicht – es gilt die Verbindung selbst', async () => {
+    const base = await startWith(proxyRegel(false));
+    const r = await ipFor(base, '203.0.113.7');
+    expect(r.ip).toMatch(/127\.0\.0\.1$/);
+  });
+
+  it('an: wie bisher die Adresse, die der eigene Proxy weiterreicht', async () => {
+    const base = await startWith(proxyRegel(true));
+    expect((await ipFor(base, '203.0.113.7')).ip).toBe('203.0.113.7');
   });
 });

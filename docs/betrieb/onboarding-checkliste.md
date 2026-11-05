@@ -29,7 +29,7 @@ betreiben aber **nichts** für sie (kein zentraler Server, kein geteilter Zugang
 - **Cookie/HTTPS:** Mit `COOKIE_SECURE=true` lehnt der Browser das Login-Cookie bei Aufruf über HTTP ab
   → über HTTPS testen (die Prod-Vorlage setzt `true`).
   In Produktion vertraut die App dem Reverse Proxy (`trust proxy`) – die `X-Forwarded-*`-Header
-  müssen ankommen.
+  müssen ankommen. Das gilt nur mit `TRUST_PROXY=an` (Prod-Vorlage); ohne Proxy `aus` (einfache Vorlage, #849).
 - **ChurchTools-Rechte:** „Nichts sichtbar" liegt fast immer an fehlenden CT-Lese-Rechten
   (Veranstaltungen / Song-Kategorien), nicht an der App.
 - **Admin-Recht passt nicht:** `ADMIN_PERMISSION` an das Rechtekonzept der Instanz anpassen.

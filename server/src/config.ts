@@ -83,6 +83,26 @@ export function pruefeZeitzone(wert: string | undefined): string {
   return zone;
 }
 
+/**
+ * **Wem die App die Absender-Adresse glaubt** (`TRUST_PROXY`, #849) – davon hängt das Login-Limit ab.
+ *
+ * - `an` (Vorgabe, wie bisher): dem eigenen Reverse-Proxy, dem Docker-Gateway oder einem Tunnel
+ *   (`utils/vertrauterProxy.ts`). Richtig hinter einem Reverse-Proxy (Prod, Staging).
+ * - `aus`: niemandem. Richtig OHNE Reverse-Proxy (die einfache Vorlage `deploy/docker-compose.yml`, Port im LAN): Dort
+ *   ist jedes Gerät im WLAN selbst der „private Nachbar“, dem `an` vertraut – es könnte eine erfundene Adresse in
+ *   `X-Forwarded-For` schreiben und so das Login-Limit umgehen.
+ *
+ * Ein unbekannter Wert bricht den Start ab: Ein Tippfehler darf nicht still eine der beiden Regeln wählen.
+ */
+export function pruefeTrustProxy(wert: string | undefined): boolean {
+  const w = (wert ?? '').trim().toLowerCase();
+  if (w === '' || w === 'an' || w === 'true' || w === '1') return true;
+  if (w === 'aus' || w === 'false' || w === '0') return false;
+  throw new Error(
+    `TRUST_PROXY „${wert}" verstehe ich nicht – „an" (hinter einem Reverse-Proxy) oder „aus".`,
+  );
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 3001),
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -112,6 +132,8 @@ export const config = {
    * sonst am Vortag. Ohne Eintrag gilt Europe/Berlin.
    */
   zeitzone: pruefeZeitzone(process.env.ZEITZONE),
+  // Wem die Absender-Adresse geglaubt wird (#849) – siehe `pruefeTrustProxy`.
+  trustProxy: pruefeTrustProxy(process.env.TRUST_PROXY),
   /** Ablageort der Laufzeit-Branding-Datei (persistentes Docker-Volume). */
   siteConfigPath: process.env.SITE_CONFIG_PATH ?? './data/site.json',
   /** Ablageordner der kontobezogenen Anmerkungen (eine JSON-Datei je ChurchTools-Konto). */

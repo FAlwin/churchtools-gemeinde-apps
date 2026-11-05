@@ -1,0 +1,7 @@
+# Sicherheits-Header des Anmeldeformulars (#849) – erzeugt von scripts/formular-hochladen.mjs (htaccessAus).
+# connect-src/img-src: die ChurchTools-Instanzen aus instanzen.json; frame-ancestors: wo es eingebettet werden darf.
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://deine-gemeinde.church.tools https://test-deine-gemeinde.church.tools; font-src 'self' data:; connect-src 'self' https://deine-gemeinde.church.tools https://test-deine-gemeinde.church.tools; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -14,7 +14,12 @@
  *   ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools,test-<instanz>.church.tools npm run formular:hochladen
  *
  * `ANMELDUNG_CT_INSTANZEN` (#843): die ChurchTools-Instanzen, die das Formular ansprechen darf – kommagetrennt. Das
- * Skript schreibt daraus `instanzen.json` neben `index.html` (vor ihr hochgeladen) und liest sie im Netz nach.
+ * Skript schreibt daraus `instanzen.json` neben `index.html` (vor ihr hochgeladen) und liest sie im Netz nach. Aus
+ * derselben Liste entsteht die `.htaccess` mit den Sicherheits-Headern (#849, `htaccessAus`); ob der Webspace sie
+ * anwendet, prüft das Skript am Antwort-Header der Seite.
+ *
+ * Optional `ANMELDUNG_EINBETTEN` (#849): wo das Formular eingebettet werden darf, z. B.
+ * `https://gemeinde.de,https://*.gemeinde.de` – leer = nur auf der eigenen Seite.
  *
  * Optional `ANMELDUNG_FTP_ORDNER` (Ordner im FTP-Zugang, Standard: dessen Wurzel) und `ANMELDUNG_FTP_BENUTZER` –
  * Pflicht, sobald es für denselben Server mehrere Einträge im Schlüsselbund gibt (z. B. Website und Formular), sonst
@@ -47,18 +52,24 @@ export function alteAssets(vorhanden, neu) {
  * wird NICHTS hochgeladen: Gemessen 15.10.2026 landet der Haupt-FTP-Zugang einer Website direkt im WordPress-Ordner –
  * eine `index.html` dort hätte Vorrang vor `index.php` und legte die ganze Website lahm.
  */
-export function fremdeDateien(liste) {
+export function fremdeDateien(liste, o = {}) {
   // `instanzen.json` gehört dazu (#843) – sonst bräche jedes Hochladen nach dem ersten an der eigenen Liste ab.
   const unsere = new Set([
     'index.html',
     'assets',
     'instanzen.json',
     'instanzen.beispiel.json',
+    // Die Vorlage der Sicherheits-Header für andere Gemeinden (#849).
+    'htaccess.beispiel',
     '.',
     '..',
     '',
   ]);
-  return liste.map((n) => n.trim()).filter((n) => !unsere.has(n));
+  // Eine `.htaccess` ist nur unsere, wenn sie mit unserem Kopf beginnt (`htaccessUnsere`, gelesen in `main`) – sonst
+  // ist es z. B. die der Website (WordPress), und hier wird nichts hochgeladen (#849).
+  return liste
+    .map((n) => n.trim())
+    .filter((n) => (n === '.htaccess' ? !o.htaccessUnsere : !unsere.has(n)));
 }
 
 /**
@@ -81,6 +92,66 @@ export function instanzenListe(wert) {
       `ANMELDUNG_CT_INSTANZEN braucht Rechnernamen wie „gemeinde.church.tools“, kommagetrennt${kaputt.length ? ` – nicht „${kaputt.join('“, „')}“` : ''}.`,
     );
   return liste;
+}
+
+/**
+ * **Wo das Formular eingebettet werden darf** (`ANMELDUNG_EINBETTEN`, #849): Adressen wie `https://gemeinde.de` oder
+ * `https://*.gemeinde.de`, kommagetrennt. Leer = nirgends außer auf der eigenen Seite.
+ */
+export function einbettenListe(wert) {
+  const liste = String(wert ?? '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  const kaputt = liste.filter((x) => !/^https:\/\/(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(x));
+  if (kaputt.length)
+    throw new Error(
+      `ANMELDUNG_EINBETTEN braucht Adressen wie „https://gemeinde.de“ oder „https://*.gemeinde.de“ – nicht „${kaputt.join('“, „')}“.`,
+    );
+  return [...new Set(liste)];
+}
+
+/**
+ * **Die `.htaccess` des Formulars** (#849): Sicherheits-Header, die der Webspace mitschickt. Die ChurchTools-Instanzen
+ * kommen aus derselben Liste wie `instanzen.json` – eine Quelle, zwei Dateien. Was das Formular wirklich lädt: eigene
+ * Skripte, Stile und Schriften (fontsource), Daten und Bilder von der Instanz (Gruppenbild, Logo unter `/images/…`).
+ * `'unsafe-inline'` nur für Stile: React setzt `style`-Angaben direkt am Element (Farben der Gestaltung).
+ *
+ * `<IfModule>`: Fehlt `mod_headers`, wird die Datei nicht zum Fehler 500 – ob die Header ankommen, prüft `main` im Netz.
+ */
+/** Die erste Zeile jeder `.htaccess`, die dieses Skript schreibt – daran erkennt es seine eigene wieder. */
+export const HTACCESS_KOPF =
+  '# Sicherheits-Header des Anmeldeformulars (#849) – erzeugt von scripts/formular-hochladen.mjs (htaccessAus).';
+
+/** Ist diese `.htaccess` von uns? Eine fremde (Website, Hoster) wird nie überschrieben. */
+export function istUnsereHtaccess(text) {
+  return typeof text === 'string' && text.startsWith(HTACCESS_KOPF);
+}
+
+export function htaccessAus(instanzen, einbetten = []) {
+  const ct = instanzen.map((i) => `https://${i}`).join(' ');
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${ct}`,
+    "font-src 'self' data:",
+    `connect-src 'self' ${ct}`,
+    `frame-ancestors ${["'self'", ...einbetten].join(' ')}`,
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; ');
+  return [
+    HTACCESS_KOPF,
+    '# connect-src/img-src: die ChurchTools-Instanzen aus instanzen.json; frame-ancestors: wo es eingebettet werden darf.',
+    '<IfModule mod_headers.c>',
+    `  Header always set Content-Security-Policy "${csp}"`,
+    '  Header always set Referrer-Policy "strict-origin-when-cross-origin"',
+    '  Header always set X-Content-Type-Options "nosniff"',
+    '</IfModule>',
+    '',
+  ].join('\n');
 }
 
 /** Eine `curl`-Konfiguration mit den Zugangsdaten – sie geht über die Standardeingabe, nicht in die Befehlszeile. */
@@ -117,6 +188,21 @@ function zugangAusSchluesselbund(server, gewuenscht) {
   return { benutzer, passwort };
 }
 
+/** Eine Datei lesen – `null`, wenn es sie nicht gibt (curl 78 / FTP 550). Jeder andere Fehler wirft. */
+function ladeOderNichts(konfig, url) {
+  const r = spawnSync(
+    'curl',
+    ['--silent', '--show-error', '--ssl-reqd', '--max-time', '60', '-K', '-', url],
+    {
+      input: konfig,
+      encoding: 'utf8',
+    },
+  );
+  if (r.status === 0) return r.stdout;
+  if (r.status === 78) return null;
+  throw new Error(`curl ${url}: ${r.stderr.trim()}`);
+}
+
 /** `curl` mit den Zugangsdaten über die Standardeingabe. Wirft bei Fehlern – mit der Meldung von curl, ohne Passwort. */
 function curl(konfig, args) {
   const r = spawnSync(
@@ -142,6 +228,7 @@ async function main() {
     process.exit(2);
   }
   const instanzen = instanzenListe(process.env.ANMELDUNG_CT_INSTANZEN);
+  const einbetten = einbettenListe(process.env.ANMELDUNG_EINBETTEN);
   const wurzel = join(dirname(fileURLToPath(import.meta.url)), '..', 'formular', 'dist');
   const html = readFileSync(join(wurzel, 'index.html'), 'utf8');
   const neu = assetsAus(html);
@@ -165,7 +252,14 @@ async function main() {
       `Den Ordner ${basis} gibt es (noch) nicht – erst die Subdomain mit ihrem Ordner anlegen.`,
     );
   }
-  const fremd = fremdeDateien(ziel);
+  // Eine vorhandene `.htaccess` muss unsere sein (#849) – auch wenn die Liste sie nicht zeigt (viele FTP-Server
+  // verbergen Punkt-Dateien). Eine fremde wird nie überschrieben.
+  const htaccessVorher = ladeOderNichts(k, `${basis}.htaccess`);
+  if (htaccessVorher !== null && !istUnsereHtaccess(htaccessVorher))
+    throw new Error(
+      `Im Ordner ${basis} liegt eine fremde .htaccess – das ist nicht der Ordner des Formulars. Nichts hochgeladen.`,
+    );
+  const fremd = fremdeDateien(ziel, { htaccessUnsere: htaccessVorher !== null });
   if (fremd.length)
     throw new Error(
       `Im Ordner ${basis} liegen fremde Dateien (${fremd.slice(0, 5).join(', ')}${fremd.length > 5 ? ' …' : ''}) – ` +
@@ -177,6 +271,10 @@ async function main() {
   writeFileSync(listeDatei, `${JSON.stringify(instanzen)}\n`);
   curl(k, ['-T', listeDatei, `${basis}instanzen.json`]);
   console.log(`hochgeladen: instanzen.json (${instanzen.join(', ')})`);
+  const htaccessDatei = join(dirname(listeDatei), '.htaccess');
+  writeFileSync(htaccessDatei, htaccessAus(instanzen, einbetten));
+  curl(k, ['-T', htaccessDatei, `${basis}.htaccess`]);
+  console.log('hochgeladen: .htaccess (Sicherheits-Header)');
   for (const n of gebaut) {
     curl(k, ['--ftp-create-dirs', '-T', join(wurzel, 'assets', n), `${basis}assets/${n}`]);
     console.log(`hochgeladen: assets/${n}`);
@@ -188,6 +286,12 @@ async function main() {
   const url = adresse.endsWith('/') ? adresse : `${adresse}/`;
   const r = await fetch(`${url}?stand=${Date.now()}`, { cache: 'no-store' });
   const online = assetsAus(await r.text());
+  // Die Sicherheits-Header (#849): Ein „hochgeladen“ beweist nicht, dass der Webspace die .htaccess auch anwendet.
+  const csp = r.headers.get('content-security-policy') ?? '';
+  if (!instanzen.every((i) => csp.includes(`https://${i}`)))
+    throw new Error(
+      `${url} schickt die Sicherheits-Header nicht (Content-Security-Policy: „${csp || 'fehlt'}“) – wertet der Webspace .htaccess aus (mod_headers)?`,
+    );
   if (!r.ok || online.join() !== neu.join())
     throw new Error(
       `Die Seite ${url} liefert noch nicht die neue Fassung (HTTP ${r.status}, ${online.join(', ')}).`,
@@ -203,7 +307,9 @@ async function main() {
     throw new Error(
       `${url}instanzen.json liefert nicht die neue Liste (HTTP ${l.status}, ${JSON.stringify(onlineListe)}).`,
     );
-  console.log(`geprüft: ${url} lädt ${neu.join(', ')}; instanzen.json = ${instanzen.join(', ')}`);
+  console.log(
+    `geprüft: ${url} lädt ${neu.join(', ')}; instanzen.json = ${instanzen.join(', ')}; Sicherheits-Header da`,
+  );
 
   // 4. Erst jetzt alte Dateien löschen.
   const liste = curl(k, ['--list-only', `${basis}assets/`]).split(/\r?\n/);

@@ -1601,6 +1601,12 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   Marker und bleibt unberührt (fällt weg).
   **Reiter in ChurchTools für alle, die die App öffnen** (Rechtekonzept E2, Alwin 04.11.2026): `meineRechte` setzt
   `canUseAvailability: true`; die Musikteam-Gruppen gelten dort nur noch für Team-Notizen.
+- **Rechte-Übersicht (05.11.2026): EINE Stelle für alle Rechte der Musik App** – `docs/betrieb/ERWEITERUNG.md`,
+  Abschnitt „Rechte einrichten“ (Häkchen-Tabelle der Erweiterung + „Weitere Rechte – Vorschlag“; jede Release-Notiz
+  verlinkt dorthin). **Braucht eine Funktion ein neues ChurchTools-Recht, kommt es dort in die Tabelle.**
+  `shared/ct/rechteDoku.test.ts` wacht darüber: Er findet über einen mitschreibenden Proxy jedes Recht, das
+  `rechteAus` oder `dienstgruppenSichtAus` tatsächlich auswertet, und verlangt es in Backticks im Abschnitt. Rechte am
+  eigenen Modul („Daten in Kategorie …“) liest die App nicht vorab – die von Hand nachziehen.
 
 ## Schreibzugriff (Editor) – ChurchTools-Eigenheiten
 

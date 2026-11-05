@@ -6,6 +6,7 @@ import { Icon } from '@ui/icons/icons';
 import { tagKurz, tagPunkt } from '@shared/ct/datum';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { statusText } from '@shared/protokolle/aufgaben';
+import { punktBeschriftung } from '@shared/protokolle/dokument';
 import {
   begriffe,
   fundstellen,
@@ -63,7 +64,7 @@ function Markiert({ text, woerter }: { text: string; woerter: readonly string[] 
 function wo(e: SuchEintrag): string {
   const teile = [e.gruppe.name];
   if (e.sitzung) teile.push(e.sitzung.titel);
-  if (e.punkt) teile.push(`${e.punkt.nummer}. ${e.punkt.titel}`);
+  if (e.punkt) teile.push(punktBeschriftung(e.punkt));
   if (e.aufgabe) {
     teile.push(statusText(e.aufgabe.status));
     if (e.aufgabe.bis) teile.push(`bis ${tagKurz(e.aufgabe.bis)}`);

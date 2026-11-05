@@ -1,4 +1,5 @@
 import {
+  LADE_FEHLER_TEXT,
   abmeldeDatenAus,
   abmeldeLink,
   abmeldeVorlage,
@@ -26,7 +27,7 @@ import {
   type CtFormular,
   type PreisWahl,
 } from '@shared/anmeldung/senden';
-import { WARTEN_MS } from './laden';
+import { WARTEN_MS, zielFehler } from './laden';
 
 /**
  * **Eine Anmeldung abschicken** (A6-2, #548) – ohne Login, wie gemessen (14.10.2026): Token holen, Formular-Aufbau mit
@@ -81,6 +82,9 @@ export async function anfrage(
   init: RequestInit = {},
   texte: AnfrageTexte = ANMELDEN,
 ): Promise<unknown> {
+  // Dieselbe Prüfung wie beim Laden (#843): Nur die Instanzen aus `instanzen.json` bekommen Eingaben.
+  const ziel = await zielFehler(url);
+  if (ziel) throw new SendeProblem(LADE_FEHLER_TEXT[ziel].text);
   const abbruch = new AbortController();
   const uhr = setTimeout(() => abbruch.abort(), WARTEN_MS);
   let r: Response;

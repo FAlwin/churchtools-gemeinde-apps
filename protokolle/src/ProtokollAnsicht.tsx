@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
-import { ableiten, BLOCK, tabellenZeilen, textAus, type Block } from '@shared/protokolle/dokument';
+import {
+  ableiten,
+  BLOCK,
+  punktNummer,
+  tabellenZeilen,
+  textAus,
+  type Block,
+  type Punkt,
+} from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
 import type { Thema } from '@ui/design/thema';
 import { useThema } from '@ui/design/useThema';
@@ -80,7 +88,8 @@ export function Inhalt({ content }: { content: unknown }) {
 }
 
 interface Kontext {
-  nummern: Map<string, number>;
+  /** Tagesordnungspunkte und Unterpunkte mit ihrer Nummer – aus der EINEN Ableitung. */
+  punkte: Map<string, Punkt>;
   /** Der Punkt, zu dem die Suche gesprungen ist – kurz hervorgehoben. */
   markiert: string | null;
   aufgaben: ReadonlyMap<string, Aufgabe>;
@@ -135,23 +144,27 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
   switch (b.type) {
     case 'heading': {
       const stufe = Number(b.props?.level ?? 1);
-      const nr = k.nummern.get(b.id);
+      const p = k.punkte.get(b.id);
       const inhalt = (
         <>
-          {nr !== undefined && <span className={styles.nr}>{nr}.</span>}
+          {p && <span className={styles.nr}>{punktNummer(p)}</span>}
           <Inhalt content={b.content} />
         </>
       );
+      // Die Suche springt zu Tagesordnungspunkt oder Unterpunkt (K3b) – beide tragen deshalb die Sprungmarke.
+      const ziel = (klasse: string) =>
+        `${klasse}${k.markiert === b.id ? ` ${styles.markiert}` : ''}`;
       return (
         <>
           {stufe <= 1 ? (
-            <h3
-              className={`${styles.punkt}${k.markiert === b.id ? ` ${styles.markiert}` : ''}`}
-              id={`punkt-${b.id}`}
-            >
+            <h3 className={ziel(styles.punkt)} id={`punkt-${b.id}`}>
               {inhalt}
             </h3>
-          ) : stufe === 2 ? (
+          ) : p ? (
+            <h4 className={ziel(styles.unterpunkt)} id={`punkt-${b.id}`}>
+              {inhalt}
+            </h4>
+          ) : stufe !== 3 ? (
             <h4>{inhalt}</h4>
           ) : (
             <h5>{inhalt}</h5>
@@ -279,7 +292,7 @@ export function ProtokollAnsicht({
 }) {
   const a = ableiten(dokument);
   const k: Kontext = {
-    nummern: new Map(a.punkte.map((p) => [p.blockId, p.nummer])),
+    punkte: new Map(a.punkte.map((p) => [p.blockId, p])),
     aufgaben: new Map(aufgaben.map((x) => [x.id, x])),
     markiert,
   };

@@ -46,10 +46,18 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
    (`index.html`, Ordner `assets`) in den Ordner der Subdomain hochladen. Aktualisieren: Inhalt ersetzen.
    **Immer zusammen mit der Erweiterung aktualisieren:** Ein älteres Formular-Paket kennt neue Bausteine nicht
    (z. B. „Erziehungsberechtigte“, „Unterschrift“ seit A6-2b) und kann Formulare mit ihnen nicht anzeigen.
+   **Einmal anlegen: `instanzen.json`** (seit #843, 05.11.2026) – neben `index.html` eine Datei mit euren
+   ChurchTools-Instanzen, z. B. `["eure-gemeinde.church.tools"]` (Vorlage: `instanzen.beispiel.json` im Paket). Das
+   Formular spricht **nur** diese an; ein Link auf eine andere Instanz zeigt „Diese Anmeldung gibt es hier nicht“,
+   ohne die fremde Seite zu fragen – sonst könnte jemand unter eurer Adresse ein fremdes Formular (mit fremder IBAN)
+   zeigen. Fehlt die Datei, zeigt das Formular „Diese Anmeldeseite ist noch nicht eingerichtet“. Das Paket enthält
+   sie bewusst nicht: Beim Aktualisieren bleibt eure Liste stehen. Nutzt ihr eine Test-Instanz mit derselben Seite,
+   gehört sie mit in die Liste.
    **Per Skript (macOS):** Zugangsdaten einmal im Schlüsselbund ablegen –
    `security add-internet-password -s <FTP-Server> -a <FTP-Benutzer> -r "ftp " -w` (fragt nach dem Passwort) –,
-   danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run
-formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
+   danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.…
+ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools npm run formular:hochladen` (Instanzen kommagetrennt; das Skript
+   schreibt `instanzen.json` und liest sie im Netz nach; optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
    Schlüsselbund-Einträge gibt). Am besten ein **eigener FTP-Zugang nur für den Ordner der Subdomain**, nicht der der Website. Das Skript baut das Formular, lädt per FTPS erst die neuen
    Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
    nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
@@ -57,7 +65,7 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
    **ECG Donrath** (eingerichtet 16.10.2026, Webspace bei Hetzner, verwaltet von Willi Heidebrecht): Formular unter
    `https://anmeldung.ecg-donrath.de`, FTP-Server `www622.your-server.de`, eigener FTP-Benutzer `whebde_1` nur für den
    Ordner der Subdomain (Passwort im Schlüsselbund auf Alwins Mac). Hochladen:
-   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de npm run formular:hochladen`.
+   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de ANMELDUNG_CT_INSTANZEN=ecg-donrath.church.tools,test-ecg-donrath.church.tools npm run formular:hochladen`.
    Nie `whebde_0` nehmen – das ist der Zugang der Website (WordPress); das Skript bricht dort ohnehin ab.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser

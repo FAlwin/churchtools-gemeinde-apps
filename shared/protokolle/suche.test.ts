@@ -148,7 +148,7 @@ describe('suchIndex (S3-4)', () => {
       titel: 'Leitungssitzung',
       beginn: '2026-10-14T17:00:00Z',
     });
-    expect(b.punkt).toEqual({ blockId: 'p2', nummer: 2, titel: 'Freizeit' });
+    expect(b.punkt).toEqual({ blockId: 'p2', nummer: '2', tiefe: 0, titel: 'Freizeit' });
   });
 
   it('Termine mit Datum; Protokolltext auch aus Unterpunkten – aber keine Punkt-Überschriften', () => {
@@ -175,7 +175,7 @@ describe('suchIndex (S3-4)', () => {
     expect(todos[0].punkt?.titel).toBe('Technik');
     expect(todos[0].sitzung?.schluessel).toBe('p:nov');
     expect(todos[1].aufgabe?.status).toBe('arbeit');
-    expect(todos[1].punkt).toEqual({ blockId: 'p1', nummer: 1, titel: 'Technik' });
+    expect(todos[1].punkt).toEqual({ blockId: 'p1', nummer: '1', tiefe: 0, titel: 'Technik' });
     expect([todos[2].sitzung, todos[2].punkt]).toEqual([null, null]);
   });
 

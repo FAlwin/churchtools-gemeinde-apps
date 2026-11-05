@@ -22,7 +22,8 @@ describe('ProtokollAnsicht (S3-2) – das echte BlockNote-Dokument', () => {
     expect(punkte).toEqual(['1.Andacht & Gebet', '2.Termine & Gemeindeleben']);
     expect(screen.getByText('Peter:').tagName).toBe('STRONG');
     expect(screen.getByText('Römer 12, 9–13').tagName).toBe('EM');
-    expect(container.querySelector('h4')?.textContent).toBe('Zwischenüberschrift');
+    // Überschrift 2 ist seit K3b ein Unterpunkt mit Nummer.
+    expect(container.querySelector('h4')?.textContent).toBe('2.1Zwischenüberschrift');
     expect(container.querySelector('blockquote')?.textContent).toBe('Ein Zitat');
     const link = screen.getByRole('link', { name: 'Link' });
     expect(link.getAttribute('href')).toBe('https://example.org');
@@ -149,6 +150,30 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
     } finally {
       delete document.documentElement.dataset.theme;
     }
+  });
+
+  it('Unterpunkte mit Nummer und Sprungmarke für die Suche; „Überschrift“ ohne Nummer (K3b)', () => {
+    const h = (id: string, level: number) => ({
+      id,
+      type: 'heading',
+      props: { level },
+      content: [text(id)],
+    });
+    const { container } = render(
+      <ProtokollAnsicht
+        dokument={[h('Fest', 1), h('Aufbau', 2), h('Zelte', 4), h('Notiz', 3)]}
+        markiert="Zelte"
+      />,
+    );
+    expect(
+      [...container.querySelectorAll('h3, h4, h5')].map((x) => [x.tagName, x.textContent, x.id]),
+    ).toEqual([
+      ['H3', '1.Fest', 'punkt-Fest'],
+      ['H4', '1.1Aufbau', 'punkt-Aufbau'],
+      ['H4', '1.1.1Zelte', 'punkt-Zelte'],
+      ['H5', 'Notiz', ''],
+    ]);
+    expect(container.querySelector('#punkt-Zelte')?.className).toContain('markiert');
   });
 
   it('leeres Dokument: ein Satz', () => {

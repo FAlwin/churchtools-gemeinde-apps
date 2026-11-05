@@ -16,7 +16,9 @@
  * - `verweis` – fester Punkt ohne eigenen Text: `props.art` = `offene-aufgaben` | `letztes-protokoll`.
  *
  * Ein **Tagesordnungspunkt** ist eine Überschrift der Stufe 1 auf oberster Ebene; alles bis zur nächsten
- * gehört zu ihm (auch in Unterpunkten).
+ * gehört zu ihm (auch in Unterpunkten). Ein **Unterpunkt** (K3b, 4.1 bis 4.1.1.1.1) ist eine Überschrift der Stufe
+ * 2, 4, 5 oder 6 auf oberster Ebene – Stufe 3 bleibt die „Überschrift“ ohne Nummer, damit kein gespeichertes Protokoll
+ * seine Bedeutung ändert (`UNTERPUNKT_STUFEN`).
  */
 import { vorabLesen, type Vorab } from './aufgaben';
 
@@ -56,9 +58,48 @@ export type VerweisArt = 'offene-aufgaben' | 'letztes-protokoll';
 
 export interface Punkt {
   blockId: string;
-  /** 1, 2, 3 … in der Reihenfolge des Dokuments. */
-  nummer: number;
+  /** `4` beim Tagesordnungspunkt, `4.1` / `4.1.1` … beim Unterpunkt – in der Reihenfolge des Dokuments. */
+  nummer: string;
+  /** 0 = Tagesordnungspunkt, 1–4 = Ebene des Unterpunkts (so, wie er gezählt wird). */
+  tiefe: number;
   titel: string;
+}
+
+/**
+ * **Überschrift-Stufe je Unterpunkt-Ebene** (K3b, Alwin 04.11.2026: „möglichst viele“). BlockNote kennt die Stufen 1–6;
+ * 1 ist der Tagesordnungspunkt, 3 die „Überschrift“ ohne Nummer – bleiben vier Ebenen.
+ */
+export const UNTERPUNKT_STUFEN = [2, 4, 5, 6] as const;
+
+/** Die tiefste Ebene eines Unterpunkts (4.1.1.1.1). */
+export const TIEFSTE_EBENE = UNTERPUNKT_STUFEN.length;
+
+/**
+ * **Die Ebene einer Überschrift:** 0 = Tagesordnungspunkt (Stufe 1), 1–4 = Unterpunkt; `null` für alles andere – auch
+ * für die „Überschrift“ (Stufe 3). Sagt nur, was der Block ist; ob er zählt, entscheidet `ableiten` (oberste Ebene,
+ * nicht vor dem ersten Punkt).
+ */
+export function punktEbene(b: Pick<Block, 'type' | 'props'> | undefined): number | null {
+  if (b?.type !== 'heading') return null;
+  const stufe = Number(b.props?.level ?? 1);
+  if (stufe === 1) return 0;
+  const i = (UNTERPUNKT_STUFEN as readonly number[]).indexOf(stufe);
+  return i < 0 ? null : i + 1;
+}
+
+/** Die Überschrift-Stufe für eine Ebene (0 → 1, 1 → 2, 2 → 4 …). */
+export function stufeDerEbene(ebene: number): number {
+  return ebene <= 0 ? 1 : UNTERPUNKT_STUFEN[Math.min(ebene, TIEFSTE_EBENE) - 1];
+}
+
+/** Die Nummer, wie sie vor der Überschrift steht: `4.` beim Tagesordnungspunkt, `4.1` beim Unterpunkt. */
+export function punktNummer(p: Pick<Punkt, 'nummer' | 'tiefe'>): string {
+  return p.tiefe === 0 ? `${p.nummer}.` : p.nummer;
+}
+
+/** „Punkt 4.2 · Essen“ – so heißt ein Punkt in den Bereichen und in der Suche (Alwin 04.11.2026). */
+export function punktBeschriftung(p: Pick<Punkt, 'nummer' | 'titel'>): string {
+  return `Punkt ${p.nummer} · ${p.titel}`;
 }
 
 interface Eintrag {
@@ -172,14 +213,10 @@ function datumAus(props: Record<string, unknown> | undefined): string | null {
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d ? d : null;
 }
 
-function istPunkt(b: Block): boolean {
-  return b.type === 'heading' && Number(b.props?.level ?? 1) === 1;
-}
-
 /**
  * **Alles, was aus dem Dokument folgt** – in der Reihenfolge des Dokuments, Unterpunkte eingeschlossen.
  * Leere Beschlüsse und Termine ohne Text zählen nicht (eine angefangene Zeile ist noch kein Beschluss);
- * Aufgaben ohne Text ebenso.
+ * Aufgaben ohne Text ebenso. Ein Eintrag gehört zum letzten Punkt davor – seit K3b auch zu einem Unterpunkt.
  */
 export function ableiten(dokument: readonly Block[]): Ableitung {
   const a: Ableitung = { punkte: [], beschluesse: [], aufgaben: [], termine: [] };
@@ -203,12 +240,20 @@ export function ableiten(dokument: readonly Block[]): Ableitung {
     for (const k of b.children ?? []) besuche(k);
   };
 
+  // Je Ebene der Zähler; ein Unterpunkt steht höchstens eine Ebene unter dem Punkt davor (auch wenn ein altes oder
+  // umgebautes Dokument eine Ebene überspringt), und vor dem ersten Tagesordnungspunkt zählt keiner.
+  const zaehler: number[] = [];
   for (const b of dokument) {
-    if (istPunkt(b)) {
+    const ebene = punktEbene(b);
+    if (ebene !== null && (ebene === 0 || zaehler.length)) {
+      const tiefe = Math.min(ebene, zaehler.length);
+      zaehler.length = tiefe + 1;
+      zaehler[tiefe] = (zaehler[tiefe] ?? 0) + 1;
       punkt = b.id;
       a.punkte.push({
         blockId: b.id,
-        nummer: a.punkte.length + 1,
+        nummer: zaehler.join('.'),
+        tiefe,
         titel: textAus(b.content).trim(),
       });
     }

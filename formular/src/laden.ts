@@ -1,7 +1,9 @@
 import { gemeindeNameAus } from '@shared/ct/info';
 import {
+  INSTANZEN_DATEI,
   abmeldeDatenAus,
   apiBasis,
+  erlaubteInstanzenAus,
   ladeFehlerAus,
   type AbmeldeDaten,
   type AbmeldeOrt,
@@ -23,11 +25,67 @@ export class LadeProblem extends Error {
   }
 }
 
+let erlaubt: Promise<Set<string>> | null = null;
+
+/** Nur für Tests: die geladene Liste vergessen. */
+export function vergissInstanzen(): void {
+  erlaubt = null;
+}
+
+/** `instanzen.json` neben dieser Seite lesen. Gemerkt wird nur ein Erfolg – Vorübergehendes wird beim nächsten Mal neu versucht. */
+async function erlaubteInstanzen(): Promise<Set<string>> {
+  erlaubt ??= (async () => {
+    const abbruch = new AbortController();
+    const uhr = setTimeout(() => abbruch.abort(), WARTEN_MS);
+    let r: Response;
+    try {
+      r = await fetch(new URL(INSTANZEN_DATEI, window.location.href), {
+        cache: 'no-store',
+        credentials: 'omit',
+        signal: abbruch.signal,
+      });
+    } catch {
+      throw new LadeProblem(ladeFehlerAus(abbruch.signal.aborted ? 'zeit' : 'netz'));
+    } finally {
+      clearTimeout(uhr);
+    }
+    // Fehlt die Datei, ist die Seite nicht eingerichtet – das ist endgültig, kein Grund zum Nochmal-Versuchen.
+    if (r.status === 404) throw new LadeProblem('nicht-eingerichtet');
+    if (!r.ok) throw new LadeProblem(ladeFehlerAus(r.status));
+    const liste = erlaubteInstanzenAus(await r.json().catch(() => null));
+    if (!liste) throw new LadeProblem('nicht-eingerichtet');
+    return liste;
+  })();
+  try {
+    return await erlaubt;
+  } catch (e) {
+    erlaubt = null;
+    throw e;
+  }
+}
+
+/**
+ * **Darf diese Seite die Adresse ansprechen?** (#843) – `null`, wenn ja, sonst die Fehlerart. JEDE Anfrage an
+ * ChurchTools fragt hier vorher, beim Laden wie beim Absenden (`senden.ts`): So erreicht ein Link auf eine fremde
+ * Instanz sie gar nicht erst.
+ */
+export async function zielFehler(url: string): Promise<LadeFehler | null> {
+  try {
+    const liste = await erlaubteInstanzen();
+    // `hostname` ist immer klein geschrieben, die Liste auch (`erlaubteInstanzenAus`).
+    return liste.has(new URL(url).hostname) ? null : 'fremde-instanz';
+  } catch (e) {
+    return e instanceof LadeProblem ? e.art : 'voruebergehend';
+  }
+}
+
 /**
  * Eine Anfrage OHNE Login (`credentials: 'omit'`) – das Formular ist für Gäste. Zeitüberschreitung, kein Netz
- * und jeder Status ≠ 2xx werden zu einem `LadeProblem` mit der passenden Art.
+ * und jeder Status ≠ 2xx werden zu einem `LadeProblem` mit der passenden Art. Vorher die Prüfung `zielFehler`.
  */
 async function anfrage(url: string): Promise<unknown> {
+  const fehler = await zielFehler(url);
+  if (fehler) throw new LadeProblem(fehler);
   const abbruch = new AbortController();
   const uhr = setTimeout(() => abbruch.abort(), WARTEN_MS);
   let antwort: Response;

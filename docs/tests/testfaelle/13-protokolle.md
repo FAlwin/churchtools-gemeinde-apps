@@ -109,3 +109,33 @@ beim Tippen ins Menü nicht verloren.
 - **Historie:** K3a (04.11.2026: Leiste in Gruppen, Variante B; am iPhone gefunden: Termin-Text 0 px breit als Buchstabensäule neben dem Kasten – die Handy-Regel der To-Do-Schildchen galt für alle Schildchen, seit S4-2; Safari zoomte beim Antippen leicht hinein – Schrift unter 16 px, jetzt `maximum-scale=1` auf iOS in allen Apps)
 
 </details>
+
+### TF-PROT-05 · Unterpunkte: Tab macht 4.1, die Nummern stehen überall gleich
+
+**Das brauchst du:** Einen Rechner mit Tastatur, in der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel
+beginnt mit „TEST“) mit vier Tagesordnungspunkten, unter dem vierten ein Beschluss.
+
+**Das muss passieren:** Tab macht aus einem Tagesordnungspunkt einen Unterpunkt mit Nummer (4.1, 4.1.1 …), Umschalt+Tab
+wieder einen Punkt. Der Punkt rutscht dabei nicht eingerückt unter den Text davor. Editor, Lesen, Bereiche und Suche
+zeigen dieselbe Nummer.
+
+1. In ChurchTools im Menü auf **Protokolle**, das Test-Protokoll öffnen (Schreiben).
+2. Cursor in den **ersten** Tagesordnungspunkt, **Tab**: Nichts passiert, er bleibt „1.“.
+3. Cursor in den **vierten** Punkt, **Tab**: Er heißt jetzt „3.1“, steht bündig wie vorher, nur kleiner. Unten unter
+   „Beschlüsse“ steht beim Beschluss **„Punkt 3.1 · …“**.
+4. Gleich nochmal **Tab**: Nichts passiert (über „3.1“ steht kein Unterpunkt, unter den er rücken könnte). In den dritten
+   Punkt, Tab: „2.1“; zurück in den vierten, Tab: **„2.1.1“**.
+5. **Umschalt+Tab** zweimal auf dem Punkt „2.1.1“: erst „2.2“, dann wieder **„3.“**.
+6. Drei Textzeilen unter einem Punkt markieren, **Tab**: Alle drei rücken gemeinsam ein; Umschalt+Tab holt sie zurück.
+7. Einen Punkt wieder zu „3.1“ machen, oben **Lesen**: Dort steht „3.1“ mit demselben Titel. Speichern abwarten, dann
+   die **Lupe**, ein Wort aus dem Beschluss suchen: Der Treffer nennt „Punkt 3.1 · …“; ein Klick springt zum Unterpunkt.
+8. Am Handy: dasselbe über **Zeilen ▾ → Einrücken / Ausrücken**.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/dokument.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/einruecken.ts`, `protokolle/src/punktNummern.ts`, `protokolle/src/editorSchema.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/Bereiche.tsx`, `protokolle/src/Suche.tsx`
+- **Automatisiert:** ja – `protokolle/src/einruecken.test.ts` (Tab mit dem echten Editor), `protokolle/src/punktNummern.test.ts`, `shared/protokolle/dokument.test.ts`, `shared/protokolle/abschnitte.test.ts`, `protokolle/src/Werkzeugleiste.test.tsx`, `protokolle/src/ProtokollAnsicht.test.tsx`; die Gegenprobe zeigt: ohne die eigene Tab-Taste rücken auch dort mehrere markierte Zeilen nicht ein
+- **Historie:** K3b-1 (04.11.2026: Tab auf einem Tagesordnungspunkt hängte ihn als Kind unter den Block davor – Nummer weg, Beschlüsse darunter zählten zum Punkt davor; markierte Zeilen ließen sich nicht einrücken)
+
+</details>

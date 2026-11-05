@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
+import { vergissInstanzen } from './laden';
+import { anfrage } from './senden';
 
 /**
  * Echt anmelden (A6-2, #548) gegen ein nachgestelltes ChurchTools – Token, Formular-Aufbau, Anmeldung, so wie am
@@ -47,7 +49,10 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
   aufrufe = [];
+  vergissInstanzen();
   antworten = {
+    // Die Liste der Gemeinde auf dem Webspace (#843) – ohne sie spricht das Formular kein ChurchTools an.
+    'GET /instanzen.json': [{ status: 200, body: ['test.church.tools'] }],
     'GET /api/publicgroups/66': [{ status: 200, body: { data: GRUPPE } }],
     'GET /api/info': [{ status: 200, body: { siteName: 'Gemeinde Test' } }],
     'POST /api/publicgroups/66/token': [{ status: 200, body: { data: { token: 'T1' } } }],
@@ -100,11 +105,25 @@ async function ausfuellenUndAbschicken() {
 }
 const geschickt = () => aufrufe.filter((a) => a.pfad.endsWith('/signup'));
 
+describe('Absenden nur an die Instanzen der Gemeinde (#843)', () => {
+  it('eine Adresse außerhalb von instanzen.json bekommt keine Eingaben – nicht einmal eine Anfrage', async () => {
+    await expect(
+      anfrage('https://fremde-seite.example/api/publicgroups/66/signup', {
+        method: 'POST',
+        body: JSON.stringify({ geheim: 'IBAN' }),
+      }),
+    ).rejects.toThrow('Der Link gehört nicht zu dieser Anmeldeseite');
+    expect(aufrufe.filter((a) => a.pfad !== '/instanzen.json')).toEqual([]);
+  });
+});
+
 describe('Echt anmelden (A6-2)', () => {
   it('Token → Formular → Anmeldung, ohne Login; nur die Teilnehmenden, Kontakt bei der ersten Person', async () => {
     await ausfuellenUndAbschicken();
     expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
-    expect(aufrufe.map((a) => `${a.methode} ${a.pfad}`).slice(2)).toEqual([
+    // Ohne den einen Abruf der Liste erlaubter Instanzen (#843, nur beim ersten Laden) und die zwei Ladeaufrufe.
+    const anCt = aufrufe.filter((a) => a.pfad !== '/instanzen.json');
+    expect(anCt.map((a) => `${a.methode} ${a.pfad}`).slice(2)).toEqual([
       // #602/A6-5a: zuerst frisch nachsehen, wer einen Platz bekommt (Betrag), für die erste Person gleich mitbenutzt.
       'GET /api/publicgroups/66',
       'POST /api/publicgroups/66/token',

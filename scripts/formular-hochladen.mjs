@@ -10,7 +10,11 @@
  *
  * Aufruf (nichts davon ist geheim; ECG: siehe docs/betrieb/ANMELDUNGEN.md):
  *
- *   ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run formular:hochladen
+ *   ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… \
+ *   ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools,test-<instanz>.church.tools npm run formular:hochladen
+ *
+ * `ANMELDUNG_CT_INSTANZEN` (#843): die ChurchTools-Instanzen, die das Formular ansprechen darf – kommagetrennt. Das
+ * Skript schreibt daraus `instanzen.json` neben `index.html` (vor ihr hochgeladen) und liest sie im Netz nach.
  *
  * Optional `ANMELDUNG_FTP_ORDNER` (Ordner im FTP-Zugang, Standard: dessen Wurzel) und `ANMELDUNG_FTP_BENUTZER` –
  * Pflicht, sobald es für denselben Server mehrere Einträge im Schlüsselbund gibt (z. B. Website und Formular), sonst
@@ -22,7 +26,8 @@
  * Schritt vorher, bleibt die bisherige Seite, wie sie war.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,8 +48,39 @@ export function alteAssets(vorhanden, neu) {
  * eine `index.html` dort hätte Vorrang vor `index.php` und legte die ganze Website lahm.
  */
 export function fremdeDateien(liste) {
-  const unsere = new Set(['index.html', 'assets', '.', '..', '']);
+  // `instanzen.json` gehört dazu (#843) – sonst bräche jedes Hochladen nach dem ersten an der eigenen Liste ab.
+  const unsere = new Set([
+    'index.html',
+    'assets',
+    'instanzen.json',
+    'instanzen.beispiel.json',
+    '.',
+    '..',
+    '',
+  ]);
   return liste.map((n) => n.trim()).filter((n) => !unsere.has(n));
+}
+
+/**
+ * **Der Inhalt von `instanzen.json`** aus `ANMELDUNG_CT_INSTANZEN` (#843): kommagetrennt, klein geschrieben, ohne
+ * Doppelte. Ob ein Eintrag ein gültiger Rechnername ist, entscheidet das Formular selbst (`erlaubteInstanzenAus`) –
+ * hier wird nur abgewiesen, was sicher keiner ist (Schema, Pfad), damit ein Tippfehler nicht erst im Netz auffällt.
+ */
+export function instanzenListe(wert) {
+  const liste = [
+    ...new Set(
+      String(wert ?? '')
+        .split(',')
+        .map((x) => x.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  const kaputt = liste.filter((x) => /[/:\s]/.test(x));
+  if (liste.length === 0 || kaputt.length)
+    throw new Error(
+      `ANMELDUNG_CT_INSTANZEN braucht Rechnernamen wie „gemeinde.church.tools“, kommagetrennt${kaputt.length ? ` – nicht „${kaputt.join('“, „')}“` : ''}.`,
+    );
+  return liste;
 }
 
 /** Eine `curl`-Konfiguration mit den Zugangsdaten – sie geht über die Standardeingabe, nicht in die Befehlszeile. */
@@ -99,12 +135,13 @@ function curl(konfig, args) {
 async function main() {
   const server = process.env.ANMELDUNG_FTP_SERVER;
   const adresse = process.env.ANMELDUNG_FORMULAR_ADRESSE;
-  if (!server || !adresse) {
+  if (!server || !adresse || !process.env.ANMELDUNG_CT_INSTANZEN) {
     console.error(
-      'Bitte ANMELDUNG_FTP_SERVER und ANMELDUNG_FORMULAR_ADRESSE setzen (siehe Kopf dieser Datei).',
+      'Bitte ANMELDUNG_FTP_SERVER, ANMELDUNG_FORMULAR_ADRESSE und ANMELDUNG_CT_INSTANZEN setzen (siehe Kopf dieser Datei).',
     );
     process.exit(2);
   }
+  const instanzen = instanzenListe(process.env.ANMELDUNG_CT_INSTANZEN);
   const wurzel = join(dirname(fileURLToPath(import.meta.url)), '..', 'formular', 'dist');
   const html = readFileSync(join(wurzel, 'index.html'), 'utf8');
   const neu = assetsAus(html);
@@ -135,7 +172,11 @@ async function main() {
         'das ist nicht der Ordner des Formulars. Nichts hochgeladen. ANMELDUNG_FTP_ORDNER prüfen.',
     );
 
-  // 1. Neue Dateien, 2. index.html zuletzt.
+  // 1. Die Liste der Instanzen und die neuen Dateien, 2. index.html zuletzt.
+  const listeDatei = join(mkdtempSync(join(tmpdir(), 'formular-')), 'instanzen.json');
+  writeFileSync(listeDatei, `${JSON.stringify(instanzen)}\n`);
+  curl(k, ['-T', listeDatei, `${basis}instanzen.json`]);
+  console.log(`hochgeladen: instanzen.json (${instanzen.join(', ')})`);
   for (const n of gebaut) {
     curl(k, ['--ftp-create-dirs', '-T', join(wurzel, 'assets', n), `${basis}assets/${n}`]);
     console.log(`hochgeladen: assets/${n}`);
@@ -155,7 +196,14 @@ async function main() {
     const a = await fetch(`${url}assets/${n}`, { method: 'HEAD', cache: 'no-store' });
     if (!a.ok) throw new Error(`assets/${n} antwortet mit HTTP ${a.status}.`);
   }
-  console.log(`geprüft: ${url} lädt ${neu.join(', ')}`);
+  // Nachlesen statt glauben: Liefert der Webspace genau die eben geschriebene Liste?
+  const l = await fetch(`${url}instanzen.json?stand=${Date.now()}`, { cache: 'no-store' });
+  const onlineListe = l.ok ? await l.json().catch(() => null) : null;
+  if (JSON.stringify(onlineListe) !== JSON.stringify(instanzen))
+    throw new Error(
+      `${url}instanzen.json liefert nicht die neue Liste (HTTP ${l.status}, ${JSON.stringify(onlineListe)}).`,
+    );
+  console.log(`geprüft: ${url} lädt ${neu.join(', ')}; instanzen.json = ${instanzen.join(', ')}`);
 
   // 4. Erst jetzt alte Dateien löschen.
   const liste = curl(k, ['--list-only', `${basis}assets/`]).split(/\r?\n/);

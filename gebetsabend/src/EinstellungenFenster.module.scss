@@ -1,0 +1,32 @@
+// Einstellungen des Gebetsabends (G3) – Feldliste wie in den ChurchTools-Fenstern, Werte aus ui/design.
+@use '@ui/design/mixins' as m;
+
+.felder {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+.feld {
+  @include m.eingabefeld;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font-size: 15px;
+}
+
+.leise {
+  font-size: 13.5px;
+  color: var(--text2);
+}
+
+.fehler {
+  font-size: 14px;
+  color: var(--red);
+}

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { inhaltAus } from '../ct/modulDaten';
 import {
   ID_LAENGE,
   ID_PRAEFIX,
@@ -7,10 +6,7 @@ import {
   neuerZugang,
   PASSWORT_LAENGE,
   ZEICHEN,
-  ZUGANG_ART,
-  ZUGANG_FASSUNG,
   zufallsText,
-  zugangAlsWert,
   zugangAus,
 } from './zugang';
 
@@ -52,30 +48,28 @@ describe('neuerZugang', () => {
   });
 });
 
-describe('gespeicherter Zugang', () => {
-  /** So liest die Seite den Wert: `inhaltAus` (gemeinsam für alle Erweiterungen) und dann `zugangAus`. */
-  const lesen = (value: string) =>
-    zugangAus(inhaltAus({ id: 1, dataCategoryId: 2, value }, ZUGANG_ART, ZUGANG_FASSUNG));
-
-  it('hin und zurück unverändert', () => {
+describe('zugangAus', () => {
+  // Hin und zurück durch den Speicher prüft `ablage.test.ts`; hier nur, was als Zugang gilt.
+  it('ein erzeugter Zugang bleibt unverändert', () => {
     const z = neuerZugang(false, '2026-11-05T19:30:00.000Z');
-    expect(lesen(zugangAlsWert(z))).toEqual(z);
+    expect(zugangAus(JSON.parse(JSON.stringify(z)))).toEqual(z);
   });
 
-  it('fremder oder kaputter Wert gilt als „keine Übertragung“', () => {
-    expect(lesen('kein json')).toBeNull();
-    expect(
-      lesen(JSON.stringify({ art: 'anderes', fassung: 1, streamId: 'a', passwort: 'b' })),
-    ).toBeNull();
+  it('fremder oder kaputter Inhalt gilt als „keine Übertragung“', () => {
+    expect(zugangAus(null)).toBeNull();
+    expect(zugangAus('kein Objekt')).toBeNull();
     const z = neuerZugang(true, 'x');
     // Bindestrich: VDO.Ninja würde ihn ersetzen – nicht „fast richtig“ weiterverwenden.
-    expect(lesen(zugangAlsWert({ ...z, streamId: 'ecg-don' }))).toBeNull();
-    expect(lesen(zugangAlsWert({ ...z, passwort: '' }))).toBeNull();
+    expect(zugangAus({ ...z, streamId: 'ecg-don' })).toBeNull();
+    expect(zugangAus({ ...z, passwort: '' })).toBeNull();
   });
 
   it('ohne Angabe: mit Bild, keine Übertragung', () => {
-    expect(
-      zugangAus({ art: ZUGANG_ART, fassung: ZUGANG_FASSUNG, streamId: 'gebetabc', passwort: 'p' }),
-    ).toEqual({ streamId: 'gebetabc', passwort: 'p', mitBild: true, laeuftSeit: null });
+    expect(zugangAus({ streamId: 'gebetabc', passwort: 'p' })).toEqual({
+      streamId: 'gebetabc',
+      passwort: 'p',
+      mitBild: true,
+      laeuftSeit: null,
+    });
   });
 });

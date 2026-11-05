@@ -6,6 +6,8 @@
  * sehen z. B. „Sonstige Veranstaltung“, nicht aber interne Kalender) – dort stehen auch andere Termine.
  */
 
+import type { Dokumentart } from '../ct/versionierterWert';
+
 export interface Einstellungen {
   /** ID des Kalenders, `null` = keiner gewählt → kein Termin auf der Seite. */
   kalender: number | null;
@@ -15,12 +17,8 @@ export interface Einstellungen {
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = { kalender: null, suchwort: 'Gebet' };
 
-export const EINSTELLUNGEN_ART = 'gebetsabend-einstellungen';
-export const EINSTELLUNGEN_FASSUNG = 1;
-
-export function einstellungenAlsWert(e: Einstellungen): string {
-  return JSON.stringify({ art: EINSTELLUNGEN_ART, fassung: EINSTELLUNGEN_FASSUNG, ...e });
-}
+/** Wie der Zugang ein Dokument mit Versionsnummer (G3, `ablage.ts`); Fassung 1 (bis G2, nie live) gilt als „nichts gespeichert“. */
+export const EINSTELLUNGEN_DOKUMENT: Dokumentart = { art: 'gebetsabend-einstellungen', fassung: 2 };
 
 /** Aus dem gespeicherten Inhalt; fehlt etwas, gilt die Vorgabe – ein kaputter Wert legt die Seite nicht lahm. */
 export function einstellungenAus(inhalt: unknown): Einstellungen {

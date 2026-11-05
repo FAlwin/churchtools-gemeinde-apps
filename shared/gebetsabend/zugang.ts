@@ -8,6 +8,7 @@
  *    durch `_`. Deshalb erzeugen wir nur aus diesem Vorrat.
  *  - **Jeder Start setzt neue Daten** – ein weitergegebener Link gilt höchstens einen Abend.
  */
+import type { Dokumentart } from '../ct/versionierterWert';
 
 /** Ohne Zeichen, die man verwechselt (i/l/1, o/0) – falls jemand doch einmal etwas abtippt. */
 export const ZEICHEN = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -67,14 +68,12 @@ export function neuerZugang(
   };
 }
 
-/** Kennung des gespeicherten Werts (`inhaltAus` in `@shared/ct/modulDaten`). */
-export const ZUGANG_ART = 'gebetsabend-zugang';
-export const ZUGANG_FASSUNG = 1;
-
-/** Der Wert, wie er in der Kategorie „Zugang“ steht. */
-export function zugangAlsWert(z: Zugang): string {
-  return JSON.stringify({ art: ZUGANG_ART, fassung: ZUGANG_FASSUNG, ...z });
-}
+/**
+ * Woran der Zugang im Speicher erkannt wird – seit G3 ein **Dokument mit Versionsnummer** (`@shared/ct/versionierterWert`,
+ * `ablage.ts`): Starten zwei Technik-Geräte zugleich, geht keiner still verloren. Fassung 1 (bis G2, nie live) war ein
+ * einfacher Wert ohne Version und gilt als „kein Zugang“.
+ */
+export const ZUGANG_DOKUMENT: Dokumentart = { art: 'gebetsabend-zugang', fassung: 2 };
 
 /**
  * Der Zugang aus dem gespeicherten Inhalt – `null`, wenn er nicht von uns ist oder nicht passt (dann gilt: keine

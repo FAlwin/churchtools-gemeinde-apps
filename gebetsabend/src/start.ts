@@ -15,6 +15,8 @@ import { einrichtungAus, type Einrichtung } from '@shared/gebetsabend/einrichten
 import { zuhoererName } from '@shared/gebetsabend/zuhoeren';
 
 export interface Start {
+  /** Die eigene Personen-ID – steht beim Speichern im Dokument (`von`). */
+  ichId: number;
   vorname: string;
   /** Vor- und Nachname – der Name, mit dem man beim Sender ankommt („Wer hört zu?“). */
   name: string;
@@ -25,6 +27,8 @@ export interface Start {
   darfAnlegen: boolean;
   /** Darf die Zugangsdaten schreiben (anlegen, ändern UND löschen in „Zugang“) → gehört zur Technik. */
   technik: boolean;
+  /** Darf die Einstellungen ändern (Kategorie „Einstellungen“) → sieht das Zahnrad (G3). */
+  einstellungenAendern: boolean;
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -38,6 +42,7 @@ export async function ladeStart(): Promise<Start> {
     (rechte as Record<string, unknown> | null)?.[modulPort.kuerzel() ?? 'gebetsabend'],
   );
   return {
+    ichId: ich.id,
     vorname: ich.vorname,
     name: zuhoererName(ich.vorname, ich.nachname),
     gemeinde: ich.gemeinde,
@@ -45,5 +50,7 @@ export async function ladeStart(): Promise<Start> {
     einrichtung,
     darfAnlegen: eigene.anlegen,
     technik: einrichtung.zugang !== null && eigene.aendern.includes(einrichtung.zugang),
+    einstellungenAendern:
+      einrichtung.einstellungen !== null && eigene.aendern.includes(einrichtung.einstellungen),
   };
 }

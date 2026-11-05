@@ -21,7 +21,9 @@ import {
   vorStart,
 } from '@shared/gebetsabend/zuhoeren';
 import type { Zugang } from '@shared/gebetsabend/zugang';
+import { TECHNIK_TEXT } from '@shared/gebetsabend/technik';
 import { ladeZugang } from './lesen';
+import { ZustandZeile } from './ZustandZeile';
 import styles from './Zuhoeren.module.scss';
 
 const VDO_HERKUNFT = new URL(VDO_BASIS).origin;
@@ -32,6 +34,13 @@ interface Props {
   kategorie: number;
   /** Vor- und Nachname – kommt beim Sender als Name an („Wer hört zu?“, G4). */
   name: string;
+  /**
+   * Sendet DIESES Gerät gerade (Technik, G3)? Dann kein Zuhören hier – der Ton liefe wieder ins Mikrofon. Ein offener
+   * Player schließt sich.
+   */
+  sendetHier?: boolean;
+  /** Zählt hoch, wenn die Technik auf diesem Gerät gespeichert hat – dann sofort nachfragen statt nach bis zu 20 s. */
+  aktualisiert?: number;
 }
 
 type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art: 'da' };
@@ -50,7 +59,7 @@ type Laden = { art: 'laedt' } | { art: 'fehler'; fehler: Fehlermeldung } | { art
  * - Das iframe entsteht erst beim Tippen. Am iPhone reicht das nicht immer: Safari sperrt das Abspielen im fremden
  *   iframe, bis man dort selbst tippt (05.11.2026) – daher der Hinweis unter dem Bild.
  */
-export function Zuhoeren({ modul, kategorie, name }: Props) {
+export function Zuhoeren({ modul, kategorie, name, sendetHier = false, aktualisiert = 0 }: Props) {
   const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
   const [zugang, setZugang] = useState<Zugang | null>(null);
   /** Womit der Player geladen ist – `null` = er ist zu. */
@@ -96,6 +105,14 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
   }, [nachfragen]);
 
   useEffect(() => {
+    if (aktualisiert > 0) nachfragen(false);
+  }, [aktualisiert, nachfragen]);
+
+  useEffect(() => {
+    if (sendetHier) setGehoert(null);
+  }, [sendetHier]);
+
+  useEffect(() => {
     const hoeren = (e: MessageEvent) => {
       if (!istVdoMeldung(e, fenster.current?.contentWindow, VDO_HERKUNFT)) return;
       const m = meldungAus(e.data);
@@ -119,13 +136,22 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
     return <FehlerKasten fehler={laden.fehler} onNochmal={() => nachfragen(true)} />;
 
   const vor = vorStart(zugang);
+  if (sendetHier)
+    return (
+      <section className={styles.karte} aria-label="Zuhören">
+        <ZustandZeile gut={vor.art === 'laeuft'}>
+          {vor.art === 'laeuft' ? `Läuft seit ${uhrText(vor.seit)} Uhr` : 'Noch keine Übertragung'}
+        </ZustandZeile>
+        <p className={styles.text}>{TECHNIK_TEXT.nichtHierZuhoeren}</p>
+      </section>
+    );
   return (
     <section className={styles.karte} aria-label="Zuhören">
       {gehoert ? (
         <>
-          <Zustand gut={PLAYER_GUT[player]}>
+          <ZustandZeile gut={PLAYER_GUT[player]}>
             {gehoert.laeuftSeit ? `Läuft seit ${uhrText(gehoert.laeuftSeit)} Uhr` : 'Läuft'}
-          </Zustand>
+          </ZustandZeile>
           <iframe
             key={`${gehoert.streamId}-${gehoert.mitBild ? 'bild' : 'ton'}`}
             ref={fenster}
@@ -151,11 +177,11 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
         </>
       ) : (
         <>
-          <Zustand gut={vor.art === 'laeuft'}>
+          <ZustandZeile gut={vor.art === 'laeuft'}>
             {vor.art === 'laeuft'
               ? `Läuft seit ${uhrText(vor.seit)} Uhr`
               : 'Noch keine Übertragung'}
-          </Zustand>
+          </ZustandZeile>
           {vor.art === 'aus' && (
             <p className={styles.text}>
               {beendet
@@ -175,14 +201,5 @@ export function Zuhoeren({ modul, kategorie, name }: Props) {
         </>
       )}
     </section>
-  );
-}
-
-function Zustand({ gut, children }: { gut: boolean; children: string }) {
-  return (
-    <p className={gut ? `${styles.zustand} ${styles.an}` : styles.zustand} role="status">
-      <span className={styles.punkt} aria-hidden="true" />
-      {children}
-    </p>
   );
 }

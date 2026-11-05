@@ -6,13 +6,25 @@
  *  - `?demo=zuhoerer` – Mitglied, eingerichtet, die Übertragung **läuft**, nächster Termin aus dem Kalender. Der
  *    Player lädt die echte VDO.Ninja-Seite mit einer erfundenen StreamID – er wartet also („beginnt gleich“).
  *  - `?demo=aus` – wie `zuhoerer`, aber noch keine Übertragung.
- *  - `?demo=technik` – wie `zuhoerer`, gehört zur Technik.
+ *  - `?demo=technik` – wie `aus`, gehört zur Technik: „Übertragung starten“ schreibt in den Browser-Speicher, der
+ *    Sender öffnet die echte VDO.Ninja-Seite (Kamera-Abfrage). Zahnrad → Einstellungen mit erfundenen Kalendern.
  *  - `?demo=mitglied` – Mitglied, sieht keine Kategorie (Rechte fehlen).
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
  */
 import { KATEGORIE_EINSTELLUNGEN, KATEGORIE_ZUGANG } from '@shared/gebetsabend/einrichten';
-import { neuerZugang, zugangAlsWert } from '@shared/gebetsabend/zugang';
-import { einstellungenAlsWert } from '@shared/gebetsabend/einstellungen';
+import { neuerZugang, ZUGANG_DOKUMENT } from '@shared/gebetsabend/zugang';
+import { EINSTELLUNGEN_DOKUMENT } from '@shared/gebetsabend/einstellungen';
+import type { Dokumentart } from '@shared/ct/versionierterWert';
+
+/** Ein gespeichertes Dokument, wie `dokumentSpeichern` es schreibt (`@shared/ct/versionierterWert`). */
+const dokument = (art: Dokumentart, inhalt: unknown) =>
+  JSON.stringify({
+    ...art,
+    version: 1,
+    zeit: new Date().toISOString(),
+    von: { personId: 1, name: 'Demo' },
+    inhalt,
+  });
 
 const MODUL = 30;
 const ZUGANG = 74;
@@ -56,7 +68,35 @@ export function demoStarten(fall: string): void {
     },
   });
   const zugang = neuerZugang(true, new Date(Date.now() - 12 * 60_000).toISOString());
-  const zugangWert = zugangAlsWert(fall === 'aus' ? { ...zugang, laeuftSeit: null } : zugang);
+  // Die Werte der Kategorien – im Speicher, damit Starten, Beenden und Einstellungen in der Demo wirken.
+  const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
+    [
+      ZUGANG,
+      eingerichtet
+        ? [
+            {
+              id: 1,
+              dataCategoryId: ZUGANG,
+              value: dokument(
+                ZUGANG_DOKUMENT,
+                fall === 'zuhoerer' ? zugang : { ...zugang, laeuftSeit: null },
+              ),
+            },
+          ]
+        : [],
+    ],
+    [
+      EINSTELLUNGEN,
+      [
+        {
+          id: 2,
+          dataCategoryId: EINSTELLUNGEN,
+          value: dokument(EINSTELLUNGEN_DOKUMENT, { kalender: KALENDER, suchwort: 'Gebet' }),
+        },
+      ],
+    ],
+  ]);
+  let naechsteId = 10;
   const beginn = naechsterDonnerstag();
 
   const antwort = (daten: unknown, status = 200) =>
@@ -89,15 +129,31 @@ export function demoStarten(fall: string): void {
       }
       return antwort(kategorien);
     }
-    if (pfad === `/custommodules/${MODUL}/customdatacategories/${ZUGANG}/customdatavalues`)
-      return antwort(eingerichtet ? [{ id: 1, dataCategoryId: ZUGANG, value: zugangWert }] : []);
-    if (pfad === `/custommodules/${MODUL}/customdatacategories/${EINSTELLUNGEN}/customdatavalues`)
+    const wertePfad =
+      /^\/custommodules\/\d+\/customdatacategories\/(\d+)\/customdatavalues(?:\/(\d+))?$/.exec(
+        pfad,
+      );
+    if (wertePfad) {
+      const liste = werte.get(Number(wertePfad[1])) ?? [];
+      const rumpf =
+        typeof init?.body === 'string' ? (JSON.parse(init.body) as { value: string }) : null;
+      if (method === 'POST' && rumpf) {
+        liste.push({ id: naechsteId++, dataCategoryId: Number(wertePfad[1]), value: rumpf.value });
+        werte.set(Number(wertePfad[1]), liste);
+        return antwort(liste.at(-1), 201);
+      }
+      if (method === 'PUT' && rumpf) {
+        const w = liste.find((x) => x.id === Number(wertePfad[2]));
+        if (!w) return antwort(null, 404);
+        w.value = rumpf.value;
+        return antwort(w);
+      }
+      return antwort(liste);
+    }
+    if (pfad === '/calendars')
       return antwort([
-        {
-          id: 2,
-          dataCategoryId: EINSTELLUNGEN,
-          value: einstellungenAlsWert({ kalender: KALENDER, suchwort: 'Gebet' }),
-        },
+        { id: KALENDER, name: 'Sonstige Veranstaltung' },
+        { id: 2, name: 'Gottesdienst' },
       ]);
     if (pfad === '/calendars/appointments')
       return antwort([

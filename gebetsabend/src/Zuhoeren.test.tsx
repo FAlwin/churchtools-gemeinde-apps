@@ -5,6 +5,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { VDO_BASIS } from '@shared/gebetsabend/links';
 import { NACHFRAGEN_MS, PLAYER_TEXT } from '@shared/gebetsabend/zuhoeren';
 import { neuerZugang, type Zugang } from '@shared/gebetsabend/zugang';
+import { TECHNIK_TEXT } from '@shared/gebetsabend/technik';
 import * as L from './lesen';
 import { Zuhoeren } from './Zuhoeren';
 
@@ -145,6 +146,43 @@ describe('Zuhoeren', () => {
       false,
     );
     expect(screen.queryByRole('button', { name: /Großansicht|Vollbild/ })).toBeNull();
+  });
+
+  it('auf dem Gerät, das sendet: kein Zuhören (Ton liefe ins Mikrofon) – ein offener Player schließt sich', async () => {
+    laden.mockResolvedValue(laeuft());
+    const { rerender } = render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend zuhören/ }));
+    expect(document.querySelector('iframe')).not.toBeNull();
+    rerender(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" sendetHier />);
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Gebetsabend zuhören/ })).toBeNull();
+    expect(screen.getByText(TECHNIK_TEXT.nichtHierZuhoeren)).toBeTruthy();
+    // Sendet das Gerät nicht mehr, kommt der alte Player NICHT von selbst zurück (er hinge an alten Daten).
+    rerender(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toBeTruthy();
+  });
+
+  it('hat die Technik hier gespeichert, fragt die Seite SOFORT nach – nicht erst nach 20 s', async () => {
+    laden.mockResolvedValue(null);
+    const { rerender } = render(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(laden).toHaveBeenCalledTimes(1);
+    laden.mockResolvedValue(laeuft());
+    rerender(<Zuhoeren modul={29} kategorie={77} name="Helene Wiebe" aktualisiert={1} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(laden).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: /Gebetsabend zuhören/ })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 
   it('scheitert schon das erste Laden, steht der Fehler da (nicht „keine Übertragung“)', async () => {

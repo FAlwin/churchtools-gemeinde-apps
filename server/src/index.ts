@@ -78,7 +78,7 @@ if (config.isProduction) {
           styleSrc: ["'self'", "'unsafe-inline'"],
           // Logo (base64-DataURL) + Anmerkungs-PNGs (DataURL/Blob) + gerenderte PDF-Seiten.
           imgSrc: ["'self'", 'data:', 'blob:'],
-          fontSrc: ["'self'"], // System-Font, kein Web-Font
+          fontSrc: ["'self'"], // Lato als eigene Dateien, nie als data: (ui/design/schrift.ts)
           connectSrc: ["'self'"], // Client spricht nur mit dem eigenen /api-Proxy
           workerSrc: ["'self'", 'blob:'], // pdf.js-Worker ist inline → Blob-URL
           objectSrc: ["'none'"],

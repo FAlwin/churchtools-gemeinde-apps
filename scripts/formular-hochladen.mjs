@@ -135,7 +135,7 @@ export function htaccessAus(instanzen, einbetten = []) {
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${ct}`,
-    "font-src 'self' data:",
+    "font-src 'self'", // Schriften als eigene Dateien (ui/design/schrift.ts)
     `connect-src 'self' ${ct}`,
     `frame-ancestors ${["'self'", ...einbetten].join(' ')}`,
     "base-uri 'self'",

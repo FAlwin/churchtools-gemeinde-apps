@@ -27,11 +27,17 @@ ausgezählt, nicht fortgeschrieben.
 | E2E Rückgängig nach Löschen/Verschieben      | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-rueckgaengig.spec.ts`             |
 | E2E Lied-Statistik aus ChurchTools           | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/lied-statistik.spec.ts`                  |
 | E2E Scroll-Modus und Pedal (#551)            | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/chart-scrollen.spec.ts`                  |
+| E2E Rauchtest je Erweiterung (#845)          | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/erweiterungen-rauch.spec.ts` (`?demo`)   |
 
 **Befehle:** `npm test` (alle Vitest), `npm run test:cov` (mit Coverage),
 `npm run test:watch` (Watch-Modus, im Client), `npm run test:e2e` (Playwright).
 Der Render-Smoke fährt den Dev-Server hoch und lädt `?demo=chart` (mountet die Chart-Ansicht ohne
 ChurchTools-Login) → prüft, dass die PDF-Seiten rendern und keine unbehandelte JS-Ausnahme auftritt.
+
+**Rauchtest je Erweiterung (#845):** Anmeldungen, Dienstplaner, Organigramm, Protokolle und Gebetsabend laufen je mit eigenem
+Dev-Server auf eigenem Port (528x, Liste in `e2e/erweiterungen.ts`), weil `?demo` nur dort existiert. Je App:
+Startseite da, Klasse `ct-extension` gesetzt, ein Hauptweg führt weiter (nur gegen die Demo, keine echte Instanz), kein Seiten- und kein
+Konsolenfehler. Das ist das Netz für den Umbau von Ladeschicht und großen Komponenten.
 
 **Auth-Flow (#174):** Dafür laufen drei Prozesse – der ChurchTools-**Stub** (`e2e/ct-stub.mjs`), der
 **echte** Server (mit seiner echten Session-, Rechte- und Proxy-Logik, nur auf den Stub gerichtet) und

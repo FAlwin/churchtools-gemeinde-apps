@@ -35,7 +35,13 @@ describe('zoomBeimTippenAus in jeder App', () => {
       });
     // Findet die Suche die vier bekannten nicht, misst der Test nichts.
     expect(erweiterungen).toEqual(
-      expect.arrayContaining(['anmeldungen', 'dienstplaner', 'organigramm', 'protokolle']),
+      expect.arrayContaining([
+        'anmeldungen',
+        'dienstplaner',
+        'organigramm',
+        'protokolle',
+        'gebetsabend',
+      ]),
     );
     const selbst = erweiterungen.filter(
       (app) => !/erweiterungStarten\(\{/.test(lies(join(WURZEL, app, 'src/main.tsx'))),

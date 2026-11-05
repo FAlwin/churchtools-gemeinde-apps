@@ -18,7 +18,7 @@
  * **Recht:** `view song statistics` (Bereich Events) – je Person, denn gefragt wird mit ihrer Sitzung.
  */
 import type { AjaxMeldungen, AltPort } from './altSchnittstelle';
-import { tagAusIso } from './zeit';
+import { heuteImKalender, tagAusIso } from './zeit';
 
 /** Die Spieltage eines Lieds (`YYYY-MM-DD`), absteigend – der neueste zuerst. */
 export interface LiedNutzung {
@@ -79,5 +79,5 @@ export async function liedStatistik(
   jetzt: Date = new Date(),
 ): Promise<Record<number, LiedNutzung>> {
   const roh = await p.anfrage('getSongStatistic', {}, STATISTIK_MELDUNGEN);
-  return nutzungAus(roh, lieder, tagAusIso(jetzt.toISOString(), zeitzone), zeitzone);
+  return nutzungAus(roh, lieder, heuteImKalender(jetzt, zeitzone), zeitzone);
 }

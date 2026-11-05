@@ -1,7 +1,7 @@
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht } from './veranstaltungen';
 import { anlegenMoeglich, istGruppenAdmin } from './einrichten';
@@ -65,8 +65,8 @@ export function App() {
     setAenderungRoh((alt) => (a ? { ...a, nr: (alt?.nr ?? 0) + 1 } : null));
   /** Zählt hoch, wenn die offene Seite neu laden soll (nach „Rückgängig“). */
   const [stand, setStand] = useState(0);
-  const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const heute = tagAusIso(new Date().toISOString(), zeitzone);
+  const zeitzone = gemeindeZeitzone();
+  const heute = heuteImKalender();
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });

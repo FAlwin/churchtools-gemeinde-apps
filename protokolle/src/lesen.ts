@@ -8,7 +8,7 @@
  * (`treffenNichtFreigegeben`) statt einer stillen Lücke.
  */
 import { werteLesen } from '@shared/ct/modulDaten';
-import { tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { istEinstellung } from '@shared/protokolle/einrichten';
@@ -171,7 +171,7 @@ export async function treffenLesen(
 export async function ladeSitzungen(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'id' | 'protokolle'>,
-  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  zeitzone = gemeindeZeitzone(),
   jetzt = new Date(),
 ): Promise<GruppenSitzungen> {
   const koepfe: ProtokollKopf[] = [];
@@ -186,7 +186,7 @@ export async function ladeSitzungen(
     }
   }
   // „Heute“ in derselben Zeitzone wie die Sitzungen – sonst wäre kurz vor Mitternacht ein Tag verschoben.
-  const heute = tagAusIso(jetzt.toISOString(), zeitzone);
+  const heute = heuteImKalender(jetzt, zeitzone);
   const bis = plusTage(heute, KOMMEND_TAGE);
   const [imFenster, treffen] = await Promise.all([
     kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis),
@@ -225,7 +225,7 @@ export interface GruppenUebersicht {
 export async function ladeUebersicht(
   modul: number,
   gruppen: readonly ProtokollGruppe[],
-  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  zeitzone = gemeindeZeitzone(),
   jetzt = new Date(),
 ): Promise<GruppenUebersicht[]> {
   const ergebnis = new Map<number, GruppenUebersicht>();

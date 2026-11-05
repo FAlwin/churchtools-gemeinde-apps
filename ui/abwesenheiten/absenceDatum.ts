@@ -1,6 +1,7 @@
 import type { Absence, AbsenceEvent } from '@shared/types/index';
 import { decktTermin } from '@shared/absences/index';
 import { wochentagKurz } from '@shared/ct/wochen';
+import { heuteImKalender, uhrText } from '@shared/ct/zeit';
 
 /**
  * Datums-Helfer für die Verfügbarkeit (#177). Alles rein und ohne Zeitzone: Die Tage kommen als
@@ -33,7 +34,7 @@ export function abwesenheitFuerTermin(alle: Absence[], ev: AbsenceEvent): Absenc
  * aus dem ISO-String – zweistellig sind sie dort schon.
  */
 export function tagKurz(iso: string, heute = new Date()): string {
-  const jahr = Number(iso.slice(0, 4)) === heute.getFullYear() ? '' : iso.slice(0, 4);
+  const jahr = iso.slice(0, 4) === heuteImKalender(heute).slice(0, 4) ? '' : iso.slice(0, 4);
   return `${wochentagKurz(iso)}, ${iso.slice(8, 10)}.${iso.slice(5, 7)}.${jahr}`;
 }
 
@@ -55,11 +56,9 @@ export function zeitraumKurz(
     : `${tagKurz(a.startDate, heute)} – ${tagKurz(a.endDate, heute)}`;
 }
 
-/** Uhrzeit aus einem ISO-Zeitpunkt in der Zeitzone des Geräts – „10:00". */
+/** Uhrzeit aus einem ISO-Zeitpunkt in der Uhr der Gemeinde – „10:00" (#847; vorher die des Geräts). */
 export function uhrzeit(isoZeitpunkt: string): string {
-  const d = new Date(isoZeitpunkt);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  return uhrText(isoZeitpunkt);
 }
 
 /**

@@ -4,7 +4,7 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Icon } from '@ui/icons/icons';
 import { datumText, tagKurz } from '@shared/ct/datum';
-import { heuteImKalender, tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   istUeberfaellig,
@@ -42,8 +42,6 @@ type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; uebersicht: GruppenUebersicht[] };
-
-const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export interface StartseiteProps {
   modul: number;
@@ -100,7 +98,7 @@ export function Startseite({
   const laden = useCallback(() => {
     if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
     setZustand({ art: 'laedt' });
-    ladeUebersicht(modul, gruppen, zeitzone).then(
+    ladeUebersicht(modul, gruppen, gemeindeZeitzone()).then(
       (uebersicht) => setZustand({ art: 'fertig', uebersicht }),
       (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
@@ -112,9 +110,10 @@ export function Startseite({
   const anstehend = naechsteSitzungen(
     ue.map((u) => ({ gruppe: u.gruppe, kommend: u.sitzungen.kommend })),
     heute,
-    zeitzone,
+    gemeindeZeitzone(),
   );
-  const jetzt = anstehend.find((n) => tagAusIso(n.sitzung.beginn, zeitzone) === heute) ?? null;
+  const jetzt =
+    anstehend.find((n) => tagAusIso(n.sitzung.beginn, gemeindeZeitzone()) === heute) ?? null;
   const naechste = anstehend.filter((n) => n !== jetzt);
   const meine = ue.flatMap((u) =>
     meineOffenen(u.aufgaben, ich.person, heute).map((a) => ({ a, u })),
@@ -135,14 +134,14 @@ export function Startseite({
         {jetzt && (
           <section className={`${styles.karte} ${styles.heute}`} aria-label="Heute">
             <div className={styles.heuteKopf}>
-              <DatumKachel {...kachelVon(jetzt.sitzung.beginn, zeitzone)} />
+              <DatumKachel {...kachelVon(jetzt.sitzung.beginn, gemeindeZeitzone())} />
               <div>
                 <span className={styles.heuteMarke}>Heute</span>
                 <h2>
                   {jetzt.sitzung.titel} · {jetzt.gruppe.name}
                 </h2>
                 <p>
-                  {uhrzeit(jetzt.sitzung.beginn, zeitzone)}
+                  {uhrzeit(jetzt.sitzung.beginn, gemeindeZeitzone())}
                   {zusagen(jetzt.sitzung)}
                 </p>
               </div>
@@ -246,12 +245,13 @@ export function Startseite({
                         className={styles.zeile}
                         onClick={() => onSitzung(n.gruppe.id, n.sitzung.schluessel)}
                       >
-                        <DatumKachel {...kachelVon(n.sitzung.beginn, zeitzone)} />
+                        <DatumKachel {...kachelVon(n.sitzung.beginn, gemeindeZeitzone())} />
                         <span className={styles.text}>
                           <b>{n.gruppe.name}</b>
                           <small>
-                            {n.sitzung.titel} · {datumText(tagAusIso(n.sitzung.beginn, zeitzone))} ·{' '}
-                            {uhrzeit(n.sitzung.beginn, zeitzone)}
+                            {n.sitzung.titel} ·{' '}
+                            {datumText(tagAusIso(n.sitzung.beginn, gemeindeZeitzone()))} ·{' '}
+                            {uhrzeit(n.sitzung.beginn, gemeindeZeitzone())}
                             {antwort ? ` · ${ANTWORT_TEXT[antwort]}` : ''}
                           </small>
                         </span>
@@ -313,7 +313,7 @@ export function Startseite({
           modul={modul}
           gruppen={schreibGruppen}
           ich={ich}
-          zeitzone={zeitzone}
+          zeitzone={gemeindeZeitzone()}
           onAngelegt={(g, id) => {
             setNeu(false);
             onSitzung(g, `p:${id}`);

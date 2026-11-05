@@ -11,6 +11,7 @@ import { dateienAendern, ladeDateien } from './ladeTerminDateien';
 import { AnhangHinzufuegen } from './AnhangHinzufuegen';
 import infos from './InfosFenster.module.scss';
 import styles from './DateienFenster.module.scss';
+import { datumUhrText } from '@shared/ct/zeit';
 
 /** Welche Seite das Fenster zeigt. Eine Datei wird über ihre ID gemerkt – ihre Daten kommen aus der aktuellen Liste. */
 type Seite =
@@ -207,19 +208,12 @@ export function DateienFenster({
   );
 }
 
-/** Wann angehängt, wie ChurchTools es zeigt: „03.11.2026 11:05“ (in der Zeitzone des Geräts). */
+/** Wann angehängt, wie ChurchTools es zeigt: „03.11.2026 11:05“ (in der Uhr der Gemeinde, #847). */
 function angehaengtText(d: TerminDatei): string | null {
   if (!d.angelegt) return null;
-  const am = new Date(d.angelegt.am);
-  if (Number.isNaN(am.getTime())) return null;
-  const zeit = am.toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return `Angehängt am ${zeit.replace(',', '')}${d.angelegt.von ? ` von ${d.angelegt.von}` : ''}`;
+  const zeit = datumUhrText(d.angelegt.am);
+  if (!zeit) return null;
+  return `Angehängt am ${zeit}${d.angelegt.von ? ` von ${d.angelegt.von}` : ''}`;
 }
 
 /**

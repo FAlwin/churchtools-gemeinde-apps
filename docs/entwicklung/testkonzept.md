@@ -91,6 +91,10 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `keepalive`. Dazu an den Diensten: Einstellungen in EINEM Upload, Anmerkungen „neuer Strich gewinnt, alter Zoom
   bleibt“ bei Weiterzeichnen während eines scheiternden Uploads. Gegenprobe je Regel; einzig das Timer-Räumen beim
   Weglegen ist nicht beobachtbar (der alte Timer fände eine leere Schlange)
+- `ui/design/eineZeitzone` – Wächter (#847): keine eigene Zeitzone (`resolvedOptions().timeZone`, `'Europe/Berlin'`),
+  kein eigenes „heute“ (`tagAusIso(new Date()…)`, `getFullYear()`), keine Anzeige in Gerätezeit (`Intl.DateTimeFormat`
+  / `toLocale…String` ohne `timeZone`) – mit Gegenprobe, dass jede Form erkannt wird, und Ausnahmen, die es geben
+  muss. Dazu in `shared/ct/zeit`, `absenceDatum` und `blatt` Tests mit UTC+14 (kein Testgerät hat sie)
 - `middleware/apiEingang` – Eingang des Servers (#844), echter Mini-Server mit echtem Fehler-Handler: über dem
   Kontingent kommt 429, **bevor** der Rumpf gelesen wird (kaputtes JSON → 429, nicht 400); 2 MB an eine gewöhnliche
   Route und an den Login → 413 mit Meldung, 500 kB gehen durch, 6 MB Anmerkungen und 2 MB Einstellungen gehen durch,

@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   _vergissGemeindeZeitzone,
+  datumUhrText,
   gemeindeZeitzone,
   geraeteZeitzone,
   heuteImKalender,
   merkeGemeindeZeitzone,
   ortszeitAus,
   tagAusIso,
+  uhrText,
   utcAus,
   wannText,
   zeitzoneAusKonfig,
@@ -93,5 +95,33 @@ describe('Zeitzone der Gemeinde (#847)', () => {
     expect(heuteImKalender(jetzt)).toBe(tagAusIso(jetzt.toISOString(), geraeteZeitzone()));
     merkeGemeindeZeitzone({ timezone: WEIT_WEG });
     expect(heuteImKalender(jetzt)).toBe('2026-11-06');
+  });
+});
+
+describe('Anzeigen in der Uhr der Gemeinde (#847)', () => {
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('uhrText / datumUhrText rechnen mit der übergebenen Zone', () => {
+    expect(uhrText('2026-11-03T10:05:00Z', BERLIN)).toBe('11:05');
+    expect(datumUhrText('2026-11-03T10:05:00Z', BERLIN)).toBe('03.11.2026 11:05');
+    expect(datumUhrText(new Date('2026-11-03T10:05:00Z'), BERLIN)).toBe('03.11.2026 11:05');
+  });
+
+  it('ohne Zone: die der Gemeinde, nicht die des Geräts', () => {
+    merkeGemeindeZeitzone({ timezone: 'Pacific/Kiritimati' }); // UTC+14
+    expect(datumUhrText('2026-11-03T10:05:00Z')).toBe('04.11.2026 00:05');
+    expect(uhrText('2026-11-03T10:05:00Z')).toBe('00:05');
+  });
+
+  it('nicht lesbar → leer, auch ein ungültiges Date (würfe sonst)', () => {
+    expect(uhrText('kaputt', BERLIN)).toBe('');
+    expect(datumUhrText('', BERLIN)).toBe('');
+    expect(datumUhrText(new Date('kaputt'), BERLIN)).toBe('');
+  });
+
+  it('heuteImKalender nimmt eine übergebene Zone (Server, Tests)', () => {
+    expect(heuteImKalender(new Date('2026-11-05T11:30:00Z'), 'Pacific/Kiritimati')).toBe(
+      '2026-11-06',
+    );
   });
 });

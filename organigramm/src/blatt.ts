@@ -10,6 +10,7 @@ import type { Anordnung, SichtKnoten } from '@shared/organigramm/ansichten';
 import { rollenZahl } from '@shared/organigramm/personen';
 import type { KastenInhalt } from './kastenPersonen';
 import { kuerzenAuf, nachKommasUmbrechen } from './umbruch';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 export interface Papier {
   id: 'a4-quer' | 'a4-hoch' | 'a3-quer' | 'a3-hoch';
@@ -231,6 +232,6 @@ export function listenSeiten(
 /** „Organigramm-Gottesdienst-2026-10-28.pdf“ – nur Buchstaben, Ziffern und Striche, damit jedes Gerät sie nimmt. */
 export function pdfDateiname(name: string, datum: Date): string {
   const teil = name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'Gemeinde';
-  const tag = `${datum.getFullYear()}-${String(datum.getMonth() + 1).padStart(2, '0')}-${String(datum.getDate()).padStart(2, '0')}`;
+  const tag = heuteImKalender(datum); // der Tag in der Gemeinde wie beim „Stand“ (#847)
   return `Organigramm-${teil}-${tag}.pdf`;
 }

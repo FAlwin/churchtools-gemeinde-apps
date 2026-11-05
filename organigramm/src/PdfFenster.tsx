@@ -37,6 +37,8 @@ import {
 import { ANSICHT_NAMEN, type BaumAnsicht } from './auswahl';
 import fenster from './GruppenFenster.module.scss';
 import styles from './PdfFenster.module.scss';
+import { heuteImKalender } from '@shared/ct/zeit';
+import { tagPunkt } from '@shared/ct/datum';
 
 type PdfArt = AnordnungsArt | 'liste';
 const ARTEN = (['oben', 'links', 'mindmap', 'liste'] as const).map((a: PdfArt) => ({
@@ -159,7 +161,7 @@ export function PdfFenster({
   const seitenZahl = listen ? listen.length : 1;
   const gezeigt = Math.min(blatt, seitenZahl - 1);
 
-  const stand = `Stand ${datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  const stand = `Stand ${tagPunkt(heuteImKalender(datum))}`;
   const kopf = useMemo<BlattKopf>(
     () => ({
       titel: 'Organigramm',

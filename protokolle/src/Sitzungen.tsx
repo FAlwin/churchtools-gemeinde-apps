@@ -5,7 +5,7 @@ import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt, datumText } from '@shared/ct/datum';
-import { ortszeitAus } from '@shared/ct/zeit';
+import { gemeindeZeitzone, ortszeitAus } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
@@ -33,10 +33,8 @@ type Zustand =
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; daten: GruppenSitzungen; aufgaben: Aufgabe[] };
 
-const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
 function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
-  const k = kachelVon(s.beginn, zeitzone);
+  const k = kachelVon(s.beginn, gemeindeZeitzone());
   const status = s.kopf?.status;
   return (
     <li>
@@ -45,8 +43,8 @@ function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
         <span className={styles.text}>
           <b>{s.titel}</b>
           <small>
-            {datumText(ortszeitAus(s.beginn, zeitzone).slice(0, 10))} ·{' '}
-            {uhrzeit(s.beginn, zeitzone)}
+            {datumText(ortszeitAus(s.beginn, gemeindeZeitzone()).slice(0, 10))} ·{' '}
+            {uhrzeit(s.beginn, gemeindeZeitzone())}
             {status === 'frei' && s.kopf?.freigabe
               ? ` · freigegeben am ${tagPunkt(s.kopf.freigabe.am.slice(0, 10))}`
               : ''}
@@ -124,7 +122,10 @@ export function Sitzungen({
     // Das Ziel gilt für das Laden, das es vorfand: Läuft ein zweites Laden schon, bevor das erste fertig ist
     // (React-Prüfmodus, „Erneut versuchen“), hat es dasselbe Ziel – und löscht den Sprung nicht.
     const ziel = wunsch.current;
-    Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
+    Promise.all([
+      ladeSitzungen(modul, gruppe, gemeindeZeitzone()),
+      ladeAufgaben(modul, gruppe),
+    ]).then(
       ([daten, aufgaben]) => {
         setZustand({ art: 'fertig', daten, aufgaben });
         if (ziel === undefined) return;
@@ -143,7 +144,10 @@ export function Sitzungen({
   // damit die nächste Sitzung sind danach frisch. Scheitert es, bleibt die alte Liste – das nächste Laden holt es nach.
   const nachladen = useCallback(() => {
     if (!gruppe) return;
-    Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
+    Promise.all([
+      ladeSitzungen(modul, gruppe, gemeindeZeitzone()),
+      ladeAufgaben(modul, gruppe),
+    ]).then(
       ([daten, aufgaben]) => {
         setZustand({ art: 'fertig', daten, aufgaben });
         // Die offene Sitzung frisch aus der Liste – nach „Bearbeiten“ im Editor stimmen Titel und Zeit im Kopf. Der
@@ -180,7 +184,7 @@ export function Sitzungen({
     return (
       <NaechsteSitzung
         naechste={n}
-        zeitzone={zeitzone}
+        zeitzone={gemeindeZeitzone()}
         onFestlegen={
           darfFestlegen && s.kopf?.status !== 'frei'
             ? () => setFestlegen({ art: 'naechste', bis: s })
@@ -204,7 +208,7 @@ export function Sitzungen({
         sitzung={bearbeiten}
         sitzungen={alle}
         ich={ich}
-        zeitzone={zeitzone}
+        zeitzone={gemeindeZeitzone()}
         onFertig={() => {
           setBearbeiten(null);
           if (geoeffnetImEditor) {
@@ -233,7 +237,7 @@ export function Sitzungen({
         sitzungen={alle}
         bis={festlegen.bis}
         ich={ich}
-        zeitzone={zeitzone}
+        zeitzone={gemeindeZeitzone()}
         onFestgelegt={(id) => {
           setFestlegen(null);
           if (geoeffnetImEditor) {
@@ -273,7 +277,7 @@ export function Sitzungen({
           protokolle={zustand.daten.protokolle}
           teile={zustand.daten.teile}
           ich={ich}
-          zeitzone={zeitzone}
+          zeitzone={gemeindeZeitzone()}
           naechste={naechsteVon(offen)}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={(geaendert) => {
@@ -307,7 +311,7 @@ export function Sitzungen({
           protokolle={zustand.daten.protokolle}
           teile={zustand.daten.teile}
           aufgaben={zustand.aufgaben}
-          zeitzone={zeitzone}
+          zeitzone={gemeindeZeitzone()}
           springeZu={zuPunkt}
           naechste={naechsteVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
@@ -339,7 +343,7 @@ export function Sitzungen({
             protokolle={zustand.daten.protokolle}
             teile={zustand.daten.teile}
             ich={ich}
-            zeitzone={zeitzone}
+            zeitzone={gemeindeZeitzone()}
             onBegonnen={(id) => {
               // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
               setBeginnt(null);
@@ -427,7 +431,7 @@ export function Sitzungen({
               gruppen={gruppen.filter(darfSchreibenIn)}
               start={gruppe.id}
               ich={ich}
-              zeitzone={zeitzone}
+              zeitzone={gemeindeZeitzone()}
               onAngelegt={(g, id) => {
                 // Die neue Sitzung gleich im Editor öffnen – auch, wenn im Fenster eine andere Gruppe gewählt wurde.
                 setNeu(false);

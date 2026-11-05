@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
-import { tagAusIso } from '@shared/ct/zeit';
+import { heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { anmeldeLink, ortszeitAus, terminZeile } from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
@@ -492,7 +492,7 @@ export function VeranstaltungSeite({
   const neuLaden = () => mitgliederLaden(e, a.maxPlaetze);
   const pruefOben = pruef?.art === 'fertig' ? pruef.n.hinweise > 0 : pruefWarOben;
   const pruefKarte = pruef && <NachpruefungKarte stand={pruef} onNeu={neuLaden} />;
-  const heute = tagAusIso(new Date().toISOString(), zeitzone);
+  const heute = heuteImKalender();
   const t = e.termin;
   const geburt = geburtsdatumAn(e.formular);
   const kostet = kannEtwasKosten(e.preis);

@@ -84,6 +84,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - `services/userSettings` – Altbestand der Lied-Einstellungen: Schlüssel-Filter (#215, #145 – jede
   erlaubte Einstellung findet ihr Lied), Lesefehler wirft (#273). `putSettings` samt Obergrenzen
   (#195, #213) ist am 12.10.2026 entfallen. Altdaten legen Tests über `server/src/testHilfen/altbestand.ts` an.
+- `middleware/apiEingang` – Eingang des Servers (#844), echter Mini-Server mit echtem Fehler-Handler: über dem
+  Kontingent kommt 429, **bevor** der Rumpf gelesen wird (kaputtes JSON → 429, nicht 400); 2 MB an eine gewöhnliche
+  Route und an den Login → 413 mit Meldung, 500 kB gehen durch, 6 MB Anmerkungen und 2 MB Einstellungen gehen durch,
+  über 8 MB nicht; kaputtes JSON → 400 ohne Fehlerzeile im Log. Gegenprobe je Teil (Reihenfolge 1, kleine Grenze 2,
+  große Routen 2, Fehler-Handler 4 fallende Tests)
 - `utils/ipKey` – Rate-Limit-Schlüssel (#146): gleiches /64 ⇒ gleicher Schlüssel, verschiedene /64
   getrennt, IPv4-mapped wie IPv4, Zone-Index, Normalisierung, unparsebar, leer
 - `services/buildSong.head` – Kopfangaben aus der ChordPro-Datei (#236): `{title}`/`{artist}`

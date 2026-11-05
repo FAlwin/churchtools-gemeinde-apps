@@ -729,14 +729,18 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 - [x] .env + .gitignore korrekt eingerichtet
 - [x] Zod-Validierung auf allen API-Routen
 - [x] helmet eingerichtet
-- [x] express-rate-limit eingerichtet (zusätzlich striktes Limit am Login)
+- [x] express-rate-limit eingerichtet, VOR dem Lesen des Rumpfs (zusätzlich striktes Limit am Login)
 - [x] Öffentliches Repo unter MIT-Lizenz (`FAlwin/churchtools-gemeinde-apps`); keine Secrets im Code/in der Historie (`.env` nie eingecheckt)
 - [x] Authentifizierung: persönlicher ChurchTools-Login, Session in signiertem httpOnly-Cookie
 - [x] HTTPS extern via Synology Reverse Proxy + Let's Encrypt (`musik.ecg-donrath.de`)
-- [x] npm audit: zuletzt geprüft am 26.07.2026 – Funde betreffen **ausschließlich Build-/Lint-/
-      Test-Werkzeuge** (sass, eslint, vitest), zur Laufzeit nicht erreichbar; Prod-Pfad unbetroffen
-      (Details in Issue #199). Frühere Prüfung 16.07.2026 – **0 Schwachstellen** (die früheren 3 moderaten
-      esbuild/vite-Funde sind mit den aktuellen Dev-Deps nicht mehr vorhanden)
+- [x] npm audit: zuletzt geprüft am 05.11.2026 (#844) – `npm audit --omit=dev` meldet nur noch **zod 3.25**
+      (hoch, Speicher bei übergroßen Sammlungen): nur angemeldet erreichbar und durch die Rumpf-Grenze gedeckelt,
+      Behebung erst mit zod 4 (eigene Aufgabe). `body-parser` (DoS, anonym erreichbar), `dompurify` (über jsPDF,
+      `.html()` ungenutzt) und `qs` gezielt angehoben. Die übrigen Funde des vollen `npm audit` betreffen Build-/
+      Test-Werkzeuge (vite, vitest, glob …). **Bewerten nach Erreichbarkeit, nicht nach Prod/Dev** – die frühere
+      Aussage „ausschließlich Build-Werkzeuge“ (26.07.) stimmte am 04.11. nicht mehr.
+- [x] Eingang des Servers (`middleware/apiEingang.ts`, #844): **erst Rate-Limit, dann Rumpf lesen**; Rumpf-Grenze
+      1 MB, 8 MB nur für `/api/annotations` und `/api/settings`. Zu groß → 413, kaputtes JSON → 400 (vorher 500).
 
 ## Deployment
 

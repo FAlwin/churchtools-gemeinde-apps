@@ -5,13 +5,12 @@ import { readFileSync } from 'node:fs';
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { vertrauterProxy } from './utils/vertrauterProxy.js';
 import { abmeldungenLaden } from './services/abmeldungen.js';
 import { aufraeumen } from './services/ablageUmzug.js';
-import { ipRateKey } from './utils/ipKey.js';
-import { sessionRateKey, dropUnusableSessionCookie } from './middleware/session.js';
+import { dropUnusableSessionCookie } from './middleware/session.js';
+import { apiEingang } from './middleware/apiEingang.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import setlistRoutes from './routes/setlist.js';
@@ -98,36 +97,16 @@ if (config.isProduction) {
 } else {
   app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 }
-// Limit höher: Logo (base64) + Anmerkungs-Striche einer Seite (PNG-DataURL) müssen hineinpassen.
 // Einmal ins Log, wenn HTTPS ankommt, das Sitzungs-Cookie aber ohne `secure` ginge (#409).
 app.use(
   cookieSecureWarnung({ produktion: config.isProduction, cookieSecure: config.cookieSecure }),
 );
-app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser(config.sessionSecret));
 // Direkt nach dem Cookie-Lesen: ein unbrauchbares Session-Cookie (falsche Signatur oder nicht
 // entschlüsselbar) einmal löschen, statt es bei jeder Anfrage erneut geschickt zu bekommen (#268).
 app.use(dropUnusableSessionCookie);
-
-// Allgemeines Rate-Limit – NUR auf echte API-Aktionen (`/api`), nicht auf statische
-// Frontend-Dateien (JS/CSS/Icons); die zählten sonst jede beim App-Laden mit.
-// Gezählt wird PRO ANGEMELDETEM NUTZER (Session-Cookie), sonst pro IP: Im Gemeinde-WLAN gehen
-// alle Geräte über EINE öffentliche IP raus – ohne Nutzer-Schlüssel teilte sich das ganze Team
-// ein Kontingent und lief sofort in „Too many requests". (Login bekommt zusätzlich ein strengeres.)
-app.use(
-  '/api',
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 600,
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Angemeldet zählt die SITZUNG (stabiler Schlüssel, siehe `sessionRateKey` – #194): Seit der
-    // Cookie-Verschlüsselung ändert sich der rohe Cookie-Wert bei jeder Anfrage, als Schlüssel wäre
-    // das Limit wirkungslos. Ohne Session der Anschluss, nicht die einzelne Adresse: `ipRateKey`
-    // fasst IPv6 auf das /64-Netz zusammen (#146).
-    keyGenerator: (req) => sessionRateKey(req) ?? ipRateKey(req.ip),
-  }),
-);
+// Erst das Rate-Limit, dann der Rumpf – mit kleiner Grenze außer für Anmerkungen/Einstellungen (#844).
+app.use(apiEingang());
 
 // ── Routen ──────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

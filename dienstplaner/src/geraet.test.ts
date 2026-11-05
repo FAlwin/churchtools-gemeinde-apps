@@ -31,6 +31,8 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
         unteransicht: 'personen',
         ausgeblendeteGruppen: [3, 'ohne'],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
+        // Unsinn bei „Wer wie oft?“ wird dessen Vorgabe, die letzten 3 Monate (E9-3) – nicht „ab heute“.
+        zeitraumWer: { art: 'letzte', monate: 4 },
         // Nur `true` klappt den Ablauf zu (E6-6a) – Text zählt nicht. Dasselbe für „Infos & Dateien“ (T1b).
         ablaufZu: 'ja',
         infosZu: 1,
@@ -42,6 +44,7 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
       zeitraum: { art: 'abHeute' },
+      zeitraumWer: { art: 'letzte', monate: 3 },
       ablaufZu: false,
       infosZu: false,
     });

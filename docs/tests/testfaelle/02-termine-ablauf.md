@@ -650,3 +650,34 @@ weg als die geladenen Wochen.
 - **Historie:** E8-3 (05.11.2026, Entwurf `e8-teilen.html`)
 
 </details>
+
+### TF-ABLAUF-25 · Planen: Monat anklicken, ＋ im Zeitraum, „Wer wie oft?“ mit eigenem Zeitraum, Scroll-Leiste
+
+**Das brauchst du:** Planen am Rechner mit Terminen in mehreren Monaten, vergangene mit Einteilungen; eine Maus ohne
+seitliches Rad (oder das Trackpad nicht benutzen).
+
+**Das muss passieren:** Der Zeitraum lässt sich direkt per Monat wählen, um einzelne Termine erweitern, und „Wer wie
+oft?“ hat einen eigenen Zeitraum für die Vergangenheit. Dass die Matrix seitlich weitergeht, sieht man an der Leiste.
+
+1. Zeitraum-Knopf → Menü: **Ab heute**, darunter **Monat** mit Jahr ‹ › und zwölf Monatsfeldern (Punkt = laufender
+   Monat), darunter **Eigener Zeitraum**. **Dez** → das Menü schließt, die Matrix zeigt alle Dezember-Termine. Mit ‹ beim
+   Jahr gehen auch vergangene Monate.
+2. Neben dem Knopf **＋** rechts → ein einzelner Termin nach dem Dezember kommt dazu (nicht der ganze Januar); der Knopf
+   zeigt die Spanne und darunter „Dezember 2026 + 1 Termin · n Termine“. Die Matrix bleibt dabei stehen (kein „wird
+   geladen“). **＋** links nimmt einen Termin davor dazu. Ausgeblendete Veranstaltungen (Filter) zählen nicht.
+3. Im Menü ist der Dezember weiter blau. **›** springt zum Januar – das ＋ fällt weg.
+4. **Wer wie oft?** → der Knopf zeigt „Letzte 3 Monate · n Termine“ mit der Spanne bis heute; gezählt wird dort. Im
+   Menü oben **Letzte 3/6/12 Monate** statt „Ab heute“, darunter Monatsfelder und eigener Zeitraum.
+5. Zurück auf **Matrix** → die Matrix hat ihren eigenen Zeitraum behalten. Seite neu laden → beide Zeiträume sind noch da.
+6. Viele Termine (z. B. ein Monat mit Gebetsabenden): unten an der Matrix steht **immer** eine graue Scroll-Leiste, auch
+   ohne zu scrollen; mit der Maus ziehen schiebt die Termine seitlich.
+7. Abwesenheiten (Musik-App): dort sind die Monatsfelder vor dem laufenden Monat gesperrt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/zeitraum.ts`, `shared/dienstplan/plan.ts`, `ui/bedienung/ZeitraumKnopf.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/Planen.module.scss`
+- **Automatisiert:** ja – `shared/ct/zeitraum.test.ts` (Letzte N Monate, ＋ zählt nach Filter, Vorlauf, gemerkt), `shared/dienstplan/plan.test.ts` (`planAusschnitt` aus `planAus`), `ui/bedienung/ZeitraumKnopf.test.tsx` (Monatsfelder, Jahr, Vergangenheit, Grenzen), `dienstplaner/src/Planen.test.tsx` (Monat, ＋ ohne Vorgeladenes, leises Nachladen, eigener Zeitraum „Wer wie oft?“ getrennt gemerkt), `ui/design/matrixScrollLeiste.test.ts` (Regel für die Scroll-Leiste), `client/src/pages/Availability.test.tsx`; von Hand bleibt, ob die Leiste im Browser wirklich dauerhaft steht
+- **Historie:** E9-3 (05.11.2026, Entwurf `e9-zeitraum-scrollen.html`, Wünsche aus dem ersten Planen in Live)
+
+</details>

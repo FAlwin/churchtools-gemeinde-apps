@@ -1593,7 +1593,7 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   heißt **„Abwesenheiten"** (Icon `user-slash`, Tab-ID bleibt `verfuegbarkeit`), Kopfleiste nur mit
   Titel. `pages/Availability.tsx`: Schalter **Termine | Einträge**; seit 28.10.2026 **Zeitraum-Knopf und
   Filter-Knopf wie im Dienstplaner** (`ui/bedienung/ZeitraumKnopf`, `ui/bedienung/FilterKnopf`, Regel
-  `shared/ct/zeitraum.ts`; ab heute = vier Wochen, dieser/nächster Monat, eigener Zeitraum; nur nach vorn, ein Jahr
+  `shared/ct/zeitraum.ts`; ab heute = vier Wochen, Monatsfelder (seit E9-3, Vergangenes gesperrt), eigener Zeitraum; nur nach vorn, ein Jahr
   vorab geholt, ein eigener Zeitraum darüber hinaus holt nach; Filter mit Häkchen = ausgeblendete Arten,
   `worship:abwesenheiten-ausgeblendet`, die alte Einzelwahl wird einmal umgerechnet). Vorher Monats-Kapseln
   (`MonatsLeiste`, gelöscht). Je Termin ein **Abhakfeld** – Häkchen sind nur **vorgemerkt** (blauer Ring), die

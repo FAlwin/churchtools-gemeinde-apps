@@ -287,7 +287,11 @@ describe('Termine im Reiter (E3-2)', () => {
     vi.mocked(ladeZeitraum).mockResolvedValue(KEINE_TERMINE);
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /^Zeitraum:/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    // Das Monatsfeld des laufenden Monats (mit dem Punkt, E9-3) – das Datum dieses Tests ist das echte.
+    const laufend = screen
+      .getAllByRole('button', { pressed: false })
+      .find((b) => /heute/.test(b.className) && b.getAttribute('aria-label'));
+    fireEvent.click(laufend!);
     await screen.findByText(/^Im .* stehen keine Termine an\.$/);
     const [, von, bis, zeitzone] = vi.mocked(ladeZeitraum).mock.calls[0];
     expect([von.slice(0, 7), von.slice(8)]).toEqual([bis.slice(0, 7), '01']);

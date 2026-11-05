@@ -1,15 +1,20 @@
 /** API-Aufrufe für das Laufzeit-Branding (White-Label). */
 import type { Kalender, SiteConfig } from '@shared/types/index';
 import { apiFetch } from './api';
+import { merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import { istExtension } from './ctRuntime';
 import { einstellungenSpeichern } from './ctEinstellungen';
 import { gemeindeKonfiguration, gruppen, kalender, rollen } from './ctLesen';
 import { teilenEinrichten } from './ctTeilen';
 
-export function getSiteConfig(): Promise<SiteConfig> {
+export async function getSiteConfig(): Promise<SiteConfig> {
   // Extension: kein `site.json` – Name aus ChurchTools, der Rest aus den Daten der Erweiterung (3b-4).
-  if (istExtension) return gemeindeKonfiguration();
-  return apiFetch<SiteConfig>('/api/site-config');
+  const cfg = istExtension
+    ? await gemeindeKonfiguration()
+    : await apiFetch<SiteConfig>('/api/site-config');
+  // Die Zeitzone der Gemeinde für die ganze App (#847) – hier, weil beide Auslieferungen so starten.
+  merkeGemeindeZeitzone({ timezone: cfg.zeitzone });
+  return cfg;
 }
 
 export async function updateSiteConfig(cfg: SiteConfig): Promise<SiteConfig> {

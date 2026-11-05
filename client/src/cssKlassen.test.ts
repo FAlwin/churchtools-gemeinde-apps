@@ -1,3 +1,6 @@
+/// <reference types="node" />
+// Node-Typen fordert diese Datei selbst an (sie liest Dateien bzw. rechnet sha256 wie der Server). Bis #847 kamen sie
+// still über `utils/heute.test.ts` ins ganze Client-Projekt – mit dessen Wegfall fehlten sie hier.
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

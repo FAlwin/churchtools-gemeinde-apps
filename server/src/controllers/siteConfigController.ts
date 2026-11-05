@@ -11,6 +11,7 @@ import { getGroupRoles, getGroups } from '../services/ctCapabilities.js';
 import { readSession, isSessionExpired } from '../middleware/session.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { getKalender } from '../services/ctRead.js';
+import { config } from '../config.js';
 
 /**
  * GET /api/site-config – öffentlich (der Login-Screen braucht Name/Logo/Links, bevor man
@@ -23,11 +24,13 @@ export async function getSiteConfigCtrl(req: Request, res: Response): Promise<vo
   const cfg = await getSiteConfig();
   const session = readSession(req);
   const authed = !!session && !isSessionExpired(session.issuedAt);
+  // Die Zeitzone der Gemeinde (#847) – auch ohne Anmeldung, der Login-Bildschirm lädt die App schon.
   if (authed) {
-    res.json(cfg);
+    res.json({ ...cfg, zeitzone: config.zeitzone });
     return;
   }
   res.json({
+    zeitzone: config.zeitzone,
     appName: cfg.appName,
     description: cfg.description,
     orgName: cfg.orgName,

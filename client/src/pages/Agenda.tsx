@@ -12,7 +12,6 @@ import { useSiteConfig } from '../hooks/useSiteConfig';
 import { AblaufAnlegenFenster } from '../components/AblaufAnlegenFenster';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
-import { heuteIso } from '../utils/heute';
 import { monatLabel, monatVon } from '@shared/ct/monate';
 import { saveServiceOffline } from '../services/offline';
 import { liedAnzahl } from '../utils/songFilter';
@@ -22,6 +21,7 @@ import { standKurz } from '../utils/zeitstempel';
 import { funktionen } from '../services/funktionen';
 import { agendaAbfrage } from '../hooks/abfrageSchluessel';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 interface AgendaProps {
   services: Service[];
@@ -85,7 +85,7 @@ export function Agenda({
     if (!online && tab === 'past') setTab('upcoming');
   }, [online, tab]);
 
-  const today = heuteIso();
+  const today = heuteImKalender();
   const pastQuery = usePastServices(monthsBack, tab === 'past' && online);
   // Termine ohne Ablauf (13.10.2026) – nur, wenn die Verwaltung Kalender dafür gewählt hat.
   const regel = useSiteConfig().data.ablaufAnlegen;

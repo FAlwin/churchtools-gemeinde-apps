@@ -32,6 +32,7 @@ vi.mock('../middleware/session.js', () => ({
 }));
 
 const { getSiteConfigCtrl, putSiteConfigCtrl } = await import('./siteConfigController.js');
+const { config } = await import('../config.js');
 const siteConfig = await import('../services/siteConfig.js');
 
 function runCtrl(): Promise<Record<string, unknown>> {
@@ -107,5 +108,15 @@ describe('PUT /api/site-config – reicht jedes Feld weiter', () => {
     await expect(
       putSiteConfigCtrl({ body } as Request, { json: vi.fn() } as unknown as Response),
     ).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('GET /api/site-config – die Zeitzone der Gemeinde (#847)', () => {
+  it('geht mit, ohne und mit Anmeldung (der Login-Bildschirm lädt die App schon)', async () => {
+    readSession.mockReturnValue(null);
+    expect((await runCtrl()).zeitzone).toBe(config.zeitzone);
+    readSession.mockReturnValue({ issuedAt: Date.now() });
+    isSessionExpired.mockReturnValue(false);
+    expect((await runCtrl()).zeitzone).toBe(config.zeitzone);
   });
 });

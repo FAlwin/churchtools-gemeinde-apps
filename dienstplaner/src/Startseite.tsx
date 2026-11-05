@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { kachel, tagKurz } from '@shared/ct/datum';
-import { gemeindeZeitzone, isoTag } from '@shared/ct/zeit';
+import { kachel, plusTage, tagKurz } from '@shared/ct/datum';
+import { gemeindeZeitzone } from '@shared/ct/zeit';
 import { decktTermin } from '@shared/absences/index';
 import type { CtAbsence } from '@shared/ct/typen';
 import type { TerminZeile } from '@shared/dienstplan/termine';
@@ -370,8 +370,8 @@ function useAbwesenheiten(ichId: number, heute: string): CtAbsence[] | undefined
   const [liste, setListe] = useState<CtAbsence[] | undefined>(undefined);
   useEffect(() => {
     let aktuell = true;
-    // Ein Jahr voraus – über einen Zeitpunkt, nicht als Text (am 29.02. gäbe es sonst keinen Tag).
-    const bis = isoTag(new Date(Date.parse(`${heute}T12:00:00Z`) + 365 * 86_400_000));
+    // Ein Jahr voraus – in Tagen gerechnet, nicht als Text (am 29.02. gäbe es sonst keinen Tag).
+    const bis = plusTage(heute, 365);
     ladeAbwesenheiten(ichId, heute, bis).then(
       (l) => aktuell && setListe(l),
       () => undefined,

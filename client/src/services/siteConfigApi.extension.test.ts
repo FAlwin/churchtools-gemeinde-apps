@@ -4,7 +4,8 @@ import { _bremseLoesen, _vergissCsrf } from './ctRuntime';
 import { _vergissModul } from './ctModulDaten';
 import { KATEGORIE_KUERZEL } from './ctEinstellungen';
 import { TEILEN_KATEGORIE } from './ctTeilen';
-import { updateSiteConfig } from './siteConfigApi';
+import { getSiteConfig, updateSiteConfig } from './siteConfigApi';
+import { _vergissGemeindeZeitzone, gemeindeZeitzone, geraeteZeitzone } from '@shared/ct/zeit';
 import { FakeCt } from './ctFake.testutil';
 
 /**
@@ -56,5 +57,21 @@ describe('updateSiteConfig in der Erweiterung', () => {
       message: expect.stringContaining('Liste der Team-Notizen') as unknown,
     });
     expect(ct.werte).toEqual([]);
+  });
+});
+
+describe('getSiteConfig merkt die Zeitzone der Gemeinde für die ganze App (#847)', () => {
+  afterEach(() => _vergissGemeindeZeitzone());
+
+  it('aus /api/config', async () => {
+    ct.liefere('/api/config', { timezone: 'Pacific/Kiritimati' });
+    await getSiteConfig();
+    expect(gemeindeZeitzone()).toBe('Pacific/Kiritimati');
+  });
+
+  it('antwortet /api/config nicht, bleibt die des Geräts', async () => {
+    ct.liefere('/api/config', {}, 500);
+    await getSiteConfig();
+    expect(gemeindeZeitzone()).toBe(geraeteZeitzone());
   });
 });

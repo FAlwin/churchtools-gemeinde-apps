@@ -8,6 +8,7 @@ import { arrangementFileEntries, fileIdFromUrl } from '@shared/ct/arrangementFil
 import { arrangementAnsicht } from '@shared/ct/liedVerwaltung';
 import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import styles from './LiedAnsicht.module.scss';
+import { sichererLink } from '@shared/ct/sichereAdresse';
 
 interface Props {
   terminId: number;
@@ -97,7 +98,8 @@ export function LiedAnsicht({ terminId, tag, punkt, lied, musikApp, onClose, zur
                 return (
                   <li key={d.fileId}>
                     <DateiZeile
-                      href={d.url}
+                      // Aus ChurchTools-Daten – nur http(s), nie `javascript:` (#849).
+                      href={sichererLink(d.url)}
                       symbol={DATEI_SYMBOL[d.kind]}
                       titel={z.titel}
                       unter={z.unter}

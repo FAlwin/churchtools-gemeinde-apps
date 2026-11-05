@@ -13,6 +13,7 @@
  *    (Name 1–255), Löschen `DELETE /files/{id}` (schon weg → 404). Recht wie bei den Infos (`darfTerminAendern`).
  */
 import { pruefeHochladen } from '../dateien/index';
+import { adresseInInstanz, sichererLink } from './sichereAdresse';
 import { neuerDateiname, safeFileName } from './arrangementFiles';
 import type { SchreibAuftrag } from './schreibKern';
 
@@ -99,13 +100,7 @@ export function dateienAusListe(roh: unknown): TerminDatei[] {
  * ältere Einträge anders entstanden sein können.
  */
 export function dateiAdresse(d: TerminDatei, basis: string): string | null {
-  if (d.art === 'datei') return d.url.startsWith(`${basis}/`) ? d.url : null;
-  try {
-    const u = new URL(d.url);
-    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : null;
-  } catch {
-    return null;
-  }
+  return d.art === 'datei' ? adresseInInstanz(d.url, basis) : sichererLink(d.url);
 }
 
 /** Woran man eine Liste wiedererkennt – ändert sich, wenn eine Datei dazukommt, wegfällt oder umbenannt wird. */

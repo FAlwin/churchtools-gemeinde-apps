@@ -99,3 +99,45 @@ describe('apiEingang: erst zählen, dann lesen (#844)', () => {
     expect((await schicke(base, '/api/auth/login', rumpf(2_000_000), 'POST')).status).toBe(429);
   });
 });
+
+describe('apiEingang: schreibend nur von der eigenen Seite (#849)', () => {
+  const mit = (base: string, methode: string, herkunft?: string) =>
+    fetch(`${base}/api/auth/login`, {
+      method: methode,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(herkunft ? { 'Sec-Fetch-Site': herkunft } : {}),
+      },
+      ...(methode === 'GET' ? {} : { body: '{}' }),
+    });
+
+  it('eine andere Seite derselben Domain (same-site) wird abgewiesen – das ist der Fall von SameSite=Lax', async () => {
+    const base = await starte();
+    const res = await mit(base, 'POST', 'same-site');
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'Diese Anfrage kommt nicht aus der App.' });
+  });
+
+  it('eine fremde Seite (cross-site) ebenso', async () => {
+    const base = await starte();
+    expect((await mit(base, 'POST', 'cross-site')).status).toBe(403);
+  });
+
+  it('die eigene Seite (same-origin) geht durch', async () => {
+    const base = await starte();
+    expect((await mit(base, 'POST', 'same-origin')).status).toBe(200);
+  });
+
+  it('ohne den Kopf (alter Browser, curl) bleibt es beim bisherigen Verhalten', async () => {
+    const base = await starte();
+    expect((await mit(base, 'POST')).status).toBe(200);
+  });
+
+  it('lesen ist von überall erlaubt (der Login-Bildschirm, Links aus anderen Apps)', async () => {
+    const base = await starte();
+    const app = await fetch(`${base}/api/auth/login`, {
+      headers: { 'Sec-Fetch-Site': 'cross-site' },
+    });
+    expect(app.status).not.toBe(403);
+  });
+});

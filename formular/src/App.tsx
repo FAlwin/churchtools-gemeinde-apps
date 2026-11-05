@@ -107,6 +107,7 @@ export function App() {
       )}
       <AnmeldeFormular
         ansicht={{
+          basis: `https://${ort.instanz}`,
           name: v.name,
           gemeinde: stand.daten.gemeinde,
           einstellungen: v.einstellungen,

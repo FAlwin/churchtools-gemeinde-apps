@@ -126,6 +126,15 @@ export default tseslint.config(
           message:
             'Effekt-Rumpf in { } setzen: Der Wert eines Ausdrucks würde zur Aufräum-Funktion (Chrome 152: scrollIntoView liefert ein Promise → Absturz beim Verschwinden).',
         },
+        // Wie `react/jsx-no-script-url`, ohne ein weiteres Paket (#849): React blockt `javascript:` in `href` NICHT.
+        // Erkannt werden nur geschriebene Texte – Adressen aus Daten laufen über `sichererLink` (`shared/ct/sichereAdresse.ts`).
+        ...[
+          'Literal[value=/^\\s*javascript:/i]',
+          'TemplateElement[value.raw=/^\\s*javascript:/i]',
+        ].map((ziel) => ({
+          selector: `JSXAttribute[name.name=/^(href|src|action|formAction)$/] ${ziel}`,
+          message: 'Keine javascript:-Adresse – Links aus Daten über sichererLink().',
+        })),
       ],
     },
   },

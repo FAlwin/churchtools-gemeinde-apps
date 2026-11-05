@@ -34,8 +34,29 @@ export const RUMPF_GRENZE = '1mb';
 export const RUMPF_GRENZE_GROSS = '8mb';
 export const GROSSE_RUEMPFE = ['/api/annotations', '/api/settings'];
 
+/** Methoden, die etwas ändern – nur sie müssen von der eigenen Seite kommen. */
+const SCHREIBEND = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * **Schreibende Anfragen nur von der eigenen Seite** (#849). `SameSite=Lax` am Sitzungs-Cookie schützt nur vor
+ * fremden *Sites* – andere Seiten unter derselben Domain (`ecg-donrath.de`: WordPress, `anmeldung.`, `musik-test.`)
+ * schicken das Cookie mit. Der Browser sagt in `Sec-Fetch-Site`, woher eine Anfrage kommt; ein Reverse-Proxy kann das
+ * nicht verfälschen (anders als `Host`). Fehlt der Kopf (sehr alte Browser, Werkzeuge wie curl), bleibt es beim
+ * bisherigen Verhalten – Angreifer brauchen den Browser der Person, und der sendet ihn.
+ */
+export const nurEigeneSeite: express.RequestHandler = (req, res, next) => {
+  const herkunft = req.get('sec-fetch-site');
+  if (SCHREIBEND.has(req.method) && herkunft !== undefined && herkunft !== 'same-origin') {
+    res.status(403).json({ error: 'Diese Anfrage kommt nicht aus der App.' });
+    return;
+  }
+  next();
+};
+
 export function apiEingang(opts: { max?: number } = {}): Router {
   const eingang = express.Router();
+  // Zuerst die Herkunft: kostet nichts und weist fremde Seiten ab, bevor gezählt oder gelesen wird.
+  eingang.use('/api', nurEigeneSeite);
   eingang.use(
     '/api',
     rateLimit({

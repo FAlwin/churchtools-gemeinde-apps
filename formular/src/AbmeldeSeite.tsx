@@ -66,6 +66,7 @@ export function AbmeldeSeite({ ort }: { ort: AbmeldeOrt }) {
   return (
     <DeineAnmeldung
       ansicht={{
+        basis: `https://${ort.instanz}`,
         name,
         gemeinde,
         einstellungen: v?.einstellungen ?? neueEinstellungen('einfach'),

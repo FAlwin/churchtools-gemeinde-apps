@@ -48,6 +48,7 @@ import { useSchlange } from './useSchlange';
 import { hinweisZu } from './hinweise';
 import { wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import k from './Baukasten.module.scss';
+import { ctBasis } from '@ui/ct/basis';
 
 /**
  * **Der Formular-Baukasten** (A5, umgebaut nach Alwins Wunsch vom 13.10.2026: „Ich will das richtige Formular
@@ -860,6 +861,7 @@ export function Baukasten({
       })
     : formular;
   const ansicht = {
+    basis: ctBasis(),
     name: nameEntwurf || name,
     gemeinde,
     einstellungen: { ...e, wer, formular: anzeigeFormular, gestaltung },

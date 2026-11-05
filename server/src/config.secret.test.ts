@@ -22,6 +22,12 @@ describe('pruefeSessionSecret', () => {
     expect(() => pruefeSessionSecret(beispiel, true)).toThrow(/Beispielwert/);
   });
 
+  it('lehnt auch den früheren Platzhalter der Vorlage ab (#849) – er steht in alten .env-Kopien', () => {
+    const alt = 'hier-langen-zufallsstring-eintragen';
+    expect(alt.length).toBeGreaterThanOrEqual(SESSION_SECRET_MIN_LAENGE);
+    expect(() => pruefeSessionSecret(alt, true)).toThrow(/Beispielwert/);
+  });
+
   it('lehnt den Entwicklungs-Rückfall in Produktion ab', () => {
     expect(() => pruefeSessionSecret('dev-only-insecure-secret', true)).toThrow();
   });

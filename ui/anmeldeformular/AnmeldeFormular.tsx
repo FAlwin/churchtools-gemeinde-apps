@@ -28,6 +28,7 @@ import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import { HONIGTOPF_NAME, SPAM_TEXT, spamGrund } from '@shared/anmeldung/spamschutz';
 import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
+import { adresseInInstanz } from '@shared/ct/sichereAdresse';
 
 /**
  * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
@@ -38,6 +39,8 @@ import s from './AnmeldeFormular.module.scss';
  */
 
 export interface Ansicht {
+  /** Die ChurchTools-Instanz (`https://gemeinde.church.tools`) – das Logo kommt nur von dort (#849). */
+  basis: string;
   name: string;
   gemeinde: string | null;
   einstellungen: OeffentlicheEinstellungen;
@@ -400,7 +403,10 @@ export function FormularRahmen({
   const unter = terminZeile(e);
   // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
   const mitBild = !!ansicht.bildUrl;
-  const logoOben = g.logo !== 'keins' && !!g.logoUrl && g.logoOrt === 'oben';
+  // Das Logo nur aus der eigenen Instanz (#849): Die Adresse steht in der Gruppe und ist über die API änderbar – ein
+  // fremder Host erführe sonst, wer das Formular ansieht. Das Schema kennt die Instanz nicht, deshalb hier.
+  const logoUrl = g.logo !== 'keins' ? adresseInInstanz(g.logoUrl, ansicht.basis) : null;
+  const logoOben = !!logoUrl && g.logoOrt === 'oben';
   const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
   const klassen = [
     s.pv,
@@ -433,14 +439,13 @@ export function FormularRahmen({
     '--p-body': SCHRIFT[g.textSchrift],
     ...(mitBild ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl!)}")` } : {}),
   } as React.CSSProperties;
-  const logo =
-    g.logo !== 'keins' && g.logoUrl ? (
-      <img
-        className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
-        src={titelbildGross(g.logoUrl, 240)}
-        alt=""
-      />
-    ) : null;
+  const logo = logoUrl ? (
+    <img
+      className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
+      src={titelbildGross(logoUrl, 240)}
+      alt=""
+    />
+  ) : null;
 
   return (
     <div className={klassen} style={stil}>

@@ -70,6 +70,12 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
       content: [{ type: 'link', href: 'javascript:alert(1)', content: [text('Böse')] }],
       children: [],
     },
+    {
+      id: 'l2',
+      type: 'paragraph',
+      content: [{ type: 'link', href: 'mailto:kasse@gemeinde.de', content: [text('Kasse')] }],
+      children: [],
+    },
   ];
   const aufgabe = statusSetzen(
     neueAufgabe({
@@ -104,6 +110,10 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
   it('`javascript:`-Adressen werden kein Link', () => {
     render(<ProtokollAnsicht dokument={dok} />);
     expect(screen.getByText('Böse').closest('a')).toBeNull();
+    // Mail-Adressen bleiben Links (#849: dieselbe Regel wie vorher, jetzt aus `sichererLink`).
+    expect(screen.getByText('Kasse').closest('a')?.getAttribute('href')).toBe(
+      'mailto:kasse@gemeinde.de',
+    );
   });
 
   it('Markiertes erscheint in der Farbe des Editors – Hintergrund und Schrift (K3a)', () => {

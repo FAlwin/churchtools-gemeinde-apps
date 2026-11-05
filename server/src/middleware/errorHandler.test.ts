@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { errorHandler, HttpError } from './errorHandler.js';
 
 /**
@@ -56,5 +57,29 @@ describe('errorHandler – Retry-After (#300)', () => {
     const { res, setHeader } = fakeRes();
     lauf(new HttpError(503, 'gedrosselt', 0), res);
     expect(setHeader).not.toHaveBeenCalled();
+  });
+});
+
+describe('errorHandler – ungültige Eingabe aus zod (#849, zod 4)', () => {
+  it('400 mit den Feldern, die nicht passen – nicht 500', () => {
+    const { res, status, json } = fakeRes();
+    const r = z.object({ titel: z.string().min(1, 'Titel fehlt') }).safeParse({ titel: '' });
+    expect(r.success).toBe(false);
+    lauf(r.error, res);
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({
+      error: 'Ungültige Eingabe',
+      details: { formErrors: [], fieldErrors: { titel: ['Titel fehlt'] } },
+    });
+  });
+
+  it('auch ein geworfener Fehler aus .parse()', () => {
+    const { res, status } = fakeRes();
+    try {
+      z.number().parse('x');
+    } catch (e) {
+      lauf(e, res);
+    }
+    expect(status).toHaveBeenCalledWith(400);
   });
 });

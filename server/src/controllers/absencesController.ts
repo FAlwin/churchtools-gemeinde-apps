@@ -15,7 +15,7 @@ async function myUserId(req: Request): Promise<number> {
 // 400 ab, dort hält sie den Service auch ohne Controller prüfbar – eine Regel, zwei Prüfstellen.
 const isoTag = z.string().regex(absences.ISO_TAG, 'Datum als JJJJ-MM-TT.');
 
-const neueAbsenceSchema = z.object({
+export const neueAbsenceSchema = z.object({
   startDate: isoTag,
   endDate: isoTag,
   /**
@@ -29,6 +29,8 @@ const neueAbsenceSchema = z.object({
   // `offset: true` ist Absicht: Ohne das lehnt zod `2026-10-04T10:00:00+02:00` ab. Die ECG-Instanz
   // liefert `…Z` (gemessen), aber die App wird an andere Gemeinden verteilt – dort dürfte sonst
   // jeder Haken mit 400 scheitern (Code-Check 23.09.2026, empirisch nachgestellt).
+  // Seit zod 4 (#849) streng nach ISO: mit Sekunden und Abstand MIT Doppelpunkt (`+0200` und `10:00Z` gehen nicht mehr
+  // durch). ChurchTools liefert die Zeiten so (gemessen 05.11.2026: nur `JJJJ-MM-TTTHH:MM:SSZ`) – `absencesController.zeit.test.ts`.
   startTime: z.string().datetime({ offset: true }).optional(),
   endTime: z.string().datetime({ offset: true }).optional(),
   comment: z.string().trim().max(200).optional(),

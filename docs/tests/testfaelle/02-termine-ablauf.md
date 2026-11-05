@@ -234,32 +234,35 @@ Gottesdienstes **nicht** in den Vorlauf (der Balken „Beginn" bleibt, wo er hin
 
 ### TF-ABLAUF-11 · Ablauf direkt in der App anlegen
 
-**Das brauchst du:** Admin für die Verwaltung, Recht „Ablauf bearbeiten", in ChurchTools mindestens eine
-**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** – darunter eine, die nicht passen soll
-(z. B. ein Gebetsabend im selben Kalender). **Nur in der Test-Instanz** (Erweiterung oder lokaler Server):
-Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
+**Das brauchst du:** Recht „Ablauf bearbeiten" für einen Kalender, in ChurchTools mindestens eine
+**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** in diesem Kalender. **Nur in der Test-Instanz**
+(Erweiterung oder lokaler Server): Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
 
-**Das muss passieren:** Veranstaltungen ohne Ablauf aus den gewählten Kalendern stehen mit grauer
-Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen". Termine, deren Name das
-Suchwort nicht enthält, fehlen. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen
-Kalenders zuerst). Nach „Anlegen" öffnet sich der neue Ablauf mit den Punkten der Vorlage; in der Liste
-steht der Termin danach als normaler Termin – nur einmal.
+**Das muss passieren:** Mit „auch ohne Ablauf“ im Filter stehen die Veranstaltungen ohne Ablauf aus diesem Kalender
+mit grauer Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen" – alle, ein Suchwort gibt es
+nicht mehr. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen Kalenders zuerst). Nach „Anlegen" öffnet
+sich der neue Ablauf mit den Punkten der Vorlage; in der Liste steht der Termin danach als normaler Termin – nur
+einmal.
 
-1. **Mehr → Termine ohne Ablauf**: den Kalender anhaken, Suchwort „Gottesdienst", Speichern.
-2. **Termine**: Der Gottesdienst ohne Ablauf steht da, der Gebetsabend nicht.
+1. **Termine → Filter**: beim Kalender das eingerückte Häkchen **auch ohne Ablauf** setzen.
+2. Die Veranstaltungen ohne Ablauf aus dem Kalender stehen da (z. B. auch ein Gebetsabend im selben Kalender).
 3. Zeile antippen → Vorlage gewählt lassen → **Anlegen**. Der Ablauf öffnet sich; in ChurchTools nachsehen.
 4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
    Liedern und Balken „Beginn" mit.
 5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
-6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Die Termine stehen mit „Kein Ablauf"
-   da, aber ohne „Ablauf anlegen". Ist das Konto **Admin des Termins**, gibt es „Ablauf anlegen" trotzdem (#635).
+6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Der Filter bietet dort kein „auch ohne
+   Ablauf“ an, die Termine ohne Ablauf erscheinen nicht. Ein Termin mit Ablauf, dessen **Admin** das Konto ist, lässt
+   sich trotzdem bearbeiten (#635).
+7. **Filter** → beim Kalender das Häkchen selbst wegnehmen: Alle Termine des Kalenders verschwinden, auch die mit
+   Ablauf; am Knopf steht „1“. App neu laden: Die Wahl ist noch da (auf dem Gerät gemerkt).
+8. **Mehr**: Die Zeile „Termine ohne Ablauf“ gibt es in der Verwaltung nicht mehr.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
-- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/utils/kalenderFilter.ts`, `client/src/hooks/useTerminFilter.ts`, `ui/bedienung/FilterKnopf.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635; Filter), `client/src/utils/kalenderFilter.test.ts`, `server/src/controllers/setlistController.ohneAblauf.test.ts`, `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach. 05.11.2026: Kalender je Person im Filter der Terminliste statt Verwaltung, Suchwort weg (Alwin: Frauentreff).
 
 </details>
 

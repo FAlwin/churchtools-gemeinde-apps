@@ -911,11 +911,11 @@ export interface SiteConfig {
    */
   liedblattLogo?: boolean;
   /**
-   * Welche Termine OHNE Ablauf die Terminliste zeigt – mit „Ablauf anlegen" (Alwin, 13.10.2026). Nur
-   * Termine aus `kalenderIds`, und – wenn gesetzt – nur solche, deren Name `suchwort` enthält
-   * (Groß-/Kleinschreibung egal). Grund für das Suchwort: Bei der ECG liegen Gottesdienst und
-   * Gebetsabend im selben Kalender. Leere Kalenderliste = Funktion aus. Die Regel steht in
-   * `@shared/ct/setlistKern` (`brauchtAblauf`).
+   * **Nur noch ein Startwert.** Vom 13.10. bis 05.11.2026 legte ein Admin hier für alle fest, welche Termine OHNE Ablauf
+   * die Terminliste zeigt (Kalender + Suchwort). Seit dem 05.11.2026 wählt das jede Person im Filter der Terminliste
+   * selbst (`client/src/utils/kalenderFilter.ts`); einstellen lässt es sich nicht mehr. Gelesen werden nur noch die
+   * `kalenderIds` – als „auch ohne Ablauf“ für Geräte, die noch nichts gewählt haben (`startFilter`). Das Feld bleibt
+   * im Schema, damit Speichern anderer Einstellungen den Wert nicht verwirft.
    */
   ablaufAnlegen?: AblaufAnlegenRegel;
 }

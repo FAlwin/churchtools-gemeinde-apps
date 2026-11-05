@@ -389,7 +389,7 @@ leichtem Schatten, Knöpfe 4 px, Schrift Lato; untere Tab-Bar, Light/Dark). Alle
 **Einziger anpassbarer Wert:** der **Gemeinde-Name** (`orgName`) – ein ChurchTools-**Admin** ändert ihn
 im Mehr-Tab (`pages/Settings.tsx` → Verwaltung: `hooks/useVerwaltung.ts`, `components/VerwaltungFenster.tsx`; `PUT /api/site-config`); persistiert in `site.json` (Volume,
 `SITE_CONFIG_PATH`). Admin-Recht über `ADMIN_PERMISSION` (Default `churchcore:administer persons`).
-`SiteConfig` (`shared/types`) hat zehn Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?`, `terminArten?` (#400), `standardAnsicht?` (07.10.2026, Akkorde/PDF zuerst; Regel in `client/src/utils/standardAnsicht.ts`, auf dem Gerät gemerkt in `devicePrefs`), `liedblattLogo?` (19.10.2026, Logo aufs Liedblatt; Regel `logoZeigen` in `client/src/utils/logoAsset.ts`, gelesen NUR über `hooks/useAppLogo` – Liedblatt, Teilen, Liederheft, Editor-Vorschau) und `ablaufAnlegen?` (13.10.2026). Nur die ersten drei und `standardAnsicht` sind reine Anzeige-Werte. **Ein neues Feld muss mit:** Typ + `DEFAULT_SITE_CONFIG` (`shared/types`), Schema + `EinstellbareWerte` + `einstellungenZusammensetzen` (`shared/ct/einstellungen.ts` – Server und Erweiterung lesen und speichern beide darüber), und, falls öffentlich, die beschnittene Antwort in `getSiteConfigCtrl`.
+`SiteConfig` (`shared/types`) hat zehn Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?`, `terminArten?` (#400), `standardAnsicht?` (07.10.2026, Akkorde/PDF zuerst; Regel in `client/src/utils/standardAnsicht.ts`, auf dem Gerät gemerkt in `devicePrefs`), `liedblattLogo?` (19.10.2026, Logo aufs Liedblatt; Regel `logoZeigen` in `client/src/utils/logoAsset.ts`, gelesen NUR über `hooks/useAppLogo` – Liedblatt, Teilen, Liederheft, Editor-Vorschau) und `ablaufAnlegen?` (13.10.2026; **seit 05.11.2026 nicht mehr einstellbar, nur noch Startwert** des Filters der Terminliste – `client/src/utils/kalenderFilter.ts`, auf dem Gerät gemerkt). Nur die ersten drei und `standardAnsicht` sind reine Anzeige-Werte. **Ein neues Feld muss mit:** Typ + `DEFAULT_SITE_CONFIG` (`shared/types`), Schema + `EinstellbareWerte` + `einstellungenZusammensetzen` (`shared/ct/einstellungen.ts` – Server und Erweiterung lesen und speichern beide darüber), und, falls öffentlich, die beschnittene Antwort in `getSiteConfigCtrl`.
 
 **Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Mehr` (`components/TabBar.tsx` – füllt die
 gemeinsame `ui/bedienung/ReiterLeiste`, die auch der Dienstplaner am Handy nutzt; der
@@ -896,7 +896,8 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 - **v2.35.0 (13.10.2026) = Ablauf in der App anlegen** (PR #515, dazu aus dem anderen Teil des Repos
   Dienstplaner E3-2/E3-3, Anmeldungen A4 und die schmalere Reiterleiste in den Erweiterungen #504).
   Terminliste zeigt Veranstaltungen OHNE Ablauf aus den in der Verwaltung gewählten Kalendern (+ Suchwort,
-  weil Gottesdienst und Gebetsabend bei der ECG im selben Kalender liegen) mit „Anlegen" – aus einer
+  weil Gottesdienst und Gebetsabend bei der ECG im selben Kalender liegen; **seit 05.11.2026 wählt das jede Person
+  im Filter der Terminliste, ohne Suchwort, nur in Kalendern mit Ablauf-Recht**) mit „Anlegen" – aus einer
   Vorlage (vorausgewählt), wie eine frühere oder leer. Regeln in `shared/ct/ablaufAnlegen.ts`; eigene
   Abfrage `/api/services/ohne-ablauf`, die bestehende Terminliste bleibt „nur mit Ablauf". ChurchTools:
   `PUT /events/{id}/agenda` (`template_id` / `event_id`), gemessen an der Test-Instanz. Abgeschlossener

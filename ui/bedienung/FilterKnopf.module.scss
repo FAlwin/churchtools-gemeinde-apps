@@ -105,3 +105,29 @@
     accent-color: var(--blue);
   }
 }
+
+// Eingerücktes Zusatz-Häkchen unter einer Möglichkeit (Terminliste: „auch ohne Ablauf“, 05.11.2026).
+.zusatz {
+  min-height: 32px;
+  padding-left: 28px;
+  font-size: 13.5px;
+  color: var(--text2);
+
+  input {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:has(input:disabled) {
+    color: var(--text3);
+    cursor: default;
+  }
+}
+
+.hinweis {
+  margin: 6px 0 0;
+  max-width: 280px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text2);
+}

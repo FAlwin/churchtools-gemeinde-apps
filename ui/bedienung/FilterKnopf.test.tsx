@@ -89,4 +89,59 @@ describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
     const knopf = screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' });
     expect([...knopf.querySelectorAll('span')].map((s) => s.textContent)).toEqual(['Filter', '1']);
   });
+
+  it('Zusatz-Häkchen (Terminliste, 05.11.2026): eingerückt, eigener Name, aus solange die Möglichkeit aus ist', () => {
+    const umschalten = vi.fn();
+    const abschnitt = (aus: string[]) => ({
+      titel: 'Kalender',
+      optionen: [
+        {
+          wert: '2',
+          text: 'Gottesdienste',
+          zusatz: { text: 'auch ohne Ablauf', an: true, onUmschalten: umschalten },
+        },
+        { wert: '7', text: 'Jugend' },
+      ],
+      aus,
+      onAus: vi.fn(),
+      hinweis: 'Nur, wo du Abläufe anlegen darfst.',
+    });
+    const { rerender } = render(<FilterKnopf abschnitte={[abschnitt([])]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    const zusatz = screen.getByRole('checkbox', { name: 'Gottesdienste: auch ohne Ablauf' });
+    expect(angehakt(zusatz)).toBe(true);
+    fireEvent.click(zusatz);
+    expect(umschalten).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Nur, wo du Abläufe anlegen darfst.')).toBeTruthy();
+    // Die Zahl am Knopf zählt nur die Möglichkeiten, nicht den Zusatz.
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+
+    rerender(<FilterKnopf abschnitte={[abschnitt(['2'])]} />);
+    const ausgegraut = screen.getByRole('checkbox', { name: 'Gottesdienste: auch ohne Ablauf' });
+    expect(angehakt(ausgegraut)).toBe(false);
+    expect((ausgegraut as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
+  });
+
+  it('eine einzige Möglichkeit MIT Zusatz-Häkchen ist eine Wahl – der Knopf erscheint', () => {
+    render(
+      <FilterKnopf
+        abschnitte={[
+          {
+            titel: 'Kalender',
+            optionen: [
+              {
+                wert: '2',
+                text: 'Gottesdienste',
+                zusatz: { text: 'auch ohne Ablauf', an: false, onUmschalten: vi.fn() },
+              },
+            ],
+            aus: [],
+            onAus: vi.fn(),
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+  });
 });

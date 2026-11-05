@@ -7,14 +7,15 @@ import {
 } from '../client/src/utils/onboarding';
 
 /**
- * **Ablauf in der App anlegen** (Alwin, 13.10.2026) – der ganze Weg über den echten Server:
- * Verwaltung → „Termine ohne Ablauf" (Kalender + Suchwort) → die Veranstaltung steht mit „Kein
- * Ablauf" in der Terminliste, der Gebetsabend im selben Kalender nicht → „Ablauf anlegen" → die
- * Vorlage ist vorausgewählt → angelegt, der neue Ablauf öffnet sich mit den Punkten der Vorlage.
+ * **Ablauf in der App anlegen** (Alwin, 13.10.2026) – der ganze Weg über den echten Server. Seit dem 05.11.2026 über
+ * den Filter der Terminliste statt über die Verwaltung: Kalender „Anlegeprobe“ → „auch ohne Ablauf“ → die
+ * Veranstaltung steht mit „Kein Ablauf" in der Liste → „Ablauf anlegen" → die Vorlage ist vorausgewählt → angelegt, der
+ * neue Ablauf öffnet sich mit den Punkten der Vorlage. Das Suchwort gibt es nicht mehr – der Gebetsabend im selben
+ * Kalender steht mit da.
  *
- * Eigener Kalender und eigener Admin im Stub. Die Namen enthalten bewusst NICHT „Gottesdienst (Stub)":
- * Ist die Funktion eingeschaltet, stehen die Termine auch in den Listen der parallel laufenden Tests – und
- * die suchen „Gottesdienst (Stub)" (so passiert beim ersten vollen Lauf).
+ * Eigener Kalender und eigener Admin im Stub. Der Filter liegt im Browser (je Gerät), die parallel laufenden Tests
+ * sehen ihn nicht. Der Startwert kommt aber aus der früheren Einstellung der Gemeinde (`server/.e2e-data`) – also
+ * den Zielzustand herstellen, nicht blind umschalten.
  */
 const TOUREN = [TOUR_TERMINE, TOUR_CHART, TOUR_SETLIST, TOUR_SETLIST_EDIT];
 const tourenAus = (touren: string[]) => {
@@ -29,28 +30,22 @@ test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page, browser }) =>
   await page.getByLabel(/Passwort/i).fill('egal-der-stub-prueft-nicht');
   await page.getByRole('button', { name: /Anmelden/i }).click();
 
-  // Verwaltung: Kalender „Anlegeprobe" einschalten, nur Termine mit „Gottesdienst" im Namen.
-  await page.getByRole('button', { name: 'Mehr', exact: true }).click();
-  await page.getByRole('button', { name: /Termine ohne Ablauf/ }).click();
-  // Die Einstellung bleibt zwischen Läufen gespeichert (`server/.e2e-data`) – also den Zielzustand
-  // herstellen, nicht blind umschalten.
-  const kalender = page.getByRole('checkbox', { name: 'Anlegeprobe' });
-  if ((await kalender.getAttribute('aria-checked')) !== 'true') await kalender.click();
-  await page.getByLabel('Suchwort im Terminnamen').fill('Gottesdienst');
-  const speichern = page.getByRole('button', { name: 'Speichern' });
-  if (await speichern.isVisible()) await speichern.click();
-  // Ohne Änderung hat das Fenster keine Knöpfe unten (02.11.2026) – dann schließt das X.
-  else await page.getByRole('button', { name: 'Fenster schließen' }).click();
-  await expect(page.getByRole('button', { name: /Termine ohne Ablauf.*1 Kalender/ })).toBeVisible();
+  // Filter der Terminliste: beim Kalender „Anlegeprobe“ auch Termine ohne Ablauf zeigen.
+  await page.getByRole('button', { name: /^Filter/ }).click();
+  const ohneAblauf = page.getByRole('checkbox', { name: 'Anlegeprobe: auch ohne Ablauf' });
+  if (!(await ohneAblauf.isChecked())) await ohneAblauf.click();
+  await expect(ohneAblauf).toBeChecked();
+  // Die Zeile „Termine ohne Ablauf“ unter Mehr → Verwaltung gibt es nicht mehr.
+  await page.keyboard.press('Escape');
 
-  // Terminliste: der Gottesdienst ohne Ablauf ja, der Gebetsabend im selben Kalender nicht.
-  await page.getByRole('button', { name: 'Termine', exact: true }).click();
+  // Terminliste: der Gottesdienst ohne Ablauf – und der Gebetsabend im selben Kalender (kein Suchwort mehr).
   const zeile = page.getByRole('button', { name: /Gottesdienst zur Anlegeprobe.*Kein Ablauf/ });
   await expect(zeile).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText('Gebetsabend zur Anlegeprobe')).toHaveCount(0);
+  await expect(page.getByText('Gebetsabend zur Anlegeprobe')).toBeVisible();
 
-  // Je Termin (#635): Der Musiker darf nur Kalender 1 bearbeiten – er sieht den Termin aus „Anlegeprobe"
-  // (Kalender 6) mit „Kein Ablauf", aber ohne „Ablauf anlegen". Eigener Browser-Kontext = eigene Anmeldung.
+  // Je Kalender (05.11.2026): Der Musiker darf Abläufe nur in Kalender 1 bearbeiten – sein Filter bietet „auch ohne
+  // Ablauf“ nur dort an (die Namen kommen aus `/api/kalender`, seit heute ohne Admin-Recht), und die Termine aus
+  // „Anlegeprobe“ (Kalender 6) erscheinen bei ihm nicht. Eigener Browser-Kontext = eigene Anmeldung.
   const musiker = await browser.newContext();
   const mPage = await musiker.newPage();
   await mPage.addInitScript(tourenAus, TOUREN);
@@ -58,10 +53,14 @@ test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page, browser }) =>
   await mPage.getByLabel(/E-Mail/i).fill('test@example.org');
   await mPage.getByLabel(/Passwort/i).fill('egal-der-stub-prueft-nicht');
   await mPage.getByRole('button', { name: /Anmelden/i }).click();
+  await mPage.getByRole('button', { name: /^Filter/ }).click();
   await expect(
-    mPage.getByRole('button', { name: /Gottesdienst zur Anlegeprobe.*Kein Ablauf/ }),
-  ).toBeVisible({ timeout: 15_000 });
-  await expect(mPage.getByLabel('Ablauf anlegen')).toHaveCount(0);
+    mPage.getByRole('checkbox', { name: 'Gottesdienst: auch ohne Ablauf' }),
+  ).toBeVisible();
+  await expect(mPage.getByRole('checkbox', { name: 'Anlegeprobe: auch ohne Ablauf' })).toHaveCount(
+    0,
+  );
+  await expect(mPage.getByText('Gottesdienst zur Anlegeprobe')).toHaveCount(0);
   await musiker.close();
 
   // Anlegen: „Vorlage zuerst" – die Vorlage des Kalenders ist gewählt.

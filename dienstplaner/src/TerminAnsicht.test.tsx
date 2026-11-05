@@ -9,6 +9,21 @@ import { TerminAnsicht } from './TerminAnsicht';
 import { einteilungSchluessel } from '@shared/dienstplan/tausch';
 import { tauschAttrappe } from './tausch.testutil';
 import type { Tausch } from './useTausch';
+import type { TerminBlatt } from '@shared/ct/terminBlatt';
+
+// Teilen (E8-1): Das Blatt wird festgehalten statt gezeichnet – geprüft wird, was aus den echten Plan-Daten entsteht.
+const blaetter = vi.hoisted(() => [] as unknown[]);
+vi.mock('@ui/teilen/terminBlattPdf', () => ({
+  terminBlattPdf: vi.fn(async (b: unknown) => {
+    blaetter.push(b);
+    const { jsPDF } = await import('jspdf');
+    return new jsPDF();
+  }),
+}));
+vi.mock('@ui/teilen/pdfSeiten', () => ({
+  renderPdfToCanvases: vi.fn(() => Promise.resolve([])),
+  renderPdfSeite: vi.fn(() => Promise.reject(new Error('jsdom'))),
+}));
 
 /**
  * Die Termin-Ansicht (E6-1b) – mit dem echten Laden (`ladeTermin`, `ladeAblauf`), nur ChurchTools ist ersetzt.
@@ -182,6 +197,31 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(await within(dienste).findByText(/bei Spike Musiker \(So, 10\.01\.\)/)).toBeTruthy();
     expect(within(dienste).getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
     expect(within(dienste).queryByRole('button', { name: /Tauschen/ })).toBeNull();
+  });
+
+  it('„Teilen“ hinter dem Titel öffnet „Termin teilen“ – Dienste aus denselben Plätzen, Ablauf mit Beginn', async () => {
+    ct();
+    blaetter.length = 0;
+    zeige();
+    await screen.findByRole('region', { name: 'Dienste' });
+    fireEvent.click(screen.getByRole('button', { name: 'Termin als PDF teilen' }));
+    expect(await screen.findByRole('dialog', { name: 'Termin teilen' })).toBeTruthy();
+    await waitFor(() => expect(blaetter.length).toBeGreaterThan(0));
+    const b = blaetter.at(-1) as TerminBlatt;
+    expect(b.titel).toBe('Gottesdienst');
+    expect(b.untertitel).toMatch(/^Sonntag, 18\. Oktober 2026 · 10:00/);
+    expect(b.app).toBe('Dienstplaner');
+    expect(b.dienste).toEqual([
+      expect.objectContaining({
+        name: 'Technik',
+        // In der Reihenfolge des Plans – wie die Karte „Dienste“ der Termin-Ansicht.
+        dienste: [
+          { name: 'Licht', personen: [], frei: 1 },
+          { name: 'Ton', personen: [{ name: 'Alwin', angefragt: false }], frei: 0 },
+        ],
+      }),
+    ]);
+    expect(b.ablauf?.zeilen.map((z) => z.art)).toContain('beginn');
   });
 
   it('kein Ablauf (404) → „Noch kein Ablauf.“; leerer Ablauf → „noch leer“; die Dienste stehen trotzdem', async () => {

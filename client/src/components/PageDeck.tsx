@@ -24,7 +24,7 @@ import { PageDrawToolbar } from './PageDrawToolbar';
 import { PageTextLayer } from './PageTextLayer';
 import { LassoEbene } from './LassoEbene';
 import { SlidePanes } from './SlidePanes';
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import styles from './PageDeck.module.scss';
 import { maltStriche } from '../utils/malwerkzeug';
 

@@ -7,7 +7,7 @@ import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import { TOUR_SETLIST, TOUR_SETLIST_EDIT } from '../utils/onboarding';
 
 // Das PDF-Teilen braucht pdf.js samt Worker – hier nicht gebraucht, jsdom kennt keinen Worker.
-vi.mock('../pdfSetup', () => ({}));
+vi.mock('@ui/teilen/pdfSetup', () => ({}));
 
 const { Setlist } = await import('./Setlist');
 

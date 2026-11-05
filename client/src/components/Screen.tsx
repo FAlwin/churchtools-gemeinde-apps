@@ -1,5 +1,5 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useZumAnfang } from '../hooks/useZumAnfang';
 import styles from './Screen.module.scss';

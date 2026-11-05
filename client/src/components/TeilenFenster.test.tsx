@@ -11,7 +11,7 @@ vi.mock('@ui/teilen/sharePdf', () => ({
 }));
 // pdf.js zeichnet in jsdom nicht – die Vorschau bekommt Leinwand-Attrappen, je Seite eine.
 const zeichnen = vi.hoisted(() => ({ fehlschlag: false }));
-vi.mock('../utils/dokumentSeiten', () => {
+vi.mock('@ui/teilen/pdfSeiten', () => {
   const blatt = (n: number) => ({ toDataURL: () => `data:image/jpeg;seite${n}` });
   return {
     renderPdfToCanvases: vi.fn(async (data: ArrayBuffer) => {
@@ -24,7 +24,7 @@ vi.mock('../utils/dokumentSeiten', () => {
 });
 const { downloadPdf, sharePdf } = await import('@ui/teilen/sharePdf');
 const { TeilenFenster } = await import('./TeilenFenster');
-const { PdfSeitenVorschau } = await import('./PdfSeitenVorschau');
+const { PdfSeitenVorschau } = await import('@ui/teilen/PdfSeitenVorschau');
 const { getTeilenMitAnmerkungen } = await import('../utils/devicePrefs');
 
 /**

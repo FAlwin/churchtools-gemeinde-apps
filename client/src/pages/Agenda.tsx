@@ -4,7 +4,7 @@ import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
-import { Spinner } from '../components/Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { usePastServices, useServicesOhneAblauf } from '../hooks/useServices';

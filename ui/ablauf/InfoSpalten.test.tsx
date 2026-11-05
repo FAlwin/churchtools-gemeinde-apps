@@ -64,7 +64,7 @@ const ZEILEN = [
 describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
   it('am Rechner: je gewählter Gruppe eine Spalte mit Kopf; leer = „–“', () => {
     render(<AblaufListe zeilen={ZEILEN} infoSpalten={[GRUPPEN[0], GRUPPEN[1]]} />);
-    expect(screen.getByText('Punkt')).toBeTruthy();
+    expect(screen.getByText('Eintrag')).toBeTruthy();
     expect(screen.getByText('Technik')).toBeTruthy();
     expect(screen.getByText('Musik')).toBeTruthy();
     const zeile = screen.getByText('Treu').closest('div[class*="flowRow"]')!;
@@ -101,7 +101,7 @@ describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
     };
     Object.defineProperty(rahmen, 'clientWidth', { value: 500, configurable: true });
     Object.defineProperty(rahmen, 'scrollWidth', { value: 750, configurable: true });
-    masse(screen.getByText('Punkt'), 0, 300);
+    masse(screen.getByText('Eintrag'), 0, 300);
     masse(screen.getByText('Technik'), 300, 150);
     masse(screen.getByText('Musik'), 450, 150);
     masse(screen.getByText('Programm'), 600, 150);
@@ -129,7 +129,7 @@ describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
   it('am Handy: eine Zeile „Gruppe: Text“ unter dem Punkt, keine Spalten', () => {
     handy();
     render(<AblaufListe zeilen={ZEILEN} infoSpalten={[GRUPPEN[0]]} />);
-    expect(screen.queryByText('Punkt')).toBeNull();
+    expect(screen.queryByText('Eintrag')).toBeNull();
     const zeile = screen.getByText('Treu').closest('div[class*="flowRow"]')!;
     expect(zeile.textContent).toContain('Technik: Band-Mikros');
     expect(zeile.textContent).not.toContain('Intro leise');
@@ -137,7 +137,7 @@ describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
 
   it('schmal (Matrix, Bild 4 A): keine Infos', () => {
     render(<AblaufListe zeilen={ZEILEN} infoSpalten={GRUPPEN} schmal />);
-    expect(screen.queryByText('Punkt')).toBeNull();
+    expect(screen.queryByText('Eintrag')).toBeNull();
     expect(screen.queryByText(/Mikro 1 an/)).toBeNull();
   });
 

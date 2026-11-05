@@ -25,7 +25,7 @@ ChordPro-Datei.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `client/src/services/modus.ts`, `client/src/pdfSetup.ts`, `client/src/pdfWorkerDatei.ts`, `client/src/styles/main.scss`, `client/vite.config.ts`, `ui/erweiterung/cssBereich.ts`, `shared/ct/setlistKern.ts`
+- **Betrifft:** `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `client/src/services/modus.ts`, `ui/teilen/pdfSetup.ts`, `ui/teilen/pdfWorkerDatei.ts`, `ui/erweiterung/viteErweiterung.ts`, `client/src/styles/main.scss`, `client/vite.config.ts`, `ui/erweiterung/cssBereich.ts`, `shared/ct/setlistKern.ts`
 - **Automatisiert:** teilweise – `ctLesen.test.ts` und `ctRuntime.test.ts` gegen ein nachgebautes
   ChurchTools; was nur in der echten Einbettung auffällt (CSP, `<base href>`, Kopf verworfen, Leiste
   von 56 px), prüft nur dieser Fall

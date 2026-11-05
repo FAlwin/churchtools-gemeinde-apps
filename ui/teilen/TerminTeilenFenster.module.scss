@@ -1,0 +1,144 @@
+@use '../design/mixins' as m;
+
+// „Termin teilen“ (E8-1, Entwurf `e8-teilen.html` Version 5) – Listen wie die Einstellungen der Apps, im
+// ChurchTools-Look: Karte mit Haarlinien, Zeilen mit Titel und grauer Zusammenfassung, Kästchen in Blau.
+
+.inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.liste {
+  @include m.card-list;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+
+  > svg {
+    flex-shrink: 0;
+    color: var(--text3);
+  }
+
+  &:disabled {
+    cursor: default;
+
+    b {
+      color: var(--text2);
+    }
+  }
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--section);
+    }
+  }
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  small {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text2);
+  }
+}
+
+.kaestchen {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 8px 14px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+
+  input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}
+
+.gruppe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.15s;
+}
+
+// Ist der Teil ausgeschaltet, stehen seine Einzelheiten zurückgenommen da – ändern darf man sie trotzdem.
+.aus {
+  opacity: 0.5;
+}
+
+.ueber {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.reihe {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.reiheText {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stand,
+.hinweis {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text2);
+}
+
+.link {
+  @include m.textKnopf;
+}

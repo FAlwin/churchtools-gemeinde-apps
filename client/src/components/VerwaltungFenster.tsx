@@ -2,7 +2,7 @@ import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/in
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { speicherFehler } from '../utils/speicherFehler';
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { Icon } from '@ui/icons/icons';
 import { LinksManager } from './LinksManager';
 import { TerminArtenManager } from './TerminArtenManager';

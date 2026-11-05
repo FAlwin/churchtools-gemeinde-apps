@@ -27,12 +27,7 @@ export default defineConfig(({ mode }) => {
                 find: 'virtual:pwa-register/react',
                 replacement: fileURLToPath(new URL('./src/services/swOhne.ts', import.meta.url)),
               },
-              // pdf.js-Worker als eigene Datei statt inline – ChurchTools verbietet Worker aus
-              // `blob:` (pdfSetup.ts, #335).
-              {
-                find: /^\.\/pdfWorker$/,
-                replacement: fileURLToPath(new URL('./src/pdfWorkerDatei.ts', import.meta.url)),
-              },
+              // Der pdf.js-Worker als eigene Datei kommt aus dem gemeinsamen Erweiterungs-Bau (E8-1).
             ]
           : []),
       ],

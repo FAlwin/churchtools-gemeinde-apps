@@ -15,7 +15,7 @@ vi.mock('../services/churchtoolsApi', async (orig) => ({
 }));
 
 // Das PDF-Teilen braucht pdf.js samt Worker – hier nicht gebraucht, jsdom kennt keinen Worker.
-vi.mock('../pdfSetup', () => ({}));
+vi.mock('@ui/teilen/pdfSetup', () => ({}));
 
 const { Setlist } = await import('./Setlist');
 

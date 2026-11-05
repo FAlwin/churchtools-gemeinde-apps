@@ -5,8 +5,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Worker im ohnehin offline verfügbaren Haupt-Bundle → Charts rendern auch ohne Netz (#32).
 //
 // In der ChurchTools-Extension geht das nicht: ChurchTools verbietet Worker aus `blob:` (CSP
-// `child-src * data`, gemessen 07.10.2026). Dort lenkt `vite.config.ts` `./pdfWorker` auf
-// `./pdfWorkerDatei` um – der Worker als eigene Datei; Offline gibt es in der Extension ohnehin nicht.
+// `child-src * data`, gemessen 07.10.2026). Dort lenkt der gemeinsame Erweiterungs-Bau (`ui/erweiterung/viteErweiterung.ts`) `./pdfWorker`
+// auf `./pdfWorkerDatei` um – der Worker als eigene Datei; Offline gibt es in der Extension ohnehin nicht.
 import PdfWorker from './pdfWorker';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();

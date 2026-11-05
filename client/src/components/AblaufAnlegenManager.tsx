@@ -3,7 +3,7 @@ import { SITE_CONFIG_GRENZEN, type SiteConfig } from '@shared/types/index';
 import { Icon } from '@ui/icons/icons';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
-import { Spinner } from './Spinner';
+import { Spinner } from '@ui/bedienung/Spinner';
 import { useKalender, useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { sameIdSet } from '../utils/adminDrafts';
 import { speicherFehler } from '../utils/speicherFehler';

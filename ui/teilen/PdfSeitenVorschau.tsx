@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { jsPDF } from 'jspdf';
-import { Icon } from '@ui/icons/icons';
-import { Spinner } from './Spinner';
-import { renderPdfSeite, renderPdfToCanvases } from '../utils/dokumentSeiten';
+import { Icon } from '../icons/icons';
+import { Spinner } from '../bedienung/Spinner';
+import { renderPdfSeite, renderPdfToCanvases } from './pdfSeiten';
 import styles from './PdfSeitenVorschau.module.scss';
 
 /** Miniaturen: klein genug, dass auch ein langer Ablauf das Gerät nicht füllt (A4 ≈ 180 px breit). */
@@ -14,7 +14,8 @@ const GROSS_SCALE = 2;
  * **Vorschau des fertigen PDF im Teilen-Fenster** (Alwin, 08.10.2026, Entwurf A: „eine Ansicht vor
  * dem Teilen"). Die Seiten liegen als kleine Blätter nebeneinander; Antippen zeigt eine Seite groß.
  *
- * Gezeichnet wird mit `dokumentSeiten` – derselben Umwandlung wie im Liedblatt, keine zweite. Eine
+ * Gezeichnet wird mit `pdfSeiten` – derselben Umwandlung wie im Liedblatt, keine zweite. Seit E8-1 in `ui/` – der
+ * Dienstplaner zeigt damit das Termin-Blatt. Eine
  * Vorschau, die nicht klappt, hält das Teilen nicht auf: Das PDF ist ja fertig.
  */
 export function PdfSeitenVorschau({ doc }: { doc: jsPDF }) {

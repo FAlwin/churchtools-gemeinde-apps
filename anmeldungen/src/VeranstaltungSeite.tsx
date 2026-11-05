@@ -7,7 +7,7 @@ import { anmeldeLink, ortszeitAus, terminZeile } from '@shared/anmeldung/termin'
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
-import { loeschDatum } from '@shared/anmeldung/ablaeufe';
+import { loeschDatum } from '@shared/anmeldung/termin';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
@@ -203,7 +203,9 @@ function DatenschutzKarte({
   })();
   return (
     <Karte titel="Datenschutz" onBearbeiten={onBearbeiten}>
-      <Zeile titel="Daten löschen">{monate} Monate nach dem Ende</Zeile>
+      <Zeile titel="Daten löschen">
+        {monate} {monate === 1 ? 'Monat' : 'Monate'} nach dem Ende
+      </Zeile>
       <Zeile titel="Am">{am}</Zeile>
     </Karte>
   );

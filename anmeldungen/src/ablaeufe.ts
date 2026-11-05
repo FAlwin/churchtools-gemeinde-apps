@@ -38,7 +38,6 @@ import {
   erinnerungen,
   erinnerungsTextAus,
   anmeldeschlussVorLoeschen,
-  loeschDatum,
   routinenSchritte,
   schrittFolge,
   type AblaufMail,
@@ -47,6 +46,7 @@ import {
   type MailArt,
   type RoutinenArt,
 } from '@shared/anmeldung/ablaeufe';
+import { loeschDatum } from '@shared/anmeldung/termin';
 import { anmeldungenIn, systemfelderNachziehen, teilnehmerRolle } from './einrichten';
 import { platzhalterLaden } from './rundmail';
 
@@ -310,11 +310,11 @@ export async function ablaeufeEinrichten(
   const liste = erinnerungen(e, heute);
   if (datum !== null && datum <= heute && !loeschenBestaetigt) {
     const unsere = ROUTINEN.map((r) => unsereFuer(zuordnungen, rolle, r.status));
-    if (unsere.some((r) => wartetBis(r) !== datum)) throw new LoeschdatumVorbei(datum);
-    // A9-4, D5: Das Datum steht schon so drin, aber die Abläufe sind aus (archiviert, dann wiederhergestellt). Gehen sie
-    // wieder an, entfernt ChurchTools sofort alle (gemessen 24.10.2026) – darum auch hier erst die Rückfrage, aber nur,
-    // wenn noch jemand da ist.
-    if (unsere.some((r) => r?.isEnabled !== true)) {
+    // Gefragt wird, wenn ChurchTools beim Schreiben sofort entfernte: bei einem neuen Datum (A9-3a) und, wenn es schon so
+    // drinsteht, die Abläufe aber aus sind (A9-4, D5: archiviert, dann wiederhergestellt – gehen sie wieder an, entfernt
+    // ChurchTools sofort alle, gemessen 24.10.2026). Beides nur, wenn noch jemand da ist: Ohne Anmeldungen geht nichts
+    // verloren (echte Prüfung 04.11.2026 – vorher fragte eine frisch freigegebene, leere Veranstaltung).
+    if (unsere.some((r) => wartetBis(r) !== datum || r?.isEnabled !== true)) {
       const anzahl = await anmeldungenIn(id);
       if (anzahl > 0) throw new LoeschdatumVorbei(datum, anzahl);
     }

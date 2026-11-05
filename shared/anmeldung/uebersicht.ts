@@ -17,7 +17,7 @@ import {
   type TerminAngabe,
 } from './formular';
 import { anmeldungenAus, listenZahlen, mitgliederstandAus, type MitgliedRoh } from './liste';
-import { loeschDatum } from './ablaeufe';
+import { loeschDatum } from './termin';
 import { wartenTrotzPlatz } from './nachpruefung';
 import { preisKurz } from './preis';
 

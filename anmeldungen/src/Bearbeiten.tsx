@@ -36,7 +36,8 @@ import {
 } from './einrichten';
 import { WER_TEXT, datumText, geburtsdatumNoetigText, schlussVorLoeschenText } from './anzeige';
 import { ablaeufeEinrichten, type AblaufStand } from './ablaeufe';
-import { anmeldeschlussAm, letzterAnmeldetag, loeschDatum } from '@shared/anmeldung/ablaeufe';
+import { anmeldeschlussAm, letzterAnmeldetag } from '@shared/anmeldung/ablaeufe';
+import { loeschDatum } from '@shared/anmeldung/termin';
 import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
@@ -776,7 +777,7 @@ export function BezahlungFenster({
 /**
  * **Fenster „Daten löschen“** (A4, Löschen seit A9-3a): Frist in Monaten nach dem Ende. Sind die Abläufe eingerichtet,
  * schreibt das Speichern das neue Löschdatum gleich in die Routinen. Liegt es heute oder früher, entfernte ChurchTools
- * dabei sofort alle Anmeldungen (gemessen) – darum erst die Rückfrage mit der Zahl. `abläufe`: der Stand aus der Karte
+ * dabei sofort alle Anmeldungen (gemessen) – darum erst die Rückfrage mit der Zahl, ohne Anmeldungen keine. `abläufe`: der Stand aus der Karte
  * „Mails“; ohne ihn (Entwurf, ohne Recht) wird nur die Frist gespeichert, das Datum zieht der Abgleich nach.
  */
 export function LoeschfristFenster({
@@ -805,8 +806,13 @@ export function LoeschfristFenster({
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
   const datum = gueltig ? loeschDatum({ termin: e.termin, loeschfristMonate: zahl }) : null;
   const absender = ablauf?.platz && ablauf.warte ? ablauf.absenderId : null;
+  // Ohne Anmeldungen keine Rückfrage – es geht nichts verloren (wie in `ablaeufeEinrichten`); unbekannt (`null`): fragen.
   const sofort =
-    absender !== null && datum !== null && datum <= heute && datum !== ablauf?.loeschDatum;
+    absender !== null &&
+    datum !== null &&
+    datum <= heute &&
+    datum !== ablauf?.loeschDatum &&
+    anzahl !== 0;
 
   const sichern = () =>
     speichern(

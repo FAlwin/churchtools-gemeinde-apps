@@ -694,6 +694,7 @@ describe('Löschen (A9-3a)', () => {
         schritt: routine('active').steps[1].id,
       },
     ];
+    ei.anmeldungenIn.mockResolvedValue(1);
     mitTermin('2026-07-28'); // + 3 Monate = heute
     routinenPatches = [];
     const f = await ablaeufeEinrichten(165, 7, undefined, undefined, optionen).catch(
@@ -701,6 +702,7 @@ describe('Löschen (A9-3a)', () => {
     );
     expect(f).toBeInstanceOf(LoeschdatumVorbei);
     expect((f as LoeschdatumVorbei).datum).toBe('2026-10-28');
+    expect((f as LoeschdatumVorbei).anzahl).toBe(1);
     expect(routinenPatches).toEqual([]);
     expect(entfernt).toEqual([]);
     expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
@@ -711,6 +713,17 @@ describe('Löschen (A9-3a)', () => {
     expect(entfernt).toEqual(['Lena']);
     // Die Anmeldung ist mit zu – wer jetzt käme, bekäme sonst „Du bist dabei!“ und wäre sofort wieder weg.
     expect(anmeldeschluss).toBe('2026-10-27T22:59:00Z');
+  });
+
+  it('neues Datum heute oder früher, aber niemand angemeldet: ohne Rückfrage geschrieben – es geht nichts verloren', async () => {
+    // Echte Prüfung 04.11.2026: Eine frisch freigegebene, leere Veranstaltung fragte „Sofort löschen?“.
+    mitTermin('2026-07-28');
+    await expect(
+      ablaeufeEinrichten(165, 7, undefined, undefined, optionen),
+    ).resolves.toBeUndefined();
+    expect(ei.anmeldungenIn).toHaveBeenCalledWith(165);
+    for (const r of ['active', 'waiting'])
+      expect(routine(r).steps[1].actionData.untilDate).toBe('2026-10-28');
   });
 
   it('steht das erreichte Datum schon so in ChurchTools, fragt es nicht noch einmal', async () => {
@@ -788,6 +801,7 @@ describe('Löschen (A9-3a)', () => {
         schritt: routine('active').steps[1].id,
       },
     ];
+    ei.anmeldungenIn.mockResolvedValue(1);
     mitTermin('2026-06-01');
     routinenPatches = [];
     const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
@@ -795,6 +809,15 @@ describe('Löschen (A9-3a)', () => {
     expect(stand.loeschDatum).toBe('2027-02-15');
     expect(routinenPatches).toEqual([]);
     expect(entfernt).toEqual([]);
+  });
+
+  it('Abgleich: neues Datum heute oder früher, niemand angemeldet → still geschrieben, kein Hinweis', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    mitTermin('2026-06-01');
+    const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
+    expect(stand.loeschenOffen).toBeUndefined();
+    expect(stand.loeschDatum).toBe('2026-09-01');
   });
 
   describe('Anmeldeschluss vor dem Löschdatum (Fund der echten Prüfung)', () => {

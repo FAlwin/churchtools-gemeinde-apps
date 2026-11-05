@@ -13,12 +13,12 @@ import {
   eigenerTextFehler,
   erinnerungen,
   erinnerungsTextAus,
-  loeschDatum,
   routinenSchritte,
   schrittFolge,
   standardBetreff,
 } from './ablaeufe';
 import { bankZeilen } from './bezahlung';
+import { loeschDatum } from './termin';
 import { SYSTEMFELDER } from './formular';
 import { einstellungen } from './senden.testdaten';
 import { neueEinstellungen } from './vorlagen';

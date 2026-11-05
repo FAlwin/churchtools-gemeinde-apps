@@ -355,14 +355,21 @@ Vor dem Teilen zeigt das Fenster die Seiten; „Herunterladen" speichert ohne Te
 7. **Herunterladen** → die Datei landet ohne Teilen-Menü auf dem Gerät (iPad im Browser: Dateien →
    Downloads; in der App vom Homescreen kann iOS eine Ansicht mit Teilen-Knopf zeigen). Das Fenster
    bleibt offen und zeigt „Heruntergeladen".
+8. **Termin-Blatt** (E8-1b): Oben im Fenster „**Liedblätter | Termin-Blatt**“ → **Termin-Blatt** → „Termin teilen“
+   wie im Dienstplaner (Dienste, Ablauf, Infos; Unterseiten; Vorschau). In ChurchTools stehen die Dienste des Termins
+   oben auf dem Blatt; auf dem eigenen Server sagt die Zeile „Dienste“: „Die Dienste zeigt die Musik-App nur in
+   ChurchTools.“ **Liedblätter** führt zurück.
+9. Ein Ablauf **ohne Lieder** → „Teilen“ ist trotzdem da und öffnet gleich das Termin-Blatt (ohne Wahl oben).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `ui/teilen/PdfSeitenVorschau.tsx`, `ui/teilen/pdfSeiten.ts`, `ui/teilen/sharePdf.ts`, `ui/teilen/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
+- **Betrifft:** `ui/teilen/TerminTeilenFenster.tsx`, `shared/dienstplan/terminBlattDienste.ts`, `client/src/services/ctLesen.ts`, `client/src/components/TeilenFenster.tsx`, `ui/teilen/PdfSeitenVorschau.tsx`, `ui/teilen/pdfSeiten.ts`, `ui/teilen/sharePdf.ts`, `ui/teilen/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
 - **Automatisiert:** teilweise – `ablaufPdf.test.ts` (Reihenfolge, Dokument-Seiten, Ersatz/Fehlen,
   Seitenbesitzer und Ebene je Seite), `TeilenFenster.test.tsx` (Vorgabe, Merken, veraltetes PDF, Vorschau, Großansicht, Herunterladen);
-  gegen den ChurchTools-Stub durchgeklickt und das heruntergeladene PDF angesehen. Von Hand bleibt das
+  gegen den ChurchTools-Stub durchgeklickt und das heruntergeladene PDF angesehen. Termin-Blatt (E8-1b):
+  `Setlist.teilen.test.tsx` (Wahl, ohne Lieder gleich das Blatt, Dienste/Server/Fehler, Lied mit Arrangement),
+  `shared/dienstplan/terminBlattDienste.test.ts` (nur vollständig sichtbare Dienste), `churchtoolsApi.terminDienste.test.ts`. Von Hand bleibt das
   Teilen-Menü auf iOS (frisches Antippen) und ein Ausdruck
 - **Historie:** Anfrage BG Korntal (Teilen-Knopf fehlte ohne ChordPro), Alwin 07.10.2026 (Anmerkungen
   wählbar), Alwin 08.10.2026 (Vorschau und Herunterladen)

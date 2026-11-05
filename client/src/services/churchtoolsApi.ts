@@ -32,6 +32,7 @@ import type {
 import { apiFetch, apiFetchBlob } from './api';
 import { liedDateiPfad } from './apiBase';
 import { istExtension, ohneServer } from './ctRuntime';
+import type { BlattGruppe } from '@shared/ct/terminBlatt';
 import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
 import * as extSongSelect from './ctSongSelect';
@@ -191,6 +192,15 @@ export function ablaufNeuAufsetzen(
     method: 'PUT',
     body: JSON.stringify({ kalenderId, quelle, gesehen, nurDieser }),
   });
+}
+
+/**
+ * Die Dienste eines Termins fürs Termin-Blatt (E8-1b) – **nur in ChurchTools** (`null` auf dem eigenen Server: Der
+ * NAS-Server ist für Neues nicht mehr eingeplant, das Blatt kommt dort ohne Dienste).
+ */
+export function getTerminDienste(eventId: number): Promise<BlattGruppe[] | null> {
+  if (istExtension) return ext.terminDienste(eventId);
+  return Promise.resolve(null);
 }
 
 /** Lädt die ChurchTools-Dienste (für die Verantwortlich-Chips). */

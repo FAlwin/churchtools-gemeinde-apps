@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AgendaItem,
   AgendaServiceOption,
@@ -37,6 +37,11 @@ import { ablaufPdfBauen, akkordeNichtGeladen, teilbareLieder } from '../utils/ab
 import { eigeneEbene } from '../utils/anmerkungsEbene';
 import { pullAnnotations } from '../services/annotations';
 import { TeilenFenster, type GebautesPdf } from '../components/TeilenFenster';
+import { TerminTeilenFenster } from '@ui/teilen/TerminTeilenFenster';
+import { Segment } from '@ui/bedienung/Segment';
+import type { AblaufZeile } from '@shared/ct/ablaufZeile';
+import { getTerminDienste } from '../services/churchtoolsApi';
+import { useSiteConfig } from '../hooks/useSiteConfig';
 import { dokumentSeiten } from '../utils/dokumentSeiten';
 import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts } from '../utils/songPdfOpts';
@@ -47,6 +52,24 @@ import { terminZeile } from '../utils/terminZeile';
 /** Der Hinweis, wenn man einen abgeschlossenen Ablauf ändern will (Alwin, 13.10.2026). */
 const GESPERRT =
   'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen.';
+
+/**
+ * Eine Zeile der Musik-App fürs Termin-Blatt (E8-1b) – dieselbe Zeile wie in der Ansicht, nur der Name des Arrangements
+ * heißt dort `arrangement` (`AblaufZeile`, wie im Dienstplaner).
+ */
+function blattZeile(i: AgendaItem): AblaufZeile {
+  return {
+    ...i,
+    song: i.song
+      ? {
+          title: i.song.title,
+          originalKey: i.song.originalKey,
+          bpm: i.song.bpm,
+          arrangement: i.song.arrangementName,
+        }
+      : null,
+  };
+}
 
 interface SetlistProps {
   service: Service;
@@ -172,10 +195,35 @@ export function Setlist({
   // Lieder, die NUR wegen eines Ladefehlers fehlen würden (#274). Ohne diesen Hinweis fiele das Lied
   // stumm aus der geteilten PDF – und niemandem fällt auf, dass ein Blatt fehlt.
   const nichtGeladen = akkordeNichtGeladen(lieder, teilbar);
-  // Das Teilen-Fenster (Anmerkungen ja/nein, PDF entsteht im Hintergrund) – `TeilenFenster`.
+  // Das Teilen-Fenster (Anmerkungen ja/nein, PDF entsteht im Hintergrund) – `TeilenFenster`. Seit E8-1b mit der Wahl
+  // „Liedblätter | Termin-Blatt“; ohne teilbare Lieder öffnet gleich das Termin-Blatt.
   const [teilenOffen, setTeilenOffen] = useState(false);
+  const [teilenArt, setTeilenArt] = useState<'lieder' | 'blatt'>('lieder');
+  const [umgeschaltet, setUmgeschaltet] = useState(false);
+  const gemeinde = useSiteConfig().data.orgName;
+  // Wer eingeteilt ist – nur fürs Termin-Blatt und erst, wenn es offen ist (E8-1b). Auf dem eigenen Server `null`.
+  const terminDienste = useQuery({
+    queryKey: ['termin-dienste', service.id],
+    queryFn: () => getTerminDienste(service.id),
+    enabled: teilenOffen && teilenArt === 'blatt',
+    staleTime: 0,
+  });
+  const diensteHinweis = terminDienste.isPending
+    ? 'Dienste werden geladen …'
+    : terminDienste.isError
+      ? 'Die Dienste ließen sich gerade nicht laden.'
+      : terminDienste.data === null
+        ? 'Die Dienste zeigt die Musik-App nur in ChurchTools.'
+        : undefined;
 
   function teilenOeffnen() {
+    setUmgeschaltet(false);
+    if (teilbar.length === 0) {
+      setTeilenArt('blatt');
+      setTeilenOffen(true);
+      return;
+    }
+    setTeilenArt('lieder');
     if (nichtGeladen.length > 0) {
       const liste = nichtGeladen.join(', ');
       const weiter = window.confirm(
@@ -184,7 +232,7 @@ export function Setlist({
       );
       if (!weiter) return;
     }
-    if (teilbar.length > 0) setTeilenOffen(true);
+    setTeilenOffen(true);
   }
 
   async function ablaufPdf(mitAnmerkungen: boolean): Promise<GebautesPdf> {
@@ -234,11 +282,11 @@ export function Setlist({
             onIds={spalten.setIds}
           />
         )}
-        {teilbar.length > 0 && !editMode && (
+        {items.length > 0 && !editMode && (
           <KopfKnopf
             onClick={teilenOeffnen}
             label="Teilen"
-            title="Alle Lieder als PDF teilen"
+            title="Ablauf als PDF teilen"
             dataTour="setlist-share"
             symbol={<Icon name="share" size={18} stroke={2.2} />}
           />
@@ -283,6 +331,24 @@ export function Setlist({
       </>
     ) : undefined;
 
+  // Die Wahl oben im Teilen-Fenster – nur, wenn es Liedblätter gibt (sonst gibt es nur das Termin-Blatt).
+  const teilenWahl =
+    teilbar.length > 0 ? (
+      <Segment
+        verbunden
+        value={teilenArt}
+        options={[
+          { value: 'lieder', label: 'Liedblätter' },
+          { value: 'blatt', label: 'Termin-Blatt' },
+        ]}
+        onChange={(v) => {
+          setUmgeschaltet(true);
+          setTeilenArt(v);
+        }}
+        ariaLabel="Was teilen"
+      />
+    ) : null;
+
   /** Dialoge und Fenster schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (
     <>
@@ -290,12 +356,35 @@ export function Setlist({
         <AblaufNeuAufsetzen termin={service} onClose={() => setNeuAufsetzenOffen(false)} />
       )}
 
-      {teilenOffen && (
+      {teilenOffen && teilenArt === 'lieder' && (
         <TeilenFenster
           titel="Ablauf teilen"
           dateiname={service.name || 'Ablauf'}
           bauen={ablaufPdf}
           onClose={() => setTeilenOffen(false)}
+          kopf={teilenWahl}
+          einblenden={!umgeschaltet}
+        />
+      )}
+      {teilenOffen && teilenArt === 'blatt' && (
+        <TerminTeilenFenster
+          quelle={{
+            titel: service.name,
+            tag: service.date,
+            // `time` ist „10:00 Uhr“ (`mapEventToService`) – das Blatt rechnet mit der reinen Uhrzeit (Abnahme 05.11.2026:
+            // sonst „19:00 Uhr Uhr“ im Kopf und keine Dauer am Ende).
+            beginn: service.time.replace(/\s*Uhr$/, ''),
+            gemeinde,
+            app: 'Musik-App',
+            zeilen: items.map(blattZeile),
+            dienste: terminDienste.data ?? [],
+            infoGruppen: infoGruppen ?? [],
+            ansichtInfos: spalten.ids,
+          }}
+          diensteHinweis={diensteHinweis}
+          onClose={() => setTeilenOffen(false)}
+          kopf={teilenWahl}
+          einblenden={!umgeschaltet}
         />
       )}
 

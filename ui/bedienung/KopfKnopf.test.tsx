@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { KopfKnopf, KopfZurueck } from './KopfKnopf';
+import { KopfKnopf, KopfLink, KopfZurueck } from './KopfKnopf';
 
 /** Seitenkopf im ChurchTools-Stil (Scheibe S, 26.10.2026): Knöpfe mit Rahmen, Symbol und Beschriftung. */
 describe('KopfKnopf', () => {
@@ -85,5 +85,21 @@ describe('KopfZurueck', () => {
   it('ohne Ziel heißt er „Zurück“', () => {
     render(<KopfZurueck onClick={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Zurück' }).textContent).toBe('Zurück');
+  });
+});
+
+describe('KopfLink', () => {
+  it('ein Verweis, der genauso aussieht wie die Knöpfe daneben – Symbol und Beschriftung, dieselben Klassen', () => {
+    render(
+      <>
+        <KopfKnopf onClick={vi.fn()} label="Bearbeiten" symbol={<b>B</b>} />
+        <KopfLink href="https://ct.example/ccm/musik-app/" label="Musik-App" symbol={<b>M</b>} />
+      </>,
+    );
+    const link = screen.getByRole('link', { name: 'Musik-App' });
+    expect(link.getAttribute('href')).toBe('https://ct.example/ccm/musik-app/');
+    expect(link.textContent).toBe('MMusik-App');
+    expect(link.className).toBe(screen.getByRole('button', { name: 'Bearbeiten' }).className);
+    cleanup();
   });
 });

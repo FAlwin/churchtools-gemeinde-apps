@@ -9,7 +9,10 @@
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts` und `fileDownload.ts`.
  */
-import { dienstgruppenSichtAus } from '@shared/ct/dienstRechte';
+import { dienstgruppenSichtAus, dienstRechteAus } from '@shared/ct/dienstRechte';
+import { terminDiensteAus } from '@shared/dienstplan/terminBlattDienste';
+import type { RohTermin } from '@shared/dienstplan/termine';
+import type { BlattGruppe } from '@shared/ct/terminBlatt';
 import {
   fensterOhneAblauf,
   kalenderAus,
@@ -431,6 +434,36 @@ export function blatt(songId: number, arrangementId?: number): Promise<SetlistSo
 
 export async function arrangements(songId: number): Promise<SongArrangementOption[]> {
   return arrangementOptionen(await leser.song(songId));
+}
+
+/**
+ * **Wer an einem Termin eingeteilt ist** – fürs Termin-Blatt (E8-1b): die Plätze des Termins
+ * (`include=eventServices`), Dienste, Dienstgruppen und Rechte, ausgewertet mit derselben Plan-Regel wie im
+ * Dienstplaner (`terminDiensteAus`). **Wirft**, wenn etwas davon nicht lesbar ist – das Fenster sagt es dann.
+ */
+export async function terminDienste(eventId: number): Promise<BlattGruppe[]> {
+  const [termin, roh, gruppen, rechte] = await Promise.all([
+    ctDaten<unknown>(`/events/${eventId}?include=eventServices`),
+    ctDaten<unknown>('/services'),
+    ctDaten<unknown>('/servicegroups'),
+    ctDaten<Record<string, Record<string, unknown>>>('/permissions/global'),
+  ]);
+  if (
+    !termin ||
+    typeof termin !== 'object' ||
+    !Array.isArray((termin as RohTermin).eventServices) ||
+    !Array.isArray(roh) ||
+    !Array.isArray(gruppen)
+  ) {
+    throw new ApiError(502, 'ChurchTools hat die Dienste des Termins nicht vollständig geliefert.');
+  }
+  return terminDiensteAus(
+    termin as RohTermin,
+    roh,
+    gruppen,
+    dienstRechteAus(rechte, (status, meldung) => new ApiError(status, meldung)),
+    ZEITZONE,
+  );
 }
 
 export async function dienste(): Promise<AgendaServiceOption[]> {

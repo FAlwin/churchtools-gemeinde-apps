@@ -109,6 +109,30 @@ export function KopfKnopf({
 }
 
 /**
+ * **Ein Verweis im Seitenkopf, der aussieht wie die Knöpfe daneben** – „Musik-App“ über dem Ablauf im Dienstplaner
+ * (Alwin, 05.11.2026: „sollte aussehen wie die anderen Buttons“; vorher blauer Text ohne Rahmen). Ein Verweis bleibt ein
+ * Verweis (`<a>`): Er führt woandershin und lässt sich in einem neuen Tab öffnen. Am Handy nur das Symbol, wie die Knöpfe.
+ */
+export function KopfLink({
+  href,
+  label,
+  title,
+  symbol,
+}: {
+  href: string;
+  label: string;
+  title?: string;
+  symbol: ReactNode;
+}) {
+  return (
+    <a className={styles.knopf} href={href} title={title ?? label} aria-label={title ?? label}>
+      {symbol}
+      <span className={styles.text}>{label}</span>
+    </a>
+  );
+}
+
+/**
  * **„← Termine“** – zurück mit Ziel als Beschriftung, auch am Handy (dort ist er der einzige Weg zurück und das Ziel
  * soll lesbar bleiben). Ohne Ziel heißt er „Zurück“.
  */

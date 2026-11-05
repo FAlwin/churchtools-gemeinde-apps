@@ -8,7 +8,6 @@ import {
   type Stammdaten,
 } from '@shared/anmeldung/vorbereiten';
 import { LoeschdatumVorbei, ablaeufeEinrichten, absenderAus } from './ablaeufe';
-import { tagPunkt } from '@shared/ct/datum';
 import {
   anmeldeBedingungen,
   anmeldenVorbereiten,
@@ -20,6 +19,7 @@ import {
   type LeitungsKandidat,
 } from './einrichten';
 import { pflichtNachziehen } from './formularFelder';
+import { SofortLoeschenFrage } from './SofortLoeschenFrage';
 import { gemeindeVorgaben } from './gemeinde';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
@@ -127,33 +127,15 @@ export function FreigebenFenster({
 
   if (sofort)
     return (
-      <Sheet
-        title="Sofort löschen?"
+      <SofortLoeschenFrage
+        frage={sofort}
+        wann="Beim Freigeben"
+        knopf="Trotzdem freigeben"
+        arbeitet={arbeitet}
+        onWeiter={() => void los(true)}
+        onZurueck={() => setSofort(null)}
         onClose={onClose}
-        zurueck={() => setSofort(null)}
-        onAbbrechen={() => setSofort(null)}
-        beschaeftigt={arbeitet}
-        knoepfe={
-          <FensterKnopf art="gefahr" disabled={arbeitet} onClick={() => void los(true)}>
-            {arbeitet ? 'Einen Moment …' : 'Trotzdem freigeben'}
-          </FensterKnopf>
-        }
-      >
-        <p className={f.fehler}>
-          Das Löschdatum ({tagPunkt(sofort.datum)}) ist schon erreicht. Beim Freigeben entfernt
-          ChurchTools <b>sofort</b>{' '}
-          {sofort.anzahl === 1
-            ? 'die eine Anmeldung'
-            : sofort.anzahl === undefined
-              ? 'alle Anmeldungen'
-              : `alle ${sofort.anzahl} Anmeldungen`}
-          . Das lässt sich nicht rückgängig machen.
-        </p>
-        <p className={f.hinweis}>
-          Sollen sie bleiben: abbrechen und unter „Datenschutz“ die Frist verlängern oder den Termin
-          prüfen.
-        </p>
-      </Sheet>
+      />
     );
 
   if (fehlt)

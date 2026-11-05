@@ -234,7 +234,9 @@ export type Hinweis =
   | { art: 'nachruecken'; v: Veranstaltung; frei: number | null; wartend: number }
   | { art: 'zahlungen'; v: Veranstaltung; offen: number }
   /** A9-4 (D3): Anmeldungen gelöscht, die Antworten stehen noch im Verlauf. `darf`: endgültig löschen (D4). */
-  | { art: 'endgueltig'; v: Veranstaltung; seit: string; darf: boolean };
+  | { art: 'endgueltig'; v: Veranstaltung; seit: string; darf: boolean }
+  /** A9-5 (F1): freigegeben, aber ohne Abläufe – keine eigene Bestätigung, nie gelöscht. `darf`: Routinen verwalten (F3). */
+  | { art: 'einrichten'; v: Veranstaltung; darf: boolean };
 
 /**
  * **„Braucht deine Aufmerksamkeit“**, wie im Entwurf:
@@ -244,6 +246,9 @@ export type Hinweis =
  * - offene Zahlungen – **nur für die Leitung**, für alle anderen wäre es Lärm.
  * - A9-4 (D3, D6): Löschdatum erreicht und keine Anmeldungen mehr → endgültig löschen – **für alle in der Gruppe**;
  *   den Knopf bekommt, wer darf (`loeschbar`, D4). Dafür braucht es die Belegung auch der vergangenen Veranstaltung.
+ * - A9-5 (F1, F3): freigegeben ohne Abläufe → „Mails und Löschen einrichten“ – für alle in der Gruppe; den Knopf
+ *   bekommt, wer Routinen verwalten darf (`einrichten`: Veranstaltung → darf). Wer die Veranstaltungen ohne Abläufe sind,
+ *   fragt der Aufrufer ChurchTools (`ablaeufeFehlen`).
  * Sonst ist vorbei vorbei: dort gibt es keine Hinweise.
  */
 export function aufmerksamkeit(
@@ -252,6 +257,7 @@ export function aufmerksamkeit(
   leitungIn: ReadonlySet<number>,
   heute = '',
   loeschbar: ReadonlySet<number> = new Set(),
+  einrichten: ReadonlyMap<number, boolean> = new Map(),
 ): Hinweis[] {
   const out: Hinweis[] = kaputt.map((k) => ({ art: 'kaputt' as const, ...k }));
   for (const v of [...liste].sort(frueherZuerst)) {
@@ -264,6 +270,8 @@ export function aufmerksamkeit(
       out.push({ art: 'endgueltig', v, seit, darf: loeschbar.has(v.id) });
       continue;
     }
+    const darfEinrichten = einrichten.get(v.id);
+    if (darfEinrichten !== undefined) out.push({ art: 'einrichten', v, darf: darfEinrichten });
     if (v.phase !== 'anstehend' || !v.belegung) continue;
     const { aktiv, wartend, unbezahlt } = v.belegung;
     // Dieselbe Regel wie Kachel und Warteliste – ohne Platzgrenze ist immer Platz frei.

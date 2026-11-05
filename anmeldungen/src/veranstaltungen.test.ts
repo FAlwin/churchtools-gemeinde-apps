@@ -79,6 +79,24 @@ function ct(antworten: Antworten): string[] {
 
 const seite = (data: unknown[]) => json(200, { data, meta: { pagination: { lastPage: 1 } } });
 
+/** Unsere beiden Routinen, an (A9-1) – so sieht eine eingerichtete Veranstaltung aus. */
+const ROUTINEN_AN = () =>
+  json(200, {
+    data: [
+      {
+        groupTypeRoleId: 32,
+        groupMemberStatus: 'active',
+        routine: { name: 'Anmeldungen: Platz', isEnabled: true },
+      },
+      {
+        groupTypeRoleId: 32,
+        groupMemberStatus: 'waiting',
+        routine: { name: 'Anmeldungen: Warteliste', isEnabled: true },
+      },
+    ],
+  });
+const GRUPPE = () => json(200, { data: { information: { groupTypeId: 5 }, settings: {} } });
+
 const LOBPREIS: MeineGruppe = { id: 9, name: 'Lobpreisteam', leitung: true };
 const TECHNIK: MeineGruppe = { id: 7, name: 'Technik', leitung: false };
 
@@ -126,6 +144,13 @@ function standard(): Antworten {
       ]),
     '/groups/46/members': () =>
       seite([mitglied('active', '1'), mitglied('active', '0'), mitglied('active', '0')]),
+    // A9-5: Die freigegebenen sind eingerichtet – Teilnehmerrolle über Gruppe und Rollen.
+    ...Object.fromEntries(
+      [40, 46, 52].flatMap((id) => [
+        [`/groups/${id}/members/routines`, ROUTINEN_AN],
+        [`/groups/${id}`, GRUPPE],
+      ]),
+    ),
   };
 }
 
@@ -236,6 +261,62 @@ describe('ladeUebersicht', () => {
       const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
       expect(u.hinweise.some((x) => x.art === 'endgueltig')).toBe(false);
       expect(gefragt).not.toContain('/groups/55?dry_run=true');
+    });
+  });
+
+  describe('A9-5: freigegeben ohne Abläufe – „Mails und Löschen einrichten“', () => {
+    const ohneAblaeufe = (a: Antworten, id: number) => {
+      a[`/groups/${id}/members/routines`] = () => json(200, { data: [] });
+      a['/permissions/global'] = () => json(200, { data: { churchdb: {} } });
+      a[`/permissions/internal/groups/${id}`] = () =>
+        json(200, { data: { churchdb: { '+admin routines': true } } });
+      return a;
+    };
+
+    it('anstehend ohne Abläufe → Hinweis für alle; den Knopf, wer Routinen verwalten darf', async () => {
+      const gefragt = ct(ohneAblaeufe(standard(), 46));
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      const h = u.hinweise.find((x) => x.art === 'einrichten');
+      expect(h).toMatchObject({ art: 'einrichten', darf: true });
+      expect(h && 'v' in h && h.v.id).toBe(46);
+      // Zahlungen der Freizeit bleiben daneben stehen.
+      expect(u.hinweise.map((x) => x.art)).toEqual([
+        'nachruecken',
+        'einrichten',
+        'zahlungen',
+        'freigabe',
+      ]);
+      // Entwürfe fragt niemand – dort richtet das Freigeben ein.
+      expect(gefragt).not.toContain('/groups/43/members/routines');
+    });
+
+    it('ohne das Recht für Routinen → Hinweis ohne Knopf', async () => {
+      const a = ohneAblaeufe(standard(), 46);
+      a['/permissions/internal/groups/46'] = () => json(200, { data: { churchdb: {} } });
+      ct(a);
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.find((x) => x.art === 'einrichten')).toMatchObject({ darf: false });
+    });
+
+    it('vergangen ohne Abläufe: nur, solange noch jemand angemeldet ist', async () => {
+      const a = ohneAblaeufe(standard(), 52);
+      a['/groups/52/members'] = () => seite([mitglied('active', undefined, 35)]);
+      ct(a);
+      let u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.some((x) => x.art === 'einrichten')).toBe(false);
+      a['/groups/52/members'] = () => seite([mitglied('active')]);
+      ct(a);
+      u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.find((x) => x.art === 'einrichten')).toMatchObject({ darf: true });
+    });
+
+    it('Abläufe nicht lesbar (403) → kein Hinweis, die Übersicht kommt trotzdem', async () => {
+      const a = standard();
+      a['/groups/46/members/routines'] = () => json(403, { message: 'Forbidden' });
+      ct(a);
+      const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+      expect(u.hinweise.some((x) => x.art === 'einrichten')).toBe(false);
+      expect(u.einteilung.anstehend).toHaveLength(2);
     });
   });
 

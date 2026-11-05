@@ -229,9 +229,18 @@ in einer Zeile an) und der Link zu „Deine Anmeldung“. **Warteliste** – mit
 die Kontakt-Adresse (zwei Kinder = zwei Mails). Absender ist, wer freigibt (wenn Leitung), sonst die erste gewählte
 Leitung; Antworten gehen an diese Person. Die Karte „Mails“ im Bereich „Vorbereiten“ zeigt den Stand. Einrichten darf,
 wer in ChurchTools das Recht „Routinen verwalten“ hat – fehlt es, wird trotzdem freigegeben, und ChurchTools schickt
-seine Standard-Mail (ohne Betrag). Ältere Veranstaltungen (vor A9 freigegeben) behalten die Standard-Mail, bis sie
-eingerichtet werden. In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
+seine Standard-Mail (ohne Betrag). In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
 nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erweiterung stehen.
+
+**Ältere Veranstaltungen** (A9-5): Wer vor A9 freigegeben hat, hat keine Abläufe – ChurchTools schickt seine
+Standard-Mail und **löscht die Anmeldungen nie**. Die Karte „Mails“ sagt das und bietet **„Jetzt einrichten“**; die
+Startseite zeigt allen in der Gruppe „…: Mails und Löschen einrichten“ (vergangene nur, solange noch jemand angemeldet
+ist). Den Knopf hat, wer Routinen verwalten darf; alle anderen lesen, wer es kann. Die Rückfrage nennt, was sich
+ändert: Ab jetzt kommt die Bestätigung mit Betrag, Bankdaten und Link; **die schon Angemeldeten bekommen keine neue
+Mail**, für sie gelten aber Erinnerung und Löschdatum. Absender ist, wer einrichtet (wenn Leitung), sonst die erste
+Leitung. Ist das Löschdatum schon vorbei und noch jemand da, fragt erst „Sofort löschen?“. Dasselbe gilt für jede
+Veranstaltung, deren Abläufe aus sind. Auch beim gewöhnlichen Einrichten holt die Erweiterung jetzt Personen nach, die
+vor den Abläufen angemeldet waren – sonst würden sie nie gelöscht (gemessen 05.11.2026).
 
 **Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung**,
 **Warteliste** und **Erinnerung** (A9-3b, siehe unten) – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der

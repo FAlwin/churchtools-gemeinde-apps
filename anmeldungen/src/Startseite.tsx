@@ -7,6 +7,7 @@ import type { Hinweis, Veranstaltung } from '@shared/anmeldung/uebersicht';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
 import type { Aenderung } from './Rueckgaengig';
+import { EinrichtenFenster } from './EinrichtenFenster';
 import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
 import { insArchiv } from './archiv';
 import { STATUS } from './einrichten';
@@ -85,6 +86,7 @@ function HinweisZeile({
   darfArchivieren,
   onEndgueltig,
   onInsArchiv,
+  onEinrichten,
 }: {
   h: Hinweis;
   gruppenName: (id: number) => string;
@@ -94,6 +96,7 @@ function HinweisZeile({
   darfArchivieren: (gruppeId: number) => boolean;
   onEndgueltig: (v: Veranstaltung) => void;
   onInsArchiv: (v: Veranstaltung) => void;
+  onEinrichten: (v: Veranstaltung) => void;
 }) {
   if (h.art === 'kaputt') {
     return (
@@ -138,6 +141,29 @@ function HinweisZeile({
       </div>
     );
   }
+  if (h.art === 'einrichten')
+    // A9-5 (F1, F3): für alle in der Gruppe; den Knopf hat, wer Routinen verwalten darf – er öffnet gleich die Rückfrage.
+    return (
+      <div className={styles.zeile}>
+        <Kachel tag={v.tag} grau={v.phase === 'vorbei'} />
+        <div className={styles.mitte}>
+          <b>{v.name}: Mails und Löschen einrichten</b>
+          <small>
+            Bisher löscht ChurchTools die Anmeldungen nie.
+            {!h.darf && ' Einrichten kann, wer in ChurchTools Routinen verwalten darf.'}
+          </small>
+        </div>
+        {h.darf ? (
+          <FensterKnopf art="zweit" onClick={() => onEinrichten(v)}>
+            Einrichten
+          </FensterKnopf>
+        ) : (
+          <FensterKnopf art="zweit" onClick={() => onOeffnen(v.id)}>
+            Ansehen
+          </FensterKnopf>
+        )}
+      </div>
+    );
   const text =
     h.art === 'freigabe'
       ? {
@@ -259,6 +285,7 @@ export function Startseite({
 }: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
   const [loeschen, setLoeschen] = useState<Veranstaltung | null>(null);
+  const [einrichten, setEinrichten] = useState<Veranstaltung | null>(null);
   const [hinweisFehler, setHinweisFehler] = useState<string | null>(null);
   const leitung = new Set(start.gruppen.filter((g) => g.leitung).map((g) => g.id));
   const darfArchivieren = (gruppeId: number) => admin || leitung.has(gruppeId);
@@ -323,6 +350,7 @@ export function Startseite({
                   admin={admin}
                   darfArchivieren={darfArchivieren}
                   onEndgueltig={setLoeschen}
+                  onEinrichten={setEinrichten}
                   onInsArchiv={(v) => void insArchivLegen(v)}
                 />
               ))}
@@ -461,6 +489,16 @@ export function Startseite({
           </p>
         </section>
       </div>
+      {einrichten && (
+        <EinrichtenFenster
+          id={einrichten.id}
+          onClose={() => setEinrichten(null)}
+          onEingerichtet={(text) => {
+            onGeaendert({ text: `„${einrichten.name}“: ${text}`, rueckgaengig: null });
+            setEinrichten(null);
+          }}
+        />
+      )}
       {loeschen && (
         <EndgueltigLoeschenFenster
           id={loeschen.id}

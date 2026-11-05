@@ -10,7 +10,9 @@ import {
   LoeschdatumVorbei,
   ablaeufeAbgleichen,
   ablaeufeEinrichten,
+  ablaeufeFehlen,
   ablaeufeLesen,
+  ablaeufeNachholen,
   ablaeufeWiederAn,
   absenderAus,
   vorschauPerson,
@@ -31,6 +33,8 @@ vi.mock('./einrichten', async (original) => ({
   systemfelderNachziehen: vi.fn(),
   teilnehmerRolle: vi.fn(),
   anmeldungenIn: vi.fn(),
+  leitungsKandidaten: vi.fn(),
+  meineId: vi.fn(),
 }));
 vi.mock('./rundmail', async (original) => ({
   ...(await original<typeof import('./rundmail')>()),
@@ -90,7 +94,8 @@ let routinenPatches: Record<string, unknown>[];
 interface Lauf {
   routine: number;
   person: string;
-  status: 'finished' | 'waiting';
+  /** `not-started` (A9-5, gemessen 05.11.2026): schon vor der Routine angemeldet – kein Lauf, nur „möglich“. */
+  status: 'finished' | 'waiting' | 'not-started';
   schritt: number | null;
 }
 const HEUTE = '2026-10-28';
@@ -113,6 +118,8 @@ let schlussSchlucken: boolean;
  * neue Anmeldung die Bestätigung und wäre sofort entfernt (gemessen 28.10.2026). Muss immer leer bleiben.
  */
 let offenBeimLoeschen: string[];
+/** A9-5: Wer schon vor den Routinen angemeldet war (ältere Veranstaltung) – je Person ihr Status in der Gruppe. */
+let vorherAngemeldet: { person: string; status: 'active' | 'waiting' }[];
 
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
@@ -159,11 +166,13 @@ beforeEach(() => {
   anmeldeschluss = null;
   schlussSchlucken = false;
   offenBeimLoeschen = [];
+  vorherAngemeldet = [];
   ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
-    const m = /^\/routines\/(\d+)\/runs$/.exec(pfad);
+    const m = /^\/routines\/(\d+)\/runs(\?with_potential_domain_objects=true)?$/.exec(pfad);
     if (!m) throw new Error(`unerwartet: ${pfad}`);
+    // Gemessen 05.11.2026: Die noch nie Gestarteten zeigt ChurchTools nur mit dem Zusatz.
     return laeufe
-      .filter((l) => l.routine === Number(m[1]))
+      .filter((l) => l.routine === Number(m[1]) && (m[2] || l.status !== 'not-started'))
       .map((l) => ({ status: l.status, routineStepId: l.schritt }));
   });
   ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
@@ -212,6 +221,9 @@ beforeEach(() => {
         description: null,
       };
       routinen.set(r.id, r);
+      // Gemessen 24.10.2026: Eine neue Routine erfasst schon Angemeldete nicht – sie stehen als `not-started` da.
+      for (const v of vorherAngemeldet.filter((x) => x.status === r.status))
+        laeufe.push({ routine: r.id, person: v.person, status: 'not-started', schritt: null });
       return { data: { id: r.id } };
     }
     const m = /^\/routines\/(\d+)$/.exec(pfad);
@@ -231,8 +243,8 @@ beforeEach(() => {
           for (const l of laeufe.filter(
             (x) =>
               x.routine === r.id &&
-              (was === 'finished'
-                ? x.status === 'finished'
+              (was === 'finished' || was === 'not-started'
+                ? x.status === was
                 : x.status === 'waiting' && x.schritt === was),
           ))
             laufWeiter(r, l, 0);
@@ -1176,5 +1188,105 @@ describe('Archiv (A9-4)', () => {
     archivieren();
     await ablaeufeEinrichten(165, 7, undefined, undefined, { heute: HEUTE, zeitzone: ZONE });
     expect(unsere().every((r) => r.isEnabled)).toBe(true);
+  });
+});
+
+describe('Ältere Veranstaltungen (A9-5)', () => {
+  const ZONE = 'Europe/Berlin';
+  const optionen = { heute: HEUTE, zeitzone: ZONE };
+  /** Termin am So, 15.11.2026 → Löschen 15.02.2027; `tage` vor dem Beginn. */
+  const mitTermin = (tage?: number[]) =>
+    ei.systemfelderNachziehen.mockResolvedValue({
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: '2026-11-15T10:00', ende: '2026-11-15T18:00', ort: '', terminId: 1 },
+      loeschfristMonate: 3,
+      ...(tage ? { erinnerungTage: tage } : {}),
+    });
+  const routine = (status: string) => [...routinen.values()].find((x) => x.status === status)!;
+  const wo = (person: string) => {
+    const l = laeufe.find((x) => x.person === person)!;
+    const r = routinen.get(l.routine)!;
+    const s = r.steps.find((x) => x.id === l.schritt);
+    return `${l.status} ${s ? String(s.actionData.untilDate) : '–'}`;
+  };
+  afterEach(() => expect(offenBeimLoeschen).toEqual([]));
+
+  it('vorher Angemeldete (Platz und Warteliste) kommen ohne Mail ins Warten aufs Löschen; die Mails sind danach an', async () => {
+    vorherAngemeldet = [
+      { person: 'Ada', status: 'active' },
+      { person: 'Ben', status: 'waiting' },
+    ];
+    mitTermin();
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(wo('Ada')).toBe('waiting 2027-02-15');
+    expect(wo('Ben')).toBe('waiting 2027-02-15');
+    expect(mailsAnLaeufe).toEqual([]);
+    expect(routine('active').steps[0].isEnabled).toBe(true);
+    expect(routine('waiting').steps[0].isEnabled).toBe(true);
+  });
+
+  it('mit Erinnerungen: die fällige wird ohne Mail übersprungen, sie warten an der nächsten (gemessen 05.11.2026)', async () => {
+    vorherAngemeldet = [{ person: 'Ada', status: 'active' }];
+    mitTermin([14, 30]); // 30 Tage → 16.10. (vorbei), 14 Tage → 01.11.
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(wo('Ada')).toBe('waiting 2026-11-01');
+    expect(mailsAnLaeufe).toEqual([]);
+  });
+
+  it('ohne Termin bleibt es beim Lesen – ohne Löschen und Erinnerung gibt es nichts nachzuholen', async () => {
+    vorherAngemeldet = [{ person: 'Ada', status: 'active' }];
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(wo('Ada')).toBe('not-started –');
+    expect(mailsAnLaeufe).toEqual([]);
+  });
+
+  it('ablaeufeFehlen: ohne Routinen ja, eingerichtet nein, abgeschaltet (Archiv) wieder ja – wie die Karte „Mails“', async () => {
+    expect(await ablaeufeFehlen(165)).toBe(true);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(await ablaeufeFehlen(165)).toBe(false);
+    const lesen = await ablaeufeLesen(165);
+    expect(lesen.platz && lesen.warte).toBe(true);
+    routine('waiting').isEnabled = false;
+    expect(await ablaeufeFehlen(165)).toBe(true);
+    expect((await ablaeufeLesen(165)).warte).toBe(false);
+  });
+
+  it('ablaeufeNachholen: Absender ist, wer einrichtet und zur Leitung gehört – sonst die erste Leitung', async () => {
+    ei.leitungsKandidaten.mockResolvedValue([
+      { personId: 3, name: 'Anna', leitung: false },
+      { personId: 7, name: 'Bea', leitung: true },
+      { personId: 9, name: 'Carl', leitung: true },
+    ]);
+    ei.meineId.mockResolvedValue(9);
+    await ablaeufeNachholen(165);
+    expect(routine('active').steps[0].actionData.senderId).toBe(9);
+    ei.meineId.mockResolvedValue(3);
+    await ablaeufeNachholen(165);
+    expect(routine('active').steps[0].actionData.senderId).toBe(7);
+  });
+
+  it('ablaeufeNachholen: ohne Leitung ein verständlicher Fehler, nichts geschrieben', async () => {
+    ei.leitungsKandidaten.mockResolvedValue([{ personId: 3, name: 'Anna', leitung: false }]);
+    ei.meineId.mockResolvedValue(3);
+    await expect(ablaeufeNachholen(165)).rejects.toMatchObject({
+      status: 422,
+      message: expect.stringMatching(/keine Leitung/) as unknown,
+    });
+    expect(routinen.size).toBe(0);
+  });
+
+  it('ablaeufeNachholen: Löschdatum vorbei und noch Anmeldungen → erst die Rückfrage; mit Bestätigung eingerichtet', async () => {
+    ei.leitungsKandidaten.mockResolvedValue([{ personId: 7, name: 'Bea', leitung: true }]);
+    ei.meineId.mockResolvedValue(7);
+    ei.systemfelderNachziehen.mockResolvedValue({
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: '2026-07-01T10:00', ende: '2026-07-01T18:00', ort: '', terminId: 1 },
+      loeschfristMonate: 3,
+    });
+    ei.anmeldungenIn.mockResolvedValue(2);
+    const f = await ablaeufeNachholen(165).catch((x: unknown) => x);
+    expect(f).toBeInstanceOf(LoeschdatumVorbei);
+    expect((f as LoeschdatumVorbei).anzahl).toBe(2);
+    expect(routinen.size).toBe(0);
   });
 });

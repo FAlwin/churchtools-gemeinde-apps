@@ -9,7 +9,8 @@
  *   Beschreibung (darin unsere Einstellungen), auch Entwürfe; ohne Rechte leer;
  * - `GET /groups?ids[]=…` – einmal für alle Veranstaltungen: Plätze, Anmeldezeitraum, Warteliste;
  * - `GET /groups/{id}/members` – je **anstehender** Veranstaltung: Belegung, Warteliste, „bezahlt“; dazu je vergangener
- *   mit erreichtem Löschdatum (A9-4) – und für die ohne Anmeldungen der Lösch-Probelauf (`darfEndgueltigLoeschen`).
+ *   mit erreichtem Löschdatum (A9-4) – und für die ohne Anmeldungen der Lösch-Probelauf (`darfEndgueltigLoeschen`);
+ * - `GET /groups/{id}/members/routines` – je freigegebener Veranstaltung (A9-5): fehlen die Abläufe?
  * Listen mit Seiten (`members`, `groups`: 10 je Seite) über `ctAlleSeiten`.
  */
 import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
@@ -36,7 +37,14 @@ import {
   type VeranstaltungRoh,
 } from '@shared/anmeldung/uebersicht';
 
-import { darfEndgueltigLoeschen, leitungsRollen, reparieren } from './einrichten';
+import { ablaeufeFehlen } from './ablaeufe';
+import {
+  anmeldungenIn,
+  darfAblaeufeEinrichten,
+  darfEndgueltigLoeschen,
+  leitungsRollen,
+  reparieren,
+} from './einrichten';
 import { loeschDatum } from '@shared/anmeldung/termin';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
@@ -206,10 +214,30 @@ export async function ladeUebersicht(
     },
   );
 
+  // A9-5 (F1): Freigegeben, aber ohne Abläufe? Dann schickt ChurchTools seine Standard-Mail und löscht nie. Vergangene nur,
+  // solange noch jemand angemeldet ist – sonst gibt es nichts mehr zu löschen. Darf man die Routinen nicht lesen (403),
+  // fehlt der Hinweis eben; anderes kann vorübergehend sein – auch dann lieber ohne Hinweis als ohne Übersicht.
+  const freigegeben = new Set(lesbar.filter(({ r }) => r.statusId === 1).map(({ r }) => r.id));
+  const einrichten = new Map<number, boolean>();
+  await mapLimit(
+    liste.filter((v) => freigegeben.has(v.id) && !abgelaufen(v, heute)),
+    PARALLEL,
+    async (v) => {
+      try {
+        if (!(await ablaeufeFehlen(v.id))) return;
+        if (v.phase === 'vorbei' && (await anmeldungenIn(v.id)) === 0) return;
+        einrichten.set(v.id, await darfAblaeufeEinrichten(v.id));
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 403))
+          console.warn(`Abläufe von ${v.id} nicht gelesen`, e);
+      }
+    },
+  );
+
   const leitungIn = new Set(gruppen.filter((g) => g.leitung).map((g) => g.id));
   return {
     einteilung: einteilen(liste),
-    hinweise: aufmerksamkeit(liste, kaputt, leitungIn, heute, loeschbar),
+    hinweise: aufmerksamkeit(liste, kaputt, leitungIn, heute, loeschbar, einrichten),
     offen,
     verborgen,
   };

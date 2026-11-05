@@ -348,3 +348,41 @@ describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6)', () => {
     expect(abgelaufen(v(roh(6, 'Herbst', termin('2026-11-01T10:00')), leer), HEUTE)).toBeNull();
   });
 });
+
+describe('Ohne Abläufe: einrichten (A9-5, F1/F3)', () => {
+  const LEITUNG = new Set([9]);
+  const leer = { aktiv: 0, wartend: 0, unbezahlt: null };
+
+  it('freigegeben ohne Abläufe → Hinweis für alle, `darf` je Veranstaltung; Nachrücken bleibt daneben', () => {
+    const x = v(roh(6, 'Herbst', termin('2026-11-01T10:00'), { gruppeId: 7 }), {
+      aktiv: 30,
+      wartend: 2,
+      unbezahlt: null,
+    });
+    const einrichten = new Map([[6, false]]);
+    expect(aufmerksamkeit([x], [], LEITUNG, HEUTE, new Set(), einrichten)).toEqual([
+      { art: 'einrichten', v: x, darf: false },
+    ]);
+    const y = v(roh(6, 'Herbst', termin('2026-11-01T10:00')), {
+      aktiv: 1,
+      wartend: 2,
+      unbezahlt: null,
+    });
+    expect(
+      aufmerksamkeit([y], [], LEITUNG, HEUTE, new Set(), new Map([[6, true]])).map((h) => h.art),
+    ).toEqual(['einrichten', 'nachruecken']);
+  });
+
+  it('abgelaufen geht vor – dort ist nichts mehr einzurichten; Entwürfe richtet das Freigeben ein', () => {
+    const juni = v(roh(5, 'Sommerfest', termin('2026-06-01T10:00')), leer);
+    expect(
+      aufmerksamkeit([juni], [], LEITUNG, HEUTE, new Set(), new Map([[5, true]])).map((h) => h.art),
+    ).toEqual(['endgueltig']);
+    const entwurf = v(roh(7, 'Plan', termin('2026-12-01T10:00'), { statusId: 2 }));
+    expect(
+      aufmerksamkeit([entwurf], [], LEITUNG, HEUTE, new Set(), new Map([[7, true]])).map(
+        (h) => h.art,
+      ),
+    ).toEqual(['freigabe']);
+  });
+});

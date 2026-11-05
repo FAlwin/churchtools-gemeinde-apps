@@ -15,6 +15,7 @@ import {
   istGruppenAdmin,
   teamVon,
   wiederherstellen,
+  darfAblaeufeEinrichten,
   darfVeranstaltungEinrichten,
   einstellungenVon,
   belegungNachziehen,
@@ -30,6 +31,7 @@ import {
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
+import { EinrichtenFenster } from './EinrichtenFenster';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
@@ -93,6 +95,7 @@ type Fenster =
   | 'freigeben'
   | 'verwalten'
   | 'mails'
+  | 'einrichten'
   | { preis: PreisFenster }
   | null;
 
@@ -213,18 +216,22 @@ function DatenschutzKarte({
 
 /**
  * **Karte „Mails“** (A9-1, Entwurf `a9-ablaeufe-v1`) – was ChurchTools nach dem Anmelden verschickt. Eingerichtet wird
- * beim Freigeben; „Bearbeiten“ (A9-2a) öffnet das Fenster „Mails“, sobald beide Abläufe da sind.
+ * beim Freigeben; „Bearbeiten“ (A9-2a) öffnet das Fenster „Mails“, sobald beide Abläufe da sind. Fehlt einer (vor A9-1
+ * freigegeben, oder aus), steht dort „Jetzt einrichten“ (A9-5, F1) – für alle sichtbar, der Knopf nur, wer Routinen
+ * verwalten darf (`onEinrichten`, F3).
  */
 function MailsKarte({
   stand,
   kostet,
   heute,
   onBearbeiten,
+  onEinrichten,
 }: {
   stand: AblaufStand | 'entwurf' | 'fehler' | null;
   kostet: boolean;
   heute: string;
   onBearbeiten?: () => void;
+  onEinrichten?: () => void;
 }) {
   if (stand === 'entwurf')
     return (
@@ -240,16 +247,21 @@ function MailsKarte({
         </Zeile>
       </Karte>
     );
+  const einrichten = !stand.platz || !stand.warte;
+  const ohneRecht = einrichten && !onEinrichten && (
+    <small className={v.klein}>Einrichten kann, wer in ChurchTools Routinen verwalten darf.</small>
+  );
   if (!stand.platz && !stand.warte)
     return (
-      <Karte titel="Mails">
+      <Karte titel="Mails" onBearbeiten={onEinrichten} knopf="Jetzt einrichten">
         <Zeile titel="Nach dem Anmelden">
           <span className={v.fehlt}>noch nicht eingerichtet</span>
           <small className={v.klein}>
             {stand.standardMail
-              ? 'ChurchTools schickt seine Standard-Mail – ohne Betrag und Bankdaten.'
-              : 'ChurchTools schickt keine Mail.'}
+              ? 'Bisher schickt ChurchTools seine Standard-Mail, und gelöscht wird nie.'
+              : 'Bisher schickt ChurchTools keine Mail, und gelöscht wird nie.'}
           </small>
+          {ohneRecht}
         </Zeile>
       </Karte>
     );
@@ -259,9 +271,14 @@ function MailsKarte({
   );
   const EIGEN_NAME = { platz: 'Bestätigung', warte: 'Warteliste', erinnerung: 'Erinnerung' };
   return (
-    <Karte titel="Mails" onBearbeiten={stand.platz && stand.warte ? onBearbeiten : undefined}>
+    <Karte
+      titel="Mails"
+      onBearbeiten={einrichten ? onEinrichten : onBearbeiten}
+      knopf={einrichten ? 'Jetzt einrichten' : 'Bearbeiten'}
+    >
       <Zeile titel="Nach dem Anmelden">
         {stand.platz ? `✓ Bestätigung${kostet ? ' mit Betrag, Bankdaten' : ''} und Link` : fehlt}
+        {ohneRecht}
       </Zeile>
       <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>
       <Zeile titel="Nachrücken">{stand.platz ? '✓ Bestätigung wie oben' : fehlt}</Zeile>
@@ -328,6 +345,8 @@ export function VeranstaltungSeite({
   const [pruefWarOben, setPruefWarOben] = useState(false);
   // A9-1: Stand der Bestätigungsmails – nebenher geladen, die Seite wartet nicht darauf. `null` = lädt noch.
   const [ablauf, setAblauf] = useState<AblaufStand | 'fehler' | null>(null);
+  // A9-5 (F3): Darf man fehlende Abläufe einrichten? Nur gefragt, wenn welche fehlen – sonst braucht es niemand.
+  const [darfMails, setDarfMails] = useState(false);
   // U1: Eine Kennzahl-Kachel springt in eine Ansicht der Liste – `n` zählt hoch, damit derselbe Sprung neu beginnt.
   const [sprung, setSprung] = useState<{ filter: ListenFilter; n: number }>({
     filter: 'alle',
@@ -385,6 +404,10 @@ export function VeranstaltungSeite({
           ).then(
             (stand) => {
               setAblauf(stand);
+              if (darf && (!stand.platz || !stand.warte))
+                darfAblaeufeEinrichten(id).then(setDarfMails, (x: unknown) =>
+                  console.warn('Recht für Routinen nicht gelesen', x),
+                );
               // A9-3a: Der Abgleich kann den Anmeldeschluss vorgezogen haben – die Karte „Anmeldung“ zeigt ihn gleich. Er
               // zieht ihn nur vor, leert ihn nie; ein leerer Stand ändert darum nichts.
               const schluss = stand.anmeldeschluss;
@@ -682,6 +705,7 @@ export function VeranstaltungSeite({
                 kostet={kostet}
                 heute={heute}
                 onBearbeiten={bearbeiten('mails')}
+                onEinrichten={darfMails ? () => setFenster('einrichten') : undefined}
               />
               <DatenschutzKarte
                 monate={e.loeschfristMonate}
@@ -830,6 +854,18 @@ export function VeranstaltungSeite({
               },
               false,
             );
+            laden();
+          }}
+        />
+      )}
+      {fenster === 'einrichten' && (
+        <EinrichtenFenster
+          id={id}
+          onClose={() => setFenster(null)}
+          // Kein „Rückgängig“ – zurück ginge nur, indem die Routinen wieder gelöscht würden.
+          onEingerichtet={(text) => {
+            setFenster(null);
+            onGeaendert({ text, rueckgaengig: null }, false);
             laden();
           }}
         />

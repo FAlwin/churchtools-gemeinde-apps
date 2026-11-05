@@ -1,24 +1,24 @@
 import type { Service } from '../types/index';
 import type { CtEvent } from './typen';
-import { tagAusIso } from './zeit';
-import { MONATE_KURZ } from './datum';
+import { ortszeitAus, tagAusIso } from './zeit';
+import { MONATE_KURZ, wochentagName } from './datum';
 import { kalenderVon, terminAdminIds } from './ablaufRecht';
 
-const TZ = 'Europe/Berlin';
-
-function parts(iso: string): { day: string; month: string; weekday: string; time: string } {
-  const d = new Date(iso);
-  const day = new Intl.DateTimeFormat('de-DE', { day: '2-digit', timeZone: TZ }).format(d);
-  const monthNum = Number(
-    new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: TZ }).format(d),
-  );
-  const weekday = new Intl.DateTimeFormat('de-DE', { weekday: 'long', timeZone: TZ }).format(d);
-  const time = new Intl.DateTimeFormat('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: TZ,
-  }).format(d);
-  return { day, month: MONATE_KURZ[monthNum - 1] ?? '', weekday, time: `${time} Uhr` };
+/**
+ * Tag, Monat, Wochentag und Uhrzeit eines Termins – in der Zeitzone der Gemeinde, wie `date` (#847). Bis zum
+ * 05.11.2026 galt `zeitzone` nur für `date`; diese vier standen fest auf Berlin (halb umgesetzte Regel).
+ */
+function parts(
+  iso: string,
+  zeitzone: string,
+): { day: string; month: string; weekday: string; time: string } {
+  const lokal = ortszeitAus(iso, zeitzone);
+  return {
+    day: lokal.slice(8, 10),
+    month: MONATE_KURZ[Number(lokal.slice(5, 7)) - 1] ?? '',
+    weekday: wochentagName(lokal.slice(0, 10)),
+    time: `${lokal.slice(11, 16)} Uhr`,
+  };
 }
 
 /** Wandelt ein ChurchTools-Event in unser Service-Format um. */
@@ -29,7 +29,7 @@ export function mapEventToService(
   /** Zeitzone der Gemeinde – bestimmt, an welchem TAG ein Termin liegt (#414). */
   zeitzone: string,
 ): Service {
-  const p = parts(ev.startDate);
+  const p = parts(ev.startDate, zeitzone);
   const kalenderId = kalenderVon(ev);
   return {
     id: ev.id,

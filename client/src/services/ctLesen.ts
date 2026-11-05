@@ -93,9 +93,7 @@ import {
 } from './ctRuntime';
 import { gespeicherteEinstellungen } from './ctEinstellungen';
 import { holeGesehen, merkeGesehen } from './personenAblage';
-
-/** Zeitzone der Gemeinde. Die Server-Variante liest sie aus `ZEITZONE`; hier gilt der Standard. */
-const ZEITZONE = 'Europe/Berlin';
+import { gemeindeZeitzone, zeitzoneAusKonfig } from '@shared/ct/zeit';
 
 /**
  * Untertitel-Memo (#306): Der Untertitel war die HÄLFTE der Dauerlast der Terminliste – je Termin ein
@@ -131,7 +129,10 @@ export const leser: CtLeser = {
   dateiText: async (fileUrl) => (await ctDatei(fileUrl)).text(),
   fehler: (status, meldung) => new ApiError(status, meldung),
   istUeberlastet,
-  zeitzone: ZEITZONE,
+  // Ein Getter: `leser` entsteht beim Import, die Zeitzone der Gemeinde kommt erst mit `getSiteConfig` (#847).
+  get zeitzone() {
+    return gemeindeZeitzone();
+  },
 };
 
 /**
@@ -180,13 +181,18 @@ export async function meinStatus(): Promise<AuthStatus> {
  * Gerät die Wahl der Gemeinde nicht durch die Vorgaben ersetzt.
  */
 export async function gemeindeKonfiguration(): Promise<SiteConfig> {
-  const [orgName, gespeichert] = await Promise.all([gemeindeName(), gespeicherteEinstellungen()]);
+  const [orgName, gespeichert, zeitzone] = await Promise.all([
+    gemeindeName(),
+    gespeicherteEinstellungen(),
+    // Die Zeitzone der Gemeinde (#847) – Beiwerk wie der Name: Antwortet ChurchTools nicht, bleibt die des Geräts.
+    ctAnfrage<unknown>('/config').then(zeitzoneAusKonfig, () => null),
+  ]);
   // Geprüft mit dem Standardnamen, eingesetzt wird der echte: Das Schema begrenzt den Namen auf 80
   // Zeichen – ein längerer Name in ChurchTools ließe sonst die ganzen Einstellungen durchfallen.
   const geprueft =
     einstellungenAus({ ...gespeichert, orgName: DEFAULT_SITE_CONFIG.orgName }) ??
     DEFAULT_SITE_CONFIG;
-  return { ...geprueft, orgName };
+  return { ...geprueft, orgName, ...(zeitzone ? { zeitzone } : {}) };
 }
 
 async function gemeindeName(): Promise<string> {
@@ -303,7 +309,7 @@ export function liedNutzung(): Promise<Record<number, LiedNutzung>> {
     liedStatistik(
       { anfrage: ctAltAnfrage, fehler: (status, meldung) => new ApiError(status, meldung) },
       await leser.alleLieder(),
-      ZEITZONE,
+      gemeindeZeitzone(),
     ),
   );
 }
@@ -462,7 +468,7 @@ export async function terminDienste(eventId: number): Promise<BlattGruppe[]> {
     roh,
     gruppen,
     dienstRechteAus(rechte, (status, meldung) => new ApiError(status, meldung)),
-    ZEITZONE,
+    gemeindeZeitzone(),
   );
 }
 
@@ -501,7 +507,7 @@ export async function ablaufVorlagen(): Promise<AblaufVorlage[]> {
 
 /** `GET /api/services/:id/agenda/bestand` – was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b). */
 export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
-  return ablaufBestandLesen(browserAblaufLeser, eventId, ZEITZONE);
+  return ablaufBestandLesen(browserAblaufLeser, eventId, gemeindeZeitzone());
 }
 
 /** `GET /api/kalender` – die Kalender, für die Verwaltung „Termine ohne Ablauf". */

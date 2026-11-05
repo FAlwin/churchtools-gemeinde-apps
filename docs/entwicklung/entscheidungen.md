@@ -460,6 +460,9 @@ Berlin, der Server `ZEITZONE` – in Deutschland fiel das nicht auf, im Ausland 
   Ein Aussetzer darf den Start nicht blockieren, und in der Gemeinde ist es dieselbe Uhr.
 - **Der Server** rechnet weiter mit `config.zeitzone` und reicht sie ausdrücklich weiter; die Ablage im Modul gilt
   nur im Browser.
+- **Die Musik-App** (Z3) bekommt die Zone über `getSiteConfig` – Server-Variante aus `ZEITZONE` (`/api/site-config`),
+  Erweiterung aus ChurchTools `/api/config`. `mapEvent` rechnet Tag, Monat, Wochentag und Uhrzeit in derselben Zone
+  wie das Datum (vorher fest Berlin).
 - Umgestellt in drei Schritten: Z1 Quelle, Z2 Erweiterungen und Formular, Z3 Musik-App und `plusTage`-Nachbauten.
-  Seit Z2 hält `ui/design/eineZeitzone.test.ts` fest, dass niemand die Zeitzone, „heute“ oder eine Anzeige in
-  Gerätezeit selbst baut; seine Ausnahmeliste nennt, was für Z3 übrig ist.
+  `ui/design/eineZeitzone.test.ts` hält fest, dass niemand die Zeitzone, „heute“, eine Tagesrechnung oder eine
+  Anzeige in Gerätezeit selbst baut; Ausnahmen sind nur `shared/ct/zeit.ts` und die Server-Vorgabe.

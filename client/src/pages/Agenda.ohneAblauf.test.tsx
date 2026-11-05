@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DEFAULT_SITE_CONFIG, type Service, type SiteConfig } from '@shared/types/index';
-import { heuteIso } from '../utils/heute';
+import { heuteImKalender } from '@shared/ct/zeit';
 
 const api = vi.hoisted(() => ({ getServicesOhneAblauf: vi.fn(), getAblaufVorlagen: vi.fn() }));
 vi.mock('../services/churchtoolsApi', async (orig) => ({
@@ -24,7 +24,7 @@ const { Agenda } = await import('./Agenda');
  * nie doppelt, und „Ablauf anlegen" gibt es nur mit dem Recht dazu.
  */
 function inTagen(n: number): string {
-  const d = new Date(`${heuteIso()}T12:00:00Z`);
+  const d = new Date(`${heuteImKalender()}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }

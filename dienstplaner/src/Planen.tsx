@@ -1,7 +1,17 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  Fragment,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { Toast } from '@ui/fenster/Toast';
@@ -179,6 +189,14 @@ function bisherAus(p: PlanPlatz | undefined): Pick<FreierPlatz, 'bisher'> {
   if (!p || p.art === 'frei' || p.name === null) return {};
   return { bisher: { belegung: p.belegung, name: p.name, gast: p.gast } };
 }
+
+/**
+ * „Plan teilen“ (E8-2) erst beim Antippen laden – es bringt pdf.js mit; beim Start legte das sonst einen Worker an (wie
+ * „Termin teilen“ in der Termin-Ansicht).
+ */
+const PlanTeilenFenster = lazy(() =>
+  import('./PlanTeilenFenster').then((m) => ({ default: m.PlanTeilenFenster })),
+);
 
 /**
  * **Planen** (Bauplan E3-4/E3-5, Entwurf v17): Termine als Spalten, Dienstgruppen und Dienste als Zeilen,
@@ -461,6 +479,9 @@ export function Planen({
   }
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
+  // „Plan teilen“ (E8-2): geteilt werden die Termine, die gerade zählen – dieselben wie in der Aufschrift des
+  // Zeitraum-Knopfs – und die eingeblendeten Gruppen.
+  const [teilenOffen, setTeilenOffen] = useState(false);
   const d = plan ? fensterDaten(plan, ansicht, platz) : null;
   const gesamt = d?.gefiltert.length ?? 0;
   const f = sichtbar(fenster, gesamt, d?.passend ?? 0);
@@ -478,8 +499,9 @@ export function Planen({
     setFenster(schritt(fenster, was, gesamt, d?.passend ?? 0));
   };
 
-  // Aufschrift des Zeitraum-Knopfs.
-  const anzahl = handy || bereich ? (d?.gefiltert.length ?? 0) : imFenster.length;
+  // Aufschrift des Zeitraum-Knopfs – und dieselben Termine teilt „Plan teilen“.
+  const teilenSpalten = handy || bereich ? (d?.gefiltert ?? []) : imFenster;
+  const anzahl = teilenSpalten.length;
   const terminText = `${anzahl} ${anzahl === 1 ? 'Termin' : 'Termine'}`;
   const z = ansicht.zeitraum;
   const zeile1 =
@@ -585,6 +607,29 @@ export function Planen({
             },
           ]}
         />
+        <KopfKnopf
+          onClick={() => setTeilenOffen(true)}
+          label="Teilen"
+          title="Plan als PDF teilen"
+          symbol={<Icon name="share" size={16} />}
+          disabled={!plan || teilenSpalten.length === 0}
+        />
+        {teilenOffen && plan && (
+          <Suspense fallback={null}>
+            <PlanTeilenFenster
+              quelle={{
+                plan,
+                spalten: teilenSpalten,
+                gruppen: plan.gruppen.filter(
+                  (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
+                ),
+                gemeinde: ablauf?.start.gemeinde ?? null,
+                app: 'Dienstplaner',
+              }}
+              onClose={() => setTeilenOffen(false)}
+            />
+          </Suspense>
+        )}
       </div>
       {handy && leiste}
     </div>

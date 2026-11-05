@@ -120,6 +120,8 @@ describe('Termin-Blatt als PDF', () => {
     expect(breiten[0]).toBeGreaterThanOrEqual(10 + 3);
     expect(breiten[1]).toBeGreaterThanOrEqual('5 Min'.length * 2 + 3);
     expect(breiten.reduce((s, x) => s + x, 0)).toBeCloseTo(180);
+    // Den übrigen Platz bekommt „Eintrag“ – „Zuständig“ bleibt so breit wie nötig („Jakob Weber“ 22 + Polster 3).
+    expect(breiten[3]).toBeCloseTo(25);
   });
 
   it('quer, wenn gewählt', async () => {

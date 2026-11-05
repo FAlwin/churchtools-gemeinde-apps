@@ -262,7 +262,7 @@ function VerschobenHinweis({
     setGesehen(vs.am);
   };
   return (
-    <section className={s.karte} aria-label="Termin verschoben">
+    <section className={`${s.karte} ${v.verschoben}`} aria-label="Termin verschoben">
       <p>
         {tag ? (
           <>
@@ -741,9 +741,9 @@ export function VeranstaltungSeite({
                       {t.terminId ? `Termin Nr. ${t.terminId}` : '–'}
                       {kalender?.art === 'weg' && (
                         // K1 (V3, V7): Das Datum bleibt – Formular und Löschdatum stimmen so weiter.
-                        <small className={v.fehlt}>
-                          Im Kalender nicht mehr da (gelöscht, verschoben oder abgesagt) – bitte den
-                          Termin neu wählen.
+                        <small className={v.klein}>
+                          <span className={v.fehlt}>Im Kalender nicht mehr da</span> (gelöscht,
+                          verschoben oder abgesagt) – bitte den Termin neu wählen.
                         </small>
                       )}
                     </Zeile>

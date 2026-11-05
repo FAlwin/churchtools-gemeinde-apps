@@ -1,5 +1,6 @@
 /**
- * Lied-IDs aus einem Query-Parameter (`?songs=1,2,3`) lesen – EINE Stelle für alle Endpunkte (#279).
+ * Lied-IDs aus einem Query-Parameter (`?songs=1,2,3`) lesen – EINE Stelle für alle Endpunkte (#279). Seit dem
+ * 05.11.2026 liest auch `?kalender=…` (Termine ohne Ablauf) seine IDs hierüber – dieselbe Regel, keine Kopie.
  *
  * Zwei Gründe für diese Datei:
  *

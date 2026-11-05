@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AblaufAnlegenRegel } from '../types/index';
 import {
   ABLAUF_SCHON_DA,
   ablaufAnlegen,
@@ -36,36 +35,22 @@ function ev(id: number, name: string, kalender: string, start = '2026-10-25T09:0
   };
 }
 
-const REGEL: AblaufAnlegenRegel = { kalenderIds: [2], suchwort: 'Gottesdienst' };
+const KALENDER = [2];
 
 describe('brauchtAblauf – welche Veranstaltungen ohne Ablauf erscheinen', () => {
-  it('Kalender und Suchwort müssen passen (Gebetsabend im selben Kalender bleibt draußen)', () => {
-    expect(brauchtAblauf(ev(1, 'Gottesdienst', '2'), REGEL)).toBe(true);
-    expect(brauchtAblauf(ev(2, 'Gebetsabend', '2'), REGEL)).toBe(false);
-    expect(brauchtAblauf(ev(3, 'Gottesdienst', '3'), REGEL)).toBe(false);
+  it('nur aus den gewählten Kalendern – seit 05.11.2026 ohne Suchwort, der Gebetsabend gehört dazu', () => {
+    expect(brauchtAblauf(ev(1, 'Gottesdienst', '2'), KALENDER)).toBe(true);
+    expect(brauchtAblauf(ev(2, 'Gebetsabend', '2'), KALENDER)).toBe(true);
+    expect(brauchtAblauf(ev(3, 'Gottesdienst', '3'), KALENDER)).toBe(false);
   });
 
-  it('Suchwort ohne Rücksicht auf Groß-/Kleinschreibung, auch mitten im Namen', () => {
-    expect(brauchtAblauf(ev(1, 'Jugendgottesdienst', '2'), REGEL)).toBe(true);
-    expect(brauchtAblauf(ev(1, 'GOTTESDIENST mit Taufe', '2'), REGEL)).toBe(true);
-  });
-
-  it('leeres Suchwort = alle Termine der gewählten Kalender', () => {
-    expect(brauchtAblauf(ev(2, 'Gebetsabend', '2'), { kalenderIds: [2], suchwort: ' ' })).toBe(
-      true,
-    );
-  });
-
-  it('ohne gewählte Kalender oder ohne Regel: aus', () => {
-    expect(brauchtAblauf(ev(1, 'Gottesdienst', '2'), { kalenderIds: [], suchwort: '' })).toBe(
-      false,
-    );
-    expect(brauchtAblauf(ev(1, 'Gottesdienst', '2'), undefined)).toBe(false);
+  it('ohne gewählte Kalender: aus', () => {
+    expect(brauchtAblauf(ev(1, 'Gottesdienst', '2'), [])).toBe(false);
   });
 
   it('ein Termin ohne lesbaren Kalender gehört nie dazu', () => {
     const ohne = { ...ev(1, 'Gottesdienst', '2'), calendar: undefined };
-    expect(brauchtAblauf(ohne, REGEL)).toBe(false);
+    expect(brauchtAblauf(ohne, KALENDER)).toBe(false);
   });
 });
 
@@ -91,27 +76,27 @@ describe('termineOhneAblauf', () => {
       [
         ev(3, 'Gottesdienst', '2', '2026-11-01T09:00:00Z'),
         ev(1, 'Gottesdienst', '2', '2026-10-25T09:00:00Z'),
-        ev(2, 'Gebetsabend', '2', '2026-10-28T17:00:00Z'),
+        ev(2, 'Gebetsabend', '5', '2026-10-28T17:00:00Z'),
         ev(4, 'Gottesdienst', '2', '2026-11-08T09:00:00Z'),
       ],
       (id) => (id === 4 ? Promise.resolve({ items: [] }) : keinAblauf()),
     );
-    const liste = await termineOhneAblauf(l, '2026-10-13', '2026-11-24', REGEL);
+    const liste = await termineOhneAblauf(l, '2026-10-13', '2026-11-24', KALENDER);
 
     expect(liste.map((s) => s.id)).toEqual([1, 3]);
     expect(liste[0]).toMatchObject({ songCount: 0, kalenderId: 2, name: 'Gottesdienst' });
   });
 
   it('fragt nur die passenden nach ihrem Ablauf – nicht jeden Termin', async () => {
-    const l = leser([ev(1, 'Gottesdienst', '2'), ev(2, 'Gebetsabend', '2')], keinAblauf);
-    await termineOhneAblauf(l, 'a', 'b', REGEL);
+    const l = leser([ev(1, 'Gottesdienst', '2'), ev(2, 'Gebetsabend', '5')], keinAblauf);
+    await termineOhneAblauf(l, 'a', 'b', KALENDER);
     expect(l.agenda).toHaveBeenCalledTimes(1);
     expect(l.agenda).toHaveBeenCalledWith(1);
   });
 
-  it('ohne Regel: keine einzige Anfrage', async () => {
+  it('ohne Kalender: keine einzige Anfrage', async () => {
     const l = leser([ev(1, 'Gottesdienst', '2')], keinAblauf);
-    expect(await termineOhneAblauf(l, 'a', 'b', { kalenderIds: [], suchwort: '' })).toEqual([]);
+    expect(await termineOhneAblauf(l, 'a', 'b', [])).toEqual([]);
     expect(l.events).not.toHaveBeenCalled();
   });
 
@@ -119,7 +104,7 @@ describe('termineOhneAblauf', () => {
     const l = leser([ev(1, 'Gottesdienst', '2'), ev(2, 'Gottesdienst', '2')], (id) =>
       id === 2 ? Promise.reject(new Fehler(503, 'gebremst')) : keinAblauf(),
     );
-    await expect(termineOhneAblauf(l, 'a', 'b', REGEL)).rejects.toMatchObject({ status: 503 });
+    await expect(termineOhneAblauf(l, 'a', 'b', KALENDER)).rejects.toMatchObject({ status: 503 });
   });
 
   it('ein anderer Fehler lässt NUR diese Veranstaltung weg (nicht raten, ob sie einen hat)', async () => {
@@ -127,7 +112,7 @@ describe('termineOhneAblauf', () => {
     const l = leser([ev(1, 'Gottesdienst', '2'), ev(2, 'Gottesdienst', '2')], (id) =>
       id === 2 ? Promise.reject(new Fehler(403, 'kein Recht')) : keinAblauf(),
     );
-    expect((await termineOhneAblauf(l, 'a', 'b', REGEL)).map((s) => s.id)).toEqual([1]);
+    expect((await termineOhneAblauf(l, 'a', 'b', KALENDER)).map((s) => s.id)).toEqual([1]);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });

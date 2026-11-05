@@ -246,7 +246,7 @@ erlaubt – nie ein Knopf, der mit „verboten" endet.
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/ct/ablaufRecht.ts`, `shared/ct/mapEvent.ts`, `shared/ct/rechte.ts`, `client/src/App.tsx`, `client/src/pages/Agenda.tsx`
-- **Automatisiert:** ja – `shared/ct/ablaufRecht.test.ts` (Regel, ältere Server), `client/src/pages/Agenda.ohneAblauf.test.tsx` (je Termin), `e2e/ablauf-recht.spec.ts` (Stift, „Zu Ablauf hinzufügen"), `e2e/ablauf-anlegen.spec.ts` (Musiker ohne Kalender-Recht: kein „Ablauf anlegen"); von Hand bleibt das Speichern als Termin-Admin gegen echtes ChurchTools (Schritt 3)
+- **Automatisiert:** ja – `shared/ct/ablaufRecht.test.ts` (Regel, ältere Server, `darfAblaufImKalender`), `client/src/pages/Agenda.ohneAblauf.test.tsx` (je Termin), `e2e/ablauf-recht.spec.ts` (Stift, „Zu Ablauf hinzufügen"), `e2e/ablauf-anlegen.spec.ts` (Musiker ohne Kalender-Recht: im Filter kein „auch ohne Ablauf“, seit 05.11.2026); von Hand bleibt das Speichern als Termin-Admin gegen echtes ChurchTools (Schritt 3)
 - **Historie:** #635 (19.10.2026, gemessen E6-0 am 17.10.2026)
 
 </details>

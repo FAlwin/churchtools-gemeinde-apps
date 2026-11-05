@@ -22,8 +22,9 @@ router.put(
   asyncHandler(putSiteConfigCtrl),
 );
 
-// ChurchTools-Kalender für „Termine ohne Ablauf" (nur Admin, 13.10.2026).
-router.get('/kalender', requireSession, asyncHandler(requireAdmin), asyncHandler(getKalenderCtrl));
+// ChurchTools-Kalender – Namen für den Filter der Terminliste. Seit 05.11.2026 für alle Angemeldeten (vorher nur
+// Admin für die Verwaltung): ChurchTools liefert mit der Sitzung der Person nur die Kalender, die sie sehen darf.
+router.get('/kalender', requireSession, asyncHandler(getKalenderCtrl));
 
 // ChurchTools-Gruppen für das Admin-Dropdown „Gruppen-Zuweisung" (nur Admin).
 router.get('/groups', requireSession, asyncHandler(requireAdmin), asyncHandler(getGroupsCtrl));

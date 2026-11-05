@@ -13,6 +13,7 @@
 
 import type { StandardAnsicht } from '@shared/types/index';
 import { lokalSchreiben } from './lokalSpeicher';
+import { kalenderFilterAus, type KalenderFilter } from './kalenderFilter';
 
 const KEYS = {
   /** Ist die Anmerkungs-Werkzeugleiste zum Rand-Knopf eingeklappt? */
@@ -23,6 +24,8 @@ const KEYS = {
   abwesenheitenFilter: 'worship:abwesenheiten-filter',
   /** Ausgeblendete Termin-Arten im Tab „Abwesenheiten" (seit 28.10.2026) – JSON-Liste, leer = alle zu sehen. */
   abwesenheitenAusgeblendet: 'worship:abwesenheiten-ausgeblendet',
+  /** Filter der Terminliste (05.11.2026): ausgeblendete Kalender und „auch ohne Ablauf“ – JSON, `utils/kalenderFilter`. */
+  termineFilter: 'worship:termine-filter',
   /** Ein Abmelden konnte den Server nicht erreichen und muss beim nächsten Start nachgeholt werden (#403). */
   abmeldenAusstehend: 'worship:abmelden-ausstehend',
   /**
@@ -107,6 +110,25 @@ export function getAbwesenheitenAusgeblendet(): string[] | null {
 
 export function setAbwesenheitenAusgeblendet(ids: string[]): void {
   write('abwesenheitenAusgeblendet', JSON.stringify(ids));
+}
+
+/**
+ * **Filter der Terminliste** (05.11.2026) – auf dem Gerät gemerkt wie der der Abwesenheiten (Entscheidung Alwin). `null`,
+ * solange nichts gemerkt ist: Dann gilt der Startwert aus `startFilter`. Ein kaputter Wert ergibt ebenfalls `null` –
+ * lieber den Startwert als still zu wenig.
+ */
+export function getTermineFilter(): KalenderFilter | null {
+  const roh = read('termineFilter');
+  if (roh === null) return null;
+  try {
+    return kalenderFilterAus(JSON.parse(roh));
+  } catch {
+    return null;
+  }
+}
+
+export function setTermineFilter(filter: KalenderFilter): void {
+  write('termineFilter', JSON.stringify(filter));
 }
 
 /**

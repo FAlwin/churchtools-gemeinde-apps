@@ -14,7 +14,11 @@ import { setSettingsSyncErrorHandler } from './services/userSettings';
 import { setAnnotationsSyncErrorHandler } from './services/annotations';
 import { Login } from './pages/Login';
 import { Agenda } from './pages/Agenda';
-import { ablaufRechteAus, darfAblaufBearbeiten } from '@shared/ct/ablaufRecht';
+import {
+  ablaufRechteAus,
+  darfAblaufBearbeiten,
+  darfAblaufImKalender,
+} from '@shared/ct/ablaufRecht';
 import type { Service } from '@shared/types/index';
 import { useSettings } from './hooks/useSettings';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
@@ -641,6 +645,7 @@ export default function App() {
             isError={servicesQuery.isError}
             onRetry={() => servicesQuery.refetch()}
             kannAblaufAnlegen={darfAblauf}
+            darfAblaufImKalender={(id) => darfAblaufImKalender(ablaufRechte, id)}
             onSelect={(s) => {
               setService(s);
               setView({ type: 'setlist' });

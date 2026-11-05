@@ -167,14 +167,14 @@ export function useTermineAm(tag: string | null, enabled: boolean) {
 }
 
 /**
- * Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen sollen (13.10.2026). Nur, wenn die
- * Funktion eingestellt ist – sonst wäre jede Abfrage eine leere Antwort.
+ * Veranstaltungen ohne Ablauf aus den Kalendern, die im Filter „auch ohne Ablauf“ haben (13.10.2026, seit 05.11.2026
+ * je Person). Ohne solche Kalender wird nicht gefragt – jede Abfrage wäre eine leere Antwort.
  */
-export function useServicesOhneAblauf(enabled: boolean) {
+export function useServicesOhneAblauf(kalenderIds: readonly number[], enabled: boolean) {
   return useQuery({
-    queryKey: schluessel.termineOhneAblauf(),
-    queryFn: () => api.getServicesOhneAblauf(),
-    enabled,
+    queryKey: schluessel.termineOhneAblauf(kalenderIds),
+    queryFn: () => api.getServicesOhneAblauf(kalenderIds),
+    enabled: enabled && kalenderIds.length > 0,
     staleTime: ACTIVE_STALE_MS,
     refetchOnWindowFocus: true,
   });

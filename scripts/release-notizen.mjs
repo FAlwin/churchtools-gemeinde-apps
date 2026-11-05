@@ -29,6 +29,7 @@ export const APPS = {
   anmeldungen: /Anmeldung/,
   organigramm: /Organigramm/,
   protokolle: /Protokolle/,
+  gebetsabend: /Gebetsabend/,
 };
 const ALLE = /alle Apps|alle Erweiterungen|gemeinsam/;
 

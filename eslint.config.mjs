@@ -67,6 +67,7 @@ export default tseslint.config(
             'organigramm/*.ts',
             'formular/*.ts',
             'protokolle/*.ts',
+            'gebetsabend/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
             'server/scripts/*.ts',
@@ -103,6 +104,7 @@ export default tseslint.config(
       'organigramm/src/**/*.{ts,tsx}',
       'formular/src/**/*.{ts,tsx}',
       'protokolle/src/**/*.{ts,tsx}',
+      'gebetsabend/src/**/*.{ts,tsx}',
       'ui/**/*.{ts,tsx}',
     ],
     languageOptions: {
@@ -199,6 +201,7 @@ export default tseslint.config(
       'organigramm/*.ts',
       'formular/*.ts',
       'protokolle/*.ts',
+      'gebetsabend/*.ts',
       'e2e/*.mjs',
       'scripts/**/*.mjs',
       'server/scripts/**/*.ts',

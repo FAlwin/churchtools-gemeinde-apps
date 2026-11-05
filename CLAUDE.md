@@ -209,6 +209,8 @@ churchtools-gemeinde-apps/
 ├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (nur Erweiterung, Kürzel `organigramm`; Stand O7: Baum, Personen/Hinweise für Leitungen, Präsentation (Admins auch „Neue Gliederung“), Gruppen umhängen/anlegen, Mitglieder pflegen, Reiter „Neue Gliederung“ (Plan und Umbau) für Admins, Ansichten Karten/Liste/von oben/von links/Mindmap mit „Anfangen bei“ (O7b), Organigramm als PDF mit Vorschau (O7b-4), Präsentation mit Kacheln/von oben/von links/Mindmap (O7b-5) – Anleitung `docs/betrieb/ORGANIGRAMM.md`, manuelle Tests TF-ORG)
 ├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
 ├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
+├── shared/gebetsabend/      # Regeln des Gebetsabends: zugang (StreamID/Passwort), links (VDO.Ninja), zustand (Player-Meldungen), einrichten (G1)
+├── gebetsabend/             # Gebetsabend: ChurchTools-Erweiterung, überträgt den Gebetsabend per VDO.Ninja an Mitglieder (Bauplan Gebetsabend, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens; helle Farben im Mixin `hell` in _farben.scss), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren),
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)

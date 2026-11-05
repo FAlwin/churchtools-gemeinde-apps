@@ -1,0 +1,34 @@
+// Stand der Einrichtung (Bauplan Gebetsabend G1) – eine Karte im ChurchTools-Look wie die Startseiten der anderen
+// Erweiterungen.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 640px;
+  padding: 14px 16px;
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  p {
+    font-size: 14.5px;
+    color: var(--text);
+  }
+
+  // Nach `p`, damit die ruhigere Farbe gewinnt (gleiche Tiefe, spätere Regel).
+  .leise {
+    color: var(--text2);
+  }
+}
+
+.knoepfe {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}

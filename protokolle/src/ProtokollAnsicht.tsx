@@ -16,6 +16,7 @@ import { useThema } from '@ui/design/useThema';
 import { farbWert } from './farben';
 import { FesterPunkt } from './FesterPunkt';
 import styles from './ProtokollAnsicht.module.scss';
+import { sichererLink } from '@shared/ct/sichereAdresse';
 
 /**
  * **Ein Protokoll lesen** (Bauplan S3-2) – eine eigene, schlanke Darstellung der Blöcke, wie der Editor (BlockNote)
@@ -33,11 +34,6 @@ interface LinkStueck {
   type: 'link';
   href: string;
   content: TextStueck[];
-}
-
-/** Nur Web- und Mail-Adressen werden zu Links – nie `javascript:` oder Ähnliches aus einem gespeicherten Dokument. */
-function sichereAdresse(href: unknown): string | null {
-  return typeof href === 'string' && /^(https?:|mailto:)/i.test(href.trim()) ? href.trim() : null;
 }
 
 function textStueck(t: TextStueck, key: number, thema: Thema): ReactNode {
@@ -71,7 +67,8 @@ export function Inhalt({ content }: { content: unknown }) {
       {(content as (TextStueck | LinkStueck)[]).map((c, i) => {
         if (c?.type === 'text') return textStueck(c, i, thema);
         if (c?.type === 'link') {
-          const href = sichereAdresse(c.href);
+          // Nur Web- und Mail-Adressen werden zu Links – nie `javascript:` aus einem gespeicherten Dokument (#849).
+          const href = sichererLink(c.href, { mailto: true });
           const innen = (c.content ?? []).map((t, j) => textStueck(t, j, thema));
           return href ? (
             <a key={i} href={href} target="_blank" rel="noopener noreferrer">

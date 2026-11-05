@@ -11,6 +11,9 @@ import { loeschDatum } from '@shared/anmeldung/termin';
 import { datumText } from '@shared/ct/datum';
 import type { Abgeschickt } from '@shared/anmeldung/senden';
 
+/** Die Instanz der Tests – das Logo kommt nur von dort (#849). */
+const BASIS = 'https://ct.test';
+
 const HEUTE = '2026-10-13';
 
 function freizeit(): OeffentlicheEinstellungen {
@@ -53,6 +56,7 @@ const zeigen = (e: OeffentlicheEinstellungen, mitMuster = true) =>
   render(
     <AnmeldeFormular
       ansicht={{
+        basis: BASIS,
         name: 'Silvesterfreizeit',
         gemeinde: 'ECG Donrath',
         einstellungen: e,
@@ -200,6 +204,7 @@ describe('Anmeldeformular (A5)', () => {
       render(
         <AnmeldeFormular
           ansicht={{
+            basis: BASIS,
             name: 'X',
             gemeinde: null,
             einstellungen: { ...e, gestaltung: g },
@@ -258,7 +263,7 @@ describe('Haken für den Baukasten (A5)', () => {
     const gesehen: string[] = [];
     render(
       <AnmeldeFormular
-        ansicht={{ name: 'Freizeit', gemeinde: 'ECG', einstellungen: mitText() }}
+        ansicht={{ basis: BASIS, name: 'Freizeit', gemeinde: 'ECG', einstellungen: mitText() }}
         heute={HEUTE}
         vorschau
         start={musterAntworten(mitText(), HEUTE)}
@@ -301,7 +306,10 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
       musterfarbe: '#abcdef',
     };
     const { container } = render(
-      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
+      <AnmeldeFormular
+        ansicht={{ basis: BASIS, name: 'X', gemeinde: 'ECG', einstellungen: e }}
+        heute={HEUTE}
+      />,
     );
     const pv = container.firstElementChild as HTMLElement;
     expect(pv.style.getPropertyValue('--p-page')).toBe('#112233');
@@ -321,6 +329,7 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
       const { container, unmount } = render(
         <AnmeldeFormular
           ansicht={{
+            basis: BASIS,
             name: 'X',
             gemeinde: null,
             einstellungen: { ...e, gestaltung: { ...e.gestaltung, ...g } },
@@ -341,6 +350,9 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
     );
     expect(logo({ logo: 'keins', logoUrl: 'https://ct.test/l' })).toBeNull();
     expect(logo({ logo: 'ct', logoUrl: null })).toBeNull();
+    // #849: Die Adresse steht in der Gruppe und ist über die API änderbar – ein fremder Host zeigt kein Logo.
+    expect(logo({ logo: 'eigen', logoUrl: 'https://fremd.example/l.png' })).toBeNull();
+    expect(logo({ logo: 'eigen', logoUrl: 'https://ct.test.fremd.example/l.png' })).toBeNull();
   });
 
   it('Logo oben in der Mitte → Titel auch mittig (Alwin, 14.10.2026); links daneben → wie eingestellt', () => {
@@ -349,6 +361,7 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
       const { container, unmount } = render(
         <AnmeldeFormular
           ansicht={{
+            basis: BASIS,
             name: 'X',
             gemeinde: null,
             einstellungen: {
@@ -378,6 +391,7 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
     const { container } = render(
       <AnmeldeFormular
         ansicht={{
+          basis: BASIS,
           name: 'X',
           gemeinde: null,
           einstellungen: freizeit(),
@@ -400,7 +414,10 @@ describe('Reihenfolge (Feinheiten A5)', () => {
     const note = e.formular.anmeldung.find((f) => f.id === 'note')!;
     e.formular.anmeldung = [note, ...e.formular.anmeldung.filter((f) => f.id !== 'note')];
     const { container } = render(
-      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: null, einstellungen: e }} heute={HEUTE} />,
+      <AnmeldeFormular
+        ansicht={{ basis: BASIS, name: 'X', gemeinde: null, einstellungen: e }}
+        heute={HEUTE}
+      />,
     );
     const text = container.textContent ?? '';
     expect(text.indexOf('Bemerkungen')).toBeGreaterThan(-1);
@@ -423,7 +440,13 @@ describe('Spam-Schutz im echten Formular (A6-3, #593)', () => {
     const e = freizeit();
     const r = render(
       <AnmeldeFormular
-        ansicht={{ name: 'Freizeit', gemeinde: 'ECG', einstellungen: e, freiePlaetze: 3 }}
+        ansicht={{
+          basis: BASIS,
+          name: 'Freizeit',
+          gemeinde: 'ECG',
+          einstellungen: e,
+          freiePlaetze: 3,
+        }}
         heute={HEUTE}
         start={musterAntworten(e, HEUTE)}
         onAbsenden={onAbsenden}

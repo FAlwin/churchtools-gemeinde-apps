@@ -91,6 +91,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `keepalive`. Dazu an den Diensten: Einstellungen in EINEM Upload, Anmerkungen „neuer Strich gewinnt, alter Zoom
   bleibt“ bei Weiterzeichnen während eines scheiternden Uploads. Gegenprobe je Regel; einzig das Timer-Räumen beim
   Weglegen ist nicht beobachtbar (der alte Timer fände eine leere Schlange)
+- `shared/ct/sichereAdresse` – die eine Prüfung für Adressen aus Daten (#849): http(s) ja, `javascript:`/`data:`/
+  `vbscript:` und Verkleidungen (Großschreibung, Leerraum, Tab) nie, `mailto` nur auf Wunsch; `adresseInInstanz` gegen
+  ähnliche Hosts, anderes Protokoll und `user@host`. Dazu an den Stellen: Lied-Ansicht im Dienstplaner (`javascript:` wird
+  kein Link), Formular-Logo (fremder Host → keins), Protokoll-Links (mailto bleibt). Server `apiEingang`: schreibend
+  von `same-site`/`cross-site` → 403, `same-origin` und ohne Kopf durch, lesen von überall. Gegenprobe je Teil
 - `ui/ct/mitglieder` – Mitgliedschafts-Baustein (#848): anlegen = `PUT` mit `only_add` (auch gegen ein mitgegebenes
   `only_add: false`), ändern = `PATCH` ohne, entfernen = `DELETE`, Meldung bei fehlendem Recht, 404 = `null`, ein
   vorübergehender Fehler wirft. Wächter `ui/design/eineMitgliedschaft`: keine Einzel-Adresse außerhalb des Bausteins

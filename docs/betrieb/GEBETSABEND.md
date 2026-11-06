@@ -1,9 +1,10 @@
 # Gebetsabend – ChurchTools-Erweiterung
 
-> **Stand: G4 (05.11.2026)** – Die Erweiterung lässt sich installieren und **einrichten** (legt ihre zwei Kategorien
-> an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend zuhören“**; die Technik **startet und beendet** die
-> Übertragung direkt in der Seite, sieht **wer zuhört** und stellt den Kalender ein. Es folgen die Anleitung für Helfer
-> (G5) und der Pilot (G6) (Bauplan `gebetsabend-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: erste Version v0.1.0 (06.11.2026, Bauplan G1–G4).** Die Erweiterung lässt sich installieren und
+> **einrichten** (legt ihre zwei Kategorien an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend
+> zuhören“**; die Technik **startet und beendet** die Übertragung direkt in der Seite, sieht **wer zuhört** und stellt
+> den Kalender ein. Die Zuhörer richtet man am besten persönlich ein: anmelden mit „Angemeldet bleiben“, Passwort im
+> Handy speichern, die Seite als Symbol auf den Home-Bildschirm legen.
 
 Der Gebetsabend wird für Gemeindeglieder übertragen, die nicht kommen können – mit Bild und Ton, nur für Personen mit
 ChurchTools-Zugang und Recht an der Erweiterung. Übertragen wird mit **VDO.Ninja** (Peer-to-Peer im Browser) im
@@ -76,6 +77,9 @@ Handy steht alles untereinander.
   schiefging. Beim ersten Mal fragt der Browser nach Kamera und Mikrofon – „Erlauben“, am besten dauerhaft.
   Empfohlen wird Chrome auf dem Gerät im Raum. Bei „Nur Ton“ zeigt VDO.Ninja eine Geräteauswahl, dort einmal das
   Mikrofon bestätigen.
+- **Gerät im Raum:** Ein Rechner ohne eingebaute Kamera (z. B. Mac mini) braucht eine externe Webcam mit Mikrofon.
+  Ruhezustand und Bildschirmschoner ausschalten, sonst bricht die Übertragung ab. Wer im Raum sitzt, sollte vorher
+  wissen, dass übertragen wird.
 - **Seite offen lassen:** Der Sender läuft nur, solange die Seite offen ist und das Gerät nicht gesperrt wird.
 - **Seite neu geladen oder anderes Gerät:** Dann steht „Läuft – der Sender ist auf diesem Gerät nicht aktiv“. Die
   Seite startet den Sender **nie von selbst** (sonst könnten zwei Geräte gleichzeitig senden). **„Sender hier

@@ -15,6 +15,7 @@ import * as AB from './ablaeufe';
 import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
 import * as TP from '@ui/teilen/sharePdf';
 import * as TF from '@ui/teilen/shareFile';
+import * as QR from '@ui/teilen/qr';
 import {
   e as eListe,
   mitglieder as mitgliederListe,
@@ -426,6 +427,24 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         erinnerungen: [],
         ...x,
       });
+
+    it('lassen sich die Anmeldungen nicht zählen: Fehler im Fenster, Einrichten gesperrt', async () => {
+      ohne();
+      stelle(true, 1);
+      m.anmeldungenIn.mockRejectedValue(new TypeError('Failed to fetch'));
+      zeigen();
+      const karte = await screen.findByRole('region', { name: 'Mails' });
+      fireEvent.click(await within(karte).findByRole('button', { name: 'Jetzt einrichten' }));
+      const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
+      expect((await within(fenster).findByRole('alert')).textContent).toMatch(
+        /antwortet gerade nicht/,
+      );
+      expect(within(fenster).queryByText('Wird geladen …')).toBeNull();
+      expect(within(fenster).getByRole('button', { name: 'Jetzt einrichten' })).toHaveProperty(
+        'disabled',
+        true,
+      );
+    });
 
     it('öffnet die Rückfrage; ohne Termin „Ohne Termin wird nicht gelöscht.“; danach gemeldet und neu geladen', async () => {
       ohne();
@@ -1082,9 +1101,143 @@ describe('Neue Veranstaltung (A3, #486)', () => {
     await waitFor(() => expect(fertig).toHaveBeenCalledWith(95));
     expect(m.kopiereVeranstaltung).toHaveBeenCalledWith(41, 'Kindertag 2027');
   });
+  it('wie eine frühere: die erste ist vorgewählt', async () => {
+    m.veranstaltungenVon.mockResolvedValue([
+      { id: 40, name: 'Kindertag 2026' },
+      { id: 41, name: 'Sommerfest' },
+    ]);
+    m.kopiereVeranstaltung.mockResolvedValue(95);
+    const fertig = vi.fn();
+    render(<NeueVeranstaltung teams={TEAMS} artId={5} onFertig={fertig} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Kindertag 2027' } });
+    fireEvent.click(screen.getByRole('button', { name: /Wie eine frühere/ }));
+    expect(await screen.findByLabelText<HTMLSelectElement>('Welche?')).toHaveProperty(
+      'value',
+      '40',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    await waitFor(() => expect(m.kopiereVeranstaltung).toHaveBeenCalledWith(40, 'Kindertag 2027'));
+  });
+
+  it('wie eine frühere, anderes Team: dessen erste ist gewählt – nicht die Wahl beim ersten Team', async () => {
+    const ZWEI = [...TEAMS, { id: 8, name: 'Jugend', leitung: false }];
+    m.veranstaltungenVon.mockImplementation((team: number) =>
+      Promise.resolve(
+        team === 7
+          ? [
+              { id: 40, name: 'Kindertag 2026' },
+              { id: 41, name: 'Sommerfest' },
+            ]
+          : [{ id: 50, name: 'Jugendabend' }],
+      ),
+    );
+    m.kopiereVeranstaltung.mockResolvedValue(95);
+    render(<NeueVeranstaltung teams={ZWEI} artId={5} onFertig={() => {}} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Jugendabend 2027' } });
+    fireEvent.click(screen.getByRole('button', { name: /Wie eine frühere/ }));
+    fireEvent.change(await screen.findByLabelText('Welche?'), { target: { value: '41' } });
+    fireEvent.change(screen.getByLabelText('Gehört zur Gruppe'), { target: { value: '8' } });
+    await screen.findByRole('option', { name: 'Jugendabend' });
+    // Angelegt wird, was gewählt ist – die Auswahlliste zeigt einen fremden Wert nur scheinbar als ersten.
+    fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    await waitFor(() =>
+      expect(m.kopiereVeranstaltung).toHaveBeenCalledWith(50, 'Jugendabend 2027'),
+    );
+  });
+
+  it('wie eine frühere: lassen sie sich nicht laden, steht der Fehler da', async () => {
+    m.veranstaltungenVon.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<NeueVeranstaltung teams={TEAMS} artId={5} onFertig={() => {}} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /Wie eine frühere/ }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+  });
+
   it('ohne Namen nicht anlegbar', () => {
     render(<NeueVeranstaltung teams={TEAMS} artId={5} onFertig={() => {}} onClose={() => {}} />);
     expect(screen.getByRole('button', { name: 'Anlegen' })).toHaveProperty('disabled', true);
+  });
+});
+
+describe('Laden in den Fenstern (#845, Scheibe 3d)', () => {
+  const fenster = () => screen.getByRole('dialog');
+  const terminFenster = async () => {
+    const termin = await screen.findByRole('region', { name: 'Termin' });
+    fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
+  };
+
+  it('Freigeben: wer schon Leitung ist, ist vorgewählt – nicht, wer freigibt', async () => {
+    stelle(true);
+    m.leitungsKandidaten.mockResolvedValue([
+      { personId: 1, name: 'Alwin Friesen', leitung: false },
+      { personId: 2, name: 'Bea Team', leitung: true },
+    ]);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    const bea = await screen.findByRole('button', { name: 'Bea Team' });
+    expect(bea.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Alwin Friesen' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
+  it('Freigeben: lässt sich die Leitung nicht laden, sagt es das Fenster', async () => {
+    stelle(true);
+    m.leitungsKandidaten.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    expect((await within(fenster()).findByRole('alert')).textContent).toMatch(
+      /antwortet gerade nicht/,
+    );
+  });
+
+  it('Termin: lassen sich die Kalender nicht laden, sagt es das Fenster', async () => {
+    stelle(true);
+    m.kalenderListe.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    await terminFenster();
+    expect(await within(fenster()).findByText(/antwortet gerade nicht/)).toBeTruthy();
+  });
+
+  it('Termin: lassen sich die Termine nicht laden, sagt es das Fenster', async () => {
+    stelle(true);
+    m.termineIn.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    await terminFenster();
+    expect(await within(fenster()).findByText(/antwortet gerade nicht/)).toBeTruthy();
+  });
+
+  it('Termin: die Termine stehen nach Beginn sortiert, egal wie ChurchTools sie liefert', async () => {
+    stelle(true);
+    m.kalenderListe.mockResolvedValue([{ id: 1, name: 'Sonstige Veranstaltung', schreiben: true }]);
+    const termin = (id: number, title: string, startDate: string) => ({
+      id,
+      title,
+      startDate,
+      endDate: startDate,
+      address: null,
+    });
+    m.termineIn.mockResolvedValue([
+      termin(2, 'Adventsfeier', '2026-12-05T14:00:00Z'),
+      termin(1, 'Herbstfest', '2026-11-28T14:00:00Z'),
+    ]);
+    zeigen();
+    await terminFenster();
+    await within(fenster()).findByRole('button', { name: /Herbstfest/ });
+    const namen = within(fenster())
+      .getAllByRole('button', { name: /Herbstfest|Adventsfeier/ })
+      .map((b) => b.textContent?.replace(/Sa,.*$/, ''));
+    expect(namen).toEqual(['Herbstfest', 'Adventsfeier']);
+  });
+
+  it('QR-Code: lässt sich das Bild nicht bauen, sagt es das Fenster', async () => {
+    stelle(true, 1);
+    vi.mocked(QR).qrPng.mockRejectedValueOnce(new Error('Leinwand'));
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    fireEvent.click(await within(karte).findByRole('button', { name: 'QR-Code' }));
+    expect((await within(fenster()).findByRole('alert')).textContent).toMatch(
+      /antwortet gerade nicht/,
+    );
   });
 });
 

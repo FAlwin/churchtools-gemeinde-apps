@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useLinkKopieren } from './useLinkKopieren';
@@ -24,7 +25,6 @@ import {
   terminAusCt,
   terminWann,
   utcAus,
-  type CtTermin,
 } from '@shared/anmeldung/termin';
 import {
   aendereEinstellungen,
@@ -34,13 +34,11 @@ import {
   speichereBezahlung,
   termineIn,
   type AnmeldeEinstellungen,
-  type Kalender,
 } from './einrichten';
 import { WER_TEXT, datumText, geburtsdatumNoetigText, schlussVorLoeschenText } from './anzeige';
 import { ablaeufeEinrichten, type AblaufStand } from './ablaeufe';
 import { anmeldeschlussAm, letzterAnmeldetag } from '@shared/anmeldung/ablaeufe';
 import { loeschDatum } from '@shared/anmeldung/termin';
-import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
 import s from './Startseite.module.scss';
@@ -122,10 +120,8 @@ export function TerminFenster({
 }) {
   const heute = heuteImKalender();
   const [art, setArt] = useState<'vorhanden' | 'neu'>('vorhanden');
-  const [kalender, setKalender] = useState<Kalender[] | null>(null);
   // Beim Kalender des gewählten Termins beginnen (A3-Abnahme: es begann beim ersten, z. B. „Bandproben“).
   const [kalenderId, setKalenderId] = useState<number | null>(termin?.kalenderId ?? null);
-  const [termine, setTermine] = useState<CtTermin[] | null>(null);
   const [suche, setSuche] = useState('');
   const [neu, setNeu] = useState({
     titel: name,
@@ -138,12 +134,10 @@ export function TerminFenster({
         : '',
     ort: termin?.ort ?? '',
   });
-  const [ladeFehler, setLadeFehler] = useState<string | null>(null);
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
 
-  useEffect(() => {
-    kalenderListe().then(setKalender, (e: unknown) => setLadeFehler(fehlerMeldung(e).text));
-  }, []);
+  const kalenderStand = useLaden(() => kalenderListe(), []).stand;
+  const kalender = kalenderStand.art === 'fertig' ? kalenderStand.daten : null;
 
   const auswahl = useMemo(
     () => (kalender ?? []).filter((k) => art === 'vorhanden' || k.schreiben),
@@ -154,18 +148,22 @@ export function TerminFenster({
     if (auswahl.length && !auswahl.some((k) => k.id === kalenderId)) setKalenderId(auswahl[0].id);
   }, [auswahl, kalenderId]);
 
-  useEffect(() => {
-    if (art !== 'vorhanden' || kalenderId === null) return;
-    let aktuell = true;
-    setTermine(null);
-    termineIn(kalenderId, heute, plusTage(heute, 400)).then(
-      (t) => aktuell && setTermine(t.sort((a, b) => a.startDate.localeCompare(b.startDate))),
-      (e: unknown) => aktuell && setLadeFehler(fehlerMeldung(e).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [art, kalenderId, heute]);
+  const termineStand = useLaden(
+    () =>
+      art !== 'vorhanden' || kalenderId === null
+        ? null
+        : termineIn(kalenderId, heute, plusTage(heute, 400)).then((t) =>
+            t.sort((a, b) => a.startDate.localeCompare(b.startDate)),
+          ),
+    [art, kalenderId, heute],
+  ).stand;
+  const termine = termineStand.art === 'fertig' ? termineStand.daten : null;
+  const ladeFehler =
+    kalenderStand.art === 'fehler'
+      ? kalenderStand.fehler.text
+      : termineStand.art === 'fehler'
+        ? termineStand.fehler.text
+        : null;
 
   const gefiltert = (termine ?? []).filter((t) =>
     (t.title ?? '').toLowerCase().includes(suche.trim().toLowerCase()),

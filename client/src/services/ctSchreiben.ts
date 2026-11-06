@@ -20,20 +20,14 @@ import {
   vorBeginnSetzen,
   weglassenSetzen,
   ablaufAbschliessen,
-  type CtSchreiber,
   type GeloeschterPunkt,
   type NeuerPunkt,
   type PunktAenderung,
-  type SchreibAuftrag,
 } from '@shared/ct/schreibKern';
 import type {
   ArrangementAnsicht,
   ArrangementAuftrag,
   ArrangementFileEntry,
-  LiedAngelegt,
-  LiedAnlegenAuftrag,
-  LiedStammdaten,
-  LiedStammdatenAnsicht,
   SongVersion,
 } from '@shared/types/index';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -41,41 +35,11 @@ import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufNeuAufsetzen as neuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import type { AblaufQuelle } from '@shared/types/index';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
-import type { CtVerwalter } from '@shared/ct/liedVerwaltung';
 import * as noten from '@shared/ct/notenblaetter';
-import type { CtNotenSchreiber } from '@shared/ct/notenblaetter';
-import { notenblattAusSongSelect } from '@shared/ct/songselect';
-import { songSelect } from './ctSongSelect';
 import { ApiError } from './api';
-import { browserSchreiber, schreibFehler } from '@ui/ct/schreiber';
-import { ctAnfrage } from './ctRuntime';
-import { bearbeitbareKategorien, leser, quellen } from './ctLesen';
-
-/** Der `CtSchreiber` des Browsers (`@ui/ct/schreiber`) samt Liedverwaltung und Notenblättern. */
-const schreiber: CtSchreiber & CtVerwalter & CtNotenSchreiber = {
-  ...browserSchreiber,
-  // ── Liedverwaltung und Notenblätter (3b-2) ──
-  alleLieder: () => leser.alleLieder(),
-  bearbeitbareKategorien,
-  quellen,
-  dateiText: (fileUrl) => leser.dateiText(fileUrl),
-  /** Wie `uploadFile` im Server: EIN Feld `files[]`, Name und Art mit der Datei. */
-  async hochladen(arrangementId, datei, meldungen) {
-    const form = new FormData();
-    const inhalt = typeof datei.inhalt === 'string' ? datei.inhalt : new Uint8Array(datei.inhalt);
-    form.append('files[]', new Blob([inhalt], { type: datei.mime }), datei.filename);
-    const auftrag: SchreibAuftrag = { method: 'POST', ...meldungen };
-    try {
-      await ctAnfrage(`/files/song_arrangement/${arrangementId}`, {
-        method: 'POST',
-        body: form,
-        verweigert: meldungen.verweigert,
-      });
-    } catch (e) {
-      throw schreibFehler(e, auftrag);
-    }
-  },
-};
+// Der Schreiber samt Liedverwaltung und die Lied-Wege liegen seit LW2a (06.11.2026) in `@ui/ct/lieder`.
+import { liedSchreiber as schreiber } from '@ui/ct/lieder';
+export { arrangement, liedAendern, liedNeu, notenblatt, notenblattAusCcli } from '@ui/ct/lieder';
 
 const OK = { ok: true } as const;
 
@@ -180,19 +144,6 @@ export async function tempo(
 
 // ── Liedverwaltung (3b-2) – dieselben Antworten wie die Endpunkte des Servers ──
 
-/** `POST /api/songs` */
-export function liedNeu(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
-  return lieder.liedAnlegen(schreiber, auftrag);
-}
-
-/** `PUT /api/songs/:id` – zurück kommt das Lied, wie ChurchTools es DANACH liest. */
-export async function liedAendern(
-  songId: number,
-  aenderung: Partial<LiedStammdaten>,
-): Promise<LiedStammdatenAnsicht> {
-  return lieder.stammdatenAnsicht(await lieder.liedAendern(schreiber, songId, aenderung));
-}
-
 /** `DELETE /api/songs/:id` */
 export function liedWeg(songId: number): Promise<{ name: string }> {
   return lieder.liedLoeschen(schreiber, songId);
@@ -204,15 +155,6 @@ export function arrangementNeu(
   auftrag: ArrangementAuftrag & { name: string },
 ): Promise<ArrangementAnsicht> {
   return lieder.arrangementAnlegen(schreiber, songId, auftrag);
-}
-
-/** `PUT /api/songs/:id/arrangements/:arrId` */
-export function arrangement(
-  songId: number,
-  arrangementId: number,
-  auftrag: ArrangementAuftrag,
-): Promise<ArrangementAnsicht> {
-  return lieder.arrangementBearbeiten(schreiber, songId, arrangementId, auftrag);
 }
 
 /** `PATCH /api/songs/:id/arrangements/:arrId/default` */
@@ -262,27 +204,6 @@ export function dateiName(
   name: string,
 ): Promise<ArrangementFileEntry[]> {
   return noten.dateiUmbenennen(schreiber, songId, arrangementId, fileId, name);
-}
-
-/** `PUT /api/songs/:id/arrangements/:arrId/chordpro` – das Original-Notenblatt. */
-export function notenblatt(
-  songId: number,
-  arrangementId: number,
-  text: string,
-): Promise<ArrangementFileEntry[]> {
-  return noten.notenblattSchreiben(schreiber, songId, arrangementId, text);
-}
-
-/**
- * `POST /api/songs/:id/arrangements/:arr/songselect/chordpro` (3b-5) – das Original-Notenblatt aus
- * CCLI SongSelect holen und ersetzen; erst holen, dann das alte löschen (`notenblattAusSongSelect`).
- */
-export function notenblattAusCcli(
-  songId: number,
-  arrangementId: number,
-  songNumber: number,
-): Promise<ArrangementFileEntry[]> {
-  return notenblattAusSongSelect(schreiber, songSelect, songId, arrangementId, songNumber);
 }
 
 /** `POST /api/songs/:id/versions` */

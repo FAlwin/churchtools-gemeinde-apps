@@ -7,6 +7,1260 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.39.0] – 2026-11-06
+
+**Überblick.** Musik-App: **Filter in der Terminliste** (Kalender ausblenden, „auch ohne Ablauf“ je Person statt
+„Termine ohne Ablauf“ unter Mehr); **Termin-Blatt teilen**; Ablauf mit **Info-Spalten als Tabelle**, antippbaren Kreisen
+und **Einfügen an einer bestimmten Stelle**; **Dateien und Versionen umbenennen**, „Lieder öffnen mit: Nur Text“;
+Abwesenheiten auch in der Erweiterung in ChurchTools; Uhr der Gemeinde überall. Sicherheit und Betrieb: kleineres
+Docker-Image, Schalter `TRUST_PROXY` (Vorgabe „an“ – bestehende Installationen ändern nichts), Schutz vor großen
+Anfragen ohne Anmeldung, Warteschlange der Anmerkungen übersteht Abmelden und Neustart, geteiltes Gerät räumt erst
+auf. Alle Apps: Fenster erscheinen zuverlässig, Umschalter deutlicher, kein Zoom beim Antippen am iPhone. Aus dem
+anderen Teil des Repos (eigene Erweiterungen): Dienstplaner E6b–E9 und T1–T2, Anmeldungen A9 und K1, Protokolle K3 und
+S5-3, Gebetsabend G1–G4.
+
+### Intern
+
+- **Ein Laden für die Erweiterungen: `useLaden`** (#845, Scheibe 3). Statt je Stelle eines eigenen `useEffect` mit
+  `let aktuell = true` gilt EINE Regel: späte Antworten zählen nicht, Fehler laufen über `fehlerMeldung`, `neu()` ist
+  „Erneut versuchen“. Umgestellt sind zuerst `ui/teilen` (PDF-Vorschau, PDF-Bau der Blätter) und das Organigramm (Logo,
+  PDF, Gruppenrechte); die übrigen Erweiterungen folgen je in einer eigenen Scheibe. Ein Wächter hält umgestellte
+  Ordner frei von neuen Ladeblöcken von Hand, die Prüfregel `exhaustive-deps` prüft die `deps` von `useLaden`.
+- Neue Tests für die PDF-Vorschau und den PDF-Bau der Teilen-Fenster – beides war bisher ungeprüft.
+
+### Neu (Gebetsabend)
+
+- **„Wer hört zu?“ (G4).** In einer eigenen Karte neben dem Sender sieht die Technik, wer gerade zuhört – Vor- und Nachname aus ChurchTools
+  und seit wann. Wer sich still neu verbindet oder mit zwei Geräten zuhört, steht einmal da („2 Geräte“). „Ohne
+  Namen“ heißt meist: Jemand hört mit einem weitergegebenen Link zu. Nach „Sender neu starten“ beginnt die Liste leer
+  und füllt sich von selbst wieder. Gespeichert wird nichts.
+
+### Geändert (Gebetsabend)
+
+- **Aussehen wie die anderen Erweiterungen** (Entwurf v4). Die Technik sieht am Computer zwei Spalten wie im
+  Dienstplaner: links „Übertragung“ mit dem Kamerabild, rechts „Wer hört zu?“ und den Gebetsabend. Termin und
+  „Gebetsabend zuhören“ stehen in einer Karte wie „Als Nächstes“. „Einstellungen“ ist ein Knopf neben „Hallo …“ statt
+  eines kleinen Zahnrads in der Karte. Alle Knöpfe sind normale ChurchTools-Knöpfe.
+
+### Geändert (alle Erweiterungen)
+
+- **Das Zahnrad bei „Einstellungen“ sieht aus wie „System-Einstellungen“ in ChurchTools** – die Form aus Font Awesome 7
+  statt 6, mit breiteren Zähnen. Gilt auch für Anmeldungen und Organigramm.
+
+### Intern (Gebetsabend)
+
+- Regeln in `shared/gebetsabend/werHoert.ts`: Verbindungen je UUID aus `push-connection` / `push-connection-info`
+  (auch das ältere `new-push-connection`), angezeigt je Person (Messung G0-3). Meldungen zählen nur aus dem eigenen
+  Sender-iframe und von `https://vdo.ninja`; `meldungAus` reicht dafür die UUID mit durch, und `VDO_HERKUNFT` steht
+  jetzt an EINER Stelle in `links.ts` (vorher in `Zuhoeren.tsx` berechnet). Gegenprobe je Teil (9 Teile).
+- Seit Entwurf v4 meldet `Sender.tsx` nur noch weiter (`onMeldung`); die Verbindungen hält die Technik-Karte je Sender
+  (neuer Schlüssel bei neuen Daten oder „neu starten“ = leere Liste), angezeigt in `WerHoertZu.tsx`. Der Termin kommt
+  über `useNaechsterTermin` in die Zuhören-Karte; Knöpfe sind `FensterKnopf`.
+
+### Neu (Gebetsabend)
+
+- **Übertragen aus der Seite (G3).** Wer zur Technik gehört, sieht über allem die Karte „Übertragung“: „Bild + Ton“
+  oder „Nur Ton“ wählen, **„Übertragung starten“** – das setzt neue Zugangsdaten, startet den Sender direkt in der
+  Seite (Kamerabild in der Karte) und meldet allen „läuft“. Nach dem Neuladen oder auf einem anderen Gerät startet der
+  Sender nie von selbst; **„Sender hier starten“** macht mit denselben Daten weiter, die Zuhörer bleiben verbunden.
+  Dazu **„Sender neu starten“** und **„Übertragung beenden“** (mit Rückfrage). Auf dem Gerät, das sendet, gibt es kein
+  Zuhören – der Ton liefe sonst wieder ins Mikrofon. Unter dem **Zahnrad** stellt die Technik ein, aus welchem
+  Kalender der nächste Termin kommt und an welchem Wort im Titel er erkannt wird.
+- **Die Seite steht in der Mitte.** Am Computer hingen die Karten links mit leerer Fläche rechts; jetzt stehen Kopf,
+  Karten und Version schmal und mittig untereinander.
+
+### Intern (Gebetsabend)
+
+- Zugang und Einstellungen liegen jetzt als **Dokument mit Versionsnummer** in ihrer Kategorie – über den gemeinsamen
+  Baustein `@shared/ct/versionierterWert` (wie Plan und Sichtbarkeit im Organigramm), nicht nachgebaut
+  (`shared/gebetsabend/ablage.ts`). Starten zwei Technik-Geräte zugleich, wird nichts still überschrieben; gestartet
+  ist erst, was nachgelesen dasteht. Ein Eintrag aus G2 ohne Version (nur Test-Instanz) zählt als „nichts
+  gespeichert“.
+- Regeln der Technik ohne Oberfläche in `shared/gebetsabend/technik.ts` (Stand „aus / hier / woanders“, wann der
+  Sender aufhört, Texte). Die Zustandszeile mit Punkt ist ein Baustein für Zuhören und Technik (`ZustandZeile`).
+  Gegenprobe je Teil (12 Teile), Komponenten-Tests mit Fake-Timern.
+- `ErweiterungsSeite` kann `schmal` (eine Spalte in der Mitte, 640 px Inhalt) – nur der Gebetsabend schaltet es ein,
+  die anderen Erweiterungen bleiben bei 1120 px. Die Breite 640 px stand vorher an drei Stellen im Gebetsabend und
+  steht jetzt nur noch dort.
+
+### Intern
+
+- **E2E-Rauchtest für jede Erweiterung** (#845): Anmeldungen, Dienstplaner, Organigramm, Protokolle und Gebetsabend starten im
+  E2E-Lauf je mit eigenem Dev-Server im Demo-Modus; je App werden Startseite, ein Hauptweg und „keine Seiten- oder
+  Konsolenfehler“ geprüft (`e2e/erweiterungen-rauch.spec.ts`). Bisher gab es E2E nur für die Musik-App.
+
+### Neu (Dienstplaner)
+
+- **Monat direkt anklicken:** Im Zeitraum-Menü stehen zwölf Monatsfelder mit Jahr ‹ › – ein Klick zeigt den Monat,
+  auch vergangene. Statt „Dieser Monat“ und „Nächster Monat“.
+- **＋ auch im gewählten Zeitraum:** Neben dem Zeitraum-Knopf nimmt ＋ einzelne Termine davor oder danach dazu („Dezember
+  2026 + 1 Termin“) – wie bei „Ab heute“, keine ganzen Monate.
+- **„Wer wie oft?“ mit eigenem Zeitraum:** getrennt von der Matrix gemerkt, ohne Wahl die letzten 3 Monate; im Menü
+  „Letzte 3/6/12 Monate“.
+
+### Geändert (Dienstplaner)
+
+- **Scroll-Leiste der Matrix immer sichtbar:** Am Mac blieb sie unsichtbar, bis man scrollte – ohne seitliches Mausrad
+  sah man nicht, dass rechts weitere Termine kommen.
+
+### Geändert (Musik-App)
+
+- **Abwesenheiten:** Im Zeitraum-Menü dieselben Monatsfelder; Monate vor dem laufenden sind gesperrt.
+
+### Neu (Musik-App)
+
+- **Filter in der Terminliste.** Neben „Kommende | Vergangene“ steht der Knopf „Filter“ (wie bei den Abwesenheiten):
+  je Kalender ein Häkchen – ohne Häkchen verschwinden alle Termine dieses Kalenders, auch die mit Ablauf. Wo man Abläufe
+  anlegen darf, holt das eingerückte Häkchen „auch ohne Ablauf“ zusätzlich die Termine ohne Ablauf in die Liste – mit
+  „Anlegen“. So lässt sich z. B. spontan ein Ablauf für den Frauentreff anlegen, ohne die Liste der anderen zu ändern.
+  Die Auswahl merkt sich das Gerät. Die Einführung der Termine zeigt den Knopf (einmal neu für alle).
+
+### Geändert (Musik-App)
+
+- **„Termine ohne Ablauf“ unter Mehr → Verwaltung ist weg** – das wählt jetzt jede Person selbst im Filter. Wer noch
+  nichts gewählt hat, startet mit den Kalendern, die die Verwaltung bisher für alle eingestellt hatte. Das Suchwort
+  (z. B. „Gottesdienst“) gibt es nicht mehr: „auch ohne Ablauf“ zeigt alle Termine des Kalenders ohne Ablauf, also auch
+  einen Gebetsabend im selben Kalender. Termine ohne Ablauf sieht man nur noch aus Kalendern, in denen man Abläufe
+  anlegen darf.
+
+### Intern (Musik-App)
+
+- `GET /api/services/ohne-ablauf?kalender=2,5` nimmt die Kalender aus der Anfrage (höchstens 50, gelesen über
+  `songIdsFromQuery`) statt aus `SiteConfig.ablaufAnlegen`; das Feld bleibt nur als Startwert im Schema.
+  `GET /api/kalender` braucht kein Admin-Recht mehr. Regeln in `client/src/utils/kalenderFilter.ts`, Recht je Kalender
+  in `darfAblaufImKalender` (`shared/ct/ablaufRecht.ts`, auch von `darfAblaufBearbeiten` genutzt). `FilterKnopf` kann
+  ein eingerücktes Zusatz-Häkchen und einen Hinweis. `brauchtAblauf`/`termineOhneAblauf` nehmen eine Kalenderliste.
+
+### Intern
+
+- **Der Gebetsabend startet über den gemeinsamen Start** (`erweiterungStarten`, #845). #872 kam nach #877 und schrieb
+  seinen Start noch selbst – der Wächter `ui/design/tippZoomAufruf.test.ts` schlug an, `main` war rot. Rechte-Meldung
+  und `?demo` (nur beim Entwickeln) bleiben, wie sie waren.
+
+### Neu (Gebetsabend)
+
+- **Neue Erweiterung „Gebetsabend“ (G1 + G2).** Sie überträgt den Gebetsabend mit Bild und Ton an Gemeindeglieder,
+  die nicht kommen können – nur mit ChurchTools-Zugang und Recht, ohne Link zum Weitergeben. Sie lässt sich
+  installieren und mit einem Knopf **einrichten** (legt die Kategorien „Zugang“ und „Einstellungen“ an). Danach zeigt
+  die Seite den nächsten Termin aus dem Kalender und einen großen Knopf **„Gebetsabend zuhören“**. Ohne Übertragung
+  steht „Noch keine Übertragung“ da; die Seite merkt von selbst, wenn die Technik startet. Ein Tippen öffnet Bild und
+  Ton ohne Bedienelemente von VDO.Ninja (bis auf den Wiedergabe-Knopf, wenn das iPhone das Abspielen sperrt – „Einmal
+  ins Bild tippen“), darunter steht, was gerade passiert. Startet die Technik neu, verbindet sich der Player selbst neu;
+  beendet sie, schließt er sich. Antwortet ChurchTools kurz nicht, läuft alles weiter. Im Bild liegt die
+  Steuerleiste des Geräts – am iPhone Apples eigener Player mit echtem **Vollbild**, auch in der ChurchTools-App vom
+  Home-Bildschirm; **Bild-in-Bild** bietet Apple nur in Safari an. Gesendet wird in Full HD, je Zuhörer mit höchstens
+  2 Mbit/s. Übertragen starten und „Wer hört zu?“ folgen. Anleitung mit Rechte-Tabelle: `docs/betrieb/GEBETSABEND.md`.
+
+### Intern (Gebetsabend)
+
+- Regeln in `shared/gebetsabend/`: Zugangsdaten (nur Buchstaben und Ziffern, ohne Schieflage erzeugt), die
+  VDO.Ninja-Adressen an einer Stelle, der Player-Zustand aus den VDO.Ninja-Meldungen, der Stand der Einrichtung,
+  Einstellungen, nächster Termin und die Zuhör-Regeln (`nachNachfrage`: weiter / neu / beendet) – alles nach den
+  Messungen S0/S0b/G0 vom 05.11.2026 (`gebetsabend-planung/s0-messung.md`). Meldungen von VDO.Ninja nur aus dem
+  eigenen iframe **und** von `https://vdo.ninja` (`istVdoMeldung`). Gegenprobe je Teil, Komponenten-Test mit
+  Fake-Timern.
+- Vollbild und Bild-in-Bild kommen aus der Steuerleiste des Geräts (`&videocontrols`, iframe-Erlaubnis
+  `fullscreen; picture-in-picture`), kein eigener Knopf. Gemessen am iPhone (05.11.2026): Vollbild geht auch in der
+  PWA, Bild-in-Bild sperrt Apple in der PWA unabhängig vom Player (gegengeprüft mit eigenem `<video>` über das
+  VDO.Ninja-SDK).
+- Eingetragen in Workspaces, Build, Lint, Testlauf, CI-Paket, Release-Weg `gebetsabend-v*`, Release-Notizen. Die
+  CSS-Klassen-Prüfung (`client/src/cssKlassen.test.ts`) prüft jetzt auch das Organigramm, das dort fehlte.
+
+### Intern
+
+- **Ein gemeinsamer Start für alle Erweiterungen** (#845): `erweiterungStarten()` in `ui/erweiterung/starten.tsx`
+  ersetzt vier fast gleiche `main.tsx` (je 43 → 11–12 Zeilen). Klasse `ct-extension`, Home-Strich, Hell/Dunkel,
+  Zoom beim Antippen und die Rechte-Meldung stehen damit an einer Stelle; `?demo` bleibt nur beim Entwickeln
+  (gemessen: kein Demo-Code in den gebauten Erweiterungen). Ein Wächtertest hält fest, dass jede neue Erweiterung
+  diesen Start nimmt.
+
+### Behoben (Musik-App)
+
+- **Keine Schrift-Fehler mehr in der Konsole** (#849). Vite bettete zwei kleine Lato-Dateien (Namen mit ł, č …) als
+  `data:` ins CSS ein, die Sicherheitsregel der App blockierte sie bei jedem Start. Sichtbar war nichts, weil der
+  Browser die woff2-Fassung nimmt – die Schriften liegen jetzt immer als eigene Dateien vor.
+
+### Geändert (Anmeldungen)
+
+- **Das öffentliche Formular erlaubt keine eingebetteten Schriften mehr** (`font-src 'self'` in der `.htaccess`).
+  Es lädt Lato wie die Musik-App als eigene Dateien; die Regel braucht `data:` nicht mehr.
+
+### Geändert (Musik-App)
+
+- **Das Docker-Image enthält nur noch, was zur Laufzeit gebraucht wird** (#849). Es wird in zwei Stufen gebaut;
+  Vite, Vitest, ESLint & Co. stecken nicht mehr im ausgelieferten Image. Die CI baut und startet es bei jedem PR
+  (Job „docker-start“: Gesundheit, Web-App, läuft als `node`, keine Entwickler-Pakete).
+- **Neuer Schalter `TRUST_PROXY`** (#849): `an` (Standard, wie bisher) hinter einem Reverse-Proxy, `aus` ohne. Die
+  einfache Vorlage `deploy/docker-compose.yml` (Port im LAN, kein Proxy) setzt `aus` – sonst konnte jedes Gerät im
+  WLAN eine erfundene Absender-Adresse mitschicken und das Login-Limit umgehen. Bestehende Installationen ändern sich
+  nicht; wer die einfache Vorlage neu nimmt und später einen Proxy davorsetzt, stellt `TRUST_PROXY=an`.
+
+### Behoben (Anmeldungen)
+
+- **Das öffentliche Formular schickt Sicherheits-Header mit** (#849): Es darf nur die eigenen ChurchTools-Instanzen
+  ansprechen, keine fremden Skripte laden und nur auf der eigenen Website eingebettet werden. Das Upload-Skript schreibt
+  die `.htaccess` aus derselben Liste wie `instanzen.json`, prüft am Antwort-Kopf, dass der Webspace sie anwendet, und
+  überschreibt nie eine fremde `.htaccess`. Für andere Gemeinden liegt `htaccess.beispiel` im Paket.
+
+### Intern (alle Apps)
+
+- GitHub-Actions mit Schreibrechten (Docker, Releases) stehen auf Commit-SHAs statt Tags; ein Test hält das fest. Die
+  CI führt `npm audit --omit=dev --audit-level=high` aus.
+
+### Intern
+
+- **Erstes Release einer App ohne Liste** (Bauplan E9-1): Die Release-Seite zeigt beim ersten Release einer
+  Erweiterung (kein voriger Tag) „Erste Version“ statt aller Einträge, die je für sie entstanden sind – beim
+  Dienstplaner wären es 164 gewesen. `beschreibung()` in `scripts/release-notizen.mjs`.
+- Betriebs-Anleitung des Dienstplaners (`docs/betrieb/DIENSTPLANER.md`) auf den Stand der ersten Version gebracht.
+
+### Neu (Dienstplaner)
+
+- **Meine Dienste teilen** (Bauplan E8-3, Entwurf `e8-teilen.html`): Unter Dienste → Meine steht neben „Meine | Alle“
+  „Teilen“. Das Blatt nennt alle kommenden eigenen Dienste – Datum mit Uhrzeit, Termin, Dienst, zugesagt oder angefragt –,
+  z. B. für den Familienkalender; im Kopf der eigene Name. Gelesen wird frisch beim Öffnen, nicht nur die geladenen
+  Wochen der Liste. Vorschau, „Herunterladen“, „Teilen“.
+
+### Geändert (Dienstplaner + Musik-App + Protokolle)
+
+- **„Filter“ am Handy nur als Symbol** – wie die anderen Kopfknöpfe; die Zahl der ausgeblendeten bleibt sichtbar. Sonst
+  rutschte „Teilen“ unter Dienste → Meine in eine eigene Zeile. Gilt überall, wo es den Filter gibt: Dienste und Planen
+  im Dienstplaner, Abwesenheiten der Musik-App, To-dos der Protokolle.
+
+### Intern
+
+- Kern `shared/dienstplan/meineBlatt.ts` aus den Einteilungen von `einteilungenAus` (derselbe Erzeuger wie beim
+  Tauschen), gezeichnet mit dem Plan-Blatt (`planBlattPdf`). `ladeIch` liest jetzt auch den Nachnamen (`nachname`).
+
+### Intern (alle Apps)
+
+- **zod 4.6.7 statt 3.25** (#849, GHSA-mrhx-c7xc-m3w5: Speicher bei übergroßen Sammlungen; nur angemeldet erreichbar).
+  `npm audit --omit=dev` meldet jetzt 0 Schwachstellen. Alle Schemas laufen unverändert; ein Vergleich zod 3 ↔ 4 an den
+  genutzten Mustern fand nur zwei Unterschiede: `datetime({ offset: true })` lehnt Zeiten ohne Sekunden und Abstände
+  ohne Doppelpunkt ab (ChurchTools liefert beides nicht, gemessen), und die englischen Standard-Fehlertexte lauten
+  anders. Der Fehler-Handler nutzt `z.flattenError` statt des veralteten `err.flatten()`.
+
+### Behoben (Musik-App)
+
+- **Andere Seiten unter derselben Domain können nichts mehr in der Musik-App ändern** (#849). Das Sitzungs-Cookie
+  (`SameSite=Lax`) schützt nur vor fremden Domains; eine Seite wie die Gemeinde-Website oder das Anmeldeformular hätte
+  im Namen einer angemeldeten Person schreiben können. Jetzt lehnt der Server schreibende Anfragen ab, die laut Browser
+  nicht aus der App selbst kommen.
+
+### Behoben (Dienstplaner)
+
+- **Dateien in der Lied-Ansicht öffnen nur noch sichere Adressen** (#849). Eine `javascript:`-Adresse aus ChurchTools
+  wurde vorher als Link gezeigt; ChurchTools lehnt sie beim Anlegen zwar ab, über die API oder aus älteren Einträgen
+  kann sie trotzdem dastehen.
+
+### Behoben (Anmeldungen)
+
+- **Das Logo im Formular kommt nur noch aus der eigenen ChurchTools-Instanz** (#849). Die Adresse steht in der Gruppe;
+  eine fremde Adresse hätte einem fremden Server verraten, wer das Formular öffnet.
+
+### Intern (alle Apps)
+
+- Eine Prüfung für Adressen aus Daten: `sichererLink`/`adresseInInstanz` in `shared/ct/sichereAdresse.ts` statt drei
+  eigener (Protokolle, Termin-Dateien, Links der Musik-App). ESLint sperrt geschriebene `javascript:`-Adressen in
+  `href`/`src`. Der frühere Platzhalter `hier-langen-zufallsstring-eintragen` gilt nicht mehr als Sitzungs-Geheimnis.
+  `.gitignore` fängt `*.local.js`, `fotos.local/`, `rohdaten.local/` ab.
+
+### Neu (Anmeldungen)
+
+- **Termin im Kalender verschoben? Die Anmeldung zieht nach (K1).** Wird der Termin nur im ChurchTools-Kalender
+  verschoben (Tag, Uhrzeit, Ort oder Kalender), übernimmt die Erweiterung das beim nächsten Öffnen – Formular,
+  Löschdatum und Erinnerungen stimmen wieder. Oben steht, was vorher galt und was jetzt gilt, dass die Angemeldeten es
+  noch nicht wissen, und „Rundmail schreiben“. Jede Person sieht den Hinweis einmal.
+- **Termin im Kalender gelöscht** (oder bei einer Serie diese Wiederholung verschoben/abgesagt): Das Datum bleibt, die
+  Karte „Termin“ bittet, ihn neu zu wählen.
+
+### Intern (Anmeldungen + Organigramm)
+
+- **Mitgliedschaften nur noch über einen Baustein** (`ui/ct/mitglieder.ts`, #848): anlegen per `PUT` mit `only_add`,
+  ändern per `PATCH`, 404 heißt „nicht in der Gruppe“. Die Regel (#759) stand an sechs Schreibstellen in Anmeldungen
+  (Nachrücken, Absagen zurückholen, von Hand eintragen, Zahlung, Leitung einrichten) und Organigramm, dazu viermal das
+  Lesen und zweimal „404 = nicht dabei“. Richtig waren alle; der Wächter `ui/design/eineMitgliedschaft.test.ts` hält
+  jetzt fest, dass niemand die Adresse einer Mitgliedschaft selbst baut. Am Verhalten ändert sich nichts.
+
+### Behoben (Anmeldungen)
+
+- **Erneut freigeben schickt keine zweite Bestätigung mehr.** Wurde eine Veranstaltung mit Anmeldungen wieder zum
+  Entwurf und dann neu freigegeben, holte die Erweiterung die Angemeldeten noch im Entwurf in die Abläufe – dort laufen
+  sie nicht, und beim Freigeben liefen sie dann über die Bestätigungsmail. Jetzt wird erst nach dem Freigeben
+  nachgeholt, ohne Mail (gefunden bei der echten Prüfung am 05.11.2026, Mails nur an eine Testadresse).
+
+### Neu (Dienstplaner)
+
+- **Plan teilen** (Bauplan E8-2, Entwurf `e8-teilen.html`): In „Planen“ steht in der Werkzeugleiste „Teilen“. Das
+  Fenster „Plan teilen“ bietet den **ganzen Plan** (je Gruppe eine Tabelle), **nur eine Gruppe** (z. B. für den
+  Gruppenchat) oder **„Wir suchen noch …“** – nur die offenen Dienste je Termin, ohne Namen, zum Rumschicken. Geteilt
+  werden die Termine und Gruppen, die „Planen“ gerade zeigt; nur Gesendetes, keine Entwürfe. Dazu die Seiten als
+  Vorschau, „Herunterladen“ und „Teilen“; das Gerät merkt sich die Wahl.
+- Das Blatt im selben Look wie das Termin-Blatt: Kopf mit Zeitraum, Gemeinde und Stand, Namen, „(angefragt)“, freie
+  Plätze rot, keine leeren Spalten, ab sechs Spalten quer.
+
+### Intern
+
+- Der Satz der Blätter (`ui/teilen/pdfSatz.ts`: Schrift, Zellen, Spaltenbreiten, Tabellenkopf, Kopf und Fuß) und das
+  Gemeinsame der Teilen-Fenster (`pdfFenster.tsx`, `pdfFensterZustand.ts`: PDF bauen, Status, Vorschau, Knöpfe) aus dem
+  Termin-Blatt herausgelöst – Termin- und Plan-Blatt nutzen sie beide. Das Plan-Fenster lädt erst beim Antippen.
+
+### Geändert (Musik-App)
+
+- **Auch die Musik-App rechnet mit der Uhr der Gemeinde** (#847, Schritt Z3). Die Zeitzone kommt in der
+  Server-Variante aus `ZEITZONE` (über `/api/site-config`), in der Erweiterung aus ChurchTools. Bisher nahmen „heute“,
+  der Offline-Stand und die Abwesenheiten die Uhr des Geräts, und Tag, Monat, Wochentag und Uhrzeit der Terminkarten
+  standen fest auf Berlin, auch wenn `ZEITZONE` etwas anderes sagte. In Deutschland ändert sich nichts Sichtbares.
+
+### Intern (alle Apps)
+
+- `client/src/utils/heute.ts` ist weg (`heuteImKalender`). `wochentagName` in `shared/ct/datum.ts`. Die drei
+  `plusTage`-Nachbauten (Anmeldungen, Abwesenheiten, Dienstplaner) nutzen `plusTage`. Der Zeitzonen-Wächter kennt jetzt
+  auch nachgerechnete Tage und hat nur noch zwei feste Ausnahmen.
+- Zwei Client-Tests fordern die Node-Typen jetzt selbst an; sie kamen bisher still über `heute.test.ts`.
+
+### Geändert (Anmeldungen + Dienstplaner + Protokolle + Organigramm)
+
+- **Alle Erweiterungen rechnen mit der Uhr der Gemeinde** (#847, Schritt Z2). Bisher bestimmte gut ein Dutzend
+  Stellen die Zeitzone selbst – meist die des Geräts, im Dienstplaner teils fest Berlin. Jetzt gilt überall die aus
+  ChurchTools: für „heute“, Sitzungen, Termine, Abwesenheits-Uhrzeiten, „Angehängt am“ bei Termin-Dateien, „Zuletzt“
+  im Organigramm sowie den Stand und Dateinamen gedruckter Listen und PDFs. In Deutschland ändert sich nichts
+  Sichtbares bis auf eine Kleinigkeit: Der Stand auf Drucklisten und geteilten Terminblättern heißt jetzt „Stand
+  05.11.2026 13:07“ ohne Komma, wie bei den Termin-Dateien.
+
+### Intern (alle Apps)
+
+- `uhrText` und `datumUhrText` in `shared/ct/zeit.ts`, `heuteImKalender` nimmt optional eine Zone. Der Wächter
+  `ui/design/eineZeitzone.test.ts` verbietet eigene Zeitzonen, eigenes „heute“ und Anzeigen in Gerätezeit.
+
+### Neu (Protokolle, S5-3)
+
+- **Anwesenheit** als fester Punkt im Protokoll (Entwürfe `s5-3-anwesenheit-v1/-v2`, Alwin 05.11.2026): je Mitglied
+  **Anwesend / Abwesend**, nochmal tippen = wieder offen. Jeder Tipp steht sofort im **ChurchTools-Gruppentreffen** –
+  dort hat ChurchTools auch die Übersicht über alle Sitzungen.
+- **Von selbst vorbelegt:** Wer zugesagt hat, ist anwesend, wer abgesagt hat, abwesend – solange am Treffen noch
+  niemand etwas eingetragen hat. Danach tippt man nur noch die Abweichungen (kurzfristig krank …).
+- **Gäste** als freie Namen – sie stehen nur im Protokoll, nicht in der Gruppe.
+- **Einklappbar:** Zugeklappt (beim Lesen von selbst) steht „Anwesend (n): … · Abwesend: … · Offen: … · Gäste: …“.
+- Ohne Gruppentreffen steht im Kasten **„Gruppentreffen anlegen“** (ohne Mail); danach geht die Anwesenheit gleich.
+- Über „Einfügen ▾ → Anwesenheit“ und das „/“-Menü; die **Standard-Vorlage „Leitungssitzung“** beginnt mit
+  „1. Anwesenheit“ (eingerichtete Vorlagen bleiben, wie sie sind).
+- **„Gruppe einrichten“** gibt der Leitung „Gruppentreffen pflegen“ und „… durchführen“ – nur entzogen, wenn die
+  Verwaltung sie selbst gesetzt hat.
+
+### Behoben (Protokolle, S5-3)
+
+- Ein fester Punkt, den diese Fassung nicht kennt, erschien als „Offene To-Dos“; bei der Freigabe hätte jeder Punkt
+  außer „Letztes Protokoll“ den Stand der To-Dos festgehalten bekommen – jetzt je Art ausdrücklich.
+
+### Intern (S5-3)
+
+- Gemessen 05.11.2026 (`messung-s5-3-2026-11-05.md`): „Gruppentreffen pflegen“ = 10124, „durchführen“ = 10111;
+  zurück auf offen = `DELETE …/members/{person}` mit `{status: 'unsure'}` (aus der ChurchTools-Oberfläche).
+- Regel `shared/protokolle/anwesenheit.ts`, Schreiben `protokolle/src/anwesenheitSchreiben.ts` (Teilnehmerliste
+  seitenweise; Vorbelegen schreibt alle und liest einmal nach), Kasten `Anwesenheit.tsx` (gemeinsamer Umschalter
+  `Segment`), `treffenVerknuepfen` in `schreiben.ts`.
+- Eine Liste der festen Punkte: `VERWEIS_ARTEN` / `istVerweisArt` in `dokument.ts` (vorher zwei `VerweisArt`-Typen
+  und Einzelvergleiche in Vorlage und Formular).
+- Der ChurchTools-Nachbau der Tests kennt Anwesenheit (seitenweise Teilnehmer) und läuft auch in jsdom.
+
+### Neu (Musik-App)
+
+- **Termin-Blatt teilen** (Bauplan E8-1b, Entwurf `e8-teilen.html`): Oben im Teilen-Fenster des Ablaufs wählt man
+  „Liedblätter | Termin-Blatt“. Das Termin-Blatt ist dasselbe wie im Dienstplaner – Dienste je Gruppe, Ablauf mit
+  Beginn und Ende, Infos, Unterseiten zum Wählen, Vorschau. Ein Ablauf ohne Lieder lässt sich jetzt auch teilen: „Teilen“
+  öffnet dann gleich das Termin-Blatt.
+- In ChurchTools stehen oben die **Dienste des Termins** (wer eingeteilt ist, angefragt, frei). Auf dem eigenen Server
+  kommt das Blatt ohne Dienste – die Zeile „Dienste“ sagt es.
+
+### Geändert (Dienstplaner)
+
+- **„Musik-App“ über dem Ablauf** sieht jetzt aus wie die Knöpfe daneben (Rahmen, Symbol, Beschriftung; am Handy nur
+  das Symbol) statt als blauer Text – neuer gemeinsamer Baustein `KopfLink`.
+
+### Intern
+
+- Die Dienste eines Termins mit derselben Plan-Regel wie im Dienstplaner (`shared/dienstplan/terminBlattDienste.ts`,
+  vorher `dienstplaner/src/`): nur Dienste, deren Plätze ChurchTools vollständig liefert – ohne den Weg über geleitete
+  Gruppen (die Musik-App liest sie nicht), im Zweifel fehlt ein Dienst, statt unvollständig dazustehen.
+- `TeilenFenster` und `TerminTeilenFenster` haben einen Kopf (die Wahl) und blenden beim Umschalten nicht neu ein;
+  `TerminTeilenFenster` sagt in der Zeile „Dienste“, wenn es keine gibt oder sie nicht zu haben sind.
+
+### Geändert (Anmeldungen + Protokolle + Organigramm)
+
+- **„Heute“ geht nach der Uhr der Gemeinde, nicht nach der des Geräts** (#847, Schritt Z1). Die Zeitzone kommt aus
+  ChurchTools (`/api/config`) und wird beim Start einmal gelesen – in den Erweiterungen und im öffentlichen Formular.
+  In Deutschland ändert sich nichts Sichtbares; wer im Ausland ist, sieht „heute“ jetzt am selben Tag wie die Termine.
+  Antwortet ChurchTools beim Start nicht, gilt wie bisher die Zeitzone des Geräts.
+
+### Geändert (Anmeldungen)
+
+- **Startseite: ab drei Veranstaltungen ohne Mails eine Zeile für alle.** „8 Veranstaltungen: Mails und Löschen
+  einrichten“ – „Anzeigen“ klappt die einzelnen auf. Vorher lief „Braucht deine Aufmerksamkeit“ damit voll.
+- **„Mails und Löschen einrichten?“ nennt die Veranstaltung.** Von der Startseite aus war sonst nicht zu sehen, welche
+  gemeint ist.
+
+### Behoben (Musik-App)
+
+- **Anmerkungen gehen nach einem automatischen Abmelden nicht mehr aus der Warteschlange verloren** (#846). Bisher
+  warfen die Anmerkungen ausstehende Uploads weg, solange der Abgleich abgeschaltet war (die Einstellungen behielten
+  sie). Nach der nächsten Anmeldung gehen sie jetzt mit hoch.
+- **Eine Änderung während eines laufenden Uploads übersteht jetzt auch einen Neustart.** War der Upload danach
+  erfolgreich, wurde der Merker für den Neustart abgehakt, obwohl schon die nächste Änderung wartete. Wurde die App
+  genau dann beendet, fehlte sie.
+
+### Intern (Musik-App)
+
+- Die Speicher-Warteschlange von Anmerkungen und Einstellungen ist jetzt EIN Baustein (`services/schreibSchlange.ts`,
+  #846): Verzögern, Merker, Wiederholen und alle Fehlerzweige an einer Stelle, auch für Abgleich und Migration. Neu:
+  Ein 413 bei der einmaligen Migration der Einstellungen wird gemeldet. Ein Test, der echt 650 ms wartete, läuft mit
+  Fake-Timern.
+
+### Neu (Anmeldungen)
+
+- **Ältere Veranstaltungen: „Mails und Löschen einrichten“ (A9-5).** Wer vor den eigenen Mails freigegeben hat, hat in
+  ChurchTools keine Abläufe – es kommt die Standard-Mail ohne Betrag, und die Anmeldungen werden nie gelöscht. Die Karte
+  „Mails“ bietet jetzt „Jetzt einrichten“, die Startseite zeigt es allen in der Gruppe. Schon Angemeldete bekommen keine
+  neue Mail, für sie gelten aber Erinnerung und Löschdatum. Den Knopf hat, wer in ChurchTools Routinen verwalten darf.
+
+### Behoben (Anmeldungen)
+
+- **Vor den Abläufen Angemeldete werden mitgelöscht.** Eine neue Routine erfasst in ChurchTools nur, wer danach kommt –
+  wer schon da war, wäre nie gelöscht worden und hätte keine Erinnerung bekommen. Beim Einrichten holt die Erweiterung
+  sie jetzt ohne Mail nach (gemessen 05.11.2026).
+
+### Behoben (Musik-App)
+
+- **Der Server lässt sich nicht mehr ohne Anmeldung mit großen Anfragen lahmlegen** (#844). Bisher las er jeden
+  Rumpf bis 8 MB, bevor das Rate-Limit zählte – auch beim Login. Jetzt zählt er zuerst und weist eine Anfrage über dem
+  Kontingent ab, ohne sie zu lesen. Die Grenze liegt bei 1 MB, nur Anmerkungen und Einstellungen dürfen bis 8 MB
+  groß sein. `body-parser` ist auf 2.4.0 angehoben (Lücke GHSA-27r3-jxmh-p828), dazu `dompurify` und `qs`.
+- Eine zu große Anfrage bekommt **413 „Die Daten sind zu groß.“**, kaputtes JSON **400** – vorher wurde aus beidem
+  ein 500 „Interner Serverfehler“ mit Stacktrace im Log.
+
+### Neu (Dienstplaner)
+
+- **Termin teilen als PDF** (Bauplan E8-1, Entwurf `e8-teilen.html` Version 5, Alwin 05.11.2026): In der
+  Termin-Ansicht steht hinter dem Titel „Teilen“. Das Fenster „Termin teilen“ zeigt drei Zeilen – Dienste, Ablauf,
+  Infos – mit dem, was gerade eingestellt ist, dazu Hoch-/Querformat, die fertigen Seiten als Vorschau,
+  „Herunterladen“ und „Teilen“. Ein Tipp auf eine Zeile öffnet ihre Einstellungen im selben Fenster: ein/aus, welche
+  Gruppen, freie und angefragte Plätze, Dienste über oder unter dem Ablauf; Uhrzeit, Dauer, Zuständig (Spalte oder
+  unter dem Eintrag), Notiz, Tonart, Tempo, Arrangement, Vorlauf, weggelassene Einträge; Infos als Spalten oder
+  unter dem Eintrag. Die Infos-Gruppen kommen vorab aus „Spalten“ der Ansicht. Das Gerät merkt sich die Wahl.
+- **Das Termin-Blatt** im ChurchTools-Look (Lato): oben Titel, Datum mit Beginn und Ende, Gemeinde und Stand; die
+  Dienste je Gruppe in Spalten (Dienst grau, Person fett, „frei“ rot, „angefragt“); der Ablauf mit Beginn und Ende als
+  dunkle Bänder, Abschnitten mit ihrer Dauer, Liedern mit Tonart. Keine leeren Info-Spalten; ganze Teams stehen nur als
+  Dienst-Name. Auf jeder Seite Kopf und „Seite x von y“.
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **„Eintrag“ statt „Punkt“** in der Kopfzeile der Info-Spalten des Ablaufs (Musik-App und Dienstplaner) – so heißt es
+  schon beim Hinzufügen.
+
+### Intern
+
+- Kern `shared/ct/terminBlatt.ts` (was aufs Blatt kommt, aus denselben Ablauf-Zeilen wie die Ansicht), Zeichnung
+  `ui/teilen/terminBlattPdf.ts`, Fenster `ui/teilen/TerminTeilenFenster.tsx` – gemeinsam für Dienstplaner und (mit
+  E8-1b) Musik-App.
+- PDF-Vorschau, Seitenzeichnen mit pdf.js, Worker-Einrichtung, Bildgrößen-Grenze und Ladekringel aus der Musik-App
+  nach `ui/` (`ui/teilen/`, `ui/bedienung/Spinner.tsx`); die Umlenkung des pdf.js-Workers auf eine eigene Datei steht
+  jetzt im gemeinsamen Erweiterungs-Bau (`ui/erweiterung/viteErweiterung.ts`) und gilt für jede Erweiterung.
+- Der Dienstplaner lädt „Termin teilen“ (mit pdf.js) erst beim Antippen.
+
+### Neu (Protokolle, K3b-2)
+
+- **Früheres Protokoll** (Entwurf `k3b-v1`, Alwin 04.11.2026): „Einfügen ▾ → Früheres Protokoll“ (auch im „/“-Menü)
+  fragt in einem Fenster, **welches** – alle freigegebenen Protokolle der Gruppe, neueste zuerst, das letzte vorgewählt.
+  Der Punkt heißt dann „Protokoll der letzten Sitzung“ oder „Protokoll vom 09.09.2026“.
+- Am Kasten **„Ändern“** (nur beim Schreiben): ein anderes Protokoll wählen; ein selbstgesetzter Titel zieht mit, ein
+  eigener bleibt. Ein Kasten ohne Wahl (aus der Vorlage) sagt „immer die letzte Sitzung“.
+- **„Ansehen“** zeigt das Protokoll im kleinen Fenster (bisher hieß der Knopf „Öffnen“); dort springt **„Öffnen“** zu
+  dieser Sitzung – aus dem Editor erst nach dem Speichern. „Zurück“ führt wieder zum Protokoll, aus dem man kam.
+
+### Behoben (Protokolle, K3b-2)
+
+- **Kasten am Handy:** Mit zwei Knöpfen rutschen „Ändern“ und „Ansehen“ unter den Text, statt ihn zu einer schmalen
+  Spalte zu quetschen (im Entwurf gefunden).
+
+### Intern (K3b-2)
+
+- Eine Regel in `shared/protokolle/festePunkte.ts`: `fruehereProtokolle`, `fruehererTitel`, `istFruehererTitel`,
+  `festesProtokollWert` (die Freigabe schreibt `props.fest` jetzt über dieselbe Funktion) und `TITEL_LETZTES_PROTOKOLL`
+  (vorher als Text in Vorlage und Anzeige). Die Wahl steht gleich in `props.fest` – kein neues Datenformat.
+- Leiste und „/“-Menü fügen feste Punkte über `festenPunktAnbieten` ein (`fruehesProtokoll.ts`); die Punkte des
+  „/“-Menüs stehen in `festeImMenue` und sind damit erstmals getestet.
+
+### Behoben (Anmeldungen)
+
+- **Das öffentliche Formular spricht nur noch die ChurchTools-Instanzen der Gemeinde an** (#843). Bisher nahm es
+  jede Instanz aus dem Link: Wer einen Link `…/#fremde-seite/1` verschickte und dort eine nachgebaute Schnittstelle
+  hinstellte, zeigte unter der Adresse der Gemeinde ein fremdes Formular – mit fremder IBAN, und die Eingaben gingen
+  an ihn. Jetzt liegt neben `index.html` eine Liste `instanzen.json`; ein Link auf eine andere Instanz zeigt „Diese
+  Anmeldung gibt es hier nicht“, ohne die fremde Seite zu fragen. Das gilt beim Laden, Anmelden und für „Deine
+  Anmeldung“. **Beim Aktualisieren einmal `instanzen.json` anlegen** (siehe `docs/betrieb/ANMELDUNGEN.md`) – ohne
+  sie zeigt das Formular „noch nicht eingerichtet“. Das Paket enthält sie bewusst nicht, damit ein Update eure Liste
+  nicht überschreibt; als Vorlage liegt `instanzen.beispiel.json` bei.
+
+### Intern (Anmeldungen)
+
+- `npm run formular:hochladen` braucht `ANMELDUNG_CT_INSTANZEN`, schreibt daraus `instanzen.json`, lädt sie vor
+  `index.html` hoch und liest sie im Netz nach; der Ordner-Schutz kennt die Datei.
+
+### Geändert (Musik-App)
+
+- **Rechte-Übersicht neu aufgebaut** (`docs/betrieb/ERWEITERUNG.md`, „Rechte einrichten“): die drei Schritte beim
+  Einrichten (als Admin in der Verwaltung eine Einstellung ändern und bei „Anmerkungen“ die Musikteam-Gruppe wählen –
+  erst dann gibt es die Kategorien der App), eine Häkchen-Tabelle für die Rechte der Erweiterung (Nutzer, Musiker,
+  Admin je Kategorie) und die übrigen Rechte als Vorschlag, den jede Gemeinde selbst anpasst. Neu darin: die
+  Info-Spalten im Ablauf (`view servicegroup`).
+
+### Intern
+
+- **Prüfung `shared/ct/rechteDoku.test.ts`:** Jedes ChurchTools-Recht, das die Musik App auswertet, muss in der
+  Rechte-Übersicht stehen – gefunden über die Erzeuger (`rechteAus`, `dienstgruppenSichtAus`), nicht über eine Liste.
+
+### Neu (Protokolle, K3b-1)
+
+- **Unterpunkte mit Nummer in bis zu vier Ebenen** (Entwurf `k3b-v1`, Alwin 04.11.2026): Tab macht aus einem
+  Tagesordnungspunkt einen Unterpunkt (4.1), nochmal Tab eine Ebene tiefer (4.1.1) – bis 4.1.1.1.1. Umschalt+Tab geht
+  zurück bis zum Tagesordnungspunkt. Ein Unterpunkt steht höchstens eine Ebene unter dem Punkt davor; der erste Punkt
+  bleibt Punkt. Dasselbe unter „Absatz ▾ → Einrücken/Ausrücken“.
+- **Die Nummern stehen überall gleich:** im Editor, beim Lesen, in den Bereichen (Beschlüsse · To-Dos · Termine) und in
+  der Suche – Beschluss, To-Do und Termin unter einem Unterpunkt heißen dort „Punkt 4.2 · Essen“. Die Suche schreibt
+  auch bei Tagesordnungspunkten „Punkt 4 · …“ (vorher „4. …“) und springt auch zu einem Unterpunkt.
+- **Mehrere markierte Zeilen** rücken gemeinsam ein und aus.
+
+### Behoben (Protokolle, K3b-1)
+
+- **Tab auf einem Tagesordnungspunkt** hängte ihn als eingerückten Block unter den Text davor: Er verlor seine Nummer,
+  wurde übergroß, und Beschlüsse und To-Dos darunter zählten in den Bereichen zum Punkt davor.
+- **Mehrere markierte Zeilen** ließen sich mit Tab nicht einrücken – der Editor gab Tab bei einer Markierung an eine
+  eigene Formatleiste weiter, die wir gar nicht zeigen.
+
+### Intern (K3b-1)
+
+- Eine Zählung für alle (`ableiten` in `shared/protokolle/dokument.ts`): `punktEbene`, `stufeDerEbene`,
+  `punktNummer`, `punktBeschriftung`. Unterpunkte sind Überschriften der Stufe 2/4/5/6; **Stufe 3 bleibt „Überschrift“**,
+  damit kein gespeichertes Protokoll seine Bedeutung ändert. Eine Überschrift 2 aus älteren Protokollen zählt jetzt als
+  Unterpunkt.
+- Der Editor zeigt die Nummern aus derselben Ableitung (`punktNummern.ts`, ProseMirror-Dekoration) statt aus einem
+  eigenen CSS-Zähler; dafür sind `prosemirror-state`/`prosemirror-view` direkte Abhängigkeiten der Protokolle (gleiche
+  Fassung wie in BlockNote, eine Kopie).
+- Abschnitte ziehen und „Nach oben/unten“ rechnen nach Rang (Punkt › 4.1 › … › 4.1.1.1.1 › Überschrift), nicht nach
+  gespeicherter Stufe – eine „Überschrift“ zerschneidet keinen Unterpunkt 4.1.1.
+- Tab/Umschalt+Tab und die Leiste nutzen dieselbe Regel (`einruecken.ts`); in Tabellen bleibt Tab beim Zellenwechsel.
+
+### Behoben (Anmeldungen)
+
+- **Das Formular nennt Gästen den Tag, an dem wirklich gelöscht wird.** Es rechnete das Löschdatum selbst nach und
+  nannte an Monatsenden einen späteren Tag (Termin 30.11., 3 Monate: „02.03.“ statt 28.02.). Jetzt gilt für Formular,
+  Erweiterung und Abläufe dieselbe Regel.
+- **„Sofort löschen?“ nur noch, wenn jemand angemeldet ist.** Eine frisch freigegebene Veranstaltung mit Löschdatum in
+  der Vergangenheit fragte, obwohl nichts zu löschen war – beim Freigeben und im Fenster „Daten löschen“.
+- **„1 Monat nach dem Ende“** statt „1 Monate“ in der Karte „Datenschutz“.
+
+### Behoben (Musik-App)
+
+- **Eine Liedversion oder das Original-Notenblatt kann beim Speichern nicht mehr verloren gehen** (#842). ChurchTools
+  kann eine Datei nicht ersetzen, deshalb legt die App die neue Fassung daneben und löscht danach die alte. Gelöscht
+  wurde bisher, sobald das Hochladen keinen Fehler meldete – hätte ChurchTools „erfolgreich“ geantwortet, ohne die
+  Datei anzulegen, wäre die Version weg gewesen. Jetzt liest die App nach und löscht die alte Fassung erst, wenn die
+  neue wirklich dasteht; sonst kommt „ChurchTools hat das Speichern bestätigt, die Datei ist aber nicht da. Es wurde
+  nichts gelöscht.“ Gilt für Version ändern und umbenennen, das Original im Editor und das Holen aus SongSelect, in
+  der Server-App wie in der Erweiterung. Beobachtet wurde der Fall bisher nicht; gefunden beim Code-Check vom
+  04.11.2026.
+
+### Intern (Musik-App)
+
+- Testdoppel wie gemessen: `ctLiedAblage.testutil.ts` (Server) und `FakeCt` (Browser) legen hochgeladene
+  Arrangement-Dateien mit neuer ID ab und blenden gelöschte aus; `uploadVerschwindet` / `ablageName` stellen den
+  lügenden Erfolg und eine anders benannte Ablage nach.
+
+### Neu (Anmeldungen)
+
+- **Löschen und Archiv passen zum Löschdatum (A9-4).** Archivieren schaltet in ChurchTools die Abläufe ab – davor
+  archiviert, würden die Anmeldungen nie gelöscht. „Löschen“ ist darum mit Anmeldungen bis zum Löschdatum gesperrt und
+  nennt den Tag (Tipp: „Freigabe zurücknehmen“). Ohne Anmeldungen geht es jederzeit, ohne Löschdatum mit Hinweis.
+- **Startseite: „Anmeldungen gelöscht – jetzt endgültig löschen“.** Nach dem Löschdatum stehen die Antworten noch im
+  Verlauf der Gruppe. Alle in der Gruppe sehen den Hinweis; wer darf, löscht gleich endgültig (Namen eintippen), die
+  Leitung legt die Veranstaltung ins Archiv – endgültig löschen darf in ChurchTools nur ein Admin (gemessen). Den Knopf
+  zeigt die Erweiterung nach einem Lösch-Probelauf, der nichts löscht.
+- **Freigeben fragt vorher**, wenn ChurchTools dabei sofort Anmeldungen entfernen würde – z. B. nach dem Wiederherstellen
+  aus dem Archiv, wenn das Löschdatum schon vorbei ist.
+
+### Behoben (Anmeldungen)
+
+- **„Rückgängig“ nach dem Archivieren schaltet die Abläufe wieder ein.** ChurchTools schaltet sie beim Archivieren ab
+  und beim Zurückholen nicht wieder an – danach blieben Bestätigungsmails, Erinnerungen und das Löschen still aus.
+
+### Neu (Dienstplaner)
+
+- **Dienste tauschen** (Bauplan E7-3, Entwurf `e7-3-tausch.html`, Alwin 04.11.2026): An jedem eigenen Dienst – zugesagt
+  oder noch offen – steht „Tauschen“ (Startseite „Deine nächsten Dienste“ und „Für dich offen“, Dienste → Meine, in der
+  Termin-Ansicht unter dem eigenen Platz). Ein Fenster zeigt alle, die denselben Dienst an einem anderen Termin haben;
+  ein Tipp schickt die Tausch-Anfrage. Getauscht wird erst, wenn die andere Person annimmt – dann sind beide zugesagt.
+- **Tausch-Anfragen an mich** stehen in „Für dich offen“: „A möchte tauschen: Du bekämst … am … und gibst deinen am …
+  ab.“ mit Annehmen (ohne Rückfrage, ein Tausch lässt sich nicht rückgängig machen) und Ablehnen.
+- **Eigene Anfragen am Dienst:** „Tausch angefragt bei … “ mit Zurückziehen; abgelehnt mit „Andere fragen“. Je Dienst
+  eine Anfrage auf einmal.
+
+### Intern (Dienstplaner)
+
+- Kern `shared/dienstplan/tausch.ts` (gemessen als Spike, `messung-e7.md`): Die ID der eigenen Einteilung ändert sich
+  bei jeder Antwort – sie wird vor jedem Schreiben frisch gelesen; nach jedem Schreiben wird nachgelesen (Annehmen
+  zählt erst, wenn der getauschte Dienst wirklich da ist). Den eigenen Ausgang führt ChurchTools nur je Einteilung.
+  Nachbau `tausch.testutil.ts` für Kern- und Oberflächen-Tests.
+
+### Geändert (Protokolle, K3a)
+
+- **Werkzeugleiste in Gruppen** (Entwurf `k3-leiste-v1`, Variante B, Alwin 04.11.2026): Textart und Fett · Kursiv ·
+  Unterstrichen · Durchgestrichen · Formatierung entfernen direkt, dahinter die Menüs **Markieren ▾ · Absatz ▾ ·
+  Einfügen ▾**. Am Rechner eine Zeile; am Handy Fett und „Aa“ vorn, die Menüs als Zeichen (Absatz = Zeilen).
+- **Textarten heißen neu:** Text · Tagesordnungspunkt · **Unterpunkt** (Überschrift 2) · **Überschrift** (Überschrift 3),
+  in Leiste und „/“-Menü.
+- **Nur noch To-Do:** Die Checkliste ist aus Leiste und „/“-Menü verschwunden; alte Checklisten bleiben lesbar. Der Knopf
+  „Aufgabe“ heißt jetzt „To-Do“.
+
+### Neu (Protokolle, K3a)
+
+- **Markieren in allen Farben des Editors** – Hintergrund und Schrift, neun Farben, hell wie dunkel. Die Lese-Ansicht
+  zeigt dieselben Farben (vorher nur „markiert“, egal welche Farbe).
+- **Tabellen:** „Einfügen → Tabelle“ (auch im „/“-Menü) fügt drei Spalten mit Kopfzeile ein; Zeilen und Spalten über die
+  Griffe, Kopfzeile/-spalte im Griff-Menü. Lese-Ansicht und Suche kennen sie; Tabellen aus Word bleiben Tabellen.
+
+### Behoben (Protokolle, K3a)
+
+- **Termin am Handy:** Der Text eines Termins stand als Buchstabensäule rechts neben dem blauen Kasten, die Seite ließ
+  sich seitlich schieben (am iPhone gefunden, seit S4-2). Die Handy-Regel für die Schildchen gilt jetzt nur am To-Do; ein
+  langes Wort ohne Leerzeichen bricht im Kasten um.
+
+### Behoben (alle Apps)
+
+- **Kein Hineinzoomen beim Antippen am iPhone:** Safari vergrößerte die Seite leicht, sobald man in ein Feld oder den
+  Protokoll-Editor tippte (Schrift unter 16 px; Alwin, 04.11.2026). Jede App setzt auf iPhone und iPad jetzt
+  `maximum-scale=1` (`ui/fenster/tippZoom.ts`) – Vergrößern mit zwei Fingern geht weiter; Android bleibt unberührt.
+
+### Intern (Protokolle, K3a)
+
+- Farben kommen aus BlockNote selbst (`COLORS_DEFAULT` / `COLORS_DARK_MODE_DEFAULT`, `protokolle/src/farben.ts`); die eine
+  Abweichung (Gelb = `--markiert`) prüft `ui/design/markierFarben.test.ts` gegen den Editor-Stil.
+- Tabellen lesen: `tabellenZeilen` in `shared/protokolle/dokument.ts` (eine Lesart für Lese-Ansicht, Suche, später PDF).
+- `useThema` liegt jetzt in `ui/design/useThema.ts` (vorher nur im Protokoll-Editor).
+
+### Neu (Anmeldungen)
+
+- **Erinnerung vor dem Termin (A9-3b).** Im Fenster „Mails“ gibt es den Reiter „Erinnerung“: bis zu drei Erinnerungen,
+  je 1–30 Tage vorher (Vorschläge 1, 3, 7, 14 Tage oder eigene Zahl), beim Einschalten „3 Tage“. ChurchTools schickt sie
+  von selbst an jede Person mit Platz – mit Datum, Ort, Anmelde-Nr. und Link zu „Deine Anmeldung“, ohne Bankdaten.
+  Betreff, eigener Absatz und Gruß gelten für alle Erinnerungen und teilen sich die 1.000 Zeichen mit der Bestätigung.
+  Schon Angemeldete bekommen neu eingeschaltete Erinnerungen auch. Ist ein Erinnerungstag schon vorbei, geht nur die
+  zuletzt fällige noch an Spätangemeldete; ältere schaltet die Erweiterung ab. Die Karte „Mails“ zeigt die Tage.
+
+### Intern (Anmeldungen)
+
+- **Schritte der Routine nach ihrer Stellung** (`schrittFolge`): Bestätigung, je Erinnerung „warten“ + Mail, dann Löschen.
+  Mit mehreren Mail- und Warte-Schritten fand „der erste Schritt dieser Art“ den falschen. Wegfallende Erinnerungen
+  laufen erst ohne Mail auf heute (sonst 422 bzw. fielen Wartende aus dem Löschen); falsch Wartende werden neu gestartet,
+  fällige Erinnerungen sind dabei aus. Nie eine `emailId` mitschicken – sie gehört zu genau einem Schritt (gemessen
+  04.11.2026, Siebte Runde).
+
+### Intern (Protokolle)
+
+- **Wackler in den To-Do-Tests behoben:** `ToDos.test.tsx` und `ToDos.board.test.tsx` zeigen die To-Do-Seite, deren
+  Einstellungen sich über die echte Personen-Ablage mit ChurchTools abgleichen. Im Test scheiterte die Abfrage („fetch
+  failed“) erst nach dem Testende, und das `console.warn` kam, während Vitest die Umgebung schon schloss –
+  „EnvironmentTeardownError: Closing rpc while onUserConsoleLog was pending“ machte die CI rot, obwohl alle Tests grün
+  waren (PR #836). Beide Tests gleichen jetzt ohne Netz ab (`protokolle/src/ohneAbgleich.testutil.ts`); je ein Test
+  prüft, dass der Abgleich darüber läuft. Die App selbst ist unverändert.
+
+### Neu (Dienstplaner)
+
+- **Reiter „Abwesenheiten“** (Bauplan E7-2c, Entwurf `e7-2-abwesenheiten.html`): dieselbe Seite wie in der Musik-App –
+  Termine abhaken, Zeitraum eintragen, ändern, löschen, direkt in ChurchTools, für jeden (die eigenen Abwesenheiten
+  braucht kein Recht). Der Platzhalter „Hier trägst du bald ein …“ ist weg; die Karte auf der Startseite führt hierher.
+- **Eigene Dienste unter jedem Termin:** „Du bist eingeteilt: Ton“ bzw. „Angefragt: Gesang“. Wer einen solchen Termin
+  abhakt, sieht in Rot „bitte auch den Dienst absagen“ – die Abwesenheit allein sagt dem Planer nichts.
+- Der Filter nach Veranstaltung bildet sich wie in „Dienste“ aus den Terminen (jeder Name, der mehrfach vorkommt).
+
+### Behoben (Musik-App + Dienstplaner)
+
+- **Abwesenheiten auf schmalen Bildschirmen:** Zeitraum und Filter brechen um, statt dass der Filter-Knopf über den
+  Rand ragt (gefunden bei der Abnahme E7-2c).
+
+### Intern (Dienstplaner + Musik-App)
+
+- Die gemeinsame Seite (`ui/abwesenheiten/AbwesenheitenSeite.tsx`) nimmt einen Zusatz je Termin (`terminZusatz`) und
+  die Termin-Arten auch als Funktion der Termine. Die eigenen Dienste kommen in einem Aufruf aus
+  `/persons/{ich}/servicerequests?only_future=true` (`shared/dienstplan/meineDienste.ts`).
+
+### Neu (Musik-App)
+
+- **Abwesenheiten jetzt auch in der Musik-App in ChurchTools** (Dienstplaner E7-2b, Alwin 04.11.2026: nur noch die
+  Erweiterung zählt). Der Reiter „Abwesenheiten“ ist **für alle da, die die Musik-App öffnen** (Rechtekonzept E2,
+  Alwin 04.11.2026 – auf dem NAS weiter nur fürs Musikteam), und schreibt direkt in ChurchTools: Termine abhaken, Zeitraum eintragen, ändern, löschen. Ändern bleibt
+  derselbe Eintrag, denselben Zeitraum gibt es nie doppelt.
+
+### Geändert (Musik-App)
+
+- **Alle Abwesenheiten sehen gleich aus** – kein graues „in ChurchTools eingetragen“ mehr. Neue Einträge aus ChurchTools
+  heraus tragen kein „[Musikteam]“ mehr (auf dem NAS schreibt der Server es weiter).
+- **Löschen fragt immer nach** – „Abwesenheit löschen?“ mit Grund und Zeitraum, im Fenster selbst. Vorher fragte nur
+  ein Eintrag, der direkt in ChurchTools gemacht wurde.
+
+### Intern (Musik-App + Dienstplaner)
+
+- Die Abwesenheiten-Seite ist ein **gemeinsamer Baustein** (`ui/abwesenheiten/`): Seite, Fenster, Helfer; Daten,
+  Schreiben und Rahmen kommen je App von außen. `pages/Availability.tsx` ist nur noch der Rahmen der Musik-App. Die
+  Tages- und Monats-Helfer liegen in `shared/ct/` (`wochen.ts`, `monate.ts`). Die Schreib-Hooks (`useCreateAbsence` …
+  `useSaveAbsenceChanges`) sind weg – gesammelt gespeichert wird in der Seite, weiter erst anlegen, dann löschen,
+  nacheinander. Der Dienstplaner bekommt die Seite mit E7-2c.
+
+### Behoben (Anmeldungen)
+
+- **Extras mit Komma im Namen zählen wieder mit.** Hieß ein Extra etwa „Bettwäsche, Handtuch“, zerfiel es beim
+  Nachrechnen am eigenen Komma und fehlte im Betrag: Die Nachprüfung meldete „Betrag weicht ab“, und beim
+  Nachrücken, Absagen, „Person dazu“ und Zurückholen schlug die Rückfrage einen zu niedrigen Betrag vor. Jetzt wird
+  jedes Extra als ganzes Stück gesucht – wie die Antworten einer Mehrfachauswahl; beide nutzen dieselbe Regel.
+
+### Intern (Dienstplaner + Musik-App)
+
+- **Abwesenheiten direkt aus der Erweiterung – der Kern** (Dienstplaner E7-2a, Alwin 04.11.2026: nur noch die
+  Erweiterung zählt, kein eigener Server). `shared/absences/abwesenheiten.ts` liest, trägt ein, ändert und löscht die
+  eigenen Abwesenheiten über einen Anschluss (`ui/ct/abwesenheitPort.ts`) – für beide Apps; sichtbar wird er mit
+  E7-2b/E7-2c. Gemessen 04.11.2026 als Spike:
+  - **Ändern bleibt derselbe Eintrag** (`PUT`, ersetzt ganz) – der Server legt dafür noch neu an und löscht alt.
+  - **Mit Uhrzeit gehen nur die Uhrzeiten mit:** Tage dazu lehnt ChurchTools mit 400 ab.
+  - **Kein Doppel:** ChurchTools legt denselben Zeitraum zweimal an; der Kern prüft vorher – über alle eigenen
+    Einträge, auch die in ChurchTools gemachten (kein Kennzeichen „[Musikteam]“ mehr, ein altes wird ausgeblendet und
+    fällt beim Ändern weg).
+  - **Einen Tag weiter lesen:** Einträge mit Uhrzeit liefert ChurchTools erst, wenn `to` nach ihrem Tag liegt – sonst
+    fand die Doppel-Sperre ein Fenster am letzten Tag nie (in der Probe gegen die Test-Instanz gefunden).
+  - **Löschen wird nachgelesen:** ChurchTools meldet immer Erfolg, auch ohne Wirkung.
+  - **Gründe** aus `/event/masterdata` (deutsch, „Abwesend“ vorgewählt) statt über die alte Schnittstelle.
+- `ladeAbwesenheiten` (Startseite des Dienstplaners) liest über denselben Anschluss.
+
+### Neu (Dienstplaner, E7-1 – Alwin, 03.11.2026)
+
+- **Anfragen beantworten:** Auf der Startseite unter „Für dich offen“ und im Reiter „Dienste → Meine“ stehen an jeder
+  offenen Anfrage **Zusagen** und **Absagen** (Entwurf `e7-anfragen.html`, Variante A) – zusätzlich zur
+  ChurchTools-App, mit denselben Wörtern. Absagen fragt nach einem freiwilligen **Grund**, den sieht, wer den Dienst
+  plant. Ab zwei offenen Anfragen gibt es **„Alle zusagen“**. Nach dem Antworten bleibt die Zeile zehn Minuten lang mit
+  **„Rückgängig“** stehen – so lange lässt ChurchTools es zu. Erlaubt ein Dienst kein Absagen, steht statt des Knopfs
+  „Absagen geht hier nicht – bitte sprich mit dem Planer.“ Hat sich eine Anfrage inzwischen geändert (zurückgezogen,
+  neu vergeben), wird nichts überschrieben: ein Hinweis, und die Liste lädt neu. Absagen und Rückgängig gehen auch
+  ohne Recht auf den Dienst – wer ihn nicht plant, sieht den freien Platz nach der Absage gar nicht mehr (beim Prüfen
+  als Nicht-Admin aufgefallen: Die Absage kam an, die Meldung sagte aber „gibt es nicht mehr“). Testfall TF-ABLAUF-20.
+
+### Geändert (Dienstplaner)
+
+- Die eigenen Dienste eines Termins stehen auf der Startseite und unter „Dienste“ in der Reihenfolge der Gemeinde (wie
+  die Zeilen der Matrix), nicht mehr in der von ChurchTools – dort springt ein Dienst nach jeder Antwort nach hinten
+  (beim Prüfen in der Test-Instanz aufgefallen).
+
+### Intern (Dienstplaner)
+
+- Der Schreibkern des Einteilens (`platzEinteilen`) ist jetzt ein Fall von `platzAendern` (frisch lesen, Konflikt statt
+  Überschreiben, schreiben, nachlesen); Zusagen, Absagen und Rückgängig (`@shared/dienstplan/antworten`) benutzen
+  dieselbe Regel. Gemessen 03.11.2026 als Nicht-Admin (`dienstplaner-planung/docs/messung-e7.md`).
+
+### Neu (Dienstplaner, T2b – Alwin, 02.11.2026)
+
+- **Dateien am Termin ändern** – wer den Termin ändern darf, hängt im Fenster „Dateien“ über **„Anhang hinzufügen“**
+  Dateien an (auswählen oder hineinziehen, mehrere auf einmal) oder einen **Link** (Name und Adresse). Ein Tipp auf eine
+  Datei zeigt – wie in ChurchTools – ein **kleines Fenster** mit Art, Größe, wann und von wem angehängt und **Öffnen**,
+  **Umbenennen** (die Endung bleibt) und **Löschen** (mit Rückfrage). Wer nicht ändern darf, öffnet die Datei direkt.
+  Dateien über **128 MB** stehen sofort rot da und gehen gar nicht erst hoch (ChurchTools lehnt sie sonst erst nach dem
+  kompletten Hochladen ab); jede Datei zeigt beim Hochladen einen **Fortschritt in %**. Die Büroklammer steht für
+  Berechtigte auch an Terminen ohne Dateien und öffnet dann gleich „Anhang hinzufügen“. Ohne „Hochladen und E-Mail
+  schreiben“ – das kommt mit E8. Testfall TF-ABLAUF-19.
+- Große Dateien brechen nicht nach einer festen Zeit ab: Die Zeitgrenze gilt für **Stillstand** (60 s ohne
+  Fortschritt). Und nach einem Abbruch liest der Dienstplaner erst nach, ob die Datei trotzdem angekommen ist, bevor er
+  „fehlgeschlagen“ sagt – sonst lädt man sie zweimal hoch. Jede Änderung zählt erst, wenn ChurchTools sie beim
+  Nachlesen zeigt.
+
+### Intern (alle Apps)
+
+- Die Prüfung vor dem Hochladen (leer, zu groß, gleicher Name) steht jetzt in `@shared/dateien` (`pruefeHochladen`, die
+  Grenze gibt die App mit); die Musik-App benutzt sie mit ihren 50 MB. `ui/ct/verbindung` hat `ctHochladen` – Hochladen
+  mit Fortschritt nach denselben Regeln wie `ctAnfrage` (Bremse, CSRF-Token, Fehlerübersetzung).
+
+### Geändert (Dienstplaner)
+
+- **Matrix, „Infos & Dateien“ wie in ChurchTools:** Oben in jeder Zelle die Knöpfe **ⓘ** (Weitere Infos – hellblau,
+  wenn es welche gibt) und **Büroklammer** (Anhang hinzufügen); darunter der Infotext grau hinterlegt zum Lesen und
+  „Anhänge:“ mit den Dateien. Vorher sah man einem vorhandenen Text nicht an, dass er sich bearbeiten lässt (Alwin,
+  03.11.2026, Entwurf `matrix-infos-bearbeiten.html` Variante D1). Ersetzt „+ Infos“ und „+ Datei“. ⓘ und Büroklammer
+  sind – auch im Kopf der Termin-Ansicht – genau die Zeichen von ChurchTools (dessen Font Awesome, nichts kopiert).
+
+### Behoben (Dienstplaner)
+
+- **Die Matrix zeigt nach Änderungen in der Termin-Ansicht den neuen Stand:** Wer dort Infos speicherte oder Dateien
+  änderte und mit „‹ Planen“ zurückging, sah bis zum Neuladen der Seite noch die alten (beim Prüfen von T2b in der
+  Test-Instanz aufgefallen; die Infos betraf es seit T1). Jetzt lädt der Dienstplaner die Termine danach leise neu.
+
+### Neu (Dienstplaner, T2a – Alwin, 02.11.2026)
+
+- **Dateien am Termin** – die Büroklammer aus der Dienstplan-Liste von ChurchTools: Im Kopf der Termin-Ansicht steht sie
+  neben dem ⓘ mit der Zahl der Dateien; antippen öffnet das Fenster „Dateien“ mit Art und Größe, ein Tipp öffnet die
+  Datei bzw. den Link aus ChurchTools. In der Matrix steht unter den Infos je Datei eine Zeile (höchstens drei, dann
+  „+ N weitere“), die dasselbe Fenster öffnet. Die Dateien kommen mit der Terminliste, ohne zusätzliche Anfrage; die
+  Größe lädt das Fenster frisch nach – klappt das nicht, bleibt der bekannte Stand stehen. Dateien auf fremden Hosts und
+  Links ohne `http(s)` führen nirgendwohin. Hochladen, Link anhängen, Umbenennen und Löschen folgen mit T2b.
+  Testfall TF-ABLAUF-18.
+
+### Intern (Dienstplaner)
+
+- Die Dateizeile der Lied-Ansicht ist jetzt ein gemeinsamer Baustein (`ui/dateien/DateiZeile`), die Dateien am Termin
+  benutzen ihn mit. `KopfKnopf` kann eine Zahl neben dem Symbol zeigen (`zahl`), auch am Handy.
+
+### Neu (Dienstplaner, T1b – Alwin, 02.11.2026)
+
+- **„Infos & Dateien“ in der Matrix** (Planen): eine eigene Gruppe über dem Ablauf (Entwurf `matrix-infos.html`,
+  Variante 2) – je Termin die ersten zwei Zeilen der „Weiteren Infos“, so vergleicht man mehrere Termine auf einen Blick.
+  Antippen öffnet dasselbe Fenster wie in der Termin-Ansicht; wer den Termin ändern darf, schreibt über „+ Infos“
+  direkt in der Matrix, und die Zelle zeigt den Text sofort. Zuklappbar, auf dem Gerät gemerkt wie „Ablauf“; am Handy
+  beim gewählten Termin. Die Dateien kommen mit T2 in dieselbe Gruppe. Testfall TF-ABLAUF-17.
+
+### Geändert (Dienstplaner)
+
+- **Noch keine Infos und man darf schreiben: das Fenster öffnet gleich mit dem Textfeld** – in der Matrix („+ Infos“)
+  wie in der Termin-Ansicht (ⓘ). Vorher kam erst „Noch keine Infos“ und dann „Bearbeiten“ (aufgefallen beim Prüfen in
+  der Test-Instanz). „Abbrechen“ schließt dann das Fenster.
+
+### Neu (Dienstplaner, T1 – Alwin, 02.11.2026)
+
+- **„Weitere Infos“ am Termin** – das „i“ aus der Dienstplan-Liste von ChurchTools (Entwurf `termin-einstellungen.html`,
+  Variante B). Unter Datum und Uhrzeit steht der Anfang in einer Zeile, oben im Kopf ein ⓘ; beides öffnet das Fenster
+  mit dem ganzen Text. Wer den Termin ändern darf (Admin, „Events bearbeiten“ für den Kalender oder Admin des Termins –
+  gemessen), bearbeitet ihn dort: Textfeld mit Zähler, höchstens 4000 Zeichen wie ChurchTools. Dasselbe Feld wie
+  „Weitere Infos“ in ChurchTools.
+  - **Eine Absage bleibt bestehen:** ChurchTools setzt einen abgesagten Termin beim Speichern ohne diese Angabe wieder
+    auf „findet statt“ (gemessen). Der Dienstplaner liest sie vorher frisch und schickt sie mit.
+  - Hat jemand die Infos inzwischen anders gespeichert, wird nicht überschrieben: Das Fenster zeigt den Text aus
+    ChurchTools und bietet „Ihre übernehmen“ oder „Meine speichern“.
+  - Nach dem Speichern wird nachgelesen; kam es nicht an, steht „ChurchTools hat die Infos nicht übernommen“ da.
+  - Testfall TF-ABLAUF-16.
+
+### Intern (Dienstplaner)
+
+- `DienstRechte.terminKalender` (`edit events`), `PlanSpalte.infos`, `darfTerminAendern` (derselbe Aufbau wie beim
+  Ablauf, über `darfAblaufBearbeiten`). Demo: Termin 101 hat Infos, der Planer darf sie ändern.
+
+### Behoben (Anmeldungen)
+
+- **Startseite: „Plätze frei, wer rückt nach?“ auch ohne Platzgrenze.** Wartete jemand bei einer Veranstaltung
+  ohne Platzgrenze, zeigten Kachel und Warteliste „nachrücken“, die Startseite unter „Braucht deine Aufmerksamkeit“
+  aber nichts – sie rechnete die Regel selbst nach und verlangte dabei eine Grenze. Jetzt gilt dieselbe Regel
+  (`wartenTrotzPlatz`); die Überschrift heißt dann „…: Plätze frei“ ohne Zahl.
+- **Startseite zählt Personen auf der Warteliste, nicht Anmeldungen.** Die Zahl war schon immer die der Personen,
+  der Text sagte „2 Anmeldungen warten“ – bei einer Familie mit zwei Kindern auf der Warteliste stimmte das nicht.
+  Jetzt: „2 Personen warten auf der Warteliste.“
+
+### Geändert (Anmeldungen)
+
+- **Mehrfachauswahl lesbarer: „Fr, 14.05. · Sa, 15.05.“ statt „Fr, 14.05., Sa, 15.05.“.** Gilt im Fenster einer
+  Anmeldung, auf der Druckliste und in der Tabelle. Steht in ChurchTools eine Antwort, die es im Formular nicht mehr
+  gibt, bleibt der Text wie in ChurchTools – sonst verschwände sie still. Die Summenzeile zählt wie bisher je
+  Antwort.
+
+### Neu (Dienstplaner, E6b-2 L3 – Alwin, 02.11.2026)
+
+- **„Live“ steuern:** Wer an einem Termin in einem Dienst mit „Live-Agenda steuern“ eingeteilt ist (genau die Regel
+  von ChurchTools), bekommt in „Live“ unter dem Kreis **‹ Zurück**, **Weiter ›**, **− 1 Min** und **+ 1 Min** – vor
+  dem Start nur **Starten**. Geschaltet wird im Live-Stand von ChurchTools: Die Live-Agenda dort und alle anderen
+  Geräte folgen, und umgekehrt.
+  - „Weiter“ und „Zurück“ überspringen Lieder ohne Dauer (wie ChurchTools) und weggelassene Punkte. ±1 Min ändert die
+    Restzeit, der Punkt bleibt. Am Ende ist „Weiter“ gesperrt.
+  - Der neue Stand steht sofort da; eine ältere Abfrage, die noch unterwegs war, überschreibt ihn nicht.
+  - Vor jedem Schalten wird der Ablauf frisch gelesen. Hat ihn jemand geändert (Punkt davor gelöscht), wird die Stelle
+    erst nachgezogen – sonst schaltete man vom falschen Punkt aus weiter.
+  - Klappt das Schalten nicht, steht es daneben („Nicht übernommen – vermutlich hat gerade jemand anderes geschaltet.“
+    bzw. „Nicht gespeichert – … Bitte noch einmal tippen.“).
+  - Am Handy vier Symbolknöpfe ‹ › − + wie in der Live-Agenda von ChurchTools. Testfall TF-ABLAUF-15.
+
+### Intern (Dienstplaner)
+
+- `PlanSpalte.liveSteuern` aus `darfLiveSteuern` (eine Stelle in `planAus`); in der Demo darf „Ton“ steuern.
+
+### Neu (Dienstplaner, E6b-2 L2 – Alwin, 02.11.2026)
+
+- **„Live“ in der Termin-Ansicht** – der Live-Stand von ChurchTools zum Folgen, derselbe wie in dessen „Live-Agenda“
+  (Ablaufpläne → „Live-Agenda ansehen“). Entwurf `e6b-2-live.html`, Variante A.
+  - **Jetzt** mit Notiz (wie die Live-Agenda von ChurchTools), Zuständigen und den Infos der unter „Spalten“
+    gewählten Gruppen, mitlaufende Lieder ohne Dauer, **Dann**, der Kreis mit der Restzeit (läuft ins Minus und wird rot: „+0:45 · über der Zeit“) und **Gesamt** mit der
+    Abweichung in Worten („2 Min. später“). Darunter der ganze Ablauf: erledigte Punkte mit Haken, der aktuelle
+    hervorgehoben, weggelassene durchgestrichen.
+  - Folgt jedem Weiterschalten in ChurchTools nach spätestens 2,5 Sekunden – so oft fragt auch die Live-Agenda von
+    ChurchTools. Nur solange „Live“ offen und sichtbar ist; gerechnet wird in der Uhr von ChurchTools, damit alle
+    Geräte dieselbe Restzeit zeigen.
+  - Noch nicht gestartet: „Jetzt · nach Plan“ folgt der Uhr. Nach dem letzten Punkt: „Ablauf vorbei“ mit Uhrzeit und
+    Abweichung.
+  - Antwortet ChurchTools kurz nicht, bleibt der letzte Stand stehen („Keine Verbindung – Stand von 10:08 Uhr. Wird
+    wieder versucht.“).
+  - Der Knopf steht an jedem Termin mit Ablauf (zum Vorbereiten); am Tag des Termins hat er einen roten Punkt, solange
+    ChurchTools den Termin als gestartet führt. Bildschirm bleibt an, Vollbild wo möglich, Esc schließt.
+  - Abweichung: Steht vor dem aktuellen Punkt ein weggelassener, rechnet die Live-Agenda von ChurchTools dessen Dauer
+    mit ein, der Dienstplaner nimmt die Zeiten aus dem Ablauf (Test-Instanz: ChurchTools „−49 Minuten“, Dienstplaner
+    „53 Min. später“ – laut Ablauf begann die Predigt um 12:50).
+  - Steuern (‹ › − +) kommt mit L3. Testfall TF-ABLAUF-14.
+
+### Geändert (Dienstplaner)
+
+- **„Musik-App“ am Handy nur als Symbol** im Kopf des Ablaufs, im selben Kasten wie die Knöpfe daneben (Alwin,
+  02.11.2026: „sieht sonst so komisch aus“). Am Rechner bleibt der Link mit Text.
+
+### Intern (Dienstplaner)
+
+- Der Demo-Ablauf hat eine ID wie in ChurchTools (die Live-Agenda braucht sie).
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **Zuständige klappen direkt am Knopf auf** (Alwin auf Staging, 02.11.2026: „nach dem Klick ist die Position des
+  Zuständigkeitsfensters nicht schön … entweder es kommt direkt aus diesem Button“). Statt eines Fensters an einer
+  falschen Stelle der Seite steht die Liste jetzt unter den Kreisen – unten am Bildschirm darüber –, wie das Menü am
+  Plus einer Zeile; Scrollen, Escape oder ein Tipp daneben schließen sie. Beim Drüberfahren färben sich nur noch die
+  Kreise blau, statt eines Rahmens darum („wird nicht schön beim Hover angezeigt“).
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **Info-Spalten als Tabelle** (Alwin, 02.11.2026: „Das mit den Spalten müssen wir irgendwie schöner hinbekommen“;
+  Entwurf „Ablauf mit Info-Spalten“, abgenommen). Die Spalten haben keine feste Breite von 150 px mehr: Eine Spalte
+  wird so breit wie ihr Inhalt (höchstens etwa 280 px, dann bricht der Text um), eine leere nur so breit wie ihr Name;
+  der Punkt behält mindestens 380 px. Alle Zeilen teilen sich ein Raster – vorher rutschten die Spalten bei schmalerem
+  Punkt nach links. Im Spaltenkopf steht, in wie vielen Punkten etwas eingetragen ist („Technik · 2“).
+  - **Wird es eng** (iPad hochkant, viele Spalten), scrollt alles rechts vom Punkt waagerecht, der Punkt bleibt stehen.
+    Rechts zeigt „›“, dass es weitergeht; steht in einer verdeckten Spalte etwas, trägt der Punkt ein Schildchen
+    („Technik ›“), das dorthin scrollt.
+- **Beim Bearbeiten stehen die Infos der gewählten Spalten unter dem Punkt** („Technik: …“) – vorher sah man dort
+  nicht, was schon eingetragen war.
+- **Die Kreise der Zuständigen sind antippbar** (Variante C): Direkt am Knopf klappt eine Liste mit allen Personen und
+  ihrem Dienst auf, offene Dienste rot. Die Namen unter dem Titel bleiben. Bei Liedern öffnet der Punkt weiter das Blatt, die Kreise das
+  Fenster.
+- **Musik-App: nur Kürzel in den Kreisen** („in der eigenen App nur Initialen“). Auf dem eigenen Server blockte die
+  Sicherheitsregel die Fotos aus ChurchTools – es blieb ein leerer Kreis. Im Dienstplaner (in ChurchTools) bleiben
+  die Fotos; lädt eins nicht, steht das Kürzel da.
+
+### Intern (Musik-App + Dienstplaner)
+
+- `AblaufListe`: Punkt-Zelle (bei Liedern nur sie als Knopf, damit die Kreise ein eigener Knopf sein können), Spalten
+  per `subgrid`, `useSpaltenSicht` misst verdeckte Spalten an den Köpfen; neu `ZustaendigeListe` (am Knopf, an `body`), `fotos`,
+  `ResponsibleEntry.dienst`, `useAblaufBearbeiten({ infoSpalten })`. Gegenprobe: 20 Teile einzeln zurückgenommen,
+  jeder macht Tests rot (die Matrix-Sonderregel für Infos war überflüssig – die schmale Form zeigt ohnehin nur den
+  Titel – und ist entfernt). TF-ABLAUF-12, TF-EDIT-14.
+
+### Intern (Dienstplaner, E6b-2 L1 – Alwin, 02.11.2026)
+
+- **Kern für „Live“: der Live-Stand von ChurchTools** (`shared/ct/liveAgenda.ts`) – noch nichts Sichtbares, die
+  Ansicht kommt mit L2. Der Dienstplaner liest und schreibt **denselben** Stand wie die „Live-Agenda“ von ChurchTools
+  (alte Schnittstelle `loadAgendaLivePosition`/`saveAgendaLivePosition`, gemessen 02.11.2026 in der Test-Instanz,
+  `dienstplaner-planung/docs/messung-e6b-2-live.md`), kein eigener Speicher.
+  - Liste wie ChurchTools: Stelle 0 = nicht gestartet, dann alle Punkte ohne Überschriften **samt weggelassenen**,
+    zuletzt Ende – sonst zeigte dieselbe Stelle etwas anderes als die Live-Agenda.
+  - „Weiter“/„Zurück“ überspringen Lieder ohne Dauer (wie ChurchTools) und weggelassene Punkte (Alwin); Zusatzzeit
+    ±1 Min als Gesamtwert, ohne den Beginn des Punkts zu verschieben (gemessen).
+  - Daraus Jetzt, „mit“ (Lieder ohne Dauer), Dann, Restzeit (läuft ins Minus), Abweichung in Worten („2 Min. später“,
+    abgeschnitten wie ChurchTools) und Ende; solange niemand gestartet hat, „Jetzt“ nach der Uhr.
+  - Steuern darf, wer an dem Termin auf einem gültigen Platz in einem Dienst mit „Live-Agenda steuern“ eingeteilt ist
+    – genau die Regel von ChurchTools (`darfLiveSteuern`, `Dienst.liveSteuern`). ChurchTools selbst prüft beim
+    Speichern nichts (gemessen, auch ohne Admin).
+  - Schreiben liest nach („nicht angekommen“ statt stillem Erfolg); vorübergehende Fehler zerstören keinen Stand.
+  - Nach einer Ablauf-Änderung rechnet `stelleNachziehen` die Stelle neu, damit der aktuelle Punkt derselbe bleibt.
+- **Ein Anschluss an die alte Schnittstelle für Regeln in `shared/`** (`AltAnfragePort`, im Browser
+  `dienstplaner/src/altPort.ts`): Vorlieben und Live-Agenda nutzen ihn; vorher stand der Anschluss der Vorlieben als
+  eigene Kopie da. `ablaufBeginn` liefert den Beginn eines Punkts als Zeitpunkt (eine Regel mit `ablaufUhrzeit`);
+  `isValid` am Platz steht jetzt in `RohPlatz` statt als Zusatz im Organigramm.
+- Demo des Dienstplaners kennt die Live-Agenda (für L2).
+
+### Behoben (Musik-App)
+
+- **Gerade Trennlinien im Lied-Menü** (Alwin, 02.11.2026: „Warum sind die Linien rechts und links so abgerundet?“).
+  Seit dem Umbau zum Fenster (#779) bogen sich die Linien zwischen den Zeilen an beiden Enden nach unten: Sie hingen
+  als Schatten an der Zeile, und die Zeile hat runde Ecken für die Hervorhebung. Jetzt ist die Linie ein eigenes,
+  gerades Element über die volle Breite; die Hervorhebung bleibt rund.
+
+### Intern (alle Apps)
+
+- Wächter `ui/design/trennlinien.test.ts`: Eine Regel mit Rundung darf ihre Trennlinie nicht als
+  `box-shadow: inset 0 1px 0` tragen. Gegenprobe: ohne den Fix meldet er genau die Zeile im Lied-Menü.
+
+### Geändert (alle Erweiterungen)
+
+- **„‹“ auch in Dienstplaner, Anmeldungen, Organigramm und Protokolle** (Alwin, 02.11.2026: „Wechselt ein Screen im
+  Fenster, soll es einen Zurück-Pfeil geben“; Scheibe 2 nach dem Entwurf „Fenster mit Zurück“). Wo ein Fenster ein
+  anderes ersetzt oder seine Seite wechselt, steht vor dem Titel „‹“ – ein Schritt zurück; das X schließt alles.
+  - **Dienstplaner:** „Wer kann?“ aus einem Entwurf oder einem belegten Platz führt mit „‹“ dorthin zurück. Die
+    Lied-Ansicht aus dem Punkt-Fenster hat „‹“ statt „Zurück“ unten, und kein „Schließen“ mehr neben dem X.
+  - **Anmeldungen:** „Person dazu“ und „Zurückholen“ führen zur Anmeldung zurück, aus der sie kamen; die Bausteine
+    „Nach Alter“, „Rabatt“, „Extra“ zu „Baustein hinzufügen“; „Veranstaltung verwalten“ hat zum ersten Mal einen Weg
+    zurück zur Auswahl. Mail schreiben, Rundmail-Vorschau, „Anmeldung von Hand“ und „Sofort löschen?“: „‹“ statt
+    „Zurück“ unten.
+  - **Organigramm:** Von der Person zur Gruppe, weiter zur Ober- oder Untergruppe – „‹“ geht jeweils einen Schritt
+    zurück. In den Schritten der Gruppe (Ändern, Aufnehmen, Rolle …) „‹“ statt „Zurück“ unten; aus „Umhängen?“ zurück
+    zur Wahl des Ziels.
+  - **Protokolle:** „Sitzung absagen“ mit „‹“ zurück zur Sitzung.
+  - **Punkt-Fenster** (Musik-App und Dienstplaner): „Einfügen nach“ und „Zuständig“ mit „‹“; „Lied verknüpfen“ führt
+    mit „‹“ zum Eintrag zurück.
+- **Unten jetzt „Abbrechen · …“ wie in ChurchTools.** Bei einer Rückfrage („1 Mail jetzt senden?“, „Sitzung
+  absagen“, „Umhängen?“) führt „Abbrechen“ dorthin zurück, wo man herkam – Geschriebenes geht nicht verloren. Bei
+  einem Schritt nach vorn („Neue Person anlegen → Weiter“) bricht es ab wie das X.
+
+### Intern (alle Erweiterungen)
+
+- Wächter in `fensterAufbau.test.ts`: kein „Zurück“-Knopf unten mehr (das Muster erkennt auch `onClick={() => …}` –
+  ein erster Entwurf hätte genau das übersehen, die Gegenprobe fand es). Organigramm mit einem Verlauf der Fenster,
+  Dienstplaner merkt sich, woher „Wer kann?“ kam; `PreisFenster` trägt `ausNeu`. Gegenprobe: 24 Teile einzeln
+  zurückgenommen, jeder macht Tests rot.
+
+### Geändert (alle Apps)
+
+- **Fenster nur zum Ansehen oder Wählen haben unten kein „Schließen“ mehr** (Alwin, 02.11.2026: „Schließen und X ist
+  doppelt in dem Fenster“; Entwurf „Fenster mit Zurück“, abgenommen). Geschlossen wird mit dem X oben rechts, wie in
+  ChurchTools; die Fenster werden kürzer. Das gilt auch für „Fertig“ und „Abbrechen“, wo sie nur schlossen
+  (Tonart, Kapo, Abschnitte, Dateien, „Wer kann?“, Bausteine im Baukasten, Gruppe und Person im Organigramm …), und
+  für Fenster, die gerade keinen eigenen Knopf haben (Ergebnis nach dem Senden, Laden). Fenster zum Bearbeiten
+  behalten „Abbrechen“ neben „Speichern“.
+
+### Neu (Musik-App)
+
+- **„‹“ zurück ins Lied-Menü:** Transponieren, Kapo, Abschnitte, „Dateien verwalten“ und „Stammdaten …“ haben vor dem
+  Titel einen Zurück-Pfeil; das X schließt ganz. Über den Stammdaten führen „‹“ und „Abbrechen“ im Arrangement-Fenster
+  zurück zu den Stammdaten, ebenso beim Umbenennen zurück zu den Dateien; das X schließt beide. Im Liederheft führt
+  „‹“ aus dem Formular „Neues Lied“ zurück zur Suche.
+- **Version umbenennen zeigt den Dateinamen:** Unter dem Feld steht, wie die Datei in ChurchTools heißen wird
+  („Datei in ChurchTools: Lied — Akustik (App).chordpro“). Alwin fragte, warum bei der einen Datei die Endung steht
+  und bei der anderen nicht – bei einer Version setzt die App Liedtitel, „(App)“ und Endung selbst.
+
+### Intern (alle Apps)
+
+- `Sheet`: ohne eigene Knöpfe (`knoepfe={null}`) keine Fußzeile; neu `onAbbrechen` für Fenster über einem Fenster.
+  `fensterAufbau.test.ts` meldet ein `cancelLabel` neben `knoepfe={null}` (16 tote Beschriftungen entfernt).
+  `versionLiedTitel` liest den Liedtitel mit demselben Muster wie `versionNameOf`. Der Board-Test der Protokolle
+  („Alphabetisch“) hing an einem festen Datum und fiel seit dem 02.11.2026 – die Fälligkeiten liegen jetzt weit in der
+  Zukunft. Gegenprobe: 15 Teile einzeln zurückgenommen, jeder macht Tests rot. TF-EINST-21.
+- Dienstplaner, Anmeldungen, Organigramm und Protokolle: Fensterwechsel und Schritte mit „‹“ folgen in einer zweiten
+  Scheibe.
+
+### Neu (Musik-App)
+
+- **Dateien umbenennen** (Alwin, 30.10.2026: „wäre gut, wenn man die hochgeladenen Dateien irgendwo direkt umbenennen
+  könnte“; Entwurf „Auswahl, Anzeige & Dateien“, Board 3). In **„Dateien verwalten“** hat jede Zeile einen **Stift**
+  neben dem Papierkorb. Das Fenster zeigt den Namen zum Ändern und die **Endung fest daneben** – aus einem PDF wird
+  kein Text. Der neue Name gilt für alle, in der App und in ChurchTools; eine gewählte Datei bleibt gewählt, Anmerkungen
+  auf einem PDF bleiben (beides hängt an der Datei, nicht am Namen).
+  - **Eine Version aus dem Editor** wird dort ebenso umbenannt: Im Feld steht nur ihr Name, und Tonart, Aussehen und
+    die eigenen Anmerkungen gehen mit – wie beim Umbenennen im Editor.
+  - Ein Name, unter dem das Notenblatt zur Version würde („… (App)“), geht nicht; ebenso nicht der Name einer anderen
+    Datei daneben. Was ChurchTools ablehnt, steht im Fenster.
+
+### Intern (Musik-App)
+
+- `PATCH /files/<id> {name}` gemessen an der Test-Instanz (31.10.2026, `musik-planung/docs/messung-datei-umbenennen-31.10.md`,
+  Mess-Skript `server/scripts/probe-datei-umbenennen.ts`): 204, Name wirklich geändert, ID/Adresse/Inhalt bleiben.
+  `dateiUmbenennen` im geteilten Kern (Server und Erweiterung) liest danach nach – ein 204 ohne Wirkung wird zum Fehler.
+  Neue Route `PATCH /api/songs/:songId/arrangements/:arrangementId/files/:fileId`. Die Namensregel `neuerDateiname`
+  gilt im Fenster und im Kern. Was beim Umbenennen einer Version mitgeht, steht jetzt an einer Stelle
+  (`umbenannteVersionMitnehmen`) – Editor und Dateiverwaltung rufen beide sie. Der E2E-Stub benennt wie ChurchTools
+  wirklich um; `e2e/dateien-umbenennen.spec.ts` geht die Kette mit echtem Server durch (und ist der einzige Test, der
+  die Route selbst bemerkt). Gegenprobe: 21 Teile einzeln zurückgenommen, jeder macht Tests rot. TF-EINST-09,
+  TF-EXT-05.
+
+### Geändert (Musik-App)
+
+- **Lied-Menü: „Akkorde & Text · Nur Text · Datei“ als drei gleichrangige Zeilen** (Alwin, 30.10.2026: „irreführend,
+  dass man unter Nur Text eine PDF wählt“; Entwurf „Auswahl, Anzeige & Dateien“, abgenommen). „Nur Text“ steht
+  immer direkt da; die hochgeladenen Dateien (PDF oder Bild) liegen unter **„Datei ›“** mit ihrer Zahl daneben – bei
+  genau einer Datei ist sie direkt wählbar. Die gezeigte Datei steht in Blau neben „Datei“. Unter der Auswahl steht für
+  Berechtigte, wo umbenannt und gelöscht wird.
+- **„Bearbeiten“ ohne Unterseite:** „Im Editor öffnen“, **„Dateien verwalten“** (vorher „Dateien …“ auf der
+  Unterseite „Dateien · Stammdaten ›“) und „Stammdaten …“ stehen direkt da.
+
+### Neu (Musik-App + Dienstplaner – Alwin, 30.10.2026)
+
+- **Einen Punkt an einer bestimmten Stelle einfügen** – nicht mehr nur am Ende. Entwurf `einfuegen-entwurf.html`,
+  abgenommen 30.10.2026 (A + B, am PC wie ChurchTools).
+  - Im Fenster „Neuer Eintrag“ steht **„Einfügen nach“** (vorgegeben „Am Ende“); ein Tipp zeigt alle Punkte zur Wahl.
+  - Im Fenster eines Punkts links unten **„Darunter einfügen“** (gesperrt, solange dort etwas ungespeichert ist).
+  - **Am Rechner** erscheinen beim Drüberfahren neben dem Stift ein **Plus** – „Programmpunkt/Lied/Überschrift
+    dahinter einfügen“ bzw. „… davor einfügen“, wie in ChurchTools – und ein **roter Papierkorb** mit derselben
+    Rückfrage wie „Eintrag löschen“. Am Handy erscheinen sie nicht.
+- **„Weitere Einstellungen“ beim Anlegen:** Infos je Gruppe, „Vor Gottesdienstbeginn“ und „An diesem Termin
+  weglassen“ lassen sich gleich beim Anlegen setzen (zum Aufklappen). „Vor Gottesdienstbeginn“ startet mit der Seite der
+  gewählten Stelle.
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **„Vor Gottesdienstbeginn“ verschiebt nur noch diesen einen Punkt** (Alwin, 30.10.2026): Eingeschaltet rückt er
+  direkt über „Beginn“, ausgeschaltet direkt darunter; alle anderen Punkte bleiben auf ihrer Seite – auch bei
+  Überschriften (nur sie selbst). Vorher wanderte die Grenze, und alle Punkte darüber bzw. darunter wechselten mit. Der
+  Hinweis am Schalter sagt, wohin der Punkt beim Speichern rückt.
+
+### Intern (Musik-App + Dienstplaner)
+
+- `vorlaufUmschalten` (ersetzt `beginnPositionFuer`), `anDieStelle` als eine Regel für Einfügen und Zurückholen,
+  `angelegtePruefen` (frisch nachlesen statt der Antwort trauen), `vorlaufAnDerStelle`; `MenueListe` als gemeinsames
+  Menü für den grünen Kopfknopf und das Plus an der Zeile; Fensterknopf-Art `link`; das Menü am Plus der Zeile hängt an `body` (`useAufklapp` kennt dafür `menue`), sonst schnitt die Ablauf-Karte es ab; ein `infosSchema` für Gesehen,
+  Ändern und Anlegen. Gegenprobe: 15 Teile einzeln zurückgenommen, jeder macht Tests rot. TF-EDIT-15.
+
+### Behoben (Musik-App)
+
+- **Eigene Anmerkungen bleiben beim Umbenennen einer Version erhalten.** Ein neuer Versionsname ist intern ein neuer
+  Schlüssel; Striche, Texte und Zoom lagen danach unter dem alten und waren auf jedem Gerät unsichtbar (gefunden beim
+  Bau von #812). Jetzt gehen sie mit – kopiert, nicht verschoben, und über den normalen Upload-Weg auch aufs Konto.
+  Eine **neu** angelegte Version bekommt weiterhin keine: Ihr Text ist ein anderer, die Striche säßen falsch.
+  Grenze: Die Anmerkungen **anderer** Teammitglieder zu dieser Version liegen in deren Konto und bleiben beim alten
+  Namen.
+
+### Intern (Musik-App)
+
+- `anmerkungenMitnehmen` in `services/annotations.ts` – welche Schlüssel dazugehören, entscheidet `versionKopien`
+  (dieselbe Regel wie beim Schlüssel-Umzug vom 07.10.2026), nur der eigene Namensraum, Upload über `pushField`.
+  Aufgerufen in `useChartEditor` beim Umbenennen, vor `selectVersion`.
+
+### Behoben (Musik-App)
+
+- **Geteiltes Gerät in der Erweiterung:** Meldete sich nach A jemand anderes in ChurchTools an (oder wurde eine Person
+  simuliert), lag alles von A noch im Browser – die Erweiterung hat kein eigenes Abmelden. Was A ohne Netz geändert
+  und nicht mehr hochgeladen hatte (Tonart, Kapo, Striche), landete dann **auf Bs Konto**, und bis zum Abgleich sah B
+  As Werte und zwischengespeicherte Abläufe. Jetzt merkt sich das Gerät, für wen es zuletzt lief; wechselt die Person,
+  wird es zuerst geräumt wie beim Abmelden der Server-App (`clearDeviceData`). Hochgeladen wird erst, wenn feststeht,
+  wer angemeldet ist. Wie beim Abmelden gilt: Was A noch nicht hochgeladen hatte, ist dann weg statt bei B.
+
+### Neu (Musik-App)
+
+- **„Lieder öffnen mit: Akkorde & Text | Nur Text“** unter „Mehr › Während des Spielens“ (Alwin, 30.10.2026: „Für
+  Sänger würde es Sinn machen, dass man voreinstellen kann, dass immer Nur Text als erstes gewählt ist“). Mit „Nur
+  Text“ öffnet jedes Lied ohne Akkorde, an dem man selbst noch nichts gewählt hat; wer an einem Lied „Akkorde & Text“
+  wählt, behält das für dieses Lied. Die Wahl gilt **auf allen eigenen Geräten** und geht der Gemeinde-Einstellung
+  „PDF zuerst“ vor. Ein Lied ohne Text zeigt weiter sein Dokument.
+
+### Behoben (Musik-App)
+
+- **Nach dem Speichern im Editor sieht das Lied aus wie vorher** (Alwin, 30.10.2026: „soll bitte genau die Ansicht,
+  mit dem gleichen Aussehen von vorher erscheinen, nicht wieder zurück in die Ursprungsansicht“). Schrift, Spalten
+  und „Nur Text“ gelten je Version – eine im Editor neu gespeicherte Version startete deshalb mit Schrift 20, einer
+  Spalte und Akkorden. Jetzt übernimmt sie Schrift, Spalten, Nur Text, Kapo und Zählweise der Version, aus der sie
+  entstand. Dasselbe beim Umbenennen einer Version (neuer Name = neuer Schlüssel): dort geht alles mit, auch Tonart und
+  Abschnitts-Transponierung.
+
+### Intern (Musik-App)
+
+- `einstellungenMitnehmen` in `utils/songVersions.ts` (vor `selectVersion`, nichts überschreiben, über `setLsVersion`
+  auch ans Konto). Persönliche Konto-Einstellungen unter der Pseudo-Lied-ID `KONTO_ID = 0` (`worship_start_0`, neue
+  Einstellungsart `start` in `SETTINGS_BASES`): `pullSettings` fragt sie immer mit, `GET /api/settings` ergänzt sie;
+  Team-Notizen fragen nur echte Lieder ab und nehmen sie nie mit. Regel in `standardAnsicht.ts` (`liedStart`,
+  `standardQuelle`), angewandt in `loadSettings` – damit auch in „Als PDF teilen“ und im Ablauf-PDF.
+- Bekannt, nicht behoben: Anmerkungen einer umbenannten Version bleiben unter dem alten Schlüssel liegen.
+
+### Neu (Protokolle, S7-3)
+
+- **Board** im Reiter „To-Dos“ (Alwin 30.10.2026): „Liste | Board“; nach Status (Offen · In Arbeit · Erledigt) oder nach
+  Person, „+ Neues To-Do“ je Spalte mit Vorbelegung.
+- **Ziehen:** Maus über die ganze Karte, am Handy lange drücken (~0,4 s). Nach Status ändert es den Status, nach Person
+  tauscht es nur die gezogene Person. Gibt ein Mitglied sein eigenes To-Do ab, fragt die Seite vorher.
+- **Sortieren:** Dringlichkeit · Bis-Datum · Alphabetisch · Manuell (eigene Reihenfolge per Ziehen, auch in der Liste).
+- **Verlauf „Zuständig“:** jeder Wechsel der Zuständigen steht jetzt im Verlauf – im Board, im Fenster, im Editor und
+  beim Verschieben in eine andere Gruppe.
+- **Gemerkt je Benutzer, auf allen Geräten:** Ansicht, Einteilung, Filter, Sortierung und Reihenfolge liegen in einer
+  Datei am eigenen ChurchTools-Konto (vorher nur im Gerät).
+
+- Beim Prüfen in der Test-Instanz gefunden und behoben: Ein To-Do mit zwei Zuständigen steht nach Person in zwei
+  Spalten; Umordnen in der einen trug die Person der anderen aus (gleiche Zieh-Kennung). Jetzt je Spalte eindeutig.
+
+- Ebenfalls in der Test-Instanz gefunden: Der Spiegel der Einstellungen im Gerät galt je Browser, nicht je Person – an
+  einem geteilten Gerät bekam die zweite Person die Einstellungen der ersten (und in ihre Datei). Jetzt je Person.
+
+- Am iPhone gefunden: Das Bild unter dem Finger war breiter als die Karte, der Inhalt brach anders um. Jetzt genau so
+  groß wie die gezogene Karte.
+
+### Intern
+
+- `shared/ct/personenAblage.ts` verallgemeinert (Präfix/Dateiname als Parameter, `holeDaten`, `mischeEin`) statt einer
+  zweiten Ablage; der Browser-Anschluss liegt jetzt in `ui/ct/ablagePort.ts` (Musik-App und Protokolle).
+- `useZiehSensorenLangDruecken` und `WahlKnopf` in `ui/bedienung` für alle Apps.
+
+### Behoben (alle Apps)
+
+- **Fenster erscheinen wieder zuverlässig – nie mehr nur der dunkle Schleier.** iOS meldete manchmal noch eine
+  Bildschirmtastatur, die längst zu war (nach dem Schreiben, nach einer Weile im Hintergrund). Jedes Fenster sparte
+  dann unten Platz für sie aus und behielt selbst keinen: Man sah nur die Unschärfe, erst ein Neustart der App half
+  (iPad: „Einstellungen“ im Organigramm; iPhone: Lied-Menü nach dem Editor). Eine Tastatur zählt jetzt nur noch, wenn
+  gerade in einem Feld geschrieben wird – und ein Fenster behält in jedem Fall genug Höhe für Kopf und Knöpfe.
+- **Untere Reiterleiste in der ChurchTools-App ganz über dem Home-Strich.** Am iPhone lagen die Beschriftungen bisher
+  zum Teil im Strich-Bereich, die runden Ecken schnitten „Organigramm“ und „Neue Gliederung“ an. Gilt für alle
+  Erweiterungen mit Reiterleiste; im Browser bleibt sie wie sie ist.
+
+### Behoben (Organigramm)
+
+- **Präsentation: „Zurück“ und „Weiter“ über dem Home-Strich.** Die Fußleiste lag am iPhone zu tief und wurde von
+  den runden Ecken angeschnitten.
+
+### Geändert (alle Apps)
+
+- **Was in einem Umschalter gewählt ist, sieht man jetzt sofort: blau umrandet, zart blau hinterlegt, blaue Schrift**
+  (Alwin, 30.10.2026: im Tempo-Fenster nicht gefunden, wo der sichtbare Puls an ist; Entwurf „Auswahl, Anzeige &
+  Dateien“, Variante B). Vorher war das Gewählte nur eine Stufe heller grau – im Dunkeln kaum zu unterscheiden. Gilt
+  für alle Umschalter aller Apps: Tempo-Fenster (Schläge je Takt, Sichtbarer Puls, Klick), Liederliste, Abwesenheiten,
+  Dienstplaner, Protokolle-Suche, Anmeldungen. Volles Blau bleibt den Knöpfen, die etwas tun („66 in ChurchTools
+  speichern“).
+
+### Intern (alle Apps)
+
+- `auswahlKnopfAn` setzt Rand `--blue`, Fläche `--blue-soft`, Schrift `--blue-ink`; der Farbwert `--seg-on` ist weg.
+  Sechs Stellen hatten Rand und Schrift über dem Baustein selbst nachgezogen – die Zeilen sind entfernt. Der verbundene
+  `Segment` (Dienstplaner) hat dafür einen durchsichtigen Rand. Wächter `ui/design/auswahlBlau.test.ts`.
+
+### Geändert (alle Apps)
+
+- **Die Release-Seite auf GitHub zeigt nur noch die Änderungen der App, die veröffentlicht wird** (Alwin, 30.10.2026:
+  „wenn ich einen Release einer App mache, sollen auch nur die Features dieser einen App oder Erweiterung da
+  erscheinen“). Vorher hing beim Musik-App-Release eine Liste aller Pull Requests seit dem letzten Tag dran – auch die
+  von Protokollen, Organigramm, Dienstplaner und Anmeldungen. Jetzt stehen dort unter „Was sich geändert hat seit …“
+  die Punkte Neu, Geändert und Behoben aus dem CHANGELOG, die diese App nennen oder alle Apps betreffen. Die
+  Erweiterungen bekommen dieselbe Liste; vorher hatten sie gar keine.
+
+### Intern (Release-Beschreibung)
+
+- `scripts/release-notizen.mjs`: Abschnitte aus `CHANGELOG.md` und `changelog.d/` beim Tag minus denselben beim vorigen
+  stabilen Tag derselben App (gleiches Präfix, ohne `-rc`), verglichen am Text – so gilt ein Eintrag, den ein
+  Musik-App-Release aus `changelog.d/` ins CHANGELOG schiebt, beim nächsten Erweiterungs-Release nicht wieder als neu.
+  `release.yml`, `erweiterung-release.yml` und `anmeldungen-release.yml` rufen es auf (`fetch-depth: 0`),
+  `generate_release_notes` ist aus.
+- `npm run changelog -- --pruefen` verlangt in jeder gezeigten Überschrift (Neu/Geändert/Behoben/Entfernt/Sicherheit)
+  die App in der Klammer – sonst landete der Eintrag in keiner Release-Beschreibung.
+
+### Neu (Dienstplaner, E6b-1 – Alwin, 30.10.2026)
+
+- **„Ablauf zeigen“** in der Termin-Ansicht: der Ablauf ruhig im Vollbild – „wie ein Hintergrundbild am Handy“.
+  Entwurf `e6b-anzeige.html`, abgenommen 30.10.2026.
+  - Oben links die Uhr (Gemeinde-Zeit, läuft mit) und der Tag, rechts Titel, Beginn und Ende; darunter alle Punkte mit
+    Zeit, Dauer, Titel, Zuständigen und den Infos der unter „Spalten“ gewählten Gruppen. Weggelassene Punkte fehlen.
+  - Nichts hervorgehoben, nichts verstellbar: Die Schrift passt sich an, damit alles auf einen Blick passt (einspaltig,
+    höchstens 1100 px breit); reicht es selbst klein nicht, wird gescrollt.
+  - Farben folgen ChurchTools (hell oder dunkel). Nur **Vollbild** (wo der Browser es kann, auch Taste F) und
+    **Schließen** (auch Esc); der Bildschirm bleibt an, solange die Anzeige offen ist.
+  - Die Live-Steuerung bekommt später einen eigenen Knopf.
+
+### Geändert (Dienstplaner)
+
+- **„Ende“ heißt jetzt: wann der letzte Punkt des Ablaufs vorbei ist** – ohne „ca.“ (Alwin, 30.10.2026: „Ist ja klar,
+  dass es nur so endet, wenn alles nach Plan läuft“). Vorher stand „Ende ca.“ mit dem Ende des Termins aus ChurchTools,
+  das mit dem Ablauf nichts zu tun haben muss. Termin-Ansicht und „Ablauf zeigen“ rechnen wie der Balken „Ende“ der
+  Matrix (`ablaufEnde`); ohne Ablauf steht kein Ende da. Die Startseite zeigt bei „Als Nächstes“ nur Tag und Beginn.
+
+### Behoben (alle Erweiterungen)
+
+- Wechselte die Breite über die Handy-Grenze (Handy quer drehen), baute die Seite sich neu auf – offene Fenster und
+  Bearbeiten gingen zu. Der Rahmen hat jetzt mit und ohne Leiste unten denselben Aufbau.
+
+### Intern (E6b-1)
+
+- `useWakeLock` nach `ui/bedienung/` (Musik-App und Dienstplaner), neu `ui/bedienung/useVollbild.ts` – das Organigramm
+  nutzt ihn für die Präsentation statt eigener Vollbild-Logik. `tagLang` in `shared/ct/datum.ts`.
+- Gemeinsamer Wert `--ebene-vollflaeche` (2500) für alles, was die ganze Fläche über der Leiste von ChurchTools deckt
+  (App-Vollbild, Präsentation, „Ablauf zeigen“) – vorher stand die Zahl an jeder Stelle selbst, und die Anzeige lag mit
+  1000 unter der Leiste (1040, in der Test-Instanz gefunden). Wächter `ui/design/ebeneVollflaeche.test.ts`.
+- Neuer Testfall TF-ABLAUF-13.
+
 ## [2.38.0] – 2026-10-30
 
 **Überblick.** Musik-App: der **Lied-Editor** L1–L6 (Akkorde als Kärtchen, Ablauf, Liedinfo aus ChurchTools, Akkord-Leiste,

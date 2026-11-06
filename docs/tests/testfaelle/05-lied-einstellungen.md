@@ -587,7 +587,7 @@ Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/ct/liedinfo.ts`, `shared/ct/liedinfoImport.ts`, `shared/ct/songselect.ts`, `ui/lied/liedinfoFormular.ts`, `client/src/hooks/useLiedinfoQuelle.ts`, `ui/lied/editor/LiedinfoKarte.tsx`, `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordProInput.tsx`
+- **Betrifft:** `shared/ct/liedinfo.ts`, `shared/ct/liedinfoImport.ts`, `shared/ct/songselect.ts`, `ui/lied/liedinfoFormular.ts`, `ui/lied/useLiedinfoQuelle.ts`, `ui/lied/editor/LiedinfoKarte.tsx`, `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordProInput.tsx`
 - **Automatisiert:** weitgehend – `liedinfo.test.ts` (Felder, zwei `{artist}`, Vergleich, Entfernen nur mit Wert,
   Grammatik = Ausblenden), `liedinfoFormular.test.ts` (Start, Vorbelegen, Änderung, Speichern: Erfolg, Feld trotz
   Speichern leer, Fehler, ohne Recht, nichts geändert), `LiedinfoKarte.test.tsx`, `ChordEditor.test.tsx` (Fehler →

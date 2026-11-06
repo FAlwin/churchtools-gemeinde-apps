@@ -78,10 +78,12 @@ describe('Meine Dienste teilen (E8-3)', () => {
 
   it('nicht lesbar → Hinweis mit „Erneut versuchen“, der es noch einmal liest', async () => {
     port.einteilungen.mockRejectedValueOnce(new Error('503')).mockResolvedValueOnce([]);
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     zeige();
     fireEvent.click(knopf()!);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    // Der Grund steht im Log – auf der Seite nur „ließen sich nicht laden“.
+    expect(warn).toHaveBeenCalledWith('[meine dienste] nicht geladen:', expect.any(Error));
     await waitFor(() =>
       expect((blaetter.at(-1) as PlanBlatt | undefined)?.leer).toBe(
         'Du hast keine kommenden Dienste.',

@@ -2,7 +2,6 @@ import {
   Fragment,
   lazy,
   Suspense,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -16,6 +15,7 @@ import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
@@ -279,21 +279,17 @@ export function Planen({
   const { toast, showToast } = useToast();
 
   // Entwürfe (E4-3): geladen beim Öffnen, neu nach dem Einrichten einer Schublade oder „Erneut versuchen“.
-  const [ew, setEw] = useState<EntwuerfeZustand>({ art: 'laedt' });
-  const [ewVersuch, setEwVersuch] = useState(0);
-  useEffect(() => {
-    if (!entwuerfe) return;
-    let aktuell = true;
-    setEw({ art: 'laedt' });
-    entwuerfe.laden().then(
-      (daten) => aktuell && setEw({ art: 'fertig', daten }),
-      (e: unknown) => aktuell && setEw({ art: 'fehler', text: fehlerMeldung(e).text }),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [entwuerfe, ewVersuch]);
-  const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
+  const {
+    stand: ewStand,
+    neu: ewNeu,
+    setze: ewSetzeDaten,
+  } = useLaden(() => (entwuerfe ? entwuerfe.laden() : null), [entwuerfe]);
+  const ew: EntwuerfeZustand =
+    ewStand.art === 'fertig'
+      ? { art: 'fertig', daten: ewStand.daten }
+      : ewStand.art === 'fehler'
+        ? { art: 'fehler', text: ewStand.fehler.text }
+        : { art: 'laedt' };
   /**
    * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
    * Eintragen – sonst ist er **veraltet**: Es gilt ChurchTools, und am Platz steht nur ein Schild (Alwin,
@@ -314,12 +310,11 @@ export function Planen({
     ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.stand === 'bereit';
   /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
   const ewSetzen = (k: string, e: Entwurf | null) =>
-    setEw((alt) => {
-      if (alt.art !== 'fertig') return alt;
-      const map = new Map(alt.daten.entwuerfe);
+    ewSetzeDaten((alt) => {
+      const map = new Map(alt.entwuerfe);
       if (e) map.set(k, e);
       else map.delete(k);
-      return { art: 'fertig', daten: { ...alt.daten, entwuerfe: map } };
+      return { ...alt, entwuerfe: map };
     });
   /**
    * Einen Entwurf speichern und das Ergebnis gleich in die geladenen Daten übernehmen – bei einem Konflikt das, was

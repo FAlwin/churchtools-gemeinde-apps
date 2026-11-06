@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import type { SongSelectTreffer } from '@shared/types/index';
-import type { LiedWahlArgs } from '@ui/ablauf/PunktFenster';
-import { Sheet } from '@ui/fenster/Sheet';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import styles from '@ui/ablauf/PunktFenster.module.scss';
-import { SongPicker } from '@ui/lied/SongPicker';
+import type { LiedWahlArgs } from '../ablauf/PunktFenster';
+import { Sheet } from '../fenster/Sheet';
+import { FensterKnopf } from '../fenster/FensterKnopf';
+import styles from '../ablauf/PunktFenster.module.scss';
+import { SongPicker } from './SongPicker';
 import { NewSongSheet } from './NewSongSheet';
-import { useCapabilities } from '../hooks/useServices';
+import { useLiedZugriff } from './liedZugriff';
 
 /**
  * **„Lied verknüpfen" der Musik-App** – die Liedwahl, die sie ins gemeinsame Punkt-Fenster (`ui/ablauf/PunktFenster`)
@@ -24,7 +24,7 @@ export function LiedVerknuepfen({
   fehler,
   busy,
 }: LiedWahlArgs) {
-  const canEditSongs = useCapabilities(true).data?.canEditSongs ?? false;
+  const canEditSongs = useLiedZugriff().useRechte()?.liederAendern ?? false;
   const [neuesLied, setNeuesLied] = useState<{ treffer?: SongSelectTreffer; name?: string } | null>(
     null,
   );

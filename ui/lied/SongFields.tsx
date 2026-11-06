@@ -14,8 +14,8 @@
 import type { ReactNode } from 'react';
 import type { SongCategory } from '@shared/types/index';
 import { LIED_GRENZEN } from '@shared/types/index';
-import type { NeuesLiedFormular } from '@ui/lied/liedFormular';
-import styles from '@ui/lied/SongFields.module.scss';
+import type { NeuesLiedFormular } from './liedFormular';
+import styles from './SongFields.module.scss';
 
 interface SongFieldsProps {
   formular: NeuesLiedFormular;

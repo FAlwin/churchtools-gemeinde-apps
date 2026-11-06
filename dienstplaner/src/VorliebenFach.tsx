@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import {
@@ -35,38 +36,47 @@ export function VorliebenFach({
   vorlieben: EntwurfAnschluss['vorlieben'];
   onClose: (gespeichert: boolean) => void;
 }) {
-  const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
-  const [versuch, setVersuch] = useState(0);
+  const { stand, neu } = useLaden(
+    () => vorlieben.lesen(gruppe.id, person.id),
+    [vorlieben, gruppe.id, person.id],
+  );
+  // Im Fenster geändert – bis dahin gilt das Gespeicherte.
+  const [eigen, setEigen] = useState<Vorliebe | null>(null);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [laeuft, setLaeuft] = useState(false);
+  const zustand: Zustand =
+    stand.art === 'fertig'
+      ? stand.daten.ok
+        ? {
+            art: 'bereit',
+            v: eigen ?? stand.daten.vorliebe,
+            gespeichert: stand.daten.vorliebe,
+            meldung,
+            laeuft,
+          }
+        : { art: 'fehler', grund: stand.daten.grund }
+      : // Wirft das Lesen selbst (statt einen Grund zu nennen), ist es vorübergehend – „Erneut versuchen“.
+        stand.art === 'fehler'
+        ? { art: 'fehler', grund: 'voruebergehend' }
+        : { art: 'laedt' };
 
-  useEffect(() => {
-    let aktuell = true;
-    setZustand({ art: 'laedt' });
-    void vorlieben.lesen(gruppe.id, person.id).then((r) => {
-      if (!aktuell) return;
-      setZustand(
-        r.ok
-          ? { art: 'bereit', v: r.vorliebe, gespeichert: r.vorliebe, meldung: null, laeuft: false }
-          : { art: 'fehler', grund: r.grund },
-      );
-    });
-    return () => {
-      aktuell = false;
-    };
-  }, [vorlieben, gruppe.id, person.id, versuch]);
-
-  const setze = (teil: Partial<Vorliebe>) =>
-    setZustand((z) => (z.art === 'bereit' ? { ...z, v: { ...z.v, ...teil }, meldung: null } : z));
+  const setze = (teil: Partial<Vorliebe>) => {
+    if (zustand.art !== 'bereit') return;
+    setEigen({ ...zustand.v, ...teil });
+    setMeldung(null);
+  };
 
   const speichern = async () => {
     if (zustand.art !== 'bereit' || zustand.laeuft) return;
     const v = zustand.v;
-    setZustand({ ...zustand, laeuft: true, meldung: null });
+    setLaeuft(true);
+    setMeldung(null);
     const r = await vorlieben.speichern(gruppe.id, person.id, v);
     if (r.ok) onClose(true);
-    else
-      setZustand((z) =>
-        z.art === 'bereit' ? { ...z, laeuft: false, meldung: vorliebenGrundText(r.grund) } : z,
-      );
+    else {
+      setLaeuft(false);
+      setMeldung(vorliebenGrundText(r.grund));
+    }
   };
 
   const bereit = zustand.art === 'bereit' ? zustand : null;
@@ -95,7 +105,7 @@ export function VorliebenFach({
         <div className={styles.kasten}>
           {vorliebenGrundText(zustand.grund)}{' '}
           {zustand.grund === 'voruebergehend' && (
-            <button type="button" className={styles.link} onClick={() => setVersuch((x) => x + 1)}>
+            <button type="button" className={styles.link} onClick={neu}>
               Erneut versuchen
             </button>
           )}

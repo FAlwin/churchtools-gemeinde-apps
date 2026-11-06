@@ -16,20 +16,32 @@ import type { SongSelectTreffer } from '@shared/types/index';
  *     hat abgelehnt" (nichts entstanden) als auch für „Lied da, aber kein Arrangement". Deshalb darf
  *     der Knopf nicht einfach „Erneut versuchen" heißen.
  */
-const legeLiedAn = vi.fn();
-const holeChordProAusSongSelect = vi.fn();
-const speichereNotenblatt = vi.fn();
-const getSongChart = vi.fn();
-vi.mock('../services/churchtoolsApi', () => ({
-  legeLiedAn: (...a: unknown[]) => legeLiedAn(...a),
-  holeChordProAusSongSelect: (...a: unknown[]) => holeChordProAusSongSelect(...a),
-  speichereNotenblatt: (...a: unknown[]) => speichereNotenblatt(...a),
-  getSongChart: (...a: unknown[]) => getSongChart(...a),
-}));
-
-const { ApiError } = await import('../services/api');
+const liedAnlegen = vi.fn();
+const notenblattAusSongSelect = vi.fn();
+const notenblattSpeichern = vi.fn();
+const notenblattLesen = vi.fn();
+// Der Liedzugriff der App (LW1b-2): Hier eine Attrappe – was die Musik-App konkret anbindet (ChurchTools-Aufrufe,
+// „502 heißt ungewiss"), prüft `client/src/hooks/musikLiedZugriff.test.ts`.
+class ChurchToolsFehler extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+const nachAenderung = vi.fn();
+const zugriff = {
+  liedAnlegen: (...a: unknown[]) => liedAnlegen(...a),
+  notenblattAusSongSelect: (...a: unknown[]) => notenblattAusSongSelect(...a),
+  notenblattSpeichern: (...a: unknown[]) => notenblattSpeichern(...a),
+  notenblattLesen: (...a: unknown[]) => notenblattLesen(...a),
+  anlegenUngewiss: (e: unknown) => e instanceof ChurchToolsFehler && e.status === 502,
+  nachAenderung,
+} as unknown as import('./liedZugriff').LiedZugriff;
+const { LiedZugriffKontext } = await import('./liedZugriff');
 const { useNeuesLied } = await import('./useNeuesLied');
-const { LEERES_FORMULAR } = await import('@ui/lied/liedFormular');
+const { LEERES_FORMULAR } = await import('./liedFormular');
 
 const TREFFER: SongSelectTreffer = {
   songNumber: 5841527,
@@ -47,16 +59,20 @@ const FORMULAR = { ...LEERES_FORMULAR, name: 'Treu', categoryId: 0, ccli: '58415
 function starte(opts: { canUseCcli?: boolean } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderHook(() => useNeuesLied({ canUseCcli: opts.canUseCcli ?? true }), {
-    wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={qc}>
+        <LiedZugriffKontext.Provider value={zugriff}>{children}</LiedZugriffKontext.Provider>
+      </QueryClientProvider>
+    ),
   });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  legeLiedAn.mockResolvedValue({ songId: 77, arrangementId: 500 });
-  holeChordProAusSongSelect.mockResolvedValue([]);
-  speichereNotenblatt.mockResolvedValue([]);
-  getSongChart.mockResolvedValue({ chordpro: '{title: Treu}\n[E]Aus SongSelect' });
+  liedAnlegen.mockResolvedValue({ songId: 77, arrangementId: 500 });
+  notenblattAusSongSelect.mockResolvedValue([]);
+  notenblattSpeichern.mockResolvedValue([]);
+  notenblattLesen.mockResolvedValue('{title: Treu}\n[E]Aus SongSelect');
 });
 
 describe('useNeuesLied – der gute Fall', () => {
@@ -65,10 +81,10 @@ describe('useNeuesLied – der gute Fall', () => {
     await result.current.anlegen(FORMULAR, 0, TREFFER);
 
     await waitFor(() => expect(result.current.ergebnis).not.toBeNull());
-    expect(legeLiedAn).toHaveBeenCalledWith(
+    expect(liedAnlegen).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Treu', categoryId: 0, ccli: '5841527' }),
     );
-    expect(holeChordProAusSongSelect).toHaveBeenCalledWith(77, 500, 5841527);
+    expect(notenblattAusSongSelect).toHaveBeenCalledWith(77, 500, 5841527);
     expect(result.current.ergebnis?.notenblatt).toBe(true);
     expect(result.current.ergebnis?.hinweise).toEqual([]);
     expect(result.current.fehler).toBeNull();
@@ -77,7 +93,7 @@ describe('useNeuesLied – der gute Fall', () => {
 
 describe('useNeuesLied – Teilerfolge', () => {
   it('das Lied bleibt gültig, wenn das Notenblatt nicht kommt', async () => {
-    holeChordProAusSongSelect.mockRejectedValue(new Error('CCLI antwortet nicht.'));
+    notenblattAusSongSelect.mockRejectedValue(new Error('CCLI antwortet nicht.'));
     const { result } = starte();
     await result.current.anlegen(FORMULAR, 0, TREFFER);
 
@@ -94,7 +110,7 @@ describe('useNeuesLied – Teilerfolge', () => {
     await result.current.anlegen(FORMULAR, 0, { ...TREFFER, hasChordPro: false });
 
     await waitFor(() => expect(result.current.ergebnis).not.toBeNull());
-    expect(holeChordProAusSongSelect).not.toHaveBeenCalled();
+    expect(notenblattAusSongSelect).not.toHaveBeenCalled();
     expect(result.current.ergebnis?.hinweise.join(' ')).toContain('keine Akkorde');
   });
 
@@ -103,7 +119,7 @@ describe('useNeuesLied – Teilerfolge', () => {
     await result.current.anlegen(FORMULAR, 0, null);
 
     await waitFor(() => expect(result.current.ergebnis).not.toBeNull());
-    expect(holeChordProAusSongSelect).not.toHaveBeenCalled();
+    expect(notenblattAusSongSelect).not.toHaveBeenCalled();
     expect(result.current.ergebnis?.hinweise).toEqual([]);
     expect(result.current.ergebnis?.notenblatt).toBe(false);
   });
@@ -111,8 +127,8 @@ describe('useNeuesLied – Teilerfolge', () => {
 
 describe('useNeuesLied – Fehlschläge', () => {
   it('nach einem 502 gilt der Zustand als ungewiss', async () => {
-    legeLiedAn.mockRejectedValue(
-      new ApiError(502, '„Treu" wurde angelegt, aber ohne Arrangement.'),
+    liedAnlegen.mockRejectedValue(
+      new ChurchToolsFehler(502, '„Treu" wurde angelegt, aber ohne Arrangement.'),
     );
     const { result } = starte();
     await result.current.anlegen(FORMULAR, 0, TREFFER);
@@ -125,7 +141,9 @@ describe('useNeuesLied – Fehlschläge', () => {
 
   it('eine abgelehnte Doppel-Nummer (409) ist NICHT ungewiss', async () => {
     // Hier ist sicher nichts entstanden – der Nutzer darf den Namen ändern und normal weitermachen.
-    legeLiedAn.mockRejectedValue(new ApiError(409, 'Die CCLI-Nummer 5841527 hat schon „Treu".'));
+    liedAnlegen.mockRejectedValue(
+      new ChurchToolsFehler(409, 'Die CCLI-Nummer 5841527 hat schon „Treu".'),
+    );
     const { result } = starte();
     await result.current.anlegen(FORMULAR, 0, TREFFER);
 
@@ -135,16 +153,16 @@ describe('useNeuesLied – Fehlschläge', () => {
   });
 
   it('holt kein Notenblatt, wenn das Anlegen scheitert', async () => {
-    legeLiedAn.mockRejectedValue(new ApiError(403, 'abgelehnt'));
+    liedAnlegen.mockRejectedValue(new ChurchToolsFehler(403, 'abgelehnt'));
     const { result } = starte();
     await result.current.anlegen(FORMULAR, 0, TREFFER);
 
     await waitFor(() => expect(result.current.fehler).not.toBeNull());
-    expect(holeChordProAusSongSelect).not.toHaveBeenCalled();
+    expect(notenblattAusSongSelect).not.toHaveBeenCalled();
   });
 
   it('zuruecksetzen räumt Fehler, Ungewissheit und Ergebnis weg', async () => {
-    legeLiedAn.mockRejectedValue(new ApiError(502, 'kaputt'));
+    liedAnlegen.mockRejectedValue(new ChurchToolsFehler(502, 'kaputt'));
     const { result } = starte();
     await result.current.anlegen(FORMULAR, 0, TREFFER);
     await waitFor(() => expect(result.current.ungewiss).toBe(true));
@@ -173,7 +191,7 @@ describe('useNeuesLied – Notenblatt schreiben/bearbeiten', () => {
     expect(text).toContain('{title: Treu}');
     expect(text).toContain('{key: E}');
     expect(text).toContain('{ccli: 5841527}');
-    expect(getSongChart).not.toHaveBeenCalled();
+    expect(notenblattLesen).not.toHaveBeenCalled();
   });
 
   it('mit Blatt aus SongSelect kommt genau dieses zum Anpassen', async () => {
@@ -182,7 +200,7 @@ describe('useNeuesLied – Notenblatt schreiben/bearbeiten', () => {
     await waitFor(() => expect(result.current.ergebnis?.notenblatt).toBe(true));
 
     expect(await result.current.notenblattText(FORMULAR)).toBe('{title: Treu}\n[E]Aus SongSelect');
-    expect(getSongChart).toHaveBeenCalledWith(77, 500);
+    expect(notenblattLesen).toHaveBeenCalledWith(77, 500);
   });
 
   it('Speichern schreibt das Original und zieht das Ergebnis nach', async () => {
@@ -193,13 +211,13 @@ describe('useNeuesLied – Notenblatt schreiben/bearbeiten', () => {
 
     const ok = await result.current.notenblattSpeichern('{title: Treu}\n[E]Neu');
     expect(ok).toBe(true);
-    expect(speichereNotenblatt).toHaveBeenCalledWith(77, 500, '{title: Treu}\n[E]Neu');
+    expect(notenblattSpeichern).toHaveBeenCalledWith(77, 500, '{title: Treu}\n[E]Neu');
     await waitFor(() => expect(result.current.ergebnis?.notenblatt).toBe(true));
     expect(result.current.ergebnis?.notenblattQuelle).toBe('eigenes');
   });
 
   it('ein Fehlschlag beim Speichern nennt den Grund vom Server und lässt den Editor offen', async () => {
-    speichereNotenblatt.mockRejectedValue(
+    notenblattSpeichern.mockRejectedValue(
       new Error('Keine Berechtigung, Dateien in ChurchTools zu speichern.'),
     );
     const { result } = starte({ canUseCcli: false });

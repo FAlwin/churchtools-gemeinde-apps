@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import { DateiZeile } from '@ui/dateien/DateiZeile';
@@ -68,32 +69,22 @@ export function DateienFenster({
         ? { art: 'datei', id: gleichDatei }
         : { art: 'liste' },
   );
-  const [liste, setListe] = useState<readonly TerminDatei[]>(dateien);
-  const [ladeFehler, setLadeFehler] = useState(false);
   // Der Rückruf ändert sich mit jedem Zeichnen der Eltern – nachgeladen wird trotzdem nur einmal je Termin.
   const melden = useRef(onAktuell);
   melden.current = onAktuell;
 
+  // Frisch nachladen; bis dahin gilt die Liste, die der Termin schon kennt. Scheitert es, bleibt sie mit Hinweis stehen.
+  const { stand, setze } = useLaden(() => laden(terminId), [terminId, laden]);
+  const liste: readonly TerminDatei[] = stand.art === 'fertig' ? stand.daten : dateien;
+  const ladeFehler = stand.art === 'fehler';
+  // Jede frische Liste – geladen oder nach dem Ändern – auch an die Eltern.
   useEffect(() => {
-    let aktuell = true;
-    laden(terminId).then(
-      (frisch) => {
-        if (!aktuell) return;
-        setListe(frisch);
-        melden.current(frisch);
-      },
-      () => aktuell && setLadeFehler(true),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [terminId, laden]);
+    if (stand.art === 'fertig') melden.current(stand.daten);
+  }, [stand]);
 
-  /** Eine neue Liste nach dem Ändern – hier und bei den Eltern. */
+  /** Eine neue Liste nach dem Ändern – hier und (über den Effekt oben) bei den Eltern. */
   function neu(frisch: TerminDatei[]): void {
-    setListe(frisch);
-    setLadeFehler(false);
-    melden.current(frisch);
+    setze(frisch);
   }
 
   const zurListe = () => setSeite({ art: 'liste' });

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { tagAusIso } from '@shared/ct/zeit';
 import type { Person } from '@shared/organigramm/mitglieder';
 import {
@@ -71,35 +72,26 @@ export function SitzungFestlegen({
       zeitzone,
     }),
   );
-  const [mitglieder, setMitglieder] = useState<Mitglieder>({ art: 'laedt' });
-  const [eingeladen, setEingeladen] = useState<ReadonlySet<number>>(new Set());
+  const geladen = useLaden(() => ladeGruppenMitglieder(gruppe.id), [gruppe.id]).stand;
+  const mitglieder: Mitglieder =
+    geladen.art !== 'fertig'
+      ? { art: 'laedt' }
+      : geladen.daten === 'verborgen'
+        ? { art: 'verborgen' }
+        : { art: 'fertig', liste: geladen.daten };
+  /** Abgewählt oder dazugewählt – bis dahin alle aktiven Mitglieder (Alwin, 28.10.2026). */
+  const [eigene, setEingeladen] = useState<ReadonlySet<number> | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [ende, setEnde] = useState<{ sitzung: string | null; texte: string[] } | null>(null);
 
-  useEffect(() => {
-    let aktiv = true;
-    ladeGruppenMitglieder(gruppe.id).then(
-      (r) => {
-        if (!aktiv) return;
-        if (r === 'verborgen') {
-          setMitglieder({ art: 'verborgen' });
-          return;
-        }
-        setMitglieder({ art: 'fertig', liste: r });
-        // Vorbelegt: alle aktiven Mitglieder (Alwin, 28.10.2026).
-        setEingeladen(new Set(r.map((x) => x.id)));
-      },
-      (e: unknown) => {
-        if (aktiv) setFehler(fehlerMeldung(e));
-      },
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [gruppe.id]);
-
-  const liste = mitglieder.art === 'fertig' ? mitglieder.liste : [];
+  const liste = useMemo(
+    () => (geladen.art === 'fertig' && geladen.daten !== 'verborgen' ? geladen.daten : []),
+    [geladen],
+  );
+  const eingeladen = useMemo(() => eigene ?? new Set(liste.map((x) => x.id)), [eigene, liste]);
+  // Scheitert das Laden der Mitglieder, steht der Fehler unten – Festlegen bleibt gesperrt.
+  const meldung = fehler ?? (geladen.art === 'fehler' ? geladen.fehler : null);
   // Wer festlegt und sich einlädt, hat sofort zugesagt und bekommt keine Mail (gemessen 28.10.2026).
   const mails = liste.filter((x) => eingeladen.has(x.id) && x.id !== ich.person).length;
   const problem = planungFehler(p, zeitzone, jetzt ?? new Date());
@@ -185,7 +177,7 @@ export function SitzungFestlegen({
               Einladen
               {mitglieder.art === 'fertig' ? ` · ${eingeladen.size} von ${liste.length}` : ''}
             </span>
-            {mitglieder.art === 'laedt' && !fehler && (
+            {mitglieder.art === 'laedt' && !meldung && (
               <p className={felder.leise}>Mitglieder werden geladen …</p>
             )}
             {mitglieder.art === 'verborgen' && (
@@ -243,9 +235,9 @@ export function SitzungFestlegen({
           )}
         </>
       )}
-      {fehler && (
+      {meldung && (
         <p className={felder.fehler} role="alert">
-          {fehler.text}
+          {meldung.text}
         </p>
       )}
     </Sheet>

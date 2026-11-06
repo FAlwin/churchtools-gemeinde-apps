@@ -22,12 +22,15 @@ export type Ladestand<T> =
  *   (vorübergehend ist nicht ungültig). Nur, wo die alten Daten zu den neuen `deps` noch passen dürfen: derselbe
  *   Inhalt, frisch nachgefragt. Sonst sprängen Inhalt oder Bild bei jedem Nachfragen kurz weg (Gebetsabend: der
  *   Player würde neu aufgebaut).
+ * - `setze(daten)`: Was gerade geschrieben wurde und dessen Antwort den neuen Stand schon enthält, gilt sofort – ohne
+ *   noch einmal zu fragen (Protokolle: Anwesenheit nach einem Tipp). Nur, wenn nicht gerade geladen wird; sonst
+ *   gewinnt die Antwort, die danach kommt.
  */
 export function useLaden<T>(
   laden: () => Promise<T> | null,
   deps: DependencyList,
   { behalten = false }: { behalten?: boolean } = {},
-): { stand: Ladestand<T>; neu: () => void } {
+): { stand: Ladestand<T>; neu: () => void; setze: (daten: T) => void } {
   const [stand, setStand] = useState<Ladestand<T>>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
 
@@ -61,5 +64,6 @@ export function useLaden<T>(
   }, [...deps, versuch]);
 
   const neu = useCallback(() => setVersuch((v) => v + 1), []);
-  return { stand, neu };
+  const setze = useCallback((daten: T) => setStand({ art: 'fertig', daten }), []);
+  return { stand, neu, setze };
 }

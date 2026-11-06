@@ -203,6 +203,48 @@ describe('ProtokollNeu', () => {
     await waitFor(() => expect(onAngelegt).toHaveBeenCalledWith(7, 'neu'));
     expect(beginnen.mock.calls[0][0]).toMatchObject({ kategorie: 70, mitarbeit: null, gruppe: 7 });
   });
+
+  it('Geändertes gilt beim Anlegen – nicht die Vorbelegung', async () => {
+    zeige();
+    await bereit();
+    fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Sondersitzung' } });
+    fireEvent.change(screen.getByLabelText('Datum'), { target: { value: '2026-11-18' } });
+    fireEvent.click(anlegen());
+    await waitFor(() => expect(beginnen).toHaveBeenCalled());
+    expect(beginnen.mock.calls[0][0].sitzung).toMatchObject({
+      titel: 'Sondersitzung',
+      beginn: '2026-11-18T18:30:00Z',
+    });
+  });
+
+  it('andere Gruppe gewählt: deren Vorbelegung – Geändertes der ersten Gruppe gilt dort nicht', async () => {
+    // Je Aufruf frische Daten – wie aus ChurchTools.
+    vi.mocked(L.ladeSitzungen).mockImplementation(() => Promise.resolve(daten([SEPT, OKT])));
+    zeige(GRUPPEN);
+    await bereit();
+    fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Sondersitzung' } });
+    fireEvent.change(screen.getByLabelText('Gruppe'), { target: { value: '7' } });
+    await waitFor(() =>
+      expect(L.ladeSitzungen).toHaveBeenLastCalledWith(24, GRUPPEN[1], ZONE, JETZT),
+    );
+    await bereit();
+    expect(screen.getByLabelText<HTMLInputElement>('Titel').value).toBe('Leitungssitzung');
+  });
+
+  it('die Sitzungen lassen sich nicht laden: Fehler, kein Anlegen', async () => {
+    vi.mocked(L.ladeSitzungen).mockRejectedValue(new TypeError('Failed to fetch'));
+    zeige();
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect((anlegen() as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('die Vorlagen lassen sich nicht laden: Fehler statt der Wahl, kein Anlegen', async () => {
+    vi.mocked(V.ladeVorlagen).mockRejectedValue(new TypeError('Failed to fetch'));
+    zeige();
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByText('Vorlagen werden geladen …')).toBeNull();
+    expect((anlegen() as HTMLButtonElement).disabled).toBe(true);
+  });
 });
 
 describe('Einstieg auf der Startseite', () => {

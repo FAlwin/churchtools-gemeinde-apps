@@ -8,7 +8,7 @@ import { dateien, WURZEL } from '../design/quelltexte.testutil';
  * `let aktuell = true` wäre wieder eine eigene Regel für späte Antworten und Fehler – genau die Kopien, die `useLaden`
  * ersetzt. Die Liste wächst mit jeder Scheibe; am Ende stehen alle Erweiterungen darin.
  */
-const UMGESTELLT = ['ui', 'organigramm/src', 'gebetsabend/src'];
+const UMGESTELLT = ['ui', 'organigramm/src', 'gebetsabend/src', 'protokolle/src'];
 const VON_HAND = /\blet (aktuell|aktiv) = true\b/;
 const HOOK = join(WURZEL, 'ui/ct/useLaden.ts');
 

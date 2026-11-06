@@ -127,6 +127,19 @@ describe('Fenster „Gruppe einrichten“', () => {
     expect(await screen.findByText('Gruppe: Leitungsteam')).toBeTruthy();
   });
 
+  it('die Gruppe lässt sich nicht lesen: Fehler statt „Wird geladen“, keine Wahl', async () => {
+    m.ladeGruppe.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<Verwaltung modul={24} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Technik/ }));
+    const fenster = await screen.findByRole('dialog');
+    // Im Fenster selbst – nicht ein Fehler der Liste dahinter.
+    expect((await within(fenster).findByRole('alert')).textContent).toMatch(
+      /antwortet gerade nicht/,
+    );
+    expect(within(fenster).queryByText('Wird geladen …')).toBeNull();
+    expect(within(fenster).queryByText(/Was darf welche Rolle/)).toBeNull();
+  });
+
   it('Kategorien da, Einstellung fehlt: sagt „unvollständig“ und bietet Einrichten an', async () => {
     render(<Verwaltung modul={24} />);
     await oeffnen('Leitungsteam');

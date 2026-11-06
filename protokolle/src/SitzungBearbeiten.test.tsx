@@ -393,6 +393,14 @@ describe('SitzungBearbeiten', () => {
     });
   });
 
+  it('der Termin lässt sich nicht lesen: Fehler statt der Felder, kein Speichern', async () => {
+    vi.mocked(B.terminStand).mockRejectedValue(new TypeError('Failed to fetch'));
+    zeige();
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByText('Termin wird geladen …')).toBeNull();
+    expect(screen.queryByLabelText('Datum')).toBeNull();
+  });
+
   it('Protokoll ohne Termin: kein Laden des Termins, keine Einladungen, kein Absagen', async () => {
     zeige({ ...SITZUNG, termin: null, anfragen: [] });
     await bereit();

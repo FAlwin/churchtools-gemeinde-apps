@@ -116,6 +116,17 @@ describe('useLaden (#845)', () => {
   });
 });
 
+describe('useLaden: setze', () => {
+  it('was gerade geschrieben wurde, gilt sofort – ohne noch einmal zu fragen', async () => {
+    const laden = vi.fn(() => Promise.resolve('alt'));
+    const { result } = renderHook(() => useLaden(laden, []));
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'alt' }));
+    act(() => result.current.setze('neu'));
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'neu' });
+    expect(laden).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('useLaden mit „behalten“', () => {
   /** `laden` bekommt die deps (`n`) – so steuert jeder Test, was zu welchem Stand zurückkommt. */
   function mitBehalten(laden: (n: number) => Promise<string> | null) {

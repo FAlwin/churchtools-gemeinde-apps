@@ -107,6 +107,13 @@ describe('Anwesenheit beim Schreiben (S5-3)', () => {
     expect(ct.teilnahme.get(15)).toBeUndefined();
   });
 
+  it('lässt sich die Anwesenheit nicht lesen: Fehler statt „wird gelesen“', async () => {
+    ct.fehlerBei = { methode: 'GET', status: 503 };
+    zeige(<FesterPunkt art="anwesenheit" abhaken gaeste="" gaesteSetzen={() => {}} fest="" />);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByText('Anwesenheit wird gelesen …')).toBeNull();
+  });
+
   it('fehlt das Recht, steht es da – und nichts bleibt halb', async () => {
     ct.treffen.get(G)![0].hasEditingStarted = true;
     zeige(<FesterPunkt art="anwesenheit" abhaken gaeste="" gaesteSetzen={() => {}} fest="" />);

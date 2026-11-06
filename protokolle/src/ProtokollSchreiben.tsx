@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
@@ -146,7 +147,6 @@ export function ProtokollSchreiben({
     todosRef.current = m;
     setTodosZustand(m);
   }, []);
-  const [mitglieder, setMitglieder] = useState<readonly Person[] | 'verborgen' | null>(null);
   // Änderungen an To-Dos nacheinander – zwei schnelle Klicks dürfen sich nicht gegenseitig überschreiben.
   const kette = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -239,16 +239,13 @@ export function ProtokollSchreiben({
 
   // Wer eine Aufgabe übernehmen kann – einmal je Editor; ein Fehler lässt die Liste leer („werden geladen“ bleibt nicht
   // stehen: dann gibt es nur den externen Namen, und der Hinweis sagt es).
-  useEffect(() => {
-    let aktiv = true;
-    ladeGruppenMitglieder(gruppeId).then(
-      (m) => aktiv && setMitglieder(m),
-      () => aktiv && setMitglieder('verborgen'),
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [gruppeId]);
+  const mitgliederStand = useLaden(() => ladeGruppenMitglieder(gruppeId), [gruppeId]).stand;
+  const mitglieder: readonly Person[] | 'verborgen' | null =
+    mitgliederStand.art === 'fertig'
+      ? mitgliederStand.daten
+      : mitgliederStand.art === 'fehler'
+        ? 'verborgen'
+        : null;
 
   const todoAendern = useCallback(
     (id: string, text: string, f: (a: Aufgabe) => Aufgabe) => {

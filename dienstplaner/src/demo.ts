@@ -311,8 +311,40 @@ function werKannDemo(eventId: number): unknown {
   };
 }
 
+/**
+ * Die Liederliste (LW2b) – für die Liedauswahl im Punkt-Fenster und die Lied-Karten. Form wie `/api/songs` (gemessen
+ * #322): Nummer als Zeichenkette, Tonart am Arrangement, eine Seite.
+ */
+const LIEDER = {
+  data: [
+    {
+      id: 25,
+      name: 'Treu',
+      author: 'Tobias Gerster',
+      ccli: '4328979',
+      arrangements: [{ id: 31, name: 'Standard', keyOfArrangement: 'E', isDefault: true }],
+    },
+    {
+      id: 26,
+      name: 'Halleluja',
+      author: null,
+      ccli: null,
+      arrangements: [{ id: 32, name: 'Standard', keyOfArrangement: 'C', isDefault: true }],
+    },
+    {
+      id: 27,
+      name: 'Way Maker',
+      author: 'Osinachi Kalu Okoro Egbu',
+      ccli: '7115744',
+      arrangements: [{ id: 33, name: 'Standard', keyOfArrangement: 'E', isDefault: true }],
+    },
+  ],
+  meta: { pagination: { lastPage: 1 } },
+};
+
 function daten(fall: string): Record<string, unknown> {
   return {
+    '/api/songs': LIEDER,
     '/api/whoami': { data: { id: 1, firstName: fall === 'mitglied' ? 'Spike' : 'Alwin' } },
     '/api/persons/1/groups': {
       data: [

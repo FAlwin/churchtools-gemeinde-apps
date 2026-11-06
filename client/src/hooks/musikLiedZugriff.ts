@@ -1,6 +1,10 @@
-import type { LiedZugriff } from '@ui/lied/liedZugriff';
+import {
+  anlegenUngewissAus,
+  liedRechteAus,
+  notenblattTextAus,
+  type LiedZugriff,
+} from '@ui/lied/liedZugriff';
 import * as api from '../services/churchtoolsApi';
-import { ApiError } from '../services/api';
 import { schluessel } from './abfrageSchluessel';
 import { funktionen } from '../services/funktionen';
 import { useCapabilities } from './useServices';
@@ -22,13 +26,7 @@ export const musikLiedZugriff: LiedZugriff = {
   liedtextSuche: funktionen.liedtextSuche ? api.sucheImLiedtext : undefined,
   useRechte() {
     const c = useCapabilities(true).data;
-    return c
-      ? {
-          statistik: c.canViewSongStatistics ?? false,
-          ccli: c.canUseCcli ?? false,
-          liederAendern: c.canEditSongs ?? false,
-        }
-      : undefined;
+    return c ? liedRechteAus(c) : undefined;
   },
   // Notenblatt-Editor (LW1b-1): dieselbe Einstellung und dasselbe Logo wie das Liedblatt.
   liedansicht: getLiedansicht,
@@ -36,13 +34,12 @@ export const musikLiedZugriff: LiedZugriff = {
   // „Neues Lied", Stammdaten, Arrangements (LW1b-2): dieselben Aufrufe wie vorher in `useServices`/`useNotenblatt`.
   kategorien: api.getSongCategories,
   liedAnlegen: api.legeLiedAn,
-  // Ein 502 heißt hier „ChurchTools hat nicht geantwortet" – das Lied kann trotzdem stehen (#322).
-  anlegenUngewiss: (e) => e instanceof ApiError && e.status === 502,
+  anlegenUngewiss: anlegenUngewissAus,
   notenblattAusSongSelect: async (songId, arrangementId, songNumber) => {
     await api.holeChordProAusSongSelect(songId, arrangementId, songNumber);
   },
   notenblattLesen: async (songId, arrangementId) =>
-    (await api.getSongChart(songId, arrangementId)).chordpro || null,
+    notenblattTextAus(await api.getSongChart(songId, arrangementId)),
   notenblattSpeichern: async (songId, arrangementId, text) => {
     await api.speichereNotenblatt(songId, arrangementId, text);
   },

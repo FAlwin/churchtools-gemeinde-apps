@@ -71,6 +71,13 @@
     anlegen/ändern, Arrangement, Notenblatt. `client/src/services/ctLesen.ts`, `ctSchreiben.ts` und `ctSongSelect.ts`
     reichen sie nur weiter (Wächter `ctLieder.weiterreichen.test.ts`: dieselben Funktionen, also dieselben
     Zwischenspeicher). Der Dienstplaner nutzt sie direkt (LW2b).
+  - **Liedauswahl im Dienstplaner seit LW2b (06.11.2026):** `dienstplaner/src/liedZugriff.ts` baut über
+    `ui/lied/ctLiedZugriff.ts` den Liedzugriff (ChurchTools direkt über `ui/ct/lieder`), dazu einen eigenen
+    `QueryClient`; beide Provider stehen in `dienstplaner/src/App.tsx`. Die Lied-Rechte kommen aus dem Start
+    (`startLiederAus` → `rechteAus` + `liedRechteAus`, dieselbe Regel wie die Musik-App). `TerminAblauf` steckt
+    `liedWahl` nur mit dem Recht, Lieder zu sehen, ein; sonst bleibt die Lied-Ansicht. Das Fenster wird nachgeladen
+    (`dienstplaner/src/LiedWahl.tsx`, `React.lazy`). Gemeinsame Regeln beider Apps: `liedRechteAus`,
+    `anlegenUngewissAus` (502), `notenblattTextAus` in `ui/lied/liedZugriff.ts`.
   - **ein Suchfeld, eine Liste, zwei Knöpfe je Zeile** (#378, dritter Anlauf nach Alwins Rückmeldungen vom
     03./04.09.2026). Gesucht wird in Titel, Autor **und CCLI-Nummer** (`SongLibraryEntry.ccli`, pflichtig,
     vom Server aus `CtSongListEntry.ccli`). Eigene Lieder oben, SongSelect darunter mit Überschrift

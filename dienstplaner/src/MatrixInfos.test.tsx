@@ -391,6 +391,27 @@ describe('Dateien in der Matrix (T2a)', () => {
     expect(within(t11 as HTMLElement).queryByRole('button')).toBeNull();
   });
 
+  it('die Fenster stehen nicht in der Tabelle – ein Fenster in `tbody` wäre kein gültiges HTML', () => {
+    const fehler = vi.spyOn(console, 'error').mockImplementation(() => {});
+    ct();
+    render(ansicht(planMit(ROH_DATEIEN)));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }),
+    );
+    expect(screen.getByRole('dialog', { name: 'Weitere Infos' }).closest('table')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', {
+        name: 'Video.mp4 – Gottesdienst, So, 18.10.2026',
+      }),
+    );
+    expect(screen.getByRole('dialog', { name: 'Video.mp4' }).closest('table')).toBeNull();
+    const verschachtelt = fehler.mock.calls.filter((c) =>
+      String(c[0]).includes('validateDOMNesting'),
+    );
+    expect(verschachtelt).toEqual([]);
+  });
+
   it('mit Recht öffnet ein Tipp auf eine Datei ihr kleines Fenster; „‹“ führt zu allen Dateien', async () => {
     ct();
     render(ansicht(planMit(ROH_DATEIEN)));

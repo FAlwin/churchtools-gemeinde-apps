@@ -16,6 +16,7 @@ import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen } from '@shared/protokolle/speicher';
 import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
 import type { Block } from '@shared/protokolle/dokument';
 
 /**
@@ -95,7 +96,8 @@ function protokollWerte(
       fassung: 1,
       gruppe: 11,
       rollen: [],
-      punkte: 'vorschlagen',
+      // `?demo=direkt`: Vorschläge landen von selbst im Protokoll (S5-4).
+      punkte: fall === 'direkt' ? 'direkt' : 'vorschlagen',
       kalender: 4,
     }),
   ];
@@ -208,6 +210,61 @@ const FRUEHERE_AUFGABEN = [
   ),
 ];
 
+/**
+ * Vorschläge (S5-4): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
+ * (ändern, zurückziehen) und ein abgelehnter mit Begründung (Erledigt).
+ */
+const ENTWURF_ZIEL = {
+  art: 'sitzung' as const,
+  beginn: '2026-10-21T17:00:00Z',
+  termin: { kalender: 4, id: 121 },
+  treffen: null,
+  sitzung: 'demo-entwurf',
+};
+const DEMO_VORSCHLAEGE = [
+  neuerVorschlag({
+    id: 'demo-v1',
+    gruppe: 11,
+    titel: 'Neue Beamer-Halterung im Saal',
+    text: 'Die alte wackelt, ein Angebot liegt vor (ca. 180 €).',
+    ziel: ENTWURF_ZIEL,
+    ich: { person: 19, name: 'Peter Wiens' },
+    am: '2026-10-19T18:00:00Z',
+  }),
+  neuerVorschlag({
+    id: 'demo-v2',
+    gruppe: 11,
+    titel: 'Kinderbetreuung beim Gemeindeessen',
+    text: '',
+    ziel: ENTWURF_ZIEL,
+    ich: { person: 23, name: 'Daniel Schmidt' },
+    am: '2026-10-20T18:00:00Z',
+  }),
+  neuerVorschlag({
+    id: 'demo-v3',
+    gruppe: 11,
+    titel: 'Jahresplanung 2027',
+    text: 'Termine für Freizeiten und Taufe festlegen.',
+    ziel: NAECHSTE,
+    ich: { person: 1, name: 'Alwin Friesen' },
+    am: '2026-11-02T18:00:00Z',
+  }),
+  ablehnen(
+    neuerVorschlag({
+      id: 'demo-v4',
+      gruppe: 11,
+      titel: 'Parkplatz-Beschilderung',
+      text: '',
+      ziel: { ...ENTWURF_ZIEL, beginn: '2026-10-14T17:00:00Z', termin: null, sitzung: 'demo-okt' },
+      ich: { person: 1, name: 'Alwin Friesen' },
+      am: '2026-10-10T18:00:00Z',
+    }),
+    'Klären wir mit dem Vermieter, nicht im Leitungskreis.',
+    { person: 7, name: 'Johann Becker' },
+    '2026-10-14T19:00:00Z',
+  ),
+];
+
 const MODUL = 20;
 /** Schlüssel der Rechte wie gemessen (Modul 24, S2-1); die Nummern sind nur für die Demo. */
 const RECHTE = ['view', 'view custom category', 'create custom category', 'edit custom category'];
@@ -263,7 +320,7 @@ function speicherAnlegen(fall: string): Speicher {
             [60, protokollWerte(60, 600, fall)],
             [
               61,
-              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN].map((x, i) => ({
+              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN, ...DEMO_VORSCHLAEGE].map((x, i) => ({
                 id: 700 + i,
                 dataCategoryId: 61,
                 value: JSON.stringify(x),
@@ -322,7 +379,8 @@ function antwort(
 ): Antwort {
   if (fall === 'fehler' && pfad.endsWith('/customdatacategories')) return { status: 502 };
   if (pfad === '/api/csrftoken') return { status: 200, data: 'demo' };
-  if (pfad === '/api/whoami') return { status: 200, data: { id: 1, firstName: 'Alwin' } };
+  if (pfad === '/api/whoami')
+    return { status: 200, data: { id: 1, firstName: 'Alwin', lastName: 'Friesen' } };
   if (pfad === '/api/info')
     return { status: 200, data: { siteName: 'Evangeliumschristen-Gemeinde e.V.' } };
   if (pfad === '/api/permissions/global')

@@ -89,6 +89,7 @@ export type IconName =
   | 'aufgabe'
   | 'stempel'
   | 'todo-liste'
+  | 'idee'
   | 'tabelle'
   | 'sortieren';
 
@@ -557,6 +558,13 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="m3.5 6.5 1.6 1.6 2.6-2.8M3.5 16.5l1.6 1.6 2.6-2.8M11 7h9.5M11 17h9.5M11 12h6" />
+        </svg>
+      );
+    // Glühbirne – „Punkt vorschlagen“ in den Protokollen (S5-4, Entwurf `s5-4-vorschlaege-v1`).
+    case 'idee':
+      return (
+        <svg {...p}>
+          <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.4 1 2.5h6c0-1.1.3-1.8 1-2.5A6 6 0 0 0 12 3Z" />
         </svg>
       );
     // Tabelle einfügen im Protokoll-Editor (K3a, Entwurf `k3-leiste-v1`).

@@ -32,6 +32,7 @@ const LEER: GruppenSitzungen = {
   teile: [],
   kalender: null,
   treffenNichtFreigegeben: false,
+  punkte: 'vorschlagen',
 };
 
 /**

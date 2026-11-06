@@ -6,23 +6,19 @@
  * Wie beim Protokoll: vorher frisch lesen, nachher nachlesen (ein `201` ist kein Beleg); jeder Fehler wird geworfen.
  * Gelöscht wird nie hart – auch nicht hier (S0: wer in „Mitarbeit“ ändern darf, dürfte jeden Wert löschen).
  */
-import { werteLesen, wertAendern, wertAnlegen } from '@shared/ct/modulDaten';
+import { wertAendern, wertAnlegen } from '@shared/ct/modulDaten';
 import { istAufgabe, mitNamen, type Aufgabe, type AufgabenPlan } from '@shared/protokolle/aufgaben';
-import { wertInhalt, type Schreiber } from '@shared/protokolle/speicher';
+import type { Schreiber } from '@shared/protokolle/speicher';
 import { modulPort } from '@ui/ct/modulPort';
+import { derArt, gleich, mitarbeitRoh, wertNachgelesen, type MitarbeitOrt } from './mitarbeitWerte';
+
+export type { MitarbeitOrt };
 
 /**
  * Wer schreibt – beide Schreibtore stempeln den eigenen Vornamen an die eigenen Verlaufseinträge (`mitNamen`), damit
  * Mitglieder ohne Einsicht in die Mitgliederliste sehen, wer es war.
  */
 export type Schreibend = Pick<Schreiber, 'person' | 'name'>;
-
-/** Wo die To-Dos einer Gruppe liegen. */
-export interface MitarbeitOrt {
-  modul: number;
-  /** Kategorie „Mitarbeit“ der Gruppe. */
-  kategorie: number;
-}
 
 const VERWEIGERT = 'Du darfst die To-Dos dieser Gruppe nicht ändern.';
 
@@ -34,19 +30,8 @@ const VERWEIGERT = 'Du darfst die To-Dos dieser Gruppe nicht ändern.';
 export async function aufgabenWerte(
   ort: MitarbeitOrt,
 ): Promise<{ wert: number; aufgabe: Aufgabe }[]> {
-  const je = new Map<string, { wert: number; aufgabe: Aufgabe }>();
-  for (const w of [...(await werteLesen(modulPort, ort.modul, ort.kategorie))].sort(
-    (a, b) => a.id - b.id,
-  )) {
-    const x = wertInhalt(w);
-    if (istAufgabe(x) && !je.has(x.id)) je.set(x.id, { wert: w.id, aufgabe: x });
-  }
-  return [...je.values()];
+  return derArt(await mitarbeitRoh(ort), istAufgabe).map((w) => ({ wert: w.wert, aufgabe: w.x }));
 }
-
-/** Stimmt der gelesene Stand mit dem geschriebenen überein? (Verlauf und Felder, nicht die Reihenfolge der Schlüssel.) */
-const gleich = (a: Aufgabe | undefined, b: Aufgabe): boolean =>
-  !!a && JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * **Den Abgleich ausführen** (`aufgabenAbgleich`): frisch lesen, `planen` auf **diesem** Stand rechnen lassen, neue
@@ -90,26 +75,15 @@ export async function aufgabenSchreiben(
  * schreiben, nachlesen. Gibt es das To-Do noch nicht (die Aufgabe ist noch nicht gespeichert), entsteht es aus
  * `anlegen()`. Liefert den gespeicherten Stand.
  */
-export async function aufgabeAendern(
+export function aufgabeAendern(
   ort: MitarbeitOrt,
   id: string,
   aendern: (a: Aufgabe) => Aufgabe,
   anlegen: () => Aufgabe,
   ich: Schreibend,
 ): Promise<Aufgabe> {
-  const da = (await aufgabenWerte(ort)).find((x) => x.aufgabe.id === id);
-  const neu = mitNamen(aendern(da?.aufgabe ?? anlegen()), ich);
-  if (da)
-    await wertAendern(
-      modulPort,
-      ort.modul,
-      ort.kategorie,
-      da.wert,
-      JSON.stringify(neu),
-      VERWEIGERT,
-    );
-  else await wertAnlegen(modulPort, ort.modul, ort.kategorie, JSON.stringify(neu), VERWEIGERT);
-  const nachgelesen = (await aufgabenWerte(ort)).find((x) => x.aufgabe.id === id)?.aufgabe;
-  if (!gleich(nachgelesen, neu)) throw new Error('ChurchTools hat das To-Do nicht übernommen.');
-  return neu;
+  return wertNachgelesen(ort, istAufgabe, id, (a) => mitNamen(aendern(a), ich), anlegen, {
+    verweigert: VERWEIGERT,
+    nichtUebernommen: 'ChurchTools hat das To-Do nicht übernommen.',
+  });
 }

@@ -141,6 +141,7 @@ export function App() {
           modul={start.modul}
           gruppen={start.gruppen}
           ich={{ person: start.id, name: start.vorname }}
+          vollerName={`${start.vorname} ${start.nachname}`.trim()}
           schreibbar={start.schreibbar}
           auswahl={auswahl}
         />

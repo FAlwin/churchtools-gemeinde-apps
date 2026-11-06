@@ -76,7 +76,12 @@ const JUG = frei('jug', '2026-10-02T16:00:00Z', [
   block('j1', 'heading', 'Räume', { level: 1 }),
   block('e1', 'beschluss', 'Jugendraum wird gestrichen.'),
 ]);
-const ohne = { kommend: [], kalender: 4, treffenNichtFreigegeben: false };
+const ohne = {
+  kommend: [],
+  kalender: 4,
+  punkte: 'vorschlagen' as const,
+  treffenNichtFreigegeben: false,
+};
 const UEBERSICHT: L.GruppenUebersicht[] = [
   {
     gruppe: GRUPPEN[0],

@@ -7,13 +7,29 @@ import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen, type ProtokollKopf } from '@shared/protokolle/speicher';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { NAECHSTE, neuerVorschlag, zielVon, type Vorschlag } from '@shared/protokolle/vorschlaege';
 import * as L from './lesen';
+import * as V from './vorschlaegeSchreiben';
 import { Sitzungen } from './Sitzungen';
+
+// Vorschläge (S5-4): die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
+const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
+vi.mock('./vorschlaegeSchreiben', () => ({
+  vorschlagEinreichen: vi.fn((_o: unknown, v: { id: string }) => {
+    VS.stand.set(v.id, v);
+    return Promise.resolve(v);
+  }),
+  vorschlagSchreiben: vi.fn((_o: unknown, id: string, f: (v: unknown) => unknown) => {
+    const neu = f(VS.stand.get(id));
+    VS.stand.set(id, neu);
+    return Promise.resolve(neu);
+  }),
+}));
 
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
-  ladeAufgaben: vi.fn(),
+  ladeMitarbeit: vi.fn(),
 }));
 const m = vi.mocked(L);
 
@@ -60,12 +76,14 @@ const DATEN: L.GruppenSitzungen = {
   teile: werte.map((w) => JSON.parse(w) as L.GruppenSitzungen['teile'][number]),
   kalender: 4,
   treffenNichtFreigegeben: false,
+  punkte: 'vorschlagen',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  VS.stand.clear();
   m.ladeSitzungen.mockResolvedValue(DATEN);
-  m.ladeAufgaben.mockResolvedValue([]);
+  m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [] });
 });
 
 describe('Reiter „Sitzungen“ (S3-2)', () => {
@@ -251,5 +269,95 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     render(<Sitzungen ich={ICH} modul={24} gruppen={[]} />);
     expect(screen.getByText(/keiner Gruppe/)).toBeTruthy();
     expect(m.ladeSitzungen).not.toHaveBeenCalled();
+  });
+});
+
+describe('Vorschläge (S5-4)', () => {
+  const PETER = { person: 19, name: 'Peter Wiens' };
+  const vorschlag = (id: string, ziel = zielVon(KOMMEND)): Vorschlag => {
+    const v = neuerVorschlag({
+      id,
+      gruppe: 11,
+      titel: `Thema ${id}`,
+      text: '',
+      ziel,
+      ich: PETER,
+      am: '2026-11-01T10:00:00Z',
+    });
+    VS.stand.set(id, v);
+    return v;
+  };
+  const karte = () => screen.findByRole('region', { name: 'Vorschläge' });
+  const vorschlagen = async (thema: string) => {
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Punkt für eine Sitzung vorschlagen/ }),
+    );
+    fireEvent.change(screen.getByPlaceholderText(/Kinderbetreuung beim Gemeindeessen/), {
+      target: { value: thema },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschlagen' }));
+  };
+
+  it('Mitglied schlägt für die nächste Sitzung vor – mit vollem Namen; sieht ihn mit Stand, ohne Leitungs-Knöpfe', async () => {
+    render(<Sitzungen ich={ICH} vollerName="Alwin Friesen" modul={24} gruppen={GRUPPEN} />);
+    await vorschlagen('Neue Lieder');
+    await waitFor(() => expect(V.vorschlagEinreichen).toHaveBeenCalledTimes(1));
+    const [ort, v] = vi.mocked(V.vorschlagEinreichen).mock.calls[0];
+    expect(ort).toEqual({ modul: 24, kategorie: 61 });
+    expect(v).toMatchObject({
+      titel: 'Neue Lieder',
+      von: 1,
+      name: 'Alwin Friesen',
+      stand: 'offen',
+      ziel: zielVon(KOMMEND),
+    });
+    const k = await karte();
+    expect(within(k).getByText('Neue Lieder')).toBeTruthy();
+    expect(within(k).getByText(/von Alwin Friesen \(du\)/)).toBeTruthy();
+    expect(within(k).getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
+    expect(within(k).queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+    const kommend = screen.getByRole('region', { name: 'Kommend' });
+    expect(within(kommend).getByText('1 Vorschlag')).toBeTruthy();
+  });
+
+  it('ohne festgelegte Sitzung: „Nächste Sitzung (noch nicht festgelegt)“', async () => {
+    m.ladeSitzungen.mockResolvedValue({ ...DATEN, kommend: [] });
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    await vorschlagen('Jahresplanung');
+    expect(
+      screen.getByRole('option', { name: /Nächste Sitzung \(noch nicht festgelegt\)/ }),
+    ).toBeTruthy();
+    await waitFor(() => expect(V.vorschlagEinreichen).toHaveBeenCalled());
+    expect(vi.mocked(V.vorschlagEinreichen).mock.calls[0][1].ziel).toEqual(NAECHSTE);
+    expect(
+      within(await karte()).getByText(/die nächste Sitzung · noch nicht festgelegt/),
+    ).toBeTruthy();
+  });
+
+  it('Leitung übernimmt in der Liste: für diese Sitzung vorgemerkt', async () => {
+    m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [vorschlag('v1')] });
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    const k = await karte();
+    expect(within(k).queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
+    fireEvent.click(within(k).getByRole('button', { name: 'Übernehmen' }));
+    expect(await within(k).findByText('übernommen')).toBeTruthy();
+    expect(VS.stand.get('v1')).toMatchObject({ stand: 'angenommen', ziel: zielVon(KOMMEND) });
+  });
+
+  it('„Direkt eintragen“: keine Entscheidung nötig – „kommt ins Protokoll“, keine Leitungs-Knöpfe', async () => {
+    m.ladeSitzungen.mockResolvedValue({ ...DATEN, punkte: 'direkt' });
+    m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [vorschlag('v1')] });
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    const k = await karte();
+    expect(within(k).getByText('kommt ins Protokoll')).toBeTruthy();
+    expect(within(k).queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+    expect(within(k).queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+  });
+
+  it('Gruppe ohne Mitarbeit-Kategorie (unvollständig): kein Vorschlagen, keine Karte', async () => {
+    render(<Sitzungen ich={ICH} modul={24} gruppen={[{ ...GRUPPEN[0], mitarbeit: null }]} />);
+    await screen.findByRole('region', { name: 'Kommend' });
+    expect(screen.queryByRole('button', { name: /Punkt für eine Sitzung vorschlagen/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Vorschläge' })).toBeNull();
   });
 });

@@ -73,6 +73,7 @@ const daten = (protokolle: Sitzung[], kommend: Sitzung[] = []): L.GruppenSitzung
   teile: alt.werte.map((w) => JSON.parse(w) as ProtokollTeil),
   kalender: null,
   treffenNichtFreigegeben: false,
+  punkte: 'vorschlagen',
 });
 
 const zeige = (gruppen = GRUPPEN.slice(0, 1)) => {

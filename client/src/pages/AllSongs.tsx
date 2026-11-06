@@ -8,7 +8,7 @@ import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
 import { NoteTile } from '../components/NoteTile';
 import { AddToAgendaSheet } from '../components/AddToAgendaSheet';
-import { NewSongSheet } from '../components/NewSongSheet';
+import { NewSongSheet } from '@ui/lied/NewSongSheet';
 import { EditSongSheet } from '../components/EditSongSheet';
 import { SongStatsBar } from '@ui/lied/SongStatsBar';
 import { LiedtextTrefferListe } from '@ui/lied/LiedtextTrefferListe';

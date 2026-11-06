@@ -16,7 +16,7 @@ import type { ArrangementAnsicht } from '@shared/types/index';
 import { Icon } from '@ui/icons/icons';
 import { unterzeile } from '@ui/lied/arrangementFormular';
 import styles from './ArrangementListe.module.scss';
-import neu from './NewSongSheet.module.scss';
+import neu from '@ui/lied/NewSongSheet.module.scss';
 
 interface ArrangementListeProps {
   arrangements: ArrangementAnsicht[];

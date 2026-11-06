@@ -18,10 +18,9 @@
  */
 import { useState } from 'react';
 import type { SongSelectTreffer } from '@shared/types/index';
-import { ApiError } from '../services/api';
-import { holeChordProAusSongSelect } from '../services/churchtoolsApi';
-import { useLiedAnlegen } from './useServices';
-import { auftragAus, notenblattPlan, type NeuesLiedFormular } from '@ui/lied/liedFormular';
+import { useLiedAnlegen } from './liedDaten';
+import { useLiedZugriff } from './liedZugriff';
+import { auftragAus, notenblattPlan, type NeuesLiedFormular } from './liedFormular';
 import { useNotenblatt } from './useNotenblatt';
 
 /** Was aus dem Anlegen wurde – **einschließlich der Teilerfolge.** */
@@ -49,6 +48,7 @@ interface Args {
 }
 
 export function useNeuesLied({ canUseCcli }: Args) {
+  const quelle = useLiedZugriff();
   const anlegenMutation = useLiedAnlegen();
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -118,7 +118,11 @@ export function useNeuesLied({ canUseCcli }: Args) {
         hinweise.push(plan.grund);
       } else if (plan) {
         try {
-          await holeChordProAusSongSelect(angelegt.songId, angelegt.arrangementId, plan.songNumber);
+          await quelle.notenblattAusSongSelect(
+            angelegt.songId,
+            angelegt.arrangementId,
+            plan.songNumber,
+          );
           notenblatt = true;
         } catch (e) {
           // Das Lied bleibt bestehen – nur das Blatt fehlt. Der Grund kommt vom Server (Lizenz, Netz),
@@ -141,7 +145,7 @@ export function useNeuesLied({ canUseCcli }: Args) {
       });
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Das Anlegen ist fehlgeschlagen.');
-      if (e instanceof ApiError && e.status === 502) setUngewiss(true);
+      if (quelle.anlegenUngewiss(e)) setUngewiss(true);
     } finally {
       setLaeuft(false);
     }

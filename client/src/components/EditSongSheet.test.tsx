@@ -48,9 +48,18 @@ vi.mock('../hooks/useServices', () => ({
   useArrangementLoeschen: () => ({ mutateAsync: arrLoeschenFn, isPending: false }),
 }));
 
+// Die Liedinfo im Editor (`useLiedinfoQuelle`) liegt seit LW1b-2 in `ui/lied` und fragt `liedDaten` direkt –
+// dieselben Attrappen wie oben, damit beide Wege dasselbe sehen.
+vi.mock('@ui/lied/liedDaten', () => ({
+  useSongStammdaten: () => stammdaten(),
+  useLiedAendern: () => ({ mutateAsync: aendernFn, isPending: false }),
+  useArrangements: () => arrangementeFn(),
+  useArrangementAendern: () => ({ mutateAsync: arrAendernFn, isPending: false }),
+}));
+
 const notenblattText = vi.fn();
 const notenblattSpeichern = vi.fn();
-vi.mock('../hooks/useNotenblatt', () => ({
+vi.mock('@ui/lied/useNotenblatt', () => ({
   useNotenblatt: () => ({
     text: notenblattText,
     speichern: notenblattSpeichern,

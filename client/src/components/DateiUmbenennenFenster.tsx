@@ -14,7 +14,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { umbenennPruefung, umbenennVorlage, versionsDateiname } from '../utils/dateiVerwaltung';
 import feld from '@ui/lied/SongFields.module.scss';
-import styles from './NewSongSheet.module.scss';
+import styles from '@ui/lied/NewSongSheet.module.scss';
 import eigen from './DateiUmbenennenFenster.module.scss';
 
 interface Props {

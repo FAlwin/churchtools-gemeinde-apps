@@ -25,23 +25,19 @@
 import { useEffect, useState } from 'react';
 import type { SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
 import { LIED_GRENZEN } from '@shared/types/index';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '../fenster/FensterKnopf';
+import { Sheet } from '../fenster/Sheet';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
-import { Icon } from '@ui/icons/icons';
-import { CenterMessage } from '@ui/bedienung/CenterMessage';
+import { Icon } from '../icons/icons';
+import { CenterMessage } from '../bedienung/CenterMessage';
 import { SongFields } from './SongFields';
-import { ChordEditor } from '@ui/lied/editor/ChordEditor';
+import { ChordEditor } from './editor/ChordEditor';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.
-import feld from '@ui/lied/SongFields.module.scss';
-import {
-  useCapabilities,
-  useSongCategories,
-  useSongLibrary,
-  useSongSelectSong,
-} from '../hooks/useServices';
-import { useNeuesLied } from '../hooks/useNeuesLied';
-import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
+import feld from './SongFields.module.scss';
+import { useSongCategories, useSongLibrary, useSongSelectSong } from './liedDaten';
+import { useLiedZugriff } from './liedZugriff';
+import { useNeuesLied } from './useNeuesLied';
+import { useLiedinfoQuelle } from './useLiedinfoQuelle';
 import {
   LEERES_FORMULAR,
   formularAusTreffer,
@@ -49,7 +45,7 @@ import {
   namensWarnung,
   vorhandenesLied,
   type NeuesLiedFormular,
-} from '@ui/lied/liedFormular';
+} from './liedFormular';
 import styles from './NewSongSheet.module.scss';
 
 interface NewSongSheetProps {
@@ -108,8 +104,7 @@ export function NewSongSheet({
   onClose,
   zurueck,
 }: NewSongSheetProps) {
-  const caps = useCapabilities(true);
-  const canUseCcli = caps.data?.canUseCcli ?? false;
+  const canUseCcli = useLiedZugriff().useRechte()?.ccli ?? false;
   const kategorien = useSongCategories(true);
   // Nur für die Warnung bei gleichem Namen. Die Liste ist beim Öffnen längst geladen (Liederheft und
   // Lied-Auswahl nutzen dieselbe Query) – deshalb kein zusätzlicher Abruf gegen ChurchTools.

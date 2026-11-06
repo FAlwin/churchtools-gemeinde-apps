@@ -11,9 +11,8 @@
  */
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getSongChart, speichereNotenblatt } from '../services/churchtoolsApi';
-import { chordproVorlage } from '../utils/activeSongView';
-import { schluessel } from './abfrageSchluessel';
+import { chordproVorlage } from './liedFormular';
+import { useLiedZugriff } from './liedZugriff';
 
 export interface NotenblattZiel {
   songId: number;
@@ -31,6 +30,7 @@ export function useNotenblatt(ziel: NotenblattZiel | null) {
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const quelle = useLiedZugriff();
 
   /**
    * Der Text, mit dem der Editor startet: das vorhandene Blatt oder das Gerüst aus der Vorlage.
@@ -41,8 +41,8 @@ export function useNotenblatt(ziel: NotenblattZiel | null) {
   const text = async (vorlage: NotenblattVorlage, hatBlatt: boolean | null): Promise<string> => {
     if (!ziel) return '';
     if (hatBlatt !== false) {
-      const chart = await getSongChart(ziel.songId, ziel.arrangementId);
-      if (chart.chordpro) return chart.chordpro;
+      const blatt = await quelle.notenblattLesen(ziel.songId, ziel.arrangementId);
+      if (blatt) return blatt;
     }
     return chordproVorlage(vorlage);
   };
@@ -53,9 +53,9 @@ export function useNotenblatt(ziel: NotenblattZiel | null) {
     setLaeuft(true);
     setFehler(null);
     try {
-      await speichereNotenblatt(ziel.songId, ziel.arrangementId, inhalt);
-      // Das Blatt hat sich geändert – wer das Lied gleich öffnet, soll es sehen, nicht den Cache.
-      void queryClient.invalidateQueries({ queryKey: schluessel.liedblaetter(ziel.songId) });
+      await quelle.notenblattSpeichern(ziel.songId, ziel.arrangementId, inhalt);
+      // Das Blatt hat sich geändert – wer das Lied gleich öffnet, soll es sehen, nicht den Cache (Musik-App: Liedblätter).
+      quelle.nachAenderung(queryClient, { art: 'notenblatt', songId: ziel.songId });
       return true;
     } catch (e) {
       // Der Grund kommt vom Server (Rechte, Netz) – damit klar ist, ob ein zweiter Versuch Sinn hat.

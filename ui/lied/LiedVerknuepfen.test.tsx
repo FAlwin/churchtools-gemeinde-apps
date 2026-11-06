@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AgendaItem, SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
-import type { PunktFensterProps } from '@ui/ablauf/PunktFenster';
+import type { PunktFensterProps } from '../ablauf/PunktFenster';
 
 /**
  * „Eintrag bearbeiten" – geprüft wird der **Anlege-Weg aus „Lied verknüpfen"** (#391, 18.09.2026):
@@ -20,10 +20,20 @@ import type { PunktFensterProps } from '@ui/ablauf/PunktFenster';
  * und `NewSongSheet.test.tsx`; hier zählt die **Verdrahtung** zwischen den dreien.
  */
 const caps = vi.fn();
-vi.mock('../hooks/useServices', () => ({
-  useCapabilities: () => caps(),
+// Die Rechte kommen seit LW1b-2 über den Liedzugriff; `caps` liefert weiter die Form von `useCapabilities`, damit die
+// Tests unten unverändert bleiben – hier wird sie so übersetzt wie in `musikLiedZugriff.useRechte`.
+vi.mock('./liedZugriff', () => ({
+  useLiedZugriff: () => ({
+    useRechte: () => {
+      const d = (caps() as { data?: { canUseCcli?: boolean; canEditSongs?: boolean } } | undefined)
+        ?.data;
+      return d
+        ? { statistik: false, ccli: d.canUseCcli ?? false, liederAendern: d.canEditSongs ?? false }
+        : undefined;
+    },
+  }),
 }));
-vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+vi.mock('../fenster/useOverlayKeyboardInset', () => ({
   useOverlayKeyboardInset: () => undefined,
 }));
 
@@ -38,7 +48,7 @@ const TREFFER: SongSelectTreffer = {
   hasChordSheet: true,
 };
 
-vi.mock('@ui/lied/SongPicker', () => ({
+vi.mock('./SongPicker', () => ({
   SongPicker: (p: {
     onPick?: (arrangementId: number, songName: string) => void;
     neuesLied?: { label: string; onClick: (name: string) => void };
@@ -90,7 +100,7 @@ vi.mock('./NewSongSheet', () => ({
 }));
 
 const { LiedVerknuepfen } = await import('./LiedVerknuepfen');
-const { PunktFenster } = await import('@ui/ablauf/PunktFenster');
+const { PunktFenster } = await import('../ablauf/PunktFenster');
 
 /** „Eintrag bearbeiten" der Musik-App: das gemeinsame Punkt-Fenster mit eingesteckter Liedwahl – wie in `Setlist`. */
 function ItemActionSheet(props: PunktFensterProps) {

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { SongLibraryEntry } from '@shared/types/index';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
-import { knopfFolge } from '@ui/fenster/fenster.testutil';
+import { knopfFolge } from '../fenster/fenster.testutil';
 
 const LIED: SongLibraryEntry = {
   songId: 5,

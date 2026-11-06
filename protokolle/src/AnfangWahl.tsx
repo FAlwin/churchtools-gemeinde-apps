@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { tagPunkt } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
 import { ableiten, type Block } from '@shared/protokolle/dokument';
@@ -43,7 +44,16 @@ export function useAnfangWahl(q: {
   auswahl: (gesperrt: boolean) => ReactNode;
 } {
   const { modul, protokolle, teile, beginn, zeitzone } = q;
-  const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
+  const vorlagen = useLaden(
+    () => ladeVorlagen(modul).then(({ vorlagen: v }) => v.map((x) => x.vorlage)),
+    [modul],
+  ).stand;
+  const laden: Laden =
+    vorlagen.art === 'fertig'
+      ? { art: 'fertig', vorlagen: vorlagen.daten }
+      : vorlagen.art === 'fehler'
+        ? vorlagen
+        : { art: 'laedt' };
   const [wahl, setWahl] = useState<string | null>(null);
 
   const letztes = useMemo(() => {
@@ -51,19 +61,6 @@ export function useAnfangWahl(q: {
     const dok = s ? dokumentDerSitzung(s.kopf, teile) : null;
     return s && dok ? { sitzung: s, dokument: dok } : null;
   }, [protokolle, beginn, teile]);
-
-  useEffect(() => {
-    let aktiv = true;
-    ladeVorlagen(modul).then(
-      ({ vorlagen }) => {
-        if (aktiv) setLaden({ art: 'fertig', vorlagen: vorlagen.map((v) => v.vorlage) });
-      },
-      (e: unknown) => aktiv && setLaden({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [modul]);
 
   // Vorbelegt: „Wie letztes Mal“, wenn es ein letztes Protokoll gibt – sonst die erste Vorlage. Abgeleitet statt einmal
   // gesetzt: Kommen die Protokolle der Gruppe erst nach den Vorlagen an („Neues Protokoll“, K2a), stand sonst die erste

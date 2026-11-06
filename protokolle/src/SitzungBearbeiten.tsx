@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden, type Ladestand } from '@ui/ct/useLaden';
 import type { Person } from '@shared/organigramm/mitglieder';
 import {
   aenderungVon,
@@ -31,12 +32,26 @@ type Laden<T> =
   | { art: 'fertig'; wert: T }
   | { art: 'fehler'; fehler: Fehlermeldung };
 
+/** Ohne Termin wird nichts geladen (`aus`) – dann gilt `ohneTermin`. */
+function alsLaden<T>(s: Ladestand<T>, ohneTermin: T): Laden<T> {
+  if (s.art === 'aus') return { art: 'fertig', wert: ohneTermin };
+  if (s.art === 'fertig') return { art: 'fertig', wert: s.daten };
+  return s;
+}
+
 const personen = (n: number) => `${n} ${n === 1 ? 'Person' : 'Personen'}`;
 
 /** Bei einer Serie: ist das der erste Termin, und wie viele kommen noch (für „ganze Serie löschen“)? */
 interface Serie {
   erster: boolean;
   kommende: number;
+}
+
+/** Was der Termin jetzt sagt: gesperrt (Anmeldung), die Sitzung mit Zeit und Eingeladenen, die Serie. */
+interface TerminJetzt {
+  sperre: string | null;
+  sitzung: Sitzung;
+  serie: Serie | null;
 }
 
 /**
@@ -78,70 +93,59 @@ export function SitzungBearbeiten({
 }) {
   const termin = sitzung.termin;
   // Mit Termin gilt, was ChurchTools jetzt hat (Zeit, Eingeladene) – nicht die Liste (`terminStand`).
-  const [stand, setStand] = useState<
-    Laden<{ sperre: string | null; sitzung: Sitzung; serie: Serie | null }>
-  >(termin ? { art: 'laedt' } : { art: 'fertig', wert: { sperre: null, sitzung, serie: null } });
+  // Ohne Termin gibt es nichts zu laden: Es gilt die Sitzung der Liste, und Mitglieder braucht es nicht.
+  const stand = alsLaden(
+    useLaden(
+      () =>
+        termin
+          ? terminStand(termin).then(({ roh, eingeladen: da, termine }): TerminJetzt => {
+              const s = terminSperre(roh);
+              const frisch: Sitzung = {
+                ...sitzung,
+                // Bei einer Serie behält diese Sitzung ihren Beginn, die Dauer kommt vom Termin.
+                ...zeitAusTermin(roh, sitzung.beginn),
+                anfragen: da.map((person) => ({
+                  person,
+                  antwort: sitzung.anfragen.find((x) => x.person === person)?.antwort ?? 'offen',
+                })),
+              };
+              const heute = (jetzt ?? new Date()).getTime();
+              return {
+                sperre: s === 'anmeldung' ? ANMELDUNG : null,
+                sitzung: frisch,
+                serie:
+                  s === 'serie'
+                    ? {
+                        erster: ersterDerSerie(roh, sitzung.beginn, zeitzone),
+                        kommende: termine.filter((x) => Date.parse(x) >= heute).length,
+                      }
+                    : null,
+              };
+            })
+          : null,
+      [termin, sitzung, zeitzone, jetzt],
+    ).stand,
+    { sperre: null, sitzung, serie: null },
+  );
   const aktuell = stand.art === 'fertig' ? stand.wert.sitzung : sitzung;
   const serie = stand.art === 'fertig' ? stand.wert.serie : null;
   const [umfang, setUmfang] = useState<Umfang>('diese');
   const [absageArt, setAbsageArt] = useState<SerienAbsage>('diese');
-  const [p, setP] = useState<Planung>(() => planungVon(sitzung, zeitzone));
+  // Geändert wird erst, wenn der Termin da ist – bis dahin (und ohne Änderung) gilt, was er sagt.
+  const [eigeneP, setP] = useState<Planung | null>(null);
+  const p = useMemo(() => eigeneP ?? planungVon(aktuell, zeitzone), [eigeneP, aktuell, zeitzone]);
   const vorher = useMemo(() => aktuell.anfragen.map((a) => a.person), [aktuell]);
-  const [eingeladen, setEingeladen] = useState<ReadonlySet<number>>(() => new Set(vorher));
+  const [eigeneEingeladen, setEingeladen] = useState<ReadonlySet<number> | null>(null);
+  const eingeladen = useMemo(() => eigeneEingeladen ?? new Set(vorher), [eigeneEingeladen, vorher]);
   const [neuEinladen, setNeuEinladen] = useState(true);
-  const [mitglieder, setMitglieder] = useState<Laden<Person[] | 'verborgen'>>(
-    termin ? { art: 'laedt' } : { art: 'fertig', wert: [] },
+  const mitglieder = alsLaden<Person[] | 'verborgen'>(
+    useLaden(() => (termin ? ladeGruppenMitglieder(gruppe.id) : null), [termin, gruppe.id]).stand,
+    [],
   );
   const [absagen, setAbsagen] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [ende, setEnde] = useState<{ titel: string; hinweise: string[] } | null>(null);
-
-  // Der Termin (Serie? Anmeldung?) und die Mitglieder – nur, wenn es einen Termin gibt.
-  useEffect(() => {
-    if (!termin) return;
-    let aktiv = true;
-    terminStand(termin).then(
-      ({ roh, eingeladen: da, termine }) => {
-        if (!aktiv) return;
-        const s = terminSperre(roh);
-        const frisch: Sitzung = {
-          ...sitzung,
-          // Bei einer Serie behält diese Sitzung ihren Beginn, die Dauer kommt vom Termin.
-          ...zeitAusTermin(roh, sitzung.beginn),
-          anfragen: da.map((person) => ({
-            person,
-            antwort: sitzung.anfragen.find((x) => x.person === person)?.antwort ?? 'offen',
-          })),
-        };
-        const heute = (jetzt ?? new Date()).getTime();
-        setStand({
-          art: 'fertig',
-          wert: {
-            sperre: s === 'anmeldung' ? ANMELDUNG : null,
-            sitzung: frisch,
-            serie:
-              s === 'serie'
-                ? {
-                    erster: ersterDerSerie(roh, sitzung.beginn, zeitzone),
-                    kommende: termine.filter((x) => Date.parse(x) >= heute).length,
-                  }
-                : null,
-          },
-        });
-        setP(planungVon(frisch, zeitzone));
-        setEingeladen(new Set(da));
-      },
-      (e: unknown) => aktiv && setStand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    ladeGruppenMitglieder(gruppe.id).then(
-      (r) => aktiv && setMitglieder({ art: 'fertig', wert: r }),
-      (e: unknown) => aktiv && setMitglieder({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [termin, gruppe.id, sitzung, zeitzone, jetzt]);
 
   const liste =
     mitglieder.art === 'fertig' && mitglieder.wert !== 'verborgen' ? mitglieder.wert : [];

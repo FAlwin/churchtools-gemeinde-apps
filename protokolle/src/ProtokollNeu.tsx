@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { tagAusIso } from '@shared/ct/zeit';
 import { anfangsDokument } from '@shared/protokolle/beginnen';
@@ -65,9 +66,7 @@ export function ProtokollNeu({
 }) {
   const [gruppeId, setGruppeId] = useState<number>(start ?? gruppen[0]?.id ?? 0);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0];
-  const [daten, setDaten] = useState<Daten>({ art: 'laedt' });
   const [heute] = useState(() => tagAusIso((jetzt ?? new Date()).toISOString(), zeitzone));
-  const [p, setP] = useState<Planung | null>(null);
   const [mitTreffen, setMitTreffen] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
@@ -76,31 +75,36 @@ export function ProtokollNeu({
   const treffen = useRef<{ schluessel: string; id: number } | null>(null);
 
   // Die Sitzungen der Gruppe: für die Vorbelegung, „Wie letztes Mal“ und „zu dieser Zeit gibt es schon eine“.
-  useEffect(() => {
-    if (!gruppe) return;
-    let aktiv = true;
-    setDaten({ art: 'laedt' });
-    setP(null);
-    ladeSitzungen(modul, gruppe, zeitzone, jetzt).then(
-      (d) => {
-        if (!aktiv) return;
-        setDaten({ art: 'fertig', daten: d });
-        // Wie „Neue Sitzung“: wie die letzte Sitzung, die schon war (S5-2).
-        setP(
-          vorbelegung({
-            sitzungen: [...d.kommend, ...d.protokolle],
+  const geladen = useLaden(
+    () => (gruppe ? ladeSitzungen(modul, gruppe, zeitzone, jetzt) : null),
+    [modul, gruppe, zeitzone, jetzt],
+  ).stand;
+  const daten: Daten =
+    geladen.art === 'fertig'
+      ? { art: 'fertig', daten: geladen.daten }
+      : geladen.art === 'fehler'
+        ? geladen
+        : { art: 'laedt' };
+  // Wie „Neue Sitzung“: wie die letzte Sitzung, die schon war (S5-2).
+  const vorbelegt = useMemo(
+    () =>
+      geladen.art === 'fertig'
+        ? vorbelegung({
+            sitzungen: [...geladen.daten.kommend, ...geladen.daten.protokolle],
             bis: { beginn: (jetzt ?? new Date()).toISOString() },
             heute,
             zeitzone,
-          }),
-        );
-      },
-      (e: unknown) => aktiv && setDaten({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [modul, gruppe, zeitzone, jetzt, heute]);
+          })
+        : null,
+    [geladen, jetzt, heute, zeitzone],
+  );
+  // Im Fenster geändert – gilt nur für die Sitzungen, zu denen es geändert wurde: Eine andere Gruppe fängt wieder mit
+  // ihrer Vorbelegung an. Solange geladen wird, gibt es keine Planung.
+  const [eigene, setEigene] = useState<{ fuer: GruppenSitzungen; p: Planung } | null>(null);
+  const p = geladen.art !== 'fertig' ? null : eigene?.fuer === geladen.daten ? eigene.p : vorbelegt;
+  const setP = (neu: Planung) => {
+    if (geladen.art === 'fertig') setEigene({ fuer: geladen.daten, p: neu });
+  };
 
   const d = daten.art === 'fertig' ? daten.daten : LEER;
   const z =

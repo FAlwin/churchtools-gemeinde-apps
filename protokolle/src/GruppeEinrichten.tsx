@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import { STUFEN, type PunkteVonMitgliedern, type Stufe } from '@shared/protokolle/einrichten';
 import {
   gruppeEinrichten,
@@ -19,6 +20,18 @@ type Laden =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; rollen: GruppenRolle[]; gespeichert: boolean };
+
+/** Gespeicherte Stufen übernehmen; neue Rollen bekommen den Vorschlag. */
+function wahlAus({ rollen, einstellung }: Awaited<ReturnType<typeof ladeGruppe>>): Wahl {
+  const v = vorschlag(rollen);
+  return einstellung
+    ? {
+        rollen: v.rollen.map((r) => einstellung.rollen.find((x) => x.rolle === r.rolle) ?? r),
+        punkte: einstellung.punkte,
+        kalender: einstellung.kalender,
+      }
+    : v;
+}
 
 /**
  * **Fenster „Gruppe einrichten“** (Bauplan S2-2, Entwurf 7): je Rolle Kein Zugriff · Lesen + eigene To-Dos ·
@@ -39,44 +52,30 @@ export function GruppeEinrichten({
   onClose: () => void;
   onFertig: () => void;
 }) {
-  const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
-  const [wahl, setWahl] = useState<Wahl | null>(null);
+  const geladen = useLaden(() => ladeGruppe(modul, gruppe.id), [modul, gruppe.id]).stand;
+  const laden: Laden =
+    geladen.art === 'fertig'
+      ? {
+          art: 'fertig',
+          rollen: geladen.daten.rollen,
+          gespeichert: geladen.daten.einstellung !== null,
+        }
+      : geladen.art === 'fehler'
+        ? geladen
+        : { art: 'laedt' };
+  /** Im Fenster geändert – bis dahin gilt das Gespeicherte bzw. der Vorschlag. */
+  const [eigene, setWahl] = useState<Wahl | null>(null);
+  const wahl = eigene ?? (geladen.art === 'fertig' ? wahlAus(geladen.daten) : null);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
 
-  useEffect(() => {
-    let aktiv = true;
-    ladeGruppe(modul, gruppe.id).then(
-      ({ rollen, einstellung }) => {
-        if (!aktiv) return;
-        setLaden({ art: 'fertig', rollen, gespeichert: einstellung !== null });
-        const v = vorschlag(rollen);
-        // Gespeicherte Stufen übernehmen; neue Rollen bekommen den Vorschlag.
-        setWahl(
-          einstellung
-            ? {
-                rollen: v.rollen.map(
-                  (r) => einstellung.rollen.find((x) => x.rolle === r.rolle) ?? r,
-                ),
-                punkte: einstellung.punkte,
-                kalender: einstellung.kalender,
-              }
-            : v,
-        );
-      },
-      (e: unknown) => {
-        if (aktiv) setLaden({ art: 'fehler', fehler: fehlerMeldung(e) });
-      },
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [modul, gruppe.id]);
-
-  const stufeSetzen = (rolle: number, stufe: Stufe) =>
-    setWahl(
-      (w) => w && { ...w, rollen: w.rollen.map((r) => (r.rolle === rolle ? { ...r, stufe } : r)) },
-    );
+  const stufeSetzen = (rolle: number, stufe: Stufe) => {
+    if (wahl)
+      setWahl({
+        ...wahl,
+        rollen: wahl.rollen.map((r) => (r.rolle === rolle ? { ...r, stufe } : r)),
+      });
+  };
 
   const speichern = () => {
     if (!wahl) return;

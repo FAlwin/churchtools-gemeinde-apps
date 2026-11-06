@@ -239,6 +239,14 @@ describe('SitzungFestlegen', () => {
     expect(screen.getByLabelText<HTMLInputElement>('Titel').value).toBe('Leitungssitzung');
   });
 
+  it('Mitglieder lassen sich nicht laden: sagt es, Festlegen bleibt gesperrt', async () => {
+    vi.mocked(M.ladeGruppenMitglieder).mockRejectedValue(new TypeError('Failed to fetch'));
+    fenster({ jetzt: new Date('2026-10-28T08:00:00Z') });
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByText('Mitglieder werden geladen …')).toBeNull();
+    expect((knopf(/^Festlegen/) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('Mitglieder nicht sichtbar: ohne Einladung, mit Hinweis', async () => {
     vi.mocked(M.ladeGruppenMitglieder).mockResolvedValue('verborgen');
     fenster({ jetzt: new Date('2026-10-28T08:00:00Z') });

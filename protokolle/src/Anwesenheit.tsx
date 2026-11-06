@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden } from '@ui/ct/useLaden';
 import {
   gaesteAus,
   kurzform,
@@ -52,7 +53,6 @@ export function Anwesenheit({
 }) {
   const gaeste = gaesteAus(gaesteRoh);
   const [auf, setAuf] = useState(bearbeitbar);
-  const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
   const [laeuft, setLaeuft] = useState<number | 'treffen' | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [neuerGast, setNeuerGast] = useState('');
@@ -60,22 +60,26 @@ export function Anwesenheit({
   // Von selbst vorbelegen nur einmal je Treffen und Kasten – auch wenn der Editor neu zeichnet.
   const vorbelegt = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (treffen === null) return;
-    let aktiv = true;
-    setLaden({ art: 'laedt' });
-    (async () => {
-      let stand = await anwesenheitLesen(gruppe, treffen);
-      if (bearbeitbar && vorbelegt.current !== treffen) {
-        vorbelegt.current = treffen;
-        stand = await vorbelegen(gruppe, treffen, stand, anfragen);
-      }
-      if (aktiv) setLaden({ art: 'fertig', stand });
-    })().catch((e: unknown) => aktiv && setLaden({ art: 'fehler', text: fehlerMeldung(e).text }));
-    return () => {
-      aktiv = false;
-    };
-  }, [gruppe, treffen, anfragen, bearbeitbar]);
+  const { stand: geladen, setze } = useLaden(
+    () =>
+      treffen === null
+        ? null
+        : (async () => {
+            let stand = await anwesenheitLesen(gruppe, treffen);
+            if (bearbeitbar && vorbelegt.current !== treffen) {
+              vorbelegt.current = treffen;
+              stand = await vorbelegen(gruppe, treffen, stand, anfragen);
+            }
+            return stand;
+          })(),
+    [gruppe, treffen, anfragen, bearbeitbar],
+  );
+  const laden: Laden =
+    geladen.art === 'fertig'
+      ? { art: 'fertig', stand: geladen.daten }
+      : geladen.art === 'fehler'
+        ? { art: 'fehler', text: geladen.fehler.text }
+        : { art: 'laedt' };
 
   const antwortVon = new Map(anfragen.map((a) => [a.person, a.antwort]));
 
@@ -138,7 +142,7 @@ export function Anwesenheit({
     statusSetzen(gruppe, treffen, person, nachTipp(jetzt, tipp)).then(
       (neu) => {
         setLaeuft(null);
-        setLaden({ art: 'fertig', stand: neu });
+        setze(neu);
       },
       (e: unknown) => {
         setLaeuft(null);

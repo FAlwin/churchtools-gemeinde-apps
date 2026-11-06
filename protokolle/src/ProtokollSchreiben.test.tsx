@@ -69,6 +69,7 @@ vi.mock('./DokumentEditor', async () => {
             wer
           </button>
           <span data-testid="todos">{k ? [...k.todos.keys()].join(',') : 'kein Kontext'}</span>
+          <span data-testid="mitglieder">{k ? JSON.stringify(k.mitglieder) : ''}</span>
           <button type="button" onClick={() => void feste?.treffenAnlegen?.()}>
             treffen anlegen
           </button>
@@ -433,6 +434,13 @@ describe('ProtokollSchreiben', () => {
     await screen.findByText('bearbeitbar');
     fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
     expect(screen.getByText('Beamer von früher').closest('li')!.textContent).toMatch(/Alwin/);
+  });
+
+  it('Mitgliederliste lässt sich nicht laden: die Blöcke sehen „verborgen“, nicht ewig „werden geladen“', async () => {
+    vi.mocked(M.ladeGruppenMitglieder).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    zeige();
+    await screen.findByText('bearbeitbar');
+    await waitFor(() => expect(screen.getByTestId('mitglieder').textContent).toBe('"verborgen"'));
   });
 
   it('„Lesen“ nach dem Tippen speichert sofort – nicht erst nach der Pause', async () => {

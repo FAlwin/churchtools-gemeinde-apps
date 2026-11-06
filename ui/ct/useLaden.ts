@@ -18,32 +18,40 @@ export type Ladestand<T> =
  * - Ein Fehler wird über `fehlerMeldung` beschrieben – dieselben Zweige wie überall (vorübergehend ≠ abgelehnt).
  * - `neu()` ist „Erneut versuchen“: zeigt wieder „lädt“ und fragt noch einmal.
  * - Gibt `laden` `null` zurück, gibt es nichts zu laden (`aus`) – etwa solange eine Auswahl fehlt.
+ * - `behalten`: Beim **Neuladen** bleiben die alten Daten stehen, bis neue da sind – auch wenn das Neuladen scheitert
+ *   (vorübergehend ist nicht ungültig). Nur, wo die alten Daten zu den neuen `deps` noch passen dürfen: derselbe
+ *   Inhalt, frisch nachgefragt. Sonst sprängen Inhalt oder Bild bei jedem Nachfragen kurz weg (Gebetsabend: der
+ *   Player würde neu aufgebaut).
  */
 export function useLaden<T>(
   laden: () => Promise<T> | null,
   deps: DependencyList,
+  { behalten = false }: { behalten?: boolean } = {},
 ): { stand: Ladestand<T>; neu: () => void } {
   const [stand, setStand] = useState<Ladestand<T>>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
 
   useEffect(() => {
     let aktuell = true;
+    /** Mit `behalten` bleiben fertige Daten stehen; sonst gilt der neue Stand. */
+    const setze = (neu: Ladestand<T>) =>
+      setStand((alt) => (behalten && alt.art === 'fertig' ? alt : neu));
     let abfrage: Promise<T> | null;
     try {
       abfrage = laden();
     } catch (e) {
       // Ein Fehler schon beim Aufrufen (nicht erst im Versprechen) ist derselbe Fehler.
-      setStand({ art: 'fehler', fehler: fehlerMeldung(e) });
+      setze({ art: 'fehler', fehler: fehlerMeldung(e) });
       return;
     }
     if (!abfrage) {
       setStand({ art: 'aus' });
       return;
     }
-    setStand({ art: 'laedt' });
+    setze({ art: 'laedt' });
     abfrage.then(
       (daten) => aktuell && setStand({ art: 'fertig', daten }),
-      (e: unknown) => aktuell && setStand({ art: 'fehler', fehler: fehlerMeldung(e) }),
+      (e: unknown) => aktuell && setze({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
     return () => {
       aktuell = false;

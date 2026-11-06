@@ -1,9 +1,14 @@
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { useLaden, type Ladestand } from '@ui/ct/useLaden';
 import { ctDaten } from '@ui/ct/verbindung';
-import { einstellungenLesen, einstellungenSpeichern } from '@shared/gebetsabend/ablage';
+import {
+  einstellungenLesen,
+  einstellungenSpeichern,
+  type StandLesen,
+} from '@shared/gebetsabend/ablage';
 import { KATEGORIE_EINSTELLUNGEN } from '@shared/gebetsabend/einrichten';
 import type { Einstellungen } from '@shared/gebetsabend/einstellungen';
 import { speicherFehlerText } from '@shared/gebetsabend/technik';
@@ -28,7 +33,7 @@ interface Kalender {
 type Laden =
   | { art: 'laedt' }
   | { art: 'fehler'; text: string }
-  | { art: 'da'; version: number | null; kalender: Kalender[] };
+  | { art: 'da'; version: number | null; inhalt: Einstellungen; kalender: Kalender[] };
 
 /** `/calendars` – nur, was die angemeldete Person sehen darf (G0-4). Unbrauchbare Einträge fallen weg. */
 function kalenderAus(roh: unknown): Kalender[] {
@@ -37,45 +42,51 @@ function kalenderAus(roh: unknown): Kalender[] {
   );
 }
 
+/** Was das Fenster nach dem Laden zeigt – Fehler der Ablage mit ihrem eigenen Text. */
+function ladenAus(s: Ladestand<[StandLesen<Einstellungen>, unknown]>): Laden {
+  if (s.art === 'fehler') return { art: 'fehler', text: s.fehler.text };
+  if (s.art !== 'fertig') return { art: 'laedt' };
+  const [l, roh] = s.daten;
+  if (!l.ok)
+    return {
+      art: 'fehler',
+      text: speicherFehlerText(l.grund, 'geladen', KATEGORIE_EINSTELLUNGEN.name),
+    };
+  return {
+    art: 'da',
+    version: l.stand.version,
+    inhalt: l.stand.inhalt,
+    kalender: kalenderAus(roh),
+  };
+}
+
 /**
  * **Einstellungen des Gebetsabends** (Bauplan Gebetsabend G3, Entwurf v3): aus welchem Kalender der nächste Termin
  * kommt und an welchem Wort im Titel er erkannt wird. Nur für die Technik. Gespeichert mit Version und Nachlesen
  * (`@shared/gebetsabend/ablage`); hat inzwischen ein anderer gespeichert, wird nichts überschrieben.
  */
 export function EinstellungenFenster({ start, kategorie, onGespeichert, onSchliessen }: Props) {
-  const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
-  const [werte, setWerte] = useState<Einstellungen>({ kalender: null, suchwort: '' });
+  const geladen = ladenAus(
+    useLaden(
+      () =>
+        Promise.all([
+          einstellungenLesen(port, start.modul, kategorie),
+          ctDaten<unknown>('/calendars'),
+        ]),
+      [start.modul, kategorie],
+    ).stand,
+  );
+  /** Im Fenster geändert – bis dahin gilt, was geladen wurde. */
+  const [eigene, setWerte] = useState<Einstellungen | null>(null);
+  /** Hat inzwischen ein anderer gespeichert, gilt dessen Version. */
+  const [nachgelesen, setNachgelesen] = useState<{ version: number | null } | null>(null);
+  const laden: Laden =
+    geladen.art === 'da' && nachgelesen ? { ...geladen, version: nachgelesen.version } : geladen;
+  const werte = eigene ?? (laden.art === 'da' ? laden.inhalt : { kalender: null, suchwort: '' });
   const [arbeitet, setArbeitet] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const kalenderId = useId();
   const wortId = useId();
-
-  useEffect(() => {
-    let aktuell = true;
-    Promise.all([
-      einstellungenLesen(port, start.modul, kategorie),
-      ctDaten<unknown>('/calendars'),
-    ]).then(
-      ([l, roh]) => {
-        if (!aktuell) return;
-        if (!l.ok) {
-          setLaden({
-            art: 'fehler',
-            text: speicherFehlerText(l.grund, 'geladen', KATEGORIE_EINSTELLUNGEN.name),
-          });
-          return;
-        }
-        setWerte(l.stand.inhalt);
-        setLaden({ art: 'da', version: l.stand.version, kalender: kalenderAus(roh) });
-      },
-      (e: unknown) => {
-        if (aktuell) setLaden({ art: 'fehler', text: fehlerMeldung(e).text });
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [start.modul, kategorie]);
 
   const speichern = async () => {
     if (laden.art !== 'da') return;
@@ -99,7 +110,7 @@ export function EinstellungenFenster({ start, kategorie, onGespeichert, onSchlie
       if (r.jetzt) {
         // Nichts überschreiben: Was jetzt dasteht, gilt – und steht im Fenster.
         setWerte(r.jetzt.inhalt);
-        setLaden({ ...laden, version: r.jetzt.version });
+        setNachgelesen({ version: r.jetzt.version });
       }
       setProblem(speicherFehlerText(r.grund, 'gespeichert', KATEGORIE_EINSTELLUNGEN.name));
     } catch (e) {

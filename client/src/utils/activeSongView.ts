@@ -3,6 +3,7 @@ import type { SongSettings } from './chartSettings';
 import { parseChordPro } from '@shared/lieder/chordpro';
 import { availableVersions, notierteTonart, type ResolvedVersion } from './songVersions';
 import { shiftKey } from '@shared/lieder/transpose';
+import { chordproVorlage } from '@ui/lied/liedFormular';
 
 /**
  * Was aus dem aktiven Lied plus seinen Einstellungen folgt (#314).
@@ -112,29 +113,6 @@ export function deriveActiveSongView(song: SetlistSong, set: SongSettings): Acti
     activeDoc,
     headInfo,
   };
-}
-
-/**
- * Startgerüst für ein Lied, zu dem es noch keinen ChordPro-Text gibt.
- *
- * **Eine Vorlage, zwei Aufrufer** (04.09.2026): das Blatt (`buildEditorTemplate`) und der Editor direkt
- * nach dem Anlegen (`NewSongSheet`). Vorher stand das Gerüst hier fest verdrahtet an ein `SetlistSong`;
- * das neue Lied hat noch keins – nur Titel, Tonart und ggf. CCLI-Nummer aus dem Formular.
- */
-export function chordproVorlage(lied: {
-  title: string;
-  key?: string | null;
-  ccli?: string | null;
-}): string {
-  const key = lied.key || 'C';
-  const kopf = [
-    `{title: ${lied.title}}`,
-    `{key: ${key}}`,
-    lied.ccli ? `{ccli: ${lied.ccli}}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
-  return `${kopf}\n\n{comment: Vers 1}\n[${key}]Hier Text mit Akkorden eingeben\n\n{comment: Chorus}\n`;
 }
 
 function buildEditorTemplate(song: SetlistSong): string {

@@ -45,7 +45,7 @@ export const schluessel = {
   // Die Liedwahl liegt in `ui/lied` (LW1a, 06.11.2026) – ihre Schlüssel stehen dort, hier nur verwiesen.
   liedNutzung: liedSchluessel.liedNutzung,
   liederliste: liedSchluessel.liederliste,
-  liedStammdaten: (songId: number | null) => ['song-stammdaten', songId] as const,
+  liedStammdaten: liedSchluessel.liedStammdaten,
 
   /** Alle Liedblätter eines Lieds, gleich welches Arrangement. */
   liedblaetter: (songId: number) => ['song-chart', songId] as const,
@@ -53,7 +53,7 @@ export const schluessel = {
   liedblatt: (songId: number, arrangementId?: number) =>
     [...schluessel.liedblaetter(songId), arrangementId] as const,
 
-  arrangements: (songId: number | null) => ['arrangements', songId] as const,
+  arrangements: liedSchluessel.arrangements,
   liedArrangements: (songId: number | null) => ['song-arrangements', songId] as const,
   arrangementDateien: (songId: number, arrangementId: number) =>
     ['arrangement-files', songId, arrangementId] as const,

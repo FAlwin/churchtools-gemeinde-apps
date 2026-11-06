@@ -23,7 +23,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import feld from '@ui/lied/SongFields.module.scss';
-import styles from './NewSongSheet.module.scss';
+import styles from '@ui/lied/NewSongSheet.module.scss';
 import eigen from './ArrangementSheet.module.scss';
 import {
   LEERES_ARRANGEMENT,

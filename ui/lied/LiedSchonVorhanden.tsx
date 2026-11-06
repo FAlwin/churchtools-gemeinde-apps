@@ -1,6 +1,6 @@
 import type { SongLibraryEntry } from '@shared/types/index';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '../fenster/FensterKnopf';
+import { Sheet } from '../fenster/Sheet';
 import styles from './NewSongSheet.module.scss';
 
 interface LiedSchonVorhandenProps {

@@ -58,7 +58,13 @@
     Editor von der App braucht, gibt sie ebenfalls über den `LiedZugriff`: `liedansicht()` (Geräte-Einstellung
     Scrollen/Blättern) und `useBlattLogo()` (Logo der PDF-Kopfzeile). **Jeder Einstieg braucht den Provider** – in
     `main.tsx` umschließt er App UND die Entwicklungs-Demos (`?demo=chart|editor`, sonst e2e rot, #887).
-    „Neues Lied" (`NewSongSheet`) und `LiedVerknuepfen` noch in `client/` (LW1b-2).
+    **Seit LW1b-2 auch „Neues Lied"** in `ui/lied` (`NewSongSheet`, `SongFields`, `LiedSchonVorhanden`,
+    `LiedVerknuepfen`, `useNeuesLied`, `useNotenblatt`, `useLiedinfoQuelle`, Gerüst `chordproVorlage` in
+    `liedFormular.ts`). Die Abfragen für Kategorien, Stammdaten, Arrangements, Lied anlegen/ändern stehen in
+    `liedDaten.ts`; was dort für alle erneuert wird (Liederliste, Stammdaten, Arrangements), steht dort – was nur eine App
+    neu laden muss, meldet sie über `nachAenderung` ihres Liedzugriffs (Musik-App: Liedblätter, Abläufe,
+    Arrangement-Auswahl). Auch die übrigen Arrangement-Änderungen der Musik-App nutzen `arrangementListenErneuern`
+    aus `liedDaten.ts`. „Vielleicht doch angelegt" (Musik-App: 502) entscheidet `anlegenUngewiss` der App.
   - **ein Suchfeld, eine Liste, zwei Knöpfe je Zeile** (#378, dritter Anlauf nach Alwins Rückmeldungen vom
     03./04.09.2026). Gesucht wird in Titel, Autor **und CCLI-Nummer** (`SongLibraryEntry.ccli`, pflichtig,
     vom Server aus `CtSongListEntry.ccli`). Eigene Lieder oben, SongSelect darunter mit Überschrift
@@ -107,7 +113,7 @@
     Schritt** – nichts öffnet sich von selbst (Entscheidung Alwin). Speichern → `PUT /api/songs/:id/arrangements/:arrId/chordpro` → `originalNotenblattSchreiben` in `setlistBuilder.ts`:
     die aus `holeChordProAusSongSelect` herausgezogene Regel „ein Original pro Arrangement, erst hochladen,
     dann löschen, `(App)`-Versionen bleiben" – jetzt EINE Stelle für beide Wege. `ChordEditor` hat dafür
-    `mitVersionsname={false}`. Die ChurchTools-Aufrufe liegen in **`hooks/useNotenblatt.ts`** (Starttext
+    `mitVersionsname={false}`. Die ChurchTools-Aufrufe liegen in **`ui/lied/useNotenblatt.ts`** (Starttext
     holen oder Gerüst, speichern, `['song-chart', songId]` verwerfen) – **eine** Stelle für `NewSongSheet`
     (über `useNeuesLied`) **und** `EditSongSheet` („Notenblatt bearbeiten" im Stammdaten-Blatt, braucht
     dafür `arrangementId` + `tonart` vom Aufrufer). Nicht in den Komponenten. **Gegen den Stub nicht
@@ -556,7 +562,7 @@ gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchm
 `useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
 dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Titel, Autor, CCLI, Copyright am Lied; Tempo, Takt am
 Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `ui/lied/liedinfoFormular.ts` auf den Formularen
-des Stammdaten-Blatts, Laden/Speichern `hooks/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
+des Stammdaten-Blatts, Laden/Speichern `ui/lied/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
 ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBeimImport` beim SongSelect-Import);
 ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart (in der Datei; im Text seit L6
 ausgeblendet, `TONART_ZEILE`). L6 = Menü **„Einfügen“** (`EinfuegenMenue`, Variante B) statt Format-Menü: Teile (Name über

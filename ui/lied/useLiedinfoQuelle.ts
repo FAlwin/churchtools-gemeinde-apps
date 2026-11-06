@@ -4,8 +4,8 @@ import {
   useArrangements,
   useLiedAendern,
   useSongStammdaten,
-} from './useServices';
-import type { LiedinfoQuelle } from '@ui/lied/liedinfoFormular';
+} from './liedDaten';
+import type { LiedinfoQuelle } from './liedinfoFormular';
 
 /**
  * **Die Liedinfo für den Editor laden und speichern** (Lied-Editor L4): Lied-Stammdaten und das Arrangement, dessen

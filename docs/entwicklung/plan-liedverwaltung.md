@@ -256,7 +256,7 @@ Lied anlegen …"), Erfolgsansicht mit drei Wegen (öffnen / noch eins / fertig)
 > `ui/lied/useLiedSuche.ts`.
 
 Die Regeln liegen bewusst **nicht** in der Komponente: `ui/lied/liedFormular.ts` (Formularstand, Warnung,
-Auftrag, Entscheidung über das Notenblatt) und `hooks/useNeuesLied.ts` (die Abfolge samt
+Auftrag, Entscheidung über das Notenblatt) und `ui/lied/useNeuesLied.ts` (die Abfolge samt
 Teilerfolgen). Beides ist geprüft, jede Regel einzeln per Gegenprobe – 46 neue Tests.
 
 **Was noch fehlt: der Durchklick auf Staging** (#283 – eine grüne Testsuite hat hier schon einmal

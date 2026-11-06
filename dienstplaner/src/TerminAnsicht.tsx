@@ -1,16 +1,18 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { useLaden, type Ladestand } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf, KopfLink } from '@ui/bedienung/KopfKnopf';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { datumText, kachel } from '@shared/ct/datum';
 import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import type { CtAgenda } from '@shared/ct/typen';
 import { dateienSchluessel, type TerminDatei } from '@shared/ct/terminDateien';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
-import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
+import { ladeAblauf } from './ladeBeiwerk';
+import { useMusikApp } from './useMusikApp';
 import { Plaetze } from './Planen';
 import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
@@ -34,6 +36,11 @@ type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; daten: TerminDaten; ablauf: CtAgenda | null };
+
+function alsZustand(s: Ladestand<{ daten: TerminDaten; ablauf: CtAgenda | null }>): Zustand {
+  if (s.art === 'fertig') return { art: 'fertig', ...s.daten };
+  return s.art === 'fehler' ? s : { art: 'laedt' };
+}
 
 /**
  * **Die Termin-Ansicht** (Bauplan E6-1b, Entwurf `e6-entwurf.html` Bild 1): oben der Ablauf – derselbe Baustein wie in
@@ -83,10 +90,20 @@ export function TerminAnsicht({
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
   tausch?: Tausch;
 }) {
-  const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
-  const [versuch, setVersuch] = useState(0);
+  const {
+    stand,
+    neu,
+    setze: setzeGeladen,
+  } = useLaden(
+    () =>
+      Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
+        ([daten, ablauf]) => ({ daten, ablauf }),
+      ),
+    [start, terminId, zeitzone],
+  );
+  const zustand = alsZustand(stand);
   // Adresse der Musik-App: `undefined` = noch unbekannt, `null` = nicht installiert (die Lied-Ansicht sagt es dann).
-  const [musikApp, setMusikApp] = useState<string | null | undefined>(undefined);
+  const musikApp = useMusikApp();
   const [bearbeiten, setBearbeiten] = useState(false);
   // „Weitere Infos“ (T1): das Fenster und ein frisch gespeicherter Text (bis der Termin neu geladen wird).
   const [infosOffen, setInfosOffen] = useState(false);
@@ -96,35 +113,15 @@ export function TerminAnsicht({
   const [dateienNeu, setDateienNeu] = useState<TerminDatei[] | null>(null);
   const [teilenOffen, setTeilenOffen] = useState(false);
 
+  // Ein anderer Termin: Fenster und frisch Gespeichertes des alten gelten nicht mehr.
   useEffect(() => {
-    let aktuell = true;
     setBearbeiten(false);
     setInfosOffen(false);
     setInfosNeu(null);
     setDateienOffen(false);
     setDateienNeu(null);
     setTeilenOffen(false);
-    setZustand({ art: 'laedt' });
-    Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
-      ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
-      (e: unknown) => aktuell && setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [start, terminId, zeitzone, versuch]);
-
-  // Beiwerk wie auf der Startseite: scheitert es, fehlt nur der Knopf.
-  useEffect(() => {
-    let aktuell = true;
-    ladeMusikApp().then(
-      (url) => aktuell && setMusikApp(url),
-      () => {},
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, []);
+  }, [start, terminId, zeitzone]);
 
   const blaettern = (
     <span className={styles.blaettern}>
@@ -164,7 +161,7 @@ export function TerminAnsicht({
         {zustand.art === 'laedt' ? (
           <p className={styles.hinweis}>Termin wird geladen …</p>
         ) : (
-          <FehlerKasten fehler={zustand.fehler} onNochmal={() => setVersuch((v) => v + 1)} />
+          <FehlerKasten fehler={zustand.fehler} onNochmal={neu} />
         )}
       </div>
     );
@@ -216,7 +213,7 @@ export function TerminAnsicht({
       zeitzone={zeitzone}
       termin={s}
       ablauf={ablauf}
-      onAblauf={(neu) => setZustand((z) => (z.art === 'fertig' ? { ...z, ablauf: neu } : z))}
+      onAblauf={(ablauf) => setzeGeladen((alt) => ({ ...alt, ablauf }))}
       bearbeiten={bearbeiten}
       onBearbeiten={setBearbeiten}
       musikApp={musikApp}

@@ -69,7 +69,7 @@ import { useArrangementDateien } from '../hooks/useArrangementDateien';
 import { loeschFrage } from '../utils/dateiVerwaltung';
 import { useSetlistPages } from '../hooks/useSetlistPages';
 import { useCapabilities, useSongArrangements, useSongUsage } from '../hooks/useServices';
-import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
+import { useLiedinfoQuelle } from '@ui/lied/useLiedinfoQuelle';
 import type { DrawTool } from '../types/index';
 import { beschreibeEbene, type NamenQuelle } from '../utils/annotationLevelLabel';
 import styles from './ChordChart.module.scss';

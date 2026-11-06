@@ -121,4 +121,19 @@ describe('Liederliste: die Musik-App erneuert den Eintrag der Liedwahl (LW1a)', 
     expect(schluessel.liederliste).toBe(liedSchluessel.liederliste);
     expect(schluessel.liedNutzung).toBe(liedSchluessel.liedNutzung);
   });
+
+  /**
+   * Seit LW1b-2 (06.11.2026) auch Stammdaten und Arrangements: „Neues Lied" und die Liedinfo im Editor lesen sie in
+   * `ui/lied`, die Arrangement-Verwaltung der Musik-App setzt und erneuert sie über `schluessel`. Zwei Schlüssel wären
+   * zwei Speicher – das Formular zeigte nach dem Speichern den alten Stand.
+   */
+  it('Stammdaten und Arrangements ebenso (LW1b-2)', async () => {
+    const { liedSchluessel } = await import('@ui/lied/liedDaten');
+    expect(schluessel.liedStammdaten).toBe(liedSchluessel.liedStammdaten);
+    expect(schluessel.arrangements).toBe(liedSchluessel.arrangements);
+    // Die gespeicherten Namen bleiben – sonst wären gemerkte Stände nach dem Update verwaist.
+    expect(liedSchluessel.liedStammdaten(5)).toEqual(['song-stammdaten', 5]);
+    expect(liedSchluessel.arrangements(5)).toEqual(['arrangements', 5]);
+    expect(liedSchluessel.kategorien()).toEqual(['song-categories']);
+  });
 });

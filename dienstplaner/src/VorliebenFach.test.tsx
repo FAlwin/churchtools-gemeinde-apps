@@ -39,6 +39,17 @@ describe('VorliebenFach (E5-3)', () => {
     expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
   });
 
+  it('wirft das Lesen (statt einen Grund zu nennen): vorübergehend – mit „Erneut versuchen“', async () => {
+    const lesen = vi
+      .fn<EntwurfAnschluss['vorlieben']['lesen']>()
+      .mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValueOnce({ ok: true, vorliebe: STANDARD });
+    zeige({ lesen });
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    expect(await screen.findByRole('combobox', { name: 'Wie oft höchstens?' })).toBeTruthy();
+    expect(lesen).toHaveBeenCalledTimes(2);
+  });
+
   it('Speichern schreibt genau die gewählten Werte und schließt mit „gespeichert“', async () => {
     const { vorlieben, onClose } = zeige();
     await screen.findByRole('combobox', { name: 'Wie oft höchstens?' });

@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  type AblaufQuelle,
-  type AgendaItem,
-  type ArrangementAuftrag,
-  type LiedAnlegenAuftrag,
-  type LiedStammdaten,
-} from '@shared/types/index';
+import { type AblaufQuelle, type AgendaItem, type ArrangementAuftrag } from '@shared/types/index';
 import { plusTage } from '@shared/ct/datum';
 import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
@@ -16,6 +10,8 @@ import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 import { agendaAbfrage, liedblattAbfrage, schluessel } from './abfrageSchluessel';
 import { heuteImKalender } from '@shared/ct/zeit';
+import { arrangementListenErneuern } from '@ui/lied/liedDaten';
+import { useLiedZugriff } from '@ui/lied/liedZugriff';
 
 /**
  * Die Abfragen der Liedwahl liegen seit LW1a (06.11.2026) in `ui/lied/liedDaten.ts` – hier nur weitergereicht, damit
@@ -28,6 +24,14 @@ export {
   useSongSelectLiedtext,
   useSongSelectSuche,
   useSongUsage,
+  // Seit LW1b-2 (06.11.2026): „Neues Lied", Stammdaten und Arrangements.
+  useArrangementAendern,
+  useArrangements,
+  useLiedAendern,
+  useLiedAnlegen,
+  useSongCategories,
+  useSongSelectSong,
+  useSongStammdaten,
 } from '@ui/lied/liedDaten';
 export { SONGSELECT_MIN_ZEICHEN } from '@ui/lied/suchRegeln';
 
@@ -382,81 +386,6 @@ export function useCapabilities(enabled: boolean) {
 }
 
 /**
- * Lädt die Lied-Kategorien, in denen der Nutzer anlegen/ändern darf (#322).
- *
- * **Kurze Vorhaltezeit (5 min) mit Absicht.** Kategorien ändern sich fast nie, aber die Liste hängt an
- * einem **Recht** – wird es in ChurchTools entzogen, soll die Auswahl nicht stundenlang eine Kategorie
- * anbieten, die es für diesen Nutzer nicht mehr gibt. Die Liedliste darf 10 Minuten alt sein, eine
- * Berechtigung eher nicht.
- */
-export function useSongCategories(enabled: boolean) {
-  return useQuery({
-    queryKey: ['song-categories'],
-    queryFn: () => api.getSongCategories(),
-    enabled,
-    staleTime: 1000 * 60 * 5,
-  });
-}
-
-/**
- * Holt zu einer CCLI-Nummer die **Einzelangaben** – vor allem das Copyright (#378).
- *
- * Die Trefferliste von CCLI enthält es nicht; erst diese Abfrage liefert es. Sie lief vorher als `await`
- * im Klick-Handler von `NewSongSheet`. Seit der Treffer von außen kommt (Suche im Einfüge-Dialog, #378), ist es eine
- * Abfrage: **kein Effekt, der nachlädt** – der lief bei einem neu erzeugten Prop-Objekt endlos – und das
- * Ergebnis liegt danach im Cache, wenn dieselbe Nummer nochmal gebraucht wird.
- *
- * **Ein Fehlschlag ist kein Grund, das Anlegen zu verhindern:** Der Aufrufer zeigt das Formular ohne
- * Copyright, statt eine Meldung zu bringen.
- */
-export function useSongSelectSong(songNumber: number | null) {
-  return useQuery({
-    queryKey: ['songselect-song', songNumber],
-    queryFn: () => api.getSongSelectSong(songNumber as number),
-    enabled: songNumber !== null,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
-}
-
-/**
- * Lädt die Stammdaten eines Liedes für das Änderungsformular (#322, Schritt 11).
- *
- * **`staleTime: 0` mit Absicht.** Diese Abfrage füllt ein Formular, aus dem heraus geschrieben wird –
- * ein alter Stand wäre hier gefährlicher als eine zusätzliche Anfrage. Der Server liest beim Speichern
- * ohnehin noch einmal frisch (`liedAendern`), aber der Nutzer soll auch SEHEN, was gerade gilt.
- */
-export function useSongStammdaten(songId: number | null) {
-  return useQuery({
-    queryKey: schluessel.liedStammdaten(songId),
-    queryFn: () => api.getSongStammdaten(songId as number),
-    enabled: songId !== null,
-    staleTime: 0,
-  });
-}
-
-/**
- * Ändert die Stammdaten eines Liedes (#322, Schritt 11).
- *
- * Danach ist **alles ungültig, wo ein Liedname steht**: Bibliothek, Chart und – falls das Lied im
- * Ablauf vorkommt – die Abläufe. Bewusst NICHT die Statistik (`song-usage`): Ein umbenanntes Lied wurde
- * nicht öfter oder seltener gespielt – ihre Zahlen ändern sich dadurch nicht.
- */
-export function useLiedAendern(songId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (aenderung: Partial<LiedStammdaten>) => api.aendereLied(songId, aenderung),
-    onSuccess: (stand) => {
-      // Den frischen Stand direkt in den Cache legen, damit das Formular nicht kurz den alten zeigt.
-      qc.setQueryData(schluessel.liedStammdaten(songId), stand);
-      void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
-      void qc.invalidateQueries({ queryKey: schluessel.liedblaetter(songId) });
-      void qc.invalidateQueries({ queryKey: schluessel.agendaAlle() });
-    },
-  });
-}
-
-/**
  * Löscht ein Lied (#322, Schritt 11).
  *
  * Räumt danach auch die **Anmerkungs-Abfragen** nicht weg – die liegen pro Konto und verweisen auf eine
@@ -491,53 +420,14 @@ export function useSongSources(enabled: boolean) {
   });
 }
 
-/** Die Arrangements eines Liedes mit allen Feldern (#396) – nur im Stammdaten-Blatt. */
-export function useArrangements(songId: number | null) {
-  return useQuery({
-    queryKey: schluessel.arrangements(songId),
-    queryFn: () => api.getArrangements(songId as number),
-    enabled: songId !== null,
-    staleTime: 0,
-  });
-}
-
-/**
- * Was nach einer Arrangement-Änderung neu geladen werden muss (#396) – **einmal, für alle vier.**
- *
- * Anlegen, Ändern, Standard und Löschen betreffen dieselben Listen: die Arrangements selbst, die
- * Bibliothek (sie zeigt Tonart und Arrangement-ID des **Standards**) und das Blatt dieses Liedes.
- * Vier Kopien dieser Aufzählung wären vier Stellen, an denen jemand eine Liste vergisst – und
- * vergessen heißt hier: Die App zeigt einen Stand, den es in ChurchTools nicht mehr gibt.
- *
- * **Die Statistik bewusst nicht** (`song-usage`): Ein geändertes Arrangement wurde nicht öfter
- * gespielt. Einzige Ausnahme: Ein gelöschtes Arrangement nimmt seine Einsätze mit (ChurchTools zählt je
- * Arrangement). Das zeigt die Statistik, sobald der Stand des Servers verfällt (zehn Minuten) – ein
- * Neuladen hier holte vorher nur denselben gemerkten Stand.
- */
-function arrangementListenErneuern(qc: ReturnType<typeof useQueryClient>, songId: number): void {
-  void qc.invalidateQueries({ queryKey: schluessel.arrangements(songId) });
-  void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
-  void qc.invalidateQueries({ queryKey: schluessel.liedblaetter(songId) });
-  void qc.invalidateQueries({ queryKey: schluessel.liedArrangements(songId) });
-}
-
 /** Legt ein weiteres Arrangement an (#396). */
 export function useArrangementAnlegen(songId: number) {
   const qc = useQueryClient();
+  const quelle = useLiedZugriff();
   return useMutation({
     mutationFn: (auftrag: ArrangementAuftrag & { name: string }) =>
       api.legeArrangementAn(songId, auftrag),
-    onSuccess: () => arrangementListenErneuern(qc, songId),
-  });
-}
-
-/** Ändert ein Arrangement (#396). */
-export function useArrangementAendern(songId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (v: { arrangementId: number; auftrag: ArrangementAuftrag }) =>
-      api.aendereArrangement(songId, v.arrangementId, v.auftrag),
-    onSuccess: () => arrangementListenErneuern(qc, songId),
+    onSuccess: () => arrangementListenErneuern(qc, quelle, songId),
   });
 }
 
@@ -549,11 +439,12 @@ export function useArrangementAendern(songId: number) {
  */
 export function useArrangementStandard(songId: number) {
   const qc = useQueryClient();
+  const quelle = useLiedZugriff();
   return useMutation({
     mutationFn: (arrangementId: number) => api.arrangementZumStandard(songId, arrangementId),
     onSuccess: (liste) => {
       qc.setQueryData(schluessel.arrangements(songId), liste);
-      arrangementListenErneuern(qc, songId);
+      arrangementListenErneuern(qc, quelle, songId);
     },
   });
 }
@@ -561,32 +452,13 @@ export function useArrangementStandard(songId: number) {
 /** Löscht ein Arrangement (#396) – samt Notenblättern, Dateien und Versionen. */
 export function useArrangementLoeschen(songId: number) {
   const qc = useQueryClient();
+  const quelle = useLiedZugriff();
   return useMutation({
     mutationFn: (arrangementId: number) => api.loescheArrangement(songId, arrangementId),
     onSuccess: () => {
-      arrangementListenErneuern(qc, songId);
+      arrangementListenErneuern(qc, quelle, songId);
       // Ein gelöschtes Arrangement kann in einem Ablauf gestanden haben.
       void qc.invalidateQueries({ queryKey: schluessel.agendaAlle() });
-    },
-  });
-}
-
-/**
- * Legt ein Lied an (#322) – Lied + erstes Arrangement.
- *
- * **Nur die Liedliste wird danach ungültig, nicht die Statistik:** An der Nutzung hat sich nichts
- * geändert; sie neu zu holen wären ChurchTools-Anfragen für nichts (#300). In einen Ablauf kommt das
- * Lied erst über „Neuer Eintrag" – und der lädt den Ablauf selbst neu.
- *
- * Was **nicht** hier steht: ein Wiederholversuch. Ein zweiter Durchlauf legte ein zweites Lied an
- * (siehe `songErstellen.ts`) – React Query wiederholt Mutationen von sich aus nicht, und das bleibt so.
- */
-export function useLiedAnlegen() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (auftrag: LiedAnlegenAuftrag) => api.legeLiedAn(auftrag),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
     },
   });
 }

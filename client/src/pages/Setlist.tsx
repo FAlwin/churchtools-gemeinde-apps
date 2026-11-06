@@ -14,7 +14,7 @@ import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
-import { LiedVerknuepfen } from '../components/LiedVerknuepfen';
+import { LiedVerknuepfen } from '@ui/lied/LiedVerknuepfen';
 import { AblaufNeuAufsetzen } from '../components/AblaufAnlegenFenster';
 import { Icon } from '@ui/icons/icons';
 import {

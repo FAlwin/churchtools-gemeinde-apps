@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import type { CtAgenda } from '@shared/ct/typen';
-import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
+import { ladeAblauf } from './ladeBeiwerk';
+import { useMusikApp } from './useMusikApp';
 import type { Start } from './start';
 
 /** Der Ablauf eines Termins in der Matrix: wird geladen, ließ sich nicht laden, oder steht da (`null` = keiner). */
@@ -40,10 +41,11 @@ export function useMatrixAblauf(
 ): MatrixAblauf | null {
   const [ablaeufe, setAblaeufe] = useState<Map<number, AblaufZustand>>(new Map());
   const [bearbeiten, setBearbeiten] = useState(false);
-  const [musikApp, setMusikApp] = useState<string | null | undefined>(undefined);
   // Was schon angefragt ist – als Ref, damit zwei Aufrufe im selben Durchgang nicht doppelt laden.
   const angefragt = useRef(new Set<number>());
   const aktiv = anschluss !== undefined;
+  // Beiwerk wie in der Termin-Ansicht: scheitert es, sagt die Lied-Ansicht nur, dass die Musik-App fehlt.
+  const musikApp = useMusikApp(aktiv);
 
   const laden = useCallback((ids: number[]) => {
     const neu = ids.filter((id) => !angefragt.current.has(id));
@@ -67,19 +69,6 @@ export function useMatrixAblauf(
       );
     }
   }, []);
-
-  // Beiwerk wie in der Termin-Ansicht: scheitert es, sagt die Lied-Ansicht nur, dass die Musik-App fehlt.
-  useEffect(() => {
-    if (!aktiv) return;
-    let aktuell = true;
-    ladeMusikApp().then(
-      (url) => aktuell && setMusikApp(url),
-      () => {},
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [aktiv]);
 
   if (!anschluss) return null;
   return {

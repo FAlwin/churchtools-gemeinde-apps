@@ -1,6 +1,14 @@
 import { createContext, useContext } from 'react';
+import type { QueryClient } from '@tanstack/react-query';
 import type {
+  ArrangementAnsicht,
+  ArrangementAuftrag,
+  LiedAngelegt,
+  LiedAnlegenAuftrag,
+  LiedStammdaten,
+  LiedStammdatenAnsicht,
   LiedtextVorschau,
+  SongCategory,
   SongLibraryEntry,
   SongSelectLiedtext,
   SongSelectSong,
@@ -17,6 +25,8 @@ export interface LiedRechte {
   statistik: boolean;
   /** SongSelect nutzen (`canUseCcli`). */
   ccli: boolean;
+  /** Lieder anlegen und ändern (`canEditSongs`) – davon hängt „Neues Lied" ab (LW1b-2). */
+  liederAendern: boolean;
 }
 
 /**
@@ -54,6 +64,45 @@ export interface LiedZugriff {
    * ausgeblendet hat. Ein Hook, weil die Musik-App es aus ihren Einstellungen lädt (`useAppLogo`).
    */
   useBlattLogo(): HTMLImageElement | null;
+
+  /* ------------------------------------------------ „Neues Lied" und Liedinfo (LW1b-2, 06.11.2026) */
+
+  /** Die Lied-Kategorien, in denen der Nutzer anlegen/ändern darf (das Recht schneidet die Liste zu). */
+  kategorien(): Promise<SongCategory[]>;
+  /** Legt Lied + erstes Arrangement an. */
+  liedAnlegen(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt>;
+  /**
+   * War der Fehler beim Anlegen einer, nach dem das Lied **vielleicht doch** angelegt ist (z. B. eine Zeitüberschreitung
+   * auf dem Rückweg)? Dann sagt die Oberfläche „bitte erst in der Liederliste nachsehen" statt „nochmal versuchen" –
+   * ein zweiter Versuch legte ein zweites Lied an. Welche Fehler das sind, weiß nur die App (Musik-App: 502).
+   */
+  anlegenUngewiss(fehler: unknown): boolean;
+  /** Holt das Notenblatt aus SongSelect und legt es am Arrangement ab. */
+  notenblattAusSongSelect(songId: number, arrangementId: number, songNumber: number): Promise<void>;
+  /** Der ChordPro-Text des Original-Notenblatts – `null`, wenn es keins gibt. */
+  notenblattLesen(songId: number, arrangementId: number): Promise<string | null>;
+  /** Speichert den Text als Original-Notenblatt. */
+  notenblattSpeichern(songId: number, arrangementId: number, text: string): Promise<void>;
+  stammdaten(songId: number): Promise<LiedStammdatenAnsicht>;
+  liedAendern(songId: number, aenderung: Partial<LiedStammdaten>): Promise<LiedStammdatenAnsicht>;
+  arrangements(songId: number): Promise<ArrangementAnsicht[]>;
+  arrangementAendern(
+    songId: number,
+    arrangementId: number,
+    auftrag: ArrangementAuftrag,
+  ): Promise<ArrangementAnsicht>;
+  /**
+   * Was **die App selbst** nach einer Änderung neu laden muss – zusätzlich zu dem, was `liedDaten.ts` für alle erneuert
+   * (Liederliste, Stammdaten, Arrangements). Die Musik-App: ihre Liedblätter, Abläufe, Arrangement-Auswahl; der
+   * Dienstplaner hat andere Zwischenspeicher. Ohne diesen Schritt zeigte eine App einen Stand, den es nicht mehr gibt.
+   */
+  nachAenderung(qc: QueryClient, anlass: LiedAenderungsAnlass): void;
+}
+
+/** Wodurch sich etwas an einem Lied geändert hat – danach richtet sich, was die App neu lädt. */
+export interface LiedAenderungsAnlass {
+  art: 'lied' | 'arrangement' | 'notenblatt';
+  songId: number;
 }
 
 /**

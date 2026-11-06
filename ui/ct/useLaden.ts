@@ -24,13 +24,15 @@ export type Ladestand<T> =
  *   Player würde neu aufgebaut).
  * - `setze(daten)`: Was gerade geschrieben wurde und dessen Antwort den neuen Stand schon enthält, gilt sofort – ohne
  *   noch einmal zu fragen (Protokolle: Anwesenheit nach einem Tipp). Nur, wenn nicht gerade geladen wird; sonst
- *   gewinnt die Antwort, die danach kommt.
+ *   gewinnt die Antwort, die danach kommt. `setze((alt) => neu)` ändert die geladenen Daten – auch mehrmals kurz
+ *   hintereinander, ohne dass eine Änderung die andere überschreibt; ist nichts geladen, bleibt alles, wie es ist
+ *   (Dienstplaner: einen Entwurf übernehmen, ohne alles neu zu laden).
  */
 export function useLaden<T>(
   laden: () => Promise<T> | null,
   deps: DependencyList,
   { behalten = false }: { behalten?: boolean } = {},
-): { stand: Ladestand<T>; neu: () => void; setze: (daten: T) => void } {
+): { stand: Ladestand<T>; neu: () => void; setze: (daten: T | ((alt: T) => T)) => void } {
   const [stand, setStand] = useState<Ladestand<T>>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
 
@@ -64,6 +66,15 @@ export function useLaden<T>(
   }, [...deps, versuch]);
 
   const neu = useCallback(() => setVersuch((v) => v + 1), []);
-  const setze = useCallback((daten: T) => setStand({ art: 'fertig', daten }), []);
+  const setze = useCallback(
+    (daten: T | ((alt: T) => T)) =>
+      setStand((alt) => {
+        if (typeof daten !== 'function') return { art: 'fertig', daten };
+        return alt.art === 'fertig'
+          ? { art: 'fertig', daten: (daten as (a: T) => T)(alt.daten) }
+          : alt;
+      }),
+    [],
+  );
   return { stand, neu, setze };
 }

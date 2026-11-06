@@ -110,7 +110,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   „Erneut versuchen“), auch ein Fehler schon beim Aufruf; eine späte Antwort und ein später Fehler zu alten `deps` zählen
   nicht; `null` = `aus` ohne Aufruf; `neu()` fragt noch einmal. Mit `behalten` bleiben fertige Daten beim Neuladen
   stehen – auch bei einem Fehler im Versprechen oder schon beim Aufruf; `null` verwirft sie. `setze` gilt sofort, ohne
-  neu zu fragen. Gegenprobe je Teil (8 + 4 + 1).
+  neu zu fragen; `setze((alt) => …)` zweimal kurz hintereinander gilt beides, ohne Geladenes ändert es nichts.
+  Gegenprobe je Teil (8 + 4 + 1 + 2).
   Wächter `ui/ct/ladenAufruf`: in den umgestellten Ordnern (Liste wächst je Scheibe) kein `let aktuell/aktiv = true`
   mehr, mit Erkennungs-Gegenprobe am Hook selbst. Die Prüfregel `exhaustive-deps` sieht `useLaden` mit an
   (`eslint.config.mjs`, Gegenprobe: fehlende Abhängigkeit wird gemeldet, ohne die Einstellung nicht)
@@ -299,7 +300,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     (`tempVerzeichnis`, `tempDatei`, `leeren` mit Wiederholungen): eindeutig je Lauf, hält paralleles
     Schreiben aus. Er ersetzt sieben handgeschriebene Kopien, deren Aufräumen bei langsamen Tests in
     `ENOTEMPTY` lief (CI-Flackern in `annotations.test`; die langsamen Fälle dort haben jetzt 30 s).
-  - **Der Editor nach dem Anlegen und im Stammdaten-Blatt (04.09.2026):** `hooks/useNotenblatt` – der
+  - **Der Editor nach dem Anlegen und im Stammdaten-Blatt (04.09.2026):** `ui/lied/useNotenblatt` – der
     gemeinsame Kern: Gerüst ohne Abfrage (`hatBlatt: false`), geholtes Blatt (`true`), nachsehen (`null`),
     Speichern verwirft `['song-chart', songId]`, Fehler nennt den Grund, ohne Ziel passiert nichts.
     `components/EditSongSheet` – „Notenblatt bearbeiten" fragt mit `null` nach, Editor ohne Versionsname,
@@ -307,10 +308,10 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Speichern-Regel gegen die **echte** Komponente: Ohne Versionsname-Feld sperrt der fehlende Name nicht,
     leerer Text sperrt immer. **Lehre (04.09.2026):** Beide Aufrufer-Tests mocken den Editor als Attrappe;
     der Knopf war im Browser dauerhaft grau, die Suite grün. Wer eine Komponente mockt, muss ihre
-    Regeln, auf die er sich verlässt, an der Komponente selbst prüfen. `hooks/useNeuesLied` – Starttext ist das Gerüst aus dem
+    Regeln, auf die er sich verlässt, an der Komponente selbst prüfen. `ui/lied/useNeuesLied` – Starttext ist das Gerüst aus dem
     Formular (Titel, Tonart, Nummer) und fragt das Blatt NICHT ab; mit SongSelect-Blatt kommt genau
     dieses; Speichern trifft den Server und zieht das Ergebnis nach; ein Fehlschlag nennt den Grund.
-    `components/NewSongSheet` – der Knopf heißt „schreiben" ohne und „bearbeiten" mit Blatt, der Editor
+    `ui/lied/NewSongSheet` – der Knopf heißt „schreiben" ohne und „bearbeiten" mit Blatt, der Editor
     (Attrappe) bekommt den Text und `mitVersionsname={false}`, **nichts öffnet sich von selbst**.
     Serverseitig `services/arrangementFileVerwaltung.test.ts` → `originalNotenblattSchreiben`: erst
     hochladen, dann das alte Original löschen (am protokollierten `fetch`), Versionen und PDF bleiben,

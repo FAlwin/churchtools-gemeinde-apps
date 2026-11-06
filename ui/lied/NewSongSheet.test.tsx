@@ -8,7 +8,7 @@ import type {
   SongSelectTreffer,
   UserCapabilities,
 } from '@shared/types/index';
-import { knopfFolge } from '@ui/fenster/fenster.testutil';
+import { knopfFolge } from '../fenster/fenster.testutil';
 
 /**
  * Das Blatt „Neues Lied" (#322, Schritt 10b; umgebaut in #378) – geprüft werden die **Entscheidungen**,
@@ -30,9 +30,20 @@ const caps = vi.fn();
 const kategorien = vi.fn();
 const bibliothek = vi.fn();
 const details = vi.fn();
-vi.mock('../hooks/useServices', () => ({
-  SONGSELECT_MIN_ZEICHEN: 3,
-  useCapabilities: () => caps(),
+// Die Rechte kommen seit LW1b-2 über den Liedzugriff; `caps` liefert weiter die Form von `useCapabilities`, damit die
+// Tests unten unverändert bleiben – hier wird sie so übersetzt wie in `musikLiedZugriff.useRechte`.
+vi.mock('./liedZugriff', () => ({
+  useLiedZugriff: () => ({
+    useRechte: () => {
+      const d = (caps() as { data?: { canUseCcli?: boolean; canEditSongs?: boolean } } | undefined)
+        ?.data;
+      return d
+        ? { statistik: false, ccli: d.canUseCcli ?? false, liederAendern: d.canEditSongs ?? false }
+        : undefined;
+    },
+  }),
+}));
+vi.mock('./liedDaten', () => ({
   useSongCategories: () => kategorien(),
   useSongLibrary: () => bibliothek(),
   // Das Argument wird durchgereicht: Daran hängt die Zusicherung, dass ohne Treffer NICHTS abgefragt wird.
@@ -51,19 +62,24 @@ const notenblattSpeichern = vi.fn();
 const hookErgebnis = vi.fn();
 /** Läuft das Anlegen gerade? Steuerbar, weil die Namenswarnung davon abhängt (#395). */
 const hookLaeuft = vi.fn();
-vi.mock('../hooks/useNeuesLied', () => ({
-  useNeuesLied: () => ({
-    anlegen,
-    laeuft: hookLaeuft(),
-    fehler: null,
-    ungewiss: false,
-    ergebnis: hookErgebnis(),
-    zuruecksetzen: vi.fn(),
-    notenblattText,
-    notenblattSpeichern,
-    notenblattLaeuft: false,
-    notenblattFehler: null,
-  }),
+/** Womit das Blatt den Ablauf startet – daran hängt, ob nach dem Anlegen das Notenblatt aus SongSelect kommt. */
+const neuesLiedArgs = vi.fn();
+vi.mock('./useNeuesLied', () => ({
+  useNeuesLied: (args: unknown) => (
+    neuesLiedArgs(args),
+    {
+      anlegen,
+      laeuft: hookLaeuft(),
+      fehler: null,
+      ungewiss: false,
+      ergebnis: hookErgebnis(),
+      zuruecksetzen: vi.fn(),
+      notenblattText,
+      notenblattSpeichern,
+      notenblattLaeuft: false,
+      notenblattFehler: null,
+    }
+  ),
 }));
 
 /**
@@ -71,7 +87,7 @@ vi.mock('../hooks/useNeuesLied', () => ({
  * hierher, und in jsdom rendert es nicht sauber. Geprüft wird die VERDRAHTUNG – welcher Text hinein
  * kommt und dass Speichern den Hook trifft.
  */
-vi.mock('@ui/lied/editor/ChordEditor', () => ({
+vi.mock('./editor/ChordEditor', () => ({
   ChordEditor: (p: {
     initialText: string;
     mitVersionsname?: boolean;
@@ -141,6 +157,25 @@ beforeEach(() => {
 function zeige(props: Partial<Parameters<typeof NewSongSheet>[0]> = {}) {
   return render(<NewSongSheet onClose={vi.fn()} {...props} />);
 }
+
+/**
+ * Das SongSelect-Recht entscheidet, ob nach dem Anlegen das Notenblatt geholt wird (`notenblattPlan`). Es kommt seit
+ * LW1b-2 aus dem Liedzugriff – und darf nicht mit dem Recht „Lieder ändern" verwechselt werden, das jeder hat, der
+ * dieses Blatt überhaupt sieht. Vorher prüfte das kein Test (Gegenprobe LW1b-2 blieb grün).
+ */
+describe('NewSongSheet – das SongSelect-Recht geht an den Ablauf', () => {
+  it('ohne SongSelect-Recht: kein Notenblatt aus SongSelect, auch wenn Lieder geändert werden dürfen', () => {
+    caps.mockReturnValue({ data: { canUseCcli: false, canEditSongs: true } });
+    zeige();
+    expect(neuesLiedArgs).toHaveBeenLastCalledWith({ canUseCcli: false });
+  });
+
+  it('mit SongSelect-Recht: ja', () => {
+    caps.mockReturnValue({ data: { canUseCcli: true, canEditSongs: false } });
+    zeige();
+    expect(neuesLiedArgs).toHaveBeenLastCalledWith({ canUseCcli: true });
+  });
+});
 
 describe('NewSongSheet – zurück zur Suche (02.11.2026)', () => {
   it('mit Vorgänger: „‹“ und „Abbrechen“ führen zurück, das X schließt', () => {

@@ -865,6 +865,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.39.0 (06.11.2026) = Termine-Filter, Ablauf-Tabelle, Sicherheit/Betrieb.** Filter in der Terminliste statt
+  „Termine ohne Ablauf“ unter Mehr (#878), Termin-Blatt teilen (#862), Info-Spalten als Tabelle + Einfügen an einer
+  Stelle (#823 ff.), Dateien/Versionen umbenennen (#818, #814), „Lieder öffnen mit: Nur Text“ (#812), geteiltes Gerät
+  (#813), Abwesenheiten in der Erweiterung (#834), Uhr der Gemeinde (#847). Betrieb: Docker zweistufig + `TRUST_PROXY`
+  (Vorgabe „an“, bestehende Compose-Dateien unverändert; #849 S3), body-parser (#844), Warteschlange (#846), zod 4.
+  Einführung: `termine-v4` (Filter). Release-Prüfung auf `f376218e`: 7/7 + Erweiterungs-Bau grün (Tests mit
+  `TZ=UTC`), E2E 125/125. Filter in der Test-Instanz abgenommen (ZIP `test-05.11k`). Dazu Dienstplaner E6b–E9/T1–T2,
+  Anmeldungen A9/K1, Protokolle K3/S5-3, Gebetsabend G1–G4.
 - **v2.38.0 (30.10.2026) = Lied-Editor + ChurchTools-Look.** Lied-Editor L1–L6 und „Nur Text“ (#790); Seitenköpfe
   S/S2, Liedblatt B0–B5 (Kopf mit Lied-Leiste, Fußleiste #799, Scroll-Modus #802, Einführung #805), Lied-Menü als
   Fenster (#779), „zuletzt gesungen“ (#792), Abwesenheiten wie Dienstplaner (#760); iPhone: unterer Rand gemessen

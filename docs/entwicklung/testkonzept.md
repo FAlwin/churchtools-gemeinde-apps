@@ -106,6 +106,12 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `only_add: false`), ändern = `PATCH` ohne, entfernen = `DELETE`, Meldung bei fehlendem Recht, 404 = `null`, ein
   vorübergehender Fehler wirft. Wächter `ui/design/eineMitgliedschaft`: keine Einzel-Adresse außerhalb des Bausteins
   (mit Erkennungs-Gegenprobe; Listen, Verlauf, Abläufe und Anwesenheit bleiben erlaubt)
+- `ui/ct/useLaden` – das eine Laden der Erweiterungen (#845): lädt → fertig, Fehler über `fehlerMeldung` (401 ohne
+  „Erneut versuchen“), auch ein Fehler schon beim Aufruf; eine späte Antwort und ein später Fehler zu alten `deps` zählen
+  nicht; `null` = `aus` ohne Aufruf; `neu()` fragt noch einmal. Gegenprobe je Teil (8).
+  Wächter `ui/ct/ladenAufruf`: in den umgestellten Ordnern (Liste wächst je Scheibe) kein `let aktuell/aktiv = true`
+  mehr, mit Erkennungs-Gegenprobe am Hook selbst. Die Prüfregel `exhaustive-deps` sieht `useLaden` mit an
+  (`eslint.config.mjs`, Gegenprobe: fehlende Abhängigkeit wird gemeldet, ohne die Einstellung nicht)
 - `ui/design/eineZeitzone` – Wächter (#847): keine eigene Zeitzone (`resolvedOptions().timeZone`, `'Europe/Berlin'`),
   kein eigenes „heute“ (`tagAusIso(new Date()…)`, `getFullYear()`), keine Anzeige in Gerätezeit (`Intl.DateTimeFormat`
   / `toLocale…String` ohne `timeZone`) – mit Gegenprobe, dass jede Form erkannt wird, und Ausnahmen, die es geben

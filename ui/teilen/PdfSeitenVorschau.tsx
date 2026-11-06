@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { jsPDF } from 'jspdf';
 import { Icon } from '../icons/icons';
 import { Spinner } from '../bedienung/Spinner';
+import { useLaden } from '../ct/useLaden';
 import { renderPdfSeite, renderPdfToCanvases } from './pdfSeiten';
 import styles from './PdfSeitenVorschau.module.scss';
 
@@ -21,51 +22,38 @@ const GROSS_SCALE = 2;
 export function PdfSeitenVorschau({ doc }: { doc: jsPDF }) {
   const daten = useMemo(() => doc.output('arraybuffer'), [doc]);
   const seiten = doc.getNumberOfPages();
-  const [bilder, setBilder] = useState<string[] | null>(null);
-  const [fehler, setFehler] = useState(false);
   const [gross, setGross] = useState<number | null>(null);
-  const [grossBild, setGrossBild] = useState<string | null>(null);
 
+  // Neues PDF (z. B. Anmerkungen umgeschaltet): neu zeichnen – ein später fertiges altes Zeichnen zählt nicht
+  // (`useLaden`). pdf.js übernimmt den Puffer (er ist danach leer) – deshalb je Aufruf eine Kopie.
+  const mini = useLaden(
+    () =>
+      renderPdfToCanvases(daten.slice(0), MINI_SCALE).then((cs) =>
+        cs.map((c) => c.toDataURL('image/jpeg', 0.8)),
+      ),
+    [daten],
+  ).stand;
   useEffect(() => {
-    // Neues PDF (z. B. Anmerkungen umgeschaltet): alte Bilder weg, ein später fertiges altes
-    // Zeichnen darf das neue nicht überschreiben.
-    let aktuell = true;
-    setBilder(null);
-    setFehler(false);
     setGross(null);
-    // pdf.js übernimmt den Puffer (er ist danach leer) – deshalb je Aufruf eine Kopie.
-    renderPdfToCanvases(daten.slice(0), MINI_SCALE).then(
-      (cs) => {
-        if (aktuell) setBilder(cs.map((c) => c.toDataURL('image/jpeg', 0.8)));
-      },
-      () => {
-        if (aktuell) setFehler(true);
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
   }, [daten]);
 
+  const grossStand = useLaden(
+    () =>
+      gross === null
+        ? null
+        : renderPdfSeite(daten.slice(0), gross + 1, GROSS_SCALE).then((c) =>
+            c.toDataURL('image/jpeg', 0.85),
+          ),
+    [gross, daten],
+  ).stand;
+  // Großansicht nicht zu zeichnen → zurück zur Übersicht, die Miniaturen gibt es ja.
   useEffect(() => {
-    if (gross === null) return;
-    let aktuell = true;
-    setGrossBild(null);
-    renderPdfSeite(daten.slice(0), gross + 1, GROSS_SCALE).then(
-      (c) => {
-        if (aktuell) setGrossBild(c.toDataURL('image/jpeg', 0.85));
-      },
-      () => {
-        // Großansicht nicht zu zeichnen → zurück zur Übersicht, die Miniaturen gibt es ja.
-        if (aktuell) setGross(null);
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [gross, daten]);
+    if (grossStand.art === 'fehler') setGross(null);
+  }, [grossStand.art]);
+  const bilder = mini.art === 'fertig' ? mini.daten : null;
+  const grossBild = grossStand.art === 'fertig' ? grossStand.daten : null;
 
-  if (fehler) return null;
+  if (mini.art === 'fehler') return null;
 
   if (gross !== null) {
     return (

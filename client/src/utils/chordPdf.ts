@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
+import { parseChordPro, parseLine, parseMetadata, teileImFlow } from '@shared/lieder/chordpro';
 import { transposeChord } from './transpose';
 import type { SetlistSong } from '@shared/types/index';
 import type { Abbildung, Satzplan, Stueck } from './rollenAbbildung';

@@ -568,7 +568,7 @@ Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/utils/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/AblaufKarte.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
+- **Betrifft:** `shared/lieder/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/AblaufKarte.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (Flow, Rückfall, Einfügestelle, `----`),
   `chordPdf.test.ts` (Reihenfolge, Wegweiser, `----` unsichtbar, Transponierung bei Wiederholung),
   `ChordEditor.test.tsx` (Ablauf-Karte: hinzufügen, entfernen, „Wie im Text“, unbekannte Namen, eingeklappt),

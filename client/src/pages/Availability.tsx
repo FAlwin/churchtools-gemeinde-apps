@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { NeueAbsence } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { CenterMessage } from '../components/CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   AbwesenheitenSeite,

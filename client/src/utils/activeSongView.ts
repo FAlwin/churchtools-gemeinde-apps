@@ -1,6 +1,6 @@
 import type { ChordProSection, SetlistSong, SongDocument } from '@shared/types/index';
 import type { SongSettings } from './chartSettings';
-import { parseChordPro } from './chordpro';
+import { parseChordPro } from '@shared/lieder/chordpro';
 import { availableVersions, notierteTonart, type ResolvedVersion } from './songVersions';
 import { shiftKey } from './transpose';
 

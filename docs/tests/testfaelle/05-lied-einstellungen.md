@@ -451,7 +451,7 @@ ein Kärtchen so, wie man es erwartet – ein Kärtchen verschwindet immer ganz 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/chordpro.ts`
+- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** teilweise – `e2e/editor-text.spec.ts` (Kärtchen und Bänder, Rücktaste löscht den ganzen
   Akkord, Rückgängig, Tippen davor, „× im Ablauf“, rohe Ansicht; Chromium in der CI, WebKit/Mac-Safari von Hand
   am 22.10.2026 grün). **Von Hand bleibt das echte iPad**: Bildschirmtastatur, Diktieren, Autokorrektur – die
@@ -483,7 +483,7 @@ offen, und man kann direkt weiterschreiben.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordFenster.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/transpose.ts`, `client/src/utils/chordpro.ts`
+- **Betrifft:** `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordFenster.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/transpose.ts`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** weitgehend – `transpose.test.ts` (`tonartAkkorde`, `akkordLesen`, `akkordTeile`),
   `chordpro.test.ts` (`akkordeImText`), `AkkordLeiste.test.tsx` (Gruppen, Gedrückthalten mit Fake-Timern),
   `AkkordFenster.test.tsx`, `ChordEditor.test.tsx` (Tonart aus `{key}`), `e2e/editor-akkorde.spec.ts`
@@ -514,7 +514,7 @@ kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die T
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/chordpro.ts`
+- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (`akkordVerschieben`: Nachbarzeichen, Nachbar-Akkord,
   Zeilenrand), `e2e/editor-akkord-menue.spec.ts` (schieben + Menü wandert mit + Rahmen, Rückgängig, Entfernen,
   Ändern, Leiste und „Anderer Akkord“ ersetzen, Zeilenrand gesperrt). **Von Hand bleibt das echte iPad**: Auf
@@ -627,7 +627,7 @@ Format-Menü hatte) und abgesetzt „Nur für andere Programme“. Im Text sind 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/EinfuegenMenue.tsx`, `client/src/utils/einfuegen.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/utils/chordpro.ts`, `shared/ct/liedinfo.ts`
+- **Betrifft:** `client/src/components/EinfuegenMenue.tsx`, `client/src/utils/einfuegen.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `shared/lieder/chordpro.ts`, `shared/ct/liedinfo.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (`neuerTeilName`, `ENDE_ZEILE` = Regel des Blatts),
   `liedinfo.test.ts` (`TONART_ZEILE`, `{key}` bleibt beim Speichern), `EinfuegenMenue.test.tsx` (alle Kopfangaben da,
   gegen `LIEDINFO_FELDER` geprüft; eigener Name), `ChordEditor.test.tsx`, `e2e/editor-einfuegen.spec.ts` (hinter der Zeile,

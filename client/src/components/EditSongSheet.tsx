@@ -25,7 +25,7 @@ import type { ArrangementAnsicht, ArrangementAuftrag } from '@shared/types/index
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
-import { CenterMessage } from './CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Coachmarks } from './Coachmarks';
 import {

@@ -13,7 +13,7 @@
  * Akkorde fliegen heraus, Zeilenumbrüche bleiben (`white-space: pre-line` in der Vorschau). Leere
  * Abschnitte fallen weg – der Parser liefert sie nicht.
  */
-import type { LiedtextTeil } from '@shared/types/index';
+import type { LiedtextTeil } from '../types/index';
 import { parseChordPro, parseLine } from './chordpro';
 
 /** Eine ChordPro-Zeile ohne Akkorde – nur der Text, so wie er gesungen wird. */

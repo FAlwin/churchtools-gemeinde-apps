@@ -45,16 +45,23 @@
     - `EditSongSheet`, Einstiege im Lied-Menü und im Liederheft). **Noch nicht auf Staging
       durchgeklickt**, weil jeder Lauf echte Lieder in ChurchTools anlegt bzw. löscht (TF-LIB-03,
       TF-LIB-04).
+  - **Die Liedwahl liegt seit 06.11.2026 in `ui/lied`** (Dienstplaner E9 „LW1a"): `SongPicker` samt Bausteinen,
+    `useLiedSuche`, `suchRegeln.ts` (Titel/CCLI-Nummer, ab wann SongSelect von selbst fragt) und die Abfragen
+    `liedDaten.ts` (TanStack Query, Schlüssel und Haltezeiten wortgleich wie vorher). Ihre Daten holt sie über den
+    **`LiedZugriff`** der App (`LiedZugriffKontext.Provider`); die Musik-App gibt `hooks/musikLiedZugriff.ts` in `main.tsx`
+    (dieselben `churchtoolsApi`-Wege, Liedtext-Suche nur mit `funktionen.liedtextSuche`). `useServices` reicht die
+    Abfragen nur weiter. ChordPro-Leser `shared/lieder/chordpro.ts` + `liedtextTeile.ts`, `CenterMessage` und
+    `useEntprellt` in `ui/bedienung`. „Neues Lied" (`NewSongSheet`) und `LiedVerknuepfen` noch in `client/` (LW1b).
   - **ein Suchfeld, eine Liste, zwei Knöpfe je Zeile** (#378, dritter Anlauf nach Alwins Rückmeldungen vom
     03./04.09.2026). Gesucht wird in Titel, Autor **und CCLI-Nummer** (`SongLibraryEntry.ccli`, pflichtig,
     vom Server aus `CtSongListEntry.ccli`). Eigene Lieder oben, SongSelect darunter mit Überschrift
     („SongSelect · N Treffer zu …") und Nummer in der Unterzeile, am Ende die Liedtexte. **Alle drei Quellen
-    rendern dieselbe `components/LiedZeile.tsx`:** Zeile (mit Auge) = Vorschau, **Plus** = einfügen; bei
+    rendern dieselbe `ui/lied/LiedZeile.tsx`:** Zeile (mit Auge) = Vorschau, **Plus** = einfügen; bei
     SongSelect öffnet das Plus `NewSongSheet` vorbelegt (Kategorie bleibt Pflicht, Entscheidung Alwin).
     Ohne `aktion` ist `LiedZeile` eine einfache Pfeil-Zeile – so nutzt sie das Liederheft für
     Liedtext-Treffer. **SongSelect fragt von selbst NUR bei leerer Bibliothek** (`bibliothekLeer` vom
     Aufrufer); sonst steht am Ende eine dezente `SucheAngebot`-Zeile („Bei SongSelect nach … suchen"),
-    Tipp oder Enter holt nach. Liedtexte laufen nie von selbst. Regeln in `hooks/useLiedSuche.ts`, Feld in
+    Tipp oder Enter holt nach. Liedtexte laufen nie von selbst. Regeln in `ui/lied/useLiedSuche.ts`, Feld in
     `LiedSucheKopf.tsx` – **das Liederheft nutzt dieselben Bausteine** (hatte eigene Suchfeld-Kopie +
     eigene `textSuche === query`-Regel → weg). **Zwei Anläufe davor:** Umschalter über der Liste (14.08.,
     verlangte die Quellenwahl VOR dem Tippen) und blaue Angebots-Knöpfe unter der Liste (03.09., wirkten
@@ -79,11 +86,11 @@
   - die **Liedtext-Vorschau als Zwischenschritt beim Einfügen** (#379, nach Alwins Rückmeldung vom 14.08.2026 umgebaut): Ein Antippen
     zeigt **erst den Text**, darin steht der Knopf zum Einfügen (Muster ProPresenter). **Seit 04.09.2026 der
     GANZE Text mit Abschnitten:** `GET /api/songs/:id/liedtext-vorschau` liefert das rohe ChordPro
-    (`LiedtextVorschau.chordpro`, im Index gehalten), `utils/liedtextTeile.ts` zerlegt es mit
+    (`LiedtextVorschau.chordpro`, im Index gehalten), `shared/lieder/liedtextTeile.ts` zerlegt es mit
     `parseChordPro`/`parseLine` – demselben Parser wie das Blatt. Kein zweiter Abschnitts-Parser. Der
     gekürzte 220-Zeichen-Anfang (`vorschauAus`) ist weg. Beim Verknüpfen heißt der untere Knopf
     „Abbrechen" (verlässt die Suche); zur Liste führt nur der Pfeil in der Vorschau (Entscheidung Alwin).
-    `components/LiedVorschau.tsx`, für beide Quellen. Daneben bleibt ein **„+"** in der Bibliothekszeile,
+    `ui/lied/LiedVorschau.tsx`, für beide Quellen. Daneben bleibt ein **„+"** in der Bibliothekszeile,
     das sofort einfügt – im Gottesdienst zählt der kurze Weg. Der erste Entwurf („Text zeigen"-Knopf je
     Zeile) ist zurückgebaut: Der Text ist die **Entscheidungsgrundlage**, nicht eine Randnotiz.
 
@@ -667,7 +674,7 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
 
 - **ChordPro:** zwei Dialekte unterstützen – Standard (`{start_of_verse}`) UND
   SongSelect (`{comment: Vers}`, optionale Akkorde `[(E)]`, Bass-Akkorde `[E/G#]`)
-  - **`{flow: …}`** (#606) ordnet die Teile nach ihrer Überschrift (`teileImFlow` in `utils/chordpro.ts`;
+  - **`{flow: …}`** (#606) ordnet die Teile nach ihrer Überschrift (`teileImFlow` in `shared/lieder/chordpro.ts`;
     Nicht-Genanntes fällt weg, kein Treffer → alles wie im Text; `index` = Stelle im Original für die
     Abschnitts-Transponierung). Nur das Blatt (`chordPdf`) nutzt den Flow – Liedtext-Vorschau und
     Abschnitts-Menü bleiben beim Original. **`----`** allein in einer Zeile = Weiterschalt-Punkt

@@ -15,6 +15,7 @@
  * umbenennt, verliert den Offline-Vorrat bis zum nächsten Laden – nur zusammen mit einem neuen
  * App-Stand (`buster`) ändern.
  */
+import { liedSchluessel } from '@ui/lied/liedDaten';
 import { queryOptions } from '@tanstack/react-query';
 import * as api from '../services/churchtoolsApi';
 
@@ -41,8 +42,9 @@ export const schluessel = {
   agendaAlle: () => ['agenda'] as const,
   agenda: (eventId: number | null) => [...schluessel.agendaAlle(), eventId] as const,
 
-  liedNutzung: () => ['song-usage'] as const,
-  liederliste: () => ['song-library'] as const,
+  // Die Liedwahl liegt in `ui/lied` (LW1a, 06.11.2026) – ihre Schlüssel stehen dort, hier nur verwiesen.
+  liedNutzung: liedSchluessel.liedNutzung,
+  liederliste: liedSchluessel.liederliste,
   liedStammdaten: (songId: number | null) => ['song-stammdaten', songId] as const,
 
   /** Alle Liedblätter eines Lieds, gleich welches Arrangement. */

@@ -6,7 +6,12 @@ import { Spinner } from '@ui/bedienung/Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
-import { akkordVerschieben, flowSetzen, neuerTeilName, parseMetadata } from '../utils/chordpro';
+import {
+  akkordVerschieben,
+  flowSetzen,
+  neuerTeilName,
+  parseMetadata,
+} from '@shared/lieder/chordpro';
 import { AkkordMenue } from './AkkordMenue';
 import { AkkordLeiste } from './AkkordLeiste';
 import { AkkordFenster } from './AkkordFenster';

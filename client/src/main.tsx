@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { LiedZugriffKontext } from '@ui/lied/liedZugriff';
+import { musikLiedZugriff } from './hooks/musikLiedZugriff';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import App from './App';
 import { queryClient, persistOptions } from './queryClient';
@@ -95,7 +97,10 @@ const rootNode = DemoComp ? (
     <DemoComp />
   </React.Suspense>
 ) : (
-  <App />
+  // Die Liedwahl (`ui/lied`, LW1a) holt ihre Daten über den Liedzugriff der Musik-App.
+  <LiedZugriffKontext.Provider value={musikLiedZugriff}>
+    <App />
+  </LiedZugriffKontext.Provider>
 );
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

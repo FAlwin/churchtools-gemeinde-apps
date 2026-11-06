@@ -39,6 +39,9 @@ describe('die Namen – Teil des gespeicherten Zwischenspeichers', () => {
     expect(schluessel.termine()).toEqual(['services']);
     expect(schluessel.ich()).toEqual(['me']);
     expect(schluessel.liedblatt(3, 9)).toEqual(['song-chart', 3, 9]);
+    // Seit LW1a (06.11.2026) in `ui/lied/liedDaten.ts` – der Name gilt weiter.
+    expect(schluessel.liederliste()).toEqual(['song-library']);
+    expect(schluessel.liedNutzung()).toEqual(['song-usage']);
   });
 });
 
@@ -104,5 +107,18 @@ describe('Ablauf: Anzeigen und Offline-Vorrat teilen sich den Eintrag', () => {
   it('ohne Termin wird nichts geholt', () => {
     renderHook(() => useAgenda(null), { wrapper });
     expect(api.getAgenda).not.toHaveBeenCalled();
+  });
+});
+
+describe('Liederliste: die Musik-App erneuert den Eintrag der Liedwahl (LW1a)', () => {
+  /**
+   * Die Liedwahl liegt seit 06.11.2026 in `ui/lied` und holt die Liederliste unter `liedSchluessel.liederliste()`. Die
+   * Musik-App erneuert sie nach dem Anlegen, Ändern und Löschen eines Lieds über `schluessel.liederliste()`. Stünde dort
+   * wieder ein eigener Schlüssel, liefe das Erneuern still ins Leere – und ein neues Lied fehlte in der Suche.
+   */
+  it('ist derselbe Schlüssel wie in der Liedwahl', async () => {
+    const { liedSchluessel } = await import('@ui/lied/liedDaten');
+    expect(schluessel.liederliste).toBe(liedSchluessel.liederliste);
+    expect(schluessel.liedNutzung).toBe(liedSchluessel.liedNutzung);
   });
 });

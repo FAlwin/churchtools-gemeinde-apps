@@ -24,10 +24,9 @@
  */
 import { useEffect, useState } from 'react';
 import { LIEDTEXT_SUCHE_MIN_ZEICHEN } from '@shared/types/index';
-import { useEntprellt } from './useEntprellt';
-import { SONGSELECT_MIN_ZEICHEN } from './useServices';
-import { automatischSuchen } from '../utils/liedFormular';
-import { funktionen } from '../services/funktionen';
+import { useEntprellt } from '../bedienung/useEntprellt';
+import { SONGSELECT_MIN_ZEICHEN, automatischSuchen } from './suchRegeln';
+import { useLiedZugriff } from './liedZugriff';
 
 /** Die beiden Quellen, die als Gruppe unter der Bibliothek erscheinen – ihre Überschrift. */
 export type LiedQuelle = 'liedtext' | 'songselect';
@@ -69,6 +68,8 @@ export function useLiedSuche({ eingabe, canUseCcli, kannAnlegen, bibliothekLeer 
   const begriff = eingabe.trim();
   const entprellt = useEntprellt(eingabe, SUCH_ENTPRELLUNG_MS).trim();
   const songSelectMoeglich = canUseCcli && kannAnlegen;
+  // Die Liedtext-Suche gibt es nur, wo der Liedzugriff der App sie anbietet (nicht in ChurchTools-Erweiterungen).
+  const liedtextSucheDa = useLiedZugriff().liedtextSuche !== undefined;
 
   /**
    * Was zuletzt **abgeschickt** wurde – je Quelle ein Zustand, nicht der Feldinhalt.
@@ -130,8 +131,6 @@ export function useLiedSuche({ eingabe, canUseCcli, kannAnlegen, bibliothekLeer 
     liedtexteSuchen,
     // In der ChurchTools-Erweiterung gibt es die Liedtext-Suche nicht (Massenlauf, Plan 3c).
     angebotLiedtexte:
-      funktionen.liedtextSuche &&
-      begriff.length >= LIEDTEXT_SUCHE_MIN_ZEICHEN &&
-      liedtextBegriff === '',
+      liedtextSucheDa && begriff.length >= LIEDTEXT_SUCHE_MIN_ZEICHEN && liedtextBegriff === '',
   };
 }

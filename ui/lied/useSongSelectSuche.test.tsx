@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { SongSelectSong, SongSelectSuchergebnis } from '@shared/types/index';
+import { LiedZugriffKontext, type LiedZugriff } from './liedZugriff';
+import { useSongSelectSuche } from './liedDaten';
 
 /**
  * Titel **oder** CCLI-Nummer im selben Feld (#322).
@@ -14,12 +16,11 @@ import type { SongSelectSong, SongSelectSuchergebnis } from '@shared/types/index
  */
 const sucheSongSelect = vi.fn();
 const getSongSelectSong = vi.fn();
-vi.mock('../services/churchtoolsApi', () => ({
-  sucheSongSelect: (...a: unknown[]) => sucheSongSelect(...a),
-  getSongSelectSong: (...a: unknown[]) => getSongSelectSong(...a),
-}));
-
-const { useSongSelectSuche } = await import('./useServices');
+// Seit LW1a (06.11.2026) kommen die Daten über den Liedzugriff der App – hier ein Test-Zugriff mit genau diesen zwei Wegen.
+const zugriff = {
+  songSelectSuche: (titel: string) => sucheSongSelect(titel),
+  songSelectLied: (nr: number) => getSongSelectSong(nr),
+} as unknown as LiedZugriff;
 
 const LIED: SongSelectSong = {
   songNumber: 5841527,
@@ -38,7 +39,11 @@ const TITELSUCHE: SongSelectSuchergebnis = { treffer: [LIED], gesamt: 147, volls
 function starte(eingabe: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderHook(() => useSongSelectSuche(eingabe, true), {
-    wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={qc}>
+        <LiedZugriffKontext.Provider value={zugriff}>{children}</LiedZugriffKontext.Provider>
+      </QueryClientProvider>
+    ),
   });
 }
 

@@ -12,10 +12,10 @@
  * Lied annehmen. Titel, Autoren, Nummer und Tonart stehen dann schon drin.
  */
 import type { SongSelectTreffer } from '@shared/types/index';
-import { useSongSelectSuche } from '../hooks/useServices';
-import { QUELLE_BESCHRIFTUNG } from '../hooks/useLiedSuche';
-import { sucheArt, trefferUnterzeile } from '../utils/liedFormular';
-import { CenterMessage } from './CenterMessage';
+import { useSongSelectSuche } from './liedDaten';
+import { QUELLE_BESCHRIFTUNG } from './useLiedSuche';
+import { sucheArt, trefferUnterzeile } from './suchRegeln';
+import { CenterMessage } from '../bedienung/CenterMessage';
 import { LiedZeile } from './LiedZeile';
 import styles from './LiedTreffer.module.scss';
 

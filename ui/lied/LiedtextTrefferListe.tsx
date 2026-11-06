@@ -14,8 +14,8 @@
  * Lied, und es gibt nichts einzufügen.
  */
 import type { SongLibraryEntry } from '@shared/types/index';
-import { useLiedtextSuche } from '../hooks/useServices';
-import { liedAnzahl } from '../utils/songFilter';
+import { useLiedtextSuche } from './liedDaten';
+import { liedAnzahl } from './songFilter';
 import { LiedZeile } from './LiedZeile';
 import styles from './LiedTreffer.module.scss';
 

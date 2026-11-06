@@ -1,5 +1,5 @@
 import type { SongLibraryEntry } from '@shared/types/index';
-import type { SongUsageMap } from '../services/churchtoolsApi';
+import type { SongUsageMap } from './liedZugriff';
 
 export type SongSort = 'name' | 'count' | 'recent';
 

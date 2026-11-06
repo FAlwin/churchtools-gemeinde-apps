@@ -3,7 +3,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Worker inline im Bundle (@ui/teilen/pdfSetup) → funktioniert auch offline (#32).
 import '@ui/teilen/pdfSetup';
 import { type ChordPdfSong, generateChordPdf } from '../utils/chordPdf';
-import { parseMetadata } from '../utils/chordpro';
+import { parseMetadata } from '@shared/lieder/chordpro';
 import { wirksamerMassstab } from '@ui/teilen/leinwand';
 import { useAppLogo } from '../hooks/useAppLogo';
 import styles from './PdfPreview.module.scss';

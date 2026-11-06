@@ -29,6 +29,9 @@ import type {
   SongVersion,
   UserCapabilities,
 } from '@shared/types/index';
+import type { SongUsageMap } from '@ui/lied/liedZugriff';
+// Liegt seit LW1a (06.11.2026) bei der Liedwahl in `ui/lied`.
+export type { SongUsageMap };
 import { apiFetch, apiFetchBlob } from './api';
 import { liedDateiPfad } from './apiBase';
 import { istExtension, ohneServer } from './ctRuntime';
@@ -479,7 +482,6 @@ export function legeLiedAn(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
  * Nutzungsdaten je Song: die vergangenen Spieltermine (YYYY-MM-DD, absteigend). Häufigkeit und
  * „zuletzt" für einen gewählten Zeitraum rechnet die Ansicht daraus selbst aus – separat, gecacht.
  */
-export type SongUsageMap = Record<string, { dates: string[] }>;
 export function getSongUsage(): Promise<SongUsageMap> {
   if (istExtension) return ext.liedNutzung();
   return apiFetch<SongUsageMap>('/api/song-usage');

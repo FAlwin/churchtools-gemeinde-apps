@@ -16,7 +16,7 @@ import type { SongLibraryEntry, SongTextTreffer } from '@shared/types/index';
  *    ein Fehlerschirm, weggelassen wäre er eine Lüge.
  */
 const suche = vi.fn();
-vi.mock('../hooks/useServices', () => ({
+vi.mock('./liedDaten', () => ({
   useLiedtextSuche: (begriff: string, enabled: boolean) => suche(begriff, enabled),
 }));
 

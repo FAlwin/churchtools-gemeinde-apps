@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { akkordTeile, tonartAkkorde } from '../utils/transpose';
-import { akkordeImText } from '../utils/chordpro';
+import { akkordeImText } from '@shared/lieder/chordpro';
 import styles from './AkkordLeiste.module.scss';
 
 interface Props {

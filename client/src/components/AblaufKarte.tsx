@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@ui/icons/icons';
 import { useZiehSensoren } from '@ui/bedienung/useZiehSensoren';
 import { innerScrollOnly } from '@ui/bedienung/dndAutoScroll';
-import { flowEintraege, parseChordPro, parseMetadata, teileImFlow } from '../utils/chordpro';
+import { flowEintraege, parseChordPro, parseMetadata, teileImFlow } from '@shared/lieder/chordpro';
 import styles from './AblaufKarte.module.scss';
 
 interface Props {

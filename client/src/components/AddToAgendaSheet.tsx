@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Service, SongArrangementOption, SongLibraryEntry } from '@shared/types/index';
 import { Sheet } from '@ui/fenster/Sheet';
-import { CenterMessage } from './CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Icon } from '@ui/icons/icons';
 import { useSongArrangements, useAddSongToService } from '../hooks/useServices';
 import styles from './AddToAgendaSheet.module.scss';

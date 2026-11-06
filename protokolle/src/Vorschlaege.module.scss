@@ -1,0 +1,185 @@
+// Vorschläge für Tagesordnungspunkte (S5-4): Karte im Reiter „Sitzungen“, Kasten beim Schreiben, Felder im Fenster.
+// Karte und Kopf wie die anderen Karten der Sitzungsliste; Knöpfe über den gemeinsamen `aktionKnopf`.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+.kartenkopf {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// Zwischenzeile „Für Leitungssitzung · Mi, 11.11.2026 · 19:00 Uhr“.
+.gruppe {
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--section);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vorschlag {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.oben {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.inhalt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text2);
+    font-size: 14px;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+// Begründung beim Ablehnen.
+.grund {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--border);
+  color: var(--text2);
+  font-size: 13.5px;
+  white-space: pre-line;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.knopf {
+  @include m.aktionKnopf;
+  height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
+.blau {
+  color: var(--blue-ink);
+}
+
+.rot {
+  color: var(--red);
+}
+
+.leer,
+.fehler {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fehler {
+  color: var(--red);
+  font-weight: 600;
+}
+
+// Kopf des Kastens beim Schreiben – zum Auf- und Zuklappen.
+.klapp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  > svg {
+    flex: none;
+    color: var(--text2);
+  }
+
+  + .liste,
+  + .fehler {
+    border-top: 1px solid var(--hair);
+  }
+}
+
+// Hinweis „2 Vorschläge wurden … eingefügt“ (Gruppe „Direkt eintragen“).
+.hinweis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+}
+
+// Im Fenster.
+.text {
+  height: auto;
+  min-height: 72px;
+  padding-block: 8px;
+  resize: vertical;
+}
+
+.klein {
+  color: var(--text3);
+  font-size: 12.5px;
+}

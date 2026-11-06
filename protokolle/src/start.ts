@@ -17,6 +17,8 @@ import { ctDaten } from '@ui/ct/verbindung';
 export interface Start {
   id: number;
   vorname: string;
+  /** Für „vorgeschlagen von …“ (S5-4) – fehlt, wenn ChurchTools keinen liefert. */
+  nachname: string;
   gemeinde: string | null;
   modul: number;
   gruppen: ProtokollGruppe[];
@@ -39,6 +41,7 @@ export async function ladeStart(): Promise<Start> {
   return {
     id: ich.id,
     vorname: ich.vorname,
+    nachname: ich.nachname ?? '',
     gemeinde: ich.gemeinde,
     modul,
     gruppen: protokollGruppen(ich.mitgliedschaften, kategorien),

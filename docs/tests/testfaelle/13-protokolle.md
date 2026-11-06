@@ -196,3 +196,34 @@ Tipp steht sofort im ChurchTools-Gruppentreffen, nochmal tippen macht wieder off
 - **Historie:** S5-3 (05.11.2026)
 
 </details>
+
+### TF-PROT-08 · Punkt vorschlagen, übernehmen, ablehnen, direkt eintragen
+
+**Das brauchst du:** In der Test-Instanz die Testgruppe mit einer kommenden Sitzung und einem eigenen Test-Protokoll im
+Entwurf (Titel beginnt mit „TEST“), dazu eine zweite Person ohne Leitung (z. B. „Benutzer simulieren“). Danach die
+Test-Vorschläge zurückziehen bzw. das Test-Protokoll aufräumen.
+
+**Das muss passieren:** Ein Mitglied schlägt einen Punkt vor und sieht ihn mit Stand. Die Leitung übernimmt ihn beim
+Schreiben – er steht vor „Verschiedenes“ mit „vorgeschlagen von …“ – oder lehnt ab; wer vorschlug, sieht die
+Begründung. Bei „Direkt eintragen“ steht der Punkt beim Öffnen schon drin, nie doppelt.
+
+1. Als Mitglied in ChurchTools auf **Protokolle** → Reiter **Sitzungen** → **Punkt vorschlagen** (Glühbirne).
+2. Sitzung lassen, Thema „TEST Vorschlag“ eintippen, **Vorschlagen**: Er steht in der Karte „Vorschläge“ unter seiner
+   Sitzung als „offen“, mit **Ändern** und **Zurückziehen**; in der Sitzungszeile steht „1 Vorschlag“.
+3. Als Leitung das Test-Protokoll öffnen (Schreiben): Oben steht „Vorschläge · 1“. **Übernehmen**: Der Punkt steht vor
+   „Verschiedenes“, darunter „vorgeschlagen von …“; oben „gespeichert“. Der Kasten ist weg.
+4. Zurück zu „Sitzungen“: In der Karte steht der Vorschlag als „im Protokoll“.
+5. Einen zweiten Vorschlag als Mitglied machen; als Leitung im Protokoll **Ablehnen** mit einem Satz. Als Mitglied:
+   „abgelehnt“ und der Satz darunter, kein Ändern mehr.
+6. In der Verwaltung die Gruppe auf **Direkt eintragen** stellen, als Mitglied einen dritten Vorschlag machen, als
+   Leitung das Protokoll öffnen: Der Punkt steht schon drin, oben „Ein Vorschlag wurde … eingefügt“. Zurück und noch
+   einmal öffnen: nicht doppelt. Die Gruppe danach wieder auf **Vorschlagen** stellen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/vorschlaege.ts`, `protokolle/src/vorschlaegeSchreiben.ts`, `protokolle/src/mitarbeitWerte.ts`, `protokolle/src/Vorschlaege.tsx`, `protokolle/src/VorschlagFenster.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/lesen.ts`
+- **Automatisiert:** ja – `shared/protokolle/vorschlaege.test.ts` (Ziel, Weiterrutschen, Stände, Karte, Einfügestelle), `protokolle/src/vorschlaegeSchreiben.test.ts` und `protokolle/src/lesen.test.ts` (mit dem ChurchTools-Nachbau), `protokolle/src/Sitzungen.test.tsx`, `protokolle/src/ProtokollSchreiben.test.tsx` (einfügen, erst gespeichert dann vermerkt, nicht doppelt, Speichern scheitert); ob Mitglieder ohne Leitung in „Mitarbeit“ schreiben dürfen, nur in der Test-Instanz
+- **Historie:** S5-4 (06.11.2026)
+
+</details>

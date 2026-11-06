@@ -11,10 +11,11 @@ import { werteLesen } from '@shared/ct/modulDaten';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
-import { istEinstellung } from '@shared/protokolle/einrichten';
+import { istEinstellung, type PunkteVonMitgliedern } from '@shared/protokolle/einrichten';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import type { Aufgabe } from '@shared/protokolle/aufgaben';
-import { aufgabenWerte } from './aufgabenSchreiben';
+import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { istVorschlag, type Vorschlag } from '@shared/protokolle/vorschlaege';
+import { derArt, mitarbeitRoh } from './mitarbeitWerte';
 import {
   istKopf,
   istTeil,
@@ -48,6 +49,8 @@ export interface GruppenSitzungen {
   teile: ProtokollTeil[];
   /** Kalender der Gruppe aus der Einstellung – `null`: keiner gewählt (dann kommen keine Termine). */
   kalender: number | null;
+  /** Punkte von Mitgliedern (Einstellung, S5-4): vorschlagen oder direkt eintragen. Ohne Einstellung: vorschlagen. */
+  punkte: PunkteVonMitgliedern;
   /** ChurchTools zeigt dieser Person die Gruppentreffen nicht (403) – „Kommend“ ist dann nur der Kalender. */
   treffenNichtFreigegeben: boolean;
 }
@@ -177,12 +180,16 @@ export async function ladeSitzungen(
   const koepfe: ProtokollKopf[] = [];
   const teile: ProtokollTeil[] = [];
   let kalender: number | null = null;
+  let punkte: PunkteVonMitgliedern = 'vorschlagen';
   if (gruppe.protokolle !== null) {
     for (const w of await werteLesen(modulPort, modul, gruppe.protokolle)) {
       const x = wertInhalt(w);
       if (istKopf(x)) koepfe.push(x);
       else if (istTeil(x)) teile.push(x);
-      else if (istEinstellung(x) && x.gruppe === gruppe.id) kalender = x.kalender;
+      else if (istEinstellung(x) && x.gruppe === gruppe.id) {
+        kalender = x.kalender;
+        punkte = x.punkte;
+      }
     }
   }
   // „Heute“ in derselben Zeitzone wie die Sitzungen – sonst wäre kurz vor Mitternacht ein Tag verschoben.
@@ -197,19 +204,35 @@ export async function ladeSitzungen(
     ...sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone }),
     teile,
     kalender,
+    punkte,
     treffenNichtFreigegeben: treffen === null,
   };
 }
 
-/** **Die Aufgaben einer Gruppe** (gelöschte nicht). Ohne Mitarbeit-Kategorie: keine. Gelesen über `aufgabenWerte`. */
+/**
+ * **Was in „Mitarbeit“ steht** – To-Dos (gelöschte nicht) und Vorschläge (S5-4), **einmal** gelesen. Ohne
+ * Mitarbeit-Kategorie: nichts.
+ */
+export async function ladeMitarbeit(
+  modul: number,
+  gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
+): Promise<{ aufgaben: Aufgabe[]; vorschlaege: Vorschlag[] }> {
+  if (gruppe.mitarbeit === null) return { aufgaben: [], vorschlaege: [] };
+  const roh = await mitarbeitRoh({ modul, kategorie: gruppe.mitarbeit });
+  return {
+    aufgaben: derArt(roh, istAufgabe)
+      .map((w) => w.x)
+      .filter((a) => !a.geloescht),
+    vorschlaege: derArt(roh, istVorschlag).map((w) => w.x),
+  };
+}
+
+/** **Die Aufgaben einer Gruppe** (gelöschte nicht) – aus `ladeMitarbeit`. */
 export async function ladeAufgaben(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
 ): Promise<Aufgabe[]> {
-  if (gruppe.mitarbeit === null) return [];
-  return (await aufgabenWerte({ modul, kategorie: gruppe.mitarbeit }))
-    .map((x) => x.aufgabe)
-    .filter((a) => !a.geloescht);
+  return (await ladeMitarbeit(modul, gruppe)).aufgaben;
 }
 
 export interface GruppenUebersicht {

@@ -38,7 +38,7 @@ vi.mock('./ProtokollNeu', () => ({
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
-  ladeAufgaben: vi.fn(),
+  ladeMitarbeit: vi.fn(),
 }));
 // Der Editor als Attrappe: zählt, wie oft er geöffnet wird, und zeigt den Kasten „Nächste Sitzung“.
 const editorGeoeffnet = vi.fn();
@@ -272,6 +272,7 @@ describe('Einstiege (S5-2)', () => {
     teile: OKT_DOK.werte.map((w) => JSON.parse(w) as ProtokollTeil),
     kalender,
     treffenNichtFreigegeben: false,
+    punkte: 'vorschlagen',
   });
   const liste = (schreibbar: number[] = [60], auswahl: string | undefined = undefined) =>
     render(
@@ -286,7 +287,7 @@ describe('Einstiege (S5-2)', () => {
 
   beforeEach(() => {
     vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([]));
-    vi.mocked(L.ladeAufgaben).mockResolvedValue([]);
+    vi.mocked(L.ladeMitarbeit).mockResolvedValue({ aufgaben: [], vorschlaege: [] });
   });
 
   it('„Neue Sitzung“ nur für die Leitung und nur mit Kalender', async () => {

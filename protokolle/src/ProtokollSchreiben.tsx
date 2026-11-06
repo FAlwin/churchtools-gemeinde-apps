@@ -3,6 +3,7 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
+import { ApiError } from '@ui/ct/fehler';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
@@ -23,6 +24,20 @@ import {
   type AufgabenStatus,
 } from '@shared/protokolle/aufgaben';
 import type { Person } from '@shared/organigramm/mitglieder';
+import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
+import {
+  aufsNaechsteMal,
+  ablehnen,
+  einfuegeStelle,
+  imProtokoll,
+  istVorschlag,
+  offeneFuer,
+  schonImDokument,
+  vorschlagBloecke,
+  zumEinfuegen,
+  type Vorschlag,
+} from '@shared/protokolle/vorschlaege';
+import { istAufgabe } from '@shared/protokolle/aufgaben';
 import { AufgabenKontext, type AufgabenKontextWert } from './aufgabenKontext';
 import {
   aufgabeAendern,
@@ -30,6 +45,11 @@ import {
   aufgabenWerte,
   type MitarbeitOrt,
 } from './aufgabenSchreiben';
+import { derArt, mitarbeitRoh } from './mitarbeitWerte';
+import { vorschlagSchreiben } from './vorschlaegeSchreiben';
+import { VorschlaegeKasten } from './Vorschlaege';
+import { VorschlagAblehnen } from './VorschlagFenster';
+import vorschlagStil from './Vorschlaege.module.scss';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { uhrzeit, wannLang } from './anzeige';
 import { Bereiche } from './Bereiche';
@@ -88,6 +108,10 @@ export function ProtokollSchreiben({
   ich,
   zeitzone,
   naechste,
+  kommend = [],
+  direkt = false,
+  vollerName = ich.name,
+  onVorschlag,
   onBearbeiten,
   onZurueck,
   onZuSitzung,
@@ -107,6 +131,14 @@ export function ProtokollSchreiben({
   zeitzone: string;
   /** „Nächste Sitzung“ im Bereich Termine (S5-2) – festgelegt wird im Fenster der Liste dahinter. */
   naechste?: ReactNode;
+  /** Die kommenden Sitzungen der Gruppe – wofür ein Vorschlag gerade gilt (S5-4, `zielSitzung`). */
+  kommend?: readonly Sitzung[];
+  /** Gruppe „Direkt eintragen“: offene Vorschläge kommen beim Öffnen von selbst hinein (S5-4). */
+  direkt?: boolean;
+  /** Vor- und Nachname für den Verlauf der Vorschläge. */
+  vollerName?: string;
+  /** Ein Vorschlag hat sich hier geändert – die Liste dahinter zieht mit. */
+  onVorschlag?: (v: Vorschlag) => void;
   /** „Bearbeiten“ im Kopf – die Sitzung dieses Protokolls (Zeit, Titel, Eingeladene, absagen; K2b), nur für die Leitung. */
   onBearbeiten?: () => void;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
@@ -149,15 +181,21 @@ export function ProtokollSchreiben({
   }, []);
   // Änderungen an To-Dos nacheinander – zwei schnelle Klicks dürfen sich nicht gegenseitig überschreiben.
   const kette = useRef<Promise<unknown>>(Promise.resolve());
+  // Vorschläge der Gruppe (S5-4) – frisch gelesen beim Öffnen, mit den To-Dos in einem Lesen.
+  const [vorschlaege, setVorschlaege] = useState<readonly Vorschlag[]>([]);
+  const [vorschlagHinweis, setVorschlagHinweis] = useState<string | null>(null);
+  const [vorschlagFehler, setVorschlagFehler] = useState<string | null>(null);
+  const [ablehnenFuer, setAblehnenFuer] = useState<Vorschlag | null>(null);
+  // Je Öffnen wird einmal eingefügt, was hinein soll – nicht bei jedem Neuzeichnen.
+  const eingefuegt = useRef(false);
 
   const oeffnen = useCallback(() => {
     setLaden({ art: 'laedt' });
-    Promise.all([
-      protokollLesen(ort),
-      mOrt ? aufgabenWerte(mOrt).then((w) => w.map((x) => x.aufgabe)) : Promise.resolve([]),
-    ]).then(
-      ([{ kopf, dokument }, alle]) => {
-        setTodos(alle);
+    eingefuegt.current = false;
+    Promise.all([protokollLesen(ort), mOrt ? mitarbeitRoh(mOrt) : Promise.resolve([])]).then(
+      ([{ kopf, dokument }, roh]) => {
+        setTodos(derArt(roh, istAufgabe).map((w) => w.x));
+        setVorschlaege(derArt(roh, istVorschlag).map((w) => w.x));
         if (!kopf || !dokument) {
           setLaden({
             art: 'lesen',
@@ -417,6 +455,94 @@ export function ProtokollSchreiben({
     return id;
   }, [gruppeId, sitzung.beginn, sitzung.ende, zeitzone, ort]);
 
+  // Vorschläge (S5-4): wer schreibt (mit vollem Namen), heute, und ein Vorschlag nach dem Schreiben in beide Listen.
+  const ichV = useMemo(
+    () => ({ person: schreiber.person, name: vollerName }),
+    [schreiber.person, vollerName],
+  );
+  const vorschlagNeu = useCallback(
+    (v: Vorschlag) => {
+      setVorschlaege((l) => l.map((x) => (x.id === v.id ? v : x)));
+      onVorschlag?.(v);
+    },
+    [onVorschlag],
+  );
+
+  /**
+   * **Vorschläge ins Protokoll** (S5-4): Punkte vor „Verschiedenes“ einfügen (was schon drinsteht – Block-ID
+   * `vorschlag-…` – nicht noch einmal), **sofort speichern** und erst danach „im Protokoll“ vermerken. Scheitert das
+   * Speichern, bleibt der Vorschlag, wie er war: Beim nächsten Öffnen wird er erkannt und nur noch vermerkt. Liefert, wie
+   * viele neu hineinkamen und ob vor „Verschiedenes“.
+   */
+  const insProtokoll = useCallback(
+    async (liste: readonly Vorschlag[]): Promise<{ neu: number; vorVerschiedenes: boolean }> => {
+      const g = editor.current;
+      const st = steuerung.current;
+      if (!g || !st || !mOrt || !liste.length) return { neu: 0, vorVerschiedenes: false };
+      const neu = liste.filter((v) => !schonImDokument(g.dokument(), v));
+      const vorVerschiedenes = einfuegeStelle(g.dokument()) !== null;
+      for (const v of neu) g.einfuegen(vorschlagBloecke(v), einfuegeStelle(g.dokument()));
+      if (neu.length) {
+        st.geaendert();
+        if (!(await st.jetzt()))
+          // 409: `fehlerMeldung` zeigt diesen Text statt „ChurchTools antwortet gerade nicht“.
+          throw new ApiError(
+            409,
+            'Das Protokoll ist noch nicht gespeichert – der Vorschlag steht schon drin und wird beim nächsten Öffnen vermerkt.',
+          );
+      }
+      for (const v of liste)
+        vorschlagNeu(
+          await vorschlagSchreiben(mOrt, v.id, (x) =>
+            imProtokoll(x, ort.sitzung, ichV, new Date().toISOString()),
+          ),
+        );
+      return { neu: neu.length, vorVerschiedenes };
+    },
+    [mOrt, ort.sitzung, ichV, vorschlagNeu],
+  );
+
+  // Beim Öffnen: angenommene Vorschläge dieser Sitzung – und bei „Direkt eintragen“ auch die offenen – einfügen. Nur,
+  // wenn dieses Fenster schreiben darf (niemand sonst schreibt); einmal je Öffnen.
+  const lageJetzt = z?.lage;
+  useEffect(() => {
+    if (laden.art !== 'bereit' || (lageJetzt !== 'frei' && lageJetzt !== 'schreibe')) return;
+    if (eingefuegt.current) return;
+    eingefuegt.current = true;
+    const zone = gemeindeZeitzone();
+    const liste = zumEinfuegen(
+      vorschlaege,
+      sitzung,
+      direkt,
+      kommend,
+      heuteImKalender(new Date(), zone),
+      zone,
+    );
+    if (!liste.length) return;
+    insProtokoll(liste).then(
+      (r) => {
+        if (r.neu)
+          setVorschlagHinweis(
+            `${r.neu === 1 ? 'Ein Vorschlag wurde' : `${r.neu} Vorschläge wurden`} als Punkt ${r.vorVerschiedenes ? 'vor „Verschiedenes“' : 'am Ende'} eingefügt.`,
+          );
+      },
+      (e: unknown) => setVorschlagFehler(`Vorschläge: ${fehlerMeldung(e).text}`),
+    );
+  }, [laden.art, lageJetzt, vorschlaege, sitzung, direkt, kommend, insProtokoll]);
+
+  const vorschlagTun = (f: () => Promise<unknown>) => async () => {
+    setVorschlagFehler(null);
+    try {
+      await f();
+    } catch (e) {
+      setVorschlagFehler(fehlerMeldung(e).text);
+    }
+  };
+  const zone = gemeindeZeitzone();
+  const offeneVorschlaege = direkt
+    ? []
+    : offeneFuer(vorschlaege, sitzung, kommend, heuteImKalender(new Date(), zone), zone);
+
   // Feste Punkte (S4-3a) – derselbe Rahmen für Editor, Lese-Ansicht und „nur lesen“.
   const rahmen = (inhalt: ReactNode) => (
     <FestePunkteRahmen
@@ -599,6 +725,48 @@ export function ProtokollSchreiben({
         <p className={styles.nebenbei} role="status">
           {hinweis}
         </p>
+      )}
+      {vorschlagHinweis && (
+        <p className={vorschlagStil.hinweis} role="status">
+          <Icon name="idee" size={18} />
+          {vorschlagHinweis}
+        </p>
+      )}
+      {bearbeitbar && mOrt && (
+        <VorschlaegeKasten
+          liste={offeneVorschlaege}
+          ich={schreiber.person}
+          fehler={vorschlagFehler}
+          aktionen={{
+            uebernehmen: (v) =>
+              vorschlagTun(async () => {
+                await insProtokoll([v]);
+              })(),
+            naechstesMal: (v) =>
+              vorschlagTun(async () =>
+                vorschlagNeu(
+                  await vorschlagSchreiben(mOrt, v.id, (x) =>
+                    aufsNaechsteMal(x, sitzung, ichV, new Date().toISOString()),
+                  ),
+                ),
+              )(),
+            ablehnen: setAblehnenFuer,
+          }}
+        />
+      )}
+      {ablehnenFuer && mOrt && (
+        <VorschlagAblehnen
+          vorschlag={ablehnenFuer}
+          onAblehnen={async (grund) => {
+            vorschlagNeu(
+              await vorschlagSchreiben(mOrt, ablehnenFuer.id, (x) =>
+                ablehnen(x, grund, ichV, new Date().toISOString()),
+              ),
+            );
+            setAblehnenFuer(null);
+          }}
+          onClose={() => setAblehnenFuer(null)}
+        />
       )}
 
       {rahmen(

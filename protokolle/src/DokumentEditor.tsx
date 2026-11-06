@@ -225,6 +225,11 @@ export interface EditorGriff {
   dokument(): Block[];
   /** Den Inhalt ersetzen (Mitlesen, Übernehmen) – zählt nicht als Änderung. */
   ersetzen(dokument: readonly Block[]): void;
+  /**
+   * Blöcke einfügen – vor den Block `vor` (oberste Ebene), sonst ans Ende. Zählt als Änderung (wird gespeichert); für
+   * übernommene Vorschläge (S5-4).
+   */
+  einfuegen(bloecke: readonly Block[], vor: string | null): void;
 }
 
 export function DokumentEditor({
@@ -312,6 +317,16 @@ export function DokumentEditor({
           stumm.current = false;
         }
         ersetzt.current = JSON.stringify(editor.document);
+      },
+      einfuegen: (bloecke, vor) => {
+        const ziel = vor !== null ? editor.getBlock(vor) : undefined;
+        if (ziel) editor.insertBlocks(bloecke as Teil[], ziel, 'before');
+        else
+          editor.insertBlocks(
+            bloecke as Teil[],
+            editor.document[editor.document.length - 1],
+            'after',
+          );
       },
     }),
     [editor],

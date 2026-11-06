@@ -15,8 +15,8 @@ voneinander abgesetzt. Oben stehen Titel, Tonart und Tempo.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useSetlistPages.ts`, `client/src/components/PageDeck.tsx`, `client/src/hooks/useChartStream.ts`
-- **Automatisiert:** teilweise – `e2e/chart-smoke.spec.ts`, `client/src/utils/chordPdf.test.ts`
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `ui/lied/chordPdf.ts`, `client/src/hooks/useSetlistPages.ts`, `client/src/components/PageDeck.tsx`, `client/src/hooks/useChartStream.ts`
+- **Automatisiert:** teilweise – `e2e/chart-smoke.spec.ts`, `ui/lied/chordPdf.test.ts`
 - **Historie:** –
 
 </details>
@@ -174,7 +174,7 @@ sichtbar, bis die neuen fertig sind. Die App darf nicht mehrere Sekunden stehen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/components/ChartAppearanceMenu.tsx`, `client/src/utils/chordPdf.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/components/ChartOverlays.tsx`
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/components/ChartAppearanceMenu.tsx`, `ui/lied/chordPdf.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/components/ChartOverlays.tsx`
 - **Automatisiert:** teilweise – `client/src/utils/chartPdfOptions.test.ts`, `client/src/components/ChartAppearanceMenu.test.tsx`
 - **Historie:** #197
 
@@ -527,7 +527,7 @@ Einstellung gilt nur auf diesem Gerät.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/utils/pedalSchritt.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
+- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `ui/lied/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/utils/pedalSchritt.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal Teil für
   Teil samt ⅔ bei langen Teilen und Halt am `----`,
   Kopfzeile folgt der Mitte, Tipp, Lied in der Leiste, Fußpfeil, `blatt-leiste.spec.ts` (Leiste folgt und scrollt mit,
@@ -568,7 +568,7 @@ Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/lieder/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/AblaufKarte.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
+- **Betrifft:** `shared/lieder/chordpro.ts`, `ui/lied/chordPdf.ts`, `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/AblaufKarte.tsx`, `ui/lied/editor/ChordProInput.tsx`, `shared/ct/liedtext.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (Flow, Rückfall, Einfügestelle, `----`),
   `chordPdf.test.ts` (Reihenfolge, Wegweiser, `----` unsichtbar, Transponierung bei Wiederholung),
   `ChordEditor.test.tsx` (Ablauf-Karte: hinzufügen, entfernen, „Wie im Text“, unbekannte Namen, eingeklappt),
@@ -601,7 +601,7 @@ rückt oben etwas nach oben. Wieder an → überall wieder da.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/hooks/useAppLogo.ts`, `client/src/utils/logoAsset.ts`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/components/PdfPreview.tsx`, `client/src/pages/Setlist.tsx`, `shared/ct/einstellungen.ts`
+- **Betrifft:** `client/src/hooks/useAppLogo.ts`, `client/src/utils/logoAsset.ts`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `ui/lied/editor/PdfPreview.tsx`, `client/src/pages/Setlist.tsx`, `shared/ct/einstellungen.ts`
 - **Automatisiert:** weitgehend – `e2e/chart-logo.spec.ts` (Liedblatt mit und ohne Logo, am gezeichneten Bild),
   `useAppLogo.test.ts`, `Settings.test.tsx` (Schalter, Fehler), `siteConfig.test.ts` und `ctEinstellungen.test.ts`
   (Speichern im Server bzw. in ChurchTools). Von Hand bleiben Liederheft, geteiltes PDF und Editor-Vorschau

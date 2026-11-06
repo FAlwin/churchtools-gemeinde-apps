@@ -41,6 +41,19 @@ export interface LiedZugriff {
   liedtextSuche?: (q: string) => Promise<SongTextTreffer[]>;
   /** Die Rechte; `undefined`, solange sie noch laden. */
   useRechte(): LiedRechte | undefined;
+
+  /* ------------------------------------------------ Notenblatt-Editor (LW1b-1, 06.11.2026) */
+
+  /**
+   * Wie die Vorschau im Editor das Blatt zeigt: als durchgehende Rolle (`scrollen`) oder seitenweise. Die Musik-App
+   * gibt ihre Geräte-Einstellung „Liedansicht" herein, damit Editor und Liedblatt gleich aussehen.
+   */
+  liedansicht(): 'scrollen' | 'blaettern';
+  /**
+   * Das Logo für die Kopfzeile der PDF-Vorschau – `null`, solange es lädt, wenn es fehlt oder die Gemeinde es
+   * ausgeblendet hat. Ein Hook, weil die Musik-App es aus ihren Einstellungen lädt (`useAppLogo`).
+   */
+  useBlattLogo(): HTMLImageElement | null;
 }
 
 /**

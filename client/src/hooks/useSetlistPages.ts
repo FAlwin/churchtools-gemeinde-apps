@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
-import type { SetlistPageOwner } from '../utils/chordPdf';
+import type { SetlistPageOwner } from '@ui/lied/chordPdf';
 import { ladeDokument } from '../services/fileDownload';
 import { renderPdfToCanvases } from '@ui/teilen/pdfSeiten';
 import { dokumentSeiten } from '../utils/dokumentSeiten';

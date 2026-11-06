@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within, act } from '@testing-library/react';
 import { AkkordLeiste } from './AkkordLeiste';
-import { tonartAkkorde } from '../utils/transpose';
+import { tonartAkkorde } from '@shared/lieder/transpose';
 
 /** Lied-Editor L5 (22.10.2026, Entwurf Variante A): Akkord-Leiste statt Menü. */
 const TEXT = '{key: E}\n{comment: Vers}\n[E]Du [F#m7]bleibst [A]an [F#m7]meiner [D/F#]Seite';

@@ -37,7 +37,7 @@ import {
 import { SongFields } from './SongFields';
 import { ArrangementListe } from './ArrangementListe';
 import { ArrangementSheet } from './ArrangementSheet';
-import { ChordEditor } from './ChordEditor';
+import { ChordEditor } from '@ui/lied/editor/ChordEditor';
 import { useNotenblatt } from '../hooks/useNotenblatt';
 import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.
@@ -62,7 +62,7 @@ import {
   hatAenderung,
   namensWarnung,
   type NeuesLiedFormular,
-} from '../utils/liedFormular';
+} from '@ui/lied/liedFormular';
 import styles from './NewSongSheet.module.scss';
 
 interface EditSongSheetProps {

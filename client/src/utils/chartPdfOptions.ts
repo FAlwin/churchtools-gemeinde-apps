@@ -1,8 +1,8 @@
 import type { SetlistSong } from '@shared/types/index';
-import type { ChordPdfOptions } from './chordPdf';
+import type { ChordPdfOptions } from '@ui/lied/chordPdf';
 import type { SongSettings } from './chartSettings';
 import { notierteTonart } from './songVersions';
-import { getSemitoneOffset } from './transpose';
+import { getSemitoneOffset } from '@shared/lieder/transpose';
 
 /**
  * Übersetzt die Anzeige-Einstellungen eines Lieds in die PDF-Optionen (#197).

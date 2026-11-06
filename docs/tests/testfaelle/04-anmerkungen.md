@@ -339,7 +339,7 @@ verschwindet und nichts steht doppelt da.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/LassoEbene.tsx`, `client/src/utils/lasso.ts`, `client/src/utils/rolleSpeichern.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/hooks/usePageDraw.ts`, `client/src/components/RollenMalen.tsx`, `client/src/components/PageDeck.tsx`, `client/src/components/DrawToolbar.tsx`
+- **Betrifft:** `client/src/components/LassoEbene.tsx`, `client/src/utils/lasso.ts`, `client/src/utils/rolleSpeichern.ts`, `ui/lied/rollenAbbildung.ts`, `client/src/hooks/usePageDraw.ts`, `client/src/components/RollenMalen.tsx`, `client/src/components/PageDeck.tsx`, `client/src/components/DrawToolbar.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-lasso.spec.ts` (Blättern: verschieben + Rückgängig, Griff +
   Werkzeugwechsel; Rolle: verschieben, Lücken-Text, Lücken-Strich, Text und Strich unter dem letzten Teil, die Rolle
   wächst für eine Notiz weit unten, Sperre neben dem 2-Spalten-Streifen mit Rückgängig und mit Stift aus), `lasso.test.ts`, `rolleSpeichern.test.ts`, `rollenAbbildung.test.ts`. Von Hand

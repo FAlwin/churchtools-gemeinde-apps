@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LIEDINFO_FELDER, LIEDINFO_ZEILE, TONART_ZEILE } from '@shared/ct/liedinfo';
 import { EinfuegenMenue } from './EinfuegenMenue';
-import { ANDERE, KOPFANGABEN, TEILE } from '../utils/einfuegen';
+import { ANDERE, KOPFANGABEN, TEILE } from '@shared/lieder/einfuegen';
 
 /** Lied-Editor L6 (24.10.2026): Menü „Einfügen“ statt Format-Menü (Variante B). */
 function zeige(offen = true, mitLiedinfo = true) {

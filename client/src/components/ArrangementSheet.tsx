@@ -22,7 +22,7 @@ import { ARRANGEMENT_GRENZEN, type ArrangementAnsicht, type SongSource } from '@
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
-import feld from './SongFields.module.scss';
+import feld from '@ui/lied/SongFields.module.scss';
 import styles from './NewSongSheet.module.scss';
 import eigen from './ArrangementSheet.module.scss';
 import {
@@ -33,7 +33,7 @@ import {
   formularAusArrangement,
   hatAenderung,
   type ArrangementFormular,
-} from '../utils/arrangementFormular';
+} from '@ui/lied/arrangementFormular';
 import type { ArrangementAuftrag } from '@shared/types/index';
 
 interface ArrangementSheetProps {

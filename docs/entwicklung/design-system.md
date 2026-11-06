@@ -183,7 +183,7 @@ gemessen wurde → keine Regression auf Geräten ohne Safe Area.
 
 Gerechnet wird damit nur noch in `ui/design/_variables.scss`: `--sat` steckt in `--inhalt-pad-top` (installierte App
 am iPhone: Safe-Area + 36px, unter dem Unschärfe-Band) und `--bar-pad-top` (nur noch Grundlage des iPad-Werts). Jeder
-Kopf beginnt mit `--inhalt-pad-top`; seit 29.10.2026 auch der Lied-Editor (`components/ChordEditor.module.scss`), und
+Kopf beginnt mit `--inhalt-pad-top`; seit 29.10.2026 auch der Lied-Editor (`ui/lied/editor/ChordEditor.module.scss`), und
 das Tempo-Menü rechnet seine Höhe mit der gemessenen Kopf-Unterkante statt mit einem Nachbau (`obenBand.test.ts`).
 
 ## Dialoge über der Tastatur (Safe Area unten) – verbindlich

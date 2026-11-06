@@ -5,8 +5,8 @@ const push = vi.hoisted(() => vi.fn());
 vi.mock('../services/annotations', () => ({ pushField: push }));
 
 const { entwurfTexte, lueckenTexteHolen, texteZurueck } = await import('./rolleSpeichern');
-const { satzplaene } = await import('./chordPdf');
-const { streifen, textAufRolle } = await import('./rollenAbbildung');
+const { satzplaene } = await import('@ui/lied/chordPdf');
+const { streifen, textAufRolle } = await import('@ui/lied/rollenAbbildung');
 const { textSchluessel } = await import('./annotationKeys');
 import type { SetlistSong } from '@shared/types/index';
 

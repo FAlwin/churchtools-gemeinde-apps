@@ -1,5 +1,5 @@
 /** Menü „Einfügen“ im Lied-Editor (L6): was es anbietet – eigene Datei, damit die Komponente nur Komponenten exportiert. */
-import { LIEDINFO_FELDER, type LiedinfoFeld } from '@shared/ct/liedinfo';
+import { LIEDINFO_FELDER, type LiedinfoFeld } from '../ct/liedinfo';
 
 /** Was das Menü einfügen kann – der Editor setzt es in den Text. */
 export type Einfuegen =

@@ -15,7 +15,7 @@ import { DEFAULT_SETTINGS, type SongSettings } from '../utils/chartSettings';
  *    Ergebnis.
  */
 const generateSetlistPdfWithOwners = vi.fn();
-vi.mock('../utils/chordPdf', () => ({
+vi.mock('@ui/lied/chordPdf', () => ({
   generateSetlistPdfWithOwners: (...a: unknown[]) => generateSetlistPdfWithOwners(...a),
 }));
 vi.mock('../utils/logoAsset', () => ({ logoTightUrl: 'data:image/png;base64,AA' }));

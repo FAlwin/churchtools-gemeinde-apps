@@ -22,8 +22,8 @@ entsprechend verschoben.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`, `client/src/utils/chartSettings.ts`, `client/src/utils/transpose.ts`, `client/src/components/KeyPicker.tsx`, `client/src/components/CapoPicker.tsx`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/utils/activeSongView.ts`, `client/src/components/ChartOverlays.tsx`
-- **Automatisiert:** teilweise – `client/src/utils/transpose.test.ts`, `client/src/hooks/useSongSettings.test.tsx`
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`, `client/src/utils/chartSettings.ts`, `shared/lieder/transpose.ts`, `client/src/components/KeyPicker.tsx`, `client/src/components/CapoPicker.tsx`, `ui/lied/chordPdf.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/utils/activeSongView.ts`, `client/src/components/ChartOverlays.tsx`
+- **Automatisiert:** teilweise – `shared/lieder/transpose.test.ts`, `client/src/hooks/useSongSettings.test.tsx`
   und seit #314 `client/src/utils/activeSongView.test.ts` (Kapo wird ABGEZOGEN – „klingt A, Kapo 2 →
   Griff G"; dazu die Info-Zeile im Kopf)
 - **Historie:** –
@@ -98,8 +98,8 @@ bleibt vollständig.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartSettings.ts`, `client/src/utils/chordPdf.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/utils/activeSongView.ts`, `client/src/utils/chartPageKeys.ts`
-- **Automatisiert:** teilweise – `client/src/utils/chordPdf.test.ts` und seit #314
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartSettings.ts`, `ui/lied/chordPdf.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/utils/activeSongView.ts`, `client/src/utils/chartPageKeys.ts`
+- **Automatisiert:** teilweise – `ui/lied/chordPdf.test.ts` und seit #314
   `client/src/utils/chartPageKeys.test.ts`: dass „Nur Text" eine EIGENE Notiz-Ebene hat und der
   Wechsel erst mit den sichtbaren Seiten greift (nicht schon beim Umschalten). Von Hand bleibt, dass
   der Umbruch auf dem Gerät gut aussieht.
@@ -122,7 +122,7 @@ ist wieder alles einheitlich.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/SectionTransposeSheet.tsx`, `client/src/utils/chartSettings.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/components/ChartOverlays.tsx`
+- **Betrifft:** `client/src/components/SectionTransposeSheet.tsx`, `client/src/utils/chartSettings.ts`, `client/src/pages/ChordChart.tsx`, `ui/lied/chordPdf.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/components/ChartOverlays.tsx`
 - **Automatisiert:** nein
 - **Historie:** #16
 
@@ -171,7 +171,7 @@ eine andere Tonart als auf dem Blatt – bei Kapo 2 zwei Halbtöne zu hoch.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/songPdfOpts.ts`, `ui/teilen/sharePdf.ts`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useAppLogo.ts`
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/songPdfOpts.ts`, `ui/teilen/sharePdf.ts`, `ui/lied/chordPdf.ts`, `client/src/hooks/useAppLogo.ts`
 - **Automatisiert:** teilweise – `client/src/utils/chartPdfOptions.test.ts` (die Rechnung inkl. Kapo und der Weg über den Speicher); von Hand bleibt der Teilen-Dialog des Geräts und das Ansehen der fertigen Datei
 - **Historie:** #239
 
@@ -325,8 +325,8 @@ stimmt das Blatt weiter – ohne dass du irgendwo rechnen musst.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/hooks/useChartEditor.ts`, `client/src/utils/transpose.ts`, `client/src/utils/songVersions.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/activeSongView.ts`, `client/src/components/ChordEditor.tsx`, `server/src/services/setlistBuilder.ts`
-- **Automatisiert:** teilweise – `client/src/utils/transpose.test.ts` (ganzer Text, `{key}`-Zeile, 0 Halbtöne buchstäblich), `client/src/utils/songVersions.test.ts` (Tonart je Version), `client/src/utils/chartPdfOptions.test.ts` (Versatz je Version), `client/src/hooks/useChartEditor.test.ts` (öffnet in Blatt-Tonart, Wahl geht in neue Version mit), `client/src/components/ChordEditor.test.tsx` (Tonart-Zeile), `server/src/services/buildSong.head.test.ts` (`writtenKey` aus der Versions-Datei); von Hand bleibt, dass ChurchTools die Datei mit der `{key}`-Zeile wirklich so ablegt
+- **Betrifft:** `client/src/hooks/useChartEditor.ts`, `shared/lieder/transpose.ts`, `client/src/utils/songVersions.ts`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/activeSongView.ts`, `ui/lied/editor/ChordEditor.tsx`, `server/src/services/setlistBuilder.ts`
+- **Automatisiert:** teilweise – `shared/lieder/transpose.test.ts` (ganzer Text, `{key}`-Zeile, 0 Halbtöne buchstäblich), `client/src/utils/songVersions.test.ts` (Tonart je Version), `client/src/utils/chartPdfOptions.test.ts` (Versatz je Version), `client/src/hooks/useChartEditor.test.ts` (öffnet in Blatt-Tonart, Wahl geht in neue Version mit), `ui/lied/editor/ChordEditor.test.tsx` (Tonart-Zeile), `server/src/services/buildSong.head.test.ts` (`writtenKey` aus der Versions-Datei); von Hand bleibt, dass ChurchTools die Datei mit der `{key}`-Zeile wirklich so ablegt
 - **Historie:** #398 (20.09.2026), Wunsch Alwin nach einem Abend Zurückrechnen
 
 </details>
@@ -421,7 +421,7 @@ Text ändert sich durch den neuen Aufbau nichts.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/ChordEditor.module.scss`, `client/src/dev/DemoEditor.tsx`
+- **Betrifft:** `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordEditor.module.scss`, `client/src/dev/DemoEditor.tsx`
 - **Automatisiert:** weitgehend – `ChordEditor.test.tsx` (breit beide Karten, schmal Umschalter und Text-Karte
   bleibt erhalten, Rückgängig in der Text-Karte), `e2e/editor-aufbau.spec.ts` (iPad- und Handy-Breite, Titel
   nicht abgeschnitten, Speichern liefert den Text Zeichen für Zeichen). Von Hand: echtes iPad/Handy mit
@@ -451,7 +451,7 @@ ein Kärtchen so, wie man es erwartet – ein Kärtchen verschwindet immer ganz 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
+- **Betrifft:** `ui/lied/editor/ChordProInput.tsx`, `ui/lied/editor/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** teilweise – `e2e/editor-text.spec.ts` (Kärtchen und Bänder, Rücktaste löscht den ganzen
   Akkord, Rückgängig, Tippen davor, „× im Ablauf“, rohe Ansicht; Chromium in der CI, WebKit/Mac-Safari von Hand
   am 22.10.2026 grün). **Von Hand bleibt das echte iPad**: Bildschirmtastatur, Diktieren, Autokorrektur – die
@@ -483,7 +483,7 @@ offen, und man kann direkt weiterschreiben.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordFenster.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/transpose.ts`, `shared/lieder/chordpro.ts`
+- **Betrifft:** `ui/lied/editor/AkkordLeiste.tsx`, `ui/lied/editor/AkkordFenster.tsx`, `ui/lied/editor/ChordEditor.tsx`, `shared/lieder/transpose.ts`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** weitgehend – `transpose.test.ts` (`tonartAkkorde`, `akkordLesen`, `akkordTeile`),
   `chordpro.test.ts` (`akkordeImText`), `AkkordLeiste.test.tsx` (Gruppen, Gedrückthalten mit Fake-Timern),
   `AkkordFenster.test.tsx`, `ChordEditor.test.tsx` (Tonart aus `{key}`), `e2e/editor-akkorde.spec.ts`
@@ -514,7 +514,7 @@ kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die T
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
+- **Betrifft:** `ui/lied/editor/ChordProInput.tsx`, `ui/lied/editor/AkkordMenue.tsx`, `ui/lied/editor/ChordEditor.tsx`, `shared/lieder/chordpro.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (`akkordVerschieben`: Nachbarzeichen, Nachbar-Akkord,
   Zeilenrand), `e2e/editor-akkord-menue.spec.ts` (schieben + Menü wandert mit + Rahmen, Rückgängig, Entfernen,
   Ändern, Leiste und „Anderer Akkord“ ersetzen, Zeilenrand gesperrt). **Von Hand bleibt das echte iPad**: Auf
@@ -549,7 +549,7 @@ Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur i
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordProInput.tsx`, `ui/fenster/useTastaturOffen.ts`
+- **Betrifft:** `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/AkkordLeiste.tsx`, `ui/lied/editor/AkkordMenue.tsx`, `ui/lied/editor/ChordProInput.tsx`, `ui/fenster/useTastaturOffen.ts`
 - **Automatisiert:** weitgehend – `useTastaturOffen.test.tsx` (Formel, Schwelle für die Hardware-Tastatur-Leiste),
   `e2e/editor-schreiben.spec.ts` mit nachgestellter Tastatur (`visualViewport` schrumpft): Ablauf/Fassung weg, eine
   Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen, iOS verkleinert das
@@ -587,7 +587,7 @@ Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/ct/liedinfo.ts`, `shared/ct/liedinfoImport.ts`, `shared/ct/songselect.ts`, `client/src/utils/liedinfoFormular.ts`, `client/src/hooks/useLiedinfoQuelle.ts`, `client/src/components/LiedinfoKarte.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`
+- **Betrifft:** `shared/ct/liedinfo.ts`, `shared/ct/liedinfoImport.ts`, `shared/ct/songselect.ts`, `ui/lied/liedinfoFormular.ts`, `client/src/hooks/useLiedinfoQuelle.ts`, `ui/lied/editor/LiedinfoKarte.tsx`, `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordProInput.tsx`
 - **Automatisiert:** weitgehend – `liedinfo.test.ts` (Felder, zwei `{artist}`, Vergleich, Entfernen nur mit Wert,
   Grammatik = Ausblenden), `liedinfoFormular.test.ts` (Start, Vorbelegen, Änderung, Speichern: Erfolg, Feld trotz
   Speichern leer, Fehler, ohne Recht, nichts geändert), `LiedinfoKarte.test.tsx`, `ChordEditor.test.tsx` (Fehler →
@@ -627,7 +627,7 @@ Format-Menü hatte) und abgesetzt „Nur für andere Programme“. Im Text sind 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/EinfuegenMenue.tsx`, `client/src/utils/einfuegen.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `shared/lieder/chordpro.ts`, `shared/ct/liedinfo.ts`
+- **Betrifft:** `ui/lied/editor/EinfuegenMenue.tsx`, `shared/lieder/einfuegen.ts`, `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordProInput.tsx`, `shared/lieder/chordpro.ts`, `shared/ct/liedinfo.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (`neuerTeilName`, `ENDE_ZEILE` = Regel des Blatts),
   `liedinfo.test.ts` (`TONART_ZEILE`, `{key}` bleibt beim Speichern), `EinfuegenMenue.test.tsx` (alle Kopfangaben da,
   gegen `LIEDINFO_FELDER` geprüft; eigener Name), `ChordEditor.test.tsx`, `e2e/editor-einfuegen.spec.ts` (hinter der Zeile,
@@ -705,7 +705,7 @@ trotzdem mit allen Akkorden.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.module.scss`
+- **Betrifft:** `ui/lied/editor/ChordEditor.tsx`, `ui/lied/editor/ChordProInput.tsx`, `ui/lied/editor/ChordEditor.module.scss`
 - **Automatisiert:** weitgehend – `e2e/editor-nur-text.spec.ts` (Ausblenden und zurück samt unverändertem Speichern,
   Rücktaste und Entf neben einem unsichtbaren Akkord, markiertes Wort samt Akkord, Enter, Leerzeichen-Schwanz am
   Zeilenende unsichtbar und erhalten). **Von Hand bleibt** die

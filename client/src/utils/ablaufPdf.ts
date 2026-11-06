@@ -1,10 +1,10 @@
 import { jsPDF } from 'jspdf';
 import type { SetlistSong, SongDocument } from '@shared/types/index';
 import { loadSettings } from './chartSettings';
-import { generateChordPdf, type ChordPdfOptions } from './chordPdf';
+import { generateChordPdf, type ChordPdfOptions } from '@ui/lied/chordPdf';
 import { selectedVersionKey, versionText } from './songVersions';
 import type { StreamOwner } from './streamCompose';
-import { PAGE_H, PAGE_W } from './blattMasse';
+import { PAGE_H, PAGE_W } from '@ui/lied/blattMasse';
 
 /**
  * **Den Ablauf als EIN PDF teilen – jedes Lied so, wie es angezeigt wird** (07.10.2026).

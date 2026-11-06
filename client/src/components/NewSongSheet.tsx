@@ -31,9 +31,9 @@ import { LiedSchonVorhanden } from './LiedSchonVorhanden';
 import { Icon } from '@ui/icons/icons';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { SongFields } from './SongFields';
-import { ChordEditor } from './ChordEditor';
+import { ChordEditor } from '@ui/lied/editor/ChordEditor';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.
-import feld from './SongFields.module.scss';
+import feld from '@ui/lied/SongFields.module.scss';
 import {
   useCapabilities,
   useSongCategories,
@@ -49,7 +49,7 @@ import {
   namensWarnung,
   vorhandenesLied,
   type NeuesLiedFormular,
-} from '../utils/liedFormular';
+} from '@ui/lied/liedFormular';
 import styles from './NewSongSheet.module.scss';
 
 interface NewSongSheetProps {

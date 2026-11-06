@@ -1,4 +1,4 @@
-@use '@ui/design/mixins' as m;
+@use '../../design/mixins' as m;
 
 .overlay {
   // Vollbild (fixed) → hinter der halbtransparenten iOS-Tastatur schimmert nichts durch.

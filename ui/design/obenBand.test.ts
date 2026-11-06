@@ -36,7 +36,7 @@ describe('Abstand oben', () => {
   });
 
   it('der Lied-Editor beginnt unter dem Band', () => {
-    const editor = readFileSync(`${WURZEL}/client/src/components/ChordEditor.module.scss`, 'utf8');
+    const editor = readFileSync(`${WURZEL}/ui/lied/editor/ChordEditor.module.scss`, 'utf8');
     expect(editor).toContain('padding-top: var(--inhalt-pad-top)');
   });
 });

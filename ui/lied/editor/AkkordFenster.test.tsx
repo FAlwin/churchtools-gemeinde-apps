@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { knopfFolge } from '@ui/fenster/fenster.testutil';
+import { knopfFolge } from '../../fenster/fenster.testutil';
 
-vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+vi.mock('../../fenster/useOverlayKeyboardInset', () => ({
   useOverlayKeyboardInset: () => undefined,
 }));
 const { AkkordFenster } = await import('./AkkordFenster');

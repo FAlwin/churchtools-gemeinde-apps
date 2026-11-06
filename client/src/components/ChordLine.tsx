@@ -1,5 +1,5 @@
 import { parseLine } from '@shared/lieder/chordpro';
-import { transposeChord } from '../utils/transpose';
+import { transposeChord } from '@shared/lieder/transpose';
 import styles from './ChordLine.module.scss';
 
 interface ChordLineProps {

@@ -27,7 +27,7 @@ import {
   parseChordPro,
   parseMetadata,
   teileImFlow,
-} from '../utils/chordpro';
+} from '@shared/lieder/chordpro';
 import { LIEDINFO_ZEILE, TONART_ZEILE } from '@shared/ct/liedinfo';
 
 /** Imperative Schnittstelle für Toolbar-Aktionen (Einfügen / Rückgängig / Wiederholen). */

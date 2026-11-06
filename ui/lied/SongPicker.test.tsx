@@ -22,9 +22,25 @@ const eigenerText = vi.fn();
 const ccliText = vi.fn();
 const songSelectSuche = vi.fn();
 
-vi.mock('../hooks/useServices', () => ({
-  SONGSELECT_MIN_ZEICHEN: 3,
-  useCapabilities: () => caps(),
+/**
+ * Die Rechte kommen seit LW1a (06.11.2026) über den Liedzugriff der App (`useRechte`), die Daten über `liedDaten`.
+ * `caps()` liefert weiter die Form der Musik-App (`{ data: { canViewSongStatistics, canUseCcli } }`) – umgesetzt wie in
+ * `musikLiedZugriff`.
+ */
+vi.mock('./liedZugriff', () => ({
+  useLiedZugriff: () => ({
+    useRechte: () => {
+      const d = (
+        caps() as { data?: { canViewSongStatistics?: boolean; canUseCcli?: boolean } } | undefined
+      )?.data;
+      return d
+        ? { statistik: d.canViewSongStatistics ?? false, ccli: d.canUseCcli ?? false }
+        : undefined;
+    },
+    liedtextSuche: () => Promise.resolve([]),
+  }),
+}));
+vi.mock('./liedDaten', () => ({
   useSongLibrary: () => lib(),
   useSongUsage: (an: boolean) => usage(an),
   useLiedtextVorschau: (songId: number, enabled: boolean) => eigenerText(songId, enabled),

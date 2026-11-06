@@ -1,5 +1,5 @@
-import { Spinner } from '@ui/bedienung/Spinner';
-import { Icon, type IconName } from '@ui/icons/icons';
+import { Spinner } from './Spinner';
+import { Icon, type IconName } from '../icons/icons';
 import styles from './CenterMessage.module.scss';
 
 interface CenterMessageProps {

@@ -9,7 +9,7 @@ import {
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
 import { useAblaufAnlegen, useAblaufNeuAufsetzen, useAblaufVorlagen } from '../hooks/useServices';
 import { schluessel } from '../hooks/abfrageSchluessel';
-import { liedAnzahl } from '../utils/songFilter';
+import { liedAnzahl } from '@ui/lied/songFilter';
 
 interface Props {
   /** Die Veranstaltung ohne Ablauf. */

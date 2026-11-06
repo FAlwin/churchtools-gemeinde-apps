@@ -4,6 +4,15 @@ import { renderHook, act } from '@testing-library/react';
 import { useLiedSuche, SUCH_ENTPRELLUNG_MS } from './useLiedSuche';
 
 /**
+ * Ob es die Liedtext-Suche gibt, sagt seit LW1a (06.11.2026) der Liedzugriff der App (vorher `funktionen`): In der
+ * Musik-App mit Server ist sie da, in ChurchTools-Erweiterungen nicht. Standard hier: da.
+ */
+const zugriff = vi.hoisted((): { liedtextSuche: unknown } => ({
+  liedtextSuche: () => Promise.resolve([]),
+}));
+vi.mock('./liedZugriff', () => ({ useLiedZugriff: () => zugriff }));
+
+/**
  * Die Regeln des einen Suchfelds (#378, zweiter Anlauf 03.09.2026) – **hier liegt das Teure.**
  *
  * Jede SongSelect-Suche geht über ChurchTools weiter an CCLI (~800 ms gemessen) und zählt gegen die
@@ -213,5 +222,16 @@ describe('useLiedSuche – die Liedtextsuche läuft NIE von selbst', () => {
   it('gibt es auch ohne SongSelect – Suchen darf jeder', () => {
     const { result } = baue('gnade', true, false, false);
     expect(result.current.angebotLiedtexte).toBe(true);
+  });
+
+  it('fehlt ganz, wenn der Liedzugriff keine Liedtext-Suche hat (ChurchTools-Erweiterung)', () => {
+    const vorher = zugriff.liedtextSuche;
+    zugriff.liedtextSuche = undefined;
+    try {
+      const { result } = baue('gnade', true);
+      expect(result.current.angebotLiedtexte).toBe(false);
+    } finally {
+      zugriff.liedtextSuche = vorher;
+    }
   });
 });

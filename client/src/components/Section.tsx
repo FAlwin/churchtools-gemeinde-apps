@@ -1,5 +1,5 @@
 import type { ChordProSection } from '@shared/types/index';
-import { parseLine } from '../utils/chordpro';
+import { parseLine } from '@shared/lieder/chordpro';
 import { ChordLine } from './ChordLine';
 import styles from './Section.module.scss';
 

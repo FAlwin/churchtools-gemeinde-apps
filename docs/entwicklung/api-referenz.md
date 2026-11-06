@@ -120,7 +120,7 @@
   speichert je Nummer zwischen (`staleTime: Infinity`).
 - `GET  /api/songs/:songId/liedtext-vorschau` → `LiedtextVorschau` (`{chordpro: string | null}`) – das
   **rohe ChordPro des Original-Notenblatts** für die Vorschau (#379). Seit 04.09.2026 der ganze Text
-  statt eines gekürzten Anfangs; die **Abschnitte baut der Client** (`utils/liedtextTeile.ts`) mit dem
+  statt eines gekürzten Anfangs; die **Abschnitte baut der Client** (`shared/lieder/liedtextTeile.ts`) mit dem
   Parser des Blattes – kein zweiter Abschnitts-Parser auf dem Server. **Baut den Suchindex NICHT:** Steht
   er frisch, kommt die Antwort daraus (der Index hält das ChordPro; keine Anfrage an ChurchTools); sonst
   wird **genau dieses eine** Notenblatt geladen. `chordpro: null` heißt „hat keinen Text" – ein gültiger

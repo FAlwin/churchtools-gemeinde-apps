@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
-import { CenterMessage } from './CenterMessage';
+import { CenterMessage } from '../bedienung/CenterMessage';
 import { SongStatsBar } from './SongStatsBar';
 import { LiedSucheKopf } from './LiedSucheKopf';
 import { SucheAngebot } from './SucheAngebot';
@@ -8,18 +8,18 @@ import { LiedtextTrefferListe } from './LiedtextTrefferListe';
 import { SongSelectTrefferListe } from './SongSelectTrefferListe';
 import { LiedVorschau } from './LiedVorschau';
 import { LiedZeile } from './LiedZeile';
-import { Icon } from '@ui/icons/icons';
-import { chordproZuTeile } from '../utils/liedtextTeile';
-import { useSongFilter } from '../hooks/useSongFilter';
-import { useLiedSuche } from '../hooks/useLiedSuche';
-import { statLabel } from '../utils/songFilter';
+import { Icon } from '../icons/icons';
+import { chordproZuTeile } from '@shared/lieder/liedtextTeile';
+import { useSongFilter } from './useSongFilter';
+import { useLiedSuche } from './useLiedSuche';
+import { statLabel } from './songFilter';
 import {
-  useCapabilities,
   useLiedtextVorschau,
   useSongLibrary,
   useSongSelectLiedtext,
   useSongUsage,
-} from '../hooks/useServices';
+} from './liedDaten';
+import { useLiedZugriff } from './liedZugriff';
 import styles from './SongPicker.module.scss';
 
 interface SongPickerProps {
@@ -92,15 +92,15 @@ export function SongPicker({
   busy,
   autoFocus,
 }: SongPickerProps) {
-  const caps = useCapabilities(true);
-  const showStats = caps.data?.canViewSongStatistics ?? false;
+  const rechte = useLiedZugriff().useRechte();
+  const showStats = rechte?.statistik ?? false;
   const lib = useSongLibrary(true);
   const usage = useSongUsage(showStats);
   const f = useSongFilter(lib.data ?? [], usage.data, showStats, 'name', !usage.isError);
   const query = f.q.trim();
   const suche = useLiedSuche({
     eingabe: f.q,
-    canUseCcli: caps.data?.canUseCcli ?? false,
+    canUseCcli: rechte?.ccli ?? false,
     kannAnlegen: onSongSelectTreffer !== undefined,
     // „Leer" heißt: Die Liste steht und hat zu diesem Begriff nichts. Während des Ladens oder bei
     // einem Fehler ist sie nicht leer, sondern unbekannt – dann darf SongSelect nicht von selbst starten.

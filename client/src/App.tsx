@@ -46,7 +46,7 @@ import {
 } from './hooks/useServices';
 import { useSetlistLiveSync, useMarkSeenAfterShown } from './hooks/useSetlistLiveSync';
 import { Screen } from './components/Screen';
-import { CenterMessage } from './components/CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { TabBar, type TabId } from './components/TabBar';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Toast } from './components/Toast';

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
-import { flowSetzen } from '../client/src/utils/chordpro';
+import { flowSetzen } from '../shared/lieder/chordpro';
 
 /**
  * **Lied-Editor L2: Ablauf als Kärtchen** (22.10.2026, Alwin: „wie in ProPresenter“). Geprüft am gespeicherten

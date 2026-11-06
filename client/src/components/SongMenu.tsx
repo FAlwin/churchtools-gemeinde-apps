@@ -29,7 +29,7 @@ import type { SongSettings } from '../utils/chartSettings';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { hasStoredNotesForLevel as hasOwnNotes } from '../utils/annotationKeys';
-import { fmtPlayDate } from '../utils/songFilter';
+import { fmtPlayDate } from '@ui/lied/songFilter';
 import styles from './SongMenu.module.scss';
 
 /** Eine wählbare Fassung des Lieds (Original oder benannte Version). */

@@ -11,7 +11,7 @@ import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { CenterMessage } from '../components/CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { LiedVerknuepfen } from '../components/LiedVerknuepfen';

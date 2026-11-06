@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SongLibraryEntry } from '@shared/types/index';
-import type { SongUsageMap } from '../services/churchtoolsApi';
+import type { SongUsageMap } from './liedZugriff';
 import { filterSongs, liedAnzahl, statLabel, type SongFilterOpts } from './songFilter';
 
 const SONGS: SongLibraryEntry[] = [

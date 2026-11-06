@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { SongLibraryEntry } from '@shared/types/index';
-import type { SongUsageMap } from '../services/churchtoolsApi';
-import { filterSongs, type SongSort } from '../utils/songFilter';
+import type { SongUsageMap } from './liedZugriff';
+import { filterSongs, type SongSort } from './songFilter';
 
 /**
  * Gemeinsamer Zustand für die Lied-Liste (Bibliothek UND Auswahl beim Hinzufügen/Verknüpfen):

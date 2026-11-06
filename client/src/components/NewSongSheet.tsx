@@ -29,7 +29,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
 import { Icon } from '@ui/icons/icons';
-import { CenterMessage } from './CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { SongFields } from './SongFields';
 import { ChordEditor } from './ChordEditor';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.

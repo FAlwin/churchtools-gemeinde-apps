@@ -253,7 +253,7 @@ Lied anlegen …"), Erfolgsansicht mit drei Wegen (öffnen / noch eins / fertig)
 > „Bewusst NICHT gebaut" unten ist seit 18.09.2026 überholt (#391): Auch „Lied verknüpfen" gibt jetzt einen
 > `onSongSelectTreffer`-Weg mit. Die Entscheidungen dazu stehen in #378,
 > `docs/entwicklung/entscheidungen.md` und im CHANGELOG; die Regeln selbst in
-> `client/src/hooks/useLiedSuche.ts`.
+> `ui/lied/useLiedSuche.ts`.
 
 Die Regeln liegen bewusst **nicht** in der Komponente: `utils/liedFormular.ts` (Formularstand, Warnung,
 Auftrag, Entscheidung über das Notenblatt) und `hooks/useNeuesLied.ts` (die Abfolge samt

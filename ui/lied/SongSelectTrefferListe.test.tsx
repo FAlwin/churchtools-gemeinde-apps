@@ -14,8 +14,7 @@ import type { SongSelectSuchergebnis } from '@shared/types/index';
  * den geteilten Typ typisiert.
  */
 const suche = vi.fn();
-vi.mock('../hooks/useServices', () => ({
-  SONGSELECT_MIN_ZEICHEN: 3,
+vi.mock('./liedDaten', () => ({
   useSongSelectSuche: () => suche(),
 }));
 

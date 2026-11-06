@@ -40,7 +40,7 @@ vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
 }));
 
 const { ChordEditor } = await import('./ChordEditor');
-const { flowSetzen, neuerTeilName } = await import('../utils/chordpro');
+const { flowSetzen, neuerTeilName } = await import('@shared/lieder/chordpro');
 
 function zeige(props: Partial<Parameters<typeof ChordEditor>[0]> = {}) {
   const onSave = vi.fn();

@@ -215,7 +215,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   Ziel-Element, Auto-Skip fehlender Schritte.
 - **Das eine Suchfeld (#378, zweiter Anlauf 03.09.2026)** – hier liegt das Teure, denn die Quellen kosten
   sehr Unterschiedliches:
-  - `hooks/useLiedSuche` (jsdom, **Fake-Timer**): **SongSelect fragt von selbst NUR, wenn die Bibliothek
+  - `ui/lied/useLiedSuche` (jsdom, **Fake-Timer**): **SongSelect fragt von selbst NUR, wenn die Bibliothek
     zum Begriff leer ist** – findet sie etwas, läuft keine CCLI-Anfrage, nur das Angebot steht. Nie unter
     drei Zeichen, nie ohne Lizenz **und** Anlege-Weg (`kannAnlegen`), eine unvollständige CCLI-Nummer nicht
     von selbst (7 Stellen, gemessen) – über das Angebot aber doch. Ein abgeschickter Begriff gilt nur,
@@ -225,11 +225,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     erledigt die Entprellung die Arbeit, die der Test der Regel zuschreibt. Und: **Der Startwert ist nicht
     entprellt** (`useEntprellt` gibt ihn sofort weiter) – ein Test, der „vorher leer" am Startwert prüft,
     prüft eine Annahme, die der Hook nicht macht; das ist am 03.09.2026 einmal passiert.
-  - `components/LiedSucheKopf`: ein Platzhalter, die Eingabetaste schickt nur an SongSelect, wenn es den
+  - `ui/lied/LiedSucheKopf`: ein Platzhalter, die Eingabetaste schickt nur an SongSelect, wenn es den
     Weg gibt, und es gibt **keinen** Umschalter und keinen Such-Knopf mehr (Gegenprobe zur Entscheidung).
-  - `components/SucheAngebot`: zeigt den Text, meldet den Tipp – die Regeln, WANN er erscheint, liegen im
+  - `ui/lied/SucheAngebot`: zeigt den Text, meldet den Tipp – die Regeln, WANN er erscheint, liegen im
     Hook.
-  - `components/LiedZeile` (04.09.2026): **Zeile öffnet die Vorschau, Plus fügt ein – getrennt.** Ein Tipp
+  - `ui/lied/LiedZeile` (04.09.2026): **Zeile öffnet die Vorschau, Plus fügt ein – getrennt.** Ein Tipp
     auf die Zeile darf NICHT einfügen, das Plus NICHT die Vorschau öffnen; ohne `aktion` gibt es kein
     Plus (Liederheft). Genau diese Trennung ist der Grund für zwei Knöpfe.
   - **Verfügbarkeit (#177, 05.09.2026):** Server `services/absences.test` – Marker entscheidet „eigene",
@@ -315,12 +315,12 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Serverseitig `services/arrangementFileVerwaltung.test.ts` → `originalNotenblattSchreiben`: erst
     hochladen, dann das alte Original löschen (am protokollierten `fetch`), Versionen und PDF bleiben,
     scheitert der Upload wird nichts gelöscht.
-  - `utils/liedtextTeile` (04.09.2026): ChordPro → Abschnitte für die Vorschau, **mit dem Parser des
+  - `shared/lieder/liedtextTeile` (04.09.2026): ChordPro → Abschnitte für die Vorschau, **mit dem Parser des
     Blattes** – beide Dialekte (Standard `{start_of_verse}`, SongSelect `{comment: …}`), Akkorde raus,
     Zeilenumbrüche bleiben, ein Lied nur aus Direktiven ergibt keine Abschnitte.
-  - `utils/songFilter`: **die CCLI-Nummer gehört zur Suche** – Treffer über die Nummer und ihren Anfang,
+  - `ui/lied/songFilter`: **die CCLI-Nummer gehört zur Suche** – Treffer über die Nummer und ihren Anfang,
     Nummern-Treffer zählen wie Titel-Treffer (vor Autor-Treffern), `null` stürzt nicht.
-  - `components/SongSelectTrefferListe` + `components/LiedtextTrefferListe`: die Trefferlisten samt der
+  - `ui/lied/SongSelectTrefferListe` + `ui/lied/LiedtextTrefferListe`: die Trefferlisten samt der
     **Regression zum Absturz vom 13.08.2026** (Treffer kommen aus `data.treffer`, nicht aus dem
     Antwort-Objekt), der Unterscheidung „nichts gefunden" / „konnte nicht suchen" (#270) und der
     Gruppen-Überschrift („SongSelect · N Treffer zu …"). Beide rendern `LiedZeile`: Zeile → Vorschau, Plus →
@@ -328,14 +328,14 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     hat kein Plus. Der Leer-Begriff-Zweig ist weg: Beide werden nur noch mit abgeschicktem Begriff gerendert.
 
 - **Die Vorschau vor dem Einfügen (#379):**
-  - `components/SongPicker`: **Beim Durchsehen der Liste wird KEIN Liedtext abgefragt** – geprüft am
+  - `ui/lied/SongPicker`: **Beim Durchsehen der Liste wird KEIN Liedtext abgefragt** – geprüft am
     `enabled`-Argument beider Hooks, denn eine Vorschau je Zeile hieße eine Anfrage je Zeile. Bei CCLI ist
     das mehr als Sparsamkeit: Aufs Kontingent zählt ein Textabruf laut CCLI nicht, ob er in der
     Nutzungs-Historie erscheint, ist offen. Dazu die zwei
     Wege, die beide gewollt sind: **Antippen → Vorschau** und **„+" → sofort einfügen** (der zweite darf
     keine Textabfrage auslösen). Der Hook `useLiedSuche` ist hier **nicht gemockt** – ein Mock müsste
     seine Quellen-Logik nachbauen; stattdessen läuft er echt, mit Fake-Timern für die Entprellung.
-  - `components/LiedVorschau`: **handlungsfähig in jedem Zustand** – ohne Liedtext, bei einem Ladefehler
+  - `ui/lied/LiedVorschau`: **handlungsfähig in jedem Zustand** – ohne Liedtext, bei einem Ladefehler
     und während des Holens muss Einfügen möglich bleiben. „Kein Text vorhanden", ein **Fehler** und eine
     leere Anzeige sind drei verschiedene Aussagen. Und: **der CCLI-Hinweis wird angezeigt**, wenn die
     Quelle ihn mitschickt – das ist eine Lizenzbedingung, keine Zierde.

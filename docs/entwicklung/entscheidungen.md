@@ -231,8 +231,8 @@ Reiter öffnet dasselbe Formular über `startTreffer` gefüllt.
 
 | Wo                                              | Was                                                                        |
 | ----------------------------------------------- | -------------------------------------------------------------------------- |
-| `hooks/useLiedSuche.ts`                         | die **Regeln**: welche Quelle gilt, was an sie geschickt wird, Entprellung |
-| `components/LiedSucheKopf.tsx`                  | Feld + Umschalter (die Optik, an allen drei Stellen dieselbe)              |
+| `ui/lied/useLiedSuche.ts`                       | die **Regeln**: welche Quelle gilt, was an sie geschickt wird, Entprellung |
+| `ui/lied/LiedSucheKopf.tsx`                     | Feld + Umschalter (die Optik, an allen drei Stellen dieselbe)              |
 | `SongSelectTrefferListe`/`LiedtextTrefferListe` | die zwei Trefferlisten, die überall gleich aussehen                        |
 | die Aufrufer                                    | **nur** die Bibliotheksliste – sie ist je Ansicht verschieden              |
 

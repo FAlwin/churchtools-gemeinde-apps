@@ -28,7 +28,7 @@ bei jedem Testlauf mit dabei.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/SongPicker.tsx`
+- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/lied/SongPicker.tsx`
 - **Automatisiert:** teilweise – `server/src/services/agendaPayload.test.ts`
 - **Historie:** –
 
@@ -188,7 +188,7 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/NewSongSheet.tsx`, `ui/lied/SongPicker.tsx`
 - **Automatisiert:** teilweise – `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
 - **Historie:** #391 (18.09.2026)
 

@@ -1,4 +1,4 @@
-import { parseLine } from '../utils/chordpro';
+import { parseLine } from '@shared/lieder/chordpro';
 import { transposeChord } from '../utils/transpose';
 import styles from './ChordLine.module.scss';
 

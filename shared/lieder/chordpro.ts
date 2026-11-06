@@ -6,7 +6,7 @@
  * Reine Funktionen, keine React-Abhängigkeit. Übernommen aus dem Design-Prototyp
  * und um den SongSelect-Dialekt + Typen erweitert.
  */
-import type { ChordProSection } from '@shared/types/index';
+import type { ChordProSection } from '../types/index';
 
 /** Ein Akkord-/Text-Paar einer Zeile. */
 interface ChordPair {

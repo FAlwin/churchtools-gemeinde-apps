@@ -38,7 +38,7 @@ const TREFFER: SongSelectTreffer = {
   hasChordSheet: true,
 };
 
-vi.mock('./SongPicker', () => ({
+vi.mock('@ui/lied/SongPicker', () => ({
   SongPicker: (p: {
     onPick?: (arrangementId: number, songName: string) => void;
     neuesLied?: { label: string; onClick: (name: string) => void };

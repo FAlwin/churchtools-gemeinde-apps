@@ -63,8 +63,8 @@ Termine, nicht nur über den Zeitraum; **künftige** Termine zählen nicht mit.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/pages/AllSongs.tsx`, `client/src/utils/songFilter.ts`, `client/src/components/SongStatsBar.tsx`, `server/src/services/setlistBuilder.ts`
-- **Automatisiert:** teilweise – `client/src/utils/songFilter.test.ts` (auch: Datum bei A–Z, über alle Termine),
+- **Betrifft:** `client/src/pages/AllSongs.tsx`, `ui/lied/songFilter.ts`, `ui/lied/SongStatsBar.tsx`, `server/src/services/setlistBuilder.ts`
+- **Automatisiert:** teilweise – `ui/lied/songFilter.test.ts` (auch: Datum bei A–Z, über alle Termine),
   `server/src/services/songUsage.test.ts`, `e2e/lied-statistik.spec.ts` („zuletzt …“ ohne Umschalten)
 - **Historie:** #157, #158; „zuletzt gesungen“ in jeder Zeile 30.10.2026 (Alwin beim Planen)
 
@@ -117,8 +117,8 @@ Mal dauert es ein paar Sekunden (die App holt dafür jeden Liedtext einmal), dan
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `server/src/services/songTextIndex.ts`, `server/src/services/gebuendelterLauf.ts`, `server/src/services/mapLimit.ts`, `client/src/components/LiedtextTrefferListe.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/pages/AllSongs.tsx`, `client/src/hooks/useServices.ts`
-- **Automatisiert:** teilweise – `server/src/services/songTextIndex.test.ts` (Akkorde ersatzlos entfernen, ein Aufbau bei fünf Suchen, Drosselung, Sperrfrist mit altem Index #456, nur eigene Lieder #458), `server/src/services/gebuendelterLauf.test.ts`, `client/src/hooks/useLiedSuche.test.ts` (Schwelle und dass ein Reiterwechsel allein nichts auslöst), `client/src/components/LiedtextTrefferListe.test.tsx`; von Hand bleibt das Zusammenspiel mit ChurchTools und die Wartezeit beim ersten Aufbau
+- **Betrifft:** `server/src/services/songTextIndex.ts`, `server/src/services/gebuendelterLauf.ts`, `server/src/services/mapLimit.ts`, `ui/lied/LiedtextTrefferListe.tsx`, `ui/lied/useLiedSuche.ts`, `client/src/pages/AllSongs.tsx`, `client/src/hooks/useServices.ts`
+- **Automatisiert:** teilweise – `server/src/services/songTextIndex.test.ts` (Akkorde ersatzlos entfernen, ein Aufbau bei fünf Suchen, Drosselung, Sperrfrist mit altem Index #456, nur eigene Lieder #458), `server/src/services/gebuendelterLauf.test.ts`, `ui/lied/useLiedSuche.test.ts` (Schwelle und dass ein Reiterwechsel allein nichts auslöst), `ui/lied/LiedtextTrefferListe.test.tsx`; von Hand bleibt das Zusammenspiel mit ChurchTools und die Wartezeit beim ersten Aufbau
 - **Historie:** #322, #378
 
 </details>
@@ -174,8 +174,8 @@ gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/components/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`, `client/src/components/LiedVerknuepfen.tsx`
-- **Automatisiert:** teilweise – `client/src/utils/liedFormular.test.ts`, `client/src/hooks/useNeuesLied.test.tsx` (Gerüst vs. geholtes Blatt, Speichern zieht das Ergebnis nach), `client/src/components/NewSongSheet.test.tsx` (Knopf, Editor ohne Versionsname, nichts öffnet sich von selbst), `server/src/services/arrangementFileVerwaltung.test.ts` (`originalNotenblattSchreiben`: erst hochladen, dann ersetzen; Versionen bleiben), `client/src/components/SongSelectTrefferListe.test.tsx`, `server/src/services/songVerwaltung.test.ts`; von Hand bleibt das Zusammenspiel mit ChurchTools und CCLI
+- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `ui/lied/SongPicker.tsx`, `ui/lied/useLiedSuche.ts`, `ui/lied/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`, `client/src/components/LiedVerknuepfen.tsx`
+- **Automatisiert:** teilweise – `client/src/utils/liedFormular.test.ts`, `client/src/hooks/useNeuesLied.test.tsx` (Gerüst vs. geholtes Blatt, Speichern zieht das Ergebnis nach), `client/src/components/NewSongSheet.test.tsx` (Knopf, Editor ohne Versionsname, nichts öffnet sich von selbst), `server/src/services/arrangementFileVerwaltung.test.ts` (`originalNotenblattSchreiben`: erst hochladen, dann ersetzen; Versionen bleiben), `ui/lied/SongSelectTrefferListe.test.tsx`, `server/src/services/songVerwaltung.test.ts`; von Hand bleibt das Zusammenspiel mit ChurchTools und CCLI
 - **Historie:** #322, #378 (Wegwahl weg, Suche im Einfüge-Dialog)
 
 </details>
@@ -216,8 +216,8 @@ und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, su
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/hooks/useLiedSuche.ts`, `client/src/components/LiedSucheKopf.tsx`, `client/src/components/SucheAngebot.tsx`, `client/src/components/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/LiedVerknuepfen.tsx`
-- **Automatisiert:** teilweise – `client/src/hooks/useLiedSuche.test.ts` (SongSelect fragt von selbst NUR bei leerer Bibliothek, nie unter drei Zeichen, nie ohne Lizenz/Anlege-Weg; Angebot schickt sofort; Treffer gelten nur, solange der Begriff steht; Liedtexte nie von selbst), `client/src/components/SongPicker.test.tsx` (Angebot statt Anfrage bei Treffern, automatische Suche bei leerer Bibliothek, kein SongSelect ohne Anlege-Weg, kein Umschalter), `client/src/components/LiedSucheKopf.test.tsx`, `client/src/components/SucheAngebot.test.tsx`, `client/src/utils/songFilter.test.ts` (die Einzahl); von Hand bleibt das Zusammenspiel gegen echtes SongSelect und dass im Liederheft wirklich kein SongSelect erscheint (beim Verknüpfen gibt es ihn seit #391 – TF-EDIT-07)
+- **Betrifft:** `ui/lied/useLiedSuche.ts`, `ui/lied/LiedSucheKopf.tsx`, `ui/lied/SucheAngebot.tsx`, `ui/lied/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/LiedVerknuepfen.tsx`
+- **Automatisiert:** teilweise – `ui/lied/useLiedSuche.test.ts` (SongSelect fragt von selbst NUR bei leerer Bibliothek, nie unter drei Zeichen, nie ohne Lizenz/Anlege-Weg; Angebot schickt sofort; Treffer gelten nur, solange der Begriff steht; Liedtexte nie von selbst), `ui/lied/SongPicker.test.tsx` (Angebot statt Anfrage bei Treffern, automatische Suche bei leerer Bibliothek, kein SongSelect ohne Anlege-Weg, kein Umschalter), `ui/lied/LiedSucheKopf.test.tsx`, `ui/lied/SucheAngebot.test.tsx`, `ui/lied/songFilter.test.ts` (die Einzahl); von Hand bleibt das Zusammenspiel gegen echtes SongSelect und dass im Liederheft wirklich kein SongSelect erscheint (beim Verknüpfen gibt es ihn seit #391 – TF-EDIT-07)
 - **Historie:** #378 (erster Anlauf Umschalter 14.08.2026, umgebaut nach Rückmeldung Alwin 03.09.2026)
 
 </details>
@@ -417,8 +417,8 @@ Durchsehen der Liste passiert von allein nichts.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/LiedVorschau.tsx`, `client/src/components/LiedZeile.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useServices.ts`, `server/src/services/ctSongSelect.ts`, `server/src/services/songTextIndex.ts`, `server/src/controllers/liederController.ts`, `server/src/controllers/songSelectController.ts`
-- **Automatisiert:** teilweise – `client/src/components/LiedZeile.test.tsx` (Zeile = Vorschau, Plus = einfügen, getrennt), `client/src/components/SongPicker.test.tsx` (in der Liste wird NICHT abgefragt, Antippen führt in die Vorschau, Plus fügt sofort ein, Plus an der SongSelect-Zeile öffnet das Formular ohne Textabruf), `client/src/components/LiedVorschau.test.tsx` (ohne Text bleibt Einfügen möglich, Fehler ≠ „kein Text", der CCLI-Hinweis wird gezeigt), `server/src/services/songTextIndex.test.ts` (Index wird benutzt statt gebaut, genau ein Download); von Hand bleibt das Zusammenspiel mit CCLI und die Frage, ob die Vorschau im Gottesdienst als Umweg stört
+- **Betrifft:** `ui/lied/LiedVorschau.tsx`, `ui/lied/LiedZeile.tsx`, `ui/lied/SongPicker.tsx`, `client/src/hooks/useServices.ts`, `server/src/services/ctSongSelect.ts`, `server/src/services/songTextIndex.ts`, `server/src/controllers/liederController.ts`, `server/src/controllers/songSelectController.ts`
+- **Automatisiert:** teilweise – `ui/lied/LiedZeile.test.tsx` (Zeile = Vorschau, Plus = einfügen, getrennt), `ui/lied/SongPicker.test.tsx` (in der Liste wird NICHT abgefragt, Antippen führt in die Vorschau, Plus fügt sofort ein, Plus an der SongSelect-Zeile öffnet das Formular ohne Textabruf), `ui/lied/LiedVorschau.test.tsx` (ohne Text bleibt Einfügen möglich, Fehler ≠ „kein Text", der CCLI-Hinweis wird gezeigt), `server/src/services/songTextIndex.test.ts` (Index wird benutzt statt gebaut, genau ein Download); von Hand bleibt das Zusammenspiel mit CCLI und die Frage, ob die Vorschau im Gottesdienst als Umweg stört
 - **Historie:** #379 (als Zwischenschritt umgebaut, Rückmeldung Alwin 14.08.2026; zwei Knöpfe je Zeile, Rückmeldung Alwin 04.09.2026)
 
 </details>

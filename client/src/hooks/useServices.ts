@@ -2,15 +2,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  LIEDTEXT_SUCHE_MIN_ZEICHEN,
   type AblaufQuelle,
   type AgendaItem,
   type ArrangementAuftrag,
   type LiedAnlegenAuftrag,
   type LiedStammdaten,
-  type SongSelectSuchergebnis,
 } from '@shared/types/index';
-import { sucheArt } from '../utils/liedFormular';
 import { plusTage } from '@shared/ct/datum';
 import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
@@ -19,6 +16,20 @@ import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 import { agendaAbfrage, liedblattAbfrage, schluessel } from './abfrageSchluessel';
 import { heuteImKalender } from '@shared/ct/zeit';
+
+/**
+ * Die Abfragen der Liedwahl liegen seit LW1a (06.11.2026) in `ui/lied/liedDaten.ts` – hier nur weitergereicht, damit
+ * die Musik-App sie an gewohnter Stelle findet. Sie lesen über den Liedzugriff (`musikLiedZugriff`, in `main.tsx` gegeben).
+ */
+export {
+  useLiedtextSuche,
+  useLiedtextVorschau,
+  useSongLibrary,
+  useSongSelectLiedtext,
+  useSongSelectSuche,
+  useSongUsage,
+} from '@ui/lied/liedDaten';
+export { SONGSELECT_MIN_ZEICHEN } from '@ui/lied/suchRegeln';
 
 // Kurze Frische für die aktuellen (aktiven) Daten: So erscheinen ChurchTools-Änderungen
 // (verschobene Punkte, geänderte Setlist) zeitnah – die Query gilt schon nach 30 s als veraltet
@@ -370,16 +381,6 @@ export function useCapabilities(enabled: boolean) {
   });
 }
 
-/** Lädt alle Lieder (für die „Alle Lieder"-Ansicht). */
-export function useSongLibrary(enabled: boolean) {
-  return useQuery({
-    queryKey: schluessel.liederliste(),
-    queryFn: () => api.getSongLibrary(),
-    enabled,
-    staleTime: 1000 * 60 * 10,
-  });
-}
-
 /**
  * Lädt die Lied-Kategorien, in denen der Nutzer anlegen/ändern darf (#322).
  *
@@ -394,103 +395,6 @@ export function useSongCategories(enabled: boolean) {
     queryFn: () => api.getSongCategories(),
     enabled,
     staleTime: 1000 * 60 * 5,
-  });
-}
-
-/**
- * Sucht im **Liedtext** des eigenen Bestands (#322).
- *
- * **Erst auf Verlangen**, nicht automatisch: Der erste Aufruf lässt den Server einen Index bauen (ein
- * Datei-Download je Lied). Das ist zu teuer, um es bei jedem Tippen im Liederheft mitlaufen zu lassen –
- * die Titelsuche filtert ohnehin schon lokal und deckt den Normalfall ab. Das Verlangen ist der Tipp auf
- * das Angebot „Auch in den Liedtexten nach … suchen" (`SucheAngebot`, #378) – im Liederheft wie im
- * Einfüge-Dialog; die Schwelle bleibt.
- *
- * Danach ist es billig: Der Index hält eine Stunde, weitere Suchen antworten aus dem Speicher.
- */
-export function useLiedtextSuche(begriff: string, enabled: boolean) {
-  const q = begriff.trim();
-  return useQuery({
-    queryKey: ['song-text-search', q],
-    queryFn: () => api.sucheImLiedtext(q),
-    enabled: enabled && q.length >= LIEDTEXT_SUCHE_MIN_ZEICHEN,
-    staleTime: 1000 * 60 * 10,
-    // Kein automatischer zweiter Versuch: Ist ChurchTools gedrosselt (503), hilft Wiederholen nicht –
-    // die Meldung ist die nützlichere Antwort.
-    retry: false,
-  });
-}
-
-/**
- * Der Textanfang **eines** Liedes für die Vorschau (#379) – **nur auf Verlangen.**
- *
- * `enabled` steuert der Aufrufer: Erst wenn jemand „Text zeigen" antippt, geht die Anfrage los. Eine
- * Vorschau je Listenzeile wäre eine Anfrage je Zeile – für eine Liste, die man nur durchsieht.
- *
- * **`staleTime: Infinity`**, weil Liedtexte sich praktisch nie ändern: Wer zwei gleichnamige Lieder
- * vergleicht, klappt sie mehrfach auf und zu – das darf nicht jedes Mal fragen. Und **kein Retry**: Ein
- * Lied ohne Notenblatt bleibt eines, da hilft Wiederholen nicht.
- */
-export function useLiedtextVorschau(songId: number, enabled: boolean) {
-  return useQuery({
-    queryKey: ['liedtext-vorschau', songId],
-    queryFn: () => api.holeLiedtextVorschau(songId),
-    enabled,
-    staleTime: Infinity,
-    retry: false,
-  });
-}
-
-/**
- * Der Liedtext eines **SongSelect**-Liedes für die Vorschau (#379).
- *
- * **`staleTime: Infinity` und `gcTime` lang – das ist hier keine Feinheit, sondern die Vorkehrung.** Aufs
- * Kontingent zählt ein Textabruf laut CCLI nicht, ob er in der Nutzungs-Historie erscheint, ist offen;
- * deshalb darf Auf- und Zuklappen desselben Liedes **nicht** erneut fragen. Ein Abruf je Nummer und Sitzung.
- *
- * `enabled` steuert der Aufrufer: erst wenn ein Treffer wirklich geöffnet wird.
- */
-export function useSongSelectLiedtext(songNumber: number | null, enabled: boolean) {
-  return useQuery({
-    queryKey: ['songselect-liedtext', songNumber],
-    queryFn: () => api.holeSongSelectLiedtext(songNumber as number),
-    enabled: enabled && songNumber !== null,
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 60,
-    retry: false,
-  });
-}
-
-/** Ab wie vielen Zeichen bei CCLI gesucht wird – kürzere Eingaben ergeben nur Rauschen. */
-export const SONGSELECT_MIN_ZEICHEN = 3;
-
-/**
- * Sucht bei CCLI SongSelect nach einem Titel (#322).
- *
- * **Jede Suche geht über ChurchTools an CCLI** – deshalb wird sie nicht bei jedem Tastendruck
- * ausgelöst: Der Aufrufer gibt den Suchbegriff entprellt herein, und unter drei Zeichen läuft gar
- * nichts. **Kein automatischer zweiter Versuch:** Ein Fehler von CCLI (keine Lizenz, Aussetzer)
- * wiederholt sich meist, und die Meldung ist hier die nützlichere Antwort als ein stiller Retry.
- */
-export function useSongSelectSuche(eingabe: string, enabled: boolean) {
-  const begriff = eingabe.trim();
-  const art = sucheArt(begriff);
-  return useQuery({
-    // Die Art gehört in den Schlüssel: „5841527" und ein gleichnamiger Titel sind zwei Abfragen.
-    queryKey: ['songselect-search', art.art, begriff],
-    queryFn: async (): Promise<SongSelectSuchergebnis> => {
-      if (art.art === 'titel') return api.sucheSongSelect(art.titel);
-      /**
-       * **Eine CCLI-Nummer ist keine Suche, sondern eine Abfrage** – sie liefert genau ein Lied.
-       * Das Ergebnis wird in dieselbe Form gebracht, damit die Trefferliste nicht zwei Fälle kennen
-       * muss: ein Treffer, vollständig.
-       */
-      const lied = await api.getSongSelectSong(art.nummer);
-      return { treffer: [lied], gesamt: 1, vollstaendig: true };
-    },
-    enabled: enabled && begriff.length >= SONGSELECT_MIN_ZEICHEN,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
   });
 }
 
@@ -684,16 +588,6 @@ export function useLiedAnlegen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
     },
-  });
-}
-
-/** Lädt die Song-Nutzungsdaten (Häufigkeit/zuletzt) im Hintergrund. */
-export function useSongUsage(enabled: boolean) {
-  return useQuery({
-    queryKey: schluessel.liedNutzung(),
-    queryFn: () => api.getSongUsage(),
-    enabled,
-    staleTime: 1000 * 60 * 30,
   });
 }
 

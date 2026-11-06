@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Service } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { CenterMessage } from '../components/CenterMessage';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from '@ui/bedienung/Spinner';
@@ -16,7 +16,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
 import { monatLabel, monatVon } from '@shared/ct/monate';
 import { saveServiceOffline } from '../services/offline';
-import { liedAnzahl } from '../utils/songFilter';
+import { liedAnzahl } from '@ui/lied/songFilter';
 import { queryClient } from '../queryClient';
 import styles from './Agenda.module.scss';
 import { standKurz } from '../utils/zeitstempel';

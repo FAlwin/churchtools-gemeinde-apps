@@ -4,7 +4,7 @@ import type { LiedWahlArgs } from '@ui/ablauf/PunktFenster';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import styles from '@ui/ablauf/PunktFenster.module.scss';
-import { SongPicker } from './SongPicker';
+import { SongPicker } from '@ui/lied/SongPicker';
 import { NewSongSheet } from './NewSongSheet';
 import { useCapabilities } from '../hooks/useServices';
 

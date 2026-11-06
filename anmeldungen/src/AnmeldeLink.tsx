@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
@@ -49,19 +50,19 @@ export function AnmeldeLinkKarte({
   /** Öffnet das Freigeben-Fenster; fehlt ohne Recht zum Einrichten. */
   onEinrichten?: () => void;
 }) {
-  const [pruefung, setPruefung] = useState<Pruefung>({ art: 'prueft' });
-
-  useEffect(() => {
-    let aktuell = true;
-    setPruefung({ art: 'prueft' });
-    anmeldeBedingungen(id).then(
-      (fehlt) => aktuell && setPruefung({ art: 'fertig', fehlt }),
-      () => aktuell && setPruefung({ art: 'unbekannt' }),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [id, stand]);
+  const geprueft = useLaden(
+    () => anmeldeBedingungen(id),
+    // `stand` steht nur in den deps: Nach jedem Neuladen der Seite wird neu geprüft, gelesen wird es nicht.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, stand],
+  ).stand;
+  // Lässt es sich nicht prüfen, steht der Link ohne Warnung da („unbekannt“).
+  const pruefung: Pruefung =
+    geprueft.art === 'fertig'
+      ? { art: 'fertig', fehlt: geprueft.daten }
+      : geprueft.art === 'fehler'
+        ? { art: 'unbekannt' }
+        : { art: 'prueft' };
 
   const nurZeitraum =
     pruefung.art === 'fertig' && pruefung.fehlt.length === 1 && pruefung.fehlt[0] === ZEITRAUM_ZU;

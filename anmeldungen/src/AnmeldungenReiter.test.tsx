@@ -12,6 +12,7 @@ import * as M from './mitglieder';
 import * as R from './rundmail';
 import * as E from './einrichten';
 import * as T from '@ui/teilen/sharePdf';
+import * as LP from '@ui/teilen/listenPdf';
 import {
   FELDER,
   STICHTAG,
@@ -42,6 +43,11 @@ vi.mock('./vonHand', () => ({
 }));
 const hm = vi.mocked(H);
 vi.mock('./mitglieder', () => ({ gruppenfelderLaden: vi.fn() }));
+// Das PDF der Druckliste wird echt gebaut – nur das Scheitern stellt ein Test ein.
+vi.mock('@ui/teilen/listenPdf', async (original) => {
+  const echt = await original<typeof import('@ui/teilen/listenPdf')>();
+  return { ...echt, listenPdf: vi.fn(echt.listenPdf) };
+});
 vi.mock('./rundmail', () => ({
   platzhalterLaden: vi.fn(),
   vorschauLaden: vi.fn(),
@@ -1139,6 +1145,29 @@ describe('Druckliste (A8-1)', () => {
     expect(within(fenster()).getByRole('status').textContent).toBe('Heruntergeladen');
     expect(tm.downloadPdf.mock.calls[0][1]).toBe('Kinderfreizeit – Teilnehmer');
     expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+  });
+
+  it('„Heruntergeladen“ gilt nur für das PDF, das heruntergeladen wurde – eine andere Wahl nimmt es weg', async () => {
+    zeigen(fertig());
+    await oeffnen();
+    fireEvent.click(within(fenster()).getByRole('button', { name: 'Herunterladen' }));
+    expect(within(fenster()).getByRole('status').textContent).toBe('Heruntergeladen');
+    fireEvent.click(within(fenster()).getByRole('button', { name: 'Auch Warteliste (2)' }));
+    await pdfFertig();
+    expect(within(fenster()).queryByRole('status')).toBeNull();
+  });
+
+  it('lässt sich das PDF nicht bauen: Fehler im Fenster, kein Teilen', async () => {
+    vi.mocked(LP.listenPdf).mockRejectedValueOnce(new Error('jsPDF'));
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: 'Druckliste' }));
+    expect((await within(fenster()).findByRole('alert')).textContent).toMatch(
+      /antwortet gerade nicht/,
+    );
+    expect(
+      within(fenster()).getByRole<HTMLButtonElement>('button', { name: 'PDF wird erstellt …' })
+        .disabled,
+    ).toBe(true);
   });
 
   it('andere Spalten → beim Teilen gemerkt; ohne Recht nicht', async () => {

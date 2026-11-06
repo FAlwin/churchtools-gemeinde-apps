@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { jsPDF } from 'jspdf';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
@@ -60,8 +60,6 @@ export function DrucklisteFenster({
   const [art, setArt] = useState<ListenArt>('teilnehmer');
   const [alleZeigen, setAlleZeigen] = useState(false);
   const gewaehlt = angebot.find((l) => l.art === art) ?? angebot[0];
-  const [pdf, setPdf] = useState<jsPDF | null>(null);
-  const [fehler, setFehler] = useState<string | null>(null);
   const [merkFehler, setMerkFehler] = useState<string | null>(null);
   const [geladen, setGeladen] = useState(false);
 
@@ -75,25 +73,16 @@ export function DrucklisteFenster({
   const titel = gemeinde ? `${gemeinde} · ${veranstaltung}` : veranstaltung;
   const [stand] = useState(() => `Stand ${datumUhrText(new Date())}`);
 
+  // Wer während des Bauens umschaltet, bekommt das PDF zur NEUEN Wahl – das alte wird verworfen (`useLaden`).
+  const gebaut = useLaden(
+    () => listenPdf({ titel, liste: gewaehlt.titel, stand, ...tabelle }),
+    [titel, stand, tabelle, gewaehlt.titel],
+  ).stand;
+  const pdf = gebaut.art === 'fertig' ? gebaut.daten : null;
+  const fehler = gebaut.art === 'fehler' ? gebaut.fehler.text : null;
+  // „Heruntergeladen“ gilt nur für das PDF, das heruntergeladen wurde.
   useEffect(() => {
-    // Wer während des Bauens umschaltet, bekommt das PDF zur NEUEN Wahl – das alte wird verworfen.
-    let aktuell = true;
-    setPdf(null);
     setGeladen(false);
-    listenPdf({ titel, liste: gewaehlt.titel, stand, ...tabelle }).then(
-      (doc) => {
-        if (aktuell) {
-          setPdf(doc);
-          setFehler(null);
-        }
-      },
-      (x: unknown) => {
-        if (aktuell) setFehler(fehlerMeldung(x).text);
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
   }, [titel, stand, tabelle, gewaehlt.titel]);
 
   const umschalten = (schluessel: string) =>

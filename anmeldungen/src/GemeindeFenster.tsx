@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { formularAdresseAus } from '@shared/anmeldung/oeffentlich';
@@ -35,34 +36,44 @@ export function GemeindeFenster({
   onClose: () => void;
   onGespeichert: (text: string) => void;
 }) {
-  const [daten, setDaten] = useState<Stammdaten | null>(null);
-  const [wahl, setWahl] = useState<Partial<NeuePersonVorgaben>>({});
-  const [vorschlag, setVorschlag] = useState(false);
-  const [adresse, setAdresse] = useState('');
-  const [zahlarten, setZahlarten] = useState<string[]>([]);
+  const geladen = useLaden(
+    () =>
+      stammdaten().then(async (daten) => {
+        const [wahl, gespeichert] = await Promise.all([
+          gemeindeVorgaben(daten),
+          gemeindeEinstellungen(),
+        ]);
+        return {
+          daten,
+          wahl,
+          vorschlag: !gespeichert.neuePersonen,
+          adresse: gespeichert.formularAdresse ?? '',
+          zahlarten: gespeichert.zahlarten,
+        };
+      }),
+    [],
+  ).stand;
+  const g = geladen.art === 'fertig' ? geladen.daten : null;
+  const daten: Stammdaten | null = g?.daten ?? null;
+  const vorschlag = g?.vorschlag ?? false;
+  // Im Fenster geändert – bis dahin gilt, was gespeichert ist.
+  const [eigen, setEigen] = useState<{
+    wahl?: Partial<NeuePersonVorgaben>;
+    adresse?: string;
+    zahlarten?: string[];
+  }>({});
+  const wahl = eigen.wahl ?? g?.wahl ?? {};
+  const adresse = eigen.adresse ?? g?.adresse ?? '';
+  const zahlarten = eigen.zahlarten ?? g?.zahlarten ?? [];
+  const setWahl = (w: Partial<NeuePersonVorgaben>) => setEigen((e) => ({ ...e, wahl: w }));
+  const setAdresse = (a: string) => setEigen((e) => ({ ...e, adresse: a }));
+  const setZahlarten = (z: string[]) => setEigen((e) => ({ ...e, zahlarten: z }));
   const [neueZahlart, setNeueZahlart] = useState('');
   const [pruefung, setPruefung] = useState<SeitenPruefung | null>(null);
   const [prueft, setPrueft] = useState(false);
   const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-
-  useEffect(() => {
-    let aktuell = true;
-    stammdaten()
-      .then(async (s) => {
-        const [v, gespeichert] = await Promise.all([gemeindeVorgaben(s), gemeindeEinstellungen()]);
-        if (!aktuell) return;
-        setDaten(s);
-        setWahl(v);
-        setVorschlag(!gespeichert.neuePersonen);
-        setAdresse(gespeichert.formularAdresse ?? '');
-        setZahlarten(gespeichert.zahlarten);
-      })
-      .catch((e: unknown) => aktuell && setFehler(fehlerMeldung(e).text));
-    return () => {
-      aktuell = false;
-    };
-  }, []);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  const fehler = eigenerFehler ?? (geladen.art === 'fehler' ? geladen.fehler.text : null);
 
   const gueltig = formularAdresseAus(adresse);
 

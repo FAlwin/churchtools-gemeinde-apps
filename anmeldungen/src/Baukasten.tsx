@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { flushSync } from 'react-dom';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
@@ -164,7 +165,6 @@ export function Baukasten({
   const [nameEntwurf, setNameEntwurf] = useState(name);
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<FeldEntwurf | null>(null);
-  const [info, setInfo] = useState<AntwortInfo | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [geraet, setGeraet] = useState<'computer' | 'handy'>('computer');
   const [vorschau, setVorschau] = useState(false);
@@ -201,17 +201,9 @@ export function Baukasten({
   });
 
   // Das Gemeindelogo aus ChurchTools einmal holen (`undefined` = lädt noch, `null` = keins hinterlegt).
-  const [ctLogo, setCtLogo] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    let aktuell = true;
-    gemeindeLogo().then(
-      (url) => aktuell && setCtLogo(url),
-      () => aktuell && setCtLogo(null),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, []);
+  const logoStand = useLaden(() => gemeindeLogo(), []).stand;
+  const ctLogo: string | null | undefined =
+    logoStand.art === 'fertig' ? logoStand.daten : logoStand.art === 'fehler' ? null : undefined;
 
   // Neuer gespeicherter Stand: den Zwischenstand verwerfen – aber nur, wenn nichts mehr läuft oder wartet.
   useEffect(() => {
@@ -286,7 +278,6 @@ export function Baukasten({
     if (feldId === aktiv) return;
     feldSichern();
     setAktiv(feldId);
-    setInfo(null);
     const f = feldId
       ? [...formularRef.current.anmeldung, ...formularRef.current.person].find(
           (x) => x.id === feldId,
@@ -298,42 +289,45 @@ export function Baukasten({
 
   // Zum gewählten Feld: wie oft beantwortet, und die IDs der Antworten (Umbenennen behält die Wahl).
   const ctId = aktiv ? e.ctFelder[aktiv] : undefined;
+  const infoStand = useLaden(
+    () =>
+      !aktiv || ctId === undefined
+        ? null
+        : Promise.all([ctFelderLesen(id), antwortenZaehlen(id)]).then(
+            ([felder, zahlen]): AntwortInfo => {
+              const z = zahlen.get(ctId);
+              return {
+                feldId: aktiv,
+                beantwortet: z?.gesamt ?? 0,
+                jeAntwort: z?.jeOption ?? new Map<string, number>(),
+                ct: (felder.get(ctId)?.options ?? []).map((o) => ({
+                  id: String(o.id),
+                  text: o.name,
+                })),
+              };
+            },
+          ),
+    [id, aktiv, ctId],
+  ).stand;
+  // Ein anderes Feld lädt neu; `feldId` hält die Info beim Feld, zu dem sie gehört. Einen neuen Fragetyp gibt es nur
+  // ohne Antworten – dort sagt die Info nichts (0 beantwortet), bis die neue Spalte da ist.
+  const info = infoStand.art === 'fertig' ? infoStand.daten : null;
+  // Kommen die IDs der Antworten, bekommt der Entwurf dieses Felds sie dazu (Umbenennen behält die Wahl).
   useEffect(() => {
-    if (!aktiv || ctId === undefined) return;
-    let aktuell = true;
-    Promise.all([ctFelderLesen(id), antwortenZaehlen(id)]).then(
-      ([felder, zahlen]) => {
-        if (!aktuell) return;
-        const ct = (felder.get(ctId)?.options ?? []).map((o) => ({
-          id: String(o.id),
-          text: o.name,
-        }));
-        const z = zahlen.get(ctId);
-        setInfo({
-          feldId: aktiv,
-          beantwortet: z?.gesamt ?? 0,
-          jeAntwort: z?.jeOption ?? new Map<string, number>(),
-          ct,
-        });
-        const d = entwurfRef.current;
-        if (d && d.feld.id === aktiv) {
-          const zuId = new Map(ct.map((o) => [o.text, o.id]));
-          const mitIds = {
-            ...d,
-            antworten: d.antworten.map((a) =>
-              a.altId || a.von === undefined ? a : { ...a, altId: zuId.get(a.von) },
-            ),
-          };
-          entwurfRef.current = mitIds;
-          setEntwurf(mitIds);
-        }
-      },
-      () => {},
-    );
-    return () => {
-      aktuell = false;
+    if (infoStand.art !== 'fertig') return;
+    const { feldId, ct } = infoStand.daten;
+    const d = entwurfRef.current;
+    if (!d || d.feld.id !== feldId) return;
+    const zuId = new Map(ct.map((o) => [o.text, o.id]));
+    const mitIds = {
+      ...d,
+      antworten: d.antworten.map((a) =>
+        a.altId || a.von === undefined ? a : { ...a, altId: zuId.get(a.von) },
+      ),
     };
-  }, [id, aktiv, ctId]);
+    entwurfRef.current = mitIds;
+    setEntwurf(mitIds);
+  }, [infoStand]);
 
   function aendern(d: FeldEntwurf) {
     entwurfRef.current = d;
@@ -431,7 +425,6 @@ export function Baukasten({
     const neu = einordnen(ersetzeFeld(fo, feld), feld.id, bereich, vorId, feld);
     setLokalF(neu);
     setAktiv(feld.id);
-    setInfo(null);
     neuerEntwurf(feld);
     insBild.current = feld.id;
     void tun(`„${b.name}“ hinzugefügt.`, () => feldSpeichern(id, bereich, feld, undefined, vorId));
@@ -456,7 +449,6 @@ export function Baukasten({
     };
     setLokalF(ersetzeFeld(formularRef.current, feld));
     neuerEntwurf(feld);
-    setInfo(null);
     void tun(`Fragetyp von „${feld.frage}“ geändert.`, () => feldTypAendern(id, feld));
   }
 

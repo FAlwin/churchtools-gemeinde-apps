@@ -110,7 +110,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   „Erneut versuchen“), auch ein Fehler schon beim Aufruf; eine späte Antwort und ein später Fehler zu alten `deps` zählen
   nicht; `null` = `aus` ohne Aufruf; `neu()` fragt noch einmal. Mit `behalten` bleiben fertige Daten beim Neuladen
   stehen – auch bei einem Fehler im Versprechen oder schon beim Aufruf; `null` verwirft sie. `setze` gilt sofort, ohne
-  neu zu fragen. Gegenprobe je Teil (8 + 4 + 1).
+  neu zu fragen; `setze((alt) => …)` zweimal kurz hintereinander gilt beides, ohne Geladenes ändert es nichts.
+  Gegenprobe je Teil (8 + 4 + 1 + 2).
   Wächter `ui/ct/ladenAufruf`: in den umgestellten Ordnern (Liste wächst je Scheibe) kein `let aktuell/aktiv = true`
   mehr, mit Erkennungs-Gegenprobe am Hook selbst. Die Prüfregel `exhaustive-deps` sieht `useLaden` mit an
   (`eslint.config.mjs`, Gegenprobe: fehlende Abhängigkeit wird gemeldet, ohne die Einstellung nicht)

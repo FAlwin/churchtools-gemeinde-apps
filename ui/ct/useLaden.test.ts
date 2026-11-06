@@ -125,6 +125,22 @@ describe('useLaden: setze', () => {
     expect(result.current.stand).toEqual({ art: 'fertig', daten: 'neu' });
     expect(laden).toHaveBeenCalledTimes(1);
   });
+
+  it('setze((alt) => …): zwei Änderungen kurz hintereinander gelten beide', async () => {
+    const { result } = renderHook(() => useLaden(() => Promise.resolve(['a']), []));
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: ['a'] }));
+    act(() => {
+      result.current.setze((alt) => [...alt, 'b']);
+      result.current.setze((alt) => [...alt, 'c']);
+    });
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: ['a', 'b', 'c'] });
+  });
+
+  it('setze((alt) => …) ohne geladene Daten ändert nichts', () => {
+    const { result } = renderHook(() => useLaden(() => new Promise<string[]>(() => {}), []));
+    act(() => result.current.setze((alt) => [...alt, 'b']));
+    expect(result.current.stand).toEqual({ art: 'laedt' });
+  });
 });
 
 describe('useLaden mit „behalten“', () => {

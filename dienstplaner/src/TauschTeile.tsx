@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -109,23 +110,21 @@ function TauschFenster({
   zeitzone: string;
   onClose: () => void;
 }) {
-  const [liste, setListe] = useState<Kandidat[] | null | 'fehler' | 'weg'>(null);
+  const geladen = useLaden(
+    () => tausch.kandidaten(schluessel),
+    // Nur beim Öffnen laden – `tausch` ändert sich bei jedem Zeichnen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schluessel],
+  ).stand;
+  const liste: Kandidat[] | null | 'fehler' | 'weg' =
+    geladen.art === 'fertig'
+      ? (geladen.daten ?? 'weg')
+      : geladen.art === 'fehler'
+        ? 'fehler'
+        : null;
   const [wahl, setWahl] = useState<number | null>(null);
   const laeuft = tausch.laeuft(schluessel) === 'anfragen';
   const fehler = tausch.fehler(schluessel);
-
-  useEffect(() => {
-    let aktiv = true;
-    tausch.kandidaten(schluessel).then(
-      (l) => aktiv && setListe(l ?? 'weg'),
-      () => aktiv && setListe('fehler'),
-    );
-    return () => {
-      aktiv = false;
-    };
-    // Nur beim Öffnen laden – `tausch` ändert sich bei jedem Zeichnen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schluessel]);
 
   const leer = Array.isArray(liste) && liste.length === 0;
   return (

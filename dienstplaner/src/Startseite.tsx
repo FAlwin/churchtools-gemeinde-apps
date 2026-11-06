@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
@@ -10,7 +11,8 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import { bisDahin, startUebersicht, type DienstAmTermin } from '@shared/dienstplan/start';
 import { planbareDienstgruppen, type Start } from './start';
 import type { TermineZustand } from './Termine';
-import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
+import { ladeAbwesenheiten, ladeLieder } from './ladeBeiwerk';
+import { useMusikApp } from './useMusikApp';
 import { Plakette } from './Plakette';
 import { plaketteArt } from './plaketteArt';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
@@ -226,25 +228,11 @@ function AlsNaechstes({
   onTermin?: (id: number) => void;
 }) {
   const k = kachel(z.tag);
-  const [lieder, setLieder] = useState<string[] | null | undefined>(undefined);
-  const [musikApp, setMusikApp] = useState<string | null>(null);
-
-  useEffect(() => {
-    let aktuell = true;
-    setLieder(undefined);
-    // Beiwerk: scheitert es, fehlt die Angabe – „noch kein Ablauf“ stünde sonst falsch da.
-    ladeLieder(z.id).then(
-      (l) => aktuell && setLieder(l),
-      () => undefined,
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [z.id]);
-
-  useEffect(() => {
-    ladeMusikApp().then(setMusikApp, () => setMusikApp(null));
-  }, []);
+  // Beiwerk: scheitert es, fehlt die Angabe (`undefined`) – „noch kein Ablauf“ stünde sonst falsch da.
+  const liederStand = useLaden(() => ladeLieder(z.id), [z.id]).stand;
+  const lieder: string[] | null | undefined =
+    liederStand.art === 'fertig' ? liederStand.daten : undefined;
+  const musikApp = useMusikApp();
 
   const team = z.team.slice(0, TEAM_ZEIGEN).map((t) => `${t.name} (${t.dienst})`);
   const mehr = z.team.length - team.length;
@@ -367,18 +355,10 @@ function ReiterLink({
 
 /** Die eigenen Abwesenheiten ab heute (ein Jahr voraus); `undefined`, solange unbekannt oder gescheitert. */
 function useAbwesenheiten(ichId: number, heute: string): CtAbsence[] | undefined {
-  const [liste, setListe] = useState<CtAbsence[] | undefined>(undefined);
-  useEffect(() => {
-    let aktuell = true;
-    // Ein Jahr voraus – in Tagen gerechnet, nicht als Text (am 29.02. gäbe es sonst keinen Tag).
-    const bis = plusTage(heute, 365);
-    ladeAbwesenheiten(ichId, heute, bis).then(
-      (l) => aktuell && setListe(l),
-      () => undefined,
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [ichId, heute]);
-  return liste;
+  // Ein Jahr voraus – in Tagen gerechnet, nicht als Text (am 29.02. gäbe es sonst keinen Tag).
+  const s = useLaden(
+    () => ladeAbwesenheiten(ichId, heute, plusTage(heute, 365)),
+    [ichId, heute],
+  ).stand;
+  return s.art === 'fertig' ? s.daten : undefined;
 }

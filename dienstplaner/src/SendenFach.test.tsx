@@ -127,6 +127,11 @@ describe('SendenFach (E4-4-2)', () => {
     expect(screen.queryByText(/einen Hinweis/)).toBeNull();
   });
 
+  it('Hinweise lassen sich nicht prüfen: kein ewiges „werden geprüft“ – gesendet werden kann trotzdem', async () => {
+    zeige({ hinweise: Promise.reject(new Error('503')) });
+    await waitFor(() => expect(screen.queryByText(/werden geprüft/)).toBeNull());
+  });
+
   it('Häkchen: nur Ausgewähltes wird gesendet, in Reihenfolge; danach steht nur das noch da', async () => {
     const s = sendenMit(new Map());
     zeige({ senden: s.senden });

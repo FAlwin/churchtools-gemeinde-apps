@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { ctBasis } from '@ui/ct/verbindung';
 import { dateiAdresse } from '@shared/ct/terminDateien';
 import { datumText } from '@shared/ct/datum';
@@ -237,7 +238,12 @@ export function InfosZeilen({
           })}
         </tr>
       )}
-      {offen && <Fenster mi={mi} s={offen.s} was={offen.was} onClose={() => setOffen(null)} />}
+      {/* Aus der Tabelle heraus: Ein Fenster in `tbody` wäre kein gültiges HTML (wie die Fenster der Ablauf-Zeilen). */}
+      {offen && (
+        <BodyPortal>
+          <Fenster mi={mi} s={offen.s} was={offen.was} onClose={() => setOffen(null)} />
+        </BodyPortal>
+      )}
     </>
   );
 }

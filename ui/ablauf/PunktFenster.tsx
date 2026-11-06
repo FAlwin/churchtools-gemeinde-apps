@@ -55,8 +55,9 @@ interface Gemeinsam {
   /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
   services: AgendaServiceOption[];
   /**
-   * Lieder verknüpfen und lösen – nur die Musik-App kann das (Liedsuche, „Neues Lied", SongSelect). Ohne
-   * Steckplatz zeigt das Fenster das Lied nur an (Dienstplaner, Alwin 17.10.2026: „Lieder nur anzeigen").
+   * Lieder verknüpfen und lösen (Liedsuche, „Neues Lied", SongSelect) – die Bausteine liegen in `ui/lied`
+   * (`LiedVerknuepfen`); Musik-App und seit LW2b (06.11.2026) auch der Dienstplaner stecken sie hier ein. Ohne
+   * Steckplatz zeigt das Fenster das Lied nur an (Dienstplaner ohne Recht, Lieder zu sehen).
    */
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
   /**

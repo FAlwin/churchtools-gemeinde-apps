@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ganzSichtbar, ladeStart, planbar, planbareDienstgruppen } from './start';
+import { ganzSichtbar, ladeStart, planbar, planbareDienstgruppen, startLiederAus } from './start';
 import { startFuer } from './start.testutil';
 
 /**
@@ -73,6 +73,8 @@ describe('ladeStart (Dienstplaner)', () => {
   it('Person, Gruppen, Dienstgruppen in Gemeinde-Reihenfolge und die Planer-Rechte', async () => {
     ct(GUT);
     expect(await ladeStart()).toEqual({
+      // Ohne Lied-Rechte in der Antwort (LW2b): keine Liedauswahl, nur die Lied-Ansicht.
+      lieder: { sehen: false, rechte: { statistik: false, ccli: false, liederAendern: false } },
       ichId: 1,
       vorname: 'Alwin',
       nachname: 'Friesen',
@@ -134,6 +136,35 @@ describe('ladeStart (Dienstplaner)', () => {
   it('Dienstgruppen nicht lesbar (500) → Fehler', async () => {
     ct({ ...GUT, '/servicegroups': () => json(500, {}) });
     await expect(ladeStart()).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+/**
+ * Die Lied-Rechte des Dienstplaners (LW2b, 06.11.2026) – dieselbe Regel wie in der Musik-App (`rechteAus`), nur die
+ * Übersetzung in die Liedauswahl. Geprüft wird jeder Teil für sich: sehen, Statistik, SongSelect, ändern.
+ */
+describe('startLiederAus (LW2b)', () => {
+  const recht = (churchservice: Record<string, unknown>, weitere: Record<string, unknown> = {}) =>
+    startLiederAus({ churchservice, ...weitere });
+
+  it('ohne Lied-Rechte: nichts', () => {
+    expect(recht({ 'edit agenda': [1] })).toEqual({
+      sehen: false,
+      rechte: { statistik: false, ccli: false, liederAendern: false },
+    });
+  });
+
+  it('jedes Recht für sich', () => {
+    expect(recht({ 'view songcategory': [1] }).sehen).toBe(true);
+    expect(recht({ 'view song statistics': true }).rechte.statistik).toBe(true);
+    expect(recht({ 'use ccli': true }).rechte.ccli).toBe(true);
+    expect(recht({ 'edit songcategory': [1] }).rechte.liederAendern).toBe(true);
+  });
+
+  it('Admin darf Lieder sehen und ändern – SongSelect und Statistik aber nur mit eigenem Recht (wie die Musik-App)', () => {
+    const a = recht({}, { churchcore: { 'administer persons': true } });
+    expect(a.sehen).toBe(true);
+    expect(a.rechte).toEqual({ statistik: false, ccli: false, liederAendern: true });
   });
 });
 

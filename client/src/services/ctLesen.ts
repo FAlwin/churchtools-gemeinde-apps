@@ -25,18 +25,11 @@ import { gemeindeNameAus } from '@shared/ct/info';
 import type {
   AgendaItem,
   AgendaServiceOption,
-  ArrangementAnsicht,
   ArrangementFileEntry,
   AuthStatus,
-  LiedStammdatenAnsicht,
-  LiedtextVorschau,
   Service,
-  SetlistSong,
   SongArrangementOption,
   SiteConfig,
-  SongCategory,
-  SongLibraryEntry,
-  SongSource,
   UserCapabilities,
 } from '@shared/types/index';
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
@@ -50,32 +43,17 @@ import {
   rollenAus,
   type RohMitgliedschaft,
 } from '@shared/ct/gruppen';
-import { arrangementAnsicht, stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
 import { arrangementAus } from '@shared/ct/schreibKern';
-import {
-  alleKategorien,
-  bearbeitbareKategorien as bearbeitbareKategorienAus,
-  quellenAusStammdaten,
-  type LiedStammdatenRoh,
-} from '@shared/ct/stammdaten';
-import { liedtextVorschauAus } from '@shared/ct/liedtext';
-import { liedStatistik, type LiedNutzung } from '@shared/ct/liedStatistik';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 import {
   ablaufPunkte,
   arrangementOptionen,
   dienstReihenfolge,
-  liedBibliothek,
-  liedBlatt,
   setlistGeaendert,
   standardFenster,
   termineMitAblauf,
-  untertitelAus,
-  type CtLeser,
 } from '@shared/ct/setlistKern';
-import type { CtAgenda, CtEvent, CtService, CtSong, CtSongListEntry } from '@shared/ct/typen';
-import { createTtlMemo } from '@shared/ct/ttlMemo';
-import { merkeVersprechen } from '@shared/ct/versprechenMerker';
+import type { CtService } from '@shared/ct/typen';
 import { whoamiId } from '@shared/ct/whoami';
 import { angemeldeteId } from '@ui/ct/ich';
 import { browserAblaufLeser } from '@ui/ct/schreiber';
@@ -83,57 +61,25 @@ import { ablaufBestandLesen, type AblaufBestand } from '@shared/ct/ablaufNeu';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
-import {
-  ctAlleSeiten,
-  ctAltAnfrage,
-  ctAnfrage,
-  ctDaten,
-  ctDatei,
-  istUeberlastet,
-} from './ctRuntime';
+import { ctAnfrage, ctDaten, ctDatei } from './ctRuntime';
 import { gespeicherteEinstellungen } from './ctEinstellungen';
 import { holeGesehen, merkeGesehen } from './personenAblage';
 import { gemeindeZeitzone, zeitzoneAusKonfig } from '@shared/ct/zeit';
-
-/**
- * Untertitel-Memo (#306): Der Untertitel war die HÄLFTE der Dauerlast der Terminliste – je Termin ein
- * Abruf, im Minutentakt. In der Extension fragt jedes Gerät selbst, das Memo zählt hier also noch mehr.
- * Ein Fehler wird NICHT gemerkt (#306): „vorübergehend ist nicht ungültig".
- */
-const untertitelMemo = createTtlMemo<string | null>(10 * 60_000);
-
-/** Der `CtLeser` des Browsers für den geteilten Aufbau. */
-export const leser: CtLeser = {
-  events: (from, to) => ctDaten<CtEvent[]>(`/events?from=${from}&to=${to}`),
-  agenda: (eventId) => ctDaten<CtAgenda>(`/events/${eventId}/agenda`),
-  song: (songId) => ctDaten<CtSong>(`/songs/${songId}`),
-  // Wie `ctRead.getAllSongs`: seitenweise, höchstens 50 Seiten – das Blättern steht seit #480 einmal in
-  // `ctAlleSeiten` (mehr als 5.000 Lieder → Fehler statt still abgeschnitten).
-  alleLieder: () => ctAlleSeiten<CtSongListEntry>('/songs'),
-  async untertitel(calendarId, appointmentId) {
-    const key = `${calendarId}|${appointmentId}`;
-    const treffer = untertitelMemo.get(key);
-    if (treffer !== undefined) return treffer;
-    try {
-      const wert = untertitelAus(
-        await ctDaten<{ appointment?: { subtitle?: string }; subtitle?: string }>(
-          `/calendars/${calendarId}/appointments/${appointmentId}`,
-        ),
-      );
-      untertitelMemo.set(key, wert);
-      return wert;
-    } catch {
-      return null;
-    }
-  },
-  dateiText: async (fileUrl) => (await ctDatei(fileUrl)).text(),
-  fehler: (status, meldung) => new ApiError(status, meldung),
-  istUeberlastet,
-  // Ein Getter: `leser` entsteht beim Import, die Zeitzone der Gemeinde kommt erst mit `getSiteConfig` (#847).
-  get zeitzone() {
-    return gemeindeZeitzone();
-  },
-};
+// Die Lied-Wege liegen seit LW2a (06.11.2026) in `@ui/ct/lieder` – für Musik-App und Dienstplaner; hier weitergereicht.
+import { leser } from '@ui/ct/lieder';
+export {
+  _vergissNutzung,
+  _vergissStammdaten,
+  arrangementVerwaltung,
+  bearbeitbareKategorien,
+  blatt,
+  leser,
+  lieder,
+  liedNutzung,
+  liedStammdatenAnsicht,
+  liedtextVorschau,
+  quellen,
+} from '@ui/ct/lieder';
 
 /**
  * Fingerabdruck aus dem geteilten Text – sha256 wie im Server (`node:crypto`), hier mit
@@ -279,105 +225,6 @@ export async function rollen(groupId: number): Promise<{ id: number; name: strin
   return rollenAus(await ctDaten(`/groups/${groupId}/roles`));
 }
 
-/**
- * `GET /api/songs/:id/liedtext-vorschau` – beim Hinzufügen eines Lieds zum Ablauf (#335, 3b-1).
- *
- * Der Server sucht das Lied in der ganzen Liederliste (die er ohnehin für die Suche hält); hier wird
- * nur dieses eine Lied gelesen – eine Anfrage plus die Datei. Welche Datei und „nur mit Text" regelt
- * `@shared/ct/liedtext`.
- */
-export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau> {
-  const song = await leser.song(songId);
-  return { chordpro: await liedtextVorschauAus(song, (url) => leser.dateiText(url)) };
-}
-
-// ── Lied-Statistik ───────────────────────────────────────────────────────────
-
-/**
- * `GET /api/song-usage` – die Lied-Statistik aus ChurchTools selbst (`@shared/ct/liedStatistik`, Alwin
- * 08.10.2026): EIN Aufruf (`getSongStatistic`) plus die Liederliste. Bis dahin gab es die Statistik in
- * der Extension nicht, weil der alte Weg je Gerät ~250 Anfragen gekostet hätte (#300).
- *
- * Zehn Minuten gemerkt, wie im Server. Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht
- * ungültig. Ohne das Recht „Song-Statistik sehen" fragt die Ansicht gar nicht erst
- * (`canViewSongStatistics`); täte sie es doch, würfe ChurchTools.
- */
-const nutzung = merkeVersprechen<Record<number, LiedNutzung>>({ ttlMs: 10 * 60_000 });
-
-export function liedNutzung(): Promise<Record<number, LiedNutzung>> {
-  return nutzung.hole('statistik', async () =>
-    liedStatistik(
-      { anfrage: ctAltAnfrage, fehler: (status, meldung) => new ApiError(status, meldung) },
-      await leser.alleLieder(),
-      gemeindeZeitzone(),
-    ),
-  );
-}
-
-/** Nur für Tests: die gemerkte Statistik vergessen. */
-export function _vergissNutzung(): void {
-  nutzung.vergiss();
-}
-
-// ── Lied-Stammdaten (3b-2) ───────────────────────────────────────────────────
-
-/**
- * `getMasterData` der alten Schnittstelle – einmal je Sitzung der Seite geholt. Die Liste ändert sich
- * selten (Kategorien, Liederbücher), und die Liedverwaltung fragt sie bei jedem Anlegen/Ändern
- * (Recht, Quelle). Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht ungültig.
- */
-const stammdaten = merkeVersprechen<LiedStammdatenRoh>();
-function liedStammdaten(): Promise<LiedStammdatenRoh> {
-  return stammdaten.hole(
-    'stammdaten',
-    async () =>
-      (await ctAltAnfrage(
-        'getMasterData',
-        {},
-        {
-          verweigert: 'Keine Berechtigung, die Lied-Kategorien in ChurchTools zu lesen.',
-          unlesbar: 'ChurchTools lieferte keine lesbare Antwort für die Lied-Kategorien.',
-          fehlgeschlagen: 'Die Lied-Kategorien konnten nicht geladen werden.',
-        },
-      )) as LiedStammdatenRoh,
-  );
-}
-
-/** Nur für Tests: gemerkte Stammdaten vergessen. */
-export function _vergissStammdaten(): void {
-  stammdaten.vergiss();
-}
-
-/** `GET /api/song-categories` – die Kategorien, in denen die Person Lieder anlegen/ändern darf. */
-export async function bearbeitbareKategorien(): Promise<SongCategory[]> {
-  const rechte = await ctDaten<Record<string, Record<string, unknown>>>('/permissions/global');
-  return bearbeitbareKategorienAus(
-    rechte,
-    STANDARD_ADMIN_RECHT,
-    await alleKategorien({
-      stammdaten: liedStammdaten,
-      lieder: () => leser.alleLieder(),
-      istUeberlastet,
-    }),
-    (status, meldung) => new ApiError(status, meldung),
-  );
-}
-
-/** `GET /api/song-sources` – die Liedquellen (Liederbücher). */
-export async function quellen(): Promise<SongSource[]> {
-  return quellenAusStammdaten(await liedStammdaten());
-}
-
-/** `GET /api/songs/:id/stammdaten` */
-export async function liedStammdatenAnsicht(songId: number): Promise<LiedStammdatenAnsicht> {
-  return stammdatenAnsicht(await leser.song(songId));
-}
-
-/** `GET /api/songs/:id/arrangements/verwaltung` */
-export async function arrangementVerwaltung(songId: number): Promise<ArrangementAnsicht[]> {
-  return (await leser.song(songId)).arrangements.map(arrangementAnsicht);
-}
-
 /** `GET /api/songs/:id/arrangements/:arrId/files` */
 export async function arrangementDateien(
   songId: number,
@@ -428,14 +275,6 @@ export async function alsGesehenMerken(eventId: number): Promise<{ ok: boolean }
 export async function ablaufStand(eventId: number): Promise<{ hash: string }> {
   const items = (await leser.agenda(eventId)).items ?? [];
   return { hash: await fingerabdruck(fingerprintRohtext(items)) };
-}
-
-export function lieder(): Promise<SongLibraryEntry[]> {
-  return liedBibliothek(leser);
-}
-
-export function blatt(songId: number, arrangementId?: number): Promise<SetlistSong> {
-  return liedBlatt(leser, songId, arrangementId);
 }
 
 export async function arrangements(songId: number): Promise<SongArrangementOption[]> {

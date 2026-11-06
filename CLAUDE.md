@@ -65,6 +65,12 @@
     neu laden muss, meldet sie über `nachAenderung` ihres Liedzugriffs (Musik-App: Liedblätter, Abläufe,
     Arrangement-Auswahl). Auch die übrigen Arrangement-Änderungen der Musik-App nutzen `arrangementListenErneuern`
     aus `liedDaten.ts`. „Vielleicht doch angelegt" (Musik-App: 502) entscheidet `anlegenUngewiss` der App.
+  - **Die Lied-Wege des Browsers zu ChurchTools liegen seit LW2a (06.11.2026) in `ui/ct/lieder.ts`:** der `leser`
+    (`CtLeser`), Liederliste, Liedblatt, Liedtext-Vorschau, Statistik (zehn Minuten gemerkt), Stammdaten/Kategorien
+    (je Sitzung gemerkt), SongSelect, der Schreiber samt Liedverwaltung/Notenblättern (`liedSchreiber`), Lied
+    anlegen/ändern, Arrangement, Notenblatt. `client/src/services/ctLesen.ts`, `ctSchreiben.ts` und `ctSongSelect.ts`
+    reichen sie nur weiter (Wächter `ctLieder.weiterreichen.test.ts`: dieselben Funktionen, also dieselben
+    Zwischenspeicher). Der Dienstplaner nutzt sie direkt (LW2b).
   - **ein Suchfeld, eine Liste, zwei Knöpfe je Zeile** (#378, dritter Anlauf nach Alwins Rückmeldungen vom
     03./04.09.2026). Gesucht wird in Titel, Autor **und CCLI-Nummer** (`SongLibraryEntry.ccli`, pflichtig,
     vom Server aus `CtSongListEntry.ccli`). Eigene Lieder oben, SongSelect darunter mit Überschrift

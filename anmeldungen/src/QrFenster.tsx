@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { jsPDF } from 'jspdf';
+import { useMemo } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { qrGroesse, qrMuster, qrPfad, qrPng } from '@ui/teilen/qr';
@@ -7,7 +7,6 @@ import { sharePdf } from '@ui/teilen/sharePdf';
 import { shareOrDownload } from '@ui/teilen/shareFile';
 import { druckDateiname } from '@shared/anmeldung/druckliste';
 import { aushangPdf, type AushangDaten } from './aushang';
-import { fehlerMeldung } from './zustand';
 import a from './AnmeldungenReiter.module.scss';
 import q from './QrFenster.module.scss';
 
@@ -21,24 +20,12 @@ import q from './QrFenster.module.scss';
  */
 export function QrFenster({ daten, onClose }: { daten: AushangDaten; onClose: () => void }) {
   const muster = useMemo(() => qrMuster(daten.link), [daten.link]);
-  const [bild, setBild] = useState<Blob | null>(null);
-  const [pdf, setPdf] = useState<jsPDF | null>(null);
-  const [fehler, setFehler] = useState<string | null>(null);
-
-  useEffect(() => {
-    let aktuell = true;
-    Promise.all([qrPng(muster), aushangPdf(daten)]).then(
-      ([b, d]) => {
-        if (!aktuell) return;
-        setBild(b);
-        setPdf(d);
-      },
-      (x: unknown) => aktuell && setFehler(fehlerMeldung(x).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [muster, daten]);
+  const gebaut = useLaden(
+    () => Promise.all([qrPng(muster), aushangPdf(daten)]),
+    [muster, daten],
+  ).stand;
+  const [bild, pdf] = gebaut.art === 'fertig' ? gebaut.daten : [null, null];
+  const fehler = gebaut.art === 'fehler' ? gebaut.fehler.text : null;
 
   const seite = qrGroesse(muster);
   return (

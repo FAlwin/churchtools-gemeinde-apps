@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
@@ -49,49 +50,47 @@ export function FreigebenFenster({
   onClose: () => void;
   onFreigegeben: (text: string) => void;
 }) {
-  const [kandidaten, setKandidaten] = useState<LeitungsKandidat[] | null>(null);
-  const [gewaehlt, setGewaehlt] = useState<Set<number>>(new Set());
-  const [ich, setIch] = useState<number | null>(null);
-  const [daten, setDaten] = useState<Stammdaten | null>(null);
-  const [vorgaben, setVorgaben] = useState<Partial<NeuePersonVorgaben> | null>(null);
+  const geladen = useLaden(
+    () =>
+      Promise.all([
+        leitungsKandidaten(id),
+        meineId(),
+        // Die Stammdaten nur einmal laden – die Vorgaben brauchen sie auch.
+        stammdaten().then(async (st) => [st, await gemeindeVorgaben(st)] as const),
+      ]),
+    [id],
+  ).stand;
+  const [kandidaten, ich, daten, vorgaben]: [
+    LeitungsKandidat[] | null,
+    number | null,
+    Stammdaten | null,
+    Partial<NeuePersonVorgaben> | null,
+  ] =
+    geladen.art === 'fertig'
+      ? [geladen.daten[0], geladen.daten[1], geladen.daten[2][0], geladen.daten[2][1]]
+      : [null, null, null, null];
+  // Wer schon Leitung ist, bleibt gewählt; sonst die Person, die gerade freigibt. Geändert gilt das Eigene.
+  const [eigeneWahl, setGewaehlt] = useState<Set<number> | null>(null);
+  const gewaehlt = useMemo(() => {
+    if (eigeneWahl) return eigeneWahl;
+    if (geladen.art !== 'fertig') return new Set<number>();
+    const [k, meine] = geladen.daten;
+    const schon = k.filter((x) => x.leitung).map((x) => x.personId);
+    return new Set(schon.length ? schon : [meine]);
+  }, [eigeneWahl, geladen]);
   const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  const fehler = eigenerFehler ?? (geladen.art === 'fehler' ? geladen.fehler.text : null);
   /** A9-4 (D5): Beim Freigeben entfernte ChurchTools sofort Anmeldungen – erst fragen. */
   const [sofort, setSofort] = useState<LoeschdatumVorbei | null>(null);
   const [fehlt, setFehlt] = useState<string[] | null>(null);
 
-  useEffect(() => {
-    let aktuell = true;
-    Promise.all([
-      leitungsKandidaten(id),
-      meineId(),
-      // Die Stammdaten nur einmal laden – die Vorgaben brauchen sie auch.
-      stammdaten().then(async (st) => [st, await gemeindeVorgaben(st)] as const),
-    ]).then(
-      ([k, ich, [s, v]]) => {
-        if (!aktuell) return;
-        setKandidaten(k);
-        setIch(ich);
-        // Wer schon Leitung ist, bleibt gewählt; sonst die Person, die gerade freigibt.
-        const schon = k.filter((x) => x.leitung).map((x) => x.personId);
-        setGewaehlt(new Set(schon.length ? schon : [ich]));
-        setDaten(s);
-        setVorgaben(v);
-      },
-      (e: unknown) => aktuell && setFehler(fehlerMeldung(e).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [id]);
-
-  const umschalten = (p: number) =>
-    setGewaehlt((alt) => {
-      const neu = new Set(alt);
-      if (neu.has(p)) neu.delete(p);
-      else neu.add(p);
-      return neu;
-    });
+  const umschalten = (p: number) => {
+    const neu = new Set(gewaehlt);
+    if (neu.has(p)) neu.delete(p);
+    else neu.add(p);
+    setGewaehlt(neu);
+  };
 
   async function los(loeschenBestaetigt = false) {
     if (!vorgabenVollstaendig(vorgaben)) return;

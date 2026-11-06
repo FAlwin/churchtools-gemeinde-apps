@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { datumText } from '@shared/ct/datum';
@@ -28,33 +29,21 @@ export function EinrichtenFenster({
   onClose: () => void;
   onEingerichtet: (text: string) => void;
 }) {
-  const [stand, setStand] = useState<{
-    anzahl: number;
-    kostet: boolean;
-    datum: string | null;
-    erinnerung: boolean;
-  } | null>(null);
+  const geladen = useLaden(
+    () =>
+      Promise.all([einstellungenVon(id), anmeldungenIn(id)]).then(([e, anzahl]) => ({
+        anzahl,
+        kostet: kannEtwasKosten(e.preis),
+        datum: loeschDatum(e),
+        erinnerung: !!e.erinnerungTage?.length,
+      })),
+    [id],
+  ).stand;
+  const stand = geladen.art === 'fertig' ? geladen.daten : null;
   const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  const fehler = eigenerFehler ?? (geladen.art === 'fehler' ? geladen.fehler.text : null);
   const [sofort, setSofort] = useState<LoeschdatumVorbei | null>(null);
-
-  useEffect(() => {
-    let aktuell = true;
-    Promise.all([einstellungenVon(id), anmeldungenIn(id)]).then(
-      ([e, anzahl]) =>
-        aktuell &&
-        setStand({
-          anzahl,
-          kostet: kannEtwasKosten(e.preis),
-          datum: loeschDatum(e),
-          erinnerung: !!e.erinnerungTage?.length,
-        }),
-      (x: unknown) => aktuell && setFehler(fehlerMeldung(x).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [id]);
 
   async function los(loeschenBestaetigt = false) {
     setArbeitet(true);

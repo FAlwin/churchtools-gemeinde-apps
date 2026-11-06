@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Schalter } from '@ui/bedienung/Schalter';
@@ -15,7 +16,7 @@ import {
   type MailArt,
 } from '@shared/anmeldung/ablaeufe';
 import { ablaeufeEinrichten, vorschauPerson, type AblaufStand } from './ablaeufe';
-import { aendereEinstellungen, leitungsKandidaten, type LeitungsKandidat } from './einrichten';
+import { aendereEinstellungen, leitungsKandidaten } from './einrichten';
 import { ErinnerungWahl } from './ErinnerungWahl';
 import { platzhalterLaden, vorschauLaden } from './rundmail';
 import { fehlerMeldung } from './zustand';
@@ -55,25 +56,20 @@ export function MailsFenster({
   const [tage, setTage] = useState<(number | null)[]>(e.erinnerungTage ?? []);
   const [absender, setAbsender] = useState<number | null>(stand.absenderId);
   const [qr, setQr] = useState(stand.qr);
-  const [leitung, setLeitung] = useState<LeitungsKandidat[] | null>(null);
+  const leitungStand = useLaden(
+    () => leitungsKandidaten(id).then((k) => k.filter((x) => x.leitung)),
+    [id],
+  ).stand;
+  const leitung = leitungStand.art === 'fertig' ? leitungStand.daten : null;
   const [vorschau, setVorschau] = useState<{
     betreff: string;
     html: string;
     echt: boolean;
   } | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-
-  useEffect(() => {
-    let aktuell = true;
-    leitungsKandidaten(id).then(
-      (k) => aktuell && setLeitung(k.filter((x) => x.leitung)),
-      (x: unknown) => aktuell && setFehler(fehlerMeldung(x).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [id]);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  // Lässt sich die Leitung nicht laden, steht es unten – wie ein Fehler beim Speichern.
+  const fehler = eigenerFehler ?? (leitungStand.art === 'fehler' ? leitungStand.fehler.text : null);
 
   const t = texte[art];
   const aendern = (teil: Partial<EigenerText>) => {

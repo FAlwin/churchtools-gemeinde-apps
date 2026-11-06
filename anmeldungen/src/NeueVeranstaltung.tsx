@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import type { MeineGruppe } from '@shared/ct/gruppen';
@@ -28,28 +29,21 @@ export function NeueVeranstaltung({
   const [name, setName] = useState('');
   const [teamId, setTeamId] = useState(teams[0]?.id ?? 0);
   const [start, setStart] = useState<Vorlage | 'kopie'>('einfach');
-  const [fruehere, setFruehere] = useState<{ id: number; name: string }[] | null>(null);
-  const [quelleId, setQuelleId] = useState<number | null>(null);
-  const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-
   // Frühere Veranstaltungen des Teams erst holen, wenn „wie eine frühere“ gewählt ist.
-  useEffect(() => {
-    if (start !== 'kopie') return;
-    let aktuell = true;
-    setFruehere(null);
-    veranstaltungenVon(teamId).then(
-      (liste) => {
-        if (!aktuell) return;
-        setFruehere(liste);
-        setQuelleId(liste[0]?.id ?? null);
-      },
-      (e: unknown) => aktuell && setFehler(fehlerMeldung(e).text),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [start, teamId]);
+  const fruehereStand = useLaden(
+    () => (start === 'kopie' ? veranstaltungenVon(teamId) : null),
+    [start, teamId],
+  ).stand;
+  const fruehere = fruehereStand.art === 'fertig' ? fruehereStand.daten : null;
+  // Gewählt gilt nur für die Liste, aus der gewählt wurde – ein anderes Team fängt wieder bei seiner ersten an.
+  const [wahl, setWahl] = useState<{ fuer: typeof fruehere; id: number } | null>(null);
+  const quelleId =
+    fruehere === null ? null : wahl?.fuer === fruehere ? wahl.id : (fruehere[0]?.id ?? null);
+  const setQuelleId = (id: number) => setWahl({ fuer: fruehere, id });
+  const [arbeitet, setArbeitet] = useState(false);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  const fehler =
+    eigenerFehler ?? (fruehereStand.art === 'fehler' ? fruehereStand.fehler.text : null);
 
   const bereit = name.trim() !== '' && teamId !== 0 && (start !== 'kopie' || quelleId !== null);
 

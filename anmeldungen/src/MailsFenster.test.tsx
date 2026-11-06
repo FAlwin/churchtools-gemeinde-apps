@@ -98,6 +98,12 @@ describe('MailsFenster', () => {
     expect(feld('Betreff').getAttribute('placeholder')).toBe('Kinderfreizeit: Warteliste');
   });
 
+  it('lässt sich die Leitung nicht laden, steht der Fehler im Fenster', async () => {
+    ei.leitungsKandidaten.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+  });
+
   it('Absender: nur die Leitung der Veranstaltung zur Wahl', async () => {
     zeigen();
     const wahl = screen.getByRole('combobox', { name: 'Absender' });

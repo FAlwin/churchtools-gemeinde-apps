@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import {
   istGruppenAdmin,
@@ -28,38 +29,29 @@ export function LogoAuswahl({
   /** Ein Logo wurde gelöscht – war es das gewählte, braucht das Formular ein anderes. */
   onEntfernt: (url: string) => void;
 }) {
-  const [liste, setListe] = useState<EigenesLogo[] | undefined>(undefined);
-  const [admin, setAdmin] = useState(false);
+  const { stand: listeStand, setze: setListe } = useLaden(
+    () => logoListe(veranstaltungId),
+    [veranstaltungId],
+  );
+  // `undefined` = lädt noch; scheitert das Laden, gibt es nur „Neues hochladen“ und den Fehler.
+  const liste: EigenesLogo[] | undefined =
+    listeStand.art === 'fertig' ? listeStand.daten : listeStand.art === 'fehler' ? [] : undefined;
+  const adminStand = useLaden(() => istGruppenAdmin(), []).stand;
+  const admin = adminStand.art === 'fertig' && adminStand.daten;
   const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
+  const [eigenerFehler, setFehler] = useState<string | null>(null);
+  const fehler = eigenerFehler ?? (listeStand.art === 'fehler' ? listeStand.fehler.text : null);
   const [frage, setFrage] = useState<EigenesLogo | null>(null);
   const datei = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    let aktuell = true;
-    logoListe(veranstaltungId).then(
-      (l) => aktuell && setListe(l),
-      (e: unknown) => {
-        if (!aktuell) return;
-        setListe([]);
-        setFehler(fehlerMeldung(e).text);
-      },
-    );
-    istGruppenAdmin().then(
-      (a) => aktuell && setAdmin(a),
-      () => undefined,
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [veranstaltungId]);
-
+  // Hochladen und Löschen gibt es erst mit geladener Liste, und `arbeitet` sperrt beide – dazwischen ändert sich
+  // `liste` nicht, die Antwort gilt also für genau diese Liste.
   async function hochladen(d: File) {
     setArbeitet(true);
     setFehler(null);
     try {
       const neu = await logoHochladen(veranstaltungId, d);
-      setListe((l) => [neu, ...(l ?? [])]);
+      setListe([neu, ...(liste ?? [])]);
       onWaehlen(neu.url);
     } catch (e) {
       setFehler(fehlerMeldung(e).text);
@@ -72,7 +64,7 @@ export function LogoAuswahl({
     setFehler(null);
     try {
       await logoEntfernen(l.id);
-      setListe((alt) => (alt ?? []).filter((x) => x.id !== l.id));
+      setListe((liste ?? []).filter((x) => x.id !== l.id));
       setFrage(null);
       onEntfernt(l.url);
     } catch (e) {

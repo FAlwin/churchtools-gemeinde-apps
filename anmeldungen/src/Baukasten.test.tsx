@@ -744,6 +744,46 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     expect(g).toMatchObject({ logo: 'keins', logoUrl: null });
   });
 
+  it('Gemeindelogo lässt sich nicht holen: wie „keins hinterlegt“ – nicht wählbar statt ewig „lädt“', async () => {
+    ei.gemeindeLogo.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Gemeindelogo/ })).toHaveProperty('disabled', true),
+    );
+  });
+
+  it('eigene Logos lassen sich nicht laden: Fehler, „Neues hochladen“ geht trotzdem', async () => {
+    ei.logoListe.mockRejectedValue(new TypeError('Failed to fetch'));
+    zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: /Eigenes/ }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByText('Logos werden geladen …')).toBeNull();
+    expect(screen.getByRole('button', { name: '+ Neues hochladen' })).toBeTruthy();
+  });
+
+  it('ein anderes eigenes Logo entfernen: verschwindet aus der Auswahl, ohne neu zu laden', async () => {
+    const jugend = { id: 300, name: 'Jugend', url: 'https://ct.test/images/9/alt' };
+    const kinder = { id: 301, name: 'Kinder', url: 'https://ct.test/images/10/neu' };
+    ei.logoListe.mockResolvedValue([jugend, kinder]);
+    ei.istGruppenAdmin.mockResolvedValue(true);
+    ei.logoEntfernen.mockResolvedValue(undefined);
+    const e = einstellungen();
+    e.gestaltung = { ...e.gestaltung, logo: 'eigen', logoUrl: kinder.url };
+    zeigen(e);
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.change(await screen.findByLabelText('Logo entfernen'), { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }));
+    await waitFor(() => expect(ei.logoEntfernen).toHaveBeenCalledWith(300));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Jugend' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Kinder' })).toBeTruthy();
+    expect(ei.logoListe).toHaveBeenCalledTimes(1);
+  });
+
   it('ohne Recht wird das Logo nicht übernommen (kein Schreiben)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     ei.gemeindeLogo.mockResolvedValue('https://ct.test/images/558/logo');

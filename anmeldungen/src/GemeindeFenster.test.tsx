@@ -46,6 +46,13 @@ beforeEach(() => {
 });
 
 describe('Einstellungen der Gemeinde (A6-2)', () => {
+  it('lässt sich nichts laden: Fehler statt der Felder', async () => {
+    ei.stammdaten.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    expect(screen.queryByLabelText('Status')).toBeNull();
+  });
+
   it('Vorschlag vorbelegt; „Mitglied“ nicht wählbar; ohne Adresse und Standort kein Speichern', async () => {
     render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
     const status = await screen.findByLabelText<HTMLSelectElement>('Status');

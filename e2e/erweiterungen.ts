@@ -1,7 +1,8 @@
 /**
  * **Die Erweiterungen im E2E-Lauf** (#845) – EINE Liste für die Dev-Server in `playwright.config.ts` und die
  * Rauchtests. Eigene Ports (528x), nicht die der Entwicklung (5176, 5178 …): Lokal laufen dort oft Dev-Server anderer
- * Arbeitskopien, und `reuseExistingServer` würde stillschweigend deren Stand testen.
+ * Arbeitskopien. Läuft auf einem dieser Ports doch ein Server aus einem anderen Ordner (etwa der E2E-Lauf einer
+ * anderen Arbeitskopie), bricht der Lauf ab, statt still dessen Stand zu testen (`scripts/fremde-server.mjs`).
  */
 export const ERWEITERUNGEN = [
   { app: 'anmeldungen', port: 5281 },

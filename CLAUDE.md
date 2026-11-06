@@ -736,7 +736,10 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   Auth-Flow und die Abläufe (Hinzufügen, Vorlauf, Abschließen, Rückgängig, Statistik, Liedblatt) gegen
   den ChurchTools-Stub `e2e/ct-stub.mjs` (#174). Playwright startet Stub, echten Server und Client selbst;
   die Tests laufen **parallel gegen EINEN Stub** – wer den Ablauf ändert, braucht einen eigenen
-  Stub-Termin. Läuft im CI-Job `e2e`, nicht gegen die Staging-Instanz.
+  Stub-Termin. Läuft im CI-Job `e2e`, nicht gegen die Staging-Instanz. **Lokal** übernimmt Playwright laufende
+  Server (`reuseExistingServer`) – aber nur aus DIESER Arbeitskopie: Läuft auf einem der Ports (4599, 3001, 5173,
+  528x) ein Server aus einem anderen Ordner, bricht der Lauf mit Port und Ordner ab (`scripts/fremde-server.mjs`,
+  06.11.2026 – vorher testete er still fremden Code). Dann warten oder den anderen Server stoppen.
 - **CI:** `.github/workflows/ci.yml` – Job `build-and-test` (`lint` + `build` + `test`) **und**
   Job `e2e` (Playwright-Smoke, Chromium) bei jedem PR und Push auf `main`. Kein DB-Service nötig.
 - **Regel:** Jeder Bug → Issue (Vorlage „Fehlerbericht"); betrifft er reine Logik,

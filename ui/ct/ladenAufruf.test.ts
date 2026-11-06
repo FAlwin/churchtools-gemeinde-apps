@@ -6,7 +6,8 @@ import { dateien, WURZEL } from '../design/quelltexte.testutil';
 /**
  * **Wo auf `useLaden` umgestellt ist, lädt niemand mehr von Hand** (#845, Scheibe 3). Ein neuer `useEffect` mit
  * `let aktuell = true` wäre wieder eine eigene Regel für späte Antworten und Fehler – genau die Kopien, die `useLaden`
- * ersetzt. Die Liste wächst mit jeder Scheibe; am Ende stehen alle Erweiterungen darin.
+ * ersetzt. Seit Scheibe 3e-2 stehen alle Erweiterungen darin. Nicht dabei, weil nicht Teil von #845: die Musik-App
+ * (`client/src`) und das öffentliche Anmeldeformular (`formular/src`).
  */
 const UMGESTELLT = [
   'ui',
@@ -14,6 +15,7 @@ const UMGESTELLT = [
   'gebetsabend/src',
   'protokolle/src',
   'anmeldungen/src',
+  'dienstplaner/src',
 ];
 const VON_HAND = /\blet (aktuell|aktiv) = true\b/;
 const HOOK = join(WURZEL, 'ui/ct/useLaden.ts');

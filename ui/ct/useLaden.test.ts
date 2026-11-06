@@ -167,7 +167,12 @@ describe('useLaden mit „behalten“', () => {
     await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' }));
     rerender({ n: 2 });
     await act(async () => zwei.nein(new Error('Netz weg')));
-    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' });
+    // Daneben der Fehler – wer will, zeigt ihn (Planen: Fehlerkasten über der Tabelle).
+    expect(result.current.stand).toEqual({
+      art: 'fertig',
+      daten: 'eins',
+      neuFehler: fehlerMeldung(new Error('Netz weg')),
+    });
   });
 
   it('auch ein Fehler schon beim Aufrufen nimmt die alten Daten nicht weg', async () => {
@@ -177,7 +182,49 @@ describe('useLaden mit „behalten“', () => {
     });
     await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' }));
     rerender({ n: 2 });
-    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' });
+    expect(result.current.stand).toEqual({
+      art: 'fertig',
+      daten: 'eins',
+      neuFehler: fehlerMeldung(new Error('kaputt')),
+    });
+  });
+
+  it('ein gelungenes Neuladen nimmt den Fehler wieder weg; `neu()` lädt dabei leise', async () => {
+    let n = 0;
+    const laden = vi.fn(() => {
+      n += 1;
+      return n === 2 ? Promise.reject(new Error('Netz weg')) : Promise.resolve(`stand ${n}`);
+    });
+    const { result } = renderHook(() => useLaden(laden, [], { behalten: true }));
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'stand 1' }));
+    act(() => result.current.neu());
+    await waitFor(() =>
+      expect(result.current.stand).toMatchObject({
+        daten: 'stand 1',
+        neuFehler: expect.anything(),
+      }),
+    );
+    act(() => result.current.neu());
+    expect(result.current.stand).toMatchObject({ art: 'fertig', daten: 'stand 1' });
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'stand 3' }));
+  });
+
+  it('behalten als Prüfung: nur Daten, die zum neuen Laden noch passen, bleiben stehen', async () => {
+    const zwei = offen<string>();
+    const drei = offen<string>();
+    const { result, rerender } = renderHook(
+      ({ n }: { n: number }) =>
+        useLaden(() => (n === 1 ? Promise.resolve('a1') : n === 2 ? zwei.p : drei.p), [n], {
+          behalten: (alt) => alt.startsWith('a') && n === 2,
+        }),
+      { initialProps: { n: 1 } },
+    );
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'a1' }));
+    rerender({ n: 2 });
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'a1' });
+    await act(async () => zwei.ja('a2'));
+    rerender({ n: 3 });
+    expect(result.current.stand).toEqual({ art: 'laedt' });
   });
 
   it('ohne fertige Daten gilt „lädt“ und „fehler“ wie sonst; null verwirft sie („aus“)', async () => {

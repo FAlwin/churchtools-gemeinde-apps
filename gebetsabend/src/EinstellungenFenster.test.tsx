@@ -112,6 +112,14 @@ describe('EinstellungenFenster', () => {
     expect(screen.getByRole('alert').textContent).toContain('nichts überschrieben');
     expect(schliessen).not.toHaveBeenCalled();
     expect(gespeichert).not.toHaveBeenCalled();
+
+    // Nochmal speichern: jetzt mit der Version des anderen – sonst gäbe es nur wieder „konflikt“.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+      await Promise.resolve();
+    });
+    expect(speichern.mock.calls[1][5]).toBe(6);
+    expect(speichern.mock.calls[1][3]).toEqual({ kalender: 1, suchwort: 'Andacht' });
   });
 
   it('ein gespeicherter Kalender, den man selbst nicht sieht, bleibt gewählt statt still zu verschwinden', async () => {
@@ -131,6 +139,29 @@ describe('EinstellungenFenster', () => {
         onSchliessen={schliessen}
       />,
     );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByLabelText('Kalender des Gebetsabends')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('ChurchTools antwortet gerade nicht');
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+  });
+
+  it('die Kalender lassen sich nicht holen → Fehler über fehlerMeldung, Speichern gesperrt', async () => {
+    lesen.mockResolvedValue({
+      ok: true,
+      stand: { version: 5, inhalt: { kalender: 2, suchwort: '' } },
+    });
+    daten.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(
+      <EinstellungenFenster
+        start={START}
+        kategorie={80}
+        onGespeichert={gespeichert}
+        onSchliessen={schliessen}
+      />,
+    );
+    expect(screen.getByText('Wird geladen …')).toBeTruthy();
     await act(async () => {
       await Promise.resolve();
     });

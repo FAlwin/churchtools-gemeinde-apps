@@ -115,3 +115,53 @@ describe('useLaden (#845)', () => {
     expect(laden).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('useLaden mit „behalten“', () => {
+  /** `laden` bekommt die deps (`n`) – so steuert jeder Test, was zu welchem Stand zurückkommt. */
+  function mitBehalten(laden: (n: number) => Promise<string> | null) {
+    return renderHook(({ n }: { n: number }) => useLaden(() => laden(n), [n], { behalten: true }), {
+      initialProps: { n: 1 },
+    });
+  }
+
+  it('beim Neuladen bleiben die alten Daten stehen, bis neue da sind', async () => {
+    const zwei = offen<string>();
+    const { result, rerender } = mitBehalten((n) => (n === 1 ? Promise.resolve('eins') : zwei.p));
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' }));
+    rerender({ n: 2 });
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' });
+    await act(async () => zwei.ja('zwei'));
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'zwei' });
+  });
+
+  it('scheitert das Neuladen, bleiben die alten Daten stehen', async () => {
+    const zwei = offen<string>();
+    const { result, rerender } = mitBehalten((n) => (n === 1 ? Promise.resolve('eins') : zwei.p));
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' }));
+    rerender({ n: 2 });
+    await act(async () => zwei.nein(new Error('Netz weg')));
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' });
+  });
+
+  it('auch ein Fehler schon beim Aufrufen nimmt die alten Daten nicht weg', async () => {
+    const { result, rerender } = mitBehalten((n) => {
+      if (n === 2) throw new Error('kaputt');
+      return Promise.resolve('eins');
+    });
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' }));
+    rerender({ n: 2 });
+    expect(result.current.stand).toEqual({ art: 'fertig', daten: 'eins' });
+  });
+
+  it('ohne fertige Daten gilt „lädt“ und „fehler“ wie sonst; null verwirft sie („aus“)', async () => {
+    const { result, rerender } = mitBehalten((n) =>
+      n === 1 ? Promise.reject(new Error('Netz weg')) : n === 2 ? Promise.resolve('zwei') : null,
+    );
+    await waitFor(() => expect(result.current.stand.art).toBe('fehler'));
+    rerender({ n: 2 });
+    expect(result.current.stand).toEqual({ art: 'laedt' });
+    await waitFor(() => expect(result.current.stand).toEqual({ art: 'fertig', daten: 'zwei' }));
+    rerender({ n: 3 });
+    expect(result.current.stand).toEqual({ art: 'aus' });
+  });
+});

@@ -5,7 +5,6 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -14,7 +13,6 @@ import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
@@ -353,48 +351,36 @@ export function Planen({
   const setzeZeitraum = (neu: Zeitraum) =>
     setAnsicht(personen ? { ...ansicht, zeitraumWer: neu } : { ...ansicht, zeitraum: neu });
 
-  // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
-  // Bereich zählt nicht mehr. Geladen wird mit dem Vorlauf für ＋ (`ladeGrenzen`).
+  // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten Bereich zählt
+  // nicht mehr (`useLaden`). Geladen wird mit dem Vorlauf für ＋ (`ladeGrenzen`).
   const grenzen = zeitraumGrenzen(z, heute);
   const laden = ladeGrenzen(z, heute);
   const bereich = laden ? `${laden.von}|${laden.bis}` : null;
-  const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
-  const [versuch, setVersuch] = useState(0);
-  // Nach dem Senden leise neu laden: Das Bisherige bleibt stehen, bis das Neue da ist (wie „ab heute“).
-  const leiseNeu = useRef(false);
   // ＋ bei gewähltem Zeitraum lädt weiter aus – bis das da ist, bleibt der bisherige Stand stehen (für diesen Bereich).
   const [leiseFuer, setLeiseFuer] = useState<string | null>(null);
-  useEffect(() => {
-    if (!laden || !bereich) return;
-    let aktuell = true;
-    if (!leiseNeu.current && leiseFuer !== bereich)
-      setEigen({ bereich, zustand: { art: 'laedt' } });
-    leiseNeu.current = false;
-    ladeZeitraum(laden.von, laden.bis).then(
-      (d) => {
-        if (!aktuell) return;
-        setEigen({
-          bereich,
-          zustand: { art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: 0 },
-        });
-        setLeiseFuer((l) => (l === bereich ? null : l));
-      },
-      (e: unknown) => {
-        if (!aktuell) return;
-        setEigen({ bereich, zustand: { art: 'fehler', fehler: fehlerMeldung(e) } });
-        setLeiseFuer((l) => (l === bereich ? null : l));
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `laden` steckt vollständig in `bereich`
-  }, [bereich, ladeZeitraum, versuch]);
+  const { stand: zeitraum, neu: zeitraumNeu } = useLaden(
+    () =>
+      laden && bereich ? ladeZeitraum(laden.von, laden.bis).then((d) => ({ bereich, ...d })) : null,
+    // `laden` steckt vollständig in `bereich`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bereich, ladeZeitraum],
+    // Leise (das Bisherige bleibt stehen, bis das Neue da ist): derselbe Bereich noch einmal (nach dem Senden, „Erneut
+    // versuchen“) und ＋. Scheitert es, steht der Fehler über der Tabelle wie bei „ab heute“ (Alwin, 06.11.2026).
+    { behalten: (alt) => alt.bereich === bereich || leiseFuer === bereich },
+  );
   const quelle: TermineZustand = !bereich
     ? zustand
-    : eigen && (eigen.bereich === bereich || leiseFuer === bereich)
-      ? eigen.zustand
-      : { art: 'laedt' };
+    : zeitraum.art === 'fertig' && (zeitraum.daten.bereich === bereich || leiseFuer === bereich)
+      ? {
+          art: 'fertig',
+          zeilen: zeitraum.daten.zeilen,
+          plan: zeitraum.daten.plan,
+          wochen: 0,
+          nachladeFehler: zeitraum.neuFehler,
+        }
+      : zeitraum.art === 'fehler'
+        ? { art: 'fehler', fehler: zeitraum.fehler }
+        : { art: 'laedt' };
 
   // „Ab heute“ am Ende: erst nachladen, dann den Schritt tun (Alwin: „Weitere Termine laden“ machte dasselbe
   // wie ＋). Kommt nichts Neues, wird weitergeladen – eine lange Lücke (Sommerpause, oder ein Filter auf eine
@@ -460,18 +446,18 @@ export function Planen({
   const [staende, setStaende] = useState<Map<number, TerminStand>>(new Map());
   const lage = entwurfsLage();
   const fremdSchluessel = lage.fremd.join(',');
+  // Gesammelt, nicht ersetzt: Mit jeder Antwort werden weniger Termine „fremd“ – die bekannten bleiben bekannt.
+  // Scheitert es, bleibt der Stand „unbekannt“: nichts als alt melden (vorübergehend ist nicht gelöscht).
+  const nachgefragt = useLaden(
+    () =>
+      entwuerfe && fremdSchluessel
+        ? entwuerfe.termine(fremdSchluessel.split(',').map(Number))
+        : null,
+    [entwuerfe, fremdSchluessel],
+  ).stand;
   useEffect(() => {
-    if (!entwuerfe || !fremdSchluessel) return;
-    let aktuell = true;
-    const ids = fremdSchluessel.split(',').map(Number);
-    entwuerfe.termine(ids).then(
-      (m) => aktuell && setStaende((alt) => new Map([...alt, ...m])),
-      () => {}, // „unbekannt“: nichts als alt melden (vorübergehend ist nicht gelöscht)
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [entwuerfe, fremdSchluessel]);
+    if (nachgefragt.art === 'fertig') setStaende((alt) => new Map([...alt, ...nachgefragt.daten]));
+  }, [nachgefragt]);
   function entwurfsLage() {
     const schilder = new Map<string, Entwurf[]>();
     const alte: AlterEntwurf[] = [];
@@ -696,12 +682,7 @@ export function Planen({
   let inhalt: ReactNode;
   if (quelle.art === 'laedt') inhalt = <p className={styles.hinweis}>Termine werden geladen …</p>;
   else if (quelle.art === 'fehler')
-    inhalt = (
-      <FehlerKasten
-        fehler={quelle.fehler}
-        onNochmal={bereich ? () => setVersuch((v) => v + 1) : onNochmal}
-      />
-    );
+    inhalt = <FehlerKasten fehler={quelle.fehler} onNochmal={bereich ? zeitraumNeu : onNochmal} />;
   else if (!plan || !d || plan.spalten.length === 0)
     inhalt = hinweis(
       z.art === 'abHeute'
@@ -799,10 +780,8 @@ export function Planen({
 
   /** ChurchTools hat sich geändert (gesendet, Plätze): die Termine neu – leise, ohne „wird geladen“. */
   const leiseNeuLaden = () => {
-    if (bereich) {
-      leiseNeu.current = true;
-      setVersuch((v) => v + 1);
-    } else onAktualisieren?.();
+    if (bereich) zeitraumNeu();
+    else onAktualisieren?.();
   };
 
   /**
@@ -1028,12 +1007,16 @@ export function Planen({
   };
   const offen = sendbareZeilen().length;
 
-  const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
+  // Nachladen gescheitert, der bisherige Stand steht: bei „ab heute“ wie beim gewählten Zeitraum (Alwin, 06.11.2026).
+  const nachladeFehler = quelle.art === 'fertig' ? quelle.nachladeFehler : undefined;
   return (
     <div className={styles.planen}>
       {werkzeug}
       {nachladeFehler && (
-        <FehlerKasten fehler={nachladeFehler} onNochmal={() => nachladen('weiter')} />
+        <FehlerKasten
+          fehler={nachladeFehler}
+          onNochmal={bereich ? zeitraumNeu : () => nachladen('weiter')}
+        />
       )}
       {lage.alte.length > 0 && entwuerfe && ew.art === 'fertig' && (
         <div className={styles.alteHinweis} role="status" aria-label="Alte Entwürfe">

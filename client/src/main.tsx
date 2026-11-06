@@ -97,10 +97,7 @@ const rootNode = DemoComp ? (
     <DemoComp />
   </React.Suspense>
 ) : (
-  // Die Liedwahl (`ui/lied`, LW1a) holt ihre Daten über den Liedzugriff der Musik-App.
-  <LiedZugriffKontext.Provider value={musikLiedZugriff}>
-    <App />
-  </LiedZugriffKontext.Provider>
+  <App />
 );
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -114,7 +111,11 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <SwUpdateProvider>
           {/* Erst rendern, wenn der Offline-Cache wiederhergestellt ist (kein Login-Blitz beim Start). */}
           <RestoreGate>
-            {rootNode}
+            {/* Lieder holt die App über ihren Liedzugriff (`ui/lied`, LW1a) – auch die Demos: ?demo=chart
+                zeigt das Liedblatt, und das fragt die Liednutzung ab. */}
+            <LiedZugriffKontext.Provider value={musikLiedZugriff}>
+              {rootNode}
+            </LiedZugriffKontext.Provider>
             {/* Global (auch auf dem Login-Screen): Hinweis, sobald eine neue Version bereitliegt. */}
             <UpdateBanner />
           </RestoreGate>

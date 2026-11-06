@@ -28,6 +28,7 @@ import { LiedAnsicht } from './LiedAnsicht';
 import { AblaufAnzeige } from './AblaufAnzeige';
 import { LiveAnsicht } from './LiveAnsicht';
 import { ladeLive } from './ladeLive';
+import { LiedWahl } from './LiedWahl';
 import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
@@ -250,7 +251,10 @@ export function TerminAblauf({
     schmal,
     // In der Matrix zieht jede Spalte im gemeinsamen Zieh-Bereich – auch in einen anderen Termin (E6-6b).
     ziehen: schmal ? { spalte: terminId, neuLaden: ablaufNeuLaden } : undefined,
-    // Im Punkt-Fenster: die Zeile „Lied“ öffnet die Lied-Ansicht an seiner Stelle (Alwin, 28.10.2026: an beiden Stellen).
+    // Im Punkt-Fenster die Liedauswahl wie in der Musik-App (LW2b, Alwin 06.11.2026): anderes Lied, Verknüpfung
+    // aufheben, „Neues Lied“. Die Lied-Ansicht bleibt über das Lied im Ablauf erreichbar. Ohne das Recht, Lieder zu
+    // sehen, gibt es keine Liedauswahl – dann öffnet die Zeile „Lied“ weiter die Lied-Ansicht (Alwin, 28.10.2026).
+    liedWahl: start.lieder?.sehen ? (args) => <LiedWahl {...args} /> : undefined,
     liedAnsehen: (p, zurueck, schliessen) => liedAnsicht(p, schliessen, zurueck),
   });
 

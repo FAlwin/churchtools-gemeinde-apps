@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
+import { ApiError } from '../ct/fehler';
 import type {
   ArrangementAnsicht,
   ArrangementAuftrag,
@@ -9,6 +10,7 @@ import type {
   LiedStammdatenAnsicht,
   LiedtextVorschau,
   SongCategory,
+  UserCapabilities,
   SongLibraryEntry,
   SongSelectLiedtext,
   SongSelectSong,
@@ -97,6 +99,34 @@ export interface LiedZugriff {
    * Dienstplaner hat andere Zwischenspeicher. Ohne diesen Schritt zeigte eine App einen Stand, den es nicht mehr gibt.
    */
   nachAenderung(qc: QueryClient, anlass: LiedAenderungsAnlass): void;
+}
+
+/**
+ * Die Lied-Rechte aus den ChurchTools-Rechten (`rechteAus` in `@shared/ct/rechte`) – **eine** Übersetzung für Musik-App
+ * und Dienstplaner (LW2b, 06.11.2026).
+ */
+export function liedRechteAus(
+  c: Pick<UserCapabilities, 'canViewSongStatistics' | 'canUseCcli' | 'canEditSongs'>,
+): LiedRechte {
+  return {
+    statistik: c.canViewSongStatistics ?? false,
+    ccli: c.canUseCcli ?? false,
+    liederAendern: c.canEditSongs ?? false,
+  };
+}
+
+/**
+ * War der Fehler beim Anlegen einer, nach dem das Lied **vielleicht doch** steht? Ein 502 heißt hier „ChurchTools hat
+ * nicht (vollständig) geantwortet“ – z. B. Lied angelegt, Arrangement nicht (#322). Für alle Apps, die ChurchTools über
+ * `ApiError` ansprechen.
+ */
+export function anlegenUngewissAus(fehler: unknown): boolean {
+  return fehler instanceof ApiError && fehler.status === 502;
+}
+
+/** Der Text des Original-Notenblatts aus einem Liedblatt – ohne Text gibt es keins (`null`). */
+export function notenblattTextAus(blatt: { chordpro?: string | null }): string | null {
+  return blatt.chordpro || null;
 }
 
 /** Wodurch sich etwas an einem Lied geändert hat – danach richtet sich, was die App neu lädt. */

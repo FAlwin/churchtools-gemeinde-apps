@@ -422,3 +422,34 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 - **Historie:** 30.10.2026 (Alwin: „nicht immer neuer Punkt, der dann am Ende eingefügt wird“; Vorlauf vorher als Block, #423)
 
 </details>
+
+### TF-EDIT-16 · Im Dienstplaner ein Lied wählen, lösen und neu anlegen
+
+**Vorbereitung:** Ein **Probe-Termin ohne Dienste** (keine Mails) mit Ablauf und einem Punkt mit Lied, im
+Dienstplaner. Ein Konto mit dem Recht, Lieder zu sehen; für „Neues Lied“ zusätzlich Lieder bearbeiten, für SongSelect
+das CCLI-Recht. Ein zweites Konto **ohne** Lied-Recht, das den Ablauf bearbeiten darf.
+
+**Das muss passieren:** Das Punkt-Fenster bedient Lieder wie in der Musik-App (Bauplan E9, Wunsch 4, LW2b, Alwin
+06.11.2026) – anderes Lied wählen, Verknüpfung aufheben, „Neues Lied“. Geschrieben wird erst mit **Speichern**.
+
+1. **Ablauf bearbeiten** → den Punkt mit Lied antippen → die Zeile **Lied** zeigt das Lied mit Pfeil, darunter
+   **„Verknüpfung aufheben“**.
+2. Zeile **Lied** antippen → **„Lied verknüpfen“** öffnet sich (beim ersten Mal kurz „Liedauswahl wird geladen …“) mit
+   der Liederliste, Suche, A–Z/Häufigkeit/Zuletzt. Ein anderes Lied mit **+** wählen → zurück im Punkt-Fenster steht
+   das neue Lied, noch nichts gespeichert. **Speichern** → im Ablauf und in ChurchTools steht das neue Lied.
+3. **Verknüpfung aufheben** → **Speichern** → der Punkt hat kein Lied mehr.
+4. **Lied verknüpfen** → **„+ Neues Lied“** → Formular mit Kategorien; einen Titel suchen, der nicht im Bestand ist →
+   SongSelect-Treffer → **+** füllt das Formular (Copyright wird nachgeholt). **Lied anlegen** → „… ist angelegt“,
+   **„Notenblatt bearbeiten“** öffnet den Editor (Vorschau ohne Logo), **Zurück zum Eintrag** → **Speichern**.
+5. Mit dem Konto **ohne** Lied-Recht: Die Zeile **Lied** öffnet weiter die **Lied-Ansicht** (wie bisher), kein
+   „Verknüpfung aufheben“.
+6. Probe-Lied und Probe-Punkt wieder löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/LiedWahl.tsx`, `dienstplaner/src/liedZugriff.ts`, `dienstplaner/src/start.ts`, `dienstplaner/src/App.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `ui/lied/ctLiedZugriff.ts`, `ui/lied/liedZugriff.ts`, `ui/lied/LiedVerknuepfen.tsx`, `ui/lied/NewSongSheet.tsx`, `ui/ct/lieder.ts`, `ui/ablauf/PunktFenster.tsx`
+- **Automatisiert:** teilweise – `dienstplaner/src/TerminAnsicht.test.tsx` (Liedauswahl nur mit Recht, gewähltes Lied vorgemerkt), `dienstplaner/src/start.test.ts` (`startLiederAus`, je Recht), `dienstplaner/src/liedZugriff.test.ts`, `ui/lied/ctLiedZugriff.test.ts` (gemeinsame Wege, gemeinsame Regeln), `e2e/dienstplaner-liedwahl.spec.ts` (echte Liedauswahl im Browser, mit Liedzugriff und Zwischenspeicher); von Hand bleiben Anlegen und Speichern gegen echtes ChurchTools
+- **Historie:** 06.11.2026 (LW2b; vorher zeigte der Dienstplaner Lieder nur an, Alwin 17.10.2026)
+
+</details>

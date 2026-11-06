@@ -21,6 +21,8 @@ import { diensteAus, type Dienst } from '@shared/ct/dienste';
 import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
 import { darfAblaufBearbeiten, type AblaufTermin } from '@shared/ct/ablaufRecht';
 import { darfTerminAendern } from '@shared/ct/terminInfos';
+import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
+import { liedRechteAus, type LiedRechte } from '@ui/lied/liedZugriff';
 
 /** Das Kürzel des Dienstplaners in ChurchTools – aus der Bau-Adresse (`/ccm/dienstplaner/`). */
 export const MODUL_KUERZEL = kuerzelAusBasis(import.meta.env.BASE_URL) ?? 'dienstplaner';
@@ -37,6 +39,18 @@ export interface Start {
   /** Die Dienste der Gemeinde nach ID (`/services`), mit Dienstgruppe und ChurchTools-Gruppen. */
   dienste: Map<number, Dienst>;
   rechte: DienstRechte;
+  /**
+   * Was man mit Liedern darf (LW2b, 06.11.2026) – aus denselben Rechten, mit derselben Regel wie die Musik-App
+   * (`rechteAus`). Fehlt es, bleibt im Punkt-Fenster die Lied-Ansicht statt der Liedauswahl (so auch in Tests, die
+   * ihren `Start` selbst bauen).
+   */
+  lieder?: StartLieder;
+}
+
+export interface StartLieder {
+  /** Lieder überhaupt sehen (`view songcategory`) – ohne das gibt es keine Liedauswahl. */
+  sehen: boolean;
+  rechte: LiedRechte;
 }
 
 /** **Wirft**, wenn etwas davon nicht lesbar ist – eine halbe Startseite wäre eine falsche. */
@@ -62,6 +76,7 @@ export async function ladeStart(): Promise<Start> {
     dienstgruppen: dienstgruppenAus(dienstgruppenRoh),
     dienste: diensteAus(diensteRoh as Parameters<typeof diensteAus>[0]),
     rechte: dienstRechteAus(rechteRoh, (status, meldung) => new ApiError(status, meldung)),
+    lieder: startLiederAus(rechteRoh),
   };
 }
 
@@ -118,4 +133,16 @@ export function planbareDienstgruppen(start: Start): Dienstgruppe[] {
   return start.dienstgruppen.filter((g) =>
     dienste.some((d) => d.dienstgruppeId === g.id && planbar(start, d)),
   );
+}
+
+/** Die Lied-Rechte aus der Rechte-Antwort – `rechteAus` wie in der Musik-App, übersetzt mit `liedRechteAus`. */
+export function startLiederAus(
+  rechteRoh: Record<string, Record<string, unknown>> | null,
+): StartLieder {
+  const c = rechteAus(
+    rechteRoh,
+    STANDARD_ADMIN_RECHT,
+    (status, meldung) => new ApiError(status, meldung),
+  );
+  return { sehen: c.canViewSongs, rechte: liedRechteAus(c) };
 }

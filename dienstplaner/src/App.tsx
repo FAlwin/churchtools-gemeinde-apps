@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { LiedZugriffKontext } from '@ui/lied/liedZugriff';
+import { dienstplanerLiedZugriff, liedAbfragen } from './liedZugriff';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
@@ -41,6 +44,8 @@ export function App() {
   const [termine, setTermine] = useState<TermineZustand | null>(null);
   const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);
   const zeitzone = gemeindeZeitzone();
+  // Die Liedauswahl im Punkt-Fenster (LW2b) – mit den Lied-Rechten aus dem Start.
+  const liedZugriff = useMemo(() => dienstplanerLiedZugriff(start?.lieder?.rechte), [start]);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -160,82 +165,86 @@ export function App() {
     ) : undefined;
 
   return (
-    <ErweiterungsSeite
-      app="Dienstplaner"
-      zustand={zustand}
-      reiter={oben}
-      unten={unten}
-      gruss={terminId === null && aktiv === 'start'}
-      onNochmal={laden}
-    >
-      {start && terminId !== null && (
-        <TerminAnsicht
-          key={terminId}
-          start={start}
-          terminId={terminId}
-          zeitzone={zeitzone}
-          vorher={stelle > 0 ? reihe[stelle - 1] : null}
-          nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
-          zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
-          onTermin={terminZeigen}
-          onZurueck={() => wechseln(aktiv)}
-          // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
-          // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
-          onGeaendert={() => termineLaden(start, geladen, true)}
-          tausch={tausch}
-        />
-      )}
-      {start && terminId === null && aktiv === 'start' && (
-        <Startseite
-          start={start}
-          termine={termineSicht}
-          antworten={antworten}
-          tausch={tausch}
-          zeitzone={zeitzone}
-          heute={heuteImKalender()}
-          onNochmal={() => termineLaden(start, wochen)}
-          onTermin={terminZeigen}
-          onMeineTermine={() => {
-            merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
-            wechseln('termine');
-          }}
-        />
-      )}
-      {terminId === null && aktiv === 'termine' && termine && start && (
-        <Termine
-          onTermin={terminZeigen}
-          zustand={termineSicht ?? termine}
-          antworten={antworten}
-          tausch={tausch}
-          zeitzone={zeitzone}
-          ich={{
-            id: start.ichId,
-            name: [start.vorname, start.nachname].filter(Boolean).join(' '),
-            gemeinde: start.gemeinde,
-          }}
-          planer={darfPlanen}
-          onNochmal={() => termineLaden(start, wochen)}
-          onMehr={mehrLaden}
-        />
-      )}
-      {terminId === null && aktiv === 'planen' && termine && start && (
-        <Planen
-          onTermin={terminZeigen}
-          zustand={termine}
-          handy={handy}
-          onNochmal={() => termineLaden(start, wochen)}
-          onMehr={mehrLaden}
-          onAktualisieren={() => termineLaden(start, geladen, true)}
-          mehrMoeglich={geladen < MAX_WOCHEN}
-          ladeZeitraum={zeitraumLaden}
-          heute={heuteImKalender()}
-          entwuerfe={entwuerfe}
-          ablauf={{ start, zeitzone }}
-        />
-      )}
-      {terminId === null && aktiv === 'abwesenheiten' && start && (
-        <Abwesenheiten ichId={start.ichId} zeitzone={zeitzone} heute={heuteImKalender()} />
-      )}
-    </ErweiterungsSeite>
+    <QueryClientProvider client={liedAbfragen}>
+      <LiedZugriffKontext.Provider value={liedZugriff}>
+        <ErweiterungsSeite
+          app="Dienstplaner"
+          zustand={zustand}
+          reiter={oben}
+          unten={unten}
+          gruss={terminId === null && aktiv === 'start'}
+          onNochmal={laden}
+        >
+          {start && terminId !== null && (
+            <TerminAnsicht
+              key={terminId}
+              start={start}
+              terminId={terminId}
+              zeitzone={zeitzone}
+              vorher={stelle > 0 ? reihe[stelle - 1] : null}
+              nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
+              zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
+              onTermin={terminZeigen}
+              onZurueck={() => wechseln(aktiv)}
+              // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
+              // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
+              onGeaendert={() => termineLaden(start, geladen, true)}
+              tausch={tausch}
+            />
+          )}
+          {start && terminId === null && aktiv === 'start' && (
+            <Startseite
+              start={start}
+              termine={termineSicht}
+              antworten={antworten}
+              tausch={tausch}
+              zeitzone={zeitzone}
+              heute={heuteImKalender()}
+              onNochmal={() => termineLaden(start, wochen)}
+              onTermin={terminZeigen}
+              onMeineTermine={() => {
+                merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
+                wechseln('termine');
+              }}
+            />
+          )}
+          {terminId === null && aktiv === 'termine' && termine && start && (
+            <Termine
+              onTermin={terminZeigen}
+              zustand={termineSicht ?? termine}
+              antworten={antworten}
+              tausch={tausch}
+              zeitzone={zeitzone}
+              ich={{
+                id: start.ichId,
+                name: [start.vorname, start.nachname].filter(Boolean).join(' '),
+                gemeinde: start.gemeinde,
+              }}
+              planer={darfPlanen}
+              onNochmal={() => termineLaden(start, wochen)}
+              onMehr={mehrLaden}
+            />
+          )}
+          {terminId === null && aktiv === 'planen' && termine && start && (
+            <Planen
+              onTermin={terminZeigen}
+              zustand={termine}
+              handy={handy}
+              onNochmal={() => termineLaden(start, wochen)}
+              onMehr={mehrLaden}
+              onAktualisieren={() => termineLaden(start, geladen, true)}
+              mehrMoeglich={geladen < MAX_WOCHEN}
+              ladeZeitraum={zeitraumLaden}
+              heute={heuteImKalender()}
+              entwuerfe={entwuerfe}
+              ablauf={{ start, zeitzone }}
+            />
+          )}
+          {terminId === null && aktiv === 'abwesenheiten' && start && (
+            <Abwesenheiten ichId={start.ichId} zeitzone={zeitzone} heute={heuteImKalender()} />
+          )}
+        </ErweiterungsSeite>
+      </LiedZugriffKontext.Provider>
+    </QueryClientProvider>
   );
 }

@@ -13,6 +13,19 @@ import type { TerminBlatt } from '@shared/ct/terminBlatt';
 
 // Teilen (E8-1): Das Blatt wird festgehalten statt gezeichnet – geprüft wird, was aus den echten Plan-Daten entsteht.
 const blaetter = vi.hoisted(() => [] as unknown[]);
+// Die Liedauswahl (LW2b) ist hier eine Attrappe – ihr Innenleben prüfen die Tests in `ui/lied`; hier zählt, OB das
+// Punkt-Fenster sie zeigt und was ein gewähltes Lied auslöst.
+vi.mock('./LiedWahl', () => ({
+  LiedWahl: (p: {
+    onGewaehlt: (arrangementId: number, name: string) => void;
+    onAbbrechen: () => void;
+  }) => (
+    <div role="dialog" aria-label="Liedauswahl (Attrappe)">
+      <button onClick={() => p.onGewaehlt(31, 'Way Maker')}>Way Maker wählen</button>
+      <button onClick={p.onAbbrechen}>Attrappe abbrechen</button>
+    </div>
+  ),
+}));
 vi.mock('@ui/teilen/terminBlattPdf', () => ({
   terminBlattPdf: vi.fn(async (b: unknown) => {
     blaetter.push(b);
@@ -1017,6 +1030,37 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     expect(screen.getByPlaceholderText<HTMLInputElement>('z. B. Lied').value).toBe('Lobpreis');
     // Auch der Rückweg ersetzt nur das Fenster, statt es neu einzublenden.
     expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
+  });
+
+  /** LW2b (06.11.2026): Wer Lieder sehen darf, bekommt im Punkt-Fenster die Liedauswahl wie in der Musik-App. */
+  const mitLiedern = (sehen: boolean) => ({
+    ...darf,
+    lieder: { sehen, rechte: { statistik: false, ccli: false, liederAendern: false } },
+  });
+
+  it('mit Lied-Rechten: Zeile „Lied“ öffnet die Liedauswahl, dazu „Verknüpfung aufheben“ (LW2b)', async () => {
+    ctLied();
+    zeige({ start: mitLiedern(true) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    expect(await screen.findByRole('button', { name: 'Verknüpfung aufheben' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Lied: Treu – ansehen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Lied: Treu – anderes wählen' }));
+    expect(await screen.findByRole('dialog', { name: 'Liedauswahl (Attrappe)' })).toBeTruthy();
+    // Ein gewähltes Lied ist nur vorgemerkt – zurück im Punkt-Fenster steht es dort, geschrieben wird erst mit Speichern.
+    fireEvent.click(screen.getByRole('button', { name: 'Way Maker wählen' }));
+    expect(
+      await screen.findByRole('button', { name: 'Lied: Way Maker – anderes wählen' }),
+    ).toBeTruthy();
+  });
+
+  it('ohne das Recht, Lieder zu sehen: keine Liedauswahl, weiter die Lied-Ansicht (LW2b)', async () => {
+    ctLied();
+    zeige({ start: mitLiedern(false) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    expect(await screen.findByRole('button', { name: 'Lied: Treu – ansehen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verknüpfung aufheben' })).toBeNull();
   });
 
   it('von der Lied-Karte geöffnet: blendet ein wie jedes Fenster', async () => {

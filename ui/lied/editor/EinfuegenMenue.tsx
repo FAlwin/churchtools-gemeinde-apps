@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Icon } from '@ui/icons/icons';
+import { Icon } from '../../icons/icons';
 import styles from './ChordEditor.module.scss';
-import { ANDERE, KOPFANGABEN, TEILE, type Einfuegen } from '../utils/einfuegen';
+import { ANDERE, KOPFANGABEN, TEILE, type Einfuegen } from '@shared/lieder/einfuegen';
 
 interface Props {
   offen: boolean;

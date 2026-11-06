@@ -1,5 +1,5 @@
 import type { SetlistSong } from '@shared/types/index';
-import type { ChordPdfOptions } from './chordPdf';
+import type { ChordPdfOptions } from '@ui/lied/chordPdf';
 import { loadSettings } from './chartSettings';
 import { pdfOptionsForSong } from './chartPdfOptions';
 import { selectedVersionKey } from './songVersions';

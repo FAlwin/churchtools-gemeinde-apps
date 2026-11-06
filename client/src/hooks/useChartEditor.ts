@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { createVersion, updateVersion, deleteVersion } from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
-import { getSemitoneOffset, mitTonart, transposeChordpro } from '../utils/transpose';
+import { getSemitoneOffset, mitTonart, transposeChordpro } from '@shared/lieder/transpose';
 import { einstellungenMitnehmen } from '../utils/songVersions';
 import { umbenannteVersionMitnehmen } from '../services/versionUmbenannt';
 

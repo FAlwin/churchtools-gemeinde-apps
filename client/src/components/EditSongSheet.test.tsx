@@ -61,7 +61,7 @@ vi.mock('../hooks/useNotenblatt', () => ({
 }));
 
 /** Der Editor als Attrappe – geprüft wird die Verdrahtung, nicht sein Innenleben (siehe NewSongSheet.test). */
-vi.mock('./ChordEditor', () => ({
+vi.mock('@ui/lied/editor/ChordEditor', () => ({
   ChordEditor: (p: {
     initialText: string;
     mitVersionsname?: boolean;

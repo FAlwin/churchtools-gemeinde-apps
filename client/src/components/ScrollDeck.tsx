@@ -25,8 +25,8 @@ import {
   textAufRolle,
   type Anmerkungsquelle,
   type Rechteck,
-} from '../utils/rollenAbbildung';
-import { PAGE_W } from '../utils/blattMasse';
+} from '@ui/lied/rollenAbbildung';
+import { PAGE_W } from '@ui/lied/blattMasse';
 import { Spinner } from '@ui/bedienung/Spinner';
 import deck from './PageDeck.module.scss';
 import styles from './ScrollDeck.module.scss';

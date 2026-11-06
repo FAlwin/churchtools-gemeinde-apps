@@ -11,7 +11,7 @@ import type { AnnotationText } from '@shared/types/index';
 import { pushField } from '../services/annotations';
 import { lokalSchreiben } from './lokalSpeicher';
 import { readPageTexts, textSchluessel } from './annotationKeys';
-import { PAGE_H, PAGE_W } from './blattMasse';
+import { PAGE_H, PAGE_W } from '@ui/lied/blattMasse';
 import { hatInhalt, imLasso, lassoPfad, pixelRahmen, type Punkt } from './lasso';
 import {
   a4NachRolle,
@@ -20,7 +20,7 @@ import {
   textAufRolle,
   textAufSeite,
   type Streifen,
-} from './rollenAbbildung';
+} from '@ui/lied/rollenAbbildung';
 
 /** Ein gespeichertes Strich-Bild laden – `null`, wenn es keins gibt oder es kaputt ist. */
 export function bildLaden(daten: string | null): Promise<HTMLImageElement | null> {

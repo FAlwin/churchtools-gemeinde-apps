@@ -1,13 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { ARRANGEMENT_GRENZEN, LIED_GRENZEN } from '@shared/types/index';
 import type { LiedinfoFeld, LiedinfoVergleich } from '@shared/ct/liedinfo';
-import {
-  liedinfoUebernehmen,
-  liedinfoWert,
-  type LiedinfoFormular,
-} from '../utils/liedinfoFormular';
+import { liedinfoUebernehmen, liedinfoWert, type LiedinfoFormular } from '../liedinfoFormular';
 // Die Feld-Stile direkt aus dem Modul der Stammdaten-Felder: dieselbe Sorte Eingabe, dasselbe Aussehen.
-import feld from './SongFields.module.scss';
+import feld from '../SongFields.module.scss';
 import styles from './LiedinfoKarte.module.scss';
 
 interface Props {

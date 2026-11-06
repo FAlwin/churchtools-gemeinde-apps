@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 // Worker inline im Bundle (@ui/teilen/pdfSetup) → funktioniert auch offline (#32).
-import '@ui/teilen/pdfSetup';
-import { type ChordPdfSong, generateChordPdf } from '../utils/chordPdf';
+import '../../teilen/pdfSetup';
+import { type ChordPdfSong, generateChordPdf } from '../chordPdf';
 import { parseMetadata } from '@shared/lieder/chordpro';
-import { wirksamerMassstab } from '@ui/teilen/leinwand';
-import { useAppLogo } from '../hooks/useAppLogo';
+import { wirksamerMassstab } from '../../teilen/leinwand';
+import { useLiedZugriff } from '../liedZugriff';
 import styles from './PdfPreview.module.scss';
 
 interface PdfPreviewProps {
@@ -34,7 +34,7 @@ export function PdfPreview({ title, text, semitones, rolle = false, kopf }: PdfP
   const [fitTick, setFitTick] = useState(0);
   // Dasselbe Logo wie auf dem Blatt (samt Gemeinde-Schalter, 19.10.2026) – bis dahin fehlte es in der
   // Vorschau ganz, und der Text stand dort höher als auf dem fertigen Blatt.
-  const logo = useAppLogo();
+  const logo = useLiedZugriff().useBlattLogo();
 
   useEffect(() => {
     const wrap = wrapRef.current;

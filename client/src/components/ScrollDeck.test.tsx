@@ -6,8 +6,8 @@ import { ScrollDeck } from './ScrollDeck';
 import { SCROLL_START, type ScrollPosition } from '../utils/scrollPosition';
 import { textSchluessel } from '../utils/annotationKeys';
 import type { PedalRichtung } from '../utils/pedalTasten';
-import { satzplaene } from '../utils/chordPdf';
-import type { Anmerkungsquelle } from '../utils/rollenAbbildung';
+import { satzplaene } from '@ui/lied/chordPdf';
+import type { Anmerkungsquelle } from '@ui/lied/rollenAbbildung';
 
 const KEINE = (): Anmerkungsquelle => ({ seiten: [{ own: null, over: null }] });
 

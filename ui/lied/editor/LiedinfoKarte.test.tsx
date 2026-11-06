@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ArrangementAnsicht, LiedStammdatenAnsicht } from '@shared/types/index';
 import { LiedinfoKarte } from './LiedinfoKarte';
-import { liedinfoStart, type LiedinfoQuelle } from '../utils/liedinfoFormular';
+import { liedinfoStart, type LiedinfoQuelle } from '../liedinfoFormular';
 
 /** Lied-Editor L4 (23.10.2026): Liedinfo – Hinweis am Feld, übernehmen, nur lesen. */
 const LIED: LiedStammdatenAnsicht = {

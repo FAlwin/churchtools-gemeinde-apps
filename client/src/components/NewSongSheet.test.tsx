@@ -71,7 +71,7 @@ vi.mock('../hooks/useNeuesLied', () => ({
  * hierher, und in jsdom rendert es nicht sauber. Geprüft wird die VERDRAHTUNG – welcher Text hinein
  * kommt und dass Speichern den Hook trifft.
  */
-vi.mock('./ChordEditor', () => ({
+vi.mock('@ui/lied/editor/ChordEditor', () => ({
   ChordEditor: (p: {
     initialText: string;
     mitVersionsname?: boolean;

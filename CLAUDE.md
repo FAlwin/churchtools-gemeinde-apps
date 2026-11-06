@@ -51,7 +51,14 @@
     **`LiedZugriff`** der App (`LiedZugriffKontext.Provider`); die Musik-App gibt `hooks/musikLiedZugriff.ts` in `main.tsx`
     (dieselben `churchtoolsApi`-Wege, Liedtext-Suche nur mit `funktionen.liedtextSuche`). `useServices` reicht die
     Abfragen nur weiter. ChordPro-Leser `shared/lieder/chordpro.ts` + `liedtextTeile.ts`, `CenterMessage` und
-    `useEntprellt` in `ui/bedienung`. „Neues Lied" (`NewSongSheet`) und `LiedVerknuepfen` noch in `client/` (LW1b).
+    `useEntprellt` in `ui/bedienung`. **Seit LW1b-1 auch der Notenblatt-Editor** in `ui/lied/editor/` (`ChordEditor`,
+    `ChordProInput` mit CodeMirror, `PdfPreview`, Akkord-Leiste/-Menü/-Fenster, Ablauf-Karte, Einfügen-Menü,
+    Liedinfo-Karte), dazu `chordPdf`/`rollenAbbildung`/`blattMasse` und die Formular-Regeln (`liedFormular`,
+    `arrangementFormular`, `liedinfoFormular`) in `ui/lied`, `transpose` + `einfuegen` in `shared/lieder`. Was der
+    Editor von der App braucht, gibt sie ebenfalls über den `LiedZugriff`: `liedansicht()` (Geräte-Einstellung
+    Scrollen/Blättern) und `useBlattLogo()` (Logo der PDF-Kopfzeile). **Jeder Einstieg braucht den Provider** – in
+    `main.tsx` umschließt er App UND die Entwicklungs-Demos (`?demo=chart|editor`, sonst e2e rot, #887).
+    „Neues Lied" (`NewSongSheet`) und `LiedVerknuepfen` noch in `client/` (LW1b-2).
   - **ein Suchfeld, eine Liste, zwei Knöpfe je Zeile** (#378, dritter Anlauf nach Alwins Rückmeldungen vom
     03./04.09.2026). Gesucht wird in Titel, Autor **und CCLI-Nummer** (`SongLibraryEntry.ccli`, pflichtig,
     vom Server aus `CtSongListEntry.ccli`). Eigene Lieder oben, SongSelect darunter mit Überschrift
@@ -490,7 +497,7 @@ nutzen das Gerüst – wer `Screen` direkt verwendet, braucht einen Grund (Login
 ## Akkord-Ansicht: durchgehender Seiten-Strom + Anmerkungen
 
 Die Akkord-Ansicht ist **kein** Live-HTML-Chart mehr, sondern ein **Seiten-Strom aus Canvas-Seiten**.
-`utils/chordPdf.ts` baut aus ChordPro ein A4-PDF (SongSelect-Look, alles schwarz, Logo oben rechts);
+`ui/lied/chordPdf.ts` baut aus ChordPro ein A4-PDF (SongSelect-Look, alles schwarz, Logo oben rechts);
 `generateSetlistPdfWithOwners` erzeugt daraus **eine** kombinierte PDF + `owners[]` (welche Seite zu
 welchem Lied/Seite/Version gehört).
 
@@ -515,12 +522,12 @@ Breite, nahtlos (`components/ScrollDeck.tsx`). **Seit #607 ist jedes Lied dort E
 Probesatz `rollenHoehe`, 120 mm bis 5 m). **Anmerkungen sind gemeinsam (#614):** gespeichert bleiben sie auf
 den A4-Seiten; die Rolle hat KEINE eigenen (`drawKeyForPage` liefert für sie `null`) und zeigt die aller A4-Seiten
 ihres Lieds umgerechnet. Dafür schreibt `generateChordPdf` beim Setzen die **Stücke** mit (Teil × Spalte × Seite,
-`satzplaene`), `utils/rollenAbbildung.ts` macht daraus Streifen (Kern + Lücke; Lücken → ans Ende des vorigen
+`satzplaene`), `ui/lied/rollenAbbildung.ts` macht daraus Streifen (Kern + Lücke; Lücken → ans Ende des vorigen
 Stücks, 2 Spalten → an den linken Rand gerückt; der Platz unter dem letzten Teil ist ein Kern, und die Rolle wächst,
 soweit dort etwas steht – `rollenUnterkante`, in `ScrollSeite`; beim Malen bleibt die Höhe stehen, die Mal-Ebene
 kommt erst nach dem Ausmessen, `kerneAufSeite` schreibt nur zurück, was die Rolle abdeckt, #626),
 `anmerkungsquelleFuer` (chartPageKeys) liefert je Seite die
-Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream` übernimmt `localPage` und
+Schlüssel. Blatt-Maße EINMAL in `ui/lied/blattMasse.ts`. Achtung: `composeStream` übernimmt `localPage` und
 `abbildung` aus dem Blatt (nicht neu zählen!). jsPDF-`addPage()` ohne Format nimmt das der VORIGEN Seite. Leinwand-Deckel für iOS
 `ui/teilen/leinwand.ts` (seit E8-1 in `ui/`, mit der PDF-Vorschau). Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht.
 **Neuer Lied-Editor in Scheiben L0–L6** (seit 22.10.2026; Bauplan + L0-Messung außerhalb des Repos in
@@ -548,7 +555,7 @@ Schreibfeld im Fokus – `schreibtGerade`, auch für `syncAppHeight` –,
 gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchmal das Fenster; auch für
 `useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
 dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Titel, Autor, CCLI, Copyright am Lied; Tempo, Takt am
-Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `utils/liedinfoFormular.ts` auf den Formularen
+Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `ui/lied/liedinfoFormular.ts` auf den Formularen
 des Stammdaten-Blatts, Laden/Speichern `hooks/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
 ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBeimImport` beim SongSelect-Import);
 ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart (in der Datei; im Text seit L6
@@ -588,7 +595,7 @@ Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen E
 Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus geht ein Tritt **Teil für Teil**
 (#609): zur nächsten Halte-Stelle (Titel, Teil-Anfang, `----`), wenn sie schon zu sehen ist, sonst ⅔ Bildschirm
 (`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit) – Regel `pedalZiel` (`utils/pedalSchritt.ts`), Halte-Stellen
-`pedalHalte` (`utils/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
+`pedalHalte` (`ui/lied/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
 protokolliert; Luft über einem Teil `HALTE_LUFT` in mm, höchstens der halbe Abstand zum Teil davor bzw. Kopf
 `KOPF_ABSTAND` – feste Bildpunkte ließen auf schmalen Handys einen Streifen der Zeile davor herein; am `----`
 keine Luft). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
@@ -721,7 +728,7 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 - **Umgebung je Testdatei:** Standard ist `node` (reine Logik). Tests, die DOM/localStorage/jsPDF
   brauchen, setzen selbst `// @vitest-environment jsdom` als ERSTE Zeile – fehlt sie, scheitern sie
   mit „window is not defined".
-- **Umfang:** Vitest für reine Logik (`utils/transpose.ts`, `chordpro.ts`, …), den
+- **Umfang:** Vitest für reine Logik (`shared/lieder/transpose.ts`, `chordpro.ts`, …), den
   Interaktionskern (`hooks/usePageDraw` Undo/Redo/Push-Dedup/Key-Wechsel), Basis-Komponenten
   (`Coachmarks`) und alle Server-Services/-Controller/-Middleware (ChurchTools gemockt).
   Coverage schließt `utils/`, `components/`, `hooks/`, `services/` ein.

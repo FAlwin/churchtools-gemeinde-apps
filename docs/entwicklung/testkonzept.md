@@ -269,7 +269,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     „heute“ (seit #847 `heuteImKalender` in `shared/ct/zeit.test`, vorher `utils/heute.test`) prüft mit der Zone
     **Europe/Berlin**, dass 22:30 UTC schon der nächste Tag ist – in UTC wären Gemeinde- und UTC-Weg gleich, der
     Test wäre auf der CI wertlos. `utils/ids.test` prüft den Rückfall ohne `crypto.randomUUID` (LAN über HTTP).
-    `utils/arrangementFormular.test` hält den Tempo-Bereich gegen `@shared/tempo` statt gegen
+    `ui/lied/arrangementFormular.test` hält den Tempo-Bereich gegen `@shared/tempo` statt gegen
     Literale und prüft, dass der Speichern-Knopf bei einem unspielbaren Tempo gesperrt bleibt.
     `components/TerminArtenManager.test` vergleicht die `maxLength` der Felder mit
     `SITE_CONFIG_GRENZEN`, `services/siteConfig.test` das Zod-Schema mit derselben Konstante – beide
@@ -286,14 +286,14 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   - **Release v2.25.0 (20./21.09.2026):** `ui/abwesenheiten/terminFilter.test` (damals `utils/`) (#400: `artVon` = erste passende
     Art, sonst „Sonstige"; `knoepfeAus`; `wirksameAuswahl` verwirft unbekannte IDs und nimmt höchstens
     eine; `filtereTermine`; `umschalten` = eins oder alles) und `components/TerminArtenManager.test`
-    (Admin-Pflege). `utils/arrangementFormular.test` (#396: Länge Sekunden ↔ Minuten:Sekunden hin und
+    (Admin-Pflege). `ui/lied/arrangementFormular.test` (#396: Länge Sekunden ↔ Minuten:Sekunden hin und
     zurück, Formular aus Arrangement, `arrangementBereit` + Hinweis „Liednummer nur mit Quelle",
     `auftragAus` schickt beim Ändern NUR das Geänderte, `hatAenderung`), `components/ArrangementSheet.test`
     (Speichern, Quelle/Liednummer, Standard und Löschen nur beim vorhandenen Arrangement); Server
     `services/arrangementVerwaltung.test` (Lesen, Anlegen nie als Standard, Ändern über
     lesen–ändern–schreiben, Standard über `PATCH …/default` mit Nachsehen, die beiden Geländer beim
     Löschen: letztes und Standard → 409) und `services/ctSongSources.test` (Objekt statt Array,
-    Kurzzeit-Memo). `utils/transpose.test` → `transposeChordpro`/`mitTonart` (#398: Akkorde in `[…]`
+    Kurzzeit-Memo). `shared/lieder/transpose.test` → `transposeChordpro`/`mitTonart` (#398: Akkorde in `[…]`
     und die `{key}`-Zeile, 0 Halbtöne lässt den Text unangetastet); Server `services/buildSong.head.test`
     → „jede Version kennt ihre Tonart" (`writtenKey` aus der eigenen `{key}`-Zeile, `null` ohne).
     `testHilfen/tempAblage.test` – der gemeinsame Helfer für Temp-Verzeichnisse in Server-Tests
@@ -304,7 +304,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     gemeinsame Kern: Gerüst ohne Abfrage (`hatBlatt: false`), geholtes Blatt (`true`), nachsehen (`null`),
     Speichern verwirft `['song-chart', songId]`, Fehler nennt den Grund, ohne Ziel passiert nichts.
     `components/EditSongSheet` – „Notenblatt bearbeiten" fragt mit `null` nach, Editor ohne Versionsname,
-    Speichern meldet über `onSaved`, nichts öffnet sich von selbst. `components/ChordEditor` – die
+    Speichern meldet über `onSaved`, nichts öffnet sich von selbst. `ui/lied/editor/ChordEditor` – die
     Speichern-Regel gegen die **echte** Komponente: Ohne Versionsname-Feld sperrt der fehlende Name nicht,
     leerer Text sperrt immer. **Lehre (04.09.2026):** Beide Aufrufer-Tests mocken den Editor als Attrappe;
     der Knopf war im Browser dauerhaft grau, die Suite grün. Wer eine Komponente mockt, muss ihre
@@ -412,7 +412,7 @@ zurückgelegt und wiederholt**, der Pull überschreibt die Seite danach NICHT (d
 Ausfallkette), 413 meldet dem Nutzer die Ursache, 401 schaltet ab ohne Wiederholung, ein neuerer
 Strich gewinnt gegen den zurückgelegten und ein anderes Feld überlebt daneben. Aufbau bewusst von
 `userSettings.flush.test.ts` (#213) übernommen – gleiche Fehlerklasse, gleicher Test.
-Erledigt: `utils/chordPdf.ts` 0 → 87,7 % und `services/annotations.ts` 13 → 53,6 % (#192),
+Erledigt: `ui/lied/chordPdf.ts` 0 → 87,7 % und `services/annotations.ts` 13 → 53,6 % (#192),
 `agendaItemWritePayload` mit 11 Tests (#212).
 
 **Erkannt im Code-Check 31.07.2026 (#251), teils erledigt:** `DrawToolbar.tsx` (479 Z.) ist seit

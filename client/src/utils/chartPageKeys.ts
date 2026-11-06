@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, type SongSettings } from './chartSettings';
 import type { StreamOwner } from './streamCompose';
 import { drawKeyForOwner, viewKeyForOwner, zoomKeyBaseForOwner } from './streamKeys';
 import { eigenerSchluessel } from './pageKeys';
-import type { Anmerkungsquelle } from './rollenAbbildung';
+import type { Anmerkungsquelle } from '@ui/lied/rollenAbbildung';
 
 /**
  * Welche Anmerkungs-/Zoom-Ebene gehört zu welcher Seite des durchgehenden Stroms? (#314)

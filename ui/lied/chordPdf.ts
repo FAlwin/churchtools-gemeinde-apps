@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { parseChordPro, parseLine, parseMetadata, teileImFlow } from '@shared/lieder/chordpro';
-import { transposeChord } from './transpose';
+import { transposeChord } from '@shared/lieder/transpose';
 import type { SetlistSong } from '@shared/types/index';
 import type { Abbildung, Satzplan, Stueck } from './rollenAbbildung';
 import { KOPF_ABSTAND, MARGIN, PAGE_H, PAGE_W, spaltenBreite, spaltenX } from './blattMasse';

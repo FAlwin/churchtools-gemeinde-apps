@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChordProInput, type AkkordAntippen, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
-import { Icon } from '@ui/icons/icons';
-import { Spinner } from '@ui/bedienung/Spinner';
-import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
+import { Icon } from '../../icons/icons';
+import { Spinner } from '../../bedienung/Spinner';
+import { useOverlayKeyboardInset } from '../../fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
-import { shiftKey } from '../utils/transpose';
+import { shiftKey } from '@shared/lieder/transpose';
 import {
   akkordVerschieben,
   flowSetzen,
@@ -17,11 +17,11 @@ import { AkkordLeiste } from './AkkordLeiste';
 import { AkkordFenster } from './AkkordFenster';
 import { AblaufKarte } from './AblaufKarte';
 import { EinfuegenMenue } from './EinfuegenMenue';
-import type { Einfuegen } from '../utils/einfuegen';
-import { getLiedansicht } from '../utils/devicePrefs';
-import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { useTastaturOffen } from '@ui/fenster/useTastaturOffen';
-import { Segment } from '@ui/bedienung/Segment';
+import type { Einfuegen } from '@shared/lieder/einfuegen';
+import { useLiedZugriff } from '../liedZugriff';
+import { useMedienAbfrage } from '../../bedienung/useMedienAbfrage';
+import { useTastaturOffen } from '../../fenster/useTastaturOffen';
+import { Segment } from '../../bedienung/Segment';
 import { liedinfoZeilenEntfernen } from '@shared/ct/liedinfo';
 import type { LiedinfoVergleich } from '@shared/ct/liedinfo';
 import { LiedinfoKarte } from './LiedinfoKarte';
@@ -31,7 +31,7 @@ import {
   liedinfoStart,
   type LiedinfoFormular,
   type LiedinfoQuelle,
-} from '../utils/liedinfoFormular';
+} from '../liedinfoFormular';
 
 interface ChordEditorProps {
   songTitle: string;
@@ -127,7 +127,8 @@ export function ChordEditor({
   }, [tastaturOffen, textFokus]);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
-  const [rolle] = useState(() => getLiedansicht() === 'scrollen');
+  const liedZugriff = useLiedZugriff();
+  const [rolle] = useState(() => liedZugriff.liedansicht() === 'scrollen');
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   // Ohne Versionsname-Feld (Original-Notenblatt) darf der fehlende Name nicht sperren – sonst ist

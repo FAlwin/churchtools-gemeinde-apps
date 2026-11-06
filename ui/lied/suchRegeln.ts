@@ -2,7 +2,7 @@
  * **Die Such-Regeln der Liedwahl** – wohin eine Eingabe geht (Titel oder CCLI-Nummer), ab wann SongSelect von selbst
  * fragt und wie ein Treffer beschrieben wird. Rein und damit prüfbar.
  *
- * Bis zum 06.11.2026 Teil von `client/src/utils/liedFormular.ts` (die Formular-Regeln „Neues Lied"); umgezogen mit der
+ * Bis zum 06.11.2026 Teil von `liedFormular.ts` (die Formular-Regeln „Neues Lied", damals in `client/src/utils`); umgezogen mit der
  * Liedwahl nach `ui/lied` (Dienstplaner-Bauplan E9, Wunsch 4 „LW1a"), damit Musik-App und Dienstplaner dieselben
  * Regeln nutzen und keine zweite Kopie entsteht.
  */

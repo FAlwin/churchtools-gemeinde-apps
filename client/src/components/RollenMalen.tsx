@@ -9,8 +9,8 @@ import { useLatestRef } from '../hooks/useLatestRef';
 import { pushField } from '../services/annotations';
 import { textSchluessel } from '../utils/annotationKeys';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
-import { rahmenAufKernen, streifen, type Anmerkungsquelle } from '../utils/rollenAbbildung';
-import { PAGE_W } from '../utils/blattMasse';
+import { rahmenAufKernen, streifen, type Anmerkungsquelle } from '@ui/lied/rollenAbbildung';
+import { PAGE_W } from '@ui/lied/blattMasse';
 import {
   bildLaden,
   entwurfStriche,

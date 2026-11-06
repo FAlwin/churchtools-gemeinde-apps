@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Icon } from '@ui/icons/icons';
-import { akkordTeile, tonartAkkorde } from '../utils/transpose';
+import { Icon } from '../../icons/icons';
+import { akkordTeile, tonartAkkorde } from '@shared/lieder/transpose';
 import { akkordeImText } from '@shared/lieder/chordpro';
 import styles from './AkkordLeiste.module.scss';
 

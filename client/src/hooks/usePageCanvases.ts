@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { useLatestRef } from './useLatestRef';
-import { PAGE_H, PAGE_W } from '../utils/blattMasse';
+import { PAGE_H, PAGE_W } from '@ui/lied/blattMasse';
 
 /** Seitenverhältnis, bis die erste Seite gezeichnet ist. */
 const A4_FORMAT = `${PAGE_W} / ${PAGE_H}`;

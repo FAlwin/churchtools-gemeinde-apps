@@ -8,9 +8,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icon } from '@ui/icons/icons';
-import { useZiehSensoren } from '@ui/bedienung/useZiehSensoren';
-import { innerScrollOnly } from '@ui/bedienung/dndAutoScroll';
+import { Icon } from '../../icons/icons';
+import { useZiehSensoren } from '../../bedienung/useZiehSensoren';
+import { innerScrollOnly } from '../../bedienung/dndAutoScroll';
 import { flowEintraege, parseChordPro, parseMetadata, teileImFlow } from '@shared/lieder/chordpro';
 import styles from './AblaufKarte.module.scss';
 

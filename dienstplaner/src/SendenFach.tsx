@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz } from '@shared/ct/datum';
@@ -29,6 +30,8 @@ type Phase = 'liste' | 'laeuft' | 'fertig';
  * sich lohnt. `onClose(true)`, wenn sich etwas geändert hat (`neuLaden`, auch bei einem Konflikt) – dann lädt der
  * Aufrufer Matrix und Entwürfe neu.
  */
+const KEINE_HINWEISE = new Map<string, SendeHinweis>();
+
 export function SendenFach({
   zeilen,
   ichId,
@@ -47,26 +50,21 @@ export function SendenFach({
 }) {
   const schluessel = (z: SendeZeile) => ortSchluessel(z.entwurf.ort);
   const [haken, setHaken] = useState<Set<string>>(() => new Set(zeilen.map(schluessel)));
-  const [hw, setHw] = useState<Map<string, SendeHinweis> | null>(null);
+  const hwStand = useLaden(
+    () => hinweise(zeilen),
+    // Einmal beim Öffnen – die Liste ändert sich im offenen Fach nicht.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  ).stand;
+  // Scheitert es, gibt es keine Hinweise – gesendet werden kann trotzdem.
+  const hw: Map<string, SendeHinweis> | null =
+    hwStand.art === 'fertig' ? hwStand.daten : hwStand.art === 'fehler' ? KEINE_HINWEISE : null;
   const [phase, setPhase] = useState<Phase>('liste');
   const [ergebnisse, setErgebnisse] = useState<Map<string, SendeErgebnis>>(new Map());
   const [jetzt, setJetzt] = useState<string | null>(null);
   // Ab dem ersten Senden zeigt das Fach nur noch, was ausgewählt war – Abgewähltes bleibt einfach Entwurf.
   const [auswahl, setAuswahl] = useState<Set<string> | null>(null);
   const sichtbar = auswahl ? zeilen.filter((z) => auswahl.has(schluessel(z))) : zeilen;
-
-  useEffect(() => {
-    let aktuell = true;
-    hinweise(zeilen).then(
-      (m) => aktuell && setHw(m),
-      () => aktuell && setHw(new Map()),
-    );
-    return () => {
-      aktuell = false;
-    };
-    // Einmal beim Öffnen – die Liste ändert sich im offenen Fach nicht.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const gewaehlt = zeilen.filter((z) => haken.has(schluessel(z)));
   const zuSenden =

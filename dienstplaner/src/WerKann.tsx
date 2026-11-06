@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstplan/werKann';
 import {
   zielText,
@@ -97,8 +98,19 @@ export function WerKann({
   /** Der Stift (E5-3): Vorlieben der Kandidaten für diese Dienstgruppe ändern. Ohne Angabe kein Stift. */
   stift?: { vorlieben: EntwurfAnschluss['vorlieben']; gruppe: { id: number; name: string } };
 }) {
-  const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
-  const [versuch, setVersuch] = useState(0);
+  const { stand, neu } = useLaden(
+    () =>
+      ladeWerKann(platz.eventId, platz.serviceId).then((roh) =>
+        kandidatenAus(roh, { monat: platz.monat, schonDa: new Set(platz.schonDa) }),
+      ),
+    [platz.eventId, platz.serviceId, platz.monat, platz.schonDa],
+  );
+  const zustand: Zustand =
+    stand.art === 'fertig'
+      ? { art: 'fertig', liste: stand.daten }
+      : stand.art === 'fehler'
+        ? stand
+        : { art: 'laedt' };
   const [suche, setSuche] = useState('');
   const [gast, setGast] = useState('');
   const [laeuft, setLaeuft] = useState(false);
@@ -123,22 +135,6 @@ export function WerKann({
     else setMeldung(grundText(r.grund));
   };
 
-  useEffect(() => {
-    let aktuell = true;
-    setZustand({ art: 'laedt' });
-    ladeWerKann(platz.eventId, platz.serviceId).then(
-      (roh) => {
-        if (!aktuell) return;
-        const liste = kandidatenAus(roh, { monat: platz.monat, schonDa: new Set(platz.schonDa) });
-        setZustand({ art: 'fertig', liste });
-      },
-      (e: unknown) => aktuell && setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [platz.eventId, platz.serviceId, platz.monat, platz.schonDa, versuch]);
-
   const q = suche.trim().toLowerCase();
   return (
     <Sheet
@@ -152,9 +148,7 @@ export function WerKann({
         {platz.bisher && <> · statt {platz.bisher.name}</>}
       </p>
       {zustand.art === 'laedt' && <p className={styles.hinweis}>„Wer kann?“ wird geladen …</p>}
-      {zustand.art === 'fehler' && (
-        <FehlerKasten fehler={zustand.fehler} onNochmal={() => setVersuch((v) => v + 1)} />
-      )}
+      {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={neu} />}
       {zustand.art === 'fertig' && (
         <>
           {zustand.liste.length >= SUCHE_AB && (
@@ -307,7 +301,7 @@ export function WerKann({
             // ChurchTools rechnet mit der neuen Vorliebe neue Punkte – die Liste neu laden.
             vergissWerKann(platz.eventId, platz.serviceId);
             setNotiz(`Vorlieben von ${stiftFuer.name} gespeichert.`);
-            setVersuch((v) => v + 1);
+            neu();
           }}
         />
       )}

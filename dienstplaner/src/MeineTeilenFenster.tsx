@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { PdfKnoepfe, PdfStandUndVorschau } from '@ui/teilen/pdfFenster';
 import { useGebautesPdf, useStand } from '@ui/teilen/pdfFensterZustand';
@@ -31,23 +32,16 @@ export function MeineTeilenFenster({
   onClose: () => void;
   port?: Pick<TauschPort, 'einteilungen'>;
 }) {
-  const [einteilungen, setEinteilungen] = useState<Einteilung[] | 'laedt' | 'fehler'>('laedt');
-  const [versuch, setVersuch] = useState(0);
-
-  useEffect(() => {
-    let aktuell = true;
-    setEinteilungen('laedt');
-    port.einteilungen(wer.ichId).then(
-      (roh) => aktuell && setEinteilungen(einteilungenAus(roh)),
-      (e: unknown) => {
+  const { stand, neu } = useLaden(
+    () =>
+      port.einteilungen(wer.ichId).then(einteilungenAus, (e: unknown) => {
         console.warn('[meine dienste] nicht geladen:', e);
-        if (aktuell) setEinteilungen('fehler');
-      },
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [port, wer.ichId, versuch]);
+        throw e;
+      }),
+    [port, wer.ichId],
+  );
+  const einteilungen: Einteilung[] | 'laedt' | 'fehler' =
+    stand.art === 'fertig' ? stand.daten : stand.art === 'fehler' ? 'fehler' : 'laedt';
 
   if (Array.isArray(einteilungen))
     return <BlattFenster wer={wer} einteilungen={einteilungen} onClose={onClose} />;
@@ -59,7 +53,7 @@ export function MeineTeilenFenster({
         ) : (
           <p className={styles.hinweis} role="alert">
             Deine Dienste ließen sich gerade nicht laden.{' '}
-            <button type="button" className={styles.link} onClick={() => setVersuch((v) => v + 1)}>
+            <button type="button" className={styles.link} onClick={neu}>
               Erneut versuchen
             </button>
           </p>

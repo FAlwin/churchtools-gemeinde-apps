@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
@@ -103,6 +104,8 @@ export interface AblaufTeile {
  * und bekommt jeden neu gelesenen Stand über `onAblauf` zurück. Je Termin eine eigene Instanz (`key` = Termin): Ein
  * Neu-Lesen, das erst nach dem Wechsel ankommt, zählt dann nicht mehr.
  */
+const KEINE_LIEDER = new Map<number, CtSong>();
+
 export function TerminAblauf({
   start,
   zeitzone,
@@ -146,11 +149,8 @@ export function TerminAblauf({
   const [zeigen, setZeigen] = useState(false);
   // „Live“ (E6b-2 L2): offen? Und läuft der Termin heute gerade in ChurchTools (roter Punkt am Knopf)?
   const [live, setLive] = useState(false);
-  const [liveLaeuft, setLiveLaeuft] = useState(false);
   const agendaId = ablauf?.id;
   const items = ablauf?.items;
-  // Die Lieder des Ablaufs aus ChurchTools: Autor für die Lied-Karte (E6-O1), alles Weitere für die Lied-Ansicht (O4).
-  const [lieder, setLieder] = useState<Map<number, CtSong>>(new Map());
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
   const [anlegen, setAnlegen] = useState<{
     neu: boolean;
@@ -169,6 +169,18 @@ export function TerminAblauf({
     };
   }, []);
 
+  // Lieder des Ablaufs einmal je Stand nachladen (der Ablauf nennt weder Autor noch Dateien, gemessen E6-O0).
+  const liedIds = useMemo(
+    () => (ablauf?.items ?? []).flatMap((i) => (i.song ? [i.song.songId] : [])).join(','),
+    [ablauf],
+  );
+  // Die Lieder des Ablaufs aus ChurchTools: Autor für die Lied-Karte (E6-O1), alles Weitere für die Lied-Ansicht (O4).
+  // Scheitert es, stehen die Karten ohne Autor da.
+  const liederStand = useLaden(
+    () => ladeLiedDaten(liedIds ? liedIds.split(',').map(Number) : []),
+    [liedIds],
+  ).stand;
+  const lieder = liederStand.art === 'fertig' ? liederStand.daten : KEINE_LIEDER;
   const zeilen = useMemo(
     () =>
       (ablauf?.items ?? []).map((i) => {
@@ -178,22 +190,6 @@ export function TerminAblauf({
       }),
     [ablauf, terminId, zeitzone, lieder],
   );
-  // Lieder des Ablaufs einmal je Stand nachladen (der Ablauf nennt weder Autor noch Dateien, gemessen E6-O0).
-  const liedIds = useMemo(
-    () => (ablauf?.items ?? []).flatMap((i) => (i.song ? [i.song.songId] : [])).join(','),
-    [ablauf],
-  );
-  useEffect(() => {
-    let aktuell = true;
-    const ids = liedIds ? liedIds.split(',').map(Number) : [];
-    ladeLiedDaten(ids).then(
-      (l) => aktuell && setLieder(l),
-      () => aktuell && setLieder(new Map()),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [liedIds]);
   const dienste = useMemo(
     () => [...start.dienste.values()].map((d) => ({ id: d.id, name: d.name })),
     [start.dienste],
@@ -454,23 +450,16 @@ export function TerminAblauf({
 
   // Der rote Punkt: nur am Tag des Termins einmal nachsehen (Alwin, 02.11.2026) – beim Öffnen und nach dem Schließen
   // von „Live“, nie in der Matrix. Scheitert es, fehlt nur der Punkt.
-  useEffect(() => {
-    setLiveLaeuft(false);
-    if (schmal || live || agendaId === undefined || !items) return;
-    if (termin.tag !== ortszeitAus(new Date().toISOString(), zeitzone).slice(0, 10)) return;
-    let aktuell = true;
+  const liveStand = useLaden(() => {
+    if (schmal || live || agendaId === undefined || !items) return null;
+    if (termin.tag !== ortszeitAus(new Date().toISOString(), zeitzone).slice(0, 10)) return null;
     const punkte = liveListe(items, terminId).length;
-    ladeLive(terminId, agendaId).then(
-      (r) => {
-        const s = r.ok ? r.stand.stelle : null;
-        if (aktuell) setLiveLaeuft(s !== null && s > 0 && s <= punkte);
-      },
-      () => {},
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [schmal, live, agendaId, items, terminId, termin.tag, zeitzone]);
+    return ladeLive(terminId, agendaId).then((r) => {
+      const s = r.ok ? r.stand.stelle : null;
+      return s !== null && s > 0 && s <= punkte;
+    });
+  }, [schmal, live, agendaId, items, terminId, termin.tag, zeitzone]).stand;
+  const liveLaeuft = liveStand.art === 'fertig' && liveStand.daten;
 
   const ende = ablauf !== null ? ablaufEnde(zeilen) : null;
   // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.

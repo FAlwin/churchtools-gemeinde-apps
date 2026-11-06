@@ -99,6 +99,15 @@ describe('Tauschen am eigenen Dienst (E7-3)', () => {
     expect(screen.queryByRole('button', { name: 'Tausch anfragen' })).toBeNull();
   });
 
+  it('der eigene Dienst ist inzwischen weg → das Fenster sagt es', async () => {
+    const ct = nachbau();
+    zeige(SPIKE, ct.port);
+    const tauschen = await screen.findByRole('button', { name: /Tauschen/ });
+    ct.port.einteilungen = () => Promise.resolve([]);
+    fireEvent.click(tauschen);
+    expect(await screen.findByText('Diesen Dienst hast du nicht mehr.')).toBeTruthy();
+  });
+
   it('die Partner lassen sich gerade nicht lesen → Meldung statt leerer Liste', async () => {
     const ct = nachbau();
     ct.port.kandidaten = () => Promise.reject(new Error('503'));

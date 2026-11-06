@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState, type DependencyList } from 'react';
 import { fehlerMeldung, type Fehlermeldung } from './fehlerMeldung';
 
-/** Was eine Abfrage gerade zeigt. `aus` = es gibt nichts zu laden (die Funktion gab `null`). */
+/**
+ * Was eine Abfrage gerade zeigt. `aus` = es gibt nichts zu laden (die Funktion gab `null`). `neuFehler` (nur mit
+ * `behalten`): Das letzte Neuladen ist gescheitert – die Daten sind die bisherigen.
+ */
 export type Ladestand<T> =
   | { art: 'aus' }
   | { art: 'laedt' }
-  | { art: 'fertig'; daten: T }
+  | { art: 'fertig'; daten: T; neuFehler?: Fehlermeldung }
   | { art: 'fehler'; fehler: Fehlermeldung };
 
 /**
@@ -19,8 +22,11 @@ export type Ladestand<T> =
  * - `neu()` ist „Erneut versuchen“: zeigt wieder „lädt“ und fragt noch einmal.
  * - Gibt `laden` `null` zurück, gibt es nichts zu laden (`aus`) – etwa solange eine Auswahl fehlt.
  * - `behalten`: Beim **Neuladen** bleiben die alten Daten stehen, bis neue da sind – auch wenn das Neuladen scheitert
- *   (vorübergehend ist nicht ungültig). Nur, wo die alten Daten zu den neuen `deps` noch passen dürfen: derselbe
- *   Inhalt, frisch nachgefragt. Sonst sprängen Inhalt oder Bild bei jedem Nachfragen kurz weg (Gebetsabend: der
+ *   (vorübergehend ist nicht ungültig); dann steht der Fehler als `neuFehler` daneben, wer will, zeigt ihn (Planen:
+ *   der Fehlerkasten über der Tabelle wie bei „ab heute“, Alwin 06.11.2026). Auch `neu()` lädt dann leise. Als
+ *   Funktion entscheidet `behalten(alt)` an den gehaltenen Daten, ob sie zum neuen Laden noch passen (Planen: derselbe
+ *   Bereich oder der durch ＋ erweiterte – ein ganz anderer Zeitraum zeigt „lädt“). Nur, wo die alten Daten zu den
+ *   neuen `deps` noch passen dürfen: derselbe Inhalt, frisch nachgefragt. Sonst sprängen Inhalt oder Bild bei jedem Nachfragen kurz weg (Gebetsabend: der
  *   Player würde neu aufgebaut).
  * - `setze(daten)`: Was gerade geschrieben wurde und dessen Antwort den neuen Stand schon enthält, gilt sofort – ohne
  *   noch einmal zu fragen (Protokolle: Anwesenheit nach einem Tipp). Nur, wenn nicht gerade geladen wird; sonst
@@ -31,16 +37,20 @@ export type Ladestand<T> =
 export function useLaden<T>(
   laden: () => Promise<T> | null,
   deps: DependencyList,
-  { behalten = false }: { behalten?: boolean } = {},
+  { behalten = false }: { behalten?: boolean | ((alt: T) => boolean) } = {},
 ): { stand: Ladestand<T>; neu: () => void; setze: (daten: T | ((alt: T) => T)) => void } {
   const [stand, setStand] = useState<Ladestand<T>>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
 
   useEffect(() => {
     let aktuell = true;
-    /** Mit `behalten` bleiben fertige Daten stehen; sonst gilt der neue Stand. */
+    /** Mit `behalten` bleiben fertige Daten stehen – ein Fehler steht dann als `neuFehler` daneben. */
     const setze = (neu: Ladestand<T>) =>
-      setStand((alt) => (behalten && alt.art === 'fertig' ? alt : neu));
+      setStand((alt) => {
+        if (alt.art !== 'fertig') return neu;
+        if (!(typeof behalten === 'function' ? behalten(alt.daten) : behalten)) return neu;
+        return neu.art === 'fehler' ? { ...alt, neuFehler: neu.fehler } : alt;
+      });
     let abfrage: Promise<T> | null;
     try {
       abfrage = laden();

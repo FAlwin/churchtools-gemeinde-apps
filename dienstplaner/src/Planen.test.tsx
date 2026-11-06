@@ -705,6 +705,25 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     expect(spaltenNamen()).toHaveLength(4);
   });
 
+  it('scheitert ＋, bleibt die Matrix stehen – darüber der Fehler wie bei „ab heute“; „Erneut versuchen“ lädt leise', async () => {
+    let n = 0;
+    const laden = vi.fn((von: string, bis: string) => {
+      if (bis === '2026-10-31') return wieCt(von, bis);
+      n += 1;
+      return n === 1 ? Promise.reject(new TypeError('Failed to fetch')) : wieCt(von, bis);
+    });
+    zeigeZ(laden);
+    waehle('Oktober 2026');
+    await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
+    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    expect(await screen.findByText(/antwortet gerade nicht/)).toBeTruthy();
+    expect(spaltenNamen()).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+    expect(screen.queryByText('Termine werden geladen …')).toBeNull();
+    await waitFor(() => expect(spaltenNamen()).toHaveLength(4));
+    expect(screen.queryByText(/antwortet gerade nicht/)).toBeNull();
+  });
+
   it('＋ davor ohne frühere Veranstaltung ändert nichts an der Spanne', async () => {
     const laden = vi.fn(wieCt);
     zeigeZ(laden);
@@ -1777,6 +1796,33 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     );
     expect(termine).toHaveBeenCalledWith([90, 91, 92, 93]);
     expect(termine).toHaveBeenCalledTimes(1);
+  });
+
+  it('kommen die Termine in zwei Runden, bleibt die erste bekannt – kein Hin und Her beim Nachfragen', async () => {
+    // Erst nur 90 (91 fehlt in der Antwort), dann 91 – danach ist nichts mehr „fremd“.
+    const termine = vi.fn((ids: number[]) =>
+      Promise.resolve(
+        new Map<number, TerminStand>(
+          ids.includes(90)
+            ? [[90, { art: 'weg' }]]
+            : [[91, { art: 'da', name: 'Gottesdienst', tag: '2026-10-04' }]],
+        ),
+      ),
+    );
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([90, 91].map((ev) => entwurf({ ort: { eventId: ev, serviceId: 7, index: null } }))),
+        ),
+      termine,
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('status', { name: 'Alte Entwürfe' }).textContent).toMatch(
+        /^2 alte Entwürfe/,
+      ),
+    );
+    await new Promise((r) => setTimeout(r, 50));
+    expect(termine.mock.calls).toEqual([[[90, 91]], [[91]]]);
   });
 
   it('Dienst gehört nicht mehr zum Termin → alt; „Alle verwerfen“ mit der Gruppe der Schublade, danach neu laden', async () => {

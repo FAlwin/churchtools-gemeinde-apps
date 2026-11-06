@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Sheet } from '@ui/fenster/Sheet';
-import { akkordLesen, akkordTeile } from '../utils/transpose';
+import { FensterKnopf } from '../../fenster/FensterKnopf';
+import { Sheet } from '../../fenster/Sheet';
+import { akkordLesen, akkordTeile } from '@shared/lieder/transpose';
 import styles from './AkkordFenster.module.scss';
 
 interface Props {

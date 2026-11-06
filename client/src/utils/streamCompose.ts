@@ -1,6 +1,6 @@
 import type { SetlistSong } from '@shared/types/index';
 import type { SongSettings } from './chartSettings';
-import type { Abbildung } from './rollenAbbildung';
+import type { Abbildung } from '@ui/lied/rollenAbbildung';
 
 /** Wem gehört eine Seite im durchgehenden Strom (Lied + Seite darin, Akkorde oder Dokument). */
 export interface StreamOwner {

@@ -1,6 +1,6 @@
-import { ChordEditor } from '../components/ChordEditor';
+import { ChordEditor } from '@ui/lied/editor/ChordEditor';
 import { DEMO_EDITOR_TEXT as SAMPLE } from './demoEditorText';
-import type { LiedinfoQuelle } from '../utils/liedinfoFormular';
+import type { LiedinfoQuelle } from '@ui/lied/liedinfoFormular';
 
 /**
  * Stammdaten wie aus ChurchTools (L4): Der Autor weicht vom Notenblatt ab (Hinweis am Feld), das Tempo fehlt dort

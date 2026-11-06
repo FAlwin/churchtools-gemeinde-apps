@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Icon } from '@ui/icons/icons';
+import { Icon } from '../../icons/icons';
 import styles from './AkkordMenue.module.scss';
 
 interface Props {

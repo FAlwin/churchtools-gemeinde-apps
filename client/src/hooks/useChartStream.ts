@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { pdfOptionsForSong } from '../utils/chartPdfOptions';
 import { loadSettings, type SongSettings } from '../utils/chartSettings';
-import { generateSetlistPdfWithOwners, type SetlistPageOwner } from '../utils/chordPdf';
+import { generateSetlistPdfWithOwners, type SetlistPageOwner } from '@ui/lied/chordPdf';
 import { versionText } from '../utils/songVersions';
 
 /**

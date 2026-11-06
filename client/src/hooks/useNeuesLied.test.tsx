@@ -29,7 +29,7 @@ vi.mock('../services/churchtoolsApi', () => ({
 
 const { ApiError } = await import('../services/api');
 const { useNeuesLied } = await import('./useNeuesLied');
-const { LEERES_FORMULAR } = await import('../utils/liedFormular');
+const { LEERES_FORMULAR } = await import('@ui/lied/liedFormular');
 
 const TREFFER: SongSelectTreffer = {
   songNumber: 5841527,

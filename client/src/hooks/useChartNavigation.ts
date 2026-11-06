@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
-import type { SetlistPageOwner } from '../utils/chordPdf';
+import type { SetlistPageOwner } from '@ui/lied/chordPdf';
 import { useLandscape } from './useLandscape';
 import { pedalRichtung, type PedalRichtung } from '../utils/pedalTasten';
 

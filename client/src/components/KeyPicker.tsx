@@ -1,5 +1,5 @@
 import { Sheet } from '@ui/fenster/Sheet';
-import { ALL_KEYS_MAJOR, ALL_KEYS_MINOR } from '../utils/transpose';
+import { ALL_KEYS_MAJOR, ALL_KEYS_MINOR } from '@shared/lieder/transpose';
 import styles from './keyButtons.module.scss';
 
 interface KeyPickerProps {

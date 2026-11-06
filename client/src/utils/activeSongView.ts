@@ -2,7 +2,7 @@ import type { ChordProSection, SetlistSong, SongDocument } from '@shared/types/i
 import type { SongSettings } from './chartSettings';
 import { parseChordPro } from '@shared/lieder/chordpro';
 import { availableVersions, notierteTonart, type ResolvedVersion } from './songVersions';
-import { shiftKey } from './transpose';
+import { shiftKey } from '@shared/lieder/transpose';
 
 /**
  * Was aus dem aktiven Lied plus seinen Einstellungen folgt (#314).

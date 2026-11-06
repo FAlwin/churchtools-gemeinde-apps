@@ -2,6 +2,8 @@ import type { LiedZugriff } from '@ui/lied/liedZugriff';
 import * as api from '../services/churchtoolsApi';
 import { funktionen } from '../services/funktionen';
 import { useCapabilities } from './useServices';
+import { useAppLogo } from './useAppLogo';
+import { getLiedansicht } from '../utils/devicePrefs';
 
 /**
  * **Der Liedzugriff der Musik-App** (LW1a, 06.11.2026): Die Liedwahl in `ui/lied` holt ihre Daten über diese Wege –
@@ -22,4 +24,7 @@ export const musikLiedZugriff: LiedZugriff = {
       ? { statistik: c.canViewSongStatistics ?? false, ccli: c.canUseCcli ?? false }
       : undefined;
   },
+  // Notenblatt-Editor (LW1b-1): dieselbe Einstellung und dasselbe Logo wie das Liedblatt.
+  liedansicht: getLiedansicht,
+  useBlattLogo: useAppLogo,
 };

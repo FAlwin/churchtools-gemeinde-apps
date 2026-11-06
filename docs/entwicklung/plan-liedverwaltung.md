@@ -255,7 +255,7 @@ Lied anlegen …"), Erfolgsansicht mit drei Wegen (öffnen / noch eins / fertig)
 > `docs/entwicklung/entscheidungen.md` und im CHANGELOG; die Regeln selbst in
 > `ui/lied/useLiedSuche.ts`.
 
-Die Regeln liegen bewusst **nicht** in der Komponente: `utils/liedFormular.ts` (Formularstand, Warnung,
+Die Regeln liegen bewusst **nicht** in der Komponente: `ui/lied/liedFormular.ts` (Formularstand, Warnung,
 Auftrag, Entscheidung über das Notenblatt) und `hooks/useNeuesLied.ts` (die Abfolge samt
 Teilerfolgen). Beides ist geprüft, jede Regel einzeln per Gegenprobe – 46 neue Tests.
 
@@ -304,7 +304,7 @@ Daraus die Umsetzung:
   Liederheft. Aus dem Chart heraus verlässt die App nach dem Löschen die Ansicht – ein Blatt zu einem
   gelöschten Lied wäre eine Sackgasse.
 - **`SongFields`** trägt die fünf Felder für **beide** Formulare; die Regeln liegen zusammen in
-  `utils/liedFormular.ts`. Der Dateiname `songErstellen.ts` wurde zu `songVerwaltung.ts`, weil dort
+  `ui/lied/liedFormular.ts`. Der Dateiname `songErstellen.ts` wurde zu `songVerwaltung.ts`, weil dort
   jetzt Anlegen, Ändern und Löschen liegen.
 - **Kein Notiz-Feld** – siehe Messung.
 

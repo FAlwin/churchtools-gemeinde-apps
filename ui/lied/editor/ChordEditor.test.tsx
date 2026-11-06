@@ -35,9 +35,17 @@ vi.mock('./PdfPreview', () => ({
     return null;
   },
 }));
-vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+vi.mock('../../fenster/useOverlayKeyboardInset', () => ({
   useOverlayKeyboardInset: () => undefined,
 }));
+
+// Der Liedzugriff der App (LW1b-1): Die Liedansicht gibt die App herein (Musik-App: ihre Geräte-Einstellung).
+const ansicht: { wert: 'scrollen' | 'blaettern' } = { wert: 'blaettern' };
+const { LiedZugriffKontext } = await import('../liedZugriff');
+const zugriff = {
+  liedansicht: () => ansicht.wert,
+  useBlattLogo: () => null,
+} as unknown as import('../liedZugriff').LiedZugriff;
 
 const { ChordEditor } = await import('./ChordEditor');
 const { flowSetzen, neuerTeilName } = await import('@shared/lieder/chordpro');
@@ -45,17 +53,19 @@ const { flowSetzen, neuerTeilName } = await import('@shared/lieder/chordpro');
 function zeige(props: Partial<Parameters<typeof ChordEditor>[0]> = {}) {
   const onSave = vi.fn();
   render(
-    <ChordEditor
-      songTitle="Treu"
-      initialText={'{title: Treu}\n[D]Zeile'}
-      initialName=""
-      isNew
-      saving={false}
-      error={null}
-      onSave={onSave}
-      onClose={vi.fn()}
-      {...props}
-    />,
+    <LiedZugriffKontext.Provider value={zugriff}>
+      <ChordEditor
+        songTitle="Treu"
+        initialText={'{title: Treu}\n[D]Zeile'}
+        initialName=""
+        isNew
+        saving={false}
+        error={null}
+        onSave={onSave}
+        onClose={vi.fn()}
+        {...props}
+      />
+    </LiedZugriffKontext.Provider>,
   );
   return {
     onSave,
@@ -271,7 +281,7 @@ describe('ChordEditor – Akkorde einfügen', () => {
 describe('ChordEditor – Vorschau im Scroll-Modus', () => {
   beforeEach(() => {
     vorschau.props.length = 0;
-    localStorage.removeItem('worship:liedansicht');
+    ansicht.wert = 'blaettern';
   });
 
   it('beim Blättern: A4', () => {
@@ -280,7 +290,7 @@ describe('ChordEditor – Vorschau im Scroll-Modus', () => {
   });
 
   it('beim Scrollen: die lange Seite', () => {
-    localStorage.setItem('worship:liedansicht', 'scrollen');
+    ansicht.wert = 'scrollen';
     zeige({ mitVersionsname: false });
     expect(vorschau.props.at(-1)?.rolle).toBe(true);
   });

@@ -6,16 +6,8 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { useLaden } from '@ui/ct/useLaden';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
-import { monatName, tagKurz } from '@shared/ct/datum';
-import {
-  gruppenName,
-  planAusschnitt,
-  type Plan,
-  type PlanGruppe,
-  type PlanPlatz,
-  type PlanSpalte,
-  type PlanZeile,
-} from '@shared/dienstplan/plan';
+import { tagKurz } from '@shared/ct/datum';
+import { gruppenName, planAusschnitt, type Plan, type PlanGruppe } from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
 import {
   passendeAnzahl,
@@ -26,15 +18,12 @@ import {
   type FensterSchritt,
 } from '@shared/dienstplan/fenster';
 import {
-  entwurfVeraltet,
   ortSchluessel,
   zielText,
   type Besetzung,
   type Entwurf,
   type EntwurfErgebnis,
-  type EntwurfZiel,
 } from '@shared/dienstplan/entwuerfe';
-import type { Belegung, PlatzOrt } from '@shared/dienstplan/einteilen';
 import {
   ladeGrenzen,
   mitDazu,
@@ -54,20 +43,18 @@ import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
-import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
+import { PlaetzeFach } from './PlaetzeFach';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
-import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
-import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
+import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
 import { ALLE_REITER } from './reiter';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
 import { useMatrixAblauf } from './useMatrixAblauf';
 import { useMatrixInfos } from './useMatrixInfos';
 import type { Start } from './start';
 import {
-  type EntwurfAmPlatz,
   schluessel,
   type Sicht,
   darfPlanen,
@@ -78,6 +65,15 @@ import {
 import { Terminleiste } from './Terminleiste';
 import { TabellenPlan, HandyPlan } from './PlanAnsicht';
 import { WerWieOft } from './WerWieOft';
+import { useEntwuerfe } from './useEntwuerfe';
+import {
+  darfAendern,
+  entwurfAmPlatz,
+  plaetzeZeilen,
+  sendbareZeilen,
+  zauberEingeplant,
+  zauberZeilen,
+} from './planEntwuerfe';
 import styles from './Planen.module.scss';
 
 /** Der Name des Reiters mit den eigenen Diensten – aus der Reiterliste, damit der Hilfetext eine Umbenennung mitmacht. */
@@ -105,11 +101,6 @@ interface Props {
   /** Der Ablauf in der Matrix (E6-6a) – ohne steht die Matrix ohne die Gruppe „Ablauf“ da. */
   ablauf?: { start: Start; zeitzone: string };
 }
-
-type EntwuerfeZustand =
-  | { art: 'laedt' }
-  | { art: 'fehler'; text: string }
-  | { art: 'fertig'; daten: EntwuerfeDaten };
 
 /**
  * „Plan teilen“ (E8-2) erst beim Antippen laden – es bringt pdf.js mit; beim Start legte das sonst einen Worker an (wie
@@ -192,74 +183,6 @@ export function Planen({
   const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const [rahmen, platz] = useBreite();
   const { toast, showToast } = useToast();
-
-  // Entwürfe (E4-3): geladen beim Öffnen, neu nach dem Einrichten einer Schublade oder „Erneut versuchen“.
-  const {
-    stand: ewStand,
-    neu: ewNeu,
-    setze: ewSetzeDaten,
-  } = useLaden(() => (entwuerfe ? entwuerfe.laden() : null), [entwuerfe]);
-  const ew: EntwuerfeZustand =
-    ewStand.art === 'fertig'
-      ? { art: 'fertig', daten: ewStand.daten }
-      : ewStand.art === 'fehler'
-        ? { art: 'fehler', text: ewStand.fehler.text }
-        : { art: 'laedt' };
-  /**
-   * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
-   * Eintragen – sonst ist er **veraltet**: Es gilt ChurchTools, und am Platz steht nur ein Schild (Alwin,
-   * 14.10.2026). Verglichen wird mit derselben Regel wie beim Senden (`p.belegung`, `gleicherStand` – auch eine
-   * inzwischen gegebene Zusage zählt als Änderung, Alwin 15.10.2026).
-   */
-  const entwurfAmPlatz = (s: PlanSpalte, zl: PlanZeile, p: PlanPlatz): EntwurfAmPlatz | null => {
-    if (ew.art !== 'fertig') return null;
-    const e = ew.daten.entwuerfe.get(
-      ortSchluessel({ eventId: s.id, serviceId: zl.dienst.id, index: p.index }),
-    );
-    if (!e) return null;
-    return { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) };
-  };
-  /** Darf man die Entwürfe dieser Gruppe ändern? (Schublade bereit) */
-  const darfAendern = (zl: PlanZeile) =>
-    ew.art === 'fertig' &&
-    ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.stand === 'bereit';
-  /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
-  const ewSetzen = (k: string, e: Entwurf | null) =>
-    ewSetzeDaten((alt) => {
-      const map = new Map(alt.entwuerfe);
-      if (e) map.set(k, e);
-      else map.delete(k);
-      return { ...alt, entwuerfe: map };
-    });
-  /**
-   * Einen Entwurf speichern und das Ergebnis gleich in die geladenen Daten übernehmen – bei einem Konflikt das, was
-   * jetzt dasteht. **Eine Stelle** für „Wer kann?“, Zurückziehen und Zauberstab (E5-2): Wer die Eingabe ändert
-   * (etwa „direkt zuteilen“ als Vorgabe je Dienst), ändert sie für alle.
-   */
-  const entwurfSpeichern = async (
-    daten: EntwuerfeDaten,
-    gruppeId: number,
-    e: { ort: PlatzOrt; ziel: EntwurfZiel; gesehen: Belegung; modus?: Entwurf['modus'] },
-    erwartet: number | null,
-  ): Promise<EntwurfErgebnis> => {
-    if (!entwuerfe) return { ok: false, grund: 'voruebergehend' };
-    const r = await entwuerfe.speichern(
-      daten,
-      gruppeId,
-      {
-        ort: e.ort,
-        ziel: e.ziel,
-        modus: e.modus ?? 'anfrage',
-        gesehen: e.gesehen,
-        von: entwuerfe.ich,
-      },
-      erwartet,
-    );
-    const k = ortSchluessel(e.ort);
-    if (r.ok) ewSetzen(k, r.entwurf);
-    else if (r.grund === 'konflikt') ewSetzen(k, r.jetzt ?? null);
-    return r;
-  };
 
   // Jede Unteransicht hat ihren eigenen Zeitraum (E9-3, Alwin 05.11.2026): die Matrix z. B. den Dezember, „Wer wie
   // oft?“ die letzten 3 Monate. Alles Weitere richtet sich nach dem der gezeigten Ansicht.
@@ -356,71 +279,15 @@ export function Planen({
     [geladen, rand, dazu],
   );
 
-  // Entwürfe ohne Platz (#582): Am geladenen Termin passt die Platznummer nicht mehr (Platzzahl in ChurchTools
-  // geändert – gemessen: dann wird neu nummeriert) → Schild beim Dienst. Gehört der Dienst nicht mehr zum Termin,
-  // oder ist der Termin vorbei bzw. gelöscht → „alte Entwürfe“ zum Aufräumen. Termine außerhalb des Zeitraums werden
-  // einmal nachgefragt; ein künftiger Termin dort ist normal.
-  const [staende, setStaende] = useState<Map<number, TerminStand>>(new Map());
-  const lage = entwurfsLage();
-  const fremdSchluessel = lage.fremd.join(',');
-  // Gesammelt, nicht ersetzt: Mit jeder Antwort werden weniger Termine „fremd“ – die bekannten bleiben bekannt.
-  // Scheitert es, bleibt der Stand „unbekannt“: nichts als alt melden (vorübergehend ist nicht gelöscht).
-  const nachgefragt = useLaden(
-    () =>
-      entwuerfe && fremdSchluessel
-        ? entwuerfe.termine(fremdSchluessel.split(',').map(Number))
-        : null,
-    [entwuerfe, fremdSchluessel],
-  ).stand;
-  useEffect(() => {
-    if (nachgefragt.art === 'fertig') setStaende((alt) => new Map([...alt, ...nachgefragt.daten]));
-  }, [nachgefragt]);
-  function entwurfsLage() {
-    const schilder = new Map<string, Entwurf[]>();
-    const alte: AlterEntwurf[] = [];
-    const fremd = new Set<number>();
-    if (!plan || ew.art !== 'fertig') return { schilder, alte, fremd: [] as number[] };
-    const spalteJe = new Map(plan.spalten.map((sp, i) => [sp.id, i]));
-    const zeileJe = new Map(plan.gruppen.flatMap((g) => g.zeilen).map((zl) => [zl.dienst.id, zl]));
-    const aendern = (gruppeId: number) => ew.daten.schubladen.get(gruppeId)?.stand === 'bereit';
-    for (const [k, e] of ew.daten.entwuerfe) {
-      const gruppeId = ew.daten.gruppeJe.get(k);
-      if (gruppeId === undefined) continue;
-      const i = spalteJe.get(e.ort.eventId);
-      const dienst = zeileJe.get(e.ort.serviceId)?.dienst.name;
-      if (i === undefined) {
-        const st = staende.get(e.ort.eventId);
-        if (!st) fremd.add(e.ort.eventId);
-        else if (aendern(gruppeId) && st.art === 'weg') {
-          alte.push({ entwurf: e, gruppeId, grund: 'termin-weg', dienst });
-        } else if (aendern(gruppeId) && st.art === 'da' && st.tag < heute) {
-          alte.push({ entwurf: e, gruppeId, grund: 'vorbei', termin: st, dienst });
-        }
-        continue;
-      }
-      const sp = plan.spalten[i];
-      const zl = zeileJe.get(e.ort.serviceId);
-      // Dienst gar nicht in der Matrix (z. B. Gruppe nicht ganz sichtbar) – dann nichts behaupten.
-      if (!zl) continue;
-      const zelle = zl.zellen[i];
-      if (zelle === null) {
-        if (aendern(gruppeId)) {
-          alte.push({
-            entwurf: e,
-            gruppeId,
-            grund: 'dienst-weg',
-            termin: { name: sp.name, tag: sp.tag },
-            dienst,
-          });
-        }
-        continue;
-      }
-      if (zelle.some((p) => p.index === e.ort.index)) continue;
-      const sk = `${sp.id}|${zl.dienst.id}`;
-      schilder.set(sk, [...(schilder.get(sk) ?? []), e]);
-    }
-    return { schilder, alte, fremd: [...fremd].sort((a, b) => a - b) };
-  }
+  // Entwürfe (E4-3) und wo sie stehen (#582) – Laden, Speichern und Regeln in `useEntwuerfe` / `planEntwuerfe`.
+  const {
+    ew,
+    daten,
+    neu: ewNeu,
+    setzen: ewSetzen,
+    speichern: entwurfSpeichern,
+    lage,
+  } = useEntwuerfe(entwuerfe, plan, heute);
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
   // „Plan teilen“ (E8-2): geteilt werden die Termine, die gerade zählen – dieselben wie in der Aufschrift des
@@ -638,24 +505,24 @@ export function Planen({
         g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
           ? () => setPlaetzeFach({ spalte: i, gruppe: g })
           : undefined,
-      entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
+      entwurf: (i, zl, p) => entwurfAmPlatz(daten, plan.spalten[i], zl, p),
       onZauberstab: (idx, g) => {
-        const z = entwuerfe ? zauberZeilen(idx, g) : null;
+        const z = entwuerfe ? zauberZeilen(plan, daten, heute, idx, g) : null;
         if (!z || z.zeilen.length === 0) return undefined;
         return () =>
           setZauber({
             titel: `Automatische Planung · ${gruppenName(g)}`,
             unter: zauberUnter(plan, idx),
             ...z,
-            eingeplant: zauberEingeplant(g),
+            eingeplant: zauberEingeplant(plan, daten, g),
             gruppe: { id: g.gruppe?.id ?? 0, name: gruppenName(g) },
           });
       },
-      darfAendern,
+      darfAendern: (zl) => darfAendern(daten, zl),
       onEntwurf: (i, zl, nr) => {
         const plaetze = zl.zellen[i] ?? [];
         const p = plaetze[nr - 1];
-        const a = p ? entwurfAmPlatz(plan.spalten[i], zl, p) : null;
+        const a = p ? entwurfAmPlatz(daten, plan.spalten[i], zl, p) : null;
         if (!p || !a) return;
         setFach({
           platz: freierPlatz(plan.spalten[i], zl, plaetze, nr),
@@ -701,75 +568,12 @@ export function Planen({
     else onAktualisieren?.();
   };
 
-  /**
-   * Die freien Plätze für den Zauberstab (E5-2): nicht abgesagt, nicht vorbei, wo man den Dienst planen und die
-   * Entwürfe der Gruppe ändern darf – **ohne Entwurf** (die bleiben, wie sie sind; gezählt in `mitEntwurf`).
-   * Der Reihe nach: Termin, Dienst, Platz – so rechnet auch der Kern.
-   */
-  function zauberZeilen(
-    idx: number[],
-    g: PlanGruppe,
-  ): { zeilen: ZauberZeile[]; mitEntwurf: number } {
-    const zeilen: ZauberZeile[] = [];
-    let mitEntwurf = 0;
-    if (!plan || ew.art !== 'fertig') return { zeilen, mitEntwurf };
-    for (const i of [...idx].sort((a, b) => a - b)) {
-      const s = plan.spalten[i];
-      if (s.abgesagt || s.tag < heute) continue;
-      for (const zl of g.zeilen) {
-        if (!darfPlanen(zl, s) || !darfAendern(zl)) continue;
-        const zelle = zl.zellen[i] ?? [];
-        zelle.forEach((p, n) => {
-          if (p.art !== 'frei') return;
-          if (entwurfAmPlatz(s, zl, p)) {
-            mitEntwurf++;
-            return;
-          }
-          zeilen.push({
-            schluessel: ortSchluessel({ eventId: s.id, serviceId: zl.dienst.id, index: p.index }),
-            terminId: s.id,
-            serviceId: zl.dienst.id,
-            tag: s.tag,
-            schonDa: zelle.flatMap((x) => (x.personId !== null ? [x.personId] : [])),
-            dienst: zl.dienst.name,
-            nr: n + 1,
-            von: zelle.length,
-            kopf: `${tagKurz(s.tag)} · ${s.name} · ${s.uhrzeit} Uhr`,
-            monatName: monatName(s.tag),
-            index: p.index,
-            gruppeId: zl.dienst.dienstgruppeId ?? 0,
-            gesehen: p.belegung,
-            stift: zl.planbar,
-          });
-        });
-      }
-    }
-    return { zeilen, mitEntwurf };
-  }
-
-  /**
-   * Was im Lauf schon feststeht (Alwin, 16.10.: „mitzählen“): Entwürfe mit Person in der Schublade dieser Gruppe,
-   * an Terminen der Matrix (dort kennen wir den Tag).
-   */
-  function zauberEingeplant(g: PlanGruppe): Eingeplant[] {
-    if (!plan || ew.art !== 'fertig' || !g.gruppe) return [];
-    const tagJe = new Map(plan.spalten.map((s) => [s.id, s.tag]));
-    const out: Eingeplant[] = [];
-    for (const [k, e] of ew.daten.entwuerfe) {
-      const tag = tagJe.get(e.ort.eventId);
-      if (ew.daten.gruppeJe.get(k) !== g.gruppe.id || !tag || e.ziel.art !== 'person') continue;
-      out.push({ personId: e.ziel.personId, tag });
-    }
-    return out;
-  }
-
   /** Übernehmen (E5-2): je Vorschlag ein Entwurf, einer nach dem anderen – wie „Wer kann?“ ihn anlegt. */
   async function zauberUebernehmen(
     wahlen: Wahl[],
     melde: (index: number, ergebnis: EntwurfErgebnis) => void,
   ): Promise<void> {
-    if (!entwuerfe || ew.art !== 'fertig') return;
-    const daten = ew.daten;
+    if (!entwuerfe || !daten) return;
     for (const [i, w] of wahlen.entries()) {
       const ort = { eventId: w.zeile.terminId, serviceId: w.zeile.serviceId, index: w.zeile.index };
       const r = await entwurfSpeichern(
@@ -785,26 +589,6 @@ export function Planen({
       melde(i, r);
     }
   }
-
-  /**
-   * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
-   * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
-   */
-  const plaetzeZeilen = (s: PlanSpalte, i: number, g: PlanGruppe): PlaetzeZeile[] =>
-    g.zeilen
-      .filter((zl) => darfPlanen(zl, s))
-      .map((zl) => {
-        const zelle = zl.zellen[i] ?? [];
-        const belegtZahl = zelle.filter((p) => p.art !== 'frei').length;
-        const entwuerfeHier = zelle.filter((p) => entwurfAmPlatz(s, zl, p) !== null).length;
-        return {
-          serviceId: zl.dienst.id,
-          name: zl.dienst.name,
-          anzahl: zelle.length,
-          belegt: belegtZahl,
-          entwuerfe: entwuerfeHier,
-        };
-      });
 
   /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
   const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
@@ -892,37 +676,7 @@ export function Planen({
     };
   };
 
-  // Die Leiste unten (E4-3-3): gültige Entwürfe im geladenen Zeitraum – veraltete werden nie gesendet.
-  // Die Leiste unten und das Senden-Fach (E4-4): **eine** Regel für Zählen und Senden (Bauplan: „Zählen und
-  // Senden aus derselben Regel“) – gültige Entwürfe im geladenen Zeitraum, wo man planen und die Schublade ändern
-  // darf; nach Terminen geordnet.
-  const sendbareZeilen = (): SendeZeile[] => {
-    if (!plan || ew.art !== 'fertig') return [];
-    const zeilen: SendeZeile[] = [];
-    plan.spalten.forEach((spalte, i) => {
-      for (const g of plan.gruppen) {
-        for (const zl of g.zeilen) {
-          if (!darfPlanen(zl, spalte) || !darfAendern(zl)) continue;
-          const kategorie = ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.kategorie;
-          if (kategorie == null) continue;
-          for (const p of zl.zellen[i] ?? []) {
-            const a = entwurfAmPlatz(spalte, zl, p);
-            if (!a || a.veraltet) continue;
-            zeilen.push({
-              entwurf: a.entwurf,
-              kategorie,
-              tag: spalte.tag,
-              termin: spalte.name,
-              dienst: zl.dienst.name,
-              bisher: p.art === 'frei' || p.verborgen ? null : p.name,
-            });
-          }
-        }
-      }
-    });
-    return zeilen;
-  };
-  const offen = sendbareZeilen().length;
+  const offen = sendbareZeilen(plan, daten).length;
 
   // Nachladen gescheitert, der bisherige Stand steht: bei „ab heute“ wie beim gewählten Zeitraum (Alwin, 06.11.2026).
   const nachladeFehler = quelle.art === 'fertig' ? quelle.nachladeFehler : undefined;
@@ -1070,7 +824,7 @@ export function Planen({
           <button
             type="button"
             className={styles.sendenKnopf}
-            onClick={() => setSendenListe(sendbareZeilen())}
+            onClick={() => setSendenListe(sendbareZeilen(plan, daten))}
           >
             {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
           </button>
@@ -1125,6 +879,7 @@ export function Planen({
           titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}
           unter={`${plan.spalten[plaetzeFach.spalte].name} · ${tagKurz(plan.spalten[plaetzeFach.spalte].tag)}`}
           zeilen={plaetzeZeilen(
+            daten,
             plan.spalten[plaetzeFach.spalte],
             plaetzeFach.spalte,
             plaetzeFach.gruppe,

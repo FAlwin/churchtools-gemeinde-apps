@@ -43,6 +43,7 @@ const laden = vi.mocked(ladeStart);
 const START: Start = {
   id: 1,
   vorname: 'Alwin',
+  nachname: 'Friesen',
   gemeinde: 'ECG Donrath',
   modul: 20,
   darfVerwalten: false,

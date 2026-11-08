@@ -3,8 +3,9 @@ import { ApiError } from '@ui/ct/fehler';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { dokumentAusTeilen, teileBauen, type ProtokollKopf } from '@shared/protokolle/speicher';
 import { neueAufgabe, alsGeloescht } from '@shared/protokolle/aufgaben';
+import { NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
 import { gruppeEinrichten } from './einrichten';
-import { ladeAufgaben, ladeSitzungen } from './lesen';
+import { ladeAufgaben, ladeMitarbeit, ladeSitzungen } from './lesen';
 import {
   kategorieVon,
   LEITER,
@@ -21,7 +22,7 @@ let ct: Nachbau;
 const JETZT = new Date('2026-10-23T10:00:00Z');
 const ZONE = 'Europe/Berlin';
 
-const einrichten = (kalender: number | null) =>
+const einrichten = (kalender: number | null, punkte: 'vorschlagen' | 'direkt' = 'vorschlagen') =>
   gruppeEinrichten(
     MODUL,
     { id: 194, name: 'Technik', versteckt: false },
@@ -30,7 +31,7 @@ const einrichten = (kalender: number | null) =>
         { rolle: LEITER, stufe: 'leitung' },
         { rolle: TEILNEHMER, stufe: 'mitglied' },
       ],
-      punkte: 'vorschlagen',
+      punkte,
       kalender,
     },
   );
@@ -88,6 +89,7 @@ describe('ladeSitzungen (S3-1)', () => {
     ]);
     expect(s.protokolle.map((x) => x.kopf?.sitzung)).toEqual(['okt']);
     expect(s.kalender).toBe(4);
+    expect(s.punkte).toBe('vorschlagen');
     expect(s.treffenNichtFreigegeben).toBe(false);
     // Das Dokument lässt sich aus den gelesenen Teilen wiederherstellen.
     expect(dokumentAusTeilen(s.protokolle[0].kopf!, s.teile)).toEqual(BLOCKNOTE_DOKUMENT);
@@ -319,5 +321,43 @@ describe('ladeAufgaben (S3-1)', () => {
   it('ohne Mitarbeit-Kategorie: keine Aufgaben, kein Aufruf', async () => {
     expect(await ladeAufgaben(MODUL, { mitarbeit: null })).toEqual([]);
     expect(ct.aufrufe).toEqual([]);
+  });
+});
+
+describe('Vorschläge (S5-4)', () => {
+  it('„Punkte von Mitgliedern“ kommt aus der Einstellung der Gruppe', async () => {
+    await einrichten(4, 'direkt');
+    expect((await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT)).punkte).toBe('direkt');
+  });
+
+  it('ladeMitarbeit: To-Dos und Vorschläge mit EINEM Lesen; ladeAufgaben bleibt ohne Vorschläge', async () => {
+    await einrichten(null);
+    const a = neueAufgabe({
+      id: 'a1',
+      gruppe: 194,
+      sitzung: null,
+      text: 'Saal',
+      von: 1,
+      am: '2026-10-14T18:00:00Z',
+    });
+    const v = neuerVorschlag({
+      id: 'v1',
+      gruppe: 194,
+      titel: 'Beamer',
+      text: '',
+      ziel: NAECHSTE,
+      ich: { person: 19, name: 'Spike' },
+      am: '2026-10-20T10:00:00Z',
+    });
+    werteVon(ct, gruppe().mitarbeit).push(
+      { id: 1, value: JSON.stringify(a) },
+      { id: 2, value: JSON.stringify(v) },
+    );
+    ct.aufrufe.length = 0;
+    const m = await ladeMitarbeit(MODUL, gruppe());
+    expect(m.aufgaben.map((x) => x.id)).toEqual(['a1']);
+    expect(m.vorschlaege.map((x) => x.id)).toEqual(['v1']);
+    expect(ct.aufrufe.filter((x) => x.startsWith('GET'))).toHaveLength(1);
+    expect((await ladeAufgaben(MODUL, gruppe())).map((x) => x.id)).toEqual(['a1']);
   });
 });

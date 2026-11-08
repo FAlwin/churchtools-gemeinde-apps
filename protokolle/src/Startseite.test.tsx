@@ -129,7 +129,12 @@ const GELOESCHT = alsGeloescht(
 );
 const OHNE_HERKUNFT = aufgabe({ id: 'b1', text: 'Andacht vorbereiten', wer: [1], sitzung: 'alt' });
 
-const leer = { teile: [], kalender: 4, treffenNichtFreigegeben: false };
+const leer = {
+  teile: [],
+  kalender: 4,
+  punkte: 'vorschlagen' as const,
+  treffenNichtFreigegeben: false,
+};
 const UEBERSICHT: L.GruppenUebersicht[] = [
   {
     gruppe: GRUPPEN[0],

@@ -12,11 +12,31 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import * as M from './mitglieder';
 import * as S from './schreiben';
 import * as A from './aufgabenSchreiben';
+import * as W from './mitarbeitWerte';
 import * as P from './planen';
 import { neueAufgabe } from '@shared/protokolle/aufgaben';
+import {
+  annehmen,
+  neuerVorschlag,
+  vorschlagBloecke,
+  zielVon,
+  type Vorschlag,
+} from '@shared/protokolle/vorschlaege';
+import * as V from './vorschlaegeSchreiben';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
+// Was der Editor über `einfuegen` bekam (S5-4) – es steht danach in seinem Dokument.
+const E = vi.hoisted(() => ({ einfuegen: vi.fn(), zusatz: [] as unknown[] }));
+// Vorschläge in „Mitarbeit“: die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
+const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
+vi.mock('./vorschlaegeSchreiben', () => ({
+  vorschlagSchreiben: vi.fn((_o: unknown, id: string, f: (v: unknown) => unknown) => {
+    const neu = f(VS.stand.get(id));
+    VS.stand.set(id, neu);
+    return Promise.resolve(neu);
+  }),
+}));
 vi.mock('./schreiben', () => ({
   protokollLesen: vi.fn(),
   schreibenUebernehmen: vi.fn(),
@@ -30,6 +50,11 @@ vi.mock('./aufgabenSchreiben', () => ({
   aufgabenWerte: vi.fn(() => Promise.resolve([])),
   aufgabenSchreiben: vi.fn(() => Promise.resolve([])),
   aufgabeAendern: vi.fn(),
+}));
+// „Mitarbeit“ wird beim Öffnen einmal gelesen – To-Dos und Vorschläge (S5-4).
+vi.mock('./mitarbeitWerte', async (orig) => ({
+  ...(await orig<typeof import('./mitarbeitWerte')>()),
+  mitarbeitRoh: vi.fn(() => Promise.resolve([])),
 }));
 vi.mock('./mitglieder', () => ({
   ladeGruppenMitglieder: vi.fn(() => Promise.resolve([{ id: 7, name: 'Johann' }])),
@@ -53,8 +78,12 @@ vi.mock('./DokumentEditor', async () => {
       const k = useContext(AufgabenKontext);
       const feste = useContext(FestePunkteKontext);
       useImperativeHandle(griff, () => ({
-        dokument: () => MIT_AUFGABE,
+        dokument: () => [...MIT_AUFGABE, ...E.zusatz],
         ersetzen: () => undefined,
+        einfuegen: (b: unknown[], vor: string | null) => {
+          E.einfuegen(b, vor);
+          E.zusatz.push(...b);
+        },
       }));
       return (
         <div>
@@ -140,6 +169,8 @@ const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void) => {
 
 beforeEach(() => {
   lesen.mockResolvedValue({ kopf: KOPF, dokument: DOK });
+  E.zusatz.length = 0;
+  VS.stand.clear();
 });
 
 describe('ProtokollSchreiben', () => {
@@ -240,10 +271,10 @@ describe('ProtokollSchreiben', () => {
   });
 
   it('„Lesen“ zeigt die Lese-Ansicht mit den festen Punkten – der Editor bleibt ausgeblendet bestehen (S4-3a)', async () => {
-    vi.mocked(A.aufgabenWerte).mockResolvedValueOnce([
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce([
       {
         wert: 1,
-        aufgabe: neueAufgabe({
+        x: neueAufgabe({
           id: 'frueher',
           gruppe: 194,
           sitzung: 'alt',
@@ -409,10 +440,10 @@ describe('ProtokollSchreiben', () => {
 
   it('Mitgliederliste verborgen: im festen Punkt steht bei eigenen To-Dos trotzdem der eigene Name (S7-2a)', async () => {
     vi.mocked(M.ladeGruppenMitglieder).mockResolvedValueOnce('verborgen');
-    vi.mocked(A.aufgabenWerte).mockResolvedValueOnce([
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce([
       {
         wert: 1,
-        aufgabe: neueAufgabe({
+        x: neueAufgabe({
           id: 'frueher',
           gruppe: 194,
           sitzung: 'alt',
@@ -457,5 +488,126 @@ describe('ProtokollSchreiben', () => {
     // … „Lesen“ wartet nicht: gespeichert, bevor die Pause um wäre.
     fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
     await waitFor(() => expect(S.speichern).toHaveBeenCalledTimes(2), { timeout: 1000 });
+  });
+});
+
+describe('Vorschläge beim Schreiben (S5-4)', () => {
+  const AM = '2026-10-20T10:00:00Z';
+  // Vollständig wie aus `sitzungenOrdnen` – ein Ziel ohne `termin`/`treffen` wäre kein gültiger Vorschlag.
+  const SITZ: Sitzung = { ...SITZUNG, termin: null, treffen: null, anfragen: [] };
+  const vorschlag = (id: string, teil: Partial<Vorschlag> = {}): Vorschlag => ({
+    ...neuerVorschlag({
+      id,
+      gruppe: 194,
+      titel: `Thema ${id}`,
+      text: '',
+      ziel: zielVon(SITZ),
+      ich: { person: 19, name: 'Peter Wiens' },
+      am: AM,
+    }),
+    ...teil,
+  });
+  const ablegen = (...v: Vorschlag[]) => {
+    for (const x of v) VS.stand.set(x.id, x);
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce(v.map((x, i) => ({ wert: i + 1, x })));
+  };
+  const zeigeMit = (direkt: boolean) =>
+    render(
+      <ProtokollSchreiben
+        sitzung={SITZ}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        kommend={[SITZ]}
+        direkt={direkt}
+        vollerName="Alwin Friesen"
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+  const gespeichert = () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+  };
+  const stand = (id: string) => VS.stand.get(id) as Vorschlag;
+
+  it('„Direkt eintragen“: offene Vorschläge kommen beim Öffnen hinein, werden gespeichert, DANN vermerkt', async () => {
+    gespeichert();
+    ablegen(vorschlag('v1'), vorschlag('v2', { stand: 'abgelehnt' }));
+    zeigeMit(true);
+    expect(await screen.findByText(/Ein Vorschlag wurde als Punkt am Ende eingefügt/)).toBeTruthy();
+    expect(E.einfuegen).toHaveBeenCalledTimes(1);
+    expect(E.einfuegen).toHaveBeenCalledWith(vorschlagBloecke(vorschlag('v1')), null);
+    // Gespeichert wurde das Dokument MIT dem Punkt – erst danach steht „im Protokoll“.
+    expect(vi.mocked(S.speichern).mock.calls[0][3].map((b) => b.id)).toContain('vorschlag-v1');
+    expect(stand('v1')).toMatchObject({ stand: 'imProtokoll', sitzung: 's1' });
+    expect(stand('v2').stand).toBe('abgelehnt');
+    // Kein Kasten bei „Direkt eintragen“.
+    expect(screen.queryByRole('region', { name: 'Vorschläge' })).toBeNull();
+  });
+
+  it('steht der Punkt schon drin (Vermerken scheiterte letztes Mal): nicht noch einmal, nur vermerkt', async () => {
+    gespeichert();
+    E.zusatz.push(...vorschlagBloecke(vorschlag('v1')));
+    ablegen(vorschlag('v1'));
+    zeigeMit(true);
+    await waitFor(() => expect(stand('v1').stand).toBe('imProtokoll'));
+    expect(E.einfuegen).not.toHaveBeenCalled();
+    expect(S.speichern).not.toHaveBeenCalled();
+  });
+
+  it('Speichern scheitert: der Vorschlag bleibt offen – beim nächsten Öffnen wird er erkannt', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockRejectedValue(new Error('Netz weg'));
+    ablegen(vorschlag('v1'));
+    zeigeMit(true);
+    expect(
+      await screen.findByText(/noch nicht gespeichert – der Vorschlag steht schon drin/),
+    ).toBeTruthy();
+    expect(E.einfuegen).toHaveBeenCalledTimes(1);
+    expect(V.vorschlagSchreiben).not.toHaveBeenCalled();
+    expect(stand('v1').stand).toBe('offen');
+    // „Direkt eintragen“ entscheidet nicht – auch jetzt, wo er noch offen ist, kein „Übernehmen“.
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+  });
+
+  it('„Vorschlagen“: offene stehen im Kasten, angenommene kommen gleich hinein; „Übernehmen“ fügt ein und vermerkt', async () => {
+    gespeichert();
+    const an = annehmen(vorschlag('v2'), SITZ, { person: 1, name: 'Alwin Friesen' }, AM);
+    ablegen(vorschlag('v1'), an);
+    zeigeMit(false);
+    const kasten = await screen.findByRole('region', { name: 'Vorschläge' });
+    await waitFor(() => expect(stand('v2').stand).toBe('imProtokoll'));
+    expect(E.einfuegen).toHaveBeenCalledTimes(1);
+    expect(kasten.textContent).toContain('Thema v1');
+    expect(kasten.textContent).not.toContain('Thema v2');
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+    await waitFor(() => expect(stand('v1').stand).toBe('imProtokoll'));
+    expect(E.einfuegen).toHaveBeenCalledTimes(2);
+    expect(stand('v1').verlauf.at(-1)).toMatchObject({ art: 'imProtokoll', name: 'Alwin Friesen' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Vorschläge' })).toBeNull());
+  });
+
+  it('„Nächstes Mal“ und „Ablehnen“ (mit Begründung) im Kasten', async () => {
+    gespeichert();
+    ablegen(vorschlag('v1'), vorschlag('v2'));
+    zeigeMit(false);
+    await screen.findByRole('region', { name: 'Vorschläge' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Nächstes Mal' })[0]);
+    await waitFor(() => expect(stand('v1').ziel).toEqual({ art: 'naechste', nach: SITZ.beginn }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ablehnen' })[0]);
+    fireEvent.change(await screen.findByPlaceholderText(/Klären wir im Gemeinderat/), {
+      target: { value: 'Nicht jetzt' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ablehnen' }).at(-1)!);
+    await waitFor(() =>
+      expect(stand('v2')).toMatchObject({ stand: 'abgelehnt', grund: 'Nicht jetzt' }),
+    );
+    expect(E.einfuegen).not.toHaveBeenCalled();
   });
 });

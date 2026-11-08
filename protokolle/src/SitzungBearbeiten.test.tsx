@@ -25,7 +25,7 @@ vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn() }));
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
-  ladeAufgaben: vi.fn(() => Promise.resolve([])),
+  ladeMitarbeit: vi.fn(() => Promise.resolve({ aufgaben: [], vorschlaege: [] })),
 }));
 
 // Der Editor als Attrappe (wie im Festlegen-Test): zählt, wie oft er geöffnet wird, zeigt Titel und „Bearbeiten“.
@@ -442,6 +442,7 @@ describe('Einstiege (Sitzungsansicht, Kasten „Nächste Sitzung“)', () => {
       teile: frei.werte.map((w) => JSON.parse(w) as ProtokollTeil),
       kalender: 4,
       treffenNichtFreigegeben: false,
+      punkte: 'vorschlagen',
     });
     render(
       <Sitzungen
@@ -479,6 +480,7 @@ describe('Einstiege (Sitzungsansicht, Kasten „Nächste Sitzung“)', () => {
       teile: [],
       kalender: 4,
       treffenNichtFreigegeben: false,
+      punkte: 'vorschlagen',
     });
     render(
       <Sitzungen
@@ -505,6 +507,7 @@ describe('Einstiege (Sitzungsansicht, Kasten „Nächste Sitzung“)', () => {
       teile: [],
       kalender: 4,
       treffenNichtFreigegeben: false,
+      punkte: 'vorschlagen',
     });
     await waitFor(() =>
       expect(

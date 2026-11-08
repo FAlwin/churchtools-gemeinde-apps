@@ -77,6 +77,7 @@ const uebersicht = (lt: Aufgabe[]): L.GruppenUebersicht[] =>
       teile: [],
       kalender: 4,
       treffenNichtFreigegeben: false,
+      punkte: 'vorschlagen',
     },
     aufgaben: i === 0 ? lt : [],
   }));

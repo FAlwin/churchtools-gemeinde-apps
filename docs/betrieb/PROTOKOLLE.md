@@ -1,12 +1,12 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3 + S5-3 (05.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3 + S5-3 + S5-4 (06.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
 > Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
-> die nächste Sitzung fest. Anwesenheit, Vorschläge, Freigabe und PDF folgen (Bauplan S5-3–S9 in
+> die nächste Sitzung fest; Mitglieder schlagen Punkte vor. Freigabe und PDF folgen (Bauplan S6–S9 in
 > `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -169,6 +169,21 @@ vorbelegt** (Zusage = anwesend, Absage = abwesend), solange am Treffen noch niem
 trägt man als freien Namen ein; sie stehen nur im Protokoll. Zugeklappt (beim Lesen von selbst) steht die Kurzform
 „Anwesend (n): … · Abwesend: …“. Gibt es zur Sitzung kein Gruppentreffen, legt „Gruppentreffen anlegen“ eins an (ohne
 Mail). Eintragen darf, wer in der Gruppe „Gruppentreffen pflegen“ hat – das gibt „Gruppe einrichten“ der Leitung.
+
+**Punkte vorschlagen (S5-4):** Im Reiter „Sitzungen“ steht bei „Kommend“ **„Punkt vorschlagen“** – für alle, die die
+Gruppe sehen. Man wählt die Sitzung (vorbelegt die nächste; ohne festgelegte heißt sie „Nächste Sitzung“, der
+Vorschlag rutscht dann von selbst dorthin), ein Thema und freiwillig ein, zwei Sätze. Die Karte **„Vorschläge“** unter
+„Kommend“ zeigt alle Vorschläge der Gruppe mit Stand; eigene, offene lassen sich ändern und zurückziehen. Was dann
+passiert, stellt „Gruppe einrichten“ ein:
+
+- **Vorschlagen:** Die Leitung sieht beim Schreiben oben „Vorschläge · n“ – **Übernehmen** setzt einen Punkt vor
+  „Verschiedenes“ (sonst ans Ende), **Nächstes Mal** schiebt ihn zur Sitzung danach, **Ablehnen** fragt nach einer
+  freiwilligen Begründung, die der Vorschlagende sieht. Übernehmen geht auch in der Karte; eingefügt wird dann beim
+  nächsten Öffnen des Protokolls.
+- **Direkt eintragen:** Beim Öffnen des Protokolls stehen die Vorschläge schon als Punkte vor „Verschiedenes“.
+
+Unter dem Punkt steht kursiv „vorgeschlagen von …“ (änderbar wie jeder Text). Ein offener Vorschlag, dessen Sitzung
+abgesagt oder ohne ihn freigegeben wurde, rutscht zur nächsten Sitzung weiter.
 
 **Früheres Protokoll (K3b-2):** „Einfügen → Früheres Protokoll“ (auch im „/“-Menü) fragt, **welches** – alle
 freigegebenen Protokolle der Gruppe, das letzte vorgewählt. Der Kasten zeigt es mit **„Ansehen“** im kleinen Fenster;

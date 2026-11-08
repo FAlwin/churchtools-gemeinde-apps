@@ -110,6 +110,12 @@
   }
 }
 
+// „2 Vorschläge“ unter dem Datum einer kommenden Sitzung (S5-4).
+.vorschlaege {
+  display: flex;
+  margin-top: 2px;
+}
+
 .innen,
 .fuss {
   padding: 12px 14px;

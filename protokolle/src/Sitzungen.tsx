@@ -5,12 +5,25 @@ import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt, datumText } from '@shared/ct/datum';
-import { gemeindeZeitzone, ortszeitAus } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
-import { ladeAufgaben, ladeSitzungen, type GruppenSitzungen } from './lesen';
+import {
+  ablehnen,
+  annehmen,
+  aufsNaechsteMal,
+  neuerVorschlag,
+  vorschlagAendern,
+  zielSitzung,
+  zurueckziehen,
+  type Vorschlag,
+} from '@shared/protokolle/vorschlaege';
+import { ladeMitarbeit, ladeSitzungen, type GruppenSitzungen } from './lesen';
+import { VorschlaegeKarte, type VorschlagAktionen } from './Vorschlaege';
+import { VorschlagAblehnen, VorschlagFenster } from './VorschlagFenster';
+import { vorschlagEinreichen, vorschlagSchreiben } from './vorschlaegeSchreiben';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
@@ -31,9 +44,18 @@ const ProtokollSchreiben = lazy(() =>
 type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
-  | { art: 'fertig'; daten: GruppenSitzungen; aufgaben: Aufgabe[] };
+  | { art: 'fertig'; daten: GruppenSitzungen; aufgaben: Aufgabe[]; vorschlaege: Vorschlag[] };
 
-function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
+function SitzungZeile({
+  s,
+  vorschlaege = 0,
+  onOeffnen,
+}: {
+  s: Sitzung;
+  /** Offene Vorschläge für diese Sitzung (S5-4). */
+  vorschlaege?: number;
+  onOeffnen: () => void;
+}) {
   const k = kachelVon(s.beginn, gemeindeZeitzone());
   const status = s.kopf?.status;
   return (
@@ -49,6 +71,14 @@ function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
               ? ` · freigegeben am ${tagPunkt(s.kopf.freigabe.am.slice(0, 10))}`
               : ''}
           </small>
+          {/* Unter dem Datum, nicht daneben – am Handy drückte das Schild den Titel zusammen. */}
+          {vorschlaege > 0 && (
+            <span className={styles.vorschlaege}>
+              <Marke art="info">
+                {vorschlaege} {vorschlaege === 1 ? 'Vorschlag' : 'Vorschläge'}
+              </Marke>
+            </span>
+          )}
         </span>
         {status === 'entwurf' && <Marke art="leise">Entwurf</Marke>}
         {status === 'geplant' && <Marke art="leise">geplant</Marke>}
@@ -82,6 +112,7 @@ export function Sitzungen({
   modul,
   gruppen,
   ich,
+  vollerName = ich.name,
   schreibbar = [],
   auswahl = null,
 }: {
@@ -89,6 +120,8 @@ export function Sitzungen({
   gruppen: ProtokollGruppe[];
   /** Wer angemeldet ist – für die Schreibsperre („Alwin schreibt gerade“). */
   ich: { person: number; name: string };
+  /** Vor- und Nachname – so steht man unter einem Vorschlag und im Protokoll („vorgeschlagen von …“, S5-4). */
+  vollerName?: string;
   /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort öffnet ein Entwurf im Editor (S4-1). */
   schreibbar?: readonly number[];
   auswahl?: SitzungsAuswahl | null;
@@ -113,6 +146,14 @@ export function Sitzungen({
   const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
   // „Öffnen“ im Fenster eines früheren Protokolls (K3b-2): Woher man kam – „Zurück“ führt wieder dorthin.
   const [herkunft, setHerkunft] = useState<string | null>(null);
+  // Vorschläge (S5-4): das offene Fenster und eine Meldung, wenn eine Aktion in der Karte scheiterte.
+  const [vorschlagFenster, setVorschlagFenster] = useState<
+    | { art: 'neu'; id: string }
+    | { art: 'aendern'; v: Vorschlag }
+    | { art: 'ablehnen'; v: Vorschlag }
+    | null
+  >(null);
+  const [vorschlagFehler, setVorschlagFehler] = useState<string | null>(null);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -124,10 +165,10 @@ export function Sitzungen({
     const ziel = wunsch.current;
     Promise.all([
       ladeSitzungen(modul, gruppe, gemeindeZeitzone()),
-      ladeAufgaben(modul, gruppe),
+      ladeMitarbeit(modul, gruppe),
     ]).then(
-      ([daten, aufgaben]) => {
-        setZustand({ art: 'fertig', daten, aufgaben });
+      ([daten, { aufgaben, vorschlaege }]) => {
+        setZustand({ art: 'fertig', daten, aufgaben, vorschlaege });
         if (ziel === undefined) return;
         wunsch.current = undefined;
         const s = [...daten.kommend, ...daten.protokolle].find((x) => x.schluessel === ziel);
@@ -146,10 +187,10 @@ export function Sitzungen({
     if (!gruppe) return;
     Promise.all([
       ladeSitzungen(modul, gruppe, gemeindeZeitzone()),
-      ladeAufgaben(modul, gruppe),
+      ladeMitarbeit(modul, gruppe),
     ]).then(
-      ([daten, aufgaben]) => {
-        setZustand({ art: 'fertig', daten, aufgaben });
+      ([daten, { aufgaben, vorschlaege }]) => {
+        setZustand({ art: 'fertig', daten, aufgaben, vorschlaege });
         // Die offene Sitzung frisch aus der Liste – nach „Bearbeiten“ im Editor stimmen Titel und Zeit im Kopf. Der
         // Editor hängt nur an der Sitzungs-ID, ein neues Objekt lädt ihn nicht neu.
         setOffen(
@@ -252,6 +293,97 @@ export function Sitzungen({
       />
     );
 
+  // Vorschläge (S5-4) – lesen und schreiben in „Mitarbeit“; jede Aktion liest frisch, schreibt und liest nach.
+  const zone = gemeindeZeitzone();
+  const heute = heuteImKalender(new Date(), zone);
+  const mOrt = gruppe && gruppe.mitarbeit !== null ? { modul, kategorie: gruppe.mitarbeit } : null;
+  const ichV = { person: ich.person, name: vollerName };
+  const jetzt = () => new Date().toISOString();
+  const kommend = zustand.art === 'fertig' ? zustand.daten.kommend : [];
+  const vorschlaege = zustand.art === 'fertig' ? zustand.vorschlaege : [];
+  const direkt = zustand.art === 'fertig' && zustand.daten.punkte === 'direkt';
+  const leitung = !!gruppe && darfSchreibenIn(gruppe);
+  const vorschlagSetzen = (v: Vorschlag) =>
+    setZustand((z) =>
+      z.art !== 'fertig'
+        ? z
+        : {
+            ...z,
+            vorschlaege: z.vorschlaege.some((x) => x.id === v.id)
+              ? z.vorschlaege.map((x) => (x.id === v.id ? v : x))
+              : [...z.vorschlaege, v],
+          },
+    );
+  const vorschlagTun = async (id: string, f: (v: Vorschlag) => Vorschlag) => {
+    if (!mOrt) return;
+    setVorschlagFehler(null);
+    try {
+      vorschlagSetzen(await vorschlagSchreiben(mOrt, id, f));
+    } catch (e) {
+      setVorschlagFehler(fehlerMeldung(e).text);
+    }
+  };
+  // Übernehmen und „Nächstes Mal“ brauchen eine festgelegte Sitzung; ablehnen geht immer.
+  const vorschlagAktionen = (s: Sitzung | null): VorschlagAktionen => ({
+    aendern: (v) => setVorschlagFenster({ art: 'aendern', v }),
+    zurueckziehen: (v) => vorschlagTun(v.id, (x) => zurueckziehen(x, ichV, jetzt())),
+    ...(leitung && s
+      ? {
+          uebernehmen: (v: Vorschlag) => vorschlagTun(v.id, (x) => annehmen(x, s, ichV, jetzt())),
+          naechstesMal: (v: Vorschlag) =>
+            vorschlagTun(v.id, (x) => aufsNaechsteMal(x, s, ichV, jetzt())),
+        }
+      : {}),
+    ...(leitung ? { ablehnen: (v: Vorschlag) => setVorschlagFenster({ art: 'ablehnen', v }) } : {}),
+  });
+  const offeneFuerZeile = (s: Sitzung) =>
+    vorschlaege.filter(
+      (v) =>
+        v.stand === 'offen' && zielSitzung(v, kommend, heute, zone)?.schluessel === s.schluessel,
+    ).length;
+  const vorschlagFensterAnzeigen = () => {
+    if (!vorschlagFenster || !gruppe || !mOrt) return null;
+    if (vorschlagFenster.art === 'ablehnen') {
+      const v = vorschlagFenster.v;
+      return (
+        <VorschlagAblehnen
+          vorschlag={v}
+          onAblehnen={async (grund) => {
+            vorschlagSetzen(
+              await vorschlagSchreiben(mOrt, v.id, (x) => ablehnen(x, grund, ichV, jetzt())),
+            );
+            setVorschlagFenster(null);
+          }}
+          onClose={() => setVorschlagFenster(null)}
+        />
+      );
+    }
+    const f = vorschlagFenster;
+    const vorher = f.art === 'aendern' ? f.v : null;
+    return (
+      <VorschlagFenster
+        gruppe={gruppe.name}
+        sitzungen={kommend.filter((s) => tagAusIso(s.beginn, zone) >= heute)}
+        vorher={vorher}
+        jetzt={vorher ? zielSitzung(vorher, kommend, heute, zone) : null}
+        direkt={direkt}
+        zeitzone={zone}
+        onSpeichern={async (x) => {
+          vorschlagSetzen(
+            f.art === 'aendern'
+              ? await vorschlagSchreiben(mOrt, f.v.id, (y) => vorschlagAendern(y, x, ichV, jetzt()))
+              : await vorschlagEinreichen(
+                  mOrt,
+                  neuerVorschlag({ id: f.id, gruppe: gruppe.id, ...x, ich: ichV, am: jetzt() }),
+                ),
+          );
+          setVorschlagFenster(null);
+        }}
+        onClose={() => setVorschlagFenster(null)}
+      />
+    );
+  };
+
   if (!gruppe)
     return (
       <p className={styles.ruhig}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
@@ -279,6 +411,10 @@ export function Sitzungen({
           ich={ich}
           zeitzone={gemeindeZeitzone()}
           naechste={naechsteVon(offen)}
+          kommend={kommend}
+          direkt={direkt}
+          vollerName={vollerName}
+          onVorschlag={vorschlagSetzen}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={(geaendert) => {
             setOffen(null);
@@ -381,31 +517,46 @@ export function Sitzungen({
               <h3 id="kommend">Kommend</h3>
               <span className={styles.anzahl}>{zustand.daten.kommend.length}</span>
               {/* „Neue Sitzung“ braucht dazu einen Kalender – wer sie darf, darf also immer auch schreiben. */}
-              {darfSchreiben && (
-                <span className={styles.aktionen}>
+              <span className={styles.aktionen}>
+                {mOrt && (
                   <KopfKnopf
-                    neu
-                    label="Neues Protokoll"
-                    title="Neues Protokoll ohne Termin"
-                    symbol={<Icon name="plus" size={16} />}
-                    onClick={() => setNeu(true)}
+                    label="Punkt vorschlagen"
+                    title="Einen Punkt für eine Sitzung vorschlagen"
+                    symbol={<Icon name="idee" size={16} />}
+                    onClick={() => setVorschlagFenster({ art: 'neu', id: crypto.randomUUID() })}
                   />
-                  {darfFestlegen && (
+                )}
+                {darfSchreiben && (
+                  <>
                     <KopfKnopf
                       neu
-                      label="Neue Sitzung"
-                      title="Neue Sitzung mit Termin und Einladung"
-                      symbol={<Icon name="calendar" size={16} />}
-                      onClick={() => setFestlegen({ art: 'neu', bis: null })}
+                      label="Neues Protokoll"
+                      title="Neues Protokoll ohne Termin"
+                      symbol={<Icon name="plus" size={16} />}
+                      onClick={() => setNeu(true)}
                     />
-                  )}
-                </span>
-              )}
+                    {darfFestlegen && (
+                      <KopfKnopf
+                        neu
+                        label="Neue Sitzung"
+                        title="Neue Sitzung mit Termin und Einladung"
+                        symbol={<Icon name="calendar" size={16} />}
+                        onClick={() => setFestlegen({ art: 'neu', bis: null })}
+                      />
+                    )}
+                  </>
+                )}
+              </span>
             </div>
             {zustand.daten.kommend.length ? (
               <ul className={styles.liste}>
                 {zustand.daten.kommend.map((s) => (
-                  <SitzungZeile key={s.schluessel} s={s} onOeffnen={() => setOffen(s)} />
+                  <SitzungZeile
+                    key={s.schluessel}
+                    s={s}
+                    vorschlaege={offeneFuerZeile(s)}
+                    onOeffnen={() => setOffen(s)}
+                  />
                 ))}
               </ul>
             ) : (
@@ -424,6 +575,19 @@ export function Sitzungen({
               </p>
             )}
           </section>
+          {mOrt && (
+            <VorschlaegeKarte
+              liste={vorschlaege}
+              kommend={kommend}
+              heute={heute}
+              zeitzone={zone}
+              ich={ich.person}
+              direkt={direkt}
+              aktionen={vorschlagAktionen}
+              fehler={vorschlagFehler}
+            />
+          )}
+          {vorschlagFensterAnzeigen()}
           {festlegenFenster(false)}
           {neu && (
             <ProtokollNeu

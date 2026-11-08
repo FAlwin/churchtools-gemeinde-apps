@@ -316,6 +316,16 @@ describe('Planen – Terminleiste (E3-5)', () => {
     expect(spaltenNamen()).toEqual(['Gottesdienst']);
     expect(knopf.textContent).toBe('18.10.20261 Termin · passend zur Fensterbreite');
   });
+
+  it('am Handy zählt der Zeitraum-Knopf alle geladenen Termine – nicht nur die im Fenster (dieselben teilt „Plan teilen“)', () => {
+    schmal(); // nur eine Spalte passt
+    zeige(true);
+    const knopf = screen.getByRole('button', { name: /^Zeitraum:/ });
+    expect(PLAN.spalten.length).toBeGreaterThan(1);
+    expect(knopf.getAttribute('aria-label')).toBe(
+      `Zeitraum: Ab heute, ${PLAN.spalten.length} Termine`,
+    );
+  });
 });
 
 describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {

@@ -13,7 +13,7 @@ import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf } from './ladeBeiwerk';
 import { useMusikApp } from './useMusikApp';
-import { Plaetze } from './Planen';
+import { Plaetze } from './PlanPlaetze';
 import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
 import { CtSymbol } from './CtSymbol';

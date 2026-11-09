@@ -19,6 +19,7 @@ export function zeile(
     tag,
     uhrzeit: '10:00',
     abgesagt: false,
+    kalender: null,
     meine: [],
     geplant: 0,
     frei: 0,

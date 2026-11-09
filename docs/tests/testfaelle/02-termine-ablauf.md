@@ -684,3 +684,30 @@ oft?“ hat einen eigenen Zeitraum für die Vergangenheit. Dass die Matrix seitl
 - **Historie:** E9-3 (05.11.2026, Entwurf `e9-zeitraum-scrollen.html`, Wünsche aus dem ersten Planen in Live)
 
 </details>
+
+### TF-ABLAUF-26 · Filter nach Kalender (Dienste und Planen)
+
+**Das brauchst du:** Dienstplaner mit Terminen aus mindestens zwei Kalendern (z. B. Gottesdienste und
+Gemeindeveranstaltungen), darunter ein umbenannter Gottesdienst (z. B. „Ostergottesdienst“).
+
+**Das muss passieren:** Im Filter steht oben „Kalender“; ein abgehakter Kalender blendet seine Termine aus, egal wie sie
+heißen.
+
+1. **Dienste** → „Alle“ → **Filter**: oben **Kalender** mit den Kalendern der Termine (nach Namen), darunter
+   **Veranstaltungen**.
+2. „Gemeindeveranstaltungen“ abhaken → Gebetsabend & Co. verschwinden, der umbenannte Gottesdienst bleibt. Unter
+   „Veranstaltungen“ steht kein „Gebetsabend“ mehr. Am Knopf steht die Zahl der ausgeblendeten Häkchen.
+3. Seite neu laden → die Wahl ist noch da.
+4. **Planen** → **Filter**: Kalender, Veranstaltungen, Gruppen. Kalender abhaken → die Spalten fallen weg.
+5. Zeitraum = ein Monat, **＋** rechts → der nächste Termin aus einem **angehakten** Kalender kommt dazu; ein Termin im
+   abgehakten Kalender dazwischen wird übersprungen.
+6. Liegen alle geladenen Termine in einem Kalender, fehlt der Abschnitt „Kalender“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/kalenderFilter.ts`, `shared/dienstplan/termine.ts`, `shared/dienstplan/plan.ts`, `dienstplaner/src/terminAbschnitte.ts`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/usePlanZeitraum.ts`, `dienstplaner/src/auswahl.ts`, `dienstplaner/src/planenAnsicht.ts`, `client/src/utils/kalenderFilter.ts`
+- **Automatisiert:** ja – `shared/ct/kalenderFilter.test.ts` (Name aus dem Termin, ohne Kalender sichtbar, ausgeblendete wählbar, gemerkte IDs), `shared/dienstplan/termine.test.ts` (Kalender am Termin, Veranstaltungen nur aus angehakten Kalendern, mit „Meine“), `dienstplaner/src/Termine.test.tsx` + `dienstplaner/src/Planen.test.tsx` (Abschnitt oben, blendet aus, gemerkt, ＋ überspringt, ohne zweiten Kalender kein Abschnitt), `dienstplaner/src/geraet.test.ts`, `client/src/utils/kalenderFilter.test.ts`; 15 Gegenproben einzeln rot; von Hand bleibt der Blick auf echte Kalender
+- **Historie:** Wunsch 6 (09.11.2026, Entwurf `w6-kalender-filter.html`; Live gemessen: außer dem Kalender keine Kategorie am Termin)
+
+</details>

@@ -158,6 +158,7 @@ describe('planAus', () => {
         liveSteuern: false,
         infos: '',
         dateien: [],
+        kalender: null,
       },
       {
         id: 11,
@@ -173,6 +174,7 @@ describe('planAus', () => {
         liveSteuern: false,
         infos: '',
         dateien: [],
+        kalender: null,
       },
     ]);
   });

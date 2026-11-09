@@ -13,6 +13,7 @@ import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { ablaufTerminVon, type AblaufTermin } from '../ct/ablaufRecht';
 import { darfLiveSteuern } from '../ct/liveAgenda';
+import { terminKalenderAus, type TerminKalender } from '../ct/kalenderFilter';
 import { infosAus } from '../ct/terminInfos';
 import { dateienAus, type TerminDatei } from '../ct/terminDateien';
 import { ortszeitAus } from '../ct/zeit';
@@ -69,6 +70,8 @@ export interface PlanSpalte {
   infos: string;
   /** Die Dateien am Termin (`dateienAus`, T2a) – ohne Größe, die steht erst im Dateien-Fenster. */
   dateien: TerminDatei[];
+  /** Der Kalender des Termins – für den Filter „Kalender“ (Wunsch 6), `null` ohne Angabe. */
+  kalender: TerminKalender | null;
 }
 
 export interface PlanZeile {
@@ -176,6 +179,7 @@ export function planAus(
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
       infos: infosAus(t),
       dateien: dateienAus(t),
+      kalender: terminKalenderAus(t),
     };
   });
 

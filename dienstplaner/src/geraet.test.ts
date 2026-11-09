@@ -18,7 +18,9 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
     });
     expect(leseAuswahl()).toEqual(VORGABE);
     expect(leseAnsicht()).toEqual(VORGABE_ANSICHT);
-    expect(() => merkeAuswahl({ nurMeine: false, ausgeblendet: [] })).not.toThrow();
+    expect(() =>
+      merkeAuswahl({ nurMeine: false, ausgeblendet: [], ausgeblendeteKalender: [] }),
+    ).not.toThrow();
   });
 
   it('Unsinn im Speicher → Vorgabe bzw. nur die gültigen Teile', () => {
@@ -30,6 +32,8 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
         breite: 'xl',
         unteransicht: 'personen',
         ausgeblendeteGruppen: [3, 'ohne'],
+        // Kalender nur als ganze Zahlen über 0, ohne Doppelte (Wunsch 6).
+        ausgeblendeteKalender: [12, '2', 12, 0, 2.5, -1],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
         // Unsinn bei „Wer wie oft?“ wird dessen Vorgabe, die letzten 3 Monate (E9-3) – nicht „ab heute“.
         zeitraumWer: { art: 'letzte', monate: 4 },
@@ -43,6 +47,7 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       unteransicht: 'personen',
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
+      ausgeblendeteKalender: [12],
       zeitraum: { art: 'abHeute' },
       zeitraumWer: { art: 'letzte', monate: 3 },
       ablaufZu: false,

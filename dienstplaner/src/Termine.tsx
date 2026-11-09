@@ -6,15 +6,15 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kachel, monatTitel, tagKurz } from '@shared/ct/datum';
 import {
-  WEITERE,
   filtere,
   nachMonat,
-  veranstaltungsArten,
+  terminFilter,
   type Auswahl,
   type TerminZeile,
 } from '@shared/dienstplan/termine';
 import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
+import { terminAbschnitte } from './terminAbschnitte';
 import { Plakette } from './Plakette';
 import { plaketteArt } from './plaketteArt';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
@@ -64,7 +64,7 @@ interface Props {
 
 /**
  * **Termine** (Bauplan E3-2, Entwurf v17): eine Liste nach Monaten, „Meine | Alle“ (Vorgabe Meine),
- * Filter nach Veranstaltung, Plaketten mit den eigenen Diensten; Planer sehen „N frei“ ihrer
+ * Filter nach Kalender und Veranstaltung (`terminFilter`), Plaketten mit den eigenen Diensten; Planer sehen „N frei“ ihrer
  * Dienstgruppen. Eine Zeile öffnet die Termin-Ansicht (E6-1b); offene Anfragen lassen sich darunter zusagen oder absagen
  * (E7-1, `AntwortKnoepfe`).
  */
@@ -97,7 +97,8 @@ export function Termine({
   };
 
   const alle = zustand.art === 'fertig' ? zustand.zeilen : [];
-  const arten = veranstaltungsArten(alle);
+  const aus = { kalender: auswahl.ausgeblendeteKalender, arten: auswahl.ausgeblendet };
+  const angebot = terminFilter(alle, aus);
   const monate = nachMonat(filtere(alle, auswahl));
 
   return (
@@ -117,17 +118,9 @@ export function Termine({
           />
           <FilterKnopf
             className={styles.filterRechts}
-            abschnitte={[
-              {
-                titel: 'Veranstaltungen',
-                optionen: arten.map((art) => ({
-                  wert: art,
-                  text: art === WEITERE ? 'Weitere' : art,
-                })),
-                aus: auswahl.ausgeblendet,
-                onAus: (ausgeblendet) => aendern({ ...auswahl, ausgeblendet }),
-              },
-            ]}
+            abschnitte={terminAbschnitte(angebot, aus, (a) =>
+              aendern({ ...auswahl, ausgeblendeteKalender: a.kalender, ausgeblendet: a.arten }),
+            )}
           />
           {/* Nur bei „Meine“ (Entwurf E8): alle kommenden eigenen Dienste als PDF. */}
           {ich && auswahl.nurMeine && (

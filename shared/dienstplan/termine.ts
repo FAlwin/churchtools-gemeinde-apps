@@ -6,13 +6,21 @@
  * Gemessen an der Live-Instanz (13.10.2026, nur lesen): `/events?from&to&include=eventServices` liefert
  * je Termin die Plätze mit `serviceId`, `personId`, `name`, `isAccepted` (das alte `agreed` ist als
  * veraltet markiert), `isValid`. Ein Platz ist **frei**, wenn `name` leer ist – bei „Namen verbergen“
- * kommen auch besetzte Plätze mit `personId: -2`, aber mit Namen (E0 §2). Die Kalender taugen nicht zum
- * Filtern (bei der ECG fast alles in einem), die **Namen** der Termine schon (Gottesdienst, Gebetsabend).
+ * kommen auch besetzte Plätze mit `personId: -2`, aber mit Namen (E0 §2). Gefiltert wird nach den **Namen**
+ * der Termine (Gottesdienst, Gebetsabend) und seit Wunsch 6 (09.11.2026) zusätzlich nach **Kalender** – Termine
+ * werden umbenannt („Ostergottesdienst“); bis dahin lag bei der ECG fast alles in einem Kalender, Alwin teilt sie
+ * dafür auf (`terminFilter`).
  */
 import type { CtEvent } from '../ct/typen';
 import type { Dienst } from '../ct/dienste';
 import { ortszeitAus } from '../ct/zeit';
 import { terminAdminIds } from '../ct/ablaufRecht';
+import {
+  kalenderSichtbar,
+  kalenderZumFiltern,
+  terminKalenderAus,
+  type TerminKalender,
+} from '../ct/kalenderFilter';
 import type { Antwort } from './antworten';
 
 export interface RohPlatz {
@@ -75,6 +83,8 @@ export interface TerminZeile {
   /** `HH:mm` in Ortszeit der Gemeinde. */
   uhrzeit: string;
   abgesagt: boolean;
+  /** Der Kalender des Termins – für den Filter „Kalender“ (Wunsch 6), `null` ohne Angabe. */
+  kalender: TerminKalender | null;
   meine: MeinDienst[];
   /** Plätze in Dienstgruppen, die man plant (0 für Nicht-Planer oder ohne solche Dienste). */
   geplant: number;
@@ -163,6 +173,7 @@ export function termineAus(
         tag: lokal.slice(0, 10),
         uhrzeit: lokal.slice(11, 16),
         abgesagt: t.isCanceled === true,
+        kalender: terminKalenderAus(t),
         meine,
         geplant,
         frei,
@@ -201,13 +212,51 @@ export interface Auswahl {
   nurMeine: boolean;
   /** Ausgeblendete Arten (Name bzw. `WEITERE`). */
   ausgeblendet: string[];
+  /** Ausgeblendete Kalender (IDs, Wunsch 6). */
+  ausgeblendeteKalender: number[];
+}
+
+/** Was im Filter ausgeblendet ist – Kalender und Veranstaltungen. */
+export interface TerminAus {
+  kalender: readonly number[];
+  arten: readonly string[];
+}
+
+/**
+ * **Der Termin-Filter von Dienste-Liste und Matrix** (Wunsch 6, 09.11.2026): erst der Kalender, dann die Veranstaltung.
+ * Die Veranstaltungen entstehen nur aus Terminen der eingeblendeten Kalender – sonst stünde „Gebetsabend“ im Filter,
+ * obwohl sein Kalender schon aus ist. Eine Stelle für beide Ansichten, damit Anzeige, Zählen und Nachladen der Matrix
+ * dasselbe sehen.
+ */
+export function terminFilter<T extends { name: string; kalender: TerminKalender | null }>(
+  zeilen: readonly T[],
+  aus: TerminAus,
+): {
+  /** Die Kalender für den Abschnitt „Kalender“. */
+  kalender: TerminKalender[];
+  /** Die Veranstaltungsarten für den Abschnitt „Veranstaltungen“. */
+  arten: string[];
+  /** Steht der Termin da? */
+  zeigt: (z: T) => boolean;
+} {
+  const namen = new Map(
+    zeilen.flatMap((z) => (z.kalender ? [[z.kalender.id, z.kalender.name] as const] : [])),
+  );
+  const imKalender = (z: T) => kalenderSichtbar(z.kalender?.id, aus.kalender);
+  const arten = veranstaltungsArten(zeilen.filter(imKalender));
+  return {
+    kalender: kalenderZumFiltern(namen.keys(), (id) => namen.get(id), aus.kalender),
+    arten,
+    zeigt: (z) => imKalender(z) && !aus.arten.includes(artVon(z, arten)),
+  };
 }
 
 export function filtere(zeilen: TerminZeile[], a: Auswahl): TerminZeile[] {
-  const arten = veranstaltungsArten(zeilen);
-  return zeilen.filter(
-    (z) => (!a.nurMeine || z.meine.length > 0) && !a.ausgeblendet.includes(artVon(z, arten)),
-  );
+  const { zeigt } = terminFilter(zeilen, {
+    kalender: a.ausgeblendeteKalender,
+    arten: a.ausgeblendet,
+  });
+  return zeilen.filter((z) => (!a.nurMeine || z.meine.length > 0) && zeigt(z));
 }
 
 /** Nach Monat gruppiert, in der Reihenfolge der Liste. */

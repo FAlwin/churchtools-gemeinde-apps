@@ -6,6 +6,7 @@ import {
   istFrei,
   nachMonat,
   termineAus,
+  terminFilter,
   veranstaltungsArten,
   type RohTermin,
 } from './termine';
@@ -68,6 +69,7 @@ describe('termineAus', () => {
       tag: '2026-10-18',
       uhrzeit: '10:00',
       abgesagt: false,
+      kalender: null,
       // In der Reihenfolge der Gemeinde (hier ohne sortKey: nach Namen), nicht nach ChurchTools (E7-1).
       meine: [
         { dienst: 'Gesang', zugesagt: false, ort: { serviceId: 9, index: null }, absagen: true },
@@ -121,12 +123,20 @@ describe('Veranstaltungsarten und Filter', () => {
   });
 
   it('„Meine“ zeigt nur Termine mit eigenem Dienst', () => {
-    expect(filtere(liste, { nurMeine: true, ausgeblendet: [] }).map((z) => z.id)).toEqual([1]);
+    expect(
+      filtere(liste, { nurMeine: true, ausgeblendet: [], ausgeblendeteKalender: [] }).map(
+        (z) => z.id,
+      ),
+    ).toEqual([1]);
   });
 
   it('ausgeblendete Arten fallen weg – auch „Weitere“', () => {
     expect(
-      filtere(liste, { nurMeine: false, ausgeblendet: ['Gebetsabend', WEITERE] }).map((z) => z.id),
+      filtere(liste, {
+        nurMeine: false,
+        ausgeblendet: ['Gebetsabend', WEITERE],
+        ausgeblendeteKalender: [],
+      }).map((z) => z.id),
     ).toEqual([1, 3, 5]);
   });
 
@@ -227,5 +237,62 @@ describe('termineAus – eigene Dienste (E7-1)', () => {
       ['Gesang', 1],
       ['Gesang', 2],
     ]);
+  });
+});
+
+describe('Filter nach Kalender (Wunsch 6, 09.11.2026)', () => {
+  const GD = { domainIdentifier: '1', title: 'Gottesdienste' };
+  const GV = { domainIdentifier: '2', title: 'Gemeindeveranstaltungen' };
+  const mit = (t: RohTermin, calendar: object): RohTermin => ({ ...t, calendar });
+  const liste = zeilen([
+    mit(termin(1, 'Gottesdienst', '2026-10-18T08:00:00Z'), GD),
+    mit(termin(2, 'Gebetsabend', '2026-10-21T17:00:00Z'), GV),
+    mit(termin(3, 'Gottesdienst', '2026-10-25T09:00:00Z'), GD),
+    mit(termin(4, 'Gebetsabend', '2026-10-28T18:00:00Z'), GV),
+    // Umbenannt – mit dem Namen allein fiele er unter „Weitere“.
+    mit(termin(5, 'Ostergottesdienst', '2026-11-01T09:00:00Z'), GD),
+    termin(6, 'Ohne Kalender', '2026-11-08T17:00:00Z'),
+  ]);
+
+  it('termineAus übernimmt den Kalender des Termins', () => {
+    expect(liste.map((z) => z.kalender?.id ?? null)).toEqual([1, 2, 1, 2, 1, null]);
+    expect(liste[1].kalender).toEqual({ id: 2, name: 'Gemeindeveranstaltungen' });
+  });
+
+  it('Kalender im Angebot: die der Termine, nach Namen; ausgeblendete bleiben wählbar', () => {
+    expect(terminFilter(liste, { kalender: [], arten: [] }).kalender.map((k) => k.name)).toEqual([
+      'Gemeindeveranstaltungen',
+      'Gottesdienste',
+    ]);
+    expect(terminFilter(liste, { kalender: [2], arten: [] }).kalender.map((k) => k.id)).toEqual([
+      2, 1,
+    ]);
+  });
+
+  it('ausgeblendeter Kalender: seine Termine fallen weg – umbenannte im anderen Kalender bleiben, ohne Kalender auch', () => {
+    const { zeigt } = terminFilter(liste, { kalender: [2], arten: [] });
+    expect(liste.filter(zeigt).map((z) => z.id)).toEqual([1, 3, 5, 6]);
+  });
+
+  it('„Veranstaltungen“ nur aus eingeblendeten Kalendern – kein „Gebetsabend“, wenn sein Kalender aus ist', () => {
+    expect(terminFilter(liste, { kalender: [], arten: [] }).arten).toEqual([
+      'Gebetsabend',
+      'Gottesdienst',
+      WEITERE,
+    ]);
+    expect(terminFilter(liste, { kalender: [2], arten: [] }).arten).toEqual([
+      'Gottesdienst',
+      WEITERE,
+    ]);
+  });
+
+  it('Kalender und Veranstaltung zusammen; filtere nimmt den Kalender aus der Auswahl', () => {
+    expect(
+      filtere(liste, {
+        nurMeine: false,
+        ausgeblendet: [WEITERE],
+        ausgeblendeteKalender: [2],
+      }).map((z) => z.id),
+    ).toEqual([1, 3]);
   });
 });

@@ -12,6 +12,7 @@
  * Update niemandem die Gottesdienste ohne Ablauf verschwinden.
  */
 import type { AblaufAnlegenRegel, Kalender, Service } from '@shared/types/index';
+import { kalenderIdsAus, kalenderSichtbar, kalenderZumFiltern } from '@shared/ct/kalenderFilter';
 
 export interface KalenderFilter {
   /** Ausgeblendete Kalender – ihre Termine stehen gar nicht in der Liste. */
@@ -28,28 +29,22 @@ export interface FilterKalender {
   ohneAblaufMoeglich: boolean;
 }
 
-function ids(roh: unknown): number[] {
-  return Array.isArray(roh)
-    ? [...new Set(roh.filter((x): x is number => Number.isInteger(x) && (x as number) > 0))]
-    : [];
-}
-
 /** Ein gespeicherter Filter, geprüft – `null`, wenn er nicht die erwartete Form hat. */
 export function kalenderFilterAus(roh: unknown): KalenderFilter | null {
   if (typeof roh !== 'object' || roh === null) return null;
   const r = roh as Record<string, unknown>;
   if (!Array.isArray(r.aus) || !Array.isArray(r.ohneAblauf)) return null;
-  return { aus: ids(r.aus), ohneAblauf: ids(r.ohneAblauf) };
+  return { aus: kalenderIdsAus(r.aus), ohneAblauf: kalenderIdsAus(r.ohneAblauf) };
 }
 
 /** Solange nichts gemerkt ist: nichts ausgeblendet, „auch ohne Ablauf“ wie früher in der Verwaltung eingestellt. */
 export function startFilter(frueher: AblaufAnlegenRegel | undefined): KalenderFilter {
-  return { aus: [], ohneAblauf: ids(frueher?.kalenderIds) };
+  return { aus: [], ohneAblauf: kalenderIdsAus(frueher?.kalenderIds) };
 }
 
-/** Steht dieser Termin in der Liste? Ein Termin ohne bekannten Kalender (ältere Server) immer. */
+/** Steht dieser Termin in der Liste? Ein Termin ohne bekannten Kalender (ältere Server) immer – `kalenderSichtbar`. */
 export function terminSichtbar(s: Service, filter: KalenderFilter): boolean {
-  return s.kalenderId === undefined || !filter.aus.includes(s.kalenderId);
+  return kalenderSichtbar(s.kalenderId, filter.aus);
 }
 
 /**
@@ -77,18 +72,14 @@ export function kalenderImFilter(
   darfImKalender: (id: number) => boolean,
 ): FilterKalender[] {
   const namen = new Map((alleKalender ?? []).map((k) => [k.id, k.name]));
-  const gewaehlt = new Set<number>([
-    ...termine.flatMap((s) => (s.kalenderId === undefined ? [] : [s.kalenderId])),
-    ...(alleKalender ?? []).filter((k) => darfImKalender(k.id)).map((k) => k.id),
-    ...filter.aus,
-  ]);
-  return [...gewaehlt]
-    .map((id) => ({
-      id,
-      name: namen.get(id) ?? `Kalender ${id}`,
-      ohneAblaufMoeglich: darfImKalender(id),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return kalenderZumFiltern(
+    [
+      ...termine.flatMap((s) => (s.kalenderId === undefined ? [] : [s.kalenderId])),
+      ...(alleKalender ?? []).filter((k) => darfImKalender(k.id)).map((k) => k.id),
+    ],
+    (id) => namen.get(id),
+    filter.aus,
+  ).map((k) => ({ ...k, ohneAblaufMoeglich: darfImKalender(k.id) }));
 }
 
 /** Kalender ein- oder ausblenden. */

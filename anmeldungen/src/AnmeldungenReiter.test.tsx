@@ -163,6 +163,27 @@ describe('Reiter Anmeldungen', () => {
     expect(screen.queryByText(/Für die ganze Anmeldung/)).toBeNull();
   });
 
+  it('im Fenster je Person: Platz oder Warteliste, Link zur Person in ChurchTools; Abgesagte mit Grund', () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    const fenster = within(screen.getByRole('dialog'));
+    expect(fenster.getByText('hat einen Platz')).toBeTruthy();
+    expect(fenster.getByText('Warteliste 1')).toBeTruthy();
+    const links = fenster.getAllByRole('link', { name: 'In ChurchTools' });
+    expect(links).toHaveLength(2);
+    for (const l of links)
+      expect(l.getAttribute('href')).toMatch(/\/\?q=churchdb#PersonView\/searchEntry:%23\d+\/$/);
+    cleanup();
+    const [jonas, lena] = mitglieder('AAAAAA', [true, false], 10);
+    zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        /Jonas Beispiel – am 18\.10\. selbst abgesagt \(Link in der Mail\)/,
+      ),
+    ).toBeTruthy();
+  });
+
   it('Filter Warteliste, Abgesagt und Suche', () => {
     const [jonas, lena] = mitglieder('AAAAAA', [true, false], 10);
     zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));

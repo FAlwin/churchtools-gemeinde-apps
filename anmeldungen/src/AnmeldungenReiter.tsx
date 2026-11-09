@@ -16,15 +16,11 @@ import type { GeladenerStand } from './mitglieder';
 import {
   gezeigteSpalten,
   mitSpaltenWahl,
-  obenZuerst,
   personSchluessel,
   personZeilen,
   personZellText,
-  personenSortiert,
   personSumme,
   type PersonZeile,
-  passtZurSuche,
-  sortiert,
   spaltenWahl,
   summe,
   wahlGeaendert,
@@ -46,6 +42,9 @@ import { DrucklisteFenster } from './DrucklisteFenster';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
+import { listenAnsicht, type ListenFilter } from './listenAnsicht';
+
+export type { ListenFilter };
 import { absageText, ganzerName, kurz } from './anmeldungText';
 import {
   AnmeldungAnsehen,
@@ -60,9 +59,6 @@ export type MitgliederZustand =
   | { art: 'fehler'; text: string }
   | { art: 'verboten' }
   | { art: 'fertig'; stand: GeladenerStand };
-
-/** Was die Liste zeigt – auch das Ziel der Kennzahl-Kacheln oben auf der Seite (U1). */
-export type ListenFilter = 'alle' | 'offen' | 'warte' | 'abgesagt';
 
 function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
   if (!kostet || x.betragCent === null || x.betragCent <= 0) return null;
@@ -217,49 +213,13 @@ export function AnmeldungenReiter({
 
   const z = listenZahlen(e, liste);
   const plaetze = { belegt: z.belegt, wartend: z.wartend, max: maxPlaetze };
-  const wartende = liste
-    .flatMap((x) => x.personen.filter((p) => p.status === 'wartet').map((p) => ({ p, x })))
-    .sort((u, w) => (u.p.warteplatz ?? 999) - (w.p.warteplatz ?? 999));
-  const absagen = [...stand!.absagen].sort((u, w) => w.am.localeCompare(u.am));
+  const { wartende, absagen, zeilen, personenGezeigt, absageZeilen, zahlen } = listenAnsicht(
+    e,
+    liste,
+    stand!.absagen,
+    { filter, suche, sortierung, jePerson, oben },
+  );
   const frei = maxPlaetze === null ? null : maxPlaetze - z.belegt;
-  // Je Reiter die Anmeldungen (U2-1) – die Anzahl am Reiter ist die Zahl der Zeilen.
-  const imReiter = {
-    alle: liste,
-    offen: liste.filter((x) => x.zahlungOffen),
-    warte: liste.filter((x) => x.personen.some((p) => p.status === 'wartet')),
-  };
-  const zeilen =
-    filter === 'abgesagt'
-      ? []
-      : obenZuerst(
-          sortiert(
-            e,
-            imReiter[filter].filter((x) => passtZurSuche(x, suche)),
-            sortierung,
-            filter === 'warte',
-          ),
-          (x) => oben.has(x.schluessel),
-        );
-  // Dieselben Reiter je Person: Zahlung offen = die Personen einer Anmeldung mit offener Zahlung.
-  const personenImReiter = {
-    alle: personZeilen(liste),
-    offen: personZeilen(imReiter.offen),
-    warte: personZeilen(liste).filter((y) => y.p.status === 'wartet'),
-  };
-  const personenGezeigt =
-    filter === 'abgesagt' || !jePerson
-      ? []
-      : obenZuerst(
-          personenSortiert(
-            e,
-            personenImReiter[filter].filter((y) =>
-              passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
-            ),
-            sortierung,
-            filter === 'warte',
-          ),
-          (y) => oben.has(personSchluessel(y)),
-        );
   /** Eine Zeile an- oder abheften – was es nicht mehr gibt, fällt dabei aus dem Gerätespeicher. */
   const anheftenUm = (k: string) =>
     setOben(
@@ -270,9 +230,6 @@ export function AnmeldungenReiter({
         new Set([...liste.map((x) => x.schluessel), ...personZeilen(liste).map(personSchluessel)]),
       ),
     );
-  const absageZeilen = absagen.filter((b) =>
-    passtZurSuche({ wer: b.name, nr: null, personen: [] }, suche),
-  );
   const ausgewaehlt = offen ? liste.find((x) => x.schluessel === offen) : undefined;
   if (ausgewaehlt) zuletztOffen.current = ausgewaehlt;
   // Weg aus der Liste (letzte Person abgesagt), aber eben geändert → das Fenster bleibt mit „Rückgängig“ stehen.
@@ -324,13 +281,6 @@ export function AnmeldungenReiter({
     setFilter(f);
     setSortierung(null);
   };
-  const zahlen = jePerson
-    ? {
-        alle: personenImReiter.alle.length,
-        offen: personenImReiter.offen.length,
-        warte: personenImReiter.warte.length,
-      }
-    : { alle: liste.length, offen: imReiter.offen.length, warte: imReiter.warte.length };
   const reiter: Reiter<ListenFilter>[] = [
     { id: 'alle', label: 'Alle', icon: 'people', zahl: zahlen.alle },
     ...(z.kostet

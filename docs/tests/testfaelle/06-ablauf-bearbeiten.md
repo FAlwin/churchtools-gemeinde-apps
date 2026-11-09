@@ -402,8 +402,10 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 3. Noch einmal, diesmal **Einfügen nach: Soundcheck** → unter „Weitere Einstellungen“ ist **Vor Gottesdienstbeginn**
    schon an. **Hinzufügen** → er steht über dem Balken „Beginn“, der Soundcheck bleibt Vorlauf, alle Punkte darunter
    bleiben im Gottesdienst.
-4. Einen Punkt antippen → links unten **„Darunter einfügen“** → „Nach „…“ einfügen“ → **Programmpunkt hinzufügen** →
-   „Einfügen nach“ nennt den Punkt. Erst etwas am Punkt ändern: „Darunter einfügen“ ist gesperrt, bis gespeichert ist.
+4. Einen Punkt antippen → links unten **„Darunter einfügen“** → am **Rechner/iPad** klappt direkt am Knopf ein kleines
+   Menü nach oben auf, **am Handy** das Blatt „Nach „…“ einfügen“ von unten (Fund F2, 07.11.2026) → **Programmpunkt
+   hinzufügen** → „Einfügen nach“ nennt den Punkt. Erst etwas am Punkt ändern: „Darunter einfügen“ ist gesperrt, bis
+   gespeichert ist.
 5. **Am Rechner:** Maus über eine Zeile → neben dem Stift ein **Plus** und ein **roter Papierkorb**. Plus →
    „Programmpunkt/Überschrift dahinter einfügen“, Linie, „… davor einfügen“ (Musik-App auch „Lied …“). **Davor** bei
    dem ersten Punkt unter „Beginn“ → der neue Punkt steht unter „Beginn“, nicht im Vorlauf. Papierkorb → dieselbe

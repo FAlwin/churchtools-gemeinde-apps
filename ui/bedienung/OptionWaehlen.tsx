@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { Icon } from '../icons/icons';
 import { KopfKnopf } from './KopfKnopf';
@@ -37,12 +38,19 @@ export interface Option {
 export function MenueListe({
   optionen,
   schliessen,
+  nachOben = false,
 }: {
   optionen: Option[];
   schliessen: () => void;
+  /** Über dem Knopf statt darunter – für einen Knopf in der Fußzeile eines Fensters („Darunter einfügen“). */
+  nachOben?: boolean;
 }) {
   return (
-    <div className={styles.menue} role="menu" aria-label="Option wählen">
+    <div
+      className={`${styles.menue}${nachOben ? ` ${styles.nachOben}` : ''}`}
+      role="menu"
+      aria-label="Option wählen"
+    >
       {optionen.map((o) => (
         <button
           key={o.label}
@@ -129,21 +137,46 @@ export function HinzufuegenMenue({
   klein?: boolean;
   dataTour?: string;
 }) {
-  // Auf, zu, Tipp daneben, Escape – derselbe Baustein wie Filter- und Zeitraum-Knopf.
+  return (
+    <KnopfMitMenue
+      optionen={optionen}
+      knopf={({ offen, umschalten }) => (
+        <KopfKnopf
+          onClick={gesperrt ?? umschalten}
+          label={label}
+          title={title}
+          neu
+          klein={klein}
+          menuOffen={gesperrt ? undefined : offen}
+          dataTour={dataTour}
+          symbol={<Icon name="plus" size={16} stroke={2.4} />}
+        />
+      )}
+    />
+  );
+}
+
+/**
+ * **Ein Knopf, der ein kleines Menü aufklappt** – auf, zu, Tipp daneben, Escape (`useAufklapp`, derselbe Baustein wie
+ * Filter- und Zeitraum-Knopf). Für „+ Eintrag hinzufügen“ im Kopf und „Darunter einfügen“ im Punkt-Fenster (am Rechner,
+ * Alwin 07.11.2026); der Knopf selbst kommt vom Aufrufer.
+ */
+export function KnopfMitMenue({
+  optionen,
+  knopf,
+  nachOben = false,
+}: {
+  optionen: Option[];
+  knopf: (a: { offen: boolean; umschalten: () => void }) => ReactNode;
+  nachOben?: boolean;
+}) {
   const { offen, setOffen, rahmen } = useAufklapp();
   return (
     <div className={styles.huelle} ref={rahmen}>
-      <KopfKnopf
-        onClick={() => (gesperrt ? gesperrt() : setOffen((o) => !o))}
-        label={label}
-        title={title}
-        neu
-        klein={klein}
-        menuOffen={gesperrt ? undefined : offen}
-        dataTour={dataTour}
-        symbol={<Icon name="plus" size={16} stroke={2.4} />}
-      />
-      {offen && <MenueListe optionen={optionen} schliessen={() => setOffen(false)} />}
+      {knopf({ offen, umschalten: () => setOffen((o) => !o) })}
+      {offen && (
+        <MenueListe optionen={optionen} schliessen={() => setOffen(false)} nachOben={nachOben} />
+      )}
     </div>
   );
 }

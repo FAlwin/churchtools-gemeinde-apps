@@ -563,6 +563,19 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               titel: `Nach „${itemLabel(actionItem)}“ einfügen`,
             });
           }}
+          // Am Rechner/iPad ein Menü am Knopf statt des Blatts von unten (Fund F2, Alwin 07.11.2026). Gewählt: erst das
+          // Punkt-Fenster zu, dann das neue auf – dieselbe Reihenfolge wie über das Blatt.
+          darunterOptionen={
+            handy
+              ? undefined
+              : optionenFuer({ nach: actionItem.id }).map((x) => ({
+                  ...x,
+                  onClick: () => {
+                    setActionItem(null);
+                    x.onClick();
+                  },
+                }))
+          }
           liedAnsehen={
             o.liedAnsehen
               ? (zurueck, schliessen) => o.liedAnsehen!(actionItem, zurueck, schliessen)

@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.2.0 (06.11.2026, Bauplan E0–E9: Liedauswahl im Ablauf).** Was die Reiter können:
+> **Stand: v0.3.0 (09.11.2026: Einteilen in der Termin-Ansicht, Filter nach Kalender).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen.
@@ -16,7 +16,8 @@
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
->   Vorlieben je Person (Stift), Platzzahl (Regler), „Infos & Dateien“ je Termin, „Wer wie oft?“, **Ansehen und senden**, **Teilen** = Plan,
+>   Vorlieben je Person (Stift), Platzzahl (Regler), „Infos & Dateien“ je Termin, „Wer wie oft?“, Filter nach Kalender,
+>   Veranstaltung und Gruppe, **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
 >

@@ -901,6 +901,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.39.1 (09.11.2026) = „Darunter einfügen“ als Menü am Knopf.** Einzige Musik-App-Änderung seit v2.39.0 (#905,
+  F2 aus dem Dienstplaner-Test): am Rechner/iPad Menü nach oben am Knopf, am Handy weiter das Blatt; gemeinsamer
+  Baustein `KnopfMitMenue`. Einführung bewusst unverändert (kein `data-tour` am Knopf). Gleichzeitig `dienstplan-v0.3.0`
+  (Einteilen + Senden in der Termin-Ansicht #910, Filter nach Kalender #909). Dazu Dienstplaner v0.2.0/LW, Protokolle
+  S5-4, Gebetsabend v0.1.0, #845-Scheiben.
 - **v2.39.0 (06.11.2026) = Termine-Filter, Ablauf-Tabelle, Sicherheit/Betrieb.** Filter in der Terminliste statt
   „Termine ohne Ablauf“ unter Mehr (#878), Termin-Blatt teilen (#862), Info-Spalten als Tabelle + Einfügen an einer
   Stelle (#823 ff.), Dateien/Versionen umbenennen (#818, #814), „Lieder öffnen mit: Nur Text“ (#812), geteiltes Gerät

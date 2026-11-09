@@ -1,5 +1,7 @@
 import type { Breite } from '@shared/dienstplan/fenster';
+import type { TerminAus } from '@shared/dienstplan/termine';
 import { AB_HEUTE, LETZTE_3, zeitraumAus, type Zeitraum } from '@shared/ct/zeitraum';
+import { kalenderIdsAus } from '@shared/ct/kalenderFilter';
 import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
 /**
@@ -13,6 +15,8 @@ export interface PlanenAnsicht {
   ausgeblendeteGruppen: string[];
   /** Ausgeblendete Veranstaltungsarten (wie in der Termine-Liste). */
   ausgeblendeteArten: string[];
+  /** Ausgeblendete Kalender (IDs, Wunsch 6) – wie in der Termine-Liste. */
+  ausgeblendeteKalender: number[];
   /** Ab heute, ein Monat oder ein eigener Zeitraum (Zeitraum-Knopf, 14.10.2026) – der Matrix. */
   zeitraum: Zeitraum;
   /**
@@ -33,6 +37,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   unteransicht: 'matrix',
   ausgeblendeteGruppen: [],
   ausgeblendeteArten: [],
+  ausgeblendeteKalender: [],
   zeitraum: AB_HEUTE,
   zeitraumWer: LETZTE_3,
   ablaufZu: false,
@@ -49,12 +54,18 @@ export function leseAnsicht(): PlanenAnsicht {
       unteransicht: a.unteransicht === 'personen' ? 'personen' : 'matrix',
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
+      ausgeblendeteKalender: kalenderIdsAus(a.ausgeblendeteKalender),
       zeitraum: zeitraumAus(a.zeitraum),
       zeitraumWer: zeitraumAus(a.zeitraumWer, LETZTE_3),
       ablaufZu: a.ablaufZu === true,
       infosZu: a.infosZu === true,
     };
   });
+}
+
+/** Was der Filter der Matrix ausblendet – für `terminFilter` (Wunsch 6). */
+export function ansichtAus(a: PlanenAnsicht): TerminAus {
+  return { kalender: a.ausgeblendeteKalender, arten: a.ausgeblendeteArten };
 }
 
 export function merkeAnsicht(a: PlanenAnsicht): void {

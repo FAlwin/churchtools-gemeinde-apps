@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { planAusschnitt, type Plan } from '@shared/dienstplan/plan';
-import { artVon, veranstaltungsArten } from '@shared/dienstplan/termine';
+import { terminFilter } from '@shared/dienstplan/termine';
 import {
   passendeAnzahl,
   schritt,
@@ -20,7 +20,7 @@ import {
 } from '@shared/ct/zeitraum';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
-import type { PlanenAnsicht } from './planenAnsicht';
+import { ansichtAus, type PlanenAnsicht } from './planenAnsicht';
 
 /**
  * **Zeitraum und Fenster in „Planen“** (E3-4, E9-3; #845, Scheibe 4a-3: aus der Komponente herausgezogen,
@@ -135,16 +135,15 @@ export function usePlanZeitraum({
   // die ＋ dazunahm (gezählt nach dem Filter „Veranstaltungen“, wie ＋ bei „ab heute“).
   const geladen = quelle.art === 'fertig' ? quelle.plan : null;
   const dazu = z.art === 'abHeute' ? undefined : z.dazu;
+  const zSchluessel = JSON.stringify(z);
   const rand = useMemo(() => {
     if (!grenzen) return null;
-    const arten = geladen ? veranstaltungsArten(geladen.spalten) : [];
-    const tage = (geladen?.spalten ?? []).map((sp) => ({
-      tag: sp.tag,
-      sichtbar: !ansicht.ausgeblendeteArten.includes(artVon(sp, arten)),
-    }));
+    const { zeigt } = terminFilter(geladen?.spalten ?? [], ansichtAus(ansicht));
+    const tage = (geladen?.spalten ?? []).map((sp) => ({ tag: sp.tag, sichtbar: zeigt(sp) }));
     return mitDazu(tage, grenzen, dazu);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `grenzen` und `dazu` stecken in `bereich` und `z`
-  }, [geladen, bereich, JSON.stringify(z), ansicht.ausgeblendeteArten]);
+    // `grenzen` und `dazu` stecken in `bereich` und `z`, vom Filter zählen nur die ausgeblendeten Listen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geladen, bereich, zSchluessel, ansicht.ausgeblendeteArten, ansicht.ausgeblendeteKalender]);
   const plan = useMemo(
     () => (geladen && rand && dazu ? planAusschnitt(geladen, rand.von, rand.bis) : geladen),
     [geladen, rand, dazu],
@@ -228,9 +227,7 @@ export function usePlanZeitraum({
 
 /** Gefilterte Spalten und wie viele „passend“ ins Fenster gehen – für Anzeige und Nachladen gleich. */
 function fensterDaten(plan: Plan, ansicht: PlanenAnsicht, platz: number) {
-  const arten = veranstaltungsArten(plan.spalten);
-  const gefiltert = plan.spalten
-    .map((_, i) => i)
-    .filter((i) => !ansicht.ausgeblendeteArten.includes(artVon(plan.spalten[i], arten)));
+  const { zeigt } = terminFilter(plan.spalten, ansichtAus(ansicht));
+  const gefiltert = plan.spalten.map((_, i) => i).filter((i) => zeigt(plan.spalten[i]));
   return { gefiltert, passend: passendeAnzahl(platz, ansicht.breite, gefiltert.length) };
 }

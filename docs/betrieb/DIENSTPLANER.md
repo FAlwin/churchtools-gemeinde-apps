@@ -4,7 +4,7 @@
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen.
-> - **Dienste:** Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung. Offene Anfragen zusagen oder absagen,
+> - **Dienste:** Liste nach Monaten, „Meine | Alle“, Filter nach Kalender und Veranstaltung. Offene Anfragen zusagen oder absagen,
 >   eigene Dienste **tauschen**; unter „Meine“ **Teilen** = alle kommenden eigenen Dienste als PDF.
 > - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App, mit Recht **bearbeiten** (Stift, Ziehen,
 >   „An diesem Termin weglassen“, „Ablauf anlegen“ / „Neu aufsetzen …“), die Dienste des Termins, **Infos & Dateien**

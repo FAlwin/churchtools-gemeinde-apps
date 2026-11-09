@@ -365,6 +365,42 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
     expect(tabelle().getByRole('button', { name: /Technik/ })).toBeTruthy();
   });
 
+  it('Filter nach Kalender (Wunsch 6): eigener Abschnitt vor „Veranstaltungen“, blendet Spalten aus, gemerkt', () => {
+    const GV = { domainIdentifier: '2', title: 'Gemeindeveranstaltungen' };
+    const GD = { domainIdentifier: '1', title: 'Gottesdienste' };
+    const roh = ROH2.map((r) => ({ ...r, calendar: r.name === 'Gebetsabend' ? GV : GD }));
+    const plan = planAus(roh, OPT2);
+    const zeigeMit = () =>
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+          handy={false}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+        />,
+      );
+    const { unmount } = zeigeMit();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(
+      within(screen.getByRole('dialog', { name: 'Filter' }))
+        .getAllByRole('group')
+        .map((g) => g.querySelector('legend')?.textContent),
+    ).toEqual(['Kalender', 'Veranstaltungen', 'Gruppen']);
+    const kalender = within(screen.getByRole('group', { name: 'Kalender' }));
+    fireEvent.click(kalender.getByRole('checkbox', { name: 'Gemeindeveranstaltungen' }));
+    expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gottesdienst', 'Gottesdienst']);
+    unmount();
+    zeigeMit();
+    expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gottesdienst', 'Gottesdienst']);
+  });
+
+  it('nur ein Kalender → kein Abschnitt „Kalender“', () => {
+    zeige2();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(screen.queryByRole('group', { name: 'Kalender' })).toBeNull();
+  });
+
   it('alles ausgeblendet → sagt, wie man wieder einblendet', () => {
     zeige2();
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
@@ -698,6 +734,38 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     // › springt um den Monat – das ＋ fällt weg.
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum danach' }));
     expect(laden).toHaveBeenLastCalledWith('2026-11-01', '2026-11-30');
+  });
+
+  it('＋ zählt nur Termine aus eingeblendeten Kalendern – ein Gebetsabend im ausgeblendeten Kalender wird übersprungen (Wunsch 6)', async () => {
+    const GV = { domainIdentifier: '2', title: 'Gemeindeveranstaltungen' };
+    const GD = { domainIdentifier: '1', title: 'Gottesdienste' };
+    const roh = [
+      ...ROH2.filter((x) => x.id !== 4),
+      t(7, 'Gebetsabend', '2026-11-04T18:00:00Z'),
+      t(5, 'Gottesdienst', '2026-11-08T09:00:00Z', [{ serviceId: 6, personId: null, name: null }]),
+    ].map((r) => ({ ...r, calendar: r.name === 'Gebetsabend' ? GV : GD }));
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ ausgeblendeteKalender: [2] }),
+    );
+    const laden = vi.fn((von: string, bis: string) =>
+      Promise.resolve(
+        daten(
+          planAus(
+            roh.filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis),
+            OPT2,
+          ),
+        ),
+      ),
+    );
+    zeigeZ(laden);
+    waehle('Oktober 2026');
+    await screen.findByRole('button', { name: /^Zeitraum: Oktober 2026/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    expect(
+      await screen.findByRole('button', { name: /^Zeitraum: 01\.10\. – 08\.11\.2026/ }),
+    ).toBeTruthy();
+    expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gottesdienst', 'Gottesdienst']);
   });
 
   it('während ＋ nachlädt, bleibt die Matrix stehen – kein „wird geladen“', async () => {

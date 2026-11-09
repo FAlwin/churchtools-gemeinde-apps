@@ -76,6 +76,7 @@ describe('ladeTermine', () => {
         tag: '2026-10-18',
         uhrzeit: '10:00',
         abgesagt: false,
+        kalender: null,
         meine: [
           { dienst: 'Ton', zugesagt: true, ort: { serviceId: 6, index: null }, absagen: true },
         ],

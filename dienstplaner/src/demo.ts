@@ -133,8 +133,12 @@ const TERMINE = [
 ].map((t) => ({
   ...t,
   // Wie ChurchTools: Jeder Termin nennt seinen Kalender – ohne ihn scheiterte „Ablauf anlegen“ in der Matrix-Demo
-  // („Kalender unbekannt“, gefunden beim Durchklicken von E6-6b).
-  calendar: { title: 'Gottesdienste', domainIdentifier: '1' },
+  // („Kalender unbekannt“, gefunden beim Durchklicken von E6-6b). Gebetsabende in einem eigenen Kalender, damit der
+  // Filter „Kalender“ (Wunsch 6) in der Demo etwas zu wählen hat.
+  calendar:
+    t.name === 'Gebetsabend'
+      ? { title: 'Gemeindeveranstaltungen', domainIdentifier: '2' }
+      : { title: 'Gottesdienste', domainIdentifier: '1' },
 }));
 // Wie ChurchTools: Hat ein Dienst mehrere Plätze, sind sie durchgezählt (1, 2, …), sonst `null`.
 function durchzaehlen(t: (typeof TERMINE)[number]) {

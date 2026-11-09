@@ -87,6 +87,51 @@ describe('Termine (E3-2)', () => {
     expect(screen.getByRole('button', { name: 'Filter, 2 ausgeblendet' })).toBeTruthy();
   });
 
+  it('Filter nach Kalender (Wunsch 6): oben, umbenannte bleiben, „Veranstaltungen“ nur aus angehakten, gemerkt', () => {
+    const GD = { id: 1, name: 'Gottesdienste' };
+    const GV = { id: 2, name: 'Gemeindeveranstaltungen' };
+    const zeilen = [
+      z(1, 'Gottesdienst', '2026-10-18', { kalender: GD }),
+      z(2, 'Gebetsabend', '2026-10-21', { kalender: GV }),
+      z(3, 'Gottesdienst', '2026-11-01', { kalender: GD }),
+      z(4, 'Gebetsabend', '2026-11-04', { kalender: GV }),
+      z(5, 'Ostergottesdienst', '2026-11-08', { kalender: GD }),
+    ];
+    const { unmount } = render(
+      <Termine
+        zustand={{ art: 'fertig', zeilen, plan: LEERER_PLAN, wochen: 8 }}
+        planer
+        onNochmal={() => {}}
+        onMehr={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    const legenden = within(screen.getByRole('dialog', { name: 'Filter' }))
+      .getAllByRole('group')
+      .map((g) => g.querySelector('legend')?.textContent);
+    expect(legenden).toEqual(['Kalender', 'Veranstaltungen']);
+    const kalender = within(screen.getByRole('group', { name: 'Kalender' }));
+    fireEvent.click(kalender.getByRole('checkbox', { name: 'Gemeindeveranstaltungen' }));
+    expect(titel()).toEqual(['Gottesdienst', 'Gottesdienst', 'Ostergottesdienst']);
+    expect(
+      within(screen.getByRole('group', { name: 'Veranstaltungen' }))
+        .getAllByRole('checkbox')
+        .map((b) => b.closest('label')!.textContent),
+    ).toEqual(['Gottesdienst', 'Weitere']);
+    unmount();
+    zeige(true, undefined, zeilen);
+    fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    expect(titel()).toEqual(['Gottesdienst', 'Gottesdienst', 'Ostergottesdienst']);
+  });
+
+  it('nur ein Kalender (oder keiner bekannt) → kein Abschnitt „Kalender“', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(screen.queryByRole('group', { name: 'Kalender' })).toBeNull();
+  });
+
   it('die Wahl bleibt nach dem Neuladen erhalten (im Gerät gemerkt)', () => {
     const { unmount } = render(
       <Termine

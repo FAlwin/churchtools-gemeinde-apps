@@ -7,7 +7,7 @@ import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { tagKurz } from '@shared/ct/datum';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
-import { veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
+import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
 import {
   ortSchluessel,
@@ -20,7 +20,8 @@ import { zeitraumText, zeitraumVerschieben } from '@shared/ct/zeitraum';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
 import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
-import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
+import { ansichtAus, leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
+import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
@@ -240,7 +241,8 @@ export function Planen({
     />
   );
 
-  const arten = plan ? veranstaltungsArten(plan.spalten) : [];
+  const angebot = terminFilter(plan?.spalten ?? [], ansichtAus(ansicht));
+  const arten = angebot.arten;
   const werkzeug = (
     <div className={styles.werkzeug}>
       <Segment
@@ -283,15 +285,13 @@ export function Planen({
         )}
         <FilterKnopf
           abschnitte={[
-            {
-              titel: 'Veranstaltungen',
-              optionen: arten.map((art) => ({
-                wert: art,
-                text: art === WEITERE ? 'Weitere' : art,
-              })),
-              aus: ansicht.ausgeblendeteArten,
-              onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
-            },
+            ...terminAbschnitte(angebot, ansichtAus(ansicht), (a) =>
+              setAnsicht({
+                ...ansicht,
+                ausgeblendeteKalender: a.kalender,
+                ausgeblendeteArten: a.arten,
+              }),
+            ),
             {
               titel: 'Gruppen',
               optionen: (plan?.gruppen ?? []).map((g) => ({

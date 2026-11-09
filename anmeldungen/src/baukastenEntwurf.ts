@@ -1,4 +1,4 @@
-import { feldFehler, type Feld } from '@shared/anmeldung/formular';
+import { feldFehler, type Feld, type Formular } from '@shared/anmeldung/formular';
 
 /** Entwurf eines Felds im Baukasten (A5) – getrennt von den Komponenten (React Fast Refresh). */
 
@@ -28,3 +28,11 @@ export function entwurfFehler(d: FeldEntwurf): string | null {
 
 export const mitAntworten = (f: Feld) =>
   f.typ === 'radio' || f.typ === 'select' || f.typ === 'multi';
+
+export const ersetzeFeld = (fo: Formular, feld: Feld): Formular => ({
+  anmeldung: fo.anmeldung.map((f) => (f.id === feld.id ? feld : f)),
+  person: fo.person.map((f) => (f.id === feld.id ? feld : f)),
+});
+
+/** Name, E-Mail, Datenschutz, Preisbereich: gehören immer dazu – nicht zu bearbeiten oder zu entfernen. */
+export const istFest = (f: Feld) => f.art === 'fest' || f.art === 'preis';

@@ -287,6 +287,92 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
   });
 });
 
+describe('Baukasten (#845, 4b-1): Ziehen abbrechen, Gleiten, Knöpfe am Feld', () => {
+  it('Ziehen abgebrochen (Esc, außerhalb losgelassen) → die Lücke verschwindet, nichts wird abgelegt', () => {
+    const { huelle, container } = zeigen();
+    const y = lage(container);
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    mitY('dragOver', huelle('allergy'), y('allergy', 'oben'));
+    expect(screen.getByText('Hier loslassen')).toBeTruthy();
+    fireEvent.dragEnd(screen.getByRole('button', { name: 'Zahl' }));
+    expect(screen.queryByText('Hier loslassen')).toBeNull();
+    mitY('drop', huelle('allergy'), y('allergy', 'oben'));
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('wandert die Lücke, gleiten die Felder von ihrem alten Platz zum neuen', () => {
+    const animate = vi.fn();
+    Element.prototype.animate = animate;
+    try {
+      const { huelle, container } = zeigen();
+      const y = lage(container);
+      fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+      // Die Lücke über „allergy“ schiebt die Felder darunter um 50 px nach unten.
+      const alt = huelle('note').getBoundingClientRect();
+      huelle('note').getBoundingClientRect = () =>
+        ({ top: alt.top + 50, bottom: alt.bottom + 50, height: 80 }) as DOMRect;
+      mitY('dragOver', huelle('allergy'), y('allergy', 'oben'));
+      const fuerNote = animate.mock.contexts.indexOf(huelle('note'));
+      expect(fuerNote).toBeGreaterThanOrEqual(0);
+      expect(animate.mock.calls[fuerNote][0]).toEqual([
+        { transform: 'translateY(-50px)' },
+        { transform: 'none' },
+      ]);
+      // Was nicht gewandert ist, gleitet nicht.
+      expect(animate.mock.contexts).not.toContain(huelle('allergy'));
+    } finally {
+      delete (Element.prototype as Partial<Element>).animate;
+    }
+  });
+
+  it('Pfeile am Rand gesperrt: das erste Feld nicht nach oben, das letzte nicht nach unten', () => {
+    const { huelle, container } = zeigen();
+    fireEvent.click(huelle('f1'));
+    expect(screen.getByRole('button', { name: 'Gruppe nach unten' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Gruppe nach oben' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    const erstes = container.querySelector<HTMLElement>('[data-bereich="person"]')!;
+    fireEvent.click(erstes);
+    const oben = within(erstes).getByRole('button', { name: / nach oben$/ });
+    expect(oben).toHaveProperty('disabled', true);
+    expect(within(erstes).getByRole('button', { name: / nach unten$/ })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('nach unten: ans Ende des Bereichs, wenn es das vorletzte Feld war', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach unten' }));
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledTimes(2));
+    expect(ff.feldEinordnen.mock.calls[1]).toEqual([91, 'f1', 'person', null]);
+  });
+
+  it('kopieren: ein eigenes Feld als „(Kopie)“ gleich darunter', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe kopieren' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const [, bereich, feld] = ff.feldSpeichern.mock.calls[0];
+    expect(bereich).toBe('person');
+    expect(feld).toMatchObject({
+      art: 'eigen',
+      typ: 'radio',
+      frage: 'Gruppe (Kopie)',
+      antworten: ['Minis', 'Kids'],
+    });
+    expect(feld.id).not.toBe('f1');
+  });
+});
+
 describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
   it('nach einer Pause beim Tippen gespeichert – vorher nicht; die IDs der Antworten gehen mit', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });

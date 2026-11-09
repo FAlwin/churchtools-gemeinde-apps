@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ablaufZeileAus, punktStand, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { ReactNode } from 'react';
 import { useAblaufBearbeiten, verlangtNeuLaden, type AblaufAktionen } from './useAblaufBearbeiten';
@@ -629,7 +629,12 @@ describe('Einfügen an einer Stelle (30.10.2026)', () => {
     expect(screen.queryByPlaceholderText(/^Titel/)).toBeNull();
   });
 
-  it('„Darunter einfügen“ im Punkt-Fenster: „Option wählen“ für diese Stelle, dann das Fenster dort', async () => {
+  it('„Darunter einfügen“ am Handy: „Option wählen“ als Blatt für diese Stelle, dann das Fenster dort', async () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
     const a = aktionen();
     zeigen(a);
     fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
@@ -644,6 +649,40 @@ describe('Einfügen an einer Stelle (30.10.2026)', () => {
         title: 'Kaffee',
         nachId: 1,
         vorBeginn: true,
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * Am Rechner/iPad ein Menü direkt am Knopf (Fund F2, Alwin 07.11.2026) – vorher öffnete auch dort das Blatt von unten
+   * über die ganze Breite. Gewählt: das Punkt-Fenster geht zu, das neue öffnet an derselben Stelle.
+   */
+  it('„Darunter einfügen“ am Rechner: Menü am Knopf statt Blatt, dann das Fenster dort', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[1]);
+    const knopf = screen.getByRole('button', { name: /Darunter einfügen/ });
+    expect(knopf.getAttribute('aria-haspopup')).toBe('menu');
+    fireEvent.click(knopf);
+    expect(screen.queryByRole('dialog', { name: 'Nach „Begrüßung“ einfügen' })).toBeNull();
+    const menue = screen.getByRole('menu');
+    expect(
+      within(menue)
+        .getAllByRole('menuitem')
+        .map((m) => m.textContent),
+    ).toEqual(['Programmpunkt hinzufügen', 'Überschrift hinzufügen']);
+    fireEvent.click(within(menue).getByRole('menuitem', { name: 'Programmpunkt hinzufügen' }));
+    // Das Punkt-Fenster „Begrüßung“ ist zu, das neue offen.
+    expect(screen.queryByRole('button', { name: /Darunter einfügen/ })).toBeNull();
+    titel('Kaffee');
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() =>
+      expect(a.add).toHaveBeenCalledWith({
+        type: 'text',
+        title: 'Kaffee',
+        nachId: 2,
+        vorBeginn: false,
       }),
     );
   });

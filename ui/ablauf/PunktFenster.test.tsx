@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ablaufZeileAus, zeitPlus, zustaendigText } from '@shared/ct/ablaufZeile';
 import type { CtAgendaItem } from '@shared/ct/typen';
 import { ABLAUFPUNKT_GRENZEN } from '@shared/types/index';
@@ -487,5 +487,54 @@ describe('„Darunter einfügen“ im Punkt-Fenster (Alwin 30.10.2026, Entwurf B
   it('ohne onDarunter kein Knopf', () => {
     zeige(zeile({ title: 'Predigt' }));
     expect(screen.queryByRole('button', { name: /Darunter einfügen/ })).toBeNull();
+  });
+
+  /** Am Rechner/iPad (Fund F2, Alwin 07.11.2026): ein kleines Menü am Knopf, nach oben – der Knopf steht unten im Fenster. */
+  describe('mit darunterOptionen (Rechner)', () => {
+    function mitMenue() {
+      const onDarunter = vi.fn();
+      const programmpunkt = vi.fn();
+      render(
+        <PunktFenster
+          item={zeile({ title: 'Begrüßung' })}
+          onClose={vi.fn()}
+          onUpdate={vi.fn().mockResolvedValue(undefined)}
+          vorBeginn={false}
+          onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
+          onSetWeggelassen={vi.fn().mockResolvedValue(undefined)}
+          services={[]}
+          onRequestDelete={vi.fn()}
+          onDarunter={onDarunter}
+          darunterOptionen={[
+            { label: 'Programmpunkt hinzufügen', onClick: programmpunkt },
+            { label: 'Überschrift hinzufügen', onClick: vi.fn() },
+          ]}
+        />,
+      );
+      return {
+        onDarunter,
+        programmpunkt,
+        knopf: () => screen.getByRole('button', { name: /Darunter einfügen/ }),
+      };
+    }
+
+    it('klappt das Menü am Knopf auf – nach oben, ohne das Blatt (onDarunter) zu rufen', () => {
+      const { onDarunter, programmpunkt, knopf } = mitMenue();
+      expect(knopf().getAttribute('aria-expanded')).toBe('false');
+      fireEvent.click(knopf());
+      expect(knopf().getAttribute('aria-expanded')).toBe('true');
+      const menue = screen.getByRole('menu');
+      expect(menue.className).toMatch(/nachOben/);
+      fireEvent.click(within(menue).getByRole('menuitem', { name: 'Programmpunkt hinzufügen' }));
+      expect(programmpunkt).toHaveBeenCalled();
+      expect(onDarunter).not.toHaveBeenCalled();
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('mit ungespeicherter Änderung gesperrt – wie ohne Menü', () => {
+      const { knopf } = mitMenue();
+      fireEvent.change(screen.getByPlaceholderText('z. B. 5'), { target: { value: '9' } });
+      expect((knopf() as HTMLButtonElement).disabled).toBe(true);
+    });
   });
 });

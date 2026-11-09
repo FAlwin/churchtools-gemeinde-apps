@@ -90,6 +90,14 @@
   min-width: 240px;
   box-shadow: 0 10px 30px rgba(15, 23, 43, 0.18);
 
+  // Über dem Knopf, linksbündig mit ihm – für „Darunter einfügen“ unten links im Punkt-Fenster.
+  &.nachOben {
+    top: auto;
+    bottom: calc(100% + 4px);
+    right: auto;
+    left: 0;
+  }
+
   .option {
     padding: 12px 14px;
     font-size: 15px;

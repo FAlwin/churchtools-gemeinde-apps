@@ -20,6 +20,7 @@ import { ResponsibleField } from './ResponsibleField';
 import { Icon } from '../icons/icons';
 import { Sheet } from '../fenster/Sheet';
 import { FensterKnopf } from '../fenster/FensterKnopf';
+import { KnopfMitMenue, type Option } from '../bedienung/OptionWaehlen';
 import { Schalter } from '../bedienung/Schalter';
 import { Segment } from '../bedienung/Segment';
 import { LiedKarte, ResponsibleLine, VerborgeneGruppenHinweis } from './AblaufTeile';
@@ -98,6 +99,12 @@ interface Bearbeiten extends Gemeinsam {
    * hinter diesem anlegen. Ohne: kein Knopf. Solange etwas ungespeichert ist, gesperrt – wie das Blättern.
    */
   onDarunter?: () => void;
+  /**
+   * Am Rechner/iPad (Alwin, 07.11.2026, Fund F2): „Darunter einfügen“ klappt diese Möglichkeiten als kleines Menü direkt
+   * am Knopf auf – wie das Plus an einer Zeile –, statt das Blatt von unten über die ganze Breite zu öffnen. Gegeben,
+   * ersetzt es `onDarunter`; am Handy bleibt das Blatt (`onDarunter`).
+   */
+  darunterOptionen?: Option[];
   /**
    * „Position 2 von 8“ und ‹ › zum vorigen/nächsten Punkt (E6-O O3). Fehlt `onVorher`/`onNachher`, ist der Pfeil
    * gesperrt (erster/letzter Punkt). Solange etwas ungespeichert ist, sind beide gesperrt (Alwin, 28.10.2026).
@@ -558,15 +565,34 @@ export function PunktFenster(props: PunktFensterProps) {
         props.modus !== 'neu' && (
           <>
             {/* Vor „Eintrag löschen“: Dessen `margin-right: auto` schiebt dann beide nach links (B, Alwin 30.10.2026). */}
-            {props.onDarunter && (
-              <FensterKnopf
-                art="link"
-                disabled={busy || dirty}
-                title={dirty ? 'Erst speichern oder abbrechen.' : undefined}
-                onClick={props.onDarunter}
-              >
-                <Icon name="plus" size={15} stroke={2.4} /> Darunter einfügen
-              </FensterKnopf>
+            {props.darunterOptionen ? (
+              <KnopfMitMenue
+                optionen={props.darunterOptionen}
+                nachOben
+                knopf={({ offen, umschalten }) => (
+                  <FensterKnopf
+                    art="link"
+                    disabled={busy || dirty}
+                    title={dirty ? 'Erst speichern oder abbrechen.' : undefined}
+                    aria-haspopup="menu"
+                    aria-expanded={offen}
+                    onClick={umschalten}
+                  >
+                    <Icon name="plus" size={15} stroke={2.4} /> Darunter einfügen
+                  </FensterKnopf>
+                )}
+              />
+            ) : (
+              props.onDarunter && (
+                <FensterKnopf
+                  art="link"
+                  disabled={busy || dirty}
+                  title={dirty ? 'Erst speichern oder abbrechen.' : undefined}
+                  onClick={props.onDarunter}
+                >
+                  <Icon name="plus" size={15} stroke={2.4} /> Darunter einfügen
+                </FensterKnopf>
+              )
             )}
             <FensterKnopf
               art="loeschen"

@@ -7,6 +7,269 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.39.1] – 2026-11-09
+
+**Überblick.** Musik-App: **„Darunter einfügen“** im Punkt-Fenster öffnet am Rechner und iPad ein kleines Menü am
+Knopf statt eines Blatts über die ganze Breite (am Handy bleibt das Blatt). Aus dem anderen Teil des Repos (eigene
+Erweiterungen): Dienstplaner v0.2.0 (Liedauswahl im Ablauf) und v0.3.0 (Einteilen und Senden direkt in der
+Termin-Ansicht, Filter nach Kalender), Protokolle S5-4 (Punkte vorschlagen), Gebetsabend v0.1.0; dazu die Aufräum-Scheiben
+von #845 (`useLaden` überall, „Planen“ und Baukasten in Hooks).
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.3.0 gebracht: Einteilen und Senden in der Termin-Ansicht,
+  Filter nach Kalender in „Dienste“ und „Planen“.
+
+### Neu (Dienstplaner)
+
+- **Einteilen und senden direkt in der Termin-Ansicht.** Wer einen Dienst planen darf, tippt dort einen freien Platz an
+  („Wer kann?“), zieht Einteilungen zurück oder ersetzt sie, öffnet Entwürfe und nutzt den Zauberstab je Gruppe – mit
+  denselben Fenstern wie in „Planen“. Unten erscheint „Ansehen und senden“ für **nur diesen Termin**; liegen an anderen
+  Terminen noch Entwürfe, sagt das Senden-Fenster, dass sie unter „Planen“ gesendet werden. So lässt sich ein einzelner
+  Gottesdienst ganz in seiner Ansicht einteilen.
+
+### Intern (Dienstplaner)
+
+- Das Einteilen (Fenster, Leiste, Zauberstab, Entwurfs-Regeln) steht jetzt in `useEinteilen` statt in `Planen.tsx`, die
+  Knopf-Regel der Plätze einmal in `EinteilPlaetze` (vorher zweimal in `PlanAnsicht`). Die Entwurfs-Attrappe der Tests
+  liegt in `entwurfAnschluss.testutil.ts`.
+
+### Neu (Dienstplaner)
+
+- **Filter nach Kalender.** Unter „Dienste“ und in „Planen“ steht im Filter oben ein Abschnitt „Kalender“ – angehakt
+  heißt gezeigt, gemerkt auf dem Gerät. Umbenannte Termine (z. B. „Ostergottesdienst“) bleiben so in der Auswahl,
+  solange sie im richtigen Kalender liegen. „Veranstaltungen“ bietet dann nur noch Termine aus den angehakten
+  Kalendern an; ＋ beim Zeitraum zählt ausgeblendete Kalender nicht mit. Gibt es nur einen Kalender, fehlt der
+  Abschnitt.
+
+### Intern (Musik-App + Dienstplaner)
+
+- Die Kalender-Regeln des Termin-Filters (sichtbar?, welche Kalender im Menü, gemerkte IDs prüfen) stehen jetzt einmal
+  in `shared/ct/kalenderFilter.ts`; die Terminliste der Musik-App nutzt sie mit, statt eigener Kopien.
+
+### Intern
+
+- **Anmeldungen: was die Liste zeigt, als reine Funktion** (#845, Schritt 4, Scheibe 4c-2): `listenAnsicht` rechnet je
+  Reiter die Zeilen (je Anmeldung oder je Person; gesucht, sortiert, Angeheftetes zuerst), die Absagen (neueste zuerst),
+  die Wartenden nach Warteplatz und die Zahlen an den Reitern. Unverändert übernommen; `AnmeldungenReiter.tsx` hat
+  statt 760 noch 710 Zeilen. Neue Tests (`listenAnsicht.test.ts`, mit den Erzeugern der Liste): Warteplatz statt
+  Anmeldetag, neueste Absage zuerst, „je Person · Zahlung offen“, Angeheftetes je Person.
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **„Darunter einfügen“ am Rechner und iPad als kleines Menü direkt am Knopf.** Im Punkt-Fenster klappten „Programmpunkt
+  / Lied / Überschrift hinzufügen“ bisher auch auf großen Bildschirmen als Blatt von unten über die ganze Breite auf –
+  jetzt wie das Plus an einer Zeile ein Menü über dem Knopf. Am Handy bleibt das Blatt von unten wie in ChurchTools.
+
+### Intern
+
+- **Anmeldungen: das Fenster einer Anmeldung in eigener Datei** (#845, Schritt 4, Scheibe 4c-1): `AnmeldungAnsehen`
+  (Antworten, Zahlungen, Nachrücken, Absagen, „Rückgängig“ im Fenster) steht jetzt in `AnmeldungAnsehen.tsx`; die
+  Texte, die Liste und Fenster teilen (`kurz`, `ganzerName`, `absageText`), in `anmeldungText.ts`. Nur verschoben;
+  `AnmeldungenReiter.tsx` hat statt 1.193 noch 760 Zeilen. Neuer Test: im Fenster je Person Platz oder Warteliste, Link
+  zur Person in ChurchTools, Abgesagte mit Grund.
+
+### Intern
+
+- **Baukasten: Feld-Entwurf und Design-Speichern als Hooks** (#845, Schritt 4, Scheibe 4b-2): `useFeldEntwurf` trägt,
+  welches Feld gewählt ist, was daran geändert wird und wann es gespeichert wird (nach einer Pause beim Tippen, beim
+  Wechsel, beim Verlassen), den Fragetyp und was ChurchTools zu den Antworten weiß; `useDesignEntwurf` speichert das
+  Design nach einer kurzen Pause. Unverändert übernommen; `Baukasten.tsx` hat statt 874 noch rund 710 Zeilen (vor
+  Schritt 4: 1.109). Neue Tests: Leerzeichen am Rand, Speichern beim Verlassen (Feld und Design einzeln), ein gewähltes
+  Vorlagen-Feld entfernen, Zwischenstand bei wartendem Design, Textfeld → Auswahl mit zwei Antworten.
+
+### Intern
+
+- **Baukasten: Ziehen und Ablegen als Hook, Knöpfe am Feld als Baustein** (#845, Schritt 4, Scheibe 4b-1): `useZiehen`
+  trägt, was beim Ziehen geschieht – die Lücke unter dem Mauszeiger (gerechnet an den Plätzen vom Start), das Gleiten
+  der Felder, das Mitscrollen am Rand, das Ausblenden des gezogenen Felds erst nach dem Start und das Ablegen „ganz
+  unten“ vor Preis und Datenschutz. `FeldWerkzeug` sind die Knöpfe hoch, runter, kopieren und entfernen. Unverändert
+  übernommen; `Baukasten.tsx` hat statt 1.109 noch rund 875 Zeilen. Neue Tests: Abbrechen des Ziehens, Gleiten,
+  gesperrte Pfeile am Rand, „nach unten“ ans Ende und Kopieren.
+
+### Intern
+
+- **„Planen“: Zeitraum und Fenster als Hook** (#845, Schritt 4, Scheibe 4a-3): `usePlanZeitraum` trägt, welcher
+  Zeitraum gilt (je Unteransicht), was dafür geladen ist (leise bei ＋ und nach dem Senden), welcher Ausschnitt zu
+  sehen ist (‹ ›, Nachladen am Ende von „ab heute“) und was der Zeitraum-Knopf dazu sagt. Unverändert übernommen;
+  `Planen.tsx` hat statt 909 noch rund 790 Zeilen (vor Schritt 4: 2.010). Neuer Test: Am Handy zählt der Zeitraum-Knopf
+  alle geladenen Termine – dieselben teilt „Plan teilen“.
+
+### Neu (Protokolle, S5-4)
+
+- **Punkte vorschlagen** (Entwurf `s5-4-vorschlaege-v1`, Alwin 06.11.2026): Im Reiter „Sitzungen“ steht bei „Kommend“
+  **„Punkt vorschlagen“** – für alle in der Gruppe. Man wählt die Sitzung (vorbelegt die nächste), ein Thema und
+  freiwillig ein, zwei Sätze. Ist noch keine Sitzung festgelegt, gilt er **„für die nächste Sitzung“** und rutscht von
+  selbst dorthin, sobald die Leitung eine festlegt.
+- **Karte „Vorschläge“** unter „Kommend“: alle Vorschläge der Gruppe, nach Sitzung geordnet, mit Stand (offen,
+  übernommen, im Protokoll, abgelehnt mit Begründung); in der Sitzungszeile steht „2 Vorschläge“. Eigene, offene
+  Vorschläge lassen sich **ändern und zurückziehen**.
+- **Gruppe „Vorschlagen“:** Die Leitung sieht beim Schreiben oben **„Vorschläge · n“** mit **Übernehmen** (der Punkt
+  kommt vor „Verschiedenes“, sonst ans Ende), **Nächstes Mal** (zur Sitzung danach) und **Ablehnen** (Begründung
+  freiwillig). Übernehmen geht auch schon in der Karte – eingefügt wird dann beim Öffnen des Protokolls.
+- **Gruppe „Direkt eintragen“:** Beim Öffnen des Protokolls stehen die Vorschläge schon als Punkte vor „Verschiedenes“;
+  ein Hinweis sagt es. Die Leitung ändert, verschiebt oder löscht sie wie jeden Punkt.
+- Unter einem übernommenen Punkt steht kursiv **„vorgeschlagen von …“** – auch beim Lesen und später im PDF; die
+  Leitung kann es wie jeden Text ändern.
+
+### Intern (S5-4)
+
+- Regel `shared/protokolle/vorschlaege.ts` (Ziel einer Sitzung über `gehoertZu`, Weiterrutschen, Karte, Einfügestelle);
+  ein Wert je Vorschlag in „Mitarbeit“ (`art: 'vorschlag'`), nie hart gelöscht.
+- Im Protokoll trägt der Punkt die Block-ID `vorschlag-<ID>`: Erst wird eingefügt und **gespeichert**, dann „im
+  Protokoll“ vermerkt – scheitert das Vermerken, erkennt das nächste Öffnen den Punkt und fügt ihn nicht doppelt ein.
+- Ein Weg für alle Werte in „Mitarbeit“: `protokolle/src/mitarbeitWerte.ts` (frisch lesen, anwenden, schreiben,
+  nachlesen) – To-Dos und Vorschläge nutzen ihn; Sitzungsliste und Editor lesen „Mitarbeit“ einmal für beides.
+- Neues Symbol `idee` (Glühbirne) in `ui/icons`.
+
+### Intern
+
+- **„Planen“: Entwürfe aus der Komponente gezogen** (#845, Schritt 4, Scheibe 4a-2): Die Regeln – Entwurf am Platz,
+  alte Entwürfe und Entwürfe ohne Platz, Senden-Liste, Zauberstab-Zeilen, Plätze-Fach – sind reine Funktionen in
+  `planEntwuerfe.ts`; Laden, Übernehmen, Speichern und die Nachfrage zu Terminen außerhalb des Zeitraums stehen im
+  Hook `useEntwuerfe`. Unverändert übernommen; `Planen.tsx` hat statt 1.154 noch rund 910 Zeilen. Als Nächstes 4a-3:
+  der Zeitraum als Hook.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.2.0 gebracht: Liedauswahl im Punkt-Fenster samt der
+  Rechte, die sie braucht.
+
+### Intern
+
+- **„Planen“ im Dienstplaner in Dateien geteilt** (#845, Schritt 4, Scheibe 4a-1): Die Teile, die schon eigene
+  Komponenten waren, stehen jetzt in eigenen Dateien – `Terminleiste.tsx`, `PlanAnsicht.tsx` (Tabelle, Handy,
+  Gruppenknöpfe), `WerWieOft.tsx`, `PlanPlaetze.tsx` (Plätze, auch für die Termin-Ansicht), `useBisUnten.ts` und
+  `planSicht.ts` (gemeinsame Typen und Regeln wie `darfPlanen`, `freierPlatz`). Rein verschoben, nichts verändert:
+  `Planen.tsx` hat statt 2.010 noch rund 1.150 Zeilen. Als Nächstes zieht 4a-2 Zustand und Abläufe aus der
+  Komponente `Planen` in Hooks.
+
+### Neu (Dienstplaner)
+
+- **Lieder im Ablauf wählen, lösen und neu anlegen – wie in der Musik-App.** Im Punkt-Fenster öffnet die Zeile „Lied“
+  die Liedauswahl: anderes Lied wählen (mit Suche, Häufigkeit und Zuletzt), „Verknüpfung aufheben“, „Neues Lied“ samt
+  SongSelect und Notenblatt-Editor. Geschrieben wird erst mit „Speichern“. Wer keine Lieder sehen darf, sieht wie
+  bisher die Lied-Ansicht. Das Fenster wird erst beim Öffnen geladen, der Start bleibt leicht.
+
+### Geändert (Dienstplaner)
+
+- **Planen mit gewähltem Zeitraum:** Scheitert das Nachladen bei ＋ oder nach dem Senden, bleibt die Matrix stehen –
+  darüber steht der Fehler mit „Erneut versuchen“, wie schon bei „ab heute“ (Alwin, 06.11.2026). Vorher ersetzte der
+  Fehler die ganze Matrix. „Erneut versuchen“ lädt leise, ohne „Termine werden geladen …“.
+
+### Intern
+
+- **`useLaden` im Dienstplaner, Teil 2** (#845, Scheibe 3e-2): der Zeitraum in „Planen“ und die Nachfrage zu Terminen
+  außerhalb des Zeitraums (alte Entwürfe) laden über den gemeinsamen Hook. Damit gibt es in keiner Erweiterung mehr
+  einen Ladeblock von Hand; der Wächter gilt jetzt auch für den Dienstplaner. Neu im Hook: Mit `behalten` steht ein
+  gescheitertes Neuladen als `neuFehler` neben den behaltenen Daten, und `behalten` darf eine Prüfung auf die alten Daten
+  sein (nur passende bleiben stehen).
+- Neue Tests: ＋ scheitert → Matrix bleibt, Fehler darüber, „Erneut versuchen“ lädt leise; Termine, die in zwei Runden
+  bekannt werden, bleiben bekannt (kein Hin und Her beim Nachfragen).
+
+### Intern (Musik-App + Dienstplaner)
+
+- Die Wege der ChurchTools-Erweiterung zu den Liedern – Liederliste, Liedblatt, Statistik, Kategorien, SongSelect,
+  Lied anlegen und ändern, Notenblätter – liegen jetzt im gemeinsamen Ordner `ui/ct/lieder.ts` (E9, Wunsch 4,
+  „LW2a“). Die Musik-App reicht sie nur weiter und behält dieselben Zwischenspeicher; der Dienstplaner kann sie für
+  die Liedauswahl direkt nutzen. Für die Musik-App ändert sich nichts Sichtbares.
+
+### Intern
+
+- **E2E: keine fremden Dev-Server mehr still mittesten.** Lokal übernimmt Playwright Server, die schon auf seinen Ports
+  laufen – bisher auch die einer anderen Arbeitskopie, deren Code dann still mitgetestet wurde (am 06.11.2026 zweimal
+  passiert). Jetzt prüft die Konfiguration vorher je Port, aus welchem Ordner der Server läuft: aus dieser Arbeitskopie
+  → weiter mitbenutzen, aus einer anderen → Abbruch mit Port und Ordner (`scripts/fremde-server.mjs`). Die Ports kommen
+  aus den `webServer`-Einträgen selbst. In der CI ändert sich nichts.
+
+### Behoben (Dienstplaner)
+
+- **„Infos & Dateien“ in der Matrix:** Die Fenster für Infos und Dateien standen im HTML mitten in der Tabelle (ungültig,
+  der Browser meldete es in der Konsole). Sie hängen jetzt wie die Fenster der Ablauf-Zeilen an der Seite selbst
+  (`BodyPortal`). Sichtbar ändert sich nichts.
+
+### Intern (Musik-App + Dienstplaner)
+
+- „Neues Lied“ liegt jetzt im gemeinsamen Ordner `ui/lied` – der letzte Schritt, bevor der Dienstplaner beim
+  Verknüpfen eines Liedes auch ein neues anlegen kann (E9, Wunsch 4, „LW1b-2“). Mit umgezogen sind die Abfragen für
+  Kategorien, Stammdaten und Arrangements sowie das Anlegen und Ändern eines Liedes. Was nur die Musik-App danach neu
+  laden muss (Liedblätter, Abläufe, Arrangement-Auswahl), meldet sie über ihren Liedzugriff. Für die Musik-App ändert
+  sich nichts Sichtbares.
+
+### Intern
+
+- **`useLaden` im Dienstplaner, Teil 1** (#845, Scheibe 3e-1): Startseite (Lieder, Abwesenheiten), Termin-Ansicht,
+  Ablauf (Lieder, roter Live-Punkt), „Wer kann?“, Vorlieben, Dateien, „Meine Dienste teilen“, Senden-Fach, Tausch und
+  die Entwürfe in „Planen“ laden über den gemeinsamen Hook statt über 14 eigene Ladeblöcke. Die Adresse der Musik-App
+  holt jetzt **eine** Stelle (`useMusikApp`) statt dreier Ladeblöcke mit verschiedenem Umgang mit Fehlern. Neu im Hook:
+  `setze((alt) => …)` ändert die geladenen Daten, auch mehrmals kurz hintereinander (einen Entwurf übernehmen, ohne
+  alles neu zu laden). Der Zeitraum in „Planen“ und die Nachfrage zu fremden Terminen folgen in Teil 2, mit ihnen der
+  Wächter gegen Ladeblöcke von Hand.
+- Neue Tests: `useMusikApp`, die Warnung im Log bei „Meine Dienste“, Senden ohne prüfbare Hinweise, „Diesen Dienst
+  hast du nicht mehr“ beim Tausch, ein Lesen der Vorlieben, das wirft.
+
+### Intern (Musik-App + Dienstplaner)
+
+- Der Notenblatt-Editor liegt jetzt im gemeinsamen Ordner `ui/lied/editor` – Vorbereitung dafür, dass der
+  Dienstplaner beim Anlegen eines Liedes denselben Editor anbietet (E9, Wunsch 4, „LW1b-1“). Mit ihm umgezogen sind
+  die PDF-Erzeugung des Liedblatts, die Formular-Regeln für Lied und Arrangement sowie die Akkord-Umrechnung. Die
+  Liedansicht (Scrollen/Blättern) und das Logo der PDF-Kopfzeile gibt die Musik-App über ihren Liedzugriff herein.
+  Für die Musik-App ändert sich nichts Sichtbares.
+
+### Intern
+
+- **`useLaden` auch in den Anmeldungen** (#845, Scheibe 3d): Anmeldelink, QR-Code, Mails, „Mails und Löschen
+  einrichten“, Druckliste, Termin (Kalender und Termine), Baukasten (Gemeindelogo, Antworten eines Felds),
+  Logo-Auswahl, „Neue Veranstaltung“, „Einstellungen der Gemeinde“ und „Freigeben“ laden über den gemeinsamen Hook
+  statt über zwölf eigene Ladeblöcke. Was im Fenster geändert wird (Leitung, Vorgaben, Adresse, Zahlarten, die frühere
+  Veranstaltung), liegt jetzt über dem Geladenen, statt es nach dem Laden umzukopieren. Der Wächter gegen Ladeblöcke
+  von Hand gilt jetzt auch für die Anmeldungen.
+- Neue Tests für die Fehlerzweige, die bisher ungeprüft waren (Leitung, Kalender, Termine, QR-Code, Druckliste,
+  Mails, Gemeinde, Logos, frühere Veranstaltungen), und für Vorwahlen: die erste frühere Veranstaltung, ein anderes
+  Team fängt neu an, wer schon Leitung ist, bleibt gewählt; die Termine stehen sortiert; ein entferntes Logo
+  verschwindet ohne Neuladen; „Heruntergeladen“ gilt nur für das heruntergeladene PDF.
+
+### Intern (Musik-App + Dienstplaner)
+
+- **Liedwahl in den gemeinsamen Ordner gezogen (Dienstplaner E9, „LW1a“):** `SongPicker` mit Suche, Vorschau,
+  Statistik-Leiste und SongSelect-/Liedtext-Treffern liegt jetzt in `ui/lied`, die Such-Regeln in
+  `ui/lied/suchRegeln.ts`, die Abfragen in `ui/lied/liedDaten.ts` (Schlüssel und Haltezeiten unverändert). Die Daten
+  kommen über den `LiedZugriff` der App; die Musik-App gibt ihre bisherigen Wege. ChordPro-Leser nach
+  `shared/lieder`, `CenterMessage` und `useEntprellt` nach `ui/bedienung`. Für die Musik-App ändert sich nichts
+  Sichtbares – Vorbereitung für die Liedauswahl im Dienstplaner.
+
+### Intern
+
+- **`useLaden` auch in den Protokollen** (#845, Scheibe 3c): Vorlagen-Wahl, Anwesenheit, „Gruppe einrichten“,
+  „Sitzung festlegen“, „Neues Protokoll“, „Sitzung bearbeiten“ und die Mitglieder beim Schreiben laden über den
+  gemeinsamen Hook statt über sieben eigene Ladeblöcke. Was im Fenster geändert wird (Planung, Eingeladene, Stufen),
+  liegt jetzt über dem Geladenen, statt es nach dem Laden umzukopieren. Neu im Hook: `setze` – was gerade geschrieben
+  wurde und dessen Antwort den neuen Stand schon enthält, gilt sofort (Anwesenheit nach einem Tipp). Der Wächter gegen
+  Ladeblöcke von Hand gilt jetzt auch für die Protokolle.
+- Neue Tests für die Fehlerzweige, die bisher ungeprüft waren (Vorlagen, Sitzungen, Gruppe, Anwesenheit, Mitglieder,
+  Termin), und für „Neues Protokoll“: Geändertes gilt beim Anlegen, eine andere Gruppe fängt mit ihrer Vorbelegung an.
+
+### Geändert (Gebetsabend)
+
+- **Erste Version v0.1.0 zum Installieren.** Die Anleitung (`docs/betrieb/GEBETSABEND.md`) beschreibt jetzt den
+  Stand der ersten Version, wie man Zuhörer einrichtet und was das Gerät im Raum braucht (externe Webcam, kein
+  Ruhezustand).
+
+### Intern (Gebetsabend)
+
+- `release-notizen.mjs`: Die Fehlermeldung zur fehlenden App in der Überschrift nennt jetzt auch „Gebetsabend“ –
+  erlaubt war es schon, nur die Meldung kannte es nicht.
+
+### Intern
+
+- **`useLaden` auch im Gebetsabend** (#845, Scheibe 3b): der nächste Termin und das Fenster „Einstellungen“ laden über
+  den gemeinsamen Hook statt über eigene Ladeblöcke. Neu im Hook: `behalten` – beim Neuladen bleiben die alten Daten
+  stehen, bis neue da sind, auch wenn das Neuladen scheitert. So springt die Termin-Karte nach dem Speichern der
+  Einstellungen nicht um, und ein laufender Player wird nicht neu aufgebaut. Der Dienstplaner braucht dasselbe für
+  „leise neu laden“. Der Wächter gegen Ladeblöcke von Hand gilt jetzt auch für den Gebetsabend.
+- Neue Tests: der Termin bleibt beim Neuladen und bei einem gescheiterten Neuladen stehen; nach einem Konflikt
+  speichert das Einstellungen-Fenster mit der Version des anderen; die Kalender lassen sich nicht holen → Fehler.
+
 ## [2.39.0] – 2026-11-06
 
 **Überblick.** Musik-App: **Filter in der Terminliste** (Kalender ausblenden, „auch ohne Ablauf“ je Person statt

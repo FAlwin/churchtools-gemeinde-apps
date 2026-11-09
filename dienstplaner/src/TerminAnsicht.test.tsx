@@ -10,6 +10,8 @@ import { einteilungSchluessel } from '@shared/dienstplan/tausch';
 import { tauschAttrappe } from './tausch.testutil';
 import type { Tausch } from './useTausch';
 import type { TerminBlatt } from '@shared/ct/terminBlatt';
+import type { EntwurfAnschluss } from './ladeEntwuerfe';
+import { daten, entwurf, gesendet, nachgebaut } from './entwurfAnschluss.testutil';
 
 // Teilen (E8-1): Das Blatt wird festgehalten statt gezeichnet – geprüft wird, was aus den echten Plan-Daten entsteht.
 const blaetter = vi.hoisted(() => [] as unknown[]);
@@ -100,6 +102,8 @@ function zeige(
     nachher?: number | null;
     start?: ReturnType<typeof startFuer>;
     tausch?: Tausch;
+    entwuerfe?: EntwurfAnschluss;
+    handy?: boolean;
   } = {},
 ) {
   const onTermin = vi.fn();
@@ -117,6 +121,9 @@ function zeige(
       onZurueck={onZurueck}
       onGeaendert={onGeaendert}
       tausch={p.tausch}
+      entwuerfe={p.entwuerfe}
+      heute="2026-10-01"
+      handy={p.handy ?? false}
     />
   );
   const { rerender } = render(ansicht(7));
@@ -176,8 +183,13 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(within(dienste).getByText('Licht')).toBeTruthy();
     expect(within(dienste).getByText('Alwin')).toBeTruthy();
     expect(within(dienste).getByText('frei')).toBeTruthy();
-    // Nur ansehen: kein Platz ist ein Knopf.
-    expect(within(dienste).queryAllByRole('button')).toHaveLength(0);
+    // Als Planer (Technik) sind der freie und der belegte Platz Knöpfe wie in der Matrix (F1) – ohne Planen-Recht
+    // keiner (Test unter „Einteilen in der Termin-Ansicht“). Ohne Entwurfs-Anschluss kein Zauberstab.
+    expect(
+      within(dienste)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['frei – Wer kann? (Platz 1 von 1)', 'Alwin – zugesagt: zurückziehen oder ersetzen']);
   });
 
   it('„Tauschen“ (E7-3) nur an meinem eigenen Platz – nicht am freien, nicht ohne Tausch-Zustand', async () => {
@@ -1615,5 +1627,135 @@ describe('Dateien am Termin (T2a)', () => {
     expect(await within(f).findByText('Fremd.pdf')).toBeTruthy();
     expect(within(f).queryByRole('link')).toBeNull();
     expect(within(f).getByText('Skript')).toBeTruthy();
+  });
+});
+
+describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
+  // Termin 7: Ton (Dienst 6) hat Alwin, Licht (Dienst 7) ist frei – beide in Technik (Gruppe 3), die Alwin plant.
+  const hier = (x: Parameters<typeof entwurf>[0] = {}) =>
+    entwurf({ ort: { eventId: 7, serviceId: 7, index: null }, ...x });
+  const leiste = () =>
+    screen.queryByRole('status', { name: 'Noch nicht gesendet' })?.textContent ?? null;
+
+  it('als Planer: „frei“ antippen öffnet „Wer kann?“ – dasselbe Fenster wie in der Matrix; dazu der Hinweis', async () => {
+    ct();
+    zeige({ entwuerfe: nachgebaut() });
+    fireEvent.click(await screen.findByRole('button', { name: /^frei – Wer kann\?/ }));
+    // Das Fenster „Wer kann?“ der Matrix (`WerKann`) – Titel Dienst · Tag.
+    expect(await screen.findByRole('dialog', { name: /^Licht · / })).toBeTruthy();
+    expect(screen.getByText(/Einen freien Platz antippen zeigt, wer kann/)).toBeTruthy();
+  });
+
+  it('ohne Planen-Recht: Plätze nur zum Ansehen, kein Hinweis, kein Zauberstab – wie bisher', async () => {
+    ct();
+    zeige({
+      entwuerfe: nachgebaut(),
+      start: startFuer({
+        rechte: {
+          planbareDienstgruppen: [],
+          sichtbareDienstgruppen: [3],
+          ablaufKalender: [],
+          terminKalender: [],
+          abwesenheitenAller: false,
+        },
+      }),
+    });
+    expect(await screen.findByText('frei')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /frei – Wer kann/ })).toBeNull();
+    expect(screen.queryByText(/Einen freien Platz antippen/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Automatische Planung/ })).toBeNull();
+  });
+
+  it('ein Entwurf steht am Platz; unten die Leiste „an diesem Termin“ – Entwürfe anderer Termine zählen nicht', async () => {
+    ct();
+    const anschluss = nachgebaut({
+      laden: () =>
+        Promise.resolve(daten([hier(), entwurf({ ort: { eventId: 99, serviceId: 7, index: 1 } })])),
+    });
+    zeige({ entwuerfe: anschluss });
+    await waitFor(() =>
+      expect(leiste()).toBe('1 Entwurf noch nicht gesendetan diesem TerminAnsehen und senden'),
+    );
+    expect(screen.getByTitle(/^Entwurf von/).textContent).toContain('Ben Test');
+    // Die anderen Termine werden hier nicht nachgefragt (nur „Planen“ sucht alte Entwürfe).
+    expect(anschluss.termine).not.toHaveBeenCalled();
+  });
+
+  it('„Ansehen und senden“: nur dieser Termin, Hinweis auf die anderen; danach Termin leise neu und Bescheid an die anderen Ansichten', async () => {
+    // Nach dem Senden steht in ChurchTools Ben Test (angefragt) an Licht – und der Entwurf ist weg.
+    let gesendetIst = false;
+    const spy = ct({
+      termin: () =>
+        json(200, {
+          data: gesendetIst
+            ? {
+                ...TERMIN,
+                eventServices: [
+                  TERMIN.eventServices[0],
+                  { serviceId: 7, personId: 46, name: 'Ben Test', isAccepted: false },
+                ],
+              }
+            : TERMIN,
+        }),
+    });
+    const senden = vi.fn((...a: Parameters<ReturnType<typeof gesendet>>) => {
+      gesendetIst = true;
+      return gesendet()(...a);
+    });
+    const { onGeaendert } = zeige({
+      entwuerfe: nachgebaut({
+        laden: () =>
+          Promise.resolve(
+            daten(
+              gesendetIst
+                ? []
+                : [hier(), entwurf({ ort: { eventId: 99, serviceId: 7, index: 1 } })],
+            ),
+          ),
+        senden,
+      }),
+    });
+    await waitFor(() => expect(leiste()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    expect(
+      await screen.findByText(
+        'An einem anderen Termin liegen noch Entwürfe – die sendest du unter „Planen“.',
+      ),
+    ).toBeTruthy();
+    const vorher = spy.mock.calls.filter(([u]) => String(u).includes('/events/')).length;
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    await screen.findByText('Gesendet');
+    expect(senden.mock.calls[0][1]).toEqual([{ entwurf: hier(), kategorie: 30 }]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Fenster schließen' }));
+    await waitFor(() =>
+      expect(spy.mock.calls.filter(([u]) => String(u).includes('/events/')).length).toBe(
+        vorher + 1,
+      ),
+    );
+    expect(onGeaendert).toHaveBeenCalled();
+    // Leise: die Ansicht bleibt stehen (kein „Termin wird geladen …“) – und zeigt danach, was jetzt in ChurchTools steht.
+    expect(screen.queryByText('Termin wird geladen …')).toBeNull();
+    const dienste = screen.getByRole('region', { name: 'Dienste' });
+    await waitFor(() => expect(within(dienste).queryByText('frei')).toBeNull());
+    expect(within(dienste).getByText('Ben Test')).toBeTruthy();
+    expect(leiste()).toBeNull();
+  });
+
+  it('Zauberstab je Gruppe für diesen Termin – öffnet die automatische Planung', async () => {
+    ct();
+    zeige({ entwuerfe: nachgebaut() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Automatische Planung Technik' }));
+    expect(
+      await screen.findByRole('dialog', { name: /Automatische Planung · Technik/ }),
+    ).toBeTruthy();
+  });
+
+  it('am Handy: „Ansehen & senden“, ohne Zusatzzeile', async () => {
+    ct();
+    zeige({
+      handy: true,
+      entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([hier()])) }),
+    });
+    await waitFor(() => expect(leiste()).toBe('1 EntwurfAnsehen & senden'));
   });
 });

@@ -38,8 +38,14 @@ export function SendenFach({
   hinweise,
   senden,
   onClose,
+  zusatz,
 }: {
   zeilen: SendeZeile[];
+  /**
+   * Ein Satz unter der Liste, solange noch nichts gesendet ist – in der Termin-Ansicht (F1): „An N anderen Terminen
+   * liegen noch Entwürfe …“, weil dort nur die Entwürfe dieses Termins stehen.
+   */
+  zusatz?: string;
   ichId: number | null;
   hinweise: (zeilen: SendeZeile[]) => Promise<Map<string, SendeHinweis>>;
   senden: (
@@ -263,6 +269,7 @@ export function SendenFach({
           abwählen.
         </div>
       )}
+      {phase === 'liste' && zusatz && <p className={styles.hinweis}>{zusatz}</p>}
     </Sheet>
   );
 }

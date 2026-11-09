@@ -11,7 +11,9 @@
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
 >   als PDF, Sprung in die Musik-App. **Lieder** im Punkt-Fenster wie in der Musik-App: anderes Lied wählen (Suche,
 >   Häufigkeit, Zuletzt), „Verknüpfung aufheben“, „Neues Lied“ samt SongSelect und Notenblatt-Editor – mit dem Recht,
->   Lieder zu sehen (anlegen: Lieder bearbeiten, SongSelect: CCLI-Recht); ohne bleibt die Lied-Ansicht.
+>   Lieder zu sehen (anlegen: Lieder bearbeiten, SongSelect: CCLI-Recht); ohne bleibt die Lied-Ansicht. Wer einen Dienst
+>   planen darf, **teilt hier ein** wie in „Planen“ (freier Platz → „Wer kann?“, Entwurf, Zauberstab je Gruppe) und
+>   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler), „Infos & Dateien“ je Termin, „Wer wie oft?“, **Ansehen und senden**, **Teilen** = Plan,

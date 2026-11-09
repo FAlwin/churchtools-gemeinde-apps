@@ -1,11 +1,58 @@
 import { Fragment } from 'react';
 import { Icon } from '@ui/icons/icons';
-import type { PlanPlatz } from '@shared/dienstplan/plan';
+import type { PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { zielText, type Entwurf } from '@shared/dienstplan/entwuerfe';
-import type { EntwurfAmPlatz } from './planSicht';
+import { darfPlanen, type EntwurfAmPlatz, type Sicht } from './planSicht';
 import styles from './Planen.module.scss';
 
-/** Die Plätze eines Dienstes am Termin – auch in der Termin-Ansicht (E6-1b, dort ohne Knöpfe). */
+/** Was die Plätze zum Einteilen brauchen – aus `useEinteilen` (Matrix und Termin-Ansicht, F1). */
+export type AmPlatz = Pick<
+  Sicht,
+  | 'onFrei'
+  | 'entwurf'
+  | 'ohnePlatz'
+  | 'onOhnePlatz'
+  | 'onBelegt'
+  | 'onEntwurf'
+  | 'darfAendern'
+  | 'ichId'
+>;
+
+/**
+ * **Die Plätze einer Zelle zum Einteilen** – mit genau den Knöpfen, die man dort haben darf. **Eine** Regel für die
+ * Tabelle und das Handy in „Planen“ und für die Termin-Ansicht (F1, 09.11.2026; vorher stand sie zweimal in
+ * `PlanAnsicht`): freier und belegter Platz, wo man den Dienst planen darf (`darfPlanen`); Entwurf und Schild nur, wo man
+ * die Entwürfe der Gruppe auch ändern darf.
+ */
+export function EinteilPlaetze({
+  am,
+  s,
+  i,
+  z,
+}: {
+  am: AmPlatz;
+  s: PlanSpalte;
+  /** Die Spalte in `plan.spalten`. */
+  i: number;
+  z: PlanZeile;
+}) {
+  const planen = darfPlanen(z, s);
+  const aendern = planen && am.darfAendern(z);
+  return (
+    <Plaetze
+      plaetze={z.zellen[i] ?? []}
+      onFrei={planen ? (nr) => am.onFrei(i, z, nr) : undefined}
+      entwurf={(p) => am.entwurf(i, z, p)}
+      ohnePlatz={am.ohnePlatz(i, z)}
+      onOhnePlatz={aendern ? (e) => am.onOhnePlatz(i, z, e) : undefined}
+      onBelegt={planen ? (nr) => am.onBelegt(i, z, nr) : undefined}
+      onEntwurf={aendern ? (nr) => am.onEntwurf(i, z, nr) : undefined}
+      ichId={am.ichId}
+    />
+  );
+}
+
+/** Die Plätze eines Dienstes am Termin – ohne Knöpfe nur zum Ansehen (Termin-Ansicht ohne Planen-Recht). */
 export function Plaetze({
   plaetze,
   onFrei,

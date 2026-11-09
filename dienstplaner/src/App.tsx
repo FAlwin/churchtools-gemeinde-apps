@@ -190,6 +190,9 @@ export function App() {
               // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
               onGeaendert={() => termineLaden(start, geladen, true)}
               tausch={tausch}
+              entwuerfe={entwuerfe}
+              heute={heuteImKalender()}
+              handy={handy}
             />
           )}
           {start && terminId === null && aktiv === 'start' && (

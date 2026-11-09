@@ -26,6 +26,11 @@ export function useEntwuerfe(
   entwuerfe: EntwurfAnschluss | undefined,
   plan: Plan | null,
   heute: string,
+  /**
+   * Termine außerhalb von `plan` nachfragen, um alte Entwürfe zu erkennen – nur in „Planen“. Die Termin-Ansicht (F1)
+   * zeigt nur ihren Termin; dort wären fast alle Entwürfe „fremd“, jede Ansicht fragte sie neu ab.
+   */
+  nachfragen = true,
 ) {
   const { stand, neu, setze } = useLaden(() => (entwuerfe ? entwuerfe.laden() : null), [entwuerfe]);
   const ew: EntwuerfeZustand =
@@ -77,7 +82,7 @@ export function useEntwuerfe(
 
   const [staende, setStaende] = useState<Map<number, TerminStand>>(new Map());
   const lage = entwurfsLage(plan, daten, staende, heute);
-  const fremdSchluessel = lage.fremd.join(',');
+  const fremdSchluessel = nachfragen ? lage.fremd.join(',') : '';
   // Gesammelt, nicht ersetzt: Mit jeder Antwort werden weniger Termine „fremd“ – die bekannten bleiben bekannt.
   // Scheitert es, bleibt der Stand „unbekannt“: nichts als alt melden (vorübergehend ist nicht gelöscht).
   const nachgefragt = useLaden(

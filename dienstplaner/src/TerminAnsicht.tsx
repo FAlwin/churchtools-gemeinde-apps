@@ -13,7 +13,12 @@ import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf } from './ladeBeiwerk';
 import { useMusikApp } from './useMusikApp';
-import { Plaetze } from './PlanPlaetze';
+import { EinteilPlaetze } from './PlanPlaetze';
+import { ZauberKnopf } from './PlanAnsicht';
+import { useEinteilen } from './useEinteilen';
+import { darfPlanen } from './planSicht';
+import type { EntwurfAnschluss } from './ladeEntwuerfe';
+import { andereTermineText } from './planEntwuerfe';
 import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
 import { CtSymbol } from './CtSymbol';
@@ -62,6 +67,11 @@ function alsZustand(s: Ladestand<{ daten: TerminDaten; ablauf: CtAgenda | null }
  *
  * **Tauschen** (E7-3, Entwurf `e7-3-tausch.html`): An meinem eigenen Platz steht unter den Plätzen „Tauschen“ bzw. der
  * Stand der Anfrage – derselbe Baustein und derselbe Zustand wie auf der Startseite und in „Dienste“.
+ *
+ * **Einteilen** (F1, 09.11.2026, Entwurf `f1-termin-planen.html`): Wer einen Dienst planen darf, teilt hier ein wie in
+ * „Planen“ – freier Platz → „Wer kann?“, belegter Platz → zurückziehen oder ersetzen, Entwurf → Entwurfs-Fach, Zauberstab
+ * je Gruppe – und sendet unten mit „Ansehen und senden“ **nur die Entwürfe dieses Termins** (`useEinteilen`, dieselben
+ * Fenster wie in der Matrix). Alle anderen sehen die Plätze wie bisher.
  */
 export function TerminAnsicht({
   start,
@@ -74,6 +84,9 @@ export function TerminAnsicht({
   onZurueck,
   onGeaendert,
   tausch,
+  entwuerfe,
+  heute,
+  handy,
 }: {
   start: Start;
   terminId: number;
@@ -89,6 +102,12 @@ export function TerminAnsicht({
   onGeaendert?: () => void;
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
   tausch?: Tausch;
+  /** Einteilen als Entwurf (F1) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
+  entwuerfe?: EntwurfAnschluss;
+  /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde) – für den Zauberstab. */
+  heute: string;
+  /** Schmaler Bildschirm: die Leiste kürzer („Ansehen & senden“). */
+  handy: boolean;
 }) {
   const {
     stand,
@@ -102,6 +121,24 @@ export function TerminAnsicht({
     [start, terminId, zeitzone],
   );
   const zustand = alsZustand(stand);
+  // Einteilen wie in „Planen“ (F1) – mit dem Plan dieses einen Termins; gesendet wird damit nur, was hier steht.
+  const einteilen = useEinteilen({
+    plan: zustand.art === 'fertig' ? zustand.daten.plan : null,
+    entwuerfe,
+    heute,
+    handy,
+    nachfragen: false,
+    leisteZusatz: 'an diesem Termin',
+    sendenZusatz: (daten) => andereTermineText(daten, terminId),
+    // Danach leise neu lesen, was in ChurchTools steht; scheitert das, wie beim ersten Laden mit Fehlerkasten.
+    onGesendet: () => {
+      ladeTermin(start, terminId, zeitzone).then(
+        (daten) => setzeGeladen((alt) => ({ ...alt, daten })),
+        () => neu(),
+      );
+      onGeaendert?.();
+    },
+  });
   // Adresse der Musik-App: `undefined` = noch unbekannt, `null` = nicht installiert (die Lied-Ansicht sagt es dann).
   const musikApp = useMusikApp();
   const [bearbeiten, setBearbeiten] = useState(false);
@@ -176,6 +213,8 @@ export function TerminAnsicht({
   const infos = infosNeu ?? s.infos;
   // Infos und Dateien ändern darf, wer den Termin ändern darf – dieselbe Regel (gemessen 02.11.2026).
   const darf = terminAenderbar(start, s.ablaufTermin);
+  // Darf ich hier irgendeinen Dienst planen? Dann steht der Hinweis zum Einteilen unter den Diensten (F1).
+  const planer = gruppen.some((g) => g.zeilen.some((z) => darfPlanen(z, s)));
   // Meine Plätze an diesem Termin (dieselbe Zeile wie in der Liste) – je Dienst „Tauschen“ darunter.
   const meine = tausch ? (zustand.daten.zeilen[0]?.meine ?? []) : [];
   // Das ⓘ wie in ChurchTools (Entwurf T, Variante B): wo es Infos gibt oder man welche schreiben darf.
@@ -302,14 +341,25 @@ export function TerminAnsicht({
             ) : (
               gruppen.map((g) => (
                 <div key={g.gruppe?.id ?? 'weitere'} className={styles.gruppe}>
-                  <h4>{gruppenName(g)}</h4>
+                  <h4>
+                    {gruppenName(g)}
+                    <ZauberKnopf
+                      onKlick={einteilen.amPlatz.onZauberstab([0], g)}
+                      text={`Automatische Planung ${gruppenName(g)}`}
+                    />
+                  </h4>
                   {g.zeilen.map((z) => {
                     const eigene = meine.filter((d) => d.ort?.serviceId === z.dienst.id);
                     return (
                       <div key={z.dienst.id} className={styles.dienst}>
                         <span>{z.dienst.name}</span>
                         <div className={styles.platzSpalte}>
-                          <Plaetze plaetze={z.zellen[0] ?? []} ichId={start.ichId} />
+                          <EinteilPlaetze
+                            am={{ ...einteilen.amPlatz, ichId: start.ichId }}
+                            s={s}
+                            i={0}
+                            z={z}
+                          />
                           {tausch &&
                             eigene.map((d, i) => (
                               <div key={i} className={styles.tausch}>
@@ -333,7 +383,16 @@ export function TerminAnsicht({
                 </div>
               ))
             )}
+            {planer && (
+              <p className={styles.hinweis}>
+                Einen freien Platz antippen zeigt, wer kann – dort trägst du jemanden als Entwurf
+                ein. Einen belegten Platz antippen: zurückziehen oder ersetzen. Gesendet wird erst
+                mit „Ansehen und senden“ – nur, was an diesem Termin steht.
+              </p>
+            )}
           </section>
+          {einteilen.leiste}
+          {einteilen.fenster}
           {teile.ueberlagerung}
           {infosOffen && (
             <InfosFenster

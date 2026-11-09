@@ -10,8 +10,8 @@ import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Entwurf, EntwurfEingabe, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
 import type { TerminStand } from './terminStand';
-import { STANDARD } from '@shared/dienstplan/vorlieben';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
+import { ALWIN, TECHNIK, daten, entwurf, gesendet, nachgebaut } from './entwurfAnschluss.testutil';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
 import { ladeWerKann } from './ladeWerKann';
@@ -982,48 +982,6 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       ganzSichtbar: () => true,
     },
   );
-  const TECHNIK = { id: 3, name: 'Technik', fuerAlle: false };
-  const ALWIN = { personId: 1, name: 'Alwin' };
-  const entwurf = (x: Partial<Entwurf> = {}): Entwurf => ({
-    ort: { eventId: 20, serviceId: 7, index: 2 },
-    ziel: { art: 'person', personId: 46, name: 'Ben Test' },
-    modus: 'anfrage',
-    gesehen: { art: 'frei' },
-    von: ALWIN,
-    zeit: '2026-10-14T20:00:00.000Z',
-    version: 1,
-    ...x,
-  });
-  const daten = (
-    entwuerfe: Entwurf[] = [],
-    schublade: Partial<Schublade> = {},
-  ): EntwuerfeDaten => ({
-    modul: 16,
-    schubladen: new Map([[3, { gruppe: TECHNIK, kategorie: 30, stand: 'bereit', ...schublade }]]),
-    entwuerfe: new Map(
-      entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
-    ),
-    gruppeJe: new Map(
-      entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, 3]),
-    ),
-  });
-  /** Der Anschluss zum Anfassen – eine Stelle für alle Tests (jede neue Funktion kommt nur hier dazu). */
-  const nachgebaut = (a: Partial<EntwurfAnschluss> = {}): EntwurfAnschluss => ({
-    ich: ALWIN,
-    laden: vi.fn(() => Promise.resolve(daten())),
-    speichern: vi.fn(),
-    entfernen: vi.fn(),
-    einrichten: vi.fn(() => Promise.resolve()),
-    senden: vi.fn(),
-    hinweise: vi.fn(() => Promise.resolve(new Map())),
-    anzahl: vi.fn(),
-    termine: vi.fn(() => Promise.resolve(new Map())),
-    vorlieben: {
-      lesen: vi.fn(() => Promise.resolve({ ok: true as const, vorliebe: STANDARD })),
-      speichern: vi.fn(() => Promise.resolve({ ok: true as const })),
-    },
-    ...a,
-  });
   function zeige4(
     a: Partial<EntwurfAnschluss>,
     props: Partial<ComponentProps<typeof Planen>> = {},
@@ -1382,22 +1340,6 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
   });
 
   // ── E4-4-2: Senden-Fach ──────────────────────────────────────────────────
-  /** Senden, das alles schafft – und dabei jeden Eintrag meldet wie der Kern. */
-  const gesendet = () =>
-    vi.fn(
-      (
-        _d: EntwuerfeDaten,
-        eintraege: readonly unknown[],
-        melde: (i: number, r: SendeErgebnis) => void,
-      ) => {
-        const r = eintraege.map((_, i): SendeErgebnis => {
-          melde(i, { art: 'gesendet' });
-          return { art: 'gesendet' };
-        });
-        return Promise.resolve(r);
-      },
-    );
-
   it('„Ansehen und senden“ öffnet das Fach mit genau den gezählten Entwürfen (eine Regel), samt Kategorie', async () => {
     const senden = gesendet();
     zeige4({

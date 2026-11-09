@@ -711,3 +711,34 @@ heißen.
 - **Historie:** Wunsch 6 (09.11.2026, Entwurf `w6-kalender-filter.html`; Live gemessen: außer dem Kalender keine Kategorie am Termin)
 
 </details>
+
+### TF-ABLAUF-27 · Einteilen und senden direkt in der Termin-Ansicht
+
+**Das brauchst du:** Dienstplaner als Planer einer Dienstgruppe; ein kommender Termin mit einem freien Platz in dieser
+Gruppe; dazu an einem **anderen** Termin schon ein Entwurf (in „Planen“ angelegt). Test-Instanz verschickt echte
+Mitteilungen – nur senden, wenn das gewollt ist.
+
+**Das muss passieren:** In der Termin-Ansicht wird eingeteilt wie in der Matrix; gesendet wird nur, was an diesem Termin
+steht.
+
+1. Termin öffnen → unter „Dienste“ ist ein freier Platz der eigenen Gruppe rot **„frei“** und antippbar; darunter steht
+   der Hinweis „Einen freien Platz antippen zeigt, wer kann …“. Plätze fremder Gruppen sind nicht antippbar.
+2. „frei“ antippen → **„Wer kann?“** (Titel „Dienst · Tag“), dasselbe Fenster wie in „Planen“. Jemanden wählen → das
+   Fenster schließt, am Platz steht der Entwurf blau gestrichelt, Meldung „… eingetragen – noch nicht gesendet“.
+3. Unten die Leiste **„1 Entwurf noch nicht gesendet · an diesem Termin“** mit **Ansehen und senden**.
+4. Einen belegten Platz antippen → zurückziehen oder ersetzen wie in der Matrix; den Entwurf antippen → Entwurfs-Fach.
+5. In der Gruppenüberschrift rechts der **Zauberstab** → automatische Planung nur für diesen Termin.
+6. **Ansehen und senden** → nur die Entwürfe dieses Termins; darunter „An einem anderen Termin liegen noch Entwürfe – die
+   sendest du unter „Planen“.“ Senden → danach zeigt die Ansicht ohne Neuladen, was jetzt in ChurchTools steht; die
+   Leiste ist weg. In „Planen“ steht der Entwurf des anderen Termins weiter da.
+7. Ohne Planen-Recht (andere Person): Plätze nur ansehen, kein Hinweis, kein Zauberstab, keine Leiste.
+8. Am Handy: Leiste „1 Entwurf · Ansehen & senden“, Fenster von unten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/PlanPlaetze.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/SendenFach.tsx`, `dienstplaner/src/useEntwuerfe.ts`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/App.tsx`
+- **Automatisiert:** ja – `dienstplaner/src/TerminAnsicht.test.tsx` (Planer/kein Planer, Entwurf am Platz, Leiste „an diesem Termin“, nur dieser Termin gesendet, danach leise neu, Zauberstab, Handy, keine Nachfrage fremder Termine), `dienstplaner/src/planEntwuerfe.andere.test.ts`, `dienstplaner/src/Planen.test.tsx` (unverändert grün nach dem Umzug in `useEinteilen`); 15 Gegenproben einzeln rot; von Hand bleibt das echte Senden
+- **Historie:** Fund F1 aus dem Test von v0.2.0 (08.11.2026), Entwurf `f1-termin-planen.html` (09.11.2026)
+
+</details>

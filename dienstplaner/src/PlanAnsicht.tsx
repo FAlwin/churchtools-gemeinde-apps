@@ -7,8 +7,8 @@ import { DIENST_SPALTE, SPALTENBREITE, type Breite } from '@shared/dienstplan/fe
 import { CtSymbol } from './CtSymbol';
 import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
 import { HandyInfos, InfosZeilen } from './MatrixInfos';
-import { schluessel, type Sicht, darfPlanen, nurAnsehen } from './planSicht';
-import { Plaetze } from './PlanPlaetze';
+import { schluessel, type Sicht, nurAnsehen } from './planSicht';
+import { EinteilPlaetze } from './PlanPlaetze';
 import { useBisUnten } from './useBisUnten';
 import styles from './Planen.module.scss';
 
@@ -30,7 +30,7 @@ function GruppenStand({ frei }: { frei: number | null }) {
 }
 
 /** Zauberstab (E5-2) – das Symbol aus ChurchTools (`fa-magic`, Alwin 16.10.), nur wo es etwas zu füllen gibt. */
-function ZauberKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
+export function ZauberKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
   if (!onKlick) return null;
   return (
     <button
@@ -248,32 +248,7 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                                 –
                               </span>
                             ) : (
-                              <Plaetze
-                                plaetze={zelle}
-                                onFrei={
-                                  darfPlanen(z, plan.spalten[i])
-                                    ? (nr) => sicht.onFrei(i, z, nr)
-                                    : undefined
-                                }
-                                entwurf={(p) => sicht.entwurf(i, z, p)}
-                                ohnePlatz={sicht.ohnePlatz(i, z)}
-                                onOhnePlatz={
-                                  darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
-                                    ? (e) => sicht.onOhnePlatz(i, z, e)
-                                    : undefined
-                                }
-                                onBelegt={
-                                  darfPlanen(z, plan.spalten[i])
-                                    ? (nr) => sicht.onBelegt(i, z, nr)
-                                    : undefined
-                                }
-                                onEntwurf={
-                                  darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
-                                    ? (nr) => sicht.onEntwurf(i, z, nr)
-                                    : undefined
-                                }
-                                ichId={sicht.ichId}
-                              />
+                              <EinteilPlaetze am={sicht} s={plan.spalten[i]} i={i} z={z} />
                             )}
                           </td>
                         );
@@ -377,24 +352,7 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
                 dienste.map((z) => (
                   <div key={z.dienst.id} className={styles.handyDienst}>
                     <span>{z.dienst.name}</span>
-                    <Plaetze
-                      plaetze={z.zellen[i]!}
-                      onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
-                      entwurf={(p) => sicht.entwurf(i, z, p)}
-                      ohnePlatz={sicht.ohnePlatz(i, z)}
-                      onOhnePlatz={
-                        darfPlanen(z, s) && sicht.darfAendern(z)
-                          ? (e) => sicht.onOhnePlatz(i, z, e)
-                          : undefined
-                      }
-                      onBelegt={darfPlanen(z, s) ? (nr) => sicht.onBelegt(i, z, nr) : undefined}
-                      onEntwurf={
-                        darfPlanen(z, s) && sicht.darfAendern(z)
-                          ? (nr) => sicht.onEntwurf(i, z, nr)
-                          : undefined
-                      }
-                      ichId={sicht.ichId}
-                    />
+                    <EinteilPlaetze am={sicht} s={s} i={i} z={z} />
                   </div>
                 ))}
             </div>

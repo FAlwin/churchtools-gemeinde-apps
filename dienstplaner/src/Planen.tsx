@@ -3,19 +3,10 @@ import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { Toast } from '@ui/fenster/Toast';
-import { useToast } from '@ui/fenster/useToast';
 import { tagKurz } from '@shared/ct/datum';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
-import {
-  ortSchluessel,
-  zielText,
-  type Besetzung,
-  type Entwurf,
-  type EntwurfErgebnis,
-} from '@shared/dienstplan/entwuerfe';
 import { zeitraumText, zeitraumVerschieben } from '@shared/ct/zeitraum';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
@@ -24,40 +15,20 @@ import { ansichtAus, leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './pla
 import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
-import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
-import { EntwurfFach } from './EntwurfFach';
-import { BelegtFach } from './BelegtFach';
 import { PlaetzeFach } from './PlaetzeFach';
-import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
-import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
-import { SendenFach, type SendeZeile } from './SendenFach';
-import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
+import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { ALLE_REITER } from './reiter';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
 import { useMatrixAblauf } from './useMatrixAblauf';
 import { useMatrixInfos } from './useMatrixInfos';
 import type { Start } from './start';
-import {
-  schluessel,
-  type Sicht,
-  darfPlanen,
-  freierPlatz,
-  zauberUnter,
-  stehtInChurchTools,
-} from './planSicht';
+import { schluessel, type Sicht, darfPlanen } from './planSicht';
 import { Terminleiste } from './Terminleiste';
 import { TabellenPlan, HandyPlan } from './PlanAnsicht';
 import { WerWieOft } from './WerWieOft';
-import { useEntwuerfe } from './useEntwuerfe';
-import {
-  darfAendern,
-  entwurfAmPlatz,
-  plaetzeZeilen,
-  sendbareZeilen,
-  zauberEingeplant,
-  zauberZeilen,
-} from './planEntwuerfe';
+import { useEinteilen } from './useEinteilen';
+import { plaetzeZeilen } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -130,43 +101,11 @@ export function Planen({
     setAnsicht({ ...ansicht, infosZu }),
   );
   const [zu, setZu] = useState<Set<string> | null>(null);
-  const [frei, setFrei] = useState<FreierPlatz | null>(null);
-  // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
-  const [belegt, setBelegt] = useState<FreierPlatz | null>(null);
   // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
   );
-  // Das Zauberstab-Fenster (E5-2): Gruppe und Termine (Indizes in `plan.spalten`).
-  // Beim Öffnen festgehalten – sonst verschwänden Zeilen, sobald ein Vorschlag als Entwurf dasteht.
-  const [zauber, setZauber] = useState<{
-    titel: string;
-    unter: string;
-    zeilen: ZauberZeile[];
-    mitEntwurf: number;
-    eingeplant: Eingeplant[];
-    gruppe: { id: number; name: string };
-  } | null>(null);
-  // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
-  const [fach, setFach] = useState<{
-    platz: FreierPlatz;
-    entwurf: Entwurf;
-    inChurchTools: string | null;
-  } | null>(null);
-  const [ersetzt, setErsetzt] = useState<number | null>(null);
-  /**
-   * Aus welchem Fenster „Wer kann?“ aufging (Alwin, 02.11.2026: „Wechselt ein Screen im Fenster, soll es einen
-   * Zurück-Pfeil geben“) – „‹“ öffnet genau dieses wieder. `null`: vom freien Platz aus, dann gibt es keinen Pfeil.
-   */
-  const [werKannVon, setWerKannVon] = useState<
-    | { art: 'entwurf'; fach: NonNullable<typeof fach> }
-    | { art: 'belegt'; platz: FreierPlatz }
-    | null
-  >(null);
-  // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
-  const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const [rahmen, platz] = useBreite();
-  const { toast, showToast } = useToast();
 
   // Zeitraum, was dafür geladen ist und welcher Ausschnitt zu sehen ist – `usePlanZeitraum`.
   const {
@@ -202,15 +141,23 @@ export function Planen({
     onAktualisieren,
   });
 
-  // Entwürfe (E4-3) und wo sie stehen (#582) – Laden, Speichern und Regeln in `useEntwuerfe` / `planEntwuerfe`.
+  // Einteilen über Entwürfe (E4/E5) – Fenster, Leiste und was die Plätze bekommen; dieselben in der Termin-Ansicht (F1).
   const {
     ew,
     daten,
-    neu: ewNeu,
-    setzen: ewSetzen,
-    speichern: entwurfSpeichern,
+    ewNeu,
     lage,
-  } = useEntwuerfe(entwuerfe, plan, heute);
+    showToast,
+    amPlatz,
+    leiste: sendeLeiste,
+    fenster,
+  } = useEinteilen({
+    plan,
+    entwuerfe,
+    heute,
+    handy,
+    onGesendet: leiseNeuLaden,
+  });
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
   // „Plan teilen“ (E8-2): geteilt werden die Termine, die gerade zählen – dieselben wie in der Aufschrift des
@@ -373,53 +320,13 @@ export function Planen({
       zugeklappt,
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
-      onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
-      onBelegt: (i, zl, nr) => setBelegt(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      ...amPlatz,
       onPlaetze: (i, g) =>
         entwuerfe &&
         !plan.spalten[i].abgesagt &&
         g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
           ? () => setPlaetzeFach({ spalte: i, gruppe: g })
           : undefined,
-      entwurf: (i, zl, p) => entwurfAmPlatz(daten, plan.spalten[i], zl, p),
-      onZauberstab: (idx, g) => {
-        const z = entwuerfe ? zauberZeilen(plan, daten, heute, idx, g) : null;
-        if (!z || z.zeilen.length === 0) return undefined;
-        return () =>
-          setZauber({
-            titel: `Automatische Planung · ${gruppenName(g)}`,
-            unter: zauberUnter(plan, idx),
-            ...z,
-            eingeplant: zauberEingeplant(plan, daten, g),
-            gruppe: { id: g.gruppe?.id ?? 0, name: gruppenName(g) },
-          });
-      },
-      darfAendern: (zl) => darfAendern(daten, zl),
-      onEntwurf: (i, zl, nr) => {
-        const plaetze = zl.zellen[i] ?? [];
-        const p = plaetze[nr - 1];
-        const a = p ? entwurfAmPlatz(daten, plan.spalten[i], zl, p) : null;
-        if (!p || !a) return;
-        setFach({
-          platz: freierPlatz(plan.spalten[i], zl, plaetze, nr),
-          entwurf: a.entwurf,
-          inChurchTools: a.veraltet ? stehtInChurchTools(p) : null,
-        });
-      },
-      ohnePlatz: (i, zl) => lage.schilder.get(`${plan.spalten[i].id}|${zl.dienst.id}`) ?? [],
-      onOhnePlatz: (i, zl, e) =>
-        setFach({
-          platz: {
-            ...freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], 1),
-            nr: e.ort.index ?? 1,
-            index: e.ort.index,
-            bisher: undefined,
-          },
-          entwurf: e,
-          inChurchTools:
-            'Diesen Platz gibt es so nicht mehr – die Platzzahl wurde in ChurchTools geändert.',
-        }),
-      ichId: entwuerfe?.ich.personId ?? null,
       onTermin,
       ablauf: matrixAblauf,
       infos: matrixInfos,
@@ -437,116 +344,6 @@ export function Planen({
         <TabellenPlan sicht={sicht} breite={ansicht.breite} />
       );
   }
-
-  /** Übernehmen (E5-2): je Vorschlag ein Entwurf, einer nach dem anderen – wie „Wer kann?“ ihn anlegt. */
-  async function zauberUebernehmen(
-    wahlen: Wahl[],
-    melde: (index: number, ergebnis: EntwurfErgebnis) => void,
-  ): Promise<void> {
-    if (!entwuerfe || !daten) return;
-    for (const [i, w] of wahlen.entries()) {
-      const ort = { eventId: w.zeile.terminId, serviceId: w.zeile.serviceId, index: w.zeile.index };
-      const r = await entwurfSpeichern(
-        daten,
-        w.zeile.gruppeId,
-        {
-          ort,
-          ziel: { art: 'person', personId: w.personId, name: w.name },
-          gesehen: w.zeile.gesehen,
-        },
-        null,
-      );
-      melde(i, r);
-    }
-  }
-
-  /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
-  const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
-    if (r.ok) {
-      ewSetzen(k, r.entwurf);
-      setFach(null);
-      showToast(text());
-    } else if (r.grund === 'konflikt') {
-      // Was jetzt dasteht, zeigt die Matrix sofort – und das offene Fach auch (sonst zeigte es die alte Fassung,
-      // Prüfung mit zwei Planern 16.10.2026). Ist der Entwurf weg, bleibt das Fach mit seinem Hinweis stehen.
-      ewSetzen(k, r.jetzt ?? null);
-      const jetzt = r.jetzt;
-      if (jetzt) setFach((f) => (f ? { ...f, entwurf: jetzt } : f));
-    }
-  };
-
-  /** Der Stift in „Wer kann?“ (E5-3) – nur, wo man die Dienstgruppe plant (nicht nur als Termin-Admin). */
-  const stiftFuer = (f: FreierPlatz) => {
-    const g = plan?.gruppen.find((x) => x.gruppe?.id === f.gruppeId);
-    return entwuerfe && f.stift && g
-      ? { vorlieben: entwuerfe.vorlieben, gruppe: { id: f.gruppeId, name: gruppenName(g) } }
-      : undefined;
-  };
-
-  /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
-  const eintragenFuer = (f: FreierPlatz): Eintragen | undefined => {
-    if (!entwuerfe) return undefined;
-    if (ew.art === 'laedt') return { art: 'laedt' };
-    if (ew.art === 'fehler') return { art: 'gesperrt', text: ew.text, onNochmal: ewNeu };
-    const daten = ew.daten;
-    const s = daten.schubladen.get(f.gruppeId);
-    if (!s) {
-      return { art: 'gesperrt', text: 'Für diesen Dienst kannst du hier keine Entwürfe anlegen.' };
-    }
-    if (s.fehler) return { art: 'gesperrt', text: grundText(s.fehler), onNochmal: ewNeu };
-    if (s.stand === 'einrichtbar') {
-      return {
-        art: 'einrichten',
-        gruppe: s.gruppe.name,
-        onEinrichten: async () => {
-          await entwuerfe.einrichten(s.gruppe);
-          ewNeu();
-        },
-      };
-    }
-    if (s.stand === 'fehlt') {
-      return {
-        art: 'gesperrt',
-        text: `Für „${s.gruppe.name}“ gibt es noch keinen Platz für Entwürfe – oder dir fehlt das Recht, ihn zu sehen. Bitte die Gemeinde-Verwaltung fragen.`,
-      };
-    }
-    if (s.stand === 'nur-lesen') {
-      return {
-        art: 'gesperrt',
-        text: `Du darfst die Entwürfe von „${s.gruppe.name}“ ansehen, aber nicht ändern. Bitte die Gemeinde-Verwaltung nach dem Recht fragen.`,
-      };
-    }
-    const ort = { eventId: f.eventId, serviceId: f.serviceId, index: f.index };
-    return {
-      art: 'bereit',
-      erwartet: ersetzt,
-      onWahl: async (ziel: Besetzung, erwartet: number | null): Promise<EntwurfErgebnis> => {
-        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war. „Gesehen“ ist, was
-        // jetzt in ChurchTools steht – frei, oder die Person, die ersetzt wird (E4-5); bei einem gültigen Entwurf
-        // ist das genau, was er gesehen hat (`gleicherStand`).
-        const alt = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
-        const r = await entwurfSpeichern(
-          daten,
-          f.gruppeId,
-          { ort, ziel, modus: alt?.modus, gesehen: f.bisher?.belegung ?? { art: 'frei' } },
-          erwartet,
-        );
-        if (r.ok) {
-          setFrei(null);
-          setErsetzt(null);
-          setWerKannVon(null);
-          showToast(
-            f.bisher
-              ? `${ziel.name} statt ${f.bisher.name} eingetragen – noch nicht gesendet.`
-              : `${ziel.name} eingetragen – noch nicht gesendet.`,
-          );
-        }
-        return r;
-      },
-    };
-  };
-
-  const offen = sendbareZeilen(plan, daten).length;
 
   // Nachladen gescheitert, der bisherige Stand steht: bei „ab heute“ wie beim gewählten Zeitraum (Alwin, 06.11.2026).
   const nachladeFehler = quelle.art === 'fertig' ? quelle.nachladeFehler : undefined;
@@ -589,132 +386,8 @@ export function Planen({
         dessen Vorlieben – sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann
         bekommen die Angefragten eine Mitteilung von ChurchTools.
       </p>
-      {fach && entwuerfe && ew.art === 'fertig' && (
-        <EntwurfFach
-          platz={fach.platz}
-          entwurf={fach.entwurf}
-          inChurchTools={fach.inChurchTools}
-          onClose={() => setFach(null)}
-          onModus={async (modus, erwartet) => {
-            const e = fach.entwurf;
-            const r = await entwurfSpeichern(
-              ew.daten,
-              fach.platz.gruppeId,
-              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen },
-              erwartet,
-            );
-            nachFach(r, ortSchluessel(e.ort), () =>
-              modus === 'direkt'
-                ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
-                : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,
-            );
-            return r;
-          }}
-          onEntfernen={async (erwartet) => {
-            const e = fach.entwurf;
-            const r = await entwuerfe.entfernen(ew.daten, fach.platz.gruppeId, e.ort, erwartet);
-            nachFach(r, ortSchluessel(e.ort), () =>
-              fach.inChurchTools !== null ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
-            );
-            return r;
-          }}
-          onAnderePerson={() => {
-            // „Wer kann?“ für denselben Platz – es ersetzt den Entwurf (mit seiner Version).
-            setErsetzt(fach.entwurf.version);
-            setFrei(fach.platz);
-            setWerKannVon({ art: 'entwurf', fach });
-            setFach(null);
-          }}
-        />
-      )}
-      {frei && (
-        <WerKann
-          platz={frei}
-          onClose={() => {
-            setFrei(null);
-            setErsetzt(null);
-            setWerKannVon(null);
-          }}
-          zurueck={
-            werKannVon
-              ? () => {
-                  setFrei(null);
-                  setErsetzt(null);
-                  setWerKannVon(null);
-                  if (werKannVon.art === 'entwurf') setFach(werKannVon.fach);
-                  else setBelegt(werKannVon.platz);
-                }
-              : undefined
-          }
-          eintragen={eintragenFuer(frei)}
-          stift={stiftFuer(frei)}
-        />
-      )}
-      {belegt?.bisher && entwuerfe && (
-        <BelegtFach
-          platz={{ ...belegt, bisher: belegt.bisher }}
-          eintragen={eintragenFuer(belegt)}
-          onClose={() => setBelegt(null)}
-          onAnderePerson={() => {
-            // „Wer kann?“ für denselben Platz – die Wahl ersetzt die Person, die dort steht.
-            setFrei(belegt);
-            setWerKannVon({ art: 'belegt', platz: belegt });
-            setBelegt(null);
-          }}
-          onZurueckziehen={async () => {
-            const b = belegt.bisher;
-            if (!b) return { ok: false, grund: 'voruebergehend' };
-            const ort = {
-              eventId: belegt.eventId,
-              serviceId: belegt.serviceId,
-              index: belegt.index,
-            };
-            if (ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
-            const r = await entwurfSpeichern(
-              ew.daten,
-              belegt.gruppeId,
-              { ort, ziel: { art: 'frei' }, gesehen: b.belegung },
-              null,
-            );
-            if (r.ok) {
-              setBelegt(null);
-              showToast(`${b.name} wird beim Senden zurückgezogen – noch nicht gesendet.`);
-            }
-            return r;
-          }}
-        />
-      )}
-      {offen > 0 && (
-        <div className={styles.sendeLeiste} role="status" aria-label="Noch nicht gesendet">
-          {/* Am Handy kürzer, wie im Entwurf (Abschnitt 6) – sonst bricht alles um. */}
-          <span>
-            {offen} {offen === 1 ? 'Entwurf' : 'Entwürfe'}
-            {handy ? '' : ' noch nicht gesendet'}
-          </span>
-          <button
-            type="button"
-            className={styles.sendenKnopf}
-            onClick={() => setSendenListe(sendbareZeilen(plan, daten))}
-          >
-            {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
-          </button>
-        </div>
-      )}
-      {sendenListe && entwuerfe && ew.art === 'fertig' && (
-        <SendenFach
-          zeilen={sendenListe}
-          ichId={entwuerfe.ich.personId}
-          hinweise={(z) => entwuerfe.hinweise(z)}
-          senden={(eintraege, melde) => entwuerfe.senden(ew.daten, eintraege, melde)}
-          onClose={(geaendert) => {
-            setSendenListe(null);
-            if (geaendert) {
-              ewNeu();
-              leiseNeuLaden();
-            }
-          }}
-        />
-      )}
+      {sendeLeiste}
+      {fenster}
       {alteListe && entwuerfe && ew.art === 'fertig' && (
         <AlteEntwuerfeFach
           zeilen={alteListe}
@@ -725,22 +398,6 @@ export function Planen({
           onClose={(geaendert) => {
             setAlteListe(null);
             if (geaendert) ewNeu();
-          }}
-        />
-      )}
-      {zauber && (
-        <ZauberstabFach
-          {...zauber}
-          vorlieben={entwuerfe?.vorlieben}
-          uebernehmen={zauberUebernehmen}
-          onClose={(n) => {
-            setZauber(null);
-            if (n > 0)
-              showToast(
-                n === 1
-                  ? '1 Vorschlag als Entwurf eingetragen – noch nicht gesendet.'
-                  : `${n} Vorschläge als Entwurf eingetragen – noch nicht gesendet.`,
-              );
           }}
         />
       )}
@@ -764,7 +421,6 @@ export function Planen({
           }}
         />
       )}
-      <Toast message={toast} />
     </div>
   );
 }

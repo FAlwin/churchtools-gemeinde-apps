@@ -223,3 +223,17 @@ export function sendbareZeilen(plan: Plan | null, daten: EntwuerfeDaten | null):
   });
   return zeilen;
 }
+
+/**
+ * Der Satz im Senden-Fach der Termin-Ansicht: Entwürfe an anderen Terminen werden hier nicht gesendet (F1, Alwin
+ * 09.11.2026: senden nur, was an diesem Termin steht) – sie stehen unter „Planen“.
+ */
+export function andereTermineText(daten: EntwuerfeDaten, terminId: number): string | undefined {
+  const andere = new Set(
+    [...daten.entwuerfe.values()].map((e) => e.ort.eventId).filter((id) => id !== terminId),
+  ).size;
+  if (andere === 0) return undefined;
+  return andere === 1
+    ? 'An einem anderen Termin liegen noch Entwürfe – die sendest du unter „Planen“.'
+    : `An ${andere} anderen Terminen liegen noch Entwürfe – die sendest du unter „Planen“.`;
+}

@@ -16,7 +16,8 @@ import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldun
 import * as FF from './formularFelder';
 import * as EI from './einrichten';
 import { ApiError } from '@ui/ct/fehler';
-import { Baukasten, PAUSE_DESIGN_MS, PAUSE_FELD_MS } from './Baukasten';
+import { Baukasten } from './Baukasten';
+import { PAUSE_DESIGN_MS, PAUSE_FELD_MS } from './useEntwurf';
 import { fehlerMeldung } from './zustand';
 
 vi.mock('./formularFelder', () => ({
@@ -447,6 +448,47 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
   });
 
+  it('gespeichert wird ohne Leerzeichen am Rand – Frage und Antworten', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '  Welche Gruppe?  ' } });
+    fireEvent.change(screen.getByLabelText('Antwort 1'), { target: { value: ' Kleine ' } });
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({
+      frage: 'Welche Gruppe?',
+      antworten: ['Kleine', 'Kids'],
+    });
+  });
+
+  it('beim Verlassen des Baukastens wird das angefangene Feld gleich gespeichert', async () => {
+    vi.useFakeTimers();
+    const { huelle, unmount } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: 'Welche Gruppe?' } });
+    unmount();
+    // Vor Ablauf der Pause – gespeichert hat das Verlassen, nicht die Uhr.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_FELD_MS - 1);
+    });
+    expect(ff.feldSpeichern).toHaveBeenCalledTimes(1);
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ frage: 'Welche Gruppe?' });
+  });
+
+  it('ein gewähltes Vorlagen-Feld entfernen → weg und nicht mehr gewählt (taucht nicht wieder auf)', async () => {
+    ff.feldEntfernen.mockResolvedValue({ art: 'ausgeblendet', antworten: 0 });
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('allergy'));
+    expect(screen.getByLabelText('Frage')).toBeTruthy();
+    fireEvent.click(
+      within(huelle('allergy') as HTMLElement).getByRole('button', { name: / entfernen$/ }),
+    );
+    await waitFor(() => expect(ff.feldEntfernen).toHaveBeenCalledWith(91, 'allergy'));
+    expect(huelle('allergy')).toBeNull();
+    expect(screen.queryByLabelText('Frage')).toBeNull();
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
   it('entfernen: die Meldung sagt, was passiert ist (Antworten bleiben)', async () => {
     ff.feldEntfernen.mockResolvedValue({ art: 'ausgeblendet', antworten: 3 });
     const { gespeichert, huelle } = zeigen();
@@ -652,6 +694,43 @@ describe('Baukasten (A5): Design', () => {
     ).toBe('Herzlich willkommen!');
   });
 
+  it('beim Verlassen des Baukastens wird ein wartendes Design gleich gespeichert', async () => {
+    vi.useFakeTimers();
+    const { unmount } = zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beere' }));
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+    unmount();
+    // Vor Ablauf der Pause – gespeichert hat das Verlassen, nicht die Uhr.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_DESIGN_MS - 1);
+    });
+    expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1);
+    expect(
+      ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung.farbe,
+    ).toBe('#a3245c');
+  });
+
+  it('kommt ein neuer Stand, während das Design noch wartet, bleibt der Zwischenstand stehen', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { rerender } = zeigen();
+    fireEvent.change(screen.getByLabelText('Begrüßungstext'), { target: { value: 'Hallo!' } });
+    rerender(
+      <Baukasten
+        id={91}
+        name="Kindertag"
+        gemeinde="ECG Donrath"
+        einstellungen={einstellungen()}
+        bildUrl={null}
+        darf
+        heute="2026-10-13"
+        onGespeichert={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Begrüßungstext')).toHaveProperty('value', 'Hallo!');
+  });
+
   it('Name direkt im Kopf ändern → umbenannt', async () => {
     ei.umbenennen.mockResolvedValue(undefined);
     zeigen();
@@ -724,6 +803,18 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     });
     // Das Tippen davor wird nicht zusätzlich gespeichert – der Typwechsel nimmt es mit.
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('Fragetyp: aus einem Textfeld wird eine Auswahl mit zwei Antworten zum Ausfüllen', async () => {
+    ff.feldTypAendern.mockResolvedValue({} as never);
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    fireEvent.change(await screen.findByLabelText('Fragetyp'), { target: { value: 'radio' } });
+    await waitFor(() => expect(ff.feldTypAendern).toHaveBeenCalled());
+    expect(ff.feldTypAendern.mock.calls[0][1]).toMatchObject({
+      typ: 'radio',
+      antworten: ['Antwort 1', 'Antwort 2'],
+    });
   });
 
   it('Fragetyp gesperrt, wenn schon jemand geantwortet hat', async () => {

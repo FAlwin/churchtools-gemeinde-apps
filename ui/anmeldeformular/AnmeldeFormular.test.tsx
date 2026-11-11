@@ -69,6 +69,61 @@ const zeigen = (e: OeffentlicheEinstellungen, mitMuster = true) =>
   );
 
 describe('Anmeldeformular (A5)', () => {
+  it('Beschriftung: Pflichtfelder mit * (für Vorleser verborgen), freiwillige mit „(freiwillig)“ – reine Texte ohne', () => {
+    const e = freizeit();
+    // Ein reiner Text (Überschrift) ist auch „freiwillig“ – zu ihm passt der Zusatz nicht.
+    e.formular.person.push({
+      id: 'f2',
+      art: 'eigen',
+      typ: 'ueberschrift',
+      frage: 'Zum Schluss',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+    });
+    const { container } = zeigen(e);
+    const beschriftung = (frage: string) =>
+      [...container.querySelectorAll('label')].find((l) => l.firstChild?.textContent === frage)!;
+    const pflichtFelder = [...e.formular.anmeldung, ...e.formular.person].filter(
+      (f) => f.zustand === 'pflicht',
+    );
+    const mitBeschriftung = pflichtFelder.filter((f) => beschriftung(f.frage));
+    expect(mitBeschriftung.length).toBeGreaterThan(0);
+    for (const f of mitBeschriftung) {
+      const stern = beschriftung(f.frage).querySelector('[aria-hidden="true"]');
+      expect(stern?.textContent).toBe('*');
+    }
+    expect(beschriftung('T-Shirt').textContent).toBe('T-Shirt (freiwillig)');
+    // Je Person einmal – überall ohne Zusatz.
+    for (const x of screen.getAllByText('Zum Schluss')) expect(x.textContent).toBe('Zum Schluss');
+    expect(container.textContent).not.toMatch(/Zum Schluss \(freiwillig\)/);
+  });
+
+  it('Fakten oben mit Symbol: Plätze, Anmeldeschluss, Preis', () => {
+    const e = freizeit();
+    const { container } = render(
+      <AnmeldeFormular
+        ansicht={{
+          basis: BASIS,
+          name: 'Silvesterfreizeit',
+          gemeinde: null,
+          einstellungen: e,
+          freiePlaetze: 3,
+          anmeldeschluss: '2026-12-01',
+        }}
+        heute={HEUTE}
+        vorschau
+      />,
+    );
+    const fakten = [...container.querySelectorAll('span')].filter(
+      (x) =>
+        x.firstElementChild?.tagName === 'svg' &&
+        /Plätze|Anmeldeschluss|€/.test(x.textContent ?? ''),
+    );
+    expect(fakten).toHaveLength(3);
+    for (const f of fakten) expect(f.querySelector('svg path')?.getAttribute('d')).toBeTruthy();
+  });
+
   it('Kopf: Name, Datum und Ort, Preis in einem Wort; „noch 3 Plätze“ nur wenn knapp; kein Gemeindename', () => {
     const e = freizeit();
     zeigen(e);

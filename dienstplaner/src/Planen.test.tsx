@@ -182,6 +182,28 @@ describe('Planen – Handy (E3-4)', () => {
     // Am Gebetsabend gibt es keinen Licht-Dienst – also keine Zeile dafür.
     expect(screen.queryByText('Licht')).toBeNull();
   });
+
+  it('Titel und Datum des Termins öffnen die Termin-Ansicht (Wunsch 8) – wie „Ablauf & Dienste“', () => {
+    const onTermin = vi.fn();
+    zeige(true, onTermin);
+    const karte = within(screen.getByRole('region', { name: /^Gottesdienst, / }));
+    fireEvent.click(karte.getByRole('button', { name: 'Gottesdienst' }));
+    expect(onTermin).toHaveBeenLastCalledWith(10);
+    const kachel = karte.getByText('18').closest('button')!;
+    expect(kachel.getAttribute('tabindex')).toBe('-1');
+    fireEvent.click(kachel);
+    expect(onTermin).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Planen – Tabelle: Datum öffnet den Termin (Wunsch 8)', () => {
+  it('die Kachel im Spaltenkopf führt wie der Name in die Termin-Ansicht', () => {
+    const onTermin = vi.fn();
+    zeige(false, onTermin);
+    const kopf = screen.getAllByRole('columnheader')[1];
+    fireEvent.click(within(kopf).getByText('18').closest('button')!);
+    expect(onTermin).toHaveBeenCalledWith(10);
+  });
 });
 
 describe('Planen – Zustände', () => {
@@ -2235,5 +2257,73 @@ describe('Planen → Termin-Ansicht (E6-1b)', () => {
     fireEvent.click(leiste.getAllByRole('button')[1]);
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf & Dienste' }));
     expect(onTermin).toHaveBeenLastCalledWith(11);
+  });
+});
+
+describe('Planen – von der Startseite: eine Gruppe, nächste 6 Wochen (Wunsch 7, 11.11.2026)', () => {
+  afterEach(() => localStorage.clear());
+  const ANSICHT = 'dienstplaner.planen.ansicht';
+  function zeigeF(fokusGruppe: number | null = 3) {
+    const laden = vi.fn(() => Promise.resolve({ zeilen: [] as [], plan: PLAN2 }));
+    const onFokusEnde = vi.fn();
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN2, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        ladeZeitraum={laden}
+        fokusGruppe={fokusGruppe}
+        onFokusEnde={onFokusEnde}
+      />,
+    );
+    return { laden, onFokusEnde };
+  }
+  const hinweis = () => screen.findByRole('status', { name: 'Von der Startseite' });
+
+  it('lädt genau die Tage der Karte „Planen“ und zeigt nur diese Gruppe – oben steht es', async () => {
+    const { laden } = zeigeF();
+    expect(laden).toHaveBeenCalledWith('2026-10-14', '2026-11-24');
+    expect((await hinweis()).textContent).toMatch(/^Nur Technik · nächste 6 Wochen/);
+    expect(tabelle().getByRole('button', { name: /Technik/ })).toBeTruthy();
+    expect(tabelle().queryByRole('button', { name: /Programm/ })).toBeNull();
+  });
+
+  it('nur für diesen Besuch: gemerkter Zeitraum und Filter bleiben; andere Einstellungen (Breite) werden gemerkt', async () => {
+    localStorage.setItem(
+      ANSICHT,
+      JSON.stringify({ zeitraum: { art: 'monat', monat: '2026-12' }, ausgeblendeteGruppen: [] }),
+    );
+    zeigeF();
+    await hinweis();
+    fireEvent.click(screen.getByRole('button', { name: 'Breite Spalten' }));
+    const g = JSON.parse(localStorage.getItem(ANSICHT)!);
+    expect(g.breite).toBe('breit');
+    expect(g.zeitraum).toEqual({ art: 'monat', monat: '2026-12' });
+    expect(g.ausgeblendeteGruppen).toEqual([]);
+    // Breite ist keine Gruppenwahl – es bleibt bei „nur Technik“.
+    expect((await hinweis()).textContent).toMatch(/^Nur Technik/);
+  });
+
+  it('eine Gruppe im Filter dazunehmen → „Eigene Auswahl“; „Gewohnte Ansicht“ beendet den Besuch', async () => {
+    const { onFokusEnde } = zeigeF();
+    await hinweis();
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/ }));
+    const gruppen = within(screen.getByRole('group', { name: 'Gruppen' }));
+    fireEvent.click(gruppen.getByRole('checkbox', { name: 'Programm' }));
+    expect((await hinweis()).textContent).toMatch(/^Eigene Auswahl/);
+    expect(tabelle().getByRole('button', { name: /Programm/ })).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(ANSICHT) ?? '{}').ausgeblendeteGruppen ?? []).toEqual(
+      [],
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gewohnte Ansicht' }));
+    expect(onFokusEnde).toHaveBeenCalled();
+  });
+
+  it('ohne Gruppe von der Startseite: kein Hinweis, der gemerkte Zeitraum gilt', () => {
+    const { laden } = zeigeF(null);
+    expect(screen.queryByRole('status', { name: 'Von der Startseite' })).toBeNull();
+    expect(laden).not.toHaveBeenCalled();
   });
 });

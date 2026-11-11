@@ -1,4 +1,5 @@
 import type { Antworten, OeffentlicheEinstellungen, Schrift } from '@shared/anmeldung/formular';
+import { vorJahren } from '@shared/ct/datum';
 
 /** Hilfen zum Anmeldeformular (A5) – getrennt von den Komponenten (React Fast Refresh). */
 
@@ -23,7 +24,7 @@ export function leereAntworten(): Antworten {
  */
 export function musterAntworten(e: OeffentlicheEinstellungen, heute: string): Antworten {
   const stichtag = (e.termin?.beginn ?? heute).slice(0, 10);
-  const geboren = (jahre: number) => `${Number(stichtag.slice(0, 4)) - jahre}${stichtag.slice(4)}`;
+  const geboren = (jahre: number) => vorJahren(stichtag, jahre);
   const kinder = e.wer === 'kinder';
   const personen =
     e.wer === 'einzeln'

@@ -27,7 +27,24 @@ export function sichtbareReiter(darfPlanen: boolean): Reiter<ReiterId>[] {
 
 /** Der Reiter aus der Adresse (`#/termine`) – Regel in `@ui/bedienung/reiterAdresse`. Unbekannt → Start. */
 export function reiterAusAdresse(hash: string, erlaubt: Reiter<ReiterId>[]): ReiterId {
+  if (planenGruppeAusAdresse(hash) !== null && erlaubt.some((r) => r.id === 'planen')) {
+    return 'planen';
+  }
   return ausAdresse(hash, erlaubt, 'start');
+}
+
+/**
+ * **Planen mit einer Gruppe** (Wunsch 7, Alwin 11.11.2026): Die Karte „Planen“ der Startseite öffnet `#/planen/gruppe/3` –
+ * nur diese Gruppe, die nächsten 6 Wochen, **nur für diesen Besuch** (der gemerkte Filter bleibt). Eine eigene Adresse,
+ * damit Zurück und Neuladen funktionieren.
+ */
+export function planenGruppeAusAdresse(hash: string): number | null {
+  const id = /^#\/planen\/gruppe\/(\d+)$/.exec(hash)?.[1];
+  return id ? Number(id) : null;
+}
+
+export function adresseFuerPlanenGruppe(gruppeId: number): string {
+  return `#/planen/gruppe/${gruppeId}`;
 }
 
 export function adresseFuer(id: ReiterId): string {

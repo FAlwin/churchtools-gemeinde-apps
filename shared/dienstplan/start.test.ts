@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bisDahin, startUebersicht, NAECHSTE_DIENSTE } from './start';
+import { bisDahin, planenZeitraum, startUebersicht, NAECHSTE_DIENSTE } from './start';
 import { zeile, mein } from './zeile.testutil';
 
 const TECHNIK = { id: 3, name: 'Technik', fuerAlle: false };
@@ -81,5 +81,18 @@ describe('bisDahin', () => {
     expect(bisDahin('2026-10-14', '2026-10-14')).toBe('heute');
     expect(bisDahin('2026-10-14', '2026-10-15')).toBe('morgen');
     expect(bisDahin('2026-10-14', '2026-10-18')).toBe('in 4 Tagen');
+  });
+});
+
+describe('planenZeitraum – dieselben Tage wie die Karte „Planen“ (Wunsch 7)', () => {
+  it('von heute bis zum letzten Tag, den die Karte noch zählt – der Tag danach zählt nicht', () => {
+    const zr = planenZeitraum(O.heute);
+    expect(zr).toEqual({ art: 'eigen', von: '2026-10-14', bis: '2026-11-24' });
+    if (zr.art !== 'eigen') throw new Error('eigen erwartet');
+    // Gegen die Zählung der Karte geprüft, nicht gegen eine Zahl: der letzte Tag zählt, der nächste nicht.
+    const frei = (tag: string) =>
+      startUebersicht([zeile(1, 'G', tag, { freiNachGruppe: { 3: 1 } })], O).planen[0].frei;
+    expect(frei(zr.bis)).toBe(1);
+    expect(frei('2026-11-25')).toBe(0);
   });
 });

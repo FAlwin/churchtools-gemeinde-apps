@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   adresseFuer,
+  adresseFuerPlanenGruppe,
   adresseFuerTermin,
+  planenGruppeAusAdresse,
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
@@ -41,5 +43,25 @@ describe('Adresse der Termin-Ansicht (E6-1b)', () => {
     for (const h of ['', '#/termine', '#/termin/', '#/termin/abc', '#/termin/148/x']) {
       expect(terminAusAdresse(h)).toBeNull();
     }
+  });
+});
+
+describe('Adresse „Planen mit einer Gruppe“ (Wunsch 7)', () => {
+  it('#/planen/gruppe/<id> → Gruppe und Reiter Planen; hin und zurück gleich', () => {
+    expect(planenGruppeAusAdresse(adresseFuerPlanenGruppe(3))).toBe(3);
+    expect(reiterAusAdresse('#/planen/gruppe/3', sichtbareReiter(true))).toBe('planen');
+    for (const h of [
+      '',
+      '#/planen',
+      '#/planen/gruppe/',
+      '#/planen/gruppe/x',
+      '#/planen/gruppe/3/x',
+    ]) {
+      expect(planenGruppeAusAdresse(h)).toBeNull();
+    }
+  });
+
+  it('ohne Planen-Recht führt die Adresse zum Start – wie jede unbekannte', () => {
+    expect(reiterAusAdresse('#/planen/gruppe/3', sichtbareReiter(false))).toBe('start');
   });
 });

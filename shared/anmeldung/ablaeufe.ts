@@ -25,6 +25,10 @@ import { htmlSicher, mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
 import { plusTage } from '../ct/datum';
 import { utcAus } from '../ct/zeit';
+import type { RoutinenSchritt } from '../ct/routinen';
+
+/** Lag bis O9-1 (11.11.2026) hier; jetzt in `shared/ct/routinen.ts` (auch der Gruppenwechsel schreibt Routinen). */
+export type { RoutinenSchritt };
 
 /** Name eines Systemfelds – so heißt es auch als Platzhalter bei ChurchTools (`/placeholders/group/{id}`). */
 const feld = (id: (typeof SYSTEMFELDER)[number]['id']) =>
@@ -354,17 +358,6 @@ export function ablaufMails(
   };
   return { platz, warte, erinnerung, unbekannt: [...unbekannt] };
 }
-
-/** Ein Schritt einer Routine, wie `PATCH /routines/{id}` ihn nimmt. */
-export type RoutinenSchritt =
-  | {
-      id?: number;
-      actionKey: 'send-member-email';
-      isEnabled: boolean;
-      actionData: { subject: string; body: string; addSignOutUrl: false; senderId: number };
-    }
-  | { id?: number; actionKey: 'special:wait'; isEnabled: true; actionData: { untilDate: string } }
-  | { id?: number; actionKey: 'remove-member'; isEnabled: true; actionData: Record<string, never> };
 
 /**
  * **Darf eine Veranstaltung ins Archiv?** (A9-4, D1/D2) – Archivieren schaltet die Abläufe ab (gemessen 24.10.2026), danach

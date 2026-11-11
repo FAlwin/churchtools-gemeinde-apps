@@ -423,6 +423,40 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
   });
 
+  it('aus Planen mit einer Gruppe (Wunsch 7): Termin öffnen und „zurück“ → wieder nur diese Gruppe', async () => {
+    breite(false);
+    localStorage.clear();
+    window.location.hash = '#/planen/gruppe/3';
+    laden.mockResolvedValue(s);
+    termineLaden.mockResolvedValue(KEINE_TERMINE);
+    // Ton (Technik) an jedem Termin, damit die Matrix Spalten hat.
+    const mitTon = ROH.map((r) => ({
+      ...r,
+      eventServices: [{ serviceId: 6, personId: null, name: null }],
+    })) as RohTermin[];
+    vi.mocked(ladeZeitraum).mockResolvedValue({ zeilen: [], plan: plan(mitTon) });
+    vi.mocked(ladeTermin).mockImplementation((_s, id) =>
+      Promise.resolve({ zeilen: [], plan: plan(mitTon.filter((r) => r.id === id)) }),
+    );
+    render(<App />);
+    expect((await screen.findByRole('status', { name: 'Von der Startseite' })).textContent).toMatch(
+      /^Nur Technik/,
+    );
+    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    expect(
+      within(bereiche).getByRole('button', { name: 'Planen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Gebetsabend' }));
+    expect(window.location.hash).toBe('#/termin/8');
+    expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Planen' }).find((b) => !bereiche.contains(b))!,
+    );
+    expect(window.location.hash).toBe('#/planen/gruppe/3');
+    expect(await screen.findByRole('status', { name: 'Von der Startseite' })).toBeTruthy();
+    localStorage.clear();
+  });
+
   it('direkt über die Adresse (Neuladen): Termin-Ansicht ohne Gruß, zurück zu „Start“', async () => {
     breite(false);
     window.location.hash = '#/termin/7';

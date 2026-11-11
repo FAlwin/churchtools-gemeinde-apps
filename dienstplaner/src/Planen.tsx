@@ -7,7 +7,8 @@ import { tagKurz } from '@shared/ct/datum';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
-import { zeitraumText, zeitraumVerschieben } from '@shared/ct/zeitraum';
+import { zeitraumText, zeitraumVerschieben, type Zeitraum } from '@shared/ct/zeitraum';
+import { planenZeitraum } from '@shared/dienstplan/start';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
 import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
@@ -56,6 +57,13 @@ interface Props {
   onTermin?: (id: number) => void;
   /** Der Ablauf in der Matrix (E6-6a) – ohne steht die Matrix ohne die Gruppe „Ablauf“ da. */
   ablauf?: { start: Start; zeitzone: string };
+  /**
+   * Von der Startseite (Wunsch 7, `#/planen/gruppe/3`): nur diese Dienstgruppe und die nächsten 6 Wochen – nur für diesen
+   * Besuch, der gemerkte Filter und Zeitraum bleiben. `null`/fehlt: Planen wie gewohnt.
+   */
+  fokusGruppe?: number | null;
+  /** „Gewohnte Ansicht“ – zurück zu Planen mit dem gemerkten Filter. */
+  onFokusEnde?: () => void;
 }
 
 /**
@@ -88,11 +96,37 @@ export function Planen({
   entwuerfe,
   onTermin,
   ablauf,
+  fokusGruppe = null,
+  onFokusEnde,
 }: Props) {
-  const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
+  const [gemerkt, setGemerkt] = useState<PlanenAnsicht>(leseAnsicht);
+  // Ein Besuch von der Startseite (Wunsch 7): Zeitraum und Gruppen gelten nur hier – `aus: null` heißt „alle außer der
+  // Gruppe“, ausgerechnet, sobald der Plan da ist. Alles andere (Breite, Ablauf zu …) wird wie immer gemerkt.
+  const [besuch, setBesuch] = useState<{
+    gruppe: number;
+    zeitraum: Zeitraum;
+    aus: string[] | null;
+  } | null>(() =>
+    fokusGruppe === null
+      ? null
+      : { gruppe: fokusGruppe, zeitraum: planenZeitraum(heute), aus: null },
+  );
+  let ansicht: PlanenAnsicht = besuch ? { ...gemerkt, zeitraum: besuch.zeitraum } : gemerkt;
   const setAnsicht = (a: PlanenAnsicht) => {
-    setAnsichtRoh(a);
-    merkeAnsicht(a);
+    const neu = besuch
+      ? { ...a, zeitraum: gemerkt.zeitraum, ausgeblendeteGruppen: gemerkt.ausgeblendeteGruppen }
+      : a;
+    // Nur wer die Gruppen wirklich ändert, macht aus „nur diese Gruppe“ eine eigene Auswahl (nicht schon „Breite“).
+    if (besuch) {
+      const gleich = a.ausgeblendeteGruppen.join('|') === ansicht.ausgeblendeteGruppen.join('|');
+      setBesuch({
+        ...besuch,
+        zeitraum: a.zeitraum,
+        aus: gleich ? besuch.aus : a.ausgeblendeteGruppen,
+      });
+    }
+    setGemerkt(neu);
+    merkeAnsicht(neu);
   };
   const matrixAblauf = useMatrixAblauf(ablauf, ansicht.ablaufZu, (ablaufZu) =>
     setAnsicht({ ...ansicht, ablaufZu }),
@@ -140,6 +174,16 @@ export function Planen({
     onMehr,
     onAktualisieren,
   });
+  // Erst mit dem Plan steht fest, welche Gruppen es gibt – beim Besuch sind alle außer der einen ausgeblendet.
+  const besuchGruppe = besuch && plan?.gruppen.find((g) => g.gruppe?.id === besuch.gruppe);
+  if (besuch) {
+    ansicht = {
+      ...ansicht,
+      ausgeblendeteGruppen:
+        besuch.aus ??
+        (plan?.gruppen ?? []).map(schluessel).filter((k) => k !== String(besuch.gruppe)),
+    };
+  }
 
   // Einteilen über Entwürfe (E4/E5) – Fenster, Leiste und was die Plätze bekommen; dieselben in der Termin-Ansicht (F1).
   const {
@@ -355,6 +399,25 @@ export function Planen({
           fehler={nachladeFehler}
           onNochmal={bereich ? zeitraumNeu : () => nachladen('weiter')}
         />
+      )}
+      {besuch && (
+        <div className={styles.besuchHinweis} role="status" aria-label="Von der Startseite">
+          <span>
+            {besuch.aus === null ? (
+              <>
+                Nur <b>{besuchGruppe ? gruppenName(besuchGruppe) : 'eine Gruppe'}</b>
+              </>
+            ) : (
+              'Eigene Auswahl'
+            )}{' '}
+            · nächste 6 Wochen – von der Startseite, nur für jetzt.
+          </span>
+          {onFokusEnde && (
+            <button type="button" className={styles.alteKnopf} onClick={onFokusEnde}>
+              Gewohnte Ansicht
+            </button>
+          )}
+        </div>
       )}
       {lage.alte.length > 0 && entwuerfe && ew.art === 'fertig' && (
         <div className={styles.alteHinweis} role="status" aria-label="Alte Entwürfe">

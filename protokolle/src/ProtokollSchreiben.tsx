@@ -59,6 +59,7 @@ import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { Marke } from './Marke';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import {
+  freigeben,
   protokollLesen,
   schreibenUebernehmen,
   speichern,
@@ -68,6 +69,12 @@ import {
   type ProtokollOrt,
 } from './schreiben';
 import { treffenAnlegen } from './planen';
+import { anwesenheitLesen, treffenAbschliessen } from './anwesenheitSchreiben';
+import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
+import { ZurueckVermerk } from './FreigabeVermerk';
+import { festhaltenFuerFreigabe } from '@shared/protokolle/festePunkte';
+import { freigabeHinweise, type Hinweis } from '@shared/protokolle/freigabe';
+import type { TreffenStand } from '@shared/protokolle/anwesenheit';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
 import ansicht from './SitzungAnsicht.module.scss';
 import styles from './ProtokollSchreiben.module.scss';
@@ -113,6 +120,7 @@ export function ProtokollSchreiben({
   vollerName = ich.name,
   onVorschlag,
   onBearbeiten,
+  onFreigegeben,
   onZurueck,
   onZuSitzung,
 }: {
@@ -141,6 +149,8 @@ export function ProtokollSchreiben({
   onVorschlag?: (v: Vorschlag) => void;
   /** „Bearbeiten“ im Kopf – die Sitzung dieses Protokolls (Zeit, Titel, Eingeladene, absagen; K2b), nur für die Leitung. */
   onBearbeiten?: () => void;
+  /** Freigegeben (S6-1) – die Liste dahinter lädt neu und zeigt das Protokoll zum Lesen. */
+  onFreigegeben?: () => void;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
   /**
@@ -189,6 +199,30 @@ export function ProtokollSchreiben({
   // Je Öffnen wird einmal eingefügt, was hinein soll – nicht bei jedem Neuzeichnen.
   const eingefuegt = useRef(false);
 
+  // To-Dos vor dem Schreiben abgleichen (S4-2) – beim Speichern und beim Freigeben (S6-1) derselbe Weg.
+  const abgleich = useCallback(
+    (d: readonly Block[]) =>
+      mOrt
+        ? async () =>
+            setTodos(
+              await aufgabenSchreiben(
+                mOrt,
+                (vorhanden) =>
+                  aufgabenAbgleich({
+                    eintraege: ableiten(d).aufgaben,
+                    vorhanden,
+                    gruppe: gruppeId,
+                    sitzung: ort.sitzung,
+                    von: schreiber.person,
+                    am: new Date().toISOString(),
+                  }),
+                schreiber,
+              ),
+            )
+        : undefined,
+    [mOrt, gruppeId, ort.sitzung, schreiber, setTodos],
+  );
+
   const oeffnen = useCallback(() => {
     setLaden({ art: 'laedt' });
     eingefuegt.current = false;
@@ -226,32 +260,7 @@ export function ProtokollSchreiben({
         const s = new SchreibSteuerung(
           {
             sperreNehmen: (stand) => sperreNehmen(ort, schreiber, stand),
-            speichern: (stand, d) =>
-              speichern(
-                ort,
-                schreiber,
-                stand,
-                d,
-                new Date(),
-                mOrt
-                  ? async () =>
-                      setTodos(
-                        await aufgabenSchreiben(
-                          mOrt,
-                          (vorhanden) =>
-                            aufgabenAbgleich({
-                              eintraege: ableiten(d).aufgaben,
-                              vorhanden,
-                              gruppe: gruppeId,
-                              sitzung: ort.sitzung,
-                              von: schreiber.person,
-                              am: new Date().toISOString(),
-                            }),
-                          schreiber,
-                        ),
-                      )
-                  : undefined,
-              ),
+            speichern: (stand, d) => speichern(ort, schreiber, stand, d, new Date(), abgleich(d)),
             dokument: () => editor.current?.dokument() ?? dokument,
             jetzt: () => new Date(),
           },
@@ -271,7 +280,7 @@ export function ProtokollSchreiben({
       },
       (e: unknown) => setLaden({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
-  }, [ort, schreiber, mOrt, gruppeId, setTodos]);
+  }, [ort, schreiber, mOrt, setTodos, abgleich]);
 
   useEffect(oeffnen, [oeffnen]);
 
@@ -444,6 +453,8 @@ export function ProtokollSchreiben({
   const aufgaben = useMemo(() => [...todos.values()].filter((a) => !a.geloescht), [todos]);
 
   // „Gruppentreffen anlegen“ im festen Punkt „Anwesenheit“ (S5-3): anlegen (ohne Mail), mit dem Protokoll verknüpfen.
+  // Im Editor angelegtes Treffen (S5-3) – für die Hinweise vor dem Freigeben (S6-1), bevor die Liste neu lädt.
+  const neuesTreffenId = useRef<number | null>(null);
   const neuesTreffen = useCallback(async () => {
     const id = await treffenAnlegen(
       gruppeId,
@@ -452,6 +463,7 @@ export function ProtokollSchreiben({
       zeitzone,
     );
     await treffenVerknuepfen(ort, id);
+    neuesTreffenId.current = id;
     return id;
   }, [gruppeId, sitzung.beginn, sitzung.ende, zeitzone, ort]);
 
@@ -543,6 +555,77 @@ export function ProtokollSchreiben({
     ? []
     : offeneFuer(vorschlaege, sitzung, kommend, heuteImKalender(new Date(), zone), zone);
 
+  // Freigeben (S6-1): Hinweise im Fenster – die Anwesenheit kommt frisch aus ChurchTools nach.
+  const [freigabe, setFreigabe] = useState<{
+    laedt: boolean;
+    hinweise: Hinweis[];
+    zusammenfassung: string;
+    treffen: number | null;
+  } | null>(null);
+  const freigabeOeffnen = () => {
+    const d = editor.current?.dokument() ?? dok;
+    const treffen =
+      neuesTreffenId.current ??
+      (laden.art === 'bereit' ? laden.kopf.treffen : null) ??
+      sitzung.treffen;
+    const mit = (anwesenheit: TreffenStand | null) =>
+      freigabeHinweise({
+        dokument: d,
+        aufgaben: todosRef.current,
+        anwesenheit,
+        offeneVorschlaege,
+      });
+    setFreigabe({ laedt: treffen !== null, treffen, ...mit(null) });
+    if (treffen !== null)
+      anwesenheitLesen(gruppeId, treffen).then(
+        (a) => setFreigabe((f) => f && { ...f, laedt: false, ...mit(a) }),
+        // Lesen gescheitert: ohne Anwesenheits-Hinweis weiter – Freigeben bleibt möglich.
+        () => setFreigabe((f) => f && { ...f, laedt: false }),
+      );
+  };
+  const freigebenJetzt = async (): Promise<FreigabeFolge> => {
+    const st = steuerung.current;
+    if (!st || !(await st.jetzt()))
+      throw new ApiError(
+        409,
+        'Die letzten Änderungen sind noch nicht gespeichert – bitte gleich noch einmal versuchen.',
+      );
+    const d = festhaltenFuerFreigabe(editor.current?.dokument() ?? dok, {
+      aufgaben: [...todosRef.current.values()],
+      gruppe: gruppeId,
+      sitzung: { beginn: sitzung.beginn, kopf: { sitzung: ort.sitzung, status: 'entwurf' } },
+      protokolle,
+      heute: heuteImKalender(new Date(), zone),
+    });
+    const r = await freigeben(ort, schreiber, st.basisStand, d, ichV, new Date(), abgleich(d));
+    if (r.art !== 'ok')
+      throw new ApiError(
+        409,
+        r.art === 'gesperrt'
+          ? `${r.sperre.name} schreibt gerade – freigeben geht erst danach.`
+          : r.art === 'veraendert'
+            ? 'Inzwischen hat jemand anderes gespeichert – bitte den aktuellen Stand laden.'
+            : r.art === 'fest'
+              ? 'Das Protokoll ist schon freigegeben.'
+              : 'Dieses Protokoll gibt es nicht mehr.',
+      );
+    // Frei: dieses Fenster schreibt nicht mehr (und gibt beim Schließen keine Sperre frei).
+    st.stoppen();
+    steuerung.current = null;
+    gespeichert.current = true;
+    const t = r.kopf.treffen;
+    return t !== null ? { treffen: () => treffenAbschliessen(gruppeId, t) } : {};
+  };
+  const zurStelle = (ziel: string) => {
+    setFreigabe(null);
+    setLesen(false);
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-id="${CSS.escape(ziel)}"]`)
+        ?.scrollIntoView?.({ block: 'center' });
+    });
+  };
+
   // Feste Punkte (S4-3a) – derselbe Rahmen für Editor, Lese-Ansicht und „nur lesen“.
   const rahmen = (inhalt: ReactNode) => (
     <FestePunkteRahmen
@@ -568,6 +651,9 @@ export function ProtokollSchreiben({
     </FestePunkteRahmen>
   );
 
+  // Freigeben darf, wer hier gerade schreiben kann (niemand sonst schreibt) – im Editor ist das immer die Leitung.
+  const darfFreigeben = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+
   const kopfZeile = (
     <>
       <button
@@ -591,17 +677,29 @@ export function ProtokollSchreiben({
           <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
-        {onBearbeiten && (
+        {(onBearbeiten || darfFreigeben) && (
           <div className={ansicht.aktionen}>
-            <KopfKnopf
-              label="Bearbeiten"
-              title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
-              symbol={<Icon name="pencil" size={16} />}
-              onClick={onBearbeiten}
-            />
+            {darfFreigeben && (
+              <KopfKnopf
+                haupt
+                label="Freigeben"
+                title="Protokoll freigeben"
+                symbol={<Icon name="stempel" size={16} />}
+                onClick={freigabeOeffnen}
+              />
+            )}
+            {onBearbeiten && (
+              <KopfKnopf
+                label="Bearbeiten"
+                title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
+                symbol={<Icon name="pencil" size={16} />}
+                onClick={onBearbeiten}
+              />
+            )}
           </div>
         )}
       </header>
+      <ZurueckVermerk kopf={laden.art === 'bereit' ? laden.kopf : null} zeitzone={zeitzone} />
     </>
   );
 
@@ -752,6 +850,22 @@ export function ProtokollSchreiben({
               )(),
             ablehnen: setAblehnenFuer,
           }}
+        />
+      )}
+      {freigabe && (
+        <FreigabeFenster
+          hinweise={freigabe.hinweise}
+          zusammenfassung={freigabe.zusammenfassung}
+          mitTreffen={freigabe.treffen !== null}
+          laedt={freigabe.laedt}
+          onAnsehen={zurStelle}
+          onFreigeben={freigebenJetzt}
+          onFertig={() => {
+            setFreigabe(null);
+            if (onFreigegeben) onFreigegeben();
+            else onZurueck(true);
+          }}
+          onClose={() => setFreigabe(null)}
         />
       )}
       {ablehnenFuer && mOrt && (

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import {
   sperreVon,
@@ -14,6 +14,7 @@ import * as S from './schreiben';
 import * as A from './aufgabenSchreiben';
 import * as W from './mitarbeitWerte';
 import * as P from './planen';
+import * as AW from './anwesenheitSchreiben';
 import { neueAufgabe } from '@shared/protokolle/aufgaben';
 import {
   annehmen,
@@ -38,6 +39,7 @@ vi.mock('./vorschlaegeSchreiben', () => ({
   }),
 }));
 vi.mock('./schreiben', () => ({
+  freigeben: vi.fn(),
   protokollLesen: vi.fn(),
   schreibenUebernehmen: vi.fn(),
   speichern: vi.fn(),
@@ -46,6 +48,21 @@ vi.mock('./schreiben', () => ({
   treffenVerknuepfen: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('./planen', () => ({ treffenAnlegen: vi.fn(() => Promise.resolve(88)) }));
+// Freigabe (S6-1): Anwesenheit lesen und Treffen abschließen als Attrappen.
+vi.mock('./anwesenheitSchreiben', async (orig) => ({
+  ...(await orig<typeof import('./anwesenheitSchreiben')>()),
+  anwesenheitLesen: vi.fn(() =>
+    Promise.resolve({
+      abgeschlossen: false,
+      begonnen: true,
+      personen: [
+        { person: 1, name: 'Alwin Friesen', status: 'da' },
+        { person: 19, name: 'Spike Musiker', status: 'offen' },
+      ],
+    }),
+  ),
+  treffenAbschliessen: vi.fn(() => Promise.resolve()),
+}));
 vi.mock('./aufgabenSchreiben', () => ({
   aufgabenWerte: vi.fn(() => Promise.resolve([])),
   aufgabenSchreiben: vi.fn(() => Promise.resolve([])),
@@ -609,5 +626,101 @@ describe('Vorschläge beim Schreiben (S5-4)', () => {
       expect(stand('v2')).toMatchObject({ stand: 'abgelehnt', grund: 'Nicht jetzt' }),
     );
     expect(E.einfuegen).not.toHaveBeenCalled();
+  });
+});
+
+describe('Freigeben (S6-1)', () => {
+  const MIT_TREFFEN = { ...KOPF, treffen: 15 };
+  const zeigeFrei = (onFreigegeben = vi.fn()) => {
+    render(
+      <ProtokollSchreiben
+        sitzung={{ ...SITZUNG, kopf: MIT_TREFFEN }}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        vollerName="Alwin Friesen"
+        onFreigegeben={onFreigegeben}
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+    return onFreigegeben;
+  };
+  const oeffnen = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Protokoll freigeben' }));
+    return screen.findByRole('dialog');
+  };
+  const freigabeKlick = async () => {
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Freigeben$/ })).toHaveProperty('disabled', false),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Freigeben$/ }));
+  };
+
+  beforeEach(() => {
+    lesen.mockResolvedValue({ kopf: MIT_TREFFEN, dokument: DOK });
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: MIT_TREFFEN });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: MIT_TREFFEN });
+  });
+
+  it('Fenster mit Hinweisen; Freigeben schreibt frei (voller Name), schließt das Treffen ab, dann zum Lesen', async () => {
+    vi.mocked(S.freigeben).mockResolvedValue({
+      art: 'ok',
+      kopf: { ...MIT_TREFFEN, status: 'frei' },
+    });
+    const fertig = zeigeFrei();
+    const d = await oeffnen();
+    expect(await within(d).findByText('Anwesenheit: 1 noch offen – geprüft?')).toBeTruthy();
+    expect(within(d).getByText('Spike Musiker')).toBeTruthy();
+    expect(within(d).getByText(/Gruppentreffen wird abgeschlossen/)).toBeTruthy();
+    await freigabeKlick();
+    await waitFor(() => expect(fertig).toHaveBeenCalled());
+    const [ort, , , , wer] = vi.mocked(S.freigeben).mock.calls[0];
+    expect(ort).toEqual({ modul: 24, kategorie: 62, sitzung: 's1' });
+    expect(wer).toEqual({ person: 1, name: 'Alwin Friesen' });
+    expect(AW.treffenAbschliessen).toHaveBeenCalledWith(194, 15);
+  });
+
+  it('Treffen lässt sich nicht abschließen: „freigegeben“ mit „Nochmal versuchen“ – klappt es dann, weiter', async () => {
+    vi.mocked(S.freigeben).mockResolvedValue({
+      art: 'ok',
+      kopf: { ...MIT_TREFFEN, status: 'frei' },
+    });
+    vi.mocked(AW.treffenAbschliessen).mockRejectedValueOnce(new Error('weg'));
+    const fertig = zeigeFrei();
+    await oeffnen();
+    await freigabeKlick();
+    expect(await screen.findByText(/Das Protokoll ist freigegeben/)).toBeTruthy();
+    expect(fertig).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal versuchen' }));
+    await waitFor(() => expect(fertig).toHaveBeenCalled());
+    expect(AW.treffenAbschliessen).toHaveBeenCalledTimes(2);
+    expect(S.freigeben).toHaveBeenCalledTimes(1);
+  });
+
+  it('abgewiesen (jemand anderes schreibt): Meldung im Fenster, nicht freigegeben, Treffen bleibt', async () => {
+    vi.mocked(S.freigeben).mockResolvedValue({
+      art: 'gesperrt',
+      sperre: sperreVon({ person: 7, name: 'Johann', fenster: 'j' }, new Date()),
+    });
+    const fertig = zeigeFrei();
+    await oeffnen();
+    await freigabeKlick();
+    expect(await screen.findByText(/Johann schreibt gerade/)).toBeTruthy();
+    expect(fertig).not.toHaveBeenCalled();
+    expect(AW.treffenAbschliessen).not.toHaveBeenCalled();
+  });
+
+  it('schreibt jemand anderes: kein „Freigeben“', async () => {
+    const johann = sperreVon({ person: 7, name: 'Johann', fenster: 'j' }, new Date());
+    lesen.mockResolvedValue({ kopf: { ...MIT_TREFFEN, sperre: johann }, dokument: DOK });
+    zeigeFrei();
+    await screen.findByText('Johann schreibt gerade.');
+    expect(screen.queryByRole('button', { name: 'Protokoll freigeben' })).toBeNull();
   });
 });

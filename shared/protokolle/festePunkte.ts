@@ -79,9 +79,15 @@ export function istFruehererTitel(titel: string): boolean {
   return titel === TITEL_LETZTES_PROTOKOLL || /^Protokoll vom \d{2}\.\d{2}\.\d{4}$/.test(titel);
 }
 
-/** `props.fest` für „dieses Protokoll“ (`null` = keins) – beim Wählen und bei der Freigabe dieselbe Schreibweise. */
-export function festesProtokollWert(sitzung: string | null): string {
-  return JSON.stringify({ sitzung } satisfies FestesProtokoll);
+/**
+ * `props.fest` für „dieses Protokoll“ (`null` = keins) – beim Wählen und bei der Freigabe dieselbe Schreibweise.
+ * `beiFreigabe` (S6-1): erst die Freigabe hat es festgehalten – „Freigabe zurücknehmen“ macht nur so einen Punkt wieder
+ * live; eine bewusste Wahl (K3b-2) bleibt.
+ */
+export function festesProtokollWert(sitzung: string | null, beiFreigabe = false): string {
+  return JSON.stringify(
+    beiFreigabe ? { sitzung, freigabe: true } : ({ sitzung } satisfies FestesProtokoll),
+  );
 }
 
 const gelesen = (x: unknown): Record<string, unknown> | null => {
@@ -184,7 +190,7 @@ export function festePunkteFesthalten(
     const art = b.props?.art;
     const fest =
       art === 'letztes-protokoll'
-        ? festesProtokollWert(q.letztes)
+        ? festesProtokollWert(q.letztes, true)
         : art === 'offene-aufgaben'
           ? JSON.stringify(stand)
           : null;
@@ -192,4 +198,52 @@ export function festePunkteFesthalten(
     return { ...b, props: { ...b.props, fest }, ...kinder };
   };
   return dokument.map(halten);
+}
+
+/**
+ * **Feste Punkte wieder live** (S6-1, „Freigabe zurücknehmen“, Alwin 11.11.2026): Was erst die Freigabe festgehalten
+ * hat, fällt weg – „Offene To-Dos“ immer, „Letztes Protokoll“ nur, wenn die Freigabe es gesetzt hat; ein bewusst
+ * gewähltes früheres Protokoll (K3b-2) bleibt. Beim nächsten Freigeben wird neu festgehalten.
+ */
+export function festePunkteLoesen(dokument: readonly Block[]): Block[] {
+  const loesen = (b: Block): Block => {
+    const kinder = b.children?.length ? { children: b.children.map(loesen) } : {};
+    if (b.type !== BLOCK.verweis || !gelesen(b.props?.fest)) return { ...b, ...kinder };
+    const art = b.props?.art;
+    const weg =
+      art === 'offene-aufgaben' ||
+      (art === 'letztes-protokoll' && gelesen(b.props?.fest)?.freigabe === true);
+    if (!weg) return { ...b, ...kinder };
+    // Leer wie ein frisch eingefügter Punkt (Standard im Editor-Schema) – nicht weggelassen.
+    return { ...b, props: { ...b.props, fest: '' }, ...kinder };
+  };
+  return dokument.map(loesen);
+}
+
+/**
+ * **Festhalten bei der Freigabe** mit denselben Eingaben, die der Punkt live zeigt (`FesterPunkt`): die offenen To-Dos
+ * von früher und das letzte freigegebene Protokoll vor dieser Sitzung. Die eine Stelle dafür.
+ */
+export function festhaltenFuerFreigabe<T extends SitzungsBezug>(
+  dokument: readonly Block[],
+  q: {
+    aufgaben: readonly Aufgabe[];
+    gruppe: number;
+    sitzung: SitzungsBezug & { kopf: { sitzung: string; status: string } };
+    protokolle: readonly T[];
+    heute: string;
+  },
+): Block[] {
+  const letztes = letztesProtokoll(q.protokolle, q.sitzung);
+  return festePunkteFesthalten(dokument, {
+    offen: offeneVonFrueher({
+      aufgaben: q.aufgaben,
+      gruppe: q.gruppe,
+      sitzung: q.sitzung.kopf.sitzung,
+      seit: letztes?.beginn ?? null,
+      heute: q.heute,
+      fest: null,
+    }),
+    letztes: letztes?.kopf?.sitzung ?? null,
+  });
 }

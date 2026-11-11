@@ -1,13 +1,13 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3 + S5-3 + S5-4 (06.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3 + S5 + S6-1 (11.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
 > Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
-> die nächste Sitzung fest; Mitglieder schlagen Punkte vor. Freigabe und PDF folgen (Bauplan S6–S9 in
-> `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> die nächste Sitzung fest und geben Protokolle frei; Mitglieder schlagen Punkte vor. Beitrag in der Gruppe und PDF
+> folgen (Bauplan S6-2 bis S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -202,8 +202,21 @@ geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do
 zuerst) mit Status-Kreis, Wer und Bis; darunter eingeklappt „Seit der Sitzung am … erledigt“. Im Editor hakt man sie
 am Kreis ab, in der Lese-Ansicht ist es nur Anzeige. „Protokoll der letzten Sitzung“ zeigt das letzte **freigegebene**
 Protokoll der Gruppe vor dieser Sitzung; „Öffnen“ zeigt es im Fenster. Beide füllen sich **bis zur Freigabe live**;
-bei der Freigabe (S6) merkt sich das Protokoll, was sie zeigten. Einfügen über „Einfügen“ in der Werkzeugleiste oder das „/“-Menü
+bei der Freigabe merkt sich das Protokoll, was sie zeigten (wird die Freigabe zurückgenommen, sind sie wieder live; ein
+bewusst gewähltes früheres Protokoll bleibt). Einfügen über „Einfügen“ in der Werkzeugleiste oder das „/“-Menü
 (Gruppe „Feste Punkte“) – als Tagesordnungspunkt mit Titel, den man umbenennen kann.
+
+**Freigeben (S6-1):** Im Editor oben **„Freigeben“** (blau, nur die Leitung, solange niemand anders schreibt). Das
+Fenster zeigt **Hinweise**, ohne zu zwingen: wer in der Anwesenheit noch offen ist („geprüft?“), To-Dos ohne
+Zuständigen, noch offene Vorschläge (sie rutschen zur nächsten Sitzung) – „Ansehen“ springt an die Stelle – und eine
+Zusammenfassung. **Freigeben** speichert zuerst, hält die festen Punkte fest, macht das Protokoll **fest** und schließt
+das **Gruppentreffen** in ChurchTools ab (danach lässt sich die Anwesenheit dort nicht mehr ändern; Kommentar und Gäste
+bleiben). Klappt das Abschließen nicht, ist das Protokoll trotzdem frei und das Fenster bietet „Nochmal versuchen“.
+To-Dos bleiben abhakbar. Danach steht oben **„freigegeben am … von …“**.
+
+**Freigabe zurücknehmen (S6-1):** Bei einem freigegebenen Protokoll sieht die Leitung **„Freigabe zurücknehmen“**
+(mit Rückfrage). Es wird wieder ein Entwurf; über dem Protokoll steht „Freigabe zurückgenommen am … von … – vorher
+freigegeben am … von …“. Das Gruppentreffen bleibt abgeschlossen. Beim nächsten Freigeben wird neu festgehalten.
 
 **Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten
 Überschrift gleicher oder höherer Stufe. Abgelegt wird nur an Abschnittsgrenzen: Lässt man mitten in einem anderen
@@ -244,7 +257,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   und vor dem ersten Schreiben am Protokoll. Die Blöcke `EditorBloecke.tsx` bekommen To-Dos und Mitglieder über
   `aufgabenKontext.ts`.
 - Feste Punkte: Regel `shared/protokolle/festePunkte.ts` (`letztesProtokoll`, `offeneVonFrueher`,
-  `festePunkteFesthalten` – die Freigabe in S6 muss es aufrufen, sonst bleiben die Punkte live), Baustein
+  `festePunkteFesthalten` über `festhaltenFuerFreigabe` bei der Freigabe, `festePunkteLoesen` beim Zurücknehmen),
+  Baustein
   `FesterPunkt.tsx` für Editor und Lese-Ansicht, Kontext + Fenster `FestePunkteRahmen.tsx`. Festgehalten wird in
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in

@@ -71,6 +71,44 @@ describe('Felder', () => {
     expect(hand[NR]).toBe('HAND01');
   });
 
+  it('F1b: von Hand wird Ausgeblendetes nicht geschrieben – dieselbe Regel wie im Formular', () => {
+    const { x, a } = ein(e());
+    // Die Quelle muss davor stehen: Fotos nach vorn.
+    const foto = x.formular.person.find((f) => f.id === 'foto')!;
+    x.formular.person = [
+      x.formular.person[0],
+      foto,
+      ...x.formular.person.slice(1).filter((f) => f !== foto),
+    ];
+    x.formular.person = x.formular.person.map((f) =>
+      f.id === 'allergy'
+        ? {
+            ...f,
+            bed: {
+              modus: 'eine' as const,
+              regeln: [{ feld: 'foto', op: 'ist' as const, wert: 'Nein' }],
+            },
+          }
+        : f,
+    );
+    const hand = handFelder(x, a, { option: 0, extras: [] }, HEUTE, FELDER, {
+      nr: 'HAND01',
+      mitPlatz: true,
+      papier: null,
+    });
+    expect(a.personen[0].allergy).toBe('Nüsse'); // Jonas: Fotos „Ja“ → Allergien ausgeblendet
+    expect(hand[x.ctFelder.allergy]).toBeUndefined();
+    expect(hand[x.ctFelder.foto]).toBeDefined();
+    // Gegenfall: Fotos „Nein“ → Allergien sichtbar und geschrieben.
+    a.personen[0].foto = 'Nein';
+    const sichtbar = handFelder(x, a, { option: 0, extras: [] }, HEUTE, FELDER, {
+      nr: 'HAND01',
+      mitPlatz: true,
+      papier: null,
+    });
+    expect(sichtbar[x.ctFelder.allergy]).toBe('Nüsse');
+  });
+
   it('Unterschrift auf Papier: vermerkt mit Name und Tag, ohne Striche', () => {
     const { x, a } = ein(e());
     delete a.anmeldung.sign;

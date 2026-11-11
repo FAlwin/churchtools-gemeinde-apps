@@ -5,13 +5,14 @@ import { ApiError } from '@ui/ct/fehler';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import { FeldEingabe } from '@ui/anmeldeformular/FeldEingabe';
+import { useBedingungen } from '@ui/anmeldeformular/useBedingungen';
+import { leeren } from '@shared/anmeldung/bedingungen';
 import pv from '@ui/anmeldeformular/AnmeldeFormular.module.scss';
 import {
   geburtsdatumAn,
   mailGueltig,
   pruefeAntworten,
   type Antwort,
-  type Antworten,
   type Feld,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
@@ -155,7 +156,6 @@ export function VonHandFenster({
   });
   const [gleiche, setGleiche] = useState<Gefunden[]>([]);
   const [wahl, setWahl] = useState<Wahl | null>(null);
-  const [antworten, setAntworten] = useState<Antworten>({ anmeldung: {}, personen: [{}] });
   const [option, setOption] = useState(() =>
     Math.max(
       0,
@@ -171,13 +171,20 @@ export function VonHandFenster({
   const [nr] = useState(() => dazu?.nr ?? neueAnmeldeNr());
 
   const hf = useMemo(() => handFormular(e.formular), [e.formular]);
+  // F1b: dieselben Bedingungen wie im Formular (`useBedingungen`) – ausblenden, Antworten sperren, Wahl lösen.
+  const { antworten, setAntworten, zeigen, bedingt } = useBedingungen(hf, () => ({
+    anmeldung: {},
+    personen: [{}],
+  }));
+  // Was gespeichert würde: ohne Ausgeblendetes (`leeren`, wie beim Absenden) – fürs Geburtsdatum unten.
+  const geleert = leeren(e.formular, antworten);
   const mitGeburt = geburtsdatumAn(e.formular);
   const platz = handPlatz(lage, trotzdem);
   const mitPlatz = platz.status === 'active';
   const betrag = betragAus(e, antworten, { option, extras }, heute, [mitPlatz]);
   // Person dazu: nur ihre Fragen werden geprüft – und sie bekommt eine eigene Zahlung (wie beim Nachrücken).
   const pruefFormular = dazu ? { anmeldung: [], person: hf.person } : hf;
-  const birthAntwort = antworten.personen[0].birth;
+  const birthAntwort = geleert.personen[0].birth;
   const dz =
     dazu && wahl
       ? dazuPlan(
@@ -270,7 +277,7 @@ export function VonHandFenster({
           werte[cf.betrag] = euroText(dz.zahlung.betragCent);
           werte[cf.aufschluesselung] = dz.zahlung.aufschluesselung;
         }
-        const birth = antworten.personen[0].birth;
+        const birth = geleert.personen[0].birth;
         const r = await vonHandAnmelden(
           id,
           {
@@ -603,19 +610,22 @@ export function VonHandFenster({
         ) : (
           <section className={`${a.teil} ${a.handFragen}`}>
             <h3>Für die Anmeldung</h3>
-            {hf.anmeldung.filter(sichtbar).map((x) => (
-              <div key={x.id} className={a.handFragen}>
-                {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
-                {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
-                <FeldEingabe
-                  feld={x}
-                  pfad={`anmeldung.${x.id}`}
-                  wert={antworten.anmeldung[x.id]}
-                  onWert={(w) => setAnmeldung(x.id, w)}
-                  fehler={fehlerFelder}
-                />
-              </div>
-            ))}
+            {hf.anmeldung
+              .filter((x) => sichtbar(x) && zeigen(x))
+              .map((x) => (
+                <div key={x.id} className={a.handFragen}>
+                  {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
+                  {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
+                  <FeldEingabe
+                    feld={x}
+                    pfad={`anmeldung.${x.id}`}
+                    wert={antworten.anmeldung[x.id]}
+                    onWert={(w) => setAnmeldung(x.id, w)}
+                    fehler={fehlerFelder}
+                    {...bedingt(x, `anmeldung.${x.id}`)}
+                  />
+                </div>
+              ))}
             {mitUnterschrift(e.formular) && (
               <>
                 <button
@@ -638,17 +648,20 @@ export function VonHandFenster({
 
         <section className={`${a.teil} ${a.handFragen}`}>
           <h3>{person ? ganz(person) : 'Person'}</h3>
-          {hf.person.filter(sichtbar).map((x) => (
-            <FeldEingabe
-              key={x.id}
-              feld={x}
-              pfad={`personen.0.${x.id}`}
-              wert={antworten.personen[0][x.id]}
-              onWert={(w) => setPerson(x.id, w)}
-              fehler={fehlerFelder}
-              gesperrt={gesperrt(x)}
-            />
-          ))}
+          {hf.person
+            .filter((x) => sichtbar(x) && zeigen(x, 0))
+            .map((x) => (
+              <FeldEingabe
+                key={x.id}
+                feld={x}
+                pfad={`personen.0.${x.id}`}
+                wert={antworten.personen[0][x.id]}
+                onWert={(w) => setPerson(x.id, w)}
+                fehler={fehlerFelder}
+                gesperrt={gesperrt(x)}
+                {...bedingt(x, `personen.0.${x.id}`, 0)}
+              />
+            ))}
         </section>
 
         {kostet && !dazu && (g.art === 'auswahl' || e.preis.extras.length > 0) && (

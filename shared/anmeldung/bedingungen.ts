@@ -1,8 +1,8 @@
 /**
  * **Bedingungen im Formular** (Etappe F1a, Entwurf `f1-bedingungen-nachweise-v1`, Alwin 11.11.2026) – eine Frage nur
  * zeigen, wenn …; eine einzelne Antwort nur wählbar, wenn …. Die EINE Stelle für diese Regeln: das öffentliche
- * Formular, die Pflichtprüfung (`pruefeAntworten`), „Deine Anmeldung“, die Anmeldung von Hand, die Vorschau und das
- * Absenden lesen hier.
+ * Formular, die Pflichtprüfung (`pruefeAntworten`), die Anmeldung von Hand, die Vorschau (über
+ * `ui/anmeldeformular/useBedingungen.ts`) und das Absenden (`anmeldungAufbauen`, `buchungAus`) lesen hier.
  *
  * - Wie bei Tally: beliebig viele Bedingungen je Frage, „eine reicht“ oder „alle müssen“.
  * - Als Quelle gehen nur Fragen **davor** – so entstehen keine Kreise. Eine Frage je Person darf zusätzlich auf jede
@@ -230,26 +230,52 @@ export function geloestHinweis(u: UngueltigeAntwort): string {
   return `„${u.antwort}“ ist ${grund ? `${grund} möglich` : 'jetzt nicht mehr möglich'} – bitte neu wählen.`;
 }
 
+/** Tiefe Kopie der Antworten (eine Ebene je Teil) – die Bereiniger ändern nie die übergebenen Antworten. */
+function kopie(a: Antworten): Antworten {
+  return { anmeldung: { ...a.anmeldung }, personen: a.personen.map((p) => ({ ...p })) };
+}
+
+/** Höchstzahl der Runden: Jede Runde, die etwas ändert, braucht eine Stufe – mehr Stufen als Felder gibt es nicht. */
+const runden = (f: Formular) => f.anmeldung.length + f.person.length + 1;
+
 /**
- * **Antworten bereinigen** – ungültige Wahl lösen und ausgeblendete Fragen leeren, so lange, bis sich nichts mehr
- * ändert (eine geleerte Frage kann weitere ausblenden). Gibt neue Antworten zurück; die alten bleiben unberührt.
+ * **Ungültige Wahl lösen** – nur gewählte Antworten, die gerade nicht wählbar sind; ausgeblendete Fragen bleiben
+ * stehen (im Formular kommt ihr Wert zurück, wenn die Frage wieder auftaucht). So lange, bis nichts mehr ungültig
+ * ist – eine gelöste Wahl kann eine weitere Antwort sperren. `geloest`: was gelöst wurde, für den Hinweis
+ * (`geloestHinweis`).
+ */
+export function loesen(
+  f: Formular,
+  a: Antworten,
+): { antworten: Antworten; geloest: UngueltigeAntwort[] } {
+  const jetzt = kopie(a);
+  const geloest: UngueltigeAntwort[] = [];
+  for (let runde = 0; runde < runden(f); runde++) {
+    const weg = ungueltigeAntworten(f, jetzt);
+    if (weg.length === 0) break;
+    for (const u of weg) {
+      const ziel = u.pfad.startsWith('anmeldung.')
+        ? jetzt.anmeldung
+        : jetzt.personen[Number(u.pfad.split('.')[1])];
+      const w = ziel[u.feld.id];
+      ziel[u.feld.id] = Array.isArray(w) ? w.filter((x) => x !== u.antwort) : undefined;
+      geloest.push(u);
+    }
+  }
+  return { antworten: jetzt, geloest };
+}
+
+/**
+ * **Antworten bereinigen** (vor dem Absenden) – ungültige Wahl lösen (`loesen`) und ausgeblendete Fragen leeren, so
+ * lange, bis sich nichts mehr ändert (eine geleerte Frage kann weitere ausblenden). Gibt neue Antworten zurück; die
+ * alten bleiben unberührt.
  */
 export function leeren(f: Formular, a: Antworten): Antworten {
-  const jetzt: Antworten = {
-    anmeldung: { ...a.anmeldung },
-    personen: a.personen.map((p) => ({ ...p })),
-  };
-  for (let runde = 0; runde <= f.anmeldung.length + f.person.length; runde++) {
-    let geaendert = false;
-    for (const u of ungueltigeAntworten(f, jetzt)) {
-      const [teil, i, id] = u.pfad.startsWith('anmeldung.')
-        ? (['anmeldung', -1, u.feld.id] as const)
-        : (['personen', Number(u.pfad.split('.')[1]), u.feld.id] as const);
-      const ziel = teil === 'anmeldung' ? jetzt.anmeldung : jetzt.personen[i];
-      const w = ziel[id];
-      ziel[id] = Array.isArray(w) ? w.filter((x) => x !== u.antwort) : undefined;
-      geaendert = true;
-    }
+  let jetzt = kopie(a);
+  for (let runde = 0; runde < runden(f); runde++) {
+    const l = loesen(f, jetzt);
+    jetzt = l.antworten;
+    let geaendert = l.geloest.length > 0;
     for (const x of f.anmeldung)
       if (jetzt.anmeldung[x.id] !== undefined && !feldSichtbar(f, x, jetzt)) {
         delete jetzt.anmeldung[x.id];
@@ -262,9 +288,27 @@ export function leeren(f: Formular, a: Antworten): Antworten {
           geaendert = true;
         }
     });
-    if (!geaendert) return jetzt;
+    if (!geaendert) break;
   }
   return jetzt;
+}
+
+/** Wie eine Antwort gerade erscheint: wählbar, ausgegraut (mit Grund) oder gar nicht. */
+export type AntwortZustand = { art: 'frei' } | { art: 'grau'; grund?: string } | { art: 'weg' };
+
+/** **Wie erscheint diese Antwort?** – für die Eingabe (`FeldEingabe`); dieselbe Regel wie `antwortFrei`. */
+export function antwortZustand(
+  f: Formular,
+  x: Feld,
+  antwort: string,
+  a: Antworten,
+  person?: number,
+): AntwortZustand {
+  if (antwortFrei(f, x, antwort, a, person)) return { art: 'frei' };
+  const bed = x.antwortBed![antwort];
+  return bed.art === 'weg'
+    ? { art: 'weg' }
+    : { art: 'grau', grund: bed.grund?.trim() || undefined };
 }
 
 /**

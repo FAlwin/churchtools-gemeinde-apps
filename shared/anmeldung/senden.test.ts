@@ -297,3 +297,82 @@ describe('Link zu „Deine Anmeldung“ (A9-1)', () => {
     expect(mitLink(a, a.forms[0], 'L')).toBe(a.forms[0]);
   });
 });
+
+describe('F1b: Was die Person nicht mehr gesehen hat, kommt nicht nach ChurchTools', () => {
+  const wahl = { option: 0, extras: [] };
+  /** Eine Bedingung schaut nur nach vorn – die Quelle muss davor stehen. */
+  const nachVorn = <T extends { id: string }>(liste: T[], id: string): T[] => [
+    liste[0],
+    liste.find((f) => f.id === id)!,
+    ...liste.slice(1).filter((f) => f.id !== id),
+  ];
+  /** Allergien nur, wenn Fotos erlaubt sind (sinnlos, aber schlicht); Telefon nur mit Bemerkung. */
+  function mitBedingungen() {
+    const e = einstellungen();
+    e.formular.person = nachVorn(e.formular.person, 'foto');
+    e.formular.anmeldung = nachVorn(e.formular.anmeldung, 'note');
+    const nurWenn = (feld: string, op: 'ist' | 'ausgefuellt', wert?: string) => ({
+      modus: 'eine' as const,
+      regeln: [{ feld, op, ...(wert === undefined ? {} : { wert }) }],
+    });
+    e.formular.person = e.formular.person.map((f) =>
+      f.id === 'allergy' ? { ...f, bed: nurWenn('foto', 'ist', 'Ja') } : f,
+    );
+    e.formular.anmeldung = e.formular.anmeldung.map((f) =>
+      f.id === 'tel' ? { ...f, bed: nurWenn('note', 'ausgefuellt') } : f,
+    );
+    return e;
+  }
+
+  it('ausgeblendete Fragen fehlen – je Person und beim Kontakt; sichtbare stehen da', () => {
+    const a = antworten();
+    a.personen[1].allergy = 'Gluten'; // Lena: Fotos „Nein“ → Allergien ausgeblendet
+    const [jonas, lena] = anmeldungAufbauen(mitBedingungen(), a, wahl, HEUTE, CT).forms;
+    expect(wert(jonas.form, 609)).toBe('Nüsse');
+    expect(wert(lena.form, 609)).toBeUndefined();
+    expect(wert(jonas.form, 603)).toBeUndefined(); // Bemerkung leer → Telefon ausgeblendet
+    a.anmeldung.note = 'Kommt später';
+    expect(wert(anmeldungAufbauen(mitBedingungen(), a, wahl, HEUTE, CT).forms[0].form, 603)).toBe(
+      '0151 111',
+    );
+  });
+
+  it('eine gesperrte Antwort wird nicht gespeichert', () => {
+    const e = mitBedingungen();
+    e.formular.person = e.formular.person.map((f) =>
+      f.id === 'foto'
+        ? {
+            ...f,
+            antwortBed: {
+              Ja: {
+                modus: 'eine' as const,
+                regeln: [{ feld: 'birth', op: 'ausgefuellt' as const }],
+                art: 'grau' as const,
+              },
+            },
+          }
+        : f,
+    );
+    const a = antworten();
+    delete a.personen[0].birth;
+    const [jonas] = anmeldungAufbauen(e, a, wahl, HEUTE, CT).forms;
+    expect(wert(jonas.form, 612)).toBeUndefined();
+    expect(wert(jonas.form, 609)).toBeUndefined(); // und damit auch die Allergien (zweite Stufe)
+  });
+
+  it('ein ausgeblendetes Geburtsdatum zählt nicht im Betrag – angezeigt wie gespeichert', () => {
+    const e = einstellungen();
+    e.formular.person = nachVorn(e.formular.person, 'foto').map((f) =>
+      f.id === 'birth'
+        ? {
+            ...f,
+            bed: {
+              modus: 'eine' as const,
+              regeln: [{ feld: 'foto', op: 'ist' as const, wert: 'Ja' }],
+            },
+          }
+        : f,
+    );
+    expect(buchungAus(e, antworten(), wahl, HEUTE).alter).toEqual([9, null]);
+  });
+});

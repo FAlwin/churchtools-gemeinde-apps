@@ -13,11 +13,13 @@ import {
 } from './formular';
 import {
   antwortFrei,
+  antwortZustand,
   bedingungFehler,
   feldSichtbar,
   geloestHinweis,
   kurzname,
   leeren,
+  loesen,
   moeglicheQuellen,
   ungueltigeAntworten,
   wahlAntworten,
@@ -290,6 +292,89 @@ describe('Antworten mit Bedingung („Gruppenleiter“ nur für Getaufte)', () =
         antworten({ taufe: 'Nein', zeitraum: ['TeensWoche'], kids1: 'Gruppenleiter' }),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('loesen – während man tippt (F1b)', () => {
+  const f = acFormular();
+
+  it('löst nur die ungültige Wahl – Ausgeblendetes behält seinen Wert, die alten Antworten bleiben unberührt', () => {
+    const vorher = antworten({
+      taufe: 'Nein',
+      zeitraum: ['KidsWoche'],
+      kids1: 'Gruppenleiter',
+      kids2: 'Küche',
+      begleit: 'Nein',
+      begleitNamen: 'Max',
+    });
+    const { antworten: nachher, geloest } = loesen(f, vorher);
+    expect(nachher.anmeldung.kids1).toBeUndefined();
+    expect(nachher.anmeldung.kids2).toBe('Küche');
+    // Ausgeblendet (begleit = Nein), aber nicht geleert – taucht die Frage wieder auf, ist der Wert noch da.
+    expect(nachher.anmeldung.begleitNamen).toBe('Max');
+    expect(geloest.map((u) => [u.pfad, u.antwort])).toEqual([['anmeldung.kids1', 'Gruppenleiter']]);
+    expect(vorher.anmeldung.kids1).toBe('Gruppenleiter');
+  });
+
+  it('mehrstufig: eine gelöste Wahl sperrt die nächste Antwort', () => {
+    const g: Formular = {
+      anmeldung: [
+        frage('q1', 'janein'),
+        frage('q2', 'radio', {
+          antworten: ['A', 'B'],
+          antwortBed: { A: { ...wenn('q1', 'ist', 'Ja'), art: 'grau' } },
+        }),
+        frage('q3', 'radio', {
+          antworten: ['X', 'Y'],
+          antwortBed: { X: { ...wenn('q2', 'ist', 'A'), art: 'weg' } },
+        }),
+      ],
+      person: [],
+    };
+    const { antworten: nachher, geloest } = loesen(g, {
+      anmeldung: { q1: 'Nein', q2: 'A', q3: 'X' },
+      personen: [],
+    });
+    expect(nachher.anmeldung).toEqual({ q1: 'Nein', q2: undefined, q3: undefined });
+    expect(geloest.map((u) => u.pfad)).toEqual(['anmeldung.q2', 'anmeldung.q3']);
+  });
+
+  it('nichts ungültig → nichts gelöst', () => {
+    const a = antworten({ taufe: 'Ja', zeitraum: ['KidsWoche'], kids1: 'Gruppenleiter' });
+    expect(loesen(f, a)).toEqual({ antworten: a, geloest: [] });
+  });
+});
+
+describe('antwortZustand – wie eine Antwort erscheint (F1b)', () => {
+  const f = acFormular();
+  const kids1 = feld(f, 'kids1');
+
+  it('frei, grau mit Grund, grau ohne Grund, weg', () => {
+    expect(antwortZustand(f, kids1, 'Küche', antworten({ taufe: 'Nein' }))).toEqual({
+      art: 'frei',
+    });
+    expect(antwortZustand(f, kids1, 'Gruppenleiter', antworten({ taufe: 'Ja' }))).toEqual({
+      art: 'frei',
+    });
+    expect(antwortZustand(f, kids1, 'Gruppenleiter', antworten({ taufe: 'Nein' }))).toEqual({
+      art: 'grau',
+      grund: 'nur für Getaufte',
+    });
+    const ohneGrund = {
+      ...kids1,
+      antwortBed: { Gruppenleiter: { ...nurGetauft(), grund: '  ' } },
+    };
+    expect(antwortZustand(f, ohneGrund, 'Gruppenleiter', antworten({ taufe: 'Nein' }))).toEqual({
+      art: 'grau',
+      grund: undefined,
+    });
+    const weg = {
+      ...kids1,
+      antwortBed: { Gruppenleiter: { ...nurGetauft(), art: 'weg' as const } },
+    };
+    expect(antwortZustand(f, weg, 'Gruppenleiter', antworten({ taufe: 'Nein' }))).toEqual({
+      art: 'weg',
+    });
   });
 });
 

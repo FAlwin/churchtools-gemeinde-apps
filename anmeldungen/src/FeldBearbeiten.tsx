@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { BAUSTEINE, nurText, type Feld, type Feldtyp } from '@shared/anmeldung/formular';
+import { ANTWORT_MAX } from '@shared/anmeldung/bedingungen';
 import {
   entwurfFehler,
   mitAntworten,
@@ -133,7 +134,7 @@ export function FeldBearbeiten({
               )}
               <input
                 value={a.text}
-                maxLength={80}
+                maxLength={ANTWORT_MAX}
                 aria-label={`Antwort ${i + 1}`}
                 onChange={(e) =>
                   setAntworten(

@@ -104,10 +104,14 @@ export interface Nachbau {
       isCanceled?: boolean;
       isCompleted?: boolean;
       comment?: string | null;
+      numGuests?: number | null;
+      pollResult?: unknown;
       hasEditingStarted?: boolean;
     }[]
   >;
   treffenVerboten: boolean;
+  /** `PUT` am Treffen sagt 200, ändert aber nichts (S6-1: Abschließen muss nachgelesen werden). */
+  treffenSchlucken: boolean;
   /** Die Mitglieder, die jedes Gruppentreffen kennt (S5-3). */
   teilnehmer: { person: number; vor: string; nach: string }[];
   /** Anwesenheit je Treffen: Person → `present` / `absent` / `unsure`. */
@@ -155,6 +159,7 @@ export function nachbauStarten(): Nachbau {
     ],
     teilnahme: new Map(),
     teilnahmeSchlucken: false,
+    treffenSchlucken: false,
     terminAnfrage: null,
     definitionen: DEFINITIONEN,
   };
@@ -463,6 +468,12 @@ export function nachbauStarten(): Nachbau {
       const person = Number(checkin ? checkin[2] : austragen![3]);
       const t = (s.treffen.get(g) ?? []).find((x) => x.id === id);
       if (!t) return json(404, { message: 'weg' });
+      // Gemessen S6-0 (11.11.2026): abgeschlossen = Anwesenheit gesperrt.
+      if (t.isCompleted)
+        return json(400, {
+          message: 'Group meeting is completed',
+          translatedMessage: 'Das Treffen ist abgeschlossen',
+        });
       if (!s.teilnahmeSchlucken) {
         const stand = s.teilnahme.get(id) ?? new Map<number, string>();
         stand.set(
@@ -486,13 +497,22 @@ export function nachbauStarten(): Nachbau {
         liste.splice(liste.indexOf(t), 1);
         return json(204, null);
       }
-      // Wie gemessen (16.10. + 29.10.2026): ohne `isCanceled`/`isCompleted` 400; ein fehlender Kommentar wird geleert.
-      if (typeof body.isCanceled !== 'boolean' || typeof body.isCompleted !== 'boolean')
+      // Wie gemessen (16.10., 29.10. + S6-0 11.11.2026): ohne `isCanceled`/`isCompleted`/`startDate` 400; was fehlt
+      // (Kommentar, Gäste, Rückmeldung), wird geleert.
+      if (
+        typeof body.isCanceled !== 'boolean' ||
+        typeof body.isCompleted !== 'boolean' ||
+        typeof body.startDate !== 'string' ||
+        !body.startDate
+      )
         return json(400, { message: 'validation' });
-      t.startDate = String(body.startDate);
+      if (s.treffenSchlucken) return json(200, { data: t });
+      t.startDate = body.startDate;
       t.isCanceled = body.isCanceled;
       t.isCompleted = body.isCompleted;
       t.comment = typeof body.comment === 'string' ? body.comment : null;
+      t.numGuests = typeof body.numGuests === 'number' ? body.numGuests : null;
+      t.pollResult = body.pollResult ?? null;
       return json(200, { data: t });
     }
     if (tr) {

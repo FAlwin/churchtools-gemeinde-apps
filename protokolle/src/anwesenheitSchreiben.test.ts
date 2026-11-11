@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NichtUebernommen } from '@ui/ct/fehler';
-import { anwesenheitLesen, statusSetzen, vorbelegen } from './anwesenheitSchreiben';
+import {
+  anwesenheitLesen,
+  statusSetzen,
+  treffenAbschliessen,
+  vorbelegen,
+} from './anwesenheitSchreiben';
 import { nachbauEnde, nachbauStarten, type Nachbau } from './nachbau.testhilfe';
 
 /** Anwesenheit im Gruppentreffen (S5-3) gegen die nachgestellte ChurchTools-Instanz – Wege wie gemessen 05.11.2026. */
@@ -94,5 +99,46 @@ describe('vorbelegen', () => {
     const stand = await anwesenheitLesen(G, T);
     ct.teilnahmeSchlucken = true;
     await expect(vorbelegen(G, T, stand, anfragen)).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+});
+
+describe('treffenAbschliessen (S6-1, gemessen S6-0)', () => {
+  it('schließt ab und behält Kommentar, Gäste und Rückmeldung (ganz gelesen, ganz zurück)', async () => {
+    ct.treffen.set(G, [
+      {
+        id: T,
+        startDate: '2026-11-11T18:00:00Z',
+        comment: 'Kuchen',
+        numGuests: 2,
+        pollResult: { ja: 3 },
+      },
+    ]);
+    await treffenAbschliessen(G, T);
+    expect(ct.treffen.get(G)![0]).toMatchObject({
+      isCompleted: true,
+      isCanceled: false,
+      comment: 'Kuchen',
+      numGuests: 2,
+      pollResult: { ja: 3 },
+      startDate: '2026-11-11T18:00:00Z',
+    });
+    // Danach sperrt ChurchTools die Anwesenheit.
+    await expect(statusSetzen(G, T, 19, 'da')).rejects.toThrow();
+  });
+
+  it('schon abgeschlossen: kein Schreiben', async () => {
+    ct.treffen.set(G, [{ id: T, startDate: '2026-11-11T18:00:00Z', isCompleted: true }]);
+    await treffenAbschliessen(G, T);
+    expect(schreibAufrufe()).toEqual([]);
+  });
+
+  it('kein Recht: Fehler statt Erfolg', async () => {
+    ct.treffenVerboten = true;
+    await expect(treffenAbschliessen(G, T)).rejects.toThrow();
+  });
+
+  it('ChurchTools sagt 200, schließt aber nicht ab: nachgelesen → Fehler statt Erfolg', async () => {
+    ct.treffenSchlucken = true;
+    await expect(treffenAbschliessen(G, T)).rejects.toThrow(/Abschließen des Gruppentreffens/);
   });
 });

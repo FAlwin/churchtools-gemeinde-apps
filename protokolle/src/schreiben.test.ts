@@ -11,12 +11,17 @@ import {
 import {
   protokollLesen,
   schreibenUebernehmen,
+  freigabeZuruecknehmen,
+  freigeben,
   speichern,
   sperreFreigeben,
   sperreNehmen,
   treffenVerknuepfen,
   type ProtokollOrt,
 } from './schreiben';
+import { festesProtokollWert } from '@shared/protokolle/festePunkte';
+import { verlaufAus } from '@shared/protokolle/freigabe';
+import { dokumentDerSitzung, istKopf } from '@shared/protokolle/speicher';
 import { MODUL, nachbauEnde, nachbauStarten, werteVon, type Nachbau } from './nachbau.testhilfe';
 
 /** Schreiben am Protokoll (S4-1) gegen die nachgestellte ChurchTools-Instanz (`nachbau.testhilfe.ts`). */
@@ -297,5 +302,111 @@ describe('treffenVerknuepfen (S5-3)', () => {
     ablegen({ treffen: null });
     ct.schlucken.add('PUT WERT');
     await expect(treffenVerknuepfen(ORT, 77)).rejects.toThrow(/Gruppentreffen am Protokoll/);
+  });
+});
+
+describe('freigeben (S6-1)', () => {
+  const WER = { person: 1, name: 'Alwin Friesen' };
+  const FEST: Block[] = [
+    {
+      id: 'v',
+      type: 'verweis',
+      props: { art: 'letztes-protokoll', fest: festesProtokollWert('okt', true) },
+      children: [],
+    },
+    ...NEU,
+  ];
+  const lesenAusSpeicher = () => {
+    const werte = werteVon(ct, KAT).map((w) => JSON.parse(w.value) as unknown);
+    const kopf = werte.find(istKopf)!;
+    return {
+      kopf,
+      dok: dokumentDerSitzung(kopf, werte.filter(istTeil)),
+      teile: werte.filter(istTeil).length,
+    };
+  };
+
+  it('frei: Dokument (festgehalten) gespeichert, Kopf frei mit Vermerk und Verlauf, ohne Sperre; alte Teile weg', async () => {
+    const stand = ablegen({ sperre: sperreVon(ICH, JETZT) });
+    const vorher = vi.fn(() => Promise.resolve());
+    const r = await freigeben(ORT, ICH, stand, FEST, WER, JETZT, vorher);
+    expect(r.art).toBe('ok');
+    expect(vorher).toHaveBeenCalledTimes(1);
+    const { kopf, dok, teile } = lesenAusSpeicher();
+    expect(kopf).toMatchObject({
+      status: 'frei',
+      sperre: null,
+      freigabe: { von: 1, am: JETZT.toISOString() },
+    });
+    expect(verlaufAus(kopf)).toEqual([
+      { art: 'freigegeben', von: 1, name: 'Alwin Friesen', am: JETZT.toISOString() },
+    ]);
+    expect(dok).toEqual(FEST);
+    expect(teile).toBe(teileBauen(FEST, 's1').werte.length);
+  });
+
+  it('jemand anderes schreibt / inzwischen gespeichert: nichts geschrieben, abgewiesen', async () => {
+    const stand = ablegen({ sperre: sperreVon(JOHANN, JETZT) });
+    expect((await freigeben(ORT, ICH, stand, FEST, WER, JETZT)).art).toBe('gesperrt');
+    expect(lesenAusSpeicher().kopf.status).toBe('entwurf');
+    werteVon(ct, KAT).length = 0;
+    ablegen();
+    expect((await freigeben(ORT, ICH, 'alter-stand', FEST, WER, JETZT)).art).toBe('veraendert');
+    expect(lesenAusSpeicher().kopf.status).toBe('entwurf');
+  });
+
+  it('ChurchTools übernimmt die Freigabe nicht: Fehler, kein Erfolg', async () => {
+    const stand = ablegen();
+    ct.schlucken.add('PUT WERT');
+    await expect(freigeben(ORT, ICH, stand, FEST, WER, JETZT)).rejects.toThrow(/Freigabe/);
+    expect(kopfImSpeicher().status).toBe('entwurf');
+  });
+});
+
+describe('freigabeZuruecknehmen (S6-1)', () => {
+  const WER = { person: 7, name: 'Johann Becker' };
+  const FREI: Block[] = [
+    {
+      id: 'o',
+      type: 'verweis',
+      props: {
+        art: 'offene-aufgaben',
+        fest: JSON.stringify({ offen: ['a'], erledigt: [], seit: null }),
+      },
+      children: [],
+    },
+    {
+      id: 'v',
+      type: 'verweis',
+      props: { art: 'letztes-protokoll', fest: festesProtokollWert('okt', true) },
+      children: [],
+    },
+    {
+      id: 'w',
+      type: 'verweis',
+      props: { art: 'letztes-protokoll', fest: festesProtokollWert('sept') },
+      children: [],
+    },
+  ];
+
+  it('wieder Entwurf, Verlauf ergänzt, feste Punkte wieder live (die gewählte bleibt)', async () => {
+    ablegen({ status: 'frei', freigabe: { von: 1, am: JETZT.toISOString() } }, FREI);
+    const r = await freigabeZuruecknehmen(ORT, WER, new Date('2026-10-25T09:00:00Z'));
+    expect(r.art).toBe('ok');
+    const werte = werteVon(ct, KAT).map((w) => JSON.parse(w.value) as unknown);
+    const kopf = werte.find(istKopf)!;
+    expect(kopf).toMatchObject({ status: 'entwurf', freigabe: null, sperre: null });
+    expect(verlaufAus(kopf).map((e) => e.art + ':' + e.name)).toEqual([
+      'zurueckgenommen:Johann Becker',
+    ]);
+    const dok = dokumentDerSitzung(kopf, werte.filter(istTeil))!;
+    expect(dok.map((b) => b.props?.fest)).toEqual(['', '', festesProtokollWert('sept')]);
+  });
+
+  it('nicht (mehr) freigegeben: nichts geschrieben', async () => {
+    ablegen();
+    const vorher = werteVon(ct, KAT).map((w) => w.value);
+    expect((await freigabeZuruecknehmen(ORT, WER)).art).toBe('nichtFrei');
+    expect(werteVon(ct, KAT).map((w) => w.value)).toEqual(vorher);
   });
 });

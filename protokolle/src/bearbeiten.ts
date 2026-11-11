@@ -44,6 +44,7 @@ import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { abgelehnt } from './planen';
+import { treffenAendern } from './anwesenheitSchreiben';
 import { anfragenLesen, terminDaten, terminLaden, terminPfad, type TerminRef } from './termin';
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -151,22 +152,9 @@ function treffenDerSerie(
   return je;
 }
 
-/** Ein Gruppentreffen verschieben – ChurchTools leert, was im `PUT` fehlt (Kommentar, Gäste, Rückmeldung). */
+/** Ein Gruppentreffen verschieben – über `treffenAendern` (ChurchTools leert, was im `PUT` fehlt). */
 async function treffenVerschieben(gruppe: number, id: number, beginn: string): Promise<void> {
-  const pfad = `/groups/${gruppe}/meetings/${id}`;
-  const d = await ctDaten<Record<string, unknown>>(pfad);
-  await ctAnfrage(pfad, {
-    method: 'PUT',
-    body: json({
-      startDate: beginn,
-      isCompleted: d?.isCompleted ?? false,
-      isCanceled: d?.isCanceled ?? false,
-      comment: d?.comment ?? null,
-      numGuests: d?.numGuests ?? null,
-      pollResult: d?.pollResult ?? null,
-    }),
-  });
-  const nach = await ctDaten<{ startDate?: string }>(pfad);
+  const nach = await treffenAendern(gruppe, id, (r) => ({ ...r, startDate: beginn }));
   if (!nach?.startDate || minute(nach.startDate) !== minute(beginn))
     throw new NichtUebernommen('das Gruppentreffen');
 }

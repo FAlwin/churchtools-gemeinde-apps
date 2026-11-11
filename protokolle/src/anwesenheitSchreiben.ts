@@ -22,6 +22,61 @@ const json = (body: unknown) => JSON.stringify(body);
 const VERWEIGERT =
   'Dir fehlt in ChurchTools das Recht, Gruppentreffen zu pflegen – ein Admin richtet die Gruppe ein.';
 
+/** Was ein Gruppentreffen beim Zurückschreiben braucht. */
+export interface TreffenRumpf {
+  startDate: string;
+  isCompleted: boolean;
+  isCanceled: boolean;
+  comment: unknown;
+  numGuests: unknown;
+  pollResult: unknown;
+}
+
+/**
+ * **Ein Gruppentreffen ändern** – ganz lesen, ändern, ganz zurückschreiben, nachlesen. ChurchTools leert, was im `PUT`
+ * fehlt (Kommentar, Gäste, Rückmeldung – K2b 29.10., S6-0 11.11.2026), und `startDate` ist Pflicht. Die eine Stelle für
+ * Verschieben (K2b) und Abschließen (S6-1). `aendern` gibt `null` zurück, wenn nichts zu tun ist. Liefert das
+ * nachgelesene Treffen.
+ */
+export async function treffenAendern(
+  gruppe: number,
+  id: number,
+  aendern: (r: TreffenRumpf) => TreffenRumpf | null,
+  verweigert?: string,
+): Promise<Partial<TreffenRumpf> | null> {
+  const pfad = `/groups/${gruppe}/meetings/${id}`;
+  const d = await ctDaten<Record<string, unknown>>(pfad);
+  const rumpf = aendern({
+    startDate: typeof d?.startDate === 'string' ? d.startDate : '',
+    isCompleted: d?.isCompleted === true,
+    isCanceled: d?.isCanceled === true,
+    comment: d?.comment ?? null,
+    numGuests: d?.numGuests ?? null,
+    pollResult: d?.pollResult ?? null,
+  });
+  if (!rumpf) return d;
+  await ctAnfrage(pfad, {
+    method: 'PUT',
+    body: json(rumpf),
+    ...(verweigert ? { verweigert } : {}),
+  });
+  return ctDaten<Partial<TreffenRumpf>>(pfad);
+}
+
+/**
+ * **Gruppentreffen abschließen** (S6-1, bei der Freigabe): danach sperrt ChurchTools die Anwesenheit (gemessen S6-0).
+ * Schon abgeschlossen → nichts zu tun. Nachgelesen.
+ */
+export async function treffenAbschliessen(gruppe: number, id: number): Promise<void> {
+  const nach = await treffenAendern(
+    gruppe,
+    id,
+    (r) => (r.isCompleted ? null : { ...r, isCompleted: true }),
+    VERWEIGERT,
+  );
+  if (nach?.isCompleted !== true) throw new NichtUebernommen('das Abschließen des Gruppentreffens');
+}
+
 /** Das Treffen und seine Personen. Die Liste der Personen blättert (ChurchTools liefert manche Listen seitenweise). */
 export async function anwesenheitLesen(gruppe: number, treffen: number): Promise<TreffenStand> {
   const [t, personen] = await Promise.all([

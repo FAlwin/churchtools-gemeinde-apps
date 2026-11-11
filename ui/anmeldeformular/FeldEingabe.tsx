@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { nurText, type Antwort, type Feld } from '@shared/anmeldung/formular';
+import { wahlAntworten } from '@shared/anmeldung/bedingungen';
 import { datumText } from '@shared/ct/datum';
 import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
@@ -157,7 +158,7 @@ export function FeldEingabe({
       />
     );
   } else if (f.typ === 'janein' || f.typ === 'radio') {
-    const antworten = f.typ === 'janein' ? ['Ja', 'Nein'] : f.antworten;
+    const antworten = wahlAntworten(f);
     eingabe = (
       <div
         className={f.typ === 'janein' ? s.yn : s.choices}

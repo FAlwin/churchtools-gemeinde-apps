@@ -17,6 +17,9 @@
  */
 import { z } from 'zod';
 import { ausBase64url, base64url } from '../ct/packen';
+
+/** Lag bis O9-1 (11.11.2026) hier; jetzt in `shared/ct/datum.ts`, weil auch das Organigramm (Gruppenwechsel) es braucht. */
+export { alterAm } from '../ct/datum';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
@@ -174,18 +177,6 @@ export function mitWer(
   geburtsdatum: boolean,
 ): OeffentlicheEinstellungen {
   return { ...e, wer, formular: setzeGeburtsdatum(e.formular, geburtsdatum) };
-}
-
-/** **Alter am Stichtag** (erster Tag der Veranstaltung), beides `YYYY-MM-DD`. `null`, wenn kein Geburtsdatum. */
-export function alterAm(geburt: string, stichtag: string): number | null {
-  const g = /^(\d{4})-(\d{2})-(\d{2})$/.exec(geburt);
-  const s = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stichtag);
-  if (!g || !s) return null;
-  const [gj, gm, gt] = g.slice(1).map(Number);
-  const [sj, sm, st] = s.slice(1).map(Number);
-  let alter = sj - gj;
-  if (sm < gm || (sm === gm && st < gt)) alter--;
-  return alter < 0 ? null : alter;
 }
 
 /** Eine erziehungsberechtigte Person (Baustein „Erziehungsberechtigte“). */

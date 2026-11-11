@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { DatumKachel } from '@ui/bedienung/DatumKachel';
+import { KachelLink, TitelLink } from './TerminLink';
 import { kachel, tagKurz } from '@shared/ct/datum';
 import { gruppenName, type PlanGruppe, type PlanSpalte } from '@shared/dienstplan/plan';
 import { DIENST_SPALTE, SPALTENBREITE, type Breite } from '@shared/dienstplan/fenster';
@@ -128,7 +128,11 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                   data-neben={neben(s) || undefined}
                 >
                   <div className={styles.kopfDatum}>
-                    <DatumKachel tag={k.tag} monat={k.monat} />
+                    <KachelLink
+                      tag={k.tag}
+                      monat={k.monat}
+                      onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}
+                    />
                     <small>
                       {tagKurz(s.tag).slice(0, 2)} · {s.uhrzeit}
                     </small>
@@ -304,9 +308,16 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
       </div>
       <section className={styles.karte} aria-label={`${s.name}, ${tagKurz(s.tag)}`}>
         <div className={styles.handyKopf}>
-          <DatumKachel tag={k.tag} monat={k.monat} />
+          {/* Datum und Titel öffnen den Termin (Wunsch 8) – wie „Ablauf & Dienste“ daneben. */}
+          <KachelLink
+            tag={k.tag}
+            monat={k.monat}
+            onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}
+          />
           <div>
-            <b>{s.name}</b>
+            <TitelLink onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}>
+              <b>{s.name}</b>
+            </TitelLink>
             <small>
               {tagKurz(s.tag)} · {s.uhrzeit} Uhr ·{' '}
               <span className={st.offen ? styles.offen : styles.besetzt}>{st.text}</span>

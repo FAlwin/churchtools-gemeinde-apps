@@ -721,6 +721,13 @@
 }
 
 // Alte Entwürfe (#582): Hinweis über der Matrix, rot getönt wie die Warnungen (kein Gelb/Orange).
+// Planen mit einer Gruppe von der Startseite (Wunsch 7) – derselbe Aufbau wie „alte Entwürfe“, aber blau: ein Hinweis,
+// kein Fehler.
+.besuchHinweis {
+  @extend .alteHinweis;
+  background: var(--blue-soft);
+}
+
 .alteHinweis {
   display: flex;
   align-items: center;

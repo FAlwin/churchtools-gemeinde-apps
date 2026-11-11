@@ -1,14 +1,22 @@
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { Icon } from '@ui/icons/icons';
 import { useAufklapp } from '@ui/bedienung/useAufklapp';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { listenScroll, menueVersatz } from '@ui/bedienung/menueLage';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { spitzenSuche, spitzenWahl } from '@shared/organigramm/ansichten';
 import styles from './SpitzenAuswahl.module.scss';
 
 /** So weit rückt jede Ebene ein (px). */
 const EINZUG = 14;
-
 /**
  * **„Anfangen bei“ – jede Gruppe, mit Suche** (#915, Rückmeldung 11.11.2026: „nur das Kaffeeteam und die Untergruppen
  * darin“). Ein Knopf im Stil der Felder; er klappt ein Menü auf: oben ein Suchfeld, darunter die Gemeinde und alle
@@ -45,10 +53,24 @@ export function SpitzenAuswahl({
   const gewaehlt = wahl.find((w) => w.wert === (wert ?? '')) ?? wahl[0];
   const sucht = suche.trim() !== '';
 
-  // Mit den Pfeiltasten bleibt die markierte Zeile im Blick (lange Liste). Rumpf in { }: scrollIntoView liefert in
-  // neueren Browsern ein Promise – als Rückgabe des Effekts hielte React es für das Aufräumen (weiße Seite).
+  const menue = useRef<HTMLDivElement>(null);
+  const listeRef = useRef<HTMLUListElement>(null);
+
+  // Vor dem ersten Bild: rechts im Bildschirm halten (`menueVersatz`).
+  useLayoutEffect(() => {
+    const m = menue.current;
+    if (!offen || !m) return;
+    m.style.left = '0px';
+    const r = m.getBoundingClientRect();
+    m.style.left = `${menueVersatz(r.left, r.width, document.documentElement.clientWidth)}px`;
+  }, [offen]);
+
+  // Die markierte Zeile bleibt im Blick (lange Liste, Pfeiltasten) – nur die Liste scrollt, nie die Seite.
   useEffect(() => {
-    if (offen) document.getElementById(`${id}-${aktiv}`)?.scrollIntoView?.({ block: 'nearest' });
+    const ul = listeRef.current;
+    const li = document.getElementById(`${id}-${aktiv}`);
+    if (!offen || !ul || !li) return;
+    ul.scrollTop = listenScroll(ul.scrollTop, ul.clientHeight, li.offsetTop, li.offsetHeight);
   }, [offen, aktiv, id]);
 
   const umschalten = () => {
@@ -89,7 +111,7 @@ export function SpitzenAuswahl({
         <Icon name="chev-down" size={14} />
       </button>
       {offen && (
-        <div className={styles.menue}>
+        <div className={styles.menue} ref={menue}>
           <label className={styles.suche}>
             <Icon name="search" size={14} />
             <input
@@ -109,7 +131,7 @@ export function SpitzenAuswahl({
               onKeyDown={taste}
             />
           </label>
-          <ul className={styles.liste} role="listbox" id={id} aria-label={label}>
+          <ul ref={listeRef} className={styles.liste} role="listbox" id={id} aria-label={label}>
             {liste.map((w, i) => (
               <li
                 key={w.wert}

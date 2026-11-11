@@ -58,6 +58,7 @@
 }
 
 .liste {
+  position: relative; // Bezug für offsetTop der Zeilen (Mitscrollen von Hand)
   margin: 0;
   padding: 0 0 6px;
   list-style: none;

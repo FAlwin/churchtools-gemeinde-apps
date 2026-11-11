@@ -202,7 +202,8 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
    Nur sie und ihre Untergruppen sind zu sehen. In der aufgeklappten Liste sind die Gruppen nach Ebene eingerückt.
    **Suchen:** ein Stück eines Namens tippen – nur Treffer, darunter klein die Obergruppen; mit Pfeiltasten und Enter
    wählen (Laptop). Ein Name, den es nicht gibt → „Keine Gruppe gefunden“. **Am Handy:** Beim Aufklappen geht die
-   Tastatur nicht von selbst auf, die Liste ist ganz zu sehen und lässt sich scrollen. Zurück auf **Ganze Gemeinde**.
+   Tastatur nicht von selbst auf, die Liste ist ganz zu sehen (ragt nicht über den rechten Rand), lässt sich
+   scrollen, und die Seite rückt beim Aufklappen nicht zur Seite. Zurück auf **Ganze Gemeinde**.
 5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
    und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
 6. Als Gruppen-Admin über **Einstellungen** den Gruppentyp der Spitze für alle ausblenden und speichern (nur in der
@@ -212,7 +213,7 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/SpitzenAuswahl.tsx`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `organigramm/src/GruppenFenster.tsx`, `shared/organigramm/ansichten.ts`
+- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/SpitzenAuswahl.tsx`, `ui/bedienung/menueLage.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `organigramm/src/GruppenFenster.tsx`, `shared/organigramm/ansichten.ts`
 - **Automatisiert:** größtenteils – `App.test.tsx` (O7b-2), `SpitzenAuswahl.test.tsx`, `Liste.test.tsx`,
   `auswahl.test.ts`, `ansichten.test.ts`; ob die Gruppen mit dem echten ChurchTools übereinstimmen und wie es am Handy
   aussieht (Tastatur, Scrollen der Liste), prüft nur dieser Fall

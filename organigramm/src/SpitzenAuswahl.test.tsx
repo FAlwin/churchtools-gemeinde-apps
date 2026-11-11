@@ -97,4 +97,26 @@ describe('SpitzenAuswahl (#915)', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(onWahl).not.toHaveBeenCalled();
   });
+
+  it('am Handy rückt das Menü nach links, statt rechts hinauszuragen – und schiebt die Seite nicht (Test-Instanz 11.11.)', () => {
+    // So stand es in der Test-Instanz bei 375 px: Knopf ab 104 px, Menü 320 px breit.
+    const rechteck = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 104, width: 320 } as DOMRect);
+    const breite = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(375);
+    const insBild = vi.fn();
+    Element.prototype.scrollIntoView = insBild;
+    try {
+      zeigen('1/2');
+      fireEvent.click(spitzenKnopf('Anfangen bei'));
+      const menue = screen.getByRole('listbox', { name: 'Anfangen bei' }).parentElement!;
+      expect(menue.style.left).toBe('-65px'); // 104 + 320 − (375 − 16)
+      fireEvent.keyDown(suche(), { key: 'ArrowDown' });
+      expect(insBild).not.toHaveBeenCalled();
+    } finally {
+      rechteck.mockRestore();
+      breite.mockRestore();
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
 });

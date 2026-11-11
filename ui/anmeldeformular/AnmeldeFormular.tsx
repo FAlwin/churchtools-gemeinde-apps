@@ -1,31 +1,19 @@
-import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
-import {
-  mailGueltig,
-  pruefeAntworten,
-  type Antwort,
-  type Antworten,
-  type Feld,
-} from '@shared/anmeldung/formular';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { mailGueltig, type Antwort, type Antworten, type Feld } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { datumText } from '@shared/ct/datum';
 import { loeschDatum } from '@shared/anmeldung/termin';
-import {
-  betragAus,
-  neueAnmeldeNr,
-  personenNamen,
-  wartelistenZeile,
-  type Abgeschickt,
-  type PreisWahl,
-} from '@shared/anmeldung/senden';
+import { betragAus, wartelistenZeile } from '@shared/anmeldung/senden';
 import { platzPlan, type PlatzStand } from '@shared/anmeldung/oeffentlich';
 import { mehrAlsVorgesehen, optionRest } from '@shared/anmeldung/kontingent';
 import { euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { leereAntworten } from './daten';
-import { HONIGTOPF_NAME, SPAM_TEXT, spamGrund } from '@shared/anmeldung/spamschutz';
+import { HONIGTOPF_NAME } from '@shared/anmeldung/spamschutz';
 import s from './AnmeldeFormular.module.scss';
 import { FeldEingabe } from './FeldEingabe';
 import { FormularRahmen, Symbol, type Ansicht } from './FormularRahmen';
 import { Ergebnis } from './FormularErgebnis';
+import { useAbsenden, usePlaetze, type Abschicken } from './useAbsenden';
 
 /**
  * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
@@ -75,19 +63,6 @@ function mitHinweis(text: string, knopf: ReactNode): ReactNode {
 }
 
 /**
- * **Echt abschicken** (öffentliches Formular, A6-2). Wirft bei einem Fehler einen `Error`, dessen Text die Person
- * liest – die Eingaben bleiben stehen. Kommt nur ein Teil durch (#602: jede Person einzeln), sagt das Ergebnis es je
- * Person; `nur` schickt dann die offen gebliebenen noch einmal.
- */
-export type Abschicken = (a: {
-  antworten: Antworten;
-  wahl: PreisWahl;
-  nur?: number[];
-  /** Anmelde-Nr. (A6-5a) – einmal je Formular, bei „noch einmal“ dieselbe. */
-  nr: string;
-}) => Promise<Abgeschickt>;
-
-/**
  * Das ganze Formular. `vorschau`: mit Musterdaten, „Absenden“ zeigt nur, wie die Bestätigung aussähe. `probe`:
  * das öffentliche Formular als Trockenlauf („Extern öffnen und testen“) – sonst wie für Gäste, schickt aber nichts.
  * Mit `onAbsenden` (öffentliches Formular, A6-2) wird wirklich angemeldet.
@@ -127,24 +102,15 @@ export function AnmeldeFormular({
     ),
   );
   const [extras, setExtras] = useState<boolean[]>(e.preis.extras.map(() => false));
-  const [fehler, setFehler] = useState<string[]>([]);
-  const [fertig, setFertig] = useState<Abgeschickt | null>(null);
-  const [sendet, setSendet] = useState(false);
-  const [sendeFehler, setSendeFehler] = useState<string | null>(null);
-  const [nochmalFehler, setNochmalFehler] = useState<string | null>(null);
-  // Freie Plätze (#602): beim Laden, beim Hinzufügen frisch nachgefragt. Ohne Angabe (Vorschau) kein Hinweis.
-  const [platz, setPlatz] = useState<PlatzStand | null>(() =>
-    ansicht.freiePlaetze === undefined
-      ? null
-      : { freiePlaetze: ansicht.freiePlaetze, warteliste: ansicht.warteliste === true },
-  );
-  const [fragtNach, setFragtNach] = useState(false);
-  const [nr] = useState(neueAnmeldeNr);
+  // ── Freie Plätze (`usePlaetze`) ──
+  const { platz, fragtNach, hinzufuegen } = usePlaetze({
+    ansicht,
+    baukasten: !!baukasten,
+    plaetzeNachfragen,
+    antworten,
+    setAntworten,
+  });
   const echt = !!onAbsenden && !vorschau && !probe && !baukasten;
-  // A6-3 Spam-Schutz (`spamschutz.ts`): Honigtopf und Mindest-Ausfüllzeit seit dem Laden. Doppel-Absenden verhindert
-  // schon `sendet` – React zeichnet nach jedem Klick neu (gegengeprüft 16.10.2026).
-  const honigtopf = useRef<HTMLInputElement>(null);
-  const [geladen] = useState(() => Date.now());
 
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
   // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
@@ -200,83 +166,27 @@ export function AnmeldeFormular({
   const alleWarten = !!plan && plan.length > 0 && plan.every((x) => x === 'warteliste');
   const wer = kinder ? 'Kind' : 'Person';
 
-  async function hinzufuegen() {
-    if (baukasten || fragtNach) return;
-    let stand = platz;
-    if (plaetzeNachfragen) {
-      setFragtNach(true);
-      try {
-        stand = await plaetzeNachfragen();
-        setPlatz(stand);
-      } catch {
-        // Vorübergehend ist nicht ungültig: mit dem letzten Stand weiter, ChurchTools entscheidet beim Absenden.
-      } finally {
-        setFragtNach(false);
-      }
-    }
-    if (stand && platzPlan(stand, antworten.personen.length + 1).at(-1) === 'kein') return;
-    setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }));
-  }
-
-  async function nochmal(offen: number[]) {
-    if (!onAbsenden || sendet) return;
-    setSendet(true);
-    setNochmalFehler(null);
-    try {
-      const neu = await onAbsenden({ antworten, wahl: { option, extras }, nur: offen, nr });
-      setFertig((alt) =>
-        alt
-          ? {
-              ...alt,
-              personen: alt.personen.map((x) => neu.personen.find((y) => y.index === x.index) ?? x),
-              meldung: neu.meldung,
-            }
-          : neu,
-      );
-    } catch (fehler) {
-      setNochmalFehler(fehler instanceof Error ? fehler.message : 'Das hat nicht geklappt.');
-    } finally {
-      setSendet(false);
-    }
-  }
-
-  async function absenden() {
-    if (baukasten || sendet) return;
-    const offen = pruefeAntworten(e.formular, antworten);
-    setFehler(offen);
-    if (offen.length > 0) return;
-    // A6-5b: ausgebuchte Option – nichts schicken (der Hinweis steht schon über dem Knopf).
-    if (preis.ausgebucht && e.preis.grundpreis.art === 'auswahl') return;
-    if (!echt || !onAbsenden) {
-      setFertig({
-        personen: personenNamen(e, antworten).map((name, index) => ({
-          index,
-          name,
-          ergebnis: 'angemeldet',
-        })),
-        mail: typeof antworten.anmeldung.mail === 'string' ? antworten.anmeldung.mail : '',
-      });
-      return;
-    }
-    const spam = spamGrund({
-      honigtopf: honigtopf.current?.value ?? '',
-      seitDemLadenMs: Date.now() - geladen,
-    });
-    if (spam) {
-      setSendeFehler(SPAM_TEXT[spam]);
-      return;
-    }
-    setSendet(true);
-    setSendeFehler(null);
-    try {
-      setFertig(await onAbsenden({ antworten, wahl: { option, extras }, nr }));
-    } catch (fehler) {
-      // Vorübergehend ist nicht endgültig: Die Eingaben bleiben stehen, ein zweiter Klick versucht es noch einmal.
-      setSendeFehler(fehler instanceof Error ? fehler.message : 'Das hat nicht geklappt.');
-    } finally {
-      setSendet(false);
-    }
-  }
+  // ── Absenden (`useAbsenden`) ──
+  const {
+    fehler,
+    fertig,
+    setFertig,
+    sendet,
+    sendeFehler,
+    nochmalFehler,
+    honigtopf,
+    nochmal,
+    absenden,
+  } = useAbsenden({
+    e,
+    antworten,
+    option,
+    extras,
+    preis,
+    echt,
+    baukasten: !!baukasten,
+    onAbsenden,
+  });
 
   const zeilen = betrag.posten.filter((p) => p.betragCent !== null);
 

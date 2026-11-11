@@ -4,7 +4,7 @@ import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
-import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
+import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
@@ -17,6 +17,7 @@ import {
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
+import { SpitzenAuswahl } from './SpitzenAuswahl';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
 import { personenInhalt } from './kastenPersonen';
@@ -172,20 +173,17 @@ export function Organigramm({
           className={styles.ansicht}
           verbunden
         />
-        <label className={styles.anfangen}>
-          Anfangen bei
-          <select
-            className={styles.feld}
-            value={spitze ?? ''}
-            onChange={(e) => onSpitze(e.target.value || null)}
-          >
-            {spitzenWahl(baum, spitze).map((w) => (
-              <option key={w.wert} value={w.wert}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Kein <label> um die Auswahl: Darin stehen Knopf und Suchfeld – ein Label leitete Klicks weiter. */}
+        <span className={styles.anfangen}>
+          <span aria-hidden="true">Anfangen bei</span>
+          <SpitzenAuswahl
+            label="Anfangen bei"
+            baum={baum}
+            wert={spitze}
+            onWahl={onSpitze}
+            feldKlasse={styles.feld}
+          />
+        </span>
         {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst
             (Alwin, 28.10.2026: Variante B). */}
         {ansicht !== 'karten' && (

@@ -12,6 +12,7 @@ import {
   SCHALTER,
   schalterStummel,
   sichtbarerBaum,
+  spitzenSuche,
   spitzenWahl,
   type Anordnung,
   type AnordnungsArt,
@@ -131,16 +132,66 @@ describe('sichtbarerBaum', () => {
 });
 
 describe('spitzenWahl', () => {
-  it('ganze Gemeinde, jeder Bereich – eine tiefere Spitze zusätzlich, eine verschwundene nicht', () => {
-    expect(spitzenWahl(BAUM, null).map((w) => w.name)).toEqual([
-      'Ganze Gemeinde',
-      'Gottesdienst',
-      'Gemeinschaft',
-      'Jugend',
+  it('ganze Gemeinde und jede Gruppe in Baum-Reihenfolge, eingerückt nach Ebene (#915)', () => {
+    const w = spitzenWahl(BAUM, null);
+    expect(w.map((x) => `${x.ebene}:${x.name}`)).toEqual([
+      '0:Ganze Gemeinde',
+      '1:Gottesdienst',
+      '2:Musik',
+      '3:Band',
+      '3:Chor',
+      '3:Jugendband',
+      '2:Technik',
+      '3:Ton',
+      '3:Stream',
+      '2:Predigt',
+      '1:Gemeinschaft',
+      '2:Hauskreise',
+      '3:Hauskreis Nord',
+      '2:Café',
+      '1:Jugend',
+      '2:Teenkreis',
     ]);
-    expect(spitzenWahl(BAUM, '10').map((w) => w.wert)).toEqual(['', '1', '10', '40']);
-    expect(spitzenWahl(BAUM, '1/2').at(-1)).toEqual({ wert: '1/2', name: 'Musik' });
-    expect(spitzenWahl(BAUM, '1/99')).toHaveLength(4);
+    expect(w.find((x) => x.name === 'Café')).toEqual({
+      wert: '10/13',
+      name: 'Café',
+      ebene: 2,
+      weg: 'Gemeinschaft',
+    });
+    expect(w.find((x) => x.name === 'Hauskreis Nord')?.weg).toBe('Gemeinschaft › Hauskreise');
+  });
+
+  it('eine Gruppe mit zwei Obergruppen steht einmal – an der Stelle, die auch pfadVon nimmt', () => {
+    const band = spitzenWahl(BAUM, null).filter((x) => x.name === 'Jugendband');
+    expect(band).toEqual([
+      { wert: '1/2/30', name: 'Jugendband', ebene: 3, weg: 'Gottesdienst › Musik' },
+    ]);
+    expect(band[0].wert).toBe(pfadVon(BAUM, 30));
+  });
+
+  it('die gewählte Spitze über den zweiten Weg steht zusätzlich am Ende; eine verschwundene nicht', () => {
+    const anzahl = spitzenWahl(BAUM, null).length;
+    expect(spitzenWahl(BAUM, '1/2')).toHaveLength(anzahl);
+    expect(spitzenWahl(BAUM, '40/30').at(-1)).toEqual({
+      wert: '40/30',
+      name: 'Jugendband',
+      ebene: 1,
+      weg: '',
+    });
+    expect(spitzenWahl(BAUM, '40/30')).toHaveLength(anzahl + 1);
+    expect(spitzenWahl(BAUM, '1/99')).toHaveLength(anzahl);
+  });
+});
+
+describe('spitzenSuche', () => {
+  const wahl = spitzenWahl(BAUM, null);
+  it('findet Teile des Namens ohne Groß/klein – die Gemeinde gehört nicht dazu', () => {
+    expect(spitzenSuche(wahl, 'haus').map((w) => w.name)).toEqual(['Hauskreise', 'Hauskreis Nord']);
+    expect(spitzenSuche(wahl, '  CAFÉ ').map((w) => w.wert)).toEqual(['10/13']);
+    expect(spitzenSuche(wahl, 'gemeinde')).toEqual([]);
+  });
+  it('ohne Text alles, auch die Gemeinde', () => {
+    expect(spitzenSuche(wahl, ' ')).toEqual(wahl);
   });
 });
 

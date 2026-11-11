@@ -35,6 +35,7 @@
 .feld {
   @include m.eingabefeld;
   height: var(--knopf-hoehe);
+  max-width: 260px; // lange Gruppennamen in „Anfangen bei“ werden gekürzt, die Leiste bleibt eine Zeile
   padding: 0 8px;
   font-size: 14px;
   font-weight: 400;

@@ -1,0 +1,100 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { Knoten } from '@shared/organigramm/gruppen';
+import { SpitzenAuswahl } from './SpitzenAuswahl';
+import { spitzenKnopf, spitzenOptionen, waehleSpitze } from './spitzenAuswahl.testutil';
+
+const g = (id: number, name: string, kinder: Knoten[] = []): Knoten => ({
+  gruppe: { id, name, typId: 2, statusId: 1, farbe: null },
+  kinder,
+});
+const BAUM: Knoten[] = [
+  g(1, 'Gottesdienst', [g(2, 'Café-Team', [g(3, 'Café Team 1'), g(4, 'Café Team 2')])]),
+  g(10, 'Technik', [g(11, 'Ton'), g(12, 'Licht')]),
+];
+
+function zeigen(wert: string | null = null) {
+  const onWahl = vi.fn();
+  render(
+    <SpitzenAuswahl label="Anfangen bei" baum={BAUM} wert={wert} onWahl={onWahl} feldKlasse="" />,
+  );
+  return { onWahl };
+}
+const liste = () => within(screen.getByRole('listbox', { name: 'Anfangen bei' }));
+const suche = () => screen.getByRole('combobox', { name: 'Gruppe suchen' });
+
+afterEach(cleanup);
+
+describe('SpitzenAuswahl (#915)', () => {
+  it('zeigt die Wahl; aufgeklappt die Gemeinde und jede Gruppe, nach Ebene eingerückt', () => {
+    zeigen('1/2');
+    expect(spitzenKnopf('Anfangen bei').textContent).toBe('Café-Team');
+    expect(spitzenOptionen('Anfangen bei')).toEqual([
+      'Ganze Gemeinde',
+      'Gottesdienst',
+      'Café-Team',
+      'Café Team 1',
+      'Café Team 2',
+      'Technik',
+      'Ton',
+      'Licht',
+    ]);
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    const einzug = (name: string) => liste().getByRole('option', { name }).style.paddingLeft;
+    expect([
+      einzug('Ganze Gemeinde'),
+      einzug('Gottesdienst'),
+      einzug('Café-Team'),
+      einzug('Café Team 1'),
+    ]).toEqual(['10px', '24px', '38px', '52px']);
+    expect(liste().getByRole('option', { name: 'Café-Team' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('ein Klick wählt den Pfad und klappt zu – „Ganze Gemeinde“ heißt null', () => {
+    const { onWahl } = zeigen('10');
+    waehleSpitze('Anfangen bei', 'Café-Team');
+    expect(onWahl).toHaveBeenLastCalledWith('1/2');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    waehleSpitze('Anfangen bei', 'Ganze Gemeinde');
+    expect(onWahl).toHaveBeenLastCalledWith(null);
+  });
+
+  it('Suche: Treffer ohne Einzug, mit Obergruppen; Pfeiltasten und Enter; nichts gefunden', () => {
+    const { onWahl } = zeigen();
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    fireEvent.change(suche(), { target: { value: 'café team' } });
+    const treffer = liste().getAllByRole('option');
+    expect(treffer.map((o) => o.textContent)).toEqual([
+      'Café Team 1Gottesdienst › Café-Team',
+      'Café Team 2Gottesdienst › Café-Team',
+    ]);
+    expect(treffer.map((o) => o.style.paddingLeft)).toEqual(['10px', '10px']);
+    fireEvent.keyDown(suche(), { key: 'ArrowDown' });
+    fireEvent.keyDown(suche(), { key: 'ArrowDown' }); // am Ende bleibt es beim letzten
+    expect(suche().getAttribute('aria-activedescendant')).toBe(treffer[1].id);
+    fireEvent.keyDown(suche(), { key: 'Enter' });
+    expect(onWahl).toHaveBeenLastCalledWith('1/2/4');
+
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    expect((suche() as HTMLInputElement).value).toBe(''); // neu aufgeklappt = neue Suche
+    fireEvent.change(suche(), { target: { value: 'Orgel' } });
+    expect(liste().queryAllByRole('option')).toEqual([]);
+    expect(screen.getByText('Keine Gruppe gefunden')).toBeTruthy();
+    fireEvent.keyDown(suche(), { key: 'Enter' });
+    expect(onWahl).toHaveBeenCalledTimes(1);
+  });
+
+  it('Escape und ein Tipp daneben klappen zu, ohne zu wählen', () => {
+    const { onWahl } = zeigen();
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).toBeNull();
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(onWahl).not.toHaveBeenCalled();
+  });
+});

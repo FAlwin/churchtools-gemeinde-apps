@@ -1,0 +1,100 @@
+@use '@ui/design/mixins' as m;
+
+// „Anfangen bei“ / „Ausschnitt“ (#915): Knopf im Stil der Felder, darunter das Menü mit Suche und allen Gruppen.
+.rahmen {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menue {
+  @include m.card-list;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  width: min(320px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(15, 23, 43, 0.18);
+}
+
+.suche {
+  @include m.eingabefeld(true);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 0 8px;
+  color: var(--text3);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: var(--knopf-hoehe);
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+  }
+}
+
+.liste {
+  margin: 0;
+  padding: 0 0 6px;
+  list-style: none;
+  max-height: min(360px, 55vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.aktiv {
+  background: var(--blue-soft);
+}
+
+.gewaehlt {
+  color: var(--blue);
+}
+
+.fett {
+  font-weight: 700;
+}
+
+.weg {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.leer {
+  margin: 4px 12px 12px;
+  color: var(--text3);
+  font-size: 14px;
+}

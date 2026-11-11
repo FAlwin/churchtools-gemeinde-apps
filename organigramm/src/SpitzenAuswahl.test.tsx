@@ -119,4 +119,50 @@ describe('SpitzenAuswahl (#915)', () => {
       delete (Element.prototype as Partial<Element>).scrollIntoView;
     }
   });
+
+  it('mit Maus: Fokus ins Suchfeld erst nach dem Einrücken und ohne Scrollen (Test-Instanz 11.11.)', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      (q: string) =>
+        ({
+          matches: true,
+          media: q,
+          addEventListener() {},
+          removeEventListener() {},
+        }) as unknown as MediaQueryList,
+    );
+    const rechteck = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 89, width: 320 } as DOMRect);
+    const breite = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(375);
+    const reihenfolge: string[] = [];
+    const fokus = vi.spyOn(HTMLInputElement.prototype, 'focus').mockImplementation(function (
+      this: HTMLInputElement,
+      o?: FocusOptions,
+    ) {
+      const menue = this.closest('[class]')?.parentElement as HTMLElement;
+      reihenfolge.push(`fokus preventScroll=${String(o?.preventScroll)} left=${menue.style.left}`);
+    });
+    try {
+      zeigen();
+      fireEvent.click(spitzenKnopf('Anfangen bei'));
+      expect(reihenfolge).toEqual(['fokus preventScroll=true left=-50px']);
+    } finally {
+      vi.unstubAllGlobals();
+      rechteck.mockRestore();
+      breite.mockRestore();
+      fokus.mockRestore();
+    }
+  });
+
+  it('ohne Maus (Handy): kein Fokus ins Suchfeld – sonst ginge die Tastatur auf', () => {
+    const fokus = vi.spyOn(HTMLInputElement.prototype, 'focus');
+    try {
+      zeigen();
+      fireEvent.click(spitzenKnopf('Anfangen bei'));
+      expect(fokus).not.toHaveBeenCalled();
+    } finally {
+      fokus.mockRestore();
+    }
+  });
 });

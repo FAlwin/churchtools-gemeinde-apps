@@ -55,15 +55,20 @@ export function SpitzenAuswahl({
 
   const menue = useRef<HTMLDivElement>(null);
   const listeRef = useRef<HTMLUListElement>(null);
+  const suchFeld = useRef<HTMLInputElement>(null);
 
-  // Vor dem ersten Bild: rechts im Bildschirm halten (`menueVersatz`).
+  // Vor dem ersten Bild: rechts im Bildschirm halten (`menueVersatz`) – und ERST DANN mit der Maus ins Suchfeld, ohne
+  // Scrollen. Mit `autoFocus` kam der Fokus vor dieser Rechnung, solange das Menü noch überstand: Der Browser scrollte
+  // den Behälter von ChurchTools 16 px zur Seite, die Messung war verschoben, und das Menü stand rechts am Rand
+  // (Test-Instanz 11.11.2026, 375 px breit, mit Maus).
   useLayoutEffect(() => {
     const m = menue.current;
     if (!offen || !m) return;
     m.style.left = '0px';
     const r = m.getBoundingClientRect();
     m.style.left = `${menueVersatz(r.left, r.width, document.documentElement.clientWidth)}px`;
-  }, [offen]);
+    if (maus) suchFeld.current?.focus({ preventScroll: true });
+  }, [offen, maus]);
 
   // Die markierte Zeile bleibt im Blick (lange Liste, Pfeiltasten) – nur die Liste scrollt, nie die Seite.
   useEffect(() => {
@@ -122,7 +127,7 @@ export function SpitzenAuswahl({
               aria-expanded
               aria-activedescendant={liste[aktiv] ? `${id}-${aktiv}` : undefined}
               placeholder="Gruppe suchen"
-              autoFocus={maus}
+              ref={suchFeld}
               value={suche}
               onChange={(e) => {
                 setSuche(e.target.value);

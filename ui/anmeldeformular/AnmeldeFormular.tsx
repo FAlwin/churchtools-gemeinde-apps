@@ -14,6 +14,7 @@ import { FeldEingabe } from './FeldEingabe';
 import { FormularRahmen, Symbol, type Ansicht } from './FormularRahmen';
 import { Ergebnis } from './FormularErgebnis';
 import { useAbsenden, usePlaetze, type Abschicken } from './useAbsenden';
+import { useBedingungen } from './useBedingungen';
 
 /**
  * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
@@ -93,7 +94,12 @@ export function AnmeldeFormular({
   const e = ansicht.einstellungen;
   const g = e.gestaltung;
   const kinder = e.wer === 'kinder';
-  const [antworten, setAntworten] = useState<Antworten>(start ?? leereAntworten());
+  // F1b: Bedingungen (ausblenden, Antworten sperren, Wahl lösen) – im Baukasten aus, dort sieht man alles.
+  const { antworten, setAntworten, zeigen, bedingt } = useBedingungen(
+    e.formular,
+    () => start ?? leereAntworten(),
+    !baukasten,
+  );
   // A6-5b: Eine ausgebuchte Option ist nicht wählbar – vorausgewählt ist die erste freie.
   const [option, setOption] = useState(() =>
     Math.max(
@@ -115,8 +121,8 @@ export function AnmeldeFormular({
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
   // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
   // Bemerkungen. Nur der Datenschutz steht immer am Ende, direkt vor dem Absenden.
-  const kopf = e.formular.anmeldung.filter((f) => sichtbar(f) && !amEnde(f));
-  const ende = e.formular.anmeldung.filter((f) => sichtbar(f) && f.typ === 'privacy');
+  const kopf = e.formular.anmeldung.filter((f) => sichtbar(f) && zeigen(f) && !amEnde(f));
+  const ende = e.formular.anmeldung.filter((f) => sichtbar(f) && zeigen(f) && f.typ === 'privacy');
   const preisFeld = e.formular.anmeldung.find((f) => f.typ === 'price' && sichtbar(f));
   const personFelder = e.formular.person.filter(sichtbar);
   // Derselbe Tag, an dem ChurchTools löscht – die eine Regel aus `termin.ts`.
@@ -267,6 +273,7 @@ export function AnmeldeFormular({
                   onWert={(w) => setAnmeldung(f.id, w)}
                   fehler={fehler}
                   zusatz={baukasten?.hinweis?.(f.id)}
+                  {...bedingt(f, `anmeldung.${f.id}`)}
                 />,
               ),
             )}
@@ -331,21 +338,24 @@ export function AnmeldeFormular({
                     „Entfernen“.
                   </p>
                 )}
-                {personFelder.map((f) =>
-                  huelle(
-                    f,
-                    'person',
-                    <FeldEingabe
-                      key={f.id}
-                      feld={f}
-                      pfad={`personen.${i}.${f.id}`}
-                      wert={p[f.id]}
-                      onWert={(w) => setPerson(i, f.id, w)}
-                      fehler={fehler}
-                      zusatz={baukasten?.hinweis?.(f.id)}
-                    />,
-                  ),
-                )}
+                {personFelder
+                  .filter((f) => zeigen(f, i))
+                  .map((f) =>
+                    huelle(
+                      f,
+                      'person',
+                      <FeldEingabe
+                        key={f.id}
+                        feld={f}
+                        pfad={`personen.${i}.${f.id}`}
+                        wert={p[f.id]}
+                        onWert={(w) => setPerson(i, f.id, w)}
+                        fehler={fehler}
+                        zusatz={baukasten?.hinweis?.(f.id)}
+                        {...bedingt(f, `personen.${i}.${f.id}`, i)}
+                      />,
+                    ),
+                  )}
               </div>
             ))}
             {e.wer !== 'einzeln' && naechster === 'kein' && (
@@ -439,6 +449,7 @@ export function AnmeldeFormular({
                   fehler={fehler}
                   zusatz={baukasten?.hinweis?.(f.id)}
                   loeschtag={loeschtag}
+                  {...bedingt(f, `anmeldung.${f.id}`)}
                 />,
               ),
             )}

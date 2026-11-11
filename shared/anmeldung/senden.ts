@@ -26,6 +26,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { tagPunkt } from '../ct/datum';
+import { leeren } from './bedingungen';
 import {
   berechnePreis,
   euroText,
@@ -109,8 +110,11 @@ export function buchungAus(
 ): Buchung {
   const stichtag = (e.termin?.beginn ?? heute).slice(0, 10);
   const mitGeburt = geburtsdatumAn(e.formular);
+  // F1b: Auch das Geburtsdatum kann eine Bedingung haben – ein ausgeblendetes zählt nicht, im angezeigten wie im
+  // gespeicherten Betrag (`anmeldungAufbauen` leert dieselben Antworten).
+  const sichtbar = leeren(e.formular, a);
   return {
-    alter: a.personen
+    alter: sichtbar.personen
       .filter((_, i) => mitPlatz?.[i] !== false)
       .map((p) => (mitGeburt && typeof p.birth === 'string' ? alterAm(p.birth, stichtag) : null)),
     option: wahl.option,
@@ -268,12 +272,15 @@ export function wartelistenZeile(name: string): string {
  */
 export function anmeldungAufbauen(
   e: OeffentlicheEinstellungen,
-  a: Antworten,
+  roh: Antworten,
   wahl: PreisWahl,
   heute: string,
   ct: CtFormular,
   weiteres: { nr?: string; mitPlatz?: boolean[]; papier?: string } = {},
 ): Anmeldung {
+  // F1b: Was die Person zuletzt nicht mehr gesehen hat (ausgeblendete Frage, gesperrte Antwort), kommt nicht nach
+  // ChurchTools. Hier, weil das Formular UND die Anmeldung von Hand (`handFelder`) durch diese Stelle gehen.
+  const a = leeren(e.formular, roh);
   const alle = [...ct.form, ...(ct.addChildForm ?? [])];
   const person = (name: string) => alle.find((x) => x.type === 'person' && x.name === name);
   const gruppenfeld = (ctId: number | undefined) =>

@@ -362,6 +362,14 @@
   gap: 8px;
   align-items: center;
 }
+// F1b: Antwort mit Bedingung, gerade nicht wählbar – grau, mit Grund (Entwurf F1, Ansicht 2).
+.pv .gesperrt {
+  color: var(--p-muted);
+  cursor: not-allowed;
+}
+.pv .gesperrt small {
+  font-size: 0.85em;
+}
 .pv .infofield {
   background: color-mix(in srgb, var(--p-accent) 9%, transparent);
   border-radius: calc(var(--p-r) * 0.6);

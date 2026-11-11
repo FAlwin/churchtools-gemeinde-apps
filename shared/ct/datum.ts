@@ -129,3 +129,27 @@ export function letzterTag(monat: string): string {
   const tage = new Date(Date.UTC(jahr, m, 0)).getUTCDate();
   return `${monat}-${String(tage).padStart(2, '0')}`;
 }
+
+/**
+ * **Derselbe Tag vor `jahre` Jahren** (`2027-09-30`, 10 → `2017-09-30`): wer an diesem Tag oder früher geboren ist, ist am
+ * Tag `tag` mindestens `jahre` alt – Gegenstück zu `alterAm`. Für Regeln (Gruppenwechsel) und Musterdaten (Anmeldeformular).
+ */
+export function vorJahren(tag: string, jahre: number): string {
+  return `${Number(tag.slice(0, 4)) - jahre}${tag.slice(4)}`;
+}
+
+/**
+ * **Alter am Stichtag**, beides `YYYY-MM-DD`; `null` ohne (gültiges) Geburtsdatum oder vor der Geburt. Die eine Stelle für
+ * Anmeldungen (Stichtag = erster Tag der Veranstaltung) und Gruppenwechsel (Stichtag 30.09.) – lag bis 11.11.2026 in
+ * `shared/anmeldung/formular.ts`.
+ */
+export function alterAm(geburt: string, stichtag: string): number | null {
+  const g = /^(\d{4})-(\d{2})-(\d{2})$/.exec(geburt);
+  const s = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stichtag);
+  if (!g || !s) return null;
+  const [gj, gm, gt] = g.slice(1).map(Number);
+  const [sj, sm, st] = s.slice(1).map(Number);
+  let alter = sj - gj;
+  if (sm < gm || (sm === gm && st < gt)) alter--;
+  return alter < 0 ? null : alter;
+}

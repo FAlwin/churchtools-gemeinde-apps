@@ -3,7 +3,7 @@ import type { AbmeldeDaten } from '@shared/anmeldung/oeffentlich';
 import { kannEtwasKosten } from '@shared/anmeldung/preis';
 import { mailGueltig } from '@shared/anmeldung/formular';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
-import { FormularRahmen, type Ansicht } from './AnmeldeFormular';
+import { FormularRahmen, type Ansicht } from './FormularRahmen';
 import s from './AnmeldeFormular.module.scss';
 
 /**

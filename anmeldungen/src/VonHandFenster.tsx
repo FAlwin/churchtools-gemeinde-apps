@@ -4,7 +4,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ApiError } from '@ui/ct/fehler';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
-import { FeldEingabe } from '@ui/anmeldeformular/AnmeldeFormular';
+import { FeldEingabe } from '@ui/anmeldeformular/FeldEingabe';
 import pv from '@ui/anmeldeformular/AnmeldeFormular.module.scss';
 import {
   geburtsdatumAn,

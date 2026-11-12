@@ -1266,6 +1266,99 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     );
     expect(gruppen.get(id)!.note).toBe(vorher);
   });
+
+  // ── F1c: Bedingungen ziehen beim Speichern mit (Alwin, 12.11.2026) ──
+  /** Größe (f1, Auswahl) und „Welche Farbe?“ (f2) nur, wenn Größe „M“ – dazu „L“ nur, wenn ein Telefon da ist. */
+  async function mitBedingung() {
+    const id = await neu();
+    await feldSpeichern(
+      id,
+      'anmeldung',
+      feld({
+        antwortBed: {
+          L: { modus: 'eine', regeln: [{ feld: 'tel', op: 'ausgefuellt' }], art: 'grau' },
+        },
+      }),
+      undefined,
+      null,
+    );
+    const f2 = feld({
+      id: 'f2',
+      typ: 'text',
+      frage: 'Welche Farbe?',
+      antworten: [],
+      bed: { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'M' }] },
+    });
+    await feldSpeichern(id, 'anmeldung', f2, undefined, null);
+    return id;
+  }
+  const gespeichert = (id: number, feldId: string) =>
+    einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === feldId)!;
+
+  it('F1c: Antwort umbenannt → die Bedingung, die darauf schaut, zieht mit (sonst blockierte das Speichern)', async () => {
+    const id = await mitBedingung();
+    const opt = ctFeld(id, 'f1').options as { id: string; name: string }[];
+    await feldSpeichern(id, 'anmeldung', feld({ antworten: ['S', 'Medium', 'L'] }), [
+      { text: 'S', altId: opt[0].id, von: 'S' },
+      { text: 'Medium', altId: opt[1].id, von: 'M' },
+      { text: 'L', altId: opt[2].id, von: 'L' },
+    ]);
+    expect(gespeichert(id, 'f2').bed!.regeln).toEqual([{ feld: 'f1', op: 'ist', wert: 'Medium' }]);
+  });
+
+  it('F1c: Antwort umbenannt → die Bedingung AN dieser Antwort zieht mit', async () => {
+    const id = await mitBedingung();
+    const f1 = gespeichert(id, 'f1');
+    await feldSpeichern(id, 'anmeldung', { ...f1, antworten: ['S', 'M', 'Large'] }, [
+      { text: 'S', von: 'S' },
+      { text: 'M', von: 'M' },
+      { text: 'Large', von: 'L' },
+    ]);
+    expect(Object.keys(gespeichert(id, 'f1').antwortBed!)).toEqual(['Large']);
+  });
+
+  it('F1c: Antwort entfernt → die Bedingung, die darauf schaut, fällt weg', async () => {
+    const id = await mitBedingung();
+    await feldSpeichern(id, 'anmeldung', feld({ antworten: ['S', 'L'] }), [
+      { text: 'S', von: 'S' },
+      { text: 'L', von: 'L' },
+    ]);
+    expect(gespeichert(id, 'f2').bed).toBeUndefined();
+  });
+
+  it('F1c: Quelle entfernt (gelöscht oder nur ausgeblendet) → die Bedingung fällt weg', async () => {
+    const id = await mitBedingung();
+    expect(await feldEntfernen(id, 'f1')).toEqual({ art: 'geloescht' });
+    expect(gespeichert(id, 'f2').bed).toBeUndefined();
+
+    const id2 = await mitBedingung();
+    const ct1 = ctFeld(id2, 'f1');
+    const opt = ct1.options as { id: string }[];
+    mitglieder.set(id2, [
+      { groupMemberStatus: 'active', fields: [{ id: ct1.id, value: opt[1].id }] },
+    ]);
+    expect(await feldEntfernen(id2, 'f1')).toEqual({ art: 'ausgeblendet', antworten: 1 });
+    expect(gespeichert(id2, 'f2').bed).toBeUndefined();
+  });
+
+  it('F1c: Antwort-Bedingung auf eine entfernte Quelle (Telefon ausgeschaltet) fällt weg', async () => {
+    const id = await mitBedingung();
+    expect(await feldEntfernen(id, 'tel')).toMatchObject({ art: 'ausgeblendet' });
+    expect(gespeichert(id, 'f1').antwortBed).toBeUndefined();
+  });
+
+  it('F1c: Verschieben, das eine Bedingung kaputt machte → 409, nichts geändert', async () => {
+    const id = await mitBedingung();
+    const vorher = gruppen.get(id)!.note;
+    await expect(feldEinordnen(id, 'f1', 'anmeldung', null)).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringContaining('„T-Shirt-Größe“ muss vor „Welche Farbe?“ bleiben'),
+    });
+    expect(gruppen.get(id)!.note).toBe(vorher);
+    // Unbeteiligtes verschieben geht weiter.
+    await feldEinordnen(id, 'note', 'anmeldung', 'f1');
+    expect(ids(id).anmeldung.indexOf('note')).toBeLessThan(ids(id).anmeldung.indexOf('f1'));
+  });
 });
 
 describe('Titelbild (A5)', () => {

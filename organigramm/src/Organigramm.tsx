@@ -4,7 +4,7 @@ import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
-import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
+import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
@@ -17,9 +17,11 @@ import {
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
+import { SpitzenAuswahl } from './SpitzenAuswahl';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { personenInhalt } from './kastenPersonen';
+import { personenInhalt, type RollenFilter } from './kastenPersonen';
+import { RollenAuswahl } from './RollenAuswahl';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -48,6 +50,8 @@ interface Props {
   /** Personen in Diagramm und Liste (O7b-6) – je Gerät gemerkt, liegt in `App`. */
   personen: PersonenWahl;
   onPersonen: (w: PersonenWahl) => void;
+  /** „Welche Rollen“ (#915) – je Gerät gemerkt, liegt in `App`; gilt auch für die Präsentation. */
+  rollenFilter: RollenFilter;
   /** Pfad der Spitze – `null` = ganze Gemeinde. Eine verschwundene Spitze setzt `App` zurück. */
   spitze: string | null;
   onSpitze: (pfad: string | null) => void;
@@ -78,6 +82,7 @@ export function Organigramm({
   onAnsicht,
   personen,
   onPersonen,
+  rollenFilter,
   spitze,
   onSpitze,
   sicht,
@@ -92,8 +97,8 @@ export function Organigramm({
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
-    () => personenInhalt(mitglieder, start.rollen, personen),
-    [mitglieder, personen, start.rollen],
+    () => personenInhalt(mitglieder, start.rollen, personen, rollenFilter.aus),
+    [mitglieder, personen, start.rollen, rollenFilter.aus],
   );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
   // Karten ab der Spitze: ein Bereich (oder eine Gruppe) allein – sonst alle Bereiche wie bisher.
@@ -172,20 +177,17 @@ export function Organigramm({
           className={styles.ansicht}
           verbunden
         />
-        <label className={styles.anfangen}>
-          Anfangen bei
-          <select
-            className={styles.feld}
-            value={spitze ?? ''}
-            onChange={(e) => onSpitze(e.target.value || null)}
-          >
-            {spitzenWahl(baum, spitze).map((w) => (
-              <option key={w.wert} value={w.wert}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Kein <label> um die Auswahl: Darin stehen Knopf und Suchfeld – ein Label leitete Klicks weiter. */}
+        <span className={styles.anfangen}>
+          <span aria-hidden="true">Anfangen bei</span>
+          <SpitzenAuswahl
+            label="Anfangen bei"
+            baum={baum}
+            wert={spitze}
+            onWahl={onSpitze}
+            feldKlasse={styles.feld}
+          />
+        </span>
         {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst
             (Alwin, 28.10.2026: Variante B). */}
         {ansicht !== 'karten' && (
@@ -217,6 +219,12 @@ export function Organigramm({
               verbunden
             />
           </span>
+          {personen !== 'aus' && (
+            <span className={styles.anfangen}>
+              Welche Rollen
+              <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
+            </span>
+          )}
         </div>
       )}
 

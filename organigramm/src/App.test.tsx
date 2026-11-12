@@ -28,6 +28,13 @@ import { einrichtungAus, type Einrichtung } from '@shared/organigramm/gruppenwec
 import type { KjDaten } from '@shared/organigramm/gruppenwechselSicht';
 import { ladeEinrichtung } from './gruppenwechselSpeicher';
 import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
+import {
+  spitzenKnopf,
+  spitzenName,
+  spitzenOptionen,
+  spitzenWert,
+  waehleSpitze,
+} from './spitzenAuswahl.testutil';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./ladeMitglieder', () => ({
@@ -659,6 +666,45 @@ describe('O4: Präsentation', () => {
     expect(within(technik).getByText('Mitglieder nicht sichtbar')).toBeTruthy();
   });
 
+  it('„Welche Rollen“ (#915): Listen ohne die abgewählten Rollen, mit Hinweis – Zahlen und Leitung zählen alle', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    const d = await oeffnen();
+    // In den Kacheln gibt es Listen – also auch den Filter, mit derselben gemerkten Wahl wie im Reiter.
+    expect(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+    expect(within(d).getByText('3 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const technik = within(d).getByRole('region', { name: 'Technik' });
+    expect(
+      within(technik)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['AAlwin FriesenLeiter', 'DDora DornCo-Leiter']);
+    expect(within(technik).getByText('1 Person ausgeblendet')).toBeTruthy();
+    // Die Zahl an der Spalte zählt weiter alle drei.
+    expect(within(technik).getByText('3')).toBeTruthy();
+
+    fireEvent.click(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' }));
+    fireEvent.click(within(d).getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(within(technik).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(technik).queryByText(/ausgeblendet/)).toBeNull();
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+  });
+
+  it('„Welche Rollen“ gilt auch in den Diagrammen der Präsentation', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    const d = await oeffnen();
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const bild = within(d).getByRole('group', { name: 'Organigramm' }).textContent;
+    expect(bild).toContain('Dora Dorn');
+    expect(bild).not.toContain('Carl Clau');
+  });
+
   it('Tastatur: Pfeile, Bild auf/ab, Pos1, Esc zurück zur Übersicht und dort schließen', async () => {
     const d = await oeffnen();
     const taste = (key: string) => fireEvent.keyDown(window, { key });
@@ -1262,9 +1308,17 @@ describe('O6: Leitung und Mitglieder', () => {
 });
 
 describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
+  /** Die Gemeinde und jede Gruppe des Test-Baums, wie im Baum (#915) – nicht mehr nur die Bereiche. */
+  const OPTIONEN_ANFANGEN = [
+    'Ganze Gemeinde',
+    'Gottesdienst',
+    'Technik',
+    'Stream',
+    'Café',
+    'Infos',
+  ];
   const ansicht = (name: string) =>
     within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
-  const anfangenBei = () => screen.getByLabelText<HTMLSelectElement>('Anfangen bei');
   const bereiche = () => screen.queryAllByRole('region').map((r) => r.getAttribute('aria-label'));
 
   it('Liste: Gemeinde oben, Bereiche offen, darunter zu – Wahl im Gerät gemerkt', async () => {
@@ -1319,19 +1373,35 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   it('„Anfangen bei“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    expect([...anfangenBei().options].map((o) => o.text)).toEqual([
-      'Ganze Gemeinde',
-      'Gottesdienst',
-      'Café',
-      'Infos',
-    ]);
-    fireEvent.change(anfangenBei(), { target: { value: '10' } });
+    expect(spitzenOptionen('Anfangen bei')).toEqual(OPTIONEN_ANFANGEN);
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     expect(bereiche()).toEqual(['Gottesdienst']);
     fireEvent.click(ansicht('Liste'));
     expect(screen.queryByText('ECG')).toBeNull();
     expect(screen.getByRole('button', { name: 'Gottesdienst zuklappen' })).toBeTruthy();
-    fireEvent.change(anfangenBei(), { target: { value: '' } });
+    waehleSpitze('Anfangen bei', 'Ganze Gemeinde');
     expect(screen.getByText('ECG')).toBeTruthy();
+  });
+
+  it('„Anfangen bei“ eine tiefere Gruppe direkt aus der Auswahl – auch per Suche und Enter (#915)', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    waehleSpitze('Anfangen bei', 'Technik');
+    expect(bereiche()).toEqual(['Technik']);
+    expect(spitzenWert('Anfangen bei')).toBe('10/7');
+    // Suchen: nur Treffer, mit ihren Obergruppen darunter; Enter nimmt den ersten.
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    const suche = screen.getByRole('combobox', { name: 'Gruppe suchen' });
+    fireEvent.change(suche, { target: { value: 'stre' } });
+    expect(
+      within(screen.getByRole('listbox', { name: 'Anfangen bei' }))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['StreamGottesdienst › Technik']);
+    fireEvent.keyDown(suche, { key: 'Enter' });
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(spitzenName('Anfangen bei')).toBe('Stream');
+    expect(spitzenWert('Anfangen bei')).toBe('10/7/12');
   });
 
   it('„Im Organigramm hier anfangen“ im Gruppenfenster: Gruppe wird Spitze, offen, steht in der Auswahl', async () => {
@@ -1341,8 +1411,8 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
     expect(screen.queryByRole('region', { name: 'Leiter' })).toBeNull();
     expect(bereiche()).toEqual(['Technik']);
-    expect(anfangenBei().value).toBe('10/7');
-    expect(anfangenBei().selectedOptions[0].text).toBe('Technik');
+    expect(spitzenWert('Anfangen bei')).toBe('10/7');
+    expect(spitzenName('Anfangen bei')).toBe('Technik');
     fireEvent.click(ansicht('Liste'));
     // Technik war zu – als Spitze steht sie offen da.
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
@@ -1368,14 +1438,14 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   it('Spitze für alle ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    waehleSpitze('Anfangen bei', 'Infos');
     expect(bereiche()).toEqual(['Infos']);
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(anfangenBei().value).toBe('');
+    expect(spitzenWert('Anfangen bei')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
     // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(anfangenBei().value).toBe('');
+    expect(spitzenWert('Anfangen bei')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
   });
 
@@ -1384,7 +1454,7 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     // verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    waehleSpitze('Anfangen bei', 'Infos');
     baumReiter.length = 0;
     await typFuerAlleUmschalten(/^Verteiler/);
     expect(baumReiter.length).toBeGreaterThan(0);
@@ -1426,7 +1496,7 @@ describe('O7b-3: Diagramme', () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
     fireEvent.click(ansicht('Von links'));
-    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     expect(diagramm().textContent).not.toContain('ECG');
     expect(within(diagramm()).getByRole('button', { name: 'Technik' })).toBeTruthy();
     expect(within(diagramm()).queryByRole('button', { name: 'Café' })).toBeNull();
@@ -1487,6 +1557,60 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(kasten().textContent).toContain('LEITER');
     expect(kasten().textContent).toContain('Alwin Friesen');
     expect(kasten().textContent).toContain('1 Mitarbeiter');
+  });
+
+  it('„Welche Rollen“ (#915): nur mit Personen; abgewählt fehlt die Rolle, darunter steht es – gemerkt', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(screen.queryByRole('button', { name: /Welche Rollen/ })).toBeNull();
+    fireEvent.click(personen('Alle'));
+    fireEvent.click(screen.getByRole('button', { name: 'Welche Rollen: Alle' }));
+    const haken = within(screen.getByRole('group', { name: 'Welche Rollen' }));
+    // Die Rollen wie in den Kästchen: Leitung zuerst, die Standardrolle zuletzt.
+    expect(haken.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)).toEqual([
+      'Leiter',
+      'Co-Leiter',
+      'Mitarbeiter',
+    ]);
+    fireEvent.click(haken.getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Leiter Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Mitarbeiter (1) ausgeblendet');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('["Mitarbeiter"]');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+
+    fireEvent.click(haken.getByRole('button', { name: 'Alle' }));
+    expect(listenZeile('Technik')).toContain('Carl Clau');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+    fireEvent.click(haken.getByRole('button', { name: 'Nur Leitung' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Co-Leiter Dora Dorn');
+
+    // Im Diagramm dieselbe Regel – der Hinweis steht im Kästchen (gemessen wie „Mitglieder nicht sichtbar“).
+    fireEvent.click(ansicht('Von oben'));
+    const technik = within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
+      name: 'Technik',
+    });
+    expect(technik.textContent).toContain('Dora Dorn');
+    expect(technik.textContent).not.toContain('Carl Clau');
+    expect(technik.textContent).toMatch(/Mitarbeiter \(1\) aus/);
+  });
+
+  it('„Welche Rollen“ gemerkt: gilt nach dem Neuladen; Unlesbares im Speicher heißt „alle“', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    localStorage.setItem('organigramm-rollen-aus', '["Leiter", 7]');
+    const { unmount } = render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Leiter (1) ausgeblendet');
+    unmount();
+    localStorage.setItem('organigramm-rollen-aus', '{kaputt');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).toContain('Alwin Friesen');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: Alle' })).toBeTruthy();
   });
 });
 
@@ -1641,11 +1765,11 @@ describe('O7b-4: Organigramm als PDF', () => {
     render(<App />);
     const knopf = await screen.findByRole('button', { name: 'Als PDF speichern oder drucken' });
     expect(knopf.closest('header')).not.toBeNull();
-    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     fireEvent.click(knopf);
     const fenster = within(screen.getByRole('dialog', { name: 'Organigramm als PDF' }));
     expect(fenster.getByLabelText<HTMLSelectElement>('Ansicht').value).toBe('links');
-    expect(fenster.getByLabelText<HTMLSelectElement>('Ausschnitt').value).toBe('10');
+    expect(spitzenWert('Ausschnitt', fenster)).toBe('10');
     expect(
       within(screen.getByRole('figure', { name: 'Vorschau' })).getByRole('img', {
         name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,

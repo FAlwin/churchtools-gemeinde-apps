@@ -751,8 +751,10 @@ steht.
 **Das muss passieren:** Ein Tipp auf der Startseite führt ohne Umweg an die richtige Stelle.
 
 1. Startseite → Karte **Planen** → eine Gruppe (z. B. „Technik · 27 Plätze frei“) antippen → Planen öffnet sich mit
-   **nur dieser Gruppe** und dem Zeitraum **heute bis in 6 Wochen**; oben steht „Nur Technik · nächste 6 Wochen – von der
-   Startseite, nur für jetzt.“ Die freien Plätze in der Matrix ergeben dieselbe Zahl wie auf der Startseite.
+   **nur dieser Gruppe** und dem Zeitraum **heute bis in 6 Wochen**; oben steht – **blau hinterlegt**, nicht rot –
+   „Nur Technik · nächste 6 Wochen – von der Startseite, nur für jetzt.“ Die freien Plätze in der Matrix ergeben dieselbe
+   Zahl wie auf der Startseite. Auch der Termin-Kopf (am Handy die Datumszettel) zählt **nur Technik**: „alles besetzt“,
+   wenn Technik dort voll ist, auch wenn andere Gruppen noch Lücken haben; „—“, wo Technik an dem Termin keinen Dienst hat.
 2. Einen Termin im Kopf antippen → Termin-Ansicht → „‹ Planen“ → wieder nur Technik, derselbe Zeitraum.
 3. **Gewohnte Ansicht** → Planen mit dem eigenen gemerkten Filter und Zeitraum. Auch über den Reiter „Planen“ kommt der
    gewohnte Stand – der Besuch hat nichts verstellt. Spaltenbreite, die man währenddessen ändert, bleibt gemerkt.

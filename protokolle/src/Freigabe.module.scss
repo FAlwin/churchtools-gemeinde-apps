@@ -76,3 +76,29 @@
   color: var(--text2);
   font-size: 13.5px;
 }
+
+// Beitrag in der Gruppe (S6-2): Vorschau unter dem Häkchen – wie ein Beitrag, eingerückt unter den Haken.
+.vorschau {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 14px 30px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  font-size: 13.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+.rest {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.45;
+}

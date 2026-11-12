@@ -151,6 +151,12 @@
     text-anchor: middle;
   }
 
+  line {
+    stroke: var(--text2);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
   &:focus-visible circle {
     stroke: var(--blue);
   }

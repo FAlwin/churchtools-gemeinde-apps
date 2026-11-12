@@ -41,6 +41,8 @@ export function TabBar({ active, tabs, dimmed = [], onChange, oben }: TabBarProp
       onErneut={scrolleZumAnfang}
       tour="tabbar"
       oben={oben}
+      // Die Reiter der Musik-App stehen oben immer am Bildschirmrand (Platz für die Statusleiste, 12.11.2026).
+      amRand={oben}
     />
   );
 }

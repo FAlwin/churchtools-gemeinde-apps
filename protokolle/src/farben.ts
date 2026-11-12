@@ -1,6 +1,7 @@
 import { COLORS_DARK_MODE_DEFAULT, COLORS_DEFAULT } from '@blocknote/core';
 import { de } from '@blocknote/core/locales';
 import type { Thema } from '@ui/design/thema';
+import type { Rgb } from '@shared/ct/terminBlatt';
 
 /**
  * **Die Markier-Farben des Protokolls** (Bauplan K3a, Alwin 04.11.2026: „alle Farben des Editors, Hintergrund und
@@ -36,4 +37,27 @@ export function farbWert(name: unknown, art: FarbArt, thema: Thema): string | un
   if (!Object.hasOwn(tabelle, name)) return undefined;
   if (art === 'hintergrund') return EIGENE_HINTERGRUENDE[name] ?? tabelle[name].background;
   return tabelle[name].text;
+}
+
+/**
+ * **Der Textmarker auf Papier** (S6-3a): `--markiert` der hellen Farben (`ui/design/_farben.scss`,
+ * `rgba(250, 204, 21, 0.45)`) auf Weiß gemischt – ein PDF kennt keine CSS-Variablen. `farben.test.ts` rechnet es aus der
+ * SCSS-Datei nach, damit beide nicht auseinanderlaufen.
+ */
+export const MARKIERT_PAPIER: Rgb = [253, 232, 150];
+
+const hex = (h: string): Rgb | null => {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h.trim());
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+};
+
+/**
+ * **Eine Markier-Farbe fürs PDF** – dieselbe Farbe wie auf dem hellen Blatt (`farbWert`), als Rot/Grün/Blau. Gelb als
+ * Hintergrund ist unser Textmarker (`MARKIERT_PAPIER`).
+ */
+export function papierFarbe(name: unknown, art: FarbArt): Rgb | null {
+  const wert = farbWert(name, art, 'light');
+  if (!wert) return null;
+  if (wert === EIGENE_HINTERGRUENDE.yellow) return MARKIERT_PAPIER;
+  return hex(wert);
 }

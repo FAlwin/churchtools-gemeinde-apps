@@ -24,6 +24,11 @@ interface Props<T extends string> {
    * ChurchTools („Events“: Dienstplan · Abwesenheiten …), ohne Symbole. Am Handy bleibt die Leiste unten.
    */
   oben?: boolean;
+  /**
+   * **Die Leiste steht oben am Bildschirmrand** (nur mit `oben`): In der installierten App lässt sie Platz für die
+   * Statusleiste (`--reiter-oben-polster`). Reiter in einer Seite oder Karte (Anmeldungen) brauchen das nicht.
+   */
+  amRand?: boolean;
   /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */
   name?: string;
 }
@@ -40,10 +45,15 @@ export function ReiterLeiste<T extends string>({
   onErneut,
   tour,
   oben = false,
+  amRand = false,
   name = 'Bereiche',
 }: Props<T>) {
   return (
-    <nav className={oben ? styles.oben : styles.tabbar} data-tour={tour} aria-label={name}>
+    <nav
+      className={oben ? `${styles.oben}${amRand ? ' ' + styles.rand : ''}` : styles.tabbar}
+      data-tour={tour}
+      aria-label={name}
+    >
       {reiter.map((r) => {
         const an = aktiv === r.id;
         const aus = gedimmt.includes(r.id);

@@ -14,6 +14,7 @@ import {
   freigegebenerKopf,
   verlaufAus,
   zurueckgenommenerKopf,
+  zurueckText,
 } from './freigabe';
 import type { ProtokollKopf } from './speicher';
 
@@ -299,5 +300,28 @@ describe('Feste Punkte bei Freigabe und Zurücknehmen', () => {
       seit: okt.beginn,
     });
     expect(festesProtokollAus(l.props?.fest)).toEqual({ sitzung: 'okt' });
+  });
+});
+
+describe('zurueckText – derselbe Satz auf der Seite und im PDF (S6-3a)', () => {
+  const tag = (iso: string) => iso.slice(0, 10);
+  it('mit der Freigabe davor', () => {
+    expect(
+      zurueckText(
+        {
+          am: '2026-11-13T09:00:00Z',
+          name: 'Maria',
+          vorher: { art: 'freigegeben', von: 1, name: 'Alwin', am: '2026-11-12T09:00:00Z' },
+        },
+        tag,
+      ),
+    ).toBe(
+      'Freigabe zurückgenommen am 2026-11-13 von Maria – vorher freigegeben am 2026-11-12 von Alwin.',
+    );
+  });
+  it('ohne Freigabe davor (ältere Köpfe ohne Verlauf)', () => {
+    expect(zurueckText({ am: '2026-11-13T09:00:00Z', name: 'Maria', vorher: null }, tag)).toBe(
+      'Freigabe zurückgenommen am 2026-11-13 von Maria.',
+    );
   });
 });

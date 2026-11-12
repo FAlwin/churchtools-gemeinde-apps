@@ -213,8 +213,12 @@ export function textAus(content: unknown): string {
 
 const DATUM = /^\d{4}-\d{2}-\d{2}$/;
 
-/** `props.datum`, wenn es ein gültiges Kalenderdatum ist (`2026-02-30` zählt nicht). */
-function datumAus(props: Record<string, unknown> | undefined): string | null {
+/**
+ * **Das Datum eines Termin-Blocks:** `props.datum`, wenn es ein gültiges Kalenderdatum ist (`2026-02-30` zählt nicht).
+ * Eine Regel für Ableitung, Editor, Lese-Ansicht und PDF – bis S6-3a prüften Editor und Lese-Ansicht nur die Form und
+ * zeigten den 30.02., den die Bereiche verwarfen.
+ */
+export function terminDatum(props: Record<string, unknown> | undefined): string | null {
   const d = props?.datum;
   if (typeof d !== 'string' || !DATUM.test(d)) return null;
   const t = new Date(`${d}T12:00:00Z`);
@@ -244,7 +248,7 @@ export function ableiten(dokument: readonly Block[]): Ableitung {
       });
     }
     if (b.type === BLOCK.termin && text)
-      a.termine.push({ blockId: b.id, text, punkt, datum: datumAus(b.props) });
+      a.termine.push({ blockId: b.id, text, punkt, datum: terminDatum(b.props) });
     for (const k of b.children ?? []) besuche(k);
   };
 

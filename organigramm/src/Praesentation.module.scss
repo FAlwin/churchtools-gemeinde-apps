@@ -50,6 +50,15 @@
   font-weight: 700;
 }
 
+// Knopf „Welche Rollen“ (#915) – im Stil der Felder wie im Reiter.
+.feld {
+  @include m.eingabefeld;
+  height: var(--knopf-hoehe);
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
 .knopf {
   @include m.aktionKnopf;
   display: inline-flex;

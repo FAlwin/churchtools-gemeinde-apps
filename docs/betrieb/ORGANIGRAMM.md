@@ -75,10 +75,20 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   „Mitglieder nicht sichtbar“; eine Gruppe ohne eigene Mitglieder (oft eine Obergruppe) zeigt nur den Namen. Die
   Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät; sie gilt auch für die Diagramme
   der Präsentation (dort oben derselbe Umschalter) und gibt im PDF vor, ob das Häkchen **Personen** gesetzt ist.
+- **Welche Rollen** (seit #915, neben **Personen**, sobald Personen gezeigt werden) – ein Häkchen je Rolle, so benannt
+  wie in ChurchTools; „Leiter“ steht einmal, auch wenn es die Rolle bei mehreren Gruppentypen gibt. Angeboten wird nur,
+  was bei den sichtbaren Mitgliedern vorkommt. Dazu **Alle** und **Nur Leitung**. Abgewählte Rollen fehlen in den
+  Kästchen und Zeilen; darunter steht klein, was fehlt („Mitarbeiter (6) ausgeblendet“) – ist alles abgewählt, nur
+  dieser Hinweis. Der Knopf zeigt „Alle“ oder „3 von 5“. Das Gerät merkt sich die abgewählten Rollen; eine neue Rolle
+  in ChurchTools ist so von selbst zu sehen. Gilt auch in der Präsentation und gibt den Filter im PDF vor.
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
-- **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
-  Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
-  Ist die Spitze für alle ausgeblendet, gilt wieder die ganze Gemeinde.
+- **Anfangen bei:** die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
+  dann zeigen alle Ansichten nur sie. Die Auswahl klappt eine Liste auf, nach Ebene eingerückt wie im Baum, oben ein
+  **Suchfeld**: Beim Tippen stehen nur die Treffer da, darunter klein ihre Obergruppen (gleichnamige Gruppen bleiben
+  unterscheidbar). Mit der Maus springt man gleich ins Suchfeld (Pfeiltasten, Enter); am Handy nicht, sonst verdeckte
+  die Tastatur die Liste. Eine Gruppe mit zwei Obergruppen steht einmal, an ihrer ersten Stelle. Im Gruppenfenster jeder
+  Gruppe mit Untergruppen steht weiter **„Im Organigramm hier anfangen“**. Ist die Spitze für alle ausgeblendet, gilt
+  wieder die ganze Gemeinde; was für alle ausgeblendet ist, steht nicht in der Auswahl.
 - Die gewählte Ansicht **merkt sich das Gerät**. Ohne Wahl: am Handy die Liste, sonst **von
   oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation seit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
@@ -107,7 +117,7 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
 „Anfangen bei“ und was aufgeklappt ist, und zeigt das Blatt als **Vorschau** – genau diese Seiten werden zur PDF:
 
 - **Ansicht:** von oben, von links, Mindmap oder Liste (Karten gibt es auf Papier nicht – dann von oben).
-- **Ausschnitt:** ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
+- **Ausschnitt:** ganze Gemeinde oder jede Gruppe – dieselbe Auswahl mit Suche wie „Anfangen bei“ (#915).
 - **Papier:** **Passend** (vorgegeben: das A4, quer oder hoch, auf dem das Diagramm am größten wird; eine Liste steht
   hoch), A4 quer, A4 hoch, A3 quer oder A3 hoch. Ein Diagramm steht auf **einer Seite**, die Schrift wird höchstens
   11 pt groß; unter 6 pt rät das Fenster zu A3, einem Ausschnitt oder „Alles aufgeklappt“ aus. Eine Liste läuft über
@@ -117,6 +127,8 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
   (dort etwas eingerückt unter dem Namen, vor den Untergruppen). Angehakt ist es, wenn der Reiter Personen zeigt; es
   zeigt dann dieselbe Stufe – steht der Reiter auf „Aus“, die **Rollen** (Standardrolle als Zahl). Kursiv gibt es auf
   Papier nicht (eingebettet ist nur Lato normal und fett); der Text ist derselbe.
+- **Welche Rollen** (seit #915, nur mit Personen) – übernimmt die Wahl aus dem Reiter; hier geändert gilt sie nur für
+  diese PDF (wie der Ausschnitt).
 - **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht
   oben links. Ohne Logo in ChurchTools gibt es die Wahl nicht.
 - Auf jeder Seite: oben „Organigramm“, Gemeinde (und Ausschnitt), Stand-Datum; unten Gemeinde und „Seite x von y“.
@@ -148,6 +160,11 @@ ChurchTools:
   öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät. In den Diagrammen steht oben
   zusätzlich **Personen: Aus · Rollen · Alle** (ab O7b-6b) – dieselbe Wahl wie im Reiter, hier geändert gilt sie auch
   dort. Neue Gruppen der neuen Gliederung haben noch niemanden und zeigen nur den Namen.
+- **Welche Rollen** (seit #915; in den Kacheln immer, in den Diagrammen mit Personen) – derselbe Filter wie im Reiter,
+  hier geändert auch dort. Er gilt für die Kästchen und für die Personenlisten der Spalten: Dort bleibt, wer in der
+  Gruppe **oder einer ihrer Untergruppen** eine gewählte Rolle hat – „Nur Leitung“ bei Technik zeigt also auch die
+  Leitung von Ton und Stream. Darunter steht, wie viele ausgeblendet sind. Die Zahlen („12 Personen“) und die Leitung
+  auf den Kacheln zählen weiter alle.
 - Es gilt dasselbe wie im Baum: Was Gruppen-Admins für alle ausgeblendet haben, fehlt auch hier.
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.
@@ -268,7 +285,7 @@ Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
 
 ## Was die Erweiterung speichert
 
-Pro Gerät wird gemerkt, welche Ansichten gewählt sind und ob Personen gezeigt werden. Ab O7 liegt der **Plan „neue Gliederung“** im
+Pro Gerät wird gemerkt, welche Ansichten gewählt sind, ob Personen gezeigt werden und welche Rollen abgewählt sind. Ab O7 liegt der **Plan „neue Gliederung“** im
 Speicher der Erweiterung: als ein Eintrag in der Kategorie **„Plan „neue Gliederung““** (Kürzel `plan`), die die
 Erweiterung beim ersten Speichern anlegt. Darin stehen nur die Änderungen gegenüber heute (neue Gruppen, Umhängen,
 Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in ChurchTools.

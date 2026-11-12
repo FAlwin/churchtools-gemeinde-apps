@@ -15,13 +15,14 @@ import {
   anordnen,
   knotenAmPfad,
   sichtbarerBaum,
-  spitzenWahl,
   type AnordnungsArt,
 } from '@shared/organigramm/ansichten';
 import { DiagrammBild } from './DiagrammBild';
+import { SpitzenAuswahl } from './SpitzenAuswahl';
 import { BlattSeite, ListenInhalt, type BlattKopf } from './BlattSeite';
 import { messung, useSchrift } from './messung';
-import { pdfPersonenWahl, personenInhalt } from './kastenPersonen';
+import { pdfPersonenWahl, personenInhalt, type RollenFilter } from './kastenPersonen';
+import { RollenAuswahl } from './RollenAuswahl';
 import type { MitgliederDaten } from './ladeMitglieder';
 import { textBreite } from './textBreite';
 import {
@@ -67,6 +68,8 @@ interface Props {
     mitglieder: MitgliederDaten | null;
     rollen: ReadonlyMap<number, Rolle>;
   };
+  /** „Welche Rollen“ (#915) – vom Reiter übernommen; hier geändert gilt es nur für diese PDF (wie der Ausschnitt). */
+  rollenFilter: Pick<RollenFilter, 'rollen' | 'aus'>;
   onSchliessen: () => void;
   /** Für Tests: das Datum auf dem Blatt. */
   heute?: Date;
@@ -89,6 +92,7 @@ export function PdfFenster({
   ansicht,
   typFarben,
   personen,
+  rollenFilter,
   onSchliessen,
   heute,
 }: Props) {
@@ -100,6 +104,7 @@ export function PdfFenster({
   const [alles, setAlles] = useState(true);
   const [mitLogo, setMitLogo] = useState(true);
   const [mitPersonen, setMitPersonen] = useState(personen.wahl !== 'aus');
+  const [rollenAus, setRollenAus] = useState(rollenFilter.aus);
   const [blatt, setBlatt] = useState(0);
   const [datum] = useState(() => heute ?? new Date());
 
@@ -109,8 +114,11 @@ export function PdfFenster({
   const farbe = useMemo(() => sichtFarbe(typFarben), [typFarben]);
   const wartet = mitPersonen && mitglieder === null;
   const inhalt = useMemo(
-    () => (mitPersonen ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl)) : undefined),
-    [mitPersonen, mitglieder, rollen, wahl],
+    () =>
+      mitPersonen
+        ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl), rollenAus)
+        : undefined,
+    [mitPersonen, mitglieder, rollen, wahl, rollenAus],
   );
   const { breite, hoehe, kasten, kuerzen } = useMemo(
     () => messung(schrift, inhalt),
@@ -220,23 +228,19 @@ export function PdfFenster({
             ))}
           </select>
         </label>
-        <label className={fenster.beschriftung}>
-          Ausschnitt
-          <select
-            className={fenster.feld}
-            value={ausschnitt ?? ''}
-            onChange={(e) => {
-              setAusschnitt(e.target.value || null);
+        <div className={fenster.beschriftung}>
+          <span aria-hidden="true">Ausschnitt</span>
+          <SpitzenAuswahl
+            label="Ausschnitt"
+            baum={baum}
+            wert={ausschnitt}
+            onWahl={(w) => {
+              setAusschnitt(w);
               setBlatt(0);
             }}
-          >
-            {spitzenWahl(baum, ausschnitt).map((w) => (
-              <option key={w.wert} value={w.wert}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            feldKlasse={fenster.feld}
+          />
+        </div>
         <label className={fenster.beschriftung}>
           Papier
           <select
@@ -252,6 +256,17 @@ export function PdfFenster({
             ))}
           </select>
         </label>
+        {mitPersonen && (
+          <div className={fenster.beschriftung}>
+            <span aria-hidden="true">Welche Rollen</span>
+            <RollenAuswahl
+              rollen={rollenFilter.rollen}
+              aus={rollenAus}
+              onAus={setRollenAus}
+              feldKlasse={fenster.feld}
+            />
+          </div>
+        )}
       </div>
       <div className={styles.haken}>
         <label>

@@ -1,5 +1,5 @@
 import type { jsPDF } from 'jspdf';
-import type { Absatz, Lauf, Zelle } from '@shared/ct/terminBlatt';
+import type { Absatz, Lauf, Rgb, Zelle } from '@shared/ct/terminBlatt';
 import { spaltenBreiten } from './listenPdf';
 
 /**
@@ -31,6 +31,10 @@ export const BAND: Farbe = [238, 242, 246];
 const SCHILD: Farbe = [232, 238, 246];
 const ROT: Farbe = [231, 0, 11];
 export const WEISS: Farbe = [255, 255, 255];
+/** Links (`--blue` der ChurchTools-Oberfläche). */
+const BLAU: Farbe = [21, 93, 252];
+/** Hintergrund von Code im Text. */
+const CODE: Farbe = [238, 242, 246];
 
 export const zeilenHoehe = (pt: number) => pt * PT * 1.3;
 
@@ -46,7 +50,8 @@ export interface BlattKopf {
 
 /**
  * Ein neues A4-Dokument mit Lato. `schrift` nur für Tests („helvetica“): Mit eingebetteter Lato steht der Text nicht
- * lesbar im PDF. jsPDF wird erst hier geladen – die Apps starten ohne den Brocken.
+ * lesbar im PDF. jsPDF wird erst hier geladen – die Apps starten ohne den Brocken. Die kursiven Schnitte bettet das
+ * Protokoll-PDF selbst ein (`pdfSchriftKursiv.ts`) – stünde der Aufruf hier, trüge jede App mit PDF sie im ZIP.
  */
 export async function neuesDokument(
   quer: boolean,
@@ -140,11 +145,19 @@ export function tabellenBreiten(
 
 // ── Satz ─────────────────────────────────────────────────────────────────────
 
-interface Wort {
+export interface Wort {
   text: string;
   stil: Lauf['stil'];
   breite: number;
   leer: boolean;
+  /** Der Lauf, aus dem das Wort kommt – für Kursiv, Farben, Linien und Link. */
+  lauf: Lauf;
+}
+
+/** Ein Absatz einer Zelle, in Zeilen umbrochen. */
+export interface AbsatzZeilen {
+  pt: number;
+  zeilen: Wort[][];
 }
 
 /** Grundlage beider Blätter: Schrift, Zellen, Linien, Seiten, Tabellenkopf, Kopf und Fuß. */
@@ -165,19 +178,33 @@ export class PdfSatz {
     this.unten = this.hoehe - RAND - FUSS;
   }
 
-  protected stil(stil: Lauf['stil'], pt: number, grau = false) {
+  /** Die Schriftfarbe eines Laufs: eigene Farbe, sonst Link-Blau, sonst die Farbe des `stil` (`grau` = Vorlauf). */
+  private farbe(stil: Lauf['stil'], grau: boolean, l?: Pick<Lauf, 'farbe' | 'link'>): Rgb {
+    if (l?.farbe) return l.farbe;
+    if (l?.link) return BLAU;
+    return stil === 'rot' ? ROT : stil === 'grau' || grau ? GRAU : stil === 'schild' ? NAVY : TINTE;
+  }
+
+  protected stil(
+    stil: Lauf['stil'],
+    pt: number,
+    grau = false,
+    l?: Pick<Lauf, 'kursiv' | 'farbe' | 'link'>,
+  ) {
     const fett = stil === 'fett' || stil === 'kleinFett' || stil === 'schild';
-    this.d.setFont(this.font, fett ? 'bold' : 'normal');
+    const kursiv = !!l?.kursiv;
+    this.d.setFont(
+      this.font,
+      fett && kursiv ? 'bolditalic' : kursiv ? 'italic' : fett ? 'bold' : 'normal',
+    );
     this.d.setFontSize(
       stil === 'schild' ? pt - 1.6 : stil === 'kleinFett' ? Math.min(pt, KLEIN) : pt,
     );
-    const farbe: Farbe =
-      stil === 'rot' ? ROT : stil === 'grau' || grau ? GRAU : stil === 'schild' ? NAVY : TINTE;
-    this.d.setTextColor(...farbe);
+    this.d.setTextColor(...this.farbe(stil, grau, l));
   }
 
-  protected textBreite(t: string, stil: Lauf['stil'], pt: number) {
-    this.stil(stil, pt);
+  protected textBreite(t: string, stil: Lauf['stil'], pt: number, kursiv = false) {
+    this.stil(stil, pt, false, { kursiv });
     return this.d.getTextWidth(t);
   }
 
@@ -193,6 +220,7 @@ export class PdfSatz {
           stil: l.stil,
           breite: this.textBreite(l.text, l.stil, pt) + 3.2,
           leer: false,
+          lauf: l,
         });
         continue;
       }
@@ -202,8 +230,9 @@ export class PdfSatz {
         aus.push({
           text: leer ? ' ' : teil,
           stil: l.stil,
-          breite: this.textBreite(leer ? ' ' : teil, l.stil, pt),
+          breite: this.textBreite(leer ? ' ' : teil, l.stil, pt, l.kursiv),
           leer,
+          lauf: l,
         });
       }
     }
@@ -211,7 +240,7 @@ export class PdfSatz {
   }
 
   /** Ein Absatz in Zeilen der Breite `breite` – am Wortende umbrochen, ein zu langes Wort an der Breite. */
-  private umbrechen(absatz: Absatz, breite: number, pt: number): Wort[][] {
+  protected umbrechen(absatz: Absatz, breite: number, pt: number): Wort[][] {
     const zeilen: Wort[][] = [[]];
     let x = 0;
     for (const w of this.woerter(absatz, pt)) {
@@ -224,14 +253,14 @@ export class PdfSatz {
         x = 0;
       }
       if (!w.leer && w.breite > breite && w.stil !== 'schild') {
-        this.stil(w.stil, pt);
+        this.stil(w.stil, pt, false, w.lauf);
         const stuecke = this.d.splitTextToSize(w.text, breite) as string[];
         stuecke.forEach((s, i) => {
           if (i > 0) {
             zeilen.push([]);
             akt = zeilen[zeilen.length - 1];
           }
-          const sb = this.textBreite(s, w.stil, pt);
+          const sb = this.textBreite(s, w.stil, pt, w.lauf.kursiv);
           akt.push({ ...w, text: s, breite: sb });
           x = sb;
         });
@@ -243,7 +272,7 @@ export class PdfSatz {
     return zeilen;
   }
 
-  private zelleZeilen(z: Zelle, breite: number) {
+  protected zelleZeilen(z: Zelle, breite: number): AbsatzZeilen[] {
     return z.absaetze.map((a) => {
       const pt = a.klein ? KLEIN : GROSS;
       return { pt, zeilen: this.umbrechen(a.laeufe, breite, pt) };
@@ -263,25 +292,59 @@ export class PdfSatz {
     let y = oben;
     for (const t of this.zelleZeilen(z, breite)) {
       for (const zeile of t.zeilen) {
-        const grund = y + t.pt * PT * 0.95;
-        let cx = x;
-        for (const w of zeile) {
-          if (w.stil === 'schild') {
-            const sh = (t.pt - 1.6) * PT * 1.25;
-            this.d.setFillColor(...SCHILD);
-            this.d.roundedRect(cx + 1.2, grund - sh + 0.55, w.breite - 1.2, sh, 0.6, 0.6, 'F');
-            this.stil('schild', t.pt);
-            this.d.text(w.text, cx + 2.2, grund - 0.15);
-          } else {
-            this.stil(w.stil, t.pt, grau && w.stil !== 'rot');
-            this.d.text(w.text, cx, grund);
-          }
-          cx += w.breite;
-        }
+        this.zeileZeichnen(zeile, x, y, t.pt, grau);
         y += zeilenHoehe(t.pt);
       }
       if (t.zeilen.length === 0) y += zeilenHoehe(t.pt);
       y += ABSATZ;
+    }
+  }
+
+  /**
+   * Eine umbrochene Zeile ab (x, oben): Hintergrund (markiert, Code) unter dem Text, Unter- und Durchstreichen darüber,
+   * ein Link als anklickbare Fläche.
+   */
+  protected zeileZeichnen(
+    zeile: readonly Wort[],
+    x: number,
+    oben: number,
+    pt: number,
+    grau = false,
+  ) {
+    const grund = oben + pt * PT * 0.95;
+    const h = zeilenHoehe(pt);
+    let cx = x;
+    for (const w of zeile) {
+      const l = w.lauf;
+      if (w.stil === 'schild') {
+        const sh = (pt - 1.6) * PT * 1.25;
+        this.d.setFillColor(...SCHILD);
+        this.d.roundedRect(cx + 1.2, grund - sh + 0.55, w.breite - 1.2, sh, 0.6, 0.6, 'F');
+        this.stil('schild', pt);
+        this.d.text(w.text, cx + 2.2, grund - 0.15);
+        cx += w.breite;
+        continue;
+      }
+      const hinten = l.hintergrund ?? (l.code ? CODE : null);
+      if (hinten) {
+        this.d.setFillColor(...hinten);
+        this.d.rect(cx, oben, w.breite, h, 'F');
+      }
+      const farbe = this.farbe(w.stil, grau && w.stil !== 'rot', l);
+      this.stil(w.stil, pt, grau && w.stil !== 'rot', l);
+      this.d.text(w.text, cx, grund);
+      const unter = l.unterstrichen || !!l.link;
+      if (unter || l.durchgestrichen) {
+        this.d.setDrawColor(...farbe);
+        this.d.setLineWidth(Math.max(0.12, pt * PT * 0.06));
+        if (unter) this.d.line(cx, grund + 0.45, cx + w.breite, grund + 0.45);
+        if (l.durchgestrichen) {
+          const mitte = grund - pt * PT * 0.28;
+          this.d.line(cx, mitte, cx + w.breite, mitte);
+        }
+      }
+      if (l.link) this.d.link(cx, oben, w.breite, h, { url: l.link });
+      cx += w.breite;
     }
   }
 

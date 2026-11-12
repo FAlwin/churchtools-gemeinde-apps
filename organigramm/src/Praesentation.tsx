@@ -14,7 +14,8 @@ import type { PBereich, PSpalte, Praesentation as Daten } from '@shared/organigr
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
 import { Diagramm } from './Diagramm';
-import { personenInhalt } from './kastenPersonen';
+import { personenInhalt, type RollenFilter } from './kastenPersonen';
+import { RollenAuswahl } from './RollenAuswahl';
 import {
   ANSICHT_NAMEN,
   lesePraesAnsicht,
@@ -45,6 +46,8 @@ interface Props {
   stand?: { wert: Stand; onWechsel: (s: Stand) => void };
   /** Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. */
   personen: { wahl: PersonenWahl; onWahl: (w: PersonenWahl) => void };
+  /** „Welche Rollen“ (#915) – derselbe gemerkte Filter wie im Reiter; gilt für Diagramme UND Listen. */
+  rollenFilter: RollenFilter;
   onSchliessen: () => void;
 }
 
@@ -64,8 +67,20 @@ interface Props {
  *
  * **Personen** (O7b-6b): In den Diagrammen oben „Personen: Aus · Rollen · Alle“ wie im Reiter – dieselbe Wahl, im Gerät
  * gemerkt. Neue Gruppen der „Neuen Gliederung“ haben noch niemanden und zeigen nur den Namen.
+ *
+ * **Welche Rollen** (#915, Alwin 12.11.2026: „Diagramme und Listen“): Abgewählte Rollen fehlen in den Kästchen und in
+ * den Personenlisten; darunter steht, wie viele ausgeblendet sind. Die Zahlen („12 Personen“) und die Leitung der
+ * Bereiche zählen weiter alle – sonst hieße es bei abgewählter Leitung „Leitung wird noch gesucht“.
  */
-export function Praesentation({ start, daten, mitglieder, stand, personen, onSchliessen }: Props) {
+export function Praesentation({
+  start,
+  daten,
+  mitglieder,
+  stand,
+  personen,
+  rollenFilter,
+  onSchliessen,
+}: Props) {
   const [seite, setSeite] = useState(-1); // -1 = Übersicht
   const [ansicht, setAnsicht] = useState<PraesAnsicht>(lesePraesAnsicht);
   const baum = useMemo(() => daten.bereiche.map((b) => b.knoten), [daten]);
@@ -142,7 +157,18 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
     ) : (
       <span className={styles.gesucht}>Leitung wird noch gesucht</span>
     );
-  const liste = (personen: readonly Mitglied[]) => (
+  // Die Liste ohne abgewählte Rollen – und darunter, wie viele dadurch fehlen (#915).
+  const liste = (alle: readonly Mitglied[], personen: readonly Mitglied[]) => (
+    <>
+      {personen.length > 0 && listeAus(personen)}
+      {alle.length > personen.length && (
+        <div className={styles.gesucht}>
+          {anzahl(alle.length - personen.length, 'Person', 'Personen')} ausgeblendet
+        </div>
+      )}
+    </>
+  );
+  const listeAus = (personen: readonly Mitglied[]) => (
     <ul className={styles.liste}>
       {personen.map((m) => {
         const p = person(m.personId);
@@ -263,7 +289,7 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
               {s.personen.length > 0 && <span className={styles.zahl}>{s.personen.length}</span>}
             </div>
             {s.personen.length ? (
-              liste(s.personen)
+              liste(s.personen, s.gezeigt)
             ) : (
               <div className={styles.gesucht}>
                 {s.vollstaendig ? 'noch keine Mitglieder' : 'Mitglieder nicht sichtbar'}
@@ -284,7 +310,7 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
                       {u.sichtbar && <span className={styles.zahl}>{u.personen.length}</span>}
                     </div>
                     {u.sichtbar ? (
-                      liste(u.personen)
+                      liste(u.personen, u.gezeigt)
                     ) : (
                       <div className={styles.gesucht}>Mitglieder nicht sichtbar</div>
                     )}
@@ -318,8 +344,8 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
   const bereichNr = (id: number) => baum.findIndex((k) => k.gruppe.id === id);
   const kachelFarbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   const inhalt = useMemo(
-    () => personenInhalt(mitglieder, start.rollen, personen.wahl),
-    [mitglieder, start.rollen, personen.wahl],
+    () => personenInhalt(mitglieder, start.rollen, personen.wahl, rollenFilter.aus),
+    [mitglieder, start.rollen, personen.wahl, rollenFilter.aus],
   );
   const diagrammSeite = (art: Exclude<PraesAnsicht, 'kacheln'>) => (
     <div className={styles.diagrammSeite}>
@@ -389,6 +415,12 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
               ariaLabel="Personen"
               verbunden
             />
+          </span>
+        )}
+        {(ansicht === 'kacheln' || personen.wahl !== 'aus') && (
+          <span className={styles.personen}>
+            Welche Rollen
+            <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
           </span>
         )}
         {kannVollbild && (

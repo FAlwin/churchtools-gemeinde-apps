@@ -198,7 +198,12 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
    etwas.
 3. Seite neu laden: Die Liste ist wieder da. Am Handy (ohne vorher etwas gewählt zu haben) beginnt die Erweiterung mit
    der Liste.
-4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Zurück auf **Ganze Gemeinde**.
+4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Dann eine **tiefere Gruppe** (z. B. ein Café-Team):
+   Nur sie und ihre Untergruppen sind zu sehen. In der aufgeklappten Liste sind die Gruppen nach Ebene eingerückt.
+   **Suchen:** ein Stück eines Namens tippen – nur Treffer, darunter klein die Obergruppen; mit Pfeiltasten und Enter
+   wählen (Laptop). Ein Name, den es nicht gibt → „Keine Gruppe gefunden“. **Am Handy:** Beim Aufklappen geht die
+   Tastatur nicht von selbst auf, die Liste ist ganz zu sehen (ragt nicht über den rechten Rand), lässt sich
+   scrollen, und die Seite rückt beim Aufklappen nicht zur Seite. Zurück auf **Ganze Gemeinde**.
 5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
    und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
 6. Als Gruppen-Admin über **Einstellungen** den Gruppentyp der Spitze für alle ausblenden und speichern (nur in der
@@ -208,10 +213,12 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `organigramm/src/GruppenFenster.tsx`, `shared/organigramm/ansichten.ts`
-- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-2), `Liste.test.tsx`, `auswahl.test.ts`, `ansichten.test.ts`;
-  ob die Gruppen mit dem echten ChurchTools übereinstimmen und wie es am Handy aussieht, prüft nur dieser Fall
-- **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026; Startansicht am Handy Liste)
+- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/SpitzenAuswahl.tsx`, `ui/bedienung/menueLage.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `organigramm/src/GruppenFenster.tsx`, `shared/organigramm/ansichten.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-2), `SpitzenAuswahl.test.tsx`, `Liste.test.tsx`,
+  `auswahl.test.ts`, `ansichten.test.ts`; ob die Gruppen mit dem echten ChurchTools übereinstimmen und wie es am Handy
+  aussieht (Tastatur, Scrollen der Liste), prüft nur dieser Fall
+- **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026; Startansicht am Handy Liste); #915
+  (11.11.2026: jede Gruppe mit Suche statt nur Bereiche)
 
 </details>
 
@@ -261,15 +268,17 @@ Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
    Kästchen). Von dort **drucken**: Das Druckfenster zeigt das Blatt in seiner Lage (quer bleibt quer).
 3. Dasselbe mit **Mindmap** und **A3 quer**, dann **Liste** (läuft bei vielen Gruppen über mehrere Seiten – in der
    Vorschau blättern). **Herunterladen** speichert `Organigramm-…-<Datum>.pdf`.
-4. **Logo der Gemeinde** abwählen: Das Logo verschwindet aus Vorschau und PDF.
-5. ChurchTools auf **dunkel** stellen: Vorschau und PDF bleiben hell.
-6. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: im neuen Tab „Teilen“ → „Drucken“ bzw. „In Dateien
+4. **Ausschnitt** → eine tiefere Gruppe über die Suche wählen: Die Vorschau zeigt nur sie samt Untergruppen; die
+   aufgeklappte Liste liegt über dem Fenster und lässt sich scrollen, nichts ist abgeschnitten (#915).
+5. **Logo der Gemeinde** abwählen: Das Logo verschwindet aus Vorschau und PDF.
+6. ChurchTools auf **dunkel** stellen: Vorschau und PDF bleiben hell.
+7. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: im neuen Tab „Teilen“ → „Drucken“ bzw. „In Dateien
    sichern“).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `organigramm/src/PdfFenster.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/App.tsx`, `ui/teilen/svgSeitenPdf.ts`, `ui/teilen/pdfSchrift.ts`, `ui/teilen/sharePdf.ts`, `ui/ct/logo.ts`, `ui/design/_farben.scss`, `shared/organigramm/ansichten.ts`
+- **Betrifft:** `organigramm/src/PdfFenster.tsx`, `organigramm/src/SpitzenAuswahl.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/App.tsx`, `ui/teilen/svgSeitenPdf.ts`, `ui/teilen/pdfSchrift.ts`, `ui/teilen/sharePdf.ts`, `ui/ct/logo.ts`, `ui/design/_farben.scss`, `shared/organigramm/ansichten.ts`
 - **Automatisiert:** teilweise – `PdfFenster.test.tsx` (Vorschau, Auswahl, Seiten in die PDF, Blättern, Logo,
   Fehler/Neuversuch, veraltete PDF verworfen), `blatt.test.ts` (Papier, Maßstab, Seiten), `svgSeitenPdf.test.ts`
   (Stile als Attribute, Grundlinie, Formate je Seite, Aufräumen), `pdfSchrift.test.ts`, `sharePdf.test.ts`,
@@ -437,7 +446,48 @@ ChurchTools ändert sich nichts.
 
 </details>
 
-### TF-ORG-15 · Kinder & Jugend: Gruppenwechsel ansehen (Leitung und Bereichsleitung)
+### TF-ORG-15 · Welche Rollen: Personen nach Rollen filtern
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Eine Gruppe mit Leiter, Co-Leiter, Organisator und
+mehreren Mitarbeitern; ein Bereich mit Untergruppen, deren Leitung nicht die des Bereichs ist.
+
+**Das muss passieren:** Abgewählte Rollen fehlen überall, wo Personen stehen – und es steht ehrlich da, was fehlt.
+Niemand erscheint, der die Rolle nicht hat.
+
+1. Reiter Organigramm, Ansicht **Liste**, **Personen: Aus**: Es gibt kein **Welche Rollen**. **Personen: Alle** →
+   daneben **Welche Rollen: Alle**.
+2. Aufklappen: ein Häkchen je Rolle, wie in ChurchTools benannt, Leitung zuerst; „Leiter“ steht nur einmal. Eine Rolle,
+   die niemand hat, steht nicht da. Darunter **Alle** und **Nur Leitung**.
+3. **Mitarbeiter** abwählen: Die Mitarbeiter fehlen, darunter steht klein „Mitarbeiter (6) ausgeblendet“. Der Knopf
+   zeigt „3 von 4“ o. ä. Eine Gruppe, in der es nur Mitarbeiter gibt, zeigt nur den Hinweis.
+4. **Nur Leitung**: nur Leiter und Co-Leiter. Dasselbe in **Von oben**, **Von links** und **Mindmap** – kein Kästchen
+   liegt über einem anderen.
+5. Seite neu laden: Die Wahl ist wieder da.
+6. **Präsentieren**, **Kacheln**: oben **Welche Rollen** mit derselben Wahl. Einen Bereich öffnen: In den Spalten stehen
+   nur die gewählten Rollen – auch die Leitung der Untergruppen –, darunter „N Personen ausgeblendet“. Die Zahl an der
+   Spalte zählt weiter alle. Hier **Alle** wählen, Präsentation schließen – im Reiter steht jetzt ebenfalls **Alle**.
+7. **PDF / Drucken** mit Personen: **Welche Rollen** übernimmt die Wahl des Reiters; hier geändert ändert sich nur die
+   PDF, der Reiter bleibt.
+8. Am Handy (oder 375 px breit): Das Menü ragt rechts nicht hinaus, die Seite rutscht nicht zur Seite.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/praesentation.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/RollenAuswahl.tsx`,
+  `organigramm/src/messung.ts`, `organigramm/src/blatt.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/Organigramm.tsx`,
+  `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`, `organigramm/src/auswahl.ts`,
+  `ui/bedienung/useMenueImBild.ts`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Name je Rolle einmal, Reihenfolge, ohne Personen nicht
+  angeboten, Teilbaum-Regel), `praesentation.test.ts` (Spalten und Untergruppen, Zahlen zählen alle),
+  `kastenPersonen.test.ts` (Hinweis, alles abgewählt, Knopftext), `RollenAuswahl.test.tsx` (Häkchen, Alle, Nur Leitung,
+  Menü im Bild), `App.test.tsx` (Reiter, Diagramm, gemerkt, Präsentation mit Listen und Diagramm), `PdfFenster.test.tsx`
+  (übernommen, nur für die PDF geändert); ob es mit echten Rollen gut aussieht, prüft nur dieser Fall
+- **Historie:** #915 Scheibe B; Rückmeldung nach einer Vorstellung 11.11.2026, Entwurf und Entscheidungen 12.11.2026
+  (Häkchen je Name, kleiner Hinweis im Kästchen, Präsentation Diagramme und Listen)
+
+</details>
+
+### TF-ORG-16 · Kinder & Jugend: Gruppenwechsel ansehen (Leitung und Bereichsleitung)
 
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung. Im Speicher der Erweiterung die Kategorie
 „Gruppenwechsel“ mit einer Einrichtung (Stufen, Bereichsgruppe, Wechsel-Gruppen). Der Gruppentyp der Kindergruppen

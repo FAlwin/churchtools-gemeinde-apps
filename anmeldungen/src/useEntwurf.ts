@@ -8,6 +8,11 @@ import type {
   OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { bereichVon } from '@shared/anmeldung/baukasten';
+import {
+  bedingungenNachziehen,
+  umbenannteAntworten,
+  weggefallenText,
+} from '@shared/anmeldung/bedingungen';
 import { antwortenZaehlen, ctFelderLesen, feldSpeichern, feldTypAendern } from './formularFelder';
 import { aendereEinstellungen } from './einrichten';
 import {
@@ -18,6 +23,17 @@ import {
   type FeldEntwurf,
 } from './baukastenEntwurf';
 import type { useSchlange } from './useSchlange';
+
+const feldIn = (fo: Formular, feldId: string) =>
+  [...fo.anmeldung, ...fo.person].find((x) => x.id === feldId);
+
+/** Das Feld mit den Bedingungen von `sauber` (nachgezogen) – sonst unverändert. */
+function mitBedingungenVon(f: Feld, sauber: Feld | undefined): Feld {
+  const neu: Feld = { ...f, bed: sauber?.bed, antwortBed: sauber?.antwortBed };
+  if (!neu.bed) delete neu.bed;
+  if (!neu.antwortBed) delete neu.antwortBed;
+  return neu;
+}
 
 /** Pause beim Tippen, nach der ein Feld gespeichert wird. */
 export const PAUSE_FELD_MS = 1500;
@@ -76,16 +92,29 @@ export function useFeldEntwurf({
       frage: d.feld.frage.trim(),
       antworten: mit ? d.antworten.map((a) => a.text.trim()) : d.feld.antworten,
     };
+    const antworten = mit
+      ? d.antworten.map((a) => ({ text: a.text.trim(), altId: a.altId, von: a.von }))
+      : undefined;
     const bereich = bereichVon(formularRef.current, feld.id) ?? 'person';
-    setLokalF(ersetzeFeld(formularRef.current, feld));
+    // Bedingungen ziehen mit (F1c) – derselbe Schritt wie beim Speichern (`feldSpeichern` → `ersetzen`).
+    const { formular, weggefallen } = bedingungenNachziehen(
+      ersetzeFeld(formularRef.current, feld),
+      { feldId: feld.id, antworten: umbenannteAntworten(antworten) },
+    );
+    setLokalF(formular);
+    // Der Entwurf geht vom gespeicherten Stand aus weiter: Die Antworten heißen ab jetzt so (das nächste Umbenennen
+    // zieht von hier aus mit, nicht vom Stand beim Laden), und die Bedingungen am Feld sind die nachgezogenen.
+    const sauber = feldIn(formular, feld.id);
+    const weiter: FeldEntwurf = {
+      feld: mitBedingungenVon(d.feld, sauber),
+      antworten: d.antworten.map((a) => ({ ...a, von: a.text.trim() })),
+    };
+    entwurfRef.current = weiter;
+    setEntwurf(weiter);
     setHinweis(null);
-    void tun(`„${feld.frage || 'Trennlinie'}“ gespeichert.`, () =>
-      feldSpeichern(
-        id,
-        bereich,
-        feld,
-        mit ? d.antworten.map((a) => ({ text: a.text.trim(), altId: a.altId })) : undefined,
-      ),
+    const zusatz = weggefallenText(weggefallen);
+    void tun(`„${feld.frage || 'Trennlinie'}“ gespeichert.${zusatz ? ` ${zusatz}` : ''}`, () =>
+      feldSpeichern(id, bereich, feld, antworten),
     );
   }, [id, tun, formularRef, setLokalF]);
 
@@ -177,9 +206,28 @@ export function useFeldEntwurf({
           : ['Antwort 1', 'Antwort 2']
         : [],
     };
-    setLokalF(ersetzeFeld(formularRef.current, feld));
-    neuerEntwurf(feld);
-    void tun(`Fragetyp von „${feld.frage}“ geändert.`, () => feldTypAendern(id, feld));
+    // Ein anderer Fragetyp kennt andere Vergleiche und Antworten – was nicht mehr passt, fällt weg (F1c).
+    const { formular, weggefallen } = bedingungenNachziehen(ersetzeFeld(formularRef.current, feld));
+    setLokalF(formular);
+    neuerEntwurf(feldIn(formular, feld.id) ?? feld);
+    const zusatz = weggefallenText(weggefallen);
+    void tun(`Fragetyp von „${feld.frage}“ geändert.${zusatz ? ` ${zusatz}` : ''}`, () =>
+      feldTypAendern(id, feld),
+    );
+  }
+
+  /**
+   * Haben sich die Bedingungen am gewählten Feld von außen geändert (eine Quelle entfernt, das Geburtsdatum
+   * ausgeschaltet), übernimmt der Entwurf sie – sonst schriebe das nächste Speichern die alten zurück.
+   */
+  function bedingungenAuffrischen(fo: Formular) {
+    const d = entwurfRef.current;
+    const sauber = d ? feldIn(fo, d.feld.id) : undefined;
+    if (!d || !sauber || (sauber.bed === d.feld.bed && sauber.antwortBed === d.feld.antwortBed))
+      return;
+    const neu = { ...d, feld: mitBedingungenVon(d.feld, sauber) };
+    entwurfRef.current = neu;
+    setEntwurf(neu);
   }
 
   /** Das gewählte Feld abwählen, ohne zu speichern – es wird gerade entfernt. */
@@ -204,6 +252,7 @@ export function useFeldEntwurf({
     aendern,
     typAendern,
     verwerfen,
+    bedingungenAuffrischen,
   };
 }
 

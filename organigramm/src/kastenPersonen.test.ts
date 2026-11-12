@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rollenAus } from '@shared/organigramm/mitglieder';
-import { kastenInhalt, pdfPersonenWahl, personenInhalt } from './kastenPersonen';
+import { kastenInhalt, pdfPersonenWahl, personenInhalt, rollenKnopfText } from './kastenPersonen';
 import type { MitgliederStand } from './ladeMitglieder';
 
 // Rollen eines Dienstes wie gemessen (Test-Instanz 29.10.2026): Mitarbeiter ist die Standardrolle.
@@ -71,5 +71,44 @@ describe('personenInhalt und das PDF-Häkchen (O7b-6b)', () => {
     expect(pdfPersonenWahl('aus')).toBe('rollen');
     expect(pdfPersonenWahl('rollen')).toBe('rollen');
     expect(pdfPersonenWahl('alle')).toBe('alle');
+  });
+});
+
+describe('Rollenfilter im Kästchen (#915)', () => {
+  it('abgewählte Rollen fehlen – darunter steht, was ausgeblendet ist, mit Zahl', () => {
+    expect(kastenInhalt(sichtbar, 'alle', ROLLEN, name, new Set(['Mitarbeiter']))).toEqual({
+      art: 'rollen',
+      gruppen: [{ rolle: 'Leiter', namen: ['Alwin'], nurZahl: false }],
+      ausgeblendet: 'Mitarbeiter (1) ausgeblendet',
+    });
+  });
+
+  it('ist alles abgewählt, bleibt nur der Hinweis – die Gruppe sieht nicht leer aus', () => {
+    expect(
+      kastenInhalt(sichtbar, 'rollen', ROLLEN, name, new Set(['Mitarbeiter', 'Leiter'])),
+    ).toEqual({
+      art: 'hinweis',
+      text: 'Leiter (1), Mitarbeiter (1) ausgeblendet',
+    });
+  });
+
+  it('eine abgewählte Rolle, die es in der Gruppe nicht gibt, ändert nichts; „nicht sichtbar“ bleibt', () => {
+    expect(kastenInhalt(sichtbar, 'rollen', ROLLEN, name, new Set(['Organisator']))).toEqual(
+      kastenInhalt(sichtbar, 'rollen', ROLLEN, name),
+    );
+    expect(kastenInhalt({ art: 'verborgen' }, 'alle', ROLLEN, name, new Set(['Leiter']))).toEqual({
+      art: 'hinweis',
+      text: 'Mitglieder nicht sichtbar',
+    });
+  });
+
+  it('Knopf: „Alle“ oder „gewählt von angeboten“ – früher gemerkte, jetzt fehlende Rollen zählen nicht', () => {
+    const rollen = [
+      { name: 'Leiter', leitung: true },
+      { name: 'Mitarbeiter', leitung: false },
+    ];
+    expect(rollenKnopfText(rollen, new Set())).toBe('Alle');
+    expect(rollenKnopfText(rollen, new Set(['Organisator']))).toBe('Alle');
+    expect(rollenKnopfText(rollen, new Set(['Mitarbeiter']))).toBe('1 von 2');
   });
 });

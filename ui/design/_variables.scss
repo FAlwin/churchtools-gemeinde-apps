@@ -99,6 +99,14 @@ html[data-theme='dark'] {
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
+  // **Reiter oben am Bildschirmrand** (Musik-App am iPad, `ReiterLeiste` mit `amRand`): Platz für die Statusleiste über
+  // den Reitern. Im Browser nichts; in der installierten App die Safe-Area (Standalone-Block unten). Bis zum 12.11.2026
+  // fehlte das – seit „Reiter am iPad oben“ (#739, 26.10.) standen die Reiter in der App vom NAS unter Uhr und Akku
+  // (Alwin am iPad: „die Knöpfe im Header sind nicht zu sehen“).
+  --reiter-oben-polster: 0px;
+  // Was UNTER einer solchen Leiste steht, braucht keinen Abstand zum Rand mehr – die Leiste hat ihn schon. Der Bereich
+  // unter den Reitern setzt `--inhalt-pad-top` darauf (`App.tsx`), sonst käme die Safe-Area ein zweites Mal dazu.
+  --inhalt-pad-unter-reiter: 12px;
   // Unterkante des Liedblatt-Kopfs – nur noch die VORGABE, bis `BlattKopf` die Kopfkarte gemessen hat
   // (`--blatt-kopf-unten`, Scheibe B1: die Karte ist je Größe verschieden hoch). Daran hängen Lied-Menü, Aussehen,
   // Tempo und der Hinweis „Ablauf geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl.
@@ -145,6 +153,9 @@ html[data-theme='dark'] {
   // standen die Köpfe 36px unter der Leiste im Leeren (Alwin, 28.10.2026: „die Icons oben sind zu tief“).
   // `standalone.test.ts` hält fest, dass jede Standalone-Regel hier ihr Gegenstück hat.
   --inhalt-pad-top: 12px;
+  // Reiter oben: Darüber steht die Leiste von ChurchTools, nicht die Statusleiste. Nach `polster.test.ts` ein Polster
+  // wie die anderen.
+  --reiter-oben-polster: 0px;
 }
 
 /**
@@ -165,6 +176,8 @@ html[data-theme='dark'] {
   @supports (-webkit-touch-callout: none) {
     :root {
       --inhalt-pad-top: calc(var(--sat, env(safe-area-inset-top, 0px)) + 36px);
+      // Reiter oben (iPad, iPhone quer): genau die Statusleiste – die Reiter beginnen direkt darunter wie in ChurchTools.
+      --reiter-oben-polster: var(--sat, env(safe-area-inset-top, 0px));
     }
   }
 }

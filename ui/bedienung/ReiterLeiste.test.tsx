@@ -40,6 +40,19 @@ describe('ReiterLeiste', () => {
     expect(onWechsel).toHaveBeenCalledWith('b');
   });
 
+  it('am Rand (12.11.2026): nur mit „oben“ bekommt die Leiste den Platz für die Statusleiste', () => {
+    const { container, rerender } = render(
+      <ReiterLeiste reiter={REITER} aktiv="a" onWechsel={() => {}} oben amRand />,
+    );
+    expect(container.querySelector('nav')?.className).toMatch(/oben.*rand/);
+    // Reiter in einer Seite (Anmeldungen) bleiben ohne Polster.
+    rerender(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={() => {}} oben />);
+    expect(container.querySelector('nav')?.className).not.toMatch(/rand/);
+    // Unten gibt es den Rand oben nicht.
+    rerender(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={() => {}} amRand />);
+    expect(container.querySelector('nav')?.className).not.toMatch(/rand/);
+  });
+
   it('Anzahl hinter dem Text (U2-1); eigener Name für eine zweite Leiste, sonst „Bereiche“', () => {
     render(
       <ReiterLeiste

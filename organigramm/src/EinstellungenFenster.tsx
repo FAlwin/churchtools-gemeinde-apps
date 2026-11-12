@@ -6,6 +6,7 @@ import type { Versioniert } from '@shared/ct/versionierterWert';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { ALLES_SICHTBAR, type Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import { speichereSichtbarkeit } from './sichtbarkeitSpeicher';
+import { STUFE_WAHL } from './stufeTexte';
 import { planFehlerText, type Gespeichertes } from './planTexte';
 import type { Start } from './start';
 import fenster from './GruppenFenster.module.scss';
@@ -38,6 +39,7 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
   const anfang = stand?.inhalt ?? ALLES_SICHTBAR;
   const [typen, setTypen] = useState(() => new Set(anfang.typen));
   const [gruppen, setGruppen] = useState(() => new Set(anfang.gruppen));
+  const [personen, setPersonen] = useState(anfang.personen);
   const [basis, setBasis] = useState(stand);
   const [suche, setSuche] = useState('');
   const [arbeitet, setArbeitet] = useState(false);
@@ -88,14 +90,20 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
   };
 
   const n = typen.size + gruppen.size;
-  const zusammenfassung = n
-    ? [
-        typen.size ? anzahl(typen.size, 'Gruppentyp', 'Gruppentypen') : '',
-        gruppen.size ? anzahl(gruppen.size, 'Gruppe', 'Gruppen') : '',
-      ]
-        .filter(Boolean)
-        .join(' und ') + ' ausgeblendet'
-    : 'Alles sichtbar';
+  const stufe = STUFE_WAHL.find((w) => w.value === personen);
+  const zusammenfassung = [
+    n
+      ? [
+          typen.size ? anzahl(typen.size, 'Gruppentyp', 'Gruppentypen') : '',
+          gruppen.size ? anzahl(gruppen.size, 'Gruppe', 'Gruppen') : '',
+        ]
+          .filter(Boolean)
+          .join(' und ') + ' ausgeblendet'
+      : 'Alle Gruppen sichtbar',
+    personen === 'alle' ? '' : `Personen: ${stufe?.label ?? ''}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const speichern = async () => {
     setArbeitet(true);
@@ -104,6 +112,7 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
       const neu: Sichtbarkeit = {
         typen: [...typen].sort((a, b) => a - b),
         gruppen: [...gruppen].sort((a, b) => a - b),
+        personen,
       };
       const r = await speichereSichtbarkeit(
         neu,
@@ -122,6 +131,7 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
         setBasis(jetzt);
         setTypen(new Set(jetzt?.inhalt.typen ?? []));
         setGruppen(new Set(jetzt?.inhalt.gruppen ?? []));
+        setPersonen(jetzt?.inhalt.personen ?? 'alle');
         setProblem(
           `${jetzt?.von.name ?? 'Ein anderer'} hat das inzwischen geändert – nichts überschrieben. Hier steht jetzt der neue Stand.`,
         );
@@ -192,6 +202,45 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
         <ul className={styles.baum}>
           {start.baum.map((k) => zweig(k, String(k.gruppe.id), false))}
         </ul>
+      </div>
+      <div className={fenster.abschnitt}>
+        <h3>Personen für alle ohne Leitung</h3>
+        <p className={fenster.leise}>
+          Was Personen, die nichts leiten, höchstens von den Personen sehen – in Kästchen, Liste,
+          Karten, Präsentation, PDF und im Gruppenfenster. Wer eine Gruppe leitet, sieht deren
+          Personen samt Untergruppen voll; Gruppen-Admins sehen alles.
+        </p>
+        <div
+          className={styles.stufen}
+          role="radiogroup"
+          aria-label="Personen für alle ohne Leitung"
+        >
+          {STUFE_WAHL.map((w) => (
+            <label key={w.value}>
+              <input
+                type="radio"
+                name="personen-stufe"
+                checked={personen === w.value}
+                onChange={() => setPersonen(w.value)}
+              />
+              <span>
+                {w.label}
+                <small>{w.erklaerung}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className={fenster.leise}>
+          <b>Das ist nur eine Anzeige-Regel.</b> In ChurchTools selbst sieht jede Person weiter, was
+          ihre Rechte erlauben – das Organigramm kann nur weniger zeigen, nie mehr.
+        </p>
+        {personen !== 'alle' && (
+          <p className={styles.warnung} role="note">
+            Die Regel greift nur bei Personen, die die Kategorie „Was das Organigramm zeigt“ lesen
+            dürfen. Wem in ChurchTools dieses Recht fehlt, sieht weiter alle Namen. Also allen, die
+            das Organigramm öffnen, dort „Daten sehen“ geben (Anleitung: Abschnitt „Speicher“).
+          </p>
+        )}
       </div>
       {problem && (
         <p className={fenster.fehler} role="alert">

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
-import { hatBereich, imBereich, personenImBereich, sichtbereich } from './sichtbereich';
+import {
+  hatBereich,
+  imBereich,
+  personenGrenze,
+  personenImBereich,
+  sichtbereich,
+} from './sichtbereich';
 
 const g = (id: number): OrgGruppe => ({ id, name: `G${id}`, typId: 2, statusId: 1, farbe: null });
 // 10 → 7 → 12; 47 allein
@@ -54,5 +60,16 @@ describe('personenImBereich', () => {
       { gruppeId: 7, rolleId: 16 },
       { gruppeId: 12, rolleId: 15 },
     ]);
+  });
+});
+
+describe('personenGrenze (#915 C)', () => {
+  it('im eigenen Bereich alle Namen, sonst die Einstellung; Gruppen-Admins ohne Grenze', () => {
+    const leitung = personenGrenze(sichtbereich(BAUM, [7], false), 'zahl');
+    expect([10, 7, 12, 47].map(leitung)).toEqual(['zahl', 'alle', 'alle', 'zahl']);
+    const niemand = personenGrenze(sichtbereich(BAUM, [], false), 'aus');
+    expect([10, 7, 12, 47].map(niemand)).toEqual(['aus', 'aus', 'aus', 'aus']);
+    const admin = personenGrenze(sichtbereich(BAUM, [], true), 'aus');
+    expect([10, 7, 12, 47].map(admin)).toEqual(['alle', 'alle', 'alle', 'alle']);
   });
 });

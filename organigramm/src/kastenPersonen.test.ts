@@ -112,3 +112,40 @@ describe('Rollenfilter im Kästchen (#915)', () => {
     expect(rollenKnopfText(rollen, new Set(['Mitarbeiter']))).toBe('1 von 2');
   });
 });
+
+describe('Grenze im Kästchen (#915 C)', () => {
+  const daten = {
+    je: new Map<number, MitgliederStand>([
+      [1, sichtbar],
+      [2, sichtbar],
+    ]),
+    personen: new Map([
+      [1, { id: 1, name: 'Alwin', bild: null, initialen: 'A' }],
+      [2, { id: 2, name: 'Bea', bild: null, initialen: 'B' }],
+    ]),
+  };
+  const grenze = (id: number) => (id === 1 ? 'zahl' : 'alle') as const;
+
+  it('die eigene Wahl gilt höchstens bis zur Grenze der Gruppe – je Gruppe', () => {
+    const inhalt = personenInhalt(daten, ROLLEN, 'alle', undefined, grenze);
+    expect(inhalt(1)).toEqual({
+      art: 'rollen',
+      gruppen: [
+        { rolle: 'Leiter', namen: ['Alwin'], nurZahl: true },
+        { rolle: 'Mitarbeiter', namen: ['Bea'], nurZahl: true },
+      ],
+    });
+    expect(inhalt(2)).toEqual({
+      art: 'rollen',
+      gruppen: [
+        { rolle: 'Leiter', namen: ['Alwin'], nurZahl: false },
+        { rolle: 'Mitarbeiter', namen: ['Bea'], nurZahl: false },
+      ],
+    });
+  });
+
+  it('„Keine Personen“ zeigt nichts; die eigene Wahl „Aus“ bleibt aus', () => {
+    expect(personenInhalt(daten, ROLLEN, 'alle', undefined, () => 'aus')(1)).toBeNull();
+    expect(personenInhalt(daten, ROLLEN, 'aus', undefined, () => 'alle')(1)).toBeNull();
+  });
+});

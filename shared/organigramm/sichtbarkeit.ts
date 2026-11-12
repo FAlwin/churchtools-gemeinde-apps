@@ -5,7 +5,12 @@
  * Typ-Schildchen je Gerät sind weg. In ChurchTools selbst ändert sich nichts.
  *
  * Gespeichert wird nur, WAS ausgeblendet ist (IDs); Gruppen und Typen, die es nicht mehr gibt, stören nicht.
+ *
+ * Seit #915 Scheibe C (12.11.2026) auch, wie viel **Personen ohne Leitung** von den Personen höchstens sehen
+ * (`personen`). Ein Wert von vorher hat das Feld nicht – dann alle Namen, wie bisher.
  */
+import { PERSONEN_STUFEN, type PersonenStufe } from './personen';
+
 export const SICHT_ART = { art: 'organigramm-sichtbar', fassung: 1 };
 
 export interface Sichtbarkeit {
@@ -13,9 +18,22 @@ export interface Sichtbarkeit {
   typen: number[];
   /** Für alle ausgeblendete Gruppen – samt ihren Untergruppen. */
   gruppen: number[];
+  /** Was Personen ohne Leitung höchstens von den Personen sehen (außerhalb dessen, was sie leiten). */
+  personen: PersonenStufe;
 }
 
-export const ALLES_SICHTBAR: Sichtbarkeit = { typen: [], gruppen: [] };
+export const ALLES_SICHTBAR: Sichtbarkeit = { typen: [], gruppen: [], personen: 'alle' };
+
+/**
+ * Die Stufe aus dem Speicher: fehlt sie (Wert von vor Scheibe C), alle Namen; ist sie unbekannt (etwa von einer
+ * späteren Fassung), vorsichtshalber keine Namen – eine Anzeige-Regel darf im Zweifel weniger zeigen, nie mehr.
+ */
+const stufeAus = (x: unknown): PersonenStufe =>
+  x === undefined
+    ? 'alle'
+    : PERSONEN_STUFEN.includes(x as PersonenStufe)
+      ? (x as PersonenStufe)
+      : 'zahl';
 
 const ids = (x: unknown): number[] | null =>
   Array.isArray(x) && x.every((n) => Number.isInteger(n) && (n as number) > 0)
@@ -28,7 +46,7 @@ export function sichtbarkeitAus(roh: unknown): Sichtbarkeit | null {
   const r = roh as Record<string, unknown>;
   const typen = ids(r.typen);
   const gruppen = ids(r.gruppen);
-  return typen && gruppen ? { typen, gruppen } : null;
+  return typen && gruppen ? { typen, gruppen, personen: stufeAus(r.personen) } : null;
 }
 
 /** Ist überhaupt etwas für alle ausgeblendet? */

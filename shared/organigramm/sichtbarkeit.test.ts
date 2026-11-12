@@ -6,7 +6,20 @@ describe('sichtbarkeitAus – was gespeichert ist (O7b-7)', () => {
     expect(sichtbarkeitAus({ typen: [9, 4, 9], gruppen: [12, 7] })).toEqual({
       typen: [4, 9],
       gruppen: [7, 12],
+      personen: 'alle',
     });
+  });
+
+  it('Personen ohne Leitung (#915 C): von vorher ohne Feld = alle Namen; Unbekanntes vorsichtshalber ohne Namen', () => {
+    for (const st of ['aus', 'zahl', 'rollen', 'alle'] as const)
+      expect(sichtbarkeitAus({ typen: [], gruppen: [], personen: st })?.personen).toBe(st);
+    expect(sichtbarkeitAus({ typen: [], gruppen: [] })?.personen).toBe('alle');
+    for (const roh of ['nur-leitung', 3, null, ''])
+      expect(sichtbarkeitAus({ typen: [1], gruppen: [], personen: roh })).toEqual({
+        typen: [1],
+        gruppen: [],
+        personen: 'zahl',
+      });
   });
 
   it('alles andere ist keine Einstellung – dann gilt „nichts ausgeblendet“ beim Aufrufer', () => {

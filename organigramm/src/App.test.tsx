@@ -23,6 +23,13 @@ import { personenSuchen } from '@ui/ct/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
+import {
+  spitzenKnopf,
+  spitzenName,
+  spitzenOptionen,
+  spitzenWert,
+  waehleSpitze,
+} from './spitzenAuswahl.testutil';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./ladeMitglieder', () => ({
@@ -1249,9 +1256,17 @@ describe('O6: Leitung und Mitglieder', () => {
 });
 
 describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
+  /** Die Gemeinde und jede Gruppe des Test-Baums, wie im Baum (#915) – nicht mehr nur die Bereiche. */
+  const OPTIONEN_ANFANGEN = [
+    'Ganze Gemeinde',
+    'Gottesdienst',
+    'Technik',
+    'Stream',
+    'Café',
+    'Infos',
+  ];
   const ansicht = (name: string) =>
     within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
-  const anfangenBei = () => screen.getByLabelText<HTMLSelectElement>('Anfangen bei');
   const bereiche = () => screen.queryAllByRole('region').map((r) => r.getAttribute('aria-label'));
 
   it('Liste: Gemeinde oben, Bereiche offen, darunter zu – Wahl im Gerät gemerkt', async () => {
@@ -1306,19 +1321,35 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   it('„Anfangen bei“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    expect([...anfangenBei().options].map((o) => o.text)).toEqual([
-      'Ganze Gemeinde',
-      'Gottesdienst',
-      'Café',
-      'Infos',
-    ]);
-    fireEvent.change(anfangenBei(), { target: { value: '10' } });
+    expect(spitzenOptionen('Anfangen bei')).toEqual(OPTIONEN_ANFANGEN);
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     expect(bereiche()).toEqual(['Gottesdienst']);
     fireEvent.click(ansicht('Liste'));
     expect(screen.queryByText('ECG')).toBeNull();
     expect(screen.getByRole('button', { name: 'Gottesdienst zuklappen' })).toBeTruthy();
-    fireEvent.change(anfangenBei(), { target: { value: '' } });
+    waehleSpitze('Anfangen bei', 'Ganze Gemeinde');
     expect(screen.getByText('ECG')).toBeTruthy();
+  });
+
+  it('„Anfangen bei“ eine tiefere Gruppe direkt aus der Auswahl – auch per Suche und Enter (#915)', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    waehleSpitze('Anfangen bei', 'Technik');
+    expect(bereiche()).toEqual(['Technik']);
+    expect(spitzenWert('Anfangen bei')).toBe('10/7');
+    // Suchen: nur Treffer, mit ihren Obergruppen darunter; Enter nimmt den ersten.
+    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    const suche = screen.getByRole('combobox', { name: 'Gruppe suchen' });
+    fireEvent.change(suche, { target: { value: 'stre' } });
+    expect(
+      within(screen.getByRole('listbox', { name: 'Anfangen bei' }))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['StreamGottesdienst › Technik']);
+    fireEvent.keyDown(suche, { key: 'Enter' });
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(spitzenName('Anfangen bei')).toBe('Stream');
+    expect(spitzenWert('Anfangen bei')).toBe('10/7/12');
   });
 
   it('„Im Organigramm hier anfangen“ im Gruppenfenster: Gruppe wird Spitze, offen, steht in der Auswahl', async () => {
@@ -1328,8 +1359,8 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
     expect(screen.queryByRole('region', { name: 'Leiter' })).toBeNull();
     expect(bereiche()).toEqual(['Technik']);
-    expect(anfangenBei().value).toBe('10/7');
-    expect(anfangenBei().selectedOptions[0].text).toBe('Technik');
+    expect(spitzenWert('Anfangen bei')).toBe('10/7');
+    expect(spitzenName('Anfangen bei')).toBe('Technik');
     fireEvent.click(ansicht('Liste'));
     // Technik war zu – als Spitze steht sie offen da.
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
@@ -1355,14 +1386,14 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   it('Spitze für alle ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    waehleSpitze('Anfangen bei', 'Infos');
     expect(bereiche()).toEqual(['Infos']);
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(anfangenBei().value).toBe('');
+    expect(spitzenWert('Anfangen bei')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
     // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(anfangenBei().value).toBe('');
+    expect(spitzenWert('Anfangen bei')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
   });
 
@@ -1371,7 +1402,7 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     // verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    waehleSpitze('Anfangen bei', 'Infos');
     baumReiter.length = 0;
     await typFuerAlleUmschalten(/^Verteiler/);
     expect(baumReiter.length).toBeGreaterThan(0);
@@ -1413,7 +1444,7 @@ describe('O7b-3: Diagramme', () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
     fireEvent.click(ansicht('Von links'));
-    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     expect(diagramm().textContent).not.toContain('ECG');
     expect(within(diagramm()).getByRole('button', { name: 'Technik' })).toBeTruthy();
     expect(within(diagramm()).queryByRole('button', { name: 'Café' })).toBeNull();
@@ -1628,11 +1659,11 @@ describe('O7b-4: Organigramm als PDF', () => {
     render(<App />);
     const knopf = await screen.findByRole('button', { name: 'Als PDF speichern oder drucken' });
     expect(knopf.closest('header')).not.toBeNull();
-    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    waehleSpitze('Anfangen bei', 'Gottesdienst');
     fireEvent.click(knopf);
     const fenster = within(screen.getByRole('dialog', { name: 'Organigramm als PDF' }));
     expect(fenster.getByLabelText<HTMLSelectElement>('Ansicht').value).toBe('links');
-    expect(fenster.getByLabelText<HTMLSelectElement>('Ausschnitt').value).toBe('10');
+    expect(spitzenWert('Ausschnitt', fenster)).toBe('10');
     expect(
       within(screen.getByRole('figure', { name: 'Vorschau' })).getByRole('img', {
         name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,

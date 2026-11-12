@@ -15,10 +15,10 @@ import {
   anordnen,
   knotenAmPfad,
   sichtbarerBaum,
-  spitzenWahl,
   type AnordnungsArt,
 } from '@shared/organigramm/ansichten';
 import { DiagrammBild } from './DiagrammBild';
+import { SpitzenAuswahl } from './SpitzenAuswahl';
 import { BlattSeite, ListenInhalt, type BlattKopf } from './BlattSeite';
 import { messung, useSchrift } from './messung';
 import { pdfPersonenWahl, personenInhalt } from './kastenPersonen';
@@ -220,23 +220,19 @@ export function PdfFenster({
             ))}
           </select>
         </label>
-        <label className={fenster.beschriftung}>
-          Ausschnitt
-          <select
-            className={fenster.feld}
-            value={ausschnitt ?? ''}
-            onChange={(e) => {
-              setAusschnitt(e.target.value || null);
+        <div className={fenster.beschriftung}>
+          <span aria-hidden="true">Ausschnitt</span>
+          <SpitzenAuswahl
+            label="Ausschnitt"
+            baum={baum}
+            wert={ausschnitt}
+            onWahl={(w) => {
+              setAusschnitt(w);
               setBlatt(0);
             }}
-          >
-            {spitzenWahl(baum, ausschnitt).map((w) => (
-              <option key={w.wert} value={w.wert}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            feldKlasse={fenster.feld}
+          />
+        </div>
         <label className={fenster.beschriftung}>
           Papier
           <select

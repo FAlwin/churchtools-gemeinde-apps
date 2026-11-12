@@ -64,21 +64,51 @@ export function pfadVon(baum: readonly Knoten[], id: number): string | null {
   return lauf(baum, GEMEINDE);
 }
 
+/** Eine Möglichkeit in „Anfangen bei“ bzw. „Ausschnitt“: `wert` ist der Pfad (`''` = ganze Gemeinde). */
+export interface SpitzenWahl {
+  wert: string;
+  name: string;
+  /** 0 = Gemeinde, 1 = Bereich, 2 = dessen Untergruppe … – für das Einrücken. */
+  ebene: number;
+  /** Die Obergruppen bis zum Bereich („Gottesdienst › Musik“) – beim Suchen, damit gleichnamige Gruppen unterscheidbar sind. */
+  weg: string;
+}
+
 /**
- * Was „Anfangen bei“ anbietet (O7b-2, auch „Ausschnitt“ beim Drucken O7b-4): die ganze Gemeinde, jeder Bereich – und
- * die gewählte Spitze, wenn sie tiefer liegt („Im Organigramm hier anfangen“). Wert `''` = ganze Gemeinde.
+ * Was „Anfangen bei“ anbietet (O7b-2, auch „Ausschnitt“ beim Drucken O7b-4): die ganze Gemeinde und **jede Gruppe**
+ * im Baum, von oben nach unten wie im Baum (#915, Rückmeldung 11.11.2026: „nur das Café-Team samt Untergruppen“ –
+ * vorher nur die Bereiche). Eine Gruppe mit zwei Obergruppen steht einmal, an ihrer ersten Stelle wie bei `pfadVon`.
+ * Ausgeblendetes fehlt, weil der Aufrufer den Baum ohne es übergibt. Ist die gewählte Spitze ein anderer Pfad zu einer
+ * solchen Gruppe, steht sie zusätzlich am Ende – sonst zeigte die Auswahl etwas anderes als den Baum.
  */
-export function spitzenWahl(
-  baum: readonly Knoten[],
-  spitze: string | null,
-): { wert: string; name: string }[] {
-  const wahl = [
-    { wert: '', name: 'Ganze Gemeinde' },
-    ...baum.map((b) => ({ wert: String(b.gruppe.id), name: b.gruppe.name })),
-  ];
-  const tief = spitze?.includes('/') ? knotenAmPfad(baum, spitze) : null;
-  if (tief && spitze) wahl.push({ wert: spitze, name: tief.gruppe.name });
+export function spitzenWahl(baum: readonly Knoten[], spitze: string | null): SpitzenWahl[] {
+  const wahl: SpitzenWahl[] = [{ wert: '', name: 'Ganze Gemeinde', ebene: 0, weg: '' }];
+  const gesehen = new Set<number>();
+  const lauf = (ks: readonly Knoten[], pfad: string, ebene: number, weg: string[]) => {
+    for (const k of ks) {
+      if (gesehen.has(k.gruppe.id)) continue;
+      gesehen.add(k.gruppe.id);
+      const p = pfadKind(pfad, k.gruppe.id);
+      wahl.push({ wert: p, name: k.gruppe.name, ebene, weg: weg.join(' › ') });
+      lauf(k.kinder, p, ebene + 1, [...weg, k.gruppe.name]);
+    }
+  };
+  lauf(baum, GEMEINDE, 1, []);
+  const tief = spitze ? knotenAmPfad(baum, spitze) : null;
+  if (tief && spitze && !wahl.some((w) => w.wert === spitze)) {
+    wahl.push({ wert: spitze, name: tief.gruppe.name, ebene: 1, weg: '' });
+  }
   return wahl;
+}
+
+/**
+ * Die Suche in „Anfangen bei“: Gruppen, deren Name den Text enthält (ohne Groß/klein). Leerer Text = alles. Die
+ * Gemeinde selbst bleibt beim Suchen weg – sie ist kein Name, den man sucht.
+ */
+export function spitzenSuche(wahl: readonly SpitzenWahl[], text: string): SpitzenWahl[] {
+  const such = text.trim().toLocaleLowerCase('de');
+  if (!such) return [...wahl];
+  return wahl.filter((w) => w.wert !== '' && w.name.toLocaleLowerCase('de').includes(such));
 }
 
 /** Wie es anfangs aussieht: die Gemeinde und die Bereiche offen, darunter zu. */

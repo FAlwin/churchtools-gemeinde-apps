@@ -11,6 +11,7 @@ import { TAILWIND_500 } from '@shared/organigramm/farbe';
 import { rollenAus } from '@shared/organigramm/mitglieder';
 import type { MitgliederDaten } from './ladeMitglieder';
 import { PdfFenster } from './PdfFenster';
+import { spitzenName, spitzenWert, waehleSpitze } from './spitzenAuswahl.testutil';
 
 // jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
 vi.mock('./textBreite', () => ({ textBreite: (t: string) => t.length * 8 }));
@@ -116,7 +117,7 @@ describe('Organigramm als PDF (O7b-4)', () => {
   it('übernimmt den Reiter – aus Karten wird „von oben“ –, Papier passend, anfangs alles aufgeklappt', async () => {
     await zeigen();
     expect(auswahl('Ansicht').value).toBe('oben');
-    expect(auswahl('Ausschnitt').value).toBe('');
+    expect(spitzenWert('Ausschnitt')).toBe('');
     expect(auswahl('Papier').value).toBe('passend');
     const [s] = seiten();
     expect(s.getAttribute('aria-label')).toBe('Organigramm · ECG, Seite 1 von 1');
@@ -182,7 +183,7 @@ describe('Organigramm als PDF (O7b-4)', () => {
     expect(auswahl('Ansicht').value).toBe('mindmap');
     fireEvent.click(screen.getByLabelText('Alles aufgeklappt'));
     expect(vorschau().textContent).not.toContain('Stream');
-    fireEvent.change(auswahl('Ausschnitt'), { target: { value: '10' } });
+    waehleSpitze('Ausschnitt', 'Gottesdienst');
     expect(seiten()[0].getAttribute('aria-label')).toBe(
       'Organigramm · ECG · Gottesdienst, Seite 1 von 1',
     );
@@ -322,8 +323,8 @@ describe('Organigramm als PDF (O7b-4)', () => {
 
   it('eine tiefere Spitze aus dem Reiter steht als Ausschnitt bereit', async () => {
     await zeigen({ spitze: '10/7', ansicht: 'links' });
-    expect(auswahl('Ausschnitt').value).toBe('10/7');
-    expect(auswahl('Ausschnitt').selectedOptions[0].text).toBe('Technik');
+    expect(spitzenWert('Ausschnitt')).toBe('10/7');
+    expect(spitzenName('Ausschnitt')).toBe('Technik');
     expect(seiten()[0].getAttribute('aria-label')).toBe(
       'Organigramm · ECG · Technik, Seite 1 von 1',
     );

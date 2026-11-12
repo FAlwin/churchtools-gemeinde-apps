@@ -74,9 +74,13 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät; sie gilt auch für die Diagramme
   der Präsentation (dort oben derselbe Umschalter) und gibt im PDF vor, ob das Häkchen **Personen** gesetzt ist.
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
-- **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
-  Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
-  Ist die Spitze für alle ausgeblendet, gilt wieder die ganze Gemeinde.
+- **Anfangen bei:** die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
+  dann zeigen alle Ansichten nur sie. Die Auswahl klappt eine Liste auf, nach Ebene eingerückt wie im Baum, oben ein
+  **Suchfeld**: Beim Tippen stehen nur die Treffer da, darunter klein ihre Obergruppen (gleichnamige Gruppen bleiben
+  unterscheidbar). Mit der Maus springt man gleich ins Suchfeld (Pfeiltasten, Enter); am Handy nicht, sonst verdeckte
+  die Tastatur die Liste. Eine Gruppe mit zwei Obergruppen steht einmal, an ihrer ersten Stelle. Im Gruppenfenster jeder
+  Gruppe mit Untergruppen steht weiter **„Im Organigramm hier anfangen“**. Ist die Spitze für alle ausgeblendet, gilt
+  wieder die ganze Gemeinde; was für alle ausgeblendet ist, steht nicht in der Auswahl.
 - Die gewählte Ansicht **merkt sich das Gerät**. Ohne Wahl: am Handy die Liste, sonst **von
   oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation seit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
@@ -105,7 +109,7 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
 „Anfangen bei“ und was aufgeklappt ist, und zeigt das Blatt als **Vorschau** – genau diese Seiten werden zur PDF:
 
 - **Ansicht:** von oben, von links, Mindmap oder Liste (Karten gibt es auf Papier nicht – dann von oben).
-- **Ausschnitt:** ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
+- **Ausschnitt:** ganze Gemeinde oder jede Gruppe – dieselbe Auswahl mit Suche wie „Anfangen bei“ (#915).
 - **Papier:** **Passend** (vorgegeben: das A4, quer oder hoch, auf dem das Diagramm am größten wird; eine Liste steht
   hoch), A4 quer, A4 hoch, A3 quer oder A3 hoch. Ein Diagramm steht auf **einer Seite**, die Schrift wird höchstens
   11 pt groß; unter 6 pt rät das Fenster zu A3, einem Ausschnitt oder „Alles aufgeklappt“ aus. Eine Liste läuft über

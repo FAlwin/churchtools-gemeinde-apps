@@ -487,7 +487,7 @@ Niemand erscheint, der die Rolle nicht hat.
 
 </details>
 
-### TF-ORG-16 · Personen für alle ohne Leitung (Sichtbarkeitsstufe)
+### TF-ORG-17 · Personen für alle ohne Leitung (Sichtbarkeitsstufe)
 
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung; ein Gruppen-Admin und zwei weitere Personen: eine, die eine
 Untergruppe leitet (z. B. Ton unter Technik), und eine, die nichts leitet. Laptop.

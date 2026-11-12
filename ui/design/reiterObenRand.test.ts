@@ -20,13 +20,17 @@ describe('Reiter oben am Rand', () => {
     );
   });
 
-  it('in der installierten App ist das Polster die Safe-Area, sonst 0', () => {
+  it('in der installierten App reicht das Polster bis unter das Unschärfe-Band, sonst 0', () => {
     const v = lies('ui/design/_variables.scss');
     expect(v).toMatch(/^\s*--reiter-oben-polster:\s*0px;/m);
     const standalone = v.slice(v.indexOf('@media (display-mode: standalone) {'));
+    // Nur die Statusleiste (bis 12.11.2026 abends) war zu wenig: Die Reiter lagen im Band und waren weich.
+    expect(standalone).toMatch(/--reiter-oben-polster:\s*var\(--band-unten\);/);
     expect(standalone).toMatch(
-      /--reiter-oben-polster:\s*var\(--sat, env\(safe-area-inset-top, 0px\)\);/,
+      /--band-unten:\s*calc\(var\(--sat, env\(safe-area-inset-top, 0px\)\) \+ 36px\);/,
     );
+    // Köpfe und Reiter rechnen mit DERSELBEN Unterkante – keine zweite Formel.
+    expect(standalone).toMatch(/--inhalt-pad-top:\s*var\(--band-unten\);/);
   });
 
   it('die Musik-App setzt ihre oberen Reiter an den Rand', () => {

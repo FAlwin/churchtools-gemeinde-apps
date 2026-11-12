@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
@@ -186,5 +186,32 @@ describe('App (S1)', () => {
     expect(await screen.findByText('SITZUNGEN 7/p:okt#pkt-2')).toBeTruthy();
     expect(window.location.hash).toBe('#/sitzungen');
     expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+});
+
+describe('Direktlink auf eine Sitzung (S6-2, „Protokoll öffnen“ im Beitrag)', () => {
+  it('öffnet „Sitzungen“ mit Gruppe und Sitzung; die Adresse geht auf den Reiter zurück, der Pfad bleibt', async () => {
+    window.history.replaceState(null, '', '/ccm/protokolle/#/sitzungen/7/ab%20c');
+    // Wie in ChurchTools: `<base href>` zeigt auf die Instanz – ein nacktes `#/…` landete dort.
+    const basis = document.createElement('base');
+    basis.href = '/';
+    document.head.append(basis);
+    onTestFinished(() => {
+      basis.remove();
+      window.history.replaceState(null, '', '/');
+    });
+    render(<App />);
+    expect(await screen.findByText('SITZUNGEN 7/p:ab c')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
+    expect(window.location.pathname).toBe('/ccm/protokolle/');
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('auch bei schon offener App (Link angeklickt, während sie läuft)', async () => {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Hallo Alwin' });
+    window.location.hash = '#/sitzungen/11/s9';
+    expect(await screen.findByText('SITZUNGEN 11/p:s9')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
   });
 });

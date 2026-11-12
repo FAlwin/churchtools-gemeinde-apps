@@ -23,6 +23,11 @@
  * (`unsure`, solange nichts eingetragen ist); `POST /groups/{g}/checkin/{p}` = anwesend, `DELETE …/members/{p}` mit
  * `{status}` (ohne: `absent`). Jeder Eintrag setzt `hasEditingStarted` am Treffen. `teilnahmeSchlucken` antwortet 200
  * und speichert nichts.
+ *
+ * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
+ * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
+ * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
+ * lässt das Nachlesen mit diesem Status scheitern, `beitragSchlucken` sagt 201 mit ID und legt nichts an.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -120,6 +125,21 @@ export interface Nachbau {
   /** Zuletzt angefragter Zeitraum der Termine (`from`/`to`) – zum Prüfen. */
   terminAnfrage: string | null;
   definitionen: unknown;
+  /** Gruppen, in denen man Beiträge schreiben darf (S6-2). */
+  beitragsGruppen: number[];
+  beitraege: {
+    id: number;
+    groupId: number;
+    title: string;
+    content: string;
+    visibility: unknown;
+    commentsActive: unknown;
+  }[];
+  beitragFehler: AnlegeFehler | null;
+  beitragLesenFehler: number | null;
+  beitragSchlucken: boolean;
+  /** ChurchTools speichert den Beitrag mit anderem Titel (z. B. gekürzt). */
+  beitragTitelAnders: boolean;
 }
 
 function json(status: number, body: unknown): Response {
@@ -162,6 +182,12 @@ export function nachbauStarten(): Nachbau {
     treffenSchlucken: false,
     terminAnfrage: null,
     definitionen: DEFINITIONEN,
+    beitragsGruppen: [],
+    beitraege: [],
+    beitragFehler: null,
+    beitragLesenFehler: null,
+    beitragSchlucken: false,
+    beitragTitelAnders: false,
   };
   // In Node ein schmales `window`; in jsdom (Komponenten-Tests, S5-3) bleibt das echte – sonst fehlte React alles
   // außer der Adresse – und bekommt nur die Adresse von ChurchTools.
@@ -252,6 +278,33 @@ export function nachbauStarten(): Nachbau {
           ? { message: 'Forbidden', messageKey: 'error.forbidden.edit' }
           : { message: 'weg' },
       );
+    if (pfad === '/post/groups')
+      return json(200, {
+        data: s.beitragsGruppen.map((g) => ({
+          group: { domainIdentifier: String(g), title: `Gruppe ${g}` },
+          type: 'postPossible',
+        })),
+      });
+    if (pfad === '/posts' && m === 'POST') {
+      const id = s.naechste++;
+      const f = s.beitragFehler;
+      if ((!f || f.angelegt) && !s.beitragSchlucken)
+        s.beitraege.push({
+          id,
+          groupId: Number(body.groupId),
+          title: s.beitragTitelAnders ? String(body.title).slice(0, 10) : String(body.title),
+          content: String(body.content),
+          visibility: body.visibility,
+          commentsActive: body.commentsActive,
+        });
+      return f ? fehlerAntwort(f) : json(201, { data: { id } });
+    }
+    const einB = /^\/posts\/(\d+)$/.exec(pfad);
+    if (einB && m === 'GET') {
+      if (s.beitragLesenFehler) return json(s.beitragLesenFehler, { message: 'weg' });
+      const b = s.beitraege.find((x) => x.id === Number(einB[1]));
+      return b ? json(200, { data: b }) : json(404, { message: 'Nicht gefunden' });
+    }
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (neuT && m === 'POST') {
       const id = s.naechste++;

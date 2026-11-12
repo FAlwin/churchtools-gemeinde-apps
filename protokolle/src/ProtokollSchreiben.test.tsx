@@ -81,6 +81,19 @@ vi.mock('./mitarbeitWerte', async (orig) => ({
   ...(await orig<typeof import('./mitarbeitWerte')>()),
   mitarbeitRoh: vi.fn(() => Promise.resolve([])),
 }));
+// „Teilen / PDF“ (S6-3b): das Blatt festhalten statt zeichnen – jsdom kann kein pdf.js.
+const BLAETTER = vi.hoisted(() => [] as unknown[]);
+vi.mock('@ui/teilen/protokollPdf', () => ({
+  protokollPdf: vi.fn(async (b: unknown) => {
+    BLAETTER.push(b);
+    const { jsPDF } = await import('jspdf');
+    return new jsPDF();
+  }),
+}));
+vi.mock('@ui/teilen/pdfSeiten', () => ({
+  renderPdfToCanvases: vi.fn(() => Promise.resolve([])),
+  renderPdfSeite: vi.fn(() => Promise.reject(new Error('jsdom'))),
+}));
 vi.mock('./mitglieder', () => ({
   ladeGruppenMitglieder: vi.fn(() => Promise.resolve([{ id: 7, name: 'Johann' }])),
 }));
@@ -861,5 +874,49 @@ describe('Freigeben (S6-1)', () => {
       expect(fertig).toHaveBeenCalled();
       expect(BT.schritt).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('Teilen / PDF im Editor (S6-3b)', () => {
+  it('teilt, was im Editor steht – auch noch nicht Gespeichertes; Entwurf, Mitglieder nicht noch einmal gelesen', async () => {
+    BLAETTER.length = 0;
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    vi.mocked(M.ladeGruppenMitglieder).mockClear();
+    render(
+      <ProtokollSchreiben
+        sitzung={SITZUNG}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        ich={{ person: 1, name: 'Alwin' }}
+        teilen={{
+          gemeinde: 'ECG Donrath',
+          ich: { person: 1, name: 'Alwin Friesen' },
+          naechste: null,
+        }}
+        onZurueck={vi.fn()}
+      />,
+    );
+    await screen.findByText('bearbeitbar');
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Teilen \/ PDF/ }));
+    expect(await screen.findByRole('dialog', { name: 'Protokoll teilen' })).toBeTruthy();
+    expect(await screen.findByText(/Protokoll Leitungsteam 2026-10-24 ENTWURF\.pdf/)).toBeTruthy();
+    const b = BLAETTER.at(-1) as { entwurf: boolean; teile: unknown[] };
+    expect(b.entwurf).toBe(true);
+    expect(JSON.stringify(b.teile)).toContain('Beamer');
+    expect(M.ladeGruppenMitglieder).toHaveBeenCalledTimes(1);
+  });
+
+  it('ohne Teilen-Rahmen kein Knopf', async () => {
+    zeige();
+    await screen.findByText('bearbeitbar');
+    expect(screen.queryByRole('button', { name: /Teilen \/ PDF/ })).toBeNull();
   });
 });

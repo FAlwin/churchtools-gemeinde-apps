@@ -21,6 +21,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Üblich 1–2 Minuten (ohne Docker-Cache länger). Grenze gegen hängende Läufe – ohne sie hing am 11.11.2026 ein Job 6 h (siehe e2e in ci.yml).
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write

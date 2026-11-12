@@ -115,10 +115,25 @@ export const gruppenSchluessel = (g: Pick<BlattGruppe, 'id'>) => g.id ?? -1;
 
 // ── Ausgang ──────────────────────────────────────────────────────────────────
 
+/** Eine Farbe als Rot, Grün, Blau (0–255). */
+export type Rgb = readonly [number, number, number];
+
 /** Ein Stück Text mit seiner Auszeichnung. `schild` = kleines Schild (Tonart), `rot` = frei/offen. */
 export interface Lauf {
   text: string;
   stil?: 'fett' | 'grau' | 'rot' | 'schild' | 'kleinFett';
+  /**
+   * Auszeichnung wie im Editor des Protokolls (S6-3a) – Termin- und Plan-Blatt brauchen sie nicht. `farbe` geht vor der
+   * Farbe des `stil`; `link` macht den Lauf im PDF anklickbar (nur sichere Adressen, geprüft beim Bauen des Blatts).
+   */
+  kursiv?: boolean;
+  unterstrichen?: boolean;
+  durchgestrichen?: boolean;
+  /** Code im Text (`code`): grau hinterlegt. */
+  code?: boolean;
+  farbe?: Rgb;
+  hintergrund?: Rgb;
+  link?: string;
 }
 /** Ein Absatz – Läufe nebeneinander, umbrochen am Wortende. */
 export type Absatz = Lauf[];

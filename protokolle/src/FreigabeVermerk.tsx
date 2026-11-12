@@ -1,6 +1,6 @@
 import { tagPunkt } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
-import { freigabeVermerk, type KopfMitVerlauf } from '@shared/protokolle/freigabe';
+import { freigabeVermerk, zurueckText, type KopfMitVerlauf } from '@shared/protokolle/freigabe';
 import { Marke } from './Marke';
 import styles from './Freigabe.module.scss';
 
@@ -30,13 +30,5 @@ export function ZurueckVermerk({
 }) {
   const z = freigabeVermerk(kopf).zurueck;
   if (!z) return null;
-  return (
-    <p className={styles.vermerk}>
-      Freigabe zurückgenommen am {tag(z.am, zeitzone)} von {z.name}
-      {z.vorher
-        ? ` – vorher freigegeben am ${tag(z.vorher.am, zeitzone)} von ${z.vorher.name}`
-        : ''}
-      .
-    </p>
-  );
+  return <p className={styles.vermerk}>{zurueckText(z, (iso) => tag(iso, zeitzone))}</p>;
 }

@@ -6,6 +6,7 @@ import {
   BLOCK,
   punktNummer,
   tabellenZeilen,
+  terminDatum,
   textAus,
   type Block,
   type Punkt,
@@ -210,9 +211,7 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
         <div className={`${styles.marke} ${styles.termin}`}>
           <Icon name="calendar" size={16} />
           <span className={styles.markeText}>
-            {typeof b.props?.datum === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.props.datum) && (
-              <b>{tagPunkt(b.props.datum)} </b>
-            )}
+            {terminDatum(b.props) && <b>{tagPunkt(terminDatum(b.props)!)} </b>}
             <Inhalt content={b.content} />
           </span>
           {kinder}

@@ -95,6 +95,19 @@ export function freigabeVermerk(k: KopfMitVerlauf | null): {
   };
 }
 
+/**
+ * **„Freigabe zurückgenommen am … von … – vorher freigegeben am … von ….“** – der Satz über einem zurückgenommenen
+ * Entwurf, auf der Seite (`ZurueckVermerk`) und im PDF (S6-3a). `tag` macht aus einem Zeitpunkt den Tag der Gemeinde.
+ */
+export function zurueckText(
+  z: NonNullable<ReturnType<typeof freigabeVermerk>['zurueck']>,
+  tag: (iso: string) => string,
+): string {
+  return `Freigabe zurückgenommen am ${tag(z.am)} von ${z.name}${
+    z.vorher ? ` – vorher freigegeben am ${tag(z.vorher.am)} von ${z.vorher.name}` : ''
+  }.`;
+}
+
 export interface Hinweis {
   art: 'anwesenheit' | 'todos' | 'vorschlaege';
   text: string;

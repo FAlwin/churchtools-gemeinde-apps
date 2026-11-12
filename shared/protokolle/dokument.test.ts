@@ -14,6 +14,7 @@ import {
   textAus,
   TIEFSTE_EBENE,
   type Block,
+  terminDatum,
 } from './dokument';
 import { BLOCKNOTE_DOKUMENT } from './dokument.testdaten';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -273,5 +274,14 @@ describe('Feste Punkte: die eine Liste der Arten (S5-3)', () => {
     expect(VERWEIS_ARTEN.every(istVerweisArt)).toBe(true);
     expect(istVerweisArt('beschluesse')).toBe(false);
     expect(istVerweisArt(undefined)).toBe(false);
+  });
+});
+
+describe('terminDatum – eine Regel für Ableitung, Editor, Lese-Ansicht und PDF (S6-3a)', () => {
+  it('nur ein gültiges Kalenderdatum', () => {
+    expect(terminDatum({ datum: '2026-12-14' })).toBe('2026-12-14');
+    for (const datum of ['2026-02-30', '14.12.2026', '', 3, undefined])
+      expect(terminDatum({ datum })).toBeNull();
+    expect(terminDatum(undefined)).toBeNull();
   });
 });

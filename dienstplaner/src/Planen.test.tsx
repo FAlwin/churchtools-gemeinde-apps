@@ -161,6 +161,30 @@ describe('Planen – Tabelle (E3-4)', () => {
     ).toEqual(['alles besetzt', '—']);
   });
 
+  it('Kopf und Füllbalken zählen nur die gezeigten Gruppen (L2, 12.11.2026)', () => {
+    // Alle Gruppen: 18.10. hat 3 Plätze, 1 frei (Licht) → „1 frei“, Balken 67 %.
+    zeige();
+    const kopf = () => screen.getAllByRole('columnheader')[1];
+    const balken = () =>
+      (kopf().querySelector('[aria-hidden="true"] > i') as HTMLElement).style.width;
+    expect(kopf().textContent).toMatch(/1 frei$/);
+    expect(balken()).toBe('67%');
+    cleanup();
+    // Technik ausgeblendet: nur Programm (Predigt, Gast) → „alles besetzt“, Balken voll.
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ ausgeblendeteGruppen: ['3'] }),
+    );
+    try {
+      zeige();
+      expect(kopf().textContent).toMatch(/alles besetzt$/);
+      expect(balken()).toBe('100%');
+    } finally {
+      // Auch wenn der Test fällt – sonst bliebe Technik für die folgenden Tests ausgeblendet.
+      localStorage.clear();
+    }
+  });
+
   it('kein „Weitere Termine laden“ mehr – das macht ＋ bzw. › am Ende (14.10.2026)', () => {
     zeige();
     expect(screen.queryByRole('button', { name: 'Weitere Termine laden' })).toBeNull();
@@ -2263,13 +2287,13 @@ describe('Planen → Termin-Ansicht (E6-1b)', () => {
 describe('Planen – von der Startseite: eine Gruppe, nächste 6 Wochen (Wunsch 7, 11.11.2026)', () => {
   afterEach(() => localStorage.clear());
   const ANSICHT = 'dienstplaner.planen.ansicht';
-  function zeigeF(fokusGruppe: number | null = 3) {
+  function zeigeF(fokusGruppe: number | null = 3, handy = false) {
     const laden = vi.fn(() => Promise.resolve({ zeilen: [] as [], plan: PLAN2 }));
     const onFokusEnde = vi.fn();
     render(
       <Planen
         zustand={{ art: 'fertig', zeilen: [], plan: PLAN2, wochen: 8 }}
-        handy={false}
+        handy={handy}
         onNochmal={() => {}}
         onMehr={() => {}}
         {...ZUSATZ}
@@ -2319,6 +2343,36 @@ describe('Planen – von der Startseite: eine Gruppe, nächste 6 Wochen (Wunsch 
     );
     fireEvent.click(screen.getByRole('button', { name: 'Gewohnte Ansicht' }));
     expect(onFokusEnde).toHaveBeenCalled();
+  });
+
+  it('Kopf zählt nur die gezeigte Gruppe (L2): wo Technik nichts hat, „—“ statt Programms „1 frei“', async () => {
+    zeigeF();
+    await hinweis();
+    const koepfe = screen.getAllByRole('columnheader').slice(1);
+    // 18.10./21.10./25.10. hat Technik einen (besetzten oder angefragten) Platz; am 01.11. nur Programm.
+    expect(koepfe.map((k) => k.textContent?.match(/(\d+ frei|alles besetzt|—)$/)?.[1])).toEqual([
+      'alles besetzt',
+      'alles besetzt',
+      'alles besetzt',
+      '—',
+    ]);
+  });
+
+  it('am Handy zählen die Datumszettel nur die gezeigte Gruppe (L2)', async () => {
+    zeigeF(3, true);
+    await hinweis();
+    const zettel = within(screen.getByRole('group', { name: 'Termine' })).getAllByRole('button');
+    expect(zettel.map((z) => z.lastElementChild?.textContent)).toEqual([
+      'alles besetzt',
+      'alles besetzt',
+      'alles besetzt',
+      '—',
+    ]);
+    // Der Kopf des gewählten Termins zählt genauso.
+    fireEvent.click(zettel[3]);
+    expect(screen.getByRole('region', { name: /^Gottesdienst, So, 01\.11\./ }).textContent).toMatch(
+      /10:00 Uhr · —/,
+    );
   });
 
   it('ohne Gruppe von der Startseite: kein Hinweis, der gemerkte Zeitraum gilt', () => {

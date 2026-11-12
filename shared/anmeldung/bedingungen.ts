@@ -326,6 +326,9 @@ export type KaputtGrund =
   | 'fest'
   | 'zielAntwort';
 
+/** Name, E-Mail, Datenschutz und Preis sind immer dabei – sie können keine Bedingung tragen. Die EINE Stelle dafür. */
+const immerDabei = (x: Feld) => x.art === 'fest' || x.art === 'preis';
+
 /** Eine kaputte Stelle an einer Bedingung – die EINE Prüfung hinter `bedingungFehler`, Aufräumen und Sperre. */
 export interface KaputteStelle {
   /** Die Frage, die die Bedingung trägt. */
@@ -390,7 +393,7 @@ export function kaputteStellen(f: Formular): KaputteStelle[] {
   };
   for (const x of alle) {
     if (x.bed) {
-      if (x.art === 'fest' || x.art === 'preis')
+      if (immerDabei(x))
         aus.push({
           ziel: x,
           grund: 'fest',
@@ -641,3 +644,148 @@ export const VERGLEICH_TEXT: Record<Vergleich, string> = {
 
 /** Braucht der Vergleich eine Antwort? */
 export const vergleichMitWert = mitWert;
+
+// ── Regel-Liste (F1d) ────────────────────────────────────────────────────────────────────────
+
+/**
+ * **Was ein Fenster speichert** – die EINE Stelle für das Fenster an Frage oder Antwort (F1c) und die Regel-Liste
+ * (F1d): ohne Regel `null` (= entfernen), Regeln ohne Antwort-Vergleich ohne `wert`, an einer Frage ohne `art`/`grund`,
+ * an einer Antwort den Hinweis nur beim Ausgrauen.
+ */
+export function bedingungAufbereiten(
+  bed: AntwortBedingung,
+  anAntwort: boolean,
+): Bedingung | AntwortBedingung | null {
+  if (!bed.regeln.length) return null;
+  const regeln = bed.regeln.map((r) => (mitWert(r.op) ? r : { feld: r.feld, op: r.op }));
+  if (!anAntwort) return { modus: bed.modus, regeln };
+  const grund = bed.grund?.trim();
+  return {
+    modus: bed.modus,
+    regeln,
+    art: bed.art,
+    ...(bed.art === 'grau' && grund ? { grund } : {}),
+  };
+}
+
+/** Ein Ziel einer Regel: eine Frage – oder eine Antwort darin. */
+export interface RegelZiel {
+  id: string;
+  antwort?: string;
+}
+
+/** Eine Regel der Liste: dieselbe Bedingung an einem oder mehreren Zielen („Wenn … dann zeige A, B“). */
+export interface RegelGruppe {
+  bed: Bedingung | AntwortBedingung;
+  /** Bei Antworten: ihr Text – alle Ziele sind dann diese Antwort, in verschiedenen Fragen. */
+  antwort?: string;
+  ziele: RegelZiel[];
+}
+
+/**
+ * Woran zwei Bedingungen als gleich gelten: dieselben Regeln in derselben Reihenfolge, derselbe Umschalter (bei nur
+ * einer Regel egal), an Antworten dieselbe Darstellung.
+ */
+function bedSchluessel(bed: Bedingung | AntwortBedingung, antwort?: string): string {
+  const a = 'art' in bed ? bed : null;
+  return JSON.stringify([
+    antwort ?? null,
+    bed.regeln.length > 1 ? bed.modus : 'eine',
+    bed.regeln.map((r) => [r.feld, r.op, mitWert(r.op) ? (r.wert ?? '') : null]),
+    a ? a.art : null,
+    a?.art === 'grau' ? (a.grund?.trim() ?? '') : null,
+  ]);
+}
+
+/**
+ * **Die Regel-Liste** (Reiter „Bedingungen“, Alwin 11.11.2026): alle Bedingungen des Formulars, gleiche zu einer Regel
+ * zusammengefasst – gespeichert wird weiter je Feld und Antwort, die Liste ist nur eine Sicht darauf. In der
+ * Reihenfolge des ersten Ziels; Antwort-Regeln fassen nur dieselbe Antwort in mehreren Fragen zusammen.
+ */
+export function regelGruppen(f: Formular): RegelGruppe[] {
+  const gruppen = new Map<string, RegelGruppe>();
+  const dazu = (bed: Bedingung | AntwortBedingung, ziel: RegelZiel) => {
+    const s = bedSchluessel(bed, ziel.antwort);
+    const g = gruppen.get(s);
+    if (g) g.ziele.push(ziel);
+    else
+      gruppen.set(s, {
+        bed,
+        ...(ziel.antwort === undefined ? {} : { antwort: ziel.antwort }),
+        ziele: [ziel],
+      });
+  };
+  for (const x of [...f.anmeldung, ...f.person]) {
+    if (x.bed) dazu(x.bed, { id: x.id });
+    for (const [antwort, b] of Object.entries(x.antwortBed ?? {})) dazu(b, { id: x.id, antwort });
+  }
+  return [...gruppen.values()];
+}
+
+/** Teilen sich andere Ziele dieselbe Bedingung wie `ziel`? – für den Hinweis im Fenster an Frage oder Antwort. */
+export function gleicheBedingung(f: Formular, ziel: RegelZiel): RegelZiel[] {
+  const g = regelGruppen(f).find((x) =>
+    x.ziele.some((z) => z.id === ziel.id && z.antwort === ziel.antwort),
+  );
+  return g ? g.ziele.filter((z) => !(z.id === ziel.id && z.antwort === ziel.antwort)) : [];
+}
+
+/** Darf ein Feld überhaupt eine Bedingung tragen? Nicht, was immer dabei ist (`immerDabei`); nicht ausgeschaltet. */
+export function kannBedingungTragen(x: Feld): boolean {
+  return !immerDabei(x) && x.zustand !== 'aus';
+}
+
+/**
+ * **Die Fragen, auf die eine Regel schauen darf** – für ALLE gewählten Ziele zugleich. Ohne Ziel (neue Regel): jede
+ * Frage, die für irgendein Feld Quelle sein könnte.
+ */
+export function gemeinsameQuellen(f: Formular, ziele: Feld[]): Feld[] {
+  const alle = [...f.anmeldung, ...f.person];
+  if (ziele.length) return alle.filter((q) => ziele.every((z) => quelleErlaubt(f, z, q)));
+  return alle.filter((q) => alle.some((z) => kannBedingungTragen(z) && quelleErlaubt(f, z, q)));
+}
+
+/** **Die Felder, die eine Regel zeigen kann** – die auf jede ihrer Quellen schauen dürfen (keine Kreise). */
+export function zielKandidaten(f: Formular, bed: Bedingung): Feld[] {
+  const alle = [...f.anmeldung, ...f.person];
+  return alle.filter(
+    (z) =>
+      kannBedingungTragen(z) &&
+      bed.regeln.every((r) => {
+        const q = alle.find((x) => x.id === r.feld);
+        return !!q && quelleErlaubt(f, z, q);
+      }),
+  );
+}
+
+/**
+ * **Eine Regel speichern** – an allen Zielen zugleich (Reiter „Bedingungen“): erst die Bedingung an den bisherigen
+ * Zielen (`alt`) lösen, dann an die neuen setzen. `bed = null` entfernt die Regel. Andere Bedingungen an den neuen
+ * Zielen werden ersetzt – das Fenster sagt das vorher.
+ */
+export function regelSetzen(
+  f: Formular,
+  alt: RegelZiel[],
+  ziele: RegelZiel[],
+  bed: Bedingung | AntwortBedingung | null,
+): Formular {
+  const feld = (x: Feld): Feld => {
+    const weg = alt.filter((z) => z.id === x.id);
+    const neu = bed ? ziele.filter((z) => z.id === x.id) : [];
+    if (!weg.length && !neu.length) return x;
+    const y: Feld = { ...x };
+    const ab: Record<string, AntwortBedingung> = { ...(x.antwortBed ?? {}) };
+    for (const z of weg) {
+      if (z.antwort === undefined) delete y.bed;
+      else delete ab[z.antwort];
+    }
+    for (const z of neu) {
+      if (z.antwort === undefined) y.bed = { modus: bed!.modus, regeln: bed!.regeln };
+      else if ('art' in bed!) ab[z.antwort] = bed;
+    }
+    if (Object.keys(ab).length) y.antwortBed = ab;
+    else delete y.antwortBed;
+    return y;
+  };
+  return { anmeldung: f.anmeldung.map(feld), person: f.person.map(feld) };
+}

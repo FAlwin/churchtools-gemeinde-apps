@@ -23,6 +23,11 @@ export type SchlangenStand =
  */
 export function useSchlange(onFertig: (text: string, umkehrbar: boolean) => void) {
   const [stand, setStand] = useState<SchlangenStand>({ art: 'ruhe' });
+  /**
+   * Wie viele Aufgaben bisher in die Schlange kamen – woran sich „danach wurde etwas gespeichert“ erkennen lässt. Am
+   * `stand` geht das nicht: Ist eine Aufgabe schnell fertig, wird „arbeitet“ nie gezeichnet, nur das „ruhe“ danach.
+   */
+  const [auftraege, setAuftraege] = useState(0);
   const kette = useRef<Promise<void>>(Promise.resolve());
   const offen = useRef(0);
   const fertig = useRef(onFertig);
@@ -35,6 +40,7 @@ export function useSchlange(onFertig: (text: string, umkehrbar: boolean) => void
       umkehrbar = true,
     ): Promise<boolean> => {
       offen.current++;
+      setAuftraege((n) => n + 1);
       setStand({ art: 'arbeitet' });
       let ok = false;
       const lauf = kette.current.then(async () => {
@@ -62,5 +68,5 @@ export function useSchlange(onFertig: (text: string, umkehrbar: boolean) => void
   /** Läuft gerade etwas oder wartet etwas? (Dann darf der Baukasten seinen Zwischenstand nicht verwerfen.) */
   const laeuft = useCallback(() => offen.current > 0, []);
 
-  return { stand, tun, laeuft };
+  return { stand, tun, laeuft, auftraege };
 }

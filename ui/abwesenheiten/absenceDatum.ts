@@ -1,7 +1,7 @@
 import type { Absence, AbsenceEvent } from '@shared/types/index';
 import { decktTermin } from '@shared/absences/index';
 import { wochentagKurz } from '@shared/ct/wochen';
-import { wochentagName } from '@shared/ct/datum';
+import { tagMonat, wochentagName } from '@shared/ct/datum';
 import { heuteImKalender, uhrText } from '@shared/ct/zeit';
 
 /**
@@ -36,7 +36,7 @@ export function abwesenheitFuerTermin(alle: Absence[], ev: AbsenceEvent): Absenc
  */
 export function tagKurz(iso: string, heute = new Date()): string {
   const jahr = iso.slice(0, 4) === heuteImKalender(heute).slice(0, 4) ? '' : iso.slice(0, 4);
-  return `${wochentagKurz(iso)}, ${iso.slice(8, 10)}.${iso.slice(5, 7)}.${jahr}`;
+  return `${wochentagKurz(iso)}, ${tagMonat(iso)}${jahr}`;
 }
 
 /** `2026-10-04` → „Sonntag" – für die Unterzeile einer Terminzeile. Seit #847 aus `@shared/ct/datum`. */

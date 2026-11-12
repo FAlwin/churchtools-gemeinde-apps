@@ -10,6 +10,8 @@ import {
   monatTitel,
   tagKurz,
   tagLang,
+  tagMonat,
+  tagPunkt,
   tageBis,
   alterAm,
   plusTage,
@@ -26,6 +28,13 @@ describe('Tage anzeigen', () => {
     expect(monatTitel(null)).toBe('Ohne Datum');
     expect(monatName('2026-11-08')).toBe('November');
     expect(monatName('2027-03-01')).toBe('März');
+  });
+
+  it('„TT.MM.“ an einer Stelle: tagMonat – auch aus einer Ortszeit, und Grundlage von tagKurz', () => {
+    expect(tagMonat('2026-03-05')).toBe('05.03.');
+    expect(tagMonat('2026-11-14T18:42')).toBe('14.11.');
+    expect(tagKurz('2026-03-05')).toBe(`Do, ${tagMonat('2026-03-05')}`);
+    expect(tagPunkt('2026-03-05')).toBe(`${tagMonat('2026-03-05')}2026`);
   });
 
   it('Tage bis – auch über die Zeitumstellung (Ende Oktober) genau', () => {

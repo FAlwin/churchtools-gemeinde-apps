@@ -104,7 +104,7 @@ export function Baukasten({
   /** Nach jedem Speichern: neu laden und – wenn `umkehrbar` – „Rückgängig“ anbieten. */
   onGespeichert: (text: string, umkehrbar: boolean) => void;
 }) {
-  const { stand, tun, laeuft } = useSchlange(onGespeichert);
+  const { stand, tun, laeuft, auftraege } = useSchlange(onGespeichert);
   const [lokalF, setLokalFZustand] = useState<Formular | null>(null);
   const [lokalG, setLokalG] = useState<Gestaltung | null>(null);
   const [lokalWer, setLokalWer] = useState<OeffentlicheEinstellungen['wer'] | null>(null);
@@ -153,7 +153,7 @@ export function Baukasten({
     typAendern,
     verwerfen,
     bedingungenAuffrischen,
-  } = useFeldEntwurf({ id, tun, formularRef, setLokalF, ctFelder: e.ctFelder });
+  } = useFeldEntwurf({ id, tun, auftraege, formularRef, setLokalF, ctFelder: e.ctFelder });
   const { designWartet, designSichern, gestalten } = useDesignEntwurf({ id, tun, setLokalG });
   const bildDatei = useRef<HTMLInputElement>(null);
   /** Ein neu eingefügtes Feld nach dem Zeichnen ins Bild holen (beim Antippen liegt es oft außer Sicht). */

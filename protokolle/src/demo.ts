@@ -295,6 +295,8 @@ interface Speicher {
   anwesenheit: Map<number, Map<number, string>>;
   /** Abgeschlossene Gruppentreffen (S6-1, bei der Freigabe). */
   abgeschlossen: Set<number>;
+  /** Beiträge in Gruppen (S6-2, „In der Gruppe Bescheid geben“). */
+  beitraege: { id: number; groupId: number; title: string; content: string }[];
 }
 
 function speicherAnlegen(fall: string): Speicher {
@@ -344,6 +346,7 @@ function speicherAnlegen(fall: string): Speicher {
     treffen: [],
     anwesenheit: new Map(),
     abgeschlossen: new Set(),
+    beitraege: [],
   };
 }
 
@@ -647,6 +650,31 @@ function antwort(
     if (methode === 'DELETE' && w) liste.splice(liste.indexOf(w), 1);
     if (methode === 'DELETE') return { status: 204 };
     return { status: methode === 'POST' ? 201 : 200, data: methode === 'GET' ? liste : {} };
+  }
+  // Beiträge (S6-2) – wie gemessen 11.11.2026: `/post/groups` nennt die Gruppen, in denen man schreiben darf
+  // (Fall `ohne-beitraege`: keine), `POST /posts` liefert die ID, `GET /posts/{id}` liest nach.
+  if (pfad === '/api/post/groups')
+    return {
+      status: 200,
+      data:
+        fall === 'ohne-beitraege'
+          ? []
+          : [{ group: { title: 'Leitungsteam', domainIdentifier: '11' }, type: 'postPossible' }],
+    };
+  if (pfad === '/api/posts' && methode === 'POST') {
+    const b = {
+      id: s.naechste++,
+      groupId: Number(rumpf.groupId),
+      title: String(rumpf.title),
+      content: String(rumpf.content),
+    };
+    s.beitraege.push(b);
+    return { status: 201, data: b };
+  }
+  const beitrag = /^\/api\/posts\/(\d+)$/.exec(pfad);
+  if (beitrag && methode === 'GET') {
+    const b = s.beitraege.find((x) => x.id === Number(beitrag[1]));
+    return b ? { status: 200, data: b } : { status: 404, data: null };
   }
   return null;
 }

@@ -12,7 +12,8 @@ import { Verwaltung } from './Verwaltung';
 import { Sitzungen, type SitzungsAuswahl } from './Sitzungen';
 import { SuchLeiste } from './SuchLeiste';
 import { Suche } from './Suche';
-import { sichtbareReiter, type ReiterId } from './reiter';
+import { protokollSchluessel } from '@shared/protokolle/sitzungen';
+import { sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
 
 /**
  * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Verwaltung. Am
@@ -46,7 +47,23 @@ export function App() {
   useEffect(laden, [laden]);
 
   useEffect(() => {
-    const folgen = () => setHash(window.location.hash);
+    const folgen = () => {
+      // Direktlink auf eine Sitzung (S6-2, „Protokoll öffnen“ im Beitrag): einmal lesen, die Sitzung öffnen, die Adresse
+      // auf den Reiter zurücksetzen – sonst öffnete Neuladen später wieder diese Sitzung. Mit Pfad: ChurchTools setzt
+      // `<base href>` auf die Instanz, ein nacktes `#/…` führte dorthin.
+      const ziel = sitzungAusAdresse(window.location.hash);
+      if (ziel) {
+        setSuche({ offen: false, begriff: '' });
+        setAuswahl({ gruppe: ziel.gruppe, sitzung: protokollSchluessel(ziel.sitzung) });
+        window.history.replaceState(
+          window.history.state,
+          '',
+          `${window.location.pathname}${window.location.search}${adresseFuer<ReiterId>('sitzungen', 'start')}`,
+        );
+      }
+      setHash(window.location.hash);
+    };
+    folgen();
     window.addEventListener('hashchange', folgen);
     return () => window.removeEventListener('hashchange', folgen);
   }, []);

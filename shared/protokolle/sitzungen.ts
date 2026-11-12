@@ -87,6 +87,9 @@ export function gehoertZu(
   );
 }
 
+/** Der Listenschlüssel einer Sitzung mit Protokoll – die eine Stelle dafür (Liste, Startseite, Direktlink S6-2). */
+export const protokollSchluessel = (sitzung: string): string => `p:${sitzung}`;
+
 export function sitzungenOrdnen(q: {
   termine: readonly Termin[];
   treffen: readonly Treffen[];
@@ -96,7 +99,7 @@ export function sitzungenOrdnen(q: {
   zeitzone: string;
 }): { kommend: Sitzung[]; protokolle: Sitzung[] } {
   const sitzungen: Sitzung[] = q.koepfe.map((k) => ({
-    schluessel: `p:${k.sitzung}`,
+    schluessel: protokollSchluessel(k.sitzung),
     beginn: k.beginn,
     titel: k.titel,
     termin: k.termin,

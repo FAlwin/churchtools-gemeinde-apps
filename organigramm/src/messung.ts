@@ -127,11 +127,17 @@ export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt 
       const bloecke =
         i.art === 'hinweis'
           ? [{ rolle: null, texte: [i.text], art: 'hinweis' as const }]
-          : i.gruppen.map((g) => ({
-              rolle: g.rolle.toLocaleUpperCase('de'),
-              texte: g.nurZahl ? [rollenZahl(g)] : g.namen,
-              art: g.nurZahl ? ('zahl' as const) : ('person' as const),
-            }));
+          : [
+              ...i.gruppen.map((g) => ({
+                rolle: g.rolle.toLocaleUpperCase('de'),
+                texte: g.nurZahl ? [rollenZahl(g)] : g.namen,
+                art: g.nurZahl ? ('zahl' as const) : ('person' as const),
+              })),
+              // Was der Rollenfilter wegnimmt (#915) – klein darunter, wie „Mitglieder nicht sichtbar“.
+              ...(i.ausgeblendet
+                ? [{ rolle: null, texte: [i.ausgeblendet], art: 'hinweis' as const }]
+                : []),
+            ];
       const inhaltBreite = Math.max(
         ...bloecke.flatMap((b) => [
           b.rolle === null ? 0 : mass(b.rolle, true, ROLLE_PT),

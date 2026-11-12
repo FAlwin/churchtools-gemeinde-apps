@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, rollenRang, type Mitglied } from './mitglieder';
 import {
+  gezeigtePersonen,
   gruppenLeitung,
   gruppenPersonen,
   kastenRollen,
+  rollenName,
   rollenZahl,
+  rollenZurWahl,
   teilbaumPersonen,
 } from './personen';
 
@@ -217,5 +220,58 @@ describe('kastenRollen – die Personen einer Gruppe nach Rollen (O7b-6)', () =>
       ['Mitarbeiter', ['Bea']],
       ['Mitglied', ['Alwin']],
     ]);
+  });
+});
+
+describe('Rollenfilter „Welche Rollen“ (#915)', () => {
+  // „Leiter“ gibt es je Gruppentyp als eigene Rolle (gemessen O6): hier bei Diensten (2) und Kleingruppen (3).
+  const TYPEN = rollenAus([
+    { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0, groupTypeId: 2, isDefault: true },
+    { id: 16, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 2 },
+    { id: 18, name: 'Organisator', isLeader: false, sortKey: 4, groupTypeId: 2 },
+    { id: 19, name: 'Coach', isLeader: false, sortKey: 3, groupTypeId: 2 },
+    { id: 21, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 3 },
+    { id: 22, name: 'Teilnehmer', isLeader: false, sortKey: 0, groupTypeId: 3, isDefault: true },
+  ]);
+
+  it('rollenName: wie ChurchTools sie nennt – unbekannt und „nur über eine Untergruppe“ heißen „Mitglied“', () => {
+    expect(rollenName(TYPEN, 18)).toBe('Organisator');
+    expect(rollenName(TYPEN, 99)).toBe('Mitglied');
+    expect(rollenName(TYPEN, null)).toBe('Mitglied');
+  });
+
+  it('rollenZurWahl: jeder vorkommende Name einmal, in der Reihenfolge der Kästchen; ohne Personen nicht angeboten', () => {
+    const wahl = rollenZurWahl(
+      [
+        [m(1, 15), m(2, 16), m(3, 18)],
+        [m(4, 21), m(5, 22), m(6, 99)],
+      ],
+      TYPEN,
+    );
+    // Leitung zuerst, dann die übrigen nach sortKey, die Standardrollen zuletzt, unbekannt ganz hinten.
+    // „Coach“ (19) hat niemanden – steht nicht da. „Leiter“ steht einmal, obwohl es zwei Rollen sind.
+    expect(wahl).toEqual([
+      { name: 'Leiter', leitung: true },
+      { name: 'Organisator', leitung: false },
+      { name: 'Mitarbeiter', leitung: false },
+      { name: 'Teilnehmer', leitung: false },
+      { name: 'Mitglied', leitung: false },
+    ]);
+    expect(rollenZurWahl([], TYPEN)).toEqual([]);
+  });
+
+  it('gezeigtePersonen: wer in der Gruppe ODER einer Untergruppe eine gewählte Rolle hat, bleibt', () => {
+    const technik = teilbaumPersonen(BAUM[0], MITGLIEDER, name, RANG);
+    const alle = [7, 12, 15, 72];
+    const nur = (aus: string[]) =>
+      gezeigtePersonen(technik, alle, MITGLIEDER, ROLLEN, new Set(aus)).map((x) => x.personId);
+    // Nur Leitung: Alwin leitet Technik, Emil ist Co-Leiter von Ton – beide bleiben, obwohl Emil in Technik selbst
+    // keine Rolle hat. Carl, Bea (Mitarbeiter) und Dora (Teilnehmer) fallen weg.
+    expect(nur(['Mitarbeiter', 'Teilnehmer'])).toEqual([1, 5]);
+    // Bea ist in Stream UND Ton Mitarbeiterin: Ohne „Mitarbeiter“ fehlt sie – ohne „Leiter“ bleibt sie.
+    expect(nur(['Leiter', 'Co-Leiter'])).toEqual(expect.arrayContaining([2, 3, 4]));
+    expect(nur(['Leiter', 'Co-Leiter'])).not.toContain(5);
+    // Nichts abgewählt: die Liste, wie sie ist.
+    expect(nur([])).toEqual(technik.map((x) => x.personId));
   });
 });

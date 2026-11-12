@@ -20,7 +20,7 @@ import {
 import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
-import type { PersonenWahl } from '@shared/organigramm/personen';
+import { rollenZurWahl, type PersonenWahl } from '@shared/organigramm/personen';
 import { ladeStart, type Start } from './start';
 import {
   fehlendeNachladen,
@@ -44,11 +44,14 @@ import { EinstellungenFenster } from './EinstellungenFenster';
 import { ALLES_SICHTBAR, type Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import type { Versioniert } from '@shared/ct/versionierterWert';
 import { PdfFenster } from './PdfFenster';
+import type { RollenFilter } from './kastenPersonen';
 import {
   leseAnsicht,
   lesePersonen,
+  leseRollenAus,
   merkeAnsicht,
   merkePersonen,
+  merkeRollenAus,
   type BaumAnsicht,
 } from './auswahl';
 
@@ -113,6 +116,8 @@ export function App() {
   const [gewaehlt, setGewaehlt] = useState(leseAnsicht);
   // Personen in Diagramm und Liste (O7b-6): ohne Wahl „Aus“, je Gerät gemerkt.
   const [personenWahl, setPersonenWahl] = useState(lesePersonen);
+  // „Welche Rollen“ (#915): die abgewählten Rollennamen, je Gerät gemerkt – für Reiter und Präsentation dieselben.
+  const [rollenAus, setRollenAus] = useState(leseRollenAus);
   const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'oben');
   const [spitze, setSpitze] = useState<string | null>(null);
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
@@ -275,6 +280,10 @@ export function App() {
     merkePersonen(w);
     setPersonenWahl(w);
   };
+  const rollenWaehlen = (aus: Set<string>) => {
+    merkeRollenAus(aus);
+    setRollenAus(aus);
+  };
   const admin = !!start?.rechte.gruppenVerwalten;
   const reiter = admin ? REITER_ADMIN : REITER;
   const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash, admin) : 'organigramm';
@@ -290,6 +299,15 @@ export function App() {
     }
     return { mitglieder: m, angefragt: a };
   }, [mitglieder]);
+  const rollenZumAnhaken = useMemo(
+    () => (start ? rollenZurWahl(lesbar.mitglieder.values(), start.rollen) : []),
+    [start, lesbar],
+  );
+  const rollenFilter: RollenFilter = {
+    rollen: rollenZumAnhaken,
+    aus: rollenAus,
+    onAus: rollenWaehlen,
+  };
   const personen = useMemo(() => personenImBereich(lesbar.mitglieder, bereich), [lesbar, bereich]);
   const praesentation = useMemo(() => {
     if (!praesentiert || !start || !mitglieder) return null;
@@ -312,8 +330,19 @@ export function App() {
       personen,
       start.rollen,
       (id) => mitglieder.personen.get(id)?.name ?? '',
+      rollenAus,
     );
-  }, [praesentiert, start, mitglieder, lesbar, typenAus, gruppenAus, praesStand, praesPlan]);
+  }, [
+    praesentiert,
+    start,
+    mitglieder,
+    lesbar,
+    typenAus,
+    gruppenAus,
+    praesStand,
+    praesPlan,
+    rollenAus,
+  ]);
 
   const praesentieren = () => {
     if (!start?.rechte.gruppenVerwalten) {
@@ -474,6 +503,7 @@ export function App() {
           onAnsicht={ansichtWaehlen}
           personen={personenWahl}
           onPersonen={personenWaehlen}
+          rollenFilter={rollenFilter}
           spitze={spitze}
           onSpitze={spitzeSetzen}
           sicht={sicht}
@@ -551,6 +581,7 @@ export function App() {
           ansicht={baumAnsicht}
           typFarben={start.typFarben}
           personen={{ wahl: personenWahl, mitglieder, rollen: start.rollen }}
+          rollenFilter={rollenFilter}
           onSchliessen={() => setPdfOffen(false)}
         />
       )}
@@ -561,6 +592,7 @@ export function App() {
           mitglieder={mitglieder}
           stand={praesPlan ? { wert: praesStand, onWechsel: setPraesStand } : undefined}
           personen={{ wahl: personenWahl, onWahl: personenWaehlen }}
+          rollenFilter={rollenFilter}
           onSchliessen={() => setPraesentiert(false)}
         />
       )}

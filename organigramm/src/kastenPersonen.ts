@@ -5,24 +5,41 @@
  * sichtbare Mitglieder (oft eine Obergruppe) zeigt nichts, ebenso alles, solange die Mitglieder noch laden.
  */
 import type { Rolle } from '@shared/organigramm/mitglieder';
-import { kastenRollen, type PersonenWahl, type RollenGruppe } from '@shared/organigramm/personen';
+import {
+  kastenRollen,
+  type PersonenWahl,
+  type RollenGruppe,
+  type RollenWahl,
+} from '@shared/organigramm/personen';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 
 export type KastenInhalt =
-  | { art: 'rollen'; gruppen: RollenGruppe[] }
+  /** `ausgeblendet`: was der Rollenfilter wegnimmt – steht klein darunter (#915, Alwin 12.11.2026). */
+  | { art: 'rollen'; gruppen: RollenGruppe[]; ausgeblendet?: string }
   | { art: 'hinweis'; text: string };
+
+/** „Mitarbeiter (6), Teilnehmer (2) ausgeblendet“ – die abgewählten Rollen dieser Gruppe mit ihrer Zahl. */
+const ausgeblendetText = (weg: readonly RollenGruppe[]) =>
+  `${weg.map((g) => `${g.rolle} (${g.namen.length})`).join(', ')} ausgeblendet`;
 
 export function kastenInhalt(
   stand: MitgliederStand | undefined,
   wahl: PersonenWahl,
   rollen: ReadonlyMap<number, Rolle>,
   name: (personId: number) => string,
+  aus: ReadonlySet<string> = new Set(),
 ): KastenInhalt | null {
   if (wahl === 'aus' || !stand) return null;
   if (stand.art === 'verborgen') return { art: 'hinweis', text: 'Mitglieder nicht sichtbar' };
   if (stand.art === 'fehler') return { art: 'hinweis', text: 'Mitglieder gerade nicht ladbar' };
-  const gruppen = kastenRollen(stand.mitglieder, rollen, name, wahl);
-  return gruppen.length ? { art: 'rollen', gruppen } : null;
+  const alle = kastenRollen(stand.mitglieder, rollen, name, wahl);
+  const gruppen = alle.filter((g) => !aus.has(g.rolle));
+  const weg = alle.filter((g) => aus.has(g.rolle));
+  if (!weg.length) return gruppen.length ? { art: 'rollen', gruppen } : null;
+  // Ist alles abgewählt, bleibt nur der Hinweis – sonst stünde die Gruppe da, als hätte sie niemanden.
+  return gruppen.length
+    ? { art: 'rollen', gruppen, ausgeblendet: ausgeblendetText(weg) }
+    : { art: 'hinweis', text: ausgeblendetText(weg) };
 }
 
 /**
@@ -33,9 +50,10 @@ export function personenInhalt(
   mitglieder: MitgliederDaten | null,
   rollen: ReadonlyMap<number, Rolle>,
   wahl: PersonenWahl,
+  aus?: ReadonlySet<string>,
 ): (id: number) => KastenInhalt | null {
   const name = (p: number) => mitglieder?.personen.get(p)?.name ?? '';
-  return (id) => kastenInhalt(mitglieder?.je.get(id), wahl, rollen, name);
+  return (id) => kastenInhalt(mitglieder?.je.get(id), wahl, rollen, name, aus);
 }
 
 /**
@@ -43,3 +61,18 @@ export function personenInhalt(
  */
 export const pdfPersonenWahl = (reiter: PersonenWahl): Exclude<PersonenWahl, 'aus'> =>
   reiter === 'aus' ? 'rollen' : reiter;
+
+/** „Alle“ oder „3 von 5“ auf dem Knopf „Welche Rollen“ – gezählt nur die Rollen, die gerade angeboten werden. */
+export function rollenKnopfText(rollen: readonly RollenWahl[], aus: ReadonlySet<string>): string {
+  const gezeigt = rollen.filter((r) => !aus.has(r.name)).length;
+  return gezeigt === rollen.length ? 'Alle' : `${gezeigt} von ${rollen.length}`;
+}
+
+/** „Welche Rollen“ (#915) – was Reiter, Präsentation und PDF dafür brauchen. */
+export interface RollenFilter {
+  /** Die Rollen zum Anhaken (`rollenZurWahl`). */
+  rollen: readonly RollenWahl[];
+  /** Die abgewählten Rollennamen – leer heißt alle. */
+  aus: ReadonlySet<string>;
+  onAus: (aus: Set<string>) => void;
+}

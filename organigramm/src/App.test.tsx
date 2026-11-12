@@ -653,6 +653,45 @@ describe('O4: Präsentation', () => {
     expect(within(technik).getByText('Mitglieder nicht sichtbar')).toBeTruthy();
   });
 
+  it('„Welche Rollen“ (#915): Listen ohne die abgewählten Rollen, mit Hinweis – Zahlen und Leitung zählen alle', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    const d = await oeffnen();
+    // In den Kacheln gibt es Listen – also auch den Filter, mit derselben gemerkten Wahl wie im Reiter.
+    expect(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+    expect(within(d).getByText('3 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const technik = within(d).getByRole('region', { name: 'Technik' });
+    expect(
+      within(technik)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['AAlwin FriesenLeiter', 'DDora DornCo-Leiter']);
+    expect(within(technik).getByText('1 Person ausgeblendet')).toBeTruthy();
+    // Die Zahl an der Spalte zählt weiter alle drei.
+    expect(within(technik).getByText('3')).toBeTruthy();
+
+    fireEvent.click(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' }));
+    fireEvent.click(within(d).getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(within(technik).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(technik).queryByText(/ausgeblendet/)).toBeNull();
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+  });
+
+  it('„Welche Rollen“ gilt auch in den Diagrammen der Präsentation', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    const d = await oeffnen();
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const bild = within(d).getByRole('group', { name: 'Organigramm' }).textContent;
+    expect(bild).toContain('Dora Dorn');
+    expect(bild).not.toContain('Carl Clau');
+  });
+
   it('Tastatur: Pfeile, Bild auf/ab, Pos1, Esc zurück zur Übersicht und dort schließen', async () => {
     const d = await oeffnen();
     const taste = (key: string) => fireEvent.keyDown(window, { key });
@@ -1505,6 +1544,60 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(kasten().textContent).toContain('LEITER');
     expect(kasten().textContent).toContain('Alwin Friesen');
     expect(kasten().textContent).toContain('1 Mitarbeiter');
+  });
+
+  it('„Welche Rollen“ (#915): nur mit Personen; abgewählt fehlt die Rolle, darunter steht es – gemerkt', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(screen.queryByRole('button', { name: /Welche Rollen/ })).toBeNull();
+    fireEvent.click(personen('Alle'));
+    fireEvent.click(screen.getByRole('button', { name: 'Welche Rollen: Alle' }));
+    const haken = within(screen.getByRole('group', { name: 'Welche Rollen' }));
+    // Die Rollen wie in den Kästchen: Leitung zuerst, die Standardrolle zuletzt.
+    expect(haken.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)).toEqual([
+      'Leiter',
+      'Co-Leiter',
+      'Mitarbeiter',
+    ]);
+    fireEvent.click(haken.getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Leiter Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Mitarbeiter (1) ausgeblendet');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('["Mitarbeiter"]');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+
+    fireEvent.click(haken.getByRole('button', { name: 'Alle' }));
+    expect(listenZeile('Technik')).toContain('Carl Clau');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+    fireEvent.click(haken.getByRole('button', { name: 'Nur Leitung' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Co-Leiter Dora Dorn');
+
+    // Im Diagramm dieselbe Regel – der Hinweis steht im Kästchen (gemessen wie „Mitglieder nicht sichtbar“).
+    fireEvent.click(ansicht('Von oben'));
+    const technik = within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
+      name: 'Technik',
+    });
+    expect(technik.textContent).toContain('Dora Dorn');
+    expect(technik.textContent).not.toContain('Carl Clau');
+    expect(technik.textContent).toMatch(/Mitarbeiter \(1\) aus/);
+  });
+
+  it('„Welche Rollen“ gemerkt: gilt nach dem Neuladen; Unlesbares im Speicher heißt „alle“', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    localStorage.setItem('organigramm-rollen-aus', '["Leiter", 7]');
+    const { unmount } = render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Leiter (1) ausgeblendet');
+    unmount();
+    localStorage.setItem('organigramm-rollen-aus', '{kaputt');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).toContain('Alwin Friesen');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: Alle' })).toBeTruthy();
   });
 });
 

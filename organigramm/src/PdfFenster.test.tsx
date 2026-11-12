@@ -9,6 +9,7 @@ import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
 import { TAILWIND_500 } from '@shared/organigramm/farbe';
 import { rollenAus } from '@shared/organigramm/mitglieder';
+import { rollenZurWahl } from '@shared/organigramm/personen';
 import type { MitgliederDaten } from './ladeMitglieder';
 import { PdfFenster } from './PdfFenster';
 import { spitzenName, spitzenWert, waehleSpitze } from './spitzenAuswahl.testutil';
@@ -71,6 +72,15 @@ const MITGLIEDER: MitgliederDaten = {
   ),
 };
 
+/** „Welche Rollen“ (#915): erzeugt wie in `App` – aus den sichtbaren Mitgliedern, nichts abgewählt. */
+const ROLLEN_FILTER = {
+  rollen: rollenZurWahl(
+    [...MITGLIEDER.je.values()].flatMap((s) => (s.art === 'sichtbar' ? [s.mitglieder] : [])),
+    ROLLEN,
+  ),
+  aus: new Set<string>(),
+};
+
 /** Typfarben wie in der Test-Instanz: Dienste lime. */
 const TYPFARBEN = new Map([[2, 'lime']]);
 
@@ -99,6 +109,7 @@ async function zeigen(extra: Partial<Parameters<typeof PdfFenster>[0]> = {}) {
       ansicht="karten"
       typFarben={TYPFARBEN}
       personen={{ wahl: 'aus', mitglieder: MITGLIEDER, rollen: ROLLEN }}
+      rollenFilter={ROLLEN_FILTER}
       onSchliessen={onSchliessen}
       heute={HEUTE}
       {...extra}
@@ -280,6 +291,30 @@ describe('Organigramm als PDF (O7b-4)', () => {
     expect(vorschau().textContent).not.toContain('Bea Berg');
   });
 
+  it('„Welche Rollen“ kommt vom Reiter; hier geändert gilt es für diese PDF – mit Hinweis, was fehlt (#915)', async () => {
+    await zeigen({
+      ansicht: 'liste',
+      personen: { wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN },
+      rollenFilter: { ...ROLLEN_FILTER, aus: new Set(['Mitarbeiter']) },
+    });
+    expect(vorschau().textContent).toContain('Alwin Friesen');
+    expect(vorschau().textContent).not.toContain('Bea Berg');
+    // Im Test misst die Schrift grob – der Hinweis wird gekürzt wie „Mitglieder nicht s…“.
+    expect(vorschau().textContent).toContain('Mitarbeiter (2) aus');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Welche Rollen: 1 von 2' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(vorschau().textContent).toContain('Bea Berg');
+    expect(vorschau().textContent).not.toContain('Mitarbeiter (2)');
+    fireEvent.click(screen.getByRole('button', { name: 'Nur Leitung' }));
+    expect(screen.getByRole('button', { name: 'Welche Rollen: 1 von 2' })).toBeTruthy();
+    expect(vorschau().textContent).not.toContain('Bea Berg');
+
+    // Ohne Personen gibt es nichts zu filtern – die Auswahl verschwindet.
+    fireEvent.click(screen.getByLabelText('Personen'));
+    expect(screen.queryByRole('button', { name: /Welche Rollen/ })).toBeNull();
+  });
+
   it('mit Personen erst, wenn die Mitglieder geladen sind – vorher keine PDF ohne Personen zum Herunterladen', async () => {
     const { rerender, onSchliessen } = await zeigen({
       ansicht: 'liste',
@@ -297,6 +332,7 @@ describe('Organigramm als PDF (O7b-4)', () => {
         ansicht="liste"
         typFarben={TYPFARBEN}
         personen={{ wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN }}
+        rollenFilter={ROLLEN_FILTER}
         onSchliessen={onSchliessen}
         heute={HEUTE}
       />,

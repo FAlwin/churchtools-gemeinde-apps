@@ -15,6 +15,15 @@ import {
   antwortFrei,
   antwortZustand,
   bedingungFehler,
+  bedingungSatz,
+  bedingungenAufraeumen,
+  bedingungenNachziehen,
+  bedingungenUmbenennen,
+  istQuelle,
+  kaputteStellen,
+  umbenannteAntworten,
+  verschiebenSperre,
+  weggefallenText,
   feldSichtbar,
   geloestHinweis,
   kurzname,
@@ -27,6 +36,8 @@ import {
   type Bedingung,
 } from './bedingungen';
 import { neueEinstellungen } from './vorlagen';
+import { geburtsdatumAn, mitWer } from './formular';
+import { einordnen } from './baukasten';
 
 /** F1a – Bedingungen im Formular (Entwurf f1-bedingungen-nachweise-v1, Klick-Runden 07.–11.11.2026). */
 
@@ -591,5 +602,246 @@ describe('kleine Helfer', () => {
   it('wahlAntworten: Ja/Nein fest, sonst die eigenen', () => {
     expect(wahlAntworten(frage('a', 'janein'))).toEqual(['Ja', 'Nein']);
     expect(wahlAntworten(frage('a', 'radio', { antworten: ['x', 'y'] }))).toEqual(['x', 'y']);
+  });
+});
+
+// ── F1c: Bedingungen ziehen mit (Alwin, 12.11.2026) ─────────────────────────────────────────────
+
+describe('kaputteStellen – die EINE Prüfung hinter bedingungFehler', () => {
+  const f = acFormular();
+  it('nennt Ziel, Antwort, Regel, Quelle und Grund', () => {
+    const ohneTaufe: Formular = {
+      ...f,
+      anmeldung: f.anmeldung.map((x) => (x.id === 'taufe' ? { ...x, zustand: 'aus' } : x)),
+    };
+    expect(
+      kaputteStellen(ohneTaufe).map((s) => [s.ziel.id, s.antwort, s.regel, s.quelle?.id, s.grund]),
+    ).toEqual([
+      ['taufHinweis', undefined, 0, 'taufe', 'aus'],
+      ['kids1', 'Gruppenleiter', 0, 'taufe', 'aus'],
+      ['kids2', 'Gruppenleiter', 0, 'taufe', 'aus'],
+    ]);
+    expect(bedingungFehler(ohneTaufe)).toEqual(kaputteStellen(ohneTaufe).map((s) => s.text));
+  });
+});
+
+describe('bedingungenUmbenennen – umbenannte Antworten ziehen mit', () => {
+  it('Regeln anderer Fragen und die Bedingung AN der Antwort', () => {
+    const f = acFormular();
+    const neu = bedingungenUmbenennen(f, 'kids1', { Gruppenleiter: 'Gruppenleitung' });
+    expect(feld(neu, 'kidsLeiter').bed!.regeln).toEqual([
+      { feld: 'kids1', op: 'ist', wert: 'Gruppenleitung' },
+      // kids2 heißt weiter „Gruppenleiter“ – nur Regeln auf kids1 ziehen mit.
+      { feld: 'kids2', op: 'ist', wert: 'Gruppenleiter' },
+    ]);
+    expect(Object.keys(feld(neu, 'kids1').antwortBed!)).toEqual(['Gruppenleitung']);
+    expect(Object.keys(feld(neu, 'kids2').antwortBed!)).toEqual(['Gruppenleiter']);
+    // Das alte Formular bleibt unberührt.
+    expect(Object.keys(feld(f, 'kids1').antwortBed!)).toEqual(['Gruppenleiter']);
+  });
+
+  it('ein Tausch (A ↔ B) geht in einem Schritt', () => {
+    const f = acFormular();
+    const neu = bedingungenUmbenennen(f, 'zeitraum', {
+      KidsWoche: 'TeensWoche',
+      TeensWoche: 'KidsWoche',
+    });
+    expect(feld(neu, 'kids1').bed!.regeln[0].wert).toBe('TeensWoche');
+  });
+
+  it('umbenannteAntworten: nur, was sich wirklich geändert hat (ohne Leerzeichen am Rand)', () => {
+    expect(
+      umbenannteAntworten([
+        { text: 'Gruppenleitung ', von: 'Gruppenleiter' },
+        { text: 'Küche', von: 'Küche' },
+        { text: 'Neu' },
+      ]),
+    ).toEqual({ Gruppenleiter: 'Gruppenleitung' });
+    expect(umbenannteAntworten(undefined)).toEqual({});
+  });
+});
+
+describe('bedingungenAufraeumen – „Bedingung fällt mit weg“', () => {
+  const ohne = (f: Formular, id: string): Formular => ({
+    anmeldung: f.anmeldung.filter((x) => x.id !== id),
+    person: f.person.filter((x) => x.id !== id),
+  });
+
+  it('Quelle entfernt: die Bedingung fällt ganz weg, die Frage ist danach immer zu sehen', () => {
+    const { formular, weggefallen } = bedingungenAufraeumen(ohne(acFormular(), 'begleit'));
+    expect(feld(formular, 'begleitNamen').bed).toBeUndefined();
+    expect(weggefallen.map((w) => [w.ziel.id, w.antwort, w.ganz])).toEqual([
+      ['begleitNamen', undefined, true],
+    ]);
+    expect(bedingungFehler(formular)).toEqual([]);
+  });
+
+  it('eine von zwei Regeln fällt weg: der Rest bleibt, als Teil gemeldet', () => {
+    const { formular, weggefallen } = bedingungenAufraeumen(ohne(acFormular(), 'kids2'));
+    expect(feld(formular, 'kidsLeiter').bed).toEqual({
+      modus: 'eine',
+      regeln: [{ feld: 'kids1', op: 'ist', wert: 'Gruppenleiter' }],
+    });
+    expect(weggefallen.map((w) => [w.ziel.id, w.ganz])).toEqual([['kidsLeiter', false]]);
+  });
+
+  it('Antwort der Quelle entfernt, Antwort mit Bedingung entfernt, Quelle ausgeschaltet', () => {
+    const f = acFormular();
+    const mit = (id: string, x: Partial<Feld>): Formular => ({
+      ...f,
+      anmeldung: f.anmeldung.map((y) => (y.id === id ? { ...y, ...x } : y)),
+    });
+    // „KidsWoche“ aus dem Zeitraum entfernt → beide Kids-Fragen ohne Bedingung.
+    const a = bedingungenAufraeumen(mit('zeitraum', { antworten: ['Aufbauwoche', 'TeensWoche'] }));
+    expect([feld(a.formular, 'kids1').bed, feld(a.formular, 'kids2').bed]).toEqual([
+      undefined,
+      undefined,
+    ]);
+    // „Gruppenleiter“ aus kids1 entfernt → seine Antwort-Bedingung fällt weg, ebenso die Regel des Leiter-Wunschs.
+    const b = bedingungenAufraeumen(mit('kids1', { antworten: ['Küche', 'Media'] }));
+    expect(feld(b.formular, 'kids1').antwortBed).toBeUndefined();
+    expect(feld(b.formular, 'kidsLeiter').bed!.regeln).toEqual([
+      { feld: 'kids2', op: 'ist', wert: 'Gruppenleiter' },
+    ]);
+    expect(b.weggefallen.map((w) => [w.ziel.id, w.antwort, w.ganz])).toEqual([
+      ['kids1', 'Gruppenleiter', true],
+      ['kidsLeiter', undefined, false],
+    ]);
+    // Taufe ausgeschaltet → Hinweis und beide Antwort-Bedingungen weg.
+    const c = bedingungenAufraeumen(mit('taufe', { zustand: 'aus' }));
+    expect(bedingungFehler(c.formular)).toEqual([]);
+    expect(c.weggefallen).toHaveLength(3);
+  });
+
+  it('ein anderer Fragetyp: Vergleich passt nicht mehr → weg', () => {
+    const f = acFormular();
+    const { formular } = bedingungenAufraeumen({
+      ...f,
+      anmeldung: f.anmeldung.map((y) =>
+        y.id === 'zeitraum' ? { ...y, typ: 'text', antworten: [] } : y,
+      ),
+    });
+    expect(feld(formular, 'kids1').bed).toBeUndefined();
+  });
+
+  it('„steht dahinter“ räumt es NICHT auf (das verhindert die Sperre), und ohne Fund kommt dasselbe Formular', () => {
+    const f = acFormular();
+    const verdreht = einordnen(f, 'taufe', 'anmeldung', null);
+    expect(bedingungenAufraeumen(verdreht).formular).toBe(verdreht);
+    expect(bedingungenAufraeumen(f)).toEqual({ formular: f, weggefallen: [] });
+    expect(bedingungenAufraeumen(f).formular).toBe(f);
+  });
+
+  it('bedingungenNachziehen: erst umbenennen, dann aufräumen – Umbenanntes bleibt', () => {
+    const f = acFormular();
+    const kids1 = { ...feld(f, 'kids1'), antworten: ['Küche', 'Gruppenleitung', 'Media'] };
+    const geaendert: Formular = {
+      ...f,
+      anmeldung: f.anmeldung.map((y) => (y.id === 'kids1' ? kids1 : y)),
+    };
+    const { formular, weggefallen } = bedingungenNachziehen(geaendert, {
+      feldId: 'kids1',
+      antworten: { Gruppenleiter: 'Gruppenleitung' },
+    });
+    expect(weggefallen).toEqual([]);
+    expect(Object.keys(feld(formular, 'kids1').antwortBed!)).toEqual(['Gruppenleitung']);
+    expect(feld(formular, 'kidsLeiter').bed!.regeln[0].wert).toBe('Gruppenleitung');
+  });
+
+  it('mitWer: Geburtsdatum ausgeschaltet → Bedingungen darauf fallen weg', () => {
+    const e = neueEinstellungen('freizeit');
+    const ziel = frage('kurs', 'text', { bed: wenn('birth', 'ausgefuellt') });
+    e.formular.person.push(ziel);
+    expect(geburtsdatumAn(e.formular)).toBe(true);
+    const neu = mitWer(e, e.wer, false);
+    expect(feld(neu.formular, 'kurs').bed).toBeUndefined();
+    expect(bedingungFehler(neu.formular)).toEqual([]);
+  });
+});
+
+describe('weggefallenText – der Satz zur Meldung', () => {
+  const f = acFormular();
+  it('ganz, mehrere, ein Teil, beides, nichts', () => {
+    const z = (id: string) => feld(f, id);
+    expect(weggefallenText([{ ziel: z('kids1'), ganz: true }])).toBe(
+      'Die Bedingung bei „Frage kids1“ fällt mit weg.',
+    );
+    expect(
+      weggefallenText([
+        { ziel: z('kids1'), ganz: true },
+        { ziel: z('kids2'), antwort: 'Gruppenleiter', ganz: true },
+        { ziel: z('taufHinweis'), ganz: true },
+      ]),
+    ).toBe(
+      'Die Bedingungen bei „Frage kids1“, „Frage kids2“ (Antwort „Gruppenleiter“) und „Frage taufHinweis“ fallen mit weg.',
+    );
+    expect(weggefallenText([{ ziel: z('kidsLeiter'), ganz: false }])).toBe(
+      'Bei „Frage kidsLeiter“ fällt ein Teil der Bedingung weg.',
+    );
+    expect(
+      weggefallenText([
+        { ziel: z('kids1'), ganz: true },
+        { ziel: z('kidsLeiter'), ganz: false },
+      ]),
+    ).toBe(
+      'Die Bedingung bei „Frage kids1“ fällt mit weg. Bei „Frage kidsLeiter“ fällt ein Teil der Bedingung weg.',
+    );
+    expect(weggefallenText([])).toBe('');
+  });
+});
+
+describe('verschiebenSperre – „Verschieben sperren“', () => {
+  const f = acFormular();
+  it('Quelle hinter ihr Ziel oder Ziel vor seine Quelle → gesperrt, mit Satz', () => {
+    expect(verschiebenSperre(f, einordnen(f, 'begleit', 'anmeldung', null))).toBe(
+      '„Frage begleit“ muss vor „Frage begleitNamen“ bleiben – dort ist sie Bedingung.',
+    );
+    expect(verschiebenSperre(f, einordnen(f, 'begleitNamen', 'anmeldung', 'begleit'))).toBe(
+      '„Frage begleit“ muss vor „Frage begleitNamen“ bleiben – dort ist sie Bedingung.',
+    );
+  });
+
+  it('Kontakt-Frage als Quelle zu den Fragen je Person → gesperrt, anderer Satz', () => {
+    expect(verschiebenSperre(f, einordnen(f, 'begleit', 'person', null))).toBe(
+      '„Frage begleitNamen“ schaut auf „Frage begleit“ – beide müssen bei den Kontakt-Fragen stehen, „Frage begleit“ davor.',
+    );
+  });
+
+  it('erlaubt: unbeteiligte Felder, das Ziel nach unten, ein Ziel je Person auf eine Kontakt-Frage', () => {
+    expect(verschiebenSperre(f, einordnen(f, 'tel', 'anmeldung', null))).toBeNull();
+    expect(verschiebenSperre(f, einordnen(f, 'begleitNamen', 'anmeldung', null))).toBeNull();
+    expect(verschiebenSperre(f, einordnen(f, 'begleitNamen', 'person', null))).toBeNull();
+  });
+
+  it('was schon vorher kaputt war, sperrt nicht noch einmal', () => {
+    const kaputt = einordnen(f, 'begleit', 'anmeldung', null);
+    expect(verschiebenSperre(kaputt, einordnen(kaputt, 'tel', 'anmeldung', null))).toBeNull();
+  });
+});
+
+describe('istQuelle und bedingungSatz', () => {
+  const f = acFormular();
+  it('istQuelle: Fragen und Antworten zählen, ohne Bedingung nicht', () => {
+    expect(istQuelle(f, 'zeitraum')).toBe(true);
+    expect(istQuelle(f, 'taufe')).toBe(true); // nur über Antwort-Bedingungen und den Hinweis
+    expect(istQuelle(f, 'kids2')).toBe(true);
+    expect(istQuelle(f, 'begleitNamen')).toBe(false);
+  });
+  it('bedingungSatz: mit Kurzname, „oder“/„und“, ohne Wert bei „ist ausgefüllt“, fehlende Quelle', () => {
+    const k = { ...feld(f, 'zeitraum'), kurz: 'Zeitraum' };
+    const mitKurz = { ...f, anmeldung: f.anmeldung.map((x) => (x.id === 'zeitraum' ? k : x)) };
+    expect(bedingungSatz(mitKurz, feld(f, 'kids1').bed!)).toBe('„Zeitraum“ enthält KidsWoche');
+    expect(bedingungSatz(f, feld(f, 'kidsLeiter').bed!)).toBe(
+      '„Frage kids1“ ist Gruppenleiter oder „Frage kids2“ ist Gruppenleiter',
+    );
+    expect(
+      bedingungSatz(f, {
+        modus: 'alle',
+        regeln: [
+          { feld: 'begleit', op: 'ausgefuellt' },
+          { feld: 'weg', op: 'leer' },
+        ],
+      }),
+    ).toBe('„Frage begleit“ ist ausgefüllt und (Frage fehlt) ist leer');
   });
 });

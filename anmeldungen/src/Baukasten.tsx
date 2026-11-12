@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
@@ -6,6 +6,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { AnmeldeFormular, type BaukastenHaken } from '@ui/anmeldeformular/AnmeldeFormular';
 import { musterAntworten } from '@ui/anmeldeformular/daten';
 import {
+  FELDER_MAX,
   geburtsdatumAn,
   mitWer,
   platzBelegt,
@@ -23,7 +24,13 @@ import {
   verschiebbar,
   type Bereich,
 } from '@shared/anmeldung/baukasten';
+import {
+  bedingungenNachziehen,
+  verschiebenSperre,
+  weggefallenText,
+} from '@shared/anmeldung/bedingungen';
 import { feldEinordnen, feldEntfernen, feldSpeichern } from './formularFelder';
+import { BedingungChips } from './Bedingungen';
 import {
   aendereEinstellungen,
   bildEntfernen,
@@ -98,7 +105,7 @@ export function Baukasten({
   onGespeichert: (text: string, umkehrbar: boolean) => void;
 }) {
   const { stand, tun, laeuft } = useSchlange(onGespeichert);
-  const [lokalF, setLokalF] = useState<Formular | null>(null);
+  const [lokalF, setLokalFZustand] = useState<Formular | null>(null);
   const [lokalG, setLokalG] = useState<Gestaltung | null>(null);
   const [lokalWer, setLokalWer] = useState<OeffentlicheEinstellungen['wer'] | null>(null);
   /** Welches ⓘ gerade aufgeklappt ist (Feld-ID oder Bereich). */
@@ -110,6 +117,8 @@ export function Baukasten({
   const [reiter, setReiter] = useState<'bausteine' | 'design'>('bausteine');
   const [blatt, setBlatt] = useState<'bausteine' | 'design' | null>(null);
   const [bildArbeitet, setBildArbeitet] = useState(false);
+  /** Warum etwas nicht ging (Verschieben gesperrt, Teil voll) – steht oben, bis das Nächste gelingt (F1c). */
+  const [sperre, setSperre] = useState<string | null>(null);
 
   const formular = lokalF ?? e.formular;
   const gestaltung = lokalG ?? e.gestaltung;
@@ -118,6 +127,15 @@ export function Baukasten({
   // Refs für die Zeitgeber: Sie feuern später und brauchen den Stand von dann, nicht den beim Anlegen.
   const formularRef = useRef(formular);
   formularRef.current = formular;
+  /**
+   * Zwischenstand setzen – und gleich lesbar machen (F1c): Wird erst ein Feld gesichert und im selben Klick verschoben
+   * oder entfernt, liest der zweite Schritt sonst den Stand vom letzten Zeichnen, ohne den ersten. Dann fehlte in der
+   * Anzeige kurz die eben getippte Änderung, und die Sperre beim Verschieben nannte die alten Namen.
+   */
+  const setLokalF = useCallback((fo: Formular | null) => {
+    if (fo) formularRef.current = fo;
+    setLokalFZustand(fo);
+  }, []);
 
   // ── Das gewählte Feld und sein Entwurf (`useFeldEntwurf`), das Design (`useDesignEntwurf`) ──
   const {
@@ -134,6 +152,7 @@ export function Baukasten({
     aendern,
     typAendern,
     verwerfen,
+    bedingungenAuffrischen,
   } = useFeldEntwurf({ id, tun, formularRef, setLokalF, ctFelder: e.ctFelder });
   const { designWartet, designSichern, gestalten } = useDesignEntwurf({ id, tun, setLokalG });
   const bildDatei = useRef<HTMLInputElement>(null);
@@ -159,7 +178,7 @@ export function Baukasten({
     setLokalF(null);
     setLokalG(null);
     setLokalWer(null);
-  }, [e, laeuft, designWartet]);
+  }, [e, laeuft, designWartet, setLokalF]);
   useEffect(() => {
     setNameEntwurf(name);
   }, [name]);
@@ -191,7 +210,9 @@ export function Baukasten({
   function werAendern(neu: OeffentlicheEinstellungen['wer'], geburt: boolean) {
     feldSichern();
     setLokalWer(neu);
-    setLokalF(mitWer({ ...e, formular: formularRef.current }, neu, geburt).formular);
+    const formularNeu = mitWer({ ...e, formular: formularRef.current }, neu, geburt).formular;
+    setLokalF(formularNeu);
+    bedingungenAuffrischen(formularNeu);
     void tun('„Wer meldet sich an?“ gespeichert.', () =>
       aendereEinstellungen(id, (frisch) => mitWer(frisch, neu, geburt)),
     );
@@ -251,6 +272,14 @@ export function Baukasten({
     // Die Kennung erst jetzt vergeben: Zwei Bausteine kurz nacheinander dürfen sich nicht in die Quere kommen.
     const feld = b.feld.art === 'eigen' ? { ...b.feld, id: neueFeldKennung(fo) } : b.feld;
     const neu = einordnen(ersetzeFeld(fo, feld), feld.id, bereich, vorId, feld);
+    // Die Grenze je Teil (`FELDER_MAX`) – ausgeblendete Felder zählen mit, sie stehen weiter in den Einstellungen.
+    if (neu[bereich].length > FELDER_MAX) {
+      setSperre(
+        `Hier passen höchstens ${FELDER_MAX} Felder hinein (ausgeblendete zählen mit). Erst ein Feld entfernen.`,
+      );
+      return;
+    }
+    setSperre(null);
     setLokalF(neu);
     setAktiv(feld.id);
     neuerEntwurf(feld);
@@ -264,6 +293,10 @@ export function Baukasten({
     const fo = formularRef.current;
     const neu = einordnen(fo, feldId, bereich, vorId);
     if (JSON.stringify(neu) === JSON.stringify(fo)) return;
+    // Stünde eine Quelle danach hinter ihrer Bedingung, bleibt alles, wie es ist (Alwin, 12.11.2026).
+    const gesperrt = verschiebenSperre(fo, neu);
+    setSperre(gesperrt);
+    if (gesperrt) return;
     setLokalF(neu);
     void tun('Verschoben.', () => feldEinordnen(id, feldId, bereich, vorId));
   }
@@ -272,7 +305,8 @@ export function Baukasten({
     if (aktiv === f.id) verwerfen();
     else feldSichern();
     const fo = formularRef.current;
-    setLokalF(
+    // Schaut eine Bedingung auf das Feld, fällt sie mit weg (Alwin, 12.11.2026) – dieselbe Stelle wie beim Speichern.
+    const { formular: neu, weggefallen } = bedingungenNachziehen(
       f.art === 'eigen'
         ? {
             anmeldung: fo.anmeldung.filter((x) => x.id !== f.id),
@@ -280,12 +314,19 @@ export function Baukasten({
           }
         : ersetzeFeld(fo, { ...f, zustand: 'aus' }),
     );
+    setSperre(null);
+    setLokalF(neu);
+    const zusatz = weggefallenText(weggefallen);
     void tun(
       (ergebnis) => {
         const r = ergebnis as Awaited<ReturnType<typeof feldEntfernen>>;
-        if (r.art === 'geloescht') return `„${f.frage || 'Trennlinie'}“ entfernt.`;
-        if (r.antworten === 0) return `„${f.frage}“ ausgeschaltet.`;
-        return `„${f.frage}“ ausgeblendet – ${r.antworten === 1 ? 'die Antwort bleibt' : `die ${r.antworten} Antworten bleiben`} in ChurchTools.`;
+        const text =
+          r.art === 'geloescht'
+            ? `„${f.frage || 'Trennlinie'}“ entfernt.`
+            : r.antworten === 0
+              ? `„${f.frage}“ ausgeschaltet.`
+              : `„${f.frage}“ ausgeblendet – ${r.antworten === 1 ? 'die Antwort bleibt' : `die ${r.antworten} Antworten bleiben`} in ChurchTools.`;
+        return zusatz ? `${text} ${zusatz}` : text;
       },
       () => feldEntfernen(id, f.id),
     );
@@ -356,6 +397,16 @@ export function Baukasten({
   const bildWaehlen = (d: File) => void bild(() => bildHochladen(id, d), 'Titelbild hochgeladen.');
   const bildWeg = () => void bild(() => bildEntfernen(id), 'Titelbild entfernt.');
 
+  // Das bearbeitete Feld so zeigen, wie es gerade im Baukasten steht (für die Vorschau und die Bedingungen).
+  const anzeigeFormular = entwurf
+    ? ersetzeFeld(formular, {
+        ...entwurf.feld,
+        antworten: mitAntworten(entwurf.feld)
+          ? entwurf.antworten.map((a) => a.text)
+          : entwurf.feld.antworten,
+      })
+    : formular;
+
   // ── Die Hülle um jedes Feld ──
   function huelle(f: Feld, bereich: Bereich, inhalt: ReactNode): ReactNode {
     const beweglich = verschiebbar(f);
@@ -399,7 +450,7 @@ export function Baukasten({
       lueckeDavor && luecke(),
       <div
         key="feld"
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
+        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''} ${f.bed ? k.bedingt : ''}`}
         data-feld={f.id}
         data-bereich={bereich}
         data-ende={amEnde(f) ? '' : undefined}
@@ -408,6 +459,7 @@ export function Baukasten({
           ev.stopPropagation();
           const h = hinweisUnter(ev);
           if (h) return hinweisUmschalten(h);
+          setSperre(null);
           if (beweglich || !fest) waehlen(f.id);
         }}
         onDragStart={(ev) => {
@@ -424,7 +476,9 @@ export function Baukasten({
         {istAktiv && !fest && entwurf ? (
           <FeldBearbeiten
             entwurf={entwurf}
+            formular={anzeigeFormular}
             onAendern={aendern}
+            onSofortSichern={feldSichern}
             beantwortet={entfernt ? entfernt.beantwortet : null}
             entferntGewaehlt={entferntGewaehlt}
             wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
@@ -436,6 +490,7 @@ export function Baukasten({
             <div ref={inert} className={k.inhalt}>
               {inhalt}
             </div>
+            <BedingungChips formular={anzeigeFormular} feld={f} />
             {hinweisKasten(f.id)}
             {istAktiv && (
               <div className={k.festFuss}>
@@ -450,15 +505,6 @@ export function Baukasten({
     ];
   }
 
-  // Das bearbeitete Feld so zeigen, wie es gerade im Baukasten steht (für die Vorschau).
-  const anzeigeFormular = entwurf
-    ? ersetzeFeld(formular, {
-        ...entwurf.feld,
-        antworten: mitAntworten(entwurf.feld)
-          ? entwurf.antworten.map((a) => a.text)
-          : entwurf.feld.antworten,
-      })
-    : formular;
   const ansicht = {
     basis: ctBasis(),
     name: nameEntwurf || name,
@@ -579,9 +625,9 @@ export function Baukasten({
           Nochmal
         </button>
       </span>
-    ) : hinweis ? (
+    ) : hinweis || sperre ? (
       <span className={k.statusFehler} role="alert">
-        {hinweis}
+        {hinweis ?? sperre}
       </span>
     ) : (
       <span className={k.status} aria-live="polite">

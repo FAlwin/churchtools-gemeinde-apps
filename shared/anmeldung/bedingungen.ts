@@ -312,50 +312,332 @@ export function antwortZustand(
 }
 
 /**
- * **Was an den Bedingungen nicht stimmt** – für `pruefeFormular` (Speichern im Baukasten). Eine kaputte Bedingung
- * würde eine Frage für immer ausblenden; darum wird sie nicht gespeichert.
+ * Warum eine Bedingung nicht stimmt. `stelle` = die Quelle steht nicht davor (oder im falschen Teil) – das entsteht
+ * nur durch Verschieben und wird dort gesperrt (`verschiebenSperre`). Alles andere entsteht durch Entfernen,
+ * Ausschalten, Umbenennen oder einen neuen Fragetyp und wird beim Speichern aufgeräumt (`bedingungenAufraeumen`).
  */
-export function bedingungFehler(f: Formular): string[] {
-  const fehler: string[] = [];
+export type KaputtGrund =
+  | 'leer'
+  | 'fehlt'
+  | 'aus'
+  | 'stelle'
+  | 'vergleich'
+  | 'antwort'
+  | 'fest'
+  | 'zielAntwort';
+
+/** Eine kaputte Stelle an einer Bedingung – die EINE Prüfung hinter `bedingungFehler`, Aufräumen und Sperre. */
+export interface KaputteStelle {
+  /** Die Frage, die die Bedingung trägt. */
+  ziel: Feld;
+  /** Bei einer Bedingung an einer Antwort: diese Antwort. */
+  antwort?: string;
+  /** Welche Regel (Index) – fehlt, wenn die ganze Bedingung betroffen ist (`leer`, `fest`, `zielAntwort`). */
+  regel?: number;
+  /** Die Frage, auf die die Regel schaut (wenn es sie gibt). */
+  quelle?: Feld;
+  grund: KaputtGrund;
+  /** Der Satz für Fehlermeldung und Warnung im Baukasten. */
+  text: string;
+}
+
+/** **Kaputte Stellen an den Bedingungen** – in der Reihenfolge der Felder, je Feld erst die Frage, dann die Antworten. */
+export function kaputteStellen(f: Formular): KaputteStelle[] {
+  const aus: KaputteStelle[] = [];
   const alle = [...f.anmeldung, ...f.person];
   const name = (x: Feld) => `„${kurzname(x)}“`;
-  const pruefeRegeln = (ziel: Feld, bed: Bedingung, wo: string) => {
-    if (bed.regeln.length === 0) fehler.push(`${wo}: Die Bedingung ist leer.`);
-    for (const r of bed.regeln) {
+  const pruefeRegeln = (ziel: Feld, bed: Bedingung, wo: string, antwort?: string) => {
+    const dazu = (s: Omit<KaputteStelle, 'ziel' | 'antwort'>) =>
+      aus.push({ ziel, ...(antwort === undefined ? {} : { antwort }), ...s });
+    if (bed.regeln.length === 0) dazu({ grund: 'leer', text: `${wo}: Die Bedingung ist leer.` });
+    bed.regeln.forEach((r, regel) => {
       const q = alle.find((x) => x.id === r.feld);
-      if (!q) {
-        fehler.push(`${wo}: Die Frage, auf die die Bedingung schaut, gibt es nicht mehr.`);
-        continue;
-      }
-      if (q.zustand === 'aus') {
-        fehler.push(`${wo}: Die Bedingung schaut auf ${name(q)} – die ist ausgeschaltet.`);
-        continue;
-      }
-      if (!quelleErlaubt(f, ziel, q)) {
-        fehler.push(`${wo}: Die Bedingung schaut auf ${name(q)} – die muss davor stehen.`);
-        continue;
-      }
-      if (!vergleicheFuer(q).includes(r.op)) {
-        fehler.push(`${wo}: Dieser Vergleich passt nicht zu ${name(q)}.`);
-        continue;
-      }
+      if (!q)
+        return dazu({
+          regel,
+          grund: 'fehlt',
+          text: `${wo}: Die Frage, auf die die Bedingung schaut, gibt es nicht mehr.`,
+        });
+      if (q.zustand === 'aus')
+        return dazu({
+          regel,
+          quelle: q,
+          grund: 'aus',
+          text: `${wo}: Die Bedingung schaut auf ${name(q)} – die ist ausgeschaltet.`,
+        });
+      if (!quelleErlaubt(f, ziel, q))
+        return dazu({
+          regel,
+          quelle: q,
+          grund: 'stelle',
+          text: `${wo}: Die Bedingung schaut auf ${name(q)} – die muss davor stehen.`,
+        });
+      if (!vergleicheFuer(q).includes(r.op))
+        return dazu({
+          regel,
+          quelle: q,
+          grund: 'vergleich',
+          text: `${wo}: Dieser Vergleich passt nicht zu ${name(q)}.`,
+        });
       if (mitWert(r.op) && (r.wert === undefined || !wahlAntworten(q).includes(r.wert)))
-        fehler.push(`${wo}: Die Antwort „${r.wert ?? ''}“ gibt es bei ${name(q)} nicht mehr.`);
-    }
+        dazu({
+          regel,
+          quelle: q,
+          grund: 'antwort',
+          text: `${wo}: Die Antwort „${r.wert ?? ''}“ gibt es bei ${name(q)} nicht mehr.`,
+        });
+    });
   };
   for (const x of alle) {
     if (x.bed) {
       if (x.art === 'fest' || x.art === 'preis')
-        fehler.push(`${name(x)} ist immer dabei und kann keine Bedingung haben.`);
+        aus.push({
+          ziel: x,
+          grund: 'fest',
+          text: `${name(x)} ist immer dabei und kann keine Bedingung haben.`,
+        });
       else pruefeRegeln(x, x.bed, name(x));
     }
     for (const [antwort, bed] of Object.entries(x.antwortBed ?? {})) {
       if (!MIT_WAHL.has(x.typ) || !wahlAntworten(x).includes(antwort)) {
-        fehler.push(`${name(x)}: Die Antwort „${antwort}“ mit Bedingung gibt es nicht mehr.`);
+        aus.push({
+          ziel: x,
+          antwort,
+          grund: 'zielAntwort',
+          text: `${name(x)}: Die Antwort „${antwort}“ mit Bedingung gibt es nicht mehr.`,
+        });
         continue;
       }
-      pruefeRegeln(x, bed, `${name(x)}, Antwort „${antwort}“`);
+      pruefeRegeln(x, bed, `${name(x)}, Antwort „${antwort}“`, antwort);
     }
   }
-  return fehler;
+  return aus;
 }
+
+/**
+ * **Was an den Bedingungen nicht stimmt** – für `pruefeFormular` (Speichern im Baukasten). Eine kaputte Bedingung
+ * würde eine Frage für immer ausblenden; darum wird sie nicht gespeichert.
+ */
+export function bedingungFehler(f: Formular): string[] {
+  return kaputteStellen(f).map((s) => s.text);
+}
+
+// ── Bedingungen nachziehen (F1c) ─────────────────────────────────────────────────────────────
+
+/**
+ * **Antworten umbenannt** – die Bedingungen, die auf diese Antworten schauen, und die Bedingungen AN diesen Antworten
+ * ziehen mit. `umbenannt`: alter Text → neuer Text (beides zugleich, ein Tausch geht also auch).
+ */
+export function bedingungenUmbenennen(
+  f: Formular,
+  feldId: string,
+  umbenannt: Record<string, string>,
+): Formular {
+  const neuerName = (w: string) => (Object.hasOwn(umbenannt, w) ? umbenannt[w] : w);
+  if (!Object.keys(umbenannt).length) return f;
+  const regeln = <B extends Bedingung>(b: B): B => ({
+    ...b,
+    regeln: b.regeln.map((r) =>
+      r.feld === feldId && r.wert !== undefined ? { ...r, wert: neuerName(r.wert) } : r,
+    ),
+  });
+  const feld = (x: Feld): Feld => {
+    const neu: Feld = { ...x };
+    if (x.bed) neu.bed = regeln(x.bed);
+    if (x.antwortBed) {
+      const ab: Record<string, AntwortBedingung> = {};
+      for (const [antwort, b] of Object.entries(x.antwortBed)) {
+        const schluessel = x.id === feldId ? neuerName(antwort) : antwort;
+        // Kollision (zwei Antworten heißen jetzt gleich): die erste bleibt.
+        if (!Object.hasOwn(ab, schluessel)) ab[schluessel] = regeln(b);
+      }
+      neu.antwortBed = ab;
+    }
+    return neu;
+  };
+  return { anmeldung: f.anmeldung.map(feld), person: f.person.map(feld) };
+}
+
+/**
+ * **Umbenannte Antworten** aus dem Baukasten: alter Text → neuer Text (`von` = der Name beim letzten Speichern). Daran
+ * ziehen die Bedingungen mit (`bedingungenUmbenennen`).
+ */
+export function umbenannteAntworten(
+  antworten: { text: string; von?: string }[] | undefined,
+): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const a of antworten ?? [])
+    if (a.von !== undefined && a.von !== a.text.trim()) m[a.von] = a.text.trim();
+  return m;
+}
+
+/** Was durch das Aufräumen wegfiel: die Bedingung an einer Frage oder an einer ihrer Antworten. */
+export interface Weggefallen {
+  ziel: Feld;
+  antwort?: string;
+  /** `true`: die ganze Bedingung fiel weg (die Frage ist jetzt immer zu sehen); sonst nur ein Teil. */
+  ganz: boolean;
+}
+
+/** Was beim Speichern aufgeräumt wird – alles außer `stelle` (die Sperre beim Verschieben verhindert es). */
+const AUFRAEUMEN = new Set<KaputtGrund>([
+  'leer',
+  'fehlt',
+  'aus',
+  'vergleich',
+  'antwort',
+  'zielAntwort',
+]);
+
+/**
+ * **Bedingungen aufräumen** (Alwin, 12.11.2026: „Bedingung fällt mit weg“) – wird eine Antwort oder eine Frage
+ * entfernt oder ausgeschaltet, auf die eine Bedingung schaut, fällt diese Regel weg. Bleibt keine Regel übrig, fällt
+ * die ganze Bedingung weg: Die Frage ist dann immer zu sehen. `weggefallen` nennt, wo – für die Meldung
+ * (`weggefallenText`). Ohne Änderung kommt dasselbe Formular zurück.
+ */
+export function bedingungenAufraeumen(f: Formular): {
+  formular: Formular;
+  weggefallen: Weggefallen[];
+} {
+  const stellen = kaputteStellen(f).filter((s) => AUFRAEUMEN.has(s.grund));
+  if (!stellen.length) return { formular: f, weggefallen: [] };
+  const weggefallen: Weggefallen[] = [];
+  const ohne = <B extends Bedingung>(x: Feld, b: B, antwort?: string): B | null => {
+    const hier = stellen.filter((s) => s.ziel.id === x.id && s.antwort === antwort);
+    if (!hier.length) return b;
+    const weg = new Set(hier.map((s) => s.regel));
+    const regeln = hier.some((s) => s.regel === undefined)
+      ? []
+      : b.regeln.filter((_, i) => !weg.has(i));
+    if (hier.every((s) => s.regel !== undefined) && regeln.length === b.regeln.length) return b;
+    weggefallen.push({
+      ziel: x,
+      ...(antwort === undefined ? {} : { antwort }),
+      ganz: !regeln.length,
+    });
+    return regeln.length ? { ...b, regeln } : null;
+  };
+  const feld = (x: Feld): Feld => {
+    if (!x.bed && !x.antwortBed) return x;
+    const neu: Feld = { ...x };
+    if (x.bed) {
+      const b = ohne(x, x.bed);
+      if (b) neu.bed = b;
+      else delete neu.bed;
+    }
+    if (x.antwortBed) {
+      const ab: Record<string, AntwortBedingung> = {};
+      for (const [antwort, b] of Object.entries(x.antwortBed)) {
+        const rest = ohne(x, b, antwort);
+        if (rest) ab[antwort] = rest;
+      }
+      if (Object.keys(ab).length) neu.antwortBed = ab;
+      else delete neu.antwortBed;
+    }
+    return neu;
+  };
+  return {
+    formular: { anmeldung: f.anmeldung.map(feld), person: f.person.map(feld) },
+    weggefallen,
+  };
+}
+
+/**
+ * **Bedingungen nachziehen** – die EINE Stelle für Baukasten (Zwischenstand) und Speichern (`formularFelder.ts`):
+ * erst umbenannte Antworten mitziehen, dann aufräumen, was weggefallen ist.
+ */
+export function bedingungenNachziehen(
+  f: Formular,
+  umbenannt?: { feldId: string; antworten: Record<string, string> },
+): { formular: Formular; weggefallen: Weggefallen[] } {
+  return bedingungenAufraeumen(
+    umbenannt ? bedingungenUmbenennen(f, umbenannt.feldId, umbenannt.antworten) : f,
+  );
+}
+
+/**
+ * Der Satz zur Meldung: „Die Bedingung bei „Bereich“ fällt mit weg.“ / „Bei „Bereich“ fällt ein Teil der Bedingung
+ * weg.“ – leer, wenn nichts wegfiel.
+ */
+export function weggefallenText(w: Weggefallen[]): string {
+  const namen = (ganz: boolean) => [
+    ...new Set(
+      w
+        .filter((x) => x.ganz === ganz)
+        .map((x) => `„${kurzname(x.ziel)}“${x.antwort ? ` (Antwort „${x.antwort}“)` : ''}`),
+    ),
+  ];
+  const liste = (n: string[]) =>
+    n.length === 1 ? n[0] : `${n.slice(0, -1).join(', ')} und ${n.at(-1)}`;
+  const ganz = namen(true);
+  const teil = namen(false);
+  const saetze: string[] = [];
+  if (ganz.length)
+    saetze.push(
+      ganz.length === 1
+        ? `Die Bedingung bei ${liste(ganz)} fällt mit weg.`
+        : `Die Bedingungen bei ${liste(ganz)} fallen mit weg.`,
+    );
+  if (teil.length) saetze.push(`Bei ${liste(teil)} fällt ein Teil der Bedingung weg.`);
+  return saetze.join(' ');
+}
+
+/**
+ * **Darf so verschoben werden?** (Alwin, 12.11.2026: „Verschieben sperren“) – `null`, wenn ja; sonst der Satz, warum
+ * nicht. Gesperrt wird nur, was das Verschieben NEU kaputt macht (eine Quelle stünde hinter ihrem Ziel oder im falschen
+ * Teil).
+ */
+export function verschiebenSperre(alt: Formular, neu: Formular): string | null {
+  const schluessel = (s: KaputteStelle) =>
+    `${s.ziel.id}|${s.antwort ?? ''}|${s.regel ?? ''}|${s.quelle?.id ?? ''}`;
+  const vorher = new Set(
+    kaputteStellen(alt)
+      .filter((s) => s.grund === 'stelle')
+      .map(schluessel),
+  );
+  const s = kaputteStellen(neu).find((x) => x.grund === 'stelle' && !vorher.has(schluessel(x)));
+  if (!s?.quelle) return null;
+  const q = `„${kurzname(s.quelle)}“`;
+  const z = `„${kurzname(s.ziel)}“`;
+  const teilQ = ortVon(neu, s.quelle.id)?.teil;
+  const teilZ = ortVon(neu, s.ziel.id)?.teil;
+  return teilQ === teilZ || teilZ === 'person'
+    ? `${q} muss vor ${z} bleiben – dort ist sie Bedingung.`
+    : `${z} schaut auf ${q} – beide müssen bei den Kontakt-Fragen stehen, ${q} davor.`;
+}
+
+/** **Schaut eine Bedingung auf diese Frage?** – dann bietet der Baukasten den Kurznamen an (Alwin, 12.11.2026). */
+export function istQuelle(f: Formular, feldId: string): boolean {
+  return [...f.anmeldung, ...f.person].some(
+    (x) =>
+      x.bed?.regeln.some((r) => r.feld === feldId) ||
+      Object.values(x.antwortBed ?? {}).some((b) => b.regeln.some((r) => r.feld === feldId)),
+  );
+}
+
+/** Der Satz zu einer Bedingung: „„Zeitraum“ enthält KidsWoche oder „Taufe“ ist Ja“ – für Chips und das Fenster. */
+export function bedingungSatz(f: Formular, bed: Bedingung): string {
+  const alle = [...f.anmeldung, ...f.person];
+  return bed.regeln
+    .map((r) => {
+      const q = alle.find((x) => x.id === r.feld);
+      const name = q ? `„${kurzname(q)}“` : '(Frage fehlt)';
+      return mitWert(r.op)
+        ? `${name} ${VERGLEICH_TEXT[r.op]} ${r.wert ?? ''}`
+        : `${name} ${VERGLEICH_TEXT[r.op]}`;
+    })
+    .join(bed.modus === 'alle' ? ' und ' : ' oder ');
+}
+
+/** Wie ein Vergleich heißt (Fenster, Chips, Regel-Liste). */
+export const VERGLEICH_TEXT: Record<Vergleich, string> = {
+  ist: 'ist',
+  istNicht: 'ist nicht',
+  enthaelt: 'enthält',
+  enthaeltNicht: 'enthält nicht',
+  ausgefuellt: 'ist ausgefüllt',
+  leer: 'ist leer',
+};
+
+/** Braucht der Vergleich eine Antwort? */
+export const vergleichMitWert = mitWert;

@@ -394,8 +394,9 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     expect(bereich).toBe('person');
     expect(feld).toMatchObject({ frage: 'Welche Gruppe?', antworten: ['Kleine', 'Kids'] });
     expect(antworten).toEqual([
-      { text: 'Kleine', altId: '11' },
-      { text: 'Kids', altId: '12' },
+      // `von`: der Name beim Laden – daran ziehen die Bedingungen mit (F1c).
+      { text: 'Kleine', altId: '11', von: 'Minis' },
+      { text: 'Kids', altId: '12', von: 'Kids' },
     ]);
   });
 
@@ -425,8 +426,8 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     fireEvent.click(huelle('allergy'));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
     expect(ff.feldSpeichern.mock.calls[0][3]).toEqual([
-      { text: 'Minis', altId: '11' },
-      { text: 'Große', altId: '12' },
+      { text: 'Minis', altId: '11', von: 'Minis' },
+      { text: 'Große', altId: '12', von: 'Kids' },
     ]);
   });
 
@@ -981,5 +982,293 @@ describe('Baukasten-Blätter im ChurchTools-Aufbau', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
     expect(fensterKnoepfe()).not.toContain('Fertig');
+  });
+});
+
+// ── F1c: Bedingungen im Baukasten (Entwurf f1-bedingungen-nachweise-v1, Ansicht 1; Alwin 12.11.2026) ──
+describe('Baukasten (F1c): Bedingungen einstellen', () => {
+  /** Kinder-Event mit „Gruppe“ (f1: Minis/Kids) und „Welche Kids-Gruppe?“ (f2) nur, wenn Gruppe „Kids“. */
+  function mitZiel(bed = true): OeffentlicheEinstellungen {
+    const e = einstellungen();
+    e.formular.person.push({
+      id: 'f2',
+      art: 'eigen',
+      typ: 'text',
+      frage: 'Welche Kids-Gruppe?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      ...(bed ? { bed: { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Kids' }] } } : {}),
+    });
+    e.ctFelder = { ...e.ctFelder, f2: 502 };
+    return e;
+  }
+  const dialog = () => screen.getByRole('dialog');
+
+  it('Knopf „Nur zeigen, wenn …“ → Fenster → Speichern speichert gleich (nicht erst nach der Pause)', async () => {
+    const { huelle } = zeigen(mitZiel(false));
+    fireEvent.click(huelle('f2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Nur zeigen, wenn …' }));
+    expect(within(dialog()).getByText('Bedingung: Welche Kids-Gruppe?')).toBeTruthy();
+    // Vorgabe: die letzte Frage davor mit Antworten – hier „Gruppe“, „ist“, die erste Antwort.
+    expect(within(dialog()).getByLabelText<HTMLSelectElement>('Frage 1').value).toBe('f1');
+    fireEvent.change(within(dialog()).getByLabelText('Antwort 1'), { target: { value: 'Kids' } });
+    expect(
+      within(dialog()).getByText(
+        'Die Frage erscheint nur, wenn „Gruppe“ ist Kids. Pflicht gilt nur, solange sie zu sehen ist.',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({
+      id: 'f2',
+      bed: { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Kids' }] },
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Bedingung ändern' })).toBeTruthy();
+  });
+
+  it('mehrere Bedingungen: „eine reicht / alle müssen“, Vergleich ohne Wert, „Bedingung entfernen“', async () => {
+    const { huelle } = zeigen(mitZiel());
+    fireEvent.click(huelle('f2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Bedingung ändern' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: '+ Bedingung' }));
+    fireEvent.change(within(dialog()).getByLabelText('Vergleich 2'), {
+      target: { value: 'ausgefuellt' },
+    });
+    expect(within(dialog()).queryByLabelText('Antwort 2')).toBeNull();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'alle müssen' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
+    expect(ff.feldSpeichern.mock.calls[0][2].bed).toEqual({
+      modus: 'alle',
+      regeln: [
+        { feld: 'f1', op: 'ist', wert: 'Kids' },
+        { feld: 'f1', op: 'ausgefuellt' },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Bedingung ändern' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Bedingung entfernen' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(2));
+    expect(ff.feldSpeichern.mock.calls[1][2].bed).toBeUndefined();
+  });
+
+  it('Pfeil an einer Antwort → „nur wählbar, wenn …“ mit Ausgrauen und Hinweis', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: '„Kids“ nur wählbar, wenn …' }));
+    expect(within(dialog()).getByText('Antwort „Kids“')).toBeTruthy();
+    fireEvent.change(within(dialog()).getByLabelText('Hinweis'), {
+      target: { value: 'nur mit Telefon' },
+    });
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'tel' } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2].antwortBed).toEqual({
+      Kids: {
+        modus: 'eine',
+        regeln: [{ feld: 'tel', op: 'ausgefuellt' }],
+        art: 'grau',
+        grund: 'nur mit Telefon',
+      },
+    });
+    expect(
+      screen
+        .getByRole('button', { name: '„Kids“ nur wählbar, wenn …' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('ausblenden: ohne Hinweis gespeichert', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: '„Minis“ nur wählbar, wenn …' }));
+    fireEvent.change(within(dialog()).getByLabelText('Hinweis'), { target: { value: 'egal' } });
+    fireEvent.change(within(dialog()).getByLabelText('Darstellung'), { target: { value: 'weg' } });
+    expect(within(dialog()).queryByLabelText('Hinweis')).toBeNull();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2].antwortBed?.Minis).toEqual({
+      modus: 'eine',
+      regeln: [expect.any(Object)],
+      art: 'weg',
+    });
+  });
+
+  it('Hinweis am Feld: „Nur wenn …“ unter dem nicht gewählten Feld, mit Kurzname', () => {
+    const e = mitZiel();
+    e.formular.person.find((f) => f.id === 'f1')!.kurz = 'Gruppe kurz';
+    const { huelle } = zeigen(e);
+    expect(
+      within(huelle('f2') as HTMLElement).getByText('Nur wenn „Gruppe kurz“ ist Kids'),
+    ).toBeTruthy();
+  });
+
+  it('Kurzname nur an Fragen, auf die eine Bedingung schaut', async () => {
+    const { huelle } = zeigen(mitZiel());
+    fireEvent.click(huelle('f2'));
+    expect(screen.queryByLabelText('Kurzname für Bedingungen')).toBeNull();
+    fireEvent.click(huelle('f1'));
+    const kurz = screen.getByLabelText<HTMLInputElement>('Kurzname für Bedingungen');
+    expect(kurz.placeholder).toBe('Kurzname für Bedingungen (freiwillig): Gruppe');
+    fireEvent.change(kurz, { target: { value: 'Gr.' } });
+    fireEvent.click(huelle('f2'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ id: 'f1', kurz: 'Gr.' });
+  });
+
+  it('Verschieben, das eine Bedingung kaputt machte, wird gesperrt – mit Satz', async () => {
+    const { huelle } = zeigen(mitZiel());
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach unten' }));
+    expect(
+      await screen.findByText(
+        '„Gruppe“ muss vor „Welche Kids-Gruppe?“ bleiben – dort ist sie Bedingung.',
+      ),
+    ).toBeTruthy();
+    expect(ff.feldEinordnen).not.toHaveBeenCalled();
+  });
+
+  it('eben getippt, gleich verschoben: die Sperre kennt schon den neuen Kurznamen', async () => {
+    const { huelle } = zeigen(mitZiel());
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Kurzname für Bedingungen'), {
+      target: { value: 'Gr.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach unten' }));
+    expect(
+      await screen.findByText(
+        '„Gr.“ muss vor „Welche Kids-Gruppe?“ bleiben – dort ist sie Bedingung.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('eben getippt, gleich verschoben: die Änderung bleibt in der Anzeige', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Hilfetext'), {
+      target: { value: 'bitte eine wählen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalled());
+    fireEvent.click(huelle('allergy'));
+    expect(within(huelle('f1') as HTMLElement).getByText('bitte eine wählen')).toBeTruthy();
+  });
+
+  it('Quelle entfernt → die Bedingung fällt mit weg, die Meldung sagt es', async () => {
+    const { huelle, gespeichert } = zeigen(mitZiel());
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe entfernen' }));
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith(
+        '„Gruppe“ entfernt. Die Bedingung bei „Welche Kids-Gruppe?“ fällt mit weg.',
+        true,
+      ),
+    );
+    expect(within(huelle('f2') as HTMLElement).queryByText(/Nur wenn/)).toBeNull();
+  });
+
+  it('Antwort umbenannt → die Bedingung, die darauf schaut, zeigt gleich den neuen Namen', async () => {
+    const { huelle, gespeichert } = zeigen(mitZiel());
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Antwort 2'), { target: { value: 'Große' } });
+    fireEvent.click(huelle('f2'));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalledWith('„Gruppe“ gespeichert.', true));
+    fireEvent.click(huelle('allergy'));
+    expect(
+      within(huelle('f2') as HTMLElement).getByText('Nur wenn „Gruppe“ ist Große'),
+    ).toBeTruthy();
+  });
+
+  it('zweimal umbenannt: das zweite Mal zieht vom gespeicherten Namen aus mit, nicht vom Namen beim Laden', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { huelle } = zeigen(mitZiel());
+    fireEvent.click(huelle('f1'));
+    await waitFor(() => expect(ff.ctFelderLesen).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Antwort 2'), { target: { value: 'Große' } });
+    // Gespeichert nach der Pause beim Tippen – das Feld bleibt gewählt.
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_FELD_MS);
+    });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText('Antwort 2'), { target: { value: 'Riesen' } });
+    fireEvent.click(huelle('f2'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(2));
+    expect(ff.feldSpeichern.mock.calls[1][3]).toEqual([
+      { text: 'Minis', altId: '11', von: 'Minis' },
+      { text: 'Riesen', altId: '12', von: 'Große' },
+    ]);
+    fireEvent.click(huelle('allergy'));
+    expect(
+      within(huelle('f2') as HTMLElement).getByText('Nur wenn „Gruppe“ ist Riesen'),
+    ).toBeTruthy();
+  });
+
+  it('eigene Antwort mit Bedingung umbenannt: beim nächsten Speichern bleibt die Bedingung am neuen Namen', async () => {
+    const e = einstellungen();
+    e.formular.person.find((f) => f.id === 'f1')!.antwortBed = {
+      Kids: { modus: 'eine', regeln: [{ feld: 'tel', op: 'ausgefuellt' }], art: 'grau' },
+    };
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { huelle } = zeigen(e);
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Antwort 2'), { target: { value: 'Große' } });
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_FELD_MS);
+    });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText('Hilfetext'), { target: { value: 'bitte wählen' } });
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(2));
+    expect(Object.keys(ff.feldSpeichern.mock.calls[1][2].antwortBed ?? {})).toEqual(['Große']);
+  });
+
+  it('Geburtsdatum ausgeschaltet, während ein Feld mit Bedingung darauf gewählt ist → der Entwurf übernimmt das', async () => {
+    const e = einstellungen();
+    e.formular.person.push({
+      id: 'f3',
+      art: 'eigen',
+      typ: 'text',
+      frage: 'Welcher Kurs?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      bed: { modus: 'eine', regeln: [{ feld: 'birth', op: 'ausgefuellt' }] },
+    });
+    const { huelle } = zeigen(e);
+    fireEvent.click(huelle('f3'));
+    expect(screen.getByRole('button', { name: 'Bedingung ändern' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Geburtsdatum abfragen/ }));
+    expect(screen.getByRole('button', { name: 'Nur zeigen, wenn …' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Hilfetext'), { target: { value: 'x' } });
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ id: 'f3' });
+    expect(ff.feldSpeichern.mock.calls[0][2].bed).toBeUndefined();
+  });
+
+  it('Feldgrenze je Teil: angezeigt; ist ein Teil voll, kommt kein Baustein mehr hinein', () => {
+    const e = einstellungen();
+    for (let i = e.formular.person.length; i < 60; i++)
+      e.formular.person.push({
+        id: `v${i}`,
+        art: 'eigen',
+        typ: 'text',
+        frage: `Voll ${i}`,
+        hilfe: '',
+        zustand: 'aus',
+        antworten: [],
+      });
+    zeigen(e);
+    expect(
+      screen.getByText(`Kontakt ${e.formular.anmeldung.length} von 60 · je Person 60 von 60`),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    expect(
+      screen.getByText(
+        'Hier passen höchstens 60 Felder hinein (ausgeblendete zählen mit). Erst ein Feld entfernen.',
+      ),
+    ).toBeTruthy();
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
   });
 });

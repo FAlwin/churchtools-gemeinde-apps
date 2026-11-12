@@ -31,6 +31,11 @@ import {
   type CtOption,
 } from '@shared/anmeldung/felder';
 import { bereichVon, einordnen, type Bereich } from '@shared/anmeldung/baukasten';
+import {
+  bedingungenNachziehen,
+  umbenannteAntworten,
+  verschiebenSperre,
+} from '@shared/anmeldung/bedingungen';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
 export type { Bereich };
@@ -95,18 +100,28 @@ export async function antwortenZaehlen(id: number): Promise<Map<number, Beantwor
 /**
  * Das Feld ins Formular übernehmen: ein vorhandenes an Ort und Stelle ersetzen, ein neues einordnen (`einordnen`,
  * dieselbe Regel wie beim Ziehen im Baukasten). Mit `vorId` (auch `null` = ans Ende) wird zusätzlich dorthin
- * verschoben – auch in den anderen Bereich.
+ * verschoben – auch in den anderen Bereich. Danach ziehen die Bedingungen nach (F1c): umbenannte Antworten mit,
+ * entfernte fallen weg (`bedingungenNachziehen` – dieselbe Stelle wie der Zwischenstand im Baukasten).
  */
 function ersetzen(
   formular: Formular,
   bereich: Bereich,
   feld: Feld,
   vorId: string | null | undefined,
+  umbenannt: Record<string, string>,
 ): Formular {
   const da = bereichVon(formular, feld.id);
-  if (!da) return einordnen(formular, feld.id, bereich, vorId ?? null, feld);
-  const ersetzt = { ...formular, [da]: formular[da].map((f) => (f.id === feld.id ? feld : f)) };
-  return vorId === undefined ? ersetzt : einordnen(ersetzt, feld.id, bereich, vorId);
+  const ersetzt = !da
+    ? einordnen(formular, feld.id, bereich, vorId ?? null, feld)
+    : vorId === undefined
+      ? { ...formular, [da]: formular[da].map((f) => (f.id === feld.id ? feld : f)) }
+      : einordnen(
+          { ...formular, [da]: formular[da].map((f) => (f.id === feld.id ? feld : f)) },
+          feld.id,
+          bereich,
+          vorId,
+        );
+  return bedingungenNachziehen(ersetzt, { feldId: feld.id, antworten: umbenannt }).formular;
 }
 
 /**
@@ -120,11 +135,12 @@ export async function feldSpeichern(
   id: number,
   bereich: Bereich,
   feld: Feld,
-  antworten?: { text: string; altId?: string }[],
+  antworten?: { text: string; altId?: string; von?: string }[],
   vorId?: string | null,
 ): Promise<OeffentlicheEinstellungen> {
   const e = await einstellungenVon(id);
-  const geplant = ersetzen(e.formular, bereich, feld, vorId);
+  const umbenannt = umbenannteAntworten(antworten);
+  const geplant = ersetzen(e.formular, bereich, feld, vorId, umbenannt);
   const fehler = pruefeFormular(geplant);
   if (fehler.length) throw new ApiError(422, fehler.join(' '));
 
@@ -172,7 +188,7 @@ export async function feldSpeichern(
   if (!gespeichert.verborgen) delete gespeichert.verborgen;
   return aendereEinstellungen(id, (frisch) => ({
     ...frisch,
-    formular: ersetzen(frisch.formular, bereich, gespeichert, vorId),
+    formular: ersetzen(frisch.formular, bereich, gespeichert, vorId, umbenannt),
     ctFelder: {
       ...frisch.ctFelder,
       ...(ctId !== undefined ? { [feld.id]: ctId } : {}),
@@ -265,10 +281,11 @@ export async function feldEntfernen(
     delete ctFelder[feldId];
     return {
       ...frisch,
-      formular: {
+      // Schaute eine Bedingung auf das Feld, fällt sie mit weg (F1c, Alwin 12.11.2026).
+      formular: bedingungenNachziehen({
         anmeldung: frisch.formular.anmeldung.filter((f) => f.id !== feldId),
         person: frisch.formular.person.filter((f) => f.id !== feldId),
-      },
+      }).formular,
       ctFelder,
     };
   });
@@ -308,6 +325,8 @@ export async function feldTypAendern(id: number, feld: Feld): Promise<Oeffentlic
 /**
  * **Ein Feld verschieben** – vor `vorId` in `bereich` (`null` = ans Ende), auch in den anderen Bereich. Nur die
  * Einstellungen: ChurchTools kennt keine Formular-Reihenfolge, und die Spalte gehört zur Gruppe, nicht zum Bereich.
+ * Stünde danach eine Quelle hinter ihrer Bedingung, wird nicht verschoben (`verschiebenSperre`, F1c) – der Baukasten
+ * prüft das schon vorher, hier zählt der frisch gelesene Stand.
  */
 export async function feldEinordnen(
   id: number,
@@ -315,10 +334,12 @@ export async function feldEinordnen(
   bereich: Bereich,
   vorId: string | null,
 ): Promise<void> {
-  await aendereEinstellungen(id, (frisch) => ({
-    ...frisch,
-    formular: einordnen(frisch.formular, feldId, bereich, vorId),
-  }));
+  await aendereEinstellungen(id, (frisch) => {
+    const formular = einordnen(frisch.formular, feldId, bereich, vorId);
+    const sperre = verschiebenSperre(frisch.formular, formular);
+    if (sperre) throw new ApiError(409, sperre);
+    return { ...frisch, formular };
+  });
 }
 
 /**

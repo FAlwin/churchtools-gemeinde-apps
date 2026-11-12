@@ -31,6 +31,7 @@ import {
   antwortBedingungSchema,
   bedingungFehler,
   bedingungSchema,
+  bedingungenAufraeumen,
   feldSichtbar,
   type AntwortBedingung,
   type Bedingung,
@@ -186,14 +187,16 @@ export function setzeGeburtsdatum(f: Formular, an: boolean): Formular {
 
 /**
  * **„Wer meldet sich an?“ ändern** – und ob das Geburtsdatum abgefragt wird. Die EINE Stelle für das Fenster
- * im Reiter Veranstaltung und die Leiste im Baukasten.
+ * im Reiter Veranstaltung und die Leiste im Baukasten. Schaut eine Bedingung auf das Geburtsdatum und wird es
+ * ausgeschaltet, fällt sie mit weg (`bedingungenAufraeumen`, F1c).
  */
 export function mitWer(
   e: OeffentlicheEinstellungen,
   wer: OeffentlicheEinstellungen['wer'],
   geburtsdatum: boolean,
 ): OeffentlicheEinstellungen {
-  return { ...e, wer, formular: setzeGeburtsdatum(e.formular, geburtsdatum) };
+  const formular = bedingungenAufraeumen(setzeGeburtsdatum(e.formular, geburtsdatum)).formular;
+  return { ...e, wer, formular };
 }
 
 /** Eine erziehungsberechtigte Person (Baustein „Erziehungsberechtigte“). */

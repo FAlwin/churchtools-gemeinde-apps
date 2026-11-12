@@ -32,24 +32,26 @@ export interface MitgliederDaten {
 
 export const GLEICHZEITIG = 4;
 
-export async function ladeMitglieder(
+/** Ein Abruf je Gruppe mit den drei Ausgängen oben – geteilt mit dem Reiter „Kinder & Jugend“ (O9-2). */
+export type JeGruppe<T> = { art: 'sichtbar'; wert: T } | { art: 'verborgen' } | { art: 'fehler' };
+
+/**
+ * **Die Mitglieder-Liste jeder Gruppe holen und lesen** – die EINE Stelle für Drosselung und die Unterscheidung
+ * abgemeldet (wirft) / verborgen (403) / vorübergehend. `aus` liest die Zeilen (hier `mitgliederAus`, im Reiter
+ * „Kinder & Jugend“ mit Status).
+ */
+export async function jeGruppeLaden<T>(
   gruppenIds: readonly number[],
+  aus: (rows: RohMitglied[]) => T,
   holen: (pfad: string) => Promise<RohMitglied[]> = (pfad) => ctAlleSeiten<RohMitglied>(pfad),
-): Promise<MitgliederDaten> {
-  const je = new Map<number, MitgliederStand>();
-  const personen = new Map<number, Person>();
+): Promise<Map<number, JeGruppe<T>>> {
+  const je = new Map<number, JeGruppe<T>>();
   // Ein Behälter statt `let`: TypeScript verfolgt Zuweisungen in den Abruf-Rückrufen nicht.
   const abgemeldet: { fehler: ApiError | null } = { fehler: null };
   await mapLimit([...gruppenIds], GLEICHZEITIG, async (id) => {
     if (abgemeldet.fehler) return;
     try {
-      const {
-        mitglieder,
-        angefragt,
-        personen: p,
-      } = mitgliederAus(await holen(`/groups/${id}/members`));
-      for (const x of p) personen.set(x.id, x);
-      je.set(id, { art: 'sichtbar', mitglieder, angefragt });
+      je.set(id, { art: 'sichtbar', wert: aus(await holen(`/groups/${id}/members`)) });
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) abgemeldet.fehler = e;
       else if (e instanceof ApiError && e.status === 403) je.set(id, { art: 'verborgen' });
@@ -57,6 +59,24 @@ export async function ladeMitglieder(
     }
   });
   if (abgemeldet.fehler) throw abgemeldet.fehler;
+  return je;
+}
+
+export async function ladeMitglieder(
+  gruppenIds: readonly number[],
+  holen?: (pfad: string) => Promise<RohMitglied[]>,
+): Promise<MitgliederDaten> {
+  const je = new Map<number, MitgliederStand>();
+  const personen = new Map<number, Person>();
+  for (const [id, s] of await jeGruppeLaden(gruppenIds, mitgliederAus, holen)) {
+    if (s.art !== 'sichtbar') {
+      je.set(id, s);
+      continue;
+    }
+    const { mitglieder, angefragt, personen: p } = s.wert;
+    for (const x of p) personen.set(x.id, x);
+    je.set(id, { art: 'sichtbar', mitglieder, angefragt });
+  }
   return { je, personen };
 }
 

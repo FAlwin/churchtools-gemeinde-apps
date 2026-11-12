@@ -436,3 +436,43 @@ ChurchTools ändert sich nichts.
 - **Historie:** #736; Wunsch Alwin 28.10.2026, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026
 
 </details>
+
+### TF-ORG-15 · Kinder & Jugend: Gruppenwechsel ansehen (Leitung und Bereichsleitung)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung. Im Speicher der Erweiterung die Kategorie
+„Gruppenwechsel“ mit einer Einrichtung (Stufen, Bereichsgruppe, Wechsel-Gruppen). Der Gruppentyp der Kindergruppen
+gibt seinen Leitern: „Organigramm“ sehen, Kategorien und Daten sehen für „Gruppenwechsel“ und „Was das Organigramm
+zeigt“, und den Kalender „Schulferien NRW“. Ein Admin-Konto und ein Konto, das nur eine Kindergruppe leitet (oder
+zwei Browser).
+
+**Das muss passieren:** Leitungen sehen nur ihre Gruppe, Admins und die Bereichsleitung alle Gruppen. Die Wechseltage
+stimmen mit dem Ferienkalender überein, und es wird nichts verändert.
+
+1. Als Admin **Organigramm** öffnen: Oben gibt es den Reiter **Kinder & Jugend**. Darin **Übersicht** mit dem
+   Jahresband (Angekündigt · Wechseltag · Stichtag) und einer Kachel je Gruppe mit Zahl und Chips („… wechseln“,
+   „… ohne Geburtstag“).
+2. Den Wechseltag mit dem Kalender **Schulferien NRW** vergleichen: Er ist der erste Montag nach den Sommerferien.
+3. Eine Kachel anklicken: Die Gruppe zeigt „Wechseln zu …“, „Bleiben in …“ und „Kommen neu dazu“. **Übersicht**
+   (mit Pfeil) führt zurück.
+4. Ein Kind anklicken: Ein Fenster nur zum Lesen mit Gruppe, Geburtstag, Alter am Stichtag und Wechsel; **In
+   ChurchTools öffnen** führt zur Person.
+5. **Daten pflegen**: „Geburtstag fehlt“ und „Wird bis zum Stichtag 18“ mit den passenden Kindern.
+6. Als Leitung einer Kindergruppe: Der Reiter heißt dort **Meine Gruppe**, ohne Übersicht und ohne „Wird 18“. Vor
+   der Ankündigung steht bei „Kommen neu dazu“ nur, ab wann man es sieht.
+7. Der Leitung das Recht auf „Schulferien NRW“ wegnehmen und neu laden: ein Hinweis, dass der Kalender fehlt, statt
+   leerer Listen. Danach das Recht wieder geben.
+8. Als Person ohne Kindergruppe und ohne Admin-Recht: Es gibt keinen Reiter **Kinder & Jugend**.
+9. In ChurchTools nachsehen: Gruppen und Mitglieder sind unverändert.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/KinderJugend.tsx`, `organigramm/src/ladeKinderJugend.ts`, `organigramm/src/gruppenwechselSpeicher.ts`, `organigramm/src/ladeMitglieder.ts`, `organigramm/src/App.tsx`, `shared/organigramm/gruppenwechselSicht.ts`, `shared/organigramm/gruppenwechselEinrichtung.ts`, `shared/organigramm/gruppenwechsel.ts`, `shared/ct/kalenderTermine.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O9-2: Reiter nur mit Einrichtung und Zugang, Übersicht und
+  Gruppe, Kind-Fenster, Daten pflegen, kein Kalender, Leitung), `ladeKinderJugend.test.ts` (Kalender nach Namen,
+  403 → kein Kalender, vorübergehend → „Erneut versuchen“, 401), `gruppenwechselSicht.test.ts`,
+  `gruppenwechselEinrichtung.test.ts`; die echten Rechte, den echten Ferienkalender und zwei Konten prüft nur dieser
+  Fall
+- **Historie:** Bauplan O9-2; Entwurf `kj-gruppenwechsel-v1.html` (v3), entschieden 11. und 12.11.2026 (O9-F5, O9-F6)
+
+</details>

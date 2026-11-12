@@ -1,12 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { tagPunkt } from '@shared/ct/datum';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { wannLang } from './anzeige';
 import { Marke } from './Marke';
+import { FreigabeMarke, ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
@@ -30,6 +30,7 @@ export function SitzungAnsicht({
   naechste,
   onBeginnen,
   onBearbeiten,
+  onZuruecknehmen,
   onZurueck,
   onZuSitzung,
 }: {
@@ -49,6 +50,8 @@ export function SitzungAnsicht({
   onBeginnen?: () => void;
   /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
   onBearbeiten?: () => void;
+  /** Nur für die Leitung (S6-1): „Freigabe zurücknehmen“ bei einem freigegebenen Protokoll. */
+  onZuruecknehmen?: () => void;
   onZurueck: () => void;
   /** „Öffnen“ im Fenster eines früheren Protokolls: zu dieser Sitzung springen (K3b-2). */
   onZuSitzung?: (s: Sitzung) => void;
@@ -80,23 +83,30 @@ export function SitzungAnsicht({
           {kopf?.status === 'entwurf' && (
             <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
           )}
-          {kopf?.status === 'frei' && (
-            <Marke art="gut">
-              freigegeben{kopf.freigabe ? ` am ${tagPunkt(kopf.freigabe.am.slice(0, 10))}` : ''}
-            </Marke>
-          )}
+          {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
         </div>
-        {onBearbeiten && (
+        {(onBearbeiten || onZuruecknehmen) && (
           <div className={styles.aktionen}>
-            <KopfKnopf
-              label="Bearbeiten"
-              title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
-              symbol={<Icon name="pencil" size={16} />}
-              onClick={onBearbeiten}
-            />
+            {onBearbeiten && (
+              <KopfKnopf
+                label="Bearbeiten"
+                title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
+                symbol={<Icon name="pencil" size={16} />}
+                onClick={onBearbeiten}
+              />
+            )}
+            {onZuruecknehmen && kopf?.status === 'frei' && (
+              <KopfKnopf
+                label="Freigabe zurücknehmen"
+                title="Freigabe zurücknehmen – wieder Entwurf"
+                symbol={<Icon name="undo" size={16} />}
+                onClick={onZuruecknehmen}
+              />
+            )}
           </div>
         )}
       </header>
+      <ZurueckVermerk kopf={kopf} zeitzone={zeitzone} />
 
       {!kopf && (
         <p className={styles.hinweis}>

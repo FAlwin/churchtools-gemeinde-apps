@@ -5,6 +5,7 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { AnmeldeFormular } from './AnmeldeFormular';
+import { FeldEingabe } from './FeldEingabe';
 import { SCHRIFT, musterAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import { loeschDatum } from '@shared/anmeldung/termin';
@@ -558,5 +559,247 @@ describe('Spam-Schutz im echten Formular (A6-3, #593)', () => {
     fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
     absenden();
     expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+});
+
+describe('Bedingungen im Formular (F1b)', () => {
+  /** Eine Person (Einzelanmeldung): getauft? → „Wann getauft?“ (Pflicht) und „Mitarbeit“ mit Bedingungen je Antwort. */
+  function mitBedingungen(wer: OeffentlicheEinstellungen['wer'] = 'einzeln') {
+    const e = freizeit();
+    e.wer = wer;
+    const taufeJa = {
+      modus: 'eine' as const,
+      regeln: [{ feld: 'taufe', op: 'ist' as const, wert: 'Ja' }],
+    };
+    e.formular.person.push(
+      {
+        id: 'taufe',
+        art: 'eigen',
+        typ: 'janein',
+        frage: 'Bist du getauft?',
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: [],
+      },
+      {
+        id: 'wann',
+        art: 'eigen',
+        typ: 'text',
+        frage: 'Wann getauft?',
+        hilfe: '',
+        zustand: 'pflicht',
+        antworten: [],
+        bed: taufeJa,
+      },
+      {
+        id: 'rolle',
+        art: 'eigen',
+        typ: 'radio',
+        frage: 'Mitarbeit',
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: ['Teilnehmer', 'Gruppenleiter', 'Küche'],
+        antwortBed: {
+          Gruppenleiter: { ...taufeJa, art: 'grau', grund: 'nur für Getaufte' },
+          Küche: { ...taufeJa, art: 'weg' },
+        },
+      },
+    );
+    return e;
+  }
+  const knopf = (c: HTMLElement, pfad: string, wert: string) =>
+    c.querySelector<HTMLInputElement>(`input[name="af-${pfad}"][value="${wert}"]`);
+  const absenden = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+
+  it('eine Frage erscheint erst, wenn ihre Bedingung zutrifft – je Person', () => {
+    const { container } = zeigen(mitBedingungen('familie'));
+    expect(screen.queryAllByLabelText(/Wann getauft\?/)).toHaveLength(0);
+    fireEvent.click(knopf(container, 'personen.1.taufe', 'Ja')!);
+    // Nur bei Person 2 – Person 1 hat nichts gewählt.
+    expect(container.querySelector('#af-personen\\.1\\.wann')).toBeTruthy();
+    expect(container.querySelector('#af-personen\\.0\\.wann')).toBeNull();
+    fireEvent.click(knopf(container, 'personen.1.taufe', 'Nein')!);
+    expect(container.querySelector('#af-personen\\.1\\.wann')).toBeNull();
+  });
+
+  it('Pflicht gilt nur, solange die Frage zu sehen ist', () => {
+    const { container } = zeigen(mitBedingungen());
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Ja')!);
+    absenden();
+    expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
+    expect(screen.getByText('Bitte ausfüllen.')).toBeTruthy();
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Nein')!);
+    absenden();
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+
+  it('Antworten mit Bedingung: „grau“ gesperrt mit Grund, „weg“ gar nicht da – bis die Bedingung zutrifft', () => {
+    const { container } = zeigen(mitBedingungen());
+    const leiter = knopf(container, 'personen.0.rolle', 'Gruppenleiter')!;
+    expect(leiter.disabled).toBe(true);
+    expect(leiter.closest('label')!.textContent).toBe('Gruppenleiter (nur für Getaufte)');
+    expect(knopf(container, 'personen.0.rolle', 'Küche')).toBeNull();
+    expect(knopf(container, 'personen.0.rolle', 'Teilnehmer')!.disabled).toBe(false);
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Ja')!);
+    expect(knopf(container, 'personen.0.rolle', 'Gruppenleiter')!.disabled).toBe(false);
+    expect(
+      knopf(container, 'personen.0.rolle', 'Gruppenleiter')!.closest('label')!.textContent,
+    ).toBe('Gruppenleiter');
+    expect(knopf(container, 'personen.0.rolle', 'Küche')).toBeTruthy();
+  });
+
+  it('wird eine gewählte Antwort ungültig, wird die Wahl gelöst und die Frage sagt warum – bis man neu wählt', () => {
+    const { container } = zeigen(mitBedingungen());
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Ja')!);
+    fireEvent.click(knopf(container, 'personen.0.rolle', 'Gruppenleiter')!);
+    expect(knopf(container, 'personen.0.rolle', 'Gruppenleiter')!.checked).toBe(true);
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Nein')!);
+    expect(knopf(container, 'personen.0.rolle', 'Gruppenleiter')!.checked).toBe(false);
+    const hinweis = '„Gruppenleiter“ ist nur für Getaufte möglich – bitte neu wählen.';
+    expect(screen.getByRole('status', { name: '' }).textContent).toBe(hinweis);
+    // Eine andere Frage ändern: Der Hinweis bleibt.
+    fireEvent.change(container.querySelector('#af-anmeldung\\.tel')!, { target: { value: '0' } });
+    expect(screen.getByText(hinweis)).toBeTruthy();
+    // An der Frage neu wählen: Er geht.
+    fireEvent.click(knopf(container, 'personen.0.rolle', 'Teilnehmer')!);
+    expect(screen.queryByText(hinweis)).toBeNull();
+  });
+
+  it('eine ausgeblendete Frage behält ihren Wert – taucht sie wieder auf, ist er noch da', () => {
+    const { container } = zeigen(mitBedingungen());
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Ja')!);
+    fireEvent.change(container.querySelector('#af-personen\\.0\\.wann')!, {
+      target: { value: '2019' },
+    });
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Nein')!);
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Ja')!);
+    expect(container.querySelector<HTMLInputElement>('#af-personen\\.0\\.wann')!.value).toBe(
+      '2019',
+    );
+  });
+
+  it('im Baukasten ist alles zu sehen und nichts gesperrt – dort bearbeitet man das Formular', () => {
+    const e = mitBedingungen();
+    const { container } = render(
+      <AnmeldeFormular
+        ansicht={{ basis: BASIS, name: 'Freizeit', gemeinde: 'ECG', einstellungen: e }}
+        heute={HEUTE}
+        vorschau
+        start={musterAntworten(e, HEUTE)}
+        baukasten={{ feld: (_f, _b, inhalt) => inhalt }}
+      />,
+    );
+    expect(container.querySelector('#af-personen\\.0\\.wann')).toBeTruthy();
+    expect(knopf(container, 'personen.0.rolle', 'Küche')).toBeTruthy();
+    expect(knopf(container, 'personen.0.rolle', 'Gruppenleiter')!.disabled).toBe(false);
+    expect(container.textContent).not.toContain('nur für Getaufte');
+  });
+});
+
+describe('Bedingungen: Kontakt-Fragen und weitere Feldarten (F1b)', () => {
+  it('eine Kontakt-Frage mit Bedingung – auch eine Frage je Person darf auf den Kontakt schauen', () => {
+    const e = freizeit();
+    e.wer = 'einzeln';
+    const telGefuellt = {
+      modus: 'eine' as const,
+      regeln: [{ feld: 'tel', op: 'ausgefuellt' as const }],
+    };
+    const tel = e.formular.anmeldung.findIndex((f) => f.id === 'tel');
+    e.formular.anmeldung.splice(tel + 1, 0, {
+      id: 'erreichbar',
+      art: 'eigen',
+      typ: 'text',
+      frage: 'Wann erreichbar?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      bed: telGefuellt,
+    });
+    e.formular.person.push({
+      id: 'sms',
+      art: 'eigen',
+      typ: 'check',
+      frage: 'SMS-Erinnerung',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      bed: telGefuellt,
+    });
+    const { container } = zeigen(e, false);
+    expect(screen.queryByLabelText(/Wann erreichbar\?/)).toBeNull();
+    expect(screen.queryByLabelText(/SMS-Erinnerung/)).toBeNull();
+    fireEvent.change(container.querySelector('#af-anmeldung\\.tel')!, {
+      target: { value: '0151' },
+    });
+    expect(screen.getByLabelText(/Wann erreichbar\?/)).toBeTruthy();
+    expect(screen.getByLabelText(/SMS-Erinnerung/)).toBeTruthy();
+  });
+
+  const grau = (a: string) =>
+    a === 'B'
+      ? { art: 'grau' as const, grund: 'nur für Getaufte' }
+      : a === 'C'
+        ? { art: 'weg' as const }
+        : { art: 'frei' as const };
+
+  it('Auswahlliste: gesperrte Antwort mit Grund und nicht wählbar, ausgeblendete fehlt', () => {
+    const { container } = render(
+      <FeldEingabe
+        feld={{
+          id: 'x',
+          art: 'eigen',
+          typ: 'select',
+          frage: 'Liste',
+          hilfe: '',
+          zustand: 'freiwillig',
+          antworten: ['A', 'B', 'C'],
+        }}
+        pfad="anmeldung.x"
+        wert={undefined}
+        onWert={() => {}}
+        antwortZu={grau}
+      />,
+    );
+    const optionen = [...container.querySelectorAll('option')].map((o) => [
+      o.textContent,
+      o.disabled,
+    ]);
+    expect(optionen).toEqual([
+      ['Bitte wählen …', false],
+      ['A', false],
+      ['B (nur für Getaufte)', true],
+    ]);
+  });
+
+  it('Mehrfachauswahl: gesperrte Antwort grau und nicht wählbar, ausgeblendete fehlt', () => {
+    const onWert = vi.fn();
+    const { container } = render(
+      <FeldEingabe
+        feld={{
+          id: 'x',
+          art: 'eigen',
+          typ: 'multi',
+          frage: 'Mehrere',
+          hilfe: '',
+          zustand: 'freiwillig',
+          antworten: ['A', 'B', 'C'],
+        }}
+        pfad="anmeldung.x"
+        wert={[]}
+        onWert={onWert}
+        antwortZu={grau}
+        geloest="„B“ ist nur für Getaufte möglich – bitte neu wählen."
+      />,
+    );
+    const kaesten = [...container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+    expect(kaesten.map((k) => [k.closest('label')!.textContent, k.disabled])).toEqual([
+      ['A', false],
+      ['B (nur für Getaufte)', true],
+    ]);
+    expect(screen.getByRole('status').textContent).toBe(
+      '„B“ ist nur für Getaufte möglich – bitte neu wählen.',
+    );
   });
 });

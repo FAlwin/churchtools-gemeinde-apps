@@ -197,6 +197,59 @@ describe('Startseite → Termin-Ansicht (E6-1b)', () => {
   });
 });
 
+describe('Startseite: direkt hin (Wünsche 7 und 8, 11.11.2026)', () => {
+  it('Planen: eine Gruppe antippen öffnet Planen mit genau dieser Gruppe (#/planen/gruppe/3)', () => {
+    window.location.hash = '';
+    zeige();
+    const planen = within(screen.getByRole('region', { name: 'Planen' }));
+    fireEvent.click(planen.getByRole('button', { name: /^Technik/ }));
+    expect(window.location.hash).toBe('#/planen/gruppe/3');
+    fireEvent.click(planen.getByRole('button', { name: /^Musik/ }));
+    expect(window.location.hash).toBe('#/planen/gruppe/4');
+    window.location.hash = '';
+  });
+
+  it('Als Nächstes: Titel und Datum öffnen den Termin – der Titel per Tastatur, die Kachel nur zum Tippen', async () => {
+    const onTermin = vi.fn();
+    zeige(ZEILEN, { onTermin });
+    fireEvent.click(held().getByRole('button', { name: 'Gottesdienst' }));
+    expect(onTermin).toHaveBeenLastCalledWith(1);
+    const kachel = held().getByText(/^\d+$/).closest('button')!;
+    expect(kachel.getAttribute('tabindex')).toBe('-1');
+    fireEvent.click(kachel);
+    expect(onTermin).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(lieder).toHaveBeenCalled());
+  });
+
+  it('Dienst-Zeilen („Deine nächsten Dienste“, „Für dich offen“): der Titel öffnet seinen Termin; Zusagen bleibt eigener Knopf', () => {
+    const onTermin = vi.fn();
+    // Mit Platz, damit „Tauschen“ in der Zeile steht.
+    const zeilen = ZEILEN.map((z) =>
+      z.id === 3
+        ? { ...z, meine: [mein('Licht', true, { ort: { serviceId: 7, index: null } })] }
+        : z,
+    );
+    zeige(zeilen, { onTermin, tausch: tauschAttrappe() });
+    const dienste = within(screen.getByRole('region', { name: 'Deine nächsten Dienste' }));
+    fireEvent.click(dienste.getByRole('button', { name: 'Licht · Gottesdienst' }));
+    expect(onTermin).toHaveBeenLastCalledWith(3);
+    const offen = within(screen.getByRole('region', { name: 'Für dich offen' }));
+    const titel = offen.getByRole('button', { name: 'Gesang · Gebetsabend' });
+    // Kein Knopf im Knopf: „Tauschen“ u. Ä. stehen unter dem Titel, nicht darin.
+    expect(titel.querySelector('button')).toBeNull();
+    expect(dienste.getByRole('button', { name: /Tauschen/ }).contains(titel)).toBe(false);
+    fireEvent.click(titel);
+    expect(onTermin).toHaveBeenLastCalledWith(2);
+  });
+
+  it('ohne onTermin bleiben Titel und Datum reiner Text', () => {
+    zeige();
+    expect(held().queryByRole('button', { name: 'Gottesdienst' })).toBeNull();
+    const dienste = within(screen.getByRole('region', { name: 'Deine nächsten Dienste' }));
+    expect(dienste.queryByRole('button', { name: 'Licht · Gottesdienst' })).toBeNull();
+  });
+});
+
 describe('Startseite: Tauschen (E7-3)', () => {
   it('„Tauschen“ an den eigenen Diensten; eine Tausch-Anfrage zeigt „Für dich offen“ auch ohne offene Dienst-Anfrage', async () => {
     // Mit bekanntem Platz – ohne `ort` gibt es nichts zu tauschen.

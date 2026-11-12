@@ -17,6 +17,7 @@ import {
   adresseFuer,
   adresseFuerTermin,
   ALLE_REITER,
+  planenGruppeAusAdresse,
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
@@ -76,8 +77,16 @@ export function App() {
   const reiter = sichtbareReiter(darfPlanen);
   // Termin-Ansicht (E6-1b): eigene Adresse; hervorgehoben bleibt der Reiter, von dem man kam – dorthin führt „zurück“.
   const terminId = terminAusAdresse(hash);
+  // Planen mit einer Gruppe von der Startseite (Wunsch 7) – nur für diesen Besuch.
+  const fokusGruppe = planenGruppeAusAdresse(hash);
   const herkunft = useRef<ReiterId>('start');
-  if (terminId === null) herkunft.current = reiterAusAdresse(hash, reiter);
+  // Die genaue Adresse, von der man kam – „zurück“ aus der Termin-Ansicht führt in Planen mit einer Gruppe (Wunsch 7)
+  // wieder dorthin, nicht in die gewohnte Ansicht.
+  const herkunftAdresse = useRef('');
+  if (terminId === null) {
+    herkunft.current = reiterAusAdresse(hash, reiter);
+    herkunftAdresse.current = fokusGruppe !== null ? hash : adresseFuer(herkunft.current);
+  }
   const aktiv = terminId === null ? reiterAusAdresse(hash, reiter) : herkunft.current;
 
   const termineLaden = useCallback(
@@ -185,7 +194,9 @@ export function App() {
               nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
               zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
               onTermin={terminZeigen}
-              onZurueck={() => wechseln(aktiv)}
+              onZurueck={() => {
+                window.location.hash = herkunftAdresse.current;
+              }}
               // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
               // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
               onGeaendert={() => termineLaden(start, geladen, true)}
@@ -230,6 +241,10 @@ export function App() {
           )}
           {terminId === null && aktiv === 'planen' && termine && start && (
             <Planen
+              // Neu aufbauen, wenn der Besuch beginnt oder endet – sonst bliebe sein Zeitraum stehen.
+              key={fokusGruppe ?? 'gewohnt'}
+              fokusGruppe={fokusGruppe}
+              onFokusEnde={() => wechseln('planen')}
               onTermin={terminZeigen}
               zustand={termine}
               handy={handy}

@@ -147,6 +147,10 @@ jobs:
       - name: GitHub Release veröffentlichen
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
+          # Titel mit App-Namen wie bei den Erweiterungen („Dienstplaner v0.3.0“) – sonst nimmt GitHub nur den Tag
+          # und in der Release-Liste steht ein nacktes „v2.39.1“ (Alwin, 11.11.2026). Der Update-Hinweis liest nur
+          # `tag_name` und `html_url` (shared/update), nie den Titel.
+          name: Musik-App ${{ github.ref_name }}
           # Fester Text ÜBER den Änderungen: Wer von der Release-Seite kommt, sieht sonst nur die ZIP und nicht,
           # was ins ChurchTools-Formular gehört (Alwin, 07.10.2026).
           body: |

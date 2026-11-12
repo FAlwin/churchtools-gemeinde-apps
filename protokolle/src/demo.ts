@@ -293,6 +293,8 @@ interface Speicher {
   treffen: { id: number; startDate: string; isCanceled: boolean }[];
   /** Anwesenheit je Gruppentreffen (S5-3) – Person → `present` / `absent`; fehlt = `unsure`. */
   anwesenheit: Map<number, Map<number, string>>;
+  /** Abgeschlossene Gruppentreffen (S6-1, bei der Freigabe). */
+  abgeschlossen: Set<number>;
 }
 
 function speicherAnlegen(fall: string): Speicher {
@@ -341,6 +343,7 @@ function speicherAnlegen(fall: string): Speicher {
     termine: [],
     treffen: [],
     anwesenheit: new Map(),
+    abgeschlossen: new Set(),
   };
 }
 
@@ -496,7 +499,17 @@ function antwort(
     const id = Number(einTreffen[1]);
     const stand = s.anwesenheit.get(id);
     if (!einTreffen[2])
-      return { status: 200, data: { id, isCompleted: false, hasEditingStarted: !!stand } };
+      return {
+        status: 200,
+        data: {
+          id,
+          startDate: s.treffen.find((t) => t.id === id)?.startDate ?? '2026-10-21T17:00:00Z',
+          isCompleted: s.abgeschlossen.has(id),
+          isCanceled: false,
+          comment: null,
+          hasEditingStarted: !!stand,
+        },
+      };
     return {
       status: 200,
       data: LEITUNGSTEAM.map(([personId, firstName, lastName]) => ({
@@ -507,6 +520,13 @@ function antwort(
         },
       })),
     };
+  }
+  // Abschließen bei der Freigabe (S6-1) – wie gemessen (S6-0): ganzer Rumpf mit `startDate`.
+  if (einTreffen && !einTreffen[2] && methode === 'PUT') {
+    if (!rumpf.startDate) return { status: 400, data: null };
+    if (rumpf.isCompleted) s.abgeschlossen.add(Number(einTreffen[1]));
+    else s.abgeschlossen.delete(Number(einTreffen[1]));
+    return { status: 200, data: {} };
   }
   const checkin = /^\/api\/groups\/11\/checkin\/(\d+)$/.exec(pfad);
   const austragen = /^\/api\/groups\/11\/meetings\/(\d+)\/members\/(\d+)$/.exec(pfad);

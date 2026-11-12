@@ -7,7 +7,7 @@ import { Icon } from '@ui/icons/icons';
 import { tagPunkt, datumText } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { protokollSchluessel, type Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import {
@@ -293,7 +293,7 @@ export function Sitzungen({
             return;
           }
           // Aus der Liste oder der Ansicht: neu laden und die neue Sitzung öffnen.
-          if (id !== null) wunsch.current = `p:${id}`;
+          if (id !== null) wunsch.current = protokollSchluessel(id);
           laden();
         }}
         onClose={() => setFestlegen(null)}
@@ -500,7 +500,7 @@ export function Sitzungen({
             onBegonnen={(id) => {
               // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
               setBeginnt(null);
-              wunsch.current = `p:${id}`;
+              wunsch.current = protokollSchluessel(id);
               laden();
             }}
             onClose={() => setBeginnt(null)}
@@ -511,7 +511,7 @@ export function Sitzungen({
         {zuruecknehmen && offen.kopf && gruppe.protokolle !== null && (
           <ConfirmDialog
             title="Freigabe zurücknehmen?"
-            message="Das Protokoll wird wieder ein Entwurf und lässt sich bearbeiten. Im Protokoll steht, wer es wann zurückgenommen hat. Das Gruppentreffen bleibt abgeschlossen."
+            message="Das Protokoll wird wieder ein Entwurf und lässt sich bearbeiten. Im Protokoll steht, wer es wann zurückgenommen hat. Das Gruppentreffen bleibt abgeschlossen, ein Beitrag in der Gruppe bleibt stehen. Beim nächsten Freigeben kannst du wieder Bescheid geben."
             confirmLabel="Zurücknehmen"
             beschaeftigt={zuruecknehmen.laeuft}
             onConfirm={() => {
@@ -639,7 +639,7 @@ export function Sitzungen({
               onAngelegt={(g, id) => {
                 // Die neue Sitzung gleich im Editor öffnen – auch, wenn im Fenster eine andere Gruppe gewählt wurde.
                 setNeu(false);
-                wunsch.current = `p:${id}`;
+                wunsch.current = protokollSchluessel(id);
                 if (g === gruppe.id) laden();
                 else setGruppeId(g);
               }}

@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.3.0 (09.11.2026: Einteilen in der Termin-Ansicht, Filter nach Kalender).** Was die Reiter können:
+> **Stand: v0.3.1 (11.11.2026: von der Startseite direkt in Planen und zum Termin).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen

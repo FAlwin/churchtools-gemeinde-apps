@@ -14,7 +14,7 @@
  */
 import { nachfahren, type Knoten } from './gruppen';
 import { rollenRang, type Mitglied, type Rolle } from './mitglieder';
-import { gruppenLeitung, gruppenPersonen, teilbaumPersonen } from './personen';
+import { gezeigtePersonen, gruppenLeitung, gruppenPersonen, teilbaumPersonen } from './personen';
 
 /** Große Bereiche zuerst (die meisten Gruppen darunter), dann nach Name – EINE Reihenfolge für Baum und Präsentation. */
 export function bereicheSortiert(baum: readonly Knoten[]): Knoten[] {
@@ -30,6 +30,8 @@ export interface PUntergruppe {
   /** Gruppen zwischen Spalte und Untergruppe (ohne beide), für „Ton › Kurs“. */
   pfad: string[];
   personen: Mitglied[];
+  /** Davon zu zeigen – ohne die abgewählten Rollen (#915). `personen` zählt weiter alle. */
+  gezeigt: Mitglied[];
   sichtbar: boolean;
 }
 
@@ -37,6 +39,8 @@ export interface PSpalte {
   knoten: Knoten;
   /** Jede Person des Teilbaums einmal – Leitung dieser Gruppe zuerst. */
   personen: Mitglied[];
+  /** Davon zu zeigen – ohne die abgewählten Rollen (#915). `personen` zählt weiter alle. */
+  gezeigt: Mitglied[];
   sichtbar: boolean;
   vollstaendig: boolean;
   unter: PUntergruppe[];
@@ -66,6 +70,8 @@ export function praesentationAus(
   mitglieder: ReadonlyMap<number, readonly Mitglied[]>,
   rollen: ReadonlyMap<number, Rolle>,
   name: (personId: number) => string,
+  /** Abgewählte Rollen („Welche Rollen“, #915) – nur für die Listen; Zahlen und Leitung zählen alle. */
+  aus: ReadonlySet<string> = new Set(),
 ): Praesentation {
   const rang = rollenRang(rollen);
   const eigene = (k: Knoten) => mitglieder.get(k.gruppe.id) ?? [];
@@ -73,18 +79,34 @@ export function praesentationAus(
   const vollstaendig = (k: Knoten) =>
     sichtbar(k) && nachfahren(k).every((id) => mitglieder.has(id));
 
+  const zeigen = (personen: Mitglied[], gruppen: number[]) =>
+    gezeigtePersonen(personen, gruppen, mitglieder, rollen, aus);
+
   const unterVon = (k: Knoten, pfad: string[]): PUntergruppe[] =>
-    k.kinder.flatMap((c) => [
-      { knoten: c, pfad, personen: gruppenPersonen(eigene(c), name, rang), sichtbar: sichtbar(c) },
-      ...unterVon(c, [...pfad, c.gruppe.name]),
-    ]);
-  const spalte = (k: Knoten, mitUnter: boolean): PSpalte => ({
-    knoten: k,
-    personen: teilbaumPersonen(k, mitglieder, name, rang),
-    sichtbar: sichtbar(k),
-    vollstaendig: vollstaendig(k),
-    unter: mitUnter ? unterVon(k, []) : [],
-  });
+    k.kinder.flatMap((c) => {
+      const personen = gruppenPersonen(eigene(c), name, rang);
+      return [
+        {
+          knoten: c,
+          pfad,
+          personen,
+          gezeigt: zeigen(personen, [c.gruppe.id]),
+          sichtbar: sichtbar(c),
+        },
+        ...unterVon(c, [...pfad, c.gruppe.name]),
+      ];
+    });
+  const spalte = (k: Knoten, mitUnter: boolean): PSpalte => {
+    const personen = teilbaumPersonen(k, mitglieder, name, rang);
+    return {
+      knoten: k,
+      personen,
+      gezeigt: zeigen(personen, [k.gruppe.id, ...nachfahren(k)]),
+      sichtbar: sichtbar(k),
+      vollstaendig: vollstaendig(k),
+      unter: mitUnter ? unterVon(k, []) : [],
+    };
+  };
 
   const alle = new Set<number>();
   const bereiche = bereicheSortiert(baum).map((b): PBereich => {

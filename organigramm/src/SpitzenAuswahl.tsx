@@ -10,7 +10,8 @@ import {
 import { Icon } from '@ui/icons/icons';
 import { useAufklapp } from '@ui/bedienung/useAufklapp';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { listenScroll, menueVersatz } from '@ui/bedienung/menueLage';
+import { listenScroll } from '@ui/bedienung/menueLage';
+import { useMenueImBild } from '@ui/bedienung/useMenueImBild';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { spitzenSuche, spitzenWahl } from '@shared/organigramm/ansichten';
 import styles from './SpitzenAuswahl.module.scss';
@@ -61,13 +62,9 @@ export function SpitzenAuswahl({
   // Scrollen. Mit `autoFocus` kam der Fokus vor dieser Rechnung, solange das Menü noch überstand: Der Browser scrollte
   // den Behälter von ChurchTools 16 px zur Seite, die Messung war verschoben, und das Menü stand rechts am Rand
   // (Test-Instanz 11.11.2026, 375 px breit, mit Maus).
+  useMenueImBild(menue, offen);
   useLayoutEffect(() => {
-    const m = menue.current;
-    if (!offen || !m) return;
-    m.style.left = '0px';
-    const r = m.getBoundingClientRect();
-    m.style.left = `${menueVersatz(r.left, r.width, document.documentElement.clientWidth)}px`;
-    if (maus) suchFeld.current?.focus({ preventScroll: true });
+    if (offen && maus) suchFeld.current?.focus({ preventScroll: true });
   }, [offen, maus]);
 
   // Die markierte Zeile bleibt im Blick (lange Liste, Pfeiltasten) – nur die Liste scrollt, nie die Seite.

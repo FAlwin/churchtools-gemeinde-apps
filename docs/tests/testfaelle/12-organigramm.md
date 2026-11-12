@@ -445,3 +445,44 @@ ChurchTools ändert sich nichts.
 - **Historie:** #736; Wunsch Alwin 28.10.2026, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026
 
 </details>
+
+### TF-ORG-15 · Welche Rollen: Personen nach Rollen filtern
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Eine Gruppe mit Leiter, Co-Leiter, Organisator und
+mehreren Mitarbeitern; ein Bereich mit Untergruppen, deren Leitung nicht die des Bereichs ist.
+
+**Das muss passieren:** Abgewählte Rollen fehlen überall, wo Personen stehen – und es steht ehrlich da, was fehlt.
+Niemand erscheint, der die Rolle nicht hat.
+
+1. Reiter Organigramm, Ansicht **Liste**, **Personen: Aus**: Es gibt kein **Welche Rollen**. **Personen: Alle** →
+   daneben **Welche Rollen: Alle**.
+2. Aufklappen: ein Häkchen je Rolle, wie in ChurchTools benannt, Leitung zuerst; „Leiter“ steht nur einmal. Eine Rolle,
+   die niemand hat, steht nicht da. Darunter **Alle** und **Nur Leitung**.
+3. **Mitarbeiter** abwählen: Die Mitarbeiter fehlen, darunter steht klein „Mitarbeiter (6) ausgeblendet“. Der Knopf
+   zeigt „3 von 4“ o. ä. Eine Gruppe, in der es nur Mitarbeiter gibt, zeigt nur den Hinweis.
+4. **Nur Leitung**: nur Leiter und Co-Leiter. Dasselbe in **Von oben**, **Von links** und **Mindmap** – kein Kästchen
+   liegt über einem anderen.
+5. Seite neu laden: Die Wahl ist wieder da.
+6. **Präsentieren**, **Kacheln**: oben **Welche Rollen** mit derselben Wahl. Einen Bereich öffnen: In den Spalten stehen
+   nur die gewählten Rollen – auch die Leitung der Untergruppen –, darunter „N Personen ausgeblendet“. Die Zahl an der
+   Spalte zählt weiter alle. Hier **Alle** wählen, Präsentation schließen – im Reiter steht jetzt ebenfalls **Alle**.
+7. **PDF / Drucken** mit Personen: **Welche Rollen** übernimmt die Wahl des Reiters; hier geändert ändert sich nur die
+   PDF, der Reiter bleibt.
+8. Am Handy (oder 375 px breit): Das Menü ragt rechts nicht hinaus, die Seite rutscht nicht zur Seite.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/praesentation.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/RollenAuswahl.tsx`,
+  `organigramm/src/messung.ts`, `organigramm/src/blatt.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/Organigramm.tsx`,
+  `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`, `organigramm/src/auswahl.ts`,
+  `ui/bedienung/useMenueImBild.ts`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Name je Rolle einmal, Reihenfolge, ohne Personen nicht
+  angeboten, Teilbaum-Regel), `praesentation.test.ts` (Spalten und Untergruppen, Zahlen zählen alle),
+  `kastenPersonen.test.ts` (Hinweis, alles abgewählt, Knopftext), `RollenAuswahl.test.tsx` (Häkchen, Alle, Nur Leitung,
+  Menü im Bild), `App.test.tsx` (Reiter, Diagramm, gemerkt, Präsentation mit Listen und Diagramm), `PdfFenster.test.tsx`
+  (übernommen, nur für die PDF geändert); ob es mit echten Rollen gut aussieht, prüft nur dieser Fall
+- **Historie:** #915 Scheibe B; Rückmeldung nach einer Vorstellung 11.11.2026, Entwurf und Entscheidungen 12.11.2026
+  (Häkchen je Name, kleiner Hinweis im Kästchen, Präsentation Diagramme und Listen)
+
+</details>

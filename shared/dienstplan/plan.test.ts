@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { diensteAus } from '../ct/dienste';
 import { dateienAus } from '../ct/terminDateien';
-import { planAus, planAusschnitt, platzAus } from './plan';
+import { planAus, planAusschnitt, platzAus, terminStand } from './plan';
 import type { RohTermin } from './termine';
 
 const ICH = 1;
@@ -142,7 +142,7 @@ describe('planAus', () => {
     ]),
   ];
 
-  it('Spalten nach Zeit, mit Ortszeit, Plätzen und besetzten', () => {
+  it('Spalten nach Zeit, mit Ortszeit', () => {
     expect(plan(roh).spalten).toEqual([
       {
         id: 10,
@@ -150,8 +150,6 @@ describe('planAus', () => {
         tag: '2026-10-18',
         uhrzeit: '10:00',
         abgesagt: false,
-        plaetze: 3,
-        besetzt: 2,
         admin: false,
         beginn: '2026-10-18T08:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
@@ -166,8 +164,6 @@ describe('planAus', () => {
         tag: '2026-10-25',
         uhrzeit: '10:00',
         abgesagt: false,
-        plaetze: 2,
-        besetzt: 1,
         admin: false,
         beginn: '2026-10-25T09:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
@@ -218,6 +214,30 @@ describe('planAus', () => {
     const p = plan([termin(12, '2026-11-08T09:00:00Z', [], { eventFiles })]);
     expect(p.spalten[0].dateien).toEqual(dateienAus({ eventFiles }));
     expect(p.spalten[0].dateien).toHaveLength(1);
+  });
+
+  it('Stand eines Termins (L2): alle Gruppen zusammen – Plätze aus den Zellen, frei = ohne Namen', () => {
+    const p = plan(roh);
+    // T10: Licht frei, Ton angefragt (zählt als besetzt), Predigt Ben; T11: Ton Anna, Gesang frei.
+    expect(terminStand(p.gruppen, 0)).toEqual({ plaetze: 3, frei: 1 });
+    expect(terminStand(p.gruppen, 1)).toEqual({ plaetze: 2, frei: 1 });
+  });
+
+  it('Stand eines Termins (L2): nur die übergebenen Gruppen; `null`, wo keine davon einen Dienst hat', () => {
+    const p = plan(roh);
+    const nur = (...ids: number[]) => p.gruppen.filter((g) => ids.includes(g.gruppe?.id ?? -1));
+    expect(terminStand(nur(1), 0)).toEqual({ plaetze: 1, frei: 0 });
+    expect(terminStand(nur(3), 0)).toEqual({ plaetze: 2, frei: 1 });
+    expect(terminStand(nur(4), 1)).toEqual({ plaetze: 1, frei: 1 });
+    expect(terminStand(nur(1), 1)).toBeNull();
+    expect(terminStand(nur(4), 0)).toBeNull();
+    expect(terminStand([], 0)).toBeNull();
+  });
+
+  it('Stand eines Termins zählt dasselbe wie die Gruppenzeile (`frei` je Gruppe)', () => {
+    const p = plan(roh);
+    for (const g of p.gruppen)
+      p.spalten.forEach((_, i) => expect(terminStand([g], i)?.frei ?? null).toBe(g.frei[i]));
   });
 
   it('Gruppen und Dienste in der Reihenfolge der Gemeinde; nur Dienste, die vorkommen', () => {
@@ -311,7 +331,7 @@ describe('planAus – nur Dienste, die ChurchTools ganz liefert', () => {
   });
 
   it('der Kopf zählt dieselben Plätze wie die Zeilen', () => {
-    expect(p.spalten[0]).toMatchObject({ plaetze: 2, besetzt: 1 });
+    expect(terminStand(p.gruppen, 0)).toEqual({ plaetze: 2, frei: 1 });
   });
 });
 

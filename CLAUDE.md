@@ -901,6 +901,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.39.2 (13.11.2026) = Reiter oben am iPad wieder sichtbar und scharf.** Einzige sichtbare Musik-App-Änderung seit
+  v2.39.1 (#931, #932): In der installierten App standen die oberen Reiter (seit #739) unter der Statusleiste und im
+  Unschärfe-Band, das iPadOS inzwischen wie iOS hat. `--band-unten` (Safe-Area + 36) gilt jetzt für Köpfe und Reiter;
+  Erweiterungen unverändert. Am iPad auf Staging abgenommen. Liedblatt/Editor am iPad bleiben bei `--bar-pad-top` + 4
+  (ungeprüft). Intern: ChordChart weiter aufgeteilt (#918). Dazu Organigramm, Protokolle S6, Dienstplaner v0.3.1, Anmeldungen F1.
 - **v2.39.1 (09.11.2026) = „Darunter einfügen“ als Menü am Knopf.** Einzige Musik-App-Änderung seit v2.39.0 (#905,
   F2 aus dem Dienstplaner-Test): am Rechner/iPad Menü nach oben am Knopf, am Handy weiter das Blatt; gemeinsamer
   Baustein `KnopfMitMenue`. Einführung bewusst unverändert (kein `data-tour` am Knopf). Gleichzeitig `dienstplan-v0.3.0`

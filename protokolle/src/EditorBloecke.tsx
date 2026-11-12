@@ -1,11 +1,11 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
-import { textAus } from '@shared/protokolle/dokument';
+import { terminDatum, textAus } from '@shared/protokolle/dokument';
 import {
   istUeberfaellig,
   nameAusListe,
-  nameImVerlauf,
+  zustaendigeNamen,
   neueAufgabe,
   statusSetzen,
   vorabAnwenden,
@@ -138,11 +138,7 @@ export function AufgabeBlock({
   const liste = mitglieder && mitglieder !== 'verborgen' ? mitglieder : null;
   // Mitglieder sehen die Liste oft nicht – dann ich selbst bzw. der Name aus dem Verlauf (S7-2a), erst danach die Zahl.
   const ausListe = k ? nameAusListe(k.mitglieder, k.ich) : () => null;
-  const nameVon = (p: number) => ausListe(p) ?? (a && nameImVerlauf(a, p)) ?? `Person ${p}`;
-  const wer = [
-    ...(sicht?.wer ?? []).map(nameVon),
-    ...(sicht?.extern ? [`${sicht.extern} (extern)`] : []),
-  ];
+  const wer = sicht ? zustaendigeNamen(sicht, ausListe, (p) => `Person ${p}`) : [];
   const ueber = !!a && istUeberfaellig(a, heuteImKalender());
 
   return (
@@ -274,7 +270,7 @@ export function TerminBlock({
     updateBlock: (b: string, u: { props: { datum: string } }) => unknown;
   };
 }) {
-  const datum = /^\d{4}-\d{2}-\d{2}$/.test(block.props.datum) ? block.props.datum : '';
+  const datum = terminDatum(block.props) ?? '';
   return (
     <div className={`${ansicht.marke} ${ansicht.termin}`}>
       <span className={`${styles.schilder} ${styles.vorneSchild}`} contentEditable={false}>

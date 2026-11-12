@@ -6,8 +6,8 @@
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
 > Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
-> die nächste Sitzung fest und geben Protokolle frei; Mitglieder schlagen Punkte vor. Beitrag in der Gruppe und PDF
-> folgen (Bauplan S6-2 bis S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> die nächste Sitzung fest und geben Protokolle frei (mit Beitrag in der Gruppe); Mitglieder schlagen Punkte vor. Das
+> PDF folgt (Bauplan S6-3 bis S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -260,7 +260,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
 - Regeln (ohne Oberfläche, getestet): `shared/protokolle/` – Dokument und Ableitung (`dokument.ts`), Speicher mit
   Kopf und gepackten Teilen (`speicher.ts`), To-Dos (`aufgaben.ts`), Einrichten (`einrichten.ts`), Vorlagen
   (`vorlagen.ts`), Namen für die KI (`platzhalter.ts`), Meine Gruppen (`gruppen.ts`), Sitzungen (`sitzungen.ts`),
-  Suche (`suche.ts`).
+  Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
+  gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a, der Knopf folgt mit S6-3b).
 - Schreiben: `protokolle/src/schreiben.ts` (Sperre nehmen, speichern, übernehmen, freigeben – vorher frisch lesen,
   nachher nachlesen), `schreibSteuerung.ts` (wann gespeichert wird), Editor `DokumentEditor.tsx` + `editorSchema.ts`
   (BlockNote 0.56, fest gepinnt – Updates bewusst, die Schnittstellen ändern sich in 0.x noch), Word-Listen

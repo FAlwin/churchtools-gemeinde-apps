@@ -23,6 +23,7 @@ import {
   zustaendigSetzen,
   nameAusListe,
   nameImVerlauf,
+  zustaendigeNamen,
   nameFuer,
   weitereZustaendige,
 } from './aufgaben';
@@ -447,6 +448,31 @@ describe('Name im Verlauf (S7-2a: Mitglieder sahen „Person 1“)', () => {
     };
     expect(nameImVerlauf(v, 23)).toBe('Johann');
     expect(nameImVerlauf(v, 1)).toBeNull();
+  });
+  it('zustaendigeNamen: Liste, dann Verlauf, dann `unbekannt` – sonst fällt er weg; extern am Ende', () => {
+    const a = {
+      wer: [1, 23, 99],
+      extern: 'Hans Gast',
+      verlauf: [{ am: AM2, von: 23, name: 'Johann', art: 'notiz' as const }],
+    };
+    const liste = (p: number) => (p === 1 ? 'Alwin Friesen' : null);
+    expect(zustaendigeNamen(a, liste)).toEqual(['Alwin Friesen', 'Johann', 'Hans Gast (extern)']);
+    expect(zustaendigeNamen(a, liste, (p) => `Person ${p}`)).toEqual([
+      'Alwin Friesen',
+      'Johann',
+      'Person 99',
+      'Hans Gast (extern)',
+    ]);
+    // Ohne Mitgliederliste (Lese-Ansicht): nur die externe Person.
+    expect(zustaendigeNamen(a, null)).toEqual(['Hans Gast (extern)']);
+    // Ohne Verlauf (Wahl im Block vor dem Speichern).
+    expect(
+      zustaendigeNamen(
+        { wer: [23], extern: '' },
+        () => null,
+        (p) => `Person ${p}`,
+      ),
+    ).toEqual(['Person 23']);
   });
   it('nameFuer: erst die Mitgliederliste (Vorname), dann der Verlauf', () => {
     const v = { verlauf: [{ am: AM2, von: 23, name: 'Hansi', art: 'notiz' as const }] };

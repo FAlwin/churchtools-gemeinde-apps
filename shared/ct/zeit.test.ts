@@ -10,6 +10,7 @@ import {
   tagAusIso,
   uhrText,
   utcAus,
+  wannLang,
   wannText,
   zeitzoneAusKonfig,
 } from './zeit';
@@ -141,5 +142,13 @@ describe('heuteImKalender – der Tag der Gemeinde, nicht der in UTC', () => {
   it('am Tag stimmen beide, Monat und Tag zweistellig', () => {
     expect(heuteImKalender(new Date(Date.UTC(2026, 8, 21, 10, 0)), BERLIN)).toBe('2026-09-21');
     expect(heuteImKalender(new Date(Date.UTC(2026, 0, 5, 12, 0)), BERLIN)).toBe('2026-01-05');
+  });
+});
+
+describe('wannLang – Sitzungen der Protokolle und ihr PDF (S6-3a)', () => {
+  it('Wochentag, Datum und Uhrzeit in der Zeitzone der Gemeinde – auch über Mitternacht', () => {
+    expect(wannLang('2026-11-11T18:00:00Z', BERLIN)).toBe('Mi, 11.11.2026 · 19:00 Uhr');
+    expect(wannLang('2026-11-11T23:30:00Z', BERLIN)).toBe('Do, 12.11.2026 · 00:30 Uhr');
+    expect(wannLang('2026-07-01T17:00:00Z', BERLIN)).toBe('Mi, 01.07.2026 · 19:00 Uhr');
   });
 });

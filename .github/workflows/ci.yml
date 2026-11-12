@@ -80,6 +80,9 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # Ein grüner Lauf braucht 3–4 Minuten. Ohne Grenze hing die Browser-Installation am 11.11.2026 sechs Stunden lang
+    # (Ubuntu-Paketserver nicht erreichbar), bis GitHub den Job abbrach – mit Grenze scheitert er schnell und kann neu laufen.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 

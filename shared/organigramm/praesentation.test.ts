@@ -149,3 +149,25 @@ describe('praesentationAus (O4)', () => {
     expect(P.personen).toBe(6); // Fia und Emil sind in Gottesdienst UND Café – trotzdem einmal
   });
 });
+
+describe('Rollenfilter in den Listen (#915)', () => {
+  it('Spalte: bleibt, wer hier ODER in einer Untergruppe eine gewählte Rolle hat; Zahlen zählen alle', () => {
+    // Dora leitet Ton (Untergruppe von Technik), Emil leitet Technik selbst.
+    const mitLeitungInTon = new Map(MITGLIEDER).set(15, [m(4, 16), m(3, 15)]);
+    const p = praesentationAus(BAUM, mitLeitungInTon, ROLLEN, name, new Set(['Mitarbeiter']));
+    const technik = p.bereiche
+      .find((b) => b.knoten.gruppe.name === 'Gottesdienst')!
+      .spalten.find((s) => s.knoten.gruppe.name === 'Technik')!;
+    expect(ids(technik.gezeigt)).toEqual([5, 4]);
+    expect(ids(technik.personen)).toHaveLength(4); // Carl, Emil, Dora, Fia – gezählt wird weiter alles
+    // Die Untergruppe für sich: nur ihre eigene Leitung.
+    const ton = technik.unter.find((u) => u.knoten.gruppe.name === 'Ton')!;
+    expect(ids(ton.gezeigt)).toEqual([4]);
+    expect(p.personen).toBe(P.personen);
+  });
+
+  it('ohne Filter: gezeigt = personen', () => {
+    const s = spalte('Gottesdienst', 'Technik');
+    expect(s.gezeigt).toEqual(s.personen);
+  });
+});

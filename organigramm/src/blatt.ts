@@ -189,6 +189,16 @@ function personenZeilen(
       }),
     );
   }
+  // Was der Rollenfilter wegnimmt (#915) – eine kursive Zeile wie „Mitglieder nicht sichtbar“.
+  if (i.ausgeblendet)
+    out.push({
+      ...basis,
+      schluessel: `${k.schluessel}:${out.length}`,
+      rolle: null,
+      ab: 0,
+      text: kuerzenAuf(i.ausgeblendet, platz, person),
+      kursiv: true,
+    });
   return out;
 }
 

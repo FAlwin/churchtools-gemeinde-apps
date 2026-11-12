@@ -20,6 +20,9 @@ import styles from './Diagramm.module.scss';
 
 type GruppenEigenschaften = SVGProps<SVGGElement>;
 
+/** Halbe Länge des „−“ im Schalter (Radius 9). */
+const MINUS_HALB = 3.5;
+
 interface Props {
   anordnung: Anordnung;
   kuerzen: (k: SichtKnoten, breite: number) => string;
@@ -130,9 +133,20 @@ export function DiagrammBild({ anordnung, kuerzen, farbe, zeilen, knoten, schalt
           lage.schalter ? (
             <g key={'s' + lage.knoten.schluessel} className={styles.schalter} {...schalter(lage)}>
               <circle cx={lage.schalter.x} cy={lage.schalter.y} r={SCHALTER} />
-              <text x={lage.schalter.x} y={lage.schalter.y}>
-                {lage.knoten.offen ? '−' : lage.knoten.kinderZahl}
-              </text>
+              {lage.knoten.offen ? (
+                // Das „−“ als Strich, nicht als Schriftzeichen: Die Schrift setzt ihr Minus auf die Rechenachse,
+                // nicht in die Mitte des Kreises – es saß sichtbar zu tief.
+                <line
+                  x1={lage.schalter.x - MINUS_HALB}
+                  x2={lage.schalter.x + MINUS_HALB}
+                  y1={lage.schalter.y}
+                  y2={lage.schalter.y}
+                />
+              ) : (
+                <text x={lage.schalter.x} y={lage.schalter.y}>
+                  {lage.knoten.kinderZahl}
+                </text>
+              )}
             </g>
           ) : null,
         )}

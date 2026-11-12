@@ -139,7 +139,15 @@ describe('Diagramm (O7b-3)', () => {
     fireEvent.click(technik);
     expect(onUmklappen).toHaveBeenLastCalledWith('10/7');
     const gd = screen.getByRole('button', { name: 'Gottesdienst zuklappen' });
-    expect(gd.textContent).toBe('−');
+    // Das „−“ ist ein Strich genau durch die Mitte des Kreises (als Schriftzeichen saß es zu tief).
+    expect(gd.textContent).toBe('');
+    const kreis = gd.querySelector('circle')!;
+    const strich = gd.querySelector('line')!;
+    const cx = Number(kreis.getAttribute('cx'));
+    const cy = Number(kreis.getAttribute('cy'));
+    expect(Number(strich.getAttribute('y1'))).toBe(cy);
+    expect(Number(strich.getAttribute('y2'))).toBe(cy);
+    expect((Number(strich.getAttribute('x1')) + Number(strich.getAttribute('x2'))) / 2).toBe(cx);
     fireEvent.keyDown(gd, { key: ' ' });
     expect(onUmklappen).toHaveBeenLastCalledWith('10');
   });

@@ -55,9 +55,6 @@ export interface PlanSpalte {
   tag: string;
   uhrzeit: string;
   abgesagt: boolean;
-  /** Die Plätze des Termins in den Zeilen der Matrix und davon besetzte – für Füllstand und „N frei“. */
-  plaetze: number;
-  besetzt: number;
   /** Admin dieses Termins – plant dann jeden Dienst darin. */
   admin: boolean;
   /** Beginn wie von ChurchTools (`startDate`, ISO) – „Ablauf anlegen“ in der Matrix braucht ihn (E6-6a). */
@@ -164,15 +161,12 @@ export function planAus(
   };
   const spalten: PlanSpalte[] = termine.map((t) => {
     const lokal = ortszeitAus(t.startDate, o.zeitzone);
-    const plaetze = (t.eventServices ?? []).filter(inMatrix);
     return {
       id: t.id,
       name: t.name,
       tag: lokal.slice(0, 10),
       uhrzeit: lokal.slice(11, 16),
       abgesagt: t.isCanceled === true,
-      plaetze: plaetze.length,
-      besetzt: plaetze.filter((p) => !istFrei(p)).length,
       admin: istTerminAdmin(t, o.ichId),
       beginn: t.startDate,
       ablaufTermin: ablaufTerminVon(t),
@@ -235,6 +229,31 @@ export function planAus(
     }
   }
   return { spalten, gruppen };
+}
+
+/** Plätze eines Termins und wie viele davon frei sind. */
+export interface TerminStand {
+  plaetze: number;
+  frei: number;
+}
+
+/**
+ * **Stand eines Termins über die gezeigten Gruppen** (Fund L2, Alwin 12.11.2026): Kopf, Füllbalken und Datumsleiste
+ * zählen nur die Gruppen, die man gerade sieht – wer von der Startseite „Programm · 3 Plätze frei“ kommt, soll an den
+ * Terminen Programms Plätze sehen, nicht „12 frei“ für alle Gruppen. Gezählt wird aus den Zellen, also dieselben Plätze
+ * wie in den Zeilen. `null`, wenn keine dieser Gruppen an dem Termin einen Dienst hat.
+ */
+export function terminStand(gruppen: PlanGruppe[], spalte: number): TerminStand | null {
+  let stand: TerminStand | null = null;
+  for (const g of gruppen)
+    for (const z of g.zeilen) {
+      const zelle = z.zellen[spalte];
+      if (!zelle) continue;
+      stand ??= { plaetze: 0, frei: 0 };
+      stand.plaetze += zelle.length;
+      stand.frei += zelle.filter((p) => p.art === 'frei').length;
+    }
+  return stand;
 }
 
 /**

@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { DatumKachel } from '@ui/bedienung/DatumKachel';
+import { KachelLink, TitelLink } from './TerminLink';
 import { kachel, tagKurz } from '@shared/ct/datum';
-import { gruppenName, type PlanGruppe, type PlanSpalte } from '@shared/dienstplan/plan';
+import {
+  gruppenName,
+  terminStand,
+  type PlanGruppe,
+  type PlanSpalte,
+  type TerminStand,
+} from '@shared/dienstplan/plan';
 import { DIENST_SPALTE, SPALTENBREITE, type Breite } from '@shared/dienstplan/fenster';
 import { CtSymbol } from './CtSymbol';
 import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
@@ -12,10 +18,13 @@ import { EinteilPlaetze } from './PlanPlaetze';
 import { useBisUnten } from './useBisUnten';
 import styles from './Planen.module.scss';
 
-function standText(s: PlanSpalte): { text: string; offen: boolean } {
+/** „N frei“ eines Termins – über die gezeigten Gruppen (`terminStand`); „—“, wo keine davon einen Dienst hat. */
+function standText(s: PlanSpalte, stand: TerminStand | null): { text: string; offen: boolean } {
   if (s.abgesagt) return { text: 'abgesagt', offen: false };
-  const frei = s.plaetze - s.besetzt;
-  return frei > 0 ? { text: `${frei} frei`, offen: true } : { text: 'alles besetzt', offen: false };
+  if (!stand) return { text: '—', offen: false };
+  return stand.frei > 0
+    ? { text: `${stand.frei} frei`, offen: true }
+    : { text: 'alles besetzt', offen: false };
 }
 
 function GruppenStand({ frei }: { frei: number | null }) {
@@ -119,7 +128,8 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
             {spalten.map((i) => {
               const s = plan.spalten[i];
               const k = kachel(s.tag);
-              const st = standText(s);
+              const stand = terminStand(gruppen, i);
+              const st = standText(s, stand);
               return (
                 <th
                   key={s.id}
@@ -128,7 +138,11 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                   data-neben={neben(s) || undefined}
                 >
                   <div className={styles.kopfDatum}>
-                    <DatumKachel tag={k.tag} monat={k.monat} />
+                    <KachelLink
+                      tag={k.tag}
+                      monat={k.monat}
+                      onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}
+                    />
                     <small>
                       {tagKurz(s.tag).slice(0, 2)} · {s.uhrzeit}
                     </small>
@@ -150,7 +164,7 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                   <div className={styles.fuellung} aria-hidden="true">
                     <i
                       style={{
-                        width: `${s.plaetze ? Math.round((s.besetzt / s.plaetze) * 100) : 0}%`,
+                        width: `${stand?.plaetze ? Math.round(((stand.plaetze - stand.frei) / stand.plaetze) * 100) : 0}%`,
                       }}
                     />
                   </div>
@@ -279,14 +293,14 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
   }, [amLetzten]);
   const s = plan.spalten[i];
   const k = kachel(s.tag);
-  const st = standText(s);
+  const st = standText(s, terminStand(gruppen, i));
 
   return (
     <div>
       <div className={styles.datumsleiste} role="group" aria-label="Termine">
         {spalten.map((x) => {
           const sx = plan.spalten[x];
-          const stx = standText(sx);
+          const stx = standText(sx, terminStand(gruppen, x));
           return (
             <button
               key={sx.id}
@@ -304,9 +318,16 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
       </div>
       <section className={styles.karte} aria-label={`${s.name}, ${tagKurz(s.tag)}`}>
         <div className={styles.handyKopf}>
-          <DatumKachel tag={k.tag} monat={k.monat} />
+          {/* Datum und Titel öffnen den Termin (Wunsch 8) – wie „Ablauf & Dienste“ daneben. */}
+          <KachelLink
+            tag={k.tag}
+            monat={k.monat}
+            onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}
+          />
           <div>
-            <b>{s.name}</b>
+            <TitelLink onKlick={sicht.onTermin ? () => sicht.onTermin?.(s.id) : undefined}>
+              <b>{s.name}</b>
+            </TitelLink>
             <small>
               {tagKurz(s.tag)} · {s.uhrzeit} Uhr ·{' '}
               <span className={st.offen ? styles.offen : styles.besetzt}>{st.text}</span>

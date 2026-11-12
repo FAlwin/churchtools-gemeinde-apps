@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
+import { terminStand } from '@shared/dienstplan/plan';
 import { ladeTermin, ladeTermine, ladeZeitraum } from './ladeTermine';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
@@ -104,7 +105,7 @@ describe('ladeTermine', () => {
       { dienst: 'Ton', zugesagt: true, ort: { serviceId: 6, index: null }, absagen: true },
     ]);
     expect(d.plan.gruppen).toEqual([]);
-    expect(d.plan.spalten[0]).toMatchObject({ plaetze: 0, besetzt: 0 });
+    expect(terminStand(d.plan.gruppen, 0)).toBeNull();
   });
 
   it('Termine ohne Liste → Fehler 502, nicht „keine Termine“', async () => {

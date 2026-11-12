@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
-import { DatumKachel } from '@ui/bedienung/DatumKachel';
+import { KachelLink, TitelLink } from './TerminLink';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { kachel, plusTage, tagKurz } from '@shared/ct/datum';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
@@ -20,7 +20,7 @@ import { Toast } from '@ui/fenster/Toast';
 import type { Antworten } from './useAntworten';
 import type { Tausch } from './useTausch';
 import { TauschAmDienst, TauschEingang, TauschGetauscht, type EigenerDienst } from './TauschTeile';
-import { adresseFuer, type ReiterId } from './reiter';
+import { adresseFuer, adresseFuerPlanenGruppe, type ReiterId } from './reiter';
 import styles from './Startseite.module.scss';
 
 interface Props {
@@ -137,7 +137,7 @@ export function Startseite({
             </div>
             <ul className={styles.liste}>
               {u.offen.map((d, i) => (
-                <DienstZeile key={i} d={d} abwesend={abwesendAm(d.termin)}>
+                <DienstZeile key={i} d={d} abwesend={abwesendAm(d.termin)} onTermin={onTermin}>
                   {antworten && (
                     <AntwortKnoepfe termin={d.termin} d={d.mein} antworten={antworten} />
                   )}
@@ -167,7 +167,7 @@ export function Startseite({
           </div>
           <ul className={styles.liste}>
             {u.naechsteDienste.map((d, i) => (
-              <DienstZeile key={i} d={d}>
+              <DienstZeile key={i} d={d} onTermin={onTermin}>
                 {tausch && eigener(d) && (
                   <TauschAmDienst d={eigener(d)!} tausch={tausch} zeitzone={zeitzone} />
                 )}
@@ -198,7 +198,12 @@ export function Startseite({
               <span className={styles.leise}>nächste 6 Wochen</span>
             </div>
             {u.planen.map(({ gruppe, frei }) => (
-              <ReiterLink key={gruppe.id} reiter="planen" titel={gruppe.name}>
+              <ReiterLink
+                key={gruppe.id}
+                reiter="planen"
+                adresse={adresseFuerPlanenGruppe(gruppe.id)}
+                titel={gruppe.name}
+              >
                 {termine?.art !== 'fertig' ? (
                   ' '
                 ) : frei > 0 ? (
@@ -228,6 +233,8 @@ function AlsNaechstes({
   onTermin?: (id: number) => void;
 }) {
   const k = kachel(z.tag);
+  // Datum und Titel führen in die Termin-Ansicht (Wunsch 8) – wie „Ablauf & Dienste“.
+  const oeffnen = onTermin ? () => onTermin(z.id) : undefined;
   // Beiwerk: scheitert es, fehlt die Angabe (`undefined`) – „noch kein Ablauf“ stünde sonst falsch da.
   const liederStand = useLaden(() => ladeLieder(z.id), [z.id]).stand;
   const lieder: string[] | null | undefined =
@@ -241,9 +248,11 @@ function AlsNaechstes({
     <section className={`${styles.karte} ${styles.held}`} aria-labelledby="als-naechstes">
       <span className={styles.vorzeile}>Als Nächstes · {bisDahin(heute, z.tag)}</span>
       <div className={styles.heldKopf}>
-        <DatumKachel tag={k.tag} monat={k.monat} />
+        <KachelLink tag={k.tag} monat={k.monat} onKlick={oeffnen} />
         <div>
-          <h2 id="als-naechstes">{z.name}</h2>
+          <h2 id="als-naechstes">
+            <TitelLink onKlick={oeffnen}>{z.name}</TitelLink>
+          </h2>
           <p className={styles.leise}>
             {/* Nur Tag und Beginn – kein Ende (Alwin, 30.10.2026). Ende heißt überall „wann der letzte Punkt vorbei ist“; das
                 steht in der Termin-Ansicht, nicht hier. */}
@@ -293,21 +302,27 @@ function AlsNaechstes({
 function DienstZeile({
   d,
   abwesend = false,
+  onTermin,
   children,
 }: {
   d: DienstAmTermin;
   abwesend?: boolean;
+  /** Datum und Titel → Termin-Ansicht (Wunsch 8). */
+  onTermin?: (id: number) => void;
   /** Unter dem Text – Zusagen/Absagen (E7-1). */
   children?: ReactNode;
 }) {
   const k = kachel(d.termin.tag);
+  const oeffnen = onTermin ? () => onTermin(d.termin.id) : undefined;
   return (
     <li className={styles.zeile}>
-      <DatumKachel tag={k.tag} monat={k.monat} />
+      <KachelLink tag={k.tag} monat={k.monat} onKlick={oeffnen} />
       <div className={styles.mitte}>
-        <b>
-          {d.dienst} · {d.termin.name}
-        </b>
+        <TitelLink onKlick={oeffnen}>
+          <b>
+            {d.dienst} · {d.termin.name}
+          </b>
+        </TitelLink>
         <small>
           {tagKurz(d.termin.tag)} · {d.termin.uhrzeit} Uhr
         </small>
@@ -322,11 +337,14 @@ function DienstZeile({
 
 function ReiterLink({
   reiter,
+  adresse,
   icon,
   titel,
   children,
 }: {
   reiter: ReiterId;
+  /** Eine genauere Adresse im Reiter – Planen mit einer Gruppe (Wunsch 7). */
+  adresse?: string;
   icon?: 'user-slash';
   titel: string;
   children: ReactNode;
@@ -336,7 +354,7 @@ function ReiterLink({
       type="button"
       className={styles.linkZeile}
       onClick={() => {
-        window.location.hash = adresseFuer(reiter);
+        window.location.hash = adresse ?? adresseFuer(reiter);
       }}
     >
       {icon && (

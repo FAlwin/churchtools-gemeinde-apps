@@ -635,7 +635,11 @@ export default function App() {
           position: 'relative',
           overflow: 'hidden',
           // Am Handy liegt die Reiterleiste darunter: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
-          ...(handy ? ({ '--plus-boden': '0px' } as CSSProperties) : {}),
+          // Sonst liegt sie darüber und hält schon den Platz für die Statusleiste frei – die Köpfe darunter beginnen
+          // wie unter einer Leiste, nicht noch einmal mit der Safe-Area (12.11.2026).
+          ...(handy
+            ? ({ '--plus-boden': '0px' } as CSSProperties)
+            : ({ '--inhalt-pad-top': 'var(--inhalt-pad-unter-reiter)' } as CSSProperties)),
         }}
       >
         {tab === 'termine' && canViewAgendas && (

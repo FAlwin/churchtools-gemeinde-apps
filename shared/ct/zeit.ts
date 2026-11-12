@@ -2,7 +2,7 @@
  * Der Tag eines ChurchTools-Zeitpunkts in der Zeitzone der Gemeinde – geteilt von Server und
  * ChurchTools-Extension (#335). Lag bis dahin in `server/src/utils/isoTag.ts`.
  */
-import { tagPunkt } from './datum';
+import { datumText, tagPunkt } from './datum';
 
 /**
  * **Ein Zeitpunkt als `YYYY-MM-DD` (UTC)** – für Zeitfenster an ChurchTools (`from`/`to`), die eine
@@ -193,4 +193,13 @@ export function wannText(zeitpunkt: string, zeitzone: string, jetzt = new Date()
   const uhr = lokal.slice(11, 16);
   if (lokal.slice(0, 10) === heuteImKalender(jetzt, zeitzone)) return `heute ${uhr}`;
   return `${lokal.slice(8, 10)}.${lokal.slice(5, 7)}. ${uhr}`;
+}
+
+/**
+ * „Mi, 14.10.2026 · 19:00 Uhr“ in der Zeitzone der Gemeinde – Sitzungen der Protokolle (S3-2) und ihr PDF (S6-3a).
+ * Bis S6-3a lag die Regel in `protokolle/src/anzeige.ts`; das PDF hätte sie sonst nachgebaut.
+ */
+export function wannLang(beginn: string, zeitzone: string): string {
+  const lokal = ortszeitAus(beginn, zeitzone);
+  return `${datumText(lokal.slice(0, 10))} · ${lokal.slice(11, 16)} Uhr`;
 }

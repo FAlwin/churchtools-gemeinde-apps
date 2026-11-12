@@ -10,6 +10,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { NAECHSTE, neuerVorschlag, zielVon, type Vorschlag } from '@shared/protokolle/vorschlaege';
 import * as L from './lesen';
 import * as V from './vorschlaegeSchreiben';
+import * as SCH from './schreiben';
 import { Sitzungen } from './Sitzungen';
 
 // Vorschläge (S5-4): die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
@@ -32,6 +33,10 @@ vi.mock('./lesen', async (orig) => ({
   ladeMitarbeit: vi.fn(),
 }));
 const m = vi.mocked(L);
+vi.mock('./schreiben', async (orig) => ({
+  ...(await orig<typeof import('./schreiben')>()),
+  freigabeZuruecknehmen: vi.fn(),
+}));
 
 const ICH = { person: 1, name: 'Alwin' };
 const GRUPPEN: ProtokollGruppe[] = [
@@ -359,5 +364,73 @@ describe('Vorschläge (S5-4)', () => {
     await screen.findByRole('region', { name: 'Kommend' });
     expect(screen.queryByRole('button', { name: /Punkt für eine Sitzung vorschlagen/ })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Vorschläge' })).toBeNull();
+  });
+});
+
+describe('Freigegeben (S6-1)', () => {
+  const MIT_VERLAUF = {
+    ...KOPF,
+    verlauf: [{ art: 'freigegeben', von: 1, name: 'Alwin Friesen', am: '2026-10-15T08:00:00Z' }],
+  };
+  const FREI: Sitzung = { ...PROTOKOLL, kopf: MIT_VERLAUF };
+
+  it('Marke mit Namen; „Freigabe zurücknehmen“ nur für die Leitung – mit Rückfrage, danach neu geladen', async () => {
+    m.ladeSitzungen.mockResolvedValue({ ...DATEN, protokolle: [FREI] });
+    vi.mocked(SCH.freigabeZuruecknehmen).mockResolvedValue({
+      art: 'ok',
+      kopf: { ...KOPF, status: 'entwurf' },
+    });
+    const r = render(
+      <Sitzungen ich={ICH} vollerName="Johann Becker" modul={24} gruppen={GRUPPEN} />,
+    );
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    expect(await screen.findByText('freigegeben am 15.10.2026 von Alwin Friesen')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Freigabe zurücknehmen/ })).toBeNull();
+    r.unmount();
+
+    render(
+      <Sitzungen
+        ich={ICH}
+        vollerName="Johann Becker"
+        modul={24}
+        gruppen={GRUPPEN}
+        schreibbar={[60]}
+      />,
+    );
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    fireEvent.click(await screen.findByRole('button', { name: /Freigabe zurücknehmen/ }));
+    expect(SCH.freigabeZuruecknehmen).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurücknehmen' }));
+    await waitFor(() =>
+      expect(SCH.freigabeZuruecknehmen).toHaveBeenCalledWith(
+        { modul: 24, kategorie: 60, sitzung: 'okt' },
+        { person: 1, name: 'Johann Becker' },
+      ),
+    );
+    await waitFor(() => expect(m.ladeSitzungen.mock.calls.length).toBeGreaterThanOrEqual(3));
+  });
+
+  it('zurückgenommen: Vermerk über dem Entwurf (auch beim Lesen)', async () => {
+    const zurueck = {
+      ...KOPF,
+      status: 'entwurf' as const,
+      freigabe: null,
+      verlauf: [
+        { art: 'freigegeben', von: 1, name: 'Alwin Friesen', am: '2026-10-15T08:00:00Z' },
+        { art: 'zurueckgenommen', von: 7, name: 'Johann Becker', am: '2026-10-16T08:00:00Z' },
+      ],
+    };
+    m.ladeSitzungen.mockResolvedValue({
+      ...DATEN,
+      kommend: [{ ...PROTOKOLL, kopf: zurueck }],
+      protokolle: [],
+    });
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    fireEvent.click(await screen.findByText('Entwurf'));
+    expect(
+      await screen.findByText(
+        'Freigabe zurückgenommen am 16.10.2026 von Johann Becker – vorher freigegeben am 15.10.2026 von Alwin Friesen.',
+      ),
+    ).toBeTruthy();
   });
 });

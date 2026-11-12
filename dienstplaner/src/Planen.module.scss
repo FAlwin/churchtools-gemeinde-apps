@@ -735,6 +735,14 @@
   line-height: 1.4;
 }
 
+// Planen mit einer Gruppe von der Startseite (Wunsch 7) – derselbe Aufbau wie „alte Entwürfe“, aber blau: ein Hinweis,
+// kein Fehler. **Muss HINTER `.alteHinweis` stehen** (Fund L1, live 12.11.2026): `@extend` hängt `.besuchHinweis` an
+// deren Regel an – stünde sie davor, gewönne deren roter Hintergrund (Wächter: `ui/design/extendReihenfolge.test.ts`).
+.besuchHinweis {
+  @extend .alteHinweis;
+  background: var(--blue-soft);
+}
+
 .alteKnopf {
   flex: none;
   height: 32px;

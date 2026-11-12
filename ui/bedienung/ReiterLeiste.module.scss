@@ -90,6 +90,11 @@
     }
   }
 
+  // Oben am Bildschirmrand (`amRand`): Platz für die Statusleiste der installierten App, die Fläche läuft darunter durch.
+  &.rand {
+    padding-top: var(--reiter-oben-polster);
+  }
+
   // Anzahl hinter dem Text – leiser, auch am gewählten Reiter (U2-1).
   .tab .zahl {
     color: var(--text3);

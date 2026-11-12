@@ -17,6 +17,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Üblich wenige Minuten (wie die Erweiterungs-Releases). Grenze gegen hängende Läufe – ohne sie hing am 11.11.2026 ein Job 6 h (siehe e2e in ci.yml).
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:

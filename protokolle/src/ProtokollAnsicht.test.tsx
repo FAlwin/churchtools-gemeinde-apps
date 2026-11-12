@@ -102,6 +102,24 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
     expect(screen.getByText('☑')).toBeTruthy();
   });
 
+  it('Termin mit unmöglichem Datum (30.02.): ohne Datum – wie in den Bereichen (S6-3a, `terminDatum`)', () => {
+    render(
+      <ProtokollAnsicht
+        dokument={[
+          {
+            id: 't9',
+            type: 'termin',
+            props: { datum: '2026-02-30' },
+            content: [text('Fest')],
+            children: [],
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText('Fest')).toBeTruthy();
+    expect(screen.queryByText(/30\.02\.2026/)).toBeNull();
+  });
+
   it('ein unbekannter Block zeigt seinen Text – nichts geht verloren', () => {
     render(<ProtokollAnsicht dokument={dok} />);
     expect(screen.getByText('Unbekannter Block')).toBeTruthy();

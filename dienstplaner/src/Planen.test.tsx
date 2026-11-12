@@ -161,6 +161,30 @@ describe('Planen – Tabelle (E3-4)', () => {
     ).toEqual(['alles besetzt', '—']);
   });
 
+  it('Kopf und Füllbalken zählen nur die gezeigten Gruppen (L2, 12.11.2026)', () => {
+    // Alle Gruppen: 18.10. hat 3 Plätze, 1 frei (Licht) → „1 frei“, Balken 67 %.
+    zeige();
+    const kopf = () => screen.getAllByRole('columnheader')[1];
+    const balken = () =>
+      (kopf().querySelector('[aria-hidden="true"] > i') as HTMLElement).style.width;
+    expect(kopf().textContent).toMatch(/1 frei$/);
+    expect(balken()).toBe('67%');
+    cleanup();
+    // Technik ausgeblendet: nur Programm (Predigt, Gast) → „alles besetzt“, Balken voll.
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ ausgeblendeteGruppen: ['3'] }),
+    );
+    try {
+      zeige();
+      expect(kopf().textContent).toMatch(/alles besetzt$/);
+      expect(balken()).toBe('100%');
+    } finally {
+      // Auch wenn der Test fällt – sonst bliebe Technik für die folgenden Tests ausgeblendet.
+      localStorage.clear();
+    }
+  });
+
   it('kein „Weitere Termine laden“ mehr – das macht ＋ bzw. › am Ende (14.10.2026)', () => {
     zeige();
     expect(screen.queryByRole('button', { name: 'Weitere Termine laden' })).toBeNull();
@@ -181,6 +205,28 @@ describe('Planen – Handy (E3-4)', () => {
     expect(screen.getByText('Nicht sichtbar')).toBeTruthy();
     // Am Gebetsabend gibt es keinen Licht-Dienst – also keine Zeile dafür.
     expect(screen.queryByText('Licht')).toBeNull();
+  });
+
+  it('Titel und Datum des Termins öffnen die Termin-Ansicht (Wunsch 8) – wie „Ablauf & Dienste“', () => {
+    const onTermin = vi.fn();
+    zeige(true, onTermin);
+    const karte = within(screen.getByRole('region', { name: /^Gottesdienst, / }));
+    fireEvent.click(karte.getByRole('button', { name: 'Gottesdienst' }));
+    expect(onTermin).toHaveBeenLastCalledWith(10);
+    const kachel = karte.getByText('18').closest('button')!;
+    expect(kachel.getAttribute('tabindex')).toBe('-1');
+    fireEvent.click(kachel);
+    expect(onTermin).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Planen – Tabelle: Datum öffnet den Termin (Wunsch 8)', () => {
+  it('die Kachel im Spaltenkopf führt wie der Name in die Termin-Ansicht', () => {
+    const onTermin = vi.fn();
+    zeige(false, onTermin);
+    const kopf = screen.getAllByRole('columnheader')[1];
+    fireEvent.click(within(kopf).getByText('18').closest('button')!);
+    expect(onTermin).toHaveBeenCalledWith(10);
   });
 });
 
@@ -2235,5 +2281,103 @@ describe('Planen → Termin-Ansicht (E6-1b)', () => {
     fireEvent.click(leiste.getAllByRole('button')[1]);
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf & Dienste' }));
     expect(onTermin).toHaveBeenLastCalledWith(11);
+  });
+});
+
+describe('Planen – von der Startseite: eine Gruppe, nächste 6 Wochen (Wunsch 7, 11.11.2026)', () => {
+  afterEach(() => localStorage.clear());
+  const ANSICHT = 'dienstplaner.planen.ansicht';
+  function zeigeF(fokusGruppe: number | null = 3, handy = false) {
+    const laden = vi.fn(() => Promise.resolve({ zeilen: [] as [], plan: PLAN2 }));
+    const onFokusEnde = vi.fn();
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN2, wochen: 8 }}
+        handy={handy}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        ladeZeitraum={laden}
+        fokusGruppe={fokusGruppe}
+        onFokusEnde={onFokusEnde}
+      />,
+    );
+    return { laden, onFokusEnde };
+  }
+  const hinweis = () => screen.findByRole('status', { name: 'Von der Startseite' });
+
+  it('lädt genau die Tage der Karte „Planen“ und zeigt nur diese Gruppe – oben steht es', async () => {
+    const { laden } = zeigeF();
+    expect(laden).toHaveBeenCalledWith('2026-10-14', '2026-11-24');
+    expect((await hinweis()).textContent).toMatch(/^Nur Technik · nächste 6 Wochen/);
+    expect(tabelle().getByRole('button', { name: /Technik/ })).toBeTruthy();
+    expect(tabelle().queryByRole('button', { name: /Programm/ })).toBeNull();
+  });
+
+  it('nur für diesen Besuch: gemerkter Zeitraum und Filter bleiben; andere Einstellungen (Breite) werden gemerkt', async () => {
+    localStorage.setItem(
+      ANSICHT,
+      JSON.stringify({ zeitraum: { art: 'monat', monat: '2026-12' }, ausgeblendeteGruppen: [] }),
+    );
+    zeigeF();
+    await hinweis();
+    fireEvent.click(screen.getByRole('button', { name: 'Breite Spalten' }));
+    const g = JSON.parse(localStorage.getItem(ANSICHT)!);
+    expect(g.breite).toBe('breit');
+    expect(g.zeitraum).toEqual({ art: 'monat', monat: '2026-12' });
+    expect(g.ausgeblendeteGruppen).toEqual([]);
+    // Breite ist keine Gruppenwahl – es bleibt bei „nur Technik“.
+    expect((await hinweis()).textContent).toMatch(/^Nur Technik/);
+  });
+
+  it('eine Gruppe im Filter dazunehmen → „Eigene Auswahl“; „Gewohnte Ansicht“ beendet den Besuch', async () => {
+    const { onFokusEnde } = zeigeF();
+    await hinweis();
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/ }));
+    const gruppen = within(screen.getByRole('group', { name: 'Gruppen' }));
+    fireEvent.click(gruppen.getByRole('checkbox', { name: 'Programm' }));
+    expect((await hinweis()).textContent).toMatch(/^Eigene Auswahl/);
+    expect(tabelle().getByRole('button', { name: /Programm/ })).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(ANSICHT) ?? '{}').ausgeblendeteGruppen ?? []).toEqual(
+      [],
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gewohnte Ansicht' }));
+    expect(onFokusEnde).toHaveBeenCalled();
+  });
+
+  it('Kopf zählt nur die gezeigte Gruppe (L2): wo Technik nichts hat, „—“ statt Programms „1 frei“', async () => {
+    zeigeF();
+    await hinweis();
+    const koepfe = screen.getAllByRole('columnheader').slice(1);
+    // 18.10./21.10./25.10. hat Technik einen (besetzten oder angefragten) Platz; am 01.11. nur Programm.
+    expect(koepfe.map((k) => k.textContent?.match(/(\d+ frei|alles besetzt|—)$/)?.[1])).toEqual([
+      'alles besetzt',
+      'alles besetzt',
+      'alles besetzt',
+      '—',
+    ]);
+  });
+
+  it('am Handy zählen die Datumszettel nur die gezeigte Gruppe (L2)', async () => {
+    zeigeF(3, true);
+    await hinweis();
+    const zettel = within(screen.getByRole('group', { name: 'Termine' })).getAllByRole('button');
+    expect(zettel.map((z) => z.lastElementChild?.textContent)).toEqual([
+      'alles besetzt',
+      'alles besetzt',
+      'alles besetzt',
+      '—',
+    ]);
+    // Der Kopf des gewählten Termins zählt genauso.
+    fireEvent.click(zettel[3]);
+    expect(screen.getByRole('region', { name: /^Gottesdienst, So, 01\.11\./ }).textContent).toMatch(
+      /10:00 Uhr · —/,
+    );
+  });
+
+  it('ohne Gruppe von der Startseite: kein Hinweis, der gemerkte Zeitraum gilt', () => {
+    const { laden } = zeigeF(null);
+    expect(screen.queryByRole('status', { name: 'Von der Startseite' })).toBeNull();
+    expect(laden).not.toHaveBeenCalled();
   });
 });

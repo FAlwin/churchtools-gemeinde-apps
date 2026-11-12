@@ -2,16 +2,13 @@
  * **Wie Zeiten in den Protokollen erscheinen** (S3-2) – auf den gemeinsamen Datumsbausteinen
  * (`@shared/ct/datum`, `@shared/ct/zeit`), nicht nachgerechnet.
  */
-import { datumText, kachel } from '@shared/ct/datum';
+import { kachel } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { VerweisArt } from '@shared/protokolle/dokument';
 import { TITEL_LETZTES_PROTOKOLL } from '@shared/protokolle/festePunkte';
 
-/** „Mi, 14.10.2026 · 19:00 Uhr“ in der Zeitzone der Gemeinde. */
-export function wannLang(beginn: string, zeitzone: string): string {
-  const lokal = ortszeitAus(beginn, zeitzone);
-  return `${datumText(lokal.slice(0, 10))} · ${lokal.slice(11, 16)} Uhr`;
-}
+/** „Mi, 14.10.2026 · 19:00 Uhr“ – die Regel steht seit S6-3a in `@shared/ct/zeit` (auch fürs PDF). */
+export { wannLang } from '@shared/ct/zeit';
 
 /** „19:00 Uhr“ */
 export function uhrzeit(beginn: string, zeitzone: string): string {

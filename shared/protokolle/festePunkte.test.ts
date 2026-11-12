@@ -226,7 +226,7 @@ describe('Früheres Protokoll (K3b-2)', () => {
       [{ id: 'v', type: BLOCK.verweis, props: { art: 'letztes-protokoll' } }],
       { offen: { offen: [], erledigt: [], seit: null }, letztes: 'okt' },
     );
-    expect(frei.props?.fest).toBe(festesProtokollWert('okt'));
+    expect(frei.props?.fest).toBe(festesProtokollWert('okt', true));
   });
 });
 

@@ -23,6 +23,11 @@
  * (`unsure`, solange nichts eingetragen ist); `POST /groups/{g}/checkin/{p}` = anwesend, `DELETE …/members/{p}` mit
  * `{status}` (ohne: `absent`). Jeder Eintrag setzt `hasEditingStarted` am Treffen. `teilnahmeSchlucken` antwortet 200
  * und speichert nichts.
+ *
+ * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
+ * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
+ * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
+ * lässt das Nachlesen mit diesem Status scheitern, `beitragSchlucken` sagt 201 mit ID und legt nichts an.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -104,10 +109,14 @@ export interface Nachbau {
       isCanceled?: boolean;
       isCompleted?: boolean;
       comment?: string | null;
+      numGuests?: number | null;
+      pollResult?: unknown;
       hasEditingStarted?: boolean;
     }[]
   >;
   treffenVerboten: boolean;
+  /** `PUT` am Treffen sagt 200, ändert aber nichts (S6-1: Abschließen muss nachgelesen werden). */
+  treffenSchlucken: boolean;
   /** Die Mitglieder, die jedes Gruppentreffen kennt (S5-3). */
   teilnehmer: { person: number; vor: string; nach: string }[];
   /** Anwesenheit je Treffen: Person → `present` / `absent` / `unsure`. */
@@ -116,6 +125,21 @@ export interface Nachbau {
   /** Zuletzt angefragter Zeitraum der Termine (`from`/`to`) – zum Prüfen. */
   terminAnfrage: string | null;
   definitionen: unknown;
+  /** Gruppen, in denen man Beiträge schreiben darf (S6-2). */
+  beitragsGruppen: number[];
+  beitraege: {
+    id: number;
+    groupId: number;
+    title: string;
+    content: string;
+    visibility: unknown;
+    commentsActive: unknown;
+  }[];
+  beitragFehler: AnlegeFehler | null;
+  beitragLesenFehler: number | null;
+  beitragSchlucken: boolean;
+  /** ChurchTools speichert den Beitrag mit anderem Titel (z. B. gekürzt). */
+  beitragTitelAnders: boolean;
 }
 
 function json(status: number, body: unknown): Response {
@@ -155,8 +179,15 @@ export function nachbauStarten(): Nachbau {
     ],
     teilnahme: new Map(),
     teilnahmeSchlucken: false,
+    treffenSchlucken: false,
     terminAnfrage: null,
     definitionen: DEFINITIONEN,
+    beitragsGruppen: [],
+    beitraege: [],
+    beitragFehler: null,
+    beitragLesenFehler: null,
+    beitragSchlucken: false,
+    beitragTitelAnders: false,
   };
   // In Node ein schmales `window`; in jsdom (Komponenten-Tests, S5-3) bleibt das echte – sonst fehlte React alles
   // außer der Adresse – und bekommt nur die Adresse von ChurchTools.
@@ -247,6 +278,33 @@ export function nachbauStarten(): Nachbau {
           ? { message: 'Forbidden', messageKey: 'error.forbidden.edit' }
           : { message: 'weg' },
       );
+    if (pfad === '/post/groups')
+      return json(200, {
+        data: s.beitragsGruppen.map((g) => ({
+          group: { domainIdentifier: String(g), title: `Gruppe ${g}` },
+          type: 'postPossible',
+        })),
+      });
+    if (pfad === '/posts' && m === 'POST') {
+      const id = s.naechste++;
+      const f = s.beitragFehler;
+      if ((!f || f.angelegt) && !s.beitragSchlucken)
+        s.beitraege.push({
+          id,
+          groupId: Number(body.groupId),
+          title: s.beitragTitelAnders ? String(body.title).slice(0, 10) : String(body.title),
+          content: String(body.content),
+          visibility: body.visibility,
+          commentsActive: body.commentsActive,
+        });
+      return f ? fehlerAntwort(f) : json(201, { data: { id } });
+    }
+    const einB = /^\/posts\/(\d+)$/.exec(pfad);
+    if (einB && m === 'GET') {
+      if (s.beitragLesenFehler) return json(s.beitragLesenFehler, { message: 'weg' });
+      const b = s.beitraege.find((x) => x.id === Number(einB[1]));
+      return b ? json(200, { data: b }) : json(404, { message: 'Nicht gefunden' });
+    }
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (neuT && m === 'POST') {
       const id = s.naechste++;
@@ -463,6 +521,12 @@ export function nachbauStarten(): Nachbau {
       const person = Number(checkin ? checkin[2] : austragen![3]);
       const t = (s.treffen.get(g) ?? []).find((x) => x.id === id);
       if (!t) return json(404, { message: 'weg' });
+      // Gemessen S6-0 (11.11.2026): abgeschlossen = Anwesenheit gesperrt.
+      if (t.isCompleted)
+        return json(400, {
+          message: 'Group meeting is completed',
+          translatedMessage: 'Das Treffen ist abgeschlossen',
+        });
       if (!s.teilnahmeSchlucken) {
         const stand = s.teilnahme.get(id) ?? new Map<number, string>();
         stand.set(
@@ -486,13 +550,22 @@ export function nachbauStarten(): Nachbau {
         liste.splice(liste.indexOf(t), 1);
         return json(204, null);
       }
-      // Wie gemessen (16.10. + 29.10.2026): ohne `isCanceled`/`isCompleted` 400; ein fehlender Kommentar wird geleert.
-      if (typeof body.isCanceled !== 'boolean' || typeof body.isCompleted !== 'boolean')
+      // Wie gemessen (16.10., 29.10. + S6-0 11.11.2026): ohne `isCanceled`/`isCompleted`/`startDate` 400; was fehlt
+      // (Kommentar, Gäste, Rückmeldung), wird geleert.
+      if (
+        typeof body.isCanceled !== 'boolean' ||
+        typeof body.isCompleted !== 'boolean' ||
+        typeof body.startDate !== 'string' ||
+        !body.startDate
+      )
         return json(400, { message: 'validation' });
-      t.startDate = String(body.startDate);
+      if (s.treffenSchlucken) return json(200, { data: t });
+      t.startDate = body.startDate;
       t.isCanceled = body.isCanceled;
       t.isCompleted = body.isCompleted;
       t.comment = typeof body.comment === 'string' ? body.comment : null;
+      t.numGuests = typeof body.numGuests === 'number' ? body.numGuests : null;
+      t.pollResult = body.pollResult ?? null;
       return json(200, { data: t });
     }
     if (tr) {

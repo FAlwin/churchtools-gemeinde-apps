@@ -11,6 +11,9 @@ import {
   tagKurz,
   tagLang,
   tageBis,
+  alterAm,
+  plusTage,
+  vorJahren,
 } from './datum';
 
 describe('Tage anzeigen', () => {
@@ -73,5 +76,15 @@ describe('tagLang (Ablauf-Anzeige E6b-1)', () => {
   it('Wochentag und Monat ausgeschrieben, Tag ohne führende Null', () => {
     expect(tagLang('2026-11-01')).toBe('Sonntag, 1. November');
     expect(tagLang('2026-10-30')).toBe('Freitag, 30. Oktober');
+  });
+});
+
+describe('vorJahren ist das Gegenstück zu alterAm', () => {
+  it.each(['2027-09-30', '2026-12-28', '2028-03-01', '2027-01-01'])('am %s', (tag) => {
+    for (const n of [1, 7, 10, 16, 18]) {
+      expect(vorJahren(tag, n)).toBe(`${Number(tag.slice(0, 4)) - n}${tag.slice(4)}`);
+      expect(alterAm(vorJahren(tag, n), tag)).toBe(n);
+      expect(alterAm(plusTage(vorJahren(tag, n), 1), tag)).toBe(n - 1);
+    }
   });
 });

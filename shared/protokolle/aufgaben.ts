@@ -175,6 +175,30 @@ export function nameAusListe(
 }
 
 /**
+ * **Die Zuständigen eines To-Dos als Namen** – erst die Mitglieder (`name`, sonst der im Verlauf gestempelte Name, sonst
+ * `unbekannt`; wer dann noch ohne Namen ist, fällt weg), danach die Person außerhalb der Gruppe mit „(extern)“. Ohne
+ * `name` (Lese-Ansicht ohne Mitgliederliste) nur die externe Person. Eine Regel für Editor, feste Punkte und PDF (S6-3a)
+ * – bis dahin stand sie zweimal von Hand.
+ */
+export function zustaendigeNamen(
+  a: Pick<Aufgabe, 'wer' | 'extern'> & { verlauf?: Aufgabe['verlauf'] },
+  name: ((p: number) => string | null) | null,
+  unbekannt: (p: number) => string | null = () => null,
+): string[] {
+  const mitglieder = name
+    ? a.wer
+        .map(
+          (p) =>
+            name(p) ??
+            (a.verlauf ? nameImVerlauf({ verlauf: a.verlauf }, p) : null) ??
+            unbekannt(p),
+        )
+        .filter((n): n is string => !!n)
+    : [];
+  return [...mitglieder, ...(a.extern ? [`${a.extern} (extern)`] : [])];
+}
+
+/**
  * **Zuständige, die man nicht kennt** (Mitgliederliste verborgen): mit Namen, wenn sie im Verlauf je schrieben, sonst
  * gezählt – „eine weitere Person“, „2 weitere“. Karte und Fenster sagen es gleich.
  */

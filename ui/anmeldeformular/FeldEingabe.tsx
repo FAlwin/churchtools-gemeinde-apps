@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { nurText, type Antwort, type Feld } from '@shared/anmeldung/formular';
+import { wahlAntworten, type AntwortZustand } from '@shared/anmeldung/bedingungen';
 import { datumText } from '@shared/ct/datum';
 import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
@@ -29,6 +30,8 @@ export function FeldEingabe({
   gesperrt = false,
   loeschtag = null,
   zusatz = null,
+  antwortZu,
+  geloest,
 }: {
   feld: Feld;
   wert: Antwort;
@@ -40,6 +43,10 @@ export function FeldEingabe({
   loeschtag?: string | null;
   /** Steht hinter der (ersten) Beschriftung – im Baukasten das ⓘ. */
   zusatz?: ReactNode;
+  /** F1b: Wie eine Antwort gerade erscheint (Bedingung an der Antwort) – ohne: alle wählbar (`useBedingungen`). */
+  antwortZu?: (antwort: string) => AntwortZustand;
+  /** F1b: „„Gruppenleiter“ ist nur für Getaufte möglich – bitte neu wählen.“ – die Wahl wurde gerade gelöst. */
+  geloest?: string;
 }) {
   const f = feld;
   const hatFehler = (unter = '') => fehler.includes(unter ? `${pfad}.${unter}` : pfad);
@@ -47,6 +54,13 @@ export function FeldEingabe({
     hatFehler(unter) ? <span className={s.err}>{text}</span> : null;
   const hilfe = f.hilfe ? <span className={s.help}>{f.hilfe}</span> : null;
   const id = `af-${pfad}`;
+  // F1b: Antworten mit Bedingung – „weg“ fehlt ganz, „grau“ ist gesperrt und sagt warum.
+  const zustand = (a: string): AntwortZustand => antwortZu?.(a) ?? { art: 'frei' };
+  const sichtbareAntworten = (liste: string[]) => liste.filter((a) => zustand(a).art !== 'weg');
+  const grund = (a: string) => {
+    const z = zustand(a);
+    return z.art === 'grau' && z.grund ? z.grund : null;
+  };
 
   if (f.typ === 'ueberschrift')
     return (
@@ -157,7 +171,7 @@ export function FeldEingabe({
       />
     );
   } else if (f.typ === 'janein' || f.typ === 'radio') {
-    const antworten = f.typ === 'janein' ? ['Ja', 'Nein'] : f.antworten;
+    const antworten = sichtbareAntworten(wahlAntworten(f));
     eingabe = (
       <div
         className={f.typ === 'janein' ? s.yn : s.choices}
@@ -165,16 +179,22 @@ export function FeldEingabe({
         aria-labelledby={`${id}-l`}
       >
         {antworten.map((a) => (
-          <label key={a} className={f.typ === 'janein' ? s.ynb : s.choice}>
+          <label
+            key={a}
+            className={`${f.typ === 'janein' ? s.ynb : s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}
+          >
             <input
               type="radio"
               name={id}
               value={a}
               checked={wert === a}
-              disabled={gesperrt}
+              disabled={gesperrt || zustand(a).art === 'grau'}
               onChange={() => onWert(a)}
             />
-            <span>{a}</span>
+            <span>
+              {a}
+              {grund(a) && <small> ({grund(a)})</small>}
+            </span>
           </label>
         ))}
       </div>
@@ -188,9 +208,10 @@ export function FeldEingabe({
         onChange={(e) => onWert(e.target.value)}
       >
         <option value="">Bitte wählen …</option>
-        {f.antworten.map((a) => (
-          <option key={a} value={a}>
+        {sichtbareAntworten(f.antworten).map((a) => (
+          <option key={a} value={a} disabled={zustand(a).art === 'grau'}>
             {a}
+            {grund(a) ? ` (${grund(a)})` : ''}
           </option>
         ))}
       </select>
@@ -199,17 +220,20 @@ export function FeldEingabe({
     const gewaehlt = Array.isArray(wert) ? wert : [];
     eingabe = (
       <div className={s.choices} role="group" aria-labelledby={`${id}-l`}>
-        {f.antworten.map((a) => (
-          <label key={a} className={s.choice}>
+        {sichtbareAntworten(f.antworten).map((a) => (
+          <label key={a} className={`${s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}>
             <input
               type="checkbox"
               checked={gewaehlt.includes(a)}
-              disabled={gesperrt}
+              disabled={gesperrt || zustand(a).art === 'grau'}
               onChange={(e) =>
                 onWert(e.target.checked ? [...gewaehlt, a] : gewaehlt.filter((x) => x !== a))
               }
             />
-            <span>{a}</span>
+            <span>
+              {a}
+              {grund(a) && <small> ({grund(a)})</small>}
+            </span>
           </label>
         ))}
       </div>
@@ -238,11 +262,17 @@ export function FeldEingabe({
       </label>
       {eingabe}
       {!(f.typ === 'text' && f.hilfe) && hilfe}
-      {fehlerText(
-        f.typ === 'email' && typeof wert === 'string' && wert.trim()
-          ? 'Bitte eine gültige E-Mail-Adresse eintragen.'
-          : 'Bitte ausfüllen.',
+      {geloest && (
+        <span className={s.err} role="status">
+          {geloest}
+        </span>
       )}
+      {!geloest &&
+        fehlerText(
+          f.typ === 'email' && typeof wert === 'string' && wert.trim()
+            ? 'Bitte eine gültige E-Mail-Adresse eintragen.'
+            : 'Bitte ausfüllen.',
+        )}
     </div>
   );
 }

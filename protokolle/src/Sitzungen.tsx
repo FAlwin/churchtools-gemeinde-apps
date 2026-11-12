@@ -7,7 +7,7 @@ import { Icon } from '@ui/icons/icons';
 import { tagPunkt, datumText } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { protokollSchluessel, type Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import {
@@ -24,6 +24,8 @@ import { ladeMitarbeit, ladeSitzungen, type GruppenSitzungen } from './lesen';
 import { VorschlaegeKarte, type VorschlagAktionen } from './Vorschlaege';
 import { VorschlagAblehnen, VorschlagFenster } from './VorschlagFenster';
 import { vorschlagEinreichen, vorschlagSchreiben } from './vorschlaegeSchreiben';
+import { freigabeZuruecknehmen } from './schreiben';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
@@ -154,6 +156,11 @@ export function Sitzungen({
     | null
   >(null);
   const [vorschlagFehler, setVorschlagFehler] = useState<string | null>(null);
+  // „Freigabe zurücknehmen“ (S6-1): die Rückfrage und, falls es scheitert, warum.
+  const [zuruecknehmen, setZuruecknehmen] = useState<{
+    laeuft: boolean;
+    fehler: string | null;
+  } | null>(null);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -286,7 +293,7 @@ export function Sitzungen({
             return;
           }
           // Aus der Liste oder der Ansicht: neu laden und die neue Sitzung öffnen.
-          if (id !== null) wunsch.current = `p:${id}`;
+          if (id !== null) wunsch.current = protokollSchluessel(id);
           laden();
         }}
         onClose={() => setFestlegen(null)}
@@ -415,6 +422,11 @@ export function Sitzungen({
           direkt={direkt}
           vollerName={vollerName}
           onVorschlag={vorschlagSetzen}
+          onFreigegeben={() => {
+            // Neu laden und gleich wieder öffnen – jetzt zum Lesen, mit „freigegeben am … von …“.
+            wunsch.current = offen.schluessel;
+            laden();
+          }}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={(geaendert) => {
             setOffen(null);
@@ -452,6 +464,11 @@ export function Sitzungen({
           naechste={naechsteVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
+          onZuruecknehmen={
+            darfSchreiben && offen.kopf?.status === 'frei'
+              ? () => setZuruecknehmen({ laeuft: false, fehler: null })
+              : undefined
+          }
           onZurueck={() => {
             setZuPunkt(null);
             setHerkunft(null);
@@ -483,7 +500,7 @@ export function Sitzungen({
             onBegonnen={(id) => {
               // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
               setBeginnt(null);
-              wunsch.current = `p:${id}`;
+              wunsch.current = protokollSchluessel(id);
               laden();
             }}
             onClose={() => setBeginnt(null)}
@@ -491,6 +508,29 @@ export function Sitzungen({
         )}
         {festlegenFenster(false)}
         {bearbeitenFenster(false)}
+        {zuruecknehmen && offen.kopf && gruppe.protokolle !== null && (
+          <ConfirmDialog
+            title="Freigabe zurücknehmen?"
+            message="Das Protokoll wird wieder ein Entwurf und lässt sich bearbeiten. Im Protokoll steht, wer es wann zurückgenommen hat. Das Gruppentreffen bleibt abgeschlossen, ein Beitrag in der Gruppe bleibt stehen. Beim nächsten Freigeben kannst du wieder Bescheid geben."
+            confirmLabel="Zurücknehmen"
+            beschaeftigt={zuruecknehmen.laeuft}
+            onConfirm={() => {
+              const ort = { modul, kategorie: gruppe.protokolle!, sitzung: offen.kopf!.sitzung };
+              setZuruecknehmen({ laeuft: true, fehler: null });
+              freigabeZuruecknehmen(ort, ichV).then(
+                () => {
+                  setZuruecknehmen(null);
+                  wunsch.current = offen.schluessel;
+                  laden();
+                },
+                (e: unknown) => setZuruecknehmen({ laeuft: false, fehler: fehlerMeldung(e).text }),
+              );
+            }}
+            onCancel={() => setZuruecknehmen(null)}
+          >
+            {zuruecknehmen.fehler && <p role="alert">{zuruecknehmen.fehler}</p>}
+          </ConfirmDialog>
+        )}
       </>
     );
 
@@ -599,7 +639,7 @@ export function Sitzungen({
               onAngelegt={(g, id) => {
                 // Die neue Sitzung gleich im Editor öffnen – auch, wenn im Fenster eine andere Gruppe gewählt wurde.
                 setNeu(false);
-                wunsch.current = `p:${id}`;
+                wunsch.current = protokollSchluessel(id);
                 if (g === gruppe.id) laden();
                 else setGruppeId(g);
               }}

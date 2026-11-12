@@ -641,6 +641,12 @@
     justify-content: space-between;
   }
 }
+.feldZahl {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
 .balken {
   height: 6px;
   border-radius: 3px;
@@ -1112,4 +1118,224 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 1.45;
+}
+
+// ── Bedingungen (F1c, Entwurf f1-bedingungen-nachweise-v1, Ansicht 1) ──
+.bedingt {
+  box-shadow: inset 2px 0 0 var(--p-accent, #155dfc);
+}
+.bedChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 6px;
+}
+.bedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  font-size: 12px;
+  color: var(--p-accent-text, #155dfc);
+  background: color-mix(in srgb, var(--p-accent, #155dfc) 10%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+
+  svg {
+    flex: none;
+  }
+}
+.bedAntwortChip {
+  margin: 0 0 4px 26px;
+  font-size: 11px;
+}
+.bedKaputt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--p-err, #b42318);
+
+  svg {
+    flex: none;
+  }
+}
+.bedKnopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--p-line, #dde5e6);
+  background: var(--p-card, #fff);
+  color: var(--p-muted, #5b6b70);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: var(--p-accent, #155dfc);
+    color: var(--p-accent-text, #155dfc);
+    background: color-mix(in srgb, var(--p-accent, #155dfc) 10%, transparent);
+  }
+}
+.antwortFest {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 2px;
+}
+.antwort .bedPfeil {
+  color: var(--p-muted, #5b6b70);
+  border: 1px solid transparent;
+  border-radius: 999px;
+
+  &[aria-pressed='true'] {
+    color: var(--p-accent-text, #155dfc);
+    border-color: var(--p-accent, #155dfc);
+    background: color-mix(in srgb, var(--p-accent, #155dfc) 10%, transparent);
+  }
+}
+.bedFenster {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  p {
+    margin: 0;
+  }
+}
+.bedBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--p-line, #dde5e6);
+  border-radius: var(--r-ctrl);
+  padding: 10px 12px;
+}
+.bedBlockKopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bedBlockTitel,
+.bedWort {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-muted, #5b6b70);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bedRegel {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.2fr) 30px;
+  gap: 6px;
+  align-items: center;
+
+  select {
+    height: 34px;
+    min-width: 0;
+    width: 100%;
+    font: inherit;
+    border: 1px solid var(--p-line, #dde5e6);
+    border-radius: var(--r-ctrl);
+    background: var(--p-card, #fff);
+    color: var(--p-text, #17242a);
+    padding: 0 6px;
+  }
+
+  .bedOpBreit {
+    grid-column: span 2;
+  }
+
+  // Schmal: Wort über die ganze Breite, die Auswahlen untereinander, × neben der ersten.
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr) 30px;
+
+    .bedWort {
+      grid-column: 1 / -1;
+    }
+
+    select,
+    .bedOpBreit {
+      grid-column: 1;
+    }
+
+    .bedWeg {
+      grid-column: 2;
+      grid-row: 2;
+    }
+  }
+}
+.bedModus button {
+  white-space: nowrap;
+}
+.bedWeg {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--p-muted, #5b6b70);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.bedPlus {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--p-accent-text, #155dfc);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.bedZiel {
+  display: inline-block;
+  background: color-mix(in srgb, var(--p-accent, #155dfc) 10%, transparent);
+  color: var(--p-accent-text, #155dfc);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.bedDarstellung {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--p-muted, #5b6b70);
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  select,
+  input {
+    height: 32px;
+    font: inherit;
+    border: 1px solid var(--p-line, #dde5e6);
+    border-radius: var(--r-ctrl);
+    background: var(--p-card, #fff);
+    color: var(--p-text, #17242a);
+    padding: 0 8px;
+  }
+
+  input {
+    width: 190px;
+    max-width: 100%;
+  }
+}
+.bedSatz {
+  font-size: 13px;
+  color: var(--p-muted, #5b6b70);
+  background: var(--p-fill, #eef3f3);
+  border-radius: var(--r-ctrl);
+  padding: 7px 10px;
 }

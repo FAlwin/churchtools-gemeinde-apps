@@ -742,3 +742,34 @@ steht.
 - **Historie:** Fund F1 aus dem Test von v0.2.0 (08.11.2026), Entwurf `f1-termin-planen.html` (09.11.2026)
 
 </details>
+
+### TF-ABLAUF-28 · Von der Startseite direkt hin: Gruppe in Planen, Termin per Titel
+
+**Das brauchst du:** Dienstplaner als Planer von mindestens zwei Dienstgruppen; auf der Startseite „Als Nächstes“ und
+„Deine nächsten Dienste“ mit Einträgen.
+
+**Das muss passieren:** Ein Tipp auf der Startseite führt ohne Umweg an die richtige Stelle.
+
+1. Startseite → Karte **Planen** → eine Gruppe (z. B. „Technik · 27 Plätze frei“) antippen → Planen öffnet sich mit
+   **nur dieser Gruppe** und dem Zeitraum **heute bis in 6 Wochen**; oben steht – **blau hinterlegt**, nicht rot –
+   „Nur Technik · nächste 6 Wochen – von der Startseite, nur für jetzt.“ Die freien Plätze in der Matrix ergeben dieselbe
+   Zahl wie auf der Startseite. Auch der Termin-Kopf (am Handy die Datumszettel) zählt **nur Technik**: „alles besetzt“,
+   wenn Technik dort voll ist, auch wenn andere Gruppen noch Lücken haben; „—“, wo Technik an dem Termin keinen Dienst hat.
+2. Einen Termin im Kopf antippen → Termin-Ansicht → „‹ Planen“ → wieder nur Technik, derselbe Zeitraum.
+3. **Gewohnte Ansicht** → Planen mit dem eigenen gemerkten Filter und Zeitraum. Auch über den Reiter „Planen“ kommt der
+   gewohnte Stand – der Besuch hat nichts verstellt. Spaltenbreite, die man währenddessen ändert, bleibt gemerkt.
+4. Im Besuch im Filter eine zweite Gruppe anhaken → oben „Eigene Auswahl“, beide Gruppen sichtbar.
+5. Startseite: Datum oder Titel unter **Als Nächstes** antippen → Termin-Ansicht dieses Termins. Ebenso in **Deine
+   nächsten Dienste** und **Für dich offen** der Titel („Video Regie · Gottesdienst“) oder die Datumskachel; „Tauschen“,
+   „Zusagen“ usw. bleiben eigene Knöpfe.
+6. Planen am Handy: Datum oder Titel des Termins oben öffnen die Termin-Ansicht (wie „Ablauf & Dienste“); in der Tabelle
+   öffnet auch die Datumskachel im Spaltenkopf den Termin.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/TerminLink.tsx`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/App.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `shared/dienstplan/start.ts`
+- **Automatisiert:** ja – `shared/dienstplan/start.test.ts` (`planenZeitraum` gegen die Zählung der Karte), `dienstplaner/src/reiter.test.ts` (Adresse `#/planen/gruppe/<id>`), `dienstplaner/src/Planen.test.tsx` (Besuch: Zeitraum, nur eine Gruppe, Gemerktes bleibt, „Eigene Auswahl“, „Gewohnte Ansicht“; Titel/Kachel am Handy und im Tabellenkopf), `dienstplaner/src/App.test.tsx` (zurück aus dem Termin in den Besuch), `dienstplaner/src/Startseite.test.tsx` (Gruppe → Adresse, Titel und Kachel → Termin); 17 Gegenproben einzeln rot
+- **Historie:** Wünsche 7 und 8 (Alwin 09.11.2026, Bild der Startseite v0.3.0; entschieden 11.11.2026)
+
+</details>

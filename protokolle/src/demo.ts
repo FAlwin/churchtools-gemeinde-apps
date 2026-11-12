@@ -293,6 +293,10 @@ interface Speicher {
   treffen: { id: number; startDate: string; isCanceled: boolean }[];
   /** Anwesenheit je Gruppentreffen (S5-3) – Person → `present` / `absent`; fehlt = `unsure`. */
   anwesenheit: Map<number, Map<number, string>>;
+  /** Abgeschlossene Gruppentreffen (S6-1, bei der Freigabe). */
+  abgeschlossen: Set<number>;
+  /** Beiträge in Gruppen (S6-2, „In der Gruppe Bescheid geben“). */
+  beitraege: { id: number; groupId: number; title: string; content: string }[];
 }
 
 function speicherAnlegen(fall: string): Speicher {
@@ -341,6 +345,8 @@ function speicherAnlegen(fall: string): Speicher {
     termine: [],
     treffen: [],
     anwesenheit: new Map(),
+    abgeschlossen: new Set(),
+    beitraege: [],
   };
 }
 
@@ -496,7 +502,17 @@ function antwort(
     const id = Number(einTreffen[1]);
     const stand = s.anwesenheit.get(id);
     if (!einTreffen[2])
-      return { status: 200, data: { id, isCompleted: false, hasEditingStarted: !!stand } };
+      return {
+        status: 200,
+        data: {
+          id,
+          startDate: s.treffen.find((t) => t.id === id)?.startDate ?? '2026-10-21T17:00:00Z',
+          isCompleted: s.abgeschlossen.has(id),
+          isCanceled: false,
+          comment: null,
+          hasEditingStarted: !!stand,
+        },
+      };
     return {
       status: 200,
       data: LEITUNGSTEAM.map(([personId, firstName, lastName]) => ({
@@ -507,6 +523,13 @@ function antwort(
         },
       })),
     };
+  }
+  // Abschließen bei der Freigabe (S6-1) – wie gemessen (S6-0): ganzer Rumpf mit `startDate`.
+  if (einTreffen && !einTreffen[2] && methode === 'PUT') {
+    if (!rumpf.startDate) return { status: 400, data: null };
+    if (rumpf.isCompleted) s.abgeschlossen.add(Number(einTreffen[1]));
+    else s.abgeschlossen.delete(Number(einTreffen[1]));
+    return { status: 200, data: {} };
   }
   const checkin = /^\/api\/groups\/11\/checkin\/(\d+)$/.exec(pfad);
   const austragen = /^\/api\/groups\/11\/meetings\/(\d+)\/members\/(\d+)$/.exec(pfad);
@@ -627,6 +650,31 @@ function antwort(
     if (methode === 'DELETE' && w) liste.splice(liste.indexOf(w), 1);
     if (methode === 'DELETE') return { status: 204 };
     return { status: methode === 'POST' ? 201 : 200, data: methode === 'GET' ? liste : {} };
+  }
+  // Beiträge (S6-2) – wie gemessen 11.11.2026: `/post/groups` nennt die Gruppen, in denen man schreiben darf
+  // (Fall `ohne-beitraege`: keine), `POST /posts` liefert die ID, `GET /posts/{id}` liest nach.
+  if (pfad === '/api/post/groups')
+    return {
+      status: 200,
+      data:
+        fall === 'ohne-beitraege'
+          ? []
+          : [{ group: { title: 'Leitungsteam', domainIdentifier: '11' }, type: 'postPossible' }],
+    };
+  if (pfad === '/api/posts' && methode === 'POST') {
+    const b = {
+      id: s.naechste++,
+      groupId: Number(rumpf.groupId),
+      title: String(rumpf.title),
+      content: String(rumpf.content),
+    };
+    s.beitraege.push(b);
+    return { status: 201, data: b };
+  }
+  const beitrag = /^\/api\/posts\/(\d+)$/.exec(pfad);
+  if (beitrag && methode === 'GET') {
+    const b = s.beitraege.find((x) => x.id === Number(beitrag[1]));
+    return b ? { status: 200, data: b } : { status: 404, data: null };
   }
   return null;
 }

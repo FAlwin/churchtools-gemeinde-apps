@@ -1,0 +1,37 @@
+// Datum und Titel als Weg in die Termin-Ansicht (Wunsch 8) – sieht aus wie bisher, beim Zeigen wird der Titel blau.
+
+.kachel {
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-tile);
+  background: none;
+  cursor: pointer;
+}
+
+.titel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: inherit;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--blue-ink);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+    border-radius: var(--r-ctrl);
+  }
+}

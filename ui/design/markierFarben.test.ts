@@ -41,3 +41,18 @@ describe('Markier-Farben der Protokolle (K3a)', () => {
     });
   });
 });
+
+describe('Textmarker auf Papier (Protokolle S6-3a)', () => {
+  it('MARKIERT_PAPIER ist `--markiert` der hellen Farben auf Weiß gemischt', () => {
+    const scss = lies('ui/design/_farben.scss');
+    const m = /--markiert:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(scss);
+    expect(m).not.toBeNull();
+    const [r, g, b, a] = [1, 2, 3, 4].map((i) => Number(m![i]));
+    const gemischt = [r, g, b].map((c) => Math.round(255 - a * (255 - c)));
+    const papier = /MARKIERT_PAPIER: Rgb = \[(\d+), (\d+), (\d+)\]/.exec(
+      lies('protokolle/src/farben.ts'),
+    );
+    expect(papier).not.toBeNull();
+    expect([1, 2, 3].map((i) => Number(papier![i]))).toEqual(gemischt);
+  });
+});

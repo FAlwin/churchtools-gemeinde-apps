@@ -17,10 +17,25 @@
  */
 import { z } from 'zod';
 import { ausBase64url, base64url } from '../ct/packen';
+
+/** Lag bis O9-1 (11.11.2026) hier; jetzt in `shared/ct/datum.ts`, weil auch das Organigramm (Gruppenwechsel) es braucht. */
+export { alterAm } from '../ct/datum';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
 import { mitVorgaben, vorlageVon } from './gestaltung';
+import {
+  ANTWORT_MAX,
+  JA_NEIN,
+  KURZ_MAX,
+  antwortBedingungSchema,
+  bedingungFehler,
+  bedingungSchema,
+  bedingungenAufraeumen,
+  feldSichtbar,
+  type AntwortBedingung,
+  type Bedingung,
+} from './bedingungen';
 
 export type Feldtyp =
   | 'name'
@@ -72,6 +87,12 @@ export interface Feld {
    * das Formular bietet sie nicht mehr an.
    */
   verborgen?: string[];
+  /** **Nur zeigen, wenn …** (F1a) – fehlt sie, ist die Frage immer zu sehen (`bedingungen.ts`). */
+  bed?: Bedingung;
+  /** Einzelne Antworten nur wählbar, wenn … – Schlüssel ist die Antwort (F1a, „Gruppenleiter“ nur für Getaufte). */
+  antwortBed?: Record<string, AntwortBedingung>;
+  /** Freiwilliger Kurzname für Regel-Liste und Fenster (Klick-Runde 4); sonst wird die Frage gekürzt. */
+  kurz?: string;
 }
 
 export interface Formular {
@@ -166,26 +187,16 @@ export function setzeGeburtsdatum(f: Formular, an: boolean): Formular {
 
 /**
  * **„Wer meldet sich an?“ ändern** – und ob das Geburtsdatum abgefragt wird. Die EINE Stelle für das Fenster
- * im Reiter Veranstaltung und die Leiste im Baukasten.
+ * im Reiter Veranstaltung und die Leiste im Baukasten. Schaut eine Bedingung auf das Geburtsdatum und wird es
+ * ausgeschaltet, fällt sie mit weg (`bedingungenAufraeumen`, F1c).
  */
 export function mitWer(
   e: OeffentlicheEinstellungen,
   wer: OeffentlicheEinstellungen['wer'],
   geburtsdatum: boolean,
 ): OeffentlicheEinstellungen {
-  return { ...e, wer, formular: setzeGeburtsdatum(e.formular, geburtsdatum) };
-}
-
-/** **Alter am Stichtag** (erster Tag der Veranstaltung), beides `YYYY-MM-DD`. `null`, wenn kein Geburtsdatum. */
-export function alterAm(geburt: string, stichtag: string): number | null {
-  const g = /^(\d{4})-(\d{2})-(\d{2})$/.exec(geburt);
-  const s = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stichtag);
-  if (!g || !s) return null;
-  const [gj, gm, gt] = g.slice(1).map(Number);
-  const [sj, sm, st] = s.slice(1).map(Number);
-  let alter = sj - gj;
-  if (sm < gm || (sm === gm && st < gt)) alter--;
-  return alter < 0 ? null : alter;
+  const formular = bedingungenAufraeumen(setzeGeburtsdatum(e.formular, geburtsdatum)).formular;
+  return { ...e, wer, formular };
 }
 
 /** Eine erziehungsberechtigte Person (Baustein „Erziehungsberechtigte“). */
@@ -285,10 +296,13 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
     }
     if (typeof wert !== 'string' || !wert.trim()) fehlt.push(pfad);
   };
-  for (const x of f.anmeldung) pruefe(x, a.anmeldung[x.id], `anmeldung.${x.id}`);
+  // F1a: Pflicht gilt nur, solange die Frage zu sehen ist.
+  for (const x of f.anmeldung)
+    if (feldSichtbar(f, x, a)) pruefe(x, a.anmeldung[x.id], `anmeldung.${x.id}`);
   if (a.personen.length === 0) fehlt.push('personen');
   a.personen.forEach((p, i) => {
-    for (const x of f.person) pruefe(x, p[x.id], `personen.${i}.${x.id}`);
+    for (const x of f.person)
+      if (feldSichtbar(f, x, a, i)) pruefe(x, p[x.id], `personen.${i}.${x.id}`);
   });
   return fehlt;
 }
@@ -320,6 +334,7 @@ export function pruefeFormular(f: Formular): string[] {
   for (const id of ['name', 'mail', 'priv'])
     if (!f.anmeldung.some((x) => x.id === id && x.zustand === 'pflicht'))
       fehler.push('Name, E-Mail und Datenschutz müssen dabei sein.');
+  fehler.push(...bedingungFehler(f));
   return [...new Set(fehler)];
 }
 
@@ -363,7 +378,7 @@ export function ctAblage(x: Feld): CtAblage {
         ? { ort: 'person', feld: 'birthday' }
         : { ort: 'gruppenfeld', fieldTypeCode: 'date', optionen: [] };
     case 'janein':
-      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: ['Ja', 'Nein'] };
+      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: JA_NEIN };
     case 'check':
       return { ort: 'gruppenfeld', fieldTypeCode: 'checkbox', optionen: [] };
     case 'radio':
@@ -431,6 +446,12 @@ export const SYSTEMFELDER = [
 
 // ── Öffentliche Einstellungen in der Gruppen-Beschreibung ──────────────────────────────────────
 
+/**
+ * Höchstzahl der Felder je Teil (Kontakt / je Person). Bis F1a 30 (aus #474, nie gemessen) – die AC-Mitarbeiter-
+ * Anmeldung braucht mit Hinweisen, Trennlinien und Schritten rund 37. Die eigentliche Grenze sind die 5.000 Zeichen
+ * der Beschreibung (`einstellungenAlsText` meldet sie mit Zahl).
+ */
+export const FELDER_MAX = 60;
 /** Höchstlänge der Gruppen-Beschreibung (gemessen A0: 5.000 geht, 20.000 → 400). */
 export const BESCHREIBUNG_MAX = 5000;
 /**
@@ -655,8 +676,12 @@ const feldSchema = z.object({
   frage: z.string().max(200),
   hilfe: z.string().max(400),
   zustand: z.enum(['aus', 'freiwillig', 'pflicht']),
-  antworten: z.array(z.string().max(80)).max(20),
-  verborgen: z.array(z.string().max(80)).max(20).optional(),
+  antworten: z.array(z.string().max(ANTWORT_MAX)).max(20),
+  verborgen: z.array(z.string().max(ANTWORT_MAX)).max(20).optional(),
+  // Seit F1a. Ein älteres Formular-Paket liest sie nicht (zeigt dann alles) – Paket und Erweiterung zusammen hochladen.
+  bed: bedingungSchema.optional(),
+  antwortBed: z.record(z.string().max(ANTWORT_MAX), antwortBedingungSchema).optional(),
+  kurz: z.string().max(KURZ_MAX).optional(),
 });
 // Farben nur in Hex-Schreibweise – sie landen in einem style-Attribut.
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -684,8 +709,8 @@ const einstellungenSchema = z.object({
     .default(null),
   preis: preisSchema,
   formular: z.object({
-    anmeldung: z.array(feldSchema).max(30),
-    person: z.array(feldSchema).max(30),
+    anmeldung: z.array(feldSchema).max(FELDER_MAX),
+    person: z.array(feldSchema).max(FELDER_MAX),
   }),
   // Seit dem Entwurf v3 (A5) ist jede Angabe einzeln einstellbar. Ältere Einstellungen (nur Vorlage, Farbe,
   // Feldstil, Knöpfe, Text) bleiben lesbar: Was fehlt, kommt aus ihrer Vorlage (`mitVorgaben`). Unbekannte

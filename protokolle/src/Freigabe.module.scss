@@ -1,0 +1,104 @@
+// Freigeben und zurücknehmen (S6-1): Hinweise im Fenster, Vermerk über dem Protokoll.
+@use '@ui/design/mixins' as m;
+
+.hinweise {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 12px;
+    font-size: 14px;
+
+    + li {
+      border-top: 1px solid var(--hair);
+    }
+  }
+}
+
+.zeichen {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-weight: 900;
+}
+
+// Wie die Warnung an der Aufgabe (`EditorBloecke`): rot – kein eigenes Orange (Design-Regel).
+.warn .zeichen {
+  color: var(--red);
+}
+
+.ok .zeichen {
+  color: var(--green);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.ansehen {
+  @include m.textKnopf;
+  align-self: flex-start;
+  font-size: 13.5px;
+}
+
+.info {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.vermerk {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--section);
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Beitrag in der Gruppe (S6-2): Vorschau unter dem Häkchen – wie ein Beitrag, eingerückt unter den Haken.
+.vorschau {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 14px 30px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  font-size: 13.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+.rest {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.45;
+}

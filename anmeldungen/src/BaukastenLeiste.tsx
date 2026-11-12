@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
-import { BAUSTEINE, type Feld, type Feldtyp, type Formular } from '@shared/anmeldung/formular';
+import {
+  BAUSTEINE,
+  FELDER_MAX,
+  type Feld,
+  type Feldtyp,
+  type Formular,
+} from '@shared/anmeldung/formular';
 import {
   EMPFOHLEN,
   bausteinFeld,
@@ -333,6 +339,14 @@ export function BausteineTafel({
         {prozent >= 85 && (
           <small>Es wird knapp – lange Hilfetexte oder der Begrüßungstext kürzen hilft.</small>
         )}
+        {/* Die Grenze je Teil (F1c) – ausgeblendete Felder zählen mit, sie stehen weiter in den Einstellungen. */}
+        <div className={k.feldZahl}>
+          <span>Felder</span>
+          <b>
+            Kontakt {formular.anmeldung.length} von {FELDER_MAX} · je Person{' '}
+            {formular.person.length} von {FELDER_MAX}
+          </b>
+        </div>
       </div>
     </div>
   );

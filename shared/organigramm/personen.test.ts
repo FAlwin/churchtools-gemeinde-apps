@@ -13,6 +13,7 @@ import {
   rollenZahl,
   rollenZurWahl,
   teilbaumPersonen,
+  type PersonenGrenze,
 } from './personen';
 
 const g = (id: number, name: string): OrgGruppe => ({
@@ -321,7 +322,7 @@ describe('Personen für alle ohne Leitung (#915 C)', () => {
       [15, [m(4, 15)]],
     ]);
     const alle = [m(1, 16), m(3, 15), m(4, 15)];
-    const grenze = (id: number) => (id === 15 ? 'alle' : 'zahl') as const;
+    const grenze: PersonenGrenze = (id) => (id === 15 ? 'alle' : 'zahl');
     expect(
       gezeigtePersonen(alle, [7, 15], MG, R, new Set(), grenze).map((x) => x.personId),
     ).toEqual([4]);

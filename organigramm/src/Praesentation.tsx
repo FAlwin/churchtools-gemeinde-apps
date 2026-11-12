@@ -44,9 +44,10 @@ interface Props {
   mitglieder: MitgliederDaten;
   /** „Neue Gliederung | Heute“ (O7-4) – nur für Gruppen-Admins mit einem Plan; sonst fehlt der Umschalter. */
   stand?: { wert: Stand; onWechsel: (s: Stand) => void };
-  /** Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. */
-  /** `grenze`: wie viel man von den Personen je Gruppe sehen darf (#915 C) – für das Diagramm; die Listen und die
-   * Leitung hat `praesentationAus` schon danach gerechnet. */
+  /**
+   * Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. `grenze`: wie viel man von den Personen
+   * je Gruppe sehen darf (#915 C) – für das Diagramm; Listen und Leitung hat `praesentationAus` schon danach gerechnet.
+   */
   personen: { wahl: PersonenWahl; onWahl: (w: PersonenWahl) => void; grenze?: PersonenGrenze };
   /** „Welche Rollen“ (#915) – derselbe gemerkte Filter wie im Reiter; gilt für Diagramme UND Listen. */
   rollenFilter: RollenFilter;

@@ -1719,7 +1719,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     sichtbarkeitSpeichern.mockResolvedValue({
       ok: false,
       grund: 'konflikt',
-      jetzt: stand({ typen: [], gruppen: [47] }, 4, 'Bea'),
+      jetzt: stand({ typen: [], gruppen: [47], personen: 'zahl' }, 4, 'Bea'),
     });
     render(<App />);
     fireEvent.click(
@@ -1733,6 +1733,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     );
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Verteiler/ }).checked).toBe(true);
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Café/ }).checked).toBe(false);
+    expect(d.getByRole<HTMLInputElement>('radio', { name: /^Nur Zahlen/ }).checked).toBe(true);
     expect(screen.queryByRole('region', { name: 'Café' })).toBeNull();
   });
 });
@@ -1790,6 +1791,8 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
     const gd = screen.getByRole('region', { name: 'Gottesdienst' });
     expect(gd.textContent).toContain('Leitung: 1 Leiter');
     expect(gd.textContent).not.toContain('Alwin Friesen');
+    // auch kein Bild der Leitung (es trägt den Namen als Titel)
+    expect(gd.querySelector('[title="Alwin Friesen"]')).toBeNull();
     expect(screen.getByRole('note').textContent).toContain('die Namen von Personen');
 
     fireEvent.click(zeile('Technik'));
@@ -1834,6 +1837,7 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
   });
 
   it('Präsentation: Leitung auf der Kachel gezählt, Spalten ohne Namen – die Zahlen zählen alle', async () => {
+    localStorage.setItem('organigramm-personen', '"alle"');
     stufe('zahl');
     ohneLeitung();
     render(<App />);
@@ -1849,6 +1853,14 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
     expect(d.textContent).not.toContain('Carl Clau');
     expect(d.textContent).not.toContain('Dora Dorn');
     expect(within(d).getByText('3 Personen ausgeblendet')).toBeTruthy();
+    // Im Diagramm der Präsentation dieselbe Grenze – trotz eigener Wahl „Alle“.
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    expect(d.textContent).toContain('1 Mitarbeiter');
+    expect(d.textContent).not.toContain('Carl Clau');
   });
 
   it('PDF: zeigt nie mehr als der Reiter', async () => {

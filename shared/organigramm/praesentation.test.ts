@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, type Mitglied } from './mitglieder';
+import type { PersonenGrenze } from './personen';
 import { bereicheSortiert, praesentationAus } from './praesentation';
 
 const g = (id: number, name: string): OrgGruppe => ({
@@ -174,7 +175,7 @@ describe('Rollenfilter in den Listen (#915)', () => {
 
 describe('Personen für alle ohne Leitung in der Präsentation (#915 C)', () => {
   // Wer Ton (15) leitet: dort und im Ton-Kurs alle Namen, sonst nur Zahlen.
-  const grenze = (id: number) => (id === 15 || id === 72 ? 'alle' : 'zahl') as const;
+  const grenze: PersonenGrenze = (id) => (id === 15 || id === 72 ? 'alle' : 'zahl');
   const Q = praesentationAus(BAUM, MITGLIEDER, ROLLEN, name, new Set(), grenze);
   const qb = (n: string) => Q.bereiche.find((b) => b.knoten.gruppe.name === n)!;
   const qs = (b: string, n: string) => qb(b).spalten.find((x) => x.knoten.gruppe.name === n)!;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rollenAus } from '@shared/organigramm/mitglieder';
+import type { PersonenGrenze } from '@shared/organigramm/personen';
 import { kastenInhalt, pdfPersonenWahl, personenInhalt, rollenKnopfText } from './kastenPersonen';
 import type { MitgliederStand } from './ladeMitglieder';
 
@@ -124,7 +125,7 @@ describe('Grenze im Kästchen (#915 C)', () => {
       [2, { id: 2, name: 'Bea', bild: null, initialen: 'B' }],
     ]),
   };
-  const grenze = (id: number) => (id === 1 ? 'zahl' : 'alle') as const;
+  const grenze: PersonenGrenze = (id) => (id === 1 ? 'zahl' : 'alle');
 
   it('die eigene Wahl gilt höchstens bis zur Grenze der Gruppe – je Gruppe', () => {
     const inhalt = personenInhalt(daten, ROLLEN, 'alle', undefined, grenze);

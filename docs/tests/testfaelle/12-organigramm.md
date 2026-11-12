@@ -486,3 +486,45 @@ Niemand erscheint, der die Rolle nicht hat.
   (Häkchen je Name, kleiner Hinweis im Kästchen, Präsentation Diagramme und Listen)
 
 </details>
+
+### TF-ORG-16 · Personen für alle ohne Leitung (Sichtbarkeitsstufe)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; ein Gruppen-Admin und zwei weitere Personen: eine, die eine
+Untergruppe leitet (z. B. Ton unter Technik), und eine, die nichts leitet. Laptop.
+
+**Das muss passieren:** Wer nichts leitet, sieht höchstens, was die Admins eingestellt haben – überall, wo Namen stehen.
+Leitungen sehen ihre Gruppen voll, Admins alles. Nichts wird gespeichert, wenn etwas nicht lesbar ist.
+
+1. Als Admin **Einstellungen**: Unter „Personen für alle ohne Leitung“ vier Stufen, darunter „Das ist nur eine
+   Anzeige-Regel …“. **Nur Zahlen** wählen: Ein Hinweis zum Leserecht erscheint, unten steht „… · Personen: Nur
+   Zahlen“. Speichern. Über dem Baum: „Für alle ausgeblendet: die Namen von Personen …“. Der Admin sieht weiter alle
+   Namen.
+2. Als Person ohne Leitung: **Karten** zeigen „Leitung: 1 Leiter“ statt Namen, keine Bilder. **Liste** mit Personen
+   **Alle**: nur Zahlen je Rolle. Ein Gruppenfenster: Überschriften mit Zahl, keine Namen, darunter „Namen sind hier
+   ausgeblendet …“.
+3. **Präsentieren**: Kacheln mit „1 Leiter“ statt Namen, die Zahlen stimmen; in einem Bereich keine Namen in den
+   Spalten, „N Personen ausgeblendet“; **Von oben** nur Zahlen. **PDF / Drucken**: ebenso.
+4. Als Leitung von Ton: In Ton (und darunter) alle Namen, in Technik und Gottesdienst nur Zahlen; in der Spalte Technik
+   der Präsentation stehen nur die Namen aus Ton.
+5. Admin stellt **Wie „Rollen“**: Leitung und Organisatoren mit Namen, Mitarbeiter als Zahl. Dann **Keine Personen**:
+   Kästchen ohne Personen, das Gruppenfenster zeigt nur „Die Personen sind hier ausgeblendet …“, Kacheln „1 Leiter“.
+6. Netz kurz trennen (oder in den Entwicklerwerkzeugen die Anfrage blockieren) und neu laden: Hinweis „… ließ sich
+   gerade nicht laden – zu sehen sind alle Gruppen, Personen vorsichtshalber ohne Namen“; **Erneut versuchen** bei
+   Netz: Die eingestellte Stufe gilt wieder. In ChurchTools hat sich nichts geändert.
+7. Zum Schluss als Admin wieder **Alle Namen** speichern.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/sichtbereich.ts`, `shared/organigramm/sichtbarkeit.ts`,
+  `shared/organigramm/praesentation.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/Organigramm.tsx`,
+  `organigramm/src/GruppenFenster.tsx`, `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`,
+  `organigramm/src/EinstellungenFenster.tsx`, `organigramm/src/stufeTexte.ts`, `organigramm/src/App.tsx`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Stufen, Namen je Stufe, Teilbaum, Leitung gezählt),
+  `sichtbereich.test.ts` (Grenze je Gruppe), `sichtbarkeit.test.ts` (alte Werte, Unbekanntes), `kastenPersonen.test.ts`,
+  `praesentation.test.ts`, `App.test.tsx` (Karten, Liste, Gruppenfenster, Präsentation, PDF, Leitung, Admin, nicht
+  lesbar, kein Leserecht, Einstellungen); mit echten Personen und Rechten prüft es nur dieser Fall
+- **Historie:** #915 Scheibe C; Entscheidungen 12.11.2026 (vier Stufen, Leitung streng nach Stufe, nicht lesbar →
+  keine Namen, kein Leserecht → Admins warnen)
+
+</details>

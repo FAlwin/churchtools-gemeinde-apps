@@ -36,6 +36,6 @@ describe('sichtbarkeitAus – was gespeichert ist (O7b-7)', () => {
 
   it('etwasAusgeblendet', () => {
     expect(etwasAusgeblendet(ALLES_SICHTBAR)).toBe(false);
-    expect(etwasAusgeblendet({ typen: [], gruppen: [3] })).toBe(true);
+    expect(etwasAusgeblendet({ typen: [], gruppen: [3], personen: 'alle' })).toBe(true);
   });
 });

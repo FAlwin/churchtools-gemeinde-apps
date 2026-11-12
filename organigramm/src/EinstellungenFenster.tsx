@@ -238,7 +238,8 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
           <p className={styles.warnung} role="note">
             Die Regel greift nur bei Personen, die die Kategorie „Was das Organigramm zeigt“ lesen
             dürfen. Wem in ChurchTools dieses Recht fehlt, sieht weiter alle Namen. Also allen, die
-            das Organigramm öffnen, dort „Daten sehen“ geben (Anleitung: Abschnitt „Speicher“).
+            das Organigramm öffnen, dort „Daten sehen“ geben (Anleitung: „Was die Erweiterung
+            speichert“).
           </p>
         )}
       </div>

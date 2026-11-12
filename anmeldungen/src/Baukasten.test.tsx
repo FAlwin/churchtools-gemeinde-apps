@@ -13,10 +13,13 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { vorlageVon } from '@shared/anmeldung/gestaltung';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import type { Bedingung } from '@shared/anmeldung/bedingungen';
 import * as FF from './formularFelder';
 import * as EI from './einrichten';
 import { ApiError } from '@ui/ct/fehler';
 import { Baukasten } from './Baukasten';
+import { _blickVergessen } from './baukastenBlick';
+import { RegelListe } from './RegelListe';
 import { PAUSE_DESIGN_MS, PAUSE_FELD_MS } from './useEntwurf';
 import { fehlerMeldung } from './zustand';
 
@@ -25,6 +28,7 @@ vi.mock('./formularFelder', () => ({
   feldTypAendern: vi.fn(),
   feldEntfernen: vi.fn(),
   feldEinordnen: vi.fn(),
+  regelSpeichern: vi.fn(),
   ctFelderLesen: vi.fn(),
   antwortenZaehlen: vi.fn(),
 }));
@@ -104,9 +108,11 @@ function lage(container: HTMLElement) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  _blickVergessen();
   ff.feldSpeichern.mockResolvedValue({} as never);
   ff.feldEntfernen.mockResolvedValue({ art: 'geloescht' });
   ff.feldEinordnen.mockResolvedValue(undefined);
+  ff.regelSpeichern.mockResolvedValue(undefined);
   ff.ctFelderLesen.mockResolvedValue(
     new Map([
       [
@@ -1270,5 +1276,250 @@ describe('Baukasten (F1c): Bedingungen einstellen', () => {
       ),
     ).toBeTruthy();
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+});
+
+// ── F1d: Reiter „Formular | Bedingungen“ (Entwurf F1 Ansicht 1; Alwin 12.11.2026: Reiter über dem Formular) ──
+describe('Baukasten (F1d): Reiter „Bedingungen“', () => {
+  const KIDS: Bedingung = { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Kids' }] };
+  /** „Gruppe“ (f1: Minis/Kids), danach f2 und f3 – mit `bed2`/`bed3` als Bedingung. */
+  function mitZielen(bed2?: Bedingung, bed3?: Bedingung): OeffentlicheEinstellungen {
+    const e = einstellungen();
+    for (const [id, frage, bed] of [
+      ['f2', 'Welche Kids-Gruppe?', bed2],
+      ['f3', 'Wer holt ab?', bed3],
+    ] as const)
+      e.formular.person.push({
+        id,
+        art: 'eigen',
+        typ: 'text',
+        frage,
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: [],
+        ...(bed ? { bed } : {}),
+      });
+    return e;
+  }
+  const dialog = () => screen.getByRole('dialog');
+  const reiter = (name: RegExp) => screen.getByRole('button', { name });
+  const karten = () =>
+    screen.getAllByRole('listitem').filter((li) => li.textContent?.startsWith('wenn'));
+
+  it('Reiter über dem Formular, mit Zahl; „Bedingungen“ zeigt die Liste ohne Leiste, „Formular“ wieder das Formular', () => {
+    const { huelle } = zeigen(mitZielen(KIDS));
+    expect(reiter(/^Bedingungen 1$/).getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(reiter(/^Bedingungen/));
+    expect(reiter(/^Bedingungen/).getAttribute('aria-pressed')).toBe('true');
+    expect(karten()).toHaveLength(1);
+    expect(karten()[0].textContent).toContain('„Gruppe“ ist Kids');
+    expect(karten()[0].textContent).toContain('zeige Welche Kids-Gruppe?');
+    // Ohne Bausteine-Leiste, ohne Computer/Handy und ohne „+ Baustein“ unten.
+    expect(screen.queryByRole('complementary', { name: 'Bausteine und Design' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Größe der Ansicht' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Baustein' })).toBeNull();
+    expect(huelle('f2')).toBeNull();
+    fireEvent.click(reiter(/^Formular$/));
+    expect(huelle('f2')).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Bausteine und Design' })).toBeTruthy();
+  });
+
+  it('der Reiter bleibt, wenn der Baukasten neu aufgebaut wird („Rückgängig“ lädt die Veranstaltung neu)', () => {
+    const erst = zeigen(mitZielen(KIDS));
+    fireEvent.click(reiter(/^Bedingungen/));
+    erst.unmount();
+    const dann = zeigen(mitZielen(KIDS));
+    expect(reiter(/^Bedingungen/).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(reiter(/^Formular$/));
+    dann.unmount();
+    zeigen(mitZielen(KIDS));
+    expect(reiter(/^Formular$/).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('gleiche Bedingungen stehen als EINE Regel mit beiden Zielen', () => {
+    zeigen(mitZielen(KIDS, KIDS));
+    expect(reiter(/^Bedingungen 1$/)).toBeTruthy();
+    fireEvent.click(reiter(/^Bedingungen/));
+    expect(karten()).toHaveLength(1);
+    expect(karten()[0].textContent).toContain('zeige Welche Kids-Gruppe?Wer holt ab?');
+  });
+
+  it('ohne Regeln: der Hinweis, wie man eine anlegt', () => {
+    zeigen(mitZielen());
+    fireEvent.click(reiter(/^Bedingungen 0$/));
+    expect(screen.getByText(/Noch keine Bedingungen/)).toBeTruthy();
+  });
+
+  it('„Neue Regel“ mit mehreren Zielen → EIN Speichern für alle, gleich in der Liste', async () => {
+    const { gespeichert } = zeigen(mitZielen());
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: 'Neue Regel' }));
+    expect(within(dialog()).getByText('Neue Regel')).toBeTruthy();
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'f1' } });
+    fireEvent.change(within(dialog()).getByLabelText('Antwort 1'), { target: { value: 'Kids' } });
+    // Ohne Ziel lässt sich nichts speichern.
+    expect(
+      within(dialog()).getByRole<HTMLButtonElement>('button', { name: 'Speichern' }).disabled,
+    ).toBe(true);
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: /Wer holt ab\?/ }));
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: /Welche Kids-Gruppe\?/ }));
+    expect(
+      within(dialog()).getByText(
+        'Diese 2 Felder erscheinen nur, wenn „Gruppe“ ist Kids. Pflicht gilt nur, solange sie zu sehen ist.',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.regelSpeichern).toHaveBeenCalledTimes(1));
+    // Die Ziele in der Reihenfolge des Formulars.
+    expect(ff.regelSpeichern).toHaveBeenCalledWith(91, [], [{ id: 'f2' }, { id: 'f3' }], KIDS);
+    await waitFor(() => expect(gespeichert).toHaveBeenCalledWith('Regel gespeichert.', true));
+    expect(karten()).toHaveLength(1);
+    expect(reiter(/^Bedingungen 1$/)).toBeTruthy();
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('keine Kreise: Ziele nur nach der Quelle, Quellen nur vor allen gewählten Zielen', () => {
+    zeigen(mitZielen());
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: 'Neue Regel' }));
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'f1' } });
+    const ziele = () =>
+      within(dialog())
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')!.textContent);
+    expect(ziele()).toContain('Welche Kids-Gruppe?');
+    expect(ziele()).not.toContain('Gruppe'); // nicht auf sich selbst
+    // „Wer holt ab?“ gewählt → „Welche Kids-Gruppe?“ (davor) ist Quelle, „Wer holt ab?“ selbst nicht.
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: /Wer holt ab\?/ }));
+    const quellen = [...within(dialog()).getByLabelText<HTMLSelectElement>('Frage 1').options].map(
+      (o) => o.textContent,
+    );
+    expect(quellen).toContain('Welche Kids-Gruppe?');
+    expect(quellen).not.toContain('Wer holt ab?');
+    // Quelle „Welche Kids-Gruppe?“ → als Ziel bleibt nur, was danach steht.
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'f2' } });
+    expect(ziele()).not.toContain('Welche Kids-Gruppe?');
+    expect(ziele()).toContain('Wer holt ab?');
+  });
+
+  it('„Bearbeiten“ ändert die Regel für alle Ziele; ein abgewähltes Ziel verliert sie', async () => {
+    zeigen(mitZielen(KIDS, KIDS));
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: /^Regel bearbeiten/ }));
+    expect(within(dialog()).getByText('Regel bearbeiten')).toBeTruthy();
+    fireEvent.change(within(dialog()).getByLabelText('Antwort 1'), { target: { value: 'Minis' } });
+    fireEvent.click(within(dialog()).getByRole('checkbox', { name: /Wer holt ab\?/ }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.regelSpeichern).toHaveBeenCalledTimes(1));
+    const MINIS = { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Minis' }] };
+    expect(ff.regelSpeichern).toHaveBeenCalledWith(
+      91,
+      [{ id: 'f2' }, { id: 'f3' }],
+      [{ id: 'f2' }],
+      MINIS,
+    );
+    // Gleich zu sehen: Die Liste hat jetzt nur noch „Welche Kids-Gruppe?“ an dieser Regel.
+    expect(karten()[0].textContent).toContain('„Gruppe“ ist Minis');
+    expect(karten()[0].textContent).not.toContain('Wer holt ab?');
+  });
+
+  it('„Regel entfernen“ nimmt sie von allen Zielen', async () => {
+    const { gespeichert } = zeigen(mitZielen(KIDS, KIDS));
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: /^Regel bearbeiten/ }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Regel entfernen' }));
+    await waitFor(() => expect(ff.regelSpeichern).toHaveBeenCalledTimes(1));
+    const beide = [{ id: 'f2' }, { id: 'f3' }];
+    expect(ff.regelSpeichern).toHaveBeenCalledWith(91, beide, beide, null);
+    await waitFor(() => expect(gespeichert).toHaveBeenCalledWith('Regel entfernt.', true));
+    expect(screen.getByText(/Noch keine Bedingungen/)).toBeTruthy();
+  });
+
+  it('ein Feld mit anderer Bedingung: das Fenster sagt vorher, dass sie ersetzt wird', () => {
+    zeigen(mitZielen(undefined, { ...KIDS, regeln: [{ feld: 'f1', op: 'ist', wert: 'Minis' }] }));
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: 'Neue Regel' }));
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'f1' } });
+    expect(
+      within(dialog()).getByRole('checkbox', {
+        name: /Wer holt ab\? \(hat schon eine andere Bedingung – wird ersetzt\)/,
+      }),
+    ).toBeTruthy();
+    expect(within(dialog()).getByRole('checkbox', { name: 'Welche Kids-Gruppe?' })).toBeTruthy();
+  });
+
+  it('Antwort-Regel: „nur wählbar in“ mit Darstellung, Ziele bleiben', async () => {
+    const e = mitZielen();
+    e.formular.person.push({
+      id: 'f4',
+      art: 'eigen',
+      typ: 'radio',
+      frage: 'Dienst',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: ['Küche', 'Leitung'],
+      antwortBed: { Leitung: { ...KIDS, art: 'grau', grund: 'nur für Kids' } },
+    });
+    zeigen(e);
+    fireEvent.click(reiter(/^Bedingungen 1$/));
+    expect(karten()[0].textContent).toContain(
+      '„Leitung“ nur wählbar in Dienst · sonst ausgegraut („nur für Kids“)',
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Regel bearbeiten/ }));
+    expect(within(dialog()).queryAllByRole('checkbox')).toHaveLength(0);
+    fireEvent.change(within(dialog()).getByLabelText('Darstellung'), { target: { value: 'weg' } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ff.regelSpeichern).toHaveBeenCalledTimes(1));
+    const ziel = [{ id: 'f4', antwort: 'Leitung' }];
+    expect(ff.regelSpeichern).toHaveBeenCalledWith(91, ziel, ziel, { ...KIDS, art: 'weg' });
+  });
+
+  it('eine kaputte Regel steht rot in der Liste', () => {
+    zeigen(mitZielen({ ...KIDS, regeln: [{ feld: 'f1', op: 'ist', wert: 'Teens' }] }));
+    fireEvent.click(reiter(/^Bedingungen/));
+    expect(within(karten()[0]).getByRole('alert').textContent).toContain(
+      'Die Antwort „Teens“ gibt es bei „Gruppe“ nicht mehr.',
+    );
+  });
+
+  it('Reiter wechseln speichert das angefangene Feld zuerst', async () => {
+    const { huelle } = zeigen(mitZielen());
+    fireEvent.click(huelle('f2'));
+    fireEvent.change(screen.getByLabelText('Hilfetext'), { target: { value: 'z. B. Löwen' } });
+    fireEvent.click(reiter(/^Bedingungen/));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ id: 'f2', hilfe: 'z. B. Löwen' });
+  });
+
+  it('Fenster am Feld: teilen sich mehrere Felder die Bedingung, sagt es das', () => {
+    const { huelle } = zeigen(mitZielen(KIDS, KIDS));
+    fireEvent.click(huelle('f2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Bedingung ändern' }));
+    expect(
+      within(dialog()).getByText(
+        'Dieselbe Bedingung haben auch: „Wer holt ab?“. Hier änderst du sie nur für diese Frage; gemeinsam geht es im Reiter „Bedingungen“.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('eine Regel, deren Quelle hinter dem Ziel steht: erst eine gültige Quelle wählen, dann speichern', () => {
+    // Altbestand: „Welche Kids-Gruppe?“ schaut auf „Wer holt ab?“ – das steht dahinter.
+    zeigen(mitZielen({ ...KIDS, regeln: [{ feld: 'f3', op: 'ausgefuellt' }] }));
+    fireEvent.click(reiter(/^Bedingungen/));
+    fireEvent.click(screen.getByRole('button', { name: /^Regel bearbeiten/ }));
+    const speichern = () =>
+      within(dialog()).getByRole<HTMLButtonElement>('button', { name: 'Speichern' });
+    expect(within(dialog()).getByLabelText<HTMLSelectElement>('Frage 1').value).toBe('');
+    expect(speichern().disabled).toBe(true);
+    fireEvent.change(within(dialog()).getByLabelText('Frage 1'), { target: { value: 'f1' } });
+    expect(speichern().disabled).toBe(false);
+  });
+
+  it('ohne mögliche Quelle lässt sich keine neue Regel anlegen', () => {
+    const fo = { anmeldung: [], person: [] };
+    render(<RegelListe formular={fo} darf onBearbeiten={vi.fn()} />);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Neue Regel' }).disabled).toBe(
+      true,
+    );
   });
 });

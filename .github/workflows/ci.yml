@@ -10,6 +10,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # Üblich 5–7 Minuten. Grenze gegen hängende Läufe – ohne sie hing am 11.11.2026 ein Job 6 h (siehe e2e in ci.yml).
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
 
@@ -80,6 +82,9 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # Ein grüner Lauf braucht 3–4 Minuten. Ohne Grenze hing die Browser-Installation am 11.11.2026 sechs Stunden lang
+    # (Ubuntu-Paketserver nicht erreichbar), bis GitHub den Job abbrach – mit Grenze scheitert er schnell und kann neu laufen.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -103,6 +108,8 @@ jobs:
   # Entwickler-Pakete – fehlt dort etwas, das der Server braucht, merkt das sonst erst Staging (oder Watchtower in Prod).
   docker-start:
     runs-on: ubuntu-latest
+    # Üblich gut 1 Minute. Grenze gegen hängende Läufe – ohne sie hing am 11.11.2026 ein Job 6 h (siehe e2e in ci.yml).
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 

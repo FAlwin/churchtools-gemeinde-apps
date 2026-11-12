@@ -26,6 +26,10 @@ const ERLAUBT: Record<string, string> = {
   'k.schrift': 'Schrift im Design',
   'k.logoKachel': 'Logo zum Auswählen',
   'k.pflicht': 'Pflicht/freiwillig umschalten',
+  'k.bedKnopf':
+    '„Nur zeigen, wenn …“ / „Bedingung ändern“ im Fuß des Felds – Pille aus Entwurf F1, zeigt an, ob es eine Bedingung gibt (F1c)',
+  'k.bedPfeil':
+    'Pfeil an einer Antwort – „nur wählbar, wenn …“, markiert, wenn es eine Bedingung gibt (F1c)',
   'a.pille': 'Empfänger-Pille in der Rundmail',
   // Klickbare Zeilen und Überschriften – die ganze Fläche öffnet etwas.
   't.oeffnen':
@@ -41,12 +45,14 @@ const ERLAUBT: Record<string, string> = {
   'f.textKnopf': 'Textlink im Fenster',
   'd.weitere': 'Textlink „＋ weitere“',
   'k.antwortNeu': 'Textlink „＋ Antwort“',
+  'k.bedPlus': 'Textlink „+ Bedingung“ im Bedingungs-Fenster (F1c)',
   'v.zurueck': '„‹ Übersicht“ / „‹ Vorbereiten“',
   // Besondere Lagen.
   'k.bildKnopf': 'liegt über dem Titelbild',
   'k.info': 'Symbol „i“ neben einer Frage',
   'rueckgaengigStile.knopf': 'gemeinsam aus ui/fenster/aenderung',
   'v.leisteZu': 'Schließen-Kreuz der Rückgängig-Leiste',
+  'k.bedWeg': 'Kreuz am Ende einer Bedingungszeile – wie das Kreuz an einer Antwort (F1c)',
 };
 
 /** Alle `x.y`-Klassen an `<button className={…}>` in den Bildschirmen der Erweiterung, mit Fundort. */

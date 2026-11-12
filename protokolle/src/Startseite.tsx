@@ -16,6 +16,7 @@ import {
 import {
   meineAntwort,
   naechsteSitzungen,
+  protokollSchluessel,
   type Antwort,
   type Sitzung,
 } from '@shared/protokolle/sitzungen';
@@ -316,7 +317,7 @@ export function Startseite({
           zeitzone={gemeindeZeitzone()}
           onAngelegt={(g, id) => {
             setNeu(false);
-            onSitzung(g, `p:${id}`);
+            onSitzung(g, protokollSchluessel(id));
           }}
           onClose={() => setNeu(false)}
         />

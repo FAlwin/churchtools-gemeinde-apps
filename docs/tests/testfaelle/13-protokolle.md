@@ -255,3 +255,33 @@ macht es wieder zum Entwurf mit Vermerk; das Treffen bleibt abgeschlossen.
 - **Historie:** S6-1 (11.11.2026)
 
 </details>
+
+### TF-PROT-10 · Beim Freigeben in der Gruppe Bescheid geben
+
+**Das brauchst du:** In der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel beginnt mit „TEST“) in einer
+Gruppe, deren Typ Beiträge erlaubt und in der du „Beitrag gruppenintern erstellen“ hast, dazu ein Test-Protokoll in
+Gruppe 194 (Typ „Anmeldung“, ohne Beiträge). Danach Beitrag und Test-Protokolle aufräumen. Achtung: Ein Beitrag kann
+die Mitglieder der Gruppe benachrichtigen – nur in einer Gruppe nur mit dir (und Spike) testen.
+
+**Das muss passieren:** Wo Beiträge gehen, hat das Freigabe-Fenster das Häkchen „In der Gruppe Bescheid geben“ (an) mit
+Vorschau; nach dem Freigeben steht der Beitrag in der Gruppe, und „Protokoll öffnen“ führt direkt in die Sitzung. In
+Gruppe 194 gibt es kein Häkchen.
+
+1. In ChurchTools auf **Protokolle** → **Sitzungen** → das Test-Protokoll der Gruppe mit Beiträgen öffnen → **Freigeben**.
+2. Das Fenster zeigt **In der Gruppe Bescheid geben** (Häkchen an) und darunter „Protokoll vom … ist freigegeben“.
+   Häkchen aus: Die Vorschau verschwindet. Wieder an.
+3. **Freigeben**: Das Protokoll öffnet sich zum Lesen.
+4. In ChurchTools die Gruppe → **Beiträge**: „Protokoll vom … ist freigegeben“ von dir, darunter der Satz und der Link
+   „Protokoll öffnen“; Kommentare sind aus.
+5. **Protokoll öffnen** antippen: Die Protokolle öffnen sich direkt bei dieser Sitzung; die Adresse endet danach auf
+   `#/sitzungen`.
+6. Test-Protokoll in Gruppe 194 → **Freigeben**: kein Häkchen „In der Gruppe Bescheid geben“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/beitrag.ts`, `protokolle/src/beitragSchreiben.ts`, `protokolle/src/FreigabeFenster.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/reiter.ts`, `protokolle/src/App.tsx`
+- **Automatisiert:** ja – `shared/protokolle/beitrag.test.ts` (Text, Markdown, `/post/groups`), `protokolle/src/beitragSchreiben.test.ts` (mit dem ChurchTools-Nachbau: anlegen und nachlesen, abgelehnt, unklar, Nachlesen scheitert, nicht übernommen), `protokolle/src/ProtokollSchreiben.test.tsx` (Häkchen, Vorschau, „Nochmal versuchen“ nur für Wiederholbares), `protokolle/src/reiter.test.ts`, `protokolle/src/App.test.tsx` (Direktlink); wie der Beitrag in ChurchTools aussieht und benachrichtigt, nur in der Test-Instanz
+- **Historie:** S6-2 (11.11.2026)
+
+</details>

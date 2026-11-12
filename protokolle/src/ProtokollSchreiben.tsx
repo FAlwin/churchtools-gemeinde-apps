@@ -74,6 +74,11 @@ import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
 import { ZurueckVermerk } from './FreigabeVermerk';
 import { festhaltenFuerFreigabe } from '@shared/protokolle/festePunkte';
 import { freigabeHinweise, type Hinweis } from '@shared/protokolle/freigabe';
+import { freigabeBeitrag, type Beitrag } from '@shared/protokolle/beitrag';
+import { ctBasis } from '@ui/ct/verbindung';
+import { modulPort } from '@ui/ct/modulPort';
+import { beitragMoeglich, beitragSchritt } from './beitragSchreiben';
+import { sitzungsLink } from './reiter';
 import type { TreffenStand } from '@shared/protokolle/anwesenheit';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
 import ansicht from './SitzungAnsicht.module.scss';
@@ -555,12 +560,15 @@ export function ProtokollSchreiben({
     ? []
     : offeneFuer(vorschlaege, sitzung, kommend, heuteImKalender(new Date(), zone), zone);
 
-  // Freigeben (S6-1): Hinweise im Fenster – die Anwesenheit kommt frisch aus ChurchTools nach.
+  // Freigeben (S6-1): Hinweise im Fenster – die Anwesenheit kommt frisch aus ChurchTools nach. Ob ein Beitrag in der
+  // Gruppe geht (S6-2), ebenso; bis beides da ist, wartet „Freigeben“.
   const [freigabe, setFreigabe] = useState<{
-    laedt: boolean;
+    laedtAnwesenheit: boolean;
+    laedtBeitrag: boolean;
     hinweise: Hinweis[];
     zusammenfassung: string;
     treffen: number | null;
+    beitrag: Beitrag | null;
   } | null>(null);
   const freigabeOeffnen = () => {
     const d = editor.current?.dokument() ?? dok;
@@ -575,15 +583,32 @@ export function ProtokollSchreiben({
         anwesenheit,
         offeneVorschlaege,
       });
-    setFreigabe({ laedt: treffen !== null, treffen, ...mit(null) });
+    setFreigabe({
+      laedtAnwesenheit: treffen !== null,
+      laedtBeitrag: true,
+      treffen,
+      beitrag: null,
+      ...mit(null),
+    });
     if (treffen !== null)
       anwesenheitLesen(gruppeId, treffen).then(
-        (a) => setFreigabe((f) => f && { ...f, laedt: false, ...mit(a) }),
+        (a) => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false, ...mit(a) }),
         // Lesen gescheitert: ohne Anwesenheits-Hinweis weiter – Freigeben bleibt möglich.
-        () => setFreigabe((f) => f && { ...f, laedt: false }),
+        () => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false }),
       );
+    const beitrag = freigabeBeitrag({
+      titel: laden.art === 'bereit' ? laden.kopf.titel : sitzung.titel,
+      beginn: sitzung.beginn,
+      zeitzone,
+      link: sitzungsLink(ctBasis(), modulPort.kuerzel() ?? 'protokolle', gruppeId, ort.sitzung),
+    });
+    beitragMoeglich(gruppeId).then(
+      (ja) => setFreigabe((f) => f && { ...f, laedtBeitrag: false, beitrag: ja ? beitrag : null }),
+      // Nicht feststellbar: ohne Häkchen weiter – Freigeben bleibt möglich, der Beitrag ist Beiwerk.
+      () => setFreigabe((f) => f && { ...f, laedtBeitrag: false }),
+    );
   };
-  const freigebenJetzt = async (): Promise<FreigabeFolge> => {
+  const freigebenJetzt = async (bescheid: boolean): Promise<FreigabeFolge> => {
     const st = steuerung.current;
     if (!st || !(await st.jetzt()))
       throw new ApiError(
@@ -614,7 +639,11 @@ export function ProtokollSchreiben({
     steuerung.current = null;
     gespeichert.current = true;
     const t = r.kopf.treffen;
-    return t !== null ? { treffen: () => treffenAbschliessen(gruppeId, t) } : {};
+    const b = bescheid ? freigabe?.beitrag : null;
+    return {
+      ...(t !== null ? { treffen: () => treffenAbschliessen(gruppeId, t) } : {}),
+      ...(b ? { beitrag: beitragSchritt(gruppeId, b) } : {}),
+    };
   };
   const zurStelle = (ziel: string) => {
     setFreigabe(null);
@@ -857,7 +886,9 @@ export function ProtokollSchreiben({
           hinweise={freigabe.hinweise}
           zusammenfassung={freigabe.zusammenfassung}
           mitTreffen={freigabe.treffen !== null}
-          laedt={freigabe.laedt}
+          laedt={freigabe.laedtAnwesenheit || freigabe.laedtBeitrag}
+          gruppe={gruppe}
+          beitrag={freigabe.beitrag}
           onAnsehen={zurStelle}
           onFreigeben={freigebenJetzt}
           onFertig={() => {

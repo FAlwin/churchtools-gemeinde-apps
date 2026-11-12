@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3 + S5 + S6-1 (11.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3 + S5 + S6-1 + S6-2 (11.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
@@ -51,6 +51,10 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
 - **Versteckte Gruppen** bleiben versteckt; ihre Mitglieder bekommen beim Einrichten zusätzlich „versteckte Gruppe
   sehen“. Ohne das sehen sie ihre eigene Gruppe in ChurchTools nicht (gemessen 22.10.2026).
+- **Beitrag nach der Freigabe** (S6-2): Das Häkchen „In der Gruppe Bescheid geben“ erscheint nur, wo man in
+  ChurchTools Beiträge schreiben darf – der **Gruppentyp** muss Beiträge erlauben (Typ „Anmeldung“ tut es nicht) und
+  die Rolle braucht das gruppeninterne Recht **„Beitrag gruppenintern erstellen“**. Das Einrichten vergibt es **nicht**
+  (Entscheidung 11.11.2026) – ein Admin setzt es in ChurchTools selbst, wo es gewünscht ist.
 
 **Vorlagen** (Reiter „Verwaltung“, Karte „Vorlagen“): gelten für alle Gruppen. Beim ersten Einrichten einer Gruppe
 entstehen drei zum Anpassen (Leitungssitzung, Teamtreffen, Klausur). Je Vorlage: Name, Tagesordnungspunkte mit
@@ -213,6 +217,15 @@ Zusammenfassung. **Freigeben** speichert zuerst, hält die festen Punkte fest, m
 das **Gruppentreffen** in ChurchTools ab (danach lässt sich die Anwesenheit dort nicht mehr ändern; Kommentar und Gäste
 bleiben). Klappt das Abschließen nicht, ist das Protokoll trotzdem frei und das Fenster bietet „Nochmal versuchen“.
 To-Dos bleiben abhakbar. Danach steht oben **„freigegeben am … von …“**.
+
+**In der Gruppe Bescheid geben (S6-2):** Darf man in der Gruppe Beiträge schreiben (siehe Rechte), hat das Fenster
+das Häkchen **„In der Gruppe Bescheid geben“** – vorbelegt an, mit Vorschau. Beim Freigeben entsteht ein Beitrag in der
+Gruppe (gruppenintern, ohne Kommentare, Absender ist man selbst): „Protokoll vom … ist freigegeben“ mit dem Link
+**„Protokoll öffnen“**, der direkt in diese Sitzung führt (`…/ccm/<Kürzel>/#/sitzungen/<Gruppe>/<Sitzung>`). Ob
+ChurchTools die Mitglieder per Mail oder App benachrichtigt, hängt an deren Einstellungen. Klappt der Beitrag nicht, ist
+das Protokoll trotzdem frei: „Nochmal versuchen“ – außer ChurchTools hat nicht geantwortet; dann ist unklar, ob er schon
+da ist, und das Fenster bittet, in der Gruppe nachzusehen (sonst stünde er doppelt da). Zurücknehmen lässt den Beitrag
+stehen.
 
 **Freigabe zurücknehmen (S6-1):** Bei einem freigegebenen Protokoll sieht die Leitung **„Freigabe zurücknehmen“**
 (mit Rückfrage). Es wird wieder ein Entwurf; über dem Protokoll steht „Freigabe zurückgenommen am … von … – vorher

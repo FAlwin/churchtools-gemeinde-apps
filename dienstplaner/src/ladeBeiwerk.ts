@@ -9,6 +9,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { abwesenheitPort } from '@ui/ct/abwesenheitPort';
 import { ctAbwesenheiten } from '@shared/absences/abwesenheiten';
 import type { CtAbsence, CtAgenda, CtSong } from '@shared/ct/typen';
+import { terminVorlagenAus, type TerminVorlage } from '@shared/ct/terminVorlagen';
 
 /**
  * Die Liedtitel aus dem Ablauf eines Termins, in Ablauf-Reihenfolge. `null` = der Termin hat keinen
@@ -95,3 +96,14 @@ export async function ladeLiedDaten(songIds: readonly number[]): Promise<Map<num
 /** Der Autor eines geladenen Lieds – leer zählt als keiner (für die Lied-Karte, E6-O1). */
 export const autorVon = (lied: CtSong | undefined): string | null =>
   typeof lied?.author === 'string' && lied.author.trim() ? lied.author.trim() : null;
+
+/**
+ * Die Terminvorlagen von ChurchTools (`/eventtemplates`, gemessen 13.11.2026) fürs Plätze-Fach. Beiwerk: **wirft**, wenn
+ * keine Liste kommt – das Fach zeigt dann einen ruhigen Hinweis und bleibt sonst bedienbar. Kaputte Einzeleinträge
+ * fallen im Parser weg, ohne zu werfen.
+ */
+export async function ladeTerminVorlagen(): Promise<TerminVorlage[]> {
+  const roh = await ctDaten<unknown>('/eventtemplates');
+  if (!Array.isArray(roh)) throw new ApiError(502, 'ChurchTools hat die Vorlagen nicht geliefert.');
+  return terminVorlagenAus(roh);
+}

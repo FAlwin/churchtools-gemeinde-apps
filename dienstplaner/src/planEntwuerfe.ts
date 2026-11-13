@@ -1,5 +1,15 @@
 import { monatName, tagKurz } from '@shared/ct/datum';
-import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
+import type { Dienst } from '@shared/ct/dienste';
+import type { TerminVorlage } from '@shared/ct/terminVorlagen';
+import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
+import {
+  diensteDerGruppe,
+  type Plan,
+  type PlanGruppe,
+  type PlanPlatz,
+  type PlanSpalte,
+  type PlanZeile,
+} from '@shared/dienstplan/plan';
 import { entwurfVeraltet, ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import type { AlterEntwurf } from './AlteEntwuerfeFach';
@@ -9,6 +19,7 @@ import type { SendeZeile } from './SendenFach';
 import type { TerminStand } from './terminStand';
 import type { ZauberZeile } from './ZauberstabFach';
 import { darfPlanen, type EntwurfAmPlatz } from './planSicht';
+import { ganzSichtbar, planbar, type Start } from './start';
 
 /**
  * **Die Regeln der Entwürfe in „Planen“** (#845, Scheibe 4a-2: aus der Komponente herausgezogen, unverändert). Reine
@@ -168,29 +179,132 @@ export function zauberEingeplant(
 }
 
 /**
+ * **Alle Dienste der Gemeinde, wie `planAus` sie kennt** – damit das Plätze-Fach auch Dienste anbietet, die im geladenen
+ * Zeitraum noch nirgends einen Platz haben (die Matrix baut für sie keine Zeile). Die Regeln „ganz sichtbar“ und „darf
+ * planen“ kommen aus derselben Quelle wie die der Matrix (`ganzSichtbar`/`planbar` aus `start.ts`, siehe
+ * `ladeTermine.datenAus`) – nicht nachgebaut.
+ */
+export interface DiensteKatalog {
+  /** In der Reihenfolge der Gemeinde (`/services`, `sortKey`) – so sortiert auch die Matrix. */
+  dienste: ReadonlyMap<number, Dienst>;
+  dienstgruppen: readonly Dienstgruppe[];
+  /** Darf man den Dienst planen (ohne Termin-Admin)? Wie `planAus` → `o.planbar`. */
+  planbar: (dienst: Dienst) => boolean;
+  /** Liefert ChurchTools alle Plätze des Dienstes? Wie `planAus` → `o.ganzSichtbar`. */
+  ganzSichtbar: (dienst: Dienst) => boolean;
+}
+
+/** Der Katalog aus dem Start – dieselben Funktionen, mit denen `ladeTermine` die Matrix baut. */
+export const katalogAus = (start: Start): DiensteKatalog => ({
+  dienste: start.dienste,
+  dienstgruppen: start.dienstgruppen,
+  planbar: (d) => planbar(start, d),
+  ganzSichtbar: (d) => ganzSichtbar(start, d),
+});
+
+/** Der Stand eines Dienstes an einem Termin – aus seiner Zeile; ohne Zeile hat er dort keinen Platz. */
+function plaetzeZeile(
+  daten: EntwuerfeDaten | null,
+  s: PlanSpalte,
+  i: number,
+  dienst: Dienst,
+  zl: PlanZeile | undefined,
+): PlaetzeZeile {
+  const zelle = zl?.zellen[i] ?? [];
+  return {
+    serviceId: dienst.id,
+    name: dienst.name,
+    anzahl: zelle.length,
+    belegt: zelle.filter((p) => p.art !== 'frei').length,
+    entwuerfe: zl ? zelle.filter((p) => entwurfAmPlatz(daten, s, zl, p) !== null).length : 0,
+  };
+}
+
+/**
+ * Darf man diesen Dienst an diesem Termin im Fach ändern? **Eine Stelle** für Gruppenfach und Vorlage. Mit Zeile gilt
+ * `darfPlanen` (Zeile oder Termin-Admin, wie überall); ohne Zeile – der Dienst hat im Zeitraum keinen Platz – gilt
+ * dieselbe Regel über den Katalog, dazu muss man ihn ganz sehen dürfen (sonst baut auch `planAus` keine Zeile).
+ */
+function darfImFach(
+  k: DiensteKatalog,
+  s: PlanSpalte,
+  dienst: Dienst,
+  zl: PlanZeile | undefined,
+): boolean {
+  return zl ? darfPlanen(zl, s) : k.ganzSichtbar(dienst) && (k.planbar(dienst) || s.admin);
+}
+
+/**
  * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
  * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
+ *
+ * Mit `katalog` stehen **alle Dienste der Gruppe** da, auch die ohne Matrixzeile – mit Anzahl 0 („nicht vorgesehen“), dort
+ * schaltet „+“ sie ein (13.11.2026: „Abendmahl“ fehlte, weil er im Zeitraum nirgends vorkam). Die Matrix selbst bekommt
+ * keine Leerzeilen. Ohne `katalog` nur die Dienste mit Zeile.
  */
-export const plaetzeZeilen = (
+export function plaetzeZeilen(
   daten: EntwuerfeDaten | null,
   s: PlanSpalte,
   i: number,
   g: PlanGruppe,
-): PlaetzeZeile[] =>
-  g.zeilen
-    .filter((zl) => darfPlanen(zl, s))
-    .map((zl) => {
-      const zelle = zl.zellen[i] ?? [];
-      const belegtZahl = zelle.filter((p) => p.art !== 'frei').length;
-      const entwuerfeHier = zelle.filter((p) => entwurfAmPlatz(daten, s, zl, p) !== null).length;
-      return {
-        serviceId: zl.dienst.id,
-        name: zl.dienst.name,
-        anzahl: zelle.length,
-        belegt: belegtZahl,
-        entwuerfe: entwuerfeHier,
-      };
-    });
+  katalog?: DiensteKatalog,
+): PlaetzeZeile[] {
+  if (!katalog) {
+    return g.zeilen
+      .filter((zl) => darfPlanen(zl, s))
+      .map((zl) => plaetzeZeile(daten, s, i, zl.dienst, zl));
+  }
+  const zeileJe = new Map(g.zeilen.map((zl) => [zl.dienst.id, zl]));
+  return diensteDerGruppe(
+    [...katalog.dienste.values()],
+    katalog.dienstgruppen,
+    g.gruppe?.id ?? null,
+  )
+    .filter((d) => darfImFach(katalog, s, d, zeileJe.get(d.id)))
+    .map((d) => plaetzeZeile(daten, s, i, d, zeileJe.get(d.id)));
+}
+
+/**
+ * Die Dienste **aller übrigen Gruppen**, die man an diesem Termin planen darf – für „Vorlage übernehmen“, die über alle
+ * Dienstgruppen wirkt. Dieselbe Regel wie `plaetzeZeilen` (`darfImFach`).
+ */
+export function plaetzeWeitere(
+  daten: EntwuerfeDaten | null,
+  plan: Plan,
+  s: PlanSpalte,
+  i: number,
+  g: PlanGruppe,
+  katalog: DiensteKatalog,
+): PlaetzeZeile[] {
+  const zeileJe = new Map(plan.gruppen.flatMap((pg) => pg.zeilen).map((zl) => [zl.dienst.id, zl]));
+  const eigene = new Set(
+    diensteDerGruppe(
+      [...katalog.dienste.values()],
+      katalog.dienstgruppen,
+      g.gruppe?.id ?? null,
+    ).map((d) => d.id),
+  );
+  return [...katalog.dienste.values()]
+    .filter((d) => !eigene.has(d.id) && darfImFach(katalog, s, d, zeileJe.get(d.id)))
+    .map((d) => plaetzeZeile(daten, s, i, d, zeileJe.get(d.id)));
+}
+
+/**
+ * Was das Plätze-Fach für „Vorlage übernehmen“ braucht – nur, wenn der Termin einen bekannten Kalender hat (die Vorlagen
+ * gehören je zu einem Kalender; ohne ihn ließe sich keine zuordnen).
+ */
+export function vorlageFuer(
+  katalog: DiensteKatalog,
+  s: PlanSpalte,
+  laden: () => Promise<TerminVorlage[]>,
+) {
+  if (!s.kalender) return undefined;
+  return {
+    kalenderId: s.kalender.id,
+    laden,
+    namen: new Map([...katalog.dienste].map(([id, d]) => [id, d.name])),
+  };
+}
 
 /**
  * Die Leiste unten und das Senden-Fach (E4-4): **eine** Regel für Zählen und Senden (Bauplan: „Zählen und Senden aus

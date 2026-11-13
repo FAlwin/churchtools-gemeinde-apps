@@ -408,7 +408,47 @@ function daten(fall: string): Record<string, unknown> {
         // Ton darf die Live-Agenda steuern (E6b-2 L3) – Alwin ist an 101 als Ton eingeteilt.
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7], allowControlLiveAgenda: true },
         { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
+        // Kamera: Technik, aber an keinem Termin im Zeitraum eingeplant – im Plätze-Fach steht sie mit 0 („nicht
+        // vorgesehen“), „+“ schaltet sie ein; die Vorlage „Gottesdienst mit Kamera“ nimmt sie dazu.
+        { id: 8, name: 'Kamera', serviceGroupId: 3, groupIds: [7] },
         { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },
+      ],
+    },
+    // Terminvorlagen (Plätze-Fach „Vorlage übernehmen“), Form wie gemessen am 13.11.2026. Kalender 1 = Gottesdienste.
+    // Die Vorlage „Gottesdienst mit Kamera“ nennt auch Predigt – die darf der Demo-Planer nicht planen (übersprungen).
+    '/api/eventtemplates': {
+      data: [
+        {
+          id: 0,
+          templateName: 'Standard',
+          calendarId: 1,
+          eventName: 'Gottesdienst',
+          services: [
+            { serviceId: 6, count: 1 },
+            { serviceId: 7, count: 1 },
+            { serviceId: 9, count: 2 },
+          ],
+        },
+        {
+          id: 3,
+          templateName: 'Gottesdienst mit Kamera',
+          calendarId: 1,
+          eventName: 'Gottesdienst',
+          services: [
+            { serviceId: 6, count: 1 },
+            { serviceId: 7, count: 1 },
+            { serviceId: 9, count: 3 },
+            { serviceId: 8, count: 1 },
+            { serviceId: 1, count: 1 },
+          ],
+        },
+        {
+          id: 1,
+          templateName: 'Gebetsabend',
+          calendarId: 2,
+          eventName: 'Gebetsabend',
+          services: [{ serviceId: 6, count: 1 }],
+        },
       ],
     },
     '/api/servicegroups': {

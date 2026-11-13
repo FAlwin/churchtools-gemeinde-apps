@@ -138,6 +138,23 @@ export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   };
 }
 
+/**
+ * **Welche Dienste zu einer Dienstgruppe gehören** – `gid === null` ist die Gruppe „Weitere“: Dienste ohne Dienstgruppe
+ * oder mit einer, die ChurchTools nicht (mehr) nennt. Eine Stelle für die Matrix (`planAus`) und das Plätze-Fach
+ * (`plaetzeZeilen`) – sonst stünde dort eine andere Gruppe als hier.
+ */
+export function diensteDerGruppe(
+  dienste: readonly Dienst[],
+  dienstgruppen: readonly Dienstgruppe[],
+  gid: number | null,
+): Dienst[] {
+  return dienste.filter((d) =>
+    gid === null
+      ? d.dienstgruppeId === null || !dienstgruppen.some((x) => x.id === d.dienstgruppeId)
+      : d.dienstgruppeId === gid,
+  );
+}
+
 export function planAus(
   roh: RohTermin[],
   o: {
@@ -210,11 +227,7 @@ export function planAus(
   const bekannte = [...o.dienste.values()].filter((d) => zellen.has(d.id));
   for (const gid of reihenfolge) {
     const g = gid === null ? null : (o.dienstgruppen.find((x) => x.id === gid) ?? null);
-    const imGruppe = bekannte.filter((d) =>
-      gid === null
-        ? d.dienstgruppeId === null || !o.dienstgruppen.some((x) => x.id === d.dienstgruppeId)
-        : d.dienstgruppeId === gid,
-    );
+    const imGruppe = diensteDerGruppe(bekannte, o.dienstgruppen, gid);
     if (imGruppe.length === 0) continue;
     const pg = gruppeFuer(g);
     for (const dienst of imGruppe) {

@@ -11,6 +11,8 @@ import { ladeStart, planbareDienstgruppen, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Abwesenheiten } from './Abwesenheiten';
 import { Planen } from './Planen';
+import { katalogAus } from './planEntwuerfe';
+import { ladeTerminVorlagen } from './ladeBeiwerk';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -256,6 +258,8 @@ export function App() {
               heute={heuteImKalender()}
               entwuerfe={entwuerfe}
               ablauf={{ start, zeitzone }}
+              katalog={katalogAus(start)}
+              ladeVorlagen={ladeTerminVorlagen}
             />
           )}
           {terminId === null && aktiv === 'abwesenheiten' && start && (

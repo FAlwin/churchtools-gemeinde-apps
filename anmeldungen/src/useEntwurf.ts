@@ -40,6 +40,22 @@ export const PAUSE_FELD_MS = 1500;
 /** Pause nach einer Änderung am Design (Farbe, Vorlage …), nach der gespeichert wird. */
 export const PAUSE_DESIGN_MS = 700;
 
+/**
+ * **Ein Feld ließ sich nicht speichern.** Solange es gewählt ist, gilt der Hinweis ihm. Wird es verlassen, ist die
+ * Änderung weg – dann nennt der Hinweis das Feld (`verlassen`: wie es gespeichert heißt) und geht, sobald danach
+ * etwas anderes gespeichert wird (Alwin, 12.11.2026; vorher blieb er stehen, bis wieder in ein Feld getippt wurde).
+ */
+interface Hinweis {
+  fehler: string;
+  verlassen?: string;
+}
+
+function hinweisText(h: Hinweis | null): string | null {
+  if (!h) return null;
+  if (h.verlassen === undefined) return `Nicht gespeichert: ${h.fehler}`;
+  return `${h.verlassen ? `„${h.verlassen}“` : 'Feld'} nicht gespeichert: ${h.fehler}`;
+}
+
 interface AntwortInfo {
   feldId: string;
   beantwortet: number;
@@ -56,12 +72,16 @@ interface AntwortInfo {
 export function useFeldEntwurf({
   id,
   tun,
+  auftraege,
   formularRef,
   setLokalF,
   ctFelder,
 }: {
   id: number;
   tun: ReturnType<typeof useSchlange>['tun'];
+  /** Wie viele Aufgaben bisher in die Speicher-Schlange kamen – ein neues Speichern räumt den Hinweis eines verlassenen
+   * Felds weg. */
+  auftraege: number;
   /** Der Stand von jetzt – die Zeitgeber feuern später als das Zeichnen, in dem sie gestellt wurden. */
   formularRef: { readonly current: Formular };
   setLokalF: (fo: Formular) => void;
@@ -69,7 +89,7 @@ export function useFeldEntwurf({
 }) {
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<FeldEntwurf | null>(null);
-  const [hinweis, setHinweis] = useState<string | null>(null);
+  const [hinweis, setHinweis] = useState<Hinweis | null>(null);
   const entwurfRef = useRef<FeldEntwurf | null>(null);
   const geaendert = useRef(false);
   const feldUhr = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,7 +102,7 @@ export function useFeldEntwurf({
     if (!d || !geaendert.current) return;
     const fehler = entwurfFehler(d);
     if (fehler) {
-      setHinweis(`Nicht gespeichert: ${fehler}`);
+      setHinweis({ fehler });
       return;
     }
     geaendert.current = false;
@@ -119,6 +139,11 @@ export function useFeldEntwurf({
   }, [id, tun, formularRef, setLokalF]);
 
   function neuerEntwurf(f: Feld | null) {
+    const vorher = entwurfRef.current;
+    if (vorher && vorher.feld.id !== f?.id) {
+      const name = feldIn(formularRef.current, vorher.feld.id)?.frage.trim() ?? '';
+      setHinweis((h) => (h && h.verlassen === undefined ? { ...h, verlassen: name } : h));
+    }
     const d = f ? { feld: f, antworten: f.antworten.map((t) => ({ text: t, von: t })) } : null;
     entwurfRef.current = d;
     geaendert.current = false;
@@ -236,7 +261,22 @@ export function useFeldEntwurf({
     if (feldUhr.current) clearTimeout(feldUhr.current);
     setAktiv(null);
     neuerEntwurf(null);
+    setHinweis(null);
   }
+
+  /**
+   * Den Hinweis eines verlassenen Felds wegräumen, sobald danach etwas anderes gespeichert wird – aber erst, wenn er
+   * zu sehen war: Fügt derselbe Klick ein neues Feld ein, kommt dessen Speichern im selben Zeichnen in die Schlange.
+   * Darum EIN Effekt, der sich merkt, beim wievielten Auftrag der Hinweis erschien (zwei Effekte hingen an ihrer
+   * Reihenfolge).
+   */
+  const erschienen = useRef<{ hinweis: Hinweis | null; auftraege: number } | null>(null);
+  useEffect(() => {
+    const vorher = erschienen.current;
+    erschienen.current = { hinweis, auftraege };
+    if (hinweis?.verlassen === undefined || vorher?.hinweis !== hinweis) return;
+    if (auftraege > vorher.auftraege) setHinweis(null);
+  }, [hinweis, auftraege]);
 
   return {
     aktiv,
@@ -244,7 +284,7 @@ export function useFeldEntwurf({
     entwurf,
     entwurfRef,
     geaendert,
-    hinweis,
+    hinweis: hinweisText(hinweis),
     info,
     feldSichern,
     neuerEntwurf,

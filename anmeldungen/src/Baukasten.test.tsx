@@ -446,13 +446,86 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ id: 'tel', hilfe: 'für Notfälle' });
   });
 
-  it('ohne Frage wird nicht gespeichert – mit Hinweis', async () => {
+  it('ohne Frage wird nicht gespeichert – mit Hinweis, der beim Verlassen das Feld nennt', async () => {
     const { huelle } = zeigen();
     fireEvent.click(huelle('f1'));
     fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '  ' } });
     fireEvent.click(huelle('allergy'));
-    expect(await screen.findByText('Nicht gespeichert: Bitte eine Frage eintragen.')).toBeTruthy();
+    expect(
+      await screen.findByText('„Gruppe“ nicht gespeichert: Bitte eine Frage eintragen.'),
+    ).toBeTruthy();
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  /** Frage leeren und die Tipp-Pause abwarten – das Feld bleibt gewählt. */
+  async function frageLeerenUndWarten(huelle: (id: string) => Element) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '' } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_FELD_MS);
+    });
+  }
+
+  it('solange das Feld gewählt bleibt: Hinweis ohne Feldname – auch ein anderes Speichern lässt ihn stehen', async () => {
+    const { huelle } = zeigen();
+    await frageLeerenUndWarten(huelle);
+    expect(screen.getByText('Nicht gespeichert: Bitte eine Frage eintragen.')).toBeTruthy();
+    // Das Design speichern fasst das Feld nicht an – der Hinweis gilt weiter dem gewählten Feld.
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beere' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_DESIGN_MS);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalled());
+    expect(screen.getByText('Nicht gespeichert: Bitte eine Frage eintragen.')).toBeTruthy();
+  });
+
+  it('das gewählte Feld mit dem Fehler entfernen → Hinweis weg', async () => {
+    const { huelle } = zeigen();
+    await frageLeerenUndWarten(huelle);
+    expect(screen.getByText('Nicht gespeichert: Bitte eine Frage eintragen.')).toBeTruthy();
+    // Mit leerer Frage heißt der Knopf wie bei einer Trennlinie.
+    fireEvent.click(
+      within(huelle('f1') as HTMLElement).getByRole('button', { name: 'Trennlinie entfernen' }),
+    );
+    await waitFor(() => expect(ff.feldEntfernen).toHaveBeenCalledWith(91, 'f1'));
+    expect(screen.queryByText(/nicht gespeichert/i)).toBeNull();
+  });
+
+  it('verlassenes Feld: der Hinweis geht, sobald danach das Design gespeichert wird', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '' } });
+    fireEvent.click(huelle('allergy'));
+    const text = '„Gruppe“ nicht gespeichert: Bitte eine Frage eintragen.';
+    expect(screen.getByText(text)).toBeTruthy();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beere' }));
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_DESIGN_MS);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText(text)).toBeNull());
+  });
+
+  it('fügt derselbe Klick ein neues Feld ein, bleibt der Hinweis – bis danach etwas gespeichert wird', async () => {
+    const { gespeichert, huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith('„Kurzer Text“ hinzugefügt.', true),
+    );
+    const text = '„Gruppe“ nicht gespeichert: Bitte eine Frage eintragen.';
+    expect(screen.getByText(text)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ja / Nein' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(text)).toBeNull();
   });
 
   it('gespeichert wird ohne Leerzeichen am Rand – Frage und Antworten', async () => {

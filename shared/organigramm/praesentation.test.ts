@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, type Mitglied } from './mitglieder';
+import type { PersonenGrenze } from './personen';
 import { bereicheSortiert, praesentationAus } from './praesentation';
 
 const g = (id: number, name: string): OrgGruppe => ({
@@ -169,5 +170,31 @@ describe('Rollenfilter in den Listen (#915)', () => {
   it('ohne Filter: gezeigt = personen', () => {
     const s = spalte('Gottesdienst', 'Technik');
     expect(s.gezeigt).toEqual(s.personen);
+  });
+});
+
+describe('Personen für alle ohne Leitung in der Präsentation (#915 C)', () => {
+  // Wer Ton (15) leitet: dort und im Ton-Kurs alle Namen, sonst nur Zahlen.
+  const grenze: PersonenGrenze = (id) => (id === 15 || id === 72 ? 'alle' : 'zahl');
+  const Q = praesentationAus(BAUM, MITGLIEDER, ROLLEN, name, new Set(), grenze);
+  const qb = (n: string) => Q.bereiche.find((b) => b.knoten.gruppe.name === n)!;
+  const qs = (b: string, n: string) => qb(b).spalten.find((x) => x.knoten.gruppe.name === n)!;
+
+  it('die Leitung der Kachel nur gezählt – die Zahlen zählen weiter alle', () => {
+    expect(qb('Gottesdienst').leitung).toEqual([]);
+    expect(qb('Gottesdienst').leitungOhneNamen).toBe('1 Leiter, 1 Co-Leiter');
+    expect(qb('Gottesdienst').personen).toBe(bereich('Gottesdienst').personen);
+    expect(bereich('Gottesdienst').leitungOhneNamen).toBeNull();
+    expect(ids(bereich('Gottesdienst').leitung)).toEqual([1, 2]);
+  });
+
+  it('in den Listen nur, wen eine Gruppe mit Namen zeigt – gezählt bleiben alle', () => {
+    const technik = qs('Gottesdienst', 'Technik');
+    // Carl und Dora sind in Ton, Fia im Ton-Kurs – Emil leitet nur Technik selbst und steht dort ohne Namen.
+    expect([...ids(technik.gezeigt)].sort()).toEqual([3, 4, 6]);
+    expect(technik.personen.length).toBe(spalte('Gottesdienst', 'Technik').personen.length);
+    expect(ids(qs('Gottesdienst', 'Musik').gezeigt)).toEqual([]);
+    const ton = technik.unter.find((u) => u.knoten.gruppe.name === 'Ton')!;
+    expect(ids(ton.gezeigt)).toEqual(ids(ton.personen));
   });
 });

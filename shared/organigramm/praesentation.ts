@@ -14,7 +14,15 @@
  */
 import { nachfahren, type Knoten } from './gruppen';
 import { rollenRang, type Mitglied, type Rolle } from './mitglieder';
-import { gezeigtePersonen, gruppenLeitung, gruppenPersonen, teilbaumPersonen } from './personen';
+import {
+  gezeigtePersonen,
+  gruppenLeitung,
+  gruppenPersonen,
+  leitungNachStufe,
+  OHNE_GRENZE,
+  teilbaumPersonen,
+  type PersonenGrenze,
+} from './personen';
 
 /** Große Bereiche zuerst (die meisten Gruppen darunter), dann nach Name – EINE Reihenfolge für Baum und Präsentation. */
 export function bereicheSortiert(baum: readonly Knoten[]): Knoten[] {
@@ -48,7 +56,10 @@ export interface PSpalte {
 
 export interface PBereich {
   knoten: Knoten;
+  /** Die Leitung mit Namen – so weit die Grenze es erlaubt (#915 C). */
   leitung: Mitglied[];
+  /** Die übrige Leitung, nur gezählt („1 Leiter“) – `null`, wenn es keine gibt. */
+  leitungOhneNamen: string | null;
   /** Personen im ganzen Bereich, jede einmal. */
   personen: number;
   sichtbar: boolean;
@@ -72,6 +83,8 @@ export function praesentationAus(
   name: (personId: number) => string,
   /** Abgewählte Rollen („Welche Rollen“, #915) – nur für die Listen; Zahlen und Leitung zählen alle. */
   aus: ReadonlySet<string> = new Set(),
+  /** Wie viel man von den Personen je Gruppe sehen darf (#915 C) – für Listen UND Leitung; die Zahlen zählen alle. */
+  grenze: PersonenGrenze = OHNE_GRENZE,
 ): Praesentation {
   const rang = rollenRang(rollen);
   const eigene = (k: Knoten) => mitglieder.get(k.gruppe.id) ?? [];
@@ -80,7 +93,7 @@ export function praesentationAus(
     sichtbar(k) && nachfahren(k).every((id) => mitglieder.has(id));
 
   const zeigen = (personen: Mitglied[], gruppen: number[]) =>
-    gezeigtePersonen(personen, gruppen, mitglieder, rollen, aus);
+    gezeigtePersonen(personen, gruppen, mitglieder, rollen, aus, grenze);
 
   const unterVon = (k: Knoten, pfad: string[]): PUntergruppe[] =>
     k.kinder.flatMap((c) => {
@@ -112,9 +125,16 @@ export function praesentationAus(
   const bereiche = bereicheSortiert(baum).map((b): PBereich => {
     const personen = teilbaumPersonen(b, mitglieder, name, rang);
     for (const p of personen) alle.add(p.personId);
+    const leitung = leitungNachStufe(
+      gruppenLeitung(eigene(b), rollen, name, rang),
+      grenze(b.gruppe.id),
+      rollen,
+      name,
+    );
     return {
       knoten: b,
-      leitung: gruppenLeitung(eigene(b), rollen, name, rang),
+      leitung: leitung.namen,
+      leitungOhneNamen: leitung.ohneNamen,
       personen: personen.length,
       sichtbar: sichtbar(b),
       vollstaendig: vollstaendig(b),

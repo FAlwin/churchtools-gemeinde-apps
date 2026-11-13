@@ -20,6 +20,7 @@ import { ladePlan } from './plan';
 import { ladeSichtbarkeit, speichereSichtbarkeit } from './sichtbarkeitSpeicher';
 import { ladeGruppenRechte } from './mitgliedschaft';
 import { personenSuchen } from '@ui/ct/personen';
+import type { PersonenStufe } from '@shared/organigramm/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
@@ -1615,13 +1616,14 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
 });
 
 describe('O7b-7: Was das Organigramm für alle zeigt', () => {
-  const stand = (inhalt: { typen: number[]; gruppen: number[] }, version = 3, name = 'Alwin') => ({
+  type Inhalt = { typen: number[]; gruppen: number[]; personen?: PersonenStufe };
+  const stand = (inhalt: Inhalt, version = 3, name = 'Alwin') => ({
     version,
     zeit: '2026-10-29T10:00:00Z',
     von: { personId: 1, name },
-    inhalt,
+    inhalt: { personen: 'alle' as PersonenStufe, ...inhalt },
   });
-  const fuerAlle = (inhalt: { typen: number[]; gruppen: number[] }) =>
+  const fuerAlle = (inhalt: Inhalt) =>
     sichtbarkeitLaden.mockResolvedValue({ ok: true, daten: stand(inhalt) });
 
   it('Typ und Gruppe samt Untergruppen für alle aus – in Karten und PDF; Hinweis', async () => {
@@ -1717,7 +1719,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
       expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
     );
     expect(sichtbarkeitSpeichern).toHaveBeenCalledWith(
-      { typen: [9], gruppen: [7] },
+      { typen: [9], gruppen: [7], personen: 'alle' },
       { personId: 1, name: 'Alwin' },
       3,
     );
@@ -1730,7 +1732,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     sichtbarkeitSpeichern.mockResolvedValue({
       ok: false,
       grund: 'konflikt',
-      jetzt: stand({ typen: [], gruppen: [47] }, 4, 'Bea'),
+      jetzt: stand({ typen: [], gruppen: [47], personen: 'zahl' }, 4, 'Bea'),
     });
     render(<App />);
     fireEvent.click(
@@ -1744,6 +1746,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     );
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Verteiler/ }).checked).toBe(true);
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Café/ }).checked).toBe(false);
+    expect(d.getByRole<HTMLInputElement>('radio', { name: /^Nur Zahlen/ }).checked).toBe(true);
     expect(screen.queryByRole('region', { name: 'Café' })).toBeNull();
   });
 });
@@ -1775,6 +1778,179 @@ describe('O7b-4: Organigramm als PDF', () => {
         name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,
       }),
     ).toBeTruthy();
+  });
+});
+
+describe('#915 C: Personen für alle ohne Leitung', () => {
+  const stufe = (personen: PersonenStufe) =>
+    sichtbarkeitLaden.mockResolvedValue({
+      ok: true,
+      daten: {
+        version: 3,
+        zeit: '2026-11-12T10:00:00Z',
+        von: { personId: 1, name: 'Alwin' },
+        inhalt: { typen: [], gruppen: [], personen },
+      },
+    });
+  const ohneLeitung = () => laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [] }));
+  const listenZeile = (name: string) =>
+    screen.getByRole('button', { name }).closest('li')?.textContent ?? '';
+
+  it('„Nur Zahlen“: wer nichts leitet, sieht Karten, Liste und Gruppenfenster ohne Namen – die Leitung gezählt', async () => {
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    const gd = screen.getByRole('region', { name: 'Gottesdienst' });
+    expect(gd.textContent).toContain('Leitung: 1 Leiter');
+    expect(gd.textContent).not.toContain('Alwin Friesen');
+    // auch kein Bild der Leitung (es trägt den Namen als Titel)
+    expect(gd.querySelector('[title="Alwin Friesen"]')).toBeNull();
+    expect(screen.getByRole('note').textContent).toContain('die Namen von Personen');
+
+    fireEvent.click(zeile('Technik'));
+    const f = within(screen.getByRole('dialog', { name: 'Technik' }));
+    expect(f.getByRole('heading', { name: 'Mitarbeiter · 1' })).toBeTruthy();
+    expect(f.queryByText('Carl Clau')).toBeNull();
+    expect(f.queryByText('Dora Dorn')).toBeNull();
+    expect(f.getByText(/Namen sind hier ausgeblendet/)).toBeTruthy();
+  });
+
+  it('„Nur Zahlen“ begrenzt auch die eigene Wahl „Alle“ in der Liste', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('1 Mitarbeiter');
+    expect(listenZeile('Technik')).toContain('1 Co-Leiter');
+  });
+
+  it('wer Technik leitet, sieht dort alle Namen – im Gottesdienst darüber nur die Zahl', async () => {
+    stufe('zahl');
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.getByRole('region', { name: 'Gottesdienst' }).textContent).toContain(
+      'Leitung: 1 Leiter',
+    );
+  });
+
+  it('„Keine Personen“: das Gruppenfenster zeigt keine Rollen, nur den Hinweis', async () => {
+    stufe('aus');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    fireEvent.click(zeile('Technik'));
+    const f = within(screen.getByRole('dialog', { name: 'Technik' }));
+    expect(f.queryByRole('heading', { name: /Mitarbeiter/ })).toBeNull();
+    expect(f.getByText(/Die Personen sind hier ausgeblendet/)).toBeTruthy();
+  });
+
+  it('Präsentation: Leitung auf der Kachel gezählt, Spalten ohne Namen – die Zahlen zählen alle', async () => {
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    const d = await screen.findByRole('dialog', { name: 'Präsentation' });
+    const kachel = within(d).getByRole('heading', { name: 'Gottesdienst' }).closest('button')!;
+    expect(within(kachel).getByText('1 Leiter')).toBeTruthy();
+    expect(kachel.textContent).not.toContain('Alwin Friesen');
+    expect(within(kachel).getByText('1 Gruppe · 4 Personen')).toBeTruthy();
+    fireEvent.click(kachel);
+    expect(d.textContent).not.toContain('Carl Clau');
+    expect(d.textContent).not.toContain('Dora Dorn');
+    expect(within(d).getByText('3 Personen ausgeblendet')).toBeTruthy();
+    // Im Diagramm der Präsentation dieselbe Grenze – trotz eigener Wahl „Alle“.
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    expect(d.textContent).toContain('1 Mitarbeiter');
+    expect(d.textContent).not.toContain('Carl Clau');
+  });
+
+  it('PDF: zeigt nie mehr als der Reiter', async () => {
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
+    const vorschau = screen.getByRole('figure', { name: 'Vorschau' });
+    expect(vorschau.textContent).toContain('1 Mitarbeiter');
+    expect(vorschau.textContent).not.toContain('Carl Clau');
+    expect(vorschau.textContent).not.toContain('Alwin Friesen');
+  });
+
+  it('Gruppen-Admins sehen weiter alles', async () => {
+    stufe('aus');
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+  });
+
+  it('nicht lesbar: vorsichtshalber ohne Namen, mit Hinweis – Gruppen-Admins sehen alles', async () => {
+    sichtbarkeitLaden.mockResolvedValue({ ok: false, grund: 'voruebergehend' });
+    ohneLeitung();
+    const { unmount } = render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    expect(screen.getByText(/Personen vorsichtshalber ohne Namen/)).toBeTruthy();
+    unmount();
+    laden.mockResolvedValue(start());
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.getByText(/ließ sich gerade nicht laden – zu sehen ist alles/)).toBeTruthy();
+  });
+
+  it('kein Leserecht: es gilt nichts davon – ohne Hinweis (davor warnt das Fenster die Admins)', async () => {
+    sichtbarkeitLaden.mockResolvedValue({ ok: false, grund: 'kein-recht' });
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.queryByText(/Was das Organigramm für alle zeigt, ließ sich/)).toBeNull();
+  });
+
+  it('„Einstellungen“: Stufe wählen, Warnung zum Leserecht, gespeichert samt Gruppen', async () => {
+    stufe('alle');
+    sichtbarkeitSpeichern.mockImplementation((inhalt) =>
+      Promise.resolve({
+        ok: true,
+        daten: {
+          version: 4,
+          zeit: '2026-11-12T10:00:00Z',
+          von: { personId: 1, name: 'Alwin' },
+          inhalt,
+        },
+      }),
+    );
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
+    );
+    const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
+    expect(d.getByText('Das ist nur eine Anzeige-Regel.')).toBeTruthy();
+    expect(d.queryByText(/Die Regel greift nur bei Personen/)).toBeNull();
+    fireEvent.click(d.getByRole('radio', { name: /^Nur Zahlen/ }));
+    expect(d.getByText(/Die Regel greift nur bei Personen/)).toBeTruthy();
+    expect(d.getByText('Alle Gruppen sichtbar · Personen: Nur Zahlen')).toBeTruthy();
+    fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
+    await vi.waitFor(() =>
+      expect(sichtbarkeitSpeichern).toHaveBeenCalledWith(
+        { typen: [], gruppen: [], personen: 'zahl' },
+        { personId: 1, name: 'Alwin' },
+        3,
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
+    );
+    expect(screen.getByRole('note').textContent).toContain('die Namen von Personen');
   });
 });
 

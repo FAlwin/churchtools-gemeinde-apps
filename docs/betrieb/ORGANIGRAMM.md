@@ -46,6 +46,10 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Kindergruppe      | Reiter „Kinder & Jugend“ → „Meine Gruppe“ (O9-2)                                            | Rolle mit Leitung + Rechte am Gruppentyp      |
 | Bereichsleitung Kinder & Jugend | Reiter „Kinder & Jugend“ → „Übersicht“ über alle Stufen (O9-2); Admins ebenso               | Leitung der Bereichsgruppe der Einrichtung    |
 
+Seit #915 Scheibe C können Gruppen-Admins zusätzlich begrenzen, wie viel **Personen ohne Leitung** von den Personen
+sehen (Abschnitt „Was das Organigramm für alle zeigt“). Das ist **nur eine Anzeige-Regel**: Die Tabelle oben bleibt
+richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erlauben. Das Organigramm zeigt nur weniger.
+
 ## Ansichten (ab O7b)
 
 Über dem Baum wählt man, **wie** er aussieht:
@@ -107,9 +111,33 @@ aus, die das Organigramm öffnen – im Reiter, in der Präsentation und in der 
 - Ausgeblendet heißt nur: hier nicht zu sehen. In ChurchTools bleibt alles, wie es ist. Die Reiter **Personen**,
   **Hinweise** und **Neue Gliederung** zeigen weiter alle Gruppen – dort wird mit der ganzen Struktur gearbeitet.
 - Hat inzwischen ein anderer Admin gespeichert, wird nichts überschrieben: Das Fenster zeigt dann dessen Stand.
-- Lässt sich die Einstellung gerade nicht lesen (Netz, ChurchTools antwortet nicht), ist alles zu sehen, mit Hinweis
-  und **Erneut versuchen**. Fehlt einer Person das Leserecht auf die Kategorie, sieht sie ebenfalls alles – ohne
-  Hinweis (siehe unten).
+- Lässt sich die Einstellung gerade nicht lesen (Netz, ChurchTools antwortet nicht), sind alle Gruppen zu sehen, mit
+  Hinweis und **Erneut versuchen** – Personen aber vorsichtshalber **ohne Namen** (Stufe „Nur Zahlen“), außer in
+  Gruppen, die man leitet; Gruppen-Admins sehen alles. Fehlt einer Person das Leserecht auf die Kategorie, gilt für sie
+  nichts davon – sie sieht alles, ohne Hinweis (siehe unten). Davor warnt das Fenster, sobald eine Stufe gewählt ist.
+
+### Personen für alle ohne Leitung (ab #915 Scheibe C)
+
+Im selben Fenster legen Gruppen-Admins fest, was Personen, **die nichts leiten**, höchstens von den Personen sehen –
+in Kästchen und Liste, auf den Karten („Leitung: …“), in der Präsentation (Kacheln, Spalten, Diagramme), in der PDF
+und im Gruppenfenster:
+
+| Stufe              | Zu sehen                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| **Alle Namen**     | wie bisher (Vorgabe, auch für alles, was vor Scheibe C gespeichert wurde)                 |
+| **Wie „Rollen“**   | Namen in den besonderen Rollen (Leitung, Organisator …); Mitarbeiter/Teilnehmer als Zahl  |
+| **Nur Zahlen**     | keine Namen, auch nicht die der Leitung – z. B. „1 Leiter, 6 Mitarbeiter“                 |
+| **Keine Personen** | in Kästchen, Listen und Gruppenfenster nichts; die Leitung auf Karten und Kacheln gezählt |
+
+- **Wer eine Gruppe leitet**, sieht deren Personen samt aller Untergruppen voll – dieselbe Grenze wie bei den Reitern
+  Personen und Hinweise (`sichtbereich`). **Gruppen-Admins** sehen alles.
+- Die eigene Wahl „Personen: Aus · Rollen · Alle“ bleibt; sie gilt nur höchstens bis zur Stufe. Die Zahlen („12
+  Personen“) zählen weiter alle – sie nennen niemanden.
+- Die Leitung fällt **streng** unter die Stufe (Alwin 12.11.2026): Bei „Nur Zahlen“ steht auf der Kachel „1 Leiter“
+  statt des Namens; „Leitung wird noch gesucht“ steht nur, wo es wirklich keine gibt.
+- Über dem Baum steht für alle, was gilt („Für alle ausgeblendet: die Namen von Personen – eingestellt von
+  Gruppen-Admins“), im Gruppenfenster „Namen sind hier ausgeblendet“.
+- Ein unbekannter Wert im Speicher (etwa von einer späteren Fassung) gilt als „Nur Zahlen“ – im Zweifel weniger zeigen.
 
 ## Als PDF speichern und drucken (ab O7b-4)
 
@@ -300,7 +328,8 @@ Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in 
 
 Ab O7b-7 liegt dort auch **„Was das Organigramm zeigt“**: ein Eintrag in der Kategorie **„Was das Organigramm zeigt“**
 (Kürzel `sichtbar`), angelegt beim ersten Speichern unter „Einstellungen“. Darin stehen nur die IDs der für alle
-ausgeblendeten Gruppentypen und Gruppen, dazu wer zuletzt gespeichert hat.
+ausgeblendeten Gruppentypen und Gruppen, die Stufe „Personen für alle ohne Leitung“ (seit #915 C, Feld `personen`)
+und wer zuletzt gespeichert hat.
 
 > **Rechte dieser Kategorie – anders als beim Plan:** **Daten sehen** brauchen **alle**, die das Organigramm öffnen
 > (sonst sehen sie alles, auch was ausgeblendet sein soll); **Daten anlegen, ändern, löschen** nur die Gruppen-Admins.

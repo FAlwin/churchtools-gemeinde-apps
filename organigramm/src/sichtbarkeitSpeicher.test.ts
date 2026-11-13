@@ -34,34 +34,44 @@ describe('Was das Organigramm zeigt – im Speicher der Erweiterung (O7b-7)', ()
   });
 
   it('speichern legt die Kategorie an; wieder gelesen steht es da, das zweite Mal mit Version', async () => {
-    const s = { typen: [9], gruppen: [7] };
+    const s = { typen: [9], gruppen: [7], personen: 'alle' as const };
     expect(await speichereSichtbarkeit(s, ALEX, null)).toMatchObject({
       ok: true,
       daten: { version: 1, inhalt: s, von: ALEX },
     });
     expect(await ladeSichtbarkeit()).toMatchObject({ ok: true, daten: { version: 1, inhalt: s } });
-    expect(await speichereSichtbarkeit({ typen: [], gruppen: [] }, ALEX, 1)).toMatchObject({
+    expect(
+      await speichereSichtbarkeit({ typen: [], gruppen: [], personen: 'alle' as const }, ALEX, 1),
+    ).toMatchObject({
       ok: true,
       daten: { version: 2 },
     });
   });
 
   it('ein anderer war schneller → Konflikt, nichts überschrieben, mit dem, was jetzt dasteht', async () => {
-    await speichereSichtbarkeit({ typen: [9], gruppen: [] }, ALEX, null);
-    await speichereSichtbarkeit({ typen: [9], gruppen: [7] }, { personId: 2, name: 'Bea' }, 1);
-    const r = await speichereSichtbarkeit({ typen: [], gruppen: [] }, ALEX, 1);
+    await speichereSichtbarkeit({ typen: [9], gruppen: [], personen: 'alle' as const }, ALEX, null);
+    await speichereSichtbarkeit(
+      { typen: [9], gruppen: [7], personen: 'alle' as const },
+      { personId: 2, name: 'Bea' },
+      1,
+    );
+    const r = await speichereSichtbarkeit(
+      { typen: [], gruppen: [], personen: 'alle' as const },
+      ALEX,
+      1,
+    );
     expect(r).toMatchObject({
       ok: false,
       grund: 'konflikt',
       jetzt: { version: 2, von: { name: 'Bea' } },
     });
     expect(await ladeSichtbarkeit()).toMatchObject({
-      daten: { inhalt: { typen: [9], gruppen: [7] } },
+      daten: { inhalt: { typen: [9], gruppen: [7], personen: 'alle' as const } },
     });
   });
 
   it('ein Wert in anderem Format zählt wie keiner', async () => {
-    await speichereSichtbarkeit({ typen: [9], gruppen: [] }, ALEX, null);
+    await speichereSichtbarkeit({ typen: [9], gruppen: [], personen: 'alle' as const }, ALEX, null);
     // Von Hand verdorben: Gruppen fehlen.
     sp.s.werte[0].value = JSON.stringify({
       ...SICHT_ART,

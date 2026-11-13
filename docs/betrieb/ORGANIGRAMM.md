@@ -1,12 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7b-7 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O9-2 (12.11.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
 > und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen; Gruppen-Admins stellen ein, was
-> das Organigramm für alle zeigt (O7b-7). Als Nächstes (O8) der echte Umbau der Gemeindestruktur. Diese Anleitung wächst mit.
+> das Organigramm für alle zeigt (O7b-7). Seit O9-2 der Reiter **Kinder & Jugend** (Gruppenwechsel der Kinder, nur lesen). Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -43,6 +43,8 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                    | Rolle mit Leitung                             |
 | Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (O6)       | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
 | Gruppen-Admin                   | „Einstellungen“: was das Organigramm für alle zeigt (O7b-7)                                 | „Gruppen verwalten“ + Rechte der Kategorie    |
+| Leitung einer Kindergruppe      | Reiter „Kinder & Jugend“ → „Meine Gruppe“ (O9-2)                                            | Rolle mit Leitung + Rechte am Gruppentyp      |
+| Bereichsleitung Kinder & Jugend | Reiter „Kinder & Jugend“ → „Übersicht“ über alle Stufen (O9-2); Admins ebenso               | Leitung der Bereichsgruppe der Einrichtung    |
 
 ## Ansichten (ab O7b)
 
@@ -257,6 +259,30 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 - **Archivieren** setzt den Status „archiviert“ – nichts wird gelöscht, Mitglieder und Historie bleiben (gemessen
   24.10.2026; keine Mail). Archivierte Gruppen zeigt ChurchTools nicht mehr im Baum.
 
+## Kinder & Jugend: Gruppenwechsel (ab O9-2)
+
+Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Bis O9-2 **nur
+zum Lesen** – Ausnahmen („bleibt noch ein Jahr“) setzt man ab O9-3 hier, bis dahin in ChurchTools.
+
+- **Wer ihn sieht:** Leitungen der Kindergruppen (**Meine Gruppe**), die Leitung der Bereichsgruppe und Admins
+  (**Übersicht** mit einer Kachel je Gruppe). Ohne Einrichtung (siehe unten) gibt es den Reiter nicht.
+- **Jahresband:** Angekündigt · Wechseltag · Stichtag. Der **Wechseltag** ist der erste Montag nach den
+  Sommerferien; er kommt **live aus dem Kalender „Schulferien NRW“**. Der **Stichtag** zählt fürs Alter.
+- **Je Gruppe:** wer wechselt, wer bleibt (auch als Ausnahme), wer neu dazukommt. Leitungen sehen neue Kinder erst
+  ab der Ankündigung, die Bereichsleitung schon vorher als Vorschau.
+- **Daten pflegen:** Kinder ohne Geburtstag (die wechseln nie von selbst) und – nur für die Bereichsleitung – wer
+  bis zum Stichtag 18 wird.
+
+**Rechte am Gruppentyp der Kindergruppen** (Rechteverwaltung → Gruppentyp → Kindergruppe → „Globale Berechtigungen“
+→ Leiter → Bearbeiten; gemessen 12.11.2026 in der Test-Instanz):
+
+- organigramm → **„Organigramm“ sehen**
+- organigramm → **Kategorien sehen** und **Daten in Kategorie sehen** → je **Gruppenwechsel** und **Was das
+  Organigramm zeigt** (nicht „-- Alle --“, nicht den Plan)
+- Kalender → Einzelnen Kalender sehen → Gemeindekalender → **Schulferien NRW**
+
+Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
+
 ## Was die Erweiterung speichert
 
 Pro Gerät wird gemerkt, welche Ansichten gewählt sind, ob Personen gezeigt werden und welche Rollen abgewählt sind. Ab O7 liegt der **Plan „neue Gliederung“** im
@@ -279,3 +305,12 @@ ausgeblendeten Gruppentypen und Gruppen, dazu wer zuletzt gespeichert hat.
 > **Rechte dieser Kategorie – anders als beim Plan:** **Daten sehen** brauchen **alle**, die das Organigramm öffnen
 > (sonst sehen sie alles, auch was ausgeblendet sein soll); **Daten anlegen, ändern, löschen** nur die Gruppen-Admins.
 > Dieselbe Vorsicht wie oben: den anderen Admins das Sehrecht geben, bevor sie zum ersten Mal speichern.
+
+Ab O9-2 liegt dort auch die **Einrichtung des Gruppenwechsels**: ein Eintrag in der Kategorie **„Gruppenwechsel“**
+(Kürzel `gruppenwechsel`). Darin stehen die Stufen (Gruppe und Alter ab), die Bereichsgruppe, je Übergang die
+Wechsel-Gruppe und die Fristen (Ankündigung, Aufnahme). Die Wechseltage selbst stehen **nicht** darin – sie kommen
+jedes Mal aus dem Ferienkalender. Die Erweiterung liest den Eintrag nur; anlegen kommt mit „Einrichten“ (O9-5) –
+bis dahin gibt es ihn nur in der Test-Instanz (per API geschrieben).
+
+> **Rechte dieser Kategorie:** **Daten sehen** brauchen alle Kinder-Leitungen und die Bereichsleitung (am Gruppentyp,
+> siehe oben); ändern nur Admins.

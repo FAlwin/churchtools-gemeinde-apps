@@ -44,6 +44,10 @@ import { EinstellungenFenster } from './EinstellungenFenster';
 import { ALLES_SICHTBAR, type Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import type { Versioniert } from '@shared/ct/versionierterWert';
 import { PdfFenster } from './PdfFenster';
+import { KinderJugend } from './KinderJugend';
+import { ladeEinrichtung } from './gruppenwechselSpeicher';
+import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
+import { kjZugang } from '@shared/organigramm/gruppenwechselSicht';
 import type { RollenFilter } from './kastenPersonen';
 import {
   leseAnsicht,
@@ -55,25 +59,24 @@ import {
   type BaumAnsicht,
 } from './auswahl';
 
-type Ansicht = 'organigramm' | 'personen' | 'hinweise' | 'gliederung';
-const REITER: Reiter<Ansicht>[] = [
-  { id: 'organigramm', label: 'Organigramm', icon: 'grid' },
-  { id: 'personen', label: 'Personen', icon: 'people' },
-  { id: 'hinweise', label: 'Hinweise', icon: 'info' },
-];
-// Der Plan „neue Gliederung“ (O7) – nur für Gruppen-Admins (Alwin, 24.10.2026).
-const REITER_ADMIN: Reiter<Ansicht>[] = [
-  ...REITER,
-  { id: 'gliederung', label: 'Neue Gliederung', icon: 'pencil' },
-];
-const ansichtAusAdresse = (hash: string, admin: boolean): Ansicht =>
-  hash === '#personen'
-    ? 'personen'
-    : hash === '#hinweise'
-      ? 'hinweise'
-      : hash === '#gliederung' && admin
-        ? 'gliederung'
-        : 'organigramm';
+type Ansicht = 'organigramm' | 'personen' | 'hinweise' | 'kinder' | 'gliederung';
+/**
+ * Die Reiter: „Kinder & Jugend“ (O9-2) nur für Leitungen der Stufen, Bereichsleitung und Admins; der Plan „neue
+ * Gliederung“ (O7) nur für Gruppen-Admins (Alwin, 24.10.2026). Personen und Hinweise nur mit eigenem Bereich.
+ */
+function reiterFuer(bereich: boolean, kinder: boolean, admin: boolean): Reiter<Ansicht>[] {
+  const r: Reiter<Ansicht>[] = [{ id: 'organigramm', label: 'Organigramm', icon: 'grid' }];
+  if (bereich) {
+    r.push({ id: 'personen', label: 'Personen', icon: 'people' });
+    r.push({ id: 'hinweise', label: 'Hinweise', icon: 'info' });
+  }
+  if (kinder) r.push({ id: 'kinder', label: 'Kinder & Jugend', icon: 'people' });
+  if (admin) r.push({ id: 'gliederung', label: 'Neue Gliederung', icon: 'pencil' });
+  return r;
+}
+/** Die Ansicht aus der Adresse – nur eine, die es für diese Person als Reiter gibt. */
+const ansichtAusAdresse = (hash: string, reiter: readonly Reiter<Ansicht>[]): Ansicht =>
+  reiter.find((r) => r.id !== 'organigramm' && hash === `#${r.id}`)?.id ?? 'organigramm';
 
 /** Was für alle ausgeblendet ist – bis es geladen ist, und wenn es sich gerade nicht lesen lässt. */
 type ZentralStand =
@@ -125,6 +128,9 @@ export function App() {
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
   // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
   const [pdfOffen, setPdfOffen] = useState(false);
+  // Gruppenwechsel der Kinder (O9-2): die Einrichtung aus dem Speicher. Ohne sie – nicht eingerichtet, kein Leserecht
+  // oder gerade nicht lesbar – gibt es den Reiter „Kinder & Jugend“ nicht; nichts geht dabei verloren.
+  const [einrichtung, setEinrichtung] = useState<Einrichtung | null>(null);
 
   const abgemeldetOderFehler = useCallback(
     (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
@@ -171,6 +177,10 @@ export function App() {
       setMitglieder(null);
       ladeMitglieder(s.gruppen.map((g) => g.id)).then(setMitglieder, abgemeldetOderFehler);
       einsaetzeLaden();
+      ladeEinrichtung().then(
+        (r) => setEinrichtung(r.ok ? (r.daten?.inhalt ?? null) : null),
+        () => setEinrichtung(null),
+      );
     }, abgemeldetOderFehler);
   }, [abgemeldetOderFehler, einsaetzeLaden, zentralLaden]);
 
@@ -285,8 +295,13 @@ export function App() {
     setRollenAus(aus);
   };
   const admin = !!start?.rechte.gruppenVerwalten;
-  const reiter = admin ? REITER_ADMIN : REITER;
-  const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash, admin) : 'organigramm';
+  const kinderZugang = useMemo(
+    () => (start && einrichtung ? kjZugang(einrichtung, start.geleitet, admin) : null),
+    [start, einrichtung, admin],
+  );
+  const reiter = reiterFuer(zeigtMehr, !!kinderZugang, admin);
+  const zeigtReiter = reiter.length > 1;
+  const ansicht: Ansicht = zeigtReiter ? ansichtAusAdresse(hash, reiter) : 'organigramm';
 
   // Lesbare Mitglieder und Anfragen – Grundlage für Personen, Hinweise und das Personenfenster.
   const lesbar = useMemo(() => {
@@ -387,7 +402,7 @@ export function App() {
   };
   const fertig = zustand.art === 'fertig';
   const oben =
-    fertig && zeigtMehr && !handy ? (
+    fertig && zeigtReiter && !handy ? (
       <Segment
         value={ansicht}
         options={reiter.map((r) => ({ value: r.id, label: r.label }))}
@@ -397,7 +412,7 @@ export function App() {
       />
     ) : undefined;
   const unten =
-    fertig && zeigtMehr && handy ? (
+    fertig && zeigtReiter && handy ? (
       <ReiterLeiste reiter={reiter} aktiv={ansicht} onWechsel={wechseln} />
     ) : undefined;
 
@@ -533,6 +548,14 @@ export function App() {
           onGruppe={gruppeOeffnen}
           onPerson={personOeffnen}
           onEinsaetzeNachladen={einsaetzeLaden}
+        />
+      )}
+      {start && einrichtung && kinderZugang && ansicht === 'kinder' && (
+        <KinderJugend
+          start={start}
+          einrichtung={einrichtung}
+          zugang={kinderZugang}
+          onAbgemeldet={abgemeldetOderFehler}
         />
       )}
       {start && ansicht === 'gliederung' && (

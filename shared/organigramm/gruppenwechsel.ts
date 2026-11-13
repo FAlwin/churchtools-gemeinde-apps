@@ -15,6 +15,7 @@
  */
 import { alterAm, plusTage, vorJahren } from '../ct/datum';
 import type { RoutinenSchritt } from '../ct/routinen';
+import type { TerminRoh } from '../ct/kalenderTermine';
 
 // ── Einstellung ────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,21 @@ export interface Ferientermin {
   titel: string;
   beginn: string;
   ende: string;
+}
+
+/**
+ * Termine aus `GET /calendars/appointments` als Ferientermine – ganztägig kommen Beginn und Ende als Tag (gemessen
+ * 12.11.2026). Einträge ohne Titel oder Tage fallen weg.
+ */
+export function ferientermineAus(roh: readonly TerminRoh[]): Ferientermin[] {
+  const aus: Ferientermin[] = [];
+  for (const r of roh) {
+    const titel = (r.base ?? r.appointment?.base)?.title;
+    const beginn = r.calculated?.startDate;
+    const ende = r.calculated?.endDate;
+    if (typeof titel === 'string' && beginn && ende) aus.push({ titel, beginn, ende });
+  }
+  return aus;
 }
 
 /** Sommerferien eines Jahres. */

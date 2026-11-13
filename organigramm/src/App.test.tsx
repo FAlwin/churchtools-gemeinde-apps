@@ -23,6 +23,11 @@ import { personenSuchen } from '@ui/ct/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
+import { GRUNDWERTE, sommerferienAus, wechseljahre } from '@shared/organigramm/gruppenwechsel';
+import { einrichtungAus, type Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
+import type { KjDaten } from '@shared/organigramm/gruppenwechselSicht';
+import { ladeEinrichtung } from './gruppenwechselSpeicher';
+import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
 import {
   spitzenKnopf,
   spitzenName,
@@ -169,6 +174,12 @@ vi.mock('./sichtbarkeitSpeicher', () => ({
   ladeSichtbarkeit: vi.fn(),
   speichereSichtbarkeit: vi.fn(),
 }));
+// Gruppenwechsel der Kinder (O9-2) – ohne Angabe nicht eingerichtet; die eigenen Tests stellen es ein.
+vi.mock('./gruppenwechselSpeicher', () => ({ ladeEinrichtung: vi.fn() }));
+vi.mock('./ladeKinderJugend', () => ({ ladeFerien: vi.fn(), ladeKjDaten: vi.fn() }));
+const einrichtungLaden = vi.mocked(ladeEinrichtung);
+const ferienLaden = vi.mocked(ladeFerien);
+const kjLaden = vi.mocked(ladeKjDaten);
 const laden = vi.mocked(ladeStart);
 const sichtbarkeitLaden = vi.mocked(ladeSichtbarkeit);
 const sichtbarkeitSpeichern = vi.mocked(speichereSichtbarkeit);
@@ -344,6 +355,8 @@ beforeEach(() => {
   sichtbarkeitSpeichern.mockReset();
   mitgliederLaden.mockResolvedValue(MITGLIEDER);
   einsaetzeLaden.mockResolvedValue(EINSAETZE);
+  einrichtungLaden.mockReset();
+  einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
 });
 
 describe('App des Organigramms (O2)', () => {
@@ -1762,5 +1775,166 @@ describe('O7b-4: Organigramm als PDF', () => {
         name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,
       }),
     ).toBeTruthy();
+  });
+});
+
+describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
+  const FISCHE = 50;
+  const JUNGSCHAR = 51;
+  const WECHSEL = 52;
+  const BEREICH = 53;
+  const EINRICHTUNG: Einrichtung = einrichtungAus({
+    einstellung: {
+      ...GRUNDWERTE,
+      stufen: [
+        { gruppeId: FISCHE, name: 'Fische', abAlter: 7 },
+        { gruppeId: JUNGSCHAR, name: 'Jungschar', abAlter: 10 },
+      ],
+    },
+    bereichGruppeId: BEREICH,
+    wechselGruppen: [{ vonGruppeId: FISCHE, nachGruppeId: JUNGSCHAR, gruppeId: WECHSEL }],
+  })!;
+  // Die Sommerferien im nächsten Jahr: Heute ist dann immer vor der Ankündigung – egal, wann der Test läuft.
+  const JAHR = Number(heuteImKalender().slice(0, 4)) + 1;
+  const JAHRE = wechseljahre(
+    sommerferienAus(
+      [{ titel: `Sommerferien NRW ${JAHR}`, beginn: `${JAHR}-07-19`, ende: `${JAHR}-08-31` }],
+      'Sommerferien',
+    ),
+    GRUNDWERTE,
+  );
+  const k = (personId: number, name: string, status: 'active' | 'to_delete' = 'active') => ({
+    personId,
+    name,
+    leitung: false,
+    status,
+  });
+  const DATEN: KjDaten = {
+    gruppen: new Map([
+      [
+        FISCHE,
+        {
+          art: 'sichtbar',
+          mitglieder: [
+            { personId: 5, name: 'Jana Kiefer', leitung: true, status: 'active' },
+            k(60, 'Lea Birke'),
+            k(61, 'Tim Eiche'),
+            k(62, 'Finn Hasel'),
+          ],
+        },
+      ],
+      [JUNGSCHAR, { art: 'sichtbar', mitglieder: [k(70, 'Ben Holunder')] }],
+      [WECHSEL, { art: 'sichtbar', mitglieder: [k(61, 'Tim Eiche', 'to_delete')] }],
+    ]),
+    geburtstage: new Map([
+      [60, `${JAHR - 10}-09-30`], // am Stichtag 10 → wechselt
+      [61, `${JAHR - 11}-01-01`], // alt genug, aber Ausnahme
+      [62, null], // ohne Geburtstag
+      [70, `${JAHR - 11}-05-05`],
+    ]),
+  };
+
+  beforeEach(() => {
+    einrichtungLaden.mockResolvedValue({
+      ok: true,
+      daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
+    });
+    ferienLaden.mockReset();
+    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE });
+    kjLaden.mockReset();
+    kjLaden.mockResolvedValue({ art: 'da', daten: DATEN });
+  });
+
+  it('ohne Einrichtung gibt es den Reiter nicht – auch nicht für Admins', async () => {
+    einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
+    window.location.hash = '#kinder';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
+    expect(screen.queryByRole('button', { name: 'Kinder & Jugend' })).toBeNull();
+    expect(kjLaden).not.toHaveBeenCalled();
+  });
+
+  it('Admin: Übersicht mit Kacheln je Stufe, Kachel → Gruppe, Kind → Fenster nur zum Lesen', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    expect(await screen.findByRole('heading', { name: 'Übersicht' })).toBeTruthy();
+    expect(
+      screen.getByText(`4 Kinder und Jugendliche · 1 wechseln · 1 ohne Geburtstag`, {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Fische/ }));
+    expect(screen.getByRole('heading', { name: 'Fische' })).toBeTruthy();
+    expect(screen.getByText('Leitung: Jana Kiefer · 3 Kinder')).toBeTruthy();
+    expect(screen.getByText('wechselt → Jungschar')).toBeTruthy();
+    expect(screen.getByText('bleibt noch ein Jahr')).toBeTruthy();
+    expect(screen.getByText('Geburtstag fehlt')).toBeTruthy();
+    // Bereichsleitung sieht schon vor der Ankündigung, wer neu dazukommt – hier bei der Jungschar.
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zur Übersicht' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Jungschar/ }));
+    expect(screen.getByText('kommt aus Fische')).toBeTruthy();
+    expect(screen.getByText('Lea Birke')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zur Übersicht' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Fische/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Tim Eiche/ }));
+    const fenster = within(screen.getByRole('dialog', { name: 'Tim Eiche' }));
+    expect(fenster.getByText('bleibt noch ein Jahr (Ausnahme)')).toBeTruthy();
+    expect(fenster.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('Daten pflegen: Admin sieht „Geburtstag fehlt“ und „Wird 18“, Leitung nur „Geburtstag fehlt“', async () => {
+    const { unmount } = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Daten pflegen' }));
+    expect(screen.getByRole('heading', { name: /^Geburtstag fehlt\s*1$/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Wird bis zum Stichtag 18/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Finn Hasel/ }));
+    const fenster = within(screen.getByRole('dialog', { name: 'Finn Hasel' }));
+    expect(fenster.getByText('fehlt')).toBeTruthy();
+    expect(fenster.getByText(/wechselt das Kind nie von selbst/)).toBeTruthy();
+    unmount();
+
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [FISCHE] }));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Daten pflegen' }));
+    expect(screen.getByRole('heading', { name: /^Geburtstag fehlt\s*1$/ })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /^Wird bis zum Stichtag 18/ })).toBeNull();
+  });
+
+  it('Leitung einer Stufe: „Meine Gruppe“, wer neu kommt erst ab der Ankündigung', async () => {
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [JUNGSCHAR] }));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    expect(await screen.findByRole('heading', { name: 'Jungschar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Meine Gruppe' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Übersicht' })).toBeNull();
+    expect(screen.getByText(/siehst du ab der Ankündigung/)).toBeTruthy();
+    expect(screen.queryByText('Lea Birke')).toBeNull();
+  });
+
+  it('wer keine Stufe leitet: kein Reiter, auch nicht über die Adresse', async () => {
+    window.location.hash = '#kinder';
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
+    expect(screen.queryByRole('button', { name: 'Kinder & Jugend' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Übersicht' })).toBeNull();
+  });
+
+  it('Ferienkalender nicht freigegeben → sagt es, statt leere Listen zu zeigen', async () => {
+    ferienLaden.mockResolvedValue({ art: 'keinKalender' });
+    window.location.hash = '#kinder';
+    render(<App />);
+    expect(await screen.findByText(/ist für dich nicht sichtbar/)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Übersicht' })).toBeNull();
+  });
+
+  it('vorübergehender Fehler → „Erneut versuchen“ lädt neu', async () => {
+    kjLaden.mockResolvedValueOnce({ art: 'fehler' });
+    window.location.hash = '#kinder';
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Erneut versuchen/ }));
+    expect(await screen.findByRole('heading', { name: 'Übersicht' })).toBeTruthy();
   });
 });

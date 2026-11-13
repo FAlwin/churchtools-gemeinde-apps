@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
+import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Sheet } from '@ui/fenster/Sheet';
 import { AnmeldeFormular, type BaukastenHaken } from '@ui/anmeldeformular/AnmeldeFormular';
 import { musterAntworten } from '@ui/anmeldeformular/daten';
@@ -26,11 +27,19 @@ import {
 } from '@shared/anmeldung/baukasten';
 import {
   bedingungenNachziehen,
+  regelGruppen,
+  regelSetzen,
   verschiebenSperre,
+  type AntwortBedingung,
+  type Bedingung,
+  type RegelGruppe,
+  type RegelZiel,
   weggefallenText,
 } from '@shared/anmeldung/bedingungen';
-import { feldEinordnen, feldEntfernen, feldSpeichern } from './formularFelder';
+import { feldEinordnen, feldEntfernen, feldSpeichern, regelSpeichern } from './formularFelder';
 import { BedingungChips } from './Bedingungen';
+import { RegelFenster, RegelListe } from './RegelListe';
+import { blickMerken, blickVon, type Blick } from './baukastenBlick';
 import {
   aendereEinstellungen,
   bildEntfernen,
@@ -119,6 +128,10 @@ export function Baukasten({
   const [bildArbeitet, setBildArbeitet] = useState(false);
   /** Warum etwas nicht ging (Verschieben gesperrt, Teil voll) – steht oben, bis das Nächste gelingt (F1c). */
   const [sperre, setSperre] = useState<string | null>(null);
+  /** Reiter über dem Formular: das Formular selbst oder alle Regeln (F1d, Alwin 12.11.2026: über dem Formular). */
+  const [blick, setBlick] = useState<Blick>(() => blickVon(id));
+  /** Offenes Regel-Fenster: `{ gruppe: null }` = neue Regel. */
+  const [regelOffen, setRegelOffen] = useState<{ gruppe: RegelGruppe | null } | null>(null);
 
   const formular = lokalF ?? e.formular;
   const gestaltung = lokalG ?? e.gestaltung;
@@ -346,6 +359,29 @@ export function Baukasten({
     einfuegen(
       { name: kopie.frage || 'Trennlinie', feld: kopie, bereich: bereichVon(fo, f.id) ?? 'person' },
       { bereich: bereichVon(fo, f.id) ?? 'person', vorId: naechsteId(fo, f.id) },
+    );
+  }
+
+  /** Reiter wechseln – vorher das offene Feld speichern und abwählen, die Regel-Liste zeigt den gespeicherten Stand. */
+  function blickWechseln(neu: Blick) {
+    feldSichern();
+    setAktiv(null);
+    neuerEntwurf(null);
+    setSperre(null);
+    blickMerken(id, neu);
+    setBlick(neu);
+  }
+
+  /** **Eine Regel speichern** (Reiter „Bedingungen“) – an allen Zielen zugleich, ein Schreiben, ein „Rückgängig“. */
+  function regelSichern(
+    alt: RegelZiel[],
+    ziele: RegelZiel[],
+    bed: Bedingung | AntwortBedingung | null,
+  ) {
+    setRegelOffen(null);
+    setLokalF(regelSetzen(formularRef.current, alt, ziele, bed));
+    void tun(bed ? 'Regel gespeichert.' : 'Regel entfernt.', () =>
+      regelSpeichern(id, alt, ziele, bed),
     );
   }
 
@@ -646,15 +682,17 @@ export function Baukasten({
           <span className={k.status}>Nur die Leitung kann das Formular ändern.</span>
         )}
         <div className={k.rechts}>
-          <Segment
-            ariaLabel="Größe der Ansicht"
-            value={geraet}
-            onChange={setGeraet}
-            options={[
-              { value: 'computer', label: 'Computer' },
-              { value: 'handy', label: 'Handy' },
-            ]}
-          />
+          {(zeigeVorschau || blick === 'formular') && (
+            <Segment
+              ariaLabel="Größe der Ansicht"
+              value={geraet}
+              onChange={setGeraet}
+              options={[
+                { value: 'computer', label: 'Computer' },
+                { value: 'handy', label: 'Handy' },
+              ]}
+            />
+          )}
           {darf && (
             <button
               type="button"
@@ -674,53 +712,81 @@ export function Baukasten({
         </div>
       </div>
 
-      <div className={`${k.flaeche} ${zeigeVorschau ? k.ohneLeiste : ''}`}>
-        <div
-          ref={buehneRef}
-          className={`${k.buehne} ${geraet === 'handy' ? k.handy : ''}`}
-          onClick={() => !zeigeVorschau && waehlen(null)}
-          // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
-          // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
-          onDragEnter={ueberBuehne}
-          onDragOver={ueberBuehne}
-          onDrop={loslassen}
-        >
-          {zeigeVorschau ? (
-            <AnmeldeFormular
-              key={`vorschau-${gestaltung.vorlage}`}
-              ansicht={ansicht}
-              heute={heute}
-              vorschau
-              start={musterAntworten(e, heute)}
-            />
-          ) : (
-            <AnmeldeFormular
-              ansicht={ansicht}
-              heute={heute}
-              vorschau
-              start={musterAntworten(e, heute)}
-              baukasten={haken}
-            />
+      {!zeigeVorschau && (
+        <div className={k.formularReiter}>
+          <ReiterLeiste
+            oben
+            name="Formular oder Bedingungen"
+            aktiv={blick}
+            onWechsel={blickWechseln}
+            reiter={[
+              { id: 'formular', label: 'Formular', icon: 'dokument' },
+              {
+                id: 'bedingungen',
+                label: 'Bedingungen',
+                icon: 'liste',
+                zahl: regelGruppen(formular).length,
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      {!zeigeVorschau && blick === 'bedingungen' ? (
+        <RegelListe
+          formular={formular}
+          darf={darf}
+          onBearbeiten={(gruppe) => setRegelOffen({ gruppe })}
+        />
+      ) : (
+        <div className={`${k.flaeche} ${zeigeVorschau ? k.ohneLeiste : ''}`}>
+          <div
+            ref={buehneRef}
+            className={`${k.buehne} ${geraet === 'handy' ? k.handy : ''}`}
+            onClick={() => !zeigeVorschau && waehlen(null)}
+            // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
+            // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
+            onDragEnter={ueberBuehne}
+            onDragOver={ueberBuehne}
+            onDrop={loslassen}
+          >
+            {zeigeVorschau ? (
+              <AnmeldeFormular
+                key={`vorschau-${gestaltung.vorlage}`}
+                ansicht={ansicht}
+                heute={heute}
+                vorschau
+                start={musterAntworten(e, heute)}
+              />
+            ) : (
+              <AnmeldeFormular
+                ansicht={ansicht}
+                heute={heute}
+                vorschau
+                start={musterAntworten(e, heute)}
+                baukasten={haken}
+              />
+            )}
+          </div>
+
+          {!zeigeVorschau && (
+            <aside className={k.leiste} aria-label="Bausteine und Design">
+              <Segment
+                ariaLabel="Leiste"
+                value={reiter}
+                onChange={setReiter}
+                options={[
+                  { value: 'bausteine', label: 'Bausteine' },
+                  { value: 'design', label: 'Design' },
+                ]}
+              />
+              {reiter === 'bausteine' ? tafelBausteine : tafelDesign}
+            </aside>
           )}
         </div>
+      )}
 
-        {!zeigeVorschau && (
-          <aside className={k.leiste} aria-label="Bausteine und Design">
-            <Segment
-              ariaLabel="Leiste"
-              value={reiter}
-              onChange={setReiter}
-              options={[
-                { value: 'bausteine', label: 'Bausteine' },
-                { value: 'design', label: 'Design' },
-              ]}
-            />
-            {reiter === 'bausteine' ? tafelBausteine : tafelDesign}
-          </aside>
-        )}
-      </div>
-
-      {!zeigeVorschau && (
+      {!zeigeVorschau && blick === 'formular' && (
         <div className={k.mobil}>
           <button type="button" onClick={() => setBlatt('bausteine')}>
             <Icon name="plus" size={18} /> Baustein
@@ -729,6 +795,14 @@ export function Baukasten({
             Design
           </button>
         </div>
+      )}
+      {regelOffen && (
+        <RegelFenster
+          formular={formular}
+          gruppe={regelOffen.gruppe}
+          onSpeichern={regelSichern}
+          onClose={() => setRegelOffen(null)}
+        />
       )}
       {blatt && (
         <Sheet

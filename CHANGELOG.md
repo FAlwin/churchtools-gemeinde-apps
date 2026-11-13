@@ -7,6 +7,257 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.39.2] – 2026-11-13
+
+**Überblick.** Musik-App: **Die Reiter oben am iPad sind wieder zu sehen und scharf** – in der installierten App
+standen sie seit v2.38.0 unter der Statusleiste und im milchigen Band von iPadOS. Intern ist das Lied-Blatt weiter
+aufgeteilt (#918). Aus dem anderen Teil des Repos (eigene Erweiterungen): Organigramm („Anfangen bei“ jede Gruppe,
+„Welche Rollen“, Kern für den Gruppenwechsel), Protokolle S6-1 bis S6-3a (Freigeben, Bescheid geben, PDF), Dienstplaner
+v0.3.1 (von der Startseite direkt hin) und L1/L2, Anmeldungen F1a–F1c (Bedingungen, noch nicht veröffentlicht).
+
+### Behoben (Musik-App)
+
+- **Reiter oben am iPad wieder zu sehen und scharf** (#931, #932): In der installierten App vom NAS standen die Reiter
+  (Termine · Lieder · Abwesenheiten · Mehr) seit „Reiter am iPad oben“ unter Uhr und Akku der Statusleiste und im
+  milchigen Band, das iPadOS inzwischen wie das iPhone oben über die App legt. Die Leiste reicht jetzt bis unter das
+  Band (Safe-Area + 36 px, wie die Köpfe am iPhone), der Inhalt darunter beginnt direkt unter den Reitern. In
+  ChurchTools ändert sich nichts (dort steht die Leiste von ChurchTools darüber).
+
+### Neu (Organigramm)
+
+- **Welche Rollen** (#915): Neben „Personen“ lässt sich je Rolle ein Häkchen setzen, benannt wie in ChurchTools, dazu
+  „Alle“ und „Nur Leitung“. Abgewählte Rollen fehlen in Diagrammen, Liste, Präsentation (Kästchen und Personenlisten)
+  und PDF; darunter steht klein, was ausgeblendet ist. Die Zahlen zählen weiter alle. Das Gerät merkt sich die Wahl.
+
+### Intern
+
+- **Lied-Blatt: Datei-Fenster, Seiten-Schlüssel und Teilen-PDF herausgelöst** (#845, Schritt 4, Scheibe 4e):
+  `DateiFenster` (Dateien des Arrangements mit SongSelect-Rückfrage, Löschen, Umbenennen und Upload-Warnung),
+  `useSeitenSchluessel` (Anmerkungs-, Zoom- und „Notizen von …“-Schlüssel je Seite) und `liedPdfBauen` (das aktive Lied
+  als PDF zum Teilen) stehen jetzt in eigenen Dateien. Unverändert übernommen; `ChordChart.tsx` hat statt 1.063 noch
+  896 Zeilen. Neue Tests für alle drei Teile – vorher war diese Verdrahtung ungetestet (16 Teile, 2 über E2E bewacht).
+
+### Neu (Organigramm)
+
+- **„Anfangen bei“ jede Gruppe, mit Suche** (#915, Scheibe A). Bisher ging die Auswahl nur bis zu den Bereichen; jetzt
+  steht jede Gruppe darin, nach Ebene eingerückt wie im Baum – z. B. nur das Café-Team oder nur die Technik samt
+  Untergruppen. Oben ein Suchfeld: Treffer mit ihren Obergruppen darunter, Pfeiltasten und Enter am Laptop; am Handy
+  öffnet sich die Tastatur nicht von selbst. Dieselbe Auswahl gilt für den **Ausschnitt** der PDF. Eine Gruppe mit
+  zwei Obergruppen steht einmal; was für alle ausgeblendet ist, fehlt.
+
+### Intern (CI)
+
+- Jeder CI-, Staging- und Release-Job hat ein Zeitlimit (10–30 Minuten, je nach üblicher Dauer; e2e 20). Am 11.11.2026
+  hing die Installation der Testbrowser sechs Stunden lang, weil der Ubuntu-Paketserver nicht erreichbar war; jetzt
+  scheitert ein hängender Job schnell und kann neu gestartet werden. Die Erweiterungs-Releases erben die Grenze aus
+  `erweiterung-release.yml`.
+
+### Behoben (Organigramm)
+
+- **Das „−“ im runden Klapp-Schalter sitzt jetzt genau in der Mitte.** Es war ein Schriftzeichen, das Lato auf
+  ihre Rechenachse setzt – sichtbar unter der Kreismitte. Jetzt ist es ein Strich durch die Mitte (Diagramm und
+  Präsentation; die Zahlen im zugeklappten Schalter waren schon mittig).
+
+### Intern
+
+- **Anmeldungen: Bedingungen im Baukasten einstellen** (Etappe F, Scheibe F1c; noch nicht freigegeben, veröffentlicht
+  wird erst nach Etappe F). Nach dem abgenommenen Entwurf `f1-bedingungen-nachweise-v1`, Ansicht 1:
+  - An jeder Frage der Knopf „Nur zeigen, wenn …“ / „Bedingung ändern“, an jeder Antwort ein Pfeil für „nur wählbar,
+    wenn …“ (auch bei Ja/Nein). Beide öffnen ein Fenster: beliebig viele Bedingungen, „eine reicht / alle müssen“, bei
+    Antworten „ausgrauen mit Hinweis“ oder „ausblenden“. „Speichern“ speichert sofort. Als Quelle bietet das Fenster
+    nur Fragen davor an (`moeglicheQuellen`).
+  - Unter jedem Feld steht, wann es erscheint und welche Antworten nur unter Bedingung wählbar sind; links eine blaue
+    Linie. Was an einer Bedingung nicht stimmt, steht rot darunter.
+  - Freiwilliger **Kurzname** für Fragen, auf die eine Bedingung schaut (Alwin, 12.11.2026) – grau vorbelegt mit der
+    automatischen Kürzung.
+  - **Bedingungen ziehen mit:** Wird eine Antwort umbenannt, ziehen die Bedingungen darauf und daran mit. Wird eine
+    Antwort oder Frage entfernt oder ausgeschaltet, fällt die Bedingung mit weg (Alwin, 12.11.2026), und die Meldung
+    nennt die betroffene Frage; „Rückgängig“ holt alles zurück. Dasselbe beim Ausschalten des Geburtsdatums (`mitWer`)
+    und beim Wechsel des Fragetyps. Bis F1c hätte so eine Änderung jedes weitere Speichern blockiert
+    (`bedingungFehler`).
+  - **Verschieben gesperrt,** wenn danach eine Quelle hinter ihrer Bedingung stünde (Alwin, 12.11.2026): „„Taufe“ muss
+    vor „Bereich“ bleiben – dort ist sie Bedingung.“ – im Baukasten und beim Speichern (`feldEinordnen` → 409).
+  - Die Feldgrenze je Teil (`FELDER_MAX` = 60) steht in der Leiste; ist ein Teil voll, kommt kein Baustein mehr hinein.
+  - Neu im Regel-Baustein (`shared/anmeldung/bedingungen.ts`): `kaputteStellen` (die EINE Prüfung hinter
+    `bedingungFehler`), `bedingungenUmbenennen`, `bedingungenAufraeumen`, `bedingungenNachziehen`, `verschiebenSperre`,
+    `weggefallenText`, `istQuelle`, `bedingungSatz`, `umbenannteAntworten`.
+  - Nebenbei behoben: Wurde ein Feld gesichert und im selben Klick verschoben, las der zweite Schritt den Stand vom
+    letzten Zeichnen – die eben getippte Änderung fehlte kurz in der Anzeige (`setLokalF` im Baukasten).
+
+### Behoben (Dienstplaner)
+
+- **Planen zählt im Termin-Kopf nur die gezeigten Gruppen.** „N frei“, der Füllbalken und am Handy die Datumszettel
+  zählten bisher immer alle Gruppen eines Termins – auch wenn nur eine Gruppe gezeigt wurde. Wer von der Startseite
+  „Programm · 3 Plätze frei“ kam, sah an einem Gottesdienst „12 frei“, obwohl Programm dort nur einen Platz frei hatte.
+  Jetzt zählen sie wie die Gruppenzeilen; hat keine gezeigte Gruppe an einem Termin einen Dienst, steht dort „—“.
+- **Der Hinweis „Nur … · nächste 6 Wochen“ ist blau** – er war versehentlich rot wie eine Warnung.
+
+### Intern
+
+- Wächter `ui/design/extendReihenfolge.test.ts`: Eine Klasse mit `@extend` darf ihre eigenen Angaben nicht an die
+  erweiterte Regel verlieren (Sass hängt sie dort an – steht die Klasse davor, gewinnt die andere). Geprüft am
+  übersetzten CSS aller Apps.
+
+### Behoben (Protokolle)
+
+- **Termin mit unmöglichem Datum:** Editor und Lese-Ansicht zeigten bei einem Termin auch ein Datum wie den 30.02.,
+  das die Bereiche unten schon verwarfen. Jetzt gilt überall dieselbe Regel (`terminDatum`) – ein ungültiges Datum
+  erscheint nirgends.
+
+### Intern (S6-3a)
+
+- **Das Protokoll als PDF – Satz** (Bauplan S6-3a, noch ohne Knopf; der kommt mit S6-3b): Regel
+  `shared/protokolle/protokollBlatt.ts` (Kopf mit Freigabe-Vermerk, das Protokoll wie in der Lese-Ansicht, Übersicht
+  Beschlüsse · To-Dos · Termine · Nächste Sitzung; To-Dos mit Wer und Bis ohne Status, bei „Offene To-Dos von früher“
+  die seit der letzten Sitzung erledigten ausgeschrieben – Alwin 12.11.2026), gezeichnet in `ui/teilen/protokollPdf.ts`
+  auf dem gemeinsamen `PdfSatz` (Zeile für Zeile über die Seite, Überschriften nie allein unten, Tabellen mit
+  verbundenen Zellen).
+- `PdfSatz` und `Lauf` können jetzt auch kursiv, unterstrichen, durchgestrichen, Code, Schrift- und Hintergrundfarbe
+  und Links (Termin- und Plan-Blatt unverändert). Kursive Lato (`Lato-Italic.ttf`, `Lato-BoldItalic.ttf`, unverändert
+  aus google/fonts, Alwin 12.11.2026) in eigenem Modul `pdfSchriftKursiv.ts` – nur das Protokoll-PDF lädt sie.
+- Eine Regel statt Kopien: `zustaendigeNamen` (Editor, feste Punkte, PDF), `terminDatum` (Ableitung, Editor,
+  Lese-Ansicht, PDF), `wannLang` jetzt in `@shared/ct/zeit`, `zurueckText` (Seite und PDF). Der Textmarker auf Papier
+  (`MARKIERT_PAPIER`) wird im Test aus `--markiert` nachgerechnet.
+
+### Neu (Protokolle, S6-2)
+
+- **In der Gruppe Bescheid geben** (Entwurf `s6-freigabe-pdf-v1`, Alwin 09./11.11.2026): Beim Freigeben gibt es das
+  Häkchen „In der Gruppe Bescheid geben“ (vorbelegt an, mit Vorschau) – nur, wo man in ChurchTools Beiträge schreiben
+  darf. Dann entsteht ein Beitrag in der Gruppe „Protokoll vom … ist freigegeben“ mit dem Link **„Protokoll öffnen“**.
+  Klappt der Beitrag nicht, ist das Protokoll trotzdem frei („Nochmal versuchen“); ist unklar, ob er schon da ist,
+  bittet das Fenster, in der Gruppe nachzusehen, statt ihn doppelt zu schicken.
+- **Direkt zu einer Sitzung:** `#/sitzungen/<Gruppe>/<Sitzung>` öffnet die Protokolle gleich bei dieser Sitzung.
+
+### Intern (S6-2)
+
+- Gemessen 11.11.2026: `GET /post/groups` listet die Gruppen, in denen man schreiben darf (`type: 'postPossible'`);
+  `POST /posts` (Markdown, Absatz = Leerzeile) → ID → nachgelesen.
+- Regel `shared/protokolle/beitrag.ts` (Text, Markdown-sicherer Titel, Gruppen aus `/post/groups`); Schreiben
+  `protokolle/src/beitragSchreiben.ts` mit `abgelehnt` aus `planen.ts` (abgelehnt → wiederholbar, unklar → `Unklar`,
+  angelegt → der nächste Versuch liest nur nach).
+- Das Freigabe-Fenster arbeitet die Folgeschritte (Treffen, Beitrag) einzeln ab; „Nochmal versuchen“ wiederholt nur,
+  was gescheitert ist und sich gefahrlos wiederholen lässt.
+- Den Listenschlüssel einer Sitzung mit Protokoll (`p:<Sitzung>`) bilden jetzt alle Stellen über `protokollSchluessel`
+  (vorher fünfmal von Hand).
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.3.1 gebracht: von der Startseite direkt in Planen (nur
+  die angetippte Gruppe, nächste 6 Wochen) und per Datum oder Titel direkt zum Termin.
+
+### Intern
+
+- **Release-Titel der Musik-App mit App-Namen:** Der Release-Schritt setzt den Titel „Musik-App vX.Y.Z“ statt nur des
+  Tags – wie „Dienstplaner v0.3.0“ bei den Erweiterungen. Der Update-Hinweis liest weiter nur Tag und Link.
+
+### Intern
+
+- **Anmeldungen: Bedingungen wirken im Formular** (Etappe F, Scheibe F1b; einstellen lassen sie sich erst mit F1c).
+  Das öffentliche Formular, die Vorschau und die Anmeldung von Hand wenden die Bedingungen aus
+  `shared/anmeldung/bedingungen.ts` an – über EINE Stelle, `ui/anmeldeformular/useBedingungen.ts`.
+  - Fragen mit Bedingung erscheinen erst, wenn sie zutrifft – beim Kontakt und je Person einzeln. Pflicht gilt nur,
+    solange die Frage zu sehen ist.
+  - Antworten mit Bedingung sind ausgegraut mit Grund („Gruppenleiter (nur für Getaufte)“) oder fehlen ganz – bei
+    Ja/Nein, Auswahl, Auswahlliste und Mehrfachauswahl.
+  - Wird eine gewählte Antwort ungültig, wird die Wahl sofort gelöst, und die Frage sagt warum („… ist nur für Getaufte
+    möglich – bitte neu wählen.“). Der Hinweis bleibt, bis man an dieser Frage neu wählt.
+  - Eine ausgeblendete Frage behält ihren Wert, solange man ausfüllt. Nach ChurchTools kommt sie nicht:
+    `anmeldungAufbauen` leert vor dem Senden (`leeren`). Weil das Formular und „Von Hand“ beide durch diese Stelle
+    gehen, gilt das für beide.
+  - Der Betrag rechnet mit einem ausgeblendeten Geburtsdatum nicht (`buchungAus`) – angezeigt wie gespeichert.
+  - Im Baukasten bleibt alles sichtbar und wählbar.
+  - Neu im Regel-Baustein: `loesen` (nur ungültige Wahl lösen, `leeren` baut darauf auf) und `antwortZustand`.
+
+### Neu (Protokolle, S6-1)
+
+- **Protokoll freigeben** (Entwurf `s6-freigabe-pdf-v1`, Alwin 09./11.11.2026): Im Editor oben „Freigeben“ (nur die
+  Leitung). Das Fenster zeigt **Hinweise, ohne zu zwingen** – offene Anwesenheit („geprüft?“), To-Dos ohne Zuständigen,
+  offene Vorschläge – mit „Ansehen“ (springt an die Stelle) und einer Zusammenfassung.
+- **Freigeben** speichert, hält die festen Punkte fest, macht das Protokoll fest und **schließt das Gruppentreffen** in
+  ChurchTools ab (Kommentar und Gäste bleiben erhalten). Scheitert nur das Abschließen, ist das Protokoll trotzdem frei
+  – „Nochmal versuchen“. To-Dos bleiben abhakbar. Oben steht danach **„freigegeben am … von …“**.
+- **Freigabe zurücknehmen** (nur die Leitung, mit Rückfrage): wieder Entwurf, die festen Punkte zeigen wieder den
+  aktuellen Stand; über dem Protokoll „Freigabe zurückgenommen am … von … – vorher freigegeben am … von …“. Das
+  Gruppentreffen bleibt abgeschlossen.
+
+### Intern (S6-1)
+
+- Gemessen 11.11.2026 (`messung-s6-0-2026-11-11.md`): Abschließen braucht `startDate`, ein schlankes `PUT` leert
+  Kommentar und Gäste → ganz lesen, alles zurück. Ein Baustein `treffenAendern` für Verschieben (K2b) und Abschließen.
+- Regel `shared/protokolle/freigabe.ts` (Hinweise aus `ableiten`, Kopf frei/zurück, Verlauf mit Namen im Kopf,
+  Vermerk); `festhaltenFuerFreigabe` und `festePunkteLoesen` in `festePunkte.ts` – die Freigabe markiert ihr
+  „Letztes Protokoll“, eine bewusste Wahl (K3b-2) bleibt beim Zurücknehmen.
+- Speichern in Bausteine geteilt (`teileSichern`, `alteTeileWeg`); Freigeben und Zurücknehmen nutzen dieselbe
+  Reihenfolge (neue Teile → nachlesen → Kopf → nachlesen → alte weg). Der To-Do-Abgleich ist eine Funktion für Speichern
+  und Freigeben.
+- Der Test-Nachbau verhält sich beim Treffen wie gemessen (Pflicht `startDate`, leert Gäste, abgeschlossen = gesperrt).
+
+### Intern (Organigramm)
+
+- **Gruppenwechsel der Kinder – Kern ohne Oberfläche** (Bauplan O9-1): `shared/organigramm/gruppenwechsel.ts` rechnet
+  aus dem Ferienkalender die Wechseltage (erster Montag nach den Sommerferien, Ankündigung 8 Wochen vorher, Aufnahme 14
+  Tage), sagt voraus, wer wechselt, und baut die Regeln für Wechsel-Gruppe, neue und alte Gruppe, die Aufräum-Routine
+  und die drei Leiter-Rechte am Typ „Gruppenwechsel“. Einstellbar für andere Gemeinden (Stufen, Stichtag, Fristen,
+  Ferienkalender); `einstellungFehler` fängt Werte ab, mit denen die Regeln stillschweigend falsch wären. Die Tests
+  werten die erzeugten Regeln mit einem kleinen Nachbau der ChurchTools-Auswertung aus und vergleichen mit der Vorschau.
+- `alterAm` liegt jetzt in `shared/ct/datum.ts` (vorher `shared/anmeldung/formular.ts`), daneben neu `vorJahren` – „Stichtag
+  minus N Jahre“ stand im Anmeldeformular (Musterdaten) schon einmal von Hand und nutzt es jetzt mit. Der Typ
+  `RoutinenSchritt` liegt in `shared/ct/routinen.ts` (vorher `shared/anmeldung/ablaeufe.ts`, neu mit Warten nach Dauer).
+  Die alten Stellen reichen weiter, die Anmeldungen ändern sich nicht.
+
+### Intern
+
+- **Anmeldungen: Bedingungen im Formular – der Regel-Baustein** (Etappe F, Scheibe F1a; noch ohne Oberfläche).
+  Neue Datei `shared/anmeldung/bedingungen.ts` als die EINE Stelle für „Nur zeigen, wenn …“. Fragen und einzelne
+  Antworten können eine Bedingung bekommen (`bed`, `antwortBed`; Antwort sonst ausgegraut mit Hinweis oder
+  ausgeblendet). Dazu ein freiwilliger Kurzname (`kurz`).
+  - Vergleiche: ist, ist nicht, enthält, enthält nicht, ausgefüllt, leer; mit „eine reicht / alle müssen“.
+  - Quellen nur davor; eine Frage je Person darf auch auf Kontakt-Fragen schauen. Ausgeblendete oder ausgeschaltete
+    Quellen zählen als nicht erfüllt.
+  - Pflicht gilt nur, solange die Frage zu sehen ist (`pruefeAntworten`). `leeren` löst ungültige Antworten und leert
+    Ausgeblendetes, auch über mehrere Stufen. `bedingungFehler` verhindert das Speichern kaputter Bedingungen
+    (`pruefeFormular`).
+  - Höchstzahl der Felder je Teil von 30 auf 60 (`FELDER_MAX`): Die AC-Mitarbeiter-Anmeldung braucht rund 37. Ein
+    Test belegt, dass sie samt Bedingungen in die 5.000 Zeichen passt.
+  - „Ja/Nein“ (`wahlAntworten`) und die Antwort-Länge (`ANTWORT_MAX`) stehen jetzt an einer Stelle statt an zwei.
+  - Ein älteres Formular-Paket liest die Bedingungen nicht. Paket und Erweiterung deshalb zusammen hochladen.
+
+### Neu (Dienstplaner)
+
+- **Von der Startseite direkt hin.** Eine Gruppe in der Karte „Planen“ öffnet Planen mit **nur dieser Gruppe** und den
+  **nächsten 6 Wochen** – genau den Terminen, deren freie Plätze die Karte zählt. Oben steht, dass es nur für diesen
+  Besuch gilt; „Gewohnte Ansicht“ führt zurück zum eigenen Filter, der dabei unverändert bleibt. Aus einem Termin geht
+  „zurück“ wieder in diesen Besuch.
+- **Datum und Titel öffnen den Termin.** Auf der Startseite („Als Nächstes“, „Deine nächsten Dienste“, „Für dich offen“)
+  und in Planen am Handy führen Datumskachel und Titel direkt in die Termin-Ansicht, in der Tabelle auch die Kachel im
+  Spaltenkopf.
+
+### Intern
+
+- **Anmeldeformular: Absenden und freie Plätze als Hooks** (#845, Schritt 4, Scheibe 4d-2): `useAbsenden` prüft,
+  schützt gegen Spam (Honigtopf, Mindest-Ausfüllzeit), schickt ab oder zeigt in der Vorschau, was herauskäme, und
+  schickt bei „Noch einmal“ nur die Offenen mit derselben Anmelde-Nr.; `usePlaetze` fragt beim Hinzufügen einer Person
+  die freien Plätze frisch nach. Unverändert übernommen (`ui/anmeldeformular/useAbsenden.ts`, dazu der Typ
+  `Abschicken`); `AnmeldeFormular.tsx` hat statt 627 noch 537 Zeilen (vor Schritt 4: 1.113) → fertig aufgeteilt. Neue
+  Tests: im Baukasten keine Person dazu, kein doppeltes Nachfragen, Fehler bei „Noch einmal“, Mail im Vorschau-Ergebnis.
+
+### Intern
+
+- **Anmeldeformular in Dateien geteilt** (#845, Schritt 4, Scheibe 4d-1): `FeldEingabe` (ein Feld, wie Gäste es sehen,
+  mit Pflicht-Stern), `FormularRahmen` (Gestaltung, Kopf mit Logo und Titelbild, Symbole; dazu der Typ `Ansicht`) und
+  `Ergebnis` (die Seite nach dem Abschicken, `FormularErgebnis.tsx`) stehen jetzt in eigenen Dateien unter
+  `ui/anmeldeformular/`. Nur verschoben; `AnmeldeFormular.tsx` hat statt 1.113 noch 627 Zeilen. Neue Tests:
+  Pflicht-Stern und „(freiwillig)“ an der Beschriftung, Symbole in den Fakten oben.
+
+### Intern
+
+- **Anmeldungen: die Fenster des Reiters als Hook** (#845, Schritt 4, Scheibe 4c-3): `useFenster` führt, welches Fenster
+  offen ist – die Anmeldung (mit Rückfrage und der letzten Änderung samt „Rückgängig“), „Von Hand“, Zurückholen,
+  Rundmail und Druckliste – und welche Anmeldung im Fenster steht, auch wenn sie nach einer Absage aus der Liste fiel.
+  Unverändert übernommen; `AnmeldungenReiter.tsx` hat statt 710 noch 673 Zeilen (vor Schritt 4: 1.193) → fertig
+  aufgeteilt. Neue Tests (`useFenster.test.ts`): Zurück aus „Person dazu“, Fenster bleibt nur mit „Rückgängig“,
+  „fertig“ ohne alte Rückfrage, Rundmail erst mit Liste und genau einmal.
+
 ## [2.39.1] – 2026-11-09
 
 **Überblick.** Musik-App: **„Darunter einfügen“** im Punkt-Fenster öffnet am Rechner und iPad ein kleines Menü am

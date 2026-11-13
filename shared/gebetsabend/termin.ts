@@ -4,12 +4,8 @@
  * die Antwort trägt je Termin `base` (Titel, ID) und `calculated` (Beginn/Ende dieses Vorkommens, UTC).
  */
 
-/** Ein Eintrag der Liste, nur die gelesenen Felder. */
-export interface TerminRoh {
-  base?: { id?: number; title?: string };
-  appointment?: { base?: { id?: number; title?: string } };
-  calculated?: { startDate?: string; endDate?: string };
-}
+import type { TerminRoh } from '../ct/kalenderTermine';
+export { terminPfad, type TerminRoh } from '../ct/kalenderTermine';
 
 export interface GebetsTermin {
   id: number;
@@ -21,10 +17,6 @@ export interface GebetsTermin {
 
 /** So weit voraus wird gesucht – ein Gebetsabend, der weiter weg ist, steht nicht als „nächster“ da. */
 export const TAGE_VORAUS = 60;
-
-export function terminPfad(kalender: number, von: string, bis: string): string {
-  return `/calendars/appointments?calendar_ids[]=${kalender}&from=${von}&to=${bis}`;
-}
 
 /**
  * Der nächste passende Termin: Titel enthält das Suchwort (leer = jeder), und er ist **nicht vorbei** – ein Abend,

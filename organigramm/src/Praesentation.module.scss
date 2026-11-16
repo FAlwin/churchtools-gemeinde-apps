@@ -18,17 +18,29 @@
   }
 }
 
+// Zwei Zeilen (16.11.2026): oben Name, Vollbild und Schließen, darunter die Bedienung.
 .kopf {
   flex: none;
   display: flex;
-  // Mit dem Umschalter „Neue Gliederung | Heute“ (O7-4) passt die Leiste am Handy nicht in eine Zeile –
-  // umbrechen statt „Schließen“ über den Rand zu schieben.
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   padding: 10px clamp(16px, 2vw, 24px);
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
+}
+
+.kopfOben {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Die Bedienung bricht am Handy um, statt über den Rand zu ragen (wie seit O7-4).
+.bedienung {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .gemeinde {

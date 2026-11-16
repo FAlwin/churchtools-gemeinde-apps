@@ -57,14 +57,16 @@ export type Feldtyp =
   | 'price'
   // A6-2b: zusammengesetzte Bausteine (Alwin, 14./15.10.2026, Entwurf `a6-2b-entwurf-v2`).
   | 'erziehungsberechtigte'
-  | 'unterschrift';
+  | 'unterschrift'
+  // F2a: Beginn eines neuen Schritts (Seitenumbruch, Klick-Runden 7/8) – ein Text-Baustein mit Namen.
+  | 'schritt';
 
 /**
  * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
  * ChurchTools, kein „Pflicht“. Die EINE Stelle für diese Regel (Prüfung, Ablage, Darstellung, Baukasten).
  */
 export function nurText(typ: Feldtyp): boolean {
-  return typ === 'info' || typ === 'ueberschrift' || typ === 'trenner';
+  return typ === 'info' || typ === 'ueberschrift' || typ === 'trenner' || typ === 'schritt';
 }
 
 /** `fest` = immer dabei, `standard` = vorgegeben, an/aus; `eigen` = aus dem Baukasten; `preis` = aus den Preisen. */
@@ -119,6 +121,7 @@ export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestalt
   { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
   { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
   { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
+  // „Neuer Schritt“ (F2) kommt erst mit dem Baukasten-Teil (F2c) in die Leiste.
 ];
 
 export interface Vorgaben {
@@ -312,6 +315,8 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
  * gespeichert wird) und `pruefeFormular` (beim Speichern). `null` = in Ordnung.
  */
 export function feldFehler(x: Feld): string | null {
+  // F2: Der Name eines Schritts ist Pflicht (Klick-Runde 7) – er steht oben im Formular.
+  if (x.typ === 'schritt' && !x.frage.trim()) return 'Bitte einen Namen für den Schritt eintragen.';
   if (x.art === 'eigen' && x.typ !== 'trenner' && !x.frage.trim())
     return nurText(x.typ) ? 'Bitte einen Text eintragen.' : 'Bitte eine Frage eintragen.';
   if (
@@ -370,6 +375,7 @@ export function ctAblage(x: Feld): CtAblage {
     case 'info':
     case 'ueberschrift':
     case 'trenner':
+    case 'schritt':
     case 'price':
     case 'privacy':
       return { ort: 'keins' };
@@ -547,6 +553,9 @@ export interface TabellenWahl {
   fest: string[];
 }
 
+/** Name von Schritt 1, solange keiner eingetragen ist (Klick-Runde 8). */
+export const ERSTER_SCHRITT = 'Deine Angaben';
+
 export interface OeffentlicheEinstellungen {
   /** `null`, solange ein Entwurf noch kein Datum hat. */
   termin: TerminAngabe | null;
@@ -566,6 +575,11 @@ export interface OeffentlicheEinstellungen {
    * eingeschaltet sind (hält die Einstellungen kurz). Die Routine dazu baut `erinnerungen` in `ablaeufe.ts`.
    */
   erinnerungTage?: number[];
+  /**
+   * **Name von Schritt 1** (F2, Klick-Runde 8): Sobald das Formular Schritte hat, steht oben der feste Balken
+   * „Schritt 1“ – sein Name steht hier (die übrigen Schritte tragen ihren Namen am Baustein). Fehlt = `ERSTER_SCHRITT`.
+   */
+  ersterSchritt?: string;
   /**
    * **Im Kalender verschoben** (K1): Datum oder Ort, wie sie VOR der Übernahme aus dem Kalender waren, und wann
    * übernommen wurde. Der Hinweis oben auf der Seite zeigt es jeder Person einmal; die nächste Übernahme ersetzt es.
@@ -672,6 +686,8 @@ const feldSchema = z.object({
     // deshalb immer zusammen mit der Erweiterung aktualisieren (docs/betrieb/ANMELDUNGEN.md).
     'erziehungsberechtigte',
     'unterschrift',
+    // Seit F2a. Ein älteres Formular-Paket kennt ihn nicht – Paket und Erweiterung zusammen hochladen.
+    'schritt',
   ]),
   frage: z.string().max(200),
   hilfe: z.string().max(400),
@@ -761,6 +777,8 @@ const einstellungenSchema = z.object({
   loeschfristMonate: z.number().int().min(1).max(36).default(3),
   // Seit A9-3b: nur, wenn Erinnerungen eingeschaltet sind.
   erinnerungTage: z.array(z.number().int().min(1).max(30)).max(3).optional(),
+  // Seit F2a: der Name von Schritt 1 (nur bei Formularen mit Schritten).
+  ersterSchritt: z.string().max(60).optional(),
   // Seit K1: nur, nachdem der Termin aus dem Kalender nachgezogen wurde.
   terminVerschoben: z
     .object({

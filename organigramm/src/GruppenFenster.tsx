@@ -34,7 +34,12 @@ import {
   weiterSichtbarUeber,
 } from '@shared/organigramm/struktur';
 import { rollenFuerTyp, rollenRang, standardRolle } from '@shared/organigramm/mitglieder';
-import { gruppenPersonen } from '@shared/organigramm/personen';
+import {
+  gruppenPersonen,
+  mitNamen,
+  rollenName,
+  type PersonenStufe,
+} from '@shared/organigramm/personen';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
 import { ladeAktivStatus, strukturZugriff as z } from './struktur';
@@ -63,6 +68,11 @@ interface Props {
   onStruktur: () => Promise<boolean>;
   /** Die Mitglieder DIESER Gruppe neu laden (nach einer Änderung an ihnen, O6) – `false`, wenn das gerade nicht ging. */
   onMitgliederNeu: () => Promise<boolean>;
+  /**
+   * Wie viel man von den Personen dieser Gruppe sehen darf (#915 C, `personenGrenze`) – ohne Angabe alles. Wer pflegen
+   * darf, leitet oder ist Gruppen-Admin und sieht damit ohnehin alles.
+   */
+  personenStufe?: PersonenStufe;
 }
 
 /** Was das Fenster gerade zeigt: die Gruppe – oder einen Schritt, der die Struktur ändert (O5). */
@@ -98,6 +108,7 @@ export function GruppenFenster({
   onHierAnfangen,
   onStruktur,
   onMitgliederNeu,
+  personenStufe = 'alle',
 }: Props) {
   const g = knoten.gruppe;
   const stand = mitglieder?.je.get(g.id);
@@ -189,15 +200,14 @@ export function GruppenFenster({
   };
   // ── Mitglieder (O6) – danach nur die Mitglieder dieser Gruppe neu laden ──
   const personName = (id: number) => mitglieder?.personen.get(id)?.name ?? `Person ${id}`;
-  const rollenName = (id: number | null) =>
-    (id !== null ? start.rollen.get(id)?.name : undefined) ?? 'Mitglied';
+  const rolleHeisst = (id: number | null) => rollenName(start.rollen, id);
   const personAufnehmen = (personId: number, anzeige: string, rolleId: number) => {
     let vorher: Awaited<ReturnType<typeof aufnehmen>> = null;
     void ausfuehren(
       async () => {
         vorher = await aufnehmen(mz, g.id, personId, rolleId);
       },
-      `„${anzeige}“ ist jetzt in „${g.name}“ (${rollenName(rolleId)}).`,
+      `„${anzeige}“ ist jetzt in „${g.name}“ (${rolleHeisst(rolleId)}).`,
       () => aufnehmenZurueck(mz, g.id, personId, vorher),
       onMitgliederNeu,
     );
@@ -205,7 +215,7 @@ export function GruppenFenster({
   const rolleSetzen = (personId: number, alt: number | null, neu: number) =>
     void ausfuehren(
       () => rolleAendern(mz, g.id, personId, neu),
-      `„${personName(personId)}“ ist jetzt ${rollenName(neu)}.`,
+      `„${personName(personId)}“ ist jetzt ${rolleHeisst(neu)}.`,
       alt === null ? null : () => rolleAendern(mz, g.id, personId, alt),
       onMitgliederNeu,
     );
@@ -222,14 +232,23 @@ export function GruppenFenster({
   const name = (id: number) => person(id)?.name ?? '';
   const liste = stand?.art === 'sichtbar' ? gruppenPersonen(stand.mitglieder, name, rang) : [];
 
-  // Abschnitte je Rolle, in der Reihenfolge von ChurchTools
-  const abschnitte: { rolle: string; ids: number[] }[] = [];
-  for (const m of liste) {
-    const rolle = (m.rolleId !== null ? start.rollen.get(m.rolleId)?.name : null) ?? 'Mitglied';
-    const letzter = abschnitte[abschnitte.length - 1];
-    if (letzter?.rolle === rolle) letzter.ids.push(m.personId);
-    else abschnitte.push({ rolle, ids: [m.personId] });
-  }
+  // Abschnitte je Rolle, in der Reihenfolge von ChurchTools – mit Namen nur, wo die Stufe es erlaubt (#915 C); sonst
+  // steht nur die Überschrift mit der Zahl. Bei „Keine Personen“ nicht einmal die.
+  const abschnitte: { rolle: string; ids: number[]; namen: boolean }[] = [];
+  if (personenStufe !== 'aus')
+    for (const m of liste) {
+      const rolle = rollenName(start.rollen, m.rolleId);
+      const letzter = abschnitte[abschnitte.length - 1];
+      if (letzter?.rolle === rolle) letzter.ids.push(m.personId);
+      else
+        abschnitte.push({
+          rolle,
+          ids: [m.personId],
+          namen: mitNamen(personenStufe, start.rollen, m.rolleId),
+        });
+    }
+  const ohneNamen =
+    liste.length > 0 && (personenStufe === 'aus' || abschnitte.some((a) => !a.namen));
 
   const obergruppen = (start.eltern.get(g.id) ?? [])
     .map((id) => start.gruppen.find((x) => x.id === id))
@@ -508,45 +527,53 @@ export function GruppenFenster({
           <h3>
             {a.rolle} · {a.ids.length}
           </h3>
-          <ul className={styles.personen}>
-            {a.ids.map((id) => {
-              const p = person(id);
-              return (
-                <li key={id}>
-                  {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} />}
-                  <span className={styles.personName}>{name(id)}</span>
-                  {pflege.rolleAendern && (
-                    <button
-                      type="button"
-                      className={styles.klein}
-                      aria-label={`Rolle von ${name(id)}`}
-                      onClick={() =>
-                        beginnen({
-                          art: 'rolle',
-                          personId: id,
-                          rolleId: liste.find((m) => m.personId === id)?.rolleId ?? null,
-                        })
-                      }
-                    >
-                      Rolle
-                    </button>
-                  )}
-                  {pflege.beenden && (
-                    <button
-                      type="button"
-                      className={styles.klein}
-                      aria-label={`${name(id)} austragen`}
-                      onClick={() => beginnen({ art: 'austragen', personId: id })}
-                    >
-                      Austragen
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          {a.namen && (
+            <ul className={styles.personen}>
+              {a.ids.map((id) => {
+                const p = person(id);
+                return (
+                  <li key={id}>
+                    {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} />}
+                    <span className={styles.personName}>{name(id)}</span>
+                    {pflege.rolleAendern && (
+                      <button
+                        type="button"
+                        className={styles.klein}
+                        aria-label={`Rolle von ${name(id)}`}
+                        onClick={() =>
+                          beginnen({
+                            art: 'rolle',
+                            personId: id,
+                            rolleId: liste.find((m) => m.personId === id)?.rolleId ?? null,
+                          })
+                        }
+                      >
+                        Rolle
+                      </button>
+                    )}
+                    {pflege.beenden && (
+                      <button
+                        type="button"
+                        className={styles.klein}
+                        aria-label={`${name(id)} austragen`}
+                        onClick={() => beginnen({ art: 'austragen', personId: id })}
+                      >
+                        Austragen
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
       ))}
+      {ohneNamen && (
+        <p className={styles.leise}>
+          {personenStufe === 'aus' ? 'Die Personen sind' : 'Namen sind'} hier ausgeblendet –
+          eingestellt von Gruppen-Admins.
+        </p>
+      )}
 
       {pflege.aufnehmen && (
         <button

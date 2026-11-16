@@ -5,11 +5,12 @@
  * Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen und Schreiben scheitern nie nach außen.
  */
 import type { PersonenWahl } from '@shared/organigramm/personen';
-import { leseImGeraet, merkeImGeraet } from '@ui/bedienung/geraet';
+import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
 const ANSICHT = 'organigramm-ansicht';
 const PRAES_ANSICHT = 'organigramm-praesentation-ansicht';
 const PERSONEN = 'organigramm-personen';
+const ROLLEN_AUS = 'organigramm-rollen-aus';
 
 // Der gemeinsame Baustein (`@ui/bedienung/geraet`) – vorher stand dieselbe Mechanik hier und im Dienstplaner.
 const lesen = (schluessel: string): unknown =>
@@ -71,4 +72,19 @@ export function lesePersonen(): PersonenWahl {
 
 export function merkePersonen(wahl: PersonenWahl): void {
   merken(PERSONEN, wahl);
+}
+
+/**
+ * „Welche Rollen“ (#915): die ABGEWÄHLTEN Rollennamen – leer heißt alle. Was kein Text ist, fällt weg; ist gar nichts
+ * Lesbares gemerkt, gilt „alle“ (nichts geht verloren, es wird nur nichts ausgeblendet).
+ */
+export function leseRollenAus(): Set<string> {
+  return new Set(texte(lesen(ROLLEN_AUS)));
+}
+
+export function merkeRollenAus(aus: ReadonlySet<string>): void {
+  merken(
+    ROLLEN_AUS,
+    [...aus].sort((a, b) => a.localeCompare(b, 'de')),
+  );
 }

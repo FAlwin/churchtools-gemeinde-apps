@@ -14,6 +14,13 @@ import {
 import {
   antwortFrei,
   antwortZustand,
+  bedingungAufbereiten,
+  gemeinsameQuellen,
+  gleicheBedingung,
+  kannBedingungTragen,
+  regelGruppen,
+  regelSetzen,
+  zielKandidaten,
   bedingungFehler,
   bedingungSatz,
   bedingungenAufraeumen,
@@ -843,5 +850,254 @@ describe('istQuelle und bedingungSatz', () => {
         ],
       }),
     ).toBe('„Frage begleit“ ist ausgefüllt und (Frage fehlt) ist leer');
+  });
+});
+
+describe('Regel-Liste (F1d) – gleiche Bedingungen zusammengefasst', () => {
+  it('fasst gleiche Bedingungen zu einer Regel – Fragen und Antworten getrennt, in der Reihenfolge des Formulars', () => {
+    const g = regelGruppen(acFormular());
+    expect(g.map((x) => ({ antwort: x.antwort, ziele: x.ziele.map((z) => z.id) }))).toEqual([
+      { antwort: undefined, ziele: ['taufHinweis'] },
+      { antwort: undefined, ziele: ['kids1', 'kids2'] },
+      { antwort: 'Gruppenleiter', ziele: ['kids1', 'kids2'] },
+      { antwort: undefined, ziele: ['kidsLeiter'] },
+      { antwort: undefined, ziele: ['begleitNamen'] },
+    ]);
+    expect(g[2].ziele).toEqual([
+      { id: 'kids1', antwort: 'Gruppenleiter' },
+      { id: 'kids2', antwort: 'Gruppenleiter' },
+    ]);
+  });
+
+  it('gleich heißt: dieselben Regeln, derselbe Umschalter (bei einer Regel egal), an Antworten dieselbe Darstellung', () => {
+    const f = acFormular();
+    const mit = (id: string, x: Partial<Feld>) => {
+      const neu = structuredClone(f);
+      Object.assign(feld(neu, id), x);
+      return neu;
+    };
+    const anzahl = (fo: Formular) => regelGruppen(fo).length;
+    // Bei einer Regel ist der Umschalter egal …
+    expect(
+      anzahl(
+        mit('kids2', { bed: { ...wenn('zeitraum', 'enthaelt', 'KidsWoche'), modus: 'alle' } }),
+      ),
+    ).toBe(5);
+    // … eine andere Antwort, ein anderer Vergleich, ein anderer Hinweis, „ausblenden“ trennt.
+    expect(anzahl(mit('kids2', { bed: wenn('zeitraum', 'enthaelt', 'TeensWoche') }))).toBe(6);
+    expect(anzahl(mit('kids2', { bed: wenn('zeitraum', 'enthaeltNicht', 'KidsWoche') }))).toBe(6);
+    expect(
+      anzahl(
+        mit('kids2', { antwortBed: { Gruppenleiter: { ...nurGetauft(), grund: 'nur Getaufte' } } }),
+      ),
+    ).toBe(6);
+    expect(
+      anzahl(mit('kids2', { antwortBed: { Gruppenleiter: { ...nurGetauft(), art: 'weg' } } })),
+    ).toBe(6);
+    // „ausblenden“ ohne Hinweis: ein liegengebliebener Hinweis zählt nicht.
+    const weg = (grund?: string): AntwortBedingung => ({ ...nurGetauft(), art: 'weg', grund });
+    const beide = structuredClone(f);
+    feld(beide, 'kids1').antwortBed = { Gruppenleiter: weg('alt') };
+    feld(beide, 'kids2').antwortBed = { Gruppenleiter: weg() };
+    expect(anzahl(beide)).toBe(5);
+    // Mehrere Regeln: der Umschalter zählt.
+    const zwei: Bedingung = {
+      modus: 'eine',
+      regeln: [
+        { feld: 'taufe', op: 'ist', wert: 'Ja' },
+        { feld: 'begleit', op: 'ist', wert: 'Ja' },
+      ],
+    };
+    const z = structuredClone(f);
+    z.anmeldung.push(
+      frage('a', 'text', { bed: zwei }),
+      frage('b', 'text', { bed: { ...zwei, modus: 'alle' } }),
+    );
+    expect(
+      regelGruppen(z)
+        .slice(-2)
+        .map((x) => x.ziele.map((y) => y.id)),
+    ).toEqual([['a'], ['b']]);
+  });
+
+  it('dieselbe Bedingung an verschiedenen Antworten bleibt getrennt (wie im Entwurf)', () => {
+    const f = acFormular();
+    feld(f, 'kids1').antwortBed = { Gruppenleiter: nurGetauft(), Media: nurGetauft() };
+    const antworten = regelGruppen(f)
+      .filter((g) => g.antwort)
+      .map((g) => [g.antwort, g.ziele.map((z) => z.id)]);
+    expect(antworten).toEqual([
+      ['Gruppenleiter', ['kids1', 'kids2']],
+      ['Media', ['kids1']],
+    ]);
+  });
+
+  it('gleicheBedingung nennt die anderen Ziele derselben Regel – für den Hinweis im Fenster am Feld', () => {
+    const f = acFormular();
+    expect(gleicheBedingung(f, { id: 'kids1' })).toEqual([{ id: 'kids2' }]);
+    expect(gleicheBedingung(f, { id: 'kids2', antwort: 'Gruppenleiter' })).toEqual([
+      { id: 'kids1', antwort: 'Gruppenleiter' },
+    ]);
+    expect(gleicheBedingung(f, { id: 'kidsLeiter' })).toEqual([]);
+    expect(gleicheBedingung(f, { id: 'taufe' })).toEqual([]);
+  });
+});
+
+describe('regelSetzen – eine Regel an allen Zielen zugleich (F1d)', () => {
+  it('neue Regel mit mehreren Zielen setzt dieselbe Bedingung an jedes', () => {
+    const f = acFormular();
+    const bed = wenn('taufe', 'ist', 'Ja');
+    const neu = regelSetzen(f, [], [{ id: 'begleit' }, { id: 'begleitNamen' }], bed);
+    expect(feld(neu, 'begleit').bed).toEqual(bed);
+    expect(feld(neu, 'begleitNamen').bed).toEqual(bed); // die andere Bedingung ist ersetzt
+    expect(
+      regelGruppen(neu).find((g) => g.ziele.length === 2 && g.ziele[0].id === 'begleit'),
+    ).toBeTruthy();
+    expect(bedingungFehler(neu)).toEqual([]);
+    // Das alte Formular bleibt, wie es war.
+    expect(feld(f, 'begleit').bed).toBeUndefined();
+  });
+
+  it('bearbeiten: ein abgewähltes Ziel verliert die Bedingung, ein neues bekommt sie', () => {
+    const f = acFormular();
+    const bed = wenn('zeitraum', 'enthaelt', 'TeensWoche');
+    const neu = regelSetzen(
+      f,
+      [{ id: 'kids1' }, { id: 'kids2' }],
+      [{ id: 'kids2' }, { id: 'kidsLeiter' }],
+      bed,
+    );
+    expect(feld(neu, 'kids1').bed).toBeUndefined();
+    expect(feld(neu, 'kids2').bed).toEqual(bed);
+    expect(feld(neu, 'kidsLeiter').bed).toEqual(bed);
+    // Die Antwort-Bedingungen an diesen Feldern bleiben unberührt.
+    expect(feld(neu, 'kids1').antwortBed).toEqual({ Gruppenleiter: nurGetauft() });
+  });
+
+  it('entfernen (`null`) nimmt die Bedingung von allen Zielen', () => {
+    const f = acFormular();
+    const neu = regelSetzen(
+      f,
+      [{ id: 'kids1' }, { id: 'kids2' }],
+      [{ id: 'kids1' }, { id: 'kids2' }],
+      null,
+    );
+    expect(feld(neu, 'kids1').bed).toBeUndefined();
+    expect(feld(neu, 'kids2').bed).toBeUndefined();
+    expect('bed' in feld(neu, 'kids1')).toBe(false);
+  });
+
+  it('Antwort-Regel: setzt und entfernt nur an dieser Antwort; leer wird `antwortBed` ganz entfernt', () => {
+    const f = acFormular();
+    feld(f, 'kids1').antwortBed = { Gruppenleiter: nurGetauft(), Media: nurGetauft() };
+    const alt = [
+      { id: 'kids1', antwort: 'Gruppenleiter' },
+      { id: 'kids2', antwort: 'Gruppenleiter' },
+    ];
+    const weg: AntwortBedingung = { ...wenn('taufe', 'ist', 'Ja'), art: 'weg' };
+    const neu = regelSetzen(f, alt, alt, weg);
+    expect(feld(neu, 'kids1').antwortBed).toEqual({ Gruppenleiter: weg, Media: nurGetauft() });
+    expect(feld(neu, 'kids2').antwortBed).toEqual({ Gruppenleiter: weg });
+    const ohne = regelSetzen(f, alt, alt, null);
+    expect(feld(ohne, 'kids1').antwortBed).toEqual({ Media: nurGetauft() });
+    expect('antwortBed' in feld(ohne, 'kids2')).toBe(false);
+  });
+
+  it('an einer Frage landen nur Regeln und Umschalter – kein `art`/`grund` aus einem Antwort-Fenster', () => {
+    const neu = regelSetzen(acFormular(), [], [{ id: 'begleit' }], nurGetauft());
+    expect(feld(neu, 'begleit').bed).toEqual(wenn('taufe', 'ist', 'Ja'));
+  });
+});
+
+describe('Quellen und Ziele einer Regel (F1d) – keine Kreise', () => {
+  it('zielKandidaten: nur Felder nach allen Quellen, die eine Bedingung tragen können', () => {
+    const f = acFormular();
+    f.anmeldung.push(frage('aus', 'text', { zustand: 'aus' }));
+    const ids = (bed: Bedingung) => zielKandidaten(f, bed).map((x) => x.id);
+    const nachZeitraum = ids(wenn('zeitraum', 'ist', 'KidsWoche'));
+    expect(nachZeitraum).toContain('kids1');
+    expect(nachZeitraum).toContain('begleitNamen');
+    expect(nachZeitraum).not.toContain('zeitraum'); // nicht auf sich selbst
+    expect(nachZeitraum).not.toContain('taufe'); // steht davor
+    expect(nachZeitraum).not.toContain('aus'); // ausgeschaltet
+    // Name, E-Mail, Datenschutz (immer dabei) nie.
+    expect(
+      f.anmeldung.filter((x) => x.art === 'fest').some((x) => nachZeitraum.includes(x.id)),
+    ).toBe(false);
+    // Mit zwei Quellen: nach der letzten.
+    const zwei = ids({
+      modus: 'alle',
+      regeln: [
+        { feld: 'taufe', op: 'ist', wert: 'Ja' },
+        { feld: 'begleit', op: 'ist', wert: 'Ja' },
+      ],
+    });
+    expect(zwei).toContain('begleitNamen');
+    expect(zwei).not.toContain('kids1');
+    // Fragen je Person dürfen auf Kontakt-Fragen schauen.
+    const person = f.person.filter(kannBedingungTragen).map((x) => x.id);
+    expect(person.length).toBeGreaterThan(0);
+    for (const id of person) expect(nachZeitraum).toContain(id);
+  });
+
+  it('gemeinsameQuellen: nur Fragen, die vor ALLEN Zielen stehen; ohne Ziel jede mögliche Quelle', () => {
+    const f = acFormular();
+    const quellen = (ids: string[]) =>
+      gemeinsameQuellen(
+        f,
+        ids.map((id) => feld(f, id)),
+      ).map((x) => x.id);
+    expect(quellen(['kids2', 'begleitNamen'])).toEqual(quellen(['kids2']));
+    expect(quellen(['kids2'])).toContain('kids1');
+    expect(quellen(['kids1', 'kids2'])).not.toContain('kids1');
+    const alle = quellen([]);
+    expect(alle).toContain('taufe');
+    expect(alle).toContain('begleit');
+    expect(alle).not.toContain('taufHinweis'); // Hinweistext ist keine Quelle
+    // Eine Quelle, für die ein Ziel möglich ist, findet auch zielKandidaten wieder.
+    for (const id of alle)
+      expect(zielKandidaten(f, wenn(id, 'ausgefuellt')).length).toBeGreaterThan(0);
+  });
+
+  it('kannBedingungTragen ist dieselbe Regel wie die Prüfung „immer dabei“', () => {
+    const f = standardFormular();
+    for (const x of [...f.anmeldung, ...f.person]) {
+      const mit = { ...x, zustand: 'freiwillig' as const, bed: wenn('nirgends', 'ausgefuellt') };
+      const fest = kaputteStellen({ anmeldung: [mit], person: [] }).some((s) => s.grund === 'fest');
+      expect(kannBedingungTragen(mit)).toBe(!fest);
+    }
+  });
+});
+
+describe('bedingungAufbereiten – was ein Fenster speichert', () => {
+  const roh: AntwortBedingung = {
+    modus: 'alle',
+    regeln: [
+      { feld: 'taufe', op: 'ausgefuellt', wert: 'Ja' },
+      { feld: 'zeitraum', op: 'enthaelt', wert: 'KidsWoche' },
+    ],
+    art: 'grau',
+    grund: '  nur für Getaufte ',
+  };
+  it('an einer Frage: nur Umschalter und Regeln, ohne Wert bei „ist ausgefüllt“', () => {
+    expect(bedingungAufbereiten(roh, false)).toEqual({
+      modus: 'alle',
+      regeln: [
+        { feld: 'taufe', op: 'ausgefuellt' },
+        { feld: 'zeitraum', op: 'enthaelt', wert: 'KidsWoche' },
+      ],
+    });
+  });
+  it('an einer Antwort: Hinweis getrimmt, nur beim Ausgrauen; leerer Hinweis fällt weg', () => {
+    expect(bedingungAufbereiten(roh, true)).toMatchObject({
+      art: 'grau',
+      grund: 'nur für Getaufte',
+    });
+    expect(bedingungAufbereiten({ ...roh, art: 'weg' }, true)).not.toHaveProperty('grund');
+    expect(bedingungAufbereiten({ ...roh, grund: '  ' }, true)).not.toHaveProperty('grund');
+  });
+  it('ohne Regel: `null` (= entfernen)', () => {
+    expect(bedingungAufbereiten({ ...roh, regeln: [] }, true)).toBeNull();
+    expect(bedingungAufbereiten({ ...roh, regeln: [] }, false)).toBeNull();
   });
 });

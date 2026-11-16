@@ -31,6 +31,7 @@ import {
   kalenderListe,
   kopiereVeranstaltung,
   legeTerminAn,
+  termineIn,
   legeVeranstaltungAn,
   speichereAnmeldung,
   speichereBezahlung,
@@ -52,6 +53,7 @@ import {
   pflichtNachziehen,
   feldEinordnen,
   feldTypAendern,
+  regelSpeichern,
 } from './formularFelder';
 import type { Feld } from '@shared/anmeldung/formular';
 import { terminAusCt } from '@shared/anmeldung/termin';
@@ -332,6 +334,23 @@ function ct() {
         },
       });
     }
+    if (m === 'GET' && pfad === '/calendars/appointments') {
+      // Die Liste eines Kalenders – Kalender und Zeitraum aus der Abfrage, so wie `terminPfad` sie schreibt.
+      const kal = url.searchParams.getAll('calendar_ids[]').map(Number);
+      const von = url.searchParams.get('from');
+      const bis = url.searchParams.get('to');
+      if (kal.length === 0 || !von || !bis) return json(400, { message: 'Abfrage unvollständig' });
+      const data = [...termine]
+        .filter(([, t]) => {
+          const tag = String(t.startDate).slice(0, 10);
+          return kal.includes(Number(t.calendarId)) && tag >= von && tag <= bis;
+        })
+        .map(([id, t]) => ({
+          base: { id, title: t.title, startDate: t.startDate, endDate: t.endDate },
+          calculated: { startDate: t.startDate, endDate: t.endDate },
+        }));
+      return json(200, { data });
+    }
     r = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (r && m === 'POST') {
       const id = naechste++;
@@ -563,6 +582,20 @@ describe('Rechte und Kalender', () => {
       address: { meetingAt: 'Saal' },
       isInternal: false,
     });
+  });
+  it('Termine im Zeitraum: Kalender und Tage gehen als calendar_ids[]/from/to an ChurchTools', async () => {
+    const t = await legeTerminAn({
+      kalenderId: 1,
+      titel: 'Gemeindeessen',
+      beginn: '2026-11-15T12:00',
+      ende: '2026-11-15T14:00',
+      ort: 'Saal',
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
+      zeitzone: 'Europe/Berlin',
+    });
+    expect((await termineIn(1, '2026-11-15', '2026-11-15')).map((x) => x.id)).toEqual([t.id]);
+    expect(await termineIn(1, '2026-11-16', '2026-11-30')).toEqual([]);
+    expect(await termineIn(2, '2026-11-15', '2026-11-15')).toEqual([]);
   });
   it('Termin angelegt, aber anders gespeichert → Fehler', async () => {
     schlucken.add('TERMIN');
@@ -1358,6 +1391,49 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     // Unbeteiligtes verschieben geht weiter.
     await feldEinordnen(id, 'note', 'anmeldung', 'f1');
     expect(ids(id).anmeldung.indexOf('note')).toBeLessThan(ids(id).anmeldung.indexOf('f1'));
+  });
+
+  // ── F1d: Regeln aus dem Reiter „Bedingungen“ (Alwin, 11./12.11.2026) ──
+  it('F1d: eine Regel an mehreren Zielen – alle gespeichert, abgewählte verlieren sie', async () => {
+    const id = await mitBedingung();
+    const f3 = feld({ id: 'f3', typ: 'text', frage: 'Welche Marke?', antworten: [] });
+    await feldSpeichern(id, 'anmeldung', f3, undefined, null);
+    const bed = { modus: 'eine' as const, regeln: [{ feld: 'f1', op: 'ist' as const, wert: 'S' }] };
+    await regelSpeichern(id, [{ id: 'f2' }], [{ id: 'f2' }, { id: 'f3' }], bed);
+    expect(gespeichert(id, 'f2').bed).toEqual(bed);
+    expect(gespeichert(id, 'f3').bed).toEqual(bed);
+    await regelSpeichern(id, [{ id: 'f2' }, { id: 'f3' }], [{ id: 'f3' }], bed);
+    expect(gespeichert(id, 'f2').bed).toBeUndefined();
+    expect(gespeichert(id, 'f3').bed).toEqual(bed);
+    // Entfernen nimmt sie von allen.
+    await regelSpeichern(id, [{ id: 'f3' }], [{ id: 'f3' }], null);
+    expect(gespeichert(id, 'f3').bed).toBeUndefined();
+    // Die Antwort-Bedingung an „L“ blieb die ganze Zeit unberührt.
+    expect(Object.keys(gespeichert(id, 'f1').antwortBed!)).toEqual(['L']);
+  });
+
+  it('F1d: Antwort-Regel ändern – nur diese Antwort, Darstellung mit', async () => {
+    const id = await mitBedingung();
+    const ziel = [{ id: 'f1', antwort: 'L' }];
+    const weg = {
+      modus: 'eine' as const,
+      regeln: [{ feld: 'tel', op: 'leer' as const }],
+      art: 'weg' as const,
+    };
+    await regelSpeichern(id, ziel, ziel, weg);
+    expect(gespeichert(id, 'f1').antwortBed).toEqual({ L: weg });
+  });
+
+  it('F1d: eine Regel, die nicht stimmt (Ziel vor der Quelle) → 422, nichts geändert', async () => {
+    const id = await mitBedingung();
+    const vorher = gruppen.get(id)!.note;
+    await expect(
+      regelSpeichern(id, [], [{ id: 'tel' }], {
+        modus: 'eine',
+        regeln: [{ feld: 'f2', op: 'ausgefuellt' }],
+      }),
+    ).rejects.toMatchObject({ status: 422, message: expect.stringContaining('muss davor stehen') });
+    expect(gruppen.get(id)!.note).toBe(vorher);
   });
 });
 

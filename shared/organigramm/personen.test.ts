@@ -2,11 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, rollenRang, type Mitglied } from './mitglieder';
 import {
+  gezeigtePersonen,
   gruppenLeitung,
   gruppenPersonen,
+  hoechstens,
   kastenRollen,
+  leitungNachStufe,
+  mitNamen,
+  rollenName,
   rollenZahl,
+  rollenZurWahl,
   teilbaumPersonen,
+  type PersonenGrenze,
 } from './personen';
 
 const g = (id: number, name: string): OrgGruppe => ({
@@ -217,5 +224,127 @@ describe('kastenRollen – die Personen einer Gruppe nach Rollen (O7b-6)', () =>
       ['Mitarbeiter', ['Bea']],
       ['Mitglied', ['Alwin']],
     ]);
+  });
+});
+
+describe('Rollenfilter „Welche Rollen“ (#915)', () => {
+  // „Leiter“ gibt es je Gruppentyp als eigene Rolle (gemessen O6): hier bei Diensten (2) und Kleingruppen (3).
+  const TYPEN = rollenAus([
+    { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0, groupTypeId: 2, isDefault: true },
+    { id: 16, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 2 },
+    { id: 18, name: 'Organisator', isLeader: false, sortKey: 4, groupTypeId: 2 },
+    { id: 19, name: 'Coach', isLeader: false, sortKey: 3, groupTypeId: 2 },
+    { id: 21, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 3 },
+    { id: 22, name: 'Teilnehmer', isLeader: false, sortKey: 0, groupTypeId: 3, isDefault: true },
+  ]);
+
+  it('rollenName: wie ChurchTools sie nennt – unbekannt und „nur über eine Untergruppe“ heißen „Mitglied“', () => {
+    expect(rollenName(TYPEN, 18)).toBe('Organisator');
+    expect(rollenName(TYPEN, 99)).toBe('Mitglied');
+    expect(rollenName(TYPEN, null)).toBe('Mitglied');
+  });
+
+  it('rollenZurWahl: jeder vorkommende Name einmal, in der Reihenfolge der Kästchen; ohne Personen nicht angeboten', () => {
+    const wahl = rollenZurWahl(
+      [
+        [m(1, 15), m(2, 16), m(3, 18)],
+        [m(4, 21), m(5, 22), m(6, 99)],
+      ],
+      TYPEN,
+    );
+    // Leitung zuerst, dann die übrigen nach sortKey, die Standardrollen zuletzt, unbekannt ganz hinten.
+    // „Coach“ (19) hat niemanden – steht nicht da. „Leiter“ steht einmal, obwohl es zwei Rollen sind.
+    expect(wahl).toEqual([
+      { name: 'Leiter', leitung: true },
+      { name: 'Organisator', leitung: false },
+      { name: 'Mitarbeiter', leitung: false },
+      { name: 'Teilnehmer', leitung: false },
+      { name: 'Mitglied', leitung: false },
+    ]);
+    expect(rollenZurWahl([], TYPEN)).toEqual([]);
+  });
+
+  it('gezeigtePersonen: wer in der Gruppe ODER einer Untergruppe eine gewählte Rolle hat, bleibt', () => {
+    const technik = teilbaumPersonen(BAUM[0], MITGLIEDER, name, RANG);
+    const alle = [7, 12, 15, 72];
+    const nur = (aus: string[]) =>
+      gezeigtePersonen(technik, alle, MITGLIEDER, ROLLEN, new Set(aus)).map((x) => x.personId);
+    // Nur Leitung: Alwin leitet Technik, Emil ist Co-Leiter von Ton – beide bleiben, obwohl Emil in Technik selbst
+    // keine Rolle hat. Carl, Bea (Mitarbeiter) und Dora (Teilnehmer) fallen weg.
+    expect(nur(['Mitarbeiter', 'Teilnehmer'])).toEqual([1, 5]);
+    // Bea ist in Stream UND Ton Mitarbeiterin: Ohne „Mitarbeiter“ fehlt sie – ohne „Leiter“ bleibt sie.
+    expect(nur(['Leiter', 'Co-Leiter'])).toEqual(expect.arrayContaining([2, 3, 4]));
+    expect(nur(['Leiter', 'Co-Leiter'])).not.toContain(5);
+    // Nichts abgewählt: die Liste, wie sie ist.
+    expect(nur([])).toEqual(technik.map((x) => x.personId));
+  });
+});
+
+describe('Personen für alle ohne Leitung (#915 C)', () => {
+  // Wie in ChurchTools: Mitarbeiter ist die Standardrolle (isDefault).
+  const R = rollenAus([
+    { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0, isDefault: true },
+    { id: 16, name: 'Leiter', isLeader: true, sortKey: 1 },
+    { id: 17, name: 'Co-Leiter', isLeader: true, sortKey: 2 },
+    { id: 18, name: 'Organisator', isLeader: false, sortKey: 3 },
+  ]);
+
+  it('hoechstens: die eigene Wahl, begrenzt durch die Einstellung', () => {
+    expect(hoechstens('alle', 'zahl')).toBe('zahl');
+    expect(hoechstens('rollen', 'alle')).toBe('rollen');
+    expect(hoechstens('aus', 'alle')).toBe('aus');
+    expect(hoechstens('alle', 'aus')).toBe('aus');
+    expect(hoechstens('rollen', 'zahl')).toBe('zahl');
+  });
+
+  it('mitNamen: „Rollen“ nennt alle außer der Standardrolle, „Nur Zahlen“ und „Keine“ niemanden – auch keine Leitung', () => {
+    const je = (st: 'aus' | 'zahl' | 'rollen' | 'alle') =>
+      [15, 16, 18, null, 99].map((id) => mitNamen(st, R, id));
+    expect(je('alle')).toEqual([true, true, true, true, true]);
+    expect(je('rollen')).toEqual([false, true, true, true, true]);
+    expect(je('zahl')).toEqual([false, false, false, false, false]);
+    expect(je('aus')).toEqual([false, false, false, false, false]);
+  });
+
+  it('kastenRollen bei „Nur Zahlen“: jede Rolle nur gezählt, Leitung zuerst', () => {
+    const k = kastenRollen([m(2, 15), m(3, 15), m(1, 16), m(4, 18)], R, name, 'zahl');
+    expect(k.map((x) => [rollenZahl(x), x.nurZahl])).toEqual([
+      ['1 Leiter', true],
+      ['1 Organisator', true],
+      ['2 Mitarbeiter', true],
+    ]);
+  });
+
+  it('gezeigtePersonen mit Grenze: in der Spalte nur, wen eine Gruppe mit Namen zeigt', () => {
+    // Technik (7): Carl Mitarbeiter, Alwin Leiter; Ton (15): Dora Mitarbeiter – wer Ton leitet, sieht dort Namen.
+    const MG = new Map<number, Mitglied[]>([
+      [7, [m(3, 15), m(1, 16)]],
+      [15, [m(4, 15)]],
+    ]);
+    const alle = [m(1, 16), m(3, 15), m(4, 15)];
+    const grenze: PersonenGrenze = (id) => (id === 15 ? 'alle' : 'zahl');
+    expect(
+      gezeigtePersonen(alle, [7, 15], MG, R, new Set(), grenze).map((x) => x.personId),
+    ).toEqual([4]);
+    const rollenGrenze = () => 'rollen' as const;
+    expect(
+      gezeigtePersonen(alle, [7, 15], MG, R, new Set(), rollenGrenze).map((x) => x.personId),
+    ).toEqual([1]);
+    // ohne Grenze und ohne abgewählte Rolle: alle
+    expect(gezeigtePersonen(alle, [7, 15], MG, R, new Set()).map((x) => x.personId)).toEqual([
+      1, 3, 4,
+    ]);
+  });
+
+  it('leitungNachStufe: mit Namen, wo erlaubt – sonst gezählt, auch bei „Keine Personen“', () => {
+    const l = [m(1, 16), m(4, 17)];
+    expect(leitungNachStufe(l, 'alle', R, name)).toEqual({ namen: l, ohneNamen: null });
+    expect(leitungNachStufe(l, 'rollen', R, name)).toEqual({ namen: l, ohneNamen: null });
+    expect(leitungNachStufe(l, 'zahl', R, name)).toEqual({
+      namen: [],
+      ohneNamen: '1 Leiter, 1 Co-Leiter',
+    });
+    expect(leitungNachStufe(l, 'aus', R, name).ohneNamen).toBe('1 Leiter, 1 Co-Leiter');
+    expect(leitungNachStufe([], 'zahl', R, name)).toEqual({ namen: [], ohneNamen: null });
   });
 });

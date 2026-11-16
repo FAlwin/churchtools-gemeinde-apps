@@ -67,12 +67,15 @@ export function Liste({ sicht, onUmklappen, onGruppe, farbe, inhalt }: Props) {
             {leute.art === 'hinweis' ? (
               <span className={styles.hinweis}>{leute.text}</span>
             ) : (
-              leute.gruppen.map((g, i) => (
-                <span key={i} className={styles.rolle}>
-                  <span className={styles.rollenName}>{g.rolle}</span>{' '}
-                  {g.nurZahl ? <i>{rollenZahl(g)}</i> : g.namen.join(', ')}
-                </span>
-              ))
+              <>
+                {leute.gruppen.map((g, i) => (
+                  <span key={i} className={styles.rolle}>
+                    <span className={styles.rollenName}>{g.rolle}</span>{' '}
+                    {g.nurZahl ? <i>{rollenZahl(g)}</i> : g.namen.join(', ')}
+                  </span>
+                ))}
+                {leute.ausgeblendet && <span className={styles.hinweis}>{leute.ausgeblendet}</span>}
+              </>
             )}
           </div>
         )}

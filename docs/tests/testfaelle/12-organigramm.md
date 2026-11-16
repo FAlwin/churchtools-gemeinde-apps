@@ -445,3 +445,126 @@ ChurchTools ändert sich nichts.
 - **Historie:** #736; Wunsch Alwin 28.10.2026, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026
 
 </details>
+
+### TF-ORG-15 · Welche Rollen: Personen nach Rollen filtern
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Eine Gruppe mit Leiter, Co-Leiter, Organisator und
+mehreren Mitarbeitern; ein Bereich mit Untergruppen, deren Leitung nicht die des Bereichs ist.
+
+**Das muss passieren:** Abgewählte Rollen fehlen überall, wo Personen stehen – und es steht ehrlich da, was fehlt.
+Niemand erscheint, der die Rolle nicht hat.
+
+1. Reiter Organigramm, Ansicht **Liste**, **Personen: Aus**: Es gibt kein **Welche Rollen**. **Personen: Alle** →
+   daneben **Welche Rollen: Alle**.
+2. Aufklappen: ein Häkchen je Rolle, wie in ChurchTools benannt, Leitung zuerst; „Leiter“ steht nur einmal. Eine Rolle,
+   die niemand hat, steht nicht da. Darunter **Alle** und **Nur Leitung**.
+3. **Mitarbeiter** abwählen: Die Mitarbeiter fehlen, darunter steht klein „Mitarbeiter (6) ausgeblendet“. Der Knopf
+   zeigt „3 von 4“ o. ä. Eine Gruppe, in der es nur Mitarbeiter gibt, zeigt nur den Hinweis.
+4. **Nur Leitung**: nur Leiter und Co-Leiter. Dasselbe in **Von oben**, **Von links** und **Mindmap** – kein Kästchen
+   liegt über einem anderen.
+5. Seite neu laden: Die Wahl ist wieder da.
+6. **Präsentieren**, **Kacheln**: oben **Welche Rollen** mit derselben Wahl. Einen Bereich öffnen: In den Spalten stehen
+   nur die gewählten Rollen – auch die Leitung der Untergruppen –, darunter „N Personen ausgeblendet“. Die Zahl an der
+   Spalte zählt weiter alle. Hier **Alle** wählen, Präsentation schließen – im Reiter steht jetzt ebenfalls **Alle**.
+7. **PDF / Drucken** mit Personen: **Welche Rollen** übernimmt die Wahl des Reiters; hier geändert ändert sich nur die
+   PDF, der Reiter bleibt.
+8. Am Handy (oder 375 px breit): Das Menü ragt rechts nicht hinaus, die Seite rutscht nicht zur Seite.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/praesentation.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/RollenAuswahl.tsx`,
+  `organigramm/src/messung.ts`, `organigramm/src/blatt.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/Organigramm.tsx`,
+  `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`, `organigramm/src/auswahl.ts`,
+  `ui/bedienung/useMenueImBild.ts`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Name je Rolle einmal, Reihenfolge, ohne Personen nicht
+  angeboten, Teilbaum-Regel), `praesentation.test.ts` (Spalten und Untergruppen, Zahlen zählen alle),
+  `kastenPersonen.test.ts` (Hinweis, alles abgewählt, Knopftext), `RollenAuswahl.test.tsx` (Häkchen, Alle, Nur Leitung,
+  Menü im Bild), `App.test.tsx` (Reiter, Diagramm, gemerkt, Präsentation mit Listen und Diagramm), `PdfFenster.test.tsx`
+  (übernommen, nur für die PDF geändert); ob es mit echten Rollen gut aussieht, prüft nur dieser Fall
+- **Historie:** #915 Scheibe B; Rückmeldung nach einer Vorstellung 11.11.2026, Entwurf und Entscheidungen 12.11.2026
+  (Häkchen je Name, kleiner Hinweis im Kästchen, Präsentation Diagramme und Listen)
+
+</details>
+
+### TF-ORG-16 · Kinder & Jugend: Gruppenwechsel ansehen (Leitung und Bereichsleitung)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung. Im Speicher der Erweiterung die Kategorie
+„Gruppenwechsel“ mit einer Einrichtung (Stufen, Bereichsgruppe, Wechsel-Gruppen). Der Gruppentyp der Kindergruppen
+gibt seinen Leitern: „Organigramm“ sehen, Kategorien und Daten sehen für „Gruppenwechsel“ und „Was das Organigramm
+zeigt“, und den Kalender „Schulferien NRW“. Ein Admin-Konto und ein Konto, das nur eine Kindergruppe leitet (oder
+zwei Browser).
+
+**Das muss passieren:** Leitungen sehen nur ihre Gruppe, Admins und die Bereichsleitung alle Gruppen. Die Wechseltage
+stimmen mit dem Ferienkalender überein, und es wird nichts verändert.
+
+1. Als Admin **Organigramm** öffnen: Oben gibt es den Reiter **Kinder & Jugend**. Darin **Übersicht** mit dem
+   Jahresband (Angekündigt · Wechseltag · Stichtag) und einer Kachel je Gruppe mit Zahl und Chips („… wechseln“,
+   „… ohne Geburtstag“).
+2. Den Wechseltag mit dem Kalender **Schulferien NRW** vergleichen: Er ist der erste Montag nach den Sommerferien.
+3. Eine Kachel anklicken: Die Gruppe zeigt „Wechseln zu …“, „Bleiben in …“ und „Kommen neu dazu“. **Übersicht**
+   (mit Pfeil) führt zurück.
+4. Ein Kind anklicken: Ein Fenster nur zum Lesen mit Gruppe, Geburtstag, Alter am Stichtag und Wechsel; **In
+   ChurchTools öffnen** führt zur Person.
+5. **Daten pflegen**: „Geburtstag fehlt“ und „Wird bis zum Stichtag 18“ mit den passenden Kindern.
+6. Als Leitung einer Kindergruppe: Der Reiter heißt dort **Meine Gruppe**, ohne Übersicht und ohne „Wird 18“. Vor
+   der Ankündigung steht bei „Kommen neu dazu“ nur, ab wann man es sieht.
+7. Der Leitung das Recht auf „Schulferien NRW“ wegnehmen und neu laden: ein Hinweis, dass der Kalender fehlt, statt
+   leerer Listen. Danach das Recht wieder geben.
+8. Als Person ohne Kindergruppe und ohne Admin-Recht: Es gibt keinen Reiter **Kinder & Jugend**.
+9. In ChurchTools nachsehen: Gruppen und Mitglieder sind unverändert.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/KinderJugend.tsx`, `organigramm/src/ladeKinderJugend.ts`, `organigramm/src/gruppenwechselSpeicher.ts`, `organigramm/src/ladeMitglieder.ts`, `organigramm/src/App.tsx`, `shared/organigramm/gruppenwechselSicht.ts`, `shared/organigramm/gruppenwechselEinrichtung.ts`, `shared/organigramm/gruppenwechsel.ts`, `shared/ct/kalenderTermine.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O9-2: Reiter nur mit Einrichtung und Zugang, Übersicht und
+  Gruppe, Kind-Fenster, Daten pflegen, kein Kalender, Leitung), `ladeKinderJugend.test.ts` (Kalender nach Namen,
+  403 → kein Kalender, vorübergehend → „Erneut versuchen“, 401), `gruppenwechselSicht.test.ts`,
+  `gruppenwechselEinrichtung.test.ts`; die echten Rechte, den echten Ferienkalender und zwei Konten prüft nur dieser
+  Fall
+- **Historie:** Bauplan O9-2; Entwurf `kj-gruppenwechsel-v1.html` (v3), entschieden 11. und 12.11.2026 (O9-F5, O9-F6)
+
+</details>
+
+### TF-ORG-17 · Personen für alle ohne Leitung (Sichtbarkeitsstufe)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; ein Gruppen-Admin und zwei weitere Personen: eine, die eine
+Untergruppe leitet (z. B. Ton unter Technik), und eine, die nichts leitet. Laptop.
+
+**Das muss passieren:** Wer nichts leitet, sieht höchstens, was die Admins eingestellt haben – überall, wo Namen stehen.
+Leitungen sehen ihre Gruppen voll, Admins alles. Nichts wird gespeichert, wenn etwas nicht lesbar ist.
+
+1. Als Admin **Einstellungen**: Unter „Personen für alle ohne Leitung“ vier Stufen, darunter „Das ist nur eine
+   Anzeige-Regel …“. **Nur Zahlen** wählen: Ein Hinweis zum Leserecht erscheint, unten steht „… · Personen: Nur
+   Zahlen“. Speichern. Über dem Baum: „Für alle ausgeblendet: die Namen von Personen …“. Der Admin sieht weiter alle
+   Namen.
+2. Als Person ohne Leitung: **Karten** zeigen „Leitung: 1 Leiter“ statt Namen, keine Bilder. **Liste** mit Personen
+   **Alle**: nur Zahlen je Rolle. Ein Gruppenfenster: Überschriften mit Zahl, keine Namen, darunter „Namen sind hier
+   ausgeblendet …“.
+3. **Präsentieren**: Kacheln mit „1 Leiter“ statt Namen, die Zahlen stimmen; in einem Bereich keine Namen in den
+   Spalten, „N Personen ausgeblendet“; **Von oben** nur Zahlen. **PDF / Drucken**: ebenso.
+4. Als Leitung von Ton: In Ton (und darunter) alle Namen, in Technik und Gottesdienst nur Zahlen; in der Spalte Technik
+   der Präsentation stehen nur die Namen aus Ton.
+5. Admin stellt **Wie „Rollen“**: Leitung und Organisatoren mit Namen, Mitarbeiter als Zahl. Dann **Keine Personen**:
+   Kästchen ohne Personen, das Gruppenfenster zeigt nur „Die Personen sind hier ausgeblendet …“, Kacheln „1 Leiter“.
+6. Netz kurz trennen (oder in den Entwicklerwerkzeugen die Anfrage blockieren) und neu laden: Hinweis „… ließ sich
+   gerade nicht laden – zu sehen sind alle Gruppen, Personen vorsichtshalber ohne Namen“; **Erneut versuchen** bei
+   Netz: Die eingestellte Stufe gilt wieder. In ChurchTools hat sich nichts geändert.
+7. Zum Schluss als Admin wieder **Alle Namen** speichern.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/sichtbereich.ts`, `shared/organigramm/sichtbarkeit.ts`,
+  `shared/organigramm/praesentation.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/Organigramm.tsx`,
+  `organigramm/src/GruppenFenster.tsx`, `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`,
+  `organigramm/src/EinstellungenFenster.tsx`, `organigramm/src/stufeTexte.ts`, `organigramm/src/App.tsx`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Stufen, Namen je Stufe, Teilbaum, Leitung gezählt),
+  `sichtbereich.test.ts` (Grenze je Gruppe), `sichtbarkeit.test.ts` (alte Werte, Unbekanntes), `kastenPersonen.test.ts`,
+  `praesentation.test.ts`, `App.test.tsx` (Karten, Liste, Gruppenfenster, Präsentation, PDF, Leitung, Admin, nicht
+  lesbar, kein Leserecht, Einstellungen); mit echten Personen und Rechten prüft es nur dieser Fall
+- **Historie:** #915 Scheibe C; Entscheidungen 12.11.2026 (vier Stufen, Leitung streng nach Stufe, nicht lesbar →
+  keine Namen, kein Leserecht → Admins warnen)
+
+</details>

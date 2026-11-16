@@ -1,12 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7b-7 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O9-2 (12.11.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
 > und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen; Gruppen-Admins stellen ein, was
-> das Organigramm für alle zeigt (O7b-7). Als Nächstes (O8) der echte Umbau der Gemeindestruktur. Diese Anleitung wächst mit.
+> das Organigramm für alle zeigt (O7b-7). Seit O9-2 der Reiter **Kinder & Jugend** (Gruppenwechsel der Kinder, nur lesen). Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -43,6 +43,12 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                    | Rolle mit Leitung                             |
 | Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (O6)       | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
 | Gruppen-Admin                   | „Einstellungen“: was das Organigramm für alle zeigt (O7b-7)                                 | „Gruppen verwalten“ + Rechte der Kategorie    |
+| Leitung einer Kindergruppe      | Reiter „Kinder & Jugend“ → „Meine Gruppe“ (O9-2)                                            | Rolle mit Leitung + Rechte am Gruppentyp      |
+| Bereichsleitung Kinder & Jugend | Reiter „Kinder & Jugend“ → „Übersicht“ über alle Stufen (O9-2); Admins ebenso               | Leitung der Bereichsgruppe der Einrichtung    |
+
+Seit #915 Scheibe C können Gruppen-Admins zusätzlich begrenzen, wie viel **Personen ohne Leitung** von den Personen
+sehen (Abschnitt „Was das Organigramm für alle zeigt“). Das ist **nur eine Anzeige-Regel**: Die Tabelle oben bleibt
+richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erlauben. Das Organigramm zeigt nur weniger.
 
 ## Ansichten (ab O7b)
 
@@ -73,6 +79,12 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   „Mitglieder nicht sichtbar“; eine Gruppe ohne eigene Mitglieder (oft eine Obergruppe) zeigt nur den Namen. Die
   Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät; sie gilt auch für die Diagramme
   der Präsentation (dort oben derselbe Umschalter) und gibt im PDF vor, ob das Häkchen **Personen** gesetzt ist.
+- **Welche Rollen** (seit #915, neben **Personen**, sobald Personen gezeigt werden) – ein Häkchen je Rolle, so benannt
+  wie in ChurchTools; „Leiter“ steht einmal, auch wenn es die Rolle bei mehreren Gruppentypen gibt. Angeboten wird nur,
+  was bei den sichtbaren Mitgliedern vorkommt. Dazu **Alle** und **Nur Leitung**. Abgewählte Rollen fehlen in den
+  Kästchen und Zeilen; darunter steht klein, was fehlt („Mitarbeiter (6) ausgeblendet“) – ist alles abgewählt, nur
+  dieser Hinweis. Der Knopf zeigt „Alle“ oder „3 von 5“. Das Gerät merkt sich die abgewählten Rollen; eine neue Rolle
+  in ChurchTools ist so von selbst zu sehen. Gilt auch in der Präsentation und gibt den Filter im PDF vor.
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
 - **Anfangen bei:** die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
   dann zeigen alle Ansichten nur sie. Die Auswahl klappt eine Liste auf, nach Ebene eingerückt wie im Baum, oben ein
@@ -99,9 +111,33 @@ aus, die das Organigramm öffnen – im Reiter, in der Präsentation und in der 
 - Ausgeblendet heißt nur: hier nicht zu sehen. In ChurchTools bleibt alles, wie es ist. Die Reiter **Personen**,
   **Hinweise** und **Neue Gliederung** zeigen weiter alle Gruppen – dort wird mit der ganzen Struktur gearbeitet.
 - Hat inzwischen ein anderer Admin gespeichert, wird nichts überschrieben: Das Fenster zeigt dann dessen Stand.
-- Lässt sich die Einstellung gerade nicht lesen (Netz, ChurchTools antwortet nicht), ist alles zu sehen, mit Hinweis
-  und **Erneut versuchen**. Fehlt einer Person das Leserecht auf die Kategorie, sieht sie ebenfalls alles – ohne
-  Hinweis (siehe unten).
+- Lässt sich die Einstellung gerade nicht lesen (Netz, ChurchTools antwortet nicht), sind alle Gruppen zu sehen, mit
+  Hinweis und **Erneut versuchen** – Personen aber vorsichtshalber **ohne Namen** (Stufe „Nur Zahlen“), außer in
+  Gruppen, die man leitet; Gruppen-Admins sehen alles. Fehlt einer Person das Leserecht auf die Kategorie, gilt für sie
+  nichts davon – sie sieht alles, ohne Hinweis (siehe unten). Davor warnt das Fenster, sobald eine Stufe gewählt ist.
+
+### Personen für alle ohne Leitung (ab #915 Scheibe C)
+
+Im selben Fenster legen Gruppen-Admins fest, was Personen, **die nichts leiten**, höchstens von den Personen sehen –
+in Kästchen und Liste, auf den Karten („Leitung: …“), in der Präsentation (Kacheln, Spalten, Diagramme), in der PDF
+und im Gruppenfenster:
+
+| Stufe              | Zu sehen                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| **Alle Namen**     | wie bisher (Vorgabe, auch für alles, was vor Scheibe C gespeichert wurde)                 |
+| **Wie „Rollen“**   | Namen in den besonderen Rollen (Leitung, Organisator …); Mitarbeiter/Teilnehmer als Zahl  |
+| **Nur Zahlen**     | keine Namen, auch nicht die der Leitung – z. B. „1 Leiter, 6 Mitarbeiter“                 |
+| **Keine Personen** | in Kästchen, Listen und Gruppenfenster nichts; die Leitung auf Karten und Kacheln gezählt |
+
+- **Wer eine Gruppe leitet**, sieht deren Personen samt aller Untergruppen voll – dieselbe Grenze wie bei den Reitern
+  Personen und Hinweise (`sichtbereich`). **Gruppen-Admins** sehen alles.
+- Die eigene Wahl „Personen: Aus · Rollen · Alle“ bleibt; sie gilt nur höchstens bis zur Stufe. Die Zahlen („12
+  Personen“) zählen weiter alle – sie nennen niemanden.
+- Die Leitung fällt **streng** unter die Stufe (Alwin 12.11.2026): Bei „Nur Zahlen“ steht auf der Kachel „1 Leiter“
+  statt des Namens; „Leitung wird noch gesucht“ steht nur, wo es wirklich keine gibt.
+- Über dem Baum steht für alle, was gilt („Für alle ausgeblendet: die Namen von Personen – eingestellt von
+  Gruppen-Admins“), im Gruppenfenster „Namen sind hier ausgeblendet“.
+- Ein unbekannter Wert im Speicher (etwa von einer späteren Fassung) gilt als „Nur Zahlen“ – im Zweifel weniger zeigen.
 
 ## Als PDF speichern und drucken (ab O7b-4)
 
@@ -119,6 +155,8 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
   (dort etwas eingerückt unter dem Namen, vor den Untergruppen). Angehakt ist es, wenn der Reiter Personen zeigt; es
   zeigt dann dieselbe Stufe – steht der Reiter auf „Aus“, die **Rollen** (Standardrolle als Zahl). Kursiv gibt es auf
   Papier nicht (eingebettet ist nur Lato normal und fett); der Text ist derselbe.
+- **Welche Rollen** (seit #915, nur mit Personen) – übernimmt die Wahl aus dem Reiter; hier geändert gilt sie nur für
+  diese PDF (wie der Ausschnitt).
 - **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht
   oben links. Ohne Logo in ChurchTools gibt es die Wahl nicht.
 - Auf jeder Seite: oben „Organigramm“, Gemeinde (und Ausschnitt), Stand-Datum; unten Gemeinde und „Seite x von y“.
@@ -150,6 +188,11 @@ ChurchTools:
   öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät. In den Diagrammen steht oben
   zusätzlich **Personen: Aus · Rollen · Alle** (ab O7b-6b) – dieselbe Wahl wie im Reiter, hier geändert gilt sie auch
   dort. Neue Gruppen der neuen Gliederung haben noch niemanden und zeigen nur den Namen.
+- **Welche Rollen** (seit #915; in den Kacheln immer, in den Diagrammen mit Personen) – derselbe Filter wie im Reiter,
+  hier geändert auch dort. Er gilt für die Kästchen und für die Personenlisten der Spalten: Dort bleibt, wer in der
+  Gruppe **oder einer ihrer Untergruppen** eine gewählte Rolle hat – „Nur Leitung“ bei Technik zeigt also auch die
+  Leitung von Ton und Stream. Darunter steht, wie viele ausgeblendet sind. Die Zahlen („12 Personen“) und die Leitung
+  auf den Kacheln zählen weiter alle.
 - Es gilt dasselbe wie im Baum: Was Gruppen-Admins für alle ausgeblendet haben, fehlt auch hier.
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.
@@ -244,9 +287,33 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 - **Archivieren** setzt den Status „archiviert“ – nichts wird gelöscht, Mitglieder und Historie bleiben (gemessen
   24.10.2026; keine Mail). Archivierte Gruppen zeigt ChurchTools nicht mehr im Baum.
 
+## Kinder & Jugend: Gruppenwechsel (ab O9-2)
+
+Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Bis O9-2 **nur
+zum Lesen** – Ausnahmen („bleibt noch ein Jahr“) setzt man ab O9-3 hier, bis dahin in ChurchTools.
+
+- **Wer ihn sieht:** Leitungen der Kindergruppen (**Meine Gruppe**), die Leitung der Bereichsgruppe und Admins
+  (**Übersicht** mit einer Kachel je Gruppe). Ohne Einrichtung (siehe unten) gibt es den Reiter nicht.
+- **Jahresband:** Angekündigt · Wechseltag · Stichtag. Der **Wechseltag** ist der erste Montag nach den
+  Sommerferien; er kommt **live aus dem Kalender „Schulferien NRW“**. Der **Stichtag** zählt fürs Alter.
+- **Je Gruppe:** wer wechselt, wer bleibt (auch als Ausnahme), wer neu dazukommt. Leitungen sehen neue Kinder erst
+  ab der Ankündigung, die Bereichsleitung schon vorher als Vorschau.
+- **Daten pflegen:** Kinder ohne Geburtstag (die wechseln nie von selbst) und – nur für die Bereichsleitung – wer
+  bis zum Stichtag 18 wird.
+
+**Rechte am Gruppentyp der Kindergruppen** (Rechteverwaltung → Gruppentyp → Kindergruppe → „Globale Berechtigungen“
+→ Leiter → Bearbeiten; gemessen 12.11.2026 in der Test-Instanz):
+
+- organigramm → **„Organigramm“ sehen**
+- organigramm → **Kategorien sehen** und **Daten in Kategorie sehen** → je **Gruppenwechsel** und **Was das
+  Organigramm zeigt** (nicht „-- Alle --“, nicht den Plan)
+- Kalender → Einzelnen Kalender sehen → Gemeindekalender → **Schulferien NRW**
+
+Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
+
 ## Was die Erweiterung speichert
 
-Pro Gerät wird gemerkt, welche Ansichten gewählt sind und ob Personen gezeigt werden. Ab O7 liegt der **Plan „neue Gliederung“** im
+Pro Gerät wird gemerkt, welche Ansichten gewählt sind, ob Personen gezeigt werden und welche Rollen abgewählt sind. Ab O7 liegt der **Plan „neue Gliederung“** im
 Speicher der Erweiterung: als ein Eintrag in der Kategorie **„Plan „neue Gliederung““** (Kürzel `plan`), die die
 Erweiterung beim ersten Speichern anlegt. Darin stehen nur die Änderungen gegenüber heute (neue Gruppen, Umhängen,
 Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in ChurchTools.
@@ -261,8 +328,18 @@ Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in 
 
 Ab O7b-7 liegt dort auch **„Was das Organigramm zeigt“**: ein Eintrag in der Kategorie **„Was das Organigramm zeigt“**
 (Kürzel `sichtbar`), angelegt beim ersten Speichern unter „Einstellungen“. Darin stehen nur die IDs der für alle
-ausgeblendeten Gruppentypen und Gruppen, dazu wer zuletzt gespeichert hat.
+ausgeblendeten Gruppentypen und Gruppen, die Stufe „Personen für alle ohne Leitung“ (seit #915 C, Feld `personen`)
+und wer zuletzt gespeichert hat.
 
 > **Rechte dieser Kategorie – anders als beim Plan:** **Daten sehen** brauchen **alle**, die das Organigramm öffnen
 > (sonst sehen sie alles, auch was ausgeblendet sein soll); **Daten anlegen, ändern, löschen** nur die Gruppen-Admins.
 > Dieselbe Vorsicht wie oben: den anderen Admins das Sehrecht geben, bevor sie zum ersten Mal speichern.
+
+Ab O9-2 liegt dort auch die **Einrichtung des Gruppenwechsels**: ein Eintrag in der Kategorie **„Gruppenwechsel“**
+(Kürzel `gruppenwechsel`). Darin stehen die Stufen (Gruppe und Alter ab), die Bereichsgruppe, je Übergang die
+Wechsel-Gruppe und die Fristen (Ankündigung, Aufnahme). Die Wechseltage selbst stehen **nicht** darin – sie kommen
+jedes Mal aus dem Ferienkalender. Die Erweiterung liest den Eintrag nur; anlegen kommt mit „Einrichten“ (O9-5) –
+bis dahin gibt es ihn nur in der Test-Instanz (per API geschrieben).
+
+> **Rechte dieser Kategorie:** **Daten sehen** brauchen alle Kinder-Leitungen und die Bereichsleitung (am Gruppentyp,
+> siehe oben); ändern nur Admins.

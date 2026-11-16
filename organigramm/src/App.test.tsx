@@ -20,9 +20,15 @@ import { ladePlan } from './plan';
 import { ladeSichtbarkeit, speichereSichtbarkeit } from './sichtbarkeitSpeicher';
 import { ladeGruppenRechte } from './mitgliedschaft';
 import { personenSuchen } from '@ui/ct/personen';
+import type { PersonenStufe } from '@shared/organigramm/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
+import { GRUNDWERTE, sommerferienAus, wechseljahre } from '@shared/organigramm/gruppenwechsel';
+import { einrichtungAus, type Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
+import type { KjDaten } from '@shared/organigramm/gruppenwechselSicht';
+import { ladeEinrichtung } from './gruppenwechselSpeicher';
+import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
 import {
   spitzenKnopf,
   spitzenName,
@@ -169,6 +175,12 @@ vi.mock('./sichtbarkeitSpeicher', () => ({
   ladeSichtbarkeit: vi.fn(),
   speichereSichtbarkeit: vi.fn(),
 }));
+// Gruppenwechsel der Kinder (O9-2) – ohne Angabe nicht eingerichtet; die eigenen Tests stellen es ein.
+vi.mock('./gruppenwechselSpeicher', () => ({ ladeEinrichtung: vi.fn() }));
+vi.mock('./ladeKinderJugend', () => ({ ladeFerien: vi.fn(), ladeKjDaten: vi.fn() }));
+const einrichtungLaden = vi.mocked(ladeEinrichtung);
+const ferienLaden = vi.mocked(ladeFerien);
+const kjLaden = vi.mocked(ladeKjDaten);
 const laden = vi.mocked(ladeStart);
 const sichtbarkeitLaden = vi.mocked(ladeSichtbarkeit);
 const sichtbarkeitSpeichern = vi.mocked(speichereSichtbarkeit);
@@ -344,6 +356,8 @@ beforeEach(() => {
   sichtbarkeitSpeichern.mockReset();
   mitgliederLaden.mockResolvedValue(MITGLIEDER);
   einsaetzeLaden.mockResolvedValue(EINSAETZE);
+  einrichtungLaden.mockReset();
+  einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
 });
 
 describe('App des Organigramms (O2)', () => {
@@ -651,6 +665,45 @@ describe('O4: Präsentation', () => {
     fireEvent.click(within(technik).getByText('1 Untergruppe'));
     expect(within(technik).getByText('Stream')).toBeTruthy();
     expect(within(technik).getByText('Mitglieder nicht sichtbar')).toBeTruthy();
+  });
+
+  it('„Welche Rollen“ (#915): Listen ohne die abgewählten Rollen, mit Hinweis – Zahlen und Leitung zählen alle', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    const d = await oeffnen();
+    // In den Kacheln gibt es Listen – also auch den Filter, mit derselben gemerkten Wahl wie im Reiter.
+    expect(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+    expect(within(d).getByText('3 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const technik = within(d).getByRole('region', { name: 'Technik' });
+    expect(
+      within(technik)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['AAlwin FriesenLeiter', 'DDora DornCo-Leiter']);
+    expect(within(technik).getByText('1 Person ausgeblendet')).toBeTruthy();
+    // Die Zahl an der Spalte zählt weiter alle drei.
+    expect(within(technik).getByText('3')).toBeTruthy();
+
+    fireEvent.click(within(d).getByRole('button', { name: 'Welche Rollen: 2 von 3' }));
+    fireEvent.click(within(d).getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(within(technik).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(technik).queryByText(/ausgeblendet/)).toBeNull();
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+  });
+
+  it('„Welche Rollen“ gilt auch in den Diagrammen der Präsentation', async () => {
+    localStorage.setItem('organigramm-rollen-aus', '["Mitarbeiter"]');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    const d = await oeffnen();
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    const bild = within(d).getByRole('group', { name: 'Organigramm' }).textContent;
+    expect(bild).toContain('Dora Dorn');
+    expect(bild).not.toContain('Carl Clau');
   });
 
   it('Tastatur: Pfeile, Bild auf/ab, Pos1, Esc zurück zur Übersicht und dort schließen', async () => {
@@ -1506,16 +1559,71 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(kasten().textContent).toContain('Alwin Friesen');
     expect(kasten().textContent).toContain('1 Mitarbeiter');
   });
+
+  it('„Welche Rollen“ (#915): nur mit Personen; abgewählt fehlt die Rolle, darunter steht es – gemerkt', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(screen.queryByRole('button', { name: /Welche Rollen/ })).toBeNull();
+    fireEvent.click(personen('Alle'));
+    fireEvent.click(screen.getByRole('button', { name: 'Welche Rollen: Alle' }));
+    const haken = within(screen.getByRole('group', { name: 'Welche Rollen' }));
+    // Die Rollen wie in den Kästchen: Leitung zuerst, die Standardrolle zuletzt.
+    expect(haken.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)).toEqual([
+      'Leiter',
+      'Co-Leiter',
+      'Mitarbeiter',
+    ]);
+    fireEvent.click(haken.getByRole('checkbox', { name: 'Mitarbeiter' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Leiter Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Mitarbeiter (1) ausgeblendet');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('["Mitarbeiter"]');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+
+    fireEvent.click(haken.getByRole('button', { name: 'Alle' }));
+    expect(listenZeile('Technik')).toContain('Carl Clau');
+    expect(localStorage.getItem('organigramm-rollen-aus')).toBe('[]');
+    fireEvent.click(haken.getByRole('button', { name: 'Nur Leitung' }));
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('Co-Leiter Dora Dorn');
+
+    // Im Diagramm dieselbe Regel – der Hinweis steht im Kästchen (gemessen wie „Mitglieder nicht sichtbar“).
+    fireEvent.click(ansicht('Von oben'));
+    const technik = within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
+      name: 'Technik',
+    });
+    expect(technik.textContent).toContain('Dora Dorn');
+    expect(technik.textContent).not.toContain('Carl Clau');
+    expect(technik.textContent).toMatch(/Mitarbeiter \(1\) aus/);
+  });
+
+  it('„Welche Rollen“ gemerkt: gilt nach dem Neuladen; Unlesbares im Speicher heißt „alle“', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    localStorage.setItem('organigramm-rollen-aus', '["Leiter", 7]');
+    const { unmount } = render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
+    expect(listenZeile('Technik')).toContain('Leiter (1) ausgeblendet');
+    unmount();
+    localStorage.setItem('organigramm-rollen-aus', '{kaputt');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).toContain('Alwin Friesen');
+    expect(screen.getByRole('button', { name: 'Welche Rollen: Alle' })).toBeTruthy();
+  });
 });
 
 describe('O7b-7: Was das Organigramm für alle zeigt', () => {
-  const stand = (inhalt: { typen: number[]; gruppen: number[] }, version = 3, name = 'Alwin') => ({
+  type Inhalt = { typen: number[]; gruppen: number[]; personen?: PersonenStufe };
+  const stand = (inhalt: Inhalt, version = 3, name = 'Alwin') => ({
     version,
     zeit: '2026-10-29T10:00:00Z',
     von: { personId: 1, name },
-    inhalt,
+    inhalt: { personen: 'alle' as PersonenStufe, ...inhalt },
   });
-  const fuerAlle = (inhalt: { typen: number[]; gruppen: number[] }) =>
+  const fuerAlle = (inhalt: Inhalt) =>
     sichtbarkeitLaden.mockResolvedValue({ ok: true, daten: stand(inhalt) });
 
   it('Typ und Gruppe samt Untergruppen für alle aus – in Karten und PDF; Hinweis', async () => {
@@ -1611,7 +1719,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
       expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
     );
     expect(sichtbarkeitSpeichern).toHaveBeenCalledWith(
-      { typen: [9], gruppen: [7] },
+      { typen: [9], gruppen: [7], personen: 'alle' },
       { personId: 1, name: 'Alwin' },
       3,
     );
@@ -1624,7 +1732,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     sichtbarkeitSpeichern.mockResolvedValue({
       ok: false,
       grund: 'konflikt',
-      jetzt: stand({ typen: [], gruppen: [47] }, 4, 'Bea'),
+      jetzt: stand({ typen: [], gruppen: [47], personen: 'zahl' }, 4, 'Bea'),
     });
     render(<App />);
     fireEvent.click(
@@ -1638,6 +1746,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     );
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Verteiler/ }).checked).toBe(true);
     expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Café/ }).checked).toBe(false);
+    expect(d.getByRole<HTMLInputElement>('radio', { name: /^Nur Zahlen/ }).checked).toBe(true);
     expect(screen.queryByRole('region', { name: 'Café' })).toBeNull();
   });
 });
@@ -1669,5 +1778,339 @@ describe('O7b-4: Organigramm als PDF', () => {
         name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,
       }),
     ).toBeTruthy();
+  });
+});
+
+describe('#915 C: Personen für alle ohne Leitung', () => {
+  const stufe = (personen: PersonenStufe) =>
+    sichtbarkeitLaden.mockResolvedValue({
+      ok: true,
+      daten: {
+        version: 3,
+        zeit: '2026-11-12T10:00:00Z',
+        von: { personId: 1, name: 'Alwin' },
+        inhalt: { typen: [], gruppen: [], personen },
+      },
+    });
+  const ohneLeitung = () => laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [] }));
+  const listenZeile = (name: string) =>
+    screen.getByRole('button', { name }).closest('li')?.textContent ?? '';
+
+  it('„Nur Zahlen“: wer nichts leitet, sieht Karten, Liste und Gruppenfenster ohne Namen – die Leitung gezählt', async () => {
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    const gd = screen.getByRole('region', { name: 'Gottesdienst' });
+    expect(gd.textContent).toContain('Leitung: 1 Leiter');
+    expect(gd.textContent).not.toContain('Alwin Friesen');
+    // auch kein Bild der Leitung (es trägt den Namen als Titel)
+    expect(gd.querySelector('[title="Alwin Friesen"]')).toBeNull();
+    expect(screen.getByRole('note').textContent).toContain('die Namen von Personen');
+
+    fireEvent.click(zeile('Technik'));
+    const f = within(screen.getByRole('dialog', { name: 'Technik' }));
+    expect(f.getByRole('heading', { name: 'Mitarbeiter · 1' })).toBeTruthy();
+    expect(f.queryByText('Carl Clau')).toBeNull();
+    expect(f.queryByText('Dora Dorn')).toBeNull();
+    expect(f.getByText(/Namen sind hier ausgeblendet/)).toBeTruthy();
+  });
+
+  it('„Nur Zahlen“ begrenzt auch die eigene Wahl „Alle“ in der Liste', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(listenZeile('Technik')).not.toContain('Carl Clau');
+    expect(listenZeile('Technik')).toContain('1 Mitarbeiter');
+    expect(listenZeile('Technik')).toContain('1 Co-Leiter');
+  });
+
+  it('wer Technik leitet, sieht dort alle Namen – im Gottesdienst darüber nur die Zahl', async () => {
+    stufe('zahl');
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.getByRole('region', { name: 'Gottesdienst' }).textContent).toContain(
+      'Leitung: 1 Leiter',
+    );
+  });
+
+  it('„Keine Personen“: das Gruppenfenster zeigt keine Rollen, nur den Hinweis', async () => {
+    stufe('aus');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    fireEvent.click(zeile('Technik'));
+    const f = within(screen.getByRole('dialog', { name: 'Technik' }));
+    expect(f.queryByRole('heading', { name: /Mitarbeiter/ })).toBeNull();
+    expect(f.getByText(/Die Personen sind hier ausgeblendet/)).toBeTruthy();
+  });
+
+  it('Präsentation: Leitung auf der Kachel gezählt, Spalten ohne Namen – die Zahlen zählen alle', async () => {
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    const d = await screen.findByRole('dialog', { name: 'Präsentation' });
+    const kachel = within(d).getByRole('heading', { name: 'Gottesdienst' }).closest('button')!;
+    expect(within(kachel).getByText('1 Leiter')).toBeTruthy();
+    expect(kachel.textContent).not.toContain('Alwin Friesen');
+    expect(within(kachel).getByText('1 Gruppe · 4 Personen')).toBeTruthy();
+    fireEvent.click(kachel);
+    expect(d.textContent).not.toContain('Carl Clau');
+    expect(d.textContent).not.toContain('Dora Dorn');
+    expect(within(d).getByText('3 Personen ausgeblendet')).toBeTruthy();
+    // Im Diagramm der Präsentation dieselbe Grenze – trotz eigener Wahl „Alle“.
+    fireEvent.click(
+      within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Von oben',
+      }),
+    );
+    expect(d.textContent).toContain('1 Mitarbeiter');
+    expect(d.textContent).not.toContain('Carl Clau');
+  });
+
+  it('PDF: zeigt nie mehr als der Reiter', async () => {
+    localStorage.setItem('organigramm-personen', '"alle"');
+    stufe('zahl');
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
+    const vorschau = screen.getByRole('figure', { name: 'Vorschau' });
+    expect(vorschau.textContent).toContain('1 Mitarbeiter');
+    expect(vorschau.textContent).not.toContain('Carl Clau');
+    expect(vorschau.textContent).not.toContain('Alwin Friesen');
+  });
+
+  it('Gruppen-Admins sehen weiter alles', async () => {
+    stufe('aus');
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+  });
+
+  it('nicht lesbar: vorsichtshalber ohne Namen, mit Hinweis – Gruppen-Admins sehen alles', async () => {
+    sichtbarkeitLaden.mockResolvedValue({ ok: false, grund: 'voruebergehend' });
+    ohneLeitung();
+    const { unmount } = render(<App />);
+    await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
+    expect(screen.getByText(/Personen vorsichtshalber ohne Namen/)).toBeTruthy();
+    unmount();
+    laden.mockResolvedValue(start());
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.getByText(/ließ sich gerade nicht laden – zu sehen ist alles/)).toBeTruthy();
+  });
+
+  it('kein Leserecht: es gilt nichts davon – ohne Hinweis (davor warnt das Fenster die Admins)', async () => {
+    sichtbarkeitLaden.mockResolvedValue({ ok: false, grund: 'kein-recht' });
+    ohneLeitung();
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    expect(screen.queryByText(/Was das Organigramm für alle zeigt, ließ sich/)).toBeNull();
+  });
+
+  it('„Einstellungen“: Stufe wählen, Warnung zum Leserecht, gespeichert samt Gruppen', async () => {
+    stufe('alle');
+    sichtbarkeitSpeichern.mockImplementation((inhalt) =>
+      Promise.resolve({
+        ok: true,
+        daten: {
+          version: 4,
+          zeit: '2026-11-12T10:00:00Z',
+          von: { personId: 1, name: 'Alwin' },
+          inhalt,
+        },
+      }),
+    );
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
+    );
+    const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
+    expect(d.getByText('Das ist nur eine Anzeige-Regel.')).toBeTruthy();
+    expect(d.queryByText(/Die Regel greift nur bei Personen/)).toBeNull();
+    fireEvent.click(d.getByRole('radio', { name: /^Nur Zahlen/ }));
+    expect(d.getByText(/Die Regel greift nur bei Personen/)).toBeTruthy();
+    expect(d.getByText('Alle Gruppen sichtbar · Personen: Nur Zahlen')).toBeTruthy();
+    fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
+    await vi.waitFor(() =>
+      expect(sichtbarkeitSpeichern).toHaveBeenCalledWith(
+        { typen: [], gruppen: [], personen: 'zahl' },
+        { personId: 1, name: 'Alwin' },
+        3,
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
+    );
+    expect(screen.getByRole('note').textContent).toContain('die Namen von Personen');
+  });
+});
+
+describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
+  const FISCHE = 50;
+  const JUNGSCHAR = 51;
+  const WECHSEL = 52;
+  const BEREICH = 53;
+  const EINRICHTUNG: Einrichtung = einrichtungAus({
+    einstellung: {
+      ...GRUNDWERTE,
+      stufen: [
+        { gruppeId: FISCHE, name: 'Fische', abAlter: 7 },
+        { gruppeId: JUNGSCHAR, name: 'Jungschar', abAlter: 10 },
+      ],
+    },
+    bereichGruppeId: BEREICH,
+    wechselGruppen: [{ vonGruppeId: FISCHE, nachGruppeId: JUNGSCHAR, gruppeId: WECHSEL }],
+  })!;
+  // Die Sommerferien im nächsten Jahr: Heute ist dann immer vor der Ankündigung – egal, wann der Test läuft.
+  const JAHR = Number(heuteImKalender().slice(0, 4)) + 1;
+  const JAHRE = wechseljahre(
+    sommerferienAus(
+      [{ titel: `Sommerferien NRW ${JAHR}`, beginn: `${JAHR}-07-19`, ende: `${JAHR}-08-31` }],
+      'Sommerferien',
+    ),
+    GRUNDWERTE,
+  );
+  const k = (personId: number, name: string, status: 'active' | 'to_delete' = 'active') => ({
+    personId,
+    name,
+    leitung: false,
+    status,
+  });
+  const DATEN: KjDaten = {
+    gruppen: new Map([
+      [
+        FISCHE,
+        {
+          art: 'sichtbar',
+          mitglieder: [
+            { personId: 5, name: 'Jana Kiefer', leitung: true, status: 'active' },
+            k(60, 'Lea Birke'),
+            k(61, 'Tim Eiche'),
+            k(62, 'Finn Hasel'),
+          ],
+        },
+      ],
+      [JUNGSCHAR, { art: 'sichtbar', mitglieder: [k(70, 'Ben Holunder')] }],
+      [WECHSEL, { art: 'sichtbar', mitglieder: [k(61, 'Tim Eiche', 'to_delete')] }],
+    ]),
+    geburtstage: new Map([
+      [60, `${JAHR - 10}-09-30`], // am Stichtag 10 → wechselt
+      [61, `${JAHR - 11}-01-01`], // alt genug, aber Ausnahme
+      [62, null], // ohne Geburtstag
+      [70, `${JAHR - 11}-05-05`],
+    ]),
+  };
+
+  beforeEach(() => {
+    einrichtungLaden.mockResolvedValue({
+      ok: true,
+      daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
+    });
+    ferienLaden.mockReset();
+    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE });
+    kjLaden.mockReset();
+    kjLaden.mockResolvedValue({ art: 'da', daten: DATEN });
+  });
+
+  it('ohne Einrichtung gibt es den Reiter nicht – auch nicht für Admins', async () => {
+    einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
+    window.location.hash = '#kinder';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
+    expect(screen.queryByRole('button', { name: 'Kinder & Jugend' })).toBeNull();
+    expect(kjLaden).not.toHaveBeenCalled();
+  });
+
+  it('Admin: Übersicht mit Kacheln je Stufe, Kachel → Gruppe, Kind → Fenster nur zum Lesen', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    expect(await screen.findByRole('heading', { name: 'Übersicht' })).toBeTruthy();
+    expect(
+      screen.getByText(`4 Kinder und Jugendliche · 1 wechseln · 1 ohne Geburtstag`, {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Fische/ }));
+    expect(screen.getByRole('heading', { name: 'Fische' })).toBeTruthy();
+    expect(screen.getByText('Leitung: Jana Kiefer · 3 Kinder')).toBeTruthy();
+    expect(screen.getByText('wechselt → Jungschar')).toBeTruthy();
+    expect(screen.getByText('bleibt noch ein Jahr')).toBeTruthy();
+    expect(screen.getByText('Geburtstag fehlt')).toBeTruthy();
+    // Bereichsleitung sieht schon vor der Ankündigung, wer neu dazukommt – hier bei der Jungschar.
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zur Übersicht' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Jungschar/ }));
+    expect(screen.getByText('kommt aus Fische')).toBeTruthy();
+    expect(screen.getByText('Lea Birke')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zur Übersicht' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Fische/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Tim Eiche/ }));
+    const fenster = within(screen.getByRole('dialog', { name: 'Tim Eiche' }));
+    expect(fenster.getByText('bleibt noch ein Jahr (Ausnahme)')).toBeTruthy();
+    expect(fenster.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('Daten pflegen: Admin sieht „Geburtstag fehlt“ und „Wird 18“, Leitung nur „Geburtstag fehlt“', async () => {
+    const { unmount } = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Daten pflegen' }));
+    expect(screen.getByRole('heading', { name: /^Geburtstag fehlt\s*1$/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Wird bis zum Stichtag 18/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Finn Hasel/ }));
+    const fenster = within(screen.getByRole('dialog', { name: 'Finn Hasel' }));
+    expect(fenster.getByText('fehlt')).toBeTruthy();
+    expect(fenster.getByText(/wechselt das Kind nie von selbst/)).toBeTruthy();
+    unmount();
+
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [FISCHE] }));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Daten pflegen' }));
+    expect(screen.getByRole('heading', { name: /^Geburtstag fehlt\s*1$/ })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /^Wird bis zum Stichtag 18/ })).toBeNull();
+  });
+
+  it('Leitung einer Stufe: „Meine Gruppe“, wer neu kommt erst ab der Ankündigung', async () => {
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [JUNGSCHAR] }));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    expect(await screen.findByRole('heading', { name: 'Jungschar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Meine Gruppe' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Übersicht' })).toBeNull();
+    expect(screen.getByText(/siehst du ab der Ankündigung/)).toBeTruthy();
+    expect(screen.queryByText('Lea Birke')).toBeNull();
+  });
+
+  it('wer keine Stufe leitet: kein Reiter, auch nicht über die Adresse', async () => {
+    window.location.hash = '#kinder';
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
+    expect(screen.queryByRole('button', { name: 'Kinder & Jugend' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Übersicht' })).toBeNull();
+  });
+
+  it('Ferienkalender nicht freigegeben → sagt es, statt leere Listen zu zeigen', async () => {
+    ferienLaden.mockResolvedValue({ art: 'keinKalender' });
+    window.location.hash = '#kinder';
+    render(<App />);
+    expect(await screen.findByText(/ist für dich nicht sichtbar/)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Übersicht' })).toBeNull();
+  });
+
+  it('vorübergehender Fehler → „Erneut versuchen“ lädt neu', async () => {
+    kjLaden.mockResolvedValueOnce({ art: 'fehler' });
+    window.location.hash = '#kinder';
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Erneut versuchen/ }));
+    expect(await screen.findByRole('heading', { name: 'Übersicht' })).toBeTruthy();
   });
 });

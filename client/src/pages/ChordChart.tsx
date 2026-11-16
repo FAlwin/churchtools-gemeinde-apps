@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
 import { BlattKopf, type BlattKopfAngaben } from '../components/BlattKopf';
@@ -31,25 +31,12 @@ import {
   isTourDone,
   markTourDone,
 } from '../utils/onboarding';
-import { VIEW_NS } from '../services/teamNotes';
-import {
-  anmerkungsquelleFuer,
-  drawKeyForPage,
-  pageLabelFor,
-  viewKeyForPage,
-  zoomKeyBaseForPage,
-} from '../utils/chartPageKeys';
 import { SharersSheet } from '../components/SharersSheet';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { deriveActiveSongView } from '../utils/activeSongView';
 import { chartHead } from '@ui/lied/chordPdf';
-import { pdfOptionsForSong } from '../utils/chartPdfOptions';
-import { ablaufPdfBauen } from '../utils/ablaufPdf';
-import { eigeneEbene } from '../utils/anmerkungsEbene';
-import { dokumentSeiten } from '../utils/dokumentSeiten';
-import { ladeDokument } from '../services/fileDownload';
-import { TeilenFenster, type GebautesPdf } from '../components/TeilenFenster';
+import { TeilenFenster } from '../components/TeilenFenster';
 import { DEFAULT_SETTINGS } from '../utils/chartSettings';
 import { useTeamNotesImport } from '../hooks/useTeamNotesImport';
 import { useChartNavigation } from '../hooks/useChartNavigation';
@@ -62,11 +49,11 @@ import {
   useArrangementVorladen,
 } from '../hooks/useArrangementUeberschreibung';
 import { setArrangementTempo } from '../services/churchtoolsApi';
-import { ArrangementFilesSheet } from '../components/ArrangementFilesSheet';
-import { DateiUmbenennenFenster } from '../components/DateiUmbenennenFenster';
+import { DateiFenster } from '../components/DateiFenster';
+import { useSeitenSchluessel } from '../hooks/useSeitenSchluessel';
+import { liedPdfBauen } from '../utils/liedPdf';
 import { EditSongSheet } from '../components/EditSongSheet';
 import { useArrangementDateien } from '../hooks/useArrangementDateien';
-import { loeschFrage } from '../utils/dateiVerwaltung';
 import { useSetlistPages } from '../hooks/useSetlistPages';
 import { useCapabilities, useSongArrangements, useSongUsage } from '../hooks/useServices';
 import { useLiedinfoQuelle } from '@ui/lied/useLiedinfoQuelle';
@@ -145,8 +132,6 @@ export function ChordChart({
     .join(',');
 
   const [drawMode, setDrawMode] = useState(false);
-  /** Rückfrage vor dem Holen aus SongSelect (#322) – es ersetzt ein vorhandenes Notenblatt. */
-  const [songSelectFrage, setSongSelectFrage] = useState(false);
   /**
    * Auffrischen im Hintergrund (Erst-Sync, 30-s-/60-s-Takt, Rückkehr zur App) – in `useChartSync`.
    *
@@ -508,90 +493,19 @@ export function ChordChart({
     tempoAktiv,
   } = useTempoSteuerung(song, set);
 
-  // Anmerkungs-/Zoom-Schlüssel je Strom-Seite. Die Regeln – welche Darstellungsart gilt, wann es
-  // KEINEN Schlüssel gibt – stehen rein und getestet in `utils/chartPageKeys` (#314); hier nur die
-  // Verdrahtung an die aktuellen Daten.
-  const drawKeyFor = (page: number): string | null =>
-    drawKeyForPage(page, owners, publishedSettings, effSettings);
-  const zoomKeyBaseFor = (page: number): string =>
-    zoomKeyBaseForPage(page, owners, publishedSettings, effSettings);
-  const pageLabel = (activePg: number, pageIdx: number): string | null =>
-    pageLabelFor(activePg, pageIdx, owners);
-  // „Notizen von …": stabile Identität für die PageDeck-Effekte, deshalb `useCallback`.
-  // `viewingId` gehört bewusst in die Abhängigkeiten, obwohl er im Schlüssel nicht vorkommt: Beim
-  // Wechsel auf eine andere Person mit derselben Ebene bliebe die Funktion sonst identisch, und
-  // PageDeck bekäme kein Signal, den Ansichts-Spiegel neu zu lesen.
-  const viewingId = viewing?.id ?? null;
-  const viewingSongId = viewing?.songId ?? null;
-  const viewingLyr = viewing?.lyr ?? false;
-  // SEIN Arrangement (#320, 3c) – gesucht wird unter dem Schlüssel des Kollegen, nicht dem eigenen.
-  const viewingArr = viewing?.arrangementId ?? null;
-  const viewKeyFor = useCallback(
-    (page: number): string | null =>
-      viewKeyForPage(
-        page,
-        owners,
-        viewingId == null || viewingSongId == null
-          ? null
-          : { songId: viewingSongId, lyr: viewingLyr, arrangementId: viewingArr },
-        VIEW_NS,
-      ),
-    [owners, viewingId, viewingSongId, viewingLyr, viewingArr],
-  );
-  /** Scroll-Modus: welche Anmerkungen eine Seite zeigt – bei der Rolle die aller A4-Seiten des Lieds (#614). */
-  const anmerkungFuer = (page: number) =>
-    anmerkungsquelleFuer(
-      page,
-      owners,
-      publishedSettings,
-      effSettings,
-      viewingId == null || viewingSongId == null
-        ? null
-        : { songId: viewingSongId, lyr: viewingLyr, arrangementId: viewingArr },
-      VIEW_NS,
-      viewMode === 'merge',
-    );
+  // Anmerkungs-/Zoom-Schlüssel je Strom-Seite – in `useSeitenSchluessel`.
+  const { drawKeyFor, zoomKeyBaseFor, pageLabel, viewKeyFor, anmerkungFuer } = useSeitenSchluessel({
+    owners,
+    publishedSettings,
+    effSettings,
+    viewing,
+    viewMode,
+  });
 
-  /**
-   * „Als PDF teilen" – das aktive Lied als einzelne PDF, über das Teilen-Fenster (Anmerkungen ja/nein,
-   * 07.10.2026) und denselben Baustein wie der Ablauf (`ablaufPdfBauen`): Akkorde oder das angezeigte
-   * Dokument, auf Wunsch mit den eigenen Anmerkungen.
-   *
-   * Die Akkord-Optionen kommen aus `pdfOptionsForSong`, derselben Funktion, die auch den Seitenstrom
-   * der Anzeige baut. Vorher baute diese Stelle die Optionen selbst und übergab `totalOffset` – also
-   * OHNE den Kapo-Abzug. Bei gesetztem Kapo war das geteilte PDF dadurch anders transponiert als der
-   * Bildschirm (#239). Es darf hier keine zweite Fassung dieser Rechnung geben.
-   */
   const [teilenOffen, setTeilenOffen] = useState(false);
-  const liedPdf = async (mitAnmerkungen: boolean): Promise<GebautesPdf> => {
-    const lied = { ...song, chordpro: displayedChordpro };
-    const opts = pdfOptionsForSong(song, set, logo);
-    const dokument =
-      set.viewSource === 'chords'
-        ? null
-        : (song.documents.find((d) => d.fileId === set.viewSource) ?? null);
-    const { doc, ersetzt, fehlend } = await ablaufPdfBauen(
-      [
-        {
-          song: lied,
-          versionKey: set.versionKey,
-          quelle: dokument ? { art: 'dokument', dokument } : { art: 'akkorde', opts },
-        },
-      ],
-      {
-        ladeSeiten: async (s, d) => dokumentSeiten(await ladeDokument(s.id, d.fileId), d.type),
-        akkordOpts: () => opts,
-        ebene: mitAnmerkungen ? eigeneEbene : undefined,
-      },
-    );
-    const hinweis =
-      ersetzt.length > 0
-        ? 'Das Dokument ließ sich nicht laden – im PDF stehen die Akkorde'
-        : fehlend.length > 0
-          ? 'Das Dokument ließ sich nicht laden'
-          : '';
-    return { doc, hinweis };
-  };
+  /** „Als PDF teilen“ – das aktive Lied als einzelne PDF (`liedPdfBauen`, dort die Begründung zu #239). */
+  const liedPdf = (mitAnmerkungen: boolean) =>
+    liedPdfBauen({ song, set, logo, displayedChordpro }, mitAnmerkungen);
 
   // ChordPro-Versionen anlegen/bearbeiten/löschen (Zustand + ChurchTools-Aufrufe im Hook gebündelt).
   const {
@@ -947,95 +861,14 @@ export function ChordChart({
           />
         )}
 
-        {/* Dateien des Arrangements (#321). Hochladen/Löschen folgt in Schritt 4. */}
-        {overlay === 'files' && (
-          <ArrangementFilesSheet
-            arrangementName={ebenenNamen.arrangementName(song.arrangementId)}
-            files={datei.dateien.data ?? []}
-            laedt={datei.dateien.isPending}
-            // `paused` heißt: React Query wartet auf den Server, statt weiter zu versuchen.
-            angehalten={datei.dateien.fetchStatus === 'paused'}
-            fehler={
-              datei.dateien.error
-                ? 'Die Dateien konnten nicht geladen werden. Bitte erneut versuchen.'
-                : null
-            }
-            laedtHoch={datei.laedtHoch}
-            /**
-             * Aus SongSelect holen nur, wenn beides da ist: das Recht der Gemeinde (`canUseCcli`)
-             * UND eine CCLI-Nummer am Lied. Ohne die Nummer wüsste CCLI nicht, welches Lied gemeint
-             * ist; ohne das Recht scheitert der Aufruf immer.
-             */
-            songSelect={
-              canUseCcli && song.ccli
-                ? { songNumber: Number(song.ccli), laeuft: datei.holtChordPro }
-                : null
-            }
-            onDownload={(f) => void datei.herunterladen(f)}
-            onUpload={datei.dateiGewaehlt}
-            onDelete={datei.setLoeschDatei}
-            onRename={datei.setUmbenennDatei}
-            onSongSelect={() => setSongSelectFrage(true)}
-            onClose={() => setOverlay(null)}
-            zurueck={() => setOverlay('menu')}
-          />
-        )}
-
-        {/* Die Rückfrage nennt die FOLGE: Ein vorhandenes Notenblatt wird ersetzt, und die Tonart
-            kommt aus dem Arrangement (CCLI transponiert beim Herunterladen). */}
-        {songSelectFrage && song.ccli && (
-          <ConfirmDialog
-            title="Notenblatt aus SongSelect holen?"
-            message={`Für „${song.title}" (CCLI-Nummer ${song.ccli}) wird das Notenblatt bei SongSelect geholt und in „${song.arrangementName}" abgelegt – in der Tonart des Arrangements. Ein vorhandenes Notenblatt dieses Arrangements wird dabei ERSETZT; deine eigenen Versionen bleiben.`}
-            confirmLabel="Holen"
-            onConfirm={() => {
-              setSongSelectFrage(false);
-              void datei.chordProHolen(Number(song.ccli));
-            }}
-            onCancel={() => setSongSelectFrage(false)}
-          />
-        )}
-
-        {/* Rückfrage vor dem Löschen. Bei einer flachen Liste ist dieser Text die einzige Bremse –
-            deshalb nennt er die FOLGE und nicht nur „wirklich?". */}
-        {datei.loeschDatei && (
-          <ConfirmDialog
-            title="Datei löschen?"
-            message={loeschFrage(datei.loeschDatei)}
-            confirmLabel="Löschen"
-            onConfirm={() => void datei.loeschenBestaetigen()}
-            onCancel={() => datei.setLoeschDatei(null)}
-          />
-        )}
-
-        {/* Umbenennen (31.10.2026): Datei direkt in ChurchTools, Version über die Version. Fehler stehen im Fenster,
-            das offen bleibt. */}
-        {datei.umbenennDatei && (
-          <DateiUmbenennenFenster
-            datei={datei.umbenennDatei}
-            benennt={datei.benennt}
-            fehler={datei.umbenennFehler}
-            onUmbenennen={(eingabe) => void datei.umbenennen(eingabe)}
-            onZurueck={() => datei.setUmbenennDatei(null)}
-            // Das X schließt alles – auch die Dateien darunter (02.11.2026).
-            onClose={() => {
-              datei.setUmbenennDatei(null);
-              setOverlay(null);
-            }}
-          />
-        )}
-
-        {/* Gleicher Name: ChurchTools ersetzt nicht, es läge zweimal da. Was die richtige Datei ist,
-            weiß nur der Nutzer – also Auskunft geben und ihn entscheiden lassen. */}
-        {datei.uploadWarnung && (
-          <ConfirmDialog
-            title="Datei gibt es schon"
-            message={datei.uploadWarnung.text}
-            confirmLabel="Trotzdem hochladen"
-            onConfirm={datei.warnungBestaetigen}
-            onCancel={() => datei.setUploadWarnung(null)}
-          />
-        )}
+        <DateiFenster
+          song={song}
+          datei={datei}
+          overlay={overlay}
+          setOverlay={setOverlay}
+          ebenenNamen={ebenenNamen}
+          canUseCcli={canUseCcli}
+        />
 
         <Toast message={toast} />
 

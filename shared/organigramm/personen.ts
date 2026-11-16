@@ -63,6 +63,40 @@ export function gruppenLeitung(
 /** Was ein Kästchen im Diagramm und eine Zeile der Liste an Personen zeigen (O7b-6): nichts, die Rollen oder alle. */
 export type PersonenWahl = 'aus' | 'rollen' | 'alle';
 
+/**
+ * **Wie viel von den Personen einer Gruppe zu sehen ist** (#915 Scheibe C, entschieden 12.11.2026) – von wenig nach viel:
+ * keine Personen · nur Zahlen („1 Leiter, 6 Mitarbeiter“) · wie „Rollen“ (die Standardrolle nur als Zahl) · alle Namen.
+ * Die eigene Wahl („Aus · Rollen · Alle“) ist eine Stufe; was Gruppen-Admins für Personen ohne Leitung einstellen, setzt
+ * eine Grenze darüber (`hoechstens`).
+ */
+export type PersonenStufe = 'aus' | 'zahl' | 'rollen' | 'alle';
+
+export const PERSONEN_STUFEN: readonly PersonenStufe[] = ['aus', 'zahl', 'rollen', 'alle'];
+
+/** Die kleinere von zwei Stufen – die eigene Wahl, begrenzt durch die Einstellung. */
+export const hoechstens = (a: PersonenStufe, b: PersonenStufe): PersonenStufe =>
+  PERSONEN_STUFEN[Math.min(PERSONEN_STUFEN.indexOf(a), PERSONEN_STUFEN.indexOf(b))];
+
+/** Die Grenze je Gruppe (`personenGrenze` in `sichtbereich.ts`). Ohne Einstellung: keine. */
+export type PersonenGrenze = (gruppeId: number) => PersonenStufe;
+export const OHNE_GRENZE: PersonenGrenze = () => 'alle';
+
+/**
+ * **Steht diese Person bei dieser Stufe mit Namen da?** – EINE Regel für Kästchen, Liste, PDF, Präsentation, Karten und
+ * Gruppenfenster (#915 C). Bei „Rollen“ steht die Standardrolle (`isDefault`, Mitarbeiter/Teilnehmer) nur als Zahl,
+ * alle anderen Rollen mit Namen; bei „Nur Zahlen“ und „Keine Personen“ niemand – auch die Leitung nicht (Alwin
+ * 12.11.2026: „streng nach Stufe“).
+ */
+export function mitNamen(
+  stufe: PersonenStufe,
+  rollen: ReadonlyMap<number, Rolle>,
+  rolleId: number | null,
+): boolean {
+  if (stufe === 'alle') return true;
+  if (stufe !== 'rollen') return false;
+  return (rolleId === null ? undefined : rollen.get(rolleId))?.standard !== true;
+}
+
 /** Eine Rolle einer Gruppe mit ihren Personen – `nurZahl`: nur „6 Mitarbeiter“ statt der Namen. */
 export interface RollenGruppe {
   rolle: string;
@@ -82,36 +116,124 @@ export function kastenRollen(
   mitglieder: readonly Mitglied[],
   rollen: ReadonlyMap<number, Rolle>,
   name: Name,
-  wahl: PersonenWahl,
+  wahl: PersonenStufe,
 ): RollenGruppe[] {
   if (wahl === 'aus') return [];
-  const rang = (id: number | null) => {
-    const r = id === null ? undefined : rollen.get(id);
-    if (!r) return [3, 0] as const;
-    return [r.leitung ? 0 : r.standard ? 2 : 1, r.sortKey] as const;
-  };
+  const rang = kastenRang(rollen);
   const je = new Map<number | null, number[]>();
   for (const m of mitglieder) {
     const id = m.rolleId !== null && rollen.has(m.rolleId) ? m.rolleId : null;
     je.set(id, [...(je.get(id) ?? []), m.personId]);
   }
   return [...je]
-    .sort(([a], [b]) => {
-      const [ga, sa] = rang(a);
-      const [gb, sb] = rang(b);
-      return ga - gb || sa - sb || (a ?? 0) - (b ?? 0);
-    })
+    .sort(([a], [b]) => rang(a) - rang(b) || (a ?? 0) - (b ?? 0))
     .map(([id, personen]) => {
-      const r = id === null ? undefined : rollen.get(id);
       return {
-        rolle: r?.name ?? 'Mitglied',
+        rolle: rollenName(rollen, id),
         namen: personen
           .sort((a, b) => name(a).localeCompare(name(b), 'de') || a - b)
           .map((p) => name(p)),
-        nurZahl: wahl === 'rollen' && r?.standard === true,
+        nurZahl: !mitNamen(wahl, rollen, id),
       };
     });
 }
 
 /** „6 Mitarbeiter“ – die Standardrolle bei „Rollen“ (O7b-6). Der Rollenname steht, wie ChurchTools ihn liefert. */
 export const rollenZahl = (g: RollenGruppe): string => `${g.namen.length} ${g.rolle}`;
+
+/**
+ * **Wie eine Rolle im Organigramm heißt** – so, wie ChurchTools sie liefert; eine Rolle, die ChurchTools nicht (mehr)
+ * liefert, und „nur über eine Untergruppe dabei“ heißen „Mitglied“. EINE Stelle für die Kästchen und den Rollenfilter
+ * (#915) – der Filter merkt sich Namen, also müssen beide denselben Namen sehen.
+ */
+export function rollenName(rollen: ReadonlyMap<number, Rolle>, rolleId: number | null): string {
+  return (rolleId === null ? undefined : rollen.get(rolleId))?.name ?? 'Mitglied';
+}
+
+/**
+ * Die Reihenfolge der Rollen in den Kästchen und im Rollenfilter: Leitung (`isLeader`), dann die übrigen, dann die
+ * Standardrolle (`isDefault`), unbekannt zuletzt – jeweils nach `sortKey`.
+ */
+function kastenRang(rollen: ReadonlyMap<number, Rolle>): (rolleId: number | null) => number {
+  return (id) => {
+    const r = id === null ? undefined : rollen.get(id);
+    if (!r) return 3_000_000;
+    return (r.leitung ? 0 : r.standard ? 2 : 1) * 1_000_000 + r.sortKey;
+  };
+}
+
+/** Eine Rolle zum Anhaken: Name wie in ChurchTools, `leitung` – für „Nur Leitung“. */
+export interface RollenWahl {
+  name: string;
+  leitung: boolean;
+}
+
+/**
+ * **Die Rollen zum Anhaken** („Welche Rollen“, #915): jeder Rollenname, der bei den sichtbaren Mitgliedern
+ * tatsächlich vorkommt, einmal – „Leiter“ gibt es je Gruppentyp als eigene Rolle, steht hier aber nur einmal
+ * (entschieden 12.11.2026). Eine Rolle ohne Personen wird nicht angeboten. Reihenfolge wie in den Kästchen.
+ */
+export function rollenZurWahl(
+  listen: Iterable<readonly Mitglied[]>,
+  rollen: ReadonlyMap<number, Rolle>,
+): RollenWahl[] {
+  const rang = kastenRang(rollen);
+  const je = new Map<string, { rang: number; leitung: boolean }>();
+  for (const liste of listen)
+    for (const m of liste) {
+      const n = rollenName(rollen, m.rolleId);
+      const da = je.get(n);
+      je.set(n, {
+        rang: Math.min(da?.rang ?? Infinity, rang(m.rolleId)),
+        leitung: (da?.leitung ?? false) || (m.rolleId !== null && !!rollen.get(m.rolleId)?.leitung),
+      });
+    }
+  return [...je]
+    .sort(([a, x], [b, y]) => x.rang - y.rang || a.localeCompare(b, 'de'))
+    .map(([name, { leitung }]) => ({ name, leitung }));
+}
+
+/**
+ * **Wer in einer Liste mit Namen bleibt** (#915, Präsentation): ohne abgewählte Rollen („Welche Rollen“) und nur, wen die
+ * Stufe der Gruppe mit Namen zeigt (`mitNamen`, Scheibe C). Eine Person bleibt, wenn sie in der Gruppe ODER einer ihrer
+ * Untergruppen beides erfüllt – „Nur Leitung“ bei Technik zeigt also auch die Leitung von Ton und Stream, nicht aber
+ * deren Mitarbeiter; wer Ton leitet, sieht in der Spalte Technik die Namen aus Ton, aber nicht die übrigen.
+ */
+export function gezeigtePersonen(
+  personen: readonly Mitglied[],
+  gruppen: readonly number[],
+  mitglieder: ReadonlyMap<number, readonly Mitglied[]>,
+  rollen: ReadonlyMap<number, Rolle>,
+  aus: ReadonlySet<string>,
+  grenze: PersonenGrenze = OHNE_GRENZE,
+): Mitglied[] {
+  const bleibt = new Set<number>();
+  for (const id of gruppen) {
+    const stufe = grenze(id);
+    for (const m of mitglieder.get(id) ?? [])
+      if (!aus.has(rollenName(rollen, m.rolleId)) && mitNamen(stufe, rollen, m.rolleId))
+        bleibt.add(m.personId);
+  }
+  return personen.filter((p) => bleibt.has(p.personId));
+}
+
+/**
+ * **Die Leitung, wie die Stufe sie zeigt** (#915 C) – für die Karten im Reiter und die Kacheln der Präsentation: mit
+ * Namen, wo `mitNamen` es erlaubt, sonst gezählt („1 Leiter, 1 Co-Leiter“). Gezählt wird auch bei „Keine Personen“:
+ * Sonst stünde fälschlich „Leitung wird noch gesucht“ da.
+ */
+export function leitungNachStufe(
+  leitung: readonly Mitglied[],
+  stufe: PersonenStufe,
+  rollen: ReadonlyMap<number, Rolle>,
+  name: Name,
+): { namen: Mitglied[]; ohneNamen: string | null } {
+  const namen = leitung.filter((m) => mitNamen(stufe, rollen, m.rolleId));
+  const rest = leitung.filter((m) => !mitNamen(stufe, rollen, m.rolleId));
+  return {
+    namen,
+    ohneNamen: rest.length
+      ? kastenRollen(rest, rollen, name, 'zahl').map(rollenZahl).join(', ')
+      : null,
+  };
+}

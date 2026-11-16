@@ -10,8 +10,10 @@ import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import {
   gruppenLeitung,
+  leitungNachStufe,
   teilbaumPersonen,
   type Mitglied,
+  type PersonenGrenze,
   type PersonenWahl,
 } from '@shared/organigramm/personen';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
@@ -20,7 +22,9 @@ import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import { SpitzenAuswahl } from './SpitzenAuswahl';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { personenInhalt } from './kastenPersonen';
+import { personenInhalt, type RollenFilter } from './kastenPersonen';
+import { RollenAuswahl } from './RollenAuswahl';
+import { stufeBand } from './stufeTexte';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -38,8 +42,10 @@ interface Props {
   lesbar: ReadonlyMap<number, readonly Mitglied[]>;
   /** Was Gruppen-Admins für alle ausgeblendet haben (O7b-7). */
   fuerAlle: Sichtbarkeit;
-  /** Ließ sich gerade nicht lesen – dann ist alles zu sehen, mit Hinweis. */
+  /** Ließ sich gerade nicht lesen – dann sind alle Gruppen zu sehen, Personen ohne Leitung ohne Namen; mit Hinweis. */
   fuerAlleFehler: boolean;
+  /** Wie viel man von den Personen je Gruppe sehen darf (#915 C) – für Kästchen, Liste und die Leitung auf den Karten. */
+  grenze: PersonenGrenze;
   onFuerAlleNochmal: () => void;
   /** Der Baum ohne für alle Ausgeblendetes, große Bereiche zuerst – EINE Rechnung in `App` für Karten, Liste und Fenster. */
   baum: readonly Knoten[];
@@ -49,6 +55,8 @@ interface Props {
   /** Personen in Diagramm und Liste (O7b-6) – je Gerät gemerkt, liegt in `App`. */
   personen: PersonenWahl;
   onPersonen: (w: PersonenWahl) => void;
+  /** „Welche Rollen“ (#915) – je Gerät gemerkt, liegt in `App`; gilt auch für die Präsentation. */
+  rollenFilter: RollenFilter;
   /** Pfad der Spitze – `null` = ganze Gemeinde. Eine verschwundene Spitze setzt `App` zurück. */
   spitze: string | null;
   onSpitze: (pfad: string | null) => void;
@@ -73,12 +81,14 @@ export function Organigramm({
   lesbar,
   fuerAlle,
   fuerAlleFehler,
+  grenze,
   onFuerAlleNochmal,
   baum,
   ansicht,
   onAnsicht,
   personen,
   onPersonen,
+  rollenFilter,
   spitze,
   onSpitze,
   sicht,
@@ -93,8 +103,8 @@ export function Organigramm({
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
-    () => personenInhalt(mitglieder, start.rollen, personen),
-    [mitglieder, personen, start.rollen],
+    () => personenInhalt(mitglieder, start.rollen, personen, rollenFilter.aus, grenze),
+    [mitglieder, personen, start.rollen, rollenFilter.aus, grenze],
   );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
   // Karten ab der Spitze: ein Bereich (oder eine Gruppe) allein – sonst alle Bereiche wie bisher.
@@ -108,13 +118,26 @@ export function Organigramm({
           .join(', ')})`
       : '',
     fuerAlle.gruppen.length ? anzahl(fuerAlle.gruppen.length, 'Gruppe', 'Gruppen') : '',
+    stufeBand(fuerAlle.personen) ?? '',
   ]
     .filter(Boolean)
     .join(' und ');
 
   const stand = (id: number): MitgliederStand | undefined => mitglieder?.je.get(id);
   const sichtbare = (id: number): readonly Mitglied[] => lesbar.get(id) ?? [];
-  const leitung = (id: number) => gruppenLeitung(sichtbare(id), start.rollen, name, rang);
+  // Die Leitung, wie die Grenze der Gruppe sie zeigt (#915 C): mit Namen oder nur gezählt.
+  const leitung = (id: number) =>
+    leitungNachStufe(
+      gruppenLeitung(sichtbare(id), start.rollen, name, rang),
+      grenze(id),
+      start.rollen,
+      name,
+    );
+  const leitungText = (l: ReturnType<typeof leitung>) =>
+    l.namen.length || l.ohneNamen
+      ? 'Leitung: ' +
+        [...l.namen.map((m) => name(m.personId)), l.ohneNamen].filter(Boolean).join(', ')
+      : null;
   const dienste = (id: number) =>
     start.dienste ? [...start.dienste.values()].filter((d) => d.gruppenIds.includes(id)) : [];
   const offen = (id: number) =>
@@ -131,7 +154,8 @@ export function Organigramm({
     const n = sichtbare(k.gruppe.id).length;
     const l = leitung(k.gruppe.id);
     const teile = [n ? anzahl(n, 'Person', 'Personen') : 'keine Mitglieder sichtbar'];
-    if (l.length) teile.push('Leitung: ' + l.map((m) => name(m.personId)).join(', '));
+    const lt = leitungText(l);
+    if (lt) teile.push(lt);
     return teile.join(' · ');
   };
 
@@ -215,6 +239,12 @@ export function Organigramm({
               verbunden
             />
           </span>
+          {personen !== 'aus' && (
+            <span className={styles.anfangen}>
+              Welche Rollen
+              <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
+            </span>
+          )}
         </div>
       )}
 
@@ -226,7 +256,10 @@ export function Organigramm({
       )}
       {fuerAlleFehler && (
         <div className={styles.hinweis} role="status">
-          Was das Organigramm für alle zeigt, ließ sich gerade nicht laden – zu sehen ist alles.
+          Was das Organigramm für alle zeigt, ließ sich gerade nicht laden –{' '}
+          {start.rechte.gruppenVerwalten
+            ? 'zu sehen ist alles.'
+            : 'zu sehen sind alle Gruppen, Personen vorsichtshalber ohne Namen (außer in Gruppen, die du leitest).'}
           <button type="button" className={styles.nochmal} onClick={onFuerAlleNochmal}>
             Erneut versuchen
           </button>
@@ -289,7 +322,7 @@ export function Organigramm({
                           : personen
                             ? anzahl(personen, 'Person', 'Personen')
                             : null,
-                        l.length ? 'Leitung: ' + l.map((m) => name(m.personId)).join(', ') : null,
+                        leitungText(l),
                         // Der Bereich selbst nicht lesbar oder gerade nicht ladbar → hier sagen, nicht nur oben.
                         stand(b.gruppe.id)?.art === 'verborgen' ||
                         stand(b.gruppe.id)?.art === 'fehler'
@@ -301,7 +334,7 @@ export function Organigramm({
                     </span>
                   </span>
                   <span className={styles.bilder}>
-                    {l.map((m) => {
+                    {l.namen.map((m) => {
                       const p = mitglieder?.personen.get(m.personId);
                       return p ? (
                         <PersonBild

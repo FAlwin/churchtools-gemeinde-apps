@@ -100,7 +100,7 @@ html[data-theme='dark'] {
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
   // **Reiter oben am Bildschirmrand** (Musik-App am iPad, `ReiterLeiste` mit `amRand`): Platz für die Statusleiste über
-  // den Reitern. Im Browser nichts; in der installierten App die Safe-Area (Standalone-Block unten). Bis zum 12.11.2026
+  // den Reitern. Im Browser nichts; in der installierten App bis unter das Unschärfe-Band (Standalone-Block unten). Bis zum 12.11.2026
   // fehlte das – seit „Reiter am iPad oben“ (#739, 26.10.) standen die Reiter in der App vom NAS unter Uhr und Akku
   // (Alwin am iPad: „die Knöpfe im Header sind nicht zu sehen“).
   --reiter-oben-polster: 0px;
@@ -156,6 +156,7 @@ html[data-theme='dark'] {
   // Reiter oben: Darüber steht die Leiste von ChurchTools, nicht die Statusleiste. Nach `polster.test.ts` ein Polster
   // wie die anderen.
   --reiter-oben-polster: 0px;
+  --band-unten: 0px;
 }
 
 /**
@@ -175,9 +176,13 @@ html[data-theme='dark'] {
 @media (display-mode: standalone) {
   @supports (-webkit-touch-callout: none) {
     :root {
-      --inhalt-pad-top: calc(var(--sat, env(safe-area-inset-top, 0px)) + 36px);
-      // Reiter oben (iPad, iPhone quer): genau die Statusleiste – die Reiter beginnen direkt darunter wie in ChurchTools.
-      --reiter-oben-polster: var(--sat, env(safe-area-inset-top, 0px));
+      // Unterkante des Unschärfe-Bands: Safe-Area + 36 px. EINE Stelle für Köpfe und Reiter.
+      --band-unten: calc(var(--sat, env(safe-area-inset-top, 0px)) + 36px);
+      --inhalt-pad-top: var(--band-unten);
+      // Reiter oben (iPad, iPhone quer): ganz unter das Band, die Leistenfarbe läuft darüber bis zum Rand. Bis zum
+      // 12.11.2026 abends nur die Statusleiste – die Reiter standen darunter, aber im Band und weich (Alwin am iPad:
+      // „immer noch verschwommen“). Seit iPadOS 26 hat auch das iPad das Band (siehe iPad-Block unten).
+      --reiter-oben-polster: var(--band-unten);
     }
   }
 }
@@ -188,6 +193,10 @@ html[data-theme='dark'] {
  * iPhone nötig; auf dem iPad genügt die Safe-Area wie bei der früheren Leiste (`--bar-pad-top`) plus
  * ein paar Pixel. Erkannt an BEIDEN Kanten ≥ 744 px – das kleinste iPad (mini) ist 744 breit, ein
  * gedrehtes iPhone ist nur ~430 hoch und bleibt draußen.
+ *
+ * ⚠️ **Überholt seit iPadOS 26** (Alwin am iPad, 12.11.2026): Das iPad hat das milchige Band inzwischen auch – die
+ * Reiter oben lagen darin und waren weich. Die Reiter rechnen deshalb mit `--band-unten`. Ob Köpfe ohne Reiter
+ * (Liedblatt, Editor) mit diesem Wert noch im Band stehen, ist am Gerät nicht geprüft.
  */
 @media (display-mode: standalone) and (min-width: 744px) and (min-height: 744px) {
   @supports (-webkit-touch-callout: none) {

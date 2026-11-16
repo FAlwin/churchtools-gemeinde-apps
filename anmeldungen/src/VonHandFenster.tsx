@@ -221,7 +221,7 @@ export function VonHandFenster({
         ? w.p
         : { vor: w.neu.vor, nach: w.neu.nach, geburtstag: w.neu.geburtstag, email: w.neu.email };
     setWahl(w);
-    setAntworten(handStart(e, p));
+    setAntworten(handStart(e, p, dazu));
     setFehlerFelder([]);
     setFehler(null);
     setSchritt('antworten');

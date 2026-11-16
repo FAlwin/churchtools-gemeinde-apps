@@ -92,6 +92,7 @@ export function AnmeldungenReiter({
   mitBestaetigung = false,
   startFilter = 'alle',
   startRundmail = false,
+  startOffen = null,
 }: {
   id: number;
   /** Name der Veranstaltung – für die Mail an die Familie (A7-3). */
@@ -122,6 +123,8 @@ export function AnmeldungenReiter({
   startFilter?: ListenFilter;
   /** „Rundmail schreiben“ aus dem Hinweis „im Kalender verschoben“ (K1, V6): öffnet sie, sobald die Liste da ist. */
   startRundmail?: boolean;
+  /** Diese Anmeldung gleich öffnen (Schlüssel) – Sprung aus der Nachprüfung (F1e). */
+  startOffen?: string | null;
 }) {
   const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
@@ -163,7 +166,14 @@ export function AnmeldungenReiter({
     fertig,
     ausgewaehlt,
     fensterX,
-  } = useFenster({ liste, darf, mitBestaetigung, startRundmail, onGespeichert });
+  } = useFenster({
+    liste,
+    darf,
+    mitBestaetigung,
+    startRundmail,
+    startOffen,
+    onGespeichert,
+  });
 
   if (entwurf || !zustand)
     return (

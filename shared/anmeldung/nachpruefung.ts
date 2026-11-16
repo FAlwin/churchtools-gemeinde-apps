@@ -12,7 +12,8 @@ import { optionenBelegt } from './kontingent';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { istEigeneZahlung, vonHandBetrag } from './zahlung';
 import { sollBetrag } from './sollbetrag';
-import type { Mitgliederstand } from './liste';
+import type { ListenAnmeldung, Mitgliederstand } from './liste';
+import { bedingungsBefunde, type Bedingungsbefund } from './antwortenAusListe';
 
 /** Ein Mitglied der Veranstaltung, wie die Nachprüfung es braucht. */
 export interface PruefMitglied {
@@ -74,6 +75,8 @@ export interface Nachpruefung {
   betraege: Betragsbefund[];
   /** Wie viele Anmeldungen beim Betrag geprüft wurden. */
   geprueft: number;
+  /** Was das Formular wegen seiner Bedingungen verhindert hätte (F1e) – von Hand in ChurchTools eingetragen. */
+  bedingungen: Bedingungsbefund[];
   /** Was Aufmerksamkeit braucht – `preise` ist nur eine Info und zählt nicht. */
   hinweise: number;
 }
@@ -128,6 +131,8 @@ export function nachpruefen(
   e: OeffentlicheEinstellungen,
   mitglieder: PruefMitglied[],
   plaetze: PlatzZahlen,
+  /** Die Anmeldungen wie in der Liste – für die Bedingungen (F1e). */
+  anmeldungen: ListenAnmeldung[] = [],
 ): Nachpruefung {
   // Belegung je Auswahl – dieselbe Zählung, die das Formular sperren lässt.
   const g = e.preis.grundpreis;
@@ -236,14 +241,17 @@ export function nachpruefen(
 
   // „Platz frei – jemand wartet“ zählt seit U2-1 nicht mehr: Er steht in der Kachel und im Reiter Warteliste, wo man
   // auch nachrücken lässt (Alwin, 29.10.2026) – die Nachprüfung wiederholt ihn nicht.
+  const bedingungen = bedingungsBefunde(e, anmeldungen);
   const hinweise =
     (auswahl?.optionen.filter((o) => o.zustand === 'ueberbucht').length ?? 0) +
-    betraege.filter((b) => b.grund !== 'preise').length;
+    betraege.filter((b) => b.grund !== 'preise').length +
+    bedingungen.length;
   return {
     plaetze,
     auswahl,
     betraege,
     geprueft,
+    bedingungen,
     hinweise,
   };
 }

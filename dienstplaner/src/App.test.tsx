@@ -27,6 +27,7 @@ vi.mock('./ladeTermine', () => ({
 }));
 // Das Beiwerk der Startseite (Lieder, Abwesenheiten, Musik-App) – hier ohne Netz.
 vi.mock('./ladeBeiwerk', () => ({
+  ladeTerminVorlagen: vi.fn(() => Promise.resolve([])),
   ladeLieder: vi.fn(() => Promise.resolve(null)),
   ladeAbwesenheiten: vi.fn(() => Promise.resolve([])),
   ladeMusikApp: vi.fn(() => Promise.resolve(null)),

@@ -521,7 +521,7 @@ describe('Planen – Wer wie oft? (E3-5)', () => {
   it('der Zeitraum von „Wer wie oft?“ kommt beim nächsten Öffnen aus dem Gerät zurück', () => {
     localStorage.setItem(
       'dienstplaner.planen.ansicht',
-      JSON.stringify({ unteransicht: 'personen', zeitraumWer: { art: 'letzte', monate: 12 } }),
+      JSON.stringify({ unteransicht: 'werWieOft', zeitraumWer: { art: 'letzte', monate: 12 } }),
     );
     const laden = vi.fn(() => new Promise<never>(() => {}));
     render(

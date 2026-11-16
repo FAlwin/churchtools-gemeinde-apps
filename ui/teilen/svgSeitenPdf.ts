@@ -123,7 +123,7 @@ export async function svgSeitenPdf(
   info: { titel: string; thema?: string },
 ): Promise<jsPDF> {
   if (!seiten.length) throw new Error('Keine Seite für die PDF.');
-  const [{ jsPDF }, { svg2pdf }, { latoEinbetten, schriftImDokument, PDF_SCHRIFT }] =
+  const [{ jsPDF }, { svg2pdf }, { schriftEinbetten, schriftImDokument, PDF_SCHRIFT }] =
     await Promise.all([import('jspdf'), import('svg2pdf.js'), import('./pdfSchrift')]);
   const lage = (s: SvgSeite) => (s.breite > s.hoehe ? 'landscape' : 'portrait');
   const doc = new jsPDF({
@@ -131,7 +131,7 @@ export async function svgSeitenPdf(
     format: [seiten[0].breite, seiten[0].hoehe],
     orientation: lage(seiten[0]),
   });
-  latoEinbetten(doc);
+  schriftEinbetten(doc);
   // Ohne die Schrift im Dokument wird die PDF trotzdem – nur rechtsbündige Texte sitzen dann etwas daneben.
   await schriftImDokument().catch(() => undefined);
   doc.setProperties({ title: info.titel, subject: info.thema ?? '', creator: 'ChurchTools' });

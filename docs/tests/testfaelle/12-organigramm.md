@@ -258,7 +258,7 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung; einen Mac mit Chrome und Safari und ein iPad.
 
 **Das muss passieren:** Auf jedem Gerät entsteht dieselbe PDF: oben Logo, „Organigramm“, Gemeinde und Stand, unten
-Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in Lato, auf dem gewählten Papier. Quer bleibt beim
+Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in der PDF-Schrift (Gemeinde Sans, sieht aus wie Lato), auf dem gewählten Papier. Quer bleibt beim
 Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
 
 1. **Organigramm** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch
@@ -328,8 +328,8 @@ Mitarbeitern (z. B. ein Dienst-Team) und – wenn möglich – eine Gruppe, dere
 **Das muss passieren:** Unter dem Namen stehen die Rollen und Personen genau so, wie ChurchTools sie für die Gruppe
 führt – niemand fehlt, nichts ist dazu erfunden.
 
-1. Reiter Organigramm, Ansicht **Von oben**: Rechts neben den Gruppentypen steht **Personen: Aus · Rollen · Alle**,
-   gewählt ist **Aus** (oder die zuletzt gewählte). In **Karten** gibt es den Umschalter nicht.
+1. Reiter Organigramm, Ansicht **Von oben**: In der Zeile unter der Ansicht steht rechts **Personen: Aus · Rollen ·
+   Alle**, gewählt ist **Aus** (oder die zuletzt gewählte). In **Karten** gibt es den Umschalter nicht.
 2. **Rollen**: In den Kästchen steht unter dem Namen klein **LEITER**, **CO-LEITER** … mit den Namen; die Standardrolle
    (Mitarbeiter bzw. Teilnehmer) steht zuletzt als Zahl („6 Mitarbeiter“). Mit der Gruppe in ChurchTools vergleichen:
    gleiche Rollen, gleiche Personen.
@@ -337,7 +337,10 @@ führt – niemand fehlt, nichts ist dazu erfunden.
 4. Kein Kästchen liegt über einem anderen, das runde **+/−** verdeckt keine Zeile; **Ganz zeigen** zeigt alles.
 5. Dasselbe in **Von links**, **Mindmap** und **Liste** (dort eingerückt unter dem Gruppennamen).
 6. Eine Gruppe ohne Leserecht zeigt „Mitglieder nicht sichtbar“.
-7. Seite neu laden: Die Wahl ist wieder da. Bei 1280 px Breite bleibt die Leiste oben einzeilig.
+7. Seite neu laden: Die Wahl ist wieder da. Bei 1280 px Breite stehen Ansicht, **Anfangen bei** und Auf-/Zuklappen in
+   einer Zeile, **Personen** und **Welche Rollen** darunter.
+8. Am Handy (375 px), Ansicht **Liste**, mit einer zugeklappten Gruppe mit langem Namen (z. B. „Lobpreisteam“):
+   „13 Untergruppen“ steht unter dem Namen, nichts überlappt, die Seite rutscht nicht zur Seite.
 
 <details><summary>Technisches</summary>
 
@@ -349,7 +352,8 @@ führt – niemand fehlt, nichts ist dazu erfunden.
   (Sichtregel), `Diagramm.test.tsx` (Blick fängt bei anderer Wahl neu an), `App.test.tsx` (O7b-6), `auswahl.test.ts`;
   ob es mit echten Namen gut aussieht, prüft nur dieser Fall
 - **Historie:** #736; Wunsch Alwin 28.10.2026 („ChurchTools abbilden … nichts weglassen oder hinzufügen“), Entwurf
-  `o7b-6-7-v1.html`, entschieden 29.10.2026
+  `o7b-6-7-v1.html`, entschieden 29.10.2026; Schritt 8 seit #945 (16.11.2026: Zahl der Untergruppen überlappte am
+  Handy den Namen)
 
 </details>
 
@@ -364,8 +368,9 @@ Safari oder Chrome. Eine Gruppe mit Leiter und mehreren Mitarbeitern.
    Alle**, gewählt ist **Rollen**; die Kästchen zeigen die Rollen. In **Kacheln** gibt es den Umschalter nicht.
 2. In der Präsentation **Alle** wählen, einen Bereich öffnen: Auch die Untergruppen zeigen ihre Personen. Präsentation
    schließen – im Reiter steht jetzt ebenfalls **Alle**.
-3. Am iPad quer (oder 1024 px Fensterbreite ohne Vollbild-Knopf) bleibt die Kopfleiste einzeilig, auch mit **Neue
-   Gliederung | Heute**.
+3. Die Kopfleiste hat zwei Zeilen: oben der Name der Gemeinde mit **Vollbild** und **Schließen**, darunter die
+   Bedienung. Bei 1280 px steht der Name ganz da; am iPad quer und schmaler bricht nur die Bedienung um, nichts ragt
+   über den Rand (seit #945, 16.11.2026 – vorher kürzte die einzeilige Leiste den Namen bis auf „Evange…“).
 4. **PDF / Drucken**: Das Häkchen **Personen** ist gesetzt; die Vorschau zeigt die Personen wie im Reiter. Häkchen weg →
    nur die Namen der Gruppen.
 5. Im Reiter **Aus** wählen und das PDF-Fenster neu öffnen: Häkchen aus. Anhaken → die Rollen, Mitarbeiter als Zahl.

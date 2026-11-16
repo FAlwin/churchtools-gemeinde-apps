@@ -75,6 +75,8 @@ function zeigen(
   darf = true,
   mitBestaetigung = false,
   startRundmail = false,
+  einst = e(),
+  startOffen: string | null = null,
 ) {
   const onNeuLaden = vi.fn();
   const onGespeichert = vi.fn();
@@ -82,7 +84,7 @@ function zeigen(
     <AnmeldungenReiter
       id={165}
       veranstaltung="Kinderfreizeit"
-      e={e()}
+      e={einst}
       maxPlaetze={max}
       warteliste
       anmeldeschluss={null}
@@ -96,6 +98,7 @@ function zeigen(
       onGespeichert={onGespeichert}
       mitBestaetigung={mitBestaetigung}
       startRundmail={startRundmail}
+      startOffen={startOffen}
     />,
   );
   return Object.assign(onNeuLaden, { onGespeichert });
@@ -796,6 +799,25 @@ describe('Person dazu (A7-4b)', () => {
     expect(plan.felder[x.ctFelder.aufschluesselung]).toMatch(/^Dazu angemeldet am /);
   });
 
+  it('F1e: eine Frage der Person, die auf eine Kontakt-Frage schaut, erscheint wie im Formular', async () => {
+    const x = e();
+    // Allergien nur, wenn ein Telefon angegeben ist – Maria hat eins.
+    x.formular.person.find((f) => f.id === 'allergy')!.bed = {
+      modus: 'eine',
+      regeln: [{ feld: 'tel', op: 'ausgefuellt' }],
+    };
+    zeigen(fertig(), 10, false, true, false, false, x);
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Paul' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Beispiel/ }));
+    expect(screen.getByText(/zur Anmeldung von Maria Beispiel/)).toBeTruthy();
+    expect(screen.getByLabelText(/Allergien/)).toBeTruthy();
+  });
+
   it('ohne Anmelde-Nr. (ältere Anmeldung) gibt es „Person dazu“ nicht', () => {
     zeigen(fertig(mitglieder(undefined, [true, false], 10)));
     fireEvent.click(screen.getAllByRole('button', { name: /Maria Beispiel/ })[0]);
@@ -1490,5 +1512,13 @@ describe('Zeilen anheften (U2-4)', () => {
     zeigen(drei());
     fireEvent.click(nadeln()[2]);
     expect(reihe()[0]).toBe('CCCCCC');
+  });
+});
+
+describe('Sprung aus der Nachprüfung (F1e)', () => {
+  it('mit `startOffen` ist das Fenster dieser Anmeldung gleich offen', () => {
+    zeigen(fertig(), 10, false, true, false, false, e(), 'AAAAAA');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
   });
 });

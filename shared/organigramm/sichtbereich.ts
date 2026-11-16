@@ -9,6 +9,7 @@
  */
 import { knotenNachId, nachfahren, type Knoten } from './gruppen';
 import type { Mitglied } from './mitglieder';
+import type { PersonenGrenze, PersonenStufe } from './personen';
 
 export type Sichtbereich = ReadonlySet<number> | null;
 
@@ -33,6 +34,15 @@ export const imBereich = (bereich: Sichtbereich, gruppeId: number): boolean =>
   bereich === null || bereich.has(gruppeId);
 
 export const hatBereich = (bereich: Sichtbereich): boolean => bereich === null || bereich.size > 0;
+
+/**
+ * **Wie viel man von den Personen einer Gruppe sehen darf** (#915 Scheibe C): im eigenen Bereich alles – Leitungen ihre
+ * Gruppen samt Untergruppen, Gruppen-Admins (`null`) alles –, sonst höchstens, was Gruppen-Admins für Personen ohne
+ * Leitung eingestellt haben. Nur eine Anzeige-Regel: ChurchTools zeigt jeder Person weiter, was ihre Rechte erlauben.
+ */
+export function personenGrenze(bereich: Sichtbereich, sonst: PersonenStufe): PersonenGrenze {
+  return (gruppeId) => (imBereich(bereich, gruppeId) ? 'alle' : sonst);
+}
 
 export interface PersonImBereich {
   personId: number;

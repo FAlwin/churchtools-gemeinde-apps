@@ -46,9 +46,19 @@ export function tagPunkt(tag: string): string {
   return tag.slice(0, 10).split('-').reverse().join('.');
 }
 
+/**
+ * „14.11.“ – Tag und Monat, ohne Jahr und Wochentag. **Die eine Stelle für „TT.MM.“** (#845-Restpunkt): stand bis
+ * 12.11.2026 achtmal von Hand da (hier, Zeitraum, Anmeldungen, `wannText`, Dateiname des Plan-Blatts, Offline-Stand,
+ * Abwesenheiten); „TT.MM.JJJJ“ ist `tagPunkt` (der Dateiname des Termin-Blatts baute auch das noch selbst).
+ * Nimmt auch Ortszeiten wie `2026-11-14T18:42` – es zählt nur das Datum vorn.
+ */
+export function tagMonat(tag: string): string {
+  return `${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
+}
+
 /** „Sa, 14.11.“ – ohne Jahr, für Listen, in denen der Monat darüber steht. */
 export function tagKurz(tag: string): string {
-  return `${WOCHENTAG[datum(tag).getUTCDay()]}, ${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
+  return `${WOCHENTAG[datum(tag).getUTCDay()]}, ${tagMonat(tag)}`;
 }
 
 const WOCHENTAG_LANG = [

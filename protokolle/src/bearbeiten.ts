@@ -15,6 +15,11 @@
  * beenden (`repeatUntil`), ganze Serie löschen.
  */
 import { werteLesen, wertAendern, wertLoeschen } from '@shared/ct/modulDaten';
+// Eigener Name: `terminPfad` aus `./termin` ist der Pfad EINES Termins, dieser hier die Liste eines Kalenders.
+import {
+  terminPfad as kalenderTerminePfad,
+  type TerminRoh as KalenderTerminRoh,
+} from '@shared/ct/kalenderTermine';
 import {
   aenderungVon,
   ausnahmeRumpf,
@@ -253,10 +258,12 @@ async function teilen(
     if (abgelehnt(e)) throw e;
   }
   if (id === null) {
-    const liste = await ctDaten<
-      { base?: { id?: number; title?: string }; calculated?: { startDate?: string } }[]
-    >(
-      `/calendars/appointments?calendar_ids[]=${termin.kalender}&from=${serienTag(neu.beginn, 'UTC')}&to=${serienTag(new Date(Date.parse(neu.beginn) + 86_400_000).toISOString(), 'UTC')}`,
+    const liste = await ctDaten<KalenderTerminRoh[]>(
+      kalenderTerminePfad(
+        termin.kalender,
+        serienTag(neu.beginn, 'UTC'),
+        serienTag(new Date(Date.parse(neu.beginn) + 86_400_000).toISOString(), 'UTC'),
+      ),
     ).catch(() => []);
     const treffer = (liste ?? []).find(
       (x) =>

@@ -14,6 +14,7 @@
 import { werteLesen, wertAnlegen } from '@shared/ct/modulDaten';
 import { plusTage } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
+import { terminPfad, type TerminRoh } from '@shared/ct/kalenderTermine';
 import { geplanterKopf } from '@shared/protokolle/planen';
 import { minute } from '@shared/protokolle/sitzungen';
 import { sitzungAusWerten } from '@shared/protokolle/speicher';
@@ -64,10 +65,7 @@ async function terminSuchen(
   zeitzone: string,
 ): Promise<number | null> {
   const tag = tagAusIso(beginn, zeitzone);
-  const roh =
-    (await ctDaten<{ base?: { id: number; title: string }; calculated?: { startDate?: string } }[]>(
-      `/calendars/appointments?calendar_ids[]=${kalender}&from=${tag}&to=${tag}`,
-    )) ?? [];
+  const roh = (await ctDaten<TerminRoh[]>(terminPfad(kalender, tag, tag))) ?? [];
   const t = roh.find(
     (r) =>
       r.base?.title === titel &&

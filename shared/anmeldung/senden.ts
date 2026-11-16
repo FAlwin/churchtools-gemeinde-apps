@@ -276,7 +276,17 @@ export function anmeldungAufbauen(
   wahl: PreisWahl,
   heute: string,
   ct: CtFormular,
-  weiteres: { nr?: string; mitPlatz?: boolean[]; papier?: string } = {},
+  weiteres: {
+    nr?: string;
+    mitPlatz?: boolean[];
+    papier?: string;
+    /**
+     * „Person dazu“ von Hand (A7-4b): Die Kontakt-Antworten sind nur dabei, damit die Bedingungen stimmen (F1e) – ihre
+     * Felder stehen schon bei der ersten Person und werden nicht noch einmal umgerechnet (eine inzwischen umbenannte
+     * Auswahl ließe sonst die ganze Anmeldung scheitern).
+     */
+    nurPerson?: boolean;
+  } = {},
 ): Anmeldung {
   // F1b: Was die Person zuletzt nicht mehr gesehen hat (ausgeblendete Frage, gesperrte Antwort), kommt nicht nach
   // ChurchTools. Hier, weil das Formular UND die Anmeldung von Hand (`handFelder`) durch diese Stelle gehen.
@@ -347,8 +357,9 @@ export function anmeldungAufbauen(
   const einmal: FormWert[] = [];
   if (kontakt.vor || kontakt.nach)
     einmal.push(systemWert('kontakt', `${kontakt.vor} ${kontakt.nach}`.trim()));
-  for (const f of e.formular.anmeldung.filter(sichtbar))
-    einmal.push(...feldWerte(f, a.anmeldung[f.id]));
+  if (!weiteres.nurPerson)
+    for (const f of e.formular.anmeldung.filter(sichtbar))
+      einmal.push(...feldWerte(f, a.anmeldung[f.id]));
   if (kannEtwasKosten(e.preis)) {
     einmal.push(systemWert('betrag', euroText(betrag.gesamtCent)));
     einmal.push(

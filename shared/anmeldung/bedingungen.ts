@@ -17,6 +17,7 @@
  */
 import { z } from 'zod';
 import type { Antwort, Antworten, Feld, Formular } from './formular';
+import { freiGewaehlt, freiName, freiSchluessel } from './freieAntwort';
 
 /** Höchstlänge einer Antwort – dieselbe für die Antworten selbst, ausgeblendete und Bedingungen (`formular.ts`). */
 export const ANTWORT_MAX = 80;
@@ -61,10 +62,19 @@ export const antwortBedingungSchema = bedingungSchema.extend({
   grund: z.string().max(KURZ_MAX).optional(),
 });
 
-/** Antwortmöglichkeiten einer Auswahlfrage – bei „Ja / Nein“ fest. Die EINE Stelle dafür. */
+/** Die festen Antworten einer Auswahlfrage – bei „Ja / Nein“ fest, ohne die freie Antwort. */
 export const JA_NEIN = ['Ja', 'Nein'];
-export function wahlAntworten(x: Feld): string[] {
+export function festeAntworten(x: Feld): string[] {
   return x.typ === 'janein' ? JA_NEIN : x.antworten;
+}
+
+/**
+ * **Antwortmöglichkeiten einer Auswahlfrage** – die festen und am Ende die freie (F3). Die EINE Stelle dafür: Optionen
+ * in ChurchTools (`ctAblage`), Quellen und Werte der Bedingungen, Auswahlliste im Formular.
+ */
+export function wahlAntworten(x: Feld): string[] {
+  const frei = freiName(x);
+  return frei === null ? festeAntworten(x) : [...festeAntworten(x), frei];
 }
 
 /** Fragen mit Antwortmöglichkeiten – nur sie können einzelne Antworten an Bedingungen knüpfen. */
@@ -328,6 +338,13 @@ export function leeren(f: Formular, a: Antworten): Antworten {
     });
     if (!geaendert) break;
   }
+  // F3: Der Text der freien Antwort geht nur mit, solange sie gewählt ist – sonst stünde in ChurchTools ein Text zu
+  // einer Antwort, die die Person wieder abgewählt hat (oder zu einer Frage, die sie nicht mehr sah).
+  const freiWeg = (teil: Record<string, Antwort>, felder: Feld[]) => {
+    for (const x of felder) if (!freiGewaehlt(x, teil[x.id])) delete teil[freiSchluessel(x.id)];
+  };
+  freiWeg(jetzt.anmeldung, f.anmeldung);
+  for (const p of jetzt.personen) freiWeg(p, f.person);
   return jetzt;
 }
 

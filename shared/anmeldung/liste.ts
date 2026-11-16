@@ -20,6 +20,8 @@ import {
   type Feld,
   type OeffentlicheEinstellungen,
 } from './formular';
+import { wahlAntworten } from './bedingungen';
+import { freiAnzeige, freiSchluessel } from './freieAntwort';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { eigeneZahlungArt, istEigeneZahlung } from './zahlung';
 
@@ -542,9 +544,31 @@ export function antwortZeilen(
 /**
  * **Eine Antwort als Text** – wie das Fenster sie zeigt, die Druckliste sie druckt (A8) und die Tabelle sie zeigt:
  * Ankreuzen als „ja“, Mehrfachauswahl mit `MEHRFACH_TRENNER`, sonst der lesbare Wert; `null`, wenn nichts beantwortet
- * ist oder das Feld keine eigene Spalte in ChurchTools hat.
+ * ist oder das Feld keine eigene Spalte in ChurchTools hat. Die freie Antwort (F3) steht hier als ihr Text, wie eine
+ * eigene Antwort („FeG Siegburg“ statt „Andere Gemeinde“, Alwin 16.11.2026) – für die Regeln gilt `antwortRoh`.
  */
 export function antwortText(
+  f: Feld,
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+): string | null {
+  const roh = antwortRoh(f, werte, ctFelder);
+  if (roh === null) return null;
+  const tid = ctFelder[freiSchluessel(f.id)];
+  const text = tid === undefined ? undefined : werte[tid];
+  if (f.typ !== 'multi') return f.typ === 'check' ? roh : freiAnzeige(f, roh, text);
+  // Mehrfachauswahl: nur umschreiben, wenn jede Antwort erkannt ist (sonst steht der Text aus ChurchTools da).
+  const teile = mehrfachAntworten(f, roh);
+  return teile.join(MEHRFACH_TRENNER) === roh
+    ? teile.map((a) => freiAnzeige(f, a, text)).join(MEHRFACH_TRENNER)
+    : roh;
+}
+
+/**
+ * **Eine Antwort, wie sie in ChurchTools steht** – die freie Antwort als ihre Beschriftung (F3). Für die Regeln
+ * (`antwortenAus`: Bedingungen, Nachprüfung, „Person dazu“); angezeigt wird `antwortText`.
+ */
+export function antwortRoh(
   f: Feld,
   werte: Werte,
   ctFelder: OeffentlicheEinstellungen['ctFelder'],
@@ -588,5 +612,16 @@ export function ganzeStuecke(
  */
 export function mehrfachAntworten(f: Feld, text: string | null): string[] {
   const trenner = text?.includes(MEHRFACH_TRENNER) ? MEHRFACH_TRENNER : ', ';
-  return ganzeStuecke([...f.antworten, ...(f.verborgen ?? [])], text, trenner);
+  return ganzeStuecke([...wahlAntworten(f), ...(f.verborgen ?? [])], text, trenner);
+}
+
+/**
+ * **Die Teile einer angezeigten Mehrfachauswahl** (`antwortText`) – für die Summenzeile. Der Text einer freien
+ * Antwort (F3) ist keine bekannte Antwort, zählt aber als eigene („Fotos machen 1“); ist gar nichts erkannt, zählt
+ * der ganze Text.
+ */
+export function mehrfachAnzeigeTeile(f: Feld, text: string): string[] {
+  if (text.includes(MEHRFACH_TRENNER)) return text.split(MEHRFACH_TRENNER);
+  const bekannt = mehrfachAntworten(f, text);
+  return bekannt.length ? bekannt : [text];
 }

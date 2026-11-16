@@ -737,8 +737,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   `npm run test:watch`; `npm run test:e2e` (Playwright).
 - ⚠️ **`npm test` allein reicht als Freigabe NICHT:** Der Client-Build fährt `tsc && vite build`, und
   `tsc` typprüft die **Testdateien mit**. Ein Tippfehler im Typ eines Tests lässt alle Tests grün
-  durchlaufen und bricht trotzdem den Build (und damit die CI). Vor dem Push immer auch
-  `npm run build`.
+  durchlaufen und bricht trotzdem den Build (und damit die CI). Vor dem Push deshalb immer auch den
+  Build des **betroffenen Teilprojekts** (z. B. `npm run build -w client`) – den Gesamt-Build fährt die CI.
 - **vitest 4, Spione frisch je Test** (#405): Beide Testkonfigurationen setzen `restoreMocks: true`.
   vitest 4 ÜBERNIMMT bei einem zweiten `vi.spyOn` auf dieselbe Methode den bestehenden Spion samt
   Aufrufen – ohne die Einstellung liest ein Test womöglich die Logzeile des vorigen. Typen: ein bloßes
@@ -761,6 +761,18 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   06.11.2026 – vorher testete er still fremden Code). Dann warten oder den anderen Server stoppen.
 - **CI:** `.github/workflows/ci.yml` – Job `build-and-test` (`lint` + `build` + `test`) **und**
   Job `e2e` (Playwright-Smoke, Chromium) bei jedem PR und Push auf `main`. Kein DB-Service nötig.
+- **Wer prüft was (seit 16.11.2026):** Die **volle** Prüfkette läuft nur auf GitHub – mehrere Sitzungen mit
+  kompletten lokalen Läufen haben den Entwickler-Mac regelmäßig ausgelastet. Lokal vor dem Push nur gezielt:
+  - die Tests der geänderten Dateien: `TZ=UTC npx vitest related <dateien> --run` im betroffenen Teilprojekt
+    (die CI läuft in UTC);
+  - der Build des betroffenen Teilprojekts (s. o.) und `npx eslint <geänderte dateien>`;
+  - die billigen Textprüfungen, die sonst gern erst in der CI scheitern: `npm run format:check`,
+    `npm run doc-check`, `npm run changelog -- --pruefen`, `npm run testplan -- --pruefen`.
+
+  **Nicht lokal:** `npm test` über alles, Gesamt-Build, `build:extension`, `paket`, `npm audit`, `test:e2e` –
+  und `npm ci` nur, wenn sich `package-lock.json` geändert hat oder `node_modules` fehlt. Ist die CI rot, nur
+  den roten Schritt lokal einzeln nachstellen (bei e2e `npx playwright test <datei>`).
+
 - **Regel:** Jeder Bug → Issue (Vorlage „Fehlerbericht"); betrifft er reine Logik,
   zusätzlich ein Regressionstest.
 
@@ -835,7 +847,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 Diese Checkliste wird **bei jedem Release** abgearbeitet – nichts überspringen. Am bequemsten über
 den Skill `/festhalten`, der genau das automatisiert.
 
-1. **Code grün:** `npm run lint` + `npm run build` + `npm test` laufen sauber durch.
+1. **Code grün:** Die GitHub-CI auf dem Release-Stand von `main` ist grün (`lint`, `build`, `test`, `e2e`) –
+   lokal wird dafür nicht noch einmal alles gefahren (siehe „Wer prüft was").
 2. **Einführung geprüft:** Bringt das Release ein neues/geändertes Bedienelement? Dann die geführte
    Einführung angepasst (Schritt + `data-tour`) UND die betroffene Tour-Version erhöht, damit sie
    beim ersten Öffnen erscheint (siehe „Onboarding / Geführte Einführung"). Wenn nein: bewusst nichts.

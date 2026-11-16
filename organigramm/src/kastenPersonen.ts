@@ -6,7 +6,11 @@
  */
 import type { Rolle } from '@shared/organigramm/mitglieder';
 import {
+  hoechstens,
   kastenRollen,
+  OHNE_GRENZE,
+  type PersonenGrenze,
+  type PersonenStufe,
   type PersonenWahl,
   type RollenGruppe,
   type RollenWahl,
@@ -24,7 +28,7 @@ const ausgeblendetText = (weg: readonly RollenGruppe[]) =>
 
 export function kastenInhalt(
   stand: MitgliederStand | undefined,
-  wahl: PersonenWahl,
+  wahl: PersonenStufe,
   rollen: ReadonlyMap<number, Rolle>,
   name: (personId: number) => string,
   aus: ReadonlySet<string> = new Set(),
@@ -44,16 +48,19 @@ export function kastenInhalt(
 
 /**
  * Was unter dem Namen JEDER Gruppe steht – EINE Stelle für Reiter, Präsentation und PDF (O7b-6b). Neu rechnen, wenn sich
- * Mitglieder, Rollen oder Wahl ändern (die Kästchen werden dann neu gemessen).
+ * Mitglieder, Rollen, Wahl oder Grenze ändern (die Kästchen werden dann neu gemessen). Die eigene Wahl gilt höchstens
+ * so weit, wie die Grenze der Gruppe reicht (#915 C).
  */
 export function personenInhalt(
   mitglieder: MitgliederDaten | null,
   rollen: ReadonlyMap<number, Rolle>,
   wahl: PersonenWahl,
   aus?: ReadonlySet<string>,
+  grenze: PersonenGrenze = OHNE_GRENZE,
 ): (id: number) => KastenInhalt | null {
   const name = (p: number) => mitglieder?.personen.get(p)?.name ?? '';
-  return (id) => kastenInhalt(mitglieder?.je.get(id), wahl, rollen, name, aus);
+  return (id) =>
+    kastenInhalt(mitglieder?.je.get(id), hoechstens(wahl, grenze(id)), rollen, name, aus);
 }
 
 /**

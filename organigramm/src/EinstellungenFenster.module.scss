@@ -38,3 +38,40 @@
 .aus > label {
   color: var(--text3);
 }
+
+// Personen für alle ohne Leitung (#915 C): eine Stufe je Zeile, die Erklärung darunter.
+.stufen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 0;
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  input {
+    margin-top: 3px;
+  }
+
+  small {
+    display: block;
+    color: var(--text3);
+    font-size: 13px;
+  }
+}
+
+// Die Regel greift nur mit Leserecht – wie das Band über dem Baum.
+.warnung {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+}

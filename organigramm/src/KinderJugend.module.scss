@@ -463,6 +463,18 @@
   }
 }
 
+/* Mehrere Befunde einer Zeile (z. B. je Gruppe) – je einer pro Zeile statt eines Blocks. */
+.befunde {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .leerKarte {
   @include m.card-list;
   display: flex;

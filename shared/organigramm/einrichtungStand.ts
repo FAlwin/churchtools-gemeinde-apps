@@ -22,6 +22,7 @@ import {
   type Regel,
   type WechselGruppen,
   type WechselRollen,
+  regelName,
 } from './gruppenwechsel';
 import { wechselGruppeAb, type Einrichtung } from './gruppenwechselEinrichtung';
 import { teilnehmerRolleAus } from './gruppenwechselSicht';
@@ -97,7 +98,8 @@ export type RegelStandRoh =
 
 export type ZeilenStand =
   | { art: 'ok'; text: string }
-  | { art: 'warn'; text: string }
+  /** `liste`: mehrere Befunde, je einer pro Zeile (z. B. je Gruppe) – `text` fasst sie dann zusammen. */
+  | { art: 'warn'; text: string; liste?: readonly string[] }
   | { art: 'nichtPruefbar'; text: string };
 
 export type ZeilenId = 'typ' | 'rechte' | 'wechselGruppen' | 'wechseltage' | 'regeln' | 'routinen';
@@ -110,6 +112,11 @@ export interface StandZeile {
 
 const ok = (text: string): ZeilenStand => ({ art: 'ok', text });
 const warn = (text: string): ZeilenStand => ({ art: 'warn', text });
+/** Ein Befund steht als Text da, mehrere als Liste mit `zusammen` darüber. */
+const warnListe = (befunde: readonly string[], zusammen: string): ZeilenStand =>
+  befunde.length === 1 ? warn(befunde[0]) : { art: 'warn', text: zusammen, liste: befunde };
+/** „1 Routine“, „3 Routinen“. */
+const anzahl = (n: number, eins: string, mehr: string): string => `${n} ${n === 1 ? eins : mehr}`;
 const nichtPruefbar = (text = 'nicht prüfbar – ließ sich gerade nicht lesen'): ZeilenStand => ({
   art: 'nichtPruefbar',
   text,
@@ -259,7 +266,7 @@ function rechteZeile(d: EinrichtungDaten): StandZeile {
 
 function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
   const wege = uebergaenge(e.einstellung);
-  const titel = `${wege.length} Wechsel-Gruppen`;
+  const titel = anzahl(wege.length, 'Wechsel-Gruppe', 'Wechsel-Gruppen');
   const bereich = gruppenName(q, e.bereichGruppeId);
   const probleme: string[] = [];
   for (const u of wege) {
@@ -283,7 +290,10 @@ function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
     titel,
     stand:
       probleme.length > 0
-        ? warn(probleme.join('; '))
+        ? warnListe(
+            probleme,
+            `${anzahl(probleme.length, 'Übergang stimmt', 'Übergänge stimmen')} nicht`,
+          )
         : ok(`unter „${bereich}“: ${wege.map(wechselGruppenName).join(', ')}`),
   };
 }
@@ -299,7 +309,8 @@ function wechseltageZeile(regel: RegelStandRoh, naechstesJahr: number): StandZei
     return {
       id: 'wechseltage',
       titel,
-      stand: warn(`fehlen ab ${s.ab} – die Regeln reichen nur bis ${s.bis}`),
+      // „reichen nur bis …“ hieße nichts: Gezählt wird ab dem nächsten Wechsel, davor steht nichts von uns.
+      stand: warn(`fehlen ab ${s.ab}`),
     };
   const jahre = regel.staende
     .filter((x) => x.jahr >= naechstesJahr && x.jahr <= regel.bis)
@@ -362,25 +373,37 @@ function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): Stand
     }
     const sollHier = soll.get(id) ?? [];
     const ist = g.regeln.wert.map((r) => (typeof r.shorty === 'string' ? r.shorty : null));
-    for (const r of sollHier)
-      if (!ist.includes(r.shorty)) probleme.push(`${name}: fehlt – ${r.description}`);
+    // Je Gruppe EINE Zeile mit allen Befunden – sonst wird es bei mehreren Gruppen ein unlesbarer Block.
+    const befunde: string[] = [];
+    const fehlend = sollHier
+      .filter((r) => !ist.includes(r.shorty))
+      .map((r) => regelName(r.shorty) ?? r.shorty);
+    if (fehlend.length > 0)
+      befunde.push(`${listeAuf(fehlend)} ${fehlend.length === 1 ? 'fehlt' : 'fehlen'}`);
     const bekannt = new Set(erlaubteRegeln.map((r) => r.shorty));
     const fremd = ist.filter((s) => s === null || !bekannt.has(s));
     if (fremd.length > 0)
-      probleme.push(
-        `${name}: fremde Regel ${listeAuf(
+      befunde.push(
+        `${fremd.length === 1 ? 'fremde Regel' : 'fremde Regeln'} ${listeAuf(
           fremd.map((s) => (s === null ? 'ohne Namen' : `„${s}“`)),
-        )} – nicht von dieser Erweiterung`,
+        )} (nicht von dieser Erweiterung)`,
       );
     if (sollHier.length > 0) {
       if (!g.status.ok) unlesbar = true;
       else if (g.status.wert === 'none')
-        probleme.push(
-          `${name}: Die Regeln laufen nicht (die Gruppe ist nicht als dynamisch eingeschaltet)`,
-        );
+        befunde.push('läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet');
     }
+    if (befunde.length > 0) probleme.push(`${name}: ${befunde.join('; ')}`);
   }
-  if (probleme.length > 0) return { id: 'regeln', titel, stand: warn(probleme.join('; ')) };
+  if (probleme.length > 0)
+    return {
+      id: 'regeln',
+      titel,
+      stand: warnListe(
+        probleme,
+        `${anzahl(probleme.length, 'Gruppe stimmt', 'Gruppen stimmen')} nicht`,
+      ),
+    };
   if (unlesbar) return { id: 'regeln', titel, stand: nichtPruefbar() };
   return {
     id: 'regeln',
@@ -428,7 +451,7 @@ function routineProblem(
 
 function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
   const wege = uebergaenge(e.einstellung);
-  const titel = `${wege.length} Routinen`;
+  const titel = anzahl(wege.length, 'Routine', 'Routinen');
   const probleme: string[] = [];
   let unlesbar = false;
   for (const u of wege) {
@@ -465,7 +488,15 @@ function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
     const befunde = passend.map((r) => routineProblem(r, schritte));
     if (!befunde.includes(null)) probleme.push(`${name}: Routine ${befunde[0]}`);
   }
-  if (probleme.length > 0) return { id: 'routinen', titel, stand: warn(probleme.join('; ')) };
+  if (probleme.length > 0)
+    return {
+      id: 'routinen',
+      titel,
+      stand: warnListe(
+        probleme,
+        `${anzahl(probleme.length, 'Routine stimmt', 'Routinen stimmen')} nicht`,
+      ),
+    };
   if (unlesbar) return { id: 'routinen', titel, stand: nichtPruefbar() };
   return {
     id: 'routinen',

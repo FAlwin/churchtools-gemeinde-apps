@@ -99,6 +99,13 @@ export function EinrichtungSeite({
                 <span className={styles.pruefMitte}>
                   <b>{z.titel}</b>
                   <span>{z.stand.text}</span>
+                  {z.stand.art === 'warn' && z.stand.liste && (
+                    <ul className={styles.befunde}>
+                      {z.stand.liste.map((b) => (
+                        <li key={b}>{b}</li>
+                      ))}
+                    </ul>
+                  )}
                 </span>
               </li>
             ))}

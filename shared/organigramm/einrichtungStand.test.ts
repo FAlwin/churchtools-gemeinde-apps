@@ -4,6 +4,7 @@ import {
   aufraeumRoutine,
   GRUNDWERTE,
   LEITER_RECHTE,
+  REGELN,
   sommerferienAus,
   uebergaenge,
   wechselGruppenName,
@@ -365,7 +366,8 @@ describe('Zeile Wechseltage in den Regeln', () => {
 
   it('stehen schon die nächsten nicht mehr drin → „fehlen ab“', () => {
     const s = zeile(zeilen(gut(), { art: 'da', staende: [], bis: 2026 }), 'wechseltage');
-    expect(s).toMatchObject({ art: 'warn', text: expect.stringContaining('fehlen ab 2027') });
+    // Kein „reichen nur bis 2026“: Vor dem nächsten Wechsel steht nichts von uns drin, der Zusatz sagte nichts.
+    expect(s).toEqual({ art: 'warn', text: 'fehlen ab 2027' });
   });
 
   it('Regeln nicht lesbar → nicht prüfbar', () => {
@@ -373,17 +375,35 @@ describe('Zeile Wechseltage in den Regeln', () => {
   });
 });
 
+describe('Überschriften in Einzahl und Mehrzahl', () => {
+  it('ein Übergang → „1 Wechsel-Gruppe“, „1 Routine“; zwei → Mehrzahl', () => {
+    const eins = einrichtungAus({
+      einstellung: { ...E.einstellung, stufen: E.einstellung.stufen.slice(0, 2) },
+      bereichGruppeId: 9,
+      wechselGruppen: [E.wechselGruppen[0]],
+    })!;
+    const titel = (z: StandZeile[], id: ZeilenId) => z.find((x) => x.id === id)!.titel;
+    const z1 = zeilen(gut(), staendeBis(2029), eins);
+    expect(titel(z1, 'wechselGruppen')).toBe('1 Wechsel-Gruppe');
+    expect(titel(z1, 'routinen')).toBe('1 Routine');
+    const z2 = zeilen();
+    expect(titel(z2, 'wechselGruppen')).toBe('2 Wechsel-Gruppen');
+    expect(titel(z2, 'routinen')).toBe('2 Routinen');
+  });
+});
+
 describe('Zeile Regeln der Gruppen', () => {
-  it('fehlt eine Regel, steht ihre Beschreibung (aus dem Erzeuger) und die Gruppe da', () => {
+  it('fehlt eine Regel, steht ihr Kurzname (aus REGELN) und die Gruppe da', () => {
     const d = gut();
     const w = d.gruppen.get(11)!;
     if (!w.regeln.ok) throw new Error('gelesen');
     const [kinder, leitung] = wechselGruppenRegeln(U1, JAHRE, ROLLEN);
+    expect(kinder.shorty).toBe(REGELN.kinder.shorty);
     d.gruppen = new Map(d.gruppen).set(11, { ...w, regeln: ok([leitung]) });
     const s = zeile(zeilen(d), 'regeln');
     expect(s).toEqual({
       art: 'warn',
-      text: `Schäfchen → Fische: fehlt – ${kinder.description}`,
+      text: `Schäfchen → Fische: ${REGELN.kinder.name} fehlt`,
     });
   });
 
@@ -392,14 +412,14 @@ describe('Zeile Regeln der Gruppen', () => {
     d.gruppen = new Map(d.gruppen).set(2, {
       regeln: ok(
         (d.gruppen.get(2)!.regeln as { ok: true; wert: { shorty?: unknown }[] }).wert.filter(
-          (r) => r.shorty !== 'gwaufnahme',
+          (r) => r.shorty !== REGELN.aufnahme.shorty,
         ),
       ),
       status: ok('manual'),
     });
     const s = zeile(zeilen(d), 'regeln');
     expect(s.art).toBe('warn');
-    expect(s.text).toContain('Fische: fehlt – Gruppenwechsel: Kinder aus „Schäfchen“');
+    expect(s.text).toBe(`Fische: ${REGELN.aufnahme.name} fehlt`);
   });
 
   it('eine fremde Regel → Warnung mit ihrem Namen (sie wäre beim Schreiben weg)', () => {
@@ -412,15 +432,19 @@ describe('Zeile Regeln der Gruppen', () => {
     });
     const s = zeile(zeilen(d), 'regeln');
     expect(s.art).toBe('warn');
-    expect(s.text).toContain('Fische: fremde Regel „meineregel“ und ohne Namen');
+    expect(s.text).toBe(
+      'Fische: fremde Regeln „meineregel“ und ohne Namen (nicht von dieser Erweiterung)',
+    );
   });
 
-  it('Status „none“ → Warnung: Die Regeln laufen nicht', () => {
+  it('Status „none“ → Warnung: läuft nicht', () => {
     const d = gut();
     d.gruppen = new Map(d.gruppen).set(12, { ...d.gruppen.get(12)!, status: ok('none') });
     const s = zeile(zeilen(d), 'regeln');
     expect(s.art).toBe('warn');
-    expect(s.text).toContain('Fische → Jungschar: Die Regeln laufen nicht');
+    expect(s.text).toBe(
+      'Fische → Jungschar: läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet',
+    );
   });
 
   it('keine Regeln (404 → leere Liste) in einer Gruppe → fehlt, mit allen ihren Regeln', () => {
@@ -428,7 +452,25 @@ describe('Zeile Regeln der Gruppen', () => {
     d.gruppen = new Map(d.gruppen).set(11, { regeln: ok([]), status: ok('none') });
     const s = zeile(zeilen(d), 'regeln');
     expect(s.art).toBe('warn');
-    expect((s.text.match(/Schäfchen → Fische: fehlt/g) ?? []).length).toBe(2);
+    // EINE Zeile je Gruppe mit allen Befunden – nicht drei einzelne.
+    expect(s.text).toBe(
+      `Schäfchen → Fische: ${REGELN.kinder.name} und ${REGELN.leitung.name} fehlen; läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet`,
+    );
+  });
+
+  it('Befunde in mehreren Gruppen → je Gruppe eine Listenzeile, darüber die Zahl', () => {
+    const d = gut();
+    d.gruppen = new Map(d.gruppen)
+      .set(11, { ...d.gruppen.get(11)!, status: ok('none') })
+      .set(12, { ...d.gruppen.get(12)!, status: ok('none') });
+    expect(zeile(zeilen(d), 'regeln')).toEqual({
+      art: 'warn',
+      text: '2 Gruppen stimmen nicht',
+      liste: [
+        'Schäfchen → Fische: läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet',
+        'Fische → Jungschar: läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet',
+      ],
+    });
   });
 
   it('Regeln oder Status nicht lesbar → nicht prüfbar, nie „fehlt“', () => {

@@ -17,4 +17,4 @@
 
 - Fenster `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (`fflate`, `docxText` und `ki.ts`
   liegen nicht im Haupt-Bundle); Personen aus `GET /persons` seitenweise (`kiPersonen.ts`, `ctAlleSeiten`, 200 je
-  Seite). Neue Symbole `funke` und `kopieren` in `ui/icons`. Einfügen „ans Ende“ (auch bei übernommenen Vorschlägen) geht jetzt vor die leere Schlusszeile des Editors statt dahinter (`vorSchlusszeilen` in `dokument.ts`, `bloeckeEinfuegen.ts`) – vorher stand eine Leerzeile vor dem Neuen. Demo: `/api/persons` mit `meta.pagination`.
+  Seite). Neue Symbole `funke` und `kopieren` in `ui/icons`. „Auftrag kopieren“ nutzt den gemeinsamen Baustein `useKopieren` (`ui/bedienung`); `kopieren()` meldet jetzt zusätzlich, ob es geklappt hat (bisherige Aufrufer unverändert). Einfügen „ans Ende“ (auch bei übernommenen Vorschlägen) geht jetzt vor die leere Schlusszeile des Editors statt dahinter (`vorSchlusszeilen` in `dokument.ts`, `bloeckeEinfuegen.ts`) – vorher stand eine Leerzeile vor dem Neuen. Demo: `/api/persons` mit `meta.pagination`.

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
+import { useKopieren } from '@ui/bedienung/useKopieren';
 import type { Person as Mitglied } from '@shared/organigramm/mitglieder';
 import type { Block } from '@shared/protokolle/dokument';
 import { docxText } from '@shared/protokolle/docxText';
@@ -221,6 +222,7 @@ export function KiFuellenFenster({
         : '',
     [tx, gruppe, datum, dokument, ersetzt, funde],
   );
+  const { kopieren: inZwischenablage } = useKopieren(auftrag, auftragFeld);
   const zurueckNamen = useMemo(() => Object.values(ersetzt.zuordnung), [ersetzt]);
 
   const eingabeGeaendert = () => {
@@ -269,14 +271,10 @@ export function KiFuellenFenster({
     eingabeGeaendert();
   };
 
+  // Kopieren über den gemeinsamen Baustein (`useKopieren`, auch Anmeldelink und Organigramm) – hier mit Ergebnis, weil es
+  // bei „geht nicht“ gleich zum Ausweg geht.
   const kopieren = async () => {
-    let ok = false;
-    try {
-      await navigator.clipboard.writeText(auftrag);
-      ok = true;
-    } catch {
-      ok = false;
-    }
+    const ok = await inZwischenablage();
     setKopiert(ok);
     setAusweg(!ok);
     // Gescheitert → gleich zum Ausweg: „Auftrag anzeigen“ zum Markieren.

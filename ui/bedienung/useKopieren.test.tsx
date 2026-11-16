@@ -10,13 +10,22 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'clipboard');
 });
 
+let ergebnis: boolean | undefined;
+
 function Probe({ text }: { text: string }) {
   const feld = useRef<HTMLTextAreaElement>(null);
   const { stand, kopieren } = useKopieren(text, feld);
   return (
     <>
       <textarea ref={feld} readOnly value={text} aria-label="Text" />
-      <button type="button" onClick={() => void kopieren()}>
+      <button
+        type="button"
+        onClick={() =>
+          void kopieren().then((ok) => {
+            ergebnis = ok;
+          })
+        }
+      >
         kopieren
       </button>
       <output>{stand}</output>
@@ -59,5 +68,21 @@ describe('useKopieren', () => {
     fireEvent.click(screen.getByRole('button', { name: 'kopieren' }));
     await act(async () => {});
     expect(screen.getByRole('status').textContent).toBe('vonHand');
+  });
+
+  it('kopieren() meldet, ob es geklappt hat (true / false) – für Aufrufer, die danach weiterleiten', async () => {
+    zwischenablage(vi.fn().mockResolvedValue(undefined));
+    ergebnis = undefined;
+    render(<Probe text="Hallo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'kopieren' }));
+    await act(async () => {});
+    expect(ergebnis).toBe(true);
+    cleanup();
+    zwischenablage(vi.fn().mockRejectedValue(new Error('nein')));
+    ergebnis = undefined;
+    render(<Probe text="Hallo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'kopieren' }));
+    await act(async () => {});
+    expect(ergebnis).toBe(false);
   });
 });

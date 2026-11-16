@@ -1,13 +1,14 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3 + S5 + S6-1 + S6-2 (11.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S7 + K3 + S5 + S6 (12.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
 > Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
 > Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
-> die nächste Sitzung fest und geben Protokolle frei (mit Beitrag in der Gruppe); Mitglieder schlagen Punkte vor. Das
-> PDF folgt (Bauplan S6-3 bis S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> die nächste Sitzung fest und geben Protokolle frei (mit Beitrag in der Gruppe); Mitglieder schlagen Punkte vor. Jedes
+> Protokoll lässt sich als **PDF teilen**. Weiter geht es mit S8/S9 (`protokolle-planung/docs/bauplan.md`). Diese
+> Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -231,6 +232,15 @@ stehen.
 (mit Rückfrage). Es wird wieder ein Entwurf; über dem Protokoll steht „Freigabe zurückgenommen am … von … – vorher
 freigegeben am … von …“. Das Gruppentreffen bleibt abgeschlossen. Beim nächsten Freigeben wird neu festgehalten.
 
+**Teilen / PDF (S6-3):** Oben in jeder Sitzung mit Protokoll – beim Lesen und beim Schreiben, für alle, die es lesen
+dürfen – öffnet **„Teilen / PDF“** das Fenster „Protokoll teilen“ mit den Seiten, „Herunterladen“ und „Teilen“ (am
+Handy/iPad das Teilen-Menü). Das PDF hat oben Gruppe, Titel, Datum und „Freigegeben am … von …“, dann das Protokoll wie
+beim Lesen (Anwesenheit kurz, To-Dos mit Wer und Bis, ohne Status; bei „Offene To-Dos von früher“ die seither erledigten
+ausgeschrieben) und am Ende die Übersicht mit Beschlüssen, To-Dos, Terminen und der nächsten Sitzung. Ein **Entwurf**
+trägt „ENTWURF – NOCH NICHT FREIGEGEBEN“ im Kasten, ein blasses „ENTWURF“ auf jeder Seite und „ENTWURF“ im Dateinamen
+(`Protokoll <Gruppe> <JJJJ-MM-TT> ENTWURF.pdf`). Im Editor kommt auch noch nicht Gespeichertes mit. Wer die
+Mitgliederliste nicht sieht, bekommt bei To-Dos die Namen aus dem Verlauf oder „eine weitere Person“.
+
 **Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten
 Überschrift gleicher oder höherer Stufe. Abgelegt wird nur an Abschnittsgrenzen: Lässt man mitten in einem anderen
 Punkt los, rückt der Abschnitt an die nächste Grenze. Das Griff-Menü einer Überschrift hat „Nach oben“ und „Nach
@@ -261,7 +271,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   Kopf und gepackten Teilen (`speicher.ts`), To-Dos (`aufgaben.ts`), Einrichten (`einrichten.ts`), Vorlagen
   (`vorlagen.ts`), Namen für die KI (`platzhalter.ts`), Meine Gruppen (`gruppen.ts`), Sitzungen (`sitzungen.ts`),
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
-  gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a, der Knopf folgt mit S6-3b).
+  gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a; Fenster `ProtokollTeilenFenster.tsx`,
+  nachgeladen über `ProtokollTeilen.tsx`, S6-3b).
 - Schreiben: `protokolle/src/schreiben.ts` (Sperre nehmen, speichern, übernehmen, freigeben – vorher frisch lesen,
   nachher nachlesen), `schreibSteuerung.ts` (wann gespeichert wird), Editor `DokumentEditor.tsx` + `editorSchema.ts`
   (BlockNote 0.56, fest gepinnt – Updates bewusst, die Schnittstellen ändern sich in 0.x noch), Word-Listen

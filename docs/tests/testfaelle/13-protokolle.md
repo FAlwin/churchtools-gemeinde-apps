@@ -285,3 +285,36 @@ Gruppe 194 gibt es kein Häkchen.
 - **Historie:** S6-2 (11.11.2026)
 
 </details>
+
+### TF-PROT-11 · Protokoll als PDF teilen
+
+**Das brauchst du:** In der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel beginnt mit „TEST“) mit
+Gruppentreffen, einem Beschluss, einem To-Do mit Zuständigem und Bis, einem Termin, etwas Fett/Kursiv/Textmarker und
+einer festgelegten nächsten Sitzung, dazu ein freigegebenes Protokoll. Danach die Test-Protokolle aufräumen.
+
+**Das muss passieren:** „Teilen / PDF“ gibt es oben in jeder Sitzung mit Protokoll – auch für Mitglieder ohne Leitung.
+Das Fenster „Protokoll teilen“ zeigt die Seiten; das PDF hat Kopf, Inhalt wie beim Lesen und am Ende die Übersicht. Ein
+Entwurf trägt „ENTWURF“ im Kasten, als Wasserzeichen und im Dateinamen; ein freigegebenes Protokoll nichts davon.
+
+1. In ChurchTools auf **Protokolle** → **Sitzungen** → das Test-Protokoll im Entwurf öffnen (Schreiben) → **Teilen / PDF**.
+2. Das Fenster „Protokoll teilen“ zeigt „Fertig · N Seiten · Protokoll <Gruppe> <JJJJ-MM-TT> ENTWURF.pdf“ und die
+   Seiten: oben der Kasten „ENTWURF – NOCH NICHT FREIGEGEBEN“, schräg ein blasses „ENTWURF“ auf jeder Seite.
+3. Im PDF stehen Anwesenheit (Kurzform), Punkte mit Nummern, der Beschluss grün, das To-Do mit Wer und Bis (ohne
+   Status), der Termin blau, Fett/Kursiv/Textmarker wie im Editor; am Ende „Übersicht“ mit Beschlüssen, To-Dos,
+   Terminen (je mit Punkt) und der nächsten Sitzung.
+4. Etwas im Editor tippen und gleich **Teilen / PDF**: Das Getippte steht schon im PDF.
+5. **Herunterladen**: Die Datei heißt wie angezeigt, das Fenster bleibt offen, „Heruntergeladen“ steht dabei. Am iPad
+   oder Handy: **Teilen** öffnet das Teilen-Menü.
+6. Das freigegebene Protokoll öffnen → **Teilen / PDF**: oben „Freigegeben am … von …“, kein Kasten, kein Wasserzeichen,
+   kein „ENTWURF“ im Dateinamen.
+7. Als Mitglied ohne Leitung (z. B. Spike) dasselbe freigegebene Protokoll: **Teilen / PDF** ist da; bei To-Dos stehen
+   Namen oder „eine weitere Person“, nie „noch niemand“, wenn jemand zuständig ist.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/protokollBlatt.ts`, `ui/teilen/protokollPdf.ts`, `ui/teilen/pdfSatz.ts`, `protokolle/src/ProtokollTeilenFenster.tsx`, `protokolle/src/ProtokollTeilen.tsx`, `protokolle/src/SitzungAnsicht.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/App.tsx`
+- **Automatisiert:** ja – `shared/protokolle/protokollBlatt.test.ts` (Inhalt, Banner, Dateiname, Zuständige ohne Namen), `ui/teilen/protokollPdf.test.ts` (Schnitte, Seiten, Banner, Wasserzeichen), `protokolle/src/ProtokollTeilenFenster.test.tsx` (frisch lesen, Lesefehler, kein zweites Lesen, kein Neubau bei gleichen Werten), `protokolle/src/Sitzungen.test.tsx` und `protokolle/src/ProtokollSchreiben.test.tsx` (Knopf, Ungespeichertes im PDF); wie die Seiten aussehen und das Teilen-Menü am Gerät, nur von Hand
+- **Historie:** S6-3a (12.11.2026), S6-3b (12.11.2026)
+
+</details>

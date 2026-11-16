@@ -11,7 +11,9 @@ const blatt = (teile: BlattTeil[], x: Partial<ProtokollBlatt> = {}): ProtokollBl
   app: 'Protokolle',
   stand: 'Stand 12.11.2026, 10:00 Uhr',
   entwurf: false,
+  banner: null,
   vermerk: [[{ text: 'Freigegeben am 12.11.2026 von Alwin Friesen', stil: 'fett' }]],
+  dateiname: 'Protokoll Leitungsteam 2026-11-11',
   teile,
   uebersicht: {
     beschluesse: [{ absatz: [{ text: 'Essen um 12:30' }], punkt: 'Punkt 1' }],
@@ -219,6 +221,26 @@ describe('Protokoll als PDF', () => {
       '(Flyer)',
     ])
       expect(r).toContain(t);
+  });
+
+  it('Entwurf: Banner auf Seite 1, blasses „ENTWURF“ auf jeder Seite', async () => {
+    const lang = Array.from({ length: 60 }, (_, i) => text(`Absatz${i} ${'Wort '.repeat(40)}`));
+    const doc = await protokollPdf(
+      blatt(lang, { entwurf: true, banner: 'ENTWURF – NOCH NICHT FREIGEGEBEN', vermerk: [] }),
+      'helvetica',
+    );
+    const r = doc.output();
+    const seiten = doc.getNumberOfPages();
+    expect(seiten).toBeGreaterThan(1);
+    expect(r).toContain('NOCH NICHT FREIGEGEBEN)');
+    expect(r.split('(ENTWURF)').length - 1).toBe(seiten);
+    expect(r).toMatch(/\/ca 0\.08/);
+  });
+
+  it('freigegeben: weder Banner noch Wasserzeichen', async () => {
+    const r = await roh(blatt([text('schlicht')]));
+    expect(r).not.toContain('ENTWURF');
+    expect(r).not.toMatch(/\/ca 0\.08/);
   });
 
   it('mit Lato: alle vier Schnitte eingebettet, ohne Fehler', async () => {

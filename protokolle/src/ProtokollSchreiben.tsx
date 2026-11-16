@@ -72,6 +72,7 @@ import { treffenAnlegen } from './planen';
 import { anwesenheitLesen, treffenAbschliessen } from './anwesenheitSchreiben';
 import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
 import { ZurueckVermerk } from './FreigabeVermerk';
+import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
 import { festhaltenFuerFreigabe } from '@shared/protokolle/festePunkte';
 import { freigabeHinweise, type Hinweis } from '@shared/protokolle/freigabe';
 import { freigabeBeitrag, type Beitrag } from '@shared/protokolle/beitrag';
@@ -123,6 +124,7 @@ export function ProtokollSchreiben({
   kommend = [],
   direkt = false,
   vollerName = ich.name,
+  teilen,
   onVorschlag,
   onBearbeiten,
   onFreigegeben,
@@ -150,6 +152,8 @@ export function ProtokollSchreiben({
   direkt?: boolean;
   /** Vor- und Nachname für den Verlauf der Vorschläge. */
   vollerName?: string;
+  /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. Geteilt wird, was im Editor steht. */
+  teilen?: TeilenRahmen;
   /** Ein Vorschlag hat sich hier geändert – die Liste dahinter zieht mit. */
   onVorschlag?: (v: Vorschlag) => void;
   /** „Bearbeiten“ im Kopf – die Sitzung dieses Protokolls (Zeit, Titel, Eingeladene, absagen; K2b), nur für die Leitung. */
@@ -174,6 +178,7 @@ export function ProtokollSchreiben({
   const [schreiber] = useState<Schreiber>(() => ({ ...ich, fenster: crypto.randomUUID() }));
   const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
   const [z, setZ] = useState<SteuerZustand | null>(null);
+  const [teilenOffen, setTeilenOffen] = useState(false);
   const [dok, setDok] = useState<Block[]>([]);
   const [frage, setFrage] = useState<'uebernehmen' | 'verlassen' | null>(null);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
@@ -682,6 +687,10 @@ export function ProtokollSchreiben({
 
   // Freigeben darf, wer hier gerade schreiben kann (niemand sonst schreibt) – im Editor ist das immer die Leitung.
   const darfFreigeben = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+  // Teilen (S6-3b): was im Editor steht, auch noch nicht Gespeichertes – beim Nur-Lesen das gelesene Protokoll.
+  const teilenDokument =
+    laden.art === 'bereit' ? dok : laden.art === 'lesen' ? laden.dokument : null;
+  const darfTeilen = !!teilen && !!teilenDokument;
 
   const kopfZeile = (
     <>
@@ -706,7 +715,7 @@ export function ProtokollSchreiben({
           <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || darfFreigeben) && (
+        {(onBearbeiten || darfFreigeben || darfTeilen) && (
           <div className={ansicht.aktionen}>
             {darfFreigeben && (
               <KopfKnopf
@@ -725,10 +734,28 @@ export function ProtokollSchreiben({
                 onClick={onBearbeiten}
               />
             )}
+            {darfTeilen && <TeilenKnopf onClick={() => setTeilenOffen(true)} />}
           </div>
         )}
       </header>
       <ZurueckVermerk kopf={laden.art === 'bereit' ? laden.kopf : null} zeitzone={zeitzone} />
+      {teilenOffen && teilen && teilenDokument && (
+        <ProtokollTeilen
+          sitzung={sitzung}
+          gruppe={gruppe}
+          gruppeId={gruppeId}
+          kopf={laden.art === 'bereit' ? laden.kopf : sitzung.kopf}
+          dokument={teilenDokument}
+          aufgaben={aufgaben}
+          protokolle={protokolle}
+          naechste={teilen.naechste}
+          zeitzone={zeitzone}
+          gemeinde={teilen.gemeinde}
+          ich={teilen.ich}
+          mitglieder={mitglieder}
+          onClose={() => setTeilenOffen(false)}
+        />
+      )}
     </>
   );
 

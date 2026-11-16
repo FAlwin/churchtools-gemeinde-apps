@@ -27,6 +27,23 @@ vi.mock('./vorschlaegeSchreiben', () => ({
   }),
 }));
 
+// „Teilen / PDF“ (S6-3b): das Blatt festhalten statt zeichnen – jsdom kann kein pdf.js.
+const BLAETTER = vi.hoisted(() => [] as unknown[]);
+vi.mock('@ui/teilen/protokollPdf', () => ({
+  protokollPdf: vi.fn(async (b: unknown) => {
+    BLAETTER.push(b);
+    const { jsPDF } = await import('jspdf');
+    return new jsPDF();
+  }),
+}));
+vi.mock('@ui/teilen/pdfSeiten', () => ({
+  renderPdfToCanvases: vi.fn(() => Promise.resolve([])),
+  renderPdfSeite: vi.fn(() => Promise.reject(new Error('jsdom'))),
+}));
+vi.mock('./mitglieder', () => ({
+  ladeGruppenMitglieder: vi.fn(() => Promise.resolve('verborgen')),
+}));
+
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
@@ -432,5 +449,34 @@ describe('Freigegeben (S6-1)', () => {
         'Freigabe zurückgenommen am 16.10.2026 von Johann Becker – vorher freigegeben am 15.10.2026 von Alwin Friesen.',
       ),
     ).toBeTruthy();
+  });
+});
+
+describe('Teilen / PDF (S6-3b)', () => {
+  it('für alle, die lesen: Fenster mit Gemeinde und der nächsten Sitzung', async () => {
+    BLAETTER.length = 0;
+    render(
+      <Sitzungen
+        ich={ICH}
+        vollerName="Alwin Friesen"
+        gemeinde="ECG Donrath"
+        modul={24}
+        gruppen={GRUPPEN}
+      />,
+    );
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    fireEvent.click(await screen.findByRole('button', { name: /Teilen \/ PDF/ }));
+    expect(await screen.findByRole('dialog', { name: 'Protokoll teilen' })).toBeTruthy();
+    expect(await screen.findByText(/Protokoll Leitungsteam 2026-10-14\.pdf/)).toBeTruthy();
+    const b = BLAETTER.at(-1) as { gemeinde: string; uebersicht: { naechste: string | null } };
+    expect(b.gemeinde).toBe('ECG Donrath');
+    expect(b.uebersicht.naechste).toMatch(/17\.03\.2027/);
+  });
+
+  it('ohne Protokoll kein Knopf', async () => {
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    fireEvent.click(await screen.findByText('Klausur'));
+    expect(await screen.findByText(/Für diese Sitzung gibt es noch kein Protokoll/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Teilen \/ PDF/ })).toBeNull();
   });
 });

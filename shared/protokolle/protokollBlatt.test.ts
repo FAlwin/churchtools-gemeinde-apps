@@ -99,10 +99,12 @@ describe('Kopf und Vermerk', () => {
     expect(protokollBlatt(quelle([], { titel: '  ' })).titel).toBe('Sitzung');
   });
 
-  it('Entwurf: rot „noch nicht freigegeben“ – nach einer Zurücknahme mit dem Satz dazu', () => {
+  it('Entwurf: Banner, „ENTWURF“ im Dateinamen – nach einer Zurücknahme der Satz als Vermerk', () => {
     const b = protokollBlatt(quelle([]));
     expect(b.entwurf).toBe(true);
-    expect(b.vermerk).toEqual([[{ text: 'Entwurf – noch nicht freigegeben', stil: 'rot' }]]);
+    expect(b.banner).toBe('ENTWURF – NOCH NICHT FREIGEGEBEN');
+    expect(b.dateiname).toBe('Protokoll Leitungsteam 2026-11-11 ENTWURF');
+    expect(b.vermerk).toEqual([]);
     const zurueck = protokollBlatt(
       quelle([], {
         kopf: {
@@ -115,7 +117,6 @@ describe('Kopf und Vermerk', () => {
       }),
     );
     expect(zurueck.vermerk.map(text)).toEqual([
-      'Entwurf – noch nicht freigegeben',
       'Freigabe zurückgenommen am 13.11.2026 von Maria Dück – vorher freigegeben am 12.11.2026 von Alwin Friesen.',
     ]);
   });
@@ -132,7 +133,19 @@ describe('Kopf und Vermerk', () => {
       }),
     );
     expect(b.entwurf).toBe(false);
+    expect(b.banner).toBeNull();
     expect(b.vermerk.map(text)).toEqual(['Freigegeben am 13.11.2026 von Alwin Friesen']);
+  });
+
+  it('Dateiname: Tag der Sitzung in der Zeit der Gemeinde, ohne „ENTWURF“ bei freigegebenen', () => {
+    const b = protokollBlatt(
+      quelle([], {
+        gruppe: ' Jugend ',
+        beginn: '2026-11-11T23:30:00Z',
+        kopf: kopf({ status: 'frei', freigabe: { von: 1, am: '2026-11-12T09:00:00Z' } }),
+      }),
+    );
+    expect(b.dateiname).toBe('Protokoll Jugend 2026-11-12');
   });
 });
 
@@ -240,6 +253,35 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
     ]);
     for (const t of ts) expect(t).toMatchObject({ zeichen: { art: 'kasten', an: false } });
     expect(JSON.stringify(ts)).not.toMatch(/erledigt|offen|Arbeit/);
+  });
+
+  it('Zuständige, die man nicht kennt (Liste verborgen): Name aus dem Verlauf, sonst gezählt – nie „noch niemand“', () => {
+    const fremd = aufgabe('t1', { wer: [2, 7, 8] });
+    fremd.verlauf.push({
+      art: 'status',
+      von: 2,
+      name: 'Maria Dück',
+      am: '2026-11-12T08:00:00Z',
+      status: 'arbeit',
+    });
+    const ts = teile(
+      quelle([block('aufgabe', 'Deko', { props: { aufgabe: 't1' } })], {
+        aufgaben: [fremd],
+        name: null,
+      }),
+    );
+    expect(texte(ts)).toEqual(['Deko – Maria Dück, 2 weitere']);
+    const einer = teile(
+      quelle(
+        [
+          block('aufgabe', 'Beamer', {
+            props: { vorab: JSON.stringify({ wer: [9], extern: '', bis: null }) },
+          }),
+        ],
+        { name: () => null },
+      ),
+    );
+    expect(texte(einer)).toEqual(['Beamer – eine weitere Person']);
   });
 
   it('Beschluss, Termin mit Datum, Zitat, Trennlinie', () => {

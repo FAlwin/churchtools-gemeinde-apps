@@ -3,9 +3,10 @@
  * Liste und Fenster der Anmeldung dieselben Texte benutzen).
  */
 import type { Absage } from '@shared/anmeldung/liste';
+import { tagMonat } from '@shared/ct/datum';
 
 /** `TT.MM.` */
-export const kurz = (tag: string | null) => (tag ? `${tag.slice(8, 10)}.${tag.slice(5, 7)}.` : '');
+export const kurz = (tag: string | null) => (tag ? tagMonat(tag) : '');
 export const ganzerName = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
 
 export const absageText = (b: Absage) =>

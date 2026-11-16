@@ -5,7 +5,7 @@ import type { RohTermin } from '@shared/dienstplan/termine';
 import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
 import { daten, entwurf } from './entwurfAnschluss.testutil';
-import { katalogAus, plaetzeWeitere, plaetzeZeilen, vorlageFuer } from './planEntwuerfe';
+import { katalogAus, plaetzeZeilen, vorlageFuer } from './planEntwuerfe';
 
 /**
  * Das Plätze-Fach zeigt alle Dienste der Gruppe, auch die ohne Matrixzeile (13.11.2026). Der Plan entsteht wie in der App
@@ -123,11 +123,9 @@ describe('plaetzeZeilen – alle Dienste der Gruppe', () => {
     const plan = planFuer(s, [s.ichId]);
     const k = katalogAus(s);
     expect(plan.gruppen.some((g) => g.gruppe?.id === 3)).toBe(false);
-    // „Weitere“ für eine sichtbare Gruppe (Programm hat die Zeile Predigt): Technik-Dienste fehlen dort.
-    const w = plaetzeWeitere(null, plan, plan.spalten[0], 0, gruppe(plan, 1), k);
-    expect(w.map((x) => x.name)).not.toContain('Kamera');
-    expect(w.map((x) => x.name)).not.toContain('Ton');
-    expect(w.map((x) => x.name)).toContain('Abendmahl');
+    // Das Fach einer sichtbaren Gruppe (Programm) kennt keine Technik-Dienste.
+    const z = plaetzeZeilen(null, plan.spalten[0], 0, gruppe(plan, 1), k);
+    expect(z.map((x) => x.name)).toEqual(['Predigt']);
   });
 
   it('Gruppe „Weitere“ (Dienst mit unbekannter Dienstgruppe) wird wie in der Matrix gebildet', () => {
@@ -137,14 +135,6 @@ describe('plaetzeZeilen – alle Dienste der Gruppe', () => {
     const z = plaetzeZeilen(null, plan.spalten[0], 0, weitere, katalogAus(s));
     expect(z.map((x) => x.name)).toEqual(['Sonstiges']);
   });
-
-  it('plaetzeWeitere: Dienste der übrigen Gruppen, die man planen darf – nie die der eigenen', () => {
-    const s = start();
-    const plan = planFuer(s);
-    const w = plaetzeWeitere(null, plan, plan.spalten[0], 0, gruppe(plan, 3), katalogAus(s));
-    expect(w.map((x) => x.name)).toEqual(['Abendmahl']); // Predigt: Programm nicht planbar
-    expect(w[0]).toMatchObject({ anzahl: 0, belegt: 0, entwuerfe: 0 });
-  });
 });
 
 describe('vorlageFuer', () => {
@@ -152,11 +142,28 @@ describe('vorlageFuer', () => {
     const s = start();
     const plan = planFuer(s);
     const laden = () => Promise.resolve([]);
-    const v = vorlageFuer(katalogAus(s), plan.spalten[0], laden)!;
+    const technik = gruppe(plan, 3);
+    const v = vorlageFuer(katalogAus(s), plan.spalten[0], technik, laden)!;
     expect(v.kalenderId).toBe(1);
     expect(v.namen.get(24)).toBe('Abendmahl');
     expect(
-      vorlageFuer(katalogAus(s), { ...plan.spalten[0], kalender: null }, laden),
+      vorlageFuer(katalogAus(s), { ...plan.spalten[0], kalender: null }, technik, laden),
     ).toBeUndefined();
+  });
+
+  it('gruppenDienste: genau die Dienste der Gruppe – wie die Liste im Fach, auch ohne Matrixzeile', () => {
+    const s = start();
+    const plan = planFuer(s);
+    const k = katalogAus(s);
+    const laden = () => Promise.resolve([]);
+    const technik = vorlageFuer(k, plan.spalten[0], gruppe(plan, 3), laden)!.gruppenDienste;
+    expect([...technik].sort((a, b) => a - b)).toEqual([6, 7, 8]); // Kamera (8) hat keine Zeile
+    const liste = plaetzeZeilen(null, plan.spalten[0], 0, gruppe(plan, 3), k).map(
+      (z) => z.serviceId,
+    );
+    expect([...technik].sort((a, b) => a - b)).toEqual(liste.sort((a, b) => a - b));
+    // „Weitere“ (Dienst mit unbekannter Dienstgruppe): wie in der Matrix gebildet.
+    const weitere = { gruppe: null, planbar: true, zeilen: [], frei: [] };
+    expect([...vorlageFuer(k, plan.spalten[0], weitere, laden)!.gruppenDienste]).toEqual([30]);
   });
 });

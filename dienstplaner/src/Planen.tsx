@@ -33,7 +33,7 @@ import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
 import { useEinteilen } from './useEinteilen';
-import { plaetzeWeitere, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -510,21 +510,14 @@ export function Planen({
             plaetzeFach.gruppe,
             katalog,
           )}
-          weitere={
-            katalog
-              ? plaetzeWeitere(
-                  daten,
-                  plan,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.spalte,
-                  plaetzeFach.gruppe,
-                  katalog,
-                )
-              : undefined
-          }
           vorlage={
             katalog && ladeVorlagen
-              ? vorlageFuer(katalog, plan.spalten[plaetzeFach.spalte], ladeVorlagen)
+              ? vorlageFuer(
+                  katalog,
+                  plan.spalten[plaetzeFach.spalte],
+                  plaetzeFach.gruppe,
+                  ladeVorlagen,
+                )
               : undefined
           }
           aendern={(z, gesehen, neu) =>

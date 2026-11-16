@@ -165,6 +165,58 @@ describe('bedingungsBefunde – was das Formular verhindert hätte (Nachprüfung
   });
 });
 
+describe('bedingungsBefunde – Fragen in einem übersprungenen Schritt (F2d)', () => {
+  /** Ein Schritt „Allergien“ vor `allergy`, nur wenn kein Telefon angegeben ist – Maria hat eins. */
+  function mitSchritt(bed = wenn('tel', 'leer')): OeffentlicheEinstellungen {
+    const x = e();
+    const i = x.formular.person.findIndex((f) => f.id === 'allergy');
+    const schritt: Feld = {
+      id: 's2',
+      art: 'eigen',
+      typ: 'schritt',
+      frage: 'Allergien',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      bed,
+    };
+    x.formular.person.splice(i, 0, schritt);
+    return x;
+  }
+
+  it('beantwortet, obwohl der Schritt übersprungen worden wäre – der Satz nennt den Schritt und seine Bedingung', () => {
+    const x = mitSchritt();
+    const anm = gespeichert(x);
+    // Ohne eigene Bedingung an der Frage – nur der Schritt hätte sie ausgeblendet.
+    expect(feld(x, 'allergy').bed).toBeUndefined();
+    const b = bedingungsBefunde(x, [anm]);
+    // Alles hinter dem Schritt gehört zu ihm: Allergien (nur Jonas hat sie beantwortet) und die Foto-Erlaubnis.
+    const allergie = feld(x, 'allergy').frage;
+    const foto = feld(x, 'foto').frage;
+    expect(b.map((y) => [y.name, y.frage, y.art, y.schritt, y.bedingung])).toEqual([
+      ['Jonas Beispiel', allergie, 'frage', 'Allergien', '„Telefon“ ist leer'],
+      ['Jonas Beispiel', foto, 'frage', 'Allergien', '„Telefon“ ist leer'],
+      ['Lena Beispiel', foto, 'frage', 'Allergien', '„Telefon“ ist leer'],
+    ]);
+    expect(bedingungsText(b[0])).toBe(
+      `„${feld(x, 'allergy').frage}“ beantwortet – die Frage steht im Schritt „Allergien“, der nur erscheint, wenn „Telefon“ ist leer`,
+    );
+  });
+
+  it('wird der Schritt gezeigt, ist es kein Befund', () => {
+    const x = mitSchritt(wenn('tel', 'ausgefuellt'));
+    expect(bedingungsBefunde(x, [gespeichert(x)])).toEqual([]);
+  });
+
+  it('Schritt gezeigt, die Frage selbst nicht: der Satz nennt ihre eigene Bedingung, keinen Schritt', () => {
+    const x = mitSchritt(wenn('tel', 'ausgefuellt'));
+    const anm = gespeichert(x);
+    feld(x, 'allergy').bed = wenn('mail', 'leer');
+    const [b] = bedingungsBefunde(x, [anm]);
+    expect([b.schritt, b.bedingung]).toEqual([undefined, '„E-Mail“ ist leer']);
+  });
+});
+
 describe('„Person dazu“ mit den Kontakt-Antworten (F1e)', () => {
   it('startet mit den Kontakt-Antworten der Anmeldung', () => {
     const x = e();

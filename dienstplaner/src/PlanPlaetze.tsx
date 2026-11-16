@@ -2,7 +2,9 @@ import { Fragment } from 'react';
 import { Icon } from '@ui/icons/icons';
 import type { PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { zielText, type Entwurf } from '@shared/dienstplan/entwuerfe';
+import { platzPerson } from '@shared/dienstplan/fokus';
 import { darfPlanen, type EntwurfAmPlatz, type Sicht } from './planSicht';
+import { useLangDruck } from './useLangDruck';
 import styles from './Planen.module.scss';
 
 /** Was die Plätze zum Einteilen brauchen – aus `useEinteilen` (Matrix und Termin-Ansicht, F1). */
@@ -16,6 +18,8 @@ export type AmPlatz = Pick<
   | 'onEntwurf'
   | 'darfAendern'
   | 'ichId'
+  | 'fokusId'
+  | 'onFokus'
 >;
 
 /**
@@ -48,6 +52,8 @@ export function EinteilPlaetze({
       onBelegt={planen ? (nr) => am.onBelegt(i, z, nr) : undefined}
       onEntwurf={aendern ? (nr) => am.onEntwurf(i, z, nr) : undefined}
       ichId={am.ichId}
+      fokusId={am.fokusId}
+      onFokus={am.onFokus}
     />
   );
 }
@@ -62,6 +68,8 @@ export function Plaetze({
   ohnePlatz = [],
   onOhnePlatz,
   ichId = null,
+  fokusId = null,
+  onFokus,
 }: {
   plaetze: PlanPlatz[];
   /** Entwürfe dieses Dienstes am Termin, deren Platz es nicht mehr gibt (#582) – als Schild darunter. */
@@ -76,6 +84,10 @@ export function Plaetze({
   /** Entwurf bzw. Schild antippen → Entwurfs-Fach (nur wo man planen und ändern darf). */
   onEntwurf?: (nr: number) => void;
   ichId?: number | null;
+  /** Fokus-Modus (Wunsch 11): wessen Plätze umrandet sind. */
+  fokusId?: number | null;
+  /** Eine Person in den Fokus nehmen – Symbol am Namen und langes Drücken; ohne bleibt der Platz, wie er war. */
+  onFokus?: (personId: number, name: string) => void;
 }) {
   return (
     <div className={styles.plaetze}>
@@ -90,6 +102,7 @@ export function Plaetze({
               bisher={p.art === 'frei' || p.verborgen ? null : p.name}
               eigener={a.entwurf.von.personId === ichId}
               onOeffnen={oeffnen}
+              fokus={fokusId !== null && platzPerson(p, a)?.personId === fokusId}
             />
           );
         }
@@ -104,9 +117,9 @@ export function Plaetze({
               frei
             </button>
           ) : p.art !== 'frei' && !p.verborgen && !a && onBelegt ? (
-            <Platz p={p} onAntippen={() => onBelegt(i + 1)} />
+            <Platz p={p} onAntippen={() => onBelegt(i + 1)} fokusId={fokusId} onFokus={onFokus} />
           ) : (
-            <Platz p={p} />
+            <Platz p={p} fokusId={fokusId} onFokus={onFokus} />
           );
         if (!a) return <Fragment key={i}>{platz}</Fragment>;
         // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
@@ -161,6 +174,7 @@ function EntwurfPlatz({
   bisher,
   eigener,
   onOeffnen,
+  fokus,
 }: {
   e: Entwurf;
   /** Wer in ChurchTools dort steht (E4-5): wird zurückgezogen bzw. ersetzt. */
@@ -168,6 +182,8 @@ function EntwurfPlatz({
   eigener: boolean;
   /** Antippen öffnet das Entwurfs-Fach (E4-3-3) – nur wo man ändern darf. */
   onOeffnen?: () => void;
+  /** Fokus-Modus: der Entwurf trägt die fokussierte Person ein (`platzPerson`). */
+  fokus: boolean;
 }) {
   const gast = e.ziel.art === 'gast';
   // Zurückziehen (rot, der Name durchgestrichen) oder Ersetzen („Neu statt Alt“) – Entwurf Abschnitt 2.
@@ -186,7 +202,7 @@ function EntwurfPlatz({
             'aria-label': `Entwurf von ${e.von.name}: ${was}`,
           }
         : {})}
-      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
+      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}${fokus ? ' ' + styles.fokus : ''}`}
       title={
         zurueck
           ? `Wird zurückgezogen – Entwurf von ${e.von.name}, noch nicht gesendet`
@@ -213,13 +229,33 @@ function EntwurfPlatz({
   );
 }
 
-/** Ein Platz – zugesagt (Haken), angefragt („?“), frei, verborgen oder Gast. */
-function Platz({ p, onAntippen }: { p: PlanPlatz; onAntippen?: () => void }) {
+/**
+ * Ein Platz – zugesagt (Haken), angefragt („?“), frei, verborgen oder Gast.
+ *
+ * **Fokus-Modus (Wunsch 11):** Ist es der Platz der fokussierten Person, steht er umrandet da (`styles.fokus`). Mit
+ * `onFokus` hat ein belegter Platz mit Person zwei Wege in den Fokus: ein **Symbol am Namen** (nur mit echter Maus beim
+ * Darüberfahren sichtbar, ein eigener Knopf neben dem Platz – kein Fehltipp auf den Platz) und **langes Drücken**
+ * (Handy). Beides lässt das Fenster am Platz zu.
+ */
+function Platz({
+  p,
+  onAntippen,
+  fokusId = null,
+  onFokus,
+}: {
+  p: PlanPlatz;
+  onAntippen?: () => void;
+  fokusId?: number | null;
+  onFokus?: (personId: number, name: string) => void;
+}) {
+  const wer = platzPerson(p, null);
+  const fokussierbar = wer !== null && onFokus ? () => onFokus(wer.personId, wer.name) : undefined;
+  const lang = useLangDruck(fokussierbar);
   if (p.art === 'frei') return <span className={`${styles.platz} ${styles.frei}`}>frei</span>;
   const stand = p.art === 'zugesagt' ? 'zugesagt' : 'angefragt';
   // Antippbar (E4-5): zurückziehen oder ersetzen – ein Knopf mit demselben Aussehen.
   const Tag = onAntippen ? 'button' : 'span';
-  return (
+  const platz = (
     <Tag
       {...(onAntippen
         ? {
@@ -228,7 +264,8 @@ function Platz({ p, onAntippen }: { p: PlanPlatz; onAntippen?: () => void }) {
             'aria-label': `${p.name ?? ''}${p.gast ? ' (Gast)' : ''} – ${stand}: zurückziehen oder ersetzen`,
           }
         : {})}
-      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}${onAntippen ? ' ' + styles.belegtKnopf : ''}`}
+      {...lang}
+      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}${onAntippen ? ' ' + styles.belegtKnopf : ''}${wer !== null && wer.personId === fokusId ? ' ' + styles.fokus : ''}${fokussierbar ? ' ' + styles.langDruck : ''}`}
       title={stand}
     >
       <span className={styles.ic} aria-label={p.art}>
@@ -241,5 +278,23 @@ function Platz({ p, onAntippen }: { p: PlanPlatz; onAntippen?: () => void }) {
       )}
       {p.gast && <span className={styles.gast}>Gast</span>}
     </Tag>
+  );
+  if (!fokussierbar || !wer) return platz;
+  return (
+    <div className={styles.huelle}>
+      {platz}
+      <button
+        type="button"
+        className={styles.fokusSymbol}
+        aria-label={`Im Plan hervorheben: ${wer.name}`}
+        title="Im Plan hervorheben"
+        onClick={(e) => {
+          e.stopPropagation();
+          fokussierbar();
+        }}
+      >
+        <Icon name="fokus" size={14} />
+      </button>
+    </div>
   );
 }

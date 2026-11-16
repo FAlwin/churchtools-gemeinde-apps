@@ -10,6 +10,7 @@ import {
   type EntwurfErgebnis,
 } from '@shared/dienstplan/entwuerfe';
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
+import { einsaetzeUm, einsaetzeUmText } from '@shared/dienstplan/fokus';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
@@ -41,6 +42,21 @@ export type EinteilenAmPlatz = Pick<
   | 'onZauberstab'
 >;
 
+/** Aus welchem Fenster „Wer kann?“ aufging – „‹“ öffnet genau dieses wieder (`null`: vom freien Platz aus, kein Pfeil). */
+export type WerKannVon =
+  | { art: 'entwurf'; fach: { platz: FreierPlatz; entwurf: Entwurf; inChurchTools: string | null } }
+  | { art: 'belegt'; platz: FreierPlatz };
+
+/**
+ * Wohin „Zurück zu ‚Wer kann?‘“ in der Fokus-Leiste führt (Wunsch 11): derselbe Platz, mit allem, was beim Schließen
+ * dranhing – dem Entwurf, den die Wahl ersetzt (`ersetzt`), und dem Fenster davor (`von`).
+ */
+export interface WerKannZurueck {
+  platz: FreierPlatz;
+  ersetzt: number | null;
+  von: WerKannVon | null;
+}
+
 /**
  * **Einteilen über Entwürfe – für „Planen“ und die Termin-Ansicht** (F1, 09.11.2026; bis dahin stand alles in
  * `Planen.tsx`, Bauplan E4/E5): freien Platz antippen → „Wer kann?“, belegten Platz → zurückziehen oder ersetzen, Entwurf
@@ -59,6 +75,7 @@ export function useEinteilen({
   nachfragen = true,
   leisteZusatz,
   sendenZusatz,
+  fokus,
 }: {
   plan: Plan | null;
   /** Ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
@@ -76,6 +93,14 @@ export function useEinteilen({
   sendenZusatz?: (
     daten: NonNullable<ReturnType<typeof useEntwuerfe>['daten']>,
   ) => string | undefined;
+  /**
+   * Fokus-Modus (Wunsch 11, nur „Planen“): Aus dem Fenster am belegten Platz („Im Plan hervorheben“) und aus „Wer kann?“
+   * („im Plan zeigen“, mit dem Weg zurück) wird eine Person in den Fokus genommen. Ohne Angabe gibt es die Knöpfe nicht.
+   */
+  fokus?: {
+    hervorheben: (person: { personId: number; name: string }) => void;
+    zeigen: (person: { personId: number; name: string }, zurueck: WerKannZurueck) => void;
+  };
 }) {
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
@@ -101,11 +126,7 @@ export function useEinteilen({
    * Aus welchem Fenster „Wer kann?“ aufging (Alwin, 02.11.2026: „Wechselt ein Screen im Fenster, soll es einen
    * Zurück-Pfeil geben“) – „‹“ öffnet genau dieses wieder. `null`: vom freien Platz aus, dann gibt es keinen Pfeil.
    */
-  const [werKannVon, setWerKannVon] = useState<
-    | { art: 'entwurf'; fach: NonNullable<typeof fach> }
-    | { art: 'belegt'; platz: FreierPlatz }
-    | null
-  >(null);
+  const [werKannVon, setWerKannVon] = useState<WerKannVon | null>(null);
   // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
   const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const { toast, showToast } = useToast();
@@ -218,7 +239,10 @@ export function useEinteilen({
   };
 
   /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
-  const eintragenFuer = (f: FreierPlatz): Eintragen | undefined => {
+  const eintragenFuer = (
+    f: FreierPlatz,
+    ersetztVersion: number | null = ersetzt,
+  ): Eintragen | undefined => {
     if (!entwuerfe) return undefined;
     if (ew.art === 'laedt') return { art: 'laedt' };
     if (ew.art === 'fehler') return { art: 'gesperrt', text: ew.text, onNochmal: ewNeu };
@@ -253,7 +277,7 @@ export function useEinteilen({
     const ort = { eventId: f.eventId, serviceId: f.serviceId, index: f.index };
     return {
       art: 'bereit',
-      erwartet: ersetzt,
+      erwartet: ersetztVersion,
       onWahl: async (ziel: Besetzung, erwartet: number | null): Promise<EntwurfErgebnis> => {
         // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war. „Gesehen“ ist, was
         // jetzt in ChurchTools steht – frei, oder die Person, die ersetzt wird (E4-5); bei einem gültigen Entwurf
@@ -281,6 +305,13 @@ export function useEinteilen({
   };
 
   const offen = sendbareZeilen(plan, daten).length;
+
+  // Wer am angetippten belegten Platz steht – nur eine Person mit Konto kann in den Fokus (kein Gast, kein verborgener Name).
+  const bel = belegt?.bisher?.belegung;
+  const belegtPerson =
+    belegt?.bisher && (bel?.art === 'zusage' || bel?.art === 'anfrage')
+      ? { personId: bel.personId, name: belegt.bisher.name }
+      : null;
 
   const leiste: ReactNode = offen > 0 && (
     <div className={styles.sendeLeiste} role="status" aria-label="Noch nicht gesendet">
@@ -361,6 +392,27 @@ export function useEinteilen({
           }
           eintragen={eintragenFuer(frei)}
           stift={stiftFuer(frei)}
+          fokus={
+            fokus && plan && frei.datum
+              ? {
+                  mini: (personId) =>
+                    einsaetzeUmText(
+                      einsaetzeUm(plan, {
+                        personId,
+                        tag: frei.datum ?? '',
+                        entwurf: amPlatz.entwurf,
+                      }),
+                    ),
+                  zeigen: (person) => {
+                    const zurueck: WerKannZurueck = { platz: frei, ersetzt, von: werKannVon };
+                    setFrei(null);
+                    setErsetzt(null);
+                    setWerKannVon(null);
+                    fokus.zeigen(person, zurueck);
+                  },
+                }
+              : undefined
+          }
         />
       )}
       {belegt?.bisher && entwuerfe && (
@@ -368,6 +420,14 @@ export function useEinteilen({
           platz={{ ...belegt, bisher: belegt.bisher }}
           eintragen={eintragenFuer(belegt)}
           onClose={() => setBelegt(null)}
+          onFokus={
+            fokus && belegtPerson
+              ? () => {
+                  setBelegt(null);
+                  fokus.hervorheben(belegtPerson);
+                }
+              : undefined
+          }
           onAnderePerson={() => {
             // „Wer kann?“ für denselben Platz – die Wahl ersetzt die Person, die dort steht.
             setFrei(belegt);
@@ -433,5 +493,37 @@ export function useEinteilen({
     </>
   );
 
-  return { ew, daten, ewNeu, lage, showToast, amPlatz, leiste, fenster };
+  /** „Zurück zu ‚Wer kann?‘“ (Fokus-Leiste): dasselbe Fenster für denselben Platz noch einmal. */
+  const werKannOeffnen = (z: WerKannZurueck) => {
+    setFrei(z.platz);
+    setErsetzt(z.ersetzt);
+    setWerKannVon(z.von);
+  };
+
+  /** Kann man an diesem Platz gerade Entwürfe anlegen? (Fokus-Leiste: sonst gibt es „Hier eintragen“ nicht.) */
+  const eintragenMoeglich = (z: WerKannZurueck) =>
+    eintragenFuer(z.platz, z.ersetzt)?.art === 'bereit';
+
+  /**
+   * „Hier eintragen“ (Fokus-Leiste): **dieselbe Funktion wie die Wahl in „Wer kann?“** (`eintragenFuer` → `onWahl`) –
+   * Entwurf, Konflikt-Schutz und Hinweis („noch nicht gesendet“) kommen von dort. `null`, wo es nicht geht.
+   */
+  const trageEin = (z: WerKannZurueck, ziel: Besetzung): Promise<EntwurfErgebnis> | null => {
+    const e = eintragenFuer(z.platz, z.ersetzt);
+    return e?.art === 'bereit' ? e.onWahl(ziel, z.ersetzt) : null;
+  };
+
+  return {
+    ew,
+    daten,
+    ewNeu,
+    lage,
+    showToast,
+    amPlatz,
+    leiste,
+    fenster,
+    werKannOeffnen,
+    eintragenMoeglich,
+    trageEin,
+  };
 }

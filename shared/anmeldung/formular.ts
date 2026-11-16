@@ -259,6 +259,15 @@ export function mailGueltig(s: string): boolean {
 }
 
 /**
+ * **Nur, was die Personen betrifft** – aus `pruefeAntworten`, für „Person dazu“ von Hand (F2d): Die Kontakt-Antworten
+ * stehen schon bei der Anmeldung. Geprüft wird trotzdem mit dem GANZEN Formular – sonst fehlten die Schritte und
+ * Bedingungen aus dem Kontakt-Teil, und eine Frage in einem übersprungenen Schritt wäre Pflicht.
+ */
+export function nurPersonenPfade(wege: string[]): string[] {
+  return wege.filter((w) => w.startsWith('personen.'));
+}
+
+/**
  * **Welche Pflichtangaben fehlen** – Schlüssel wie `anmeldung.mail`, `personen.1.birth`,
  * `anmeldung.name.vor`. Leer = alles da. Dieselbe Prüfung im Formular und in der Nachprüfung.
  */

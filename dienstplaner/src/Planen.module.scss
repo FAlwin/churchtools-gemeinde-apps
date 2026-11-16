@@ -513,6 +513,73 @@
   }
 }
 
+// ── Fokus-Modus (Wunsch 11, Entwurf `e11-fokus.html`, Variante A) ───────────────────────────────────────────────────
+// Der Platz der fokussierten Person: Rahmen als **Outline außen** (2 px, 1 px Abstand) und blasse, **deckende** gelbe
+// Fläche – so bleibt innen sichtbar, ob er zugesagt (grün), angefragt (?) oder Entwurf (blau gestrichelt) ist. Farben nur
+// aus `ui/design/_farben.scss`. Steht NACH `.entwurf`, damit die Fläche gewinnt.
+.fokus {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--fokus);
+  outline-offset: 1px;
+  background: var(--fokus-grund);
+  font-weight: 700;
+}
+
+// Ein Platz mit langem Drücken (Handy): kein Textmarkieren, kein iOS-Menü dazwischen.
+.langDruck {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+// Hülle um Platz und Fokus-Symbol: Das Symbol ist ein **eigener Knopf neben dem Platz** (ein Knopf im Knopf gibt es nicht)
+// – so löst es nie das Fenster am Platz aus.
+.huelle {
+  position: relative;
+}
+
+// Nur mit echter Maus, beim Darüberfahren (oder per Tastatur-Fokus); am Handy gibt es das Symbol nicht – dort hilft
+// langes Drücken. `display: none` heißt auch: kein unsichtbares Tippziel am Rand des Platzes.
+.fokusSymbol {
+  display: none;
+  padding: 0;
+
+  @media (hover: hover) {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    transform: translateY(-50%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    opacity: 0;
+
+    .huelle:hover &,
+    .huelle:focus-within &,
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    &:hover {
+      border-color: var(--fokus);
+      background: var(--fokus-grund);
+      color: var(--fokus-text);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 1px;
+    }
+  }
+}
+
 // „Entwurf veraltet“ – kleines Schild unter dem Platz (Alwin, 14.10.2026): ChurchTools gilt, der Entwurf
 // wird nie gesendet; antippen führt zu „Entwurf verwerfen“.
 .veraltet {

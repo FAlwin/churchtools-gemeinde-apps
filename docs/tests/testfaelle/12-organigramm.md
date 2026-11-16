@@ -258,7 +258,7 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung; einen Mac mit Chrome und Safari und ein iPad.
 
 **Das muss passieren:** Auf jedem Gerät entsteht dieselbe PDF: oben Logo, „Organigramm“, Gemeinde und Stand, unten
-Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in Lato, auf dem gewählten Papier. Quer bleibt beim
+Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in der PDF-Schrift (Gemeinde Sans, sieht aus wie Lato), auf dem gewählten Papier. Quer bleibt beim
 Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
 
 1. **Organigramm** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch

@@ -31,7 +31,7 @@ describe('schriftImDokument', () => {
     const { schriftImDokument } = await import('./pdfSchrift');
     await expect(schriftImDokument()).rejects.toThrow('vorübergehend');
     await schriftImDokument();
-    expect(angemeldet).toEqual(['LatoPdf 400', 'LatoPdf 700']);
+    expect(angemeldet).toEqual(['GemeindeSans 400', 'GemeindeSans 700']);
     // Einmal angemeldet, bleibt es dabei.
     await schriftImDokument();
     expect(angemeldet).toHaveLength(2);

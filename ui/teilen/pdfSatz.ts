@@ -4,7 +4,7 @@ import { spaltenBreiten } from './listenPdf';
 
 /**
  * **Der Satz der geteilten Blätter** (E8) – was Termin-Blatt (`terminBlattPdf.ts`) und Plan-Blatt (`planBlattPdf.ts`)
- * gleich brauchen: Lato im ChurchTools-Look, Zellen mit gemischter Auszeichnung (fett, grau, rot, Schild), am Wortende
+ * gleich brauchen: die Schrift im ChurchTools-Look, Zellen mit gemischter Auszeichnung (fett, grau, rot, Schild), am Wortende
  * umbrochen, Spaltenbreiten nach Bedarf, Tabellenkopf, und auf jeder Seite Kopf (Titel, Datum, Gemeinde, Stand) und Fuß
  * („Seite x von y“). Bis E8-2 stand das nur im Termin-Blatt – das Plan-Blatt hätte es sonst nachgebaut.
  */
@@ -49,7 +49,7 @@ export interface BlattKopf {
 }
 
 /**
- * Ein neues A4-Dokument mit Lato. `schrift` nur für Tests („helvetica“): Mit eingebetteter Lato steht der Text nicht
+ * Ein neues A4-Dokument mit der PDF-Schrift (Gemeinde Sans). `schrift` nur für Tests („helvetica“): Mit eingebetteter PDF-Schrift steht der Text nicht
  * lesbar im PDF. jsPDF wird erst hier geladen – die Apps starten ohne den Brocken. Die kursiven Schnitte bettet das
  * Protokoll-PDF selbst ein (`pdfSchriftKursiv.ts`) – stünde der Aufruf hier, trüge jede App mit PDF sie im ZIP.
  */
@@ -60,8 +60,8 @@ export async function neuesDokument(
   const { jsPDF } = await import('jspdf');
   const d = new jsPDF({ unit: 'mm', format: 'a4', orientation: quer ? 'landscape' : 'portrait' });
   if (schrift) return { d, font: schrift };
-  const { latoEinbetten, PDF_SCHRIFT } = await import('./pdfSchrift');
-  latoEinbetten(d);
+  const { schriftEinbetten, PDF_SCHRIFT } = await import('./pdfSchrift');
+  schriftEinbetten(d);
   return { d, font: PDF_SCHRIFT };
 }
 

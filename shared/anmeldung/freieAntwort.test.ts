@@ -271,7 +271,7 @@ describe('Schreiben nach ChurchTools (F3a)', () => {
 
   it('fehlt die Spalte in ChurchTools, sagt es das (statt den Text still zu verlieren)', () => {
     const x = einst();
-    delete (x.ctFelder)['foto.frei'];
+    delete x.ctFelder['foto.frei'];
     expect(() => gespeichert(x, mitFrei())).toThrow(PasstNicht);
   });
 });

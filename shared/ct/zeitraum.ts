@@ -6,7 +6,7 @@
  *
  * Tage als `YYYY-MM-DD`, Monate als `YYYY-MM` (Ortszeit der Gemeinde), gerechnet mit `shared/ct/datum.ts`.
  */
-import { letzterTag, monatPlus, monatTitel, plusTage, tageBis } from './datum';
+import { letzterTag, monatPlus, monatTitel, plusTage, tagMonat, tageBis } from './datum';
 
 /**
  * **＋ links und rechts bei gewähltem Zeitraum** (E9-3, Alwin 05.11.2026): so viele **einzelne Veranstaltungen**
@@ -128,16 +128,14 @@ export function ohneDazu(z: Zeitraum): Zeitraum {
   return kopie;
 }
 
-const kurz = (tag: string) => `${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
-
 /**
  * Zwei Tage als Spanne: „01.10. – 31.10.2026“, über den Jahreswechsel mit beiden Jahren, ein einzelner Tag als
  * „18.10.2026“. Für den eigenen Zeitraum und für das, was „ab heute“ gerade zeigt – eine Regel für beide.
  */
 export function spanneText(von: string, bis: string): string {
-  if (von === bis) return `${kurz(von)}${von.slice(0, 4)}`;
+  if (von === bis) return `${tagMonat(von)}${von.slice(0, 4)}`;
   const jahr = von.slice(0, 4) === bis.slice(0, 4) ? '' : von.slice(0, 4);
-  return `${kurz(von)}${jahr} – ${kurz(bis)}${bis.slice(0, 4)}`;
+  return `${tagMonat(von)}${jahr} – ${tagMonat(bis)}${bis.slice(0, 4)}`;
 }
 
 /** Aufschrift des Zeitraum-Knopfs bei gewähltem Zeitraum: „Oktober 2026“, „01.10. – 31.10.2026“, „Letzte 3 Monate“. */

@@ -9,6 +9,7 @@ import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shar
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { protokollSchluessel, type Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
+import type { TeilenRahmen } from './ProtokollTeilen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import {
   ablehnen,
@@ -115,6 +116,7 @@ export function Sitzungen({
   gruppen,
   ich,
   vollerName = ich.name,
+  gemeinde = null,
   schreibbar = [],
   auswahl = null,
 }: {
@@ -124,6 +126,8 @@ export function Sitzungen({
   ich: { person: number; name: string };
   /** Vor- und Nachname – so steht man unter einem Vorschlag und im Protokoll („vorgeschlagen von …“, S5-4). */
   vollerName?: string;
+  /** Name der Gemeinde – oben rechts auf dem PDF eines Protokolls (S6-3b). */
+  gemeinde?: string | null;
   /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort öffnet ein Entwurf im Editor (S4-1). */
   schreibbar?: readonly number[];
   auswahl?: SitzungsAuswahl | null;
@@ -227,6 +231,12 @@ export function Sitzungen({
     darfSchreibenIn(gruppe) &&
     s.kopf?.status !== 'frei' &&
     (s.termin !== null || s.kopf !== null);
+  // „Teilen / PDF“ (S6-3b): mit vollem Namen (sich selbst kennt man auch ohne Mitgliederliste) und der nächsten Sitzung.
+  const teilenVon = (s: Sitzung): TeilenRahmen => ({
+    gemeinde,
+    ich: { person: ich.person, name: vollerName },
+    naechste: naechsteNach(s, alle)?.beginn ?? null,
+  });
   const naechsteVon = (s: Sitzung) => {
     const n = naechsteNach(s, alle);
     return (
@@ -418,6 +428,7 @@ export function Sitzungen({
           ich={ich}
           zeitzone={gemeindeZeitzone()}
           naechste={naechsteVon(offen)}
+          teilen={teilenVon(offen)}
           kommend={kommend}
           direkt={direkt}
           vollerName={vollerName}
@@ -462,6 +473,7 @@ export function Sitzungen({
           zeitzone={gemeindeZeitzone()}
           springeZu={zuPunkt}
           naechste={naechsteVon(offen)}
+          teilen={teilenVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZuruecknehmen={

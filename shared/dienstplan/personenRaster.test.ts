@@ -1,0 +1,607 @@
+import { describe, expect, it } from 'vitest';
+import { diensteAus } from '../ct/dienste';
+import type { Person } from '../organigramm/mitglieder';
+import { entwurfVeraltet, ortSchluessel, type Entwurf, type EntwurfZiel } from './entwuerfe';
+import { planAus, terminStand, type Plan, type PlanGruppe } from './plan';
+import { abwesenheitenAus, type GruppenStand, type PersonenDaten } from './personenDaten';
+import { offenText, personenRaster, type EntwurfSuche } from './personenRaster';
+import { termineAus, type RohTermin } from './termine';
+
+/**
+ * Tests gegen die Erzeuger: Der Plan kommt aus `planAus` mit rohen Terminen, die Abwesenheiten aus `abwesenheitenAus`
+ * mit rohen Antworten – keine handgeschriebenen Endstrukturen.
+ *
+ * Dienste: Gitarre (Musik, Gruppe 100), Gesang (Musik, Gruppe 90), Ton (Technik, Gruppe 7), Café (Café, fünf Gruppen).
+ */
+const GITARRE = 10;
+const GESANG = 9;
+const TON = 6;
+const CAFE = 20;
+const DIENSTE = diensteAus([
+  { id: TON, name: 'Ton', serviceGroupId: 3, groupIds: [7], sortKey: 1 },
+  { id: GITARRE, name: 'Gitarre', serviceGroupId: 4, groupIds: [100], sortKey: 2 },
+  { id: GESANG, name: 'Gesang', serviceGroupId: 4, groupIds: [90], sortKey: 3 },
+  { id: CAFE, name: 'Café', serviceGroupId: 5, groupIds: [47, 49], sortKey: 4 },
+]);
+const GRUPPEN = [
+  { id: 3, name: 'Technik', fuerAlle: false },
+  { id: 4, name: 'Musik', fuerAlle: false },
+  { id: 5, name: 'Café', fuerAlle: false },
+];
+
+const T1 = '2026-12-06T08:00:00Z';
+const T2 = '2026-12-09T17:00:00Z';
+const T3 = '2026-12-13T08:00:00Z';
+
+const termin = (id: number, startDate: string, eventServices: object[], extra = {}): RohTermin => ({
+  id,
+  name: id === 2 ? 'Gebetsabend' : 'Gottesdienst',
+  startDate,
+  endDate: startDate.replace('T08:00', 'T10:00').replace('T17:00', 'T18:30'),
+  eventServices,
+  ...extra,
+});
+const frei = (serviceId: number, index: number | null = null) => ({
+  serviceId,
+  personId: null,
+  name: null,
+  index,
+});
+const platz = (
+  serviceId: number,
+  personId: number | null,
+  name: string,
+  isAccepted = true,
+  index: number | null = null,
+) => ({ serviceId, personId, name, isAccepted, index });
+
+function planDaraus(roh: RohTermin[]): Plan {
+  return planAus(roh, {
+    ichId: 1,
+    dienste: DIENSTE,
+    dienstgruppen: GRUPPEN,
+    zeitzone: 'Europe/Berlin',
+    planbar: () => true,
+    ganzSichtbar: () => true,
+  });
+}
+
+const person = (id: number, name: string): Person => ({
+  id,
+  name,
+  bild: null,
+  initialen: name
+    .split(' ')
+    .map((w) => w[0])
+    .join(''),
+});
+const da = (
+  mitglieder: Person[] | 'verborgen',
+  abwesenheiten: Extract<GruppenStand, { art: 'da' }>['abwesenheiten'] = [],
+): GruppenStand => ({ art: 'da', mitglieder, abwesenheiten });
+const abwesend = (id: number, personId: number, von: string, bis: string, extra = {}) => ({
+  id,
+  person: { domainIdentifier: String(personId) },
+  absenceReason: { nameTranslated: 'Urlaub' },
+  startDate: von,
+  endDate: bis,
+  ...extra,
+});
+
+const ANNA = person(5, 'Anna Gans');
+const BEN = person(8, 'Ben Kunz');
+const CLARA = person(11, 'Clara Neu');
+const DANIEL = person(12, 'Daniel Fink');
+
+/** Ein Plan mit drei Terminen (Sonntag, Mittwoch, Sonntag) und je Dienst ein paar Plätzen. */
+const ROH: RohTermin[] = [
+  termin(1, T1, [
+    platz(GITARRE, 12, 'Daniel Fink'), // Daniel: Gitarre UND Gesang am selben Tag
+    platz(GESANG, 12, 'Daniel Fink', false),
+    platz(GESANG, 5, 'Anna Gans'),
+    platz(TON, 8, 'Ben Kunz'), // Ben ist Gesang-Mitglied, an diesem Tag aber im Ton (Technik)
+    frei(CAFE, 1),
+    frei(CAFE, 2),
+  ]),
+  termin(2, T2, [
+    platz(GITARRE, 12, 'Daniel Fink'),
+    platz(GESANG, null, 'Gastsängerin'),
+    platz(GESANG, -2, 'Geheim Person'),
+    frei(TON),
+  ]),
+  termin(3, T3, [platz(GESANG, 5, 'Anna Gans', false), frei(GITARRE)], { isCanceled: true }),
+];
+const PLAN = planDaraus(ROH);
+const ALLE_SPALTEN = [0, 1, 2];
+const ALLE_GRUPPEN = PLAN.gruppen;
+
+const DATEN: PersonenDaten = new Map<number, GruppenStand>([
+  [100, da([DANIEL, person(2, 'Eva Hell')])], // Gitarre
+  [90, da([ANNA, BEN, DANIEL, CLARA])], // Gesang
+  [7, da([BEN])], // Technik
+  [47, da([CLARA])],
+  [49, da([CLARA, ANNA])], // Clara steht in beiden Café-Gruppen
+]);
+
+const block = (r: ReturnType<typeof personenRaster>, dienst: number) =>
+  r.blocks.find((b) => b.dienst.id === dienst)!;
+const zeile = (r: ReturnType<typeof personenRaster>, dienst: number, personId: number) =>
+  block(r, dienst).zeilen.find((z) => z.personId === personId)!;
+
+describe('personenRaster – Blöcke und Zeilen', () => {
+  it('ein Block je Dienst in der Reihenfolge der Matrix; Zeilen alphabetisch', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(r.blocks.map((b) => b.dienst.name)).toEqual(['Ton', 'Gitarre', 'Gesang', 'Café']);
+    expect(block(r, GESANG).zeilen.map((z) => z.name)).toEqual([
+      'Anna Gans',
+      'Ben Kunz',
+      'Clara Neu',
+      'Daniel Fink',
+    ]);
+  });
+
+  it('ein Mitglied ohne Einsatz hat eine Zeile mit leeren Zellen und 0 Einsätzen', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    const eva = zeile(r, GITARRE, 2);
+    expect(eva.mitglied).toBe(true);
+    expect(eva.einsaetze).toBe(0);
+    expect(eva.zellen.every((z) => z.zustand === null && z.weitere.length === 0)).toBe(true);
+  });
+
+  it('wer eingeteilt, aber kein Mitglied ist, bekommt trotzdem eine Zeile', () => {
+    const ohneMitglieder: PersonenDaten = new Map([
+      [90, da([ANNA])], // Daniel steht im Plan, aber nicht in der Gruppe
+    ]);
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: ohneMitglieder,
+    });
+    const daniel = zeile(r, GESANG, 12);
+    expect(daniel.mitglied).toBe(false);
+    expect(daniel.initialen).toBe('DF');
+    expect(daniel.zellen[0].zustand).toBe('angefragt');
+  });
+
+  it('Einsätze = zugesagt + angefragt dieser Person in diesem Dienst, in den gezeigten Terminen', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(zeile(r, GESANG, 5).einsaetze).toBe(2); // Anna: zugesagt am 06.12., angefragt am 13.12.
+    expect(zeile(r, GITARRE, 12).einsaetze).toBe(2);
+    expect(zeile(r, GESANG, 12).einsaetze).toBe(1);
+    const nurErster = personenRaster({
+      plan: PLAN,
+      spalten: [0],
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(zeile(nurErster, GESANG, 5).einsaetze).toBe(1);
+  });
+
+  it('der Zustand der Zelle: zugesagt oder angefragt', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(zeile(r, GESANG, 5).zellen.map((z) => z.zustand)).toEqual([
+      'zugesagt',
+      null,
+      'angefragt',
+    ]);
+  });
+
+  it('Café hängt an mehreren CT-Gruppen: die Mitglieder werden zusammengeführt, jede Person einmal', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(block(r, CAFE).zeilen.map((z) => z.personId)).toEqual([5, 11]); // Anna, Clara – Clara nur einmal
+    expect(block(r, CAFE).gruppenIds).toEqual([47, 49]);
+  });
+
+  it('ein Dienst ohne Platz an den gezeigten Terminen bekommt keinen Block', () => {
+    // Nur der Mittwoch: Café hat dort keine Plätze.
+    const r = personenRaster({ plan: PLAN, spalten: [1], gruppen: ALLE_GRUPPEN, daten: DATEN });
+    expect(r.blocks.map((b) => b.dienst.name)).toEqual(['Ton', 'Gitarre', 'Gesang']);
+  });
+
+  it('nur die gezeigten Gruppen bekommen Blöcke', () => {
+    const musik = PLAN.gruppen.filter((g) => g.gruppe?.id === 4);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: musik, daten: DATEN });
+    expect(r.blocks.map((b) => b.dienst.name)).toEqual(['Gitarre', 'Gesang']);
+  });
+});
+
+describe('personenRaster – zweiter Dienst am Tag', () => {
+  it('eine Person in zwei Diensten: zwei Zeilen, „auch …“ unter dem Namen und „+ …“ am selben Tag', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    const gitarre = zeile(r, GITARRE, 12);
+    const gesang = zeile(r, GESANG, 12);
+    expect(gitarre.auch).toEqual(['Gesang']);
+    expect(gesang.auch).toEqual(['Gitarre']);
+    // Am 06.12. in beiden Diensten: in jeder Zeile steht der andere als „+ …“.
+    expect(gitarre.zellen[0].weitere).toEqual([{ dienst: 'Gesang', fremd: false, gruppe: null }]);
+    expect(gesang.zellen[0].weitere).toEqual([{ dienst: 'Gitarre', fremd: false, gruppe: null }]);
+    // Am 09.12. nur Gitarre: in der Gesang-Zeile steht trotzdem „+ Gitarre“, mit leerer Zelle.
+    expect(gesang.zellen[1].zustand).toBeNull();
+    expect(gesang.zellen[1].weitere.map((w) => w.dienst)).toEqual(['Gitarre']);
+    // Wer nur in einem Dienst Mitglied ist, hat kein „auch“.
+    expect(zeile(r, GITARRE, 2).auch).toEqual([]); // Eva
+  });
+
+  it('„auch …“ nennt nur gezeigte Dienste', () => {
+    const nurGesang = PLAN.gruppen.filter((g) => g.gruppe?.id === 4);
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: nurGesang.map((g) => ({
+        ...g,
+        zeilen: g.zeilen.filter((z) => z.dienst.id === GESANG),
+      })),
+      daten: DATEN,
+    });
+    expect(zeile(r, GESANG, 12).auch).toEqual([]);
+  });
+
+  it('ein Dienst aus einer ausgeblendeten Gruppe: „+ Ton (Technik)“, als fremd gekennzeichnet', () => {
+    const ohneTechnik = PLAN.gruppen.filter((g) => g.gruppe?.id !== 3);
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ohneTechnik,
+      daten: DATEN,
+    });
+    const ben = zeile(r, GESANG, 8);
+    expect(ben.zellen[0].zustand).toBeNull();
+    expect(ben.zellen[0].weitere).toEqual([{ dienst: 'Ton', fremd: true, gruppe: 'Technik' }]);
+    // Mit der Gruppe sichtbar ist es ein gewöhnliches „+ Ton“.
+    const mit = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(zeile(mit, GESANG, 8).zellen[0].weitere).toEqual([
+      { dienst: 'Ton', fremd: false, gruppe: null },
+    ]);
+  });
+});
+
+describe('personenRaster – Abwesenheiten', () => {
+  const mitAbwesenheit = (roh: object[]): PersonenDaten =>
+    new Map<number, GruppenStand>([
+      [100, da([DANIEL])],
+      [90, da([ANNA, BEN, DANIEL, CLARA], abwesenheitenAus(roh))],
+    ]);
+
+  it('eine mehrtägige Abwesenheit, die vor dem Zeitraum beginnt, deckt den ersten Termin ab', () => {
+    const roh = [abwesend(1, 5, '2026-11-28', '2026-12-07')];
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: mitAbwesenheit(roh),
+    });
+    expect(zeile(r, GESANG, 5).zellen.map((z) => z.abwesend)).toEqual([
+      { grund: 'Urlaub' },
+      null,
+      null,
+    ]);
+  });
+
+  it('ohne Grund steht „Abwesend“; ein Eintrag mit Uhrzeit deckt nur seinen Termin', () => {
+    const roh = [
+      {
+        id: 7,
+        person: { domainIdentifier: '11' },
+        absenceReason: null,
+        startDate: '2026-12-09',
+        endDate: '2026-12-09',
+        startTime: '2026-12-09T09:00:00Z', // nur der Vormittag – der Gebetsabend (17 Uhr UTC) bleibt frei
+        endTime: '2026-12-09T11:00:00Z',
+      },
+      { id: 8, person: { domainIdentifier: '11' }, startDate: '2026-12-13', endDate: '2026-12-13' },
+    ];
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: mitAbwesenheit(roh),
+    });
+    expect(zeile(r, GESANG, 11).zellen.map((z) => z.abwesend)).toEqual([
+      null,
+      null,
+      { grund: 'Abwesend' },
+    ]);
+  });
+
+  it('abwesend UND eingeteilt: beides bleibt sichtbar, mit Warnung', () => {
+    const roh = [abwesend(1, 5, '2026-12-06', '2026-12-06')];
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: mitAbwesenheit(roh),
+    });
+    const z = zeile(r, GESANG, 5).zellen[0];
+    expect(z.zustand).toBe('zugesagt');
+    expect(z.abwesend).toEqual({ grund: 'Urlaub' });
+    expect(z.warnung).toBe(true);
+    // Nur abwesend, nicht eingeteilt: keine Warnung.
+    const frei = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: mitAbwesenheit([abwesend(2, 11, '2026-12-06', '2026-12-06')]),
+    });
+    expect(zeile(frei, GESANG, 11).zellen[0].warnung).toBe(false);
+  });
+
+  it('dieselbe Abwesenheit aus zwei Gruppen zählt einmal, und sie gilt in jedem Dienst der Person', () => {
+    const roh = [abwesend(3, 12, '2026-12-09', '2026-12-09')];
+    const daten = new Map<number, GruppenStand>([
+      [100, da([DANIEL], abwesenheitenAus(roh))],
+      [90, da([DANIEL], abwesenheitenAus(roh))],
+    ]);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
+    expect(zeile(r, GITARRE, 12).zellen[1].abwesend).toEqual({ grund: 'Urlaub' });
+    expect(zeile(r, GESANG, 12).zellen[1].abwesend).toEqual({ grund: 'Urlaub' });
+  });
+
+  it('ohne Recht: der Block sagt es, geliefert wird nichts ausgewertet', () => {
+    const daten = new Map<number, GruppenStand>([
+      [100, da([DANIEL], 'nichtSichtbar')],
+      [90, da([ANNA, DANIEL])],
+      [7, da([BEN], 'nichtSichtbar')],
+    ]);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
+    expect(block(r, GITARRE).abwesenheit).toBe('nichtSichtbar');
+    expect(block(r, GESANG).abwesenheit).toBe('ok');
+    expect(block(r, TON).abwesenheit).toBe('nichtSichtbar');
+  });
+
+  it('Café mit einer Gruppe mit und einer ohne Recht: „teilweise“', () => {
+    const daten = new Map<number, GruppenStand>([
+      [47, da([CLARA])],
+      [49, da([ANNA], 'nichtSichtbar')],
+    ]);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
+    expect(block(r, CAFE).abwesenheit).toBe('teilweise');
+  });
+});
+
+describe('personenRaster – Gäste, Verborgene, Fußzeile', () => {
+  it('ein Platz mit Namen ohne Person ist ein Gast (Zeile „Gäste“), keine Personenzeile', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(block(r, GESANG).gaeste).toEqual([[], [{ name: 'Gastsängerin', entwurf: false }], []]);
+    expect(block(r, GESANG).zeilen.map((z) => z.name)).not.toContain('Gastsängerin');
+  });
+
+  it('„Namen verbergen“ zeigt nie einen Namen – weder als Zeile noch als Gast noch gezählt', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(JSON.stringify(r)).not.toContain('Geheim');
+  });
+
+  it('„Noch offen“ zählt wie die Matrix: Summe über die gezeigten Dienste = terminStand', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    // 06.12.: Café 2 frei · 09.12.: Ton 1 frei · 13.12. abgesagt (die Matrix sagt dort „abgesagt“, nicht „1 frei“).
+    expect(r.offen[0].dienste).toEqual([{ dienst: 'Café', anzahl: 2 }]);
+    expect(r.offen[1].dienste).toEqual([{ dienst: 'Ton', anzahl: 1 }]);
+    expect(r.offen[2]).toEqual({ abgesagt: true, dienste: [] });
+    for (const i of [0, 1]) {
+      const summe = r.offen[i].dienste.reduce((n, d) => n + d.anzahl, 0);
+      expect(summe).toBe(terminStand(ALLE_GRUPPEN, i)?.frei ?? 0);
+    }
+  });
+
+  it('„Noch offen“ nur über die gezeigten Gruppen – wie die Matrix (Fund L2)', () => {
+    const musik: PlanGruppe[] = PLAN.gruppen.filter((g) => g.gruppe?.id === 4);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: musik, daten: DATEN });
+    expect(r.offen[0].dienste).toEqual([]);
+    expect(r.offen[1].dienste).toEqual([]);
+    expect(terminStand(musik, 0)?.frei).toBe(0);
+  });
+
+  it('Text eines roten Tags: Dienstname, bei mehreren mit Zahl', () => {
+    expect(offenText({ dienst: 'Gesang', anzahl: 1 })).toBe('Gesang');
+    expect(offenText({ dienst: 'Gesang', anzahl: 2 })).toBe('Gesang ×2');
+  });
+});
+
+describe('personenRaster – Entwürfe', () => {
+  const entwurfFuer = (
+    ziel: EntwurfZiel,
+    ort: { eventId: number; serviceId: number; index: number | null },
+  ): Entwurf => ({
+    ort,
+    ziel,
+    modus: 'anfrage',
+    gesehen: { art: 'frei' },
+    von: { personId: 1, name: 'Alwin' },
+    zeit: '2026-12-01T10:00:00Z',
+    version: 1,
+  });
+  /** Wie `entwurfAmPlatz` in „Planen“: der Entwurf am Platz, veraltet, wenn in ChurchTools etwas anderes steht. */
+  const suche =
+    (liste: Entwurf[]): EntwurfSuche =>
+    (i, z, p) => {
+      const e = liste.find(
+        (x) =>
+          ortSchluessel(x.ort) ===
+          ortSchluessel({ eventId: PLAN.spalten[i].id, serviceId: z.dienst.id, index: p.index }),
+      );
+      return e ? { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) } : null;
+    };
+
+  it('ein Entwurf auf einen freien Platz erscheint als „Entwurf“ in der Zeile der Person – und zählt nicht als Einsatz', () => {
+    const e = entwurfFuer(
+      { art: 'person', personId: 2, name: 'Eva Hell' },
+      { eventId: 3, serviceId: GITARRE, index: null },
+    );
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: suche([e]),
+    });
+    const eva = zeile(r, GITARRE, 2);
+    expect(eva.zellen.map((z) => z.zustand)).toEqual([null, null, 'entwurf']);
+    expect(eva.einsaetze).toBe(0);
+  });
+
+  it('ein veralteter Entwurf zählt nicht – am Platz gilt ChurchTools', () => {
+    // Der Entwurf wurde auf einen freien Platz gemacht, inzwischen ist dort jemand eingetragen.
+    const e = entwurfFuer(
+      { art: 'person', personId: 2, name: 'Eva Hell' },
+      { eventId: 1, serviceId: GITARRE, index: null },
+    );
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: suche([e]),
+    });
+    expect(zeile(r, GITARRE, 2).zellen[0].zustand).toBeNull();
+  });
+
+  it('ein Entwurf auf jemanden ohne Mitgliedschaft legt eine Zeile an; ein Gast-Entwurf steht bei „Gäste“', () => {
+    const person = entwurfFuer(
+      { art: 'person', personId: 99, name: 'Neu Dabei' },
+      { eventId: 3, serviceId: GITARRE, index: null },
+    );
+    const gast = entwurfFuer(
+      { art: 'gast', name: 'Onkel Otto' },
+      { eventId: 2, serviceId: TON, index: null },
+    );
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: suche([person, gast]),
+    });
+    expect(zeile(r, GITARRE, 99)).toMatchObject({ mitglied: false, name: 'Neu Dabei' });
+    expect(block(r, TON).gaeste[1]).toEqual([{ name: 'Onkel Otto', entwurf: true }]);
+  });
+
+  it('„Zurückziehen“ (Entwurf auf frei) ändert die Zeile der Person nicht', () => {
+    const e = entwurfFuer({ art: 'frei' }, { eventId: 1, serviceId: GITARRE, index: null });
+    const ohne = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    const mit = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: suche([e]),
+    });
+    expect(mit).toEqual(ohne);
+  });
+});
+
+describe('personenRaster – Ladezustand der Gruppen', () => {
+  it('ein vorübergehender Fehler einer Gruppe steht im Block der Gruppe, der Rest bleibt', () => {
+    const daten = new Map<number, GruppenStand>([
+      [100, da([DANIEL])],
+      [90, { art: 'fehler', text: 'ChurchTools antwortet gerade nicht.', nochmal: true }],
+    ]);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
+    expect(block(r, GESANG).fehler).toEqual({
+      gruppenIds: [90],
+      text: 'ChurchTools antwortet gerade nicht.',
+      nochmal: true,
+    });
+    expect(block(r, GITARRE).fehler).toBeNull();
+    // Die Eingeteilten stehen trotzdem da.
+    expect(block(r, GESANG).zeilen.map((z) => z.name)).toEqual(['Anna Gans', 'Daniel Fink']);
+  });
+
+  it('Mitglieder nicht sichtbar (403) ist kein Fehler zum Wiederholen', () => {
+    const daten = new Map<number, GruppenStand>([[90, da('verborgen')]]);
+    const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
+    expect(block(r, GESANG).mitgliederVerborgen).toBe(true);
+    expect(block(r, GESANG).fehler).toBeNull();
+  });
+
+  it('noch nichts geladen: nur die Eingeteilten, ohne Hinweise', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: new Map(),
+    });
+    expect(block(r, GESANG).zeilen.map((z) => z.name)).toEqual(['Anna Gans', 'Daniel Fink']);
+    expect(block(r, GESANG)).toMatchObject({ fehler: null, abwesenheit: 'ok' });
+  });
+});
+
+describe('Ende der Spalte – dieselbe Regel wie in der Terminliste', () => {
+  it('`PlanSpalte.ende` = `TerminZeile.ende`, auch ohne Ende am Termin', () => {
+    const roh = [
+      termin(1, T1, []),
+      { id: 2, name: 'Ohne Ende', startDate: T2, endDate: T2, eventServices: [] },
+      {
+        id: 3,
+        name: 'Ende vor Beginn',
+        startDate: T3,
+        endDate: '2026-12-13T07:00:00Z',
+        eventServices: [],
+      },
+    ] as RohTermin[];
+    const plan = planDaraus(roh);
+    const zeilen = termineAus(roh, {
+      ichId: 1,
+      dienste: DIENSTE,
+      planbar: () => true,
+      zeitzone: 'Europe/Berlin',
+    });
+    expect(plan.spalten.map((s) => s.ende)).toEqual(zeilen.map((z) => z.ende));
+    expect(plan.spalten[0].ende).toBe('2026-12-06T10:00:00Z');
+    expect(plan.spalten[2].ende).toBe(T3);
+  });
+});

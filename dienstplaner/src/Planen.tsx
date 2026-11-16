@@ -29,6 +29,9 @@ import { schluessel, type Sicht, darfPlanen } from './planSicht';
 import { Terminleiste } from './Terminleiste';
 import { TabellenPlan, HandyPlan } from './PlanAnsicht';
 import { WerWieOft } from './WerWieOft';
+import { PersonenRaster } from './PersonenRaster';
+import type { PersonenLader } from './ladePersonen';
+import { dienstFarben } from './personenFarben';
 import { useEinteilen } from './useEinteilen';
 import { plaetzeWeitere, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
@@ -68,6 +71,11 @@ interface Props {
    * Ohne bleibt das Fach ohne Vorlagen-Bereich.
    */
   ladeVorlagen?: () => Promise<TerminVorlage[]>;
+  /**
+   * Mitglieder und Abwesenheiten der CT-Gruppen für die Ansicht „Personen“ (Wunsch 5, P1). Ohne zeigt die Ansicht nur
+   * die Eingeteilten.
+   */
+  ladePersonen?: PersonenLader;
   /**
    * Von der Startseite (Wunsch 7, `#/planen/gruppe/3`): nur diese Dienstgruppe und die nächsten 6 Wochen – nur für diesen
    * Besuch, der gemerkte Filter und Zeitraum bleiben. `null`/fehlt: Planen wie gewohnt.
@@ -109,6 +117,7 @@ export function Planen({
   ablauf,
   katalog,
   ladeVorlagen,
+  ladePersonen,
   fokusGruppe = null,
   onFokusEnde,
 }: Props) {
@@ -156,7 +165,7 @@ export function Planen({
 
   // Zeitraum, was dafür geladen ist und welcher Ausschnitt zu sehen ist – `usePlanZeitraum`.
   const {
-    personen,
+    werWieOft,
     z,
     setzeZeitraum,
     bereich,
@@ -228,7 +237,7 @@ export function Planen({
       zeile2={zeile2}
       heute={heute}
       abHeuteZusatz={handy ? 'die nächsten Termine' : 'passend zur Fensterbreite'}
-      vergangenheit={personen}
+      vergangenheit={werWieOft}
       onWahl={waehleZeitraum}
     />
   );
@@ -253,7 +262,8 @@ export function Planen({
         value={ansicht.unteransicht}
         options={[
           { value: 'matrix', label: 'Matrix' },
-          { value: 'personen', label: 'Wer wie oft?' },
+          { value: 'raster', label: 'Personen' },
+          { value: 'werWieOft', label: 'Wer wie oft?' },
         ]}
         onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
         ariaLabel="Ansicht"
@@ -369,6 +379,13 @@ export function Planen({
       else neu.add(k);
       setZu(neu);
     };
+    // Die Farbe eines Dienstes in „Personen“: nach der Reihenfolge ALLER Dienste der Gemeinde (sonst wanderte sie mit dem
+    // gezeigten Zeitraum) – ohne Katalog nach den Diensten des Plans.
+    const farben = dienstFarben(
+      katalog
+        ? katalog.dienste.keys()
+        : plan.gruppen.flatMap((g) => g.zeilen.map((x) => x.dienst.id)),
+    );
     const haupt = arten[0] !== undefined && arten[0] !== WEITERE ? arten[0] : null;
     const sicht: Sicht = {
       plan,
@@ -393,8 +410,10 @@ export function Planen({
         hinweis(
           'Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.',
         )
-      ) : ansicht.unteransicht === 'personen' ? (
+      ) : ansicht.unteransicht === 'werWieOft' ? (
         <WerWieOft sicht={sicht} />
+      ) : ansicht.unteransicht === 'raster' ? (
+        <PersonenRaster sicht={sicht} lader={ladePersonen} farbe={(id) => farben.get(id) ?? 0} />
       ) : handy ? (
         <HandyPlan sicht={sicht} amEnde={kannNachladen ? () => nachladen('passend') : undefined} />
       ) : (
@@ -461,7 +480,9 @@ export function Planen({
         Vorlage. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der Rangfolge von
         ChurchTools, ebenfalls als Entwurf. Der Stift neben einem Namen ändert dessen Vorlieben –
         sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
-        Angefragten eine Mitteilung von ChurchTools.
+        Angefragten eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben Termine als Raster:
+        eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
+        zum Ansehen, eingetragen wird in der Matrix.
       </p>
       {sendeLeiste}
       {fenster}

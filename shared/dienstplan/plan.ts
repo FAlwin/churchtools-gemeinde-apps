@@ -21,6 +21,7 @@ import { belegungAus, type Belegung } from './einteilen';
 import {
   istFrei,
   istTerminAdmin,
+  terminEnde,
   VERBORGENE_PERSON,
   type RohPlatz,
   type RohTermin,
@@ -59,6 +60,8 @@ export interface PlanSpalte {
   admin: boolean;
   /** Beginn wie von ChurchTools (`startDate`, ISO) – „Ablauf anlegen“ in der Matrix braucht ihn (E6-6a). */
   beginn: string;
+  /** Ende wie `TerminZeile.ende` (`terminEnde`) – für Abwesenheiten (`decktTermin`) in der Ansicht „Personen“. */
+  ende: string;
   /** Kalender und Admins für die Bearbeiten-Regel des Ablaufs (`ablaufBearbeitbar`, E6-6a). */
   ablaufTermin: AblaufTermin;
   /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, E6b-2 L3)? */
@@ -186,6 +189,7 @@ export function planAus(
       abgesagt: t.isCanceled === true,
       admin: istTerminAdmin(t, o.ichId),
       beginn: t.startDate,
+      ende: terminEnde(t),
       ablaufTermin: ablaufTerminVon(t),
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
       infos: infosAus(t),

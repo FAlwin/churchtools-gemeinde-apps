@@ -99,6 +99,16 @@ export interface TerminZeile {
   team: TeamPlatz[];
 }
 
+/**
+ * **Das Ende eines Termins** für `decktTermin` (Abwesenheiten): `endDate`, wenn es nach dem Beginn liegt, sonst der
+ * Beginn. Als Zeitpunkte vergleichen, nicht als Text (Lehre aus `decktTermin`, shared/absences). Eine Stelle für die
+ * Terminliste (`TerminZeile.ende`) und die Matrix (`PlanSpalte.ende`) – sonst deckte dieselbe Abwesenheit hier einen
+ * Termin ab und dort nicht.
+ */
+export function terminEnde(t: Pick<RohTermin, 'startDate' | 'endDate'>): string {
+  return t.endDate && Date.parse(t.endDate) > Date.parse(t.startDate) ? t.endDate : t.startDate;
+}
+
 /** Die ID, die ChurchTools bei „Namen verbergen“ statt der Person schickt (E0 §2). */
 export const VERBORGENE_PERSON = -2;
 
@@ -162,14 +172,11 @@ export function termineAus(
       // Die eigenen Dienste in der Reihenfolge der Gemeinde (wie die Zeilen der Matrix), nicht in der von ChurchTools:
       // Die liefert nach ID, und eine Antwort vergibt eine neue – sonst spränge die Zeile nach dem Zusagen (E7-1, 03.11.).
       meine.sort((x, y) => rang(x) - rang(y) || (x.ort?.index ?? 0) - (y.ort?.index ?? 0));
-      // Als Zeitpunkte vergleichen, nicht als Text (Lehre aus `decktTermin`, shared/absences).
-      const ende =
-        t.endDate && Date.parse(t.endDate) > Date.parse(t.startDate) ? t.endDate : t.startDate;
       return {
         id: t.id,
         name: t.name,
         beginn: t.startDate,
-        ende,
+        ende: terminEnde(t),
         tag: lokal.slice(0, 10),
         uhrzeit: lokal.slice(11, 16),
         abgesagt: t.isCanceled === true,

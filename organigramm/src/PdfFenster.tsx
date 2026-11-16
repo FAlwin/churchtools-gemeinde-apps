@@ -10,7 +10,7 @@ import { useLaden } from '@ui/ct/useLaden';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { sichtFarbe } from '@shared/organigramm/farbe';
 import type { Rolle } from '@shared/organigramm/mitglieder';
-import type { PersonenWahl } from '@shared/organigramm/personen';
+import { OHNE_GRENZE, type PersonenGrenze, type PersonenWahl } from '@shared/organigramm/personen';
 import {
   anordnen,
   knotenAmPfad,
@@ -67,6 +67,8 @@ interface Props {
     wahl: PersonenWahl;
     mitglieder: MitgliederDaten | null;
     rollen: ReadonlyMap<number, Rolle>;
+    /** Wie viel man von den Personen je Gruppe sehen darf (#915 C) – die PDF zeigt nie mehr als der Reiter. */
+    grenze?: PersonenGrenze;
   };
   /** „Welche Rollen“ (#915) – vom Reiter übernommen; hier geändert gilt es nur für diese PDF (wie der Ausschnitt). */
   rollenFilter: Pick<RollenFilter, 'rollen' | 'aus'>;
@@ -110,15 +112,15 @@ export function PdfFenster({
 
   const messRef = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(messRef);
-  const { mitglieder, rollen, wahl } = personen;
+  const { mitglieder, rollen, wahl, grenze = OHNE_GRENZE } = personen;
   const farbe = useMemo(() => sichtFarbe(typFarben), [typFarben]);
   const wartet = mitPersonen && mitglieder === null;
   const inhalt = useMemo(
     () =>
       mitPersonen
-        ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl), rollenAus)
+        ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl), rollenAus, grenze)
         : undefined,
-    [mitPersonen, mitglieder, rollen, wahl, rollenAus],
+    [mitPersonen, mitglieder, rollen, wahl, rollenAus, grenze],
   );
   const { breite, hoehe, kasten, kuerzen } = useMemo(
     () => messung(schrift, inhalt),

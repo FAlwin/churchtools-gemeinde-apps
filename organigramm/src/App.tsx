@@ -17,7 +17,12 @@ import {
   pfadVon,
   sichtbarerBaum,
 } from '@shared/organigramm/ansichten';
-import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
+import {
+  hatBereich,
+  personenGrenze,
+  personenImBereich,
+  sichtbereich,
+} from '@shared/organigramm/sichtbereich';
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
 import { rollenZurWahl, type PersonenWahl } from '@shared/organigramm/personen';
@@ -253,6 +258,11 @@ export function App() {
     zentral.art === 'da' ? (zentral.stand?.inhalt ?? ALLES_SICHTBAR) : ALLES_SICHTBAR;
   // Ausgeblendet ist, was Gruppen-Admins für alle ausgeblendet haben (O7b-7). Eigene Typ-Schildchen je Gerät gibt es
   // nicht mehr (30.10.2026): Ein Typ ging samt allem darunter – oben stehen meist Dienstbereiche, dann war alles weg.
+  // Wie viel man von den Personen je Gruppe sieht (#915 C): im eigenen Bereich alles, sonst höchstens, was Gruppen-Admins
+  // eingestellt haben. Lässt sich das gerade nicht lesen, vorsichtshalber keine Namen (entschieden 12.11.2026) – fehlt
+  // nur das Leserecht, gilt nichts davon (`zentralLaden`); davor warnt das Fenster „Einstellungen“.
+  const sonst = zentral.art === 'fehler' ? 'zahl' : fuerAlle.personen;
+  const grenze = useMemo(() => personenGrenze(bereich, sonst), [bereich, sonst]);
   const typenAus = useMemo(() => new Set(fuerAlle.typen), [fuerAlle]);
   const gruppenAus = useMemo(() => new Set(fuerAlle.gruppen), [fuerAlle]);
   const sichtBaum = useMemo(
@@ -346,6 +356,7 @@ export function App() {
       start.rollen,
       (id) => mitglieder.personen.get(id)?.name ?? '',
       rollenAus,
+      grenze,
     );
   }, [
     praesentiert,
@@ -357,6 +368,7 @@ export function App() {
     praesStand,
     praesPlan,
     rollenAus,
+    grenze,
   ]);
 
   const praesentieren = () => {
@@ -512,6 +524,7 @@ export function App() {
           lesbar={lesbar.mitglieder}
           fuerAlle={fuerAlle}
           fuerAlleFehler={zentral.art === 'fehler'}
+          grenze={grenze}
           onFuerAlleNochmal={() => void zentralLaden()}
           baum={sichtBaum}
           ansicht={baumAnsicht}
@@ -574,6 +587,7 @@ export function App() {
           onHierAnfangen={hierAnfangen}
           onStruktur={strukturNeu}
           onMitgliederNeu={() => mitgliederNeu(offenerKnoten.gruppe.id)}
+          personenStufe={grenze(offenerKnoten.gruppe.id)}
         />
       )}
       {start && offenePersonImBereich && (
@@ -603,7 +617,7 @@ export function App() {
           spitze={spitze}
           ansicht={baumAnsicht}
           typFarben={start.typFarben}
-          personen={{ wahl: personenWahl, mitglieder, rollen: start.rollen }}
+          personen={{ wahl: personenWahl, mitglieder, rollen: start.rollen, grenze }}
           rollenFilter={rollenFilter}
           onSchliessen={() => setPdfOffen(false)}
         />
@@ -614,7 +628,7 @@ export function App() {
           daten={praesentation}
           mitglieder={mitglieder}
           stand={praesPlan ? { wert: praesStand, onWechsel: setPraesStand } : undefined}
-          personen={{ wahl: personenWahl, onWahl: personenWaehlen }}
+          personen={{ wahl: personenWahl, onWahl: personenWaehlen, grenze }}
           rollenFilter={rollenFilter}
           onSchliessen={() => setPraesentiert(false)}
         />

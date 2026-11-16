@@ -1,6 +1,6 @@
 /**
  * **Der nächste Gebetsabend aus dem Kalender** (Bauplan Gebetsabend G2). Gelesen wird
- * `GET /calendars/appointments?calendar_ids[]=…&from=…&to=…` – dieselbe Abfrage wie in Protokollen und Anmeldungen;
+ * `GET /calendars/appointments?calendar_ids[]=…&from=…&to=…` – über `terminPfad` aus `shared/ct/kalenderTermine.ts`;
  * die Antwort trägt je Termin `base` (Titel, ID) und `calculated` (Beginn/Ende dieses Vorkommens, UTC).
  */
 

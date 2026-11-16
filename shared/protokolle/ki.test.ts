@@ -421,10 +421,13 @@ describe('antwortLesen', () => {
 
 describe('einfuegeStelleKI', () => {
   const punkte = ableiten(dokument()).punkte;
-  it('„3.“ landet hinter 3.2 (vor 4.), „3.1“ vor 3.2', () => {
-    expect(einfuegeStelleKI(punkte, 'h3')).toBe('h4');
+  it('„3.“ mit Unterpunkten landet vor 3.1 (nicht hinter 3.2), „3.1“ vor 3.2, „3.2“ vor 4.', () => {
+    expect(einfuegeStelleKI(punkte, 'h3')).toBe('h31');
     expect(einfuegeStelleKI(punkte, 'h31')).toBe('h32');
     expect(einfuegeStelleKI(punkte, 'h32')).toBe('h4');
+  });
+  it('ein Punkt ohne Unterpunkte: vor den nächsten Punkt', () => {
+    expect(einfuegeStelleKI(punkte, 'h1')).toBe('h2');
   });
   it('letzter Punkt oder unbekannter Block → null', () => {
     expect(einfuegeStelleKI(punkte, 'h4')).toBeNull();
@@ -471,7 +474,7 @@ describe('uebernahmePlanen', () => {
   const gesamt = (b: Block[]) => b.map((x) => [x.type, textAus(x.content)]);
 
   it('Einfügungen: je Ziel ein Aufruf; später im Dokument zuerst, neue Punkte zuletzt mit vor = null', () => {
-    expect(plan.einfuegungen.map((e) => e.vor)).toEqual([null, 'h32', 'h4', null]);
+    expect(plan.einfuegungen.map((e) => e.vor)).toEqual([null, 'h32', 'h31', null]);
     // 4. (letzter Punkt) und die neuen Punkte gehen beide ans Ende – 4. kommt zuerst
     expect(gesamt(plan.einfuegungen[0].bloecke)).toEqual([['bulletListItem', 'Noch offen.']]);
     expect(plan.einfuegungen[3].bloecke[0].type).toBe('heading');
@@ -579,6 +582,23 @@ describe('uebernahmePlanen', () => {
     expect(r.uebersprungen).toHaveLength(1);
   });
 
+  it('Beschluss und Termin für einen Punkt MIT Unterpunkten zählen zu diesem Punkt, nicht zum letzten Unterpunkt (Fund TF-PROT-12)', () => {
+    const e = lesen(
+      JSON.stringify({
+        beschluesse: [{ nr: '3', text: 'Für 3.' }],
+        termine: [{ nr: '3', datum: '2026-12-12', text: 'Für 3.' }],
+      }),
+    );
+    const doc = dokument();
+    for (const f of uebernahmePlanen(e, doc, neueId).einfuegungen) {
+      const i = f.vor === null ? doc.length : doc.findIndex((b) => b.id === f.vor);
+      doc.splice(i, 0, ...f.bloecke);
+    }
+    const a = ableiten(doc);
+    expect(a.beschluesse.map((b) => b.punkt)).toEqual(['h3']);
+    expect(a.termine.map((t) => t.punkt)).toEqual(['h3']);
+  });
+
   it('Gesamtbild: eingefügt in dieser Reihenfolge entsteht die erwartete Dokumentfolge', () => {
     // einfügen wie EditorGriff.einfuegen: vor Block `vor`, sonst ans Ende
     const doc = dokument();
@@ -587,10 +607,12 @@ describe('uebernahmePlanen', () => {
       doc.splice(i, 0, ...e.bloecke);
     }
     const folge = doc.map((b) => textAus(b.content)).filter(Boolean);
+    // 3. hat Unterpunkte: sein Inhalt steht hinter dem eigenen Text, VOR 3.1 (Alwin 16.11.2026)
+    expect(folge.indexOf('Rückmeldungen bisher 64.')).toBeLessThan(folge.indexOf('Zu 3 gesamt.'));
+    expect(folge.indexOf('Zu 3 gesamt.')).toBeLessThan(folge.indexOf('Küche'));
     expect(folge.indexOf('Küche')).toBeLessThan(folge.indexOf('Kochteam steht.'));
     expect(folge.indexOf('Kochteam steht.')).toBeLessThan(folge.indexOf('Kinderbetreuung'));
-    expect(folge.indexOf('Kinderbetreuung')).toBeLessThan(folge.indexOf('Zu 3 gesamt.'));
-    expect(folge.indexOf('Zu 3 gesamt.')).toBeLessThan(folge.indexOf('Verschiedenes'));
+    expect(folge.indexOf('Kinderbetreuung')).toBeLessThan(folge.indexOf('Verschiedenes'));
     expect(folge.indexOf('Noch offen.')).toBeLessThan(folge.indexOf('Parkplatz'));
     // Das Ergebnis liest die gemeinsame Ableitung: Beschluss und Termin stehen bei 3.1
     const a = ableiten(doc);

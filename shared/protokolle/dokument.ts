@@ -312,3 +312,20 @@ export function mitNeuenIds(bloecke: readonly Block[], neueId: () => string): Bl
     children: mitNeuenIds(b.children ?? [], neueId),
   }));
 }
+
+/** Ein Absatz ohne Text und ohne Kinder – die leere Zeile, die der Editor am Ende des Dokuments stehen lässt. */
+function leererAbsatz(b: Block): boolean {
+  return b.type === 'paragraph' && !textAus(b.content).trim() && !(b.children ?? []).length;
+}
+
+/**
+ * **„Ans Ende“ einfügen heißt: vor die leeren Zeilen am Schluss** (S8-2, Fund aus TF-PROT-12). Der Editor lässt unten
+ * eine leere Zeile stehen; wer dahinter einfügt, bekommt eine Leerzeile vor dem neuen Inhalt. Rückgabe: die ID des ersten
+ * leeren Absatzes der Schlussreihe (davor einfügen) – oder `null`, wenn das Dokument nicht mit einer leeren Zeile endet
+ * (dann hinter den letzten Block). Gilt für jedes Einfügen ans Ende (übernommene Vorschläge, „Mit KI füllen“).
+ */
+export function vorSchlusszeilen(dokument: readonly Block[]): string | null {
+  let i = dokument.length;
+  while (i > 0 && leererAbsatz(dokument[i - 1])) i--;
+  return i < dokument.length ? dokument[i].id : null;
+}

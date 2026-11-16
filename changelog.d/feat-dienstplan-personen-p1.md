@@ -11,7 +11,7 @@
     blass als „+ Ton (Technik)“. Abwesend = grauer Tag mit dem Grund (auch mehrtägig, auch wenn sie vor dem Zeitraum
     begann); abwesend **und** eingeteilt zeigt beides mit rotem Rand.
   - **Gäste**-Zeile je Block, Fußzeile **„Noch offen“** (freie Plätze je Termin, gezählt wie in der Matrix). Maus über dem
-    Namen hebt alle Zeilen der Person schwach hervor, Antippen nimmt sie in den Fokus (Wunsch 11). Am Handy dieselbe Tabelle, waagerecht scrollbar, die
+    Namen bzw. Antippen hebt alle Zeilen der Person hervor. Am Handy dieselbe Tabelle, waagerecht scrollbar, die
     Namensspalte bleibt stehen. Ein Klick in eine Zelle tut noch nichts – Eintragen folgt.
   - **Abwesenheiten nur mit Recht:** „Abwesenheiten verwalten“ (global) oder „Abwesenheiten sehen“ in der Gruppe. Ohne
     Recht sagt der Block „Abwesenheiten nicht sichtbar“, statt leerer Zellen zu zeigen (ChurchTools liefert dann still eine

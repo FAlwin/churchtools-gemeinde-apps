@@ -1,0 +1,584 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { strToU8, zipSync } from 'fflate';
+import type { Person as Mitglied } from '@shared/organigramm/mitglieder';
+import { BLOCK, type Block } from '@shared/protokolle/dokument';
+import { docxText } from '@shared/protokolle/docxText';
+import {
+  antwortLesen,
+  auftragBauen,
+  uebernahmePlanen,
+  uebernehmbar,
+  type Eintrag,
+} from '@shared/protokolle/ki';
+import {
+  namenFinden,
+  platzhalterAnwenden,
+  type Fund,
+  type Person,
+} from '@shared/protokolle/platzhalter';
+import { KiFuellenFenster, type KiFuellenProps } from './KiFuellenFenster';
+
+/**
+ * **„Mit KI füllen“, das Fenster** (S8-2): der ganze Weg gegen die echten Erzeuger – `namenFinden`,
+ * `platzhalterAnwenden`, `auftragBauen`, `antwortLesen`, `uebernahmePlanen`. Nichts davon wird hier nachgebaut: Der Test
+ * rechnet mit denselben Funktionen, was herauskommen muss, und vergleicht. Die Zwischenablage ist eine Attrappe, der
+ * Editor ein `einfuegen`-Spion.
+ */
+const P = (id: number, vorname: string, nachname: string): Person => ({ id, vorname, nachname });
+const ALWIN = P(1, 'Alwin', 'Friesen');
+const PETER = P(3, 'Peter', 'Wiens');
+const MARIA = P(5, 'Maria', 'Dück');
+const DANIEL = P(4, 'Daniel', 'Schmidt');
+const JOHANN = P(7, 'Johann', 'Becker');
+const GRUPPE_PERSONEN = [ALWIN, PETER, MARIA, DANIEL, JOHANN];
+const LEA = P(9, 'Lea', 'Janzen');
+const ALLE = [...GRUPPE_PERSONEN, P(6, 'Anna', 'Klassen'), P(8, 'Viktor', 'Neumann'), LEA];
+const MITGLIEDER: Mitglied[] = GRUPPE_PERSONEN.map((p) => ({
+  id: p.id,
+  name: `${p.vorname} ${p.nachname}`,
+  bild: null,
+  initialen: p.vorname.slice(0, 1),
+}));
+
+const GRUPPE = 'Leitungsteam';
+const DATUM = '2026-11-18';
+
+/** Beispiel-Transkript aus dem abgenommenen Entwurf `s8-ki-v1`. */
+const TRANSKRIPT = `Alwin: Gut, dann fangen wir an. Peter Wiens hat heute die Andacht.
+Peter: Psalm 91, Verse 1 bis 6. Danach beten wir für Familie Neumann. Und für Anna Klassen, sie hat eine Krebserkrankung.
+Alwin: Dann zum Gemeindeessen am 13. Dezember. Maria Dück, wie sieht es in der Küche aus?
+Maria: Das Kochteam steht, wir kochen für 70 Personen. Die Tischdekoration besorge ich bis zum 6. Dezember.
+Alwin: Und die Kinderbetreuung?
+Daniel: Johann Becker hat schon zwei Jugendliche gefragt. Johann, holst du dir bis nächsten Freitag die Zusagen?
+Johann: Mach ich.
+Alwin: Dann halten wir fest: Das Essen beginnt um 12:30 Uhr. Aufgebaut wird am Samstag, 12. Dezember, ab 15 Uhr.
+Peter: Noch ein neues Thema: Auf dem Parkplatz fehlen Hinweisschilder. Viktor Neumann hat angeboten, einen Entwurf zu machen.
+Alwin: Gut. Viktor Neumann, zeigst du uns den bis zum 30. November?`;
+
+const text = (t: string) => [{ type: 'text', text: t, styles: {} }];
+const heading = (id: string, level: number, t: string): Block => ({
+  id,
+  type: 'heading',
+  props: { level },
+  content: text(t),
+  children: [],
+});
+/** 1 Andacht · 2 Rückblick (fester Punkt) · 3 Gemeindeessen mit 3.1 und 3.2 · 4 Besuch von Lea Janzen (Name im Titel) · 5 Verschiedenes. */
+const dokument = (): Block[] => [
+  heading('h1', 1, 'Andacht & Gebet'),
+  heading('h2', 1, 'Rückblick'),
+  { id: 'v2', type: BLOCK.verweis, props: { art: 'letztes-protokoll' }, children: [] },
+  heading('h3', 1, 'Gemeindeessen am 13.12.'),
+  heading('h31', 2, 'Küche'),
+  heading('h32', 2, 'Kinderbetreuung'),
+  heading('h4', 1, 'Besuch von Lea Janzen'),
+  heading('h5', 1, 'Verschiedenes'),
+];
+
+/** Dieselbe Suche wie im Fenster: Transkript, Titel, Gruppenname – mit `namenFinden`, nicht nachgebaut. */
+const fundeFuer = (tx: string, eigene: string[] = [], gruppe = GRUPPE_PERSONEN): Fund[] =>
+  namenFinden(
+    [
+      tx,
+      ...dokument().map((b) =>
+        b.type === 'heading' ? (b.content as { text: string }[])[0].text : '',
+      ),
+      GRUPPE,
+    ].join('\n'),
+    { alle: ALLE, gruppe },
+    eigene,
+  );
+const phVon = (funde: Fund[], name: string): string => {
+  const f = funde.find((x) => x.text === name);
+  if (!f) throw new Error(`kein Fund für ${name}`);
+  return f.platzhalter;
+};
+
+const neueIdFabrik = () => {
+  let n = 0;
+  return () => `neu-${++n}`;
+};
+
+const schreiben = vi.fn<(t: string) => Promise<void>>();
+beforeEach(() => {
+  schreiben.mockReset();
+  schreiben.mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: schreiben },
+    configurable: true,
+  });
+});
+
+function zeige(p: Partial<KiFuellenProps> = {}) {
+  const einfuegen = vi.fn();
+  const onUebernommen = vi.fn();
+  const onClose = vi.fn();
+  const r = render(
+    <KiFuellenFenster
+      gruppe={GRUPPE}
+      datum={DATUM}
+      dokument={dokument}
+      mitglieder={MITGLIEDER}
+      einfuegen={einfuegen}
+      onUebernommen={onUebernommen}
+      onClose={onClose}
+      personenLaden={() => Promise.resolve(ALLE)}
+      neueId={neueIdFabrik()}
+      {...p}
+    />,
+  );
+  return { ...r, einfuegen, onUebernommen, onClose };
+}
+
+const tippeTranskript = (t = TRANSKRIPT) =>
+  fireEvent.change(screen.getByLabelText('Transkript'), { target: { value: t } });
+const kopierKnopf = () => screen.getByRole('button', { name: /Auftrag kopieren|Kopiert/ });
+const bereit = () => waitFor(() => expect(kopierKnopf()).toHaveProperty('disabled', false));
+const kopieren = async () => {
+  await bereit();
+  fireEvent.click(kopierKnopf());
+  await waitFor(() => expect(schreiben).toHaveBeenCalled());
+  return schreiben.mock.calls[schreiben.mock.calls.length - 1][0];
+};
+const zuSchritt2 = async () => {
+  await kopieren();
+  fireEvent.click(screen.getByRole('button', { name: 'Weiter: Antwort einfügen' }));
+  await screen.findByLabelText('Antwort der KI');
+};
+const antworten = (a: unknown) =>
+  fireEvent.change(screen.getByLabelText('Antwort der KI'), {
+    target: { value: typeof a === 'string' ? a : JSON.stringify(a) },
+  });
+
+/** Eine Antwort der KI auf den kopierten Auftrag – mit den Platzhaltern, die dort stehen. */
+const antwortFuer = (funde: Fund[]) => {
+  const ph = (n: string) => phVon(funde, n);
+  return {
+    punkte: [
+      {
+        nr: '1',
+        stichpunkte: [
+          `Andacht von ${ph('Peter Wiens')}: Psalm 91.`,
+          `Gebet für ${ph('Familie Neumann')}.`,
+        ],
+      },
+      { nr: '3.1', stichpunkte: [`${ph('Maria Dück')} besorgt die Tischdekoration.`] },
+      { nr: '2', stichpunkte: ['Gehört zum festen Punkt.'] },
+      { nr: '9', stichpunkte: ['Gibt es nicht.'] },
+    ],
+    beschluesse: [{ nr: '3', text: 'Das Gemeindeessen beginnt um 12:30 Uhr.' }],
+    todos: [
+      { nr: '3.2', text: 'Zusagen einholen', wer: [ph('Johann Becker')], bis: '2026-11-20' },
+      { nr: '4', text: 'Entwurf zeigen', wer: [ph('Viktor Neumann')], bis: '2026-11-30' },
+    ],
+    termine: [{ nr: '3', datum: '2026-12-12', text: 'Aufbau ab 15 Uhr' }],
+    neue_punkte: [
+      { titel: 'Parkplatz', stichpunkte: [`${ph('Viktor Neumann')} macht einen Entwurf.`] },
+    ],
+  };
+};
+
+/** Was `antwortLesen` aus dieser Antwort macht – so wie das Fenster es mit den Funden des Auftrags tut. */
+const leseEintraege = (funde: Fund[], antwort: unknown): Eintrag[] => {
+  const r = antwortLesen(JSON.stringify(antwort), {
+    dokument: dokument(),
+    zuordnung: platzhalterAnwenden(TRANSKRIPT, funde).zuordnung,
+    funde,
+    gruppe: GRUPPE_PERSONEN,
+  });
+  if (!r.ok) throw new Error(r.meldung);
+  return r.eintraege;
+};
+
+describe('Schritt 1: Auftrag', () => {
+  it('der kopierte Auftrag enthält KEINEN gefundenen Namen, aber die Platzhalter – auch aus dem Titel', async () => {
+    zeige();
+    tippeTranskript();
+    // „Weiteres verbergen“ über das Feld, wie ein Nutzer.
+    fireEvent.change(screen.getByLabelText('Weiteres verbergen'), {
+      target: { value: 'Krebserkrankung' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    const auftrag = await kopieren();
+
+    const funde = fundeFuer(TRANSKRIPT, ['Krebserkrankung']);
+    // Es gibt etwas zu finden – sonst wäre die Prüfung leer.
+    expect(funde.length).toBeGreaterThanOrEqual(8);
+    for (const f of funde) expect(auftrag).not.toContain(f.text);
+    for (const f of funde) expect(auftrag).toContain(f.platzhalter);
+    // Der Name steht nur im Titel der Tagesordnung („Besuch von Lea Janzen“) – gefunden und ersetzt.
+    expect(funde.some((f) => f.text === 'Lea Janzen')).toBe(true);
+    expect(auftrag).toContain(`Besuch von ${phVon(funde, 'Lea Janzen')}`);
+    // Der ganze Auftrag ist genau das, was die Regeln bauen.
+    expect(auftrag).toBe(
+      auftragBauen({
+        gruppe: GRUPPE,
+        datum: DATUM,
+        dokument: dokument(),
+        transkript: platzhalterAnwenden(TRANSKRIPT, funde).text,
+        funde,
+      }),
+    );
+  });
+
+  it('zeigt die Funde mit Anzahl, Art und Platzhalter; auch der Name im Titel steht in der Liste', async () => {
+    zeige();
+    tippeTranskript();
+    await bereit();
+    const liste = screen.getByLabelText('Gefundene Namen');
+    const funde = fundeFuer(TRANSKRIPT);
+    for (const f of funde) {
+      const zeile = within(liste).getByLabelText(`${f.text} ersetzen`).closest('label')!;
+      expect(zeile.textContent).toContain(`${f.anzahl}×`);
+      expect(zeile.textContent).toContain(f.platzhalter);
+    }
+    expect(within(liste).getByLabelText('Lea Janzen ersetzen')).toBeTruthy();
+  });
+
+  it('Häkchen weg: der Name bleibt im Auftrag stehen, die anderen werden weiter ersetzt', async () => {
+    zeige();
+    tippeTranskript();
+    await bereit();
+    fireEvent.click(screen.getByLabelText('Peter ersetzen'));
+    const auftrag = await kopieren();
+    expect(auftrag).toContain('Peter: Psalm 91');
+    expect(auftrag).not.toContain('Alwin');
+  });
+
+  it('der feste Hinweis zu Heiklem steht über „Weiteres verbergen“', () => {
+    zeige();
+    const hinweis = screen.getByText(
+      'Namen werden automatisch ersetzt. Heikles (z. B. Krankheiten) hier selbst eintragen oder vorher aus dem Text nehmen.',
+    );
+    const feld = screen.getByLabelText('Weiteres verbergen');
+    expect(hinweis.compareDocumentPosition(feld) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('nennt keine bestimmte KI', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    const alles = document.body.textContent ?? '';
+    for (const n of ['Claude', 'ChatGPT', 'Copilot', 'Gemini', 'OpenAI', 'Anthropic'])
+      expect(alles).not.toContain(n);
+    expect(document.querySelector('a')).toBeNull();
+  });
+
+  it('ohne Transkript ist nichts zu kopieren; solange die Personenliste fehlt, auch nicht (sonst gingen Namen hinaus)', async () => {
+    const r = zeige({ personenLaden: () => new Promise(() => undefined) });
+    tippeTranskript();
+    expect(kopierKnopf()).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Weiter: Antwort einfügen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    r.unmount();
+    zeige();
+    expect(kopierKnopf()).toHaveProperty('disabled', true); // kein Transkript
+  });
+
+  it('solange die Gruppenmitglieder fehlen (null), nicht kopieren', async () => {
+    zeige({ mitglieder: null });
+    tippeTranskript();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(kopierKnopf()).toHaveProperty('disabled', true);
+  });
+
+  it('Mitglieder verborgen: Vornamen allein werden nicht gesucht (nur volle Namen)', async () => {
+    zeige({ mitglieder: 'verborgen' });
+    tippeTranskript('Peter hat die Andacht. Peter Wiens betet.');
+    await bereit();
+    const liste = screen.getByLabelText('Gefundene Namen');
+    expect(within(liste).getByLabelText('Peter Wiens ersetzen')).toBeTruthy();
+    expect(within(liste).queryByLabelText('Peter ersetzen')).toBeNull();
+  });
+});
+
+describe('Personenliste', () => {
+  it('Lesefehler: sichtbarer Hinweis, das Fenster bleibt nutzbar – und es werden keine Namen geloggt', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    zeige({ personenLaden: () => Promise.reject(new Error('Netz weg')) });
+    expect(
+      await screen.findByText(
+        'Die Personenliste ließ sich nicht laden – Namen bitte selbst unter „Weiteres verbergen“ eintragen.',
+      ),
+    ).toBeTruthy();
+    tippeTranskript('Maria Dück hat die Küche.');
+    fireEvent.change(screen.getByLabelText('Weiteres verbergen'), {
+      target: { value: 'Maria Dück' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    const auftrag = await kopieren();
+    expect(auftrag).not.toContain('Maria Dück');
+    expect(auftrag).toContain('[Vertraulich 1]');
+    expect(warn).toHaveBeenCalled();
+    expect(JSON.stringify(warn.mock.calls.map((c) => String(c[1])))).not.toContain('Maria');
+  });
+});
+
+describe('Datei wählen', () => {
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const docx = (absaetze: string[]): File => {
+    const xml = `<w:document ${NS}><w:body>${absaetze.map((a) => `<w:p><w:r><w:t>${a}</w:t></w:r></w:p>`).join('')}</w:body></w:document>`;
+    const bytes = zipSync({
+      '[Content_Types].xml': strToU8('<Types/>'),
+      'word/document.xml': strToU8(xml),
+    });
+    return new File([bytes], 'Sitzung.docx');
+  };
+  const waehle = (f: File) =>
+    fireEvent.change(screen.getByTestId('ki-datei'), { target: { files: [f] } });
+
+  it('.docx: der Text kommt ins Feld (Umlaute), Name und Quelle stehen daneben', async () => {
+    zeige();
+    waehle(docx(['Größe: Maria Dück bringt Käse', 'Zweiter Absatz ß']));
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLTextAreaElement>('Transkript').value).toBe(
+        'Größe: Maria Dück bringt Käse\nZweiter Absatz ß',
+      ),
+    );
+    expect(screen.getByText('aus Sitzung.docx übernommen')).toBeTruthy();
+    // …und die Namen daraus werden gefunden.
+    expect(await screen.findByLabelText('Maria Dück ersetzen')).toBeTruthy();
+  });
+
+  it('.docx, die keine ist: Meldung im Fenster (von docxText), das Feld bleibt, wie es war', async () => {
+    zeige();
+    tippeTranskript('Vorhandener Text');
+    const kaputt = new File([strToU8('kein zip')], 'kaputt.docx');
+    waehle(kaputt);
+    const erwartet = docxText(strToU8('kein zip'));
+    if (erwartet.ok) throw new Error('docxText hätte scheitern müssen');
+    expect((await screen.findByRole('alert')).textContent).toBe(erwartet.meldung);
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Transkript').value).toBe('Vorhandener Text');
+  });
+
+  it('.txt wird als UTF-8 gelesen', async () => {
+    zeige();
+    waehle(new File([strToU8('Schön: Peter Wiens, Größe äöüß')], 'notizen.txt'));
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLTextAreaElement>('Transkript').value).toBe(
+        'Schön: Peter Wiens, Größe äöüß',
+      ),
+    );
+  });
+
+  it('andere Endung: freundliche Meldung', async () => {
+    zeige();
+    waehle(new File([strToU8('x')], 'bild.png'));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/\.txt oder \.docx/);
+  });
+});
+
+describe('Schritt 2: Antwort', () => {
+  it('Auftrag kopiert: Hinweis „in deine KI einfügen“, „Auftrag anzeigen“ zu', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    expect(screen.getByText(/in deine KI einfügen und die Antwort hier einfügen/)).toBeTruthy();
+    const details = screen.getByText('Auftrag anzeigen').closest('details')!;
+    expect(details.open).toBe(false);
+  });
+
+  it('Kopieren scheitert: gleich Schritt 2, „Auftrag anzeigen“ offen – mit dem markierbaren, schreibgeschützten Auftrag', async () => {
+    schreiben.mockRejectedValue(new Error('gesperrt'));
+    zeige();
+    tippeTranskript();
+    await bereit();
+    fireEvent.click(kopierKnopf());
+    await screen.findByLabelText('Antwort der KI');
+    const details = screen.getByText('Auftrag anzeigen').closest('details')!;
+    expect(details.open).toBe(true);
+    expect(screen.getByText('Kopieren war nicht möglich.')).toBeTruthy();
+    const feld = screen.getByLabelText<HTMLTextAreaElement>('Auftrag');
+    expect(feld.readOnly).toBe(true);
+    const funde = fundeFuer(TRANSKRIPT);
+    expect(feld.value).toBe(
+      auftragBauen({
+        gruppe: GRUPPE,
+        datum: DATUM,
+        dokument: dokument(),
+        transkript: platzhalterAnwenden(TRANSKRIPT, funde).text,
+        funde,
+      }),
+    );
+  });
+
+  it('ohne Kopieren weiter: Hinweis „noch nicht kopiert“ und der Ausweg ist offen', async () => {
+    zeige();
+    tippeTranskript();
+    await bereit();
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter: Antwort einfügen' }));
+    await screen.findByLabelText('Antwort der KI');
+    expect(screen.getByText('Der Auftrag ist noch nicht kopiert.')).toBeTruthy();
+    expect(screen.getByText('Auftrag anzeigen').closest('details')!.open).toBe(true);
+  });
+
+  it('kaputte Antwort: Meldung (von antwortLesen) im Fenster, der Text bleibt stehen', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    const kaputt =
+      'Gerne! Hier ist eine Zusammenfassung der Sitzung. Sag Bescheid, wenn ich ändern soll.';
+    antworten(kaputt);
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    const erwartet = antwortLesen(kaputt, {
+      dokument: dokument(),
+      zuordnung: {},
+      funde: [],
+      gruppe: [],
+    });
+    if (erwartet.ok) throw new Error('hätte scheitern müssen');
+    const alarm = await screen.findByRole('alert');
+    expect(alarm.textContent).toContain(erwartet.meldung);
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Antwort der KI').value).toBe(kaputt);
+    expect(screen.queryByText('Ausgewählte übernehmen')).toBeNull();
+  });
+
+  it('abgeschnittenes JSON: ebenfalls Meldung, nichts geht verloren', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    antworten('{"punkte":[{"nr":"1","stichpunkte":["a"');
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Antwort der KI').value).toContain(
+      '"nr":"1"',
+    );
+  });
+});
+
+describe('Schritt 3: Vorschau und Übernahme', () => {
+  const bisVorschau = async () => {
+    const r = zeige();
+    tippeTranskript();
+    fireEvent.change(screen.getByLabelText('Weiteres verbergen'), {
+      target: { value: 'Krebserkrankung' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await zuSchritt2();
+    const funde = fundeFuer(TRANSKRIPT, ['Krebserkrankung']);
+    antworten(antwortFuer(funde));
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    await screen.findByText('Stichpunkte');
+    return { ...r, funde };
+  };
+
+  it('zeigt die Bereiche, die Namen wieder da (grün), das Ziel je Zeile – und keine Platzhalter mehr', async () => {
+    await bisVorschau();
+    for (const b of ['Stichpunkte', 'Beschlüsse', 'To-Dos', 'Termine', 'Neue Punkte'])
+      expect(screen.getByRole('heading', { name: new RegExp(b) })).toBeTruthy();
+    const alles = document.body.textContent ?? '';
+    expect(alles).toContain('Andacht von Peter Wiens: Psalm 91.');
+    expect(alles).toContain('Gebet für Familie Neumann.');
+    expect(alles).not.toMatch(/\[Person \d+\]/);
+    const gruen = [...document.querySelectorAll('[data-name]')].map((e) => e.textContent);
+    expect(gruen).toContain('Peter Wiens');
+    expect(gruen).toContain('Maria Dück');
+    // Ziel klein darunter, mit Nummer und Titel.
+    expect(alles).toContain('→ 3.1 Küche');
+    expect(alles).toContain('→ 3. Gemeindeessen am 13.12.');
+    // To-Dos: Mitglied mit Namen, Nicht-Mitglied „(extern)“, Bis-Datum TT.MM.JJJJ.
+    expect(alles).toContain('Johann Becker');
+    expect(alles).not.toContain('Johann Becker (extern)');
+    expect(alles).toContain('Viktor Neumann (extern)');
+    expect(alles).toContain('bis 20.11.2026');
+    expect(alles).toContain('12.12.2026');
+  });
+
+  it('nicht übernehmbare Einträge (fester / unbekannter Punkt): ohne Häkchen, ausgegraut, mit Grund', async () => {
+    await bisVorschau();
+    const fest = screen.getByText('Gehört zum festen Punkt.').closest('label')!;
+    const unbekannt = screen.getByText('Gibt es nicht.').closest('label')!;
+    for (const l of [fest, unbekannt]) {
+      const haken = within(l).getByRole<HTMLInputElement>('checkbox');
+      expect(haken.checked).toBe(false);
+      expect(haken.disabled).toBe(true);
+    }
+    expect(fest.textContent).toContain('fester Punkt');
+    expect(unbekannt.textContent).toContain('Punkt 9 gibt es nicht');
+  });
+
+  it('„Ausgewählte übernehmen“ ruft einfuegen mit genau dem, was uebernahmePlanen liefert – in dieser Reihenfolge', async () => {
+    const { einfuegen, onUebernommen, funde } = await bisVorschau();
+    const eintraege = leseEintraege(funde, antwortFuer(funde));
+    const plan = uebernahmePlanen(eintraege.filter(uebernehmbar), dokument(), neueIdFabrik());
+    expect(plan.einfuegungen.length).toBeGreaterThan(2); // sonst prüft die Reihenfolge nichts
+    const anzahl = eintraege.filter(uebernehmbar).length;
+    fireEvent.click(screen.getByRole('button', { name: `Ausgewählte übernehmen (${anzahl})` }));
+    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(onUebernommen).toHaveBeenCalledWith({ anzahl, uebersprungen: 0 });
+  });
+
+  it('Häkchen aus: der Eintrag wird nicht übernommen (und nicht gezählt)', async () => {
+    const { einfuegen, onUebernommen, funde } = await bisVorschau();
+    const eintraege = leseEintraege(funde, antwortFuer(funde));
+    const weg = eintraege.find((e) => e.art === 'beschluss')!;
+    fireEvent.click(
+      within(
+        screen.getByText('Das Gemeindeessen beginnt um 12:30 Uhr.').closest('label')!,
+      ).getByRole('checkbox'),
+    );
+    const gewaehlt = eintraege.filter((e) => uebernehmbar(e) && e.id !== weg.id);
+    const plan = uebernahmePlanen(gewaehlt, dokument(), neueIdFabrik());
+    fireEvent.click(
+      screen.getByRole('button', { name: `Ausgewählte übernehmen (${gewaehlt.length})` }),
+    );
+    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(JSON.stringify(einfuegen.mock.calls)).not.toContain('beginnt um 12:30');
+    expect(onUebernommen).toHaveBeenCalledWith({ anzahl: gewaehlt.length, uebersprungen: 0 });
+  });
+
+  it('alles abgehakt: nichts zu übernehmen, Knopf aus', async () => {
+    await bisVorschau();
+    for (const k of screen.getAllByRole<HTMLInputElement>('checkbox'))
+      if (k.checked) fireEvent.click(k);
+    expect(screen.getByRole('button', { name: /Ausgewählte übernehmen/ })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('ein Punkt, der seit dem Lesen aus dem Dokument verschwunden ist: übersprungen und gemeldet', async () => {
+    let doku = dokument();
+    const { einfuegen, onUebernommen } = zeige({ dokument: () => doku });
+    tippeTranskript();
+    await zuSchritt2();
+    const funde = fundeFuer(TRANSKRIPT);
+    antworten({
+      punkte: [
+        { nr: '1', stichpunkte: ['Eins'] },
+        { nr: '3.1', stichpunkte: ['Küche'] },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    await screen.findByText('Stichpunkte');
+    expect(funde.length).toBeGreaterThan(0);
+    doku = doku.filter((b) => b.id !== 'h31'); // 3.1 Küche ist weg
+    fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (2)' }));
+    expect(onUebernommen).toHaveBeenCalledWith({ anzahl: 1, uebersprungen: 1 });
+    expect(einfuegen).toHaveBeenCalledTimes(1);
+  });
+
+  it('Zurück aus der Vorschau: die Antwort steht noch da', async () => {
+    await bisVorschau();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    const feld = await screen.findByLabelText<HTMLTextAreaElement>('Antwort der KI');
+    expect(feld.value).toContain('"punkte"');
+  });
+});
+
+describe('nichts wird gespeichert', () => {
+  it('weder localStorage noch sessionStorage bekommen etwas', async () => {
+    const setLokal = vi.spyOn(Storage.prototype, 'setItem');
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    antworten(antwortFuer(fundeFuer(TRANSKRIPT)));
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    await screen.findByText('Stichpunkte');
+    expect(setLokal).not.toHaveBeenCalled();
+  });
+});

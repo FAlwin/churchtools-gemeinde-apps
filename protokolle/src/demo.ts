@@ -358,6 +358,15 @@ const LEITUNGSTEAM: [number, string, string][] = [
   [23, 'Daniel', 'Schmidt'],
 ];
 
+/** Weitere Personen der Gemeinde (nicht im Leitungsteam) – nur für die Namenssuche in „Mit KI füllen“. */
+const DEMO_PERSONEN: [number, string, string][] = [
+  [31, 'Maria', 'Dück'],
+  [32, 'Anna', 'Klassen'],
+  [33, 'Viktor', 'Neumann'],
+  [34, 'David', 'Penner'],
+  [35, 'Lea', 'Janzen'],
+];
+
 const ROLLEN: Record<number, { id: number; nameTranslated: string; isLeader: boolean }[]> = {
   7: [
     { id: 701, nameTranslated: 'Leiter', isLeader: true },
@@ -374,7 +383,7 @@ const ROLLEN: Record<number, { id: number; nameTranslated: string; isLeader: boo
   ],
 };
 
-type Antwort = { status: number; data?: unknown } | null;
+type Antwort = { status: number; data?: unknown; meta?: unknown } | null;
 
 function antwort(
   fall: string,
@@ -405,6 +414,17 @@ function antwort(
           ),
         },
       },
+    };
+  // Alle sichtbaren Personen für „Mit KI füllen“ (S8-2): die Mitglieder des Leitungsteams und ein paar andere – mit
+  // `meta.pagination`, wie ChurchTools seitenweise liefert. Die Namen passen zum Beispiel-Transkript im Entwurf.
+  if (pfad === '/api/persons')
+    return {
+      status: 200,
+      data: [
+        ...LEITUNGSTEAM.map(([id, firstName, lastName]) => ({ id, firstName, lastName })),
+        ...DEMO_PERSONEN.map(([id, firstName, lastName]) => ({ id, firstName, lastName })),
+      ],
+      meta: { pagination: { total: 9, limit: 200, current: 1, lastPage: 1 } },
     };
   // Mitglieder für „Wer kümmert sich?“ (S4-2) – Form wie gemessen (Organigramm O2).
   if (/^\/api\/groups\/\d+\/members$/.test(pfad))
@@ -698,7 +718,9 @@ export function demoStarten(fall: string): void {
     // `/info` kommt von ChurchTools ohne die Hülle `{ data: … }` (gemessen, `shared/ct/info.ts`).
     // Fehler kommen von ChurchTools ohne Hülle (`messageKey` oben – daran erkennt `fehlerAus` ein Verbot).
     const daten =
-      url.pathname === '/api/info' || a.status >= 400 ? a.data : { data: a.data ?? null };
+      url.pathname === '/api/info' || a.status >= 400
+        ? a.data
+        : { data: a.data ?? null, ...(a.meta ? { meta: a.meta } : {}) };
     return new Response(a.status === 204 ? null : JSON.stringify(daten), {
       status: a.status,
       headers: { 'Content-Type': 'application/json' },

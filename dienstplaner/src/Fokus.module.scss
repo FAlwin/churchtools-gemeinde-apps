@@ -1,0 +1,253 @@
+// Fokus-Modus des Dienstplaners (Wunsch 11, Entwurf `e11-fokus.html`): die Leiste „Fokus: Name · …“ und das Suchfeld
+// „Person hervorheben“. Farben nur aus `ui/design/_farben.scss` (`--fokus`, `--fokus-grund`, `--fokus-text`).
+@use '@ui/design/mixins' as m;
+
+.leiste {
+  // Klebt oben, solange Planen im Bild ist (Entwurf e11). Der Matrix-Kopf klebt im eigenen Rollbereich (`.rahmen`), die
+  // Seite scrollt in `.rolle` – die zwei stören sich nicht. Über dem Matrix-Kopf (3), unter Menüs (20) und Fenstern.
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid var(--fokus);
+  border-bottom: 1px solid var(--fokus);
+  background: var(--fokus-grund);
+  color: var(--fokus-text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+
+  & + & {
+    border-top: 1px solid color-mix(in srgb, var(--fokus) 45%, transparent);
+    padding: 6px 12px;
+  }
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fokus);
+  color: #422006; // bewusst fest: dunkle Schrift auf dem gelben Kreis, hell wie dunkel (yellow-950)
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+
+  b {
+    font-weight: 800;
+  }
+}
+
+.knopf {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--fokus);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 13px var(--ui);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.haupt {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.zurueck {
+  @include m.textKnopf;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+// ── Suchfeld „Person hervorheben“ ─────────────────────────────────────────────────────────────────────────────────
+.suche {
+  position: relative;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 210px;
+  height: var(--knopf-hoehe);
+  padding: 0 10px 0 32px;
+  font-size: 14px;
+
+  @media (max-width: 759px) {
+    width: 100%;
+  }
+}
+
+.lupe {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  height: var(--knopf-hoehe);
+  color: var(--text3);
+  pointer-events: none;
+}
+
+.menue {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+// Handy: ein Such-Symbol in der Leiste, das Feld klappt darunter auf.
+.handyMenue {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+
+  .menue {
+    position: static;
+    width: auto;
+    max-width: none;
+    margin-top: 6px;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+.vorschlag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+
+  & + & {
+    border-top: 1px solid var(--hair);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--blue-soft);
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+.leer {
+  padding: 10px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Handy: das Such-Symbol – so hoch und quadratisch wie die Knöpfe daneben (`--knopf-hoehe`).
+.lupenKnopf {
+  @include m.auswahlKnopf;
+  display: inline-grid;
+  place-items: center;
+  width: var(--knopf-hoehe);
+  height: var(--knopf-hoehe);
+  padding: 0;
+  border-radius: var(--r-ctrl);
+
+  &[aria-expanded='true'] {
+    @include m.auswahlKnopfAn;
+  }
+}
+
+// Handy: eine Zeile für Name und Zahl, die Einzelheiten klein darunter, „Fokus aus“ nur als ✕ (Entwurf e11 Abschnitt 5).
+.leisteHandy {
+  font-size: 13px;
+
+  .zeile {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 10px;
+  }
+  .text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .zurueck {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.detail {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.aus {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--fokus);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}

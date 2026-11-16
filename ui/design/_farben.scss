@@ -19,6 +19,12 @@
   --blue-ink: #155dfc;
   --blue-soft: rgba(21, 93, 252, 0.1); // Blau-Flächen (sanfte Hervorhebung)
   --markiert: rgba(250, 204, 21, 0.45); // Textmarker im Protokoll (Editor, Lese-Ansicht, PDF)
+  // Fokus-Modus des Dienstplaners (Wunsch 11, Entwurf `e11-fokus.html`, Variante A „CT-Gelb“): Rahmen yellow-500, Fläche
+  // yellow-400 zu 16 % **auf der Kartenfläche gemischt** (deckend – durchscheinend verfärbte sie den gestrichelten Entwurf
+  // und die grünen Haken). Gelb, weil Blau schon „Entwurf“ heißt und Amber die Dienstfarbe 0 ist. Im Dunkel nur die Schrift.
+  --fokus: #eab308; // yellow-500
+  --fokus-grund: color-mix(in srgb, #facc15 16%, var(--surface2));
+  --fokus-text: #713f12; // yellow-900
   --blue-tile: #dbeafe; // `--color-accent-b-pale` (blue-100) – Datumskachel, gewählter Eintrag
   --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
   // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`

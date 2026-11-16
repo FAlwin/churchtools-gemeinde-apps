@@ -199,3 +199,39 @@
   color: var(--text);
   font-size: 13.5px;
 }
+
+// Fokus-Modus (Wunsch 11): die Einsätze rund um den Termin als Mini-Zeile unter dem Hinweis …
+.wer small.mini {
+  color: var(--text2);
+  font-size: 12px;
+}
+
+// … und „im Plan zeigen“ neben der Karte – ein eigener Knopf (die Karte selbst trägt den Kandidaten ein), nur das Symbol wie
+// der Stift daneben: Mit Beschriftung blieb dem Namen kaum Platz (Browser-Check 16.11.2026, Fenster 420 px). Der Name steht im
+// Titel und für Vorleser im `aria-label`.
+.zeigen {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-height: var(--knopf-hoehe);
+  align-self: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--fokus);
+      background: var(--fokus-grund);
+      color: var(--fokus-text);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}

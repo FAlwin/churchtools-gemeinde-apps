@@ -7,6 +7,7 @@ import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
 import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
+import { fokusKandidaten, fokusTexte, fokusZahlen } from '@shared/dienstplan/fokus';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
 import { zeitraumText, zeitraumVerschieben, type Zeitraum } from '@shared/ct/zeitraum';
@@ -40,7 +41,9 @@ import { WerWieOft } from './WerWieOft';
 import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
-import { useEinteilen } from './useEinteilen';
+import { useEinteilen, type WerKannZurueck } from './useEinteilen';
+import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
+import { grundText } from './ladeEntwuerfe';
 import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
@@ -177,6 +180,15 @@ export function Planen({
     setAnsicht({ ...ansicht, infosZu }),
   );
   const [zu, setZu] = useState<Set<string> | null>(null);
+  // Der Fokus-Modus (Wunsch 11, Alwin 16.11.2026): **eine** Person, deren Plätze in Matrix, Zettel und „Personen“
+  // umrandet sind. Der Zustand sitzt nur hier – die Ansichten lesen ihn über `Sicht.fokusId` – und gilt, solange
+  // Planen offen ist: Ansichtswechsel und Blättern lassen ihn stehen, Verlassen von Planen beendet ihn (die Seite wird
+  // dann abgebaut); gemerkt wird er nicht. `zurueck` ist der Weg zurück zu „Wer kann?“, wenn er von dort kam.
+  const [fokusPerson, setFokusPerson] = useState<{
+    person: FokusPerson;
+    zurueck: WerKannZurueck | null;
+  } | null>(null);
+  const [fokusEintragen, setFokusEintragen] = useState(false);
   // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
@@ -237,12 +249,19 @@ export function Planen({
     amPlatz,
     leiste: sendeLeiste,
     fenster,
+    werKannOeffnen,
+    eintragenMoeglich,
+    trageEin,
   } = useEinteilen({
     plan,
     entwuerfe,
     heute,
     handy,
     onGesendet: leiseNeuLaden,
+    fokus: {
+      hervorheben: (person) => setFokusPerson({ person, zurueck: null }),
+      zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
+    },
   });
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
@@ -315,6 +334,13 @@ export function Planen({
             onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
             ariaLabel="Spaltenbreite"
             verbunden
+          />
+        )}
+        {plan && (
+          <FokusSuche
+            kandidaten={fokusKandidaten(plan, amPlatz.entwurf)}
+            onWahl={(person) => setFokusPerson({ person, zurueck: null })}
+            handy={handy}
           />
         )}
         <FilterKnopf
@@ -413,6 +439,9 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       ...amPlatz,
+      fokusId: fokusPerson?.person.personId ?? null,
+      onFokus: (personId, name) => setFokusPerson({ person: { personId, name }, zurueck: null }),
+      onFokusAus: () => setFokusPerson(null),
       onPlaetze: (i, g) =>
         entwuerfe &&
         !plan.spalten[i].abgesagt &&
@@ -441,9 +470,63 @@ export function Planen({
 
   // Nachladen gescheitert, der bisherige Stand steht: bei „ab heute“ wie beim gewählten Zeitraum (Alwin, 06.11.2026).
   const nachladeFehler = quelle.art === 'fertig' ? quelle.nachladeFehler : undefined;
+
+  // Die Fokus-Leiste: gezählt wird über die Termine des gewählten Zeitraums (nach Kalender/Veranstaltung gefiltert), mit
+  // allen Diensten – ein ausgeblendeter ist trotzdem ein Einsatz, die Leiste sagt „N ausgeblendet“ (`fokusZahlen`).
+  const fokusZurueck = fokusPerson?.zurueck ?? null;
+  const fokusLeiste = fokusPerson ? (
+    <FokusLeiste
+      person={fokusPerson.person}
+      handy={handy}
+      // Lädt der Plan gerade neu (Zeitraum gewechselt), bleibt die Leiste stehen – nur ohne Zahlen.
+      texte={
+        plan && d
+          ? fokusTexte(
+              fokusZahlen(plan, {
+                personId: fokusPerson.person.personId,
+                spalten: d.gefiltert,
+                aus: gruppenAus(ansicht),
+                entwurf: amPlatz.entwurf,
+              }),
+            )
+          : { kurz: 'Termine werden geladen …', detail: '' }
+      }
+      onAus={() => setFokusPerson(null)}
+      zurueck={
+        fokusZurueck
+          ? {
+              text: `${fokusZurueck.platz.dienst} · ${fokusZurueck.platz.tag}`,
+              onZurueck: () => {
+                setFokusPerson({ ...fokusPerson, zurueck: null });
+                werKannOeffnen(fokusZurueck);
+              },
+              laeuft: fokusEintragen,
+              // „Hier eintragen“ legt den Entwurf mit derselben Funktion an wie die Wahl in „Wer kann?“.
+              onEintragen: eintragenMoeglich(fokusZurueck)
+                ? () => {
+                    setFokusEintragen(true);
+                    void trageEin(fokusZurueck, { art: 'person', ...fokusPerson.person })
+                      ?.then((r) => {
+                        if (r.ok) setFokusPerson({ ...fokusPerson, zurueck: null });
+                        else
+                          showToast(
+                            r.grund === 'konflikt'
+                              ? 'Hier hat eben jemand den Platz geändert – bitte noch einmal ansehen.'
+                              : grundText(r.grund),
+                          );
+                      })
+                      .finally(() => setFokusEintragen(false));
+                  }
+                : undefined,
+            }
+          : undefined
+      }
+    />
+  ) : null;
   return (
     <div className={styles.planen}>
       {werkzeug}
+      {fokusLeiste}
       {nachladeFehler && (
         <FehlerKasten
           fehler={nachladeFehler}
@@ -502,7 +585,10 @@ export function Planen({
         eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
         zum Ansehen, eingetragen wird in der Matrix; einen Dienst antippen klappt seinen Block zu.
         Im Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann
-        in Matrix und „Personen“ und zählt nicht mit.
+        in Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“,
+        das Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
+        belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
+        Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
       </p>
       {sendeLeiste}
       {fenster}

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
@@ -10,13 +10,15 @@ import { FreigabeMarke, ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
+import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
 import styles from './SitzungAnsicht.module.scss';
 
 /**
  * **Eine Sitzung ansehen** (Bauplan S3-2, Entwurf 7) – oben Titel und Stand, darunter das Protokoll als Dokument und
  * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; geschrieben wird im
  * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1), dazu „Bearbeiten“ (K2b). Kommt man aus der Suche (S3-4b),
- * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor.
+ * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor. „Teilen / PDF“ (S6-3b) gibt es für
+ * alle, die das Protokoll lesen – im Entwurf mit „ENTWURF“ auf dem PDF.
  */
 export function SitzungAnsicht({
   sitzung,
@@ -28,6 +30,7 @@ export function SitzungAnsicht({
   zeitzone,
   springeZu = null,
   naechste,
+  teilen,
   onBeginnen,
   onBearbeiten,
   onZuruecknehmen,
@@ -46,6 +49,8 @@ export function SitzungAnsicht({
   springeZu?: string | null;
   /** „Nächste Sitzung“ im Bereich Termine (S5-2). */
   naechste?: ReactNode;
+  /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. */
+  teilen?: TeilenRahmen;
   /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
   onBeginnen?: () => void;
   /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
@@ -58,6 +63,8 @@ export function SitzungAnsicht({
 }) {
   const kopf = sitzung.kopf;
   const dokument = dokumentDerSitzung(kopf, teile);
+  const [teilenOffen, setTeilenOffen] = useState(false);
+  const darfTeilen = !!teilen && !!dokument && kopf?.status !== 'geplant';
 
   // Zum Punkt springen, sobald er da ist. Effekt-Rumpf mit { } – `scrollIntoView` liefert in neuen Browsern ein
   // Promise, und ein zurückgegebenes Promise hielte React für die Aufräum-Funktion (Chrome 152, weiße Seite).
@@ -85,7 +92,7 @@ export function SitzungAnsicht({
           )}
           {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || onZuruecknehmen) && (
+        {(onBearbeiten || onZuruecknehmen || darfTeilen) && (
           <div className={styles.aktionen}>
             {onBearbeiten && (
               <KopfKnopf
@@ -95,6 +102,7 @@ export function SitzungAnsicht({
                 onClick={onBearbeiten}
               />
             )}
+            {darfTeilen && <TeilenKnopf onClick={() => setTeilenOffen(true)} />}
             {onZuruecknehmen && kopf?.status === 'frei' && (
               <KopfKnopf
                 label="Freigabe zurücknehmen"
@@ -147,6 +155,22 @@ export function SitzungAnsicht({
           </section>
           <Bereiche dokument={dokument} aufgaben={aufgaben} naechste={naechste} />
         </FestePunkteRahmen>
+      )}
+      {teilenOffen && teilen && dokument && (
+        <ProtokollTeilen
+          sitzung={sitzung}
+          gruppe={gruppe}
+          gruppeId={gruppeId}
+          kopf={kopf}
+          dokument={dokument}
+          aufgaben={aufgaben}
+          protokolle={protokolle}
+          naechste={teilen.naechste}
+          zeitzone={zeitzone}
+          gemeinde={teilen.gemeinde}
+          ich={teilen.ich}
+          onClose={() => setTeilenOffen(false)}
+        />
       )}
     </div>
   );

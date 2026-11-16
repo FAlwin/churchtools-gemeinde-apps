@@ -159,6 +159,7 @@ export function App() {
           gruppen={start.gruppen}
           ich={{ person: start.id, name: start.vorname }}
           vollerName={`${start.vorname} ${start.nachname}`.trim()}
+          gemeinde={start.gemeinde}
           schreibbar={start.schreibbar}
           auswahl={auswahl}
         />

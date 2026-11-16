@@ -61,6 +61,12 @@ const GRUEN_HELL: Farbe = [240, 253, 244];
 const BLAU: Farbe = [21, 93, 252];
 const BLAU_HELL: Farbe = [239, 246, 255];
 const KASTEN: Farbe = [246, 248, 250];
+/** Banner und Wasserzeichen im Entwurf (Entwurf S6 v1: #c2410c). */
+const ENTWURF: Farbe = [194, 65, 12];
+const BANNER_PT = 9;
+const WASSERZEICHEN_PT = 96;
+const WASSERZEICHEN_DECKKRAFT = 0.08;
+const WASSERZEICHEN_WINKEL = 30;
 
 /** Eine Zeile, wie sie fließt: ihre Wörter, wo sie beginnt, und was davor steht. */
 interface FlussZeile {
@@ -99,8 +105,11 @@ class ProtokollZeichner extends PdfSatz {
   }
 
   alles() {
-    this.fliessen(this.absatzZeilen(this.b.vermerk, RAND, this.innen, GROSS, 0.6));
-    this.y += 3;
+    if (this.b.banner) this.banner(this.b.banner);
+    if (this.b.vermerk.length) {
+      this.fliessen(this.absatzZeilen(this.b.vermerk, RAND, this.innen, GROSS, 0.6));
+      this.y += 3;
+    }
     if (!this.b.teile.length)
       this.fliessen(
         this.absatzZeilen([[{ text: LEER_TEXT, stil: 'grau' }]], RAND, this.innen, GROSS),
@@ -108,6 +117,48 @@ class ProtokollZeichner extends PdfSatz {
     for (const t of this.b.teile) this.teil(t);
     this.uebersicht();
     this.kopfUndFuss(this.b);
+    if (this.b.entwurf) this.wasserzeichen();
+  }
+
+  // ── Entwurf (S6-3b) ────────────────────────────────────────────────────────
+
+  /** „ENTWURF – NOCH NICHT FREIGEGEBEN“ im gerahmten Kasten oben auf Seite 1. */
+  private banner(text: string) {
+    const polster = 1.8;
+    const w = this.textBreite(text, 'fett', BANNER_PT) + 2 * polster * 1.6;
+    const h = zeilenHoehe(BANNER_PT) + 2 * polster;
+    this.d.setDrawColor(...ENTWURF);
+    this.d.setLineWidth(0.35);
+    this.d.rect(RAND, this.y, w, h, 'S');
+    this.stil('fett', BANNER_PT);
+    this.d.setTextColor(...ENTWURF);
+    this.d.text(text, RAND + polster * 1.6, this.y + polster + BANNER_PT * PT * 0.95);
+    this.d.setTextColor(0);
+    this.y += h + 3;
+  }
+
+  /** „ENTWURF“ schräg und blass über jeder Seite – zuletzt, wenn alle Seiten stehen. */
+  private wasserzeichen() {
+    const text = 'ENTWURF';
+    const w = this.textBreite(text, 'fett', WASSERZEICHEN_PT);
+    const hoch = WASSERZEICHEN_PT * PT * 0.7;
+    const a = (WASSERZEICHEN_WINKEL * Math.PI) / 180;
+    // Text läuft schräg nach oben; der Startpunkt liegt so, dass die Mitte des Worts in der Seitenmitte sitzt.
+    const x = this.breite / 2 - (w / 2) * Math.cos(a) + (hoch / 2) * Math.sin(a);
+    const y = this.hoehe / 2 + (w / 2) * Math.sin(a) + (hoch / 2) * Math.cos(a);
+    // `doc.GState` ist ein Konstruktor (jsPDF-Doku: `new doc.GState({ opacity })`), die Typen führen ihn als Methode.
+    const G = (this.d as unknown as { GState: new (p: { opacity: number }) => unknown }).GState;
+    const blass = new G({ opacity: WASSERZEICHEN_DECKKRAFT });
+    const voll = new G({ opacity: 1 });
+    for (let s = 1; s <= this.d.getNumberOfPages(); s++) {
+      this.d.setPage(s);
+      this.d.setGState(blass);
+      this.stil('fett', WASSERZEICHEN_PT);
+      this.d.setTextColor(...ENTWURF);
+      this.d.text(text, x, y, { angle: WASSERZEICHEN_WINKEL });
+      this.d.setGState(voll);
+    }
+    this.d.setTextColor(0);
   }
 
   // ── Fluss ──────────────────────────────────────────────────────────────────

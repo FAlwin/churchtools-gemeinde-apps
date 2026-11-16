@@ -6,7 +6,7 @@
  *
  * Alles kommt aus denselben Regeln wie die Seite – nichts wird ein zweites Mal gerechnet:
  * - Nummern 4. / 4.1 und Übersicht aus `ableiten` (wie Lese-Ansicht und Bereiche);
- * - Wer bei einem To-Do: `zustaendigeNamen`; „Offene To-Dos von früher“: `offeneVonFrueher`; „Früheres Protokoll“ wie
+ * - Wer bei einem To-Do: `zustaendigeNamen`, wen man nicht kennt gezählt wie in der To-Do-Liste (`weitereZustaendige`); „Offene To-Dos von früher“: `offeneVonFrueher`; „Früheres Protokoll“ wie
  *   `FesterPunkt`; Anwesenheit: `kurzform`; Tabellen: `tabellenZeilen`; Links nur über `sichererLink`.
  * - To-Dos mit Wer und Bis, **ohne Status** (Alwin 09.11.2026); bei „Offene To-Dos von früher“ stehen die seit der letzten
  *   Sitzung erledigten ausgeschrieben darunter – das PDF lässt sich nicht aufklappen (Alwin 12.11.2026).
@@ -17,7 +17,14 @@ import { sichererLink } from '../ct/sichereAdresse';
 import type { Absatz, Lauf, Rgb } from '../ct/terminBlatt';
 import { tagAusIso, wannLang } from '../ct/zeit';
 import { gaesteAus, kurzform, type TreffenStand } from './anwesenheit';
-import { istUeberfaellig, vorabLesen, zustaendigeNamen, type Aufgabe } from './aufgaben';
+import {
+  istUeberfaellig,
+  nameImVerlauf,
+  vorabLesen,
+  weitereZustaendige,
+  zustaendigeNamen,
+  type Aufgabe,
+} from './aufgaben';
 import {
   ableiten,
   BLOCK,
@@ -131,10 +138,14 @@ export interface ProtokollBlatt {
   gemeinde: string | null;
   app: string;
   stand: string;
-  /** Noch nicht freigegeben. */
+  /** Noch nicht freigegeben – dann Banner und Wasserzeichen (S6-3b). */
   entwurf: boolean;
-  /** Oben auf Seite 1: „Freigegeben am … von …“ bzw. „Entwurf – noch nicht freigegeben“ (+ Zurücknahme). */
+  /** Der Kasten oben auf Seite 1 im Entwurf: „ENTWURF – NOCH NICHT FREIGEGEBEN“; `null` bei freigegebenen. */
+  banner: string | null;
+  /** Oben auf Seite 1: „Freigegeben am … von …“ bzw. im Entwurf die Zurücknahme (sonst leer). */
   vermerk: Absatz[];
+  /** „Protokoll Leitungsteam 2026-11-11“, im Entwurf mit „ ENTWURF“ – ohne Endung (Entwurf S6 v1). */
+  dateiname: string;
   /** Das Protokoll – leer, wenn noch nichts drinsteht. */
   teile: BlattTeil[];
   uebersicht: Uebersicht;
@@ -208,13 +219,28 @@ const fett = (text: string): Lauf => ({ text, stil: 'fett' });
 // ── To-Dos ───────────────────────────────────────────────────────────────────
 
 /**
+ * Wer zuständig ist, als Namen – wie `zustaendigeNamen`, nur dass niemand verschwindet: Wen man nicht kennt (Mitgliederliste
+ * verborgen oder nicht geladen, kein Name im Verlauf), zählt `weitereZustaendige` („eine weitere Person“) wie die To-Do-Liste.
+ * Sonst stünde auf dem Papier „noch niemand“, obwohl jemand zuständig ist.
+ */
+function werNamen(
+  s: Pick<Aufgabe, 'wer' | 'extern'> & { verlauf?: Aufgabe['verlauf'] },
+  q: Pick<ProtokollQuelle, 'name'>,
+): string[] {
+  const name = q.name ?? (() => null);
+  const verlauf = s.verlauf ?? [];
+  const fremd = s.wer.filter((p) => !name(p) && !nameImVerlauf({ verlauf }, p));
+  return [...zustaendigeNamen(s, name), ...weitereZustaendige({ verlauf: [] }, fremd)];
+}
+
+/**
  * **„– Maria Dück, bis 06.12.2026“** – Wer und Bis eines To-Dos im Protokoll, ohne Status (Entwurf: „– noch niemand“).
  * Gibt es das To-Do noch nicht (nicht gespeichert), gilt die Wahl im Block (`vorab`).
  */
 function werBis(e: Pick<AufgabenEintrag, 'aufgabe' | 'vorab'>, q: ProtokollQuelle): Lauf {
   const a = e.aufgabe ? q.aufgaben.find((x) => x.id === e.aufgabe) : undefined;
   const sicht = a ?? e.vorab;
-  const wer = sicht ? zustaendigeNamen(sicht, q.name) : [];
+  const wer = sicht ? werNamen(sicht, q) : [];
   const teile = [wer.length ? wer.join(', ') : 'noch niemand'];
   if (sicht?.bis) teile.push(`bis ${tagPunkt(sicht.bis)}`);
   return grau(` – ${teile.join(', ')}`);
@@ -225,7 +251,7 @@ function werBis(e: Pick<AufgabenEintrag, 'aufgabe' | 'vorab'>, q: ProtokollQuell
  * To-Do durchgestrichen – festgehaltene Listen zeigen den heutigen Stand).
  */
 function fruehereZeile(a: Aufgabe, q: ProtokollQuelle): Absatz {
-  const wer = zustaendigeNamen(a, q.name);
+  const wer = werNamen(a, q);
   const text: Lauf =
     a.status === 'erledigt'
       ? { text: a.text, stil: 'grau', durchgestrichen: true }
@@ -474,23 +500,30 @@ function vermerkAus(q: ProtokollQuelle): { entwurf: boolean; vermerk: Absatz[] }
   }
   return {
     entwurf: true,
-    vermerk: [
-      [{ text: 'Entwurf – noch nicht freigegeben', stil: 'rot' }],
-      ...(v.zurueck ? [[grau(zurueckText(v.zurueck, tag))]] : []),
-    ],
+    vermerk: v.zurueck ? [[grau(zurueckText(v.zurueck, tag))]] : [],
   };
 }
 
 export function protokollBlatt(q: ProtokollQuelle): ProtokollBlatt {
   const a = ableiten(q.dokument);
   const k: Kontext = { q, punkte: new Map(a.punkte.map((p) => [p.blockId, p])) };
+  const vermerk = vermerkAus(q);
   return {
     titel: q.titel.trim() || 'Sitzung',
     untertitel: `${q.gruppe} · ${wannLang(q.beginn, q.zeitzone)}`,
     gemeinde: q.gemeinde,
     app: 'Protokolle',
     stand: q.stand,
-    ...vermerkAus(q),
+    ...vermerk,
+    banner: vermerk.entwurf ? 'ENTWURF – NOCH NICHT FREIGEGEBEN' : null,
+    dateiname: [
+      'Protokoll',
+      q.gruppe.trim(),
+      tagAusIso(q.beginn, q.zeitzone),
+      vermerk.entwurf ? 'ENTWURF' : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
     teile: teileAus(q.dokument, 0, k),
     uebersicht: uebersichtAus(a, q),
   };

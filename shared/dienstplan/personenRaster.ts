@@ -13,8 +13,9 @@
  *
  * **Zeile je Person UND Dienst** (Alwin, 06.11.2026): Wer in zwei Diensten steht (Gitarre und Gesang), steht in beiden
  * Blöcken – unter dem Namen „auch Gesang“, in der Zelle „+ Gesang“, wenn am selben Tag noch ein anderer Dienst dazukommt.
- * Das gilt auch für Dienste aus **ausgeblendeten** Gruppen („+ Ton (Technik)“, blass) – dafür zählen die Einteilungen
- * aller geladenen Dienste, nicht nur der gezeigten.
+ * Das gilt auch für **ausgeblendete** Dienste: aus einer ausgeblendeten Gruppe „+ Ton (Technik)“, ein einzeln
+ * ausgeblendeter Dienst einer gezeigten Gruppe „+ Bild“ (beide blass) – dafür zählen die Einteilungen aller geladenen
+ * Dienste, nicht nur der gezeigten.
  */
 import { decktTermin } from '../absences/index';
 import type { Dienst } from '../ct/dienste';
@@ -39,7 +40,11 @@ export type EntwurfSuche = (
 
 export type ZellenZustand = 'zugesagt' | 'angefragt' | 'entwurf';
 
-/** Ein weiterer Dienst am selben Tag („+ Gesang“). `gruppe` steht nur bei `fremd` (Dienst aus einer ausgeblendeten Gruppe). */
+/**
+ * Ein weiterer Dienst am selben Tag („+ Gesang“). `fremd`: der Dienst ist ausgeblendet (seine Gruppe oder er selbst);
+ * `gruppe` steht nur, wenn die ganze Gruppe ausgeblendet ist („+ Ton (Technik)“ – ein einzeln ausgeblendeter Dienst einer
+ * gezeigten Gruppe: „+ Bild“).
+ */
 export interface WeitererDienst {
   dienst: string;
   fremd: boolean;
@@ -138,7 +143,7 @@ export function personenRaster(o: {
   plan: Plan;
   /** Indizes der gezeigten Spalten in `plan.spalten`. */
   spalten: number[];
-  /** Die gezeigten Gruppen (Gruppenfilter), in der Reihenfolge der Matrix. */
+  /** Die gezeigten Gruppen mit den gezeigten Diensten (`gezeigteGruppen`, Gruppen- und Dienstfilter), in der Reihenfolge der Matrix. */
   gruppen: PlanGruppe[];
   daten: PersonenDaten;
   entwurf?: EntwurfSuche;
@@ -183,6 +188,9 @@ export function personenRaster(o: {
   };
 
   const diensteZeilen = rasterDienste(plan, spalten, gruppen);
+  // Ausgeblendet = nicht in den gezeigten Gruppen (`gezeigteGruppen`) – für Gruppen- und Dienstfilter dieselbe Regel.
+  const gezeigteDienste = new Set(gruppen.flatMap((g) => g.zeilen.map((z) => z.dienst.id)));
+  const gezeigteGruppen = new Set(gruppen.map((g) => g.gruppe?.id ?? null));
 
   /** Die Mitglieder (aktiv) der CT-Gruppen eines Dienstes, Personen zusammengeführt. */
   const mitgliederDes = (d: Dienst) => {
@@ -256,8 +264,15 @@ export function personenRaster(o: {
           const weitere: WeitererDienst[] = (eigene?.[pos] ?? [])
             .filter((x) => x.dienst.id !== dienst.id)
             .map((x) => {
-              const fremd = !gruppen.includes(x.gruppe);
-              return { dienst: x.dienst.name, fremd, gruppe: fremd ? gruppenName(x.gruppe) : null };
+              const fremd = !gezeigteDienste.has(x.dienst.id);
+              // Der Gruppenname nur, wenn die ganze Gruppe fehlt – ein einzeln ausgeblendeter Dienst einer gezeigten
+              // Gruppe steht ohne („+ Bild“).
+              const gruppeFehlt = !gezeigteGruppen.has(x.gruppe.gruppe?.id ?? null);
+              return {
+                dienst: x.dienst.name,
+                fremd,
+                gruppe: fremd && gruppeFehlt ? gruppenName(x.gruppe) : null,
+              };
             });
           const abwesend = abwesendAm(personId, plan.spalten[i]);
           return { zustand, weitere, abwesend, warnung: abwesend !== null && zustand !== null };

@@ -5,6 +5,7 @@ import { entwurfVeraltet, ortSchluessel, type Entwurf, type EntwurfZiel } from '
 import { planAus, terminStand, type Plan, type PlanGruppe } from './plan';
 import { abwesenheitenAus, type GruppenStand, type PersonenDaten } from './personenDaten';
 import { offenText, personenRaster, type EntwurfSuche } from './personenRaster';
+import { gezeigteGruppen } from './planFilter';
 import { termineAus, type RohTermin } from './termine';
 
 /**
@@ -122,6 +123,10 @@ const DATEN: PersonenDaten = new Map<number, GruppenStand>([
   [47, da([CLARA])],
   [49, da([CLARA, ANNA])], // Clara steht in beiden Café-Gruppen
 ]);
+
+/** Freie Plätze eines Termins über Gruppen – aus `terminStand`, der Zahl der Matrix (abgesagte Termine zählen nicht). */
+const freiUeber = (gruppen: PlanGruppe[], spalte: number) =>
+  PLAN.spalten[spalte].abgesagt ? 0 : (terminStand(gruppen, spalte)?.frei ?? 0);
 
 const block = (r: ReturnType<typeof personenRaster>, dienst: number) =>
   r.blocks.find((b) => b.dienst.id === dienst)!;
@@ -288,6 +293,57 @@ describe('personenRaster – zweiter Dienst am Tag', () => {
     expect(zeile(mit, GESANG, 8).zellen[0].weitere).toEqual([
       { dienst: 'Ton', fremd: false, gruppe: null },
     ]);
+  });
+});
+
+describe('personenRaster – ein einzeln ausgeblendeter Dienst (Wunsch 10)', () => {
+  /** Gesang (Musik) ausblenden – Gitarre derselben Gruppe bleibt. Die Gruppen kommen aus `gezeigteGruppen`, wie in „Planen“. */
+  const ohneGesang = gezeigteGruppen(PLAN, { gruppen: [], dienste: [GESANG] });
+  const r = personenRaster({
+    plan: PLAN,
+    spalten: ALLE_SPALTEN,
+    gruppen: ohneGesang,
+    daten: DATEN,
+  });
+
+  it('kein Block für den Dienst, die Gruppe bleibt', () => {
+    expect(r.blocks.map((b) => b.dienst.id)).not.toContain(GESANG);
+    expect(r.blocks.map((b) => b.dienst.id)).toContain(GITARRE);
+  });
+
+  it('am selben Tag: „+ Gesang“, blass – ohne Gruppenzusatz, weil die Gruppe gezeigt wird', () => {
+    // Daniel steht am ersten Termin in Gitarre UND Gesang.
+    expect(zeile(r, GITARRE, 12).zellen[0].weitere).toEqual([
+      { dienst: 'Gesang', fremd: true, gruppe: null },
+    ]);
+  });
+
+  it('ist die ganze Gruppe aus, steht der Gruppenzusatz wie bisher', () => {
+    const ohneTechnik = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: gezeigteGruppen(PLAN, { gruppen: ['3'], dienste: [] }),
+      daten: DATEN,
+    });
+    expect(zeile(ohneTechnik, GESANG, 8).zellen[0].weitere).toEqual([
+      { dienst: 'Ton', fremd: true, gruppe: 'Technik' },
+    ]);
+  });
+
+  it('„Noch offen“ und Termin-Stand zählen ohne den Dienst – dieselben Plätze', () => {
+    const mit = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(r.offen.every((o) => o.dienste.every((d) => d.dienst !== 'Gesang'))).toBe(true);
+    ALLE_SPALTEN.forEach((i, pos) => {
+      const summe = r.offen[pos].dienste.reduce((n, d) => n + d.anzahl, 0);
+      expect(summe).toBe(freiUeber(ohneGesang, i));
+    });
+    // Gegenprobe: Mit allen Gruppen stehen weiter dieselben Dienste da wie vorher.
+    expect(mit.blocks.map((b) => b.dienst.id)).toContain(GESANG);
   });
 });
 

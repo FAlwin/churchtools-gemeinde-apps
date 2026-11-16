@@ -32,6 +32,8 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
         breite: 'xl',
         unteransicht: 'personen',
         ausgeblendeteGruppen: [3, 'ohne'],
+        // Dienste nur als Zahlen (Wunsch 10).
+        ausgeblendeteDienste: [7, '8', 7, null],
         // Kalender nur als ganze Zahlen über 0, ohne Doppelte (Wunsch 6).
         ausgeblendeteKalender: [12, '2', 12, 0, 2.5, -1],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
@@ -47,6 +49,7 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       // Der alte Wert `'personen'` (bis 16.11.2026 „Wer wie oft?“) wird zu `werWieOft`.
       unteransicht: 'werWieOft',
       ausgeblendeteGruppen: ['ohne'],
+      ausgeblendeteDienste: [7],
       ausgeblendeteArten: [],
       ausgeblendeteKalender: [12],
       zeitraum: { art: 'abHeute' },

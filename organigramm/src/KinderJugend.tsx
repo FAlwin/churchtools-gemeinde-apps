@@ -2,18 +2,23 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Segment } from '@ui/bedienung/Segment';
 import { PersonBild } from '@ui/bedienung/PersonBild';
+import { Schalter } from '@ui/bedienung/Schalter';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
+import { ApiError } from '@ui/ct/fehler';
 import { tagKurz, tagPunkt } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Stufe, Wechseljahr } from '@shared/organigramm/gruppenwechsel';
 import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
 import {
   aktuellesWechseljahr,
+  vorigerWechseltag,
+  ausnahmeStand,
   gruppenSicht,
   phaseAm,
   pflegeAus,
+  type AusnahmeStand,
   type GruppenSicht,
   type KindZeile,
   type KjZugang,
@@ -21,7 +26,16 @@ import {
   type Phase,
 } from '@shared/organigramm/gruppenwechselSicht';
 import { initialenAus, istLeitung } from '@shared/organigramm/mitglieder';
+import {
+  ausnahmeAufheben,
+  ausnahmeSetzen,
+  ausnahmeZurueck,
+  type Mitgliedschaft,
+} from '@shared/organigramm/mitgliedschaft';
+import { mitgliederRechteOderNichts, type GruppenRechte } from '@shared/organigramm/rechte';
+import { ausnahmeFehlerText, keinSchalterText } from './ausnahmeTexte';
 import { ladeFerien, ladeKjDaten, type FerienStand, type KjLadeStand } from './ladeKinderJugend';
+import { ladeTeilnehmerRolle, mitgliedZugriff } from './mitgliedschaft';
 import type { Start } from './start';
 import styles from './KinderJugend.module.scss';
 
@@ -41,9 +55,9 @@ const wechseltagText = (tag: string) => `${tagKurz(tag).split(',')[0]}, ${tagPun
 const kurz = (name: string) => name.split(' ')[0];
 
 /**
- * **Der Reiter „Kinder & Jugend“ – nur lesen** (Bauplan O9-2, Entwurf v3): Leitungen sehen ihre Gruppe, Bereichsleitung
- * und Admins eine Übersicht über alle Stufen; dazu „Daten pflegen“. Ein Kind öffnet ein Fenster, das nur zeigt –
- * die Ausnahme setzen kommt mit O9-3.
+ * **Der Reiter „Kinder & Jugend“** (Bauplan O9-2/O9-3, Entwurf v3): Leitungen sehen ihre Gruppe, Bereichsleitung und
+ * Admins eine Übersicht über alle Stufen; dazu „Daten pflegen“. Ein Kind öffnet ein Fenster; darin setzt man die
+ * **Ausnahme** („Bleibt noch ein Jahr“) – wenn das Recht an der Wechsel-Gruppe da ist (`ausnahmeStand`).
  */
 export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props) {
   const heute = useMemo(() => heuteImKalender(), []);
@@ -54,7 +68,9 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
   const [stufeWahl, setStufeWahl] = useState<number | null>(
     zugang.art === 'leitung' ? zugang.stufen[0] : null,
   );
-  const [offenesKind, setOffenesKind] = useState<{ kind: KindZeile; stufe: GruppenSicht } | null>(
+  // Nur WER offen ist – das Kind selbst kommt bei jedem Zeichnen frisch aus den Daten: Nach dem Setzen einer Ausnahme
+  // lädt der Reiter neu, und das Fenster zeigt den neuen Stand.
+  const [offenesKind, setOffenesKind] = useState<{ personId: number; stufeId: number } | null>(
     null,
   );
 
@@ -70,7 +86,25 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
   }, [einrichtung, heute, start.rollen, onAbgemeldet]);
   useEffect(laden, [laden]);
 
+  /**
+   * Nach dem Schreiben: die Daten des Reiters neu holen, **ohne** „wird geladen“ dazwischen – das Fenster bleibt offen
+   * (mit „Rückgängig“). `false`, wenn das nicht ging; dann bleibt der alte Stand stehen.
+   */
+  const neuLesen = useCallback(async (): Promise<boolean> => {
+    try {
+      const neu = await ladeKjDaten(einrichtung, (rolleId) => istLeitung(start.rollen, rolleId));
+      if (neu.art === 'fehler') return false;
+      setDaten(neu);
+      return true;
+    } catch (e) {
+      onAbgemeldet(e);
+      return false;
+    }
+  }, [einrichtung, start.rollen, onAbgemeldet]);
+
   const jahr = ferien.art === 'da' ? aktuellesWechseljahr(ferien.jahre, heute) : null;
+  // Grenze für „Ausnahme vom letzten Jahr“ – der Wechseltag des Vorjahres (der Ferienkalender lädt ab dem Vorjahr).
+  const voriger = ferien.art === 'da' && jahr ? vorigerWechseltag(ferien.jahre, jahr) : null;
   const sichten = useMemo(() => {
     if (!jahr || daten.art !== 'da') return [];
     const stufen =
@@ -79,9 +113,28 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
         : zugang.stufen;
     const neu = zugang.art === 'bereich' ? 'immer' : 'abAnkuendigung';
     return stufen.flatMap(
-      (id) => gruppenSicht(einrichtung, id, daten.daten, jahr, heute, neu) ?? [],
+      (id) =>
+        gruppenSicht(einrichtung, id, daten.daten, jahr, heute, neu, {
+          vorigerWechseltag: voriger,
+        }) ?? [],
     );
-  }, [jahr, daten, zugang, einrichtung, heute]);
+  }, [jahr, voriger, daten, zugang, einrichtung, heute]);
+
+  // Was die eigene Rolle an den Wechsel-Gruppen darf – global (Admin, Bereichsleitung) oder über die Rolle dort.
+  // Wo es sich nicht sagen lässt, fehlt die Gruppe (dann: „nicht lesbar“ statt „fehlt dir das Recht“).
+  const rechte = useMemo(() => {
+    const m = new Map<number, GruppenRechte>();
+    if (daten.art !== 'da') return m;
+    for (const w of einrichtung.wechselGruppen) {
+      const typId = start.gruppen.find((x) => x.id === w.gruppeId)?.typId ?? null;
+      const r = mitgliederRechteOderNichts(start.rechte, daten.rechte.get(w.gruppeId) ?? null, {
+        id: w.gruppeId,
+        typId,
+      });
+      if (r) m.set(w.gruppeId, r);
+    }
+    return m;
+  }, [daten, einrichtung, start.gruppen, start.rechte]);
 
   if (ferien.art === 'laedt' || daten.art === 'laedt')
     return <CenterMessage loading text="Kinder und Wechseltage werden geladen …" />;
@@ -105,7 +158,12 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
   const phase = phaseAm(jahr, heute);
   const bereich = zugang.art === 'bereich';
   const offeneSicht = sichten.find((s) => s.stufe.gruppeId === stufeWahl) ?? null;
-  const kindOeffnen = (stufe: GruppenSicht) => (kind: KindZeile) => setOffenesKind({ kind, stufe });
+  const kindOeffnen = (stufe: GruppenSicht) => (kind: KindZeile) =>
+    setOffenesKind({ personId: kind.personId, stufeId: stufe.stufe.gruppeId });
+  const offen = offenesKind
+    ? sichten.find((s) => s.stufe.gruppeId === offenesKind.stufeId)
+    : undefined;
+  const offenKind = offen?.kinder.find((k) => k.personId === offenesKind?.personId);
 
   return (
     <div className={styles.seite}>
@@ -145,13 +203,29 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           <Uebersicht sichten={sichten} jahr={jahr} phase={phase} onStufe={setStufeWahl} />
         ) : null)}
       {unter === 'daten' && (
-        <DatenPflegen sichten={sichten} bereich={bereich} jahr={jahr} onKind={setOffenesKind} />
-      )}
-      {offenesKind && (
-        <KindFenster
-          kind={offenesKind.kind}
-          sicht={offenesKind.stufe}
+        <DatenPflegen
+          sichten={sichten}
+          bereich={bereich}
           jahr={jahr}
+          onKind={({ kind, stufe }) => kindOeffnen(stufe)(kind)}
+        />
+      )}
+      {offen && offenKind && (
+        <KindFenster
+          kind={offenKind}
+          sicht={offen}
+          jahr={jahr}
+          stand={ausnahmeStand(
+            einrichtung,
+            offen.stufe.gruppeId,
+            offenKind,
+            daten.daten,
+            jahr,
+            heute,
+            rechte,
+          )}
+          onGeaendert={neuLesen}
+          onAbgemeldet={onAbgemeldet}
           onSchliessen={() => setOffenesKind(null)}
         />
       )}
@@ -161,9 +235,9 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
 
 // ── Bausteine ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Hinweis({ children }: { children: ReactNode }) {
+function Hinweis({ children, gelb }: { children: ReactNode; gelb?: boolean }) {
   return (
-    <div className={styles.hinweis}>
+    <div className={gelb ? `${styles.hinweis} ${styles.hinweisGelb}` : styles.hinweis}>
       <Icon name="info" size={16} />
       <span>{children}</span>
     </div>
@@ -195,12 +269,17 @@ function Jahresband({ jahr, phase }: { jahr: Wechseljahr; phase: Phase }) {
 }
 
 function Chips({ kind, neuVon }: { kind?: KindZeile; neuVon?: string }) {
-  const chips: { text: string; art: 'blau' | 'gruen' | 'rot' | 'grau' }[] = [];
+  const chips: { text: string; art: 'blau' | 'gruen' | 'rot' | 'grau' | 'gelb' }[] = [];
   if (neuVon) chips.push({ text: `kommt aus ${kurz(neuVon)}`, art: 'gruen' });
   if (kind) {
     const w = kind.wechsel;
     if (w.art === 'wechselt') chips.push({ text: `wechselt → ${kurz(w.nach.name)}`, art: 'blau' });
-    if (w.art === 'ausnahme') chips.push({ text: 'bleibt noch ein Jahr', art: 'grau' });
+    if (w.art === 'ausnahme')
+      chips.push(
+        w.vomVorjahr
+          ? { text: 'Ausnahme vom letzten Jahr', art: 'gelb' }
+          : { text: 'bleibt noch ein Jahr', art: 'grau' },
+      );
     if (w.art === 'ohneGeburtstag') chips.push({ text: 'Geburtstag fehlt', art: 'rot' });
     if (w.art === 'unbekannt') chips.push({ text: 'nicht lesbar', art: 'grau' });
     if (kind.wird18) chips.push({ text: 'wird 18', art: 'blau' });
@@ -339,16 +418,27 @@ function GruppenSeite({
       ) : phase === 'ruhig' ? (
         <Hinweis>
           Noch nicht angekündigt. Unten steht, wer <b>nach heutigem Stand</b> am {wt} wechselt.
+          {bereich && ' Ausnahmen kannst du schon jetzt eintragen.'}
         </Hinweis>
       ) : phase === 'angekuendigt' ? (
         <Hinweis>
-          <b>Der Wechsel ist angekündigt.</b> Prüfe die Liste bis zum {wt}. Danach geht alles von
-          selbst.
+          <b>Der Wechsel ist angekündigt.</b> Prüfe die Liste bis zum {wt}. Soll ein Kind noch
+          bleiben? Tippe es an. Danach geht alles von selbst.
         </Hinweis>
       ) : (
         <Hinweis>
           <b>Der Wechsel läuft.</b> Die Kinder kommen bis zum {tagPunkt(jahr.aufnahmeBis)} von
           selbst in die neue Gruppe.
+        </Hinweis>
+      )}
+      {s.ausVorjahr.length > 0 && (
+        <Hinweis gelb>
+          <span>
+            <b>Ausnahme vom letzten Jahr:</b> {s.ausVorjahr.map((k) => k.name).join(', ')} bleibt
+            weiter in {kurz(s.stufe.name)}. Soll{' '}
+            {s.ausVorjahr.length > 1 ? 'jemand' : kurz(s.ausVorjahr[0].name)} dieses Jahr wechseln?
+            Antippen und die Ausnahme aufheben.
+          </span>
         </Hinweis>
       )}
       {s.naechste && !s.ausnahmenBekannt && (
@@ -503,30 +593,102 @@ function DatenPflegen({
   );
 }
 
-// ── Fenster: ein Kind (nur lesen) ──────────────────────────────────────────────────────────────────────────────
+// ── Fenster: ein Kind ──────────────────────────────────────────────────────────────────────────────────────────
+
+/** „Rückgängig“ im Fenster – nach dem Schreiben bereit, nie in einer Leiste dahinter. */
+interface Zurueck {
+  text: string;
+  tun: () => Promise<void>;
+}
 
 function KindFenster({
   kind,
   sicht,
   jahr,
+  stand,
+  onGeaendert,
+  onAbgemeldet,
   onSchliessen,
 }: {
   kind: KindZeile;
   sicht: GruppenSicht;
   jahr: Wechseljahr;
+  stand: AusnahmeStand;
+  /** Die Daten des Reiters neu laden – `false`, wenn das nicht ging. */
+  onGeaendert: () => Promise<boolean>;
+  onAbgemeldet: (e: unknown) => void;
   onSchliessen: () => void;
 }) {
+  const [arbeitet, setArbeitet] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [zurueck, setZurueck] = useState<Zurueck | null>(null);
   const w = kind.wechsel;
+  const vorname = kurz(kind.name);
+  const wt = wechseltagText(jahr.wechseltag);
   const wechsel =
     w.art === 'wechselt'
-      ? `${wechseltagText(jahr.wechseltag)} → ${w.nach.name}`
+      ? `${wt} → ${w.nach.name}`
       : w.art === 'ausnahme'
-        ? 'bleibt noch ein Jahr (Ausnahme)'
+        ? w.vomVorjahr
+          ? 'bleibt noch ein Jahr (Ausnahme vom letzten Jahr)'
+          : 'bleibt noch ein Jahr (Ausnahme)'
         : w.art === 'bleibt'
           ? 'nein'
           : 'unbekannt';
+
+  /**
+   * **Schreiben, neu laden, „Rückgängig“ anbieten.** 401 → abgemeldet (für die ganze Seite); jeder andere Fehler bleibt
+   * im Fenster stehen, der Zustand ändert sich nicht, und nichts wird von selbst wiederholt. Neu geladen wird auch nach
+   * einem Fehler: Was ChurchTools jetzt hat, soll da stehen.
+   */
+  const ausfuehren = async (tun: () => Promise<void>, danach: Zurueck | null) => {
+    setArbeitet(true);
+    setFehler(null);
+    setZurueck(null);
+    let geschrieben = false;
+    try {
+      await tun();
+      geschrieben = true;
+      setZurueck(danach);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        onAbgemeldet(e);
+        return;
+      }
+      setFehler(ausnahmeFehlerText(e));
+    }
+    const geladen = await onGeaendert();
+    if (geschrieben && !geladen) {
+      setFehler(
+        'Gespeichert – aber die Liste ließ sich gerade nicht neu laden. Bitte lade den Reiter neu.',
+      );
+    }
+    setArbeitet(false);
+  };
+
+  const schalten = () => {
+    if (stand.art !== 'schalter') return;
+    const gruppeId = stand.gruppeId;
+    let vorher: Mitgliedschaft | null = null;
+    const rueckgaengig = (text: string): Zurueck => ({
+      text,
+      tun: () => ausnahmeZurueck(mitgliedZugriff, gruppeId, kind.personId, vorher),
+    });
+    if (stand.an) {
+      void ausfuehren(async () => {
+        vorher = await ausnahmeAufheben(mitgliedZugriff, gruppeId, kind.personId);
+      }, rueckgaengig('Ausnahme aufgehoben'));
+    } else {
+      void ausfuehren(async () => {
+        vorher = await ausnahmeSetzen(mitgliedZugriff, gruppeId, kind.personId, () =>
+          ladeTeilnehmerRolle(gruppeId),
+        );
+      }, rueckgaengig('Ausnahme eingetragen'));
+    }
+  };
+
   return (
-    <Sheet title={kind.name} onClose={onSchliessen} knoepfe={null}>
+    <Sheet title={kind.name} onClose={onSchliessen} knoepfe={null} beschaeftigt={arbeitet}>
       <dl className={styles.daten}>
         <dt>Gruppe</dt>
         <dd>{sicht.stufe.name}</dd>
@@ -548,15 +710,57 @@ function KindFenster({
           Ohne Geburtstag wechselt das Kind nie von selbst. Bitte in ChurchTools nachtragen.
         </Hinweis>
       )}
-      {w.art === 'ausnahme' && (
-        <Hinweis>
-          Die Ausnahme bleibt, bis jemand sie aufhebt – auch über den Wechseltag hinaus.
-        </Hinweis>
+      {stand.art === 'schalter' && (
+        <button
+          type="button"
+          className={styles.schalterKnopf}
+          aria-pressed={stand.an}
+          disabled={arbeitet}
+          onClick={schalten}
+        >
+          <Schalter an={stand.an} />
+          Bleibt noch ein Jahr in {kurz(sicht.stufe.name)}
+        </button>
       )}
-      {w.art === 'wechselt' && (
-        <Hinweis>
-          {kurz(kind.name)} wechselt am {wechseltagText(jahr.wechseltag)} von selbst.
-        </Hinweis>
+      {fehler && (
+        <p className={styles.fehler} role="alert">
+          {fehler}
+        </p>
+      )}
+      {zurueck ? (
+        <p className={styles.leise}>
+          {zurueck.text} ·{' '}
+          <button
+            type="button"
+            className={styles.rueck}
+            disabled={arbeitet}
+            onClick={() => void ausfuehren(zurueck.tun, null)}
+          >
+            Rückgängig
+          </button>
+        </p>
+      ) : stand.art === 'schalter' ? (
+        <p className={styles.leise}>
+          {w.art === 'ausnahme'
+            ? w.vomVorjahr
+              ? `Diese Ausnahme gilt seit letztem Jahr. Hebst du sie auf, wechselt ${vorname} am ${wt}.`
+              : 'Die Ausnahme bleibt, bis du sie aufhebst – auch über den Wechseltag hinaus.'
+            : `${vorname} wechselt am ${wt} von selbst. Danach lässt sich das nur noch von Hand ändern.`}
+        </p>
+      ) : (
+        <>
+          {stand.art === 'hinweis' && <Hinweis>{keinSchalterText(stand.grund, jahr)}</Hinweis>}
+          {w.art === 'ausnahme' && (
+            <Hinweis>
+              Die Ausnahme bleibt, bis jemand sie aufhebt – auch über den Wechseltag hinaus.
+            </Hinweis>
+          )}
+          {w.art === 'wechselt' && (
+            <Hinweis>
+              {vorname} wechselt am {wt} von selbst.
+            </Hinweis>
+          )}
+        </>
       )}
       <a
         className={styles.oeffnen}

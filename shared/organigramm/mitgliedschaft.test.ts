@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ausnahmeAufheben,
+  ausnahmeSetzen,
+  ausnahmeZurueck,
   aufnehmen,
   aufnehmenZurueck,
   beenden,
@@ -141,5 +144,110 @@ describe('rolleAendern / beenden', () => {
     const b = nachbau({ 66: aktiv(16, '2026-10-23') });
     b.panne.ohneWirkung = true;
     await expect(beendenZurueck(b.z, 210, 66)).rejects.toThrow(/Zurücknehmen des Endes/);
+  });
+});
+
+describe('Ausnahme setzen, aufheben, rückgängig (O9-3)', () => {
+  const rolle = () => Promise.resolve(45);
+  const mit = (status: string, ende: string | null = null): Mitgliedschaft => ({
+    rolleId: 45,
+    status,
+    ende,
+  });
+
+  it('Kind schon in der Gruppe: nur der Status wird „zu löschen“ (PATCH) – Rolle und Rest bleiben', async () => {
+    const n = nachbau({ 66: mit('active') });
+    expect(await ausnahmeSetzen(n.z, 315, 66, rolle)).toEqual(mit('active'));
+    expect(n.m.get(66)).toEqual(mit('to_delete'));
+    expect(n.log).toEqual(['aendern 66 {"groupMemberStatus":"to_delete"}']);
+  });
+
+  it('Kind noch nicht in der Gruppe: gleich als „zu löschen“ mit der Teilnehmer-Rolle aufgenommen – vorher null', async () => {
+    const n = nachbau();
+    expect(await ausnahmeSetzen(n.z, 315, 66, rolle)).toBeNull();
+    expect(n.m.get(66)).toEqual(mit('to_delete'));
+    expect(n.log).toEqual(['anlegen 66 {"groupTypeRoleId":45,"groupMemberStatus":"to_delete"}']);
+  });
+
+  it('die Rolle wird nur geholt, wenn sie gebraucht wird', async () => {
+    let geholt = 0;
+    const holen = () => {
+      geholt++;
+      return Promise.resolve(45);
+    };
+    await ausnahmeSetzen(nachbau({ 66: mit('active') }).z, 315, 66, holen);
+    expect(geholt).toBe(0);
+    await ausnahmeSetzen(nachbau().z, 315, 66, holen);
+    expect(geholt).toBe(1);
+  });
+
+  it('eine beendete Mitgliedschaft wird beim Setzen wieder offen (Ende geleert), sonst wäre es keine Ausnahme', async () => {
+    const n = nachbau({ 66: mit('active', '2025-01-01') });
+    await ausnahmeSetzen(n.z, 315, 66, rolle);
+    expect(n.m.get(66)).toEqual(mit('to_delete'));
+    expect(n.log).toEqual(['aendern 66 {"groupMemberStatus":"to_delete","memberEndDate":null}']);
+  });
+
+  it('gemeldet, aber der Status stimmt nicht → „nicht übernommen“ (Nachlesen prüft den STATUS)', async () => {
+    const n = nachbau({ 66: mit('active') });
+    n.panne.ohneWirkung = true;
+    await expect(ausnahmeSetzen(n.z, 315, 66, rolle)).rejects.toThrow(/die Ausnahme/);
+    const leer = nachbau();
+    leer.panne.ohneWirkung = true;
+    await expect(ausnahmeSetzen(leer.z, 315, 66, rolle)).rejects.toThrow(/die Ausnahme/);
+  });
+
+  it('aufheben: Status wieder „aktiv“, nachgelesen; liefert den Stand davor', async () => {
+    const n = nachbau({ 66: mit('to_delete') });
+    expect(await ausnahmeAufheben(n.z, 315, 66)).toEqual(mit('to_delete'));
+    expect(n.m.get(66)).toEqual(mit('active'));
+    expect(n.log).toEqual(['aendern 66 {"groupMemberStatus":"active"}']);
+    const stumm = nachbau({ 66: mit('to_delete') });
+    stumm.panne.ohneWirkung = true;
+    await expect(ausnahmeAufheben(stumm.z, 315, 66)).rejects.toThrow(/Aufheben der Ausnahme/);
+  });
+
+  it('aufheben bei einem Kind, das nicht (mehr) in der Gruppe ist: nichts zu tun, nichts geschrieben', async () => {
+    const n = nachbau();
+    expect(await ausnahmeAufheben(n.z, 315, 66)).toBeNull();
+    expect(n.log).toEqual([]);
+  });
+
+  it('Rückgängig: war das Kind vorher nicht dabei → austragen (DELETE), sonst alter Status zurück', async () => {
+    const neu = nachbau();
+    const v1 = await ausnahmeSetzen(neu.z, 315, 66, rolle);
+    await ausnahmeZurueck(neu.z, 315, 66, v1);
+    expect(neu.m.has(66)).toBe(false);
+    expect(neu.log.at(-1)).toBe('entfernen 66');
+
+    const alt = nachbau({ 66: mit('active') });
+    const v2 = await ausnahmeSetzen(alt.z, 315, 66, rolle);
+    await ausnahmeZurueck(alt.z, 315, 66, v2);
+    expect(alt.m.get(66)).toEqual(mit('active'));
+
+    const aufgehoben = nachbau({ 66: mit('to_delete') });
+    const v3 = await ausnahmeAufheben(aufgehoben.z, 315, 66);
+    await ausnahmeZurueck(aufgehoben.z, 315, 66, v3);
+    expect(aufgehoben.m.get(66)).toEqual(mit('to_delete'));
+
+    const mitEnde = nachbau({ 66: mit('active', '2025-01-01') });
+    const v4 = await ausnahmeSetzen(mitEnde.z, 315, 66, rolle);
+    await ausnahmeZurueck(mitEnde.z, 315, 66, v4);
+    expect(mitEnde.m.get(66)).toEqual(mit('active', '2025-01-01'));
+  });
+
+  it('Rückgängig nach dem Aufnehmen, wenn das Kind inzwischen weg ist: nichts mehr zu löschen', async () => {
+    const n = nachbau();
+    await ausnahmeZurueck(n.z, 315, 66, null);
+    expect(n.log).toEqual([]);
+  });
+
+  it('Rückgängig, aber nichts passiert → „nicht übernommen“', async () => {
+    const n = nachbau({ 66: mit('to_delete') });
+    n.panne.ohneWirkung = true;
+    await expect(ausnahmeZurueck(n.z, 315, 66, mit('active'))).rejects.toThrow(/alten Stand/);
+    const m = nachbau({ 66: mit('to_delete') });
+    m.panne.ohneWirkung = true;
+    await expect(ausnahmeZurueck(m.z, 315, 66, null)).rejects.toThrow(/Entfernen/);
   });
 });

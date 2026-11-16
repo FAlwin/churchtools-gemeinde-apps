@@ -1,12 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O9-2 (12.11.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O9-3 (16.11.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
 > und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen; Gruppen-Admins stellen ein, was
-> das Organigramm für alle zeigt (O7b-7). Seit O9-2 der Reiter **Kinder & Jugend** (Gruppenwechsel der Kinder, nur lesen). Diese Anleitung wächst mit.
+> das Organigramm für alle zeigt (O7b-7). Seit O9-2 der Reiter **Kinder & Jugend** (Gruppenwechsel der Kinder), seit O9-3 mit **Ausnahme setzen**. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -290,10 +290,10 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 - **Archivieren** setzt den Status „archiviert“ – nichts wird gelöscht, Mitglieder und Historie bleiben (gemessen
   24.10.2026; keine Mail). Archivierte Gruppen zeigt ChurchTools nicht mehr im Baum.
 
-## Kinder & Jugend: Gruppenwechsel (ab O9-2)
+## Kinder & Jugend: Gruppenwechsel (ab O9-2, Ausnahme ab O9-3)
 
-Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Bis O9-2 **nur
-zum Lesen** – Ausnahmen („bleibt noch ein Jahr“) setzt man ab O9-3 hier, bis dahin in ChurchTools.
+Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Ausnahmen
+(„bleibt noch ein Jahr“) setzt man seit O9-3 hier, im Fenster des Kindes (siehe „Ausnahme setzen“ unten).
 
 - **Wer ihn sieht:** Leitungen der Kindergruppen (**Meine Gruppe**), die Leitung der Bereichsgruppe und Admins
   (**Übersicht** mit einer Kachel je Gruppe). Ohne Einrichtung (siehe unten) gibt es den Reiter nicht.
@@ -313,6 +313,28 @@ zum Lesen** – Ausnahmen („bleibt noch ein Jahr“) setzt man ab O9-3 hier, b
 - Kalender → Einzelnen Kalender sehen → Gemeindekalender → **Schulferien NRW**
 
 Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
+
+### Ausnahme setzen (O9-3)
+
+Ein Kind antippen, dann den Schalter **„Bleibt noch ein Jahr in …“**. Eine **Ausnahme** ist der Status „zu löschen“ des
+Kindes in der **Wechsel-Gruppe** – die Regeln in ChurchTools lassen es dann in Ruhe, und die Ausnahme bleibt stehen,
+bis jemand sie aufhebt. Der Schalter speichert sofort und liest nach; **„Rückgängig“** steht im Fenster.
+
+- **Wer ab wann:** Entscheidend ist das **Recht an der Wechsel-Gruppe** in ChurchTools, nicht die Rolle in der App.
+  Ist das Kind dort schon Mitglied (ab der Ankündigung), braucht man das Recht, **den Status zu ändern** – das haben
+  die Leitungen der Wechsel-Gruppe. Ist es noch nicht dort, braucht man das Recht, **Personen aufzunehmen** – das
+  haben Bereichsleitung und Admins; sie tragen eine Ausnahme schon **vor** der Ankündigung ein, das Kind wird dann
+  gleich als „zu löschen“ mit der Teilnehmer-Rolle der Wechsel-Gruppe aufgenommen („Rückgängig“ trägt es wieder
+  aus). Leitungen sehen vor der Ankündigung „Eine Ausnahme kannst du ab dem … eintragen.“
+- **Ab dem Wechseltag** gibt es keinen Schalter mehr: Dann kommt die Ausnahme zu spät, das Kind ist schon in der neuen
+  Gruppe. Den Schalter gibt es nur für Kinder, die in diesem Jahr dran wären.
+- **Ausnahme vom letzten Jahr:** Wurde der Status **vor dem Wechseltag des Vorjahres** gesetzt (Tag in der Zeit der
+  Gemeinde), zeigt der Reiter einen gelben Chip „Ausnahme vom letzten Jahr“, die Gruppenseite einen gelben Hinweis,
+  und das Fenster nennt den Wechseltag, falls man sie aufhebt. Eine Ausnahme, die die Bereichsleitung in diesem Jahr
+  schon vor der Ankündigung einträgt, gehört zu diesem Jahr. Den Wechseltag des Vorjahres liest der Reiter aus dem
+  Ferienkalender (geladen ab 1. Januar des Vorjahres); fehlt er dort, wird nichts gelb.
+- **Fehler:** Es wird nie etwas von selbst wiederholt. Fehlt das Recht, steht ChurchTools' Meldung im Fenster;
+  antwortet ChurchTools nicht, steht „Gerade nicht gespeichert“, und der Stand bleibt wie er war.
 
 ## Was die Erweiterung speichert
 

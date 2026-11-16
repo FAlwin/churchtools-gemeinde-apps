@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { ApiError } from '@ui/ct/fehler';
+import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { baumAus, elternAus, type Knoten, type OrgGruppe } from '@shared/organigramm/gruppen';
 import { knotenAmPfad } from '@shared/organigramm/ansichten';
 import { rollenAus } from '@shared/organigramm/mitglieder';
@@ -18,11 +18,13 @@ import {
 import { ladeEinsaetze } from './ladeEinsaetze';
 import { ladePlan } from './plan';
 import { ladeSichtbarkeit, speichereSichtbarkeit } from './sichtbarkeitSpeicher';
-import { ladeGruppenRechte } from './mitgliedschaft';
+import { ladeGruppenRechte, ladeTeilnehmerRolle } from './mitgliedschaft';
 import { personenSuchen } from '@ui/ct/personen';
 import type { PersonenStufe } from '@shared/organigramm/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { heuteImKalender } from '@shared/ct/zeit';
+import { plusTage, tagPunkt } from '@shared/ct/datum';
+import { KEINE_GRUPPENRECHTE, type GruppenRechte } from '@shared/organigramm/rechte';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
 import { GRUNDWERTE, sommerferienAus, wechseljahre } from '@shared/organigramm/gruppenwechsel';
 import { einrichtungAus, type Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
@@ -50,8 +52,8 @@ const cm = vi.hoisted(() => {
   const m = new Map<number, M>();
   const log: string[] = [];
   const rechte = {
-    wert: { aufnehmen: false, rolleAendern: false, beenden: false } as
-      | { aufnehmen: boolean; rolleAendern: boolean; beenden: boolean }
+    wert: { aufnehmen: false, rolleAendern: false, beenden: false, statusAendern: false } as
+      | { aufnehmen: boolean; rolleAendern: boolean; beenden: boolean; statusAendern: boolean }
       | Error,
   };
   return {
@@ -97,6 +99,7 @@ vi.mock('./mitgliedschaft', () => ({
       ? Promise.reject(cm.rechte.wert)
       : Promise.resolve(cm.rechte.wert),
   ),
+  ladeTeilnehmerRolle: vi.fn(() => Promise.resolve(45)),
 }));
 vi.mock('@ui/ct/personen', () => ({ personenSuchen: vi.fn() }));
 // Ein nachgebautes ChurchTools für die Struktur (O5): Obergruppen je Gruppe und ein Protokoll der Aufrufe.
@@ -338,7 +341,7 @@ beforeEach(() => {
   cm.m.set(4, { rolleId: 17, status: 'active', ende: null });
   cm.m.set(1, { rolleId: 16, status: 'active', ende: null });
   cm.log.length = 0;
-  cm.rechte.wert = { aufnehmen: false, rolleAendern: false, beenden: false };
+  cm.rechte.wert = { aufnehmen: false, rolleAendern: false, beenden: false, statusAendern: false };
   ct.eltern.clear();
   ct.eltern.set(7, [10]);
   ct.eltern.set(12, [7]);
@@ -1210,7 +1213,7 @@ describe('O6: Leitung und Mitglieder', () => {
 
   it('Leitung (Rechte je Gruppe wie gemessen): aufnehmen und Rolle ja, austragen nein', async () => {
     nurLeitung();
-    cm.rechte.wert = { aufnehmen: true, rolleAendern: true, beenden: false };
+    cm.rechte.wert = { aufnehmen: true, rolleAendern: true, beenden: false, statusAendern: false };
     await technikOeffnen();
     expect(await screen.findByRole('button', { name: '＋ Person aufnehmen' })).toBeTruthy();
     expect(knopf('Rolle von Carl Clau')).toBeTruthy();
@@ -1964,7 +1967,7 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
   });
 });
 
-describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
+describe('O9-2: Reiter „Kinder & Jugend“', () => {
   const FISCHE = 50;
   const JUNGSCHAR = 51;
   const WECHSEL = 52;
@@ -1994,6 +1997,7 @@ describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
     name,
     leitung: false,
     status,
+    statusGeaendert: null,
   });
   const DATEN: KjDaten = {
     gruppen: new Map([
@@ -2002,7 +2006,13 @@ describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
         {
           art: 'sichtbar',
           mitglieder: [
-            { personId: 5, name: 'Jana Kiefer', leitung: true, status: 'active' },
+            {
+              personId: 5,
+              name: 'Jana Kiefer',
+              leitung: true,
+              status: 'active',
+              statusGeaendert: null,
+            },
             k(60, 'Lea Birke'),
             k(61, 'Tim Eiche'),
             k(62, 'Finn Hasel'),
@@ -2028,7 +2038,7 @@ describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
     ferienLaden.mockReset();
     ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE });
     kjLaden.mockReset();
-    kjLaden.mockResolvedValue({ art: 'da', daten: DATEN });
+    kjLaden.mockResolvedValue({ art: 'da', daten: DATEN, rechte: new Map() });
   });
 
   it('ohne Einrichtung gibt es den Reiter nicht – auch nicht für Admins', async () => {
@@ -2065,7 +2075,8 @@ describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Tim Eiche/ }));
     const fenster = within(screen.getByRole('dialog', { name: 'Tim Eiche' }));
     expect(fenster.getByText('bleibt noch ein Jahr (Ausnahme)')).toBeTruthy();
-    expect(fenster.queryByRole('checkbox')).toBeNull();
+    // Admin darf an der Wechsel-Gruppe alles – die Ausnahme lässt sich hier aufheben (O9-3).
+    expect(fenster.getByRole('button', { name: 'Bleibt noch ein Jahr in Fische' })).toBeTruthy();
   });
 
   it('Daten pflegen: Admin sieht „Geburtstag fehlt“ und „Wird 18“, Leitung nur „Geburtstag fehlt“', async () => {
@@ -2122,5 +2133,360 @@ describe('O9-2: Reiter „Kinder & Jugend“ (nur lesen)', () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /Erneut versuchen/ }));
     expect(await screen.findByRole('heading', { name: 'Übersicht' })).toBeTruthy();
+  });
+});
+
+describe('O9-3: Ausnahme setzen', () => {
+  const FISCHE = 50;
+  const JUNGSCHAR = 51;
+  const WECHSEL = 52;
+  const BEREICH = 53;
+  const LEA = 60;
+  const TIM = 61;
+  const EINRICHTUNG: Einrichtung = einrichtungAus({
+    einstellung: {
+      ...GRUNDWERTE,
+      stufen: [
+        { gruppeId: FISCHE, name: 'Fische', abAlter: 7 },
+        { gruppeId: JUNGSCHAR, name: 'Jungschar', abAlter: 10 },
+      ],
+    },
+    bereichGruppeId: BEREICH,
+    wechselGruppen: [{ vonGruppeId: FISCHE, nachGruppeId: JUNGSCHAR, gruppeId: WECHSEL }],
+  })!;
+
+  /**
+   * Ferien relativ zu heute – die Phase steht dann fest, egal wann der Test läuft: `ende` = so viele Tage ab heute.
+   * Der Wechseltag ist der erste Montag danach; Ankündigung = 56 Tage davor, Aufnahme bis 14 Tage danach.
+   */
+  const ferien = (endeInTagen: number) => {
+    const ende = plusTage(heuteImKalender(), endeInTagen);
+    const vorjahrEnde = plusTage(ende, -364); // dieselben Ferien ein Jahr früher (Grenze für „vom Vorjahr“)
+    return wechseljahre(
+      sommerferienAus(
+        [
+          { titel: 'Sommerferien NRW', beginn: plusTage(vorjahrEnde, -40), ende: vorjahrEnde },
+          { titel: 'Sommerferien NRW', beginn: plusTage(ende, -40), ende },
+        ],
+        'Sommerferien',
+      ),
+      GRUNDWERTE,
+    );
+  };
+  /** Das laufende Wechseljahr (das Vorjahr steht davor). */
+  const aktuell = () => zustand.jahre[zustand.jahre.length - 1];
+  const RUHIG = 200; // Ankündigung noch weit weg
+  const ANGEKUENDIGT = 14; // Wechseltag in 15–21 Tagen
+  const WECHSELT = -9; // Wechseltag vor 2–8 Tagen, Aufnahme läuft noch
+
+  const LEITUNG_RECHTE: GruppenRechte = {
+    ...KEINE_GRUPPENRECHTE,
+    rolleAendern: true,
+    statusAendern: true,
+  };
+  const zustand: {
+    jahre: ReturnType<typeof ferien>;
+    tim: string | null;
+    rechte: Map<number, GruppenRechte>;
+  } = { jahre: [], tim: null, rechte: new Map() };
+
+  /** Die Wechsel-Gruppe so, wie das nachgebaute ChurchTools (`cm.m`) sie gerade hat. */
+  const daten = (): KjDaten => {
+    const j = aktuell();
+    const kind = (personId: number, name: string, status: 'active' | 'to_delete') => ({
+      personId,
+      name,
+      leitung: false,
+      status,
+      statusGeaendert: personId === TIM ? zustand.tim : null,
+    });
+    const drin = (id: number, name: string) => {
+      const m = cm.m.get(id);
+      return m ? [kind(id, name, m.status as 'active' | 'to_delete')] : [];
+    };
+    return {
+      gruppen: new Map([
+        [
+          FISCHE,
+          {
+            art: 'sichtbar',
+            mitglieder: [
+              {
+                personId: 5,
+                name: 'Jana Kiefer',
+                leitung: true,
+                status: 'active',
+                statusGeaendert: null,
+              },
+              kind(LEA, 'Lea Birke', 'active'),
+              kind(TIM, 'Tim Eiche', 'active'),
+            ],
+          },
+        ],
+        [JUNGSCHAR, { art: 'sichtbar', mitglieder: [] }],
+        [
+          WECHSEL,
+          { art: 'sichtbar', mitglieder: [...drin(LEA, 'Lea Birke'), ...drin(TIM, 'Tim Eiche')] },
+        ],
+      ]),
+      geburtstage: new Map([
+        [LEA, `${j.jahr - 10}-09-30`], // am Stichtag 10 → wechselt
+        [TIM, `${j.jahr - 11}-01-01`],
+      ]),
+    };
+  };
+
+  const original = { aendern: cm.zugriff.aendern, nichtUebernommen: cm.zugriff.nichtUebernommen };
+  beforeEach(() => {
+    zustand.jahre = ferien(RUHIG);
+    zustand.tim = null;
+    zustand.rechte = new Map();
+    einrichtungLaden.mockResolvedValue({
+      ok: true,
+      daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
+    });
+    ferienLaden.mockReset();
+    ferienLaden.mockImplementation(() => Promise.resolve({ art: 'da', jahre: zustand.jahre }));
+    kjLaden.mockReset();
+    kjLaden.mockImplementation(() =>
+      Promise.resolve({ art: 'da', daten: daten(), rechte: zustand.rechte }),
+    );
+    vi.mocked(ladeTeilnehmerRolle).mockReset();
+    vi.mocked(ladeTeilnehmerRolle).mockResolvedValue(45);
+    // Wie in ChurchTools: Das Nachlesen, das nicht stimmt, ist ein `NichtUebernommen` (502 mit eigener Aussage).
+    cm.zugriff.nichtUebernommen = (was) => new NichtUebernommen(was);
+  });
+  afterEach(() => {
+    cleanup();
+    cm.zugriff.aendern = original.aendern;
+    cm.zugriff.nichtUebernommen = original.nichtUebernommen;
+  });
+
+  const leitung = () => start({ rechte: rechte(), geleitet: [FISCHE] });
+  /** Das Fenster eines Kindes öffnen – als Leitung (eine Stufe, gleich die Gruppe) oder als Admin (über die Kachel). */
+  const kindOeffnen = async (name: string, admin = false) => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+    if (admin) fireEvent.click(await screen.findByRole('button', { name: /^Fische/ }));
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(name) }));
+    return within(await screen.findByRole('dialog', { name }));
+  };
+  const schalter = (f: ReturnType<typeof within>) =>
+    f.getByRole('button', { name: 'Bleibt noch ein Jahr in Fische' });
+  const lea = () => cm.m.set(LEA, { rolleId: 45, status: 'active', ende: null });
+  const tim = (geaendert: string | null) => {
+    cm.m.set(TIM, { rolleId: 45, status: 'to_delete', ende: null });
+    zustand.tim = geaendert;
+  };
+
+  it('Leitung nach der Ankündigung: setzt die Ausnahme (nur der Status), liest neu, „Rückgängig“ steht im Fenster', async () => {
+    zustand.jahre = ferien(ANGEKUENDIGT);
+    zustand.rechte = new Map([[WECHSEL, LEITUNG_RECHTE]]);
+    laden.mockResolvedValue(leitung());
+    lea();
+    const f = await kindOeffnen('Lea Birke');
+    expect(schalter(f).getAttribute('aria-pressed')).toBe('false');
+    const ladungen = kjLaden.mock.calls.length;
+
+    fireEvent.click(schalter(f));
+    expect(await f.findByText(/Ausnahme eingetragen/)).toBeTruthy();
+    expect(cm.log).toEqual(['aendern 60 {"groupMemberStatus":"to_delete"}']);
+    expect(cm.m.get(LEA)?.status).toBe('to_delete');
+    // neu gelesen (eine Quelle), das Fenster blieb offen und zeigt den neuen Stand
+    expect(kjLaden.mock.calls.length).toBeGreaterThan(ladungen);
+    await vi.waitFor(() => expect(schalter(f).getAttribute('aria-pressed')).toBe('true'));
+    expect(f.getByText('bleibt noch ein Jahr (Ausnahme)')).toBeTruthy();
+
+    fireEvent.click(f.getByRole('button', { name: 'Rückgängig' }));
+    await vi.waitFor(() => expect(cm.m.get(LEA)?.status).toBe('active'));
+    await vi.waitFor(() => expect(schalter(f).getAttribute('aria-pressed')).toBe('false'));
+    expect(f.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Lea Birke' })).toBeTruthy();
+  });
+
+  it('Ausnahme aufheben (Status wieder aktiv) und wieder zurück', async () => {
+    zustand.jahre = ferien(ANGEKUENDIGT);
+    zustand.rechte = new Map([[WECHSEL, LEITUNG_RECHTE]]);
+    laden.mockResolvedValue(leitung());
+    tim(null);
+    const f = await kindOeffnen('Tim Eiche');
+    expect(schalter(f).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(schalter(f));
+    expect(await f.findByText(/Ausnahme aufgehoben/)).toBeTruthy();
+    expect(cm.log).toEqual(['aendern 61 {"groupMemberStatus":"active"}']);
+    expect(cm.m.get(TIM)?.status).toBe('active');
+    fireEvent.click(f.getByRole('button', { name: 'Rückgängig' }));
+    await vi.waitFor(() => expect(cm.m.get(TIM)?.status).toBe('to_delete'));
+  });
+
+  it('Leitung vor der Ankündigung: Hinweis mit dem Tag statt Schalter, nichts geschrieben', async () => {
+    zustand.rechte = new Map([[WECHSEL, LEITUNG_RECHTE]]);
+    laden.mockResolvedValue(leitung());
+    const f = await kindOeffnen('Lea Birke');
+    expect(
+      f.getByText(`Eine Ausnahme kannst du ab dem ${tagPunkt(aktuell().ankuendigung)} eintragen.`),
+    ).toBeTruthy();
+    expect(f.queryByRole('button', { name: /Bleibt noch ein Jahr/ })).toBeNull();
+    expect(cm.log).toEqual([]);
+  });
+
+  it('Admin vor der Ankündigung: nimmt das Kind gleich als „zu löschen“ auf (Teilnehmer-Rolle) – Rückgängig trägt aus', async () => {
+    const f = await kindOeffnen('Lea Birke', true);
+    expect(cm.m.has(LEA)).toBe(false);
+    fireEvent.click(schalter(f));
+    expect(await f.findByText(/Ausnahme eingetragen/)).toBeTruthy();
+    expect(cm.log).toEqual(['anlegen 60 {"groupTypeRoleId":45,"groupMemberStatus":"to_delete"}']);
+    expect(vi.mocked(ladeTeilnehmerRolle)).toHaveBeenCalledWith(WECHSEL);
+    expect(cm.m.get(LEA)).toEqual({ rolleId: 45, status: 'to_delete', ende: null });
+    fireEvent.click(f.getByRole('button', { name: 'Rückgängig' }));
+    await vi.waitFor(() => expect(cm.m.has(LEA)).toBe(false));
+    expect(cm.log.at(-1)).toBe('entfernen 60');
+  });
+
+  it('nach dem Wechseltag kein Schalter mehr – auch für Admins; kurzer Hinweis', async () => {
+    zustand.jahre = ferien(WECHSELT);
+    lea();
+    const f = await kindOeffnen('Lea Birke', true);
+    expect(f.queryByRole('button', { name: /Bleibt noch ein Jahr/ })).toBeNull();
+    expect(f.getByText(/käme jetzt zu spät/)).toBeTruthy();
+  });
+
+  it('Recht fehlt bzw. nicht lesbar: Hinweis statt Schalter', async () => {
+    zustand.jahre = ferien(ANGEKUENDIGT);
+    laden.mockResolvedValue(leitung());
+    lea();
+    zustand.rechte = new Map([[WECHSEL, KEINE_GRUPPENRECHTE]]);
+    const f = await kindOeffnen('Lea Birke');
+    expect(f.getByText(/fehlt dir in ChurchTools das Recht/)).toBeTruthy();
+    expect(f.queryByRole('button', { name: /Bleibt noch ein Jahr/ })).toBeNull();
+    cleanup();
+    zustand.rechte = new Map(); // Rechte ließen sich nicht lesen – Listen stehen trotzdem
+    const g = await kindOeffnen('Lea Birke');
+    expect(g.getByText(/gerade nicht lesbar/)).toBeTruthy();
+    expect(g.queryByRole('button', { name: /Bleibt noch ein Jahr/ })).toBeNull();
+  });
+
+  describe('Fehler: nichts geht verloren', () => {
+    beforeEach(() => {
+      zustand.jahre = ferien(ANGEKUENDIGT);
+      zustand.rechte = new Map([[WECHSEL, LEITUNG_RECHTE]]);
+      laden.mockResolvedValue(leitung());
+      lea();
+    });
+
+    it('vorübergehend (503): „Gerade nicht gespeichert“, Zustand bleibt, kein „Rückgängig“, kein Wiederholen', async () => {
+      const spy = vi.spyOn(cm.zugriff, 'aendern').mockRejectedValue(new ApiError(503, 'x'));
+      const f = await kindOeffnen('Lea Birke');
+      const ladungen = kjLaden.mock.calls.length;
+      fireEvent.click(schalter(f));
+      expect((await f.findByRole('alert')).textContent).toMatch(/^Gerade nicht gespeichert\./);
+      // auch nach dem Fehler wird neu gelesen: Was ChurchTools jetzt hat, soll dastehen
+      await vi.waitFor(() => expect(kjLaden.mock.calls.length).toBeGreaterThan(ladungen));
+      expect(cm.m.get(LEA)?.status).toBe('active');
+      expect(schalter(f).getAttribute('aria-pressed')).toBe('false');
+      expect(f.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+      await vi.waitFor(() => expect((schalter(f) as HTMLButtonElement).disabled).toBe(false));
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('403: die Meldung von ChurchTools steht im Fenster, nichts verändert', async () => {
+      vi.spyOn(cm.zugriff, 'aendern').mockRejectedValue(
+        new ApiError(403, 'Du darfst die Mitglieder dieser Gruppe in ChurchTools nicht so ändern.'),
+      );
+      const f = await kindOeffnen('Lea Birke');
+      fireEvent.click(schalter(f));
+      expect((await f.findByRole('alert')).textContent).toMatch(/nicht so ändern/);
+      expect(cm.m.get(LEA)?.status).toBe('active');
+    });
+
+    it('nicht übernommen (2xx, aber das Nachlesen stimmt nicht): genau diese Aussage', async () => {
+      vi.spyOn(cm.zugriff, 'aendern').mockResolvedValue(undefined);
+      const f = await kindOeffnen('Lea Birke');
+      fireEvent.click(schalter(f));
+      expect((await f.findByRole('alert')).textContent).toBe(
+        'ChurchTools hat die Ausnahme nicht übernommen. Bitte noch einmal versuchen.',
+      );
+      expect(f.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+    });
+
+    it('abgemeldet (401) → wie überall auf der Seite', async () => {
+      vi.spyOn(cm.zugriff, 'aendern').mockRejectedValue(new ApiError(401, 'x'));
+      const f = await kindOeffnen('Lea Birke');
+      fireEvent.click(schalter(f));
+      expect(await screen.findByText(/nicht mehr angemeldet/)).toBeTruthy();
+      // die ganze Seite ist abgemeldet – das Fenster steht nicht mit einer eigenen Fehlerzeile weiter da
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('Neu laden scheitert nach dem Speichern: gesagt, das Fenster bleibt mit „Rückgängig“', async () => {
+      const f = await kindOeffnen('Lea Birke');
+      kjLaden.mockResolvedValue({ art: 'fehler' });
+      fireEvent.click(schalter(f));
+      expect(await f.findByRole('alert')).toBeTruthy();
+      expect(f.getByRole('alert').textContent).toMatch(/Gespeichert – aber/);
+      expect(cm.m.get(LEA)?.status).toBe('to_delete');
+      expect(f.getByRole('button', { name: 'Rückgängig' })).toBeTruthy();
+    });
+
+    it('der Schalter ist gesperrt, solange geschrieben wird', async () => {
+      let frei: () => void = () => undefined;
+      const tor = new Promise<void>((r) => (frei = r));
+      vi.spyOn(cm.zugriff, 'aendern').mockImplementationOnce((...a) =>
+        tor.then(() => original.aendern(...a)),
+      );
+      const f = await kindOeffnen('Lea Birke');
+      fireEvent.click(schalter(f));
+      await vi.waitFor(() => expect((schalter(f) as HTMLButtonElement).disabled).toBe(true));
+      frei();
+      expect(await f.findByText(/Ausnahme eingetragen/)).toBeTruthy();
+      await vi.waitFor(() => expect((schalter(f) as HTMLButtonElement).disabled).toBe(false));
+    });
+
+    it('Admin: die Teilnehmer-Rolle fehlt → Meldung, nichts geschrieben', async () => {
+      cm.m.delete(LEA);
+      zustand.jahre = ferien(RUHIG);
+      laden.mockResolvedValue(start());
+      vi.mocked(ladeTeilnehmerRolle).mockRejectedValue(
+        new ApiError(404, 'Die Wechsel-Gruppe hat in ChurchTools keine Teilnehmer-Rolle.'),
+      );
+      const f = await kindOeffnen('Lea Birke', true);
+      fireEvent.click(schalter(f));
+      expect((await f.findByRole('alert')).textContent).toMatch(/keine Teilnehmer-Rolle/);
+      expect(cm.log).toEqual([]);
+    });
+  });
+
+  describe('Ausnahme vom letzten Jahr', () => {
+    const vorVorjahresWechseltag = () => `${plusTage(zustand.jahre[0].wechseltag, -3)}T10:00:00Z`;
+    const vorAnkuendigung = () => `${plusTage(aktuell().ankuendigung, -5)}T10:00:00Z`;
+    beforeEach(() => {
+      zustand.jahre = ferien(ANGEKUENDIGT);
+      zustand.rechte = new Map([[WECHSEL, LEITUNG_RECHTE]]);
+      laden.mockResolvedValue(leitung());
+    });
+
+    it('vor dem Wechseltag des Vorjahres gesetzt: gelber Chip, Hinweis, Satz im Fenster', async () => {
+      tim(vorVorjahresWechseltag());
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+      await screen.findByRole('heading', { name: 'Fische' });
+      expect(screen.getAllByText('Ausnahme vom letzten Jahr').length).toBe(1); // der Chip
+      expect(screen.getByText(/Ausnahme vom letzten Jahr:/)).toBeTruthy(); // der Hinweis
+      expect(screen.queryByText('bleibt noch ein Jahr')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /Tim Eiche/ }));
+      const f = within(await screen.findByRole('dialog', { name: 'Tim Eiche' }));
+      expect(
+        f.getByText(/^Diese Ausnahme gilt seit letztem Jahr\. Hebst du sie auf, wechselt Tim am /),
+      ).toBeTruthy();
+    });
+
+    it('dieses Jahr schon vor der Ankündigung gesetzt (Bereichsleitung): normale Ausnahme, kein gelb', async () => {
+      tim(vorAnkuendigung());
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+      await screen.findByRole('heading', { name: 'Fische' });
+      expect(screen.getByText('bleibt noch ein Jahr')).toBeTruthy();
+      expect(screen.queryByText(/Ausnahme vom letzten Jahr/)).toBeNull();
+    });
   });
 });

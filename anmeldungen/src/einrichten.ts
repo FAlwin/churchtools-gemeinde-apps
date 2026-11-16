@@ -9,6 +9,7 @@
  */
 import { ZodError } from 'zod';
 import { heuteImKalender } from '@shared/ct/zeit';
+import { terminPfad } from '@shared/ct/kalenderTermine';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { angemeldeteId } from '@ui/ct/ich';
@@ -1084,7 +1085,7 @@ export async function kalenderListe(): Promise<Kalender[]> {
 export async function termineIn(kalenderId: number, von: string, bis: string): Promise<CtTermin[]> {
   const roh = await ctDaten<
     { base?: CtTermin; calculated?: { startDate?: string; endDate?: string } }[]
-  >(`/calendars/appointments?calendar_ids[]=${kalenderId}&from=${von}&to=${bis}`);
+  >(terminPfad(kalenderId, von, bis));
   return roh
     .filter((t) => t.base)
     .map((t) => ({

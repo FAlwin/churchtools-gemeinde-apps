@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rollenAus } from '@shared/organigramm/mitglieder';
+import type { PersonenGrenze } from '@shared/organigramm/personen';
 import { kastenInhalt, pdfPersonenWahl, personenInhalt, rollenKnopfText } from './kastenPersonen';
 import type { MitgliederStand } from './ladeMitglieder';
 
@@ -110,5 +111,42 @@ describe('Rollenfilter im Kästchen (#915)', () => {
     expect(rollenKnopfText(rollen, new Set())).toBe('Alle');
     expect(rollenKnopfText(rollen, new Set(['Organisator']))).toBe('Alle');
     expect(rollenKnopfText(rollen, new Set(['Mitarbeiter']))).toBe('1 von 2');
+  });
+});
+
+describe('Grenze im Kästchen (#915 C)', () => {
+  const daten = {
+    je: new Map<number, MitgliederStand>([
+      [1, sichtbar],
+      [2, sichtbar],
+    ]),
+    personen: new Map([
+      [1, { id: 1, name: 'Alwin', bild: null, initialen: 'A' }],
+      [2, { id: 2, name: 'Bea', bild: null, initialen: 'B' }],
+    ]),
+  };
+  const grenze: PersonenGrenze = (id) => (id === 1 ? 'zahl' : 'alle');
+
+  it('die eigene Wahl gilt höchstens bis zur Grenze der Gruppe – je Gruppe', () => {
+    const inhalt = personenInhalt(daten, ROLLEN, 'alle', undefined, grenze);
+    expect(inhalt(1)).toEqual({
+      art: 'rollen',
+      gruppen: [
+        { rolle: 'Leiter', namen: ['Alwin'], nurZahl: true },
+        { rolle: 'Mitarbeiter', namen: ['Bea'], nurZahl: true },
+      ],
+    });
+    expect(inhalt(2)).toEqual({
+      art: 'rollen',
+      gruppen: [
+        { rolle: 'Leiter', namen: ['Alwin'], nurZahl: false },
+        { rolle: 'Mitarbeiter', namen: ['Bea'], nurZahl: false },
+      ],
+    });
+  });
+
+  it('„Keine Personen“ zeigt nichts; die eigene Wahl „Aus“ bleibt aus', () => {
+    expect(personenInhalt(daten, ROLLEN, 'alle', undefined, () => 'aus')(1)).toBeNull();
+    expect(personenInhalt(daten, ROLLEN, 'aus', undefined, () => 'alle')(1)).toBeNull();
   });
 });

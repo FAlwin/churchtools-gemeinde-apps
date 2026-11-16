@@ -61,4 +61,38 @@ describe('ConfirmDialog', () => {
     fireEvent.click(container.firstElementChild as Element);
     expect(onCancel).not.toHaveBeenCalled();
   });
+
+  it('Escape bricht ab – wie X und Abbrechen (16.11.2026: vorher schloss die Taste nichts)', () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+    render(<ConfirmDialog {...grund} onConfirm={onConfirm} onCancel={onCancel} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('Escape tut nichts, solange es läuft oder es kein Abbrechen gibt', () => {
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <ConfirmDialog {...grund} beschaeftigt onConfirm={vi.fn()} onCancel={onCancel} />,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    rerender(
+      <ConfirmDialog {...grund} cancelLabel={null} onConfirm={vi.fn()} onCancel={onCancel} />,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('nach dem Schließen hört niemand mehr auf Escape', () => {
+    const onCancel = vi.fn();
+    const { unmount } = render(
+      <ConfirmDialog {...grund} onConfirm={vi.fn()} onCancel={onCancel} />,
+    );
+    unmount();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 });

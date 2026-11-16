@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
+import { useEscape } from '../bedienung/useEscape';
 import { FensterKnopf } from './FensterKnopf';
 import { useKnopfZeile } from './useKnopfZeile';
 import styles from './ConfirmDialog.module.scss';
@@ -47,6 +48,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titelId = useId();
   const knopfZeile = useKnopfZeile<HTMLDivElement>();
+  // Escape = Abbrechen – nur wo es ein Abbrechen gibt und nichts gerade schreibt (wie der Klick daneben).
+  useEscape(cancelLabel !== null && !beschaeftigt, onCancel);
   return (
     <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
       <div

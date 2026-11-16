@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/bilder/musik-demo.gif" width="480" alt="Die Musik App: Ein Lied wird von G nach A transponiert und als reiner Text angezeigt">
+  <img src="docs/bilder/apps-uebersicht.gif" width="640" alt="Kurzer Rundgang durch die vier Apps: Musik-App, Dienstplaner, Organigramm und Gebetsabend">
 </p>
 
 ---
@@ -53,40 +53,25 @@ _Administration → Erweiterungen_ hochladet. Die Musik-App läuft außerdem auf
 **In Arbeit:** [Anmeldungen](docs/betrieb/ANMELDUNGEN.md) (Ersatz für Jotform & Co.) und
 [Protokolle](docs/betrieb/PROTOKOLLE.md) (Sitzungen mit To-Dos und Beschlüssen).
 
-## So sieht es aus
+## Musik-App
+
+<p align="center">
+  <img src="docs/bilder/musik-demo.gif" width="400" alt="Musik-App: Ein Lied wird von G nach A transponiert und als reiner Text angezeigt">
+</p>
+
+Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, die im Ablauf steht.
+
+- **Transponieren mit einem Tipp**, mit Kapo und eigenen Versionen eines Liedes (z. B. „Akustik“)
+- **Ablauf bearbeiten**, Lieder suchen und einfügen, Notenblätter aus CCLI SongSelect holen
+- **Anmerkungen** mit Stift und Marker, auf Wunsch mit dem Team geteilt
+- **Am iPad zwei Seiten nebeneinander**, als PDF teilbar; mit eigenem Server auch offline im Saal
 
 <table>
   <tr>
     <td width="72%"><img src="docs/bilder/musik-liedblatt.png" alt="Musik-App am iPad quer: zwei Liedblätter nebeneinander"></td>
     <td width="28%"><img src="docs/bilder/musik-handy.png" alt="Musik-App am Handy"></td>
   </tr>
-  <tr>
-    <td align="center">Musik-App am iPad</td>
-    <td align="center">… und am Handy</td>
-  </tr>
 </table>
-
-<table>
-  <tr>
-    <td width="33%"><img src="docs/bilder/dienstplaner-start.png" alt="Dienstplaner: Startseite mit dem nächsten Dienst und offenen Anfragen"></td>
-    <td width="33%"><img src="docs/bilder/organigramm-karten.png" alt="Organigramm: Bereiche und Gruppen als Karten"></td>
-    <td width="33%"><img src="docs/bilder/gebetsabend-technik.png" alt="Gebetsabend: Übertragung starten"></td>
-  </tr>
-  <tr>
-    <td align="center">Dienstplaner</td>
-    <td align="center">Organigramm</td>
-    <td align="center">Gebetsabend</td>
-  </tr>
-</table>
-
-Die Bilder zeigen Beispieldaten aus dem Demo-Modus der Apps.
-
-## Was die Musik-App kann
-
-- **Chord Charts aus ChurchTools**, automatisch in der richtigen Tonart, mit Kapo – auch als PDF zum Teilen
-- **Ablauf bearbeiten**, Lieder suchen und einfügen, Notenblätter aus CCLI SongSelect holen
-- **Anmerkungen** mit Stift und Marker, auf Wunsch mit dem Team geteilt
-- **Offline im Saal** und als App auf dem Home-Bildschirm (eigener Server)
 
 <details>
 <summary><strong>Alle Funktionen im Detail</strong></summary>
@@ -141,6 +126,54 @@ Die Bilder zeigen Beispieldaten aus dem Demo-Modus der Apps.
   auf der Login-Seite
 
 </details>
+
+**[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest)** · [Als Erweiterung installieren](docs/betrieb/ERWEITERUNG.md) · [Auf eigenem Server](INSTALL.md)
+
+## Dienstplaner
+
+<p align="center">
+  <img src="docs/bilder/dienstplaner-demo.gif" width="640" alt="Dienstplaner: Dienst zusagen, eigene Dienste, Abwesenheit eintragen, Planen">
+</p>
+
+Ein Dienstplan für alle Dienstgruppen der Gemeinde – gespeichert in ChurchTools.
+
+- **Startseite** mit dem nächsten Dienst samt Team und Liedern, offenen Anfragen und freien Plätzen
+- **Zusagen, absagen, tauschen** mit einem Tipp; eigene Dienste als PDF teilen
+- **Abwesenheiten** je Termin per Häkchen oder als Zeitraum eintragen
+- **Planen** für Planer: Termine als Spalten, freier Platz → „Wer kann?“, Vorschläge per Zauberstab, „Wer wie oft?“
+
+**[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)** · [Anleitung](docs/betrieb/DIENSTPLANER.md)
+
+## Organigramm
+
+<p align="center">
+  <img src="docs/bilder/organigramm-demo.gif" width="640" alt="Organigramm: Mindmap, Karten und Präsentation">
+</p>
+
+Die Gemeinde als Baum – Bereiche, Gruppen, Leitung und Personen, so wie die Gruppen in ChurchTools stehen.
+
+- **Fünf Ansichten:** Karten, Liste, von oben, von links und Mindmap – auf Wunsch mit den Personen
+- **Präsentation** im Vollbild und **PDF** zum Drucken
+- **Offene Plätze** je Gruppe auf einen Blick
+- Für Gruppen-Admins: **Gruppen umhängen und anlegen**, Leitung und Mitglieder pflegen
+
+**[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm)** · [Anleitung](docs/betrieb/ORGANIGRAMM.md)
+
+## Gebetsabend
+
+<p align="center">
+  <img src="docs/bilder/gebetsabend-demo.gif" width="640" alt="Gebetsabend: Ansicht zum Zuhören und Übertragung starten">
+</p>
+
+Der Gebetsabend für alle, die nicht kommen können – mit Bild und Ton, nur für Gemeindeglieder mit ChurchTools-Zugang.
+
+- **Zuhören mit einem Tipp** – die Seite merkt selbst, wann die Übertragung läuft
+- **Die Technik startet und beendet** die Übertragung direkt in der Seite, mit Bild oder nur Ton, und sieht, wer zuhört
+- **Kein eigener Server**, kein Link zum Weitergeben: übertragen wird von Browser zu Browser (VDO.Ninja)
+
+**[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend)** · [Anleitung](docs/betrieb/GEBETSABEND.md)
+
+Alle Bilder und Videos zeigen Beispieldaten aus dem Demo-Modus der Apps.
 
 ## Für andere Gemeinden
 

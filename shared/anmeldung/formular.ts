@@ -121,7 +121,8 @@ export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestalt
   { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
   { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
   { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
-  // „Neuer Schritt“ (F2) kommt erst mit dem Baukasten-Teil (F2c) in die Leiste.
+  // F2c: beginnt eine neue Seite des Formulars (`formularSchritte.ts`) – geht überall, auch mitten in den Personen.
+  { typ: 'schritt', name: 'Neuer Schritt', gruppe: 'gestaltung' },
 ];
 
 export interface Vorgaben {
@@ -255,6 +256,15 @@ const MAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 /** Sieht wie eine E-Mail-Adresse aus – dieselbe Prüfung für das Formular und den Kontakt der Veranstaltung. */
 export function mailGueltig(s: string): boolean {
   return MAIL.test(s.trim());
+}
+
+/**
+ * **Nur, was die Personen betrifft** – aus `pruefeAntworten`, für „Person dazu“ von Hand (F2d): Die Kontakt-Antworten
+ * stehen schon bei der Anmeldung. Geprüft wird trotzdem mit dem GANZEN Formular – sonst fehlten die Schritte und
+ * Bedingungen aus dem Kontakt-Teil, und eine Frage in einem übersprungenen Schritt wäre Pflicht.
+ */
+export function nurPersonenPfade(wege: string[]): string[] {
+  return wege.filter((w) => w.startsWith('personen.'));
 }
 
 /**

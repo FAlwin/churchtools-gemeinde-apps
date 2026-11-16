@@ -1,12 +1,12 @@
 /**
  * **„Wer wie oft?“** (Bauplan E3-5, Entwurf v17): wie oft jemand im sichtbaren Zeitraum eingeteilt ist –
- * aus denselben Plätzen wie die Matrix (`plan.ts`), nur in den sichtbaren Spalten und Gruppen.
+ * aus denselben Plätzen wie die Matrix (`plan.ts`), nur in den sichtbaren Spalten, Gruppen und Diensten.
  *
  * Gezählt wird jede Einteilung (zugesagt oder angefragt), Personen nach ID, Gäste nach Namen. Plätze mit
  * „Namen verbergen“ fehlen (man weiß nicht, wer es ist). Die Monatsauslastung aus ChurchTools
  * (`possiblepersons`) kommt erst mit E4 – sie kostet je Termin 2,6 s und 508 KB (gemessen 07.10.2026).
  */
-import type { Plan, PlanSpalte } from './plan';
+import type { Plan, PlanGruppe, PlanSpalte } from './plan';
 
 export interface Einsatz {
   spalte: PlanSpalte;
@@ -27,13 +27,12 @@ export function werWieOft(
   o: {
     /** Indizes der sichtbaren Spalten. */
     spalten: number[];
-    /** Ist die Gruppe sichtbar? (Gruppenfilter) */
-    gruppeSichtbar: (gruppeId: number | null) => boolean;
+    /** Die gezeigten Gruppen mit den gezeigten Diensten (`gezeigteGruppen`: Gruppen- und Dienstfilter). */
+    gruppen: readonly PlanGruppe[];
   },
 ): { personen: PersonEinsaetze[]; schnitt: number } {
   const nachSchluessel = new Map<string, PersonEinsaetze>();
-  for (const g of plan.gruppen) {
-    if (!o.gruppeSichtbar(g.gruppe?.id ?? null)) continue;
+  for (const g of o.gruppen) {
     for (const z of g.zeilen) {
       for (const i of o.spalten) {
         for (const p of z.zellen[i] ?? []) {

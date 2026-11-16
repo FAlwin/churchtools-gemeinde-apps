@@ -6,6 +6,8 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
+import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
+import { fokusKandidaten, fokusTexte, fokusZahlen } from '@shared/dienstplan/fokus';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
 import { zeitraumText, zeitraumVerschieben, type Zeitraum } from '@shared/ct/zeitraum';
@@ -13,7 +15,14 @@ import { planenZeitraum } from '@shared/dienstplan/start';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
 import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
-import { ansichtAus, leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
+import {
+  ansichtAus,
+  gruppenAus,
+  leseAnsicht,
+  merkeAnsicht,
+  type PlanenAnsicht,
+} from './planenAnsicht';
+import { gruppenAbschnitt } from './gruppenAbschnitt';
 import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
@@ -32,8 +41,10 @@ import { WerWieOft } from './WerWieOft';
 import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
-import { useEinteilen } from './useEinteilen';
-import { plaetzeWeitere, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import { useEinteilen, type WerKannZurueck } from './useEinteilen';
+import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
+import { grundText } from './ladeEntwuerfe';
+import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -122,29 +133,41 @@ export function Planen({
   onFokusEnde,
 }: Props) {
   const [gemerkt, setGemerkt] = useState<PlanenAnsicht>(leseAnsicht);
-  // Ein Besuch von der Startseite (Wunsch 7): Zeitraum und Gruppen gelten nur hier – `aus: null` heißt „alle außer der
-  // Gruppe“, ausgerechnet, sobald der Plan da ist. Alles andere (Breite, Ablauf zu …) wird wie immer gemerkt.
+  // Ein Besuch von der Startseite (Wunsch 7): Zeitraum, Gruppen und Dienste gelten nur hier – `aus: null` heißt „alle
+  // außer der Gruppe“, ausgerechnet, sobald der Plan da ist; von den Diensten der Gruppe ist keiner ausgeblendet
+  // (`ausDienste`, Wunsch 10). Alles andere (Breite, Ablauf zu …) wird wie immer gemerkt.
   const [besuch, setBesuch] = useState<{
     gruppe: number;
     zeitraum: Zeitraum;
     aus: string[] | null;
+    ausDienste: number[];
   } | null>(() =>
     fokusGruppe === null
       ? null
-      : { gruppe: fokusGruppe, zeitraum: planenZeitraum(heute), aus: null },
+      : { gruppe: fokusGruppe, zeitraum: planenZeitraum(heute), aus: null, ausDienste: [] },
   );
-  let ansicht: PlanenAnsicht = besuch ? { ...gemerkt, zeitraum: besuch.zeitraum } : gemerkt;
+  let ansicht: PlanenAnsicht = besuch
+    ? { ...gemerkt, zeitraum: besuch.zeitraum, ausgeblendeteDienste: besuch.ausDienste }
+    : gemerkt;
   const setAnsicht = (a: PlanenAnsicht) => {
     const neu = besuch
-      ? { ...a, zeitraum: gemerkt.zeitraum, ausgeblendeteGruppen: gemerkt.ausgeblendeteGruppen }
+      ? {
+          ...a,
+          zeitraum: gemerkt.zeitraum,
+          ausgeblendeteGruppen: gemerkt.ausgeblendeteGruppen,
+          ausgeblendeteDienste: gemerkt.ausgeblendeteDienste,
+        }
       : a;
-    // Nur wer die Gruppen wirklich ändert, macht aus „nur diese Gruppe“ eine eigene Auswahl (nicht schon „Breite“).
+    // Nur wer Gruppen oder Dienste wirklich ändert, macht aus „nur diese Gruppe“ eine eigene Auswahl (nicht schon „Breite“).
     if (besuch) {
       const gleich = a.ausgeblendeteGruppen.join('|') === ansicht.ausgeblendeteGruppen.join('|');
+      const gleicheDienste =
+        a.ausgeblendeteDienste.join('|') === ansicht.ausgeblendeteDienste.join('|');
       setBesuch({
         ...besuch,
         zeitraum: a.zeitraum,
         aus: gleich ? besuch.aus : a.ausgeblendeteGruppen,
+        ausDienste: gleicheDienste ? besuch.ausDienste : a.ausgeblendeteDienste,
       });
     }
     setGemerkt(neu);
@@ -157,6 +180,15 @@ export function Planen({
     setAnsicht({ ...ansicht, infosZu }),
   );
   const [zu, setZu] = useState<Set<string> | null>(null);
+  // Der Fokus-Modus (Wunsch 11, Alwin 16.11.2026): **eine** Person, deren Plätze in Matrix, Zettel und „Personen“
+  // umrandet sind. Der Zustand sitzt nur hier – die Ansichten lesen ihn über `Sicht.fokusId` – und gilt, solange
+  // Planen offen ist: Ansichtswechsel und Blättern lassen ihn stehen, Verlassen von Planen beendet ihn (die Seite wird
+  // dann abgebaut); gemerkt wird er nicht. `zurueck` ist der Weg zurück zu „Wer kann?“, wenn er von dort kam.
+  const [fokusPerson, setFokusPerson] = useState<{
+    person: FokusPerson;
+    zurueck: WerKannZurueck | null;
+  } | null>(null);
+  const [fokusEintragen, setFokusEintragen] = useState(false);
   // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
@@ -217,12 +249,19 @@ export function Planen({
     amPlatz,
     leiste: sendeLeiste,
     fenster,
+    werKannOeffnen,
+    eintragenMoeglich,
+    trageEin,
   } = useEinteilen({
     plan,
     entwuerfe,
     heute,
     handy,
     onGesendet: leiseNeuLaden,
+    fokus: {
+      hervorheben: (person) => setFokusPerson({ person, zurueck: null }),
+      zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
+    },
   });
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
@@ -297,6 +336,13 @@ export function Planen({
             verbunden
           />
         )}
+        {plan && (
+          <FokusSuche
+            kandidaten={fokusKandidaten(plan, amPlatz.entwurf)}
+            onWahl={(person) => setFokusPerson({ person, zurueck: null })}
+            handy={handy}
+          />
+        )}
         <FilterKnopf
           abschnitte={[
             ...terminAbschnitte(angebot, ansichtAus(ansicht), (a) =>
@@ -306,15 +352,13 @@ export function Planen({
                 ausgeblendeteArten: a.arten,
               }),
             ),
-            {
-              titel: 'Gruppen',
-              optionen: (plan?.gruppen ?? []).map((g) => ({
-                wert: schluessel(g),
-                text: gruppenName(g),
-              })),
-              aus: ansicht.ausgeblendeteGruppen,
-              onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
-            },
+            gruppenAbschnitt(plan, gruppenAus(ansicht), (a) =>
+              setAnsicht({
+                ...ansicht,
+                ausgeblendeteGruppen: [...a.gruppen],
+                ausgeblendeteDienste: [...a.dienste],
+              }),
+            ),
           ]}
         />
         <KopfKnopf
@@ -330,9 +374,7 @@ export function Planen({
               quelle={{
                 plan,
                 spalten: teilenSpalten,
-                gruppen: plan.gruppen.filter(
-                  (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
-                ),
+                gruppen: gezeigteGruppen(plan, gruppenAus(ansicht)),
                 gemeinde: ablauf?.start.gemeinde ?? null,
                 app: 'Dienstplaner',
               }}
@@ -368,9 +410,11 @@ export function Planen({
             : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
     );
   else {
-    const gruppen = plan.gruppen.filter(
-      (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
-    );
+    // Die gezeigten Gruppen mit den gezeigten Diensten – daraus rechnen Matrix, Raster, Kopf und Zettel (`planFilter.ts`).
+    const gruppen = gezeigteGruppen(plan, gruppenAus(ansicht));
+    // Das Plätze-Fach braucht die ganze Gruppe (auch die ausgeblendeten Dienste – dort schaltet man Dienste ein und aus).
+    const ganzeGruppe = (g: PlanGruppe) =>
+      plan.gruppen.find((x) => schluessel(x) === schluessel(g)) ?? g;
     // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
     const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
     const umschalten = (k: string) => {
@@ -395,11 +439,14 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       ...amPlatz,
+      fokusId: fokusPerson?.person.personId ?? null,
+      onFokus: (personId, name) => setFokusPerson({ person: { personId, name }, zurueck: null }),
+      onFokusAus: () => setFokusPerson(null),
       onPlaetze: (i, g) =>
         entwuerfe &&
         !plan.spalten[i].abgesagt &&
-        g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
-          ? () => setPlaetzeFach({ spalte: i, gruppe: g })
+        ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
+          ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
           : undefined,
       onTermin,
       ablauf: matrixAblauf,
@@ -408,7 +455,7 @@ export function Planen({
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
         hinweis(
-          'Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.',
+          'Nichts eingeblendet – über „Filter“ eine Veranstaltung, Gruppe oder einen Dienst wieder anhaken.',
         )
       ) : ansicht.unteransicht === 'werWieOft' ? (
         <WerWieOft sicht={sicht} />
@@ -423,9 +470,63 @@ export function Planen({
 
   // Nachladen gescheitert, der bisherige Stand steht: bei „ab heute“ wie beim gewählten Zeitraum (Alwin, 06.11.2026).
   const nachladeFehler = quelle.art === 'fertig' ? quelle.nachladeFehler : undefined;
+
+  // Die Fokus-Leiste: gezählt wird über die Termine des gewählten Zeitraums (nach Kalender/Veranstaltung gefiltert), mit
+  // allen Diensten – ein ausgeblendeter ist trotzdem ein Einsatz, die Leiste sagt „N ausgeblendet“ (`fokusZahlen`).
+  const fokusZurueck = fokusPerson?.zurueck ?? null;
+  const fokusLeiste = fokusPerson ? (
+    <FokusLeiste
+      person={fokusPerson.person}
+      handy={handy}
+      // Lädt der Plan gerade neu (Zeitraum gewechselt), bleibt die Leiste stehen – nur ohne Zahlen.
+      texte={
+        plan && d
+          ? fokusTexte(
+              fokusZahlen(plan, {
+                personId: fokusPerson.person.personId,
+                spalten: d.gefiltert,
+                aus: gruppenAus(ansicht),
+                entwurf: amPlatz.entwurf,
+              }),
+            )
+          : { kurz: 'Termine werden geladen …', detail: '' }
+      }
+      onAus={() => setFokusPerson(null)}
+      zurueck={
+        fokusZurueck
+          ? {
+              text: `${fokusZurueck.platz.dienst} · ${fokusZurueck.platz.tag}`,
+              onZurueck: () => {
+                setFokusPerson({ ...fokusPerson, zurueck: null });
+                werKannOeffnen(fokusZurueck);
+              },
+              laeuft: fokusEintragen,
+              // „Hier eintragen“ legt den Entwurf mit derselben Funktion an wie die Wahl in „Wer kann?“.
+              onEintragen: eintragenMoeglich(fokusZurueck)
+                ? () => {
+                    setFokusEintragen(true);
+                    void trageEin(fokusZurueck, { art: 'person', ...fokusPerson.person })
+                      ?.then((r) => {
+                        if (r.ok) setFokusPerson({ ...fokusPerson, zurueck: null });
+                        else
+                          showToast(
+                            r.grund === 'konflikt'
+                              ? 'Hier hat eben jemand den Platz geändert – bitte noch einmal ansehen.'
+                              : grundText(r.grund),
+                          );
+                      })
+                      .finally(() => setFokusEintragen(false));
+                  }
+                : undefined,
+            }
+          : undefined
+      }
+    />
+  ) : null;
   return (
     <div className={styles.planen}>
       {werkzeug}
+      {fokusLeiste}
       {nachladeFehler && (
         <FehlerKasten
           fehler={nachladeFehler}
@@ -435,7 +536,7 @@ export function Planen({
       {besuch && (
         <div className={styles.besuchHinweis} role="status" aria-label="Von der Startseite">
           <span>
-            {besuch.aus === null ? (
+            {besuch.aus === null && besuch.ausDienste.length === 0 ? (
               <>
                 Nur <b>{besuchGruppe ? gruppenName(besuchGruppe) : 'eine Gruppe'}</b>
               </>
@@ -482,7 +583,12 @@ export function Planen({
         sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
         Angefragten eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben Termine als Raster:
         eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
-        zum Ansehen, eingetragen wird in der Matrix.
+        zum Ansehen, eingetragen wird in der Matrix; einen Dienst antippen klappt seinen Block zu.
+        Im Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann
+        in Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“,
+        das Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
+        belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
+        Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
       </p>
       {sendeLeiste}
       {fenster}
@@ -510,21 +616,14 @@ export function Planen({
             plaetzeFach.gruppe,
             katalog,
           )}
-          weitere={
-            katalog
-              ? plaetzeWeitere(
-                  daten,
-                  plan,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.spalte,
-                  plaetzeFach.gruppe,
-                  katalog,
-                )
-              : undefined
-          }
           vorlage={
             katalog && ladeVorlagen
-              ? vorlageFuer(katalog, plan.spalten[plaetzeFach.spalte], ladeVorlagen)
+              ? vorlageFuer(
+                  katalog,
+                  plan.spalten[plaetzeFach.spalte],
+                  plaetzeFach.gruppe,
+                  ladeVorlagen,
+                )
               : undefined
           }
           aendern={(z, gesehen, neu) =>

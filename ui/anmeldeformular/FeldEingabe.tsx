@@ -70,6 +70,9 @@ export function FeldEingabe({
       </div>
     );
   if (f.typ === 'trenner') return <hr className={s.trenner} />;
+  // F2: Wo nicht geblättert wird (im Baukasten; Formular und „von Hand“ blättern seit F2b/F2d), steht ein Schritt als
+  // Trennzeile da.
+  if (f.typ === 'schritt') return <div className={s.schrittMarke}>Schritt · {f.frage}</div>;
 
   if (f.typ === 'info')
     return (

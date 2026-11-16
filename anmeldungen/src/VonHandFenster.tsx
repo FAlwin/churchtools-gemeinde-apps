@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ApiError } from '@ui/ct/fehler';
@@ -6,11 +6,14 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import { FeldEingabe } from '@ui/anmeldeformular/FeldEingabe';
 import { useBedingungen } from '@ui/anmeldeformular/useBedingungen';
+import { useSchritte } from '@ui/anmeldeformular/useSchritte';
+import { SchrittFortschritt } from '@ui/anmeldeformular/SchrittFortschritt';
 import { leeren } from '@shared/anmeldung/bedingungen';
 import pv from '@ui/anmeldeformular/AnmeldeFormular.module.scss';
 import {
   geburtsdatumAn,
   mailGueltig,
+  nurPersonenPfade,
   pruefeAntworten,
   type Antwort,
   type Feld,
@@ -182,8 +185,11 @@ export function VonHandFenster({
   const platz = handPlatz(lage, trotzdem);
   const mitPlatz = platz.status === 'active';
   const betrag = betragAus(e, antworten, { option, extras }, heute, [mitPlatz]);
-  // Person dazu: nur ihre Fragen werden geprüft – und sie bekommt eine eigene Zahlung (wie beim Nachrücken).
-  const pruefFormular = dazu ? { anmeldung: [], person: hf.person } : hf;
+  // F2d: Von Hand blättert wie das Formular (Klick-Runde 8) – dasselbe Blättern (`useSchritte`), mit den Fragen von
+  // Hand. Bei „Person dazu“ nur die Seiten mit Fragen je Person.
+  const he = useMemo(() => ({ ...e, formular: hf }), [e, hf]);
+  const seite = useSchritte({ e: he, antworten, aktiv: true, nurPerson: !!dazu });
+  const oben = useRef<HTMLParagraphElement>(null);
   const birthAntwort = geleert.personen[0].birth;
   const dz =
     dazu && wahl
@@ -259,7 +265,11 @@ export function VonHandFenster({
 
   const anmelden = () => {
     if (!wahl) return;
-    const offen = pruefeAntworten(pruefFormular, antworten);
+    // Person dazu: nur ihre Fragen – geprüft mit dem ganzen Formular, sonst fehlten Schritte und Bedingungen aus dem
+    // Kontakt-Teil (F2d: eine Frage in einem übersprungenen Schritt wäre sonst Pflicht). Sie bekommt eine eigene
+    // Zahlung (wie beim Nachrücken).
+    const alle = pruefeAntworten(hf, antworten);
+    const offen = dazu ? nurPersonenPfade(alle) : alle;
     setFehlerFelder(offen);
     if (offen.length) return setFehler('Bitte die markierten Felder ausfüllen.');
     void laufen(async () => {
@@ -349,6 +359,23 @@ export function VonHandFenster({
         throw x;
       }
     });
+  };
+
+  /** Eine Seite weiter – wenn auf dieser nichts fehlt (dieselbe Pflichtprüfung wie beim Anmelden). */
+  const weiter = () => {
+    const fehlt = seite.weiter();
+    setFehlerFelder(fehlt);
+    setFehler(fehlt.length ? 'Bitte die markierten Felder ausfüllen.' : null);
+    if (!fehlt.length) oben.current?.scrollIntoView?.({ block: 'start' });
+  };
+  /** „‹“ oben: eine Seite zurück – auf der ersten zurück zur Suche (bzw. zur neuen Person). */
+  const zurueckBlaettern = () => {
+    setFehlerFelder([]);
+    setFehler(null);
+    if (!seite.erste) {
+      seite.zurueck();
+      oben.current?.scrollIntoView?.({ block: 'start' });
+    } else setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen');
   };
 
   const fehlerZeile = fehler && (
@@ -579,20 +606,28 @@ export function VonHandFenster({
   const gesperrt = (x: Feld) =>
     x.typ === 'name' || (x.id === 'birth' && (wahl?.art === 'neu' || !!person?.geburtstag));
   const g = e.preis.grundpreis;
+  // Die Kontakt-Fragen dieser Seite; ohne Schritte alle. Unterschrift, Auswahl und Platz stehen im letzten Schritt
+  // (Entwurf f2-schritte-v1, Von Hand) – ohne Kontakt-Fragen auf einer Seite auch keine leere Überschrift.
+  const kontaktHier = hf.anmeldung.filter((x) => sichtbar(x) && zeigen(x) && seite.zeigtKontakt(x));
+  const papierHier = seite.letzte && mitUnterschrift(e.formular);
   return (
     <Sheet
       title={`${person ? ganz(person) : ''} anmelden`}
       onClose={onClose}
-      zurueck={() => setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen')}
+      zurueck={zurueckBlaettern}
       onAbbrechen={onAbbrechen}
       beschaeftigt={arbeitet}
       knoepfe={
-        <FensterKnopf disabled={arbeitet} onClick={anmelden}>
-          {arbeitet ? 'Einen Moment …' : 'Anmelden'}
-        </FensterKnopf>
+        seite.letzte ? (
+          <FensterKnopf disabled={arbeitet} onClick={anmelden}>
+            {arbeitet ? 'Einen Moment …' : 'Anmelden'}
+          </FensterKnopf>
+        ) : (
+          <FensterKnopf onClick={weiter}>Weiter</FensterKnopf>
+        )
       }
     >
-      <p className={a.unterTitel}>
+      <p ref={oben} className={a.unterTitel}>
         {wahl?.art === 'neu' ? 'Neue Person · ' : ''}
         {dazu ? `zur Anmeldung von ${dazu.wer} · ` : ''}Anmelde-Nr. {nr}
       </p>
@@ -602,17 +637,24 @@ export function VonHandFenster({
         </p>
       )}
       <div className={`${pv.pv} ${pv['fs-kasten']}`} style={FARBEN}>
+        {seite.mit && (
+          <SchrittFortschritt
+            alle={seite.alle}
+            gezeigt={seite.gezeigt}
+            nr={seite.nr}
+            name={seite.name}
+          />
+        )}
         {dazu ? (
           <p className={a.leise}>
             Kontakt, Unterschrift und Auswahl stehen schon bei der Anmeldung – hier nur die Fragen
             für {vor}.
           </p>
         ) : (
-          <section className={`${a.teil} ${a.handFragen}`}>
-            <h3>Für die Anmeldung</h3>
-            {hf.anmeldung
-              .filter((x) => sichtbar(x) && zeigen(x))
-              .map((x) => (
+          (kontaktHier.length > 0 || papierHier) && (
+            <section className={`${a.teil} ${a.handFragen}`}>
+              <h3>Für die Anmeldung</h3>
+              {kontaktHier.map((x) => (
                 <div key={x.id} className={a.handFragen}>
                   {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
                   {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
@@ -626,45 +668,48 @@ export function VonHandFenster({
                   />
                 </div>
               ))}
-            {mitUnterschrift(e.formular) && (
-              <>
-                <button
-                  type="button"
-                  className={k.schalterZeile}
-                  aria-pressed={papier}
-                  onClick={() => setPapier(!papier)}
-                >
-                  <Schalter an={papier} />
-                  Unterschrift liegt auf Papier vor
-                </button>
-                <p className={a.leise}>
-                  Unterschreiben kann hier nur die Familie selbst. Bei Papier steht in ChurchTools
-                  „auf Papier – vermerkt von …“ mit deinem Namen und dem heutigen Tag.
-                </p>
-              </>
-            )}
+              {papierHier && (
+                <>
+                  <button
+                    type="button"
+                    className={k.schalterZeile}
+                    aria-pressed={papier}
+                    onClick={() => setPapier(!papier)}
+                  >
+                    <Schalter an={papier} />
+                    Unterschrift liegt auf Papier vor
+                  </button>
+                  <p className={a.leise}>
+                    Unterschreiben kann hier nur die Familie selbst. Bei Papier steht in ChurchTools
+                    „auf Papier – vermerkt von …“ mit deinem Namen und dem heutigen Tag.
+                  </p>
+                </>
+              )}
+            </section>
+          )
+        )}
+
+        {seite.mitPersonen && (
+          <section className={`${a.teil} ${a.handFragen}`}>
+            <h3>{person ? ganz(person) : 'Person'}</h3>
+            {hf.person
+              .filter((x) => sichtbar(x) && zeigen(x, 0) && seite.zeigtPerson(x))
+              .map((x) => (
+                <FeldEingabe
+                  key={x.id}
+                  feld={x}
+                  pfad={`personen.0.${x.id}`}
+                  wert={antworten.personen[0][x.id]}
+                  onWert={(w) => setPerson(x.id, w)}
+                  fehler={fehlerFelder}
+                  gesperrt={gesperrt(x)}
+                  {...bedingt(x, `personen.0.${x.id}`, 0)}
+                />
+              ))}
           </section>
         )}
 
-        <section className={`${a.teil} ${a.handFragen}`}>
-          <h3>{person ? ganz(person) : 'Person'}</h3>
-          {hf.person
-            .filter((x) => sichtbar(x) && zeigen(x, 0))
-            .map((x) => (
-              <FeldEingabe
-                key={x.id}
-                feld={x}
-                pfad={`personen.0.${x.id}`}
-                wert={antworten.personen[0][x.id]}
-                onWert={(w) => setPerson(x.id, w)}
-                fehler={fehlerFelder}
-                gesperrt={gesperrt(x)}
-                {...bedingt(x, `personen.0.${x.id}`, 0)}
-              />
-            ))}
-        </section>
-
-        {kostet && !dazu && (g.art === 'auswahl' || e.preis.extras.length > 0) && (
+        {seite.letzte && kostet && !dazu && (g.art === 'auswahl' || e.preis.extras.length > 0) && (
           <section className={`${a.teil} ${a.handFragen}`}>
             <h3>Auswahl</h3>
             {g.art === 'auswahl' && (
@@ -702,40 +747,42 @@ export function VonHandFenster({
         )}
       </div>
 
-      <PlatzWahl
-        lage={lage}
-        platz={platz}
-        trotzdem={trotzdem}
-        onTrotzdem={setTrotzdem}
-        vor={vor}
-        betrag={
-          kostet
-            ? {
-                titel: dazu ? `Neue Zahlung für ${vor}` : 'Betrag',
-                wert: !mitPlatz
-                  ? `${dazu ? '' : '0,00 € – '}folgt beim Nachrücken`
-                  : euroText(dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent),
-              }
-            : null
-        }
-      >
-        {dazu && mitPlatz && kostet && (
+      {seite.letzte && (
+        <PlatzWahl
+          lage={lage}
+          platz={platz}
+          trotzdem={trotzdem}
+          onTrotzdem={setTrotzdem}
+          vor={vor}
+          betrag={
+            kostet
+              ? {
+                  titel: dazu ? `Neue Zahlung für ${vor}` : 'Betrag',
+                  wert: !mitPlatz
+                    ? `${dazu ? '' : '0,00 € – '}folgt beim Nachrücken`
+                    : euroText(dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent),
+                }
+              : null
+          }
+        >
+          {dazu && mitPlatz && kostet && (
+            <p className={a.leise}>
+              Wie beim Nachrücken: {vor} bekommt eine eigene Zahlung – um so viel wird die Anmeldung
+              nach den Regeln teurer. Die bisherige Zahlung bleibt, wie sie ist.
+            </p>
+          )}
+          {dz?.auswahlFehlt && (
+            <p className={f.fehler}>
+              Die gespeicherte Auswahl gibt es nicht mehr – der Betrag ist nach den heutigen Preisen
+              gerechnet. Bitte danach prüfen.
+            </p>
+          )}
           <p className={a.leise}>
-            Wie beim Nachrücken: {vor} bekommt eine eigene Zahlung – um so viel wird die Anmeldung
-            nach den Regeln teurer. Die bisherige Zahlung bleibt, wie sie ist.
+            Wie im Formular: Wer wartet, zahlt erst beim Nachrücken.{' '}
+            {mailHinweis('eintragen', mitBestaetigung, vor)}
           </p>
-        )}
-        {dz?.auswahlFehlt && (
-          <p className={f.fehler}>
-            Die gespeicherte Auswahl gibt es nicht mehr – der Betrag ist nach den heutigen Preisen
-            gerechnet. Bitte danach prüfen.
-          </p>
-        )}
-        <p className={a.leise}>
-          Wie im Formular: Wer wartet, zahlt erst beim Nachrücken.{' '}
-          {mailHinweis('eintragen', mitBestaetigung, vor)}
-        </p>
-      </PlatzWahl>
+        </PlatzWahl>
+      )}
 
       {fehlerZeile}
     </Sheet>

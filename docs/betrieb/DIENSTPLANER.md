@@ -19,7 +19,8 @@
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst, nur ansehen), „Wer wie oft?“, Filter nach Kalender,
->   Veranstaltung und Gruppe, **Ansehen und senden**, **Teilen** = Plan,
+>   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
+>   Antippen des Dienstes seinen Block zu), **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
 >
@@ -102,10 +103,10 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
   gezeigten Zeitraum noch nirgends einen Platz haben (dann „nicht vorgesehen“, 0): „+“ schaltet den Dienst für diesen
   Termin ein, „−“ bis 0 wieder aus. Belegte Plätze und Dienste mit Entwürfen bleiben unverändert. Die Matrix zeigt einen
   neu eingeschalteten Dienst nach dem Schließen des Fachs (sie lädt dann neu). Oben steht, wenn es für den Kalender des
-  Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau („Abendmahl: 0 → 1 ·
-  Musik: 3 → 5“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
-  Zahl der Vorlage erhöht, nie verringert oder entfernt; sie wirkt über alle Dienstgruppen, wo man planen darf, lässt
-  Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
+  Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau (im Fach Moderation & Predigt etwa
+  „Abendmahl: 0 → 1“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
+  Zahl der Vorlage erhöht, nie verringert oder entfernt; sie ändert **nur die Dienste der Gruppe, deren Fach offen ist**
+  (Dienste anderer Gruppen in der Vorlage übergeht sie still), lässt Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
   laufen die anderen weiter, am Ende steht, was geklappt hat und was nicht. Sind die Vorlagen von ChurchTools nicht
   erreichbar, sagt das Fach es ruhig; die Plätze lassen sich trotzdem ändern.
 
@@ -120,7 +121,7 @@ Gruppe („+ Ton (Technik)“). **Abwesend** = grauer Tag mit dem Grund; ist die
 beide da (roter Rand am grauen Tag – ein Warnfall). „Einsätze“ zählt zugesagte und angefragte Einteilungen dieser Person
 in diesem Dienst in den gezeigten Terminen. „Gäste“ sind Plätze mit Namen ohne Person. Die Fußzeile **„Noch offen“** zeigt
 je Termin die freien Plätze der gezeigten Dienste („Gesang ×2“) – gezählt wie in der Matrix. „Namen verbergen“ zeigt auch
-hier nie einen Namen. Maus über dem Namen (am Handy Antippen) hebt alle Zeilen der Person hervor. Am Handy ist es
+hier nie einen Namen. Maus über dem Namen hebt alle Zeilen der Person schwach blau hervor; Antippen des Namens nimmt die Person in den **Fokus** (s. u.). Am Handy ist es
 dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Ein Klick in eine Zelle tut noch nichts
 (Eintragen kommt mit P2, Kürzel und Farben einstellen mit P3).
 
@@ -140,6 +141,32 @@ dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Ein Klic
   Abgemeldet (401) zeigt den Hinweis zum Neuladen der Seite. Bei einem späteren Neuladen bleibt der bisherige Stand stehen.
 - **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
   Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
+
+**Fokus-Modus** (Wunsch 11, 16.11.2026; Entwurf `e11-fokus.html`): **eine** Person „anleuchten“ – alle ihre Einsätze in
+Matrix, Handy-Zettel und „Personen“ werden **gelb umrandet** (Rahmen als Outline außen, blasse deckende gelbe Fläche; was im
+Platz steht – grün, ?, blau gestrichelt – bleibt sichtbar). Darüber die **Fokus-Leiste**: „Fokus: Daniel F. · 5 Einsätze in
+5 Terminen · 1 angefragt · 1 Entwurf · 1 ausgeblendet“ und „Fokus aus“. Gezählt wird über die Termine des gewählten
+Zeitraums (nach Kalender/Veranstaltung gefiltert, ohne **abgesagte** Termine) und über **alle** Dienste – ein per Filter
+ausgeblendeter Dienst ist trotzdem ein Einsatz, die Leiste sagt „N ausgeblendet“. Ein gültiger Entwurf auf die Person zählt
+und wird umrandet, ein veralteter nicht (dort gilt ChurchTools). Verglichen wird über die `personId`; Gäste und „Namen
+verbergen“ sind nie fokussierbar.
+
+- **Vier Wege hinein:** (1) **Matrix:** Fokus-Symbol am Namen eines belegten Platzes (nur mit echter Maus, beim Darüberfahren
+  – ein eigener Knopf neben dem Platz, löst nie das Fenster aus), am Handy **lang drücken** (500 ms, nicht beim Wischen; das
+  Antippen danach wird verschluckt), und im Fenster eines belegten Platzes oben **„Im Plan hervorheben“**. (2) **„Wer kann?“:**
+  je Kandidat eine Mini-Zeile („Im Plan, ±7 Tage: Gesang Mi 17.12. · Bild So 21.12.“ – Einsätze aus den geladenen Terminen)
+  und der Knopf **„im Plan zeigen“**: Fenster zu, Fokus auf die Person; die Leiste zeigt zusätzlich **„‹ Zurück zu ‚Wer kann?‘
+  für Ton · So, 20.12.“** (dasselbe Fenster für denselben Platz, auch nach „Andere Person wählen“) und **„Hier eintragen“**
+  (legt den Entwurf mit derselben Funktion an wie die Wahl im Fenster – `useEinteilen.trageEin` → `eintragenFuer.onWahl`;
+  fehlt, wo man dort nicht eintragen darf). (3) **Suchfeld „Person hervorheben“** in der Werkzeugleiste (am Handy hinter einem
+  Such-Symbol): Treffer am Anfang des Namens oder eines Wortes, Vorschläge mit Kreis, Name und Diensten – aus den im
+  geladenen Plan Eingeteilten. (4) In **„Personen“** das Antippen des Namens (zweites Antippen: „Fokus aus“).
+- **Dauer:** bleibt beim Wechsel Matrix ↔ Personen ↔ Wer wie oft? und beim Blättern; endet mit „Fokus aus“ oder beim
+  Verlassen von Planen; wird **nicht** gemerkt. Eine andere Wahl löst die Person ab (immer nur eine).
+- **Technik:** Zustand nur in `Planen.tsx` (`fokusPerson`), die Ansichten lesen ihn über `Sicht.fokusId`/`onFokus`. Die eine
+  Regel „wer steht an diesem Platz“ ist `shared/dienstplan/fokus.ts` (`platzPerson`) – Umrandung, Zählen, Suchvorschläge und
+  Mini-Zeile rechnen alle daraus. Farben: `--fokus`, `--fokus-grund`, `--fokus-text` in `ui/design/_farben.scss` (Dunkel:
+  nur die Schrift in `_variables.scss`).
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

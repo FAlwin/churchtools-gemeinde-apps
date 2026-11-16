@@ -171,6 +171,8 @@ export function useAbsenden({
 
   return {
     fehler,
+    /** F2b: „Weiter“ zeigt, was auf der Seite fehlt – dieselbe Markierung wie beim Absenden. */
+    setFehler,
     fertig,
     setFertig,
     sendet,

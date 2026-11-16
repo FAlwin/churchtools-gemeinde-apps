@@ -101,6 +101,15 @@ export function kurzname(x: Feld, max = 45): string {
 }
 
 /**
+ * **Wie ein Feld in Sätzen heißt** – „Kurzname“, ein Schritt als Schritt „Name“ (F2c: Sonst stünde in Regel-Liste und
+ * Meldungen „Team“, und niemand wüsste, dass eine ganze Seite gemeint ist). Die EINE Stelle für Meldungen und Listen.
+ */
+export function feldName(x: Feld): string {
+  const n = `„${kurzname(x)}“`;
+  return x.typ === 'schritt' ? `Schritt ${n}` : n;
+}
+
+/**
  * Preisbereich und Datenschutz stehen immer am Ende, direkt vor „Verbindlich anmelden“: Der Preis wird aus den
  * Angaben darüber gerechnet, und die Einwilligung gehört unmittelbar vor das Absenden. Seit F2a hier (und von
  * `baukasten.ts` weitergereicht): Sie gehören zu keinem Schritt, sondern stehen immer am Ende des letzten.
@@ -377,7 +386,7 @@ export interface KaputteStelle {
 export function kaputteStellen(f: Formular): KaputteStelle[] {
   const aus: KaputteStelle[] = [];
   const alle = [...f.anmeldung, ...f.person];
-  const name = (x: Feld) => `„${kurzname(x)}“`;
+  const name = feldName;
   const pruefeRegeln = (ziel: Feld, bed: Bedingung, wo: string, antwort?: string) => {
     const dazu = (s: Omit<KaputteStelle, 'ziel' | 'antwort'>) =>
       aus.push({ ziel, ...(antwort === undefined ? {} : { antwort }), ...s });
@@ -596,7 +605,7 @@ export function weggefallenText(w: Weggefallen[]): string {
     ...new Set(
       w
         .filter((x) => x.ganz === ganz)
-        .map((x) => `„${kurzname(x.ziel)}“${x.antwort ? ` (Antwort „${x.antwort}“)` : ''}`),
+        .map((x) => `${feldName(x.ziel)}${x.antwort ? ` (Antwort „${x.antwort}“)` : ''}`),
     ),
   ];
   const liste = (n: string[]) =>
@@ -629,8 +638,8 @@ export function verschiebenSperre(alt: Formular, neu: Formular): string | null {
   );
   const s = kaputteStellen(neu).find((x) => x.grund === 'stelle' && !vorher.has(schluessel(x)));
   if (!s?.quelle) return null;
-  const q = `„${kurzname(s.quelle)}“`;
-  const z = `„${kurzname(s.ziel)}“`;
+  const q = feldName(s.quelle);
+  const z = feldName(s.ziel);
   const teilQ = ortVon(neu, s.quelle.id)?.teil;
   const teilZ = ortVon(neu, s.ziel.id)?.teil;
   return teilQ === teilZ || teilZ === 'person'

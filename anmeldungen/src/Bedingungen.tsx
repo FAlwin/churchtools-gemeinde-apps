@@ -9,6 +9,7 @@ import {
   VERGLEICH_TEXT,
   bedingungSatz,
   kaputteStellen,
+  feldName,
   kurzname,
   moeglicheQuellen,
   vergleicheFuer,
@@ -20,7 +21,7 @@ import {
   type Bedingung,
   type Regel,
 } from '@shared/anmeldung/bedingungen';
-import { antwortSatz, regelFuer, standardRegel, zielName } from './bedingungTexte';
+import { antwortSatz, regelFuer, standardRegel, zeigeSatz, zielName } from './bedingungTexte';
 import k from './Baukasten.module.scss';
 
 /**
@@ -268,12 +269,13 @@ export function BedingungFenster({
   // Teilen sich andere Felder dieselbe Bedingung? Hier ändert sie sich nur für dieses (Entwurf F1, Ansicht 1).
   const andere = bisher ? gleicheBedingung(formular, { id: ziel.id, antwort }) : [];
 
-  const name = kurzname(ziel);
+  // Ein Schritt heißt hier Schritt „Name“ (F2c) – wie in der Regel-Liste.
+  const name = ziel.typ === 'schritt' ? feldName(ziel) : kurzname(ziel);
   const satz = !bed.regeln.length
     ? 'Ohne Bedingung gilt nichts – „Speichern“ entfernt sie.'
     : antwort !== undefined
       ? antwortSatz(formular, antwort, bed)
-      : `Die Frage erscheint nur, wenn ${bedingungSatz(formular, bed)}. Pflicht gilt nur, solange sie zu sehen ist.`;
+      : zeigeSatz(formular, [ziel], bed);
 
   return (
     <Sheet
@@ -316,9 +318,13 @@ export function BedingungFenster({
         {andere.length > 0 && (
           <p className={k.bedNotiz}>
             Dieselbe Bedingung haben auch:{' '}
-            {andere.map((z) => `„${zielName(formular, z)}“`).join(', ')}. Hier änderst du sie nur
-            für diese {antwort === undefined ? 'Frage' : 'Antwort'}; gemeinsam geht es im Reiter
-            „Bedingungen“.
+            {andere.map((z) => zielName(formular, z, true)).join(', ')}. Hier änderst du sie nur für{' '}
+            {antwort !== undefined
+              ? 'diese Antwort'
+              : ziel.typ === 'schritt'
+                ? 'diesen Schritt'
+                : 'diese Frage'}
+            ; gemeinsam geht es im Reiter „Bedingungen“.
           </p>
         )}
       </div>

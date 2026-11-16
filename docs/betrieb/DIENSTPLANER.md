@@ -103,10 +103,10 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
   gezeigten Zeitraum noch nirgends einen Platz haben (dann „nicht vorgesehen“, 0): „+“ schaltet den Dienst für diesen
   Termin ein, „−“ bis 0 wieder aus. Belegte Plätze und Dienste mit Entwürfen bleiben unverändert. Die Matrix zeigt einen
   neu eingeschalteten Dienst nach dem Schließen des Fachs (sie lädt dann neu). Oben steht, wenn es für den Kalender des
-  Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau („Abendmahl: 0 → 1 ·
-  Musik: 3 → 5“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
-  Zahl der Vorlage erhöht, nie verringert oder entfernt; sie wirkt über alle Dienstgruppen, wo man planen darf, lässt
-  Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
+  Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau (im Fach Moderation & Predigt etwa
+  „Abendmahl: 0 → 1“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
+  Zahl der Vorlage erhöht, nie verringert oder entfernt; sie ändert **nur die Dienste der Gruppe, deren Fach offen ist**
+  (Dienste anderer Gruppen in der Vorlage übergeht sie still), lässt Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
   laufen die anderen weiter, am Ende steht, was geklappt hat und was nicht. Sind die Vorlagen von ChurchTools nicht
   erreichbar, sagt das Fach es ruhig; die Plätze lassen sich trotzdem ändern.
 

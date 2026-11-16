@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BAUSTEINE,
   ERSTER_SCHRITT,
   ctAblage,
   nurText,
@@ -16,15 +17,20 @@ import {
 import {
   amEnde,
   bedingungFehler,
+  bedingungenNachziehen,
+  feldName,
   feldSichtbar,
   leeren,
   schrittVon,
+  verschiebenSperre,
+  weggefallenText,
   type Bedingung,
 } from './bedingungen';
-import { amEnde as amEndeBaukasten } from './baukasten';
+import { amEnde as amEndeBaukasten, bausteinFeld, einordnen } from './baukasten';
 import {
   gezeigteSeiten,
   mitSchritten,
+  schrittImBaukasten,
   schrittName,
   seiteFehlt,
   seiteSichtbar,
@@ -206,6 +212,17 @@ describe('Schritt mit Bedingung – übersprungen', () => {
   });
 });
 
+describe('gezeigteSeiten – dieselben Seiten wie übergeben', () => {
+  it('mit `alle` kommen genau diese Objekte zurück (sonst findet `includes` die offene Seite nicht)', () => {
+    const f = freizeit();
+    const a = antworten({ mit: 'Ja' });
+    const alle = seiten(f);
+    const gezeigt = gezeigteSeiten(f, a, alle);
+    expect(gezeigt).toHaveLength(4);
+    for (const x of gezeigt) expect(alle).toContain(x);
+  });
+});
+
 describe('seiteFehlt – Pflicht je Seite', () => {
   it('nur die Felder dieser Seite; Datenschutz erst auf der letzten', () => {
     const f = freizeit();
@@ -284,5 +301,75 @@ describe('Name und Speichern', () => {
       'Abschluss',
     ]);
     expect(feld(zurueck.formular, 's3').bed).toEqual(wenn('mit', 'ist', 'Ja'));
+  });
+});
+
+// ── F2c: Schritte im Baukasten ──
+describe('Schritte im Baukasten (F2c)', () => {
+  it('„Neuer Schritt“ steht in der Leiste bei der Gestaltung – mit vorbelegtem Namen, der die Pflicht erfüllt', () => {
+    expect(BAUSTEINE.find((b) => b.typ === 'schritt')).toEqual({
+      typ: 'schritt',
+      name: 'Neuer Schritt',
+      gruppe: 'gestaltung',
+    });
+    const neu = bausteinFeld('schritt', 'f9');
+    expect(neu).toMatchObject({ typ: 'schritt', frage: 'Neuer Schritt', art: 'eigen' });
+    expect(feldFehler(neu)).toBeNull();
+  });
+
+  it('Nummer wie im Formular (Schritt 1 = fester Balken), bedingte zählen mit; ausgeschaltete und Felder sind keine Schritte', () => {
+    const f = freizeit();
+    expect(schrittImBaukasten(f, feld(f, 's2'))?.nr).toBe(2);
+    expect(schrittImBaukasten(f, feld(f, 's3'))?.nr).toBe(3);
+    expect(schrittImBaukasten(f, feld(f, 's4'))?.nr).toBe(4);
+    expect(schrittImBaukasten(f, feld(f, 'bereich'))).toBeNull();
+    const aus = {
+      ...f,
+      person: f.person.map((x) => (x.id === 's3' ? { ...x, zustand: 'aus' as const } : x)),
+    };
+    expect(schrittImBaukasten(aus, feld(aus, 's3'))).toBeNull();
+    expect(schrittImBaukasten(aus, feld(aus, 's4'))?.nr).toBe(3);
+  });
+
+  it('leer: nur, wenn auf seiner Seite nichts steht – Fragen je Person nach einem Kontakt-Schritt zählen zu ihm', () => {
+    const f = freizeit();
+    // s2 hat „mit“ und davor stehende Fragen je Person (pname, birth).
+    expect(schrittImBaukasten(f, feld(f, 's2'))?.leer).toBe(false);
+    const nurPersonen = { ...f, anmeldung: f.anmeldung.filter((x) => x.id !== 'mit') };
+    expect(schrittImBaukasten(nurPersonen, feld(nurPersonen, 's2'))?.leer).toBe(false);
+    // Ein Schritt ganz am Ende hat keine Seite mit Fragen.
+    const amSchluss = { ...f, person: [...f.person, frage('s5', 'schritt', { frage: 'Anreise' })] };
+    expect(schrittImBaukasten(amSchluss, feld(amSchluss, 's5'))?.leer).toBe(true);
+    expect(schrittImBaukasten(amSchluss, feld(amSchluss, 's4'))?.leer).toBe(false);
+  });
+
+  it('eine kaputte Bedingung am Schritt: die Meldung nennt ihn Schritt „…“', () => {
+    const f = freizeit();
+    const kaputt = { ...f, anmeldung: f.anmeldung.filter((x) => x.id !== 'mit') };
+    expect(bedingungFehler(kaputt)).toEqual([
+      'Schritt „Mitarbeit“: Die Frage, auf die die Bedingung schaut, gibt es nicht mehr.',
+    ]);
+  });
+
+  it('feldName: ein Schritt heißt Schritt „Name“, eine Frage nur „Kurzname“', () => {
+    const f = freizeit();
+    expect(feldName(feld(f, 's3'))).toBe('Schritt „Mitarbeit“');
+    expect(feldName(feld(f, 'mit'))).toBe('„Frage mit“');
+  });
+
+  it('Meldungen nennen den Schritt: Sperre beim Verschieben und weggefallene Bedingung', () => {
+    const f = freizeit();
+    // „mit“ hinter den Schritt „Mitarbeit“ (in den Personen-Teil) – dort wäre sie keine gültige Quelle mehr.
+    const verschoben = einordnen(f, 'mit', 'person', 'bereich');
+    expect(verschiebenSperre(f, verschoben)).toBe(
+      '„Frage mit“ muss vor Schritt „Mitarbeit“ bleiben – dort ist sie Bedingung.',
+    );
+    const ohneQuelle = bedingungenNachziehen({
+      ...f,
+      anmeldung: f.anmeldung.filter((x) => x.id !== 'mit'),
+    });
+    expect(weggefallenText(ohneQuelle.weggefallen)).toBe(
+      'Die Bedingung bei Schritt „Mitarbeit“ fällt mit weg.',
+    );
   });
 });

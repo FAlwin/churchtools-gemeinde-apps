@@ -803,3 +803,183 @@ describe('Bedingungen: Kontakt-Fragen und weitere Feldarten (F1b)', () => {
     );
   });
 });
+
+// ── F2b: das Formular in Schritten (Entwurf f2-schritte-v1, Klick-Runden 7 und 8) ──
+describe('Formular in Schritten (F2b)', () => {
+  /**
+   * Schritt 1 Kontakt · „Wer kommt mit“ (Mitarbeit? + Personen) · „Mitarbeit“ (nur bei Ja: T-Shirt je Person) ·
+   * „Abschluss“ (Anreise je Person, Pflicht). Fotos je Person als Pflicht – damit Seite 2 eine Pflicht je Person hat.
+   */
+  function inSchritten(): OeffentlicheEinstellungen {
+    const e = freizeit();
+    e.formular.person.find((f) => f.id === 'foto')!.zustand = 'pflicht';
+    const eigen = (id: string, typ: 'schritt' | 'janein' | 'text', frage: string, extra = {}) => ({
+      id,
+      art: 'eigen' as const,
+      typ,
+      frage,
+      hilfe: '',
+      zustand: typ === 'schritt' ? ('freiwillig' as const) : ('pflicht' as const),
+      antworten: [],
+      ...extra,
+    });
+    const ende = e.formular.anmeldung.findIndex((f) => f.typ === 'price');
+    e.formular.anmeldung.splice(
+      ende,
+      0,
+      eigen('s2', 'schritt', 'Wer kommt mit'),
+      eigen('mit', 'janein', 'Möchtet ihr mitarbeiten?'),
+    );
+    const tshirt = e.formular.person.findIndex((f) => f.id === 'f1');
+    e.formular.person.splice(
+      tshirt,
+      0,
+      eigen('s3', 'schritt', 'Mitarbeit', {
+        bed: { modus: 'eine', regeln: [{ feld: 'mit', op: 'ist', wert: 'Ja' }] },
+      }),
+    );
+    e.formular.person.push(
+      eigen('s4', 'schritt', 'Abschluss'),
+      eigen('anreise', 'text', 'Anreise'),
+    );
+    return e;
+  }
+  const stand = () => screen.getByText(/^Schritt \d+ von \d+/).textContent;
+  const weiter = () => fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+  const zurueck = () => fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+  const ja = (c: HTMLElement, pfad: string, wert = 'Ja') =>
+    fireEvent.click(
+      c.querySelector<HTMLInputElement>(`input[name="af-${pfad}"][value="${wert}"]`)!,
+    );
+
+  it('Seite 1: Fortschritt, nur die Kontakt-Fragen, „Weiter“ statt Preis, Datenschutz und Anmelden', () => {
+    zeigen(inSchritten());
+    expect(stand()).toBe('Schritt 1 von 3 · Deine Angaben');
+    expect(screen.getByText('Deine Kontaktdaten')).toBeTruthy();
+    // Die Kontakt-Frage von Seite 2 steht nicht schon hier.
+    expect(screen.queryByText('Möchtet ihr mitarbeiten?')).toBeNull();
+    expect(screen.queryByText('Wer nimmt teil?')).toBeNull();
+    expect(screen.queryByLabelText(/Ich bin einverstanden/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Verbindlich anmelden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Weiter' })).toBeTruthy();
+  });
+
+  it('„Weiter“ prüft nur diese Seite; „Zurück“ prüft nichts und die Antworten bleiben', () => {
+    const { container } = zeigen(inSchritten());
+    weiter();
+    expect(stand()).toBe('Schritt 2 von 3 · Wer kommt mit');
+    expect(screen.getByText('Für die ganze Anmeldung')).toBeTruthy();
+    // Nur die Fragen dieser Seite: Name des Kontakts, T-Shirt und Anreise stehen woanders.
+    expect(screen.queryByText('Deine Kontaktdaten')).toBeNull();
+    expect(screen.queryAllByLabelText(/T-Shirt/)).toHaveLength(0);
+    expect(screen.queryAllByLabelText(/Anreise/)).toHaveLength(0);
+    // „Mitarbeit?“ und Fotos je Person fehlen → markiert, man bleibt hier.
+    weiter();
+    expect(stand()).toBe('Schritt 2 von 3 · Wer kommt mit');
+    expect(screen.getByRole('alert').textContent).toContain('markierten Angaben');
+    ja(container, 'anmeldung.mit', 'Nein');
+    ja(container, 'personen.0.foto');
+    ja(container, 'personen.1.foto', 'Nein');
+    weiter();
+    expect(stand()).toBe('Schritt 3 von 3 · Abschluss');
+    expect(screen.queryByRole('alert')).toBeNull();
+    zurueck();
+    expect(stand()).toBe('Schritt 2 von 3 · Wer kommt mit');
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="af-personen.1.foto"][value="Nein"]')!
+        .checked,
+    ).toBe(true);
+  });
+
+  it('ein Schritt mit Bedingung wird übersprungen – bei „Ja“ kommt er dazu', () => {
+    const { container } = zeigen(inSchritten());
+    weiter();
+    ja(container, 'anmeldung.mit');
+    ja(container, 'personen.0.foto');
+    ja(container, 'personen.1.foto');
+    expect(stand()).toBe('Schritt 2 von 4 · Wer kommt mit');
+    weiter();
+    expect(stand()).toBe('Schritt 3 von 4 · Mitarbeit');
+    expect(screen.getAllByLabelText(/T-Shirt/)).toHaveLength(2);
+    // Der Balken: ein Stück je Schritt – erledigte und der offene markiert.
+    const stuecke = () => [...container.querySelectorAll('[class*="fortschrittBalken"] span')];
+    expect(stuecke()).toHaveLength(4);
+    expect(stuecke().map((x) => x.className.includes('erledigt'))).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
+    // Zurück auf „Nein“: „Mitarbeit“ wird übersprungen – gestrichelt, zählt nicht mit.
+    zurueck();
+    ja(container, 'anmeldung.mit', 'Nein');
+    expect(stand()).toBe('Schritt 2 von 3 · Wer kommt mit');
+    expect(stuecke()[2].className).toMatch(/uebersprungen/);
+  });
+
+  it('„+ Weitere Person“ nur auf der ersten Seite mit Personen; spätere Seiten zeigen alle', () => {
+    const { container } = zeigen(inSchritten());
+    weiter();
+    expect(screen.getByRole('button', { name: '+ Weitere Person' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Entfernen' })).toHaveLength(2);
+    ja(container, 'anmeldung.mit', 'Nein');
+    ja(container, 'personen.0.foto');
+    ja(container, 'personen.1.foto');
+    weiter();
+    expect(screen.queryByRole('button', { name: '+ Weitere Person' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Entfernen' })).toBeNull();
+    expect(screen.getAllByLabelText(/Anreise/)).toHaveLength(2);
+    // Hier steht der Name nicht mehr dabei – die Personen heißen wie eingetragen.
+    expect(screen.getByText('Maria Beispiel')).toBeTruthy();
+    expect(screen.getByText('Jonas Beispiel')).toBeTruthy();
+  });
+
+  it('letzte Seite: Auswahl, Datenschutz und Anmelden neben „Zurück“ – Absenden wie ohne Schritte', () => {
+    const { container } = zeigen(inSchritten());
+    weiter();
+    ja(container, 'anmeldung.mit', 'Nein');
+    ja(container, 'personen.0.foto');
+    ja(container, 'personen.1.foto');
+    weiter();
+    expect(screen.getByText('Zimmer')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zurück' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+    expect(screen.getByText('Bitte ankreuzen.')).toBeTruthy();
+    fireEvent.change(screen.getAllByLabelText(/Anreise/)[0], { target: { value: 'Bahn' } });
+    fireEvent.change(screen.getAllByLabelText(/Anreise/)[1], { target: { value: 'Bahn' } });
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+
+  it('der Name von Schritt 1 kommt aus den Einstellungen', () => {
+    const e = inSchritten();
+    e.ersterSchritt = 'Kontakt';
+    zeigen(e);
+    expect(stand()).toBe('Schritt 1 von 3 · Kontakt');
+  });
+
+  it('ohne Schritte wie bisher: kein Fortschritt, kein „Weiter“, alles auf einer Seite', () => {
+    zeigen(freizeit());
+    expect(screen.queryByText(/^Schritt \d+ von/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+    expect(screen.getByText('Wer nimmt teil?')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verbindlich anmelden' })).toBeTruthy();
+  });
+
+  it('im Baukasten wird nicht geblättert – ein Schritt steht als Trennzeile mit Namen da', () => {
+    render(
+      <AnmeldeFormular
+        ansicht={{ basis: BASIS, name: 'X', gemeinde: null, einstellungen: inSchritten() }}
+        heute={HEUTE}
+        vorschau
+        baukasten={{ feld: (_f, _b, inhalt) => inhalt }}
+      />,
+    );
+    expect(screen.queryByText(/^Schritt \d+ von/)).toBeNull();
+    expect(screen.getByText('Schritt · Mitarbeit')).toBeTruthy();
+    expect(screen.getByLabelText(/Anreise/)).toBeTruthy();
+  });
+});

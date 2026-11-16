@@ -1,6 +1,7 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { nurText, type Antwort, type Feld } from '@shared/anmeldung/formular';
 import { wahlAntworten, type AntwortZustand } from '@shared/anmeldung/bedingungen';
+import { freiGewaehlt, freiMitText, freiName } from '@shared/anmeldung/freieAntwort';
 import { datumText } from '@shared/ct/datum';
 import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
@@ -32,6 +33,8 @@ export function FeldEingabe({
   zusatz = null,
   antwortZu,
   geloest,
+  freiText = '',
+  onFreiText,
 }: {
   feld: Feld;
   wert: Antwort;
@@ -47,8 +50,13 @@ export function FeldEingabe({
   antwortZu?: (antwort: string) => AntwortZustand;
   /** F1b: „„Gruppenleiter“ ist nur für Getaufte möglich – bitte neu wählen.“ – die Wahl wurde gerade gelöst. */
   geloest?: string;
+  /** F3: der Text der freien Antwort und sein Setter (`freiEingabe`). */
+  freiText?: string;
+  onFreiText?: (t: string) => void;
 }) {
   const f = feld;
+  // F3: Wer die freie Antwort gerade gewählt hat, tippt gleich los – das Feld, das aufklappt, bekommt den Fokus.
+  const [freiFokus, setFreiFokus] = useState(false);
   const hatFehler = (unter = '') => fehler.includes(unter ? `${pfad}.${unter}` : pfad);
   const fehlerText = (text: string, unter = '') =>
     hatFehler(unter) ? <span className={s.err}>{text}</span> : null;
@@ -162,6 +170,37 @@ export function FeldEingabe({
     );
   }
 
+  // ── F3: die freie Antwort (Entwurf f3-freie-antwort-v1) ──
+  const frei = freiMitText(f) ? f.frei! : null;
+  const freiGew = freiGewaehlt(f, wert);
+  /** Die freie Antwort mitwählen – beim Tippen in ein Feld, das „immer da“ steht. */
+  const freiWaehlen = () =>
+    onWert(f.typ === 'multi' ? [...(Array.isArray(wert) ? wert : []), frei!.name] : frei!.name);
+  /** Gewählt wurde etwas – war es die freie Antwort mit aufklappendem Feld, bekommt dieses den Fokus. */
+  const gewaehlt = (a: string) =>
+    setFreiFokus(!!frei && frei.textfeld === 'auf' && a === frei.name);
+  const freiFeld =
+    frei && (frei.textfeld === 'immer' || freiGew) ? (
+      <div className={`${s.freiText} ${hatFehler('frei') ? s.bad : ''}`}>
+        <input
+          id={`${id}-frei`}
+          aria-label={frei.name}
+          placeholder={frei.textfeld === 'immer' ? frei.name : 'Bitte eintragen'}
+          value={freiText}
+          disabled={gesperrt}
+          autoFocus={freiFokus}
+          onChange={(e) => {
+            onFreiText?.(e.target.value);
+            if (e.target.value.trim() && !freiGew) freiWaehlen();
+          }}
+        />
+        {fehlerText(`Bitte „${frei.name}“ eintragen.`, 'frei')}
+      </div>
+    ) : null;
+  /** Bei „steht immer da“ steht das Feld in der Zeile der freien Antwort (Eine Antwort, Mehrere Antworten). */
+  const inZeile = (a: string) =>
+    frei?.textfeld === 'immer' && a === freiName(f) && f.typ !== 'janein';
+
   let eingabe: React.ReactNode;
   if (f.typ === 'textarea') {
     eingabe = (
@@ -181,25 +220,39 @@ export function FeldEingabe({
         role="radiogroup"
         aria-labelledby={`${id}-l`}
       >
-        {antworten.map((a) => (
-          <label
-            key={a}
-            className={`${f.typ === 'janein' ? s.ynb : s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}
-          >
-            <input
-              type="radio"
-              name={id}
-              value={a}
-              checked={wert === a}
-              disabled={gesperrt || zustand(a).art === 'grau'}
-              onChange={() => onWert(a)}
-            />
-            <span>
-              {a}
-              {grund(a) && <small> ({grund(a)})</small>}
-            </span>
-          </label>
-        ))}
+        {antworten.map((a) => {
+          const knopf = (
+            <label
+              key={a}
+              className={`${f.typ === 'janein' ? s.ynb : s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}
+            >
+              <input
+                type="radio"
+                name={id}
+                value={a}
+                checked={wert === a}
+                disabled={gesperrt || zustand(a).art === 'grau'}
+                onChange={() => {
+                  onWert(a);
+                  gewaehlt(a);
+                }}
+              />
+              <span>
+                {a}
+                {inZeile(a) && ':'}
+                {grund(a) && <small> ({grund(a)})</small>}
+              </span>
+            </label>
+          );
+          return inZeile(a) ? (
+            <div key={a} className={s.freiZeile}>
+              {knopf}
+              {freiFeld}
+            </div>
+          ) : (
+            knopf
+          );
+        })}
       </div>
     );
   } else if (f.typ === 'select') {
@@ -208,10 +261,13 @@ export function FeldEingabe({
         id={id}
         value={typeof wert === 'string' ? wert : ''}
         disabled={gesperrt}
-        onChange={(e) => onWert(e.target.value)}
+        onChange={(e) => {
+          onWert(e.target.value);
+          gewaehlt(e.target.value);
+        }}
       >
         <option value="">Bitte wählen …</option>
-        {sichtbareAntworten(f.antworten).map((a) => (
+        {sichtbareAntworten(wahlAntworten(f)).map((a) => (
           <option key={a} value={a} disabled={zustand(a).art === 'grau'}>
             {a}
             {grund(a) ? ` (${grund(a)})` : ''}
@@ -220,25 +276,37 @@ export function FeldEingabe({
       </select>
     );
   } else if (f.typ === 'multi') {
-    const gewaehlt = Array.isArray(wert) ? wert : [];
+    const liste = Array.isArray(wert) ? wert : [];
     eingabe = (
       <div className={s.choices} role="group" aria-labelledby={`${id}-l`}>
-        {sichtbareAntworten(f.antworten).map((a) => (
-          <label key={a} className={`${s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}>
-            <input
-              type="checkbox"
-              checked={gewaehlt.includes(a)}
-              disabled={gesperrt || zustand(a).art === 'grau'}
-              onChange={(e) =>
-                onWert(e.target.checked ? [...gewaehlt, a] : gewaehlt.filter((x) => x !== a))
-              }
-            />
-            <span>
-              {a}
-              {grund(a) && <small> ({grund(a)})</small>}
-            </span>
-          </label>
-        ))}
+        {sichtbareAntworten(wahlAntworten(f)).map((a) => {
+          const kaestchen = (
+            <label key={a} className={`${s.choice} ${zustand(a).art === 'grau' ? s.gesperrt : ''}`}>
+              <input
+                type="checkbox"
+                checked={liste.includes(a)}
+                disabled={gesperrt || zustand(a).art === 'grau'}
+                onChange={(e) => {
+                  onWert(e.target.checked ? [...liste, a] : liste.filter((x) => x !== a));
+                  if (e.target.checked) gewaehlt(a);
+                }}
+              />
+              <span>
+                {a}
+                {inZeile(a) && ':'}
+                {grund(a) && <small> ({grund(a)})</small>}
+              </span>
+            </label>
+          );
+          return inZeile(a) ? (
+            <div key={a} className={s.freiZeile}>
+              {kaestchen}
+              {freiFeld}
+            </div>
+          ) : (
+            kaestchen
+          );
+        })}
       </div>
     );
   } else {
@@ -264,6 +332,7 @@ export function FeldEingabe({
         {zusatz}
       </label>
       {eingabe}
+      {!(frei && inZeile(frei.name)) && freiFeld}
       {!(f.typ === 'text' && f.hilfe) && hilfe}
       {geloest && (
         <span className={s.err} role="status">

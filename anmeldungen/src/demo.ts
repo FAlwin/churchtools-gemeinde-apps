@@ -73,7 +73,16 @@ function g(
  * verstößt dagegen – so, als hätte jemand in ChurchTools von Hand etwas eingetragen. Damit zeigt die Nachprüfung zwei
  * Befunde. Tom Muster (DEMO02) ist im Team – bei ihm zeigt „Person dazu“ die Fragen fürs Team.
  */
-const DEMO_SPALTEN = { nr: 74, kontakt: 75, auswahl: 76, team: 78, bereich: 79, erfahrung: 80 };
+const DEMO_SPALTEN = {
+  nr: 74,
+  kontakt: 75,
+  auswahl: 76,
+  team: 78,
+  bereich: 79,
+  erfahrung: 80,
+  // F3: der Text der freien Antwort „Anderer Bereich“ in seiner zweiten Spalte.
+  'bereich.frei': 81,
+};
 function mitBedingungen(
   f: OeffentlicheEinstellungen['formular'],
 ): OeffentlicheEinstellungen['formular'] {
@@ -108,6 +117,7 @@ function mitBedingungen(
       {
         ...frage('bereich', 'radio', 'Bereich', ['Küche', 'Technik']),
         antwortBed: { Technik: { ...imTeam, art: 'grau' as const, grund: 'nur fürs Team' } },
+        frei: { name: 'Anderer Bereich', textfeld: 'auf' as const },
       },
       { ...frage('s-team', 'schritt', 'Team'), bed: imTeam },
       { ...frage('erfahrung', 'text', 'Team-Erfahrung'), bed: imTeam },
@@ -135,9 +145,11 @@ const DEMO_FELDER = [
     options: [
       { id: 791, name: 'Küche' },
       { id: 792, name: 'Technik' },
+      { id: 793, name: 'Anderer Bereich' },
     ],
   },
   { id: 80, name: 'Team-Erfahrung' },
+  { id: 81, name: 'Bereich (Anderer Bereich)' },
 ];
 const DEMO_PERSONEN = [
   {
@@ -165,8 +177,8 @@ const familie = (seit: string) => ({
       901,
       { 73: '0', 74: 'DEMO01', 75: 'Maria Beispiel', 76: '4-Bett-Zimmer', 78: '782', 79: '792' },
     ],
-    // Jonas: „Team-Erfahrung“ beantwortet – die Frage käme nur fürs Team.
-    [902, { 73: '0', 74: 'DEMO01', 79: '791', 80: 'drei Jahre' }],
+    // Jonas: „Team-Erfahrung“ beantwortet – die Frage käme nur fürs Team. Bereich: freie Antwort „Fotos“ (F3).
+    [902, { 73: '0', 74: 'DEMO01', 79: '793', 80: 'drei Jahre', 81: 'Fotos' }],
     // Tom (DEMO02): im Team, alles erlaubt – für „Person dazu“ mit der Kontakt-Antwort „Ja“.
     [
       903,

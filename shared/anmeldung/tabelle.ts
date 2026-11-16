@@ -16,7 +16,13 @@ import {
   teilnehmerSpalten,
   teilnehmerZelle,
 } from './druckliste';
-import { listenZahlen, mehrfachAntworten, type ListenAnmeldung, type ListenPerson } from './liste';
+import { wahlAntworten } from './bedingungen';
+import {
+  listenZahlen,
+  mehrfachAnzeigeTeile,
+  type ListenAnmeldung,
+  type ListenPerson,
+} from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
 
 export interface TabellenSpalte {
@@ -185,9 +191,10 @@ export function frageSumme(
     case 'multi': {
       const je = new Map<string, number>();
       for (const a of da)
-        for (const k of f.typ === 'multi' ? mehrfachAntworten(f, a) : [a])
+        for (const k of f.typ === 'multi' ? mehrfachAnzeigeTeile(f, a) : [a])
           je.set(k, (je.get(k) ?? 0) + 1);
-      const reihe = [...f.antworten, ...(f.verborgen ?? [])];
+      // Reihenfolge wie im Formular, die freie Antwort ohne Text (F3) am Ende der festen.
+      const reihe = [...wahlAntworten(f), ...(f.verborgen ?? [])];
       const teile = reihe.filter((k) => je.get(k)).map((k) => `${k} ${je.get(k)}`);
       // Antworten, die es im Formular nicht (mehr) gibt, hinten – sie stehen ja in ChurchTools.
       for (const [k, n] of je) if (!reihe.includes(k)) teile.push(`${k} ${n}`);

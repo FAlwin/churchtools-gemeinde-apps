@@ -5,6 +5,7 @@ import {
   gruppenRechteAus,
   KEINE_GRUPPENRECHTE,
   mitgliederRechte,
+  mitgliederRechteOderNichts,
   orgRechteAus,
   type OrgRechte,
 } from './rechte';
@@ -142,16 +143,27 @@ describe('Mitglieder pflegen (O6, gemessen 23.10.2026)', () => {
       '+edit group memberships': true,
       '+edit basic group memberships': true,
       '+remove from group': false,
+      '+edit groupmemberstatus': true,
     },
   });
 
   it('je Gruppe: Leitung darf aufnehmen und Rolle ändern, aber nicht beenden', () => {
-    expect(leitung).toEqual({ aufnehmen: true, rolleAendern: true, beenden: false });
+    expect(leitung).toEqual({
+      aufnehmen: true,
+      rolleAendern: true,
+      beenden: false,
+      statusAendern: true,
+    });
     expect(mitgliederRechte(r({}), leitung, lobpreis)).toEqual(leitung);
   });
 
   it('je Gruppe erlaubt auch Austragen (wo ChurchTools es der Rolle gibt) – ohne globales Recht', () => {
-    const mitAustragen = { aufnehmen: false, rolleAendern: false, beenden: true };
+    const mitAustragen = {
+      aufnehmen: false,
+      rolleAendern: false,
+      beenden: true,
+      statusAendern: false,
+    };
     expect(mitgliederRechte(r({}), mitAustragen, lobpreis)).toEqual(mitAustragen);
   });
 
@@ -163,7 +175,7 @@ describe('Mitglieder pflegen (O6, gemessen 23.10.2026)', () => {
   });
 
   it('global: Gruppen-Admin, „edit group memberships“, Liste je Gruppe oder je Typ → alles', () => {
-    const alles = { aufnehmen: true, rolleAendern: true, beenden: true };
+    const alles = { aufnehmen: true, rolleAendern: true, beenden: true, statusAendern: true };
     expect(mitgliederRechte(r({ gruppenVerwalten: true }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
       alles,
     );
@@ -177,6 +189,34 @@ describe('Mitglieder pflegen (O6, gemessen 23.10.2026)', () => {
       alles,
     );
     expect(mitgliederRechte(r({ mitgliederGruppen: [7] }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      KEINE_GRUPPENRECHTE,
+    );
+  });
+
+  it('Status ändern (O9-3): nur `+edit groupmemberstatus` – ohne aufnehmen/austragen; global alles', () => {
+    const nurStatus = gruppenRechteAus({ churchdb: { '+edit groupmemberstatus': true } });
+    expect(nurStatus).toEqual({ ...KEINE_GRUPPENRECHTE, statusAendern: true });
+    expect(gruppenRechteAus({ churchdb: { '+edit groupmemberstatus': 1 } }).statusAendern).toBe(
+      false,
+    );
+    expect(mitgliederRechte(r({}), nurStatus, lobpreis).statusAendern).toBe(true);
+    expect(mitgliederRechte(r({}), nurStatus, lobpreis).aufnehmen).toBe(false);
+    expect(
+      mitgliederRechte(r({ gruppenVerwalten: true }), KEINE_GRUPPENRECHTE, lobpreis).statusAendern,
+    ).toBe(true);
+    expect(mitgliederRechte(r({}), KEINE_GRUPPENRECHTE, lobpreis).statusAendern).toBe(false);
+  });
+
+  it('mitgliederRechteOderNichts: ohne gelesene Rechte und ohne globales Recht weiß man es nicht', () => {
+    expect(mitgliederRechteOderNichts(r({}), null, lobpreis)).toBeNull();
+    expect(mitgliederRechteOderNichts(r({ gruppenVerwalten: true }), null, lobpreis)).toEqual({
+      aufnehmen: true,
+      rolleAendern: true,
+      beenden: true,
+      statusAendern: true,
+    });
+    // gelesen und „nichts erlaubt“ ist etwas anderes als „nicht gelesen“
+    expect(mitgliederRechteOderNichts(r({}), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
       KEINE_GRUPPENRECHTE,
     );
   });

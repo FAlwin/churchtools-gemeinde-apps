@@ -85,6 +85,14 @@
   }
 }
 
+.hinweisGelb {
+  background: var(--markiert);
+
+  svg {
+    color: var(--text);
+  }
+}
+
 .karte {
   @include m.card-list;
   padding-bottom: 4px;
@@ -193,6 +201,12 @@
   color: var(--text2);
 }
 
+// Ausnahme vom letzten Jahr: der Textmarker der App (`--markiert`).
+.gelb {
+  background: var(--markiert);
+  color: var(--text);
+}
+
 // Übersicht: je Stufe eine Kachel.
 .kacheln {
   display: grid;
@@ -254,4 +268,37 @@
   @include m.textKnopf;
   display: inline-block;
   margin-top: 12px;
+}
+
+// Der Schalter „Bleibt noch ein Jahr“ – nur Anzeige im Knopf (ui Schalter), bedient wird der Knopf.
+.schalterKnopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.fehler {
+  margin: 8px 0 0;
+  color: var(--red);
+  font-size: 14px;
+}
+
+.rueck {
+  @include m.textKnopf;
+  display: inline;
+  padding: 0;
 }

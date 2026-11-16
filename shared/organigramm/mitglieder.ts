@@ -111,6 +111,8 @@ export interface RohMitglied {
   groupTypeRoleId?: unknown;
   groupMemberStatus?: unknown;
   memberEndDate?: unknown;
+  /** Wann der Status zuletzt geändert wurde (UTC-ISO) – gemessen 16.11.2026: bei jeder Statusänderung neu gesetzt. */
+  statusChangedDate?: unknown;
 }
 
 /** „Alwin Friesen“ → „AF“ – die eine Stelle dafür (Mitgliederliste, To-Do-Übersicht der Protokolle). */

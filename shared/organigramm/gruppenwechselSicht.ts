@@ -11,9 +11,12 @@
  *   neuen Gruppe sieht sie über ihre Leiter-Rolle, 4.25); vorher – nur wer die Gruppe davor lesen darf – als Vorschau.
  */
 import { ctId } from '../ct/ctId';
+import { gemeindeZeitzone, tagAusIso } from '../ct/zeit';
 import { werWechselt, type Stufe, type Wechseljahr } from './gruppenwechsel';
 import { wechselGruppeAb, wechselGruppeNach, type Einrichtung } from './gruppenwechselEinrichtung';
 import type { RohMitglied } from './mitglieder';
+import { AUSNAHME_STATUS } from './mitgliedschaft';
+import type { GruppenRechte } from './rechte';
 
 // ── Wer sieht den Reiter ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -49,6 +52,11 @@ export interface KjMitglied {
   name: string;
   leitung: boolean;
   status: MitgliedStatus;
+  /**
+   * Wann der Status zuletzt geändert wurde (ChurchTools: `statusChangedDate`, UTC) – `null`, wenn ChurchTools keins
+   * nennt. Daran erkennt man eine Ausnahme vom Vorjahr (O9-3).
+   */
+  statusGeaendert: string | null;
 }
 
 /**
@@ -71,6 +79,10 @@ export function kjMitgliederAus(
       name: name || `Person ${personId}`,
       leitung: istLeitung(ctId(r.groupTypeRoleId)),
       status: status as MitgliedStatus,
+      statusGeaendert:
+        typeof r.statusChangedDate === 'string' && r.statusChangedDate !== ''
+          ? r.statusChangedDate
+          : null,
     });
   }
   return aus;
@@ -115,8 +127,11 @@ export const phaseAm = (j: Wechseljahr, heute: string): Phase =>
 
 export type KindWechsel =
   | { art: 'wechselt'; nach: Stufe }
-  /** Alt genug, bleibt aber: „zu löschen“ in der Wechsel-Gruppe. */
-  | { art: 'ausnahme'; nach: Stufe }
+  /**
+   * Alt genug, bleibt aber: „zu löschen“ in der Wechsel-Gruppe. `vomVorjahr`: der Status wurde vor dem Wechseltag des
+   * Vorjahres gesetzt (`ausnahmeVomVorjahr`).
+   */
+  | { art: 'ausnahme'; nach: Stufe; vomVorjahr: boolean }
   | { art: 'bleibt' }
   | { art: 'ohneGeburtstag' }
   /** Die Person ließ sich nicht lesen – ob und wohin sie wechselt, ist offen. */
@@ -131,6 +146,36 @@ export interface KindZeile {
   wechsel: KindWechsel;
   /** Am Stichtag 18 oder älter (4.20: Bereichsleitung prüft, wohin). */
   wird18: boolean;
+}
+
+/**
+ * **Ist das eine Ausnahme vom letzten Jahr?** Ja, wenn ihr Status **vor dem Wechseltag des Vorjahres** gesetzt wurde (Tag
+ * in der Gemeinde-Zeitzone). Grenze ist der Wechseltag des Vorjahres, nicht die Ankündigung dieses Jahres: Bereichsleitung
+ * und Admins dürfen eine Ausnahme schon vor der Ankündigung eintragen (O9-F7) – die gehört zu diesem Jahr.
+ * Ohne Zeitpunkt aus ChurchTools oder ohne bekanntes Vorjahr lässt es sich nicht sagen – dann gilt sie als dieses Jahr
+ * (lieber „bleibt noch ein Jahr“ als ein falsches „vom letzten Jahr“).
+ */
+export function ausnahmeVomVorjahr(
+  statusGeaendert: string | null,
+  vorigerWechseltag: string | null,
+  zeitzone: string = gemeindeZeitzone(),
+): boolean {
+  return (
+    statusGeaendert !== null &&
+    vorigerWechseltag !== null &&
+    tagAusIso(statusGeaendert, zeitzone) < vorigerWechseltag
+  );
+}
+
+/** Der Wechseltag des Jahres vor `jahr` – `null`, wenn der Ferienkalender ihn nicht hergibt. */
+export function vorigerWechseltag(jahre: readonly Wechseljahr[], jahr: Wechseljahr): string | null {
+  return jahre.find((j) => j.jahr === jahr.jahr - 1)?.wechseltag ?? null;
+}
+
+/** Wie die Sicht rechnet: Zeitzone der Gemeinde und der Wechseltag des Vorjahres (für „Ausnahme vom Vorjahr“). */
+export interface SichtOptionen {
+  zeitzone?: string;
+  vorigerWechseltag?: string | null;
 }
 
 export interface NeuZeile {
@@ -150,6 +195,8 @@ export interface GruppenSicht {
   /** Alt genug für die nächste Stufe – samt Ausnahmen (die Zeile sagt „bleibt noch ein Jahr“). */
   wechseln: KindZeile[];
   bleiben: KindZeile[];
+  /** Die Ausnahmen, die schon vom letzten Jahr stammen – sie bekommen einen Hinweis (O9-3). */
+  ausVorjahr: KindZeile[];
   /**
    * Ob die Ausnahmen bekannt sind: Ohne lesbare Wechsel-Gruppe stünde jedes Kind als „wechselt“ da, auch eins mit
    * Ausnahme – das sagt die Oberfläche dann dazu.
@@ -161,13 +208,17 @@ export interface GruppenSicht {
 
 const nachName = <T extends { name: string }>(a: T, b: T) => a.name.localeCompare(b.name, 'de');
 
-/** Die Ausnahmen einer Wechsel-Gruppe – `null`, wenn sie nicht lesbar ist. */
-function ausnahmenIn(daten: KjDaten, gruppeId: number | undefined): Set<number> | null {
-  if (gruppeId === undefined) return new Set(); // keine Wechsel-Gruppe: keine Ausnahmen möglich
+/** Die Ausnahmen einer Wechsel-Gruppe (Person → wann gesetzt) – `null`, wenn sie nicht lesbar ist. */
+type Ausnahmen = ReadonlyMap<number, string | null>;
+
+function ausnahmenIn(daten: KjDaten, gruppeId: number | undefined): Ausnahmen | null {
+  if (gruppeId === undefined) return new Map(); // keine Wechsel-Gruppe: keine Ausnahmen möglich
   const g = daten.gruppen.get(gruppeId);
   if (g?.art !== 'sichtbar') return null;
-  return new Set(
-    g.mitglieder.filter((m) => !m.leitung && m.status === 'to_delete').map((m) => m.personId),
+  return new Map(
+    g.mitglieder
+      .filter((m) => !m.leitung && m.status === AUSNAHME_STATUS)
+      .map((m): [number, string | null] => [m.personId, m.statusGeaendert]),
   );
 }
 
@@ -180,7 +231,8 @@ function zeilen(
   stufe: Stufe,
   daten: KjDaten,
   jahr: Wechseljahr,
-  ausnahmen: ReadonlySet<number>,
+  ausnahmen: Ausnahmen,
+  o: Required<SichtOptionen>,
 ): KindZeile[] {
   const kinder = kinderIn(daten.gruppen.get(stufe.gruppeId));
   const wechsel = new Map(
@@ -206,7 +258,15 @@ function zeilen(
           : w.art === 'bleibt'
             ? { art: 'bleibt' }
             : ausnahmen.has(k.personId)
-              ? { art: 'ausnahme', nach: w.nach }
+              ? {
+                  art: 'ausnahme',
+                  nach: w.nach,
+                  vomVorjahr: ausnahmeVomVorjahr(
+                    ausnahmen.get(k.personId) ?? null,
+                    o.vorigerWechseltag,
+                    o.zeitzone,
+                  ),
+                }
               : { art: 'wechselt', nach: w.nach };
       return {
         personId: k.personId,
@@ -231,7 +291,12 @@ export function gruppenSicht(
   jahr: Wechseljahr,
   heute: string,
   neuZeigen: 'immer' | 'abAnkuendigung',
+  optionen: SichtOptionen = {},
 ): GruppenSicht | null {
+  const o: Required<SichtOptionen> = {
+    zeitzone: optionen.zeitzone ?? gemeindeZeitzone(),
+    vorigerWechseltag: optionen.vorigerWechseltag ?? null,
+  };
   const stufen = e.einstellung.stufen;
   const i = stufen.findIndex((s) => s.gruppeId === stufeId);
   if (i < 0) return null;
@@ -240,7 +305,7 @@ export function gruppenSicht(
   const naechste = stufen[i + 1] ?? null;
   const g = daten.gruppen.get(stufe.gruppeId);
   const eigeneAusnahmen = ausnahmenIn(daten, wechselGruppeAb(e, stufeId)?.gruppeId);
-  const kinder = zeilen(e, stufe, daten, jahr, eigeneAusnahmen ?? new Set());
+  const kinder = zeilen(e, stufe, daten, jahr, eigeneAusnahmen ?? new Map(), o);
   const wechselnd = (k: KindZeile) => k.wechsel.art === 'wechselt' || k.wechsel.art === 'ausnahme';
   return {
     stufe,
@@ -254,8 +319,9 @@ export function gruppenSicht(
     kinder,
     wechseln: kinder.filter(wechselnd),
     bleiben: kinder.filter((k) => !wechselnd(k)),
+    ausVorjahr: kinder.filter((k) => k.wechsel.art === 'ausnahme' && k.wechsel.vomVorjahr),
     ausnahmenBekannt: eigeneAusnahmen !== null,
-    neu: vorige ? kommenNeu(e, stufe, vorige, daten, jahr, heute, neuZeigen) : [],
+    neu: vorige ? kommenNeu(e, stufe, vorige, daten, jahr, heute, neuZeigen, o) : [],
   };
 }
 
@@ -267,6 +333,7 @@ function kommenNeu(
   jahr: Wechseljahr,
   heute: string,
   neuZeigen: 'immer' | 'abAnkuendigung',
+  o: Required<SichtOptionen>,
 ): NeuZeile[] | null {
   const angekuendigt = phaseAm(jahr, heute) !== 'ruhig';
   if (!angekuendigt && neuZeigen === 'abAnkuendigung') return null;
@@ -284,7 +351,7 @@ function kommenNeu(
   if (daten.gruppen.get(vorige.gruppeId)?.art !== 'sichtbar') return null;
   const ausnahmen = ausnahmenIn(daten, wechselGruppeAb(e, vorige.gruppeId)?.gruppeId);
   if (ausnahmen === null) return null;
-  return zeilen(e, vorige, daten, jahr, ausnahmen)
+  return zeilen(e, vorige, daten, jahr, ausnahmen, o)
     .filter((k) => k.wechsel.art === 'wechselt' && !schonHier.has(k.personId))
     .map((k) => ({ personId: k.personId, name: k.name, von: vorige }));
 }
@@ -303,4 +370,79 @@ export function pflegeAus(sichten: readonly GruppenSicht[]): Pflege {
     ohneGeburtstag: alle.filter((k) => k.wechsel.art === 'ohneGeburtstag'),
     wird18: alle.filter((k) => k.wird18),
   };
+}
+
+// ── Ausnahme setzen (O9-3) ─────────────────────────────────────────────────────────────────────────────────────────
+
+/** Warum es für dieses Kind keinen Schalter gibt, obwohl es dazugehören würde. */
+export type KeinSchalterGrund =
+  /** Noch nicht angekündigt, und das Recht dafür kommt erst mit der Ankündigung (Leitungen). */
+  | 'abAnkuendigung'
+  /** Der Wechseltag ist da – das Kind geht gerade in die neue Gruppe, eine Ausnahme käme zu spät. */
+  | 'zuSpaet'
+  /** Die Rechte an der Wechsel-Gruppe sind gelesen: das nötige fehlt. */
+  | 'rechtFehlt'
+  /** Die Rechte an der Wechsel-Gruppe ließen sich nicht lesen. */
+  | 'rechtUnbekannt'
+  /** Die Wechsel-Gruppe selbst ließ sich nicht lesen: Ob das Kind schon drin ist, ist offen. */
+  | 'nichtLesbar';
+
+export type AusnahmeStand =
+  /** Der Schalter „Bleibt noch ein Jahr“; `an` = es gibt schon eine Ausnahme, `mitglied` = das Kind ist in der Wechsel-Gruppe. */
+  | { art: 'schalter'; gruppeId: number; an: boolean; mitglied: boolean }
+  | { art: 'hinweis'; grund: KeinSchalterGrund }
+  /** Das Kind wechselt ohnehin nicht (zu jung, ohne Geburtstag, letzte Stufe, keine Wechsel-Gruppe). */
+  | { art: 'keiner' };
+
+/**
+ * **Darf für dieses Kind eine Ausnahme gesetzt oder aufgehoben werden – und womit?** Entscheidend ist nicht die Rolle in
+ * der App, sondern das **Recht an der Wechsel-Gruppe** (Alwin 16.11.2026): Ist das Kind dort schon Mitglied, braucht es
+ * das Recht, den Status zu ändern; sonst das Recht, Personen aufzunehmen. `rechte` sind die Rechte je Wechsel-Gruppe –
+ * fehlt eine Gruppe darin, ließ sich ihr Recht nicht lesen.
+ */
+export function ausnahmeStand(
+  e: Einrichtung,
+  stufeId: number,
+  kind: KindZeile,
+  daten: KjDaten,
+  jahr: Wechseljahr,
+  heute: string,
+  rechte: ReadonlyMap<number, GruppenRechte>,
+): AusnahmeStand {
+  const w = kind.wechsel;
+  const wg = wechselGruppeAb(e, stufeId);
+  if ((w.art !== 'wechselt' && w.art !== 'ausnahme') || !wg) return { art: 'keiner' };
+  const phase = phaseAm(jahr, heute);
+  if (phase === 'wechsel') return { art: 'hinweis', grund: 'zuSpaet' };
+  const gruppe = daten.gruppen.get(wg.gruppeId);
+  if (gruppe?.art !== 'sichtbar') return { art: 'hinweis', grund: 'nichtLesbar' };
+  const mitglied = gruppe.mitglieder.some((m) => m.personId === kind.personId);
+  const r = rechte.get(wg.gruppeId);
+  if (!r) return { art: 'hinweis', grund: 'rechtUnbekannt' };
+  if (!(mitglied ? r.statusAendern : r.aufnehmen)) {
+    return { art: 'hinweis', grund: phase === 'ruhig' ? 'abAnkuendigung' : 'rechtFehlt' };
+  }
+  return { art: 'schalter', gruppeId: wg.gruppeId, an: w.art === 'ausnahme', mitglied };
+}
+
+/**
+ * Die Rolle, mit der ein Kind in die Wechsel-Gruppe aufgenommen wird: die **Teilnehmer-Rolle** (`type: "participant"`)
+ * aus `GET /groups/{id}/roles` (gemessen 16.11.2026: dort heißt die ID `groupTypeRoleId`). Mehrere → die Standardrolle.
+ */
+export function teilnehmerRolleAus(
+  rows:
+    | readonly {
+        groupTypeRoleId?: unknown;
+        type?: unknown;
+        isDefault?: unknown;
+        isHidden?: unknown;
+      }[]
+    | null
+    | undefined,
+): number | null {
+  const passend = (rows ?? []).filter(
+    (r) => r.type === 'participant' && r.isHidden !== true && ctId(r.groupTypeRoleId) !== null,
+  );
+  const wahl = passend.find((r) => r.isDefault === true) ?? passend[0];
+  return wahl ? ctId(wahl.groupTypeRoleId) : null;
 }

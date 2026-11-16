@@ -30,7 +30,9 @@ import {
   type KjDaten,
 } from '@shared/organigramm/gruppenwechselSicht';
 import type { RohMitglied } from '@shared/organigramm/mitglieder';
+import type { GruppenRechte } from '@shared/organigramm/rechte';
 import { jeGruppeLaden } from './ladeMitglieder';
+import { ladeGruppenRechte } from './mitgliedschaft';
 
 /** So weit voraus wird im Ferienkalender gesucht – „Einrichten“ trägt die Jahre ein, die dort stehen (bei uns bis 2029). */
 export const JAHRE_VORAUS = 5;
@@ -57,7 +59,8 @@ export async function ladeFerien(
     const jahr = Number(heute.slice(0, 4));
     const roh =
       (await holen<TerminRoh[] | null>(
-        terminPfad(kalender.id, `${jahr}-01-01`, `${jahr + JAHRE_VORAUS}-12-31`),
+        // Ab dem Vorjahr: dessen Wechseltag ist die Grenze für „Ausnahme vom letzten Jahr“ (O9-3).
+        terminPfad(kalender.id, `${jahr - 1}-01-01`, `${jahr + JAHRE_VORAUS}-12-31`),
       )) ?? [];
     return {
       art: 'da',
@@ -70,7 +73,38 @@ export async function ladeFerien(
   }
 }
 
-export type KjLadeStand = { art: 'da'; daten: KjDaten } | { art: 'fehler' };
+export type KjLadeStand =
+  | {
+      art: 'da';
+      daten: KjDaten;
+      /**
+       * Was die eigene Rolle IN jeder Wechsel-Gruppe erlaubt (O9-3). **Fehlt eine Gruppe, ließ sich ihr Recht nicht lesen**
+       * – dann gibt es dort keinen Schalter, die Listen stehen trotzdem (ein Aussetzer hier ist kein „kein Recht“).
+       */
+      rechte: ReadonlyMap<number, GruppenRechte>;
+    }
+  | { art: 'fehler' };
+
+/**
+ * Die Rechte an den Wechsel-Gruppen – je Gruppe ein Abruf. Abgemeldet (401) wirft; jeder andere Fehler lässt die Gruppe
+ * einfach aus der Antwort fallen.
+ */
+export async function ladeWechselRechte(
+  e: Einrichtung,
+  holen: (gruppeId: number) => Promise<GruppenRechte> = ladeGruppenRechte,
+): Promise<Map<number, GruppenRechte>> {
+  const rechte = new Map<number, GruppenRechte>();
+  await Promise.all(
+    e.wechselGruppen.map(async (w) => {
+      try {
+        rechte.set(w.gruppeId, await holen(w.gruppeId));
+      } catch (x) {
+        if (abgemeldet(x)) throw x;
+      }
+    }),
+  );
+  return rechte;
+}
 
 /**
  * Mitglieder aller Stufen und Wechsel-Gruppen, dann die Geburtstage der Kinder darin. Scheitern die Geburtstage
@@ -81,6 +115,7 @@ export async function ladeKjDaten(
   istLeitung: (rolleId: number | null) => boolean,
   holen?: (pfad: string) => Promise<RohMitglied[]>,
   personen: (ids: number[]) => Promise<PersonRoh[]> = personenRoh,
+  rechteHolen?: (gruppeId: number) => Promise<GruppenRechte>,
 ): Promise<KjLadeStand> {
   const je = await jeGruppeLaden(kjGruppen(e), (rows) => kjMitgliederAus(rows, istLeitung), holen);
   const gruppen = new Map<number, GruppenStand>(
@@ -93,13 +128,17 @@ export async function ladeKjDaten(
   for (const s of gruppen.values())
     if (s.art === 'sichtbar') for (const m of s.mitglieder) if (!m.leitung) kinder.add(m.personId);
   try {
-    const roh = kinder.size > 0 ? await personen([...kinder]) : [];
+    const [roh, rechte] = await Promise.all([
+      kinder.size > 0 ? personen([...kinder]) : Promise.resolve([]),
+      ladeWechselRechte(e, rechteHolen),
+    ]);
     return {
       art: 'da',
       daten: {
         gruppen,
         geburtstage: new Map(roh.map((p) => [p.id, p.birthday ? p.birthday.slice(0, 10) : null])),
       },
+      rechte,
     };
   } catch (x) {
     if (abgemeldet(x)) throw x;

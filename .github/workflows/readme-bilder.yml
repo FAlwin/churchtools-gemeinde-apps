@@ -1,0 +1,92 @@
+name: README-Bilder
+
+# Erinnerung, die README-Videos neu aufzunehmen (16.11.2026). Nimmt die Demo-Ansichten der veröffentlichten Apps als
+# Standbilder auf – einmal mit dem PR, einmal ohne – und vergleicht sie. Ändert der PR sichtbar etwas, bekommt er das
+# Label „README-Bilder“ und die Zusammenfassung des Laufs nennt die Ansichten. Vor jedem Release zeigt
+# `npm run readme-bilder -- --offen` diese PRs; dann `npm run readme-bilder` (siehe Release-Routine in CLAUDE.md).
+#
+# Bricht nie einen PR ab – es ist eine Erinnerung, keine Prüfung. Beide Seiten entstehen im SELBEN Lauf, weil
+# Standbilder nur auf demselben Rechner vergleichbar sind (Schriften).
+on:
+  pull_request:
+    paths:
+      - 'client/**'
+      - 'dienstplaner/**'
+      - 'organigramm/**'
+      - 'gebetsabend/**'
+      - 'ui/**'
+      - 'shared/**'
+      - 'scripts/readme-bilder.mjs'
+      - '.github/workflows/readme-bilder.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: readme-bilder-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  vergleichen:
+    # PRs aus Forks bekommen kein Schreibrecht für Labels – dort gäbe es nur einen roten Haken ohne Nutzen.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Zwei Installationen + zweimal Dev-Server: üblich 5–8 Minuten. Grenze gegen hängende Läufe (siehe ci.yml).
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Playwright-Browser installieren
+        run: npx playwright install --with-deps chromium
+
+      - name: Standbilder mit dem PR
+        run: node scripts/readme-bilder.mjs --standbilder test-results/bilder-neu
+
+      # Der Stand vor dem PR als zweite Arbeitskopie. Aufgenommen wird mit DIESEM Skript (das alte kennt den Modus
+      # vielleicht noch nicht), nur die Dev-Server laufen aus der alten Arbeitskopie.
+      - name: Stand vor dem PR holen
+        run: |
+          git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          git worktree add ../vorher ${{ github.event.pull_request.base.sha }}
+          cd ../vorher && npm ci
+
+      - name: Standbilder vor dem PR
+        run: node scripts/readme-bilder.mjs --standbilder test-results/bilder-alt ../vorher
+
+      - name: Vergleichen
+        id: vergleich
+        run: node scripts/readme-bilder.mjs --vergleichen test-results/bilder-alt test-results/bilder-neu
+
+      - name: Label setzen
+        if: steps.vergleich.outputs.apps != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "README-Bilder" --color FBCA04 \
+            --description "Ändert sichtbar eine App – beim nächsten Release README-Bilder neu aufnehmen" 2>/dev/null || true
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "README-Bilder"
+
+      # Ein späterer Push kann die sichtbare Änderung wieder zurücknehmen – dann soll das Label auch gehen.
+      - name: Label entfernen
+        if: steps.vergleich.outputs.apps == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit ${{ github.event.pull_request.number }} --remove-label "README-Bilder" 2>/dev/null || true
+
+      - name: Standbilder bei Bedarf ansehen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme-standbilder
+          path: test-results/bilder-*
+          retention-days: 7

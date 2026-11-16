@@ -843,9 +843,14 @@ den Skill `/festhalten`, der genau das automatisiert.
    `UPDATE.md`, `CHANGELOG.md`, `LICENSE`, `CLAUDE.md`); alles andere liegt geordnet in
    `docs/{betrieb,entwicklung,archiv}/`. Keine veralteten Aussagen, keine toten Verweise
    (z. B. auf gelöschte Dateien), keine Doppelungen (Changelog/API nur an einer Stelle).
-   **README-Bilder:** Sieht eine veröffentlichte App sichtbar anders aus, die Videos und Bilder in `docs/bilder/` mit
-   `npm run readme-bilder` neu aufnehmen (Demo-Modi, braucht `ffmpeg`; startet und beendet die Dev-Server selbst) und
-   vor dem Commit ansehen. Sonst nicht neu erzeugen – jede GIF ist danach ein anderes Binärfile im Verlauf.
+   **README-Bilder (bei JEDEM Release, Alwin 16.11.2026):** `npm run readme-bilder -- --offen` zeigt die seit dem
+   letzten Bilder-Stand gemergten PRs mit dem Label „README-Bilder“ – das setzt die CI (`readme-bilder.yml`), wenn ein
+   PR eine Demo-Ansicht einer veröffentlichten App sichtbar ändert. Steht dort etwas: `npm run readme-bilder` (braucht
+   `ffmpeg`, startet und beendet die Dev-Server selbst), Videos ansehen, mit dem Release committen. Steht dort nichts:
+   nicht neu erzeugen – jede GIF ist danach ein anderes Binärfile im Verlauf. **Erstes Release einer neuen App:** in
+   `scripts/readme-bilder.mjs` Server (`SERVER`), Ablauf (`aufnehmen`), Namensschild (`KARTEN`), GIF (`gifsBauen`) und
+   Standbilder (`STANDBILDER`) ergänzen, ihren Ordner in `readme-bilder.yml` unter `paths` eintragen, im README Zeile
+   in „Die Apps“ + eigenen Abschnitt anlegen – alle sechs Stellen, sonst fehlt sie im Rundgang oder in der Erinnerung.
 4. **Installations-Anleitung gegen die Realität prüfen:** `INSTALL.md` + `UPDATE.md` +
    die Setup-/Update-Skripte in `deploy/` müssen zum tatsächlichen Vorgehen passen.
 5. **CHANGELOG pflegen:** Die Einträge liegen seit 22.10.2026 als Dateien in `changelog.d/` (eine je PR,

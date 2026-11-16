@@ -3,7 +3,8 @@ import { ApiError } from '@ui/ct/fehler';
 import { GRUNDWERTE } from '@shared/organigramm/gruppenwechsel';
 import { einrichtungAus, type Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
 import type { RohMitglied } from '@shared/organigramm/mitglieder';
-import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
+import { KEINE_GRUPPENRECHTE } from '@shared/organigramm/rechte';
+import { ladeFerien, ladeKjDaten, ladeWechselRechte } from './ladeKinderJugend';
 
 const KALENDER = [
   { id: 4, name: 'Gemeindeleitung' },
@@ -41,7 +42,7 @@ describe('ladeFerien', () => {
       art: 'da',
       jahre: [expect.objectContaining({ jahr: 2027, wechseltag: '2027-09-06' })],
     });
-    expect(pfade[1]).toBe('/calendars/appointments?calendar_ids[]=6&from=2026-01-01&to=2031-12-31');
+    expect(pfade[1]).toBe('/calendars/appointments?calendar_ids[]=6&from=2025-01-01&to=2031-12-31');
   });
 
   it('Kalender nicht in der Liste (nicht freigegeben) → keinKalender', async () => {
@@ -90,7 +91,9 @@ describe('ladeKjDaten', () => {
     person: { title: `P ${personId}` },
     groupTypeRoleId: rolle,
     groupMemberStatus: status,
+    ...(status === 'to_delete' ? { statusChangedDate: '2026-11-16T11:53:12Z' } : {}),
   });
+  const rechteOk = () => Promise.resolve({ ...KEINE_GRUPPENRECHTE, statusAendern: true });
   const mitglieder = (pfad: string): Promise<RohMitglied[]> =>
     pfad === '/groups/1/members'
       ? Promise.resolve([zeile(101), zeile(102), zeile(5, 'active', LEITER)])
@@ -101,19 +104,33 @@ describe('ladeKjDaten', () => {
 
   it('lädt Stufen und Wechsel-Gruppen mit Status und holt die Geburtstage nur der Kinder', async () => {
     const gefragt: number[][] = [];
-    const s = await ladeKjDaten(E, istLeitung, mitglieder, (ids) => {
-      gefragt.push(ids);
-      return Promise.resolve([
-        { id: 101, birthday: '2017-09-30T00:00:00Z' },
-        { id: 102, birthday: null },
-      ]);
-    });
+    const s = await ladeKjDaten(
+      E,
+      istLeitung,
+      mitglieder,
+      (ids) => {
+        gefragt.push(ids);
+        return Promise.resolve([
+          { id: 101, birthday: '2017-09-30T00:00:00Z' },
+          { id: 102, birthday: null },
+        ]);
+      },
+      rechteOk,
+    );
     expect(gefragt).toEqual([[101, 102]]);
     if (s.art !== 'da') throw new Error('erwartet: da');
     expect(s.daten.gruppen.get(2)).toEqual({ art: 'verborgen' });
     expect(s.daten.gruppen.get(12)).toEqual({
       art: 'sichtbar',
-      mitglieder: [{ personId: 102, name: 'P 102', leitung: false, status: 'to_delete' }],
+      mitglieder: [
+        {
+          personId: 102,
+          name: 'P 102',
+          leitung: false,
+          status: 'to_delete',
+          statusGeaendert: '2026-11-16T11:53:12Z',
+        },
+      ],
     });
     expect([...s.daten.geburtstage]).toEqual([
       [101, '2017-09-30'],
@@ -122,15 +139,83 @@ describe('ladeKjDaten', () => {
   });
 
   it('scheitern die Geburtstage vorübergehend, scheitert alles – sonst hieße es „Geburtstag fehlt“', async () => {
-    const s = await ladeKjDaten(E, istLeitung, mitglieder, () =>
-      Promise.reject(new TypeError('Failed to fetch')),
+    const s = await ladeKjDaten(
+      E,
+      istLeitung,
+      mitglieder,
+      () => Promise.reject(new TypeError('Failed to fetch')),
+      rechteOk,
     );
     expect(s).toEqual({ art: 'fehler' });
   });
 
   it('abgemeldet beim Geburtstag wird geworfen', async () => {
     await expect(
-      ladeKjDaten(E, istLeitung, mitglieder, () => Promise.reject(new ApiError(401, 'x'))),
+      ladeKjDaten(
+        E,
+        istLeitung,
+        mitglieder,
+        () => Promise.reject(new ApiError(401, 'x')),
+        rechteOk,
+      ),
     ).rejects.toMatchObject({ status: 401 });
+  });
+
+  const kinder = () =>
+    Promise.resolve([
+      { id: 101, birthday: null },
+      { id: 102, birthday: null },
+    ]);
+
+  it('holt die Rechte je Wechsel-Gruppe mit (O9-3)', async () => {
+    const gefragt: number[] = [];
+    const s = await ladeKjDaten(E, istLeitung, mitglieder, kinder, (id) => {
+      gefragt.push(id);
+      return rechteOk();
+    });
+    expect(gefragt).toEqual([12]);
+    if (s.art !== 'da') throw new Error('erwartet: da');
+    expect([...s.rechte]).toEqual([[12, { ...KEINE_GRUPPENRECHTE, statusAendern: true }]]);
+  });
+
+  it('Rechte nicht lesbar (403, 503, Netz) → keine Rechte dieser Gruppe, die Listen stehen trotzdem', async () => {
+    for (const x of [
+      new ApiError(403, 'verboten'),
+      new ApiError(503, 'x'),
+      new TypeError('Failed to fetch'),
+    ]) {
+      const s = await ladeKjDaten(E, istLeitung, mitglieder, kinder, () => Promise.reject(x));
+      if (s.art !== 'da') throw new Error('erwartet: da');
+      expect(s.rechte.size).toBe(0);
+      expect(s.daten.gruppen.get(12)).toMatchObject({ art: 'sichtbar' });
+    }
+  });
+
+  it('abgemeldet beim Lesen der Rechte wird geworfen', async () => {
+    await expect(
+      ladeKjDaten(E, istLeitung, mitglieder, kinder, () => Promise.reject(new ApiError(401, 'x'))),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('ladeWechselRechte: eine Gruppe, die scheitert, fällt weg – die anderen bleiben', async () => {
+    const zwei = einrichtungAus({
+      einstellung: {
+        ...GRUNDWERTE,
+        stufen: [
+          { gruppeId: 1, name: 'Fische', abAlter: 7 },
+          { gruppeId: 2, name: 'Jungschar', abAlter: 10 },
+          { gruppeId: 3, name: 'Teenys', abAlter: 13 },
+        ],
+      },
+      bereichGruppeId: 9,
+      wechselGruppen: [
+        { vonGruppeId: 1, nachGruppeId: 2, gruppeId: 12 },
+        { vonGruppeId: 2, nachGruppeId: 3, gruppeId: 13 },
+      ],
+    })!;
+    const r = await ladeWechselRechte(zwei, (id) =>
+      id === 12 ? Promise.reject(new ApiError(503, 'x')) : rechteOk(),
+    );
+    expect([...r.keys()]).toEqual([13]);
   });
 });

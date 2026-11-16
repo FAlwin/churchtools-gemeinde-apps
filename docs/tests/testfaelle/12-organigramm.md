@@ -504,15 +504,15 @@ stimmen mit dem Ferienkalender überein, und es wird nichts verändert.
 2. Den Wechseltag mit dem Kalender **Schulferien NRW** vergleichen: Er ist der erste Montag nach den Sommerferien.
 3. Eine Kachel anklicken: Die Gruppe zeigt „Wechseln zu …“, „Bleiben in …“ und „Kommen neu dazu“. **Übersicht**
    (mit Pfeil) führt zurück.
-4. Ein Kind anklicken: Ein Fenster nur zum Lesen mit Gruppe, Geburtstag, Alter am Stichtag und Wechsel; **In
-   ChurchTools öffnen** führt zur Person.
+4. Ein Kind anklicken: Ein Fenster mit Gruppe, Geburtstag, Alter am Stichtag und Wechsel; **In
+   ChurchTools öffnen** führt zur Person. (Den Schalter „Bleibt noch ein Jahr“ prüft TF-ORG-18.)
 5. **Daten pflegen**: „Geburtstag fehlt“ und „Wird bis zum Stichtag 18“ mit den passenden Kindern.
 6. Als Leitung einer Kindergruppe: Der Reiter heißt dort **Meine Gruppe**, ohne Übersicht und ohne „Wird 18“. Vor
    der Ankündigung steht bei „Kommen neu dazu“ nur, ab wann man es sieht.
 7. Der Leitung das Recht auf „Schulferien NRW“ wegnehmen und neu laden: ein Hinweis, dass der Kalender fehlt, statt
    leerer Listen. Danach das Recht wieder geben.
 8. Als Person ohne Kindergruppe und ohne Admin-Recht: Es gibt keinen Reiter **Kinder & Jugend**.
-9. In ChurchTools nachsehen: Gruppen und Mitglieder sind unverändert.
+9. In ChurchTools nachsehen: Gruppen und Mitglieder sind unverändert (solange man keinen Schalter bedient hat).
 
 <details><summary>Technisches</summary>
 
@@ -566,5 +566,50 @@ Leitungen sehen ihre Gruppen voll, Admins alles. Nichts wird gespeichert, wenn e
   lesbar, kein Leserecht, Einstellungen); mit echten Personen und Rechten prüft es nur dieser Fall
 - **Historie:** #915 Scheibe C; Entscheidungen 12.11.2026 (vier Stufen, Leitung streng nach Stufe, nicht lesbar →
   keine Namen, kein Leserecht → Admins warnen)
+
+</details>
+
+### TF-ORG-18 · Kinder & Jugend: Ausnahme setzen („Bleibt noch ein Jahr“)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung und der Einrichtung des Gruppenwechsels (wie TF-ORG-16),
+dazu eine **Wechsel-Gruppe** zwischen zwei Stufen (z. B. Gruppe „TEST O9 Wechsel Kinder → Ziel“, Gruppentyp
+„Gruppenwechsel“) und ein Kind in der unteren Stufe, das am Stichtag alt genug ist. Ein Admin-Konto und ein Konto, das
+die Wechsel-Gruppe leitet (Leiter-Rolle mit „Status ändern“). **Vorsicht: Das schreibt in ChurchTools** – nur die
+Test-Instanz, und die Testkinder danach wieder zurücksetzen.
+
+**Das muss passieren:** Der Schalter erscheint nur, wo das Recht an der Wechsel-Gruppe da ist, speichert sofort,
+„Rückgängig“ steht im Fenster, und nach dem Wechseltag gibt es keinen Schalter mehr. Bei einem Fehler geht nichts
+verloren.
+
+1. Als **Admin** vor der Ankündigung Reiter **Kinder & Jugend** → die Gruppe → das Kind: Der Schalter **„Bleibt noch ein
+   Jahr in …“** ist aus, darunter steht, wann das Kind von selbst wechselt. Einschalten: „Ausnahme eingetragen ·
+   Rückgängig“, der Schalter steht auf an, das Kind steht jetzt unter „Bleiben“ bzw. mit „bleibt noch ein Jahr“.
+   In ChurchTools: Das Kind ist in der Wechsel-Gruppe mit Status **„zu löschen“** (Rolle Teilnehmer).
+2. **Rückgängig**: Der Schalter ist wieder aus; in ChurchTools ist das Kind nicht mehr in der Wechsel-Gruppe.
+3. Als **Leitung der Wechsel-Gruppe** vor der Ankündigung: Das Fenster zeigt statt des Schalters „Eine Ausnahme
+   kannst du ab dem … eintragen.“ Nichts lässt sich verändern.
+4. Ab der Ankündigung (Kind steht aktiv in der Wechsel-Gruppe) als Leitung: Schalter an → Status „zu löschen“ in
+   ChurchTools, **Rückgängig** → wieder „aktiv“. Danach noch einmal an und wieder **aus** (Ausnahme aufheben):
+   „Ausnahme aufgehoben · Rückgängig“.
+5. Der Leitung in ChurchTools das Recht „Status ändern“ an der Wechsel-Gruppe wegnehmen, Reiter neu laden: statt des
+   Schalters steht ein Hinweis, dass das Recht fehlt. Danach das Recht wieder geben.
+6. Ein Kind, dessen Ausnahme schon **vor dem Wechseltag des Vorjahres** stand (in der Test-Instanz: Status von Hand
+   gesetzt und ChurchTools-Datum vor diesem Tag – sonst nur im App-Test prüfbar): gelber Chip
+   **„Ausnahme vom letzten Jahr“**, auf der Gruppenseite ein gelber Hinweis; im Fenster „Diese Ausnahme gilt seit
+   letztem Jahr. Hebst du sie auf, wechselt … am …“
+7. Nach dem Wechseltag (Phase „Der Wechsel läuft“): kein Schalter mehr, ein kurzer Hinweis.
+8. Netz kurz trennen und den Schalter betätigen: „Gerade nicht gespeichert …“, der Schalter bleibt, wie er war, kein
+   „Rückgängig“. Netz wieder an, erneut schalten: Es klappt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/KinderJugend.tsx`, `organigramm/src/ausnahmeTexte.ts`, `organigramm/src/ladeKinderJugend.ts`, `organigramm/src/mitgliedschaft.ts`, `shared/organigramm/mitgliedschaft.ts`, `shared/organigramm/gruppenwechselSicht.ts`, `shared/organigramm/rechte.ts`
+- **Automatisiert:** größtenteils – `mitgliedschaft.test.ts` (shared: setzen bei Mitglied/Nicht-Mitglied, aufheben, Rückgängig, Nachlesen),
+  `gruppenwechselSicht.test.ts` (Vorjahr an der Grenze, `ausnahmeStand`), `rechte.test.ts` (`statusAendern`),
+  `ladeKinderJugend.test.ts` (Rechte je Wechsel-Gruppe), `App.test.tsx` (O9-3: Leitung, Admin vor der Ankündigung,
+  nach dem Wechseltag, Fehler, Vorjahr); mit den echten Rechten und ChurchTools prüft es nur dieser Fall. Die
+  ChurchTools-Aufrufe sind am 16.11.2026 gemessen (`organigramm-planung/docs/messung-o9-3-2026-11-16.md`)
+- **Historie:** Bauplan O9-3; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026
 
 </details>

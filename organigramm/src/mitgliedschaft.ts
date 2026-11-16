@@ -3,8 +3,9 @@
  * `shared/organigramm/mitgliedschaft.ts` und die Rechte je Gruppe. Gemessen an der Test-Instanz (O6, 23.10.2026).
  */
 import { ctDaten } from '@ui/ct/verbindung';
-import { NichtUebernommen } from '@ui/ct/fehler';
+import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { ctId } from '@shared/ct/ctId';
+import { teilnehmerRolleAus } from '@shared/organigramm/gruppenwechselSicht';
 import type { MitgliedZugriff } from '@shared/organigramm/mitgliedschaft';
 import { gruppenRechteAus, type GruppenRechte } from '@shared/organigramm/rechte';
 import {
@@ -47,4 +48,21 @@ export async function ladeGruppenRechte(gruppeId: number): Promise<GruppenRechte
       `/permissions/internal/groups/${gruppeId}`,
     ),
   );
+}
+
+/**
+ * Die Teilnehmer-Rolle einer Gruppe (`GET /groups/{id}/roles`, gemessen 16.11.2026) – Rolle der Kinder, die als
+ * Ausnahme gleich in die Wechsel-Gruppe aufgenommen werden (O9-3). Gibt es keine, wirft es eine Meldung, die das sagt.
+ */
+export async function ladeTeilnehmerRolle(gruppeId: number): Promise<number> {
+  const rolle = teilnehmerRolleAus(
+    await ctDaten<Parameters<typeof teilnehmerRolleAus>[0]>(`/groups/${gruppeId}/roles`),
+  );
+  if (rolle === null) {
+    throw new ApiError(
+      404,
+      'Die Wechsel-Gruppe hat in ChurchTools keine Teilnehmer-Rolle. Bitte einen Admin fragen.',
+    );
+  }
+  return rolle;
 }

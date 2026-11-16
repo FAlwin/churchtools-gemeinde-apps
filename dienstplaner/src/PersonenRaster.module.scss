@@ -118,6 +118,33 @@ thead .name {
   gap: 4px 8px;
   max-width: calc(100vw - 48px);
 }
+// Der Kopf als Knopf: antippen klappt den Block zu (Wunsch 10) – Chevron wie bei den Gruppen der Matrix.
+.blockKnopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 2px 0;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+
+  &[aria-expanded='false'] .chev {
+    transform: rotate(-90deg);
+  }
+}
+.chev {
+  display: inline-flex;
+  color: var(--text2);
+  transition: transform 0.15s;
+}
 .zahl {
   font-weight: 400;
   font-size: 13px;

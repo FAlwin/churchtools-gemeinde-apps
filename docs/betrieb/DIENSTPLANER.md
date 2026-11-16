@@ -19,7 +19,8 @@
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst, nur ansehen), „Wer wie oft?“, Filter nach Kalender,
->   Veranstaltung und Gruppe, **Ansehen und senden**, **Teilen** = Plan,
+>   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
+>   Antippen des Dienstes seinen Block zu), **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
 >

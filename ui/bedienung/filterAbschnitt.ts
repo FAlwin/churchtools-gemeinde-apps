@@ -10,10 +10,30 @@ export interface FilterZusatz {
   onUmschalten: () => void;
 }
 
+/**
+ * Eine Liste eingerückter Häkchen unter einer Möglichkeit – im Dienstplaner die Dienste unter einer Gruppe (Wunsch 10,
+ * 16.11.2026). Das Häkchen der Möglichkeit steht für alle zusammen (`teilweise` = ein Strich statt Haken); ein Tipp
+ * darauf ruft `onAlle`, die Wahl der einzelnen Punkte bleibt beim Aufrufer. Ausgeblendete Punkte einer Möglichkeit, die
+ * selbst an ist, zählen in die Zahl am Knopf.
+ */
+export interface FilterUnter {
+  teilweise: boolean;
+  onAlle: () => void;
+  punkte: { text: string; an: boolean; onUmschalten: () => void }[];
+}
+
+/** Eine Möglichkeit im Abschnitt. */
+export interface FilterOption {
+  wert: string;
+  text: string;
+  zusatz?: FilterZusatz;
+  unter?: FilterUnter;
+}
+
 /** Ein Abschnitt im Filter-Menü, z. B. „Veranstaltungen“ oder „Gruppen“. */
 export interface FilterAbschnitt {
   titel: string;
-  optionen: { wert: string; text: string; zusatz?: FilterZusatz }[];
+  optionen: FilterOption[];
   /** Die ausgeschalteten Werte. */
   aus: string[];
   /** Die neue Liste der ausgeschalteten Werte nach einem Tipp. */

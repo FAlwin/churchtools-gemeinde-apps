@@ -4,7 +4,7 @@ import { useAufklapp } from './useAufklapp';
 import { abschnittMitWahl, type FilterAbschnitt } from './filterAbschnitt';
 import styles from './FilterKnopf.module.scss';
 
-export type { FilterAbschnitt, FilterZusatz } from './filterAbschnitt';
+export type { FilterAbschnitt, FilterOption, FilterUnter, FilterZusatz } from './filterAbschnitt';
 
 /**
  * **Ein Knopf „Filter“ mit Menü** (Alwin, 14.10.2026, Entwurf A: „zu viele verschiedene Buttons“) – für
@@ -24,7 +24,13 @@ export function FilterKnopf({
   const id = useId();
   const sichtbar = abschnitte.filter(abschnittMitWahl);
   const ausgeblendet = sichtbar.reduce(
-    (n, a) => n + a.optionen.filter((o) => a.aus.includes(o.wert)).length,
+    (n, a) =>
+      n +
+      a.optionen.reduce(
+        (m, o) =>
+          m + (a.aus.includes(o.wert) ? 1 : (o.unter?.punkte.filter((p) => !p.an).length ?? 0)),
+        0,
+      ),
     0,
   );
 
@@ -56,12 +62,28 @@ export function FilterKnopf({
                       <input
                         type="checkbox"
                         checked={an}
+                        ref={(el) => {
+                          if (el) el.indeterminate = an && !!o.unter?.teilweise;
+                        }}
                         onChange={() =>
-                          a.onAus(an ? [...a.aus, o.wert] : a.aus.filter((x) => x !== o.wert))
+                          o.unter
+                            ? o.unter.onAlle()
+                            : a.onAus(an ? [...a.aus, o.wert] : a.aus.filter((x) => x !== o.wert))
                         }
                       />
                       {o.text}
                     </label>
+                    {o.unter?.punkte.map((p, nr) => (
+                      <label key={`${p.text}-${nr}`} className={`${styles.zeile} ${styles.zusatz}`}>
+                        <input
+                          type="checkbox"
+                          checked={p.an}
+                          aria-label={`${o.text}: ${p.text}`}
+                          onChange={p.onUmschalten}
+                        />
+                        {p.text}
+                      </label>
+                    ))}
                     {o.zusatz && (
                       <label className={`${styles.zeile} ${styles.zusatz}`}>
                         <input

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import type { Mail } from '@shared/anmeldung/bewegung';
+import type { Bedingung } from '@shared/anmeldung/bedingungen';
 import { MailAnsicht, MailKnoepfe } from './AnmeldungAktion';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import * as Z from './zahlung';
@@ -1520,5 +1521,158 @@ describe('Sprung aus der Nachprüfung (F1e)', () => {
     zeigen(fertig(), 10, false, true, false, false, e(), 'AAAAAA');
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
+  });
+});
+
+// ── F2d: Anmeldung von Hand in Schritten (Klick-Runde 8: „auch in Schritten“; Entwurf f2-schritte-v1, Von Hand) ──
+describe('Von Hand in Schritten (F2d)', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    mm.gruppenfelderLaden.mockResolvedValue(FELDER);
+    hm.meinName.mockResolvedValue('Alwin Friesen');
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+    ]);
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const feld = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const tippen = (id: string, wert: string) =>
+    fireEvent.change(feld(id), { target: { value: wert } });
+  const schritt = (id: string, frage: string, bed?: Bedingung) => ({
+    id,
+    art: 'eigen' as const,
+    typ: 'schritt' as const,
+    frage,
+    hilfe: '',
+    zustand: 'freiwillig' as const,
+    antworten: [],
+    ...(bed ? { bed } : {}),
+  });
+  const TEL: Bedingung = { modus: 'eine', regeln: [{ feld: 'tel', op: 'ausgefuellt' }] };
+  /** Kontakt auf Seite 1, „Kind“ mit den Fragen je Person, „Fotos“ (nur mit Telefon) vor der Foto-Erlaubnis. */
+  function inSchritten() {
+    const x = e();
+    x.preis.extras = [{ bezeichnung: 'Bettwäsche leihen', preisCent: 800, gilt: 'person' }];
+    const p = x.formular.person;
+    p.unshift(schritt('s2', 'Kind'));
+    p.splice(
+      p.findIndex((f) => f.id === 'foto'),
+      0,
+      schritt('s3', 'Fotos', TEL),
+    );
+    return x;
+  }
+  const stufe = () => screen.getByText(/^Schritt \d von \d/).textContent;
+  async function paulWaehlen(x: ReturnType<typeof e>) {
+    zeigen(fertig(), 10, false, true, false, false, x);
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Probe' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Probe/ }));
+  }
+
+  it('blättert wie das Formular: Weiter prüft nur die Seite, der Schritt „Fotos“ kommt mit dem Telefon dazu, am Ende Platz und Anmelden', async () => {
+    await paulWaehlen(inSchritten());
+    expect(stufe()).toBe('Schritt 1 von 2 · Deine Angaben');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Weiter']);
+    // Fragen je Person, Unterschrift, Platz und Betrag kommen später.
+    expect(screen.queryByText('Paul Probe', { selector: 'h3' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeNull();
+    expect(screen.queryByText('Warteliste 2')).toBeNull();
+    expect(screen.queryByText(/Bettwäsche leihen/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(screen.getByText('Bitte die markierten Felder ausfüllen.')).toBeTruthy();
+    // Die fehlenden Felder sind markiert – wie beim Anmelden.
+    expect(screen.getAllByText('Bitte Vornamen eintragen.').length).toBeGreaterThan(0);
+    expect(stufe()).toBe('Schritt 1 von 2 · Deine Angaben');
+
+    tippen('af-anmeldung.name-vor', 'Petra');
+    tippen('af-anmeldung.name-nach', 'Probe');
+    tippen('af-anmeldung.tel', '0170 1');
+    tippen('af-anmeldung.eltern-0-vor', 'Petra');
+    tippen('af-anmeldung.eltern-0-nach', 'Probe');
+    tippen('af-anmeldung.eltern-0-tel', '0170 1');
+    fireEvent.click(screen.getByLabelText(/einverstanden/));
+    // Mit Telefon gibt es „Fotos“ – drei Schritte.
+    expect(stufe()).toBe('Schritt 1 von 3 · Deine Angaben');
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(screen.queryByText('Bitte die markierten Felder ausfüllen.')).toBeNull();
+    expect(stufe()).toBe('Schritt 2 von 3 · Kind');
+    expect(screen.getByText('Paul Probe', { selector: 'h3' })).toBeTruthy();
+    expect(screen.queryByText('Für die Anmeldung')).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Ja' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(stufe()).toBe('Schritt 3 von 3 · Fotos');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Anmelden']);
+    expect(screen.getByText('Warteliste 2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeTruthy();
+    expect(screen.getByText(/Bettwäsche leihen/)).toBeTruthy();
+    // Die Foto-Erlaubnis ist Pflicht – ohne sie bleibt es bei der Meldung.
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(screen.getByText('Bitte die markierten Felder ausfüllen.')).toBeTruthy();
+    expect(hm.vonHandAnmelden).not.toHaveBeenCalled();
+
+    // „‹“ oben: eine Seite zurück, die Antworten bleiben, die Meldung geht weg.
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.queryByText('Bitte die markierten Felder ausfüllen.')).toBeNull();
+    expect(stufe()).toBe('Schritt 2 von 3 · Kind');
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(feld('af-anmeldung.tel').value).toBe('0170 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Ja' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(hm.vonHandAnmelden).toHaveBeenCalled());
+    const plan = hm.vonHandAnmelden.mock.calls[0][1];
+    expect(plan.felder[e().ctFelder.kontakt]).toBe('Petra Probe');
+  });
+
+  it('auf der ersten Seite führt „‹“ zurück zur Suche', async () => {
+    await paulWaehlen(inSchritten());
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByRole('searchbox', { name: 'Name' })).toBeTruthy();
+  });
+
+  it('Person dazu: nur Seiten mit Fragen je Person; eine Pflichtfrage in einem übersprungenen Kontakt-Schritt hält nicht auf', async () => {
+    const x = e();
+    // „Mitarbeit“ am Ende der Kontakt-Fragen nur ohne Telefon – Maria hat eins. Die Allergien (Pflicht) stehen vor
+    // dem ersten Schritt der Personen, gehören also zu „Mitarbeit“ und werden übersprungen.
+    x.formular.anmeldung.push(
+      schritt('s2', 'Mitarbeit', { modus: 'eine', regeln: [{ feld: 'tel', op: 'leer' }] }),
+    );
+    const p = x.formular.person;
+    const allergie = p.splice(
+      p.findIndex((f) => f.id === 'allergy'),
+      1,
+    )[0];
+    p.unshift({ ...allergie, zustand: 'pflicht' }, schritt('s3', 'Kind'));
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 50, vor: 'Paul', nach: 'Beispiel', geburtstag: '2018-04-03', email: null },
+    ]);
+    const z = zeigen(fertig(), 10, false, true, false, false, x);
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Paul' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Beispiel/ }));
+    // Schritt 1 (nur Kontakt) und „Mitarbeit“ (übersprungen) fallen weg.
+    expect(stufe()).toBe('Schritt 1 von 1 · Kind');
+    expect(screen.queryByLabelText(/Allergien/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Trotzdem einen Platz geben/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Ja' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(screen.queryByText('Bitte die markierten Felder ausfüllen.')).toBeNull();
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
   });
 });

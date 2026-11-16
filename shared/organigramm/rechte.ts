@@ -33,12 +33,19 @@ export interface GruppenRechte {
   aufnehmen: boolean;
   rolleAendern: boolean;
   beenden: boolean;
+  /**
+   * Den **Status** einer Mitgliedschaft ändern (`+edit groupmemberstatus`) – „zu löschen“ als Ausnahme im Gruppenwechsel
+   * (O9-3). Gemessen 16.11.2026: Die Leitung der Wechsel-Gruppe darf das, ohne aufnehmen (`+add person`) oder
+   * austragen (`+remove from group`) zu dürfen.
+   */
+  statusAendern: boolean;
 }
 
 export const KEINE_GRUPPENRECHTE: GruppenRechte = {
   aufnehmen: false,
   rolleAendern: false,
   beenden: false,
+  statusAendern: false,
 };
 
 export function gruppenRechteAus(
@@ -49,6 +56,7 @@ export function gruppenRechteAus(
     aufnehmen: db['+add person'] === true,
     rolleAendern: db['+edit group memberships'] === true,
     beenden: db['+remove from group'] === true,
+    statusAendern: db['+edit groupmemberstatus'] === true,
   };
 }
 
@@ -71,7 +79,23 @@ export function mitgliederRechte(
     aufnehmen: global || intern.aufnehmen,
     rolleAendern: global || intern.rolleAendern,
     beenden: global || intern.beenden,
+    statusAendern: global || intern.statusAendern,
   };
+}
+
+/**
+ * Wie `mitgliederRechte`, aber **`null`, wenn man es nicht wissen kann**: Ließen sich die Rechte in der Gruppe nicht
+ * lesen (`intern` fehlt) und gibt es auch global nichts, wäre „kein Recht“ geraten – vielleicht war es nur ein Aussetzer.
+ * Der Gruppenwechsel (O9-3) sagt dann „nicht lesbar“ statt „fehlt dir das Recht“.
+ */
+export function mitgliederRechteOderNichts(
+  r: OrgRechte,
+  intern: GruppenRechte | null,
+  g: { id: number; typId: number | null },
+): GruppenRechte | null {
+  const rechte = mitgliederRechte(r, intern ?? KEINE_GRUPPENRECHTE, g);
+  if (intern === null && !Object.values(rechte).some(Boolean)) return null;
+  return rechte;
 }
 
 const erlaubt = (liste: number[] | null, id: number | null) =>

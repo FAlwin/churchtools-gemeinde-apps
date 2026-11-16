@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';
-import { ladeGruppenRechte, mitgliedZugriff as z } from './mitgliedschaft';
+import { ladeGruppenRechte, ladeTeilnehmerRolle, mitgliedZugriff as z } from './mitgliedschaft';
 
 vi.mock('@ui/ct/verbindung', () => ({ ctAnfrage: vi.fn(), ctDaten: vi.fn() }));
 const anfrage = vi.mocked(ctAnfrage);
@@ -60,13 +60,36 @@ describe('mitgliedZugriff (O6) – wie an der Test-Instanz gemessen', () => {
         '+add person': true,
         '+edit group memberships': true,
         '+remove from group': false,
+        '+edit groupmemberstatus': true,
       },
     });
     expect(await ladeGruppenRechte(9)).toEqual({
       aufnehmen: true,
       rolleAendern: true,
       beenden: false,
+      statusAendern: true,
     });
     expect(daten).toHaveBeenCalledWith('/permissions/internal/groups/9');
+  });
+});
+
+describe('ladeTeilnehmerRolle (O9-3)', () => {
+  it('liest die Teilnehmer-Rolle (`type: participant`, `groupTypeRoleId`) aus den Rollen der Gruppe', async () => {
+    daten.mockResolvedValue([
+      { groupTypeRoleId: 48, type: 'leader', isDefault: false },
+      { groupTypeRoleId: 45, type: 'participant', isDefault: true },
+    ]);
+    expect(await ladeTeilnehmerRolle(315)).toBe(45);
+    expect(daten).toHaveBeenCalledWith('/groups/315/roles');
+  });
+
+  it('gibt es keine, kommt eine Meldung, die das sagt – nicht „antwortet nicht“', async () => {
+    daten.mockResolvedValue([{ groupTypeRoleId: 48, type: 'leader' }]);
+    await expect(ladeTeilnehmerRolle(315)).rejects.toThrow(/keine Teilnehmer-Rolle/);
+  });
+
+  it('ein vorübergehender Fehler wirft weiter', async () => {
+    daten.mockRejectedValue(new ApiError(503, 'x'));
+    await expect(ladeTeilnehmerRolle(315)).rejects.toMatchObject({ status: 503 });
   });
 });

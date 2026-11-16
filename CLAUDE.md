@@ -843,6 +843,9 @@ den Skill `/festhalten`, der genau das automatisiert.
    `UPDATE.md`, `CHANGELOG.md`, `LICENSE`, `CLAUDE.md`); alles andere liegt geordnet in
    `docs/{betrieb,entwicklung,archiv}/`. Keine veralteten Aussagen, keine toten Verweise
    (z. B. auf gelöschte Dateien), keine Doppelungen (Changelog/API nur an einer Stelle).
+   **README-Bilder:** Sieht eine veröffentlichte App sichtbar anders aus, die Videos und Bilder in `docs/bilder/` mit
+   `npm run readme-bilder` neu aufnehmen (Demo-Modi, braucht `ffmpeg`; startet und beendet die Dev-Server selbst) und
+   vor dem Commit ansehen. Sonst nicht neu erzeugen – jede GIF ist danach ein anderes Binärfile im Verlauf.
 4. **Installations-Anleitung gegen die Realität prüfen:** `INSTALL.md` + `UPDATE.md` +
    die Setup-/Update-Skripte in `deploy/` müssen zum tatsächlichen Vorgehen passen.
 5. **CHANGELOG pflegen:** Die Einträge liegen seit 22.10.2026 als Dateien in `changelog.d/` (eine je PR,

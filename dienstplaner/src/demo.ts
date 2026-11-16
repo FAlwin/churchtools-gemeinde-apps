@@ -489,7 +489,8 @@ function daten(fall: string): Record<string, unknown> {
       ],
     },
     // Terminvorlagen (Plätze-Fach „Vorlage übernehmen“), Form wie gemessen am 13.11.2026. Kalender 1 = Gottesdienste.
-    // Die Vorlage „Gottesdienst mit Kamera“ nennt auch Predigt – die darf der Demo-Planer nicht planen (übersprungen).
+    // Die Vorlage „Gottesdienst mit Kamera“ nennt auch Gesang (Musik) und Predigt (Programm): Im Fach „Technik“ ändert sie
+    // nur Ton, Licht und Kamera – Dienste anderer Gruppen übergeht sie still (16.11.2026).
     '/api/eventtemplates': {
       data: [
         {

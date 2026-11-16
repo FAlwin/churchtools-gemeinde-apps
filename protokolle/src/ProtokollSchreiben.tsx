@@ -6,6 +6,8 @@ import { useLaden } from '@ui/ct/useLaden';
 import { ApiError } from '@ui/ct/fehler';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
+import { Toast } from '@ui/fenster/Toast';
+import { useToast } from '@ui/fenster/useToast';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
 import {
@@ -24,7 +26,7 @@ import {
   type AufgabenStatus,
 } from '@shared/protokolle/aufgaben';
 import type { Person } from '@shared/organigramm/mitglieder';
-import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import {
   aufsNaechsteMal,
   ablehnen,
@@ -73,6 +75,7 @@ import { anwesenheitLesen, treffenAbschliessen } from './anwesenheitSchreiben';
 import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
 import { ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
+import { KiFuellen, KiKnopf } from './KiFuellen';
 import { festhaltenFuerFreigabe } from '@shared/protokolle/festePunkte';
 import { freigabeHinweise, type Hinweis } from '@shared/protokolle/freigabe';
 import { freigabeBeitrag, type Beitrag } from '@shared/protokolle/beitrag';
@@ -179,6 +182,8 @@ export function ProtokollSchreiben({
   const [laden, setLaden] = useState<Laden>({ art: 'laedt' });
   const [z, setZ] = useState<SteuerZustand | null>(null);
   const [teilenOffen, setTeilenOffen] = useState(false);
+  const [kiOffen, setKiOffen] = useState(false);
+  const { toast, showToast } = useToast();
   const [dok, setDok] = useState<Block[]>([]);
   const [frage, setFrage] = useState<'uebernehmen' | 'verlassen' | null>(null);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
@@ -691,6 +696,25 @@ export function ProtokollSchreiben({
   const teilenDokument =
     laden.art === 'bereit' ? dok : laden.art === 'lesen' ? laden.dokument : null;
   const darfTeilen = !!teilen && !!teilenDokument;
+  // Mit KI füllen (S8-2): wie Freigeben nur im Editor eines Entwurfs, wo man schreiben darf – und nicht in der Lese-Ansicht
+  // des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
+  const darfKi = darfFreigeben && !lesen;
+  const kiDokument = useCallback(() => editor.current?.dokument() ?? dok, [dok]);
+  const kiUebernommen = useCallback(
+    ({ anzahl, uebersprungen }: { anzahl: number; uebersprungen: number }) => {
+      setKiOffen(false);
+      // `einfuegen` meldet sich beim Editor als Eingabe – das Protokoll speichert dann von selbst. Hier zur Sicherheit
+      // dasselbe: Stand für die Anzeige holen und das Speichern anstoßen (falls der Editor keine Änderung gemeldet hat).
+      if (editor.current) setDok(editor.current.dokument());
+      steuerung.current?.geaendert();
+      showToast(
+        `${anzahl} ${anzahl === 1 ? 'Eintrag' : 'Einträge'} übernommen${
+          uebersprungen ? ` (${uebersprungen} nicht, ihr Punkt fehlt jetzt)` : ''
+        } – das Protokoll speichert automatisch. Bitte kurz im Blatt prüfen.`,
+      );
+    },
+    [showToast],
+  );
 
   const kopfZeile = (
     <>
@@ -726,6 +750,7 @@ export function ProtokollSchreiben({
                 onClick={freigabeOeffnen}
               />
             )}
+            {darfKi && <KiKnopf onClick={() => setKiOffen(true)} />}
             {onBearbeiten && (
               <KopfKnopf
                 label="Bearbeiten"
@@ -739,6 +764,18 @@ export function ProtokollSchreiben({
         )}
       </header>
       <ZurueckVermerk kopf={laden.art === 'bereit' ? laden.kopf : null} zeitzone={zeitzone} />
+      {toast && <Toast message={toast} />}
+      {kiOffen && darfKi && (
+        <KiFuellen
+          gruppe={gruppe}
+          datum={tagAusIso(sitzung.beginn, zeitzone)}
+          dokument={kiDokument}
+          mitglieder={mitglieder}
+          einfuegen={(bloecke, vor) => editor.current?.einfuegen(bloecke, vor)}
+          onUebernommen={kiUebernommen}
+          onClose={() => setKiOffen(false)}
+        />
+      )}
       {teilenOffen && teilen && teilenDokument && (
         <ProtokollTeilen
           sitzung={sitzung}

@@ -89,6 +89,8 @@ export type IconName =
   | 'kreis-haken'
   | 'aufgabe'
   | 'stempel'
+  | 'funke'
+  | 'kopieren'
   | 'todo-liste'
   | 'idee'
   | 'tabelle'
@@ -583,6 +585,22 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="3" y="4" width="18" height="16" rx="2" />
           <path d="M3 10h18M3 15h18M9 4v16M15 4v16" />
+        </svg>
+      );
+    // „Auftrag kopieren“ in „Mit KI füllen“ (Protokolle S8-2).
+    case 'kopieren':
+      return (
+        <svg {...p}>
+          <rect x="8" y="8" width="12" height="12" rx="2" />
+          <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+        </svg>
+      );
+    // „Mit KI füllen“ im Kopf des Protokoll-Editors (Protokolle S8-2, Entwurf `s8-ki-v1`).
+    case 'funke':
+      return (
+        <svg {...p}>
+          <path d="M11 3l1.9 5.6L18.5 10.5l-5.6 1.9L11 18l-1.9-5.6L3.5 10.5l5.6-1.9L11 3Z" />
+          <path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" />
         </svg>
       );
     case 'stempel':

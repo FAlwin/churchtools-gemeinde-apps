@@ -13,6 +13,7 @@ import {
   umbenannteAntworten,
   weggefallenText,
 } from '@shared/anmeldung/bedingungen';
+import { kannFrei } from '@shared/anmeldung/freieAntwort';
 import { antwortenZaehlen, ctFelderLesen, feldSpeichern, feldTypAendern } from './formularFelder';
 import { aendereEinstellungen } from './einrichten';
 import {
@@ -119,7 +120,11 @@ export function useFeldEntwurf({
     // Bedingungen ziehen mit (F1c) – derselbe Schritt wie beim Speichern (`feldSpeichern` → `ersetzen`).
     const { formular, weggefallen } = bedingungenNachziehen(
       ersetzeFeld(formularRef.current, feld),
-      { feldId: feld.id, antworten: umbenannteAntworten(antworten) },
+      {
+        feldId: feld.id,
+        // F3c: auch die umbenannte freie Antwort – verglichen mit dem Stand vor diesem Speichern.
+        antworten: umbenannteAntworten(antworten, feldIn(formularRef.current, feld.id), feld),
+      },
     );
     setLokalF(formular);
     // Der Entwurf geht vom gespeicherten Stand aus weiter: Die Antworten heißen ab jetzt so (das nächste Umbenennen
@@ -231,6 +236,8 @@ export function useFeldEntwurf({
           : ['Antwort 1', 'Antwort 2']
         : [],
     };
+    // F3c: Eine freie Antwort gibt es nur bei Auswahlfragen – bei einem Text, einem Datum … fällt sie weg.
+    if (!kannFrei(feld)) delete feld.frei;
     // Ein anderer Fragetyp kennt andere Vergleiche und Antworten – was nicht mehr passt, fällt weg (F1c).
     const { formular, weggefallen } = bedingungenNachziehen(ersetzeFeld(formularRef.current, feld));
     setLokalF(formular);

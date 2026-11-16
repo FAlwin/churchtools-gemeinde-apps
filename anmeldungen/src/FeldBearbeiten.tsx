@@ -19,6 +19,7 @@ import {
   type AntwortBedingung,
   type Bedingung,
 } from '@shared/anmeldung/bedingungen';
+import { FREI_STANDARD } from '@shared/anmeldung/freieAntwort';
 import { BedingungChips, BedingungFenster, BedingungZeichen } from './Bedingungen';
 import {
   entwurfFehler,
@@ -140,6 +141,71 @@ export function FeldBearbeiten({
     onSofortSichern();
     setFenster(null);
   }
+  // ── Freie Antwort (F3c, Entwurf f3-freie-antwort-v1, Ansicht Baukasten) ──
+  /** Eben hinzugefügt – dann gleich die Beschriftung markieren, zum Überschreiben von „Sonstiges“. */
+  const [freiNeu, setFreiNeu] = useState(false);
+  // Nur eigene Fragen. Welche Typen, entscheidet die Stelle des Links: Er steht nur in den Antwortlisten von Auswahl-
+  // und Ja-/Nein-Fragen – genau die, die eine freie Antwort kennen (`kannFrei`).
+  const freiMoeglich = eigen;
+  const freiOhne = () => {
+    const neu: Feld = { ...f };
+    delete neu.frei;
+    onAendern({ ...d, feld: neu });
+  };
+  const freiZeile = f.frei ? (
+    <div className={k.freiZeile}>
+      <div className={k.antwort}>
+        <span className={f.typ === 'multi' ? k.kaestchen : k.punkt} aria-hidden="true" />
+        <input
+          value={f.frei.name}
+          maxLength={ANTWORT_MAX}
+          aria-label="Beschriftung der freien Antwort"
+          autoFocus={freiNeu}
+          onFocus={(e) => freiNeu && e.target.select()}
+          onChange={(e) => setFeld({ frei: { ...f.frei!, name: e.target.value } })}
+        />
+        <button type="button" aria-label="Freie Antwort entfernen" onClick={freiOhne}>
+          <Icon name="x" size={16} />
+        </button>
+      </div>
+      <div className={k.freiArt}>
+        <select
+          aria-label="Textfeld der freien Antwort"
+          value={f.frei.textfeld}
+          onChange={(e) =>
+            setFeld({
+              frei: { ...f.frei!, textfeld: e.target.value as 'auf' | 'immer' | 'ohne' },
+            })
+          }
+        >
+          <option value="auf">Textfeld klappt auf</option>
+          <option value="immer">Textfeld steht immer da</option>
+          <option value="ohne">kein Textfeld</option>
+        </select>
+        <span>
+          {f.frei.textfeld === 'ohne'
+            ? 'Nur eine Antwort am Ende, ohne Eingabe.'
+            : f.zustand === 'pflicht'
+              ? 'Gewählt → der Text ist Pflicht (die Frage ist Pflicht).'
+              : 'Der Text ist freiwillig (die Frage ist freiwillig).'}
+        </span>
+      </div>
+    </div>
+  ) : null;
+  const freiKnopf =
+    freiMoeglich && !f.frei ? (
+      <button
+        type="button"
+        className={k.antwortNeu}
+        onClick={() => {
+          setFreiNeu(true);
+          setFeld({ frei: { name: FREI_STANDARD, textfeld: 'auf' } });
+        }}
+      >
+        + Freie Antwort
+      </button>
+    ) : null;
+
   const pfeil = (antwort: string, nr: number) =>
     kannBedingung ? (
       <button
@@ -234,6 +300,12 @@ export function FeldBearbeiten({
       ) : (
         <Muster f={f} />
       )}
+      {f.typ === 'janein' && (freiZeile || freiKnopf) && (
+        <div className={k.antworten}>
+          {freiZeile}
+          {freiKnopf}
+        </div>
+      )}
       {mitAntworten(f) && (
         <div className={k.antworten}>
           {d.antworten.map((a, i) => (
@@ -267,15 +339,19 @@ export function FeldBearbeiten({
               {antwortChip(schluessel(a))}
             </div>
           ))}
-          <button
-            type="button"
-            className={k.antwortNeu}
-            onClick={() =>
-              setAntworten([...d.antworten, { text: `Antwort ${d.antworten.length + 1}` }])
-            }
-          >
-            + Antwort hinzufügen
-          </button>
+          {freiZeile}
+          <div className={k.neuReihe}>
+            <button
+              type="button"
+              className={k.antwortNeu}
+              onClick={() =>
+                setAntworten([...d.antworten, { text: `Antwort ${d.antworten.length + 1}` }])
+              }
+            >
+              + Antwort hinzufügen
+            </button>
+            {freiKnopf}
+          </div>
           {entferntGewaehlt.length > 0 && (
             <p className={k.notiz} role="note">
               {entferntGewaehlt.map((t) => `„${t}“`).join(', ')}{' '}

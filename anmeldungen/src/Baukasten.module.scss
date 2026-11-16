@@ -1433,3 +1433,61 @@
     color: var(--p-muted, #5b6b70);
   }
 }
+
+// ── F2c: Schritte im Baukasten (Entwurf f2-schritte-v1, Ansicht Baukasten) ──
+// Ein Schritt ist ein Balken mit Nummer und Namen zwischen den Feldern; der feste Balken „Schritt 1“ steht oben.
+.schrittBalken {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--p-accent, #155dfc);
+  border-radius: var(--p-r, 8px);
+  background: color-mix(in srgb, var(--p-accent, #155dfc) 8%, var(--p-card, #fff));
+  color: var(--p-text, #1d2a2e);
+}
+.schrittNr {
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--p-accent, #155dfc);
+  white-space: nowrap;
+}
+.schrittName {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.schrittNameEingabe {
+  flex: 1 1 160px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--p-accent, #155dfc);
+  border-radius: var(--p-r, 8px);
+  background: var(--p-card, #fff);
+  color: var(--p-text, #1d2a2e);
+  font: inherit;
+  font-weight: 700;
+}
+.schrittFestText,
+.schrittLeer {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--p-muted, #5b6b70);
+}
+.schrittLeer {
+  color: var(--p-warn, #b45309);
+}
+// Der feste Balken lässt sich nicht greifen – er steht immer oben.
+.schrittFest {
+  margin-bottom: 4px;
+}
+// Die Hülle um einen Schritt: Bedingungs-Linie und Chips wie bei jedem Feld, aber ohne eigene Fläche.
+.schrittHuelle.bedingt .schrittBalken {
+  border-left-style: solid;
+  border-left-width: 3px;
+}

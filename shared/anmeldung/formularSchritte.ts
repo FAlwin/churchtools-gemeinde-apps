@@ -74,6 +74,18 @@ export function gezeigteSeiten(f: Formular, a: Antworten, alle: Seite[] = seiten
   return alle.filter((s) => seiteSichtbar(f, s, a));
 }
 
+/**
+ * **Ein Schritt im Baukasten** (F2c): seine Nummer – gezählt wie im Formular, Schritt 1 ist der feste Balken oben, also
+ * ab 2; bedingte zählen mit – und ob seine Seite noch leer ist (dann blätterte das Formular auf eine Seite ohne Fragen).
+ * `null` = kein eingeschalteter Schritt.
+ */
+export function schrittImBaukasten(f: Formular, x: Feld): { nr: number; leer: boolean } | null {
+  const alle = seiten(f);
+  const i = alle.findIndex((s) => s.schritt?.id === x.id);
+  if (i < 0) return null;
+  return { nr: i + 1, leer: alle[i].anmeldung.length + alle[i].person.length === 0 };
+}
+
 /** Wie der Schritt heißt – Schritt 1 aus den Einstellungen, die übrigen am Baustein. */
 export function schrittName(e: Pick<OeffentlicheEinstellungen, 'ersterSchritt'>, s: Seite): string {
   return s.schritt ? s.schritt.frage.trim() : e.ersterSchritt?.trim() || ERSTER_SCHRITT;

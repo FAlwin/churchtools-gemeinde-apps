@@ -29,6 +29,8 @@ const PFADE = {
   ueberschrift: 'M6 4v16M18 4v16M6 12h12',
   info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5m0-8v.01',
   trenner: 'M3 12h18',
+  // F2c „Neuer Schritt“: eine Seite und ein Pfeil weiter.
+  schritt: 'M4 5h8v14H4ZM15 12h6m-3-3 3 3-3 3',
   kopie:
     'M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2ZM16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2',
   bild: 'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM21 16l-5-5-8 8M9 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4',

@@ -7,6 +7,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { AnmeldeFormular, type BaukastenHaken } from '@ui/anmeldeformular/AnmeldeFormular';
 import { musterAntworten } from '@ui/anmeldeformular/daten';
 import {
+  ERSTER_SCHRITT,
   FELDER_MAX,
   geburtsdatumAn,
   mitWer,
@@ -27,6 +28,7 @@ import {
 } from '@shared/anmeldung/baukasten';
 import {
   bedingungenNachziehen,
+  feldName,
   regelGruppen,
   regelSetzen,
   verschiebenSperre,
@@ -36,6 +38,7 @@ import {
   type RegelZiel,
   weggefallenText,
 } from '@shared/anmeldung/bedingungen';
+import { mitSchritten, schrittImBaukasten } from '@shared/anmeldung/formularSchritte';
 import { feldEinordnen, feldEntfernen, feldSpeichern, regelSpeichern } from './formularFelder';
 import { BedingungChips } from './Bedingungen';
 import { RegelFenster, RegelListe } from './RegelListe';
@@ -93,6 +96,17 @@ function mitMaus(): boolean {
 /** Setzt `inert`: Die Felder im Baukasten zeigen nur, wie es aussieht – Klicks gehen an die Hülle. */
 const inert = (el: HTMLElement | null) => el?.setAttribute('inert', '');
 
+/** **Ein Schritt im Baukasten** (F2c, Entwurf `f2-schritte-v1`): ein Balken „Schritt 2 · Name“ zwischen den Feldern. */
+function SchrittBalken({ nr, name, leer }: { nr: number; name: string; leer: boolean }) {
+  return (
+    <div className={k.schrittBalken}>
+      <span className={k.schrittNr}>Schritt {nr}</span>
+      <span className={k.schrittName}>{name}</span>
+      {leer && <span className={k.schrittLeer}>Noch keine Fragen in diesem Schritt</span>}
+    </div>
+  );
+}
+
 export function Baukasten({
   id,
   name,
@@ -121,6 +135,8 @@ export function Baukasten({
   const [offenerHinweis, setOffenerHinweis] = useState<string | null>(null);
   const [ziehenAn] = useState(mitMaus);
   const [nameEntwurf, setNameEntwurf] = useState(name);
+  /** Der Name von Schritt 1 (F2c) – steht in den Einstellungen, nicht an einem Baustein. */
+  const [ersterEntwurf, setErsterEntwurf] = useState(e.ersterSchritt ?? ERSTER_SCHRITT);
   const [geraet, setGeraet] = useState<'computer' | 'handy'>('computer');
   const [vorschau, setVorschau] = useState(false);
   const [reiter, setReiter] = useState<'bausteine' | 'design'>('bausteine');
@@ -195,6 +211,9 @@ export function Baukasten({
   useEffect(() => {
     setNameEntwurf(name);
   }, [name]);
+  useEffect(() => {
+    setErsterEntwurf(e.ersterSchritt ?? ERSTER_SCHRITT);
+  }, [e.ersterSchritt]);
 
   // Beim Verlassen des Reiters nichts liegen lassen.
   useEffect(
@@ -335,7 +354,7 @@ export function Baukasten({
         const r = ergebnis as Awaited<ReturnType<typeof feldEntfernen>>;
         const text =
           r.art === 'geloescht'
-            ? `„${f.frage || 'Trennlinie'}“ entfernt.`
+            ? `${f.typ === 'schritt' ? feldName(f) : `„${f.frage || 'Trennlinie'}“`} entfernt.`
             : r.antworten === 0
               ? `„${f.frage}“ ausgeschaltet.`
               : `„${f.frage}“ ausgeblendet – ${r.antworten === 1 ? 'die Antwort bleibt' : `die ${r.antworten} Antworten bleiben`} in ChurchTools.`;
@@ -423,6 +442,26 @@ export function Baukasten({
     void tun(`Umbenannt in „${neu}“.`, () => umbenennen(id, neu));
   }
 
+  /**
+   * **Schritt 1 umbenennen** (F2c, Klick-Runde 8: der feste Balken oben). Leer gilt nicht – der Name ist Pflicht, dann
+   * steht wieder der vorige da. Der Standardname wird nicht gespeichert (`ersterSchritt` fehlt dann).
+   */
+  function ersterSichern() {
+    const neu = ersterEntwurf.trim();
+    const bisher = e.ersterSchritt ?? ERSTER_SCHRITT;
+    if (!neu || neu === bisher) {
+      setErsterEntwurf(bisher);
+      return;
+    }
+    void tun(`Schritt 1 heißt jetzt „${neu}“.`, () =>
+      aendereEinstellungen(id, (frisch) => {
+        const x: OeffentlicheEinstellungen = { ...frisch, ersterSchritt: neu };
+        if (neu === ERSTER_SCHRITT) delete x.ersterSchritt;
+        return x;
+      }),
+    );
+  }
+
   async function bild(tunBild: () => Promise<unknown>, text: string) {
     setBildArbeitet(true);
     // Ein Bild lässt sich nicht über „Rückgängig“ zurückholen – ChurchTools hebt das alte nicht auf.
@@ -456,6 +495,8 @@ export function Baukasten({
     const lueckeDanach =
       hierLuecke && ziel.vorId === null && ablageListe(bereich).at(-1)?.id === f.id;
     const entfernt = info && info.feldId === f.id ? info : null;
+    // F2c: Ein Schritt steht im Baukasten als Balken mit Nummer da (im Formular blättert er die Seite um).
+    const schritt = f.typ === 'schritt' ? schrittImBaukasten(anzeigeFormular, f) : null;
     const entferntGewaehlt =
       entfernt && entwurf
         ? entfernt.ct
@@ -486,7 +527,7 @@ export function Baukasten({
       lueckeDavor && luecke(),
       <div
         key="feld"
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''} ${f.bed ? k.bedingt : ''}`}
+        className={`${k.huelle} ${schritt ? k.schrittHuelle : ''} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''} ${f.bed ? k.bedingt : ''}`}
         data-feld={f.id}
         data-bereich={bereich}
         data-ende={amEnde(f) ? '' : undefined}
@@ -511,6 +552,7 @@ export function Baukasten({
       >
         {istAktiv && !fest && entwurf ? (
           <FeldBearbeiten
+            schrittNr={schritt?.nr}
             entwurf={entwurf}
             formular={anzeigeFormular}
             onAendern={aendern}
@@ -524,7 +566,11 @@ export function Baukasten({
         ) : (
           <>
             <div ref={inert} className={k.inhalt}>
-              {inhalt}
+              {schritt ? (
+                <SchrittBalken nr={schritt.nr} name={f.frage} leer={schritt.leer} />
+              ) : (
+                inhalt
+              )}
             </div>
             <BedingungChips formular={anzeigeFormular} feld={f} />
             {hinweisKasten(f.id)}
@@ -551,6 +597,26 @@ export function Baukasten({
 
   const haken: BaukastenHaken = {
     feld: huelle,
+    // F2c: Sobald es einen Schritt gibt, steht oben der feste Balken „Schritt 1“ – Name änderbar, sonst nichts.
+    schrittEins: mitSchritten(anzeigeFormular) ? (
+      <div className={`${k.schrittBalken} ${k.schrittFest}`}>
+        <span className={k.schrittNr}>Schritt 1</span>
+        <input
+          className={k.schrittNameEingabe}
+          value={ersterEntwurf}
+          maxLength={60}
+          aria-label="Name von Schritt 1"
+          onChange={(ev) => setErsterEntwurf(ev.target.value)}
+          onBlur={ersterSichern}
+          onKeyDown={(ev) => {
+            if (ev.key !== 'Enter') return;
+            ev.preventDefault();
+            ev.currentTarget.blur();
+          }}
+        />
+        <span className={k.schrittFestText}>steht immer oben</span>
+      </div>
+    ) : undefined,
     hinweis: hinweisKnopf,
     hinweisText: hinweisKasten,
     // Ein mehrzeiliges Feld, damit lange Namen umbrechen wie im Formular (am Handy wurde „TEST A5 Bauka…“

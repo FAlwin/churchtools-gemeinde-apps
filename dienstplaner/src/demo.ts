@@ -2,7 +2,8 @@
  * **Nur zum Entwickeln** (`npm run dev -w dienstplaner`, dann `…/ccm/dienstplaner/?demo`): spielt die
  * ChurchTools-Antworten nach, in der Form, die an der Test-Instanz gemessen wurde (12. und 13.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Planer-Recht,
- * `?demo=fehler` den Fehlerfall. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=personenfehler` eine Gruppe, deren Mitglieder in der Ansicht „Personen“
+ * beim ersten Mal scheitern. Wird nie mitgebaut (siehe `main.tsx`).
  */
 const PLANER = {
   view: true,
@@ -10,7 +11,9 @@ const PLANER = {
   'edit servicegroup': [3, 4],
   'edit agenda': [1, 2, 3, 4, 5],
   'edit events': [1, 2, 3, 4, 5],
-  'manage absent': true,
+  // Nicht global: Die Ansicht „Personen“ (Wunsch 5, P1) prüft das Recht je Gruppe – Technik und Musik ja, Programm nein
+  // (`/api/permissions/internal/groups` unten), damit „Abwesenheiten nicht sichtbar“ zu sehen ist.
+  'manage absent': false,
 };
 const MITGLIED = {
   view: false,
@@ -98,7 +101,8 @@ const TERMINE = [
     name: 'Gebetsabend',
     startDate: zeit(7, '17:00'),
     endDate: zeit(7, '18:30'),
-    eventServices: [platz(6, 19, 'Spike', true)],
+    // Ein Gast im Gesang (Name ohne Person) – die Ansicht „Personen“ zeigt ihn in der Zeile „Gäste“.
+    eventServices: [platz(6, 19, 'Spike', true), platz(9, null, 'Lea Hartmann', true)],
   },
   {
     id: 103,
@@ -346,6 +350,37 @@ const LIEDER = {
   meta: { pagination: { lastPage: 1 } },
 };
 
+/** Die Mitglieder einer CT-Gruppe, wie `GET /groups/{id}/members` sie liefert (nur aktive, eine Seite). */
+function mitglieder(...personen: [number, string][]) {
+  return {
+    data: personen.map(([personId, title]) => ({
+      personId,
+      person: {
+        title,
+        initials: title
+          .split(' ')
+          .map((w) => w[0])
+          .join(''),
+        imageUrl: null,
+      },
+      groupTypeRoleId: 15,
+      groupMemberStatus: 'active',
+    })),
+    meta: { pagination: { lastPage: 1 } },
+  };
+}
+
+/** Eine Abwesenheit, wie `GET /groups/{id}/absences` sie liefert (ganztägig). */
+const abwesenheit = (id: number, personId: number, grund: string, von: string, bis: string) => ({
+  id,
+  person: { title: `Person ${personId}`, domainIdentifier: String(personId) },
+  absenceReason: { name: `absent.reason.${grund}`, nameTranslated: grund },
+  startDate: von.slice(0, 10),
+  startTime: null,
+  endDate: bis.slice(0, 10),
+  endTime: null,
+});
+
 function daten(fall: string): Record<string, unknown> {
   return {
     '/api/songs': LIEDER,
@@ -388,6 +423,45 @@ function daten(fall: string): Record<string, unknown> {
         },
       ],
     },
+    // Ansicht „Personen“ (Wunsch 5, P1) – Mitglieder je CT-Gruppe, Form wie `GET /groups/{id}/members` (gemessen 13.11.):
+    // Technik (7), Lobpreisteam (9, Gesang) und Programm (6, Predigt). Alwin steht in Technik UND im Lobpreisteam.
+    '/api/groups/7/members': mitglieder(
+      [1, 'Alwin Friesen'],
+      [49, 'Ben Wiebe'],
+      [55, 'David Penner'],
+    ),
+    '/api/groups/9/members': mitglieder(
+      [1, 'Alwin Friesen'],
+      [19, 'Spike Musiker'],
+      [46, 'Anna Klassen'],
+      [52, 'Clara Dyck'],
+    ),
+    '/api/groups/6/members': mitglieder([19, 'Spike Musiker'], [55, 'David Penner']),
+    // Abwesenheiten aller Mitglieder einer Gruppe (`GET /groups/{id}/absences`), gemessen: auch solche, die vor `from`
+    // beginnen (David: mehrtägig, vor heute begonnen, deckt den ersten Gottesdienst); Spike ist am letzten Termin
+    // abwesend UND als Ton eingeteilt – der Warnfall; Clara hat am dritten Gottesdienst Urlaub. Gruppe 6 (Programm)
+    // liefert nie etwas: Dort fehlt das Recht, die Abfrage wird gar nicht gestellt.
+    '/api/groups/7/absences': {
+      data: [
+        abwesenheit(1, 55, 'Urlaub', zeit(-3, '00:00'), zeit(5, '00:00')),
+        abwesenheit(2, 49, 'Krank', zeit(7, '00:00'), zeit(7, '00:00')),
+      ],
+    },
+    '/api/groups/9/absences': {
+      data: [
+        abwesenheit(3, 52, 'Urlaub', zeit(11, '00:00'), zeit(11, '00:00')),
+        abwesenheit(4, 19, 'Urlaub', zeit(38, '00:00'), zeit(40, '00:00')),
+        abwesenheit(5, 46, 'Abwesend', zeit(39, '00:00'), zeit(39, '00:00')),
+      ],
+    },
+    // Das Recht „Abwesenheiten sehen“ (`+view absence`) je Gruppe – Programm (6) hat es nicht.
+    '/api/permissions/internal/groups': {
+      data: {
+        '7': { churchservice: { '+view absence': true } },
+        '9': { churchservice: { '+view absence': true } },
+        '6': { churchservice: { '+view absence': false } },
+      },
+    },
     // Reiter „Abwesenheiten“ (E7-2c): Gründe wie gemessen; eigene Dienste je Termin bleiben in der Demo leer.
     '/api/event/masterdata': {
       data: {
@@ -404,7 +478,7 @@ function daten(fall: string): Record<string, unknown> {
     '/api/services': {
       data: [
         // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).
-        { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [] },
+        { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [6] },
         // Ton darf die Live-Agenda steuern (E6b-2 L3) – Alwin ist an 101 als Ton eingeteilt.
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7], allowControlLiveAgenda: true },
         { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
@@ -875,7 +949,12 @@ function liveDemo(f: URLSearchParams): unknown {
   return { ...s, category_id: '2', currentTime: Date.now() };
 }
 
+/** Wie lange `?demo=personenfehler` die Mitglieder des Lobpreisteams scheitern lässt. */
+const PERSONEN_FEHLER_MS = 3000;
+let demoGestartet = 0;
+
 export function demoStarten(fall: string): void {
+  demoGestartet = Date.now();
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
@@ -921,6 +1000,16 @@ export function demoStarten(fall: string): void {
     }
     if (url.pathname === '/api/csrftoken') {
       return Promise.resolve(new Response(JSON.stringify({ data: 'demo' }), { status: 200 }));
+    }
+    // `?demo=personenfehler`: Die Mitglieder des Lobpreisteams scheitern in den ersten Sekunden (504) – „Nochmal
+    // versuchen“ im Block Gesang der Ansicht „Personen“ holt sie später, der Rest bleibt stehen. (Zeitfenster statt „nur
+    // das erste Mal“: Die Ansicht lädt beim Öffnen auch noch einmal neu, sobald weitere Termine da sind.)
+    if (
+      fall === 'personenfehler' &&
+      url.pathname === '/api/groups/9/members' &&
+      Date.now() - demoGestartet < PERSONEN_FEHLER_MS
+    ) {
+      return Promise.resolve(new Response('{}', { status: 504 }));
     }
     if (fall === 'fehler' && url.pathname.endsWith('/servicegroups')) {
       return Promise.resolve(new Response('{}', { status: 502 }));

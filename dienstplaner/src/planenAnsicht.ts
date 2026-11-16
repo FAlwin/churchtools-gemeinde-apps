@@ -5,12 +5,26 @@ import { kalenderIdsAus } from '@shared/ct/kalenderFilter';
 import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
 /**
+ * Die drei Ansichten in Planen: `matrix`, das Raster der Personen (`raster`, Wunsch 5) und „Wer wie oft?“ (`werWieOft`).
+ * **Bis zum 16.11.2026 hieß „Wer wie oft?“ `'personen'`** – der Name gehört jetzt nicht mehr dazu (er wäre mit dem neuen
+ * Knopf „Personen“ verwechselbar); ein so gemerkter Wert wird beim Lesen zu `werWieOft` (`unteransichtAus`).
+ */
+export type Unteransicht = 'matrix' | 'raster' | 'werWieOft';
+
+/** Die gemerkte Ansicht lesen – auch den alten Wert `'personen'` (= „Wer wie oft?“), sonst wechselte ein Gerät still die Ansicht. */
+export function unteransichtAus(roh: unknown): Unteransicht {
+  if (roh === 'raster') return 'raster';
+  if (roh === 'werWieOft' || roh === 'personen') return 'werWieOft';
+  return 'matrix';
+}
+
+/**
  * **Wie die Matrix aussieht** (Bauplan E3-5): Spaltenbreite, Unteransicht und Filter – im Gerät gemerkt
  * (Bauplan §3.3, wie im Entwurf `dienstplaner:breite`).
  */
 export interface PlanenAnsicht {
   breite: Breite;
-  unteransicht: 'matrix' | 'personen';
+  unteransicht: Unteransicht;
   /** Zugeklappte bzw. ausgeblendete Gruppen (Schlüssel wie in `Planen.tsx`). */
   ausgeblendeteGruppen: string[];
   /** Ausgeblendete Veranstaltungsarten (wie in der Termine-Liste). */
@@ -51,7 +65,7 @@ export function leseAnsicht(): PlanenAnsicht {
     return {
       // Bis 29.10.2026 S/M/L: S und M werden „schmal“, L wird „breit“.
       breite: a.breite === 'breit' || a.breite === 'l' ? 'breit' : 'schmal',
-      unteransicht: a.unteransicht === 'personen' ? 'personen' : 'matrix',
+      unteransicht: unteransichtAus(a.unteransicht),
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
       ausgeblendeteKalender: kalenderIdsAus(a.ausgeblendeteKalender),

@@ -18,7 +18,7 @@
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
->   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, „Wer wie oft?“, Filter nach Kalender,
+>   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst, nur ansehen), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung und Gruppe, **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
@@ -108,6 +108,38 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
   Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
   laufen die anderen weiter, am Ende steht, was geklappt hat und was nicht. Sind die Vorlagen von ChurchTools nicht
   erreichbar, sagt das Fach es ruhig; die Plätze lassen sich trotzdem ändern.
+
+**Ansicht „Personen“** (Wunsch 5, P1 – nur ansehen; dritter Knopf in Planen neben „Matrix“ und „Wer wie oft?“, ab
+16.11.2026): Dieselben Termine wie die Matrix (gleicher Zeitraum, gleiche Filter, auch der Besuch von der Startseite) als
+Raster – Spalten = Termine, Zeilen = Personen, **ein Block je Dienst** in der Reihenfolge der Matrix. Eine Person steht in
+**jedem** ihrer Dienste (Zeile je Person **und** Dienst), daneben „auch Gesang“ (andere gezeigte Dienste, in denen sie
+Mitglied ist). In der Zelle steht der Dienst als Tag in der Farbe des Dienstes, das Symbol sagt den Zustand: Haken =
+zugesagt, Kreis mit ? = angefragt, Stift gestrichelt = Entwurf. Am selben Tag in einem **zweiten Dienst** eingeteilt:
+grauer Text „+ Gesang“; gehört der andere Dienst zu einer **ausgeblendeten** Gruppe, steht er blass und schräg mit der
+Gruppe („+ Ton (Technik)“). **Abwesend** = grauer Tag mit dem Grund; ist die Person dort zugleich eingeteilt, bleiben
+beide da (roter Rand am grauen Tag – ein Warnfall). „Einsätze“ zählt zugesagte und angefragte Einteilungen dieser Person
+in diesem Dienst in den gezeigten Terminen. „Gäste“ sind Plätze mit Namen ohne Person. Die Fußzeile **„Noch offen“** zeigt
+je Termin die freien Plätze der gezeigten Dienste („Gesang ×2“) – gezählt wie in der Matrix. „Namen verbergen“ zeigt auch
+hier nie einen Namen. Maus über dem Namen (am Handy Antippen) hebt alle Zeilen der Person hervor. Am Handy ist es
+dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Ein Klick in eine Zelle tut noch nichts
+(Eintragen kommt mit P2, Kürzel und Farben einstellen mit P3).
+
+- **Wer eine Zeile bekommt:** die Mitglieder der ChurchTools-Gruppen des Dienstes (`/services` → `groupIds`, mehrere Gruppen
+  werden zusammengeführt – Café hängt an fünf) **plus** wer im Zeitraum dort eingeteilt ist, aber nicht Mitglied ist
+  („nicht in der Gruppe“), **plus** Personen mit einem gültigen Entwurf. Darin alphabetisch.
+- **Was geladen wird:** je ChurchTools-Gruppe der gezeigten Dienste (jede einmal, höchstens vier gleichzeitig)
+  `GET /groups/{id}/members` und `GET /groups/{id}/absences?from&to` – über den ganzen geladenen Zeitraum der Matrix, damit
+  Blättern im Fenster nichts neu lädt. Gemessen 13.11.2026 (nur lesen): 32 Abfragen parallel 342 ms.
+- **Abwesenheiten sieht nur, wer das Recht hat:** global „Abwesenheiten verwalten“ (`manage absent`) **oder** in der
+  Gruppe „Abwesenheiten sehen“ (`+view absence`, `/permissions/internal/groups`). Ohne Recht liefert ChurchTools still
+  eine **leere** Liste – deshalb wird dann gar nicht gefragt, und der Block sagt ruhig „Abwesenheiten nicht sichtbar“
+  (bei nur einem Teil der Gruppen: „nur teilweise sichtbar“). Ein 403 auf die Mitglieder heißt „Mitglieder einer Gruppe nicht
+  sichtbar – es stehen nur die Eingeteilten da“.
+- **Aussetzer zerstören nichts:** Scheitert eine Gruppe vorübergehend (Netz, Zeitüberschreitung, 5xx, gebremst), steht im
+  Block dieses Dienstes der Hinweis mit **„Nochmal versuchen“** – es wird nur diese Gruppe neu geholt, der Rest bleibt.
+  Abgemeldet (401) zeigt den Hinweis zum Neuladen der Seite. Bei einem späteren Neuladen bleibt der bisherige Stand stehen.
+- **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
+  Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

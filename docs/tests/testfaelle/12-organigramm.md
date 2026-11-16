@@ -618,3 +618,99 @@ verloren.
 - **Historie:** Bauplan O9-3; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026
 
 </details>
+
+### TF-ORG-19 · Kinder & Jugend: Wechseltage ansehen und die Leitungen benachrichtigen
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung und der Einrichtung des Gruppenwechsels (wie TF-ORG-16) samt
+Wechsel-Gruppen mit Regeln, ein Konto mit dem Recht **„Berechtigungen verwalten“**, ein Konto der Bereichsleitung **ohne**
+dieses Recht (auch ein Gruppen-Admin ohne das Recht eignet sich) und ein Konto, das nur eine Kindergruppe leitet. Dieser
+Fall liest nur – er verändert nichts in ChurchTools (die Regel in Schritt 6 nur in der Test-Instanz und danach zurück).
+
+**Das muss passieren:** Nur Bereichsleitung und Admins sehen **Wechseltage**. Wer „Berechtigungen verwalten“ hat, sieht
+zusätzlich, welche Jahre in den Regeln der Wechsel-Gruppen stehen, und eine Erinnerung, wenn sie auslaufen. Ab der
+Ankündigung steht ein Text für die Leitungen bereit.
+
+1. Als **Leitung einer Kindergruppe**: Im Reiter Kinder & Jugend gibt es nur **Meine Gruppe** und **Daten pflegen**,
+   keinen Unterreiter **Wechseltage**.
+2. Als **Bereichsleitung ohne das Recht** (oder Gruppen-Admin ohne das Recht): Neben **Übersicht** und **Daten pflegen**
+   steht **Wechseltage**. Die Tabelle hat je Jahr Sommerferien, Ankündigung, Wechseltag (mit Wochentag, z. B. „Mo,
+   06.09.2027“) und Stichtag – **keine Spalte „In den Regeln“, keine Erinnerung**, auch nicht in der Übersicht. Am Handy
+   (375 px) lässt sich die Tabelle in der Karte seitlich schieben, die Seite selbst rutscht nicht.
+3. Als **Konto mit „Berechtigungen verwalten“**: Zusätzlich die Spalte **In den Regeln**. Sind die Regeln aller
+   Wechsel-Gruppen vom Erzeuger geschrieben, stehen die Jahre darin auf „eingetragen“, spätere auf „fehlt noch“. Eine
+   Wechsel-Gruppe ganz ohne Regeln (ChurchTools meldet 404) zeigt „fehlt noch“ – keinen Fehler. Steht ein Jahr nur in
+   einem Teil der Gruppen, heißt es „unvollständig – fehlt bei …“. Ein von Hand geschriebenes Fenster (z. B. an der
+   Test-Gruppe 315) zählt nicht: „fehlt noch“.
+4. Reichen die Regeln nur noch bis zum Jahr des nächsten Wechsels: gelb „Wechseltage fehlen bald. Die Regeln reichen nur
+   noch bis …“ – auf der Seite und kurz („Mehr unter „Wechseltage““) in der **Übersicht**. Fehlt schon das nächste Jahr:
+   gelb „Ab … fehlen Wechseltage in den Regeln. Die Sommerferien dafür stehen schon im Kalender …“. Reichen sie weiter:
+   kein gelber Hinweis. Es steht nirgends „Einrichten“ oder „mit einem Klick“.
+5. **Leitungen Bescheid geben:** Vor der Ankündigung steht nur „Ab der Ankündigung am … steht hier ein Text“. Ab der
+   Ankündigung (Wechseltag in unter acht Wochen; sonst mit einem Testjahr kurz davor prüfen) steht ein Text mit dem
+   Wechseltag und je Übergang „• Fische → Jungschar: N Kinder“. Die Zahlen sind dieselben wie die „wechseln“-Chips in
+   der **Übersicht** (Ausnahmen zählen nicht mit). **Text kopieren** → „Kopiert“, danach in eine Nachricht einfügen:
+   derselbe Text. Geht das Kopieren nicht (z. B. Zwischenablage gesperrt), ist der Text markiert, und es steht „Markiert
+   – jetzt kopieren“.
+6. In ChurchTools in der Kinder-Regel einer Wechsel-Gruppe das Fenster des nächsten Jahres entfernen (nur Test-Instanz,
+   danach zurücksetzen), Reiter neu laden: Das Jahr steht auf „unvollständig – fehlt bei …“, die Erinnerung erscheint.
+7. Netz kurz trennen und **Wechseltage** neu laden: Mit dem Recht steht „nicht prüfbar“ und ein ruhiger Hinweis, **keine**
+   Erinnerung und kein Abmelden. Dasselbe, wenn einem Gruppen-Admin ohne das Recht die Regeln verwehrt sind – er wird
+   nicht abgemeldet (er fragt sie ohnehin nicht ab).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/KinderJugend.tsx`, `organigramm/src/Wechseltage.tsx`, `organigramm/src/ladeRegelStand.ts`, `shared/organigramm/wechseltage.ts`, `shared/organigramm/rechte.ts`, `ui/bedienung/useKopieren.ts`
+- **Automatisiert:** größtenteils – `wechseltage.test.ts` (läuft-aus-Regel, Jahr-Status gegen den Erzeuger
+  `wechselGruppenRegeln`, lückenlose Kette, Text für die Leitungen), `rechte.test.ts` (`rechteVerwalten` getrennt von
+  `gruppenVerwalten`), `ladeRegelStand.test.ts` (404 = keine Regeln, 401/403/Netz = nicht prüfbar, unvollständig,
+  handgeschriebenes Fenster), `Wechseltage.test.tsx` und `KinderJugend.test.tsx` (Unterreiter, Spalte und Abfrage nur
+  mit dem Recht, Hinweise, Kopieren samt Rückfall), `useKopieren.test.tsx`; mit den echten Regeln und der echten
+  Zwischenablage prüft es nur dieser Fall
+- **Historie:** Bauplan O9-4; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026, O9-F8 (Regeln als einzige Quelle)
+
+</details>
+
+### TF-ORG-20 · Kinder & Jugend: Einrichtung ansehen (Stand in ChurchTools)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung, ein Konto mit **„Berechtigungen verwalten“** (am besten
+ohne Kindergruppe und ohne Gruppen-Admin), ein Gruppen-Admin **ohne** dieses Recht und – für Schritt 5 bis 7 – die
+Möglichkeit, den gespeicherten Wert der Kategorie „Gruppenwechsel“ in der Test-Instanz vorübergehend zu ändern (danach
+zurück). Dieser Fall liest nur; geschrieben wird nichts außer diesem einen Testwert.
+
+**Das muss passieren:** Wer „Berechtigungen verwalten“ hat, sieht den Reiter Kinder & Jugend immer und erfährt dort, wie
+es um die Einrichtung steht – und verwechselt „nicht eingerichtet“ nie mit „nicht lesbar“.
+
+1. Als **Konto mit dem Recht** bei eingerichtetem Gruppenwechsel: Der Reiter hat **Übersicht, Daten pflegen, Wechseltage,
+   Einrichtung**. Als Gruppen-Admin **ohne** das Recht fehlt **Einrichtung**.
+2. **Einrichtung** öffnen: Karte „Stufen“ mit der Kette der Stufen („ab N Jahren“), „Wechsel-Gruppen unter …“, Ferienkalender,
+   Stichtag („30.09.“) und Ankündigung („8 Wochen vor dem Wechseltag“). **Keine** Knöpfe zum Ändern oder Reparieren.
+3. Karte „Stand in ChurchTools“: sechs Zeilen (Gruppentyp, Rechte der Leitung, Wechsel-Gruppen, Wechseltage, Regeln,
+   Routinen). Nach „Einrichten“ in ChurchTools stehen alle auf „in Ordnung“, kein gelber Sammelhinweis.
+4. In ChurchTools etwas verstellen (nur Test-Instanz, danach zurück): am Typ „Gruppenwechsel“ bei der Leiter-Rolle „Gruppeninfos
+   sehen“ wegnehmen; eine Routine ausschalten; die Wartezeit einer Routine ändern; eine Regel in einer Kindergruppe von
+   Hand dazuschreiben; eine Wechsel-Gruppe woanders hinhängen. Reiter neu laden: Die jeweilige Zeile zeigt „stimmt nicht“ mit
+   dem Grund („fehlt: …“, „wartet 60 statt 90 Tage“, „fremde Regel …“, „hängt nicht unter …“), oben steht „Eine Sache braucht
+   dich.“ bzw. „… Dinge brauchen dich.“.
+5. Den Wert der Kategorie „Gruppenwechsel“ so verderben, dass ihn die Erweiterung nicht mehr liest (z. B. ein Feld
+   löschen): Mit dem Recht steht „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nicht**
+   „noch nicht eingerichtet“. Ohne das Recht gibt es den Reiter nicht.
+6. Wert löschen (Kategorie bleibt leer): Mit dem Recht „Gruppenwechsel noch nicht eingerichtet“ mit der Erklärung und dem Satz
+   „Einrichten folgt in der nächsten Fassung.“, **ohne** Knopf. Ohne das Recht kein Reiter. Wert danach wiederherstellen.
+7. Netz kurz trennen und die Seite neu laden: Beim Reiter mit dem Recht steht „Die Einrichtung ließ sich gerade nicht lesen.
+   Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“. Auf der Seite „Einrichtung“
+   zeigen nicht lesbare Zeilen „nicht prüfbar“, **keine** Warnung „fehlt“, und es erfolgt kein Abmelden.
+8. Am Handy (375 px): Die Seite rutscht nicht seitlich; die Kette der Stufen bricht um.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/EinrichtungSeite.tsx`, `organigramm/src/App.tsx`, `organigramm/src/KinderJugend.tsx`, `organigramm/src/ladeEinrichtungStand.ts`, `organigramm/src/gruppenwechselSpeicher.ts`, `organigramm/src/speicher.ts`, `shared/organigramm/einrichtungStand.ts`
+- **Automatisiert:** größtenteils – `einrichtungStand.test.ts` (Soll aus den Erzeugern `alleRegeln`, `aufraeumRoutine`,
+  `LEITER_RECHTE`; jeder Warn-Fall und „nicht prüfbar“ einzeln), `ladeEinrichtungStand.test.ts` (404 = keine Regeln,
+  401/403/Netz/5xx = nicht gelesen, Drosselung), `gruppenwechselSpeicher.test.ts` (eingerichtet / keine / unlesbar /
+  Fehler), `App.test.tsx` (Sichtbarkeit des Reiters je Fall mit und ohne Recht) und `KinderJugend.test.tsx` (Unterreiter,
+  Sammelhinweis); mit den echten ChurchTools-Antworten prüft es nur dieser Fall
+- **Historie:** Bauplan O9-5c (Entwurf `o9-5-einrichten-v1.html`); Messung 16.11.2026 (O9-5a): `remove-member` kommt mit `actionData: null` zurück
+
+</details>

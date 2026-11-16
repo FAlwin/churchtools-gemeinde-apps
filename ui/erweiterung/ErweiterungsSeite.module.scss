@@ -38,18 +38,15 @@
   --plus-boden: 0px;
 }
 
+// Volle Fensterbreite, in allen Erweiterungen und auf jeder Seite gleich (Alwin 16.11.2026: „warum wird nicht die
+// komplette Fensterbreite genutzt?“ – „sollte schon einheitlich sein“). Früher hier fest 1120 px, der Gebetsabend
+// 672 px, Protokoll-Seiten 720–820 px. Bitte keine eigene Seitenbreite mehr; nur Fließtext bekommt `--lese-breite`.
 .seite {
-  max-width: 1120px;
   margin: 0 auto;
   padding: 20px 16px 32px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-// Schmale Seite (`schmal`): eine Spalte Karten von 640 px plus Rand, in der Mitte (Gebetsabend).
-.schmal {
-  max-width: 672px;
 }
 
 .kopf {

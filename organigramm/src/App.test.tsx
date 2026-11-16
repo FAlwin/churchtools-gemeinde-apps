@@ -247,6 +247,7 @@ const rechte = (x: Partial<OrgRechte> = {}): OrgRechte => ({
   mitgliederAlle: false,
   mitgliederGruppen: [],
   mitgliederTypen: [],
+  rechteVerwalten: false,
   ...x,
 });
 
@@ -360,7 +361,7 @@ beforeEach(() => {
   mitgliederLaden.mockResolvedValue(MITGLIEDER);
   einsaetzeLaden.mockResolvedValue(EINSAETZE);
   einrichtungLaden.mockReset();
-  einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
+  einrichtungLaden.mockResolvedValue({ art: 'keine' });
 });
 
 describe('App des Organigramms (O2)', () => {
@@ -2031,23 +2032,124 @@ describe('O9-2: Reiter „Kinder & Jugend“', () => {
   };
 
   beforeEach(() => {
-    einrichtungLaden.mockResolvedValue({
-      ok: true,
-      daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
-    });
+    einrichtungLaden.mockResolvedValue({ art: 'da', einrichtung: EINRICHTUNG });
     ferienLaden.mockReset();
-    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE });
+    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE, ferien: [] });
     kjLaden.mockReset();
     kjLaden.mockResolvedValue({ art: 'da', daten: DATEN, rechte: new Map() });
   });
 
   it('ohne Einrichtung gibt es den Reiter nicht – auch nicht für Admins', async () => {
-    einrichtungLaden.mockResolvedValue({ ok: true, daten: null });
+    einrichtungLaden.mockResolvedValue({ art: 'keine' });
     window.location.hash = '#kinder';
     render(<App />);
     await screen.findByRole('button', { name: 'Personen' });
     expect(screen.queryByRole('button', { name: 'Kinder & Jugend' })).toBeNull();
     expect(kjLaden).not.toHaveBeenCalled();
+  });
+
+  describe('O9-5c: Reiter ohne (lesbare) Einrichtung – nur für „Berechtigungen verwalten“', () => {
+    const verwalten = () =>
+      laden.mockResolvedValue(start({ rechte: rechte({ rechteVerwalten: true }), geleitet: [] }));
+    const ohneRecht = () =>
+      laden.mockResolvedValue(
+        start({ rechte: rechte({ gruppenVerwalten: true }), geleitet: [BEREICH] }),
+      );
+    const reiter = () => screen.queryByRole('button', { name: 'Kinder & Jugend' });
+    const NICHT_EINGERICHTET = 'Gruppenwechsel noch nicht eingerichtet';
+
+    it('keine Einrichtung: mit dem Recht Reiter und Seite „noch nicht eingerichtet“ – ohne Knopf, mit ruhigem Satz', async () => {
+      einrichtungLaden.mockResolvedValue({ art: 'keine' });
+      verwalten();
+      window.location.hash = '#kinder';
+      render(<App />);
+      expect(await screen.findByRole('heading', { name: NICHT_EINGERICHTET })).toBeTruthy();
+      expect(reiter()).toBeTruthy();
+      expect(screen.getByText('Einrichten folgt in der nächsten Fassung.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Einrichten/ })).toBeNull();
+      expect(kjLaden).not.toHaveBeenCalled();
+    });
+
+    it('keine Einrichtung: ohne das Recht kein Reiter – auch nicht für Bereichsleitung und Gruppen-Admins', async () => {
+      einrichtungLaden.mockResolvedValue({ art: 'keine' });
+      ohneRecht();
+      window.location.hash = '#kinder';
+      render(<App />);
+      await screen.findByRole('button', { name: 'Personen' });
+      expect(reiter()).toBeNull();
+      expect(screen.queryByText(NICHT_EINGERICHTET)).toBeNull();
+    });
+
+    it('unlesbar (ein Wert steht da, nur nicht in diesem Format): eigener Hinweis – NIE „noch nicht eingerichtet“', async () => {
+      einrichtungLaden.mockResolvedValue({ art: 'unlesbar' });
+      verwalten();
+      window.location.hash = '#kinder';
+      render(<App />);
+      expect(
+        await screen.findByText('Die gespeicherte Einrichtung ließ sich nicht lesen.'),
+      ).toBeTruthy();
+      expect(screen.getByText('Es wird nichts überschrieben.', { exact: false })).toBeTruthy();
+      expect(screen.queryByText(NICHT_EINGERICHTET)).toBeNull();
+      expect(screen.queryByText(/Einrichten folgt/)).toBeNull();
+    });
+
+    it('unlesbar: ohne das Recht kein Reiter', async () => {
+      einrichtungLaden.mockResolvedValue({ art: 'unlesbar' });
+      ohneRecht();
+      window.location.hash = '#kinder';
+      render(<App />);
+      await screen.findByRole('button', { name: 'Personen' });
+      expect(reiter()).toBeNull();
+    });
+
+    it('gerade nicht lesbar (vorübergehend): „nicht gelesen“ statt „noch nicht eingerichtet“; „Erneut versuchen“ fragt noch einmal', async () => {
+      einrichtungLaden.mockResolvedValueOnce({ art: 'fehler', grund: 'voruebergehend' });
+      verwalten();
+      window.location.hash = '#kinder';
+      render(<App />);
+      expect(
+        await screen.findByText(
+          'Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert.',
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText(NICHT_EINGERICHTET)).toBeNull();
+      einrichtungLaden.mockResolvedValue({ art: 'keine' });
+      fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+      expect(await screen.findByRole('heading', { name: NICHT_EINGERICHTET })).toBeTruthy();
+      expect(einrichtungLaden).toHaveBeenCalledTimes(2);
+    });
+
+    it('wirft das Lesen sogar: derselbe Fehlerfall, nicht „noch nicht eingerichtet“', async () => {
+      einrichtungLaden.mockRejectedValue(new Error('Netz weg'));
+      verwalten();
+      window.location.hash = '#kinder';
+      render(<App />);
+      expect(await screen.findByText(/ließ sich gerade nicht lesen/)).toBeTruthy();
+      expect(screen.queryByText(NICHT_EINGERICHTET)).toBeNull();
+    });
+
+    it('Fehler: ohne das Recht kein Reiter, wie bisher', async () => {
+      einrichtungLaden.mockResolvedValue({ art: 'fehler', grund: 'kein-recht' });
+      ohneRecht();
+      window.location.hash = '#kinder';
+      render(<App />);
+      await screen.findByRole('button', { name: 'Personen' });
+      expect(reiter()).toBeNull();
+    });
+
+    it('eingerichtet: auch wer nur „Berechtigungen verwalten“ hat (keine Gruppe, kein Admin) sieht den Reiter samt „Einrichtung“', async () => {
+      verwalten();
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+      expect(await screen.findByRole('button', { name: 'Einrichtung' })).toBeTruthy();
+    });
+
+    it('eingerichtet: Gruppen-Admin ohne „Berechtigungen verwalten“ sieht „Einrichtung“ nicht', async () => {
+      render(<App />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Kinder & Jugend' }));
+      await screen.findByRole('button', { name: 'Wechseltage' });
+      expect(screen.queryByRole('button', { name: 'Einrichtung' })).toBeNull();
+    });
   });
 
   it('Admin: Übersicht mit Kacheln je Stufe, Kachel → Gruppe, Kind → Fenster nur zum Lesen', async () => {
@@ -2241,12 +2343,11 @@ describe('O9-3: Ausnahme setzen', () => {
     zustand.jahre = ferien(RUHIG);
     zustand.tim = null;
     zustand.rechte = new Map();
-    einrichtungLaden.mockResolvedValue({
-      ok: true,
-      daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
-    });
+    einrichtungLaden.mockResolvedValue({ art: 'da', einrichtung: EINRICHTUNG });
     ferienLaden.mockReset();
-    ferienLaden.mockImplementation(() => Promise.resolve({ art: 'da', jahre: zustand.jahre }));
+    ferienLaden.mockImplementation(() =>
+      Promise.resolve({ art: 'da', jahre: zustand.jahre, ferien: [] }),
+    );
     kjLaden.mockReset();
     kjLaden.mockImplementation(() =>
       Promise.resolve({ art: 'da', daten: daten(), rechte: zustand.rechte }),

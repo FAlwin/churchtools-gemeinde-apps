@@ -88,7 +88,7 @@ Technik gehört, sieht nichts davon.
    der gespeicherte Stand steht da.
 9. „Nur Ton“ wählen und starten: VDO.Ninja zeigt im Sender eine Geräteauswahl – Mikrofon bestätigen; am zweiten Gerät
    kommt nur Ton. Danach beenden.
-10. Die Person ohne Rechte simulieren: nur die Karte „Gebetsabend“ schmal in der Mitte, keine „Übertragung“, kein
+10. Die Person ohne Rechte simulieren: nur die Karte „Gebetsabend“ (volle Breite), keine „Übertragung“, kein
     Knopf „Einstellungen“. Simulation beenden.
 
 <details><summary>Technisches</summary>

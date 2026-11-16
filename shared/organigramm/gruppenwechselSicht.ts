@@ -372,6 +372,13 @@ export function pflegeAus(sichten: readonly GruppenSicht[]): Pflege {
   };
 }
 
+/**
+ * **Wie viele Kinder einer Stufe wechseln – ohne die Ausnahmen** (sie bleiben noch ein Jahr). Die Zahl der Übersicht
+ * (Kachel und Summe) und der Text für die Leitungen (O9-4) kommen beide hierher.
+ */
+export const wechslerZahl = (s: GruppenSicht): number =>
+  s.wechseln.filter((k) => k.wechsel.art === 'wechselt').length;
+
 // ── Ausnahme setzen (O9-3) ─────────────────────────────────────────────────────────────────────────────────────────
 
 /** Warum es für dieses Kind keinen Schalter gibt, obwohl es dazugehören würde. */

@@ -318,3 +318,52 @@ Entwurf trägt „ENTWURF“ im Kasten, als Wasserzeichen und im Dateinamen; ein
 - **Historie:** S6-3a (12.11.2026), S6-3b (12.11.2026)
 
 </details>
+
+### TF-PROT-12 · Mit KI füllen: Auftrag ohne Namen, Antwort, Übernahme
+
+**Das brauchst du:** In der Test-Instanz eine eigene **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir und Spike
+als Mitglieder und ein Test-Protokoll im Entwurf (Titel beginnt mit „TEST“) mit Tagesordnung: 1 Andacht, 2 Gemeindeessen
+mit Unterpunkt 2.1 Küche, 3 Verschiedenes – und im Titel von Punkt 3 einen Personennamen (z. B. „Besuch von Spike
+Musiker“). Ein Transkript (als Text und als Word-Datei `.docx` mit Umlauten), in dem Mitglieder- und Personennamen
+vorkommen. **Es läuft keine echte KI:** Die Antwort setzt Claude von Hand ein (nichts verlässt den Rechner). Danach die
+Test-Protokolle und -To-Dos aufräumen.
+
+**Das muss passieren:** „Mit KI füllen“ gibt es nur im Editor eines Entwurfs für die Leitung; der kopierte Auftrag
+enthält keinen gefundenen Namen, die Vorschau zeigt sie wieder; die gewählten Einträge landen hinter dem Text der richtigen Punkte (bei Unterpunkten vor dem ersten),
+das Protokoll speichert, und aus dem To-Do entsteht ein To-Do.
+
+1. Test-Protokoll im Entwurf öffnen (Schreiben): Oben stehen **Freigeben · Mit KI füllen · Bearbeiten · Teilen / PDF**.
+   Beim Umschalten auf **Lesen** ist der Knopf weg; in einem freigegebenen Protokoll gibt es ihn nicht.
+2. **Mit KI füllen** → Transkript einfügen: Unter „Was die KI nicht sehen soll“ stehen die Namen mit Anzahl, Art und
+   Platzhalter, auch der Name aus dem Titel von Punkt 3. Über „Weiteres verbergen“ steht der Hinweis „Namen werden
+   automatisch ersetzt. Heikles (z. B. Krankheiten) hier selbst eintragen …“. Einen Begriff eintragen (z. B. eine
+   Krankheit): Er erscheint als „eigener Begriff“.
+3. „So geht es an die KI“ aufklappen: **kein gefundener Name** im Text, nur Platzhalter wie `[Person 1]`; die
+   Tagesordnung steht mit Unterpunkt (2.1) darin. Häkchen bei einem Namen wegnehmen: Er steht dann im Auftrag.
+4. **Auftrag kopieren** → „Kopiert ✓“, in einen Texteditor einfügen und prüfen (keine Namen). Dann **Weiter**: Es steht
+   „Auftrag ist kopiert – in deine KI einfügen und die Antwort hier einfügen.“, „Auftrag anzeigen“ ist zu.
+5. Eine **kaputte Antwort** einfügen („Gerne! Hier ist eine Zusammenfassung …“) → **Vorschau ansehen**: Meldung im Fenster,
+   der eingefügte Text bleibt stehen.
+6. Claude setzt die **richtige Antwort** ein (JSON mit den Platzhaltern aus dem Auftrag: Stichpunkte für 1 und 2.1, ein
+   Beschluss für 2, ein To-Do für 2.1 mit Zuständigem aus der Gruppe und Bis-Datum, ein Termin, ein neuer Punkt, dazu je ein
+   Eintrag für Punkt 9 und einen festen Punkt) → **Vorschau ansehen**: Die Namen sind wieder da (grün), je Zeile steht
+   „→ 2.1 Küche“ usw.; die Einträge für Punkt 9 und den festen Punkt sind ausgegraut („Punkt 9 gibt es nicht“, „fester Punkt“).
+7. Bei einem Eintrag das **Häkchen wegnehmen**, **Ausgewählte übernehmen**: Das Fenster geht zu, unten steht „N Einträge
+   übernommen – das Protokoll speichert automatisch“. Im Blatt stehen die Stichpunkte als Aufzählung **hinter dem Text ihres
+   Punkts** (bei Punkt 2 vor 2.1 – rechts unter „Beschlüsse“ steht beim Beschluss „Punkt 2“, nicht 2.1), Beschluss grün, Termin blau, das To-Do mit „– Name, bis …“, der neue Punkt am Ende (ohne Leerzeile davor); der
+   abgewählte Eintrag fehlt.
+8. Kurz warten: „gespeichert …“ erscheint. Die Sitzung neu öffnen: Alles steht noch da, und unter **To-Dos** gibt es das
+   To-Do (Zuständiger = das Mitglied, ein Nicht-Mitglied als extern).
+9. Noch einmal **Mit KI füllen** mit der **Word-Datei**: **Datei wählen** → der Text steht im Feld (Umlaute stimmen). Eine
+   Datei, die keine Word-Datei ist (umbenannte Textdatei als `.docx`): Meldung im Fenster, das Feld bleibt.
+10. Im Browser das Kopieren sperren (oder Seite ohne HTTPS öffnen): **Auftrag kopieren** springt zu Schritt 2, „Auftrag
+    anzeigen“ ist offen, „Alles markieren“ markiert den Text.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/ki.ts`, `shared/protokolle/platzhalter.ts`, `shared/protokolle/docxText.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.tsx`, `protokolle/src/kiPersonen.ts`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/demo.ts`
+- **Automatisiert:** ja – `shared/protokolle/ki.test.ts`, `platzhalter.test.ts`, `docxText.test.ts` (Regeln), `protokolle/src/KiFuellenFenster.test.tsx` (ganzer Weg gegen die Erzeuger: kein Name im kopierten Auftrag, Name im Titel, Kopieren scheitert, kaputte Antwort, `.docx`/`.txt`, Häkchen, Reihenfolge der Einfügungen, Personenliste fehlt), `protokolle/src/kiPersonen.test.ts` (Blättern, Namen), `protokolle/src/ProtokollSchreiben.test.tsx` (Knopf nur im Entwurf mit Schreibrecht, Weg bis `einfuegen` und Speichern); die echte Übernahme in BlockNote, das Aussehen am Handy und das Kopieren in die Zwischenablage nur von Hand
+- **Historie:** S8-2 (16.11.2026); Einfügestelle bei Unterpunkten und Schlusszeile nach dem ersten Lauf geändert (16.11.2026)
+
+</details>

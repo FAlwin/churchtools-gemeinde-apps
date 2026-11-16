@@ -1,0 +1,304 @@
+// „Mit KI füllen“ (S8-2, Entwurf `s8-ki-v1`): Fenster in drei Schritten – Auftrag, Antwort, Vorschau.
+// Farben und Rundungen nur über die gemeinsamen Werte (`festeWerte.test.ts`); Knöpfe über `FensterKnopf`.
+@use '@ui/design/mixins' as m;
+
+.schritte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text3);
+
+  li + li::before {
+    content: '›';
+    margin-right: 8px;
+  }
+
+  [aria-current='step'] {
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+.unter {
+  margin: 0 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.abschnitt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.titel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+
+  small {
+    font-weight: 400;
+    color: var(--text3);
+  }
+}
+
+.klein {
+  margin: 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.leise {
+  color: var(--text3);
+  font-size: 12.5px;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+
+  > input {
+    @include m.eingabefeld;
+    flex: 1 1 160px;
+    min-width: 0;
+    height: var(--knopf-hoehe);
+    padding: 0 10px;
+    font-size: 14px;
+  }
+}
+
+.textknopf {
+  @include m.textKnopf;
+  align-self: flex-start;
+  font-size: 13.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+// Gefundene Namen
+.funde {
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+}
+
+.fund {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 10px;
+  font-size: 14px;
+  cursor: pointer;
+
+  + .fund {
+    border-top: 1px solid var(--hair);
+  }
+
+  > input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}
+
+.fundText {
+  flex: 1 1 130px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.entfernen {
+  @include m.textKnopf;
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  color: var(--text2);
+}
+
+.art {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.platzhalter {
+  padding: 0 5px;
+  border-radius: 3px; // unter 4 px: Haarfeines, keine Karten-Rundung
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 0.92em;
+}
+
+.name {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.leer {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text3);
+}
+
+// Der Auftrag, so wie ihn die KI bekommt
+.auftrag {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ausweg {
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+
+  summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  &[open] summary {
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    @include m.eingabefeld;
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    resize: vertical;
+  }
+}
+
+// Vorschau
+.liste {
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+}
+
+.wahl {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+
+  + .wahl {
+    border-top: 1px solid var(--hair);
+  }
+
+  > input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    accent-color: var(--blue);
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.aus {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.punkte {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
+
+// Meldungen im Fenster
+.hinweis {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.zeichen {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-weight: 900;
+  color: var(--red);
+}
+
+.info {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+
+  b {
+    display: block;
+  }
+}
+
+.verstecktes {
+  display: none;
+}

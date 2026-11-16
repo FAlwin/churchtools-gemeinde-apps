@@ -302,3 +302,197 @@
   display: inline;
   padding: 0;
 }
+
+// Seite „Wechseltage“ (O9-4): Tabelle je Jahr – am Handy waagerecht scrollbar in der Karte, die Seite rutscht nicht.
+.rahmen {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  tbody tr + tr td {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+
+.bescheid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 12px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.textkopie {
+  @include m.eingabefeld;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 170px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.knopfzeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+// Seite „Einrichtung“ (O9-5c): Kette der Stufen, Liste „Stand in ChurchTools“.
+.kette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 4px 14px 8px;
+  list-style: none;
+}
+
+.stufe {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  border-radius: var(--r-card);
+  background: var(--surface3);
+
+  small {
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+.pfeil {
+  color: var(--text2);
+}
+
+.einrichtungDaten {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 4px 14px 12px;
+
+  dt {
+    color: var(--text2);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.pruef {
+  margin: 0;
+  padding: 0 0 4px;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  li:first-child {
+    border-top: 0;
+  }
+}
+
+.zeichen {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.zeichenOk {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+
+.zeichenWarn {
+  background: var(--markiert);
+  color: var(--text);
+}
+
+.zeichenGrau {
+  background: var(--surface3);
+  color: var(--text2);
+}
+
+.pruefMitte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  span {
+    color: var(--text2);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Mehrere Befunde einer Zeile (z. B. je Gruppe) – je einer pro Zeile statt eines Blocks. */
+.befunde {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leerKarte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  p,
+  ol {
+    margin: 0;
+  }
+
+  ol {
+    padding-left: 20px;
+  }
+}

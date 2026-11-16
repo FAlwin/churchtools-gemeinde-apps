@@ -7,7 +7,7 @@
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
 > Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
 > die nächste Sitzung fest und geben Protokolle frei (mit Beitrag in der Gruppe); Mitglieder schlagen Punkte vor. Jedes
-> Protokoll lässt sich als **PDF teilen**. Weiter geht es mit S8/S9 (`protokolle-planung/docs/bauplan.md`). Diese
+> Protokoll lässt sich als **PDF teilen**. Weiter geht es mit S9 (`protokolle-planung/docs/bauplan.md`). Diese
 > Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -241,6 +241,33 @@ trägt „ENTWURF – NOCH NICHT FREIGEGEBEN“ im Kasten, ein blasses „ENTWUR
 (`Protokoll <Gruppe> <JJJJ-MM-TT> ENTWURF.pdf`). Im Editor kommt auch noch nicht Gespeichertes mit. Wer die
 Mitgliederliste nicht sieht, bekommt bei To-Dos die Namen aus dem Verlauf oder „eine weitere Person“.
 
+**Mit KI füllen (Leitung, S8-2):** Im Editor eines Entwurfs steht neben „Freigeben“ der Knopf **„Mit KI füllen“** (nur
+die Leitung, nur solange man schreiben darf, nicht beim Lesen). Aus der Aufnahme einer Sitzung entstehen so Stichpunkte,
+Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kommt. In drei Schritten:
+
+1. **Auftrag:** Transkript einfügen oder eine Datei (`.txt` oder Word `.docx`) wählen. Die Erweiterung sucht Namen
+   (volle Namen aller Personen, die du in ChurchTools sehen darfst, Vornamen der Gruppe, „Familie …“, „Herr …“,
+   „Frau …“) – auch in den Titeln der Tagesordnung – und zeigt sie mit Platzhalter. Ein Häkchen weg lässt den Namen
+   stehen. Unter **„Weiteres verbergen“** trägst du eigene Begriffe ein. **Heikles (z. B. Krankheiten) trägst du selbst
+   ein oder nimmst es vorher aus dem Text** – gefunden werden nur Namen. „So geht es an die KI“ zeigt den fertigen
+   Auftrag. **„Auftrag kopieren“** legt ihn in die Zwischenablage.
+2. **Antwort:** Den Auftrag in die KI deiner Wahl einfügen und die **ganze** Antwort hier einfügen. Klappt das Kopieren
+   nicht, hilft „Auftrag anzeigen“: Text markieren und von Hand kopieren. Ist die Antwort nicht lesbar, steht die Meldung
+   im Fenster und dein Text bleibt.
+3. **Vorschau:** Jede Zeile hat ein Häkchen (an) und zeigt klein, wohin sie kommt („→ 3.1 Küche“). Was zu keinem Punkt
+   passt oder zu einem festen Punkt gehört, ist ausgegraut und wird nicht übernommen. Die echten Namen sind wieder
+   eingesetzt (grün). **„Ausgewählte übernehmen“** fügt die Stichpunkte, Beschlüsse, To-Dos und Termine **hinter den Text
+   ihres Punkts** ein (hat er Unterpunkte: vor den ersten, damit sie zu diesem Punkt zählen), neue Punkte ans Ende der
+   Tagesordnung. Danach speichert das Protokoll von selbst; die To-Dos entstehen
+   beim Speichern (Zuständige aus der Gruppe als Mitglied, alle anderen als extern). Bitte kurz im Blatt prüfen.
+
+**Datenschutz:** Transkript, gefundene Namen und die Zuordnung bleiben **nur im Fenster** – nichts wird in ChurchTools
+oder im Browser gespeichert, Schließen heißt weg. Zur KI geht nur der Text, den du selbst kopierst und einfügst, mit
+Platzhaltern statt Namen. Die Erweiterung ruft keine KI selbst auf. Der Auftrag lässt sich erst kopieren, wenn
+Personenliste und Gruppenmitglieder geladen sind; lässt sich die Personenliste nicht laden, steht ein Hinweis im Fenster
+und Namen müssen von Hand unter „Weiteres verbergen“ eingetragen werden. Wer die Mitgliederliste nicht sehen darf, bekommt
+Vornamen nicht von selbst ersetzt (volle Namen weiterhin).
+
 **Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten
 Überschrift gleicher oder höherer Stufe. Abgelegt wird nur an Abschnittsgrenzen: Lässt man mitten in einem anderen
 Punkt los, rückt der Abschnitt an die nächste Grenze. Das Griff-Menü einer Überschrift hat „Nach oben“ und „Nach
@@ -273,14 +300,21 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
   gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a; Fenster `ProtokollTeilenFenster.tsx`,
   nachgeladen über `ProtokollTeilen.tsx`, S6-3b).
-- Mit KI füllen (S8-1, Regeln ohne Oberfläche; das Fenster folgt in S8-2): `shared/protokolle/ki.ts` – `tagesordnung`
+- Mit KI füllen (S8-1 Regeln, S8-2 Fenster): `shared/protokolle/ki.ts` – `tagesordnung`
   (Punkte und Unterpunkte mit Nummer wie im Protokoll, feste Punkte = „nichts zuordnen“), `auftragBauen` (bekommt das schon
   mit `platzhalter.ts` ersetzte Transkript), `antwortLesen` (tolerant bei Codeblock/Drumherum/`nr` als Zahl, streng bei
   Typen; kaputt → `{ ok: false, meldung }`, wirft nie; Namen über `zuruecksetzen`, Zuständige: Person der Gruppe → Mitglied,
-  sonst extern) und `uebernahmePlanen` (je Ziel ein Aufruf `{ vor, bloecke }` für `EditorGriff.einfuegen`: ans Ende des
-  Abschnitts, später im Dokument zuerst, neue Punkte zuletzt; To-Do-Blöcke tragen `props.vorab`, keine To-Do-ID).
+  sonst extern) und `uebernahmePlanen` (je Ziel ein Aufruf `{ vor, bloecke }` für `EditorGriff.einfuegen`: vor den nächsten
+  Punkt – bei Unterpunkten vor den ersten, damit es zum Punkt zählt –, später im Dokument zuerst, neue Punkte zuletzt; To-Do-Blöcke tragen `props.vorab`, keine To-Do-ID).
   `shared/protokolle/docxText.ts` – Text einer `.docx` (`docxText(bytes)` → `{ ok, text } | { ok: false, meldung }`, mit
   `fflate`, ohne DOM).
+  Das Fenster (S8-2): `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (Knopf `KiKnopf` im Kopf
+  von `ProtokollSchreiben.tsx`, Bedingung `darfKi` = Freigeben-Bedingung und nicht in der Lese-Ansicht des Editors).
+  Es verbindet nur: Personen `kiPersonen.ts` (`ladePersonen`, `ctAlleSeiten('/persons', 200)`), `gruppe` = die Personen
+  der Liste, die Mitglied sind (verborgen/`null` → keine; solange `null` oder die Liste lädt, ist Kopieren gesperrt),
+  `namenFinden` über Transkript + Tagesordnungstitel + Gruppenname, `auftragBauen`/`antwortLesen`/`uebernahmePlanen` mit
+  `EditorGriff.einfuegen` (Einfügungen in der gelieferten Reihenfolge, Plan mit frisch gelesenem Dokument, neue Block-IDs
+  `crypto.randomUUID()`). Zustand nur im Fenster; ein Tipp neben das Fenster schließt es nicht, solange Text drinsteht.
 - Schreiben: `protokolle/src/schreiben.ts` (Sperre nehmen, speichern, übernehmen, freigeben – vorher frisch lesen,
   nachher nachlesen), `schreibSteuerung.ts` (wann gespeichert wird), Editor `DokumentEditor.tsx` + `editorSchema.ts`
   (BlockNote 0.56, fest gepinnt – Updates bewusst, die Schnittstellen ändern sich in 0.x noch), Word-Listen

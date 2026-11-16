@@ -12,9 +12,10 @@
  *    kaputt oder ohne JSON → `{ ok: false, meldung }` mit verständlichem deutschem Text.
  * 4. `uebernahmePlanen` – aus den angehakten Einträgen eine Liste `{ vor, bloecke }` für `EditorGriff.einfuegen`.
  *
- * Wohin etwas kommt: ans **Ende des Abschnitts** seines Punkts, also vor den nächsten Punkt **gleicher oder höherer Stufe**
- * (bei „3.“ hinter 3.1 und 3.2), beim letzten Punkt ans Dokumentende (`vor: null`). Gerechnet wird mit `Punkt.tiefe` aus
- * `ableiten` – derselben Zählung wie die Nummern, auch wenn ein Dokument eine Ebene überspringt.
+ * Wohin etwas kommt: hinter den eigenen Text seines Punkts, also **vor den nächsten Punkt** – hat „3.“ Unterpunkte, vor
+ * 3.1 (Alwin 16.11.2026, Fund aus TF-PROT-12: hinter 3.2 zählte es zu 3.2); beim letzten Punkt ans Dokumentende
+ * (`vor: null`, im Editor vor die leere Schlusszeile). Gerechnet wird mit der Punktliste aus `ableiten` – derselben wie die
+ * Nummern.
  */
 import { ableiten, BLOCK, punktNummer, terminDatum, type Block, type Punkt } from './dokument';
 import { platzhalterAnwenden, zuruecksetzen, type Fund, type Person } from './platzhalter';
@@ -315,21 +316,24 @@ export interface Einfuegung {
 const inhalt = (t: string): unknown[] => [{ type: 'text', text: t, styles: {} }];
 
 /**
- * **Die Einfügestelle eines Punkts:** der nächste Punkt gleicher oder höherer Stufe (kleinere oder gleiche `tiefe`) nach
- * ihm – sonst `null` (Dokumentende). Unterpunkte bleiben also vor der Stelle.
+ * **Die Einfügestelle eines Punkts:** der nächste Punkt danach, welcher Stufe auch immer – sonst `null` (Dokumentende).
+ * Hat der Punkt Unterpunkte, kommt sein Inhalt also **vor den ersten Unterpunkt** (Alwin 16.11.2026, Fund aus
+ * TF-PROT-12): Dahinter zählte er zum letzten Unterpunkt (Bereiche, PDF). Ohne Unterpunkte ist das der nächste Punkt
+ * gleicher oder höherer Stufe – das Ende des Punkts.
  */
 export function einfuegeStelleKI(punkte: readonly Punkt[], blockId: string): string | null {
   const i = punkte.findIndex((p) => p.blockId === blockId);
   if (i < 0) return null;
-  return punkte.slice(i + 1).find((p) => p.tiefe <= punkte[i].tiefe)?.blockId ?? null;
+  return punkte[i + 1]?.blockId ?? null;
 }
 
 /**
  * **Übernahme planen.** `gewaehlt` sind die angehakten Einträge (der Aufrufer filtert). Rückgabe:
  * - `einfuegungen` – in der Reihenfolge, in der `einfuegen` aufzurufen ist. Je Ziel-Punkt ein Aufruf mit
- *   Stichpunkten (Aufzählung), Beschlüssen, To-Dos und Terminen in dieser Reihenfolge. **Später im Dokument zuerst:** Wer
- *   einen Unterpunkt und seinen Punkt füllt, bekommt beide vor derselben Stelle – so landet der Punkt hinter den Inhalten
- *   des Unterpunkts. Die neuen Punkte kommen zuletzt (`vor: null`, Tagesordnungspunkt mit Stichpunkten).
+ *   Stichpunkten (Aufzählung), Beschlüssen, To-Dos und Terminen in dieser Reihenfolge, vor den nächsten Punkt
+ *   (`einfuegeStelleKI`). Später im Dokument zuerst – gehen der letzte Punkt und die neuen Punkte beide ans Ende, steht
+ *   der Punkt so vor den neuen. Die neuen Punkte kommen zuletzt (`vor: null`, Tagesordnungspunkt mit Stichpunkten);
+ *   „Ende“ heißt im Editor: vor die leere Schlusszeile (`vorSchlusszeilen`).
  * - `uebersprungen` – Einträge ohne gültiges Ziel (unbekannter/fester Punkt, oder der Punkt ist seit dem Lesen der
  *   Antwort aus dem Dokument verschwunden).
  *

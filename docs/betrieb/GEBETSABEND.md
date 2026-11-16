@@ -43,7 +43,7 @@ Erst danach lassen sich die Rechte auf diese Kategorien vergeben (vorher stehen 
 Die Seite zeigt eine Karte wie „Als Nächstes“ im Dienstplaner: oben den **nächsten Gebetsabend** aus dem gewählten
 Kalender (Titel enthält „Gebet“; die Technik stellt beides unter **„Einstellungen“** neben „Hallo …“ ein), darunter den
 Knopf **„Gebetsabend zuhören“**. Ohne passenden Termin steht schlicht „Gebetsabend“ oben. Wer nicht zur Technik
-gehört, sieht nur diese eine Karte, schmal in der Mitte:
+gehört, sieht nur diese eine Karte (über die volle Breite wie alle Erweiterungen):
 
 - **Noch keine Übertragung:** Der Knopf ist aus, darüber steht, dass es kurz vor dem Gebetsabend losgeht. Die Seite
   fragt alle 20 Sekunden nach und schaltet den Knopf von selbst frei – Neuladen ist nicht nötig.

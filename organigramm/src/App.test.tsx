@@ -620,6 +620,16 @@ describe('O4: Präsentation', () => {
   };
   const wo = (d: HTMLElement) => d.querySelector('[aria-live]')?.textContent;
 
+  it('Kopf in zwei Zeilen: oben Name und Schließen, darunter die Bedienung (16.11.2026)', async () => {
+    const d = await oeffnen();
+    const oben = within(d).getByRole('button', { name: 'Schließen' }).parentElement!;
+    expect(oben.textContent).toContain('ECG');
+    expect(within(oben).queryByRole('group', { name: 'Ansicht' })).toBeNull();
+    expect(
+      oben.nextElementSibling?.contains(within(d).getByRole('group', { name: 'Ansicht' })),
+    ).toBe(true);
+  });
+
   it('„Präsentieren“ erst, wenn die Mitglieder geladen sind – auch für alle ohne Leitung', async () => {
     mitgliederLaden.mockReturnValue(new Promise(() => {}));
     laden.mockResolvedValue(

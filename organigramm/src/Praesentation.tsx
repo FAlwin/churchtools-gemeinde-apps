@@ -389,63 +389,69 @@ export function Praesentation({
       tabIndex={-1}
       {...{ [BEREICH_ATTRIBUT]: '' }}
     >
+      {/* Zwei Zeilen (Alwin 16.11.2026, Entwurf A): oben Name, Vollbild und Schließen – der Name wurde in einer Zeile
+          von der Bedienung bis auf „Evange…“ gekürzt –, darunter die Bedienung. */}
       <div className={styles.kopf}>
-        <span className={styles.gemeinde}>{start.gemeinde}</span>
-        {stand && (
-          <Segment
-            value={stand.wert}
-            options={[
-              { value: 'neu', label: 'Neue Gliederung' },
-              { value: 'heute', label: 'Heute' },
-            ]}
-            onChange={(w) => {
-              setSeite(-1);
-              stand.onWechsel(w);
-            }}
-            ariaLabel="Stand"
-            verbunden
-          />
-        )}
-        <Segment
-          value={ansicht}
-          options={PRAES_ANSICHTEN.map((a) => ({
-            value: a,
-            label: a === 'kacheln' ? 'Kacheln' : ANSICHT_NAMEN[a],
-          }))}
-          onChange={(a) => {
-            setAnsicht(a);
-            merkePraesAnsicht(a);
-          }}
-          ariaLabel="Ansicht"
-          verbunden
-        />
-        {ansicht !== 'kacheln' && (
-          <span className={styles.personen}>
-            Personen
+        <div className={styles.kopfOben}>
+          <span className={styles.gemeinde}>{start.gemeinde}</span>
+          {kannVollbild && (
+            <button type="button" className={styles.knopf} onClick={vollbildUmschalten}>
+              <Icon name={vollbild ? 'vollbild-aus' : 'vollbild'} size={16} />
+              {vollbild ? 'Vollbild beenden' : 'Vollbild'}
+            </button>
+          )}
+          <button type="button" className={styles.knopf} onClick={schliessen}>
+            Schließen
+          </button>
+        </div>
+        <div className={styles.bedienung}>
+          {stand && (
             <Segment
-              value={personen.wahl}
-              options={PERSONEN_WAHL}
-              onChange={personen.onWahl}
-              ariaLabel="Personen"
+              value={stand.wert}
+              options={[
+                { value: 'neu', label: 'Neue Gliederung' },
+                { value: 'heute', label: 'Heute' },
+              ]}
+              onChange={(w) => {
+                setSeite(-1);
+                stand.onWechsel(w);
+              }}
+              ariaLabel="Stand"
               verbunden
             />
-          </span>
-        )}
-        {(ansicht === 'kacheln' || personen.wahl !== 'aus') && (
-          <span className={styles.personen}>
-            Welche Rollen
-            <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
-          </span>
-        )}
-        {kannVollbild && (
-          <button type="button" className={styles.knopf} onClick={vollbildUmschalten}>
-            <Icon name={vollbild ? 'vollbild-aus' : 'vollbild'} size={16} />
-            {vollbild ? 'Vollbild beenden' : 'Vollbild'}
-          </button>
-        )}
-        <button type="button" className={styles.knopf} onClick={schliessen}>
-          Schließen
-        </button>
+          )}
+          <Segment
+            value={ansicht}
+            options={PRAES_ANSICHTEN.map((a) => ({
+              value: a,
+              label: a === 'kacheln' ? 'Kacheln' : ANSICHT_NAMEN[a],
+            }))}
+            onChange={(a) => {
+              setAnsicht(a);
+              merkePraesAnsicht(a);
+            }}
+            ariaLabel="Ansicht"
+            verbunden
+          />
+          {ansicht !== 'kacheln' && (
+            <span className={styles.personen}>
+              Personen
+              <Segment
+                value={personen.wahl}
+                options={PERSONEN_WAHL}
+                onChange={personen.onWahl}
+                ariaLabel="Personen"
+                verbunden
+              />
+            </span>
+          )}
+          {(ansicht === 'kacheln' || personen.wahl !== 'aus') && (
+            <span className={styles.personen}>
+              Welche Rollen
+              <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
+            </span>
+          )}
+        </div>
       </div>
       <div ref={buehne} className={styles.buehne}>
         {ansicht !== 'kacheln'

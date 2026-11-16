@@ -4,6 +4,9 @@
  */
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 
+/** „1 Platz“ / „3 Plätze“ – eine Stelle für Meldung und Vorlage. */
+export const plaetzeText = (n: number): string => `${n} ${n === 1 ? 'Platz' : 'Plätze'}`;
+
 /** Was ein Fehlschlag in Worten heißt (Gründe aus `anzahl.ts`). */
 export function anzahlFehlerText(r: Extract<AnzahlErgebnis, { ok: false }>): string {
   switch (r.grund) {

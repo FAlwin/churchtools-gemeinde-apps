@@ -32,16 +32,16 @@ import {
 
 /**
  * **Das Protokoll als PDF** (Bauplan S6-3a) – gezeichnet, was `shared/protokolle/protokollBlatt.ts` festgelegt hat, auf
- * dem gemeinsamen Satz der geteilten Blätter (`pdfSatz.ts`: Lato, Kopf und Fuß mit Seitenzahl) – kein zweiter Satz.
+ * dem gemeinsamen Satz der geteilten Blätter (`pdfSatz.ts`: PDF-Schrift, Kopf und Fuß mit Seitenzahl) – kein zweiter Satz.
  * Umbrochen wird Zeile für Zeile, ein langer Absatz läuft also über die Seite; eine Überschrift steht nie allein unten,
  * eine Tabellenzeile wird nie zerteilt.
  *
- * `schrift` nur für Tests („helvetica“): Mit eingebetteter Lato steht der Text nicht lesbar im PDF.
+ * `schrift` nur für Tests („helvetica“): Mit eingebetteter PDF-Schrift steht der Text nicht lesbar im PDF.
  */
 export async function protokollPdf(b: ProtokollBlatt, schrift?: string): Promise<jsPDF> {
   const { d, font } = await neuesDokument(false, schrift);
   // Kursiv aus dem Editor (Alwin 12.11.2026: echte Kursiv-Lato) – nur hier, damit nur dieses PDF die Schnitte trägt.
-  if (!schrift) (await import('./pdfSchriftKursiv')).latoKursivEinbetten(d);
+  if (!schrift) (await import('./pdfSchriftKursiv')).kursivEinbetten(d);
   new ProtokollZeichner(d, font, b).alles();
   return d;
 }

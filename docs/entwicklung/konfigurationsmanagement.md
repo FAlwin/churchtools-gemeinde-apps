@@ -17,6 +17,10 @@ ChurchTools ist Datenquelle).
 
 - Ein **öffentliches** Git-Repo (`FAlwin/churchtools-gemeinde-apps`), MIT-Lizenz.
 - Arbeit immer in Feature-Branch + PR, nie direkt auf `main`.
+- `main` ist geschützt (Ruleset „main: CI muss grün sein“, seit 16.11.2026): gemergt wird nur, wenn `build-and-test`,
+  `docker-start` und `e2e` grün sind – und zwar auf dem **aktuellen** `main`-Stand (ist `main` weiter, erst
+  hereinholen). PRs bekommen beim Öffnen **Auto-merge** (Squash), GitHub merged dann selbst. Ausnahme: Release-PRs und
+  Tags – die entscheidet Alwin. Ein Merge nach `main` liefert nichts aus (Staging auf Zuruf, Releases nur über Tags).
 - `.env` wird **nie** committet – nur `.env.example` mit Platzhaltern.
 - Releases als Git-Tag `vX.Y.Z` (SemVer, Musik-App) → CI baut die GHCR-Images und die Erweiterungs-ZIP;
   `anmeldung-vX.Y.Z` → ZIP der Anmelde-Erweiterung, nie „latest" (`docs/betrieb/ANMELDUNGEN.md`).

@@ -44,7 +44,8 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
     );
     expect(leseAnsicht()).toEqual({
       breite: 'schmal',
-      unteransicht: 'personen',
+      // Der alte Wert `'personen'` (bis 16.11.2026 „Wer wie oft?“) wird zu `werWieOft`.
+      unteransicht: 'werWieOft',
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
       ausgeblendeteKalender: [12],
@@ -53,6 +54,22 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       ablaufZu: false,
       infosZu: false,
     });
+  });
+
+  it('die Ansicht: der alte Wert „personen“ war „Wer wie oft?“ und bleibt es – „raster“ ist die neue Ansicht „Personen“', () => {
+    const gemerkt = (u: unknown) => {
+      localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ unteransicht: u }));
+      return leseAnsicht().unteransicht;
+    };
+    expect(gemerkt('personen')).toBe('werWieOft');
+    expect(gemerkt('werWieOft')).toBe('werWieOft');
+    expect(gemerkt('raster')).toBe('raster');
+    expect(gemerkt('matrix')).toBe('matrix');
+    expect(gemerkt('unsinn')).toBe('matrix');
+    expect(gemerkt(7)).toBe('matrix');
+    // Ohne Eintrag: die Matrix.
+    localStorage.removeItem('dienstplaner.planen.ansicht');
+    expect(leseAnsicht().unteransicht).toBe('matrix');
   });
 
   it('gemerktes S/M/L wird schmal/breit (29.10.2026): S und M schmal, L breit', () => {

@@ -221,6 +221,10 @@ function DatenschutzKarte({
   );
 }
 
+/** Erster Tag der Veranstaltung (fürs Alter in Liste und Nachprüfung), ohne Termin heute – die eine Stelle dafür. */
+const stichtagVon = (e: OeffentlicheEinstellungen) =>
+  e.termin?.beginn.slice(0, 10) ?? heuteImKalender();
+
 /** Merkt sich je Gerät, welchen Hinweis „verschoben“ man gesehen hat (K1, V5) – ohne Speicher eben jedes Mal. */
 function gesehenLesen(id: number): string | null {
   try {
@@ -432,7 +436,13 @@ export function VeranstaltungSeite({
   // A9-5 (F3): Darf man fehlende Abläufe einrichten? Nur gefragt, wenn welche fehlen – sonst braucht es niemand.
   const [darfMails, setDarfMails] = useState(false);
   // U1: Eine Kennzahl-Kachel springt in eine Ansicht der Liste – `n` zählt hoch, damit derselbe Sprung neu beginnt.
-  const [sprung, setSprung] = useState<{ filter: ListenFilter; n: number; rundmail?: boolean }>({
+  const [sprung, setSprung] = useState<{
+    filter: ListenFilter;
+    n: number;
+    rundmail?: boolean;
+    /** Diese Anmeldung gleich öffnen (aus der Nachprüfung, F1e). */
+    oeffnen?: string;
+  }>({
     filter: 'alle',
     n: 0,
   });
@@ -448,7 +458,9 @@ export function VeranstaltungSeite({
           if (lauf !== ladeLauf.current) return;
           setMitglieder(stand ? { art: 'fertig', stand } : { art: 'verboten' });
           setPruefWarOben(
-            !!stand && nachpruefungAus(einstellungen, stand, maxPlaetze).hinweise > 0,
+            !!stand &&
+              nachpruefungAus(einstellungen, stand, maxPlaetze, stichtagVon(einstellungen))
+                .hinweise > 0,
           );
         },
         (x: unknown) =>
@@ -590,10 +602,23 @@ export function VeranstaltungSeite({
         ? { art: 'laedt' }
         : mitglieder.art === 'fehler'
           ? { art: 'fehler', text: `Ließ sich gerade nicht prüfen. ${mitglieder.text}` }
-          : { art: 'fertig', n: nachpruefungAus(e, mitglieder.stand, a.maxPlaetze) };
+          : {
+              art: 'fertig',
+              n: nachpruefungAus(e, mitglieder.stand, a.maxPlaetze, stichtagVon(e)),
+            };
   const neuLaden = () => mitgliederLaden(e, a.maxPlaetze);
   const pruefOben = pruef?.art === 'fertig' ? pruef.n.hinweise > 0 : pruefWarOben;
-  const pruefKarte = pruef && <NachpruefungKarte stand={pruef} onNeu={neuLaden} />;
+  const pruefKarte = pruef && (
+    <NachpruefungKarte
+      stand={pruef}
+      onNeu={neuLaden}
+      // F1e: „Anmeldung öffnen“ – in den Bereich „Anmeldungen“, das Fenster dieser Anmeldung offen.
+      onOeffnen={(schluessel) => {
+        setSprung((x) => ({ filter: 'alle', n: x.n + 1, oeffnen: schluessel }));
+        onReiter('anmeldungen');
+      }}
+    />
+  );
   const heute = heuteImKalender();
   const t = e.termin;
   const geburt = geburtsdatumAn(e.formular);
@@ -666,7 +691,7 @@ export function VeranstaltungSeite({
         <Kennzahlen
           einstellungen={e}
           zustand={mitglieder}
-          stichtag={t?.beginn.slice(0, 10) ?? heute}
+          stichtag={stichtagVon(e)}
           maxPlaetze={a.maxPlaetze}
           anmeldeschluss={a.bis}
           heute={heute}
@@ -846,6 +871,7 @@ export function VeranstaltungSeite({
             key={sprung.n}
             startFilter={sprung.filter}
             startRundmail={sprung.rundmail}
+            startOffen={sprung.oeffnen}
             id={id}
             veranstaltung={daten.name}
             e={e}
@@ -854,7 +880,7 @@ export function VeranstaltungSeite({
             anmeldeschluss={a.bis}
             entwurf={entwurf}
             zustand={mitglieder}
-            stichtag={t?.beginn.slice(0, 10) ?? heute}
+            stichtag={stichtagVon(e)}
             heute={heute}
             darf={darf}
             zahlarten={zahlartenHier}

@@ -154,7 +154,7 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
 - **Personen** (ab O7b-6b) – unter jeder Gruppe ihre Rollen und Personen wie im Reiter, im Diagramm und in der Liste
   (dort etwas eingerückt unter dem Namen, vor den Untergruppen). Angehakt ist es, wenn der Reiter Personen zeigt; es
   zeigt dann dieselbe Stufe – steht der Reiter auf „Aus“, die **Rollen** (Standardrolle als Zahl). Kursiv gibt es auf
-  Papier nicht (eingebettet ist nur Lato normal und fett); der Text ist derselbe.
+  Papier nicht (eingebettet sind dort nur normal und fett der PDF-Schrift); der Text ist derselbe.
 - **Welche Rollen** (seit #915, nur mit Personen) – übernimmt die Wahl aus dem Reiter; hier geändert gilt sie nur für
   diese PDF (wie der Ausschnitt).
 - **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht
@@ -192,7 +192,10 @@ ChurchTools:
   hier geändert auch dort. Er gilt für die Kästchen und für die Personenlisten der Spalten: Dort bleibt, wer in der
   Gruppe **oder einer ihrer Untergruppen** eine gewählte Rolle hat – „Nur Leitung“ bei Technik zeigt also auch die
   Leitung von Ton und Stream. Darunter steht, wie viele ausgeblendet sind. Die Zahlen („12 Personen“) und die Leitung
-  auf den Kacheln zählen weiter alle.
+  auf den Kacheln zählen weiter alle – nur die Stufe „Personen für alle ohne Leitung“ (Scheibe C) kann die Leitung dort
+  zählen statt nennen.
+- **Kopfleiste** (seit 16.11.2026, #945): oben der Name der Gemeinde mit **Vollbild** und **Schließen**, darunter die
+  Bedienung – sie bricht bei Bedarf um, der Name wird nicht mehr von ihr verdrängt.
 - Es gilt dasselbe wie im Baum: Was Gruppen-Admins für alle ausgeblendet haben, fehlt auch hier.
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.

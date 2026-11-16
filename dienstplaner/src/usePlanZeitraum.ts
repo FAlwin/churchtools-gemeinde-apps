@@ -55,12 +55,13 @@ export function usePlanZeitraum({
 }) {
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
 
-  // Jede Unteransicht hat ihren eigenen Zeitraum (E9-3, Alwin 05.11.2026): die Matrix z. B. den Dezember, „Wer wie
-  // oft?“ die letzten 3 Monate. Alles Weitere richtet sich nach dem der gezeigten Ansicht.
-  const personen = ansicht.unteransicht === 'personen';
-  const z = personen ? ansicht.zeitraumWer : ansicht.zeitraum;
+  // „Wer wie oft?“ hat einen eigenen Zeitraum (E9-3, Alwin 05.11.2026): die Matrix z. B. den Dezember, „Wer wie oft?“
+  // die letzten 3 Monate. Alles Weitere richtet sich nach dem der gezeigten Ansicht.
+  // Das Raster der Personen (Wunsch 5) teilt den Zeitraum der Matrix – nur „Wer wie oft?“ hat einen eigenen.
+  const werWieOft = ansicht.unteransicht === 'werWieOft';
+  const z = werWieOft ? ansicht.zeitraumWer : ansicht.zeitraum;
   const setzeZeitraum = (neu: Zeitraum) =>
-    setAnsicht(personen ? { ...ansicht, zeitraumWer: neu } : { ...ansicht, zeitraum: neu });
+    setAnsicht(werWieOft ? { ...ansicht, zeitraumWer: neu } : { ...ansicht, zeitraum: neu });
 
   // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten Bereich zählt
   // nicht mehr (`useLaden`). Geladen wird mit dem Vorlauf für ＋ (`ladeGrenzen`).
@@ -203,7 +204,7 @@ export function usePlanZeitraum({
   };
 
   return {
-    personen,
+    werWieOft,
     z,
     setzeZeitraum,
     bereich,

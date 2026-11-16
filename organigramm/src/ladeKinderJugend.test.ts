@@ -41,6 +41,8 @@ describe('ladeFerien', () => {
     expect(f).toEqual({
       art: 'da',
       jahre: [expect.objectContaining({ jahr: 2027, wechseltag: '2027-09-06' })],
+      // Die Sommerferien selbst (ohne die Herbstferien) – die Seite „Wechseltage“ zeigt sie.
+      ferien: [{ jahr: 2027, beginn: '2027-07-19', ende: '2027-08-31' }],
     });
     expect(pfade[1]).toBe('/calendars/appointments?calendar_ids[]=6&from=2025-01-01&to=2031-12-31');
   });

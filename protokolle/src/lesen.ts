@@ -11,6 +11,7 @@ import { werteLesen } from '@shared/ct/modulDaten';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
+import { terminPfad } from '@shared/ct/kalenderTermine';
 import { istEinstellung, type PunkteVonMitgliedern } from '@shared/protokolle/einrichten';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
@@ -63,10 +64,7 @@ interface TerminRoh {
 
 /** Kommende Termine im Kalender – nur die mit Besprechungsanfrage (Alwin, 23.10.2026), samt den Antworten. */
 async function termineMitAnfrage(kalender: number, von: string, bis: string): Promise<Termin[]> {
-  const roh =
-    (await ctDaten<TerminRoh[]>(
-      `/calendars/appointments?calendar_ids[]=${kalender}&from=${von}&to=${bis}`,
-    )) ?? [];
+  const roh = (await ctDaten<TerminRoh[]>(terminPfad(kalender, von, bis))) ?? [];
   const alle: Omit<Termin, 'anfragen'>[] = [];
   for (const r of roh) {
     const b = r.base ?? r.appointment?.base;

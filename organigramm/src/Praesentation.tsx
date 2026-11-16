@@ -9,7 +9,7 @@ import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import { alleAuf, anfangsOffen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import { istLeitung, type Mitglied } from '@shared/organigramm/mitglieder';
-import type { PersonenWahl } from '@shared/organigramm/personen';
+import { OHNE_GRENZE, type PersonenGrenze, type PersonenWahl } from '@shared/organigramm/personen';
 import type { PBereich, PSpalte, Praesentation as Daten } from '@shared/organigramm/praesentation';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
@@ -44,8 +44,11 @@ interface Props {
   mitglieder: MitgliederDaten;
   /** „Neue Gliederung | Heute“ (O7-4) – nur für Gruppen-Admins mit einem Plan; sonst fehlt der Umschalter. */
   stand?: { wert: Stand; onWechsel: (s: Stand) => void };
-  /** Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. */
-  personen: { wahl: PersonenWahl; onWahl: (w: PersonenWahl) => void };
+  /**
+   * Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. `grenze`: wie viel man von den Personen
+   * je Gruppe sehen darf (#915 C) – für das Diagramm; Listen und Leitung hat `praesentationAus` schon danach gerechnet.
+   */
+  personen: { wahl: PersonenWahl; onWahl: (w: PersonenWahl) => void; grenze?: PersonenGrenze };
   /** „Welche Rollen“ (#915) – derselbe gemerkte Filter wie im Reiter; gilt für Diagramme UND Listen. */
   rollenFilter: RollenFilter;
   onSchliessen: () => void;
@@ -151,9 +154,13 @@ export function Praesentation({
       </span>
     ) : null;
   };
+  // Die Leitung mit Namen – und, wo die Grenze keine Namen erlaubt (#915 C), nur gezählt („1 Leiter“).
   const leitung = (b: PBereich) =>
-    !b.sichtbar ? null : b.leitung.length ? (
-      b.leitung.map(wer)
+    !b.sichtbar ? null : b.leitung.length || b.leitungOhneNamen ? (
+      <>
+        {b.leitung.map(wer)}
+        {b.leitungOhneNamen && <span className={styles.gesucht}>{b.leitungOhneNamen}</span>}
+      </>
     ) : (
       <span className={styles.gesucht}>Leitung wird noch gesucht</span>
     );
@@ -344,8 +351,15 @@ export function Praesentation({
   const bereichNr = (id: number) => baum.findIndex((k) => k.gruppe.id === id);
   const kachelFarbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   const inhalt = useMemo(
-    () => personenInhalt(mitglieder, start.rollen, personen.wahl, rollenFilter.aus),
-    [mitglieder, start.rollen, personen.wahl, rollenFilter.aus],
+    () =>
+      personenInhalt(
+        mitglieder,
+        start.rollen,
+        personen.wahl,
+        rollenFilter.aus,
+        personen.grenze ?? OHNE_GRENZE,
+      ),
+    [mitglieder, start.rollen, personen.wahl, rollenFilter.aus, personen.grenze],
   );
   const diagrammSeite = (art: Exclude<PraesAnsicht, 'kacheln'>) => (
     <div className={styles.diagrammSeite}>

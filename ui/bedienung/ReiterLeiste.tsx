@@ -26,7 +26,7 @@ interface Props<T extends string> {
   oben?: boolean;
   /**
    * **Die Leiste steht oben am Bildschirmrand** (nur mit `oben`): In der installierten App lässt sie Platz für die
-   * Statusleiste (`--reiter-oben-polster`). Reiter in einer Seite oder Karte (Anmeldungen) brauchen das nicht.
+   * Statusleiste samt Unschärfe-Band (`--reiter-oben-polster`). Reiter in einer Seite oder Karte (Anmeldungen) brauchen das nicht.
    */
   amRand?: boolean;
   /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */

@@ -14,10 +14,13 @@ import {
   vergleicheFuer,
   vergleichMitWert,
   wahlAntworten,
+  bedingungAufbereiten,
+  gleicheBedingung,
   type AntwortBedingung,
   type Bedingung,
   type Regel,
 } from '@shared/anmeldung/bedingungen';
+import { antwortSatz, regelFuer, standardRegel, zielName } from './bedingungTexte';
 import k from './Baukasten.module.scss';
 
 /**
@@ -85,17 +88,156 @@ export function BedingungChips({
   );
 }
 
-/** Die erste Regel für eine neue Bedingung: die letzte Frage davor mit Antworten (sonst die letzte). */
-function standardRegel(quellen: Feld[]): Regel {
-  const q = [...quellen].reverse().find((x) => wahlAntworten(x).length > 0) ?? quellen.at(-1)!;
-  return regelFuer(q);
-}
-function regelFuer(q: Feld, op = vergleicheFuer(q)[0]): Regel {
-  return vergleichMitWert(op) ? { feld: q.id, op, wert: wahlAntworten(q)[0] } : { feld: q.id, op };
-}
-
 /** Höchstzahl der Regeln je Bedingung (wie im Schema). */
 const REGELN_MAX = 10;
+
+/**
+ * **Der Block „Bedingung“** – die Zeilen „wenn … oder …“, der Umschalter „eine reicht / alle müssen“ und „+ Bedingung“.
+ * Derselbe im Fenster an Frage oder Antwort (F1c) und in der Regel-Liste (F1d).
+ */
+export function BedingungBlock({
+  bed,
+  quellen,
+  onBed,
+}: {
+  bed: AntwortBedingung;
+  /** Die Fragen, auf die die Bedingung schauen darf. */
+  quellen: Feld[];
+  onBed: (bed: AntwortBedingung) => void;
+}) {
+  const regelAendern = (i: number, r: Regel) =>
+    onBed({ ...bed, regeln: bed.regeln.map((x, j) => (i === j ? r : x)) });
+  const quelleVon = (r: Regel) => quellen.find((q) => q.id === r.feld);
+  return (
+    <section className={k.bedBlock} aria-label="Bedingung">
+      <div className={k.bedBlockKopf}>
+        <span className={k.bedBlockTitel}>Bedingung</span>
+        {bed.regeln.length > 1 && (
+          <Segment
+            className={k.bedModus}
+            ariaLabel="Verknüpfung"
+            value={bed.modus}
+            onChange={(modus) => onBed({ ...bed, modus })}
+            options={[
+              { value: 'eine', label: 'eine reicht' },
+              { value: 'alle', label: 'alle müssen' },
+            ]}
+          />
+        )}
+      </div>
+      {bed.regeln.map((r, i) => {
+        const q = quelleVon(r);
+        const ops = q ? vergleicheFuer(q) : [r.op];
+        return (
+          <div key={i} className={k.bedRegel}>
+            <span className={k.bedWort}>
+              {i === 0 ? 'wenn' : bed.modus === 'alle' ? 'und' : 'oder'}
+            </span>
+            <select
+              aria-label={`Frage ${i + 1}`}
+              value={q ? r.feld : ''}
+              onChange={(e) => {
+                const neu = quellen.find((x) => x.id === e.target.value);
+                if (neu) regelAendern(i, regelFuer(neu));
+              }}
+            >
+              {!q && <option value="">(Frage fehlt)</option>}
+              {quellen.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {kurzname(x)}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label={`Vergleich ${i + 1}`}
+              // Ohne Antwort-Spalte nimmt der Vergleich ihren Platz („ist ausgefüllt“ wurde abgeschnitten).
+              className={vergleichMitWert(r.op) ? undefined : k.bedOpBreit}
+              value={r.op}
+              onChange={(e) => {
+                const op = e.target.value as Regel['op'];
+                regelAendern(i, q ? regelFuer(q, op) : { ...r, op });
+              }}
+            >
+              {ops.map((op) => (
+                <option key={op} value={op}>
+                  {VERGLEICH_TEXT[op]}
+                </option>
+              ))}
+            </select>
+            {vergleichMitWert(r.op) ? (
+              <select
+                aria-label={`Antwort ${i + 1}`}
+                value={r.wert ?? ''}
+                onChange={(e) => regelAendern(i, { ...r, wert: e.target.value })}
+              >
+                {(q ? wahlAntworten(q) : [r.wert ?? '']).map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <button
+              type="button"
+              className={k.bedWeg}
+              aria-label={`Bedingung ${i + 1} entfernen`}
+              onClick={() => onBed({ ...bed, regeln: bed.regeln.filter((_, j) => j !== i) })}
+            >
+              <Icon name="x" size={16} />
+            </button>
+          </div>
+        );
+      })}
+      {bed.regeln.length < REGELN_MAX && quellen.length > 0 && (
+        <button
+          type="button"
+          className={k.bedPlus}
+          onClick={() => onBed({ ...bed, regeln: [...bed.regeln, standardRegel(quellen)] })}
+        >
+          + Bedingung
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** **„Sonst ausgrauen / ausblenden“** mit Hinweis – für Bedingungen an Antworten (F1c und Regel-Liste). */
+export function DarstellungWahl({
+  bed,
+  onBed,
+}: {
+  bed: AntwortBedingung;
+  onBed: (bed: AntwortBedingung) => void;
+}) {
+  return (
+    <div className={k.bedDarstellung}>
+      <label>
+        Sonst{' '}
+        <select
+          aria-label="Darstellung"
+          value={bed.art}
+          onChange={(e) => onBed({ ...bed, art: e.target.value as 'grau' | 'weg' })}
+        >
+          <option value="grau">ausgrauen</option>
+          <option value="weg">ausblenden</option>
+        </select>
+      </label>
+      {bed.art === 'grau' && (
+        <label>
+          mit Hinweis{' '}
+          <input
+            type="text"
+            aria-label="Hinweis"
+            value={bed.grund ?? ''}
+            maxLength={KURZ_MAX}
+            placeholder="z. B. nur für Getaufte"
+            onChange={(e) => onBed({ ...bed, grund: e.target.value })}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
 
 /**
  * **Das Fenster „Nur zeigen, wenn …“** – für eine Frage (`antwort` fehlt) oder eine einzelne Antwort. Als Quelle gehen
@@ -123,37 +265,19 @@ export function BedingungFenster({
       ? { art: 'grau', ...structuredClone(bisher) }
       : { modus: 'eine', regeln: [standardRegel(quellen)], art: 'grau', grund: '' },
   );
-  const regelAendern = (i: number, r: Regel) =>
-    setBed({ ...bed, regeln: bed.regeln.map((x, j) => (i === j ? r : x)) });
-  const quelleVon = (r: Regel) => quellen.find((q) => q.id === r.feld);
+  // Teilen sich andere Felder dieselbe Bedingung? Hier ändert sie sich nur für dieses (Entwurf F1, Ansicht 1).
+  const andere = bisher ? gleicheBedingung(formular, { id: ziel.id, antwort }) : [];
 
-  function speichern() {
-    if (!bed.regeln.length) return onSpeichern(null);
-    const regeln = bed.regeln.map((r) => (vergleichMitWert(r.op) ? r : { feld: r.feld, op: r.op }));
-    if (antwort === undefined) return onSpeichern({ modus: bed.modus, regeln });
-    const grund = bed.grund?.trim();
-    onSpeichern({
-      modus: bed.modus,
-      regeln,
-      art: bed.art,
-      ...(bed.art === 'grau' && grund ? { grund } : {}),
-    });
-  }
-
-  const zielName = kurzname(ziel);
+  const name = kurzname(ziel);
   const satz = !bed.regeln.length
     ? 'Ohne Bedingung gilt nichts – „Speichern“ entfernt sie.'
     : antwort !== undefined
-      ? `„${antwort}“ ist nur wählbar, wenn ${bedingungSatz(formular, bed)}. Sonst ${
-          bed.art === 'weg'
-            ? 'ausgeblendet'
-            : `ausgegraut${bed.grund?.trim() ? ` mit „${bed.grund.trim()}“` : ''}`
-        }. Wer es schon gewählt hat, bekommt einen Hinweis und wählt neu.`
+      ? antwortSatz(formular, antwort, bed)
       : `Die Frage erscheint nur, wenn ${bedingungSatz(formular, bed)}. Pflicht gilt nur, solange sie zu sehen ist.`;
 
   return (
     <Sheet
-      title={antwort !== undefined ? `Antwort „${antwort}“` : `Bedingung: ${zielName}`}
+      title={antwort !== undefined ? `Antwort „${antwort}“` : `Bedingung: ${name}`}
       onClose={onClose}
       mittel
       links={
@@ -163,141 +287,40 @@ export function BedingungFenster({
           </FensterKnopf>
         ) : undefined
       }
-      knoepfe={<FensterKnopf onClick={speichern}>Speichern</FensterKnopf>}
+      knoepfe={
+        <FensterKnopf onClick={() => onSpeichern(bedingungAufbereiten(bed, antwort !== undefined))}>
+          Speichern
+        </FensterKnopf>
+      }
     >
       <div className={k.bedFenster}>
-        <section className={k.bedBlock} aria-label="Bedingung">
-          <div className={k.bedBlockKopf}>
-            <span className={k.bedBlockTitel}>Bedingung</span>
-            {bed.regeln.length > 1 && (
-              <Segment
-                className={k.bedModus}
-                ariaLabel="Verknüpfung"
-                value={bed.modus}
-                onChange={(modus) => setBed({ ...bed, modus })}
-                options={[
-                  { value: 'eine', label: 'eine reicht' },
-                  { value: 'alle', label: 'alle müssen' },
-                ]}
-              />
-            )}
-          </div>
-          {bed.regeln.map((r, i) => {
-            const q = quelleVon(r);
-            const ops = q ? vergleicheFuer(q) : [r.op];
-            return (
-              <div key={i} className={k.bedRegel}>
-                <span className={k.bedWort}>
-                  {i === 0 ? 'wenn' : bed.modus === 'alle' ? 'und' : 'oder'}
-                </span>
-                <select
-                  aria-label={`Frage ${i + 1}`}
-                  value={q ? r.feld : ''}
-                  onChange={(e) => {
-                    const neu = quellen.find((x) => x.id === e.target.value);
-                    if (neu) regelAendern(i, regelFuer(neu));
-                  }}
-                >
-                  {!q && <option value="">(Frage fehlt)</option>}
-                  {quellen.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {kurzname(x)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label={`Vergleich ${i + 1}`}
-                  // Ohne Antwort-Spalte nimmt der Vergleich ihren Platz („ist ausgefüllt“ wurde abgeschnitten).
-                  className={vergleichMitWert(r.op) ? undefined : k.bedOpBreit}
-                  value={r.op}
-                  onChange={(e) => {
-                    const op = e.target.value as Regel['op'];
-                    regelAendern(i, q ? regelFuer(q, op) : { ...r, op });
-                  }}
-                >
-                  {ops.map((op) => (
-                    <option key={op} value={op}>
-                      {VERGLEICH_TEXT[op]}
-                    </option>
-                  ))}
-                </select>
-                {vergleichMitWert(r.op) ? (
-                  <select
-                    aria-label={`Antwort ${i + 1}`}
-                    value={r.wert ?? ''}
-                    onChange={(e) => regelAendern(i, { ...r, wert: e.target.value })}
-                  >
-                    {(q ? wahlAntworten(q) : [r.wert ?? '']).map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <button
-                  type="button"
-                  className={k.bedWeg}
-                  aria-label={`Bedingung ${i + 1} entfernen`}
-                  onClick={() => setBed({ ...bed, regeln: bed.regeln.filter((_, j) => j !== i) })}
-                >
-                  <Icon name="x" size={16} />
-                </button>
-              </div>
-            );
-          })}
-          {bed.regeln.length < REGELN_MAX && quellen.length > 0 && (
-            <button
-              type="button"
-              className={k.bedPlus}
-              onClick={() => setBed({ ...bed, regeln: [...bed.regeln, standardRegel(quellen)] })}
-            >
-              + Bedingung
-            </button>
-          )}
-        </section>
+        <BedingungBlock bed={bed} quellen={quellen} onBed={setBed} />
 
         <section className={k.bedBlock} aria-label="Dann">
           <span className={k.bedBlockTitel}>Dann</span>
           {antwort === undefined ? (
             <p>
-              zeige: <span className={k.bedZiel}>{zielName}</span>
+              zeige: <span className={k.bedZiel}>{name}</span>
             </p>
           ) : (
             <>
               <p>
-                <b>„{antwort}“</b> ist nur wählbar in: <span className={k.bedZiel}>{zielName}</span>
+                <b>„{antwort}“</b> ist nur wählbar in: <span className={k.bedZiel}>{name}</span>
               </p>
-              <div className={k.bedDarstellung}>
-                <label>
-                  Sonst{' '}
-                  <select
-                    aria-label="Darstellung"
-                    value={bed.art}
-                    onChange={(e) => setBed({ ...bed, art: e.target.value as 'grau' | 'weg' })}
-                  >
-                    <option value="grau">ausgrauen</option>
-                    <option value="weg">ausblenden</option>
-                  </select>
-                </label>
-                {bed.art === 'grau' && (
-                  <label>
-                    mit Hinweis{' '}
-                    <input
-                      type="text"
-                      aria-label="Hinweis"
-                      value={bed.grund ?? ''}
-                      maxLength={KURZ_MAX}
-                      placeholder="z. B. nur für Getaufte"
-                      onChange={(e) => setBed({ ...bed, grund: e.target.value })}
-                    />
-                  </label>
-                )}
-              </div>
+              <DarstellungWahl bed={bed} onBed={setBed} />
             </>
           )}
         </section>
 
         <p className={k.bedSatz}>{satz}</p>
+        {andere.length > 0 && (
+          <p className={k.bedNotiz}>
+            Dieselbe Bedingung haben auch:{' '}
+            {andere.map((z) => `„${zielName(formular, z)}“`).join(', ')}. Hier änderst du sie nur
+            für diese {antwort === undefined ? 'Frage' : 'Antwort'}; gemeinsam geht es im Reiter
+            „Bedingungen“.
+          </p>
+        )}
       </div>
     </Sheet>
   );

@@ -33,8 +33,12 @@ import {
 import { bereichVon, einordnen, type Bereich } from '@shared/anmeldung/baukasten';
 import {
   bedingungenNachziehen,
+  regelSetzen,
   umbenannteAntworten,
   verschiebenSperre,
+  type AntwortBedingung,
+  type Bedingung,
+  type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
@@ -338,6 +342,25 @@ export async function feldEinordnen(
     const formular = einordnen(frisch.formular, feldId, bereich, vorId);
     const sperre = verschiebenSperre(frisch.formular, formular);
     if (sperre) throw new ApiError(409, sperre);
+    return { ...frisch, formular };
+  });
+}
+
+/**
+ * **Eine Regel aus dem Reiter „Bedingungen“ speichern** (F1d) – an allen Zielen zugleich, in EINEM Schreiben, also
+ * auch mit EINEM „Rückgängig“. Nur die Einstellungen: Bedingungen kennt ChurchTools nicht. Geprüft wird der frisch
+ * gelesene Stand (`pruefeFormular` – darin `bedingungFehler`); stimmt er nicht mehr, wird nichts gespeichert.
+ */
+export async function regelSpeichern(
+  id: number,
+  alt: RegelZiel[],
+  ziele: RegelZiel[],
+  bed: Bedingung | AntwortBedingung | null,
+): Promise<void> {
+  await aendereEinstellungen(id, (frisch) => {
+    const formular = regelSetzen(frisch.formular, alt, ziele, bed);
+    const fehler = pruefeFormular(formular);
+    if (fehler.length) throw new ApiError(422, fehler.join(' '));
     return { ...frisch, formular };
   });
 }

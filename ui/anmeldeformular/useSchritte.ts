@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import type { Antworten, Feld, OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import {
+  nurPersonenPfade,
+  type Antworten,
+  type Feld,
+  type OeffentlicheEinstellungen,
+} from '@shared/anmeldung/formular';
 import {
   gezeigteSeiten,
   mitSchritten,
@@ -20,21 +25,28 @@ const kennung = (s: Seite) => s.schritt?.id ?? null;
  * Die offene Seite merkt sich ihren Baustein, nicht ihre Nummer: Wird davor ein Schritt übersprungen oder wieder
  * gezeigt, bleibt man auf derselben Seite. Fällt die offene Seite selbst weg, gilt die gezeigte davor.
  * Ohne Schritte (oder `aktiv` = false, z. B. im Baukasten) gibt es genau eine Seite mit allem.
+ *
+ * `nurPerson` (F2d, „Person dazu“ von Hand): Gefragt wird nur nach der Person – Seiten ohne Fragen je Person fallen
+ * weg, und „Weiter“ verlangt nur deren Pflichtfragen (die Kontakt-Antworten stehen schon bei der Anmeldung).
  */
 export function useSchritte({
   e,
   antworten,
   aktiv,
+  nurPerson = false,
 }: {
   e: OeffentlicheEinstellungen;
   antworten: Antworten;
   aktiv: boolean;
+  nurPerson?: boolean;
 }) {
   const mit = aktiv && mitSchritten(e.formular);
   const [offen, setOffen] = useState<string | null>(null);
   const alle = seiten(e.formular);
   // Aus denselben Seiten wie `alle` – sonst findet `includes` die offene Seite nicht (F2b, Durchlauf 16.11.2026).
-  const gezeigt = mit ? gezeigteSeiten(e.formular, antworten, alle) : [];
+  const sichtbar = mit ? gezeigteSeiten(e.formular, antworten, alle) : [];
+  const mitPerson = sichtbar.filter((s) => s.person.length > 0);
+  const gezeigt = nurPerson && mitPerson.length ? mitPerson : sichtbar;
   let seite: Seite | null = null;
   if (mit) {
     // Die offene Seite – fällt sie weg, die gezeigte davor (in der Reihenfolge aller Seiten).
@@ -75,7 +87,8 @@ export function useSchritte({
      */
     weiter(): string[] {
       if (!seite || letzte) return [];
-      const fehlt = seiteFehlt(e.formular, antworten, seite, false);
+      const alleFehlt = seiteFehlt(e.formular, antworten, seite, false);
+      const fehlt = nurPerson ? nurPersonenPfade(alleFehlt) : alleFehlt;
       if (!fehlt.length) setOffen(kennung(gezeigt[nr + 1]));
       return fehlt;
     },

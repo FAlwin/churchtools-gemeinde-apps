@@ -11,7 +11,13 @@
  * Fenster, Tabelle und Druckliste (`antwortText`).
  */
 import type { Antwort, Antworten, Feld, OeffentlicheEinstellungen } from './formular';
-import { bedingungSatz, feldSichtbar, kurzname, ungueltigeAntworten } from './bedingungen';
+import {
+  bedingungSatz,
+  feldSichtbar,
+  kurzname,
+  schrittVon,
+  ungueltigeAntworten,
+} from './bedingungen';
 import { antwortText, mehrfachAntworten, type ListenAnmeldung, type Werte } from './liste';
 
 /** Eine gespeicherte Antwort so, wie die Regeln sie erwarten: Ankreuzen als `true`, Mehrfachauswahl als Liste. */
@@ -81,6 +87,8 @@ export interface Bedingungsbefund {
   bedingung: string;
   /** Bei `antwort`: der Hinweis neben der gesperrten Antwort, falls es einen gibt („nur für Getaufte“). */
   grund?: string;
+  /** Bei `frage`: Die Frage steht in diesem Schritt, und der wäre übersprungen worden (F2d) – `bedingung` ist seine. */
+  schritt?: string;
 }
 
 /**
@@ -104,7 +112,7 @@ export function bedingungsBefunde(
     const dazu = (
       f: Feld,
       person: number | undefined,
-      b: Pick<Bedingungsbefund, 'art' | 'antwort' | 'bedingung' | 'grund'>,
+      b: Pick<Bedingungsbefund, 'art' | 'antwort' | 'bedingung' | 'grund' | 'schritt'>,
     ) =>
       aus.push({
         schluessel: x.schluessel,
@@ -113,10 +121,18 @@ export function bedingungsBefunde(
         frage: kurzname(f),
         ...b,
       });
-    // Beantwortet, obwohl die Frage nicht gezeigt worden wäre (das Formular leert so etwas beim Absenden).
+    // Beantwortet, obwohl die Frage nicht gezeigt worden wäre (das Formular leert so etwas beim Absenden) – wegen
+    // ihrer eigenen Bedingung oder weil ihr Schritt übersprungen worden wäre (F2d; dieselbe Sichtbarkeit wie im Formular).
     const gestellt = (f: Feld, w: Antwort, person?: number) => {
-      if (w !== undefined && f.bed && !feldSichtbar(fo, f, a, person))
-        dazu(f, person, { art: 'frage', bedingung: bedingungSatz(fo, f.bed) });
+      if (w === undefined || feldSichtbar(fo, f, a, person)) return;
+      const s = schrittVon(fo, f);
+      if (s?.bed && !feldSichtbar(fo, s, a, person))
+        dazu(f, person, {
+          art: 'frage',
+          bedingung: bedingungSatz(fo, s.bed),
+          schritt: kurzname(s),
+        });
+      else if (f.bed) dazu(f, person, { art: 'frage', bedingung: bedingungSatz(fo, f.bed) });
     };
     for (const f of fo.anmeldung) gestellt(f, a.anmeldung[f.id]);
     a.personen.forEach((w, i) => fo.person.forEach((f) => gestellt(f, w[f.id], i)));
@@ -140,5 +156,7 @@ export function bedingungsBefunde(
 export function bedingungsText(b: Bedingungsbefund): string {
   return b.art === 'antwort'
     ? `„${b.frage}“: „${b.antwort}“ gewählt – ${b.grund ?? `nur wählbar, wenn ${b.bedingung}`}`
-    : `„${b.frage}“ beantwortet – die Frage erscheint nur, wenn ${b.bedingung}`;
+    : b.schritt
+      ? `„${b.frage}“ beantwortet – die Frage steht im Schritt „${b.schritt}“, der nur erscheint, wenn ${b.bedingung}`
+      : `„${b.frage}“ beantwortet – die Frage erscheint nur, wenn ${b.bedingung}`;
 }

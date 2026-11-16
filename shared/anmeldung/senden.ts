@@ -27,6 +27,7 @@ import {
 } from './formular';
 import { tagPunkt } from '../ct/datum';
 import { leeren } from './bedingungen';
+import { freiMitText, freiSchluessel, freiText } from './freieAntwort';
 import {
   berechnePreis,
   euroText,
@@ -320,8 +321,9 @@ export function anmeldungAufbauen(
     `${ersteEltern?.vor ?? ''} ${ersteEltern?.nach ?? ''}`.trim() ||
     `${kontakt.vor} ${kontakt.nach}`.trim();
 
-  /** Ein Gruppenfeld unseres Formulars (samt weiterer Spalten) → Werte für ChurchTools. */
-  const feldWerte = (f: Feld, w: Antwort): FormWert[] => {
+  /** Ein Gruppenfeld unseres Formulars (samt weiterer Spalten) → Werte für ChurchTools. `alle`: Antworten des Teils. */
+  const feldWerte = (f: Feld, alle: Record<string, Antwort>): FormWert[] => {
+    const w = alle[f.id];
     const ablage = ctAblage(f);
     if (ablage.ort !== 'gruppenfeld') return [];
     const spalte = (schluessel: string, name: string) => {
@@ -343,7 +345,16 @@ export function anmeldungAufbauen(
       ];
     }
     const wert = ctWert(f, w, ctFeld);
-    return wert === null ? [] : [{ id: String(ctFeld.id), type: 'custom', value: wert }];
+    const aus: FormWert[] =
+      wert === null ? [] : [{ id: String(ctFeld.id), type: 'custom', value: wert }];
+    // F3: Der Text der freien Antwort in ihrer zweiten Spalte. Ist sie abgewählt, hat `leeren` ihn oben schon
+    // entfernt – die EINE Stelle dafür.
+    const text = freiText(alle, f.id);
+    if (freiMitText(f) && text) {
+      const z = ctZusatzSpalten(f).find((x) => x.schluessel === freiSchluessel(f.id))!;
+      aus.push({ id: String(spalte(z.schluessel, z.name).id), type: 'custom', value: text });
+    }
+    return aus;
   };
   /** Ein Systemfeld (Betrag, Auswahl …) → Wert für ChurchTools. */
   const systemWert = (id: string, wert: string): FormWert => {
@@ -359,7 +370,7 @@ export function anmeldungAufbauen(
     einmal.push(systemWert('kontakt', `${kontakt.vor} ${kontakt.nach}`.trim()));
   if (!weiteres.nurPerson)
     for (const f of e.formular.anmeldung.filter(sichtbar))
-      einmal.push(...feldWerte(f, a.anmeldung[f.id]));
+      einmal.push(...feldWerte(f, a.anmeldung));
   if (kannEtwasKosten(e.preis)) {
     einmal.push(systemWert('betrag', euroText(betrag.gesamtCent)));
     einmal.push(
@@ -388,7 +399,7 @@ export function anmeldungAufbauen(
     const geburt = e.formular.person.find((f) => f.id === 'birth' && sichtbar(f));
     if (geburt && typeof p.birth === 'string' && p.birth.trim())
       form.push({ id: pflichtPerson('birthday'), type: 'person', value: p.birth.trim() });
-    for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p[f.id]));
+    for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p));
     if (nr && e.ctFelder.nr !== undefined) form.push(systemWert('nr', nr));
     if (i === 0) form.push(...einmal);
     if (datenschutz) form.push({ id: String(datenschutz.id), type: 'privacy', value: 'true' });

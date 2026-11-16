@@ -26,16 +26,25 @@ import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
 import { mitVorgaben, vorlageVon } from './gestaltung';
 import {
   ANTWORT_MAX,
-  JA_NEIN,
   KURZ_MAX,
   antwortBedingungSchema,
   bedingungFehler,
   bedingungSchema,
   bedingungenAufraeumen,
   feldSichtbar,
+  festeAntworten,
+  wahlAntworten,
   type AntwortBedingung,
   type Bedingung,
 } from './bedingungen';
+import {
+  freiGewaehlt,
+  freiMitText,
+  freiName,
+  freiSchluessel,
+  freiText,
+  kannFrei,
+} from './freieAntwort';
 
 export type Feldtyp =
   | 'name'
@@ -95,6 +104,16 @@ export interface Feld {
   antwortBed?: Record<string, AntwortBedingung>;
   /** Freiwilliger Kurzname für Regel-Liste und Fenster (Klick-Runde 4); sonst wird die Frage gekürzt. */
   kurz?: string;
+  /** **Freie Antwort** (F3) – die letzte Antwort einer Auswahl, mit Textfeld je nach Frage (`freieAntwort.ts`). */
+  frei?: FreieAntwort;
+}
+
+/** Die freie Antwort einer Auswahlfrage (F3, Klick-Runde 9). */
+export interface FreieAntwort {
+  /** Beschriftung, vorbelegt „Sonstiges“ – in ChurchTools eine normale Antwort der Auswahl. */
+  name: string;
+  /** Das Textfeld: klappt nach dem Wählen auf, steht immer da (Tippen wählt mit) oder fehlt. */
+  textfeld: 'auf' | 'immer' | 'ohne';
 }
 
 export interface Formular {
@@ -273,13 +292,17 @@ export function nurPersonenPfade(wege: string[]): string[] {
  */
 export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   const fehlt: string[] = [];
-  const pruefe = (x: Feld, wert: Antwort, pfad: string) => {
+  const pruefe = (x: Feld, alle: Record<string, Antwort>, pfad: string) => {
+    const wert = alle[x.id];
     if (nurText(x.typ) || x.typ === 'price' || x.zustand === 'aus') return;
     if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !mailGueltig(wert)) {
       fehlt.push(pfad);
       return;
     }
     if (x.zustand !== 'pflicht') return;
+    // F3: Gewählt mit Textfeld → der Text ist Pflicht, wenn es die Frage ist (Klick-Runde 9).
+    if (freiMitText(x) && freiGewaehlt(x, wert) && !freiText(alle, x.id))
+      fehlt.push(`${pfad}.frei`);
     if (x.typ === 'name') {
       const n = (wert ?? {}) as { vor?: string; nach?: string };
       if (!n.vor?.trim()) fehlt.push(`${pfad}.vor`);
@@ -311,11 +334,10 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   };
   // F1a: Pflicht gilt nur, solange die Frage zu sehen ist.
   for (const x of f.anmeldung)
-    if (feldSichtbar(f, x, a)) pruefe(x, a.anmeldung[x.id], `anmeldung.${x.id}`);
+    if (feldSichtbar(f, x, a)) pruefe(x, a.anmeldung, `anmeldung.${x.id}`);
   if (a.personen.length === 0) fehlt.push('personen');
   a.personen.forEach((p, i) => {
-    for (const x of f.person)
-      if (feldSichtbar(f, x, a, i)) pruefe(x, p[x.id], `personen.${i}.${x.id}`);
+    for (const x of f.person) if (feldSichtbar(f, x, a, i)) pruefe(x, p, `personen.${i}.${x.id}`);
   });
   return fehlt;
 }
@@ -334,6 +356,13 @@ export function feldFehler(x: Feld): string | null {
     x.antworten.filter((s) => s.trim()).length < 2
   )
     return 'Bitte mindestens zwei Antworten eintragen.';
+  if (x.frei) {
+    if (!kannFrei(x)) return 'Eine freie Antwort gibt es nur bei Auswahlfragen.';
+    const name = x.frei.name.trim();
+    if (!name) return 'Bitte eine Beschriftung für die freie Antwort eintragen.';
+    if (festeAntworten(x).some((a) => a.trim() === name))
+      return `„${name}“ gibt es schon als Antwort – die freie Antwort braucht eine eigene Beschriftung.`;
+  }
   return null;
 }
 
@@ -393,14 +422,15 @@ export function ctAblage(x: Feld): CtAblage {
       return x.id === 'birth'
         ? { ort: 'person', feld: 'birthday' }
         : { ort: 'gruppenfeld', fieldTypeCode: 'date', optionen: [] };
+    // F3: Die Optionen in ChurchTools sind die Antworten samt freier Antwort – dieselbe Liste wie für die Bedingungen.
     case 'janein':
-      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: JA_NEIN };
+      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: wahlAntworten(x) };
     case 'check':
       return { ort: 'gruppenfeld', fieldTypeCode: 'checkbox', optionen: [] };
     case 'radio':
-      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: x.antworten };
+      return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: wahlAntworten(x) };
     case 'select':
-      return { ort: 'gruppenfeld', fieldTypeCode: 'select', optionen: x.antworten };
+      return { ort: 'gruppenfeld', fieldTypeCode: 'select', optionen: wahlAntworten(x) };
     // A0: Mehrfachauswahl nimmt ChurchTools anonym nur mit einem Wert an → als Text („Wandern, Spiele“).
     case 'multi':
     case 'tel':
@@ -419,16 +449,25 @@ export function ctAblage(x: Feld): CtAblage {
 }
 
 /**
- * **Weitere Spalten eines Felds** – bisher nur die Striche der Unterschrift (Alwin, 15.10.2026: „zwei Spalten“):
- * In der ersten steht lesbar, wer wann unterschrieben hat, in dieser die Striche (höchstens 4.000 Zeichen, gemessen).
- * Ihre Nummer steht in `ctFelder` unter `<Feld-ID>.<schluessel>`.
+ * **Weitere Spalten eines Felds** – die Striche der Unterschrift (Alwin, 15.10.2026: „zwei Spalten“): In der ersten
+ * steht lesbar, wer wann unterschrieben hat, in dieser die Striche (höchstens 4.000 Zeichen, gemessen). Und der Text
+ * der freien Antwort (F3): „Frage (Beschriftung)“ – die Auswahl in ChurchTools kennt nur feste Antworten.
+ * Ihre Nummer steht in `ctFelder` unter dem `schluessel` (`<Feld-ID>.daten`, `<Feld-ID>.frei`).
  */
 export function ctZusatzSpalten(
   x: Feld,
-): { schluessel: string; name: string; fieldTypeCode: 'textarea' }[] {
-  return x.typ === 'unterschrift'
-    ? [{ schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' }]
-    : [];
+): { schluessel: string; name: string; fieldTypeCode: 'textarea' | 'text' }[] {
+  if (x.typ === 'unterschrift')
+    return [{ schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' }];
+  if (freiMitText(x))
+    return [
+      {
+        schluessel: freiSchluessel(x.id),
+        name: `${x.frage} (${freiName(x)})`,
+        fieldTypeCode: 'text',
+      },
+    ];
+  return [];
 }
 
 /**
@@ -708,6 +747,10 @@ const feldSchema = z.object({
   bed: bedingungSchema.optional(),
   antwortBed: z.record(z.string().max(ANTWORT_MAX), antwortBedingungSchema).optional(),
   kurz: z.string().max(KURZ_MAX).optional(),
+  // Seit F3. Ein älteres Formular-Paket kennt sie nicht (zeigt sie nicht an) – Paket und Erweiterung zusammen hochladen.
+  frei: z
+    .object({ name: z.string().max(ANTWORT_MAX), textfeld: z.enum(['auf', 'immer', 'ohne']) })
+    .optional(),
 });
 // Farben nur in Hex-Schreibweise – sie landen in einem style-Attribut.
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);

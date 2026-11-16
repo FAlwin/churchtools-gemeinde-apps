@@ -256,6 +256,7 @@
   width: 100%;
 }
 .pv .go:focus-visible,
+.pv .zurueck:focus-visible,
 .pv .addbtn:focus-visible,
 .pv .xbtn:focus-visible {
   outline: 2px solid var(--p-text);
@@ -299,15 +300,18 @@
   border-color: var(--p-err) !important;
 }
 .bt-eckig .go,
-.bt-eckig .addbtn {
+.bt-eckig .addbtn,
+.bt-eckig .zurueck {
   border-radius: 4px; // bewusst fest: Knopfform „eckig“ der Gestaltung
 }
 .bt-leicht .go,
-.bt-leicht .addbtn {
+.bt-leicht .addbtn,
+.bt-leicht .zurueck {
   border-radius: 10px; // bewusst fest: Knopfform „leicht rund“ der Gestaltung
 }
 .bt-rund .go,
-.bt-rund .addbtn {
+.bt-rund .addbtn,
+.bt-rund .zurueck {
   border-radius: 999px;
 }
 
@@ -1073,4 +1077,87 @@
 .pv .ergebnis-offen {
   color: var(--p-err);
   font-weight: 600;
+}
+
+/* ── F2b: das Formular in Schritten (Entwurf f2-schritte-v1, Klick-Runde 7) ── */
+.pv .fortschritt {
+  display: grid;
+  gap: 8px;
+}
+.pv .fortschrittStand {
+  margin: 0;
+  font-size: 0.87em;
+  color: var(--p-muted);
+
+  b {
+    color: var(--p-text);
+    font-size: 1.07em;
+  }
+}
+.pv .fortschrittBalken {
+  display: flex;
+  gap: 4px;
+
+  span {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--p-line);
+  }
+
+  .erledigt {
+    background: var(--p-accent);
+  }
+
+  // Übersprungen (Bedingung am Schritt nicht erfüllt) – gestrichelt, zählt nicht mit.
+  .uebersprungen {
+    background: repeating-linear-gradient(90deg, var(--p-line) 0 4px, transparent 4px 7px);
+  }
+}
+// „Zurück“ links, „Weiter“/„Anmelden“ rechts (Entwurf f2-schritte-v1); bei „volle Breite“ füllt er den Rest.
+.pv .schrittKnoepfe {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+
+  .go {
+    margin: 0 0 0 auto;
+  }
+}
+.bt-voll .schrittKnoepfe .go {
+  flex: 1;
+}
+// „Zurück“ – leiser als „Weiter“, wie „+ Weitere Person“.
+.pv .zurueck {
+  font: inherit;
+  font-weight: 700;
+  color: var(--p-accent-text);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--p-accent-text) 35%, transparent);
+  border-radius: calc(var(--p-r) * 0.7);
+  padding: 0.85em 1.2em;
+  cursor: pointer;
+}
+// Ein Schritt außerhalb des Blätterns (Baukasten, Anmeldung von Hand bis F2d): eine Trennzeile mit Namen.
+.pv .schrittMarke {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--p-muted);
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px dashed var(--p-line-strong);
+  }
+}
+// Auf späteren Seiten: „Maria Beispiel · Person 1“ – die Nummer leise dahinter.
+.pv .personNr {
+  font-weight: 400;
+  color: var(--p-muted);
 }

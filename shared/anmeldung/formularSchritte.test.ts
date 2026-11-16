@@ -206,6 +206,17 @@ describe('Schritt mit Bedingung – übersprungen', () => {
   });
 });
 
+describe('gezeigteSeiten – dieselben Seiten wie übergeben', () => {
+  it('mit `alle` kommen genau diese Objekte zurück (sonst findet `includes` die offene Seite nicht)', () => {
+    const f = freizeit();
+    const a = antworten({ mit: 'Ja' });
+    const alle = seiten(f);
+    const gezeigt = gezeigteSeiten(f, a, alle);
+    expect(gezeigt).toHaveLength(4);
+    for (const x of gezeigt) expect(alle).toContain(x);
+  });
+});
+
 describe('seiteFehlt – Pflicht je Seite', () => {
   it('nur die Felder dieser Seite; Datenschutz erst auf der letzten', () => {
     const f = freizeit();

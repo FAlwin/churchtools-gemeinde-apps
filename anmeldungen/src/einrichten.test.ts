@@ -31,6 +31,7 @@ import {
   kalenderListe,
   kopiereVeranstaltung,
   legeTerminAn,
+  termineIn,
   legeVeranstaltungAn,
   speichereAnmeldung,
   speichereBezahlung,
@@ -333,6 +334,23 @@ function ct() {
         },
       });
     }
+    if (m === 'GET' && pfad === '/calendars/appointments') {
+      // Die Liste eines Kalenders – Kalender und Zeitraum aus der Abfrage, so wie `terminPfad` sie schreibt.
+      const kal = url.searchParams.getAll('calendar_ids[]').map(Number);
+      const von = url.searchParams.get('from');
+      const bis = url.searchParams.get('to');
+      if (kal.length === 0 || !von || !bis) return json(400, { message: 'Abfrage unvollständig' });
+      const data = [...termine]
+        .filter(([, t]) => {
+          const tag = String(t.startDate).slice(0, 10);
+          return kal.includes(Number(t.calendarId)) && tag >= von && tag <= bis;
+        })
+        .map(([id, t]) => ({
+          base: { id, title: t.title, startDate: t.startDate, endDate: t.endDate },
+          calculated: { startDate: t.startDate, endDate: t.endDate },
+        }));
+      return json(200, { data });
+    }
     r = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (r && m === 'POST') {
       const id = naechste++;
@@ -564,6 +582,20 @@ describe('Rechte und Kalender', () => {
       address: { meetingAt: 'Saal' },
       isInternal: false,
     });
+  });
+  it('Termine im Zeitraum: Kalender und Tage gehen als calendar_ids[]/from/to an ChurchTools', async () => {
+    const t = await legeTerminAn({
+      kalenderId: 1,
+      titel: 'Gemeindeessen',
+      beginn: '2026-11-15T12:00',
+      ende: '2026-11-15T14:00',
+      ort: 'Saal',
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
+      zeitzone: 'Europe/Berlin',
+    });
+    expect((await termineIn(1, '2026-11-15', '2026-11-15')).map((x) => x.id)).toEqual([t.id]);
+    expect(await termineIn(1, '2026-11-16', '2026-11-30')).toEqual([]);
+    expect(await termineIn(2, '2026-11-15', '2026-11-15')).toEqual([]);
   });
   it('Termin angelegt, aber anders gespeichert → Fehler', async () => {
     schlucken.add('TERMIN');

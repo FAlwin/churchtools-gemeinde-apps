@@ -51,16 +51,20 @@ export function Liste({ sicht, onUmklappen, onGruppe, farbe, inhalt }: Props) {
             <span className={styles.pfeilLeer} />
           )}
           {kachel !== null && <GruppenKachel name={k.name} farbe={kachel} groesse={KACHEL} />}
-          {id === null ? (
-            <span className={styles.name}>{name}</span>
-          ) : (
-            <button type="button" className={styles.name} onClick={() => onGruppe(id)}>
-              {name}
-            </button>
-          )}
-          {!k.offen && k.kinderZahl > 0 && (
-            <span className={styles.zahl}>{anzahl(k.kinderZahl)}</span>
-          )}
+          {/* Name und „13 Untergruppen“ brechen gemeinsam um: Ist kein Platz, steht die Zahl unter dem Namen – vorher
+              schob sie sich am Handy über ihn (16.11.2026). */}
+          <span className={styles.nameZahl}>
+            {id === null ? (
+              <span className={styles.name}>{name}</span>
+            ) : (
+              <button type="button" className={styles.name} onClick={() => onGruppe(id)}>
+                {name}
+              </button>
+            )}
+            {!k.offen && k.kinderZahl > 0 && (
+              <span className={styles.zahl}>{anzahl(k.kinderZahl)}</span>
+            )}
+          </span>
         </div>
         {leute && (
           <div className={styles.leute}>

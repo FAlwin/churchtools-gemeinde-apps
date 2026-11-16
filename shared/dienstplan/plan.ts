@@ -21,6 +21,7 @@ import { belegungAus, type Belegung } from './einteilen';
 import {
   istFrei,
   istTerminAdmin,
+  terminEnde,
   VERBORGENE_PERSON,
   type RohPlatz,
   type RohTermin,
@@ -59,6 +60,8 @@ export interface PlanSpalte {
   admin: boolean;
   /** Beginn wie von ChurchTools (`startDate`, ISO) – „Ablauf anlegen“ in der Matrix braucht ihn (E6-6a). */
   beginn: string;
+  /** Ende wie `TerminZeile.ende` (`terminEnde`) – für Abwesenheiten (`decktTermin`) in der Ansicht „Personen“. */
+  ende: string;
   /** Kalender und Admins für die Bearbeiten-Regel des Ablaufs (`ablaufBearbeitbar`, E6-6a). */
   ablaufTermin: AblaufTermin;
   /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, E6b-2 L3)? */
@@ -138,6 +141,23 @@ export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   };
 }
 
+/**
+ * **Welche Dienste zu einer Dienstgruppe gehören** – `gid === null` ist die Gruppe „Weitere“: Dienste ohne Dienstgruppe
+ * oder mit einer, die ChurchTools nicht (mehr) nennt. Eine Stelle für die Matrix (`planAus`) und das Plätze-Fach
+ * (`plaetzeZeilen`) – sonst stünde dort eine andere Gruppe als hier.
+ */
+export function diensteDerGruppe(
+  dienste: readonly Dienst[],
+  dienstgruppen: readonly Dienstgruppe[],
+  gid: number | null,
+): Dienst[] {
+  return dienste.filter((d) =>
+    gid === null
+      ? d.dienstgruppeId === null || !dienstgruppen.some((x) => x.id === d.dienstgruppeId)
+      : d.dienstgruppeId === gid,
+  );
+}
+
 export function planAus(
   roh: RohTermin[],
   o: {
@@ -169,6 +189,7 @@ export function planAus(
       abgesagt: t.isCanceled === true,
       admin: istTerminAdmin(t, o.ichId),
       beginn: t.startDate,
+      ende: terminEnde(t),
       ablaufTermin: ablaufTerminVon(t),
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
       infos: infosAus(t),
@@ -210,11 +231,7 @@ export function planAus(
   const bekannte = [...o.dienste.values()].filter((d) => zellen.has(d.id));
   for (const gid of reihenfolge) {
     const g = gid === null ? null : (o.dienstgruppen.find((x) => x.id === gid) ?? null);
-    const imGruppe = bekannte.filter((d) =>
-      gid === null
-        ? d.dienstgruppeId === null || !o.dienstgruppen.some((x) => x.id === d.dienstgruppeId)
-        : d.dienstgruppeId === gid,
-    );
+    const imGruppe = diensteDerGruppe(bekannte, o.dienstgruppen, gid);
     if (imGruppe.length === 0) continue;
     const pg = gruppeFuer(g);
     for (const dienst of imGruppe) {

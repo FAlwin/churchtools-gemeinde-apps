@@ -1,0 +1,340 @@
+// Ansicht „Personen“ (Wunsch 5, P1, Entwurf `e9-personen-v3.html`): gebaut nach der Mitglieder-Tabelle von ChurchTools
+// (Gruppen → Mitglieder → Tabelle): Zeilen 36 px, Zellen 6px 8px, Zebra weiß / `--section`, Linien als inneres
+// Schattenband in `--hair`, Kopf `--section`, Fußzeile mit dickerer Oberlinie; Dienste als Tags (`c-tag__S`: 20 px hoch,
+// Radius wie die Kacheln). Der Rollbereich (`.rahmen`, Scroll-Leisten) kommt aus `Planen.module.scss` – wie in der Matrix.
+@use '@ui/design/mixins' as m;
+
+// Die Dienstfarben (`--dienst-0 … --dienst-7`) stehen als EINE Quelle in `ui/design/_farben.scss`. Grund und Schrift
+// des Tags rechnet `.tag` daraus. Die Zuordnung Dienst → Farbe steht in `personenFarben.ts` (P3 macht sie einstellbar);
+// die Anzahl muss dort in `ANZAHL_FARBEN` stehen.
+$anzahl-farben: 8;
+
+.raster {
+  --namew: 230px;
+  --einw: 84px;
+  --cw: 176px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text);
+
+  // Am Handy dieselbe Tabelle, nur schmaler: Name und Einsätze sollen nicht den halben Bildschirm decken (die Namensspalte
+  // bleibt beim waagerechten Scrollen stehen).
+  @media (max-width: 600px) {
+    --namew: 150px;
+    --einw: 60px;
+    --cw: 150px;
+  }
+
+  th,
+  td {
+    height: 36px;
+    padding: 6px 8px;
+    box-shadow: inset -1px -1px 0 var(--hair);
+    background: var(--zeile, var(--surface2));
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 400;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    height: auto;
+    vertical-align: top;
+    background: var(--section);
+    color: var(--text2);
+    white-space: normal;
+
+    b {
+      display: block;
+      color: var(--text);
+      font-weight: 700;
+    }
+    i {
+      display: block;
+      font-style: normal;
+      font-size: 12.5px;
+    }
+  }
+}
+
+// Linke Spalte bleibt beim waagerechten Scrollen stehen (auch am Handy).
+.name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--namew);
+  min-width: var(--namew);
+  max-width: var(--namew);
+}
+thead .name {
+  z-index: 5;
+}
+
+.einsaetze {
+  width: var(--einw);
+  min-width: var(--einw);
+  max-width: var(--einw);
+  text-align: right !important;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+.termin {
+  width: var(--cw);
+  min-width: var(--cw);
+  max-width: var(--cw);
+}
+.abgesagtSpalte {
+  opacity: 0.55;
+}
+
+// Blockkopf: der Dienst als Tag, dahinter „2 Personen“. Der Inhalt klebt links, damit er beim Scrollen im Bild bleibt.
+.raster td.blockKopf {
+  height: auto;
+  padding: 10px 8px 6px;
+  overflow: visible;
+  background: var(--surface2);
+  box-shadow:
+    inset 0 -1px 0 var(--hair),
+    inset 0 1px 0 var(--hair);
+  color: var(--text2);
+  font-weight: 700;
+  white-space: normal;
+}
+.blockInnen {
+  position: sticky;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: calc(100vw - 48px);
+}
+.zahl {
+  font-weight: 400;
+  font-size: 13px;
+}
+.blockHinweis {
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+.blockFehler {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--red);
+}
+.nochmal {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 13.5px var(--ui);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.z2 {
+  --zeile: var(--section);
+}
+// Alle Zeilen einer Person – Maus über dem Namen, am Handy Antippen (`PersonenRaster.tsx`).
+.hervor {
+  --zeile: color-mix(in oklab, var(--blue) 7%, var(--surface2));
+}
+
+.namenKnopf {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--text3);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+}
+// Der Name geht vor: Er wird nie abgeschnitten, „auch …“ und „nicht in der Gruppe“ geben nach (Ellipse, volle Zeile im Titel).
+.personName {
+  flex: none;
+  max-width: 100%;
+  font-weight: 700;
+}
+.auch,
+.keinMitglied {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auch {
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 400;
+}
+.keinMitglied {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+// ── Tags (ChurchTools `c-tag c-tag__S`) ───────────────────────────────────────
+.tag {
+  --ti: var(--text2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-tile);
+  background: color-mix(in oklch, var(--ti) 16%, var(--surface2));
+  color: color-mix(in oklch, var(--ti) 45%, var(--text));
+  font-size: 14px;
+  line-height: 20px;
+  vertical-align: middle;
+  box-shadow:
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+
+  svg {
+    flex: none;
+    color: var(--ti);
+  }
+}
+// Die Dienstfarbe NACH `.tag` (gleiche Gewichtung – sonst setzt `.tag` sie auf Grau zurück) und VOR `.entwurf`
+// (ein Entwurf bleibt blau).
+@for $i from 0 through $anzahl-farben - 1 {
+  .farbe#{$i} {
+    --ti: var(--dienst-#{$i});
+  }
+}
+
+.tagText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+// Angefragt: Kreis mit Fragezeichen (Symbol 14 px).
+.frage {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--ti);
+  border-radius: 50%;
+  color: var(--ti);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+// Entwurf: Stift, gestrichelter Rand, wie in der Matrix blau.
+.entwurf {
+  --ti: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  box-shadow: none;
+  outline: 1.5px dashed var(--blue);
+  outline-offset: -1.5px;
+}
+// Abwesend: grauer Tag mit dem Grund.
+.abwesend {
+  --ti: var(--text2);
+  background: var(--surface3);
+  color: var(--text2);
+}
+// Abwesend UND eingeteilt – ein Warnfall: der graue Tag bekommt einen roten Rand.
+.warnung {
+  outline: 1.5px solid var(--red);
+  outline-offset: -1.5px;
+}
+.offenTag {
+  --ti: var(--red);
+}
+.dazu {
+  margin-left: 6px;
+  color: var(--text2);
+  font-size: 12.5px;
+  vertical-align: middle;
+}
+// „+ Ton (Technik)“ – der andere Dienst gehört zu einer ausgeblendeten Gruppe: blasser und schräg.
+.fremd {
+  color: var(--text3);
+  font-style: italic;
+}
+.zelleLeer {
+  color: var(--text3);
+}
+
+// ── Gäste und „Noch offen“ ────────────────────────────────────────────────────
+.gaesteName {
+  color: var(--text2);
+}
+.gastTag {
+  --ti: var(--text2);
+  margin-right: 4px;
+}
+.raster tr.fuss td,
+.raster tr.fuss th {
+  background: var(--section);
+  box-shadow:
+    inset -1px -1px 0 var(--hair),
+    inset 0 2px 0 var(--hair);
+  color: var(--text2);
+  font-weight: 700;
+  white-space: normal;
+  vertical-align: top;
+}
+.offenTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.leer {
+  @include m.card-list;
+  padding: 14px;
+  margin: 0;
+  color: var(--text2);
+  font-size: 14px;
+}
+.status {
+  margin: 0 0 8px;
+  color: var(--text2);
+  font-size: 13px;
+}

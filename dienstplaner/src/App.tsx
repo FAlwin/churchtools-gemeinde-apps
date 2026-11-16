@@ -11,6 +11,9 @@ import { ladeStart, planbareDienstgruppen, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Abwesenheiten } from './Abwesenheiten';
 import { Planen } from './Planen';
+import { katalogAus } from './planEntwuerfe';
+import { ladeTerminVorlagen } from './ladeBeiwerk';
+import { ladePersonen } from './ladePersonen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -110,6 +113,16 @@ export function App() {
     (von: string, bis: string) =>
       start ? ladeZeitraum(start, von, bis, zeitzone) : Promise.reject(new Error('kein Start')),
     [start, zeitzone],
+  );
+
+  // Mitglieder und Abwesenheiten für die Ansicht „Personen“ – stabil, solange der Start gleich bleibt (die Ansicht lädt
+  // nach Gruppen und Zeitraum, nicht bei jedem Zeichnen).
+  const personenLaden = useCallback(
+    (gruppen: readonly number[], von: string, bis: string) =>
+      start
+        ? ladePersonen(gruppen, { von, bis, abwesenheitenAller: start.rechte.abwesenheitenAller })
+        : Promise.reject(new Error('kein Start')),
+    [start],
   );
 
   // Start, Termine und Planen zeigen dieselben Termine – geladen wird einmal, wenn einer davon offen ist.
@@ -256,6 +269,9 @@ export function App() {
               heute={heuteImKalender()}
               entwuerfe={entwuerfe}
               ablauf={{ start, zeitzone }}
+              katalog={katalogAus(start)}
+              ladeVorlagen={ladeTerminVorlagen}
+              ladePersonen={personenLaden}
             />
           )}
           {terminId === null && aktiv === 'abwesenheiten' && start && (

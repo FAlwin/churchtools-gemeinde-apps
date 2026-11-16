@@ -8,6 +8,7 @@ import {
   ladeLiedDaten,
   ladeLieder,
   ladeMusikApp,
+  ladeTerminVorlagen,
 } from './ladeBeiwerk';
 
 function json(status: number, body: unknown): Response {
@@ -128,5 +129,33 @@ describe('ladeAblauf (Termin-Ansicht, E6-1b)', () => {
     vi.restoreAllMocks();
     ct(() => json(502, {}));
     await expect(ladeAblauf(7)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('ladeTerminVorlagen', () => {
+  const vorlage = {
+    id: 0,
+    templateName: 'Standard',
+    calendarId: 1,
+    services: [{ serviceId: 6, count: 1 }],
+  };
+
+  it('liest /eventtemplates und lässt kaputte Einträge weg', async () => {
+    const f = ct(() => json(200, { data: [vorlage, null, { id: 'x' }] }));
+    expect(await ladeTerminVorlagen()).toEqual([
+      { id: 0, name: 'Standard', kalenderId: 1, dienste: [{ serviceId: 6, count: 1 }] },
+    ]);
+    expect(String(f.mock.calls[0][0])).toContain('/eventtemplates');
+  });
+
+  it('wirft, wenn keine Liste kommt – ein Aussetzer ist keine leere Vorlagenliste', async () => {
+    ct(() => json(200, { data: null }));
+    await expect(ladeTerminVorlagen()).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('wirft bei einem Serverfehler', async () => {
+    vi.restoreAllMocks();
+    ct(() => json(502, {}));
+    await expect(ladeTerminVorlagen()).rejects.toBeInstanceOf(ApiError);
   });
 });

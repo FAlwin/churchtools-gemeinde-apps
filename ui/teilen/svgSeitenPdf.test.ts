@@ -45,7 +45,7 @@ describe('stileEinbetten', () => {
       '<g class="knoten"><title>Hinweis</title><rect class="kasten" width="10" height="5"/><text class="name" dominant-baseline="central">Café</text></g>',
       '.kasten { fill: #dbeafe; stroke: #155dfc; stroke-width: 1.25px; } .name { fill: #162456; font-size: 3.5px; font-weight: 700; text-anchor: end; }',
     );
-    const kopie = stileEinbetten(svg, 'LatoPdf');
+    const kopie = stileEinbetten(svg, 'GemeindeSans');
     const rect = kopie.querySelector('rect')!;
     expect(rect.getAttribute('fill')).toMatch(/#dbeafe|rgb\(219, 234, 254\)/);
     expect(rect.getAttribute('stroke-width')).toBe('1.25');
@@ -54,7 +54,7 @@ describe('stileEinbetten', () => {
     expect(text.getAttribute('font-size')).toBe('3.5');
     expect(text.getAttribute('font-weight')).toBe('bold');
     expect(text.getAttribute('text-anchor')).toBe('end');
-    expect(text.getAttribute('font-family')).toBe('LatoPdf');
+    expect(text.getAttribute('font-family')).toBe('GemeindeSans');
     // `<title>` ist der Hinweis beim Darüberfahren – nicht fürs Papier.
     expect(kopie.querySelector('title')).toBeNull();
     // Das Original am Bildschirm bleibt, wie es ist.
@@ -80,7 +80,7 @@ describe('stileEinbetten – Rundungen aus dem Stil (O7b-8)', () => {
             : (Reflect.get(z, k) as unknown),
       });
     });
-    const [kachel, kasten] = stileEinbetten(svg, 'LatoPdf').querySelectorAll('rect');
+    const [kachel, kasten] = stileEinbetten(svg, 'GemeindeSans').querySelectorAll('rect');
     expect([kachel.getAttribute('rx'), kachel.getAttribute('ry')]).toEqual(['6', '6']);
     expect(kasten.hasAttribute('rx')).toBe(false);
     vi.restoreAllMocks();
@@ -167,15 +167,15 @@ describe('svgSeitenPdf', () => {
     const gezeichnet = zeichnen.mock.calls[0][0].querySelector('text')!;
     expect(gezeichnet.hasAttribute('dominant-baseline')).toBe(false);
     expect(gezeichnet.getAttribute('alignment-baseline')).toBe('central');
-    // Lato unter eigenem Namen auch im Dokument – damit misst svg2pdf rechtsbündige Texte.
-    expect(angemeldet).toEqual(['LatoPdf 400', 'LatoPdf 700']);
+    // Die PDF-Schrift unter ihrem Namen auch im Dokument – damit misst svg2pdf rechtsbündige Texte.
+    expect(angemeldet).toEqual(['GemeindeSans 400', 'GemeindeSans 700']);
     // Gezeichnet werden Kopien – die Vorschau bleibt am Platz, die Ablage ist danach wieder weg.
     expect(zeichnen.mock.calls[0][0]).not.toBe(quer);
     expect(document.body.contains(quer)).toBe(true);
     expect(document.querySelectorAll('[aria-hidden="true"]').length).toBe(0);
     // Der Titel steht in UTF-16 in der Datei (ein Nullbyte vor jedem Zeichen).
     expect(doc.output()).toContain([...'Organigramm'].map((z) => '\u0000' + z).join(''));
-    expect(doc.getFontList().LatoPdf).toEqual(['normal', 'bold']);
+    expect(doc.getFontList().GemeindeSans).toEqual(['normal', 'bold']);
   });
 
   it('scheitert das Zeichnen, wirft es – und räumt trotzdem auf', async () => {

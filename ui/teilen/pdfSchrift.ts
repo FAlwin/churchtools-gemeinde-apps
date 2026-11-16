@@ -1,29 +1,32 @@
 import type { jsPDF } from 'jspdf';
 // Als Daten im Code (`?inline`), nicht als Datei zum Nachladen: In ChurchTools gilt dessen Inhaltsrichtlinie, und
 // dieses Modul wird ohnehin erst beim Erstellen einer PDF geladen (`import('@ui/teilen/pdfSchrift')`).
-import latoNormal from './schrift/Lato-Regular.ttf?inline';
-import latoFett from './schrift/Lato-Bold.ttf?inline';
+import schriftNormal from './schrift/GemeindeSans-Regular.ttf?inline';
+import schriftFett from './schrift/GemeindeSans-Bold.ttf?inline';
 
 /**
- * **Lato in der PDF** (O7b-4, Entwurf `o7b-4-pdf-v1.html`, abgenommen 28.10.2026) – die Schrift der
- * ChurchTools-Weboberfläche auf Papier. Normal und fett, unverändert von Google Fonts (Lato 2.015, mit Latein-Erweiterung,
- * Griechisch und Kyrillisch; Lizenz und Herkunft in `schrift/`). jsPDF bettet nur die gebrauchten Zeichen ein.
+ * **Die Schrift der PDFs** (O7b-4, Entwurf `o7b-4-pdf-v1.html`, abgenommen 28.10.2026) – die Schrift der
+ * ChurchTools-Weboberfläche (Lato) auf Papier, normal und fett. Seit 16.11.2026 als **„Gemeinde Sans“**: Lato 2.015,
+ * gekürzt auf Latein (mit Erweiterungen), Kyrillisch und Satzzeichen – sonst passte das Protokolle-ZIP nicht mehr in
+ * ChurchTools (3,2 MB kamen nicht an, 2,2 MB schon). Gekürzt heißt verändert, und die Lizenz (SIL OFL) reserviert den
+ * Namen „Lato“ – darum der eigene Name. Herkunft, Werkzeug und Lizenz in `schrift/`. jsPDF bettet je PDF nur die
+ * gebrauchten Zeichen ein.
  *
- * Die Helvetica der übrigen PDFs (`listenPdf`, Liedblatt) bleibt, wie sie ist; wer dort Lato will, ruft dies hier.
+ * Die Helvetica der übrigen PDFs (`listenPdf`, Liedblatt) bleibt, wie sie ist; wer dort diese Schrift will, ruft dies hier.
  *
- * **Eigener Name** `LatoPdf` – in der PDF und im Dokument (`schriftImDokument`). Eine zweite Schrift „Lato“ im Dokument
- * träfe ChurchTools selbst (siehe `ui/design/schrift.ts`).
+ * **Eigener Name** `GemeindeSans` – in der PDF und im Dokument (`schriftImDokument`). Eine zweite Schrift „Lato“ im
+ * Dokument träfe ChurchTools selbst (siehe `ui/design/schrift.ts`).
  */
-export const PDF_SCHRIFT = 'LatoPdf';
+export const PDF_SCHRIFT = 'GemeindeSans';
 
 const SCHNITTE = [
-  { daten: latoNormal, datei: 'Lato-Regular.ttf', stil: 'normal', gewicht: '400' },
-  { daten: latoFett, datei: 'Lato-Bold.ttf', stil: 'bold', gewicht: '700' },
+  { daten: schriftNormal, datei: 'GemeindeSans-Regular.ttf', stil: 'normal', gewicht: '400' },
+  { daten: schriftFett, datei: 'GemeindeSans-Bold.ttf', stil: 'bold', gewicht: '700' },
 ] as const;
 
 const base64 = (url: string) => url.slice(url.indexOf(',') + 1);
 
-export function latoEinbetten(doc: jsPDF): void {
+export function schriftEinbetten(doc: jsPDF): void {
   for (const s of SCHNITTE) {
     doc.addFileToVFS(s.datei, base64(s.daten));
     doc.addFont(s.datei, PDF_SCHRIFT, s.stil);

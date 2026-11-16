@@ -93,4 +93,14 @@ describe('Liste (O7b-2)', () => {
     );
     expect(screen.getByText('1 Untergruppe')).toBeTruthy();
   });
+
+  it('Name und Zahl der Untergruppen brechen gemeinsam um – die Zahl steht nie über dem Namen (16.11.2026)', () => {
+    zeigen();
+    const zahl = screen.getByText('2 Untergruppen');
+    // Beide in EINEM umbrechenden Behälter: Fehlt der Platz, rutscht die Zahl unter den Namen.
+    expect(zahl.parentElement?.contains(screen.getByRole('button', { name: 'Technik' }))).toBe(
+      true,
+    );
+    expect(zahl.parentElement?.querySelector('[aria-expanded]')).toBeNull();
+  });
 });

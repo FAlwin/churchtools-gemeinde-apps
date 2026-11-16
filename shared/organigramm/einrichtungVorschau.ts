@@ -70,7 +70,19 @@ export function werVorschau(
   const wege = uebergaenge(e);
   const { kinder, nichtGelesen } = kinderDerStufen(daten, e);
   const name = new Map(kinder.map((k) => [k.personId, k.name]));
-  const je = jahre.map((jahr) => ({ jahr, wechsel: werWechselt(kinder, e, jahr) }));
+  // Jahr für Jahr weiterrechnen: Wer wechselt, steht im nächsten Jahr in der neuen Gruppe – wie ChurchTools es am
+  // Wechseltag macht. Sonst zählte ein Kind, das 2027 wechselt, 2028 und 2029 noch einmal (Test-Instanz, 16.11.2026).
+  let stand: readonly KindMitName[] = kinder;
+  const je = jahre.map((jahr) => {
+    const wechsel = werWechselt(stand, e, jahr);
+    const nach = new Map<number, number>();
+    for (const w of wechsel) if (w.art === 'wechselt') nach.set(w.personId, w.nach.gruppeId);
+    stand = stand.map((k) => {
+      const g = nach.get(k.personId);
+      return g === undefined ? k : { ...k, gruppeId: g };
+    });
+    return { jahr, wechsel };
+  });
   const zaehle = (wechsel: ReturnType<typeof werWechselt>, vonId: number) =>
     wechsel.filter((w) => w.art === 'wechselt' && w.von.gruppeId === vonId);
   return {

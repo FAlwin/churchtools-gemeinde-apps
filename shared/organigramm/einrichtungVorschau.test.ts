@@ -83,17 +83,41 @@ describe('kinderDerStufen', () => {
 describe('werVorschau', () => {
   const v = werVorschau(DATEN, E, JAHRE);
 
-  it('die Zahlen sind genau die von werWechselt (dieselbe Frage wie die Regel)', () => {
+  it('das erste Jahr zählt genau, was werWechselt sagt (dieselbe Frage wie die Regel)', () => {
     const { kinder } = kinderDerStufen(DATEN, E);
-    for (const [i, z] of v.jahre.entries()) {
-      const wechsel = werWechselt(kinder, E, JAHRE[i]);
-      expect(z.zahlen).toEqual(
-        uebergaenge(E).map(
-          (u) =>
-            wechsel.filter((w) => w.art === 'wechselt' && w.von.gruppeId === u.von.gruppeId).length,
-        ),
-      );
-    }
+    const wechsel = werWechselt(kinder, E, JAHRE[0]);
+    expect(v.jahre[0].zahlen).toEqual(
+      uebergaenge(E).map(
+        (u) =>
+          wechsel.filter((w) => w.art === 'wechselt' && w.von.gruppeId === u.von.gruppeId).length,
+      ),
+    );
+  });
+
+  it('wer gewechselt hat, zählt im nächsten Jahr nicht noch einmal (Test-Instanz 16.11.: dreimal dasselbe Kind)', () => {
+    // 2027 wechseln Anna und Cleo; 2028 ist Anna 8 (Fische, erst mit 10 weiter), Ben 6, Cleo schon in der letzten Stufe.
+    expect(v.jahre[1].zahlen).toEqual([0, 0]);
+  });
+
+  it('ein Kind wandert Jahr für Jahr weiter: Anna 2027 in die Fische und 2030 mit 10 in die Jungschar', () => {
+    const vier = wechseljahre(
+      sommerferienAus(
+        [
+          { titel: 'Sommerferien NRW 2027', beginn: '2027-07-19', ende: '2027-08-31' },
+          { titel: 'Sommerferien NRW 2028', beginn: '2028-07-10', ende: '2028-08-22' },
+          { titel: 'Sommerferien NRW 2029', beginn: '2029-07-02', ende: '2029-08-14' },
+          { titel: 'Sommerferien NRW 2030', beginn: '2030-07-01', ende: '2030-08-13' },
+        ],
+        GRUNDWERTE.ferienStichwort,
+      ),
+      GRUNDWERTE,
+    );
+    expect(werVorschau(DATEN, E, vier).jahre.map((j) => [j.jahr.jahr, ...j.zahlen])).toEqual([
+      [2027, 1, 1], // Anna → Fische, Cleo → Jungschar
+      [2028, 0, 0],
+      [2029, 1, 0], // Ben wird 7 → Fische
+      [2030, 0, 1], // Anna wird 10 → Jungschar
+    ]);
   });
 
   it('2027: Anna wechselt in die Fische, Cleo in die Jungschar; die Überschriften nennen die Übergänge', () => {

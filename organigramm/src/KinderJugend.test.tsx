@@ -14,12 +14,16 @@ import type { KjDaten, KjZugang } from '@shared/organigramm/gruppenwechselSicht'
 import { KinderJugend } from './KinderJugend';
 import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
 import { ladeRegelStand, type RegelStand } from './ladeRegelStand';
+import { ladeEinrichtungStand } from './ladeEinrichtungStand';
+import type { EinrichtungDaten } from '@shared/organigramm/einrichtungStand';
 import type { Start } from './start';
 
 vi.mock('./ladeKinderJugend', () => ({ ladeFerien: vi.fn(), ladeKjDaten: vi.fn() }));
 vi.mock('./ladeRegelStand', () => ({ ladeRegelStand: vi.fn() }));
 const ferienLaden = vi.mocked(ladeFerien);
 const kjLaden = vi.mocked(ladeKjDaten);
+vi.mock('./ladeEinrichtungStand', () => ({ ladeEinrichtungStand: vi.fn() }));
+const standLaden = vi.mocked(ladeEinrichtungStand);
 const regelLaden = vi.mocked(ladeRegelStand);
 
 const FISCHE = 50;
@@ -72,7 +76,15 @@ const rechte = (rechteVerwalten: boolean): OrgRechte => ({
   mitgliederTypen: [],
 });
 // Nur, was der Reiter vom Start liest: Rollen, Gruppen und Rechte.
-const START = { rollen: [], gruppen: [] } as unknown as Start;
+const START = {
+  rollen: [],
+  gruppen: [
+    { id: 52, name: 'Fische → Jungschar', typId: 20, statusId: 1, farbe: null },
+    { id: 53, name: 'Kinder & Jugend', typId: 2, statusId: 1, farbe: null },
+  ],
+  eltern: new Map([[52, [53]]]),
+  typNamen: new Map([[20, 'Gruppenwechsel']]),
+} as unknown as Start;
 const BEREICH: KjZugang = { art: 'bereich' };
 const LEITUNG: KjZugang = { art: 'leitung', stufen: [FISCHE] };
 
@@ -87,6 +99,14 @@ const regelBis = (bis: number): RegelStand => ({
   })),
   bis,
 });
+
+/** Nichts ließ sich lesen (z. B. alles 401): lauter „nicht prüfbar“. */
+const NICHTS_GELESEN: EinrichtungDaten = {
+  rollen: new Map(),
+  rechte: { leiter: { ok: false }, teilnehmer: { ok: false } },
+  gruppen: new Map(),
+  routinen: new Map(),
+};
 
 function zeigen(o: { zugang?: KjZugang; recht?: boolean } = {}) {
   const start = { ...START, rechte: rechte(o.recht ?? false) };
@@ -107,6 +127,8 @@ beforeEach(() => {
   kjLaden.mockResolvedValue({ art: 'da', daten: DATEN, rechte: new Map() });
   regelLaden.mockReset();
   regelLaden.mockResolvedValue(regelBis(JAHR + 1));
+  standLaden.mockReset();
+  standLaden.mockResolvedValue(NICHTS_GELESEN);
 });
 afterEach(cleanup);
 
@@ -239,5 +261,94 @@ describe('Hinweis „läuft aus“ in der Übersicht (nur mit dem Recht)', () =>
     zeigen({ zugang: LEITUNG, recht: true });
     await screen.findByRole('button', { name: 'Meine Gruppe' });
     expect(screen.queryByText('Wechseltage fehlen bald.')).toBeNull();
+  });
+});
+
+describe('Unterreiter „Einrichtung“ (O9-5c)', () => {
+  const oeffnen = async (o: Parameters<typeof zeigen>[0] = { recht: true }) => {
+    zeigen(o);
+    fireEvent.click(await screen.findByRole('button', { name: 'Einrichtung' }));
+  };
+
+  it('nur mit „Berechtigungen verwalten“ – Gruppen-Admin ohne das Recht sieht ihn nicht, Leitung mit dem Recht schon', async () => {
+    zeigen({ zugang: BEREICH, recht: false });
+    await screen.findByRole('button', { name: 'Wechseltage' });
+    expect(screen.queryByRole('button', { name: 'Einrichtung' })).toBeNull();
+    cleanup();
+    zeigen({ zugang: LEITUNG, recht: true });
+    expect(await screen.findByRole('button', { name: 'Einrichtung' })).toBeTruthy();
+    expect(standLaden).not.toHaveBeenCalled(); // geladen wird erst, wenn die Seite offen ist
+  });
+
+  it('zeigt die Stufen wie eingerichtet und liest den Stand einmal', async () => {
+    await oeffnen();
+    expect(await screen.findByRole('heading', { name: 'Einrichtung' })).toBeTruthy();
+    expect(screen.getByText('nur für „Berechtigungen verwalten“')).toBeTruthy();
+    expect(screen.getByText('ab 7 Jahren')).toBeTruthy();
+    expect(screen.getByText('ab 10 Jahren')).toBeTruthy();
+    expect(screen.getByText('Kinder & Jugend')).toBeTruthy();
+    expect(screen.getByText(`Kalender „${GRUNDWERTE.ferienkalender}“`)).toBeTruthy();
+    expect(screen.getByText('30.09.')).toBeTruthy();
+    expect(screen.getByText('8 Wochen vor dem Wechseltag')).toBeTruthy();
+    expect(await screen.findByText('Gruppentyp der Wechsel-Gruppen')).toBeTruthy();
+    expect(standLaden).toHaveBeenCalledTimes(1);
+    expect(standLaden.mock.calls[0][0]).toEqual(einrichtung());
+    // Keine Knöpfe zum Ändern oder Reparieren – die kommen mit O9-5c-2 und O9-5d.
+    expect(
+      screen.queryByRole('button', { name: /ändern|setzen|nachtragen|einrichten/i }),
+    ).toBeNull();
+  });
+
+  it('nicht lesbar ist keine Aufgabe: „nicht prüfbar“ je Zeile, kein gelber Sammelhinweis', async () => {
+    await oeffnen();
+    await screen.findByText('Gruppentyp der Wechsel-Gruppen');
+    expect(screen.getAllByText(/^nicht prüfbar/).length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText(/braucht dich|brauchen dich/)).toBeNull();
+    expect(screen.queryByText(/fehlt/)).toBeNull();
+  });
+
+  it('eine Warnung bekommt Zeichen, Text und den Sammelhinweis oben', async () => {
+    standLaden.mockResolvedValue({
+      ...NICHTS_GELESEN,
+      rechte: { leiter: { ok: true, wert: [] }, teilnehmer: { ok: true, wert: [] } },
+    });
+    await oeffnen();
+    expect(await screen.findByText('Eine Sache braucht dich.')).toBeTruthy();
+    expect(screen.getByText('Unten steht, was nicht stimmt.', { exact: false })).toBeTruthy();
+    expect(screen.getByText(/^fehlt: Gruppenmitglieder sehen/)).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'stimmt nicht' })).toBeTruthy();
+  });
+
+  it('die Wechseltage kommen aus dem Regelstand des Reiters – nicht noch einmal geladen', async () => {
+    regelLaden.mockResolvedValue(regelBis(JAHR));
+    await oeffnen();
+    expect(await screen.findByText(`nur noch bis ${JAHR}`, { exact: false })).toBeTruthy();
+    expect(regelLaden).toHaveBeenCalledTimes(1);
+  });
+
+  it('reichen die Regeln weit genug: „in allen Gruppen gleich“ mit den Jahren', async () => {
+    regelLaden.mockResolvedValue(regelBis(JAHR + 2));
+    await oeffnen();
+    expect(
+      await screen.findByText(`${JAHR}, ${JAHR + 1} und ${JAHR + 2} – in allen Gruppen gleich`),
+    ).toBeTruthy();
+  });
+
+  it('solange der Stand geladen wird: „wird geprüft“, die Stufen stehen schon da', async () => {
+    standLaden.mockReturnValue(new Promise(() => {}));
+    await oeffnen();
+    expect(await screen.findByText('Der Stand in ChurchTools wird geprüft …')).toBeTruthy();
+    expect(screen.getByText('ab 7 Jahren')).toBeTruthy();
+  });
+
+  it('wirft das Laden doch: „Gerade nicht ladbar“ und „Erneut versuchen“ fragt noch einmal', async () => {
+    standLaden.mockRejectedValueOnce(new Error('weg'));
+    await oeffnen();
+    expect(await screen.findByText('Gerade nicht ladbar.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+    });
+    expect(await screen.findByText('Gruppentyp der Wechsel-Gruppen')).toBeTruthy();
+    expect(standLaden).toHaveBeenCalledTimes(2);
   });
 });

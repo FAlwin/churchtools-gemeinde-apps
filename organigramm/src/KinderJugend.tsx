@@ -46,6 +46,7 @@ import { ausnahmeFehlerText, keinSchalterText } from './ausnahmeTexte';
 import { ladeFerien, ladeKjDaten, type FerienStand, type KjLadeStand } from './ladeKinderJugend';
 import { ladeRegelStand, type RegelStand } from './ladeRegelStand';
 import { ladeTeilnehmerRolle, mitgliedZugriff } from './mitgliedschaft';
+import { EinrichtungSeite } from './EinrichtungSeite';
 import { Hinweis } from './KjHinweis';
 import type { Start } from './start';
 import { Wechseltage } from './Wechseltage';
@@ -59,7 +60,7 @@ interface Props {
   onAbgemeldet: (e: unknown) => void;
 }
 
-type Unter = 'gruppe' | 'daten' | 'tage';
+type Unter = 'gruppe' | 'daten' | 'tage' | 'einrichtung';
 type Laden<T> = { art: 'laedt' } | T;
 
 /**
@@ -210,6 +211,8 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           { value: 'gruppe', label: bereich ? 'Übersicht' : 'Meine Gruppe' },
           { value: 'daten', label: 'Daten pflegen' },
           ...(bereich ? [{ value: 'tage' as const, label: 'Wechseltage' }] : []),
+          // Nur mit „Berechtigungen verwalten“ (O9-5c): Sie allein dürfen lesen, was in ChurchTools steht.
+          ...(darfRegeln ? [{ value: 'einrichtung' as const, label: 'Einrichtung' }] : []),
         ]}
         onChange={(u) => {
           setUnter(u);
@@ -266,6 +269,9 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           regel={darfRegeln ? regel : null}
           tage={tage}
         />
+      )}
+      {unter === 'einrichtung' && darfRegeln && (
+        <EinrichtungSeite start={start} einrichtung={einrichtung} regel={regel} jahr={jahr.jahr} />
       )}
       {offen && offenKind && (
         <KindFenster

@@ -670,3 +670,47 @@ Ankündigung steht ein Text für die Leitungen bereit.
 - **Historie:** Bauplan O9-4; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026, O9-F8 (Regeln als einzige Quelle)
 
 </details>
+
+### TF-ORG-20 · Kinder & Jugend: Einrichtung ansehen (Stand in ChurchTools)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung, ein Konto mit **„Berechtigungen verwalten“** (am besten
+ohne Kindergruppe und ohne Gruppen-Admin), ein Gruppen-Admin **ohne** dieses Recht und – für Schritt 5 bis 7 – die
+Möglichkeit, den gespeicherten Wert der Kategorie „Gruppenwechsel“ in der Test-Instanz vorübergehend zu ändern (danach
+zurück). Dieser Fall liest nur; geschrieben wird nichts außer diesem einen Testwert.
+
+**Das muss passieren:** Wer „Berechtigungen verwalten“ hat, sieht den Reiter Kinder & Jugend immer und erfährt dort, wie
+es um die Einrichtung steht – und verwechselt „nicht eingerichtet“ nie mit „nicht lesbar“.
+
+1. Als **Konto mit dem Recht** bei eingerichtetem Gruppenwechsel: Der Reiter hat **Übersicht, Daten pflegen, Wechseltage,
+   Einrichtung**. Als Gruppen-Admin **ohne** das Recht fehlt **Einrichtung**.
+2. **Einrichtung** öffnen: Karte „Stufen“ mit der Kette der Stufen („ab N Jahren“), „Wechsel-Gruppen unter …“, Ferienkalender,
+   Stichtag („30.09.“) und Ankündigung („8 Wochen vor dem Wechseltag“). **Keine** Knöpfe zum Ändern oder Reparieren.
+3. Karte „Stand in ChurchTools“: sechs Zeilen (Gruppentyp, Rechte der Leitung, Wechsel-Gruppen, Wechseltage, Regeln,
+   Routinen). Nach „Einrichten“ in ChurchTools stehen alle auf „in Ordnung“, kein gelber Sammelhinweis.
+4. In ChurchTools etwas verstellen (nur Test-Instanz, danach zurück): am Typ „Gruppenwechsel“ bei der Leiter-Rolle „Gruppeninfos
+   sehen“ wegnehmen; eine Routine ausschalten; die Wartezeit einer Routine ändern; eine Regel in einer Kindergruppe von
+   Hand dazuschreiben; eine Wechsel-Gruppe woanders hinhängen. Reiter neu laden: Die jeweilige Zeile zeigt „stimmt nicht“ mit
+   dem Grund („fehlt: …“, „wartet 60 statt 90 Tage“, „fremde Regel …“, „hängt nicht unter …“), oben steht „Eine Sache braucht
+   dich.“ bzw. „… Dinge brauchen dich.“.
+5. Den Wert der Kategorie „Gruppenwechsel“ so verderben, dass ihn die Erweiterung nicht mehr liest (z. B. ein Feld
+   löschen): Mit dem Recht steht „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nicht**
+   „noch nicht eingerichtet“. Ohne das Recht gibt es den Reiter nicht.
+6. Wert löschen (Kategorie bleibt leer): Mit dem Recht „Gruppenwechsel noch nicht eingerichtet“ mit der Erklärung und dem Satz
+   „Einrichten folgt in der nächsten Fassung.“, **ohne** Knopf. Ohne das Recht kein Reiter. Wert danach wiederherstellen.
+7. Netz kurz trennen und die Seite neu laden: Beim Reiter mit dem Recht steht „Die Einrichtung ließ sich gerade nicht lesen.
+   Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“. Auf der Seite „Einrichtung“
+   zeigen nicht lesbare Zeilen „nicht prüfbar“, **keine** Warnung „fehlt“, und es erfolgt kein Abmelden.
+8. Am Handy (375 px): Die Seite rutscht nicht seitlich; die Kette der Stufen bricht um.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/EinrichtungSeite.tsx`, `organigramm/src/App.tsx`, `organigramm/src/KinderJugend.tsx`, `organigramm/src/ladeEinrichtungStand.ts`, `organigramm/src/gruppenwechselSpeicher.ts`, `organigramm/src/speicher.ts`, `shared/organigramm/einrichtungStand.ts`
+- **Automatisiert:** größtenteils – `einrichtungStand.test.ts` (Soll aus den Erzeugern `alleRegeln`, `aufraeumRoutine`,
+  `LEITER_RECHTE`; jeder Warn-Fall und „nicht prüfbar“ einzeln), `ladeEinrichtungStand.test.ts` (404 = keine Regeln,
+  401/403/Netz/5xx = nicht gelesen, Drosselung), `gruppenwechselSpeicher.test.ts` (eingerichtet / keine / unlesbar /
+  Fehler), `App.test.tsx` (Sichtbarkeit des Reiters je Fall mit und ohne Recht) und `KinderJugend.test.tsx` (Unterreiter,
+  Sammelhinweis); mit den echten ChurchTools-Antworten prüft es nur dieser Fall
+- **Historie:** Bauplan O9-5c (Entwurf `o9-5-einrichten-v1.html`); Messung 16.11.2026 (O9-5a): `remove-member` kommt mit `actionData: null` zurück
+
+</details>

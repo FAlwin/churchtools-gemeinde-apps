@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ApiError } from '@ui/ct/fehler';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
@@ -50,8 +51,8 @@ import { ALLES_SICHTBAR, type Sichtbarkeit } from '@shared/organigramm/sichtbark
 import type { Versioniert } from '@shared/ct/versionierterWert';
 import { PdfFenster } from './PdfFenster';
 import { KinderJugend } from './KinderJugend';
-import { ladeEinrichtung } from './gruppenwechselSpeicher';
-import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
+import { ladeEinrichtung, type EinrichtungLesen } from './gruppenwechselSpeicher';
+import { EinrichtungUnlesbar, NichtEingerichtet } from './EinrichtungSeite';
 import { kjZugang } from '@shared/organigramm/gruppenwechselSicht';
 import type { RollenFilter } from './kastenPersonen';
 import {
@@ -133,9 +134,18 @@ export function App() {
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
   // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
   const [pdfOffen, setPdfOffen] = useState(false);
-  // Gruppenwechsel der Kinder (O9-2): die Einrichtung aus dem Speicher. Ohne sie – nicht eingerichtet, kein Leserecht
-  // oder gerade nicht lesbar – gibt es den Reiter „Kinder & Jugend“ nicht; nichts geht dabei verloren.
-  const [einrichtung, setEinrichtung] = useState<Einrichtung | null>(null);
+  // Gruppenwechsel der Kinder (O9-2): die Einrichtung aus dem Speicher; `null`, solange sie nicht gelesen ist. Ohne sie –
+  // nicht eingerichtet, nicht lesbar oder gerade nicht erreichbar – gibt es den Reiter „Kinder & Jugend“ nur für
+  // „Berechtigungen verwalten“ (O9-5c), und dort sagt er genau, welcher der Fälle es ist. Nichts geht dabei verloren.
+  const [einrichtungLesen, setEinrichtungLesen] = useState<EinrichtungLesen | null>(null);
+  const einrichtungHolen = useCallback(
+    () =>
+      ladeEinrichtung().then(setEinrichtungLesen, () =>
+        // Vorübergehend ist nicht „nicht eingerichtet“.
+        setEinrichtungLesen({ art: 'fehler', grund: 'voruebergehend' }),
+      ),
+    [],
+  );
 
   const abgemeldetOderFehler = useCallback(
     (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
@@ -182,12 +192,9 @@ export function App() {
       setMitglieder(null);
       ladeMitglieder(s.gruppen.map((g) => g.id)).then(setMitglieder, abgemeldetOderFehler);
       einsaetzeLaden();
-      ladeEinrichtung().then(
-        (r) => setEinrichtung(r.ok ? (r.daten?.inhalt ?? null) : null),
-        () => setEinrichtung(null),
-      );
+      void einrichtungHolen();
     }, abgemeldetOderFehler);
-  }, [abgemeldetOderFehler, einsaetzeLaden, zentralLaden]);
+  }, [abgemeldetOderFehler, einsaetzeLaden, einrichtungHolen, zentralLaden]);
 
   useEffect(laden, [laden]);
 
@@ -305,11 +312,20 @@ export function App() {
     setRollenAus(aus);
   };
   const admin = !!start?.rechte.gruppenVerwalten;
+  const einrichtung = einrichtungLesen?.art === 'da' ? einrichtungLesen.einrichtung : null;
+  // „Berechtigungen verwalten“ richtet den Gruppenwechsel ein und sieht den Reiter deshalb immer (O9-5c); alle anderen
+  // erst, wenn es ihn gibt und sie dort etwas zu sehen haben.
+  const rechteVerwalten = !!start?.rechte.rechteVerwalten;
   const kinderZugang = useMemo(
-    () => (start && einrichtung ? kjZugang(einrichtung, start.geleitet, admin) : null),
-    [start, einrichtung, admin],
+    () =>
+      start && einrichtung
+        ? (kjZugang(einrichtung, start.geleitet, admin) ??
+          (rechteVerwalten ? ({ art: 'bereich' } as const) : null))
+        : null,
+    [start, einrichtung, admin, rechteVerwalten],
   );
-  const reiter = reiterFuer(zeigtMehr, !!kinderZugang, admin);
+  const kinderReiter = !!kinderZugang || (rechteVerwalten && !!einrichtungLesen && !einrichtung);
+  const reiter = reiterFuer(zeigtMehr, kinderReiter, admin);
   const zeigtReiter = reiter.length > 1;
   const ansicht: Ansicht = zeigtReiter ? ansichtAusAdresse(hash, reiter) : 'organigramm';
 
@@ -561,6 +577,19 @@ export function App() {
           onGruppe={gruppeOeffnen}
           onPerson={personOeffnen}
           onEinsaetzeNachladen={einsaetzeLaden}
+        />
+      )}
+      {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'keine' && (
+        <NichtEingerichtet />
+      )}
+      {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'unlesbar' && (
+        <EinrichtungUnlesbar />
+      )}
+      {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'fehler' && (
+        <CenterMessage
+          icon="warnung"
+          text="Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert."
+          onRetry={() => void einrichtungHolen()}
         />
       )}
       {start && einrichtung && kinderZugang && ansicht === 'kinder' && (

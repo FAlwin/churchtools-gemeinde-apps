@@ -10,6 +10,18 @@
  * Mitglieder (aufnehmen, Rolle, beenden per `memberEndDate`), Rechte je Gruppe und die Personensuche. Neu laden setzt
  * zurück.
  */
+import {
+  alleRegeln,
+  aufraeumRoutine,
+  GRUNDWERTE,
+  LEITER_RECHTE,
+  sommerferienAus,
+  uebergaenge,
+  wechseljahre,
+} from '@shared/organigramm/gruppenwechsel';
+import { heuteImKalender } from '@shared/ct/zeit';
+import { einrichtungAus, GW_ART } from '@shared/organigramm/gruppenwechselEinrichtung';
+
 const gruppe = (id: number, name: string, groupTypeId: number, color: string | null) => ({
   id,
   name,
@@ -29,6 +41,13 @@ const GRUPPEN: ReturnType<typeof gruppe>[] = [
   gruppe(24, 'Gemeinsam werden', 2, 'orange'),
   gruppe(37, 'Bibelarbeit', 7, 'violet'),
   gruppe(34, 'Ankündigungen', 9, 'teal'),
+  // Gruppenwechsel der Kinder (O9): Bereich, Stufen und die Wechsel-Gruppen (Typ 20, versteckt)
+  gruppe(300, 'Kinder & Jugend', 2, 'lime'),
+  gruppe(301, 'Schäfchen', 7, 'sky'),
+  gruppe(302, 'Fische', 7, 'sky'),
+  gruppe(303, 'Jungschar', 7, 'sky'),
+  gruppe(311, 'Schäfchen → Fische', 20, 'gray'),
+  gruppe(312, 'Fische → Jungschar', 20, 'gray'),
 ];
 
 // Erfundene Personen; Rollen wie gemessen: 16 Leiter, 17 Co-Leiter, 15 Mitarbeiter, 39 leader (Verteiler)
@@ -74,6 +93,12 @@ const MITGLIEDER: Record<number, ReturnType<typeof m>[] | undefined> = {
   34: [m(2, 39), m(4, 15), m(5, 15), m(6, 15)],
   // Kim (11) hat bei Café Team 1 angefragt – „offene Anfrage“
   49: [m(12, 16), m(4, 15), { ...m(11, 15), groupMemberStatus: 'requested' }],
+  // Gruppenwechsel: noch ohne Kinder
+  301: [],
+  302: [],
+  303: [],
+  311: [],
+  312: [],
 };
 
 // Termine: 26 Sonntage zurück, 12 voraus. Alex (1) dient fast jeden Sonntag, Jan (10) nie; freie Plätze kommen.
@@ -109,6 +134,7 @@ const HIERARCHIE = [
   { groupId: 7, parents: [10], children: [12, 15] },
   { groupId: 47, parents: [], children: [49] },
   { groupId: 11, parents: [], children: [24] },
+  { groupId: 300, parents: [], children: [301, 302, 303, 311, 312] },
 ];
 
 /** Obergruppen je Gruppe – die veränderliche Fassung von `HIERARCHIE` (O5). */
@@ -282,6 +308,104 @@ function struktur(
 const MODUL = 16;
 const KATEGORIEN: { id: number; shorty: string; name: string; customModuleId: number }[] = [];
 const WERTE: { id: number; dataCategoryId: number; value: string }[] = [];
+
+// ── Gruppenwechsel (O9-5c): „eingerichtet“, und was ChurchTools dazu zurückgibt – aus denselben Erzeugern wie die App ──
+const WECHSEL_ROLLEN = { teilnehmer: 45, leiter: 48 };
+const EINRICHTUNG = einrichtungAus({
+  einstellung: {
+    ...GRUNDWERTE,
+    stufen: [
+      { gruppeId: 301, name: 'Schäfchen', abAlter: 4 },
+      { gruppeId: 302, name: 'Fische', abAlter: 7 },
+      { gruppeId: 303, name: 'Jungschar', abAlter: 10 },
+    ],
+  },
+  bereichGruppeId: 300,
+  wechselGruppen: [
+    { vonGruppeId: 301, nachGruppeId: 302, gruppeId: 311 },
+    { vonGruppeId: 302, nachGruppeId: 303, gruppeId: 312 },
+  ],
+})!;
+KATEGORIEN.push({ id: 480, shorty: 'gruppenwechsel', name: 'Gruppenwechsel', customModuleId: 16 });
+WERTE.push({
+  id: 481,
+  dataCategoryId: 480,
+  value: JSON.stringify({
+    ...GW_ART,
+    version: 1,
+    zeit: new Date().toISOString(),
+    von: { personId: 1, name: 'Alex Bauer' },
+    inhalt: EINRICHTUNG,
+  }),
+});
+
+/** Die Sommerferien der nächsten drei Jahre (erfunden), damit es immer einen künftigen Wechseltag gibt. */
+const FERIEN_JAHR = Number(heuteImKalender().slice(0, 4)) + 1;
+const FERIEN_TERMINE = [0, 1, 2].map((i) => ({
+  base: { id: 900 + i, title: `Sommerferien NRW ${FERIEN_JAHR + i}` },
+  calculated: { startDate: `${FERIEN_JAHR + i}-07-19`, endDate: `${FERIEN_JAHR + i}-08-31` },
+}));
+
+/** Antworten für Rollen, Rechte, Regeln, Status und Routinen der Wechsel-Gruppen – alles so, wie „Einrichten“ es hinterlässt. */
+function wechselAntworten(): Record<string, unknown> {
+  const jahre = wechseljahre(
+    sommerferienAus(
+      FERIEN_TERMINE.map((t) => ({
+        titel: t.base.title,
+        beginn: t.calculated.startDate,
+        ende: t.calculated.endDate,
+      })),
+      GRUNDWERTE.ferienStichwort,
+    ),
+    GRUNDWERTE,
+  );
+  const regeln = alleRegeln(
+    EINRICHTUNG.einstellung,
+    jahre,
+    new Map(EINRICHTUNG.wechselGruppen.map((w) => [w.vonGruppeId, w.gruppeId])),
+    WECHSEL_ROLLEN,
+    new Map(EINRICHTUNG.einstellung.stufen.map((s) => [s.gruppeId, WECHSEL_ROLLEN.teilnehmer])),
+  );
+  const a: Record<string, unknown> = {
+    '/api/calendars': { data: [{ id: 5, name: GRUNDWERTE.ferienkalender }] },
+    '/api/calendars/appointments': { data: FERIEN_TERMINE },
+    '/api/permissions/group_type_role/48': {
+      data: LEITER_RECHTE.map((r) => ({
+        authId: r.authId,
+        dataId: r.dataId,
+        isInherited: false,
+        type: 'group',
+      })),
+    },
+    '/api/permissions/group_type_role/45': { data: [] },
+  };
+  for (const [id, r] of regeln) {
+    a[`/api/dynamicgroups/${id}/ruleset`] = { data: r };
+    a[`/api/dynamicgroups/${id}/status`] = { data: { dynamicGroupStatus: 'manual' } };
+  }
+  uebergaenge(EINRICHTUNG.einstellung).forEach((u, i) => {
+    const w = EINRICHTUNG.wechselGruppen[i].gruppeId;
+    a[`/api/groups/${w}/roles`] = {
+      data: [
+        { id: 3000 + i, groupTypeRoleId: WECHSEL_ROLLEN.leiter, type: 'leader' },
+        { id: 3100 + i, groupTypeRoleId: WECHSEL_ROLLEN.teilnehmer, type: 'participant' },
+      ],
+    };
+    const { neu, schritte } = aufraeumRoutine(u, w, WECHSEL_ROLLEN, EINRICHTUNG.einstellung);
+    a[`/api/groups/${w}/members/routines`] = {
+      data: [
+        {
+          id: 100 + i,
+          groupId: w,
+          groupTypeRoleId: neu.domainContext.groupTypeRoleId,
+          groupMemberStatus: neu.domainContext.groupMemberStatus,
+          routine: { name: neu.name, isEnabled: true, steps: schritte },
+        },
+      ],
+    };
+  });
+  return a;
+}
 let naechsteId = 500;
 let beaWarSchon = false;
 
@@ -435,6 +559,7 @@ function daten(fall: string): Record<string, unknown> {
         { data: liste, meta: { pagination: { lastPage: 1 } } },
       ]),
     ),
+    ...wechselAntworten(),
     '/api/info': { siteName: 'Beispielgemeinde' },
     '/api/csrftoken': { data: 'demo' },
     '/api/person/masterdata': {
@@ -453,6 +578,7 @@ function daten(fall: string): Record<string, unknown> {
         { id: 2, name: 'Dienst', color: 'lime' },
         { id: 7, name: 'Veranstaltung', color: 'amber' },
         { id: 9, name: 'Verteiler', color: 'teal' },
+        { id: 20, name: 'Gruppenwechsel', color: 'gray' },
       ],
     },
     '/api/permissions/global': {

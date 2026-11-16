@@ -44,7 +44,7 @@ import { dienstFarben } from './personenFarben';
 import { useEinteilen, type WerKannZurueck } from './useEinteilen';
 import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
 import { grundText } from './ladeEntwuerfe';
-import { plaetzeWeitere, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -616,21 +616,14 @@ export function Planen({
             plaetzeFach.gruppe,
             katalog,
           )}
-          weitere={
-            katalog
-              ? plaetzeWeitere(
-                  daten,
-                  plan,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.spalte,
-                  plaetzeFach.gruppe,
-                  katalog,
-                )
-              : undefined
-          }
           vorlage={
             katalog && ladeVorlagen
-              ? vorlageFuer(katalog, plan.spalten[plaetzeFach.spalte], ladeVorlagen)
+              ? vorlageFuer(
+                  katalog,
+                  plan.spalten[plaetzeFach.spalte],
+                  plaetzeFach.gruppe,
+                  ladeVorlagen,
+                )
               : undefined
           }
           aendern={(z, gesehen, neu) =>

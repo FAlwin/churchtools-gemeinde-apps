@@ -70,6 +70,7 @@ const vorlage = (
 const VORLAGEN = terminVorlagenAus([
   vorlage(3, 'Abendmahl', 1, [6, 1], [24, 1], [8, 1]),
   vorlage(5, 'Gebetsabend', 2, [6, 1]),
+  vorlage(7, 'Nur Moderation', 1, [24, 1]),
 ]);
 
 function zeige(kalender = '1', katalog: DiensteKatalog | null = katalogAus(START)) {
@@ -116,7 +117,7 @@ describe('Planen – Plätze-Fach mit allen Diensten und Vorlage', () => {
     expect(laden).not.toHaveBeenCalled();
   });
 
-  it('Vorlage: nur die des Termin-Kalenders; Vorschau über alle Gruppen; Übernehmen speichert je Dienst', async () => {
+  it('Vorlage: nur die des Termin-Kalenders; Vorschau nur für die Gruppe des Fachs; Übernehmen speichert je Dienst', async () => {
     const { anzahl, laden } = zeige('1');
     await oeffne();
     const feld = await screen.findByRole('combobox', { name: 'Vorlage' });
@@ -124,14 +125,27 @@ describe('Planen – Plätze-Fach mit allen Diensten und Vorlage', () => {
     expect([...feld.querySelectorAll('option')].map((o) => o.textContent)).toEqual([
       '— Vorlage wählen —',
       'Abendmahl',
+      'Nur Moderation',
     ]);
     fireEvent.change(feld, { target: { value: '3' } });
-    // Ton hat schon 1; Abendmahl liegt in einer anderen Gruppe (Moderation) und wird trotzdem dazugenommen.
-    expect(screen.getByText('Abendmahl: 0 → 1 · Kamera: 0 → 1')).toBeTruthy();
+    // Ton hat schon 1; Abendmahl liegt in einer anderen Gruppe (Moderation) – wird nicht angefasst, auch nicht genannt.
+    expect(screen.getByText('Kamera: 0 → 1')).toBeTruthy();
+    expect(screen.queryByText(/Abendmahl/, { selector: 'small, p' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
-    await waitFor(() => expect(anzahl).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledTimes(1));
     expect(anzahl).toHaveBeenCalledWith(20, 8, 0, 1);
-    expect(anzahl).toHaveBeenCalledWith(20, 24, 0, 1);
+    expect(anzahl).not.toHaveBeenCalledWith(20, 24, expect.anything(), expect.anything());
+  });
+
+  it('Vorlage ganz ohne Dienste dieser Gruppe: ruhiger Satz, kein „Übernehmen“', async () => {
+    const { anzahl } = zeige('1');
+    await oeffne();
+    const feld = await screen.findByRole('combobox', { name: 'Vorlage' });
+    fireEvent.change(feld, { target: { value: '7' } });
+    expect(screen.getByText('Diese Vorlage hat keine Dienste dieser Gruppe.')).toBeTruthy();
+    expect(screen.queryByText('Der Termin hat schon alles aus der Vorlage.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+    expect(anzahl).not.toHaveBeenCalled();
   });
 
   it('anderer Kalender → andere Vorlage', async () => {
@@ -148,16 +162,16 @@ describe('Planen – Plätze-Fach mit allen Diensten und Vorlage', () => {
     expect(screen.queryByRole('combobox', { name: 'Vorlage' })).toBeNull();
   });
 
-  it('Dienste, die man nicht planen darf, stehen weder im Fach noch in der Vorlage', async () => {
-    const s = startFuer({ ...START, rechte: { ...START.rechte, planbareDienstgruppen: [3] } });
-    const katalog = katalogAus(s);
-    const { anzahl } = zeige('1', katalog);
+  it('Dienste der Gruppe, die man nicht planen darf, werden übersprungen; andere Gruppen bleiben still draußen', async () => {
+    const s = startFuer({ ...START, rechte: { ...START.rechte, planbareDienstgruppen: [5] } });
+    const { anzahl } = zeige('1', katalogAus(s));
+    // Kamera (Technik) darf man nicht planen – Ton hat eine Matrixzeile und gilt als planbar (wie in der Matrix).
     await oeffne();
     const feld = await screen.findByRole('combobox', { name: 'Vorlage' });
     fireEvent.change(feld, { target: { value: '3' } });
-    // Moderation darf man hier nicht planen: Abendmahl wird übersprungen, Kamera (Technik) dazugenommen.
-    expect(screen.getByText(/Kamera: 0 → 1/)).toBeTruthy();
-    expect(screen.getByText(/Abendmahl – darfst du nicht planen/)).toBeTruthy();
+    expect(screen.getByText(/Kamera – darfst du nicht planen/)).toBeTruthy();
+    expect(screen.queryByText(/Abendmahl/, { selector: 'small, p' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
     expect(anzahl).not.toHaveBeenCalled();
   });
 });

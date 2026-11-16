@@ -32,14 +32,13 @@ export interface PlaetzeZeile {
  *
  * **Alle Dienste der Gruppe** stehen da, auch die ohne Platz an diesem Termin (Anzahl 0, „nicht vorgesehen“) – „+“ schaltet
  * sie ein, „−“ bis 0 aus. Oben kann man eine **ChurchTools-Terminvorlage übernehmen** (13.11.2026): erst die Vorschau,
- * dann „Übernehmen“; sie **nimmt nur dazu** (nie weniger), über alle Dienstgruppen, wo man planen darf, und lässt Dienste
- * mit Entwürfen aus (`vorlageRechnen`). Jeder Dienst wird einzeln gespeichert – scheitert einer, laufen die anderen weiter.
+ * dann „Übernehmen“; sie **nimmt nur dazu** (nie weniger), **nur bei den Diensten dieser Gruppe** (Alwin, 16.11.2026 – andere
+ * Gruppen übergeht sie still), und lässt Dienste mit Entwürfen aus (`vorlageRechnen`). Jeder Dienst wird einzeln gespeichert – scheitert einer, laufen die anderen weiter.
  */
 export function PlaetzeFach({
   titel,
   unter,
   zeilen,
-  weitere = [],
   vorlage,
   aendern,
   onGespeichert,
@@ -48,24 +47,22 @@ export function PlaetzeFach({
   titel: string;
   unter: string;
   zeilen: PlaetzeZeile[];
-  /** Die Dienste der übrigen Gruppen, die man hier planen darf – nur für die Vorlage, nicht in der Liste. */
-  weitere?: PlaetzeZeile[];
   /**
    * Die Vorlagen von ChurchTools: `laden` einmal beim Öffnen, `kalenderId` der Kalender des Termins (nur dessen Vorlagen
-   * werden angeboten), `namen` alle Dienste der Gemeinde (ein unbekannter wird übersprungen). Ohne: kein Vorlagen-Bereich.
+   * werden angeboten), `namen` alle Dienste der Gemeinde, `gruppenDienste` die Dienste dieser Gruppe – nur die ändert die
+   * Vorlage, alles andere in ihr wird still übergangen. Ohne `vorlage`: kein Vorlagen-Bereich.
    */
   vorlage?: {
     kalenderId: number;
     laden: () => Promise<TerminVorlage[]>;
     namen: ReadonlyMap<number, string>;
+    gruppenDienste: ReadonlySet<number>;
   };
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
-  const [anzahl, setAnzahl] = useState(
-    () => new Map([...zeilen, ...weitere].map((z) => [z.serviceId, z.anzahl])),
-  );
+  const [anzahl, setAnzahl] = useState(() => new Map(zeilen.map((z) => [z.serviceId, z.anzahl])));
   const [laeuft, setLaeuft] = useState<number | null>(null);
   const [vorlageLaeuft, setVorlageLaeuft] = useState(false);
   const [geaendert, setGeaendert] = useState(false);
@@ -86,7 +83,7 @@ export function PlaetzeFach({
   /** Wie der Termin jetzt dasteht – die Zahlen aus diesem Fenster, nicht die vom Öffnen. */
   const standJetzt = (): Map<number, VorlagenStand> =>
     new Map(
-      [...zeilen, ...weitere].map((z) => [
+      zeilen.map((z) => [
         z.serviceId,
         { name: z.name, anzahl: anzahl.get(z.serviceId) ?? z.anzahl, entwuerfe: z.entwuerfe },
       ]),
@@ -120,7 +117,15 @@ export function PlaetzeFach({
       ? (() => {
           const v = vorlagen.stand.daten.find((x) => x.id === gewaehlt);
           return v
-            ? { v, r: vorlageRechnen(v, { stand: standJetzt(), namen: vorlage.namen }) }
+            ? {
+                v,
+                r: vorlageRechnen(
+                  // Nur die Dienste dieser Gruppe – die anderen Dienste der Vorlage gehen das Fach nichts an.
+                  { dienste: v.dienste.filter((d) => vorlage.gruppenDienste.has(d.serviceId)) },
+                  { stand: standJetzt(), namen: vorlage.namen },
+                ),
+                keine: !v.dienste.some((d) => vorlage.gruppenDienste.has(d.serviceId)),
+              }
             : null;
         })()
       : null;
@@ -128,7 +133,7 @@ export function PlaetzeFach({
   /** Die Vorlage übernehmen: Dienst für Dienst, jeder mit frisch lesen und nachlesen – ein Fehler hält die anderen nicht auf. */
   const uebernehmen = async () => {
     if (!rechnung || beschaeftigt || rechnung.r.aendern.length === 0) return;
-    const alle = new Map([...zeilen, ...weitere].map((z) => [z.serviceId, z]));
+    const alle = new Map(zeilen.map((z) => [z.serviceId, z]));
     const jetzt = new Map(anzahl);
     const geklappt: string[] = [];
     const fehler: string[] = [];
@@ -212,6 +217,8 @@ export function PlaetzeFach({
                 <p>
                   {rechnung.r.aendern.map((a) => `${a.name}: ${a.von} → ${a.nach}`).join(' · ')}
                 </p>
+              ) : rechnung.keine ? (
+                <p>Diese Vorlage hat keine Dienste dieser Gruppe.</p>
               ) : (
                 <p>Der Termin hat schon alles aus der Vorlage.</p>
               )}
@@ -287,7 +294,7 @@ export function PlaetzeFach({
         {vorlage &&
           vorlagen.stand.art === 'fertig' &&
           vorlagen.stand.daten.length > 0 &&
-          ' Eine Vorlage nimmt nur dazu, was fehlt – nichts wird weniger.'}
+          ' Eine Vorlage nimmt nur dazu, was fehlt – nichts wird weniger, und nur bei den Diensten dieser Gruppe.'}
       </p>
       <div ref={hinweisRef}>
         {meldung && (

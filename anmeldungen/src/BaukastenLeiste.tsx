@@ -57,6 +57,7 @@ const SYMBOL_TYP: Partial<Record<Feldtyp, BausteinIcon>> = {
   ueberschrift: 'ueberschrift',
   info: 'info',
   trenner: 'trenner',
+  schritt: 'schritt',
 };
 
 type Wer = 'familie' | 'einzeln' | 'kinder';

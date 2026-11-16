@@ -17,7 +17,7 @@ import {
   type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
 import { BedingungBlock, DarstellungWahl } from './Bedingungen';
-import { antwortSatz, standardRegel, zielName } from './bedingungTexte';
+import { antwortSatz, standardRegel, zeigeSatz, zielName } from './bedingungTexte';
 import k from './Baukasten.module.scss';
 
 /**
@@ -180,7 +180,7 @@ export function RegelFenster({
       ? antwortSatz(formular, gruppe.antwort!, bed)
       : !ziele.length
         ? 'Wähle bei „Dann“, welche Felder nur unter dieser Bedingung erscheinen.'
-        : `${ziele.length > 1 ? `Diese ${ziele.length} Felder erscheinen` : 'Die Frage erscheint'} nur, wenn ${bedingungSatz(formular, bed)}. Pflicht gilt nur, solange sie zu sehen ist.`;
+        : zeigeSatz(formular, zielFelder, bed);
 
   const fertig = bedingungAufbereiten(bed, anAntwort);
   // Bei Fragen nur Ziele, die auf jede Quelle schauen dürfen – sonst schlüge das Speichern fehl (`bedingungFehler`).

@@ -45,6 +45,8 @@ export interface BaukastenHaken {
   hinweis?: (wo: string) => ReactNode;
   /** Der aufgeklappte Hinweis zu einem Bereich (bei Feldern zeigt ihn die Hülle). */
   hinweisText?: (wo: string) => ReactNode;
+  /** F2c: der feste Balken „Schritt 1“ ganz oben – nur, wenn das Formular Schritte hat. */
+  schrittEins?: ReactNode;
 }
 
 /**
@@ -290,6 +292,7 @@ export function AnmeldeFormular({
               name={schritt.name}
             />
           )}
+          {baukasten?.schrittEins}
           {kopfHier.length > 0 && (
             <section className={s.sec}>
               <h2>

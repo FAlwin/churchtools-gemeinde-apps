@@ -87,6 +87,7 @@ export function FeldBearbeiten({
   wozuGeburtsdatum: wozu,
   werkzeug,
   onTyp,
+  schrittNr,
 }: {
   entwurf: FeldEntwurf;
   /** Das Formular, wie es gerade im Baukasten steht (mit diesem Entwurf) – für Bedingungen und Kurzname (F1c). */
@@ -104,12 +105,16 @@ export function FeldBearbeiten({
   werkzeug?: ReactNode;
   /** Fragetyp ändern (nur eigene Fragen, solange niemand geantwortet hat – ChurchTools ändert den Typ nicht). */
   onTyp?: (typ: Feldtyp) => void;
+  /** F2c: Bei einem Schritt seine Nummer im Formular (`schrittImBaukasten`). */
+  schrittNr?: number;
 }) {
   const f = d.feld;
   const setFeld = (neu: Partial<Feld>) => onAendern({ ...d, feld: { ...f, ...neu } });
   const setAntworten = (antworten: AntwortEntwurf[]) => onAendern({ ...d, antworten });
   const eigen = f.art === 'eigen';
   const text = nurText(f.typ);
+  /** F2c: Ein Schritt hat nur seinen Namen (Pflicht) und – wie jedes Feld – „Nur zeigen, wenn …“. */
+  const schritt = f.typ === 'schritt';
   const fehler = entwurfFehler(d);
   const zeichen = f.typ === 'radio' ? k.punkt : f.typ === 'multi' ? k.kaestchen : null;
 
@@ -171,17 +176,25 @@ export function FeldBearbeiten({
         <input
           className={k.frage}
           value={f.frage}
-          maxLength={200}
           disabled={!eigen}
-          aria-label={text ? 'Text' : f.typ === 'check' ? 'Text neben dem Kästchen' : 'Frage'}
-          placeholder={text ? 'Text' : 'Frage'}
+          aria-label={
+            schritt
+              ? 'Name des Schritts'
+              : text
+                ? 'Text'
+                : f.typ === 'check'
+                  ? 'Text neben dem Kästchen'
+                  : 'Frage'
+          }
+          placeholder={schritt ? 'Name des Schritts' : text ? 'Text' : 'Frage'}
+          maxLength={schritt ? 60 : 200}
           // Neu aus dem Baukasten: gleich lostippen.
           autoFocus={eigen}
           onFocus={(e) => e.target.select()}
           onChange={(e) => setFeld({ frage: e.target.value })}
         />
       )}
-      {f.typ !== 'trenner' && (
+      {f.typ !== 'trenner' && !schritt && (
         <input
           className={k.hilfe}
           value={f.hilfe}
@@ -293,7 +306,13 @@ export function FeldBearbeiten({
             ))}
           </select>
         ) : (
-          <span>{text ? 'Nur Text, keine Frage' : 'Empfohlener Baustein'}</span>
+          <span>
+            {schritt
+              ? `Schritt ${schrittNr ?? ''} · neue Seite im Formular`
+              : text
+                ? 'Nur Text, keine Frage'
+                : 'Empfohlener Baustein'}
+          </span>
         )}
         {werkzeug && <span className={k.werkzeugUnten}>{werkzeug}</span>}
         {kannBedingung && (

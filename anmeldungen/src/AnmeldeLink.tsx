@@ -4,7 +4,7 @@ import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import { anmeldeBedingungen } from './einrichten';
-import { useLinkKopieren } from './useLinkKopieren';
+import { useKopieren } from '@ui/bedienung/useKopieren';
 import { QrFenster } from './QrFenster';
 import type { AushangDaten } from './aushang';
 import s from './Startseite.module.scss';
@@ -26,7 +26,7 @@ type Pruefung = { art: 'prueft' } | { art: 'fertig'; fehlt: string[] } | { art: 
  * ebenfalls: Ein Aussetzer darf ihn nicht verstecken.
  *
  * - **Kopieren:** danach kurz „Kopiert“. Lässt der Browser es nicht zu, ist der Link markiert und kann von
- *   Hand kopiert werden (`useLinkKopieren`, wie im Termin-Fenster).
+ *   Hand kopiert werden (`useKopieren`, wie im Termin-Fenster).
  * - **Öffnen:** das Formular in einem neuen Tab – zum Selbst-Ausprobieren.
  * - **Teilen:** das Teilen-Menü des Geräts (am Handy WhatsApp, Mail …). Gibt es das nicht (manche Browser am
  *   Computer), fehlt der Knopf.
@@ -130,7 +130,7 @@ function LinkZeile({
     [gemeinde, termin, anmeldeschluss, titel, link],
   );
   const feld = useRef<HTMLInputElement>(null);
-  const { stand, kopieren } = useLinkKopieren(link, feld);
+  const { stand, kopieren } = useKopieren(link, feld);
   const teilenGeht = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   // Abbrechen im Teilen-Menü wirft `AbortError` – kein Fehler, also still.

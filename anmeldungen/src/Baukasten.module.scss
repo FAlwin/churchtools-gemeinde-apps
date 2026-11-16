@@ -1491,3 +1491,37 @@
   border-left-style: solid;
   border-left-width: 3px;
 }
+
+// ── F3c: freie Antwort im Baukasten (Entwurf f3-freie-antwort-v1) ──
+// Die letzte Antwort, gestrichelt abgesetzt: Beschriftung, Entfernen, darunter die Art des Textfelds.
+.freiZeile {
+  display: grid;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px dashed var(--p-accent, #155dfc);
+  border-radius: var(--r-ctrl);
+  background: color-mix(in srgb, var(--p-accent, #155dfc) 6%, transparent);
+}
+.freiArt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.87em;
+  color: var(--p-muted, #5b6b70);
+
+  select {
+    height: 32px;
+    border: 1px solid var(--p-line, #dde5e6);
+    border-radius: var(--r-ctrl);
+    background: var(--p-card, #fff);
+    color: var(--p-text, #1d2a2e);
+    font: inherit;
+    padding: 0 6px;
+  }
+}
+.neuReihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+}

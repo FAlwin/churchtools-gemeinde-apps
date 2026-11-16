@@ -50,6 +50,10 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
 - Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
   Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Verwaltung sie **selbst gesetzt** hat
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
+  Diese Merkliste steht in der Kategorie „Protokolle“, die die Leitung beschreiben darf. Darum zählt beim Einrichten
+  nur, was die Verwaltung dort selbst eingetragen haben kann – Zusatzrechte an Rollen **dieser** Gruppe (frisch aus
+  ChurchTools gelesen), Kalenderrechte nur am alten oder neuen Kalender der Gruppe (Security-Review 16.11.2026,
+  `vergebenPruefen`). Ein untergeschobener Eintrag führt so nie dazu, dass ein Admin Rechte anderer Gruppen entzieht.
 - **Versteckte Gruppen** bleiben versteckt; ihre Mitglieder bekommen beim Einrichten zusätzlich „versteckte Gruppe
   sehen“. Ohne das sehen sie ihre eigene Gruppe in ChurchTools nicht (gemessen 22.10.2026).
 - **Beitrag nach der Freigabe** (S6-2): Das Häkchen „In der Gruppe Bescheid geben“ erscheint nur, wo man in

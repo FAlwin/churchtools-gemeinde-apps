@@ -32,6 +32,7 @@ describe('orgRechteAus – wie an der Test-Instanz gemessen (22.10.2026)', () =>
       mitgliederAlle: false,
       mitgliederGruppen: [],
       mitgliederTypen: [],
+      rechteVerwalten: false,
     });
   });
 
@@ -54,7 +55,23 @@ describe('orgRechteAus – wie an der Test-Instanz gemessen (22.10.2026)', () =>
       mitgliederAlle: false,
       mitgliederGruppen: [],
       mitgliederTypen: [],
+      rechteVerwalten: false,
     });
+  });
+
+  it('„Berechtigungen verwalten“ (churchcore: administer persons) ist ein eigenes Recht, unabhängig von „Gruppen verwalten“', () => {
+    const nurGruppen = orgRechteAus({ churchdb: { 'administer groups': true } }, fehler);
+    expect([nurGruppen.gruppenVerwalten, nurGruppen.rechteVerwalten]).toEqual([true, false]);
+    const nurRechte = orgRechteAus(
+      { churchdb: { 'administer groups': false }, churchcore: { 'administer persons': true } },
+      fehler,
+    );
+    expect([nurRechte.gruppenVerwalten, nurRechte.rechteVerwalten]).toEqual([false, true]);
+    // Dieselbe Lesart wie `rechteAus` (Musik-App, Dienstplaner): nur ein wahrer Wert zählt.
+    expect(
+      orgRechteAus({ churchcore: { 'administer persons': false }, churchdb: {} }, fehler)
+        .rechteVerwalten,
+    ).toBe(false);
   });
 
   it('ohne churchdb-Block (andere Module da) → keine Rechte, kein Fehler', () => {
@@ -79,6 +96,7 @@ describe('orgRechteAus – wie an der Test-Instanz gemessen (22.10.2026)', () =>
 describe('darfStruktur / anlegbareTypenAus (O5)', () => {
   const r = (x: Partial<OrgRechte>): OrgRechte => ({
     gruppenVerwalten: false,
+    rechteVerwalten: false,
     anlegbareTypen: [],
     bearbeitbareGruppen: [],
     bearbeitbareTypen: [],
@@ -127,6 +145,7 @@ describe('darfStruktur / anlegbareTypenAus (O5)', () => {
 describe('Mitglieder pflegen (O6, gemessen 23.10.2026)', () => {
   const r = (x: Partial<OrgRechte>): OrgRechte => ({
     gruppenVerwalten: false,
+    rechteVerwalten: false,
     anlegbareTypen: [],
     bearbeitbareGruppen: [],
     bearbeitbareTypen: [],

@@ -8,7 +8,7 @@
  * reicht der globale Teil – Leitungen dürfen weder umhängen noch anlegen (gemessen O0 §3), und ein Gruppen-Admin hat
  * intern `+edit group hierarchy: false`, darf es aber trotzdem (O0 §4).
  */
-import { idsAusRecht, rechteAntwortPruefen } from '../ct/rechte';
+import { idsAusRecht, rechteAntwortPruefen, rechteAus, STANDARD_ADMIN_RECHT } from '../ct/rechte';
 
 export interface OrgRechte {
   /** Gruppen verwalten (umhängen, anlegen, löschen) – für alle Gruppen. */
@@ -23,6 +23,12 @@ export interface OrgRechte {
   mitgliederAlle: boolean;
   mitgliederGruppen: number[];
   mitgliederTypen: number[];
+  /**
+   * „Berechtigungen verwalten“ (`churchcore: administer persons`, O9-F8) – NICHT dasselbe wie `gruppenVerwalten`. Nur wer
+   * es hat, darf die Regeln der Wechsel-Gruppen lesen (`GET /dynamicgroups/{id}/ruleset`) und sieht, welche Wechseltage
+   * dort eingetragen sind. Gelesen über `rechteAus` wie in Musik-App und Dienstplaner – keine zweite Auswertung.
+   */
+  rechteVerwalten: boolean;
 }
 
 /**
@@ -132,5 +138,6 @@ export function orgRechteAus(
     mitgliederAlle: db['edit group memberships'] === true,
     mitgliederGruppen: idsAusRecht(db['edit group memberships of group']) ?? [],
     mitgliederTypen: idsAusRecht(db['edit group memberships of grouptype']) ?? [],
+    rechteVerwalten: rechteAus(data, STANDARD_ADMIN_RECHT, fehler).isAdmin,
   };
 }

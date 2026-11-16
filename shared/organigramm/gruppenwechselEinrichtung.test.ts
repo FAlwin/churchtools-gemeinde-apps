@@ -36,30 +36,6 @@ describe('einrichtungAus', () => {
     );
   });
 
-  it('„eingetragen bis“: ein gültiges Jahr bleibt erhalten', () => {
-    expect(einrichtungAus(gespeichert({ ...gut(), eingetragenBis: 2029 }))?.eingetragenBis).toBe(
-      2029,
-    );
-  });
-
-  it('„eingetragen bis“ fehlt → nicht bekannt, aber keine Ablehnung (und kein leeres Feld im Ergebnis)', () => {
-    const e = einrichtungAus(gespeichert(gut()));
-    expect(e).not.toBeNull();
-    expect(e && 'eingetragenBis' in e).toBe(false);
-  });
-
-  it.each([
-    ['Text', '2029'],
-    ['Kommazahl', 2029.5],
-    ['zu klein', 29],
-    ['zu groß', 20290],
-    ['null', null],
-  ])('„eingetragen bis“ ungültig (%s) → wie fehlend, die Einrichtung bleibt lesbar', (_, wert) => {
-    const e = einrichtungAus(gespeichert({ ...gut(), eingetragenBis: wert }));
-    expect(e).toEqual(gut());
-    expect(e && 'eingetragenBis' in e).toBe(false);
-  });
-
   it.each([
     ['kein Objekt', 'x'],
     ['ohne Einstellung', { ...gut(), einstellung: undefined }],

@@ -348,7 +348,7 @@ export interface WechselRollen {
 /**
  * **Das Fenster eines Jahres in der Kinder-Regel der Wechsel-Gruppe**: `[Ankündigung, Aufnahme-Ende)` und „geboren bis …“.
  * Die EINE Stelle, die es baut – `wechselGruppenRegeln` setzt die Regel daraus zusammen, und der Abgleich mit dem, was in
- * ChurchTools steht (O9-4, `regelAbweichungen`), sucht genau dieses Fenster dort.
+ * ChurchTools steht (O9-4, `jahrStaende`), sucht genau dieses Fenster dort.
  */
 export const kinderFenster = (u: Uebergang, j: Wechseljahr) => ({
   and: [

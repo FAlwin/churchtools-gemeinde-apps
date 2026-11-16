@@ -247,6 +247,7 @@ const rechte = (x: Partial<OrgRechte> = {}): OrgRechte => ({
   mitgliederAlle: false,
   mitgliederGruppen: [],
   mitgliederTypen: [],
+  rechteVerwalten: false,
   ...x,
 });
 

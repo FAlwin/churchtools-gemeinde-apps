@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { heuteImKalender } from '@shared/ct/zeit';
 import {
   GRUNDWERTE,
@@ -13,14 +13,14 @@ import type { OrgRechte } from '@shared/organigramm/rechte';
 import type { KjDaten, KjZugang } from '@shared/organigramm/gruppenwechselSicht';
 import { KinderJugend } from './KinderJugend';
 import { ladeFerien, ladeKjDaten } from './ladeKinderJugend';
-import { ladeRegelAbgleich } from './ladeRegelAbgleich';
+import { ladeRegelStand, type RegelStand } from './ladeRegelStand';
 import type { Start } from './start';
 
 vi.mock('./ladeKinderJugend', () => ({ ladeFerien: vi.fn(), ladeKjDaten: vi.fn() }));
-vi.mock('./ladeRegelAbgleich', () => ({ ladeRegelAbgleich: vi.fn() }));
+vi.mock('./ladeRegelStand', () => ({ ladeRegelStand: vi.fn() }));
 const ferienLaden = vi.mocked(ladeFerien);
 const kjLaden = vi.mocked(ladeKjDaten);
-const abgleichLaden = vi.mocked(ladeRegelAbgleich);
+const regelLaden = vi.mocked(ladeRegelStand);
 
 const FISCHE = 50;
 const JUNGSCHAR = 51;
@@ -38,7 +38,7 @@ const FERIEN = sommerferienAus(
 );
 const JAHRE: Wechseljahr[] = wechseljahre(FERIEN, GRUNDWERTE);
 
-const einrichtung = (eingetragenBis?: number): Einrichtung =>
+const einrichtung = (): Einrichtung =>
   einrichtungAus({
     einstellung: {
       ...GRUNDWERTE,
@@ -49,7 +49,6 @@ const einrichtung = (eingetragenBis?: number): Einrichtung =>
     },
     bereichGruppeId: 53,
     wechselGruppen: [{ vonGruppeId: FISCHE, nachGruppeId: JUNGSCHAR, gruppeId: WECHSEL }],
-    ...(eingetragenBis === undefined ? {} : { eingetragenBis }),
   })!;
 
 const DATEN: KjDaten = {
@@ -61,8 +60,10 @@ const DATEN: KjDaten = {
   geburtstage: new Map(),
 };
 
-const rechte = (gruppenVerwalten: boolean): OrgRechte => ({
-  gruppenVerwalten,
+const rechte = (rechteVerwalten: boolean): OrgRechte => ({
+  // „Berechtigungen verwalten“ – NICHT „Gruppen verwalten“: Das zweite gibt hier nichts frei (O9-F8).
+  gruppenVerwalten: true,
+  rechteVerwalten,
   anlegbareTypen: [],
   bearbeitbareGruppen: [],
   bearbeitbareTypen: [],
@@ -77,12 +78,22 @@ const LEITUNG: KjZugang = { art: 'leitung', stufen: [FISCHE] };
 
 const onAbgemeldet = () => {};
 
-function zeigen(o: { bis?: number; zugang?: KjZugang; admin?: boolean } = {}) {
-  const start = { ...START, rechte: rechte(o.admin ?? false) };
+/** Regeln, die bis zu diesem Jahr lückenlos eingetragen sind. */
+const regelBis = (bis: number): RegelStand => ({
+  art: 'da',
+  staende: JAHRE.map((j) => ({
+    jahr: j.jahr,
+    stand: j.jahr <= bis ? { art: 'eingetragen' } : { art: 'fehlt' },
+  })),
+  bis,
+});
+
+function zeigen(o: { zugang?: KjZugang; recht?: boolean } = {}) {
+  const start = { ...START, rechte: rechte(o.recht ?? false) };
   return render(
     <KinderJugend
       start={start}
-      einrichtung={einrichtung(o.bis)}
+      einrichtung={einrichtung()}
       zugang={o.zugang ?? BEREICH}
       onAbgemeldet={onAbgemeldet}
     />,
@@ -94,8 +105,8 @@ beforeEach(() => {
   ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE, ferien: FERIEN });
   kjLaden.mockReset();
   kjLaden.mockResolvedValue({ art: 'da', daten: DATEN, rechte: new Map() });
-  abgleichLaden.mockReset();
-  abgleichLaden.mockResolvedValue({ abweichungen: [], nichtPruefbar: [] });
+  regelLaden.mockReset();
+  regelLaden.mockResolvedValue(regelBis(JAHR + 1));
 });
 afterEach(cleanup);
 
@@ -108,36 +119,60 @@ describe('Unterreiter „Wechseltage“', () => {
   });
 
   it('Leitungen einer Stufe sehen ihn nicht', async () => {
-    zeigen({ zugang: LEITUNG });
+    zeigen({ zugang: LEITUNG, recht: true });
     await screen.findByRole('button', { name: 'Meine Gruppe' });
     expect(screen.queryByRole('button', { name: 'Wechseltage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Wechseltage' })).toBeNull();
   });
 
-  it('öffnet die Seite mit der Tabelle der Jahre aus dem Ferienkalender', async () => {
-    zeigen({ bis: JAHR + 1 });
+  it('mit dem Recht „Berechtigungen verwalten“: Tabelle mit Spalte „In den Regeln“ aus den Regeln', async () => {
+    zeigen({ recht: true });
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
     expect(screen.getByRole('heading', { name: 'Wechseltage' })).toBeTruthy();
     expect(screen.getByRole('cell', { name: String(JAHR) })).toBeTruthy();
     expect(screen.getByRole('cell', { name: String(JAHR + 2) })).toBeTruthy();
-    expect(screen.getAllByText('eingetragen')).toHaveLength(2);
+    expect(await screen.findAllByText('eingetragen')).toHaveLength(2);
     expect(screen.getByText('fehlt noch')).toBeTruthy();
   });
 
-  it('Admin: die Regeln in ChurchTools werden abgefragt, Bereichsleitung ohne Admin-Recht: nicht', async () => {
-    const { unmount } = zeigen({ bis: JAHR + 1, admin: true });
+  it('Regeln werden mit dem aktuellen Wechseljahr und den späteren Jahren abgefragt – einmal, beim Laden', async () => {
+    zeigen({ recht: true });
+    await screen.findByRole('button', { name: 'Wechseltage' });
+    expect(regelLaden).toHaveBeenCalledTimes(1);
+    const [, jahre, naechstes] = regelLaden.mock.calls[0];
+    expect(jahre.map((j) => j.jahr)).toEqual([JAHR, JAHR + 1, JAHR + 2]);
+    expect(naechstes).toBe(JAHR);
+  });
+
+  it('ohne das Recht (auch als Gruppen-Admin!): keine Abfrage, keine Spalte', async () => {
+    zeigen({ recht: false });
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
-    expect(abgleichLaden).toHaveBeenCalledTimes(1);
-    unmount();
-    abgleichLaden.mockClear();
-    zeigen({ bis: JAHR + 1, admin: false });
+    expect(regelLaden).not.toHaveBeenCalled();
+    expect(screen.getByRole('cell', { name: String(JAHR) })).toBeTruthy();
+    expect(screen.queryByRole('columnheader', { name: 'In den Regeln' })).toBeNull();
+    expect(screen.queryByText(/eingetragen|fehlt noch/)).toBeNull();
+  });
+
+  it('Regeln nicht prüfbar (z. B. 401 ohne Recht): „nicht prüfbar“, weder Abmelden noch Erinnerung', async () => {
+    regelLaden.mockResolvedValue({ art: 'nichtPruefbar' });
+    const abgemeldet = vi.fn();
+    render(
+      <KinderJugend
+        start={{ ...START, rechte: rechte(true) }}
+        einrichtung={einrichtung()}
+        zugang={BEREICH}
+        onAbgemeldet={abgemeldet}
+      />,
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
-    expect(abgleichLaden).not.toHaveBeenCalled();
+    expect(await screen.findAllByText('nicht prüfbar')).toHaveLength(3);
+    expect(abgemeldet).not.toHaveBeenCalled();
+    expect(screen.queryByText(/fehlen/)).toBeNull();
   });
 
   it('verliert man die Bereichs-Zugehörigkeit, während die Seite offen ist, zeigt sie sich nicht mehr', async () => {
     // Dieselbe Einrichtung und derselbe Start: Sonst lädt der Reiter neu und die Tabelle fehlt aus dem falschen Grund.
-    const e = einrichtung(JAHR + 1);
+    const e = einrichtung();
     const start = { ...START, rechte: rechte(false) };
     const { rerender } = render(
       <KinderJugend start={start} einrichtung={e} zugang={BEREICH} onAbgemeldet={onAbgemeldet} />,
@@ -160,31 +195,48 @@ describe('Unterreiter „Wechseltage“', () => {
   });
 });
 
-describe('Hinweis „läuft aus“ in der Übersicht', () => {
-  it('nur noch das nächste Jahr eingetragen: kurzer gelber Hinweis mit Verweis auf „Wechseltage“', async () => {
-    zeigen({ bis: JAHR });
+describe('Hinweis „läuft aus“ in der Übersicht (nur mit dem Recht)', () => {
+  it('Regeln reichen nur bis zum nächsten Jahr: kurzer gelber Hinweis mit Verweis auf „Wechseltage“', async () => {
+    regelLaden.mockResolvedValue(regelBis(JAHR));
+    zeigen({ recht: true });
     expect(await screen.findByText('Wechseltage fehlen bald.')).toBeTruthy();
     expect(
-      screen.getByText(`Eingetragen sind sie nur noch bis ${JAHR}. Mehr unter „Wechseltage“.`),
+      screen.getByText(`Die Regeln reichen nur noch bis ${JAHR}. Mehr unter „Wechseltage“.`),
     ).toBeTruthy();
   });
 
-  it('das nächste Jahr fehlt schon: „Ab … fehlen Wechseltage“', async () => {
-    zeigen({ bis: JAHR - 1 });
-    expect(await screen.findByText(`Ab ${JAHR} fehlen Wechseltage.`)).toBeTruthy();
+  it('das nächste Jahr fehlt schon: „Ab … fehlen Wechseltage in den Regeln“', async () => {
+    regelLaden.mockResolvedValue(regelBis(JAHR - 1));
+    zeigen({ recht: true });
+    expect(await screen.findByText(`Ab ${JAHR} fehlen Wechseltage in den Regeln.`)).toBeTruthy();
   });
 
-  it.each([
-    ['genug eingetragen', JAHR + 1],
-    ['nicht bekannt', undefined],
-  ])('%s: kein Hinweis', async (_, bis) => {
-    zeigen({ bis });
+  it('genug in den Regeln: kein Hinweis', async () => {
+    zeigen({ recht: true });
     await screen.findByRole('heading', { name: 'Übersicht' });
-    expect(screen.queryByText(/fehlen bald|fehlen Wechseltage/)).toBeNull();
+    await act(async () => {});
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+
+  it('nicht prüfbar: kein Hinweis', async () => {
+    regelLaden.mockResolvedValue({ art: 'nichtPruefbar' });
+    zeigen({ recht: true });
+    await screen.findByRole('heading', { name: 'Übersicht' });
+    await act(async () => {});
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+
+  it('ohne das Recht kein Hinweis – selbst wenn die Regeln auslaufen würden', async () => {
+    regelLaden.mockResolvedValue(regelBis(JAHR - 1));
+    zeigen({ recht: false });
+    await screen.findByRole('heading', { name: 'Übersicht' });
+    await act(async () => {});
+    expect(screen.queryByText(/fehlen/)).toBeNull();
   });
 
   it('Leitungen sehen ihn nicht (sie haben keine Übersicht)', async () => {
-    zeigen({ bis: JAHR, zugang: LEITUNG });
+    regelLaden.mockResolvedValue(regelBis(JAHR));
+    zeigen({ zugang: LEITUNG, recht: true });
     await screen.findByRole('button', { name: 'Meine Gruppe' });
     expect(screen.queryByText('Wechseltage fehlen bald.')).toBeNull();
   });

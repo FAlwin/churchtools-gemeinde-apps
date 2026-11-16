@@ -43,6 +43,7 @@ import {
 import { mitgliederRechteOderNichts, type GruppenRechte } from '@shared/organigramm/rechte';
 import { ausnahmeFehlerText, keinSchalterText } from './ausnahmeTexte';
 import { ladeFerien, ladeKjDaten, type FerienStand, type KjLadeStand } from './ladeKinderJugend';
+import { ladeRegelStand, type RegelStand } from './ladeRegelStand';
 import { ladeTeilnehmerRolle, mitgliedZugriff } from './mitgliedschaft';
 import { Hinweis } from './KjHinweis';
 import type { Start } from './start';
@@ -109,6 +110,25 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
   }, [einrichtung, start.rollen, onAbgemeldet]);
 
   const jahr = ferien.art === 'da' ? aktuellesWechseljahr(ferien.jahre, heute) : null;
+  // Welche Wechseltage in den Regeln von ChurchTools stehen – nur für Leute mit „Berechtigungen verwalten“ (O9-F8):
+  // Nur sie dürfen die Regeln lesen, nur sie sehen Spalte „In ChurchTools“ und die Erinnerung.
+  const darfRegeln = start.rechte.rechteVerwalten;
+  const kuenftig = useMemo(
+    () => (ferien.art === 'da' && jahr ? ferien.jahre.filter((j) => j.jahr >= jahr.jahr) : []),
+    [ferien, jahr],
+  );
+  const [regel, setRegel] = useState<Laden<RegelStand>>({ art: 'laedt' });
+  useEffect(() => {
+    if (!darfRegeln || !jahr || kuenftig.length === 0) return;
+    let aktiv = true;
+    setRegel({ art: 'laedt' });
+    // Wirft nie: 401, 403, Netz und 5xx heißen dort „nicht prüfbar“ (401 ist hier fehlendes Recht, kein Abmelden).
+    void ladeRegelStand(einrichtung, kuenftig, jahr.jahr).then((r) => aktiv && setRegel(r));
+    return () => {
+      aktiv = false;
+    };
+  }, [darfRegeln, einrichtung, kuenftig, jahr]);
+
   // Grenze für „Ausnahme vom letzten Jahr“ – der Wechseltag des Vorjahres (der Ferienkalender lädt ab dem Vorjahr).
   const voriger = ferien.art === 'da' && jahr ? vorigerWechseltag(ferien.jahre, jahr) : null;
   const sichten = useMemo(() => {
@@ -163,10 +183,12 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
 
   const phase = phaseAm(jahr, heute);
   const bereich = zugang.art === 'bereich';
-  // Admin = wer „Berechtigungen verwalten“ hat – dieselbe Angabe wie in `App` für „Neue Gliederung“.
-  const admin = start.rechte.gruppenVerwalten;
   // Läuft das Eingetragene aus? Die eine Regel (`wechseltageStand`), das nächste Jahr ist das Jahr des Reiters.
-  const tage = wechseltageStand(einrichtung.eingetragenBis, jahr.jahr);
+  // Ohne das Recht oder ohne lesbare Regeln: keine Erinnerung.
+  const tage = wechseltageStand(
+    darfRegeln && regel.art === 'da' ? regel.bis : undefined,
+    jahr.jahr,
+  );
   const offeneSicht = sichten.find((s) => s.stufe.gruppeId === stufeWahl) ?? null;
   const kindOeffnen = (stufe: GruppenSicht) => (kind: KindZeile) =>
     setOffenesKind({ personId: kind.personId, stufeId: stufe.stufe.gruppeId });
@@ -236,9 +258,8 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           ferien={ferien.ferien}
           phase={phase}
           sichten={sichten}
-          admin={admin}
+          regel={darfRegeln ? regel : null}
           tage={tage}
-          onAbgemeldet={onAbgemeldet}
         />
       )}
       {offen && offenKind && (

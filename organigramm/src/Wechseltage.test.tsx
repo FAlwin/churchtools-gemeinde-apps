@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { ApiError } from '@ui/ct/fehler';
 import { tagPunkt } from '@shared/ct/datum';
 import {
   GRUNDWERTE,
   sommerferienAus,
-  uebergaenge,
-  wechselGruppenRegeln,
   wechseljahre,
   type Wechseljahr,
 } from '@shared/organigramm/gruppenwechsel';
@@ -20,21 +17,17 @@ import {
 } from '@shared/organigramm/gruppenwechselSicht';
 import {
   leitungenNachricht,
-  regelAbweichungen,
   wechseltageStand,
   wechseltagText,
 } from '@shared/organigramm/wechseltage';
 import { Wechseltage } from './Wechseltage';
-import { ladeRegelAbgleich } from './ladeRegelAbgleich';
-
-vi.mock('./ladeRegelAbgleich', () => ({ ladeRegelAbgleich: vi.fn() }));
-const abgleichLaden = vi.mocked(ladeRegelAbgleich);
+import type { RegelStand } from './ladeRegelStand';
 
 const FISCHE = 50;
 const JUNGSCHAR = 51;
 const WECHSEL = 52;
 
-const basis = (eingetragenBis?: number): Einrichtung =>
+const basis = (): Einrichtung =>
   einrichtungAus({
     einstellung: {
       ...GRUNDWERTE,
@@ -45,7 +38,6 @@ const basis = (eingetragenBis?: number): Einrichtung =>
     },
     bereichGruppeId: 53,
     wechselGruppen: [{ vonGruppeId: FISCHE, nachGruppeId: JUNGSCHAR, gruppeId: WECHSEL }],
-    ...(eingetragenBis === undefined ? {} : { eingetragenBis }),
   })!;
 
 const FERIEN = sommerferienAus(
@@ -88,42 +80,56 @@ const sichtenFuer = (e: Einrichtung) =>
     (s) => gruppenSicht(e, s.gruppeId, DATEN, J27, J27.ankuendigung, 'immer') ?? [],
   );
 
+/** Regeln, die bis zu diesem Jahr lückenlos eingetragen sind (der Status je Jahr kommt fertig aus dem Loader). */
+const regelBis = (bis: number): RegelStand => ({
+  art: 'da',
+  staende: JAHRE.map((j) => ({
+    jahr: j.jahr,
+    stand: j.jahr <= bis ? { art: 'eingetragen' } : { art: 'fehlt' },
+  })),
+  bis,
+});
+
 function zeigen(
-  o: { bis?: number; admin?: boolean; phase?: Phase; onAbgemeldet?: (e: unknown) => void } = {},
+  o: {
+    /** `null` = ohne das Recht (Bereichsleitung): keine Spalte. */
+    regel?: Parameters<typeof Wechseltage>[0]['regel'];
+    phase?: Phase;
+    jahr?: Wechseljahr;
+  } = {},
 ) {
-  const e = basis(o.bis);
+  const e = basis();
+  const jahr = o.jahr ?? J27;
+  const regel = o.regel === undefined ? null : o.regel;
   return render(
     <Wechseltage
       einrichtung={e}
-      jahr={J27}
+      jahr={jahr}
       jahre={JAHRE}
       ferien={FERIEN}
       phase={o.phase ?? 'ruhig'}
       sichten={sichtenFuer(e)}
-      admin={o.admin ?? false}
-      tage={wechseltageStand(e.eingetragenBis, J27.jahr)}
-      onAbgemeldet={o.onAbgemeldet ?? (() => {})}
+      regel={regel}
+      tage={wechseltageStand(regel?.art === 'da' ? regel.bis : undefined, jahr.jahr)}
     />,
   );
 }
 
-beforeEach(() => {
-  abgleichLaden.mockReset();
-  abgleichLaden.mockResolvedValue({ abweichungen: [], nichtPruefbar: [] });
-});
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(navigator, 'clipboard');
 });
 
 describe('Wechseltage: Tabelle', () => {
-  it('eine Zeile je Jahr mit Sommerferien, Ankündigung, Wechseltag (mit Wochentag), Stichtag und Status', () => {
-    zeigen({ bis: 2028 });
-    const tabelle = within(screen.getByRole('table'));
-    const zeilen = tabelle.getAllByRole('row').slice(1);
+  it('Admin (mit Recht): eine Zeile je Jahr mit Sommerferien, Ankündigung, Wechseltag, Stichtag und Status', () => {
+    zeigen({ regel: regelBis(2028) });
+    const zeilen = within(screen.getByRole('table')).getAllByRole('row').slice(1);
     expect(zeilen).toHaveLength(3);
-    const z27 = within(zeilen[0]).getAllByRole('cell');
-    expect(z27.map((c) => c.textContent)).toEqual([
+    expect(
+      within(zeilen[0])
+        .getAllByRole('cell')
+        .map((c) => c.textContent),
+    ).toEqual([
       '2027',
       `${tagPunkt('2027-07-19')} – ${tagPunkt('2027-08-31')}`,
       tagPunkt(J27.ankuendigung),
@@ -135,60 +141,86 @@ describe('Wechseltage: Tabelle', () => {
     expect(within(zeilen[2]).getByText('fehlt noch')).toBeTruthy();
   });
 
+  it('Bereichsleitung ohne das Recht: Ferien und Wechseltage, aber keine Spalte „In den Regeln“ und keine Erinnerung', () => {
+    zeigen({ regel: null });
+    expect(screen.queryByRole('columnheader', { name: 'In den Regeln' })).toBeNull();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(5);
+    const z = within(screen.getByRole('table')).getAllByRole('row')[1];
+    expect(within(z).getAllByRole('cell')).toHaveLength(5);
+    expect(screen.queryByText(/eingetragen|fehlt noch|nicht prüfbar/)).toBeNull();
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+
+  it('„unvollständig“ nennt die Übergänge, in denen das Jahr fehlt', () => {
+    zeigen({
+      regel: {
+        art: 'da',
+        staende: [
+          { jahr: 2027, stand: { art: 'unvollstaendig', fehlend: ['Fische → Jungschar'] } },
+          { jahr: 2028, stand: { art: 'fehlt' } },
+          { jahr: 2029, stand: { art: 'fehlt' } },
+        ],
+        bis: 2026,
+      },
+    });
+    expect(screen.getByText('unvollständig – fehlt bei Fische → Jungschar')).toBeTruthy();
+  });
+
+  it('wird noch geprüft: „wird geprüft“, noch keine Erinnerung', () => {
+    zeigen({ regel: { art: 'laedt' } });
+    expect(screen.getAllByText('wird geprüft')).toHaveLength(3);
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+
   it('nur das aktuelle und spätere Jahre – das vergangene Vorjahr steht nicht da', () => {
-    const e = basis(2029);
-    render(
-      <Wechseltage
-        einrichtung={e}
-        jahr={JAHRE[1]}
-        jahre={JAHRE}
-        ferien={FERIEN}
-        phase="ruhig"
-        sichten={sichtenFuer(e)}
-        admin={false}
-        tage={wechseltageStand(2029, 2028)}
-        onAbgemeldet={() => {}}
-      />,
-    );
+    zeigen({ jahr: JAHRE[1], regel: regelBis(2029) });
     expect(screen.queryByRole('cell', { name: '2027' })).toBeNull();
     expect(screen.getByRole('cell', { name: '2028' })).toBeTruthy();
   });
 
-  it('ohne „eingetragen bis“: „nicht bekannt“ in jeder Zeile und ein ruhiger Hinweis – keine Erinnerung', () => {
-    zeigen({});
-    expect(screen.getAllByText('nicht bekannt')).toHaveLength(3);
-    expect(screen.getByText(/erst, wenn ein Admin „Einrichten“ ausgeführt hat/)).toBeTruthy();
-    expect(screen.queryByText(/fehlen bald|fehlen Wechseltage/)).toBeNull();
-  });
-
   it('Tabelle liegt in einer scrollbaren Karte (Handy)', () => {
-    zeigen({ bis: 2028 });
+    zeigen({ regel: regelBis(2028) });
     expect(screen.getByRole('table').closest('section')?.className).toMatch(/rahmen/);
   });
 });
 
-describe('Wechseltage: Erinnerung „läuft aus“', () => {
-  it('nur noch das nächste Jahr eingetragen → gelber Hinweis „fehlen bald“', () => {
-    zeigen({ bis: 2027 });
+describe('Wechseltage: nicht prüfbar', () => {
+  it('Spalte „nicht prüfbar“ und ein ruhiger Hinweis – keine gelbe Erinnerung', () => {
+    zeigen({ regel: { art: 'nichtPruefbar' } });
+    expect(screen.getAllByText('nicht prüfbar')).toHaveLength(3);
+    expect(screen.getByText(/ließ sich gerade nicht prüfen/)).toBeTruthy();
+    expect(screen.getByText(/Es wurde nichts verändert/)).toBeTruthy();
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+});
+
+describe('Wechseltage: Erinnerung „läuft aus“ (nur mit dem Recht)', () => {
+  it('Regeln reichen nur noch bis zum nächsten Jahr → gelber Hinweis „fehlen bald“', () => {
+    zeigen({ regel: regelBis(2027) });
     expect(screen.getByText('Wechseltage fehlen bald.')).toBeTruthy();
-    expect(screen.getByText(/nur noch bis 2027/)).toBeTruthy();
-    expect(screen.getByText(/Admin Bescheid geben/)).toBeTruthy();
+    expect(screen.getByText('Die Regeln reichen nur noch bis 2027.')).toBeTruthy();
   });
 
-  it('das nächste Jahr schon nicht mehr eingetragen → „Ab 2027 fehlen Wechseltage“', () => {
-    zeigen({ bis: 2026 });
-    expect(screen.getByText('Ab 2027 fehlen Wechseltage.')).toBeTruthy();
+  it('das nächste Jahr steht schon nicht in den Regeln → „Ab 2027 fehlen Wechseltage in den Regeln“', () => {
+    zeigen({ regel: regelBis(2026) });
+    expect(screen.getByText('Ab 2027 fehlen Wechseltage in den Regeln.')).toBeTruthy();
+    expect(screen.getByText(/„Schulferien NRW“ – rechtzeitig nachtragen/)).toBeTruthy();
   });
 
-  it('mehr als das nächste Jahr eingetragen → kein Hinweis', () => {
-    zeigen({ bis: 2029 });
+  it('mehr als das nächste Jahr in den Regeln → kein Hinweis', () => {
+    zeigen({ regel: regelBis(2029) });
+    expect(screen.queryByText(/fehlen/)).toBeNull();
+  });
+
+  it('ohne das Recht gibt es nie eine Erinnerung – auch wenn sie nötig wäre', () => {
+    zeigen({ regel: null });
     expect(screen.queryByText(/fehlen/)).toBeNull();
   });
 });
 
 describe('Wechseltage: Leitungen Bescheid geben', () => {
   it('vor der Ankündigung: nur der Satz mit dem Datum, kein Text zum Kopieren', () => {
-    zeigen({ bis: 2029, phase: 'ruhig' });
+    zeigen({ phase: 'ruhig' });
     expect(
       screen.getByText(`Ab der Ankündigung am ${tagPunkt(J27.ankuendigung)} steht hier ein Text`, {
         exact: false,
@@ -199,16 +231,18 @@ describe('Wechseltage: Leitungen Bescheid geben', () => {
   });
 
   it('ab der Ankündigung: der Text der reinen Funktion, mit den Zahlen der Übersicht', () => {
-    zeigen({ bis: 2029, phase: 'angekuendigt' });
-    const feld = screen.getByRole('textbox', { name: 'Text für die Leitungen' });
+    zeigen({ phase: 'angekuendigt' });
+    const feld = screen.getByRole<HTMLTextAreaElement>('textbox', {
+      name: 'Text für die Leitungen',
+    });
     expect(feld).toHaveProperty('readOnly', true);
-    const erwartet = leitungenNachricht(J27, sichtenFuer(basis(2029)));
-    expect((feld as HTMLTextAreaElement).value).toBe(erwartet);
+    const erwartet = leitungenNachricht(J27, sichtenFuer(basis()));
+    expect(feld.value).toBe(erwartet);
     expect(erwartet).toContain('• Fische → Jungschar: 2 Kinder');
   });
 
   it('nach dem Wechseltag braucht es keinen Text mehr', () => {
-    zeigen({ bis: 2029, phase: 'wechsel' });
+    zeigen({ phase: 'wechsel' });
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.getByText(/keinen Bescheid mehr/)).toBeTruthy();
   });
@@ -219,10 +253,10 @@ describe('Wechseltage: Leitungen Bescheid geben', () => {
       value: { writeText: schreiben },
       configurable: true,
     });
-    zeigen({ bis: 2029, phase: 'angekuendigt' });
+    zeigen({ phase: 'angekuendigt' });
     fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }));
     await act(async () => {});
-    expect(schreiben).toHaveBeenCalledWith(leitungenNachricht(J27, sichtenFuer(basis(2029))));
+    expect(schreiben).toHaveBeenCalledWith(leitungenNachricht(J27, sichtenFuer(basis())));
     expect(screen.getByRole('button', { name: 'Kopiert' })).toBeTruthy();
   });
 
@@ -231,87 +265,12 @@ describe('Wechseltage: Leitungen Bescheid geben', () => {
       value: { writeText: vi.fn().mockRejectedValue(new Error('nein')) },
       configurable: true,
     });
-    zeigen({ bis: 2029, phase: 'angekuendigt' });
+    zeigen({ phase: 'angekuendigt' });
     fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }));
     await act(async () => {});
     expect(screen.getByText('Markiert – jetzt kopieren')).toBeTruthy();
     const feld = screen.getByRole<HTMLTextAreaElement>('textbox');
     expect(feld.selectionEnd - feld.selectionStart).toBe(feld.value.length);
     expect(screen.getByRole('button', { name: 'Text kopieren' })).toBeTruthy();
-  });
-});
-
-describe('Wechseltage: Abgleich mit ChurchTools (nur Admins)', () => {
-  const uebergang = uebergaenge(basis().einstellung)[0];
-  const fehlend = regelAbweichungen(
-    uebergang,
-    WECHSEL,
-    JAHRE,
-    2029,
-    wechselGruppenRegeln(
-      uebergang,
-      JAHRE.filter((j) => j.jahr <= 2028),
-      { teilnehmer: 1, leiter: 2 },
-    ),
-  );
-
-  it('Nicht-Admins: die Regeln werden gar nicht erst abgefragt', () => {
-    zeigen({ bis: 2029, admin: false });
-    expect(abgleichLaden).not.toHaveBeenCalled();
-  });
-
-  it('Admin ohne „eingetragen bis“: nichts zu vergleichen, keine Abfrage', () => {
-    zeigen({ admin: true });
-    expect(abgleichLaden).not.toHaveBeenCalled();
-  });
-
-  it('Admin: fragt mit „eingetragen bis“ und den künftigen Jahren; passt es, steht nichts da', async () => {
-    zeigen({ bis: 2029, admin: true });
-    await screen.findByRole('table');
-    await act(async () => {});
-    expect(abgleichLaden).toHaveBeenCalledTimes(1);
-    const [e, jahre, bis] = abgleichLaden.mock.calls[0];
-    expect(e.eingetragenBis).toBe(2029);
-    expect(jahre.map((j) => j.jahr)).toEqual([2027, 2028, 2029]);
-    expect(bis).toBe(2029);
-    expect(screen.queryByText(/passen nicht/)).toBeNull();
-    expect(screen.queryByText(/ließ sich gerade nicht prüfen/)).toBeNull();
-  });
-
-  it('Abweichung: gelber Hinweis mit Gruppe und Jahr', async () => {
-    expect(fehlend).toHaveLength(1);
-    abgleichLaden.mockResolvedValue({ abweichungen: fehlend, nichtPruefbar: [] });
-    zeigen({ bis: 2029, admin: true });
-    expect(
-      await screen.findByText(
-        'Die Regeln in ChurchTools passen nicht zu „eingetragen bis 2029“: Fische 7–9 → Jungschar: 2029 fehlt.',
-      ),
-    ).toBeTruthy();
-  });
-
-  it('nicht lesbar (vorübergehend): sagt es, ohne eine Abweichung zu behaupten', async () => {
-    abgleichLaden.mockResolvedValue({ abweichungen: [], nichtPruefbar: ['Fische → Jungschar'] });
-    zeigen({ bis: 2029, admin: true });
-    expect(await screen.findByText(/ließ sich gerade nicht prüfen/)).toBeTruthy();
-    expect(screen.getByText(/Fische → Jungschar/, { exact: false })).toBeTruthy();
-    expect(screen.queryByText(/passen nicht/)).toBeNull();
-  });
-
-  it('unerwarteter Fehler beim Prüfen: „ließ sich gerade nicht prüfen“, die Seite bleibt', async () => {
-    abgleichLaden.mockRejectedValue(new TypeError('Failed to fetch'));
-    const abgemeldet = vi.fn();
-    zeigen({ bis: 2029, admin: true, onAbgemeldet: abgemeldet });
-    expect(await screen.findByText(/ließ sich gerade nicht prüfen/)).toBeTruthy();
-    expect(abgemeldet).not.toHaveBeenCalled();
-    expect(screen.getByRole('table')).toBeTruthy();
-  });
-
-  it('abgemeldet (401) geht an die ganze Seite', async () => {
-    const x = new ApiError(401, 'abgemeldet');
-    abgleichLaden.mockRejectedValue(x);
-    const abgemeldet = vi.fn();
-    zeigen({ bis: 2029, admin: true, onAbgemeldet: abgemeldet });
-    await act(async () => {});
-    expect(abgemeldet).toHaveBeenCalledWith(x);
   });
 });

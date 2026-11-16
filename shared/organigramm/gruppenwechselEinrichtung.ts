@@ -29,12 +29,6 @@ export interface Einrichtung {
   bereichGruppeId: number;
   /** Je Übergang höchstens eine. Fehlt eine, gibt es für diesen Übergang (noch) keine Ausnahmen und keine Ankündigung. */
   wechselGruppen: WechselGruppe[];
-  /**
-   * Bis zu welchem Wechseljahr die Regeln in ChurchTools stehen (O9-4). **Fehlt er, ist es nicht bekannt** – kein Fehler
-   * und kein Hinweis, der immer leuchtet: Geschrieben wird er erst von „Einrichten/Nachtragen“ (O9-5). Ein ungültiger
-   * Wert (keine ganze vierstellige Jahreszahl) zählt wie fehlend.
-   */
-  eingetragenBis?: number;
 }
 
 const id = (x: unknown): number | null =>
@@ -101,9 +95,7 @@ export function einrichtungAus(roh: unknown): Einrichtung | null {
     gesehen.add(schluessel);
     wechselGruppen.push({ vonGruppeId, nachGruppeId, gruppeId });
   }
-  const bis = zahl(r.eingetragenBis);
-  const eingetragenBis = bis !== null && bis >= 1000 && bis <= 9999 ? { eingetragenBis: bis } : {};
-  return { einstellung, bereichGruppeId, wechselGruppen, ...eingetragenBis };
+  return { einstellung, bereichGruppeId, wechselGruppen };
 }
 
 /** Die Wechsel-Gruppe, in die Kinder AUS dieser Stufe kommen – `null`, wenn sie fehlt (oder die Stufe die letzte ist). */

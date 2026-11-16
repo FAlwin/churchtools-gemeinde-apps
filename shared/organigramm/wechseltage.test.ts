@@ -18,14 +18,15 @@ import {
   type KjMitglied,
 } from './gruppenwechselSicht';
 import {
-  abweichungText,
-  jahrStatus,
+  jahrStaende,
   kurz,
   leitungenNachricht,
-  regelAbweichungen,
+  regelnReichenBis,
   tageHinweis,
   wechseltageStand,
   wechseltagText,
+  type GruppenRegeln,
+  type JahrStand,
 } from './wechseltage';
 
 // ── Erzeuger statt Literale: Einrichtung über `einrichtungAus`, Jahre über `sommerferienAus` + `wechseljahre` ──────────
@@ -63,13 +64,12 @@ const JAHRE: Wechseljahr[] = wechseljahre(
   ),
   GRUNDWERTE,
 );
-const [J27, J28, J29] = JAHRE;
+const [J27] = JAHRE;
 const U: Uebergang[] = uebergaenge(EINRICHTUNG.einstellung);
-const FISCHE_JUNGSCHAR = U[1];
 const ROLLEN = { teilnehmer: 1, leiter: 2 };
 
 describe('wechseltageStand – die eine Regel für „läuft aus“', () => {
-  it('ohne „eingetragen bis“ ist es nicht bekannt (kein Hinweis)', () => {
+  it('ohne lesbare Regeln ist es nicht bekannt (keine Erinnerung)', () => {
     expect(wechseltageStand(undefined, 2027)).toEqual({ art: 'unbekannt' });
     expect(tageHinweis({ art: 'unbekannt' }, 'Schulferien NRW')).toBeNull();
   });
@@ -89,26 +89,122 @@ describe('wechseltageStand – die eine Regel für „läuft aus“', () => {
     expect(tageHinweis(s, 'Schulferien NRW')).toBeNull();
   });
 
-  it('Hinweis „bald“: Titel, Jahr und Weg – auf der Seite ausführlich, in der Übersicht kurz', () => {
+  it('Hinweis „bald“: Titel und Jahr – ohne Versprechen („Einrichten“, „mit einem Klick“)', () => {
     const h = tageHinweis(wechseltageStand(2027, 2027), 'Schulferien NRW')!;
     expect(h.titel).toBe('Wechseltage fehlen bald.');
-    expect(h.text).toContain('nur noch bis 2027');
-    expect(h.text).toContain('Admin Bescheid geben');
-    expect(h.kurz).toBe('Eingetragen sind sie nur noch bis 2027. Mehr unter „Wechseltage“.');
+    expect(h.text).toBe('Die Regeln reichen nur noch bis 2027.');
+    expect(h.kurz).toBe('Die Regeln reichen nur noch bis 2027. Mehr unter „Wechseltage“.');
+    expect(`${h.titel}${h.text}${h.kurz}`).not.toMatch(/Klick|Einrichten|Admin/);
   });
 
   it('Hinweis „fehlt“: nennt das erste fehlende Jahr und den Kalender', () => {
     const h = tageHinweis(wechseltageStand(2026, 2027), 'Schulferien NRW')!;
-    expect(h.titel).toBe('Ab 2027 fehlen Wechseltage.');
-    expect(h.text).toContain('„Schulferien NRW“');
+    expect(h.titel).toBe('Ab 2027 fehlen Wechseltage in den Regeln.');
+    expect(h.text).toBe(
+      'Die Sommerferien dafür stehen schon im Kalender „Schulferien NRW“ – rechtzeitig nachtragen.',
+    );
     expect(h.kurz).toContain('Mehr unter „Wechseltage“');
+    expect(`${h.titel}${h.text}${h.kurz}`).not.toMatch(/Klick|Einrichten|Admin/);
+  });
+});
+
+describe('jahrStaende – gegen den Erzeuger geprüft', () => {
+  const rollen = ROLLEN;
+  const regelnBis = (u: Uebergang, letztes: number) =>
+    wechselGruppenRegeln(
+      u,
+      JAHRE.filter((j) => j.jahr <= letztes),
+      rollen,
+    );
+  const gruppen = (bisA: number, bisB: number) => [
+    { uebergang: U[0], regeln: regelnBis(U[0], bisA) },
+    { uebergang: U[1], regeln: regelnBis(U[1], bisB) },
+  ];
+  const arten = (g: GruppenRegeln[]) => jahrStaende(g, JAHRE).map((x) => x.stand.art);
+
+  /** ChurchTools darf die Schlüssel anders ordnen. */
+  const umgekehrt = (x: unknown): unknown =>
+    Array.isArray(x)
+      ? x.map(umgekehrt)
+      : x && typeof x === 'object'
+        ? Object.fromEntries(
+            Object.entries(x)
+              .reverse()
+              .map(([k, v]) => [k, umgekehrt(v)]),
+          )
+        : x;
+
+  it('Regeln, wie die Erweiterung sie schreibt, ergeben „eingetragen“ für genau die Jahre darin', () => {
+    expect(arten(gruppen(2028, 2028))).toEqual(['eingetragen', 'eingetragen', 'fehlt']);
+    expect(arten(gruppen(2027, 2027))).toEqual(['eingetragen', 'fehlt', 'fehlt']);
+    expect(arten(gruppen(2029, 2029))).toEqual(['eingetragen', 'eingetragen', 'eingetragen']);
   });
 
-  it('Status je Jahr: bis einschließlich „eingetragen bis“ eingetragen, danach fehlt es, ohne Angabe unbekannt', () => {
-    expect(jahrStatus(2028, 2028)).toBe('eingetragen');
-    expect(jahrStatus(2028, 2027)).toBe('eingetragen');
-    expect(jahrStatus(2028, 2029)).toBe('fehlt');
-    expect(jahrStatus(undefined, 2029)).toBe('unbekannt');
+  it('auch in anderer Schlüsselreihenfolge und in `data` verpackt', () => {
+    const g = gruppen(2028, 2028);
+    expect(
+      jahrStaende(
+        g.map((x) => ({ ...x, regeln: umgekehrt(x.regeln) })),
+        JAHRE,
+      ).map((x) => x.stand.art),
+    ).toEqual(['eingetragen', 'eingetragen', 'fehlt']);
+    expect(
+      jahrStaende(
+        g.map((x) => ({ ...x, regeln: { data: x.regeln } })),
+        JAHRE,
+      ).map((x) => x.stand.art),
+    ).toEqual(['eingetragen', 'eingetragen', 'fehlt']);
+  });
+
+  it('nur in einem Teil der Wechsel-Gruppen → „unvollständig“ mit den fehlenden Übergängen', () => {
+    const st = jahrStaende(gruppen(2029, 2027), JAHRE);
+    expect(st[0].stand).toEqual({ art: 'eingetragen' });
+    expect(st[1].stand).toEqual({ art: 'unvollstaendig', fehlend: ['Fische 7–9 → Jungschar'] });
+    expect(st[2].stand).toEqual({ art: 'unvollstaendig', fehlend: ['Fische 7–9 → Jungschar'] });
+  });
+
+  it('leere Regel-Liste: „fehlt“; Fenster einer anderen Stufe zählen nicht (anderes „geboren bis“)', () => {
+    expect(arten([{ uebergang: U[1], regeln: [] }])).toEqual(['fehlt', 'fehlt', 'fehlt']);
+    expect(arten([{ uebergang: U[1], regeln: wechselGruppenRegeln(U[0], JAHRE, rollen) }])).toEqual(
+      ['fehlt', 'fehlt', 'fehlt'],
+    );
+  });
+
+  it('ohne Wechsel-Gruppen ist nichts „eingetragen“', () => {
+    expect(jahrStaende([], JAHRE).map((x) => x.stand.art)).toEqual(['fehlt', 'fehlt', 'fehlt']);
+  });
+
+  it('ein handgeschriebenes Fenster, das nicht dem Erzeuger entspricht, zählt nicht', () => {
+    const hand = { and: [{ '<=': ['2026-11-01', { ct_date: ['now'] }] }] };
+    expect(arten([{ uebergang: U[1], regeln: [{ filter: hand }] }])).toEqual([
+      'fehlt',
+      'fehlt',
+      'fehlt',
+    ]);
+  });
+});
+
+describe('regelnReichenBis – lückenlose Kette ab dem nächsten Wechsel', () => {
+  const e: JahrStand = { art: 'eingetragen' };
+  const f: JahrStand = { art: 'fehlt' };
+  const u: JahrStand = { art: 'unvollstaendig', fehlend: ['x'] };
+  const st = (...arten: JahrStand[]) => arten.map((stand, i) => ({ jahr: 2027 + i, stand }));
+
+  it('alles eingetragen → bis zum letzten Jahr', () => {
+    expect(regelnReichenBis(st(e, e, e), 2027)).toBe(2029);
+  });
+  it('Kette bricht an einer Lücke ab – spätere Jahre zählen nicht', () => {
+    expect(regelnReichenBis(st(e, f, e), 2027)).toBe(2027);
+  });
+  it('schon das nächste Jahr fehlt oder ist unvollständig → bis davor', () => {
+    expect(regelnReichenBis(st(f, e, e), 2027)).toBe(2026);
+    expect(regelnReichenBis(st(u, e, e), 2027)).toBe(2026);
+  });
+  it('Jahre vor dem nächsten Wechsel werden übersprungen', () => {
+    expect(regelnReichenBis(st(f, e, e), 2028)).toBe(2029);
+  });
+  it('ohne Jahre: bis vor das nächste Jahr', () => {
+    expect(regelnReichenBis([], 2027)).toBe(2026);
   });
 });
 
@@ -193,81 +289,5 @@ describe('leitungenNachricht', () => {
     const text = leitungenNachricht(J27, s);
     expect(text).toContain('• Fische → Jungschar: Zahl gerade nicht lesbar');
     expect(text).not.toContain('Fische → Jungschar: 0');
-  });
-});
-
-describe('regelAbweichungen – gegen den Erzeuger geprüft', () => {
-  const regelnBis = (letztes: number) =>
-    wechselGruppenRegeln(
-      FISCHE_JUNGSCHAR,
-      JAHRE.filter((j) => j.jahr <= letztes),
-      ROLLEN,
-    );
-  const abw = (bis: number, regeln: unknown, jahre: readonly Wechseljahr[] = JAHRE) =>
-    regelAbweichungen(FISCHE_JUNGSCHAR, W_FISCHE, jahre, bis, regeln);
-
-  /** ChurchTools darf die Schlüssel anders ordnen. */
-  const umgekehrt = (x: unknown): unknown =>
-    Array.isArray(x)
-      ? x.map(umgekehrt)
-      : x && typeof x === 'object'
-        ? Object.fromEntries(
-            Object.entries(x)
-              .reverse()
-              .map(([k, v]) => [k, umgekehrt(v)]),
-          )
-        : x;
-
-  it('Regeln, wie die Erweiterung sie schreibt, passen zu „eingetragen bis“ – für jedes Jahr', () => {
-    expect(abw(2028, regelnBis(2028))).toEqual([]);
-    expect(abw(2027, regelnBis(2027))).toEqual([]);
-    expect(abw(2029, regelnBis(2029))).toEqual([]);
-  });
-
-  it('auch in anderer Schlüsselreihenfolge und in `data` verpackt', () => {
-    expect(abw(2028, umgekehrt(regelnBis(2028)))).toEqual([]);
-    expect(abw(2028, { data: regelnBis(2028) })).toEqual([]);
-  });
-
-  it('ein Jahr bis „eingetragen bis“ fehlt in den Regeln → „fehlt“ mit Gruppe und Jahr', () => {
-    expect(abw(2029, regelnBis(2028))).toEqual([
-      { gruppeId: W_FISCHE, uebergang: 'Fische 7–9 → Jungschar', jahr: 2029, art: 'fehlt' },
-    ]);
-  });
-
-  it('Jahre über „eingetragen bis“ hinaus in den Regeln → „zuviel“', () => {
-    expect(abw(2027, regelnBis(2029))).toEqual([
-      expect.objectContaining({ jahr: 2028, art: 'zuviel' }),
-      expect.objectContaining({ jahr: 2029, art: 'zuviel' }),
-    ]);
-  });
-
-  it('leere Regel-Liste: alle eingetragenen Jahre fehlen', () => {
-    expect(abw(2028, []).map((a) => [a.jahr, a.art])).toEqual([
-      [2027, 'fehlt'],
-      [2028, 'fehlt'],
-    ]);
-  });
-
-  it('Fenster einer anderen Stufe zählen nicht (anderes „geboren bis“)', () => {
-    const andere = wechselGruppenRegeln(U[0], JAHRE, ROLLEN);
-    expect(abw(2029, andere).map((a) => a.art)).toEqual(['fehlt', 'fehlt', 'fehlt']);
-  });
-
-  it('nur die übergebenen Jahre werden geprüft (ein vergangenes darf aus den Regeln gefallen sein)', () => {
-    expect(abw(2029, regelnBis(2029).slice(0, 0), [J28, J29]).map((a) => a.jahr)).toEqual([
-      2028, 2029,
-    ]);
-    expect(J27.jahr).toBe(2027);
-  });
-
-  it('Text: Gruppe, Jahr und Art der Abweichung', () => {
-    const text = abweichungText(
-      [...abw(2029, regelnBis(2028)), ...abw(2027, regelnBis(2028))],
-      2029,
-    );
-    expect(text).toBe(
-      'Die Regeln in ChurchTools passen nicht zu „eingetragen bis 2029“: Fische 7–9 → Jungschar: 2029 fehlt, 2028 steht zusätzlich da.',
-    );
   });
 });

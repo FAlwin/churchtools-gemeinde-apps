@@ -1,34 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useKopieren } from '@ui/bedienung/useKopieren';
-import { ApiError } from '@ui/ct/fehler';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import type { Sommerferien, Wechseljahr } from '@shared/organigramm/gruppenwechsel';
 import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
 import type { GruppenSicht, Phase } from '@shared/organigramm/gruppenwechselSicht';
 import {
-  abweichungText,
-  jahrStatus,
   leitungenNachricht,
   tageHinweis,
   wechseltagText,
+  type JahrStand,
   type TageStand,
 } from '@shared/organigramm/wechseltage';
 import { Hinweis } from './KjHinweis';
-import { ladeRegelAbgleich, type RegelAbgleich } from './ladeRegelAbgleich';
+import type { RegelStand } from './ladeRegelStand';
 import styles from './KinderJugend.module.scss';
 
-type AbgleichStand = { art: 'laedt' } | { art: 'da'; abgleich: RegelAbgleich };
-
 /**
- * **Die Seite „Wechseltage“** (Bauplan O9-4, Entwurf `kj-gruppenwechsel-v1`) – nur für Bereichsleitung und Admins:
- * wann die Kinder wechseln und bis wann die Regeln dafür in ChurchTools stehen, die Erinnerung, wenn sie auslaufen,
- * und der Text, den man den Leitungen schickt. Admins sehen zusätzlich, ob die Regeln in ChurchTools zu
- * „eingetragen bis“ passen.
+ * **Die Seite „Wechseltage“** (Bauplan O9-4, Entwurf `kj-gruppenwechsel-v1`, O9-F8) – für Bereichsleitung und Admins:
+ * wann die Kinder wechseln und der Text, den man den Leitungen schickt.
  *
- * Ist „eingetragen bis“ nicht bekannt (erst „Einrichten“ schreibt es), steht in der Tabelle „nicht bekannt“, ein ruhiger
- * Hinweis sagt warum – und es gibt weder Erinnerung noch Abgleich.
+ * Wer „Berechtigungen verwalten“ hat (`regel` ist nicht `null`), sieht zusätzlich die Spalte „In ChurchTools“ – gelesen
+ * aus den Regeln selbst, es gibt keine zweite Quelle – und die Erinnerung, wenn die Regeln auslaufen. Die
+ * Bereichsleitung ohne das Recht sieht weder Spalte noch Erinnerung. Ließen sich die Regeln nicht lesen, steht „nicht
+ * prüfbar“ und ein ruhiger Hinweis, aber keine Erinnerung.
  */
 export function Wechseltage({
   einrichtung,
@@ -37,9 +33,8 @@ export function Wechseltage({
   ferien,
   phase,
   sichten,
-  admin,
+  regel,
   tage,
-  onAbgemeldet,
 }: {
   einrichtung: Einrichtung;
   /** Das aktuelle Wechseljahr des Reiters. */
@@ -49,41 +44,17 @@ export function Wechseltage({
   ferien: readonly Sommerferien[];
   phase: Phase;
   sichten: readonly GruppenSicht[];
-  admin: boolean;
+  /** Was in den Regeln von ChurchTools steht; `null` = man darf es nicht lesen (keine Spalte, keine Erinnerung). */
+  regel: { art: 'laedt' } | RegelStand | null;
   tage: TageStand;
-  onAbgemeldet: (e: unknown) => void;
 }) {
-  const bis = einrichtung.eingetragenBis;
-  // Das aktuelle Jahr und alle späteren – ein vergangenes darf aus den Regeln gefallen sein.
+  // Das aktuelle Jahr und alle späteren – ein vergangenes zeigt die Seite nicht.
   const kuenftig = useMemo(() => jahre.filter((j) => j.jahr >= jahr.jahr), [jahre, jahr]);
   const hinweis = tageHinweis(tage, einrichtung.einstellung.ferienkalender);
-
-  const [abgleich, setAbgleich] = useState<AbgleichStand>({ art: 'laedt' });
-  const [abgleichFehler, setAbgleichFehler] = useState(false);
-  useEffect(() => {
-    // Nur Admins dürfen die Regeln lesen (für alle anderen käme 403), und ohne „eingetragen bis“ gibt es nichts zu vergleichen.
-    if (!admin || bis === undefined) return;
-    let aktiv = true;
-    setAbgleich({ art: 'laedt' });
-    setAbgleichFehler(false);
-    ladeRegelAbgleich(einrichtung, kuenftig, bis).then(
-      (a) => aktiv && setAbgleich({ art: 'da', abgleich: a }),
-      (e: unknown) => {
-        if (!aktiv) return;
-        if (e instanceof ApiError && e.status === 401) onAbgemeldet(e);
-        else setAbgleichFehler(true);
-      },
-    );
-    return () => {
-      aktiv = false;
-    };
-  }, [admin, bis, einrichtung, kuenftig, onAbgemeldet]);
 
   const nachricht = useMemo(() => leitungenNachricht(jahr, sichten), [jahr, sichten]);
   const feld = useRef<HTMLTextAreaElement>(null);
   const { stand, kopieren } = useKopieren(nachricht, feld);
-
-  const ergebnis = admin && bis !== undefined && abgleich.art === 'da' ? abgleich.abgleich : null;
 
   return (
     <>
@@ -96,28 +67,15 @@ export function Wechseltage({
         die Wechsel-Liste, am Wechseltag in die neue Gruppe. Ausnahmen setzen die Leitungen in ihrer
         Gruppe.
       </p>
-      {bis === undefined && (
-        <Hinweis>
-          Bis wann die Wechseltage in ChurchTools stehen, merkt sich die Erweiterung erst, wenn ein
-          Admin „Einrichten“ ausgeführt hat. Bis dahin steht hier „nicht bekannt“.
-        </Hinweis>
-      )}
       {hinweis && (
         <Hinweis gelb>
           <b>{hinweis.titel}</b> {hinweis.text}
         </Hinweis>
       )}
-      {ergebnis && ergebnis.abweichungen.length > 0 && bis !== undefined && (
-        <Hinweis gelb>{abweichungText(ergebnis.abweichungen, bis)}</Hinweis>
-      )}
-      {(abgleichFehler || (ergebnis && ergebnis.nichtPruefbar.length > 0)) && (
+      {regel?.art === 'nichtPruefbar' && (
         <Hinweis>
-          Ob die Regeln in ChurchTools zu „eingetragen bis {bis}“ passen, ließ sich gerade nicht
-          prüfen
-          {ergebnis && ergebnis.nichtPruefbar.length > 0
-            ? ` (${ergebnis.nichtPruefbar.join(', ')})`
-            : ''}
-          . Es wurde nichts verändert.
+          Welche Wechseltage in den Regeln von ChurchTools stehen, ließ sich gerade nicht prüfen. Es
+          wurde nichts verändert.
         </Hinweis>
       )}
       <section className={`${styles.karte} ${styles.rahmen}`} aria-label="Wechseltage je Jahr">
@@ -129,13 +87,12 @@ export function Wechseltage({
               <th scope="col">Ankündigung</th>
               <th scope="col">Wechseltag</th>
               <th scope="col">Stichtag</th>
-              <th scope="col">In ChurchTools</th>
+              {regel && <th scope="col">In den Regeln</th>}
             </tr>
           </thead>
           <tbody>
             {kuenftig.map((j) => {
               const f = ferien.find((x) => x.jahr === j.jahr);
-              const status = jahrStatus(bis, j.jahr);
               return (
                 <tr key={j.jahr}>
                   <td>
@@ -147,23 +104,11 @@ export function Wechseltage({
                     <b>{wechseltagText(j.wechseltag)}</b>
                   </td>
                   <td>{tagPunkt(j.stichtag)}</td>
-                  <td>
-                    <span
-                      className={`${styles.chip} ${
-                        status === 'eingetragen'
-                          ? styles.gruen
-                          : status === 'fehlt'
-                            ? styles.gelb
-                            : styles.grau
-                      }`}
-                    >
-                      {status === 'eingetragen'
-                        ? 'eingetragen'
-                        : status === 'fehlt'
-                          ? 'fehlt noch'
-                          : 'nicht bekannt'}
-                    </span>
-                  </td>
+                  {regel && (
+                    <td>
+                      <StatusChip regel={regel} jahr={j.jahr} />
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -214,4 +159,21 @@ export function Wechseltage({
       </section>
     </>
   );
+}
+
+/** Der Status eines Jahres in den Regeln von ChurchTools – eigene Farbe je Zustand, nie nur Farbe: immer auch Text. */
+function StatusChip({ regel, jahr }: { regel: { art: 'laedt' } | RegelStand; jahr: number }) {
+  const stand: JahrStand | undefined =
+    regel.art === 'da' ? regel.staende.find((x) => x.jahr === jahr)?.stand : undefined;
+  const [farbe, text] =
+    regel.art === 'laedt'
+      ? [styles.grau, 'wird geprüft']
+      : !stand
+        ? [styles.grau, 'nicht prüfbar']
+        : stand.art === 'eingetragen'
+          ? [styles.gruen, 'eingetragen']
+          : stand.art === 'unvollstaendig'
+            ? [styles.gelb, `unvollständig – fehlt bei ${stand.fehlend.join(', ')}`]
+            : [styles.gelb, 'fehlt noch'];
+  return <span className={`${styles.chip} ${farbe}`}>{text}</span>;
 }

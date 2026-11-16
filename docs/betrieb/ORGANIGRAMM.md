@@ -154,7 +154,7 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
 - **Personen** (ab O7b-6b) – unter jeder Gruppe ihre Rollen und Personen wie im Reiter, im Diagramm und in der Liste
   (dort etwas eingerückt unter dem Namen, vor den Untergruppen). Angehakt ist es, wenn der Reiter Personen zeigt; es
   zeigt dann dieselbe Stufe – steht der Reiter auf „Aus“, die **Rollen** (Standardrolle als Zahl). Kursiv gibt es auf
-  Papier nicht (eingebettet ist nur Lato normal und fett); der Text ist derselbe.
+  Papier nicht (eingebettet sind dort nur normal und fett der PDF-Schrift); der Text ist derselbe.
 - **Welche Rollen** (seit #915, nur mit Personen) – übernimmt die Wahl aus dem Reiter; hier geändert gilt sie nur für
   diese PDF (wie der Ausschnitt).
 - **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht

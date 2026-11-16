@@ -129,7 +129,7 @@ describe('Termin-Blatt als PDF', () => {
     expect(doc.internal.pageSize.getWidth()).toBeGreaterThan(doc.internal.pageSize.getHeight());
   });
 
-  it('mit Lato (ohne Testschrift) entsteht ein PDF ohne Fehler', async () => {
+  it('mit der PDF-Schrift (ohne Testschrift) entsteht ein PDF ohne Fehler', async () => {
     const doc = await terminBlattPdf(terminBlatt(quelle(3), BLATT_VORGABE));
     expect(doc.getNumberOfPages()).toBe(1);
   });

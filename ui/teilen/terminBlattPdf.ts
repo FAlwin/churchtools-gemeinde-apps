@@ -24,12 +24,12 @@ export type { Messen } from './pdfSatz';
 
 /**
  * **Das Termin-Blatt als PDF** (Bauplan E8-1, Entwurf `e8-teilen.html` Version 5) – gezeichnet, was
- * `shared/ct/terminBlatt.ts` festgelegt hat: im ChurchTools-Look mit Lato, oben Titel und Datum groß, rechts Gemeinde und
+ * `shared/ct/terminBlatt.ts` festgelegt hat: im ChurchTools-Look mit der PDF-Schrift, oben Titel und Datum groß, rechts Gemeinde und
  * Stand; die Dienste je Gruppe in Spalten (Dienst grau, Person fett); der Ablauf als Tabelle mit Abschnitten als graue
  * Bänder, Beginn und Ende als dunkle Bänder. Auf jeder Seite Kopf und „Seite x von y“, der Tabellenkopf wiederholt sich,
  * eine Zeile wird nie zerteilt, ein Abschnitt steht nie allein unten. Schrift, Zellen, Kopf und Fuß: `pdfSatz.ts`.
  *
- * `schrift` nur für Tests („helvetica“): Mit eingebetteter Lato steht der Text nicht lesbar im PDF.
+ * `schrift` nur für Tests („helvetica“): Mit eingebetteter PDF-Schrift steht der Text nicht lesbar im PDF.
  */
 export async function terminBlattPdf(b: TerminBlatt, schrift?: string): Promise<jsPDF> {
   const { d, font } = await neuesDokument(b.quer, schrift);

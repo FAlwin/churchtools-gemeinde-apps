@@ -19,7 +19,7 @@ import {
  * Band darüber), der Tabellenkopf wiederholt sich nach jedem Seitenumbruch, eine Zeile wird nie zerteilt, ein Band steht
  * nie allein unten.
  *
- * `schrift` nur für Tests („helvetica“): Mit eingebetteter Lato steht der Text nicht lesbar im PDF.
+ * `schrift` nur für Tests („helvetica“): Mit eingebetteter PDF-Schrift steht der Text nicht lesbar im PDF.
  */
 export async function planBlattPdf(b: PlanBlatt, schrift?: string): Promise<jsPDF> {
   const { d, font } = await neuesDokument(b.quer, schrift);

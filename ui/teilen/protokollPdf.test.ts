@@ -243,11 +243,11 @@ describe('Protokoll als PDF', () => {
     expect(r).not.toMatch(/\/ca 0\.08/);
   });
 
-  it('mit Lato: alle vier Schnitte eingebettet, ohne Fehler', async () => {
+  it('mit der PDF-Schrift: alle vier Schnitte eingebettet, ohne Fehler', async () => {
     const doc = await protokollPdf(
       blatt([{ art: 'text', einzug: 0, absaetze: [[{ text: 'kursiv', kursiv: true }]] }]),
     );
     const fonts = doc.getFontList() as Record<string, string[]>;
-    expect(fonts.LatoPdf?.sort()).toEqual(['bold', 'bolditalic', 'italic', 'normal']);
+    expect(fonts.GemeindeSans?.sort()).toEqual(['bold', 'bolditalic', 'italic', 'normal']);
   });
 });

@@ -983,3 +983,166 @@ describe('Formular in Schritten (F2b)', () => {
     expect(screen.getByLabelText(/Anreise/)).toBeTruthy();
   });
 });
+
+// ── F3b: freie Antwort im Formular (Klick-Runde 9, Entwurf f3-freie-antwort-v1) ──
+describe('Freie Antwort im Formular (F3b)', () => {
+  afterEach(() => vi.useRealTimers());
+  /**
+   * Eine Person: „Gemeinde“ (Eine Antwort, Pflicht, Textfeld klappt auf), „Bereiche“ (Mehrere Antworten, freiwillig,
+   * Textfeld steht immer da), „Größe“ (Auswahlliste, klappt auf), „Getauft?“ (Ja / Nein, ohne Textfeld).
+   */
+  function mitFrei(): OeffentlicheEinstellungen {
+    const e = freizeit();
+    e.wer = 'einzeln';
+    const feld = (
+      id: string,
+      typ: 'radio' | 'multi' | 'select' | 'janein',
+      frage: string,
+      antworten: string[],
+      frei: { name: string; textfeld: 'auf' | 'immer' | 'ohne' },
+      zustand: 'pflicht' | 'freiwillig' = 'freiwillig',
+    ) => ({ id, art: 'eigen' as const, typ, frage, hilfe: '', zustand, antworten, frei });
+    e.formular.person.push(
+      feld(
+        'gemeinde',
+        'radio',
+        'Gemeinde',
+        ['EFK Bonn', 'ECG Donrath'],
+        { name: 'Andere Gemeinde', textfeld: 'auf' },
+        'pflicht',
+      ),
+      feld('bereiche', 'multi', 'Bereiche', ['Küche', 'Technik'], {
+        name: 'Sonstiges',
+        textfeld: 'immer',
+      }),
+      feld('groesse', 'select', 'Größe', ['S', 'M'], { name: 'Andere Größe', textfeld: 'auf' }),
+      feld('taufe', 'janein', 'Getauft?', [], { name: 'Noch nicht', textfeld: 'ohne' }),
+    );
+    return e;
+  }
+  const knopf = (c: HTMLElement, pfad: string, wert: string) =>
+    c.querySelector<HTMLInputElement>(`input[name="af-${pfad}"][value="${wert}"]`);
+  const text = (c: HTMLElement, feldId: string) =>
+    c.querySelector<HTMLInputElement>(`#af-personen\\.0\\.${feldId}-frei`);
+  const absenden = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+
+  it('„klappt auf“: erst nach dem Wählen, dann mit Fokus; bei Pflicht muss der Text da sein', () => {
+    const { container } = zeigen(mitFrei());
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    expect(text(container, 'gemeinde')).toBeNull();
+    fireEvent.click(knopf(container, 'personen.0.gemeinde', 'Andere Gemeinde')!);
+    expect(text(container, 'gemeinde')).toBeTruthy();
+    expect(document.activeElement).toBe(text(container, 'gemeinde'));
+    absenden();
+    expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
+    expect(screen.getByText('Bitte „Andere Gemeinde“ eintragen.')).toBeTruthy();
+    fireEvent.change(text(container, 'gemeinde')!, { target: { value: 'FeG Siegburg' } });
+    absenden();
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+
+  it('eine andere Antwort gewählt: das Feld klappt wieder zu, die Pflicht entfällt', () => {
+    const { container } = zeigen(mitFrei());
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    fireEvent.click(knopf(container, 'personen.0.gemeinde', 'Andere Gemeinde')!);
+    fireEvent.click(knopf(container, 'personen.0.gemeinde', 'ECG Donrath')!);
+    expect(text(container, 'gemeinde')).toBeNull();
+    absenden();
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+
+  it('„steht immer da“: in der Zeile der freien Antwort; Tippen kreuzt sie an, freiwillig auch leer', () => {
+    const { container } = zeigen(mitFrei());
+    const feld = text(container, 'bereiche')!;
+    expect(feld).toBeTruthy();
+    // In derselben Zeile wie das Kästchen „Sonstiges:“.
+    expect(feld.closest('div')!.parentElement!.textContent).toContain('Sonstiges:');
+    const kaestchen = () =>
+      [...container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((x) =>
+        x.closest('label')?.textContent?.startsWith('Sonstiges'),
+      )!;
+    expect(kaestchen().checked).toBe(false);
+    fireEvent.change(feld, { target: { value: 'Fotos' } });
+    expect(kaestchen().checked).toBe(true);
+    // Ein anderes Kästchen dazu – „Sonstiges“ bleibt angekreuzt, der Text bleibt.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Küche' }));
+    expect(kaestchen().checked).toBe(true);
+    expect(text(container, 'bereiche')!.value).toBe('Fotos');
+  });
+
+  it('Auswahlliste: die freie Antwort ist der letzte Eintrag und öffnet das Feld', () => {
+    const { container } = zeigen(mitFrei());
+    const liste = container.querySelector<HTMLSelectElement>('#af-personen\\.0\\.groesse')!;
+    expect([...liste.options].map((o) => o.value)).toEqual(['', 'S', 'M', 'Andere Größe']);
+    expect(text(container, 'groesse')).toBeNull();
+    fireEvent.change(liste, { target: { value: 'Andere Größe' } });
+    expect(text(container, 'groesse')).toBeTruthy();
+    expect(document.activeElement).toBe(text(container, 'groesse'));
+  });
+
+  it('Mehrere Antworten mit „klappt auf“: erst nach dem Ankreuzen, dann mit Fokus', () => {
+    const e = mitFrei();
+    e.formular.person.find((f) => f.id === 'bereiche')!.frei = {
+      name: 'Sonstiges',
+      textfeld: 'auf',
+    };
+    const { container } = zeigen(e);
+    expect(text(container, 'bereiche')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sonstiges' }));
+    expect(document.activeElement).toBe(text(container, 'bereiche'));
+  });
+
+  it('Ja / Nein mit „steht immer da“: das Feld steht unter den Knöpfen, nicht in ihrer Reihe', () => {
+    const e = mitFrei();
+    e.formular.person.find((f) => f.id === 'taufe')!.frei = {
+      name: 'Noch nicht',
+      textfeld: 'immer',
+    };
+    const { container } = zeigen(e);
+    const feld = text(container, 'taufe')!;
+    expect(feld).toBeTruthy();
+    expect(feld.closest('[role="radiogroup"]')).toBeNull();
+  });
+
+  it('„ohne Textfeld“: eine dritte Antwort bei Ja / Nein, kein Feld', () => {
+    const { container } = zeigen(mitFrei());
+    fireEvent.click(knopf(container, 'personen.0.taufe', 'Noch nicht')!);
+    expect(knopf(container, 'personen.0.taufe', 'Noch nicht')!.checked).toBe(true);
+    expect(text(container, 'taufe')).toBeNull();
+  });
+
+  it('echtes Absenden: der Text steht bei den Antworten unter `<Feld-ID>.frei`', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
+    const e = mitFrei();
+    const onAbsenden = vi.fn().mockResolvedValue({
+      personen: [{ index: 0, name: 'Maria Beispiel', ergebnis: 'angemeldet' }],
+      mail: '',
+    } satisfies Abgeschickt);
+    const { container } = render(
+      <AnmeldeFormular
+        ansicht={{
+          basis: BASIS,
+          name: 'Freizeit',
+          gemeinde: 'ECG',
+          einstellungen: e,
+          freiePlaetze: 3,
+        }}
+        heute={HEUTE}
+        start={musterAntworten(e, HEUTE)}
+        onAbsenden={onAbsenden}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    fireEvent.click(knopf(container, 'personen.0.gemeinde', 'Andere Gemeinde')!);
+    fireEvent.change(text(container, 'gemeinde')!, { target: { value: 'FeG Siegburg' } });
+    vi.setSystemTime(new Date('2026-10-16T10:00:10Z'));
+    await act(async () => absenden());
+    expect(onAbsenden).toHaveBeenCalled();
+    expect(onAbsenden.mock.calls[0][0].antworten.personen[0]).toMatchObject({
+      gemeinde: 'Andere Gemeinde',
+      'gemeinde.frei': 'FeG Siegburg',
+    });
+  });
+});

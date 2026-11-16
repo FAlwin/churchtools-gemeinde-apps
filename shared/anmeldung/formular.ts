@@ -121,7 +121,8 @@ export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestalt
   { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
   { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
   { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
-  // „Neuer Schritt“ (F2) kommt erst mit dem Baukasten-Teil (F2c) in die Leiste.
+  // F2c: beginnt eine neue Seite des Formulars (`formularSchritte.ts`) – geht überall, auch mitten in den Personen.
+  { typ: 'schritt', name: 'Neuer Schritt', gruppe: 'gestaltung' },
 ];
 
 export interface Vorgaben {

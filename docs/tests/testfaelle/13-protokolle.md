@@ -329,7 +329,7 @@ vorkommen. **Es läuft keine echte KI:** Die Antwort setzt Claude von Hand ein (
 Test-Protokolle und -To-Dos aufräumen.
 
 **Das muss passieren:** „Mit KI füllen“ gibt es nur im Editor eines Entwurfs für die Leitung; der kopierte Auftrag
-enthält keinen gefundenen Namen, die Vorschau zeigt sie wieder; die gewählten Einträge landen am Ende der richtigen Punkte,
+enthält keinen gefundenen Namen, die Vorschau zeigt sie wieder; die gewählten Einträge landen hinter dem Text der richtigen Punkte (bei Unterpunkten vor dem ersten),
 das Protokoll speichert, und aus dem To-Do entsteht ein To-Do.
 
 1. Test-Protokoll im Entwurf öffnen (Schreiben): Oben stehen **Freigeben · Mit KI füllen · Bearbeiten · Teilen / PDF**.
@@ -349,8 +349,8 @@ das Protokoll speichert, und aus dem To-Do entsteht ein To-Do.
    Eintrag für Punkt 9 und einen festen Punkt) → **Vorschau ansehen**: Die Namen sind wieder da (grün), je Zeile steht
    „→ 2.1 Küche“ usw.; die Einträge für Punkt 9 und den festen Punkt sind ausgegraut („Punkt 9 gibt es nicht“, „fester Punkt“).
 7. Bei einem Eintrag das **Häkchen wegnehmen**, **Ausgewählte übernehmen**: Das Fenster geht zu, unten steht „N Einträge
-   übernommen – das Protokoll speichert automatisch“. Im Blatt stehen die Stichpunkte als Aufzählung **am Ende ihres Punkts**
-   (bei Punkt 2 hinter 2.1), Beschluss grün, Termin blau, das To-Do mit „– Name, bis …“, der neue Punkt am Ende; der
+   übernommen – das Protokoll speichert automatisch“. Im Blatt stehen die Stichpunkte als Aufzählung **hinter dem Text ihres
+   Punkts** (bei Punkt 2 vor 2.1 – rechts unter „Beschlüsse“ steht beim Beschluss „Punkt 2“, nicht 2.1), Beschluss grün, Termin blau, das To-Do mit „– Name, bis …“, der neue Punkt am Ende (ohne Leerzeile davor); der
    abgewählte Eintrag fehlt.
 8. Kurz warten: „gespeichert …“ erscheint. Die Sitzung neu öffnen: Alles steht noch da, und unter **To-Dos** gibt es das
    To-Do (Zuständiger = das Mitglied, ein Nicht-Mitglied als extern).
@@ -364,6 +364,6 @@ das Protokoll speichert, und aus dem To-Do entsteht ein To-Do.
 - **Priorität:** hoch
 - **Betrifft:** `shared/protokolle/ki.ts`, `shared/protokolle/platzhalter.ts`, `shared/protokolle/docxText.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.tsx`, `protokolle/src/kiPersonen.ts`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/demo.ts`
 - **Automatisiert:** ja – `shared/protokolle/ki.test.ts`, `platzhalter.test.ts`, `docxText.test.ts` (Regeln), `protokolle/src/KiFuellenFenster.test.tsx` (ganzer Weg gegen die Erzeuger: kein Name im kopierten Auftrag, Name im Titel, Kopieren scheitert, kaputte Antwort, `.docx`/`.txt`, Häkchen, Reihenfolge der Einfügungen, Personenliste fehlt), `protokolle/src/kiPersonen.test.ts` (Blättern, Namen), `protokolle/src/ProtokollSchreiben.test.tsx` (Knopf nur im Entwurf mit Schreibrecht, Weg bis `einfuegen` und Speichern); die echte Übernahme in BlockNote, das Aussehen am Handy und das Kopieren in die Zwischenablage nur von Hand
-- **Historie:** S8-2 (16.11.2026)
+- **Historie:** S8-2 (16.11.2026); Einfügestelle bei Unterpunkten und Schlusszeile nach dem ersten Lauf geändert (16.11.2026)
 
 </details>

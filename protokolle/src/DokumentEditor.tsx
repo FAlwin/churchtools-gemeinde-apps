@@ -32,6 +32,7 @@ import {
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
+import { bloeckeEinfuegen } from './bloeckeEinfuegen';
 import { Icon } from '@ui/icons/icons';
 import { useThema } from '@ui/design/useThema';
 import {
@@ -318,16 +319,7 @@ export function DokumentEditor({
         }
         ersetzt.current = JSON.stringify(editor.document);
       },
-      einfuegen: (bloecke, vor) => {
-        const ziel = vor !== null ? editor.getBlock(vor) : undefined;
-        if (ziel) editor.insertBlocks(bloecke as Teil[], ziel, 'before');
-        else
-          editor.insertBlocks(
-            bloecke as Teil[],
-            editor.document[editor.document.length - 1],
-            'after',
-          );
-      },
+      einfuegen: (bloecke, vor) => bloeckeEinfuegen(editor, bloecke, vor),
     }),
     [editor],
   );

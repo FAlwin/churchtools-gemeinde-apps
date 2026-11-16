@@ -256,8 +256,9 @@ Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kom
    im Fenster und dein Text bleibt.
 3. **Vorschau:** Jede Zeile hat ein Häkchen (an) und zeigt klein, wohin sie kommt („→ 3.1 Küche“). Was zu keinem Punkt
    passt oder zu einem festen Punkt gehört, ist ausgegraut und wird nicht übernommen. Die echten Namen sind wieder
-   eingesetzt (grün). **„Ausgewählte übernehmen“** fügt die Stichpunkte, Beschlüsse, To-Dos und Termine **ans Ende ihres
-   Punkts** ein, neue Punkte ans Ende der Tagesordnung. Danach speichert das Protokoll von selbst; die To-Dos entstehen
+   eingesetzt (grün). **„Ausgewählte übernehmen“** fügt die Stichpunkte, Beschlüsse, To-Dos und Termine **hinter den Text
+   ihres Punkts** ein (hat er Unterpunkte: vor den ersten, damit sie zu diesem Punkt zählen), neue Punkte ans Ende der
+   Tagesordnung. Danach speichert das Protokoll von selbst; die To-Dos entstehen
    beim Speichern (Zuständige aus der Gruppe als Mitglied, alle anderen als extern). Bitte kurz im Blatt prüfen.
 
 **Datenschutz:** Transkript, gefundene Namen und die Zuordnung bleiben **nur im Fenster** – nichts wird in ChurchTools
@@ -303,8 +304,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   (Punkte und Unterpunkte mit Nummer wie im Protokoll, feste Punkte = „nichts zuordnen“), `auftragBauen` (bekommt das schon
   mit `platzhalter.ts` ersetzte Transkript), `antwortLesen` (tolerant bei Codeblock/Drumherum/`nr` als Zahl, streng bei
   Typen; kaputt → `{ ok: false, meldung }`, wirft nie; Namen über `zuruecksetzen`, Zuständige: Person der Gruppe → Mitglied,
-  sonst extern) und `uebernahmePlanen` (je Ziel ein Aufruf `{ vor, bloecke }` für `EditorGriff.einfuegen`: ans Ende des
-  Abschnitts, später im Dokument zuerst, neue Punkte zuletzt; To-Do-Blöcke tragen `props.vorab`, keine To-Do-ID).
+  sonst extern) und `uebernahmePlanen` (je Ziel ein Aufruf `{ vor, bloecke }` für `EditorGriff.einfuegen`: vor den nächsten
+  Punkt – bei Unterpunkten vor den ersten, damit es zum Punkt zählt –, später im Dokument zuerst, neue Punkte zuletzt; To-Do-Blöcke tragen `props.vorab`, keine To-Do-ID).
   `shared/protokolle/docxText.ts` – Text einer `.docx` (`docxText(bytes)` → `{ ok, text } | { ok: false, meldung }`, mit
   `fflate`, ohne DOM).
   Das Fenster (S8-2): `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (Knopf `KiKnopf` im Kopf

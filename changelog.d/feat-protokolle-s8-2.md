@@ -6,7 +6,7 @@
   durch Platzhalter, je Name abwählbar, eigene Begriffe unter „Weiteres verbergen“; „Auftrag kopieren“), **Antwort**
   (die Antwort der KI einfügen; klappt das Kopieren nicht, zeigt „Auftrag anzeigen“ den Text zum Markieren) und
   **Vorschau** (Stichpunkte, Beschlüsse, To-Dos, Termine und neue Punkte mit Häkchen und Ziel; die echten Namen sind
-  wieder eingesetzt). „Ausgewählte übernehmen“ fügt alles ans Ende des jeweiligen Punkts ein; das Protokoll speichert
+  wieder eingesetzt). „Ausgewählte übernehmen“ fügt alles hinter den Text des jeweiligen Punkts ein (bei einem Punkt mit Unterpunkten vor den ersten Unterpunkt, damit es zu diesem Punkt zählt), neue Punkte ans Ende der Tagesordnung; das Protokoll speichert
   danach wie bei jeder Eingabe von selbst, die To-Dos entstehen beim Speichern. Das Fenster nennt keine bestimmte KI.
   Transkript, gefundene Namen und Zuordnung bleiben im Fenster – nichts davon wird gespeichert oder an ChurchTools
   geschickt. Kopiert werden kann erst, wenn die Personenliste und die Gruppenmitglieder geladen sind (sonst gingen
@@ -17,4 +17,4 @@
 
 - Fenster `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (`fflate`, `docxText` und `ki.ts`
   liegen nicht im Haupt-Bundle); Personen aus `GET /persons` seitenweise (`kiPersonen.ts`, `ctAlleSeiten`, 200 je
-  Seite). Neue Symbole `funke` und `kopieren` in `ui/icons`. Demo: `/api/persons` mit `meta.pagination`.
+  Seite). Neue Symbole `funke` und `kopieren` in `ui/icons`. Einfügen „ans Ende“ (auch bei übernommenen Vorschlägen) geht jetzt vor die leere Schlusszeile des Editors statt dahinter (`vorSchlusszeilen` in `dokument.ts`, `bloeckeEinfuegen.ts`) – vorher stand eine Leerzeile vor dem Neuen. Demo: `/api/persons` mit `meta.pagination`.

@@ -15,6 +15,7 @@ import {
   TIEFSTE_EBENE,
   type Block,
   terminDatum,
+  vorSchlusszeilen,
 } from './dokument';
 import { BLOCKNOTE_DOKUMENT } from './dokument.testdaten';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -283,5 +284,40 @@ describe('terminDatum – eine Regel für Ableitung, Editor, Lese-Ansicht und PD
     for (const datum of ['2026-02-30', '14.12.2026', '', 3, undefined])
       expect(terminDatum({ datum })).toBeNull();
     expect(terminDatum(undefined)).toBeNull();
+  });
+});
+
+describe('vorSchlusszeilen (S8-2: „ans Ende“ = vor die leere Schlusszeile)', () => {
+  // So liefert BlockNote die leere Zeile am Ende: Absatz mit `content: []`.
+  const leer = (id: string): Block => ({
+    id,
+    type: 'paragraph',
+    props: {},
+    content: [],
+    children: [],
+  });
+  const titel = BLOCKNOTE_DOKUMENT[0];
+
+  it('endet mit einer leeren Zeile → deren ID', () => {
+    expect(vorSchlusszeilen([titel, leer('l1')])).toBe('l1');
+  });
+  it('mehrere leere Zeilen am Schluss → die erste davon', () => {
+    expect(vorSchlusszeilen([titel, leer('l1'), leer('l2')])).toBe('l1');
+  });
+  it('nur Leerzeichen zählt als leer', () => {
+    const blank: Block = { ...leer('l1'), content: [{ type: 'text', text: '  ', styles: {} }] };
+    expect(vorSchlusszeilen([titel, blank])).toBe('l1');
+  });
+  it('endet mit Inhalt → null (hinter den letzten Block)', () => {
+    expect(vorSchlusszeilen(BLOCKNOTE_DOKUMENT)).toBeNull();
+    expect(vorSchlusszeilen([leer('l1'), titel])).toBeNull();
+  });
+  it('ein leerer Absatz mit Kindern oder eine andere leere Blockart ist keine Schlusszeile', () => {
+    expect(vorSchlusszeilen([titel, { ...leer('l1'), children: [leer('k')] }])).toBeNull();
+    expect(vorSchlusszeilen([titel, { ...leer('l1'), type: 'bulletListItem' }])).toBeNull();
+  });
+  it('leeres Dokument → null; nur eine leere Zeile → deren ID', () => {
+    expect(vorSchlusszeilen([])).toBeNull();
+    expect(vorSchlusszeilen([leer('l1')])).toBe('l1');
   });
 });

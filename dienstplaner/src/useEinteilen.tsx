@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
-import { gruppenName, type Plan } from '@shared/dienstplan/plan';
+import { gruppenName, nimmtEintraegeAn, type Plan } from '@shared/dienstplan/plan';
 import {
   ortSchluessel,
   zielText,
@@ -549,7 +549,8 @@ export function useEinteilen({
     aktion: (i, zl, personId, zustand) => {
       if (!plan) return null;
       const s = plan.spalten[i];
-      if (!darfPlanen(zl, s) || !amPlatz.darfAendern(zl)) return null;
+      // Abgesagte Termine nehmen keine Einträge an (P2a-2) – dieselbe Regel wie in der Matrix (`nimmtEintraegeAn`).
+      if (!darfPlanen(zl, s) || !nimmtEintraegeAn(s) || !amPlatz.darfAendern(zl)) return null;
       return zellenAktion({
         plaetze: zl.zellen[i],
         personId,

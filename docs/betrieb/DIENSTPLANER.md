@@ -119,15 +119,15 @@ zugesagt, Kreis mit ? = angefragt, Stift gestrichelt = Entwurf. Am selben Tag in
 grauer Text „+ Gesang“; gehört der andere Dienst zu einer **ausgeblendeten** Gruppe, steht er blass und schräg mit der
 Gruppe („+ Ton (Technik)“). **Abwesend** = grauer Tag mit dem Grund; ist die Person dort zugleich eingeteilt, bleiben
 beide da (roter Rand am grauen Tag – ein Warnfall). „Einsätze“ zählt zugesagte und angefragte Einteilungen dieser Person
-in diesem Dienst in den gezeigten Terminen. „Gäste“ sind Plätze mit Namen ohne Person. Die Fußzeile **„Noch offen“** zeigt
-je Termin die freien Plätze der gezeigten Dienste („Gesang ×2“) – gezählt wie in der Matrix. „Namen verbergen“ zeigt auch
+in diesem Dienst in den gezeigten Terminen – **und gültige Entwürfe** (s. „Entwürfe zählen mit“). „Gäste“ sind Plätze mit Namen ohne Person. Die Fußzeile **„Noch offen“** zeigt
+je Termin die freien Plätze der gezeigten Dienste („Gesang ×2“) – gezählt wie in der Matrix, also ebenfalls mit gültigen Entwürfen. „Namen verbergen“ zeigt auch
 hier nie einen Namen. Maus über dem Namen hebt alle Zeilen der Person schwach blau hervor; Antippen des Namens nimmt die Person in den **Fokus** (s. u.). Am Handy ist es
 dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Kürzel und Farben einstellen kommt mit P3.
 
 **Eintragen per Klick (P2a, 16.11.2026):** Ein Klick in eine **leere Zelle** (Person × Termin im Block eines Dienstes) legt sofort
 einen **Entwurf** an – derselbe Weg wie die Wahl in „Wer kann?“ (gleiche Funktion, gleicher Hinweis „… eingetragen – noch nicht
 gesendet“, gleicher Schutz gegen gleichzeitige Änderungen), auf den **ersten freien Platz** dieses Dienstes an diesem Termin
-(ein Platz mit Entwurf zählt nicht als frei, wie beim Zauberstab). Danach steht in der Zelle der Entwurf (blau, gestrichelt, Stift)
+(ein Platz mit Entwurf ist nicht zu haben, wie beim Zauberstab: `freiOhneEntwurf`). Danach steht in der Zelle der Entwurf (blau, gestrichelt, Stift)
 und unten die Leiste „Ansehen und senden“. Gesendet wird nichts, bevor man dort sendet. Ein Klick auf den **eigenen Entwurf**
 in der Zelle nimmt ihn wieder weg (wie „Entfernen“ im Entwurfs-Fach); der Entwurf eines **anderen Planers** ist kein Knopf –
 den öffnet man in der Matrix.
@@ -142,12 +142,28 @@ den öffnet man in der Matrix.
 - **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
   Entwürfe der Dienstgruppe geladen und änderbar (`darfAendern`: Schublade bereit). Sonst bleibt die Zelle wie bisher. Eine
   **bestehende Einteilung** (zugesagt, angefragt, Gast) anklicken tut noch nichts (P2b); die Zeile „Gäste“ und „Noch offen“
-  bleiben unverändert. Abgesagte Termine sind wie in der Matrix nicht gesperrt.
+  bleiben unverändert. **Abgesagte Termine** nehmen keine Einträge an (P2a-2, s. u.).
 - **Aussehen:** mit echter Maus (`hover: hover`) bekommt eine leere, eintragbare Zelle beim Darüberfahren einen blauen Rahmen,
   eine blasse blaue Fläche und ein „+“ rechts; am Handy/Touch zeigt sie ein blasses „+“. Jede dieser Zellen ist ein Knopf
   (Tastatur, Vorleser: „Daniel F. für Ton am Fr, 20.11. eintragen“). Der Klick auf den **Namen** setzt weiter den Fokus.
-- **„Einsätze“ und „Noch offen“** zählen wie bisher nur zugesagte/angefragte Einteilungen bzw. die freien Plätze von
-  ChurchTools – ein Entwurf ändert sie erst, wenn er gesendet ist (wie „N frei“ in der Matrix).
+- **Entwürfe zählen mit (P2a-2, 16.11.2026):** In **Matrix und „Personen“ gleich** zählt ein **gültiger** (nicht veralteter)
+  Entwurf schon wie das, was er bewirken wird. Das betrifft „N frei“ im Termin-Kopf, den Füllbalken, die Datumsleiste und die
+  Karte am Handy, die Gruppenzeile (Matrix) sowie „Einsätze“ und „Noch offen“ in „Personen“. Person oder Gast auf einem freien
+  Platz → der Platz gilt als besetzt (frei −1; bei einer Person „Einsätze“ +1); „Zurückziehen“ auf einem belegten Platz → frei
+  (frei +1; „Einsätze“ der bisherigen Person −1); eine Person durch eine andere ersetzen → frei bleibt gleich, die „Einsätze“
+  wandern. **Veraltete Entwürfe zählen nicht** (dort gilt ChurchTools). Einen Extra-Hinweis gibt es nicht – die Entwürfe stehen
+  ja blau gestrichelt da. Die Regel steht in `shared/dienstplan/platzNachEntwurf.ts` (`platzGiltFrei`, `zaehleFrei`; daraus
+  `terminStand` und `gruppenFrei` in `plan.ts`); „wer steht am Platz“ beantwortet weiter `platzPerson` (`fokus.ts`), mit
+  derselben Gültigkeit. **Bewusst ohne Entwürfe** bleiben **Teilen/PDF** („Wir suchen noch …“, Plan als PDF, Termin-Blatt) und
+  alles, was an ChurchTools geht: dort zählt nur ChurchTools, ein Entwurf ist noch nicht verbindlich (`PlanGruppe.frei` ist
+  der ChurchTools-Stand). Ebenso unverändert: die Termin-Liste und die Startseite („Plätze frei“), „Wer wie oft?“ und die Zeile
+  „+ Gesang“ in „Personen“.
+- **Abgesagte Termine nehmen keine Einträge an (P2a-2):** In der Matrix ist der freie Platz in einem abgesagten Termin kein
+  Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort keinen Zellen-Knopf, kein Hover und kein „+“, und der Zauberstab
+  füllt ihn nicht (`nimmtEintraegeAn`, `plan.ts` – eine Funktion für alle drei und für den Regler „Plätze ändern“).
+  **Vergangene Termine bleiben eintragbar** (Nachtragen); nur der Zauberstab lässt sie zusätzlich aus. Bestehende Einteilungen
+  und Entwürfe in abgesagten Terminen bleiben sichtbar; einen belegten Platz antippen (zurückziehen/ersetzen) und einen
+  vorhandenen Entwurf in der Matrix öffnen geht weiter.
 
 - **Wer eine Zeile bekommt:** die Mitglieder der ChurchTools-Gruppen des Dienstes (`/services` → `groupIds`, mehrere Gruppen
   werden zusammengeführt – Café hängt an fünf) **plus** wer im Zeitraum dort eingeteilt ist, aber nicht Mitglied ist

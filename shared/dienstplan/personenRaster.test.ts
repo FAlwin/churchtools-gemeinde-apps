@@ -529,7 +529,7 @@ describe('personenRaster – Entwürfe', () => {
       return e ? { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) } : null;
     };
 
-  it('ein Entwurf auf einen freien Platz erscheint als „Entwurf“ in der Zeile der Person – und zählt nicht als Einsatz', () => {
+  it('ein Entwurf auf einen freien Platz erscheint als „Entwurf“ in der Zeile der Person – und zählt als Einsatz (P2a-2)', () => {
     const e = entwurfFuer(
       { art: 'person', personId: 2, name: 'Eva Hell' },
       { eventId: 3, serviceId: GITARRE, index: null },
@@ -543,7 +543,8 @@ describe('personenRaster – Entwürfe', () => {
     });
     const eva = zeile(r, GITARRE, 2);
     expect(eva.zellen.map((z) => z.zustand)).toEqual([null, null, 'entwurf']);
-    expect(eva.einsaetze).toBe(0);
+    // Bis P2a zählte er nicht (nur ChurchTools); seit P2a-2 zählt ein gültiger Entwurf wie das, was er bewirken wird.
+    expect(eva.einsaetze).toBe(1);
   });
 
   it('ein veralteter Entwurf zählt nicht – am Platz gilt ChurchTools', () => {
@@ -582,7 +583,8 @@ describe('personenRaster – Entwürfe', () => {
     expect(block(r, TON).gaeste[1]).toEqual([{ name: 'Onkel Otto', entwurf: true }]);
   });
 
-  it('„Zurückziehen“ (Entwurf auf frei) ändert die Zeile der Person nicht', () => {
+  it('ein veralteter „Zurückziehen“-Entwurf (gesehen stimmt nicht mehr) ändert nichts', () => {
+    // `gesehen: frei`, in ChurchTools steht Daniel dort – der Entwurf ist veraltet.
     const e = entwurfFuer({ art: 'frei' }, { eventId: 1, serviceId: GITARRE, index: null });
     const ohne = personenRaster({
       plan: PLAN,
@@ -598,6 +600,146 @@ describe('personenRaster – Entwürfe', () => {
       entwurf: suche([e]),
     });
     expect(mit).toEqual(ohne);
+  });
+});
+
+describe('personenRaster – Entwürfe zählen mit (P2a-2)', () => {
+  const entwurfFuer = (
+    ziel: EntwurfZiel,
+    eventId: number,
+    serviceId: number,
+    p: { index: number | null; belegung: Entwurf['gesehen'] },
+  ): Entwurf => ({
+    ort: { eventId, serviceId, index: p.index },
+    ziel,
+    modus: 'anfrage',
+    gesehen: p.belegung,
+    von: { personId: 1, name: 'Alwin' },
+    zeit: '2026-12-01T10:00:00Z',
+    version: 1,
+  });
+  const suche =
+    (liste: Entwurf[]): EntwurfSuche =>
+    (i, z, p) => {
+      const e = liste.find(
+        (x) =>
+          ortSchluessel(x.ort) ===
+          ortSchluessel({ eventId: PLAN.spalten[i].id, serviceId: z.dienst.id, index: p.index }),
+      );
+      return e ? { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) } : null;
+    };
+  const rechne = (liste: Entwurf[]) =>
+    personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: suche(liste),
+    });
+  const platzIn = (spalte: number, dienstId: number, name: string) => {
+    const z = PLAN.gruppen.flatMap((g) => g.zeilen).find((x) => x.dienst.id === dienstId)!;
+    return z.zellen[spalte]!.find((p) => p.name === name)!;
+  };
+  const freierPlatz = (spalte: number, dienstId: number) => {
+    const z = PLAN.gruppen.flatMap((g) => g.zeilen).find((x) => x.dienst.id === dienstId)!;
+    return z.zellen[spalte]!.find((p) => p.art === 'frei')!;
+  };
+  const offenAn = (r: ReturnType<typeof rechne>, spalte: number, dienst: string) =>
+    r.offen[spalte].dienste.find((d) => d.dienst === dienst)?.anzahl ?? 0;
+
+  it('Entwurf auf einen freien Platz: „Noch offen“ −1 und „Einsätze“ der Person +1', () => {
+    const ohne = rechne([]);
+    expect(offenAn(ohne, 0, 'Café')).toBe(2);
+    const e = entwurfFuer(
+      { art: 'person', personId: 11, name: 'Clara Neu' },
+      1,
+      CAFE,
+      freierPlatz(0, CAFE),
+    );
+    const mit = rechne([e]);
+    expect(offenAn(mit, 0, 'Café')).toBe(1);
+    expect(zeile(ohne, CAFE, 11).einsaetze).toBe(0);
+    expect(zeile(mit, CAFE, 11).einsaetze).toBe(1);
+  });
+
+  it('der letzte freie Platz mit Entwurf: der Dienst verschwindet aus „Noch offen“', () => {
+    const p = freierPlatz(1, TON);
+    const e = entwurfFuer({ art: 'person', personId: 8, name: 'Ben Kunz' }, 2, TON, p);
+    expect(offenAn(rechne([]), 1, 'Ton')).toBe(1);
+    expect(offenAn(rechne([e]), 1, 'Ton')).toBe(0);
+  });
+
+  it('ein Gast-Entwurf macht den Platz besetzt, zählt aber bei niemandem als Einsatz', () => {
+    const e = entwurfFuer({ art: 'gast', name: 'Onkel Otto' }, 1, CAFE, freierPlatz(0, CAFE));
+    const mit = rechne([e]);
+    expect(offenAn(mit, 0, 'Café')).toBe(1);
+    expect(block(mit, CAFE).zeilen.reduce((n, z) => n + z.einsaetze, 0)).toBe(
+      block(rechne([]), CAFE).zeilen.reduce((n, z) => n + z.einsaetze, 0),
+    );
+  });
+
+  it('Zurückziehen eines belegten Platzes: „Noch offen“ +1, „Einsätze“ der bisherigen Person −1', () => {
+    const anna = platzIn(0, GESANG, 'Anna Gans');
+    const e = entwurfFuer({ art: 'frei' }, 1, GESANG, anna);
+    const ohne = rechne([]);
+    const mit = rechne([e]);
+    expect(offenAn(ohne, 0, 'Gesang')).toBe(0);
+    expect(offenAn(mit, 0, 'Gesang')).toBe(1);
+    expect(zeile(mit, GESANG, 5).einsaetze).toBe(zeile(ohne, GESANG, 5).einsaetze - 1);
+    // Die Zelle zeigt die Einteilung weiter (bis gesendet) – nur gezählt wird sie nicht mehr.
+    expect(zeile(mit, GESANG, 5).zellen[0].zustand).toBe('zugesagt');
+  });
+
+  it('Ersetzen: „Noch offen“ bleibt, „Einsätze“ wandern von der alten zur neuen Person', () => {
+    const anna = platzIn(0, GESANG, 'Anna Gans');
+    const e = entwurfFuer({ art: 'person', personId: 11, name: 'Clara Neu' }, 1, GESANG, anna);
+    const ohne = rechne([]);
+    const mit = rechne([e]);
+    expect(offenAn(mit, 0, 'Gesang')).toBe(offenAn(ohne, 0, 'Gesang'));
+    expect(zeile(mit, GESANG, 5).einsaetze).toBe(zeile(ohne, GESANG, 5).einsaetze - 1);
+    expect(zeile(mit, GESANG, 11).einsaetze).toBe(zeile(ohne, GESANG, 11).einsaetze + 1);
+  });
+
+  it('veraltete Entwürfe zählen nicht – weder „Noch offen“ noch „Einsätze“', () => {
+    // Auf einen belegten Platz „gesehen: frei“ (inzwischen belegt) und Zurückziehen auf einen freien Platz.
+    const p = platzIn(0, GESANG, 'Anna Gans');
+    const veraltetPerson = entwurfFuer(
+      { art: 'person', personId: 11, name: 'Clara Neu' },
+      1,
+      GESANG,
+      {
+        ...p,
+        belegung: { art: 'frei' },
+      },
+    );
+    const veraltetWeg = entwurfFuer({ art: 'frei' }, 1, CAFE, {
+      ...freierPlatz(0, CAFE),
+      belegung: { art: 'zusage', personId: 11 },
+    });
+    const ohne = rechne([]);
+    const mit = rechne([veraltetPerson, veraltetWeg]);
+    expect(mit.offen).toEqual(ohne.offen);
+    expect(zeile(mit, GESANG, 5).einsaetze).toBe(zeile(ohne, GESANG, 5).einsaetze);
+    expect(zeile(mit, GESANG, 11).einsaetze).toBe(zeile(ohne, GESANG, 11).einsaetze);
+  });
+
+  it('„Noch offen“ summiert wie der Termin-Kopf der Matrix (`terminStand` mit denselben Entwürfen)', () => {
+    const liste = [
+      entwurfFuer(
+        { art: 'person', personId: 11, name: 'Clara Neu' },
+        1,
+        CAFE,
+        freierPlatz(0, CAFE),
+      ),
+      entwurfFuer({ art: 'frei' }, 1, GESANG, platzIn(0, GESANG, 'Anna Gans')),
+    ];
+    const r = rechne(liste);
+    ALLE_SPALTEN.forEach((i) => {
+      const summe = r.offen[i].dienste.reduce((n, d) => n + d.anzahl, 0);
+      expect(summe).toBe(
+        PLAN.spalten[i].abgesagt ? 0 : (terminStand(ALLE_GRUPPEN, i, suche(liste))?.frei ?? 0),
+      );
+    });
   });
 });
 

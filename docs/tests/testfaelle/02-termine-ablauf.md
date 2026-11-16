@@ -929,3 +929,35 @@ ein Fenster.
 - **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (freier Platz ohne Entwurf, Aktion je Zelle: eintragen/voll/wegnehmen/nichts, Texte, Warnung einzeln und beides), `dienstplaner/src/Planen.p2a.test.tsx` (Klick → Entwurf mit denselben Angaben wie „Wer kann?“, Leiste, Entwurf wegnehmen mit Version, fremder Entwurf, Warnfenster anderer Dienst/abwesend/beides mit Abbrechen und „Trotzdem“, voll, kein Recht/keine Schublade/nicht geladen/nur lesen, Doppelklick, Fehlerhinweise, Klick neben dem Knopf, Fokus bleibt), `dienstplaner/src/Planen.personen.test.tsx`, `dienstplaner/src/Planen.fokus.test.tsx`; Gegenproben einzeln rot; von Hand bleiben Hover (Rahmen, „+“), Touch-„+“ und das Aussehen in Hell und Dunkel
 - **Historie:** Wunsch 5 (Alwin 16.11.2026, Entwurf `e9-p2-eintragen.html`, Variante B), Scheibe P2a
 </details>
+
+### TF-ABLAUF-33 · Planen: Entwürfe zählen mit, abgesagte Termine nehmen keine Einträge an
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf; ein Dienst (z. B. Ton) mit einem Termin, an dem **ein
+Platz frei** ist, einer eingeteilten Person (zugesagt) im selben Dienst und **einem abgesagten Termin** mit freien Plätzen.
+
+**Das muss passieren:** Zahlen und Knöpfe stimmen mit den Entwürfen überein – in der Matrix und in „Personen“ gleich.
+
+1. **Matrix:** Am Termin mit einem freien Platz steht im Kopf „1 frei“, der Füllbalken ist nicht voll. Freien Platz antippen,
+   jemanden als **Entwurf** eintragen: sofort „alles besetzt“, Balken voll, in der Gruppenzeile der Haken – **ohne** zu senden.
+2. Den Entwurf wieder entfernen: „1 frei“ ist zurück.
+3. Eine eingeteilte Person antippen → **zurückziehen** (Entwurf): am Termin steht „1 frei“ mehr. Stattdessen **ersetzen**:
+   die Zahl der freien Plätze bleibt.
+4. **Personen:** In einem Block (Ton) unter „Einsätze“ und in der Fußzeile **„Noch offen“** die Zahlen merken. Eine leere
+   Zelle anklicken (Entwurf): „Einsätze“ der Person **+1**, „Noch offen“ dieses Termins **−1**. Den eigenen Entwurf anklicken
+   (weg): beides wieder wie vorher.
+5. Ein Entwurf, der **veraltet** ist (in ChurchTools hat inzwischen jemand anderes den Platz belegt): zählt nicht.
+6. **Teilen / PDF:** „Plan teilen“ mit einem offenen Entwurf: „Wir suchen noch …“ und die roten „N frei“ zeigen weiter den
+   Stand von ChurchTools (der Entwurf ist noch nicht verbindlich).
+7. **Abgesagter Termin, Matrix:** der freie Platz ist **kein Knopf** (nichts öffnet „Wer kann?“); Namen und bestehende
+   Einteilungen stehen da wie bisher. Der Zauberstab füllt ihn nicht.
+8. **Abgesagter Termin, Personen:** in der abgesagten Spalte kein Rahmen, kein „+“, kein Klick; an den anderen Terminen
+   unverändert. Ein **vergangener**, nicht abgesagter Termin: weiter eintragbar (Nachtragen).
+9. **Handy:** Datumsleiste, Zeile unter dem Titel und Gruppenzeile zeigen dieselben Zahlen wie am Rechner.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/platzNachEntwurf.ts`, `shared/dienstplan/plan.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/PlanPlaetze.tsx`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planEntwuerfe.ts`
+- **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (Regel je Fall, passt zu `platzPerson`, `terminStand`/`gruppenFrei`, `PlanGruppe.frei` bleibt ChurchTools), `shared/dienstplan/personenRaster.test.ts` („Entwürfe zählen mit“), `dienstplaner/src/Planen.p2a2.test.tsx` (Kopf, Balken, Gruppenzeile, Handy, abgesagte Spalte in Matrix und „Personen“, Eintragen/Wegnehmen ändert die Zahlen), `dienstplaner/src/planEntwuerfe.zauber.test.ts`; Gegenproben je Stelle einzeln rot; von Hand bleiben Teilen/PDF und das Aussehen
+- **Historie:** Wunsch 5 (Alwin 16.11.2026), Scheibe P2a-2
+</details>

@@ -4,6 +4,7 @@ import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import {
   diensteDerGruppe,
+  nimmtEintraegeAn,
   type Plan,
   type PlanGruppe,
   type PlanPlatz,
@@ -127,7 +128,8 @@ export function zauberZeilen(
   if (!plan || !daten) return { zeilen, mitEntwurf };
   for (const i of [...idx].sort((a, b) => a - b)) {
     const s = plan.spalten[i];
-    if (s.abgesagt || s.tag < heute) continue;
+    // Abgesagte Termine nehmen keine Einträge an (`nimmtEintraegeAn`); vergangene füllt nur der Zauberstab nicht.
+    if (!nimmtEintraegeAn(s) || s.tag < heute) continue;
     for (const zl of g.zeilen) {
       if (!darfPlanen(zl, s) || !darfAendern(daten, zl)) continue;
       const zelle = zl.zellen[i] ?? [];

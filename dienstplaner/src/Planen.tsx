@@ -5,7 +5,7 @@ import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
-import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
+import { gruppenName, nimmtEintraegeAn, type PlanGruppe } from '@shared/dienstplan/plan';
 import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
 import { fokusKandidaten, fokusTexte, fokusZahlen } from '@shared/dienstplan/fokus';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
@@ -444,7 +444,7 @@ export function Planen({
       onFokusAus: () => setFokusPerson(null),
       onPlaetze: (i, g) =>
         entwuerfe &&
-        !plan.spalten[i].abgesagt &&
+        nimmtEintraegeAn(plan.spalten[i]) &&
         ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
           ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
           : undefined,
@@ -583,7 +583,9 @@ export function Planen({
         dort als Entwurf ein (auf einen freien Platz des Dienstes) – war sie am Tag schon in einem
         anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach. Den eigenen Entwurf
         anklicken nimmt ihn wieder weg; ist der Dienst voll, geht „Platz dazunehmen“ vorerst nur
-        über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix. Im
+        über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix.
+        Entwürfe zählen schon mit – in „N frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im
+        PDF gilt nur, was in ChurchTools steht. In abgesagten Terminen trägst du nichts ein. Im
         Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in
         Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das
         Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines

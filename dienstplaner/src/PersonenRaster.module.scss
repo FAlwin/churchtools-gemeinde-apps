@@ -74,7 +74,10 @@ $anzahl-farben: 8;
   min-width: var(--namew);
   max-width: var(--namew);
 }
-thead .name {
+// Die Ecke oben links über allem, was waagerecht darunter durchscrollt. `.raster thead .name` statt `thead .name`:
+// Sonst gewinnt `.raster thead th { z-index: 3 }` (spezifischer), und eine spätere Kopfzelle mit `opacity` (abgesagter
+// Termin) malt sich über „Name“ (Handy, 16.11.2026).
+.raster thead .name {
   z-index: 5;
 }
 

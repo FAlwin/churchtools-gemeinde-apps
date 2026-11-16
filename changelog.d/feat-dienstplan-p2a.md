@@ -16,3 +16,9 @@
 - **Eine Regel für „freier Platz ohne Entwurf“** (`freiOhneEntwurf`): der Zauberstab und „Personen“ fragen dieselbe Funktion.
   Der Toast bei einem gescheiterten Eintragen/Entfernen („Hier hat eben jemand den Platz geändert …“) steht an einer Stelle
   (`fehlerHinweis`), ebenso das Entfernen eines Entwurfs (`entferneEntwurf`, fürs Entwurfs-Fach und „Personen“).
+
+### Behoben (Dienstplaner)
+
+- **„Personen“: Die Ecke „Name“ oben links bleibt sauber.** Scrollte am Handy eine abgesagte Spalte darunter durch,
+  schien ihr Text durch „Name“ hindurch. Die Ecke lag nicht über den anderen Kopfzellen, weil eine allgemeinere Regel
+  spezifischer war – jetzt `.raster thead .name` (wie die Ecke der Matrix, `.plan .svcKopf`).

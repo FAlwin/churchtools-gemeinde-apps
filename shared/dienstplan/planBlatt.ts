@@ -5,7 +5,7 @@
  * stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
  * denselben Zellen wie das Termin-Blatt (`terminBlatt.ts`).
  */
-import { MONATE, tagKurz } from '../ct/datum';
+import { MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
 import type { Lauf, Zelle } from '../ct/terminBlatt';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
 
@@ -137,9 +137,7 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
   const von = tage[0] ?? '';
   const bis = tage[tage.length - 1] ?? '';
   const untertitel = von ? spanneLang(von, bis) : '';
-  const datei = von
-    ? `${von.slice(8, 10)}.${von.slice(5, 7)}.-${bis.slice(8, 10)}.${bis.slice(5, 7)}.${bis.slice(0, 4)}`
-    : '';
+  const datei = von ? `${tagMonat(von)}-${tagPunkt(bis)}` : '';
   const kopf = { untertitel, gemeinde: q.gemeinde, app: q.app, stand: q.stand };
 
   if (wahl.art === 'suchen') {

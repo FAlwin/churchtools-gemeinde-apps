@@ -10,7 +10,7 @@
  */
 import type { InfoGruppe, ResponsibleEntry } from '../types/index';
 import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from './ablaufZeile';
-import { tagLang } from './datum';
+import { tagLang, tagPunkt } from './datum';
 
 // ── Eingang ──────────────────────────────────────────────────────────────────
 
@@ -293,7 +293,6 @@ export function terminBlatt(q: BlattQuelle, e: BlattEinstellungen): TerminBlatt 
   const ende = q.zeilen ? ablaufEnde(alle) : null;
   const datum = `${tagLang(q.tag)} ${q.tag.slice(0, 4)}`;
   const untertitel = `${datum} · ${q.beginn}${ende ? ` – ${ende}` : ''} Uhr`;
-  const [j, m, t] = [q.tag.slice(0, 4), q.tag.slice(5, 7), q.tag.slice(8, 10)];
 
   let ablauf: TerminBlatt['ablauf'] = null;
   if (q.zeilen && e.ablauf.an && alle.length > 0) {
@@ -382,6 +381,6 @@ export function terminBlatt(q: BlattQuelle, e: BlattEinstellungen): TerminBlatt 
     dienste: e.dienste.an ? blattDienste(q.dienste, e.dienste) : null,
     diensteUnten: e.dienste.unten,
     ablauf,
-    dateiname: `${q.titel} ${t}.${m}.${j}`,
+    dateiname: `${q.titel} ${tagPunkt(q.tag)}`,
   };
 }

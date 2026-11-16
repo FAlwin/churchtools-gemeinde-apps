@@ -1,3 +1,4 @@
+import { tagMonat } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, ortszeitAus } from '@shared/ct/zeit';
 
 /**
@@ -12,5 +13,5 @@ export function standKurz(ms: number, heute = new Date(), zeitzone = gemeindeZei
   const lokal = ortszeitAus(new Date(ms).toISOString(), zeitzone);
   const jahr =
     lokal.slice(0, 4) === heuteImKalender(heute, zeitzone).slice(0, 4) ? '' : lokal.slice(0, 4);
-  return `${lokal.slice(8, 10)}.${lokal.slice(5, 7)}.${jahr}, ${lokal.slice(11, 16)}`;
+  return `${tagMonat(lokal)}${jahr}, ${lokal.slice(11, 16)}`;
 }

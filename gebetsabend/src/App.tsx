@@ -23,7 +23,8 @@ import styles from './App.module.scss';
  *
  * **Aufbau wie Dienstplaner und Anmeldungen** (Entwurf v4, Alwin 05.11.2026: „sieht noch nicht wie die anderen und wie
  * eine von ChurchTools aus“ – Aufbau B): Die Technik bekommt am Computer zwei Spalten, links „Übertragung“ mit dem Bild,
- * rechts „Wer hört zu?“ und den Gebetsabend. Alle anderen haben nur die eine Karte – sie steht schmal in der Mitte.
+ * rechts „Wer hört zu?“ und den Gebetsabend. Alle anderen haben nur die eine Karte – über die volle Breite wie
+ * in allen Erweiterungen (Alwin 16.11.2026: „sollte schon einheitlich sein“; vorher schmal in der Mitte).
  * „Einstellungen“ steht als Knopf neben „Hallo …“ wie in Anmeldungen und Organigramm.
  */
 export function App() {
@@ -66,7 +67,6 @@ export function App() {
       app="Gebetsabend"
       zustand={zustand}
       onNochmal={laden}
-      schmal={!technik}
       kopfAktion={
         einstellungen && (
           <KopfKnopf

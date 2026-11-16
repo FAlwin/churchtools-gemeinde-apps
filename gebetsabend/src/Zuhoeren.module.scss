@@ -106,6 +106,8 @@
 
 .player {
   width: 100%;
+  // Seit die Seite die volle Fensterbreite nutzt (16.11.2026), würde das 16:9-Bild sonst höher als das Fenster.
+  max-width: calc(70vh * 16 / 9);
   aspect-ratio: 16 / 9;
   border: 0;
   border-radius: var(--r-ctrl);

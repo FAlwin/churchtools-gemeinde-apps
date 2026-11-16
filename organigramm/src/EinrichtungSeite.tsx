@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Icon } from '@ui/icons/icons';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useLaden } from '@ui/ct/useLaden';
 import {
   einrichtungStand,
@@ -11,6 +12,7 @@ import {
 } from '@shared/organigramm/einrichtungStand';
 import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
 import { ladeEinrichtungStand } from './ladeEinrichtungStand';
+import { EinrichtenFenster } from './EinrichtenFenster';
 import { Hinweis } from './KjHinweis';
 import type { Start } from './start';
 import styles from './KinderJugend.module.scss';
@@ -18,7 +20,7 @@ import styles from './KinderJugend.module.scss';
 /**
  * **Seite „Einrichtung“ im Reiter „Kinder & Jugend“** (Bauplan O9-5c, Entwurf `o9-5-einrichten-v1`) – nur für Leute mit
  * „Berechtigungen verwalten“: die Stufen, wie sie eingerichtet sind, und **was in ChurchTools davon wirklich steht**. Sie
- * liest nur; Knöpfe zum Ändern und Reparieren kommen mit O9-5c-2 und O9-5d.
+ * liest nur; „Stufen ändern …“ öffnet das Fenster (O9-5c-2, schreibt noch nichts); Reparieren und Schreiben kommen mit O9-5d.
  *
  * `regel` ist der Stand der Wechseltage in den Regeln, den der Reiter für „Wechseltage“ schon lädt (eine Quelle, O9-4);
  * `jahr` das Jahr des nächsten Wechsels.
@@ -45,6 +47,7 @@ export function EinrichtungSeite({
     [stand, einrichtung, start, regel, jahr],
   );
   const hinweis = zeilen ? sammelHinweis(zeilen) : null;
+  const [aendern, setAendern] = useState(false);
 
   return (
     <>
@@ -84,6 +87,11 @@ export function EinrichtungSeite({
           <dt>Ankündigung</dt>
           <dd>{stufen.ankuendigung}</dd>
         </dl>
+        <div className={styles.kartenFuss}>
+          <FensterKnopf art="zweit" onClick={() => setAendern(true)}>
+            Stufen ändern …
+          </FensterKnopf>
+        </div>
       </section>
       <section className={styles.karte} aria-label="Stand in ChurchTools">
         <h3 className={styles.abschnitt}>Stand in ChurchTools</h3>
@@ -112,6 +120,15 @@ export function EinrichtungSeite({
           </ul>
         )}
       </section>
+      {aendern && (
+        <EinrichtenFenster
+          art="aendern"
+          start={start}
+          einrichtung={einrichtung}
+          standDaten={stand.art === 'fertig' ? stand.daten : undefined}
+          onSchliessen={() => setAendern(false)}
+        />
+      )}
     </>
   );
 }
@@ -146,10 +163,11 @@ function Zeichen({ stand }: { stand: StandZeile['stand']['art'] }) {
 }
 
 /**
- * **Reiter, solange es keine Einrichtung gibt** – nur für „Berechtigungen verwalten“. Der Knopf „Einrichten …“ kommt
- * mit O9-5c-2; bis dahin steht hier der ruhige Satz.
+ * **Reiter, solange es keine Einrichtung gibt** – nur für „Berechtigungen verwalten“. „Einrichten …“ öffnet das Fenster
+ * (O9-5c-2): Stufen wählen, Vorschau ansehen – geschrieben wird mit O9-5d.
  */
-export function NichtEingerichtet() {
+export function NichtEingerichtet({ start }: { start: Start }) {
+  const [offen, setOffen] = useState(false);
   return (
     <section className={styles.leerKarte} aria-label="Noch nicht eingerichtet">
       <h2>Gruppenwechsel noch nicht eingerichtet</h2>
@@ -175,7 +193,18 @@ export function NichtEingerichtet() {
         Diesen Reiter siehst nur du und wer in ChurchTools „Berechtigungen verwalten“ hat. Leitungen
         sehen ihn erst nach dem Einrichten.
       </Hinweis>
-      <p className={styles.leise}>Einrichten folgt in der nächsten Fassung.</p>
+      <div className={styles.knopfzeile}>
+        <FensterKnopf onClick={() => setOffen(true)}>Einrichten …</FensterKnopf>
+        <span className={styles.leise}>Es wird erst nach einer Vorschau etwas angelegt.</span>
+      </div>
+      {offen && (
+        <EinrichtenFenster
+          art="einrichten"
+          start={start}
+          einrichtung={null}
+          onSchliessen={() => setOffen(false)}
+        />
+      )}
     </section>
   );
 }

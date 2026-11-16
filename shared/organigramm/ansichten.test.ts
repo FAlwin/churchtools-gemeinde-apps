@@ -132,6 +132,17 @@ describe('sichtbarerBaum', () => {
 });
 
 describe('spitzenWahl', () => {
+  it('die Wahl „nichts“ kann einen eigenen Namen tragen (Fenster „Einrichten“, O9-5c-2)', () => {
+    expect(spitzenWahl(BAUM, null)[0]).toEqual({
+      wert: '',
+      name: 'Ganze Gemeinde',
+      ebene: 0,
+      weg: '',
+    });
+    expect(spitzenWahl(BAUM, null, 'Gruppe wählen …')[0].name).toBe('Gruppe wählen …');
+    expect(spitzenWahl(BAUM, null, 'Gruppe wählen …')).toHaveLength(spitzenWahl(BAUM, null).length);
+  });
+
   it('ganze Gemeinde und jede Gruppe in Baum-Reihenfolge, eingerückt nach Ebene (#915)', () => {
     const w = spitzenWahl(BAUM, null);
     expect(w.map((x) => `${x.ebene}:${x.name}`)).toEqual([

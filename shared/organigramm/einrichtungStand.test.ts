@@ -15,6 +15,7 @@ import { einrichtungAus, type Einrichtung } from './gruppenwechselEinrichtung';
 import { jahrStaende, regelnReichenBis } from './wechseltage';
 import {
   einrichtungStand,
+  fehlendeLeiterRechte,
   leiterRolleAus,
   listeAuf,
   sammelHinweis,
@@ -22,6 +23,7 @@ import {
   type EinrichtungDaten,
   type Gelesen,
   type RegelStandRoh,
+  routineBefund,
   type StandQuelle,
   type StandZeile,
   type ZeilenId,
@@ -646,5 +648,36 @@ describe('Sammelhinweis und Stufen', () => {
     expect(leiterRolleAus(rollenRoh)).toBe(ROLLEN.leiter);
     expect(leiterRolleAus([{ groupTypeRoleId: 1, type: 'leader', isHidden: true }])).toBeNull();
     expect(leiterRolleAus(null)).toBeNull();
+  });
+});
+
+describe('fehlendeLeiterRechte und routineBefund (eine Stelle für Zeile und Plan, O9-5c-2)', () => {
+  it('fehlendeLeiterRechte: alle da → leer; eins weg → genau dieses, mit Stufe; geerbt zählt als da', () => {
+    expect(fehlendeLeiterRechte(LEITER_RECHTE.map(rechtZeile))).toEqual([]);
+    const ohne = LEITER_RECHTE.filter((r) => r.authId !== 10102);
+    expect(fehlendeLeiterRechte(ohne.map(rechtZeile)).map((r) => r.authId)).toEqual([10102]);
+    expect(fehlendeLeiterRechte([])).toEqual(LEITER_RECHTE);
+    const geerbt = LEITER_RECHTE.map((r) => ({ ...rechtZeile(r), isInherited: true }));
+    expect(fehlendeLeiterRechte(geerbt)).toEqual([]);
+  });
+
+  it('routineBefund: gut → ok; keine → fehlt; andere Wartezeit → Problem; nicht lesbar → unlesbar; andere Wartezeit der Einstellung', () => {
+    const d = gut();
+    expect(routineBefund(E.einstellung, U1, 11, d)).toEqual({ art: 'ok' });
+    expect(routineBefund({ aufraeumenTage: 120 }, U1, 11, d)).toEqual({
+      art: 'problem',
+      text: `wartet ${E.einstellung.aufraeumenTage} statt 120 Tage`,
+    });
+    expect(
+      routineBefund(E.einstellung, U1, 11, { ...d, routinen: new Map([[11, ok([])]]) }),
+    ).toEqual({
+      art: 'fehlt',
+    });
+    expect(
+      routineBefund(E.einstellung, U1, 11, { ...d, routinen: new Map([[11, NICHT]]) }),
+    ).toEqual({
+      art: 'unlesbar',
+    });
+    expect(routineBefund(E.einstellung, U1, 99, d)).toEqual({ art: 'unlesbar' });
   });
 });

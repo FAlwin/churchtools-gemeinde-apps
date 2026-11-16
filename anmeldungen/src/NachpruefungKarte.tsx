@@ -3,6 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { euroText } from '@shared/anmeldung/preis';
 import type { Betragsbefund, Nachpruefung } from '@shared/anmeldung/nachpruefung';
+import { bedingungsText, type Bedingungsbefund } from '@shared/anmeldung/antwortenAusListe';
 import { datumText } from './anzeige';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
@@ -70,6 +71,32 @@ function BetragsZeile({ b }: { b: Betragsbefund }) {
   );
 }
 
+function BedingungsZeile({
+  b,
+  onOeffnen,
+}: {
+  b: Bedingungsbefund;
+  onOeffnen?: (schluessel: string) => void;
+}) {
+  return (
+    <li className={v.befund}>
+      <div className={v.befundOben}>
+        <span>
+          <b>{b.name}</b> {b.nr && <span className={v.nr}>{b.nr}</span>}
+        </span>
+        {onOeffnen && (
+          <FensterKnopf art="link" onClick={() => onOeffnen(b.schluessel)}>
+            Anmeldung öffnen
+          </FensterKnopf>
+        )}
+      </div>
+      <div className={v.befundGrund}>
+        <span className={v.pruefInfo}>{bedingungsText(b)}</span>
+      </div>
+    </li>
+  );
+}
+
 /**
  * **Karte „Nachprüfung“** (A6-5c, #623, Entwurf `a6-5c-nachpruefung-v1`) – Plätze, Belegung je Auswahl, Beträge. Ändert
  * nichts. Wo sie steht, entscheidet die Seite (mit Hinweisen oben, sonst unten).
@@ -77,9 +104,12 @@ function BetragsZeile({ b }: { b: Betragsbefund }) {
 export function NachpruefungKarte({
   stand,
   onNeu,
+  onOeffnen,
 }: {
   stand: NachpruefungStand;
   onNeu: () => void;
+  /** Das Fenster einer Anmeldung öffnen (Bedingungen, F1e). */
+  onOeffnen?: (schluessel: string) => void;
 }) {
   const n = stand.art === 'fertig' ? stand.n : null;
   const neu = (
@@ -162,6 +192,20 @@ export function NachpruefungKarte({
                   ))}
                 </ul>
               )}
+            </div>
+          )}
+          {n.bedingungen.length > 0 && (
+            <div className={v.pruefTeil}>
+              <h3>Bedingungen</h3>
+              <p className={v.pruefText}>
+                In ChurchTools steht, was das Formular nicht erlaubt hätte – meist von Hand
+                eingetragen.
+              </p>
+              <ul className={v.befunde}>
+                {n.bedingungen.map((b, i) => (
+                  <BedingungsZeile key={i} b={b} onOeffnen={onOeffnen} />
+                ))}
+              </ul>
             </div>
           )}
           <p className={v.pruefFuss}>

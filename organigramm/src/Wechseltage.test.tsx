@@ -218,6 +218,24 @@ describe('Wechseltage: Erinnerung „läuft aus“ (nur mit dem Recht)', () => {
   });
 });
 
+describe('Wechseltage: „nichts zu tun“ nur, wenn die Regeln reichen', () => {
+  const NICHTS = 'nichts zu tun – ChurchTools verschiebt von selbst';
+  it('Regeln reichen über das nächste Jahr hinaus → „nichts zu tun“', () => {
+    zeigen({ regel: regelBis(2029) });
+    expect(screen.getByText(NICHTS)).toBeTruthy();
+  });
+  it.each([
+    ['fehlt', regelBis(2026)],
+    ['läuft bald aus', regelBis(2027)],
+    ['nicht prüfbar', { art: 'nichtPruefbar' } as const],
+    ['wird geprüft', { art: 'laedt' } as const],
+    ['ohne das Recht', null],
+  ])('%s → kein „nichts zu tun“', (_, regel) => {
+    zeigen({ regel });
+    expect(screen.queryByText(NICHTS)).toBeNull();
+  });
+});
+
 describe('Wechseltage: Leitungen Bescheid geben', () => {
   it('vor der Ankündigung: nur der Satz mit dem Datum, kein Text zum Kopieren', () => {
     zeigen({ phase: 'ruhig' });

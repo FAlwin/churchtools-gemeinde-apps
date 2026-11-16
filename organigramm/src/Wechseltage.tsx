@@ -60,7 +60,11 @@ export function Wechseltage({
     <>
       <div className={styles.kopf}>
         <h2>Wechseltage</h2>
-        <span className={styles.leise}>nichts zu tun – ChurchTools verschiebt von selbst</span>
+        {/* Nur wenn die Regeln nachweislich reichen – sonst widerspräche die Zeile dem gelben Hinweis, und ohne
+            das Recht (oder „nicht prüfbar“) wäre sie ein ungeprüftes Versprechen. */}
+        {tage.art === 'ok' && (
+          <span className={styles.leise}>nichts zu tun – ChurchTools verschiebt von selbst</span>
+        )}
       </div>
       <p className={styles.leise}>
         Die Termine stehen für mehrere Jahre im Voraus fest. Am Ankündigungstag kommen die Kinder in

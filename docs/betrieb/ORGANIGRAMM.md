@@ -319,7 +319,9 @@ Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
 ### Wechseltage (O9-4, Bereichsleitung und Admins)
 
 Der Unterreiter **Wechseltage** zeigt je Jahr, das der Ferienkalender schon kennt: Sommerferien, Ankündigung, Wechseltag
-(mit Wochentag) und Stichtag. Zu tun gibt es nichts – ChurchTools verschiebt von selbst. Die Bereichsleitung sieht diese
+(mit Wochentag) und Stichtag. Stehen die Wechseltage für mehr als das nächste Jahr in den Regeln, steht unter der
+Überschrift „nichts zu tun – ChurchTools verschiebt von selbst“; sonst (und ohne das Recht) fehlt die Zeile, damit sie
+nichts Ungeprüftes verspricht. Die Bereichsleitung sieht diese
 Tabelle; die Spalte „In den Regeln“ und die Erinnerung sehen nur Leute mit dem Recht **„Berechtigungen verwalten“**
 (`churchcore: administer persons` – nicht dasselbe wie „Gruppen verwalten“).
 

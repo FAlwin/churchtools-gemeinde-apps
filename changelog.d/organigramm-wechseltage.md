@@ -9,6 +9,7 @@
   - **Erinnerung, wenn die Regeln auslaufen** (Seite und Übersicht, nur mit dem Recht): „Wechseltage fehlen bald. Die
     Regeln reichen nur noch bis …“ bzw. „Ab … fehlen Wechseltage in den Regeln.“ Lassen sich die Regeln nicht lesen,
     steht „nicht prüfbar“ – keine Erinnerung, nichts wird verändert.
+    „nichts zu tun – ChurchTools verschiebt von selbst“ steht nur da, wenn die Regeln nachweislich reichen.
   - **Leitungen Bescheid geben:** Ab der Ankündigung steht ein fertiger Text bereit (Wechseltag, je Übergang die Zahl der
     Kinder, die wechseln – ohne Ausnahmen, dieselbe Zahl wie in der Übersicht) mit dem Knopf „Text kopieren“. Geht das
     Kopieren nicht, ist der Text markiert.

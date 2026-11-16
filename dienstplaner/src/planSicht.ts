@@ -52,6 +52,12 @@ export interface Sicht {
   onTermin?: (id: number) => void;
   /** Der Ablauf oben in der Matrix (E6-6a); `null` ohne Anschluss. */
   ablauf: MatrixAblauf | null;
+  /** Fokus-Modus (Wunsch 11): wessen Plätze umrandet sind (`personId`); `null`/fehlt: niemand. */
+  fokusId?: number | null;
+  /** Eine Person in den Fokus nehmen (Symbol am Namen, langes Drücken) – fehlt, wo es keinen Fokus gibt (Termin-Ansicht). */
+  onFokus?: (personId: number, name: string) => void;
+  /** Den Fokus beenden (in „Personen“ nimmt ein zweites Antippen des Namens ihn zurück). */
+  onFokusAus?: () => void;
   /** „Infos & Dateien“ über dem Ablauf (T1b); `null` ohne Anschluss. */
   infos: MatrixInfos | null;
 }
@@ -76,6 +82,7 @@ export function freierPlatz(
     dienst: z.dienst.name,
     termin: s.name,
     tag: tagKurz(s.tag),
+    datum: s.tag,
     uhrzeit: s.uhrzeit,
     monat: s.tag.slice(0, 7),
     monatName: monatName(s.tag),

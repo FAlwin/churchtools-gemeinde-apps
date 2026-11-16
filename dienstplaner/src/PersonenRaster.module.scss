@@ -365,3 +365,37 @@ thead .name {
   color: var(--text2);
   font-size: 13px;
 }
+
+// Fokus-Modus (Wunsch 11): ALLE Zeilen der Person – gelber Rahmen oben und unten, links ein dicker Balken, rechts am Ende
+// der Zeile; die Fläche deckend (`--fokus-grund`), der Name fett. Die Farbe des Dienst-Tags bleibt (Dienstfarbe 0 ist
+// amber, deshalb nimmt der Fokus Gelb). Stärker als das blasse Hover-Blau darüber (`.hervor`), steht daher dahinter.
+.fokus {
+  --zeile: var(--fokus-grund);
+}
+.raster .fokus {
+  th,
+  td {
+    box-shadow:
+      inset 0 2px 0 var(--fokus),
+      inset 0 -2px 0 var(--fokus);
+  }
+  th:first-child {
+    box-shadow:
+      inset 0 2px 0 var(--fokus),
+      inset 0 -2px 0 var(--fokus),
+      inset 5px 0 0 var(--fokus);
+  }
+  td:last-child {
+    box-shadow:
+      inset 0 2px 0 var(--fokus),
+      inset 0 -2px 0 var(--fokus),
+      inset -2px 0 0 var(--fokus);
+  }
+  .personName {
+    font-weight: 800;
+  }
+  .avatar {
+    background: var(--fokus);
+    color: #422006; // bewusst fest: dunkle Schrift auf Gelb, hell wie dunkel
+  }
+}

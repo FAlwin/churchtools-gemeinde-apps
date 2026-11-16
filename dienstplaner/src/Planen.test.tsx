@@ -615,7 +615,8 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
       within(liste)
         .getAllByRole('listitem')
         .map((li) => li.textContent),
-    ).toEqual(['Ben Testfrei0× im November']);
+      // Mit Fokus-Modus (Wunsch 11): dazu die Mini-Zeile mit den Einsätzen rund um den Termin.
+    ).toEqual(['Ben TestfreiIm Plan, ±7 Tage: noch nichts0× im November']);
     expect(laden).toHaveBeenCalledWith(20, 7);
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();

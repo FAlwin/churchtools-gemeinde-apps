@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { EintragenStand, type Eintragen, type FreierPlatz } from './WerKann';
@@ -22,12 +23,15 @@ export function BelegtFach({
   eintragen,
   onZurueckziehen,
   onAnderePerson,
+  onFokus,
   onClose,
 }: {
   platz: FreierPlatz & { bisher: NonNullable<FreierPlatz['bisher']> };
   eintragen?: Eintragen;
   onZurueckziehen: () => Promise<EntwurfErgebnis>;
   onAnderePerson: () => void;
+  /** „Im Plan hervorheben“ (Fokus-Modus, Wunsch 11) – schließt das Fenster; fehlt bei Gästen und ohne Fokus. */
+  onFokus?: () => void;
   onClose: () => void;
 }) {
   const [laeuft, setLaeuft] = useState(false);
@@ -67,6 +71,11 @@ export function BelegtFach({
       <div className={eigen.status}>
         <b>{b.name}</b> – {stand}
       </div>
+      {onFokus && (
+        <button type="button" className={`${styles.knopf} ${eigen.fokus}`} onClick={onFokus}>
+          <Icon name="fokus" size={15} /> Im Plan hervorheben
+        </button>
+      )}
       {bereit && (
         <>
           <div className={styles.knoepfe}>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
@@ -26,6 +27,8 @@ export interface FreierPlatz {
   termin: string;
   /** z. B. „So 08.11.“ */
   tag: string;
+  /** Der Tag als `YYYY-MM-DD` – für „Einsätze in der Nähe“ (Fokus-Modus); fehlt in alten Aufrufen. */
+  datum?: string;
   uhrzeit: string;
   /** `JJJJ-MM` – für „N× im Monat“. */
   monat: string;
@@ -86,6 +89,7 @@ export function WerKann({
   zurueck,
   eintragen,
   stift,
+  fokus,
 }: {
   platz: FreierPlatz;
   onClose: () => void;
@@ -97,6 +101,15 @@ export function WerKann({
   eintragen?: Eintragen;
   /** Der Stift (E5-3): Vorlieben der Kandidaten für diese Dienstgruppe ändern. Ohne Angabe kein Stift. */
   stift?: { vorlieben: EntwurfAnschluss['vorlieben']; gruppe: { id: number; name: string } };
+  /**
+   * Fokus-Modus (Wunsch 11): je Kandidat eine Mini-Zeile mit seinen Einsätzen rund um den Termin (`mini`) und der
+   * Knopf „im Plan zeigen“ (`zeigen` – schließt das Fenster, die Matrix zeigt die Person). Ohne Angabe bleibt das Fach
+   * wie es war.
+   */
+  fokus?: {
+    mini: (personId: number) => string;
+    zeigen: (k: { personId: number; name: string }) => void;
+  };
 }) {
   const { stand, neu } = useLaden(
     () =>
@@ -180,6 +193,7 @@ export function WerKann({
                       <span className={styles.wer}>
                         <b>{k.name}</b>
                         <small className={h.warnung ? styles.warnung : undefined}>{h.text}</small>
+                        {fokus && <small className={styles.mini}>{fokus.mini(k.personId)}</small>}
                       </span>
                       <span className={styles.anzahl}>
                         {k.imMonat}× im {platz.monatName}
@@ -188,7 +202,7 @@ export function WerKann({
                   );
                   const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
                   return (
-                    <li key={k.personId} className={stift ? styles.mitStift : undefined}>
+                    <li key={k.personId} className={stift || fokus ? styles.mitStift : undefined}>
                       {bereit ? (
                         <button
                           type="button"
@@ -205,6 +219,17 @@ export function WerKann({
                         </button>
                       ) : (
                         <div className={klasse}>{inhalt}</div>
+                      )}
+                      {fokus && (
+                        <button
+                          type="button"
+                          className={styles.zeigen}
+                          onClick={() => fokus.zeigen({ personId: k.personId, name: k.name })}
+                          aria-label={`Im Plan zeigen: ${k.name}`}
+                          title="Im Plan zeigen – das Fenster schließt, die Person wird hervorgehoben"
+                        >
+                          <Icon name="fokus" size={16} />
+                        </button>
                       )}
                       {stift && (
                         <StiftKnopf

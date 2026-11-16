@@ -59,3 +59,17 @@ export function freiText(alle: Record<string, Antwort>, feldId: string): string 
 export function freiAnzeige(x: Feld, antwort: string, text: string | null | undefined): string {
   return antwort === freiName(x) && freiMitText(x) && text?.trim() ? text.trim() : antwort;
 }
+
+/**
+ * **Was die Eingabe für den Text braucht** – aus den Antworten eines Teils (Kontakt oder eine Person) und dem Setter
+ * dazu. So kennt nur diese Datei den Schlüssel `<Feld-ID>.frei` (Formular, Vorschau, Anmeldung von Hand).
+ */
+export function freiEingabe(
+  teil: Record<string, Antwort>,
+  feldId: string,
+  setze: (schluessel: string, w: Antwort) => void,
+): { freiText: string; onFreiText: (t: string) => void } {
+  const k = freiSchluessel(feldId);
+  const t = teil[k];
+  return { freiText: typeof t === 'string' ? t : '', onFreiText: (x) => setze(k, x) };
+}

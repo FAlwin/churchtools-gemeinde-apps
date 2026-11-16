@@ -39,6 +39,7 @@ import {
   type HandPerson,
 } from '@shared/anmeldung/vonHand';
 import { tagPunkt } from '@shared/ct/datum';
+import { freiEingabe } from '@shared/anmeldung/freieAntwort';
 import {
   GibtEsSchon,
   gleichNamige,
@@ -663,6 +664,7 @@ export function VonHandFenster({
                     pfad={`anmeldung.${x.id}`}
                     wert={antworten.anmeldung[x.id]}
                     onWert={(w) => setAnmeldung(x.id, w)}
+                    {...freiEingabe(antworten.anmeldung, x.id, setAnmeldung)}
                     fehler={fehlerFelder}
                     {...bedingt(x, `anmeldung.${x.id}`)}
                   />
@@ -701,6 +703,7 @@ export function VonHandFenster({
                   pfad={`personen.0.${x.id}`}
                   wert={antworten.personen[0][x.id]}
                   onWert={(w) => setPerson(x.id, w)}
+                  {...freiEingabe(antworten.personen[0], x.id, setPerson)}
                   fehler={fehlerFelder}
                   gesperrt={gesperrt(x)}
                   {...bedingt(x, `personen.0.${x.id}`, 0)}

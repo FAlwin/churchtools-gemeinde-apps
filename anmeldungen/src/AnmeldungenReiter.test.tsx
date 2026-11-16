@@ -1676,3 +1676,64 @@ describe('Von Hand in Schritten (F2d)', () => {
     await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
   });
 });
+
+// ── F3b: freie Antwort bei der Anmeldung von Hand ──
+describe('Von Hand: freie Antwort (F3b)', () => {
+  const NOCH_NICHT = 'Weiß ich noch nicht';
+  const TEXT_SPALTE = 999;
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    const felder = new Map(FELDER);
+    felder.set(612, {
+      ...FELDER.get(612)!,
+      options: [...(FELDER.get(612)!.options ?? []), { id: '117', name: NOCH_NICHT }],
+    });
+    felder.set(TEXT_SPALTE, {
+      id: TEXT_SPALTE,
+      name: `Fotos (${NOCH_NICHT})`,
+      fieldTypeCode: 'text',
+    });
+    mm.gruppenfelderLaden.mockResolvedValue(felder);
+    hm.meinName.mockResolvedValue('Alwin Friesen');
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+    ]);
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const tippen = (id: string, wert: string) =>
+    fireEvent.change(document.getElementById(id)!, { target: { value: wert } });
+
+  it('Text der freien Antwort: Feld klappt auf, ist bei Pflicht nötig und landet in seiner Spalte', async () => {
+    const x = e();
+    x.formular.person.find((f) => f.id === 'foto')!.frei = { name: NOCH_NICHT, textfeld: 'auf' };
+    x.ctFelder = { ...x.ctFelder, 'foto.frei': TEXT_SPALTE };
+    zeigen(fertig(), 10, false, true, false, false, x);
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Probe' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Probe/ }));
+    tippen('af-anmeldung.name-vor', 'Petra');
+    tippen('af-anmeldung.name-nach', 'Probe');
+    tippen('af-anmeldung.tel', '0170 1');
+    tippen('af-anmeldung.eltern-0-vor', 'Petra');
+    tippen('af-anmeldung.eltern-0-nach', 'Probe');
+    tippen('af-anmeldung.eltern-0-tel', '0170 1');
+    fireEvent.click(screen.getByLabelText(/einverstanden/));
+    fireEvent.click(screen.getByRole('radio', { name: NOCH_NICHT }));
+    fireEvent.click(screen.getByRole('button', { name: /Trotzdem einen Platz geben/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(screen.getByText(`Bitte „${NOCH_NICHT}“ eintragen.`)).toBeTruthy();
+    expect(hm.vonHandAnmelden).not.toHaveBeenCalled();
+    tippen('af-personen.0.foto-frei', 'fragt die Eltern');
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(hm.vonHandAnmelden).toHaveBeenCalled());
+    const plan = hm.vonHandAnmelden.mock.calls[0][1];
+    expect(plan.felder[x.ctFelder.foto]).toBe('117');
+    expect(plan.felder[TEXT_SPALTE]).toBe('fragt die Eltern');
+  });
+});

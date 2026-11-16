@@ -17,6 +17,7 @@ import { useAbsenden, usePlaetze, type Abschicken } from './useAbsenden';
 import { useBedingungen } from './useBedingungen';
 import { useSchritte } from './useSchritte';
 import { SchrittFortschritt } from './SchrittFortschritt';
+import { freiEingabe } from '@shared/anmeldung/freieAntwort';
 
 /**
  * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
@@ -317,6 +318,7 @@ export function AnmeldeFormular({
                     pfad={`anmeldung.${f.id}`}
                     wert={antworten.anmeldung[f.id]}
                     onWert={(w) => setAnmeldung(f.id, w)}
+                    {...freiEingabe(antworten.anmeldung, f.id, setAnmeldung)}
                     fehler={fehler}
                     zusatz={baukasten?.hinweis?.(f.id)}
                     {...bedingt(f, `anmeldung.${f.id}`)}
@@ -409,6 +411,7 @@ export function AnmeldeFormular({
                           pfad={`personen.${i}.${f.id}`}
                           wert={p[f.id]}
                           onWert={(w) => setPerson(i, f.id, w)}
+                          {...freiEingabe(p, f.id, (k, w) => setPerson(i, k, w))}
                           fehler={fehler}
                           zusatz={baukasten?.hinweis?.(f.id)}
                           {...bedingt(f, `personen.${i}.${f.id}`, i)}
@@ -526,6 +529,7 @@ export function AnmeldeFormular({
                     pfad={`anmeldung.${f.id}`}
                     wert={antworten.anmeldung[f.id]}
                     onWert={(w) => setAnmeldung(f.id, w)}
+                    {...freiEingabe(antworten.anmeldung, f.id, setAnmeldung)}
                     fehler={fehler}
                     zusatz={baukasten?.hinweis?.(f.id)}
                     loeschtag={loeschtag}

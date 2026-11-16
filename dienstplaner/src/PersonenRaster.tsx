@@ -107,11 +107,12 @@ export function PersonenRaster({
 }) {
   const { plan, spalten, gruppen, zugeklappt, onUmschalten } = sicht;
   const bisUnten = useBisUnten();
-  // Hervorheben: Maus über dem Namen (nur echte Maus – am Handy erzeugt Antippen sonst Eintreten UND Klick) oder
-  // angetippt/angeklickt (bleibt, bis man noch einmal tippt).
+  // Hervorheben mit der Maus über dem Namen (nur echte Maus – am Handy erzeugt Antippen sonst Eintreten UND Klick):
+  // schwach, nur solange man darüber ist. Das **Festhalten** ist seit Wunsch 11 der Fokus-Modus (`sicht.fokusId`):
+  // Antippen des Namens nimmt die Person in den Fokus – kräftig gelb, in allen ihren Zeilen, über die Ansichten hinweg.
   const [ueber, setUeber] = useState<number | null>(null);
-  const [fest, setFest] = useState<number | null>(null);
-  const hervor = fest ?? ueber;
+  const hervor = ueber;
+  const fokusId = sicht.fokusId ?? null;
 
   // Geladen wird für die Gruppen der gezeigten Dienste, über den ganzen geladenen Zeitraum der Matrix – Blättern im
   // Fenster lädt also nichts neu.
@@ -140,18 +141,24 @@ export function PersonenRaster({
   const zeile = (b: RasterBlock, r: RasterZeile, nr: number) => (
     <tr
       key={r.schluessel}
-      className={`${nr % 2 === 1 ? styles.z2 : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}`}
+      className={`${nr % 2 === 1 ? styles.z2 : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}${fokusId === r.personId ? ' ' + styles.fokus : ''}`}
       data-person={r.personId}
     >
       <th scope="row" className={styles.name}>
         <button
           type="button"
           className={styles.namenKnopf}
-          aria-pressed={fest === r.personId}
-          title="Alle Zeilen dieser Person hervorheben"
+          aria-pressed={fokusId === r.personId}
+          title={
+            fokusId === r.personId
+              ? 'Fokus aus'
+              : 'Im Plan hervorheben – alle Zeilen dieser Person, auch in der Matrix'
+          }
           onPointerEnter={(e) => e.pointerType === 'mouse' && setUeber(r.personId)}
           onPointerLeave={(e) => e.pointerType === 'mouse' && setUeber(null)}
-          onClick={() => setFest((alt) => (alt === r.personId ? null : r.personId))}
+          onClick={() =>
+            fokusId === r.personId ? sicht.onFokusAus?.() : sicht.onFokus?.(r.personId, r.name)
+          }
         >
           <span className={styles.avatar} aria-hidden="true">
             {r.initialen}

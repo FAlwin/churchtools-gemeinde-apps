@@ -102,7 +102,13 @@ const TERMINE = [
     startDate: zeit(7, '17:00'),
     endDate: zeit(7, '18:30'),
     // Ein Gast im Gesang (Name ohne Person) – die Ansicht „Personen“ zeigt ihn in der Zeile „Gäste“.
-    eventServices: [platz(6, 19, 'Spike', true), platz(9, null, 'Lea Hartmann', true)],
+    // Anna steht hier in Licht (Fokus-Modus, Wunsch 11): In „Wer kann?“ erscheint sie mit Einsatz in der Nähe, im Suchfeld
+    // „Person hervorheben“ und als Fokus-Ziel in der Matrix.
+    eventServices: [
+      platz(6, 19, 'Spike', true),
+      platz(7, 46, 'Anna Klassen', true),
+      platz(9, null, 'Lea Hartmann', true),
+    ],
   },
   {
     id: 103,
@@ -125,7 +131,8 @@ const TERMINE = [
     name: 'Gebetsabend',
     startDate: zeit(21, '17:00'),
     endDate: zeit(21, '18:30'),
-    eventServices: [platz(7, 1, 'Alwin', true)],
+    // Ben ist hier nur angefragt – im Fokus „1 angefragt“.
+    eventServices: [platz(7, 1, 'Alwin', true), platz(9, 49, 'Ben Wiebe', false)],
   },
   {
     id: 106,

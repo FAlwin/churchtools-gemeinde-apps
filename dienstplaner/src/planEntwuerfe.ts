@@ -265,37 +265,14 @@ export function plaetzeZeilen(
 }
 
 /**
- * Die Dienste **aller übrigen Gruppen**, die man an diesem Termin planen darf – für „Vorlage übernehmen“, die über alle
- * Dienstgruppen wirkt. Dieselbe Regel wie `plaetzeZeilen` (`darfImFach`).
- */
-export function plaetzeWeitere(
-  daten: EntwuerfeDaten | null,
-  plan: Plan,
-  s: PlanSpalte,
-  i: number,
-  g: PlanGruppe,
-  katalog: DiensteKatalog,
-): PlaetzeZeile[] {
-  const zeileJe = new Map(plan.gruppen.flatMap((pg) => pg.zeilen).map((zl) => [zl.dienst.id, zl]));
-  const eigene = new Set(
-    diensteDerGruppe(
-      [...katalog.dienste.values()],
-      katalog.dienstgruppen,
-      g.gruppe?.id ?? null,
-    ).map((d) => d.id),
-  );
-  return [...katalog.dienste.values()]
-    .filter((d) => !eigene.has(d.id) && darfImFach(katalog, s, d, zeileJe.get(d.id)))
-    .map((d) => plaetzeZeile(daten, s, i, d, zeileJe.get(d.id)));
-}
-
-/**
  * Was das Plätze-Fach für „Vorlage übernehmen“ braucht – nur, wenn der Termin einen bekannten Kalender hat (die Vorlagen
- * gehören je zu einem Kalender; ohne ihn ließe sich keine zuordnen).
+ * gehören je zu einem Kalender; ohne ihn ließe sich keine zuordnen). `gruppenDienste`: die Dienste **der Gruppe, deren Fach
+ * offen ist** (`diensteDerGruppe`, dieselbe Regel wie die Liste im Fach) – nur sie ändert eine Vorlage (16.11.2026).
  */
 export function vorlageFuer(
   katalog: DiensteKatalog,
   s: PlanSpalte,
+  g: PlanGruppe,
   laden: () => Promise<TerminVorlage[]>,
 ) {
   if (!s.kalender) return undefined;
@@ -303,6 +280,13 @@ export function vorlageFuer(
     kalenderId: s.kalender.id,
     laden,
     namen: new Map([...katalog.dienste].map(([id, d]) => [id, d.name])),
+    gruppenDienste: new Set(
+      diensteDerGruppe(
+        [...katalog.dienste.values()],
+        katalog.dienstgruppen,
+        g.gruppe?.id ?? null,
+      ).map((d) => d.id),
+    ) as ReadonlySet<number>,
   };
 }
 

@@ -35,3 +35,21 @@
 .gefahr {
   color: var(--red);
 }
+
+// „Im Plan hervorheben“ im Fenster am belegten Platz (Fokus-Modus, Wunsch 11): oben, über die ganze Breite, gelb gerahmt wie
+// der Fokus selbst – kein Knopf, der etwas ändert.
+.fokus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  border-color: var(--fokus) !important;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--fokus-grund) !important;
+    }
+  }
+}

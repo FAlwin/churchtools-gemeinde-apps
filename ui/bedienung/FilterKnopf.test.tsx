@@ -145,3 +145,45 @@ describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
     expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
   });
 });
+
+describe('FilterKnopf – Unterliste unter einer Möglichkeit (Wunsch 10)', () => {
+  const unter = (teilweise: boolean, an: boolean[], onAlle = vi.fn()) => (
+    <FilterKnopf
+      abschnitte={[
+        {
+          titel: 'Gruppen',
+          optionen: [
+            {
+              wert: 'a',
+              text: 'Technik',
+              unter: {
+                teilweise,
+                onAlle,
+                punkte: an.map((x, i) => ({ text: `Dienst ${i}`, an: x, onUmschalten: vi.fn() })),
+              },
+            },
+            { wert: 'b', text: 'Musik' },
+          ],
+          aus: [],
+          onAus: vi.fn(),
+        },
+      ]}
+    />
+  );
+
+  it('die Punkte stehen eingerückt darunter; „teilweise“ zeigt den Strich; ein Tipp ruft onAlle', () => {
+    const onAlle = vi.fn();
+    render(unter(true, [true, false], onAlle));
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/ }));
+    const gruppe = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Technik' });
+    expect(gruppe.indeterminate).toBe(true);
+    expect(angehakt(screen.getByRole('checkbox', { name: 'Technik: Dienst 1' }))).toBe(false);
+    fireEvent.click(gruppe);
+    expect(onAlle).toHaveBeenCalledTimes(1);
+  });
+
+  it('ausgeblendete Punkte zählen in die Zahl am Knopf', () => {
+    render(unter(true, [true, false, false]));
+    expect(screen.getByRole('button', { name: 'Filter, 2 ausgeblendet' })).toBeTruthy();
+  });
+});

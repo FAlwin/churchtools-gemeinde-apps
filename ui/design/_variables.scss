@@ -33,6 +33,10 @@
   // Höhe aller Knöpfe und Bedienelemente in einer Reihe – Kopf-, Zeilen- und Fensterknöpfe, Umschalter, Auswahlfelder
   // (Alwin, 28.10.2026: „einheitlich an ChurchTools orientieren“; vorher 30–40 px nebeneinander im Organigramm).
   --knopf-hoehe: 38px;
+
+  // Längste Zeile für Fließtext (Hinweise, Fußzeilen). Seit die Seiten die volle Fensterbreite nutzen (Alwin,
+  // 16.11.2026), liefen solche Sätze sonst über 1800 px – zu lang zum Lesen.
+  --lese-breite: 960px;
 }
 
 // ── Dunkel wie ChurchTools ───────────────────────────────────────────
@@ -67,6 +71,7 @@ html[data-theme='dark'] {
   --blue-ink: #669cff;
   --blue-soft: rgba(43, 127, 255, 0.18);
   --markiert: rgba(250, 204, 21, 0.3);
+  --fokus-text: #fef08a; // yellow-200 – Rahmen und Fläche (`_farben.scss`) tragen im Dunkel unverändert
   --blue-tile: #1c398e; // `--color-accent-b-pale` (blue-900)
   --blue-tile-text: #dbeafe; // `--color-accent-primary` (blue-100)
   --red: #ff6467; // red-400

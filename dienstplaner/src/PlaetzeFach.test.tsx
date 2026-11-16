@@ -175,21 +175,34 @@ describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
       [50, 1],
       [99, 1],
     ]),
+    // Video (8) gehört einer anderen Gruppe, 99 gibt es nicht mehr: beide gehen das Fach nichts an.
+    roh(5, 'Gemischt', [
+      [24, 1],
+      [8, 2],
+      [99, 1],
+    ]),
+    roh(6, 'Nur andere Gruppen', [
+      [8, 1],
+      [99, 1],
+    ]),
   ]);
+
+  // Die Dienste dieser Gruppe: die vier in der Liste und Kaffee (Gruppe, aber nicht planbar) – Café 50. Video (8) und
+  // Dienst 99 gehören nicht dazu.
+  const GRUPPE: ReadonlySet<number> = new Set([24, 9, 6, 1, 50]);
 
   function zeigeMitVorlage(
     aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, anzahl: neu }),
     laden: () => Promise<TerminVorlage[]> = () => Promise.resolve(VORLAGEN),
+    gruppenDienste: ReadonlySet<number> = GRUPPE,
   ) {
     const p = { aendern: vi.fn(aendern), onGespeichert: vi.fn(), onClose: vi.fn() };
     render(
       <PlaetzeFach
         titel="Moderation · Plätze"
         unter="Gottesdienst · So, 25.10."
-        zeilen={[ABENDMAHL]}
-        // Gesang (belegt 1) und Ton gehören einer anderen Gruppe – nur die Vorlage kennt sie.
-        weitere={[GESANG, TON, PREDIGT]}
-        vorlage={{ kalenderId: 1, laden, namen: NAMEN }}
+        zeilen={[ABENDMAHL, GESANG, TON, PREDIGT]}
+        vorlage={{ kalenderId: 1, laden, namen: NAMEN, gruppenDienste }}
         {...p}
       />,
     );
@@ -215,12 +228,6 @@ describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
     await waitFor(() => expect(zahl('Abendmahl')).toBe('0'));
   });
 
-  it('die Dienste der anderen Gruppen stehen nicht in der Liste', async () => {
-    zeigeMitVorlage();
-    await screen.findByRole('combobox', { name: 'Vorlage' });
-    expect(screen.queryByLabelText(/^Gesang: \d+ Plätze$/)).toBeNull();
-  });
-
   it('Vorschau: erhöht nur, was fehlt, und nennt Übersprungenes mit Grund; nichts wird geschrieben', async () => {
     const p = zeigeMitVorlage();
     await waehle('Abendmahl');
@@ -228,13 +235,32 @@ describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
     expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeTruthy();
     expect(p.aendern).not.toHaveBeenCalled();
     await waehle('Mit Entwurf und Fremdem');
-    // Predigt: Entwurf; Kaffee: bekannt, aber nicht planbar (nicht im Stand); 99: gibt es nicht.
+    // Predigt: Entwurf; Kaffee: in dieser Gruppe, aber nicht planbar (nicht im Stand); 99 gehört keiner Gruppe: still weg.
     expect(
       screen.getByText(
-        'Übersprungen: Predigt – hier liegt ein Entwurf · Kaffee – darfst du nicht planen · Dienst 99 – gibt es in ChurchTools nicht (mehr)',
+        'Übersprungen: Predigt – hier liegt ein Entwurf · Kaffee – darfst du nicht planen',
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+  });
+
+  it('Dienste anderer Gruppen in der Vorlage: nicht in der Vorschau, nicht übersprungen, nie geändert', async () => {
+    const p = zeigeMitVorlage();
+    await waehle('Gemischt');
+    expect(screen.getByText('Abendmahl: 0 → 1')).toBeTruthy();
+    expect(screen.queryByText(/Video|Dienst 99|Übersprungen/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+    await waitFor(() => expect(p.aendern).toHaveBeenCalledTimes(1));
+    expect(p.aendern).toHaveBeenCalledWith(ABENDMAHL, 0, 1);
+  });
+
+  it('keiner der Vorlagen-Dienste gehört zur Gruppe: ruhiger Satz statt „schon alles“, kein Übernehmen', async () => {
+    const p = zeigeMitVorlage();
+    await waehle('Nur andere Gruppen');
+    expect(screen.getByText('Diese Vorlage hat keine Dienste dieser Gruppe.')).toBeTruthy();
+    expect(screen.queryByText('Der Termin hat schon alles aus der Vorlage.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+    expect(p.aendern).not.toHaveBeenCalled();
   });
 
   it('hat der Termin schon alles: „Der Termin hat schon alles aus der Vorlage.“, kein Übernehmen', async () => {

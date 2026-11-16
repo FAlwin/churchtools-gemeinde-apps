@@ -141,6 +141,7 @@ describe('ladeStart (Organigramm)', () => {
       mitgliederAlle: false,
       mitgliederGruppen: [],
       mitgliederTypen: [],
+      rechteVerwalten: false,
     });
   });
 

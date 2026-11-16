@@ -412,7 +412,8 @@
 
 .pruefFuss {
   margin: 0;
-  padding: 10px 14px 14px;
+  // Die Trennlinie geht über die ganze Karte, der Text bleibt in der Lesebreite.
+  padding: 10px max(14px, calc(100% - var(--lese-breite))) 14px 14px;
   border-top: 1px solid var(--hair);
   color: var(--text2);
   font-size: 13px;

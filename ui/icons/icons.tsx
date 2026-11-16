@@ -53,6 +53,7 @@ export type IconName =
   | 'eraser'
   | 'lasso'
   | 'eye'
+  | 'fokus'
   | 'eye-off'
   | 'zoom-reset'
   | 'vollbild'
@@ -416,6 +417,15 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <circle cx="12" cy="8" r="3.4" />
           <path d="M5 20a7 7 0 0 1 14 0" />
           <path d="M4.5 4.5l15 15" />
+        </svg>
+      );
+    // Fokus-Modus des Dienstplaners (Wunsch 11): Fadenkreuz – eine Person im Plan anleuchten.
+    case 'fokus':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="7.5" />
+          <circle cx="12" cy="12" r="1.8" />
+          <path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" />
         </svg>
       );
     case 'eye':

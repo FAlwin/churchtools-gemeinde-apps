@@ -302,3 +302,61 @@
   display: inline;
   padding: 0;
 }
+
+// Seite „Wechseltage“ (O9-4): Tabelle je Jahr – am Handy waagerecht scrollbar in der Karte, die Seite rutscht nicht.
+.rahmen {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  tbody tr + tr td {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+
+.bescheid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 12px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.textkopie {
+  @include m.eingabefeld;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 170px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.knopfzeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}

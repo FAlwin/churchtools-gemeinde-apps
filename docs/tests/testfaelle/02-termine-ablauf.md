@@ -812,3 +812,81 @@ verwalten“).
 - **Automatisiert:** ja – `shared/dienstplan/personenRaster.test.ts` (Blöcke und Zeilen, Mitglied ohne Einsatz, Eingeteilte ohne Mitgliedschaft, Café mit mehreren Gruppen, Einsätze, „+ …“ auch für ausgeblendete Gruppen, Abwesenheit mehrtägig/mit Uhrzeit/mit Warnung, Gäste, Verborgene, „Noch offen“ = `terminStand`, Entwürfe, Ladezustand), `shared/dienstplan/personenDaten.test.ts`, `dienstplaner/src/ladePersonen.test.ts` (Recht ja/nein, Seitenteilung, Fehlerzweige einzeln, höchstens vier gleichzeitig), `dienstplaner/src/usePersonenDaten.test.tsx`, `dienstplaner/src/Planen.personen.test.tsx` (Umschalter, Laden, Fehler im Block, Hervorheben, Klick ohne Wirkung), `dienstplaner/src/geraet.test.ts` (gemerktes „personen“ → „Wer wie oft?“); 22 Gegenproben einzeln rot; von Hand bleiben echte Rechte, echte Abwesenheiten und der Blick am Handy
 - **Historie:** Wunsch 5 (Alwin 05./06.11.2026, Entwurf `e9-personen-v3.html`; P0 gemessen 13.11.2026), Scheibe P1
 </details>
+
+### TF-ABLAUF-30 · Planen: einzelne Dienste ausblenden, Block in „Personen“ zuklappen
+
+**Das brauchst du:** Dienstplaner als Planer; eine Dienstgruppe mit mindestens drei Diensten (am besten Technik mit Ton,
+Bild, Licht), in der an einem Tag dieselbe Person in zwei Diensten steht (z. B. Ton und Bild); danach zwei Termine mit
+freien Plätzen in Bild.
+
+**Das muss passieren:** Man blendet nur den Dienst aus, der stört – nicht gleich die ganze Gruppe – und sieht danach nur
+noch, was zählt.
+
+1. **Planen → Filter**: Unter **Gruppen** steht unter jeder Gruppe mit mehreren Diensten die Liste ihrer Dienste, eingerückt,
+   jeder mit eigenem Haken. Eine Gruppe mit nur einem Dienst hat keine Liste.
+2. **Bild** abhaken: Die Gruppe Technik zeigt einen **Strich** statt Haken, am Filter-Knopf steht **1**. In der **Matrix**
+   fehlt die Zeile Bild; **Termin-Kopf**, Füllbalken und die Zeile der Gruppe („N frei“) zählen **ohne** Bild (am Handy auch der
+   Zettel und die Datumsleiste); unten „Ansehen und senden“ ist davon unberührt.
+3. **Personen**: Es gibt keinen Block Bild; in der Zeile der Person im Ton steht am selben Tag blass **„+ Bild“** (ohne
+   „(Technik)“). **Noch offen** nennt Bild nicht. **Wer wie oft?** zählt Bild ebenfalls nicht mit.
+4. Die ganze Gruppe Technik ausblenden: In „Personen“ steht bei Personen aus anderen Gruppen wie bisher „+ Ton (Technik)“.
+5. Den **Gruppenhaken mit Strich** antippen: Alle Dienste der Gruppe sind wieder an. Den Haken noch einmal antippen: Gruppe
+   aus, alle ihre Dienste abgehakt. Alle Dienste einer Gruppe **einzeln** abhaken: Der Gruppenhaken ist dann ebenfalls aus.
+6. Das Gerät merkt sich die Wahl: App neu laden → derselbe Filter. Über **Teilen** → Plan: Der ausgeblendete Dienst steht
+   weder im PDF noch unter „Wir suchen noch …“.
+7. **Personen**: Den Kopf eines Dienstes („Ton · 5 Personen“) antippen → nur der Kopf bleibt, die Zeilen und Gäste sind weg,
+   **Noch offen** zählt den Dienst weiter. Noch einmal antippen klappt auf. Zuklappen ist **kein** Ausblenden: Der Filter
+   ändert sich nicht.
+8. Von der Startseite aus **Planen** → eine Gruppe (z. B. „Technik“) antippen: Es stehen **alle** Dienste der Gruppe da, auch
+   wenn Bild im Filter ausgeblendet ist. **Gewohnte Ansicht** → wieder ohne Bild. Im Besuch einen Dienst abhaken: oben „Eigene
+   Auswahl“, danach ist der gemerkte Filter unverändert.
+9. Der **Regler** in der Gruppenzeile (Plätze) zeigt weiter **alle** Dienste der Gruppe, auch den ausgeblendeten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/planFilter.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/werWieOft.ts`, `shared/dienstplan/plan.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/gruppenAbschnitt.ts`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/WerWieOft.tsx`, `ui/bedienung/FilterKnopf.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/planFilter.test.ts` (gezeigte Gruppen, freie Plätze neu gezählt, Termin-Stand, alle Dienste einzeln aus = Gruppe aus, Umschalten), `shared/dienstplan/personenRaster.test.ts` („+ Gesang“ blass ohne Gruppenzusatz, mit Gruppenzusatz bei ausgeblendeter Gruppe, „Noch offen“), `dienstplaner/src/Planen.dienstFilter.test.tsx` (Menü mit Strich, Matrix, Kopf/Füllbalken/Zettel, Personen, Block zuklappen, Wer wie oft?, Besuch von der Startseite, Lese-Toleranz), `dienstplaner/src/Planen.teilen.test.tsx`, `dienstplaner/src/Planen.plaetze.test.tsx`, `ui/bedienung/FilterKnopf.test.tsx`, `dienstplaner/src/geraet.test.ts`; 17 Gegenproben einzeln rot; von Hand bleibt der Blick am Handy und im echten ChurchTools
+- **Historie:** Wunsch 10 (Alwin 16.11.2026: „Ich will z. B. nur Bild rausfiltern“)
+
+</details>
+
+### TF-ABLAUF-31 · Planen: Fokus-Modus – eine Person im ganzen Plan anleuchten
+
+**Das brauchst du:** Dienstplaner als Planer; mehrere Termine im Zeitraum, in denen dieselbe Person in verschiedenen Diensten
+steht (am besten einmal zugesagt, einmal angefragt, einmal als Entwurf), ein freier Platz und mindestens ein Gast.
+
+**Das muss passieren:** Man sieht auf einen Blick, wo jemand eingeteilt ist – in allen Ansichten und an allen Terminen.
+
+1. **Rechner, Matrix:** Mit der Maus über den Namen eines belegten Platzes fahren → rechts erscheint ein kleines
+   **Fadenkreuz-Symbol**. Anklicken: Alle Plätze dieser Person sind **gelb umrandet** (zugesagt grün, angefragt „?“, Entwurf
+   blau gestrichelt bleiben im Platz sichtbar), andere nicht. Das Fenster „zurückziehen oder ersetzen“ geht **nicht** auf. Oben
+   steht „Fokus: <Name> · N Einsätze in M Terminen · 1 angefragt · 1 Entwurf“ und „Fokus aus“.
+2. Einen **Gast** und einen Namen mit „Namen verbergen“ anfahren: kein Symbol. Den Namen **antippen** öffnet wie gewohnt das
+   Fenster; dort oben **„Im Plan hervorheben“** (bei Gästen nicht) → Fenster zu, Fokus auf diese Person.
+3. **Handy:** Einen belegten Platz **lang drücken** (eine halbe Sekunde, nicht wischen) → Fokus; kein Fenster. Kurz tippen
+   öffnet das Fenster wie immer. Die Leiste bleibt beim Blättern zwischen den Terminen; auf dem Zettel ist der Platz umrandet.
+4. **Personen** und **Wer wie oft?** wählen: Der Fokus **bleibt**. In „Personen“ sind **alle Zeilen** der Person (in jedem
+   Dienst) gelb hinterlegt und umrandet, der Name fett. Einen anderen Namen antippen: Der Fokus wechselt (immer nur eine
+   Person); denselben noch einmal antippen: Fokus aus.
+5. **Suchfeld „Person hervorheben“** (Handy: Such-Symbol in der Leiste): „da“ tippen → Vorschläge mit Kreis, Name und Diensten
+   (nur Eingeteilte, nur Treffer am Namensanfang); wählen → Fokus. Pfeiltasten und Enter gehen auch.
+6. Im **Filter** einen Dienst ausblenden, in dem die fokussierte Person steht: Sie wird dort nicht umrandet (die Zeile fehlt),
+   die Leiste zählt den Einsatz aber mit und sagt „· 1 ausgeblendet“. Ein **abgesagter** Termin zählt nicht mit.
+7. **„Wer kann?“** an einem freien Platz öffnen: Unter jedem Namen steht „Im Plan, ±7 Tage: …“ mit seinen Einsätzen in der
+   Nähe, oder „noch nichts“. **„im Plan zeigen“** bei einem Kandidaten → Fenster zu, die Person ist im Fokus, unter „Fokus aus“
+   steht **„‹ Zurück zu ‚Wer kann?‘ für Ton · So, 20.12.“** (und **„Hier eintragen“**, wo du dort Entwürfe anlegen darfst).
+8. **Zurück** → dasselbe Fenster für denselben Platz, der Fokus bleibt. Noch einmal „im Plan zeigen“ und **„Hier eintragen“** →
+   Hinweis „… eingetragen – noch nicht gesendet“, der Entwurf steht im Platz, die Zeile „Zurück“ ist weg, der Fokus bleibt und
+   zählt den Entwurf. (Nichts geht an ChurchTools, bevor du „Ansehen und senden“ wählst.)
+9. **Fokus aus** → Umrandungen und Leiste sind weg. Fokus setzen, den Reiter wechseln (z. B. Start) und zurück zu Planen: Der
+   Fokus ist **beendet**. App neu laden: auch nicht gemerkt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/fokus.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/Fokus.tsx`, `dienstplaner/src/PlanPlaetze.tsx`, `dienstplaner/src/useLangDruck.ts`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/WerKann.tsx`, `dienstplaner/src/BelegtFach.tsx`, `dienstplaner/src/PersonenRaster.tsx`, `ui/design/_farben.scss`
+- **Automatisiert:** ja – `shared/dienstplan/fokus.test.ts` (wer steht am Platz, Zählen mit abgesagten/ausgeblendeten/Entwurf, Vorschläge, Einsätze ±7 Tage, Texte), `dienstplaner/src/Planen.fokus.test.tsx` (Umrandung in Matrix/Zettel/Personen, Leiste, Fokus aus, Ansichtswechsel, Verlassen, Fenster-Knopf, Symbol ohne Fenster, langes Drücken mit Fake-Timern, Suchfeld, „Wer kann?“ Mini-Zeile/zeigen/Zurück/Hier eintragen gegen dieselbe Funktion wie die Wahl), `dienstplaner/src/Planen.personen.test.tsx`; 23 Gegenproben einzeln rot (die Sperre „Symbol öffnet kein Fenster“ ist doppelt gesichert – eigener Knopf neben dem Platz und `stopPropagation` – und nur beides zusammen entfernt macht Tests rot); von Hand bleiben das echte Hover-Symbol mit der Maus, das lange Drücken am Handy und das Aussehen in Hell und Dunkel
+- **Historie:** Wunsch 11 (Alwin 16.11.2026, Entwurf `e11-fokus.html`, Farbe A Gelb)
+
+</details>

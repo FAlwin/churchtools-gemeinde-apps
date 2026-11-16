@@ -15,15 +15,18 @@ export function useFenster({
   darf,
   mitBestaetigung,
   startRundmail,
+  startOffen = null,
   onGespeichert,
 }: {
   liste: ListenAnmeldung[];
   darf: boolean;
   mitBestaetigung: boolean;
   startRundmail: boolean;
+  /** Diese Anmeldung gleich öffnen (Sprung aus der Nachprüfung, F1e). */
+  startOffen?: string | null;
   onGespeichert: () => void;
 }) {
-  const [offen, setOffen] = useState<string | null>(null);
+  const [offen, setOffen] = useState<string | null>(startOffen);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
   const [startModus, setStartModus] = useState<FensterModus>(null);

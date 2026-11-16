@@ -12,7 +12,8 @@
  *   **keine** Mail – Bescheid gibt es als fertige Mail (`bescheidMail`, Art `angemeldet`).
  */
 import type { Antworten, Feld, Formular, OeffentlicheEinstellungen } from './formular';
-import { einmalFelder, type CtGruppenfeld } from './liste';
+import { einmalFelder, type CtGruppenfeld, type ListenAnmeldung } from './liste';
+import { antwortenAus } from './antwortenAusListe';
 import { platzPlan, platzStandAus } from './oeffentlich';
 import { anmeldungAufbauen, type CtFormular, type PreisWahl } from './senden';
 
@@ -50,15 +51,26 @@ export function mitUnterschrift(f: Formular): boolean {
  * **Die Antworten zu Beginn** – Name, Geburtsdatum und E-Mail aus ChurchTools. „Angemeldet von“ ist bei Kinder-Events
  * leer (dort melden Eltern an), sonst die Person selbst.
  */
-export function handStart(e: OeffentlicheEinstellungen, p: HandPerson): Antworten {
+export function handStart(
+  e: OeffentlicheEinstellungen,
+  p: HandPerson,
+  /**
+   * „Person dazu“ (A7-4b): die bestehende Anmeldung. Ihre Kontakt-Antworten kommen mit – sonst blieben Fragen je Person,
+   * die auf eine Kontakt-Frage schauen, unsichtbar und ungespeichert (F1e, Klick-Runde 6). Gespeichert wird davon
+   * nichts: Bei „Person dazu“ gehen nur die Fragen der Person mit.
+   */
+  dazu: ListenAnmeldung | null = null,
+): Antworten {
   const kontakt = e.formular.anmeldung.find((f) => f.typ === 'name');
   const mail = e.formular.anmeldung.find((f) => f.typ === 'email');
   const name = e.formular.person.find((f) => f.typ === 'name');
   return {
-    anmeldung: {
-      ...(kontakt && e.wer !== 'kinder' ? { [kontakt.id]: { vor: p.vor, nach: p.nach } } : {}),
-      ...(mail ? { [mail.id]: p.email ?? '' } : {}),
-    },
+    anmeldung: dazu
+      ? antwortenAus(e, dazu).anmeldung
+      : {
+          ...(kontakt && e.wer !== 'kinder' ? { [kontakt.id]: { vor: p.vor, nach: p.nach } } : {}),
+          ...(mail ? { [mail.id]: p.email ?? '' } : {}),
+        },
     personen: [
       {
         ...(name ? { [name.id]: { vor: p.vor, nach: p.nach } } : {}),
@@ -181,6 +193,7 @@ export function handFelder(
     nr: w.nr,
     mitPlatz: [w.mitPlatz],
     ...(w.papier ? { papier: w.papier } : {}),
+    ...(w.nurPerson ? { nurPerson: true } : {}),
   });
   const einmal = new Set(w.nurPerson ? einmalFelder(e) : []);
   return Object.fromEntries(

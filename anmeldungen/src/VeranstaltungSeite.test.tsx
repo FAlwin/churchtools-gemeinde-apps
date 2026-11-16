@@ -107,6 +107,7 @@ const PRUEF_OK = {
   auswahl: null,
   betraege: [],
   geprueft: 3,
+  bedingungen: [],
   hinweise: 0,
 };
 const PRUEF_HINWEISE = {
@@ -1897,5 +1898,64 @@ describe('Termin im Kalender verschoben (K1, V1–V7)', () => {
     expect(screen.getByRole('region', { name: 'Termin' }).textContent).not.toContain(
       'nicht mehr da',
     );
+  });
+});
+
+// ── F1e: Bedingungen in der Nachprüfung (Klick-Runde 6, 16.11.2026) ──
+describe('Nachprüfung: Bedingungen (F1e)', () => {
+  const MIT_BEDINGUNG = {
+    ...PRUEF_OK,
+    bedingungen: [
+      {
+        schluessel: 'AAAAAA',
+        nr: 'AAAAAA',
+        name: 'Jonas Beispiel',
+        art: 'antwort' as const,
+        frage: 'Fotos',
+        antwort: 'Ja',
+        bedingung: '„Telefon“ ist leer',
+        grund: 'nur ohne Telefon',
+      },
+    ],
+    hinweise: 1,
+  };
+
+  it('der Befund steht in der Karte; „Anmeldung öffnen“ springt ins Fenster dieser Anmeldung', async () => {
+    stelle(true, 1, eListe());
+    mg.ladeMitglieder.mockResolvedValue({
+      ...standListe(mitgliederListe('AAAAAA', [true, true], 10)),
+      verlaufGekuerzt: false,
+    });
+    np.nachpruefungAus.mockReturnValue(MIT_BEDINGUNG);
+    const onReiter = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter="anmeldungen"
+        zeitzone={ZONE}
+        formularAdresse="https://anmeldung.beispiel.de/"
+        onZurueck={() => {}}
+        onReiter={onReiter}
+      />,
+    );
+    // Erst warten, bis geprüft ist – die Karte steht schon während „Wird geprüft …“ da.
+    expect(await screen.findByText('1 Hinweis')).toBeTruthy();
+    const karte = screen.getByRole('region', { name: 'Nachprüfung' });
+    expect(within(karte).getByText('„Fotos“: „Ja“ gewählt – nur ohne Telefon')).toBeTruthy();
+    // Gerechnet mit dem ersten Tag der Veranstaltung – wie die Liste.
+    expect(np.nachpruefungAus.mock.calls.at(-1)![3]).toBe('2026-11-20');
+    expect(screen.queryByText(/Für die ganze Anmeldung/)).toBeNull();
+    fireEvent.click(within(karte).getByRole('button', { name: 'Anmeldung öffnen' }));
+    expect(onReiter).toHaveBeenCalledWith('anmeldungen');
+    expect(await screen.findByText(/Für die ganze Anmeldung/)).toBeTruthy();
+  });
+
+  it('ohne Befund kein Abschnitt „Bedingungen“', async () => {
+    stelle(true, 1);
+    mg.ladeMitglieder.mockResolvedValue(STAND);
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
+    zeigen(undefined, 'anmeldungen');
+    expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Bedingungen' })).toBeNull();
   });
 });

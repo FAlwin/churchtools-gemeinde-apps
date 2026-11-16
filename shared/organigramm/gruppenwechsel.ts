@@ -339,6 +339,21 @@ function regel(
   };
 }
 
+/**
+ * **Die Kurznamen unserer Regeln** in ChurchTools und wie die Erweiterung sie nennt – EINE Stelle für die Erzeuger hier
+ * und den Abgleich „Stand in ChurchTools“ (O9-5c). Ein Kurzname, der hier nicht steht, ist eine fremde Regel.
+ */
+export const REGELN = {
+  kinder: { shorty: 'gwkinder', name: 'Kinder-Regel' },
+  leitung: { shorty: 'gwleitung', name: 'Leitungs-Regel' },
+  aufnahme: { shorty: 'gwaufnahme', name: 'Aufnahme-Regel' },
+  austragen: { shorty: 'gwaustragen', name: 'Austrag-Regel' },
+} as const;
+
+/** „Aufnahme-Regel“ zum Kurznamen; `null`, wenn es keine von unseren ist. */
+export const regelName = (shorty: string): string | null =>
+  Object.values(REGELN).find((r) => r.shorty === shorty)?.name ?? null;
+
 /** Rollen des Gruppentyps „Gruppenwechsel“ (entstehen beim Anlegen des Typs von selbst, O9-0). */
 export interface WechselRollen {
   teilnehmer: number;
@@ -371,7 +386,7 @@ export function wechselGruppenRegeln(
 ): Regel[] {
   const fenster = jahre.map((j) => kinderFenster(u, j));
   const kinder = regel(
-    'gwkinder',
+    REGELN.kinder.shorty,
     `Gruppenwechsel: Kinder aus „${u.von.name}“, die nach „${u.nach.name}“ wechseln`,
     10,
     {
@@ -388,7 +403,7 @@ export function wechselGruppenRegeln(
     },
   );
   const leitung = regel(
-    'gwleitung',
+    REGELN.leitung.shorty,
     `Gruppenwechsel: Leitungen von „${u.von.name}“ und „${u.nach.name}“`,
     20,
     { and: [eineDerGruppen([u.von.gruppeId, u.nach.gruppeId]), gleich('role.type', 'leader')] },
@@ -412,7 +427,7 @@ export function aufnahmeRegel(
   teilnehmerRolleNeu: number,
 ): Regel {
   return regel(
-    'gwaufnahme',
+    REGELN.aufnahme.shorty,
     `Gruppenwechsel: Kinder aus „${u.von.name}“ am Wechseltag aufnehmen`,
     10,
     {
@@ -437,7 +452,7 @@ export function aufnahmeRegel(
  */
 export function austragRegel(u: Uebergang): Regel {
   return regel(
-    'gwaustragen',
+    REGELN.austragen.shorty,
     `Gruppenwechsel: wer in „${u.nach.name}“ angekommen ist, verlässt „${u.von.name}“`,
     30,
     {

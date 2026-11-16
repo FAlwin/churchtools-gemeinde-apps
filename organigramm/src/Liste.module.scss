@@ -55,8 +55,19 @@
   width: 28px;
 }
 
+// Name und Zahl der Untergruppen: in einer Zeile, solange Platz ist – sonst die Zahl darunter, am Namen ausgerichtet.
+.nameZahl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 4px;
+  min-width: 0;
+}
+
 .name {
   min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 6px 4px;
   border: 0;
   background: none;
@@ -75,7 +86,7 @@ button.name {
 }
 
 .zahl {
-  margin-left: 4px;
+  padding-left: 4px;
   color: var(--text3);
   font-size: 13px;
   white-space: nowrap;

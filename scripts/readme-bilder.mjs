@@ -17,12 +17,28 @@
  *   eine dunkle Fläche.
  * - **Keine Einführungs-Blasen:** Alle Touren gelten als gesehen.
  *
- * Aufruf: `npm run readme-bilder` (alles) oder `npm run readme-bilder -- dienstplaner` (nur Aufnahmen, deren Name so
- * beginnt; die GIFs werden danach aus allen vorhandenen Rohvideos neu gebaut).
+ * Aufruf:
+ * - `npm run readme-bilder` – alles neu aufnehmen; `npm run readme-bilder -- dienstplaner` nur Aufnahmen, deren Name
+ *   so beginnt (die GIFs werden danach aus allen vorhandenen Rohvideos neu gebaut).
+ * - `npm run readme-bilder -- --offen` – welche gemergten PRs seit dem letzten Bilder-Stand das Label „README-Bilder“
+ *   tragen, also sichtbar etwas geändert haben. **Teil der Release-Routine** (siehe `CLAUDE.md`).
+ * - `--standbilder <ziel> [<arbeitskopie>]` und `--vergleichen <alt> <neu>` – für die CI-Erinnerung
+ *   (`.github/workflows/readme-bilder.yml`): Standbilder der Demo-Ansichten vor und nach einem PR, bei Unterschied
+ *   bekommt der PR das Label. Standbilder sind auf DEMSELBEN Rechner Byte für Byte gleich, solange sich die Ansicht
+ *   nicht ändert (Uhr fest auf {@link FESTE_ZEIT}); zwischen Rechnern nicht (Schriften) – deshalb entstehen beide
+ *   Seiten im selben CI-Lauf.
  */
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdirSync, renameSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import {
+  mkdirSync,
+  renameSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  readdirSync,
+  appendFileSync,
+} from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { ERWEITERUNGEN } from '../e2e/erweiterungen.ts';
@@ -31,7 +47,13 @@ import { pruefeFremdeServer, belegtAuf } from './fremde-server.mjs';
 const WURZEL = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ROH = join(WURZEL, 'test-results', 'readme-bilder');
 const ZIEL = join(WURZEL, 'docs', 'bilder');
-const NUR = process.argv[2] ?? '';
+const ARGS = process.argv.slice(2);
+const MODUS = ARGS[0]?.startsWith('--') ? ARGS[0] : '--aufnehmen';
+const NUR = MODUS === '--aufnehmen' ? (ARGS[0] ?? '') : '';
+/** Label, das die CI-Erinnerung an PRs hängt, die sichtbar etwas ändern. */
+const LABEL = 'README-Bilder';
+/** Feste Uhrzeit für Standbilder – sonst ändern „in 4 Tagen“ oder „läuft seit 10:42“ das Bild von selbst. */
+const FESTE_ZEIT = new Date('2026-11-16T09:00:00');
 
 const QUER = { width: 840, height: 560 };
 const HOCH = { width: 640, height: 900 };
@@ -71,11 +93,14 @@ async function antwortet(url) {
   }
 }
 
-/** @param {{ port: number; befehl: string[]; pfad: string }} s */
-async function sicherstellen(s) {
+/**
+ * @param {{ port: number; befehl: string[]; pfad: string }} s
+ * @param {string} wurzel Arbeitskopie, aus der der Server läuft
+ */
+async function sicherstellen(s, wurzel) {
   const url = `http://localhost:${s.port}${s.pfad}`;
   if (await antwortet(url)) return;
-  const kind = spawn('npm', s.befehl, { cwd: WURZEL, stdio: 'ignore', detached: true });
+  const kind = spawn('npm', s.befehl, { cwd: wurzel, stdio: 'ignore', detached: true });
   gestartet.push(kind);
   for (let i = 0; i < 240; i++) {
     if (await antwortet(url)) return;
@@ -85,7 +110,7 @@ async function sicherstellen(s) {
 }
 
 function aufraeumen() {
-  for (const kind of gestartet) {
+  for (const kind of gestartet.splice(0)) {
     try {
       // `detached` → eigene Prozessgruppe; so endet auch der Vite-Prozess hinter `npm`.
       if (kind.pid) process.kill(-kind.pid, 'SIGTERM');
@@ -93,6 +118,11 @@ function aufraeumen() {
       // schon beendet
     }
   }
+}
+
+/** @param {keyof typeof SERVER} app @param {string} [demo] */
+function demoUrl(app, demo = '') {
+  return `http://localhost:${SERVER[app].port}${SERVER[app].pfad}?demo${demo ? `=${demo}` : ''}`;
 }
 
 // ---------- Aufnahmen ----------
@@ -231,8 +261,7 @@ async function liedblatt(page, p, lang) {
 
 /** @param {import('@playwright/test').Browser} browser */
 async function aufnehmen(browser) {
-  const url = (/** @type {keyof typeof SERVER} */ app, demo = '') =>
-    `http://localhost:${SERVER[app].port}${SERVER[app].pfad}?demo${demo ? `=${demo}` : ''}`;
+  const url = demoUrl;
 
   await bild(browser, 'musik-liedblatt', IPAD, url('musik', 'chart'));
   await bild(browser, 'musik-handy', HANDY, url('musik', 'chart'));
@@ -424,37 +453,250 @@ function gifsBauen() {
   );
 }
 
+// ---------- Standbilder für die CI-Erinnerung ----------
+
+/**
+ * Die Ansichten, die die README-Videos zeigen – je eine als Standbild. Der Name beginnt mit der App: daran hängt die
+ * Meldung, WELCHE App sich sichtbar geändert hat. Eine neue App bekommt hier ihre Ansichten, sobald sie ins README
+ * kommt.
+ *
+ * @type {[name: string, app: keyof typeof SERVER, demo: string, groesse: { width: number; height: number },
+ *   schritt?: (page: import('@playwright/test').Page) => Promise<void>][]}
+ */
+const STANDBILDER = [
+  ['musik-liedblatt', 'musik', 'chart', IPAD],
+  ['musik-handy', 'musik', 'chart', HANDY],
+  ['musik-liedmenue', 'musik', 'chart', QUER, (p) => p.getByText('Akustik').first().click()],
+  ['dienstplaner-start', 'dienstplaner', '', QUER],
+  ['dienstplaner-dienste', 'dienstplaner', '', QUER, (p) => knopfIn(p, 'Dienste').click()],
+  [
+    'dienstplaner-abwesenheiten',
+    'dienstplaner',
+    '',
+    QUER,
+    (p) => knopfIn(p, 'Abwesenheiten').click(),
+  ],
+  ['dienstplaner-planen', 'dienstplaner', '', QUER, (p) => knopfIn(p, 'Planen').click()],
+  ['organigramm-baum', 'organigramm', '', QUER],
+  ['organigramm-mindmap', 'organigramm', '', QUER, (p) => knopfIn(p, 'Mindmap').click()],
+  ['organigramm-karten', 'organigramm', '', QUER, (p) => knopfIn(p, 'Karten').click()],
+  ['organigramm-praesentation', 'organigramm', '', QUER, (p) => knopfIn(p, 'Präsentieren').click()],
+  ['gebetsabend-zuhoeren', 'gebetsabend', 'zuhoerer', QUER],
+  ['gebetsabend-technik', 'gebetsabend', 'technik', QUER],
+];
+
+/** @param {import('@playwright/test').Page} page @param {string} name */
+function knopfIn(page, name) {
+  return page.getByRole('button', { name, exact: true }).first();
+}
+
+/**
+ * Nimmt alle {@link STANDBILDER} auf. Eine Ansicht, die es (noch) nicht gibt – etwa vor dem PR, der eine App
+ * einführt –, fehlt dann einfach; der Vergleich zählt sie als geändert.
+ *
+ * @param {import('@playwright/test').Browser} browser
+ * @param {string} ziel
+ */
+async function standbilder(browser, ziel) {
+  mkdirSync(ziel, { recursive: true });
+  for (const [name, app, demo, groesse, schritt] of STANDBILDER) {
+    const ctx = await browser.newContext({ viewport: groesse, locale: 'de-DE' });
+    const page = await ctx.newPage();
+    try {
+      await page.clock.setFixedTime(FESTE_ZEIT);
+      await vorbereiten(page);
+      await page.goto(demoUrl(app, demo));
+      await fertig(page);
+      if (schritt) {
+        await schritt(page);
+        await page.waitForLoadState('networkidle');
+      }
+      // Als Text: `document` gibt es nur im Browser.
+      await page.evaluate('document.fonts.ready.then(() => true)');
+      await page.waitForTimeout(800);
+      await page.screenshot({
+        path: join(ziel, `${name}.png`),
+        animations: 'disabled',
+        caret: 'hide',
+      });
+      console.log(`  Standbild ${name}`);
+    } catch (e) {
+      console.warn(`  Standbild ${name} fehlt: ${/** @type {Error} */ (e).message.split('\n')[0]}`);
+    } finally {
+      await ctx.close();
+    }
+  }
+}
+
+/**
+ * Wie viele Bildpunkte zweier gleich großer PNGs sichtbar abweichen. Gerechnet im Browser (Canvas), damit es ohne
+ * weitere Bibliothek geht. „Sichtbar“ heißt: ein Farbkanal weicht um mehr als {@link TOLERANZ} ab – Kantenglättung
+ * schwankt zwischen zwei Läufen um 1 (gemessen 16.11.2026: 4–7 von 470 400 Punkten im Organigramm).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} a
+ * @param {string} b
+ */
+async function abweichendePunkte(page, a, b) {
+  const [da, db] = [a, b].map((d) => `data:image/png;base64,${readFileSync(d).toString('base64')}`);
+  return page.evaluate(
+    `(async () => {
+      const lade = (src) => new Promise((ok, fehler) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fehler; i.src = src; });
+      const [ia, ib] = await Promise.all([lade(${JSON.stringify(da)}), lade(${JSON.stringify(db)})]);
+      if (ia.width !== ib.width || ia.height !== ib.height) return Infinity;
+      const pixel = (img) => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0); return x.getImageData(0, 0, img.width, img.height).data; };
+      const pa = pixel(ia), pb = pixel(ib);
+      let n = 0;
+      for (let i = 0; i < pa.length; i += 4)
+        if (Math.abs(pa[i] - pb[i]) > ${TOLERANZ} || Math.abs(pa[i + 1] - pb[i + 1]) > ${TOLERANZ} || Math.abs(pa[i + 2] - pb[i + 2]) > ${TOLERANZ}) n++;
+      return n;
+    })()`,
+  );
+}
+
+/** Abweichung je Farbkanal, ab der ein Bildpunkt als geändert zählt. */
+const TOLERANZ = 16;
+/** Ab so vielen geänderten Bildpunkten gilt eine Ansicht als sichtbar geändert (ein Buchstabe sind schon mehr). */
+const MINDESTENS = 20;
+
+/**
+ * Vergleicht zwei Ordner mit Standbildern und meldet, welche Apps sich sichtbar geändert haben. In der CI gehen die
+ * Apps nach `$GITHUB_OUTPUT` (`apps=…`) und eine kleine Tabelle in die Zusammenfassung des Laufs.
+ *
+ * @param {string} alt
+ * @param {string} neu
+ */
+async function vergleichen(alt, neu) {
+  const namen = [
+    ...new Set([...readdirSync(alt), ...readdirSync(neu)].filter((n) => n.endsWith('.png'))),
+  ].sort();
+  const browser = await chromium.launch();
+  /** @type {string[]} */
+  const geaendert = [];
+  try {
+    const page = await browser.newPage();
+    for (const n of namen) {
+      const a = join(alt, n);
+      const b = join(neu, n);
+      const punkte =
+        existsSync(a) && existsSync(b) ? Number(await abweichendePunkte(page, a, b)) : Infinity;
+      if (punkte >= MINDESTENS) geaendert.push(n);
+      if (punkte > 0) console.log(`  ${n}: ${punkte} Bildpunkte anders`);
+    }
+  } finally {
+    await browser.close();
+  }
+  const apps = [...new Set(geaendert.map((n) => n.split('-')[0]))];
+  console.log(
+    apps.length
+      ? `Sichtbar geändert: ${apps.join(', ')} (${geaendert.join(', ')})`
+      : 'Keine sichtbare Änderung an den README-Ansichten.',
+  );
+  if (process.env.GITHUB_OUTPUT)
+    appendFileSync(process.env.GITHUB_OUTPUT, `apps=${apps.join(',')}\n`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      apps.length
+        ? `### README-Bilder\n\nDieser PR ändert sichtbar: **${apps.join(', ')}** – beim nächsten Release ` +
+            `\`npm run readme-bilder\` laufen lassen.\n\n| Ansicht |\n| --- |\n${geaendert.map((n) => `| ${n} |`).join('\n')}\n`
+        : '### README-Bilder\n\nKeine sichtbare Änderung an den Ansichten im README.\n',
+    );
+  }
+}
+
+/** Gemergte PRs mit dem Label seit dem letzten Commit, der `docs/bilder/` geändert hat. */
+function offen() {
+  const seit = execFileSync('git', ['log', '-1', '--format=%cI', '--', 'docs/bilder'], {
+    cwd: WURZEL,
+    encoding: 'utf8',
+  }).trim();
+  const roh = execFileSync(
+    'gh',
+    [
+      'pr',
+      'list',
+      '--state',
+      'merged',
+      '--label',
+      LABEL,
+      '--search',
+      `merged:>${seit}`,
+      '--json',
+      'number,title,mergedAt',
+    ],
+    { cwd: WURZEL, encoding: 'utf8' },
+  );
+  const prs = /** @type {{ number: number; title: string; mergedAt: string }[]} */ (
+    JSON.parse(roh)
+  );
+  console.log(`Letzter Bilder-Stand: ${seit.slice(0, 10)}`);
+  if (!prs.length) {
+    console.log(
+      'Seitdem hat kein gemergter PR sichtbar etwas geändert – die README-Bilder sind aktuell.',
+    );
+    return;
+  }
+  console.log(`Seitdem ${prs.length} PR(s) mit sichtbarer Änderung – README-Bilder neu aufnehmen:`);
+  for (const pr of prs) console.log(`  #${pr.number} ${pr.title} (${pr.mergedAt.slice(0, 10)})`);
+}
+
 // ---------- Ablauf ----------
 
-try {
-  execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
-} catch {
-  console.error('ffmpeg fehlt – bitte installieren (z. B. `brew install ffmpeg`).');
-  process.exit(1);
+/** Startet (falls nötig) die Dev-Server aus `wurzel`, führt `arbeit` aus und räumt danach auf. */
+async function mitServern(
+  /** @type {string} */ wurzel,
+  /** @type {(b: import('@playwright/test').Browser) => Promise<void>} */ arbeit,
+) {
+  const ports = Object.values(SERVER).map((s) => s.port);
+  // Ein Server aus einer ANDEREN Arbeitskopie würde still deren Stand aufnehmen – dann lieber abbrechen.
+  pruefeFremdeServer(ports, wurzel);
+  const vorher = (belegtAuf(ports) ?? []).length;
+  const browser = await chromium.launch();
+  try {
+    console.log(
+      vorher
+        ? 'Dev-Server: laufen teils schon, Rest wird gestartet …'
+        : 'Dev-Server werden gestartet …',
+    );
+    await Promise.all(Object.values(SERVER).map((s) => sicherstellen(s, wurzel)));
+    await arbeit(browser);
+  } finally {
+    await browser.close();
+    aufraeumen();
+    // Erst weiter, wenn die Ports frei sind: Sonst fände ein zweiter Lauf (CI: Stand vor dem PR) noch den alten Server
+    // und nähme still denselben Stand zweimal auf.
+    for (let i = 0; i < 40 && (belegtAuf(ports) ?? []).length; i++)
+      await new Promise((r) => setTimeout(r, 250));
+  }
 }
-mkdirSync(ROH, { recursive: true });
-mkdirSync(ZIEL, { recursive: true });
 
-const ports = Object.values(SERVER).map((s) => s.port);
-// Ein Server aus einer ANDEREN Arbeitskopie würde still deren Stand aufnehmen – dann lieber abbrechen.
-pruefeFremdeServer(ports, WURZEL);
-const vorher = (belegtAuf(ports) ?? []).length;
-
-const browser = await chromium.launch();
-try {
-  console.log(
-    vorher
-      ? 'Dev-Server: laufen teils schon, Rest wird gestartet …'
-      : 'Dev-Server werden gestartet …',
-  );
-  await Promise.all(Object.values(SERVER).map(sicherstellen));
-  console.log('Aufnahmen:');
-  await aufnehmen(browser);
-  await namensschilder(browser);
+if (MODUS === '--offen') {
+  offen();
+} else if (MODUS === '--vergleichen') {
+  await vergleichen(resolve(ARGS[1] ?? ''), resolve(ARGS[2] ?? ''));
+} else if (MODUS === '--standbilder') {
+  const ziel = resolve(ARGS[1] ?? join(ROH, 'standbilder'));
+  await mitServern(resolve(ARGS[2] ?? WURZEL), (b) => standbilder(b, ziel));
+} else if (MODUS === '--aufnehmen') {
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
+  } catch {
+    console.error('ffmpeg fehlt – bitte installieren (z. B. `brew install ffmpeg`).');
+    process.exit(1);
+  }
+  mkdirSync(ROH, { recursive: true });
+  mkdirSync(ZIEL, { recursive: true });
+  await mitServern(WURZEL, async (browser) => {
+    console.log('Aufnahmen:');
+    await aufnehmen(browser);
+    await namensschilder(browser);
+  });
   console.log('GIFs:');
   gifsBauen();
   console.log(`Fertig – Ergebnis in docs/bilder/. Vor dem Commit ansehen.`);
-} finally {
-  await browser.close();
-  aufraeumen();
+} else {
+  console.error(`Unbekannte Option ${MODUS} – siehe Kopf von scripts/readme-bilder.mjs.`);
+  process.exit(1);
 }

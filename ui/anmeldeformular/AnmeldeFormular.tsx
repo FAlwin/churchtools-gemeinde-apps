@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import { mailGueltig, type Antwort, type Antworten, type Feld } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { datumText } from '@shared/ct/datum';
 import { loeschDatum } from '@shared/anmeldung/termin';
-import { betragAus, wartelistenZeile } from '@shared/anmeldung/senden';
+import { betragAus, personenNamen, wartelistenZeile } from '@shared/anmeldung/senden';
 import { platzPlan, type PlatzStand } from '@shared/anmeldung/oeffentlich';
 import { mehrAlsVorgesehen, optionRest } from '@shared/anmeldung/kontingent';
 import { euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
@@ -15,6 +15,8 @@ import { FormularRahmen, Symbol, type Ansicht } from './FormularRahmen';
 import { Ergebnis } from './FormularErgebnis';
 import { useAbsenden, usePlaetze, type Abschicken } from './useAbsenden';
 import { useBedingungen } from './useBedingungen';
+import { useSchritte } from './useSchritte';
+import { SchrittFortschritt } from './SchrittFortschritt';
 
 /**
  * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
@@ -100,6 +102,9 @@ export function AnmeldeFormular({
     () => start ?? leereAntworten(),
     !baukasten,
   );
+  // F2b: das Formular in Schritten (Entwurf f2-schritte-v1) – im Baukasten nicht, dort steht alles auf einer Bühne.
+  const schritt = useSchritte({ e, antworten, aktiv: !baukasten });
+  const formular = useRef<HTMLFormElement>(null);
   // A6-5b: Eine ausgebuchte Option ist nicht wählbar – vorausgewählt ist die erste freie.
   const [option, setOption] = useState(() =>
     Math.max(
@@ -175,6 +180,7 @@ export function AnmeldeFormular({
   // ── Absenden (`useAbsenden`) ──
   const {
     fehler,
+    setFehler,
     fertig,
     setFertig,
     sendet,
@@ -195,6 +201,28 @@ export function AnmeldeFormular({
   });
 
   const zeilen = betrag.posten.filter((p) => p.betragCent !== null);
+
+  // F2b: blättern – nach oben ins Formular, damit die neue Seite von vorn beginnt.
+  const nachOben = () => formular.current?.scrollIntoView?.({ block: 'start' });
+  function weiter() {
+    const fehlt = schritt.weiter();
+    setFehler(fehlt);
+    if (!fehlt.length) nachOben();
+  }
+  function zurueck() {
+    setFehler([]);
+    schritt.zurueck();
+    nachOben();
+  }
+  const kopfHier = kopf.filter(schritt.zeigtKontakt);
+  // F2b: Auf späteren Seiten steht der Name nicht mehr dabei – dort heißt die Person wie eingetragen (Entwurf).
+  const namen = personenNamen(e, antworten);
+  const mitNamen = schritt.mit && !schritt.personenAnlegen;
+  const zurueckKnopf = schritt.mit && !schritt.erste && (
+    <button type="button" className={s.zurueck} onClick={zurueck}>
+      Zurück
+    </button>
+  );
 
   return (
     <FormularRahmen
@@ -246,6 +274,7 @@ export function AnmeldeFormular({
         />
       ) : (
         <form
+          ref={formular}
           className={s.formstack}
           noValidate
           onSubmit={(ev) => {
@@ -253,284 +282,351 @@ export function AnmeldeFormular({
             void absenden();
           }}
         >
-          <section className={s.sec}>
-            <h2>
-              {mitHinweis(
-                kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten',
-                baukasten?.hinweis?.('kontakt'),
-              )}
-            </h2>
-            {baukasten?.hinweisText?.('kontakt')}
-            {kopf.map((f) =>
-              huelle(
-                f,
-                'anmeldung',
-                <FeldEingabe
-                  key={f.id}
-                  feld={f}
-                  pfad={`anmeldung.${f.id}`}
-                  wert={antworten.anmeldung[f.id]}
-                  onWert={(w) => setAnmeldung(f.id, w)}
-                  fehler={fehler}
-                  zusatz={baukasten?.hinweis?.(f.id)}
-                  {...bedingt(f, `anmeldung.${f.id}`)}
-                />,
-              ),
-            )}
-          </section>
-          <section className={s.sec}>
-            <h2>
-              {mitHinweis(
-                kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
-                baukasten?.hinweis?.('teil'),
-              )}
-            </h2>
-            {baukasten?.hinweisText?.('teil')}
-            {alleWarten && (
-              <div className={s.platzBanner} role="status">
-                <b>Alle Plätze sind belegt.</b> Anmeldungen kommen auf die Warteliste und rücken
-                nach, wenn Plätze frei werden.
-              </div>
-            )}
-            {personen.map((p, i) => (
-              <div key={i} className={s.person}>
-                <div className={s['person-top']}>
-                  <strong>
-                    {wer} {i + 1}
-                    {baukasten && e.wer !== 'einzeln' && (
-                      <small className={s.wiederholt}>
-                        wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
-                      </small>
-                    )}
-                    {nichtAlle && plan?.[i] === 'platz' && (
-                      <small className={s.platzJa}>bekommt einen Platz</small>
-                    )}
-                    {plan?.[i] === 'warteliste' && (
-                      <small className={s.platzWarte}>Warteliste</small>
-                    )}
-                    {plan?.[i] === 'kein' && <small className={s.platzNein}>kein Platz</small>}
-                  </strong>
-                  {!baukasten && antworten.personen.length > 1 && (
-                    <button
-                      type="button"
-                      className={s.xbtn}
-                      onClick={() =>
-                        setAntworten((a) => ({
-                          ...a,
-                          personen: a.personen.filter((_, j) => j !== i),
-                        }))
-                      }
-                    >
-                      Entfernen
-                    </button>
-                  )}
-                </div>
-                {plan?.[i] === 'warteliste' && !alleWarten && (
-                  <p className={s.platzHinweis}>
-                    Für {wer} {i + 1} ist kein Platz mehr frei – es kommt auf die <b>Warteliste</b>{' '}
-                    und rückt nach, wenn ein Platz frei wird. Wenn du das nicht möchtest:
-                    „Entfernen“.
-                  </p>
-                )}
-                {plan?.[i] === 'kein' && (
-                  <p className={`${s.platzHinweis} ${s.platzHinweisRot}`}>
-                    Für {wer} {i + 1} ist kein Platz mehr frei, und es gibt keine Warteliste – bitte
-                    „Entfernen“.
-                  </p>
-                )}
-                {personFelder
-                  .filter((f) => zeigen(f, i))
-                  .map((f) =>
-                    huelle(
-                      f,
-                      'person',
-                      <FeldEingabe
-                        key={f.id}
-                        feld={f}
-                        pfad={`personen.${i}.${f.id}`}
-                        wert={p[f.id]}
-                        onWert={(w) => setPerson(i, f.id, w)}
-                        fehler={fehler}
-                        zusatz={baukasten?.hinweis?.(f.id)}
-                        {...bedingt(f, `personen.${i}.${f.id}`, i)}
-                      />,
-                    ),
-                  )}
-              </div>
-            ))}
-            {e.wer !== 'einzeln' && naechster === 'kein' && (
-              <p className={`${s.platzHinweis} ${s.platzHinweisRot}`} role="status">
-                <b>Kein Platz mehr frei</b> – {kinder ? 'ein weiteres Kind' : 'eine weitere Person'}{' '}
-                kann nicht angemeldet werden (es gibt keine Warteliste).
-              </p>
-            )}
-            {e.wer !== 'einzeln' && (
-              <button
-                type="button"
-                className={s.addbtn}
-                disabled={naechster === 'kein' || fragtNach}
-                onClick={() => void hinzufuegen()}
-              >
-                + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
-              </button>
-            )}
-            {fehler.includes('personen') && (
-              <p className={s.warnline}>Bitte mindestens eine Person eintragen.</p>
-            )}
-          </section>
-          {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
+          {schritt.mit && (
+            <SchrittFortschritt
+              alle={schritt.alle}
+              gezeigt={schritt.gezeigt}
+              nr={schritt.nr}
+              name={schritt.name}
+            />
+          )}
+          {kopfHier.length > 0 && (
             <section className={s.sec}>
-              <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
-              {baukasten?.hinweisText?.('preis')}
-              {e.preis.grundpreis.art === 'auswahl' && (
-                <div className={s.pf}>
-                  <label htmlFor="af-option">
-                    {e.preis.grundpreis.auswahlName}
-                    <span className={s.req} aria-hidden="true">
-                      *
-                    </span>
-                  </label>
-                  <select
-                    id="af-option"
-                    value={option}
-                    onChange={(ev) => setOption(Number(ev.target.value))}
-                  >
-                    {e.preis.grundpreis.optionen.map((o, i) => (
-                      <option key={o.name} value={i} disabled={optionRest(o) === 0}>
-                        {o.name} · {euroText(o.preisCent)} pro Person
-                        {optionRest(o) === 0 ? ' – ausgebucht' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {gewaehlt && mehrAlsVorgesehen(gewaehlt, personenMitPlatz) && (
-                    <p className={s.platzHinweis}>
-                      „{gewaehlt.name}“ ist für {gewaehlt.personenJe}{' '}
-                      {gewaehlt.personenJe === 1 ? 'Person' : 'Personen'} gedacht – ihr meldet{' '}
-                      {personenMitPlatz} an. Passt das? Anmelden geht trotzdem.
-                    </p>
-                  )}
-                </div>
-              )}
-              {e.preis.extras.length > 0 && (
-                <div className={s.pf}>
-                  <span className={s.lab}>Extras</span>
-                  <div className={s.choices}>
-                    {e.preis.extras.map((x, i) => (
-                      <label key={x.bezeichnung} className={s.choice}>
-                        <input
-                          type="checkbox"
-                          checked={extras[i] ?? false}
-                          onChange={(ev) =>
-                            setExtras(extras.map((c, j) => (i === j ? ev.target.checked : c)))
-                          }
-                        />
-                        <span>
-                          {x.bezeichnung} (+{euroText(x.preisCent)}
-                          {x.gilt === 'person' ? ' pro Person' : ''})
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+              <h2>
+                {mitHinweis(
+                  // Nach Schritt 1 stehen hier die übrigen Fragen einmal je Anmeldung (Entwurf f2-schritte-v1).
+                  schritt.mit && !schritt.erste
+                    ? 'Für die ganze Anmeldung'
+                    : kinder
+                      ? 'Kontakt der Eltern'
+                      : 'Deine Kontaktdaten',
+                  baukasten?.hinweis?.('kontakt'),
+                )}
+              </h2>
+              {baukasten?.hinweisText?.('kontakt')}
+              {kopfHier.map((f) =>
+                huelle(
+                  f,
+                  'anmeldung',
+                  <FeldEingabe
+                    key={f.id}
+                    feld={f}
+                    pfad={`anmeldung.${f.id}`}
+                    wert={antworten.anmeldung[f.id]}
+                    onWert={(w) => setAnmeldung(f.id, w)}
+                    fehler={fehler}
+                    zusatz={baukasten?.hinweis?.(f.id)}
+                    {...bedingt(f, `anmeldung.${f.id}`)}
+                  />,
+                ),
               )}
             </section>
           )}
-          <section className={s.sec}>
-            {ende.map((f) =>
-              huelle(
-                f,
-                'anmeldung',
-                <FeldEingabe
-                  key={f.id}
-                  feld={f}
-                  pfad={`anmeldung.${f.id}`}
-                  wert={antworten.anmeldung[f.id]}
-                  onWert={(w) => setAnmeldung(f.id, w)}
-                  fehler={fehler}
-                  zusatz={baukasten?.hinweis?.(f.id)}
-                  loeschtag={loeschtag}
-                  {...bedingt(f, `anmeldung.${f.id}`)}
-                />,
-              ),
-            )}
-            {kostet && (
-              <div className={s.sumbox} aria-label="Preis">
-                {zeilen.map((p, i) => (
-                  <div key={i} className={s.sl}>
-                    <span>
-                      {p.text} <small>{p.hinweis}</small>
-                    </span>
-                    <span>
-                      {p.betragCent! < 0 ? `−${euroText(-p.betragCent!)}` : euroText(p.betragCent!)}
-                    </span>
+          {schritt.mitPersonen && (
+            <section className={s.sec}>
+              <h2>
+                {mitHinweis(
+                  kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
+                  baukasten?.hinweis?.('teil'),
+                )}
+              </h2>
+              {baukasten?.hinweisText?.('teil')}
+              {alleWarten && (
+                <div className={s.platzBanner} role="status">
+                  <b>Alle Plätze sind belegt.</b> Anmeldungen kommen auf die Warteliste und rücken
+                  nach, wenn Plätze frei werden.
+                </div>
+              )}
+              {personen.map((p, i) => (
+                <div key={i} className={s.person}>
+                  <div className={s['person-top']}>
+                    <strong>
+                      {mitNamen && namen[i] !== `${wer} ${i + 1}` ? (
+                        <>
+                          {namen[i]}{' '}
+                          <small className={s.personNr}>
+                            {wer} {i + 1}
+                          </small>
+                        </>
+                      ) : (
+                        <>
+                          {wer} {i + 1}
+                        </>
+                      )}
+                      {baukasten && e.wer !== 'einzeln' && (
+                        <small className={s.wiederholt}>
+                          wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
+                        </small>
+                      )}
+                      {nichtAlle && plan?.[i] === 'platz' && (
+                        <small className={s.platzJa}>bekommt einen Platz</small>
+                      )}
+                      {plan?.[i] === 'warteliste' && (
+                        <small className={s.platzWarte}>Warteliste</small>
+                      )}
+                      {plan?.[i] === 'kein' && <small className={s.platzNein}>kein Platz</small>}
+                    </strong>
+                    {!baukasten && schritt.personenAnlegen && antworten.personen.length > 1 && (
+                      <button
+                        type="button"
+                        className={s.xbtn}
+                        onClick={() =>
+                          setAntworten((a) => ({
+                            ...a,
+                            personen: a.personen.filter((_, j) => j !== i),
+                          }))
+                        }
+                      >
+                        Entfernen
+                      </button>
+                    )}
                   </div>
-                ))}
-                {betrag.warten.map((name) => (
-                  <div key={name} className={s.sl}>
-                    <span>{wartelistenZeile(name)}</span>
-                    <span />
+                  {plan?.[i] === 'warteliste' && !alleWarten && (
+                    <p className={s.platzHinweis}>
+                      Für {wer} {i + 1} ist kein Platz mehr frei – es kommt auf die{' '}
+                      <b>Warteliste</b> und rückt nach, wenn ein Platz frei wird. Wenn du das nicht
+                      möchtest: „Entfernen“.
+                    </p>
+                  )}
+                  {plan?.[i] === 'kein' && (
+                    <p className={`${s.platzHinweis} ${s.platzHinweisRot}`}>
+                      Für {wer} {i + 1} ist kein Platz mehr frei, und es gibt keine Warteliste –
+                      bitte „Entfernen“.
+                    </p>
+                  )}
+                  {personFelder
+                    .filter((f) => zeigen(f, i) && schritt.zeigtPerson(f))
+                    .map((f) =>
+                      huelle(
+                        f,
+                        'person',
+                        <FeldEingabe
+                          key={f.id}
+                          feld={f}
+                          pfad={`personen.${i}.${f.id}`}
+                          wert={p[f.id]}
+                          onWert={(w) => setPerson(i, f.id, w)}
+                          fehler={fehler}
+                          zusatz={baukasten?.hinweis?.(f.id)}
+                          {...bedingt(f, `personen.${i}.${f.id}`, i)}
+                        />,
+                      ),
+                    )}
+                </div>
+              ))}
+              {e.wer !== 'einzeln' && schritt.personenAnlegen && naechster === 'kein' && (
+                <p className={`${s.platzHinweis} ${s.platzHinweisRot}`} role="status">
+                  <b>Kein Platz mehr frei</b> –{' '}
+                  {kinder ? 'ein weiteres Kind' : 'eine weitere Person'} kann nicht angemeldet
+                  werden (es gibt keine Warteliste).
+                </p>
+              )}
+              {e.wer !== 'einzeln' && schritt.personenAnlegen && (
+                <button
+                  type="button"
+                  className={s.addbtn}
+                  disabled={naechster === 'kein' || fragtNach}
+                  onClick={() => void hinzufuegen()}
+                >
+                  + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
+                </button>
+              )}
+              {fehler.includes('personen') && (
+                <p className={s.warnline}>Bitte mindestens eine Person eintragen.</p>
+              )}
+            </section>
+          )}
+          {!schritt.letzte && (
+            // F2b: Seiten vor der letzten enden mit „Weiter“ – Preis, Datenschutz und Anmelden kommen am Schluss.
+            <section className={s.sec}>
+              {fehler.length > 0 && (
+                <p className={s.warnline} role="alert">
+                  Bitte die markierten Angaben ergänzen.
+                </p>
+              )}
+              <div className={s.schrittKnoepfe}>
+                {zurueckKnopf}
+                <button type="button" className={s.go} onClick={weiter}>
+                  Weiter
+                </button>
+              </div>
+            </section>
+          )}
+          {schritt.letzte &&
+            preisFeld &&
+            (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
+              <section className={s.sec}>
+                <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
+                {baukasten?.hinweisText?.('preis')}
+                {e.preis.grundpreis.art === 'auswahl' && (
+                  <div className={s.pf}>
+                    <label htmlFor="af-option">
+                      {e.preis.grundpreis.auswahlName}
+                      <span className={s.req} aria-hidden="true">
+                        *
+                      </span>
+                    </label>
+                    <select
+                      id="af-option"
+                      value={option}
+                      onChange={(ev) => setOption(Number(ev.target.value))}
+                    >
+                      {e.preis.grundpreis.optionen.map((o, i) => (
+                        <option key={o.name} value={i} disabled={optionRest(o) === 0}>
+                          {o.name} · {euroText(o.preisCent)} pro Person
+                          {optionRest(o) === 0 ? ' – ausgebucht' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {gewaehlt && mehrAlsVorgesehen(gewaehlt, personenMitPlatz) && (
+                      <p className={s.platzHinweis}>
+                        „{gewaehlt.name}“ ist für {gewaehlt.personenJe}{' '}
+                        {gewaehlt.personenJe === 1 ? 'Person' : 'Personen'} gedacht – ihr meldet{' '}
+                        {personenMitPlatz} an. Passt das? Anmelden geht trotzdem.
+                      </p>
+                    )}
                   </div>
-                ))}
+                )}
+                {e.preis.extras.length > 0 && (
+                  <div className={s.pf}>
+                    <span className={s.lab}>Extras</span>
+                    <div className={s.choices}>
+                      {e.preis.extras.map((x, i) => (
+                        <label key={x.bezeichnung} className={s.choice}>
+                          <input
+                            type="checkbox"
+                            checked={extras[i] ?? false}
+                            onChange={(ev) =>
+                              setExtras(extras.map((c, j) => (i === j ? ev.target.checked : c)))
+                            }
+                          />
+                          <span>
+                            {x.bezeichnung} (+{euroText(x.preisCent)}
+                            {x.gilt === 'person' ? ' pro Person' : ''})
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          {schritt.letzte && (
+            <section className={s.sec}>
+              {ende.map((f) =>
+                huelle(
+                  f,
+                  'anmeldung',
+                  <FeldEingabe
+                    key={f.id}
+                    feld={f}
+                    pfad={`anmeldung.${f.id}`}
+                    wert={antworten.anmeldung[f.id]}
+                    onWert={(w) => setAnmeldung(f.id, w)}
+                    fehler={fehler}
+                    zusatz={baukasten?.hinweis?.(f.id)}
+                    loeschtag={loeschtag}
+                    {...bedingt(f, `anmeldung.${f.id}`)}
+                  />,
+                ),
+              )}
+              {kostet && (
+                <div className={s.sumbox} aria-label="Preis">
+                  {zeilen.map((p, i) => (
+                    <div key={i} className={s.sl}>
+                      <span>
+                        {p.text} <small>{p.hinweis}</small>
+                      </span>
+                      <span>
+                        {p.betragCent! < 0
+                          ? `−${euroText(-p.betragCent!)}`
+                          : euroText(p.betragCent!)}
+                      </span>
+                    </div>
+                  ))}
+                  {betrag.warten.map((name) => (
+                    <div key={name} className={s.sl}>
+                      <span>{wartelistenZeile(name)}</span>
+                      <span />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className={s.sum}>
+                <div>
+                  {antworten.personen.length === 1
+                    ? '1 Person'
+                    : `${antworten.personen.length} Personen`}
+                  <small>
+                    {kostet
+                      ? 'Die Bankverbindung kommt mit der Bestätigung per E-Mail.'
+                      : 'Die Teilnahme ist kostenlos.'}
+                  </small>
+                </div>
+                <div className={s.big}>{kostet ? euroText(betrag.gesamtCent) : 'kostenlos'}</div>
               </div>
-            )}
-            <div className={s.sum}>
-              <div>
-                {antworten.personen.length === 1
-                  ? '1 Person'
-                  : `${antworten.personen.length} Personen`}
-                <small>
-                  {kostet
-                    ? 'Die Bankverbindung kommt mit der Bestätigung per E-Mail.'
-                    : 'Die Teilnahme ist kostenlos.'}
-                </small>
-              </div>
-              <div className={s.big}>{kostet ? euroText(betrag.gesamtCent) : 'kostenlos'}</div>
-            </div>
-            {preis.ausgebucht && (
-              <p className={s.warnline}>
-                {e.preis.grundpreis.optionen.every((o) => optionRest(o) === 0)
-                  ? 'Alle Möglichkeiten sind ausgebucht – eine Anmeldung ist gerade nicht möglich.'
-                  : 'Diese Auswahl ist ausgebucht – bitte eine andere wählen.'}
-              </p>
-            )}
-            {fehler.length > 0 && (
-              <p className={s.warnline} role="alert">
-                Bitte die markierten Angaben ergänzen.
-              </p>
-            )}
-            {sendeFehler && (
-              <p className={s.warnline} role="alert">
-                {sendeFehler}
-              </p>
-            )}
-            {echt && (
-              // Honigtopf (A6-3): für Menschen unsichtbar und nicht erreichbar, Bots füllen ihn aus.
-              <div className={s.honigtopf} aria-hidden="true">
-                <label>
-                  Bitte leer lassen
-                  <input
-                    ref={honigtopf}
-                    name={HONIGTOPF_NAME}
-                    type="text"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    defaultValue=""
-                  />
-                </label>
-              </div>
-            )}
-            <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
-              {sendet
-                ? 'Wird gesendet …'
-                : alleWarten
-                  ? 'Auf die Warteliste'
-                  : 'Verbindlich anmelden'}
-            </button>
-            {vorschau && !baukasten && (
-              <p className={s.hintline}>Vorschau mit Musterdaten – abgeschickt wird hier nichts.</p>
-            )}
-            {probe && <p className={s.hintline}>Probelauf – abgeschickt wird hier nichts.</p>}
-          </section>
+              {preis.ausgebucht && (
+                <p className={s.warnline}>
+                  {e.preis.grundpreis.optionen.every((o) => optionRest(o) === 0)
+                    ? 'Alle Möglichkeiten sind ausgebucht – eine Anmeldung ist gerade nicht möglich.'
+                    : 'Diese Auswahl ist ausgebucht – bitte eine andere wählen.'}
+                </p>
+              )}
+              {fehler.length > 0 && (
+                <p className={s.warnline} role="alert">
+                  Bitte die markierten Angaben ergänzen.
+                </p>
+              )}
+              {sendeFehler && (
+                <p className={s.warnline} role="alert">
+                  {sendeFehler}
+                </p>
+              )}
+              {echt && (
+                // Honigtopf (A6-3): für Menschen unsichtbar und nicht erreichbar, Bots füllen ihn aus.
+                <div className={s.honigtopf} aria-hidden="true">
+                  <label>
+                    Bitte leer lassen
+                    <input
+                      ref={honigtopf}
+                      name={HONIGTOPF_NAME}
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      defaultValue=""
+                    />
+                  </label>
+                </div>
+              )}
+              {/* Ohne Schritte steht „Anmelden“ wie bisher allein; mit Schritten neben „Zurück“. */}
+              {schritt.mit ? (
+                <div className={s.schrittKnoepfe}>
+                  {zurueckKnopf}
+                  <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
+                    {sendet
+                      ? 'Wird gesendet …'
+                      : alleWarten
+                        ? 'Auf die Warteliste'
+                        : 'Verbindlich anmelden'}
+                  </button>
+                </div>
+              ) : (
+                <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
+                  {sendet
+                    ? 'Wird gesendet …'
+                    : alleWarten
+                      ? 'Auf die Warteliste'
+                      : 'Verbindlich anmelden'}
+                </button>
+              )}
+              {vorschau && !baukasten && (
+                <p className={s.hintline}>
+                  Vorschau mit Musterdaten – abgeschickt wird hier nichts.
+                </p>
+              )}
+              {probe && <p className={s.hintline}>Probelauf – abgeschickt wird hier nichts.</p>}
+            </section>
+          )}
         </form>
       )}
       <footer className={s.foot}>

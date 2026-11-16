@@ -79,7 +79,7 @@ function mitBedingungen(
 ): OeffentlicheEinstellungen['formular'] {
   const frage = (
     id: string,
-    typ: 'janein' | 'radio' | 'text',
+    typ: 'janein' | 'radio' | 'text' | 'schritt',
     text: string,
     antworten: string[] = [],
   ) => ({
@@ -98,6 +98,8 @@ function mitBedingungen(
   return {
     anmeldung: [
       ...f.anmeldung.slice(0, -1),
+      // F2: Das Formular blättert – „Mitarbeit“ (Team-Frage + Personen), dann „Team“ nur für Mitarbeitende.
+      frage('s-mit', 'schritt', 'Mitarbeit'),
       frage('team', 'janein', 'Bist du im Team?'),
       ...f.anmeldung.slice(-1),
     ],
@@ -107,6 +109,7 @@ function mitBedingungen(
         ...frage('bereich', 'radio', 'Bereich', ['Küche', 'Technik']),
         antwortBed: { Technik: { ...imTeam, art: 'grau' as const, grund: 'nur fürs Team' } },
       },
+      { ...frage('s-team', 'schritt', 'Team'), bed: imTeam },
       { ...frage('erfahrung', 'text', 'Team-Erfahrung'), bed: imTeam },
     ],
   };

@@ -829,6 +829,7 @@
 
 .hinweis {
   margin: 8px 2px 0;
+  max-width: var(--lese-breite);
   color: var(--text2);
   font-size: 12.5px;
   line-height: 1.45;

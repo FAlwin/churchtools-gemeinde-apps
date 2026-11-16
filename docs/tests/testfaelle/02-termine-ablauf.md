@@ -812,3 +812,41 @@ verwalten“).
 - **Automatisiert:** ja – `shared/dienstplan/personenRaster.test.ts` (Blöcke und Zeilen, Mitglied ohne Einsatz, Eingeteilte ohne Mitgliedschaft, Café mit mehreren Gruppen, Einsätze, „+ …“ auch für ausgeblendete Gruppen, Abwesenheit mehrtägig/mit Uhrzeit/mit Warnung, Gäste, Verborgene, „Noch offen“ = `terminStand`, Entwürfe, Ladezustand), `shared/dienstplan/personenDaten.test.ts`, `dienstplaner/src/ladePersonen.test.ts` (Recht ja/nein, Seitenteilung, Fehlerzweige einzeln, höchstens vier gleichzeitig), `dienstplaner/src/usePersonenDaten.test.tsx`, `dienstplaner/src/Planen.personen.test.tsx` (Umschalter, Laden, Fehler im Block, Hervorheben, Klick ohne Wirkung), `dienstplaner/src/geraet.test.ts` (gemerktes „personen“ → „Wer wie oft?“); 22 Gegenproben einzeln rot; von Hand bleiben echte Rechte, echte Abwesenheiten und der Blick am Handy
 - **Historie:** Wunsch 5 (Alwin 05./06.11.2026, Entwurf `e9-personen-v3.html`; P0 gemessen 13.11.2026), Scheibe P1
 </details>
+
+### TF-ABLAUF-30 · Planen: einzelne Dienste ausblenden, Block in „Personen“ zuklappen
+
+**Das brauchst du:** Dienstplaner als Planer; eine Dienstgruppe mit mindestens drei Diensten (am besten Technik mit Ton,
+Bild, Licht), in der an einem Tag dieselbe Person in zwei Diensten steht (z. B. Ton und Bild); danach zwei Termine mit
+freien Plätzen in Bild.
+
+**Das muss passieren:** Man blendet nur den Dienst aus, der stört – nicht gleich die ganze Gruppe – und sieht danach nur
+noch, was zählt.
+
+1. **Planen → Filter**: Unter **Gruppen** steht unter jeder Gruppe mit mehreren Diensten die Liste ihrer Dienste, eingerückt,
+   jeder mit eigenem Haken. Eine Gruppe mit nur einem Dienst hat keine Liste.
+2. **Bild** abhaken: Die Gruppe Technik zeigt einen **Strich** statt Haken, am Filter-Knopf steht **1**. In der **Matrix**
+   fehlt die Zeile Bild; **Termin-Kopf**, Füllbalken und die Zeile der Gruppe („N frei“) zählen **ohne** Bild (am Handy auch der
+   Zettel und die Datumsleiste); unten „Ansehen und senden“ ist davon unberührt.
+3. **Personen**: Es gibt keinen Block Bild; in der Zeile der Person im Ton steht am selben Tag blass **„+ Bild“** (ohne
+   „(Technik)“). **Noch offen** nennt Bild nicht. **Wer wie oft?** zählt Bild ebenfalls nicht mit.
+4. Die ganze Gruppe Technik ausblenden: In „Personen“ steht bei Personen aus anderen Gruppen wie bisher „+ Ton (Technik)“.
+5. Den **Gruppenhaken mit Strich** antippen: Alle Dienste der Gruppe sind wieder an. Den Haken noch einmal antippen: Gruppe
+   aus, alle ihre Dienste abgehakt. Alle Dienste einer Gruppe **einzeln** abhaken: Der Gruppenhaken ist dann ebenfalls aus.
+6. Das Gerät merkt sich die Wahl: App neu laden → derselbe Filter. Über **Teilen** → Plan: Der ausgeblendete Dienst steht
+   weder im PDF noch unter „Wir suchen noch …“.
+7. **Personen**: Den Kopf eines Dienstes („Ton · 5 Personen“) antippen → nur der Kopf bleibt, die Zeilen und Gäste sind weg,
+   **Noch offen** zählt den Dienst weiter. Noch einmal antippen klappt auf. Zuklappen ist **kein** Ausblenden: Der Filter
+   ändert sich nicht.
+8. Von der Startseite aus **Planen** → eine Gruppe (z. B. „Technik“) antippen: Es stehen **alle** Dienste der Gruppe da, auch
+   wenn Bild im Filter ausgeblendet ist. **Gewohnte Ansicht** → wieder ohne Bild. Im Besuch einen Dienst abhaken: oben „Eigene
+   Auswahl“, danach ist der gemerkte Filter unverändert.
+9. Der **Regler** in der Gruppenzeile (Plätze) zeigt weiter **alle** Dienste der Gruppe, auch den ausgeblendeten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/planFilter.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/werWieOft.ts`, `shared/dienstplan/plan.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/gruppenAbschnitt.ts`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/WerWieOft.tsx`, `ui/bedienung/FilterKnopf.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/planFilter.test.ts` (gezeigte Gruppen, freie Plätze neu gezählt, Termin-Stand, alle Dienste einzeln aus = Gruppe aus, Umschalten), `shared/dienstplan/personenRaster.test.ts` („+ Gesang“ blass ohne Gruppenzusatz, mit Gruppenzusatz bei ausgeblendeter Gruppe, „Noch offen“), `dienstplaner/src/Planen.dienstFilter.test.tsx` (Menü mit Strich, Matrix, Kopf/Füllbalken/Zettel, Personen, Block zuklappen, Wer wie oft?, Besuch von der Startseite, Lese-Toleranz), `dienstplaner/src/Planen.teilen.test.tsx`, `dienstplaner/src/Planen.plaetze.test.tsx`, `ui/bedienung/FilterKnopf.test.tsx`, `dienstplaner/src/geraet.test.ts`; 17 Gegenproben einzeln rot; von Hand bleibt der Blick am Handy und im echten ChurchTools
+- **Historie:** Wunsch 10 (Alwin 16.11.2026: „Ich will z. B. nur Bild rausfiltern“)
+
+</details>

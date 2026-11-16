@@ -8,8 +8,13 @@ import type { MatrixInfos } from './useMatrixInfos';
 /** Ein Entwurf an einem Platz – und ob er veraltet ist (in ChurchTools steht inzwischen etwas anderes). */
 export type EntwurfAmPlatz = { entwurf: Entwurf; veraltet: boolean };
 
-/** Schlüssel einer Gruppe – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
-export const schluessel = (g: PlanGruppe) => (g.gruppe ? String(g.gruppe.id) : 'ohne');
+export { gruppenSchluessel as schluessel } from '@shared/dienstplan/plan';
+
+/**
+ * Schlüssel eines Dienst-Blocks in „Personen“ im Satz der zugeklappten Einträge (`Sicht.zugeklappt`) – derselbe Satz wie
+ * für die Gruppen der Matrix, die Gruppenschlüssel (Zahl oder `ohne`) kommen damit nicht in die Quere.
+ */
+export const blockSchluessel = (dienstId: number) => `dienst:${dienstId}`;
 
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */
 export interface Sicht {

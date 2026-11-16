@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { diensteAus } from '@shared/ct/dienste';
 import { terminVorlagenAus } from '@shared/ct/terminVorlagen';
 import { planAus } from '@shared/dienstplan/plan';
@@ -159,5 +159,57 @@ describe('Planen – Plätze-Fach mit allen Diensten und Vorlage', () => {
     expect(screen.getByText(/Kamera: 0 → 1/)).toBeTruthy();
     expect(screen.getByText(/Abendmahl – darfst du nicht planen/)).toBeTruthy();
     expect(anzahl).not.toHaveBeenCalled();
+  });
+});
+
+describe('Planen – Plätze-Fach und ausgeblendete Dienste (Wunsch 10)', () => {
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('ein ausgeblendeter Dienst fehlt in der Matrix, steht aber im Fach – dort schaltet man Dienste ein und aus', async () => {
+    const zweiDienste = planAus(
+      [
+        {
+          ...roh('1')[0],
+          eventServices: [
+            { serviceId: 6, personId: null, name: null, index: null },
+            { serviceId: 8, personId: null, name: null, index: null },
+          ],
+        },
+      ] as RohTermin[],
+      {
+        ichId: START.ichId,
+        dienste: START.dienste,
+        dienstgruppen: START.dienstgruppen,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => planbar(START, d),
+        ganzSichtbar: (d) => ganzSichtbar(START, d),
+      },
+    );
+    // Kamera (8) ausgeblendet, Ton (6) bleibt.
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ ausgeblendeteDienste: [8] }),
+    );
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: zweiDienste, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        mehrMoeglich={false}
+        ladeZeitraum={() => new Promise<never>(() => {})}
+        heute="2026-11-01"
+        entwuerfe={nachgebaut()}
+        katalog={katalogAus(START)}
+        ladeVorlagen={() => Promise.resolve(VORLAGEN)}
+      />,
+    );
+    expect(screen.queryByRole('rowheader', { name: 'Kamera' })).toBeNull();
+    await oeffne();
+    expect(screen.getByLabelText('Kamera: 1 Plätze')).toBeTruthy();
+    expect(screen.getByLabelText('Ton: 1 Plätze')).toBeTruthy();
   });
 });

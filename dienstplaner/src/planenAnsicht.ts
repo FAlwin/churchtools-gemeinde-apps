@@ -2,7 +2,8 @@ import type { Breite } from '@shared/dienstplan/fenster';
 import type { TerminAus } from '@shared/dienstplan/termine';
 import { AB_HEUTE, LETZTE_3, zeitraumAus, type Zeitraum } from '@shared/ct/zeitraum';
 import { kalenderIdsAus } from '@shared/ct/kalenderFilter';
-import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
+import type { PlanAus } from '@shared/dienstplan/planFilter';
+import { leseImGeraet, merkeImGeraet, texte, zahlen } from '@ui/bedienung/geraet';
 
 /**
  * Die drei Ansichten in Planen: `matrix`, das Raster der Personen (`raster`, Wunsch 5) und „Wer wie oft?“ (`werWieOft`).
@@ -27,6 +28,11 @@ export interface PlanenAnsicht {
   unteransicht: Unteransicht;
   /** Zugeklappte bzw. ausgeblendete Gruppen (Schlüssel wie in `Planen.tsx`). */
   ausgeblendeteGruppen: string[];
+  /**
+   * Einzeln ausgeblendete Dienste (IDs, Wunsch 10) – gilt wie die Gruppen für Matrix und „Personen“. Gemerkte Werte aus
+   * der Zeit davor haben das Feld nicht: dann ist nichts einzeln ausgeblendet.
+   */
+  ausgeblendeteDienste: number[];
   /** Ausgeblendete Veranstaltungsarten (wie in der Termine-Liste). */
   ausgeblendeteArten: string[];
   /** Ausgeblendete Kalender (IDs, Wunsch 6) – wie in der Termine-Liste. */
@@ -50,6 +56,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   breite: 'schmal',
   unteransicht: 'matrix',
   ausgeblendeteGruppen: [],
+  ausgeblendeteDienste: [],
   ausgeblendeteArten: [],
   ausgeblendeteKalender: [],
   zeitraum: AB_HEUTE,
@@ -67,6 +74,7 @@ export function leseAnsicht(): PlanenAnsicht {
       breite: a.breite === 'breit' || a.breite === 'l' ? 'breit' : 'schmal',
       unteransicht: unteransichtAus(a.unteransicht),
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
+      ausgeblendeteDienste: [...new Set(zahlen(a.ausgeblendeteDienste))],
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
       ausgeblendeteKalender: kalenderIdsAus(a.ausgeblendeteKalender),
       zeitraum: zeitraumAus(a.zeitraum),
@@ -81,6 +89,12 @@ export function leseAnsicht(): PlanenAnsicht {
 export function ansichtAus(a: PlanenAnsicht): TerminAus {
   return { kalender: a.ausgeblendeteKalender, arten: a.ausgeblendeteArten };
 }
+
+/** Was der Filter von Gruppen und Diensten ausblendet – für `gezeigteGruppen` und das Filter-Menü. */
+export const gruppenAus = (a: PlanenAnsicht): PlanAus => ({
+  gruppen: a.ausgeblendeteGruppen,
+  dienste: a.ausgeblendeteDienste,
+});
 
 export function merkeAnsicht(a: PlanenAnsicht): void {
   merkeImGeraet(SCHLUESSEL, a);

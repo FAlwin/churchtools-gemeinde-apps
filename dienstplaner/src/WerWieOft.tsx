@@ -4,12 +4,11 @@ import type { Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
 import styles from './Planen.module.scss';
 
-/** „Wer wie oft?“ – Einsätze je Person im sichtbaren Zeitraum und in den sichtbaren Gruppen. */
+/** „Wer wie oft?“ – Einsätze je Person im sichtbaren Zeitraum und in den sichtbaren Gruppen und Diensten (derselbe Filter wie die Matrix). */
 export function WerWieOft({ sicht }: { sicht: Sicht }) {
-  const sichtbar = new Set(sicht.gruppen.map((g) => g.gruppe?.id ?? null));
   const { personen, schnitt } = werWieOft(sicht.plan, {
     spalten: sicht.spalten,
-    gruppeSichtbar: (id) => sichtbar.has(id),
+    gruppen: sicht.gruppen,
   });
   const meiste = Math.max(1, ...personen.map((p) => p.einsaetze.length));
   const bisUnten = useBisUnten();

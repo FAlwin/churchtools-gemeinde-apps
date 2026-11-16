@@ -303,6 +303,8 @@ Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die n
   ab der Ankündigung, die Bereichsleitung schon vorher als Vorschau.
 - **Daten pflegen:** Kinder ohne Geburtstag (die wechseln nie von selbst) und – nur für die Bereichsleitung – wer
   bis zum Stichtag 18 wird.
+- **Wechseltage:** nur für Bereichsleitung und Admins – die Termine, bis wann sie in ChurchTools stehen und der Text für
+  die Leitungen (siehe „Wechseltage“ unten).
 
 **Rechte am Gruppentyp der Kindergruppen** (Rechteverwaltung → Gruppentyp → Kindergruppe → „Globale Berechtigungen“
 → Leiter → Bearbeiten; gemessen 12.11.2026 in der Test-Instanz):
@@ -313,6 +315,29 @@ Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die n
 - Kalender → Einzelnen Kalender sehen → Gemeindekalender → **Schulferien NRW**
 
 Fehlt der Kalender, zeigt der Reiter einen Hinweis statt leerer Listen.
+
+### Wechseltage (O9-4, nur Bereichsleitung und Admins)
+
+Der Unterreiter **Wechseltage** zeigt je Jahr, das der Ferienkalender schon kennt: Sommerferien, Ankündigung, Wechseltag
+(mit Wochentag), Stichtag und ob die Regeln dafür in ChurchTools stehen. Zu tun gibt es nichts – ChurchTools verschiebt
+von selbst; die Seite sagt nur, wann es Zeit wird, die Wechseltage nachzutragen.
+
+- **„Eingetragen bis“:** Die Einrichtung (Kategorie „Gruppenwechsel“) merkt sich das Feld `eingetragenBis` – bis zu
+  welchem Wechseljahr die Regeln in ChurchTools stehen. Geschrieben wird es erst von „Einrichten/Nachtragen“ (O9-5);
+  fehlt es oder ist es keine vierstellige Jahreszahl, steht in der Tabelle „nicht bekannt“, und es gibt weder
+  Erinnerung noch Abgleich.
+- **Erinnerung:** Ist `eingetragenBis` das Jahr des **nächsten** Wechsels, steht gelb „Wechseltage fehlen bald. Eingetragen
+  sind sie nur noch bis …“; liegt es davor, „Ab … fehlen Wechseltage.“ Derselbe Hinweis steht kurz in der **Übersicht**
+  (Regel `wechseltageStand` in `shared/organigramm/wechseltage.ts`). Man gibt einem Admin Bescheid.
+- **Leitungen Bescheid geben:** ChurchTools verschickt zur Ankündigung nichts. Ab der Ankündigung steht auf der Seite
+  ein Text mit Wechseltag und je Übergang der Zahl der Kinder, die wechseln (ohne Ausnahmen – dieselbe Zahl wie in der
+  Übersicht), zum Kopieren („Text kopieren“; geht das nicht, ist der Text markiert). Vor der Ankündigung steht nur,
+  ab wann es ihn gibt, nach dem Wechseltag nichts mehr.
+- **Abgleich (nur Admins):** Die Seite liest die Regeln jeder Wechsel-Gruppe aus ChurchTools
+  (`GET /dynamicgroups/{id}/ruleset`, nur mit Recht „Berechtigungen verwalten“) und prüft, ob für jedes Jahr ab dem
+  aktuellen Wechseljahr das Fenster dort steht, das die Erweiterung selbst schreiben würde – genau bis `eingetragenBis`.
+  Weicht es ab, steht gelb, welche Gruppe und welches Jahr. Ließ sich nichts lesen (Netz, Serverfehler), steht „ließ sich
+  gerade nicht prüfen“; es wird nichts geändert.
 
 ### Ausnahme setzen (O9-3)
 

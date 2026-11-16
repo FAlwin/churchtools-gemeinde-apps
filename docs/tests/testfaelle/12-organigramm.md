@@ -618,3 +618,52 @@ verloren.
 - **Historie:** Bauplan O9-3; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026
 
 </details>
+
+### TF-ORG-19 · Kinder & Jugend: Wechseltage ansehen und die Leitungen benachrichtigen
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung und der Einrichtung des Gruppenwechsels (wie TF-ORG-16), ein
+Admin-Konto, ein Konto der Bereichsleitung ohne Admin-Recht und ein Konto, das nur eine Kindergruppe leitet. Für „eingetragen
+bis“ trägt in der Test-Instanz ein Skript das Feld `eingetragenBis` in den Eintrag der Kategorie „Gruppenwechsel“
+ein (bis „Einrichten“ in O9-5 es schreibt). Dieser Fall liest nur – er verändert nichts in ChurchTools.
+
+**Das muss passieren:** Nur Bereichsleitung und Admins sehen **Wechseltage**. Die Tabelle zeigt jedes Jahr aus dem
+Ferienkalender mit seinem Status. Läuft das Eingetragene aus, erinnern gelbe Hinweise. Ab der Ankündigung steht ein
+Text für die Leitungen bereit, und Admins sehen, wenn die Regeln in ChurchTools nicht zu „eingetragen bis“ passen.
+
+1. Als **Leitung einer Kindergruppe**: Im Reiter Kinder & Jugend gibt es nur **Meine Gruppe** und **Daten pflegen**,
+   keinen Unterreiter **Wechseltage**.
+2. Als **Bereichsleitung** (ohne Admin) und als **Admin**: Neben **Übersicht** und **Daten pflegen** steht
+   **Wechseltage**. Die Tabelle hat je Jahr Sommerferien, Ankündigung, Wechseltag (mit Wochentag, z. B. „Mo, 06.09.2027“)
+   und Stichtag. Am Handy (375 px) lässt sich die Tabelle in der Karte seitlich schieben, die Seite selbst rutscht nicht.
+3. **Ohne** `eingetragenBis`: In jeder Zeile steht „nicht bekannt“, darüber ein ruhiger blauer Hinweis, dass die
+   Angabe erst mit „Einrichten“ entsteht. Kein gelber Hinweis, auch nicht in der Übersicht.
+4. `eingetragenBis` = Jahr des nächsten Wechsels: Die Jahre bis dahin stehen auf „eingetragen“, die späteren auf „fehlt
+   noch“; gelb steht „Wechseltage fehlen bald. Eingetragen sind sie nur noch bis …“ – auf der Seite und kurz („Mehr
+   unter „Wechseltage““) in der **Übersicht**.
+5. `eingetragenBis` = ein Jahr **davor**: gelb „Ab … fehlen Wechseltage.“ (Seite und Übersicht). Ein Jahr **danach** oder
+   mehr: kein gelber Hinweis.
+6. **Leitungen Bescheid geben:** Vor der Ankündigung steht nur „Ab der Ankündigung am … steht hier ein Text“. Ab der
+   Ankündigung (Wechseltag in unter acht Wochen; sonst mit einem Testjahr kurz davor prüfen) steht ein Text mit dem
+   Wechseltag und je Übergang „• Fische → Jungschar: N Kinder“. Die Zahlen sind dieselben wie die „wechseln“-Chips in
+   der **Übersicht** (Ausnahmen zählen nicht mit). **Text kopieren** → „Kopiert“, danach in eine Nachricht einfügen:
+   derselbe Text. Geht das Kopieren nicht (z. B. Zwischenablage gesperrt), ist der Text markiert, und es steht „Markiert
+   – jetzt kopieren“.
+7. Als **Admin** mit `eingetragenBis`: Passen die Regeln der Wechsel-Gruppen in ChurchTools zu „eingetragen bis“, steht
+   nichts weiter da. In ChurchTools in der Regel „Kinder“ einer Wechsel-Gruppe das Fenster eines Jahres entfernen
+   (nur Test-Instanz, danach zurücksetzen), Reiter neu laden: gelb steht „Die Regeln in ChurchTools passen nicht zu
+   „eingetragen bis …“: <Gruppe>: <Jahr> fehlt.“ Als Bereichsleitung ohne Admin-Recht erscheint dieser Hinweis nie.
+8. Netz kurz trennen und **Wechseltage** neu öffnen: Als Admin steht „ließ sich gerade nicht prüfen. Es wurde nichts
+   verändert.“ – nicht „passen nicht“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/KinderJugend.tsx`, `organigramm/src/Wechseltage.tsx`, `organigramm/src/ladeRegelAbgleich.ts`, `shared/organigramm/wechseltage.ts`, `shared/organigramm/gruppenwechselEinrichtung.ts`, `ui/bedienung/useKopieren.ts`
+- **Automatisiert:** größtenteils – `wechseltage.test.ts` (läuft-aus-Regel, Text für die Leitungen gegen `gruppenSicht`,
+  Abgleich gegen den Erzeuger `wechselGruppenRegeln`), `gruppenwechselEinrichtung.test.ts` (`eingetragenBis`),
+  `ladeRegelAbgleich.test.ts` (401 wirft, jeder andere Fehler = nicht prüfbar), `Wechseltage.test.tsx` und
+  `KinderJugend.test.tsx` (Sichtbarkeit des Unterreiters, Tabelle, Hinweise, Kopieren samt Rückfall, Abfrage nur für
+  Admins), `useKopieren.test.tsx`; mit den echten Regeln und der echten Zwischenablage prüft es nur dieser Fall
+- **Historie:** Bauplan O9-4; Entwurf `kj-gruppenwechsel-v1.html`, entschieden 16.11.2026
+
+</details>

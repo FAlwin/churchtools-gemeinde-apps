@@ -346,6 +346,18 @@ export interface WechselRollen {
 }
 
 /**
+ * **Das Fenster eines Jahres in der Kinder-Regel der Wechsel-Gruppe**: `[Ankündigung, Aufnahme-Ende)` und „geboren bis …“.
+ * Die EINE Stelle, die es baut – `wechselGruppenRegeln` setzt die Regel daraus zusammen, und der Abgleich mit dem, was in
+ * ChurchTools steht (O9-4, `regelAbweichungen`), sucht genau dieses Fenster dort.
+ */
+export const kinderFenster = (u: Uebergang, j: Wechseljahr) => ({
+  and: [
+    ...imFenster(j.ankuendigung, j.aufnahmeBis).and,
+    { '<=': [feld('person.birthday'), geborenBis(j, u.nach.abAlter)] },
+  ],
+});
+
+/**
  * **Regeln der Wechsel-Gruppe**: (1) Kinder der alten Gruppe, je Jahr ein Fenster `[Ankündigung, Aufnahme-Ende)` mit
  * „geboren bis …“ → aktiv als Teilnehmer; (2) Leitungen alter und neuer Gruppe → Leiter. Beide entfernen niemanden.
  *
@@ -357,12 +369,7 @@ export function wechselGruppenRegeln(
   jahre: readonly Wechseljahr[],
   rollen: WechselRollen,
 ): Regel[] {
-  const fenster = jahre.map((j) => ({
-    and: [
-      ...imFenster(j.ankuendigung, j.aufnahmeBis).and,
-      { '<=': [feld('person.birthday'), geborenBis(j, u.nach.abAlter)] },
-    ],
-  }));
+  const fenster = jahre.map((j) => kinderFenster(u, j));
   const kinder = regel(
     'gwkinder',
     `Gruppenwechsel: Kinder aus „${u.von.name}“, die nach „${u.nach.name}“ wechseln`,

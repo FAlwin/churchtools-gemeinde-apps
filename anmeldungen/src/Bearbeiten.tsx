@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { useLinkKopieren } from './useLinkKopieren';
+import { useKopieren } from '@ui/bedienung/useKopieren';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -64,7 +64,7 @@ export function Fehler({ text }: { text: string | null }) {
  */
 function LinkKopieren({ link }: { link: string }) {
   const feld = useRef<HTMLTextAreaElement>(null);
-  const { stand, kopieren } = useLinkKopieren(link, feld);
+  const { stand, kopieren } = useKopieren(link, feld);
   return (
     <div className={f.feld}>
       <span>Link zur Anmeldung</span>

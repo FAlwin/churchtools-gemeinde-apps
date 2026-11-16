@@ -7,7 +7,7 @@ import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
 import { ApiError } from '@ui/ct/fehler';
-import { tagKurz, tagPunkt } from '@shared/ct/datum';
+import { tagPunkt } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import type { Stufe, Wechseljahr } from '@shared/organigramm/gruppenwechsel';
 import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
@@ -24,7 +24,15 @@ import {
   type KjZugang,
   type NeuZeile,
   type Phase,
+  wechslerZahl,
 } from '@shared/organigramm/gruppenwechselSicht';
+import {
+  kurz,
+  tageHinweis,
+  wechseltageStand,
+  wechseltagText,
+  type TageStand,
+} from '@shared/organigramm/wechseltage';
 import { initialenAus, istLeitung } from '@shared/organigramm/mitglieder';
 import {
   ausnahmeAufheben,
@@ -36,7 +44,9 @@ import { mitgliederRechteOderNichts, type GruppenRechte } from '@shared/organigr
 import { ausnahmeFehlerText, keinSchalterText } from './ausnahmeTexte';
 import { ladeFerien, ladeKjDaten, type FerienStand, type KjLadeStand } from './ladeKinderJugend';
 import { ladeTeilnehmerRolle, mitgliedZugriff } from './mitgliedschaft';
+import { Hinweis } from './KjHinweis';
 import type { Start } from './start';
+import { Wechseltage } from './Wechseltage';
 import styles from './KinderJugend.module.scss';
 
 interface Props {
@@ -47,12 +57,8 @@ interface Props {
   onAbgemeldet: (e: unknown) => void;
 }
 
-type Unter = 'gruppe' | 'daten';
+type Unter = 'gruppe' | 'daten' | 'tage';
 type Laden<T> = { art: 'laedt' } | T;
-
-/** „Mo, 06.09.2027“ – der Wechseltag mit Wochentag (Entwurf v3). */
-const wechseltagText = (tag: string) => `${tagKurz(tag).split(',')[0]}, ${tagPunkt(tag)}`;
-const kurz = (name: string) => name.split(' ')[0];
 
 /**
  * **Der Reiter „Kinder & Jugend“** (Bauplan O9-2/O9-3, Entwurf v3): Leitungen sehen ihre Gruppe, Bereichsleitung und
@@ -157,6 +163,10 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
 
   const phase = phaseAm(jahr, heute);
   const bereich = zugang.art === 'bereich';
+  // Admin = wer „Berechtigungen verwalten“ hat – dieselbe Angabe wie in `App` für „Neue Gliederung“.
+  const admin = start.rechte.gruppenVerwalten;
+  // Läuft das Eingetragene aus? Die eine Regel (`wechseltageStand`), das nächste Jahr ist das Jahr des Reiters.
+  const tage = wechseltageStand(einrichtung.eingetragenBis, jahr.jahr);
   const offeneSicht = sichten.find((s) => s.stufe.gruppeId === stufeWahl) ?? null;
   const kindOeffnen = (stufe: GruppenSicht) => (kind: KindZeile) =>
     setOffenesKind({ personId: kind.personId, stufeId: stufe.stufe.gruppeId });
@@ -172,6 +182,7 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
         options={[
           { value: 'gruppe', label: bereich ? 'Übersicht' : 'Meine Gruppe' },
           { value: 'daten', label: 'Daten pflegen' },
+          ...(bereich ? [{ value: 'tage' as const, label: 'Wechseltage' }] : []),
         ]}
         onChange={(u) => {
           setUnter(u);
@@ -200,7 +211,14 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
             onKind={kindOeffnen(offeneSicht)}
           />
         ) : bereich ? (
-          <Uebersicht sichten={sichten} jahr={jahr} phase={phase} onStufe={setStufeWahl} />
+          <Uebersicht
+            sichten={sichten}
+            jahr={jahr}
+            phase={phase}
+            tage={tage}
+            ferienkalender={einrichtung.einstellung.ferienkalender}
+            onStufe={setStufeWahl}
+          />
         ) : null)}
       {unter === 'daten' && (
         <DatenPflegen
@@ -208,6 +226,19 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           bereich={bereich}
           jahr={jahr}
           onKind={({ kind, stufe }) => kindOeffnen(stufe)(kind)}
+        />
+      )}
+      {unter === 'tage' && bereich && (
+        <Wechseltage
+          einrichtung={einrichtung}
+          jahr={jahr}
+          jahre={ferien.jahre}
+          ferien={ferien.ferien}
+          phase={phase}
+          sichten={sichten}
+          admin={admin}
+          tage={tage}
+          onAbgemeldet={onAbgemeldet}
         />
       )}
       {offen && offenKind && (
@@ -234,15 +265,6 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
 }
 
 // ── Bausteine ──────────────────────────────────────────────────────────────────────────────────────────────────
-
-function Hinweis({ children, gelb }: { children: ReactNode; gelb?: boolean }) {
-  return (
-    <div className={gelb ? `${styles.hinweis} ${styles.hinweisGelb}` : styles.hinweis}>
-      <Icon name="info" size={16} />
-      <span>{children}</span>
-    </div>
-  );
-}
 
 function Jahresband({ jahr, phase }: { jahr: Wechseljahr; phase: Phase }) {
   return (
@@ -479,19 +501,22 @@ function Uebersicht({
   sichten,
   jahr,
   phase,
+  tage,
+  ferienkalender,
   onStufe,
 }: {
   sichten: readonly GruppenSicht[];
   jahr: Wechseljahr;
   phase: Phase;
+  /** Läuft das Eingetragene aus? – dann steht hier ein kurzer Hinweis (O9-4). */
+  tage: TageStand;
+  ferienkalender: string;
   onStufe: (id: number) => void;
 }) {
   const alle = sichten.reduce((n, s) => n + s.kinder.length, 0);
-  const wechseln = sichten.reduce(
-    (n, s) => n + s.wechseln.filter((k) => k.wechsel.art === 'wechselt').length,
-    0,
-  );
+  const wechseln = sichten.reduce((n, s) => n + wechslerZahl(s), 0);
   const pflege = pflegeAus(sichten);
+  const hinweis = tageHinweis(tage, ferienkalender);
   return (
     <>
       <div className={styles.kopf}>
@@ -502,9 +527,14 @@ function Uebersicht({
         </span>
       </div>
       <Jahresband jahr={jahr} phase={phase} />
+      {hinweis && (
+        <Hinweis gelb>
+          <b>{hinweis.titel}</b> {hinweis.kurz}
+        </Hinweis>
+      )}
       <div className={styles.kacheln}>
         {sichten.map((s) => {
-          const w = s.wechseln.filter((k) => k.wechsel.art === 'wechselt').length;
+          const w = wechslerZahl(s);
           const a = s.wechseln.filter((k) => k.wechsel.art === 'ausnahme').length;
           const o = s.kinder.filter((k) => k.wechsel.art === 'ohneGeburtstag').length;
           const e = s.kinder.filter((k) => k.wird18).length;

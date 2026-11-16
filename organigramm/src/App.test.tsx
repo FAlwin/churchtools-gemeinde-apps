@@ -2036,7 +2036,7 @@ describe('O9-2: Reiter „Kinder & Jugend“', () => {
       daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
     });
     ferienLaden.mockReset();
-    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE });
+    ferienLaden.mockResolvedValue({ art: 'da', jahre: JAHRE, ferien: [] });
     kjLaden.mockReset();
     kjLaden.mockResolvedValue({ art: 'da', daten: DATEN, rechte: new Map() });
   });
@@ -2246,7 +2246,9 @@ describe('O9-3: Ausnahme setzen', () => {
       daten: { inhalt: EINRICHTUNG, version: 1, von: null, am: null } as never,
     });
     ferienLaden.mockReset();
-    ferienLaden.mockImplementation(() => Promise.resolve({ art: 'da', jahre: zustand.jahre }));
+    ferienLaden.mockImplementation(() =>
+      Promise.resolve({ art: 'da', jahre: zustand.jahre, ferien: [] }),
+    );
     kjLaden.mockReset();
     kjLaden.mockImplementation(() =>
       Promise.resolve({ art: 'da', daten: daten(), rechte: zustand.rechte }),

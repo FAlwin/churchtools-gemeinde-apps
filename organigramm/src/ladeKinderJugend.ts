@@ -18,6 +18,7 @@ import {
   ferientermineAus,
   sommerferienAus,
   wechseljahre,
+  type Sommerferien,
   type GruppenwechselEinstellung,
   type KalenderKurz,
   type Wechseljahr,
@@ -38,7 +39,12 @@ import { ladeGruppenRechte } from './mitgliedschaft';
 export const JAHRE_VORAUS = 5;
 
 export type FerienStand =
-  | { art: 'da'; jahre: Wechseljahr[] }
+  | {
+      art: 'da';
+      jahre: Wechseljahr[];
+      /** Die Sommerferien, aus denen die Wechseljahre stammen – die Seite „Wechseltage“ zeigt sie (O9-4). */
+      ferien: Sommerferien[];
+    }
   /** Kalender nicht gefunden oder nicht freigegeben. */
   | { art: 'keinKalender' }
   | { art: 'fehler' };
@@ -62,10 +68,8 @@ export async function ladeFerien(
         // Ab dem Vorjahr: dessen Wechseltag ist die Grenze für „Ausnahme vom letzten Jahr“ (O9-3).
         terminPfad(kalender.id, `${jahr - 1}-01-01`, `${jahr + JAHRE_VORAUS}-12-31`),
       )) ?? [];
-    return {
-      art: 'da',
-      jahre: wechseljahre(sommerferienAus(ferientermineAus(roh), e.ferienStichwort), e),
-    };
+    const ferien = sommerferienAus(ferientermineAus(roh), e.ferienStichwort);
+    return { art: 'da', jahre: wechseljahre(ferien, e), ferien };
   } catch (x) {
     if (abgemeldet(x)) throw x;
     if (x instanceof ApiError && x.status === 403) return { art: 'keinKalender' };

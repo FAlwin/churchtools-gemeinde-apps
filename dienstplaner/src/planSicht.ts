@@ -1,6 +1,8 @@
 import { monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
+import type { RasterZelle } from '@shared/dienstplan/personenRaster';
 import type { FreierPlatz } from './WerKann';
 import type { MatrixAblauf } from './useMatrixAblauf';
 import type { MatrixInfos } from './useMatrixInfos';
@@ -15,6 +17,29 @@ export { gruppenSchluessel as schluessel } from '@shared/dienstplan/plan';
  * für die Gruppen der Matrix, die Gruppenschlüssel (Zahl oder `ohne`) kommen damit nicht in die Quere.
  */
 export const blockSchluessel = (dienstId: number) => `dienst:${dienstId}`;
+
+/**
+ * Eintragen per Klick in „Personen“ (P2a). Die Regeln und das Anlegen des Entwurfs kommen aus `useEinteilen` – dieselben
+ * wie bei „Wer kann?“; „Personen“ zeigt nur die Zelle und die Fenster.
+ */
+export interface PersonenEintragen {
+  /** Was ein Klick in diese Zelle tut – `null`: nichts (kein Recht, Entwürfe nicht bereit, bestehende Einteilung …). */
+  aktion: (
+    spalte: number,
+    zeile: PlanZeile,
+    personId: number,
+    zustand: RasterZelle['zustand'],
+  ) => ZellenAktion;
+  /** Entwurf für die Person auf den freien Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. */
+  eintragen: (
+    spalte: number,
+    zeile: PlanZeile,
+    nr: number,
+    person: { personId: number; name: string },
+  ) => Promise<void>;
+  /** Den eigenen Entwurf wieder wegnehmen – meldet selbst „entfernt“ bzw. den Fehler. */
+  wegnehmen: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
+}
 
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */
 export interface Sicht {
@@ -60,6 +85,8 @@ export interface Sicht {
   onFokusAus?: () => void;
   /** „Infos & Dateien“ über dem Ablauf (T1b); `null` ohne Anschluss. */
   infos: MatrixInfos | null;
+  /** Eintragen per Klick in „Personen“ (P2a) – fehlt, wo es das nicht gibt (Termin-Ansicht, ohne Anschluss). */
+  personen?: PersonenEintragen;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */

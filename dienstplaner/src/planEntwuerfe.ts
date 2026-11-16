@@ -11,6 +11,7 @@ import {
   type PlanZeile,
 } from '@shared/dienstplan/plan';
 import { entwurfVeraltet, ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
+import { freiOhneEntwurf } from '@shared/dienstplan/personenEintragen';
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import type { AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwuerfeDaten } from './ladeEntwuerfe';
@@ -132,7 +133,8 @@ export function zauberZeilen(
       const zelle = zl.zellen[i] ?? [];
       zelle.forEach((p, n) => {
         if (p.art !== 'frei') return;
-        if (entwurfAmPlatz(daten, s, zl, p)) {
+        // Ein Platz mit Entwurf bleibt, wie er ist (dieselbe Regel wie „Personen“: `freiOhneEntwurf`).
+        if (!freiOhneEntwurf(p, entwurfAmPlatz(daten, s, zl, p))) {
           mitEntwurf++;
           return;
         }

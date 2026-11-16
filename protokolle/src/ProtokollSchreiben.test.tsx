@@ -94,6 +94,15 @@ vi.mock('@ui/teilen/pdfSeiten', () => ({
   renderPdfToCanvases: vi.fn(() => Promise.resolve([])),
   renderPdfSeite: vi.fn(() => Promise.reject(new Error('jsdom'))),
 }));
+// „Mit KI füllen“ (S8-2): die Personenliste als Attrappe – Johann ist auch Mitglied (siehe `./mitglieder` unten).
+vi.mock('./kiPersonen', () => ({
+  ladePersonen: vi.fn(() =>
+    Promise.resolve([
+      { id: 7, vorname: 'Johann', nachname: 'Becker' },
+      { id: 8, vorname: 'Viktor', nachname: 'Neumann' },
+    ]),
+  ),
+}));
 vi.mock('./mitglieder', () => ({
   ladeGruppenMitglieder: vi.fn(() => Promise.resolve([{ id: 7, name: 'Johann' }])),
 }));
@@ -918,5 +927,130 @@ describe('Teilen / PDF im Editor (S6-3b)', () => {
     zeige();
     await screen.findByText('bearbeitbar');
     expect(screen.queryByRole('button', { name: /Teilen \/ PDF/ })).toBeNull();
+  });
+});
+
+describe('Mit KI füllen (S8-2)', () => {
+  const KI = { name: /Mit KI füllen/ };
+  // Mit „Bearbeiten“, damit die Knopfreihe im Kopf auch ohne Schreibrecht da ist – sonst fehlte der Knopf nur, weil die ganze
+  // Reihe fehlt, und die Prüfung „kein Knopf“ bewiese nichts.
+  const zeigeKi = () =>
+    render(
+      <ProtokollSchreiben
+        onBearbeiten={vi.fn()}
+        sitzung={SITZUNG}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+
+  beforeEach(() => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    E.einfuegen.mockClear();
+  });
+
+  it('der Knopf steht im Kopf eines Entwurfs, wenn man schreiben darf – zwischen Freigeben und Bearbeiten', async () => {
+    const onBearbeiten = vi.fn();
+    render(
+      <ProtokollSchreiben
+        onBearbeiten={onBearbeiten}
+        sitzung={SITZUNG}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+    const ki = await screen.findByRole('button', KI);
+    const namen = [...ki.parentElement!.querySelectorAll('button')].map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    expect(namen[0]).toBe('Protokoll freigeben');
+    expect(namen[1]).toMatch(/Mit KI füllen/);
+    expect(namen[2]).toMatch(/Sitzung bearbeiten/);
+  });
+
+  it('schreibt jemand anderes: kein Knopf', async () => {
+    const johann = sperreVon({ person: 7, name: 'Johann', fenster: 'j' }, new Date());
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann }, dokument: DOK });
+    zeigeKi();
+    await screen.findByText('Johann schreibt gerade.');
+    expect(screen.queryByRole('button', KI)).toBeNull();
+  });
+
+  it('freigegeben (Lese-Ansicht): kein Knopf', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, status: 'frei' }, dokument: DOK });
+    zeigeKi();
+    await screen.findByText(/freigegeben und lässt sich nicht mehr ändern/);
+    expect(screen.queryByRole('button', KI)).toBeNull();
+  });
+
+  it('„Lesen“ im Editor: der Knopf geht weg (der Editor ist dann ausgeblendet)', async () => {
+    zeigeKi();
+    await screen.findByRole('button', KI);
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    expect(screen.queryByRole('button', KI)).toBeNull();
+  });
+
+  it('der ganze Weg im Editor: Fenster auf, Antwort, Übernehmen → einfuegen am Editor, Fenster zu, Meldung, Speichern angestoßen', async () => {
+    // Punkt 1 des Dokuments ist ein fester Punkt (Verweis) – ein zweiter Punkt nimmt die Stichpunkte auf.
+    E.zusatz.push({
+      id: 'h9',
+      type: 'heading',
+      props: { level: 1 },
+      content: [{ type: 'text', text: 'Zweiter Punkt', styles: {} }],
+      children: [],
+    });
+    zeigeKi();
+    fireEvent.click(await screen.findByRole('button', KI));
+    const tx = await screen.findByLabelText('Transkript');
+    fireEvent.change(tx, { target: { value: 'Johann Becker bringt den Beamer mit.' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Auftrag kopieren/ })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    // Johann ist Mitglied der Gruppe (Attrappe `./mitglieder`) – sein Platzhalter macht ihn zum Zuständigen.
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter: Antwort einfügen' }));
+    fireEvent.change(await screen.findByLabelText('Antwort der KI'), {
+      target: {
+        value: JSON.stringify({
+          punkte: [{ nr: '2', stichpunkte: ['[Person 1] bringt den Beamer mit.'] }],
+        }),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    expect(await screen.findByText('→ 2. Zweiter Punkt')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (1)' }));
+    expect(E.einfuegen).toHaveBeenCalledTimes(1);
+    const [bloecke, vor] = E.einfuegen.mock.calls[0] as [
+      { type: string; content: { text: string }[] }[],
+      string | null,
+    ];
+    expect(vor).toBeNull();
+    expect(bloecke[0].type).toBe('bulletListItem');
+    expect(bloecke[0].content[0].text).toBe('Johann Becker bringt den Beamer mit.');
+    await waitFor(() => expect(screen.queryByLabelText('Transkript')).toBeNull());
+    expect(
+      await screen.findByText(/1 Eintrag übernommen – das Protokoll speichert automatisch/),
+    ).toBeTruthy();
+    // Die Änderung wird gespeichert (Sperre nehmen + speichern), nicht nur gemeldet.
+    await waitFor(() => expect(vi.mocked(S.speichern)).toHaveBeenCalled());
   });
 });

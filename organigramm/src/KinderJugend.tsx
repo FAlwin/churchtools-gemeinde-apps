@@ -6,6 +6,7 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
+import { useLaden } from '@ui/ct/useLaden';
 import { ApiError } from '@ui/ct/fehler';
 import { tagPunkt } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -117,17 +118,21 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
     () => (ferien.art === 'da' && jahr ? ferien.jahre.filter((j) => j.jahr >= jahr.jahr) : []),
     [ferien, jahr],
   );
-  const [regel, setRegel] = useState<Laden<RegelStand>>({ art: 'laedt' });
-  useEffect(() => {
-    if (!darfRegeln || !jahr || kuenftig.length === 0) return;
-    let aktiv = true;
-    setRegel({ art: 'laedt' });
-    // Wirft nie: 401, 403, Netz und 5xx heißen dort „nicht prüfbar“ (401 ist hier fehlendes Recht, kein Abmelden).
-    void ladeRegelStand(einrichtung, kuenftig, jahr.jahr).then((r) => aktiv && setRegel(r));
-    return () => {
-      aktiv = false;
-    };
-  }, [darfRegeln, einrichtung, kuenftig, jahr]);
+  // Über `useLaden` (#845): Eine späte Antwort zu alten Jahren zählt nicht. `ladeRegelStand` wirft nie – 401, 403, Netz
+  // und 5xx heißen dort „nicht prüfbar“ (401 ist hier fehlendes Recht, kein Abmelden); käme doch ein Fehler, gilt dasselbe.
+  const regelStand = useLaden(
+    () =>
+      darfRegeln && jahr && kuenftig.length > 0
+        ? ladeRegelStand(einrichtung, kuenftig, jahr.jahr)
+        : null,
+    [darfRegeln, einrichtung, kuenftig, jahr],
+  ).stand;
+  const regel: Laden<RegelStand> =
+    regelStand.art === 'fertig'
+      ? regelStand.daten
+      : regelStand.art === 'fehler'
+        ? { art: 'nichtPruefbar' }
+        : { art: 'laedt' };
 
   // Grenze für „Ausnahme vom letzten Jahr“ – der Wechseltag des Vorjahres (der Ferienkalender lädt ab dem Vorjahr).
   const voriger = ferien.art === 'da' && jahr ? vorigerWechseltag(ferien.jahre, jahr) : null;

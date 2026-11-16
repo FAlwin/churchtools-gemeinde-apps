@@ -100,6 +100,9 @@ export interface Plan {
 /** Der Name einer Gruppe in Matrix und Termin-Ansicht – Dienste ohne (bekannte) Dienstgruppe stehen unter „Weitere Dienste“. */
 export const gruppenName = (g: PlanGruppe) => g.gruppe?.name ?? 'Weitere Dienste';
 
+/** Schlüssel einer Gruppe (Filter, Zuklappen) – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
+export const gruppenSchluessel = (g: PlanGruppe) => (g.gruppe ? String(g.gruppe.id) : 'ohne');
+
 /** Ein Platz, wie er in der Matrix steht. */
 export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   const index = typeof p.index === 'number' ? p.index : null;

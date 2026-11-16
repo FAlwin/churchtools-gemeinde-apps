@@ -45,7 +45,7 @@ const PLAN = planAus(
   },
 );
 
-const alle = { spalten: [0, 1, 2], gruppeSichtbar: () => true };
+const alle = { spalten: [0, 1, 2], gruppen: PLAN.gruppen };
 
 describe('werWieOft', () => {
   it('Einsätze je Person, meiste zuerst; Gäste nach Namen; verborgene und freie Plätze fehlen', () => {
@@ -70,14 +70,17 @@ describe('werWieOft', () => {
   });
 
   it('nur sichtbare Spalten und Gruppen', () => {
-    const nurMusikErsterTermin = werWieOft(PLAN, { spalten: [0], gruppeSichtbar: (g) => g === 4 });
+    const nurMusikErsterTermin = werWieOft(PLAN, {
+      spalten: [0],
+      gruppen: PLAN.gruppen.filter((g) => g.gruppe?.id === 4),
+    });
     expect(nurMusikErsterTermin.personen.map((p) => [p.name, p.einsaetze.length])).toEqual([
       ['Anna', 1],
     ]);
   });
 
   it('niemand eingeteilt → leer, Schnitt 0', () => {
-    expect(werWieOft(PLAN, { spalten: [], gruppeSichtbar: () => true })).toEqual({
+    expect(werWieOft(PLAN, { spalten: [], gruppen: PLAN.gruppen })).toEqual({
       personen: [],
       schnitt: 0,
     });
@@ -102,7 +105,12 @@ describe('werWieOft – Personen nach ID', () => {
         ganzSichtbar: () => true,
       },
     );
-    expect(werWieOft(p, alle).personen.map((x) => [x.name, x.einsaetze.length])).toEqual([
+    expect(
+      werWieOft(p, { ...alle, gruppen: p.gruppen }).personen.map((x) => [
+        x.name,
+        x.einsaetze.length,
+      ]),
+    ).toEqual([
       ['Anna', 1],
       ['Anna', 1],
     ]);

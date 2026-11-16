@@ -6,6 +6,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import { gruppenName, type PlanGruppe } from '@shared/dienstplan/plan';
+import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
 import type { Breite } from '@shared/dienstplan/fenster';
 import { zeitraumText, zeitraumVerschieben, type Zeitraum } from '@shared/ct/zeitraum';
@@ -13,7 +14,14 @@ import { planenZeitraum } from '@shared/dienstplan/start';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
 import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
-import { ansichtAus, leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
+import {
+  ansichtAus,
+  gruppenAus,
+  leseAnsicht,
+  merkeAnsicht,
+  type PlanenAnsicht,
+} from './planenAnsicht';
+import { gruppenAbschnitt } from './gruppenAbschnitt';
 import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
@@ -33,7 +41,7 @@ import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
 import { useEinteilen } from './useEinteilen';
-import { plaetzeWeitere, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -122,29 +130,41 @@ export function Planen({
   onFokusEnde,
 }: Props) {
   const [gemerkt, setGemerkt] = useState<PlanenAnsicht>(leseAnsicht);
-  // Ein Besuch von der Startseite (Wunsch 7): Zeitraum und Gruppen gelten nur hier – `aus: null` heißt „alle außer der
-  // Gruppe“, ausgerechnet, sobald der Plan da ist. Alles andere (Breite, Ablauf zu …) wird wie immer gemerkt.
+  // Ein Besuch von der Startseite (Wunsch 7): Zeitraum, Gruppen und Dienste gelten nur hier – `aus: null` heißt „alle
+  // außer der Gruppe“, ausgerechnet, sobald der Plan da ist; von den Diensten der Gruppe ist keiner ausgeblendet
+  // (`ausDienste`, Wunsch 10). Alles andere (Breite, Ablauf zu …) wird wie immer gemerkt.
   const [besuch, setBesuch] = useState<{
     gruppe: number;
     zeitraum: Zeitraum;
     aus: string[] | null;
+    ausDienste: number[];
   } | null>(() =>
     fokusGruppe === null
       ? null
-      : { gruppe: fokusGruppe, zeitraum: planenZeitraum(heute), aus: null },
+      : { gruppe: fokusGruppe, zeitraum: planenZeitraum(heute), aus: null, ausDienste: [] },
   );
-  let ansicht: PlanenAnsicht = besuch ? { ...gemerkt, zeitraum: besuch.zeitraum } : gemerkt;
+  let ansicht: PlanenAnsicht = besuch
+    ? { ...gemerkt, zeitraum: besuch.zeitraum, ausgeblendeteDienste: besuch.ausDienste }
+    : gemerkt;
   const setAnsicht = (a: PlanenAnsicht) => {
     const neu = besuch
-      ? { ...a, zeitraum: gemerkt.zeitraum, ausgeblendeteGruppen: gemerkt.ausgeblendeteGruppen }
+      ? {
+          ...a,
+          zeitraum: gemerkt.zeitraum,
+          ausgeblendeteGruppen: gemerkt.ausgeblendeteGruppen,
+          ausgeblendeteDienste: gemerkt.ausgeblendeteDienste,
+        }
       : a;
-    // Nur wer die Gruppen wirklich ändert, macht aus „nur diese Gruppe“ eine eigene Auswahl (nicht schon „Breite“).
+    // Nur wer Gruppen oder Dienste wirklich ändert, macht aus „nur diese Gruppe“ eine eigene Auswahl (nicht schon „Breite“).
     if (besuch) {
       const gleich = a.ausgeblendeteGruppen.join('|') === ansicht.ausgeblendeteGruppen.join('|');
+      const gleicheDienste =
+        a.ausgeblendeteDienste.join('|') === ansicht.ausgeblendeteDienste.join('|');
       setBesuch({
         ...besuch,
         zeitraum: a.zeitraum,
         aus: gleich ? besuch.aus : a.ausgeblendeteGruppen,
+        ausDienste: gleicheDienste ? besuch.ausDienste : a.ausgeblendeteDienste,
       });
     }
     setGemerkt(neu);
@@ -306,15 +326,13 @@ export function Planen({
                 ausgeblendeteArten: a.arten,
               }),
             ),
-            {
-              titel: 'Gruppen',
-              optionen: (plan?.gruppen ?? []).map((g) => ({
-                wert: schluessel(g),
-                text: gruppenName(g),
-              })),
-              aus: ansicht.ausgeblendeteGruppen,
-              onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
-            },
+            gruppenAbschnitt(plan, gruppenAus(ansicht), (a) =>
+              setAnsicht({
+                ...ansicht,
+                ausgeblendeteGruppen: [...a.gruppen],
+                ausgeblendeteDienste: [...a.dienste],
+              }),
+            ),
           ]}
         />
         <KopfKnopf
@@ -330,9 +348,7 @@ export function Planen({
               quelle={{
                 plan,
                 spalten: teilenSpalten,
-                gruppen: plan.gruppen.filter(
-                  (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
-                ),
+                gruppen: gezeigteGruppen(plan, gruppenAus(ansicht)),
                 gemeinde: ablauf?.start.gemeinde ?? null,
                 app: 'Dienstplaner',
               }}
@@ -368,9 +384,11 @@ export function Planen({
             : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
     );
   else {
-    const gruppen = plan.gruppen.filter(
-      (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
-    );
+    // Die gezeigten Gruppen mit den gezeigten Diensten – daraus rechnen Matrix, Raster, Kopf und Zettel (`planFilter.ts`).
+    const gruppen = gezeigteGruppen(plan, gruppenAus(ansicht));
+    // Das Plätze-Fach braucht die ganze Gruppe (auch die ausgeblendeten Dienste – dort schaltet man Dienste ein und aus).
+    const ganzeGruppe = (g: PlanGruppe) =>
+      plan.gruppen.find((x) => schluessel(x) === schluessel(g)) ?? g;
     // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
     const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
     const umschalten = (k: string) => {
@@ -398,8 +416,8 @@ export function Planen({
       onPlaetze: (i, g) =>
         entwuerfe &&
         !plan.spalten[i].abgesagt &&
-        g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
-          ? () => setPlaetzeFach({ spalte: i, gruppe: g })
+        ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
+          ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
           : undefined,
       onTermin,
       ablauf: matrixAblauf,
@@ -408,7 +426,7 @@ export function Planen({
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
         hinweis(
-          'Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.',
+          'Nichts eingeblendet – über „Filter“ eine Veranstaltung, Gruppe oder einen Dienst wieder anhaken.',
         )
       ) : ansicht.unteransicht === 'werWieOft' ? (
         <WerWieOft sicht={sicht} />
@@ -435,7 +453,7 @@ export function Planen({
       {besuch && (
         <div className={styles.besuchHinweis} role="status" aria-label="Von der Startseite">
           <span>
-            {besuch.aus === null ? (
+            {besuch.aus === null && besuch.ausDienste.length === 0 ? (
               <>
                 Nur <b>{besuchGruppe ? gruppenName(besuchGruppe) : 'eine Gruppe'}</b>
               </>
@@ -482,7 +500,9 @@ export function Planen({
         sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
         Angefragten eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben Termine als Raster:
         eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
-        zum Ansehen, eingetragen wird in der Matrix.
+        zum Ansehen, eingetragen wird in der Matrix; einen Dienst antippen klappt seinen Block zu.
+        Im Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann
+        in Matrix und „Personen“ und zählt nicht mit.
       </p>
       {sendeLeiste}
       {fenster}
@@ -510,21 +530,14 @@ export function Planen({
             plaetzeFach.gruppe,
             katalog,
           )}
-          weitere={
-            katalog
-              ? plaetzeWeitere(
-                  daten,
-                  plan,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.spalte,
-                  plaetzeFach.gruppe,
-                  katalog,
-                )
-              : undefined
-          }
           vorlage={
             katalog && ladeVorlagen
-              ? vorlageFuer(katalog, plan.spalten[plaetzeFach.spalte], ladeVorlagen)
+              ? vorlageFuer(
+                  katalog,
+                  plan.spalten[plaetzeFach.spalte],
+                  plaetzeFach.gruppe,
+                  ladeVorlagen,
+                )
               : undefined
           }
           aendern={(z, gesehen, neu) =>

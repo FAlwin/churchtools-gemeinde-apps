@@ -189,6 +189,8 @@ export function bausteinFeld(typ: Feldtyp, id: string): Feld {
     ueberschrift: 'Zwischenüberschrift',
     info: 'Hinweis',
     trenner: '',
+    // F2c: Der Name ist Pflicht (`feldFehler`) – vorbelegt, beim Einfügen markiert zum Überschreiben.
+    schritt: 'Neuer Schritt',
   };
   return {
     id,

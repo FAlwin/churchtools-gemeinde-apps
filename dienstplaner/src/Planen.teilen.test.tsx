@@ -133,6 +133,27 @@ describe('Plan teilen (E8-2)', () => {
     expect(JSON.stringify(letztesBlatt())).not.toContain('Echter Name');
   });
 
+  it('ein ausgeblendeter Dienst steht weder im Blatt noch unter „Wir suchen noch …“ (Wunsch 10)', async () => {
+    zeige();
+    await oeffnen();
+    await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
+    // Ohne Filter steht Licht (freier Platz) im Blatt.
+    expect(JSON.stringify(letztesBlatt())).toContain('Licht');
+    cleanup();
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ ausgeblendeteDienste: [7] }),
+    );
+    zeige();
+    await oeffnen();
+    await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
+    expect(JSON.stringify(letztesBlatt())).not.toContain('Licht');
+    expect(JSON.stringify(letztesBlatt())).toContain('Ton');
+    fireEvent.click(screen.getByRole('radio', { name: /Wir suchen noch/ }));
+    await waitFor(() => expect(letztesBlatt().titel).toBe('Wir suchen noch …'));
+    expect(JSON.stringify(letztesBlatt())).not.toContain('Licht');
+  });
+
   it('eine gemerkte Gruppe, die gerade ausgeblendet ist, wird zum ganzen Plan', async () => {
     localStorage.setItem('teilen.planBlatt', JSON.stringify({ art: 'gruppe', gruppe: 3 }));
     render(

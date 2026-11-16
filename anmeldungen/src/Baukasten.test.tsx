@@ -1596,3 +1596,159 @@ describe('Baukasten (F1d): Reiter „Bedingungen“', () => {
     );
   });
 });
+
+// ── F2c: Schritte im Baukasten (Entwurf f2-schritte-v1, Ansicht Baukasten; Klick-Runden 7 und 8) ──
+describe('Baukasten (F2c): Schritte', () => {
+  const KIDS: Bedingung = { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Kids' }] };
+  /**
+   * „Gruppe“ (f1), dann Schritt „Kids“ (s2, nur wenn Gruppe „Kids“) mit „Welche Kids-Gruppe?“ (f2, dieselbe
+   * Bedingung), am Ende Schritt „Abschluss“ (s3) ohne Fragen.
+   */
+  function mitSchritten(ersterSchritt?: string): OeffentlicheEinstellungen {
+    const e = einstellungen();
+    const feld = (id: string, typ: 'schritt' | 'text', frage: string, bed?: Bedingung) => ({
+      id,
+      art: 'eigen' as const,
+      typ,
+      frage,
+      hilfe: '',
+      zustand: 'freiwillig' as const,
+      antworten: [],
+      ...(bed ? { bed } : {}),
+    });
+    e.formular.person.push(
+      feld('s2', 'schritt', 'Kids', KIDS),
+      feld('f2', 'text', 'Welche Kids-Gruppe?', KIDS),
+      feld('s3', 'schritt', 'Abschluss'),
+    );
+    if (ersterSchritt) e.ersterSchritt = ersterSchritt;
+    return e;
+  }
+  const dialog = () => screen.getByRole('dialog');
+  const erster = () => screen.getByLabelText<HTMLInputElement>('Name von Schritt 1');
+
+  it('ohne Schritt kein fester Balken „Schritt 1“', () => {
+    zeigen();
+    expect(screen.queryByLabelText('Name von Schritt 1')).toBeNull();
+  });
+
+  it('Balken: „Schritt 2 · Kids“ mit „Nur wenn …“, ein leerer Schritt sagt es', () => {
+    const { huelle } = zeigen(mitSchritten());
+    expect(erster().value).toBe('Deine Angaben');
+    expect(screen.getByText('steht immer oben')).toBeTruthy();
+    const s2 = huelle('s2') as HTMLElement;
+    expect(within(s2).getByText('Schritt 2')).toBeTruthy();
+    expect(within(s2).getByText('Kids')).toBeTruthy();
+    expect(within(s2).getByText('Nur wenn „Gruppe“ ist Kids')).toBeTruthy();
+    expect(within(s2).queryByText('Noch keine Fragen in diesem Schritt')).toBeNull();
+    const s3 = huelle('s3') as HTMLElement;
+    expect(within(s3).getByText('Schritt 3')).toBeTruthy();
+    expect(within(s3).getByText('Noch keine Fragen in diesem Schritt')).toBeTruthy();
+  });
+
+  it('Schritt 1 umbenennen speichert `ersterSchritt`; leer gilt nicht, der Standardname wird nicht gespeichert', async () => {
+    const { gespeichert } = zeigen(mitSchritten());
+    fireEvent.change(erster(), { target: { value: '   ' } });
+    fireEvent.blur(erster());
+    expect(erster().value).toBe('Deine Angaben');
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+
+    fireEvent.change(erster(), { target: { value: ' Kontakt ' } });
+    fireEvent.blur(erster());
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    const aendern = ei.aendereEinstellungen.mock.calls[0][1];
+    expect(aendern(neueEinstellungen('kinder')).ersterSchritt).toBe('Kontakt');
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith('Schritt 1 heißt jetzt „Kontakt“.', true),
+    );
+  });
+
+  it('zurück auf den Standardnamen: `ersterSchritt` fällt weg', async () => {
+    zeigen(mitSchritten('Kontakt'));
+    expect(erster().value).toBe('Kontakt');
+    fireEvent.change(erster(), { target: { value: 'Deine Angaben' } });
+    fireEvent.blur(erster());
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    const frisch = { ...neueEinstellungen('kinder'), ersterSchritt: 'Kontakt' };
+    expect('ersterSchritt' in ei.aendereEinstellungen.mock.calls[0][1](frisch)).toBe(false);
+  });
+
+  it('„Neuer Schritt“ aus der Leiste: Name vorbelegt und Pflicht, ohne Hilfetext, „Schritt 2 · neue Seite“', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Neuer Schritt' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({
+      typ: 'schritt',
+      frage: 'Neuer Schritt',
+    });
+    const name = screen.getByLabelText<HTMLInputElement>('Name des Schritts');
+    expect(name.value).toBe('Neuer Schritt');
+    // So lang wie der Name von Schritt 1 (`ersterSchritt`) – er steht oben im Formular.
+    expect(name.maxLength).toBe(60);
+    expect(screen.queryByLabelText('Hilfetext')).toBeNull();
+    expect(
+      within(huelle('f2') as HTMLElement).queryByRole('button', { name: /Pflicht/ }),
+    ).toBeNull();
+    expect(screen.getByText('Schritt 2 · neue Seite im Formular')).toBeTruthy();
+    // Jetzt gibt es einen Schritt – also auch den festen Balken oben.
+    expect(erster().value).toBe('Deine Angaben');
+    fireEvent.change(name, { target: { value: '' } });
+    expect(screen.getByText('Bitte einen Namen für den Schritt eintragen.')).toBeTruthy();
+  });
+
+  it('Bedingung am Schritt: das Fenster nennt Schritt „Kids“ und sagt, dass er übersprungen wird', () => {
+    const { huelle } = zeigen(mitSchritten());
+    fireEvent.click(huelle('s2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Bedingung ändern' }));
+    expect(within(dialog()).getByText('Bedingung: Schritt „Kids“')).toBeTruthy();
+    expect(
+      within(dialog()).getByText(
+        'Der Schritt „Kids“ erscheint nur, wenn „Gruppe“ ist Kids. Sonst wird er übersprungen – mit allen Fragen darin.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(dialog()).getByText(
+        'Dieselbe Bedingung haben auch: „Welche Kids-Gruppe?“. Hier änderst du sie nur für diesen Schritt; gemeinsam geht es im Reiter „Bedingungen“.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('Regel-Liste und Fenster am Feld nennen den Schritt als Schritt „Kids“', () => {
+    const { huelle } = zeigen(mitSchritten());
+    fireEvent.click(huelle('f2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Bedingung ändern' }));
+    expect(
+      within(dialog()).getByText(
+        'Dieselbe Bedingung haben auch: Schritt „Kids“. Hier änderst du sie nur für diese Frage; gemeinsam geht es im Reiter „Bedingungen“.',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Bedingungen/ }));
+    const karte = screen.getAllByRole('listitem').find((li) => li.textContent?.startsWith('wenn'))!;
+    expect(karte.textContent).toContain('zeige Schritt „Kids“Welche Kids-Gruppe?');
+  });
+
+  it('Verschieben hinter den eigenen Schritt ist gesperrt – der Satz nennt den Schritt', () => {
+    const { huelle } = zeigen(mitSchritten());
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(
+      within(huelle('f1') as HTMLElement).getByRole('button', { name: 'Gruppe nach unten' }),
+    );
+    expect(
+      screen.getByText('„Gruppe“ muss vor Schritt „Kids“ bleiben – dort ist sie Bedingung.'),
+    ).toBeTruthy();
+    expect(ff.feldEinordnen).not.toHaveBeenCalled();
+  });
+
+  it('Schritt entfernen: die Meldung nennt ihn Schritt „…“', async () => {
+    const { huelle, gespeichert } = zeigen(mitSchritten());
+    fireEvent.click(huelle('s3'));
+    fireEvent.click(
+      within(huelle('s3') as HTMLElement).getByRole('button', { name: 'Abschluss entfernen' }),
+    );
+    await waitFor(() => expect(ff.feldEntfernen).toHaveBeenCalledWith(91, 's3'));
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith('Schritt „Abschluss“ entfernt.', true),
+    );
+  });
+});

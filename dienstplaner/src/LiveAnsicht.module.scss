@@ -109,7 +109,7 @@
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 28px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1200px; // bewusst fest: Live-Ansicht im Vollbild, nicht im Seitenrahmen
   min-height: 0;
   margin: 0 auto;
   padding: 22px 26px max(16px, var(--unten-strich));

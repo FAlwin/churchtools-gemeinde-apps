@@ -67,6 +67,133 @@ function g(
   return { name, parent, status, note, settings, felder: [{ id: 73, name: 'Bezahlt' }] };
 }
 
+/**
+ * **Bedingungen in der Demo** (F1e, 16.11.2026): Die Lobpreisfreizeit fragt im Kontakt „Bist du im Team?“, je Person
+ * „Bereich“ („Technik“ nur fürs Team) und „Team-Erfahrung“ (nur fürs Team). Die Familie Beispiel (Anmelde-Nr. DEMO01)
+ * verstößt dagegen – so, als hätte jemand in ChurchTools von Hand etwas eingetragen. Damit zeigt die Nachprüfung zwei
+ * Befunde. Tom Muster (DEMO02) ist im Team – bei ihm zeigt „Person dazu“ die Fragen fürs Team.
+ */
+const DEMO_SPALTEN = { nr: 74, kontakt: 75, auswahl: 76, team: 78, bereich: 79, erfahrung: 80 };
+function mitBedingungen(
+  f: OeffentlicheEinstellungen['formular'],
+): OeffentlicheEinstellungen['formular'] {
+  const frage = (
+    id: string,
+    typ: 'janein' | 'radio' | 'text',
+    text: string,
+    antworten: string[] = [],
+  ) => ({
+    id,
+    art: 'eigen' as const,
+    typ,
+    frage: text,
+    hilfe: '',
+    zustand: 'freiwillig' as const,
+    antworten,
+  });
+  const imTeam = {
+    modus: 'eine' as const,
+    regeln: [{ feld: 'team', op: 'ist' as const, wert: 'Ja' }],
+  };
+  return {
+    anmeldung: [
+      ...f.anmeldung.slice(0, -1),
+      frage('team', 'janein', 'Bist du im Team?'),
+      ...f.anmeldung.slice(-1),
+    ],
+    person: [
+      ...f.person,
+      {
+        ...frage('bereich', 'radio', 'Bereich', ['Küche', 'Technik']),
+        antwortBed: { Technik: { ...imTeam, art: 'grau' as const, grund: 'nur fürs Team' } },
+      },
+      { ...frage('erfahrung', 'text', 'Team-Erfahrung'), bed: imTeam },
+    ],
+  };
+}
+const DEMO_FELDER = [
+  { id: 73, name: 'Bezahlt' },
+  { id: 74, name: 'Anmelde-Nr.' },
+  { id: 75, name: 'Angemeldet von' },
+  { id: 76, name: 'Zimmer' },
+  {
+    id: 78,
+    name: 'Bist du im Team?',
+    fieldTypeCode: 'radioselect',
+    options: [
+      { id: 781, name: 'Ja' },
+      { id: 782, name: 'Nein' },
+    ],
+  },
+  {
+    id: 79,
+    name: 'Bereich',
+    fieldTypeCode: 'radioselect',
+    options: [
+      { id: 791, name: 'Küche' },
+      { id: 792, name: 'Technik' },
+    ],
+  },
+  { id: 80, name: 'Team-Erfahrung' },
+];
+const DEMO_PERSONEN = [
+  {
+    id: 901,
+    firstName: 'Maria',
+    lastName: 'Beispiel',
+    email: 'maria@beispiel.test',
+    birthday: '1988-04-12',
+  },
+  { id: 902, firstName: 'Jonas', lastName: 'Beispiel', email: null, birthday: '2014-06-01' },
+  {
+    id: 903,
+    firstName: 'Tom',
+    lastName: 'Muster',
+    email: 'tom@muster.test',
+    birthday: '1979-09-30',
+  },
+  // Zum Finden bei „Person dazu“ (noch in keiner Veranstaltung).
+  { id: 904, firstName: 'Anna', lastName: 'Muster', email: null, birthday: '2012-03-08' },
+];
+const familie = (seit: string) => ({
+  data: [
+    // Maria: nicht im Team, aber „Technik“ (nur fürs Team).
+    [
+      901,
+      { 73: '0', 74: 'DEMO01', 75: 'Maria Beispiel', 76: '4-Bett-Zimmer', 78: '782', 79: '792' },
+    ],
+    // Jonas: „Team-Erfahrung“ beantwortet – die Frage käme nur fürs Team.
+    [902, { 73: '0', 74: 'DEMO01', 79: '791', 80: 'drei Jahre' }],
+    // Tom (DEMO02): im Team, alles erlaubt – für „Person dazu“ mit der Kontakt-Antwort „Ja“.
+    [
+      903,
+      {
+        73: '0',
+        74: 'DEMO02',
+        75: 'Tom Muster',
+        76: '2-Bett-Zimmer',
+        78: '781',
+        79: '792',
+        80: 'Leitung Technik',
+      },
+    ],
+  ].map(([id, werte]) => {
+    const p = DEMO_PERSONEN.find((x) => x.id === id)!;
+    return {
+      personId: p.id,
+      person: { domainAttributes: { firstName: p.firstName, lastName: p.lastName } },
+      groupTypeRoleId: 15,
+      groupMemberStatus: 'active',
+      memberStartDate: seit,
+      fields: Object.entries(werte as Record<string, string>).map(([f, value]) => ({
+        id: Number(f),
+        value,
+      })),
+    };
+  }),
+  meta: { pagination: { lastPage: 1 } },
+});
+
 function demoGruppen(): Map<number, G> {
   return new Map([
     [
@@ -151,7 +278,8 @@ function demoGruppen(): Map<number, G> {
               ],
               extras: [{ bezeichnung: 'Bettwäsche leihen', preisCent: 800, gilt: 'person' }],
             },
-            formular: neueEinstellungen('freizeit').formular,
+            formular: mitBedingungen(neueEinstellungen('freizeit').formular),
+            ctFelder: { bezahlt: 73, ...DEMO_SPALTEN },
             bezahlung: {
               kontoinhaber: 'Gemeinde e.V. (Beispiel)',
               iban: 'DE89370400440532013000',
@@ -200,7 +328,7 @@ const mitglieder = (aktiv: (string | null)[], wartend = 0) => ({
 
 const MITGLIEDER: Record<number, unknown> = {
   40: mitglieder([null, null, null, null, null], 2),
-  46: mitglieder(['1', '0', '0', '0']),
+  46: familie(tag(-5).slice(0, 10)),
   52: mitglieder(['0', '0']),
 };
 
@@ -227,6 +355,7 @@ export function demoStarten(fall: string): void {
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   if (fall === 'einrichten') DATEN.werte = [];
   const gruppen = demoGruppen();
+  gruppen.get(46)!.felder = DEMO_FELDER.map((f) => ({ ...f }));
   const antwort = (daten: unknown, status = 200) =>
     Promise.resolve(
       // 204 hat keinen Inhalt – sonst wirft `Response`.
@@ -350,6 +479,19 @@ export function demoStarten(fall: string): void {
           : {},
         m === 'PUT' ? 201 : m === 'DELETE' ? 204 : 200,
       );
+    }
+    // Personensuche (Anmeldung von Hand): findet die Demo-Personen am Vor- oder Nachnamen.
+    if (pfad === '/search') {
+      const q = (url.searchParams.get('query') ?? '').toLowerCase();
+      return antwort({
+        data: DEMO_PERSONEN.filter((p) =>
+          q.split(/\s+/).every((w) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(w)),
+        ).map((p) => ({ domainType: 'person', domainIdentifier: String(p.id) })),
+      });
+    }
+    if (pfad === '/persons' && m === 'GET' && url.searchParams.has('ids[]')) {
+      const ids = url.searchParams.getAll('ids[]').map(Number);
+      return antwort({ data: DEMO_PERSONEN.filter((p) => ids.includes(p.id)) });
     }
     if (pfad === '/groups' && m === 'GET') {
       const ids = url.searchParams.getAll('ids[]').map(Number);

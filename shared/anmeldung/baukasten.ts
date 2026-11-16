@@ -4,6 +4,7 @@
  * (`formularFelder.ts`) nutzen dieselben, damit Bildschirm und gespeicherte Reihenfolge nie auseinanderlaufen.
  */
 import { standardFormular, type Feld, type Feldtyp, type Formular } from './formular';
+import { amEnde } from './bedingungen';
 
 export type Bereich = keyof Formular;
 
@@ -115,13 +116,8 @@ export const BEREICH_FEST: Record<string, Bereich> = {
   birth: 'person',
 };
 
-/**
- * Preisbereich und Datenschutz stehen immer am Ende, direkt vor „Verbindlich anmelden“: Der Preis wird aus den
- * Angaben darüber gerechnet, und die Einwilligung gehört unmittelbar vor das Absenden.
- */
-export function amEnde(f: Feld): boolean {
-  return f.typ === 'price' || f.typ === 'privacy';
-}
+// `amEnde` steht seit F2a im Regel-Baustein – die Sichtbarkeit je Schritt braucht es dort (Ringabhängigkeit sonst).
+export { amEnde };
 
 /** Lässt sich das Feld im Baukasten verschieben? Alles außer Preisbereich und Datenschutz. */
 export function verschiebbar(f: Feld): boolean {

@@ -100,6 +100,31 @@ export function kurzname(x: Feld, max = 45): string {
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
 }
 
+/**
+ * Preisbereich und Datenschutz stehen immer am Ende, direkt vor „Verbindlich anmelden“: Der Preis wird aus den
+ * Angaben darüber gerechnet, und die Einwilligung gehört unmittelbar vor das Absenden. Seit F2a hier (und von
+ * `baukasten.ts` weitergereicht): Sie gehören zu keinem Schritt, sondern stehen immer am Ende des letzten.
+ */
+export function amEnde(f: Feld): boolean {
+  return f.typ === 'price' || f.typ === 'privacy';
+}
+
+/**
+ * **Zu welchem Schritt ein Feld gehört** (F2a): der letzte Baustein „Neuer Schritt“ davor – bei Fragen je Person
+ * zuerst im Personen-Teil, sonst der letzte im Kontakt-Teil. `null` = Schritt 1 (oder ein Formular ohne Schritte).
+ * Preis und Datenschutz gehören zu keinem Schritt (`amEnde`), ein Schritt nicht zu einem anderen; ausgeschaltete
+ * Schritte zählen nicht.
+ */
+export function schrittVon(f: Formular, x: Feld): Feld | null {
+  if (x.typ === 'schritt' || amEnde(x)) return null;
+  const istSchritt = (y: Feld) => y.typ === 'schritt' && y.zustand !== 'aus';
+  const ort = ortVon(f, x.id);
+  if (!ort) return null;
+  const davor = f[ort.teil].slice(0, ort.i).filter(istSchritt).at(-1);
+  if (davor) return davor;
+  return ort.teil === 'person' ? (f.anmeldung.filter(istSchritt).at(-1) ?? null) : null;
+}
+
 /** Wo ein Feld steht: Teil und Stelle. */
 function ortVon(f: Formular, id: string): { teil: 'anmeldung' | 'person'; i: number } | null {
   const a = f.anmeldung.findIndex((x) => x.id === id);
@@ -181,7 +206,11 @@ function erfuellt(b: Blick, ziel: Feld, bed: Bedingung, tiefe: number): boolean 
 function sichtbarIntern(b: Blick, x: Feld, tiefe: number): boolean {
   // Quellen stehen immer davor – mehr Stufen als Felder kann es nicht geben. Die Grenze schützt vor kaputten Daten.
   if (tiefe > 200) return false;
-  return !x.bed || erfuellt(b, x, x.bed, tiefe);
+  if (x.bed && !erfuellt(b, x, x.bed, tiefe)) return false;
+  // F2a: Wird der Schritt übersprungen (Bedingung am Schritt), ist auch jedes Feld darin nicht zu sehen – dieselbe
+  // Stelle für Pflicht, Leeren beim Absenden, Nachprüfung und Anzeige.
+  const s = schrittVon(b.f, x);
+  return !s || sichtbarIntern(b, s, tiefe + 1);
 }
 
 /** **Ist die Frage gerade zu sehen?** `person` = Index der Person bei Fragen je Person. */

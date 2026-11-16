@@ -18,15 +18,19 @@ import {
   schrittVon,
   ungueltigeAntworten,
 } from './bedingungen';
-import { antwortText, mehrfachAntworten, type ListenAnmeldung, type Werte } from './liste';
+import { freiMitText, freiSchluessel } from './freieAntwort';
+import { antwortRoh, mehrfachAntworten, type ListenAnmeldung, type Werte } from './liste';
 
-/** Eine gespeicherte Antwort so, wie die Regeln sie erwarten: Ankreuzen als `true`, Mehrfachauswahl als Liste. */
+/**
+ * Eine gespeicherte Antwort so, wie die Regeln sie erwarten: Ankreuzen als `true`, Mehrfachauswahl als Liste, die freie
+ * Antwort als ihre Beschriftung (F3 – ihr Text kommt in `teil` unter `<Feld-ID>.frei` dazu).
+ */
 function antwortAus(
   f: Feld,
   werte: Werte,
   ctFelder: OeffentlicheEinstellungen['ctFelder'],
 ): Antwort {
-  const text = antwortText(f, werte, ctFelder);
+  const text = antwortRoh(f, werte, ctFelder);
   if (text === null) return undefined;
   if (f.typ === 'check') return true;
   if (f.typ === 'multi') return mehrfachAntworten(f, text);
@@ -42,6 +46,9 @@ function teil(
   for (const f of felder) {
     const w = antwortAus(f, werte, ctFelder);
     if (w !== undefined) aus[f.id] = w;
+    const tid = freiMitText(f) ? ctFelder[freiSchluessel(f.id)] : undefined;
+    const t = tid === undefined ? undefined : werte[tid];
+    if (t?.trim()) aus[freiSchluessel(f.id)] = t.trim();
   }
   return aus;
 }

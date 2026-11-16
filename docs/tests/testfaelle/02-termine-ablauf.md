@@ -773,3 +773,42 @@ steht.
 - **Historie:** Wünsche 7 und 8 (Alwin 09.11.2026, Bild der Startseite v0.3.0; entschieden 11.11.2026)
 
 </details>
+
+### TF-ABLAUF-29 · Planen: Ansicht „Personen“ (Raster, nur ansehen)
+
+**Das brauchst du:** Dienstplaner als Planer; Dienste, deren ChurchTools-Gruppen Mitglieder haben (am besten Musik mit
+zwei Diensten, in denen dieselbe Person steht, und ein Dienst aus Technik); mindestens eine eingetragene Abwesenheit, die
+einen Termin im Zeitraum trifft; ein Konto **mit** und eines **ohne** das Recht „Abwesenheiten sehen“ (bzw. „Abwesenheiten
+verwalten“).
+
+**Das muss passieren:** Dieselben Termine wie die Matrix als Raster – wer wann eingeteilt, abwesend oder noch frei ist.
+
+1. **Planen** → oben **Matrix | Personen | Wer wie oft?** → **Personen**: Spalten = die Termine der Matrix (gleicher
+   Zeitraum, gleiche Filter), davor **Name** und **Einsätze**; ein Block je Dienst, darin die Personen alphabetisch.
+2. Eine Person, die in zwei Diensten Mitglied ist, steht in **beiden** Blöcken, jeweils mit „auch …“ neben dem Namen. Ist sie
+   an einem Tag in beiden Diensten eingeteilt, steht in jeder Zelle der andere als grauer Text „+ Gesang“.
+3. Die Zelle zeigt den Dienst als farbigen Tag: **Haken** = zugesagt, **Kreis mit ?** = angefragt, **Stift, gestrichelt** =
+   Entwurf (einen Entwurf in der Matrix anlegen, wieder zu „Personen“ wechseln). „Einsätze“ zählt zugesagt + angefragt, keine
+   Entwürfe.
+4. **Filter** → die Gruppe Technik ausblenden: Wer an einem Tag im Ton eingeteilt ist, zeigt in der Musik-Zeile blass und
+   schräg „+ Ton (Technik)“.
+5. Abwesenheit: grauer Tag mit dem **Grund**; eine mehrtägige, die vor dem Zeitraum begann, deckt den ersten Termin mit ab.
+   Ist die Person dort zugleich eingeteilt, stehen beide da, der graue Tag mit **rotem Rand**.
+6. Unten je Block eine Zeile **Gäste** (Plätze mit Namen ohne Person), ganz unten **Noch offen**: je Termin die freien Plätze
+   als rote Tags („Gesang ×2“) – dieselbe Zahl wie „N frei“ im Kopf der Matrix. Ein Dienst mit „Namen verbergen“ zeigt nie
+   einen Namen.
+7. Maus über einem Namen (am Handy antippen) hebt **alle** Zeilen dieser Person hell hervor; noch einmal antippen nimmt es
+   zurück. Ein Klick in eine Zelle tut nichts.
+8. Konto **ohne** das Recht: im Block steht ruhig „Abwesenheiten nicht sichtbar“ statt leerer Zellen.
+9. Am Handy dieselbe Tabelle, **waagerecht scrollbar**, die Namensspalte bleibt stehen.
+10. Verbindung kurz kappen oder ChurchTools bremsen lassen, Ansicht öffnen: Scheitert nur eine Gruppe, steht in **ihrem** Block
+    ein Hinweis mit **„Nochmal versuchen“**, die anderen Blöcke bleiben; danach holt der Knopf nur diese Gruppe.
+11. Hatte ein Gerät „Wer wie oft?“ gemerkt (vor 16.11.2026), zeigt es weiter „Wer wie oft?“, nicht das Raster.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/personenDaten.ts`, `shared/dienstplan/plan.ts`, `shared/dienstplan/termine.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/ladePersonen.ts`, `dienstplaner/src/usePersonenDaten.ts`, `dienstplaner/src/personenFarben.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/usePlanZeitraum.ts`
+- **Automatisiert:** ja – `shared/dienstplan/personenRaster.test.ts` (Blöcke und Zeilen, Mitglied ohne Einsatz, Eingeteilte ohne Mitgliedschaft, Café mit mehreren Gruppen, Einsätze, „+ …“ auch für ausgeblendete Gruppen, Abwesenheit mehrtägig/mit Uhrzeit/mit Warnung, Gäste, Verborgene, „Noch offen“ = `terminStand`, Entwürfe, Ladezustand), `shared/dienstplan/personenDaten.test.ts`, `dienstplaner/src/ladePersonen.test.ts` (Recht ja/nein, Seitenteilung, Fehlerzweige einzeln, höchstens vier gleichzeitig), `dienstplaner/src/usePersonenDaten.test.tsx`, `dienstplaner/src/Planen.personen.test.tsx` (Umschalter, Laden, Fehler im Block, Hervorheben, Klick ohne Wirkung), `dienstplaner/src/geraet.test.ts` (gemerktes „personen“ → „Wer wie oft?“); 22 Gegenproben einzeln rot; von Hand bleiben echte Rechte, echte Abwesenheiten und der Blick am Handy
+- **Historie:** Wunsch 5 (Alwin 05./06.11.2026, Entwurf `e9-personen-v3.html`; P0 gemessen 13.11.2026), Scheibe P1
+</details>

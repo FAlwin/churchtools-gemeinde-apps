@@ -1,4 +1,5 @@
 // Plätze-Fach (E4-5-3, Entwurf Abschnitt 4) – Tokens aus ui/design; Knöpfe und Hinweise aus WerKann.module.scss.
+@use '@ui/design/mixins' as m;
 
 .liste {
   list-style: none;
@@ -66,4 +67,41 @@
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
+}
+
+// ── Vorlage übernehmen (13.11.2026) ─────────────────────────────────────────
+.vorlage {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+}
+
+.auswahl {
+  @include m.eingabefeld;
+  width: 100%;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font-size: 14.5px;
+}
+
+.vorschau {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  small {
+    font-size: 12.5px;
+    color: var(--text2);
+  }
 }

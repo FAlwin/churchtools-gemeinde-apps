@@ -17,6 +17,7 @@ import {
   personenRaster,
   rasterDienste,
   type RasterBlock,
+  type RasterGast,
   type RasterZeile,
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
@@ -34,11 +35,17 @@ const farbKlasse = (farbe: number) => styles[`farbe${farbe % ANZAHL_FARBEN}`];
 
 /** Der Zustand in Worten (Tooltip, Vorleser) – bei einem Entwurf mit der Art: „Entwurf, Anfrage“ / „Entwurf, direkt“. */
 const zustandText = (zustand: NonNullable<RasterZelle['zustand']>, modus: RasterZelle['modus']) =>
-  zustand === 'entwurf' ? `Entwurf, ${modusWort(modus ?? 'anfrage')}` : zustand;
+  zustand === 'entwurf'
+    ? `Entwurf, ${modusWort(modus ?? 'anfrage')}`
+    : zustand === 'zurueck'
+      ? 'wird zurückgezogen'
+      : zustand;
 
 /**
  * Der Dienst als ChurchTools-Tag; das Symbol sagt den Zustand: Haken = zugesagt, Kreis mit ? = angefragt. Ein **Entwurf**
  * (blau) zeigt seine Art am Rahmen: gestrichelt mit „?“ = Anfrage, durchgezogen mit Haken = direkt (beide im gefüllten Kreis).
+ * Wird die Einteilung von einem Entwurf **weggenommen** (`zurueck`, P2b), steht sie wie in der Matrix rot gestrichelt da,
+ * mit „−“ und durchgestrichenem Namen.
  */
 function DienstTag({
   name,
@@ -54,7 +61,7 @@ function DienstTag({
   const direkt = zustand === 'entwurf' && modus === 'direkt';
   return (
     <span
-      className={`${styles.tag} ${farbKlasse(farbe)}${zustand === 'entwurf' ? ' ' + styles.entwurf : ''}${direkt ? ' ' + styles.entwurfDirekt : ''}`}
+      className={`${styles.tag} ${farbKlasse(farbe)}${zustand === 'entwurf' ? ' ' + styles.entwurf : ''}${direkt ? ' ' + styles.entwurfDirekt : ''}${zustand === 'zurueck' ? ' ' + styles.zurueck : ''}`}
       role={zustand ? 'img' : undefined}
       aria-label={zustand ? `${name}, ${zustandText(zustand, modus)}` : undefined}
       title={zustand ? `${name} – ${zustandText(zustand, modus)}` : undefined}
@@ -65,6 +72,11 @@ function DienstTag({
           ?
         </span>
       )}
+      {zustand === 'zurueck' && (
+        <span className={styles.minus} aria-hidden="true">
+          −
+        </span>
+      )}
       {direkt && (
         <span className={styles.haken} aria-hidden="true">
           <Icon name="check" size={9} stroke={3.4} />
@@ -72,6 +84,36 @@ function DienstTag({
       )}
       <span className={styles.tagText}>{name}</span>
     </span>
+  );
+}
+
+/**
+ * Ein Gast in der Gäste-Zeile: das Entwurfs-Tag (blau, Stift) oder – wenn ein Entwurf ihn wegnimmt – rot gestrichelt wie
+ * die Einteilung einer Person. Mit `onKlick` ein Knopf (P2b).
+ */
+function GastTag({ g, onKlick }: { g: RasterGast; onKlick?: () => void }) {
+  const titel = g.zurueck
+    ? `${g.name} (Gast) – wird zurückgezogen`
+    : g.entwurf
+      ? `${g.name} (Gast) – Entwurf`
+      : `${g.name} (Gast)`;
+  const Tag = onKlick ? 'button' : 'span';
+  return (
+    <Tag
+      {...(onKlick
+        ? { type: 'button' as const, onClick: onKlick, 'aria-label': `${titel}, öffnen` }
+        : {})}
+      className={`${styles.tag} ${styles.gastTag}${g.entwurf ? ` ${styles.entwurf} ${styles.entwurfDirekt}` : ''}${g.zurueck ? ' ' + styles.zurueck : ''}${onKlick ? ' ' + styles.tagKnopf : ''}`}
+      title={titel}
+    >
+      {g.entwurf && <Icon name="pencil" size={14} stroke={2.4} />}
+      {g.zurueck && (
+        <span className={styles.minus} aria-hidden="true">
+          −
+        </span>
+      )}
+      <span className={styles.tagText}>{g.name}</span>
+    </Tag>
   );
 }
 
@@ -122,7 +164,12 @@ function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: nu
  * **Eintragen per Klick (P2a):** Eine leere Zelle, in der man den Dienst planen darf, legt mit einem Klick einen Entwurf auf
  * einen freien Platz an (`sicht.personen`, dieselbe Funktion wie „Wer kann?“); ein Klick auf den eigenen Entwurf
  * schaltet ihn weiter (P2m, unten). Ein Fenster kommt nur bei einer Warnung (am Tag schon in einem anderen Dienst, abwesend) oder wenn der
- * Dienst voll ist. Eine bestehende Einteilung anklicken tut noch nichts (P2b).
+ * Dienst voll ist.
+ *
+ * **Bestehende Einteilung anklicken (P2b):** zugesagt, angefragt oder ein Gast öffnet **dasselbe Fenster wie das Antippen
+ * eines belegten Platzes in der Matrix** („zurückziehen“, „Andere Person wählen“); eine Einteilung, die ein Entwurf
+ * wegnimmt, steht rot gestrichelt und durchgestrichen da, ihr Klick öffnet das Entwurfs-Fenster. Rechte und Regeln
+ * wie in der Matrix (`useEinteilen`, `personenErlaubt`); der Klick auf den Namen setzt weiter den Fokus.
  *
  * **Klick-Zyklus (P2m):** leere Zelle → Entwurf (womit er beginnt, sagt die Vorgabe des Dienstes: Anfrage „?“ oder direkt),
  * ein zweiter Klick stellt eine Anfrage auf „direkt“ um (Haken, kräftiger), der nächste nimmt den Entwurf weg. Das
@@ -195,6 +242,16 @@ export function PersonenRaster({
       : null;
   };
 
+  /** Der Klick auf einen Gast – `undefined`, wo er nichts tut (kein Recht, Entwurf veraltet). */
+  const gastKlick = (b: RasterBlock, g: RasterGast, pos: number) => {
+    const zl = zeileJe.get(b.dienst.id);
+    const a = personen && zl ? personen.gast(spalten[pos], zl, g) : null;
+    if (!zl || !a) return undefined;
+    if (a.art === 'belegt') return () => sicht.onBelegt(spalten[pos], zl, a.nr);
+    if (a.art === 'entwurfFach') return () => sicht.onEntwurf(spalten[pos], zl, a.nr);
+    return undefined;
+  };
+
   const tue = async (arbeit: () => Promise<void>) => {
     setLaeuft(true);
     try {
@@ -211,7 +268,13 @@ export function PersonenRaster({
     if (!personen || !zl || !a || laeuft) return;
     const i = spalten[pos];
     const tag = plan.spalten[i].tag;
-    if (a.art === 'wegnehmen') {
+    if (a.art === 'belegt') {
+      // Bestehende Einteilung (P2b): dasselbe Fenster wie beim Antippen eines belegten Platzes in der Matrix.
+      sicht.onBelegt(i, zl, a.nr);
+    } else if (a.art === 'entwurfFach') {
+      // Von einem Entwurf weggenommen (rot durchgestrichen): das Entwurfs-Fenster der Matrix.
+      sicht.onEntwurf(i, zl, a.nr);
+    } else if (a.art === 'wegnehmen') {
       void tue(() => personen.wegnehmen(zl, a.entwurf));
     } else if (a.art === 'direkt') {
       void tue(() => personen.direkt(zl, a.entwurf));
@@ -284,6 +347,7 @@ export function PersonenRaster({
           termine[pos].abgesagt ? styles.abgesagtSpalte : '',
           a ? styles.klick : '',
           a && (a.art === 'eintragen' || a.art === 'voll') ? styles.leerKlick : '',
+          a && (a.art === 'belegt' || a.art === 'entwurfFach') ? styles.belegtKlick : '',
           z.abwesend ? styles.abwZelle : '',
           z.warnung ? styles.warnZelle : '',
         ]
@@ -306,7 +370,11 @@ export function PersonenRaster({
                     ? `${name}: Entwurf wegnehmen`
                     : a.art === 'direkt'
                       ? `${name}: auf direkt umstellen`
-                      : `${name} eintragen`
+                      : a.art === 'belegt'
+                        ? `${name}: Einteilung öffnen`
+                        : a.art === 'entwurfFach'
+                          ? `${name}: Entwurf öffnen`
+                          : `${name} eintragen`
                 }
                 title={
                   a.art === 'wegnehmen'
@@ -459,14 +527,16 @@ export function PersonenRaster({
                       {b.gaeste.map((liste, pos) => (
                         <td key={termine[pos].id}>
                           {liste.map((g) => (
-                            <span
-                              key={`${g.name}-${g.entwurf}`}
-                              className={`${styles.tag} ${styles.gastTag}${g.entwurf ? ` ${styles.entwurf} ${styles.entwurfDirekt}` : ''}`}
-                              title={g.entwurf ? `${g.name} (Gast) – Entwurf` : `${g.name} (Gast)`}
-                            >
-                              {g.entwurf && <Icon name="pencil" size={14} stroke={2.4} />}
-                              <span className={styles.tagText}>{g.name}</span>
-                            </span>
+                            <GastTag
+                              key={`${g.name}-${g.entwurf}-${g.zurueck}-${g.nr}`}
+                              g={g}
+                              // Ein Klick öffnet dasselbe Fenster wie in der Matrix (P2b) – nur, wo man es dort auch darf.
+                              onKlick={
+                                personen && zeileJe.get(b.dienst.id)
+                                  ? gastKlick(b, g, pos)
+                                  : undefined
+                              }
+                            />
                           ))}
                         </td>
                       ))}

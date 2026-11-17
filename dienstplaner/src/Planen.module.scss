@@ -1,6 +1,7 @@
 // Planen-Matrix des Dienstplaners (E3-4, Entwurf v17) – Tokens aus ui/design. Farben nach dem
 // ChurchTools-Look: Grün = zugesagt/besetzt, Rot = frei (offen), Grau = nicht vorgesehen.
 @use '@ui/design/mixins' as m;
+@use './zurueck' as z;
 
 .karte {
   @include m.card-list;
@@ -504,20 +505,19 @@
   border-width: 2px;
 }
 
-// Entwurf „zurückziehen“ (E4-5, Entwurf Abschnitt 2): rot gestrichelt, der Name durchgestrichen.
+// Entwurf „zurückziehen“ (E4-5, Entwurf Abschnitt 2): rot gestrichelt, der Name durchgestrichen – Farben und Fläche als
+// gemeinsame Regel in `_zurueck.scss` (auch „Personen“ nutzt sie).
 .zurueck {
-  border: 1.5px dashed var(--red);
-  background: color-mix(in srgb, var(--red) 7%, var(--surface2));
+  border: z.$rahmen;
+  @include z.flaeche;
 
   .ic {
-    background: var(--red);
-    color: #fff;
+    @include z.symbol;
   }
 }
 
 .durch {
-  color: var(--text2);
-  text-decoration: line-through;
+  @include z.durchgestrichen;
 }
 
 // Ersetzen: „Greta statt Anna“ – der Alte klein und durchgestrichen.

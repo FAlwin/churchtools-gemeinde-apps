@@ -23,7 +23,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     punkte: [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
       '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
-      'Belegten Platz antippen: zurückziehen oder ersetzen.',
+      'Belegten Platz antippen (auch in „Personen“): zurückziehen oder ersetzen.',
     ],
   },
   {

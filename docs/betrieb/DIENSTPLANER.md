@@ -18,7 +18,7 @@
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
->   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Zauberstab je Dienst im Block-Kopf), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
+>   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
@@ -171,8 +171,8 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   eingetragen („Platz dazunehmen“ kommt mit P2c).
 - **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
   Entwürfe der Dienstgruppe geladen und änderbar (`darfAendern`: Schublade bereit). Sonst bleibt die Zelle wie bisher. Eine
-  **bestehende Einteilung** (zugesagt, angefragt, Gast) anklicken tut noch nichts (P2b); die Zeile „Gäste“ und „Noch offen“
-  bleiben unverändert. **Abgesagte Termine** nehmen keine Einträge an (P2a-2, s. u.).
+  **bestehende Einteilung** (zugesagt, angefragt, Gast) anklicken öffnet das Fenster der Matrix (P2b, s. u.); „Noch offen“
+  bleibt unverändert. **Abgesagte Termine** nehmen keine Einträge an (P2a-2, s. u.).
 - **Aussehen:** mit echter Maus (`hover: hover`) bekommt eine leere, eintragbare Zelle beim Darüberfahren einen blauen Rahmen,
   eine blasse blaue Fläche und ein „+“ rechts; am Handy/Touch zeigt sie ein blasses „+“. Jede dieser Zellen ist ein Knopf
   (Tastatur, Vorleser: „Daniel F. für Ton am Fr, 20.11. eintragen“). Der Klick auf den **Namen** setzt weiter den Fokus.
@@ -188,6 +188,19 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   alles, was an ChurchTools geht: dort zählt nur ChurchTools, ein Entwurf ist noch nicht verbindlich (`PlanGruppe.frei` ist
   der ChurchTools-Stand). Ebenso unverändert: die Termin-Liste und die Startseite („Plätze frei“), „Wer wie oft?“ und die Zeile
   „+ Gesang“ in „Personen“.
+- **Bestehende Einteilung anklicken (P2b, 17.11.2026):** In „Personen“ öffnet ein Klick auf eine **zugesagte oder angefragte**
+  Einteilung (auch auf einen **Gast** in der Zeile „Gäste“) **dasselbe Fenster wie das Antippen eines belegten Platzes in der
+  Matrix** (`BelegtFach`: „Zurückziehen“, „Andere Person wählen“) – über `sicht.onBelegt` in `useEinteilen`, keine zweite
+  Logik. Wird eine Einteilung von einem **gültigen Entwurf weggenommen** (Zurückziehen **oder** Ersetzen durch jemand
+  anderen), steht die Zelle wie in der Matrix **rot gestrichelt, mit „−“ und durchgestrichenem Namen**
+  (`RasterZelle.zustand: 'zurueck'`; Farben, Fläche und Durchstreichen als eine Regel in `dienstplaner/src/_zurueck.scss`, die
+  Matrix nutzt sie ebenfalls); ihr Klick öffnet das **Entwurfs-Fenster** (`sicht.onEntwurf`, „Entfernen“ nimmt das
+  Zurückziehen zurück). „Andere Person wählen“ führt zu „Wer kann?“ für diesen Platz; das Ergebnis ist ein Ersetzen-Entwurf: die
+  neue Person steht als Entwurf in ihrer Zeile, die bisherige durchgestrichen. **Rechte wie in der Matrix** (`personenErlaubt`
+  in `useEinteilen`): das Fenster am belegten Platz verlangt nur `darfPlanen` (auch in abgesagten Terminen; ohne Schublade
+  nennt es nur Name und Stand), das Entwurfs-Fenster zusätzlich `darfAendern`. Ein belegter Platz mit **veraltetem** Entwurf ist wie
+  in der Matrix kein Knopf (dort gilt ChurchTools). Klick auf den **Namen** setzt weiter den Fokus, der Klick auf den eigenen
+  Entwurf bleibt der Zyklus aus P2m. Eine zurückgezogene Zelle ist kein Warnfall mehr (Abwesenheit).
 - **Abgesagte Termine nehmen keine Einträge an (P2a-2):** In der Matrix ist der freie Platz in einem abgesagten Termin kein
   Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort zum **Eintragen** keinen Zellen-Knopf, kein Hover und kein „+“ –
   den **eigenen Entwurf** nimmt ein Klick dort weiter weg, wie in der Matrix –, und der Zauberstab

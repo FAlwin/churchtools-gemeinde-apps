@@ -459,7 +459,19 @@ describe('personenRaster – Gäste, Verborgene, Fußzeile', () => {
       gruppen: ALLE_GRUPPEN,
       daten: DATEN,
     });
-    expect(block(r, GESANG).gaeste).toEqual([[], [{ name: 'Gastsängerin', entwurf: false }], []]);
+    expect(block(r, GESANG).gaeste).toEqual([
+      [],
+      [
+        {
+          name: 'Gastsängerin',
+          entwurf: false,
+          zurueck: false,
+          nr: expect.any(Number),
+          klick: 'belegt',
+        },
+      ],
+      [],
+    ]);
     expect(block(r, GESANG).zeilen.map((z) => z.name)).not.toContain('Gastsängerin');
   });
 
@@ -606,7 +618,15 @@ describe('personenRaster – Entwürfe', () => {
       entwurf: suche([person, gast]),
     });
     expect(zeile(r, GITARRE, 99)).toMatchObject({ mitglied: false, name: 'Neu Dabei' });
-    expect(block(r, TON).gaeste[1]).toEqual([{ name: 'Onkel Otto', entwurf: true }]);
+    expect(block(r, TON).gaeste[1]).toEqual([
+      {
+        name: 'Onkel Otto',
+        entwurf: true,
+        zurueck: false,
+        nr: expect.any(Number),
+        klick: 'entwurf',
+      },
+    ]);
   });
 
   it('ein veralteter „Zurückziehen“-Entwurf (gesehen stimmt nicht mehr) ändert nichts', () => {
@@ -712,8 +732,10 @@ describe('personenRaster – Entwürfe zählen mit (P2a-2)', () => {
     expect(offenAn(ohne, 0, 'Gesang')).toBe(0);
     expect(offenAn(mit, 0, 'Gesang')).toBe(1);
     expect(zeile(mit, GESANG, 5).einsaetze).toBe(zeile(ohne, GESANG, 5).einsaetze - 1);
-    // Die Zelle zeigt die Einteilung weiter (bis gesendet) – nur gezählt wird sie nicht mehr.
-    expect(zeile(mit, GESANG, 5).zellen[0].zustand).toBe('zugesagt');
+    // Die Zelle zeigt die Einteilung weiter (bis gesendet) – seit P2b als „zurueck“ (rot durchgestrichen, wie die Matrix),
+    // gezählt wird sie nicht mehr.
+    expect(zeile(ohne, GESANG, 5).zellen[0].zustand).toBe('zugesagt');
+    expect(zeile(mit, GESANG, 5).zellen[0].zustand).toBe('zurueck');
   });
 
   it('Ersetzen: „Noch offen“ bleibt, „Einsätze“ wandern von der alten zur neuen Person', () => {
@@ -724,6 +746,77 @@ describe('personenRaster – Entwürfe zählen mit (P2a-2)', () => {
     expect(offenAn(mit, 0, 'Gesang')).toBe(offenAn(ohne, 0, 'Gesang'));
     expect(zeile(mit, GESANG, 5).einsaetze).toBe(zeile(ohne, GESANG, 5).einsaetze - 1);
     expect(zeile(mit, GESANG, 11).einsaetze).toBe(zeile(ohne, GESANG, 11).einsaetze + 1);
+  });
+
+  it('Zelle „zurueck“ (P2b): ein gültiger Entwurf nimmt die Person am Platz weg – Zurückziehen UND Ersetzen', () => {
+    const anna = platzIn(0, GESANG, 'Anna Gans');
+    const weg = entwurfFuer({ art: 'frei' }, 1, GESANG, anna);
+    const ersetzt = entwurfFuer(
+      { art: 'person', personId: 11, name: 'Clara Neu' },
+      1,
+      GESANG,
+      anna,
+    );
+    expect(zeile(rechne([]), GESANG, 5).zellen[0].zustand).toBe('zugesagt');
+    expect(zeile(rechne([weg]), GESANG, 5).zellen[0].zustand).toBe('zurueck');
+    expect(zeile(rechne([ersetzt]), GESANG, 5).zellen[0].zustand).toBe('zurueck');
+    // Die neue Person steht als Entwurf in ihrer Zeile (wie bisher).
+    expect(zeile(rechne([ersetzt]), GESANG, 11).zellen[0].zustand).toBe('entwurf');
+    // Andere Termine derselben Person bleiben, wie sie sind.
+    expect(zeile(rechne([weg]), GESANG, 5).zellen.slice(1)).toEqual(
+      zeile(rechne([]), GESANG, 5).zellen.slice(1),
+    );
+  });
+
+  it('Zelle „zurueck“: kein Warnfall mehr, auch wenn die Person abwesend ist (eingeteilt + abwesend wäre sonst einer)', () => {
+    const anna = platzIn(0, GESANG, 'Anna Gans');
+    const weg = entwurfFuer({ art: 'frei' }, 1, GESANG, anna);
+    // Anna ist am ersten Termin abwesend (mehrtägig, beginnt davor).
+    const urlaub = new Map<number, GruppenStand>([
+      [100, da([DANIEL])],
+      [
+        90,
+        da(
+          [ANNA, BEN, DANIEL, CLARA],
+          abwesenheitenAus([abwesend(1, 5, '2026-11-28', '2026-12-07')]),
+        ),
+      ],
+    ]);
+    const rechneMit = (liste: Entwurf[]) =>
+      personenRaster({
+        plan: PLAN,
+        spalten: ALLE_SPALTEN,
+        gruppen: ALLE_GRUPPEN,
+        daten: urlaub,
+        entwurf: suche(liste),
+      });
+    // Ohne Entwurf: ein Warnfall (abwesend UND eingeteilt) – die Gegenprobe, dass die Daten stimmen.
+    expect(zeile(rechneMit([]), GESANG, 5).zellen[0]).toMatchObject({
+      zustand: 'zugesagt',
+      warnung: true,
+    });
+    const z = zeile(rechneMit([weg]), GESANG, 5).zellen[0];
+    expect(z.zustand).toBe('zurueck');
+    expect(z.abwesend).not.toBeNull();
+    expect(z.warnung).toBe(false);
+  });
+
+  it('ein veralteter Entwurf macht keine „zurueck“-Zelle – dort gilt ChurchTools', () => {
+    const anna = platzIn(0, GESANG, 'Anna Gans');
+    const alt = entwurfFuer({ art: 'frei' }, 1, GESANG, { ...anna, belegung: { art: 'frei' } });
+    expect(zeile(rechne([alt]), GESANG, 5).zellen[0].zustand).toBe('zugesagt');
+  });
+
+  it('Gast: ein gültiger Entwurf am Platz → „zurueck“ und Klick „entwurf“, ohne Entwurf „belegt“, veraltet nichts', () => {
+    const g = platzIn(1, GESANG, 'Gastsängerin');
+    const gastAn = (liste: Entwurf[]) => block(rechne(liste), GESANG).gaeste[1];
+    expect(gastAn([])).toMatchObject([{ zurueck: false, klick: 'belegt' }]);
+    const weg = entwurfFuer({ art: 'frei' }, 2, GESANG, g);
+    expect(gastAn([weg])).toMatchObject([
+      { name: 'Gastsängerin', zurueck: true, klick: 'entwurf' },
+    ]);
+    const alt = entwurfFuer({ art: 'frei' }, 2, GESANG, { ...g, belegung: { art: 'frei' } });
+    expect(gastAn([alt])).toMatchObject([{ zurueck: false, klick: null }]);
   });
 
   it('veraltete Entwürfe zählen nicht – weder „Noch offen“ noch „Einsätze“', () => {

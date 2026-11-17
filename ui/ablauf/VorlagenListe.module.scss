@@ -1,0 +1,99 @@
+// Die Vorlagen-Liste (E10-V3a, Entwurf `e10-vorlagen.html` Abschnitt 1): Karte mit Bändern je Kalender.
+@use '../design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--surface3);
+
+  h3 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.zahl {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
+.nurAnsehen {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
+.zeile {
+  @include m.list-row;
+  font-family: var(--ui);
+  color: var(--text);
+  border-bottom: 1px solid var(--hair);
+}
+
+.kachel {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-tile);
+  color: var(--blue-tile-text);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+
+  b {
+    display: block;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+}
+
+.pfeil {
+  flex: none;
+  color: var(--text3);
+}
+
+.leer {
+  margin: 0;
+  padding: 24px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text2);
+  text-align: center;
+}

@@ -47,10 +47,13 @@ export function ZeilenInhalt({
   tag,
   schmal = false,
   infoZeilen = [],
+  vorlage = false,
 }: {
   item: AblaufZeile;
   tag?: ReactNode;
   schmal?: boolean;
+  /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral statt rot – `ResponsibleLine`. */
+  vorlage?: boolean;
   /** Am Handy: die gewählten Gruppen als Zeile „Technik: …“ unter dem Punkt (E6-4, Entwurf Bild 2). */
   infoZeilen?: readonly InfoGruppe[];
 }) {
@@ -70,7 +73,10 @@ export function ZeilenInhalt({
         {tag}
         {item.weggelassen && <WeggelassenHinweis />}
       </div>
-      <ResponsibleLine entries={item.responsible} />
+      <ResponsibleLine
+        entries={item.responsible}
+        vorlage={vorlage ? { text: item.responsibleText } : undefined}
+      />
       {item.note && <div className={styles.flowNote}>{item.note}</div>}
       {infoZeilen.map((g) => {
         const text = infoText(item, g.id);
@@ -100,6 +106,7 @@ export function AblaufListe({
   mitEnde = false,
   infoSpalten = [],
   fotos = false,
+  vorlage = false,
 }: {
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
@@ -127,6 +134,12 @@ export function AblaufListe({
    * Kürzel (Alwin, 02.11.2026: „in der eigenen App nur Initialen“; dort blockt ohnehin die Sicherheitsregel fremde Bilder).
    */
   fotos?: boolean;
+  /**
+   * Der Ablauf einer **Ablaufvorlage** (E10-V3a): Platzhalter neutral; Infos je Gruppe wie am Termin. Uhrzeiten gibt es
+   * von selbst keine – `ablaufZeileAus` mit Termin 0 liefert `time: null` und nichts „weggelassen“; der Balken „Beginn“
+   * bleibt ohne `beginn` ohne Zeit.
+   */
+  vorlage?: boolean;
 }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const infos = schmal ? [] : infoSpalten;
@@ -162,6 +175,7 @@ export function AblaufListe({
             tag={tag}
             schmal={schmal}
             infoZeilen={alsSpalten ? [] : infos}
+            vorlage={vorlage}
           />
         </div>
       </>

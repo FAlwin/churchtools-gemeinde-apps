@@ -27,7 +27,11 @@ export function sichtbareReiter(darfPlanen: boolean): Reiter<ReiterId>[] {
 
 /** Der Reiter aus der Adresse (`#/termine`) – Regel in `@ui/bedienung/reiterAdresse`. Unbekannt → Start. */
 export function reiterAusAdresse(hash: string, erlaubt: Reiter<ReiterId>[]): ReiterId {
-  if (planenGruppeAusAdresse(hash) !== null && erlaubt.some((r) => r.id === 'planen')) {
+  // Gruppen-Besuch und Vorlagen gehören beide zu „Planen“ – dort bleibt der Reiter markiert.
+  if (
+    (planenGruppeAusAdresse(hash) !== null || vorlagenAusAdresse(hash) !== null) &&
+    erlaubt.some((r) => r.id === 'planen')
+  ) {
     return 'planen';
   }
   return ausAdresse(hash, erlaubt, 'start');
@@ -59,4 +63,21 @@ export function terminAusAdresse(hash: string): number | null {
 
 export function adresseFuerTermin(id: number): string {
   return `#/termin/${id}`;
+}
+
+/**
+ * **Die Seite „Ablaufvorlagen“** (E10-V3a, Entwurf: Knopf „Vorlagen“ in „Planen“, kein eigener Reiter): `#/vorlagen` ist
+ * die Liste, `#/vorlage/5` eine geöffnete Vorlage. Eigene Adressen, damit Zurück und Neuladen gehen. Antwort:
+ * `null` = keine Vorlagen-Adresse, `{ id: null }` = die Liste, `{ id }` = diese Vorlage.
+ */
+export function vorlagenAusAdresse(hash: string): { id: number | null } | null {
+  if (hash === '#/vorlagen') return { id: null };
+  const id = /^#\/vorlage\/(\d+)$/.exec(hash)?.[1];
+  return id ? { id: Number(id) } : null;
+}
+
+export const ADRESSE_VORLAGEN = '#/vorlagen';
+
+export function adresseFuerVorlage(id: number): string {
+  return `#/vorlage/${id}`;
 }

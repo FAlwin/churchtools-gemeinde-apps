@@ -8,7 +8,7 @@
  * nach jeder Änderung). Nicht abgewartet: Scheitert nur das Neu-Lesen, war das Schreiben trotzdem gelungen und darf
  * nicht als Fehler zurückgerollt werden.
  */
-import type { AblaufAktionen } from '@ui/ablauf/useAblaufBearbeiten';
+import type { AblaufAktionen, VorlagenAktionen } from '@ui/ablauf/useAblaufBearbeiten';
 import { browserSchreiber } from '@ui/ct/schreiber';
 import {
   ablaufUmsortieren,
@@ -18,6 +18,7 @@ import {
   punktWiederherstellen,
   vorBeginnSetzen,
   weglassenSetzen,
+  type AblaufZiel,
 } from '@shared/ct/schreibKern';
 
 /**
@@ -27,7 +28,11 @@ import {
 export const GESPERRT =
   'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst in ChurchTools oder in der Musik-App öffnen.';
 
-export function ablaufAktionen(eventId: number, geschrieben: () => void): AblaufAktionen {
+/**
+ * Die Aktionen für die Punkte eines Ablaufs – Termin (`number`) oder Ablaufvorlage (`{ vorlageId }`, E10-V3a): **eine**
+ * Zuordnung auf den Schreib-Kern, der Kern kennt beide Ziele. Das Auge (`weglassenSetzen`) gibt es nur am Termin.
+ */
+function punktAktionen(ziel: AblaufZiel, geschrieben: () => void): VorlagenAktionen {
   const s = browserSchreiber;
   async function danach<T>(schreiben: Promise<T>): Promise<T> {
     const ergebnis = await schreiben;
@@ -35,14 +40,28 @@ export function ablaufAktionen(eventId: number, geschrieben: () => void): Ablauf
     return ergebnis;
   }
   return {
-    reorder: (order, gesehen) => danach(ablaufUmsortieren(s, eventId, order, gesehen)),
-    remove: (itemId) => danach(punktLoeschen(s, eventId, itemId)),
+    reorder: (order, gesehen) => danach(ablaufUmsortieren(s, ziel, order, gesehen)),
+    remove: (itemId) => danach(punktLoeschen(s, ziel, itemId)),
     restore: async (punkt) => {
-      await danach(punktWiederherstellen(s, eventId, punkt));
+      await danach(punktWiederherstellen(s, ziel, punkt));
     },
-    update: (itemId, fields, gesehen) => danach(punktAendern(s, eventId, itemId, fields, gesehen)),
-    setVorBeginn: (itemId, vorBeginn) => danach(vorBeginnSetzen(s, eventId, itemId, vorBeginn)),
-    setWeggelassen: (itemId, weg) => danach(weglassenSetzen(s, eventId, itemId, weg)),
-    add: (data) => danach(punktAnlegen(s, eventId, data)),
+    update: (itemId, fields, gesehen) => danach(punktAendern(s, ziel, itemId, fields, gesehen)),
+    setVorBeginn: (itemId, vorBeginn) => danach(vorBeginnSetzen(s, ziel, itemId, vorBeginn)),
+    add: (data) => danach(punktAnlegen(s, ziel, data)),
   };
+}
+
+export function ablaufAktionen(eventId: number, geschrieben: () => void): AblaufAktionen {
+  return {
+    ...punktAktionen(eventId, geschrieben),
+    setWeggelassen: async (itemId, weg) => {
+      await weglassenSetzen(browserSchreiber, eventId, itemId, weg);
+      geschrieben();
+    },
+  };
+}
+
+/** Die Aktionen für den Ablauf einer Ablaufvorlage – ohne Auge. */
+export function vorlagenAktionen(vorlageId: number, geschrieben: () => void): VorlagenAktionen {
+  return punktAktionen({ vorlageId }, geschrieben);
 }

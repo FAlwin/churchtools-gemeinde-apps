@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: v1.0.3 (17.11.2026: „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
+> **Stand: v1.0.4 (18.11.2026: Protokoll löschen, To-Dos „Alle“ und gekürzte Zuständige, ein Termin gehört der Gruppe mit dem Gruppentreffen; v1.0.3 „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
 > Rechte ein. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste Sitzungen“ und „Deine Gruppen“; der
 > Reiter **„Sitzungen“** zeigt je Gruppe Kommend, Vorschläge und Protokolle; der Reiter **„To-Dos“** zeigt alle To-Dos der
 > eigenen Gruppen als Liste oder Board; die **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse).

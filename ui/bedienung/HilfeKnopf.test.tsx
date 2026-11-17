@@ -31,7 +31,7 @@ describe('HilfeKnopf', () => {
   it('schließt auch mit Esc', () => {
     render(<HilfeKnopf seite="Planen" abschnitte={abschnitte} />);
     fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Planen' }));
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

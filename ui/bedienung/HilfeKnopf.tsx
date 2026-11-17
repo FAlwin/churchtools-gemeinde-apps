@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Sheet } from '../fenster/Sheet';
 import { KopfKnopf } from './KopfKnopf';
+import { useEscape } from './useEscape';
 import styles from './HilfeKnopf.module.scss';
 
 /** Ein Abschnitt der Hilfe: eine Überschrift und zwei, drei kurze Stichpunkte. */
@@ -27,15 +28,8 @@ export function HilfeKnopf({
 }) {
   const [offen, setOffen] = useState(false);
 
-  // Das Fenster schließt auch mit Esc (das gemeinsame `Sheet` kann das selbst nicht).
-  useEffect(() => {
-    if (!offen) return;
-    const taste = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOffen(false);
-    };
-    window.addEventListener('keydown', taste);
-    return () => window.removeEventListener('keydown', taste);
-  }, [offen]);
+  // Das Fenster schließt auch mit Esc (das gemeinsame `Sheet` kann das selbst nicht) – über den gemeinsamen Baustein.
+  useEscape(offen, () => setOffen(false));
 
   return (
     <>

@@ -323,7 +323,9 @@ describe('Zeile „Plätze“', () => {
     // Mi 02.12.: 2 von 2 belegt → − gesperrt.
     fireEvent.click(plaetzeKnopf('Ton', 'Mi, 02.12.', '2 von 2')!);
     let f = await fenster();
-    expect(within(f).getByRole('button', { name: 'Ton: ein Platz weniger' }).disabled).toBe(true);
+    expect(
+      within(f).getByRole<HTMLButtonElement>('button', { name: 'Ton: ein Platz weniger' }).disabled,
+    ).toBe(true);
     expect(f.textContent).toContain('Erst jemanden herausnehmen');
     fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
     // So 29.11.: 2 von 3 → − geht auf 2.
@@ -341,7 +343,7 @@ describe('Zeile „Plätze“', () => {
     const f = await fenster();
     expect(f.textContent).toContain('Hier liegt ein Entwurf – erst senden oder entfernen.');
     for (const name of ['Ton: ein Platz weniger', 'Ton: ein Platz mehr'])
-      expect(within(f).getByRole('button', { name }).disabled).toBe(true);
+      expect(within(f).getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
     expect(anzahl).not.toHaveBeenCalled();
   });
 

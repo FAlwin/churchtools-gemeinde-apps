@@ -367,3 +367,51 @@ das Protokoll speichert, und aus dem To-Do entsteht ein To-Do.
 - **Historie:** S8-2 (16.11.2026); Einfügestelle bei Unterpunkten und Schlusszeile nach dem ersten Lauf geändert (16.11.2026)
 
 </details>
+
+### TF-PROT-13 · Frühere Treffen: „Noch ohne Protokoll“ und „Protokoll nachtragen“
+
+**Das brauchst du:** In der Test-Instanz eine eigene **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung
+und Spike als Mitglied, mit eingerichteten Protokollen und Kalender. Dazu ein **vergangenes** Treffen (z. B. vor drei
+Tagen) als **Kalender-Termin mit Besprechungsanfrage** (du und zwei Mitglieder eingeladen, eine Zusage, eine Absage) **und
+Gruppentreffen zur selben Minute**, ohne Protokoll. Ein zweites vergangenes Gruppentreffen im Vormonat, im
+ChurchTools-Gruppentreffen **abgeschlossen**, ebenfalls ohne Protokoll. Optional ein freigegebenes Protokoll von vor
+zwei Wochen. Danach die Test-Protokolle, -Termine und -Treffen aufräumen.
+
+**Das muss passieren:** Die Leitung findet vergangene Treffen ohne Protokoll im Block und im Fenster und kann daraus ein
+Protokoll beginnen, das mit Termin und Gruppentreffen verknüpft ist; die Anwesenheit ist aus den Antworten vorbelegt; bei
+einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts davon.
+
+1. Als Leitung den Reiter **Sitzungen** der TEST-Gruppe öffnen: Über „Kommend“ steht **Noch ohne Protokoll** mit dem
+   Treffen von vor drei Tagen (Datum, Uhrzeit, „vor 3 Tagen“, Marken „Einladung“ und „Gruppentreffen“, „1 Zusage · 1
+   Absage“). Der Untertitel nennt das letzte freigegebene Protokoll (gibt es keins: „In den letzten 28 Tagen …“). Das
+   Treffen im Vormonat steht dort nicht, wenn es vor dem letzten freigegebenen Protokoll liegt oder älter als 28 Tage ist.
+2. In der Kopfzeile von „Kommend“ steht neben „Neues Protokoll“ und „Neue Sitzung“ der Knopf **Protokoll nachtragen**
+   (am Handy nur das Symbol).
+3. **Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
+   steht das abgeschlossene Treffen mit der Marke „Gruppentreffen abgeschlossen“ und „Anwesenheit steht in ChurchTools
+   fest“. Ein Monat ohne Treffen: „Im … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
+   (auch ein Entwurf) stehen nirgends.
+4. Im aktuellen Monat die Zeile vom Treffen mit Einladung antippen: Das Fenster wechselt zu **Protokoll beginnen** (Hinweis
+   „… mit diesem Termin und dem Gruppentreffen verknüpft … aus den Antworten auf die Einladung vorbelegt“, „Wie letztes
+   Mal“ nur, wenn davor ein freigegebenes Protokoll liegt). **‹** führt zurück zur Auswahl. Wieder wählen, **Beginnen**:
+   Der Editor öffnet sich als Entwurf mit dem Titel des Termins und dem Datum des Treffens.
+5. Im Protokoll unter **Anwesenheit**: Die Zusage ist anwesend, die Absage abwesend, wer nicht geantwortet hat offen;
+   nachprüfen im ChurchTools-Gruppentreffen. Einen Namen antippen ändert ihn dort sofort.
+6. Zurück zu **Sitzungen**: Das Treffen steht nicht mehr im Block, sondern als Entwurf unter „Kommend“. In ChurchTools
+   (Kalender-Termin und Gruppentreffen) ist nichts verändert.
+7. Das Treffen im Vormonat über „Protokoll nachtragen“ → beginnen: In der Anwesenheit sind die Namen **nicht** antippbar
+   (das Gruppentreffen ist abgeschlossen), es steht der Hinweis „Das Gruppentreffen ist abgeschlossen …“.
+8. Den ChurchTools-Server kurz unerreichbar machen (oder offline gehen) und die Seite neu laden: Im Block steht ein Hinweis
+   mit „Erneut versuchen“, „Kommend“ und „Protokolle“ funktionieren, im Fenster steht beim Blättern der Hinweis statt
+   „nichts nachzutragen“.
+9. Als **Mitglied** (Spike) anmelden: Es gibt weder den Block „Noch ohne Protokoll“ noch den Knopf „Protokoll nachtragen“;
+   bei den Sitzungen kein „Protokoll beginnen“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/fruehere.ts`, `shared/protokolle/sitzungen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/NochOhneProtokoll.tsx`, `protokolle/src/ProtokollNachtragen.tsx`, `protokolle/src/FruehereText.tsx`, `protokolle/src/ProtokollBeginnen.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/demo.ts`
+- **Automatisiert:** ja – `shared/protokolle/fruehere.test.ts` (Zeitraum seit dem letzten Protokoll / 28 Tage / bis gestern, „ohne Protokoll“, Serie, Zeitzone), `protokolle/src/lesenFruehere.test.ts` (gegen den ChurchTools-Nachbau: Zeitraum der Aufrufe, Termin + Treffen = eine Sitzung, `isCompleted`, Antworten für vergangene Termine), `protokolle/src/FruehereTreffen.test.tsx` (Block und Fenster: nur Leitung, Blättern, Monat, Fehler, Beginnen), `protokolle/src/ProtokollBeginnen.test.tsx` und `beginnen.test.ts` („Wie letztes Mal“ vor dem Treffen, Verknüpfung); die echte Anwesenheit in ChurchTools, das Aussehen am Handy und der abgeschlossene Zustand in ChurchTools nur von Hand
+- **Historie:** v1.0.1 (17.11.2026)
+
+</details>

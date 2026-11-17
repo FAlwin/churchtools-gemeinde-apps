@@ -138,6 +138,65 @@ function heuteUm(stunde: number): string {
   return d.toISOString();
 }
 
+/** Vor `tage` Tagen um `stunde` Uhr Ortszeit – für „Frühere Treffen“: Treffen, die vor kurzem waren, egal wann die Demo läuft. */
+function vorTagen(tage: number, stunde: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - tage);
+  d.setHours(stunde, 0, 0, 0);
+  return d.toISOString();
+}
+
+/**
+ * **Frühere Treffen** (v1.0.1) für „Noch ohne Protokoll“ und „Protokoll nachtragen“:
+ * - vor 2 Tagen Termin + Gruppentreffen (Zu- und Absagen) und vor 10 Tagen nur ein Gruppentreffen – beide im Block;
+ * - 04.10. ein Termin ohne Treffen; 20.09. Termin + **abgeschlossenes** Gruppentreffen (Anwesenheit steht fest);
+ * - 12.07. nur ein Gruppentreffen; August 2026: nichts (leerer Monat).
+ */
+function fruehereTreffen(): Pick<Speicher, 'termine' | 'treffen'> {
+  const termin = (id: number, title: string, startDate: string, antworten: [number, string][]) => ({
+    id,
+    title,
+    startDate,
+    endDate: new Date(Date.parse(startDate) + 2 * 3_600_000).toISOString(),
+    anfragen: antworten.map(([person, state]) => ({
+      person: { domainIdentifier: String(person) },
+      state,
+    })),
+  });
+  const zwei = vorTagen(2, 17);
+  return {
+    termine: [
+      termin(130, 'Leitungssitzung', zwei, [
+        [1, 'accepted'],
+        [7, 'accepted'],
+        [19, 'accepted'],
+        [23, 'declined'],
+      ]),
+      termin(131, 'Leitungssitzung', '2026-09-20T17:00:00Z', [
+        [1, 'accepted'],
+        [7, 'accepted'],
+      ]),
+      termin(132, 'Teamklausur', '2026-10-04T17:00:00Z', [
+        [1, 'accepted'],
+        [19, 'declined'],
+      ]),
+      // Der Entwurf vom 21.10. hängt an diesem Termin (S5-3) – hier, damit er sich auch nach dem Lesefenster lesen lässt.
+      termin(121, 'Leitungssitzung', '2026-10-21T17:00:00Z', [
+        [1, 'accepted'],
+        [7, 'accepted'],
+        [19, 'declined'],
+        [23, 'pending'],
+      ]),
+    ],
+    treffen: [
+      { id: 40, startDate: zwei, isCanceled: false },
+      { id: 41, startDate: vorTagen(10, 19), isCanceled: false },
+      { id: 42, startDate: '2026-09-20T17:00:00Z', isCanceled: false },
+      { id: 43, startDate: '2026-07-12T17:00:00Z', isCanceled: false },
+    ],
+  };
+}
+
 /** Besprechungsanfragen wie in ChurchTools gemessen (S3-1 §2): Person als `domainIdentifier`, Antwort als `state`. */
 const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: string }[]> = {
   '114': [
@@ -342,10 +401,9 @@ function speicherAnlegen(fall: string): Speicher {
     ),
     rechte: new Map(),
     naechste: 100,
-    termine: [],
-    treffen: [],
+    ...fruehereTreffen(),
     anwesenheit: new Map(),
-    abgeschlossen: new Set(),
+    abgeschlossen: new Set([42]),
     beitraege: [],
   };
 }
@@ -476,10 +534,6 @@ function antwort(
           calculated: { startDate: heuteUm(19) },
         },
         {
-          base: { id: 121, title: 'Leitungssitzung', calendar: { id: 4 } },
-          calculated: { startDate: '2026-10-21T17:00:00Z' },
-        },
-        {
           base: { id: 114, title: 'Leitungssitzung', calendar: { id: 4 } },
           calculated: { startDate: '2027-03-17T17:00:00Z' },
         },
@@ -574,7 +628,10 @@ function antwort(
     return treffen[1] === '11'
       ? {
           status: 200,
-          data: [{ id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false }, ...s.treffen],
+          data: [
+            { id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false },
+            ...s.treffen,
+          ].map((t) => ({ ...t, isCompleted: s.abgeschlossen.has(t.id) })),
         }
       : {
           status: 403,

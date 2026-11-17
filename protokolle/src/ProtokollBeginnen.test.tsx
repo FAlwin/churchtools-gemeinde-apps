@@ -102,6 +102,54 @@ describe('ProtokollBeginnen', () => {
     expect(gedrueckt()).toEqual([STANDARD_VORLAGEN[0].name]);
   });
 
+  describe('frühere Sitzung (Frühere Treffen, v1.0.1)', () => {
+    const zeigeFrueher = (sitzung: Sitzung, protokolle: Sitzung[]) =>
+      render(
+        <ProtokollBeginnen
+          sitzung={sitzung}
+          gruppeId={194}
+          modul={24}
+          kategorie={62}
+          mitarbeit={65}
+          protokolle={protokolle}
+          teile={TEILE}
+          ich={{ person: 1, name: 'Alwin' }}
+          zeitzone="Europe/Berlin"
+          frueher
+          onBegonnen={vi.fn()}
+          onClose={vi.fn()}
+        />,
+      );
+
+    it('„Wie letztes Mal“ nimmt das letzte freigegebene Protokoll VOR dem Treffen, nicht ein späteres', async () => {
+      // Ein jüngeres Protokoll (11.11.) liegt vor; das Treffen ist vom 20.10. – gemeint ist das vom 14.10.
+      const jung: Sitzung = { ...ALT, schluessel: 'p:nov', beginn: '2026-11-11T17:00:00Z' };
+      zeigeFrueher({ ...NEU, beginn: '2026-10-20T18:00:00Z' }, [jung, ALT]);
+      await screen.findByText('Leitungssitzung');
+      expect(screen.getByText('Tagesordnung vom 14.10.2026: Finanzen')).toBeTruthy();
+    });
+
+    it('liegt kein Protokoll davor, fehlt „Wie letztes Mal“', async () => {
+      zeigeFrueher({ ...NEU, beginn: '2026-10-01T18:00:00Z' }, [ALT]);
+      await screen.findByText('Leer');
+      expect(screen.queryByText('Wie letztes Mal')).toBeNull();
+    });
+
+    it('sagt, womit das Protokoll verknüpft wird und woher die Anwesenheit kommt', async () => {
+      zeigeFrueher({ ...NEU, treffen: 24 }, []);
+      expect(
+        await screen.findByText(/mit diesem Termin und dem Gruppentreffen verknüpft/),
+      ).toBeTruthy();
+      expect(screen.getByText(/aus den Antworten auf die Einladung vorbelegt/)).toBeTruthy();
+    });
+
+    it('abgeschlossenes Gruppentreffen: die Anwesenheit steht fest', async () => {
+      zeigeFrueher({ ...NEU, termin: null, treffen: 24, abgeschlossen: true }, []);
+      expect(await screen.findByText(/mit diesem Gruppentreffen verknüpft/)).toBeTruthy();
+      expect(screen.getByText(/Anwesenheit steht in ChurchTools fest/)).toBeTruthy();
+    });
+  });
+
   it('„Beginnen“ legt das Protokoll mit der gewählten Vorlage an und öffnet es', async () => {
     beginnen.mockResolvedValue({ art: 'ok', sitzung: 'neu', hinweis: null });
     const onBegonnen = zeige();

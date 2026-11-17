@@ -112,11 +112,12 @@ export const STANDARD_VORLAGEN: readonly Vorlage[] = [
 ];
 
 /**
- * Ein fester Punkt ohne das, was eine frühere Sitzung bei ihrer Freigabe festhielt (`props.fest`, S4-3a) – in einer
- * neuen Sitzung zeigt er wieder live.
+ * Ein fester Punkt ohne das, was nur zur früheren Sitzung gehört: was sie bei ihrer Freigabe festhielt (`props.fest`,
+ * S4-3a) – in einer neuen Sitzung zeigt er wieder live – und die aus ihrer Anwesenheit genommenen Personen
+ * (`props.ohne`): Das Ausblenden gilt **nur für dieses eine Protokoll** (Alwin 17.11.2026, gegen „je Gruppe merken“).
  */
 function ohneFest(props: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(props).filter(([k]) => k !== 'fest'));
+  return Object.fromEntries(Object.entries(props).filter(([k]) => k !== 'fest' && k !== 'ohne'));
 }
 
 /** Das Dokument einer neuen Sitzung aus einer Vorlage – jeder Block mit neuer ID, feste Aufgaben noch ungespeichert. */

@@ -79,7 +79,7 @@ describe('vorbelegen', () => {
   it('Zusage anwesend, Absage abwesend – alles schreiben, dann EINMAL nachlesen', async () => {
     const stand = await anwesenheitLesen(G, T);
     ct.aufrufe.length = 0;
-    const neu = await vorbelegen(G, T, stand, anfragen);
+    const neu = await vorbelegen(G, T, stand, anfragen, []);
     expect(neu.personen.map((p) => [p.person, p.status])).toEqual([
       [1, 'da'],
       [19, 'weg'],
@@ -91,14 +91,14 @@ describe('vorbelegen', () => {
     await statusSetzen(G, T, 1, 'offen'); // jemand hat getippt und zurückgesetzt
     const stand = await anwesenheitLesen(G, T);
     ct.aufrufe.length = 0;
-    expect(await vorbelegen(G, T, stand, anfragen)).toBe(stand);
+    expect(await vorbelegen(G, T, stand, anfragen, [])).toBe(stand);
     expect(schreibAufrufe()).toEqual([]);
   });
 
   it('ChurchTools übernimmt die Vorbelegung nicht: NichtUebernommen', async () => {
     const stand = await anwesenheitLesen(G, T);
     ct.teilnahmeSchlucken = true;
-    await expect(vorbelegen(G, T, stand, anfragen)).rejects.toBeInstanceOf(NichtUebernommen);
+    await expect(vorbelegen(G, T, stand, anfragen, [])).rejects.toBeInstanceOf(NichtUebernommen);
   });
 });
 

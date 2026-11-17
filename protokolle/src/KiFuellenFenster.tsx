@@ -9,6 +9,7 @@ import { docxText } from '@shared/protokolle/docxText';
 import {
   antwortLesen,
   auftragBauen,
+  offenePlatzhalter,
   tagesordnung,
   uebernahmePlanen,
   uebernehmbar,
@@ -16,7 +17,10 @@ import {
 } from '@shared/protokolle/ki';
 import {
   namenFinden,
+  PLATZHALTER_MUSTER,
   platzhalterAnwenden,
+  unzugeordnet,
+  zuordnungErgaenzen,
   type Fund,
   type Person,
 } from '@shared/protokolle/platzhalter';
@@ -74,7 +78,7 @@ const reEsc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function NamenText({ text, namen }: { text: string; namen: readonly string[] }) {
   const teile = useMemo(() => {
     const liste = [...new Set(namen.filter((n) => n.trim()))].sort((a, b) => b.length - a.length);
-    const platzhalter = String.raw`\[(?:Person|Vertraulich) \d+\]`;
+    const platzhalter = PLATZHALTER_MUSTER.source;
     const name = liste.length
       ? String.raw`|((?<![\p{L}\p{N}_])(?:${liste.map(reEsc).join('|')})(?![\p{L}\p{N}_]))`
       : '';
@@ -135,8 +139,14 @@ function wohin(e: Eintrag): { ok: boolean; text: string } {
  * **„Mit KI füllen“** (Bauplan S8-2, Entwurf `s8-ki-v1`, abgenommen 16.11.2026) – drei Schritte in einem Fenster:
  * 1. **Auftrag:** Transkript (einfügen, `.txt` oder `.docx`), die gefundenen Namen mit Häkchen „ersetzen“, eigene
  *    Begriffe, der fertige Auftrag, „Auftrag kopieren“.
- * 2. **Antwort:** die Antwort der KI einfügen; kaputt → Meldung im Fenster, der Text bleibt.
- * 3. **Vorschau:** je Eintrag ein Häkchen und das Ziel; „Ausgewählte übernehmen“ fügt über `einfuegen` ein.
+ * 2. **Antwort:** die Antwort der KI einfügen; kaputt → Meldung im Fenster, der Text bleibt. Wer die Antwort schon hat,
+ *    geht aus Schritt 1 direkt hierher („Antwort schon da? Direkt einfügen“, 17.11.2026) – ohne Transkript gibt es hier
+ *    keinen Auftrag zu kopieren. Kommen in der Antwort Platzhalter vor, die diese Sitzung nicht kennt (Antwort aus einem
+ *    früheren Lauf), ordnet man sie hier von Hand einem Namen zu (Vorschläge: die Gruppenmitglieder); leer = bleibt
+ *    stehen. Ohne Transkript kennt das Fenster gar keine Zuordnung: Die Nummern der Antwort stammen dann aus einem
+ *    anderen Lauf, ein „[Person 1]“ aus den Titeln der Tagesordnung wäre eine falsche Spur.
+ * 3. **Vorschau:** je Eintrag ein Häkchen und das Ziel; „Ausgewählte übernehmen“ fügt über `einfuegen` ein. Bleiben
+ *    Platzhalter ohne Namen stehen, sagt ein Hinweis oben, dass man sie nach dem Übernehmen selbst ersetzt.
  *
  * Die Regeln stehen in `shared/protokolle/ki.ts`, `platzhalter.ts` und `docxText.ts` – hier wird nur verbunden und
  * gezeigt. **Nichts davon wird gespeichert:** Transkript, Funde und Zuordnung leben nur in diesem Fenster (kein
@@ -223,7 +233,25 @@ export function KiFuellenFenster({
     [tx, gruppe, datum, dokument, ersetzt, funde],
   );
   const { kopieren: inZwischenablage } = useKopieren(auftrag, auftragFeld);
-  const zurueckNamen = useMemo(() => Object.values(ersetzt.zuordnung), [ersetzt]);
+
+  // Ohne Transkript kennt dieses Fenster keine Platzhalter-Nummern (siehe Kopf) – dann ist alles Handarbeit.
+  const direkt = !tx.trim();
+  const basisZuordnung = useMemo<Record<string, string>>(
+    () => (direkt ? {} : ersetzt.zuordnung),
+    [direkt, ersetzt],
+  );
+  const antwortFunde = useMemo<Fund[]>(() => (direkt ? [] : funde), [direkt, funde]);
+  // Schritt 2: Platzhalter der eingefügten Antwort, die die Zuordnung nicht kennt – dazu die von Hand gewählten Namen.
+  const [manuell, setManuell] = useState<Record<string, string>>({});
+  const offeneNamen = useMemo(
+    () => unzugeordnet(antwort, basisZuordnung),
+    [antwort, basisZuordnung],
+  );
+  const antwortZuordnung = useMemo(
+    () => zuordnungErgaenzen(basisZuordnung, manuell),
+    [basisZuordnung, manuell],
+  );
+  const zurueckNamen = useMemo(() => Object.values(antwortZuordnung), [antwortZuordnung]);
 
   const eingabeGeaendert = () => {
     setKopiert(null);
@@ -286,11 +314,17 @@ export function KiFuellenFenster({
     setSchritt(2);
   };
 
+  // „Antwort schon da?“ – ohne Auftrag zur Antwort; ein Ausweg zum Kopieren gibt es hier nicht.
+  const direktZurAntwort = () => {
+    setAusweg(false);
+    setSchritt(2);
+  };
+
   const vorschau = () => {
     const r = antwortLesen(antwort, {
       dokument: dokument(),
-      zuordnung: ersetzt.zuordnung,
-      funde,
+      zuordnung: antwortZuordnung,
+      funde: antwortFunde,
       gruppe: gruppePersonen,
     });
     if (!r.ok) {
@@ -360,6 +394,7 @@ export function KiFuellenFenster({
 
   const hatInhalt = !!tx.trim() || !!antwort.trim();
   const SCHRITTE = ['Auftrag', 'Antwort', 'Vorschau'];
+  const offeneInVorschau = offenePlatzhalter(eintraege);
 
   let knoepfe: ReactNode;
   if (schritt === 1)
@@ -410,7 +445,10 @@ export function KiFuellenFenster({
       {schritt === 1 && (
         <>
           <p className={styles.unter}>
-            Transkript rein, Protokoll raus – du prüfst alles, bevor es übernommen wird.
+            Transkript rein, Protokoll raus – du prüfst alles, bevor es übernommen wird.{' '}
+            <button type="button" className={styles.textknopf} onClick={direktZurAntwort}>
+              Antwort schon da? Direkt einfügen
+            </button>
           </p>
           <div className={styles.abschnitt}>
             <label className={styles.titel} htmlFor="ki-transkript">
@@ -583,7 +621,12 @@ export function KiFuellenFenster({
 
       {schritt === 2 && (
         <>
-          {kopiert === true ? (
+          {direkt ? (
+            <p className={styles.info}>
+              Füge hier die ganze Antwort der KI ein. Platzhalter wie [Person 1] kannst du danach
+              Namen zuordnen.
+            </p>
+          ) : kopiert === true ? (
             <p className={styles.info} role="status">
               <b>Auftrag ist kopiert</b>
               in deine KI einfügen und die Antwort hier einfügen.
@@ -604,23 +647,25 @@ export function KiFuellenFenster({
               </li>
             </ul>
           )}
-          <details
-            className={styles.ausweg}
-            open={ausweg}
-            onToggle={(e) => setAusweg(e.currentTarget.open)}
-          >
-            <summary>Auftrag anzeigen</summary>
-            <textarea ref={auftragFeld} rows={8} readOnly aria-label="Auftrag" value={auftrag} />
-            <FensterKnopf
-              art="zweit"
-              onClick={() => {
-                auftragFeld.current?.focus();
-                auftragFeld.current?.select();
-              }}
+          {!direkt && (
+            <details
+              className={styles.ausweg}
+              open={ausweg}
+              onToggle={(e) => setAusweg(e.currentTarget.open)}
             >
-              Alles markieren
-            </FensterKnopf>
-          </details>
+              <summary>Auftrag anzeigen</summary>
+              <textarea ref={auftragFeld} rows={8} readOnly aria-label="Auftrag" value={auftrag} />
+              <FensterKnopf
+                art="zweit"
+                onClick={() => {
+                  auftragFeld.current?.focus();
+                  auftragFeld.current?.select();
+                }}
+              >
+                Alles markieren
+              </FensterKnopf>
+            </details>
+          )}
           {antwortFehler && (
             <ul className={styles.hinweis} role="alert">
               <li>
@@ -648,6 +693,38 @@ export function KiFuellenFenster({
               }}
             />
           </div>
+          {offeneNamen.length > 0 && (
+            <div className={styles.abschnitt}>
+              <h3 className={styles.titel}>Platzhalter zuordnen</h3>
+              <p className={styles.klein}>
+                Diese Platzhalter kennt das Fenster nicht. Schreib einen Namen dazu – leer lassen =
+                bleibt stehen.
+              </p>
+              <datalist id="ki-gruppenmitglieder">
+                {gruppePersonen.map((p) => (
+                  <option key={p.id} value={`${p.vorname.trim()} ${p.nachname.trim()}`.trim()} />
+                ))}
+              </datalist>
+              <div className={styles.zuordnen}>
+                {offeneNamen.map((p) => (
+                  <label key={p} className={styles.zuordnenZeile}>
+                    <span className={styles.platzhalter}>{p}</span>
+                    <input
+                      list="ki-gruppenmitglieder"
+                      aria-label={`Name für ${p}`}
+                      placeholder="Name"
+                      value={manuell[p] ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setManuell((m) => ({ ...m, [p]: v }));
+                        setAntwortFehler(null);
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -657,6 +734,18 @@ export function KiFuellenFenster({
             Grün = wieder eingesetzte Namen. Nimm das Häkchen weg bei allem, was nicht übernommen
             werden soll.
           </p>
+          {offeneInVorschau.length > 0 && (
+            <ul className={styles.hinweis} role="status">
+              <li>
+                <span className={styles.zeichen}>!</span>
+                <span>
+                  {offeneInVorschau.join(', ')}{' '}
+                  {offeneInVorschau.length === 1 ? 'ist keinem' : 'sind keinem'} Namen zugeordnet –
+                  nach dem Übernehmen selbst ersetzen.
+                </span>
+              </li>
+            </ul>
+          )}
           {fehler && (
             <ul className={styles.hinweis} role="alert">
               <li>

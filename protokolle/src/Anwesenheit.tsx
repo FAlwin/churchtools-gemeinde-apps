@@ -7,6 +7,8 @@ import {
   gaesteAus,
   kurzform,
   nachTipp,
+  ohneAus,
+  ohneAusgeblendete,
   type AnwesenheitsStatus,
   type TreffenStand,
 } from '@shared/protokolle/anwesenheit';
@@ -21,6 +23,12 @@ import styles from './Anwesenheit.module.scss';
  *   **Anwesend / Abwesend** (nochmal tippen = wieder offen) – jeder Tipp steht sofort im Gruppentreffen.
  * - **Von selbst vorbelegt** aus den Zusagen, solange am Treffen niemand etwas eingetragen hat (`vorbelegen`).
  * - **Gäste** sind freie Namen und stehen nur im Protokoll (`props.gaeste`).
+ * - **Aus dem Protokoll nehmen** (Alwin 17.11.2026): je Person ein Knopf, der sie aus der Anwesenheit DIESES Protokolls
+ *   ausblendet (`props.ohne`, Personen-IDs) – etwa ein Gemeinschaftskonto, das als Gruppenmitglied in jedem Treffen
+ *   steht. Im Gruppentreffen bleibt sie unverändert; unter der Liste steht „n ausgeblendet · Zeigen“ zum
+ *   Zurückholen. Das geht auch bei abgeschlossenem Treffen (anders als das Tippen): Es betrifft nur das Protokoll,
+ *   nicht die in ChurchTools gesperrte Anwesenheit – und das Protokoll selbst ist dann noch bearbeitbar (der Knopf
+ *   erscheint nur, wo der Editor schreibbar ist). Beim Lesen (Ansicht, PDF) erscheinen Ausgeblendete gar nicht.
  * - **Einklappbar:** zugeklappt die Kurzform „Anwesend (n): … · Abwesend: … · Offen: … · Gäste: …“ – beim Lesen
  *   zugeklappt, beim Schreiben offen; aufgeklappt nur eine Zeile mit den Zahlen.
  * - Ohne Gruppentreffen: „Gruppentreffen anlegen“ (nur beim Schreiben).
@@ -43,6 +51,8 @@ export function Anwesenheit({
   gaeste: gaesteRoh,
   bearbeitbar,
   gaesteSetzen,
+  ohne: ohneRoh,
+  ohneSetzen,
 }: {
   w: FestePunkteWert;
   /** `props.gaeste` des Blocks. */
@@ -50,15 +60,25 @@ export function Anwesenheit({
   /** Beim Schreiben: Anwesenheit tippen, Gäste ändern, Treffen anlegen. */
   bearbeitbar: boolean;
   gaesteSetzen?: (gaeste: string[]) => void;
+  /** `props.ohne` des Blocks – Personen-IDs, die aus diesem Protokoll genommen sind. */
+  ohne?: unknown;
+  /** Beim Schreiben: Personen aus dem Protokoll nehmen/zurückholen (fehlt es, wird nur gelesen). */
+  ohneSetzen?: (ohne: number[]) => void;
 }) {
   const gaeste = gaesteAus(gaesteRoh);
+  const ohne = ohneAus(ohneRoh);
   const [auf, setAuf] = useState(bearbeitbar);
   const [laeuft, setLaeuft] = useState<number | 'treffen' | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [neuerGast, setNeuerGast] = useState('');
+  const [ausgeblendetZeigen, setAusgeblendetZeigen] = useState(false);
   const { gruppe, treffen, anfragen } = w;
   // Von selbst vorbelegen nur einmal je Treffen und Kasten – auch wenn der Editor neu zeichnet.
   const vorbelegt = useRef<number | null>(null);
+  // Wer ausgeblendet ist, zählt bei der Vorbelegung nicht mit – gelesen wird der Stand von JETZT, ohne dass eine neue Liste
+  // das Treffen neu laden lässt (jede Zeile des Blocks ist ein neues Feld).
+  const ohneJetzt = useRef(ohne);
+  ohneJetzt.current = ohne;
 
   const { stand: geladen, setze } = useLaden(
     () =>
@@ -68,7 +88,7 @@ export function Anwesenheit({
             let stand = await anwesenheitLesen(gruppe, treffen);
             if (bearbeitbar && vorbelegt.current !== treffen) {
               vorbelegt.current = treffen;
-              stand = await vorbelegen(gruppe, treffen, stand, anfragen);
+              stand = await vorbelegen(gruppe, treffen, stand, anfragen, ohneJetzt.current);
             }
             return stand;
           })(),
@@ -131,8 +151,11 @@ export function Anwesenheit({
       </div>
     );
 
+  // Der Stand bleibt vollständig (wie ChurchTools ihn liefert); gezeigt, gezählt und gelesen wird ohne die Ausgeblendeten.
   const { stand } = laden;
-  const k = kurzform(stand.personen, gaeste);
+  const sichtbar = ohneAusgeblendete(stand, ohne);
+  const ausgeblendet = stand.personen.filter((p) => ohne.includes(p.person));
+  const k = kurzform(sichtbar.personen, gaeste);
   const tippbar = bearbeitbar && !stand.abgeschlossen;
 
   const tippen = (person: number, jetzt: AnwesenheitsStatus, tipp: AnwesenheitsStatus) => {
@@ -201,7 +224,7 @@ export function Anwesenheit({
       {auf && (
         <div className={styles.innen}>
           <ul className={styles.liste}>
-            {stand.personen.map((p) => (
+            {sichtbar.personen.map((p) => (
               <li key={p.person}>
                 <span className={styles.wer}>
                   <b>{p.name}</b>
@@ -232,6 +255,18 @@ export function Anwesenheit({
                     {{ da: 'anwesend', weg: 'abwesend', offen: 'offen' }[p.status]}
                   </span>
                 )}
+                {bearbeitbar && ohneSetzen && (
+                  <button
+                    type="button"
+                    className={styles.entfernen}
+                    aria-label={`${p.name} aus dem Protokoll nehmen`}
+                    title="Aus dem Protokoll nehmen"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => ohneSetzen([...ohne, p.person])}
+                  >
+                    <Icon name="eye-off" size={15} />
+                  </button>
+                )}
               </li>
             ))}
             {gaeste.map((g) => (
@@ -257,6 +292,47 @@ export function Anwesenheit({
               </li>
             ))}
           </ul>
+          {bearbeitbar && ohneSetzen && ausgeblendet.length > 0 && (
+            <div className={styles.ausgeblendet}>
+              <p className={styles.leise}>
+                {ausgeblendet.length} ausgeblendet
+                <button
+                  type="button"
+                  className={styles.link}
+                  aria-expanded={ausgeblendetZeigen}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setAusgeblendetZeigen(!ausgeblendetZeigen)}
+                >
+                  {ausgeblendetZeigen ? 'Verbergen' : 'Zeigen'}
+                </button>
+              </p>
+              {ausgeblendetZeigen && (
+                <ul className={styles.liste}>
+                  {ausgeblendet.map((p) => (
+                    <li key={p.person}>
+                      <span className={styles.wer}>
+                        <b>{p.name}</b>
+                        <small>nicht im Protokoll</small>
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.link}
+                        aria-label={`${p.name} zurückholen`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          ohneSetzen(ohne.filter((x) => x !== p.person));
+                          // Die letzte zurückgeholt: die Zeile verschwindet, „Zeigen“ beginnt beim nächsten Mal zu.
+                          if (ausgeblendet.length === 1) setAusgeblendetZeigen(false);
+                        }}
+                      >
+                        Zurückholen
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {bearbeitbar && gaesteSetzen && (
             <form
               className={styles.gast}

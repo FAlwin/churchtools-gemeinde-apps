@@ -128,7 +128,43 @@ export function platzhalterAnwenden(
   return { text: out, zuordnung };
 }
 
+/** So sieht ein Platzhalter aus (`[Person 1]`, `[Vertraulich 2]`) – die einzige Schreibweise, auf die alle Stellen hören. */
+export const PLATZHALTER_MUSTER = /\[(?:Person|Vertraulich) \d+\]/g;
+
+/** Ist der ganze Text ein einzelner Platzhalter? */
+export const istPlatzhalter = (text: string): boolean =>
+  /^\[(?:Person|Vertraulich) \d+\]$/.test(text);
+
 /** Platzhalter in der Antwort der KI wieder durch die Namen ersetzen. Unbekannte Platzhalter bleiben stehen. */
 export function zuruecksetzen(text: string, zuordnung: Readonly<Record<string, string>>): string {
-  return text.replace(/\[(?:Person|Vertraulich) \d+\]/g, (p) => zuordnung[p] ?? p);
+  return text.replace(PLATZHALTER_MUSTER, (p) => zuordnung[p] ?? p);
+}
+
+/** Alle Platzhalter im Text, jeder einmal, in der Reihenfolge des ersten Auftretens. */
+export function platzhalterIn(text: string): string[] {
+  return [...new Set(text.match(PLATZHALTER_MUSTER) ?? [])];
+}
+
+/**
+ * **Platzhalter, die die Zuordnung nicht kennt** – etwa, wenn die Antwort der KI aus einem früheren Auftrag stammt
+ * oder das Transkript hier nie eingefügt wurde.
+ */
+export function unzugeordnet(text: string, zuordnung: Readonly<Record<string, string>>): string[] {
+  return platzhalterIn(text).filter((p) => !(p in zuordnung));
+}
+
+/**
+ * Die Zuordnung samt den von Hand gewählten Namen (`manuell`: Platzhalter → Name). Leere Namen zählen nicht, ein
+ * Platzhalter, den die Zuordnung schon kennt, behält seinen Namen, und nur echte Platzhalter kommen hinein.
+ */
+export function zuordnungErgaenzen(
+  zuordnung: Readonly<Record<string, string>>,
+  manuell: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const aus: Record<string, string> = { ...zuordnung };
+  for (const [p, n] of Object.entries(manuell)) {
+    const name = n.trim();
+    if (name && istPlatzhalter(p) && !(p in zuordnung)) aus[p] = name;
+  }
+  return aus;
 }

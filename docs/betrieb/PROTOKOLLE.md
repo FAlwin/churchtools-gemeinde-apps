@@ -203,6 +203,15 @@ trägt man als freien Namen ein; sie stehen nur im Protokoll. Zugeklappt (beim L
 „Anwesend (n): … · Abwesend: …“. Gibt es zur Sitzung kein Gruppentreffen, legt „Gruppentreffen anlegen“ eins an (ohne
 Mail). Eintragen darf, wer in der Gruppe „Gruppentreffen pflegen“ hat – das gibt „Gruppe einrichten“ der Leitung.
 
+**Person aus der Anwesenheit nehmen:** Beim Schreiben hat jede Personenzeile einen kleinen Knopf **„… aus dem Protokoll
+nehmen“** – gedacht für Gemeinschaftskonten oder Mitglieder, die nie dabei sind, aber als Gruppenmitglied in jedem
+Gruppentreffen stehen. Das gilt **nur für dieses Protokoll** (gespeichert im festen Punkt, `props.ohne`); im
+ChurchTools-Gruppentreffen ändert sich nichts. Unter der Liste steht **„n ausgeblendet“** mit **„Zeigen“**; dort holt
+**„Zurückholen“** eine Person wieder herein. Ausgeblendete fehlen in den Zahlen, in der Kurzform, beim Lesen und im PDF,
+zählen beim Freigeben nicht als „noch offen“ und werden von der automatischen Vorbelegung nicht angefasst. Das Ausblenden
+geht auch, wenn das Gruppentreffen schon abgeschlossen ist (das Tippen von Anwesend/Abwesend dann nicht mehr). Ein neues
+Protokoll über „Wie letztes Mal“ übernimmt die ausgeblendeten Personen **nicht** – dort steht wieder die ganze Gruppe.
+
 **Punkte vorschlagen (S5-4):** Im Reiter „Sitzungen“ steht bei „Kommend“ **„Punkt vorschlagen“** – für alle, die die
 Gruppe sehen. Man wählt die Sitzung (vorbelegt die nächste; ohne festgelegte heißt sie „Nächste Sitzung“, der
 Vorschlag rutscht dann von selbst dorthin), ein Thema und freiwillig ein, zwei Sätze. Die Karte **„Vorschläge“** unter
@@ -282,12 +291,21 @@ Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kom
 2. **Antwort:** Den Auftrag in die KI deiner Wahl einfügen und die **ganze** Antwort hier einfügen. Klappt das Kopieren
    nicht, hilft „Auftrag anzeigen“: Text markieren und von Hand kopieren. Ist die Antwort nicht lesbar, steht die Meldung
    im Fenster und dein Text bleibt.
+   **Antwort schon da?** In Schritt 1 führt **„Antwort schon da? Direkt einfügen“** ohne Transkript gleich hierher (dann
+   gibt es keinen Auftrag zu kopieren; „Zurück“ geht zu Schritt 1). Kommen in der Antwort Platzhalter wie `[Person 1]`
+   vor, die das Fenster nicht kennt – etwa weil die Antwort aus einem früheren Lauf stammt –, steht darunter **„Platzhalter
+   zuordnen“**: je Platzhalter ein Feld für einen Namen, mit den Gruppenmitgliedern als Vorschlag. Leer lassen = der
+   Platzhalter bleibt stehen. Ein gewähltes Mitglied wird bei To-Dos zur zuständigen Person, jeder andere Name zum externen.
+   Ohne Transkript kennt das Fenster gar keine Platzhalter-Nummern, dann ist jeder Platzhalter der Antwort Handarbeit.
 3. **Vorschau:** Jede Zeile hat ein Häkchen (an) und zeigt klein, wohin sie kommt („→ 3.1 Küche“). Was zu keinem Punkt
    passt oder zu einem festen Punkt gehört, ist ausgegraut und wird nicht übernommen. Die echten Namen sind wieder
    eingesetzt (grün). **„Ausgewählte übernehmen“** fügt die Stichpunkte, Beschlüsse, To-Dos und Termine **hinter den Text
    ihres Punkts** ein (hat er Unterpunkte: vor den ersten, damit sie zu diesem Punkt zählen), neue Punkte ans Ende der
    Tagesordnung. Danach speichert das Protokoll von selbst; die To-Dos entstehen
    beim Speichern (Zuständige aus der Gruppe als Mitglied, alle anderen als extern). Bitte kurz im Blatt prüfen.
+   Bleiben Platzhalter ohne Namen stehen, nennt ein Hinweis oben alle auf einmal („… ist keinem Namen zugeordnet – nach
+   dem Übernehmen selbst ersetzen“). Ein To-Do, dessen Zuständiger so ein Platzhalter war, bekommt **niemanden**
+   („niemand zuständig“) – der Platzhalter wird nicht als externer Name übernommen.
 
 **Datenschutz:** Transkript, gefundene Namen und die Zuordnung bleiben **nur im Fenster** – nichts wird in ChurchTools
 oder im Browser gespeichert, Schließen heißt weg. Zur KI geht nur der Text, den du selbst kopierst und einfügst, mit
@@ -343,6 +361,15 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `namenFinden` über Transkript + Tagesordnungstitel + Gruppenname, `auftragBauen`/`antwortLesen`/`uebernahmePlanen` mit
   `EditorGriff.einfuegen` (Einfügungen in der gelieferten Reihenfolge, Plan mit frisch gelesenem Dokument, neue Block-IDs
   `crypto.randomUUID()`). Zustand nur im Fenster; ein Tipp neben das Fenster schließt es nicht, solange Text drinsteht.
+  Platzhalter von Hand (17.11.2026): `unzugeordnet` (welche Platzhalter die Zuordnung nicht kennt) und
+  `zuordnungErgaenzen` (führt die gewählten Namen mit der Zuordnung zusammen) in `platzhalter.ts`, `offenePlatzhalter`
+  (was in der Vorschau offen bleibt) in `ki.ts`; ein Platzhalter ohne Namen steht bei einem To-Do in `Eintrag.offen`, nie in
+  `wer`. Ohne Transkript rechnet das Fenster mit leerer Zuordnung und ohne Funde.
+- Anwesenheit ohne bestimmte Personen (17.11.2026): `props.ohne` am Verweis-Block „anwesenheit“ (JSON-Liste von
+  Personen-IDs, `ohneAus`/`ohneWert` in `shared/protokolle/anwesenheit.ts`). `ohneAusgeblendete` nimmt sie aus dem
+  `TreffenStand` und ist die einzige Stelle dafür – benutzt von `Anwesenheit.tsx`, `protokollBlatt.ts` (Lesen, PDF,
+  Teilen), `freigabeHinweise` (liest `ohne` am ersten Anwesenheits-Block des Dokuments) und `vorbelegung`/`vorbelegen`.
+  Wer eine neue Stelle baut, die Personen der Anwesenheit zeigt, zählt oder prüft, geht darüber.
 - Schreiben: `protokolle/src/schreiben.ts` (Sperre nehmen, speichern, übernehmen, freigeben – vorher frisch lesen,
   nachher nachlesen), `schreibSteuerung.ts` (wann gespeichert wird), Editor `DokumentEditor.tsx` + `editorSchema.ts`
   (BlockNote 0.56, fest gepinnt – Updates bewusst, die Schnittstellen ändern sich in 0.x noch), Word-Listen

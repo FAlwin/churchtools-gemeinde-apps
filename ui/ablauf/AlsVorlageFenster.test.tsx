@@ -222,10 +222,25 @@ describe('AlsVorlageFenster – vorhandene Vorlage ersetzen', () => {
     expect(screen.queryByText(/Frauenfrühstück/)).toBeNull(); // kein Recht im Kalender 3
   });
 
-  it('die erste Vorlage ist gewählt; roter Hinweis nennt die richtigen Zahlen, der Knopf ist rot und heißt „Ersetzen“', async () => {
+  it('nichts ist vorausgewählt: kein Warntext, „Ersetzen“ gesperrt, bis man eine Vorlage antippt (Alwin, 17.11.2026)', async () => {
     zeige(zugriff(), { punkte: 6 });
     await geladen();
     await ersetzenWaehlen();
+    expect(screen.queryByText(/werden durch die/)).toBeNull();
+    expect(knopf('Ersetzen')).toHaveProperty('disabled', true);
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Gottesdienst9 Punkte$|^Gottesdienst 9 Punkte$/ }),
+    );
+    expect(knopf('Ersetzen')).toHaveProperty('disabled', false);
+  });
+
+  it('gewählt: roter Hinweis nennt die richtigen Zahlen, der Knopf ist rot und heißt „Ersetzen“', async () => {
+    zeige(zugriff(), { punkte: 6 });
+    await geladen();
+    await ersetzenWaehlen();
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Gottesdienst9 Punkte$|^Gottesdienst 9 Punkte$/ }),
+    );
     expect(
       screen.getByText(
         'Die 9 Punkte von „Gottesdienst“ werden durch die 6 Punkte dieses Ablaufs ersetzt. Name und Kalender bleiben. Abläufe, die schon aus der Vorlage entstanden sind, ändern sich nicht.',
@@ -268,6 +283,9 @@ describe('AlsVorlageFenster – vorhandene Vorlage ersetzen', () => {
     const { onFertig, onClose } = zeige(z);
     await geladen();
     await ersetzenWaehlen();
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Gottesdienst9 Punkte$|^Gottesdienst 9 Punkte$/ }),
+    );
     expect(z.stand).toHaveBeenCalledTimes(1);
     fireEvent.click(knopf('Ersetzen'));
     expect((await screen.findByRole('alert')).textContent).toBe(VORLAGE_GEAENDERT);
@@ -282,6 +300,9 @@ describe('AlsVorlageFenster – vorhandene Vorlage ersetzen', () => {
     zeige(z);
     await geladen();
     await ersetzenWaehlen();
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Gottesdienst9 Punkte$|^Gottesdienst 9 Punkte$/ }),
+    );
     fireEvent.click(knopf('Ersetzen'));
     expect((await screen.findByRole('alert')).textContent).toBe(VORLAGE_GESPERRT);
     expect(z.stand).toHaveBeenCalledTimes(1);

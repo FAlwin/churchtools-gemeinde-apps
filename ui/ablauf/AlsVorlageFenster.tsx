@@ -91,8 +91,9 @@ export function AlsVorlageFenster({
       ),
     [stand, darfIn, terminKalenderId],
   );
-  // Bis jemand wählt (oder wenn die gewählte inzwischen fehlt), gilt die erste.
-  const vorlage = ersetzbar.find((v) => v.id === gewaehlteVorlage) ?? ersetzbar[0] ?? null;
+  // **Bewusst wählen** (Alwin, 17.11.2026, nach dem Durchklick): Nichts ist vorausgewählt – „Ersetzen“ überschreibt eine
+  // Vorlage, und vorausgewählt war im Test ausgerechnet eine echte. Fehlt die gewählte inzwischen, ist wieder keine gewählt.
+  const vorlage = ersetzbar.find((v) => v.id === gewaehlteVorlage) ?? null;
 
   const ersetzen = weg === 'ersetzen';
   const nameFehler = name === '' ? null : vorlageNameFehler(name);

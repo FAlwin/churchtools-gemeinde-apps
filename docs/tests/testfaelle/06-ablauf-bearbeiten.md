@@ -555,7 +555,7 @@ für den Kalender des Termins) und speichert den Ablauf als Vorlage – ohne Nam
    In ChurchTools: Vorlage da, **alle** Punkte in der Reihenfolge, Dauer, Notiz, Infos je Dienstgruppe, Lied, der ausgeblendete Punkt,
    die Grenze „vor Beginn“; als Zuständige nur der Platzhalter „[Moderation]“, **keine Person**.
 5. Im Ablauf einen Punkt ändern, wieder **Als Vorlage … → Vorhandene Vorlage ersetzen**: Nur Vorlagen mit Recht, die des Termin-Kalenders
-   zuerst, je „N Punkte“; die Probe-Vorlage wählen: roter Hinweis „Die N Punkte von „…“ werden durch die M Punkte dieses Ablaufs ersetzt …“
+   zuerst, je „N Punkte“; **nichts ist vorausgewählt**, „Ersetzen“ ist gesperrt; die Probe-Vorlage wählen: roter Hinweis „Die N Punkte von „…“ werden durch die M Punkte dieses Ablaufs ersetzt …“
    mit den richtigen Zahlen, roter Knopf **Ersetzen** → Hinweis „Vorlage „…“ ersetzt.“; in ChurchTools stimmt der neue Stand, Name und Kalender bleiben.
 6. **Woanders geändert:** Fenster „Ersetzen“ öffnen, in ChurchTools die Probe-Vorlage ändern, dann **Ersetzen**: Meldung „… woanders
    geändert …“ **im Fenster**, nichts überschrieben; ein zweiter Versuch gelingt.

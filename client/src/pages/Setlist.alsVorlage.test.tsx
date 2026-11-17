@@ -171,7 +171,8 @@ describe('Speichern über die Weiche', () => {
     zeige([2]);
     fireEvent.click(link()!);
     fireEvent.click(await screen.findByRole('button', { name: 'Vorhandene Vorlage ersetzen' }));
-    await screen.findByRole('button', { name: /Sonntag/ });
+    // Nichts ist vorausgewählt (Alwin, 17.11.2026): bewusst die Vorlage antippen.
+    fireEvent.click(await screen.findByRole('button', { name: /Sonntag/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Ersetzen' }));
     expect(await screen.findByText('Vorlage „Sonntag“ ersetzt.')).toBeTruthy();
     expect(api.vorlageMitTerminErsetzen).toHaveBeenCalledWith(11, 9, 'S');

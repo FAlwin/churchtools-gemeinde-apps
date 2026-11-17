@@ -96,7 +96,7 @@ $anzahl-farben: 8;
   max-width: var(--cw);
 }
 .abgesagtSpalte {
-  opacity: 0.55;
+  @include m.abgesagt-blass;
 }
 
 // Blockkopf: der Dienst als Tag, dahinter „2 Personen“. Der Inhalt klebt links, damit er beim Scrollen im Bild bleibt.
@@ -293,8 +293,10 @@ $anzahl-farben: 8;
   font-weight: 700;
   line-height: 1;
 }
-// Entwurf: gestrichelter Rand, wie in der Matrix blau. **Anfrage** (P2m): blass, „?“ im gestrichelten Kreis. **direkt**:
-// kräftiger – dickerer Rand, dunklere Fläche, fette Schrift, Haken im gefüllten Kreis (Entwurf `e9-p2-modus.html`).
+// Entwurf, blau – die Art sagt der **Rahmen** (Alwin 17.11.2026: „das Fragezeichen sieht man ganz schlecht … vielleicht
+// mit dem Rahmen, gestrichelt oder durchgezogen“): **Anfrage** gestrichelt, **direkt** durchgezogen (dazu dunklere Fläche,
+// fette Schrift). Das Symbol steht in beiden Fällen im **gefüllten** blauen Kreis wie in der Matrix (`.ic`) – vorher war
+// das „?“ ein gestrichelter 12-px-Kreis in Blau auf Blau und im Dunkeln kaum zu sehen.
 .entwurf {
   --ti: var(--blue);
   background: var(--blue-soft);
@@ -304,11 +306,17 @@ $anzahl-farben: 8;
   outline-offset: -1.5px;
 
   .frage {
-    border-style: dashed;
+    width: 14px;
+    height: 14px;
+    border: 0;
+    background: var(--blue);
+    color: var(--symbol-tinte);
+    font-size: 10px;
   }
 }
 .entwurfDirekt {
   background: color-mix(in srgb, var(--blue) 26%, var(--surface2));
+  outline-style: solid;
   outline-width: 2px;
   outline-offset: -2px;
   outline-color: var(--blue-ink);

@@ -467,6 +467,9 @@ describe('Überschriften in Einzahl und Mehrzahl', () => {
     const z1 = zeilen(gut(), staendeBis(2029), eins);
     expect(titel(z1, 'wechselGruppen')).toBe('1 Wechsel-Gruppe');
     expect(titel(z1, 'routinen')).toBe('1 Routine');
+    expect(z1.find((x) => x.id === 'routinen')!.stand.text).toBe(
+      `räumt die Wechsel-Gruppe ${E.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
+    );
     const z2 = zeilen();
     expect(titel(z2, 'wechselGruppen')).toBe('2 Wechsel-Gruppen');
     expect(titel(z2, 'routinen')).toBe('2 Routinen');

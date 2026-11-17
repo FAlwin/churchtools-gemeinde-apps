@@ -586,7 +586,9 @@ function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
     id: 'routinen',
     titel,
     stand: ok(
-      `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
+      wege.length === 1
+        ? `räumt die Wechsel-Gruppe ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`
+        : `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
     ),
   };
 }

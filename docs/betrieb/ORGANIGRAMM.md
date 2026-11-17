@@ -402,8 +402,8 @@ sich das Fenster nicht schließen.
 (Einrichten):
 
 - **Wechsel-Gruppen anlegen unter:** die Bereichsgruppe (wählt man wie „Anfangen bei“ mit Suche; `SpitzenAuswahl`). Sie darf
-  keine Stufe sein. **Beim Ändern ist sie gesperrt** (O9-F11): nur Anzeige mit dem Satz „Ändern in ChurchTools: Die
-  Wechsel-Gruppen dort unter die neue Gruppe hängen.“ – die Wechsel-Gruppen hängen schon darunter, und „Einrichten“ hängt
+  keine Stufe sein. **Beim Ändern ist sie gesperrt** (O9-F11): nur Anzeige mit dem Satz „Lässt sich hier nicht
+  ändern. Zum Wechseln in ChurchTools die Wechsel-Gruppen unter die neue Gruppe hängen.“ – die Wechsel-Gruppen hängen schon darunter, und „Einrichten“ hängt
   nichts um.
 - **Stufen, jüngste zuerst:** je Zeile die Gruppe, „ab N Jahren“, nach oben, nach unten, entfernen (mindestens zwei);
   „Stufe hinzufügen“ nimmt das Alter der letzten + 3. Dieselbe Gruppe darf nicht zweimal vorkommen, das Alter muss steigen.

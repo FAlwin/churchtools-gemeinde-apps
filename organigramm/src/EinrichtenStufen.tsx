@@ -121,8 +121,9 @@ export function EinrichtenStufen({
               {form.bereichGruppeId === null ? '–' : name(form.bereichGruppeId)}
             </span>
             <span className={styles.klein}>
-              Ändern in ChurchTools: Die Wechsel-Gruppen dort unter die neue Gruppe hängen. Wer
-              diese Gruppe leitet, sieht alle Wechsel-Gruppen (Bereichsleitung).
+              Lässt sich hier nicht ändern. Zum Wechseln in ChurchTools die Wechsel-Gruppen unter
+              die neue Gruppe hängen. Wer diese Gruppe leitet, sieht alle Wechsel-Gruppen
+              (Bereichsleitung).
             </span>
           </>
         ) : (

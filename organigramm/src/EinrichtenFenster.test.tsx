@@ -158,7 +158,7 @@ describe('Fenster öffnen – aus beiden Stellen', () => {
     expect(
       within(screen.getByRole('dialog', { name: 'Stufen ändern' })).getByText('Kinder & Jugend'),
     ).toBeTruthy();
-    expect(screen.getByText(/Ändern in ChurchTools/)).toBeTruthy();
+    expect(screen.getByText(/Lässt sich hier nicht ändern/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gruppe der Stufe 2: Fische' })).toBeTruthy();
     expect(screen.getByLabelText<HTMLInputElement>('ab Alter, Stufe 2').value).toBe('7');
     expect(screen.getByLabelText<HTMLInputElement>('Ankündigung').value).toBe('8');

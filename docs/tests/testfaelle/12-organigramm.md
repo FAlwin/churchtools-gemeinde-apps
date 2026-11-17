@@ -746,7 +746,7 @@ nichts.
 6. **Fußzeile:** „Abbrechen“ und der Hauptknopf („Jetzt einrichten“ bzw. „Änderungen schreiben“) – er ist an, sobald alles
    gelesen und gut ist (beim Einrichten erst mit dem Haken „Ich habe die Rechte der Leitung geprüft …“, beim Ändern gibt es
    keinen Haken). Zurück zu den Stufen geht es mit „‹“ vor dem Titel. Nach „Abbrechen“ ist in ChurchTools und im Speicher
-   nichts anders. **Beim Ändern** ist die Bereichsgruppe nur eine Anzeige mit dem Satz „Ändern in ChurchTools: …“ (gesperrt).
+   nichts anders. **Beim Ändern** ist die Bereichsgruppe nur eine Anzeige mit dem Satz „Lässt sich hier nicht ändern. …“ (gesperrt).
 7. **Fremde Regeln:** In einer gewählten Stufen-Gruppe steht eine von Hand geschriebene Regel: roter Hinweis mit Gruppe,
    Zahl und Beispiel, der Haken ist nicht anklickbar. Gruppe aus den Stufen nehmen (Zurück): Der Hinweis ist weg. Netz
    kurz trennen und die Vorschau neu öffnen: „Die Regeln von … ließen sich nicht prüfen“ mit „Nochmal prüfen“ – nie so, als

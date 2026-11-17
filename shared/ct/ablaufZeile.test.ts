@@ -8,7 +8,9 @@ import {
   itemLabel,
   itemTitleParts,
   istWeggelassen,
+  platzhalterZeile,
 } from './ablaufZeile';
+import { responsibleEntries } from './agendaFormat';
 
 /** Regeln der Anzeige-Bezeichnung (#200) – gelten in Liste, Vollansicht und Dialogen gleich. */
 describe('itemTitleParts', () => {
@@ -243,5 +245,28 @@ describe('ablaufEnde – Balken „Ende“ in der Matrix (29.10.2026)', () => {
   it('kein Punkt mit Uhrzeit (oder leer): keins', () => {
     expect(ablaufEnde([z(null, null)])).toBeNull();
     expect(ablaufEnde([])).toBeNull();
+  });
+});
+
+describe('platzhalterZeile (E10-V3a)', () => {
+  it('nimmt den Text der Vorlage, wie ChurchTools ihn schreibt – Platzhalter in Klammern', () => {
+    expect(platzhalterZeile('[Moderation]', [])).toEqual(['[Moderation]']);
+    expect(platzhalterZeile('[Moderation], [Technik] , ', [])).toEqual([
+      '[Moderation]',
+      '[Technik]',
+    ]);
+  });
+
+  it('ohne Text: die Dienste aus persons[] als Platzhalter in Klammern, Namen bleiben', () => {
+    const entries = responsibleEntries({
+      responsible: {
+        persons: [{ service: 'Moderation' }, { service: 'Leitung', person: { title: 'Anna' } }],
+      },
+    });
+    expect(platzhalterZeile('', entries)).toEqual(['[Moderation]', 'Anna']);
+  });
+
+  it('niemand zuständig: nichts', () => {
+    expect(platzhalterZeile('', [])).toEqual([]);
   });
 });

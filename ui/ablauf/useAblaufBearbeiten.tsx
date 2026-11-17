@@ -27,7 +27,7 @@ import {
 import { ConfirmDialog } from '../fenster/ConfirmDialog';
 import { Toast } from '../fenster/Toast';
 import { useToast } from '../fenster/useToast';
-import { Icon } from '../icons/icons';
+import { Icon, type IconName } from '../icons/icons';
 import { SchwebePlus } from '../bedienung/SchwebePlus';
 import { AuswahlBlatt, HinzufuegenMenue, type Option } from '../bedienung/OptionWaehlen';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
@@ -64,6 +64,22 @@ export interface AblaufAktionen {
 }
 
 /**
+ * Die Aktionen für den Ablauf einer **Ablaufvorlage** (E10-V3a): dieselben wie am Termin, **ohne das Auge** – eine Vorlage
+ * hat keinen Termin, an dem man einen Punkt weglassen könnte. Eigener Typ statt einer Attrappe, die der Aufrufer füllen
+ * müsste: Wer das Auge nicht hat, kann es nicht aus Versehen aufrufen.
+ */
+export type VorlagenAktionen = Omit<AblaufAktionen, 'setWeggelassen'>;
+
+/** Ein Link rechts in der Hinweiszeile über der Liste („Umbenennen …“, „Löschen …“) – neben „Neu aufsetzen …“. */
+export interface HinweisLink {
+  label: string;
+  icon: IconName;
+  onClick: () => void;
+  /** Rot – etwas geht verloren („Löschen …“). */
+  gefahr?: boolean;
+}
+
+/**
  * Muss nach diesem Schreibfehler der Ablauf neu gelesen werden? Punkt weg (404), Ablauf anders (409), derselbe Punkt
  * oder die Reihenfolge inzwischen geändert (412, E6-3c), abgeschlossen (423). Eine Stelle für Musik-App und
  * Dienstplaner – sonst zeigte eine App nach dem Fehler den alten Stand.
@@ -83,21 +99,20 @@ interface Wohin {
   titel?: string;
 }
 
-export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
+interface BearbeitenBasis<T extends AblaufZeile> {
   /** Bearbeiten-Modus an? Aus: Überlagerung leer, „Rückgängig" verworfen. */
   aktiv: boolean;
   /** Ablauf geladen und ohne Fehler – erst dann gibt es das Plus. */
   bereit: boolean;
   /** Der Server-Stand (auch mit „entfernt"-Platzhaltern – die gehören nur in die Ansicht). */
   items: readonly T[];
-  /** Uhrzeit des Beginns für den Balken „Beginn" (#423). */
-  beginn: string;
+  /** Uhrzeit des Beginns für den Balken „Beginn" (#423) – in einer Vorlage ohne: nur „Beginn“. */
+  beginn?: string;
   /** In ChurchTools abgeschlossen: nichts ändern, stattdessen `sperrHinweis` zeigen. */
   abgeschlossen: boolean;
   sperrHinweis: string;
   /** Speichert gerade die Reihenfolge („Speichere…" statt der Anleitung). */
   speichertGerade?: boolean;
-  aktionen: AblaufAktionen;
   /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
   dienste: AgendaServiceOption[];
   /** Liedwahl im Punkt-Fenster (Musik-App); ohne nur anzeigen (Dienstplaner). */
@@ -121,6 +136,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * Ablauf abgeschlossen, steht der Knopf allein da und zeigt den Sperr-Hinweis wie das Plus.
    */
   neuAufsetzen?: () => void;
+  /**
+   * Weitere Links rechts in der Hinweiszeile, nach „Neu aufsetzen …“ (E10-V3a: „Umbenennen …“, „Löschen …“ in einer
+   * Vorlage; später „Als Vorlage …“). Generisch – die Liste weiß nichts davon, was sie tun.
+   */
+  hinweisLinks?: readonly HinweisLink[];
   /**
    * Am iPad/Rechner statt des schwebenden Plus ein grünes „+ Eintrag hinzufügen“ im Seitenkopf (`kopfKnopf`) – wie
    * „+ Gruppe erstellen“ in ChurchTools (Scheibe S2, Alwin 26.10.2026). Am Handy bleibt das Plus.
@@ -147,6 +167,14 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
   ziehen?: { spalte: number; neuLaden: () => void };
 }
 
+/**
+ * Die Optionen – für einen **Termin** (Standard) oder eine **Ablaufvorlage** (`vorlage: true`, E10-V3a). Der Modus
+ * bestimmt, welche Aktionen verlangt werden (die Vorlage hat kein Auge) und was Fenster und Zeilen zeigen: kein Auge,
+ * Platzhalter neutral. Infos je Dienstgruppe gelten wie am Termin (nicht an Überschriften).
+ */
+export type AblaufBearbeitenOptionen<T extends AblaufZeile> = BearbeitenBasis<T> &
+  ({ vorlage?: false; aktionen: AblaufAktionen } | { vorlage: true; aktionen: VorlagenAktionen });
+
 export function useAblaufBearbeiten<T extends AblaufZeile>(
   o: AblaufBearbeitenOptionen<T>,
 ): {
@@ -159,6 +187,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   fehlerLoeschen: () => void;
 } {
   const { aktiv, items, abgeschlossen, aktionen, beiFehler } = o;
+  const vorlage = o.vorlage === true;
   // Der Stand, auf den nach einem Fehler zurückgerollt wird – ohne „entfernt"-Platzhalter (#161). Bis E6-2b-3
   // rollten Ziehen und Löschen auf `items` MIT Platzhaltern zurück, Bearbeiten und Rückgängig ohne.
   const serverStand = (): T[] => items.filter((i) => !i.removed);
@@ -404,6 +433,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               schmal={o.schmal}
               item={item}
               infoZeilen={o.infoSpalten}
+              vorlage={vorlage}
               aktionen={zeilenAktionen(item, i)}
               {...(spalte !== undefined
                 ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
@@ -431,22 +461,40 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     </SortableContext>
   );
 
+  const hatLinks = !!o.neuAufsetzen || (o.hinweisLinks?.length ?? 0) > 0;
+
   const liste = (
     <>
       {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
-      {!abgeschlossen && !o.neuAufsetzen && !o.schmal && (
+      {!abgeschlossen && !hatLinks && !o.schmal && (
         <div className={styles.editHint}>{anleitung}</div>
       )}
-      {o.neuAufsetzen && !o.schmal && (
+      {hatLinks && !o.schmal && (
         <div className={`${styles.editHint} ${styles.hintZeile}`}>
           <span>{abgeschlossen ? null : anleitung}</span>
-          <button
-            type="button"
-            className={styles.neuAufsetzen}
-            onClick={() => (abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : o.neuAufsetzen?.())}
-          >
-            <Icon name="refresh" size={14} /> Neu aufsetzen …
-          </button>
+          <span className={styles.hintLinks}>
+            {o.neuAufsetzen && (
+              <button
+                type="button"
+                className={styles.neuAufsetzen}
+                onClick={() =>
+                  abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : o.neuAufsetzen?.()
+                }
+              >
+                <Icon name="refresh" size={14} /> Neu aufsetzen …
+              </button>
+            )}
+            {(o.hinweisLinks ?? []).map((l) => (
+              <button
+                key={l.label}
+                type="button"
+                className={`${styles.neuAufsetzen}${l.gefahr ? ` ${styles.hinweisGefahr}` : ''}`}
+                onClick={l.onClick}
+              >
+                <Icon name={l.icon} size={14} /> {l.label}
+              </button>
+            ))}
+          </span>
         </div>
       )}
       {o.gruppenVerborgen && !o.schmal && (
@@ -527,6 +575,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           startNach={neuStart.nach}
           startVorBeginn={neuStart.vorBeginn}
           infoGruppen={o.infoGruppen}
+          vorlage={vorlage}
           services={o.dienste}
           liedWahl={o.liedWahl}
           onClose={() => setNeuStart(null)}
@@ -553,7 +602,10 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           }
           vorBeginn={actionItem.vorBeginn}
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
-          onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
+          onSetWeggelassen={
+            o.vorlage === true ? undefined : (weg) => o.aktionen.setWeggelassen(actionItem.id, weg)
+          }
+          vorlage={vorlage}
           onRequestDelete={() => setPendingDelete(actionItem)}
           // „Darunter einfügen“ (Alwin, 30.10.2026, Entwurf B): erst wählen, was – dann das Fenster an dieser Stelle.
           onDarunter={() => {

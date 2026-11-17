@@ -240,3 +240,21 @@ export function zeitPlus(zeit: string, minuten: number): string | null {
 
 /** „[Musik], Peter“ → „Musik, Peter“ – in der Feldliste stehen Dienste ohne Klammern (wie die ChurchTools-App). */
 export const zustaendigText = (text: string) => text.replace(/\[([^\]]+)\]/g, '$1').trim();
+
+/**
+ * **Wer in einer Ablaufvorlage zuständig ist** (E10-V3a): Eine Vorlage hat nie Personen, nur Dienste als Platzhalter –
+ * ChurchTools schreibt `[Moderation]` in den Text. Sie stehen so da, wie sie gespeichert sind, nicht als offener Dienst
+ * mit „?“ (der gehört an einen Termin, an dem noch jemand fehlt). Ohne Text, aber mit Diensten aus `persons[]`
+ * (`responsibleEntries`), kommen die Dienste in eckigen Klammern; eine Person ohne Klammern bleibt, wie sie ist.
+ */
+export function platzhalterZeile(
+  responsibleText: string,
+  entries: readonly { label: string; open: boolean }[],
+): string[] {
+  const ausText = responsibleText
+    .split(',')
+    .map((t) => t.trim())
+    .filter((t) => t !== '');
+  if (ausText.length > 0) return ausText;
+  return entries.map((e) => (e.open ? `[${e.label}]` : e.label));
+}

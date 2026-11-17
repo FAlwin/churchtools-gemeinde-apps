@@ -55,14 +55,15 @@ ChurchTools-App und zusätzlich im Dienstplaner.
 Die Erweiterung kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit
 deren Sitzung. **Ein eigenes Rechte-System gibt es nicht.**
 
-| Wer                               | Darf im Dienstplaner             | Woher (ChurchTools)                                                  |
-| --------------------------------- | -------------------------------- | -------------------------------------------------------------------- |
-| alle mit Zugang zur Erweiterung   | eigene Dienste und Gruppen sehen | Erweiterung „Dienstplaner“ sehen                                     |
-| Planer einer Dienstgruppe         | diese Dienstgruppe planen        | Recht „Dienste einer Dienstgruppe bearbeiten“ für diese Dienstgruppe |
-| Leitung der Gruppe eines Dienstes | diesen Dienst planen             | Rolle mit Leitung in der ChurchTools-Gruppe des Dienstes             |
-| Admin eines Termins               | an diesem Termin planen          | als Admin am Termin eingetragen                                      |
-| Ablauf-Pflege                     | Abläufe bearbeiten (ab E6)       | Recht „Ablauf bearbeiten“ für den Kalender oder Admin des Termins    |
-| Planer mit Entwürfen              | Entwürfe einer Gruppe eintragen  | Rechte auf die Kategorie „Entwürfe <Gruppe>“ (s. u.)                 |
+| Wer                               | Darf im Dienstplaner             | Woher (ChurchTools)                                                                      |
+| --------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| alle mit Zugang zur Erweiterung   | eigene Dienste und Gruppen sehen | Erweiterung „Dienstplaner“ sehen                                                         |
+| Planer einer Dienstgruppe         | diese Dienstgruppe planen        | Recht „Dienste einer Dienstgruppe bearbeiten“ für diese Dienstgruppe                     |
+| Leitung der Gruppe eines Dienstes | diesen Dienst planen             | Rolle mit Leitung in der ChurchTools-Gruppe des Dienstes                                 |
+| Admin eines Termins               | an diesem Termin planen          | als Admin am Termin eingetragen                                                          |
+| Ablauf-Pflege                     | Abläufe bearbeiten (ab E6)       | Recht „Ablauf bearbeiten“ für den Kalender oder Admin des Termins                        |
+| Vorlagen-Pflege                   | Ablaufvorlagen bearbeiten (E10)  | Recht „Ablaufvorlagen bearbeiten“ (`edit agenda templates`) für den Kalender der Vorlage |
+| Planer mit Entwürfen              | Entwürfe einer Gruppe eintragen  | Rechte auf die Kategorie „Entwürfe <Gruppe>“ (s. u.)                                     |
 
 Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3-4 (eine Regel:
 `darfDienstPlanen`). Der Reiter „Planen“ erscheint für globale Planer und Gruppenleitungen; wer nur Admin
@@ -273,6 +274,31 @@ verbergen“ sind nie fokussierbar.
   Regel „wer steht an diesem Platz“ ist `shared/dienstplan/fokus.ts` (`platzPerson`) – Umrandung, Zählen, Suchvorschläge und
   Mini-Zeile rechnen alle daraus. Farben: `--fokus`, `--fokus-grund`, `--fokus-text` in `ui/design/_farben.scss` (Dunkel:
   nur die Schrift in `_variables.scss`).
+
+**Ablaufvorlagen ansehen und bearbeiten** (E10-V3a, 17.11.2026; Entwurf `e10-vorlagen.html`): In **Planen** steht in der
+Werkzeugleiste links neben „Ablauf bearbeiten“ der Knopf **„Vorlagen“** – kein eigener Reiter, „Planen“ bleibt markiert,
+**„‹ Planen“** führt zurück. Die Seite hat die Adresse `#/vorlagen`, eine geöffnete Vorlage `#/vorlage/<ID>` (Zurück im Browser
+und Neuladen gehen).
+
+- **Liste:** Die Vorlagen von ChurchTools nach **Kalender** gruppiert; je Zeile Name und „N Punkte · N vor Beginn · geändert
+  TT.MM.“. Wo man in dem Kalender **keine** Vorlagen bearbeiten darf, steht am Band **„nur ansehen“** (Schloss). **„Neue Vorlage“**
+  erscheint nur, wenn man in mindestens einem Kalender darf.
+- **Neue Vorlage:** Name (höchstens 100 Zeichen) und Kalender – angeboten werden nur Kalender mit dem Recht. Danach geht die leere
+  Vorlage gleich im Bearbeiten-Modus auf. Vorbelegt ist der Kalender, in dem es schon die meisten Vorlagen gibt.
+- **Vorlage öffnen:** derselbe Ablauf-Baustein wie am Termin, aber **ohne Uhrzeiten, Personen, Live, Musik-App und Auge**
+  („An diesem Termin weglassen“ gibt es ohne Termin nicht). **Infos je Dienstgruppe** gibt es wie am Termin (Feld im Fenster,
+  Knopf „Spalten“ mit eigener, gemerkter Wahl für die Vorlagen-Seite) – an Text- und Lied-Punkten; an Überschriften nicht
+  (ChurchTools nähme sie mit Erfolg an und speicherte nichts). Dienste stehen als Platzhalter „[Moderation]“ da, nicht als offener Dienst
+  mit „?“. „vor Beginn“ gibt es auch in Vorlagen. **Bearbeiten** nur mit dem Recht; dann stehen rechts in der Hinweiszeile
+  **„Umbenennen …“** und **„Löschen …“** (rot).
+- **Löschen** fragt nach und lässt sich **nicht rückgängig machen** (ChurchTools hat dafür keinen Papierkorb); Abläufe, die schon aus
+  der Vorlage entstanden sind, bleiben. Gesperrte Vorlagen (in ChurchTools gesperrt, per Schnittstelle nicht zu entsperren)
+  melden das und lassen sich nur dort ändern.
+- **Technik:** Die Bausteine liegen in `ui/ablauf/` (`VorlagenBereich`, `VorlagenListe`, `VorlageAnsicht`, `VorlagenFenster`,
+  der Vorlagen-Modus `vorlage` in `useAblaufBearbeiten`/`PunktFenster`/`AblaufListe`) und kennen weder ChurchTools noch den Weg
+  dorthin – das gibt die App über den `VorlagenZugriff` herein (Dienstplaner: `dienstplaner/src/vorlagenZugriff.ts` über den Kern
+  `shared/ct/ablaufVorlagen.ts` und `schreibKern.ts`; die Musik-App folgt in V3b). Die Liste rechnet
+  `shared/ct/ablaufVorlagenListe.ts` aus `GET /agendatemplates` und `GET /calendars`.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { ResponsibleEntry } from '@shared/types/index';
-import { itemTitleParts } from '@shared/ct/ablaufZeile';
+import { itemTitleParts, platzhalterZeile } from '@shared/ct/ablaufZeile';
 import { Icon } from '../icons/icons';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { useAufklapp } from '../bedienung/useAufklapp';
@@ -223,7 +223,33 @@ export function WeggelassenHinweis() {
  * Zeile der Zuständigen: besetzte als Name, offene Dienste rot mit „?". Grau unter dem Titel wie in der ChurchTools-App
  * (E6-O1; vorher mit Personen-Symbol davor – das tragen jetzt die Kreise rechts).
  */
-export function ResponsibleLine({ entries }: { entries: AblaufZeile['responsible'] }) {
+export function ResponsibleLine({
+  entries,
+  vorlage,
+}: {
+  entries: AblaufZeile['responsible'];
+  /**
+   * In einer Ablaufvorlage (E10-V3a): Es gibt nie Personen, nur Dienste als Platzhalter – die stehen neutral als
+   * „[Moderation]“ da (`platzhalterZeile`), nicht als offener Dienst in Rot. Der Text kommt aus `responsibleText`.
+   */
+  vorlage?: { text: string };
+}) {
+  if (vorlage) {
+    const teile = platzhalterZeile(vorlage.text, entries);
+    if (teile.length === 0) return null;
+    return (
+      <div className={styles.resp}>
+        <span className={styles.respList}>
+          {teile.map((t, i) => (
+            <span key={i} className={styles.respName}>
+              {t}
+              {i < teile.length - 1 ? ',' : ''}
+            </span>
+          ))}
+        </span>
+      </div>
+    );
+  }
   if (entries.length === 0) return null;
   return (
     <div className={styles.resp}>

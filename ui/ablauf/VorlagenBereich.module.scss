@@ -1,0 +1,45 @@
+// Die Seite „Ablaufvorlagen“ (E10-V3a): Kopf mit „‹ Zurück“, Titel und „Neue Vorlage“, darunter die Liste.
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+  }
+}
+
+.zurueck {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hinweis {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}

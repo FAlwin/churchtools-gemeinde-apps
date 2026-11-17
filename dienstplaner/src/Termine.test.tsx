@@ -63,6 +63,14 @@ describe('Termine (E3-2)', () => {
     expect(screen.getByText('abgesagt')).toBeTruthy();
   });
 
+  it('Hilfe „?“ statt Fußnote: Knopf da, Fenster nennt, was man unter „Alle“ sieht', () => {
+    zeige();
+    expect(screen.queryByText(/entscheidet ChurchTools \(Kalender-Rechte\)/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Dienste' }));
+    expect(screen.getByRole('dialog', { name: 'Hilfe · Dienste' })).toBeTruthy();
+    expect(screen.getByText(/entscheidet ChurchTools \(Kalender-Rechte\)/)).toBeTruthy();
+  });
+
   it('Nicht-Planer sehen keine freien Plätze', () => {
     zeige(false);
     fireEvent.click(screen.getByRole('button', { name: 'Alle' }));

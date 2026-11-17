@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLaden, type Ladestand } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf, KopfLink } from '@ui/bedienung/KopfKnopf';
+import { HilfeKnopf } from '@ui/bedienung/HilfeKnopf';
+import { HILFE_TERMIN } from './hilfeTexte';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -293,6 +295,7 @@ export function TerminAnsicht({
                 symbol={<Icon name="share" size={16} />}
                 nurSymbol
               />
+              {planer && <HilfeKnopf seite="Termin" abschnitte={HILFE_TERMIN} />}
             </div>
             {infoKnopf}
             {dateiKnopf}
@@ -387,13 +390,6 @@ export function TerminAnsicht({
                   })}
                 </div>
               ))
-            )}
-            {planer && (
-              <p className={styles.hinweis}>
-                Einen freien Platz antippen zeigt, wer kann – dort trägst du jemanden als Entwurf
-                ein. Einen belegten Platz antippen: zurückziehen oder ersetzen. Gesendet wird erst
-                mit „Ansehen und senden“ – nur, was an diesem Termin steht.
-              </p>
             )}
           </section>
           {einteilen.leiste}

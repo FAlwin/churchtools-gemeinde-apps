@@ -721,8 +721,9 @@ Mitteilungen – nur senden, wenn das gewollt ist.
 **Das muss passieren:** In der Termin-Ansicht wird eingeteilt wie in der Matrix; gesendet wird nur, was an diesem Termin
 steht.
 
-1. Termin öffnen → unter „Dienste“ ist ein freier Platz der eigenen Gruppe rot **„frei“** und antippbar; darunter steht
-   der Hinweis „Einen freien Platz antippen zeigt, wer kann …“. Plätze fremder Gruppen sind nicht antippbar.
+1. Termin öffnen → unter „Dienste“ ist ein freier Platz der eigenen Gruppe rot **„frei“** und antippbar; im Kopf neben dem
+   Teilen-Knopf steht die Hilfe **„?“** (öffnet „Hilfe · Termin“: „Freien Platz antippen zeigt „Wer kann?“ …“). Plätze fremder
+   Gruppen sind nicht antippbar.
 2. „frei“ antippen → **„Wer kann?“** (Titel „Dienst · Tag“), dasselbe Fenster wie in „Planen“. Jemanden wählen → das
    Fenster schließt, am Platz steht der Entwurf blau gestrichelt, Meldung „… eingetragen – noch nicht gesendet“.
 3. Unten die Leiste **„1 Entwurf noch nicht gesendet · an diesem Termin“** mit **Ansehen und senden**.
@@ -731,7 +732,7 @@ steht.
 6. **Ansehen und senden** → nur die Entwürfe dieses Termins; darunter „An einem anderen Termin liegen noch Entwürfe – die
    sendest du unter „Planen“.“ Senden → danach zeigt die Ansicht ohne Neuladen, was jetzt in ChurchTools steht; die
    Leiste ist weg. In „Planen“ steht der Entwurf des anderen Termins weiter da.
-7. Ohne Planen-Recht (andere Person): Plätze nur ansehen, kein Hinweis, kein Zauberstab, keine Leiste.
+7. Ohne Planen-Recht (andere Person): Plätze nur ansehen, kein Hilfe-Knopf, kein Zauberstab, keine Leiste.
 8. Am Handy: Leiste „1 Entwurf · Ansehen & senden“, Fenster von unten.
 
 <details><summary>Technisches</summary>
@@ -1031,4 +1032,31 @@ Gerät – nie ein Klick aus Versehen.
 - **Betrifft:** `shared/dienstplan/modusVorgabe.ts`, `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/VorgabeFach.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `ui/design/_farben.scss`, `ui/design/_variables.scss`
 - **Automatisiert:** ja – `shared/dienstplan/modusVorgabe.test.ts`, `shared/dienstplan/personenEintragen.test.ts` (Zyklus-Entscheidung), `shared/dienstplan/personenRaster.test.ts` (Modus je Zelle), `dienstplaner/src/geraet.test.ts` (gemerkte Vorgabe lesen), `dienstplaner/src/Planen.p2m.test.tsx` (Symbol im Block-Kopf von „Personen“, Warnfall nur mit Symbol vor dem Tag, Zyklus mit Versions-Schutz, Warnfenster nur beim ersten Klick, Vorgabe → erster Klick, Symbol öffnet nur das Fenster, gemerkt nach Neuaufbau, „Für alle“, „Wer kann?“ und Zauberstab folgen der Vorgabe, Bestehendes bleibt, Abwesenheit und Warnfall als Klassen, Modus in der Zelle), `dienstplaner/src/TerminAnsicht.test.tsx` (Vorgabe gilt auch dort); Gegenproben je Teil einzeln rot; von Hand bleiben das Aussehen (Schraffur, roter Rahmen, Symbol, Hover-Ring) in Hell und Dunkel, am Rechner und am Handy
 - **Historie:** Wunsch 2 und Wunsch 1 (Alwin 17.11.2026, Entwurf `e9-p2-modus.html`: Abwesend D, Matrix G4), Scheibe P2m
+</details>
+
+### TF-ABLAUF-36 · Hilfe „?“ statt langer Erklär-Absätze
+
+**Das brauchst du:** Dienstplaner als Planer (für „Planen“ und die Termin-Ansicht), am Rechner und am Handy, Hell und Dunkel.
+
+**Das muss passieren:** Unter den Seiten „Planen“, „Dienste“ und in der Termin-Ansicht steht kein langer Erklär-Absatz mehr.
+Die Erklärung steht in einem Fenster hinter dem Knopf **„?“**, in kurzen Abschnitten mit zwei, drei Stichpunkten.
+
+1. **Planen:** Unter der Tabelle steht kein Absatz. Rechts in der Werkzeugleiste, neben **Teilen**, steht der Knopf **„?“**
+   (Tooltip „Hilfe zu Planen“) – gleich hoch wie die Knöpfe daneben, auch am Handy erreichbar.
+2. Antippen → Fenster **„Hilfe · Planen“** mit den Abschnitten „Was du siehst“, „Eintragen“, „Anfrage oder direkt“,
+   „Plätze und Zauberstab“, „Senden“, „Filter und Fokus“. Es scrollt, wenn es länger ist als der Bildschirm.
+3. Schließen mit dem **X** oben rechts und mit **Esc**; ein Tipp daneben schließt ebenfalls.
+4. **Dienste:** Rechts in der Kopfzeile (nach „Teilen“, falls „Meine“ gewählt ist) steht **„?“** → „Hilfe · Dienste“. Die Fußnote
+   unter der Liste ist weg.
+5. **Termin-Ansicht (nur als Planer):** neben dem Teilen-Symbol steht **„?“** → „Hilfe · Termin“. Ohne Planen-Recht gibt es
+   den Knopf nicht.
+6. **Bleibt, wo es ist:** kurze Hinweise in Fenstern und an Bedienelementen, Lade-, Fehler- und Leer-Texte und Warnungen
+   („Hier liegt ein Entwurf …“, „Abwesenheiten nicht sichtbar“, „Noch keine …“).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/bedienung/HilfeKnopf.tsx`, `ui/bedienung/HilfeKnopf.module.scss`, `dienstplaner/src/hilfeTexte.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
+- **Automatisiert:** ja – `ui/bedienung/HilfeKnopf.test.tsx` (Knopf, Fenster, X, Esc), `dienstplaner/src/Planen.test.tsx`, `dienstplaner/src/Termine.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf da, Absatz weg, Kernsatz in der Hilfe); Gegenprobe (Knopf raus) rot; von Hand bleibt das Aussehen am Handy und im Dunkeln
+- **Historie:** Wunsch Alwin 17.11.2026: „Muss der lange Text da stehen? Das wird niemals jemand lesen.“
 </details>

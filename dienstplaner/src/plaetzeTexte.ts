@@ -26,3 +26,7 @@ export function anzahlFehlerText(r: Extract<AnzahlErgebnis, { ok: false }>): str
       return 'ChurchTools hat es angenommen, nachgelesen steht aber die alte Zahl da.';
   }
 }
+
+/** „Hier liegt ein Entwurf – erst senden oder entfernen.“ – der Satz der Sperre (Regler und Fenster in „Personen“). */
+export const sperreText = (entwuerfe: number): string =>
+  `${entwuerfe === 1 ? 'Hier liegt ein Entwurf' : `Hier liegen ${entwuerfe} Entwürfe`} – erst senden oder entfernen.`;

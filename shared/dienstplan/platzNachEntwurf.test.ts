@@ -11,7 +11,7 @@ import {
   type PlanPlatz,
 } from './plan';
 import { gezeigteGruppen } from './planFilter';
-import { platzGiltFrei, zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
+import { platzGiltFrei, plaetzeStand, zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
 import type { RohTermin } from './termine';
 
 /**
@@ -217,5 +217,39 @@ describe('nimmtEintraegeAn', () => {
   it('abgesagte Termine nicht, alle anderen – auch vergangene – schon', () => {
     expect(PLAN.spalten.map(nimmtEintraegeAn)).toEqual([true, false]);
     expect(nimmtEintraegeAn({ abgesagt: false })).toBe(true);
+  });
+});
+
+describe('plaetzeStand – „2 von 3“ in der Zeile „Plätze“ (P2c)', () => {
+  const eva = entwurfFuer(EVA, frei);
+  const weg = entwurfFuer(WEG, belegt);
+
+  it('ohne Entwürfe: so viel belegt, wie ChurchTools sagt', () => {
+    expect(plaetzeStand(ton.zellen[0])).toEqual({ anzahl: 2, belegt: 1, frei: 1 });
+  });
+
+  it('ein Entwurf auf einen freien Platz zählt als belegt – und `frei` ist genau die Zahl aus „Noch offen“', () => {
+    const s = suche([eva]);
+    const stand = plaetzeStand(ton.zellen[0], (p) => s(0, ton, p));
+    expect(stand).toEqual({ anzahl: 2, belegt: 2, frei: 0 });
+    expect(stand.frei).toBe(gruppenFrei(PLAN.gruppen[0], 0, s));
+  });
+
+  it('Zurückziehen macht einen Platz frei, Ersetzen ändert nichts', () => {
+    const s = suche([weg]);
+    expect(plaetzeStand(ton.zellen[0], (p) => s(0, ton, p))).toEqual({
+      anzahl: 2,
+      belegt: 0,
+      frei: 2,
+    });
+    const t = suche([entwurfFuer(EVA, belegt)]);
+    expect(plaetzeStand(ton.zellen[0], (p) => t(0, ton, p)).belegt).toBe(1);
+  });
+
+  it('ein veralteter Entwurf zählt nicht; ohne Zelle (Dienst nicht vorgesehen) sind es 0 Plätze', () => {
+    const alt = entwurfFuer(EVA, belegt, TON, { art: 'frei' });
+    const s = suche([alt]);
+    expect(plaetzeStand(ton.zellen[0], (p) => s(0, ton, p)).belegt).toBe(1);
+    expect(plaetzeStand(null)).toEqual({ anzahl: 0, belegt: 0, frei: 0 });
   });
 });

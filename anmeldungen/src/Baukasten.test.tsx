@@ -10,6 +10,7 @@ import {
   within,
 } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { vorlageVon } from '@shared/anmeldung/gestaltung';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -159,17 +160,43 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect([bereich, vorId]).toEqual(['person', 'foto']);
   });
 
-  it('empfohlene Bausteine: was schon im Formular ist, ist ausgegraut; Anschrift kommt in den Kontakt', async () => {
+  it('empfohlene Bausteine: was schon im Formular ist, ist ausgegraut; die Adresse kommt in den Kontakt', async () => {
     zeigen();
     expect(screen.getByRole('button', { name: 'Telefon' }).getAttribute('aria-disabled')).toBe(
       'true',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Telefon' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Anschrift' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adresse' }));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
     const [, bereich, feld] = ff.feldSpeichern.mock.calls[0];
     expect(bereich).toBe('anmeldung');
-    expect(feld).toMatchObject({ id: 'addr', art: 'standard', zustand: 'freiwillig' });
+    expect(feld).toMatchObject({
+      id: 'adresse',
+      typ: 'adresse',
+      art: 'standard',
+      zustand: 'freiwillig',
+    });
+  });
+
+  it('F4: Adresse „einmal je Anmeldung“ ↔ „je Person“ – an der Feldkarte umsetzen', async () => {
+    const e = einstellungen();
+    e.formular.anmeldung.splice(2, 0, {
+      ...EMPFOHLEN.find((x) => x.id === 'adresse')!.feld,
+    });
+    const { huelle } = zeigen(e);
+    fireEvent.click(huelle('adresse'));
+    const karte = within(huelle('adresse') as HTMLElement);
+    expect(
+      karte.getByText('Steht bei den Kontaktdaten und gilt für alle angemeldeten Personen.'),
+    ).toBeTruthy();
+    fireEvent.click(karte.getByRole('button', { name: 'je Person' }));
+    await waitFor(() =>
+      expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'adresse', 'person', null),
+    );
+    expect(huelle('adresse').getAttribute('data-bereich')).toBe('person');
+    // Andere Felder haben die Wahl nicht.
+    fireEvent.click(huelle('f1'));
+    expect(screen.queryByRole('group', { name: 'Wo gefragt' })).toBeNull();
   });
 
   it('ziehen: über der oberen Hälfte eines Felds → davor, über der unteren → danach', async () => {

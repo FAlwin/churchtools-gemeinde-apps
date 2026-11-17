@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
+import { Segment } from '@ui/bedienung/Segment';
+import { ADRESSE_HINWEIS } from '@shared/anmeldung/adresse';
+import type { Bereich } from '@shared/anmeldung/baukasten';
 import {
   BAUSTEINE,
   nurText,
@@ -74,6 +77,11 @@ function Muster({ f }: { f: Feld }) {
           Unterschrift mit Finger oder Maus – am Handy im Vollbild
         </div>
       );
+    // F4: drei Felder und der feste Hinweis (`adresse.ts`).
+    case 'adresse':
+      return (
+        <div className={k.muster}>Straße und Hausnummer · PLZ · Ort – „{ADRESSE_HINWEIS}“</div>
+      );
     default:
       return null;
   }
@@ -90,6 +98,8 @@ export function FeldBearbeiten({
   werkzeug,
   onTyp,
   schrittNr,
+  bereich,
+  onBereich,
 }: {
   entwurf: FeldEntwurf;
   /** Das Formular, wie es gerade im Baukasten steht (mit diesem Entwurf) – für Bedingungen und Kurzname (F1c). */
@@ -109,6 +119,9 @@ export function FeldBearbeiten({
   onTyp?: (typ: Feldtyp) => void;
   /** F2c: Bei einem Schritt seine Nummer im Formular (`schrittImBaukasten`). */
   schrittNr?: number;
+  /** F4: Wo das Feld steht – und der Wechsel „einmal je Anmeldung“ / „je Person“ (nur die Adresse). */
+  bereich?: Bereich;
+  onBereich?: (b: Bereich) => void;
 }) {
   const f = d.feld;
   const setFeld = (neu: Partial<Feld>) => onAendern({ ...d, feld: { ...f, ...neu } });
@@ -423,6 +436,26 @@ export function FeldBearbeiten({
           </button>
         )}
       </div>
+      {onBereich && bereich && (
+        <div className={k.bereichWahl}>
+          <span>Gefragt</span>
+          <Segment
+            verbunden
+            ariaLabel="Wo gefragt"
+            value={bereich}
+            options={[
+              { value: 'anmeldung', label: 'einmal je Anmeldung' },
+              { value: 'person', label: 'je Person' },
+            ]}
+            onChange={(b) => b !== bereich && onBereich(b)}
+          />
+          <p className={k.notiz}>
+            {bereich === 'anmeldung'
+              ? 'Steht bei den Kontaktdaten und gilt für alle angemeldeten Personen.'
+              : 'Steht bei jeder Person – z. B. wenn Kinder an verschiedenen Adressen wohnen.'}
+          </p>
+        </div>
+      )}
       {f.id === 'birth' && wozu && (
         <p className={k.notiz} role="note">
           {geburtsdatumNoetigText(wozu)}

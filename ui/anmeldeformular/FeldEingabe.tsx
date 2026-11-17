@@ -4,7 +4,7 @@ import { wahlAntworten, type AntwortZustand } from '@shared/anmeldung/bedingunge
 import { freiGewaehlt, freiMitText, freiName } from '@shared/anmeldung/freieAntwort';
 import { hinweisTeile } from '@shared/anmeldung/hinweisLinks';
 import { datumText } from '@shared/ct/datum';
-import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
+import { AdresseEingabe, ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
 
 function Pflicht({ f }: { f: Feld }) {
@@ -105,8 +105,13 @@ export function FeldEingabe({
     );
 
   // A6-2b: zusammengesetzte Bausteine (`Bausteine.tsx`).
-  if (f.typ === 'erziehungsberechtigte' || f.typ === 'unterschrift') {
-    const Eingabe = f.typ === 'erziehungsberechtigte' ? ErziehungsEingabe : UnterschriftEingabe;
+  if (f.typ === 'erziehungsberechtigte' || f.typ === 'unterschrift' || f.typ === 'adresse') {
+    const Eingabe =
+      f.typ === 'erziehungsberechtigte'
+        ? ErziehungsEingabe
+        : f.typ === 'adresse'
+          ? AdresseEingabe
+          : UnterschriftEingabe;
     return (
       <Eingabe
         feld={f}

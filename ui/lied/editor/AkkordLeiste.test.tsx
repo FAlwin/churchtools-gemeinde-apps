@@ -75,6 +75,19 @@ describe('AkkordLeiste', () => {
     expect(screen.queryByRole('group', { name: 'Varianten von E' })).toBeNull();
   });
 
+  it('Escape schließt die Varianten, ohne zu setzen (`useEscape`, 16.11.2026)', () => {
+    vi.useFakeTimers();
+    const { waehlen } = zeige();
+    const e = screen.getByRole('button', { name: 'E' });
+    fireEvent.pointerDown(e);
+    act(() => void vi.advanceTimersByTime(500));
+    fireEvent.pointerUp(e);
+    expect(screen.getByRole('group', { name: 'Varianten von E' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('group', { name: 'Varianten von E' })).toBeNull();
+    expect(waehlen).not.toHaveBeenCalled();
+  });
+
   it('kurz tippen zeigt keine Varianten', () => {
     vi.useFakeTimers();
     const { waehlen } = zeige();

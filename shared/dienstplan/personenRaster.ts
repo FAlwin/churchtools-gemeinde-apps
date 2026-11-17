@@ -56,8 +56,8 @@ export interface RasterZelle {
   zustand: ZellenZustand | null;
   /** Andere Dienste, in denen die Person an diesem Tag eingeteilt ist. */
   weitere: WeitererDienst[];
-  /** Abwesend an diesem Termin (`decktTermin`) – der Grund, sonst „Abwesend“. */
-  abwesend: { grund: string } | null;
+  /** Abwesend an diesem Termin (`decktTermin`) – der Grund, sonst „Abwesend“, und der ganze Zeitraum der Abwesenheit. */
+  abwesend: { grund: string; von: string; bis: string } | null;
   /** Abwesend UND eingeteilt: ein Warnfall, beides bleibt sichtbar. */
   warnung: boolean;
 }
@@ -178,13 +178,15 @@ export function personenRaster(o: {
       je.set(a.id, a);
     }
   }
-  const abwesendAm = (personId: number, s: PlanSpalte): { grund: string } | null => {
+  const abwesendAm = (personId: number, s: PlanSpalte): RasterZelle['abwesend'] => {
     const alle = [...(abwesenheiten.get(personId)?.values() ?? [])];
     const deckt = (a: GruppenAbwesenheit) =>
       decktTermin(a, { startDate: s.beginn, endDate: s.ende, date: s.tag });
     // Ein Eintrag mit Uhrzeit zuerst – er gehört genau zu diesem Termin (wie `abwesenheitFuerTermin`).
     const treffer = alle.find((a) => a.startTime !== null && deckt(a)) ?? alle.find(deckt);
-    return treffer ? { grund: treffer.grund ?? 'Abwesend' } : null;
+    return treffer
+      ? { grund: treffer.grund ?? 'Abwesend', von: treffer.startDate, bis: treffer.endDate }
+      : null;
   };
 
   const diensteZeilen = rasterDienste(plan, spalten, gruppen);

@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { tagKurz } from '@shared/ct/datum';
+import type { PlanZeile } from '@shared/dienstplan/plan';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
+import {
+  eintragenWarnung,
+  vollText,
+  type EintragenWarnung,
+  type ZellenAktion,
+} from '@shared/dienstplan/personenEintragen';
 import {
   offenText,
   personenRaster,
@@ -91,8 +99,12 @@ function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: nu
 /**
  * **Die Ansicht „Personen“** (Wunsch 5, Scheibe P1 – nur ansehen): Zeilen = Personen, Spalten = die Termine der Matrix
  * (gleicher Zeitraum, gleiche Filter), Blöcke je Dienst. Gerechnet wird in `shared/dienstplan/personenRaster.ts`, geladen
- * (Mitglieder, Abwesenheiten) in `ladePersonen.ts`; hier steht nur die Darstellung. Ein Klick in eine Zelle tut nichts –
- * Eintragen kommt mit P2.
+ * (Mitglieder, Abwesenheiten) in `ladePersonen.ts`; hier steht nur die Darstellung.
+ *
+ * **Eintragen per Klick (P2a):** Eine leere Zelle, in der man den Dienst planen darf, legt mit einem Klick einen Entwurf auf
+ * einen freien Platz an (`sicht.personen`, dieselbe Funktion wie „Wer kann?“); ein Klick auf den eigenen Entwurf nimmt
+ * ihn wieder weg. Ein Fenster kommt nur bei einer Warnung (am Tag schon in einem anderen Dienst, abwesend) oder wenn der
+ * Dienst voll ist. Eine bestehende Einteilung anklicken tut noch nichts (P2b).
  */
 export function PersonenRaster({
   sicht,
@@ -128,6 +140,16 @@ export function PersonenRaster({
     zeitraum,
   );
 
+  // Das Fenster zu einem Klick: Warnung (mit „Trotzdem eintragen“) oder „Dienst voll“.
+  const [fenster, setFenster] = useState<
+    | { art: 'warnung'; titel: string; warnung: EintragenWarnung; ok: () => void }
+    | { art: 'voll'; dienst: string; text: string }
+    | null
+  >(null);
+  // Während ein Entwurf angelegt oder weggenommen wird, zählt ein zweiter Klick nicht (sonst entstünden zwei).
+  const [laeuft, setLaeuft] = useState(false);
+  const personen = sicht.personen;
+
   const raster = personenRaster({ plan, spalten, gruppen, daten, entwurf: sicht.entwurf });
   if (raster.blocks.length === 0) {
     return (
@@ -137,6 +159,56 @@ export function PersonenRaster({
     );
   }
   const termine = spalten.map((i) => plan.spalten[i]);
+  // Die Zeile der Matrix zu jedem Block – der Platz, auf den eingetragen wird, gehört zu ihr.
+  const zeileJe = new Map<number, PlanZeile>(
+    rasterDienste(plan, spalten, gruppen).map((x) => [x.zeile.dienst.id, x.zeile]),
+  );
+
+  const aktionFuer = (b: RasterBlock, r: RasterZeile, pos: number): ZellenAktion => {
+    const zl = zeileJe.get(b.dienst.id);
+    return personen && zl
+      ? personen.aktion(spalten[pos], zl, r.personId, r.zellen[pos].zustand)
+      : null;
+  };
+
+  const tue = async (arbeit: () => Promise<void>) => {
+    setLaeuft(true);
+    try {
+      await arbeit();
+    } finally {
+      setLaeuft(false);
+    }
+  };
+
+  /** Ein Klick in eine Zelle – `aktionFuer` hat schon gesagt, dass es etwas zu tun gibt. */
+  const klick = (b: RasterBlock, r: RasterZeile, pos: number) => {
+    const zl = zeileJe.get(b.dienst.id);
+    const a = aktionFuer(b, r, pos);
+    if (!personen || !zl || !a || laeuft) return;
+    const i = spalten[pos];
+    const tag = plan.spalten[i].tag;
+    if (a.art === 'wegnehmen') {
+      void tue(() => personen.wegnehmen(zl, a.entwurf));
+    } else if (a.art === 'voll') {
+      setFenster({ art: 'voll', dienst: b.dienst.name, text: vollText(b.dienst.name, tag, a.von) });
+    } else {
+      const eintragen = () =>
+        // Noch einmal fragen: Zwischen Klick und „Trotzdem“ kann sich der Platz geändert haben.
+        void tue(async () => {
+          const jetzt = personen.aktion(i, zl, r.personId, null);
+          if (jetzt?.art === 'eintragen')
+            await personen.eintragen(i, zl, jetzt.nr, { personId: r.personId, name: r.name });
+        });
+      const warnung = eintragenWarnung({
+        name: r.name,
+        dienst: b.dienst.name,
+        tag,
+        zelle: r.zellen[pos],
+      });
+      if (warnung) setFenster({ art: 'warnung', titel: 'Bitte prüfen', warnung, ok: eintragen });
+      else eintragen();
+    }
+  };
 
   const zeile = (b: RasterBlock, r: RasterZeile, nr: number) => (
     <tr
@@ -173,14 +245,44 @@ export function PersonenRaster({
         </button>
       </th>
       <td className={styles.einsaetze}>{r.einsaetze}</td>
-      {r.zellen.map((z, pos) => (
-        <td
-          key={termine[pos].id}
-          className={termine[pos].abgesagt ? styles.abgesagtSpalte : undefined}
-        >
-          <Zelle z={z} dienst={b.dienst.name} farbe={farbe(b.dienst.id)} />
-        </td>
-      ))}
+      {r.zellen.map((z, pos) => {
+        const a = aktionFuer(b, r, pos);
+        const name = `${r.name} für ${b.dienst.name} am ${tagKurz(termine[pos].tag)}`;
+        const klasse = [
+          termine[pos].abgesagt ? styles.abgesagtSpalte : '',
+          a ? styles.klick : '',
+          a && a.art !== 'wegnehmen' ? styles.leerKlick : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        return (
+          <td
+            key={termine[pos].id}
+            className={klasse || undefined}
+            // Ein Klick irgendwo in der Zelle (auch auf einem Tag darin) – der Knopf darunter ist für Tastatur und Vorleser;
+            // sein Klick steigt hierher auf, so wird nichts doppelt gerechnet.
+            onClick={a ? () => klick(b, r, pos) : undefined}
+          >
+            {a && (
+              <button
+                type="button"
+                className={styles.zellKnopf}
+                aria-label={
+                  a.art === 'wegnehmen' ? `${name}: Entwurf wegnehmen` : `${name} eintragen`
+                }
+                title={a.art === 'wegnehmen' ? 'Entwurf wegnehmen' : undefined}
+              >
+                {a.art !== 'wegnehmen' && (
+                  <span className={styles.plus} aria-hidden="true">
+                    <Icon name="plus" size={16} />
+                  </span>
+                )}
+              </button>
+            )}
+            <Zelle z={z} dienst={b.dienst.name} farbe={farbe(b.dienst.id)} />
+          </td>
+        );
+      })}
     </tr>
   );
 
@@ -341,6 +443,30 @@ export function PersonenRaster({
           </tbody>
         </table>
       </div>
+      {fenster?.art === 'warnung' && (
+        <ConfirmDialog
+          title={fenster.titel}
+          message={`${fenster.warnung.saetze.join(' ')} ${fenster.warnung.frage}`}
+          confirmLabel="Trotzdem eintragen"
+          harmlos
+          onConfirm={() => {
+            setFenster(null);
+            fenster.ok();
+          }}
+          onCancel={() => setFenster(null)}
+        />
+      )}
+      {fenster?.art === 'voll' && (
+        <ConfirmDialog
+          title={`${fenster.dienst} ist voll`}
+          message={`${fenster.text} Platz dazunehmen geht im Moment über den Regler in der Matrix.`}
+          confirmLabel="Schließen"
+          cancelLabel={null}
+          harmlos
+          onConfirm={() => setFenster(null)}
+          onCancel={() => setFenster(null)}
+        />
+      )}
     </>
   );
 }

@@ -104,6 +104,8 @@ export function rechteAus(
     canEditAgendas: isAdmin || has(cs['edit agenda']),
     // Je Kalender – ausgewertet nur über `darfAblaufBearbeiten` (#635).
     ablaufKalender: idsAusRecht(cs['edit agenda']),
+    // Je Kalender – ausgewertet nur über `darfVorlageBearbeiten` (E10, gemessen 17.11.2026).
+    vorlagenKalender: idsAusRecht(cs['edit agenda templates']),
     canEditSongs,
     // Dasselbe Recht, eigens benannt (siehe `UserCapabilities.canEditTempo`) – NICHT neu ausgewertet.
     canEditTempo: canEditSongs,

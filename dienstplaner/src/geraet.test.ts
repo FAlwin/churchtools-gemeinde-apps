@@ -34,6 +34,8 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
         ausgeblendeteGruppen: [3, 'ohne'],
         // Dienste nur als Zahlen (Wunsch 10).
         ausgeblendeteDienste: [7, '8', 7, null],
+        // Direkte Dienste (P2m, Vorgabe „Anfrage | direkt“): nur Zahlen, ohne Doppelte.
+        direktDienste: [6, '9', 6, null],
         // Kalender nur als ganze Zahlen über 0, ohne Doppelte (Wunsch 6).
         ausgeblendeteKalender: [12, '2', 12, 0, 2.5, -1],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
@@ -50,6 +52,7 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       unteransicht: 'werWieOft',
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteDienste: [7],
+      direktDienste: [6],
       ausgeblendeteArten: [],
       ausgeblendeteKalender: [12],
       zeitraum: { art: 'abHeute' },

@@ -11,6 +11,7 @@ import {
 } from '@shared/dienstplan/entwuerfe';
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import { einsaetzeUm, einsaetzeUmText } from '@shared/dienstplan/fokus';
+import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
@@ -84,6 +85,7 @@ export function useEinteilen({
   leisteZusatz,
   sendenZusatz,
   fokus,
+  modusFuer = () => 'anfrage',
 }: {
   plan: Plan | null;
   /** Ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
@@ -109,6 +111,13 @@ export function useEinteilen({
     hervorheben: (person: { personId: number; name: string }) => void;
     zeigen: (person: { personId: number; name: string }, zurueck: WerKannZurueck) => void;
   };
+  /**
+   * **Womit ein NEUER Entwurf an diesem Dienst beginnt** (P2m, Vorgabe „Anfrage | direkt“ je Dienst, gemerkt je Gerät):
+   * **eine Funktion** für „Wer kann?“, „Personen“ (erster Klick), den Zauberstab und „Hier eintragen“ – sie alle gehen
+   * durch `eintragenFuer` bzw. `zauberUebernehmen` und fragen hier. Bestehende Entwürfe ändert das nie. Ohne Angabe
+   * immer die Anfrage.
+   */
+  modusFuer?: (dienstId: number) => Modus;
 }) {
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
@@ -220,6 +229,7 @@ export function useEinteilen({
         {
           ort,
           ziel: { art: 'person', personId: w.personId, name: w.name },
+          modus: modusFuer(w.zeile.serviceId),
           gesehen: w.zeile.gesehen,
         },
         null,
@@ -258,6 +268,31 @@ export function useEinteilen({
     const r = await entwuerfe.entfernen(ew.daten, gruppeId, e.ort, erwartet);
     nachFach(r, ortSchluessel(e.ort), () =>
       verwerfen ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
+    );
+    return r;
+  };
+
+  /**
+   * Den `modus` eines Entwurfs ändern (Anfrage ⇄ direkt) – **eine Funktion** fürs Entwurfs-Fach („Beim Senden“) und für
+   * „Personen“ (zweiter Klick, P2m): Versions-Schutz im Kern (`erwartet`), Ergebnis übernehmen, Bescheid geben.
+   */
+  const modusAendern = async (
+    gruppeId: number,
+    e: Entwurf,
+    modus: Modus,
+    erwartet: number,
+  ): Promise<EntwurfErgebnis> => {
+    if (ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
+    const r = await entwurfSpeichern(
+      ew.daten,
+      gruppeId,
+      { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen },
+      erwartet,
+    );
+    nachFach(r, ortSchluessel(e.ort), () =>
+      modus === 'direkt'
+        ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
+        : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,
     );
     return r;
   };
@@ -318,7 +353,13 @@ export function useEinteilen({
         const r = await entwurfSpeichern(
           daten,
           f.gruppeId,
-          { ort, ziel, modus: alt?.modus, gesehen: f.bisher?.belegung ?? { art: 'frei' } },
+          {
+            ort,
+            ziel,
+            // Ein ersetzter Entwurf behält seinen Modus; ein neuer beginnt mit der Vorgabe des Dienstes (P2m).
+            modus: alt?.modus ?? modusFuer(f.serviceId),
+            gesehen: f.bisher?.belegung ?? { art: 'frei' },
+          },
           erwartet,
         );
         if (r.ok) {
@@ -371,21 +412,9 @@ export function useEinteilen({
           entwurf={fach.entwurf}
           inChurchTools={fach.inChurchTools}
           onClose={() => setFach(null)}
-          onModus={async (modus, erwartet) => {
-            const e = fach.entwurf;
-            const r = await entwurfSpeichern(
-              ew.daten,
-              fach.platz.gruppeId,
-              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen },
-              erwartet,
-            );
-            nachFach(r, ortSchluessel(e.ort), () =>
-              modus === 'direkt'
-                ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
-                : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,
-            );
-            return r;
-          }}
+          onModus={(modus, erwartet) =>
+            modusAendern(fach.platz.gruppeId, fach.entwurf, modus, erwartet)
+          }
           onEntfernen={(erwartet) =>
             entferneEntwurf(
               fach.platz.gruppeId,
@@ -563,8 +592,11 @@ export function useEinteilen({
         ichId: amPlatz.ichId,
       });
       // Abgesagte Termine nehmen keine neuen Einträge an (P2a-2, `nimmtEintraegeAn`) – den eigenen Entwurf nimmt man
-      // dort weiter weg, wie in der Matrix.
-      return !nimmtEintraegeAn(s) && a?.art !== 'wegnehmen' ? null : a;
+      // dort weiter weg, wie in der Matrix; „auf direkt umstellen“ gibt es dort nicht, der Klick nimmt ihn gleich weg.
+      if (nimmtEintraegeAn(s)) return a;
+      return a?.art === 'wegnehmen' || a?.art === 'direkt'
+        ? { art: 'wegnehmen', nr: a.nr, entwurf: a.entwurf }
+        : null;
     },
     eintragen: async (i, zl, nr, person, ersetzt) => {
       if (!plan) return;
@@ -577,6 +609,10 @@ export function useEinteilen({
       );
       if (!r) showToast('Hier kannst du gerade keine Entwürfe anlegen.');
       else if (!r.ok) showToast(fehlerHinweis(r));
+    },
+    direkt: async (zl, e) => {
+      const r = await modusAendern(zl.dienst.dienstgruppeId ?? 0, e, 'direkt', e.version);
+      if (!r.ok) showToast(fehlerHinweis(r));
     },
     wegnehmen: async (zl, e) => {
       const r = await entferneEntwurf(zl.dienst.dienstgruppeId ?? 0, e, e.version, false);

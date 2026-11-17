@@ -52,14 +52,17 @@ export function platzFuerEintrag(
  *   Platz oder (`ersetzt`: die Version des Entwurfs) ein Platz, dessen „Zurückziehen“-Entwurf damit ersetzt wird.
  * - `voll`: kein Platz mehr zu haben – alle `von` Plätze sind belegt oder haben einen Entwurf, der nicht „Zurückziehen“
  *   ist (P2c bringt „Platz dazunehmen“, bis dahin nur ein Hinweis).
- * - `wegnehmen`: der eigene Entwurf der Person in dieser Zelle – `nr`/`version` des Platzes, damit der Aufrufer ihn
- *   mit dem Versions-Schutz entfernen kann.
+ * - `direkt` / `wegnehmen`: der eigene Entwurf der Person in dieser Zelle (P2m, Klick-Zyklus **Anfrage → direkt → weg**):
+ *   ist er noch eine Anfrage, stellt der Klick ihn auf „direkt“ um (`direkt`), ist er schon direkt, nimmt er ihn weg
+ *   (`wegnehmen`). `nr`/`entwurf`: der Platz und der Entwurf mit seiner Version, damit der Aufrufer mit dem
+ *   Versions-Schutz arbeiten kann.
  * - `null`: nichts (bestehende Einteilung – kommt mit P2b –, Entwurf eines anderen Planers, Dienst nicht vorgesehen).
  */
 export type ZellenAktion =
   | { art: 'eintragen'; nr: number; ersetzt?: number }
   | { art: 'voll'; von: number }
   | { art: 'wegnehmen'; nr: number; entwurf: Entwurf }
+  | { art: 'direkt'; nr: number; entwurf: Entwurf }
   | null;
 
 export function zellenAktion(o: {
@@ -80,9 +83,12 @@ export function zellenAktion(o: {
       if (!a || a.veraltet) continue;
       const ziel = a.entwurf.ziel;
       if (ziel.art === 'person' && ziel.personId === o.personId) {
-        return a.entwurf.von.personId === o.ichId
-          ? { art: 'wegnehmen', nr: i + 1, entwurf: a.entwurf }
-          : null;
+        if (a.entwurf.von.personId !== o.ichId) return null;
+        return {
+          art: a.entwurf.modus === 'anfrage' ? 'direkt' : 'wegnehmen',
+          nr: i + 1,
+          entwurf: a.entwurf,
+        };
       }
     }
     return null;

@@ -247,7 +247,7 @@ describe('Planen – Ansicht „Personen“', () => {
       },
     );
     const t = await raster();
-    const tag = await within(t).findByRole('img', { name: 'Gesang, Entwurf' });
+    const tag = await within(t).findByRole('img', { name: 'Gesang, Entwurf, Anfrage' });
     expect(tag.closest('tr')!.textContent).toContain('Ben Test');
   });
 

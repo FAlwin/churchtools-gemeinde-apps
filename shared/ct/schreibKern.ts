@@ -17,6 +17,7 @@
  */
 import { agendaItemWritePayload, dienstgruppenNotizen, vorlaufUmschalten } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
+import { isHeaderType } from './agendaFormat';
 import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
 import type { CtAblaufVorlage, CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
@@ -72,29 +73,100 @@ export const REIHENFOLGE_GEAENDERT =
 export const ABLAUF_ABGESCHLOSSEN =
   'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst wieder öffnen.';
 
+/** Wie `ABLAUF_VERWEIGERT`, nur für eine **Ablaufvorlage** (E10): dieselbe Mechanik, andere Meldung. */
+export const VORLAGE_VERWEIGERT =
+  'Keine Berechtigung, diese Ablaufvorlage in ChurchTools zu ändern.';
+
+/** Wie `ABLAUF_ABGESCHLOSSEN`: Vorlagen lassen sich über die API nicht sperren oder entsperren (gemessen E10-0). */
+export const VORLAGE_GESPERRT =
+  'Diese Ablaufvorlage ist in ChurchTools gesperrt. Zum Ändern dort erst entsperren.';
+
+/**
+ * **Worauf ein Schreibvorgang am Ablauf zielt** (E10): eine Zahl = ein Termin (`/events/{id}/agenda`, so rufen alle
+ * bisherigen Stellen auf), `{ vorlageId }` = eine Ablaufvorlage (`/agendatemplates/{id}`). Gemessen E10-0: Vorlagen
+ * haben dieselben Regeln wie der Ablauf eines Termins – gleiche Punkte, gleiche Zurücksetz-Falle, dieselbe Grenze –,
+ * nur andere Pfade und Meldungen. Deshalb **keine zweite Fassung** der Schreib-Regeln, sondern ein Ziel mit je EINEM
+ * Helfer für Pfad, Lesen und Meldungen.
+ */
+export type AblaufZiel = number | { vorlageId: number };
+
+/** Ist das Ziel eine Ablaufvorlage? */
+export function istVorlage(ziel: AblaufZiel): ziel is { vorlageId: number } {
+  return typeof ziel !== 'number';
+}
+
+/** Der Pfad des Ablaufs ohne `/api` – darunter liegen `items/…` und der Ablauf selbst (`PUT`). */
+function ablaufBasis(ziel: AblaufZiel): string {
+  return istVorlage(ziel) ? `/agendatemplates/${ziel.vorlageId}` : `/events/${ziel}/agenda`;
+}
+
+/** Die Meldung bei verweigertem Schreiben – je Ziel. */
+function verweigertFuer(ziel: AblaufZiel): string {
+  return istVorlage(ziel) ? VORLAGE_VERWEIGERT : ABLAUF_VERWEIGERT;
+}
+
+/**
+ * Die Termin-ID für Regeln, die eine brauchen (`ablaufZeileAus`, `istWeggelassen`): Eine Vorlage hat keinen Termin und
+ * keine Startzeiten, `0` trifft in `startTimes` nichts – nichts ist „weggelassen“, wie gewollt.
+ */
+function terminIdVon(ziel: AblaufZiel): number {
+  return istVorlage(ziel) ? 0 : ziel;
+}
+
+/** Was `ablaufLesen` liefert: ein Ablauf, bei Vorlagen mit Namen (den braucht jedes `PUT` der Vorlage). */
+type GelesenerAblauf = CtAgenda & { name?: string | null };
+
+/** Eine Vorlage so lesen wie den Ablauf eines Termins – eine Stelle für die Umrechnung. */
+function agendaAusVorlage(v: CtAblaufVorlage): GelesenerAblauf {
+  return {
+    ...v,
+    items: v.items ?? [],
+    calendarId: v.calendarId ?? undefined,
+  };
+}
+
+/** Den Ablauf des Ziels **frisch** lesen – nie aus einem Cache (`s.agenda` bzw. `s.vorlage`). */
+async function ablaufLesen(s: CtSchreiber, ziel: AblaufZiel): Promise<GelesenerAblauf> {
+  return istVorlage(ziel) ? agendaAusVorlage(await s.vorlage(ziel.vorlageId)) : s.agenda(ziel);
+}
+
+/**
+ * Die Felder, die jedes `PUT` des Ablaufs selbst mitbringen muss: beim Termin der Kalender, bei der Vorlage zusätzlich
+ * der Name – ein `PUT` ohne ihn setzte ihn womöglich zurück (gemessen wurde nur: Name und Kalender gehören zum Aufruf).
+ */
+function ablaufKopf(ziel: AblaufZiel, a: GelesenerAblauf): Record<string, unknown> {
+  return istVorlage(ziel)
+    ? { name: a.name ?? '', calendarId: a.calendarId }
+    : { calendarId: a.calendarId };
+}
+
 /**
  * Jeder Schreibvorgang am Ablauf geht hier durch: Verweigert ChurchTools, wird **am Ablauf nachgesehen**
  * (gemessen 09.10.2026: abgeschlossen → `isLocked: true`, Ändern/Löschen → 403). Ist er abgeschlossen,
  * kommt die richtige Meldung (423); sonst bleibt es bei „Keine Berechtigung". Lässt sich der Ablauf gerade
- * nicht lesen, bleibt der ursprüngliche Fehler – geraten wird nicht.
+ * nicht lesen, bleibt der ursprüngliche Fehler – geraten wird nicht. Bei einer Vorlage (E10) dieselbe Mechanik
+ * mit den Meldungen `VORLAGE_VERWEIGERT`/`VORLAGE_GESPERRT`; der Aufrufer reicht dann `VORLAGE_VERWEIGERT` als
+ * `auftrag.verweigert` herein.
  */
 export async function ablaufSchreibe(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   pfad: string,
   auftrag: SchreibAuftrag,
 ): Promise<unknown> {
   try {
     return await s.schreibe(pfad, auftrag);
   } catch (e) {
-    if (!(e instanceof Error && e.message === ABLAUF_VERWEIGERT)) throw e;
+    if (!(e instanceof Error && e.message === verweigertFuer(ziel))) throw e;
     let abgeschlossen = false;
     try {
-      abgeschlossen = (await s.agenda(eventId)).isLocked === true;
+      abgeschlossen = (await ablaufLesen(s, ziel)).isLocked === true;
     } catch {
       throw e;
     }
-    if (abgeschlossen) throw s.fehler(423, ABLAUF_ABGESCHLOSSEN);
+    if (abgeschlossen) {
+      throw s.fehler(423, istVorlage(ziel) ? VORLAGE_GESPERRT : ABLAUF_ABGESCHLOSSEN);
+    }
     throw e;
   }
 }
@@ -144,12 +216,13 @@ export function arrangementAus(
  */
 export async function ablaufUmsortieren(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   orderedItemIds: number[],
   /** Die Reihenfolge vor dem Ziehen (E6-3c) – weicht die frische ab, hat jemand anderes umsortiert: 412. */
   gesehen?: readonly number[],
 ): Promise<void> {
-  const { items } = await s.agenda(eventId);
+  const agenda = await ablaufLesen(s, ziel);
+  const { items } = agenda;
   const byId = new Map(items.map((i) => [i.id, i]));
 
   // Schutz: nur erlauben, wenn die übergebene Reihenfolge exakt dieselben Punkte enthält.
@@ -164,10 +237,11 @@ export async function ablaufUmsortieren(
     ...agendaItemWritePayload(byId.get(id) as CtAgendaItem, { position: index }),
   }));
 
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+  await ablaufSchreibe(s, ziel, ablaufBasis(ziel), {
     method: 'PUT',
-    json: { items: payload },
-    verweigert: ABLAUF_VERWEIGERT,
+    // Beim Termin genügt die Liste; die Vorlage braucht zusätzlich Name und Kalender (`ablaufKopf`).
+    json: { ...(istVorlage(ziel) ? ablaufKopf(ziel, agenda) : {}), items: payload },
+    verweigert: verweigertFuer(ziel),
     fehler: 'Ablauf-Reihenfolge speichern fehlgeschlagen',
   });
 }
@@ -204,15 +278,20 @@ export function standardTitel(type: NeuerPunkt['type']): string {
 /** Legt einen neuen Ablaufpunkt an (am Ende). Für Lieder ist `arrangementId` Pflicht. */
 export async function punktAnlegen(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   data: NeuerPunkt,
 ): Promise<void> {
+  // Das Auge gilt für einen Termin; eine Vorlage kennt es nicht (E10-0). Vor jedem Schreiben ablehnen.
+  if (istVorlage(ziel) && data.weggelassen) {
+    throw s.fehler(400, 'In einer Ablaufvorlage kann man Punkte nicht weglassen.');
+  }
   const body: Record<string, unknown> = {
     type: data.type,
     title: data.title ?? standardTitel(data.type),
   };
-  // Lied-Verknüpfung MUSS als top-level arrangementId gesendet werden (siehe `agendaPayload`).
-  if (data.type === 'song' && data.arrangementId) body.arrangementId = data.arrangementId;
+  // Lied-Verknüpfung MUSS als top-level arrangementId gesendet werden (siehe `agendaPayload`) – bei einem Lied ohne
+  // Arrangement als `null`: Fehlt das Feld, lehnt ChurchTools mit 400 ab (gemessen E10-V1, 17.11.2026).
+  if (data.type === 'song') body.arrangementId = data.arrangementId ?? null;
   if (data.responsible) body.responsible = data.responsible;
   if (data.note) body.note = data.note;
   // CT erwartet die Dauer in Sekunden (Feld `duration`), die UI arbeitet in Minuten.
@@ -221,19 +300,28 @@ export async function punktAnlegen(
   const notizen = Object.entries(data.infos ?? {})
     .filter(([, note]) => note.trim() !== '')
     .map(([gruppe, note]) => ({ serviceGroupId: Number(gruppe), note }));
+  // ChurchTools antwortet bei Überschriften in Vorlagen mit Erfolg, speichert die Infos aber nicht (E10-0) – lieber
+  // sagen als still verlieren. Beim Termin-Ablauf nicht gemessen, dort bleibt das Verhalten wie es war.
+  if (istVorlage(ziel) && data.type === 'header' && notizen.length > 0) {
+    throw s.fehler(400, KEINE_INFOS_AN_UEBERSCHRIFT);
+  }
   if (notizen.length > 0) body.serviceGroupNotes = notizen;
-  const antwort = await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
+  const antwort = await ablaufSchreibe(s, ziel, `${ablaufBasis(ziel)}/items`, {
     method: 'POST',
     json: body,
-    verweigert: ABLAUF_VERWEIGERT,
+    verweigert: verweigertFuer(ziel),
     fehler: 'Ablaufpunkt anlegen fehlgeschlagen',
   });
   // Nur ans Ende, ohne Schalter: fertig – wie bisher ohne weiteren Abruf.
   if (data.nachId === undefined && data.vorBeginn === undefined && !data.weggelassen) return;
-  const neu = await angelegtePruefen(s, eventId, antwort, 'Der Punkt wurde nicht angelegt.');
-  await anDieStelle(s, eventId, neu.agenda, neu.id, data.nachId, data.vorBeginn);
-  if (data.weggelassen) await weglassenSetzen(s, eventId, neu.id, true);
+  const neu = await angelegtePruefen(s, ziel, antwort, 'Der Punkt wurde nicht angelegt.');
+  await anDieStelle(s, ziel, neu.agenda, neu.id, data.nachId, data.vorBeginn);
+  // `weggelassen` ist bei Vorlagen oben schon abgelehnt – hier bleibt nur der Termin.
+  if (data.weggelassen && !istVorlage(ziel)) await weglassenSetzen(s, ziel, neu.id, true);
 }
+
+/** Die Meldung, wenn jemand einer Überschrift in einer Vorlage Infos je Dienstgruppe geben will. */
+const KEINE_INFOS_AN_UEBERSCHRIFT = 'Überschriften haben in Vorlagen keine Infos je Dienstgruppe.';
 
 /**
  * Ob der eben angelegte Punkt **wirklich** im Ablauf steht – geprüft am frisch gelesenen Ablauf, nicht an der Antwort
@@ -241,12 +329,12 @@ export async function punktAnlegen(
  */
 async function angelegtePruefen(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   antwort: unknown,
   meldung: string,
-): Promise<{ id: number; agenda: CtAgenda }> {
+): Promise<{ id: number; agenda: GelesenerAblauf }> {
   const id = neueId(antwort);
-  const agenda = await s.agenda(eventId);
+  const agenda = await ablaufLesen(s, ziel);
   if (id === null || !agenda.items.some((i) => i.id === id)) {
     throw s.fehler(502, `${meldung} Bitte den Ablauf neu laden.`);
   }
@@ -269,8 +357,8 @@ async function angelegtePruefen(
  */
 async function anDieStelle(
   s: CtSchreiber,
-  eventId: number,
-  angelegt: CtAgenda,
+  ziel: AblaufZiel,
+  angelegt: GelesenerAblauf,
   neuId: number,
   nachId: number | null | undefined,
   vorBeginn: boolean | undefined,
@@ -286,16 +374,16 @@ async function anDieStelle(
     nachId === undefined ? rest.length : nachId === null ? 0 : nach >= 0 ? nach + 1 : rest.length;
   const vor = vorBeginn ?? gewuenscht < vorlauf;
   // Auf der falschen Seite der Grenze? Dann direkt an sie – über „Beginn“ als Vorlauf, darunter als Gottesdienst.
-  const ziel = vor ? Math.min(gewuenscht, vorlauf) : Math.max(gewuenscht, vorlauf);
-  const reihenfolge = [...rest.slice(0, ziel), neuId, ...rest.slice(ziel)];
+  const stelle = vor ? Math.min(gewuenscht, vorlauf) : Math.max(gewuenscht, vorlauf);
+  const reihenfolge = [...rest.slice(0, stelle), neuId, ...rest.slice(stelle)];
   if (reihenfolge.some((id, k) => items[k]?.id !== id)) {
-    await ablaufUmsortieren(s, eventId, reihenfolge);
+    await ablaufUmsortieren(s, ziel, reihenfolge);
   }
   if (!vor) return;
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+  await ablaufSchreibe(s, ziel, ablaufBasis(ziel), {
     method: 'PUT',
-    json: { calendarId: angelegt.calendarId, eventStartPosition: vorlauf + 1 },
-    verweigert: ABLAUF_VERWEIGERT,
+    json: { ...ablaufKopf(ziel, angelegt), eventStartPosition: vorlauf + 1 },
+    verweigert: verweigertFuer(ziel),
     fehler: 'Gottesdienstbeginn nachziehen fehlgeschlagen',
   });
 }
@@ -327,7 +415,7 @@ export interface PunktAenderung {
  */
 export async function punktAendern(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   fields: PunktAenderung,
   /**
@@ -336,13 +424,22 @@ export async function punktAendern(
    */
   gesehen?: PunktStand,
 ): Promise<void> {
-  const { items } = await s.agenda(eventId);
+  const { items } = await ablaufLesen(s, ziel);
   const it = items.find((i) => i.id === itemId);
   if (!it) throw s.fehler(404, 'Ablaufpunkt nicht gefunden.');
   const { infos, ...felder } = fields;
+  // Wie beim Anlegen: ChurchTools nähme Infos an einer Überschrift in einer Vorlage mit 204 an und speicherte nichts.
+  // Löschen (leerer Text) ist harmlos und bleibt erlaubt.
+  if (
+    istVorlage(ziel) &&
+    isHeaderType(it.type) &&
+    Object.values(infos ?? {}).some((t) => t.trim() !== '')
+  ) {
+    throw s.fehler(400, KEINE_INFOS_AN_UEBERSCHRIFT);
+  }
   if (gesehen) {
     // Die Zeitzone spielt für die verglichenen Felder keine Rolle (die Uhrzeit wird nicht verglichen).
-    const frisch = punktStand(ablaufZeileAus(it, eventId, 'UTC'));
+    const frisch = punktStand(ablaufZeileAus(it, terminIdVon(ziel), 'UTC'));
     const infoGeaendert = Object.keys(infos ?? {}).some(
       (g) => (frisch.infos?.[Number(g)] ?? '') !== (gesehen.infos?.[Number(g)] ?? ''),
     );
@@ -352,9 +449,9 @@ export async function punktAendern(
   }
 
   // Nur die Infos geändert: den Punkt selbst nicht anfassen.
-  if (Object.keys(felder).length > 0) await punktSchreiben(s, eventId, it, felder);
+  if (Object.keys(felder).length > 0) await punktSchreiben(s, ziel, it, felder);
   for (const [gruppe, text] of Object.entries(infos ?? {})) {
-    await gruppenInfoSchreiben(s, eventId, itemId, Number(gruppe), text);
+    await gruppenInfoSchreiben(s, ziel, itemId, Number(gruppe), text);
   }
 }
 
@@ -365,32 +462,28 @@ export async function punktAendern(
  */
 async function gruppenInfoSchreiben(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   gruppe: number,
   text: string,
 ): Promise<void> {
-  const pfad = `/events/${eventId}/agenda/items/${itemId}/servicegroups/${gruppe}`;
+  const pfad = `${ablaufBasis(ziel)}/items/${itemId}/servicegroups/${gruppe}`;
   const note = text.trim();
+  const verweigert = verweigertFuer(ziel);
   await ablaufSchreibe(
     s,
-    eventId,
+    ziel,
     pfad,
     note
-      ? {
-          method: 'PUT',
-          json: { note },
-          verweigert: ABLAUF_VERWEIGERT,
-          fehler: 'Info speichern fehlgeschlagen',
-        }
-      : { method: 'DELETE', verweigert: ABLAUF_VERWEIGERT, fehler: 'Info löschen fehlgeschlagen' },
+      ? { method: 'PUT', json: { note }, verweigert, fehler: 'Info speichern fehlgeschlagen' }
+      : { method: 'DELETE', verweigert, fehler: 'Info löschen fehlgeschlagen' },
   );
 }
 
 /** Den Punkt selbst schreiben (alles außer den Infos je Dienstgruppe). */
 async function punktSchreiben(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   it: CtAgendaItem,
   fields: Omit<PunktAenderung, 'infos'>,
 ): Promise<void> {
@@ -405,10 +498,10 @@ async function punktSchreiben(
     responsible: fields.responsible,
     durationSec: fields.durationMin !== undefined ? fields.durationMin * 60 : undefined,
   });
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${it.id}`, {
+  await ablaufSchreibe(s, ziel, `${ablaufBasis(ziel)}/items/${it.id}`, {
     method: 'PUT',
     json: body,
-    verweigert: ABLAUF_VERWEIGERT,
+    verweigert: verweigertFuer(ziel),
     fehler: 'Ablaufpunkt ändern fehlgeschlagen',
   });
 }
@@ -458,21 +551,21 @@ export interface GeloeschterPunkt {
  */
 export async function punktLoeschen(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
 ): Promise<GeloeschterPunkt | null> {
   // Lässt sich der Ablauf gerade nicht lesen, wird trotzdem gelöscht – nur ohne „Rückgängig". Gewollt
   // ist das Löschen; der Merkzettel ist eine Zugabe und darf es nicht verhindern.
-  const agenda = await s.agenda(eventId).then(
+  const agenda = await ablaufLesen(s, ziel).then(
     (a) => a,
     () => null,
   );
   const items = agenda?.items ?? [];
   const stelle = items.findIndex((i) => i.id === itemId);
   const it = stelle >= 0 ? items[stelle] : undefined;
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${itemId}`, {
+  await ablaufSchreibe(s, ziel, `${ablaufBasis(ziel)}/items/${itemId}`, {
     method: 'DELETE',
-    verweigert: ABLAUF_VERWEIGERT,
+    verweigert: verweigertFuer(ziel),
     fehler: 'Ablaufpunkt löschen fehlgeschlagen',
     okBei404: true, // schon weg ist auch weg
   });
@@ -481,14 +574,14 @@ export async function punktLoeschen(
   // sonst der erste Punkt des Gottesdienstes in den Vorlauf – samt verschobener Uhrzeiten.
   const grenze = agenda.eventStartPosition ?? 0;
   if ((it.position ?? stelle) < grenze) {
-    await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+    await ablaufSchreibe(s, ziel, ablaufBasis(ziel), {
       method: 'PUT',
-      json: { calendarId: agenda.calendarId, eventStartPosition: grenze - 1 },
-      verweigert: ABLAUF_VERWEIGERT,
+      json: { ...ablaufKopf(ziel, agenda), eventStartPosition: grenze - 1 },
+      verweigert: verweigertFuer(ziel),
       fehler: 'Gottesdienstbeginn nach dem Löschen nachziehen fehlgeschlagen',
     });
   }
-  return merkzettelAus(agenda, eventId, itemId);
+  return merkzettelAus(agenda, ziel, itemId);
 }
 
 /**
@@ -498,7 +591,7 @@ export async function punktLoeschen(
  */
 export function merkzettelAus(
   agenda: CtAgenda,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
 ): GeloeschterPunkt | null {
   const { items } = agenda;
@@ -520,7 +613,8 @@ export function merkzettelAus(
     },
     nachId: stelle > 0 ? items[stelle - 1].id : null,
     vorBeginn: it.isBeforeEvent ?? false,
-    weggelassen: istWeggelassen(it, eventId),
+    // Eine Vorlage kennt das Auge nicht (E10-0): `terminIdVon` ist dort 0, `startTimes` leer – nie weggelassen.
+    weggelassen: istWeggelassen(it, terminIdVon(ziel)),
   };
 }
 
@@ -540,7 +634,7 @@ function text(v: unknown, sonst = ''): string {
  */
 export async function punktWiederherstellen(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   g: GeloeschterPunkt,
 ): Promise<number> {
   const f = g.felder;
@@ -554,23 +648,28 @@ export async function punktWiederherstellen(
           duration: f.duration,
           responsible: f.responsible,
           serviceGroupNotes: f.serviceGroupNotes,
-          ...(f.arrangementId ? { arrangementId: f.arrangementId } : {}),
+          // Ein Lied ohne Arrangement braucht das Feld trotzdem (`null`) – sonst 400 (wie in `agendaPayload`).
+          ...(f.arrangementId
+            ? { arrangementId: f.arrangementId }
+            : f.type === 'song'
+              ? { arrangementId: null }
+              : {}),
         };
-  const antwort = await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
+  const antwort = await ablaufSchreibe(s, ziel, `${ablaufBasis(ziel)}/items`, {
     method: 'POST',
     json: body,
-    verweigert: ABLAUF_VERWEIGERT,
+    verweigert: verweigertFuer(ziel),
     fehler: 'Ablaufpunkt wiederherstellen fehlgeschlagen',
   });
   const { id: neuId, agenda } = await angelegtePruefen(
     s,
-    eventId,
+    ziel,
     antwort,
     'Der Punkt wurde nicht wieder angelegt.',
   );
   // An die alte Stelle, im alten Vorlauf-Zustand – dieselbe Regel wie „… dahinter einfügen“.
-  await anDieStelle(s, eventId, agenda, neuId, g.nachId, g.vorBeginn);
-  if (g.weggelassen) await weglassenSetzen(s, eventId, neuId, true);
+  await anDieStelle(s, ziel, agenda, neuId, g.nachId, g.vorBeginn);
+  if (g.weggelassen && !istVorlage(ziel)) await weglassenSetzen(s, ziel, neuId, true);
   return neuId;
 }
 
@@ -607,8 +706,8 @@ export async function weglassenSetzen(
   );
 }
 
-/** Die ID aus der Antwort auf `POST …/agenda/items` (`{ data: { id } }`). */
-function neueId(antwort: unknown): number | null {
+/** Die ID aus der Antwort auf ein Anlegen (`POST …/agenda/items`, `POST /agendatemplates`; `{ data: { id } }`). */
+export function neueId(antwort: unknown): number | null {
   const data = (antwort as { data?: { id?: unknown } } | null)?.data;
   return typeof data?.id === 'number' ? data.id : null;
 }
@@ -626,20 +725,20 @@ function neueId(antwort: unknown): number | null {
  */
 export async function vorBeginnSetzen(
   s: CtSchreiber,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   vorBeginn: boolean,
 ): Promise<void> {
-  const agenda = await s.agenda(eventId);
+  const agenda = await ablaufLesen(s, ziel);
   if (!agenda.items.some((i) => i.id === itemId)) throw s.fehler(409, ABLAUF_GEAENDERT);
   const neu = vorlaufUmschalten(agenda.items, agenda.eventStartPosition ?? 0, itemId, vorBeginn);
   if (neu === null) return; // steht schon so – nichts zu schreiben
 
-  if (neu.reihenfolge) await ablaufUmsortieren(s, eventId, neu.reihenfolge);
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+  if (neu.reihenfolge) await ablaufUmsortieren(s, ziel, neu.reihenfolge);
+  await ablaufSchreibe(s, ziel, ablaufBasis(ziel), {
     method: 'PUT',
-    json: { calendarId: agenda.calendarId, eventStartPosition: neu.grenze },
-    verweigert: ABLAUF_VERWEIGERT,
+    json: { ...ablaufKopf(ziel, agenda), eventStartPosition: neu.grenze },
+    verweigert: verweigertFuer(ziel),
     fehler: 'Gottesdienstbeginn speichern fehlgeschlagen',
   });
 }

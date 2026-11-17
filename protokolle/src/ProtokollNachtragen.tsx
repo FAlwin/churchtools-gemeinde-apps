@@ -147,7 +147,7 @@ export function ProtokollNachtragen({
             </ul>
           ) : (
             <div className={styles.leer}>
-              In {monatTitel(`${monat}-01`)} gibt es nichts nachzutragen – kein Treffen ohne
+              Im {monatTitel(`${monat}-01`)} gibt es nichts nachzutragen – kein Treffen ohne
               Protokoll.
             </div>
           ))}

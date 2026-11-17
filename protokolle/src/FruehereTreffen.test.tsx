@@ -293,7 +293,7 @@ describe('Fenster „Protokoll nachtragen“', () => {
     }
     expect(await within(fenster).findByText('August 2026')).toBeTruthy();
     expect(
-      await within(fenster).findByText(/In August 2026 gibt es nichts nachzutragen/),
+      await within(fenster).findByText(/Im August 2026 gibt es nichts nachzutragen/),
     ).toBeTruthy();
   });
 

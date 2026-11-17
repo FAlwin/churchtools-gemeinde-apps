@@ -389,7 +389,7 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
    (am Handy nur das Symbol).
 3. **Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
    steht das abgeschlossene Treffen mit der Marke „Gruppentreffen abgeschlossen“ und „Anwesenheit steht in ChurchTools
-   fest“. Ein Monat ohne Treffen: „In … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
+   fest“. Ein Monat ohne Treffen: „Im … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
    (auch ein Entwurf) stehen nirgends.
 4. Im aktuellen Monat die Zeile vom Treffen mit Einladung antippen: Das Fenster wechselt zu **Protokoll beginnen** (Hinweis
    „… mit diesem Termin und dem Gruppentreffen verknüpft … aus den Antworten auf die Einladung vorbelegt“, „Wie letztes

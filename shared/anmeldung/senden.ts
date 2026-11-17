@@ -4,7 +4,8 @@
  *
  * - `POST /publicgroups/{id}/signup` `{token, forms: [{form: [{id, type, value}]}], hasAcceptedPrivacyForSelf}`.
  * - Feldnummern aus `GET /publicgroups/{id}/form?token=`: Personenfelder über ihren Namen (`firstName`, `lastName`,
- *   `email`, `birthday` – Geburtstag steht nur im Kinder-Formular, wird im normalen aber angenommen), Gruppenfelder
+ *   `email`, `birthday` – Geburtstag steht nur im Kinder-Formular, wird im normalen aber angenommen; seit F4 auch
+ *   `street`, `zip`, `city`, wenn die Adresse im Formular ist), Gruppenfelder
  *   mit ihrer Nummer (`type: custom`), Datenschutz `type: privacy`.
  * - ChurchTools kennt kein „einmal je Anmeldung“: Jede Person ist ein eigenes Mitglied mit eigenen Feldern.
  *

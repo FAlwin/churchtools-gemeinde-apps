@@ -5,6 +5,7 @@ import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import type { Mail } from '@shared/anmeldung/bewegung';
 import type { Bedingung } from '@shared/anmeldung/bedingungen';
 import { MailAnsicht, MailKnoepfe } from './AnmeldungAktion';
+import { fertigHinweis } from './anmeldungText';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import * as Z from './zahlung';
 import * as B from './bewegung';
@@ -26,6 +27,7 @@ import {
 } from '@shared/anmeldung/liste.testdaten';
 import { mitgliederstandAus } from '@shared/anmeldung/liste';
 import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
+import type { Feld } from '@shared/anmeldung/formular';
 
 vi.mock('./zahlung', () => ({
   zahlungSpeichern: vi.fn().mockResolvedValue(undefined),
@@ -633,8 +635,22 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
     hm.meinName.mockResolvedValue('Alwin Friesen');
     hm.personenSuchen.mockResolvedValue([
-      { personId: 10, vor: 'Jonas', nach: 'Beispiel', geburtstag: '2017-05-01', email: null },
-      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+      {
+        personId: 10,
+        vor: 'Jonas',
+        nach: 'Beispiel',
+        geburtstag: '2017-05-01',
+        email: null,
+        adresse: null,
+      },
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Probe',
+        geburtstag: '2016-04-03',
+        email: null,
+        adresse: null,
+      },
     ]);
   });
   afterEach(() => {
@@ -646,7 +662,12 @@ describe('Anmeldung von Hand (A7-4a)', () => {
 
   it('suchen → wer dabei ist, ist gesperrt; wartet jemand, kommt Paul hinten an – oder bekommt trotzdem einen Platz', async () => {
     const zurueck = vi.fn().mockResolvedValue(undefined);
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: zurueck });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 50,
+      warteplatz: null,
+      rueckgaengig: zurueck,
+      adresseFehlt: false,
+    });
     const z = zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
     // Fenster wie ChurchTools (E6-O F4): erst suchen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten).
@@ -721,9 +742,14 @@ describe('Anmeldung von Hand (A7-4a)', () => {
   it('neue Person: gleicher Name → „dieselbe Person?“; trotzdem neu → Hinweis, dass sie in ChurchTools bleibt', async () => {
     hm.personenSuchen.mockResolvedValue([]);
     hm.gleichNamige.mockResolvedValue([
-      { personId: 77, vor: 'Nina', nach: 'Neu', geburtstag: null, email: null },
+      { personId: 77, vor: 'Nina', nach: 'Neu', geburtstag: null, email: null, adresse: null },
     ]);
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 200, warteplatz: 2, rueckgaengig: vi.fn() });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 200,
+      warteplatz: 2,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
@@ -755,7 +781,14 @@ describe('Person dazu (A7-4b)', () => {
     Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
     hm.personenSuchen.mockResolvedValue([
-      { personId: 50, vor: 'Paul', nach: 'Beispiel', geburtstag: '2018-04-03', email: null },
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Beispiel',
+        geburtstag: '2018-04-03',
+        email: null,
+        adresse: null,
+      },
     ]);
   });
   afterEach(() => {
@@ -763,7 +796,12 @@ describe('Person dazu (A7-4b)', () => {
   });
 
   it('aus dem Fenster der Anmeldung: nur die Fragen der Person, gleiche Nr., eigene Zahlung; Abbrechen führt zurück', async () => {
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 50,
+      warteplatz: null,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
     const z = zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
     fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
@@ -833,7 +871,12 @@ describe('Zurückholen (A7-4c)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 11, warteplatz: null, rueckgaengig: vi.fn() });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 11,
+      warteplatz: null,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
   });
   afterEach(() => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
@@ -937,7 +980,14 @@ describe('Zurückholen (A7-4c)', () => {
 
   it('in der Suche von „Von Hand“: wer abgesagt hat, wird zurückgeholt statt neu angemeldet', async () => {
     hm.personenSuchen.mockResolvedValue([
-      { personId: 11, vor: 'Lena', nach: 'Beispiel', geburtstag: '2019-02-02', email: null },
+      {
+        personId: 11,
+        vor: 'Lena',
+        nach: 'Beispiel',
+        geburtstag: '2019-02-02',
+        email: null,
+        adresse: null,
+      },
     ]);
     zeigen(mitAbsage());
     fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
@@ -952,7 +1002,14 @@ describe('Zurückholen (A7-4c)', () => {
 
   it('mit Bestätigungsmails (A9-1): Zurückholen nennt die Bestätigung statt „keine Mail“', async () => {
     hm.personenSuchen.mockResolvedValue([
-      { personId: 11, vor: 'Lena', nach: 'Beispiel', geburtstag: '2019-02-02', email: null },
+      {
+        personId: 11,
+        vor: 'Lena',
+        nach: 'Beispiel',
+        geburtstag: '2019-02-02',
+        email: null,
+        adresse: null,
+      },
     ]);
     zeigen(mitAbsage(), 10, false, true, true);
     fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
@@ -1534,9 +1591,21 @@ describe('Von Hand in Schritten (F2d)', () => {
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
     hm.meinName.mockResolvedValue('Alwin Friesen');
     hm.personenSuchen.mockResolvedValue([
-      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Probe',
+        geburtstag: '2016-04-03',
+        email: null,
+        adresse: null,
+      },
     ]);
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 50,
+      warteplatz: null,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
   });
   afterEach(() => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
@@ -1659,7 +1728,14 @@ describe('Von Hand in Schritten (F2d)', () => {
     )[0];
     p.unshift({ ...allergie, zustand: 'pflicht' }, schritt('s3', 'Kind'));
     hm.personenSuchen.mockResolvedValue([
-      { personId: 50, vor: 'Paul', nach: 'Beispiel', geburtstag: '2018-04-03', email: null },
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Beispiel',
+        geburtstag: '2018-04-03',
+        email: null,
+        adresse: null,
+      },
     ]);
     const z = zeigen(fertig(), 10, false, true, false, false, x);
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
@@ -1699,9 +1775,21 @@ describe('Von Hand: freie Antwort (F3b)', () => {
     mm.gruppenfelderLaden.mockResolvedValue(felder);
     hm.meinName.mockResolvedValue('Alwin Friesen');
     hm.personenSuchen.mockResolvedValue([
-      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Probe',
+        geburtstag: '2016-04-03',
+        email: null,
+        adresse: null,
+      },
     ]);
-    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 50,
+      warteplatz: null,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
   });
   afterEach(() => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
@@ -1792,5 +1880,160 @@ describe('Adresse im Fenster einer Anmeldung (F4b)', () => {
     zeigen(mitAdressen());
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
     expect(within(screen.getByRole('dialog')).queryByText('Hauptstr. 4, 53797 Lohmar')).toBeNull();
+  });
+});
+
+describe('Adresse von Hand (F4c, Entwurf f4c-von-hand-v1)', () => {
+  const BACH = { strasse: 'Am Bach 2', plz: '51766', ort: 'Engelskirchen' };
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    mm.gruppenfelderLaden.mockResolvedValue(FELDER);
+    hm.meinName.mockResolvedValue('Alwin Friesen');
+    hm.vonHandAnmelden.mockResolvedValue({
+      personId: 50,
+      warteplatz: null,
+      rueckgaengig: vi.fn(),
+      adresseFehlt: false,
+    });
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  /** Kinder-Event ohne Pflichtfragen (außer dem Namen), die Adresse einmal je Anmeldung. */
+  const einst = () => {
+    const x = e();
+    const frei = (f: Feld): Feld =>
+      f.art === 'fest' || f.zustand !== 'pflicht' ? f : { ...f, zustand: 'freiwillig' };
+    x.formular.anmeldung = x.formular.anmeldung.map(frei);
+    x.formular.person = x.formular.person.map(frei);
+    x.formular.anmeldung.splice(2, 0, { ...EMPFOHLEN.find((y) => y.id === 'adresse')!.feld });
+    return x;
+  };
+  const feld = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const tippen = (id: string, wert: string) =>
+    fireEvent.change(feld(id), { target: { value: wert } });
+  async function paulNehmen(adresse: typeof BACH | null) {
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null, adresse },
+    ]);
+    zeigen(fertig(), 10, false, true, false, false, einst());
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Probe' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Probe/ }));
+    tippen('af-anmeldung.name-vor', 'Petra');
+    tippen('af-anmeldung.name-nach', 'Probe');
+  }
+  const anmelden = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(hm.vonHandAnmelden).toHaveBeenCalled());
+    return hm.vonHandAnmelden.mock.calls[0][1].adresse;
+  };
+
+  it('bekannt, gleiche Adresse: vorbelegt, „steht schon so da“ – nichts zu schreiben', async () => {
+    await paulNehmen(BACH);
+    expect(feld('af-anmeldung.adresse-strasse').value).toBe('Am Bach 2');
+    expect(screen.getByText('So steht es schon in ChurchTools.')).toBeTruthy();
+    expect(await anmelden()).toBeNull();
+  });
+
+  it('bekannt, andere Adresse: zeigt die alte; ohne Schalter bleibt sie', async () => {
+    await paulNehmen(BACH);
+    tippen('af-anmeldung.adresse-ort', 'Overath');
+    expect(screen.getByText('Am Bach 2, 51766 Engelskirchen')).toBeTruthy();
+    expect(
+      screen.getByText('Ohne das bleibt die Adresse in ChurchTools, wie sie ist.'),
+    ).toBeTruthy();
+    expect(await anmelden()).toBeNull();
+  });
+
+  it('bekannt, andere Adresse: mit Schalter wird ersetzt – die alte geht für „Rückgängig“ mit', async () => {
+    await paulNehmen(BACH);
+    tippen('af-anmeldung.adresse-ort', 'Overath');
+    fireEvent.click(screen.getByRole('button', { name: 'Adresse in ChurchTools ersetzen' }));
+    expect(await anmelden()).toEqual({ neu: { ...BACH, ort: 'Overath' }, vorher: BACH });
+  });
+
+  it('bekannt ohne Adresse: was eingetragen wird, kommt ins Profil', async () => {
+    await paulNehmen(null);
+    expect(screen.queryByText(/noch keine Adresse/)).toBeNull();
+    tippen('af-anmeldung.adresse-strasse', 'Hauptstr. 4');
+    expect(screen.getByText(/In ChurchTools hat Paul Probe noch keine Adresse/)).toBeTruthy();
+    expect(await anmelden()).toEqual({
+      neu: { strasse: 'Hauptstr. 4', plz: '', ort: '' },
+      vorher: null,
+    });
+  });
+
+  /** Person dazu bei Marias Anmeldung – Jonas (erste Person) wohnt in Lohmar. */
+  async function dazuMit(paul: typeof BACH | null) {
+    hm.personenSuchen.mockResolvedValue([
+      {
+        personId: 50,
+        vor: 'Paul',
+        nach: 'Beispiel',
+        geburtstag: '2018-04-03',
+        email: null,
+        adresse: paul,
+      },
+    ]);
+    const stand = mitgliederstandAus(
+      mitglieder('AAAAAA', [true, true], 10),
+      [dazu(10, '2026-10-17')],
+      FELDER,
+      new Set([35]),
+      new Map([
+        [
+          10,
+          {
+            ...PERSONEN.get(10)!,
+            adresse: { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' },
+          },
+        ],
+        [11, { ...PERSONEN.get(11)! }],
+      ]),
+    );
+    zeigen(
+      { art: 'fertig', stand: { ...stand, verlaufGekuerzt: false } },
+      10,
+      false,
+      true,
+      false,
+      false,
+      einst(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Paul' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Beispiel/ }));
+  }
+
+  it('Person dazu, einmal je Anmeldung: die Adresse der Anmeldung ergänzt ein leeres Profil – ersetzt nie', async () => {
+    await dazuMit(null);
+    expect(screen.queryByLabelText(/^Straße/)).toBeNull();
+    expect(await anmelden()).toEqual({
+      neu: { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' },
+      vorher: null,
+    });
+    cleanup();
+    hm.vonHandAnmelden.mockClear();
+    await dazuMit(BACH);
+    expect(screen.queryByRole('button', { name: 'Adresse in ChurchTools ersetzen' })).toBeNull();
+    expect(await anmelden()).toBeNull();
+  });
+
+  it('kam die Adresse nicht an, sagt der Hinweis es – auch zusammen mit „neu angelegt“', () => {
+    expect(fertigHinweis('Paul Probe', false, false)).toEqual({});
+    expect(fertigHinweis('Paul Probe', false, true).hinweis).toBe(
+      'Die Adresse ließ sich nicht in ChurchTools speichern – bitte dort bei Paul Probe von Hand eintragen.',
+    );
+    expect(fertigHinweis('Paul Probe', true, true).hinweis).toMatch(
+      /^Paul Probe wurde in ChurchTools neu angelegt\..* Die Adresse ließ sich nicht/,
+    );
   });
 });

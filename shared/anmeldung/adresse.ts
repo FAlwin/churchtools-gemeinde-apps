@@ -9,7 +9,7 @@
  * Person – vorhandene Werte werden **überschrieben**. Entschieden (Alwin): so lassen, mit festem Hinweis
  * (`ADRESSE_HINWEIS`); leere Teile werden nie geschickt (`adresseWerte`), damit nichts gelöscht wird.
  */
-import type { Antwort } from './formular';
+import type { Antwort, Antworten, Formular } from './formular';
 
 /** Die Antwort des Bausteins: drei Texte. */
 export interface AdresseAntwort {
@@ -63,6 +63,39 @@ export function adresseVonPerson(
   const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
   const a: AdresseAntwort = { strasse: text(p.street), plz: text(p.zip), ort: text(p.city) };
   return a.strasse || a.plz || a.ort ? a : null;
+}
+
+/**
+ * **Die Adresse einer Person in den Antworten** – „je Person“ gefragt ihre eigene, einmal je Anmeldung gefragt die der
+ * Anmeldung (für alle Personen dieselbe). Ausgeschaltet gibt es keine. Die EINE Stelle für Formular (`senden.ts`) und
+ * „Von Hand“; Ausgeblendetes hat `leeren` vorher entfernt.
+ */
+export function adresseAntwort(f: Formular, a: Antworten, i: number): Antwort {
+  const an = (x: { typ: string; zustand: string }) => x.typ === 'adresse' && x.zustand !== 'aus';
+  const jePerson = f.person.find(an);
+  if (jePerson) return a.personen[i]?.[jePerson.id];
+  const einmal = f.anmeldung.find(an);
+  return einmal ? a.anmeldung[einmal.id] : undefined;
+}
+
+/** Normalisiert zum Vergleichen: ohne Rand und doppelte Leerzeichen, ohne Groß/Klein. */
+const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * **„Von Hand“ bei einer bekannten Person** (F4c, Alwin 17.11.2026: „fragen, wenn anders“, Entwurf
+ * `f4c-von-hand-v1`): `nichts` – nichts eingetragen oder steht so schon in ChurchTools; `ergaenzen` – die Person hat
+ * noch keine Adresse; `anders` – es steht eine andere da, ersetzt wird nur mit dem Häkchen.
+ */
+export function adresseVergleich(
+  eingetragen: Antwort,
+  profil: AdresseAntwort | null,
+): 'nichts' | 'ergaenzen' | 'anders' {
+  if (adresseWerte(eingetragen).length === 0) return 'nichts';
+  if (!profil) return 'ergaenzen';
+  const a = adresseAus(eingetragen);
+  return ADRESSE_TEILE.every(({ teil }) => norm(a[teil]) === norm(profil[teil]))
+    ? 'nichts'
+    : 'anders';
 }
 
 /** „Hauptstr. 4, 53797 Lohmar“ – `''`, wenn nichts eingetragen ist. */

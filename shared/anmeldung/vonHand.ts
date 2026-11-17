@@ -16,6 +16,7 @@ import { einmalFelder, type CtGruppenfeld, type ListenAnmeldung } from './liste'
 import { antwortenAus } from './antwortenAusListe';
 import { platzPlan, platzStandAus } from './oeffentlich';
 import { anmeldungAufbauen, type CtFormular, type PreisWahl } from './senden';
+import { ADRESSE_TEILE, type AdresseAntwort } from './adresse';
 
 /** Die Person, die von Hand angemeldet wird – aus ChurchTools oder eben angelegt. */
 export interface HandPerson {
@@ -23,6 +24,8 @@ export interface HandPerson {
   nach: string;
   geburtstag: string | null;
   email: string | null;
+  /** Straße, PLZ, Ort aus dem Profil (F4c) – bei einer neuen Person `null`. */
+  adresse: AdresseAntwort | null;
 }
 
 const vonHandGeht = (f: Feld) => !['privacy', 'unterschrift', 'price'].includes(f.typ);
@@ -49,7 +52,8 @@ export function mitUnterschrift(f: Formular): boolean {
 
 /**
  * **Die Antworten zu Beginn** – Name, Geburtsdatum und E-Mail aus ChurchTools. „Angemeldet von“ ist bei Kinder-Events
- * leer (dort melden Eltern an), sonst die Person selbst.
+ * leer (dort melden Eltern an), sonst die Person selbst. Die Adresse (F4c, Entwurf `f4c-von-hand-v1`) ist mit der aus
+ * dem Profil vorbelegt; bei „Person dazu“ und „einmal je Anmeldung“ mit der der ersten Person der Anmeldung.
  */
 export function handStart(
   e: OeffentlicheEinstellungen,
@@ -64,17 +68,27 @@ export function handStart(
   const kontakt = e.formular.anmeldung.find((f) => f.typ === 'name');
   const mail = e.formular.anmeldung.find((f) => f.typ === 'email');
   const name = e.formular.person.find((f) => f.typ === 'name');
+  const an = (f: Feld) => f.typ === 'adresse' && f.zustand !== 'aus';
+  const adresseJePerson = e.formular.person.find(an);
+  const adresseEinmal = adresseJePerson ? undefined : e.formular.anmeldung.find(an);
+  const einmalVorbelegt = dazu ? (dazu.personen[0]?.adresse ?? null) : p.adresse;
   return {
-    anmeldung: dazu
-      ? antwortenAus(e, dazu).anmeldung
-      : {
-          ...(kontakt && e.wer !== 'kinder' ? { [kontakt.id]: { vor: p.vor, nach: p.nach } } : {}),
-          ...(mail ? { [mail.id]: p.email ?? '' } : {}),
-        },
+    anmeldung: {
+      ...(dazu
+        ? antwortenAus(e, dazu).anmeldung
+        : {
+            ...(kontakt && e.wer !== 'kinder'
+              ? { [kontakt.id]: { vor: p.vor, nach: p.nach } }
+              : {}),
+            ...(mail ? { [mail.id]: p.email ?? '' } : {}),
+          }),
+      ...(adresseEinmal && einmalVorbelegt ? { [adresseEinmal.id]: { ...einmalVorbelegt } } : {}),
+    },
     personen: [
       {
         ...(name ? { [name.id]: { vor: p.vor, nach: p.nach } } : {}),
         ...(p.geburtstag ? { birth: p.geburtstag.slice(0, 10) } : {}),
+        ...(adresseJePerson && p.adresse ? { [adresseJePerson.id]: { ...p.adresse } } : {}),
       },
     ],
   };
@@ -138,16 +152,20 @@ export function handPlatz(lage: HandLage, trotzdem: boolean): HandPlatz {
 
 /**
  * Das ChurchTools-Formular, wie `anmeldungAufbauen` es erwartet – aus den Gruppenfeldern der Veranstaltung. Die
- * Personenfelder schreibt die Anmeldung von Hand nicht über die Gruppe (die Person gibt es schon).
+ * Personenfelder schreibt die Anmeldung von Hand nicht über die Gruppe (die Person gibt es schon; die Adresse schreibt
+ * `vonHandAnmelden` danach ins Profil, F4c). Sie stehen hier nur, damit `anmeldungAufbauen` sie findet – übernommen
+ * werden unten nur die Gruppenfelder. Ohne Straße, PLZ und Ort scheiterte „Von Hand“ an jeder Adresse (F4c, Test).
  */
 function formularAus(felder: ReadonlyMap<number, CtGruppenfeld>): CtFormular {
   return {
     form: [
-      ...['firstName', 'lastName', 'email', 'birthday'].map((n) => ({
-        id: n,
-        type: 'person',
-        name: n,
-      })),
+      ...['firstName', 'lastName', 'email', 'birthday', ...ADRESSE_TEILE.map((t) => t.ct)].map(
+        (n) => ({
+          id: n,
+          type: 'person',
+          name: n,
+        }),
+      ),
       ...[...felder.values()].map((f) => ({
         id: f.id,
         type: 'custom',

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ApiError } from '@ui/ct/fehler';
@@ -41,6 +41,12 @@ import {
 import { tagPunkt } from '@shared/ct/datum';
 import { freiEingabe } from '@shared/anmeldung/freieAntwort';
 import {
+  adresseAntwort,
+  adresseAus,
+  adresseText,
+  adresseVergleich,
+} from '@shared/anmeldung/adresse';
+import {
   GibtEsSchon,
   gleichNamige,
   meinName,
@@ -57,6 +63,7 @@ import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import k from './Baukasten.module.scss';
 import { mailHinweis } from './anzeige';
+import { fertigHinweis } from './anmeldungText';
 
 /**
  * **Anmeldung von Hand** (A7-4a, Entwurf `a7-4-von-hand-v1`) – erst in ChurchTools suchen, sonst neu anlegen; dann die
@@ -169,6 +176,8 @@ export function VonHandFenster({
   const [extras, setExtras] = useState<boolean[]>(e.preis.extras.map(() => false));
   const [papier, setPapier] = useState(false);
   const [trotzdem, setTrotzdem] = useState(false);
+  /** F4c: Steht in ChurchTools eine andere Adresse, ersetzt sie nur, wer das einschaltet (Entwurf f4c-von-hand-v1). */
+  const [adresseErsetzen, setAdresseErsetzen] = useState(false);
   const [fehlerFelder, setFehlerFelder] = useState<string[]>([]);
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -205,6 +214,48 @@ export function VonHandFenster({
           heute,
         )
       : null;
+  // ── F4c: Adresse (Entwurf f4c-von-hand-v1, „fragen, wenn anders“) ──
+  const profil = wahl?.art === 'da' ? wahl.p.adresse : null;
+  const eingetragen = adresseAntwort(e.formular, geleert, 0);
+  const vergleich = adresseVergleich(eingetragen, profil);
+  // Ersetzen nur mit dem Schalter – und den gibt es nur neben dem Adressfeld. Bei „Person dazu“ und „einmal je
+  // Anmeldung“ steht die Adresse nicht im Fenster: dann wird nie ersetzt, nur ein leeres Profil ergänzt (Test).
+  const adresseSchreiben =
+    vergleich === 'ergaenzen' || (vergleich === 'anders' && adresseErsetzen)
+      ? { neu: adresseAus(eingetragen), vorher: profil }
+      : null;
+  const name = wahl ? ganz(wahl.art === 'da' ? wahl.p : wahl.neu) : '';
+  /** Unter dem Baustein „Adresse“: was beim Anmelden mit ihr passiert. */
+  const adresseStand =
+    wahl?.art === 'neu' ? (
+      <p className={a.hinweisBlau}>{name} wird neu angelegt – mit dieser Adresse.</p>
+    ) : vergleich === 'ergaenzen' ? (
+      <p className={a.hinweisBlau}>
+        In ChurchTools hat {name} noch keine Adresse – was du einträgst, kommt in das Profil.
+      </p>
+    ) : vergleich === 'anders' && profil ? (
+      <div className={a.hinweisBlau} role="group" aria-label="Adresse in ChurchTools">
+        <p className={a.adresseAlt}>
+          In ChurchTools steht: <b>{adresseText(profil)}</b>
+        </p>
+        <button
+          type="button"
+          className={k.schalterZeile}
+          aria-pressed={adresseErsetzen}
+          onClick={() => setAdresseErsetzen(!adresseErsetzen)}
+        >
+          <Schalter an={adresseErsetzen} />
+          Adresse in ChurchTools ersetzen
+        </button>
+        <p className={a.leise}>
+          {adresseErsetzen
+            ? 'Beim Anmelden wird die Adresse in ChurchTools durch die neue ersetzt.'
+            : 'Ohne das bleibt die Adresse in ChurchTools, wie sie ist.'}
+        </p>
+      </div>
+    ) : profil && adresseText(eingetragen) ? (
+      <p className={a.leise}>So steht es schon in ChurchTools.</p>
+    ) : null;
   const kostet = kannEtwasKosten(e.preis);
   const schlussVorbei = !!anmeldeschluss && Date.parse(anmeldeschluss) < Date.now();
   const sichtbar = (x: Feld) => x.zustand !== 'aus';
@@ -226,8 +277,15 @@ export function VonHandFenster({
     const p: HandPerson =
       w.art === 'da'
         ? w.p
-        : { vor: w.neu.vor, nach: w.neu.nach, geburtstag: w.neu.geburtstag, email: w.neu.email };
+        : {
+            vor: w.neu.vor,
+            nach: w.neu.nach,
+            geburtstag: w.neu.geburtstag,
+            email: w.neu.email,
+            adresse: null,
+          };
     setWahl(w);
+    setAdresseErsetzen(false);
     setAntworten(handStart(e, p, dazu));
     setFehlerFelder([]);
     setFehler(null);
@@ -306,6 +364,7 @@ export function VonHandFenster({
             felder: werte,
             nrFeld: e.ctFelder.nr,
             platz,
+            adresse: adresseSchreiben,
           },
           heute,
         );
@@ -323,11 +382,7 @@ export function VonHandFenster({
             rueckgaengig: r.rueckgaengig,
           },
           // Der lange Satz stand zuerst in der Zeile mit „Rückgängig“ und drückte die Knöpfe zusammen (22.10.2026).
-          ...(wahl.art === 'neu'
-            ? {
-                hinweis: `${name} wurde in ChurchTools neu angelegt. „Rückgängig“ nimmt die Anmeldung zurück – die Person bleibt in ChurchTools.`,
-              }
-            : {}),
+          ...fertigHinweis(name, wahl.art === 'neu', r.adresseFehlt),
           mail: bescheidMail(e, {
             art: 'angemeldet',
             veranstaltung,
@@ -668,6 +723,7 @@ export function VonHandFenster({
                     fehler={fehlerFelder}
                     {...bedingt(x, `anmeldung.${x.id}`)}
                   />
+                  {x.typ === 'adresse' && adresseStand}
                 </div>
               ))}
               {papierHier && (
@@ -697,17 +753,19 @@ export function VonHandFenster({
             {hf.person
               .filter((x) => sichtbar(x) && zeigen(x, 0) && seite.zeigtPerson(x))
               .map((x) => (
-                <FeldEingabe
-                  key={x.id}
-                  feld={x}
-                  pfad={`personen.0.${x.id}`}
-                  wert={antworten.personen[0][x.id]}
-                  onWert={(w) => setPerson(x.id, w)}
-                  {...freiEingabe(antworten.personen[0], x.id, setPerson)}
-                  fehler={fehlerFelder}
-                  gesperrt={gesperrt(x)}
-                  {...bedingt(x, `personen.0.${x.id}`, 0)}
-                />
+                <Fragment key={x.id}>
+                  <FeldEingabe
+                    feld={x}
+                    pfad={`personen.0.${x.id}`}
+                    wert={antworten.personen[0][x.id]}
+                    onWert={(w) => setPerson(x.id, w)}
+                    {...freiEingabe(antworten.personen[0], x.id, setPerson)}
+                    fehler={fehlerFelder}
+                    gesperrt={gesperrt(x)}
+                    {...bedingt(x, `personen.0.${x.id}`, 0)}
+                  />
+                  {x.typ === 'adresse' && adresseStand}
+                </Fragment>
               ))}
           </section>
         )}

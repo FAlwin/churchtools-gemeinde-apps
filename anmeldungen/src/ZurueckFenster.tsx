@@ -81,6 +81,8 @@ export function ZurueckFenster({
           felder: plan.felder,
           nrFeld: e.ctFelder.nr,
           platz,
+          // Zurückholen ändert das Profil nicht – die Adresse steht dort schon (F4c).
+          adresse: null,
         },
         heute,
       );

@@ -348,6 +348,11 @@
   background: var(--blue-soft);
 }
 
+// F4c: „In ChurchTools steht …“ über dem Schalter „Adresse in ChurchTools ersetzen“.
+.adresseAlt {
+  margin: 0 0 6px;
+}
+
 .hinweisRot {
   border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   background: color-mix(in srgb, var(--red) 7%, var(--surface2));

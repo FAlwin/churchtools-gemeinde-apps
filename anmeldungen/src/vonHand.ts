@@ -26,6 +26,13 @@ import { angemeldeteId } from '@ui/ct/ich';
 import { personenRoh } from './mitglieder';
 import { personenSuchen, type Gefunden } from '@ui/ct/personen';
 import { mitgliedAnlegen, mitgliedEntfernen, mitgliedOderNichts } from '@ui/ct/mitglieder';
+import {
+  ADRESSE_TEILE,
+  adresseAus,
+  adresseVonPerson,
+  adresseWerte,
+  type AdresseAntwort,
+} from '@shared/anmeldung/adresse';
 
 /** Vor- und Nachname der angemeldeten Person – für den Vermerk „Unterschrift auf Papier“. */
 export async function meinName(): Promise<string> {
@@ -143,6 +150,11 @@ export interface VonHandPlan {
   /** Feldnummer der Anmelde-Nr. – damit wird nachgelesen. */
   nrFeld: number | undefined;
   platz: HandPlatz;
+  /**
+   * **Die Adresse ins Profil** (F4c) – `null`: nichts zu schreiben (leer, gleich, oder anders ohne Häkchen).
+   * `vorher`: was im Profil stand – „Rückgängig“ stellt es wieder her.
+   */
+  adresse: { neu: AdresseAntwort; vorher: AdresseAntwort | null } | null;
 }
 
 export interface VonHandErgebnis {
@@ -151,6 +163,40 @@ export interface VonHandErgebnis {
   warteplatz: number | null;
   /** Nimmt die Person wieder aus der Gruppe (eine neu angelegte Person bleibt in ChurchTools). */
   rueckgaengig: () => Promise<void>;
+  /**
+   * Die Adresse sollte ins Profil, ist aber nicht angekommen (keine Schreibrechte an der Person, Netz …). Die Anmeldung
+   * steht trotzdem – sie ist das Wichtigere.
+   */
+  adresseFehlt: boolean;
+}
+
+/** Steht im Profil, was geschrieben wurde? Leere Teile wurden nicht geschickt – die zählen nicht. */
+const adresseDa = (soll: AdresseAntwort, ist: AdresseAntwort | null) =>
+  ADRESSE_TEILE.every(
+    ({ teil }) => !soll[teil].trim() || (ist?.[teil] ?? '') === soll[teil].trim(),
+  );
+
+/**
+ * **Die Adresse ins Profil schreiben** (F4c) – `PATCH /persons/{id}` mit Straße, PLZ, Ort (laut API-Beschreibung
+ * erlaubt, sofern man an der Person schreiben darf), nachgelesen. Wirft bei Fehler oder wenn es nicht ankam.
+ * `leerAuch`: auch leere Teile schicken – nur für „Rückgängig“, das den alten Stand (vielleicht ohne Adresse)
+ * wiederherstellt.
+ */
+async function adresseSchreiben(
+  personId: number,
+  a: AdresseAntwort,
+  leerAuch = false,
+): Promise<void> {
+  const body = leerAuch
+    ? Object.fromEntries(ADRESSE_TEILE.map(({ teil, ct }) => [ct, a[teil].trim()]))
+    : Object.fromEntries(adresseWerte(a).map(({ ct, wert }) => [ct, wert]));
+  await ctAnfrage(`/persons/${personId}`, { method: 'PATCH', body: JSON.stringify(body) });
+  const [p] = await personenRoh([personId]);
+  const ist = p ? adresseVonPerson(p) : null;
+  const ok = leerAuch
+    ? ADRESSE_TEILE.every(({ teil }) => (ist?.[teil] ?? '') === a[teil].trim())
+    : adresseDa(a, ist);
+  if (!ok) throw new NichtUebernommen('die Adresse');
 }
 
 /**
@@ -225,13 +271,31 @@ export async function vonHandAnmelden(
     throw x;
   }
 
+  // F4c: erst nach dem Eintragen – fehlt das Recht an der Person, steht die Anmeldung trotzdem (sie ist wichtiger).
+  let adresseGeschrieben = false;
+  let adresseFehlt = false;
+  if (plan.adresse) {
+    try {
+      await adresseSchreiben(personId, plan.adresse.neu);
+      adresseGeschrieben = true;
+    } catch (x) {
+      console.warn('Adresse nicht ins Profil geschrieben', x);
+      adresseFehlt = true;
+    }
+  }
+  const adresseVorher = plan.adresse?.vorher ?? null;
+
   return {
     personId,
     warteplatz,
+    adresseFehlt,
     rueckgaengig: async () => {
       await mitgliedEntfernen(id, personId);
       if (await mitgliedDa(id, personId)) throw new NichtUebernommen('das Zurücknehmen');
       await plaetzeZurueck();
+      // Die alte Adresse zurück – auch „keine“ (dann werden die Felder wieder geleert).
+      if (adresseGeschrieben)
+        await adresseSchreiben(personId, adresseVorher ?? adresseAus(undefined), true);
     },
   };
 }

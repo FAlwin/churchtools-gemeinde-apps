@@ -22,6 +22,7 @@
 import { decktTermin } from '../absences/index';
 import type { Dienst } from '../ct/dienste';
 import { initialenAus } from '../organigramm/mitglieder';
+import type { Entwurf } from './entwuerfe';
 import { platzPerson } from './fokus';
 import { zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
 import {
@@ -53,6 +54,8 @@ export interface WeitererDienst {
 export interface RasterZelle {
   /** Der Dienst der Zeile an diesem Termin – `null`, wenn die Person dort nicht in diesem Dienst steht. */
   zustand: ZellenZustand | null;
+  /** Bei `zustand: 'entwurf'`: ob der Entwurf eine Anfrage ist oder „direkt“ (P2m) – sonst `null`. */
+  modus: Entwurf['modus'] | null;
   /** Andere Dienste, in denen die Person an diesem Tag eingeteilt ist. */
   weitere: WeitererDienst[];
   /** Abwesend an diesem Termin (`decktTermin`) – der Grund, sonst „Abwesend“, und der ganze Zeitraum der Abwesenheit. */
@@ -214,7 +217,7 @@ export function personenRaster(o: {
     // Wer eine Zeile bekommt: Mitglieder + im Zeitraum Eingeteilte + Entwürfe auf Personen.
     const personen = new Map<number, { name: string; initialen: string }>(mitglieder);
     const gaeste: RasterGast[][] = spalten.map(() => []);
-    const entwurfZelle = new Map<number, Set<number>>(); // Person → Positionen mit Entwurf
+    const entwurfZelle = new Map<number, Map<number, Entwurf['modus']>>(); // Person → Position → Modus
     const einsaetze = new Map<number, number>();
     spalten.forEach((i, pos) => {
       for (const p of z.zellen[i] ?? []) {
@@ -237,8 +240,8 @@ export function personenRaster(o: {
           if (!personen.has(ziel.personId))
             personen.set(ziel.personId, { name: ziel.name, initialen: initialenAus(ziel.name) });
           let je = entwurfZelle.get(ziel.personId);
-          if (!je) entwurfZelle.set(ziel.personId, (je = new Set()));
-          je.add(pos);
+          if (!je) entwurfZelle.set(ziel.personId, (je = new Map<number, Entwurf['modus']>()));
+          je.set(pos, e.entwurf.modus ?? 'anfrage');
         } else if (ziel.art === 'gast') {
           gaeste[pos].push({ name: ziel.name, entwurf: true });
         }
@@ -279,7 +282,15 @@ export function personenRaster(o: {
               };
             });
           const abwesend = abwesendAm(personId, plan.spalten[i]);
-          return { zustand, weitere, abwesend, warnung: abwesend !== null && zustand !== null };
+          const modus =
+            zustand === 'entwurf' ? (entwurfZelle.get(personId)?.get(pos) ?? null) : null;
+          return {
+            zustand,
+            modus,
+            weitere,
+            abwesend,
+            warnung: abwesend !== null && zustand !== null,
+          };
         });
         return {
           schluessel: `${dienst.id}|${personId}`,

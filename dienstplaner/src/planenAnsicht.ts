@@ -33,6 +33,12 @@ export interface PlanenAnsicht {
    * der Zeit davor haben das Feld nicht: dann ist nichts einzeln ausgeblendet.
    */
   ausgeblendeteDienste: number[];
+  /**
+   * Die Dienste, deren **neue** Entwürfe gleich „direkt“ beginnen (P2m, Vorgabe „Anfrage | direkt“ je Dienst; IDs). Alle
+   * anderen beginnen als Anfrage. Gemerkt je Gerät wie der Rest hier – gemerkte Werte aus der Zeit davor haben das Feld
+   * nicht: dann ist nichts direkt. Gelesen wird sie über `modusFuerDienst`.
+   */
+  direktDienste: number[];
   /** Ausgeblendete Veranstaltungsarten (wie in der Termine-Liste). */
   ausgeblendeteArten: string[];
   /** Ausgeblendete Kalender (IDs, Wunsch 6) – wie in der Termine-Liste. */
@@ -57,6 +63,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   unteransicht: 'matrix',
   ausgeblendeteGruppen: [],
   ausgeblendeteDienste: [],
+  direktDienste: [],
   ausgeblendeteArten: [],
   ausgeblendeteKalender: [],
   zeitraum: AB_HEUTE,
@@ -75,6 +82,7 @@ export function leseAnsicht(): PlanenAnsicht {
       unteransicht: unteransichtAus(a.unteransicht),
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteDienste: [...new Set(zahlen(a.ausgeblendeteDienste))],
+      direktDienste: [...new Set(zahlen(a.direktDienste))],
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
       ausgeblendeteKalender: kalenderIdsAus(a.ausgeblendeteKalender),
       zeitraum: zeitraumAus(a.zeitraum),

@@ -247,7 +247,7 @@ describe('Personen – Zauberstab im Block-Kopf (P2z)', () => {
     ]);
     await screen.findByText('3 Vorschläge als Entwurf eingetragen – noch nicht gesendet.');
     await waitFor(() =>
-      expect(within(t).getAllByRole('img', { name: 'Ton, Entwurf' })).toHaveLength(3),
+      expect(within(t).getAllByRole('img', { name: 'Ton, Entwurf, Anfrage' })).toHaveLength(3),
     );
     expect(offen(1)).toEqual(['Licht', 'Gesang']);
     expect(offen(2)).toEqual([]);

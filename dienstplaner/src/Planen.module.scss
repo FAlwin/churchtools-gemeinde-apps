@@ -300,6 +300,51 @@
   }
 }
 
+// Dienstname mit dem Vorgabe-Symbol dahinter (P2m).
+.dienstKopf {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+// Vorgabe „Anfrage | direkt“ am Dienstnamen (P2m, Entwurf `e9-p2-modus.html` G4): ein rundes Symbol wie die Status-Kreise im
+// Platz (18 px, 1,5 px Linie) – „?“ als Umriss = Anfrage, Haken gefüllt = direkt, blau. Die Tippfläche ist größer als das
+// Symbol (unsichtbar, 32 px), der Ring erscheint nur mit echter Maus.
+.vorgabe {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid var(--blue);
+  border-radius: 50%;
+  background: none;
+  color: var(--blue);
+  font: 700 11px/1 var(--ui);
+  cursor: pointer;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+  }
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 28%, transparent);
+    }
+  }
+}
+.vorgabeDirekt {
+  background: var(--blue);
+  color: var(--symbol-tinte);
+}
+
 // Regler (Plätze ändern) – leise, erst beim Zeigen deutlicher.
 .regler {
   flex: none;

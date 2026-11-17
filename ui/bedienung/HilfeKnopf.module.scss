@@ -1,0 +1,33 @@
+// Hilfe-Fenster mit kurzen Abschnitten (Dienstplaner, 17.11.2026).
+.fragezeichen {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hilfe {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.abschnitt {
+  h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  li {
+    margin: 2px 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text2);
+  }
+}

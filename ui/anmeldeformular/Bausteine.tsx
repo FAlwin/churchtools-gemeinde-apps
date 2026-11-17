@@ -22,12 +22,18 @@ import {
   type Punkt,
   type Strich,
 } from '@shared/anmeldung/unterschrift';
+import {
+  ADRESSE_HINWEIS,
+  ADRESSE_TEILE,
+  adresseAus,
+  type AdressTeil,
+} from '@shared/anmeldung/adresse';
 import { useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import s from './AnmeldeFormular.module.scss';
 
 /**
  * **Zusammengesetzte Bausteine des Formulars** (A6-2b, Entwurf `a6-2b-entwurf-v2`, Alwin 14./15.10.2026):
- * „Erziehungsberechtigte“ und „Unterschrift“. Beide gibt es einmal je Anmeldung; die Regeln (Pflicht, Ablage in
+ * „Erziehungsberechtigte“ und „Unterschrift“, seit F4 auch „Adresse“. Die ersten beiden gibt es einmal je Anmeldung; die Regeln (Pflicht, Ablage in
  * ChurchTools) stehen in `@shared/anmeldung` – hier nur, wie Gäste sie ausfüllen.
  */
 
@@ -183,6 +189,64 @@ export function ErziehungsEingabe({
         </span>
       </label>
       {hat('ok') && <span className={s.err}>Bitte ankreuzen.</span>}
+    </div>
+  );
+}
+
+const AUTOFILL: Record<AdressTeil, string> = {
+  strasse: 'street-address',
+  plz: 'postal-code',
+  ort: 'address-level2',
+};
+const FEHLT: Record<AdressTeil, string> = {
+  strasse: 'Bitte Straße und Hausnummer eintragen.',
+  plz: 'Bitte die PLZ eintragen.',
+  ort: 'Bitte den Ort eintragen.',
+};
+
+/**
+ * **Adresse** (F4, Entwurf `f4-adresse-v1`): Straße und Hausnummer, darunter PLZ und Ort nebeneinander, dazu der feste
+ * Hinweis, dass es im Profil gespeichert wird. Teile und Längen stehen in `adresse.ts`.
+ */
+export function AdresseEingabe({ feld: f, wert, onWert, pfad, fehler, gesperrt, zusatz }: Props) {
+  const a = adresseAus(wert);
+  const pflicht = f.zustand === 'pflicht';
+  const id = `af-${pfad}`;
+  const eingabe = (teil: AdressTeil) => {
+    const t = ADRESSE_TEILE.find((x) => x.teil === teil)!;
+    const hat = fehler.includes(`${pfad}.${teil}`);
+    return (
+      <div className={`${s.pf} ${hat ? s.bad : ''}`}>
+        <label htmlFor={`${id}-${teil}`}>
+          {t.name}
+          {pflicht && (
+            <span className={s.req} aria-hidden="true">
+              *
+            </span>
+          )}
+        </label>
+        <input
+          id={`${id}-${teil}`}
+          value={a[teil]}
+          maxLength={t.max}
+          disabled={gesperrt}
+          autoComplete={AUTOFILL[teil]}
+          inputMode={teil === 'plz' ? 'numeric' : undefined}
+          onChange={(ev) => onWert({ ...a, [teil]: ev.target.value })}
+        />
+        {hat && <span className={s.err}>{FEHLT[teil]}</span>}
+      </div>
+    );
+  };
+  return (
+    <div className={s.baustein}>
+      <Kopf feld={f} zusatz={zusatz} />
+      {eingabe('strasse')}
+      <div className={s.plzOrt}>
+        {eingabe('plz')}
+        {eingabe('ort')}
+      </div>
+      <span className={s.help}>{ADRESSE_HINWEIS}</span>
     </div>
   );
 }

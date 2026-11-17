@@ -1,6 +1,6 @@
 /**
  * **Die Formularfelder in ChurchTools** (A5) – jedes Feld des Formulars ist ein Gruppenfeld, also eine Spalte
- * der Mitgliederliste (außer Name, E-Mail, Geburtsdatum: die stehen an der Person). Gemessen an der
+ * der Mitgliederliste (außer Name, E-Mail, Geburtsdatum und Adresse: die stehen an der Person). Gemessen an der
  * Test-Instanz (`docs/messung-a5-2026-10-13.md`):
  *
  * - Feld und Antworten umbenennen lässt vorhandene Antworten stehen (die ID bleibt).
@@ -43,6 +43,7 @@ import {
 } from '@shared/anmeldung/bedingungen';
 import { freiName, freiSchluessel } from '@shared/anmeldung/freieAntwort';
 import { istLeer, rohWert } from '@shared/anmeldung/feldwert';
+import { ADRESSE_TEILE } from '@shared/anmeldung/adresse';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
 export type { Bereich };
@@ -232,6 +233,10 @@ export async function feldSpeichern(
     }
   }
 
+  // F4: Die Adresse liegt an der Person – ihre drei Personenfelder kommen ins Anmeldeformular (oder heraus).
+  if (ablage.ort === 'person' && ablage.feld === 'adresse')
+    await adresseImFormular(id, feld.zustand !== 'aus');
+
   const gespeichert: Feld = { ...feld, verborgen };
   if (!gespeichert.verborgen) delete gespeichert.verborgen;
   return aendereEinstellungen(id, (frisch) => ({
@@ -243,6 +248,61 @@ export async function feldSpeichern(
       ...zusatz,
     },
   }));
+}
+
+/** Welche Personenfelder im Anmeldeformular stehen – ihre Schlüssel (`street`, `zip` …). */
+async function personenfelderImFormular(id: number): Promise<Set<string>> {
+  const roh = await ctDaten<{ type?: string; field?: { dbField?: { key?: string } } }[]>(
+    `/groups/${id}/memberfields`,
+  );
+  return new Set(
+    roh.flatMap((f) => (f.type === 'person' && f.field?.dbField?.key ? [f.field.dbField.key] : [])),
+  );
+}
+
+/**
+ * Die Nummern der Personenfelder Straße, PLZ, Ort (`/fields`). Darf man die Liste nicht lesen (403), gelten die
+ * Nummern der eingebauten Felder (gemessen auf der Test-Instanz: 4, 6, 7) – ob sie stimmen, zeigt das Nachlesen.
+ */
+async function adressNummern(): Promise<Map<string, number>> {
+  const eingebaut = new Map([
+    ['street', 4],
+    ['zip', 6],
+    ['city', 7],
+  ]);
+  try {
+    const roh = await ctDaten<{ id?: number; key?: string }[]>('/fields');
+    const m = new Map<string, number>();
+    for (const f of roh) if (f.key && typeof f.id === 'number') m.set(f.key, f.id);
+    return ADRESSE_TEILE.every((t) => m.has(t.ct)) ? m : eingebaut;
+  } catch (x) {
+    if (x instanceof ApiError && x.status === 403) return eingebaut;
+    throw x;
+  }
+}
+
+/**
+ * **Straße, PLZ und Ort ins Anmeldeformular nehmen – oder heraus** (F4, gemessen F0/M1). Nie Pflicht in ChurchTools:
+ * Die Pflicht prüft unser Formular, und bei „einmal je Anmeldung“ trägt jede Person dieselbe Adresse. Nachgelesen –
+ * ein 200 allein beweist nichts.
+ */
+export async function adresseImFormular(id: number, an: boolean): Promise<void> {
+  const da = await personenfelderImFormular(id);
+  const aendern = ADRESSE_TEILE.filter((t) => da.has(t.ct) !== an);
+  if (!aendern.length) return;
+  const nummern = await adressNummern();
+  for (const [i, t] of aendern.entries()) {
+    const pfad = `/groups/${id}/memberfields/person/${nummern.get(t.ct)}`;
+    await ctAnfrage(
+      pfad,
+      an
+        ? { method: 'PUT', body: json({ sortKey: 100 + i, requiredInRegistrationForm: false }) }
+        : { method: 'DELETE' },
+    );
+  }
+  const nachher = await personenfelderImFormular(id);
+  if (ADRESSE_TEILE.some((t) => nachher.has(t.ct) !== an))
+    throw new NichtUebernommen(an ? 'die Adresse im Anmeldeformular' : 'das Entfernen der Adresse');
 }
 
 /**
@@ -410,8 +470,8 @@ export async function regelSpeichern(
 }
 
 /**
- * **Ältere Veranstaltungen nachziehen** (#597): Felder der Anmeldung, deren Spalte (oder weitere Spalte) in
- * ChurchTools noch „Pflicht“ ist, neu speichern – über `feldSpeichern`, also mit der Regel aus `feldDefinition` und
+ * **Ältere Veranstaltungen und Kopien nachziehen** (#597): Felder der Anmeldung, deren Spalte (oder weitere Spalte) in
+ * ChurchTools noch „Pflicht“ ist, neu speichern; die Adresse (F4) ins Anmeldeformular – über `feldSpeichern`, also mit der Regel aus `feldDefinition` und
  * nachgelesen. Was schon stimmt, bleibt unberührt. Aufgerufen beim Freigeben (`anmeldenVorbereiten`).
  */
 export async function pflichtNachziehen(id: number): Promise<void> {
@@ -425,6 +485,11 @@ export async function pflichtNachziehen(id: number): Promise<void> {
     };
     if (spalten.some(pflicht)) await feldSpeichern(id, 'anmeldung', f);
   }
+  // F4: Steht die Adresse im Formular, müssen Straße, PLZ und Ort im Anmeldeformular von ChurchTools sein – auch bei
+  // einer Kopie (ob ChurchTools die Personenfelder mitkopiert, ist nicht gemessen). Ohne den Baustein bleibt alles,
+  // wie es ist: Was die Leitung in ChurchTools selbst eingestellt hat, nimmt das Tool nicht heraus.
+  const adresse = [...e.formular.anmeldung, ...e.formular.person].find((f) => f.typ === 'adresse');
+  if (adresse) await adresseImFormular(id, adresse.zustand !== 'aus');
 }
 
 /**

@@ -45,6 +45,7 @@ import {
   freiText,
   kannFrei,
 } from './freieAntwort';
+import { adresseAus, type AdresseAntwort } from './adresse';
 
 export type Feldtyp =
   | 'name'
@@ -68,7 +69,9 @@ export type Feldtyp =
   | 'erziehungsberechtigte'
   | 'unterschrift'
   // F2a: Beginn eines neuen Schritts (Seitenumbruch, Klick-Runden 7/8) – ein Text-Baustein mit Namen.
-  | 'schritt';
+  | 'schritt'
+  // F4: Straße, PLZ, Ort – Personenfelder in ChurchTools (`adresse.ts`).
+  | 'adresse';
 
 /**
  * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
@@ -248,6 +251,7 @@ export type Antwort =
   | { vor: string; nach: string }
   | ErziehungsAntwort
   | UnterschriftAntwort
+  | AdresseAntwort
   | undefined;
 
 /** Die Antwort als „Erziehungsberechtigte“ – oder leer, wenn sie etwas anderes ist. */
@@ -330,6 +334,13 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
       if (!unterschriftAus(wert)) fehlt.push(pfad);
       return;
     }
+    // F4: Adresse als Pflicht – alle drei Teile.
+    if (x.typ === 'adresse') {
+      const ad = adresseAus(wert);
+      for (const teil of ['strasse', 'plz', 'ort'] as const)
+        if (!ad[teil].trim()) fehlt.push(`${pfad}.${teil}`);
+      return;
+    }
     if (typeof wert !== 'string' || !wert.trim()) fehlt.push(pfad);
   };
   // F1a: Pflicht gilt nur, solange die Frage zu sehen ist.
@@ -386,7 +397,7 @@ export function pruefeFormular(f: Formular): string[] {
 
 /** Wo ein Feld in ChurchTools liegt. `fieldTypeCode` wie bei `POST /groups/{id}/memberfields/group`. */
 export type CtAblage =
-  | { ort: 'person'; feld: 'firstName/lastName' | 'email' | 'birthday' }
+  | { ort: 'person'; feld: 'firstName/lastName' | 'email' | 'birthday' | 'adresse' }
   | {
       ort: 'gruppenfeld';
       fieldTypeCode:
@@ -403,7 +414,7 @@ export type CtAblage =
   | { ort: 'keins' };
 
 /**
- * **Wo ein Feld in ChurchTools gespeichert wird.** Name, E-Mail und Geburtsdatum sind Personenfelder;
+ * **Wo ein Feld in ChurchTools gespeichert wird.** Name, E-Mail, Geburtsdatum und Adresse (F4) sind Personenfelder;
  * Hinweistext, Preisbereich und Datenschutz haben kein eigenes Gruppenfeld (Preis: siehe `SYSTEMFELDER`).
  */
 export function ctAblage(x: Feld): CtAblage {
@@ -412,6 +423,8 @@ export function ctAblage(x: Feld): CtAblage {
       return { ort: 'person', feld: 'firstName/lastName' };
     case 'email':
       return { ort: 'person', feld: 'email' };
+    case 'adresse':
+      return { ort: 'person', feld: 'adresse' };
     case 'info':
     case 'ueberschrift':
     case 'trenner':
@@ -741,6 +754,8 @@ const feldSchema = z.object({
     'unterschrift',
     // Seit F2a. Ein älteres Formular-Paket kennt ihn nicht – Paket und Erweiterung zusammen hochladen.
     'schritt',
+    // Seit F4. Dasselbe: Paket und Erweiterung zusammen hochladen.
+    'adresse',
   ]),
   frage: z.string().max(200),
   hilfe: z.string().max(400),

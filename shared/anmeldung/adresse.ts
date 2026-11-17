@@ -1,0 +1,61 @@
+/**
+ * **Der Baustein „Adresse“** (Etappe F, Scheibe F4; Klick-Runde 6: Straße, PLZ, Ort – kein Land; Entwurf
+ * `f4-adresse-v1`, Alwin 17.11.2026). Die EINE Stelle für die drei Teile, ihre Personenfelder in ChurchTools, ihre
+ * Längen und den Text „Hauptstr. 4, 53797 Lohmar“.
+ *
+ * Gemessen (F0 08.11.2026, M1 17.11.2026, `messung-m1-2026-11-17.md`): Die Teile sind **Personenfelder** (`street`,
+ * `zip`, `city`), ins Anmeldeformular genommen über `PUT /groups/{id}/memberfields/person/{Feldnummer}`. Eine neue
+ * Person hat sie sofort; bei einer bekannten schreibt ChurchTools sie mit dem Klick in der Bestätigungsmail in die
+ * Person – vorhandene Werte werden **überschrieben**. Entschieden (Alwin): so lassen, mit festem Hinweis
+ * (`ADRESSE_HINWEIS`); leere Teile werden nie geschickt (`adresseWerte`), damit nichts gelöscht wird.
+ */
+import type { Antwort } from './formular';
+
+/** Die Antwort des Bausteins: drei Texte. */
+export interface AdresseAntwort {
+  strasse: string;
+  plz: string;
+  ort: string;
+}
+
+export type AdressTeil = keyof AdresseAntwort;
+
+/** Die Teile in ihrer Reihenfolge – Beschriftung, Personenfeld in ChurchTools (`key` in `/fields`), Länge dort. */
+export const ADRESSE_TEILE: readonly {
+  teil: AdressTeil;
+  name: string;
+  ct: 'street' | 'zip' | 'city';
+  max: number;
+}[] = [
+  { teil: 'strasse', name: 'Straße und Hausnummer', ct: 'street', max: 100 },
+  { teil: 'plz', name: 'PLZ', ct: 'zip', max: 20 },
+  { teil: 'ort', name: 'Ort', ct: 'city', max: 40 },
+];
+
+/** Der feste Hinweis unter dem Baustein – bekannte Personen bekommen ihre Adresse überschrieben (M1). */
+export const ADRESSE_HINWEIS = 'Wird im Profil in ChurchTools gespeichert.';
+
+/** Die Antwort als Adresse – fehlende oder falsche Teile sind leer. */
+export function adresseAus(w: Antwort): AdresseAntwort {
+  const x = (w && typeof w === 'object' && !Array.isArray(w) ? w : {}) as Partial<
+    Record<AdressTeil, unknown>
+  >;
+  const text = (v: unknown) => (typeof v === 'string' ? v : '');
+  return { strasse: text(x.strasse), plz: text(x.plz), ort: text(x.ort) };
+}
+
+/** **Die Teile, die etwas enthalten** – getrimmt; leere fehlen (sie würden eine vorhandene Adresse löschen). */
+export function adresseWerte(w: Antwort): { ct: 'street' | 'zip' | 'city'; wert: string }[] {
+  const a = adresseAus(w);
+  return ADRESSE_TEILE.flatMap(({ teil, ct, max }) => {
+    const wert = a[teil].trim().slice(0, max);
+    return wert ? [{ ct, wert }] : [];
+  });
+}
+
+/** „Hauptstr. 4, 53797 Lohmar“ – `''`, wenn nichts eingetragen ist. */
+export function adresseText(w: Antwort): string {
+  const a = adresseAus(w);
+  const ort = [a.plz.trim(), a.ort.trim()].filter(Boolean).join(' ');
+  return [a.strasse.trim(), ort].filter(Boolean).join(', ');
+}

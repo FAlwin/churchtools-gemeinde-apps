@@ -221,7 +221,11 @@ describe('„Person dazu“ mit den Kontakt-Antworten (F1e)', () => {
   it('startet mit den Kontakt-Antworten der Anmeldung', () => {
     const x = e();
     const anm = gespeichert(x);
-    const a = handStart(x, { vor: 'Paul', nach: 'Beispiel', geburtstag: null, email: null }, anm);
+    const a = handStart(
+      x,
+      { vor: 'Paul', nach: 'Beispiel', geburtstag: null, email: null, adresse: null },
+      anm,
+    );
     expect(a.anmeldung).toEqual(antwortenAus(x, anm).anmeldung);
     expect(a.anmeldung.tel).toBe('0151 111');
   });
@@ -230,7 +234,13 @@ describe('„Person dazu“ mit den Kontakt-Antworten (F1e)', () => {
     const x = e();
     const anm = gespeichert(x);
     feld(x, 'allergy').bed = wenn('tel', 'ausgefuellt');
-    const paul = { vor: 'Paul', nach: 'Beispiel', geburtstag: '2018-04-03', email: null };
+    const paul = {
+      vor: 'Paul',
+      nach: 'Beispiel',
+      geburtstag: '2018-04-03',
+      email: null,
+      adresse: null,
+    };
     const speichern = (start: ReturnType<typeof handStart>) => {
       start.personen[0].allergy = 'Gluten';
       return handFelder(x, start, { option: 0, extras: [] }, HEUTE, FELDER, {
@@ -264,7 +274,7 @@ describe('„Person dazu“ mit den Kontakt-Antworten (F1e)', () => {
     x.ctFelder = { ...x.ctFelder, k9: 999 };
     const start = handStart(
       x,
-      { vor: 'Paul', nach: 'Beispiel', geburtstag: null, email: null },
+      { vor: 'Paul', nach: 'Beispiel', geburtstag: null, email: null, adresse: null },
       anm,
     );
     start.anmeldung.k9 = 'Donrath';

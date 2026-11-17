@@ -29,7 +29,7 @@ import {
 import { tagPunkt } from '../ct/datum';
 import { leeren } from './bedingungen';
 import { freiMitText, freiSchluessel, freiText } from './freieAntwort';
-import { adresseWerte } from './adresse';
+import { adresseAntwort, adresseWerte } from './adresse';
 import {
   berechnePreis,
   euroText,
@@ -401,10 +401,6 @@ export function anmeldungAufbauen(
   const extras = e.preis.extras.filter((_, i) => wahl.extras[i]).map((x) => x.bezeichnung);
   if (extras.length) einmal.push(systemWert('extras', extras.join(', ')));
 
-  // F4: Die Adresse – „je Person“ gefragt oder einmal für die ganze Anmeldung (dann für alle Personen dieselbe).
-  const adresseJePerson = e.formular.person.find((f) => f.typ === 'adresse' && sichtbar(f));
-  const adresseEinmal = e.formular.anmeldung.find((f) => f.typ === 'adresse' && sichtbar(f));
-
   const forms = a.personen.map((p, i) => {
     const n = nameVon(namePerson ? p[namePerson.id] : undefined);
     const form: FormWert[] = [
@@ -417,10 +413,7 @@ export function anmeldungAufbauen(
       form.push({ id: pflichtPerson('birthday'), type: 'person', value: p.birth.trim() });
     // F4: in die Personenfelder – nur, was eingetragen ist: Ein leerer Teil würde bei einer bekannten Person die
     // vorhandene Adresse löschen (die Bestätigung überschreibt, gemessen M1).
-    const adresse = adresseJePerson
-      ? p[adresseJePerson.id]
-      : adresseEinmal && a.anmeldung[adresseEinmal.id];
-    for (const { ct: name, wert } of adresseWerte(adresse || undefined))
+    for (const { ct: name, wert } of adresseWerte(adresseAntwort(e.formular, a, i)))
       form.push({ id: pflichtPerson(name), type: 'person', value: wert });
     for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p));
     if (nr && e.ctFelder.nr !== undefined) form.push(systemWert('nr', nr));

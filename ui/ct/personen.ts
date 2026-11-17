@@ -5,6 +5,7 @@
  * - Geburtstag und E-Mail kommen aus `GET /persons?ids[]=…` (in Paketen zu 50).
  */
 import { ctDaten } from './verbindung';
+import { adresseVonPerson, type AdresseAntwort } from '@shared/anmeldung/adresse';
 
 /** Eine Person, wie `GET /persons?ids[]=…` sie liefert (soweit gebraucht). */
 export interface PersonRoh {
@@ -40,6 +41,8 @@ export interface Gefunden {
   nach: string;
   geburtstag: string | null;
   email: string | null;
+  /** Straße, PLZ, Ort aus dem Profil (F4c) – `null`, wenn leer oder nicht zu sehen. */
+  adresse: AdresseAntwort | null;
 }
 
 interface TrefferRoh {
@@ -57,6 +60,7 @@ const gefunden = (p: PersonRoh): Gefunden => ({
   nach: p.lastName ?? '',
   geburtstag: p.birthday || null,
   email: p.email || null,
+  adresse: adresseVonPerson(p),
 });
 
 /** **Personen suchen** – ohne Archivierte, in der Reihenfolge von ChurchTools. */

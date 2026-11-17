@@ -1240,8 +1240,8 @@ describe('O6: Leitung und Mitglieder', () => {
 
   it('aufnehmen: Suche, „schon dabei“ gesperrt, Standardrolle, nachgelesen – Rückgängig löscht die neue Mitgliedschaft', async () => {
     suche.mockResolvedValue([
-      { personId: 5, vor: 'Emil', nach: 'Ernst', geburtstag: null, email: null },
-      { personId: 1, vor: 'Alwin', nach: 'Friesen', geburtstag: null, email: null },
+      { personId: 5, vor: 'Emil', nach: 'Ernst', geburtstag: null, email: null, adresse: null },
+      { personId: 1, vor: 'Alwin', nach: 'Friesen', geburtstag: null, email: null, adresse: null },
     ]);
     await technikOeffnen();
     fireEvent.click(knopf('＋ Person aufnehmen'));

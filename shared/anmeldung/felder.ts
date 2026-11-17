@@ -127,7 +127,10 @@ export function feldDefinition(
 ): CtFeldDefinition | null {
   const ablage = ctAblage(f);
   if (ablage.ort !== 'gruppenfeld') return null;
-  const mitOptionen = ablage.fieldTypeCode === 'radioselect' || ablage.fieldTypeCode === 'select';
+  const mitOptionen =
+    ablage.fieldTypeCode === 'radioselect' ||
+    ablage.fieldTypeCode === 'select' ||
+    ablage.fieldTypeCode === 'multiselect';
   return {
     name,
     fieldTypeCode: ablage.fieldTypeCode,

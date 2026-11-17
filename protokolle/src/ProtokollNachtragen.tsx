@@ -65,6 +65,7 @@ export function ProtokollNachtragen({
     () =>
       von !== null && bis !== null
         ? sitzungenOhneProtokoll({
+            modul,
             gruppe: gruppeId,
             kalender,
             koepfe: koepfeAus({ kommend, protokolle }),
@@ -72,7 +73,7 @@ export function ProtokollNachtragen({
             zeitzone,
           })
         : Promise.resolve({ sitzungen: [], treffenNichtFreigegeben: false }),
-    [von, bis, gruppeId, kalender, kommend, protokolle, zeitzone],
+    [von, bis, modul, gruppeId, kalender, kommend, protokolle, zeitzone],
   );
 
   if (gewaehlt)

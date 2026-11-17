@@ -115,6 +115,14 @@ export interface Nachbau {
     }[]
   >;
   treffenVerboten: boolean;
+  /** Nur diese Gruppen: Gruppentreffen lesen → 403 (ChurchTools-„verboten“) bzw. mit diesem Status (W4: andere Gruppe). */
+  treffenVerbotenFuer: Set<number>;
+  treffenLesenFehlerFuer: Map<number, number>;
+  /** Nur diese Kategorien: Werte lesen → 403 (ChurchTools-„verboten“) bzw. mit diesem Status (W4: andere Gruppe). */
+  werteVerbotenFuer: Set<number>;
+  werteLesenFehlerFuer: Map<number, number>;
+  /** Die Liste der Kategorien lesen → mit diesem Status (W4: andere Gruppen finden). */
+  kategorienLesenFehler: number | null;
   /** `PUT` am Treffen sagt 200, ändert aber nichts (S6-1: Abschließen muss nachgelesen werden). */
   treffenSchlucken: boolean;
   /** Die Mitglieder, die jedes Gruppentreffen kennt (S5-3). */
@@ -173,6 +181,11 @@ export function nachbauStarten(): Nachbau {
     treffenFehler: null,
     treffen: new Map(),
     treffenVerboten: false,
+    treffenVerbotenFuer: new Set(),
+    treffenLesenFehlerFuer: new Map(),
+    werteVerbotenFuer: new Set(),
+    werteLesenFehlerFuer: new Map(),
+    kategorienLesenFehler: null,
     teilnehmer: [
       { person: 1, vor: 'Alwin', nach: 'Friesen' },
       { person: 19, vor: 'Spike', nach: 'Musiker' },
@@ -569,8 +582,10 @@ export function nachbauStarten(): Nachbau {
       return json(200, { data: t });
     }
     if (tr) {
-      if (s.treffenVerboten)
+      if (s.treffenVerboten || s.treffenVerbotenFuer.has(Number(tr[1])))
         return json(403, { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' });
+      const fehler = s.treffenLesenFehlerFuer.get(Number(tr[1]));
+      if (fehler) return json(fehler, { message: 'weg' });
       // Wie gemessen (28.10.2026): `end_date` zählt nicht mit.
       const von = adresse.searchParams.get('start_date') ?? '';
       const bis = adresse.searchParams.get('end_date') ?? '9999';
@@ -616,6 +631,7 @@ export function nachbauStarten(): Nachbau {
         });
         return json(201, { data: {} });
       }
+      if (s.kategorienLesenFehler) return json(s.kategorienLesenFehler, { message: 'weg' });
       return json(200, { data: s.kategorien });
     }
     const w =
@@ -623,6 +639,10 @@ export function nachbauStarten(): Nachbau {
         pfad,
       );
     if (w) {
+      if (m === 'GET' && s.werteVerbotenFuer.has(Number(w[1])))
+        return json(403, { message: 'Forbidden', messageKey: 'error.forbidden.view' });
+      const werteFehler = m === 'GET' ? s.werteLesenFehlerFuer.get(Number(w[1])) : undefined;
+      if (werteFehler) return json(werteFehler, { message: 'weg' });
       const liste = s.werte.get(Number(w[1])) ?? [];
       s.werte.set(Number(w[1]), liste);
       if (m === 'GET') return json(200, { data: liste });

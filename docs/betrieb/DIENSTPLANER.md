@@ -149,7 +149,7 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
 - **Abwesenheit als Schraffur (P2m, Variante D):** Eine Zelle, in der die Person abwesend ist, ist **diagonal schraffiert** (leicht
   getönt); der Grund steht nur als Text mit dem Abwesend-Symbol, **kein Kasten** mehr. Im Dunkelmodus dieselbe Schraffur in der
   helleren Farbe, der Text hell. **Warnfall** (abwesend UND eingeteilt/Entwurf): rote Schraffur und ein 2 px roter Rahmen um die ganze
-  Zelle; der Name sagt „… – trotzdem eingeteilt“. Die Farben sind Tokens in `ui/design` (`--abw-text`, `--abw-schraffur`,
+  Zelle. Im Warnfall steht **kein Grund als Text**, nur das durchgestrichene Abwesend-Symbol **vor** dem Entwurf- bzw. Einteilungs-Tag; der Grund steht im Tooltip und Namen der Zelle („Krank – trotzdem eingeteilt“) und im Warnfenster. Die Farben sind Tokens in `ui/design` (`--abw-text`, `--abw-schraffur`,
   `--abw-toenung`, `--abw-warn-schraffur`, `--abw-warn-toenung`, hell in `_farben.scss`, dunkel in `_variables.scss`); Klick und Hover
   der Zelle bleiben wie in P2a.
 - **Platz übernehmen (P2a-2):** Gibt es keinen freien Platz ohne Entwurf, nimmt der Klick einen Platz mit **gültigem
@@ -201,9 +201,9 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
 
 **Vorgabe „Anfrage | direkt“ je Dienst (P2m, 17.11.2026, Entwurf `e9-p2-modus.html`, Variante G4):** Ob ein **neuer** Entwurf als
 Anfrage oder gleich als **direkt** (ohne Rückfrage als zugesagt eingetragen, z. B. für Prediger) beginnt, legt man **je Dienst** fest.
-In der **Matrix** steht am Dienstnamen nur ein **rundes Symbol** (18 px): „?“ als Umriss = Anfrage, Haken gefüllt = direkt, blau;
+In der **Matrix** – und gleich im **Kopf jedes Dienst-Blocks in „Personen“**, neben dem Zauberstab (dieselbe Komponente `VorgabeKnopf`, dasselbe Fenster, dieselbe Sichtbarkeitsregel) – steht am Dienstnamen nur ein **rundes Symbol** (18 px): „?“ als Umriss = Anfrage, Haken gefüllt = direkt, blau;
 Tooltip und Vorleser „Neue Einteilungen für Ton: Anfrage – ändern“, die Tippfläche ist größer als das Symbol. Es erscheint nur, wo man
-den Dienst planen und seine Entwürfe ändern darf, in Tabelle und Handy-Zettel. Ein Klick **öffnet nur ein kleines Fenster**
+den Dienst planen und seine Entwürfe ändern darf, in Tabelle, Handy-Zettel und Block-Kopf. Die Termin-Ansicht liest die Vorgabe, hat aber (vorerst) kein Symbol. Ein Klick **öffnet nur ein kleines Fenster**
 („Vorgabe · Ton“: Segment „Anfrage | direkt“, Erklärsatz, „Für alle Dienste übernehmen“, Hinweis „Gilt auf diesem Gerät“) – es wird
 **nie per Klick am Symbol umgeschaltet**. Die Vorgabe wird **je Gerät** gemerkt (im Browser, `direktDienste` in der gemerkten
 Planen-Ansicht, `planenAnsicht.ts`; kein Eintrag = Anfrage), nicht in ChurchTools und nicht für andere Planer. Sie wirkt auf **neue**

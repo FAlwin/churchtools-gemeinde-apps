@@ -66,7 +66,7 @@ export function ZauberKnopf({ onKlick, text }: { onKlick?: () => void; text: str
  * das kleine Fenster (`VorgabeFach`); **umgeschaltet wird nie per Klick auf das Symbol**. Nur, wo man den Dienst an einem
  * der gezeigten Termine planen **und** seine Entwürfe ändern darf (`darfAendern`) – sonst gäbe es nichts zu entscheiden.
  */
-function VorgabeKnopf({
+export function VorgabeKnopf({
   sicht,
   z,
   spalten,

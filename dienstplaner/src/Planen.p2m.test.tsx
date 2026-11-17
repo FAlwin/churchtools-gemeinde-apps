@@ -420,6 +420,22 @@ describe('Matrix – Vorgabe „Anfrage | direkt“ am Dienstnamen (P2m, G4)', (
     expect(gemerkt()).toEqual([]);
   });
 
+  it('„Personen“: dasselbe Symbol im Kopf jedes Dienst-Blocks öffnet dasselbe Fenster; gemerkt wie in der Matrix', async () => {
+    zeige({});
+    await warteAufRaster();
+    const k = await screen.findByRole('button', { name: symbol('Ton', 'Anfrage') });
+    expect(k.textContent).toBe('?');
+    expect(k.closest('td')!.textContent).toContain('Ton');
+    expect(screen.getByRole('button', { name: symbol('Licht', 'Anfrage') })).toBeTruthy();
+    fireEvent.click(k);
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).getByText('Vorgabe · Ton')).toBeTruthy();
+    expect(gemerkt()).toBeUndefined();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'direkt' }));
+    expect(await screen.findByRole('button', { name: symbol('Ton', 'direkt') })).toBeTruthy();
+    expect(gemerkt()).toEqual([6]);
+  });
+
   it('Handy: das Symbol steht auch beim Dienstnamen im Zettel', async () => {
     zeige({}, { ansicht: 'matrix', handy: true, direkt: [6] });
     expect(await screen.findByRole('button', { name: symbol('Ton', 'direkt') })).toBeTruthy();
@@ -565,6 +581,15 @@ describe('Personen – Abwesenheit D: schraffierte Zelle, Grund als Text; Warnfa
     expect(
       within(warn[0] as HTMLElement).getByRole('img', { name: 'Licht, zugesagt' }),
     ).toBeTruthy();
+    // Nur das durchgestrichene Symbol VOR dem Tag – kein Grund als Text (der steht im Tooltip und im Warnfenster).
+    const bilder = within(warn[0] as HTMLElement).getAllByRole('img');
+    expect(bilder.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Abwesend: Krank – trotzdem eingeteilt',
+      'Licht, zugesagt',
+    ]);
+    expect(bilder[0].textContent).toBe('');
+    expect(bilder[0].getAttribute('title')).toBe('Krank – trotzdem eingeteilt');
+    expect(warn[0].textContent).not.toContain('Krank');
   });
 
   it('Klick und Hover der Zelle bleiben: eine abwesende, leere Zelle ist weiter ein Eintragen-Knopf (mit Warnfenster)', async () => {

@@ -1005,6 +1005,7 @@ Gerät – nie ein Klick aus Versehen.
 1. **Matrix:** Am Namen jedes planbaren Dienstes steht ein kleines **rundes Symbol**, blau: **„?“** (Umriss) = neue Einteilungen
    beginnen als Anfrage. Mit der Maus darüber: Tooltip „Neue Einteilungen für Ton: Anfrage – ändern“ und ein blasser Ring. In
    Diensten, die du nicht planen darfst, gibt es kein Symbol.
+   Dasselbe Symbol steht in „Personen“ im **Kopf jedes Dienst-Blocks**, neben dem Zauberstab, und öffnet dasselbe Fenster.
 2. Das Symbol **antippen**: es öffnet nur ein kleines Fenster **„Vorgabe · Ton“** mit **Anfrage | direkt**, dem Satz „direkt = ohne
    Rückfrage als zugesagt eintragen, z. B. für Prediger“, dem Link „Für alle Dienste übernehmen“ und dem Hinweis „Gilt auf diesem
    Gerät“. Es wird **nichts** umgeschaltet, bevor du im Fenster wählst. Auch am Handy gut zu treffen (die Tippfläche ist größer als das Symbol).
@@ -1021,13 +1022,13 @@ Gerät – nie ein Klick aus Versehen.
    Das Wort heißt überall „direkt“, nirgends „fest“.
 8. **Abwesenheit in „Personen“:** Die Zelle eines abwesenden Mitglieds ist **schraffiert**, der Grund steht als Text mit dem
    Abwesend-Symbol, **kein Kasten**. **Dunkelmodus:** dieselbe Schraffur in der helleren Farbe, der Text hell und gut lesbar.
-9. **Warnfall** (abwesend UND eingeteilt oder Entwurf): die Zelle ist **rot schraffiert** mit einem **2 px roten Rahmen** rundherum;
-   mit der Maus und per Tastatur ist die Zelle weiter klickbar wie vorher.
+9. **Warnfall** (abwesend UND eingeteilt oder Entwurf): die Zelle ist **rot schraffiert** mit einem **2 px roten Rahmen** rundherum; davor
+   steht nur das **durchgestrichene Abwesend-Symbol** (kein Grund als Text – der steht im Tooltip und im Warnfenster); mit der Maus und per Tastatur ist die Zelle weiter klickbar wie vorher.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/dienstplan/modusVorgabe.ts`, `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/VorgabeFach.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `ui/design/_farben.scss`, `ui/design/_variables.scss`
-- **Automatisiert:** ja – `shared/dienstplan/modusVorgabe.test.ts`, `shared/dienstplan/personenEintragen.test.ts` (Zyklus-Entscheidung), `shared/dienstplan/personenRaster.test.ts` (Modus je Zelle), `dienstplaner/src/geraet.test.ts` (gemerkte Vorgabe lesen), `dienstplaner/src/Planen.p2m.test.tsx` (Zyklus mit Versions-Schutz, Warnfenster nur beim ersten Klick, Vorgabe → erster Klick, Symbol öffnet nur das Fenster, gemerkt nach Neuaufbau, „Für alle“, „Wer kann?“ und Zauberstab folgen der Vorgabe, Bestehendes bleibt, Abwesenheit und Warnfall als Klassen, Modus in der Zelle), `dienstplaner/src/TerminAnsicht.test.tsx` (Vorgabe gilt auch dort); Gegenproben je Teil einzeln rot; von Hand bleiben das Aussehen (Schraffur, roter Rahmen, Symbol, Hover-Ring) in Hell und Dunkel, am Rechner und am Handy
+- **Automatisiert:** ja – `shared/dienstplan/modusVorgabe.test.ts`, `shared/dienstplan/personenEintragen.test.ts` (Zyklus-Entscheidung), `shared/dienstplan/personenRaster.test.ts` (Modus je Zelle), `dienstplaner/src/geraet.test.ts` (gemerkte Vorgabe lesen), `dienstplaner/src/Planen.p2m.test.tsx` (Symbol im Block-Kopf von „Personen“, Warnfall nur mit Symbol vor dem Tag, Zyklus mit Versions-Schutz, Warnfenster nur beim ersten Klick, Vorgabe → erster Klick, Symbol öffnet nur das Fenster, gemerkt nach Neuaufbau, „Für alle“, „Wer kann?“ und Zauberstab folgen der Vorgabe, Bestehendes bleibt, Abwesenheit und Warnfall als Klassen, Modus in der Zelle), `dienstplaner/src/TerminAnsicht.test.tsx` (Vorgabe gilt auch dort); Gegenproben je Teil einzeln rot; von Hand bleiben das Aussehen (Schraffur, roter Rahmen, Symbol, Hover-Ring) in Hell und Dunkel, am Rechner und am Handy
 - **Historie:** Wunsch 2 und Wunsch 1 (Alwin 17.11.2026, Entwurf `e9-p2-modus.html`: Abwesend D, Matrix G4), Scheibe P2m
 </details>

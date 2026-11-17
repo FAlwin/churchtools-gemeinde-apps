@@ -21,7 +21,7 @@ import {
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
 import type { PersonenLader } from './ladePersonen';
-import { ZauberKnopf } from './PlanAnsicht';
+import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
@@ -76,20 +76,24 @@ function DienstTag({
 }
 
 function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: number }) {
+  // Abwesend UND eingeteilt (Warnfall, P2m): nur das durchgestrichene Symbol – davor, ohne Text; der Grund steht im
+  // Tooltip und Namen (und im Warnfenster). Sonst Symbol und Grund als Text.
+  const abwesend = z.abwesend && (
+    <span
+      className={styles.abwesend}
+      role="img"
+      aria-label={`Abwesend: ${z.abwesend.grund}${z.warnung ? ' – trotzdem eingeteilt' : ''}`}
+      title={z.warnung ? `${z.abwesend.grund} – trotzdem eingeteilt` : z.abwesend.grund}
+    >
+      <Icon name="user-slash" size={14} />
+      {!z.warnung && <span className={styles.tagText}>{z.abwesend.grund}</span>}
+    </span>
+  );
   return (
     <>
+      {z.warnung && abwesend}
       {z.zustand && <DienstTag name={dienst} farbe={farbe} zustand={z.zustand} modus={z.modus} />}
-      {z.abwesend && (
-        <span
-          className={styles.abwesend}
-          role="img"
-          aria-label={`Abwesend: ${z.abwesend.grund}${z.warnung ? ' – trotzdem eingeteilt' : ''}`}
-          title={z.warnung ? `${z.abwesend.grund} – trotzdem eingeteilt` : z.abwesend.grund}
-        >
-          <Icon name="user-slash" size={14} />
-          <span className={styles.tagText}>{z.abwesend.grund}</span>
-        </span>
-      )}
+      {!z.warnung && abwesend}
       {z.weitere.map((w) => (
         <span
           key={w.dienst}
@@ -330,6 +334,7 @@ export function PersonenRaster({
     const n = b.zeilen.length;
     const offen = !zugeklappt.has(blockSchluessel(b.dienst.id));
     const zauberGruppe = gruppeJe.get(b.dienst.id);
+    const vorgabeZeile = zeileJe.get(b.dienst.id);
     return (
       <tr key={`k-${b.dienst.id}`}>
         <td className={styles.blockKopf} colSpan={termine.length + 2}>
@@ -350,6 +355,8 @@ export function PersonenRaster({
                 {n} {n === 1 ? 'Person' : 'Personen'}
               </span>
             </button>
+            {/* Vorgabe „Anfrage | direkt“ (P2m) – dasselbe Symbol und Fenster wie in der Matrix. */}
+            {vorgabeZeile && <VorgabeKnopf sicht={sicht} z={vorgabeZeile} spalten={termine} />}
             {/* Zauberstab für diesen Dienst über alle gezeigten Termine – dasselbe Fenster wie in der Matrix. */}
             {zauberGruppe && (
               <ZauberKnopf

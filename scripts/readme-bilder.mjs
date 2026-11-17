@@ -18,8 +18,10 @@
  * - **Keine Einführungs-Blasen:** Alle Touren gelten als gesehen.
  *
  * Aufruf:
- * - `npm run readme-bilder` – alles neu aufnehmen; `npm run readme-bilder -- dienstplaner` nur Aufnahmen, deren Name
- *   so beginnt (die GIFs werden danach aus allen vorhandenen Rohvideos neu gebaut).
+ * - `npm run readme-bilder` – alles neu aufnehmen; `npm run readme-bilder -- protokolle` nur Aufnahmen **und GIFs**,
+ *   deren Name so beginnt – es starten nur die Dev-Server der passenden App, und alle anderen Bilder in `docs/bilder/`
+ *   bleiben unangetastet (jede neue Aufnahme wäre ein anderes Binärfile im Verlauf). Die Übersicht
+ *   (`apps-uebersicht.gif`) entsteht deshalb nur beim Lauf ohne Filter.
  * - `npm run readme-bilder -- --offen` – welche gemergten PRs seit dem letzten Bilder-Stand das Label „README-Bilder“
  *   tragen, also sichtbar etwas geändert haben. **Teil der Release-Routine** (siehe `CLAUDE.md`).
  * - `--standbilder <ziel> [<arbeitskopie>]` und `--vergleichen <alt> <neu>` – für die CI-Erinnerung
@@ -64,7 +66,7 @@ const FPS = 12;
 // ---------- Dev-Server ----------
 
 const MUSIK = { port: 5173, befehl: ['run', 'dev:client'], pfad: '/' };
-/** @param {'dienstplaner' | 'organigramm' | 'gebetsabend'} app */
+/** @param {'dienstplaner' | 'organigramm' | 'protokolle' | 'gebetsabend'} app */
 function erweiterung(app) {
   const port = /** @type {number} */ (ERWEITERUNGEN.find((e) => e.app === app)?.port);
   return {
@@ -77,6 +79,7 @@ const SERVER = {
   musik: MUSIK,
   dienstplaner: erweiterung('dienstplaner'),
   organigramm: erweiterung('organigramm'),
+  protokolle: erweiterung('protokolle'),
   gebetsabend: erweiterung('gebetsabend'),
 };
 
@@ -315,6 +318,44 @@ async function aufnehmen(browser) {
     await p(1800);
   });
 
+  await video(browser, 'protokolle', QUER, url('protokolle'), async (page, p, knopf) => {
+    await p(1400);
+    await knopf('Sitzungen').click();
+    await p(1000);
+    await page.getByText('Leitungssitzung', { exact: true }).first().click();
+    await p(1300);
+    // Der Editor mit Tagesordnung, To-Dos und Beschluss.
+    await page.mouse.move(420, 380);
+    await page.mouse.wheel(0, 520);
+    await p(1400);
+    await page.mouse.wheel(0, 420);
+    await p(1500);
+    await page.mouse.wheel(0, -2000);
+    await p(600);
+    await page
+      .getByRole('button', { name: /^Teilen/ })
+      .first()
+      .click();
+    await p(1800);
+    await knopf('Abbrechen').click();
+    await p(500);
+    await knopf('To-Dos').click();
+    await p(900);
+    await page.getByText('Board', { exact: true }).first().click();
+    await p(1800);
+  });
+  await video(browser, 'protokolle-kurz', QUER, url('protokolle'), async (page, p, knopf) => {
+    await p(1400);
+    await knopf('Sitzungen').click();
+    await p(1100);
+    await page.getByText('Leitungssitzung', { exact: true }).first().click();
+    await p(1800);
+    await knopf('To-Dos').click();
+    await p(900);
+    await page.getByText('Board', { exact: true }).first().click();
+    await p(1800);
+  });
+
   await video(
     browser,
     'gebetsabend-zuhoeren',
@@ -344,10 +385,11 @@ async function aufnehmen(browser) {
 // ---------- Namensschilder für den Rundgang ----------
 
 const KARTEN = [
-  ['titel', 'Gemeinde-Apps für ChurchTools', 'Vier Apps, direkt mit eurem ChurchTools verbunden'],
+  ['titel', 'Gemeinde-Apps für ChurchTools', 'Fünf Apps, direkt mit eurem ChurchTools verbunden'],
   ['musik', 'Musik-App', 'Chord Charts der Setlist – automatisch in der richtigen Tonart'],
   ['dienstplaner', 'Dienstplaner', 'Dienste planen, zusagen und tauschen – für alle Gruppen'],
   ['organigramm', 'Organigramm', 'Bereiche, Gruppen und Leitung auf einen Blick'],
+  ['protokolle', 'Protokolle', 'Sitzungen, Beschlüsse und To-Dos – alles in ChurchTools'],
   ['gebetsabend', 'Gebetsabend', 'Übertragung des Gebetsabends nur für Mitglieder'],
 ];
 
@@ -426,16 +468,23 @@ function gif(stuecke, breite, hoehe, datei, farben = 128) {
 }
 
 function gifsBauen() {
-  gif([{ video: 'musik' }], 560, 788, 'musik-demo.gif', 96);
-  gif([{ video: 'dienstplaner' }], 720, 480, 'dienstplaner-demo.gif');
-  gif([{ video: 'organigramm' }], 720, 480, 'organigramm-demo.gif');
-  gif(
+  /** Mit Filter (`npm run readme-bilder -- protokolle`) entstehen nur GIFs, deren Name so beginnt. */
+  const dran = (/** @type {string} */ datei) => datei.startsWith(NUR);
+  /** @type {(...a: Parameters<typeof gif>) => void} */
+  const bauen = (stuecke, breite, hoehe, datei, farben) => {
+    if (dran(datei)) gif(stuecke, breite, hoehe, datei, farben);
+  };
+  bauen([{ video: 'musik' }], 560, 788, 'musik-demo.gif', 96);
+  bauen([{ video: 'dienstplaner' }], 720, 480, 'dienstplaner-demo.gif');
+  bauen([{ video: 'organigramm' }], 720, 480, 'organigramm-demo.gif');
+  bauen([{ video: 'protokolle' }], 720, 480, 'protokolle-demo.gif');
+  bauen(
     [{ video: 'gebetsabend-zuhoeren' }, { video: 'gebetsabend' }],
     720,
     480,
     'gebetsabend-demo.gif',
   );
-  gif(
+  bauen(
     [
       { bild: 'karte-titel.png', sekunden: 2 },
       { bild: 'karte-musik.png', sekunden: 1.4 },
@@ -444,6 +493,8 @@ function gifsBauen() {
       { video: 'dienstplaner-kurz' },
       { bild: 'karte-organigramm.png', sekunden: 1.4 },
       { video: 'organigramm-kurz' },
+      { bild: 'karte-protokolle.png', sekunden: 1.4 },
+      { video: 'protokolle-kurz' },
       { bild: 'karte-gebetsabend.png', sekunden: 1.4 },
       { video: 'gebetsabend' },
     ],
@@ -481,6 +532,27 @@ const STANDBILDER = [
   ['organigramm-mindmap', 'organigramm', '', QUER, (p) => knopfIn(p, 'Mindmap').click()],
   ['organigramm-karten', 'organigramm', '', QUER, (p) => knopfIn(p, 'Karten').click()],
   ['organigramm-praesentation', 'organigramm', '', QUER, (p) => knopfIn(p, 'Präsentieren').click()],
+  ['protokolle-start', 'protokolle', '', QUER],
+  [
+    'protokolle-sitzung',
+    'protokolle',
+    '',
+    QUER,
+    async (p) => {
+      await knopfIn(p, 'Sitzungen').click();
+      await p.getByText('Leitungssitzung', { exact: true }).first().click();
+    },
+  ],
+  [
+    'protokolle-todos',
+    'protokolle',
+    '',
+    QUER,
+    async (p) => {
+      await knopfIn(p, 'To-Dos').click();
+      await p.getByText('Board', { exact: true }).first().click();
+    },
+  ],
   ['gebetsabend-zuhoeren', 'gebetsabend', 'zuhoerer', QUER],
   ['gebetsabend-technik', 'gebetsabend', 'technik', QUER],
 ];
@@ -648,7 +720,12 @@ function offen() {
 async function mitServern(
   /** @type {string} */ wurzel,
   /** @type {(b: import('@playwright/test').Browser) => Promise<void>} */ arbeit,
+  /** @type {string} */ nur = '',
 ) {
+  // Mit Filter nur die Server der passenden Apps – `musik-kurz` gehört zu `musik`, `protokolle` zu `protokolle`.
+  const noetig = Object.entries(SERVER).filter(
+    ([app]) => app.startsWith(nur) || nur.startsWith(app),
+  );
   const ports = Object.values(SERVER).map((s) => s.port);
   // Ein Server aus einer ANDEREN Arbeitskopie würde still deren Stand aufnehmen – dann lieber abbrechen.
   pruefeFremdeServer(ports, wurzel);
@@ -660,7 +737,7 @@ async function mitServern(
         ? 'Dev-Server: laufen teils schon, Rest wird gestartet …'
         : 'Dev-Server werden gestartet …',
     );
-    await Promise.all(Object.values(SERVER).map((s) => sicherstellen(s, wurzel)));
+    await Promise.all(noetig.map(([, s]) => sicherstellen(s, wurzel)));
     await arbeit(browser);
   } finally {
     await browser.close();
@@ -688,11 +765,15 @@ if (MODUS === '--offen') {
   }
   mkdirSync(ROH, { recursive: true });
   mkdirSync(ZIEL, { recursive: true });
-  await mitServern(WURZEL, async (browser) => {
-    console.log('Aufnahmen:');
-    await aufnehmen(browser);
-    await namensschilder(browser);
-  });
+  await mitServern(
+    WURZEL,
+    async (browser) => {
+      console.log('Aufnahmen:');
+      await aufnehmen(browser);
+      await namensschilder(browser);
+    },
+    NUR,
+  );
   console.log('GIFs:');
   gifsBauen();
   console.log(`Fertig – Ergebnis in docs/bilder/. Vor dem Commit ansehen.`);

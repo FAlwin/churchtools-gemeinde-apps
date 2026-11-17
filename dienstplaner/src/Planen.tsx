@@ -8,6 +8,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import { gruppenName, nimmtEintraegeAn, type PlanGruppe } from '@shared/dienstplan/plan';
+import type { Dienst } from '@shared/ct/dienste';
 import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
 import { fokusKandidaten, fokusTexte, fokusZahlen } from '@shared/dienstplan/fokus';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
@@ -29,6 +30,8 @@ import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { PlaetzeFach } from './PlaetzeFach';
+import { PlatzFenster } from './PlatzFenster';
+import { usePlatzDazu } from './usePlatzDazu';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
@@ -46,7 +49,7 @@ import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen
 import { VorgabeFach } from './VorgabeFach';
 import { modusFuerDienst, vorgabeFuerAlle, vorgabeSetzen } from '@shared/dienstplan/modusVorgabe';
 import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
-import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import { plaetzeZeile, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -200,6 +203,10 @@ export function Planen({
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
   );
+  // Das Fenster für EINEN Dienst an einem Termin (P2c, Zeile „Plätze“ und roter Tag in „Personen“): Termin und Dienst.
+  const [platzFenster, setPlatzFenster] = useState<{ eventId: number; dienst: Dienst } | null>(
+    null,
+  );
   const [rahmen, platz] = useBreite();
 
   // Zeitraum, was dafür geladen ist und welcher Ausschnitt zu sehen ist – `usePlanZeitraum`.
@@ -272,6 +279,14 @@ export function Planen({
       hervorheben: (person) => setFokusPerson({ person, zurueck: null }),
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
     },
+  });
+  // „Platz dazunehmen“ im Fenster „Dienst voll“ (P2c): Platz in ChurchTools, nach dem Neuladen der Entwurf.
+  const dazunehmen = usePlatzDazu({
+    plan,
+    entwuerfe,
+    personen: amPersonen,
+    neuLaden: leiseNeuLaden,
+    showToast,
   });
   // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
   const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
@@ -467,10 +482,14 @@ export function Planen({
         ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
           ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
           : undefined,
+      onPlatz: (i, zl) =>
+        entwuerfe && nimmtEintraegeAn(plan.spalten[i]) && darfPlanen(zl, plan.spalten[i])
+          ? () => setPlatzFenster({ eventId: plan.spalten[i].id, dienst: zl.dienst })
+          : undefined,
       onTermin,
       ablauf: matrixAblauf,
       infos: matrixInfos,
-      personen: amPersonen,
+      personen: { ...amPersonen, dazunehmen },
       vorgabe: entwuerfe
         ? {
             modus: (dienstId) => modusFuerDienst(ansicht.direktDienste, dienstId),
@@ -634,6 +653,33 @@ export function Planen({
           }}
         />
       )}
+      {platzFenster &&
+        entwuerfe &&
+        plan &&
+        (() => {
+          // Termin und Dienst aus dem aktuellen Plan – er kann sich seit dem Öffnen neu geladen haben.
+          const i = plan.spalten.findIndex((s) => s.id === platzFenster.eventId);
+          if (i < 0) return null;
+          const s = plan.spalten[i];
+          const zl = plan.gruppen
+            .flatMap((g) => g.zeilen)
+            .find((x) => x.dienst.id === platzFenster.dienst.id);
+          const name = platzFenster.dienst.name;
+          return (
+            <PlatzFenster
+              key={`${s.id}|${platzFenster.dienst.id}`}
+              titel={`Plätze – ${name} · ${tagKurz(s.tag)}`}
+              unter={`${s.name} · ${s.uhrzeit} Uhr`}
+              z={plaetzeZeile(daten, s, i, platzFenster.dienst, zl)}
+              aendern={(z, gesehen, neu) => entwuerfe.anzahl(s.id, z.serviceId, gesehen, neu)}
+              onGespeichert={showToast}
+              onClose={(geaendert) => {
+                setPlatzFenster(null);
+                if (geaendert) leiseNeuLaden();
+              }}
+            />
+          );
+        })()}
       {plaetzeFach && entwuerfe && plan && (
         <PlaetzeFach
           titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}

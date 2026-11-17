@@ -916,7 +916,7 @@ ein Fenster.
 5. Person, die **abwesend** ist (Zelle schraffiert, Grund als Text): Fenster mit Grund und Zeitraum („… abwesend: Urlaub (28.11.–30.11.)“), dazu die
    gleiche Frage. Ist sie zugleich in einem anderen Dienst eingeteilt: **ein** Fenster mit beiden Sätzen.
 6. Termin, an dem der Dienst **voll** ist: Klick in eine leere Zelle → Fenster „Ton ist voll“: „Ton am 27.11. ist voll (2 von
-   2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ mit **Schließen**. Es wird nichts eingetragen.
+   2).“ mit **Platz dazunehmen (3)** (TF-ABLAUF-38). **Abbrechen** → nichts wird eingetragen.
 7. Klick auf eine **bestehende Einteilung** (zugesagt, angefragt): öffnet das Fenster „zurückziehen oder ersetzen“ (TF-ABLAUF-37).
    Klick auf den **Namen**: setzt weiter den Fokus; ein Klick in eine Zelle tut das nicht.
 8. **Tastatur:** mit Tab zu einer leeren Zelle (Rahmen), Enter → dasselbe wie der Klick; der Vorleser nennt „Daniel F. für Ton am
@@ -1099,4 +1099,35 @@ des belegten Platzes – keine zweite Logik, kein eigenes Fenster.
 - **Betrifft:** `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/_zurueck.scss`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planSicht.ts`, `dienstplaner/src/hilfeTexte.ts`
 - **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (Aktion `belegt`/`entwurfFach`, Platz ohne Entwurf, veraltet, `gastAktion`), `shared/dienstplan/personenRaster.test.ts` (Zustand `zurueck` bei Zurückziehen und Ersetzen, kein Warnfall, veraltet, Gast), `dienstplaner/src/Planen.p2b.test.tsx` (Klick → `BelegtFach`, Zurückziehen → durchgestrichen, Klick → `EntwurfFach`, Entfernen, angefragt, Gast, Andere Person wählen → Ersetzen-Entwurf, Fokus-Klick, ohne Recht, ohne Schublade); Gegenproben einzeln rot; von Hand bleibt das Aussehen (Rot gestrichelt, Hell/Dunkel, Handy)
 - **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 7), Scheibe P2b
+</details>
+
+### TF-ABLAUF-38 · Planen: Personen – Plätze einstellen und „Platz dazunehmen“
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf; ein Dienst (Ton) mit einem Termin „2 von 3“ (ein Platz offen),
+einem **vollen** Termin (2 von 2) und einem vollen Termin, an dem schon ein Entwurf liegt. Dazu ein Konto, das den Dienst nur ansehen darf.
+
+**Das muss passieren:** Plätze lassen sich in „Personen“ sofort einstellen; „Platz dazunehmen“ erhöht den Platz in ChurchTools und
+trägt die Person danach als Entwurf ein.
+
+1. **Planen → Personen.** Am Ende des Blocks Ton steht die Zeile **„Plätze“**: je Termin „2 von 3“. Freie Plätze **rot**, voll grau,
+   ohne Plätze **„aus“**. Ein Entwurf auf einem freien Platz zählt mit („3 von 3“) – genauso wie bei „Noch offen“.
+2. **Klick** auf die Zahl (oder auf den roten Tag in „Noch offen“): Fenster „Plätze – Ton · Fr, 27.11.“ mit − / + und „belegt 2 · Plätze 3 · frei 1“.
+   **−** → „Ton: jetzt 2 Plätze.“, **+** mehrmals geht ohne Obergrenze. Es gilt sofort, ChurchTools schickt nichts.
+3. **−** ist **aus** (Hinweis „Erst jemanden herausnehmen“), wenn alle Plätze belegt sind. Liegt an Ton an diesem Termin ein **Entwurf**:
+   − und + sind aus, „Hier liegt ein Entwurf – erst senden oder entfernen.“
+4. Voller Termin, Klick in die leere Zelle einer Person → Fenster „Ton ist voll“ mit „Ton bekommt sofort einen dritten Platz (in
+   ChurchTools gespeichert). <Name> wird als Entwurf eingetragen.“ → **Platz dazunehmen (3)**. Ergebnis: Ton hat 3 Plätze (Zeile
+   „Plätze“), die Person steht als **Entwurf** in der Zelle, unten zählt die Leiste. In ChurchTools hat Ton jetzt 3 Plätze, die Person
+   ist **nicht** eingeteilt.
+5. Entwurf wieder wegnehmen: der dritte Platz **bleibt** (so gewollt).
+6. Voller Termin **mit Entwurf**: Fenster „Erst senden oder Entwürfe entfernen“ mit **Ansehen und senden** (öffnet die Sende-Liste), kein Dazunehmen.
+7. **Abgesagter Termin:** die Zahl steht da, ist aber kein Knopf. Konto **ohne Recht**: ebenfalls keine Knöpfe.
+8. **Handy (375 px):** Zeile und Fenster sind benutzbar, nichts läuft aus dem Bild.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/platzNachEntwurf.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/personenEintragen.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PlatzFenster.tsx`, `dienstplaner/src/PlatzRegler.tsx`, `dienstplaner/src/PlaetzeFach.tsx`, `dienstplaner/src/useAnzahlSetzen.ts`, `dienstplaner/src/usePlatzDazu.ts`, `dienstplaner/src/Planen.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (`plaetzeStand`), `shared/dienstplan/personenRaster.test.ts` (Zeile „Plätze“, `plaetzeZelleText`), `shared/dienstplan/personenEintragen.test.ts` (`voll` mit `entwuerfe`, `platzDazuText`), `dienstplaner/src/Planen.p2c.test.tsx` (Zeile, Fenster, Sperre, Dazunehmen, Fehlerzweige, Wartezeit, abgesagt, ohne Recht); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
+- **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 6 und 9), Scheibe P2c
 </details>

@@ -6,6 +6,7 @@ import {
   eintragenWarnung,
   freiOhneEntwurf,
   gastAktion,
+  platzDazuText,
   platzFuerEintrag,
   schonEingeteiltText,
   vollText,
@@ -114,11 +115,23 @@ describe('zellenAktion', () => {
     expect(zellenAktion({ ...o, plaetze: [besetzt(1, 5, 'Anna'), besetzt(2, 6, 'Ben')] })).toEqual({
       art: 'voll',
       von: 2,
+      entwuerfe: 0,
     });
     const e = suche([{ entwurf: entwurf(2, 8) }]);
     expect(zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), frei(2)] })).toEqual({
       art: 'voll',
       von: 2,
+      entwuerfe: 1,
+    });
+  });
+
+  it('voll: `entwuerfe` zählt jeden Entwurf am Dienst – auch einen veralteten (die Sperre „Platz dazunehmen“)', () => {
+    const e = suche([{ entwurf: entwurf(2, 8), veraltet: true }]);
+    expect(
+      zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), besetzt(2, 6, 'Ben')] }),
+    ).toMatchObject({
+      art: 'voll',
+      entwuerfe: 1,
     });
   });
 
@@ -260,6 +273,14 @@ describe('Texte', () => {
 
   it('voll', () => {
     expect(vollText('Ton', '2026-11-27', 2)).toBe('Ton am 27.11. ist voll (2 von 2).');
+  });
+
+  it('Platz dazunehmen: „… bekommt sofort einen dritten Platz …“ – bis zwölf ausgeschrieben, danach „13.“', () => {
+    expect(platzDazuText('Ton', 3, 'Daniel F.')).toBe(
+      'Ton bekommt sofort einen dritten Platz (in ChurchTools gespeichert). Daniel F. wird als Entwurf eingetragen.',
+    );
+    expect(platzDazuText('Ton', 1, 'X')).toContain('einen ersten Platz');
+    expect(platzDazuText('Ton', 13, 'X')).toContain('einen 13. Platz');
   });
 });
 

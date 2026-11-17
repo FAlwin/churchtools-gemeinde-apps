@@ -24,7 +24,7 @@ import type { Dienst } from '../ct/dienste';
 import { initialenAus } from '../organigramm/mitglieder';
 import type { Entwurf } from './entwuerfe';
 import { platzPerson } from './fokus';
-import { zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
+import { plaetzeStand, zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
 import {
   gruppenName,
   type Plan,
@@ -113,12 +113,24 @@ export interface RasterBlock {
   abwesenheit: 'ok' | 'nichtSichtbar' | 'teilweise';
   /** Vorübergehend gescheiterte Gruppen – „Nochmal versuchen“. */
   fehler: { gruppenIds: number[]; text: string; nochmal: boolean } | null;
+  /**
+   * Die Zeile „Plätze“ (P2c) – je gezeigte Spalte, wie viele Plätze der Dienst dort hat und wie viele davon **belegt** sind.
+   * Gezählt wie „Noch offen“ (`plaetzeStand` → `zaehleFrei`, Entwürfe zählen mit); 0 Plätze: der Dienst ist dort aus.
+   */
+  plaetze: RasterPlaetze[];
+}
+
+/** Die Plätze eines Dienstes an einem Termin (`plaetzeStand`). */
+export interface RasterPlaetze {
+  anzahl: number;
+  belegt: number;
+  frei: number;
 }
 
 export interface RasterOffen {
   abgesagt: boolean;
-  /** Dienste mit freien Plätzen, in der Reihenfolge der Blöcke. */
-  dienste: { dienst: string; anzahl: number }[];
+  /** Dienste mit freien Plätzen, in der Reihenfolge der Blöcke. `serviceId`: für den Klick auf den roten Tag (P2c). */
+  dienste: { dienst: string; serviceId: number; anzahl: number }[];
 }
 
 export interface Raster {
@@ -357,6 +369,9 @@ export function personenRaster(o: {
       dienst,
       zeilen,
       gaeste,
+      plaetze: spalten.map((i) =>
+        plaetzeStand(z.zellen[i] ?? null, (p) => o.entwurf?.(i, z, p) ?? null),
+      ),
       gruppenIds: dienst.gruppenIds,
       mitgliederVerborgen: da.some((s) => s.mitglieder === 'verborgen'),
       abwesenheit: ohneRecht === 0 ? 'ok' : ohneRecht === da.length ? 'nichtSichtbar' : 'teilweise',
@@ -376,11 +391,20 @@ export function personenRaster(o: {
     abgesagt: plan.spalten[i].abgesagt,
     dienste: diensteZeilen.flatMap(({ zeile }) => {
       const anzahl = zaehleFrei(zeile.zellen[i] ?? [], (p) => o.entwurf?.(i, zeile, p) ?? null);
-      return anzahl > 0 && !plan.spalten[i].abgesagt ? [{ dienst: zeile.dienst.name, anzahl }] : [];
+      return anzahl > 0 && !plan.spalten[i].abgesagt
+        ? [{ dienst: zeile.dienst.name, serviceId: zeile.dienst.id, anzahl }]
+        : [];
     }),
   }));
   return { blocks, offen };
 }
+
+/**
+ * Der Text einer Zelle in der Zeile „Plätze“ (P2c): „2 von 3“ – belegt von Plätzen; ohne Plätze „aus“ (der Dienst ist an
+ * diesem Termin nicht vorgesehen, wie „nicht vorgesehen“ in der Matrix).
+ */
+export const plaetzeZelleText = (p: Pick<RasterPlaetze, 'anzahl' | 'belegt'>): string =>
+  p.anzahl === 0 ? 'aus' : `${p.belegt} von ${p.anzahl}`;
 
 /** „Gesang ×2“ – der Text eines roten Tags in „Noch offen“; ein einzelner Platz steht ohne Zahl. */
 export const offenText = (o: { dienst: string; anzahl: number }) =>

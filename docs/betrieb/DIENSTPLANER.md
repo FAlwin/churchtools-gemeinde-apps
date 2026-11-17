@@ -166,9 +166,21 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   „Zurückziehen“ ist mit dem Ersetzen aufgegangen und kommt nicht zurück – in der Matrix ist es bei „Andere Person wählen“ und
   „Entfernen“ genauso). Die Regel „welcher Platz ist zu haben“ ist `platzFuerEintrag` (`personenEintragen.ts`). Der **Zauberstab**
   füllt solche Plätze bewusst nicht (er speichert ohne Versions-Schutz, und das „Zurückziehen“ hat der Planer absichtlich gesetzt).
-- **Dienst voll** (kein Platz mehr zu haben: weder frei ohne Entwurf noch mit „Zurückziehen“-Entwurf): ein schlichtes Fenster „Ton ist voll“ mit
-  „[Dienst] am 27.11. ist voll (2 von 2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ – es wird nichts
-  eingetragen („Platz dazunehmen“ kommt mit P2c).
+- **Dienst voll** (kein Platz mehr zu haben: weder frei ohne Entwurf noch mit „Zurückziehen“-Entwurf): Fenster „Ton ist voll“ mit
+  „[Dienst] am 27.11. ist voll (2 von 2).“ und dem Knopf **„Platz dazunehmen (3)“** (P2c): `usePlatzDazu` erhöht erst die Platzzahl in
+  ChurchTools um 1 (sofort, derselbe Weg wie der Regler: `entwuerfe.anzahl` → `anzahlAendern`), lädt den Termin neu und legt –
+  **erst, wenn der neue Platz im neuen Plan wirklich da ist** – den Entwurf an (derselbe Weg wie der normale Klick, Modus aus der
+  Vorgabe; Warnungen „anderer Dienst“/„abwesend“ stehen vorher im selben Fenster). Scheitert das Erhöhen: Meldung des Reglers, kein
+  Entwurf. Scheitert erst der Entwurf: der Platz bleibt, es erscheint die Meldung des Entwurfs. Kommt der neue Platz binnen 20 s nicht,
+  gibt es eine Meldung und keinen Entwurf. **Sperre:** liegt an diesem Dienst und Termin ein Entwurf (auch ein veralteter), gibt es
+  kein Dazunehmen – das Fenster sagt „Erst senden oder Entwürfe entfernen“ mit **„Ansehen und senden“** (ChurchTools nummeriert Plätze
+  beim Ändern neu, gemessen 15.10.2026; wie beim Regler).
+- **Zeile „Plätze“ (P2c):** am Ende jedes geöffneten Dienst-Blocks, je Termin „belegt von Plätzen“ („2 von 3“), gezählt wie „Noch offen“
+  (`plaetzeStand` → `zaehleFrei`, Entwürfe zählen mit): freie Plätze rot, voll neutral, ohne Plätze „aus“. Ein Klick darauf – und auf
+  einen roten Tag in „Noch offen“ – öffnet ein Fenster mit − / + für **diesen** Dienst an diesem Termin (`PlatzFenster`, Regler und
+  Logik wie das Plätze-Fach der Matrix: `PlatzRegler`, `useAnzahlSetzen`). Sofort gespeichert, − nicht unter die Belegten, + ohne
+  Obergrenze, bei einem Entwurf an Dienst und Termin beide gesperrt. Rechte wie der Regler (`darfPlanen`, Anschluss zum Ändern der
+  Plätze); an abgesagten Terminen kein Regler.
 - **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
   Entwürfe der Dienstgruppe geladen und änderbar (`darfAendern`: Schublade bereit). Sonst bleibt die Zelle wie bisher. Eine
   **bestehende Einteilung** (zugesagt, angefragt, Gast) anklicken öffnet das Fenster der Matrix (P2b, s. u.); „Noch offen“

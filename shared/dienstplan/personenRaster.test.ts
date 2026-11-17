@@ -4,7 +4,7 @@ import type { Person } from '../organigramm/mitglieder';
 import { entwurfVeraltet, ortSchluessel, type Entwurf, type EntwurfZiel } from './entwuerfe';
 import { planAus, terminStand, type Plan, type PlanGruppe } from './plan';
 import { abwesenheitenAus, type GruppenStand, type PersonenDaten } from './personenDaten';
-import { offenText, personenRaster, type EntwurfSuche } from './personenRaster';
+import { offenText, personenRaster, plaetzeZelleText, type EntwurfSuche } from './personenRaster';
 import { gezeigteGruppen } from './planFilter';
 import { termineAus, type RohTermin } from './termine';
 
@@ -493,8 +493,8 @@ describe('personenRaster – Gäste, Verborgene, Fußzeile', () => {
       daten: DATEN,
     });
     // 06.12.: Café 2 frei · 09.12.: Ton 1 frei · 13.12. abgesagt (die Matrix sagt dort „abgesagt“, nicht „1 frei“).
-    expect(r.offen[0].dienste).toEqual([{ dienst: 'Café', anzahl: 2 }]);
-    expect(r.offen[1].dienste).toEqual([{ dienst: 'Ton', anzahl: 1 }]);
+    expect(r.offen[0].dienste).toEqual([{ dienst: 'Café', serviceId: CAFE, anzahl: 2 }]);
+    expect(r.offen[1].dienste).toEqual([{ dienst: 'Ton', serviceId: TON, anzahl: 1 }]);
     expect(r.offen[2]).toEqual({ abgesagt: true, dienste: [] });
     for (const i of [0, 1]) {
       const summe = r.offen[i].dienste.reduce((n, d) => n + d.anzahl, 0);
@@ -508,6 +508,71 @@ describe('personenRaster – Gäste, Verborgene, Fußzeile', () => {
     expect(r.offen[0].dienste).toEqual([]);
     expect(r.offen[1].dienste).toEqual([]);
     expect(terminStand(musik, 0)?.frei).toBe(0);
+  });
+
+  it('Zeile „Plätze“ (P2c): belegt von Plätzen – dieselbe Zahl wie „Noch offen“, je Dienst und Termin', () => {
+    const r = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    expect(block(r, CAFE).plaetze).toHaveLength(ALLE_SPALTEN.length);
+    // „Noch offen“ und „Plätze“ rechnen eine Zahl: frei je Dienst und Termin stimmt überall überein.
+    for (const [pos, o] of r.offen.entries()) {
+      for (const b of r.blocks) {
+        const offen = o.dienste.find((d) => d.serviceId === b.dienst.id)?.anzahl ?? 0;
+        // Abgesagte Termine zählt „Noch offen“ nicht mit (sie sagen „abgesagt“) – die Plätze bleiben, was sie sind.
+        if (!o.abgesagt) expect(b.plaetze[pos].frei).toBe(offen);
+        expect(b.plaetze[pos].belegt + b.plaetze[pos].frei).toBe(b.plaetze[pos].anzahl);
+      }
+    }
+    expect(block(r, CAFE).plaetze[0].frei).toBe(2);
+  });
+
+  it('Zeile „Plätze“: Entwürfe zählen mit; Dienst am Termin nicht vorgesehen: 0 Plätze', () => {
+    const p = PLAN.gruppen.flatMap((g) => g.zeilen).find((x) => x.dienst.id === CAFE)!;
+    const frei1 = p.zellen[0]!.find((x) => x.art === 'frei')!;
+    const e: Entwurf = {
+      ort: { eventId: PLAN.spalten[0].id, serviceId: CAFE, index: frei1.index },
+      ziel: { art: 'gast', name: 'Onkel Otto' },
+      modus: 'anfrage',
+      gesehen: frei1.belegung,
+      von: { personId: 1, name: 'Alwin' },
+      zeit: '2026-11-16T10:00:00Z',
+      version: 1,
+    };
+    const ohne = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+    });
+    const mit = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      entwurf: (i, z, pl) =>
+        ortSchluessel(e.ort) ===
+        ortSchluessel({ eventId: PLAN.spalten[i].id, serviceId: z.dienst.id, index: pl.index })
+          ? { entwurf: e, veraltet: entwurfVeraltet(e, pl.belegung) }
+          : null,
+    });
+    expect(block(mit, CAFE).plaetze[0].belegt).toBe(block(ohne, CAFE).plaetze[0].belegt + 1);
+    expect(block(mit, CAFE).plaetze[0].anzahl).toBe(block(ohne, CAFE).plaetze[0].anzahl);
+    for (const b of ohne.blocks)
+      for (const [pos, i] of ALLE_SPALTEN.entries())
+        if (
+          !PLAN.gruppen.flatMap((g) => g.zeilen).find((x) => x.dienst.id === b.dienst.id)!.zellen[i]
+        )
+          expect(b.plaetze[pos]).toEqual({ anzahl: 0, belegt: 0, frei: 0 });
+  });
+
+  it('Text der Zelle: „2 von 3“, ohne Plätze „aus“', () => {
+    expect(plaetzeZelleText({ anzahl: 3, belegt: 2 })).toBe('2 von 3');
+    expect(plaetzeZelleText({ anzahl: 3, belegt: 0 })).toBe('0 von 3');
+    expect(plaetzeZelleText({ anzahl: 0, belegt: 0 })).toBe('aus');
   });
 
   it('Text eines roten Tags: Dienstname, bei mehreren mit Zahl', () => {

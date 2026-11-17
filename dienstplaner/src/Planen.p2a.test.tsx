@@ -386,20 +386,22 @@ describe('Personen – Warnfenster', () => {
 });
 
 describe('Personen – Dienst voll', () => {
-  it('ein schlichtes Fenster, das auf den Regler verweist – es wird nichts eingetragen', async () => {
+  it('das Fenster sagt „voll“ und bietet „Platz dazunehmen (3)“ an – Abbrechen trägt nichts ein (Platz dazunehmen: Planen.p2c.test.tsx)', async () => {
     const s = speichern();
-    zeige({ entwuerfe: nachgebaut({ speichern: s }) });
+    const anzahl = vi.fn();
+    zeige({ entwuerfe: nachgebaut({ speichern: s, anzahl }) });
     await warte();
     fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
     const f = await fenster();
     expect(within(f).getByText('Ton ist voll')).toBeTruthy();
-    expect(f.textContent).toContain(
-      'Ton am 02.12. ist voll (2 von 2). Platz dazunehmen geht im Moment über den Regler in der Matrix.',
-    );
+    expect(f.textContent).toContain('Ton am 02.12. ist voll (2 von 2).');
+    expect(f.textContent).not.toContain('Regler');
     expect(within(f).queryByRole('button', { name: 'Trotzdem eintragen' })).toBeNull();
-    fireEvent.click(within(f).getByRole('button', { name: 'Schließen' }));
+    expect(within(f).getByRole('button', { name: 'Platz dazunehmen (3)' })).toBeTruthy();
+    fireEvent.click(within(f).getByRole('button', { name: 'Abbrechen' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(s).not.toHaveBeenCalled();
+    expect(anzahl).not.toHaveBeenCalled();
   });
 });
 

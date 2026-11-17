@@ -230,7 +230,7 @@ describe('Personen – Zauberstab im Block-Kopf (P2z)', () => {
           .getByText('Noch offen')
           .closest('tr')!
           .querySelectorAll('td')
-          [1 + pos].querySelectorAll('span > span'),
+          [1 + pos].querySelectorAll('span > span, button > span'),
       ].map((x) => x.textContent);
     // Termine: 13.11., 20.11., 22.11., 06.12. – Ton ist am 20. (1) und 22. (2) frei.
     expect(offen(1)).toEqual(['Licht', 'Ton', 'Gesang']);

@@ -51,7 +51,9 @@ export function platzFuerEintrag(
  * - `eintragen`: Entwurf auf den Platz `nr` (1-basiert, wie `freierPlatz`) dieses Dienstes an diesem Termin – ein freier
  *   Platz oder (`ersetzt`: die Version des Entwurfs) ein Platz, dessen „Zurückziehen“-Entwurf damit ersetzt wird.
  * - `voll`: kein Platz mehr zu haben – alle `von` Plätze sind belegt oder haben einen Entwurf, der nicht „Zurückziehen“
- *   ist (P2c bringt „Platz dazunehmen“, bis dahin nur ein Hinweis).
+ *   ist. Das Fenster bietet „Platz dazunehmen“ (P2c) – **nicht**, wenn an diesem Dienst und Termin ein Entwurf liegt
+ *   (`entwuerfe` > 0, gültig oder veraltet): ChurchTools nummeriert die Plätze beim Ändern neu (gemessen 15.10.2026), ein
+ *   Entwurf fände seinen Platz nicht mehr – dieselbe Sperre wie beim Regler (`PlaetzeFach`).
  * - `direkt` / `wegnehmen`: der eigene Entwurf der Person in dieser Zelle (P2m, Klick-Zyklus **Anfrage → direkt → weg**):
  *   ist er noch eine Anfrage, stellt der Klick ihn auf „direkt“ um (`direkt`), ist er schon direkt, nimmt er ihn weg
  *   (`wegnehmen`). `nr`/`entwurf`: der Platz und der Entwurf mit seiner Version, damit der Aufrufer mit dem
@@ -64,7 +66,7 @@ export function platzFuerEintrag(
  */
 export type ZellenAktion =
   | { art: 'eintragen'; nr: number; ersetzt?: number }
-  | { art: 'voll'; von: number }
+  | { art: 'voll'; von: number; entwuerfe: number }
   | { art: 'wegnehmen'; nr: number; entwurf: Entwurf }
   | { art: 'direkt'; nr: number; entwurf: Entwurf }
   | { art: 'belegt'; nr: number }
@@ -134,7 +136,11 @@ export function zellenAktion(o: {
     return platz.ersetzt
       ? { art: 'eintragen', nr: platz.nr, ersetzt: platz.ersetzt.version }
       : { art: 'eintragen', nr: platz.nr };
-  return { art: 'voll', von: plaetze.length };
+  return {
+    art: 'voll',
+    von: plaetze.length,
+    entwuerfe: plaetze.filter((p) => o.entwurf(p) !== null).length,
+  };
 }
 
 /** „29.11.“ oder „28.11.–30.11.“ – der Zeitraum einer Abwesenheit. */
@@ -162,6 +168,28 @@ export function abwesendText(
 /** „Ton am 27.11. ist voll (2 von 2).“ */
 export const vollText = (dienst: string, tag: string, von: number): string =>
   `${dienst} am ${tagMonat(tag)} ist voll (${von} von ${von}).`;
+
+const ORDINAL: Record<number, string> = {
+  1: 'ersten',
+  2: 'zweiten',
+  3: 'dritten',
+  4: 'vierten',
+  5: 'fünften',
+  6: 'sechsten',
+  7: 'siebten',
+  8: 'achten',
+  9: 'neunten',
+  10: 'zehnten',
+  11: 'elften',
+  12: 'zwölften',
+};
+
+/**
+ * „Ton bekommt sofort einen dritten Platz (in ChurchTools gespeichert). Daniel F. wird als Entwurf eingetragen.“ – der
+ * Satz im Fenster „Dienst voll“ (P2c). `neu`: die Zahl der Plätze danach; darüber hinaus „13.“.
+ */
+export const platzDazuText = (dienst: string, neu: number, wer: string): string =>
+  `${dienst} bekommt sofort einen ${ORDINAL[neu] ?? `${neu}.`} Platz (in ChurchTools gespeichert). ${wer} wird als Entwurf eingetragen.`;
 
 export interface EintragenWarnung {
   /** Je ein Satz: „… schon bei … eingeteilt.“, „… abwesend: …“. */

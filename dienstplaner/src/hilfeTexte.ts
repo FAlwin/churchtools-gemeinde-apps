@@ -36,7 +36,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
   {
     titel: 'Plätze und Zauberstab',
     punkte: [
-      'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort.',
+      'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort (Plätze auch über die Zeile „Plätze“ in „Personen“).',
       'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf.',
       'Stift am Namen: Vorlieben der Person – wirkt sofort.',
     ],

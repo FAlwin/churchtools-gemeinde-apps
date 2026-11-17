@@ -4,7 +4,9 @@ import { useLaden } from '@ui/ct/useLaden';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { vorlagenFuerKalender, type TerminVorlage } from '@shared/ct/terminVorlagen';
 import { vorlageRechnen, vorlagenGrundText, type VorlagenStand } from '@shared/dienstplan/vorlage';
-import { anzahlFehlerText, plaetzeText } from './plaetzeTexte';
+import { anzahlFehlerText, plaetzeText, sperreText } from './plaetzeTexte';
+import { PlatzRegler } from './PlatzRegler';
+import { useAnzahlSetzen } from './useAnzahlSetzen';
 import { useInsBild } from './useInsBild';
 // Dieselben Fach-Bausteine wie die anderen Fächer – ein Aussehen für alle.
 import styles from './WerKann.module.scss';
@@ -62,15 +64,22 @@ export function PlaetzeFach({
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
-  const [anzahl, setAnzahl] = useState(() => new Map(zeilen.map((z) => [z.serviceId, z.anzahl])));
-  const [laeuft, setLaeuft] = useState<number | null>(null);
   const [vorlageLaeuft, setVorlageLaeuft] = useState(false);
-  const [geaendert, setGeaendert] = useState(false);
-  const [meldung, setMeldung] = useState<string | null>(null);
-  const [gewaehlt, setGewaehlt] = useState<number | null>(null);
   const [ergebnis, setErgebnis] = useState<{ geklappt: string[]; fehler: string[] } | null>(null);
+  const [gewaehlt, setGewaehlt] = useState<number | null>(null);
+  // Plätze ändern: dieselbe Stelle wie im Fenster eines einzelnen Dienstes in „Personen“ (`PlatzFenster`).
+  const {
+    anzahl,
+    setAnzahl,
+    laeuft,
+    geaendert,
+    setGeaendert,
+    meldung,
+    setMeldung,
+    beschaeftigt,
+    setze: setzeEinen,
+  } = useAnzahlSetzen({ zeilen, aendern, onGespeichert, gesperrt: vorlageLaeuft });
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? ergebnis);
-  const beschaeftigt = laeuft !== null || vorlageLaeuft;
 
   // Einmal beim Öffnen (und je Kalender): `vorlage` selbst ist bei jedem Zeichnen ein neues Objekt.
   const vorlagen = useLaden(
@@ -89,27 +98,9 @@ export function PlaetzeFach({
       ]),
     );
 
-  const setze = async (z: PlaetzeZeile, neu: number) => {
-    if (beschaeftigt) return;
+  const setze = (z: PlaetzeZeile, neu: number) => {
     setErgebnis(null);
-    const gesehen = anzahl.get(z.serviceId) ?? z.anzahl;
-    setLaeuft(z.serviceId);
-    setMeldung(null);
-    const r = await aendern(z, gesehen, neu);
-    setLaeuft(null);
-    if (r.ok) {
-      setAnzahl((alt) => new Map(alt).set(z.serviceId, r.anzahl));
-      setGeaendert(true);
-      onGespeichert(`${z.name}: jetzt ${plaetzeText(r.anzahl)}.`);
-      return;
-    }
-    // Was jetzt dasteht, gilt – damit der nächste Tipp vom richtigen Stand ausgeht.
-    if (r.jetzt !== undefined) {
-      const jetzt = r.jetzt;
-      setAnzahl((alt) => new Map(alt).set(z.serviceId, jetzt));
-      if (jetzt !== gesehen) setGeaendert(true);
-    }
-    setMeldung(`${z.name}: ${anzahlFehlerText(r)}`);
+    return setzeEinen(z, neu);
   };
 
   const rechnung =
@@ -255,35 +246,16 @@ export function PlaetzeFach({
                   {n === 0 ? 'nicht vorgesehen' : z.belegt > 0 ? `${z.belegt} belegt` : 'frei'}
                 </small>
                 {z.entwuerfe > 0 && (
-                  <small className={eigen.gesperrt}>
-                    {z.entwuerfe === 1
-                      ? 'Hier liegt ein Entwurf'
-                      : `Hier liegen ${z.entwuerfe} Entwürfe`}{' '}
-                    – erst senden oder entfernen.
-                  </small>
+                  <small className={eigen.gesperrt}>{sperreText(z.entwuerfe)}</small>
                 )}
               </span>
-              <button
-                type="button"
-                className={eigen.rund}
-                disabled={beschaeftigt || n <= z.belegt || z.entwuerfe > 0}
-                aria-label={`${z.name}: ein Platz weniger`}
-                onClick={() => void setze(z, n - 1)}
-              >
-                −
-              </button>
-              <span className={eigen.zahl} aria-label={`${z.name}: ${n} Plätze`}>
-                {laeuft === z.serviceId ? '…' : n}
-              </span>
-              <button
-                type="button"
-                className={eigen.rund}
-                disabled={beschaeftigt || z.entwuerfe > 0}
-                aria-label={`${z.name}: ein Platz mehr`}
-                onClick={() => void setze(z, n + 1)}
-              >
-                +
-              </button>
+              <PlatzRegler
+                z={z}
+                n={n}
+                laeuft={laeuft === z.serviceId}
+                beschaeftigt={beschaeftigt}
+                onSetze={(neu) => void setze(z, neu)}
+              />
             </li>
           );
         })}

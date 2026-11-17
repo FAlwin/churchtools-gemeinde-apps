@@ -7,6 +7,1035 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.40.0] – 2026-11-17
+
+**Überblick.** Musik-App: **Ablaufvorlagen** – unter **Mehr → Abläufe** die Vorlagen nach Kalender ansehen und, mit dem
+ChurchTools-Recht „Ablaufvorlagen bearbeiten“, anlegen, bearbeiten, umbenennen und löschen; im Bearbeiten-Modus eines Ablaufs
+speichert **„Als Vorlage …“** den Ablauf als neue Vorlage oder ersetzt eine vorhandene (beides in der ChurchTools-Erweiterung
+und in der Server-Variante). Bestätigungsfenster schließen jetzt auch mit Esc. Aus dem anderen Teil des Repos (eigene
+Erweiterungen, mit eigenen Releases): Dienstplaner v0.3.2–v0.8.0 (Personen-Ansicht, Hilfe „?“, Ablaufvorlagen), Protokolle
+v1.0.0–v1.0.2 (Teilen/PDF, „Mit KI füllen“, frühere Treffen), Organigramm (Kinder & Jugend, Gruppenwechsel einrichten),
+Anmeldungen F1d–F5 (Formular-Ausbau, noch nicht veröffentlicht); alle Erweiterungen nutzen die volle Fensterbreite.
+
+### Neu (Musik-App + Dienstplaner)
+
+- **„Als Vorlage …“ im Ablauf eines Termins** (E10): Im Bearbeiten-Modus steht rechts in der Hinweiszeile – links neben „Neu aufsetzen …“ –
+  der Link **„Als Vorlage …“** (nur, wer im Kalender des Termins Ablaufvorlagen bearbeiten darf). Ein Fenster, zwei Wege: den Ablauf als
+  **neue Vorlage** speichern (Name vom Termin vorbelegt, Kalender wählbar) oder eine **vorhandene Vorlage ersetzen** (bewusst wählen – nichts ist vorausgewählt; roter Hinweis mit den
+  Zahlen, roter Knopf). Übernommen werden alle Einträge mit Dauer, Notiz, Infos je Dienstgruppe, Liedern und Platzhaltern wie „[Moderation]“ –
+  keine Namen von Personen. Hat inzwischen jemand die Vorlage geändert, wird nichts überschrieben. In der Musik-App sieht „Ablauf anlegen“
+  die neue Vorlage sofort; die Einführung zum Bearbeiten nennt den Link (`setlist-edit-v7`).
+
+### Intern (Musik-App)
+
+- **Server:** neue Routen `POST /api/services/:eventId/agenda/als-vorlage` und `PUT /api/ablauf-vorlagen/:vorlageId/aus-termin/:eventId`
+  (Kern: `ablaufAlsVorlage`, `vorlageErsetzen`); Erweiterung und Server nehmen denselben Weg über die Weiche. Baustein `AlsVorlageFenster` /
+  `useAlsVorlage` in `ui/ablauf/`, `VorlagenEintrag.modifiedDate` trägt den Stempel für den Vergleich.
+
+### Neu (Musik-App)
+
+- **Ablaufvorlagen ansehen und bearbeiten** (E10): Unter **Mehr** gibt es den Abschnitt **Abläufe** mit der Zeile
+  **„Ablaufvorlagen“** – für alle, die Abläufe sehen dürfen. Sie öffnet dieselbe Seite wie im Dienstplaner: Vorlagen nach Kalender,
+  „nur ansehen“ ohne das ChurchTools-Recht „Ablaufvorlagen bearbeiten“, mit dem Recht **anlegen**, füllen, **umbenennen** und – nach
+  Nachfrage – **löschen**. **‹ Mehr** führt zurück, der Reiter „Mehr“ bleibt markiert. Es geht in der ChurchTools-Erweiterung
+  **und** in der Server-Variante. Eine kurze Einführung erklärt die Seite beim ersten Öffnen (`vorlagen-v1`, `vorlage-v1`). Wer im
+  Fenster „Ablauf anlegen“ eine Vorlage wählt, sieht gleich den neuen Stand (die Liste wird nach dem Schreiben neu geholt).
+
+### Intern (Musik-App)
+
+- **Server:** neue Routen `/api/ablauf-vorlagen/stand`, `/:vorlageId` (lesen, `PUT` umbenennen, `DELETE`), `POST /api/ablauf-vorlagen`
+  und die Punkt-Routen unter `/api/ablauf-vorlagen/:vorlageId/agenda/…`. Die sechs Punkt-Handler und `ctWrite`-Funktionen
+  nehmen ein `AblaufZiel` (Termin **oder** Vorlage) – **ein** Handler für beide Pfade statt einer Kopie (`zielAus`). Rechte
+  entscheidet ChurchTools (403/412/423 gehen durch).
+- **Browser-Zugriff geteilt:** `punktAktionen` und der Vorlagen-Zugriff des Dienstplaners liegen jetzt in
+  `ui/ablauf/browserAblaufZugriff.ts`; die Musik-App-Erweiterung nutzt sie über die Weiche (`churchtoolsApi.ts`). Die Prüfung
+  „ChurchTools hat Listen geliefert“ (`vorlagenStandAusRohdaten`) teilen sich Browser und Server.
+
+### Behoben (alle Apps)
+
+- **Bestätigungsfenster schließen mit der Esc-Taste.** Die kleinen Fenster mit „Abbrechen“ (z. B. „Bitte prüfen“ im
+  Dienstplaner, Löschen-Rückfragen in Musik-App, Gebetsabend und Protokollen) ließen sich bisher nur per Klick
+  schließen. Esc wirkt jetzt wie „Abbrechen“ – nicht, solange gerade gespeichert wird, und nicht bei reinen Meldungen
+  ohne Abbrechen.
+
+### Intern (alle Apps)
+
+- Ein gemeinsamer Baustein `ui/bedienung/useEscape.ts` statt vier Kopien (`OptionWaehlen`, `useAufklapp`,
+  `AkkordLeiste`, Protokoll-Editor). Akkordleiste und Protokoll-Editor haben dafür erstmals einen Test.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.8.0 gebracht: in „Personen“ Plätze einstellen, „Platz
+  dazunehmen“ und Gäste von Hand eintragen.
+
+### Neu (Protokolle)
+
+- **Mit KI füllen: neue Punkte mit Beschlüssen, To-Dos und Terminen.** Ein leeres Protokoll (oder eines ohne passende
+  Punkte) ließ sich nicht füllen: Beschlüsse, To-Dos und Termine brauchten die Nummer eines vorhandenen Punkts („Punkt 1
+  gibt es nicht“). Jetzt kann ein neuer Punkt der KI-Antwort (`neue_punkte`) neben Stichpunkten auch Beschlüsse, To-Dos
+  (mit Zuständigen und Datum) und Termine tragen. Die Vorschau zeigt sie unter dem Punkt, **ein** Häkchen gilt für den
+  ganzen Punkt; beim Übernehmen entstehen Tagesordnungspunkt, Stichpunkte, Beschlüsse, To-Dos und Termine wie bei einem
+  vorhandenen Punkt. Steht im Protokoll keine Tagesordnung, bittet der Auftrag die KI, den Inhalt selbst in Punkte zu
+  gliedern. Antworten im alten Aufbau gehen weiter.
+
+### Intern
+
+- `shared/protokolle/ki.ts`: Lesen (`beschlussTeil`/`todoTeil`/`terminTeil`) und Block-Erzeugung (`beschlussBlock`/
+  `todoBlock`/`terminBlock`) für einzelne Einträge und für die Inhalte eines neuen Punkts sind jeweils EINE Stelle;
+  `Eintrag.neuerPunkt` trägt `beschluesse`, `todos`, `termine`.
+
+### Neu (Dienstplaner)
+
+- **Personen: Gäste von Hand eintragen.** In jedem Dienst-Block, den man planen darf, steht die Zeile „Gäste“ auch ohne Gast. Ein Klick
+  in eine leere Zelle öffnet „Gast eintragen“ (Name, mindestens 2 Zeichen, Enter sendet): Der Gast steht als Entwurf auf dem ersten
+  freien Platz, bekommt keine Anfrage und zählt bei „Plätze“ und „Noch offen“ mit. Hat die Zelle schon Gäste, steht dort ein kleines
+  „+“ für einen weiteren. Ist der Dienst voll, bietet dasselbe Fenster „Platz dazunehmen“ (bei einem Entwurf an Dienst und Termin
+  wie bei den Personen: „Erst senden oder Entwürfe entfernen“). Name und Hinweistext sind dieselben wie bei „Jemand ohne
+  ChurchTools-Konto“ in „Wer kann?“.
+
+### Intern
+
+- **Anmeldungen: Die Regel „welcher Baustein Adresse gilt“ steht an einer Stelle** (`adresseFeld` in
+  `shared/anmeldung/adresse.ts`). Sie stand doppelt – beim Lesen der Antworten (`adresseAntwort`) und beim Vorbelegen
+  „Von Hand“ (`handStart`); gefunden beim Festhalten von F4. Kein sichtbarer Unterschied.
+
+### Neu (Dienstplaner)
+
+- **Personen: Plätze einstellen.** Am Ende jedes Dienst-Blocks steht die Zeile „Plätze“ („2 von 3“, gezählt wie „Noch offen“ –
+  Entwürfe zählen mit; freie Plätze rot, ohne Plätze „aus“). Ein Klick darauf oder auf einen roten Tag in „Noch offen“ öffnet ein
+  Fenster mit − und + für diesen Dienst an diesem Termin – sofort gespeichert, nicht unter die Belegten, ohne Obergrenze, bei einem
+  Entwurf an Dienst und Termin gesperrt (wie der Regler in der Matrix).
+- **Personen: „Platz dazunehmen“.** Ist ein Dienst voll, bietet das Fenster „Platz dazunehmen (3)“: Der Platz wird sofort in
+  ChurchTools gespeichert, danach steht die Person als Entwurf auf dem neuen Platz. Liegt an Dienst und Termin schon ein Entwurf,
+  kommt stattdessen der Hinweis „Erst senden oder Entwürfe entfernen“ mit „Ansehen und senden“.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.2 gebracht: Personen lassen sich aus der Anwesenheit eines
+  Protokolls nehmen, „Mit KI füllen“ nimmt eine fertige Antwort auch ohne Transkript an.
+
+### Neu (Protokolle)
+
+- **Anwesenheit: eine Person aus diesem Protokoll nehmen.** Ein Gemeinschaftskonto oder jemand, der nie dabei ist, steht
+  als Gruppenmitglied in jedem Gruppentreffen – und damit in jeder Anwesenheit. Jetzt hat jede Zeile einen kleinen Knopf
+  **„… aus dem Protokoll nehmen“** (Auge-durchgestrichen). Gespeichert wird das **nur im Protokoll** (`props.ohne` am festen
+  Punkt); im ChurchTools-Gruppentreffen bleibt die Person unverändert stehen. Unter der Liste steht dann
+  **„n ausgeblendet · Zeigen“**, dort holt **„Zurückholen“** sie wieder herein. Ausgeblendete erscheinen weder in den
+  Zahlen und der Kurzform noch beim Lesen und im PDF; sie zählen im Fenster „Protokoll freigeben?“ nicht als „noch
+  offen“, und die automatische Vorbelegung schreibt ihnen nichts ins Gruppentreffen. Auch bei abgeschlossenem
+  Gruppentreffen möglich, weil es nur das Protokoll betrifft.
+- **Mit KI füllen: direkt zur Antwort.** Wer die Antwort der KI schon hat, kommt in Schritt 1 über **„Antwort schon da?
+  Direkt einfügen“** ohne Transkript zu Schritt 2 (dort ohne „Auftrag anzeigen“; „Zurück“ geht weiter).
+- **Mit KI füllen: Platzhalter zuordnen.** Kommen in der eingefügten Antwort Platzhalter wie `[Person 1]` vor, die das
+  Fenster nicht kennt (Antwort aus einem früheren Lauf), erscheint in Schritt 2 die Liste **„Platzhalter zuordnen“**: je
+  Platzhalter ein Feld für einen Namen, mit den Gruppenmitgliedern als Vorschlag. Leer lassen = der Platzhalter bleibt
+  stehen. Ein gewähltes Mitglied wird bei To-Dos zur zuständigen Person. In der Vorschau sagt ein Hinweis oben, welche
+  Platzhalter noch keinem Namen zugeordnet sind („nach dem Übernehmen selbst ersetzen“).
+
+### Geändert (Protokolle)
+
+- **Mit KI füllen: ein unzugeordneter Platzhalter ist kein Zuständiger mehr.** Stand in der Antwort bei einem To-Do
+  `[Person 3]` als Zuständiger und kannte das Fenster ihn nicht, wurde er als **externer Name „[Person 3]“** übernommen.
+  Jetzt bekommt das To-Do niemanden („niemand zuständig“), und der Hinweis in der Vorschau nennt den Platzhalter.
+
+### Intern
+
+- `shared/protokolle/anwesenheit.ts`: `ohneAus` / `ohneWert` (Lesen und Schreiben von `props.ohne`) und
+  `ohneAusgeblendete` – die EINE Stelle, die Ausgeblendete aus dem `TreffenStand` nimmt (Anwesenheit, `protokollBlatt`,
+  `freigabeHinweise`, `vorbelegung`/`vorbelegen`). `vorbelegung` und `vorbelegen` bekommen `ohne` als Pflichtparameter,
+  damit keine Stelle es vergisst.
+- `shared/protokolle/platzhalter.ts`: `PLATZHALTER_MUSTER`, `platzhalterIn`, `unzugeordnet`, `zuordnungErgaenzen`;
+  `shared/protokolle/ki.ts`: `offenePlatzhalter`, `Eintrag.offen` am To-Do.
+
+### Behoben (Organigramm)
+
+- **Organigramm: Der Gruppenwechsel trägt nur noch Kinder aus, keine Leitungen** (Bauplan O9-6-1). Die Austrag-Regel der
+  alten Gruppe fragte nur, wer in der neuen Gruppe aktiver Teilnehmer ist – eine **Leitung der alten Gruppe**, die in der
+  neuen Gruppe Teilnehmer, Coach o. Ä. ist (z. B. Teeny-Leitung bei „Jugend ab 16“), wäre beim nächsten Tageslauf still
+  ausgetragen worden. Jetzt muss die Person in der alten Gruppe **Teilnehmer** sein. Live war noch nichts eingerichtet,
+  und an keinem Übergang gab es so eine Überschneidung.
+  - Technisch: ChurchQuery-Operator `person--group` (nicht dokumentiert, in der Test-Instanz gemessen): Er prüft eine
+    andere Mitgliedschaft derselben Person mit eigener Rolle und eigenem Status.
+  - Die Seite „Einrichtung“ meldet eine ältere Austrag-Regel als ⚠ „veraltet“; „Stufen ändern → Änderungen schreiben“
+    erneuert sie.
+
+### Intern
+
+- **Anmeldungen: Links in Hinweistexten** (Etappe F, Scheibe F5b; veröffentlicht wird erst nach Etappe F). Nach
+  Klick-Runde 6 und dem Entwurf `f5b-links-v1`, Variante A (Alwin, 17.11.2026):
+  - Im Baukasten hat der Baustein „Hinweistext“ ein mehrzeiliges Feld mit dem Knopf **„Link“**: Wort markieren,
+    „Link“, Adresse eintragen. Im Feld steht der Link als `[Text](https://…)`, darunter die Liste der Links mit
+    „ändern“ und „entfernen“.
+  - Nur `https` mit Rechnernamen wird ein Link; alles andere bleibt Text (`javascript:`, `http:`). Im Formular öffnet
+    der Link in einem neuen Tab. Das Format kennt nur `shared/anmeldung/hinweisLinks.ts`.
+  - Hilfetexte unter Fragen bleiben ohne Links.
+
+### Intern
+
+- **Anmeldungen: Die Adresse bei der Anmeldung „Von Hand“** (Etappe F, Scheibe F4c; veröffentlicht wird erst nach
+  Etappe F). Entwurf `f4c-von-hand-v1`, entschieden 17.11.2026: „fragen, wenn anders“.
+  - Bei einer bekannten Person ist das Feld mit der Adresse aus ihrem Profil **vorbelegt**. Hat sie keine, kommt das
+    Eingetragene ins Profil; steht dort dieselbe, passiert nichts; steht eine **andere** da, zeigt das Fenster sie, und
+    nur mit dem Schalter „Adresse in ChurchTools ersetzen“ wird sie ersetzt.
+  - Eine neue Person bekommt die Adresse beim Anmelden. „Person dazu“ bei einer Adresse „einmal je Anmeldung“:
+    vorbelegt mit der Adresse der ersten Person, ergänzt nur ein leeres Profil (ersetzt wird dort nie – die Adresse
+    steht dann nicht im Fenster).
+  - Geschrieben wird **nach** dem Eintragen (`PATCH /persons/{id}`, nachgelesen). Fehlt das Recht an der Person oder
+    kommt sie nicht an, steht die Anmeldung trotzdem, und der Hinweis sagt, dass die Adresse von Hand nachzutragen
+    ist. „Rückgängig“ stellt die alte Adresse wieder her.
+  - Fehler behoben, der mit F4a kam: „Von Hand“ brach bei jeder eingetragenen Adresse ab („passt nicht zum
+    Formular“), weil das nachgebaute ChurchTools-Formular Straße, PLZ und Ort nicht kannte (`formularAus`).
+  - Die Suche (`ui/ct/personen`) liefert die Adresse mit – `adresseVonPerson` bleibt die eine Stelle dafür.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.7.0 gebracht: bestehende Einteilungen in „Personen“ per Klick
+  bearbeiten, Hilfe „?“ statt langer Texte, Ablaufvorlagen ansehen und bearbeiten.
+
+### Neu (Dienstplaner)
+
+- **Personen: bestehende Einteilungen per Klick bearbeiten.** Ein Klick auf eine zugesagte oder angefragte Einteilung – auch
+  auf einen Gast in der Zeile „Gäste“ – öffnet dasselbe Fenster wie das Antippen eines belegten Platzes in der Matrix
+  („Zurückziehen“, „Andere Person wählen“). Eine Einteilung, die ein Entwurf wegnimmt (zurückziehen oder ersetzen), steht
+  wie in der Matrix rot gestrichelt und durchgestrichen da; ein Klick darauf öffnet den Entwurf, „Entfernen“ nimmt ihn zurück.
+  „Andere Person wählen“ zeigt die neue Person als Entwurf in ihrer Zeile. Rechte wie in der Matrix; der Klick auf den Namen
+  setzt weiter den Fokus.
+
+### Intern (Dienstplaner)
+
+- **Eine Regel „Platz wird weggenommen“ für das Aussehen** (`dienstplaner/src/_zurueck.scss`: Rahmen, Fläche, Symbol,
+  Durchstreichen) – Matrix und „Personen“ nutzen sie gemeinsam. Neue Aktionen `belegt`/`entwurfFach` in `zellenAktion` und
+  `gastAktion` (`personenEintragen.ts`); die Rechte der Klicks stehen an einer Stelle (`personenErlaubt` in `useEinteilen`).
+
+### Neu (Dienstplaner)
+
+- **Ablaufvorlagen ansehen und bearbeiten** (E10): In „Planen“ steht neben „Ablauf bearbeiten“ der Knopf **„Vorlagen“**. Die Seite
+  zeigt die Vorlagen von ChurchTools nach Kalender (mit Punkten, Vorlauf und letzter Änderung); wo das Recht „Ablaufvorlagen
+  bearbeiten“ fehlt, steht „nur ansehen“. Mit dem Recht lassen sich Vorlagen **anlegen** (Name und Kalender), im Bearbeiten-Modus
+  füllen, **umbenennen** und – nach Nachfrage – **löschen**. Eine Vorlage hat keine Uhrzeiten, Personen und kein „An diesem Termin
+  weglassen“, Infos je Dienstgruppe gibt es wie am Termin (nicht an Überschriften); Dienste stehen als „[Moderation]“ da. Eigene Adressen (`#/vorlagen`, `#/vorlage/<ID>`), Zurück im Browser geht.
+
+### Intern (Dienstplaner)
+
+- **Vorlagen-Modus im Ablauf-Baustein** (`ui/ablauf`): `useAblaufBearbeiten`, `PunktFenster`, `AblaufListe` bekommen `vorlage` – kein
+  Auge, Platzhalter neutral (Infos je Dienstgruppe wie am Termin); die Aktionen der Vorlage haben kein
+  `setWeggelassen` (eigener Typ `VorlagenAktionen`). Neu: gemeinsame Bausteine `VorlagenBereich`, `VorlagenListe`, `VorlageAnsicht`,
+  `VorlagenFenster` über einen `VorlagenZugriff` (für die Musik-App in V3b ohne Änderung nutzbar), `HinweisLink` für weitere Links
+  in der Hinweiszeile. Die Liste rechnet `shared/ct/ablaufVorlagenListe.ts` auf `vorlagenAus`/`kalenderAus` auf; die Zählung der
+  Vorlauf-Punkte (`vorlaufAnzahl`) teilen sich Liste und „als Vorlage speichern“.
+
+### Intern
+
+- **Anmeldungen: Die Adresse in Tabelle, Druckliste und „Anmeldung ansehen“** (Etappe F, Scheibe F4b; veröffentlicht
+  wird erst nach Etappe F):
+  - Gelesen wird **aus dem Profil der Person** (`GET /persons`: Straße, PLZ, Ort) – also der aktuelle Stand, nicht der
+    vom Tag der Anmeldung. Darf man die Adresse nicht sehen, bleibt die Zelle leer.
+  - Die Adresse ist eine Frage im gemeinsamen Spaltenkatalog (`fragen`/`frageAntwort` in `druckliste.ts`) – dieselbe
+    Regel für Tabelle (je Anmeldung und je Person), Summenzeile („n ausgefüllt“) und Druckliste. Einmal je Anmeldung
+    gefragt: in der Zeile der Anmeldung die Adresse der ersten Person, je Person die eigene.
+  - Im Fenster einer Anmeldung steht sie je Person – nur, wenn das Formular nach der Adresse fragt.
+  - **Nicht** im Rückweg der Antworten (`antwortenAus`): Eine Adresse im Profil gibt es auch ohne diese Anmeldung – die
+    Nachprüfung meldete sonst „beantwortet, obwohl ausgeblendet“.
+  - Demo: Maria, Jonas und Tom haben eine Adresse.
+
+### Neu (Protokolle)
+
+- **Frühere Treffen: ein Protokoll zu einem Treffen nachtragen, das schon vorbei ist.** Bisher zeigte „Kommend“ Termine
+  und Gruppentreffen ohne Protokoll nur ab heute – zu einem vergangenen Treffen (z. B. dem Techniker Treffen vom
+  15.11.) ließ sich kein Protokoll beginnen. Jetzt, nur für die Leitung der Gruppe:
+  - **„Noch ohne Protokoll“** steht im Reiter „Sitzungen“ über „Kommend“: zurückliegende Sitzungen ohne Protokoll seit dem
+    letzten freigegebenen Protokoll der Gruppe (gibt es keins: die letzten 28 Tage), bis gestern – heute steht schon in
+    „Kommend“. Je Zeile **„Protokoll beginnen“**. Ist nichts offen, fehlt der Block; scheitert das Laden, steht im Block
+    ein Hinweis mit „Erneut versuchen“ und der Rest der Seite bleibt.
+  - **„Protokoll nachtragen“** (neben „Neues Protokoll“ und „Neue Sitzung“): Fenster, das **Monat für Monat** (‹ ›) alle
+    Treffen und Termine ohne Protokoll zeigt, beliebig weit zurück, vorwärts nicht über den laufenden Monat hinaus. Gelesen
+    wird nur der gezeigte Monat. Eine Zeile antippen führt im selben Fenster zu „Protokoll beginnen“ (Vorlage /
+    „Wie letztes Mal“ / leer; „‹“ zurück zur Auswahl). Das Protokoll ist danach mit genau diesem Termin und Gruppentreffen
+    verknüpft, die Anwesenheit wird aus den Zusagen und Absagen vorbelegt. Ist das Gruppentreffen schon abgeschlossen, sagt
+    die Zeile, dass die Anwesenheit in ChurchTools feststeht.
+  - Mitglieder sehen weder den Block noch den Knopf.
+
+### Behoben (Protokolle)
+
+- **Anwesenheit bei einem Protokoll zu einem vergangenen Termin.** Die Antworten auf die Einladung wurden nur für Termine ab
+  heute gelesen (und für solche hinter den 180 Tagen). Ein begonnenes Protokoll zu einem Termin davor kam deshalb ohne
+  Zusagen und Absagen an – die Anwesenheit hätte sich nicht aus den Antworten vorbelegt. Jetzt werden Termine mit
+  Protokoll-Entwurf auch vor dem Lesefenster gezielt nachgelesen.
+
+### Intern
+
+- `shared/protokolle/fruehere.ts`: die Regeln von „Frühere Treffen“ an einer Stelle (Zeitraum des Blocks, Zeitraum eines
+  Monats, „ohne Protokoll“). Die Zusammenführung von Terminen, Treffen und Köpfen ist als `sitzungenZusammenfuehren`
+  herausgelöst (`sitzungenOrdnen` nutzt sie, nichts nachgebaut); `treffenLesen` nimmt `isCompleted` mit
+  (`abgeschlossen`). Lesen: `sitzungenOhneProtokoll` in `protokolle/src/lesen.ts`.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.1 gebracht: Protokolle lassen sich jetzt auch zu vergangenen
+  Treffen beginnen („Noch ohne Protokoll“, „Protokoll nachtragen“).
+
+### Geändert (Dienstplaner)
+
+- **Hilfe-Knopf „?“ statt langer Erklär-Absätze.** Der lange Text unter „Planen“, die Fußnote unter „Dienste“ und der Hinweis
+  unter den Diensten in der Termin-Ansicht (nur für Planer) sind weg. Stattdessen steht oben rechts ein Knopf **„?“** – er
+  öffnet ein Fenster „Hilfe · Planen“ (bzw. „Dienste“, „Termin“) mit kurzen Abschnitten, je zwei, drei Stichpunkte statt
+  Fließtext. Das Fenster schließt mit X, Esc oder einem Tipp daneben. Inhaltlich geht nichts verloren. Kurze Hinweise in
+  Fenstern und an Bedienelementen, Lade-, Fehler- und Leer-Texte und Warnungen bleiben, wo sie sind.
+
+### Intern
+
+- **Anmeldungen: Baustein „Adresse“ – Straße, PLZ und Ort in den Personenfeldern** (Etappe F, Scheibe F4a;
+  veröffentlicht wird erst nach Etappe F). Entwurf `f4-adresse-v1`, gemessen auf der Test-Instanz am 17.11.2026
+  (`messung-m1-2026-11-17.md`):
+  - Neu unter „Empfohlen“: **Adresse** mit drei Feldern (Straße und Hausnummer, PLZ, Ort – kein Land) und dem festen
+    Hinweis „Wird im Profil in ChurchTools gespeichert.“ Sie ersetzt dort die frühere „Anschrift“ (ein Textfeld);
+    Formulare, die sie schon haben, behalten sie.
+  - An der Feldkarte wählt die Leitung **„einmal je Anmeldung“** (gilt für alle angemeldeten Personen) oder
+    **„je Person“**. Pflicht heißt: alle drei Teile.
+  - Gespeichert wird **an der Person** (`street`, `zip`, `city`), nicht als Spalte. Das Tool nimmt die drei
+    Personenfelder ins Anmeldeformular von ChurchTools (nie als Pflicht dort) und liest nach; beim Freigeben zieht es
+    sie nach, falls sie fehlen (z. B. bei einer Kopie).
+  - Bei einer **bekannten Person** überschreibt ChurchTools die Adresse mit dem Klick in der Bestätigungsmail
+    (gemessen M1, so gewollt). Leere Teile werden deshalb nie geschickt – sie würden eine vorhandene Adresse löschen.
+  - Noch nicht: Tabelle, Druckliste, „Anmeldung ansehen“ und Nachprüfung (F4b), „Von Hand“ (F4c).
+  - ⚠️ Neuer Feldtyp: Formular-Paket und Erweiterung zusammen hochladen (wie bei jedem neuen Baustein).
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.6.1 gebracht: Anfrage und direkt sind am Rahmen des Entwurfs
+  erkennbar (gestrichelt bzw. durchgezogen), abgesagte Spaltenköpfe bleiben deckend.
+
+### Behoben (Dienstplaner)
+
+- **Anfrage oder direkt ist am Entwurf deutlich zu sehen.** In „Personen“ stand das „?“ einer Anfrage in einem winzigen,
+  gestrichelten blauen Kreis auf blauer Fläche – im Dunkelmodus kaum zu erkennen. Jetzt sagt der **Rahmen** die Art:
+  **gestrichelt = Anfrage**, **durchgezogen = direkt** (auch Gäste), in „Personen“ und in der Matrix gleich; „?“ und Haken
+  stehen in einem gefüllten Kreis. Darüberfahren in der Matrix dunkelt die Fläche ab, statt den Rahmen durchzuziehen.
+- **Abgesagte Termine: Der Spaltenkopf bleibt deckend.** Die blasse abgesagte Spalte war über `opacity` durchsichtig – in der
+  Matrix schien beim Scrollen „kein Ablauf“ durch den klebenden Kopf, in „Personen“ ebenso. Jetzt werden nur die Inhalte
+  blass (gemeinsames Mixin `abgesagt-blass` in `ui/design/_mixins.scss`).
+
+### Intern
+
+- **Ablaufvorlagen: der Kern zum Bearbeiten steht (E10-V1, noch nichts Sichtbares).** Der Schreib-Kern (`shared/ct/schreibKern.ts`)
+  schreibt jetzt auch in eine Ablaufvorlage (Ziel `{ vorlageId }` statt Termin-ID, Pfad `/agendatemplates/{id}`) –
+  dieselben Regeln wie beim Ablauf eines Termins, keine zweite Fassung. Neu in `shared/ct/ablaufVorlagen.ts`: Vorlage
+  anlegen, umbenennen, löschen, den Ablauf eines Termins als neue Vorlage speichern und eine Vorlage damit ersetzen
+  (je ein Aufruf an ChurchTools, danach nachgelesen und nachgezählt). Dazu die Regel `darfVorlageBearbeiten` für das neue
+  Recht „Ablaufvorlagen bearbeiten“ (`edit agenda templates`, je Kalender) und der Eintrag in der Rechte-Übersicht.
+- **Lied ohne Arrangement:** Jeder Schreibweg für Ablaufpunkte (`agendaItemWritePayload`, Anlegen, Zurückholen nach
+  dem Löschen) schickt bei einem Lied ohne Arrangement jetzt `arrangementId: null` mit. Fehlt das Feld, lehnt
+  ChurchTools den Punkt mit 400 ab – gemessen an Vorlagen (Umsortieren und Ändern scheiterten an so einem Lied); laut
+  Schnittstellenbeschreibung gilt dieselbe Pflicht für Termin-Abläufe.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.6.0 gebracht: Eintragen per Klick in „Personen“ (Anfrage,
+  direkt, weg), Zauberstab je Dienst, Entwürfe zählen mit, Vorgabe „Anfrage oder direkt“ je Dienst, Abwesenheit
+  schraffiert – jetzt auch in der Übersicht der Reiter.
+
+### Neu (Dienstplaner)
+
+- **Anfrage oder direkt – eine Vorgabe je Dienst.** In der Matrix steht am Dienstnamen ein kleines blaues Symbol: „?“ = neue
+  Einteilungen beginnen als Anfrage, Haken = direkt (ohne Rückfrage als zugesagt, z. B. für Prediger). Antippen öffnet ein kleines
+  Fenster „Vorgabe · Ton“ mit „Anfrage | direkt“ und „Für alle Dienste übernehmen“ – umgeschaltet wird nie per Klick am Symbol.
+  Die Vorgabe gilt je Gerät (im Browser gemerkt) und für neue Entwürfe aus „Wer kann?“, „Personen“ und dem Zauberstab; bestehende
+  Entwürfe bleiben, wie sie sind. Dasselbe Symbol steht in „Personen“ im Kopf jedes Dienst-Blocks, neben dem Zauberstab.
+- **Personen: Klick-Zyklus.** Leere Zelle → Entwurf als Anfrage („?“), ein zweiter Klick stellt ihn auf direkt (Haken), der dritte
+  nimmt ihn weg. Steht der Dienst auf „direkt“, beginnt schon der erste Klick direkt. Das Warnfenster kommt nur beim ersten Klick.
+  In den Zellen sieht man den Unterschied: „?“ blass, Haken kräftig.
+
+### Geändert (Dienstplaner)
+
+- **Personen: Abwesenheit als Schraffur.** Die Zelle einer abwesenden Person ist schraffiert, der Grund steht nur als Text mit
+  Symbol (kein Kasten mehr); im Dunkelmodus dieselbe Schraffur in der helleren Farbe. Abwesend **und** eingeteilt: rote Schraffur
+  und ein roter Rahmen um die ganze Zelle, davor nur das durchgestrichene Symbol (der Grund steht im Tooltip und im Warnfenster).
+- Das Wort heißt überall „direkt“; „Ansehen und senden“ zeigt je Entwurf „Anfrage“ bzw. „Direkt zuteilen“ zur Kontrolle.
+- Der Hilfetext unter „Planen“ erklärt das Symbol, den Klick-Zyklus und die Schraffur.
+
+### Intern (Dienstplaner)
+
+- Neue Rechnung `shared/dienstplan/modusVorgabe.ts` (Vorgabe je Dienst); der Modus eines Entwurfs wird über **eine** Funktion
+  geändert (`modusAendern`) – fürs Entwurfs-Fach und für den Klick in „Personen“. Neue Farb-Tokens `--abw-*` und `--symbol-tinte`.
+
+### Neu (Dienstplaner)
+
+- **Personen: Zauberstab je Dienst.** Im Kopf jedes Dienst-Blocks steht neben „N Personen“ ein Zauberstab. Er schlägt für die
+  **freien Plätze dieses Dienstes an allen gezeigten Terminen** Personen vor – im selben Fenster wie der Zauberstab der Matrix
+  („Automatische Planung · Ton“), übernommen als Entwürfe. Abgesagte und vergangene Termine füllt er nicht, Plätze mit Entwurf
+  bleiben, wie sie sind. Wo in dem Dienst nichts zu füllen ist oder man ihn nicht planen darf, gibt es keinen Knopf.
+  Die Entwürfe stehen danach in „Personen“, zählen bei „Einsätze“ und „Noch offen“ mit und kommen in „Ansehen und senden“.
+
+### Intern (Dienstplaner)
+
+- Matrix und „Personen“ nutzen **dieselbe** Zauberstab-Rechnung: `onZauberstab(spalten, gruppe, dienstId?)` bzw.
+  `zauberZeilen(…, dienstId?)` – ohne Dienst die ganze Gruppe, mit Dienst nur dessen Plätze.
+
+### Geändert (Dienstplaner)
+
+- **Entwürfe zählen mit – in der Matrix und in „Personen“ gleich.** Ein gültiger (nicht veralteter) Entwurf zählt schon
+  wie das, was er bewirken wird: Wer jemanden auf einen freien Platz einträgt, sieht sofort „1 frei“ weniger – im
+  Termin-Kopf, im Füllbalken, in der Gruppenzeile und am Handy in der Datumsleiste und im Zettel; in „Personen“ ändern sich
+  „Einsätze“ der Person und „Noch offen“. Zurückziehen macht den Platz als frei sichtbar, Ersetzen lässt die Zahl der freien
+  Plätze gleich und verschiebt die Einsätze. Veraltete Entwürfe zählen nicht. Beim **Teilen und im PDF** („Wir suchen noch …“,
+  Plan als PDF) und bei allem, was an ChurchTools geht, zählt weiter nur, was in ChurchTools steht.
+- **In abgesagten Terminen lässt sich nichts mehr eintragen.** In der Matrix ist der freie Platz dort kein Knopf mehr, in
+  „Personen“ gibt es in der abgesagten Spalte keinen Eintragen-Knopf (kein Rahmen, kein „+“); der Zauberstab ließ sie schon
+  aus. Den eigenen Entwurf nimmt ein Klick dort weiter weg, wie in der Matrix. Vergangene Termine bleiben eintragbar
+  (Nachtragen). Bestehende Einteilungen bleiben sichtbar.
+- **Personen: „Platz übernehmen“ statt „Dienst voll“.** Ist ein Dienst nur noch durch einen „Zurückziehen“-Entwurf frei,
+  ersetzt ein Klick in die Zelle diesen Entwurf: aus „X zurückziehen“ wird „X durch Y ersetzen“ – derselbe Weg wie
+  „Andere Person wählen“ in der Matrix, mit Schutz gegen gleichzeitige Änderungen. Ein freier Platz ohne Entwurf hat Vorrang.
+  Nimmt man Y wieder weg, steht dort wieder X wie in ChurchTools.
+
+### Intern (Dienstplaner)
+
+- **Eine Regel „gilt der Platz als frei?“** (`platzGiltFrei`, `zaehleFrei` in `shared/dienstplan/platzNachEntwurf.ts`): aus ihr
+  rechnen `terminStand`, `gruppenFrei` und „Noch offen“ in „Personen“; „Einsätze“ rechnen aus `platzPerson` (Fokus).
+  `platzFuerEintrag` (`personenEintragen.ts`) ist die eine Regel, welcher Platz für einen neuen Entwurf zu haben ist.
+  **Eine Funktion „Termin nimmt Einträge an“** (`nimmtEintraegeAn`, `plan.ts`) für Matrix, „Personen“, Zauberstab und den
+  Regler „Plätze ändern“.
+
+### Neu (Organigramm)
+
+- **Organigramm: Gruppenwechsel einrichten – jetzt wird geschrieben** (Bauplan O9-5d, nur mit „Berechtigungen verwalten“).
+  Der Hauptknopf im Fenster „Gruppenwechsel einrichten“ bzw. „Stufen ändern“ legt an und schreibt, was die Vorschau gezeigt hat –
+  in der gemessenen Reihenfolge: Gruppentyp → Rechte der Leitung → Wechsel-Gruppen → Routinen → Regeln → Status → Regeln der
+  Kindergruppen → Status → neu berechnen → Einrichtung speichern. **Jeder Schritt wird sofort nachgelesen**; ein „angenommen“ von
+  ChurchTools allein zählt nicht. Beim ersten Fehler wird aufgehört, im Schritt „Fertig“ steht je Baustein ✓, ✗ mit Grund oder
+  „noch nicht geschrieben“.
+  - **„Nochmal versuchen“** liest alles neu und schreibt nur, was fehlt. Zeitüberschreitung, Serverfehler, Drosselung und
+    Netz gelten als vorübergehend: Nichts wird zurückgerollt oder gelöscht. Fehlt ein Recht, steht das da.
+  - **Nie eine zweite Wechsel-Gruppe:** Die Einrichtung wird sofort nach jeder neu angelegten Wechsel-Gruppe gespeichert.
+    Bricht es genau dazwischen ab, zeigt die Seite „Einrichtung“ die Gruppe als ⚠ („nicht in der Einrichtung eingetragen“), und
+    „Nochmal versuchen“ übernimmt sie, statt eine neue anzulegen.
+  - **Status „aktiv“:** Alle Wechsel-Gruppen und Kindergruppen werden auf „aktiv“ gestellt – nur aktive Gruppen rechnet ChurchTools
+    von selbst neu. Die Seite „Einrichtung“ meldet „manual“ und „inactive“ jetzt als ⚠ „rechnet nicht von selbst neu“.
+  - **Stufen ändern:** Fällt eine Stufe weg, gehen nur **unsere** Regeln aus ihr (fremde bleiben); nicht mehr gebrauchte
+    Wechsel-Gruppen werden **nicht gelöscht**, „Fertig“ nennt sie. Die Bereichsgruppe ist beim Ändern gesperrt (nur Anzeige;
+    wechseln in ChurchTools).
+  - **Läuft heute schon ein Wechsel**, steht in der Vorschau gelb „Der Wechsel <Jahr> läuft gerade – nach dem Schreiben kommen N
+    Kinder sofort in die Wechsel-Gruppe bzw. werden verschoben.“ (kein Stopp).
+  - **„Damit die Leitungen den Reiter sehen“:** Im Schritt „Fertig“ steht, welche Leserechte (Organigramm, Kategorien „Gruppenwechsel“
+    und „Was das Organigramm zeigt“, Ferienkalender) an welchen Rollen fehlen können – gesetzt wird das nicht.
+- **Organigramm: „Wechseltage nachtragen …“** (Seite „Wechseltage“ beim gelben Hinweis und Seite „Einrichtung“ bei ⚠ „Wechseltage in
+  den Regeln“). Ein kurzes Fenster Vorschau › Fertig, das nur die Regeln aller Gruppen um die neuen Jahre aus dem Ferienkalender
+  ergänzt; Ausnahmen bleiben, fremde Regeln halten auf.
+- **Organigramm: „Rechte setzen …“** (Seite „Einrichtung“ bei ⚠ „Rechte der Leitung“, wenn eines der drei Rechte fehlt). Zeigt die
+  Rechte, setzt nach dem Haken „geprüft“ nur die fehlenden und liest nach; nichts wird entzogen.
+
+### Geändert (Organigramm)
+
+- **Organigramm: Der Stand „Regeln der Gruppen“ verlangt Status „aktiv“.** Bisher galt alles außer „none“ als gut – bei „manual“
+  oder „inactive“ hätte ChurchTools am Wechseltag aber niemanden von selbst verschoben.
+
+### Intern (Organigramm)
+
+- **Organigramm:** `schreibeEinrichtung` (`organigramm/src/einrichtenSchreiben.ts`) führt `einrichtungsPlan` aus; der Plan hat
+  dafür die Schritte „unsere Regeln entfernen“ und „Einrichtung speichern“ und nennt nicht mehr gebrauchte Wechsel-Gruppen.
+  Gemeinsame Bausteine: `kuenftigeWechseljahre`, `offenesFenster`, `waiseKandidaten` (Stand und Wiederholen nutzen dieselbe
+  Regel), `werTeil`, `FremdHinweise`, `WerTabelle`. Tests laufen gegen ein gefälschtes ChurchTools, nie gegen eine Instanz.
+
+### Intern
+
+- **Anmeldungen: „Mehrere Antworten“ als echtes Auswahlfeld in ChurchTools** (Etappe F, Scheibe F5c; veröffentlicht
+  wird erst nach Etappe F). Gemessen auf der Test-Instanz am 17.11.2026 (`messung-f5c-2026-11-17.md`):
+  - Neue Fragen „Mehrere Antworten“ werden in ChurchTools ein `multiselect` mit den Antworten als Optionen (vorher eine
+    Text-Spalte „A, B“). Umbenannte Antworten behalten ihre Nummer, die Wahl bleibt; eine schon gewählte entfernte
+    Antwort bleibt verborgen stehen – wie bei den anderen Auswahlfragen. **Vorhandene Text-Spalten bleiben Text.**
+  - Geschrieben wird die Liste der Options-Nummern (Formular und von Hand); zurück kommt sie als Liste und wird zu
+    „A, B“ – Tabelle, Summe, Druckliste, Nachprüfung und „Person dazu“ lesen beides gleich.
+  - Die EINE Stelle für Rohwerte aus ChurchTools (`shared/anmeldung/feldwert.ts`): Liste, Antworten zählen,
+    Übergabe und „Rückgängig“ bei einer Absage, Nachprüfen nach dem Schreiben. Vorher hätten diese Stellen eine
+    Mehrfachauswahl als leer gelesen – die Übergabe hätte sie gelöscht.
+  - Zurückholen einer Abgesagten: Die Mehrfachauswahl aus dem Verlauf („Küche, Programm“) kommt wieder als Liste der
+    Nummern zurück; nicht mehr bekannte Antworten werden genannt.
+
+### Intern
+
+- **Anmeldungen: Antworten bis 255 Zeichen** (Etappe F, Scheibe F5a; veröffentlicht wird erst nach Etappe F). Die
+  Grenze `ANTWORT_MAX` steigt von 80 auf 255 – für Antworten, ausgeblendete Antworten, die freie Antwort und
+  Bedingungen zugleich. ChurchTools speichert so lange Optionen vollständig, auch die anonyme Wahl klappt (gemessen
+  F0, 08.11.2026); die AC-Anmeldung braucht 84 und 88 Zeichen.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf die erste Version v1.0.0 gebracht: Stand-Zeile ohne Verweis auf noch
+  offene Etappen, Hinweis „Danach richtet ein Admin jede Gruppe ein“ bei der Installation, überholte Aussage zur
+  Anwesenheit („später“) korrigiert, Hinweis auf den Planungsordner außerhalb des Repos.
+- README: Protokolle stehen jetzt in der Tabelle „Die Apps“ und haben einen eigenen Abschnitt mit kurzem Rundgang
+  (`docs/bilder/protokolle-demo.gif`, nur Beispieldaten). „In Arbeit“ nennt nur noch die Anmeldungen.
+
+### Intern (alle Apps)
+
+- `npm run readme-bilder -- <app>` nimmt jetzt nur die Bilder dieser App auf **und baut nur ihre GIFs** (vorher wurden
+  danach alle GIFs aus den Rohvideos neu gebaut, also alle Binärdateien im Verlauf geändert); gestartet werden nur die
+  passenden Dev-Server. Neu aufgenommen: der Protokolle-Rundgang samt Namensschild und Kurzfassung für die Übersicht
+  (`apps-uebersicht.gif` entsteht nur beim Lauf ohne Filter) und die Standbilder der Protokolle für die
+  README-Erinnerung; die Erinnerung (`readme-bilder.yml`) beobachtet jetzt auch `protokolle/**`.
+
+### Neu (Dienstplaner)
+
+- **Personen: Eintragen per Klick in die Zelle.** Ein Klick in eine leere Zelle (Person × Termin im Block eines Dienstes)
+  legt sofort einen **Entwurf** an – derselbe Weg wie die Wahl in „Wer kann?“, auf den ersten freien Platz dieses Dienstes
+  an diesem Termin. Gesendet wird erst mit „Ansehen und senden“. Ein Klick auf den **eigenen Entwurf** nimmt ihn wieder weg.
+  - **Ein Fenster kommt nur, wenn es etwas zu bedenken gibt:** die Person ist am selben Tag schon in einem anderen Dienst
+    eingeteilt („Daniel F. ist am Fr, 20.11. schon bei Gesang eingeteilt. Trotzdem für Ton eintragen?“) oder an dem Tag
+    abwesend (mit Grund und Zeitraum) – beides zugleich steht in einem Fenster, mit „Abbrechen“ und „Trotzdem eintragen“.
+    Ist der **Dienst voll**, sagt ein Hinweis, dass „Platz dazunehmen“ im Moment über den Regler in der Matrix geht.
+  - **Mit der Maus** zeigt eine leere, eintragbare Zelle beim Darüberfahren einen blauen Rahmen und ein „+“; am **Handy** steht
+    in solchen Zellen ein blasses „+“. Jede dieser Zellen ist per Tastatur bedienbar. Eintragen lässt sich nur dort, wo es auch
+    in der Matrix geht; bestehende Einteilungen anklicken tut noch nichts. Der Klick auf den Namen setzt weiter den Fokus.
+
+### Intern (Dienstplaner)
+
+- **Eine Regel für „freier Platz ohne Entwurf“** (`freiOhneEntwurf`): der Zauberstab und „Personen“ fragen dieselbe Funktion.
+  Der Toast bei einem gescheiterten Eintragen/Entfernen („Hier hat eben jemand den Platz geändert …“) steht an einer Stelle
+  (`fehlerHinweis`), ebenso das Entfernen eines Entwurfs (`entferneEntwurf`, fürs Entwurfs-Fach und „Personen“).
+
+### Behoben (Dienstplaner)
+
+- **„Personen“: Die Ecke „Name“ oben links bleibt sauber.** Scrollte am Handy eine abgesagte Spalte darunter durch,
+  schien ihr Text durch „Name“ hindurch. Die Ecke lag nicht über den anderen Kopfzellen, weil eine allgemeinere Regel
+  spezifischer war – jetzt `.raster thead .name` (wie die Ecke der Matrix, `.plan .svcKopf`).
+
+### Sicherheit (Protokolle)
+
+- **Einrichten prüft die Merkliste der selbst vergebenen Rechte** (Security-Review vor `protokolle-v1.0.0`): Die Liste
+  steht in der Kategorie „Protokolle · Gruppe“, die die Leitung beschreiben darf. Ein untergeschobener Eintrag konnte
+  bisher dazu führen, dass ein Admin beim nächsten „Einrichten“ ungewollt Rechte entzieht – auch an Rollen anderer
+  Gruppen. Jetzt zählen nur Zusatzrechte an Rollen dieser Gruppe (frisch aus ChurchTools), Kalenderrechte nur am alten
+  oder neuen Kalender der Gruppe (`vergebenPruefen` in `shared/protokolle/einrichten.ts`). Die Gruppenrollen liest das
+  Einrichten dafür selbst (eine Stelle `rollenLesen`, auch für das Fenster).
+
+### Neu (Organigramm)
+
+- **Organigramm: Fenster „Gruppenwechsel einrichten“ und „Stufen ändern“** (Bauplan O9-5c-2, nur mit „Berechtigungen
+  verwalten“). „Einrichten …“ auf der Seite „noch nicht eingerichtet“ und „Stufen ändern …“ unter der Karte „Stufen“ öffnen
+  dasselbe Fenster mit zwei Schritten (Stufen › Vorschau › Fertig). Der Hauptknopf schreibt erst seit O9-5d (siehe
+  dort); die Vorschau selbst liest nur.
+  - **Stufen:** Bereichsgruppe und Stufen (jüngste zuerst) mit der Gruppensuche, „ab N Jahren“, nach oben/unten/entfernen,
+    „Stufe hinzufügen“; zugeklappt die weiteren Einstellungen (Stichtag, Ankündigung in Wochen, Aufnahme, Aufräumen,
+    Ferienkalender mit „Sommerferien gefunden bis …“). Es geht nur weiter, wenn nichts fehlt; die Hinweise stehen am Feld.
+  - **Vorschau:** „Wer wechselt wann wohin“ (Jahr × Übergang mit Zahlen, Namen zum Aufklappen, Hinweis auf Kinder ohne
+    Geburtstag) und „Das legt die Erweiterung in ChurchTools an“ (je Baustein neu, vorhanden oder ändern). **Fremde Regeln
+    in einer gewählten Gruppe oder Regeln, die sich nicht lesen ließen, sind ein Stopp** (roter Hinweis); beim Einrichten
+    braucht es außerdem den Haken „Rechte der Leitung geprüft“.
+
+### Geändert (Organigramm)
+
+- **Organigramm: Die Bereichsgruppe darf keine Stufe sein, und jede Stufe braucht eine Gruppe.** Beides prüft das neue
+  Fenster – und dieselbe Prüfung gilt beim Lesen der gespeicherten Einrichtung (eine solche Einrichtung gilt dann als nicht
+  lesbar, wie bei jedem anderen Formatfehler).
+
+### Intern (Organigramm)
+
+- **Organigramm:** `einrichtungsPlan` (`shared/organigramm/einrichtungPlan.ts`) ist der Plan, den O9-5d ausführen wird: je
+  Baustein `neu | vorhanden | ändern` und die geordnete Schrittliste in der Reihenfolge der Messung vom 16.11.2026. Was sich
+  nicht lesen ließ, steht in `unsicher` und wird nie zu „fehlt“. Dazu `fremdeRegeln` (Stopp) und `darfSchreiben`.
+  `fehlendeLeiterRechte` und `routineBefund` sind aus dem Stand-Abgleich herausgezogen (eine Stelle für Zeile und Plan),
+  `regelnLesen` aus dem Lader; `einstellungFehlerJeFeld` ordnet jeden Fehler einem Feld zu.
+- **Organigramm:** `SpitzenAuswahl` nimmt optional einen eigenen Namen für „nichts gewählt“ (`leerName`) – so wählt das neue
+  Fenster EINE Gruppe mit derselben Suche wie „Anfangen bei“.
+- **Organigramm (Demo):** `?demo=neu` zeigt „noch nicht eingerichtet“, `?demo=fremd` eine Stufe mit fremder Regel; die Stufen
+  der Demo haben jetzt Kinder mit Geburtstagen.
+
+### Intern
+
+- **Anmeldungen: freie Antwort im Baukasten** (Etappe F, Scheibe F3c; veröffentlicht wird erst nach Etappe F). Damit
+  ist F3 komplett – nach dem abgenommenen Entwurf `f3-freie-antwort-v1`:
+  - Bei eigenen Auswahlfragen (Eine Antwort, Auswahlliste, Mehrere Antworten, Ja / Nein) steht neben „+ Antwort
+    hinzufügen“ der Link **„+ Freie Antwort“**: Beschriftung vorbelegt „Sonstiges“ und zum Überschreiben markiert,
+    dazu die Auswahl „Textfeld klappt auf / steht immer da / kein Textfeld“ und ein Satz, ob der Text Pflicht ist.
+  - In ChurchTools: Die freie Antwort ist die letzte Option; umbenannt behält sie ihre ID (die Wahl bleibt), die
+    Spalte „Frage (Beschriftung)“ heißt mit, Bedingungen ziehen mit – beim Speichern und im Zwischenstand des
+    Baukastens (`umbenannteAntworten`, die EINE Stelle). Die Textspalte ist in ChurchTools nie Pflicht.
+  - Entfernt, aber schon gewählt: Die Option bleibt verborgen stehen, die Textspalte kommt aus dem Anmeldeformular,
+    die Texte bleiben. Ja / Nein plant seine Optionen jetzt wie eine Auswahl (die IDs von Ja und Nein bleiben).
+  - Fragetyp zu einem Text, Datum …: Die freie Antwort fällt weg.
+  - Behoben beim Durchklicken: Unter einer Frage mit gewählter freier Antwort stand fälschlich „… hat schon jemand
+    gewählt – wird nur ausgeblendet“.
+
+### Intern
+
+- **Anmeldungen: freie Antwort im Formular und bei der Anmeldung von Hand** (Etappe F, Scheibe F3b; veröffentlicht
+  wird erst nach Etappe F). Nach dem abgenommenen Entwurf `f3-freie-antwort-v1`:
+  - „Textfeld klappt auf“: Das Feld erscheint erst, wenn die freie Antwort gewählt ist, und bekommt gleich den Fokus;
+    wird etwas anderes gewählt, klappt es wieder zu.
+  - „Textfeld steht immer da“: bei Eine Antwort und Mehrere Antworten in der Zeile der freien Antwort („Sonstiges:
+    …“), bei Ja / Nein und Auswahlliste darunter. Wer hineintippt, wählt die freie Antwort mit.
+  - Ist die Frage Pflicht, steht bei fehlendem Text „Bitte „Andere Gemeinde“ eintragen.“ – auch beim Blättern und von
+    Hand. Auswahlliste und Mehrere Antworten zeigen die freie Antwort jetzt ebenfalls (`wahlAntworten`).
+  - Der Schlüssel `<Feld-ID>.frei` steht nur in `freieAntwort.ts` (`freiEingabe` für Formular, Vorschau und von Hand).
+  - Demo: „Bereich“ der Lobpreisfreizeit hat „Anderer Bereich“, Jonas hat dort „Fotos“ eingetragen.
+
+### Intern
+
+- **Anmeldungen: freie Antwort – Regel-Teil** (Etappe F, Scheibe F3a; noch ohne Oberfläche, veröffentlicht wird erst
+  nach Etappe F). Nach Klick-Runde 9 und dem abgenommenen Entwurf `f3-freie-antwort-v1`:
+  - Auswahlfragen (Eine Antwort, Auswahlliste, Mehrere Antworten, Ja / Nein) können eine **freie Antwort** haben – die
+    letzte, mit eigener Beschriftung und Textfeld „klappt auf“, „steht immer da“ oder ohne (`Feld.frei`,
+    `shared/anmeldung/freieAntwort.ts`).
+  - In ChurchTools ist sie eine normale Antwort der Auswahl (`wahlAntworten` – die EINE Liste für Optionen und
+    Bedingungen); der Text steht in einer zweiten Spalte „Frage (Beschriftung)“ (`ctZusatzSpalten`).
+  - Pflicht: Ist die Frage Pflicht und gibt es ein Textfeld, muss der Text da sein, sobald die freie Antwort gewählt
+    ist. Abgewählt oder ausgeblendet geht der Text nicht mit (`leeren`).
+  - In der Erweiterung steht nur der Text, wie eine eigene Antwort („FeG Siegburg“) – Tabelle, Summenzeile,
+    Druckliste, „Anmeldung ansehen“ (`antwortText`); ohne Text die Beschriftung. Für die Regeln liest `antwortRoh`
+    die Beschriftung (Rückweg, Nachprüfung, „Person dazu“).
+
+### Neu (Organigramm)
+
+- **Organigramm: Unterreiter „Einrichtung“ im Reiter „Kinder & Jugend“** (Bauplan O9-5c-1, nur mit „Berechtigungen
+  verwalten“). Die Seite zeigt die Stufen, wie sie eingerichtet sind (Kette mit „ab N Jahren“, Bereichsgruppe,
+  Ferienkalender, Stichtag, Ankündigung), und **was in ChurchTools davon wirklich steht**: Gruppentyp, Rechte der Leitung
+  am Typ, Wechsel-Gruppen, Wechseltage in den Regeln, Regeln der Gruppen (auch fremde) und Aufräum-Routinen. Jede Zeile
+  ist „in Ordnung“, „stimmt nicht“ (mit Grund) oder „nicht prüfbar“; ein gelber Hinweis oben zählt, was nicht stimmt.
+  Dazu kommen die Knöpfe „Stufen ändern …“, „Rechte setzen …“ und „Wechseltage nachtragen …“ (siehe O9-5c-2 und O9-5d).
+  - **Der Reiter „Kinder & Jugend“ erscheint für „Berechtigungen verwalten“ auch ohne Einrichtung** und sagt, welcher Fall
+    es ist: „Gruppenwechsel noch nicht eingerichtet“, „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts
+    überschrieben.“ oder „Die Einrichtung ließ sich gerade nicht lesen“ mit „Erneut versuchen“. Diese Fälle werden nie
+    verwechselt – vorübergehend ist nicht „nicht eingerichtet“. Alle anderen sehen den Reiter wie bisher erst nach dem
+    Einrichten. Wer „Berechtigungen verwalten“ hat, sieht den eingerichteten Reiter jetzt auch ohne Kindergruppe.
+
+### Intern (Organigramm)
+
+- **Organigramm:** `shared/organigramm/einrichtungStand.ts` – der Soll/Ist-Abgleich als reine Funktion; das Soll kommt aus
+  den Erzeugern (`alleRegeln`, `aufraeumRoutine`, `LEITER_RECHTE`), die Wechseltage aus `jahrStaende` (keine zweite
+  Rechnung). `ladeEinrichtungStand` liest gedrosselt (vier Gruppen zugleich) und wirft nie: 401/403/Netz/5xx und unbekannte
+  Antworten sind „nicht gelesen“, nur 404 beim Regel-Abruf heißt „keine Regeln“. `remove-member` mit `actionData: null`
+  (so liefert es ChurchTools) gilt wie `{}` (Messung 16.11.2026).
+- **Organigramm:** `dokumentGenau` in `speicher.ts` unterscheidet „kein Wert“ von „Wert nicht lesbar“ (auch andere Fassung
+  oder kein JSON in der Kategorie); `dokumentAusKategorie` (Plan, Sichtbarkeit) verhält sich unverändert. `ladeEinrichtung`
+  liefert `da | keine | unlesbar | fehler`.
+- **Organigramm (Demo):** `?demo` zeigt den Gruppenwechsel „eingerichtet“ (Kinder & Jugend, drei Stufen) mit lauter
+  „in Ordnung“.
+
+### Neu (Protokolle, S8-2)
+
+- **Mit KI füllen** (Entwurf `s8-ki-v1`, Alwin 16.11.2026): Im Editor eines Entwurfs gibt es für die Leitung neben
+  „Freigeben“ den Knopf **„Mit KI füllen“**. Das Fenster führt in drei Schritten: **Auftrag** (Transkript einfügen oder
+  eine `.txt`-/`.docx`-Datei wählen; die Erweiterung findet Namen – auch in den Titeln der Tagesordnung – und ersetzt sie
+  durch Platzhalter, je Name abwählbar, eigene Begriffe unter „Weiteres verbergen“; „Auftrag kopieren“), **Antwort**
+  (die Antwort der KI einfügen; klappt das Kopieren nicht, zeigt „Auftrag anzeigen“ den Text zum Markieren) und
+  **Vorschau** (Stichpunkte, Beschlüsse, To-Dos, Termine und neue Punkte mit Häkchen und Ziel; die echten Namen sind
+  wieder eingesetzt). „Ausgewählte übernehmen“ fügt alles hinter den Text des jeweiligen Punkts ein (bei einem Punkt mit Unterpunkten vor den ersten Unterpunkt, damit es zu diesem Punkt zählt), neue Punkte ans Ende der Tagesordnung; das Protokoll speichert
+  danach wie bei jeder Eingabe von selbst, die To-Dos entstehen beim Speichern. Das Fenster nennt keine bestimmte KI.
+  Transkript, gefundene Namen und Zuordnung bleiben im Fenster – nichts davon wird gespeichert oder an ChurchTools
+  geschickt. Kopiert werden kann erst, wenn die Personenliste und die Gruppenmitglieder geladen sind (sonst gingen
+  Namen unersetzt hinaus); lässt sich die Personenliste nicht laden, sagt das Fenster es und lässt Namen von Hand
+  eintragen.
+
+### Intern (S8-2)
+
+- Fenster `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (`fflate`, `docxText` und `ki.ts`
+  liegen nicht im Haupt-Bundle); Personen aus `GET /persons` seitenweise (`kiPersonen.ts`, `ctAlleSeiten`, 200 je
+  Seite). Neue Symbole `funke` und `kopieren` in `ui/icons`. „Auftrag kopieren“ nutzt den gemeinsamen Baustein `useKopieren` (`ui/bedienung`); `kopieren()` meldet jetzt zusätzlich, ob es geklappt hat (bisherige Aufrufer unverändert). Einfügen „ans Ende“ (auch bei übernommenen Vorschlägen) geht jetzt vor die leere Schlusszeile des Editors statt dahinter (`vorSchlusszeilen` in `dokument.ts`, `bloeckeEinfuegen.ts`) – vorher stand eine Leerzeile vor dem Neuen. Demo: `/api/persons` mit `meta.pagination`.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.5.0 gebracht: einzelne Dienste ausblenden, Fokus-Modus (jetzt
+  auch in der Übersicht der Reiter), Vorlage nur für die eigene Gruppe, volle Fensterbreite.
+
+### Geändert (alle Erweiterungen)
+
+- **Volle Fensterbreite, überall gleich.** Bisher begrenzte der gemeinsame Rahmen den Inhalt auf 1120 px, den
+  Gebetsabend auf 672 px, und die Protokoll-Seiten Sitzungen, To-Dos, Verwaltung und Suche hatten je ein eigenes
+  Maß von 720 bis 820 px. Auf einem breiten Bildschirm blieb so die Hälfte frei, gerade in der Matrix und in
+  „Personen“ des Dienstplaners. Jetzt nutzen Dienstplaner, Anmeldungen, Organigramm, Protokolle und Gebetsabend die
+  ganze Breite, jede Seite gleich. Am Handy ändert sich nichts.
+  - Lange Hinweistexte (unter Planen im Dienstplaner, Fußzeilen der Anmeldungen) bleiben auf eine Lesebreite von
+    960 px begrenzt (`--lese-breite` in `ui/design/_variables.scss`). Das Bild beim Gebetsabend wird höchstens 70 %
+    der Fensterhöhe hoch.
+  - Die Option `schmal` des Seitenrahmens entfällt. Ein Test (`ui/design/seitenBreite.test.ts`) meldet jede neue
+    feste Höchstbreite ab 600 px. Ausgenommen sind nur die Vollbild-Ansichten (Ablauf-Anzeige, Live-Ansicht) mit dem
+    Vermerk „bewusst fest“.
+
+### Neu (Organigramm)
+
+- **Organigramm: Unterreiter „Wechseltage“ im Reiter „Kinder & Jugend“** (Bauplan O9-4, Bereichsleitung und Admins).
+  Die Seite zeigt je Jahr, das der Ferienkalender kennt, Sommerferien, Ankündigung, Wechseltag und Stichtag.
+  - **Wer „Berechtigungen verwalten“ hat, sieht zusätzlich, welche Wechseltage in den Regeln von ChurchTools stehen**
+    („eingetragen“, „unvollständig – fehlt bei …“, „fehlt noch“, „nicht prüfbar“). Die Erweiterung liest die Regeln der
+    Wechsel-Gruppen selbst – es gibt kein eigenes Merkfeld daneben. Die Bereichsleitung ohne dieses Recht sieht Ferien und
+    Wechseltage, aber keine Spalte und keine Erinnerung.
+  - **Erinnerung, wenn die Regeln auslaufen** (Seite und Übersicht, nur mit dem Recht): „Wechseltage fehlen bald. Die
+    Regeln reichen nur noch bis …“ bzw. „Ab … fehlen Wechseltage in den Regeln.“ Lassen sich die Regeln nicht lesen,
+    steht „nicht prüfbar“ – keine Erinnerung, nichts wird verändert.
+    „nichts zu tun – ChurchTools verschiebt von selbst“ steht nur da, wenn die Regeln nachweislich reichen.
+  - **Leitungen Bescheid geben:** Ab der Ankündigung steht ein fertiger Text bereit (Wechseltag, je Übergang die Zahl der
+    Kinder, die wechseln – ohne Ausnahmen, dieselbe Zahl wie in der Übersicht) mit dem Knopf „Text kopieren“. Geht das
+    Kopieren nicht, ist der Text markiert.
+
+### Intern (Organigramm)
+
+- **Organigramm:** `OrgRechte.rechteVerwalten` (churchcore: administer persons, gelesen über `rechteAus` wie in
+  Musik-App und Dienstplaner – nicht `gruppenVerwalten`). Neu in `shared/organigramm/wechseltage.ts`: `jahrStaende`
+  (gegen `kinderFenster`, den Baustein, aus dem `wechselGruppenRegeln` die Fenster baut), `regelnReichenBis`, die Regel
+  „läuft aus“ (`wechseltageStand`) und der Text für die Leitungen; `wechslerZahl` zählt die Wechsler für die Übersicht
+  und den Text. `ladeRegelStand` liest `GET /dynamicgroups/{id}/ruleset`: 404 heißt „keine Regeln“, 401/403/Netz/5xx
+  „nicht prüfbar“ (401 ist dort fehlendes Recht, kein Abmelden). Das Kopieren steht jetzt in
+  `ui/bedienung/useKopieren.ts` (vorher `useLinkKopieren` in den Anmeldungen) und fängt auch eine fehlende
+  Zwischenablage ab.
+
+### Intern
+
+- **Anmeldungen: Anmeldung von Hand in Schritten** (Etappe F, Scheibe F2d; noch nicht freigegeben, veröffentlicht
+  wird erst nach Etappe F). Klick-Runde 8: „auch in Schritten“.
+  - Hat das Formular Schritte, blättert das Fenster „Anmeldung von Hand“ wie das Formular – Fortschritt oben, unten
+    „Abbrechen · Weiter“, „Weiter“ prüft nur die Pflichtfragen der Seite; „‹“ oben geht eine Seite zurück (auf der
+    ersten zur Suche). Unterschrift auf Papier, Auswahl, Platz und Betrag stehen im letzten Schritt. Dasselbe
+    Blättern wie im Formular (`useSchritte`, `SchrittFortschritt`).
+  - **„Person dazu“:** nur die Seiten mit Fragen je Person (`nurPerson`). Geprüft wird jetzt mit dem ganzen Formular,
+    gemeldet nur, was die Person betrifft (`nurPersonenPfade`) – vorher fehlte der Kontakt-Teil, und eine Pflichtfrage
+    in einem übersprungenen Schritt aus dem Kontakt-Teil hätte die Anmeldung aufgehalten.
+  - **Nachprüfung:** Eine Antwort in einem Schritt, der übersprungen worden wäre, zählt jetzt auch als Hinweis – der
+    Satz nennt den Schritt und seine Bedingung. Vorher wurden nur Fragen mit eigener Bedingung geprüft.
+
+### Neu (Dienstplaner)
+
+- **Planen: Fokus-Modus – eine Person im ganzen Plan anleuchten.** Alle Einsätze einer Person werden in der Matrix, auf dem
+  Handy-Zettel und in „Personen“ **gelb umrandet** (Rahmen außen, blasse Fläche – grün, „?“ und blau gestrichelt im Platz
+  bleiben sichtbar). Oben steht die **Fokus-Leiste**: „Fokus: Daniel F. · 5 Einsätze in 5 Terminen · 1 angefragt · 1 Entwurf“
+  mit „Fokus aus“. Ausgeblendete Dienste zählen mit („· 1 ausgeblendet“), abgesagte Termine nicht.
+  - **Vier Wege hinein:** das **Fokus-Symbol** am Namen eines belegten Platzes (am Rechner beim Darüberfahren, am Handy
+    **lang drücken**), der Knopf **„Im Plan hervorheben“** im Fenster eines belegten Platzes, das Suchfeld **„Person
+    hervorheben“** in der Werkzeugleiste (am Handy hinter einem Such-Symbol) und „Personen“: Name antippen.
+  - **„Wer kann?“** zeigt je Kandidat in einer Mini-Zeile seine Einsätze eine Woche vor und nach dem Termin. **„im Plan
+    zeigen“** schließt das Fenster und stellt die Person in den Fokus; die Leiste führt mit **„Zurück zu ‚Wer kann?‘“** zum
+    selben Platz zurück und kann mit **„Hier eintragen“** gleich den Entwurf anlegen.
+  - Der Fokus bleibt beim Wechsel zwischen Matrix, „Personen“ und „Wer wie oft?“ und beim Blättern; er endet mit „Fokus aus“
+    oder beim Verlassen von Planen und wird nicht gemerkt. Immer nur eine Person; Gäste und verborgene Namen lassen sich nicht
+    anleuchten.
+  - In „Personen“ ersetzt der Fokus das Festhalten per Antippen: kräftig gelb statt blassem Blau; das Hover mit der Maus bleibt.
+  - Technik: Die eine Regel „wer steht an diesem Platz“ steht in `shared/dienstplan/fokus.ts`, daraus rechnen Umrandung,
+    Leiste, Suchvorschläge und Mini-Zeile. Neue Farben `--fokus`, `--fokus-grund`, `--fokus-text` in `ui/design/_farben.scss`.
+
+### Neu (Dienstplaner)
+
+- **Planen: einzelne Dienste ausblenden.** Im Filter steht unter jeder Gruppe mit mehreren Diensten die Liste ihrer
+  Dienste, jeder mit eigenem Haken (zum Beispiel Technik ▸ Ton, Bild, Licht). Wer nur Bild nicht sehen will, hakt Bild ab –
+  die übrigen Dienste der Gruppe bleiben. Der Haken der Gruppe zeigt dann einen Strich; ihn antippen schaltet alle Dienste
+  wieder ein. Sind alle Dienste einer Gruppe einzeln abgehakt, verhält sich die Gruppe wie „aus“.
+  - Der Filter gilt für **Matrix, „Personen“ und „Wer wie oft?“**; ein ausgeblendeter Dienst hat dort keine Zeile und keinen
+    Block. Termin-Kopf, Füllbalken, Handy-Zettel, die Zeile der Gruppe, „Noch offen“ und das Teilen als PDF zählen nur
+    gezeigte Dienste. In „Personen“ steht ein ausgeblendeter Dienst am selben Tag blass als „+ Bild“ (ist die ganze Gruppe
+    ausgeblendet, wie bisher „+ Ton (Technik)“).
+  - Das Gerät merkt sich die Wahl wie die Gruppen. Ein Besuch von der Startseite („Nur Technik · nächste 6 Wochen“) zeigt
+    trotzdem alle Dienste der Gruppe, nur für diesen Besuch; der gemerkte Filter bleibt unverändert. Der Regler in der
+    Gruppenzeile (Plätze) zeigt weiter alle Dienste der Gruppe.
+  - In **„Personen“** lässt sich jeder Dienst-Block zuklappen (Kopf „Bild · 5 Personen“ antippen). Zuklappen ist kein
+    Ausblenden: „Noch offen“ zählt den Dienst weiter, gemerkt wird es nicht (wie bei den Gruppen der Matrix).
+  - Technik: Die Regel „ist ausgeblendet“ steht an einer Stelle, `shared/dienstplan/planFilter.ts` (`gezeigteGruppen`),
+    daraus rechnen Matrix, Raster, „Wer wie oft?“, Kopf, Zettel und Teilen. `FilterKnopf` kennt dafür eine Unterliste
+    unter einer Möglichkeit.
+
+### Geändert (Dienstplaner)
+
+- **„Vorlage übernehmen“ ändert nur die Dienste der eigenen Gruppe.** Bisher hat die Vorlage im Plätze-Fach auch Dienste
+  anderer Dienstgruppen verändert (aus „Moderation & Predigt“ zum Beispiel auch Café oder Parkplatz). Jetzt gilt sie nur
+  für die Gruppe, deren Fach offen ist; Dienste anderer Gruppen in der Vorlage bleiben unberührt und stehen auch nicht
+  in der Vorschau. Hat die Vorlage keinen Dienst dieser Gruppe, sagt das Fach es.
+
+### Intern
+
+- **Anmeldungen: Schritte im Baukasten** (Etappe F, Scheibe F2c; noch nicht freigegeben, veröffentlicht wird erst nach
+  Etappe F). Nach dem abgenommenen Entwurf `f2-schritte-v1`, Klick-Runden 7 und 8:
+  - Neuer Baustein **„Neuer Schritt“** in der Leiste (Gestaltung) – geht überall, auch mitten in den Fragen je Person.
+    Der Name ist vorbelegt und Pflicht (höchstens 60 Zeichen); beim Bearbeiten nur Name und „Nur zeigen, wenn …“.
+  - Im Baukasten steht ein Schritt als **Balken „Schritt 2 · Name“** zwischen den Feldern, verschiebbar wie jeder
+    Baustein; bedingte zählen mit, ein Schritt ohne Fragen sagt „Noch keine Fragen in diesem Schritt“
+    (`schrittImBaukasten`).
+  - Sobald es einen Schritt gibt, steht oben der **feste Balken „Schritt 1“** – Name änderbar (`ersterSchritt`; leer
+    gilt nicht, der Standardname „Deine Angaben“ wird nicht gespeichert), nicht verschiebbar, nicht zu entfernen.
+  - **Bedingung am Schritt:** Fenster, Regel-Liste und Meldungen nennen ihn Schritt „Name“ und sagen, dass er mit allen
+    Fragen darin übersprungen wird. Die Benennung steht an EINER Stelle (`feldName`, für Fehler, Sperre beim
+    Verschieben, weggefallene Bedingungen); der Satz „… erscheint nur, wenn …“ ebenso (`zeigeSatz`, vorher im Fenster
+    am Feld und im Regel-Fenster doppelt).
+
+### Intern
+
+- **Anmeldungen: das öffentliche Formular in Schritten** (Etappe F, Scheibe F2b; noch nicht freigegeben, veröffentlicht
+  wird erst nach Etappe F). Nach dem abgenommenen Entwurf `f2-schritte-v1`, Klick-Runden 7 und 8:
+  - Hat das Formular Schritte, zeigt es eine Seite nach der anderen – oben „Schritt 2 von 3 · Name“ und ein dünner
+    Balken (übersprungene Schritte gestrichelt). „Weiter“ prüft nur die Pflichtfragen der Seite (`seiteFehlt`),
+    „Zurück“ prüft nichts, die Antworten bleiben.
+  - Die Fragen je Person stehen auf ihrer Seite für alle Personen; „+ Weitere Person“ und „Entfernen“ nur auf der
+    ersten Seite mit Personen. Auswahl, Betrag, Datenschutz und „Anmelden“ am Ende der letzten Seite.
+  - Gilt für das öffentliche Formular und die Vorschau; im Baukasten steht ein Schritt als Trennzeile mit Namen.
+    Ohne Schritte sieht das Formular aus wie bisher.
+  - Das Blättern steckt in `useSchritte` (die offene Seite merkt sich ihren Baustein; fällt sie weg, gilt die gezeigte
+    davor), die Anzeige in `SchrittFortschritt`. `gezeigteSeiten` nimmt jetzt die schon gebauten Seiten an – sonst
+    fand der Vergleich die offene Seite nicht.
+  - Demo: Die Lobpreisfreizeit blättert („Mitarbeit“, „Team“ nur für Mitarbeitende).
+
+### Intern (S8-1)
+
+- **Regeln für „Mit KI füllen“** (Bauplan S8-1, Entwurf `s8-ki-v1`, ohne Oberfläche): `shared/protokolle/ki.ts` baut die
+  Tagesordnung mit Unterpunkten (feste Punkte als „nichts zuordnen“) und den Auftrag an die KI (Sitzungsdatum mit
+  Wochentag, Platzhalter-Regel, JSON-Aufbau), liest die Antwort tolerant (Codeblock, Text drumherum, Nummer als Zahl;
+  Namen kommen zurück, Zuständige: Gruppenmitglied oder extern, ungültige Daten werden verworfen) und plant die
+  Übernahme als Aufrufe für `EditorGriff.einfuegen` (hinter den Text des Punkts, vor den nächsten Punkt – bei Unterpunkten vor den ersten; neue Punkte ans Ende). Dazu
+  `shared/protokolle/docxText.ts` (Text einer Word-Datei mit `fflate`). Getestet gegen die echten Blockarten und
+  `namenFinden`, u. a. „kein gefundener Name im Auftrag“.
+
+### Intern
+
+- **Anmeldungen: Formular in Schritten – Regel-Teil** (Etappe F, Scheibe F2a; noch nicht freigegeben, veröffentlicht
+  wird erst nach Etappe F). Entwurf `f2-schritte-v1`, Klick-Runden 7 und 8 (16.11.2026). Noch ohne Oberfläche:
+  - Neuer Feldtyp `schritt` (Baustein „Neuer Schritt“, kommt mit F2c in die Leiste): ein Text-Baustein ohne Spalte in
+    ChurchTools, der Name ist Pflicht. Der Name von Schritt 1 steht in den Einstellungen (`ersterSchritt`, sonst
+    „Deine Angaben“).
+  - Hat ein Schritt eine Bedingung und ist sie nicht erfüllt, wird er übersprungen: Seine Felder sind nicht zu sehen –
+    geregelt in `feldSichtbar` (`schrittVon`), also auch für Pflicht, Leeren vor dem Absenden und Nachprüfung. Preis
+    und Datenschutz gehören zu keinem Schritt, sie stehen immer am Ende des letzten (`amEnde`, dafür aus `baukasten.ts`
+    in den Regel-Baustein verlegt und dort weitergereicht).
+  - `shared/anmeldung/formularSchritte.ts`: die Seiten des Formulars (`seiten`, `gezeigteSeiten`, `seiteSichtbar`),
+    die Pflicht je Seite (`seiteFehlt` – die Pflichtprüfung des ganzen Formulars, eingegrenzt) und `schrittName`.
+
+### Neu (Organigramm)
+
+- **Organigramm: „Bleibt noch ein Jahr“ – Ausnahme im Gruppenwechsel setzen** (Bauplan O9-3). Im Fenster eines Kindes
+  im Reiter „Kinder & Jugend“ gibt es den Schalter **„Bleibt noch ein Jahr in …“**. Er speichert sofort, liest danach
+  nach, und **„Rückgängig“** steht im Fenster selbst.
+  - **Wer es darf, entscheidet das Recht an der Wechsel-Gruppe in ChurchTools**, nicht die Rolle in der App: Ist das
+    Kind dort schon Mitglied, braucht man das Recht, den Status zu ändern (Leitungen ab der Ankündigung); sonst das
+    Recht, Personen aufzunehmen – Bereichsleitung und Admins können eine Ausnahme deshalb schon **vor** der
+    Ankündigung eintragen (das Kind wird gleich als „zu löschen“ aufgenommen). Fehlt das Recht, steht statt des
+    Schalters ein Hinweis, z. B. „Eine Ausnahme kannst du ab dem … eintragen.“
+  - **Ab dem Wechseltag** gibt es keinen Schalter mehr – dann käme die Ausnahme zu spät.
+  - **Ausnahme vom letzten Jahr:** Wurde der Status vor dem Wechseltag des Vorjahres gesetzt, steht
+    das Kind mit gelbem Chip „Ausnahme vom letzten Jahr“ da, die Gruppenseite weist darauf hin, und das Fenster sagt,
+    wann das Kind wechselt, wenn man die Ausnahme aufhebt.
+  - **Fehler:** Abgemeldet → wie überall auf der Seite; fehlendes Recht oder „ChurchTools hat es nicht übernommen“ →
+    genau diese Meldung im Fenster; Netz oder Serverfehler → „Gerade nicht gespeichert“, der Stand bleibt, nichts wird
+    von selbst wiederholt.
+
+### Intern (Organigramm)
+
+- **Organigramm:** Neue Regeln für Ausnahme setzen, aufheben und „Rückgängig“ in `shared/organigramm/mitgliedschaft.ts`
+  (Nachlesen prüft den **Status**); `GruppenRechte.statusAendern` (`+edit groupmemberstatus`);
+  `ausnahmeStand` und `ausnahmeVomVorjahr` in `gruppenwechselSicht.ts`. Der Reiter holt die Rechte an den
+  Wechsel-Gruppen mit; lassen sie sich nicht lesen, gibt es dort keinen Schalter, die Listen bleiben.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.4.0 gebracht: Ansicht „Personen“ in Planen; der
+  Plätze-Regler schaltet Dienste ein und aus und übernimmt Terminvorlagen.
+
+### Behoben (Organigramm)
+
+- **Präsentation:** Die Kopfleiste steht jetzt in zwei Zeilen – oben der Name der Gemeinde mit „Vollbild“ und
+  „Schließen“, darunter die Bedienung. Vorher wurde der Name bei 1280 px bis auf „Evange…“ gekürzt.
+- **Liste am Handy:** Ist kein Platz, steht „13 Untergruppen“ unter dem Gruppennamen, statt sich über ihn zu schieben.
+
+### Geändert (alle Apps)
+
+- **PDF-Schrift kleiner:** Die Schrift der PDFs (Organigramm, Dienstplaner-Blätter, Protokolle) ist jetzt auf Latein,
+  Kyrillisch und Satzzeichen gekürzt – sie sieht aus wie bisher. Die Erweiterungs-ZIPs werden dadurch deutlich kleiner;
+  das Protokolle-ZIP mit dem neuen PDF (S6-3) passte vorher nicht in ChurchTools (3,2 MB wurden nicht ausgeliefert).
+  Griechisch und Vietnamesisch stehen in PDFs nicht mehr zur Verfügung.
+
+### Intern (PDF-Schrift)
+
+- Die vier Lato-Schnitte (2.015) heißen gekürzt **„Gemeinde Sans“** (`ui/teilen/schrift/GemeindeSans-*.ttf`, `PDF_SCHRIFT
+= 'GemeindeSans'`): Die Lizenz (SIL OFL) reserviert den Namen „Lato“ für unveränderte Fassungen. Erzeugt mit
+  `scripts/schrift-kuerzen.py` (fonttools, nur einmalig), Herkunft und Prüfsummen in `schrift/HERKUNFT.md`.
+  `latoEinbetten`/`latoKursivEinbetten` heißen jetzt `schriftEinbetten`/`kursivEinbetten`.
+- Neuer Test `ui/teilen/schrift.test.ts`: alle nötigen Zeichen (Umlaute, „“ – …, €, Nachbarländer, Russisch, Ukrainisch)
+  in jedem Schnitt, kein „Lato“ im Namen.
+
+### Neu (Dienstplaner)
+
+- **Planen: neue Ansicht „Personen“ (nur ansehen).** Dritter Knopf neben „Matrix“ und „Wer wie oft?“: dieselben Termine,
+  derselbe Zeitraum und dieselben Filter wie die Matrix, aber als Raster – Zeilen = Personen, Spalten = Termine, ein Block
+  je Dienst. So sieht man, wer wann eingeteilt, abwesend oder noch frei ist.
+  - **Zeile je Person und Dienst** („auch Gesang“ neben dem Namen), mit **Einsätze** (zugesagt + angefragt in
+    diesem Dienst). Zeilen sind die Mitglieder der ChurchTools-Gruppen des Dienstes (mehrere Gruppen werden zusammengeführt)
+    und wer dort eingeteilt ist, ohne Mitglied zu sein.
+  - **Zelle:** der Dienst als ChurchTools-Tag in der Farbe des Dienstes; Haken = zugesagt, Kreis mit ? = angefragt, Stift
+    gestrichelt = Entwurf. Ein zweiter Dienst am selben Tag steht als „+ Gesang“, einer aus einer ausgeblendeten Gruppe
+    blass als „+ Ton (Technik)“. Abwesend = grauer Tag mit dem Grund (auch mehrtägig, auch wenn sie vor dem Zeitraum
+    begann); abwesend **und** eingeteilt zeigt beides mit rotem Rand.
+  - **Gäste**-Zeile je Block, Fußzeile **„Noch offen“** (freie Plätze je Termin, gezählt wie in der Matrix). Maus über dem
+    Namen bzw. Antippen hebt alle Zeilen der Person hervor. Am Handy dieselbe Tabelle, waagerecht scrollbar, die
+    Namensspalte bleibt stehen. Ein Klick in eine Zelle tut noch nichts – Eintragen folgt.
+  - **Abwesenheiten nur mit Recht:** „Abwesenheiten verwalten“ (global) oder „Abwesenheiten sehen“ in der Gruppe. Ohne
+    Recht sagt der Block „Abwesenheiten nicht sichtbar“, statt leerer Zellen zu zeigen (ChurchTools liefert dann still eine
+    leere Liste).
+  - **Aussetzer zerstören nichts:** Scheitert eine Gruppe vorübergehend, steht im Block ein Hinweis mit „Nochmal
+    versuchen“ (nur diese Gruppe wird neu geholt); der Rest bleibt nutzbar.
+  - **Technik:** Rechnung in `shared/dienstplan/personenRaster.ts` (reine Funktionen aus Plan, Mitgliedern,
+    Abwesenheiten, Entwürfen – dieselben Regeln wie die Matrix: `planAus`, `decktTermin`, Entwurf-am-Platz), Laden in
+    `dienstplaner/src/ladePersonen.ts` (`GET /groups/{id}/members` und `/absences`, je Gruppe einmal, höchstens vier
+    gleichzeitig), Farben an einer Stelle (`personenFarben.ts`). `PlanSpalte.ende` kommt aus derselben Regel wie
+    `TerminZeile.ende` (`terminEnde`).
+  - **Umbenannt:** Der gemerkte Wert `personen` (bisher „Wer wie oft?“) wird beim Lesen zu `werWieOft` übernommen – wer
+    „Wer wie oft?“ gemerkt hatte, sieht weiter diese Ansicht. Das neue Raster heißt intern `raster`.
+
+### Neu (Dienstplaner)
+
+- **Plätze-Fach: alle Dienste der Gruppe und „Vorlage übernehmen“.** Der Regler in der Gruppenzeile (Planen, auch am
+  Handy) zeigt jetzt **jeden Dienst der Dienstgruppe**, den man am Termin planen darf – auch Dienste, die im gezeigten
+  Zeitraum noch nirgends vorkommen (zum Beispiel „Abendmahl“): Sie stehen mit „nicht vorgesehen“ da, „+“ schaltet sie
+  ein, „−“ bis 0 aus. Belegte Plätze und Dienste mit Entwürfen bleiben unverändert. Die Matrix bekommt keine
+  Leerzeilen; nach dem Schließen lädt sie neu.
+  - Oben im Fach steht „Vorlage übernehmen“ (nur Vorlagen des Kalenders des Termins, aus ChurchTools
+    `/eventtemplates`): erst die Vorschau („Abendmahl: 0 → 1 · Musik: 3 → 5“, dazu was übersprungen wird und warum),
+    dann „Übernehmen“. Die Vorlage **nimmt nur dazu** – nie weniger, nie ein Dienst weg, der Terminname bleibt – und
+    wirkt über alle Dienstgruppen, wo man planen darf. Dienste mit Entwürfen am Termin werden übersprungen.
+  - Jeder Dienst wird einzeln gespeichert (frisch lesen, schreiben, nachlesen); scheitert einer, laufen die anderen
+    weiter, und die Meldung nennt, was geklappt hat und was nicht. Sind die Vorlagen nicht erreichbar, sagt das Fach es
+    ruhig, die Plätze lassen sich trotzdem ändern.
+  - Technik: Die Rechnung steht in `shared/dienstplan/vorlage.ts`, der Leser der Vorlagen in
+    `shared/ct/terminVorlagen.ts`, die Gruppenzugehörigkeit teilen sich Matrix und Fach (`diensteDerGruppe`), „darf
+    planen“ kommt für Dienste ohne Matrixzeile aus denselben Funktionen wie in der Matrix (`planbar`, `ganzSichtbar`).
+
+### Intern
+
+- **Anmeldungen: Bedingungen auf gespeicherten Anmeldungen** (Etappe F, Scheibe F1e; noch nicht freigegeben,
+  veröffentlicht wird erst nach Etappe F). Entschieden in Klick-Runde 6 (Alwin, 16.11.2026):
+  - **Nachprüfung:** Neuer Abschnitt „Bedingungen“ in der Karte „Nachprüfung“. Er meldet, was das Formular verhindert
+    hätte – eine gesperrte Antwort („„Bereich“: „Gruppenleiter“ gewählt – nur für Getaufte“) oder eine Antwort auf eine
+    Frage, die nicht gezeigt worden wäre. Das entsteht nur durch Eintragen von Hand in ChurchTools; geändert wird nichts.
+    Jeder Befund zählt als Hinweis, „Anmeldung öffnen“ springt ins Fenster dieser Anmeldung.
+  - **„Person dazu“ (von Hand)** startet mit den Kontakt-Antworten der Anmeldung. Fragen der Person, die auf eine
+    Kontakt-Frage schauen, erscheinen wie im Formular und werden gespeichert – bis F1e blieben sie unsichtbar und fielen
+    beim Speichern weg. Die Kontakt-Felder selbst werden dabei nicht umgerechnet (`anmeldungAufbauen` mit `nurPerson`),
+    eine inzwischen geänderte Kontakt-Antwort lässt „Person dazu“ also nicht scheitern.
+  - Neu im Regel-Teil: `shared/anmeldung/antwortenAusListe.ts` – der Rückweg aus ChurchTools in die Antworten des
+    Formulars (`antwortenAus`, Spiegel von `ctWert`, gelesen über `antwortText`) und `bedingungsBefunde`, gebaut auf
+    `ungueltigeAntworten` (dieselbe Prüfung wie im Formular).
+  - Demo (`?demo`, nur zum Entwickeln): Die Lobpreisfreizeit hat jetzt zwei echte Anmeldungen mit Antworten, Personen
+    und Personensuche – Familie Beispiel verstößt gegen zwei Bedingungen (Nachprüfung), Tom Muster ist „im Team“
+    („Person dazu“ zeigt die Fragen fürs Team).
+  - Der Stichtag einer Veranstaltung (fürs Alter) steht in der Veranstaltungsseite an einer Stelle (`stichtagVon`).
+  - Anzeige in Tabelle, Druckliste und „Anmeldung ansehen“: nichts zu tun – leere Antworten stehen dort schon als „–“
+    bzw. leer, „fehlt“ gibt es nicht.
+
+### Geändert (Anmeldungen)
+
+- **Baukasten: Der Hinweis „Nicht gespeichert“ bleibt nicht mehr stehen.** Wer ein Feld ohne Frage verlässt, sieht
+  jetzt, welches Feld es war: „„Gruppe“ nicht gespeichert: Bitte eine Frage eintragen.“ Der Hinweis verschwindet,
+  sobald danach etwas anderes gespeichert wird (Design, ein anderes Feld, ein Feld entfernt) oder wenn das Feld selbst
+  entfernt wird. Bisher blieb er stehen, bis wieder in ein Feld getippt wurde. Solange das Feld noch gewählt ist,
+  bleibt der Hinweis wie bisher.
+
+### Intern
+
+- **„TT.MM.“ an einer Stelle:** `tagMonat` in `shared/ct/datum.ts`. Bisher wurde das Format an acht Stellen von Hand
+  gebaut (Zeitraum, Anmeldungen, „zuletzt gespeichert“, Dateiname des Plan-Blatts, Offline-Stand, Abwesenheiten,
+  `tagKurz`). Der Dateiname des Termin-Blatts nutzt jetzt `tagPunkt` statt eines eigenen „TT.MM.JJJJ“. Die Ausgaben
+  bleiben gleich. Restpunkt aus #845.
+
+### Intern
+
+- **Volle Prüfung nur noch auf GitHub:** `CLAUDE.md` beschreibt unter „Tests & CI“, was vor dem Push lokal geprüft
+  wird (nur die geänderten Dateien, das betroffene Teilprojekt und die Textprüfungen) und was allein die CI fährt.
+  Die Release-Routine verlangt dafür eine grüne CI auf `main` statt eines vollen lokalen Laufs.
+
+### Intern (alle Apps)
+
+- **Erinnerung für die README-Bilder:** Ein neuer CI-Ablauf (`readme-bilder.yml`) nimmt bei jedem PR, der eine App
+  berührt, die Demo-Ansichten als Standbilder auf – mit und ohne den PR – und vergleicht sie mit kleiner Toleranz für
+  Kantenglättung. Ändert der PR sichtbar etwas, bekommt er das Label „README-Bilder“; den PR bricht das nie ab.
+  `npm run readme-bilder -- --offen` listet vor dem Release die gemergten PRs mit diesem Label seit dem letzten
+  Bilder-Stand. In der Release-Routine (`CLAUDE.md`) steht, wann neu aufgenommen wird und was eine neue App braucht.
+
+### Intern (Anmeldungen, Protokolle)
+
+- **Termine eines Kalenders:** Den Pfad `/calendars/appointments?calendar_ids[]=…&from=…&to=…` baut jetzt überall
+  `terminPfad` aus `shared/ct/kalenderTermine.ts` – Anmeldungen (Termine im Zeitraum) und Protokolle (Termine mit
+  Besprechungsanfrage, Termin nach unklarer Antwort suchen, beim Bearbeiten) bauten ihn bis dahin selbst. Keine
+  sichtbare Änderung. Neuer Test für `termineIn` (Anmeldungen) gegen eine nachgebaute Kalenderliste.
+
+### Neu (Organigramm)
+
+- **Personen für alle ohne Leitung** (#915): Gruppen-Admins legen unter „Einstellungen“ fest, was Personen, die nichts
+  leiten, höchstens sehen – alle Namen, wie „Rollen“, nur Zahlen oder keine Personen. Gilt für Diagramme, Liste,
+  Karten, Präsentation, PDF und Gruppenfenster; Leitungen sehen ihre Gruppen samt Untergruppen voll, Admins alles. Nur
+  eine Anzeige-Regel – in ChurchTools sieht jede Person weiter, was ihre Rechte erlauben. Ist die Einstellung gerade
+  nicht lesbar, stehen Personen vorsichtshalber ohne Namen da.
+
+### Intern (alle Apps)
+
+- **README als Schaufenster:** oben Symbol, Download-Knopf und ein kurzer Rundgang durch alle vier veröffentlichten
+  Apps als Animation, darunter die Apps in einer Tabelle (Zweck, Download, Anleitung) und je App ein eigener Abschnitt
+  mit kurzem Video, den wichtigsten Punkten und Download-Link. Alle Bilder und Videos kommen aus den Demo-Modi
+  (`docs/bilder/`, nur Beispieldaten). Die lange Funktionsliste der Musik-App steht aufklappbar darunter. Dabei
+  korrigiert: Die Erweiterung kann inzwischen auch Abwesenheiten.
+- **`npm run readme-bilder`** nimmt alle README-Videos und -Bilder neu auf: startet die nötigen Dev-Server (oder nutzt
+  die dieser Arbeitskopie), spielt die Demo-Abläufe mit Playwright ab und baut mit `ffmpeg` die GIFs in `docs/bilder/`.
+
+### Neu (Organigramm)
+
+- **Organigramm: Reiter „Kinder & Jugend“ – Gruppenwechsel der Kinder ansehen** (Bauplan O9-2; nur lesen, Ausnahmen
+  setzen kommt mit O9-3).
+  - **Wer ihn sieht:** Leitungen der Kindergruppen („Meine Gruppe“), die Bereichsleitung Kinder & Jugend und Admins
+    („Übersicht“ mit einer Kachel je Gruppe). Ohne Einrichtung im Speicher der Erweiterung (Kategorie
+    „Gruppenwechsel“) gibt es den Reiter nicht.
+  - **Je Gruppe:** Ankündigung, Wechseltag und Stichtag; wer wechselt, wer bleibt (auch „bleibt noch ein Jahr“ als
+    Ausnahme), wer neu dazukommt. Leitungen sehen neue Kinder erst ab der Ankündigung, die Bereichsleitung schon
+    vorher als Vorschau.
+  - **Daten pflegen:** Kinder ohne Geburtstag (die wechseln nie von selbst) und, für die Bereichsleitung, wer bis zum
+    Stichtag 18 wird.
+  - Die **Wechseltage** kommen aus dem Ferienkalender („Schulferien NRW“). Wer ihn nicht sehen darf, bekommt einen
+    Hinweis statt leerer Listen – der Kalender muss den Kinder-Leitungen freigegeben sein.
+
+### Intern (Organigramm, Gebetsabend)
+
+- **Organigramm:** `shared/organigramm/gruppenwechselEinrichtung.ts` (Format der Einrichtung, streng geprüft) und
+  `gruppenwechselSicht.ts` (wer sieht was, welches Wechseljahr, je Stufe wechseln/bleiben/neu). Personen, die sich
+  nicht lesen lassen, gelten als „unbekannt“, nicht als „ohne Geburtstag“; ein vorübergehender Fehler zeigt „Erneut
+  versuchen“ statt falscher Listen.
+- **Geteilt:** Das Laden je Gruppe (abgemeldet / kein Recht / vorübergehend) steht jetzt einmal in `jeGruppeLaden`
+  (Organigramm-Mitglieder und Reiter „Kinder & Jugend“). Die Termin-Abfrage eines Kalenders liegt in
+  `shared/ct/kalenderTermine.ts` (vorher im Gebetsabend).
+
+### Intern
+
+- **Anmeldungen: Reiter „Formular | Bedingungen“ im Baukasten** (Etappe F, Scheibe F1d; noch nicht freigegeben,
+  veröffentlicht wird erst nach Etappe F). Nach dem abgenommenen Entwurf `f1-bedingungen-nachweise-v1`, Ansicht 1;
+  die Reiter stehen über dem Formular (Alwin, 12.11.2026), nicht darin.
+  - Der Reiter „Bedingungen“ zeigt alle Regeln als „Wenn … dann zeige …“; gleiche Bedingungen sind zu einer Regel
+    zusammengefasst (`regelGruppen`), Antwort-Regeln als „„Leitung“ nur wählbar in …“. Kaputte Regeln stehen rot.
+  - „Neue Regel“ mit mehreren Zielen per Häkchen; „Bearbeiten“ ändert die Regel für alle Ziele zugleich, ein
+    abgewähltes Ziel verliert sie, „Regel entfernen“ nimmt sie von allen. Als Ziele gehen nur Felder nach allen
+    Quellen (`zielKandidaten`), als Quellen nur Fragen vor allen Zielen (`gemeinsameQuellen`) – keine Kreise. Hat ein
+    Feld schon eine andere Bedingung, sagt das Fenster vorher, dass sie ersetzt wird.
+  - Gespeichert wird weiter je Feld und Antwort, in EINEM Schreiben für alle Ziele (`regelSpeichern` →
+    `regelSetzen`), also mit EINEM „Rückgängig“; geprüft am frisch gelesenen Stand (422, wenn sie nicht stimmt).
+  - Der gewählte Reiter bleibt je Veranstaltung stehen, auch wenn „Rückgängig“ die Seite neu aufbaut
+    (`baukastenBlick.ts`).
+  - Das Fenster an einer Frage oder Antwort sagt jetzt, wenn andere Felder dieselbe Bedingung haben („Hier änderst du
+    sie nur für diese Frage …“).
+  - Zusammengelegt statt kopiert: Der Block „Bedingung“ und „Sonst ausgrauen/ausblenden“ sind dieselben in beiden
+    Fenstern (`BedingungBlock`, `DarstellungWahl`), was ein Fenster speichert regelt `bedingungAufbereiten`, „immer
+    dabei“ (Name, E-Mail, Datenschutz, Preis) steht an einer Stelle (`kannBedingungTragen` und `kaputteStellen`).
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.3.2 gebracht: Planen zählt im Termin-Kopf nur die
+  gezeigten Gruppen.
+
+### Neu (Protokolle, S6-3b)
+
+- **Protokoll als PDF teilen** (Entwurf `s6-freigabe-pdf-v1`, Alwin 09./11.11.2026): Oben in jeder Sitzung mit
+  Protokoll – beim Lesen und beim Schreiben, für alle, die es lesen dürfen – gibt es **„Teilen / PDF“**. Das Fenster
+  „Protokoll teilen“ zeigt die Seiten, dazu „Herunterladen“ und „Teilen“ wie im Dienstplaner. Das PDF hat Kopf mit
+  Freigabe-Vermerk, das Protokoll wie beim Lesen und am Ende die Übersicht (Beschlüsse, To-Dos, Termine, nächste
+  Sitzung). Ein **Entwurf** trägt „ENTWURF – NOCH NICHT FREIGEGEBEN“ im Kasten, ein blasses „ENTWURF“ auf jeder Seite
+  und „ENTWURF“ im Dateinamen. Im Editor kommt auch noch nicht Gespeichertes mit.
+
+### Intern (S6-3b)
+
+- Fenster `protokolle/src/ProtokollTeilenFenster.tsx` auf den gemeinsamen Bausteinen (`PdfKnoepfe`,
+  `PdfStandUndVorschau`, `useGebautesPdf`), nachgeladen über `ProtokollTeilen.tsx` (jsPDF und pdf.js erst beim
+  Antippen). Anwesenheit und – außerhalb des Editors – Mitglieder werden frisch gelesen; scheitert eins, entsteht das
+  PDF trotzdem (Hinweis im PDF, Grund im Log).
+- Auf dem Blatt werden Zuständige, die man nicht kennt (Mitgliederliste verborgen), wie in der To-Do-Liste gezählt
+  („eine weitere Person“) statt weggelassen – sonst stand „noch niemand“, obwohl jemand zuständig ist.
+
 ## [2.39.2] – 2026-11-13
 
 **Überblick.** Musik-App: **Die Reiter oben am iPad sind wieder zu sehen und scharf** – in der installierten App

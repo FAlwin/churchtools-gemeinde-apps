@@ -922,6 +922,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.40.0 (17.11.2026) = Ablaufvorlagen (E10).** Musik-App: **Mehr → Abläufe → Ablaufvorlagen** (ansehen, mit Recht
+  `edit agenda templates` je Kalender anlegen/bearbeiten/umbenennen/löschen, #991) und **„Als Vorlage …“** im
+  Bearbeiten-Modus des Ablaufs (neue Vorlage oder vorhandene ersetzen, nichts vorausgewählt, #999); Kern #979, gemeinsamer
+  Baustein mit dem Dienstplaner (#986, dort seit `dienstplan-v0.8.0`). Beide Betriebsarten; neue Server-Routen
+  `/api/ablauf-vorlagen/…` + `…/agenda/als-vorlage` – in der Test-Instanz (Erweiterung) durchgeklickt, **Server-Betrieb nur
+  über Tests geprüft** → nach dem NAS-Deploy einmal echt prüfen. Esc schließt Bestätigungsfenster (#970). Touren
+  `vorlagen-v1`, `vorlage-v1`, `setlist-edit-v7`. Dazu Dienstplaner v0.3.2–v0.8.0, Protokolle v1.0.x, Organigramm,
+  Anmeldungen F1d–F5.
 - **v2.39.2 (13.11.2026) = Reiter oben am iPad wieder sichtbar und scharf.** Einzige sichtbare Musik-App-Änderung seit
   v2.39.1 (#931, #932): In der installierten App standen die oberen Reiter (seit #739) unter der Statusleiste und im
   Unschärfe-Band, das iPadOS inzwischen wie iOS hat. `--band-unten` (Safe-Area + 36) gilt jetzt für Köpfe und Reiter;

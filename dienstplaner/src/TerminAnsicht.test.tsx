@@ -828,6 +828,89 @@ describe('TerminAnsicht – Neu aufsetzen (E6-5b)', () => {
   });
 });
 
+/**
+ * „Als Vorlage …“ (E10-V5) – mit dem echten Kern (`ablaufAlsVorlage`: ein POST mit allen Punkten, danach nachlesen);
+ * ChurchTools ist nachgebaut. Der Link steht nur im Bearbeiten-Modus und nur mit Recht im Kalender des Termins.
+ */
+describe('TerminAnsicht – Als Vorlage … (E10-V5)', () => {
+  const ZIEL = { ...TERMIN, calendar: { domainIdentifier: '2' } };
+  const basis = startFuer().rechte;
+  const darf = startFuer({
+    rechte: { ...basis, ablaufKalender: [2], vorlagenKalender: [2] },
+  });
+  const nurAblauf = startFuer({ rechte: { ...basis, ablaufKalender: [2], vorlagenKalender: [3] } });
+
+  function ctVorlage() {
+    const geschrieben: { methode: string; pfad: string; rumpf: Record<string, unknown> }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = new URL(String(input));
+      const p = url.pathname;
+      const m = init?.method ?? 'GET';
+      if (p.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 'tok' }));
+      if (m !== 'GET') {
+        geschrieben.push({
+          methode: m,
+          pfad: p,
+          rumpf: init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {},
+        });
+        return Promise.resolve(json(200, { data: { id: 50 } }));
+      }
+      if (p === '/api/agendatemplates')
+        return Promise.resolve(
+          json(200, { data: [{ id: 31, name: 'Sonntag', calendarId: 2, items: [{}, {}] }] }),
+        );
+      if (p === '/api/agendatemplates/50')
+        return Promise.resolve(json(200, { data: { id: 50, items: [{}, {}, {}] } }));
+      if (p === '/api/calendars')
+        return Promise.resolve(json(200, { data: [{ id: 2, name: 'Gottesdienst' }] }));
+      if (p.endsWith('/agenda')) return Promise.resolve(json(200, { data: ABLAUF }));
+      if (p === '/api/events/7') return Promise.resolve(json(200, { data: ZIEL }));
+      return Promise.resolve(json(200, { data: [] }));
+    });
+    return { geschrieben };
+  }
+
+  it('mit Recht: Link links neben „Neu aufsetzen …“; Speichern schreibt EINEN POST mit Name, Kalender und allen Punkten', async () => {
+    const ct = ctVorlage();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    const namen = screen.getAllByRole('button').map((b) => b.textContent?.trim());
+    expect(namen.indexOf('Als Vorlage …')).toBe(namen.indexOf('Neu aufsetzen …') - 1);
+    fireEvent.click(screen.getByRole('button', { name: /Als Vorlage/ }));
+    expect(
+      await screen.findByText(/Ablauf von: Gottesdienst · So, 18.10.2026 · 3 Punkte/),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', false),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(await screen.findByText('Als Vorlage „Gottesdienst“ gespeichert.')).toBeTruthy();
+    expect(ct.geschrieben).toHaveLength(1);
+    const [post] = ct.geschrieben;
+    expect(`${post.methode} ${post.pfad}`).toBe('POST /api/agendatemplates');
+    expect(post.rumpf).toMatchObject({ name: 'Gottesdienst', calendarId: 2 });
+    expect((post.rumpf.items as unknown[]).length).toBe(3);
+    // Das Fenster ist zu, man bleibt im Bearbeiten.
+    expect(screen.queryByText('Als Vorlage speichern')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Fertig' })).toBeTruthy();
+  });
+
+  it('ohne Recht für den Kalender des Termins (nur Ablauf bearbeiten, Vorlagen eines anderen Kalenders): kein Link', async () => {
+    ctVorlage();
+    zeige({ start: nurAblauf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.getByRole('button', { name: /Neu aufsetzen/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
+  });
+
+  it('in der Ansicht (nicht beim Bearbeiten) steht der Link nicht', async () => {
+    ctVorlage();
+    zeige({ start: darf });
+    await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+    expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
+  });
+});
+
 /** Lied-Karte (E6-O1): Den Autor liefert der Ablauf nicht – eine Sammelabfrage holt ihn; scheitert sie, fehlt nur er. */
 describe('TerminAnsicht – Autor auf der Lied-Karte (E6-O1)', () => {
   const MIT_LIED = {

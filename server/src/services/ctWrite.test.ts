@@ -20,6 +20,8 @@ import {
   createVorlage,
   renameVorlage,
   deleteVorlage,
+  createVorlageAusTermin,
+  replaceVorlageAusTermin,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -178,6 +180,11 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ['setAgendaItemVorBeginn', () => setAgendaItemVorBeginn(COOKIE, 9, 1, true)],
   ['setAgendaItemWeggelassen', () => setAgendaItemWeggelassen(COOKIE, 9, 1, true)],
   ['createVorlage', async () => void (await createVorlage(COOKIE, { name: 'Neu', kalenderId: 2 }))],
+  [
+    'createVorlageAusTermin',
+    async () => void (await createVorlageAusTermin(COOKIE, 9, { name: 'Neu', kalenderId: 2 })),
+  ],
+  ['replaceVorlageAusTermin', () => replaceVorlageAusTermin(COOKIE, 1, 9)],
   ['renameVorlage', () => renameVorlage(COOKIE, 1, 'Anders')],
   ['deleteVorlage', () => deleteVorlage(COOKIE, 1)],
   [
@@ -585,6 +592,34 @@ describe('setAgendaItemVorBeginn – nur dieser Punkt wechselt, auf frischem Sta
       status: 409,
     });
     expect(g).toHaveLength(0);
+  });
+});
+
+/**
+ * **„Als Vorlage …“ (E10-V5):** `gesehen` wird bis zum Kern durchgereicht – eine Vorlage, die sich seit dem Öffnen des Fensters
+ * geändert hat, wird nicht überschrieben (412). Die Regel selbst prüft `shared/ct/ablaufVorlagen.test.ts`.
+ */
+describe('replaceVorlageAusTermin reicht `gesehen` an den Kern', () => {
+  it('ein abweichender Stempel → 412, nichts wird geschrieben', async () => {
+    const methoden: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const m = init?.method ?? 'GET';
+      methoden.push(m);
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
+      if (u.includes('/api/agendatemplates/')) {
+        return Promise.resolve(
+          jsonRes({ ...VORLAGE, meta: { modifiedDate: '2026-11-13T10:00:00Z' } }),
+        );
+      }
+      return Promise.resolve(jsonRes({ items: [PUNKT] }));
+    });
+    await expect(
+      replaceVorlageAusTermin(COOKIE, 1, 9, '2026-11-12T10:00:00Z'),
+    ).rejects.toMatchObject({
+      status: 412,
+    });
+    expect(methoden).not.toContain('PUT');
   });
 });
 

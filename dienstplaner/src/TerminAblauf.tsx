@@ -6,6 +6,8 @@ import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
+import { useAlsVorlage } from '@ui/ablauf/useAlsVorlage';
+import { browserAlsVorlageZugriff } from '@ui/ablauf/browserAblaufZugriff';
 import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
@@ -23,7 +25,7 @@ import type { AblaufQuelle, AblaufVorlage, InfoGruppe } from '@shared/types/inde
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
 import { ablaufAktionen, GESPERRT } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
-import { ablaufBearbeitbar, type Start } from './start';
+import { ablaufBearbeitbar, vorlageBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
 import { AblaufAnzeige } from './AblaufAnzeige';
 import { LiveAnsicht } from './LiveAnsicht';
@@ -222,6 +224,18 @@ export function TerminAblauf({
     kalenderId: termin.ablaufTermin.kalenderId ?? null,
   };
 
+  // „Als Vorlage …“ (E10-V5): nur in der Termin-Ansicht (wie „Neu aufsetzen …“) und nur mit Recht im Kalender des Termins.
+  const alsVorlageZugriff = useMemo(() => browserAlsVorlageZugriff(terminId), [terminId]);
+  const alsVorlage = useAlsVorlage({
+    an: mitNeuAufsetzen && ablauf !== null,
+    darfIn: (kalenderId) => vorlageBearbeitbar(start, kalenderId),
+    terminKalenderId: ziel.kalenderId,
+    terminTitel: termin.name,
+    terminText: `${termin.name} · ${datumText(termin.tag)}`,
+    punkte: zeilen.length,
+    zugriff: alsVorlageZugriff,
+  });
+
   const liste = useAblaufBearbeiten({
     aktiv,
     infoSpalten: spalten.gewaehlt,
@@ -243,6 +257,7 @@ export function TerminAblauf({
     // „Neu aufsetzen“ ersetzt den ganzen Ablauf und braucht Platz für die Nachfrage – nur in der Termin-Ansicht
     // (Entwurf E6-6 Bild 2).
     neuAufsetzen: mitNeuAufsetzen ? () => anlegenOeffnen(true) : undefined,
+    hinweisLinks: alsVorlage.link ? [alsVorlage.link] : undefined,
     // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
     // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix nur das Plus, neben
     // „N Punkte“ in der Gruppenzeile (E6-6c, Alwin 29.10.2026).
@@ -399,6 +414,7 @@ export function TerminAblauf({
   const ueberlagerung = (
     <>
       {liste.ueberlagerung}
+      {alsVorlage.ueberlagerung}
       {liedOffen && liedAnsicht(liedOffen, () => setLiedOffen(null))}
       {zeigen && (
         <AblaufAnzeige

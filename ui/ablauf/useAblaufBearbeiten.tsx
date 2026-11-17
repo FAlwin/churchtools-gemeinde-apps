@@ -77,6 +77,10 @@ export interface HinweisLink {
   onClick: () => void;
   /** Rot – etwas geht verloren („Löschen …“). */
   gefahr?: boolean;
+  /** Links **vor** „Neu aufsetzen …“ statt dahinter („Als Vorlage …“, E10-V5 – Entwurf: links daneben). */
+  davor?: boolean;
+  /** Ziel der Einführung der Musik-App (`data-tour`); andere Apps ignorieren das Attribut. */
+  dataTour?: string;
 }
 
 /**
@@ -138,7 +142,8 @@ interface BearbeitenBasis<T extends AblaufZeile> {
   neuAufsetzen?: () => void;
   /**
    * Weitere Links rechts in der Hinweiszeile, nach „Neu aufsetzen …“ (E10-V3a: „Umbenennen …“, „Löschen …“ in einer
-   * Vorlage; später „Als Vorlage …“). Generisch – die Liste weiß nichts davon, was sie tun.
+   * Vorlage) – oder mit `davor` davor (E10-V5: „Als Vorlage …“ am Termin). Generisch – die Liste weiß nichts davon, was
+   * sie tun.
    */
   hinweisLinks?: readonly HinweisLink[];
   /**
@@ -462,6 +467,17 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   );
 
   const hatLinks = !!o.neuAufsetzen || (o.hinweisLinks?.length ?? 0) > 0;
+  const linkKnopf = (l: HinweisLink) => (
+    <button
+      key={l.label}
+      type="button"
+      className={`${styles.neuAufsetzen}${l.gefahr ? ` ${styles.hinweisGefahr}` : ''}`}
+      data-tour={l.dataTour}
+      onClick={l.onClick}
+    >
+      <Icon name={l.icon} size={14} /> {l.label}
+    </button>
+  );
 
   const liste = (
     <>
@@ -473,6 +489,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         <div className={`${styles.editHint} ${styles.hintZeile}`}>
           <span>{abgeschlossen ? null : anleitung}</span>
           <span className={styles.hintLinks}>
+            {(o.hinweisLinks ?? []).filter((l) => l.davor).map(linkKnopf)}
             {o.neuAufsetzen && (
               <button
                 type="button"
@@ -484,16 +501,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
                 <Icon name="refresh" size={14} /> Neu aufsetzen …
               </button>
             )}
-            {(o.hinweisLinks ?? []).map((l) => (
-              <button
-                key={l.label}
-                type="button"
-                className={`${styles.neuAufsetzen}${l.gefahr ? ` ${styles.hinweisGefahr}` : ''}`}
-                onClick={l.onClick}
-              >
-                <Icon name={l.icon} size={14} /> {l.label}
-              </button>
-            ))}
+            {(o.hinweisLinks ?? []).filter((l) => !l.davor).map(linkKnopf)}
           </span>
         </div>
       )}

@@ -34,6 +34,8 @@ const schreiben = vi.hoisted(() => ({
   vorlageNeu: vi.fn(),
   vorlageUmbenennen: vi.fn(),
   vorlageLoeschen: vi.fn(),
+  vorlageAusTermin: vi.fn(),
+  vorlageMitTerminErsetzen: vi.fn(),
   reihenfolge: vi.fn(),
   punktNeu: vi.fn(),
   punkt: vi.fn(),
@@ -97,6 +99,25 @@ describe('Server-Betrieb: eigene Routen', () => {
     for (const f of Object.values(schreiben)) expect(f).not.toHaveBeenCalled();
   });
 
+  it('„Als Vorlage …“: neue Vorlage aus einem Termin (POST, liefert die ID), vorhandene ersetzen (PUT mit `gesehen`)', async () => {
+    await expect(api.vorlageAusTermin(9, { name: 'Neu', kalenderId: 2 })).resolves.toBe(42);
+    await api.vorlageMitTerminErsetzen(5, 9, '2026-11-13T10:00:00Z');
+    await api.vorlageMitTerminErsetzen(5, 9);
+    expect(apiFetch.mock.calls).toEqual([
+      [
+        '/api/services/9/agenda/als-vorlage',
+        { method: 'POST', body: JSON.stringify({ name: 'Neu', kalenderId: 2 }) },
+      ],
+      [
+        '/api/ablauf-vorlagen/5/aus-termin/9',
+        { method: 'PUT', body: JSON.stringify({ gesehen: '2026-11-13T10:00:00Z' }) },
+      ],
+      ['/api/ablauf-vorlagen/5/aus-termin/9', { method: 'PUT', body: JSON.stringify({}) }],
+    ]);
+    expect(schreiben.vorlageAusTermin).not.toHaveBeenCalled();
+    expect(schreiben.vorlageMitTerminErsetzen).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['Termin', 9, '/api/services/9/agenda'],
     ['Vorlage', { vorlageId: 5 }, '/api/ablauf-vorlagen/5/agenda'],
@@ -146,6 +167,15 @@ describe('Erweiterung: direkt an ChurchTools, nie über den Server', () => {
     expect(schreiben.vorlageNeu).toHaveBeenCalledWith({ name: 'Neu', kalenderId: 2 });
     expect(schreiben.vorlageUmbenennen).toHaveBeenCalledWith(5, 'Anders');
     expect(schreiben.vorlageLoeschen).toHaveBeenCalledWith(5);
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('„Als Vorlage …“ geht direkt an den Kern – Termin und Vorlage in der richtigen Reihenfolge', async () => {
+    schreiben.vorlageAusTermin.mockResolvedValue(42);
+    await expect(api.vorlageAusTermin(9, { name: 'Neu', kalenderId: 2 })).resolves.toBe(42);
+    await api.vorlageMitTerminErsetzen(5, 9, '2026-11-13T10:00:00Z');
+    expect(schreiben.vorlageAusTermin).toHaveBeenCalledWith(9, { name: 'Neu', kalenderId: 2 });
+    expect(schreiben.vorlageMitTerminErsetzen).toHaveBeenCalledWith(5, 9, '2026-11-13T10:00:00Z');
     expect(apiFetch).not.toHaveBeenCalled();
   });
 

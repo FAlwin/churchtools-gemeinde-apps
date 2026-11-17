@@ -16,6 +16,10 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { LiedVerknuepfen } from '@ui/lied/LiedVerknuepfen';
 import { AblaufNeuAufsetzen } from '../components/AblaufAnlegenFenster';
+import { useAlsVorlage } from '@ui/ablauf/useAlsVorlage';
+import { darfVorlageBearbeiten, type VorlagenRechte } from '@shared/ct/ablaufRecht';
+import { datumText } from '@shared/ct/datum';
+import { useAlsVorlageZugriff } from '../hooks/useVorlagenZugriff';
 import { Icon } from '@ui/icons/icons';
 import {
   useAblaufBearbeiten,
@@ -94,6 +98,11 @@ interface SetlistProps {
   infoGruppen?: readonly InfoGruppe[];
   /** Steht die Ablauf-Ansicht gerade? (für das Gesehen-Merken, siehe `AgendaFullView.onSichtbar`) */
   onAblaufSichtbar?: (sichtbar: boolean) => void;
+  /**
+   * Die Rechte für Ablaufvorlagen (`vorlagenRechteAus`) – nur damit gibt es „Als Vorlage …“ (E10-V5), und nur, wenn man im
+   * Kalender des Termins Vorlagen bearbeiten darf. Ohne: kein Link.
+   */
+  vorlagenRechte?: VorlagenRechte;
 }
 
 export function Setlist({
@@ -111,6 +120,7 @@ export function Setlist({
   gruppenVerborgen = false,
   infoGruppen,
   onAblaufSichtbar,
+  vorlagenRechte,
 }: SetlistProps) {
   const [editMode, setEditMode] = useState(false);
   // Infos je Dienstgruppe als Spalten (E6-4) – dieselbe Wahl wie im Dienstplaner, aber je App gemerkt.
@@ -134,6 +144,20 @@ export function Setlist({
   const qc = useQueryClient();
   // Liederheft: dasselbe Logo wie auf dem Liedblatt, vorgeladen – samt Gemeinde-Schalter (19.10.2026).
   const logo = useAppLogo();
+
+  // „Als Vorlage …“ (E10-V5): Link in der Hinweiszeile, Fenster und Bestätigung – `ui/ablauf/useAlsVorlage`, in beiden
+  // Betriebsarten über die Weiche (`useAlsVorlageZugriff`).
+  const alsVorlageZugriff = useAlsVorlageZugriff(service.id);
+  const alsVorlage = useAlsVorlage({
+    an: vorlagenRechte !== undefined,
+    darfIn: (kalenderId) =>
+      vorlagenRechte !== undefined && darfVorlageBearbeiten(vorlagenRechte, kalenderId),
+    terminKalenderId: service.kalenderId ?? null,
+    terminTitel: service.name,
+    terminText: `${service.name} · ${datumText(service.date)}`,
+    punkte: items.length,
+    zugriff: alsVorlageZugriff,
+  });
 
   // Die Bearbeiten-Liste (`ui/ablauf/useAblaufBearbeiten`, E6-2b-3). Hat in der Zwischenzeit jemand den Ablauf
   // abgeschlossen (423 vom Schreib-Kern), den Termin neu holen: Dann erscheint gleich der Hinweis mit „Ablauf öffnen".
@@ -160,6 +184,7 @@ export function Setlist({
         void qc.invalidateQueries({ queryKey: schluessel.agenda(service.id) });
     },
     neuAufsetzen: () => setNeuAufsetzenOffen(true),
+    hinweisLinks: alsVorlage.link ? [alsVorlage.link] : undefined,
     plusImKopf: true,
   });
   const { fehlerZeigen } = bearbeiten;
@@ -402,6 +427,7 @@ export function Setlist({
       )}
 
       {bearbeiten.ueberlagerung}
+      {alsVorlage.ueberlagerung}
 
       {setlistTour && (
         <Coachmarks

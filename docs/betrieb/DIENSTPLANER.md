@@ -294,6 +294,16 @@ und Neuladen gehen).
 - **Löschen** fragt nach und lässt sich **nicht rückgängig machen** (ChurchTools hat dafür keinen Papierkorb); Abläufe, die schon aus
   der Vorlage entstanden sind, bleiben. Gesperrte Vorlagen (in ChurchTools gesperrt, per Schnittstelle nicht zu entsperren)
   melden das und lassen sich nur dort ändern.
+- **Als Vorlage …** (E10-V5, 17.11.2026): Im **Bearbeiten-Modus eines Termin-Ablaufs** steht rechts in der Hinweiszeile **„Als
+  Vorlage …“** – **links neben „Neu aufsetzen …“**, nur in der Termin-Ansicht (nicht in der Matrix) und nur mit dem Recht
+  „Ablaufvorlagen bearbeiten“ **für den Kalender des Termins**. Ein Fenster, zwei Wege: **Als neue Vorlage** (Name, vorbelegt mit dem
+  Termin-Titel; Kalender, vorbelegt mit dem des Termins; nur Kalender mit Recht) oder **Vorhandene Vorlage ersetzen** (nur
+  Vorlagen, die man bearbeiten darf, die des Termin-Kalenders zuerst; roter Hinweis mit den Zahlen, roter Knopf „Ersetzen“; Name und
+  Kalender der Vorlage bleiben). Übernommen werden alle Einträge mit Dauer, Notiz, Infos je Dienstgruppe, Liedern und Platzhaltern wie
+  „[Moderation]“ – **keine Namen von Personen**; nur an diesem Termin ausgeblendete Einträge (Auge) kommen mit. Hat inzwischen jemand
+  die Vorlage geändert, kommt „… woanders geändert …“ statt eines Überschreibens. Fehler (kein Recht, gesperrt, nicht vollständig
+  geschrieben) stehen im Fenster. Technik: `ui/ablauf/AlsVorlageFenster.tsx`, `useAlsVorlage.tsx`, Kern `ablaufAlsVorlage` /
+  `vorlageErsetzen` in `shared/ct/ablaufVorlagen.ts`, Zugriff `browserAlsVorlageZugriff` (`ui/ablauf/browserAblaufZugriff.ts`).
 - **Technik:** Die Bausteine liegen in `ui/ablauf/` (`VorlagenBereich`, `VorlagenListe`, `VorlageAnsicht`, `VorlagenFenster`,
   der Vorlagen-Modus `vorlage` in `useAblaufBearbeiten`/`PunktFenster`/`AblaufListe`) und kennen weder ChurchTools noch den Weg
   dorthin – das gibt die App über den `VorlagenZugriff` herein (Dienstplaner: `dienstplaner/src/vorlagenZugriff.ts` über den Kern

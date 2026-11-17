@@ -465,10 +465,18 @@ describe('Matrix am Handy – Ablauf (E6-6a)', () => {
 
   it('Bearbeiten wie in der Termin-Ansicht – aber ohne „Neu aufsetzen …“', async () => {
     ct();
-    zeige({ handy: true });
+    // Mit dem Vorlagen-Recht für den Kalender: Der Link fehlt trotzdem – es liegt nicht am Recht, sondern an der Matrix.
+    zeige({
+      handy: true,
+      start: startFuer({
+        rechte: { ...startFuer().rechte, ablaufKalender: [2], vorlagenKalender: null },
+      }),
+    });
     await screen.findByText(/Tom Test/);
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten – Gottesdienst' }));
     expect(screen.getAllByRole('button', { name: 'Verschieben' })).toHaveLength(3);
     expect(screen.queryByRole('button', { name: /Neu aufsetzen/ })).toBeNull();
+    // „Als Vorlage …“ (E10-V5) gehört wie „Neu aufsetzen …“ nur in die Termin-Ansicht.
+    expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
   });
 });

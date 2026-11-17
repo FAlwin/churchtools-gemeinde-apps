@@ -532,3 +532,41 @@ Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Mehr“ 
 - **Historie:** 17.11.2026 (E10-V3b; Baustein aus V3a)
 
 </details>
+
+### TF-EDIT-19 · Den Ablauf eines Termins als Vorlage speichern („Als Vorlage …“)
+
+⚠️ **Achtung: Dieser Test ändert echte Daten in ChurchTools** – nur mit einer **eigenen Probe-Vorlage** (z. B. „Probe E10 Als Vorlage“),
+die am Ende wieder gelöscht wird, und einem **Probe-Termin** mit einem kleinen Ablauf (ein Lied, ein Punkt mit Zuständigen,
+ein Platzhalter „[Moderation]“, ein ausgeblendeter Punkt, ein Punkt vor dem Beginn). Bestehende Vorlagen nicht ersetzen.
+
+**Vorbereitung:** Ein Konto mit dem Recht **„Ablaufvorlagen bearbeiten“** und **„Abläufe bearbeiten“** für den Kalender des
+Termins, ein zweites mit „Abläufe bearbeiten“, aber **ohne** das Vorlagen-Recht für diesen Kalender. **Dreimal durchführen:** im
+**Dienstplaner**, in der **Musik-App als ChurchTools-Erweiterung** und in der **Musik-App im Server-Betrieb**.
+
+**Das muss passieren:** Im Bearbeiten-Modus des Ablaufs steht **„Als Vorlage …“** links neben „Neu aufsetzen …“ (nur mit dem Recht
+für den Kalender des Termins) und speichert den Ablauf als Vorlage – ohne Namen von Personen.
+
+1. Termin öffnen, **Ablauf bearbeiten**: rechts in der Hinweiszeile **Als Vorlage …** links von **Neu aufsetzen …**. Am Handy steht es
+   mit den anderen Links in der eigenen Zeile. In der **Matrix** (Dienstplaner) und in der **Ansicht** (ohne Bearbeiten) gibt es den Link nicht.
+2. Mit dem Konto **ohne** Vorlagen-Recht: kein Link.
+3. Link antippen: Fenster **Als Vorlage speichern**, Unterzeile „Ablauf von: <Termin> · <Datum> · N Punkte“. **Als neue Vorlage** ist
+   offen: Name = Termin-Titel, Kalender = Kalender des Termins, blauer Hinweis „… keine Namen von Personen“. Nur Kalender mit Recht in der Auswahl.
+4. Name auf „Probe E10 Als Vorlage“ ändern → **Speichern**: Fenster zu, Hinweis „Als Vorlage „Probe E10 Als Vorlage“ gespeichert.“
+   In ChurchTools: Vorlage da, **alle** Punkte in der Reihenfolge, Dauer, Notiz, Infos je Dienstgruppe, Lied, der ausgeblendete Punkt,
+   die Grenze „vor Beginn“; als Zuständige nur der Platzhalter „[Moderation]“, **keine Person**.
+5. Im Ablauf einen Punkt ändern, wieder **Als Vorlage … → Vorhandene Vorlage ersetzen**: Nur Vorlagen mit Recht, die des Termin-Kalenders
+   zuerst, je „N Punkte“; die Probe-Vorlage wählen: roter Hinweis „Die N Punkte von „…“ werden durch die M Punkte dieses Ablaufs ersetzt …“
+   mit den richtigen Zahlen, roter Knopf **Ersetzen** → Hinweis „Vorlage „…“ ersetzt.“; in ChurchTools stimmt der neue Stand, Name und Kalender bleiben.
+6. **Woanders geändert:** Fenster „Ersetzen“ öffnen, in ChurchTools die Probe-Vorlage ändern, dann **Ersetzen**: Meldung „… woanders
+   geändert …“ **im Fenster**, nichts überschrieben; ein zweiter Versuch gelingt.
+7. **Ablauf anlegen** bei einem anderen Termin (Musik-App): die Probe-Vorlage steht sofort mit dem neuen Stand in der Auswahl.
+8. Probe-Vorlage löschen (Ablaufvorlagen-Seite).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `ui/ablauf/AlsVorlageFenster.tsx`, `ui/ablauf/useAlsVorlage.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `dienstplaner/src/TerminAblauf.tsx`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useVorlagenZugriff.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctSchreiben.ts`, `server/src/controllers/setlistController.ts`, `server/src/routes/setlist.ts`, `server/src/services/ctWrite.ts`, `shared/ct/ablaufVorlagen.ts`
+- **Automatisiert:** teilweise – `ui/ablauf/AlsVorlageFenster.test.tsx`, `ui/ablauf/useAlsVorlage.test.tsx`, `ui/ablauf/browserAlsVorlageZugriff.test.ts`, `client/src/services/ctSchreiben.alsVorlage.test.ts`, `dienstplaner/src/TerminAnsicht.test.tsx` (mit dem echten Kern), `client/src/pages/Setlist.alsVorlage.test.tsx`, `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts`, `server/src/controllers/setlistController.vorlagen.test.ts`, `server/src/services/ctWrite.test.ts`, `shared/ct/ablaufVorlagen.test.ts`. Nicht automatisiert: das Aussehen und der Weg gegen echtes ChurchTools.
+- **Historie:** 17.11.2026 (E10-V5)
+
+</details>

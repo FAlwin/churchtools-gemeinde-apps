@@ -1,8 +1,13 @@
 import { useMemo } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { VorlagenZugriff } from '@ui/ablauf/vorlagenZugriff';
+import type { AlsVorlageZugriff, VorlagenZugriff } from '@ui/ablauf/vorlagenZugriff';
 import * as api from '../services/churchtoolsApi';
 import { schluessel } from './abfrageSchluessel';
+
+/** Den Vorlagen-Zwischenspeicher von „Ablauf anlegen“ / „Neu aufsetzen“ verwerfen – **eine** Stelle für alle Schreiber. */
+function vorlagenVerwerfen(qc: QueryClient): void {
+  void qc.invalidateQueries({ queryKey: schluessel.ablaufVorlagen() });
+}
 
 /**
  * **Der Zugriff der Musik-App auf die Seite „Ablaufvorlagen“** (E10-V3b) – für `VorlagenBereich` aus `ui/ablauf`. Jede
@@ -18,7 +23,7 @@ import { schluessel } from './abfrageSchluessel';
  * Neu-Lesen, war das Schreiben trotzdem gelungen und darf nicht als Fehler zurückgerollt werden.
  */
 export function vorlagenZugriffAus(qc: QueryClient): VorlagenZugriff {
-  const verwerfen = () => void qc.invalidateQueries({ queryKey: schluessel.ablaufVorlagen() });
+  const verwerfen = () => vorlagenVerwerfen(qc);
   async function danach<T>(schreiben: Promise<T>): Promise<T> {
     const ergebnis = await schreiben;
     verwerfen();
@@ -64,4 +69,36 @@ export function vorlagenZugriffAus(qc: QueryClient): VorlagenZugriff {
 export function useVorlagenZugriff(): VorlagenZugriff {
   const qc = useQueryClient();
   return useMemo(() => vorlagenZugriffAus(qc), [qc]);
+}
+
+/**
+ * **„Als Vorlage …“ im Ablauf eines Termins** (E10-V5) – dieselbe Weiche (`churchtoolsApi`: Erweiterung direkt, Server über
+ * `/api/…/als-vorlage` und `/aus-termin/`). Der Zwischenspeicher der Vorlagenliste wird nach **jedem Versuch** verworfen,
+ * auch einem gescheiterten: Ein „nicht vollständig ersetzt“ (502) hat die Vorlage trotzdem verändert, und „Ablauf anlegen“
+ * soll nie eine veraltete Liste zeigen.
+ */
+export function alsVorlageZugriffAus(qc: QueryClient, eventId: number): AlsVorlageZugriff {
+  return {
+    stand: () => api.getVorlagenStand(),
+    speichern: async (daten) => {
+      try {
+        return await api.vorlageAusTermin(eventId, daten);
+      } finally {
+        vorlagenVerwerfen(qc);
+      }
+    },
+    ersetzen: async (vorlageId, gesehen) => {
+      try {
+        await api.vorlageMitTerminErsetzen(vorlageId, eventId, gesehen);
+      } finally {
+        vorlagenVerwerfen(qc);
+      }
+    },
+  };
+}
+
+/** Der Zugriff für einen Termin, einmal je Termin – das Fenster lädt neu, sobald sich seine Identität ändert. */
+export function useAlsVorlageZugriff(eventId: number): AlsVorlageZugriff {
+  const qc = useQueryClient();
+  return useMemo(() => alsVorlageZugriffAus(qc, eventId), [qc, eventId]);
 }

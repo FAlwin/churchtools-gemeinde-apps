@@ -86,10 +86,14 @@ const tabelle = () => within(screen.getByRole('table'));
 const zeileVon = (dienst: string) => screen.getByRole('rowheader', { name: dienst }).closest('tr')!;
 
 describe('Planen – Tabelle (E3-4)', () => {
-  it('der Hilfetext nennt den Reiter mit den eigenen Diensten so, wie er heißt („Dienste“, 28.10.2026)', () => {
+  it('Hilfe „?“ statt Absatz unter der Seite: Knopf da, Fenster öffnet, nennt den Reiter mit den eigenen Diensten so, wie er heißt („Dienste“, 28.10.2026)', () => {
     zeige();
+    // Der lange Erklär-Absatz steht nicht mehr unter der Tabelle (Alwin, 17.11.2026).
+    expect(screen.queryByText(/Welche Dienste du siehst, entscheidet ChurchTools/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Planen' }));
+    expect(screen.getByRole('dialog', { name: 'Hilfe · Planen' })).toBeTruthy();
     expect(
-      screen.getByText(/deine eigenen Dienste findest du immer unter Start und Dienste\./),
+      screen.getByText(/Deine eigenen Dienste findest du immer unter Start und Dienste\./),
     ).toBeTruthy();
   });
 

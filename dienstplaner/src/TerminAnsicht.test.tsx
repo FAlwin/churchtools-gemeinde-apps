@@ -1638,13 +1638,16 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
   const leiste = () =>
     screen.queryByRole('status', { name: 'Noch nicht gesendet' })?.textContent ?? null;
 
-  it('als Planer: „frei“ antippen öffnet „Wer kann?“ – dasselbe Fenster wie in der Matrix; dazu der Hinweis', async () => {
+  it('als Planer: „frei“ antippen öffnet „Wer kann?“ – dasselbe Fenster wie in der Matrix; dazu die Hilfe „?“', async () => {
     ct();
     zeige({ entwuerfe: nachgebaut() });
     fireEvent.click(await screen.findByRole('button', { name: /^frei – Wer kann\?/ }));
     // Das Fenster „Wer kann?“ der Matrix (`WerKann`) – Titel Dienst · Tag.
     expect(await screen.findByRole('dialog', { name: /^Licht · / })).toBeTruthy();
-    expect(screen.getByText(/Einen freien Platz antippen zeigt, wer kann/)).toBeTruthy();
+    // Der Hinweis steht nicht mehr unter den Diensten, sondern in der Hilfe „?“ im Kopf.
+    expect(screen.queryByText(/Freien Platz antippen zeigt/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Termin' }));
+    expect(screen.getByText(/Freien Platz antippen zeigt „Wer kann\?“/)).toBeTruthy();
   });
 
   it('die Vorgabe „Anfrage | direkt“ des Dienstes (P2m, je Gerät aus der Matrix) gilt auch hier: Licht direkt → Entwurf direkt', async () => {
@@ -1677,7 +1680,7 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
     }
   });
 
-  it('ohne Planen-Recht: Plätze nur zum Ansehen, kein Hinweis, kein Zauberstab – wie bisher', async () => {
+  it('ohne Planen-Recht: Plätze nur zum Ansehen, keine Hilfe, kein Zauberstab – wie bisher', async () => {
     ct();
     zeige({
       entwuerfe: nachgebaut(),
@@ -1693,7 +1696,7 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
     });
     expect(await screen.findByText('frei')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /frei – Wer kann/ })).toBeNull();
-    expect(screen.queryByText(/Einen freien Platz antippen/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hilfe zu Termin' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Automatische Planung/ })).toBeNull();
   });
 

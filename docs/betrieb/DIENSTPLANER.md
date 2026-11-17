@@ -23,6 +23,9 @@
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
+> - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
+>   „?“ ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
+>   Kurze Hinweise in Fenstern, Status-, Fehler- und Leer-Texte und Warnungen bleiben dort, wo sie stehen.
 >
 > Hell oder dunkel wie in ChurchTools gewählt. Diese Anleitung wächst mit.
 

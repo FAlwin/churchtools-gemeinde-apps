@@ -357,7 +357,8 @@ describe('Fokus – bleibt über die Ansichten', () => {
     zeige({ ladePersonen: lader });
     ansicht('Personen');
     await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
-    const knoepfe = screen.getAllByRole('button', { name: /Anna Test/ });
+    // Die Namen-Knöpfe (`aria-pressed`) – die Zellen daneben sind Eintragen-Knöpfe (P2a) und zählen hier nicht.
+    const knoepfe = screen.getAllByRole('button', { name: /Anna Test/, pressed: false });
     fireEvent.click(knoepfe[0]);
     expect(leiste()?.textContent).toContain('Fokus: Anna Test');
     expect(
@@ -365,7 +366,7 @@ describe('Fokus – bleibt über die Ansichten', () => {
         .filter((e) => e.tagName === 'TR')
         .map((r) => r.getAttribute('data-person')),
     ).toEqual(knoepfe.map(() => '5'));
-    fireEvent.click(screen.getAllByRole('button', { name: /Anna Test/ })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Anna Test/, pressed: true })[1]);
     expect(leiste()).toBeNull();
     expect(umrandet()).toHaveLength(0);
   });

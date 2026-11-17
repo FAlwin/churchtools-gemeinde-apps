@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useEscape } from './useEscape';
 
 /**
  * **Ein Menü unter einem Knopf** – auf, zu, schließen bei Tipp daneben oder Escape. Eine Stelle für
@@ -20,14 +21,10 @@ export function useAufklapp() {
       if (menue.current?.contains(ziel)) return;
       if (rahmen.current && !rahmen.current.contains(ziel)) setOffen(false);
     };
-    const taste = (e: KeyboardEvent) => e.key === 'Escape' && setOffen(false);
     document.addEventListener('pointerdown', weg);
-    document.addEventListener('keydown', taste);
-    return () => {
-      document.removeEventListener('pointerdown', weg);
-      document.removeEventListener('keydown', taste);
-    };
+    return () => document.removeEventListener('pointerdown', weg);
   }, [offen]);
+  useEscape(offen, () => setOffen(false));
 
   return { offen, setOffen, rahmen, menue };
 }

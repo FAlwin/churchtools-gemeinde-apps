@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useKopieren } from '@ui/bedienung/useKopieren';
 import { Icon } from '@ui/icons/icons';
@@ -15,6 +15,8 @@ import {
 } from '@shared/organigramm/wechseltage';
 import { Hinweis } from './KjHinweis';
 import type { RegelStand } from './ladeRegelStand';
+import { NachtragenFenster } from './NachtragenFenster';
+import type { Start } from './start';
 import styles from './KinderJugend.module.scss';
 
 /**
@@ -25,6 +27,10 @@ import styles from './KinderJugend.module.scss';
  * aus den Regeln selbst, es gibt keine zweite Quelle – und die Erinnerung, wenn die Regeln auslaufen. Die
  * Bereichsleitung ohne das Recht sieht weder Spalte noch Erinnerung. Ließen sich die Regeln nicht lesen, steht „nicht
  * prüfbar“ und ein ruhiger Hinweis, aber keine Erinnerung.
+ *
+ * Beim gelben Hinweis („Wechseltage fehlen bald“) steht „Wechseltage nachtragen …“ (O9-5d): ein kurzes Fenster, das die
+ * Regeln um die Jahre ergänzt, die der Ferienkalender schon kennt. Nur mit „Berechtigungen verwalten“ – sonst gibt es den
+ * Hinweis gar nicht.
  */
 export function Wechseltage({
   einrichtung,
@@ -35,6 +41,8 @@ export function Wechseltage({
   sichten,
   regel,
   tage,
+  start,
+  onGeschrieben,
 }: {
   einrichtung: Einrichtung;
   /** Das aktuelle Wechseljahr des Reiters. */
@@ -47,7 +55,11 @@ export function Wechseltage({
   /** Was in den Regeln von ChurchTools steht; `null` = man darf es nicht lesen (keine Spalte, keine Erinnerung). */
   regel: { art: 'laedt' } | RegelStand | null;
   tage: TageStand;
+  start: Start;
+  /** Nach dem Schreiben: Einrichtung und Regeln neu lesen. */
+  onGeschrieben: () => void;
 }) {
+  const [nachtragen, setNachtragen] = useState(false);
   // Das aktuelle Jahr und alle späteren – ein vergangenes zeigt die Seite nicht.
   const kuenftig = useMemo(() => jahre.filter((j) => j.jahr >= jahr.jahr), [jahre, jahr]);
   const hinweis = tageHinweis(tage, einrichtung.einstellung.ferienkalender);
@@ -74,6 +86,14 @@ export function Wechseltage({
       {hinweis && (
         <Hinweis gelb>
           <b>{hinweis.titel}</b> {hinweis.text}
+          {regel !== null && (
+            <>
+              {' '}
+              <button type="button" className={styles.rueck} onClick={() => setNachtragen(true)}>
+                Wechseltage nachtragen …
+              </button>
+            </>
+          )}
         </Hinweis>
       )}
       {regel?.art === 'nichtPruefbar' && (
@@ -161,6 +181,15 @@ export function Wechseltage({
           )}
         </div>
       </section>
+      {nachtragen && (
+        <NachtragenFenster
+          start={start}
+          einrichtung={einrichtung}
+          regelBis={regel?.art === 'da' ? regel.bis : undefined}
+          onSchliessen={() => setNachtragen(false)}
+          onGeschrieben={onGeschrieben}
+        />
+      )}
     </>
   );
 }

@@ -1,0 +1,347 @@
+// Fenster „Gruppenwechsel einrichten / Stufen ändern“ (O9-5c-2, Entwurf o9-5-einrichten-v1) – Werte aus ui/design.
+@use '@ui/design/mixins' as m;
+
+// Schrittanzeige: Stufen › Vorschau › Fertig
+.schritte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 4px 0 18px;
+  padding: 0;
+  list-style: none;
+  color: var(--text2);
+  font-size: 13px;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  li + li::before {
+    content: '›';
+    margin-right: 4px;
+  }
+
+  i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface3);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 700;
+  }
+}
+
+.dran {
+  color: var(--text);
+  font-weight: 600;
+
+  i {
+    background: var(--blue-soft);
+    color: var(--blue-ink);
+  }
+}
+
+.fertig i {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+
+// Felder
+.feld {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.klein {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.fehlerText {
+  color: var(--red);
+  font-size: 13px;
+}
+
+.fehlerKopf {
+  margin: 0 0 12px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// Das Aussehen der Gruppenauswahl (`SpitzenAuswahl` bekommt es von hier).
+.auswahl {
+  @include m.eingabefeld;
+  height: var(--knopf-hoehe);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 10px;
+  font-size: 15px;
+}
+
+.text {
+  @include m.eingabefeld;
+  box-sizing: border-box;
+  height: var(--knopf-hoehe);
+  max-width: 100%;
+  padding: 0 10px;
+  font-size: 15px;
+}
+
+.zahl {
+  @include m.eingabefeld;
+  box-sizing: border-box;
+  height: var(--knopf-hoehe);
+  width: 72px;
+  padding: 0 8px;
+  font-size: 15px;
+}
+
+.einheit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+// Stufen: je Zeile Nummer, Gruppe, „ab N Jahren“, drei Knöpfe – am Handy umbrechen sie.
+.stufen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.nr {
+  flex: none;
+  width: 20px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.alter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.knoepfe {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.ik {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--knopf-hoehe);
+  height: var(--knopf-hoehe);
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.neuKnopf {
+  @include m.textKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--knopf-hoehe);
+}
+
+.mehr {
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+
+  summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+}
+
+.gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 4px 16px;
+  padding: 4px 12px 8px;
+}
+
+// Vorschau
+.unter {
+  margin: 14px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.zahlSpalte {
+  text-align: right !important;
+}
+
+.namenListe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 12px 12px;
+}
+
+.namen {
+  color: var(--text2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.anlage {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  li:first-child {
+    border-top: 0;
+  }
+}
+
+.anlageMitte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  > span:not(.chips) {
+    color: var(--text2);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.haken {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  font-size: 14px;
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+  }
+}
+
+.fussHinweis {
+  align-self: center;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Die Teile der Vorschau stehen mit Abstand untereinander.
+.stapel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+// „Damit die Leitungen den Reiter sehen“ (O9-F12): nur Text, keine Knöpfe.
+.leseRechte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  font-size: 14px;
+
+  h4 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text2);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+// Eine Zeile der Prüfliste mit einem Knopf rechts (Seite „Einrichtung“: „Rechte setzen …“, „Nachtragen …“).
+.zeilenKnopf {
+  flex: none;
+  margin-left: auto;
+}
+
+// Die gesperrte Bereichsgruppe beim Ändern (O9-F11): nur Anzeige.
+.gesperrt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface3);
+  font-weight: 600;
+}

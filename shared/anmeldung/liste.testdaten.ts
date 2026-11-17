@@ -49,7 +49,11 @@ export const FELDER = new Map<number, CtGruppenfeld>(
   ].map((f): [number, CtGruppenfeld] => [f.id, f]),
 );
 
-const wert = (form: FormWert[], id: number) => form.find((x) => x.id === String(id))?.value;
+/** Ein Wert als Text – Namen und Systemfelder (eine Mehrfachauswahl wäre eine Liste, F5c). */
+const wert = (form: FormWert[], id: number) => {
+  const v = form.find((x) => x.id === String(id))?.value;
+  return typeof v === 'string' ? v : undefined;
+};
 
 /** Was ChurchTools aus einer Anmeldung als Mitglieder macht. */
 export function mitglieder(

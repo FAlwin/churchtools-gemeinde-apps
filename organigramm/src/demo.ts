@@ -3,7 +3,12 @@
  * ChurchTools-Antworten nach, in der Form, die gemessen wurde (Live 19.10.2026, Test-Instanz 22.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Gruppen-Admin-Recht (zwei
  * Gruppen ohne Leserecht), `?demo=wackel` eine Gruppe, deren Mitglieder vorübergehend nicht laden, `?demo=fehler`
- * den Fehlerfall beim Start, `?demo=konflikt` einen gleichzeitigen Plan-Schreiber (O7). Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
+ * den Fehlerfall beim Start, `?demo=konflikt` einen gleichzeitigen Plan-Schreiber (O7), `?demo=neu` den Gruppenwechsel „noch
+ * nicht eingerichtet“ (Fenster „Einrichten“, O9-5c-2) und `?demo=fremd` eine Stufe mit fremder Regel (Stopp im Fenster).
+ * Seit O9-5d spielen Einrichten, Stufen ändern, Wechseltage nachtragen und Rechte setzen **nur im Speicher der Demo**
+ * (nichts geht nach außen): `?demo=rechte` lässt der Leiter-Rolle „Gruppeninfos sehen“ fehlen, `?demo=nachtragen` trägt die
+ * Regeln nur bis zum ersten Wechseljahr ein, `?demo=schreibfehler` lässt das erste Schreiben der Regeln mit 503 scheitern
+ * („Nochmal versuchen“ klappt dann). Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
  *
  * Seit O5 auch schreibend: Umhängen, Lösen und Anlegen verändern die Gruppen und die Hierarchie dieser Sitzung,
  * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Seit O6 ebenso
@@ -65,6 +70,16 @@ const NAMEN = [
   'Kim Lenz',
   'Lea Moos',
 ];
+/**
+ * Geburtstage der Kinder in den Stufen (O9-5c-2): relativ zum nächsten Wechseljahr, damit es immer Kinder gibt, die
+ * wechseln – und eins ohne Geburtstag (Person 8). Alter am 30.09. des nächsten Wechseljahres.
+ */
+const GEBURTSTAG: Record<number, string> = Object.fromEntries(
+  Object.entries({ 3: 7, 4: 5, 5: 7, 6: 10, 7: 8, 9: 11 }).map(([id, alter]) => [
+    id,
+    `${Number(heuteImKalender().slice(0, 4)) + 1 - alter}-03-15`,
+  ]),
+);
 const m = (personId: number, groupTypeRoleId: number) => ({
   personId,
   memberEndDate: null as string | null,
@@ -93,10 +108,10 @@ const MITGLIEDER: Record<number, ReturnType<typeof m>[] | undefined> = {
   34: [m(2, 39), m(4, 15), m(5, 15), m(6, 15)],
   // Kim (11) hat bei Café Team 1 angefragt – „offene Anfrage“
   49: [m(12, 16), m(4, 15), { ...m(11, 15), groupMemberStatus: 'requested' }],
-  // Gruppenwechsel: noch ohne Kinder
-  301: [],
-  302: [],
-  303: [],
+  // Gruppenwechsel: Kinder in den Stufen (Geburtstage unten bei `GEBURTSTAG`), die Wechsel-Gruppen noch leer
+  301: [m(3, 15), m(4, 15), m(5, 15)],
+  302: [m(6, 15), m(7, 15), m(8, 15)],
+  303: [m(9, 15)],
   311: [],
   312: [],
 };
@@ -281,6 +296,7 @@ function struktur(
         id: i + 1,
         firstName: n.split(' ')[0],
         lastName: n.split(' ')[1],
+        birthday: GEBURTSTAG[i + 1] ?? null,
       })),
     });
   }
@@ -346,9 +362,9 @@ const FERIEN_TERMINE = [0, 1, 2].map((i) => ({
   calculated: { startDate: `${FERIEN_JAHR + i}-07-19`, endDate: `${FERIEN_JAHR + i}-08-31` },
 }));
 
-/** Antworten für Rollen, Rechte, Regeln, Status und Routinen der Wechsel-Gruppen – alles so, wie „Einrichten“ es hinterlässt. */
-function wechselAntworten(): Record<string, unknown> {
-  const jahre = wechseljahre(
+/** Die Wechseljahre aus den erfundenen Sommerferien. */
+const demoJahre = () =>
+  wechseljahre(
     sommerferienAus(
       FERIEN_TERMINE.map((t) => ({
         titel: t.base.title,
@@ -359,52 +375,252 @@ function wechselAntworten(): Record<string, unknown> {
     ),
     GRUNDWERTE,
   );
+
+// ── Der Speicher der Demo für das Schreiben (O9-5d): Gruppentypen, Rollen, Rechte, Regeln, Status und Routinen ──
+// Nur im Speicher dieser Sitzung – nichts geht nach außen. Neu laden setzt alles zurück.
+interface DemoRoutine {
+  id: number;
+  groupId: number;
+  groupTypeRoleId: number;
+  groupMemberStatus: string;
+  routine: {
+    name: string;
+    isEnabled: boolean;
+    steps: { id: number; actionKey: string; actionData: unknown }[];
+  };
+}
+const DEMO = {
+  typen: [] as { id: number; name: string; color: string; sortKey?: number }[],
+  rollen: [] as Record<string, unknown>[],
+  rechte: new Map<
+    number,
+    { authId: number; dataId: number | null; isInherited: boolean; type: string }[]
+  >(),
+  regeln: new Map<number, unknown[]>(),
+  status: new Map<number, string>(),
+  routinen: new Map<number, DemoRoutine[]>(),
+  naechste: 700,
+  /** `?demo=schreibfehler`: Das erste Schreiben der Regeln scheitert einmal mit 503. */
+  einmalFehler: false,
+};
+
+/** Der Gruppentyp „Gruppenwechsel“ mit seinen Rollen – so legt ihn ChurchTools an (O9-0). */
+function demoTypAnlegen(name: string, sortKey?: number): void {
+  DEMO.typen.push({ id: 20, name, color: 'gray', sortKey });
+  DEMO.rollen.push(
+    {
+      id: WECHSEL_ROLLEN.leiter,
+      name: 'leader',
+      nameTranslated: 'Leiter',
+      isLeader: true,
+      sortKey: 1,
+      groupTypeId: 20,
+    },
+    {
+      id: WECHSEL_ROLLEN.teilnehmer,
+      name: 'participant',
+      nameTranslated: 'Teilnehmer',
+      isLeader: false,
+      sortKey: 0,
+      groupTypeId: 20,
+      isDefault: true,
+    },
+  );
+}
+
+const rechtZeile = (r: { authId: number; dataId: number | null }) => ({
+  authId: r.authId,
+  dataId: r.dataId,
+  isInherited: false,
+  type: 'group',
+});
+
+/** Den Speicher der Demo füllen: Basis-Typen, und – außer bei `?demo=neu` – eine fertige Einrichtung wie „Einrichten“ sie hinterlässt. */
+function demoAufbauen(fall: string): void {
+  DEMO.typen = [
+    { id: 1, name: 'Kleingruppe', color: 'sky' },
+    { id: 2, name: 'Dienst', color: 'lime' },
+    { id: 7, name: 'Veranstaltung', color: 'amber' },
+    { id: 9, name: 'Verteiler', color: 'teal' },
+  ];
+  DEMO.rollen = [...ROLLEN_BASIS];
+  DEMO.rechte.clear();
+  DEMO.regeln.clear();
+  DEMO.status.clear();
+  DEMO.routinen.clear();
+  DEMO.einmalFehler = fall === 'schreibfehler';
+  if (fall === 'neu') {
+    // Noch nichts da: kein Typ, keine Wechsel-Gruppen – „Einrichten“ legt alles an.
+    for (const id of [311, 312]) {
+      const g = GRUPPEN.find((x) => x.id === id);
+      if (g) GRUPPEN.splice(GRUPPEN.indexOf(g), 1);
+      ELTERN.delete(id);
+    }
+    return;
+  }
+  demoTypAnlegen('Gruppenwechsel');
+  const jahre = demoJahre();
   const regeln = alleRegeln(
     EINRICHTUNG.einstellung,
-    jahre,
+    // `?demo=nachtragen`: Die Regeln reichen nur bis zum ersten Wechseljahr – Hinweis und „Nachtragen …“.
+    fall === 'nachtragen' ? jahre.slice(0, 1) : jahre,
     new Map(EINRICHTUNG.wechselGruppen.map((w) => [w.vonGruppeId, w.gruppeId])),
     WECHSEL_ROLLEN,
-    new Map(EINRICHTUNG.einstellung.stufen.map((s) => [s.gruppeId, WECHSEL_ROLLEN.teilnehmer])),
+    new Map(EINRICHTUNG.einstellung.stufen.map((s) => [s.gruppeId, 41])),
   );
-  const a: Record<string, unknown> = {
-    '/api/calendars': { data: [{ id: 5, name: GRUNDWERTE.ferienkalender }] },
-    '/api/calendars/appointments': { data: FERIEN_TERMINE },
-    '/api/permissions/group_type_role/48': {
-      data: LEITER_RECHTE.map((r) => ({
-        authId: r.authId,
-        dataId: r.dataId,
-        isInherited: false,
-        type: 'group',
-      })),
-    },
-    '/api/permissions/group_type_role/45': { data: [] },
-  };
   for (const [id, r] of regeln) {
-    a[`/api/dynamicgroups/${id}/ruleset`] = { data: r };
-    a[`/api/dynamicgroups/${id}/status`] = { data: { dynamicGroupStatus: 'manual' } };
+    DEMO.regeln.set(id, r);
+    DEMO.status.set(id, 'active');
   }
+  // `?demo=fremd`: In „Fische“ steht schon eine Regel von Hand – das Fenster „Einrichten“ hält an (Stopp).
+  if (fall === 'fremd')
+    DEMO.regeln.set(302, [...(regeln.get(302) ?? []), { shorty: 'jugendliste' }]);
+  DEMO.rechte.set(
+    WECHSEL_ROLLEN.leiter,
+    // `?demo=rechte`: „Gruppeninfos sehen“ fehlt – die Leitungen sehen ihre Wechsel-Gruppe nicht.
+    LEITER_RECHTE.filter((r) => fall !== 'rechte' || r.authId !== 10102).map(rechtZeile),
+  );
   uebergaenge(EINRICHTUNG.einstellung).forEach((u, i) => {
     const w = EINRICHTUNG.wechselGruppen[i].gruppeId;
-    a[`/api/groups/${w}/roles`] = {
-      data: [
-        { id: 3000 + i, groupTypeRoleId: WECHSEL_ROLLEN.leiter, type: 'leader' },
-        { id: 3100 + i, groupTypeRoleId: WECHSEL_ROLLEN.teilnehmer, type: 'participant' },
-      ],
-    };
     const { neu, schritte } = aufraeumRoutine(u, w, WECHSEL_ROLLEN, EINRICHTUNG.einstellung);
-    a[`/api/groups/${w}/members/routines`] = {
-      data: [
-        {
-          id: 100 + i,
-          groupId: w,
-          groupTypeRoleId: neu.domainContext.groupTypeRoleId,
-          groupMemberStatus: neu.domainContext.groupMemberStatus,
-          routine: { name: neu.name, isEnabled: true, steps: schritte },
+    DEMO.routinen.set(w, [
+      {
+        id: 100 + i,
+        groupId: w,
+        groupTypeRoleId: neu.domainContext.groupTypeRoleId,
+        groupMemberStatus: neu.domainContext.groupMemberStatus,
+        routine: {
+          name: neu.name,
+          isEnabled: true,
+          steps: schritte.map((x, j) => ({
+            id: 200 + i * 10 + j,
+            actionKey: x.actionKey,
+            // ChurchTools gibt `remove-member` mit `actionData: null` zurück (gemessen 16.11.2026).
+            actionData: x.actionKey === 'remove-member' ? null : x.actionData,
+          })),
         },
-      ],
-    };
+      },
+    ]);
   });
-  return a;
+}
+
+/** Was die schreibenden Aufrufe der Erweiterung schicken – nur die Felder, die die Demo liest. */
+interface DemoRumpf {
+  name?: string;
+  sortKey?: number;
+  authId: number;
+  dataId?: number[];
+  domainContext: { groupId: number; groupTypeRoleId: number; groupMemberStatus: string };
+  isEnabled?: boolean;
+  steps?: { id?: number; actionKey: string; actionData: unknown }[];
+  dynamicGroupRuleSet?: unknown[];
+  dynamicGroupStatus?: string;
+}
+
+/** Lesen und Schreiben rund um den Gruppenwechsel – aus dem Speicher der Demo. `undefined`: nicht von hier. */
+function wechselDemo(method: string, pfad: string, body: unknown): Response | undefined {
+  const b = (body ?? {}) as DemoRumpf;
+  let t: RegExpExecArray | null;
+  if (pfad === '/api/group/grouptypes') {
+    if (method === 'POST') {
+      demoTypAnlegen(String(b.name), typeof b.sortKey === 'number' ? b.sortKey : undefined);
+      return json({ data: { id: 20 } }, 201);
+    }
+    return json({ data: DEMO.typen });
+  }
+  if (pfad === '/api/group/roles') return json({ data: DEMO.rollen });
+  if ((t = /^\/api\/groups\/(\d+)\/roles$/.exec(pfad))) {
+    const g = GRUPPEN.find((x) => x.id === Number(t![1]));
+    if (!g) return json({}, 404);
+    return json({
+      data: DEMO.rollen
+        .filter((r) => r.groupTypeId === g.information.groupTypeId)
+        .map((r) => ({
+          id: 3000 + Number(r.id),
+          groupTypeRoleId: r.id,
+          type: r.isLeader === true ? 'leader' : 'participant',
+          isDefault: r.isDefault === true,
+          isHidden: false,
+        })),
+    });
+  }
+  if ((t = /^\/api\/groups\/(\d+)\/members\/routines$/.exec(pfad)))
+    return json({ data: DEMO.routinen.get(Number(t[1])) ?? [] });
+  if (pfad === '/api/routines' && method === 'POST') {
+    const id = DEMO.naechste++;
+    const c = b.domainContext;
+    DEMO.routinen.set(c.groupId, [
+      ...(DEMO.routinen.get(c.groupId) ?? []),
+      {
+        id,
+        groupId: c.groupId,
+        groupTypeRoleId: c.groupTypeRoleId,
+        groupMemberStatus: c.groupMemberStatus,
+        routine: { name: String(b.name), isEnabled: b.isEnabled === true, steps: [] },
+      },
+    ]);
+    return json({ data: { id } }, 201);
+  }
+  if ((t = /^\/api\/routines\/(\d+)$/.exec(pfad)) && method === 'PATCH') {
+    const r = [...DEMO.routinen.values()].flat().find((x) => x.id === Number(t![1]));
+    if (!r) return json({}, 404);
+    if (Array.isArray(b.steps))
+      r.routine.steps = b.steps.map(
+        (x: { id?: number; actionKey: string; actionData: unknown }) => ({
+          id: x.id ?? DEMO.naechste++,
+          actionKey: x.actionKey,
+          actionData: x.actionKey === 'remove-member' ? null : x.actionData,
+        }),
+      );
+    if (typeof b.isEnabled === 'boolean') r.routine.isEnabled = b.isEnabled;
+    return json({ data: {} });
+  }
+  if ((t = /^\/api\/permissions\/group_type_role\/(\d+)$/.exec(pfad))) {
+    const rolle = Number(t[1]);
+    if (method === 'PUT') {
+      DEMO.rechte.set(rolle, [
+        ...(DEMO.rechte.get(rolle) ?? []),
+        rechtZeile({ authId: b.authId, dataId: Array.isArray(b.dataId) ? b.dataId[0] : null }),
+      ]);
+      return json({ data: {} });
+    }
+    return json({ data: DEMO.rechte.get(rolle) ?? [] });
+  }
+  if ((t = /^\/api\/dynamicgroups\/(\d+)\/ruleset$/.exec(pfad))) {
+    const id = Number(t[1]);
+    if (method === 'PUT') {
+      if (DEMO.einmalFehler) {
+        DEMO.einmalFehler = false;
+        return json({ message: 'ChurchTools ist gerade überlastet (Demo).' }, 503);
+      }
+      const regeln = Array.isArray(b.dynamicGroupRuleSet) ? b.dynamicGroupRuleSet : [];
+      // Ein leerer Regelsatz antwortet danach mit 404 (gemessen O9-5a).
+      if (regeln.length === 0) DEMO.regeln.delete(id);
+      else DEMO.regeln.set(id, regeln);
+      return json({ data: {} });
+    }
+    const r = DEMO.regeln.get(id);
+    return r ? json({ data: r }) : json({ message: 'dynamic group ruleset not found' }, 404);
+  }
+  if ((t = /^\/api\/dynamicgroups\/(\d+)\/status$/.exec(pfad))) {
+    const id = Number(t[1]);
+    if (method === 'PUT') {
+      DEMO.status.set(id, String(b.dynamicGroupStatus));
+      return json({ data: {} });
+    }
+    return json({ data: { dynamicGroupStatus: DEMO.status.get(id) ?? 'none' } });
+  }
+  if ((t = /^\/api\/dynamicgroups\/(\d+)\/refresh$/.exec(pfad)) && method === 'POST')
+    return json({ data: [{ groupId: Number(t[1]), created: 0, updated: 0, deleted: 0 }] });
+  return undefined;
+}
+
+/** Was in den Demo-Antworten fest steht: der Ferienkalender samt Terminen. */
+function wechselAntworten(): Record<string, unknown> {
+  return {
+    '/api/calendars': { data: [{ id: 5, name: GRUNDWERTE.ferienkalender }] },
+    '/api/calendars/appointments': { data: FERIEN_TERMINE },
+  };
 }
 let naechsteId = 500;
 let beaWarSchon = false;
@@ -466,6 +682,70 @@ function erweiterung(
   return json({ data: WERTE.filter((x) => x.dataCategoryId === kategorie) });
 }
 
+/** Die Gruppenrollen (`GET /group/roles`) – die Typen „Gruppenwechsel“ kommen beim Einrichten dazu. */
+const ROLLEN_BASIS: Record<string, unknown>[] = [
+  // Rollen gehören zu einem Gruppentyp (gemessen O6): Dienst 2, Verteiler 9, Veranstaltung 7
+  {
+    id: 15,
+    name: 'Mitarbeiter',
+    nameTranslated: 'Mitarbeiter',
+    isLeader: false,
+    sortKey: 0,
+    groupTypeId: 2,
+    isDefault: true,
+  },
+  {
+    id: 16,
+    name: 'Leiter',
+    nameTranslated: 'Leiter',
+    isLeader: true,
+    sortKey: 1,
+    groupTypeId: 2,
+  },
+  {
+    id: 17,
+    name: 'Co-Leiter',
+    nameTranslated: 'Co-Leiter',
+    isLeader: true,
+    sortKey: 2,
+    groupTypeId: 2,
+  },
+  {
+    id: 39,
+    name: 'leader',
+    nameTranslated: 'Leiter',
+    isLeader: true,
+    sortKey: 1,
+    groupTypeId: 9,
+  },
+  {
+    id: 40,
+    name: 'member',
+    nameTranslated: 'Empfänger',
+    isLeader: false,
+    sortKey: 0,
+    groupTypeId: 9,
+    isDefault: true,
+  },
+  {
+    id: 41,
+    name: 'Teilnehmer',
+    nameTranslated: 'Teilnehmer',
+    isLeader: false,
+    sortKey: 0,
+    groupTypeId: 7,
+    isDefault: true,
+  },
+  {
+    id: 42,
+    name: 'Leiter',
+    nameTranslated: 'Leiter',
+    isLeader: true,
+    sortKey: 1,
+    groupTypeId: 7,
+  },
+];
+
 function daten(fall: string): Record<string, unknown> {
   const admin = fall !== 'mitglied';
   return {
@@ -476,70 +756,6 @@ function daten(fall: string): Record<string, unknown> {
           group: { title: 'Technik', domainIdentifier: '7' },
           groupTypeRoleId: 16,
           groupMemberStatus: 'active',
-        },
-      ],
-    },
-    '/api/group/roles': {
-      data: [
-        // Rollen gehören zu einem Gruppentyp (gemessen O6): Dienst 2, Verteiler 9, Veranstaltung 7
-        {
-          id: 15,
-          name: 'Mitarbeiter',
-          nameTranslated: 'Mitarbeiter',
-          isLeader: false,
-          sortKey: 0,
-          groupTypeId: 2,
-          isDefault: true,
-        },
-        {
-          id: 16,
-          name: 'Leiter',
-          nameTranslated: 'Leiter',
-          isLeader: true,
-          sortKey: 1,
-          groupTypeId: 2,
-        },
-        {
-          id: 17,
-          name: 'Co-Leiter',
-          nameTranslated: 'Co-Leiter',
-          isLeader: true,
-          sortKey: 2,
-          groupTypeId: 2,
-        },
-        {
-          id: 39,
-          name: 'leader',
-          nameTranslated: 'Leiter',
-          isLeader: true,
-          sortKey: 1,
-          groupTypeId: 9,
-        },
-        {
-          id: 40,
-          name: 'member',
-          nameTranslated: 'Empfänger',
-          isLeader: false,
-          sortKey: 0,
-          groupTypeId: 9,
-          isDefault: true,
-        },
-        {
-          id: 41,
-          name: 'Teilnehmer',
-          nameTranslated: 'Teilnehmer',
-          isLeader: false,
-          sortKey: 0,
-          groupTypeId: 7,
-          isDefault: true,
-        },
-        {
-          id: 42,
-          name: 'Leiter',
-          nameTranslated: 'Leiter',
-          isLeader: true,
-          sortKey: 1,
-          groupTypeId: 7,
         },
       ],
     },
@@ -572,15 +788,6 @@ function daten(fall: string): Record<string, unknown> {
       },
     },
     '/api/events': { data: TERMINE },
-    '/api/group/grouptypes': {
-      data: [
-        { id: 1, name: 'Kleingruppe', color: 'sky' },
-        { id: 2, name: 'Dienst', color: 'lime' },
-        { id: 7, name: 'Veranstaltung', color: 'amber' },
-        { id: 9, name: 'Verteiler', color: 'teal' },
-        { id: 20, name: 'Gruppenwechsel', color: 'gray' },
-      ],
-    },
     '/api/permissions/global': {
       data: {
         churchcore: { 'administer persons': admin },
@@ -600,6 +807,9 @@ export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
+  // `?demo=neu`: noch nicht eingerichtet (Kategorie ohne Wert) – „Einrichten …“ öffnet das Fenster.
+  if (fall === 'neu') WERTE.splice(0, WERTE.length);
+  demoAufbauen(fall);
   const antworten = daten(fall);
   window.fetch = (input, init) => {
     const url = new URL(
@@ -620,6 +830,7 @@ export function demoStarten(fall: string): void {
       const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
       const s =
         struktur(method, url.pathname, body, url.searchParams) ??
+        wechselDemo(method, url.pathname, body) ??
         erweiterung(fall, method, url.pathname, body);
       if (s) return Promise.resolve(s);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../icons/icons';
+import { useEscape } from '../../bedienung/useEscape';
 import { akkordTeile, tonartAkkorde } from '@shared/lieder/transpose';
 import { akkordeImText } from '@shared/lieder/chordpro';
 import styles from './AkkordLeiste.module.scss';
@@ -62,14 +63,10 @@ export function AkkordLeiste({ tonart, text, zuletzt, waehlen, anderer, kompakt 
       // Der Knopf „Im Lied“ schaltet selbst um – sonst ginge das Fenster hier zu und beim Klick wieder auf.
       if (!popRef.current?.contains(ziel) && !imLiedKnopf.current?.contains(ziel)) setListe(null);
     };
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setListe(null);
     document.addEventListener('pointerdown', zu);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('pointerdown', zu);
-      document.removeEventListener('keydown', esc);
-    };
+    return () => document.removeEventListener('pointerdown', zu);
   }, [liste]);
+  useEscape(!!liste, () => setListe(null));
 
   function chip(akkord: string) {
     const halten = (e: React.PointerEvent<HTMLButtonElement>) => {

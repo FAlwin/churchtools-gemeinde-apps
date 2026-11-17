@@ -2058,16 +2058,17 @@ describe('O9-2: Reiter „Kinder & Jugend“', () => {
     const reiter = () => screen.queryByRole('button', { name: 'Kinder & Jugend' });
     const NICHT_EINGERICHTET = 'Gruppenwechsel noch nicht eingerichtet';
 
-    it('keine Einrichtung: mit dem Recht Reiter und Seite „noch nicht eingerichtet“ – ohne Knopf, mit ruhigem Satz', async () => {
+    it('keine Einrichtung: mit dem Recht Reiter und Seite „noch nicht eingerichtet“ – mit dem Knopf „Einrichten …“, der das Fenster öffnet (O9-5c-2)', async () => {
       einrichtungLaden.mockResolvedValue({ art: 'keine' });
       verwalten();
       window.location.hash = '#kinder';
       render(<App />);
       expect(await screen.findByRole('heading', { name: NICHT_EINGERICHTET })).toBeTruthy();
       expect(reiter()).toBeTruthy();
-      expect(screen.getByText('Einrichten folgt in der nächsten Fassung.')).toBeTruthy();
-      expect(screen.queryByRole('button', { name: /Einrichten/ })).toBeNull();
+      expect(screen.queryByText(/Einrichten folgt/)).toBeNull();
       expect(kjLaden).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Einrichten …' }));
+      expect(screen.getByRole('dialog', { name: 'Gruppenwechsel einrichten' })).toBeTruthy();
     });
 
     it('keine Einrichtung: ohne das Recht kein Reiter – auch nicht für Bereichsleitung und Gruppen-Admins', async () => {

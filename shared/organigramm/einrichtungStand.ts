@@ -16,10 +16,13 @@ import { ctId } from '../ct/ctId';
 import {
   alleRegeln,
   aufraeumRoutine,
+  istWechselTyp,
   LEITER_RECHTE,
   uebergaenge,
   wechselGruppenName,
+  type GruppenwechselEinstellung,
   type Regel,
+  type Uebergang,
   type WechselGruppen,
   type WechselRollen,
   regelName,
@@ -223,6 +226,15 @@ const rechtName = (r: { authId: number; dataId: number | null }): string => {
   return r.dataId === null ? name : `${name} (Stufe ${r.dataId})`;
 };
 
+/**
+ * **Welche Rechte der Leiter-Rolle fehlen** – gegen `LEITER_RECHTE`. Eine Stelle für die Zeile „Rechte der Leitung“ und
+ * für den Plan „Das legt die Erweiterung an“ (O9-5c-2); geerbte Rechte zählen als vorhanden.
+ */
+export function fehlendeLeiterRechte(rows: readonly RechtRoh[]): (typeof LEITER_RECHTE)[number][] {
+  const da = new Set(rechteAus(rows).map(rechtSchluessel));
+  return LEITER_RECHTE.filter((r) => !da.has(rechtSchluessel(r)));
+}
+
 /** Gruppeninfos sehen: ohne dieses Recht ist die Gruppe für die Leitung unsichtbar (gemessen O9-0). */
 const GRUPPENINFOS = 10102;
 
@@ -232,9 +244,8 @@ function rechteZeile(d: EinrichtungDaten): StandZeile {
   const probleme: string[] = [];
   if (leiter.ok) {
     const ist = rechteAus(leiter.wert);
-    const da = new Set(ist.map(rechtSchluessel));
     const soll = new Set(LEITER_RECHTE.map(rechtSchluessel));
-    const fehlt = LEITER_RECHTE.filter((r) => !da.has(rechtSchluessel(r)));
+    const fehlt = fehlendeLeiterRechte(leiter.wert);
     // Geerbte zählen als vorhanden (sie wirken), werden aber nicht als „zusätzlich“ gemeldet – das ließe sich hier nicht abstellen.
     const zusaetzlich = ist.filter((r) => !r.geerbt && !soll.has(rechtSchluessel(r)));
     if (fehlt.length > 0)
@@ -264,6 +275,35 @@ function rechteZeile(d: EinrichtungDaten): StandZeile {
 
 // ── Zeile: Wechsel-Gruppen ─────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * **Gruppen, die wie eine Wechsel-Gruppe aussehen, aber nirgends eingetragen sind** (O9-5d): gleicher Name, Typ
+ * „Gruppenwechsel“, direkt unter der Bereichsgruppe, und nicht schon in `benutzt`. Das ist die eine Lücke beim Einrichten:
+ * Bricht es nach dem Anlegen und vor dem Speichern ab, steht die Gruppe in ChurchTools, aber nicht in der Einrichtung.
+ * Eine Stelle für den Stand („das steht da, ist aber nicht eingetragen“) und fürs Wiederholen (dort wird die Gruppe
+ * übernommen, statt eine zweite anzulegen).
+ */
+export function waiseKandidaten(a: {
+  name: string;
+  bereichId: number;
+  typIds: ReadonlySet<number>;
+  gruppen: readonly OrgGruppe[];
+  eltern: ReadonlyMap<number, readonly number[]>;
+  benutzt: ReadonlySet<number>;
+}): OrgGruppe[] {
+  return a.gruppen.filter(
+    (g) =>
+      g.name === a.name &&
+      g.typId !== null &&
+      a.typIds.has(g.typId) &&
+      !a.benutzt.has(g.id) &&
+      (a.eltern.get(g.id) ?? []).includes(a.bereichId),
+  );
+}
+
+/** Die Gruppentypen, die „Gruppenwechsel“ heißen (nach Namen, wie `ladeTypVorhanden`). */
+export const wechselTypIds = (typNamen: ReadonlyMap<number, string>): Set<number> =>
+  new Set([...typNamen].filter(([, n]) => istWechselTyp(n)).map(([id]) => id));
+
 function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
   const wege = uebergaenge(e.einstellung);
   const titel = anzahl(wege.length, 'Wechsel-Gruppe', 'Wechsel-Gruppen');
@@ -285,6 +325,21 @@ function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
     if (!(q.eltern.get(w.gruppeId) ?? []).includes(e.bereichGruppeId))
       probleme.push(`${name}: hängt nicht unter „${bereich}“`);
   }
+  // Angelegt, aber nicht eingetragen: der Abbruch zwischen „Gruppe anlegen“ und „Einrichtung speichern“.
+  const typIds = wechselTypIds(q.typNamen);
+  const benutzt = new Set(e.wechselGruppen.map((w) => w.gruppeId));
+  for (const u of wege)
+    for (const g of waiseKandidaten({
+      name: wechselGruppenName(u),
+      bereichId: e.bereichGruppeId,
+      typIds,
+      gruppen: q.gruppen,
+      eltern: q.eltern,
+      benutzt,
+    }))
+      probleme.push(
+        `${wechselGruppenName(u)}: Gruppe ${g.id} steht unter „${bereich}“, ist aber nicht in der Einrichtung eingetragen – „Stufen ändern → Änderungen schreiben“ übernimmt sie`,
+      );
   return {
     id: 'wechselGruppen',
     titel,
@@ -357,6 +412,14 @@ function sollRegeln(e: Einrichtung, platzhalter: boolean): Map<number, Regel[]> 
   );
 }
 
+/** Die Status einer dynamischen Gruppe in ChurchTools – so, wie ein Mensch sie nennt. */
+const STATUS_TEXT: Record<string, string> = {
+  active: 'aktiv',
+  inactive: 'inaktiv',
+  manual: 'manuell',
+  none: 'keiner',
+};
+
 function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): StandZeile {
   const titel = 'Regeln der Gruppen';
   const soll = sollRegeln(e, false);
@@ -392,6 +455,11 @@ function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): Stand
       if (!g.status.ok) unlesbar = true;
       else if (g.status.wert === 'none')
         befunde.push('läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet');
+      // Nur „aktiv“ rechnet ChurchTools von selbst neu (O9-5d): bei `manual` verschiebt am Wechseltag niemand.
+      else if (g.status.wert !== 'active')
+        befunde.push(
+          `rechnet nicht von selbst neu – der Status steht auf „${STATUS_TEXT[g.status.wert] ?? g.status.wert}“, nötig ist „aktiv“`,
+        );
     }
     if (befunde.length > 0) probleme.push(`${name}: ${befunde.join('; ')}`);
   }
@@ -449,6 +517,47 @@ function routineProblem(
   return null;
 }
 
+/** Was an der Routine einer Wechsel-Gruppe steht: stimmt, fehlt, weicht ab (mit Grund) oder ließ sich nicht lesen. */
+export type RoutineBefund =
+  | { art: 'ok' }
+  | { art: 'fehlt' }
+  | { art: 'problem'; text: string }
+  | { art: 'unlesbar' };
+
+/**
+ * **Die Routine einer Wechsel-Gruppe gegen den Erzeuger** (`aufraeumRoutine`). Eine Stelle für die Zeile „Routinen“ und
+ * den Plan (O9-5c-2); `einstellung` ist die, gegen die verglichen wird (im Fenster „Stufen ändern“ die neue).
+ */
+export function routineBefund(
+  einstellung: Pick<GruppenwechselEinstellung, 'aufraeumenTage'>,
+  u: Uebergang,
+  gruppeId: number,
+  d: EinrichtungDaten,
+): RoutineBefund {
+  const rollenGelesen = d.rollen.get(gruppeId);
+  const liste = d.routinen.get(gruppeId);
+  if (!rollenGelesen || !rollenGelesen.ok || !liste || !liste.ok) return { art: 'unlesbar' };
+  const rollen = rollenAus(rollenGelesen.wert);
+  // Ohne Rollen gibt es kein Soll; die Zeile „Gruppentyp“ nennt den Grund.
+  if (rollen.teilnehmer === null || rollen.leiter === null) return { art: 'unlesbar' };
+  const { schritte } = aufraeumRoutine(
+    u,
+    gruppeId,
+    { teilnehmer: rollen.teilnehmer, leiter: rollen.leiter },
+    einstellung,
+  );
+  const passend = liste.wert.filter(
+    (r) =>
+      ctId(r.groupTypeRoleId) === rollen.teilnehmer &&
+      r.groupMemberStatus === 'active' &&
+      (r.groupId === undefined || ctId(r.groupId) === gruppeId),
+  );
+  if (passend.length === 0) return { art: 'fehlt' };
+  const befunde = passend.map((r) => routineProblem(r, schritte));
+  if (befunde.includes(null)) return { art: 'ok' };
+  return { art: 'problem', text: befunde[0] ?? '' };
+}
+
 function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
   const wege = uebergaenge(e.einstellung);
   const titel = anzahl(wege.length, 'Routine', 'Routinen');
@@ -458,35 +567,10 @@ function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
     const w = wechselGruppeAb(e, u.von.gruppeId);
     if (!w) continue; // Fehlt die Wechsel-Gruppe, meldet das die Zeile dazu – hier gäbe es nur dasselbe noch einmal.
     const name = wechselGruppenName(u);
-    const rollenGelesen = d.rollen.get(w.gruppeId);
-    const liste = d.routinen.get(w.gruppeId);
-    if (!rollenGelesen || !rollenGelesen.ok || !liste || !liste.ok) {
-      unlesbar = true;
-      continue;
-    }
-    const rollen = rollenAus(rollenGelesen.wert);
-    if (rollen.teilnehmer === null || rollen.leiter === null) {
-      unlesbar = true; // Ohne Rollen gibt es kein Soll; die Zeile „Gruppentyp“ nennt den Grund.
-      continue;
-    }
-    const { schritte } = aufraeumRoutine(
-      u,
-      w.gruppeId,
-      { teilnehmer: rollen.teilnehmer, leiter: rollen.leiter },
-      e.einstellung,
-    );
-    const passend = liste.wert.filter(
-      (r) =>
-        ctId(r.groupTypeRoleId) === rollen.teilnehmer &&
-        r.groupMemberStatus === 'active' &&
-        (r.groupId === undefined || ctId(r.groupId) === w.gruppeId),
-    );
-    if (passend.length === 0) {
-      probleme.push(`${name}: Routine fehlt`);
-      continue;
-    }
-    const befunde = passend.map((r) => routineProblem(r, schritte));
-    if (!befunde.includes(null)) probleme.push(`${name}: Routine ${befunde[0]}`);
+    const b = routineBefund(e.einstellung, u, w.gruppeId, d);
+    if (b.art === 'unlesbar') unlesbar = true;
+    else if (b.art === 'fehlt') probleme.push(`${name}: Routine fehlt`);
+    else if (b.art === 'problem') probleme.push(`${name}: Routine ${b.text}`);
   }
   if (probleme.length > 0)
     return {
@@ -502,7 +586,9 @@ function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
     id: 'routinen',
     titel,
     stand: ok(
-      `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
+      wege.length === 1
+        ? `räumt die Wechsel-Gruppe ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`
+        : `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
     ),
   };
 }

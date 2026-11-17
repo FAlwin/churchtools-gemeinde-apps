@@ -580,7 +580,8 @@ export function nachbauStarten(): Nachbau {
         ),
       });
     }
-    if (pfad === '/groups/194/roles')
+    // Rollen jeder Gruppe (das Einrichten liest sie seit dem Security-Review frisch, auch für andere Gruppen-IDs).
+    if (/^\/groups\/\d+\/roles$/.test(pfad))
       return json(200, {
         data: [
           { id: LEITER, nameTranslated: 'Leiter', isLeader: true, isActive: true },

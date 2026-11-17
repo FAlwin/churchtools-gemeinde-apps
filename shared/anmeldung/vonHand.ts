@@ -16,7 +16,7 @@ import { einmalFelder, type CtGruppenfeld, type ListenAnmeldung } from './liste'
 import { antwortenAus } from './antwortenAusListe';
 import { platzPlan, platzStandAus } from './oeffentlich';
 import { anmeldungAufbauen, type CtFormular, type PreisWahl } from './senden';
-import { ADRESSE_TEILE, type AdresseAntwort } from './adresse';
+import { ADRESSE_TEILE, adresseFeld, type AdresseAntwort } from './adresse';
 
 /** Die Person, die von Hand angemeldet wird – aus ChurchTools oder eben angelegt. */
 export interface HandPerson {
@@ -68,9 +68,9 @@ export function handStart(
   const kontakt = e.formular.anmeldung.find((f) => f.typ === 'name');
   const mail = e.formular.anmeldung.find((f) => f.typ === 'email');
   const name = e.formular.person.find((f) => f.typ === 'name');
-  const an = (f: Feld) => f.typ === 'adresse' && f.zustand !== 'aus';
-  const adresseJePerson = e.formular.person.find(an);
-  const adresseEinmal = adresseJePerson ? undefined : e.formular.anmeldung.find(an);
+  const adr = adresseFeld(e.formular);
+  const adresseJePerson = adr?.jePerson ? adr.feld : undefined;
+  const adresseEinmal = adr && !adr.jePerson ? adr.feld : undefined;
   const einmalVorbelegt = dazu ? (dazu.personen[0]?.adresse ?? null) : p.adresse;
   return {
     anmeldung: {

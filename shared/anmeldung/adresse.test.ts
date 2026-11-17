@@ -4,6 +4,7 @@ import { PasstNicht, anmeldungAufbauen, type CtFormular } from './senden';
 import {
   ADRESSE_TEILE,
   adresseAntwort,
+  adresseFeld,
   adresseAus,
   adresseText,
   adresseVergleich,
@@ -188,6 +189,16 @@ describe('Von Hand: vergleichen und vorbelegen (F4c)', () => {
     ).toBe('nichts');
     expect(adresseVergleich(HAUPT, BACH)).toBe('anders');
     expect(adresseVergleich({ strasse: '', plz: '', ort: 'Lohmar' }, BACH)).toBe('anders');
+  });
+
+  it('welcher Baustein gilt: je Person oder einmal je Anmeldung; ausgeschaltet keiner', () => {
+    expect(adresseFeld(mitAdresse('person').formular)).toMatchObject({
+      jePerson: true,
+      feld: { id: 'adresse' },
+    });
+    expect(adresseFeld(mitAdresse('anmeldung').formular)).toMatchObject({ jePerson: false });
+    expect(adresseFeld(mitAdresse('anmeldung', 'aus').formular)).toBeNull();
+    expect(adresseFeld(einstellungen().formular)).toBeNull();
   });
 
   it('die Adresse in den Antworten: je Person ihre, einmal je Anmeldung die der Anmeldung, ausgeschaltet keine', () => {

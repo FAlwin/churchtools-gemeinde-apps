@@ -124,8 +124,24 @@ export function absage(
 }
 
 export const PERSONEN = new Map<number, PersonDaten>([
-  [10, { name: 'Jonas Beispiel', email: 'maria@beispiel.test', geburtstag: '2017-05-01' }],
-  [11, { name: 'Lena Beispiel', email: 'maria@beispiel.test', geburtstag: '2019-02-02' }],
+  [
+    10,
+    {
+      name: 'Jonas Beispiel',
+      email: 'maria@beispiel.test',
+      geburtstag: '2017-05-01',
+      adresse: null,
+    },
+  ],
+  [
+    11,
+    {
+      name: 'Lena Beispiel',
+      email: 'maria@beispiel.test',
+      geburtstag: '2019-02-02',
+      adresse: null,
+    },
+  ],
 ]);
 export const stand = (roh: MitgliedRoh[], verlauf: VerlaufRoh[] = []) =>
   mitgliederstandAus(roh, verlauf, FELDER, new Set([35]), PERSONEN);

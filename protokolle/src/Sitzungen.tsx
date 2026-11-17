@@ -31,6 +31,8 @@ import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
+import { ProtokollNachtragen } from './ProtokollNachtragen';
+import { NochOhneProtokoll } from './NochOhneProtokoll';
 import { SitzungFestlegen } from './SitzungFestlegen';
 import { SitzungBearbeiten } from './SitzungBearbeiten';
 import { NaechsteSitzung } from './NaechsteSitzung';
@@ -138,6 +140,8 @@ export function Sitzungen({
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<Sitzung | null>(null);
   const [beginnt, setBeginnt] = useState<Sitzung | null>(null);
+  // „Protokoll nachtragen“ (v1.0.1): Fenster für frühere Treffen ohne Protokoll.
+  const [nachtragen, setNachtragen] = useState(false);
   // „Nächste Sitzung festlegen“ (aus dieser Sitzung) oder „Neue Sitzung“ (S5-2).
   // „Neues Protokoll“ ohne Termin (K2a).
   const [neu, setNeu] = useState(false);
@@ -459,6 +463,31 @@ export function Sitzungen({
     );
 
   const darfSchreiben = darfSchreibenIn(gruppe);
+  // „Protokoll beginnen“ – aus der geöffneten Sitzung, aus „Noch ohne Protokoll“ und aus „Protokoll nachtragen“.
+  const beginnenFenster = () =>
+    beginnt &&
+    gruppe.protokolle !== null &&
+    zustand.art === 'fertig' && (
+      <ProtokollBeginnen
+        sitzung={beginnt}
+        gruppeId={gruppe.id}
+        modul={modul}
+        kategorie={gruppe.protokolle}
+        mitarbeit={gruppe.mitarbeit}
+        protokolle={zustand.daten.protokolle}
+        teile={zustand.daten.teile}
+        ich={ich}
+        zeitzone={gemeindeZeitzone()}
+        frueher={beginnt.kopf === null && tagAusIso(beginnt.beginn, zone) < heute}
+        onBegonnen={(id) => {
+          // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
+          setBeginnt(null);
+          wunsch.current = protokollSchluessel(id);
+          laden();
+        }}
+        onClose={() => setBeginnt(null)}
+      />
+    );
 
   if (offen && zustand.art === 'fertig')
     return (
@@ -498,26 +527,7 @@ export function Sitzungen({
             setOffen(s);
           }}
         />
-        {beginnt && gruppe.protokolle !== null && (
-          <ProtokollBeginnen
-            sitzung={beginnt}
-            gruppeId={gruppe.id}
-            modul={modul}
-            kategorie={gruppe.protokolle}
-            mitarbeit={gruppe.mitarbeit}
-            protokolle={zustand.daten.protokolle}
-            teile={zustand.daten.teile}
-            ich={ich}
-            zeitzone={gemeindeZeitzone()}
-            onBegonnen={(id) => {
-              // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
-              setBeginnt(null);
-              wunsch.current = protokollSchluessel(id);
-              laden();
-            }}
-            onClose={() => setBeginnt(null)}
-          />
-        )}
+        {beginnenFenster()}
         {festlegenFenster(false)}
         {bearbeitenFenster(false)}
         {zuruecknehmen && offen.kopf && gruppe.protokolle !== null && (
@@ -564,6 +574,14 @@ export function Sitzungen({
       {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={laden} />}
       {zustand.art === 'fertig' && (
         <>
+          {darfSchreiben && gruppe.protokolle !== null && (
+            <NochOhneProtokoll
+              gruppe={gruppe}
+              daten={zustand.daten}
+              zeitzone={zone}
+              onBeginnen={setBeginnt}
+            />
+          )}
           <section className={styles.karte} aria-labelledby="kommend">
             <div className={styles.kartenkopf}>
               <h3 id="kommend">Kommend</h3>
@@ -586,6 +604,12 @@ export function Sitzungen({
                       title="Neues Protokoll ohne Termin"
                       symbol={<Icon name="plus" size={16} />}
                       onClick={() => setNeu(true)}
+                    />
+                    <KopfKnopf
+                      label="Protokoll nachtragen"
+                      title="Protokoll zu einem früheren Treffen beginnen"
+                      symbol={<Icon name="verlauf" size={16} />}
+                      onClick={() => setNachtragen(true)}
                     />
                     {darfFestlegen && (
                       <KopfKnopf
@@ -641,6 +665,28 @@ export function Sitzungen({
           )}
           {vorschlagFensterAnzeigen()}
           {festlegenFenster(false)}
+          {beginnenFenster()}
+          {nachtragen && gruppe.protokolle !== null && (
+            <ProtokollNachtragen
+              gruppeId={gruppe.id}
+              gruppeName={gruppe.name}
+              modul={modul}
+              kategorie={gruppe.protokolle}
+              mitarbeit={gruppe.mitarbeit}
+              kalender={zustand.daten.kalender}
+              kommend={zustand.daten.kommend}
+              protokolle={zustand.daten.protokolle}
+              teile={zustand.daten.teile}
+              ich={ich}
+              zeitzone={zone}
+              onBegonnen={(id) => {
+                setNachtragen(false);
+                wunsch.current = protokollSchluessel(id);
+                laden();
+              }}
+              onClose={() => setNachtragen(false)}
+            />
+          )}
           {neu && (
             <ProtokollNeu
               modul={modul}

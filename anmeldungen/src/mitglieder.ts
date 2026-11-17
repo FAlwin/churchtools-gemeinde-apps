@@ -15,6 +15,7 @@ import {
   type PersonDaten,
   type VerlaufRoh,
 } from '@shared/anmeldung/liste';
+import { adresseVonPerson } from '@shared/anmeldung/adresse';
 import { leitungsRollen } from './einrichten';
 
 /** Mehr gibt ChurchTools beim Verlauf nicht her – und es gibt keine Seiten (gemessen 19.10.2026). */
@@ -47,6 +48,7 @@ async function personenLaden(ids: number[]): Promise<Map<number, PersonDaten>> {
       name: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim(),
       email: p.email || null,
       geburtstag: p.birthday || null,
+      adresse: adresseVonPerson(p),
     });
   return m;
 }

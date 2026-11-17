@@ -11,6 +11,7 @@
  * für sich. Was es einmal je Anmeldung gibt (Kontakt, Unterschrift, Betrag …), steht bei der ersten Person (Variante A,
  * `senden.ts`) – hat sie abgesagt, kommt es aus dem Verlauf.
  */
+import type { AdresseAntwort } from './adresse';
 import {
   alterAm,
   ctAblage,
@@ -68,6 +69,8 @@ export interface PersonDaten {
   name: string;
   email: string | null;
   geburtstag: string | null;
+  /** Straße, PLZ, Ort aus dem Profil (F4b) – `null`, wenn leer oder nicht zu sehen. */
+  adresse: AdresseAntwort | null;
 }
 
 /** Werte der Gruppenfelder je Feldnummer – lesbar (Auswahl als Text), leere weggelassen. */
@@ -86,6 +89,8 @@ export interface ListenMitglied {
   vonHand: boolean;
   email: string | null;
   geburtstag: string | null;
+  /** Aus dem Profil (F4b), nicht aus der Anmeldung – der aktuelle Stand. */
+  adresse: AdresseAntwort | null;
   werte: Werte;
 }
 
@@ -223,6 +228,7 @@ export function mitgliederstandAus(
       vonHand: vonHand.has(m.personId),
       email: p?.email ?? null,
       geburtstag: p?.geburtstag ?? null,
+      adresse: p?.adresse ?? null,
       werte,
     });
   }
@@ -267,6 +273,8 @@ export interface ListenPerson {
   warteplatz: number | null;
   /** E-Mail-Adresse der Person in ChurchTools (A7-5: an wen die Rundmail je Anmeldung geht). */
   email: string | null;
+  /** Straße, PLZ, Ort aus dem Profil (F4b). */
+  adresse: AdresseAntwort | null;
   werte: Werte;
 }
 
@@ -384,6 +392,7 @@ export function anmeldungenAus(
       status: m.status === 'wartet' ? 'wartet' : 'aktiv',
       warteplatz: m.warteplatz,
       email: m.email,
+      adresse: m.adresse,
       werte: m.werte,
     }));
     const kontakt = e.ctFelder.kontakt === undefined ? undefined : w[e.ctFelder.kontakt];

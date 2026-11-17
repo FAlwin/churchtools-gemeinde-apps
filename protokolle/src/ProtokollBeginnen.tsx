@@ -28,6 +28,8 @@ export function ProtokollBeginnen({
   zeitzone,
   onBegonnen,
   onClose,
+  frueher = false,
+  zurueck,
 }: {
   sitzung: Sitzung;
   gruppeId: number;
@@ -41,6 +43,13 @@ export function ProtokollBeginnen({
   /** Begonnen (oder schon da) – die Sitzung wird mit diesem Protokoll geöffnet. */
   onBegonnen: (sitzung: string) => void;
   onClose: () => void;
+  /**
+   * Eine **frühere** Sitzung („Frühere Treffen“, v1.0.1): Das Fenster sagt, womit das Protokoll verknüpft wird und woher
+   * die Anwesenheit kommt.
+   */
+  frueher?: boolean;
+  /** „‹“ zurück zur Auswahl im Fenster „Protokoll nachtragen“, aus dem dieses aufging – das Fenster ersetzt jenes. */
+  zurueck?: () => void;
 }) {
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
@@ -88,6 +97,7 @@ export function ProtokollBeginnen({
     <Sheet
       title="Protokoll beginnen"
       onClose={onClose}
+      {...(zurueck ? { zurueck, einblenden: false } : {})}
       beschaeftigt={laeuft}
       knoepfe={
         ende ? (
@@ -102,6 +112,22 @@ export function ProtokollBeginnen({
       <p className={styles.unter}>
         {sitzung.titel} · {wannLang(sitzung.beginn, zeitzone)}
       </p>
+      {frueher && !ende && (
+        <p className={styles.hinweis}>
+          Das Protokoll wird mit{' '}
+          {sitzung.termin && sitzung.treffen !== null
+            ? 'diesem Termin und dem Gruppentreffen'
+            : sitzung.termin
+              ? 'diesem Termin'
+              : 'diesem Gruppentreffen'}{' '}
+          verknüpft.{' '}
+          {sitzung.treffen !== null && sitzung.abgeschlossen
+            ? 'Das Gruppentreffen ist abgeschlossen – die Anwesenheit steht in ChurchTools fest und wird so übernommen.'
+            : sitzung.termin
+              ? 'Die Anwesenheit wird aus den Antworten auf die Einladung vorbelegt.'
+              : ''}
+        </p>
+      )}
       {ende && (
         <p className={styles.hinweis} role="status">
           {ende.text}

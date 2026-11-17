@@ -346,3 +346,15 @@
   color: var(--text3);
   font-variant-numeric: tabular-nums;
 }
+
+// Eine **abgesagte Spalte** blass zeigen, ohne die Zelle durchsichtig zu machen. `opacity` auf der Zelle selbst machte
+// auch ihren Hintergrund durchsichtig – an klebenden Kopfzellen schien dann durch, was darunter scrollt (Matrix: „kein
+// Ablauf“ im Kopf des abgesagten Termins; „Personen“: Text unter „Name“, Alwin 17.11.2026). Jetzt bleibt der Hintergrund
+// deckend; blass werden die Kind-Elemente, reiner Text wird grau.
+@mixin abgesagt-blass {
+  color: var(--text3);
+
+  > * {
+    opacity: 0.55;
+  }
+}

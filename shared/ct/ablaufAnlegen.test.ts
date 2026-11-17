@@ -131,7 +131,15 @@ describe('vorlagenAus / kalenderAus', () => {
   it('Vorlagen: ID als Zahl, Name sortiert, Punkte gezählt, Einträge ohne ID fallen weg', () => {
     expect(
       vorlagenAus([
-        { id: 30, name: 'Sonntag', calendarId: 2, items: [{}, {}] },
+        {
+          id: 30,
+          name: 'Sonntag',
+          calendarId: 2,
+          items: [
+            { id: 1, title: 'A' },
+            { id: 2, title: 'B' },
+          ],
+        },
         { id: 28, name: 'Abendmahl', calendarId: null },
         { id: 'x' as unknown as number, name: 'kaputt' },
       ]),

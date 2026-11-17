@@ -5,7 +5,7 @@
   Ferienkalender, Stichtag, Ankündigung), und **was in ChurchTools davon wirklich steht**: Gruppentyp, Rechte der Leitung
   am Typ, Wechsel-Gruppen, Wechseltage in den Regeln, Regeln der Gruppen (auch fremde) und Aufräum-Routinen. Jede Zeile
   ist „in Ordnung“, „stimmt nicht“ (mit Grund) oder „nicht prüfbar“; ein gelber Hinweis oben zählt, was nicht stimmt.
-  Die Seite liest nur – Knöpfe zum Ändern und Reparieren kommen später.
+  Dazu kommen die Knöpfe „Stufen ändern …“, „Rechte setzen …“ und „Wechseltage nachtragen …“ (siehe O9-5c-2 und O9-5d).
   - **Der Reiter „Kinder & Jugend“ erscheint für „Berechtigungen verwalten“ auch ohne Einrichtung** und sagt, welcher Fall
     es ist: „Gruppenwechsel noch nicht eingerichtet“, „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts
     überschrieben.“ oder „Die Einrichtung ließ sich gerade nicht lesen“ mit „Erneut versuchen“. Diese Fälle werden nie

@@ -208,7 +208,7 @@ function EntwurfPlatz({
             'aria-label': `Entwurf von ${e.von.name}: ${was}`,
           }
         : {})}
-      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}${fokus ? ' ' + styles.fokus : ''}`}
+      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${!zurueck && (gast || e.modus === 'direkt') ? ' ' + styles.entwurfDirekt : ''}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}${fokus ? ' ' + styles.fokus : ''}`}
       title={
         zurueck
           ? `Wird zurückgezogen – Entwurf von ${e.von.name}, noch nicht gesendet`

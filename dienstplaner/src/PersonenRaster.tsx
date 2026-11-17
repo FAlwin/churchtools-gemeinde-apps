@@ -38,7 +38,7 @@ const zustandText = (zustand: NonNullable<RasterZelle['zustand']>, modus: Raster
 
 /**
  * Der Dienst als ChurchTools-Tag; das Symbol sagt den Zustand: Haken = zugesagt, Kreis mit ? = angefragt. Ein **Entwurf**
- * (gestrichelt, blau) zeigt seine Art (P2m): „?“ blass = Anfrage, Haken im gefüllten Kreis und kräftiger = direkt.
+ * (blau) zeigt seine Art am Rahmen: gestrichelt mit „?“ = Anfrage, durchgezogen mit Haken = direkt (beide im gefüllten Kreis).
  */
 function DienstTag({
   name,
@@ -461,7 +461,7 @@ export function PersonenRaster({
                           {liste.map((g) => (
                             <span
                               key={`${g.name}-${g.entwurf}`}
-                              className={`${styles.tag} ${styles.gastTag}${g.entwurf ? ' ' + styles.entwurf : ''}`}
+                              className={`${styles.tag} ${styles.gastTag}${g.entwurf ? ` ${styles.entwurf} ${styles.entwurfDirekt}` : ''}`}
                               title={g.entwurf ? `${g.name} (Gast) – Entwurf` : `${g.name} (Gast)`}
                             >
                               {g.entwurf && <Icon name="pencil" size={14} stroke={2.4} />}

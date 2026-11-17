@@ -576,6 +576,7 @@ export function Sitzungen({
         <>
           {darfSchreiben && gruppe.protokolle !== null && (
             <NochOhneProtokoll
+              modul={modul}
               gruppe={gruppe}
               daten={zustand.daten}
               zeitzone={zone}

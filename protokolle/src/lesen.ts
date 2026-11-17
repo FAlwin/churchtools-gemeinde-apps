@@ -7,13 +7,13 @@
  * Person die Gruppentreffen nicht sehen (403, je nach Gruppentyp), fehlen nur die Treffen, und das wird gemeldet
  * (`treffenNichtFreigegeben`) statt einer stillen Lücke.
  */
-import { werteLesen } from '@shared/ct/modulDaten';
+import { kategorienLesen, werteLesen } from '@shared/ct/modulDaten';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { terminPfad } from '@shared/ct/kalenderTermine';
 import { istEinstellung, type PunkteVonMitgliedern } from '@shared/protokolle/einrichten';
-import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
+import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
 import { istVorschlag, type Vorschlag } from '@shared/protokolle/vorschlaege';
 import { derArt, mitarbeitRoh } from './mitarbeitWerte';
@@ -27,9 +27,12 @@ import {
 import { zeitAusTermin } from '@shared/protokolle/bearbeiten';
 import { ohneProtokoll, ohneProtokollZeitraum, type Zeitraum } from '@shared/protokolle/fruehere';
 import {
+  fremdeTermineAus,
   minute,
+  nurTermin,
   sitzungenOrdnen,
   type Anfrage,
+  type GruppeImSelbenKalender,
   type Sitzung,
   type Termin,
   type Treffen,
@@ -178,6 +181,81 @@ export async function treffenLesen(
   }
 }
 
+/** Warum eine andere Gruppe nicht mitzählt – nur der Grund, keine Namen (kein Personenbezug im Log). */
+function grundAus(e: unknown): string {
+  if (e instanceof KeinSpeicherRecht) return 'kein Recht';
+  if (e instanceof ApiError) return `Status ${e.status}`;
+  return 'Fehler';
+}
+
+/**
+ * **Die anderen Gruppen, die denselben Kalender nutzen** (W4), samt ihren Gruppentreffen (`von` bis `bis`, einen Tag
+ * Rand davor – ChurchTools zählt den Tag in UTC) und Protokoll-Köpfen. Wer sie sind, steht in den Einstellungen der
+ * sichtbaren Kategorien „Protokolle“ (`kalender`).
+ *
+ * **Lesefehler sind kein „gehört woanders“:** Fehlt das Recht (`KeinSpeicherRecht`, `null` bei den Treffen) oder
+ * scheitert ein Abruf vorübergehend, zählt diese Gruppe nicht – der Termin bleibt sichtbar, die Liste lädt weiter. Das
+ * wird mit dem Grund gewarnt, nicht still verbucht.
+ */
+async function andereImKalender(
+  modul: number,
+  eigene: number,
+  kalender: number,
+  von: string,
+  bis: string,
+): Promise<GruppeImSelbenKalender[]> {
+  let gruppen: ProtokollGruppe[];
+  try {
+    gruppen = protokollGruppen(null, await kategorienLesen(modulPort, modul)).filter(
+      (g) => g.id !== eigene && g.protokolle !== null,
+    );
+  } catch (e) {
+    console.warn(`Protokolle: andere Gruppen nicht gelesen (${grundAus(e)}).`);
+    return [];
+  }
+  const gelesen: GruppeImSelbenKalender[] = [];
+  await mapLimit(gruppen, GLEICHZEITIG, async (g) => {
+    try {
+      const koepfe: ProtokollKopf[] = [];
+      let teiltKalender = false;
+      for (const w of await werteLesen(modulPort, modul, g.protokolle!)) {
+        const x = wertInhalt(w);
+        if (istKopf(x)) koepfe.push(x);
+        else if (istEinstellung(x) && x.gruppe === g.id && x.kalender === kalender)
+          teiltKalender = true;
+      }
+      if (!teiltKalender) return;
+      const treffen = await treffenLesen(g.id, plusTage(von, -1), bis);
+      if (treffen === null) {
+        console.warn('Protokolle: Gruppentreffen einer anderen Gruppe nicht lesbar (kein Recht).');
+        return;
+      }
+      gelesen.push({ treffen, koepfe });
+    } catch (e) {
+      console.warn(`Protokolle: andere Gruppe nicht gelesen (${grundAus(e)}).`);
+    }
+  });
+  return gelesen;
+}
+
+/**
+ * **Termine anderer Gruppen ausblenden** (W4, „das Gruppentreffen entscheidet“ – Regel `fremdeTermineAus`). Die eine
+ * Stelle für beide Lade-Wege (`ladeSitzungen`, `sitzungenOhneProtokoll`). Gefragt wird nur, wenn es überhaupt
+ * Sitzungen gibt, die nur aus einem Termin bestehen – sonst keine Zusatzabrufe.
+ */
+async function ohneFremdeTermine(
+  modul: number,
+  eigene: number,
+  kalender: number | null,
+  sitzungen: Sitzung[],
+  zeitraum: Zeitraum,
+  serieImmer = false,
+): Promise<Sitzung[]> {
+  if (kalender === null || !sitzungen.some(nurTermin)) return sitzungen;
+  const andere = await andereImKalender(modul, eigene, kalender, zeitraum.von, zeitraum.bis);
+  return fremdeTermineAus(sitzungen, { andere, serieImmer });
+}
+
 /**
  * **Die Sitzungen einer Gruppe** – Protokolle aus dem Speicher, Termine (mit Besprechungsanfrage) und Treffen.
  * `zeitzone` = die der Gemeinde (Standard: die des Geräts, wie im Dienstplaner).
@@ -214,8 +292,13 @@ export async function ladeSitzungen(
     ...imFenster,
     ...(await termineAusserhalb(koepfe, heute, bis, zeitzone, imFenster)),
   ];
+  const geordnet = sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone });
   return {
-    ...sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone }),
+    ...geordnet,
+    kommend: await ohneFremdeTermine(modul, gruppe.id, kalender, geordnet.kommend, {
+      von: heute,
+      bis,
+    }),
     teile,
     kalender,
     punkte,
@@ -238,6 +321,7 @@ export function koepfeAus(daten: {
  * (vorübergehend ist nicht leer); nicht freigegebene Gruppentreffen (403) werden gemeldet wie in `ladeSitzungen`.
  */
 export async function sitzungenOhneProtokoll(q: {
+  modul: number;
   gruppe: number;
   /** Kalender der Gruppe – `null`: keiner gewählt, dann zählen nur Gruppentreffen. */
   kalender: number | null;
@@ -251,14 +335,15 @@ export async function sitzungenOhneProtokoll(q: {
     q.kalender === null ? Promise.resolve([]) : termineMitAnfrage(q.kalender, von, bis),
     treffenLesen(q.gruppe, von, bis),
   ]);
+  const sitzungen = ohneProtokoll({
+    termine,
+    treffen: treffen ?? [],
+    koepfe: q.koepfe,
+    zeitraum: q.zeitraum,
+    zeitzone,
+  });
   return {
-    sitzungen: ohneProtokoll({
-      termine,
-      treffen: treffen ?? [],
-      koepfe: q.koepfe,
-      zeitraum: q.zeitraum,
-      zeitzone,
-    }),
+    sitzungen: await ohneFremdeTermine(q.modul, q.gruppe, q.kalender, sitzungen, q.zeitraum, true),
     treffenNichtFreigegeben: treffen === null,
   };
 }
@@ -268,6 +353,7 @@ export async function sitzungenOhneProtokoll(q: {
  * (`ohneProtokollZeitraum`). Nichts zu schauen → leer, ohne ChurchTools zu fragen.
  */
 export async function sitzungenNochOhneProtokoll(
+  modul: number,
   gruppe: { id: number },
   daten: Pick<GruppenSitzungen, 'kommend' | 'protokolle' | 'kalender'>,
   zeitzone = gemeindeZeitzone(),
@@ -281,6 +367,7 @@ export async function sitzungenNochOhneProtokoll(
   if (!zeitraum) return [];
   return (
     await sitzungenOhneProtokoll({
+      modul,
       gruppe: gruppe.id,
       kalender: daten.kalender,
       koepfe: koepfeAus(daten),

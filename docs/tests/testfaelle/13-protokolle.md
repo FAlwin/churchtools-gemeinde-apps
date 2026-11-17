@@ -522,6 +522,39 @@ Beispiel-Antwort:
 
 </details>
 
+### TF-PROT-16 · Mehrere Gruppen, ein Kalender: der Termin steht nur dort, wo das Gruppentreffen ist
+
+**Das brauchst du:** In der Test-Instanz **zwei TEST-Gruppen** (Gruppenname beginnt mit „TEST“, z. B. „TEST Technik“ und
+„TEST Bildtechnik“) mit dir als Leitung, **beide in Protokolle eingerichtet und mit demselben Kalender**. Im Kalender zwei
+Termine mit Besprechungsanfrage in der Zukunft („TEST Treffen A“, „TEST Treffen B“), dazu ein Termin „TEST Treffen C“ vor
+etwa einer Woche.
+
+**Das muss passieren:** Ein Termin steht nur in der Gruppe, die ein Gruppentreffen zur selben Startzeit hat. Hat keine
+Gruppe eins, steht er in beiden. Auch bei „Noch ohne Protokoll“ und „Protokoll nachtragen“.
+
+1. Im Reiter **Sitzungen** nacheinander „TEST Technik“ und „TEST Bildtechnik“ öffnen: Unter **Kommend** stehen in beiden
+   Gruppen „TEST Treffen A“ und „TEST Treffen B“, außerdem bei der Leitung oben **Noch ohne Protokoll** mit „TEST Treffen C“.
+2. In ChurchTools in der Gruppe „TEST Bildtechnik“ ein **Gruppentreffen** anlegen, das zur selben Uhrzeit beginnt wie
+   „TEST Treffen A“ (gleicher Tag, gleiche Minute).
+3. Die Seite „Protokolle“ neu laden. In „TEST Bildtechnik“ steht „TEST Treffen A“ weiter unter **Kommend** (jetzt mit dem
+   Gruppentreffen), in „TEST Technik“ **fehlt** es; „TEST Treffen B“ steht in beiden.
+4. In „TEST Bildtechnik“ ein Protokoll zu „TEST Treffen B“ beginnen („Protokoll beginnen“). In „TEST Technik“ fehlt „TEST
+   Treffen B“ jetzt ebenfalls.
+5. Ein Gruppentreffen in „TEST Technik“ zur Startzeit von „TEST Treffen A“ anlegen und neu laden: „TEST Treffen A“ steht
+   jetzt in **beiden** Gruppen (jede hat ihr eigenes Treffen).
+6. Das Gruppentreffen in „TEST Bildtechnik“ zu „TEST Treffen C“ (vor einer Woche) anlegen: In „TEST Technik“ fehlt „TEST
+   Treffen C“ unter **Noch ohne Protokoll** und im Fenster **Protokoll nachtragen**, in „TEST Bildtechnik“ steht es.
+7. Alles aufräumen: die Test-Gruppentreffen, das Test-Protokoll und die Test-Termine löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/sitzungen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/NochOhneProtokoll.tsx`, `protokolle/src/ProtokollNachtragen.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/demo.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/fremdeTermine.test.ts` (die Regel: Treffen zur selben Minute, Kopf zum Termin, Serie, eigenes Treffen/Kopf bleibt, nie ohne Termin), `protokolle/src/lesenKalenderGeteilt.test.ts` (gegen den ChurchTools-Nachbau: Kommend, Startseite, „Noch ohne Protokoll“, „Protokoll nachtragen“; kein Recht und vorübergehender Fehler bei der anderen Gruppe lassen den Termin stehen; keine Zusatzabrufe ohne Termin-Sitzungen), `protokolle/src/demoKalenderGeteilt.test.ts` (der Fall in `?demo`); die echten Rechte in ChurchTools (was ein Mitglied sieht, das die andere Gruppe nicht lesen darf) nur von Hand
+- **Historie:** 17.11.2026 (Anlass: Technik, Bildtechnik, Kamera, Stream und Tontechnik nutzen den Kalender „Technik“ – jeder Termin stand in allen fünf Gruppen, und es entstand ein zweites Protokoll in der falschen Gruppe)
+
+</details>
+
 ### TF-PROT-17 · To-Dos: „Alle“ bei den Zuständigen und gekürzte Anzeige
 
 **Das brauchst du:** In der Test-Instanz eine **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung und

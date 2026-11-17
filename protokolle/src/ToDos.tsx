@@ -20,6 +20,7 @@ import {
   nameFuer,
   nameImVerlauf,
   weitereZustaendige,
+  zustaendigKurz,
   type Aufgabe,
   type AufgabenStatus,
   type ToDoAenderung,
@@ -93,11 +94,18 @@ function Wer({ a, personen }: { a: Aufgabe; personen: ReadonlyMap<number, Person
     ),
   ];
   if (!namen.length) return <span className={styles.niemand}>noch niemand zuständig</span>;
+  // Höchstens 3 Bilder und Namen, danach „+N“ (W5) – die volle Liste steht im Tooltip und für Screenreader.
+  const kurz = zustaendigKurz(namen);
   return (
-    <span className={styles.wer}>
+    <span
+      className={styles.wer}
+      {...(kurz.gekuerzt
+        ? { title: kurz.voll, role: 'group', 'aria-label': `Zuständig: ${kurz.voll}` }
+        : {})}
+    >
       {bekannt.length > 0 && (
         <span className={styles.bilder}>
-          {bekannt.map((p) => (
+          {bekannt.slice(0, 3).map((p) => (
             <PersonBild
               key={p.id}
               name={p.name}
@@ -108,7 +116,7 @@ function Wer({ a, personen }: { a: Aufgabe; personen: ReadonlyMap<number, Person
           ))}
         </span>
       )}
-      {namen.join(', ')}
+      {kurz.text}
     </span>
   );
 }

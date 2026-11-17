@@ -2,7 +2,12 @@ import { useContext, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
-import { istUeberfaellig, zustaendigeNamen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  istUeberfaellig,
+  zustaendigeNamen,
+  zustaendigKurz,
+  type Aufgabe,
+} from '@shared/protokolle/aufgaben';
 import {
   festeAufgabenAus,
   festesProtokollAus,
@@ -126,6 +131,7 @@ function OffeneToDos({
 function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boolean }) {
   // Kennt die Liste jemanden nicht (Mitglieder sehen sie oft nicht), dann der Name aus dem Verlauf (S7-2a).
   const wer = zustaendigeNamen(a, w.name ?? null);
+  const kurz = zustaendigKurz(wer);
   const ueber = istUeberfaellig(a, w.heute);
   const aendern = abhaken ? w.status : undefined;
   return (
@@ -135,7 +141,7 @@ function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boo
         <span className={a.status === 'erledigt' ? styles.erledigt : undefined}>{a.text}</span>
         {(wer.length > 0 || a.bis) && (
           <small>
-            {wer.join(', ')}
+            {kurz.gekuerzt ? <span title={kurz.voll}>{kurz.text}</span> : kurz.text}
             {wer.length > 0 && a.bis ? ' · ' : ''}
             {a.bis && (
               <span className={ueber ? styles.ueber : undefined}>

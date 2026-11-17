@@ -138,6 +138,8 @@ describe('SitzungFestlegen', () => {
       'Die Einladung geht sofort per Mail an 2 Personen.',
     );
     expect(screen.getByText('du – sagst gleich zu')).toBeTruthy();
+    // W5: den Schalter „Alle“ gibt es nur bei den Zuständigen eines To-Dos, nicht bei Einladungen.
+    expect(screen.queryByRole('checkbox', { name: /^Alle/ })).toBeNull();
   });
 
   it('schon vorbei: „Festlegen“ ist gesperrt und das Fenster sagt warum', async () => {

@@ -66,6 +66,55 @@ const todo = (teil: Partial<Aufgabe> = {}): Aufgabe => ({
   ...teil,
 });
 
+const VIELE = Array.from({ length: 17 }, (_, i) => ({
+  id: 100 + i,
+  name: `Person${i + 1} Nach`,
+  bild: null,
+  initialen: 'PN',
+}));
+
+describe('Zuständige: Alle und Kürzung (W5)', () => {
+  const wer = () => screen.getByRole('button', { name: 'Wer kümmert sich?' });
+
+  it('Alle an → alle Mitglieder; Haken weg → Schalter aus; Alle aus → leer (über `zustaendigSetzen`, Verlauf)', () => {
+    const { k } = zeige({ text: 'Beamer', todo: todo({ wer: [7] }) });
+    fireEvent.click(wer());
+    const alle = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Alle (2)' });
+    expect(alle.checked).toBe(false);
+    fireEvent.click(alle);
+    const neu = vi.mocked(k.aendern).mock.calls[0][2](todo({ wer: [7] }));
+    expect(neu.wer).toEqual([7, 19]);
+    expect(neu.verlauf.at(-1)).toMatchObject({ art: 'zustaendig' });
+  });
+
+  it('Alle zeigt „an“, wenn alle gewählt sind; Alle aus nimmt alle der Liste weg', () => {
+    const { k } = zeige({ text: 'Beamer', todo: todo({ wer: [7, 19] }) });
+    fireEvent.click(wer());
+    const alle = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Alle (2)' });
+    expect(alle.checked).toBe(true);
+    fireEvent.click(alle);
+    const neu = vi.mocked(k.aendern).mock.calls[0][2](todo({ wer: [7, 19, 55] }));
+    expect(neu.wer).toEqual([55]);
+  });
+
+  it('ohne To-Do (Vorab): Alle merkt sich alle im Block', () => {
+    const { props } = zeige({ text: '' });
+    fireEvent.click(wer());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Alle (2)' }));
+    expect(vorabLesen(props.vorab)).toMatchObject({ wer: [7, 19] });
+  });
+
+  it('Schildchen: 17 Zuständige → 3 Namen und „+14“, voller Text im Tooltip; bis 3 unverändert', () => {
+    zeige({ text: 'Beamer', mitglieder: VIELE, todo: todo({ wer: VIELE.map((m) => m.id) }) });
+    expect(wer().textContent).toBe('Person1 Nach, Person2 Nach, Person3 Nach +14');
+    expect(wer().getAttribute('title')).toBe(VIELE.map((m) => m.name).join(', '));
+    cleanup();
+    zeige({ text: 'Beamer', mitglieder: VIELE, todo: todo({ wer: [100, 101, 102] }) });
+    expect(wer().textContent).toBe('Person1 Nach, Person2 Nach, Person3 Nach');
+    expect(wer().getAttribute('title')).toBeNull();
+  });
+});
+
 describe('Wer und Bis vor dem Text', () => {
   it('Escape klappt das Feld wieder zu, ohne zu wählen (`useEscape`, 16.11.2026)', () => {
     const { k } = zeige({ text: '' });

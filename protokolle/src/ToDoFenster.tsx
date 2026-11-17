@@ -396,6 +396,7 @@ export function ToDoFenster({
           onChange={setWer}
           gesperrt={laeuft}
           ich={ich.person}
+          mitAlle
           zusatz={(id) => (id === ich.person ? 'du' : null)}
         />
         {weitere.length > 0 && (

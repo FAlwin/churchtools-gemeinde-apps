@@ -554,3 +554,31 @@ Gruppe eins, steht er in beiden. Auch bei „Noch ohne Protokoll“ und „Proto
 - **Historie:** 17.11.2026 (Anlass: Technik, Bildtechnik, Kamera, Stream und Tontechnik nutzen den Kalender „Technik“ – jeder Termin stand in allen fünf Gruppen, und es entstand ein zweites Protokoll in der falschen Gruppe)
 
 </details>
+
+### TF-PROT-17 · To-Dos: „Alle“ bei den Zuständigen und gekürzte Anzeige
+
+**Das brauchst du:** In der Test-Instanz eine **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung und
+mindestens **fünf** Mitgliedern, eingerichtete Protokolle und ein To-Do „TEST Alle ran“.
+
+**Das muss passieren:** Der Schalter „Alle (N)“ wählt alle Mitglieder an und wieder ab. Die Karte zeigt höchstens drei
+Bilder und Namen, danach „+N“; der Tooltip nennt alle. Im PDF stehen alle Namen.
+
+1. Im Reiter **To-Dos** „TEST Alle ran“ antippen. Bei **Zuständig** steht oben **Alle (N)**, N = Zahl der Mitglieder.
+2. **Alle** antippen: Alle Mitglieder sind angehakt. Einen Haken wegnehmen: **Alle** ist aus. Wieder setzen: **Alle** ist an.
+3. **Alle** abschalten: Niemand ist angehakt. Wieder einschalten und **Speichern**.
+4. In der Liste zeigt die Karte höchstens **drei** Bilder und Namen und dahinter **+N**; mit der Maus darüber steht die volle
+   Liste. In **Nach Person** steht das To-Do in der Spalte jeder Person.
+5. In einem Protokoll-Entwurf der Gruppe einen To-Do-Punkt mit dem Schildchen **Wer?** öffnen: Dort steht ebenfalls oben
+   **Alle (N)** mit demselben Verhalten; das Schildchen zeigt drei Namen und **+N**.
+6. Beim Einladen (**Nächste Sitzung festlegen**) gibt es **kein** „Alle“.
+7. Das Protokoll freigeben und als PDF ansehen: Beim To-Do stehen **alle** Namen.
+8. Das TEST-To-Do wieder entfernen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/aufgaben.ts`, `protokolle/src/Planungsfelder.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/FesterPunkt.tsx`
+- **Automatisiert:** teilweise – `shared/protokolle/aufgaben.test.ts`, `protokolle/src/Planungsfelder.test.tsx`, `ToDoFenster.test.tsx`, `EditorBloecke.test.tsx`, `ToDos.test.tsx`, `SitzungFestlegen.test.tsx`; Aussehen am Handy, Tooltip und PDF nur von Hand
+- **Historie:** 17.11.2026 (Anlass: ein To-Do für alle 17 Mitglieder brauchte 17 Klicks und machte die Karte unlesbar)
+
+</details>

@@ -7,6 +7,9 @@ import {
   istUeberfaellig,
   nameAusListe,
   zustaendigeNamen,
+  zustaendigKurz,
+  alleGewaehlt,
+  alleSetzen,
   neueAufgabe,
   statusSetzen,
   vorabAnwenden,
@@ -46,6 +49,7 @@ function Schildchen({
   titel,
   aus,
   warnung,
+  tooltip,
   children,
 }: {
   icon: IconName;
@@ -53,6 +57,8 @@ function Schildchen({
   titel: string;
   aus: boolean;
   warnung?: boolean;
+  /** Die volle Liste, wenn der Text gekürzt ist. */
+  tooltip?: string;
   children: (zu: () => void) => ReactNode;
 }) {
   const [offen, setOffen] = useState(false);
@@ -74,6 +80,7 @@ function Schildchen({
         disabled={aus}
         aria-expanded={offen}
         aria-label={titel}
+        title={tooltip}
         onClick={() => setOffen((o) => !o)}
       >
         <Icon name={icon} size={14} />
@@ -134,6 +141,9 @@ export function AufgabeBlock({
   // Mitglieder sehen die Liste oft nicht – dann ich selbst bzw. der Name aus dem Verlauf (S7-2a), erst danach die Zahl.
   const ausListe = k ? nameAusListe(k.mitglieder, k.ich) : () => null;
   const wer = sicht ? zustaendigeNamen(sicht, ausListe, (p) => `Person ${p}`) : [];
+  // Bearbeiten: höchstens 3 Namen + „+N“ (W5); Lesen (freigegeben) zeigt alle – ein Protokoll soll vollständig sein.
+  const kurz = zustaendigKurz(wer, k?.bearbeitbar ? 3 : Infinity);
+  const alleIds = liste ? liste.map((m) => m.id) : [];
   const ueber = !!a && istUeberfaellig(a, heuteImKalender());
 
   return (
@@ -156,8 +166,9 @@ export function AufgabeBlock({
       <span className={styles.schilder} contentEditable={false}>
         <Schildchen
           icon="people"
-          text={wer.length ? wer.join(', ') : 'Wer?'}
+          text={wer.length ? kurz.text : 'Wer?'}
           titel="Wer kümmert sich?"
+          tooltip={kurz.gekuerzt ? kurz.voll : undefined}
           aus={!bereit || !k.bearbeitbar}
         >
           {() => (
@@ -166,6 +177,27 @@ export function AufgabeBlock({
               {mitglieder === null && <small>Mitglieder werden geladen …</small>}
               {mitglieder === 'verborgen' && (
                 <small>ChurchTools zeigt dir die Mitglieder dieser Gruppe nicht.</small>
+              )}
+              {liste && liste.length > 1 && (
+                <label className={styles.person}>
+                  <input
+                    type="checkbox"
+                    checked={alleGewaehlt(alleIds, sicht?.wer ?? [])}
+                    onChange={(e) => {
+                      // Vorab lesen: `aendern` ruft die Funktion erst später auf, dann steht der Haken wieder zurück.
+                      const an = e.target.checked;
+                      aendern((x) =>
+                        zustaendigSetzen(
+                          x,
+                          alleSetzen(alleIds, x.wer, an),
+                          k?.ich.person ?? 0,
+                          new Date().toISOString(),
+                        ),
+                      );
+                    }}
+                  />
+                  <b>Alle ({liste.length})</b>
+                </label>
               )}
               {liste?.map((m) => {
                 const an = !!sicht?.wer.includes(m.id);

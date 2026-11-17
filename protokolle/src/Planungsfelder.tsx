@@ -1,4 +1,5 @@
 import type { Person } from '@shared/organigramm/mitglieder';
+import { alleGewaehlt, alleSetzen } from '@shared/protokolle/aufgaben';
 import type { Planung } from '@shared/protokolle/planen';
 import felder from './Fensterfelder.module.scss';
 
@@ -94,6 +95,7 @@ export function Einladeliste({
   gesperrt,
   ich,
   zusatz,
+  mitAlle = false,
 }: {
   liste: readonly Person[];
   gewaehlt: ReadonlySet<number>;
@@ -103,9 +105,32 @@ export function Einladeliste({
   ich: number;
   /** Ein kleiner Zusatz je Person (K2b: „wird eingeladen“, „wird ausgeladen“). */
   zusatz?: (id: number) => string | null;
+  /**
+   * Zeile „Alle (N)“ oben (W5, nur bei den Zuständigen eines To-Dos, nicht bei Einladungen): wirkt, als hätte man alle der
+   * Liste von Hand angehakt (`alleSetzen`); nimmt man einen Haken weg, ist sie wieder aus (`alleGewaehlt`). Bei nur einer
+   * Person nichts zu wählen – dann ohne.
+   */
+  mitAlle?: boolean;
 }) {
+  const ids = liste.map((x) => x.id);
   return (
     <ul className={felder.personen} aria-label="Einladen">
+      {mitAlle && liste.length > 1 && (
+        <li>
+          <label className={felder.person}>
+            <input
+              type="checkbox"
+              className={felder.haken}
+              checked={alleGewaehlt(ids, gewaehlt)}
+              disabled={gesperrt}
+              onChange={(e) => onChange(new Set(alleSetzen(ids, gewaehlt, e.target.checked)))}
+            />
+            <span>
+              <b>Alle ({liste.length})</b>
+            </span>
+          </label>
+        </li>
+      )}
       {liste.map((x) => {
         const z = zusatz?.(x.id) ?? (x.id === ich ? 'du – sagst gleich zu' : null);
         return (

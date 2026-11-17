@@ -150,6 +150,57 @@ describe('ToDos', () => {
     await waitFor(() => expect(abgleich).toHaveBeenCalled());
   });
 
+  it('Karte: 17 Zuständige → höchstens 3 Bilder und Namen, „+14“, voll im Tooltip; wenige unverändert (W5)', async () => {
+    const viele = Array.from({ length: 17 }, (_, i) => ({
+      id: 100 + i,
+      name: `Person${i + 1} Nach`,
+      bild: null,
+      initialen: `P${i + 1}`,
+    }));
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(
+      uebersicht([
+        aufgabe('Alle ran', 11, { wer: viele.map((v) => v.id) }),
+        aufgabe('Zu zweit', 11, { wer: [1, 23] }),
+      ]),
+    );
+    vi.mocked(M.ladeGruppenMitglieder).mockImplementation((g) =>
+      Promise.resolve(
+        g === 11
+          ? viele.concat(
+              { id: 1, name: 'Alwin Friesen', bild: null, initialen: 'AF' },
+              { id: 23, name: 'Johann Becker', bild: null, initialen: 'JB' },
+            )
+          : 'verborgen',
+      ),
+    );
+    zeige();
+    await screen.findByText('Alle ran');
+    const karte = screen.getByText('Alle ran').closest('li') as HTMLElement;
+    const wer = within(karte).getByRole('group', { name: /^Zuständig: / });
+    expect(wer.textContent).toContain('Person1, Person2, Person3 +14');
+    expect(wer.querySelectorAll('[title]').length).toBe(3);
+    expect(wer.getAttribute('title')).toBe(viele.map((v) => v.name.split(' ')[0]).join(', '));
+    const zwei = (screen.getByText('Zu zweit').closest('li') as HTMLElement).textContent;
+    expect(zwei).toContain('Alwin, Johann');
+    expect(zwei).not.toContain('+');
+  });
+
+  it('Nach Person: ein To-Do mit vielen Zuständigen steht in jeder Personenspalte (W5, nur geprüft)', async () => {
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(
+      uebersicht([aufgabe('Alle ran', 11, { wer: [1, 23] })]),
+    );
+    zeige();
+    await screen.findByText('Alle ran');
+    fireEvent.click(screen.getByRole('button', { name: 'Nach Person' }));
+    await waitFor(() => expect(bereiche()).toEqual(['Alwin Friesen (du)', 'Johann Becker']));
+    for (const name of ['Alwin Friesen (du)', 'Johann Becker']) {
+      const spalte = screen
+        .getAllByRole('group')
+        .find((g) => g.getAttribute('aria-label') === name)!;
+      expect(within(spalte).getByText('Alle ran')).toBeTruthy();
+    }
+  });
+
   it('Sicht: als Leitung alle To-Dos der Gruppe, als Mitglied nur eigene und die ohne Zuständigen', async () => {
     zeige();
     await screen.findByText('Raum prüfen');

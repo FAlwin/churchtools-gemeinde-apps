@@ -24,6 +24,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
       '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
       'Belegten Platz antippen (auch in „Personen“): zurückziehen oder ersetzen.',
+      '„Personen“, Zeile „Gäste“: Name eintragen – ohne ChurchTools-Konto, keine Anfrage.',
     ],
   },
   {

@@ -1131,3 +1131,35 @@ trägt die Person danach als Entwurf ein.
 - **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (`plaetzeStand`), `shared/dienstplan/personenRaster.test.ts` (Zeile „Plätze“, `plaetzeZelleText`), `shared/dienstplan/personenEintragen.test.ts` (`voll` mit `entwuerfe`, `platzDazuText`), `dienstplaner/src/Planen.p2c.test.tsx` (Zeile, Fenster, Sperre, Dazunehmen, Fehlerzweige, Wartezeit, abgesagt, ohne Recht); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
 - **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 6 und 9), Scheibe P2c
 </details>
+
+### TF-ABLAUF-39 · Planen: Personen – Gäste von Hand eintragen
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf; ein Dienst (Ton) mit einem Termin mit freien Plätzen, einem
+Termin, an dem schon ein Gast steht, einem **vollen** Termin (2 von 2) und einem vollen Termin, an dem schon ein Entwurf liegt. Dazu ein
+Konto, das den Dienst nur ansehen darf.
+
+**Das muss passieren:** Ein Gast lässt sich in der Zeile „Gäste“ eintragen – als Entwurf auf einem freien Platz, ohne Anfrage.
+
+1. **Planen → Personen.** Im Block Ton steht die Zeile **„Gäste“** – auch dort, wo noch kein Gast steht. Mit der Maus über eine leere
+   Gäste-Zelle: blauer Rahmen und ein **„+“**; abgesagte Termine und Dienste, die du nur ansehen darfst: keine Knöpfe.
+2. **Klick** in die leere Zelle: Fenster **„Gast eintragen – Ton · Fr, 20.11.“** mit dem Satz „Zum Beispiel ein Gastprediger …“ und dem
+   Feld „z. B. Andreas Reimer“. Mit weniger als 2 Zeichen ist **Als Entwurf eintragen** aus; ab 2 Zeichen an; **Enter** trägt ein.
+3. **Als Entwurf eintragen**: Hinweis „<Name> eingetragen – noch nicht gesendet.“, in der Zelle steht der Gast als **blaues Tag mit
+   Stift** (durchgezogener Rahmen), die Zeile „Plätze“ und „Noch offen“ zählen ihn mit, unten die Leiste zählt mit. In der Matrix steht
+   er auf dem **ersten freien Platz**. In ChurchTools ist noch nichts passiert.
+4. Zelle mit Gast: ein kleines **„+“** neben dem Tag trägt einen **weiteren** Gast ein (nächster freier Platz). Klick auf einen
+   **bestehenden** Gast: Fenster „Zurückziehen / Andere Person wählen“ (TF-ABLAUF-37); Klick auf einen **Gast-Entwurf**: Entwurfs-Fenster
+   mit „Entfernen“.
+5. **Voller Termin:** Klick in die leere Gäste-Zelle → dasselbe Fenster mit Feld **und** „Ton am 02.12. ist voll (2 von 2). Platz
+   dazunehmen und eintragen?“; der Hauptknopf heißt **Platz dazunehmen (3)** (aus, bis ein Name da ist). Ergebnis: Ton hat 3 Plätze,
+   der Gast steht als Entwurf auf dem neuen Platz (TF-ABLAUF-38). **Abbrechen** → nichts.
+6. Voller Termin **mit Entwurf**: gleich das Fenster „Erst senden oder Entwürfe entfernen“ mit **Ansehen und senden**, kein Namensfeld.
+7. **Handy (375 px):** leere Gäste-Zellen zeigen ein blasses „+“; Antippen öffnet das Fenster, es passt auf den Bildschirm.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/personenEintragen.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/GastFenster.tsx`, `dienstplaner/src/GastFeld.tsx`, `dienstplaner/src/gastName.ts`, `dienstplaner/src/WerKann.tsx`, `dienstplaner/src/usePlatzDazu.ts`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planSicht.ts`
+- **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (`gastNeuAktion`), `dienstplaner/src/Planen.p2d.test.tsx` (Zeile immer da, Fenster, 2 Zeichen, Platz, „+“, Gast-Tags wie P2b, voll, Dazunehmen, Sperre, Rechte, abgesagt); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
+- **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 8), Scheibe P2d
+</details>

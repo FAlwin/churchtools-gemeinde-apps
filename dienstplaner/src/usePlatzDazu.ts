@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
+import type { Besetzung } from '@shared/dienstplan/entwuerfe';
 import type { Plan, PlanZeile } from '@shared/dienstplan/plan';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { anzahlFehlerText, plaetzeText } from './plaetzeTexte';
@@ -14,7 +15,8 @@ interface Wartet {
   dienst: string;
   /** So viele Plätze muss der Dienst am neu geladenen Termin haben. */
   anzahl: number;
-  person: { personId: number; name: string };
+  /** Wer eingetragen wird: eine Person oder ein Gast (P2d). */
+  wer: Besetzung;
   fertig: () => void;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -22,7 +24,7 @@ interface Wartet {
 /**
  * **„Platz dazunehmen“ im Fenster „Dienst voll“** (P2c, Entwurf `e9-p2-eintragen.html` Fall 6): erst die Platzzahl in
  * ChurchTools um 1 erhöhen (sofort, `entwuerfe.anzahl` = derselbe Weg wie der Regler: frisch lesen, schreiben, nachlesen),
- * dann den Entwurf für die Person anlegen – **aber erst, wenn der neue Platz nach dem Neuladen des Termins wirklich da ist**
+ * dann den Entwurf für die Person (oder den Gast, P2d) anlegen – **aber erst, wenn der neue Platz nach dem Neuladen des Termins wirklich da ist**
  * (ein „ok“ des Aufrufs allein ist kein Beleg; der Entwurf braucht den neuen Platz samt seiner Nummer aus dem Plan). Den Entwurf
  * legt `personen.eintragen` an – derselbe Weg wie der normale Klick (Modus aus der Vorgabe, Konflikt-Schutz, Hinweis).
  *
@@ -66,12 +68,15 @@ export function usePlatzDazu({
     wartet.current = null;
     clearTimeout(w.timer);
     // Noch einmal fragen, welcher Platz zu haben ist – wie der normale Klick (`eintragen` in „Personen“).
-    const a = personen.aktion(i, zeile, w.person.personId, null);
+    const a =
+      w.wer.art === 'person'
+        ? personen.aktion(i, zeile, w.wer.personId, null)
+        : personen.gastNeu(i, zeile);
     if (a?.art === 'eintragen') {
-      void personen.eintragen(i, zeile, a.nr, w.person, a.ersetzt).finally(w.fertig);
+      void personen.eintragen(i, zeile, a.nr, w.wer, a.ersetzt).finally(w.fertig);
     } else {
       showToast(
-        `${w.dienst} hat jetzt ${plaetzeText(w.anzahl)}, der Platz ist aber nicht mehr zu haben – ${w.person.name} nicht eingetragen.`,
+        `${w.dienst} hat jetzt ${plaetzeText(w.anzahl)}, der Platz ist aber nicht mehr zu haben – ${w.wer.name} nicht eingetragen.`,
       );
       w.fertig();
     }
@@ -86,7 +91,7 @@ export function usePlatzDazu({
 
   if (!entwuerfe) return undefined;
 
-  return async (i, zeile, person) => {
+  return async (i, zeile, wer) => {
     if (!plan || wartet.current) return;
     const s = plan.spalten[i];
     const gesehen = zeile.zellen[i]?.length ?? 0;
@@ -109,7 +114,7 @@ export function usePlatzDazu({
         if (wartet.current?.timer !== timer) return;
         wartet.current = null;
         showToast(
-          `${zeile.dienst.name} hat jetzt ${plaetzeText(neu)} (in ChurchTools gespeichert), der Termin ließ sich aber nicht neu laden – ${person.name} nicht eingetragen. Bitte die Seite neu laden.`,
+          `${zeile.dienst.name} hat jetzt ${plaetzeText(neu)} (in ChurchTools gespeichert), der Termin ließ sich aber nicht neu laden – ${wer.name} nicht eingetragen. Bitte die Seite neu laden.`,
         );
         fertig();
       }, wartezeit);
@@ -118,7 +123,7 @@ export function usePlatzDazu({
         serviceId: zeile.dienst.id,
         dienst: zeile.dienst.name,
         anzahl: neu,
-        person,
+        wer,
         fertig,
         timer,
       };

@@ -18,7 +18,12 @@ import { BelegtFach } from './BelegtFach';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
-import { gastAktion, zellenAktion, type ZellenAktion } from '@shared/dienstplan/personenEintragen';
+import {
+  gastAktion,
+  gastNeuAktion,
+  zellenAktion,
+  type ZellenAktion,
+} from '@shared/dienstplan/personenEintragen';
 import {
   darfPlanen,
   freierPlatz,
@@ -617,15 +622,22 @@ export function useEinteilen({
       );
     },
     gast: (i, zl, g) => personenErlaubt(i, zl, gastAktion(g)),
-    eintragen: async (i, zl, nr, person, ersetzt) => {
+    // Die leere Gäste-Zelle (P2d): derselbe freie Platz und dieselben Rechte wie bei einer leeren Personen-Zelle.
+    gastNeu: (i, zl) => {
+      if (!plan) return null;
+      const s = plan.spalten[i];
+      return personenErlaubt(
+        i,
+        zl,
+        gastNeuAktion(zl.zellen[i], (p) => entwurfAmPlatz(daten, s, zl, p)),
+      );
+    },
+    eintragen: async (i, zl, nr, wer, ersetzt) => {
       if (!plan) return;
       // `freierPlatz` kennt, wer dort in ChurchTools steht (`bisher`); mit `ersetzt` ist es derselbe Weg wie „Andere
       // Person wählen“ in der Matrix – Versions-Schutz inklusive.
       const platz = freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr);
-      const r = await trageEin(
-        { platz, ersetzt: ersetzt ?? null, von: null },
-        { art: 'person', ...person },
-      );
+      const r = await trageEin({ platz, ersetzt: ersetzt ?? null, von: null }, wer);
       if (!r) showToast('Hier kannst du gerade keine Entwürfe anlegen.');
       else if (!r.ok) showToast(fehlerHinweis(r));
     },

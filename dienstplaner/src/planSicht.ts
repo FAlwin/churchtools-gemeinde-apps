@@ -1,6 +1,6 @@
 import { monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
-import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Besetzung, Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import type { RasterGast, RasterZelle } from '@shared/dienstplan/personenRaster';
@@ -34,14 +34,21 @@ export interface PersonenEintragen {
   /** Was ein Klick auf einen Gast tut (P2b) – dieselben Rechte wie `aktion`. */
   gast: (spalte: number, zeile: PlanZeile, gast: RasterGast) => ZellenAktion;
   /**
-   * Entwurf für die Person auf den Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. `ersetzt`: die
-   * Version des „Zurückziehen“-Entwurfs an diesem Platz, den der Eintrag ersetzt („X durch Y ersetzen“).
+   * Was ein Klick auf die **leere Gäste-Zelle** (oder das „+“ in einer vollen, P2d) tut: `eintragen` (freier Platz),
+   * `voll` (Fenster „Dienst voll“), `null` – kein Recht, Entwürfe nicht bereit, Termin abgesagt, Dienst nicht vorgesehen.
+   * Dieselben Rechte wie `aktion`.
+   */
+  gastNeu: (spalte: number, zeile: PlanZeile) => ZellenAktion;
+  /**
+   * Entwurf für die Person – oder den Gast (P2d: `{ art: 'gast', name }`, derselbe Weg wie die Gast-Wahl in „Wer kann?“) –
+   * auf den Platz `nr` (1-basiert); meldet selbst „eingetragen“ bzw. den Fehler. `ersetzt`: die Version des
+   * „Zurückziehen“-Entwurfs an diesem Platz, den der Eintrag ersetzt („X durch Y ersetzen“).
    */
   eintragen: (
     spalte: number,
     zeile: PlanZeile,
     nr: number,
-    person: { personId: number; name: string },
+    wer: Besetzung,
     ersetzt?: number,
   ) => Promise<void>;
   /**
@@ -57,11 +64,7 @@ export interface PersonenEintragen {
    * Entwurf für die Person anlegen (derselbe Weg wie `eintragen`). Meldet selbst alle Fehler; scheitert das Erhöhen, entsteht
    * kein Entwurf. Fehlt, wo es keinen Anschluss zum Ändern der Plätze gibt.
    */
-  dazunehmen?: (
-    spalte: number,
-    zeile: PlanZeile,
-    person: { personId: number; name: string },
-  ) => Promise<void>;
+  dazunehmen?: (spalte: number, zeile: PlanZeile, wer: Besetzung) => Promise<void>;
   /**
    * Das Fenster „Ansehen und senden“ öffnen (P2c: „Erst senden oder Entwürfe entfernen“) – fehlt, wo nichts zu senden ist.
    */

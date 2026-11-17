@@ -213,6 +213,17 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   nennt es nur Name und Stand), das Entwurfs-Fenster zusätzlich `darfAendern`. Ein belegter Platz mit **veraltetem** Entwurf ist wie
   in der Matrix kein Knopf (dort gilt ChurchTools). Klick auf den **Namen** setzt weiter den Fokus, der Klick auf den eigenen
   Entwurf bleibt der Zyklus aus P2m. Eine zurückgezogene Zelle ist kein Warnfall mehr (Abwesenheit).
+- **Gäste von Hand eintragen (P2d, 17.11.2026):** Die Zeile „Gäste“ steht in **jedem** Dienst-Block, in dem man eintragen darf (auch
+  ohne Gast; sonst nur, wo Gäste stehen). Eine **leere** Gäste-Zelle ist ein Knopf („Gast für Ton am Fr, 20.11. eintragen“) und
+  öffnet das Fenster `GastFenster` („Gast eintragen – Ton · Fr, 20.11.“): Namensfeld `GastFeld` – **dieselbe Komponente, dieselbe Regel (mindestens 2 Zeichen nach dem Trimmen, `gastNameAus`) und derselbe Hinweistext (`gastName.ts`) wie „Jemand ohne ChurchTools-Konto“ in `WerKann.tsx`**; Enter sendet, Hauptknopf „Als Entwurf eintragen“. Das Anlegen läuft über `personen.eintragen` mit
+  `{ art: 'gast', name }` – also `trageEin` und die Wahl in „Wer kann?“ (Gäste bekommen nie eine Anfrage, Konflikt-Schutz und
+  Hinweis wie dort). Welcher Platz frei ist, entscheidet **dieselbe Funktion wie bei einer leeren Personen-Zelle**
+  (`freierPlatzAktion` in `shared/dienstplan/personenEintragen.ts`; für die Gäste-Zelle als `gastNeuAktion`); die Rechte sind
+  `personenErlaubt` (`darfPlanen`, Schublade/`darfAendern`, `nimmtEintraegeAn`). Hat die Zelle schon Gäste (bestehend oder
+  Entwurf), bleibt das Tag ein Knopf wie in P2b, dazu ein kleines „+“ für einen weiteren Gast. **Dienst voll:** dasselbe
+  Fenster mit Voll-Satz und „Platz dazunehmen (n)“ (`usePlatzDazu`, jetzt für `Besetzung` – Person **oder** Gast); liegt an Dienst
+  und Termin ein Entwurf, kommt gleich die Sperre „Erst senden oder Entwürfe entfernen“ (kein Namensfeld). Gast-Entwürfe zählen
+  über `platzGiltFrei` bei „Plätze“ und „Noch offen“ mit (nichts Neues).
 - **Abgesagte Termine nehmen keine Einträge an (P2a-2):** In der Matrix ist der freie Platz in einem abgesagten Termin kein
   Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort zum **Eintragen** keinen Zellen-Knopf, kein Hover und kein „+“ –
   den **eigenen Entwurf** nimmt ein Klick dort weiter weg, wie in der Matrix –, und der Zauberstab

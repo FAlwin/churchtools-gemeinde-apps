@@ -595,3 +595,58 @@ $anzahl-farben: 8;
   font-size: 13px;
   line-height: 1.45;
 }
+
+// ── Gast von Hand eintragen (P2d, Entwurf `e9-p2-eintragen.html` Fall 8) ──────────────────────────────────────────────
+// Das „+“ in einer Gäste-Zelle, die schon Gäste hat: ein kleiner Knopf mit gestricheltem Rahmen (wie ein freier Platz).
+.gastPlus {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1.5px dashed var(--text3);
+  border-radius: var(--r-tile);
+  background: none;
+  color: var(--text2);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--blue);
+      background: color-mix(in oklab, var(--blue) 10%, var(--surface2));
+      color: var(--text);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+// Das Fenster „Gast eintragen“: Feld mit Abstand zum Hinweis; darunter bei vollem Dienst der Satz „… ist voll“.
+.gastFensterFeld {
+  margin-top: 10px;
+}
+.gastVoll {
+  margin: 4px 0 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+// Gäste (Tags und „+“) einer Zelle: dürfen umbrechen, statt dass ein langer Name das „+“ hinter den Rand schiebt.
+.gastInnen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+
+  .tag {
+    max-width: 100%;
+    min-width: 0;
+    margin-right: 0;
+  }
+}

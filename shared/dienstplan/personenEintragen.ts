@@ -131,7 +131,19 @@ export function zellenAktion(o: {
     return platz ? { art: 'belegt', nr: platz.nr } : null;
   }
   if (o.zustand !== null) return null;
-  const platz = platzFuerEintrag(plaetze, o.entwurf);
+  return freierPlatzAktion(plaetze, o.entwurf);
+}
+
+/**
+ * **Wohin ein neuer Eintrag kommt** – `eintragen` (ein Platz ist zu haben, `platzFuerEintrag`) oder `voll`. Eine Stelle für
+ * die leere Personen-Zelle (`zellenAktion`) und die leere Gäste-Zelle (`gastNeuAktion`, P2d): Was frei ist und wann die
+ * Sperre bei „Platz dazunehmen“ greift, wird nur hier entschieden.
+ */
+export function freierPlatzAktion(
+  plaetze: readonly PlanPlatz[],
+  entwurf: PlatzEntwurf,
+): Extract<ZellenAktion, { art: 'eintragen' | 'voll' }> {
+  const platz = platzFuerEintrag(plaetze, entwurf);
   if (platz)
     return platz.ersetzt
       ? { art: 'eintragen', nr: platz.nr, ersetzt: platz.ersetzt.version }
@@ -139,9 +151,19 @@ export function zellenAktion(o: {
   return {
     art: 'voll',
     von: plaetze.length,
-    entwuerfe: plaetze.filter((p) => o.entwurf(p) !== null).length,
+    entwuerfe: plaetze.filter((p) => entwurf(p) !== null).length,
   };
 }
+
+/**
+ * Was ein Klick in eine **leere Gäste-Zelle** (oder das „+“ in einer vollen) tut (P2d): einen Gast-Entwurf auf einen
+ * freien Platz (`eintragen`) oder – wenn keiner zu haben ist – das Fenster „Dienst voll“ (`voll`). `null`: der Dienst ist
+ * an diesem Termin nicht vorgesehen. Die Rechte prüft der Aufrufer wie bei den Personen-Zellen.
+ */
+export const gastNeuAktion = (
+  plaetze: readonly PlanPlatz[] | null,
+  entwurf: PlatzEntwurf,
+): ZellenAktion => (plaetze ? freierPlatzAktion(plaetze, entwurf) : null);
 
 /** „29.11.“ oder „28.11.–30.11.“ – der Zeitraum einer Abwesenheit. */
 const zeitraumText = (von: string, bis: string) =>

@@ -7,7 +7,13 @@ import {
   wechseljahre,
 } from './gruppenwechsel';
 import type { KjDaten, KjMitglied } from './gruppenwechselSicht';
-import { kinderDerStufen, werVorschau } from './einrichtungVorschau';
+import {
+  kinderDerStufen,
+  kuenftigeWechseljahre,
+  offenesFenster,
+  offenesFensterText,
+  werVorschau,
+} from './einrichtungVorschau';
 
 const E = {
   stufen: [
@@ -135,5 +141,56 @@ describe('werVorschau', () => {
     expect(leer.jahre).toEqual([]);
     expect(leer.namen).toEqual([[], []]);
     expect(leer.ohneGeburtstag).toBe(0);
+  });
+});
+
+describe('offenesFenster – läuft heute schon einer der Wechsel? (O9-5d)', () => {
+  const v = werVorschau(DATEN, E, JAHRE);
+  const j = JAHRE[0]; // 2027: Ankündigung 12.07., Wechseltag 06.09., Aufnahme bis 20.09.
+
+  it('vor der Ankündigung: kein offenes Fenster', () => {
+    expect(offenesFenster(v, '2027-07-11')).toBeNull();
+    expect(offenesFenster(v, '2026-11-17')).toBeNull();
+  });
+
+  it('ab der Ankündigung (zählt mit) bis vor dem Ende der Aufnahme (zählt nicht mehr): offen, mit der Zahl aus der Vorschau', () => {
+    expect(offenesFenster(v, j.ankuendigung)).toEqual({
+      jahr: 2027,
+      kinder: 2,
+      aufnahmeLaeuft: false,
+    });
+    expect(offenesFenster(v, j.wechseltag)).toEqual({
+      jahr: 2027,
+      kinder: 2,
+      aufnahmeLaeuft: true,
+    });
+    expect(offenesFenster(v, '2027-09-19')?.jahr).toBe(2027);
+    expect(offenesFenster(v, j.aufnahmeBis)).toBeNull();
+  });
+
+  it('die Zahl ist die Summe der Übergänge DES offenen Jahres, nicht die eines anderen', () => {
+    // 2028: Ankündigung 03.07. – dort wechselt niemand mehr (Test oben), 2027 zwei Kinder.
+    expect(offenesFenster(v, '2028-07-10')).toEqual({
+      jahr: 2028,
+      kinder: 0,
+      aufnahmeLaeuft: false,
+    });
+  });
+
+  it('der Satz nennt Jahr und Zahl, Einzahl und Mehrzahl', () => {
+    expect(offenesFensterText({ jahr: 2027, kinder: 5, aufnahmeLaeuft: false })).toBe(
+      'Der Wechsel 2027 läuft gerade – nach dem Schreiben kommen 5 Kinder sofort in die Wechsel-Gruppe bzw. werden verschoben.',
+    );
+    expect(offenesFensterText({ jahr: 2027, kinder: 1, aufnahmeLaeuft: true })).toContain(
+      'kommt 1 Kind sofort in die Wechsel-Gruppe bzw. wird verschoben',
+    );
+  });
+});
+
+describe('kuenftigeWechseljahre', () => {
+  it('das aktuelle Jahr (Aufnahme noch nicht vorbei) und alle späteren', () => {
+    expect(kuenftigeWechseljahre(JAHRE, '2027-09-10').map((x) => x.jahr)).toEqual([2027, 2028]);
+    expect(kuenftigeWechseljahre(JAHRE, '2027-09-20').map((x) => x.jahr)).toEqual([2028]);
+    expect(kuenftigeWechseljahre(JAHRE, '2029-12-01')).toEqual([]);
   });
 });

@@ -74,7 +74,7 @@ export function gutesStand(): EinrichtungDaten {
       teilnehmer: ok([]),
     },
     gruppen: new Map(
-      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('manual') }] as const),
+      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('active') }] as const),
     ),
     routinen: new Map([
       [11, ok([routine(u1, 11)])],

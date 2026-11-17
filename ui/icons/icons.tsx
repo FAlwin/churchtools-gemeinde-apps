@@ -94,7 +94,8 @@ export type IconName =
   | 'todo-liste'
   | 'idee'
   | 'tabelle'
-  | 'sortieren';
+  | 'sortieren'
+  | 'verlauf';
 
 interface IconProps {
   name: IconName;
@@ -577,6 +578,15 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.4 1 2.5h6c0-1.1.3-1.8 1-2.5A6 6 0 0 0 12 3Z" />
+        </svg>
+      );
+    // Uhr mit Rückpfeil – „Protokoll nachtragen“ (Protokolle v1.0.1, Entwurf `fruehere-treffen-v1`).
+    case 'verlauf':
+      return (
+        <svg {...p}>
+          <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+          <path d="M3.5 4v4.5H8" />
+          <path d="M12 8v4.5l3 1.8" />
         </svg>
       );
     // Tabelle einfügen im Protokoll-Editor (K3a, Entwurf `k3-leiste-v1`).

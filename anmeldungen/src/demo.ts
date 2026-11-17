@@ -185,8 +185,17 @@ const DEMO_PERSONEN = [
     zip: '51766',
     city: 'Engelskirchen',
   },
-  // Zum Finden bei „Person dazu“ (noch in keiner Veranstaltung).
-  { id: 904, firstName: 'Anna', lastName: 'Muster', email: null, birthday: '2012-03-08' },
+  // Zum Finden bei „Person dazu“ (noch in keiner Veranstaltung). F4c: mit Adresse – „Von Hand“ zeigt sie vorbelegt.
+  {
+    id: 904,
+    firstName: 'Anna',
+    lastName: 'Muster',
+    email: null,
+    birthday: '2012-03-08',
+    street: 'Am Bach 2',
+    zip: '51766',
+    city: 'Engelskirchen',
+  },
 ];
 const familie = (seit: string) => ({
   data: [

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { CT, antworten, einstellungen } from './senden.testdaten';
 import { PasstNicht, anmeldungAufbauen, type CtFormular } from './senden';
-import { ADRESSE_TEILE, adresseText, adresseWerte } from './adresse';
+import {
+  ADRESSE_TEILE,
+  adresseAntwort,
+  adresseAus,
+  adresseText,
+  adresseVergleich,
+  adresseWerte,
+} from './adresse';
+import { handStart } from './vonHand';
 import { EMPFOHLEN } from './baukasten';
 import { ctAblage, pruefeAntworten, type Feld, type OeffentlicheEinstellungen } from './formular';
 
@@ -156,5 +164,47 @@ describe('Absenden (F4)', () => {
     expect(() => anmeldungAufbauen(mitAdresse('anmeldung'), a, WAHL, HEUTE, CT)).toThrow(
       PasstNicht,
     );
+  });
+});
+
+describe('Von Hand: vergleichen und vorbelegen (F4c)', () => {
+  const BACH = { strasse: 'Am Bach 2', plz: '51766', ort: 'Engelskirchen' };
+  const person = (adresse: typeof BACH | null) => ({
+    vor: 'Jonas',
+    nach: 'Beispiel',
+    geburtstag: null,
+    email: null,
+    adresse,
+  });
+
+  it('nichts eingetragen → nichts; ohne Profil-Adresse → ergänzen; gleich → nichts; sonst → anders', () => {
+    expect(adresseVergleich({ strasse: ' ', plz: '', ort: '' }, BACH)).toBe('nichts');
+    expect(adresseVergleich(HAUPT, null)).toBe('ergaenzen');
+    expect(
+      adresseVergleich(
+        { strasse: ' hauptstr.  4', plz: '53797', ort: 'LOHMAR ' },
+        adresseAus(HAUPT),
+      ),
+    ).toBe('nichts');
+    expect(adresseVergleich(HAUPT, BACH)).toBe('anders');
+    expect(adresseVergleich({ strasse: '', plz: '', ort: 'Lohmar' }, BACH)).toBe('anders');
+  });
+
+  it('die Adresse in den Antworten: je Person ihre, einmal je Anmeldung die der Anmeldung, ausgeschaltet keine', () => {
+    const a = antworten();
+    a.anmeldung.adresse = HAUPT;
+    a.personen[1].adresse = BACH;
+    expect(adresseAntwort(mitAdresse('anmeldung').formular, a, 1)).toEqual(HAUPT);
+    expect(adresseAntwort(mitAdresse('person').formular, a, 1)).toEqual(BACH);
+    expect(adresseAntwort(mitAdresse('anmeldung', 'aus').formular, a, 0)).toBeUndefined();
+  });
+
+  it('vorbelegt mit dem Profil – je Person oder einmal je Anmeldung', () => {
+    expect(handStart(mitAdresse('person'), person(BACH)).personen[0].adresse).toEqual(BACH);
+    expect(handStart(mitAdresse('anmeldung'), person(BACH)).anmeldung.adresse).toEqual(BACH);
+    expect(handStart(mitAdresse('anmeldung'), person(null)).anmeldung.adresse).toBeUndefined();
+    expect(
+      handStart(mitAdresse('anmeldung', 'aus'), person(BACH)).anmeldung.adresse,
+    ).toBeUndefined();
   });
 });

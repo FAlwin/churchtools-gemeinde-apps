@@ -37,7 +37,22 @@ interface Mitglied {
 }
 let gruppe: Map<number, Mitglied>;
 let max: number | null;
-let personen: Map<number, { id: number; firstName: string; lastName: string; birthday?: string }>;
+let personen: Map<
+  number,
+  {
+    id: number;
+    firstName: string;
+    lastName: string;
+    birthday?: string;
+    street?: string;
+    zip?: string;
+    city?: string;
+  }
+>;
+/** F4c: Schreibrechte an der Person fehlen – ChurchTools sagt 200, übernimmt die Adresse aber nicht. */
+let adresseOhneRecht: boolean;
+/** F4c: Das Schreiben der Adresse scheitert (z. B. 502). */
+let adresseFehler: ApiError | null;
 /** ChurchTools setzt einen anderen Status als geschickt. */
 let andererStatus: string | null;
 /** Das Eintragen scheitert. */
@@ -53,6 +68,8 @@ beforeEach(() => {
   andererStatus = null;
   putFehler = null;
   doppelt = null;
+  adresseOhneRecht = false;
+  adresseFehler = null;
   anfragen.length = 0;
   ei.teilnehmerRolle.mockResolvedValue(32);
   ei.neuePersonVorgaben.mockResolvedValue({ statusId: 2, campusId: 0, departmentId: 1 });
@@ -100,7 +117,14 @@ beforeEach(() => {
       return { data: { id: 200 } };
     }
     if (pfad.startsWith('/persons/') && method === 'PATCH') {
-      personen.get(Number(pfad.split('/')[2]))!.birthday = body.birthday as string;
+      const p = personen.get(Number(pfad.split('/')[2]))!;
+      if ('birthday' in body) p.birthday = body.birthday as string;
+      if ('street' in body || 'zip' in body || 'city' in body) {
+        if (adresseFehler) throw adresseFehler;
+        if (!adresseOhneRecht)
+          for (const k of ['street', 'zip', 'city'] as const)
+            if (k in body) p[k] = body[k] as string;
+      }
       return null;
     }
     const pid = Number(/members\/(\d+)/.exec(pfad)![1]);
@@ -137,6 +161,7 @@ const plan = (mehr: Partial<VonHandPlan> = {}): VonHandPlan => ({
   felder: { [NR_FELD]: 'HAND01', 585: '6,00 €' },
   nrFeld: NR_FELD,
   platz: PLATZ,
+  adresse: null,
   ...mehr,
 });
 
@@ -268,3 +293,99 @@ describe('neue Person', () => {
 });
 
 // Die Tests der Suche stehen seit O6 bei ihr in `ui/ct/personen.test.ts`.
+
+describe('Adresse ins Profil (F4c)', () => {
+  const HAUPT = { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' };
+  const BACH = { strasse: 'Am Bach 2', plz: '51766', ort: 'Engelskirchen' };
+  const hanna = () => personen.get(HANNA)!;
+  const methoden = () => anfragen.map((x) => `${x.method} ${x.pfad.split('?')[0]}`);
+
+  it('erst eintragen, dann die Adresse – nachgelesen', async () => {
+    const r = await vonHandAnmelden(GRUPPE, plan({ adresse: { neu: HAUPT, vorher: null } }), HEUTE);
+    expect(r.adresseFehlt).toBe(false);
+    expect([hanna().street, hanna().zip, hanna().city]).toEqual(['Hauptstr. 4', '53797', 'Lohmar']);
+    expect(methoden()).toEqual([
+      `PUT /groups/${GRUPPE}/members/${HANNA}`,
+      `PATCH /persons/${HANNA}`,
+    ]);
+  });
+
+  it('ohne Adresse im Plan wird die Person nicht angefasst', async () => {
+    await vonHandAnmelden(GRUPPE, plan(), HEUTE);
+    expect(methoden().filter((m) => m.startsWith('PATCH'))).toEqual([]);
+  });
+
+  it('leere Teile werden nicht geschickt', async () => {
+    await vonHandAnmelden(
+      GRUPPE,
+      plan({ adresse: { neu: { strasse: '', plz: '53797', ort: ' ' }, vorher: null } }),
+      HEUTE,
+    );
+    expect(anfragen.find((x) => x.method === 'PATCH')?.body).toEqual({ zip: '53797' });
+  });
+
+  it('kein Recht an der Person (200, aber nicht übernommen) → die Anmeldung steht, „Adresse fehlt“', async () => {
+    adresseOhneRecht = true;
+    const r = await vonHandAnmelden(GRUPPE, plan({ adresse: { neu: HAUPT, vorher: null } }), HEUTE);
+    expect(r.adresseFehlt).toBe(true);
+    expect(gruppe.has(HANNA)).toBe(true);
+  });
+
+  it('vorübergehender Fehler beim Schreiben → die Anmeldung steht trotzdem, „Adresse fehlt“', async () => {
+    adresseFehler = new ApiError(502, 'weg');
+    const r = await vonHandAnmelden(GRUPPE, plan({ adresse: { neu: HAUPT, vorher: null } }), HEUTE);
+    expect(r.adresseFehlt).toBe(true);
+    expect(gruppe.has(HANNA)).toBe(true);
+  });
+
+  it('Rückgängig stellt die alte Adresse wieder her – ersetzt wie ergänzt', async () => {
+    Object.assign(hanna(), { street: 'Am Bach 2', zip: '51766', city: 'Engelskirchen' });
+    const r = await vonHandAnmelden(GRUPPE, plan({ adresse: { neu: HAUPT, vorher: BACH } }), HEUTE);
+    expect(hanna().city).toBe('Lohmar');
+    await r.rueckgaengig();
+    expect([hanna().street, hanna().zip, hanna().city]).toEqual([
+      'Am Bach 2',
+      '51766',
+      'Engelskirchen',
+    ]);
+
+    Object.assign(hanna(), { street: '', zip: '', city: '' });
+    const r2 = await vonHandAnmelden(
+      GRUPPE,
+      plan({ adresse: { neu: HAUPT, vorher: null } }),
+      HEUTE,
+    );
+    await r2.rueckgaengig();
+    expect([hanna().street, hanna().zip, hanna().city]).toEqual(['', '', '']);
+  });
+
+  it('kam die Adresse nicht an, lässt „Rückgängig“ das Profil in Ruhe', async () => {
+    adresseOhneRecht = true;
+    const r = await vonHandAnmelden(GRUPPE, plan({ adresse: { neu: HAUPT, vorher: null } }), HEUTE);
+    anfragen.length = 0;
+    await r.rueckgaengig();
+    expect(methoden().filter((m) => m.startsWith('PATCH'))).toEqual([]);
+  });
+
+  it('neue Person: erst anlegen, dann eintragen, dann die Adresse', async () => {
+    personen.delete(200);
+    await vonHandAnmelden(
+      GRUPPE,
+      plan({
+        person: {
+          art: 'neu',
+          neu: { vor: 'Nora', nach: 'Neu', geburtstag: null, email: null, zugestimmt: 'selbst' },
+          trotzdem: false,
+        },
+        adresse: { neu: HAUPT, vorher: null },
+      }),
+      HEUTE,
+    );
+    expect(methoden()).toEqual([
+      'POST /persons',
+      `PUT /groups/${GRUPPE}/members/200`,
+      'PATCH /persons/200',
+    ]);
+    expect(personen.get(200)?.city).toBe('Lohmar');
+  });
+});

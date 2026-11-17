@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { GRUNDWERTE } from './gruppenwechsel';
 import {
   einrichtungAus,
+  einrichtungFehler,
+  einrichtungFehlerJeFeld,
   wechselGruppeAb,
   wechselGruppeNach,
   type Einrichtung,
@@ -89,5 +91,29 @@ describe('wechselGruppeAb / wechselGruppeNach', () => {
     const e = gut();
     expect(wechselGruppeNach(e, 1)).toBeNull();
     expect(wechselGruppeAb(e, 3)).toBeNull();
+  });
+});
+
+describe('einrichtungFehler: Bereichsgruppe (O9-5c-2)', () => {
+  it('taugt: eine eigene Gruppe, die keine Stufe ist', () => {
+    expect(einrichtungFehler(gut())).toEqual([]);
+  });
+
+  it('nicht gewählt', () => {
+    const f = einrichtungFehlerJeFeld({ ...gut(), bereichGruppeId: 0 });
+    expect(f).toEqual([expect.objectContaining({ feld: 'bereich' })]);
+  });
+
+  it('die Bereichsgruppe darf keine Stufe sein – das Fenster meldet es, und gelesen wird so etwas auch nicht', () => {
+    const e = { ...gut(), bereichGruppeId: STUFEN[1].gruppeId };
+    expect(einrichtungFehler(e).join(' ')).toContain('„Fische“ ist eine Stufe');
+    expect(einrichtungAus(gespeichert(e))).toBeNull();
+  });
+
+  it('meldet auch die Fehler der Einstellung, nach den Fehlern der Bereichsgruppe', () => {
+    const e = gut();
+    e.einstellung.stichtag = '13-01';
+    e.bereichGruppeId = 0;
+    expect(einrichtungFehlerJeFeld(e).map((f) => f.feld)).toEqual(['bereich', 'stichtag']);
   });
 });

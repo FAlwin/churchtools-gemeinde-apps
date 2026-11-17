@@ -166,3 +166,39 @@ describe('SpitzenAuswahl (#915)', () => {
     }
   });
 });
+
+describe('SpitzenAuswahl: eigener Name für „nichts gewählt“ (Fenster „Einrichten“, O9-5c-2)', () => {
+  it('ohne Angabe „Ganze Gemeinde“, mit Angabe der eigene Name – auf dem Knopf und als erste Wahl', () => {
+    cleanup();
+    render(
+      <SpitzenAuswahl
+        label="Gruppe"
+        baum={BAUM}
+        wert={null}
+        onWahl={vi.fn()}
+        feldKlasse=""
+        leerName="Gruppe wählen …"
+      />,
+    );
+    expect(spitzenKnopf('Gruppe').textContent).toBe('Gruppe wählen …');
+    expect(spitzenOptionen('Gruppe')[0]).toBe('Gruppe wählen …');
+    expect(spitzenOptionen('Gruppe')).not.toContain('Ganze Gemeinde');
+  });
+
+  it('die Wahl „nichts“ gibt weiter null zurück', () => {
+    cleanup();
+    const onWahl = vi.fn();
+    render(
+      <SpitzenAuswahl
+        label="Gruppe"
+        baum={BAUM}
+        wert="10"
+        onWahl={onWahl}
+        feldKlasse=""
+        leerName="Gruppe wählen …"
+      />,
+    );
+    waehleSpitze('Gruppe', 'Gruppe wählen …');
+    expect(onWahl).toHaveBeenLastCalledWith(null);
+  });
+});

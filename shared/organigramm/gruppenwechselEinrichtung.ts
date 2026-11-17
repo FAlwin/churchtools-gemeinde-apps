@@ -9,12 +9,45 @@
  */
 import {
   einstellungFehler,
+  einstellungFehlerJeFeld,
   uebergaenge,
+  type FehlerFeld,
   type GruppenwechselEinstellung,
   type Stufe,
 } from './gruppenwechsel';
 
 export const GW_ART = { art: 'organigramm-gruppenwechsel', fassung: 1 };
+
+/**
+ * **Was an einer Einrichtung nicht stimmt, je Feld** (Bauplan O9-5c-2) – `einstellungFehlerJeFeld` plus die
+ * Bereichsgruppe: Sie muss gewählt sein und darf keine Stufe sein (sonst hinge eine Wechsel-Gruppe unter einer
+ * Kindergruppe, und die Leitung der Bereichsgruppe wäre zugleich die einer Stufe). Eine Stelle für das Fenster
+ * „Einrichten“ und fürs Lesen (`einrichtungAus`), damit nichts gelesen wird, was das Fenster nie geschrieben hätte.
+ */
+export function einrichtungFehlerJeFeld(
+  e: Pick<Einrichtung, 'einstellung' | 'bereichGruppeId'>,
+): { feld: FehlerFeld | 'bereich'; text: string }[] {
+  const f: { feld: FehlerFeld | 'bereich'; text: string }[] = [];
+  if (!Number.isInteger(e.bereichGruppeId) || e.bereichGruppeId <= 0)
+    f.push({
+      feld: 'bereich',
+      text: 'Es ist noch keine Gruppe gewählt, unter der die Wechsel-Gruppen angelegt werden.',
+    });
+  else {
+    const stufe = e.einstellung.stufen.find((s) => s.gruppeId === e.bereichGruppeId);
+    if (stufe)
+      f.push({
+        feld: 'bereich',
+        text: `„${stufe.name}“ ist eine Stufe und kann nicht zugleich die Gruppe sein, unter der die Wechsel-Gruppen angelegt werden.`,
+      });
+  }
+  return [...f, ...einstellungFehlerJeFeld(e.einstellung)];
+}
+
+/** Dasselbe als reine Liste von Sätzen – leer, wenn die Einrichtung taugt. */
+export const einrichtungFehler = (
+  e: Pick<Einrichtung, 'einstellung' | 'bereichGruppeId'>,
+): string[] => einrichtungFehlerJeFeld(e).map((x) => x.text);
 
 /** Die Wechsel-Gruppe eines Übergangs, z. B. „Fische → Jungschar“. */
 export interface WechselGruppe {
@@ -78,6 +111,7 @@ export function einrichtungAus(roh: unknown): Einrichtung | null {
   const einstellung = einstellungAus(r.einstellung);
   const bereichGruppeId = id(r.bereichGruppeId);
   if (!einstellung || bereichGruppeId === null || !Array.isArray(r.wechselGruppen)) return null;
+  if (einrichtungFehler({ einstellung, bereichGruppeId }).length > 0) return null;
   const erlaubt = new Set(
     uebergaenge(einstellung).map((u) => `${u.von.gruppeId}>${u.nach.gruppeId}`),
   );

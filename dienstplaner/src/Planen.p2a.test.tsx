@@ -404,16 +404,16 @@ describe('Personen – Dienst voll', () => {
 });
 
 describe('Personen – wo nicht eingetragen werden darf, bleibt die Zelle wie bisher', () => {
-  it('Dienst ohne Schublade (Gesang) und bestehende Einteilungen: kein Knopf, ein Klick tut nichts', async () => {
+  it('Dienst ohne Schublade (Gesang) und bestehende Einteilungen: kein Eintragen-Knopf, ein Klick legt keinen Entwurf an', async () => {
     const s = speichern();
     zeige({ entwuerfe: nachgebaut({ speichern: s }) });
     await warte();
     await knopf('Daniel Test', 'Ton', 'So, 22.11.');
     // Gesang: keine Schublade für Musik → nirgends ein Eintragen-Knopf.
     expect(screen.queryAllByRole('button', { name: /für Gesang am .* eintragen/ })).toHaveLength(0);
-    // Bestehende Einteilung (Anna, Ton, Fr 20.11. zugesagt): kein Knopf (P2b).
+    // Bestehende Einteilung (Anna, Ton, Fr 20.11. zugesagt): kein EINTRAGEN-Knopf – der Klick öffnet seit P2b das Fenster
+    // am belegten Platz (Planen.p2b.test.tsx), legt aber nie einen Entwurf an.
     expect(keiner('Anna Test', 'Ton', 'Fr, 20.11.')).toBeNull();
-    // Auch ein Klick in die Zelle selbst (nicht auf den Knopf) tut dort nichts.
     const t = screen.getByRole('table', { name: 'Personen und ihre Einsätze' });
     for (const tag of within(t).getAllByRole('img', { name: 'Ton, zugesagt' }))
       fireEvent.click(tag.closest('td')!);

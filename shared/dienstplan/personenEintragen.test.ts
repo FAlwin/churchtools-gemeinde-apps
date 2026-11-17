@@ -5,6 +5,7 @@ import {
   abwesendText,
   eintragenWarnung,
   freiOhneEntwurf,
+  gastAktion,
   platzFuerEintrag,
   schonEingeteiltText,
   vollText,
@@ -187,10 +188,46 @@ describe('zellenAktion', () => {
     ).toBeNull();
   });
 
-  it('bestehende Einteilung (zugesagt, angefragt): nichts – das ist P2b', () => {
-    const plaetze = [besetzt(1, 12, 'Daniel'), frei(2)];
-    expect(zellenAktion({ ...o, zustand: 'zugesagt', plaetze })).toBeNull();
-    expect(zellenAktion({ ...o, zustand: 'angefragt', plaetze })).toBeNull();
+  it('bestehende Einteilung (zugesagt, angefragt) ohne Entwurf: „belegt“ am Platz der Person (P2b)', () => {
+    const plaetze = [frei(1), besetzt(2, 12, 'Daniel')];
+    expect(zellenAktion({ ...o, zustand: 'zugesagt', plaetze })).toEqual({ art: 'belegt', nr: 2 });
+    expect(zellenAktion({ ...o, zustand: 'angefragt', plaetze })).toEqual({
+      art: 'belegt',
+      nr: 2,
+    });
+  });
+
+  it('bestehende Einteilung: ein Platz mit Entwurf zählt nicht – der nächste Platz der Person ohne Entwurf', () => {
+    // Daniel steht an Platz 1 UND 2; Platz 1 hat einen (veralteten) Entwurf – dort gibt es in der Matrix keinen Knopf.
+    const plaetze = [besetzt(1, 12, 'Daniel'), besetzt(2, 12, 'Daniel')];
+    const e = suche([{ entwurf: zurueck(1), veraltet: true }]);
+    expect(zellenAktion({ ...o, zustand: 'zugesagt', plaetze, entwurf: e })).toEqual({
+      art: 'belegt',
+      nr: 2,
+    });
+    // Nur ein Platz, veralteter Entwurf: wie in der Matrix gibt es nur das Schild – kein Klick.
+    expect(
+      zellenAktion({ ...o, zustand: 'zugesagt', plaetze: [plaetze[0]], entwurf: e }),
+    ).toBeNull();
+  });
+
+  it('„zurueck“ (ein Entwurf nimmt die Person weg): öffnet den Entwurf an ihrem Platz – ein veralteter zählt nicht', () => {
+    const plaetze = [frei(1), besetzt(2, 12, 'Daniel')];
+    const e = suche([{ entwurf: { ...zurueck(2), gesehen: { art: 'zusage', personId: 12 } } }]);
+    expect(zellenAktion({ ...o, zustand: 'zurueck', plaetze, entwurf: e })).toEqual({
+      art: 'entwurfFach',
+      nr: 2,
+    });
+    const alt = suche([{ entwurf: zurueck(2), veraltet: true }]);
+    expect(zellenAktion({ ...o, zustand: 'zurueck', plaetze, entwurf: alt })).toBeNull();
+  });
+});
+
+describe('gastAktion', () => {
+  it('belegter Gast: Fenster am belegten Platz; Entwurf: Entwurfs-Fenster; veraltet: nichts', () => {
+    expect(gastAktion({ nr: 2, klick: 'belegt' })).toEqual({ art: 'belegt', nr: 2 });
+    expect(gastAktion({ nr: 3, klick: 'entwurf' })).toEqual({ art: 'entwurfFach', nr: 3 });
+    expect(gastAktion({ nr: 1, klick: null })).toBeNull();
   });
 });
 

@@ -365,11 +365,23 @@ describe('Personen – abgesagte Termine nehmen keine Einträge an', () => {
     expect(within(t).getByText('abgesagt', { selector: 'i' })).toBeTruthy();
   });
 
-  it('auch ein vorhandener eigener Entwurf in der abgesagten Spalte ist dort kein Knopf', async () => {
-    zeige({ entwuerfe: mitEntwuerfen(eintrag(24, 1)) });
+  it('der eigene Entwurf in der abgesagten Spalte lässt sich wegnehmen – wie in der Matrix; neu eintragen nicht', async () => {
+    const f = entfernt();
+    const e = entwurf({ ...eintrag(24, 1), version: 5 });
+    zeige({
+      entwuerfe: nachgebaut({ entfernen: f, laden: () => Promise.resolve(daten([e])) }),
+    });
     const t = await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
     await within(t).findByRole('img', { name: 'Ton, Entwurf' });
-    expect(screen.queryByRole('button', { name: /Entwurf wegnehmen/ })).toBeNull();
+    // Der freie zweite Platz ist kein Eintragen-Knopf.
+    expect(screen.queryAllByRole('button', { name: /So, 06\.12\. eintragen$/ })).toHaveLength(0);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Daniel Test für Ton am So, 06.12.: Entwurf wegnehmen',
+      }),
+    );
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
+    expect(f).toHaveBeenCalledWith(expect.anything(), 3, e.ort, 5);
   });
 });
 
@@ -378,5 +390,107 @@ describe('Vergangene Termine bleiben eintragbar (Nachtragen)', () => {
     zeige({ heute: '2026-11-25' });
     await warte();
     expect(await knopf('Daniel Test', 'Ton', 'So, 22.11.')).toBeTruthy();
+  });
+});
+
+describe('Personen – „Platz übernehmen“: ein Zurückziehen-Platz wird ersetzt statt „voll“', () => {
+  /** Mi 02.12.: Ton voll (Anna, Ben) – für Anna liegt ein „Zurückziehen“-Entwurf (Version 7). */
+  const weg = entwurf({
+    ort: { eventId: 23, serviceId: 6, index: 1 },
+    ziel: { art: 'frei' },
+    gesehen: { art: 'zusage', personId: 5 },
+    version: 7,
+  });
+
+  it('Klick auf Daniel: „Anna durch Daniel ersetzen“ – derselbe Aufruf wie „Andere Person wählen“, mit der Version des Entwurfs', async () => {
+    const s = speichern();
+    zeige({ entwuerfe: nachgebaut({ speichern: s, laden: () => Promise.resolve(daten([weg])) }) });
+    await warte();
+    fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
+    await waitFor(() => expect(s).toHaveBeenCalledTimes(1));
+    expect(s.mock.calls[0][1]).toBe(3);
+    expect(s.mock.calls[0][2]).toMatchObject({
+      ort: { eventId: 23, serviceId: 6, index: 1 },
+      ziel: { art: 'person', personId: 12, name: 'Daniel Test' },
+      modus: 'anfrage',
+      gesehen: { art: 'zusage', personId: 5 },
+    });
+    expect(s.mock.calls[0][3]).toBe(7);
+    expect(
+      await screen.findByText('Daniel Test statt Anna Test eingetragen – noch nicht gesendet.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('Daniel wieder wegnehmen: der Platz ist wieder Anna wie in ChurchTools – der Speicher hält einen Entwurf je Platz', async () => {
+    const s = speichern();
+    const f = entfernt();
+    zeige({
+      entwuerfe: nachgebaut({
+        speichern: s,
+        entfernen: f,
+        laden: () => Promise.resolve(daten([weg])),
+      }),
+    });
+    await warte();
+    fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Daniel Test für Ton am Mi, 02.12.: Entwurf wegnehmen',
+      }),
+    );
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
+    expect(f).toHaveBeenCalledWith(expect.anything(), 3, weg.ort, 1);
+    // Kein Entwurf mehr am Platz: Anna steht dort wieder zugesagt, der Dienst ist wieder voll.
+    await waitFor(() =>
+      expect(screen.queryByRole('status', { name: 'Noch nicht gesendet' })).toBeNull(),
+    );
+    fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
+    expect((await screen.findByRole('alertdialog')).textContent).toContain('Ton ist voll');
+  });
+
+  it('ein veralteter „Zurückziehen“-Entwurf macht den Platz nicht frei: „voll“', async () => {
+    const veraltet = entwurf({ ...weg, gesehen: { art: 'zusage', personId: 99 } });
+    const s = speichern();
+    zeige({
+      entwuerfe: nachgebaut({ speichern: s, laden: () => Promise.resolve(daten([veraltet])) }),
+    });
+    await warte();
+    fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
+    expect((await screen.findByRole('alertdialog')).textContent).toContain('Ton ist voll');
+    expect(s).not.toHaveBeenCalled();
+  });
+
+  it('die Warnungen gelten wie beim normalen Eintragen: Carla ist am 02.12. krank – Fenster, „Trotzdem“ ersetzt Anna', async () => {
+    const krank: PersonenDaten = new Map(STAND).set(
+      7,
+      da(
+        [ANNA, BEN, CARLA, DANIEL],
+        abwesenheitenAus([
+          {
+            id: 3,
+            person: { domainIdentifier: '11' },
+            absenceReason: { nameTranslated: 'Krank' },
+            startDate: '2026-12-02',
+            endDate: '2026-12-02',
+          },
+        ]),
+      ),
+    );
+    const s = speichern();
+    zeige({
+      ladePersonen: vi.fn(() => Promise.resolve(krank)),
+      entwuerfe: nachgebaut({ speichern: s, laden: () => Promise.resolve(daten([weg])) }),
+    });
+    await warte();
+    fireEvent.click(await knopf('Carla Test', 'Ton', 'Mi, 02.12.'));
+    expect((await screen.findByRole('alertdialog')).textContent).toContain(
+      'Carla Test ist am Mi, 02.12. abwesend: Krank (02.12.). Trotzdem für Ton eintragen?',
+    );
+    expect(s).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Trotzdem eintragen' }));
+    await waitFor(() => expect(s).toHaveBeenCalledTimes(1));
+    expect(s.mock.calls[0][2]).toMatchObject({ ziel: { personId: 11 }, gesehen: { personId: 5 } });
+    expect(s.mock.calls[0][3]).toBe(7);
   });
 });

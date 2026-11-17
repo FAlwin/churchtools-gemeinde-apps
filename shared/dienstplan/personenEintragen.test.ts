@@ -5,6 +5,7 @@ import {
   abwesendText,
   eintragenWarnung,
   freiOhneEntwurf,
+  platzFuerEintrag,
   schonEingeteiltText,
   vollText,
   zellenAktion,
@@ -57,6 +58,39 @@ describe('freiOhneEntwurf', () => {
   });
 });
 
+/** „X zurückziehen“ am Platz `index` (X = Person 5, wie `besetzt`) – gesehen: der Platz, wie er in ChurchTools ist. */
+const zurueck = (index: number | null, version = 7): Entwurf => ({
+  ...entwurf(index, 0),
+  ziel: { art: 'frei' },
+  gesehen: { art: 'zusage', personId: 5 },
+  version,
+});
+
+describe('platzFuerEintrag – welcher Platz ist für einen neuen Entwurf zu haben (P2a-2)', () => {
+  const anna = besetzt(1, 5, 'Anna');
+
+  it('ein freier Platz ohne Entwurf hat Vorrang – auch vor einem Zurückziehen-Platz davor', () => {
+    const e = suche([{ entwurf: zurueck(1) }]);
+    expect(platzFuerEintrag([anna, frei(2)], e)).toEqual({ nr: 2, ersetzt: null });
+  });
+
+  it('sonst der Platz mit gültigem „Zurückziehen“-Entwurf – mit dem Entwurf, den der Eintrag ersetzt', () => {
+    const z = zurueck(1);
+    expect(platzFuerEintrag([anna, besetzt(2, 6, 'Ben')], suche([{ entwurf: z }]))).toEqual({
+      nr: 1,
+      ersetzt: z,
+    });
+  });
+
+  it('ein veralteter „Zurückziehen“-Entwurf, ein Ersetzen-Entwurf und ein Entwurf auf einen freien Platz geben nichts her', () => {
+    const plaetze = [anna, frei(2)];
+    expect(platzFuerEintrag([anna], suche([{ entwurf: zurueck(1), veraltet: true }]))).toBeNull();
+    expect(platzFuerEintrag([anna], suche([{ entwurf: entwurf(1, 8) }]))).toBeNull();
+    expect(platzFuerEintrag(plaetze, suche([{ entwurf: entwurf(2, 8) }]))).toBeNull();
+    expect(platzFuerEintrag([anna], ohne)).toBeNull();
+  });
+});
+
 describe('zellenAktion', () => {
   const o = { personId: 12, zustand: null, ichId: 1, entwurf: ohne } as const;
 
@@ -84,6 +118,17 @@ describe('zellenAktion', () => {
     expect(zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), frei(2)] })).toEqual({
       art: 'voll',
       von: 2,
+    });
+  });
+
+  it('voller Dienst mit „Zurückziehen“-Entwurf: Eintragen ersetzt ihn – `ersetzt` ist die Version (P2a-2)', () => {
+    const e = suche([{ entwurf: zurueck(2, 9) }]);
+    expect(
+      zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), besetzt(2, 5, 'X')] }),
+    ).toEqual({
+      art: 'eintragen',
+      nr: 2,
+      ersetzt: 9,
     });
   });
 

@@ -549,20 +549,27 @@ export function useEinteilen({
     aktion: (i, zl, personId, zustand) => {
       if (!plan) return null;
       const s = plan.spalten[i];
-      // Abgesagte Termine nehmen keine Einträge an (P2a-2) – dieselbe Regel wie in der Matrix (`nimmtEintraegeAn`).
-      if (!darfPlanen(zl, s) || !nimmtEintraegeAn(s) || !amPlatz.darfAendern(zl)) return null;
-      return zellenAktion({
+      if (!darfPlanen(zl, s) || !amPlatz.darfAendern(zl)) return null;
+      const a = zellenAktion({
         plaetze: zl.zellen[i],
         personId,
         zustand,
         entwurf: (p) => entwurfAmPlatz(daten, s, zl, p),
         ichId: amPlatz.ichId,
       });
+      // Abgesagte Termine nehmen keine neuen Einträge an (P2a-2, `nimmtEintraegeAn`) – den eigenen Entwurf nimmt man
+      // dort weiter weg, wie in der Matrix.
+      return !nimmtEintraegeAn(s) && a?.art !== 'wegnehmen' ? null : a;
     },
-    eintragen: async (i, zl, nr, person) => {
+    eintragen: async (i, zl, nr, person, ersetzt) => {
       if (!plan) return;
+      // `freierPlatz` kennt, wer dort in ChurchTools steht (`bisher`); mit `ersetzt` ist es derselbe Weg wie „Andere
+      // Person wählen“ in der Matrix – Versions-Schutz inklusive.
       const platz = freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr);
-      const r = await trageEin({ platz, ersetzt: null, von: null }, { art: 'person', ...person });
+      const r = await trageEin(
+        { platz, ersetzt: ersetzt ?? null, von: null },
+        { art: 'person', ...person },
+      );
       if (!r) showToast('Hier kannst du gerade keine Entwürfe anlegen.');
       else if (!r.ok) showToast(fehlerHinweis(r));
     },

@@ -950,9 +950,13 @@ Platz frei** ist, einer eingeteilten Person (zugesagt) im selben Dienst und **ei
    Stand von ChurchTools (der Entwurf ist noch nicht verbindlich).
 7. **Abgesagter Termin, Matrix:** der freie Platz ist **kein Knopf** (nichts öffnet „Wer kann?“); Namen und bestehende
    Einteilungen stehen da wie bisher. Der Zauberstab füllt ihn nicht.
-8. **Abgesagter Termin, Personen:** in der abgesagten Spalte kein Rahmen, kein „+“, kein Klick; an den anderen Terminen
-   unverändert. Ein **vergangener**, nicht abgesagter Termin: weiter eintragbar (Nachtragen).
+8. **Abgesagter Termin, Personen:** in der abgesagten Spalte kein Rahmen, kein „+“, kein Eintragen; ein **eigener Entwurf**
+   dort lässt sich per Klick wegnehmen. An den anderen Terminen unverändert. Ein **vergangener**, nicht abgesagter Termin: weiter eintragbar (Nachtragen).
 9. **Handy:** Datumsleiste, Zeile unter dem Titel und Gruppenzeile zeigen dieselben Zahlen wie am Rechner.
+10. **Platz übernehmen:** Dienst, der voll ist, bei einer Person „Zurückziehen“ (Matrix, Entwurf). In „Personen“ in die Zelle
+    einer anderen Person klicken: kein Fenster „voll“, sondern Hinweis „Y statt X eingetragen – noch nicht gesendet“; in der
+    Matrix steht dort „Y statt X“. Warnungen (abwesend, anderer Dienst) kommen wie sonst. Y wieder wegnehmen: der Platz ist
+    wieder X (kein „Zurückziehen“ mehr). Gibt es zugleich einen freien Platz ohne Entwurf, bekommt der den Eintrag.
 
 <details><summary>Technisches</summary>
 

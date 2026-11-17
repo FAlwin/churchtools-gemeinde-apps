@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { diensteAus } from '@shared/ct/dienste';
 import { planAus } from '@shared/dienstplan/plan';
 import type { RohTermin } from '@shared/dienstplan/termine';
-import { daten } from './entwurfAnschluss.testutil';
+import { daten, entwurf } from './entwurfAnschluss.testutil';
 import { zauberZeilen } from './planEntwuerfe';
 
 /** Zauberstab: abgesagte Termine (`nimmtEintraegeAn`) und vergangene werden ausgelassen – der Rest wird gefüllt. */
@@ -39,5 +39,34 @@ describe('zauberZeilen – wohin der Zauberstab füllt', () => {
 
   it('ein abgesagter Termin allein: nichts zu füllen', () => {
     expect(zauberZeilen(PLAN, daten(), '2026-11-16', [2], PLAN.gruppen[0]).zeilen).toEqual([]);
+  });
+
+  it('ein Platz mit „Zurückziehen“-Entwurf bleibt, wie er ist – der Zauberstab füllt ihn nicht (anders als „Personen“)', () => {
+    const belegt = planAus(
+      [
+        {
+          id: 2,
+          name: 'Gottesdienst',
+          startDate: '2026-11-22T09:00:00Z',
+          endDate: '2026-11-22T09:00:00Z',
+          eventServices: [{ serviceId: 6, personId: 5, name: 'Anna', isAccepted: true, index: 1 }],
+        },
+      ],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: [{ id: 3, name: 'Technik', fuerAlle: false }],
+        zeitzone: 'Europe/Berlin',
+        planbar: () => true,
+        ganzSichtbar: () => true,
+      },
+    );
+    const weg = entwurf({
+      ort: { eventId: 2, serviceId: 6, index: 1 },
+      ziel: { art: 'frei' },
+      gesehen: { art: 'zusage', personId: 5 },
+    });
+    const r = zauberZeilen(belegt, daten([weg]), '2026-11-16', [0], belegt.gruppen[0]);
+    expect(r.zeilen).toEqual([]);
   });
 });

@@ -136,7 +136,15 @@ den öffnet man in der Matrix.
   Dienst** eingeteilt („Daniel F. ist am Fr, 20.11. schon bei Gesang eingeteilt. Trotzdem für Ton eintragen?“) oder an dem Tag
   **abwesend** (Grund und Zeitraum der Abwesenheit); treffen beide zu, steht beides in einem Fenster. Die Sätze rechnet
   `shared/dienstplan/personenEintragen.ts` aus dem, was die Zelle ohnehin zeigt („+ Gesang“, Abwesend-Tag).
-- **Dienst voll** (kein freier Platz, auch nicht durch Entwürfe frei): ein schlichtes Fenster „Ton ist voll“ mit
+- **Platz übernehmen (P2a-2):** Gibt es keinen freien Platz ohne Entwurf, nimmt der Klick einen Platz mit **gültigem
+  „Zurückziehen“-Entwurf** (belegt mit X): aus „X zurückziehen“ wird **„X durch Y ersetzen“** – derselbe Weg wie „Andere Person
+  wählen“ in der Matrix (`trageEin`/`onWahl`, mit der Version des Entwurfs als Versions-Schutz, Hinweis „Y statt X eingetragen –
+  noch nicht gesendet“). Ein freier Platz ohne Entwurf hat immer Vorrang. Die Warnungen (anderer Dienst, abwesend) gelten wie
+  beim normalen Eintragen. Nimmt man Y wieder weg, ist der Platz wieder X wie in ChurchTools (ein Platz = ein Entwurf; das
+  „Zurückziehen“ ist mit dem Ersetzen aufgegangen und kommt nicht zurück – in der Matrix ist es bei „Andere Person wählen“ und
+  „Entfernen“ genauso). Die Regel „welcher Platz ist zu haben“ ist `platzFuerEintrag` (`personenEintragen.ts`). Der **Zauberstab**
+  füllt solche Plätze bewusst nicht (er speichert ohne Versions-Schutz, und das „Zurückziehen“ hat der Planer absichtlich gesetzt).
+- **Dienst voll** (kein Platz mehr zu haben: weder frei ohne Entwurf noch mit „Zurückziehen“-Entwurf): ein schlichtes Fenster „Ton ist voll“ mit
   „[Dienst] am 27.11. ist voll (2 von 2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ – es wird nichts
   eingetragen („Platz dazunehmen“ kommt mit P2c).
 - **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
@@ -159,7 +167,8 @@ den öffnet man in der Matrix.
   der ChurchTools-Stand). Ebenso unverändert: die Termin-Liste und die Startseite („Plätze frei“), „Wer wie oft?“ und die Zeile
   „+ Gesang“ in „Personen“.
 - **Abgesagte Termine nehmen keine Einträge an (P2a-2):** In der Matrix ist der freie Platz in einem abgesagten Termin kein
-  Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort keinen Zellen-Knopf, kein Hover und kein „+“, und der Zauberstab
+  Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort zum **Eintragen** keinen Zellen-Knopf, kein Hover und kein „+“ –
+  den **eigenen Entwurf** nimmt ein Klick dort weiter weg, wie in der Matrix –, und der Zauberstab
   füllt ihn nicht (`nimmtEintraegeAn`, `plan.ts` – eine Funktion für alle drei und für den Regler „Plätze ändern“).
   **Vergangene Termine bleiben eintragbar** (Nachtragen); nur der Zauberstab lässt sie zusätzlich aus. Bestehende Einteilungen
   und Entwürfe in abgesagten Terminen bleiben sichtbar; einen belegten Platz antippen (zurückziehen/ersetzen) und einen

@@ -14,6 +14,7 @@ import {
   uebernahmePlanen,
   uebernehmbar,
   type Eintrag,
+  type TodoTeil,
 } from '@shared/protokolle/ki';
 import {
   namenFinden,
@@ -381,6 +382,22 @@ export function KiFuellenFenster({
     );
   };
   const txt = (t: string) => <NamenText text={t} namen={zurueckNamen} />;
+  /** Zuständige und Datum eines To-Dos – im einzelnen To-Do und im neuen Punkt gleich. */
+  const todoZusatz = (d: TodoTeil): ReactNode => (
+    <>
+      {d.wer.length
+        ? d.wer.map((w, i) => (
+            <span key={i}>
+              {i > 0 && ', '}
+              {txt(w.name)}
+              {w.personId === null && ' (extern)'}
+            </span>
+          ))
+        : 'niemand zuständig'}
+      {' · '}
+      {d.bis ? `bis ${datumText(d.bis)}` : 'ohne Datum'}
+    </>
+  );
   const bereich = (titel: string, zeilen: ReactNode[]) =>
     zeilen.length ? (
       <section className={styles.abschnitt} key={titel}>
@@ -775,17 +792,7 @@ export function KiFuellenFenster({
                   e,
                   txt(e.text),
                   <>
-                    {e.wer.length
-                      ? e.wer.map((w, i) => (
-                          <span key={i}>
-                            {i > 0 && ', '}
-                            {txt(w.name)}
-                            {w.personId === null && ' (extern)'}
-                          </span>
-                        ))
-                      : 'niemand zuständig'}
-                    {' · '}
-                    {e.bis ? `bis ${datumText(e.bis)}` : 'ohne Datum'}
+                    {todoZusatz(e)}
                     {' · '}
                     {wohin(e).text}
                   </>,
@@ -824,6 +831,41 @@ export function KiFuellenFenster({
                           <li key={i}>{txt(s)}</li>
                         ))}
                       </ul>
+                    )}
+                    {e.beschluesse.length > 0 && (
+                      <>
+                        <span className={styles.teilTitel}>Beschlüsse</span>
+                        <ul className={styles.punkte}>
+                          {e.beschluesse.map((b, i) => (
+                            <li key={i}>{txt(b.text)}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {e.todos.length > 0 && (
+                      <>
+                        <span className={styles.teilTitel}>To-Dos</span>
+                        <ul className={styles.punkte}>
+                          {e.todos.map((d, i) => (
+                            <li key={i}>
+                              {txt(d.text)}
+                              <small>{todoZusatz(d)}</small>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {e.termine.length > 0 && (
+                      <>
+                        <span className={styles.teilTitel}>Termine</span>
+                        <ul className={styles.punkte}>
+                          {e.termine.map((t, i) => (
+                            <li key={i}>
+                              <b>{t.datum ? datumText(t.datum) : 'ohne Datum'}</b> – {txt(t.text)}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
                     )}
                   </>,
                   wohin(e).text,

@@ -760,3 +760,92 @@ describe('nichts wird gespeichert', () => {
     expect(setLokal).not.toHaveBeenCalled();
   });
 });
+
+describe('Neue Punkte mit Beschluss, To-Do und Termin (leeres Protokoll)', () => {
+  const leer = (): Block[] => [{ id: 'p0', type: 'paragraph', content: [], children: [] }];
+  /** Antwort nur aus `neue_punkte` – ohne Platzhalter, damit „Direkt einfügen“ ohne Zuordnung auskommt. */
+  const antwort = {
+    neue_punkte: [
+      {
+        titel: 'Parkplatz',
+        stichpunkte: ['Hinweisschilder fehlen.'],
+        beschluesse: ['Wir bestellen drei Schilder.'],
+        todos: [
+          { text: 'Entwurf zeigen', wer: ['Maria Dück', 'Viktor Neumann'], bis: '2026-11-30' },
+        ],
+        termine: [{ datum: '2026-12-12', text: 'Aufbau ab 15 Uhr' }],
+      },
+      { titel: 'Verschiedenes', stichpunkte: ['Nichts weiter.'] },
+    ],
+  };
+  const bisVorschau = () => {
+    const r = zeige({ dokument: leer });
+    fireEvent.click(screen.getByRole('button', { name: 'Antwort schon da? Direkt einfügen' }));
+    antworten(antwort);
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    return r;
+  };
+  const erwartet = () => {
+    const e = antwortLesen(JSON.stringify(antwort), {
+      dokument: leer(),
+      zuordnung: {},
+      funde: [],
+      gruppe: [], // ohne Transkript kennt das Fenster keine Funde – Namen bleiben extern
+    });
+    if (!e.ok) throw new Error(e.meldung);
+    return e.eintraege;
+  };
+
+  it('Vorschau: der neue Punkt mit seinem Inhalt und EINEM Häkchen', async () => {
+    bisVorschau();
+    await screen.findByRole('heading', { name: /Neue Punkte/ });
+    const punkt = screen.getByText('Parkplatz').closest('label')!;
+    expect(within(punkt).getAllByRole('checkbox')).toHaveLength(1);
+    const t = punkt.textContent ?? '';
+    for (const s of [
+      'Hinweisschilder fehlen.',
+      'Beschlüsse',
+      'Wir bestellen drei Schilder.',
+      'To-Dos',
+      'Entwurf zeigen',
+      'Maria Dück (extern)',
+      'Viktor Neumann (extern)',
+      'bis 30.11.2026',
+      'Termine',
+      '12.12.2026',
+      'Aufbau ab 15 Uhr',
+    ])
+      expect(t, s).toContain(s);
+    // Zwei neue Punkte = zwei Häkchen insgesamt, sonst keine Bereiche für Beschlüsse/To-Dos/Termine.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    expect(screen.queryByRole('heading', { name: /^Beschlüsse/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^To-Dos/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Termine/ })).toBeNull();
+  });
+
+  it('Übernahme in ein leeres Protokoll: Punkt, Stichpunkt, Beschluss, To-Do und Termin kommen ans Ende (vor = null)', async () => {
+    const { einfuegen, onUebernommen } = bisVorschau();
+    await screen.findByRole('heading', { name: /Neue Punkte/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (2)' }));
+    expect(einfuegen).toHaveBeenCalledTimes(1);
+    const [bloecke, vor] = einfuegen.mock.calls[0] as [Block[], string | null];
+    expect(vor).toBeNull();
+    expect(
+      bloecke.slice(0, 5).map((b) => [b.type, (b.content as { text: string }[])[0].text]),
+    ).toEqual([
+      ['heading', 'Parkplatz'],
+      ['bulletListItem', 'Hinweisschilder fehlen.'],
+      [BLOCK.beschluss, 'Wir bestellen drei Schilder.'],
+      [BLOCK.aufgabe, 'Entwurf zeigen'],
+      [BLOCK.termin, 'Aufbau ab 15 Uhr'],
+    ]);
+    expect(bloecke[3].props?.vorab).toBe(
+      JSON.stringify({ wer: [], extern: 'Maria Dück, Viktor Neumann', bis: '2026-11-30' }),
+    );
+    expect(bloecke[4].props).toEqual({ datum: '2026-12-12' });
+    // Genau das, was die Regeln planen.
+    const plan = uebernahmePlanen(erwartet(), leer(), neueIdFabrik());
+    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(onUebernommen).toHaveBeenCalledWith({ anzahl: 2, uebersprungen: 0 });
+  });
+});

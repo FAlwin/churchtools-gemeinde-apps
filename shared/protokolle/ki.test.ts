@@ -165,7 +165,9 @@ describe('auftragBauen', () => {
     expect(auftrag).toContain('Gruppe „Leitungsteam“ vom Mittwoch, 18.11.2026');
     expect(auftrag).toContain('Sitzungsdatum (Mittwoch, 18.11.2026)');
     expect(auftrag).toContain('Verwende genau diese Platzhalter und erfinde keine Namen');
-    expect(auftrag).toContain('"neue_punkte":[{"titel":"…","stichpunkte":["…"]}]');
+    expect(auftrag).toContain(
+      '"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]',
+    );
     expect(auftrag).toContain('Antworte ausschließlich mit JSON');
     expect(auftrag.endsWith(angewendet.text)).toBe(true);
   });
@@ -198,10 +200,57 @@ describe('auftragBauen', () => {
     expect(ohne).toContain('1. Andacht Peter');
   });
 
-  it('ohne Punkte im Dokument: Hinweis statt leerer Liste', () => {
+  it('ohne Punkte im Dokument: die KI soll selbst gliedern – Beschlüsse, To-Dos und Termine beim jeweiligen Punkt', () => {
+    const leer = auftragBauen({ gruppe: 'G', datum: '2026-11-18', dokument: [], transkript: 'x' });
+    expect(leer).toContain(
+      '(keine Tagesordnung – gliedere den Inhalt selbst in sinnvolle Punkte unter „neue_punkte“, Beschlüsse, To-Dos und Termine dort beim jeweiligen Punkt)',
+    );
+    expect(leer).not.toContain('noch keine Punkte');
+    // Mit Tagesordnung steht die Zeile nicht im Auftrag.
+    expect(auftrag).not.toContain('keine Tagesordnung');
+  });
+
+  it('der übrige Text ist gegenüber dem bisherigen Auftrag unverändert (nur Beispiel und Zeile bei leerer Tagesordnung neu)', () => {
+    // Der bisherige Auftrag (Stand vor 17.11.2026), aus dem Quelltext von damals übernommen.
+    const bisher = (gruppe: string, datum: string, zeilen: string[], transkript: string): string =>
+      `Du bekommst das Transkript einer Sitzung der Gruppe „${gruppe}“ vom ${datum}.
+Personen und vertrauliche Angaben sind durch Platzhalter wie [Person 1] oder [Vertraulich 1] ersetzt. Verwende genau diese Platzhalter und erfinde keine Namen.
+
+Tagesordnung (nr = Nummer des Punkts):
+${zeilen.join('\n')}
+
+Ordne den Inhalt diesen Punkten zu – so fein wie möglich, also auch den Unterpunkten – und schreibe zu jedem Punkt knappe Stichpunkte auf Deutsch. Nimm nur auf, was im Transkript steht, und erfinde nichts – keine Namen, Zahlen oder Termine.
+Rechne Angaben wie „bis nächsten Freitag“ vom Sitzungsdatum (${datum}) in ein Datum um.
+Passt ein Thema zu keinem Punkt, schlage unter „neue_punkte“ einen neuen Punkt mit Titel vor.
+Antworte ausschließlich mit JSON in genau diesem Aufbau:
+{"punkte":[{"nr":"3.1","stichpunkte":["…"]}],"beschluesse":[{"nr":"3","text":"…"}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"]}]}
+
+Transkript:
+${transkript}`;
+    const neuesBeispiel =
+      '"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]';
+    const altesBeispiel = '"neue_punkte":[{"titel":"…","stichpunkte":["…"]}]';
+    const zeilen = tagesordnung(dokument()).map(
+      (p) => `${p.nummer} ${p.titel}${p.fest ? ' (fester Punkt – nichts zuordnen)' : ''}`,
+    );
+    const mit = auftragBauen({
+      gruppe: 'G',
+      datum: '2026-11-18',
+      dokument: dokument(),
+      transkript: 'x',
+    });
+    expect(mit.replace(neuesBeispiel, altesBeispiel)).toBe(
+      bisher('G', 'Mittwoch, 18.11.2026', zeilen, 'x'),
+    );
+    const leer = auftragBauen({ gruppe: 'G', datum: '2026-11-18', dokument: [], transkript: 'x' });
+    const neueZeile = leer.split('\n')[4];
     expect(
-      auftragBauen({ gruppe: 'G', datum: '2026-11-18', dokument: [], transkript: 'x' }),
-    ).toContain('noch keine Punkte');
+      leer
+        .replace(neuesBeispiel, altesBeispiel)
+        .replace(neueZeile, '(noch keine Punkte – schlage neue Punkte vor)'),
+    ).toBe(
+      bisher('G', 'Mittwoch, 18.11.2026', ['(noch keine Punkte – schlage neue Punkte vor)'], 'x'),
+    );
   });
 });
 
@@ -730,5 +779,295 @@ describe('unzugeordnet / zuordnungErgaenzen (Platzhalter von Hand)', () => {
         },
       ),
     ).toEqual({ '[Person 1]': 'Anna Klassen', '[Person 2]': 'Peter Wiens' });
+  });
+});
+
+describe('neue Punkte mit Beschlüssen, To-Dos und Terminen (17.11.2026)', () => {
+  const neuerPunkt = {
+    titel: 'Parkplatz',
+    stichpunkte: ['Schilder fehlen.'],
+    beschluesse: ['Wir bestellen Schilder.', { text: `${ph('Maria')} prüft den Preis.` }],
+    todos: [
+      { text: 'Entwurf zeigen', wer: [ph('Viktor Neumann'), ph('Maria')], bis: '2026-11-30' },
+      { text: 'Ohne alles' },
+    ],
+    termine: [
+      { datum: '2026-12-12', text: 'Aufbau' },
+      { text: 'Ohne Datum', datum: 'kaputt' },
+    ],
+  };
+  const leeresProtokoll = (): Block[] => [absatz('p0', '')];
+  const punktVon = (e: Eintrag[]) => {
+    const x = e.find((y) => y.art === 'neuerPunkt');
+    if (x?.art !== 'neuerPunkt') throw new Error('kein neuer Punkt');
+    return x;
+  };
+
+  describe('Lesen', () => {
+    it('Beschlüsse als Text und als { text } – leere und falsch getypte werden verworfen', () => {
+      const e = punktVon(
+        lesen(
+          JSON.stringify({
+            neue_punkte: [
+              {
+                titel: 'N',
+                beschluesse: ['a', { text: 'b' }, '', '  ', 5, null, { text: 7 }, ['x']],
+              },
+            ],
+          }),
+          leeresProtokoll(),
+        ),
+      );
+      expect(e.beschluesse).toEqual([{ text: 'a' }, { text: 'b' }]);
+    });
+
+    it('To-Dos wie bei den Einträgen mit nr: Zuständige (Mitglied/extern), Datum, unzugeordneter Platzhalter → offen', () => {
+      const e = punktVon(
+        lesen(
+          JSON.stringify({
+            neue_punkte: [
+              {
+                titel: 'N',
+                todos: [
+                  {
+                    text: `T ${ph('Maria')}`,
+                    wer: [ph('Maria'), ph('Viktor Neumann'), '[Person 99]'],
+                    bis: '2026-12-06',
+                  },
+                  { text: 'Datum kaputt', bis: '2026-02-30' },
+                  { text: '' },
+                  { text: 5 },
+                  'x',
+                ],
+              },
+            ],
+          }),
+          leeresProtokoll(),
+        ),
+      );
+      expect(e.todos).toEqual([
+        {
+          text: 'T Maria',
+          wer: [
+            { name: 'Maria', personId: 5 },
+            { name: 'Viktor Neumann', personId: null },
+          ],
+          bis: '2026-12-06',
+          offen: ['[Person 99]'],
+        },
+        { text: 'Datum kaputt', wer: [], bis: null },
+      ]);
+    });
+
+    it('Termine: Datum nach terminDatum, Termin ohne Text fällt weg, Namen kommen zurück', () => {
+      const e = punktVon(
+        lesen(
+          JSON.stringify({
+            neue_punkte: [
+              {
+                titel: 'N',
+                termine: [
+                  { datum: '2026-12-12', text: `Mit ${ph('Peter')}` },
+                  { datum: 'kaputt', text: 'Kaputt' },
+                  { datum: '2026-02-30', text: 'Gibt es nicht' },
+                  { text: 'Ohne Datum' },
+                  { datum: '2026-12-12' },
+                  { datum: 5, text: 'Zahl' },
+                ],
+              },
+            ],
+          }),
+          leeresProtokoll(),
+        ),
+      );
+      expect(e.termine).toEqual([
+        { text: 'Mit Peter', datum: '2026-12-12' },
+        { text: 'Kaputt', datum: null },
+        { text: 'Gibt es nicht', datum: null },
+        { text: 'Ohne Datum', datum: null },
+        { text: 'Zahl', datum: null },
+      ]);
+    });
+
+    it('Namen werden in Beschlüssen, To-Dos und Terminen eines neuen Punkts zurückgesetzt', () => {
+      const p = ph('Viktor Neumann');
+      const e = punktVon(
+        lesen(
+          JSON.stringify({
+            neue_punkte: [
+              {
+                titel: 'N',
+                beschluesse: [`B ${p}`],
+                todos: [{ text: `T ${p}` }],
+                termine: [{ text: `M ${p}` }],
+              },
+            ],
+          }),
+          leeresProtokoll(),
+        ),
+      );
+      expect([e.beschluesse[0].text, e.todos[0].text, e.termine[0].text]).toEqual([
+        'B Viktor Neumann',
+        'T Viktor Neumann',
+        'M Viktor Neumann',
+      ]);
+    });
+
+    it('alte Antwort ohne die neuen Felder: leere Listen, sonst wie bisher', () => {
+      const e = punktVon(
+        lesen(
+          JSON.stringify({ neue_punkte: [{ titel: 'Alt', stichpunkte: ['a'] }] }),
+          leeresProtokoll(),
+        ),
+      );
+      expect(e).toMatchObject({
+        titel: 'Alt',
+        stichpunkte: ['a'],
+        beschluesse: [],
+        todos: [],
+        termine: [],
+      });
+    });
+
+    it('ein leeres Protokoll lässt sich aus einer Antwort NUR mit neue_punkte füllen – alles übernehmbar', () => {
+      const e = lesen(JSON.stringify({ neue_punkte: [neuerPunkt] }), leeresProtokoll());
+      expect(e).toHaveLength(1);
+      expect(e.every(uebernehmbar)).toBe(true);
+    });
+  });
+
+  describe('offenePlatzhalter', () => {
+    const lesenOffen = (np: object, zuordnung: Record<string, string> = {}) => {
+      const r = antwortLesen(JSON.stringify({ neue_punkte: [{ titel: 'N', ...np }] }), {
+        dokument: [],
+        zuordnung,
+        funde: [],
+        gruppe: GRUPPE,
+      });
+      if (!r.ok) throw new Error(r.meldung);
+      return offenePlatzhalter(r.eintraege);
+    };
+
+    it('findet Platzhalter in Beschlüssen, To-Dos (Text und Zuständige) und Terminen des neuen Punkts', () => {
+      expect(lesenOffen({ beschluesse: ['B [Person 1]'] })).toEqual(['[Person 1]']);
+      expect(lesenOffen({ todos: [{ text: 'T [Person 2]' }] })).toEqual(['[Person 2]']);
+      expect(lesenOffen({ todos: [{ text: 'T', wer: ['[Person 3]'] }] })).toEqual(['[Person 3]']);
+      expect(lesenOffen({ termine: [{ text: 'M [Vertraulich 4]' }] })).toEqual(['[Vertraulich 4]']);
+    });
+
+    it('zugeordnete Platzhalter sind weg', () => {
+      expect(
+        lesenOffen(
+          {
+            beschluesse: ['B [Person 1]'],
+            todos: [{ text: 'T [Person 1]', wer: ['[Person 1]'] }],
+            termine: [{ text: 'M [Person 1]' }],
+          },
+          { '[Person 1]': 'Maria Dück' },
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe('Übernahme', () => {
+    const uebernehmen = (dok: Block[], np: object = neuerPunkt) => {
+      const e = lesen(
+        JSON.stringify({ neue_punkte: [np, { titel: 'Zweiter', stichpunkte: ['z'] }] }),
+        dok,
+      );
+      return uebernahmePlanen(e, dok, neueId);
+    };
+
+    it('ein neuer Punkt wird Tagesordnungspunkt, Stichpunkte, Beschlüsse, To-Dos, Termine – in dieser Reihenfolge, vor den Schlusszeilen (vor = null)', () => {
+      const plan = uebernehmen(leeresProtokoll());
+      expect(plan.einfuegungen).toHaveLength(1);
+      expect(plan.einfuegungen[0].vor).toBeNull();
+      expect(plan.uebersprungen).toEqual([]);
+      expect(
+        plan.einfuegungen[0].bloecke.map((b) => [b.type, b.props?.level, textAus(b.content)]),
+      ).toEqual([
+        ['heading', 1, 'Parkplatz'],
+        ['bulletListItem', undefined, 'Schilder fehlen.'],
+        [BLOCK.beschluss, undefined, 'Wir bestellen Schilder.'],
+        [BLOCK.beschluss, undefined, 'Maria prüft den Preis.'],
+        [BLOCK.aufgabe, undefined, 'Entwurf zeigen'],
+        [BLOCK.aufgabe, undefined, 'Ohne alles'],
+        [BLOCK.termin, undefined, 'Aufbau'],
+        [BLOCK.termin, undefined, 'Ohne Datum'],
+        ['heading', 1, 'Zweiter'],
+        ['bulletListItem', undefined, 'z'],
+      ]);
+    });
+
+    it('Beschluss-, To-Do- und Termin-Block haben dieselbe Form wie bei einem vorhandenen Punkt (gleiche Erzeugung)', () => {
+      const dok = dokument();
+      const einzeln = uebernahmePlanen(
+        lesen(
+          JSON.stringify({
+            beschluesse: [{ nr: '3.1', text: 'Wir bestellen Schilder.' }],
+            todos: [
+              {
+                nr: '3.1',
+                text: 'Entwurf zeigen',
+                wer: [ph('Viktor Neumann'), ph('Maria')],
+                bis: '2026-11-30',
+              },
+              { nr: '3.1', text: 'Ohne alles' },
+            ],
+            termine: [
+              { nr: '3.1', datum: '2026-12-12', text: 'Aufbau' },
+              { nr: '3.1', datum: 'kaputt', text: 'Ohne Datum' },
+            ],
+          }),
+          dok,
+        ),
+        dok,
+        neueId,
+      ).einfuegungen[0].bloecke;
+      const neu = uebernehmen(leeresProtokoll()).einfuegungen[0].bloecke;
+      const form = (b: Block) => [b.type, b.props, textAus(b.content), b.children];
+      const nimm = (bl: Block[], t: string, n: number) =>
+        bl
+          .filter((b) => b.type === t)
+          .slice(0, n)
+          .map(form);
+      expect(nimm(neu, BLOCK.beschluss, 1)).toEqual(nimm(einzeln, BLOCK.beschluss, 1));
+      expect(nimm(neu, BLOCK.aufgabe, 2)).toEqual(nimm(einzeln, BLOCK.aufgabe, 2));
+      expect(nimm(neu, BLOCK.termin, 2)).toEqual(nimm(einzeln, BLOCK.termin, 2));
+      const a = neu.find((b) => textAus(b.content) === 'Entwurf zeigen')!;
+      expect(vorabLesen(a.props?.vorab)).toEqual({
+        wer: [5],
+        extern: 'Viktor Neumann',
+        bis: '2026-11-30',
+      });
+      expect(neu.find((b) => textAus(b.content) === 'Ohne alles')!.props).toEqual({
+        aufgabe: '',
+        vorab: '',
+      });
+      expect(neu.find((b) => textAus(b.content) === 'Aufbau')!.props).toEqual({
+        datum: '2026-12-12',
+      });
+      expect(neu.find((b) => textAus(b.content) === 'Ohne Datum')!.props).toEqual({ datum: '' });
+    });
+
+    it('der neue Punkt ist ein echter Tagesordnungspunkt: ableiten ordnet Beschluss, To-Do und Termin ihm zu', () => {
+      const dok = leeresProtokoll();
+      for (const f of uebernehmen(dok).einfuegungen) {
+        const i = f.vor === null ? dok.length : dok.findIndex((b) => b.id === f.vor);
+        dok.splice(i, 0, ...f.bloecke);
+      }
+      const a = ableiten(dok);
+      expect(a.punkte.map((p) => [p.nummer, p.titel])).toEqual([
+        ['1', 'Parkplatz'],
+        ['2', 'Zweiter'],
+      ]);
+      const hId = a.punkte[0].blockId;
+      expect(a.beschluesse.map((b) => b.punkt)).toEqual([hId, hId]);
+      expect(a.aufgaben.map((b) => b.punkt)).toEqual([hId, hId]);
+      expect(a.termine.map((b) => [b.punkt, b.datum])).toEqual([
+        [hId, '2026-12-12'],
+        [hId, null],
+      ]);
+    });
   });
 });

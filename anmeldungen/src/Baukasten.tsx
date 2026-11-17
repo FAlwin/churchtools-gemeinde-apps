@@ -39,6 +39,7 @@ import {
   weggefallenText,
 } from '@shared/anmeldung/bedingungen';
 import { mitSchritten, schrittImBaukasten } from '@shared/anmeldung/formularSchritte';
+import { freiName } from '@shared/anmeldung/freieAntwort';
 import { feldEinordnen, feldEntfernen, feldSpeichern, regelSpeichern } from './formularFelder';
 import { BedingungChips } from './Bedingungen';
 import { RegelFenster, RegelListe } from './RegelListe';
@@ -503,6 +504,9 @@ export function Baukasten({
             .filter(
               (o) =>
                 !entwurf.antworten.some((a) => a.altId === o.id) &&
+                // F3c: Die freie Antwort ist keine entfernte – solange sie im Entwurf bleibt (in ChurchTools heißt sie
+                // wie beim letzten Speichern).
+                !(entwurf.feld.frei && o.text === freiName(f)) &&
                 (entfernt.jeAntwort.get(o.id) ?? 0) > 0,
             )
             .map((o) => o.text)

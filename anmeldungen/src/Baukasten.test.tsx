@@ -1752,3 +1752,147 @@ describe('Baukasten (F2c): Schritte', () => {
     );
   });
 });
+
+// ── F3c: freie Antwort im Baukasten (Entwurf f3-freie-antwort-v1, Ansicht Baukasten) ──
+describe('Baukasten (F3c): freie Antwort', () => {
+  const beschriftung = () =>
+    screen.getByLabelText<HTMLInputElement>('Beschriftung der freien Antwort');
+  const textfeld = () => screen.getByLabelText<HTMLSelectElement>('Textfeld der freien Antwort');
+  /** „Gruppe“ (f1) mit freier Antwort „Sonstiges“; „Welche?“ (f2) nur, wenn Gruppe „Sonstiges“. */
+  function mitFrei(): OeffentlicheEinstellungen {
+    const e = einstellungen();
+    e.formular.person.find((f) => f.id === 'f1')!.frei = { name: 'Sonstiges', textfeld: 'auf' };
+    e.formular.person.push({
+      id: 'f2',
+      art: 'eigen',
+      typ: 'text',
+      frage: 'Welche?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      bed: { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Sonstiges' }] },
+    });
+    return e;
+  }
+
+  it('„+ Freie Antwort“: vorbelegt „Sonstiges“ und zum Überschreiben markiert; gespeichert beim Verlassen', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: '+ Freie Antwort' }));
+    expect(beschriftung().value).toBe('Sonstiges');
+    expect(document.activeElement).toBe(beschriftung());
+    expect(textfeld().value).toBe('auf');
+    expect(screen.queryByRole('button', { name: '+ Freie Antwort' })).toBeNull();
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({
+      id: 'f1',
+      frei: { name: 'Sonstiges', textfeld: 'auf' },
+    });
+  });
+
+  it('Textfeld wählen: der Satz daneben sagt, was gilt – auch zur Pflicht', () => {
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    expect(screen.getByText('Der Text ist freiwillig (die Frage ist freiwillig).')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Pflicht/ }));
+    expect(
+      screen.getByText('Gewählt → der Text ist Pflicht (die Frage ist Pflicht).'),
+    ).toBeTruthy();
+    fireEvent.change(textfeld(), { target: { value: 'ohne' } });
+    expect(screen.getByText('Nur eine Antwort am Ende, ohne Eingabe.')).toBeTruthy();
+  });
+
+  it('✕ entfernt die freie Antwort – der Link ist wieder da', async () => {
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Freie Antwort entfernen' }));
+    expect(screen.queryByLabelText('Beschriftung der freien Antwort')).toBeNull();
+    expect(screen.getByRole('button', { name: '+ Freie Antwort' })).toBeTruthy();
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).not.toHaveProperty('frei');
+  });
+
+  it('nur bei eigenen Auswahlfragen – nicht bei Text oder einem empfohlenen Baustein', () => {
+    const e = mitFrei();
+    e.formular.person.find((f) => f.id === 'foto')!.zustand = 'freiwillig';
+    const { huelle } = zeigen(e);
+    fireEvent.click(huelle('f2'));
+    expect(screen.queryByRole('button', { name: '+ Freie Antwort' })).toBeNull();
+    fireEvent.click(huelle('foto'));
+    expect(screen.queryByRole('button', { name: '+ Freie Antwort' })).toBeNull();
+  });
+
+  it('eigene Ja-/Nein-Frage: auch dort „+ Freie Antwort“ (Klick-Runde 9)', () => {
+    const e = einstellungen();
+    e.formular.person.push({
+      id: 'f3',
+      art: 'eigen',
+      typ: 'janein',
+      frage: 'Getauft?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+    });
+    const { huelle } = zeigen(e);
+    fireEvent.click(huelle('f3'));
+    fireEvent.click(screen.getByRole('button', { name: '+ Freie Antwort' }));
+    expect(beschriftung().value).toBe('Sonstiges');
+  });
+
+  it('Beschriftung wie eine feste Antwort: die Meldung steht am Feld', () => {
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(beschriftung(), { target: { value: 'Kids' } });
+    expect(
+      screen.getByText(
+        '„Kids“ gibt es schon als Antwort – die freie Antwort braucht eine eigene Beschriftung.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('Fragetyp zu „Kurzer Text“: die freie Antwort fällt weg', async () => {
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Fragetyp'), { target: { value: 'text' } });
+    await waitFor(() => expect(ff.feldTypAendern).toHaveBeenCalled());
+    expect(ff.feldTypAendern.mock.calls[0][1]).not.toHaveProperty('frei');
+  });
+
+  it('umbenannt: die Bedingung, die darauf schaut, zieht im Baukasten gleich mit', () => {
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(beschriftung(), { target: { value: 'Andere' } });
+    fireEvent.click(huelle('allergy'));
+    expect(
+      within(huelle('f2') as HTMLElement).getByText('Nur wenn „Gruppe“ ist Andere'),
+    ).toBeTruthy();
+  });
+
+  it('schon gewählt: kein Hinweis „ausgeblendet“ für die freie Antwort selbst', async () => {
+    ff.ctFelderLesen.mockResolvedValue(
+      new Map([
+        [
+          501,
+          {
+            id: 501,
+            name: 'Gruppe',
+            options: [
+              { id: 11, name: 'Minis' },
+              { id: 12, name: 'Kids' },
+              { id: 13, name: 'Sonstiges' },
+            ],
+          },
+        ],
+      ]),
+    );
+    ff.antwortenZaehlen.mockResolvedValue(
+      new Map([[501, { gesamt: 1, jeOption: new Map([['13', 1]]) }]]),
+    );
+    const { huelle } = zeigen(mitFrei());
+    fireEvent.click(huelle('f1'));
+    await screen.findByText(/hier schon geantwortet/);
+    expect(screen.queryByText(/hat schon jemand gewählt/)).toBeNull();
+  });
+});

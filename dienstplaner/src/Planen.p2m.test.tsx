@@ -600,7 +600,7 @@ describe('Personen – Abwesenheit D: schraffierte Zelle, Grund als Text; Warnfa
     expect(k.closest('td')!.className).toMatch(/leerKlick/);
   });
 
-  it('der Entwurf zeigt seine Art in der Zelle: „?“ im gestrichelten Kreis (Anfrage), Haken im gefüllten Kreis und kräftiger (direkt)', async () => {
+  it('der Entwurf zeigt seine Art in der Zelle: Anfrage gestrichelt mit „?“, direkt durchgezogen mit Haken – beide im gefüllten Kreis', async () => {
     const e = entwurf({
       ort: { eventId: 21, serviceId: 6, index: 1 },
       ziel: { art: 'person', personId: 12, name: 'Daniel Test' },
@@ -621,5 +621,28 @@ describe('Personen – Abwesenheit D: schraffierte Zelle, Grund als Text; Warnfa
     expect(anfrage.className).toMatch(/entwurf/);
     expect(anfrage.className).not.toMatch(/entwurfDirekt/);
     expect(anfrage.querySelector('[class*="frage"]')?.textContent).toBe('?');
+  });
+
+  it('Matrix: derselbe Rahmen – direkt (und Gast) durchgezogen, Anfrage gestrichelt (Alwin 17.11.2026: „das Fragezeichen sieht man ganz schlecht“)', async () => {
+    const e = entwurf({
+      ort: { eventId: 21, serviceId: 6, index: 1 },
+      ziel: { art: 'person', personId: 12, name: 'Daniel Test' },
+      modus: 'direkt',
+      von: { personId: 9, name: 'Planer' },
+    });
+    const a = entwurf({
+      ort: { eventId: 21, serviceId: 6, index: 2 },
+      ziel: { art: 'person', personId: 5, name: 'Anna Test' },
+      von: { personId: 9, name: 'Planer' },
+    });
+    zeige(
+      { entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([e, a])) }) },
+      { ansicht: 'matrix' },
+    );
+    const direkt = await screen.findByRole('button', { name: /Entwurf von Planer: Daniel Test/ });
+    expect(direkt.className).toMatch(/entwurfDirekt/);
+    const anfrage = screen.getByRole('button', { name: /Entwurf von Planer: Anna Test/ });
+    expect(anfrage.className).toMatch(/entwurf/);
+    expect(anfrage.className).not.toMatch(/entwurfDirekt/);
   });
 });

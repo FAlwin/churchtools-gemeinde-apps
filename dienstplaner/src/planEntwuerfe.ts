@@ -4,6 +4,7 @@ import type { TerminVorlage } from '@shared/ct/terminVorlagen';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import {
   diensteDerGruppe,
+  nimmtEintraegeAn,
   type Plan,
   type PlanGruppe,
   type PlanPlatz,
@@ -114,6 +115,9 @@ export function entwurfsLage(
  * Die freien Plätze für den Zauberstab (E5-2): nicht abgesagt, nicht vorbei, wo man den Dienst planen und die
  * Entwürfe der Gruppe ändern darf – **ohne Entwurf** (die bleiben, wie sie sind; gezählt in `mitEntwurf`).
  * Der Reihe nach: Termin, Dienst, Platz – so rechnet auch der Kern.
+ *
+ * `dienstId`: nur dieser Dienst der Gruppe (der Zauberstab in „Personen“, P2z) – dieselbe Rechnung, nur mit einem
+ * Dienst statt der ganzen Gruppe.
  */
 export function zauberZeilen(
   plan: Plan | null,
@@ -121,14 +125,17 @@ export function zauberZeilen(
   heute: string,
   idx: number[],
   g: PlanGruppe,
+  dienstId?: number,
 ): { zeilen: ZauberZeile[]; mitEntwurf: number } {
   const zeilen: ZauberZeile[] = [];
   let mitEntwurf = 0;
   if (!plan || !daten) return { zeilen, mitEntwurf };
   for (const i of [...idx].sort((a, b) => a - b)) {
     const s = plan.spalten[i];
-    if (s.abgesagt || s.tag < heute) continue;
+    // Abgesagte Termine nehmen keine Einträge an (`nimmtEintraegeAn`); vergangene füllt nur der Zauberstab nicht.
+    if (!nimmtEintraegeAn(s) || s.tag < heute) continue;
     for (const zl of g.zeilen) {
+      if (dienstId !== undefined && zl.dienst.id !== dienstId) continue;
       if (!darfPlanen(zl, s) || !darfAendern(daten, zl)) continue;
       const zelle = zl.zellen[i] ?? [];
       zelle.forEach((p, n) => {

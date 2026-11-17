@@ -1,6 +1,11 @@
 import { Fragment } from 'react';
 import { Icon } from '@ui/icons/icons';
-import type { PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
+import {
+  nimmtEintraegeAn,
+  type PlanPlatz,
+  type PlanSpalte,
+  type PlanZeile,
+} from '@shared/dienstplan/plan';
 import { zielText, type Entwurf } from '@shared/dienstplan/entwuerfe';
 import { platzPerson } from '@shared/dienstplan/fokus';
 import { darfPlanen, type EntwurfAmPlatz, type Sicht } from './planSicht';
@@ -45,7 +50,8 @@ export function EinteilPlaetze({
   return (
     <Plaetze
       plaetze={z.zellen[i] ?? []}
-      onFrei={planen ? (nr) => am.onFrei(i, z, nr) : undefined}
+      // Ein abgesagter Termin nimmt keine Einträge an (P2a-2) – der freie Platz ist dort kein Knopf.
+      onFrei={planen && nimmtEintraegeAn(s) ? (nr) => am.onFrei(i, z, nr) : undefined}
       entwurf={(p) => am.entwurf(i, z, p)}
       ohnePlatz={am.ohnePlatz(i, z)}
       onOhnePlatz={aendern ? (e) => am.onOhnePlatz(i, z, e) : undefined}

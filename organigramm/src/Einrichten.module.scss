@@ -297,3 +297,51 @@
   gap: 10px;
   padding-bottom: 8px;
 }
+
+// „Damit die Leitungen den Reiter sehen“ (O9-F12): nur Text, keine Knöpfe.
+.leseRechte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  font-size: 14px;
+
+  h4 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text2);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+// Eine Zeile der Prüfliste mit einem Knopf rechts (Seite „Einrichtung“: „Rechte setzen …“, „Nachtragen …“).
+.zeilenKnopf {
+  flex: none;
+  margin-left: auto;
+}
+
+// Die gesperrte Bereichsgruppe beim Ändern (O9-F11): nur Anzeige.
+.gesperrt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface3);
+  font-weight: 600;
+}

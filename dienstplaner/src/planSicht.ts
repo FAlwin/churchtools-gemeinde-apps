@@ -30,12 +30,16 @@ export interface PersonenEintragen {
     personId: number,
     zustand: RasterZelle['zustand'],
   ) => ZellenAktion;
-  /** Entwurf für die Person auf den freien Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. */
+  /**
+   * Entwurf für die Person auf den Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. `ersetzt`: die
+   * Version des „Zurückziehen“-Entwurfs an diesem Platz, den der Eintrag ersetzt („X durch Y ersetzen“).
+   */
   eintragen: (
     spalte: number,
     zeile: PlanZeile,
     nr: number,
     person: { personId: number; name: string },
+    ersetzt?: number,
   ) => Promise<void>;
   /** Den eigenen Entwurf wieder wegnehmen – meldet selbst „entfernt“ bzw. den Fehler. */
   wegnehmen: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
@@ -67,9 +71,14 @@ export interface Sicht {
   onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
   /**
    * Zauberstab (E5-2): automatische Planung für diese Termine der Gruppe; `undefined`, wo es nichts zu füllen gibt
-   * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf).
+   * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf). Mit `dienstId` nur für diesen
+   * Dienst der Gruppe („Personen“, P2z) – dieselbe Funktion, dasselbe Fenster.
    */
-  onZauberstab: (spalten: number[], gruppe: PlanGruppe) => (() => void) | undefined;
+  onZauberstab: (
+    spalten: number[],
+    gruppe: PlanGruppe,
+    dienstId?: number,
+  ) => (() => void) | undefined;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;

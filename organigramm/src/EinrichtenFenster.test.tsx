@@ -88,6 +88,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const onSchliessen = vi.fn();
+const onGeschrieben = vi.fn();
 const fenster = (art: 'einrichten' | 'aendern', standDaten?: ReturnType<typeof gutesStand>) =>
   render(
     <EinrichtenFenster
@@ -96,6 +97,7 @@ const fenster = (art: 'einrichten' | 'aendern', standDaten?: ReturnType<typeof g
       einrichtung={art === 'aendern' ? EINRICHTUNG : null}
       standDaten={standDaten}
       onSchliessen={onSchliessen}
+      onGeschrieben={onGeschrieben}
     />,
   );
 const weiter = () => fireEvent.click(screen.getByRole('button', { name: 'Weiter zur Vorschau' }));
@@ -105,6 +107,8 @@ const zurVorschau = async () => {
 };
 const hauptKnopf = () =>
   screen.getByRole('button', { name: /^(Jetzt einrichten|Änderungen schreiben)$/ });
+/** Der Hauptknopf ist an (seit O9-5d schreibt er): alles gelesen und gut. */
+const bereit = () => !(hauptKnopf() as HTMLButtonElement).disabled;
 
 /** Das erste Einrichten, fertig ausgefüllt: Bereich, drei Stufen. */
 function ausfuellen() {
@@ -117,7 +121,7 @@ function ausfuellen() {
 
 describe('Fenster öffnen – aus beiden Stellen', () => {
   it('„Einrichten …“ auf der Seite „noch nicht eingerichtet“ öffnet das Modal-Fenster; der Satz „folgt“ ist weg', () => {
-    render(<NichtEingerichtet start={START} />);
+    render(<NichtEingerichtet start={START} onGeschrieben={onGeschrieben} />);
     expect(screen.queryByText(/Einrichten folgt/)).toBeNull();
     expect(screen.getByText('Es wird erst nach einer Vorschau etwas angelegt.')).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -143,13 +147,18 @@ describe('Fenster öffnen – aus beiden Stellen', () => {
         einrichtung={EINRICHTUNG}
         regel={{ art: 'nichtPruefbar' }}
         jahr={JAHR}
+        onGeschrieben={onGeschrieben}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Stufen ändern …' }));
     expect(screen.getByRole('dialog', { name: 'Stufen ändern' })).toBeTruthy();
+    // Die Bereichsgruppe ist beim Ändern gesperrt (O9-F11): nur Anzeige, keine Auswahl.
+    expect(screen.queryByRole('button', { name: /Wechsel-Gruppen anlegen unter/ })).toBeNull();
+    expect(screen.getByText('Wechsel-Gruppen hängen unter')).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: /^Wechsel-Gruppen anlegen unter: Kinder & Jugend$/ }),
+      within(screen.getByRole('dialog', { name: 'Stufen ändern' })).getByText('Kinder & Jugend'),
     ).toBeTruthy();
+    expect(screen.getByText(/Lässt sich hier nicht ändern/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gruppe der Stufe 2: Fische' })).toBeTruthy();
     expect(screen.getByLabelText<HTMLInputElement>('ab Alter, Stufe 2').value).toBe('7');
     expect(screen.getByLabelText<HTMLInputElement>('Ankündigung').value).toBe('8');
@@ -164,6 +173,7 @@ describe('Fenster öffnen – aus beiden Stellen', () => {
         einrichtung={EINRICHTUNG}
         regel={{ art: 'nichtPruefbar' }}
         jahr={JAHR}
+        onGeschrieben={onGeschrieben}
       />,
     );
     await screen.findByText('Gruppentyp „Gruppenwechsel“');
@@ -371,7 +381,7 @@ describe('Schritt „Vorschau“', () => {
     expect(await screen.findByText('Der Stand in ChurchTools wird geprüft …')).toBeTruthy();
     expect(screen.queryByRole('list', { name: 'Das legt die Erweiterung an' })).toBeNull();
     expect(screen.queryByText('Nicht alles ließ sich prüfen:')).toBeNull();
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 
   it('der Typ ließ sich nicht prüfen: gelber Hinweis, nie „neu“ oder „vorhanden“', async () => {
@@ -380,7 +390,7 @@ describe('Schritt „Vorschau“', () => {
     await zurVorschau();
     expect(await screen.findByText('Nicht alles ließ sich prüfen:')).toBeTruthy();
     expect(screen.getByText('ließ sich gerade nicht prüfen')).toBeTruthy();
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 
   it('„Es wird keine Mail verschickt“ mit dem echten Ankündigungsdatum des ersten Jahres – und es richtet sich nach den Wochen', async () => {
@@ -406,7 +416,7 @@ describe('Schritt „Vorschau“', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 
   it('die Kinder ließen sich nicht lesen: Meldung mit „Erneut versuchen“, kein Zahlenblock', async () => {
@@ -442,39 +452,37 @@ describe('Schritt „Vorschau“', () => {
   });
 });
 
-describe('Fußzeile und Haken (nichts wird geschrieben)', () => {
-  it('der Hauptknopf ist in dieser Fassung immer aus, mit dem Satz daneben – Beschriftung je nach Fall', async () => {
+describe('Fußzeile und Haken', () => {
+  it('der Hauptknopf ist an, sobald alles gelesen und gut ist – Beschriftung je nach Fall; den Satz „folgt“ gibt es nicht mehr', async () => {
     fenster('aendern', gutesStand());
     await zurVorschau();
     await screen.findByRole('list', { name: 'Das legt die Erweiterung an' });
     const k = hauptKnopf() as HTMLButtonElement;
     expect(k.textContent).toBe('Änderungen schreiben');
-    expect(k.disabled).toBe(true);
-    expect(screen.getByText('Schreiben kommt mit der nächsten Fassung.')).toBeTruthy();
+    expect(screen.queryByText(/nächsten Fassung/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Abbrechen' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Zurück' })).toBeTruthy();
     // beim Ändern gibt es keinen Haken (O9-F4 gilt fürs Einrichten)
     expect(screen.queryByRole('checkbox')).toBeNull();
-    // alles gelesen und gut: „wäre an“
-    await waitFor(() => expect(k.getAttribute('data-bereit')).toBe('ja'));
+    // alles gelesen und gut: an
+    await waitFor(() => expect(!k.disabled).toBe(true));
   });
 
-  it('Einrichten: erst mit dem Haken „Rechte der Leitung geprüft“ wäre der Knopf an', async () => {
+  it('Einrichten: erst mit dem Haken „Rechte der Leitung geprüft“ ist der Knopf an', async () => {
     fenster('einrichten');
     ausfuellen();
     await zurVorschau();
     await screen.findByRole('list', { name: 'Das legt die Erweiterung an' });
     const k = hauptKnopf() as HTMLButtonElement;
     expect(k.textContent).toBe('Jetzt einrichten');
-    expect(k.disabled).toBe(true);
+    expect(k.disabled).toBe(true); // ohne Haken
     const haken = await screen.findByRole<HTMLInputElement>('checkbox');
     await waitFor(() => expect(haken.disabled).toBe(false));
-    expect(k.getAttribute('data-bereit')).toBe('nein');
+    expect(!k.disabled).toBe(false);
     fireEvent.click(haken);
-    expect(k.getAttribute('data-bereit')).toBe('ja');
-    expect(k.disabled).toBe(true); // geschrieben wird erst mit der nächsten Fassung
+    expect(!k.disabled).toBe(true);
     fireEvent.click(haken);
-    expect(k.getAttribute('data-bereit')).toBe('nein');
+    expect(!k.disabled).toBe(false);
   });
 
   it('der Haken gilt nur für diesen Durchgang: Zurück und wieder vor setzt ihn zurück', async () => {
@@ -517,7 +525,7 @@ describe('Stopp bei fremden Regeln', () => {
     expect(alarm.textContent).toContain('Deshalb geht es hier nicht weiter');
     const haken = screen.getByRole<HTMLInputElement>('checkbox');
     expect(haken.disabled).toBe(true);
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 
   it('beim Ändern heißt es „Das Schreiben würde sie ersetzen“, und auch dort ist es ein Stopp', async () => {
@@ -533,7 +541,7 @@ describe('Stopp bei fremden Regeln', () => {
     const alarm = await screen.findByRole('alert');
     expect(alarm.textContent).toContain('1 Regel,');
     expect(alarm.textContent).toContain('Das Schreiben würde sie ersetzen');
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 
   it('Regeln nur von uns: kein Stopp', async () => {
@@ -548,7 +556,7 @@ describe('Stopp bei fremden Regeln', () => {
     await zurVorschau();
     await screen.findByRole('list', { name: 'Das legt die Erweiterung an' });
     expect(screen.queryByRole('alert')).toBeNull();
-    await waitFor(() => expect(hauptKnopf().getAttribute('data-bereit')).toBe('ja'));
+    await waitFor(() => expect(bereit()).toBe(true));
   });
 });
 
@@ -566,12 +574,12 @@ describe('Stopp bei Regeln, die sich nicht lesen ließen', () => {
     const alarm = await screen.findByRole('alert');
     expect(alarm.textContent).toContain('Die Regeln von „Fische“ ließen sich nicht prüfen.');
     expect(alarm.textContent).toContain('nie angenommen, dass es keine gibt');
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
     // beim zweiten Mal klappt es
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal prüfen' }));
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
     expect(regelnLaden).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(hauptKnopf().getAttribute('data-bereit')).toBe('ja'));
+    await waitFor(() => expect(bereit()).toBe(true));
   });
 
   it('solange die Regeln noch geladen werden, ist es auch nicht „an“', async () => {
@@ -579,6 +587,6 @@ describe('Stopp bei Regeln, die sich nicht lesen ließen', () => {
     fenster('aendern', gutesStand());
     await zurVorschau();
     await screen.findByRole('list', { name: 'Das legt die Erweiterung an' });
-    expect(hauptKnopf().getAttribute('data-bereit')).toBe('nein');
+    expect(bereit()).toBe(false);
   });
 });

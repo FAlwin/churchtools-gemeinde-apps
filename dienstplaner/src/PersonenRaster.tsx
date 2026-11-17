@@ -20,6 +20,7 @@ import {
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
 import type { PersonenLader } from './ladePersonen';
+import { ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
@@ -160,9 +161,10 @@ export function PersonenRaster({
   }
   const termine = spalten.map((i) => plan.spalten[i]);
   // Die Zeile der Matrix zu jedem Block – der Platz, auf den eingetragen wird, gehört zu ihr.
-  const zeileJe = new Map<number, PlanZeile>(
-    rasterDienste(plan, spalten, gruppen).map((x) => [x.zeile.dienst.id, x.zeile]),
-  );
+  const diensteDa = rasterDienste(plan, spalten, gruppen);
+  const zeileJe = new Map<number, PlanZeile>(diensteDa.map((x) => [x.zeile.dienst.id, x.zeile]));
+  // Die Gruppe zu jedem Block – der Zauberstab rechnet je Gruppe und Dienst (dieselbe Funktion wie in der Matrix).
+  const gruppeJe = new Map(diensteDa.map((x) => [x.zeile.dienst.id, x.gruppe]));
 
   const aktionFuer = (b: RasterBlock, r: RasterZeile, pos: number): ZellenAktion => {
     const zl = zeileJe.get(b.dienst.id);
@@ -197,7 +199,13 @@ export function PersonenRaster({
         void tue(async () => {
           const jetzt = personen.aktion(i, zl, r.personId, null);
           if (jetzt?.art === 'eintragen')
-            await personen.eintragen(i, zl, jetzt.nr, { personId: r.personId, name: r.name });
+            await personen.eintragen(
+              i,
+              zl,
+              jetzt.nr,
+              { personId: r.personId, name: r.name },
+              jetzt.ersetzt,
+            );
         });
       const warnung = eintragenWarnung({
         name: r.name,
@@ -289,6 +297,7 @@ export function PersonenRaster({
   const blockKopf = (b: RasterBlock) => {
     const n = b.zeilen.length;
     const offen = !zugeklappt.has(blockSchluessel(b.dienst.id));
+    const zauberGruppe = gruppeJe.get(b.dienst.id);
     return (
       <tr key={`k-${b.dienst.id}`}>
         <td className={styles.blockKopf} colSpan={termine.length + 2}>
@@ -309,6 +318,13 @@ export function PersonenRaster({
                 {n} {n === 1 ? 'Person' : 'Personen'}
               </span>
             </button>
+            {/* Zauberstab für diesen Dienst über alle gezeigten Termine – dasselbe Fenster wie in der Matrix. */}
+            {zauberGruppe && (
+              <ZauberKnopf
+                onKlick={sicht.onZauberstab(spalten, zauberGruppe, b.dienst.id)}
+                text={`Zauberstab: ${b.dienst.name} für alle gezeigten Termine vorschlagen`}
+              />
+            )}
             {b.abwesenheit !== 'ok' && (
               <span className={styles.blockHinweis}>
                 {b.abwesenheit === 'nichtSichtbar'

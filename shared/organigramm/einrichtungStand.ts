@@ -16,6 +16,7 @@ import { ctId } from '../ct/ctId';
 import {
   alleRegeln,
   aufraeumRoutine,
+  istWechselTyp,
   LEITER_RECHTE,
   uebergaenge,
   wechselGruppenName,
@@ -274,6 +275,35 @@ function rechteZeile(d: EinrichtungDaten): StandZeile {
 
 // ── Zeile: Wechsel-Gruppen ─────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * **Gruppen, die wie eine Wechsel-Gruppe aussehen, aber nirgends eingetragen sind** (O9-5d): gleicher Name, Typ
+ * „Gruppenwechsel“, direkt unter der Bereichsgruppe, und nicht schon in `benutzt`. Das ist die eine Lücke beim Einrichten:
+ * Bricht es nach dem Anlegen und vor dem Speichern ab, steht die Gruppe in ChurchTools, aber nicht in der Einrichtung.
+ * Eine Stelle für den Stand („das steht da, ist aber nicht eingetragen“) und fürs Wiederholen (dort wird die Gruppe
+ * übernommen, statt eine zweite anzulegen).
+ */
+export function waiseKandidaten(a: {
+  name: string;
+  bereichId: number;
+  typIds: ReadonlySet<number>;
+  gruppen: readonly OrgGruppe[];
+  eltern: ReadonlyMap<number, readonly number[]>;
+  benutzt: ReadonlySet<number>;
+}): OrgGruppe[] {
+  return a.gruppen.filter(
+    (g) =>
+      g.name === a.name &&
+      g.typId !== null &&
+      a.typIds.has(g.typId) &&
+      !a.benutzt.has(g.id) &&
+      (a.eltern.get(g.id) ?? []).includes(a.bereichId),
+  );
+}
+
+/** Die Gruppentypen, die „Gruppenwechsel“ heißen (nach Namen, wie `ladeTypVorhanden`). */
+export const wechselTypIds = (typNamen: ReadonlyMap<number, string>): Set<number> =>
+  new Set([...typNamen].filter(([, n]) => istWechselTyp(n)).map(([id]) => id));
+
 function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
   const wege = uebergaenge(e.einstellung);
   const titel = anzahl(wege.length, 'Wechsel-Gruppe', 'Wechsel-Gruppen');
@@ -295,6 +325,21 @@ function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
     if (!(q.eltern.get(w.gruppeId) ?? []).includes(e.bereichGruppeId))
       probleme.push(`${name}: hängt nicht unter „${bereich}“`);
   }
+  // Angelegt, aber nicht eingetragen: der Abbruch zwischen „Gruppe anlegen“ und „Einrichtung speichern“.
+  const typIds = wechselTypIds(q.typNamen);
+  const benutzt = new Set(e.wechselGruppen.map((w) => w.gruppeId));
+  for (const u of wege)
+    for (const g of waiseKandidaten({
+      name: wechselGruppenName(u),
+      bereichId: e.bereichGruppeId,
+      typIds,
+      gruppen: q.gruppen,
+      eltern: q.eltern,
+      benutzt,
+    }))
+      probleme.push(
+        `${wechselGruppenName(u)}: Gruppe ${g.id} steht unter „${bereich}“, ist aber nicht in der Einrichtung eingetragen – „Stufen ändern → Änderungen schreiben“ übernimmt sie`,
+      );
   return {
     id: 'wechselGruppen',
     titel,
@@ -367,6 +412,14 @@ function sollRegeln(e: Einrichtung, platzhalter: boolean): Map<number, Regel[]> 
   );
 }
 
+/** Die Status einer dynamischen Gruppe in ChurchTools – so, wie ein Mensch sie nennt. */
+const STATUS_TEXT: Record<string, string> = {
+  active: 'aktiv',
+  inactive: 'inaktiv',
+  manual: 'manuell',
+  none: 'keiner',
+};
+
 function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): StandZeile {
   const titel = 'Regeln der Gruppen';
   const soll = sollRegeln(e, false);
@@ -402,6 +455,11 @@ function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): Stand
       if (!g.status.ok) unlesbar = true;
       else if (g.status.wert === 'none')
         befunde.push('läuft nicht – die Gruppe ist nicht als dynamisch eingeschaltet');
+      // Nur „aktiv“ rechnet ChurchTools von selbst neu (O9-5d): bei `manual` verschiebt am Wechseltag niemand.
+      else if (g.status.wert !== 'active')
+        befunde.push(
+          `rechnet nicht von selbst neu – der Status steht auf „${STATUS_TEXT[g.status.wert] ?? g.status.wert}“, nötig ist „aktiv“`,
+        );
     }
     if (befunde.length > 0) probleme.push(`${name}: ${befunde.join('; ')}`);
   }
@@ -528,7 +586,9 @@ function routinenZeile(e: Einrichtung, d: EinrichtungDaten): StandZeile {
     id: 'routinen',
     titel,
     stand: ok(
-      `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
+      wege.length === 1
+        ? `räumt die Wechsel-Gruppe ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`
+        : `räumen die Wechsel-Gruppen ${e.einstellung.aufraeumenTage} Tage nach dem Wechsel auf`,
     ),
   };
 }

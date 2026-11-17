@@ -21,6 +21,7 @@ import {
   wechseltagText,
 } from '@shared/organigramm/wechseltage';
 import { Wechseltage } from './Wechseltage';
+import { START } from './einrichten.testutil';
 import type { RegelStand } from './ladeRegelStand';
 
 const FISCHE = 50;
@@ -111,6 +112,8 @@ function zeigen(
       sichten={sichtenFuer(e)}
       regel={regel}
       tage={wechseltageStand(regel?.art === 'da' ? regel.bis : undefined, jahr.jahr)}
+      start={START}
+      onGeschrieben={vi.fn()}
     />,
   );
 }

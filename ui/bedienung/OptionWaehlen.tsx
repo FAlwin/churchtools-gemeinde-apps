@@ -1,26 +1,9 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
 import { Icon } from '../icons/icons';
 import { KopfKnopf } from './KopfKnopf';
 import { useAufklapp } from './useAufklapp';
+import { useEscape } from './useEscape';
 import styles from './OptionWaehlen.module.scss';
-
-/**
- * Escape schließt das Blatt (am Rechner mit Tastatur der gewohnte Weg hinaus). Das Menü am Rechner nutzt dafür
- * `useAufklapp` wie Filter- und Zeitraum-Knopf.
- */
-function useEscape(aktiv: boolean, schliessen: () => void): void {
-  const aktuell = useRef(schliessen);
-  aktuell.current = schliessen;
-  useEffect(() => {
-    if (!aktiv) return;
-    const taste = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') aktuell.current();
-    };
-    document.addEventListener('keydown', taste);
-    return () => document.removeEventListener('keydown', taste);
-  }, [aktiv]);
-}
 
 /** Eine Möglichkeit in „Option wählen“ („Programmpunkt hinzufügen“). */
 export interface Option {

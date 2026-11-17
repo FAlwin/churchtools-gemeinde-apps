@@ -67,6 +67,15 @@ const todo = (teil: Partial<Aufgabe> = {}): Aufgabe => ({
 });
 
 describe('Wer und Bis vor dem Text', () => {
+  it('Escape klappt das Feld wieder zu, ohne zu wählen (`useEscape`, 16.11.2026)', () => {
+    const { k } = zeige({ text: '' });
+    fireEvent.click(screen.getByRole('button', { name: 'Wer kümmert sich?' }));
+    expect(screen.getByRole('checkbox', { name: 'Johann Becker' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('checkbox', { name: 'Johann Becker' })).toBeNull();
+    expect(k.aendern).not.toHaveBeenCalled();
+  });
+
   it('ohne Text: Wer und Bis bedienbar, Status nicht; die Wahl landet im Block, nicht als To-Do', () => {
     const { editor, k, props } = zeige({ text: '' });
     // Status gibt es erst mit To-Do – ohne Text kein „antippen für …“.

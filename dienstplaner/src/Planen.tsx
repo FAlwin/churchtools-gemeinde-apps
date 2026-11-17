@@ -41,9 +41,8 @@ import { WerWieOft } from './WerWieOft';
 import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
-import { useEinteilen, type WerKannZurueck } from './useEinteilen';
+import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen';
 import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
-import { grundText } from './ladeEntwuerfe';
 import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
@@ -252,6 +251,7 @@ export function Planen({
     werKannOeffnen,
     eintragenMoeglich,
     trageEin,
+    amPersonen,
   } = useEinteilen({
     plan,
     entwuerfe,
@@ -451,6 +451,7 @@ export function Planen({
       onTermin,
       ablauf: matrixAblauf,
       infos: matrixInfos,
+      personen: amPersonen,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -508,12 +509,7 @@ export function Planen({
                     void trageEin(fokusZurueck, { art: 'person', ...fokusPerson.person })
                       ?.then((r) => {
                         if (r.ok) setFokusPerson({ ...fokusPerson, zurueck: null });
-                        else
-                          showToast(
-                            r.grund === 'konflikt'
-                              ? 'Hier hat eben jemand den Platz geändert – bitte noch einmal ansehen.'
-                              : grundText(r.grund),
-                          );
+                        else showToast(fehlerHinweis(r));
                       })
                       .finally(() => setFokusEintragen(false));
                   }
@@ -583,10 +579,14 @@ export function Planen({
         sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
         Angefragten eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben Termine als Raster:
         eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
-        zum Ansehen, eingetragen wird in der Matrix; einen Dienst antippen klappt seinen Block zu.
-        Im Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann
-        in Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“,
-        das Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
+        einen Dienst antippen klappt seinen Block zu. Eine leere Zelle anklicken trägt die Person
+        dort als Entwurf ein (auf einen freien Platz des Dienstes) – war sie am Tag schon in einem
+        anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach. Den eigenen Entwurf
+        anklicken nimmt ihn wieder weg; ist der Dienst voll, geht „Platz dazunehmen“ vorerst nur
+        über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix. Im
+        Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in
+        Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das
+        Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
         belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
         Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
       </p>

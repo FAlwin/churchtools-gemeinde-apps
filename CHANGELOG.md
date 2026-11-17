@@ -317,7 +317,7 @@ Anmeldungen F1d–F5 (Formular-Ausbau, noch nicht veröffentlicht); alle Erweite
 
 ### Intern
 
-- **Ablaufvorlagen: der Kern zum Bearbeiten steht (E10-V1, noch nichts Sichtbares).** Der Schreib-Kern (`shared/ct/schreibKern.ts`)
+- **Ablaufvorlagen: der Kern zum Bearbeiten (E10-V1) – die Grundlage für die Oberfläche aus V3a, V3b und V5.** Der Schreib-Kern (`shared/ct/schreibKern.ts`)
   schreibt jetzt auch in eine Ablaufvorlage (Ziel `{ vorlageId }` statt Termin-ID, Pfad `/agendatemplates/{id}`) –
   dieselben Regeln wie beim Ablauf eines Termins, keine zweite Fassung. Neu in `shared/ct/ablaufVorlagen.ts`: Vorlage
   anlegen, umbenennen, löschen, den Ablauf eines Termins als neue Vorlage speichern und eine Vorlage damit ersetzen

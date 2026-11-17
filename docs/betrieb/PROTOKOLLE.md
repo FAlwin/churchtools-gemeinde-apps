@@ -1,14 +1,14 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S7 + K3 + S5 + S6 (12.11.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
-> Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; der
-> Reiter **„To-Dos“** zeigt alle To-Dos der eigenen Gruppen als Liste oder Board; die
-> **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
-> Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
-> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
-> die nächste Sitzung fest und geben Protokolle frei (mit Beitrag in der Gruppe); Mitglieder schlagen Punkte vor. Jedes
-> Protokoll lässt sich als **PDF teilen**. Weiter geht es mit S9 (`protokolle-planung/docs/bauplan.md`). Diese
-> Anleitung wächst mit.
+> **Stand: erste Version v1.0.0 (17.11.2026).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
+> Rechte ein. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste Sitzungen“ und „Deine Gruppen“; der
+> Reiter **„Sitzungen“** zeigt je Gruppe Kommend, Vorschläge und Protokolle; der Reiter **„To-Dos“** zeigt alle To-Dos der
+> eigenen Gruppen als Liste oder Board; die **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse).
+> Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor – mit Aufgaben (= To-Dos), Beschlüssen, Terminen,
+> Anwesenheit und festen Punkten –, beginnt Protokolle zu Terminen und Treffen, legt die nächste Sitzung fest, füllt
+> auf Wunsch mit **KI-Vorschlägen** aus einem Transkript und gibt Protokolle frei (mit Beitrag in der Gruppe); Mitglieder
+> schlagen Punkte vor. Jedes Protokoll lässt sich als **PDF teilen**. Admins richten im Reiter **„Verwaltung“** Gruppen
+> ein und pflegen die Vorlagen.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -18,7 +18,7 @@ keine Push-Mitteilungen und keine eigenen Mails.
 
 1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei
    **`protokolle-v….zip`** herunterladen (nicht entpacken). Die Releases heißen „Protokolle v…“ – nicht verwechseln
-   mit den Releases der Musik App, der Anmeldungen oder des Dienstplaners.
+   mit den Releases der Musik App, des Dienstplaners oder der anderen Erweiterungen.
 2. In ChurchTools: **Administration → Erweiterungen → Erweiterung hinzufügen**.
 3. Ausfüllen:
    - **Name:** z. B. „Protokolle“ – so heißt der Menüpunkt.
@@ -27,6 +27,9 @@ keine Push-Mitteilungen und keine eigenen Mails.
    - **Im Menü anzeigen:** an.
    - **ZIP-Datei:** die heruntergeladene Datei.
 4. **Speichern.**
+
+**Danach:** Ein Admin richtet jede Gruppe einmal im Reiter „Verwaltung“ ein (siehe „Rechte“) – vorher sehen
+Mitglieder die Gruppe nicht.
 
 **Aktualisieren:** beim Eintrag auf den Stift und die neue ZIP hochladen, sonst nichts ändern.
 
@@ -294,7 +297,7 @@ eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung
 **Versteckte Gruppen und Gruppentypen:** „versteckte Gruppe sehen“ hilft nur, wenn die Rolle die Gruppe überhaupt
 sehen darf – das legt der **Gruppentyp** fest. In einem Typ, dessen Teilnehmer die Gruppe nicht sehen (in der
 Test-Instanz „Anmeldung“), sehen sie auch nach dem Einrichten die Mitglieder nicht. Für die Protokolle selbst spielt
-das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später schon (gemessen 22.10.2026, S2-4).
+das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gemessen 22.10.2026, S2-4).
 
 ## Für Entwickler
 
@@ -366,6 +369,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
 - Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
   das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).
+- Bauplan und Messungen liegen in einem Planungsordner außerhalb des Repos – die Verweise auf `protokolle-planung/…` in
+  dieser Anleitung meinen diesen Ordner.
 - Erweiterung: `protokolle/` (`npm run dev -w protokolle`, dann `http://localhost:5192/ccm/protokolle/?demo`;
   weitere Fälle `?demo=leer`, `?demo=ohne-modul`, `?demo=fehler`, `?demo=gesperrt`).
 - Release: Tag `protokolle-vX.Y.Z` (Workflow `protokolle-release.yml`, immer `make_latest: false`).

@@ -192,6 +192,34 @@ export function istZusatzrecht(r: Recht, n: RechteNummern): boolean {
 }
 
 /**
+ * **Die Merkliste `vergeben` prüfen, bevor sie zählt** (Security-Review 16.11.2026). Sie steht in der Einstellung in
+ * „Protokolle · Gruppe“ – die darf die **Leitung** beschreiben (in ChurchTools jeden Eintrag der Kategorie). Ungeprüft
+ * würde ein untergeschobener Eintrag beim nächsten „Einrichten“ mit der Sitzung des **Admins** entzogen, auch an Rollen
+ * anderer Gruppen. Es bleibt nur, was das Einrichten selbst vergeben haben kann (`sollRechte`):
+ * - ein **Zusatzrecht** (`istZusatzrecht`),
+ * - an einer **Rolle dieser Gruppe** (`rollenDerGruppe` frisch aus ChurchTools, nicht aus der Einstellung),
+ * - Kalenderrechte nur an einem der `kalender` (alter oder neuer Kalender der Gruppe), alle übrigen ohne Daten.
+ * Was eine Leitung danach noch erreichen kann, betrifft nur Zusatzrechte der eigenen Gruppe.
+ */
+export function vergebenPruefen(
+  vergeben: readonly Recht[],
+  rollenDerGruppe: readonly number[],
+  kalender: readonly (number | null)[],
+  n: RechteNummern,
+): Recht[] {
+  const rollen = new Set(rollenDerGruppe);
+  const kalenderIds = new Set(kalender.filter((k): k is number => k !== null));
+  const istKalenderRecht = (r: Recht): boolean =>
+    r.authId === n.kalenderSehen || r.authId === n.kalenderBearbeiten;
+  return vergeben.filter(
+    (r) =>
+      rollen.has(r.rolle) &&
+      istZusatzrecht(r, n) &&
+      (istKalenderRecht(r) ? r.dataId !== null && kalenderIds.has(r.dataId) : r.dataId === null),
+  );
+}
+
+/**
  * **Welche Zusatzrechte die Verwaltung nach diesem Einrichten selbst gesetzt hat:** die im Soll, die sie gerade
  * gesetzt hat oder schon früher gesetzt hatte. Eins, das vorher schon da war (von Hand), zählt nicht.
  */

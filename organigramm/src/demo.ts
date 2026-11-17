@@ -3,7 +3,8 @@
  * ChurchTools-Antworten nach, in der Form, die gemessen wurde (Live 19.10.2026, Test-Instanz 22.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Gruppen-Admin-Recht (zwei
  * Gruppen ohne Leserecht), `?demo=wackel` eine Gruppe, deren Mitglieder vorübergehend nicht laden, `?demo=fehler`
- * den Fehlerfall beim Start, `?demo=konflikt` einen gleichzeitigen Plan-Schreiber (O7). Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
+ * den Fehlerfall beim Start, `?demo=konflikt` einen gleichzeitigen Plan-Schreiber (O7), `?demo=neu` den Gruppenwechsel „noch
+ * nicht eingerichtet“ (Fenster „Einrichten“, O9-5c-2) und `?demo=fremd` eine Stufe mit fremder Regel (Stopp im Fenster). Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
  *
  * Seit O5 auch schreibend: Umhängen, Lösen und Anlegen verändern die Gruppen und die Hierarchie dieser Sitzung,
  * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Seit O6 ebenso
@@ -65,6 +66,16 @@ const NAMEN = [
   'Kim Lenz',
   'Lea Moos',
 ];
+/**
+ * Geburtstage der Kinder in den Stufen (O9-5c-2): relativ zum nächsten Wechseljahr, damit es immer Kinder gibt, die
+ * wechseln – und eins ohne Geburtstag (Person 8). Alter am 30.09. des nächsten Wechseljahres.
+ */
+const GEBURTSTAG: Record<number, string> = Object.fromEntries(
+  Object.entries({ 3: 7, 4: 5, 5: 7, 6: 10, 7: 8, 9: 11 }).map(([id, alter]) => [
+    id,
+    `${Number(heuteImKalender().slice(0, 4)) + 1 - alter}-03-15`,
+  ]),
+);
 const m = (personId: number, groupTypeRoleId: number) => ({
   personId,
   memberEndDate: null as string | null,
@@ -93,10 +104,10 @@ const MITGLIEDER: Record<number, ReturnType<typeof m>[] | undefined> = {
   34: [m(2, 39), m(4, 15), m(5, 15), m(6, 15)],
   // Kim (11) hat bei Café Team 1 angefragt – „offene Anfrage“
   49: [m(12, 16), m(4, 15), { ...m(11, 15), groupMemberStatus: 'requested' }],
-  // Gruppenwechsel: noch ohne Kinder
-  301: [],
-  302: [],
-  303: [],
+  // Gruppenwechsel: Kinder in den Stufen (Geburtstage unten bei `GEBURTSTAG`), die Wechsel-Gruppen noch leer
+  301: [m(3, 15), m(4, 15), m(5, 15)],
+  302: [m(6, 15), m(7, 15), m(8, 15)],
+  303: [m(9, 15)],
   311: [],
   312: [],
 };
@@ -281,6 +292,7 @@ function struktur(
         id: i + 1,
         firstName: n.split(' ')[0],
         lastName: n.split(' ')[1],
+        birthday: GEBURTSTAG[i + 1] ?? null,
       })),
     });
   }
@@ -347,7 +359,7 @@ const FERIEN_TERMINE = [0, 1, 2].map((i) => ({
 }));
 
 /** Antworten für Rollen, Rechte, Regeln, Status und Routinen der Wechsel-Gruppen – alles so, wie „Einrichten“ es hinterlässt. */
-function wechselAntworten(): Record<string, unknown> {
+function wechselAntworten(fall: string): Record<string, unknown> {
   const jahre = wechseljahre(
     sommerferienAus(
       FERIEN_TERMINE.map((t) => ({
@@ -383,6 +395,11 @@ function wechselAntworten(): Record<string, unknown> {
     a[`/api/dynamicgroups/${id}/ruleset`] = { data: r };
     a[`/api/dynamicgroups/${id}/status`] = { data: { dynamicGroupStatus: 'manual' } };
   }
+  // `?demo=fremd`: In „Fische“ steht schon eine Regel von Hand – das Fenster „Einrichten“ hält an (Stopp).
+  if (fall === 'fremd')
+    a['/api/dynamicgroups/302/ruleset'] = {
+      data: [...(regeln.get(302) ?? []), { shorty: 'jugendliste' }],
+    };
   uebergaenge(EINRICHTUNG.einstellung).forEach((u, i) => {
     const w = EINRICHTUNG.wechselGruppen[i].gruppeId;
     a[`/api/groups/${w}/roles`] = {
@@ -559,7 +576,7 @@ function daten(fall: string): Record<string, unknown> {
         { data: liste, meta: { pagination: { lastPage: 1 } } },
       ]),
     ),
-    ...wechselAntworten(),
+    ...wechselAntworten(fall),
     '/api/info': { siteName: 'Beispielgemeinde' },
     '/api/csrftoken': { data: 'demo' },
     '/api/person/masterdata': {
@@ -600,6 +617,8 @@ export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
+  // `?demo=neu`: noch nicht eingerichtet (Kategorie ohne Wert) – „Einrichten …“ öffnet das Fenster.
+  if (fall === 'neu') WERTE.splice(0, WERTE.length);
   const antworten = daten(fall);
   window.fetch = (input, init) => {
     const url = new URL(

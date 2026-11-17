@@ -8,6 +8,7 @@ import {
   aufraeumRoutine,
   austragRegel,
   einstellungFehler,
+  einstellungFehlerJeFeld,
   ferienkalenderFinden,
   geborenBis,
   sommerferienAus,
@@ -407,5 +408,45 @@ describe('einstellungFehler', () => {
   ] as const)('%s', (_, aenderung, teil) => {
     const f = einstellungFehler({ ...E, ...aenderung } as GruppenwechselEinstellung);
     expect(f.join(' ')).toContain(teil);
+  });
+});
+
+describe('einstellungFehler: Zeile ohne gewählte Gruppe und Fehler je Feld (O9-5c-2)', () => {
+  const ohneGruppe = (stufen: GruppenwechselEinstellung['stufen']) =>
+    einstellungFehler({ ...E, stufen });
+
+  it('eine Gruppe, die noch nicht gewählt ist (Nummer 0, ohne Namen), wird beim Namen genannt – nicht als „zweimal“', () => {
+    const f = ohneGruppe([
+      { gruppeId: 0, name: '', abAlter: 4 },
+      { gruppeId: 0, name: '', abAlter: 7 },
+    ]);
+    expect(f).toEqual([
+      'Gruppe 1: Es ist noch keine Gruppe gewählt.',
+      'Gruppe 2: Es ist noch keine Gruppe gewählt.',
+    ]);
+  });
+
+  it('ein Alter, das nicht steigt, nennt die Zeile, wenn es noch keinen Namen gibt', () => {
+    const f = ohneGruppe([
+      { gruppeId: 1, name: 'Fische', abAlter: 7 },
+      { gruppeId: 0, name: '', abAlter: 7 },
+    ]);
+    expect(f).toContain('Gruppe 2 muss ein höheres Alter haben als „Fische“.');
+  });
+
+  it('dieselbe Gruppe doppelt und Alter, das nicht steigt, werden einzeln gemeldet', () => {
+    const f = einstellungFehler({
+      ...E,
+      stufen: [E.stufen[0], { ...E.stufen[1], gruppeId: E.stufen[0].gruppeId, abAlter: 4 }],
+    });
+    expect(f.some((x) => x.includes('zweimal'))).toBe(true);
+    expect(f.some((x) => x.includes('höheres Alter'))).toBe(true);
+  });
+
+  it('JeFeld ordnet jeden Satz einem Feld zu – und `einstellungFehler` ist dieselbe Liste als Sätze', () => {
+    const e = { ...E, stichtag: '02-29', aufnahmeTage: 0, ferienkalender: '' };
+    const je = einstellungFehlerJeFeld(e);
+    expect(je.map((x) => x.feld).sort()).toEqual(['aufnahme', 'ferienkalender', 'stichtag'].sort());
+    expect(einstellungFehler(e)).toEqual(je.map((x) => x.text));
   });
 });

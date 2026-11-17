@@ -132,7 +132,14 @@ const TERMINE = [
     startDate: zeit(21, '17:00'),
     endDate: zeit(21, '18:30'),
     // Ben ist hier nur angefragt – im Fokus „1 angefragt“.
-    eventServices: [platz(7, 1, 'Alwin', true), platz(9, 49, 'Ben Wiebe', false)],
+    // Ein zweiter, freier Platz im Gesang (Eintragen per Klick in „Personen“, P2a): Anna trägt sich sauber ein, Alwin hat
+    // am Tag schon Licht (Warnung „anderer Dienst“ – dazu ist er krank: beide Sätze), Clara ist im Urlaub (Warnung
+    // „abwesend“). Voll sind Gesang am 23.11. (Gast) und am 27.11. – dort kommt der Hinweis „Dienst voll“.
+    eventServices: [
+      platz(7, 1, 'Alwin', true),
+      platz(9, 49, 'Ben Wiebe', false),
+      platz(9, null, null),
+    ],
   },
   {
     id: 106,
@@ -459,6 +466,9 @@ function daten(fall: string): Record<string, unknown> {
         abwesenheit(3, 52, 'Urlaub', zeit(11, '00:00'), zeit(11, '00:00')),
         abwesenheit(4, 19, 'Urlaub', zeit(38, '00:00'), zeit(40, '00:00')),
         abwesenheit(5, 46, 'Abwesend', zeit(39, '00:00'), zeit(39, '00:00')),
+        // Am Gebetsabend mit dem freien Gesangs-Platz (P2a): Clara im Urlaub, Alwin krank (und dort schon in Licht).
+        abwesenheit(6, 52, 'Urlaub', zeit(20, '00:00'), zeit(22, '00:00')),
+        abwesenheit(7, 1, 'Krank', zeit(21, '00:00'), zeit(21, '00:00')),
       ],
     },
     // Das Recht „Abwesenheiten sehen“ (`+view absence`) je Gruppe – Programm (6) hat es nicht.

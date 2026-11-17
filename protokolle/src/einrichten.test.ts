@@ -134,6 +134,37 @@ describe('gruppeEinrichten', () => {
     expect(von(TEILNEHMER)).not.toContain(schl(403, 4));
   });
 
+  it('Security-Review: eine von der Leitung manipulierte Merkliste `vergeben` lässt den Admin NICHTS Fremdes entziehen', async () => {
+    await gruppeEinrichten(MODUL, GRUPPE, WAHL);
+    // Rechte, die nicht vom Einrichten stammen: eine Rolle einer anderen Gruppe, ein Datenrecht an einer fremden
+    // Kategorie und „Termine bearbeiten“ im Hauptkalender an der eigenen Leiter-Rolle (alle von Hand gesetzt).
+    const FREMD = 3333;
+    ct.rechte.set(FREMD, new Set([schl(N.aend, 888), schl(404, 4)]));
+    ct.rechte.get(LEITER)!.add(schl(N.aend, 777));
+    ct.rechte.get(LEITER)!.add(schl(404, 1));
+    // Die Leitung schreibt sie über die API in die Einstellung (sie darf die Kategorie „Protokolle“ beschreiben).
+    const liste = ct.werte.get(kat('protokolle-g194'))!;
+    const eintrag = liste.find((w) => w.value.includes('"einstellung"'))!;
+    const e = JSON.parse(eintrag.value) as { vergeben: unknown[] };
+    e.vergeben.push(
+      { rolle: FREMD, authId: N.aend, dataId: 888 },
+      { rolle: FREMD, authId: 404, dataId: 4 },
+      { rolle: LEITER, authId: N.aend, dataId: 777 },
+      { rolle: LEITER, authId: 404, dataId: 1 },
+    );
+    eintrag.value = JSON.stringify(e);
+    ct.aufrufe = [];
+    // Der Admin speichert die Gruppe erneut (unveränderte Wahl).
+    await gruppeEinrichten(MODUL, GRUPPE, WAHL);
+    expect(
+      ct.aufrufe.filter((a) => a.startsWith(`DELETE /permissions/group_role/${FREMD}`)),
+    ).toEqual([]);
+    expect(von(FREMD)).toEqual([schl(404, 4), schl(N.aend, 888)].sort());
+    expect(von(LEITER)).toEqual(expect.arrayContaining([schl(N.aend, 777), schl(404, 1)]));
+    // Die neu geschriebene Merkliste enthält die untergeschobenen Einträge nicht mehr.
+    expect(JSON.stringify(einstellungen())).not.toContain('3333');
+  });
+
   it('Vorlagen schon da: keine zweiten Standard-Vorlagen', async () => {
     await gruppeEinrichten(MODUL, GRUPPE, WAHL);
     await gruppeEinrichten(MODUL, { id: 11, name: 'Gemeindeleitung', versteckt: true }, WAHL);

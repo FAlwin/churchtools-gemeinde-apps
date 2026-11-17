@@ -57,19 +57,25 @@ export function statusAus(roh: unknown): string | null {
   return null;
 }
 
+/**
+ * Die Regeln einer dynamischen Gruppe. 404 = keine Regeln (kein Fehler); die Liste kann auch in `dynamicGroupRuleSet`
+ * stecken. Alles andere (403, Netz, 5xx, unbekannte Gestalt) ist „nicht gelesen“. Eine Stelle für den Stand der
+ * Einrichtung und für „Fremde Regeln“ im Fenster „Einrichten“ (O9-5c-2).
+ */
+export async function regelnLesen(holen: Holen, id: number): Promise<Gelesen<readonly RegelRoh[]>> {
+  try {
+    const roh = await holen<unknown>(`/dynamicgroups/${id}/ruleset`);
+    if (Array.isArray(roh)) return { ok: true, wert: roh as RegelRoh[] };
+    const innen = (roh as { dynamicGroupRuleSet?: unknown } | null)?.dynamicGroupRuleSet;
+    return Array.isArray(innen) ? { ok: true, wert: innen as RegelRoh[] } : NICHT;
+  } catch (x) {
+    return x instanceof ApiError && x.status === 404 ? { ok: true, wert: [] } : NICHT;
+  }
+}
+
 async function gruppenStand(holen: Holen, id: number): Promise<GruppenRegelStand> {
   const [regeln, status] = await Promise.all([
-    // 404 = keine Regeln (kein Fehler). Die Liste kann auch in `dynamicGroupRuleSet` stecken.
-    (async (): Promise<Gelesen<readonly RegelRoh[]>> => {
-      try {
-        const roh = await holen<unknown>(`/dynamicgroups/${id}/ruleset`);
-        if (Array.isArray(roh)) return { ok: true, wert: roh as RegelRoh[] };
-        const innen = (roh as { dynamicGroupRuleSet?: unknown } | null)?.dynamicGroupRuleSet;
-        return Array.isArray(innen) ? { ok: true, wert: innen as RegelRoh[] } : NICHT;
-      } catch (x) {
-        return x instanceof ApiError && x.status === 404 ? { ok: true, wert: [] } : NICHT;
-      }
-    })(),
+    regelnLesen(holen, id),
     (async (): Promise<Gelesen<string>> => {
       try {
         const s = statusAus(await holen<unknown>(`/dynamicgroups/${id}/status`));

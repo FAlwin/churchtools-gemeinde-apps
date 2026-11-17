@@ -293,10 +293,9 @@ describe('Unterreiter „Einrichtung“ (O9-5c)', () => {
     expect(await screen.findByText('Gruppentyp der Wechsel-Gruppen')).toBeTruthy();
     expect(standLaden).toHaveBeenCalledTimes(1);
     expect(standLaden.mock.calls[0][0]).toEqual(einrichtung());
-    // Keine Knöpfe zum Ändern oder Reparieren – die kommen mit O9-5c-2 und O9-5d.
-    expect(
-      screen.queryByRole('button', { name: /ändern|setzen|nachtragen|einrichten/i }),
-    ).toBeNull();
+    // „Stufen ändern …“ gibt es seit O9-5c-2; Reparieren („Rechte setzen“) und Nachtragen kommen mit O9-5d.
+    expect(screen.getByRole('button', { name: 'Stufen ändern …' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /setzen|nachtragen|Einrichten/i })).toBeNull();
   });
 
   it('nicht lesbar ist keine Aufgabe: „nicht prüfbar“ je Zeile, kein gelber Sammelhinweis', async () => {

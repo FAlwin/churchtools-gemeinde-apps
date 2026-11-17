@@ -19,7 +19,13 @@ import {
 import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js';
 import { getUserId } from '../services/ctAuth.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
-import { getAblaufBestand, getAblaufVorlagen, getCtServices } from '../services/ctRead.js';
+import {
+  getAblaufBestand,
+  getAblaufVorlage,
+  getAblaufVorlagen,
+  getCtServices,
+  getVorlagenStand,
+} from '../services/ctRead.js';
 import {
   createAgendaItem,
   deleteAgendaItem,
@@ -31,9 +37,13 @@ import {
   setAblaufAbgeschlossen,
   setAblaufNeu,
   createAblauf,
+  createVorlage,
+  deleteVorlage,
+  renameVorlage,
 } from '../services/ctWrite.js';
 import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
 import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
+import { istVorlage, type AblaufZiel } from '@shared/ct/schreibKern';
 import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
@@ -93,6 +103,63 @@ export async function getServicesOhneAblaufCtrl(req: Request, res: Response): Pr
 /** GET /api/ablauf-vorlagen – die Ablauf-Vorlagen aus ChurchTools (13.10.2026). */
 export async function getAblaufVorlagenCtrl(req: Request, res: Response): Promise<void> {
   res.json(await getAblaufVorlagen(ctCookie(req)));
+}
+
+/**
+ * Das Ziel der Punkt-Routen (E10-V3b): dieselben Handler bedienen `/services/:eventId/agenda/…` (ein Termin) und
+ * `/ablauf-vorlagen/:vorlageId/agenda/…` (eine Ablaufvorlage) – der Schreib-Kern kennt beide Ziele. Welche der beiden
+ * Angaben die Route hat, entscheidet nur der Pfad; eine Route mit beiden gibt es nicht.
+ */
+function zielAus(req: Request): AblaufZiel {
+  if (req.params.vorlageId !== undefined)
+    return { vorlageId: idSchema.parse(req.params.vorlageId) };
+  return idSchema.parse(req.params.eventId);
+}
+
+/**
+ * Nach einem Schreiben, das Lieder ändern kann: die Statistik neu holen lassen – **nur für Termine**. Eine Vorlage hat
+ * kein Datum, an dem ein Lied gespielt würde; die Statistik kann sich dadurch nicht ändern.
+ */
+function liedNutzungNeu(ziel: AblaufZiel): void {
+  if (!istVorlage(ziel)) invalidateSongUsageCache();
+}
+
+/** GET /api/ablauf-vorlagen/stand – die Seite „Ablaufvorlagen“: Liste nach Kalender und die Kalender (E10-V3b). */
+export async function getVorlagenStandCtrl(req: Request, res: Response): Promise<void> {
+  res.json(await getVorlagenStand(ctCookie(req)));
+}
+
+/** GET /api/ablauf-vorlagen/:vorlageId – eine Vorlage samt Punkten, frisch (E10-V3b). */
+export async function getVorlageCtrl(req: Request, res: Response): Promise<void> {
+  res.json(await getAblaufVorlage(ctCookie(req), idSchema.parse(req.params.vorlageId)));
+}
+
+/**
+ * Ein Vorlagenname. Die Namensregel (leer, zu lang → 400 mit Meldung) steht im Kern (`vorlageNameFehler`) und gilt dort
+ * für Server und Browser gleich – hier nur eine großzügige Grenze gegen Missbrauch, damit die Meldung die des Kerns bleibt.
+ */
+const vorlageNameSchema = z.string().max(500);
+const vorlageNeuSchema = z.object({ name: vorlageNameSchema, kalenderId: idSchema });
+const vorlageUmbenennenSchema = z.object({ name: vorlageNameSchema });
+
+/** POST /api/ablauf-vorlagen – eine leere Vorlage anlegen; die Antwort trägt ihre ID (E10-V3b). */
+export async function postVorlageCtrl(req: Request, res: Response): Promise<void> {
+  const id = await createVorlage(ctCookie(req), vorlageNeuSchema.parse(req.body));
+  res.json({ id });
+}
+
+/** PUT /api/ablauf-vorlagen/:vorlageId – umbenennen; die Punkte bleiben (E10-V3b). */
+export async function putVorlageCtrl(req: Request, res: Response): Promise<void> {
+  const vorlageId = idSchema.parse(req.params.vorlageId);
+  const { name } = vorlageUmbenennenSchema.parse(req.body);
+  await renameVorlage(ctCookie(req), vorlageId, name);
+  res.json({ ok: true });
+}
+
+/** DELETE /api/ablauf-vorlagen/:vorlageId – löschen (kein Papierkorb; „schon weg“ ist kein Fehler, E10-V3b). */
+export async function deleteVorlageCtrl(req: Request, res: Response): Promise<void> {
+  await deleteVorlage(ctCookie(req), idSchema.parse(req.params.vorlageId));
+  res.json({ ok: true });
 }
 
 const quelleSchema = z.discriminatedUnion('art', [
@@ -213,9 +280,9 @@ const punktStandSchema = z.object({
 
 /** PATCH /api/services/:eventId/agenda/order – neue Reihenfolge der Ablaufpunkte speichern. */
 export async function putAgendaOrder(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
+  const ziel = zielAus(req);
   const { order, gesehen } = orderSchema.parse(req.body);
-  await reorderAgenda(ctCookie(req), eventId, order, gesehen);
+  await reorderAgenda(ctCookie(req), ziel, order, gesehen);
   // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Reihenfolge ändert nicht, WELCHE Lieder an
   // welchem Datum gespielt wurden – die Statistik kann sich dadurch nicht ändern. Bitte nicht als
   // vergessene Lücke „nachrüsten". (Bis v2.32.0 kostete jedes Verwerfen einen Lauf mit ~250
@@ -277,23 +344,23 @@ export const createItemSchema = z
 
 /** POST /api/services/:eventId/agenda/items – neuen Ablaufpunkt anlegen. */
 export async function postAgendaItem(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
+  const ziel = zielAus(req);
   // Standard-Titel je Art: in `@shared/ct/schreibKern` (#335) – die Extension legt genauso an.
-  await createAgendaItem(ctCookie(req), eventId, createItemSchema.parse(req.body));
+  await createAgendaItem(ctCookie(req), ziel, createItemSchema.parse(req.body));
   // Der nächste Blick in die Statistik holt sie neu – seit 08.10.2026 ein einziger Abruf bei ChurchTools
   // (`getSongStatistic`), kein Lauf über alle Abläufe mehr (#300).
-  invalidateSongUsageCache();
+  liedNutzungNeu(ziel);
   res.json({ ok: true });
 }
 
 /** PUT /api/services/:eventId/agenda/items/:itemId – Punkt umbenennen oder mit Lied verknüpfen. */
 export async function putAgendaItem(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
+  const ziel = zielAus(req);
   const itemId = idSchema.parse(req.params.itemId);
   // „Aufheben leert den Titel": in `@shared/ct/schreibKern` (#335) – die Extension schreibt genauso.
   const { gesehen, ...felder } = updateItemSchema.parse(req.body);
-  await updateAgendaItem(ctCookie(req), eventId, itemId, felder, gesehen);
-  invalidateSongUsageCache();
+  await updateAgendaItem(ctCookie(req), ziel, itemId, felder, gesehen);
+  liedNutzungNeu(ziel);
   res.json({ ok: true });
 }
 
@@ -304,10 +371,10 @@ const vorBeginnSchema = z.object({ vorBeginn: z.boolean() });
  * Punkt läuft vor dem Beginn der Veranstaltung (`true`) oder gehört zum Gottesdienst (`false`).
  */
 export async function putAgendaItemVorBeginn(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
+  const ziel = zielAus(req);
   const itemId = idSchema.parse(req.params.itemId);
   const { vorBeginn } = vorBeginnSchema.parse(req.body);
-  await setAgendaItemVorBeginn(ctCookie(req), eventId, itemId, vorBeginn);
+  await setAgendaItemVorBeginn(ctCookie(req), ziel, itemId, vorBeginn);
   // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Grenze verschiebt nur Uhrzeiten, nicht die
   // gespielten Lieder. Siehe die Begründung bei `putAgendaOrder`.
   res.json({ ok: true });
@@ -346,10 +413,10 @@ export async function putAblaufAbgeschlossen(req: Request, res: Response): Promi
  * unter `wiederherstellen` alles, was „Rückgängig" braucht (`null`, wenn der Punkt schon weg war).
  */
 export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
+  const ziel = zielAus(req);
   const itemId = idSchema.parse(req.params.itemId);
-  const wiederherstellen = await deleteAgendaItem(ctCookie(req), eventId, itemId);
-  invalidateSongUsageCache();
+  const wiederherstellen = await deleteAgendaItem(ctCookie(req), ziel, itemId);
+  liedNutzungNeu(ziel);
   res.json({ ok: true, wiederherstellen });
 }
 
@@ -379,9 +446,9 @@ export const geloeschterPunktSchema = z.object({
 
 /** POST /api/services/:eventId/agenda/items/wiederherstellen – „Rückgängig" nach dem Löschen. */
 export async function postAgendaItemWiederherstellen(req: Request, res: Response): Promise<void> {
-  const eventId = idSchema.parse(req.params.eventId);
-  await restoreAgendaItem(ctCookie(req), eventId, geloeschterPunktSchema.parse(req.body));
-  invalidateSongUsageCache();
+  const ziel = zielAus(req);
+  await restoreAgendaItem(ctCookie(req), ziel, geloeschterPunktSchema.parse(req.body));
+  liedNutzungNeu(ziel);
   res.json({ ok: true });
 }
 

@@ -94,6 +94,28 @@
   color: var(--text3);
   flex-shrink: 0;
 }
+// Zeile mit Symbol und Untertitel („Ablaufvorlagen“, E10-V3b).
+.kachel {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--r-tile);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+.zeileText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.zeileUnter {
+  font-size: 13px;
+  color: var(--text2);
+}
 .danger {
   color: var(--red);
   flex: 1;

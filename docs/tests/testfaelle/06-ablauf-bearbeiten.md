@@ -488,8 +488,47 @@ das Recht fehlt.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `ui/ablauf/VorlagenBereich.tsx`, `ui/ablauf/VorlagenListe.tsx`, `ui/ablauf/VorlageAnsicht.tsx`, `ui/ablauf/VorlagenFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/PunktFenster.tsx`, `dienstplaner/src/vorlagenZugriff.ts`, `dienstplaner/src/ablaufAktionen.ts`, `dienstplaner/src/App.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/start.ts`, `shared/ct/ablaufVorlagenListe.ts`, `shared/ct/ablaufVorlagen.ts`
+- **Betrifft:** `ui/ablauf/VorlagenBereich.tsx`, `ui/ablauf/VorlagenListe.tsx`, `ui/ablauf/VorlageAnsicht.tsx`, `ui/ablauf/VorlagenFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `dienstplaner/src/vorlagenZugriff.ts`, `dienstplaner/src/ablaufAktionen.ts`, `dienstplaner/src/App.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/start.ts`, `shared/ct/ablaufVorlagenListe.ts`, `shared/ct/ablaufVorlagen.ts`
 - **Automatisiert:** teilweise – `ui/ablauf/VorlagenBereich.test.tsx` (Liste, „nur ansehen“, „Neue Vorlage“ nur mit Recht, Fenster, Löschen mit Nachfrage), `ui/ablauf/vorlagenModus.test.tsx` (kein Auge, keine Infos, Platzhalter neutral, keine Uhrzeit – jeweils mit Termin-Gegenprobe), `dienstplaner/src/App.vorlagen.test.tsx` (Adressen, Reiter, Zurück), `dienstplaner/src/reiter.test.ts`, `dienstplaner/src/start.test.ts` (`vorlageBearbeitbar`), `dienstplaner/src/ablaufAktionen.test.ts` (Ziel Vorlage), `shared/ct/ablaufVorlagenListe.test.ts`; von Hand bleibt das Schreiben gegen echtes ChurchTools
 - **Historie:** 17.11.2026 (E10-V3a; Kern E10-V1, Entwurf E10-V2)
+
+</details>
+
+### TF-EDIT-18 · In der Musik-App Ablaufvorlagen ansehen, anlegen, bearbeiten, umbenennen und löschen
+
+⚠️ **Achtung: Dieser Test ändert echte Daten in ChurchTools** – nur mit einer **eigenen Probe-Vorlage** (z. B. „Probe E10 Musik-App“),
+die am Ende wieder gelöscht wird. Bestehende Vorlagen nicht anfassen.
+
+**Vorbereitung:** Ein Konto mit dem Recht **„Ablaufvorlagen bearbeiten“** für **einen** Kalender (nicht alle) und ein zweites
+**ohne** dieses Recht, beide dürfen Abläufe sehen. **Zweimal durchführen:** in der **ChurchTools-Erweiterung** und in der
+**Server-Variante** (eigene Adresse der Musik-App) – dieselbe Seite, ein anderer Weg zu ChurchTools.
+
+**Das muss passieren:** Dieselbe Seite wie im Dienstplaner (TF-EDIT-17), erreichbar über **Mehr → Abläufe → Ablaufvorlagen**.
+Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Mehr“ bleibt markiert.
+
+1. **Mehr**: Zwischen „Darstellung“ und „Während des Spielens“ steht der Abschnitt **Abläufe** mit der Zeile **Ablaufvorlagen**
+   („Vorlagen ansehen, anlegen und bearbeiten“, Pfeil). Ein Konto, das **keine Abläufe sehen** darf, sieht die Zeile nicht.
+2. Die Zeile antippen: Die Seite zeigt die Vorlagen **nach Kalender**; oben **‹ Mehr**. Beim ersten Mal erscheint die Einführung
+   (Liste, „Neue Vorlage“) – danach nicht mehr.
+3. Am Kalender **ohne** das Recht steht **nur ansehen**; eine Vorlage dort öffnen: kein **Bearbeiten**. (Beim ersten Öffnen einer
+   Vorlage mit Recht erscheint ein Hinweis auf „Bearbeiten“.)
+4. **Neue Vorlage** (Computer: grüner Knopf im Kopf, Handy: rundes Plus) → „Probe E10 Musik-App“, Kalender mit Recht → **Anlegen**:
+   Die leere Vorlage geht gleich im Bearbeiten-Modus auf. Punkte hinzufügen (Programmpunkt, Überschrift, **Lied**), umsortieren,
+   löschen mit **Rückgängig**, einen Punkt **vor dem Beginn**; in ChurchTools nachsehen: Punkte, Reihenfolge und Grenze stimmen.
+5. **Umbenennen …** → neuer Name in Kopf, Liste und ChurchTools.
+6. **‹ Vorlagen**: zurück in die Liste; **‹ Mehr**: zurück in „Mehr“. Den **Reiter wechseln** und wieder auf **Mehr** tippen: Man
+   landet in „Mehr“, nicht in der Vorlage. **Zurück im Browser** wirft die App nicht hinaus (sie legt für ihre Ansichten keinen Verlauf an).
+7. **Termine** → ein Termin ohne Ablauf → **Ablauf anlegen** → die eben geänderte Vorlage steht mit **neuem Namen** und **neuer Punktzahl**
+   in der Auswahl (nicht der Stand von vor fünf Minuten).
+8. Probe-Vorlage → **Bearbeiten → Löschen …** → Nachfrage → **Löschen**: weg in der Liste, in ChurchTools und in der Auswahl „Ablauf anlegen“.
+9. Mit dem Konto **ohne** Recht: überall **nur ansehen**, kein „Neue Vorlage“, kein „Bearbeiten“. Ein Schreibversuch (z. B. mit
+   veralteter Seite) endet mit der Meldung, dass die Berechtigung fehlt – **nicht** mit „Server nicht erreichbar“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/pages/Settings.tsx`, `client/src/pages/Vorlagen.tsx`, `client/src/hooks/useMehrSeite.ts`, `client/src/hooks/useVorlagenZugriff.ts`, `client/src/hooks/useTourSobaldDa.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctSchreiben.ts`, `client/src/utils/onboarding.ts`, `client/src/App.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `ui/ablauf/VorlagenBereich.tsx`, `server/src/routes/setlist.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `server/src/services/ctRead.ts`, `shared/ct/ablaufVorlagenListe.ts`
+- **Automatisiert:** teilweise – `client/src/pages/Vorlagen.test.tsx` (Rechte, „‹ Mehr“, Vorlage öffnen), `client/src/pages/Settings.test.tsx` (Zeile nur mit Angebot), `client/src/hooks/useMehrSeite.test.tsx` (Navigation), `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts` (Weiche Erweiterung/Server je Vorgang), `client/src/hooks/useTourSobaldDa.test.tsx` (Einführung), `server/src/controllers/setlistController.vorlagen.test.ts` (Ziel Termin/Vorlage, Routen, durchgereichte Fehler), `server/src/services/ctWrite.test.ts` (Token-Wächter); von Hand bleiben das Schreiben gegen echtes ChurchTools und beide Auslieferungen
+- **Historie:** 17.11.2026 (E10-V3b; Baustein aus V3a)
 
 </details>

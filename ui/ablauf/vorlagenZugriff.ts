@@ -1,7 +1,8 @@
 /**
  * **Was die Seite „Ablaufvorlagen“ von ihrer App braucht** (E10-V3a) – die Bausteine (`VorlagenBereich`, `VorlageAnsicht`,
  * die Fenster) kennen weder ChurchTools noch den Weg dorthin. Der Dienstplaner gibt Funktionen über `browserSchreiber`
- * herein (`dienstplaner/src/vorlagenZugriff.ts`), die Musik-App später welche über ihren Server (V3b) – die Regeln
+ * herein (`ui/ablauf/browserAblaufZugriff.ts`, auch die Musik-App-Erweiterung nimmt ihn), die Musik-App über ihre Weiche
+ * (`client/src/hooks/useVorlagenZugriff.ts`: Erweiterung direkt, Server-Betrieb über `/api/ablauf-vorlagen`) – die Regeln
  * stehen in beiden Fällen im Kern (`@shared/ct/ablaufVorlagen`, `schreibKern`), nicht hier.
  *
  * Alle Funktionen werfen bei Fehler (mit der Meldung des Kerns: 403 `VORLAGE_VERWEIGERT`, 423 `VORLAGE_GESPERRT`,

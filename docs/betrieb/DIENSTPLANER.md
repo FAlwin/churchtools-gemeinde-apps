@@ -297,7 +297,9 @@ und Neuladen gehen).
 - **Technik:** Die Bausteine liegen in `ui/ablauf/` (`VorlagenBereich`, `VorlagenListe`, `VorlageAnsicht`, `VorlagenFenster`,
   der Vorlagen-Modus `vorlage` in `useAblaufBearbeiten`/`PunktFenster`/`AblaufListe`) und kennen weder ChurchTools noch den Weg
   dorthin – das gibt die App über den `VorlagenZugriff` herein (Dienstplaner: `dienstplaner/src/vorlagenZugriff.ts` über den Kern
-  `shared/ct/ablaufVorlagen.ts` und `schreibKern.ts`; die Musik-App folgt in V3b). Die Liste rechnet
+  `shared/ct/ablaufVorlagen.ts` und `schreibKern.ts`; seit V3b liegt der Browser-Zugriff in `ui/ablauf/browserAblaufZugriff.ts`, den
+  sich Dienstplaner und Musik-App-Erweiterung teilen; die Musik-App zeigt dieselbe Seite unter **Mehr → Abläufe → Ablaufvorlagen**,
+  im Server-Betrieb über `/api/ablauf-vorlagen/…`). Die Liste rechnet
   `shared/ct/ablaufVorlagenListe.ts` aus `GET /agendatemplates` und `GET /calendars`.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses

@@ -17,6 +17,9 @@ import {
   setAblaufAbgeschlossen,
   setAblaufNeu,
   createAblauf,
+  createVorlage,
+  renameVorlage,
+  deleteVorlage,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -48,6 +51,9 @@ const COOKIE = 'ChurchTools_sid=abc';
 
 /** Ein Ablaufpunkt, wie ChurchTools ihn liefert – reicht für die Nutzlast-Erzeugung. */
 const PUNKT = { id: 1, title: 'Lied', position: 0, type: 'song' };
+
+/** Eine Ablaufvorlage, wie ChurchTools sie liest – für `createVorlage` (liest nach) und `renameVorlage` (liest vorher). */
+const VORLAGE = { id: 1, name: 'Vorlage', calendarId: 2, items: [PUNKT], eventStartPosition: 0 };
 
 /** Das Lied #7 mit Arrangement #70 – `updateSong` und `updateArrangement` lesen es vor dem Schreiben. */
 const LIED = {
@@ -108,6 +114,8 @@ function lesen(u: string, method: string): Response | null {
     neuStand.ersetzt = false;
     return jsonRes({ items: [] });
   }
+  // Ablaufvorlagen (E10-V3b): lesen immer – Anlegen liest nach, Umbenennen und die Punkte lesen vorher.
+  if (u.includes('/api/agendatemplates/')) return jsonRes(VORLAGE);
   if (u.includes('/agenda')) return jsonRes({ items: [PUNKT] });
   if (u.includes('/api/songs/')) return jsonRes(liedStand.lesen());
   return null;
@@ -169,6 +177,9 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ],
   ['setAgendaItemVorBeginn', () => setAgendaItemVorBeginn(COOKIE, 9, 1, true)],
   ['setAgendaItemWeggelassen', () => setAgendaItemWeggelassen(COOKIE, 9, 1, true)],
+  ['createVorlage', async () => void (await createVorlage(COOKIE, { name: 'Neu', kalenderId: 2 }))],
+  ['renameVorlage', () => renameVorlage(COOKIE, 1, 'Anders')],
+  ['deleteVorlage', () => deleteVorlage(COOKIE, 1)],
   [
     'createAbsence',
     async () => {
@@ -574,6 +585,56 @@ describe('setAgendaItemVorBeginn – nur dieser Punkt wechselt, auf frischem Sta
       status: 409,
     });
     expect(g).toHaveLength(0);
+  });
+});
+
+/**
+ * **Punkte einer Ablaufvorlage (E10-V3b):** Die sechs Punkt-Funktionen nehmen ein Ziel – Termin (`9`) oder Vorlage
+ * (`{ vorlageId: 5 }`) – und schreiben dann nach `/agendatemplates/5`, nie nach `/events/…`. Gelesen wird die Vorlage
+ * frisch (nicht der Termin gleicher Nummer).
+ */
+describe('Punkt-Funktionen mit dem Ziel „Vorlage“', () => {
+  function mockVorlage() {
+    const aufrufe: { method: string; url: string }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      aufrufe.push({ method, url: u });
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
+      if (method === 'GET') {
+        return Promise.resolve(
+          jsonRes({
+            id: 5,
+            name: 'V',
+            calendarId: 2,
+            eventStartPosition: 0,
+            items: [
+              { id: 1, title: 'A', type: 'header', position: 0, duration: 0 },
+              { id: 2, title: 'B', type: 'header', position: 1, duration: 0 },
+            ],
+          }),
+        );
+      }
+      return Promise.resolve(jsonRes({ id: 1 }));
+    });
+    return aufrufe;
+  }
+
+  it.each([
+    ['reorderAgenda', () => reorderAgenda(COOKIE, { vorlageId: 5 }, [2, 1])],
+    ['updateAgendaItem', () => updateAgendaItem(COOKIE, { vorlageId: 5 }, 1, { title: 'Anders' })],
+    ['deleteAgendaItem', () => deleteAgendaItem(COOKIE, { vorlageId: 5 }, 1)],
+    [
+      'createAgendaItem',
+      () => createAgendaItem(COOKIE, { vorlageId: 5 }, { type: 'header', title: 'Neu' }),
+    ],
+  ])('%s liest und schreibt unter /agendatemplates/5', async (_n, aufrufen) => {
+    const a = mockVorlage();
+    await aufrufen();
+    const schreibend = a.filter((c) => c.method !== 'GET' && !c.url.includes('csrftoken'));
+    expect(schreibend.length).toBeGreaterThan(0);
+    expect(schreibend.every((c) => c.url.includes('/api/agendatemplates/5'))).toBe(true);
+    expect(a.some((c) => c.url.includes('/api/events/'))).toBe(false);
   });
 });
 

@@ -57,7 +57,14 @@ const SITE: SiteConfig = {
   noteRoles: [],
 };
 
-function zeige(p: { isAdmin?: boolean; canUseGlobalNotes?: boolean; siteGeladen?: boolean } = {}) {
+function zeige(
+  p: {
+    isAdmin?: boolean;
+    canUseGlobalNotes?: boolean;
+    siteGeladen?: boolean;
+    onVorlagen?: () => void;
+  } = {},
+) {
   const onToggleWake = vi.fn();
   const onLogout = vi.fn();
   const onReplayIntro = vi.fn();
@@ -75,6 +82,7 @@ function zeige(p: { isAdmin?: boolean; canUseGlobalNotes?: boolean; siteGeladen?
       userName="Alwin Friesen"
       onLogout={onLogout}
       onReplayIntro={onReplayIntro}
+      onVorlagen={p.onVorlagen}
     />,
   );
   return { onToggleWake, onLogout, onReplayIntro };
@@ -109,6 +117,28 @@ describe('Mehr – Aufbau', () => {
     zeige({ isAdmin: true, canUseGlobalNotes: true });
     expect(screen.getByText('Verwaltung')).toBeTruthy();
     expect(screen.getByText('Team-Notizen')).toBeTruthy();
+  });
+});
+
+describe('Mehr – Ablaufvorlagen (E10-V3b)', () => {
+  it('ohne Angebot der App (kein Recht, Abläufe zu sehen) gibt es die Zeile und den Abschnitt nicht', () => {
+    zeige();
+    expect(screen.queryByText('Abläufe')).toBeNull();
+    expect(screen.queryByText('Ablaufvorlagen')).toBeNull();
+  });
+
+  it('mit Angebot: Abschnitt „Abläufe“, Zeile samt Untertitel, ein Tipp öffnet die Seite – genau einmal', () => {
+    const onVorlagen = vi.fn();
+    zeige({ onVorlagen });
+    expect(screen.getByText('Abläufe')).toBeTruthy();
+    expect(screen.getByText('Vorlagen ansehen, anlegen und bearbeiten')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Ablaufvorlagen/ }));
+    expect(onVorlagen).toHaveBeenCalledTimes(1);
+  });
+
+  it('die Zeile trägt das Ziel der Einführung', () => {
+    zeige({ onVorlagen: vi.fn() });
+    expect(document.querySelector('[data-tour="ablaufvorlagen"]')).toBeTruthy();
   });
 });
 

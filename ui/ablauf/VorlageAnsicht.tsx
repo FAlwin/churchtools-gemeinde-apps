@@ -173,6 +173,8 @@ export function VorlageAnsicht({
                 }}
                 label={bearbeiten ? 'Fertig' : 'Bearbeiten'}
                 title={bearbeiten ? 'Fertig' : 'Vorlage bearbeiten'}
+                // Ziel der Einführung der Musik-App (`TOUR_VORLAGE`); andere Apps ignorieren das Attribut.
+                dataTour="vorlage-bearbeiten"
                 haupt={bearbeiten}
                 symbol={<Icon name={bearbeiten ? 'check' : 'pencil'} size={16} stroke={2.2} />}
               />

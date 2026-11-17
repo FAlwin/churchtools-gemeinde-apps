@@ -57,11 +57,16 @@ interface Zeile {
   'role.type': 'participant' | 'leader';
 }
 
-function auswerten(ausdruck: unknown, z: Zeile, heute: string): unknown {
+function auswerten(
+  ausdruck: unknown,
+  z: Zeile,
+  heute: string,
+  alle: readonly Zeile[] = [],
+): unknown {
   if (typeof ausdruck !== 'object' || ausdruck === null) return ausdruck;
   const [[op, arg]] = Object.entries(ausdruck);
   const a = arg as unknown[];
-  const w = (x: unknown) => auswerten(x, z, heute);
+  const w = (x: unknown) => auswerten(x, z, heute, alle);
   switch (op) {
     case 'and':
       return a.every((x) => w(x) === true);
@@ -80,6 +85,14 @@ function auswerten(ausdruck: unknown, z: Zeile, heute: string): unknown {
       return z[arg as keyof Zeile];
     case 'ct_date':
       return heute;
+    case 'person--group':
+      // Gemessen O9-6-1: beide Filter gelten auf einer ANDEREN Mitgliedschaft derselben Person.
+      return alle.some(
+        (o) =>
+          o['person.id'] === z['person.id'] &&
+          auswerten(a[0], o, heute, alle) === true &&
+          auswerten(a[1], o, heute, alle) === true,
+      );
     default:
       throw new Error(`Der Nachbau kennt „${op}“ nicht – ChurchTools vielleicht auch nicht.`);
   }
@@ -88,7 +101,7 @@ function auswerten(ausdruck: unknown, z: Zeile, heute: string): unknown {
 const passt = (r: Regel, zeilen: Zeile[], heute: string): number[] => [
   ...new Set(
     zeilen
-      .filter((z) => auswerten(r.query.params.filter, z, heute) === true)
+      .filter((z) => auswerten(r.query.params.filter, z, heute, zeilen) === true)
       .map((z) => z['person.id']),
   ),
 ];
@@ -275,15 +288,30 @@ describe('Aufnahme in die neue, Austragen aus der alten Gruppe', () => {
     expect(passt(aufnahme, aufgehoben, JAHRE[1].wechseltag)).toEqual([12]);
   });
 
-  it('Austragen: wer aktiv als Teilnehmer in der neuen Gruppe ist – nur dann entfernt die Regel', () => {
+  it('Austragen: wer in der alten Gruppe Teilnehmer und in der neuen aktiver Teilnehmer ist – nur dann', () => {
     const r = austragRegel(FISCHE_JUNGSCHAR);
     expect(
-      passt(r, [kind(11, null, 3), kind(12, null, 3, 'to_delete'), leitung(21, 3)], '2027-09-07'),
+      passt(
+        r,
+        [
+          ...[kind(11, null, 2), kind(11, null, 3)], // gewechselt → raus aus den Fischen
+          ...[kind(12, null, 2), kind(12, null, 3, 'to_delete')], // in der Jungschar nicht aktiv → bleibt
+          ...[kind(13, null, 2), leitung(13, 3)], // in der Jungschar Leitung → bleibt
+          kind(14, null, 2), // nur bei den Fischen → bleibt
+        ],
+        '2027-09-07',
+      ),
     ).toEqual([11]);
     expect(r.process.groupAndQueryResult.active).toEqual({
       handleMembership: { groupMemberStatus: 'none' },
     });
     expect(r.process.queryResultOnly).toEqual({ none: {} });
+  });
+
+  it('Austragen: eine LEITUNG der alten Gruppe bleibt, auch wenn sie in der neuen Teilnehmer ist (O9-6-1)', () => {
+    const r = austragRegel(FISCHE_JUNGSCHAR);
+    // z. B. Fische-Mitarbeiterin, die selbst noch bei der Jungschar ist – bis O9-6-1 wäre sie ausgetragen worden.
+    expect(passt(r, [leitung(21, 2), kind(21, null, 3)], '2027-09-07')).toEqual([]);
   });
 });
 
@@ -346,7 +374,8 @@ describe('alle Regeln zusammen', () => {
   });
 
   it('nur Operatoren, die ChurchTools kennt – kein `in` (O9-0)', () => {
-    const erlaubt = new Set(['and', 'or', '==', '<', '<=', 'var', 'ct_date']);
+    // `person--group`: gemessen O9-6-1 (17.11.2026, Syntax und Wirkung in der Test-Instanz).
+    const erlaubt = new Set(['and', 'or', '==', '<', '<=', 'var', 'ct_date', 'person--group']);
     for (const regeln of ALLE.values())
       for (const r of regeln)
         for (const op of operatoren(r.query.params.filter))

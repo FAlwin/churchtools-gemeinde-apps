@@ -26,6 +26,7 @@ import {
   type WechselGruppen,
   type WechselRollen,
   regelName,
+  REGELN,
 } from './gruppenwechsel';
 import { wechselGruppeAb, type Einrichtung } from './gruppenwechselEinrichtung';
 import { teilnehmerRolleAus } from './gruppenwechselSicht';
@@ -451,6 +452,15 @@ function regelnZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): Stand
           fremd.map((s) => (s === null ? 'ohne Namen' : `„${s}“`)),
         )} (nicht von dieser Erweiterung)`,
       );
+    // Die Austrag-Regel hängt weder an Jahren noch an Rollen: Sie muss Zeichen für Zeichen dem Erzeuger gleichen (ChurchTools
+    // gibt Regeln byte-genau zurück, O9-5a). Die ältere Form trug auch Leitungen der alten Gruppe aus (O9-6-1, 17.11.2026).
+    for (const r of sollHier.filter((x) => x.shorty === REGELN.austragen.shorty)) {
+      const da = g.regeln.wert.find((x) => x.shorty === r.shorty);
+      if (da && JSON.stringify(da) !== JSON.stringify(r))
+        befunde.push(
+          `${REGELN.austragen.name} ist veraltet (würde auch Leitungen austragen) – „Stufen ändern“ schreibt sie neu`,
+        );
+    }
     if (sollHier.length > 0) {
       if (!g.status.ok) unlesbar = true;
       else if (g.status.wert === 'none')

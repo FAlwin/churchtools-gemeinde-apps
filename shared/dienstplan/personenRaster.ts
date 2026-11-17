@@ -38,7 +38,11 @@ import type { GruppenAbwesenheit, PersonenDaten } from './personenDaten';
 /** Wie die Matrix einen Entwurf an einem Platz kennt (`entwurfAmPlatz`) – dieselbe Suche wie für „N frei“ (`platzNachEntwurf.ts`). */
 export type { EntwurfSuche };
 
-export type ZellenZustand = 'zugesagt' | 'angefragt' | 'entwurf';
+/**
+ * `zurueck` (P2b): die Person steht in ChurchTools noch am Platz, ein gültiger Entwurf nimmt sie dort aber weg
+ * („zurückziehen“ oder durch jemand anderen ersetzen) – wie in der Matrix, wo der Platz dann rot gestrichelt dasteht.
+ */
+export type ZellenZustand = 'zugesagt' | 'angefragt' | 'entwurf' | 'zurueck';
 
 /**
  * Ein weiterer Dienst am selben Tag („+ Gesang“). `fremd`: der Dienst ist ausgeblendet (seine Gruppe oder er selbst);
@@ -82,7 +86,18 @@ export interface RasterZeile {
 
 export interface RasterGast {
   name: string;
+  /** Ein Entwurf trägt diesen Gast ein (noch nicht in ChurchTools). */
   entwurf: boolean;
+  /** Der Gast steht in ChurchTools, ein gültiger Entwurf nimmt ihn dort weg (P2b). */
+  zurueck: boolean;
+  /** Der Platz (1-basiert) in der Zelle des Dienstes – daran öffnet ein Klick dasselbe Fenster wie in der Matrix. */
+  nr: number;
+  /**
+   * Was ein Klick tut – dieselbe Regel wie in der Matrix (`Plaetze`): ein belegter Platz ohne Entwurf öffnet das Fenster
+   * „zurückziehen oder ersetzen“, ein Platz mit gültigem Entwurf das Entwurfs-Fenster, bei einem veralteten Entwurf
+   * gilt ChurchTools und es gibt nur das Schild der Matrix (hier: nichts).
+   */
+  klick: 'belegt' | 'entwurf' | null;
 }
 
 export interface RasterBlock {
@@ -220,7 +235,7 @@ export function personenRaster(o: {
     const entwurfZelle = new Map<number, Map<number, Entwurf['modus']>>(); // Person → Position → Modus
     const einsaetze = new Map<number, number>();
     spalten.forEach((i, pos) => {
-      for (const p of z.zellen[i] ?? []) {
+      for (const [platzIndex, p] of (z.zellen[i] ?? []).entries()) {
         const e = o.entwurf?.(i, z, p) ?? null;
         if (besetzt(p)) {
           if (p.personId !== null && p.name !== null) {
@@ -228,7 +243,13 @@ export function personenRaster(o: {
             if (!personen.has(p.personId))
               personen.set(p.personId, { name: p.name, initialen: initialenAus(p.name) });
           } else if (p.gast && p.name !== null) {
-            gaeste[pos].push({ name: p.name, entwurf: false });
+            gaeste[pos].push({
+              name: p.name,
+              entwurf: false,
+              zurueck: e !== null && !e.veraltet,
+              nr: platzIndex + 1,
+              klick: e === null ? 'belegt' : e.veraltet ? null : 'entwurf',
+            });
           }
         }
         // Einsätze: wer am Platz steht – nach einem gültigen Entwurf, sonst nach ChurchTools (dieselbe Regel wie der Fokus).
@@ -243,7 +264,13 @@ export function personenRaster(o: {
           if (!je) entwurfZelle.set(ziel.personId, (je = new Map<number, Entwurf['modus']>()));
           je.set(pos, e.entwurf.modus ?? 'anfrage');
         } else if (ziel.art === 'gast') {
-          gaeste[pos].push({ name: ziel.name, entwurf: true });
+          gaeste[pos].push({
+            name: ziel.name,
+            entwurf: true,
+            zurueck: false,
+            nr: platzIndex + 1,
+            klick: 'entwurf',
+          });
         }
       }
     });
@@ -261,13 +288,27 @@ export function personenRaster(o: {
         const zellen: RasterZelle[] = spalten.map((i, pos) => {
           const hier = z.zellen[i] ?? [];
           const platz = hier.filter((p) => besetzt(p) && p.personId === personId);
-          const zustand: ZellenZustand | null = platz.some((p) => p.art === 'zugesagt')
-            ? 'zugesagt'
-            : platz.length > 0
-              ? 'angefragt'
-              : entwurfZelle.get(personId)?.has(pos)
-                ? 'entwurf'
-                : null;
+          // Wird die Person an JEDEM ihrer Plätze hier von einem gültigen Entwurf weggenommen (zurückziehen oder durch
+          // jemand anderen ersetzen), zeigt die Zelle es wie die Matrix. Ein eigener Entwurf auf sie geht vor.
+          const weggenommen =
+            platz.length > 0 &&
+            platz.every((p) => {
+              const e = o.entwurf?.(i, z, p) ?? null;
+              if (!e || e.veraltet) return false;
+              const ziel = e.entwurf.ziel;
+              return !(ziel.art === 'person' && ziel.personId === personId);
+            });
+          const eigenerEntwurf = entwurfZelle.get(personId)?.has(pos) ?? false;
+          const zustand: ZellenZustand | null =
+            weggenommen && !eigenerEntwurf
+              ? 'zurueck'
+              : platz.some((p) => p.art === 'zugesagt')
+                ? 'zugesagt'
+                : platz.length > 0
+                  ? 'angefragt'
+                  : eigenerEntwurf
+                    ? 'entwurf'
+                    : null;
           const weitere: WeitererDienst[] = (eigene?.[pos] ?? [])
             .filter((x) => x.dienst.id !== dienst.id)
             .map((x) => {
@@ -289,7 +330,8 @@ export function personenRaster(o: {
             modus,
             weitere,
             abwesend,
-            warnung: abwesend !== null && zustand !== null,
+            // Wird sie ohnehin weggenommen, ist die Abwesenheit kein Warnfall mehr.
+            warnung: abwesend !== null && zustand !== null && zustand !== 'zurueck',
           };
         });
         return {

@@ -11,7 +11,7 @@
 import { tagKurz, tagMonat } from '../ct/datum';
 import type { Entwurf } from './entwuerfe';
 import type { PlanPlatz } from './plan';
-import type { RasterZelle } from './personenRaster';
+import type { RasterGast, RasterZelle } from './personenRaster';
 
 /** Wie die Matrix einen Entwurf an einem Platz kennt (`Sicht.entwurf`, schon auf Spalte und Zeile festgelegt). */
 export type PlatzEntwurf = (p: PlanPlatz) => { entwurf: Entwurf; veraltet: boolean } | null;
@@ -56,14 +56,34 @@ export function platzFuerEintrag(
  *   ist er noch eine Anfrage, stellt der Klick ihn auf „direkt“ um (`direkt`), ist er schon direkt, nimmt er ihn weg
  *   (`wegnehmen`). `nr`/`entwurf`: der Platz und der Entwurf mit seiner Version, damit der Aufrufer mit dem
  *   Versions-Schutz arbeiten kann.
- * - `null`: nichts (bestehende Einteilung – kommt mit P2b –, Entwurf eines anderen Planers, Dienst nicht vorgesehen).
+ * - `belegt` / `entwurfFach` (P2b): eine **bestehende Einteilung** (zugesagt, angefragt, Gast) bzw. eine, die ein Entwurf
+ *   wegnimmt (rot durchgestrichen): der Klick öffnet **dasselbe Fenster wie in der Matrix** – das Fenster „zurückziehen
+ *   oder ersetzen“ (`onBelegt`) bzw. das Entwurfs-Fenster (`onEntwurf`). `nr`: der Platz, 1-basiert. Das Recht dafür
+ *   prüft der Aufrufer wie die Matrix (`darfPlanen`, für das Entwurfs-Fenster zusätzlich `darfAendern`).
+ * - `null`: nichts (Entwurf eines anderen Planers, Dienst nicht vorgesehen, Entwurf am Platz veraltet).
  */
 export type ZellenAktion =
   | { art: 'eintragen'; nr: number; ersetzt?: number }
   | { art: 'voll'; von: number }
   | { art: 'wegnehmen'; nr: number; entwurf: Entwurf }
   | { art: 'direkt'; nr: number; entwurf: Entwurf }
+  | { art: 'belegt'; nr: number }
+  | { art: 'entwurfFach'; nr: number }
   | null;
+
+/** Die Plätze, an denen die Person in ChurchTools steht (zugesagt oder angefragt, Name sichtbar) – 1-basiert. */
+const plaetzeDerPerson = (plaetze: readonly PlanPlatz[], personId: number) =>
+  plaetze.flatMap((p, i) =>
+    p.art !== 'frei' && !p.verborgen && p.personId === personId ? [{ nr: i + 1, p }] : [],
+  );
+
+/** Was ein Klick auf einen Gast tut – dieselbe Regel wie für Personen, der Platz steht schon im Raster. */
+export const gastAktion = (g: Pick<RasterGast, 'nr' | 'klick'>): ZellenAktion =>
+  g.klick === 'belegt'
+    ? { art: 'belegt', nr: g.nr }
+    : g.klick === 'entwurf'
+      ? { art: 'entwurfFach', nr: g.nr }
+      : null;
 
 export function zellenAktion(o: {
   /** Die Plätze des Dienstes an diesem Termin – `null`: der Dienst ist dort nicht vorgesehen. */
@@ -93,7 +113,21 @@ export function zellenAktion(o: {
     }
     return null;
   }
-  // Zugesagt und angefragt: ein Klick tut noch nichts (P2b).
+  // Wird sie weggenommen (rot durchgestrichen): der Klick öffnet den Entwurf, der es tut – wie in der Matrix.
+  if (o.zustand === 'zurueck') {
+    for (const { nr, p } of plaetzeDerPerson(plaetze, o.personId)) {
+      const a = o.entwurf(p);
+      if (a && !a.veraltet) return { art: 'entwurfFach', nr };
+    }
+    return null;
+  }
+  // Zugesagt und angefragt: der erste Platz der Person ohne Entwurf – dort öffnet sich dasselbe Fenster wie beim
+  // Antippen eines belegten Platzes in der Matrix (die dort nur Plätze OHNE Entwurf zum Knopf macht; ein veralteter
+  // Entwurf zählt auch, dort gilt ChurchTools und es gibt nur das Schild).
+  if (o.zustand === 'zugesagt' || o.zustand === 'angefragt') {
+    const platz = plaetzeDerPerson(plaetze, o.personId).find(({ p }) => o.entwurf(p) === null);
+    return platz ? { art: 'belegt', nr: platz.nr } : null;
+  }
   if (o.zustand !== null) return null;
   const platz = platzFuerEintrag(plaetze, o.entwurf);
   if (platz)

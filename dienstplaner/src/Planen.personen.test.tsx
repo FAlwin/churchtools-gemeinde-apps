@@ -268,7 +268,10 @@ describe('Planen – Ansicht „Personen“', () => {
     zeige(vi.fn(() => Promise.resolve(STAND)));
     const t = await raster();
     await waitFor(() => expect(hat(t, 'Ben Test')).toBe(true));
-    const annaKnoepfe = within(t).getAllByRole('button', { name: /Anna Test/ });
+    // Nur die Namenknöpfe (`aria-pressed`) – die Zellen mit Einteilung sind seit P2b auch Knöpfe („Anna Test für Ton …“).
+    const annaKnoepfe = within(t)
+      .getAllByRole('button', { name: /Anna Test/ })
+      .filter((k) => k.hasAttribute('aria-pressed'));
     expect(annaKnoepfe).toHaveLength(2); // Zeile je Person UND Dienst
     fireEvent.click(annaKnoepfe[0]);
     for (const k of annaKnoepfe) expect(k.getAttribute('aria-pressed')).toBe('true');

@@ -21,7 +21,8 @@ export interface MitgliedAngaben {
   groupTypeRoleId?: number;
   groupMemberStatus?: string;
   waitinglistPosition?: number;
-  fields?: Record<number, string | boolean | null>;
+  /** Auswahl als Options-Nummer, Mehrfachauswahl (`multiselect`) als Liste davon (gemessen 17.11.2026). */
+  fields?: Record<number, string | string[] | boolean | null>;
   [weitere: string]: unknown;
 }
 

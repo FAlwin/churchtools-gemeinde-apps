@@ -23,7 +23,11 @@ function mitExtras() {
 /** Was die Anmeldung in ChurchTools hinterlässt: Text im Feld „Extras“ und der berechnete Betrag. */
 function geschrieben(e: ReturnType<typeof einstellungen>, extras: boolean[]) {
   const [erste] = anmeldungAufbauen(e, antworten(), { option: 0, extras }, HEUTE, CT).forms;
-  const wert = (id: number | undefined) => erste.form.find((x) => x.id === String(id))?.value;
+  // Betrag und Aufschlüsselung sind Text (eine Mehrfachauswahl wäre eine Liste, F5c).
+  const wert = (id: number | undefined) => {
+    const v = erste.form.find((x) => x.id === String(id))?.value;
+    return typeof v === 'string' ? v : undefined;
+  };
   return { extras: wert(e.ctFelder.extras), cent: centAusEuroText(wert(e.ctFelder.betrag)) };
 }
 

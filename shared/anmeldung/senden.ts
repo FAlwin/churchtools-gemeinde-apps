@@ -54,7 +54,8 @@ export interface CtFormular {
 export interface FormWert {
   id: string;
   type: string;
-  value: string;
+  /** Mehrfachauswahl (`multiselect`, F5c): die Liste der Options-Nummern. */
+  value: string | string[];
 }
 
 export interface Anmeldung {
@@ -204,11 +205,11 @@ export function unterschriftAufPapier(vermerktVon: string, heute: string): strin
 }
 
 /**
- * Eine Antwort im Format, das ChurchTools für das Gruppenfeld annimmt (gemessen A0/A6): Ankreuzen `1`, Ja/Nein und
- * Auswahl als Options-ID, Mehrfachauswahl als Text („Wandern, Spiele“), sonst der Text. `null` = leer, nichts
- * schicken.
+ * Eine Antwort im Format, das ChurchTools für das Gruppenfeld annimmt (gemessen A0/A6/F0): Ankreuzen `1`, Ja/Nein und
+ * Auswahl als Options-ID, Mehrfachauswahl als Liste der Options-IDs (`multiselect`, F5c) – in einer älteren
+ * Text-Spalte als Text („Wandern, Spiele“) –, sonst der Text. `null` = leer, nichts schicken.
  */
-export function ctWert(f: Feld, w: Antwort, ct: CtFormFeld): string | null {
+export function ctWert(f: Feld, w: Antwort, ct: CtFormFeld): string | string[] | null {
   if (f.typ === 'check') return w === true ? '1' : null;
   if (f.typ === 'janein' || f.typ === 'radio' || f.typ === 'select') {
     if (typeof w !== 'string' || !w.trim()) return null;
@@ -216,7 +217,16 @@ export function ctWert(f: Feld, w: Antwort, ct: CtFormFeld): string | null {
     if (!o) throw new PasstNicht(`„${f.frage}“ kennt die Antwort „${w}“ nicht`);
     return String(o.id);
   }
-  if (f.typ === 'multi') return Array.isArray(w) && w.length ? w.join(', ') : null;
+  if (f.typ === 'multi') {
+    if (!Array.isArray(w) || !w.length) return null;
+    // Woran die Spalte zu erkennen ist: Ein `multiselect` hat Optionen, die alte Text-Spalte nicht.
+    if (!ct.options?.length) return w.join(', ');
+    return w.map((a) => {
+      const o = ct.options!.find((x) => x.name.trim() === a.trim());
+      if (!o) throw new PasstNicht(`„${f.frage}“ kennt die Antwort „${a}“ nicht`);
+      return String(o.id);
+    });
+  }
   if (f.typ === 'erziehungsberechtigte') return erziehungText(w);
   // Die Unterschrift baut `anmeldungAufbauen` (sie braucht Name und Tag).
   if (f.typ === 'unterschrift') return null;

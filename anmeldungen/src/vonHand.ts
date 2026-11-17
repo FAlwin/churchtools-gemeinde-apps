@@ -138,8 +138,8 @@ export interface VonHandPlan {
   person:
     | { art: 'da'; personId: number; geburtstagNachtragen: string | null }
     | { art: 'neu'; neu: NeuePerson; trotzdem: boolean };
-  /** Gruppenfelder (`handFelder`). */
-  felder: Record<number, string>;
+  /** Gruppenfelder (`handFelder`) – Mehrfachauswahl als Liste der Options-Nummern (F5c). */
+  felder: Record<number, string | string[]>;
   /** Feldnummer der Anmelde-Nr. – damit wird nachgelesen. */
   nrFeld: number | undefined;
   platz: HandPlatz;

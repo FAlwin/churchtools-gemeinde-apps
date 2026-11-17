@@ -195,11 +195,11 @@ describe('pruefeAntworten', () => {
 });
 
 describe('ctAblage – nach den Messungen in A0', () => {
-  it('Mehrere Antworten landen als Text (ChurchTools nimmt anonym nur einen Wert)', () => {
+  it('F5c: Mehrere Antworten als echtes multiselect (anonym mit mehreren Werten, gemessen F0) – A0 maß noch Text', () => {
     expect(ctAblage(eigen('multi', 'Was?', { antworten: ['A', 'B'] }))).toEqual({
       ort: 'gruppenfeld',
-      fieldTypeCode: 'text',
-      optionen: [],
+      fieldTypeCode: 'multiselect',
+      optionen: ['A', 'B'],
     });
   });
   it('Ja/Nein wird eine Auswahl mit genau „Ja“ und „Nein“', () => {

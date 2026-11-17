@@ -127,15 +127,31 @@ dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Kürzel 
 **Eintragen per Klick (P2a, 16.11.2026):** Ein Klick in eine **leere Zelle** (Person × Termin im Block eines Dienstes) legt sofort
 einen **Entwurf** an – derselbe Weg wie die Wahl in „Wer kann?“ (gleiche Funktion, gleicher Hinweis „… eingetragen – noch nicht
 gesendet“, gleicher Schutz gegen gleichzeitige Änderungen), auf den **ersten freien Platz** dieses Dienstes an diesem Termin
-(ein Platz mit Entwurf ist nicht zu haben, wie beim Zauberstab: `freiOhneEntwurf`). Danach steht in der Zelle der Entwurf (blau, gestrichelt, Stift)
+(ein Platz mit Entwurf ist nicht zu haben, wie beim Zauberstab: `freiOhneEntwurf`). Danach steht in der Zelle der Entwurf (blau, gestrichelt, „?“ = Anfrage)
 und unten die Leiste „Ansehen und senden“. Gesendet wird nichts, bevor man dort sendet. Ein Klick auf den **eigenen Entwurf**
-in der Zelle nimmt ihn wieder weg (wie „Entfernen“ im Entwurfs-Fach); der Entwurf eines **anderen Planers** ist kein Knopf –
-den öffnet man in der Matrix.
+schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; „weg“ ist „Entfernen“ im Entwurfs-Fach); der Entwurf eines
+**anderen Planers** ist kein Knopf – den öffnet man in der Matrix.
 
 - **Warnfenster** (nur dann, mit „Abbrechen“ und „Trotzdem eintragen“): die Person ist am selben Tag **schon in einem anderen
   Dienst** eingeteilt („Daniel F. ist am Fr, 20.11. schon bei Gesang eingeteilt. Trotzdem für Ton eintragen?“) oder an dem Tag
   **abwesend** (Grund und Zeitraum der Abwesenheit); treffen beide zu, steht beides in einem Fenster. Die Sätze rechnet
   `shared/dienstplan/personenEintragen.ts` aus dem, was die Zelle ohnehin zeigt („+ Gesang“, Abwesend-Tag).
+- **Klick-Zyklus Anfrage → direkt → weg (P2m, 17.11.2026):** Der **erste** Klick legt den Entwurf an – als **Anfrage** („?“, blass,
+  gestrichelt) oder, wenn der Dienst auf „direkt“ gestellt ist (Vorgabe, s. u.), gleich als **direkt** (Haken im gefüllten Kreis,
+  kräftiger, dickerer gestrichelter Rand). Der **zweite** Klick auf den eigenen Entwurf stellt eine Anfrage auf **direkt** um (ohne
+  Rückfrage zugesagt), der **dritte** nimmt ihn weg; ist er schon direkt, nimmt schon der zweite weg. Das **Warnfenster** (anderer
+  Dienst am Tag, abwesend) kommt nur beim ersten Klick. Umgestellt wird mit **derselben Funktion** wie „Beim Senden: Anfrage |
+  direkt“ im Entwurfs-Fach (`modusAendern` in `useEinteilen.tsx`, mit der Version des Entwurfs als Versions-Schutz). Die Zelle
+  sagt es auch dem Vorleser („Ton, Entwurf, Anfrage“ / „… direkt“), der Zellen-Knopf nennt den nächsten Schritt („auf direkt
+  umstellen“ / „Entwurf wegnehmen“). In einem **abgesagten** Termin nimmt schon der erste Klick auf den eigenen Entwurf ihn weg.
+  Die Entscheidung „was tut der Klick“ steht in `zellenAktion` (`personenEintragen.ts`: `eintragen`, `direkt`, `wegnehmen`).
+  „Platz übernehmen“ behält den Modus des ersetzten Entwurfs wie bisher.
+- **Abwesenheit als Schraffur (P2m, Variante D):** Eine Zelle, in der die Person abwesend ist, ist **diagonal schraffiert** (leicht
+  getönt); der Grund steht nur als Text mit dem Abwesend-Symbol, **kein Kasten** mehr. Im Dunkelmodus dieselbe Schraffur in der
+  helleren Farbe, der Text hell. **Warnfall** (abwesend UND eingeteilt/Entwurf): rote Schraffur und ein 2 px roter Rahmen um die ganze
+  Zelle. Im Warnfall steht **kein Grund als Text**, nur das durchgestrichene Abwesend-Symbol **vor** dem Entwurf- bzw. Einteilungs-Tag; der Grund steht im Tooltip und Namen der Zelle („Krank – trotzdem eingeteilt“) und im Warnfenster. Die Farben sind Tokens in `ui/design` (`--abw-text`, `--abw-schraffur`,
+  `--abw-toenung`, `--abw-warn-schraffur`, `--abw-warn-toenung`, hell in `_farben.scss`, dunkel in `_variables.scss`); Klick und Hover
+  der Zelle bleiben wie in P2a.
 - **Platz übernehmen (P2a-2):** Gibt es keinen freien Platz ohne Entwurf, nimmt der Klick einen Platz mit **gültigem
   „Zurückziehen“-Entwurf** (belegt mit X): aus „X zurückziehen“ wird **„X durch Y ersetzen“** – derselbe Weg wie „Andere Person
   wählen“ in der Matrix (`trageEin`/`onWahl`, mit der Version des Entwurfs als Versions-Schutz, Hinweis „Y statt X eingetragen –
@@ -182,6 +198,20 @@ den öffnet man in der Matrix.
   Recht und Schublade) sind dieselben. **Kein Knopf**, wo es dort nichts zu füllen gibt – wie in der Matrix (kein freier Platz
   ohne Entwurf, nichts zu planen, Schublade nur lesbar, nur abgesagte/vergangene Termine frei). Der Block-Kopf klebt am Handy
   beim Scrollen links, der Knopf bleibt erreichbar.
+
+**Vorgabe „Anfrage | direkt“ je Dienst (P2m, 17.11.2026, Entwurf `e9-p2-modus.html`, Variante G4):** Ob ein **neuer** Entwurf als
+Anfrage oder gleich als **direkt** (ohne Rückfrage als zugesagt eingetragen, z. B. für Prediger) beginnt, legt man **je Dienst** fest.
+In der **Matrix** – und gleich im **Kopf jedes Dienst-Blocks in „Personen“**, neben dem Zauberstab (dieselbe Komponente `VorgabeKnopf`, dasselbe Fenster, dieselbe Sichtbarkeitsregel) – steht am Dienstnamen nur ein **rundes Symbol** (18 px): „?“ als Umriss = Anfrage, Haken gefüllt = direkt, blau;
+Tooltip und Vorleser „Neue Einteilungen für Ton: Anfrage – ändern“, die Tippfläche ist größer als das Symbol. Es erscheint nur, wo man
+den Dienst planen und seine Entwürfe ändern darf, in Tabelle, Handy-Zettel und Block-Kopf. Die Termin-Ansicht liest die Vorgabe, hat aber (vorerst) kein Symbol. Ein Klick **öffnet nur ein kleines Fenster**
+(„Vorgabe · Ton“: Segment „Anfrage | direkt“, Erklärsatz, „Für alle Dienste übernehmen“, Hinweis „Gilt auf diesem Gerät“) – es wird
+**nie per Klick am Symbol umgeschaltet**. Die Vorgabe wird **je Gerät** gemerkt (im Browser, `direktDienste` in der gemerkten
+Planen-Ansicht, `planenAnsicht.ts`; kein Eintrag = Anfrage), nicht in ChurchTools und nicht für andere Planer. Sie wirkt auf **neue**
+Entwürfe aus „Wer kann?“, dem ersten Klick in „Personen“, „Hier eintragen“ (Fokus-Leiste) und dem Zauberstab (Matrix und „Personen“) –
+überall über **eine** Funktion (`modusFuer` in `useEinteilen.tsx`, `modusFuerDienst` in `shared/dienstplan/modusVorgabe.ts`); auch die
+Termin-Ansicht liest sie. **Bestehende Entwürfe bleiben unverändert**, ein ersetzter Entwurf behält seinen Modus. „Ansehen und senden“
+nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt beides oben – zur Kontrolle, nur lesen. Das Wort ist überall
+**„direkt“** (nicht „fest“); der Knopf „Direkt zuteilen“ im Entwurfs-Fach bleibt.
 
 - **Wer eine Zeile bekommt:** die Mitglieder der ChurchTools-Gruppen des Dienstes (`/services` → `groupIds`, mehrere Gruppen
   werden zusammengeführt – Café hängt an fünf) **plus** wer im Zeitraum dort eingeteilt ist, aber nicht Mitglied ist

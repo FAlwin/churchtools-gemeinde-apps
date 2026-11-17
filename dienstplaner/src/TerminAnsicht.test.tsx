@@ -11,7 +11,8 @@ import { tauschAttrappe } from './tausch.testutil';
 import type { Tausch } from './useTausch';
 import type { TerminBlatt } from '@shared/ct/terminBlatt';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
-import { daten, entwurf, gesendet, nachgebaut } from './entwurfAnschluss.testutil';
+import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import { ALWIN, daten, entwurf, gesendet, nachgebaut } from './entwurfAnschluss.testutil';
 
 // Teilen (E8-1): Das Blatt wird festgehalten statt gezeichnet – geprüft wird, was aus den echten Plan-Daten entsteht.
 const blaetter = vi.hoisted(() => [] as unknown[]);
@@ -1644,6 +1645,36 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
     // Das Fenster „Wer kann?“ der Matrix (`WerKann`) – Titel Dienst · Tag.
     expect(await screen.findByRole('dialog', { name: /^Licht · / })).toBeTruthy();
     expect(screen.getByText(/Einen freien Platz antippen zeigt, wer kann/)).toBeTruthy();
+  });
+
+  it('die Vorgabe „Anfrage | direkt“ des Dienstes (P2m, je Gerät aus der Matrix) gilt auch hier: Licht direkt → Entwurf direkt', async () => {
+    const spy = ct();
+    const sonst = spy.getMockImplementation()!;
+    spy.mockImplementation((input, init) =>
+      String(input).includes('possiblepersons')
+        ? Promise.resolve(
+            json(200, {
+              data: [{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }],
+            }),
+          )
+        : sonst(input, init),
+    );
+    const s = vi.fn((_d: unknown, _g: number, e: Omit<Entwurf, 'zeit' | 'version' | 'von'>) =>
+      Promise.resolve({
+        ok: true as const,
+        entwurf: { ...e, von: ALWIN, zeit: '2026-10-01T10:00:00.000Z', version: 1 },
+      }),
+    );
+    localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ direktDienste: [7] }));
+    try {
+      zeige({ entwuerfe: nachgebaut({ speichern: s }) });
+      fireEvent.click(await screen.findByRole('button', { name: /^frei – Wer kann\?/ }));
+      fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
+      await waitFor(() => expect(s).toHaveBeenCalledTimes(1));
+      expect(s.mock.calls[0][2]).toMatchObject({ modus: 'direkt', ort: { serviceId: 7 } });
+    } finally {
+      localStorage.removeItem('dienstplaner.planen.ansicht');
+    }
   });
 
   it('ohne Planen-Recht: Plätze nur zum Ansehen, kein Hinweis, kein Zauberstab – wie bisher', async () => {

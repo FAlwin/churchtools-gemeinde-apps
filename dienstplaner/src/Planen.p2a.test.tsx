@@ -204,13 +204,13 @@ describe('Personen – Klick in eine leere Zelle', () => {
     expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
-  it('danach zeigt die Zelle den Entwurf (blau, Stift) und unten steht die Leiste „Ansehen und senden“', async () => {
+  it('danach zeigt die Zelle den Entwurf (blau, „?“ = Anfrage) und unten steht die Leiste „Ansehen und senden“', async () => {
     zeige();
     const t = await warte();
     expect(screen.queryByRole('status', { name: 'Noch nicht gesendet' })).toBeNull();
-    expect(within(t).queryByRole('img', { name: 'Ton, Entwurf' })).toBeNull();
+    expect(within(t).queryByRole('img', { name: 'Ton, Entwurf, Anfrage' })).toBeNull();
     fireEvent.click(await knopf('Daniel Test', 'Ton', 'So, 22.11.'));
-    const tag = await within(t).findByRole('img', { name: 'Ton, Entwurf' });
+    const tag = await within(t).findByRole('img', { name: 'Ton, Entwurf, Anfrage' });
     expect(tag.closest('tr')!.textContent).toContain('Daniel Test');
     const leiste = await screen.findByRole('status', { name: 'Noch nicht gesendet' });
     expect(leiste.textContent).toContain('1 Entwurf');
@@ -253,14 +253,14 @@ describe('Personen – Klick in eine leere Zelle', () => {
     fireEvent.click(await knopf('Daniel Test', 'Ton', 'So, 22.11.'));
     expect(await screen.findByText(/hat eben jemand den Platz geändert/)).toBeTruthy();
     expect(keiner('Daniel Test', 'Ton', 'So, 22.11.')).toBeTruthy();
-    expect(screen.queryByRole('img', { name: 'Ton, Entwurf' })).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Ton, Entwurf, Anfrage' })).toBeNull();
   });
 
   it('der Klick auf den Namen setzt weiter den Fokus – der Klick in die Zelle nicht', async () => {
     zeige();
     await warte();
     fireEvent.click(await knopf('Daniel Test', 'Ton', 'So, 22.11.'));
-    await screen.findByRole('img', { name: 'Ton, Entwurf' });
+    await screen.findByRole('img', { name: 'Ton, Entwurf, Anfrage' });
     expect(screen.queryByRole('status', { name: 'Fokus' })).toBeNull();
     fireEvent.click(screen.getAllByRole('button', { pressed: false, name: /Daniel Test/ })[0]);
     expect(await screen.findByRole('status', { name: 'Fokus' })).toBeTruthy();
@@ -268,9 +268,11 @@ describe('Personen – Klick in eine leere Zelle', () => {
 });
 
 describe('Personen – Klick auf den eigenen Entwurf', () => {
+  // „direkt“: Ab P2m stellt der Klick eine Anfrage erst auf direkt um (Zyklus: Planen.p2m.test.tsx) – weg geht es dann.
   const e = entwurf({
     ort: { eventId: 21, serviceId: 6, index: 1 },
     ziel: { art: 'person', personId: 12, name: 'Daniel Test' },
+    modus: 'direkt',
     version: 4,
   });
 
@@ -280,7 +282,7 @@ describe('Personen – Klick auf den eigenen Entwurf', () => {
       entwuerfe: nachgebaut({ entfernen: f, laden: () => Promise.resolve(daten([e])) }),
     });
     const t = await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
-    await within(t).findByRole('img', { name: 'Ton, Entwurf' });
+    await within(t).findByRole('img', { name: 'Ton, Entwurf, direkt' });
     fireEvent.click(
       await screen.findByRole('button', {
         name: 'Daniel Test für Ton am So, 22.11.: Entwurf wegnehmen',
@@ -289,7 +291,9 @@ describe('Personen – Klick auf den eigenen Entwurf', () => {
     await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
     expect(f).toHaveBeenCalledWith(expect.anything(), 3, e.ort, 4);
     expect(await screen.findByText('Entwurf entfernt.')).toBeTruthy();
-    await waitFor(() => expect(within(t).queryByRole('img', { name: 'Ton, Entwurf' })).toBeNull());
+    await waitFor(() =>
+      expect(within(t).queryByRole('img', { name: 'Ton, Entwurf, direkt' })).toBeNull(),
+    );
     // Die Zelle ist wieder leer und lädt zum Eintragen ein.
     expect(await knopf('Daniel Test', 'Ton', 'So, 22.11.')).toBeTruthy();
   });
@@ -300,14 +304,14 @@ describe('Personen – Klick auf den eigenen Entwurf', () => {
     );
     zeige({ entwuerfe: nachgebaut({ entfernen: f, laden: () => Promise.resolve(daten([e])) }) });
     const t = await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
-    await within(t).findByRole('img', { name: 'Ton, Entwurf' });
+    await within(t).findByRole('img', { name: 'Ton, Entwurf, direkt' });
     fireEvent.click(
       await screen.findByRole('button', {
         name: 'Daniel Test für Ton am So, 22.11.: Entwurf wegnehmen',
       }),
     );
     expect(await screen.findByText(/ChurchTools antwortet gerade nicht/)).toBeTruthy();
-    expect(within(t).getByRole('img', { name: 'Ton, Entwurf' })).toBeTruthy();
+    expect(within(t).getByRole('img', { name: 'Ton, Entwurf, direkt' })).toBeTruthy();
   });
 
   it('der Entwurf eines anderen Planers ist kein Knopf – den nimmt man nicht mit einem Klick weg', async () => {
@@ -317,9 +321,11 @@ describe('Personen – Klick auf den eigenen Entwurf', () => {
       entwuerfe: nachgebaut({ entfernen: f, laden: () => Promise.resolve(daten([fremd])) }),
     });
     const t = await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
-    await within(t).findByRole('img', { name: 'Ton, Entwurf' });
-    expect(screen.queryByRole('button', { name: /Entwurf wegnehmen/ })).toBeNull();
-    fireEvent.click(within(t).getByRole('img', { name: 'Ton, Entwurf' }).closest('td')!);
+    await within(t).findByRole('img', { name: 'Ton, Entwurf, direkt' });
+    expect(
+      screen.queryByRole('button', { name: /Entwurf wegnehmen|auf direkt umstellen/ }),
+    ).toBeNull();
+    fireEvent.click(within(t).getByRole('img', { name: 'Ton, Entwurf, direkt' }).closest('td')!);
     expect(f).not.toHaveBeenCalled();
   });
 });

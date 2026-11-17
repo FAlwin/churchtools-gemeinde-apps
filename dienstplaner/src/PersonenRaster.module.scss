@@ -293,7 +293,8 @@ $anzahl-farben: 8;
   font-weight: 700;
   line-height: 1;
 }
-// Entwurf: Stift, gestrichelter Rand, wie in der Matrix blau.
+// Entwurf: gestrichelter Rand, wie in der Matrix blau. **Anfrage** (P2m): blass, „?“ im gestrichelten Kreis. **direkt**:
+// kräftiger – dickerer Rand, dunklere Fläche, fette Schrift, Haken im gefüllten Kreis (Entwurf `e9-p2-modus.html`).
 .entwurf {
   --ti: var(--blue);
   background: var(--blue-soft);
@@ -301,17 +302,61 @@ $anzahl-farben: 8;
   box-shadow: none;
   outline: 1.5px dashed var(--blue);
   outline-offset: -1.5px;
+
+  .frage {
+    border-style: dashed;
+  }
 }
-// Abwesend: grauer Tag mit dem Grund.
+.entwurfDirekt {
+  background: color-mix(in srgb, var(--blue) 26%, var(--surface2));
+  outline-width: 2px;
+  outline-offset: -2px;
+  outline-color: var(--blue-ink);
+  font-weight: 700;
+}
+// Der Haken im gefüllten blauen Kreis (14 px) – „direkt“.
+.haken {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--symbol-tinte);
+
+  svg {
+    width: 9px;
+    height: 9px;
+    color: inherit;
+  }
+}
+// Abwesend (P2m, Entwurf `e9-p2-modus.html`, Variante D): **die Zelle ist schraffiert** (diagonal, leicht getönt), der Grund
+// steht nur als Text mit dem Symbol – kein Kasten. Farben aus `ui/design` (`--abw-*`, hell und dunkel).
+// Mit `.raster td` davor: `.raster td { background: … }` (Zebra, Fokus) setzt sonst das Muster zurück.
+.raster td.abwZelle {
+  background-image:
+    repeating-linear-gradient(135deg, var(--abw-schraffur) 0 4px, transparent 4px 9px),
+    linear-gradient(var(--abw-toenung), var(--abw-toenung));
+}
 .abwesend {
-  --ti: var(--text2);
-  background: var(--surface3);
-  color: var(--text2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  color: var(--abw-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  vertical-align: middle;
 }
-// Abwesend UND eingeteilt – ein Warnfall: der graue Tag bekommt einen roten Rand.
-.warnung {
-  outline: 1.5px solid var(--red);
-  outline-offset: -1.5px;
+// Abwesend UND eingeteilt – ein Warnfall: rote Schraffur und ein 2 px roter Rahmen um die ganze Zelle.
+.raster td.warnZelle {
+  background-image:
+    repeating-linear-gradient(135deg, var(--abw-warn-schraffur) 0 4px, transparent 4px 9px),
+    linear-gradient(var(--abw-warn-toenung), var(--abw-warn-toenung));
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
 }
 .offenTag {
   --ti: var(--red);

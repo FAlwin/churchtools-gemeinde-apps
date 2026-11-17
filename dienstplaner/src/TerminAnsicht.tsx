@@ -10,6 +10,8 @@ import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import type { CtAgenda } from '@shared/ct/typen';
 import { dateienSchluessel, type TerminDatei } from '@shared/ct/terminDateien';
 import { gruppenName } from '@shared/dienstplan/plan';
+import { modusFuerDienst } from '@shared/dienstplan/modusVorgabe';
+import { leseAnsicht } from './planenAnsicht';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf } from './ladeBeiwerk';
 import { useMusikApp } from './useMusikApp';
@@ -130,6 +132,9 @@ export function TerminAnsicht({
     nachfragen: false,
     leisteZusatz: 'an diesem Termin',
     sendenZusatz: (daten) => andereTermineText(daten, terminId),
+    // Die Vorgabe „Anfrage | direkt“ je Dienst gilt auch hier (P2m) – eingestellt wird sie in der Matrix, gelesen frisch aus
+    // dem Gerät (die Termin-Ansicht hält keine eigene Ansicht).
+    modusFuer: (dienstId) => modusFuerDienst(leseAnsicht().direktDienste, dienstId),
     // Danach leise neu lesen, was in ChurchTools steht; scheitert das, wie beim ersten Laden mit Fehlerkasten.
     onGesendet: () => {
       ladeTermin(start, terminId, zeitzone).then(

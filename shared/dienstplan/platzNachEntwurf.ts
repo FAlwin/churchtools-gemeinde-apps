@@ -16,11 +16,17 @@
  *
  * Nur Typ-Importe aus `plan.ts` (`plan.ts` selbst ruft diese Datei auf).
  */
-import type { EntwurfZiel } from './entwuerfe';
+import type { Entwurf, EntwurfZiel } from './entwuerfe';
 import type { PlanPlatz, PlanZeile } from './plan';
 
-/** Der Entwurf an einem Platz – wie `Sicht.entwurf` ihn liefert (mit „veraltet“); nur, was die Regel braucht. */
-export type PlatzEntwurfMin = { entwurf: { ziel: EntwurfZiel }; veraltet: boolean } | null;
+/**
+ * Der Entwurf an einem Platz – wie `Sicht.entwurf` ihn liefert (mit „veraltet“); nur, was die Regeln brauchen. `modus`
+ * brauchen sie nicht – „Personen“ zeigt ihn in der Zelle (P2m); ohne Angabe gilt die Anfrage.
+ */
+export type PlatzEntwurfMin = {
+  entwurf: { ziel: EntwurfZiel; modus?: Entwurf['modus'] };
+  veraltet: boolean;
+} | null;
 
 /** Wie die Matrix einen Entwurf für Spalte, Zeile und Platz kennt (`Sicht.entwurf`, `entwurfAmPlatz`). */
 export type EntwurfSuche = (spalte: number, zeile: PlanZeile, platz: PlanPlatz) => PlatzEntwurfMin;

@@ -136,7 +136,7 @@ describe('zellenAktion', () => {
     expect(zellenAktion({ ...o, plaetze: null })).toBeNull();
   });
 
-  it('eigener Entwurf in der Zelle: wegnehmen – mit Platz und Entwurf (Version für den Schutz)', () => {
+  it('eigener Entwurf als ANFRAGE: der Klick stellt auf direkt um – mit Platz und Entwurf (Version für den Schutz)', () => {
     const e = entwurf(2, 12);
     const r = zellenAktion({
       ...o,
@@ -144,7 +144,29 @@ describe('zellenAktion', () => {
       entwurf: suche([{ entwurf: e }]),
       plaetze: [besetzt(1, 5, 'Anna'), frei(2)],
     });
+    expect(r).toEqual({ art: 'direkt', nr: 2, entwurf: e });
+  });
+
+  it('eigener Entwurf, schon DIREKT: der Klick nimmt ihn weg (Zyklus Anfrage → direkt → weg)', () => {
+    const e = { ...entwurf(2, 12), modus: 'direkt' as const };
+    const r = zellenAktion({
+      ...o,
+      zustand: 'entwurf',
+      entwurf: suche([{ entwurf: e }]),
+      plaetze: [besetzt(1, 5, 'Anna'), frei(2)],
+    });
     expect(r).toEqual({ art: 'wegnehmen', nr: 2, entwurf: e });
+  });
+
+  it('der Entwurf eines anderen Planers: auch das Umstellen auf direkt ist ihm vorbehalten – nichts', () => {
+    expect(
+      zellenAktion({
+        ...o,
+        zustand: 'entwurf',
+        plaetze: [frei(1)],
+        entwurf: suche([{ entwurf: entwurf(1, 12, 99) }]),
+      }),
+    ).toBeNull();
   });
 
   it('der Entwurf eines anderen Planers, ein Entwurf einer anderen Person und ein veralteter: nichts', () => {

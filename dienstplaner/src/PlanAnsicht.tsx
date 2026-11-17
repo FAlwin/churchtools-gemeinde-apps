@@ -8,13 +8,15 @@ import {
   terminStand,
   type PlanGruppe,
   type PlanSpalte,
+  type PlanZeile,
   type TerminStand,
 } from '@shared/dienstplan/plan';
 import { DIENST_SPALTE, SPALTENBREITE, type Breite } from '@shared/dienstplan/fenster';
 import { CtSymbol } from './CtSymbol';
 import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
 import { HandyInfos, InfosZeilen } from './MatrixInfos';
-import { schluessel, type Sicht, nurAnsehen } from './planSicht';
+import { vorgabeText, type Modus } from '@shared/dienstplan/modusVorgabe';
+import { darfPlanen, schluessel, type Sicht, nurAnsehen } from './planSicht';
 import { EinteilPlaetze } from './PlanPlaetze';
 import { useBisUnten } from './useBisUnten';
 import styles from './Planen.module.scss';
@@ -54,6 +56,38 @@ export function ZauberKnopf({ onKlick, text }: { onKlick?: () => void; text: str
       title={text}
     >
       <CtSymbol name="magic" size={14} />
+    </button>
+  );
+}
+
+/**
+ * **Die Vorgabe am Dienstnamen** (P2m, Entwurf `e9-p2-modus.html`, G4): nur ein rundes Symbol, 18 px mit der Linie der
+ * Status-Kreise im Platz – „?“ als Umriss = neue Einteilungen beginnen als Anfrage, Haken gefüllt = direkt. Antippen öffnet
+ * das kleine Fenster (`VorgabeFach`); **umgeschaltet wird nie per Klick auf das Symbol**. Nur, wo man den Dienst an einem
+ * der gezeigten Termine planen **und** seine Entwürfe ändern darf (`darfAendern`) – sonst gäbe es nichts zu entscheiden.
+ */
+export function VorgabeKnopf({
+  sicht,
+  z,
+  spalten,
+}: {
+  sicht: Sicht;
+  z: PlanZeile;
+  spalten: PlanSpalte[];
+}) {
+  const v = sicht.vorgabe;
+  if (!v || !sicht.darfAendern(z) || !spalten.some((s) => darfPlanen(z, s))) return null;
+  const modus: Modus = v.modus(z.dienst.id);
+  const text = vorgabeText(z.dienst.name, modus);
+  return (
+    <button
+      type="button"
+      className={`${styles.vorgabe}${modus === 'direkt' ? ' ' + styles.vorgabeDirekt : ''}`}
+      onClick={() => v.oeffnen(z)}
+      aria-label={text}
+      title={text}
+    >
+      {modus === 'direkt' ? <Icon name="check" size={11} stroke={3.2} /> : '?'}
     </button>
   );
 }
@@ -254,8 +288,20 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
               ...(offen
                 ? g.zeilen.map((z) => (
                     <tr key={`d-${z.dienst.id}`}>
-                      <th className={styles.svc} scope="row">
-                        <b>{z.dienst.name}</b>
+                      <th
+                        className={styles.svc}
+                        scope="row"
+                        aria-labelledby={`dienstname-${z.dienst.id}`}
+                      >
+                        {/* Der Name der Zeile ist der Dienst – das Symbol gehört nicht in den Namen (Vorleser, Tests). */}
+                        <div className={styles.dienstKopf}>
+                          <b id={`dienstname-${z.dienst.id}`}>{z.dienst.name}</b>
+                          <VorgabeKnopf
+                            sicht={sicht}
+                            z={z}
+                            spalten={spalten.map((i) => plan.spalten[i])}
+                          />
+                        </div>
                       </th>
                       {spalten.map((i) => {
                         const zelle = z.zellen[i];
@@ -376,7 +422,10 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
               {offen &&
                 dienste.map((z) => (
                   <div key={z.dienst.id} className={styles.handyDienst}>
-                    <span>{z.dienst.name}</span>
+                    <span className={styles.dienstKopf}>
+                      {z.dienst.name}
+                      <VorgabeKnopf sicht={sicht} z={z} spalten={[s]} />
+                    </span>
                     <EinteilPlaetze am={sicht} s={s} i={i} z={z} />
                   </div>
                 ))}

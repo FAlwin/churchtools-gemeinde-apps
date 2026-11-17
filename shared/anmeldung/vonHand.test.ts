@@ -180,6 +180,7 @@ describe('Fragen', () => {
       nach: 'Beispiel',
       geburtstag: '2017-05-01',
       email: 'maria@beispiel.test',
+      adresse: null,
     });
     expect(start.personen[0]).toMatchObject({
       pname: { vor: 'Jonas', nach: 'Beispiel' },

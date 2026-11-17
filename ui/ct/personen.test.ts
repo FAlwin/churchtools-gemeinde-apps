@@ -18,7 +18,17 @@ beforeEach(() => {
       ]);
     if (pfad.startsWith('/persons'))
       // 99 darf man nicht sehen – ChurchTools lässt sie weg
-      return Promise.resolve([{ id: HANNA, firstName: 'Hanna', lastName: 'Handtest' }]);
+      return Promise.resolve([
+        {
+          id: HANNA,
+          firstName: 'Hanna',
+          lastName: 'Handtest',
+          // F4c: die Adresse aus dem Profil kommt mit.
+          street: 'Hauptstr. 4',
+          zip: '53797',
+          city: 'Lohmar',
+        },
+      ]);
     return Promise.reject(new Error(`unerwartet: ${pfad}`));
   });
 });
@@ -27,7 +37,14 @@ describe('personenSuchen', () => {
   it('ohne Archivierte, in der Reihenfolge von ChurchTools; wen man nicht sehen darf, fehlt', async () => {
     const t = await personenSuchen('Hanna');
     expect(t).toEqual([
-      { personId: HANNA, vor: 'Hanna', nach: 'Handtest', geburtstag: null, email: null },
+      {
+        personId: HANNA,
+        vor: 'Hanna',
+        nach: 'Handtest',
+        geburtstag: null,
+        email: null,
+        adresse: { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' },
+      },
     ]);
     expect(daten).toHaveBeenCalledWith('/persons?ids[]=152&ids[]=99&limit=2');
   });

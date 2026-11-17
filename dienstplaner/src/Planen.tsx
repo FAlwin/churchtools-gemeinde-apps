@@ -49,7 +49,14 @@ import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen
 import { VorgabeFach } from './VorgabeFach';
 import { modusFuerDienst, vorgabeFuerAlle, vorgabeSetzen } from '@shared/dienstplan/modusVorgabe';
 import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
-import { plaetzeZeile, plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
+import {
+  entwurfAmPlatz,
+  plaetzeZeile,
+  plaetzeZeilen,
+  vorlageFuer,
+  type DiensteKatalog,
+} from './planEntwuerfe';
+import { plaetzeStand } from '@shared/dienstplan/platzNachEntwurf';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
 
@@ -671,6 +678,11 @@ export function Planen({
               titel={`Plätze – ${name} · ${tagKurz(s.tag)}`}
               unter={`${s.name} · ${s.uhrzeit} Uhr`}
               z={plaetzeZeile(daten, s, i, platzFenster.dienst, zl)}
+              mitEntwuerfen={
+                zl
+                  ? plaetzeStand(zl.zellen[i] ?? null, (p) => entwurfAmPlatz(daten, s, zl, p))
+                  : null
+              }
               aendern={(z, gesehen, neu) => entwuerfe.anzahl(s.id, z.serviceId, gesehen, neu)}
               onGespeichert={showToast}
               onClose={(geaendert) => {

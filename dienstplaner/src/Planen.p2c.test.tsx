@@ -342,6 +342,8 @@ describe('Zeile „Plätze“', () => {
     fireEvent.click(plaetzeKnopf('Ton', 'So, 29.11.', '3 von 3')!);
     const f = await fenster();
     expect(f.textContent).toContain('Hier liegt ein Entwurf – erst senden oder entfernen.');
+    // Die Zahlen im Fenster wie in der Zeile („3 von 3“) – nicht „frei 1“ nach ChurchTools allein (17.11.2026).
+    expect(f.textContent).toContain('belegt 3 · Plätze 3 · frei 0 (mit Entwürfen)');
     for (const name of ['Ton: ein Platz weniger', 'Ton: ein Platz mehr'])
       expect(within(f).getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
     expect(anzahl).not.toHaveBeenCalled();

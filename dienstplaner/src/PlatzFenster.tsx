@@ -20,6 +20,7 @@ export function PlatzFenster({
   titel,
   unter,
   z,
+  mitEntwuerfen = null,
   aendern,
   onGespeichert,
   onClose,
@@ -27,6 +28,12 @@ export function PlatzFenster({
   titel: string;
   unter: string;
   z: PlaetzeZeile;
+  /**
+   * Belegt und frei, gezählt wie die Zeile „Plätze“ (`plaetzeStand`, Entwürfe zählen mit). Liegen Entwürfe vor, zeigt das
+   * Fenster diese Zahlen – sonst stünde „frei 0“ neben einer roten Zeile „1 von 2“ (17.11.2026). Der Regler selbst ist
+   * dann ohnehin gesperrt; ohne Entwürfe sind beide Zählungen gleich.
+   */
+  mitEntwuerfen?: { belegt: number; frei: number } | null;
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
@@ -56,7 +63,9 @@ export function PlatzFenster({
         />
       </div>
       <p className={eigen.zahlen}>
-        belegt {z.belegt} · Plätze {n} · frei {Math.max(n - z.belegt, 0)}
+        {z.entwuerfe > 0 && mitEntwuerfen
+          ? `belegt ${mitEntwuerfen.belegt} · Plätze ${n} · frei ${mitEntwuerfen.frei} (mit Entwürfen)`
+          : `belegt ${z.belegt} · Plätze ${n} · frei ${Math.max(n - z.belegt, 0)}`}
       </p>
       {z.entwuerfe > 0 && <p className={eigen.gesperrtText}>{sperreText(z.entwuerfe)}</p>}
       {z.entwuerfe === 0 && n <= z.belegt && z.belegt > 0 && (

@@ -19,8 +19,12 @@ import { z } from 'zod';
 import type { Antwort, Antworten, Feld, Formular } from './formular';
 import { freiGewaehlt, freiName, freiSchluessel } from './freieAntwort';
 
-/** Höchstlänge einer Antwort – dieselbe für die Antworten selbst, ausgeblendete und Bedingungen (`formular.ts`). */
-export const ANTWORT_MAX = 80;
+/**
+ * Höchstlänge einer Antwort – dieselbe für die Antworten selbst, ausgeblendete, die freie Antwort und Bedingungen
+ * (`formular.ts`). 255 seit F5a: ChurchTools speichert Optionen mit 255 Zeichen vollständig, auch die anonyme Wahl
+ * klappt (gemessen F0, 08.11.2026); die AC-Anmeldung braucht 84 und 88.
+ */
+export const ANTWORT_MAX = 255;
 /** Höchstlänge des freiwilligen Kurznamens einer Frage (Klick-Runde 4). */
 export const KURZ_MAX = 40;
 
@@ -518,14 +522,20 @@ export function bedingungenUmbenennen(
 
 /**
  * **Umbenannte Antworten** aus dem Baukasten: alter Text → neuer Text (`von` = der Name beim letzten Speichern). Daran
- * ziehen die Bedingungen mit (`bedingungenUmbenennen`).
+ * ziehen die Bedingungen mit (`bedingungenUmbenennen`). Mit `gespeichert` und `neu` (dasselbe Feld vorher und jetzt)
+ * zählt auch die umbenannte freie Antwort (F3c) – die EINE Stelle für das Speichern und den Zwischenstand im Baukasten.
  */
 export function umbenannteAntworten(
   antworten: { text: string; von?: string }[] | undefined,
+  gespeichert?: Feld,
+  neu?: Feld,
 ): Record<string, string> {
   const m: Record<string, string> = {};
   for (const a of antworten ?? [])
     if (a.von !== undefined && a.von !== a.text.trim()) m[a.von] = a.text.trim();
+  const vorher = gespeichert ? freiName(gespeichert) : null;
+  const jetzt = neu ? freiName(neu)?.trim() : undefined;
+  if (vorher !== null && jetzt && vorher !== jetzt) m[vorher] = jetzt;
   return m;
 }
 

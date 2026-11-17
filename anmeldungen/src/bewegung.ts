@@ -8,6 +8,7 @@
  *   ChurchTools selbst; mit eingerichteten Abläufen kommt die Bestätigung noch einmal (A9-1, echt geprüft 24.10.2026).
  * Jede Person wird vor dem Schreiben frisch gelesen (nicht aus der Liste), jeder Schritt nachgelesen.
  */
+import { rohWert, type CtFeldwert } from '@shared/anmeldung/feldwert';
 import { ApiError } from '@ui/ct/fehler';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { einmalFelder } from '@shared/anmeldung/liste';
@@ -30,17 +31,17 @@ interface MitgliedRoh {
   fields?: { id?: unknown; value?: unknown }[];
 }
 
-type Feldwerte = Record<number, string | boolean | null>;
+type Feldwerte = Record<number, CtFeldwert>;
 
 const mitglied = (id: number, personId: number) => mitgliedLesen<MitgliedRoh>(id, personId);
 
-/** Die Felder einer Person, wie ChurchTools sie hält (Auswahl als Options-ID) – zum Kopieren und Zurückschreiben. */
-function rohWerte(m: MitgliedRoh): Map<number, string | null> {
-  const out = new Map<number, string | null>();
-  for (const f of m.fields ?? []) {
-    const v = f.value;
-    out.set(Number(f.id), typeof v === 'string' ? v : typeof v === 'number' ? String(v) : null);
-  }
+/**
+ * Die Felder einer Person, wie ChurchTools sie hält (Auswahl als Options-ID, Mehrfachauswahl als Liste davon, F5c) –
+ * zum Kopieren und Zurückschreiben. Gelesen wie überall (`rohWert`).
+ */
+function rohWerte(m: MitgliedRoh): Map<number, string | string[] | null> {
+  const out = new Map<number, string | string[] | null>();
+  for (const f of m.fields ?? []) out.set(Number(f.id), rohWert(f.value));
   return out;
 }
 
@@ -82,7 +83,7 @@ export async function nachrueckenLassen(
 }
 
 /** Was in den Feldern stand, bevor `felder` geschrieben wurden. */
-function alteWerte(felder: Feldwerte, vorher: Map<number, string | null>): Feldwerte {
+function alteWerte(felder: Feldwerte, vorher: Map<number, string | string[] | null>): Feldwerte {
   return Object.fromEntries(Object.keys(felder).map((k) => [k, vorher.get(Number(k)) ?? null]));
 }
 

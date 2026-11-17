@@ -395,6 +395,7 @@ export type CtAblage =
         | 'checkbox'
         | 'radioselect'
         | 'select'
+        | 'multiselect'
         | 'date'
         | 'number';
       optionen: string[];
@@ -431,8 +432,11 @@ export function ctAblage(x: Feld): CtAblage {
       return { ort: 'gruppenfeld', fieldTypeCode: 'radioselect', optionen: wahlAntworten(x) };
     case 'select':
       return { ort: 'gruppenfeld', fieldTypeCode: 'select', optionen: wahlAntworten(x) };
-    // A0: Mehrfachauswahl nimmt ChurchTools anonym nur mit einem Wert an → als Text („Wandern, Spiele“).
+    // F5c: Mehrfachauswahl als echtes `multiselect` – anonym mit mehreren Werten (gemessen F0, 08.11.2026; A0 maß noch
+    // „nur ein Wert“, überholt), zurück als Liste der Options-Nummern (17.11.2026). Ältere Veranstaltungen haben eine
+    // Text-Spalte („Wandern, Spiele“) – die bleibt (`feldSpeichern`, `ctWert`).
     case 'multi':
+      return { ort: 'gruppenfeld', fieldTypeCode: 'multiselect', optionen: wahlAntworten(x) };
     case 'tel':
     case 'text':
       return { ort: 'gruppenfeld', fieldTypeCode: 'text', optionen: [] };

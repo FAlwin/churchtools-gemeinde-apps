@@ -1709,3 +1709,159 @@ describe('Termin aus dem Kalender nachziehen (K1, gemessen 05.11.2026)', () => {
     expect(await terminNachziehen(id, ZONE)).toBeNull();
   });
 });
+
+// ── F3c: freie Antwort in ChurchTools (Klick-Runde 9, Entwurf f3-freie-antwort-v1) ──
+describe('Freie Antwort in ChurchTools (F3c)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const feld = (extra: Partial<Feld> = {}): Feld => ({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'radio',
+    frage: 'Gemeinde',
+    hilfe: '',
+    zustand: 'pflicht',
+    antworten: ['EFK Bonn', 'ECG Donrath'],
+    frei: { name: 'Sonstiges', textfeld: 'auf' },
+    ...extra,
+  });
+  const ctFeld = (id: number, schluessel: string) => {
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder[schluessel]);
+  };
+  const namen = (id: number) =>
+    (ctFeld(id, 'f1')!.options as { id: string; name: string }[]).map((o) => o.name);
+
+  it('neu: Option am Ende, zweite Spalte „Frage (Beschriftung)“ als Text – nie Pflicht in ChurchTools', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    expect(namen(id)).toEqual(['EFK Bonn', 'ECG Donrath', 'Sonstiges']);
+    expect(ctFeld(id, 'f1')).toMatchObject({ requiredInRegistrationForm: true });
+    expect(ctFeld(id, 'f1.frei')).toMatchObject({
+      name: 'Gemeinde (Sonstiges)',
+      fieldTypeCode: 'text',
+      useInRegistrationForm: true,
+      requiredInRegistrationForm: false,
+    });
+  });
+
+  it('„kein Textfeld“: nur die Option, keine zweite Spalte', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld({ frei: { name: 'Sonstiges', textfeld: 'ohne' } }));
+    expect(namen(id)).toEqual(['EFK Bonn', 'ECG Donrath', 'Sonstiges']);
+    expect(ctFeld(id, 'f1.frei')).toBeUndefined();
+  });
+
+  it('umbenannt: die Option behält ihre ID (die Wahl bleibt), die Spalte heißt mit, Bedingungen ziehen mit', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    await feldSpeichern(id, 'person', {
+      ...feld({ id: 'f2', typ: 'text', frage: 'Welche?', antworten: [], zustand: 'freiwillig' }),
+      frei: undefined,
+      bed: { modus: 'eine', regeln: [{ feld: 'f1', op: 'ist', wert: 'Sonstiges' }] },
+    });
+    const vorher = (ctFeld(id, 'f1')!.options as { id: string; name: string }[]).at(-1)!;
+    const e = await feldSpeichern(
+      id,
+      'person',
+      feld({ frei: { name: 'Andere Gemeinde', textfeld: 'auf' } }),
+    );
+    const nachher = (ctFeld(id, 'f1')!.options as { id: string; name: string }[]).at(-1)!;
+    expect([nachher.id, nachher.name]).toEqual([vorher.id, 'Andere Gemeinde']);
+    expect(ctFeld(id, 'f1.frei')!.name).toBe('Gemeinde (Andere Gemeinde)');
+    expect(e.formular.person.find((f) => f.id === 'f2')!.bed!.regeln[0].wert).toBe(
+      'Andere Gemeinde',
+    );
+  });
+
+  it('entfernt, aber schon gewählt: Option nur verborgen; die Textspalte kommt aus dem Anmeldeformular, bleibt aber', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    const frei = (ctFeld(id, 'f1')!.options as { id: string; name: string }[]).at(-1)!;
+    const text = ctFeld(id, 'f1.frei')!;
+    mitglieder.set(id, [
+      {
+        groupMemberStatus: 'active',
+        fields: [
+          { id: ctFeld(id, 'f1')!.id, value: frei.id },
+          { id: text.id, value: 'FeG Siegburg' },
+        ],
+      },
+    ]);
+    const e = await feldSpeichern(id, 'person', feld({ frei: undefined }));
+    expect(e.formular.person.find((f) => f.id === 'f1')!.verborgen).toEqual(['Sonstiges']);
+    expect(ctFeld(id, 'f1.frei')).toMatchObject({ id: text.id, useInRegistrationForm: false });
+  });
+
+  it('Ja / Nein: die IDs von Ja und Nein bleiben, die freie Antwort kommt als dritte Option dazu', async () => {
+    const id = await neu();
+    const jn = feld({ typ: 'janein', antworten: [], frei: undefined });
+    await feldSpeichern(id, 'person', jn);
+    const [ja, nein] = ctFeld(id, 'f1')!.options as { id: string; name: string }[];
+    await feldSpeichern(id, 'person', { ...jn, frei: { name: 'Noch nicht', textfeld: 'ohne' } });
+    const opt = ctFeld(id, 'f1')!.options as { id: string; name: string }[];
+    expect(opt.map((o) => [o.id, o.name])).toEqual([
+      [ja.id, 'Ja'],
+      [nein.id, 'Nein'],
+      [expect.any(String), 'Noch nicht'],
+    ]);
+  });
+});
+
+// ── F5c: Mehrfachauswahl als multiselect (gemessen 17.11.2026, messung-f5c-2026-11-17.md) ──
+describe('Mehrfachauswahl in ChurchTools (F5c)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const feld = (extra: Partial<Feld> = {}): Feld => ({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'multi',
+    frage: 'Bereiche',
+    hilfe: '',
+    zustand: 'freiwillig',
+    antworten: ['Küche', 'Technik', 'Programm'],
+    ...extra,
+  });
+  const ctFeld = (id: number) => {
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder.f1)!;
+  };
+  const optionen = (id: number) => ctFeld(id).options as { id: string; name: string }[];
+
+  it('neu: eine Spalte multiselect mit den Antworten als Optionen', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    expect(ctFeld(id).fieldTypeCode).toBe('multiselect');
+    expect(optionen(id).map((o) => o.name)).toEqual(['Küche', 'Technik', 'Programm']);
+  });
+
+  it('umbenannt behält die Antwort ihre Nummer; eine schon gewählte entfernte bleibt verborgen', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    const [kueche, technik, programm] = optionen(id);
+    mitglieder.set(id, [
+      {
+        groupMemberStatus: 'active',
+        fields: [{ id: ctFeld(id).id, value: [kueche.id, programm.id] }],
+      },
+    ]);
+    const e = await feldSpeichern(id, 'person', feld({ antworten: ['Küche', 'Technik und Ton'] }), [
+      { text: 'Küche', altId: kueche.id },
+      { text: 'Technik und Ton', altId: technik.id },
+    ]);
+    expect(optionen(id).map((o) => [o.id, o.name])).toEqual([
+      [kueche.id, 'Küche'],
+      [technik.id, 'Technik und Ton'],
+      [programm.id, 'Programm'],
+    ]);
+    expect(e.formular.person.find((f) => f.id === 'f1')!.verborgen).toEqual(['Programm']);
+  });
+
+  it('Altbestand: eine Text-Spalte bleibt Text – ohne Optionen, ohne Fehler', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', feld());
+    // So wie vor F5c angelegt.
+    Object.assign(ctFeld(id), { fieldTypeCode: 'text', options: undefined });
+    await feldSpeichern(id, 'person', feld({ frage: 'Bereiche (neu)' }));
+    expect(ctFeld(id)).toMatchObject({ fieldTypeCode: 'text', name: 'Bereiche (neu)' });
+    expect(ctFeld(id).options).toBeUndefined();
+  });
+});

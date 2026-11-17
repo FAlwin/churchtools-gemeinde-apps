@@ -195,11 +195,11 @@ describe('pruefeAntworten', () => {
 });
 
 describe('ctAblage – nach den Messungen in A0', () => {
-  it('Mehrere Antworten landen als Text (ChurchTools nimmt anonym nur einen Wert)', () => {
+  it('F5c: Mehrere Antworten als echtes multiselect (anonym mit mehreren Werten, gemessen F0) – A0 maß noch Text', () => {
     expect(ctAblage(eigen('multi', 'Was?', { antworten: ['A', 'B'] }))).toEqual({
       ort: 'gruppenfeld',
-      fieldTypeCode: 'text',
-      optionen: [],
+      fieldTypeCode: 'multiselect',
+      optionen: ['A', 'B'],
     });
   });
   it('Ja/Nein wird eine Auswahl mit genau „Ja“ und „Nein“', () => {
@@ -492,3 +492,30 @@ function unpackbar(n: number, start: number): string {
   }
   return t;
 }
+
+// ── F5a: Antworten bis 255 Zeichen (gemessen F0, 08.11.2026) ──
+describe('lange Antworten (F5a)', () => {
+  const mitAntwort = (laenge: number): OeffentlicheEinstellungen => {
+    const e = neueEinstellungen('freizeit');
+    e.formular.person.push({
+      id: 'f1',
+      art: 'eigen',
+      typ: 'radio',
+      frage: 'Woche',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: ['a'.repeat(laenge), 'b'],
+      frei: { name: 'c'.repeat(laenge), textfeld: 'auf' },
+    });
+    return e;
+  };
+
+  it('255 Zeichen gehen durch – Antwort und freie Antwort, gespeichert und wieder gelesen', () => {
+    const e = mitAntwort(255);
+    expect(einstellungenLesen(einstellungenAlsText(e))).toEqual(e);
+  });
+
+  it('256 Zeichen nicht – schon das Speichern lehnt sie ab', () => {
+    expect(() => einstellungenAlsText(mitAntwort(256))).toThrow();
+  });
+});

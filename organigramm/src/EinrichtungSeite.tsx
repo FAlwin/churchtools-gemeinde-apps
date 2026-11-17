@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Icon } from '@ui/icons/icons';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useLaden } from '@ui/ct/useLaden';
 import {
   einrichtungStand,
+  fehlendeLeiterRechte,
   sammelHinweis,
   stufenAnzeige,
   type RegelStandRoh,
@@ -11,14 +13,20 @@ import {
 } from '@shared/organigramm/einrichtungStand';
 import type { Einrichtung } from '@shared/organigramm/gruppenwechselEinrichtung';
 import { ladeEinrichtungStand } from './ladeEinrichtungStand';
+import { EinrichtenFenster } from './EinrichtenFenster';
+import { NachtragenFenster } from './NachtragenFenster';
+import { RechteFenster } from './RechteFenster';
 import { Hinweis } from './KjHinweis';
 import type { Start } from './start';
 import styles from './KinderJugend.module.scss';
+import einr from './Einrichten.module.scss';
 
 /**
  * **Seite „Einrichtung“ im Reiter „Kinder & Jugend“** (Bauplan O9-5c, Entwurf `o9-5-einrichten-v1`) – nur für Leute mit
  * „Berechtigungen verwalten“: die Stufen, wie sie eingerichtet sind, und **was in ChurchTools davon wirklich steht**. Sie
- * liest nur; Knöpfe zum Ändern und Reparieren kommen mit O9-5c-2 und O9-5d.
+ * liest selbst nur; geschrieben wird in den Fenstern (O9-5d): „Stufen ändern …“, bei einem ⚠ „Rechte der Leitung“ das
+ * Fenster „Rechte setzen …“ und bei ⚠ „Wechseltage“ „Nachtragen …“. Nach dem Schreiben ruft sie `onGeschrieben`: Die
+ * Einrichtung und der Stand werden neu gelesen.
  *
  * `regel` ist der Stand der Wechseltage in den Regeln, den der Reiter für „Wechseltage“ schon lädt (eine Quelle, O9-4);
  * `jahr` das Jahr des nächsten Wechsels.
@@ -28,11 +36,14 @@ export function EinrichtungSeite({
   einrichtung,
   regel,
   jahr,
+  onGeschrieben,
 }: {
   start: Start;
   einrichtung: Einrichtung;
   regel: { art: 'laedt' } | RegelStandRoh;
   jahr: number;
+  /** Es wurde (vielleicht) geschrieben: Einrichtung und Stand neu lesen. */
+  onGeschrieben: () => void;
 }) {
   // Über `useLaden` (#845). `ladeEinrichtungStand` wirft nie; käme doch ein Fehler, steht „gerade nicht ladbar“.
   const { stand, neu } = useLaden(() => ladeEinrichtungStand(einrichtung), [einrichtung]);
@@ -45,6 +56,14 @@ export function EinrichtungSeite({
     [stand, einrichtung, start, regel, jahr],
   );
   const hinweis = zeilen ? sammelHinweis(zeilen) : null;
+  const [aendern, setAendern] = useState(false);
+  const [rechteOffen, setRechteOffen] = useState(false);
+  const [nachtragenOffen, setNachtragenOffen] = useState(false);
+  // Was an der Rolle „Leiter“ fehlt – nur, wenn es sich lesen ließ (nie aus „nicht prüfbar“ ein „fehlt“ machen).
+  const fehlendeRechte =
+    stand.art === 'fertig' && stand.daten.rechte.leiter.ok
+      ? fehlendeLeiterRechte(stand.daten.rechte.leiter.wert)
+      : [];
 
   return (
     <>
@@ -84,6 +103,11 @@ export function EinrichtungSeite({
           <dt>Ankündigung</dt>
           <dd>{stufen.ankuendigung}</dd>
         </dl>
+        <div className={styles.kartenFuss}>
+          <FensterKnopf art="zweit" onClick={() => setAendern(true)}>
+            Stufen ändern …
+          </FensterKnopf>
+        </div>
       </section>
       <section className={styles.karte} aria-label="Stand in ChurchTools">
         <h3 className={styles.abschnitt}>Stand in ChurchTools</h3>
@@ -107,11 +131,55 @@ export function EinrichtungSeite({
                     </ul>
                   )}
                 </span>
+                {z.id === 'rechte' && z.stand.art === 'warn' && fehlendeRechte.length > 0 && (
+                  <span className={einr.zeilenKnopf}>
+                    <FensterKnopf art="zweit" onClick={() => setRechteOffen(true)}>
+                      Rechte setzen …
+                    </FensterKnopf>
+                  </span>
+                )}
+                {z.id === 'wechseltage' && z.stand.art === 'warn' && (
+                  <span className={einr.zeilenKnopf}>
+                    <FensterKnopf
+                      onClick={() => setNachtragenOffen(true)}
+                      aria-label="Wechseltage nachtragen"
+                    >
+                      Nachtragen …
+                    </FensterKnopf>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
+      {aendern && (
+        <EinrichtenFenster
+          art="aendern"
+          start={start}
+          einrichtung={einrichtung}
+          standDaten={stand.art === 'fertig' ? stand.daten : undefined}
+          onSchliessen={() => setAendern(false)}
+          onGeschrieben={onGeschrieben}
+        />
+      )}
+      {rechteOffen && (
+        <RechteFenster
+          start={start}
+          fehlend={fehlendeRechte}
+          onSchliessen={() => setRechteOffen(false)}
+          onGeschrieben={onGeschrieben}
+        />
+      )}
+      {nachtragenOffen && (
+        <NachtragenFenster
+          start={start}
+          einrichtung={einrichtung}
+          regelBis={regel.art === 'da' ? regel.bis : undefined}
+          onSchliessen={() => setNachtragenOffen(false)}
+          onGeschrieben={onGeschrieben}
+        />
+      )}
     </>
   );
 }
@@ -146,10 +214,18 @@ function Zeichen({ stand }: { stand: StandZeile['stand']['art'] }) {
 }
 
 /**
- * **Reiter, solange es keine Einrichtung gibt** – nur für „Berechtigungen verwalten“. Der Knopf „Einrichten …“ kommt
- * mit O9-5c-2; bis dahin steht hier der ruhige Satz.
+ * **Reiter, solange es keine Einrichtung gibt** – nur für „Berechtigungen verwalten“. „Einrichten …“ öffnet das Fenster
+ * (O9-5c-2/O9-5d): Stufen wählen, Vorschau ansehen, schreiben. Danach `onGeschrieben`: Die Einrichtung wird neu gelesen,
+ * der Reiter wird zur Seite „Einrichtung“.
  */
-export function NichtEingerichtet() {
+export function NichtEingerichtet({
+  start,
+  onGeschrieben,
+}: {
+  start: Start;
+  onGeschrieben: () => void;
+}) {
+  const [offen, setOffen] = useState(false);
   return (
     <section className={styles.leerKarte} aria-label="Noch nicht eingerichtet">
       <h2>Gruppenwechsel noch nicht eingerichtet</h2>
@@ -175,7 +251,19 @@ export function NichtEingerichtet() {
         Diesen Reiter siehst nur du und wer in ChurchTools „Berechtigungen verwalten“ hat. Leitungen
         sehen ihn erst nach dem Einrichten.
       </Hinweis>
-      <p className={styles.leise}>Einrichten folgt in der nächsten Fassung.</p>
+      <div className={styles.knopfzeile}>
+        <FensterKnopf onClick={() => setOffen(true)}>Einrichten …</FensterKnopf>
+        <span className={styles.leise}>Es wird erst nach einer Vorschau etwas angelegt.</span>
+      </div>
+      {offen && (
+        <EinrichtenFenster
+          art="einrichten"
+          start={start}
+          einrichtung={null}
+          onSchliessen={() => setOffen(false)}
+          onGeschrieben={onGeschrieben}
+        />
+      )}
     </section>
   );
 }

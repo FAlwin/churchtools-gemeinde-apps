@@ -116,6 +116,7 @@ function zeigen(o: { zugang?: KjZugang; recht?: boolean } = {}) {
       einrichtung={einrichtung()}
       zugang={o.zugang ?? BEREICH}
       onAbgemeldet={onAbgemeldet}
+      onGeschrieben={vi.fn()}
     />,
   );
 }
@@ -184,6 +185,7 @@ describe('Unterreiter „Wechseltage“', () => {
         einrichtung={einrichtung()}
         zugang={BEREICH}
         onAbgemeldet={abgemeldet}
+        onGeschrieben={vi.fn()}
       />,
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
@@ -197,12 +199,24 @@ describe('Unterreiter „Wechseltage“', () => {
     const e = einrichtung();
     const start = { ...START, rechte: rechte(false) };
     const { rerender } = render(
-      <KinderJugend start={start} einrichtung={e} zugang={BEREICH} onAbgemeldet={onAbgemeldet} />,
+      <KinderJugend
+        start={start}
+        einrichtung={e}
+        zugang={BEREICH}
+        onAbgemeldet={onAbgemeldet}
+        onGeschrieben={vi.fn()}
+      />,
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
     expect(screen.getByRole('table')).toBeTruthy();
     rerender(
-      <KinderJugend start={start} einrichtung={e} zugang={LEITUNG} onAbgemeldet={onAbgemeldet} />,
+      <KinderJugend
+        start={start}
+        einrichtung={e}
+        zugang={LEITUNG}
+        onAbgemeldet={onAbgemeldet}
+        onGeschrieben={vi.fn()}
+      />,
     );
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wechseltage' })).toBeNull();
@@ -293,10 +307,9 @@ describe('Unterreiter „Einrichtung“ (O9-5c)', () => {
     expect(await screen.findByText('Gruppentyp der Wechsel-Gruppen')).toBeTruthy();
     expect(standLaden).toHaveBeenCalledTimes(1);
     expect(standLaden.mock.calls[0][0]).toEqual(einrichtung());
-    // Keine Knöpfe zum Ändern oder Reparieren – die kommen mit O9-5c-2 und O9-5d.
-    expect(
-      screen.queryByRole('button', { name: /ändern|setzen|nachtragen|einrichten/i }),
-    ).toBeNull();
+    // „Stufen ändern …“ gibt es seit O9-5c-2; Reparieren („Rechte setzen“) und Nachtragen kommen mit O9-5d.
+    expect(screen.getByRole('button', { name: 'Stufen ändern …' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /setzen|nachtragen|Einrichten/i })).toBeNull();
   });
 
   it('nicht lesbar ist keine Aufgabe: „nicht prüfbar“ je Zeile, kein gelber Sammelhinweis', async () => {

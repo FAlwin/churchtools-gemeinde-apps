@@ -231,6 +231,13 @@ export function App() {
     }
   }, [mitglieder, abgemeldetOderFehler]);
 
+  // Nach dem Schreiben von „Einrichten“, „Nachtragen“ oder „Rechte setzen“ (O9-5d): Die Einrichtung UND die Gruppen neu
+  // lesen – sonst fehlten dem Stand die neuen Wechsel-Gruppen und der neue Gruppentyp, und die Seite zeigte Altes.
+  const nachSchreiben = useCallback(() => {
+    void strukturNeu();
+    void einrichtungHolen();
+  }, [strukturNeu, einrichtungHolen]);
+
   // Nach einer Änderung an den Mitgliedern einer Gruppe (O6): nur diese Gruppe neu – über dieselbe Stelle wie das
   // Nachladen gescheiterter Gruppen. Vorübergehende Fehler landen als „nicht ladbar“ bei der Gruppe (wie in O2).
   const mitgliederNeu = useCallback(
@@ -580,7 +587,7 @@ export function App() {
         />
       )}
       {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'keine' && (
-        <NichtEingerichtet />
+        <NichtEingerichtet start={start} onGeschrieben={nachSchreiben} />
       )}
       {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'unlesbar' && (
         <EinrichtungUnlesbar />
@@ -598,6 +605,7 @@ export function App() {
           einrichtung={einrichtung}
           zugang={kinderZugang}
           onAbgemeldet={abgemeldetOderFehler}
+          onGeschrieben={nachSchreiben}
         />
       )}
       {start && ansicht === 'gliederung' && (

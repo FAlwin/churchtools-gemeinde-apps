@@ -33,6 +33,7 @@ import {
 import { bereichVon, einordnen, type Bereich } from '@shared/anmeldung/baukasten';
 import {
   bedingungenNachziehen,
+  festeAntworten,
   regelSetzen,
   umbenannteAntworten,
   verschiebenSperre,
@@ -40,6 +41,8 @@ import {
   type Bedingung,
   type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
+import { freiName, freiSchluessel } from '@shared/anmeldung/freieAntwort';
+import { istLeer, rohWert } from '@shared/anmeldung/feldwert';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
 export type { Bereich };
@@ -85,16 +88,14 @@ export async function antwortenZaehlen(id: number): Promise<Map<number, Beantwor
   const m = new Map<number, Beantwortet>();
   for (const p of mitglieder) {
     for (const f of p.fields ?? []) {
-      const wert = f.value;
-      if (wert === null || wert === undefined || wert === '' || wert === '0' || wert === 0)
-        continue;
+      const wert = rohWert(f.value);
+      if (wert === null || istLeer(wert) || wert === '0') continue;
       const feldId = Number(f.id);
       const b = m.get(feldId) ?? { gesamt: 0, jeOption: new Map<string, number>() };
-      // Auswahl: die ID der Antwort (Text oder Zahl); anderes zählt nur als „beantwortet“.
-      const schluessel =
-        typeof wert === 'string' || typeof wert === 'number' ? String(wert) : JSON.stringify(wert);
+      // Auswahl: die ID der Antwort; Mehrfachauswahl (F5c): jede gewählte ID einzeln.
       b.gesamt++;
-      b.jeOption.set(schluessel, (b.jeOption.get(schluessel) ?? 0) + 1);
+      for (const schluessel of Array.isArray(wert) ? wert : [wert])
+        b.jeOption.set(schluessel, (b.jeOption.get(schluessel) ?? 0) + 1);
       m.set(feldId, b);
     }
   }
@@ -143,7 +144,9 @@ export async function feldSpeichern(
   vorId?: string | null,
 ): Promise<OeffentlicheEinstellungen> {
   const e = await einstellungenVon(id);
-  const umbenannt = umbenannteAntworten(antworten);
+  /** Das Feld, wie es zuletzt gespeichert war – für die umbenannte freie Antwort (F3c). */
+  const zuletzt = [...e.formular.anmeldung, ...e.formular.person].find((x) => x.id === feld.id);
+  const umbenannt = umbenannteAntworten(antworten, zuletzt, feld);
   const geplant = ersetzen(e.formular, bereich, feld, vorId, umbenannt);
   const fehler = pruefeFormular(geplant);
   if (fehler.length) throw new ApiError(422, fehler.join(' '));
@@ -154,38 +157,79 @@ export async function feldSpeichern(
   if (ablage.ort === 'gruppenfeld' && (ctId !== undefined || feld.zustand !== 'aus')) {
     const { bisher, name } = await spalteUndName(id, ctId, feld.frage);
     let optionen: CtOption[] | undefined;
-    if (feld.typ === 'radio' || feld.typ === 'select') {
+    // F5c: Eine ältere Mehrfachauswahl liegt als Text-Spalte – sie bleibt Text („Wandern, Spiele“): ChurchTools ändert
+    // den Typ einer Spalte nicht (gemessen A5), und Optionen hätte sie keine. Neue werden ein `multiselect`.
+    const alsText = feld.typ === 'multi' && !!bisher && bisher.fieldTypeCode !== 'multiselect';
+    // Ja/Nein: die vorhandenen IDs behalten (sonst entstünden neue und die Wahl wäre weg) – seit F3c mit derselben
+    // Planung wie eine Auswahl, denn die freie Antwort kann dazukommen, umbenannt werden oder wegfallen.
+    if (
+      feld.typ === 'radio' ||
+      feld.typ === 'select' ||
+      (feld.typ === 'multi' && !alsText) ||
+      (feld.typ === 'janein' && bisher)
+    ) {
       const gewaehlt = bisher
         ? new Set((await antwortenZaehlen(id)).get(bisher.id)?.jeOption.keys() ?? [])
         : new Set<string>();
       const alt = optionenVon(bisher);
+      const nachName = (t: string) => alt.find((o) => o.name === t)?.id;
+      const fest =
+        feld.typ === 'janein'
+          ? festeAntworten(feld).map((t) => ({ text: t, altId: nachName(t) }))
+          : (antworten ?? feld.antworten.map((t) => ({ text: t, altId: nachName(t) })));
+      // F3c: Die freie Antwort ist die letzte Option – umbenannt behält sie ihre ID (und damit jede Wahl).
+      const frei = freiName(feld);
+      const vorher = (zuletzt && freiName(zuletzt)) ?? frei;
       const geplant =
-        antworten ??
-        feld.antworten.map((t) => ({ text: t, altId: alt.find((o) => o.name === t)?.id }));
+        frei === null
+          ? fest
+          : [...fest, { text: frei, altId: vorher ? nachName(vorher) : undefined }];
       const plan = optionenPlanen(alt, geplant, gewaehlt);
       optionen = plan.senden;
       verborgen = plan.verborgen.length ? plan.verborgen : undefined;
-    } else if (feld.typ === 'janein' && bisher) {
-      // Ja/Nein: die vorhandenen IDs behalten (sonst entstünden neue und die Wahl wäre weg).
-      optionen = optionenVon(bisher);
     }
     ctId = await spalteSpeichern(
       id,
       bisher,
-      feldDefinition(feld, bereich, name, optionen)!,
+      feldDefinition(alsText ? { ...feld, typ: 'text' } : feld, bereich, name, optionen)!,
       feld.frage,
     );
   }
 
-  // Weitere Spalten des Felds (A6-2b: die Striche der Unterschrift) – angelegt, sobald das Feld eingeschaltet ist,
-  // danach mit ihm ein- und ausgeschaltet. Dieselbe Regel wie oben (`spalteSpeichern`).
+  // Weitere Spalten des Felds (A6-2b: die Striche der Unterschrift; F3c: der Text der freien Antwort) – angelegt,
+  // sobald das Feld eingeschaltet ist, danach mit ihm ein- und ausgeschaltet. Dieselbe Regel wie oben
+  // (`spalteSpeichern`). Nie Pflicht in ChurchTools: Den Text gibt es nur, wenn die freie Antwort gewählt ist, und die
+  // Pflicht prüft unser Formular (`pruefeAntworten`).
   const zusatz: Record<string, number> = {};
-  for (const z of ctZusatzSpalten(feld)) {
+  const spalten = ctZusatzSpalten(feld);
+  for (const z of spalten) {
     const zId = e.ctFelder[z.schluessel];
     if (zId === undefined && feld.zustand === 'aus') continue;
     const { bisher, name } = await spalteUndName(id, zId, z.name);
-    const definition = feldDefinition({ ...feld, typ: 'textarea' }, bereich, name)!;
+    const definition = feldDefinition(
+      {
+        ...feld,
+        typ: z.fieldTypeCode === 'text' ? 'text' : 'textarea',
+        zustand: feld.zustand === 'aus' ? 'aus' : 'freiwillig',
+      },
+      bereich,
+      name,
+    )!;
     zusatz[z.schluessel] = await spalteSpeichern(id, bisher, definition, z.name);
+  }
+  // F3c: Fiel die freie Antwort weg (oder hat sie kein Textfeld mehr), kommt ihre Spalte aus dem Anmeldeformular –
+  // die Texte darin bleiben stehen, wie bei einem ausgeblendeten Feld.
+  const freiAlt = e.ctFelder[freiSchluessel(feld.id)];
+  if (freiAlt !== undefined && !spalten.some((z) => z.schluessel === freiSchluessel(feld.id))) {
+    const bisher = (await ctFelderLesen(id)).get(freiAlt);
+    if (bisher?.useInRegistrationForm) {
+      const definition = feldDefinition(
+        { ...feld, typ: 'text', zustand: 'aus' },
+        bereich,
+        bisher.name,
+      )!;
+      await spalteSpeichern(id, bisher, definition, bisher.name);
+    }
   }
 
   const gespeichert: Feld = { ...feld, verborgen };

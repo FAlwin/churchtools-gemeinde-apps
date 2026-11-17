@@ -179,7 +179,7 @@ export function handFelder(
      */
     nurPerson?: boolean;
   },
-): Record<number, string> {
+): Record<number, string | string[]> {
   // Gezeichnet wird von Hand nichts – auch keine alte Antwort darf als Unterschrift durchrutschen.
   const ohneStriche = (w: Record<string, unknown>, liste: Feld[]) =>
     Object.fromEntries(

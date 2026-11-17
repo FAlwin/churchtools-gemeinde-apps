@@ -71,39 +71,72 @@ function gibtEsJedesJahr(mmtt: string): boolean {
   return d.getUTCMonth() === monat - 1 && d.getUTCDate() === tag;
 }
 
+/** Wo im Fenster „Einrichten“ ein Fehler steht – `stufen` über der Liste, die anderen am Feld. */
+export type FehlerFeld =
+  | 'stufen'
+  | 'stichtag'
+  | 'ankuendigung'
+  | 'aufnahme'
+  | 'aufraeumen'
+  | 'ferienkalender'
+  | 'ferienStichwort';
+
 /**
- * **Was an einer Einstellung nicht stimmt** – leer, wenn sie taugt. Die Regeln wären sonst stillschweigend falsch:
- * eine Stufe ohne höheres Alter verschiebt niemanden, ein 29.02. als Stichtag fehlt in drei von vier Jahren, und räumt
- * die Routine vor dem Ende der Aufnahme auf, kommt ein Kind nie in die neue Gruppe.
+ * **Was an einer Einstellung nicht stimmt, je Feld** – leer, wenn sie taugt. Die Regeln wären sonst stillschweigend
+ * falsch: eine Stufe ohne höheres Alter verschiebt niemanden, ein 29.02. als Stichtag fehlt in drei von vier Jahren, und
+ * räumt die Routine vor dem Ende der Aufnahme auf, kommt ein Kind nie in die neue Gruppe.
  */
-export function einstellungFehler(e: GruppenwechselEinstellung): string[] {
-  const f: string[] = [];
+export function einstellungFehlerJeFeld(
+  e: GruppenwechselEinstellung,
+): { feld: FehlerFeld; text: string }[] {
+  const f: { feld: FehlerFeld; text: string }[] = [];
+  const stufen = (text: string) => f.push({ feld: 'stufen', text });
   if (e.stufen.length < 2)
-    f.push('Es braucht mindestens zwei Gruppen, sonst gibt es keinen Wechsel.');
+    stufen('Es braucht mindestens zwei Gruppen, sonst gibt es keinen Wechsel.');
   const ids = new Set<number>();
   e.stufen.forEach((s, i) => {
-    if (!s.name.trim()) f.push(`Gruppe ${i + 1} hat keinen Namen.`);
-    if (ids.has(s.gruppeId)) f.push(`„${s.name}“ steht zweimal in der Reihenfolge.`);
-    ids.add(s.gruppeId);
-    if (!ganz(s.abAlter, 0)) f.push(`„${s.name}“: Das Alter muss eine ganze Zahl ab 0 sein.`);
+    // Eine Zeile ohne gewählte Gruppe (im Fenster „Einrichten“ möglich) hat weder Namen noch Nummer – dann zählt nur das.
+    const gewaehlt = Number.isInteger(s.gruppeId) && s.gruppeId > 0;
+    const wer = s.name.trim() ? `„${s.name}“` : `Gruppe ${i + 1}`;
+    if (!gewaehlt) stufen(`Gruppe ${i + 1}: Es ist noch keine Gruppe gewählt.`);
+    else {
+      if (!s.name.trim()) stufen(`Gruppe ${i + 1} hat keinen Namen.`);
+      if (ids.has(s.gruppeId)) stufen(`${wer} steht zweimal in der Reihenfolge.`);
+      ids.add(s.gruppeId);
+    }
+    if (!ganz(s.abAlter, 0)) stufen(`${wer}: Das Alter muss eine ganze Zahl ab 0 sein.`);
     const davor = e.stufen[i - 1];
     if (davor && s.abAlter <= davor.abAlter)
-      f.push(`„${s.name}“ muss ein höheres Alter haben als „${davor.name}“.`);
+      stufen(
+        `${wer} muss ein höheres Alter haben als ${davor.name.trim() ? `„${davor.name}“` : `Gruppe ${i}`}.`,
+      );
   });
   if (!gibtEsJedesJahr(e.stichtag))
-    f.push('Der Stichtag muss ein Tag sein, den es in jedem Jahr gibt (z. B. 30.09.).');
-  if (!ganz(e.ankuendigungTage, 1)) f.push('Die Ankündigung braucht mindestens einen Tag Vorlauf.');
-  if (!ganz(e.aufnahmeTage, 1)) f.push('Die neue Gruppe muss mindestens einen Tag lang aufnehmen.');
+    f.push({
+      feld: 'stichtag',
+      text: 'Der Stichtag muss ein Tag sein, den es in jedem Jahr gibt (z. B. 30.09.).',
+    });
+  if (!ganz(e.ankuendigungTage, 1))
+    f.push({ feld: 'ankuendigung', text: 'Die Ankündigung braucht mindestens einen Tag Vorlauf.' });
+  if (!ganz(e.aufnahmeTage, 1))
+    f.push({ feld: 'aufnahme', text: 'Die neue Gruppe muss mindestens einen Tag lang aufnehmen.' });
   if (!ganz(e.aufraeumenTage, 1) || e.aufraeumenTage <= e.ankuendigungTage + e.aufnahmeTage)
-    f.push(
-      `Das Aufräumen muss später kommen als Ankündigung und Aufnahme zusammen (mehr als ${
+    f.push({
+      feld: 'aufraeumen',
+      text: `Das Aufräumen muss später kommen als Ankündigung und Aufnahme zusammen (mehr als ${
         e.ankuendigungTage + e.aufnahmeTage
       } Tage), sonst ist ein Kind vor dem Wechsel schon wieder draußen.`,
-    );
-  if (!e.ferienkalender.trim()) f.push('Der Name des Ferienkalenders fehlt.');
-  if (!e.ferienStichwort.trim()) f.push('Das Stichwort für die Sommerferien fehlt.');
+    });
+  if (!e.ferienkalender.trim())
+    f.push({ feld: 'ferienkalender', text: 'Der Name des Ferienkalenders fehlt.' });
+  if (!e.ferienStichwort.trim())
+    f.push({ feld: 'ferienStichwort', text: 'Das Stichwort für die Sommerferien fehlt.' });
   return f;
 }
+
+/** Dasselbe als reine Liste von Sätzen – leer, wenn die Einstellung taugt. */
+export const einstellungFehler = (e: GruppenwechselEinstellung): string[] =>
+  einstellungFehlerJeFeld(e).map((x) => x.text);
 
 /** Ein Übergang von einer Stufe zur nächsten. */
 export interface Uebergang {
@@ -115,6 +148,14 @@ export interface Uebergang {
 export function uebergaenge(e: Pick<GruppenwechselEinstellung, 'stufen'>): Uebergang[] {
   return e.stufen.slice(1).map((nach, i) => ({ von: e.stufen[i], nach }));
 }
+
+/** Der Name des Gruppentyps, den „Einrichten“ anlegt (O9-0) – und woran „vorhanden“ erkannt wird. */
+export const WECHSEL_TYP_NAME = 'Gruppenwechsel';
+
+/** Gleicher Name heißt gleicher Typ – ohne auf Groß- und Kleinschreibung oder Leerraum zu achten. */
+export const istWechselTyp = (name: unknown): boolean =>
+  typeof name === 'string' &&
+  name.trim().toLocaleLowerCase('de') === WECHSEL_TYP_NAME.toLowerCase();
 
 /** Name der Wechsel-Gruppe eines Übergangs, so wie „Einrichten“ sie anlegt. */
 export const wechselGruppenName = (u: Uebergang): string => `${u.von.name} → ${u.nach.name}`;

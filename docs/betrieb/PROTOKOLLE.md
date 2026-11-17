@@ -72,7 +72,8 @@ Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfe
 
 **Startseite:** „Heute“ erscheint nur, wenn heute eine Sitzung ansteht. „Meine offenen To-Dos“ sind die mir
 zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind dieselben wie unter „Kommend“ im Reiter
-„Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
+„Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen – zurückliegende
+Sitzungen ohne Protokoll stehen dort nicht, sondern in „Noch ohne Protokoll“ (Reiter „Sitzungen“, nur Leitung);
 dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
 Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
 „Alle anzeigen“ an „Meine offenen To-Dos“ öffnet den Reiter „To-Dos“.
@@ -117,6 +118,26 @@ Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie
 freigegebenen Protokolls) oder „Leer“. Danach öffnet sich der Editor; feste Aufgaben der Vorlage sind gleich To-Dos.
 Hat jemand anderes inzwischen begonnen, öffnet sich dessen Protokoll. Ein Protokoll gehört zu genau einem Termin – bei
 Serienterminen zu dem mit demselben Beginn.
+
+**Frühere Treffen (Leitung, v1.0.1):** „Kommend“ zeigt Termine und Treffen ohne Protokoll nur **ab heute**. Für
+vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nicht):
+
+- **„Noch ohne Protokoll“** über „Kommend“: zurückliegende Sitzungen ohne Protokoll **seit dem letzten freigegebenen
+  Protokoll** der Gruppe (dessen Tag zählt nicht mehr; gibt es keins: die letzten 28 Tage), **bis gestern** – heute
+  steht schon in „Kommend“, so erscheint keine Sitzung doppelt oder gar nicht. Je Zeile „Protokoll beginnen“ (dasselbe
+  Fenster wie bei kommenden Sitzungen). Leer → kein Block. Wird für sich geladen: Scheitert es, steht im Block ein
+  Hinweis, der Rest bleibt nutzbar. Gerechnet wird in der Zeitzone der Gemeinde.
+- **„Protokoll nachtragen“** (Kopfzeile von „Kommend“): Fenster mit ‹ Monat ›, Start im laufenden Monat, vorwärts nicht
+  darüber hinaus, **liest nur den gezeigten Monat** (bis gestern). Eine Zeile → „Protokoll beginnen“ im selben Fenster
+  („‹“ zurück). „Wie letztes Mal“ nimmt das letzte freigegebene Protokoll **vor** diesem Treffen. Die Zeile zeigt Art
+  (Einladung / Gruppentreffen / beides), Zusagen und Absagen und einen Hinweis zur Anwesenheit: aus den Antworten
+  vorbelegt, von Hand einzutragen (Gruppentreffen ohne Einladung) oder – bei abgeschlossenem Gruppentreffen – „steht in
+  ChurchTools fest“.
+  „Ohne Protokoll“ heißt: Kein Protokoll-Kopf (Entwurf, geplant oder freigegeben) verweist auf den Termin oder das
+  Gruppentreffen – dieselbe Zuordnung wie in der Liste. Termin und Gruppentreffen zur selben Minute sind **eine** Sitzung.
+  Beim Lesen eines einzelnen Monats gilt jeder Termin als möglicher Serientermin (ein Kopf gehört nur dem Termin mit
+  demselben Beginn). Grenze: Wurde ein Termin nach Beginn des Protokolls verschoben, steht er (vergangen) wieder als „ohne
+  Protokoll“ da; „Protokoll beginnen“ legt dann ein zweites an – beim Verschieben über „Sitzung bearbeiten“ passiert das nicht.
 
 **Neues Protokoll (Leitung, K2a):** „Neues Protokoll“ auf der Startseite und im Reiter „Sitzungen“ legt ein Protokoll
 **ohne Termin** an – Gruppe wählen, Titel, Datum/Uhrzeit (auch nachträglich), Vorlage / „Wie letztes Mal“ / leer, auf
@@ -342,6 +363,14 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   dieselbe Rechnung `abschnittZiel` wie beim Ablegen).
 - Wer/Bis vor dem Text: `props.vorab` am Aufgaben-Block (JSON), übernommen beim Anlegen des To-Dos (`vorabAnwenden` in
   `aufgabenAbgleich` und beim ersten Tipp); danach leert der Block es.
+- Frühere Treffen (v1.0.1): Regeln `shared/protokolle/fruehere.ts` (`ohneProtokollZeitraum`, `monatsZeitraum`,
+  `ohneProtokoll` auf `sitzungenZusammenfuehren` aus `sitzungen.ts`, `vorZeit`), Lesen `protokolle/src/lesen.ts`
+  (`sitzungenOhneProtokoll` – dieselben `termineMitAnfrage`/`treffenLesen` wie `ladeSitzungen`, für beliebige Tage;
+  `sitzungenNochOhneProtokoll` für den Block; `treffenLesen` nimmt `isCompleted` als `abgeschlossen` mit), Block
+  `NochOhneProtokoll.tsx`, Fenster `ProtokollNachtragen.tsx`, gemeinsame Zeile `FruehereText.tsx`; „Protokoll beginnen“
+  (`ProtokollBeginnen`, Eigenschaften `frueher`/`zurueck`) und `protokollBeginnen` sind unverändert dieselben. Ein
+  Protokoll zu einem vergangenen Termin liest die Antworten auf die Einladung wie die hinter den 180 Tagen
+  (`termineAusserhalb` in `lesen.ts`), sonst bliebe die Anwesenheits-Vorbelegung leer.
 - Neues Protokoll (K2a): Fenster `ProtokollNeu.tsx` – schreibt über `protokollBeginnen` (Termin `null`), Treffen über
   `treffenAnlegen`; die Wahl des Anfangs ist `useAnfangWahl` (`AnfangWahl.tsx`, auch in „Protokoll beginnen“).
 - Nächste Sitzung festlegen: Regel `shared/protokolle/planen.ts` (`vorbelegung`, `zeitraum`, `geplanterKopf`,
@@ -365,7 +394,7 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   (Termin → Einladungen → Treffen → Köpfe; geteilt wird ohne Einladungsliste, dann einzeln eingeladen; ein schon
   herausgelöster Tag wird abgewiesen statt doppelt angelegt), Fenster `SitzungBearbeiten.tsx`, Felder
   `Planungsfelder.tsx`. Termin und Besprechungsanfragen liest `protokolle/src/termin.ts` (auch Liste und Festlegen);
-  Protokolle mit Termin hinter den 180 Tagen der Liste liest `lesen.ts` gezielt nach (`termineJenseits`). Gemessen: `protokolle-planung/docs/messung-k2b-2026-10-29.md`, `messung-k2b2-2026-10-29.md`.
+  Protokolle mit Termin hinter den 180 Tagen der Liste liest `lesen.ts` gezielt nach (`termineAusserhalb`, seit v1.0.1 auch Termine vor dem Fenster). Gemessen: `protokolle-planung/docs/messung-k2b-2026-10-29.md`, `messung-k2b2-2026-10-29.md`.
 - Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
   das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).

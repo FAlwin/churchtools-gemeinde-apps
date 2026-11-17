@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
-import { gruppenName, nimmtEintraegeAn, type Plan } from '@shared/dienstplan/plan';
+import { gruppenName, nimmtEintraegeAn, type Plan, type PlanZeile } from '@shared/dienstplan/plan';
 import {
   ortSchluessel,
   zielText,
@@ -18,7 +18,7 @@ import { BelegtFach } from './BelegtFach';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
-import { zellenAktion } from '@shared/dienstplan/personenEintragen';
+import { gastAktion, zellenAktion, type ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import {
   darfPlanen,
   freierPlatz,
@@ -575,29 +575,48 @@ export function useEinteilen({
   };
 
   /**
-   * Eintragen per Klick in „Personen“ (P2a): was ein Klick tut (`zellenAktion`) – nur wo man den Dienst planen und seine
-   * Entwürfe ändern darf (`darfPlanen`, `darfAendern`, wie in der Matrix) –, das Eintragen über **`trageEin`** (also die
-   * Wahl in „Wer kann?“) und das Wegnehmen über **`entferneEntwurf`** (also „Entfernen“ im Entwurfs-Fach).
+   * Was ein Klick in „Personen“ tun darf – **dieselben Rechte wie in der Matrix** (`EinteilPlaetze`): ein belegter Platz
+   * öffnet das Fenster „zurückziehen oder ersetzen“, wo man den Dienst planen darf (`darfPlanen`, auch an einem
+   * abgesagten Termin); das Entwurfs-Fenster und alles mit Entwürfen zusätzlich, wo man die Entwürfe der Gruppe ändern
+   * darf (`darfAendern`); neue Einträge nicht an abgesagten Terminen (`nimmtEintraegeAn`, P2a-2). Den eigenen Entwurf nimmt
+   * man dort weiter weg, wie in der Matrix; „auf direkt umstellen“ gibt es dort nicht, der Klick nimmt ihn gleich weg.
+   */
+  const personenErlaubt = (i: number, zl: PlanZeile, a: ZellenAktion): ZellenAktion => {
+    if (!plan || !a) return null;
+    const s = plan.spalten[i];
+    if (!darfPlanen(zl, s)) return null;
+    if (a.art === 'belegt') return a;
+    if (!amPlatz.darfAendern(zl)) return null;
+    if (a.art === 'entwurfFach') return a;
+    if (nimmtEintraegeAn(s)) return a;
+    return a.art === 'wegnehmen' || a.art === 'direkt'
+      ? { art: 'wegnehmen', nr: a.nr, entwurf: a.entwurf }
+      : null;
+  };
+
+  /**
+   * Eintragen per Klick in „Personen“ (P2a): was ein Klick tut (`zellenAktion`, Rechte `personenErlaubt`), das Eintragen
+   * über **`trageEin`** (also die Wahl in „Wer kann?“), das Wegnehmen über **`entferneEntwurf`** (also „Entfernen“ im
+   * Entwurfs-Fenster). Bestehende Einteilungen (P2b) öffnen über `onBelegt` / `onEntwurf` **dieselben Fenster wie die
+   * Matrix** – keine zweite Logik.
    */
   const amPersonen: PersonenEintragen = {
     aktion: (i, zl, personId, zustand) => {
       if (!plan) return null;
       const s = plan.spalten[i];
-      if (!darfPlanen(zl, s) || !amPlatz.darfAendern(zl)) return null;
-      const a = zellenAktion({
-        plaetze: zl.zellen[i],
-        personId,
-        zustand,
-        entwurf: (p) => entwurfAmPlatz(daten, s, zl, p),
-        ichId: amPlatz.ichId,
-      });
-      // Abgesagte Termine nehmen keine neuen Einträge an (P2a-2, `nimmtEintraegeAn`) – den eigenen Entwurf nimmt man
-      // dort weiter weg, wie in der Matrix; „auf direkt umstellen“ gibt es dort nicht, der Klick nimmt ihn gleich weg.
-      if (nimmtEintraegeAn(s)) return a;
-      return a?.art === 'wegnehmen' || a?.art === 'direkt'
-        ? { art: 'wegnehmen', nr: a.nr, entwurf: a.entwurf }
-        : null;
+      return personenErlaubt(
+        i,
+        zl,
+        zellenAktion({
+          plaetze: zl.zellen[i],
+          personId,
+          zustand,
+          entwurf: (p) => entwurfAmPlatz(daten, s, zl, p),
+          ichId: amPlatz.ichId,
+        }),
+      );
     },
+    gast: (i, zl, g) => personenErlaubt(i, zl, gastAktion(g)),
     eintragen: async (i, zl, nr, person, ersetzt) => {
       if (!plan) return;
       // `freierPlatz` kennt, wer dort in ChurchTools steht (`bisher`); mit `ersetzt` ist es derselbe Weg wie „Andere

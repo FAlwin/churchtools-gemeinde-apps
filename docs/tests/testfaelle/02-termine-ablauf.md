@@ -800,7 +800,7 @@ verwalten“).
    einen Namen.
 7. Maus über einem Namen (am Handy antippen) hebt **alle** Zeilen dieser Person hell hervor; noch einmal antippen nimmt es
    zurück. Wo man nicht eintragen darf (Dienst nur ansehen, Entwürfe nicht bereit), tut ein Klick in eine Zelle nichts
-   (Eintragen per Klick: TF-ABLAUF-32).
+   (Eintragen per Klick: TF-ABLAUF-32; bestehende Einteilung anklicken: TF-ABLAUF-37).
 8. Konto **ohne** das Recht: im Block steht ruhig „Abwesenheiten nicht sichtbar“ statt leerer Zellen.
 9. Am Handy dieselbe Tabelle, **waagerecht scrollbar**, die Namensspalte bleibt stehen.
 10. Verbindung kurz kappen oder ChurchTools bremsen lassen, Ansicht öffnen: Scheitert nur eine Gruppe, steht in **ihrem** Block
@@ -904,7 +904,8 @@ abwesend ist, und einer, an dem der Dienst **voll** ist (alle Plätze besetzt). 
 ein Fenster.
 
 1. **Planen → Personen.** Mit der **Maus** über eine leere Zelle im Block Ton fahren: blauer Rahmen, blasse blaue Fläche, ein
-   **„+“** rechts. Über eine Zelle mit Einteilung (✓ oder ?) oder in einem Dienst, den man nur ansehen darf: nichts.
+   **„+“** rechts. Über eine Zelle mit Einteilung (✓ oder ?): nur eine blasse Tönung, kein „+“ (Klick: TF-ABLAUF-37); in einem
+   Dienst, den man nur ansehen darf: nichts.
 2. **Klick** in die leere Zelle (Person ohne Besonderheit): sofort ein **Entwurf** (blau, gestrichelt, „?“ = Anfrage), Hinweis
    „… eingetragen – noch nicht gesendet“, unten die Leiste **Ansehen und senden** zählt mit. Kein Fenster. In der Matrix steht der
    Entwurf auf dem **ersten freien Platz** dieses Dienstes an diesem Termin.
@@ -916,8 +917,8 @@ ein Fenster.
    gleiche Frage. Ist sie zugleich in einem anderen Dienst eingeteilt: **ein** Fenster mit beiden Sätzen.
 6. Termin, an dem der Dienst **voll** ist: Klick in eine leere Zelle → Fenster „Ton ist voll“: „Ton am 27.11. ist voll (2 von
    2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ mit **Schließen**. Es wird nichts eingetragen.
-7. Klick auf eine **bestehende Einteilung** (zugesagt, angefragt): tut nichts (kommt später). Klick auf den **Namen**: setzt
-   weiter den Fokus; ein Klick in eine Zelle tut das nicht.
+7. Klick auf eine **bestehende Einteilung** (zugesagt, angefragt): öffnet das Fenster „zurückziehen oder ersetzen“ (TF-ABLAUF-37).
+   Klick auf den **Namen**: setzt weiter den Fokus; ein Klick in eine Zelle tut das nicht.
 8. **Tastatur:** mit Tab zu einer leeren Zelle (Rahmen), Enter → dasselbe wie der Klick; der Vorleser nennt „Daniel F. für Ton am
    Fr, 20.11. eintragen“.
 9. **Handy:** leere, eintragbare Zellen zeigen ein blasses „+“ (kein Hover); Antippen wie der Klick; die Fenster passen auf den
@@ -1059,4 +1060,43 @@ Die Erklärung steht in einem Fenster hinter dem Knopf **„?“**, in kurzen Ab
 - **Betrifft:** `ui/bedienung/HilfeKnopf.tsx`, `ui/bedienung/HilfeKnopf.module.scss`, `dienstplaner/src/hilfeTexte.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
 - **Automatisiert:** ja – `ui/bedienung/HilfeKnopf.test.tsx` (Knopf, Fenster, X, Esc), `dienstplaner/src/Planen.test.tsx`, `dienstplaner/src/Termine.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf da, Absatz weg, Kernsatz in der Hilfe); Gegenprobe (Knopf raus) rot; von Hand bleibt das Aussehen am Handy und im Dunkeln
 - **Historie:** Wunsch Alwin 17.11.2026: „Muss der lange Text da stehen? Das wird niemals jemand lesen.“
+</details>
+
+### TF-ABLAUF-37 · Planen: Personen – bestehende Einteilung per Klick bearbeiten
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf (Schublade der Dienstgruppe bereit); ein Termin, an dem
+im Ton eine Person **zugesagt**, eine **angefragt** und ein **Gast** eingetragen ist. Dazu ein Konto, das den Dienst nur ansehen
+darf (für Schritt 8).
+
+**Das muss passieren:** Ein Klick auf eine bestehende Einteilung öffnet **dasselbe Fenster wie in der Matrix** beim Antippen
+des belegten Platzes – keine zweite Logik, kein eigenes Fenster.
+
+1. **Planen → Personen.** Klick auf die Zelle einer **zugesagten** Person (auch auf den Tag in der Zelle): Fenster
+   „Ton · Fr, 20.11.“ mit „<Name> – hat zugesagt.“, **Andere Person wählen** und **Zurückziehen**. Genauso bei **angefragt**
+   („angefragt, noch keine Antwort.“) und bei einem **Gast** in der Zeile „Gäste“.
+2. **Zurückziehen** → Hinweis „<Name> wird beim Senden zurückgezogen – noch nicht gesendet.“ Die Zelle steht jetzt wie in der
+   Matrix **rot gestrichelt**, mit rotem „−“ und **durchgestrichenem** Namen (Tooltip „Entwurf, wird zurückgezogen“); unten zählt die Leiste
+   „Ansehen und senden“. In der Matrix steht derselbe Platz rot durchgestrichen.
+3. **Klick auf die durchgestrichene Zelle** → das Entwurfs-Fenster der Matrix. **Entfernen** nimmt das Zurückziehen zurück: die
+   Zelle ist wieder ein normales ✓ und anklickbar wie vorher.
+4. Noch einmal die Einteilung anklicken → **Andere Person wählen** → „Wer kann?“ für genau diesen Platz („… statt <Name>“) →
+   eine Person wählen. In „Personen“ steht die **neue Person als blauer Entwurf in ihrer Zeile**, die bisherige Person
+   **durchgestrichen**. Klick auf die durchgestrichene Zelle öffnet den Ersetzen-Entwurf.
+5. Ein **Gast**, den ein Entwurf wegnimmt, steht ebenfalls rot durchgestrichen in der Zeile „Gäste“; Klick → Entwurfs-Fenster.
+6. Klick auf den **Namen** der Person setzt weiter den Fokus (kein Fenster); ein Klick auf den **eigenen** Entwurf einer Person
+   (blau) bleibt der Zyklus Anfrage → direkt → weg (TF-ABLAUF-35).
+7. **Abgesagter Termin:** Wie in der Matrix lässt sich ein belegter Platz dort weiter antippen (zurückziehen/ersetzen); neu
+   eintragen geht dort nicht (TF-ABLAUF-33).
+8. Konto, das den Dienst **nur ansehen** darf: die Zellen sind keine Knöpfe, ein Klick tut nichts. Dienst **ohne Schublade**
+   (Entwürfe nicht bereit): das Fenster am belegten Platz geht auf, nennt Name und Stand und sagt, was fehlt – wie in der
+   Matrix; die durchgestrichene Zelle ist dort kein Knopf.
+9. **Tastatur:** Tab auf die Zelle, Enter → dasselbe wie der Klick; der Vorleser nennt „Anna Test für Ton am Fr, 20.11.:
+   Einteilung öffnen“ bzw. „… Entwurf öffnen“. **Handy:** Antippen genauso, das Fenster passt auf den Bildschirm.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/_zurueck.scss`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planSicht.ts`, `dienstplaner/src/hilfeTexte.ts`
+- **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (Aktion `belegt`/`entwurfFach`, Platz ohne Entwurf, veraltet, `gastAktion`), `shared/dienstplan/personenRaster.test.ts` (Zustand `zurueck` bei Zurückziehen und Ersetzen, kein Warnfall, veraltet, Gast), `dienstplaner/src/Planen.p2b.test.tsx` (Klick → `BelegtFach`, Zurückziehen → durchgestrichen, Klick → `EntwurfFach`, Entfernen, angefragt, Gast, Andere Person wählen → Ersetzen-Entwurf, Fokus-Klick, ohne Recht, ohne Schublade); Gegenproben einzeln rot; von Hand bleibt das Aussehen (Rot gestrichelt, Hell/Dunkel, Handy)
+- **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 7), Scheibe P2b
 </details>

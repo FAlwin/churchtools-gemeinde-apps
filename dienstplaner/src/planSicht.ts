@@ -3,7 +3,7 @@ import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
-import type { RasterZelle } from '@shared/dienstplan/personenRaster';
+import type { RasterGast, RasterZelle } from '@shared/dienstplan/personenRaster';
 import type { FreierPlatz } from './WerKann';
 import type { MatrixAblauf } from './useMatrixAblauf';
 import type { MatrixInfos } from './useMatrixInfos';
@@ -24,13 +24,15 @@ export const blockSchluessel = (dienstId: number) => `dienst:${dienstId}`;
  * wie bei „Wer kann?“; „Personen“ zeigt nur die Zelle und die Fenster.
  */
 export interface PersonenEintragen {
-  /** Was ein Klick in diese Zelle tut – `null`: nichts (kein Recht, Entwürfe nicht bereit, bestehende Einteilung …). */
+  /** Was ein Klick in diese Zelle tut – `null`: nichts (kein Recht, Entwürfe nicht bereit, Entwurf veraltet …). */
   aktion: (
     spalte: number,
     zeile: PlanZeile,
     personId: number,
     zustand: RasterZelle['zustand'],
   ) => ZellenAktion;
+  /** Was ein Klick auf einen Gast tut (P2b) – dieselben Rechte wie `aktion`. */
+  gast: (spalte: number, zeile: PlanZeile, gast: RasterGast) => ZellenAktion;
   /**
    * Entwurf für die Person auf den Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. `ersetzt`: die
    * Version des „Zurückziehen“-Entwurfs an diesem Platz, den der Eintrag ersetzt („X durch Y ersetzen“).

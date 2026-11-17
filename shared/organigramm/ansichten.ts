@@ -81,8 +81,13 @@ export interface SpitzenWahl {
  * Ausgeblendetes fehlt, weil der Aufrufer den Baum ohne es übergibt. Ist die gewählte Spitze ein anderer Pfad zu einer
  * solchen Gruppe, steht sie zusätzlich am Ende – sonst zeigte die Auswahl etwas anderes als den Baum.
  */
-export function spitzenWahl(baum: readonly Knoten[], spitze: string | null): SpitzenWahl[] {
-  const wahl: SpitzenWahl[] = [{ wert: '', name: 'Ganze Gemeinde', ebene: 0, weg: '' }];
+export function spitzenWahl(
+  baum: readonly Knoten[],
+  spitze: string | null,
+  /** Wie die Wahl „nichts“ heißt – sonst „Ganze Gemeinde“; das Fenster „Einrichten“ wählt damit eine Gruppe („Gruppe wählen …“). */
+  leerName = 'Ganze Gemeinde',
+): SpitzenWahl[] {
+  const wahl: SpitzenWahl[] = [{ wert: '', name: leerName, ebene: 0, weg: '' }];
   const gesehen = new Set<number>();
   const lauf = (ks: readonly Knoten[], pfad: string, ebene: number, weg: string[]) => {
     for (const k of ks) {

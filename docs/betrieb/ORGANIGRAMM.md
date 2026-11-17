@@ -353,12 +353,12 @@ verwalten“), sieht den Reiter **Kinder & Jugend** immer, auch ohne Einrichtung
 Bereichsleitung. Was er dort sieht, hängt davon ab, wie sich der gespeicherte Wert (Kategorie „Gruppenwechsel“) lesen
 lässt. Vier Fälle, die nie ineinander übergehen (`ladeEinrichtung` in `gruppenwechselSpeicher.ts`):
 
-| Fall                    | Was es ist                                                                         | Was der Reiter zeigt (nur mit dem Recht)                                                                                                                                   | Alle anderen |
-| ----------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| **eingerichtet**        | Wert da, Format stimmt                                                             | der Reiter wie gewohnt, dazu der Unterreiter **Einrichtung**                                                                                                               | wie bisher   |
-| **keine**               | Kategorie fehlt oder ohne Wert                                                     | „Gruppenwechsel noch nicht eingerichtet“ mit Erklärung; statt des Knopfs „Einrichten …“ der Satz „Einrichten folgt in der nächsten Fassung.“ (der Knopf kommt mit O9-5c-2) | kein Reiter  |
-| **unlesbar**            | Es steht etwas da, aber nicht in diesem Format (andere Fassung, kein JSON, kaputt) | „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nie** wie „keine“                                                                  | kein Reiter  |
-| **gerade nicht lesbar** | Netz, Server, abgemeldet, kein Recht                                               | „Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“                                     | kein Reiter  |
+| Fall                    | Was es ist                                                                         | Was der Reiter zeigt (nur mit dem Recht)                                                                                                        | Alle anderen |
+| ----------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **eingerichtet**        | Wert da, Format stimmt                                                             | der Reiter wie gewohnt, dazu der Unterreiter **Einrichtung**                                                                                    | wie bisher   |
+| **keine**               | Kategorie fehlt oder ohne Wert                                                     | „Gruppenwechsel noch nicht eingerichtet“ mit Erklärung und dem Knopf **„Einrichten …“** (öffnet das Fenster, siehe unten; schreibt noch nichts) | kein Reiter  |
+| **unlesbar**            | Es steht etwas da, aber nicht in diesem Format (andere Fassung, kein JSON, kaputt) | „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nie** wie „keine“                                       | kein Reiter  |
+| **gerade nicht lesbar** | Netz, Server, abgemeldet, kein Recht                                               | „Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“          | kein Reiter  |
 
 Warum die Trennung: Wer ein „unlesbares“ oder „gerade nicht lesbares“ für „nicht eingerichtet“ hielt und später neu
 einrichtete, überschriebe etwas, das da ist. Vorübergehend ist nicht ungültig.
@@ -367,10 +367,11 @@ einrichtete, überschriebe etwas, das da ist. Vorübergehend ist nicht ungültig
 > das ist von „keine Kategorie“ nicht zu unterscheiden. „Berechtigungen verwalten“ sieht alle Kategorien; bei anderen
 > Konten gilt: Vor dem Einrichten (O9-5c-2) die Rechte an der Kategorie prüfen.
 
-Der Unterreiter **Einrichtung** liest nur und verändert nichts:
+Der Unterreiter **Einrichtung** liest nur und verändert nichts – nur der Knopf „Stufen ändern …“ öffnet ein Fenster (siehe
+„Fenster ‚Gruppenwechsel einrichten‘ / ‚Stufen ändern‘ (O9-5c-2)“ unten, es **schreibt noch nichts**):
 
 - **Karte „Stufen“:** die Kette der Stufen mit „ab N Jahren“, darunter die Bereichsgruppe, unter der die Wechsel-Gruppen
-  hängen, der Ferienkalender, der Stichtag und die Ankündigung. Der Knopf „Stufen ändern …“ kommt mit O9-5c-2.
+  hängen, der Ferienkalender, der Stichtag und die Ankündigung; darunter der Knopf **„Stufen ändern …“**.
 - **Karte „Stand in ChurchTools“:** eine Zeile je Prüfung – **in Ordnung**, **stimmt nicht** (mit Text) oder **nicht
   prüfbar**. Ein Lesefehler (kein Recht, Netz, Serverfehler, unbekannte Antwort) wird nie zu „fehlt“. Oben steht ein
   gelber Sammelhinweis („Eine Sache braucht dich.“), wenn etwas nicht stimmt; „nicht prüfbar“ zählt nicht mit. Knöpfe zum
@@ -386,6 +387,51 @@ Der Unterreiter **Einrichtung** liest nur und verändert nichts:
   | Routinen                  | je Wechsel-Gruppe die Aufräum-Routine aus `aufraeumRoutine` (Teilnehmer, aktiv, wartet `aufraeumenTage` Tage, trägt aus; ChurchTools liefert `actionData: null` statt `{}` – beides gleich)                             | `GET /groups/{id}/members/routines`                                   |
 
   Die Abfragen laufen gedrosselt (vier Gruppen zugleich). 401 ist hier fehlendes Recht, kein Abmelden.
+
+### Fenster „Gruppenwechsel einrichten“ / „Stufen ändern“ (O9-5c-2, schreibt noch nichts)
+
+Zwei Knöpfe öffnen dasselbe Fenster (immer ein Modal, nur für „Berechtigungen verwalten“): **„Einrichten …“** auf der
+Seite „noch nicht eingerichtet“ und **„Stufen ändern …“** unter der Karte „Stufen“. Oben steht die Schrittanzeige
+**Stufen › Vorschau › Fertig**; „Fertig“ gibt es erst mit O9-5d. **Das Fenster legt nichts in ChurchTools an und speichert
+nichts:** Der Hauptknopf („Jetzt einrichten“ bzw. „Änderungen schreiben“) ist immer aus, daneben steht „Schreiben kommt mit
+der nächsten Fassung.“ Die Rechnung dahinter (`darfSchreiben`) steht aber schon.
+
+**Schritt „Stufen“** – vorbelegt mit der gespeicherten Einrichtung (Ändern) bzw. den Grundwerten und zwei leeren Zeilen
+(Einrichten):
+
+- **Wechsel-Gruppen anlegen unter:** die Bereichsgruppe (wählt man wie „Anfangen bei“ mit Suche; `SpitzenAuswahl`). Sie darf
+  keine Stufe sein.
+- **Stufen, jüngste zuerst:** je Zeile die Gruppe, „ab N Jahren“, nach oben, nach unten, entfernen (mindestens zwei);
+  „Stufe hinzufügen“ nimmt das Alter der letzten + 3. Dieselbe Gruppe darf nicht zweimal vorkommen, das Alter muss steigen.
+- **Weitere Einstellungen** (zugeklappt): Stichtag („30.09.“), Ankündigung **in Wochen** (gespeichert wird in Tagen, 8 Wochen
+  = 56 Tage; eine von Hand gespeicherte Zahl, die keine ganze Woche ist, bleibt, solange das Feld unberührt ist), wie lange
+  die neue Gruppe aufnimmt (Tage), wann die Wechsel-Gruppe aufräumt (Tage), der Ferienkalender (aus den sichtbaren Kalendern;
+  ein gespeicherter, aber nicht sichtbarer Kalender bleibt in der Liste) mit dem Hinweis „Sommerferien gefunden bis …“.
+- „Weiter zur Vorschau“ geht nur, wenn nichts fehlt – sonst bleibt das Fenster stehen, und die Hinweise stehen am Feld bzw.
+  über der Liste. Dieselbe Prüfung gilt beim Lesen der gespeicherten Einrichtung (`einrichtungFehler`), damit nichts
+  gelesen wird, was das Fenster nie geschrieben hätte.
+
+**Schritt „Vorschau“** – liest nur:
+
+- **Wer wechselt wann wohin:** Jahr × Übergang mit der Zahl der Kinder (aus den aktiven Teilnehmern der gewählten Stufen und
+  `werWechselt`), „Namen für <erstes Jahr> zeigen“ zum Aufklappen. Die Jahre kommen aus dem gewählten Ferienkalender, ab
+  dem nächsten Wechsel. Gelber Hinweis, wenn Kinder keinen Geburtstag haben (sie wechseln nie von selbst). Die Zahlen späterer
+  Jahre sind der heutige Stand.
+- **Das legt die Erweiterung in ChurchTools an:** je Baustein **neu**, **vorhanden** oder **ändern** – Gruppentyp
+  „Gruppenwechsel“ (vorhanden, wenn `GET /group/grouptypes` einen Typ dieses Namens liefert), Rechte der Rolle „Leiter“
+  (`LEITER_RECHTE`; Teilnehmer bekommen keine), Wechsel-Gruppen (vorhanden nur für genau diesen Übergang **und** nur, wenn es
+  die Gruppe noch gibt), Routinen, Regeln in allen Stufen und Wechsel-Gruppen. Das ist `einrichtungsPlan` – **der Plan, den
+  O9-5d ausführt**, mit den Schritten in der Reihenfolge der Messung vom 16.11.2026: Typ → Rechte → Wechsel-Gruppen →
+  Routinen → Regeln der Wechsel-Gruppen → Status → Regeln der Stufen → Status → neu berechnen. Was sich nicht lesen ließ
+  (Gruppentyp, Stand der bisherigen Einrichtung), wird nie zu „fehlt“ oder „neu“: Es steht als „Nicht alles ließ sich
+  prüfen“ da und hält das Schreiben auf.
+- **Fremde Regeln = Stopp:** Hat eine gewählte Gruppe Regeln, deren Kurzname nicht zu dieser Erweiterung gehört (`REGELN`),
+  steht ein roter Hinweis mit Gruppe und Zahl, der Haken ist aus, und das Schreiben bleibt aus – es würde die Regeln
+  ersetzen. Ließen sich die Regeln nicht lesen („ließen sich nicht prüfen“, mit „Nochmal prüfen“), gilt dasselbe.
+- **Keine Mail** (gemessen 16.11.2026): Der Hinweis nennt die Ankündigung des ersten Jahres.
+- **Haken** „Ich habe die Rechte der Leitung geprüft …“ nur beim Einrichten (O9-F4).
+
+Gelesen wird, wie überall hier, gedrosselt; 401 ist fehlendes Recht, kein Abmelden.
 
 ### Ausnahme setzen (O9-3)
 
@@ -436,7 +482,7 @@ und wer zuletzt gespeichert hat.
 Ab O9-2 liegt dort auch die **Einrichtung des Gruppenwechsels**: ein Eintrag in der Kategorie **„Gruppenwechsel“**
 (Kürzel `gruppenwechsel`). Darin stehen die Stufen (Gruppe und Alter ab), die Bereichsgruppe, je Übergang die
 Wechsel-Gruppe und die Fristen (Ankündigung, Aufnahme). Die Wechseltage selbst stehen **nicht** darin – sie kommen
-jedes Mal aus dem Ferienkalender. Die Erweiterung liest den Eintrag nur (ob er fehlt, nicht lesbar ist oder gerade nicht gelesen werden konnte, siehe „Einrichtung (O9-5c)“); anlegen kommt mit „Einrichten“ (O9-5) –
+jedes Mal aus dem Ferienkalender. Die Erweiterung liest den Eintrag nur (ob er fehlt, nicht lesbar ist oder gerade nicht gelesen werden konnte, siehe „Einrichtung (O9-5c)“); anlegen kommt mit „Einrichten“ (O9-5d; das Fenster mit Stufen und Vorschau gibt es seit O9-5c-2) –
 bis dahin gibt es ihn nur in der Test-Instanz (per API geschrieben).
 
 > **Rechte dieser Kategorie:** **Daten sehen** brauchen alle Kinder-Leitungen und die Bereichsleitung (am Gruppentyp,

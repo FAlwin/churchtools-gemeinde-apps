@@ -34,6 +34,7 @@ export function SpitzenAuswahl({
   wert,
   onWahl,
   feldKlasse,
+  leerName,
 }: {
   /** Steht vor dem Knopf und nennt ihn für Bildschirmleser („Anfangen bei“, „Ausschnitt“). */
   label: string;
@@ -43,13 +44,18 @@ export function SpitzenAuswahl({
   onWahl: (wert: string | null) => void;
   /** Das Aussehen des Felds kommt von der Stelle (Leiste im Reiter bzw. Fenster). */
   feldKlasse: string;
+  /**
+   * Wie die Wahl „nichts“ (`wert` = `null`) heißt – ohne Angabe „Ganze Gemeinde“. „Gruppe wählen …“ macht daraus die
+   * Auswahl EINER Gruppe, die noch fehlen darf (Fenster „Gruppenwechsel einrichten“, O9-5c-2).
+   */
+  leerName?: string;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
   const maus = useMedienAbfrage('(hover: hover) and (pointer: fine)');
   const [suche, setSuche] = useState('');
   const [aktiv, setAktiv] = useState(0);
   const id = useId();
-  const wahl = useMemo(() => spitzenWahl(baum, wert), [baum, wert]);
+  const wahl = useMemo(() => spitzenWahl(baum, wert, leerName), [baum, wert, leerName]);
   const liste = useMemo(() => spitzenSuche(wahl, suche), [wahl, suche]);
   const gewaehlt = wahl.find((w) => w.wert === (wert ?? '')) ?? wahl[0];
   const sucht = suche.trim() !== '';

@@ -35,6 +35,8 @@ export function FesterPunkt({
   aendern,
   gaeste,
   gaesteSetzen,
+  ohne: ausgeblendet,
+  ohneSetzen,
 }: {
   art: unknown;
   fest: unknown;
@@ -45,6 +47,10 @@ export function FesterPunkt({
   gaeste?: unknown;
   /** „Anwesenheit“ beim Schreiben: Gäste ändern – fehlt es, wird nur gelesen. */
   gaesteSetzen?: (gaeste: string[]) => void;
+  /** „Anwesenheit“: `props.ohne` des Blocks – Personen, die aus diesem Protokoll genommen sind. */
+  ohne?: unknown;
+  /** „Anwesenheit“ beim Schreiben: Personen aus dem Protokoll nehmen/zurückholen. */
+  ohneSetzen?: (ohne: number[]) => void;
 }) {
   const w = useContext(FestePunkteKontext);
   const ohne = istVerweisArt(art) ? VERWEIS_TEXT[art] : 'Fester Punkt';
@@ -59,6 +65,8 @@ export function FesterPunkt({
         gaeste={gaeste}
         bearbeitbar={gaesteSetzen !== undefined}
         gaesteSetzen={gaesteSetzen}
+        ohne={ausgeblendet}
+        ohneSetzen={ohneSetzen}
       />
     );
   return <p className={ansicht.verweis}>{ohne}</p>;

@@ -24,6 +24,7 @@ import { useSettings } from './hooks/useSettings';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { useAuth } from './hooks/useAuth';
 import { useSiteConfig } from './hooks/useSiteConfig';
+import { useMehrSeite } from './hooks/useMehrSeite';
 import { useAppNav } from './hooks/useAppNav';
 import { useDirektLink } from './hooks/useDirektLink';
 import { useOfflineAutoSync } from './hooks/useOfflineAutoSync';
@@ -112,6 +113,9 @@ const AllSongsLazy = lazy(
 const SettingsLazy = lazy(
   withChunkReload(() => import('./pages/Settings').then((m) => ({ default: m.Settings }))),
 );
+const VorlagenLazy = lazy(
+  withChunkReload(() => import('./pages/Vorlagen').then((m) => ({ default: m.Vorlagen }))),
+);
 const AvailabilityLazy = lazy(
   withChunkReload(() => import('./pages/Availability').then((m) => ({ default: m.Availability }))),
 );
@@ -129,6 +133,11 @@ const ChordChart = (props: ComponentProps<typeof ChordChartLazy>) => (
 const AllSongs = (props: ComponentProps<typeof AllSongsLazy>) => (
   <Suspense fallback={<PageFallback />}>
     <AllSongsLazy {...props} />
+  </Suspense>
+);
+const Vorlagen = (props: ComponentProps<typeof VorlagenLazy>) => (
+  <Suspense fallback={<PageFallback />}>
+    <VorlagenLazy {...props} />
   </Suspense>
 );
 const Settings = (props: ComponentProps<typeof SettingsLazy>) => (
@@ -199,6 +208,8 @@ export default function App() {
   // geladen sind (dann existieren die hervorzuhebenden Elemente). „Einführung nochmal ansehen"
   // im Mehr-Tab setzt zurück und startet sie erneut.
   const [tourActive, setTourActive] = useState(false);
+  // „Mehr“ → „Ablaufvorlagen“ (E10-V3b): welche Unterseite offen ist und warum sie hier und nicht in `useAppNav` liegt – siehe `useMehrSeite`.
+  const mehrSeite = useMehrSeite();
   // Reiter am iPad/Rechner oben (wie ChurchTools „Events“), am Handy unten (Scheibe S, 26.10.2026).
   const handy = useMedienAbfrage(HANDY_BREITE);
 
@@ -621,6 +632,7 @@ export default function App() {
           showToast('Liedersammlung ist offline nicht verfügbar.');
           return;
         }
+        mehrSeite.reiterGewechselt();
         setTab(t);
       }}
     />
@@ -700,7 +712,16 @@ export default function App() {
           <Availability online={online} onToast={showToast} />
         )}
 
-        {tab === 'mehr' && (
+        {tab === 'mehr' && mehrSeite.offen && canViewAgendas && (
+          <Vorlagen
+            caps={caps}
+            offeneId={mehrSeite.vorlage}
+            onOeffnen={mehrSeite.vorlageOeffnen}
+            zurueck={mehrSeite.zurueck}
+          />
+        )}
+
+        {tab === 'mehr' && !(mehrSeite.offen && canViewAgendas) && (
           <Settings
             site={site}
             siteGeladen={siteQuery.dataUpdatedAt > 0}
@@ -718,6 +739,8 @@ export default function App() {
               setTab('termine');
               setTourActive(true);
             }}
+            // Wer Abläufe sehen darf, sieht auch die Vorlagen; bearbeiten entscheidet die Seite je Kalender.
+            onVorlagen={canViewAgendas ? mehrSeite.vorlagenOeffnen : undefined}
           />
         )}
       </div>

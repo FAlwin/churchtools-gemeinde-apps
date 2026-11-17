@@ -7,6 +7,7 @@ import {
   vorlageZeilenAus,
   vorlagenListeAus,
   vorlagenStandAus,
+  vorlagenStandAusRohdaten,
 } from './ablaufVorlagenListe';
 import type { CtSchreiber } from './schreibKern';
 import type { CtAblaufVorlage, CtAgenda, CtAgendaItem } from './typen';
@@ -239,5 +240,29 @@ describe('vorgabeKalender', () => {
   it('keine Vorlage in erlaubten Kalendern: der erste erlaubte; nichts erlaubt: null', () => {
     expect(vorgabeKalender([kal[1], kal[2]], gruppen([vorlageAus(1, 'A', 1)]))).toBe(2);
     expect(vorgabeKalender([], gruppen([vorlageAus(1, 'A', 1)]))).toBeNull();
+  });
+});
+
+describe('vorlagenStandAusRohdaten (E10-V3b)', () => {
+  const fehler = (status: number, meldung: string) => Object.assign(new Error(meldung), { status });
+  const roh: CtAblaufVorlage[] = [{ id: 1, name: 'A', calendarId: 2, items: [] }];
+  const kalender = [{ id: 2, name: 'Gottesdienst' }];
+
+  it('baut denselben Stand wie vorlagenStandAus', () => {
+    expect(vorlagenStandAusRohdaten(roh, kalender, 'Europe/Berlin', fehler)).toEqual(
+      vorlagenStandAus(roh, kalender, 'Europe/Berlin'),
+    );
+  });
+
+  it('Vorlagen keine Liste: 502, nicht eine leere Seite', () => {
+    expect(() => vorlagenStandAusRohdaten({ x: 1 }, kalender, 'UTC', fehler)).toThrow(
+      expect.objectContaining({ status: 502, message: expect.stringContaining('Vorlagen') }),
+    );
+  });
+
+  it('Kalender keine Liste: 502', () => {
+    expect(() => vorlagenStandAusRohdaten(roh, null, 'UTC', fehler)).toThrow(
+      expect.objectContaining({ status: 502, message: expect.stringContaining('Kalender') }),
+    );
   });
 });

@@ -39,13 +39,31 @@ import type { BlattGruppe } from '@shared/ct/terminBlatt';
 import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
 import * as extSongSelect from './ctSongSelect';
-import type { GeloeschterPunkt, NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
+import {
+  istVorlage,
+  type AblaufZiel,
+  type GeloeschterPunkt,
+  type NeuerPunkt,
+  type PunktAenderung,
+} from '@shared/ct/schreibKern';
+import type { VorlagenStand } from '@shared/ct/ablaufVorlagenListe';
+import type { CtAblaufVorlage } from '@shared/ct/typen';
 import type { AblaufBestand, AblaufStand } from '@shared/ct/ablaufNeu';
 
 // Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts`, schreibende
 // über `ctSchreiben.ts` direkt an ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Phase 3b
 // kommt in Scheiben (Ablauf + Tempo, dann Lieder/Notenblätter), die Massenläufe (Statistik,
 // Liedtext-Suche) bleiben der Server-Variante vorbehalten (Plan §6).
+
+/**
+ * Der Pfad der Punkt-Routen: ein Termin (`number`) oder eine Ablaufvorlage (`{ vorlageId }`, E10-V3b). Der Server hat für
+ * beide dieselben Handler (`zielAus`); hier steht die Zuordnung Ziel → Pfad **einmal**.
+ */
+function agendaPfad(ziel: AblaufZiel): string {
+  return istVorlage(ziel)
+    ? `/api/ablauf-vorlagen/${ziel.vorlageId}/agenda`
+    : `/api/services/${ziel}/agenda`;
+}
 
 export function login(email: string, password: string): Promise<AuthStatus> {
   if (istExtension) return ohneServer('Eine eigene Anmeldung');
@@ -123,22 +141,22 @@ export function getSetlistVersion(eventId: number): Promise<{ hash: string }> {
 
 /** Speichert die neue Reihenfolge der Ablaufpunkte (Liste der Item-IDs in Wunschreihenfolge). */
 export function reorderAgenda(
-  eventId: number,
+  ziel: AblaufZiel,
   order: number[],
   /** Die Reihenfolge vor dem Ziehen (E6-3c) – hat inzwischen jemand umsortiert, kommt 412. */
   gesehen?: number[],
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.reihenfolge(eventId, order, gesehen);
-  return apiFetch(`/api/services/${eventId}/agenda/order`, {
+  if (istExtension) return extSchreiben.reihenfolge(ziel, order, gesehen);
+  return apiFetch(`${agendaPfad(ziel)}/order`, {
     method: 'PATCH',
     body: JSON.stringify({ order, gesehen }),
   });
 }
 
 /** Legt einen neuen Ablaufpunkt an (Text/Überschrift/Lied). */
-export function createAgendaItem(eventId: number, data: NeuerPunkt): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.punktNeu(eventId, data);
-  return apiFetch(`/api/services/${eventId}/agenda/items`, {
+export function createAgendaItem(ziel: AblaufZiel, data: NeuerPunkt): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.punktNeu(ziel, data);
+  return apiFetch(`${agendaPfad(ziel)}/items`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -157,6 +175,45 @@ export function getServicesOhneAblauf(kalenderIds: readonly number[]): Promise<S
 export function getAblaufVorlagen(): Promise<AblaufVorlage[]> {
   if (istExtension) return ext.ablaufVorlagen();
   return apiFetch<AblaufVorlage[]>('/api/ablauf-vorlagen');
+}
+
+/**
+ * Die Seite „Ablaufvorlagen“ (E10-V3b): Liste nach Kalender und die Kalender – **frisch**, nie aus einem Zwischenspeicher
+ * (nach jedem Schreiben wird neu gelesen). Auf dem Server und in der Erweiterung dieselbe Regel (`vorlagenStandAusRohdaten`).
+ */
+export function getVorlagenStand(): Promise<VorlagenStand> {
+  if (istExtension) return ext.vorlagenStand();
+  return apiFetch<VorlagenStand>('/api/ablauf-vorlagen/stand');
+}
+
+/** Eine Vorlage samt Punkten, **frisch** (E10-V3b). */
+export function getVorlage(vorlageId: number): Promise<CtAblaufVorlage> {
+  if (istExtension) return ext.vorlage(vorlageId);
+  return apiFetch<CtAblaufVorlage>(`/api/ablauf-vorlagen/${vorlageId}`);
+}
+
+/** Legt eine leere Vorlage an und liefert ihre ID (E10-V3b). */
+export function vorlageAnlegen(daten: { name: string; kalenderId: number }): Promise<number> {
+  if (istExtension) return extSchreiben.vorlageNeu(daten);
+  return apiFetch<{ id: number }>('/api/ablauf-vorlagen', {
+    method: 'POST',
+    body: JSON.stringify(daten),
+  }).then((r) => r.id);
+}
+
+/** Benennt eine Vorlage um; die Punkte bleiben (E10-V3b). */
+export async function vorlageUmbenennen(vorlageId: number, name: string): Promise<void> {
+  if (istExtension) return extSchreiben.vorlageUmbenennen(vorlageId, name);
+  await apiFetch(`/api/ablauf-vorlagen/${vorlageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** Löscht eine Vorlage – kein Papierkorb; „schon weg“ ist kein Fehler (E10-V3b). */
+export async function vorlageLoeschen(vorlageId: number): Promise<void> {
+  if (istExtension) return extSchreiben.vorlageLoeschen(vorlageId);
+  await apiFetch(`/api/ablauf-vorlagen/${vorlageId}`, { method: 'DELETE' });
 }
 
 /** Einen Ablauf anlegen – aus einer Vorlage, als Kopie oder leer (13.10.2026). */
@@ -220,14 +277,14 @@ export type AgendaItemUpdate = PunktAenderung;
 
 /** Schreibt die geänderten Felder eines Ablaufpunkts gesammelt (ein PUT statt Request pro Feld). */
 export function updateAgendaItem(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   fields: AgendaItemUpdate,
   /** Was das Fenster beim Öffnen gesehen hat (E6-3c) – ohne = „Trotzdem speichern“. */
   gesehen?: PunktStand,
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.punkt(eventId, itemId, fields, gesehen);
-  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, {
+  if (istExtension) return extSchreiben.punkt(ziel, itemId, fields, gesehen);
+  return apiFetch(`${agendaPfad(ziel)}/items/${itemId}`, {
     method: 'PUT',
     body: JSON.stringify({ ...fields, gesehen }),
   });
@@ -235,12 +292,12 @@ export function updateAgendaItem(
 
 /** Legt fest, ob ein Punkt vor dem Beginn der Veranstaltung läuft (Vorlauf, #423). */
 export function setAgendaItemVorBeginn(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   vorBeginn: boolean,
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.vorBeginn(eventId, itemId, vorBeginn);
-  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/vor-beginn`, {
+  if (istExtension) return extSchreiben.vorBeginn(ziel, itemId, vorBeginn);
+  return apiFetch(`${agendaPfad(ziel)}/items/${itemId}/vor-beginn`, {
     method: 'PUT',
     body: JSON.stringify({ vorBeginn }),
   });
@@ -614,17 +671,17 @@ export function renameArrangementFile(
 
 /** Löscht einen Ablaufpunkt; `wiederherstellen` ist der Merkzettel für „Rückgängig". */
 export function deleteAgendaItem(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
 ): Promise<{ ok: boolean; wiederherstellen?: GeloeschterPunkt | null }> {
-  if (istExtension) return extSchreiben.punktWeg(eventId, itemId);
-  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, { method: 'DELETE' });
+  if (istExtension) return extSchreiben.punktWeg(ziel, itemId);
+  return apiFetch(`${agendaPfad(ziel)}/items/${itemId}`, { method: 'DELETE' });
 }
 
 /** „Rückgängig" nach dem Löschen: den Punkt an seiner alten Stelle wieder anlegen. */
-export function restoreAgendaItem(eventId: number, g: GeloeschterPunkt): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.punktZurueck(eventId, g);
-  return apiFetch(`/api/services/${eventId}/agenda/items/wiederherstellen`, {
+export function restoreAgendaItem(ziel: AblaufZiel, g: GeloeschterPunkt): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.punktZurueck(ziel, g);
+  return apiFetch(`${agendaPfad(ziel)}/items/wiederherstellen`, {
     method: 'POST',
     body: JSON.stringify(g),
   });

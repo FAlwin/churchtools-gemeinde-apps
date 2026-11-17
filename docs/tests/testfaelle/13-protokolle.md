@@ -415,3 +415,58 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
 - **Historie:** v1.0.1 (17.11.2026)
 
 </details>
+
+### TF-PROT-14 · Anwesenheit: Person aus dem Protokoll nehmen · Mit KI füllen: direkt zur Antwort
+
+**Das brauchst du:** In der Test-Instanz eine eigene **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung
+und drei Mitgliedern (z. B. Spike, ein „Gemeinschaftskonto“ und eine weitere Person), eingerichteten Protokollen und
+einem Gruppentreffen mit Protokoll-Entwurf, der den festen Punkt **Anwesenheit** enthält. Dazu eine Antwort einer KI im
+Aufbau von „Mit KI füllen“ (Beispiel unten), die Platzhalter wie `[Person 1]` und `[Person 2]` enthält, ein To-Do mit
+`[Person 2]` als Zuständigem und einen Stichpunkt mit `[Person 1]`. Danach Test-Protokoll und -Treffen aufräumen.
+
+**Das muss passieren:** Eine Person lässt sich aus der Anwesenheit dieses Protokolls nehmen, ohne dass sich im
+ChurchTools-Gruppentreffen etwas ändert, und wieder zurückholen; sie fehlt beim Lesen, im PDF und bei den Hinweisen zum
+Freigeben. „Mit KI füllen“ nimmt eine fertige Antwort ohne Transkript an, lässt Platzhalter Namen zuordnen und warnt in
+der Vorschau vor den übrigen.
+
+1. Das Protokoll öffnen, bei **Anwesenheit** auf **„Gemeinschaftskonto aus dem Protokoll nehmen“** tippen (Auge-Symbol am
+   Zeilenende): Die Zeile verschwindet, unter der Liste steht **„1 ausgeblendet“**, die Zahlen oben („Anwesend … ·
+   Abwesend … · Offen …“) zählen die Person nicht mehr.
+2. Im ChurchTools-**Gruppentreffen** nachsehen: Das Gemeinschaftskonto steht dort unverändert und ist nicht angetippt
+   worden.
+3. **Zeigen** antippen: Die Person steht mit „nicht im Protokoll“ und **„Zurückholen“** da. **Zurückholen** tippen: Sie ist
+   wieder in der Liste, die Zeile „ausgeblendet“ ist weg. Danach sie erneut ausblenden.
+4. Die Seite neu laden: Die Person ist weiter ausgeblendet (gespeichert im Protokoll).
+5. **Freigeben** antippen: Ist die ausgeblendete Person im Gruppentreffen „offen“, nennt der Hinweis „Anwesenheit: … noch
+   offen“ sie **nicht**. Fenster mit „Abbrechen“ schließen.
+6. **Teilen** → PDF ansehen und den Entwurf lesen (Reiter „Protokolle“ → Protokoll öffnen): Die Person steht in der
+   Anwesenheit nirgends, auch nicht unter „Offen“.
+7. Ein **neues** Protokoll über **„Wie letztes Mal“** von diesem beginnen: Dort steht die Person wieder in der
+   Anwesenheit (das Ausblenden gilt nur für ein Protokoll). Danach das neue Test-Protokoll wieder aufräumen.
+8. **Mit KI füllen** öffnen. In Schritt 1 steht oben **„Antwort schon da? Direkt einfügen“** – antippen: Schritt 2 öffnet
+   sich ohne Transkript, es gibt **kein** „Auftrag anzeigen“ und keinen Hinweis zum Kopieren. **Zurück** führt zu Schritt 1.
+9. Wieder „Direkt einfügen“, die Beispiel-Antwort einfügen: Unter dem Feld steht **„Platzhalter zuordnen“** mit `[Person 1]`
+   und `[Person 2]`. Bei `[Person 2]` einen Mitgliedsnamen aus den Vorschlägen wählen, `[Person 1]` leer lassen, **Vorschau
+   ansehen**.
+10. In der Vorschau: Oben steht ein Hinweis „[Person 1] ist keinem Namen zugeordnet – nach dem Übernehmen selbst
+    ersetzen.“ Beim To-Do steht der gewählte Mitgliedsname (ohne „extern“). Mit `[Person 2]` leer gelassen stünde dort
+    „niemand zuständig“. **Ausgewählte übernehmen**: Der Stichpunkt enthält noch „[Person 1]“, das To-Do hat das Mitglied
+    als Zuständigen.
+
+Beispiel-Antwort:
+
+```json
+{
+  "punkte": [{ "nr": "1", "stichpunkte": ["[Person 1] hält die Andacht."] }],
+  "todos": [{ "nr": "1", "text": "TEST Zusagen einholen", "wer": ["[Person 2]"] }]
+}
+```
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/anwesenheit.ts`, `shared/protokolle/protokollBlatt.ts`, `shared/protokolle/freigabe.ts`, `shared/protokolle/ki.ts`, `shared/protokolle/platzhalter.ts`, `protokolle/src/Anwesenheit.tsx`, `protokolle/src/Anwesenheit.module.scss`, `protokolle/src/FesterPunkt.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/editorSchema.ts`, `protokolle/src/anwesenheitSchreiben.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.module.scss`
+- **Automatisiert:** teilweise – `shared/protokolle/anwesenheit.test.ts`, `protokollBlatt.test.ts`, `freigabe.test.ts`, `ki.test.ts`, `vorlagen.test.ts` (Lesen/Schreiben von `props.ohne`, „Wie letztes Mal“ ohne Ausgeblendete, Filter in Blatt, Freigabe-Hinweis und Vorbelegung, unzugeordnete Platzhalter), `protokolle/src/Anwesenheit.test.tsx` (Knopf, „ausgeblendet“/„Zeigen“/„Zurückholen“, Lesen, abgeschlossenes Treffen, Editor), `protokolle/src/KiFuellenFenster.test.tsx` (Direkt-Link, „Platzhalter zuordnen“, Hinweis in der Vorschau, Übernahme); das echte Gruppentreffen in ChurchTools, das PDF und das Aussehen am Handy nur von Hand
+- **Historie:** 17.11.2026 (Anlass: Gemeinschaftskonto „Technik“ stand als Gruppenmitglied in jeder Anwesenheit)
+
+</details>

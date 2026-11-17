@@ -42,6 +42,11 @@ interface SettingsProps {
   onLogout: () => void;
   /** Startet die geführte Einführung erneut. */
   onReplayIntro: () => void;
+  /**
+   * Öffnet die Seite „Ablaufvorlagen“ (E10-V3b). Die Zeile gibt es nur, wenn die App sie anbietet – also nur für den, der
+   * Abläufe sehen darf (`canViewAgendas`).
+   */
+  onVorlagen?: () => void;
 }
 
 const LIEDANSICHT_OPTIONS: { value: Liedansicht; label: string }[] = [
@@ -61,7 +66,7 @@ const THEME_OPTIONS: { value: ThemePref; label: string; icon: 'sun' | 'moon' | '
 ];
 
 /**
- * „Mehr"-Tab: Profil, Installieren, Darstellung, Display-Sperre, Offline, Links, Team-Notizen,
+ * „Mehr"-Tab: Profil, Installieren, Darstellung, Abläufe (Vorlagen), Display-Sperre, Offline, Links, Team-Notizen,
  * Verwaltung (Admin), Hilfe, Abmelden.
  *
  * **Nur noch Zusammensetzung** (#407, 23.09.2026). Bis dahin stand alles in dieser einen Datei (623
@@ -83,6 +88,7 @@ export function Settings({
   userName,
   onLogout,
   onReplayIntro,
+  onVorlagen,
 }: SettingsProps) {
   const verwaltung = useVerwaltung(site, isAdmin);
   const [autoOffline, setAutoOffline] = useState(isOfflineAutoEnabled());
@@ -143,6 +149,29 @@ export function Settings({
           </div>
         </div>
       </div>
+
+      {/* Abläufe (E10-V3b): die Seite „Ablaufvorlagen“ – nur für wer Abläufe sehen darf */}
+      {onVorlagen && (
+        <div className={styles.group}>
+          <div className={styles.groupHdr}>Abläufe</div>
+          <div className={styles.cardList}>
+            <button
+              className={`${styles.setRow} ${styles.tappable}`}
+              onClick={onVorlagen}
+              data-tour="ablaufvorlagen"
+            >
+              <span className={styles.kachel}>
+                <Icon name="grid" size={18} />
+              </span>
+              <span className={styles.zeileText}>
+                <span className={styles.setLabel}>Ablaufvorlagen</span>
+                <span className={styles.zeileUnter}>Vorlagen ansehen, anlegen und bearbeiten</span>
+              </span>
+              <Icon name="chev-right" size={18} className={styles.extIcon} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Während des Spielens */}
       <div className={styles.group}>

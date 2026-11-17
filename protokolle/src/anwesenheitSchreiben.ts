@@ -132,15 +132,17 @@ export async function statusSetzen(
 
 /**
  * **Von selbst vorbelegen** (`vorbelegung`): Zusagen anwesend, Absagen abwesend – nur, solange am Treffen noch niemand
- * etwas eingetragen hat. Gibt den Stand nach dem Schreiben zurück (unverändert, wenn nichts zu tun war).
+ * etwas eingetragen hat. Personen, die aus dem Protokoll genommen sind (`ohne`), bleiben unberührt. Gibt den Stand
+ * nach dem Schreiben zurück (unverändert, wenn nichts zu tun war).
  */
 export async function vorbelegen(
   gruppe: number,
   treffen: number,
   stand: TreffenStand,
   anfragen: readonly Anfrage[],
+  ohne: readonly number[],
 ): Promise<TreffenStand> {
-  const soll = vorbelegung(stand, anfragen);
+  const soll = vorbelegung(stand, anfragen, ohne);
   if (!soll.length) return stand;
   // Erst alle schreiben, dann EINMAL nachlesen – nicht je Person (eine ganze Gruppe wären sonst doppelt so viele Abrufe).
   for (const v of soll) await schreiben(gruppe, treffen, v.person, v.status);

@@ -7,6 +7,7 @@
  * einzelner Aussetzer zehn Minuten.
  */
 import { config } from '../config.js';
+import { HttpError } from '../middleware/errorHandler.js';
 import { ctGet } from './ctHttp.js';
 import type {
   CtAbsence,
@@ -19,6 +20,7 @@ import type {
 import { createTtlMemo } from './ttlMemo.js';
 import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
 import { kalenderAus, vorlagenAus } from '@shared/ct/ablaufAnlegen';
+import { vorlagenStandAusRohdaten, type VorlagenStand } from '@shared/ct/ablaufVorlagenListe';
 import { ablaufBestandLesen, type AblaufBestand } from '@shared/ct/ablaufNeu';
 import type { CtAblaufVorlage, CtKalender } from '@shared/ct/typen';
 import type { AblaufVorlage, Kalender } from '@shared/types/index';
@@ -141,6 +143,23 @@ export function getAbsences(
 /** Die Ablauf-Vorlagen der Gemeinde (Ablauf anlegen, 13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */
 export async function getAblaufVorlagen(cookie: string): Promise<AblaufVorlage[]> {
   return vorlagenAus(await ctGet<CtAblaufVorlage[]>(cookie, '/api/agendatemplates'));
+}
+
+/**
+ * Die Seite „Ablaufvorlagen“ (E10-V3b): Vorlagen samt Punkten, nach Kalender gruppiert, und die Kalender. Frisch, ohne
+ * Zwischenspeicher – nach jedem Schreiben wird neu gelesen. Regel in `@shared/ct/ablaufVorlagenListe`.
+ */
+export async function getVorlagenStand(cookie: string): Promise<VorlagenStand> {
+  const [roh, kalender] = await Promise.all([
+    ctGet<unknown>(cookie, '/api/agendatemplates'),
+    ctGet<unknown>(cookie, '/api/calendars'),
+  ]);
+  return vorlagenStandAusRohdaten(
+    roh,
+    kalender,
+    config.zeitzone,
+    (status, meldung) => new HttpError(status, meldung),
+  );
 }
 
 /** Die Kalender der Gemeinde – für die Verwaltung „Termine ohne Ablauf" (13.10.2026). */

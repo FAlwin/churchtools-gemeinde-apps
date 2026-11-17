@@ -9,7 +9,7 @@
  */
 import { ableiten, BLOCK, type Block } from './dokument';
 import type { Aufgabe } from './aufgaben';
-import type { TreffenStand } from './anwesenheit';
+import { ohneAus, ohneAusgeblendete, type TreffenStand } from './anwesenheit';
 import type { ProtokollKopf } from './speicher';
 
 export interface FreigabeEintrag {
@@ -122,6 +122,7 @@ const zahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins :
 /**
  * **Die Hinweise im Fenster „Protokoll freigeben?“** – nur, was einen Blick wert ist; leer = alles in Ordnung.
  * - Anwesenheit: wer im Gruppentreffen noch „offen“ ist (nur mit Treffen, und nur solange es nicht abgeschlossen ist).
+ *   Wer aus dem Protokoll genommen ist (`props.ohne` am Block, `ohneAusgeblendete`), zählt nicht mit.
  * - To-Dos ohne Zuständigen: weder Person noch externer Name – am gespeicherten To-Do, sonst an der Vorab-Wahl (K1).
  * - Offene Vorschläge dieser Sitzung (S5-4): sie rutschen nach der Freigabe zur nächsten Sitzung.
  */
@@ -135,7 +136,11 @@ export function freigabeHinweise(q: {
   const hinweise: Hinweis[] = [];
 
   if (q.anwesenheit && !q.anwesenheit.abgeschlossen) {
-    const offen = q.anwesenheit.personen.filter((p) => p.status === 'offen');
+    const sichtbar = ohneAusgeblendete(
+      q.anwesenheit,
+      ohneAus(findeVerweis(q.dokument, 'anwesenheit')?.props?.ohne),
+    );
+    const offen = sichtbar.personen.filter((p) => p.status === 'offen');
     if (offen.length)
       hinweise.push({
         art: 'anwesenheit',
@@ -180,11 +185,15 @@ export function freigabeHinweise(q: {
 }
 
 /** Der erste feste Punkt dieser Art (auch eingerückt) – `null`, wenn es keinen gibt. */
-function verweisBlock(dokument: readonly Block[], art: string): string | null {
+function findeVerweis(dokument: readonly Block[], art: string): Block | null {
   for (const b of dokument) {
-    if (b.type === BLOCK.verweis && b.props?.art === art) return b.id;
-    const k = verweisBlock(b.children ?? [], art);
+    if (b.type === BLOCK.verweis && b.props?.art === art) return b;
+    const k = findeVerweis(b.children ?? [], art);
     if (k) return k;
   }
   return null;
+}
+
+function verweisBlock(dokument: readonly Block[], art: string): string | null {
+  return findeVerweis(dokument, art)?.id ?? null;
 }

@@ -229,6 +229,7 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           art={b.props?.art}
           fest={b.props?.fest}
           gaeste={b.props?.gaeste}
+          ohne={b.props?.ohne}
           abhaken={false}
         />
       );

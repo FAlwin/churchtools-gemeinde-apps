@@ -16,7 +16,7 @@ import { tagPunkt } from '../ct/datum';
 import { sichererLink } from '../ct/sichereAdresse';
 import type { Absatz, Lauf, Rgb } from '../ct/terminBlatt';
 import { tagAusIso, wannLang } from '../ct/zeit';
-import { gaesteAus, kurzform, type TreffenStand } from './anwesenheit';
+import { gaesteAus, kurzform, ohneAus, ohneAusgeblendete, type TreffenStand } from './anwesenheit';
 import {
   istUeberfaellig,
   nameImVerlauf,
@@ -279,7 +279,9 @@ function anwesenheitKasten(b: Block, q: ProtokollQuelle): KastenZeile[] {
     return [{ absaetze: [[grau('Die Anwesenheit ließ sich nicht laden.')]] }];
   if (!q.anwesenheit)
     return [{ absaetze: [[grau('Zu dieser Sitzung gibt es kein Gruppentreffen.')]] }];
-  const k = kurzform(q.anwesenheit.personen, gaesteAus(b.props?.gaeste));
+  // Aus dem Protokoll genommene Personen (`props.ohne`) erscheinen gar nicht.
+  const sichtbar = ohneAusgeblendete(q.anwesenheit, ohneAus(b.props?.ohne));
+  const k = kurzform(sichtbar.personen, gaesteAus(b.props?.gaeste));
   const absatz: Absatz = [
     fett(`Anwesend (${k.anwesend.length}): `),
     { text: k.anwesend.join(', ') || '–' },

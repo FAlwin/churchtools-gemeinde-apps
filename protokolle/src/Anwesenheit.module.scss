@@ -130,6 +130,39 @@
   }
 }
 
+.ausgeblendet {
+  margin-top: 6px;
+  padding-top: 2px;
+  border-top: 1px solid var(--hair);
+
+  .leise {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+// Ein Textknopf („Zeigen“, „Zurückholen“) – unauffällig wie die Hinweiszeilen, aber als Knopf erkennbar.
+.link {
+  min-height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface2);
+    }
+  }
+}
+
 .gast {
   display: flex;
   flex-wrap: wrap;

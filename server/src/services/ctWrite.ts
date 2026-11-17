@@ -11,6 +11,7 @@ import type { HochzuladendeDatei } from '@shared/ct/notenblaetter';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
+import { vorlageAnlegen, vorlageLoeschen, vorlageUmbenennen } from '@shared/ct/ablaufVorlagen';
 import type { AblaufQuelle } from '@shared/types/index';
 import {
   ablaufAbschliessen,
@@ -22,6 +23,7 @@ import {
   tempoSetzen,
   vorBeginnSetzen,
   weglassenSetzen,
+  type AblaufZiel,
   type CtSchreiber,
   type GeloeschterPunkt,
   type NeuerPunkt,
@@ -221,52 +223,56 @@ export function schreiberFuer(cookie: string): CtSchreiber {
 
 export function reorderAgenda(
   cookie: string,
-  eventId: number,
+  ziel: AblaufZiel,
   order: number[],
   gesehen?: number[],
 ): Promise<void> {
-  return ablaufUmsortieren(schreiberFuer(cookie), eventId, order, gesehen);
+  return ablaufUmsortieren(schreiberFuer(cookie), ziel, order, gesehen);
 }
 
-export function createAgendaItem(cookie: string, eventId: number, data: NeuerPunkt): Promise<void> {
-  return punktAnlegen(schreiberFuer(cookie), eventId, data);
+export function createAgendaItem(
+  cookie: string,
+  ziel: AblaufZiel,
+  data: NeuerPunkt,
+): Promise<void> {
+  return punktAnlegen(schreiberFuer(cookie), ziel, data);
 }
 
 export function updateAgendaItem(
   cookie: string,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   fields: PunktAenderung,
   gesehen?: PunktStand,
 ): Promise<void> {
-  return punktAendern(schreiberFuer(cookie), eventId, itemId, fields, gesehen);
+  return punktAendern(schreiberFuer(cookie), ziel, itemId, fields, gesehen);
 }
 
 /** Löscht und liefert, was „Rückgängig" zum Wiederherstellen braucht (`null`: war schon weg). */
 export function deleteAgendaItem(
   cookie: string,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
 ): Promise<GeloeschterPunkt | null> {
-  return punktLoeschen(schreiberFuer(cookie), eventId, itemId);
+  return punktLoeschen(schreiberFuer(cookie), ziel, itemId);
 }
 
 /** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an („Rückgängig", 12.10.2026). */
 export async function restoreAgendaItem(
   cookie: string,
-  eventId: number,
+  ziel: AblaufZiel,
   punkt: GeloeschterPunkt,
 ): Promise<void> {
-  await punktWiederherstellen(schreiberFuer(cookie), eventId, punkt);
+  await punktWiederherstellen(schreiberFuer(cookie), ziel, punkt);
 }
 
 export function setAgendaItemVorBeginn(
   cookie: string,
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   vorBeginn: boolean,
 ): Promise<void> {
-  return vorBeginnSetzen(schreiberFuer(cookie), eventId, itemId, vorBeginn);
+  return vorBeginnSetzen(schreiberFuer(cookie), ziel, itemId, vorBeginn);
 }
 
 export function setAgendaItemWeggelassen(
@@ -276,6 +282,27 @@ export function setAgendaItemWeggelassen(
   weggelassen: boolean,
 ): Promise<void> {
   return weglassenSetzen(schreiberFuer(cookie), eventId, itemId, weggelassen);
+}
+
+// Ablaufvorlagen (E10-V3b): Regeln und Nachlesen in `@shared/ct/ablaufVorlagen`. Die Punkte einer Vorlage schreiben die
+// Funktionen oben mit dem Ziel `{ vorlageId }`.
+
+/** Eine leere Vorlage anlegen – liefert ihre ID. */
+export function createVorlage(
+  cookie: string,
+  daten: { name: string; kalenderId: number },
+): Promise<number> {
+  return vorlageAnlegen(schreiberFuer(cookie), daten);
+}
+
+/** Eine Vorlage umbenennen (die Punkte bleiben). */
+export function renameVorlage(cookie: string, vorlageId: number, name: string): Promise<void> {
+  return vorlageUmbenennen(schreiberFuer(cookie), vorlageId, name);
+}
+
+/** Eine Vorlage löschen – ChurchTools kennt keinen Papierkorb; „schon weg" ist kein Fehler. */
+export function deleteVorlage(cookie: string, vorlageId: number): Promise<void> {
+  return vorlageLoeschen(schreiberFuer(cookie), vorlageId);
 }
 
 /** Einen Ablauf anlegen (13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */

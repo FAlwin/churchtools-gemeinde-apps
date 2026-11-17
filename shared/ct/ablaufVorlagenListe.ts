@@ -93,6 +93,23 @@ export function vorlagenStandAus(
 }
 
 /**
+ * **Der Stand aus den rohen Antworten** – prüft, dass ChurchTools wirklich Listen geliefert hat (sonst 502 statt einer
+ * stillen leeren Seite), und baut dann `vorlagenStandAus`. Die eine Stelle für den Browser (Dienstplaner,
+ * Musik-App-Erweiterung) und den Server der Musik-App – vorher stand die Prüfung nur im Dienstplaner.
+ */
+export function vorlagenStandAusRohdaten(
+  roh: unknown,
+  kalenderRoh: unknown,
+  zeitzone: string,
+  fehler: (status: number, meldung: string) => Error,
+): VorlagenStand {
+  if (!Array.isArray(roh)) throw fehler(502, 'ChurchTools hat die Vorlagen nicht geliefert.');
+  if (!Array.isArray(kalenderRoh))
+    throw fehler(502, 'ChurchTools hat die Kalender nicht geliefert.');
+  return vorlagenStandAus(roh as CtAblaufVorlage[], kalenderRoh as CtKalender[], zeitzone);
+}
+
+/**
  * **Die Zeilen einer geöffneten Vorlage** – `ablaufZeileAus` mit Termin 0: Eine Vorlage hat keinen Termin, also nichts
  * „Weggelassenes“. Die Uhrzeit wird ausdrücklich geleert (auch wenn ChurchTools an einem Punkt ein `start` mitgäbe): Die
  * Vorlage hat keine Zeiten, nur Dauern – die Liste zeigt sie in der Zeitspalte unter dem leeren Platz der Uhrzeit.

@@ -16,7 +16,7 @@ import {
 import { FesterPunkt } from './FesterPunkt';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { fruehesAendern } from './fruehesProtokoll';
-import { gaesteWert } from '@shared/protokolle/anwesenheit';
+import { gaesteWert, ohneWert } from '@shared/protokolle/anwesenheit';
 import type { ProtokollEditor } from './editorSchema';
 import { AufgabenKontext } from './aufgabenKontext';
 import { StatusKreis } from './StatusKreis';
@@ -309,12 +309,12 @@ export function VerweisBlock({
   block,
   editor,
 }: {
-  block: { id: string; props: { art: string; fest: string; gaeste?: string } };
+  block: { id: string; props: { art: string; fest: string; gaeste?: string; ohne?: string } };
   // Schmal wie bei den anderen Blöcken: Der volle `ProtokollEditor` entsteht erst aus dem Schema mit diesem Block –
   // in der Signatur wäre das ein Typ-Kreis. Zur Laufzeit ist es derselbe Editor.
   editor: {
     isEditable: boolean;
-    updateBlock: (b: string, u: { props: { gaeste: string } }) => unknown;
+    updateBlock: (b: string, u: { props: { gaeste: string } | { ohne: string } }) => unknown;
   };
 }) {
   const w = useContext(FestePunkteKontext);
@@ -346,6 +346,13 @@ export function VerweisBlock({
         gaesteSetzen={
           editor.isEditable && block.props.art === 'anwesenheit'
             ? (g) => editor.updateBlock(block.id, { props: { gaeste: gaesteWert(g) } })
+            : undefined
+        }
+        ohne={block.props.ohne}
+        // Eine Person aus diesem Protokoll nehmen (nur hier gespeichert, nie im Gruppentreffen).
+        ohneSetzen={
+          editor.isEditable && block.props.art === 'anwesenheit'
+            ? (o) => editor.updateBlock(block.id, { props: { ohne: ohneWert(o) } })
             : undefined
         }
       />

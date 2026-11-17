@@ -6,13 +6,20 @@ import {
   auftragBauen,
   datumMitWochentag,
   einfuegeStelleKI,
+  offenePlatzhalter,
   tagesordnung,
   uebernahmePlanen,
   uebernehmbar,
   type AntwortKontext,
   type Eintrag,
 } from './ki';
-import { namenFinden, platzhalterAnwenden, type Person } from './platzhalter';
+import {
+  namenFinden,
+  platzhalterAnwenden,
+  unzugeordnet,
+  zuordnungErgaenzen,
+  type Person,
+} from './platzhalter';
 
 const P = (id: number, vorname: string, nachname: string): Person => ({ id, vorname, nachname });
 const ALWIN = P(1, 'Alwin', 'Friesen');
@@ -334,7 +341,8 @@ describe('antwortLesen', () => {
       'Neu2',
     ]);
     const todoB = e.find((x) => x.art === 'todo' && x.text === 'b');
-    expect(todoB).toMatchObject({ wer: [{ name: '[Person 99]', personId: null }], bis: null });
+    // Ein unbekannter Platzhalter ist kein externer Name: niemand zuständig, der Platzhalter steht in `offen`.
+    expect(todoB).toMatchObject({ wer: [], bis: null, offen: ['[Person 99]'] });
     const termin = e.find((x) => x.art === 'termin');
     expect(termin).toMatchObject({ datum: null });
     expect(e.find((x) => x.art === 'neuerPunkt' && x.titel === 'Neu')).toMatchObject({
@@ -387,8 +395,41 @@ describe('antwortLesen', () => {
       expect(todo([ph('Anna Klassen')]).wer).toEqual([{ name: 'Anna Klassen', personId: null }]);
     });
 
-    it('Platzhalter ohne Zuordnung bleibt als Text und ist extern', () => {
-      expect(todo(['[Person 42]']).wer).toEqual([{ name: '[Person 42]', personId: null }]);
+    it('Platzhalter ohne Zuordnung ist KEIN externer Name: niemand zuständig, der Platzhalter steht in `offen`', () => {
+      const t = todo(['[Person 42]']);
+      expect(t.wer).toEqual([]);
+      expect(t.offen).toEqual(['[Person 42]']);
+      // Gemischt: der bekannte bleibt Zuständiger, nur der unbekannte fällt heraus.
+      const gemischt = todo([ph('Maria'), '[Person 42]', '[Person 42]', 'Fremde Frau']);
+      expect(gemischt.wer).toEqual([
+        { name: 'Maria', personId: 5 },
+        { name: 'Fremde Frau', personId: null },
+      ]);
+      expect(gemischt.offen).toEqual(['[Person 42]']);
+      // Ohne unbekannten Platzhalter gibt es das Feld nicht.
+      expect('offen' in todo([ph('Maria')])).toBe(false);
+    });
+
+    it('von Hand zugeordnet (zuordnungErgaenzen): ein Mitglied wird zuständige Person, ein Fremder extern', () => {
+      const zuordnung = zuordnungErgaenzen(platzhalterAnwenden(TRANSKRIPT, funde).zuordnung, {
+        '[Person 42]': ' Daniel Schmidt ',
+        '[Person 43]': 'Fremde Frau',
+        '[Person 44]': '   ',
+      });
+      const r = antwortLesen(
+        JSON.stringify({
+          todos: [{ nr: '3.1', text: 'T', wer: ['[Person 42]', '[Person 43]', '[Person 44]'] }],
+        }),
+        { dokument: dokument(), zuordnung, funde, gruppe: GRUPPE },
+      );
+      if (!r.ok) throw new Error(r.meldung);
+      const t = r.eintraege[0];
+      if (t.art !== 'todo') throw new Error('kein To-Do');
+      expect(t.wer).toEqual([
+        { name: 'Daniel Schmidt', personId: 4 },
+        { name: 'Fremde Frau', personId: null },
+      ]);
+      expect(t.offen).toEqual(['[Person 44]']);
     });
 
     it('ein ausgeschriebener Name (Fund nicht ersetzt) trifft das Mitglied über den vollen Namen', () => {
@@ -621,5 +662,73 @@ describe('uebernahmePlanen', () => {
     expect(a.aufgaben.map((x) => x.punkt)).toEqual(['h31', 'h31']);
     expect(a.aufgaben[0].vorab).toEqual({ wer: [5], extern: 'Viktor Neumann', bis: '2026-12-06' });
     expect(a.punkte.at(-2)?.titel).toBe('Parkplatz');
+  });
+});
+
+describe('offenePlatzhalter – was in der Vorschau ohne Namen stehen bleibt', () => {
+  const kontext = (zuordnung: Record<string, string>): AntwortKontext => ({
+    dokument: dokument(),
+    zuordnung,
+    funde: [],
+    gruppe: GRUPPE,
+  });
+  const antwort = JSON.stringify({
+    punkte: [{ nr: '1', stichpunkte: ['[Person 1] spricht.', 'Ohne Namen.'] }],
+    beschluesse: [{ nr: '3', text: 'Beschluss von [Vertraulich 2].' }],
+    todos: [{ nr: '3.1', text: 'Machen', wer: ['[Person 1]', '[Person 3]'] }],
+    neue_punkte: [{ titel: 'Thema [Person 4]', stichpunkte: ['Zu [Person 1].'] }],
+  });
+  const lesen = (zuordnung: Record<string, string>) => {
+    const r = antwortLesen(antwort, kontext(zuordnung));
+    if (!r.ok) throw new Error(r.meldung);
+    return r.eintraege;
+  };
+
+  it('sammelt jeden Platzhalter einmal – in Texten, Zuständigen und neuen Punkten', () => {
+    expect(offenePlatzhalter(lesen({}))).toEqual([
+      '[Person 1]',
+      '[Vertraulich 2]',
+      '[Person 3]',
+      '[Person 4]',
+    ]);
+  });
+
+  it('zugeordnete Platzhalter sind weg; ist alles zugeordnet, bleibt nichts offen', () => {
+    const z = zuordnungErgaenzen(
+      {},
+      {
+        '[Person 1]': 'Maria Dück',
+        '[Vertraulich 2]': 'Krebserkrankung',
+        '[Person 3]': 'Peter Wiens',
+        '[Person 4]': 'Johann Becker',
+      },
+    );
+    expect(offenePlatzhalter(lesen(z))).toEqual([]);
+    expect(offenePlatzhalter(lesen({ '[Person 1]': 'Maria Dück' }))).not.toContain('[Person 1]');
+  });
+});
+
+describe('unzugeordnet / zuordnungErgaenzen (Platzhalter von Hand)', () => {
+  it('unzugeordnet nennt nur, was die Zuordnung nicht kennt – jeden einmal, in Reihenfolge', () => {
+    expect(
+      unzugeordnet('[Person 2] und [Person 1], [Person 2], [Vertraulich 1] [Person 9]', {
+        '[Person 1]': 'Anna Klassen',
+      }),
+    ).toEqual(['[Person 2]', '[Vertraulich 1]', '[Person 9]']);
+    expect(unzugeordnet('kein Platzhalter [Person] [Person x]', {})).toEqual([]);
+  });
+
+  it('zuordnungErgaenzen: ein bekannter Platzhalter behält seinen Namen, Leeres und Unechtes kommt nicht hinein', () => {
+    expect(
+      zuordnungErgaenzen(
+        { '[Person 1]': 'Anna Klassen' },
+        {
+          '[Person 1]': 'Jemand anderes',
+          '[Person 2]': ' Peter Wiens ',
+          '[Person 3]': ' ',
+          Quatsch: 'x',
+        },
+      ),
+    ).toEqual({ '[Person 1]': 'Anna Klassen', '[Person 2]': 'Peter Wiens' });
   });
 });

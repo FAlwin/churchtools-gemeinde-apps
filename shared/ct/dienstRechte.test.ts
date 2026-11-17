@@ -20,6 +20,8 @@ const ALWIN = {
     'view servicegroup': [1, 3, 4],
     'edit servicegroup': [1, 3, 4],
     'edit agenda': [1, 2, 3, 4, 5],
+    // Gemessen 17.11.2026 (E10-0): Ablaufvorlagen bearbeiten, ebenfalls je Kalender.
+    'edit agenda templates': [2, 5],
     // Gemessen 02.11.2026 (Termin-Einstellungen): „Events bearbeiten“ je Kalender.
     'edit events': [3, 1, 2, 4, 5],
     'manage absent': true,
@@ -33,6 +35,7 @@ const SPIKE = {
     'edit servicegroup': [],
     'view agenda': [1, 2, 3, 4, 5],
     'edit agenda': [],
+    'edit agenda templates': [],
     // Spike hat seit der Rechte-Messung (02.11.2026) „Events bearbeiten“ für Kalender 3.
     'edit events': [3],
     'manage absent': false,
@@ -45,6 +48,7 @@ describe('dienstRechteAus', () => {
       planbareDienstgruppen: [1, 3, 4],
       sichtbareDienstgruppen: [1, 3, 4],
       ablaufKalender: [1, 2, 3, 4, 5],
+      vorlagenKalender: [2, 5],
       terminKalender: [3, 1, 2, 4, 5],
       abwesenheitenAller: true,
     });
@@ -55,6 +59,7 @@ describe('dienstRechteAus', () => {
       planbareDienstgruppen: [],
       sichtbareDienstgruppen: [],
       ablaufKalender: [],
+      vorlagenKalender: [],
       terminKalender: [3],
       abwesenheitenAller: false,
     });

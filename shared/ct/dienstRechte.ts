@@ -24,6 +24,12 @@ export interface DienstRechte {
   sichtbareDienstgruppen: number[] | null;
   /** Kalender, in denen man Abläufe bearbeiten darf (`edit agenda`); `null` = alle. */
   ablaufKalender: number[] | null;
+  /**
+   * Kalender, in denen man Ablaufvorlagen bearbeiten darf (`edit agenda templates`, E10); `null` = alle. Optional wie
+   * `UserCapabilities.vorlagenKalender`: `dienstRechteAus` setzt es immer, aber die vielen handgeschriebenen Rechte der
+   * Dienstplaner-Tests brauchen es nicht.
+   */
+  vorlagenKalender?: number[] | null;
   /** Kalender, in denen man Termine ändern darf – Infos und Dateien (`edit events`, gemessen 02.11.2026); `null` = alle. */
   terminKalender: number[] | null;
   /** Abwesenheiten aller sehen und pflegen (`manage absent`). */
@@ -40,6 +46,7 @@ export function dienstRechteAus(
     planbareDienstgruppen: idsAusRecht(cs['edit servicegroup']),
     sichtbareDienstgruppen: idsAusRecht(cs['view servicegroup']),
     ablaufKalender: idsAusRecht(cs['edit agenda']),
+    vorlagenKalender: idsAusRecht(cs['edit agenda templates']),
     terminKalender: idsAusRecht(cs['edit events']),
     abwesenheitenAller: cs['manage absent'] === true,
   };

@@ -114,7 +114,11 @@ class FakeCt {
       // Wirft `agenda` (404), wird das Versprechen damit abgelehnt.
       agenda: (id) => new Promise<CtAgenda>((ok) => ok(this.agenda(id))),
       song: () => Promise.reject(new Error('nicht gebraucht')),
-      vorlage: (id) => Promise.resolve({ id, items: this.vorlagen.get(id) ?? [] }),
+      vorlage: (id) =>
+        Promise.resolve({
+          id,
+          items: (this.vorlagen.get(id) ?? []).map((title, k) => ({ id: 500 + k, title })),
+        }),
       schreibe: (pfad, auftrag) => {
         this.geschrieben.push({ pfad, auftrag });
         const m = /^\/events\/(\d+)\/agenda(?:\?(template_id|event_id)=(\d+))?$/.exec(pfad);

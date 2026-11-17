@@ -3,7 +3,9 @@ import {
   ablaufRechteAus,
   darfAblaufBearbeiten,
   darfAblaufImKalender,
+  darfVorlageBearbeiten,
   terminAdminIds,
+  vorlagenRechteAus,
 } from './ablaufRecht';
 import { mapEventToService } from './mapEvent';
 import { rechteAus } from './rechte';
@@ -107,5 +109,59 @@ describe('terminAdminIds', () => {
     expect(terminAdminIds({})).toEqual([]);
     expect(terminAdminIds({ adminIds: 'nein' })).toEqual([]);
     expect(termin('2', [19]).terminAdminIds).toEqual([19]);
+  });
+});
+
+/**
+ * Wer darf eine Ablaufvorlage bearbeiten (E10, gemessen E10-0 am 17.11.2026)? Die Kette läuft wie in der App:
+ * ChurchTools-Rechte → `rechteAus` → `vorlagenRechteAus` → Regel.
+ */
+describe('darfVorlageBearbeiten (E10)', () => {
+  const vorlagenRechte = (editVorlagen: unknown, admin = false) =>
+    vorlagenRechteAus(
+      rechteAus(
+        {
+          churchservice: { 'edit agenda templates': editVorlagen },
+          churchcore: { 'administer settings': admin },
+        },
+        'churchcore:administer settings',
+        fehler,
+      ),
+    );
+
+  it('das Recht hängt am Kalender der Vorlage – nicht „irgendein Kalender“', () => {
+    expect(darfVorlageBearbeiten(vorlagenRechte([2]), 2)).toBe(true);
+    expect(darfVorlageBearbeiten(vorlagenRechte([1]), 2)).toBe(false);
+    expect(darfVorlageBearbeiten(vorlagenRechte([]), 2)).toBe(false);
+  });
+
+  it('Admin darf alles, auch ohne Recht; ein Recht ohne Aufzählung gilt für alle Kalender', () => {
+    expect(darfVorlageBearbeiten(vorlagenRechte([], true), 2)).toBe(true);
+    expect(darfVorlageBearbeiten(vorlagenRechte(true), 7)).toBe(true);
+  });
+
+  it('Kalender unbekannt: irgendein Recht genügt (ChurchTools entscheidet), ohne Recht nicht', () => {
+    expect(darfVorlageBearbeiten(vorlagenRechte([2]), null)).toBe(true);
+    expect(darfVorlageBearbeiten(vorlagenRechte([]), null)).toBe(false);
+  });
+
+  it('„Ablauf bearbeiten“ ist KEIN Vorlagen-Recht – die beiden Rechte sind getrennt', () => {
+    const nurAblauf = rechteAus(
+      { churchservice: { 'edit agenda': [2] }, churchcore: { 'administer settings': false } },
+      'churchcore:administer settings',
+      fehler,
+    );
+    expect(darfVorlageBearbeiten(vorlagenRechteAus(nurAblauf), 2)).toBe(false);
+  });
+
+  it('kennt der Server `vorlagenKalender` nicht (ältere Version): kein Knopf; Rechte noch nicht geladen ebenso', () => {
+    expect(vorlagenRechteAus({ isAdmin: false })).toEqual({ isAdmin: false, vorlagenKalender: [] });
+    expect(darfVorlageBearbeiten(vorlagenRechteAus({ isAdmin: false }), 2)).toBe(false);
+    expect(darfVorlageBearbeiten(vorlagenRechteAus(undefined), 2)).toBe(false);
+    expect(vorlagenRechteAus({ isAdmin: false, vorlagenKalender: [3] }).vorlagenKalender).toEqual([
+      3,
+    ]);
+    // Ein Admin einer älteren Antwort ohne das Feld darf trotzdem (Admin-Zweig der Regel).
+    expect(darfVorlageBearbeiten(vorlagenRechteAus({ isAdmin: true }), 2)).toBe(true);
   });
 });

@@ -5,6 +5,7 @@ import {
   darfVerwalten,
   istEinstellung,
   vergebenNachher,
+  vergebenPruefen,
   rechteAus,
   rechteNummernAus,
   rechtRumpf,
@@ -230,6 +231,53 @@ describe('Zusatzrechte (Kalender, 10119): nur selbst gesetzte werden entzogen', 
 
   it('nicht mehr im Soll: fällt aus `vergeben` heraus', () => {
     expect(vergebenNachher(sollRechte(ohneKalender, N), [], [kal], N)).toEqual([]);
+  });
+});
+
+describe('vergebenPruefen (Security-Review 16.11.2026: Merkliste aus einer Kategorie der Leitung)', () => {
+  const ROLLEN = [72, 71, 75];
+  // Was das Einrichten selbst gemerkt haben kann – vom Erzeuger, nicht von Hand.
+  const echt = vergebenNachher(sollRechte(EINRICHTUNG, N), sollRechte(EINRICHTUNG, N), [], N);
+
+  it('echte Einträge (aus sollRechte/vergebenNachher) bleiben alle', () => {
+    expect(echt.length).toBeGreaterThan(0);
+    expect(vergebenPruefen(echt, ROLLEN, [15, null], N)).toEqual(echt);
+  });
+
+  it('Rolle einer anderen Gruppe fällt heraus', () => {
+    const fremd = { rolle: 999, authId: 404, dataId: 15 };
+    expect(vergebenPruefen([...echt, fremd], ROLLEN, [15], N)).toEqual(echt);
+  });
+
+  it('Recht, das kein Zusatzrecht ist (z. B. Daten ändern in einer fremden Kategorie), fällt heraus', () => {
+    const daten = { rolle: 72, authId: N.datenAendern, dataId: 777 };
+    const modul = { rolle: 72, authId: N.modulSehen, dataId: null };
+    expect(vergebenPruefen([...echt, daten, modul], ROLLEN, [15], N)).toEqual(echt);
+  });
+
+  it('Kalenderrecht an einem fremden Kalender fällt heraus; alter und neuer Kalender bleiben', () => {
+    const haupt = { rolle: 72, authId: 404, dataId: 1 };
+    const alt = { rolle: 72, authId: 404, dataId: 8 };
+    const ohneKalender = { rolle: 72, authId: 403, dataId: null };
+    expect(vergebenPruefen([alt, haupt, ohneKalender], ROLLEN, [8, 15], N)).toEqual([alt]);
+  });
+
+  it('Zusatzrecht ohne Daten, aber mit dataId (so erzeugt es das Einrichten nie), fällt heraus', () => {
+    const komisch = { rolle: 71, authId: VERSTECKTE_GRUPPE_SEHEN, dataId: 5 };
+    expect(vergebenPruefen([komisch], ROLLEN, [15], N)).toEqual([]);
+  });
+
+  it('zusammen mit ausrichten: ein untergeschobener fremder Eintrag wird NICHT entzogen', () => {
+    const fremd = { rolle: 999, authId: 404, dataId: 15 };
+    const ist = [...sollRechte(EINRICHTUNG, N), fremd];
+    const a = ausrichten(
+      sollRechte(EINRICHTUNG, N),
+      ist,
+      EINRICHTUNG,
+      N,
+      vergebenPruefen([...echt, fremd], ROLLEN, [15], N),
+    );
+    expect(a.entziehen).toEqual([]);
   });
 });
 

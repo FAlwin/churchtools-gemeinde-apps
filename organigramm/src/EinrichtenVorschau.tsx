@@ -1,17 +1,19 @@
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
-import { datumText, tagPunkt } from '@shared/ct/datum';
+import { tagPunkt } from '@shared/ct/datum';
 import type { EinrichtungsPlan, FremdStand, PlanArt } from '@shared/organigramm/einrichtungPlan';
-import type { WerVorschau } from '@shared/organigramm/einrichtungVorschau';
+import {
+  offenesFensterText,
+  type OffenesFenster,
+  type WerVorschau,
+} from '@shared/organigramm/einrichtungVorschau';
 import type { Wechseljahr } from '@shared/organigramm/gruppenwechsel';
 import { Hinweis } from './KjHinweis';
+import { FremdHinweise } from './FremdHinweise';
+import { WerTabelle, type Teil } from './WerTabelle';
 import kj from './KinderJugend.module.scss';
 import styles from './Einrichten.module.scss';
 
-/** Was ein Teil der Vorschau gerade zeigt: lädt, nicht ladbar (mit „Erneut versuchen“) oder fertig. */
-export type Teil<T> =
-  | { art: 'laedt' }
-  | { art: 'fehler'; text: string; neu: () => void }
-  | { art: 'da'; daten: T };
+export type { Teil } from './WerTabelle';
 
 const ART_TEXT: Record<PlanArt, string> = { neu: 'neu', vorhanden: 'vorhanden', aendern: 'ändern' };
 const ART_KLASSE: Record<PlanArt, string> = { neu: kj.blau, vorhanden: kj.gruen, aendern: kj.gelb };
@@ -29,6 +31,7 @@ export function EinrichtenVorschau({
   fremdNeu,
   haken,
   onHaken,
+  offen,
 }: {
   art: 'einrichten' | 'aendern';
   wer: Teil<WerVorschau>;
@@ -41,88 +44,19 @@ export function EinrichtenVorschau({
   fremdNeu: () => void;
   haken: boolean;
   onHaken: (an: boolean) => void;
+  /** Läuft heute schon einer der Wechsel, die geschrieben werden? Dann steht das gelb ganz oben (O9-5d). */
+  offen?: OffenesFenster | null;
 }) {
   const erstes = jahre[0];
   return (
     <div className={styles.stapel}>
-      <div className={styles.unter}>Wer wechselt wann wohin</div>
-      {wer.art === 'laedt' ? (
-        <CenterMessage loading text="Die Kinder werden gelesen …" />
-      ) : wer.art === 'fehler' ? (
-        <CenterMessage icon="warnung" text={wer.text} onRetry={wer.neu} />
-      ) : jahre.length === 0 ? (
+      {offen && (
         <Hinweis gelb>
-          <b>Der Ferienkalender nennt keine künftigen Sommerferien.</b> Ohne Wechseltage gibt es
-          nichts einzurichten – bitte den Kalender prüfen.
+          <b>{offenesFensterText(offen)}</b>
         </Hinweis>
-      ) : (
-        <>
-          <div className={`${kj.karte} ${kj.rahmen}`}>
-            <table className={kj.tabelle}>
-              <thead>
-                <tr>
-                  <th>Jahr</th>
-                  <th>Wechseltag</th>
-                  {wer.daten.uebergaenge.map((u) => (
-                    <th key={u} className={styles.zahlSpalte}>
-                      {u}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {wer.daten.jahre.map((z) => (
-                  <tr key={z.jahr.jahr}>
-                    <td>
-                      <b>{z.jahr.jahr}</b>
-                    </td>
-                    <td>{datumText(z.jahr.wechseltag)}</td>
-                    {z.zahlen.map((n, i) => (
-                      <td key={i} className={styles.zahlSpalte}>
-                        {n}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <details className={styles.mehr}>
-            <summary>Namen für {erstes.jahr} zeigen</summary>
-            <div className={styles.namenListe}>
-              {wer.daten.uebergaenge.map((u, i) => (
-                <div key={u}>
-                  <b>{u}</b>
-                  <div className={styles.namen}>
-                    {wer.daten.namen[i].length > 0 ? wer.daten.namen[i].join(', ') : '–'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
-          {wer.daten.ohneGeburtstag > 0 && (
-            <Hinweis gelb>
-              <b>
-                {wer.daten.ohneGeburtstag === 1
-                  ? '1 Kind ohne Geburtstag wechselt'
-                  : `${wer.daten.ohneGeburtstag} Kinder ohne Geburtstag wechseln`}{' '}
-                nie von selbst.
-              </b>{' '}
-              Sie stehen unter „Daten pflegen“.
-            </Hinweis>
-          )}
-          {wer.daten.nichtGelesen.length > 0 && (
-            <Hinweis gelb>
-              Von {wer.daten.nichtGelesen.map((n) => `„${n}“`).join(', ')} ließen sich die Kinder
-              nicht lesen – sie fehlen in den Zahlen.
-            </Hinweis>
-          )}
-          <p className={kj.leise}>
-            Wer in späteren Jahren wechselt, hängt von Geburtstagen ab, die noch nachgetragen werden
-            können – die Zahlen sind der heutige Stand.
-          </p>
-        </>
       )}
+      <div className={styles.unter}>Wer wechselt wann wohin</div>
+      <WerTabelle wer={wer} jahre={jahre} />
 
       <div className={styles.unter}>Das legt die Erweiterung in ChurchTools an</div>
       {plan.art === 'laedt' ? (
@@ -167,29 +101,11 @@ export function EinrichtenVorschau({
           : ''}
       </Hinweis>
 
-      {fremd?.art === 'fremd' &&
-        fremd.gruppen.map((g) => (
-          <Hinweis key={g.gruppeId} rot>
-            <b>„{g.name}“ hat schon eigene Regeln in ChurchTools</b> (
-            {g.zahl === 1 ? '1 Regel' : `${g.zahl} Regeln`}, z. B.{' '}
-            {g.beispiele.map((b) => `„${b}“`).join(', ')}).{' '}
-            {art === 'einrichten' ? 'Einrichten' : 'Das Schreiben'} würde sie ersetzen. Deshalb geht
-            es hier nicht weiter: Bitte die Regeln in ChurchTools ansehen oder die Gruppe aus den
-            Stufen nehmen.
-          </Hinweis>
-        ))}
-      {fremd?.art === 'unlesbar' && (
-        <Hinweis rot>
-          <b>
-            Die Regeln von {fremd.gruppen.map((g) => `„${g.name}“`).join(', ')} ließen sich nicht
-            prüfen.
-          </b>{' '}
-          Deshalb geht es hier nicht weiter – es wird nie angenommen, dass es keine gibt.{' '}
-          <button type="button" className={kj.rueck} onClick={fremdNeu}>
-            Nochmal prüfen
-          </button>
-        </Hinweis>
-      )}
+      <FremdHinweise
+        fremd={fremd}
+        was={art === 'einrichten' ? 'Einrichten' : 'Das Schreiben'}
+        neu={fremdNeu}
+      />
 
       {art === 'einrichten' && (
         <label className={styles.haken}>

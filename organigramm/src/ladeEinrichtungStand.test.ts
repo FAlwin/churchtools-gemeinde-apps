@@ -93,7 +93,7 @@ function gutAntworten(): Record<string, unknown> {
   };
   for (const [id, regeln] of REGELN) {
     je[`/dynamicgroups/${id}/ruleset`] = regeln;
-    je[`/dynamicgroups/${id}/status`] = { dynamicGroupStatus: 'manual' };
+    je[`/dynamicgroups/${id}/status`] = { dynamicGroupStatus: 'active' };
   }
   return je;
 }
@@ -246,7 +246,7 @@ describe('ladeEinrichtungStand', () => {
 
 describe('statusAus', () => {
   it('Text, `dynamicGroupStatus` oder `status`; alles andere ist unbekannt', () => {
-    expect(statusAus('manual')).toBe('manual');
+    expect(statusAus('active')).toBe('active');
     expect(statusAus({ dynamicGroupStatus: 'none' })).toBe('none');
     expect(statusAus({ status: 'active' })).toBe('active');
     expect(statusAus({})).toBeNull();

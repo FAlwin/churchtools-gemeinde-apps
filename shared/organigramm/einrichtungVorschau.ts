@@ -5,6 +5,7 @@
  *
  * Nur **aktive Teilnehmer** einer Stufe zählen, keine Leitung (wie in der Sicht der Leitungen, `gruppenSicht`).
  */
+import { aktuellesWechseljahr, type KjDaten } from './gruppenwechselSicht';
 import {
   uebergaenge,
   werWechselt,
@@ -12,7 +13,6 @@ import {
   type KindInGruppe,
   type Wechseljahr,
 } from './gruppenwechsel';
-import type { KjDaten } from './gruppenwechselSicht';
 
 export interface KindMitName extends KindInGruppe {
   name: string;
@@ -104,3 +104,43 @@ export function werVorschau(
     nichtGelesen,
   };
 }
+
+/**
+ * **Die Wechseljahre, die geschrieben werden:** das aktuelle (das erste, dessen Aufnahme noch nicht vorbei ist) und alle
+ * späteren aus dem Ferienkalender. Eine Stelle für das Fenster, die Vorschau und das Schreiben selbst (O9-5d) – sonst
+ * zeigte die Vorschau andere Jahre, als dann in den Regeln stehen.
+ */
+export function kuenftigeWechseljahre(alle: readonly Wechseljahr[], heute: string): Wechseljahr[] {
+  const ab = aktuellesWechseljahr(alle, heute);
+  return ab ? alle.filter((j) => j.jahr >= ab.jahr) : [];
+}
+
+/** Ein Wechsel, der heute schon läuft: Das Fenster eines Jahres (Ankündigung bis Ende der Aufnahme) ist offen. */
+export interface OffenesFenster {
+  jahr: number;
+  /** So viele Kinder kommen nach dem Schreiben sofort in die Wechsel-Gruppe bzw. werden verschoben. */
+  kinder: number;
+  /** Heute ist der Wechseltag schon da: Kinder kommen in die neue Gruppe, nicht nur in die Wechsel-Gruppe. */
+  aufnahmeLaeuft: boolean;
+}
+
+/**
+ * **Läuft heute einer der Wechsel, die geschrieben werden?** (O9-5d) Dann wirken die Regeln sofort – ChurchTools rechnet
+ * gleich nach dem Schreiben neu. Das ist kein Stopp, aber nichts, was man übersehen darf: `null`, wenn heute in keinem
+ * Fenster liegt. Die Zahl kommt aus derselben Rechnung wie die Vorschau („wer wechselt wann wohin“).
+ */
+export function offenesFenster(vorschau: WerVorschau, heute: string): OffenesFenster | null {
+  const z = vorschau.jahre.find((j) => j.jahr.ankuendigung <= heute && heute < j.jahr.aufnahmeBis);
+  if (!z) return null;
+  return {
+    jahr: z.jahr.jahr,
+    kinder: z.zahlen.reduce((a, n) => a + n, 0),
+    aufnahmeLaeuft: heute >= z.jahr.wechseltag,
+  };
+}
+
+/** Der gelbe Satz dazu – wörtlich so, wie er im Fenster steht. */
+export const offenesFensterText = (o: OffenesFenster): string =>
+  `Der Wechsel ${o.jahr} läuft gerade – nach dem Schreiben ${
+    o.kinder === 1 ? 'kommt 1 Kind' : `kommen ${o.kinder} Kinder`
+  } sofort in die Wechsel-Gruppe bzw. ${o.kinder === 1 ? 'wird' : 'werden'} verschoben.`;

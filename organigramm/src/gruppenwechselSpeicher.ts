@@ -11,8 +11,13 @@ import {
   GW_ART,
   type Einrichtung,
 } from '@shared/organigramm/gruppenwechselEinrichtung';
-import type { SpeicherGrund } from '@shared/ct/versionierterWert';
-import { dokumentGenau } from './speicher';
+import { kategorieSicherstellen } from '@shared/ct/modulDaten';
+import {
+  dokumentSpeichern,
+  type SpeicherErgebnis,
+  type SpeicherGrund,
+} from '@shared/ct/versionierterWert';
+import { dokumentGenau, modulId, port } from './speicher';
 
 export const GW_KATEGORIE = {
   kuerzel: 'gruppenwechsel',
@@ -38,4 +43,52 @@ export type EinrichtungLesen =
 export async function ladeEinrichtung(): Promise<EinrichtungLesen> {
   const r = await dokumentGenau(GW_KATEGORIE.kuerzel, GW_ART, einrichtungAus);
   return r.art === 'da' ? { art: 'da', einrichtung: r.daten.inhalt } : r;
+}
+
+/** Wie `EinrichtungLesen`, aber mit der Versionsnummer des gelesenen Werts – die braucht, wer danach schreibt (O9-5d). */
+export type EinrichtungVersioniert =
+  | { art: 'da'; einrichtung: Einrichtung; version: number }
+  | Exclude<EinrichtungLesen, { art: 'da' }>;
+
+/** Die Einrichtung frisch lesen, mit Version: Wer sie überschreibt, muss die gesehene Version nennen (Konflikt-Schutz). */
+export async function ladeEinrichtungVersioniert(): Promise<EinrichtungVersioniert> {
+  const r = await dokumentGenau(GW_KATEGORIE.kuerzel, GW_ART, einrichtungAus);
+  return r.art === 'da' ? { art: 'da', einrichtung: r.daten.inhalt, version: r.daten.version } : r;
+}
+
+const SCHREIBEN_VERWEIGERT =
+  'Dir fehlt in ChurchTools das Recht, die Einrichtung der Erweiterung zu speichern (Kategorie „Gruppenwechsel“ ändern).';
+
+/**
+ * **Die Einrichtung speichern** (O9-5d). `erwartet` ist die Version, die man gelesen hat (`null`: es gab keine); steht
+ * inzwischen eine andere da, wird nichts überschrieben (`konflikt`). Danach nachgelesen (`dokumentSpeichern`): erst was
+ * dasteht, ist der Erfolg. Fehlt die Kategorie, wird sie angelegt (nur Admins) und nachgesehen. **Wirft** bei Fehlern an
+ * Modul oder Kategorie – der Aufrufer sortiert sie nach vorübergehend und abgelehnt.
+ */
+export async function speichereEinrichtung(
+  inhalt: Einrichtung,
+  erwartet: number | null,
+  von: { personId: number; name: string },
+): Promise<SpeicherErgebnis<Einrichtung>> {
+  const modul = await modulId();
+  const kategorie = await kategorieSicherstellen(
+    port,
+    modul,
+    {
+      kuerzel: GW_KATEGORIE.kuerzel,
+      name: GW_KATEGORIE.name,
+      beschreibung: GW_KATEGORIE.beschreibung,
+    },
+    SCHREIBEN_VERWEIGERT,
+  );
+  return dokumentSpeichern(
+    port,
+    modul,
+    kategorie,
+    GW_ART,
+    inhalt,
+    von,
+    erwartet,
+    SCHREIBEN_VERWEIGERT,
+  );
 }

@@ -19,6 +19,11 @@ import {
   getAgendaServicesCtrl,
   getServicesOhneAblaufCtrl,
   getAblaufVorlagenCtrl,
+  getVorlagenStandCtrl,
+  getVorlageCtrl,
+  postVorlageCtrl,
+  putVorlageCtrl,
+  deleteVorlageCtrl,
   postAblaufCtrl,
   getAblaufBestandCtrl,
   putAblaufNeuCtrl,
@@ -71,6 +76,12 @@ router.get('/services', asyncHandler(getServices));
 // Vor `/services/:eventId/…` – sonst läse Express „ohne-ablauf" als Termin-ID.
 router.get('/services/ohne-ablauf', asyncHandler(getServicesOhneAblaufCtrl));
 router.get('/ablauf-vorlagen', asyncHandler(getAblaufVorlagenCtrl));
+// Die Seite „Ablaufvorlagen“ (E10-V3b). `/stand` vor `/:vorlageId` – sonst läse Express „stand“ als Vorlagen-ID.
+router.get('/ablauf-vorlagen/stand', asyncHandler(getVorlagenStandCtrl));
+router.post('/ablauf-vorlagen', asyncHandler(postVorlageCtrl));
+router.get('/ablauf-vorlagen/:vorlageId', asyncHandler(getVorlageCtrl));
+router.put('/ablauf-vorlagen/:vorlageId', asyncHandler(putVorlageCtrl));
+router.delete('/ablauf-vorlagen/:vorlageId', asyncHandler(deleteVorlageCtrl));
 router.post('/services/:eventId/agenda', asyncHandler(postAblaufCtrl));
 router.get('/services/:eventId/agenda/bestand', asyncHandler(getAblaufBestandCtrl));
 router.put('/services/:eventId/agenda/neu', asyncHandler(putAblaufNeuCtrl));
@@ -97,22 +108,20 @@ router.get('/capabilities', asyncHandler(getCapabilitiesCtrl));
 router.get('/agenda-services', asyncHandler(getAgendaServicesCtrl));
 router.get('/songs/:songId/arrangements', asyncHandler(getSongArrangementsCtrl));
 router.get('/songs/:songId/chart', asyncHandler(getSongChartCtrl));
-router.patch('/services/:eventId/agenda/order', asyncHandler(putAgendaOrder));
-router.post('/services/:eventId/agenda/items', asyncHandler(postAgendaItem));
-router.post(
-  '/services/:eventId/agenda/items/wiederherstellen',
-  asyncHandler(postAgendaItemWiederherstellen),
-);
-router.put('/services/:eventId/agenda/items/:itemId', asyncHandler(putAgendaItem));
-router.put(
-  '/services/:eventId/agenda/items/:itemId/vor-beginn',
-  asyncHandler(putAgendaItemVorBeginn),
-);
+// Die Punkt-Routen gibt es für einen Termin UND für eine Ablaufvorlage (E10-V3b): derselbe Handler, der Pfad sagt das
+// Ziel (`zielAus`). Das Auge (`weglassen`) und „abgeschlossen“ gibt es nur am Termin.
+for (const wurzel of ['/services/:eventId/agenda', '/ablauf-vorlagen/:vorlageId/agenda']) {
+  router.patch(`${wurzel}/order`, asyncHandler(putAgendaOrder));
+  router.post(`${wurzel}/items`, asyncHandler(postAgendaItem));
+  router.post(`${wurzel}/items/wiederherstellen`, asyncHandler(postAgendaItemWiederherstellen));
+  router.put(`${wurzel}/items/:itemId`, asyncHandler(putAgendaItem));
+  router.put(`${wurzel}/items/:itemId/vor-beginn`, asyncHandler(putAgendaItemVorBeginn));
+  router.delete(`${wurzel}/items/:itemId`, asyncHandler(deleteAgendaItemCtrl));
+}
 router.put(
   '/services/:eventId/agenda/items/:itemId/weglassen',
   asyncHandler(putAgendaItemWeglassen),
 );
-router.delete('/services/:eventId/agenda/items/:itemId', asyncHandler(deleteAgendaItemCtrl));
 router.put('/services/:eventId/agenda/abgeschlossen', asyncHandler(putAblaufAbgeschlossen));
 router.put('/songs/:songId/arrangements/:arrangementId/tempo', asyncHandler(putArrangementTempo));
 

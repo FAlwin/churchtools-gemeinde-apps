@@ -29,7 +29,8 @@ export function VorlagenListe({
     );
   }
   return (
-    <div className={styles.karte}>
+    // `data-tour`: Ziel der Einführung der Musik-App (`TOUR_VORLAGEN`); andere Apps ignorieren das Attribut.
+    <div className={styles.karte} data-tour="vorlagen-liste">
       {gruppen.map((g) => (
         <section key={g.kalenderId ?? 'ohne'} aria-label={g.kalender}>
           <div className={styles.band}>

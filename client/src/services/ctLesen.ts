@@ -57,6 +57,7 @@ import type { CtService } from '@shared/ct/typen';
 import { whoamiId } from '@shared/ct/whoami';
 import { angemeldeteId } from '@ui/ct/ich';
 import { browserAblaufLeser } from '@ui/ct/schreiber';
+import { browserVorlagenStand, browserVorlagenZugriff } from '@ui/ablauf/browserAblaufZugriff';
 import { ablaufBestandLesen, type AblaufBestand } from '@shared/ct/ablaufNeu';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
@@ -342,6 +343,14 @@ export async function termineOhneAblaufListe(kalenderIds: readonly number[]): Pr
 /** `GET /api/ablauf-vorlagen` – die Ablauf-Vorlagen aus ChurchTools. */
 export async function ablaufVorlagen(): Promise<AblaufVorlage[]> {
   return vorlagenAus(await ctDaten<CtAblaufVorlage[]>('/agendatemplates'));
+}
+
+/** `GET /api/ablauf-vorlagen/stand` – die Seite „Ablaufvorlagen“ (E10-V3b): derselbe Weg wie im Dienstplaner. */
+export const vorlagenStand = browserVorlagenStand;
+
+/** `GET /api/ablauf-vorlagen/:id` – eine Vorlage samt Punkten, frisch (E10-V3b). */
+export function vorlage(vorlageId: number): Promise<CtAblaufVorlage> {
+  return browserVorlagenZugriff.vorlage(vorlageId);
 }
 
 /** `GET /api/services/:id/agenda/bestand` – was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b). */

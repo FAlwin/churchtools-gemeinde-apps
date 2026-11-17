@@ -264,6 +264,36 @@ export const LIED_STAMMDATEN_STEPS: CoachStep[] = [
   },
 ];
 
+/**
+ * Gruppe 7 – die Seite **„Ablaufvorlagen“** hinter „Mehr“ (E10-V3b), beim ersten Öffnen der Liste. Neu, weil man die
+ * Seite nur findet, wenn man in „Mehr“ nachsieht – und weil „Neue Vorlage“ nur der sieht, der in ChurchTools Vorlagen
+ * anlegen darf. Eigene Gruppe statt eines Schritts in `TERMINE_STEPS`: Die Termine-Einführung hätte allen erneut
+ * gezeigt werden müssen, auch denen, die gar keine Vorlagen anfassen.
+ */
+export const TOUR_VORLAGEN = 'vorlagen-v1';
+export const VORLAGEN_STEPS: CoachStep[] = [
+  {
+    selector: '[data-tour="vorlagen-liste"]',
+    title: 'Eure Ablaufvorlagen',
+    body: 'Hier stehen die Vorlagen, nach Kalender sortiert – aus ihnen entstehen neue Abläufe. Tippe eine an, um ihren Ablauf zu sehen. Kalender mit „nur ansehen“ kannst du nur lesen, in den anderen darfst du auch ändern.',
+  },
+  {
+    selector: '[data-tour="vorlagen-neu"]',
+    title: 'Neue Vorlage',
+    body: 'Legt eine leere Vorlage an: Du wählst Name und Kalender und füllst sie dann wie einen Ablauf. Den Knopf siehst du nur, wenn du in ChurchTools Vorlagen anlegen darfst.',
+  },
+];
+
+/** Gruppe 8 – eine geöffnete Vorlage (E10-V3b), beim ersten Öffnen einer Vorlage. */
+export const TOUR_VORLAGE = 'vorlage-v1';
+export const VORLAGE_STEPS: CoachStep[] = [
+  {
+    selector: '[data-tour="vorlage-bearbeiten"]',
+    title: 'Vorlage bearbeiten',
+    body: 'Ändere hier den Ablauf der Vorlage: Punkte umsortieren, hinzufügen, ändern oder löschen. Umbenennen und Löschen der ganzen Vorlage stehen dann oben rechts in der Hinweiszeile. Alles gilt sofort in ChurchTools – für alle, die diese Vorlage für einen neuen Ablauf nehmen.',
+  },
+];
+
 /** Gruppe 5 – Verfügbarkeit: eigene Abwesenheiten (#177). */
 export const VERFUEGBARKEIT_STEPS: CoachStep[] = [
   {

@@ -74,6 +74,8 @@ export function VorlagenBereich({
   // „Neue Vorlage“ nur, wenn man in mindestens einem Kalender darf.
   const neu = useNeuAnlegen({
     label: 'Neue Vorlage',
+    // Ziel der Einführung der Musik-App (`TOUR_VORLAGEN`); andere Apps ignorieren das Attribut.
+    dataTour: 'vorlagen-neu',
     onClick: () => setNeuOffen(true),
     sichtbar: stand !== null && erlaubteKalender.length > 0,
   });

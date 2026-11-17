@@ -1,0 +1,5 @@
+// Wie der Seitenkopf der anderen Reiter-Seiten (`SeitenKopf.module.scss`): Der Abstand oben hält die Seite im Ruhezustand
+// unter dem Unschärfe-Band von iOS und scrollt mit weg.
+.rahmen {
+  padding: var(--inhalt-pad-top) 16px 12px;
+}

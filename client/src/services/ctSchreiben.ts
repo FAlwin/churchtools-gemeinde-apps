@@ -20,6 +20,7 @@ import {
   vorBeginnSetzen,
   weglassenSetzen,
   ablaufAbschliessen,
+  type AblaufZiel,
   type GeloeschterPunkt,
   type NeuerPunkt,
   type PunktAenderung,
@@ -37,60 +38,64 @@ import type { AblaufQuelle } from '@shared/types/index';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import * as noten from '@shared/ct/notenblaetter';
 import { ApiError } from './api';
+import { browserVorlagenZugriff } from '@ui/ablauf/browserAblaufZugriff';
 // Der Schreiber samt Liedverwaltung und die Lied-Wege liegen seit LW2a (06.11.2026) in `@ui/ct/lieder`.
 import { liedSchreiber as schreiber } from '@ui/ct/lieder';
 export { arrangement, liedAendern, liedNeu, notenblatt, notenblattAusCcli } from '@ui/ct/lieder';
 
 const OK = { ok: true } as const;
 
-/** `PATCH /api/services/:id/agenda/order` */
+/** `PATCH /api/services/:id/agenda/order` – `ziel`: Termin oder Ablaufvorlage (E10-V3b) */
 export async function reihenfolge(
-  eventId: number,
+  ziel: AblaufZiel,
   order: number[],
   gesehen?: number[],
 ): Promise<{ ok: boolean }> {
-  await ablaufUmsortieren(schreiber, eventId, order, gesehen);
+  await ablaufUmsortieren(schreiber, ziel, order, gesehen);
   return OK;
 }
 
 /** `POST /api/services/:id/agenda/items` */
-export async function punktNeu(eventId: number, data: NeuerPunkt): Promise<{ ok: boolean }> {
-  await punktAnlegen(schreiber, eventId, data);
+export async function punktNeu(ziel: AblaufZiel, data: NeuerPunkt): Promise<{ ok: boolean }> {
+  await punktAnlegen(schreiber, ziel, data);
   return OK;
 }
 
 /** `PUT /api/services/:id/agenda/items/:itemId` */
 export async function punkt(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   fields: PunktAenderung,
   gesehen?: PunktStand,
 ): Promise<{ ok: boolean }> {
-  await punktAendern(schreiber, eventId, itemId, fields, gesehen);
+  await punktAendern(schreiber, ziel, itemId, fields, gesehen);
   return OK;
 }
 
 /** `DELETE /api/services/:id/agenda/items/:itemId` – samt Merkzettel für „Rückgängig". */
 export async function punktWeg(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
 ): Promise<{ ok: boolean; wiederherstellen: GeloeschterPunkt | null }> {
-  return { ...OK, wiederherstellen: await punktLoeschen(schreiber, eventId, itemId) };
+  return { ...OK, wiederherstellen: await punktLoeschen(schreiber, ziel, itemId) };
 }
 
 /** `POST /api/services/:id/agenda/items/wiederherstellen` */
-export async function punktZurueck(eventId: number, g: GeloeschterPunkt): Promise<{ ok: boolean }> {
-  await punktWiederherstellen(schreiber, eventId, g);
+export async function punktZurueck(
+  ziel: AblaufZiel,
+  g: GeloeschterPunkt,
+): Promise<{ ok: boolean }> {
+  await punktWiederherstellen(schreiber, ziel, g);
   return OK;
 }
 
 /** `PUT /api/services/:id/agenda/items/:itemId/vor-beginn` */
 export async function vorBeginn(
-  eventId: number,
+  ziel: AblaufZiel,
   itemId: number,
   wert: boolean,
 ): Promise<{ ok: boolean }> {
-  await vorBeginnSetzen(schreiber, eventId, itemId, wert);
+  await vorBeginnSetzen(schreiber, ziel, itemId, wert);
   return OK;
 }
 
@@ -102,6 +107,21 @@ export async function weglassen(
 ): Promise<{ ok: boolean }> {
   await weglassenSetzen(schreiber, eventId, itemId, wert);
   return OK;
+}
+
+/** `POST /api/ablauf-vorlagen` – dieselbe Zuordnung auf den Kern wie im Dienstplaner (`@ui/ablauf/browserAblaufZugriff`). */
+export function vorlageNeu(daten: { name: string; kalenderId: number }): Promise<number> {
+  return browserVorlagenZugriff.anlegen(daten);
+}
+
+/** `PUT /api/ablauf-vorlagen/:id` */
+export function vorlageUmbenennen(vorlageId: number, name: string): Promise<void> {
+  return browserVorlagenZugriff.umbenennen(vorlageId, name);
+}
+
+/** `DELETE /api/ablauf-vorlagen/:id` */
+export function vorlageLoeschen(vorlageId: number): Promise<void> {
+  return browserVorlagenZugriff.loeschen(vorlageId);
 }
 
 /** `POST /api/services/:id/agenda` */

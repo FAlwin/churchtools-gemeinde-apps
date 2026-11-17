@@ -27,6 +27,8 @@ import {
   type StandQuelle,
   type StandZeile,
   type ZeilenId,
+  waiseKandidaten,
+  wechselTypIds,
 } from './einrichtungStand';
 
 const E: Einrichtung = einrichtungAus({
@@ -121,7 +123,7 @@ function gut(): EinrichtungDaten {
     ]),
     rechte: { leiter: ok(LEITER_RECHTE.map(rechtZeile)), teilnehmer: ok([]) },
     gruppen: new Map(
-      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('manual') }] as const),
+      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('active') }] as const),
     ),
     routinen: new Map([
       [11, ok([routine(U1, 11)])],
@@ -319,10 +321,10 @@ describe('Zeile Rechte der Leitung am Typ', () => {
 describe('Zeile Wechsel-Gruppen', () => {
   it('fehlt eine, steht der Übergang da', () => {
     const e: Einrichtung = { ...E, wechselGruppen: [E.wechselGruppen[0]] };
-    expect(zeile(zeilen(gut(), undefined, e), 'wechselGruppen')).toEqual({
-      art: 'warn',
-      text: `${wechselGruppenName(U2)}: fehlt`,
-    });
+    const z = zeile(zeilen(gut(), undefined, e), 'wechselGruppen');
+    expect(z.art).toBe('warn');
+    // Die Gruppe 12 gibt es unter dem Bereich mit dem Namen des Übergangs – sie ist nur nicht eingetragen (O9-5d).
+    expect(z.art === 'warn' && z.liste?.[0]).toBe(`${wechselGruppenName(U2)}: fehlt`);
   });
 
   it('eine Gruppe, die es (für mich) nicht gibt → Warnung', () => {
@@ -338,6 +340,83 @@ describe('Zeile Wechsel-Gruppen', () => {
       art: 'warn',
       text: `${wechselGruppenName(U2)}: hängt nicht unter „Kinder & Jugend“`,
     });
+  });
+});
+
+describe('Zeile Wechsel-Gruppen – angelegt, aber nicht eingetragen (O9-5d)', () => {
+  // Die Lücke: Abbruch nach dem Anlegen und vor dem Speichern der Einrichtung.
+  const ohne12: Einrichtung = { ...E, wechselGruppen: [E.wechselGruppen[0]] };
+
+  it('eine Gruppe mit dem Namen des Übergangs, Typ „Gruppenwechsel“, unter dem Bereich – aber nicht eingetragen → ⚠ mit Nummer', () => {
+    const z = zeile(zeilen(gut(), undefined, ohne12), 'wechselGruppen');
+    expect(z.art).toBe('warn');
+    expect(z.art === 'warn' && z.liste).toEqual([
+      `${wechselGruppenName(U2)}: fehlt`,
+      expect.stringContaining('Gruppe 12 steht unter „Kinder & Jugend“'),
+    ]);
+  });
+
+  it('nicht gemeldet: andere Typ, anderer Name oder nicht unter dem Bereich', () => {
+    const q = (ersetze: (g: StandQuelle['gruppen'][number]) => StandQuelle['gruppen'][number]) => ({
+      ...QUELLE,
+      gruppen: QUELLE.gruppen.map((g) => (g.id === 12 ? ersetze(g) : g)),
+    });
+    for (const quelle of [
+      q((g) => ({ ...g, typId: 7 })),
+      q((g) => ({ ...g, name: 'Etwas anderes' })),
+      { ...QUELLE, eltern: new Map([[11, [9]]]) },
+    ]) {
+      const z = zeile(zeilen(gut(), undefined, ohne12, quelle), 'wechselGruppen');
+      expect(z.art === 'warn' && z.liste).toBeFalsy();
+    }
+  });
+
+  it('eingetragene Gruppen sind keine Waisen', () => {
+    expect(zeile(zeilen(gut()), 'wechselGruppen').art).toBe('ok');
+  });
+});
+
+describe('waiseKandidaten', () => {
+  it('liefert nur Gruppen mit Namen, Typ und Obergruppe – und nicht die schon benutzten', () => {
+    const a = {
+      name: wechselGruppenName(U2),
+      bereichId: 9,
+      typIds: wechselTypIds(QUELLE.typNamen),
+      gruppen: QUELLE.gruppen,
+      eltern: QUELLE.eltern,
+      benutzt: new Set<number>(),
+    };
+    expect(waiseKandidaten(a).map((g) => g.id)).toEqual([12]);
+    expect(waiseKandidaten({ ...a, benutzt: new Set([12]) })).toEqual([]);
+    expect(waiseKandidaten({ ...a, bereichId: 5 })).toEqual([]);
+  });
+});
+
+describe('Zeile Regeln – nur „aktiv“ rechnet von selbst (O9-5d)', () => {
+  const mitStatus = (status: string) => {
+    const d = gut();
+    d.gruppen = new Map(
+      [...d.gruppen].map(([id, g]) => [id, { ...g, status: ok(status) }] as const),
+    );
+    return zeile(zeilen(d), 'regeln');
+  };
+
+  it('„manual“ und „inactive“ → ⚠ „rechnet nicht von selbst neu“ mit dem Status', () => {
+    for (const [status, wort] of [
+      ['manual', 'manuell'],
+      ['inactive', 'inaktiv'],
+    ]) {
+      const z = mitStatus(status);
+      expect(z.art).toBe('warn');
+      expect(JSON.stringify(z)).toContain(
+        `rechnet nicht von selbst neu – der Status steht auf „${wort}“`,
+      );
+    }
+  });
+
+  it('„none“ bleibt „läuft nicht“, „active“ ist in Ordnung', () => {
+    expect(JSON.stringify(mitStatus('none'))).toContain('läuft nicht');
+    expect(mitStatus('active').art).toBe('ok');
   });
 });
 
@@ -417,7 +496,7 @@ describe('Zeile Regeln der Gruppen', () => {
           (r) => r.shorty !== REGELN.aufnahme.shorty,
         ),
       ),
-      status: ok('manual'),
+      status: ok('active'),
     });
     const s = zeile(zeilen(d), 'regeln');
     expect(s.art).toBe('warn');
@@ -479,7 +558,7 @@ describe('Zeile Regeln der Gruppen', () => {
     const regelnNicht = gut();
     regelnNicht.gruppen = new Map(regelnNicht.gruppen).set(11, {
       regeln: NICHT,
-      status: ok('manual'),
+      status: ok('active'),
     });
     expect(zeile(zeilen(regelnNicht), 'regeln').art).toBe('nichtPruefbar');
     const statusNicht = gut();
@@ -510,7 +589,7 @@ describe('Zeile Regeln der Gruppen', () => {
         [3, 45],
       ]),
     ).get(3)!;
-    d.gruppen = new Map(d.gruppen).set(3, { regeln: ok(erz), status: ok('manual') });
+    d.gruppen = new Map(d.gruppen).set(3, { regeln: ok(erz), status: ok('active') });
     expect(zeile(zeilen(d, undefined, e), 'regeln').art).toBe('ok');
   });
 });

@@ -353,12 +353,12 @@ verwalten“), sieht den Reiter **Kinder & Jugend** immer, auch ohne Einrichtung
 Bereichsleitung. Was er dort sieht, hängt davon ab, wie sich der gespeicherte Wert (Kategorie „Gruppenwechsel“) lesen
 lässt. Vier Fälle, die nie ineinander übergehen (`ladeEinrichtung` in `gruppenwechselSpeicher.ts`):
 
-| Fall                    | Was es ist                                                                         | Was der Reiter zeigt (nur mit dem Recht)                                                                                                        | Alle anderen |
-| ----------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| **eingerichtet**        | Wert da, Format stimmt                                                             | der Reiter wie gewohnt, dazu der Unterreiter **Einrichtung**                                                                                    | wie bisher   |
-| **keine**               | Kategorie fehlt oder ohne Wert                                                     | „Gruppenwechsel noch nicht eingerichtet“ mit Erklärung und dem Knopf **„Einrichten …“** (öffnet das Fenster, siehe unten; schreibt noch nichts) | kein Reiter  |
-| **unlesbar**            | Es steht etwas da, aber nicht in diesem Format (andere Fassung, kein JSON, kaputt) | „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nie** wie „keine“                                       | kein Reiter  |
-| **gerade nicht lesbar** | Netz, Server, abgemeldet, kein Recht                                               | „Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“          | kein Reiter  |
+| Fall                    | Was es ist                                                                         | Was der Reiter zeigt (nur mit dem Recht)                                                                                               | Alle anderen |
+| ----------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **eingerichtet**        | Wert da, Format stimmt                                                             | der Reiter wie gewohnt, dazu der Unterreiter **Einrichtung**                                                                           | wie bisher   |
+| **keine**               | Kategorie fehlt oder ohne Wert                                                     | „Gruppenwechsel noch nicht eingerichtet“ mit Erklärung und dem Knopf **„Einrichten …“** (öffnet das Fenster, siehe unten)              | kein Reiter  |
+| **unlesbar**            | Es steht etwas da, aber nicht in diesem Format (andere Fassung, kein JSON, kaputt) | „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nie** wie „keine“                              | kein Reiter  |
+| **gerade nicht lesbar** | Netz, Server, abgemeldet, kein Recht                                               | „Die Einrichtung ließ sich gerade nicht lesen. Es wird nichts verändert.“ mit „Erneut versuchen“ – **nicht** „noch nicht eingerichtet“ | kein Reiter  |
 
 Warum die Trennung: Wer ein „unlesbares“ oder „gerade nicht lesbares“ für „nicht eingerichtet“ hielt und später neu
 einrichtete, überschriebe etwas, das da ist. Vorübergehend ist nicht ungültig.
@@ -367,40 +367,44 @@ einrichtete, überschriebe etwas, das da ist. Vorübergehend ist nicht ungültig
 > das ist von „keine Kategorie“ nicht zu unterscheiden. „Berechtigungen verwalten“ sieht alle Kategorien; bei anderen
 > Konten gilt: Vor dem Einrichten (O9-5c-2) die Rechte an der Kategorie prüfen.
 
-Der Unterreiter **Einrichtung** liest nur und verändert nichts – nur der Knopf „Stufen ändern …“ öffnet ein Fenster (siehe
-„Fenster ‚Gruppenwechsel einrichten‘ / ‚Stufen ändern‘ (O9-5c-2)“ unten, es **schreibt noch nichts**):
+Der Unterreiter **Einrichtung** liest selbst nur und verändert nichts – geschrieben wird in Fenstern, die er öffnet (seit
+O9-5d): **„Stufen ändern …“**, bei ⚠ „Rechte der Leitung“ **„Rechte setzen …“** und bei ⚠ „Wechseltage“ **„Nachtragen …“**
+(siehe „Schreiben (O9-5d)“ unten):
 
 - **Karte „Stufen“:** die Kette der Stufen mit „ab N Jahren“, darunter die Bereichsgruppe, unter der die Wechsel-Gruppen
   hängen, der Ferienkalender, der Stichtag und die Ankündigung; darunter der Knopf **„Stufen ändern …“**.
 - **Karte „Stand in ChurchTools“:** eine Zeile je Prüfung – **in Ordnung**, **stimmt nicht** (mit Text) oder **nicht
   prüfbar**. Ein Lesefehler (kein Recht, Netz, Serverfehler, unbekannte Antwort) wird nie zu „fehlt“. Oben steht ein
-  gelber Sammelhinweis („Eine Sache braucht dich.“), wenn etwas nicht stimmt; „nicht prüfbar“ zählt nicht mit. Knöpfe zum
-  Reparieren gibt es noch nicht (O9-5d).
+  gelber Sammelhinweis („Eine Sache braucht dich.“), wenn etwas nicht stimmt; „nicht prüfbar“ zählt nicht mit. „Rechte
+  setzen …“ steht nur, wenn sich die Rechte lesen ließen **und** eines der drei fehlt (ein bloß zusätzliches Recht ist ⚠,
+  aber nichts zum Setzen – entzogen wird nie etwas); „Nachtragen …“ steht bei ⚠ „Wechseltage in den Regeln“.
 
-  | Zeile                     | Soll (kommt aus den Erzeugern, nicht abgeschrieben)                                                                                                                                                                     | Gelesen über                                                          |
-  | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-  | Gruppentyp                | alle Wechsel-Gruppen haben denselben Typ, Rollen Leiter und Teilnehmer sind da                                                                                                                                          | Gruppen aus dem Start, `GET /groups/{id}/roles`                       |
-  | Rechte der Leitung am Typ | genau `LEITER_RECHTE` bei der Leiter-Rolle, keine bei der Teilnehmer-Rolle (geerbte zählen als vorhanden, werden aber nicht als „zusätzlich“ gemeldet)                                                                  | `GET /permissions/group_type_role/{rolle}`                            |
-  | Wechsel-Gruppen           | je Übergang eine, sichtbar und unter der Bereichsgruppe                                                                                                                                                                 | Gruppen und Hierarchie aus dem Start                                  |
-  | Wechseltage in den Regeln | wie im Unterreiter „Wechseltage“ (`jahrStaende`, `regelnReichenBis`, `wechseltageStand`) – derselbe Abruf, nicht ein zweiter                                                                                            | `ladeRegelStand`                                                      |
-  | Regeln der Gruppen        | je Wechsel-Gruppe Kinder- und Leitungs-Regel, je Stufe Aufnahme (außer der ersten) und Austragen (außer der letzten) aus `alleRegeln`; **keine fremden Regeln** (ein Schreiben würde sie ersetzen); Status nicht „none“ | `GET /dynamicgroups/{id}/ruleset` (404 = keine Regeln) und `…/status` |
-  | Routinen                  | je Wechsel-Gruppe die Aufräum-Routine aus `aufraeumRoutine` (Teilnehmer, aktiv, wartet `aufraeumenTage` Tage, trägt aus; ChurchTools liefert `actionData: null` statt `{}` – beides gleich)                             | `GET /groups/{id}/members/routines`                                   |
+  | Zeile                     | Soll (kommt aus den Erzeugern, nicht abgeschrieben)                                                                                                                                                                                                                                                                                                         | Gelesen über                                                          |
+  | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+  | Gruppentyp                | alle Wechsel-Gruppen haben denselben Typ, Rollen Leiter und Teilnehmer sind da                                                                                                                                                                                                                                                                              | Gruppen aus dem Start, `GET /groups/{id}/roles`                       |
+  | Rechte der Leitung am Typ | genau `LEITER_RECHTE` bei der Leiter-Rolle, keine bei der Teilnehmer-Rolle (geerbte zählen als vorhanden, werden aber nicht als „zusätzlich“ gemeldet)                                                                                                                                                                                                      | `GET /permissions/group_type_role/{rolle}`                            |
+  | Wechsel-Gruppen           | je Übergang eine, sichtbar und unter der Bereichsgruppe; **angelegt, aber nicht eingetragen** (O9-5d: Gruppe mit dem Namen des Übergangs, Typ „Gruppenwechsel“, unter der Bereichsgruppe, nicht in der Einrichtung) ist ⚠ mit Nummer                                                                                                                        | Gruppen und Hierarchie aus dem Start                                  |
+  | Wechseltage in den Regeln | wie im Unterreiter „Wechseltage“ (`jahrStaende`, `regelnReichenBis`, `wechseltageStand`) – derselbe Abruf, nicht ein zweiter                                                                                                                                                                                                                                | `ladeRegelStand`                                                      |
+  | Regeln der Gruppen        | je Wechsel-Gruppe Kinder- und Leitungs-Regel, je Stufe Aufnahme (außer der ersten) und Austragen (außer der letzten) aus `alleRegeln`; **keine fremden Regeln** (ein Schreiben würde sie ersetzen); Status **„aktiv“** (O9-5d: nur aktive Gruppen rechnet ChurchTools von selbst neu – bei „manual“ oder „inactive“ steht ⚠ „rechnet nicht von selbst neu“) | `GET /dynamicgroups/{id}/ruleset` (404 = keine Regeln) und `…/status` |
+  | Routinen                  | je Wechsel-Gruppe die Aufräum-Routine aus `aufraeumRoutine` (Teilnehmer, aktiv, wartet `aufraeumenTage` Tage, trägt aus; ChurchTools liefert `actionData: null` statt `{}` – beides gleich)                                                                                                                                                                 | `GET /groups/{id}/members/routines`                                   |
 
   Die Abfragen laufen gedrosselt (vier Gruppen zugleich). 401 ist hier fehlendes Recht, kein Abmelden.
 
-### Fenster „Gruppenwechsel einrichten“ / „Stufen ändern“ (O9-5c-2, schreibt noch nichts)
+### Fenster „Gruppenwechsel einrichten“ / „Stufen ändern“ (O9-5c-2, O9-5d)
 
 Zwei Knöpfe öffnen dasselbe Fenster (immer ein Modal, nur für „Berechtigungen verwalten“): **„Einrichten …“** auf der
 Seite „noch nicht eingerichtet“ und **„Stufen ändern …“** unter der Karte „Stufen“. Oben steht die Schrittanzeige
-**Stufen › Vorschau › Fertig**; „Fertig“ gibt es erst mit O9-5d. **Das Fenster legt nichts in ChurchTools an und speichert
-nichts:** Der Hauptknopf („Jetzt einrichten“ bzw. „Änderungen schreiben“) ist immer aus, daneben steht „Schreiben kommt mit
-der nächsten Fassung.“ Die Rechnung dahinter (`darfSchreiben`) steht aber schon.
+**Stufen › Vorschau › Fertig**. Der Hauptknopf der Vorschau („Jetzt einrichten“ bzw. „Änderungen schreiben“) ist an, sobald
+alles gelesen und gut ist (`darfSchreiben`); er schreibt (siehe „Schreiben (O9-5d)“ unten). Solange geschrieben wird, lässt
+sich das Fenster nicht schließen.
 
 **Schritt „Stufen“** – vorbelegt mit der gespeicherten Einrichtung (Ändern) bzw. den Grundwerten und zwei leeren Zeilen
 (Einrichten):
 
 - **Wechsel-Gruppen anlegen unter:** die Bereichsgruppe (wählt man wie „Anfangen bei“ mit Suche; `SpitzenAuswahl`). Sie darf
-  keine Stufe sein.
+  keine Stufe sein. **Beim Ändern ist sie gesperrt** (O9-F11): nur Anzeige mit dem Satz „Ändern in ChurchTools: Die
+  Wechsel-Gruppen dort unter die neue Gruppe hängen.“ – die Wechsel-Gruppen hängen schon darunter, und „Einrichten“ hängt
+  nichts um.
 - **Stufen, jüngste zuerst:** je Zeile die Gruppe, „ab N Jahren“, nach oben, nach unten, entfernen (mindestens zwei);
   „Stufe hinzufügen“ nimmt das Alter der letzten + 3. Dieselbe Gruppe darf nicht zweimal vorkommen, das Alter muss steigen.
 - **Weitere Einstellungen** (zugeklappt): Stichtag („30.09.“), Ankündigung **in Wochen** (gespeichert wird in Tagen, 8 Wochen
@@ -421,17 +425,86 @@ der nächsten Fassung.“ Die Rechnung dahinter (`darfSchreiben`) steht aber sch
   „Gruppenwechsel“ (vorhanden, wenn `GET /group/grouptypes` einen Typ dieses Namens liefert), Rechte der Rolle „Leiter“
   (`LEITER_RECHTE`; Teilnehmer bekommen keine), Wechsel-Gruppen (vorhanden nur für genau diesen Übergang **und** nur, wenn es
   die Gruppe noch gibt), Routinen, Regeln in allen Stufen und Wechsel-Gruppen. Das ist `einrichtungsPlan` – **der Plan, den
-  O9-5d ausführt**, mit den Schritten in der Reihenfolge der Messung vom 16.11.2026: Typ → Rechte → Wechsel-Gruppen →
-  Routinen → Regeln der Wechsel-Gruppen → Status → Regeln der Stufen → Status → neu berechnen. Was sich nicht lesen ließ
+  das Schreiben ausführt**, mit den Schritten in der Reihenfolge der Messung vom 16.11.2026: Typ → Rechte → Wechsel-Gruppen →
+  Routinen → Regeln der Wechsel-Gruppen → Status → Regeln der Stufen → Status → unsere Regeln aus Stufen entfernen, die
+  keine mehr sind → neu berechnen → Einrichtung speichern. Was sich nicht lesen ließ
   (Gruppentyp, Stand der bisherigen Einrichtung), wird nie zu „fehlt“ oder „neu“: Es steht als „Nicht alles ließ sich
   prüfen“ da und hält das Schreiben auf.
 - **Fremde Regeln = Stopp:** Hat eine gewählte Gruppe Regeln, deren Kurzname nicht zu dieser Erweiterung gehört (`REGELN`),
   steht ein roter Hinweis mit Gruppe und Zahl, der Haken ist aus, und das Schreiben bleibt aus – es würde die Regeln
   ersetzen. Ließen sich die Regeln nicht lesen („ließen sich nicht prüfen“, mit „Nochmal prüfen“), gilt dasselbe.
+- **Läuft heute schon ein Wechsel?** Liegt heute im Fenster eines Jahres (Ankündigung bis Ende der Aufnahme), steht ganz oben
+  gelb „Der Wechsel <Jahr> läuft gerade – nach dem Schreiben kommen N Kinder sofort in die Wechsel-Gruppe bzw. werden
+  verschoben.“ (N aus derselben Rechnung wie die Tabelle, `offenesFenster`). Kein Stopp – aber nichts, was man übersehen soll:
+  Die Regeln wirken sofort.
 - **Keine Mail** (gemessen 16.11.2026): Der Hinweis nennt die Ankündigung des ersten Jahres.
 - **Haken** „Ich habe die Rechte der Leitung geprüft …“ nur beim Einrichten (O9-F4).
 
 Gelesen wird, wie überall hier, gedrosselt; 401 ist fehlendes Recht, kein Abmelden.
+
+### Schreiben (O9-5d)
+
+Geschrieben wird mit der Sitzung der Seite (nur „Berechtigungen verwalten“, immer nach einer Vorschau) – `schreibeEinrichtung`
+in `organigramm/src/einrichtenSchreiben.ts`. Es führt die Schritte des Plans aus `einrichtungsPlan` aus, in der Reihenfolge der
+Messung vom 16.11.2026 (**die Routine vor den Regeln**: Für Kinder, die schon aktiv waren, entsteht sonst kein Lauf):
+
+| Schritt                       | Was geschrieben wird                                                                                                             | Was danach nachgelesen wird                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Gruppentyp                    | `POST /group/grouptypes` („Gruppenwechsel“, Kürzel GW, ohne Beiträge, kein Pflicht-Leiter, nicht für neue Personen, Farbe grau)¹ | Typ in der Liste, beide Rollen (`GET /group/roles`)                   |
+| Rechte der Leitung            | `PUT /permissions/group_type_role/{Leiter}` je **fehlendem** Recht – nur ergänzen, nie entziehen                                 | alle drei Rechte stehen da                                            |
+| Wechsel-Gruppen               | `POST /groups` (Typ, Status aktiv, `parentGroupId` = Bereich, versteckt)                                                         | Typ, Name und Obergruppe; **danach sofort die Einrichtung speichern** |
+| Routinen                      | `POST /routines` + `PATCH` der Schritte (`aufraeumRoutine`); eine vorhandene wird mit ihren Schritt-Nummern angepasst            | `routineBefund` gegen den Erzeuger (`actionData` `null` = `{}`)       |
+| Regeln der Wechsel-Gruppen    | `PUT /dynamicgroups/{id}/ruleset` (alle Regeln der Gruppe, `alleRegeln` mit allen künftigen Jahren)                              | Zeichen für Zeichen dasselbe (ChurchTools gibt sie byte-genau zurück) |
+| Status                        | `PUT /dynamicgroups/{id}/status` → **„active“** (nur aktive Gruppen rechnet ChurchTools von selbst neu)                          | Status „active“                                                       |
+| Regeln und Status der Stufen  | wie oben                                                                                                                         | wie oben                                                              |
+| Alte Stufen / Wechsel-Gruppen | unsere Regeln (`REGELN`) werden entfernt, fremde bleiben; bleibt nichts übrig, Status „none“                                     | Rest steht da                                                         |
+| Neu berechnen                 | `POST /dynamicgroups/{id}/refresh` je Wechsel-Gruppe                                                                             | ChurchTools meldet die Gruppe mit `created/updated/deleted`           |
+| Einrichtung speichern         | Kategorie „Gruppenwechsel“ mit der gelesenen Version (`dokumentSpeichern`); fehlt die Kategorie, wird sie angelegt               | wie bei allen Speicherwerten (Version, Nachlesen)                     |
+
+¹ Vorläufig: an der Test-Instanz gemessen (O9-0), vor O9-6 noch einmal prüfen.
+
+- **Jeder Schritt schreibt und liest sofort nach.** Ein `200`/`201` allein ist kein Beleg; erst was beim Nachlesen dasteht, zählt.
+  Beim **ersten Fehler** wird aufgehört, der Rest bleibt „offen“. Vor dem ersten Schreiben prüft der Lauf noch einmal alles
+  frisch (fremde Regeln, Ferienkalender, Plan nicht „unsicher“, gespeicherte Einrichtung unverändert) – er verlässt sich nicht
+  auf den Knopf.
+- **Vorübergehend ist nicht ungültig:** Zeitüberschreitung, 5xx, Drosselung, Netz und ein 403 ohne ChurchTools-Antwort heißen
+  „vorübergehend“ – nichts wird zurückgerollt oder gelöscht, „Nochmal versuchen“ liest den Stand neu, rechnet den Plan neu und
+  schreibt nur, was fehlt. 401/403 von ChurchTools heißt „abgelehnt“ („dir fehlt das Recht …“).
+- **Nie eine zweite Wechsel-Gruppe für denselben Übergang:** Die Einrichtung wird **sofort nach jeder neu angelegten
+  Wechsel-Gruppe** gespeichert und am Ende noch einmal (ohne neue Version, wenn sich nichts geändert hat). **Die eine Lücke:**
+  Bricht es nach dem Anlegen und vor dem Speichern ab (oder geht die Antwort auf das Anlegen verloren), steht die Gruppe in
+  ChurchTools, aber nicht in der Einrichtung. Die Seite „Einrichtung“ zeigt sie dann als ⚠ („Gruppe N steht unter … nicht
+  in der Einrichtung eingetragen“), und **„Nochmal versuchen“ übernimmt sie** (gleicher Name, Typ „Gruppenwechsel“, direkt unter
+  der Bereichsgruppe), statt eine zweite anzulegen. Gibt es mehrere solche Gruppen, wird nicht geraten, sondern angehalten.
+- **Konflikt:** Hat jemand anderes die Einrichtung inzwischen geändert (der Lauf erwartet genau die, aus der das Fenster stammt
+  bzw. die der letzte eigene Versuch gespeichert hat), wird nichts überschrieben.
+- **Nichts wird gelöscht.** Nicht mehr gebrauchte Wechsel-Gruppen (Stufen geändert) bleiben mit Kindern, Ausnahmen und Routine
+  stehen; „Fertig“ nennt sie. Rechte werden nur ergänzt.
+- **Fertig:** Liste je Baustein mit ✓ (nachgelesen), ✗ (mit Grund) oder „noch nicht geschrieben“; bei Fehlern „Später“ und
+  „Nochmal versuchen“. Beim Schließen nach einem Schreiben lädt die Seite die Einrichtung und die Gruppen neu.
+
+**Leserechte der Leitungen (O9-F12):** „Einrichten“ setzt sie **nicht**. Im Schritt „Fertig“ steht der Kasten „Damit die
+Leitungen den Reiter sehen“ – nur Text: **„Organigramm“ sehen**, die Kategorien **„Gruppenwechsel“** und **„Was das
+Organigramm zeigt“** (Kategorie sehen und Daten sehen) und der **Ferienkalender** (z. B. „Schulferien NRW“) sehen, und zwar an
+den **Leitern der Stufen-Gruppen** und der **Leitung der Bereichsgruppe**. Das setzt ein Admin in ChurchTools (siehe „Rechte
+am Gruppentyp der Kindergruppen“ oben).
+
+**Wechseltage nachtragen** (Knopf bei ⚠ „Wechseltage in den Regeln“ und auf der Seite „Wechseltage“ beim gelben Hinweis): Ein
+kurzes Fenster Vorschau › Fertig. Es zeigt die neuen Jahre aus dem Ferienkalender und schreibt **nur die Regeln** aller Stufen
+und Wechsel-Gruppen mit allen künftigen Jahren – keine Gruppen, Routinen, Status oder Einrichtung. Ausnahmen („zu löschen“)
+bleiben: Die Regeln fassen sie nie an. Fremde Regeln in einer Stufe halten auch hier auf.
+
+**Rechte setzen** (Knopf bei ⚠ „Rechte der Leitung“, wenn eines der drei fehlt): Ein kurzes Fenster Vorschau › Fertig mit den
+drei Rechten (das fehlende als „ergänzen“) und dem Haken „geprüft“ (O9-F4); gesetzt werden nur die fehlenden, danach wird
+nachgelesen. Andere Rechte an der Rolle bleiben.
+
+**Demo** (`npm run dev -w organigramm`, `…/ccm/organigramm/?demo=…`): Schreiben spielt nur im Speicher der Demo, nichts geht
+nach außen. `?demo=neu` (Einrichten durchklicken), `?demo=rechte` („Rechte setzen …“), `?demo=nachtragen` („Nachtragen …“),
+`?demo=schreibfehler` (das erste Schreiben der Regeln scheitert einmal – „Nochmal versuchen“).
+
+**Grenzen:** Das Umhängen der Wechsel-Gruppen bei einer anderen Bereichsgruppe gibt es nicht (O9-F11: von Hand in ChurchTools).
+Beim Anpassen einer vorhandenen Routine schickt der Lauf die Schritt-Nummern mit; ob ChurchTools damit auch bei laufenden
+Abläufen alles richtig übernimmt, ist nur für neue Routinen gemessen – weicht etwas ab, meldet es das Nachlesen.
 
 ### Ausnahme setzen (O9-3)
 
@@ -482,8 +555,8 @@ und wer zuletzt gespeichert hat.
 Ab O9-2 liegt dort auch die **Einrichtung des Gruppenwechsels**: ein Eintrag in der Kategorie **„Gruppenwechsel“**
 (Kürzel `gruppenwechsel`). Darin stehen die Stufen (Gruppe und Alter ab), die Bereichsgruppe, je Übergang die
 Wechsel-Gruppe und die Fristen (Ankündigung, Aufnahme). Die Wechseltage selbst stehen **nicht** darin – sie kommen
-jedes Mal aus dem Ferienkalender. Die Erweiterung liest den Eintrag nur (ob er fehlt, nicht lesbar ist oder gerade nicht gelesen werden konnte, siehe „Einrichtung (O9-5c)“); anlegen kommt mit „Einrichten“ (O9-5d; das Fenster mit Stufen und Vorschau gibt es seit O9-5c-2) –
-bis dahin gibt es ihn nur in der Test-Instanz (per API geschrieben).
+jedes Mal aus dem Ferienkalender. Lesen: ob er fehlt, nicht lesbar ist oder gerade nicht gelesen werden konnte, siehe „Einrichtung (O9-5c)“. Geschrieben wird er von
+„Einrichten“ und „Stufen ändern“ (O9-5d, siehe „Schreiben (O9-5d)“): mit der gelesenen Version, nie über den Wert eines anderen.
 
 > **Rechte dieser Kategorie:** **Daten sehen** brauchen alle Kinder-Leitungen und die Bereichsleitung (am Gruppentyp,
 > siehe oben); ändern nur Admins.

@@ -2,8 +2,8 @@
 
 - **Organigramm: Fenster „Gruppenwechsel einrichten“ und „Stufen ändern“** (Bauplan O9-5c-2, nur mit „Berechtigungen
   verwalten“). „Einrichten …“ auf der Seite „noch nicht eingerichtet“ und „Stufen ändern …“ unter der Karte „Stufen“ öffnen
-  dasselbe Fenster mit zwei Schritten (Stufen › Vorschau › Fertig). **Es legt noch nichts in ChurchTools an und speichert
-  nichts:** Der Hauptknopf ist aus („Schreiben kommt mit der nächsten Fassung“).
+  dasselbe Fenster mit zwei Schritten (Stufen › Vorschau › Fertig). Der Hauptknopf schreibt erst seit O9-5d (siehe
+  dort); die Vorschau selbst liest nur.
   - **Stufen:** Bereichsgruppe und Stufen (jüngste zuerst) mit der Gruppensuche, „ab N Jahren“, nach oben/unten/entfernen,
     „Stufe hinzufügen“; zugeklappt die weiteren Einstellungen (Stichtag, Ankündigung in Wochen, Aufnahme, Aufräumen,
     Ferienkalender mit „Sommerferien gefunden bis …“). Es geht nur weiter, wenn nichts fehlt; die Hinweise stehen am Feld.

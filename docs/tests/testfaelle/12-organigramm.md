@@ -684,15 +684,15 @@ es um die Einrichtung steht – und verwechselt „nicht eingerichtet“ nie mit
 1. Als **Konto mit dem Recht** bei eingerichtetem Gruppenwechsel: Der Reiter hat **Übersicht, Daten pflegen, Wechseltage,
    Einrichtung**. Als Gruppen-Admin **ohne** das Recht fehlt **Einrichtung**.
 2. **Einrichtung** öffnen: Karte „Stufen“ mit der Kette der Stufen („ab N Jahren“), „Wechsel-Gruppen unter …“, Ferienkalender,
-   Stichtag („30.09.“) und Ankündigung („8 Wochen vor dem Wechseltag“). Darunter nur der Knopf „Stufen ändern …“
-   (TF-ORG-21), **keiner** zum Reparieren oder Nachtragen.
+   Stichtag („30.09.“) und Ankündigung („8 Wochen vor dem Wechseltag“). Darunter der Knopf „Stufen ändern …“
+   (TF-ORG-21); „Rechte setzen …“ und „Nachtragen …“ stehen nur bei einem ⚠ in der Karte darunter (TF-ORG-22).
 3. Karte „Stand in ChurchTools“: sechs Zeilen (Gruppentyp, Rechte der Leitung, Wechsel-Gruppen, Wechseltage, Regeln,
    Routinen). Nach „Einrichten“ in ChurchTools stehen alle auf „in Ordnung“, kein gelber Sammelhinweis.
 4. In ChurchTools etwas verstellen (nur Test-Instanz, danach zurück): am Typ „Gruppenwechsel“ bei der Leiter-Rolle „Gruppeninfos
    sehen“ wegnehmen; eine Routine ausschalten; die Wartezeit einer Routine ändern; eine Regel in einer Kindergruppe von
    Hand dazuschreiben; eine Wechsel-Gruppe woanders hinhängen. Reiter neu laden: Die jeweilige Zeile zeigt „stimmt nicht“ mit
-   dem Grund („fehlt: …“, „wartet 60 statt 90 Tage“, „fremde Regel …“, „hängt nicht unter …“), oben steht „Eine Sache braucht
-   dich.“ bzw. „… Dinge brauchen dich.“.
+   dem Grund („fehlt: …“, „wartet 60 statt 90 Tage“, „fremde Regel …“, „hängt nicht unter …“, „rechnet nicht von selbst neu –
+   der Status steht auf „manuell““), oben steht „Eine Sache braucht dich.“ bzw. „… Dinge brauchen dich.“.
 5. Den Wert der Kategorie „Gruppenwechsel“ so verderben, dass ihn die Erweiterung nicht mehr liest (z. B. ein Feld
    löschen): Mit dem Recht steht „Die gespeicherte Einrichtung ließ sich nicht lesen. Es wird nichts überschrieben.“ – **nicht**
    „noch nicht eingerichtet“. Ohne das Recht gibt es den Reiter nicht.
@@ -719,11 +719,12 @@ es um die Einrichtung steht – und verwechselt „nicht eingerichtet“ nie mit
 ### TF-ORG-21 · Kinder & Jugend: Fenster „Einrichten“ / „Stufen ändern“ (Stufen und Vorschau)
 
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung und ein Konto mit **„Berechtigungen verwalten“**; für Schritt 7
-eine Stufen-Gruppe mit einer von Hand geschriebenen Regel (nur Test-Instanz). Dieser Fall liest nur und **schreibt nichts**
-(auch nicht in den Speicher der Erweiterung) – das Schreiben kommt mit O9-5d.
+eine Stufen-Gruppe mit einer von Hand geschriebenen Regel (nur Test-Instanz). Dieser Fall prüft Stufen und Vorschau und
+**bricht vor dem Hauptknopf ab** – das Schreiben selbst steht in TF-ORG-22.
 
 **Das muss passieren:** Das Fenster lässt sich ausfüllen und zeigt vorher, was passieren würde – es geht aber nie ein
-Schritt weiter, wenn etwas fehlt oder fremde Regeln im Weg stehen, und es verändert in ChurchTools nichts.
+Schritt weiter, wenn etwas fehlt oder fremde Regeln im Weg stehen, und bis zum Hauptknopf verändert es in ChurchTools
+nichts.
 
 1. Ohne Einrichtung (Wert der Kategorie „Gruppenwechsel“ vorübergehend löschen): **„Einrichten …“** öffnet ein Fenster
    „Gruppenwechsel einrichten“ mit der Schrittanzeige „Stufen › Vorschau › Fertig“. Mit Einrichtung öffnet
@@ -742,15 +743,19 @@ Schritt weiter, wenn etwas fehlt oder fremde Regeln im Weg stehen, und es verän
    Rechte der Rolle „Leiter“ als drei Namen, Wechsel-Gruppen, Routinen, Regeln). Bei vollständig eingerichteten Stufen
    steht fast alles auf „vorhanden“, die Regeln auf „ändern“. Der Hinweis „Es wird keine Mail verschickt“ nennt die
    Ankündigung des ersten Jahres.
-6. **Fußzeile:** „Abbrechen“ und der Hauptknopf („Jetzt einrichten“ bzw. „Änderungen schreiben“) – der Hauptknopf
-   ist **aus**, daneben steht „Schreiben kommt mit der nächsten Fassung.“ Zurück zu den Stufen geht es mit „‹“ vor dem Titel. Beim Einrichten gibt es den Haken „Ich habe die
-   Rechte der Leitung geprüft …“, beim Ändern nicht. Nach „Abbrechen“ ist in ChurchTools und im Speicher nichts anders.
+6. **Fußzeile:** „Abbrechen“ und der Hauptknopf („Jetzt einrichten“ bzw. „Änderungen schreiben“) – er ist an, sobald alles
+   gelesen und gut ist (beim Einrichten erst mit dem Haken „Ich habe die Rechte der Leitung geprüft …“, beim Ändern gibt es
+   keinen Haken). Zurück zu den Stufen geht es mit „‹“ vor dem Titel. Nach „Abbrechen“ ist in ChurchTools und im Speicher
+   nichts anders. **Beim Ändern** ist die Bereichsgruppe nur eine Anzeige mit dem Satz „Ändern in ChurchTools: …“ (gesperrt).
 7. **Fremde Regeln:** In einer gewählten Stufen-Gruppe steht eine von Hand geschriebene Regel: roter Hinweis mit Gruppe,
    Zahl und Beispiel, der Haken ist nicht anklickbar. Gruppe aus den Stufen nehmen (Zurück): Der Hinweis ist weg. Netz
    kurz trennen und die Vorschau neu öffnen: „Die Regeln von … ließen sich nicht prüfen“ mit „Nochmal prüfen“ – nie so, als
    gäbe es keine.
 8. Am Handy (375 px): Die Stufenzeilen brechen um, das Fenster rutscht nicht seitlich, die Gruppensuche ist bedienbar, die
    Tabelle scrollt waagerecht.
+9. **Läuft heute ein Wechsel** (nur prüfbar, wenn heute zwischen Ankündigung und Ende der Aufnahme eines Jahres liegt, sonst
+   an einer Test-Instanz mit passendem Ferientermin): In der Vorschau steht ganz oben gelb „Der Wechsel … läuft gerade – nach dem
+   Schreiben kommen N Kinder sofort in die Wechsel-Gruppe bzw. werden verschoben.“ und der Hauptknopf bleibt trotzdem an.
 
 <details><summary>Technisches</summary>
 
@@ -759,8 +764,69 @@ Schritt weiter, wenn etwas fehlt oder fremde Regeln im Weg stehen, und es verän
 - **Automatisiert:** größtenteils – `einrichtungPlan.test.ts` (Plan gegen die Erzeuger, Reihenfolge, „nicht lesbar“ nie „fehlt“,
   fremde Regeln, `darfSchreiben`), `einrichtungFormular.test.ts` (Wochen ↔ Tage, Stichtag, gleiche Prüfung wie beim Lesen),
   `einrichtungVorschau.test.ts`, `ladeEinrichten.test.ts` (nicht lesbar ≠ „nicht da“, Drosselung), `EinrichtenFenster.test.tsx`
-  (beide Wege hinein, Stufen bearbeiten, Vorschau, Stopp, Haken) und `gruppenwechsel(Einrichtung).test.ts` (Prüfung); mit den
+  (beide Wege hinein, Stufen bearbeiten, Vorschau, Stopp, Haken, Bereich beim Ändern gesperrt), `SchreibenFenster.test.tsx`
+  (Warnung „Wechsel läuft gerade“) und `gruppenwechsel(Einrichtung).test.ts` (Prüfung); mit den
   echten ChurchTools-Antworten, der echten Gruppensuche und am Handy prüft es nur dieser Fall
 - **Historie:** Bauplan O9-5c-2 (Entwurf `o9-5-einrichten-v1.html`, Schritte „Stufen“ und „Vorschau“); Messung O9-5a 16.11.2026 (Reihenfolge, keine Mail)
+
+</details>
+
+### TF-ORG-22 · Kinder & Jugend: Gruppenwechsel schreiben, Wechseltage nachtragen, Rechte setzen
+
+**Das brauchst du:** Die Test-Instanz (**nie die Live-Instanz**) mit der Erweiterung, ein Konto mit **„Berechtigungen
+verwalten“**, die Test-Gruppen aus O9-0 (Bereich, Kindergruppen) und einen Ferienkalender mit Sommerferien. Vorher alles
+sichern (Wert der Kategorie „Gruppenwechsel“, Regeln und Status der Test-Gruppen, Rechte am Typ). Dieser Fall **schreibt in
+ChurchTools** – nur mit Testdaten, danach zurückbauen und nachlesen. Es wird keine Mail verschickt.
+
+**Das muss passieren:** Der Hauptknopf legt genau an, was die Vorschau gezeigt hat – in fester Reihenfolge, jeder Schritt
+nachgelesen –, hört beim ersten Fehler auf, und „Nochmal versuchen“ schreibt nur, was fehlt, ohne je eine zweite Wechsel-Gruppe
+für denselben Übergang anzulegen.
+
+1. **Einrichten** (Wert der Kategorie vorübergehend entfernt, Gruppentyp und Wechsel-Gruppen der Test-Instanz zuvor
+   weggeräumt): Fenster ausfüllen, Vorschau, Haken „Rechte der Leitung geprüft“, **Jetzt einrichten**. Während es läuft, ist das
+   Fenster nicht zu schließen. Danach „Fertig. Alles ist in ChurchTools nachgelesen.“ mit einer Zeile je Baustein (Typ, Rechte,
+   Wechsel-Gruppen, Routinen, Regeln, Kindergruppen, Neu berechnet, Einrichtung gespeichert) und dem Kasten „Damit die Leitungen
+   den Reiter sehen“. **Fertig** schließt; die Seite „Einrichtung“ steht danach auf lauter ✓, **Status „aktiv“** an allen
+   Wechsel-Gruppen und Kindergruppen (in ChurchTools nachsehen), die Wechsel-Gruppen sind versteckt und hängen unter der
+   Bereichsgruppe.
+2. **Stufen ändern → Änderungen schreiben** (z. B. eine Stufe entfernen): Die Bereichsgruppe ist gesperrt. Nach dem Schreiben
+   fehlen in der entfernten Stufe unsere Regeln (fremde Regeln dort, falls vorhanden, bleiben; ohne Regeln steht der Status auf
+   „keiner“), die nicht mehr gebrauchte Wechsel-Gruppe steht noch in ChurchTools und wird in „Fertig“ genannt – **nichts wurde
+   gelöscht**.
+3. **Fehlerfall:** Netz während des Schreibens kurz trennen (oder ein Recht entziehen): „Nicht ganz fertig.“ mit ✗ und dem
+   Grund („ChurchTools hat nicht geantwortet …“ bzw. „Dir fehlt in ChurchTools das Recht …“), der Rest „noch nicht geschrieben“,
+   unten **Später** und **Nochmal versuchen**. Netz zurück, **Nochmal versuchen**: Es entstehen keine zweite Wechsel-Gruppe und
+   kein zweiter Typ; in „Fertig“ stehen nur die Schritte, die vorher fehlten.
+4. **Die Lücke** (nur mit Absicht herbeiführen, z. B. Netz genau nach dem Anlegen einer Wechsel-Gruppe trennen): Die Seite
+   „Einrichtung“ zeigt bei „Wechsel-Gruppen“ ⚠ „Gruppe N steht unter … nicht in der Einrichtung eingetragen“; „Stufen ändern →
+   Änderungen schreiben“ übernimmt die Gruppe statt eine neue anzulegen.
+5. **Rechte setzen:** Am Typ „Gruppenwechsel“ bei der Leiter-Rolle „Gruppeninfos sehen“ von Hand entziehen. Seite „Einrichtung“:
+   ⚠ bei „Rechte der Leitung“ mit dem Knopf **Rechte setzen …**. Fenster: drei Rechte, das fehlende als „ergänzen“, der Knopf
+   „Recht setzen“ erst mit dem Haken. Danach „Fertig“, in ChurchTools steht das Recht wieder da, ein von Hand gesetztes
+   Zusatzrecht an der Rolle ist **noch da**. Bei einem Recht, das nur zusätzlich steht, gibt es keinen Knopf.
+6. **Wechseltage nachtragen:** Eine Test-Gruppe so verändern, dass die Regeln nur bis zum nächsten Jahr reichen (oder
+   Ferientermine für weitere Jahre eintragen). Seite „Wechseltage“: gelber Hinweis mit **Wechseltage nachtragen …**; ebenso
+   **Nachtragen …** in der Zeile der Seite „Einrichtung“. Fenster: nur die neuen Jahre in der Tabelle, „Regeln in N Gruppen um
+   … ergänzen“. Nach „Fertig“ steht die Spalte „In den Regeln“ auf „eingetragen“; eine zuvor gesetzte Ausnahme („zu löschen“) in
+   einer Wechsel-Gruppe ist unverändert.
+7. Hat eine Stufen-Gruppe eine fremde Regel: Einrichten, Ändern und Nachtragen halten mit dem roten Hinweis an, nichts wird
+   geschrieben. Ändert jemand zwischen Vorschau und Schreiben die Einrichtung (zweiter Tab), meldet der Lauf, dass nichts
+   überschrieben wurde.
+8. Am Handy (375 px): „Fertig“ (Liste, Knöpfe untereinander) und die beiden kurzen Fenster rutschen nicht seitlich.
+9. **Rückbau:** Test-Wechsel-Gruppen, Routinen, Regeln, Status, Typ und den Wert der Kategorie zurücksetzen und mit dem Stand
+   vor dem Test vergleichen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/einrichtenSchreiben.ts`, `organigramm/src/ladeSchreibLage.ts`, `organigramm/src/useSchreibLauf.ts`, `organigramm/src/fertigListe.ts`, `organigramm/src/EinrichtenFertig.tsx`, `organigramm/src/NachtragenFenster.tsx`, `organigramm/src/RechteFenster.tsx`, `organigramm/src/EinrichtenFenster.tsx`, `organigramm/src/EinrichtungSeite.tsx`, `organigramm/src/Wechseltage.tsx`, `organigramm/src/gruppenwechselSpeicher.ts`, `shared/organigramm/einrichtungPlan.ts`, `shared/organigramm/einrichtungStand.ts`, `shared/organigramm/einrichtungVorschau.ts`
+- **Automatisiert:** größtenteils, gegen ein gefälschtes ChurchTools – `einrichtenSchreiben.test.ts` (Reihenfolge = Plan, Nachlesen je Schritt
+  („200 ohne Wirkung“ ist ein Fehler), Abbruch beim ersten Fehler, vorübergehend/abgelehnt/anderer, Speichern nach jeder neuen
+  Wechsel-Gruppe, „Nochmal versuchen“ ohne zweite Gruppe (beide Lücken), Versionskonflikt, Status „aktiv“, entfernte Stufe,
+  Rechte nur ergänzen, Nachtragen nur Regeln), `fertigListe.test.ts`, `SchreibenFenster.test.tsx` (Fertig, Fehlerfall, Nachtragen-
+  und Rechte-Fenster, Warnung, Knöpfe auf der Seite), `einrichtungPlan/-Stand/-Vorschau.test.ts`; mit den echten
+  ChurchTools-Antworten prüft es nur dieser Fall (O9-F13)
+- **Historie:** Bauplan O9-5d; Messungen O9-5a (16.11.2026) und O9-0; Entscheidungen O9-F11 (Bereich gesperrt), O9-F12 (Leserechte
+  nur als Text), O9-F13 (Testlauf); Status „aktiv“ statt „manual“ (OpenAPI der Test-Instanz, 17.11.2026)
 
 </details>

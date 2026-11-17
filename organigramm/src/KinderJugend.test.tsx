@@ -116,6 +116,7 @@ function zeigen(o: { zugang?: KjZugang; recht?: boolean } = {}) {
       einrichtung={einrichtung()}
       zugang={o.zugang ?? BEREICH}
       onAbgemeldet={onAbgemeldet}
+      onGeschrieben={vi.fn()}
     />,
   );
 }
@@ -184,6 +185,7 @@ describe('Unterreiter „Wechseltage“', () => {
         einrichtung={einrichtung()}
         zugang={BEREICH}
         onAbgemeldet={abgemeldet}
+        onGeschrieben={vi.fn()}
       />,
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
@@ -197,12 +199,24 @@ describe('Unterreiter „Wechseltage“', () => {
     const e = einrichtung();
     const start = { ...START, rechte: rechte(false) };
     const { rerender } = render(
-      <KinderJugend start={start} einrichtung={e} zugang={BEREICH} onAbgemeldet={onAbgemeldet} />,
+      <KinderJugend
+        start={start}
+        einrichtung={e}
+        zugang={BEREICH}
+        onAbgemeldet={onAbgemeldet}
+        onGeschrieben={vi.fn()}
+      />,
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Wechseltage' }));
     expect(screen.getByRole('table')).toBeTruthy();
     rerender(
-      <KinderJugend start={start} einrichtung={e} zugang={LEITUNG} onAbgemeldet={onAbgemeldet} />,
+      <KinderJugend
+        start={start}
+        einrichtung={e}
+        zugang={LEITUNG}
+        onAbgemeldet={onAbgemeldet}
+        onGeschrieben={vi.fn()}
+      />,
     );
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wechseltage' })).toBeNull();

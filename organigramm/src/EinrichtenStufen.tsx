@@ -27,6 +27,7 @@ export function EinrichtenStufen({
   zeigeFehler,
   kalender,
   ferienBis,
+  bereichGesperrt = false,
 }: {
   form: Formular;
   onForm: (f: Formular) => void;
@@ -39,6 +40,11 @@ export function EinrichtenStufen({
   kalender: string[] | null;
   /** „Sommerferien gefunden bis 2029.“ – oder was stattdessen zu sagen ist. */
   ferienBis: string;
+  /**
+   * Beim Ändern (O9-F11, Alwin 17.11.2026): Die Bereichsgruppe lässt sich hier nicht wechseln – die Wechsel-Gruppen hängen
+   * schon darunter, und „Einrichten“ hängt nichts um. Nur Anzeige; wechseln geht von Hand in ChurchTools.
+   */
+  bereichGesperrt?: boolean;
 }) {
   const pfad = (id: number | null) => (id === null ? null : pfadVon(baum, id));
   const name = (id: number) => gruppen.find((g) => g.id === id)?.name ?? `Gruppe ${id}`;
@@ -105,19 +111,36 @@ export function EinrichtenStufen({
   return (
     <>
       <div className={styles.feld}>
-        <span className={styles.label}>Wechsel-Gruppen anlegen unter</span>
-        <SpitzenAuswahl
-          label="Wechsel-Gruppen anlegen unter"
-          baum={baum}
-          wert={pfad(form.bereichGruppeId)}
-          onWahl={(p) => onForm({ ...form, bereichGruppeId: p === null ? null : idAmPfad(p) })}
-          feldKlasse={styles.auswahl}
-          leerName="Gruppe wählen …"
-        />
-        {fehlerText('fehler-bereich', 'bereich')}
-        <span className={styles.klein}>
-          Wer diese Gruppe leitet, sieht später alle Wechsel-Gruppen (Bereichsleitung).
+        <span className={styles.label}>
+          {bereichGesperrt ? 'Wechsel-Gruppen hängen unter' : 'Wechsel-Gruppen anlegen unter'}
         </span>
+        {bereichGesperrt ? (
+          <>
+            <span className={styles.gesperrt}>
+              <Icon name="lock" size={14} />
+              {form.bereichGruppeId === null ? '–' : name(form.bereichGruppeId)}
+            </span>
+            <span className={styles.klein}>
+              Ändern in ChurchTools: Die Wechsel-Gruppen dort unter die neue Gruppe hängen. Wer
+              diese Gruppe leitet, sieht alle Wechsel-Gruppen (Bereichsleitung).
+            </span>
+          </>
+        ) : (
+          <>
+            <SpitzenAuswahl
+              label="Wechsel-Gruppen anlegen unter"
+              baum={baum}
+              wert={pfad(form.bereichGruppeId)}
+              onWahl={(p) => onForm({ ...form, bereichGruppeId: p === null ? null : idAmPfad(p) })}
+              feldKlasse={styles.auswahl}
+              leerName="Gruppe wählen …"
+            />
+            {fehlerText('fehler-bereich', 'bereich')}
+            <span className={styles.klein}>
+              Wer diese Gruppe leitet, sieht später alle Wechsel-Gruppen (Bereichsleitung).
+            </span>
+          </>
+        )}
       </div>
 
       <div className={styles.feld}>

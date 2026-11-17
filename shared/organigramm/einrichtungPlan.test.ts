@@ -80,7 +80,7 @@ function gut(): EinrichtungDaten {
     ]),
     rechte: { leiter: ok(LEITER_RECHTE.map(rechtZeile)), teilnehmer: ok([]) },
     gruppen: new Map(
-      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('manual') }] as const),
+      [...regeln].map(([id, r]) => [id, { regeln: ok(r), status: ok('active') }] as const),
     ),
     routinen: new Map([
       [11, ok([routine(U1, 11)])],
@@ -135,7 +135,7 @@ describe('einrichtungsPlan – erstes Einrichten', () => {
     expect(zeile(p, 'rechte').rechte).toEqual(LEITER_RECHTE.map((r) => r.name));
   });
 
-  it('die Reihenfolge der Messung O9-5a: Typ → Rechte → Wechsel-Gruppen → Routinen → Regeln → Status → Regeln der Stufen → Status → neu berechnen', () => {
+  it('die Reihenfolge der Messung O9-5a: Typ → Rechte → Wechsel-Gruppen → Routinen → Regeln → Status → Regeln der Stufen → Status → neu berechnen → speichern', () => {
     expect(arten(p)).toEqual([
       'typ',
       'rechte',
@@ -155,6 +155,7 @@ describe('einrichtungsPlan – erstes Einrichten', () => {
       'statusStufe',
       'neuBerechnen',
       'neuBerechnen',
+      'speichern',
     ]);
     expect(p.schritte.every((s) => s.aktion !== undefined)).toBe(true);
   });
@@ -192,7 +193,7 @@ describe('einrichtungsPlan – Stufen ändern', () => {
     expect(p.unsicher).toEqual([]);
     // Nichts anzulegen: keine Schritte für Typ, Rechte, Wechsel-Gruppen, Routinen und Status (läuft schon)
     expect(new Set(arten(p))).toEqual(
-      new Set(['regelnWechselGruppe', 'regelnStufe', 'neuBerechnen']),
+      new Set(['regelnWechselGruppe', 'regelnStufe', 'neuBerechnen', 'speichern']),
     );
     expect(
       p.schritte.filter((s) => s.art === 'regelnStufe').every((s) => s.aktion === 'aendern'),
@@ -308,6 +309,85 @@ describe('einrichtungsPlan – Stufen ändern', () => {
         (s) => s.art === 'regelnStufe' && (s.ziel as { gruppeId: number }).gruppeId === 2,
       )?.aktion,
     ).toBe('aendern');
+  });
+});
+
+describe('einrichtungsPlan – Status „aktiv“ ist das Soll (O9-5d)', () => {
+  const mit = (status: string) => {
+    const stand = gut();
+    stand.gruppen = new Map(
+      [...stand.gruppen].map(([id, g]) => [id, { ...g, status: ok(status) }] as const),
+    );
+    return stand;
+  };
+
+  it('„manual“ und „inactive“ rechnen nicht von selbst: Statusschritt für jede Wechsel-Gruppe und Stufe', () => {
+    for (const status of ['manual', 'inactive', 'none']) {
+      const p = einrichtungsPlan(E, ist({ stand: mit(status) }));
+      expect(arten(p).filter((a) => a === 'statusWechselGruppe')).toHaveLength(2);
+      expect(arten(p).filter((a) => a === 'statusStufe')).toHaveLength(3);
+    }
+  });
+
+  it('„active“ ist schon gut: keine Statusschritte', () => {
+    const p = einrichtungsPlan(E, ist({ stand: mit('active') }));
+    expect(arten(p)).not.toContain('statusWechselGruppe');
+    expect(arten(p)).not.toContain('statusStufe');
+  });
+});
+
+describe('einrichtungsPlan – Stufen, die keine mehr sind (O9-5d)', () => {
+  // Die Jungschar fällt weg: Ihre Regeln (Aufnahme aus „Fische → Jungschar“) sind unsere und gehen.
+  const ohneJungschar: Einrichtung = {
+    ...E,
+    einstellung: { ...E.einstellung, stufen: E.einstellung.stufen.slice(0, 2) },
+    wechselGruppen: [E.wechselGruppen[0]],
+  };
+
+  it('unsere Regeln in der entfernten Stufe und der Wechsel-Gruppe ohne Übergang werden entfernt – vor dem Neuberechnen', () => {
+    const p = einrichtungsPlan(ohneJungschar, ist());
+    const weg = p.schritte.filter((s) => s.art === 'regelnEntfernen');
+    expect(weg.map((s) => s.ziel)).toEqual([
+      { art: 'altGruppe', gruppeId: 3, name: 'Jungschar' },
+      { art: 'altGruppe', gruppeId: 12, name: 'Fische → Jungschar' },
+    ]);
+    const a = arten(p);
+    expect(a.indexOf('regelnEntfernen')).toBeGreaterThan(a.lastIndexOf('statusStufe'));
+    expect(a.indexOf('regelnEntfernen')).toBeLessThan(a.indexOf('neuBerechnen'));
+  });
+
+  it('die Wechsel-Gruppe ohne Übergang wird NICHT gelöscht, sondern für „Fertig“ genannt', () => {
+    const p = einrichtungsPlan(ohneJungschar, ist());
+    expect(p.nichtMehrGebraucht).toEqual([{ gruppeId: 12, name: 'Fische → Jungschar' }]);
+    expect(zeile(p, 'regeln').text).toContain('nicht mehr dazugehören');
+  });
+
+  it('hat die entfernte Gruppe keine Regeln von uns (mehr), gibt es keinen Schritt dafür', () => {
+    const stand = gut();
+    stand.gruppen = new Map(stand.gruppen).set(3, { regeln: ok([]), status: ok('none') });
+    const p = einrichtungsPlan(ohneJungschar, ist({ stand }));
+    expect(p.schritte.filter((s) => s.art === 'regelnEntfernen').map((s) => s.ziel)).toEqual([
+      { art: 'altGruppe', gruppeId: 12, name: 'Fische → Jungschar' },
+    ]);
+  });
+
+  it('ohne Änderung der Stufen: nichts zu entfernen, nichts „nicht mehr gebraucht“', () => {
+    const p = einrichtungsPlan(E, ist());
+    expect(arten(p)).not.toContain('regelnEntfernen');
+    expect(p.nichtMehrGebraucht).toEqual([]);
+  });
+});
+
+describe('einrichtungsPlan – der letzte Schritt ist das Speichern', () => {
+  it('beim ersten Einrichten „neu“, beim Ändern „ändern“ – und immer nach dem Neuberechnen', () => {
+    const neu = einrichtungsPlan(E, erstes());
+    const alt = einrichtungsPlan(E, ist());
+    expect(neu.schritte[neu.schritte.length - 1]).toEqual({
+      art: 'speichern',
+      aktion: 'neu',
+      ziel: { art: 'einrichtung' },
+    });
+    expect(alt.schritte[alt.schritte.length - 1].aktion).toBe('aendern');
   });
 });
 

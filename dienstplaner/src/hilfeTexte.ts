@@ -13,52 +13,47 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
   {
     titel: 'Was du siehst',
     punkte: [
-      `Welche Dienste du siehst, entscheidet ChurchTools: Hier stehen nur Dienstgruppen, die du ganz sehen darfst. Deine eigenen Dienste findest du immer unter Start und ${DIENSTE_REITER}.`,
-      'Planen darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder Admin des Termins bist.',
-      '„Personen“ zeigt dieselben Termine als Raster: eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist. Einen Dienst antippen klappt seinen Block zu.',
-      'Abwesenheiten sind schraffiert, mit dem Grund als Text; wer abwesend und eingeteilt ist, steht rot umrahmt da. In abgesagten Terminen trägst du nichts ein.',
+      'Nur Dienstgruppen, die du in ChurchTools ganz sehen darfst.',
+      `Deine eigenen Dienste findest du immer unter Start und ${DIENSTE_REITER}.`,
+      'Planen darfst du als Bearbeiter oder Leiter der Gruppe oder als Admin des Termins.',
     ],
   },
   {
     titel: 'Eintragen',
     punkte: [
-      'Freien Platz antippen zeigt „Wer kann?“ – dort trägst du jemanden als Entwurf ein.',
-      'Belegten Platz antippen: zurückziehen oder durch jemand anderen ersetzen, ebenfalls als Entwurf.',
-      'In „Personen“ eine leere Zelle antippen trägt die Person dort als Entwurf ein. War sie am Tag schon in einem anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach.',
-      'Zweiter Klick auf den eigenen Entwurf: von „?“ (Anfrage) auf „✓“ (direkt); ein dritter nimmt ihn weg. Ist der Dienst auf „direkt“ gestellt, beginnt schon der erste Klick direkt.',
+      'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
+      '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
+      'Belegten Platz antippen: zurückziehen oder ersetzen.',
     ],
   },
   {
     titel: 'Anfrage oder direkt',
     punkte: [
-      'Das runde Symbol am Dienstnamen zeigt, womit neue Einteilungen beginnen: „?“ = Anfrage, Haken = direkt (ohne Rückfrage als zugesagt).',
-      'Antippen öffnet die Einstellung. Sie gilt nur auf diesem Gerät und für neue Entwürfe – auch für den Zauberstab.',
-      'Im Plan: Rahmen gestrichelt = Anfrage, durchgezogen = direkt.',
+      'Rahmen gestrichelt = Anfrage, durchgezogen = direkt (ohne Rückfrage zugesagt).',
+      'Symbol am Dienst („?“ oder Haken): womit neue Einteilungen beginnen – gilt auf diesem Gerät.',
     ],
   },
   {
     titel: 'Plätze und Zauberstab',
     punkte: [
-      'Der Regler in der Gruppenzeile ändert die Anzahl der Plätze – sofort. Dort schaltest du auch Dienste ein und aus oder übernimmst eine Vorlage.',
-      'Ist ein Dienst voll, geht „Platz dazunehmen“ vorerst nur über den Regler in der Matrix; bestehende Einteilungen ändert man ebenfalls in der Matrix.',
-      'Der Zauberstab schlägt für die freien Plätze Personen vor – nach der Rangfolge von ChurchTools, als Entwurf. In „Personen“ steht er an jedem Dienst und gilt nur für diesen.',
-      'Der Stift neben einem Namen ändert dessen Vorlieben – sofort in ChurchTools.',
+      'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort.',
+      'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf.',
+      'Stift am Namen: Vorlieben der Person – wirkt sofort.',
     ],
   },
   {
     titel: 'Senden',
     punkte: [
-      'Erst mit „Ansehen und senden“ geht etwas an ChurchTools. Dort steht je Entwurf „Anfrage“ oder „direkt“; die Angefragten bekommen eine Mitteilung von ChurchTools.',
-      'Entwürfe zählen schon mit – in „N frei“, „Einsätze“ und „Noch offen“.',
-      'Beim Teilen und im PDF gilt nur, was in ChurchTools steht.',
+      'Entwürfe gehen erst mit „Ansehen und senden“ an ChurchTools.',
+      'Teilen und PDF zeigen nur, was schon in ChurchTools steht.',
     ],
   },
   {
-    titel: 'Filter und Fokus',
+    titel: 'Ansicht',
     punkte: [
-      'Im Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in Matrix und „Personen“ und zählt nicht mit.',
-      'Fokus auf eine Person: Suchfeld „Person hervorheben“, das Fokus-Symbol am Namen (am Handy lang drücken), „Im Plan hervorheben“ im Fenster eines belegten Platzes oder „im Plan zeigen“ in „Wer kann?“.',
-      'Alle Einsätze der Person sind dann in Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.',
+      'Schraffiert = abwesend, rot umrandet = abwesend und trotzdem eingeteilt.',
+      'Filter: auch einzelne Dienste ausblenden.',
+      'Fokus („Person hervorheben“): alle Einsätze einer Person gelb umrandet.',
     ],
   },
 ];

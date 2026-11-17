@@ -169,8 +169,8 @@ interface BearbeitenBasis<T extends AblaufZeile> {
 
 /**
  * Die Optionen – für einen **Termin** (Standard) oder eine **Ablaufvorlage** (`vorlage: true`, E10-V3a). Der Modus
- * bestimmt, welche Aktionen verlangt werden (die Vorlage hat kein Auge) und was Fenster und Zeilen zeigen: kein Auge, keine
- * Infos je Dienstgruppe, Platzhalter neutral, keine Gruppen-Spalten.
+ * bestimmt, welche Aktionen verlangt werden (die Vorlage hat kein Auge) und was Fenster und Zeilen zeigen: kein Auge,
+ * Platzhalter neutral. Infos je Dienstgruppe gelten wie am Termin (nicht an Überschriften).
  */
 export type AblaufBearbeitenOptionen<T extends AblaufZeile> = BearbeitenBasis<T> &
   ({ vorlage?: false; aktionen: AblaufAktionen } | { vorlage: true; aktionen: VorlagenAktionen });
@@ -432,7 +432,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
             <SortableRow
               schmal={o.schmal}
               item={item}
-              infoZeilen={vorlage ? undefined : o.infoSpalten}
+              infoZeilen={o.infoSpalten}
               vorlage={vorlage}
               aktionen={zeilenAktionen(item, i)}
               {...(spalte !== undefined
@@ -497,7 +497,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           </span>
         </div>
       )}
-      {o.gruppenVerborgen && !vorlage && !o.schmal && (
+      {o.gruppenVerborgen && !o.schmal && (
         <div className={styles.editHint}>
           <VerborgeneGruppenHinweis />
         </div>
@@ -633,7 +633,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               ? (zurueck, schliessen) => o.liedAnsehen!(actionItem, zurueck, schliessen)
               : undefined
           }
-          gruppenVerborgen={vorlage ? undefined : o.gruppenVerborgen}
+          gruppenVerborgen={o.gruppenVerborgen}
           infoGruppen={o.infoGruppen}
         />
       )}

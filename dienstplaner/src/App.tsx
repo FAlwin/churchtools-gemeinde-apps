@@ -31,6 +31,7 @@ import {
   type ReiterId,
 } from './reiter';
 import { VorlagenBereich } from '@ui/ablauf/VorlagenBereich';
+import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { TerminAnsicht } from './TerminAnsicht';
 import { useAntworten } from './useAntworten';
 import { useTausch } from './useTausch';
@@ -233,6 +234,10 @@ export function App() {
               zugriff={vorlagenZugriff}
               darfIn={(kalenderId) => vorlageBearbeitbar(start, kalenderId)}
               dienste={[...start.dienste.values()].map((d) => ({ id: d.id, name: d.name }))}
+              // Infos je Dienstgruppe wie in `TerminAblauf`; die Spalten-Wahl gehört der Vorlagen-Seite allein.
+              infoGruppen={infoGruppen(start.rechte, start.dienstgruppen)}
+              gruppenVerborgen={!siehtAlleDienstgruppen(start.rechte, start.dienstgruppen)}
+              infoSpaltenSchluessel="dienstplaner.vorlage.infoSpalten"
               offeneId={vorlagenAdresse.id}
               onOeffnen={(id) => {
                 window.location.hash = id === null ? ADRESSE_VORLAGEN : adresseFuerVorlage(id);

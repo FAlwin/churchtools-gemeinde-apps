@@ -268,10 +268,11 @@ und Neuladen gehen).
   TT.MM.“. Wo man in dem Kalender **keine** Vorlagen bearbeiten darf, steht am Band **„nur ansehen“** (Schloss). **„Neue Vorlage“**
   erscheint nur, wenn man in mindestens einem Kalender darf.
 - **Neue Vorlage:** Name (höchstens 100 Zeichen) und Kalender – angeboten werden nur Kalender mit dem Recht. Danach geht die leere
-  Vorlage gleich im Bearbeiten-Modus auf.
-- **Vorlage öffnen:** derselbe Ablauf-Baustein wie am Termin, aber **ohne Uhrzeiten, Personen, Live, Spalten, Musik-App und Auge**
-  („An diesem Termin weglassen“ gibt es ohne Termin nicht), und **ohne Infos je Dienstgruppe** (ChurchTools nähme sie an
-  Überschriften mit Erfolg an und speicherte nichts). Dienste stehen als Platzhalter „[Moderation]“ da, nicht als offener Dienst
+  Vorlage gleich im Bearbeiten-Modus auf. Vorbelegt ist der Kalender, in dem es schon die meisten Vorlagen gibt.
+- **Vorlage öffnen:** derselbe Ablauf-Baustein wie am Termin, aber **ohne Uhrzeiten, Personen, Live, Musik-App und Auge**
+  („An diesem Termin weglassen“ gibt es ohne Termin nicht). **Infos je Dienstgruppe** gibt es wie am Termin (Feld im Fenster,
+  Knopf „Spalten“ mit eigener, gemerkter Wahl für die Vorlagen-Seite) – an Text- und Lied-Punkten; an Überschriften nicht
+  (ChurchTools nähme sie mit Erfolg an und speicherte nichts). Dienste stehen als Platzhalter „[Moderation]“ da, nicht als offener Dienst
   mit „?“. „vor Beginn“ gibt es auch in Vorlagen. **Bearbeiten** nur mit dem Recht; dann stehen rechts in der Hinweiszeile
   **„Umbenennen …“** und **„Löschen …“** (rot).
 - **Löschen** fragt nach und lässt sich **nicht rückgängig machen** (ChurchTools hat dafür keinen Papierkorb); Abläufe, die schon aus

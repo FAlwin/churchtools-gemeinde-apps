@@ -104,3 +104,21 @@ export function vorlageZeilenAus(v: Pick<CtAblaufVorlage, 'items'>): AblaufZeile
     weggelassen: false,
   }));
 }
+
+/**
+ * **Welcher Kalender in „Neue Vorlage“ vorbelegt ist** (Durchklick 17.11.2026: der alphabetisch erste war „Bandproben“):
+ * der erlaubte Kalender, in dem es schon die meisten Vorlagen gibt, bei Gleichstand der erste in der Reihenfolge der Liste
+ * (`gruppen`); gibt es in keinem erlaubten Kalender eine Vorlage, der erste erlaubte. `null`, wenn nichts erlaubt ist.
+ */
+export function vorgabeKalender(
+  erlaubt: readonly Kalender[],
+  gruppen: readonly VorlagenGruppe[],
+): number | null {
+  const ids = new Set(erlaubt.map((k) => k.id));
+  let beste: VorlagenGruppe | null = null;
+  for (const g of gruppen) {
+    if (g.kalenderId === null || !ids.has(g.kalenderId)) continue;
+    if (beste === null || g.vorlagen.length > beste.vorlagen.length) beste = g;
+  }
+  return beste?.kalenderId ?? erlaubt[0]?.id ?? null;
+}

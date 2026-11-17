@@ -12,12 +12,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VORLAGE_GESPERRT } from '@shared/ct/schreibKern';
 import { vorlageZeilenAus } from '@shared/ct/ablaufVorlagenListe';
-import type { AgendaServiceOption } from '@shared/types/index';
+import type { AgendaServiceOption, InfoGruppe } from '@shared/types/index';
 import { FehlerKasten } from '../erweiterung/ErweiterungsSeite';
 import { KopfKnopf } from '../bedienung/KopfKnopf';
 import { useLaden } from '../ct/useLaden';
 import { Icon } from '../icons/icons';
 import { AblaufListe } from './AblaufListe';
+import { InfoSpaltenKnopf } from './InfoSpalten';
+import { useInfoSpalten } from './infoSpaltenWahl';
 import { useAblaufBearbeiten, verlangtNeuLaden, type HinweisLink } from './useAblaufBearbeiten';
 import { VorlageLoeschenFenster, VorlageUmbenennenFenster } from './VorlagenFenster';
 import type { VorlagenZugriff } from './vorlagenZugriff';
@@ -28,6 +30,9 @@ export function VorlageAnsicht({
   zugriff,
   darfIn,
   dienste,
+  infoGruppen,
+  gruppenVerborgen,
+  infoSpaltenSchluessel = 'ablauf.vorlage.infoSpalten',
   kalenderName,
   zurueck,
   startBearbeiten = false,
@@ -40,6 +45,11 @@ export function VorlageAnsicht({
   darfIn: (kalenderId: number | null) => boolean;
   /** Die ChurchTools-Dienste für den Zuständig-Editor im Punkt-Fenster. */
   dienste: AgendaServiceOption[];
+  /** Infos je Dienstgruppe wie am Termin (Fenster-Feld, Spalten) – nie an Überschriften. */
+  infoGruppen?: readonly InfoGruppe[];
+  gruppenVerborgen?: boolean;
+  /** Schlüssel der Spalten-Wahl im Gerät. */
+  infoSpaltenSchluessel?: string;
   /** Der Name des Kalenders der Vorlage – fehlt er (Liste noch nicht da), steht nur „Ablaufvorlage“. */
   kalenderName?: (kalenderId: number | null) => string | undefined;
   /** „‹ Vorlagen“ – zurück zur Liste. */
@@ -60,6 +70,7 @@ export function VorlageAnsicht({
   const [umbenennen, setUmbenennen] = useState(false);
   const [loeschen, setLoeschen] = useState(false);
 
+  const spalten = useInfoSpalten(infoSpaltenSchluessel, infoGruppen);
   const zeilen = useMemo(() => (v ? vorlageZeilenAus(v) : []), [v]);
   const kalenderId = v?.calendarId ?? null;
   const darf = v !== null && darfIn(kalenderId);
@@ -96,6 +107,9 @@ export function VorlageAnsicht({
     sperrHinweis: VORLAGE_GESPERRT,
     aktionen,
     dienste,
+    infoGruppen,
+    infoSpalten: spalten.gewaehlt,
+    gruppenVerborgen,
     hinweisLinks: links,
     // Vorlage inzwischen anders (404/409/412/423): frisch lesen. Einen Knopf „neu laden“ gibt es hier nicht.
     beiFehler: (e) => {
@@ -143,6 +157,14 @@ export function VorlageAnsicht({
           <h3>Ablauf</h3>
           <span className={styles.kopfKnoepfe}>
             {liste.kopfKnopf}
+            {!aktiv && zeilen.length > 0 && (
+              <InfoSpaltenKnopf
+                gruppen={infoGruppen}
+                zeilen={zeilen}
+                ids={spalten.ids}
+                onIds={spalten.setIds}
+              />
+            )}
             {darf && (
               <KopfKnopf
                 onClick={() => {
@@ -168,7 +190,7 @@ export function VorlageAnsicht({
           <p className={styles.hinweis}>Die Vorlage ist noch leer.</p>
         ) : (
           <div className={styles.grund}>
-            <AblaufListe zeilen={zeilen} vorlage />
+            <AblaufListe zeilen={zeilen} vorlage infoSpalten={spalten.gewaehlt} />
           </div>
         )}
       </section>

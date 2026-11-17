@@ -200,13 +200,14 @@ describe('Neue Vorlage', () => {
     return { z, fenster: screen.getByRole('dialog', { name: 'Neue Vorlage' }) };
   }
 
-  it('bietet nur Kalender an, in denen man darf – vorbelegt mit dem ersten', async () => {
+  it('bietet nur Kalender an, in denen man darf – vorbelegt mit dem Kalender mit den meisten Vorlagen', async () => {
     const { fenster } = await oeffneNeu((k) => k === 2 || k === 3);
     const optionen = within(fenster)
       .getAllByRole('option')
       .map((o) => o.textContent);
     expect(optionen).toEqual(['Frauentreff', 'Jugend']);
-    expect(within(fenster).getByRole<HTMLSelectElement>('combobox').value).toBe('3');
+    // Vorbelegt: der Kalender mit den meisten Vorlagen (Jugend hat eine, Frauentreff keine) – nicht der alphabetisch erste.
+    expect(within(fenster).getByRole<HTMLSelectElement>('combobox').value).toBe('2');
   });
 
   it('der Name folgt der Regel des Kerns: leer oder nur Leerzeichen → „Anlegen“ gesperrt; Grenze am Feld', async () => {
@@ -278,6 +279,55 @@ describe('Neue Vorlage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
     expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Fertig' })).toBeTruthy();
+  });
+});
+
+describe('Infos je Dienstgruppe in der Vorlage', () => {
+  it('der Aufrufer gibt die Gruppen herein: Knopf „Spalten“ in der Ansicht', async () => {
+    render(
+      <VorlagenBereich
+        zugriff={zugriff()}
+        darfIn={alles}
+        dienste={[]}
+        infoGruppen={[{ id: 3, name: 'Technik' }]}
+        offeneId={5}
+        onOeffnen={() => {}}
+        zurueck={{ label: 'Planen', onClick: () => {} }}
+      />,
+    );
+    expect(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeTruthy();
+  });
+
+  it('die gewählte Spalte zeigt die Infos der Punkte in der Ansicht', async () => {
+    localStorage.clear();
+    const mitInfo = vorlage(5, 'Gottesdienst', 1, {
+      items: [
+        {
+          id: 50,
+          position: 0,
+          title: 'Begrüßung',
+          type: 'normal',
+          duration: 300,
+          serviceGroupNotes: [{ serviceGroupId: 3, note: 'Mikro 1' }],
+        },
+      ],
+    });
+    render(
+      <VorlagenBereich
+        zugriff={zugriff([mitInfo])}
+        darfIn={alles}
+        dienste={[]}
+        infoGruppen={[{ id: 3, name: 'Technik' }]}
+        offeneId={5}
+        onOeffnen={() => {}}
+        zurueck={{ label: 'Planen', onClick: () => {} }}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    expect(screen.queryByText('Mikro 1')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
+    expect(screen.getAllByText('Mikro 1').length).toBeGreaterThan(0);
+    localStorage.clear();
   });
 });
 

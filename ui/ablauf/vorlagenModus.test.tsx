@@ -64,7 +64,7 @@ function Vorlage({ aktionen }: { aktionen: VorlagenAktionen }) {
     sperrHinweis: 'gesperrt',
     aktionen,
     dienste: [],
-    // Auch wenn der Aufrufer sie reichte: In der Vorlage zählen weder Spalten noch Infos je Gruppe.
+    // Infos je Dienstgruppe gelten in der Vorlage wie am Termin (ChurchTools speichert sie an Text- und Lied-Punkten).
     infoGruppen: INFO_GRUPPEN,
     infoSpalten: INFO_GRUPPEN,
     gruppenVerborgen: true,
@@ -130,35 +130,37 @@ describe('Punkt-Fenster in der Vorlage', () => {
     expect(screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ })).toBeTruthy();
   });
 
-  it('keine Infos je Dienstgruppe, auch wenn der Aufrufer die Gruppen reicht – am Termin schon', () => {
+  it('Infos je Dienstgruppe wie am Termin: der Programmpunkt hat das Feld, die Überschrift nicht', () => {
     render(<Vorlage aktionen={vorlagenAktionen()} />);
     oeffneBegruessung();
+    expect(screen.getByLabelText('Info für Technik')).toBeTruthy();
+    expect(screen.getByText('Infos je Gruppe')).toBeTruthy();
+    cleanup();
+    render(<Vorlage aktionen={vorlagenAktionen()} />);
+    fireEvent.click(screen.getByText('Ankommen').closest('button') as HTMLElement);
     expect(screen.queryByLabelText('Info für Technik')).toBeNull();
-    expect(screen.queryByText('Infos je Gruppe')).toBeNull();
     cleanup();
     render(<Termin aktionen={terminAktionen()} />);
     oeffneBegruessung();
     expect(screen.getByLabelText('Info für Technik')).toBeTruthy();
   });
 
-  it('der Hinweis „Du siehst nicht alle Dienstgruppen“ steht nicht in der Vorlage – am Termin schon', () => {
+  it('der Hinweis „Du siehst nicht alle Dienstgruppen“ steht in der Vorlage wie am Termin', () => {
     render(<Vorlage aktionen={vorlagenAktionen()} />);
-    expect(screen.queryByText(/nicht alle Dienstgruppen/)).toBeNull();
-    oeffneBegruessung();
-    expect(screen.queryByText(/nicht alle Dienstgruppen/)).toBeNull();
+    expect(screen.getAllByText(/nicht alle Dienstgruppen/).length).toBeGreaterThan(0);
     cleanup();
     render(<Termin aktionen={terminAktionen()} />);
     expect(screen.getAllByText(/nicht alle Dienstgruppen/).length).toBeGreaterThan(0);
   });
 
-  it('Neuer Eintrag: unter „Weitere Einstellungen“ nur der Vorlauf – kein Auge, keine Infos; am Termin beides', () => {
+  it('Neuer Eintrag: unter „Weitere Einstellungen“ Vorlauf und Infos, aber kein Auge; am Termin auch das Auge', () => {
     render(<Vorlage aktionen={vorlagenAktionen()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Programmpunkt hinzufügen' }));
     fireEvent.click(screen.getByRole('button', { name: /Weitere Einstellungen/ }));
     expect(screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /An diesem Termin weglassen/ })).toBeNull();
-    expect(screen.queryByLabelText('Info für Technik')).toBeNull();
+    expect(screen.getByLabelText('Info für Technik')).toBeTruthy();
     cleanup();
     render(<Termin aktionen={terminAktionen()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
@@ -220,9 +222,9 @@ describe('Zeilen in der Vorlage', () => {
     expect(screen.getByTestId('liste').textContent).toMatch(/\d\d:\d\d/);
   });
 
-  it('keine Infos als Zeile unter dem Punkt (Spalten) – am Termin „Technik: Folie 1“', () => {
+  it('Infos der gewählten Spalten als Zeile unter dem Punkt – wie am Termin „Technik: Folie 1“', () => {
     render(<Vorlage aktionen={vorlagenAktionen()} />);
-    expect(screen.getByTestId('liste').textContent).not.toContain('Folie 1');
+    expect(screen.getByTestId('liste').textContent).toContain('Technik: Folie 1');
     cleanup();
     render(<Termin aktionen={terminAktionen()} />);
     expect(screen.getByTestId('liste').textContent).toContain('Technik: Folie 1');
@@ -256,13 +258,13 @@ describe('Hinweiszeile: Links', () => {
 describe('AblaufListe im Vorlagen-Modus (Ansicht)', () => {
   const zeilen = () => VORLAGEN_ZEILEN;
 
-  it('Platzhalter neutral, keine Uhrzeit, kein Beginn-Zeitpunkt, keine Info-Spalten – auch wenn welche gewählt sind', () => {
+  it('Platzhalter neutral, keine Uhrzeit, kein Beginn-Zeitpunkt; die gewählten Info-Spalten bleiben', () => {
     render(<AblaufListe zeilen={zeilen()} vorlage infoSpalten={INFO_GRUPPEN} />);
     expect(screen.getByText('[Moderation]').className).not.toMatch(/respOpen/);
     expect(document.body.textContent).not.toMatch(/\d\d:\d\d/);
     expect(screen.getByRole('separator', { name: 'Beginn' })).toBeTruthy();
-    expect(document.body.textContent).not.toContain('Folie 1');
-    expect(screen.queryByText('Technik')).toBeNull();
+    expect(document.body.textContent).toContain('Folie 1');
+    expect(screen.getAllByText(/Technik/).length).toBeGreaterThan(0);
   });
 
   it('Gegenprobe: ohne `vorlage` sind dieselben Zeilen rot und die Spalte da', () => {

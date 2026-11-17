@@ -135,14 +135,14 @@ export function AblaufListe({
    */
   fotos?: boolean;
   /**
-   * Der Ablauf einer **Ablaufvorlage** (E10-V3a): ohne Spalten für Infos je Gruppe, Platzhalter neutral. Uhrzeiten gibt es
+   * Der Ablauf einer **Ablaufvorlage** (E10-V3a): Platzhalter neutral; Infos je Gruppe wie am Termin. Uhrzeiten gibt es
    * von selbst keine – `ablaufZeileAus` mit Termin 0 liefert `time: null` und nichts „weggelassen“; der Balken „Beginn“
    * bleibt ohne `beginn` ohne Zeit.
    */
   vorlage?: boolean;
 }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
-  const infos = schmal || vorlage ? [] : infoSpalten;
+  const infos = schmal ? [] : infoSpalten;
   const alsSpalten = !handy && infos.length > 0;
   const sichtbar = zeilen.filter((z) => !z.removed);
   const ende = mitEnde ? ablaufEnde(sichtbar) : null;

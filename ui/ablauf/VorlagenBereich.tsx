@@ -7,7 +7,8 @@
  * Der Kopf („‹ Planen“, Titel, „Neue Vorlage“) gehört zur Liste, nicht zur offenen Vorlage – die bringt ihren eigenen mit.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { AgendaServiceOption, Kalender } from '@shared/types/index';
+import { vorgabeKalender } from '@shared/ct/ablaufVorlagenListe';
+import type { AgendaServiceOption, InfoGruppe, Kalender } from '@shared/types/index';
 import { FehlerKasten } from '../erweiterung/ErweiterungsSeite';
 import { Icon } from '../icons/icons';
 import { useNeuAnlegen } from '../bedienung/NeuAnlegen';
@@ -22,6 +23,9 @@ export function VorlagenBereich({
   zugriff,
   darfIn,
   dienste,
+  infoGruppen,
+  gruppenVerborgen,
+  infoSpaltenSchluessel,
   offeneId,
   onOeffnen,
   zurueck,
@@ -31,6 +35,15 @@ export function VorlagenBereich({
   /** Darf man in diesem Kalender Vorlagen bearbeiten (`darfVorlageBearbeiten`)? `null` = Vorlage ohne Kalender. */
   darfIn: (kalenderId: number | null) => boolean;
   dienste: AgendaServiceOption[];
+  /**
+   * Die Dienstgruppen, deren Infos man sieht – wie am Termin (`TerminAblauf`): Feld im Punkt-Fenster, Spalten in der Ansicht.
+   * Ohne: keine Infos.
+   */
+  infoGruppen?: readonly InfoGruppe[];
+  /** Sieht man nicht alle Dienstgruppen? Dann steht der Hinweis wie am Termin. */
+  gruppenVerborgen?: boolean;
+  /** Der Gerätespeicher-Schlüssel der Spalten-Wahl – je App einer, getrennt vom Ablauf der Termine. */
+  infoSpaltenSchluessel?: string;
   /** Die offene Vorlage – `null`: die Liste. */
   offeneId: number | null;
   /** Eine Vorlage öffnen (`id`) bzw. zurück zur Liste (`null`). */
@@ -74,6 +87,9 @@ export function VorlagenBereich({
         zugriff={zugriff}
         darfIn={darfIn}
         dienste={dienste}
+        infoGruppen={infoGruppen}
+        gruppenVerborgen={gruppenVerborgen}
+        infoSpaltenSchluessel={infoSpaltenSchluessel}
         kalenderName={(id) => (id === null ? undefined : namen.get(id))}
         zurueck={{ label: 'Vorlagen', onClick: () => onOeffnen(null) }}
         startBearbeiten={neuAngelegt === offeneId}
@@ -115,6 +131,7 @@ export function VorlagenBereich({
       {neuOffen && (
         <NeueVorlageFenster
           kalender={erlaubteKalender}
+          vorbelegt={stand ? vorgabeKalender(erlaubteKalender, stand.gruppen) : null}
           onClose={() => setNeuOffen(false)}
           onAnlegen={async (daten) => {
             const id = await zugriff.anlegen(daten);

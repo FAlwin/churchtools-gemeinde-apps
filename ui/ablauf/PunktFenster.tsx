@@ -75,9 +75,9 @@ interface Gemeinsam {
   infoGruppen?: readonly InfoGruppe[];
   /**
    * Der Punkt gehört zu einer **Ablaufvorlage** (E10-V3a): kein Auge „An diesem Termin weglassen“ (eine Vorlage hat
-   * keinen Termin) und keine Infos je Dienstgruppe – ChurchTools nähme sie an Überschriften mit Erfolg an und
-   * speicherte nichts (gemessen E10-0), und die Vorlage soll sie nicht einmal anbieten. Der Vorlauf-Schalter bleibt:
-   * Vorlagen kennen „vor Beginn“. Das Zuständig-Feld zeigt Platzhalter neutral.
+   * keinen Termin). Infos je Dienstgruppe gelten wie am Termin – ChurchTools speichert sie an Text- und Lied-Punkten
+   * einer Vorlage (gemessen E10-0), nur an Überschriften nicht (dort gilt die Regel des Fensters). Der Vorlauf-Schalter
+   * bleibt: Vorlagen kennen „vor Beginn“. Das Zuständig-Feld zeigt Platzhalter neutral.
    */
   vorlage?: boolean;
 }
@@ -226,7 +226,7 @@ export function PunktFenster(props: PunktFensterProps) {
   const [note, setNote] = useState(item.note);
   // Infos je Dienstgruppe (E6-4) – beim Anlegen unter „Weitere Einstellungen“ (Alwin, 30.10.2026). Überschriften zeigen
   // die Felder nicht (sie stehen im Block der Programmpunkt-Felder).
-  const infoFelder = vorlage ? [] : (props.infoGruppen ?? []);
+  const infoFelder = props.infoGruppen ?? [];
   const [infos, setInfos] = useState<Record<number, string>>(() =>
     Object.fromEntries(
       infoFelder.map((g) => [g.id, item.infos?.find((i) => i.gruppeId === g.id)?.text ?? '']),

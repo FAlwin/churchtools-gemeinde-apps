@@ -50,20 +50,23 @@ function NameFeld({
 
 /**
  * „Neue Vorlage“: Name und Kalender – **nur Kalender, in denen man Vorlagen bearbeiten darf** (`kalender` ist schon
- * gefiltert), vorbelegt mit dem ersten. Danach öffnet der Aufrufer die neue Vorlage gleich im Bearbeiten-Modus.
+ * gefiltert), vorbelegt mit dem Kalender, in dem es schon die meisten Vorlagen gibt. Danach öffnet der Aufrufer die neue Vorlage gleich im Bearbeiten-Modus.
  */
 export function NeueVorlageFenster({
   kalender,
+  vorbelegt,
   onAnlegen,
   onClose,
 }: {
   kalender: readonly Kalender[];
+  /** Der vorbelegte Kalender (`vorgabeKalender`) – ohne der erste der Auswahl. */
+  vorbelegt?: number | null;
   /** Legt an und liefert die ID; wirft bei Fehler – die Meldung steht dann im Fenster. */
   onAnlegen: (daten: { name: string; kalenderId: number }) => Promise<void>;
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
-  const [kalenderId, setKalenderId] = useState<number | null>(kalender[0]?.id ?? null);
+  const [kalenderId, setKalenderId] = useState<number | null>(vorbelegt ?? kalender[0]?.id ?? null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const nameFehler = name === '' ? null : vorlageNameFehler(name);

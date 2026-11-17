@@ -3,6 +3,7 @@ import { vorlageAnlegen, vorlagePunkteAus, vorlaufAnzahl } from './ablaufVorlage
 import { vorlagenAus } from './ablaufAnlegen';
 import {
   OHNE_KALENDER,
+  vorgabeKalender,
   vorlageZeilenAus,
   vorlagenListeAus,
   vorlagenStandAus,
@@ -203,5 +204,40 @@ describe('vorlageZeilenAus', () => {
 
   it('eine Vorlage ohne Punkte: keine Zeilen', () => {
     expect(vorlageZeilenAus({})).toEqual([]);
+  });
+});
+
+describe('vorgabeKalender', () => {
+  const kal = [
+    { id: 1, name: 'Bandproben' },
+    { id: 2, name: 'Gottesdienst' },
+    { id: 3, name: 'Jugend' },
+  ];
+  const gruppen = (roh: CtAblaufVorlage[]) => vorlagenListeAus(roh, kal, 'Europe/Berlin');
+
+  it('der erlaubte Kalender mit den meisten Vorlagen – nicht der alphabetisch erste', () => {
+    const g = gruppen([
+      vorlageAus(1, 'Probe', 1),
+      vorlageAus(2, 'A', 2),
+      vorlageAus(3, 'B', 2),
+      vorlageAus(4, 'C', 2),
+    ]);
+    expect(vorgabeKalender(kal, g)).toBe(2);
+  });
+
+  it('nur erlaubte zählen: der stärkste Kalender ohne Recht wird übergangen', () => {
+    const g = gruppen([vorlageAus(1, 'A', 2), vorlageAus(2, 'B', 2), vorlageAus(3, 'C', 3)]);
+    expect(vorgabeKalender([kal[0], kal[2]], g)).toBe(3);
+  });
+
+  it('Gleichstand: der erste in der Reihenfolge der Liste', () => {
+    const g = gruppen([vorlageAus(1, 'A', 3), vorlageAus(2, 'B', 2)]);
+    // Liste: Gottesdienst (2) vor Jugend (3).
+    expect(vorgabeKalender(kal, g)).toBe(2);
+  });
+
+  it('keine Vorlage in erlaubten Kalendern: der erste erlaubte; nichts erlaubt: null', () => {
+    expect(vorgabeKalender([kal[1], kal[2]], gruppen([vorlageAus(1, 'A', 1)]))).toBe(2);
+    expect(vorgabeKalender([], gruppen([vorlageAus(1, 'A', 1)]))).toBeNull();
   });
 });

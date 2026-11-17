@@ -466,17 +466,17 @@ und Zugang zu **Planen**. Ein zweites Konto ohne dieses Recht, aber mit Zugang z
 das Recht fehlt.
 
 **Das muss passieren:** Die Seite zeigt die Vorlagen nach Kalender; bearbeiten darf nur, wer das Recht für den Kalender hat
-(Alwin, 17.11.2026, E10). Eine Vorlage hat keine Uhrzeiten, keine Personen und kein Auge.
+(Alwin, 17.11.2026, E10). Eine Vorlage hat keine Uhrzeiten, keine Personen und kein Auge. Am Handy (375 px) stehen „Umbenennen …“/„Löschen …“ in einer eigenen Zeile unter der Anleitung; „Neu aufsetzen …“ am Termin ebenso.
 
 1. **Planen** → in der Leiste **Vorlagen** (links neben „Ablauf bearbeiten“). Die Adresse endet auf `#/vorlagen`, „Planen“
    bleibt oben markiert. Die Vorlagen stehen unter ihrem **Kalender**, je Zeile „N Punkte · geändert TT.MM.“ (und „N vor Beginn“).
 2. Am Kalender **ohne** das Recht steht **nur ansehen**. Dort eine Vorlage öffnen: Der Ablauf steht ohne Uhrzeiten da, Dienste
    als **[Moderation]** (nicht rot mit „?“), **kein „Bearbeiten“**.
-3. **Neue Vorlage** → Name „Probe E10“; die Auswahl bietet **nur** den Kalender mit Recht → **Anlegen**. Die leere Vorlage geht
+3. **Neue Vorlage** → Name „Probe E10“; die Auswahl bietet **nur** Kalender mit Recht, vorbelegt ist der mit den meisten Vorlagen → **Anlegen**. Die leere Vorlage geht
    **gleich im Bearbeiten-Modus** auf. Einen Namen über 100 Zeichen lässt das Feld nicht zu; ein leerer Name sperrt „Anlegen“.
 4. **Eintrag hinzufügen** → Programmpunkt „Begrüßung“, 5 Min, Zuständig **Moderation**; dazu eine **Überschrift** und einen Punkt
-   **vor dem Beginn** (Schalter „Vor Gottesdienstbeginn“). Im Fenster gibt es **kein „An diesem Termin weglassen“** und bei der
-   Überschrift **keine Infos je Gruppe**. Punkte ziehen und löschen (mit **Rückgängig**).
+   **vor dem Beginn** (Schalter „Vor Gottesdienstbeginn“). Im Fenster gibt es **kein „An diesem Termin weglassen“**; beim Programmpunkt stehen die **Infos je Gruppe** (eintragen,
+   speichern, in ChurchTools prüfen; **Spalten** zeigt sie auch in der Ansicht), bei der Überschrift **keine**. Punkte ziehen und löschen (mit **Rückgängig**).
 5. Die Vorlage in **ChurchTools** ansehen: Punkte, Reihenfolge, Dauer, Platzhalter und die Grenze „Beginn“ stimmen.
 6. Zurück in der App: **Umbenennen …** → „Probe E10 (neu)“ („Höchstens 100 Zeichen.“) → **Speichern**; Kopf und Liste zeigen den
    neuen Namen.

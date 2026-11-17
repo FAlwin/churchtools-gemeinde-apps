@@ -36,7 +36,17 @@ export interface CtAblaufVorlage {
   id: number;
   name?: string | null;
   calendarId?: number | null;
-  items?: unknown[];
+  /**
+   * Die Punkte – gemessen E10-0 (17.11.2026): eine Vorlage hat denselben Aufbau wie der Ablauf eines Termins, damit
+   * der Schreib-Kern sie wie ein `CtAgenda` lesen kann (`ablaufLesen`). Die Liste `GET /agendatemplates` liefert sie mit.
+   */
+  items?: CtAgendaItem[];
+  /** Die Grenze „Beginn der Veranstaltung“ – wie beim Ablauf (`CtAgenda.eventStartPosition`). */
+  eventStartPosition?: number;
+  /** `modifiedDate` ändert sich bei jedem Schreiben (sekundengenau) – Stand-Vergleich vor dem Ersetzen. */
+  meta?: { modifiedDate?: string };
+  /** In ChurchTools gesperrt – über die API weder zu setzen noch aufzuheben, nur zu lesen. */
+  isLocked?: boolean;
 }
 
 /** Ein Kalender aus `GET /api/calendars`. */

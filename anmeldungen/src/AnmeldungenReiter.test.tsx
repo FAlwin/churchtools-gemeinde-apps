@@ -16,6 +16,7 @@ import * as T from '@ui/teilen/sharePdf';
 import * as LP from '@ui/teilen/listenPdf';
 import {
   FELDER,
+  PERSONEN,
   STICHTAG,
   absage,
   dazu,
@@ -23,6 +24,8 @@ import {
   mitglieder,
   stand,
 } from '@shared/anmeldung/liste.testdaten';
+import { mitgliederstandAus } from '@shared/anmeldung/liste';
+import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 
 vi.mock('./zahlung', () => ({
   zahlungSpeichern: vi.fn().mockResolvedValue(undefined),
@@ -1735,5 +1738,59 @@ describe('Von Hand: freie Antwort (F3b)', () => {
     const plan = hm.vonHandAnmelden.mock.calls[0][1];
     expect(plan.felder[x.ctFelder.foto]).toBe('117');
     expect(plan.felder[TEXT_SPALTE]).toBe('fragt die Eltern');
+  });
+});
+
+describe('Adresse im Fenster einer Anmeldung (F4b)', () => {
+  /** Jonas wohnt in Lohmar, Lena in Engelskirchen – aus dem Profil. */
+  const mitAdressen = () =>
+    ({
+      art: 'fertig',
+      stand: {
+        ...mitgliederstandAus(
+          mitglieder('AAAAAA', [true, false], 10),
+          [dazu(10, '2026-10-17')],
+          FELDER,
+          new Set([35]),
+          new Map([
+            [
+              10,
+              {
+                ...PERSONEN.get(10)!,
+                adresse: { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' },
+              },
+            ],
+            [
+              11,
+              {
+                ...PERSONEN.get(11)!,
+                adresse: { strasse: 'Am Bach 2', plz: '51766', ort: 'Engelskirchen' },
+              },
+            ],
+          ]),
+        ),
+        verlaufGekuerzt: false,
+      },
+    }) as const;
+  const mitBaustein = () => {
+    const x = e();
+    x.formular.anmeldung.splice(2, 0, {
+      ...EMPFOHLEN.find((y) => y.id === 'adresse')!.feld,
+    });
+    return x;
+  };
+
+  it('fragt das Formular nach der Adresse, steht je Person die aus ihrem Profil', () => {
+    zeigen(mitAdressen(), 10, false, true, false, false, mitBaustein());
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    const fenster = within(screen.getByRole('dialog'));
+    expect(fenster.getByText('Hauptstr. 4, 53797 Lohmar')).toBeTruthy();
+    expect(fenster.getByText('Am Bach 2, 51766 Engelskirchen')).toBeTruthy();
+  });
+
+  it('fragt es nicht, bleibt die Adresse aus dem Profil verborgen', () => {
+    zeigen(mitAdressen());
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(within(screen.getByRole('dialog')).queryByText('Hauptstr. 4, 53797 Lohmar')).toBeNull();
   });
 });

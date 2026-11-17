@@ -26,8 +26,8 @@ const liste = (x = e()) => {
   ];
   const personen = new Map([
     ...PERSONEN,
-    [20, { name: 'Jonas Beispiel', email: null, geburtstag: '2017-05-01' }],
-    [21, { name: 'Lena Beispiel', email: null, geburtstag: '2019-02-02' }],
+    [20, { name: 'Jonas Beispiel', email: null, geburtstag: '2017-05-01', adresse: null }],
+    [21, { name: 'Lena Beispiel', email: null, geburtstag: '2019-02-02', adresse: null }],
   ]);
   return anmeldungenAus(x, mitgliederstandAus(roh, [], FELDER, new Set([35]), personen), STICHTAG);
 };

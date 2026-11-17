@@ -208,6 +208,46 @@ export function weitereZustaendige(a: Pick<Aufgabe, 'verlauf'>, ids: readonly nu
   return [...namen, ...(rest ? [rest === 1 ? 'eine weitere Person' : `${rest} weitere`] : [])];
 }
 
+/**
+ * **Schalter „Alle“ bei den Zuständigen** (W5, Alwin 17.11.2026): wirkt genau so, als hätte man alle Personen der Liste von
+ * Hand angehakt – es gibt kein eigenes Datenfeld, gespeichert wird weiter `wer`. „Alle gewählt?“ ist nur, ob jeder aus der
+ * Liste dabei ist (eine leere Liste ist nie „alle“).
+ */
+export function alleGewaehlt(liste: readonly number[], wer: Iterable<number>): boolean {
+  const da = new Set(wer);
+  return liste.length > 0 && liste.every((p) => da.has(p));
+}
+
+/**
+ * Schalter „Alle“ umgelegt: an = alle aus `liste` dazu, aus = alle aus `liste` weg. Wer nicht in der Liste steht
+ * (Mitglieder, die man nicht kennt) bleibt unberührt – wie beim Hand-Anhaken. Reihenfolge: Bestehende zuerst.
+ */
+export function alleSetzen(liste: readonly number[], wer: Iterable<number>, an: boolean): number[] {
+  const aktuell = [...wer];
+  if (!an) {
+    const weg = new Set(liste);
+    return aktuell.filter((p) => !weg.has(p));
+  }
+  return [...new Set([...aktuell, ...liste])];
+}
+
+/**
+ * **Zuständige für Bildschirm-Stellen kürzen** (W5): die ersten `max` Namen, danach „+N“ – bei 17 Zuständigen wäre die
+ * volle Liste unlesbar. `voll` ist die ganze Liste (Tooltip, Screenreader). Das Protokoll (PDF, Lesen) kürzt nie.
+ */
+export function zustaendigKurz(
+  namen: readonly string[],
+  max = 3,
+): { text: string; voll: string; gekuerzt: boolean } {
+  const voll = namen.join(', ');
+  if (namen.length <= max) return { text: voll, voll, gekuerzt: false };
+  return {
+    text: `${namen.slice(0, max).join(', ')} +${namen.length - max}`,
+    voll,
+    gekuerzt: true,
+  };
+}
+
 /** Was das Fenster „To-Do“ ändert – nur, was der Nutzer angefasst hat (`undefined` = bleibt, wie es frisch gelesen ist). */
 export interface ToDoAenderung {
   text?: string;

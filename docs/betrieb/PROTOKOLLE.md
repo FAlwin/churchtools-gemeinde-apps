@@ -101,7 +101,10 @@ To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen 
 
 **Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und
-„Löschen“ (nur vermerkt, mit Rückfrage). Je Abschnitt „Notizen“ und „Aus welcher Sitzung“ ein Schalter **„Auf Karte
+„Löschen“ (nur vermerkt, mit Rückfrage). Bei den Zuständigen steht oben **„Alle (N)“**: das wirkt, als hätte man alle
+Mitglieder der Liste von Hand angehakt (ein Haken weniger schaltet „Alle“ wieder aus; gleich im Editor am Schildchen
+„Wer?“). Karten, feste Punkte und das Schildchen zeigen bei vielen Zuständigen **höchstens drei Namen und „+N“** (die
+volle Liste im Tooltip); im Lesen und im PDF steht immer die ganze Liste. Je Abschnitt „Notizen“ und „Aus welcher Sitzung“ ein Schalter **„Auf Karte
 anzeigen“** – für alle gespeichert. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
 Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
 zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf** (dort führt das Protokoll), werden Text,

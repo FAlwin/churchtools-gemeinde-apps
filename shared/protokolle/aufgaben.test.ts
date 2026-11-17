@@ -26,6 +26,9 @@ import {
   zustaendigeNamen,
   nameFuer,
   weitereZustaendige,
+  alleGewaehlt,
+  alleSetzen,
+  zustaendigKurz,
 } from './aufgaben';
 import { ableiten, type Block } from './dokument';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -544,5 +547,69 @@ describe('Verlauf „Zuständig“ (S7-3: überall in den Verlauf)', () => {
       vorher: [19, 23],
       nachher: [19],
     });
+  });
+});
+
+describe('Schalter „Alle“ bei den Zuständigen (W5)', () => {
+  const LISTE = [1, 2, 3];
+
+  it('alleGewaehlt: nur, wenn jeder der Liste dabei ist; leere Liste nie', () => {
+    expect(alleGewaehlt(LISTE, [1, 2, 3])).toBe(true);
+    expect(alleGewaehlt(LISTE, new Set([3, 2, 1, 99]))).toBe(true);
+    expect(alleGewaehlt(LISTE, [1, 2])).toBe(false);
+    expect(alleGewaehlt(LISTE, [])).toBe(false);
+    expect(alleGewaehlt([], [])).toBe(false);
+  });
+
+  it('alleSetzen an: alle der Liste dazu, Bestehende bleiben, keine Doppelten; wer nicht in der Liste ist, bleibt', () => {
+    expect(alleSetzen(LISTE, [], true)).toEqual([1, 2, 3]);
+    expect(alleSetzen(LISTE, [2, 99], true)).toEqual([2, 99, 1, 3]);
+    expect(alleSetzen(LISTE, [1, 2, 3], true)).toEqual([1, 2, 3]);
+  });
+
+  it('alleSetzen aus: alle der Liste weg, Personen außerhalb der Liste bleiben', () => {
+    expect(alleSetzen(LISTE, [1, 2, 3], false)).toEqual([]);
+    expect(alleSetzen(LISTE, [2, 99], false)).toEqual([99]);
+    expect(alleSetzen(LISTE, [], false)).toEqual([]);
+  });
+
+  it('wirkt wie Hand-Anhaken: Alle an → alleGewaehlt; einen weg → nicht mehr', () => {
+    const an = alleSetzen(LISTE, [], true);
+    expect(alleGewaehlt(LISTE, an)).toBe(true);
+    expect(
+      alleGewaehlt(
+        LISTE,
+        an.filter((p) => p !== 2),
+      ),
+    ).toBe(false);
+    expect(alleGewaehlt(LISTE, alleSetzen(LISTE, an, false))).toBe(false);
+  });
+});
+
+describe('zustaendigKurz (W5)', () => {
+  const namen = (n: number) => Array.from({ length: n }, (_, i) => `P${i + 1}`);
+
+  it('bis 3 Namen unverändert, nicht gekürzt', () => {
+    for (const n of [0, 1, 3]) {
+      const k = zustaendigKurz(namen(n));
+      expect(k).toEqual({ text: namen(n).join(', '), voll: namen(n).join(', '), gekuerzt: false });
+    }
+  });
+
+  it('ab 4: die ersten drei und „+N“; voll bleibt die ganze Liste', () => {
+    expect(zustaendigKurz(namen(4))).toEqual({
+      text: 'P1, P2, P3 +1',
+      voll: 'P1, P2, P3, P4',
+      gekuerzt: true,
+    });
+    const k = zustaendigKurz(namen(17));
+    expect(k.text).toBe('P1, P2, P3 +14');
+    expect(k.voll.split(', ')).toHaveLength(17);
+  });
+
+  it('externer Name zählt wie jeder andere; eigene Grenze möglich, Infinity kürzt nie', () => {
+    expect(zustaendigKurz(['A', 'B', 'C', 'Müller (extern)']).text).toBe('A, B, C +1');
+    expect(zustaendigKurz(['A', 'B', 'C'], 2).text).toBe('A, B +1');
+    expect(zustaendigKurz(namen(17), Infinity).gekuerzt).toBe(false);
   });
 });

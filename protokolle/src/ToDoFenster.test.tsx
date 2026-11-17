@@ -223,6 +223,39 @@ describe('ToDoFenster', () => {
     });
   });
 
+  describe('Schalter „Alle“ (W5)', () => {
+    const haken = (name: RegExp | string) =>
+      screen.getByRole<HTMLInputElement>('checkbox', { name });
+
+    it('Alle an → alle Mitglieder gewählt und gespeichert; einen abwählen → Schalter aus; Alle aus → leer', async () => {
+      const { onFertig } = zeige({ eintrag: { aufgabe: { ...BEAMER, wer: [] }, gruppe: LT } });
+      const alle = haken('Alle (2)');
+      expect(alle.checked).toBe(false);
+      fireEvent.click(alle);
+      expect(haken(/Alwin/).checked && haken(/Johann/).checked).toBe(true);
+      expect(alle.checked).toBe(true);
+      fireEvent.click(haken(/Johann/));
+      expect(alle.checked).toBe(false);
+      fireEvent.click(haken(/Johann/));
+      expect(alle.checked).toBe(true);
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalledWith(null));
+      expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ wer: [1, 23] });
+      cleanup();
+      zeige();
+      fireEvent.click(haken('Alle (2)'));
+      expect(haken(/Alwin/).checked || haken(/Johann/).checked).toBe(false);
+    });
+
+    it('ein externer Name bleibt unberührt', () => {
+      zeige({ eintrag: { aufgabe: { ...BEAMER, wer: [], extern: 'Hausmeister' }, gruppe: LT } });
+      fireEvent.click(haken('Alle (2)'));
+      expect(screen.getByLabelText<HTMLInputElement>('Außerhalb der Gruppe (nur Name)').value).toBe(
+        'Hausmeister',
+      );
+    });
+  });
+
   it('Verlauf: Zuständig-Wechsel mit Namen; Unbekanntes aus neueren Fassungen als „geändert“ (S7-3)', () => {
     const mitWechsel = {
       ...BEAMER,

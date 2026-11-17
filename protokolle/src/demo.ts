@@ -378,6 +378,8 @@ interface Speicher {
   anwesenheit: Map<number, Map<number, string>>;
   /** Abgeschlossene Gruppentreffen (S6-1, bei der Freigabe). */
   abgeschlossen: Set<number>;
+  /** Gelöschte Gruppentreffen (W6, „Protokoll löschen“) – ChurchTools antwortet danach 404. */
+  geloescht: Set<number>;
   /** Beiträge in Gruppen (S6-2, „In der Gruppe Bescheid geben“). */
   beitraege: { id: number; groupId: number; title: string; content: string }[];
 }
@@ -445,6 +447,7 @@ function speicherAnlegen(fall: string): Speicher {
     ...fruehereTreffen(),
     anwesenheit: new Map(),
     abgeschlossen: new Set([42]),
+    geloescht: new Set(),
     beitraege: [],
   };
 }
@@ -610,6 +613,11 @@ function antwort(
   }
   const termin = /^\/api\/calendars\/4\/appointments\/(\d+)$/.exec(pfad);
   const neuerTermin = termin && s.termine.find((t) => t.id === Number(termin[1]));
+  // Termin löschen (W6): in der Demo nur die hier festgelegten – die festen Beispieltermine kennt der Einzelabruf nicht.
+  if (neuerTermin && methode === 'DELETE') {
+    s.termine.splice(s.termine.indexOf(neuerTermin), 1);
+    return { status: 204 };
+  }
   if (neuerTermin) return { status: 200, data: { appointment: neuerTermin } };
   const anfragen = /^\/api\/calendars\/\d+\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
   if (anfragen)
@@ -622,6 +630,15 @@ function antwort(
     };
   // Anwesenheit (S5-3) – Formen wie gemessen (`messung-s5-3-2026-11-05.md`).
   const einTreffen = /^\/api\/groups\/11\/meetings\/(\d+)(\/members)?$/.exec(pfad);
+  // Gruppentreffen löschen (W6): weg ist weg – Einzelabruf und Liste kennen es danach nicht mehr.
+  if (einTreffen && !einTreffen[2] && methode === 'DELETE') {
+    const id = Number(einTreffen[1]);
+    s.geloescht.add(id);
+    s.treffen = s.treffen.filter((t) => t.id !== id);
+    return { status: 204 };
+  }
+  if (einTreffen && !einTreffen[2] && s.geloescht.has(Number(einTreffen[1])))
+    return { status: 404, data: { message: 'weg' } };
   if (einTreffen && methode === 'GET') {
     const id = Number(einTreffen[1]);
     const stand = s.anwesenheit.get(id);
@@ -680,10 +697,9 @@ function antwort(
     return treffen[1] === '11'
       ? {
           status: 200,
-          data: [
-            { id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false },
-            ...s.treffen,
-          ].map((t) => ({ ...t, isCompleted: s.abgeschlossen.has(t.id) })),
+          data: [{ id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false }, ...s.treffen]
+            .filter((t) => !s.geloescht.has(t.id))
+            .map((t) => ({ ...t, isCompleted: s.abgeschlossen.has(t.id) })),
         }
       : {
           status: 403,

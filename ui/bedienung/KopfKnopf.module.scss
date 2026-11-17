@@ -100,6 +100,20 @@
   }
 }
 
+// Etwas geht verloren („Löschen“, W6) – rot wie `FensterKnopf art="gefahr"`, aber nur als Rand und Schrift: ein roter
+// Block im Seitenkopf neben „Bearbeiten“ wäre lauter als die Hauptaktion.
+.gefahr {
+  border-color: var(--red);
+  color: var(--red);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+      opacity: 0.85;
+    }
+  }
+}
+
 // Sein Fenster ist offen (Aussehen, Tempo) – hellblau ohne blauen Rand; den Rand trägt „hier gilt etwas“ (B1).
 .offen {
   background: var(--blue-soft);

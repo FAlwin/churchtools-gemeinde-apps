@@ -76,6 +76,8 @@ import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
 import { ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
 import { KiFuellen, KiKnopf } from './KiFuellen';
+import { ProtokollLoeschen } from './ProtokollLoeschen';
+import { loeschbar } from '@shared/protokolle/loeschen';
 import { festhaltenFuerFreigabe } from '@shared/protokolle/festePunkte';
 import { freigabeHinweise, type Hinweis } from '@shared/protokolle/freigabe';
 import { freigabeBeitrag, type Beitrag } from '@shared/protokolle/beitrag';
@@ -131,6 +133,7 @@ export function ProtokollSchreiben({
   onVorschlag,
   onBearbeiten,
   onFreigegeben,
+  onGeloescht,
   onZurueck,
   onZuSitzung,
 }: {
@@ -163,6 +166,8 @@ export function ProtokollSchreiben({
   onBearbeiten?: () => void;
   /** Freigegeben (S6-1) – die Liste dahinter lädt neu und zeigt das Protokoll zum Lesen. */
   onFreigegeben?: () => void;
+  /** Gelöscht (W6, nur die Leitung) – die Liste dahinter lädt neu; fehlt es, gibt es den Knopf „Löschen“ nicht. */
+  onGeloescht?: () => void;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
   /**
@@ -183,6 +188,8 @@ export function ProtokollSchreiben({
   const [z, setZ] = useState<SteuerZustand | null>(null);
   const [teilenOffen, setTeilenOffen] = useState(false);
   const [kiOffen, setKiOffen] = useState(false);
+  // „Löschen“ (W6): die Rückfrage.
+  const [loeschenOffen, setLoeschenOffen] = useState(false);
   const { toast, showToast } = useToast();
   const [dok, setDok] = useState<Block[]>([]);
   const [frage, setFrage] = useState<'uebernehmen' | 'verlassen' | null>(null);
@@ -696,6 +703,8 @@ export function ProtokollSchreiben({
   const teilenDokument =
     laden.art === 'bereit' ? dok : laden.art === 'lesen' ? laden.dokument : null;
   const darfTeilen = !!teilen && !!teilenDokument;
+  // Löschen (W6): wer das Protokoll hier schreibt, ist die Leitung; ob gerade jemand anderes schreibt, prüft das Löschen selbst.
+  const darfLoeschen = !!onGeloescht && loeschbar(sitzung.kopf?.status);
   // Mit KI füllen (S8-2): wie Freigeben nur im Editor eines Entwurfs, wo man schreiben darf – und nicht in der Lese-Ansicht
   // des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
   const darfKi = darfFreigeben && !lesen;
@@ -739,7 +748,7 @@ export function ProtokollSchreiben({
           <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || darfFreigeben || darfTeilen) && (
+        {(onBearbeiten || darfFreigeben || darfTeilen || darfLoeschen) && (
           <div className={ansicht.aktionen}>
             {darfFreigeben && (
               <KopfKnopf
@@ -760,11 +769,42 @@ export function ProtokollSchreiben({
               />
             )}
             {darfTeilen && <TeilenKnopf onClick={() => setTeilenOffen(true)} />}
+            {darfLoeschen && (
+              <KopfKnopf
+                gefahr
+                label="Löschen"
+                title="Protokoll löschen"
+                symbol={<Icon name="trash" size={16} />}
+                onClick={() => setLoeschenOffen(true)}
+              />
+            )}
           </div>
         )}
       </header>
       <ZurueckVermerk kopf={laden.art === 'bereit' ? laden.kopf : null} zeitzone={zeitzone} />
       {toast && <Toast message={toast} />}
+      {loeschenOffen && onGeloescht && (
+        <ProtokollLoeschen
+          sitzung={sitzung}
+          gruppe={{ id: gruppeId, protokolle: kategorie, mitarbeit }}
+          modul={modul}
+          ich={ichV}
+          zeitzone={zeitzone}
+          aufgaben={aufgaben}
+          schreiber={schreiber}
+          // Solange gelöscht wird, schreibt dieses Fenster nichts mehr – sonst legte ein Speichern die Teile neu an.
+          vorher={() => steuerung.current?.anhalten() ?? Promise.resolve()}
+          onAbbrechen={() => steuerung.current?.fortsetzen()}
+          onFertig={() => {
+            // Weg: nichts mehr speichern und keine Sperre freigeben (es gibt keinen Kopf mehr).
+            steuerung.current?.stoppen();
+            steuerung.current = null;
+            setLoeschenOffen(false);
+            onGeloescht();
+          }}
+          onClose={() => setLoeschenOffen(false)}
+        />
+      )}
       {kiOffen && darfKi && (
         <KiFuellen
           gruppe={gruppe}

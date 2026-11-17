@@ -53,6 +53,7 @@ export class SchreibSteuerung {
   private uhr: ReturnType<typeof setTimeout> | null = null;
   private lauf: Promise<void> | null = null;
   private nochmal = false;
+  private angehalten = false;
   private hoerer = new Set<(z: SteuerZustand) => void>();
 
   constructor(
@@ -98,6 +99,7 @@ export class SchreibSteuerung {
   }
 
   private planen(ms: number): void {
+    if (this.angehalten) return;
     if (this.uhr) clearTimeout(this.uhr);
     this.uhr = setTimeout(() => {
       this.uhr = null;
@@ -106,6 +108,7 @@ export class SchreibSteuerung {
   }
 
   private starten(): Promise<void> {
+    if (this.angehalten) return this.lauf ?? Promise.resolve();
     if (this.lauf) {
       this.nochmal = true;
       return this.lauf;
@@ -170,6 +173,23 @@ export class SchreibSteuerung {
     if (this.lauf) await this.lauf;
     if (this.z.offen) await this.starten();
     return !this.z.offen;
+  }
+
+  /**
+   * **Anhalten, solange etwas anderes am Protokoll schreibt** (Löschen, W6): kein neues Speichern mehr, ein laufendes wird
+   * abgewartet – danach schreibt dieses Fenster garantiert nichts mehr. Eingaben merkt es sich weiter (`offen`).
+   */
+  async anhalten(): Promise<void> {
+    this.angehalten = true;
+    this.stoppen();
+    if (this.lauf) await this.lauf;
+  }
+
+  /** Weiter nach `anhalten` – war inzwischen etwas offen, wird es wie nach einer Eingabe gespeichert. */
+  fortsetzen(): void {
+    this.angehalten = false;
+    if (this.z.offen && (this.z.lage === 'frei' || this.z.lage === 'schreibe'))
+      this.planen(this.z.lage === 'frei' ? 0 : PAUSE_MS);
   }
 
   /** Keine weiteren Versuche (Editor wird geschlossen). */

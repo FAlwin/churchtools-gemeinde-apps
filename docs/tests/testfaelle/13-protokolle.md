@@ -582,3 +582,55 @@ Bilder und Namen, danach „+N“; der Tooltip nennt alle. Im PDF stehen alle Na
 - **Historie:** 17.11.2026 (Anlass: ein To-Do für alle 17 Mitglieder brauchte 17 Klicks und machte die Karte unlesbar)
 
 </details>
+
+### TF-PROT-18 · Protokoll löschen: mit To-Dos, Termin und Gruppentreffen – und wenn es mittendrin hakt
+
+**Das brauchst du:** In der Test-Instanz eine **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung,
+eingerichtete Protokolle und ein Kalender. **Nur Test-Daten, nichts aus der echten Gemeinde.** Dazu zwei Sitzungen, die du
+löschen darfst: **A** („TEST Löschen A“) mit **Termin** und **Gruppentreffen**, einem begonnenen **Protokoll** (Entwurf)
+und **zwei To-Dos** darin („TEST Löschen eins“, „TEST Löschen zwei“); **B** („TEST Löschen B“) mit einem **freigegebenen**
+Protokoll und einem To-Do. **Achtung: „Termin löschen“ verschickt eine echte Mail „Termin gelöscht“ an alle
+Eingeladenen** – in der Test-Instanz nur Termine **ohne fremde Eingeladene** (nur du selbst oder ein eigenes
+Test-Konto) benutzen.
+
+**Das muss passieren:** „Löschen“ fragt nach, nennt Titel · Datum · Status und sagt, dass es sich nicht rückgängig machen
+lässt. Was man anhakt, wird gelöscht – nicht mehr und nicht weniger. Danach steht die Liste der Sitzungen mit „Protokoll
+gelöscht“ da; bleiben Termin und Gruppentreffen bestehen, steht die Sitzung wieder „ohne Protokoll“ da.
+
+1. Sitzung **A** öffnen (Entwurf, im Editor). Im Kopf steht rot **Löschen**, neben **Bearbeiten**. Antippen: Das Fenster
+   „Protokoll löschen?“ nennt „TEST Löschen A · Datum · Entwurf“ und „Das lässt sich nicht rückgängig machen.“
+2. Darin steht **To-Dos aus diesem Protokoll (2)** mit **Mitlöschen** (gewählt, „im Verlauf vermerkt“) und **Behalten**,
+   dazu **In ChurchTools außerdem löschen** mit den Häkchen **Termin „…“** (mit „N Eingeladene bekommen die Mail …“ bzw. „Niemand
+   sonst ist eingeladen – es geht keine Mail raus“) und **Gruppentreffen** – **alle Häkchen sind aus**.
+3. **Behalten** wählen, **keine** Häkchen setzen, **Löschen**. Die Liste erscheint mit „Protokoll gelöscht“. Sitzung A steht
+   unter **Kommend** wieder **ohne Protokoll** (Termin und Treffen sind noch da). Im Reiter **To-Dos** stehen „TEST Löschen
+   eins“ und „zwei“ weiter, mit „Aus einer älteren Sitzung“.
+4. Sitzung A öffnen, **Protokoll beginnen** (neu, mit einem To-Do „TEST Löschen drei“), im Kopf **Löschen**: jetzt **Mitlöschen**
+   lassen, **Gruppentreffen** anhaken, **Löschen**. In ChurchTools: das Gruppentreffen ist weg, der Termin steht noch; „TEST
+   Löschen drei“ steht nicht mehr in der To-Do-Liste (in ChurchTools-Verlauf als gelöscht vermerkt).
+5. **Vorbereitung für ein späteres Protokoll:** Eine Sitzung **C** (später als B, „TEST Löschen C“) mit einem Protokoll beginnen,
+   darin den festen Punkt **Protokoll der letzten Sitzung** einfügen (er zeigt B) und C **freigeben**.
+6. Sitzung **B** öffnen (freigegeben, nur Ansicht): Im Kopf steht **Löschen** neben **Teilen / PDF** und **Freigabe
+   zurücknehmen**. Antippen: Status „freigegeben“; **Termin** anhaken (nur mit Test-Termin ohne fremde Eingeladene!),
+   **Löschen**. Der Termin ist in ChurchTools gelöscht, das Protokoll ist aus der Liste „Protokolle“ weg.
+   Dann Sitzung **C** öffnen: Beim festen Punkt steht „Das damalige Protokoll gibt es nicht mehr“, die Seite bleibt
+   bedienbar; das PDF von C hat denselben Satz.
+7. **Schreibt jemand?** Mit einem zweiten Test-Konto (oder einem zweiten Fenster) im Protokoll einer Sitzung tippen. Im
+   ersten Fenster **Löschen** → Meldung „… schreibt gerade am Protokoll – es wurde nicht gelöscht“; nichts ist weg.
+8. **Mittendrin hakt es:** Bei einer Sitzung mit **Termin** den Termin vorher in ChurchTools mit einer **Anmeldung** versehen
+   (der Termin lässt sich dann hier nicht löschen): **Termin** ist gesperrt mit dem Grund. Alternativ die Verbindung kurz
+   kappen (Flugmodus) und **Löschen** drücken: Das Fenster bleibt offen und sagt, was schon erledigt ist und was nicht;
+   Verbindung zurück, **Nochmal versuchen**: Es klappt, nichts ist doppelt (ein To-Do-Verlauf zeigt „gelöscht“ nur einmal, es
+   kam nur eine Mail).
+9. **Terminserie:** Bei einer Serie „TEST Serie“ (wöchentlich) ein Protokoll beginnen, **Löschen**: Beim Termin steht „Nur diese
+   Sitzung fällt aus der Serie … Ohne Mail“. Anhaken, **Löschen**: Nur dieser Tag fehlt in der Serie, die anderen bleiben.
+10. Alles Übrige aufräumen (Test-Termine, -Treffen, -To-Dos, -Protokolle).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/loeschen.ts`, `protokolle/src/loeschen.ts`, `protokolle/src/ProtokollLoeschen.tsx`, `protokolle/src/bearbeiten.ts`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/SitzungAnsicht.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/schreibSteuerung.ts`, `protokolle/src/demo.ts`, `ui/bedienung/KopfKnopf.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/loeschen.test.ts` (welche To-Dos, Zahl der Eingeladenen, Texte), `protokolle/src/loeschen.test.ts` (der Ablauf gegen den ChurchTools-Nachbau: nur Protokoll, To-Dos mitlöschen/behalten, Termin, Treffen, Serie „nur diese“, fremde Sperre, Fehler mittendrin und zweiter Versuch, Nachlesen, Kopf zuletzt), `protokolle/src/loeschenListe.test.ts` (die Sitzung steht danach „ohne Protokoll“ da), `protokolle/src/ProtokollLoeschen.test.tsx` (Rückfrage, Häkchen anfangs aus, Knopf nur für die Leitung und nur mit Protokoll), `protokolle/src/SitzungenLoeschen.test.tsx`, `protokolle/src/ProtokollSchreiben.test.tsx` und `schreibSteuerung.test.ts` (Editor hält sein Speichern an), `protokolle/src/FesterPunkt.test.tsx` (feste Punkte nach dem Löschen), `protokolle/src/demoLoeschen.test.ts` (`?demo`); gemessen in der Test-Instanz 18.11.2026: ein gelöschtes Gruppentreffen liefert beim Nachlesen 404, ein zweites Löschen ebenfalls 404 (Löschen selbst 204); **echtes ChurchTools sonst nur von Hand:** die echte Mail „Termin gelöscht“, die Anmeldung am Termin
+- **Historie:** 17.11.2026 (Anlass: ein falsch begonnenes Protokoll ließ sich nur über „Absagen“ als Entwurf stehen lassen oder gar nicht entfernen)
+
+</details>

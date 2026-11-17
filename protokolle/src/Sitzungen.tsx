@@ -27,6 +27,10 @@ import { VorschlagAblehnen, VorschlagFenster } from './VorschlagFenster';
 import { vorschlagEinreichen, vorschlagSchreiben } from './vorschlaegeSchreiben';
 import { freigabeZuruecknehmen } from './schreiben';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
+import { Toast } from '@ui/fenster/Toast';
+import { useToast } from '@ui/fenster/useToast';
+import { loeschbar } from '@shared/protokolle/loeschen';
+import { ProtokollLoeschen } from './ProtokollLoeschen';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
@@ -169,6 +173,9 @@ export function Sitzungen({
     laeuft: boolean;
     fehler: string | null;
   } | null>(null);
+  // „Löschen“ (W6): die Rückfrage – und danach ein Hinweis in der Liste.
+  const [loeschen, setLoeschen] = useState(false);
+  const { toast, showToast } = useToast();
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -405,6 +412,17 @@ export function Sitzungen({
     );
   };
 
+  // Gelöscht (W6): zurück zur Liste der Gruppe – gibt es Termin oder Treffen noch, steht die Sitzung dort wieder „ohne
+  // Protokoll“ (das ergibt das Laden von selbst).
+  const geloescht = () => {
+    setLoeschen(false);
+    setOffen(null);
+    setZuPunkt(null);
+    setHerkunft(null);
+    showToast('Protokoll gelöscht');
+    laden();
+  };
+
   if (!gruppe)
     return (
       <p className={styles.ruhig}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
@@ -443,6 +461,7 @@ export function Sitzungen({
             laden();
           }}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
+          onGeloescht={geloescht}
           onZurueck={(geaendert) => {
             setOffen(null);
             if (geaendert) laden();
@@ -510,6 +529,11 @@ export function Sitzungen({
               ? () => setZuruecknehmen({ laeuft: false, fehler: null })
               : undefined
           }
+          onLoeschen={
+            darfSchreiben && gruppe.protokolle !== null && loeschbar(offen.kopf?.status)
+              ? () => setLoeschen(true)
+              : undefined
+          }
           onZurueck={() => {
             setZuPunkt(null);
             setHerkunft(null);
@@ -530,6 +554,18 @@ export function Sitzungen({
         {beginnenFenster()}
         {festlegenFenster(false)}
         {bearbeitenFenster(false)}
+        {loeschen && offen.kopf && gruppe.protokolle !== null && (
+          <ProtokollLoeschen
+            sitzung={offen}
+            gruppe={{ id: gruppe.id, protokolle: gruppe.protokolle, mitarbeit: gruppe.mitarbeit }}
+            modul={modul}
+            ich={ichV}
+            zeitzone={gemeindeZeitzone()}
+            aufgaben={zustand.aufgaben}
+            onFertig={geloescht}
+            onClose={() => setLoeschen(false)}
+          />
+        )}
         {zuruecknehmen && offen.kopf && gruppe.protokolle !== null && (
           <ConfirmDialog
             title="Freigabe zurücknehmen?"
@@ -558,6 +594,7 @@ export function Sitzungen({
 
   return (
     <div className={styles.seite}>
+      {toast && <Toast message={toast} />}
       <div className={styles.kopf}>
         <h2>{gruppe.name}</h2>
         {gruppen.length > 1 && (

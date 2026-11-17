@@ -125,6 +125,8 @@ export interface Nachbau {
   kategorienLesenFehler: number | null;
   /** `PUT` am Treffen sagt 200, ändert aber nichts (S6-1: Abschließen muss nachgelesen werden). */
   treffenSchlucken: boolean;
+  /** `DELETE` am Treffen sagt 204, löscht aber nichts (W6: Löschen muss nachgelesen werden). */
+  treffenLoeschenSchlucken: boolean;
   /** Die Mitglieder, die jedes Gruppentreffen kennt (S5-3). */
   teilnehmer: { person: number; vor: string; nach: string }[];
   /** Anwesenheit je Treffen: Person → `present` / `absent` / `unsure`. */
@@ -193,6 +195,7 @@ export function nachbauStarten(): Nachbau {
     teilnahme: new Map(),
     teilnahmeSchlucken: false,
     treffenSchlucken: false,
+    treffenLoeschenSchlucken: false,
     terminAnfrage: null,
     definitionen: DEFINITIONEN,
     beitragsGruppen: [],
@@ -560,7 +563,7 @@ export function nachbauStarten(): Nachbau {
       if (!t) return json(404, { message: 'weg' });
       if (m === 'GET') return json(200, { data: t });
       if (m === 'DELETE') {
-        liste.splice(liste.indexOf(t), 1);
+        if (!s.treffenLoeschenSchlucken) liste.splice(liste.indexOf(t), 1);
         return json(204, null);
       }
       // Wie gemessen (16.10., 29.10. + S6-0 11.11.2026): ohne `isCanceled`/`isCompleted`/`startDate` 400; was fehlt

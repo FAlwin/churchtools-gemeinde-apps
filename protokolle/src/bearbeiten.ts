@@ -429,24 +429,21 @@ export async function sitzungAendern(q: {
 }
 
 /**
- * **Sitzung absagen.** Ein Einzeltermin – und bei einer Serie „ganze Serie“ – wird gelöscht (Mail „Termin gelöscht“ bzw.
- * „Terminserie gelöscht“ an jeden Eingeladenen). Bei einer Serie sonst still: „nur diese“ als Ausnahme, „ab hier“ endet
- * die Serie am Vortag. Treffen werden gelöscht (bei „ganze Serie“ nur kommende – vergangene tragen die Anwesenheit),
- * und die Protokolle: ein geplantes verschwindet, ein begonnenes bleibt als Entwurf ohne Termin (`kopfNachAbsage`).
+ * **Den Termin absagen** – die eine Stelle dafür (Sitzung absagen und Protokoll löschen, W6). Ein Einzeltermin – und bei
+ * einer Serie „ganze Serie“ – wird gelöscht (Mail „Termin gelöscht“ bzw. „Terminserie gelöscht“ an jeden Eingeladenen);
+ * sonst bei einer Serie still: „nur diese“ als Ausnahme, „ab hier“ endet die Serie am Vortag. Nachgelesen: weg ist weg
+ * (404) – steht er noch, war nichts. Ein schon gelöschter Termin (404, etwa beim zweiten Versuch) ist abgesagt. Eine
+ * Anmeldung am Termin, eine Serie ohne Wahl (`art`) und eine inzwischen geänderte Serie werden gemeldet, nichts gelöscht.
  */
-export async function sitzungAbsagen(q: {
-  modul: number;
-  kategorie: number;
-  gruppe: number;
-  sitzung: Sitzung;
+export async function terminAbsagen(q: {
+  termin: TerminRef | null;
+  /** Beginn der Sitzung – bei einer Serie der Tag, der herausfällt. */
+  beginn: string;
   zeitzone: string;
   /** Nur bei einer Serie – Pflicht, sonst wird nichts gelöscht. */
   art?: SerienAbsage;
-  sitzungen?: readonly Sitzung[];
-  jetzt?: Date;
-}): Promise<Bearbeitet> {
-  const s = q.sitzung;
-  const hinweise: string[] = [];
+}): Promise<void> {
+  const s = { termin: q.termin, beginn: q.beginn };
   const tag = serienTag(s.beginn, q.zeitzone);
 
   // Ein schon gelöschter Termin (404 – etwa beim zweiten Versuch, nachdem nur der Kopf scheiterte) ist abgesagt.
@@ -499,6 +496,46 @@ export async function sitzungAbsagen(q: {
         throw new NichtUebernommen('die Absage');
     }
   }
+}
+
+/**
+ * **Ein Gruppentreffen löschen** – ohne Mail. „Schon weg“ (404) ist erledigt. Die eine Stelle dafür: Sitzung absagen und
+ * Protokoll löschen (W6).
+ */
+export async function treffenLoeschen(gruppe: number, id: number): Promise<void> {
+  try {
+    await ctAnfrage(`/groups/${gruppe}/meetings/${id}`, { method: 'DELETE' });
+  } catch (e) {
+    if (!weg404(e)) throw e;
+  }
+}
+
+/**
+ * **Sitzung absagen.** Ein Einzeltermin – und bei einer Serie „ganze Serie“ – wird gelöscht (Mail „Termin gelöscht“ bzw.
+ * „Terminserie gelöscht“ an jeden Eingeladenen). Bei einer Serie sonst still: „nur diese“ als Ausnahme, „ab hier“ endet
+ * die Serie am Vortag. Treffen werden gelöscht (bei „ganze Serie“ nur kommende – vergangene tragen die Anwesenheit),
+ * und die Protokolle: ein geplantes verschwindet, ein begonnenes bleibt als Entwurf ohne Termin (`kopfNachAbsage`).
+ */
+export async function sitzungAbsagen(q: {
+  modul: number;
+  kategorie: number;
+  gruppe: number;
+  sitzung: Sitzung;
+  zeitzone: string;
+  /** Nur bei einer Serie – Pflicht, sonst wird nichts gelöscht. */
+  art?: SerienAbsage;
+  sitzungen?: readonly Sitzung[];
+  jetzt?: Date;
+}): Promise<Bearbeitet> {
+  const s = q.sitzung;
+  const hinweise: string[] = [];
+
+  await terminAbsagen({
+    termin: s.termin,
+    beginn: s.beginn,
+    zeitzone: q.zeitzone,
+    ...(q.art ? { art: q.art } : {}),
+  });
 
   // Was mitgeht: bei „ab hier“ alle späteren Termine der Serie, bei „ganze Serie“ alle (Treffen nur kommende).
   const mehrere = s.termin !== null && (q.art === 'ab' || q.art === 'serie');
@@ -525,12 +562,10 @@ export async function sitzungAbsagen(q: {
   let erster: unknown = null;
   for (const id of treffen.keys())
     try {
-      await ctAnfrage(`/groups/${q.gruppe}/meetings/${id}`, { method: 'DELETE' });
+      await treffenLoeschen(q.gruppe, id);
     } catch (e) {
-      if (!weg404(e)) {
-        fehler++;
-        erster ??= e;
-      }
+      fehler++;
+      erster ??= e;
     }
   if (fehler) hinweise.push(treffenHinweis(fehler, erster, 'loeschen'));
 

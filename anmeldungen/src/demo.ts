@@ -51,6 +51,8 @@ interface G {
   note: string;
   settings: Record<string, unknown>;
   felder: { id: number; name: string; [k: string]: unknown }[];
+  /** Personenfelder im Anmeldeformular (F4: `street`, `zip`, `city`). */
+  personenfelder?: string[];
   /** Titelbild (A5). */
   bild?: string;
 }
@@ -406,6 +408,15 @@ export function demoStarten(fall: string): void {
     if (fall === 'fehler' && pfad.endsWith('/children')) return antwort({}, 502);
     if (pfad === '/csrftoken') return antwort({ data: 'demo' });
     if (pfad === '/whoami') return antwort({ data: { id: 1, firstName: 'Alwin' } });
+    // F4: die eingebauten Personenfelder für die Adresse – Nummern wie auf der Test-Instanz (gemessen 17.11.2026).
+    if (pfad === '/fields')
+      return antwort({
+        data: [
+          { id: 4, key: 'street' },
+          { id: 6, key: 'zip' },
+          { id: 7, key: 'city' },
+        ],
+      });
     if (pfad === '/info') return antwort({ siteName: 'Evangeliumschristen- Gemeinde e.V.' });
     if (pfad === '/persons/1/groups') {
       const team = (title: string, id: number, rolle: number) => ({
@@ -560,6 +571,15 @@ export function demoStarten(fall: string): void {
       Object.assign(feld, body, 'options' in body ? { options: mitIds(body.options) } : {});
       return antwort({ data: feld });
     }
+    r = /^\/groups\/(\d+)\/memberfields\/person\/(\d+)$/.exec(pfad);
+    if (r) {
+      const x = gruppen.get(Number(r[1]))!;
+      const key = { 4: 'street', 6: 'zip', 7: 'city' }[Number(r[2])];
+      if (!key) return antwort({}, 404);
+      const ohne = (x.personenfelder ?? []).filter((k) => k !== key);
+      x.personenfelder = m === 'DELETE' ? ohne : [...ohne, key];
+      return antwort(m === 'DELETE' ? {} : { data: {} }, m === 'DELETE' ? 204 : 200);
+    }
     r = /^\/files\/groupimage\/(\d+)$/.exec(pfad);
     if (r) {
       const x = gruppen.get(Number(r[1]))!;
@@ -585,7 +605,15 @@ export function demoStarten(fall: string): void {
         });
         return antwort({ data: { id } }, 201);
       }
-      return antwort({ data: x.felder.map((f) => ({ type: 'group', field: f })) });
+      return antwort({
+        data: [
+          ...x.felder.map((f) => ({ type: 'group', field: f })),
+          ...(x.personenfelder ?? []).map((key) => ({
+            type: 'person',
+            field: { dbField: { key } },
+          })),
+        ],
+      });
     }
     // Verlauf (Anmeldetag, Absagen, A7): in der Demo leer – ohne ihn brach der Bereich „Anmeldungen“ mit 404 ab.
     if (/^\/groups\/\d+\/members\/history$/.test(pfad)) return antwort({ data: [] });

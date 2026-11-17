@@ -11,7 +11,7 @@ export type Bereich = keyof Formular;
 /**
  * **Empfohlene Bausteine** – Felder mit fester Bedeutung (Übersicht, Check-in, Preise nach Alter). Jedes gibt es
  * höchstens einmal im Formular; daher feste Kennungen. Die fünf aus dem Grundformular (`standardFormular`)
- * werden von dort übernommen, damit Frage und Hilfetext an EINER Stelle stehen; Anschrift, Gesundheit und
+ * werden von dort übernommen, damit Frage und Hilfetext an EINER Stelle stehen; Adresse (F4), Gesundheit und
  * Notfallkontakt sind mit dem Baukasten dazugekommen.
  */
 export interface Empfohlen {
@@ -42,11 +42,13 @@ const neuesStandardFeld = (id: string, typ: Feldtyp, frage: string, hilfe: strin
 export const EMPFOHLEN: Empfohlen[] = [
   { id: 'birth', name: 'Geburtsdatum', bereich: 'person', feld: ausGrund('birth') },
   { id: 'tel', name: 'Telefon', bereich: 'anmeldung', feld: ausGrund('tel') },
+  // F4 (Entwurf `f4-adresse-v1`, Alwin 17.11.2026): Straße, PLZ und Ort in den Personenfeldern – ersetzt die
+  // frühere „Anschrift“ (ein Textfeld, Kennung `addr`). Formulare, die sie schon haben, behalten sie.
   {
-    id: 'addr',
-    name: 'Anschrift',
+    id: 'adresse',
+    name: 'Adresse',
     bereich: 'anmeldung',
-    feld: neuesStandardFeld('addr', 'textarea', 'Anschrift', 'Straße, PLZ und Ort'),
+    feld: neuesStandardFeld('adresse', 'adresse', 'Adresse', ''),
   },
   {
     id: 'notfall',

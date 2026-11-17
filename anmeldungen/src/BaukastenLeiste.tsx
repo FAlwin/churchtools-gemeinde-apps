@@ -34,7 +34,7 @@ export interface NeuerBaustein {
 const SYMBOL_EMPFOHLEN: Record<string, BausteinIcon> = {
   birth: 'geburt',
   tel: 'telefon',
-  addr: 'anschrift',
+  adresse: 'anschrift',
   notfall: 'notfall',
   allergy: 'essen',
   health: 'gesund',

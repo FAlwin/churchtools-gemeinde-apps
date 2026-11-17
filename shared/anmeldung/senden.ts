@@ -4,7 +4,8 @@
  *
  * - `POST /publicgroups/{id}/signup` `{token, forms: [{form: [{id, type, value}]}], hasAcceptedPrivacyForSelf}`.
  * - Feldnummern aus `GET /publicgroups/{id}/form?token=`: Personenfelder über ihren Namen (`firstName`, `lastName`,
- *   `email`, `birthday` – Geburtstag steht nur im Kinder-Formular, wird im normalen aber angenommen), Gruppenfelder
+ *   `email`, `birthday` – Geburtstag steht nur im Kinder-Formular, wird im normalen aber angenommen; seit F4 auch
+ *   `street`, `zip`, `city`, wenn die Adresse im Formular ist), Gruppenfelder
  *   mit ihrer Nummer (`type: custom`), Datenschutz `type: privacy`.
  * - ChurchTools kennt kein „einmal je Anmeldung“: Jede Person ist ein eigenes Mitglied mit eigenen Feldern.
  *
@@ -28,6 +29,7 @@ import {
 import { tagPunkt } from '../ct/datum';
 import { leeren } from './bedingungen';
 import { freiMitText, freiSchluessel, freiText } from './freieAntwort';
+import { adresseWerte } from './adresse';
 import {
   berechnePreis,
   euroText,
@@ -399,6 +401,10 @@ export function anmeldungAufbauen(
   const extras = e.preis.extras.filter((_, i) => wahl.extras[i]).map((x) => x.bezeichnung);
   if (extras.length) einmal.push(systemWert('extras', extras.join(', ')));
 
+  // F4: Die Adresse – „je Person“ gefragt oder einmal für die ganze Anmeldung (dann für alle Personen dieselbe).
+  const adresseJePerson = e.formular.person.find((f) => f.typ === 'adresse' && sichtbar(f));
+  const adresseEinmal = e.formular.anmeldung.find((f) => f.typ === 'adresse' && sichtbar(f));
+
   const forms = a.personen.map((p, i) => {
     const n = nameVon(namePerson ? p[namePerson.id] : undefined);
     const form: FormWert[] = [
@@ -409,6 +415,13 @@ export function anmeldungAufbauen(
     const geburt = e.formular.person.find((f) => f.id === 'birth' && sichtbar(f));
     if (geburt && typeof p.birth === 'string' && p.birth.trim())
       form.push({ id: pflichtPerson('birthday'), type: 'person', value: p.birth.trim() });
+    // F4: in die Personenfelder – nur, was eingetragen ist: Ein leerer Teil würde bei einer bekannten Person die
+    // vorhandene Adresse löschen (die Bestätigung überschreibt, gemessen M1).
+    const adresse = adresseJePerson
+      ? p[adresseJePerson.id]
+      : adresseEinmal && a.anmeldung[adresseEinmal.id];
+    for (const { ct: name, wert } of adresseWerte(adresse || undefined))
+      form.push({ id: pflichtPerson(name), type: 'person', value: wert });
     for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p));
     if (nr && e.ctFelder.nr !== undefined) form.push(systemWert('nr', nr));
     if (i === 0) form.push(...einmal);

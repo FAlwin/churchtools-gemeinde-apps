@@ -74,9 +74,19 @@ interface G {
   note: string;
   settings: Record<string, unknown>;
   felder: { id: number; name: string; note?: string | null; [k: string]: unknown }[];
+  /** Personenfelder im Anmeldeformular (F4) – ihre Schlüssel (`street` …). */
+  personenfelder?: string[];
   bild?: string;
   eltern: number[];
 }
+/**
+ * F4: Die Liste der Datenbankfelder (`/fields`) – `403` wie für Leitungen ohne Admin-Recht. Die Nummern im Test sind
+ * absichtlich andere als die eingebauten (4, 6, 7), damit sichtbar ist, woher sie kommen.
+ */
+let feldListe: { id: number; key: string }[] | 403;
+const EINGEBAUT: Record<number, string> = { 4: 'street', 6: 'zip', 7: 'city' };
+const personenfeldKey = (nr: number) =>
+  feldListe === 403 ? EINGEBAUT[nr] : feldListe.find((f) => f.id === nr)?.key;
 
 let gruppen: Map<number, G>;
 let naechste: number;
@@ -258,6 +268,19 @@ function ct() {
       else if (!schlucken.has('BILD')) g.bild = 'https://ct.test/images/1/abc';
       return json(m === 'DELETE' ? 204 : 200, { data: [{ imageUrl: g.bild }] });
     }
+    if (m === 'GET' && pfad === '/fields')
+      return feldListe === 403 ? json(403, {}) : json(200, { data: feldListe });
+    r = /^\/groups\/(\d+)\/memberfields\/person\/(\d+)$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      const key = personenfeldKey(Number(r[2]));
+      if (!key) return json(404, {});
+      if (!schlucken.has('PERSONENFELD')) {
+        const ohne = (g.personenfelder ?? []).filter((k) => k !== key);
+        g.personenfelder = m === 'DELETE' ? ohne : [...ohne, key];
+      }
+      return json(m === 'DELETE' ? 204 : 200, { data: {} });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group\/(\d+)$/.exec(pfad);
     if (r) {
       const g = gruppen.get(Number(r[1]))!;
@@ -287,7 +310,16 @@ function ct() {
     r = /^\/groups\/(\d+)\/memberfields$/.exec(pfad);
     if (r) {
       const g = gruppen.get(Number(r[1]))!;
-      return json(200, { data: g.felder.map((f) => ({ type: 'group', field: f })) });
+      return json(200, {
+        data: [
+          ...g.felder.map((f) => ({ type: 'group', field: f })),
+          // Wie gemessen (F4): Personenfelder mit `field.dbField.key`.
+          ...(g.personenfelder ?? []).map((key) => ({
+            type: 'person',
+            field: { id: 900, dbField: { key } },
+          })),
+        ],
+      });
     }
     r = /^\/groups\/(\d+)$/.exec(pfad);
     if (r) {
@@ -397,6 +429,12 @@ beforeEach(() => {
   aufrufe = [];
   mitglieder = new Map();
   naechsteOption = 1;
+  feldListe = [
+    { id: 41, key: 'street' },
+    { id: 61, key: 'zip' },
+    { id: 71, key: 'city' },
+    { id: 16, key: 'birthday' },
+  ];
   vi.stubGlobal('window', {
     settings: { base_url: 'https://ct.test/' },
     location: { origin: 'https://ct.test' },
@@ -1238,16 +1276,19 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(ctFeld(id, 'f1').name).toBe('T-Shirt-Größe');
   });
 
-  it('empfohlenes Feld (Anschrift) einfügen und wieder herausnehmen: Spalte bleibt, nur ausgeschaltet', async () => {
+  it('empfohlenes Feld (Notfallkontakt) einfügen und wieder herausnehmen: Spalte bleibt, nur ausgeschaltet', async () => {
     const id = await neu();
-    const anschrift = EMPFOHLEN.find((x) => x.id === 'addr')!.feld;
-    await feldSpeichern(id, 'anmeldung', anschrift, undefined, null);
-    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'tel', 'addr', 'note', 'price', 'priv']);
-    expect(ctFeld(id, 'addr')).toMatchObject({ name: 'Anschrift', useInRegistrationForm: true });
-    expect(await feldEntfernen(id, 'addr')).toEqual({ art: 'ausgeblendet', antworten: 0 });
-    expect(ctFeld(id, 'addr')).toMatchObject({ useInRegistrationForm: false });
+    const notfall = EMPFOHLEN.find((x) => x.id === 'notfall')!.feld;
+    await feldSpeichern(id, 'anmeldung', notfall, undefined, null);
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'tel', 'notfall', 'note', 'price', 'priv']);
+    expect(ctFeld(id, 'notfall')).toMatchObject({
+      name: 'Notfallkontakt während der Veranstaltung',
+      useInRegistrationForm: true,
+    });
+    expect(await feldEntfernen(id, 'notfall')).toEqual({ art: 'ausgeblendet', antworten: 0 });
+    expect(ctFeld(id, 'notfall')).toMatchObject({ useInRegistrationForm: false });
     expect(
-      einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === 'addr')
+      einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === 'notfall')
         ?.zustand,
     ).toBe('aus');
   });
@@ -1863,5 +1904,107 @@ describe('Mehrfachauswahl in ChurchTools (F5c)', () => {
     await feldSpeichern(id, 'person', feld({ frage: 'Bereiche (neu)' }));
     expect(ctFeld(id)).toMatchObject({ fieldTypeCode: 'text', name: 'Bereiche (neu)' });
     expect(ctFeld(id).options).toBeUndefined();
+  });
+});
+
+describe('Adresse in den Personenfeldern (F4)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Camp', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const adresse = (zustand: Feld['zustand'] = 'freiwillig'): Feld => ({
+    ...EMPFOHLEN.find((x) => x.id === 'adresse')!.feld,
+    zustand,
+  });
+  const imFormular = (id: number) => [...(gruppen.get(id)!.personenfelder ?? [])].sort();
+  const ids = (id: number) => {
+    const f = einstellungenLesen(gruppen.get(id)!.note)!.formular;
+    return { anmeldung: f.anmeldung.map((x) => x.id), person: f.person.map((x) => x.id) };
+  };
+  const schreibend = () =>
+    aufrufe.filter((a) => !a.startsWith('GET') && a.includes('/memberfields/person/'));
+
+  it('einfügen: Straße, PLZ und Ort kommen ins Anmeldeformular – keine Spalte, nicht Pflicht', async () => {
+    const id = await neu();
+    const vorher = gruppen.get(id)!.felder.length;
+    await feldSpeichern(id, 'anmeldung', adresse('pflicht'), undefined, null);
+    expect(imFormular(id)).toEqual(['city', 'street', 'zip']);
+    expect(gruppen.get(id)!.felder).toHaveLength(vorher);
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    expect(e.formular.anmeldung.find((f) => f.id === 'adresse')?.zustand).toBe('pflicht');
+    expect(e.ctFelder.adresse).toBeUndefined();
+    expect(schreibend()).toEqual([
+      `PUT /groups/${id}/memberfields/person/41`,
+      `PUT /groups/${id}/memberfields/person/61`,
+      `PUT /groups/${id}/memberfields/person/71`,
+    ]);
+  });
+
+  it('nicht Pflicht in ChurchTools: requiredInRegistrationForm ist immer false', async () => {
+    const id = await neu();
+    const bodies: unknown[] = [];
+    const vorher = vi.mocked(globalThis.fetch).getMockImplementation()!;
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      if (String(input).includes('/memberfields/person/'))
+        bodies.push(JSON.parse(String(init?.body)));
+      return vorher(input, init);
+    });
+    await feldSpeichern(id, 'anmeldung', adresse('pflicht'), undefined, null);
+    expect(bodies).toHaveLength(3);
+    for (const b of bodies) expect(b).toMatchObject({ requiredInRegistrationForm: false });
+  });
+
+  it('noch einmal speichern ändert in ChurchTools nichts', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', adresse(), undefined, null);
+    aufrufe.length = 0;
+    await feldSpeichern(id, 'person', adresse(), undefined, null);
+    expect(schreibend()).toEqual([]);
+    expect(ids(id).person).toContain('adresse');
+    expect(ids(id).anmeldung).not.toContain('adresse');
+  });
+
+  it('herausnehmen: die drei Personenfelder kommen aus dem Anmeldeformular, der Baustein bleibt ausgeschaltet', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', adresse(), undefined, null);
+    expect(await feldEntfernen(id, 'adresse')).toEqual({ art: 'ausgeblendet', antworten: 0 });
+    expect(imFormular(id)).toEqual([]);
+    expect(
+      einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === 'adresse')
+        ?.zustand,
+    ).toBe('aus');
+  });
+
+  it('die Nummern kommen aus /fields; darf man die Liste nicht lesen (403), gelten die eingebauten', async () => {
+    const id = await neu();
+    feldListe = 403;
+    await feldSpeichern(id, 'anmeldung', adresse(), undefined, null);
+    expect(imFormular(id)).toEqual(['city', 'street', 'zip']);
+    expect(schreibend()).toEqual([
+      `PUT /groups/${id}/memberfields/person/4`,
+      `PUT /groups/${id}/memberfields/person/6`,
+      `PUT /groups/${id}/memberfields/person/7`,
+    ]);
+  });
+
+  it('beim Freigeben nachgezogen (Kopie): fehlen die Felder, kommen sie ins Anmeldeformular', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', adresse(), undefined, null);
+    gruppen.get(id)!.personenfelder = [];
+    await pflichtNachziehen(id);
+    expect(imFormular(id)).toEqual(['city', 'street', 'zip']);
+  });
+
+  it('ohne den Baustein nimmt das Freigeben nichts heraus, was die Leitung in ChurchTools eingestellt hat', async () => {
+    const id = await neu();
+    gruppen.get(id)!.personenfelder = ['street'];
+    await pflichtNachziehen(id);
+    expect(imFormular(id)).toEqual(['street']);
+  });
+
+  it('übernimmt ChurchTools es nicht, gibt es einen Fehler – und die Einstellungen bleiben, wie sie waren', async () => {
+    const id = await neu();
+    schlucken.add('PERSONENFELD');
+    await expect(feldSpeichern(id, 'anmeldung', adresse(), undefined, null)).rejects.toThrow(
+      'die Adresse im Anmeldeformular',
+    );
+    expect(ids(id).anmeldung).not.toContain('adresse');
   });
 });

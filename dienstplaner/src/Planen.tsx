@@ -2,6 +2,8 @@ import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HilfeKnopf } from '@ui/bedienung/HilfeKnopf';
+import { HILFE_PLANEN } from './hilfeTexte';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
 import type { TerminVorlage } from '@shared/ct/terminVorlagen';
@@ -29,7 +31,6 @@ import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { PlaetzeFach } from './PlaetzeFach';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
-import { ALLE_REITER } from './reiter';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
 import { useMatrixAblauf } from './useMatrixAblauf';
 import { useMatrixInfos } from './useMatrixInfos';
@@ -48,9 +49,6 @@ import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
 import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
 import styles from './Planen.module.scss';
-
-/** Der Name des Reiters mit den eigenen Diensten – aus der Reiterliste, damit der Hilfetext eine Umbenennung mitmacht. */
-const DIENSTE_REITER = ALLE_REITER.find((r) => r.id === 'termine')?.label ?? 'Dienste';
 
 interface Props {
   zustand: TermineZustand;
@@ -374,6 +372,7 @@ export function Planen({
           symbol={<Icon name="share" size={16} />}
           disabled={!plan || teilenSpalten.length === 0}
         />
+        <HilfeKnopf seite="Planen" abschnitte={HILFE_PLANEN} />
         {teilenOffen && plan && (
           <Suspense fallback={null}>
             <PlanTeilenFenster
@@ -578,39 +577,6 @@ export function Planen({
         </div>
       )}
       <div ref={rahmen}>{inhalt}</div>
-      <p className={styles.hinweis}>
-        Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
-        ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und {DIENSTE_REITER}.
-        Planen darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes
-        leitest oder Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort
-        trägst du jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch
-        jemand anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die
-        Anzahl der Plätze – sofort; dort schaltest du auch Dienste ein und aus oder übernimmst eine
-        Vorlage. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der Rangfolge von
-        ChurchTools, ebenfalls als Entwurf; in „Personen“ steht er an jedem Dienst und gilt nur für
-        diesen. Der Stift neben einem Namen ändert dessen Vorlieben – sofort in ChurchTools. Am
-        Dienstnamen der Matrix zeigt ein rundes Symbol, womit neue Einteilungen beginnen: „?“ =
-        Anfrage, Haken = direkt (ohne Rückfrage als zugesagt); antippen öffnet die Einstellung, sie
-        gilt nur auf diesem Gerät und für neue Entwürfe – auch für den Zauberstab. Gesendet wird
-        erst mit „Ansehen und senden“ – dort steht je Entwurf „Anfrage“ oder „direkt“; die
-        Angefragten bekommen dann eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben
-        Termine als Raster: eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem,
-        was noch offen ist – einen Dienst antippen klappt seinen Block zu. Eine leere Zelle
-        anklicken trägt die Person dort als Entwurf ein (auf einen freien Platz des Dienstes) – war
-        sie am Tag schon in einem anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach.
-        Ein zweiter Klick auf den eigenen Entwurf stellt ihn von „?“ (Anfrage) auf „✓“ (direkt) um,
-        ein dritter nimmt ihn weg – ist der Dienst auf „direkt“ gestellt, beginnt schon der erste
-        Klick direkt. Abwesenheiten sind schraffiert, mit dem Grund als Text; wer abwesend und
-        eingeteilt ist, steht rot umrahmt da. Ist der Dienst voll, geht „Platz dazunehmen“ vorerst
-        nur über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix.
-        Entwürfe zählen schon mit – in „N frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im
-        PDF gilt nur, was in ChurchTools steht. In abgesagten Terminen trägst du nichts ein. Im
-        Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in
-        Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das
-        Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
-        belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
-        Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
-      </p>
       {sendeLeiste}
       {fenster}
       {vorgabeFach && plan && (

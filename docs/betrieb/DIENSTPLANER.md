@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.6.0 (17.11.2026: in „Personen“ per Klick eintragen – Anfrage, direkt, weg; Zauberstab je Dienst; Entwürfe zählen mit; Vorgabe „Anfrage oder direkt“ je Dienst; Abwesenheit schraffiert).** Was die Reiter können:
+> **Stand: v0.6.1 (17.11.2026: Anfrage/direkt am Rahmen erkennbar – gestrichelt/durchgezogen; abgesagte Spaltenköpfe deckend. v0.6.0: in „Personen“ per Klick eintragen; Zauberstab je Dienst; Entwürfe zählen mit; Vorgabe „Anfrage oder direkt“ je Dienst; Abwesenheit schraffiert).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen
@@ -115,7 +115,8 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
 Raster – Spalten = Termine, Zeilen = Personen, **ein Block je Dienst** in der Reihenfolge der Matrix. Eine Person steht in
 **jedem** ihrer Dienste (Zeile je Person **und** Dienst), daneben „auch Gesang“ (andere gezeigte Dienste, in denen sie
 Mitglied ist). In der Zelle steht der Dienst als Tag in der Farbe des Dienstes, das Symbol sagt den Zustand: Haken =
-zugesagt, Kreis mit ? = angefragt, Stift gestrichelt = Entwurf. Am selben Tag in einem **zweiten Dienst** eingeteilt:
+zugesagt, Kreis mit ? = angefragt; ein **Entwurf** ist blau – **gestrichelt** mit „?“ = Anfrage, **durchgezogen** mit
+Haken = direkt (beide Symbole im gefüllten Kreis, Alwin 17.11.2026). Am selben Tag in einem **zweiten Dienst** eingeteilt:
 grauer Text „+ Gesang“; gehört der andere Dienst zu einer **ausgeblendeten** Gruppe, steht er blass und schräg mit der
 Gruppe („+ Ton (Technik)“). **Abwesend** = grauer Tag mit dem Grund; ist die Person dort zugleich eingeteilt, bleiben
 beide da (roter Rand am grauen Tag – ein Warnfall). „Einsätze“ zählt zugesagte und angefragte Einteilungen dieser Person
@@ -136,9 +137,10 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   Dienst** eingeteilt („Daniel F. ist am Fr, 20.11. schon bei Gesang eingeteilt. Trotzdem für Ton eintragen?“) oder an dem Tag
   **abwesend** (Grund und Zeitraum der Abwesenheit); treffen beide zu, steht beides in einem Fenster. Die Sätze rechnet
   `shared/dienstplan/personenEintragen.ts` aus dem, was die Zelle ohnehin zeigt („+ Gesang“, Abwesend-Tag).
-- **Klick-Zyklus Anfrage → direkt → weg (P2m, 17.11.2026):** Der **erste** Klick legt den Entwurf an – als **Anfrage** („?“, blass,
-  gestrichelt) oder, wenn der Dienst auf „direkt“ gestellt ist (Vorgabe, s. u.), gleich als **direkt** (Haken im gefüllten Kreis,
-  kräftiger, dickerer gestrichelter Rand). Der **zweite** Klick auf den eigenen Entwurf stellt eine Anfrage auf **direkt** um (ohne
+- **Klick-Zyklus Anfrage → direkt → weg (P2m, 17.11.2026):** Der **erste** Klick legt den Entwurf an – als **Anfrage** (gestrichelter
+  Rahmen, „?“ im gefüllten Kreis) oder, wenn der Dienst auf „direkt“ gestellt ist (Vorgabe, s. u.), gleich als **direkt**
+  (durchgezogener Rahmen, Haken im gefüllten Kreis, kräftiger). Dieselbe Regel gilt in der Matrix (direkt und Gast
+  durchgezogen); Darüberfahren dunkelt dort nur die Fläche ab. Der **zweite** Klick auf den eigenen Entwurf stellt eine Anfrage auf **direkt** um (ohne
   Rückfrage zugesagt), der **dritte** nimmt ihn weg; ist er schon direkt, nimmt schon der zweite weg. Das **Warnfenster** (anderer
   Dienst am Tag, abwesend) kommt nur beim ersten Klick. Umgestellt wird mit **derselben Funktion** wie „Beim Senden: Anfrage |
   direkt“ im Entwurfs-Fach (`modusAendern` in `useEinteilen.tsx`, mit der Version des Entwurfs als Versions-Schutz). Die Zelle

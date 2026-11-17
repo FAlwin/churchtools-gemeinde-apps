@@ -5,6 +5,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { tagKurz } from '@shared/ct/datum';
 import type { PlanZeile } from '@shared/dienstplan/plan';
+import type { Besetzung } from '@shared/dienstplan/entwuerfe';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
 import {
   eintragenWarnung,
@@ -23,6 +24,7 @@ import {
   type RasterZeile,
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
+import { GastFenster } from './GastFenster';
 import type { PersonenLader } from './ladePersonen';
 import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
@@ -226,7 +228,20 @@ export function PersonenRaster({
         entwuerfe: number;
         /** Warnung „anderer Dienst am Tag“ / „abwesend“, die zusammen mit „voll“ gefragt wird. */
         warnung: EintragenWarnung | null;
-        person: { personId: number; name: string };
+        /** Wer eingetragen wird – `null` bei einem Gast, dessen Name erst im Fenster „Gast eintragen“ kommt. */
+        wer: Besetzung | null;
+        spalte: number;
+        zeile: PlanZeile;
+      }
+    | {
+        /** „Gast eintragen“ (P2d): Namensfeld; bei vollem Dienst mit „Platz dazunehmen“. */
+        art: 'gast';
+        dienst: string;
+        tag: string;
+        termin: string;
+        uhrzeit: string;
+        /** Die Plätze des Dienstes, wenn er voll ist – sonst `null`. */
+        voll: { von: number } | null;
         spalte: number;
         zeile: PlanZeile;
       }
@@ -268,6 +283,48 @@ export function PersonenRaster({
     return undefined;
   };
 
+  /** Die Aktion der leeren Gäste-Zelle (P2d) – `null`, wo man dort nichts eintragen darf. */
+  const gastNeuFuer = (b: RasterBlock, pos: number): ZellenAktion => {
+    const zl = zeileJe.get(b.dienst.id);
+    return personen && zl ? personen.gastNeu(spalten[pos], zl) : null;
+  };
+
+  /**
+   * Ein Klick in eine leere Gäste-Zelle oder auf das „+“ (P2d): das Fenster „Gast eintragen“ – bei vollem Dienst mit „Platz
+   * dazunehmen“; liegt an diesem Dienst und Termin schon ein Entwurf, die Sperre wie bei den Personen („Ansehen und senden“).
+   */
+  const gastNeuKlick = (b: RasterBlock, pos: number) => {
+    const zl = zeileJe.get(b.dienst.id);
+    const a = gastNeuFuer(b, pos);
+    if (!zl || !a || laeuft || (a.art !== 'eintragen' && a.art !== 'voll')) return;
+    const i = spalten[pos];
+    const tag = plan.spalten[i].tag;
+    if (a.art === 'voll' && a.entwuerfe > 0) {
+      setFenster({
+        art: 'voll',
+        dienst: b.dienst.name,
+        tag,
+        von: a.von,
+        entwuerfe: a.entwuerfe,
+        warnung: null,
+        wer: null,
+        spalte: i,
+        zeile: zl,
+      });
+      return;
+    }
+    setFenster({
+      art: 'gast',
+      dienst: b.dienst.name,
+      tag,
+      termin: plan.spalten[i].name,
+      uhrzeit: plan.spalten[i].uhrzeit,
+      voll: a.art === 'voll' ? { von: a.von } : null,
+      spalte: i,
+      zeile: zl,
+    });
+  };
+
   const tue = async (arbeit: () => Promise<void>) => {
     setLaeuft(true);
     try {
@@ -307,7 +364,7 @@ export function PersonenRaster({
           tag,
           zelle: r.zellen[pos],
         }),
-        person: { personId: r.personId, name: r.name },
+        wer: { art: 'person', personId: r.personId, name: r.name },
         spalte: i,
         zeile: zl,
       });
@@ -321,7 +378,7 @@ export function PersonenRaster({
               i,
               zl,
               jetzt.nr,
-              { personId: r.personId, name: r.name },
+              { art: 'person', personId: r.personId, name: r.name },
               jetzt.ersetzt,
             );
         });
@@ -497,6 +554,76 @@ export function PersonenRaster({
   };
 
   /**
+   * Die Zeile „Gäste“ eines Dienst-Blocks: Gäste (bestehend oder Entwurf) als Tags; wo man eintragen darf (`gastNeu`: dieselben
+   * Rechte wie bei den Personen-Zellen), gibt es sie **in jedem Block**, auch ohne Gast (P2d) – die leere Zelle trägt mit
+   * einem Klick einen Gast ein, eine Zelle mit Gästen hat ein kleines „+“ für einen weiteren.
+   */
+  const gaesteZeile = (b: RasterBlock) => {
+    const neu = b.gaeste.map((_, pos) => gastNeuFuer(b, pos));
+    const eintragbar = neu.map((a) => a?.art === 'eintragen' || a?.art === 'voll');
+    if (!b.gaeste.some((g) => g.length > 0) && !eintragbar.some(Boolean)) return [];
+    const zl = zeileJe.get(b.dienst.id);
+    return [
+      <tr key={`g-${b.dienst.id}`}>
+        <th scope="row" className={`${styles.name} ${styles.gaesteName}`}>
+          Gäste
+        </th>
+        <td className={styles.einsaetze} />
+        {b.gaeste.map((liste, pos) => {
+          const abgesagt = termine[pos].abgesagt ? styles.abgesagtSpalte : '';
+          const name = `${b.dienst.name} am ${tagKurz(termine[pos].tag)}`;
+          const leer = liste.length === 0 && eintragbar[pos];
+          return (
+            <td
+              key={termine[pos].id}
+              className={
+                `${abgesagt}${leer ? ` ${styles.klick} ${styles.leerKlick}` : ''}` || undefined
+              }
+              // Eine leere Gäste-Zelle zählt überall; der Knopf darin ist für Tastatur und Vorleser, sein Klick steigt hierher auf.
+              onClick={leer ? () => gastNeuKlick(b, pos) : undefined}
+            >
+              {leer && (
+                <button
+                  type="button"
+                  className={styles.zellKnopf}
+                  aria-label={`Gast für ${name} eintragen`}
+                >
+                  <span className={styles.plus} aria-hidden="true">
+                    <Icon name="plus" size={16} />
+                  </span>
+                </button>
+              )}
+              {liste.length > 0 && (
+                <div className={styles.gastInnen}>
+                  {liste.map((g) => (
+                    <GastTag
+                      key={`${g.name}-${g.entwurf}-${g.zurueck}-${g.nr}`}
+                      g={g}
+                      // Ein Klick öffnet dasselbe Fenster wie in der Matrix (P2b) – nur, wo man es dort auch darf.
+                      onKlick={personen && zl ? gastKlick(b, g, pos) : undefined}
+                    />
+                  ))}
+                  {liste.length > 0 && eintragbar[pos] && (
+                    <button
+                      type="button"
+                      className={styles.gastPlus}
+                      aria-label={`Weiteren Gast für ${name} eintragen`}
+                      title="Weiteren Gast eintragen"
+                      onClick={() => gastNeuKlick(b, pos)}
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              )}
+            </td>
+          );
+        })}
+      </tr>,
+    ];
+  };
+
+  /**
    * Die Zeile „Plätze“ am Ende eines Dienst-Blocks (P2c): je Termin „belegt von Plätzen“ – gezählt wie „Noch offen“ (Entwürfe
    * zählen mit). Freie Plätze rot (wie die roten Tags in „Noch offen“; an einem abgesagten Termin nicht), voll neutral, ohne
    * Plätze „aus“. Ein Klick öffnet den Regler dieses Dienstes an diesem Termin – wo man ihn bedienen darf (`sicht.onPlatz`).
@@ -601,33 +728,7 @@ export function PersonenRaster({
               ...(zugeklappt.has(blockSchluessel(b.dienst.id))
                 ? []
                 : b.zeilen.map((r, nr) => zeile(b, r, nr))),
-              ...(!zugeklappt.has(blockSchluessel(b.dienst.id)) &&
-              b.gaeste.some((g) => g.length > 0)
-                ? [
-                    <tr key={`g-${b.dienst.id}`}>
-                      <th scope="row" className={`${styles.name} ${styles.gaesteName}`}>
-                        Gäste
-                      </th>
-                      <td className={styles.einsaetze} />
-                      {b.gaeste.map((liste, pos) => (
-                        <td key={termine[pos].id}>
-                          {liste.map((g) => (
-                            <GastTag
-                              key={`${g.name}-${g.entwurf}-${g.zurueck}-${g.nr}`}
-                              g={g}
-                              // Ein Klick öffnet dasselbe Fenster wie in der Matrix (P2b) – nur, wo man es dort auch darf.
-                              onKlick={
-                                personen && zeileJe.get(b.dienst.id)
-                                  ? gastKlick(b, g, pos)
-                                  : undefined
-                              }
-                            />
-                          ))}
-                        </td>
-                      ))}
-                    </tr>,
-                  ]
-                : []),
+              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : gaesteZeile(b)),
               ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : [plaetzeZeile(b)]),
             ])}
             <tr className={styles.fuss}>
@@ -683,6 +784,52 @@ export function PersonenRaster({
           onCancel={() => setFenster(null)}
         />
       )}
+      {fenster?.art === 'gast' &&
+        (() => {
+          const f = fenster;
+          const dazunehmen = personen?.dazunehmen;
+          // Voll, aber „Platz dazunehmen“ gibt es hier nicht (kein Anschluss zum Ändern der Plätze): nur die Auskunft.
+          if (f.voll && !dazunehmen)
+            return (
+              <ConfirmDialog
+                title={`${f.dienst} ist voll`}
+                message={vollText(f.dienst, f.tag, f.voll.von)}
+                confirmLabel="Schließen"
+                cancelLabel={null}
+                harmlos
+                onConfirm={() => setFenster(null)}
+                onCancel={() => setFenster(null)}
+              />
+            );
+          return (
+            <GastFenster
+              titel={`Gast eintragen – ${f.dienst} · ${tagKurz(f.tag)}`}
+              unter={`${f.termin} · ${f.uhrzeit} Uhr`}
+              voll={
+                f.voll
+                  ? {
+                      text: vollText(f.dienst, f.tag, f.voll.von),
+                      hinweis: platzDazuText(f.dienst, f.voll.von + 1, 'Der Gast'),
+                      neu: f.voll.von + 1,
+                    }
+                  : null
+              }
+              onClose={() => setFenster(null)}
+              onEintragen={(name) => {
+                setFenster(null);
+                const wer: Besetzung = { art: 'gast', name };
+                if (f.voll && dazunehmen) void tue(() => dazunehmen(f.spalte, f.zeile, wer));
+                else if (!f.voll)
+                  // Noch einmal fragen: Zwischen Klick und „Eintragen“ kann sich der Platz geändert haben.
+                  void tue(async () => {
+                    const jetzt = personen?.gastNeu(f.spalte, f.zeile);
+                    if (jetzt?.art === 'eintragen')
+                      await personen?.eintragen(f.spalte, f.zeile, jetzt.nr, wer, jetzt.ersetzt);
+                  });
+              }}
+            />
+          );
+        })()}
       {fenster?.art === 'voll' &&
         (() => {
           const f = fenster;
@@ -709,7 +856,8 @@ export function PersonenRaster({
             );
           }
           const dazunehmen = personen?.dazunehmen;
-          if (!dazunehmen)
+          const wer = f.wer;
+          if (!dazunehmen || !wer)
             return (
               <ConfirmDialog
                 title={`${f.dienst} ist voll`}
@@ -733,13 +881,11 @@ export function PersonenRaster({
               harmlos
               onConfirm={() => {
                 setFenster(null);
-                void tue(() => dazunehmen(f.spalte, f.zeile, f.person));
+                void tue(() => dazunehmen(f.spalte, f.zeile, wer));
               }}
               onCancel={() => setFenster(null)}
             >
-              <p className={styles.dazuHinweis}>
-                {platzDazuText(f.dienst, f.von + 1, f.person.name)}
-              </p>
+              <p className={styles.dazuHinweis}>{platzDazuText(f.dienst, f.von + 1, wer.name)}</p>
             </ConfirmDialog>
           );
         })()}

@@ -16,6 +16,8 @@ import { ladeWerKann, vergissWerKann } from './ladeWerKann';
 import { StiftKnopf, VorliebenFach } from './VorliebenFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { grundText } from './ladeEntwuerfe';
+import { GastFeld } from './GastFeld';
+import { GAST_HINWEIS, gastNameAus } from './gastName';
 import { useInsBild } from './useInsBild';
 import styles from './WerKann.module.scss';
 
@@ -248,31 +250,22 @@ export function WerKann({
               className={styles.gastZeile}
               onSubmit={(e) => {
                 e.preventDefault();
-                if (bereit && gast.trim().length >= 2)
-                  void waehle({ art: 'gast', name: gast.trim() }, bereit.erwartet ?? null);
+                const name = gastNameAus(gast);
+                if (bereit && name) void waehle({ art: 'gast', name }, bereit.erwartet ?? null);
               }}
             >
               <h3 className={styles.titel}>Jemand ohne ChurchTools-Konto</h3>
               <div className={styles.gastFeld}>
-                <input
-                  className={styles.suche}
-                  placeholder="z. B. Andreas Reimer"
-                  aria-label="Name eines Gastes"
-                  value={gast}
-                  onChange={(e) => setGast(e.target.value)}
-                  autoComplete="off"
-                />
+                <GastFeld wert={gast} onChange={setGast} />
                 <button
                   type="submit"
                   className={styles.knopf}
-                  disabled={laeuft || gast.trim().length < 2}
+                  disabled={laeuft || gastNameAus(gast) === null}
                 >
                   Eintragen
                 </button>
               </div>
-              <p className={styles.hinweis}>
-                Zum Beispiel ein Gastprediger. Er bekommt keine Anfrage, sein Name steht im Plan.
-              </p>
+              <p className={styles.hinweis}>{GAST_HINWEIS}</p>
             </form>
           )}
         </>

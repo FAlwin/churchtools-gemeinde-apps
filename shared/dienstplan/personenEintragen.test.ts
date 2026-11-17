@@ -5,7 +5,9 @@ import {
   abwesendText,
   eintragenWarnung,
   freiOhneEntwurf,
+  freierPlatzAktion,
   gastAktion,
+  gastNeuAktion,
   platzDazuText,
   platzFuerEintrag,
   schonEingeteiltText,
@@ -241,6 +243,51 @@ describe('gastAktion', () => {
     expect(gastAktion({ nr: 2, klick: 'belegt' })).toEqual({ art: 'belegt', nr: 2 });
     expect(gastAktion({ nr: 3, klick: 'entwurf' })).toEqual({ art: 'entwurfFach', nr: 3 });
     expect(gastAktion({ nr: 1, klick: null })).toBeNull();
+  });
+});
+
+describe('gastNeuAktion (leere Gäste-Zelle, P2d)', () => {
+  it('trägt auf den ersten freien Platz ein – dieselbe Wahl wie bei einer leeren Personen-Zelle', () => {
+    const plaetze = [besetzt(1, 5, 'Anna'), frei(2), frei(3)];
+    expect(gastNeuAktion(plaetze, ohne)).toEqual({ art: 'eintragen', nr: 2 });
+    expect(gastNeuAktion(plaetze, ohne)).toEqual(
+      zellenAktion({ plaetze, personId: 12, zustand: null, entwurf: ohne, ichId: 1 }),
+    );
+  });
+
+  it('ein Platz mit „Zurückziehen“-Entwurf wird ersetzt, ein belegter Platz bleibt unberührt', () => {
+    const plaetze = [besetzt(1, 5, 'Anna'), besetzt(2, 8, 'Ben')];
+    const zurueck: Entwurf = { ...entwurf(2, 8), ziel: { art: 'frei' } };
+    expect(gastNeuAktion(plaetze, suche([{ entwurf: zurueck }]))).toEqual({
+      art: 'eintragen',
+      nr: 2,
+      ersetzt: 3,
+    });
+  });
+
+  it('voll: alle Plätze belegt oder von einem Entwurf gehalten – mit der Zahl der Entwürfe (Sperre)', () => {
+    const plaetze = [besetzt(1, 5, 'Anna'), besetzt(2, 8, 'Ben')];
+    expect(gastNeuAktion(plaetze, ohne)).toEqual({ art: 'voll', von: 2, entwuerfe: 0 });
+    expect(
+      gastNeuAktion([besetzt(1, 5, 'Anna'), frei(2)], suche([{ entwurf: entwurf(2, 12) }])),
+    ).toEqual({
+      art: 'voll',
+      von: 2,
+      entwuerfe: 1,
+    });
+  });
+
+  it('ein Gast-Entwurf hält seinen Platz – der zweite Gast kommt auf den nächsten freien', () => {
+    const gast: Entwurf = { ...entwurf(1, 0), ziel: { art: 'gast', name: 'Max Gast' } };
+    expect(gastNeuAktion([frei(1), frei(2)], suche([{ entwurf: gast }]))).toEqual({
+      art: 'eintragen',
+      nr: 2,
+    });
+  });
+
+  it('Dienst an diesem Termin nicht vorgesehen: nichts', () => {
+    expect(gastNeuAktion(null, ohne)).toBeNull();
+    expect(freierPlatzAktion([frei(1)], ohne)).toEqual({ art: 'eintragen', nr: 1 });
   });
 });
 

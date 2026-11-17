@@ -5,7 +5,7 @@
 <h1 align="center">Gemeinde-Apps für ChurchTools</h1>
 
 <p align="center">
-  Chord Charts, Dienstpläne, Organigramm und Gebetsabend – direkt mit eurem ChurchTools verbunden.<br>
+  Chord Charts, Dienstpläne, Organigramm, Protokolle und Gebetsabend – direkt mit eurem ChurchTools verbunden.<br>
   Kostenlos, quelloffen, ohne eigene Datenbank.
 </p>
 
@@ -43,15 +43,15 @@ Alle Apps gibt es als **ChurchTools-Erweiterung**: ein ZIP, das ihr in ChurchToo
 _Administration → Erweiterungen_ hochladet. Die Musik-App läuft außerdem auf einem eigenen Server
 (dann auch offline und als App auf dem Home-Bildschirm).
 
-| App              | Wofür                                                                             | Download                                                                                        | Anleitung                                                         |
-| ---------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Musik-App**    | Chord Charts der Setlist, automatisch transponiert; Ablauf, Lieder, Abwesenheiten | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest)        | [Erweiterung](docs/betrieb/ERWEITERUNG.md) · [Server](INSTALL.md) |
-| **Dienstplaner** | Dienste aller Gruppen planen, zusagen, tauschen; freie Plätze auf einen Blick     | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)  | [Anleitung](docs/betrieb/DIENSTPLANER.md)                         |
-| **Organigramm**  | Bereiche, Gruppen und Leitung als Baum, Karten oder Mindmap – auch als PDF        | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm) | [Anleitung](docs/betrieb/ORGANIGRAMM.md)                          |
-| **Gebetsabend**  | Gebetsabend als Audio-/Video-Übertragung nur für Mitglieder                       | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend) | [Anleitung](docs/betrieb/GEBETSABEND.md)                          |
+| App              | Wofür                                                                                 | Download                                                                                        | Anleitung                                                         |
+| ---------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Musik-App**    | Chord Charts der Setlist, automatisch transponiert; Ablauf, Lieder, Abwesenheiten     | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest)        | [Erweiterung](docs/betrieb/ERWEITERUNG.md) · [Server](INSTALL.md) |
+| **Dienstplaner** | Dienste aller Gruppen planen, zusagen, tauschen; freie Plätze auf einen Blick         | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)  | [Anleitung](docs/betrieb/DIENSTPLANER.md)                         |
+| **Organigramm**  | Bereiche, Gruppen und Leitung als Baum, Karten oder Mindmap – auch als PDF            | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm) | [Anleitung](docs/betrieb/ORGANIGRAMM.md)                          |
+| **Protokolle**   | Sitzungsprotokolle mit Beschlüssen und To-Dos; die Leitung schreibt, die Gruppe liest | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=protokolle)  | [Anleitung](docs/betrieb/PROTOKOLLE.md)                           |
+| **Gebetsabend**  | Gebetsabend als Audio-/Video-Übertragung nur für Mitglieder                           | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend) | [Anleitung](docs/betrieb/GEBETSABEND.md)                          |
 
-**In Arbeit:** [Anmeldungen](docs/betrieb/ANMELDUNGEN.md) (Ersatz für Jotform & Co.) und
-[Protokolle](docs/betrieb/PROTOKOLLE.md) (Sitzungen mit To-Dos und Beschlüssen).
+**In Arbeit:** [Anmeldungen](docs/betrieb/ANMELDUNGEN.md) (Ersatz für Jotform & Co.).
 
 ## Musik-App
 
@@ -158,6 +158,21 @@ Die Gemeinde als Baum – Bereiche, Gruppen, Leitung und Personen, so wie die Gr
 - Für Gruppen-Admins: **Gruppen umhängen und anlegen**, Leitung und Mitglieder pflegen
 
 **[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm)** · [Anleitung](docs/betrieb/ORGANIGRAMM.md)
+
+## Protokolle
+
+<p align="center">
+  <img src="docs/bilder/protokolle-demo.gif" width="640" alt="Protokolle: Sitzung öffnen, Protokoll mit Tagesordnung und Beschluss, als PDF teilen, To-Dos im Board">
+</p>
+
+Sitzungsprotokolle für Gruppen wie den Leitungskreis – geschrieben wie in Word oder Notion, gespeichert in ChurchTools.
+
+- **Protokoll schreiben** mit Tagesordnung, Beschlüssen, Terminen und To-Dos; mehrere sehen, wer gerade schreibt
+- **To-Dos und Beschlüsse sammeln sich von selbst:** Liste oder Board, Suche über alle Protokolle
+- **Nächste Sitzung festlegen** mit Einladung, Anwesenheit aus den Zusagen, Protokoll **freigeben** und als **PDF teilen**
+- **Mit KI füllen:** aus einem Transkript Vorschläge machen lassen – Namen bleiben dabei im Browser
+
+**[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=protokolle)** · [Anleitung](docs/betrieb/PROTOKOLLE.md)
 
 ## Gebetsabend
 

@@ -42,6 +42,7 @@ import {
   type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
 import { freiName, freiSchluessel } from '@shared/anmeldung/freieAntwort';
+import { istLeer, rohWert } from '@shared/anmeldung/feldwert';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
 export type { Bereich };
@@ -87,16 +88,14 @@ export async function antwortenZaehlen(id: number): Promise<Map<number, Beantwor
   const m = new Map<number, Beantwortet>();
   for (const p of mitglieder) {
     for (const f of p.fields ?? []) {
-      const wert = f.value;
-      if (wert === null || wert === undefined || wert === '' || wert === '0' || wert === 0)
-        continue;
+      const wert = rohWert(f.value);
+      if (wert === null || istLeer(wert) || wert === '0') continue;
       const feldId = Number(f.id);
       const b = m.get(feldId) ?? { gesamt: 0, jeOption: new Map<string, number>() };
-      // Auswahl: die ID der Antwort (Text oder Zahl); anderes zählt nur als „beantwortet“.
-      const schluessel =
-        typeof wert === 'string' || typeof wert === 'number' ? String(wert) : JSON.stringify(wert);
+      // Auswahl: die ID der Antwort; Mehrfachauswahl (F5c): jede gewählte ID einzeln.
       b.gesamt++;
-      b.jeOption.set(schluessel, (b.jeOption.get(schluessel) ?? 0) + 1);
+      for (const schluessel of Array.isArray(wert) ? wert : [wert])
+        b.jeOption.set(schluessel, (b.jeOption.get(schluessel) ?? 0) + 1);
       m.set(feldId, b);
     }
   }
@@ -158,9 +157,17 @@ export async function feldSpeichern(
   if (ablage.ort === 'gruppenfeld' && (ctId !== undefined || feld.zustand !== 'aus')) {
     const { bisher, name } = await spalteUndName(id, ctId, feld.frage);
     let optionen: CtOption[] | undefined;
+    // F5c: Eine ältere Mehrfachauswahl liegt als Text-Spalte – sie bleibt Text („Wandern, Spiele“): ChurchTools ändert
+    // den Typ einer Spalte nicht (gemessen A5), und Optionen hätte sie keine. Neue werden ein `multiselect`.
+    const alsText = feld.typ === 'multi' && !!bisher && bisher.fieldTypeCode !== 'multiselect';
     // Ja/Nein: die vorhandenen IDs behalten (sonst entstünden neue und die Wahl wäre weg) – seit F3c mit derselben
     // Planung wie eine Auswahl, denn die freie Antwort kann dazukommen, umbenannt werden oder wegfallen.
-    if (feld.typ === 'radio' || feld.typ === 'select' || (feld.typ === 'janein' && bisher)) {
+    if (
+      feld.typ === 'radio' ||
+      feld.typ === 'select' ||
+      (feld.typ === 'multi' && !alsText) ||
+      (feld.typ === 'janein' && bisher)
+    ) {
       const gewaehlt = bisher
         ? new Set((await antwortenZaehlen(id)).get(bisher.id)?.jeOption.keys() ?? [])
         : new Set<string>();
@@ -184,7 +191,7 @@ export async function feldSpeichern(
     ctId = await spalteSpeichern(
       id,
       bisher,
-      feldDefinition(feld, bereich, name, optionen)!,
+      feldDefinition(alsText ? { ...feld, typ: 'text' } : feld, bereich, name, optionen)!,
       feld.frage,
     );
   }

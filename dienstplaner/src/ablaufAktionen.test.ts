@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CtSchreiber } from '@shared/ct/schreibKern';
 import type { CtAgenda, CtAblaufVorlage } from '@shared/ct/typen';
-import { ablaufAktionen, vorlagenAktionen } from './ablaufAktionen';
+import { punktAktionen } from '@ui/ablauf/browserAblaufZugriff';
+import { ablaufAktionen } from './ablaufAktionen';
 
 /**
  * **Eine Zuordnung auf den Schreib-Kern für Termin UND Vorlage** (E10-V3a): Die Aktionen der Bearbeiten-Liste schreiben mit
@@ -43,7 +44,7 @@ beforeEach(() => {
 describe('Aktionen der Bearbeiten-Liste', () => {
   it('Vorlage: Punkt ändern und umsortieren gehen nach /agendatemplates/{id} und melden `geschrieben`', async () => {
     const geschrieben = vi.fn();
-    const a = vorlagenAktionen(5, geschrieben);
+    const a = punktAktionen({ vorlageId: 5 }, geschrieben);
     await a.update(3, { title: 'Willkommen' });
     await a.reorder([4, 3]);
     expect(gelesen.every((p) => p === '/agendatemplates/5')).toBe(true);
@@ -53,7 +54,7 @@ describe('Aktionen der Bearbeiten-Liste', () => {
   });
 
   it('Vorlage: kein Auge – die Aktion gibt es dort gar nicht', () => {
-    expect('setWeggelassen' in vorlagenAktionen(5, () => {})).toBe(false);
+    expect('setWeggelassen' in punktAktionen({ vorlageId: 5 }, () => {})).toBe(false);
   });
 
   it('Termin: derselbe Weg nach /events/{id}/agenda, mit Auge', async () => {

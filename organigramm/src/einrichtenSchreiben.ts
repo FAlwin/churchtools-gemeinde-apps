@@ -504,7 +504,9 @@ class Schreiber {
         postsEnabled: false,
         isLeaderNecessary: false,
         availableForNewPerson: false,
-        permissionDepth: 1,
+        // 0 = die Rechte des Typs gehen an keine Untergruppe weiter – Wechsel-Gruppen haben keine (OpenAPI; Typ 9 aus
+        // O9-0 hat 0).
+        permissionDepth: 0,
         sortKey: da.sortKeyMax + 1,
         color: 'gray',
         description:

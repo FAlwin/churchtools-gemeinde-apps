@@ -115,7 +115,7 @@ describe('Einrichten – der ganze Lauf gegen ein gefälschtes ChurchTools', () 
       postsEnabled: false,
       isLeaderNecessary: false,
       availableForNewPerson: false,
-      permissionDepth: 1,
+      permissionDepth: 0, // keine Weitergabe an Untergruppen (wie der in O9-0 geprüfte Typ 9)
       color: 'gray',
       sortKey: 6, // der größte vorhandene (5) + 1
     });

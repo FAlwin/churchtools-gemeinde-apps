@@ -12,7 +12,13 @@
 import { tagPunkt, plusTage } from '../ct/datum';
 import { bankZeilen } from './bezahlung';
 import type { OeffentlicheEinstellungen } from './formular';
-import { einmalFelder, type Absage, type CtGruppenfeld, type ListenAnmeldung } from './liste';
+import {
+  einmalFelder,
+  ganzeStuecke,
+  type Absage,
+  type CtGruppenfeld,
+  type ListenAnmeldung,
+} from './liste';
 import { euroText, kannEtwasKosten } from './preis';
 import { aufschluesselungText, wartelistenZeile } from './senden';
 import { sollBetrag } from './sollbetrag';
@@ -191,7 +197,7 @@ export interface ZurueckPlan {
    * Zahlung, dafür mit der neuen. Kommt sie zu einer bestehenden Anmeldung, ohne das Einmalige (das hat jetzt jemand
    * anderes).
    */
-  felder: Record<number, string>;
+  felder: Record<number, string | string[]>;
   zahlung: { betragCent: number; aufschluesselung: string } | null;
   /** Hatte vor der Absage schon bezahlt – „am 18.10.2026 (Bar)“ (Alwin, 22.10.2026: neu rechnen, Hinweis). */
   warBezahlt: string | null;
@@ -222,13 +228,23 @@ export function zurueckPlan(
     ...zahlungsfelder,
     ...(zuAnmeldung ? einmalFelder(e) : []),
   ]);
-  const felder: Record<number, string> = {};
+  const felder: Record<number, string | string[]> = {};
   const verloren: string[] = [];
   for (const [id, wert] of Object.entries(b.werte)) {
     const nummer = Number(id);
     if (weg.has(nummer)) continue;
     const feld = gruppenfelder.get(nummer);
     if (!feld) continue;
+    // Im Verlauf steht eine Mehrfachauswahl als „Küche, Sonstiges“ (F5c, gemessen 17.11.2026) – zurück als Liste der
+    // Options-Nummern, nur wenn jede Antwort erkannt ist.
+    if (feld.fieldTypeCode === 'multiselect') {
+      const namen = (feld.options ?? []).map((o) => o.name);
+      const teile = ganzeStuecke(namen, wert);
+      if (teile.join(', ') === wert.trim())
+        felder[nummer] = teile.map((t) => String(feld.options!.find((o) => o.name === t)!.id));
+      else verloren.push(`${feld.name}: ${wert}`);
+      continue;
+    }
     // Im Verlauf steht eine Auswahl als Text – zurück schreibt ChurchTools sie als Options-Nummer (gemessen 22.10.2026).
     if (feld.options?.length) {
       const o = feld.options.find((x) => x.name.trim() === wert.trim());

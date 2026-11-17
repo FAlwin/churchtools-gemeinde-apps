@@ -167,6 +167,27 @@ describe('absagenLassen', () => {
     ]);
   });
 
+  it('F5c: eine Mehrfachauswahl der Anmeldung (Liste) geht bei der Übergabe mit und kommt mit „Rückgängig“ zurück', async () => {
+    const x = e();
+    x.formular.anmeldung.push({
+      id: 'tage',
+      art: 'eigen',
+      typ: 'multi',
+      frage: 'Mitfahrt',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: ['Hin', 'Zurück'],
+    });
+    x.ctFelder = { ...x.ctFelder, tage: 700 };
+    laden(mitglieder('AAAAAA', [true, true], JONAS));
+    gruppe.get(JONAS)!.fields!.push({ id: 700, value: ['1', '2'] });
+    const zurueck = await absagenLassen(165, x, absagePlan(x, anmeldung(x), JONAS, HEUTE));
+    expect(feld(LENA, 700)).toEqual(['1', '2']);
+    await zurueck();
+    expect(feld(JONAS, 700)).toEqual(['1', '2']);
+    expect(feld(LENA, 700)).toBeNull();
+  });
+
   it('wer wartet, kommt auf denselben Platz zurück', async () => {
     const x = e();
     laden(mitglieder('AAAAAA', [true, false], JONAS));

@@ -34,7 +34,10 @@ const ein = (x: ReturnType<typeof e>) => {
 };
 
 /** Was ChurchTools nach dem `PUT` mit diesen Feldern als Mitglied liefert. */
-function mitglied(felder: Record<number, string>, status: 'active' | 'waiting'): MitgliedRoh {
+function mitglied(
+  felder: Record<number, string | string[]>,
+  status: 'active' | 'waiting',
+): MitgliedRoh {
   return {
     personId: JONAS,
     person: { domainAttributes: { firstName: 'Jonas', lastName: 'Beispiel' } },
@@ -346,7 +349,11 @@ describe('Person dazu (A7-4b)', () => {
 
 describe('Zurückholen (A7-4c)', () => {
   /** Was ChurchTools nach dem `PUT` mit diesen Feldern als Mitglied liefert. */
-  const zurueck = (personId: number, vor: string, felder: Record<number, string>): MitgliedRoh => ({
+  const zurueck = (
+    personId: number,
+    vor: string,
+    felder: Record<number, string | string[]>,
+  ): MitgliedRoh => ({
     personId,
     person: { domainAttributes: { firstName: vor, lastName: 'Beispiel' } },
     groupTypeRoleId: 32,

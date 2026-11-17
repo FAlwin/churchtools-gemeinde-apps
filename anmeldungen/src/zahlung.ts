@@ -4,6 +4,7 @@
  * `{fields: {<Nummer>: Wert}}` ändert nur die geschickten Felder, keine Mail. **Jeder Schreibschritt wird nachgelesen**
  * – ein 200 beweist nichts (`NichtUebernommen`).
  */
+import { wertGleich, type CtFeldwert } from '@shared/anmeldung/feldwert';
 import { euroText } from '@shared/anmeldung/preis';
 import { aufschluesselungMitHand } from '@shared/anmeldung/zahlung';
 import { NichtUebernommen, einstellungenVon, systemfelderNachziehen } from './einrichten';
@@ -17,22 +18,15 @@ interface MitgliedFelder {
 export async function felderSchreiben(
   id: number,
   personId: number,
-  felder: Record<number, string | boolean | null>,
+  felder: Record<number, CtFeldwert>,
   was: string,
 ): Promise<void> {
   await mitgliedAendern(id, personId, { fields: felder });
   const m = await mitgliedLesen<MitgliedFelder>(id, personId);
   const steht = new Map((m.fields ?? []).map((f) => [Number(f.id), f.value]));
-  for (const [feld, soll] of Object.entries(felder)) {
-    const ist = steht.get(Number(feld));
-    const gleich =
-      typeof soll === 'boolean'
-        ? (ist === '1' || ist === true) === soll
-        : soll === null
-          ? ist === null || ist === undefined || ist === ''
-          : (typeof ist === 'string' || typeof ist === 'number' ? String(ist) : '') === soll;
-    if (!gleich) throw new NichtUebernommen(was);
-  }
+  // Dieselbe Regel wie beim Lesen (`feldwert.ts`) – auch für die Mehrfachauswahl (F5c: Liste, geleert `[]`).
+  for (const [feld, soll] of Object.entries(felder))
+    if (!wertGleich(soll, steht.get(Number(feld)))) throw new NichtUebernommen(was);
 }
 
 /**

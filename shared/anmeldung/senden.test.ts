@@ -13,14 +13,14 @@ import {
 } from './senden';
 
 const HEUTE = '2026-10-14';
-const wert = (form: { id: string; value: string }[], id: string | number) =>
+const wert = (form: { id: string; value: string | string[] }[], id: string | number) =>
   form.find((x) => x.id === String(id))?.value;
 
 describe('anmeldungAufbauen – Variante A', () => {
   it('Mitglied werden nur die Teilnehmenden; die Eltern (Kontakt) nicht', () => {
     const a = anmeldungAufbauen(einstellungen(), antworten(), { option: 0, extras: [] }, HEUTE, CT);
     expect(a.forms).toHaveLength(2);
-    expect(a.forms.map((f) => `${wert(f.form, 2)} ${wert(f.form, 3)}`)).toEqual([
+    expect(a.forms.map((f) => `${String(wert(f.form, 2))} ${String(wert(f.form, 3))}`)).toEqual([
       'Jonas Beispiel',
       'Lena Beispiel',
     ]);
@@ -177,10 +177,20 @@ describe('ctWert – jede Feldart', () => {
       zustand: 'freiwillig',
       antworten: ['Kids'],
     }) as never;
-  it('Ankreuzen 1, sonst nichts; Mehrfachauswahl als Text; Auswahl als ID; leer → null', () => {
+  it('Ankreuzen 1, sonst nichts; Mehrfachauswahl als IDs (multiselect) oder als Text (alte Spalte); Auswahl als ID; leer → null', () => {
     expect(ctWert(feld('check'), true, ct)).toBe('1');
     expect(ctWert(feld('check'), false, ct)).toBeNull();
-    expect(ctWert(feld('multi'), ['A', 'B'], ct)).toBe('A, B');
+    // F5c: Ein multiselect hat Optionen – die Liste ihrer Nummern; die alte Text-Spalte (ohne Optionen) „A, B“.
+    const mehrfach = {
+      ...ct,
+      options: [
+        { id: 7, name: 'Kids' },
+        { id: 8, name: 'Minis' },
+      ],
+    };
+    expect(ctWert(feld('multi'), ['Minis', ' Kids '], mehrfach)).toEqual(['8', '7']);
+    expect(() => ctWert(feld('multi'), ['Teens'], mehrfach)).toThrow(PasstNicht);
+    expect(ctWert(feld('multi'), ['A', 'B'], { ...ct, options: [] })).toBe('A, B');
     expect(ctWert(feld('multi'), [], ct)).toBeNull();
     expect(ctWert(feld('radio'), 'Kids', ct)).toBe('7');
     expect(ctWert(feld('select'), ' Kids ', ct)).toBe('7');

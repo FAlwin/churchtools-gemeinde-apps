@@ -21,6 +21,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { wahlAntworten } from './bedingungen';
+import { rohWert } from './feldwert';
 import { freiAnzeige, freiSchluessel } from './freieAntwort';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { eigeneZahlungArt, istEigeneZahlung } from './zahlung';
@@ -112,11 +113,18 @@ export interface Mitgliederstand {
 const tag = (iso: string | null | undefined) =>
   typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : null;
 
-/** Ein Wert lesbar: Auswahl als Name der Antwort, Ankreuzen nur, wenn angekreuzt, leere weg. */
+/**
+ * Ein Wert lesbar: Auswahl als Name der Antwort, Ankreuzen nur, wenn angekreuzt, leere weg. Eine Mehrfachauswahl
+ * (`multiselect`, F5c) kommt als Liste der Options-Nummern und wird zu „A, B“ – genau wie die alte Text-Spalte, also
+ * liest alles danach (`mehrfachAntworten`, Anzeige, Summe, Rückweg) beide gleich.
+ */
 function lesbar(feld: CtGruppenfeld | undefined, wert: unknown): string | null {
-  if (wert === null || wert === undefined) return null;
-  const text =
-    typeof wert === 'string' ? wert.trim() : typeof wert === 'number' ? String(wert) : '';
+  const roh = rohWert(wert);
+  if (Array.isArray(roh)) {
+    const namen = roh.map((id) => feld?.options?.find((o) => String(o.id) === id)?.name ?? id);
+    return namen.length ? namen.join(', ') : null;
+  }
+  const text = roh?.trim() ?? '';
   if (!text) return null;
   if (feld?.fieldTypeCode === 'checkbox') return text === '1' || text === 'true' ? '1' : null;
   if (feld?.options?.length) {

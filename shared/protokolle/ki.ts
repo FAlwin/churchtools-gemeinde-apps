@@ -10,6 +10,8 @@
  * 3. `antwortLesen` – die Antwort der KI: tolerant beim Drumherum (Codeblock, Text davor und danach, `nr` als Zahl oder
  *    „3.“), streng bei den Typen (falsch Getyptes wird verworfen). Namen kommen über `zuruecksetzen` zurück. Wirft nie:
  *    kaputt oder ohne JSON → `{ ok: false, meldung }` mit verständlichem deutschem Text.
+ *    Ein neuer Punkt (`neue_punkte`) trägt neben Stichpunkten auch Beschlüsse, To-Dos und Termine – gelesen mit denselben
+ *    Regeln wie die Einträge mit `nr` (17.11.2026: ein leeres Protokoll ließ sich sonst nicht füllen).
  * 4. `uebernahmePlanen` – aus den angehakten Einträgen eine Liste `{ vor, bloecke }` für `EditorGriff.einfuegen`.
  *
  * Wohin etwas kommt: hinter den eigenen Text seines Punkts, also **vor den nächsten Punkt** – hat „3.“ Unterpunkte, vor
@@ -96,7 +98,9 @@ export function auftragBauen(a: {
         (p) =>
           `${p.nummer} ${ersetzt(p.titel) || '(ohne Titel)'}${p.fest ? ' (fester Punkt – nichts zuordnen)' : ''}`,
       )
-    : ['(noch keine Punkte – schlage neue Punkte vor)'];
+    : [
+        '(keine Tagesordnung – gliedere den Inhalt selbst in sinnvolle Punkte unter „neue_punkte“, Beschlüsse, To-Dos und Termine dort beim jeweiligen Punkt)',
+      ];
   return `Du bekommst das Transkript einer Sitzung der Gruppe „${ersetzt(a.gruppe)}“ vom ${datum}.
 Personen und vertrauliche Angaben sind durch Platzhalter wie [Person 1] oder [Vertraulich 1] ersetzt. Verwende genau diese Platzhalter und erfinde keine Namen.
 
@@ -107,7 +111,7 @@ Ordne den Inhalt diesen Punkten zu – so fein wie möglich, also auch den Unter
 Rechne Angaben wie „bis nächsten Freitag“ vom Sitzungsdatum (${datum}) in ein Datum um.
 Passt ein Thema zu keinem Punkt, schlage unter „neue_punkte“ einen neuen Punkt mit Titel vor.
 Antworte ausschließlich mit JSON in genau diesem Aufbau:
-{"punkte":[{"nr":"3.1","stichpunkte":["…"]}],"beschluesse":[{"nr":"3","text":"…"}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"]}]}
+{"punkte":[{"nr":"3.1","stichpunkte":["…"]}],"beschluesse":[{"nr":"3","text":"…"}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]}
 
 Transkript:
 ${a.transkript}`;
@@ -134,30 +138,45 @@ interface Basis {
   id: string;
 }
 
+/** Ein Beschluss – einzeln (`Eintrag`) oder in einem neuen Punkt. */
+export interface BeschlussTeil {
+  text: string;
+}
+
+/** Ein To-Do – einzeln (`Eintrag`) oder in einem neuen Punkt. */
+export interface TodoTeil {
+  text: string;
+  wer: Zustaendig[];
+  /** `JJJJ-MM-TT`; ungültiges Datum → `null`. */
+  bis: string | null;
+  /**
+   * Platzhalter, die als Zuständige genannt waren, aber keinem Namen zugeordnet sind – sie stehen NICHT in `wer`
+   * (ein „[Person 1]“ ist kein externer Name). Fehlt, wenn es keine gab.
+   */
+  offen?: string[];
+}
+
+/** Ein Termin – einzeln (`Eintrag`) oder in einem neuen Punkt. */
+export interface TerminTeil {
+  text: string;
+  /** `JJJJ-MM-TT`; ungültiges Datum → `null` (der Block hat dann kein Datum, die Leitung setzt es). */
+  datum: string | null;
+}
+
 export type Eintrag =
   | (Basis & { art: 'stichpunkt'; ziel: Ziel; text: string })
-  | (Basis & { art: 'beschluss'; ziel: Ziel; text: string })
+  | (Basis & { art: 'beschluss'; ziel: Ziel } & BeschlussTeil)
+  | (Basis & { art: 'todo'; ziel: Ziel } & TodoTeil)
+  | (Basis & { art: 'termin'; ziel: Ziel } & TerminTeil)
   | (Basis & {
-      art: 'todo';
-      ziel: Ziel;
-      text: string;
-      wer: Zustaendig[];
-      /** `JJJJ-MM-TT`; ungültiges Datum → `null`. */
-      bis: string | null;
-      /**
-       * Platzhalter, die als Zuständige genannt waren, aber keinem Namen zugeordnet sind – sie stehen NICHT in `wer`
-       * (ein „[Person 1]“ ist kein externer Name). Fehlt, wenn es keine gab.
-       */
-      offen?: string[];
-    })
-  | (Basis & {
-      art: 'termin';
-      ziel: Ziel;
-      text: string;
-      /** `JJJJ-MM-TT`; ungültiges Datum → `null` (der Block hat dann kein Datum, die Leitung setzt es). */
-      datum: string | null;
-    })
-  | (Basis & { art: 'neuerPunkt'; titel: string; stichpunkte: string[] });
+      art: 'neuerPunkt';
+      titel: string;
+      stichpunkte: string[];
+      /** Beschlüsse, To-Dos und Termine des neuen Punkts (17.11.2026) – leer bei einer Antwort im alten Format. */
+      beschluesse: BeschlussTeil[];
+      todos: TodoTeil[];
+      termine: TerminTeil[];
+    });
 
 /** Kann der Eintrag ins Dokument? Nicht: unbekannter oder fester Punkt. */
 export function uebernehmbar(e: Eintrag): boolean {
@@ -256,6 +275,32 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
     return { name, personId: null };
   };
 
+  // Beschluss, To-Do und Termin lesen – für die Einträge mit `nr` UND für die Inhalte eines neuen Punkts (EINE Regel).
+  const beschlussTeil = (t: string): BeschlussTeil | null => (t ? { text: zurueck(t) } : null);
+  const todoTeil = (d: Record<string, unknown>): TodoTeil | null => {
+    const t = text(d.text);
+    if (!t) return null;
+    const alle = liste(d.wer)
+      .filter((w): w is string => typeof w === 'string' && !!w.trim())
+      .map(zustaendig);
+    // Ein Platzhalter ohne Namen („[Person 1]“) ist kein Zuständiger – schon gar kein externer Name.
+    const offen = [...new Set(alle.filter((z) => istPlatzhalter(z.name)).map((z) => z.name))];
+    return {
+      text: zurueck(t),
+      wer: alle.filter((z) => !istPlatzhalter(z.name)),
+      bis: typeof d.bis === 'string' ? terminDatum({ datum: d.bis.trim() }) : null,
+      ...(offen.length ? { offen } : {}),
+    };
+  };
+  const terminTeil = (m: Record<string, unknown>): TerminTeil | null => {
+    const t = text(m.text);
+    if (!t) return null;
+    return {
+      text: zurueck(t),
+      datum: typeof m.datum === 'string' ? terminDatum({ datum: m.datum.trim() }) : null,
+    };
+  };
+
   const eintraege: Eintrag[] = [];
   const n = { stichpunkt: 0, beschluss: 0, todo: 0, termin: 0, neuerPunkt: 0 };
   const id = (art: keyof typeof n): string => `${art}-${n[art]++}`;
@@ -272,38 +317,16 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
         });
     }
   for (const b of eintraegeVon(o.beschluesse)) {
-    const t = text(b.text);
-    if (t)
-      eintraege.push({ id: id('beschluss'), art: 'beschluss', ziel: ziel(b.nr), text: zurueck(t) });
+    const t = beschlussTeil(text(b.text));
+    if (t) eintraege.push({ id: id('beschluss'), art: 'beschluss', ziel: ziel(b.nr), ...t });
   }
   for (const d of eintraegeVon(o.todos)) {
-    const t = text(d.text);
-    if (!t) continue;
-    const alle = liste(d.wer)
-      .filter((w): w is string => typeof w === 'string' && !!w.trim())
-      .map(zustaendig);
-    // Ein Platzhalter ohne Namen („[Person 1]“) ist kein Zuständiger – schon gar kein externer Name.
-    const offen = [...new Set(alle.filter((z) => istPlatzhalter(z.name)).map((z) => z.name))];
-    eintraege.push({
-      id: id('todo'),
-      art: 'todo',
-      ziel: ziel(d.nr),
-      text: zurueck(t),
-      wer: alle.filter((z) => !istPlatzhalter(z.name)),
-      bis: typeof d.bis === 'string' ? terminDatum({ datum: d.bis.trim() }) : null,
-      ...(offen.length ? { offen } : {}),
-    });
+    const t = todoTeil(d);
+    if (t) eintraege.push({ id: id('todo'), art: 'todo', ziel: ziel(d.nr), ...t });
   }
   for (const m of eintraegeVon(o.termine)) {
-    const t = text(m.text);
-    if (!t) continue;
-    eintraege.push({
-      id: id('termin'),
-      art: 'termin',
-      ziel: ziel(m.nr),
-      text: zurueck(t),
-      datum: typeof m.datum === 'string' ? terminDatum({ datum: m.datum.trim() }) : null,
-    });
+    const t = terminTeil(m);
+    if (t) eintraege.push({ id: id('termin'), art: 'termin', ziel: ziel(m.nr), ...t });
   }
   for (const q of eintraegeVon(o.neue_punkte)) {
     const titel = text(q.titel);
@@ -316,6 +339,18 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
         .map((s) => (typeof s === 'string' ? ohneAufzaehlung(s) : ''))
         .filter(Boolean)
         .map(zurueck),
+      // Beschlüsse als Text oder – tolerant – als `{"text":"…"}`.
+      beschluesse: liste(q.beschluesse)
+        .map((x) =>
+          beschlussTeil(typeof x === 'string' ? x.trim() : istObjekt(x) ? text(x.text) : ''),
+        )
+        .filter((x) => x !== null),
+      todos: eintraegeVon(q.todos)
+        .map(todoTeil)
+        .filter((x) => x !== null),
+      termine: eintraegeVon(q.termine)
+        .map(terminTeil)
+        .filter((x) => x !== null),
     });
   }
 
@@ -327,11 +362,22 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
  * Zuständigen, die deshalb fehlen. Jeder einmal, in der Reihenfolge der Einträge.
  */
 export function offenePlatzhalter(eintraege: readonly Eintrag[]): string[] {
+  const todoTexte = (d: TodoTeil): string[] => [
+    d.text,
+    ...d.wer.map((w) => w.name),
+    ...(d.offen ?? []),
+  ];
   const texte = eintraege.flatMap((e) =>
     e.art === 'neuerPunkt'
-      ? [e.titel, ...e.stichpunkte]
+      ? [
+          e.titel,
+          ...e.stichpunkte,
+          ...e.beschluesse.map((b) => b.text),
+          ...e.todos.flatMap(todoTexte),
+          ...e.termine.map((t) => t.text),
+        ]
       : e.art === 'todo'
-        ? [e.text, ...e.wer.map((w) => w.name), ...(e.offen ?? [])]
+        ? todoTexte(e)
         : [e.text],
   );
   return platzhalterIn(texte.join('\n'));
@@ -388,10 +434,30 @@ export function uebernahmePlanen(
     children: [],
   });
   const stichpunkt = (t: string): Block => block('bulletListItem', t);
+  // Die Blöcke der drei Arten – für einzelne Einträge UND für die Inhalte eines neuen Punkts (EINE Erzeugung).
+  const beschlussBlock = (b: BeschlussTeil): Block => block(BLOCK.beschluss, b.text);
+  const todoBlock = (d: TodoTeil): Block => {
+    const wer = [...new Set(d.wer.flatMap((w) => (w.personId === null ? [] : [w.personId])))];
+    const extern = [...new Set(d.wer.flatMap((w) => (w.personId === null ? [w.name] : [])))].join(
+      ', ',
+    );
+    const vorab = wer.length || extern || d.bis ? JSON.stringify({ wer, extern, bis: d.bis }) : '';
+    return block(BLOCK.aufgabe, d.text, { aufgabe: '', vorab });
+  };
+  const terminBlock = (t: TerminTeil): Block =>
+    block(BLOCK.termin, t.text, { datum: t.datum ?? '' });
 
   for (const e of gewaehlt) {
     if (e.art === 'neuerPunkt') {
-      neue.push(block('heading', e.titel, { level: 1 }), ...e.stichpunkte.map(stichpunkt));
+      // Stufe 1 = Tagesordnungspunkt (`punktEbene`); darunter Stichpunkte, Beschlüsse, To-Dos, Termine wie bei einem
+      // vorhandenen Punkt.
+      neue.push(
+        block('heading', e.titel, { level: 1 }),
+        ...e.stichpunkte.map(stichpunkt),
+        ...e.beschluesse.map(beschlussBlock),
+        ...e.todos.map(todoBlock),
+        ...e.termine.map(terminBlock),
+      );
       continue;
     }
     const ziel = e.ziel;
@@ -402,16 +468,9 @@ export function uebernahmePlanen(
     const gruppen = jePunkt.get(ziel.blockId) ?? [[], [], [], []];
     jePunkt.set(ziel.blockId, gruppen);
     if (e.art === 'stichpunkt') gruppen[0].push(stichpunkt(e.text));
-    else if (e.art === 'beschluss') gruppen[1].push(block(BLOCK.beschluss, e.text));
-    else if (e.art === 'todo') {
-      const wer = [...new Set(e.wer.flatMap((w) => (w.personId === null ? [] : [w.personId])))];
-      const extern = [...new Set(e.wer.flatMap((w) => (w.personId === null ? [w.name] : [])))].join(
-        ', ',
-      );
-      const vorab =
-        wer.length || extern || e.bis ? JSON.stringify({ wer, extern, bis: e.bis }) : '';
-      gruppen[2].push(block(BLOCK.aufgabe, e.text, { aufgabe: '', vorab }));
-    } else gruppen[3].push(block(BLOCK.termin, e.text, { datum: e.datum ?? '' }));
+    else if (e.art === 'beschluss') gruppen[1].push(beschlussBlock(e));
+    else if (e.art === 'todo') gruppen[2].push(todoBlock(e));
+    else gruppen[3].push(terminBlock(e));
   }
 
   const einfuegungen: Einfuegung[] = [...punkte]

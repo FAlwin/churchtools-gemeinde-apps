@@ -470,3 +470,54 @@ Beispiel-Antwort:
 - **Historie:** 17.11.2026 (Anlass: Gemeinschaftskonto „Technik“ stand als Gruppenmitglied in jeder Anwesenheit)
 
 </details>
+
+### TF-PROT-15 · Mit KI füllen: leeres Protokoll aus einer Antwort nur mit neuen Punkten füllen
+
+**Das brauchst du:** In der Test-Instanz eine eigene **TEST-Gruppe** (Gruppenname beginnt mit „TEST“) mit dir als Leitung,
+eingerichteten Protokollen und einem **leeren** Protokoll-Entwurf (ohne Tagesordnungspunkte). Dazu die Beispiel-Antwort
+unten.
+
+**Das muss passieren:** „Mit KI füllen“ nimmt die Antwort an, auch wenn das Protokoll keinen Punkt hat. Die Vorschau zeigt
+unter „Neue Punkte“ zwei Punkte mit je **einem** Häkchen und darunter Stichpunkte, Beschlüsse, To-Dos (mit Zuständigem und
+Datum) und Termine. Nach „Ausgewählte übernehmen“ stehen im Protokoll zwei nummerierte Tagesordnungspunkte, und
+Beschluss, To-Do und Termin gehören zu „1. TEST Parkplatz“ (auch in den Bereichen „Beschlüsse“, „To-Dos“ und „Termine“).
+
+1. Das leere Test-Protokoll öffnen und **Mit KI füllen** antippen.
+2. In Schritt 1 **„Antwort schon da? Direkt einfügen“** antippen und die Beispiel-Antwort einfügen, dann **Vorschau
+   ansehen**.
+3. In der Vorschau steht unter **Neue Punkte** „TEST Parkplatz“ mit „Hinweisschilder fehlen.“, einem Beschluss, einem
+   To-Do („Maria Test (extern)“, „bis 30.11.2026“) und einem Termin „12.12.2026“; „TEST Verschiedenes“ steht darunter mit
+   einem Stichpunkt. Es gibt genau **zwei** Häkchen, keins an Beschluss, To-Do oder Termin.
+4. Bei „TEST Verschiedenes“ das Häkchen wegnehmen: Der Knopf zeigt **„Ausgewählte übernehmen (1)“**. Das Häkchen wieder
+   setzen und **Ausgewählte übernehmen** tippen.
+5. Im Protokoll prüfen: Punkt **1.** „TEST Parkplatz“ mit Stichpunkt, Beschluss, To-Do und Termin, danach Punkt **2.**
+   „TEST Verschiedenes“.
+6. Das Protokoll speichern lassen und in „Beschlüsse“, „To-Dos“ und „Termine“ nachsehen: Alle drei stehen bei Punkt 1. Das
+   To-Do hat „Maria Test“ als externen Namen und das Datum 30.11.2026.
+7. Das Test-Protokoll wieder leeren oder löschen (und das TEST-To-Do entfernen).
+
+Beispiel-Antwort:
+
+```json
+{
+  "neue_punkte": [
+    {
+      "titel": "TEST Parkplatz",
+      "stichpunkte": ["Hinweisschilder fehlen."],
+      "beschluesse": ["Wir bestellen drei Schilder."],
+      "todos": [{ "text": "TEST Entwurf zeigen", "wer": ["Maria Test"], "bis": "2026-11-30" }],
+      "termine": [{ "datum": "2026-12-12", "text": "Aufbau ab 15 Uhr" }]
+    },
+    { "titel": "TEST Verschiedenes", "stichpunkte": ["Nichts weiter."] }
+  ]
+}
+```
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/ki.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.module.scss`
+- **Automatisiert:** teilweise – `shared/protokolle/ki.test.ts` (Lesen der neuen Felder, `offenePlatzhalter`, Übernahme in Blöcken, Auftrag mit Beispiel und Zeile bei leerer Tagesordnung), `protokolle/src/KiFuellenFenster.test.tsx` (Vorschau mit einem Häkchen, Übernahme in ein leeres Protokoll); das Aussehen am Handy, das Speichern und die Bereiche nach dem Speichern nur von Hand
+- **Historie:** 17.11.2026 (Anlass: Ein leeres Protokoll ließ sich nicht füllen – Beschlüsse, To-Dos und Termine brauchten die Nummer eines vorhandenen Punkts)
+
+</details>

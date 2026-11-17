@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ganzSichtbar, ladeStart, planbar, planbareDienstgruppen, startLiederAus } from './start';
+import {
+  ganzSichtbar,
+  ladeStart,
+  planbar,
+  planbareDienstgruppen,
+  startLiederAus,
+  vorlageBearbeitbar,
+} from './start';
+import { dienstRechteAus } from '@shared/ct/dienstRechte';
 import { startFuer } from './start.testutil';
 
 /**
@@ -233,5 +241,38 @@ describe('ganzSichtbar: was die Matrix zeigen darf (Prüfung mit drei Rollen, 13
     const s = startFuer({ rechte: { ...OHNE, sichtbareDienstgruppen: [3] } });
     expect(ganzSichtbar(s, s.dienste.get(6)!)).toBe(true);
     expect(ganzSichtbar(s, s.dienste.get(9)!)).toBe(false);
+  });
+});
+
+/**
+ * **Wer Ablaufvorlagen bearbeiten darf** (E10-V3a): Die Rechte kommen aus dem Erzeuger (`dienstRechteAus`, wie
+ * `/permissions/global` sie liefert) – nicht aus handgeschriebenen Listen. Der Zweig `null` („alle Kalender“, Admin)
+ * war beim ersten Wurf ein `?? []`-Fehler: aus „alle“ wurde „keiner“.
+ */
+describe('vorlageBearbeitbar (E10-V3a)', () => {
+  const mit = (recht: unknown) =>
+    startFuer({
+      rechte: dienstRechteAus(
+        { churchservice: { 'edit agenda templates': recht } },
+        (status, meldung) => new ApiError(status, meldung),
+      ),
+    });
+
+  it('Liste von Kalendern: nur dort', () => {
+    const s = mit([2, 5]);
+    expect(vorlageBearbeitbar(s, 2)).toBe(true);
+    expect(vorlageBearbeitbar(s, 3)).toBe(false);
+  });
+
+  it('Recht ohne Aufzählung (Admin): jeder Kalender, auch „ohne“', () => {
+    const s = mit(true);
+    expect(s.rechte.vorlagenKalender).toBeNull();
+    expect(vorlageBearbeitbar(s, 3)).toBe(true);
+    expect(vorlageBearbeitbar(s, null)).toBe(true);
+  });
+
+  it('kein Recht: nirgends – auch nicht, wenn nur das Feld fehlt (ältere Antwort)', () => {
+    expect(vorlageBearbeitbar(mit(false), 2)).toBe(false);
+    expect(vorlageBearbeitbar(startFuer(), 2)).toBe(false);
   });
 });

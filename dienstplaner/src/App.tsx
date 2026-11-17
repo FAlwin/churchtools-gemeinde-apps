@@ -7,7 +7,8 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { ladeStart, planbareDienstgruppen, type Start } from './start';
+import { ladeStart, planbareDienstgruppen, vorlageBearbeitbar, type Start } from './start';
+import { vorlagenZugriff } from './vorlagenZugriff';
 import { Startseite } from './Startseite';
 import { Abwesenheiten } from './Abwesenheiten';
 import { Planen } from './Planen';
@@ -17,15 +18,19 @@ import { ladePersonen } from './ladePersonen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
+  ADRESSE_VORLAGEN,
   adresseFuer,
   adresseFuerTermin,
+  adresseFuerVorlage,
   ALLE_REITER,
   planenGruppeAusAdresse,
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
+  vorlagenAusAdresse,
   type ReiterId,
 } from './reiter';
+import { VorlagenBereich } from '@ui/ablauf/VorlagenBereich';
 import { TerminAnsicht } from './TerminAnsicht';
 import { useAntworten } from './useAntworten';
 import { useTausch } from './useTausch';
@@ -82,6 +87,10 @@ export function App() {
   const terminId = terminAusAdresse(hash);
   // Planen mit einer Gruppe von der Startseite (Wunsch 7) – nur für diesen Besuch.
   const fokusGruppe = planenGruppeAusAdresse(hash);
+  // Die Seite „Ablaufvorlagen“ (E10-V3a): eine Unterseite von „Planen“, nur für den, der „Planen“ sieht. Ohne das Recht
+  // gilt die Adresse als unbekannt und führt zum Start.
+  const vorlagenAdresse = darfPlanen && terminId === null ? vorlagenAusAdresse(hash) : null;
+  const hauptSicht = terminId === null && vorlagenAdresse === null;
   const herkunft = useRef<ReiterId>('start');
   // Die genaue Adresse, von der man kam – „zurück“ aus der Termin-Ansicht führt in Planen mit einer Gruppe (Wunsch 7)
   // wieder dorthin, nicht in die gewohnte Ansicht.
@@ -219,7 +228,19 @@ export function App() {
               handy={handy}
             />
           )}
-          {start && terminId === null && aktiv === 'start' && (
+          {start && vorlagenAdresse !== null && (
+            <VorlagenBereich
+              zugriff={vorlagenZugriff}
+              darfIn={(kalenderId) => vorlageBearbeitbar(start, kalenderId)}
+              dienste={[...start.dienste.values()].map((d) => ({ id: d.id, name: d.name }))}
+              offeneId={vorlagenAdresse.id}
+              onOeffnen={(id) => {
+                window.location.hash = id === null ? ADRESSE_VORLAGEN : adresseFuerVorlage(id);
+              }}
+              zurueck={{ label: 'Planen', onClick: () => wechseln('planen') }}
+            />
+          )}
+          {start && hauptSicht && aktiv === 'start' && (
             <Startseite
               start={start}
               termine={termineSicht}
@@ -235,7 +256,7 @@ export function App() {
               }}
             />
           )}
-          {terminId === null && aktiv === 'termine' && termine && start && (
+          {hauptSicht && aktiv === 'termine' && termine && start && (
             <Termine
               onTermin={terminZeigen}
               zustand={termineSicht ?? termine}
@@ -252,7 +273,7 @@ export function App() {
               onMehr={mehrLaden}
             />
           )}
-          {terminId === null && aktiv === 'planen' && termine && start && (
+          {hauptSicht && aktiv === 'planen' && termine && start && (
             <Planen
               // Neu aufbauen, wenn der Besuch beginnt oder endet – sonst bliebe sein Zeitraum stehen.
               key={fokusGruppe ?? 'gewohnt'}
@@ -272,9 +293,12 @@ export function App() {
               katalog={katalogAus(start)}
               ladeVorlagen={ladeTerminVorlagen}
               ladePersonen={personenLaden}
+              onVorlagen={() => {
+                window.location.hash = ADRESSE_VORLAGEN;
+              }}
             />
           )}
-          {terminId === null && aktiv === 'abwesenheiten' && start && (
+          {hauptSicht && aktiv === 'abwesenheiten' && start && (
             <Abwesenheiten ichId={start.ichId} zeitzone={zeitzone} heute={heuteImKalender()} />
           )}
         </ErweiterungsSeite>

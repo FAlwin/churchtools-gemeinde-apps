@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADRESSE_VORLAGEN,
   adresseFuer,
   adresseFuerPlanenGruppe,
   adresseFuerTermin,
+  adresseFuerVorlage,
   planenGruppeAusAdresse,
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
+  vorlagenAusAdresse,
 } from './reiter';
 
 describe('Reiter des Dienstplaners', () => {
@@ -63,5 +66,26 @@ describe('Adresse „Planen mit einer Gruppe“ (Wunsch 7)', () => {
 
   it('ohne Planen-Recht führt die Adresse zum Start – wie jede unbekannte', () => {
     expect(reiterAusAdresse('#/planen/gruppe/3', sichtbareReiter(false))).toBe('start');
+  });
+});
+
+describe('Adressen der Ablaufvorlagen (E10-V3a)', () => {
+  it('#/vorlagen ist die Liste, #/vorlage/<id> eine Vorlage, alles andere keine Vorlagen-Adresse', () => {
+    expect(vorlagenAusAdresse('#/vorlagen')).toEqual({ id: null });
+    expect(vorlagenAusAdresse('#/vorlage/5')).toEqual({ id: 5 });
+    for (const x of ['', '#/planen', '#/vorlage/', '#/vorlage/x', '#/vorlagen/5', '#/termin/5']) {
+      expect(vorlagenAusAdresse(x)).toBeNull();
+    }
+  });
+
+  it('hin und zurück gleich', () => {
+    expect(vorlagenAusAdresse(ADRESSE_VORLAGEN)).toEqual({ id: null });
+    expect(vorlagenAusAdresse(adresseFuerVorlage(42))).toEqual({ id: 42 });
+  });
+
+  it('der Reiter „Planen“ bleibt markiert – nur für den, der „Planen“ sieht', () => {
+    expect(reiterAusAdresse('#/vorlagen', sichtbareReiter(true))).toBe('planen');
+    expect(reiterAusAdresse('#/vorlage/5', sichtbareReiter(true))).toBe('planen');
+    expect(reiterAusAdresse('#/vorlagen', sichtbareReiter(false))).toBe('start');
   });
 });

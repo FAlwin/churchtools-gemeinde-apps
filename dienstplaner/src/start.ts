@@ -19,7 +19,11 @@ import {
 import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
 import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
-import { darfAblaufBearbeiten, type AblaufTermin } from '@shared/ct/ablaufRecht';
+import {
+  darfAblaufBearbeiten,
+  darfVorlageBearbeiten,
+  type AblaufTermin,
+} from '@shared/ct/ablaufRecht';
 import { darfTerminAendern } from '@shared/ct/terminInfos';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 import { liedRechteAus, type LiedRechte } from '@ui/lied/liedZugriff';
@@ -100,6 +104,24 @@ export function ablaufBearbeitbar(start: Start, termin: AblaufTermin): boolean {
     { isAdmin: false, ablaufKalender: start.rechte.ablaufKalender },
     termin,
     start.ichId,
+  );
+}
+
+/**
+ * Darf man Ablaufvorlagen **dieses Kalenders** bearbeiten (E10-V3a)? Dieselbe Regel wie in der Musik-App
+ * (`darfVorlageBearbeiten`): `edit agenda templates` für den Kalender. Wie beim Ablauf wertet der Dienstplaner kein eigenes
+ * Admin-Recht aus – ein Admin hat das Recht für alle Kalender (`vorlagenKalender: null`). Fehlt das Recht ganz (ältere
+ * Antwort), gilt es als „keins“: Die Vorlage lässt sich dann nur ansehen.
+ */
+export function vorlageBearbeitbar(start: Start, kalenderId: number | null): boolean {
+  return darfVorlageBearbeiten(
+    {
+      isAdmin: false,
+      // Nicht `??`: `null` heißt „alle Kalender“ und darf nicht zu „keiner“ werden (wie `vorlagenRechteAus`).
+      vorlagenKalender:
+        start.rechte.vorlagenKalender !== undefined ? start.rechte.vorlagenKalender : [],
+    },
+    kalenderId,
   );
 }
 

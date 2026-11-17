@@ -1,0 +1,95 @@
+// Eine Ablaufvorlage öffnen (E10-V3a, Entwurf `e10-vorlagen.html` Abschnitt 2) – Aufbau wie die Termin-Ansicht des
+// Dienstplaners, nur ohne Datumskachel.
+@use '../design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.titel {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.zurueck {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.karte {
+  @include m.card-list;
+}
+
+.kartenKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.kopfKnoepfe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grund {
+  background: var(--surface2);
+}
+
+.hinweis {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fehler {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+}

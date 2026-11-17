@@ -87,3 +87,15 @@
     white-space: nowrap;
   }
 }
+
+// Mehrere Links rechts in der Hinweiszeile (E10-V3a: „Umbenennen …“, „Löschen …“ in einer Vorlage).
+.hintLinks {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+}
+// „Löschen …“ – rot, weil etwas verloren geht.
+.hinweisGefahr {
+  color: var(--red);
+}

@@ -95,6 +95,11 @@ interface Props {
   fokusGruppe?: number | null;
   /** „Gewohnte Ansicht“ – zurück zu Planen mit dem gemerkten Filter. */
   onFokusEnde?: () => void;
+  /**
+   * Die Seite „Ablaufvorlagen“ öffnen (E10-V3a): Knopf „Vorlagen“ links neben „Ablauf bearbeiten“. Ohne steht der Knopf
+   * nicht da (Tests ohne die Seite).
+   */
+  onVorlagen?: () => void;
 }
 
 /**
@@ -132,6 +137,7 @@ export function Planen({
   ladePersonen,
   fokusGruppe = null,
   onFokusEnde,
+  onVorlagen,
 }: Props) {
   const [gemerkt, setGemerkt] = useState<PlanenAnsicht>(leseAnsicht);
   // Ein Besuch von der Startseite (Wunsch 7): Zeitraum, Gruppen und Dienste gelten nur hier – `aus: null` heißt „alle
@@ -317,6 +323,14 @@ export function Planen({
       />
       {!handy && leiste}
       <div className={styles.rechts}>
+        {onVorlagen && (
+          <KopfKnopf
+            onClick={onVorlagen}
+            label="Vorlagen"
+            title="Ablaufvorlagen ansehen und bearbeiten"
+            symbol={<Icon name="grid" size={16} stroke={2.2} />}
+          />
+        )}
         {/* „Ablauf bearbeiten“ hier statt neben „Ablauf“ – dort passte er nicht in die Dienst-Spalte (E6-6c). */}
         {!handy && ansicht.unteransicht === 'matrix' && matrixAblauf && plan && (
           <AblaufBearbeitenKnopf ma={matrixAblauf} plan={plan} spalten={imFenster} />

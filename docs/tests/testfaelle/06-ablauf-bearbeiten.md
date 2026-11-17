@@ -455,3 +455,41 @@ das CCLI-Recht. Ein zweites Konto **ohne** Lied-Recht, das den Ablauf bearbeiten
 - **Historie:** 06.11.2026 (LW2b; vorher zeigte der Dienstplaner Lieder nur an, Alwin 17.10.2026)
 
 </details>
+
+### TF-EDIT-17 · Im Dienstplaner Ablaufvorlagen ansehen, anlegen, bearbeiten, umbenennen und löschen
+
+⚠️ **Achtung: Dieser Test ändert echte Daten in ChurchTools** – nur mit einer **eigenen Probe-Vorlage** (z. B. „Probe E10“), die am
+Ende wieder gelöscht wird. Bestehende Vorlagen nicht anfassen.
+
+**Vorbereitung:** Im Dienstplaner ein Konto mit dem Recht **„Ablaufvorlagen bearbeiten“** für **einen** Kalender (nicht alle)
+und Zugang zu **Planen**. Ein zweites Konto ohne dieses Recht, aber mit Zugang zu Planen. Eine Vorlage in einem Kalender, für den
+das Recht fehlt.
+
+**Das muss passieren:** Die Seite zeigt die Vorlagen nach Kalender; bearbeiten darf nur, wer das Recht für den Kalender hat
+(Alwin, 17.11.2026, E10). Eine Vorlage hat keine Uhrzeiten, keine Personen und kein Auge. Am Handy (375 px) stehen „Umbenennen …“/„Löschen …“ in einer eigenen Zeile unter der Anleitung; „Neu aufsetzen …“ am Termin ebenso.
+
+1. **Planen** → in der Leiste **Vorlagen** (links neben „Ablauf bearbeiten“). Die Adresse endet auf `#/vorlagen`, „Planen“
+   bleibt oben markiert. Die Vorlagen stehen unter ihrem **Kalender**, je Zeile „N Punkte · geändert TT.MM.“ (und „N vor Beginn“).
+2. Am Kalender **ohne** das Recht steht **nur ansehen**. Dort eine Vorlage öffnen: Der Ablauf steht ohne Uhrzeiten da, Dienste
+   als **[Moderation]** (nicht rot mit „?“), **kein „Bearbeiten“**.
+3. **Neue Vorlage** → Name „Probe E10“; die Auswahl bietet **nur** Kalender mit Recht, vorbelegt ist der mit den meisten Vorlagen → **Anlegen**. Die leere Vorlage geht
+   **gleich im Bearbeiten-Modus** auf. Einen Namen über 100 Zeichen lässt das Feld nicht zu; ein leerer Name sperrt „Anlegen“.
+4. **Eintrag hinzufügen** → Programmpunkt „Begrüßung“, 5 Min, Zuständig **Moderation**; dazu eine **Überschrift** und einen Punkt
+   **vor dem Beginn** (Schalter „Vor Gottesdienstbeginn“). Im Fenster gibt es **kein „An diesem Termin weglassen“**; beim Programmpunkt stehen die **Infos je Gruppe** (eintragen,
+   speichern, in ChurchTools prüfen; **Spalten** zeigt sie auch in der Ansicht), bei der Überschrift **keine**. Punkte ziehen und löschen (mit **Rückgängig**).
+5. Die Vorlage in **ChurchTools** ansehen: Punkte, Reihenfolge, Dauer, Platzhalter und die Grenze „Beginn“ stimmen.
+6. Zurück in der App: **Umbenennen …** → „Probe E10 (neu)“ („Höchstens 100 Zeichen.“) → **Speichern**; Kopf und Liste zeigen den
+   neuen Namen.
+7. **‹ Vorlagen** (und mit dem Browser-Zurück): zurück in der Liste; **‹ Planen**: zurück in der Matrix.
+8. Probe-Vorlage wieder öffnen → **Bearbeiten** → **Löschen …** → Nachfrage mit rotem Hinweis „Das lässt sich nicht
+   rückgängig machen.“ → **Abbrechen** (nichts passiert), dann **Löschen** → zurück in der Liste, die Vorlage fehlt auch in ChurchTools.
+9. Mit dem Konto **ohne** Recht: überall **nur ansehen**, kein „Neue Vorlage“, kein „Bearbeiten“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `ui/ablauf/VorlagenBereich.tsx`, `ui/ablauf/VorlagenListe.tsx`, `ui/ablauf/VorlageAnsicht.tsx`, `ui/ablauf/VorlagenFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/PunktFenster.tsx`, `dienstplaner/src/vorlagenZugriff.ts`, `dienstplaner/src/ablaufAktionen.ts`, `dienstplaner/src/App.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/start.ts`, `shared/ct/ablaufVorlagenListe.ts`, `shared/ct/ablaufVorlagen.ts`
+- **Automatisiert:** teilweise – `ui/ablauf/VorlagenBereich.test.tsx` (Liste, „nur ansehen“, „Neue Vorlage“ nur mit Recht, Fenster, Löschen mit Nachfrage), `ui/ablauf/vorlagenModus.test.tsx` (kein Auge, keine Infos, Platzhalter neutral, keine Uhrzeit – jeweils mit Termin-Gegenprobe), `dienstplaner/src/App.vorlagen.test.tsx` (Adressen, Reiter, Zurück), `dienstplaner/src/reiter.test.ts`, `dienstplaner/src/start.test.ts` (`vorlageBearbeitbar`), `dienstplaner/src/ablaufAktionen.test.ts` (Ziel Vorlage), `shared/ct/ablaufVorlagenListe.test.ts`; von Hand bleibt das Schreiben gegen echtes ChurchTools
+- **Historie:** 17.11.2026 (E10-V3a; Kern E10-V1, Entwurf E10-V2)
+
+</details>

@@ -105,8 +105,11 @@ export function SortableRow<T extends AblaufZeile>({
   ziehId,
   daten,
   infoZeilen,
+  vorlage = false,
 }: {
   item: T;
+  /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral – `ZeilenInhalt`. */
+  vorlage?: boolean;
   /** Die Infos der als Spalten gewählten Gruppen – als Zeile unter dem Punkt (02.11.2026). */
   infoZeilen?: readonly InfoGruppe[];
   onOpenActions: (item: T) => void;
@@ -184,7 +187,7 @@ export function SortableRow<T extends AblaufZeile>({
       </button>
       <ZeitSpalte item={item} />
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
-        <ZeilenInhalt item={item} schmal={schmal} infoZeilen={infoZeilen} />
+        <ZeilenInhalt item={item} schmal={schmal} infoZeilen={infoZeilen} vorlage={vorlage} />
       </button>
       {aktionen && <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} />}
       <button

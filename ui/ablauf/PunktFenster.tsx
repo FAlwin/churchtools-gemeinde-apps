@@ -73,6 +73,13 @@ interface Gemeinsam {
    * führt dort keine Infos (gemessen E6-4-0).
    */
   infoGruppen?: readonly InfoGruppe[];
+  /**
+   * Der Punkt gehört zu einer **Ablaufvorlage** (E10-V3a): kein Auge „An diesem Termin weglassen“ (eine Vorlage hat
+   * keinen Termin). Infos je Dienstgruppe gelten wie am Termin – ChurchTools speichert sie an Text- und Lied-Punkten
+   * einer Vorlage (gemessen E10-0), nur an Überschriften nicht (dort gilt die Regel des Fensters). Der Vorlauf-Schalter
+   * bleibt: Vorlagen kennen „vor Beginn“. Das Zuständig-Feld zeigt Platzhalter neutral.
+   */
+  vorlage?: boolean;
 }
 
 /** Einen vorhandenen Punkt bearbeiten (der Normalfall – `modus` darf fehlen). */
@@ -88,8 +95,11 @@ interface Bearbeiten extends Gemeinsam {
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (nur dieser Punkt rückt an „Beginn“, siehe Schalter). Wirft bei Fehler. */
   onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
-  /** Schreibt das Auge („an diesem Termin weglassen“, E6-3b) – der Stand kommt aus `item.weggelassen`. Wirft bei Fehler. */
-  onSetWeggelassen: (weggelassen: boolean) => Promise<void>;
+  /**
+   * Schreibt das Auge („an diesem Termin weglassen“, E6-3b) – der Stand kommt aus `item.weggelassen`. Wirft bei Fehler.
+   * Fehlt in einer Ablaufvorlage (`vorlage`): Dort gibt es kein Auge.
+   */
+  onSetWeggelassen?: (weggelassen: boolean) => Promise<void>;
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
   onRequestDelete: () => void;
   /** Sieht der Bearbeitende nicht alle Dienstgruppen (#676)? Dann steht der Hinweis über den Knöpfen. */
@@ -174,6 +184,7 @@ const LEERER_PUNKT: AblaufZeile = {
  */
 export function PunktFenster(props: PunktFensterProps) {
   const { onClose, services, liedWahl, liedAnsehen } = props;
+  const vorlage = props.vorlage === true;
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const ablauf = props.modus === 'neu' ? (props.ablauf ?? []) : [];
@@ -323,7 +334,7 @@ export function PunktFenster(props: PunktFensterProps) {
       if (Object.keys(pending).length > 0) await onUpdate(pending, trotzdem);
       if (vorBeginn !== vorBeginnStart) await onSetVorBeginn(vorBeginn);
       // Das Auge zuletzt: Es gilt nur für diesen Termin und ändert nur Uhrzeiten (E6-3b).
-      if (weggelassen !== weggelassenStart) await onSetWeggelassen(weggelassen);
+      if (weggelassen !== weggelassenStart) await onSetWeggelassen?.(weggelassen);
       onClose();
     } catch (e) {
       const meldung = e instanceof Error ? e.message : 'Speichern fehlgeschlagen.';
@@ -466,7 +477,7 @@ export function PunktFenster(props: PunktFensterProps) {
   const zeitBis = zeitVon && item.durationMin ? zeitPlus(zeitVon, item.durationMin) : null;
   const zeitText = neu
     ? null
-    : item.weggelassen
+    : item.weggelassen && !vorlage
       ? 'an diesem Termin weggelassen'
       : zeitVon
         ? zeitBis
@@ -796,7 +807,10 @@ export function PunktFenster(props: PunktFensterProps) {
                       <>
                         <span>{zustAnzeige}</span>
                         {zustUnveraendert ? (
-                          <ResponsibleLine entries={item.responsible} />
+                          <ResponsibleLine
+                            entries={item.responsible}
+                            vorlage={vorlage ? { text: item.responsibleText } : undefined}
+                          />
                         ) : (
                           !neu && (
                             <small className={styles.vorgemerkt}>
@@ -869,14 +883,14 @@ export function PunktFenster(props: PunktFensterProps) {
               <>
                 {!ueberschrift && infosBlock}
                 {vorlaufSchalter}
-                {augeSchalter}
+                {!vorlage && augeSchalter}
               </>
             )}
           </>
         ) : (
           <>
             {vorlaufSchalter}
-            {augeSchalter}
+            {!vorlage && augeSchalter}
           </>
         )}
       </div>

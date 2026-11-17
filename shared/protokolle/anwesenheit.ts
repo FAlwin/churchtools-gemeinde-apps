@@ -9,6 +9,10 @@
  *   nichts darübergeschrieben.
  * - **Gäste** sind freie Namen und stehen **nur im Protokoll** (`props.gaeste` am festen Punkt), nie im Gruppentreffen
  *   (Alwin: „die müssen nicht in der Gruppe stehen“). Sie gelten als anwesend.
+ * - **Aus dem Protokoll genommen** (`props.ohne`, Alwin 17.11.2026): Jede Person lässt sich aus der Anwesenheit DIESES
+ *   Protokolls ausblenden – etwa ein Gemeinschaftskonto, das als Gruppenmitglied in jedem Gruppentreffen steht. Das
+ *   steht **nur im Protokoll**; im Gruppentreffen bleibt die Person unverändert. `ohneAusgeblendete` ist die EINE
+ *   Stelle, die sie aus dem Stand nimmt – Anzeige, Zahlen, PDF, Freigabe-Hinweis und Vorbelegung gehen alle darüber.
  */
 import type { Anfrage } from './sitzungen';
 
@@ -80,15 +84,19 @@ export function treffenStandAus(treffen: unknown, personen: unknown): TreffenSta
 
 /**
  * **Was von selbst eingetragen wird:** Zusage → anwesend, Absage → abwesend – nur bei Personen, die im Treffen noch
- * offen sind, und nur, solange am Treffen niemand etwas eingetragen hat und es nicht abgeschlossen ist.
+ * offen sind, und nur, solange am Treffen niemand etwas eingetragen hat und es nicht abgeschlossen ist. Aus dem
+ * Protokoll genommene Personen (`ohne`) bleiben unberührt.
  */
 export function vorbelegung(
   stand: TreffenStand,
   anfragen: readonly Anfrage[],
+  ohne: readonly number[],
 ): { person: number; status: AnwesenheitsStatus }[] {
   if (stand.begonnen || stand.abgeschlossen) return [];
+  // Wer aus dem Protokoll genommen ist, bekommt nichts von selbst eingetragen (das stünde sonst im Gruppentreffen).
+  const sichtbar = ohneAusgeblendete(stand, ohne);
   const antwort = new Map(anfragen.map((a) => [a.person, a.antwort]));
-  return stand.personen.flatMap((p): { person: number; status: AnwesenheitsStatus }[] => {
+  return sichtbar.personen.flatMap((p): { person: number; status: AnwesenheitsStatus }[] => {
     if (p.status !== 'offen') return [];
     const a = antwort.get(p.person);
     return a === 'zugesagt'
@@ -134,4 +142,34 @@ export function gaesteAus(x: unknown): string[] {
 export function gaesteWert(gaeste: readonly string[]): string {
   const sauber = gaesteAus(JSON.stringify(gaeste));
   return sauber.length ? JSON.stringify(sauber) : '';
+}
+
+/** `props.ohne` lesen – eine JSON-Liste von Personen-IDs; Kaputtes, Doppeltes und Keine-Zahl fällt weg. */
+export function ohneAus(x: unknown): number[] {
+  if (typeof x !== 'string' || !x) return [];
+  try {
+    const v: unknown = JSON.parse(x);
+    if (!Array.isArray(v)) return [];
+    const out: number[] = [];
+    for (const n of v)
+      if (typeof n === 'number' && Number.isInteger(n) && n > 0 && !out.includes(n)) out.push(n);
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** `props.ohne` schreiben – leer, wenn niemand ausgeblendet ist (dann bleibt der Block wie vorher). */
+export function ohneWert(ohne: readonly number[]): string {
+  const sauber = ohneAus(JSON.stringify(ohne));
+  return sauber.length ? JSON.stringify(sauber) : '';
+}
+
+/**
+ * **Der Stand ohne die aus dem Protokoll genommenen Personen** – die einzige Stelle, die `props.ohne` auf einen
+ * `TreffenStand` anwendet. Wer in der Liste nicht (mehr) vorkommt, ist egal.
+ */
+export function ohneAusgeblendete(stand: TreffenStand, ohne: readonly number[]): TreffenStand {
+  if (!ohne.length) return stand;
+  return { ...stand, personen: stand.personen.filter((p) => !ohne.includes(p.person)) };
 }

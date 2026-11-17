@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
+import { ohneWert } from '@shared/protokolle/anwesenheit';
 import type { Block } from '@shared/protokolle/dokument';
 import type { ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
@@ -10,6 +11,7 @@ import { einhaengen } from './editorTest.testutil';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { FesterPunkt } from './FesterPunkt';
 import { VerweisBlock } from './EditorBloecke';
+import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { nachbauEnde, nachbauStarten, type Nachbau } from './nachbau.testhilfe';
 
 /**
@@ -167,6 +169,97 @@ describe('Anwesenheit beim Schreiben (S5-3)', () => {
   });
 });
 
+describe('Person aus dem Protokoll nehmen (17.11.2026)', () => {
+  const schreiben = (ohne: unknown, setzen = vi.fn(), extra: Record<string, unknown> = {}) =>
+    zeige(
+      <FesterPunkt
+        art="anwesenheit"
+        abhaken
+        gaeste=""
+        gaesteSetzen={() => {}}
+        ohne={ohne}
+        ohneSetzen={setzen}
+        fest=""
+        {...extra}
+      />,
+    );
+
+  it('je Person ein Knopf – er meldet die Person-ID an den Block, im Gruppentreffen ändert sich nichts', async () => {
+    const setzen = vi.fn();
+    schreiben('', setzen);
+    await screen.findByRole('group', { name: 'Alwin Friesen' });
+    const vorher = [imTreffen(1), imTreffen(19)];
+    fireEvent.click(screen.getByRole('button', { name: 'Spike Musiker aus dem Protokoll nehmen' }));
+    expect(setzen).toHaveBeenLastCalledWith([19]);
+    expect([imTreffen(1), imTreffen(19)]).toEqual(vorher);
+    expect(ct.teilnehmer.map((t) => t.person)).toEqual([1, 19]); // nie aus dem Gruppentreffen
+  });
+
+  it('wer schon ausgeblendet ist, steht nicht in der Liste und nicht in den Zahlen; die zweite Person kommt dazu', async () => {
+    const setzen = vi.fn();
+    schreiben(ohneWert([19]), setzen);
+    await screen.findByRole('group', { name: 'Alwin Friesen' });
+    expect(screen.queryByRole('group', { name: 'Spike Musiker' })).toBeNull();
+    expect(screen.getByText('Anwesend 1 · Abwesend 0 · Offen 0')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Alwin Friesen aus dem Protokoll nehmen' }));
+    expect(setzen).toHaveBeenLastCalledWith([19, 1]);
+  });
+
+  it('„n ausgeblendet“ mit „Zeigen“: die Ausgeblendeten klappen auf, „Zurückholen“ nimmt sie wieder herein', async () => {
+    const setzen = vi.fn();
+    schreiben(ohneWert([19]), setzen);
+    await screen.findByText('1 ausgeblendet');
+    expect(screen.queryByRole('button', { name: 'Spike Musiker zurückholen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zeigen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Spike Musiker zurückholen' }));
+    expect(setzen).toHaveBeenLastCalledWith([]);
+  });
+
+  it('ohne Ausgeblendete gibt es die Zeile nicht', async () => {
+    schreiben('');
+    await screen.findByRole('group', { name: 'Alwin Friesen' });
+    expect(screen.queryByText(/ausgeblendet/)).toBeNull();
+  });
+
+  it('die Vorbelegung überspringt Ausgeblendete: nichts davon steht im Gruppentreffen', async () => {
+    schreiben(ohneWert([19]));
+    await screen.findByRole('group', { name: 'Alwin Friesen' });
+    expect(imTreffen(1)).toBe('present'); // die Zusage wird eingetragen …
+    expect(imTreffen(19)).toBe('unsure'); // … die Absage der ausgeblendeten Person nicht
+  });
+
+  it('zugeklappt zählt die Kurzform ohne sie', async () => {
+    ct.treffen.get(G)![0].hasEditingStarted = true;
+    ct.teilnahme.set(15, new Map([[1, 'present']]));
+    zeige(
+      <FesterPunkt art="anwesenheit" abhaken={false} gaeste="" ohne={ohneWert([19])} fest="" />,
+    );
+    const kopfzeile = await screen.findByRole('button', { expanded: false });
+    expect(kopfzeile.textContent).toBe('Anwesend (1): Alwin Friesen');
+  });
+
+  it('beim Lesen: ausgeblendete Person erscheint gar nicht, auch kein Knopf und keine Zeile „ausgeblendet“', async () => {
+    ct.treffen.get(G)![0].hasEditingStarted = true;
+    zeige(
+      <FesterPunkt art="anwesenheit" abhaken={false} gaeste="" ohne={ohneWert([19])} fest="" />,
+    );
+    fireEvent.click(await screen.findByRole('button', { expanded: false }));
+    expect(screen.queryByText(/Spike Musiker/)).toBeNull();
+    expect(screen.queryByText(/ausgeblendet/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /aus dem Protokoll nehmen/ })).toBeNull();
+  });
+
+  it('abgeschlossenes Treffen: Tippen gesperrt, Ausblenden bleibt möglich (betrifft nur das Protokoll)', async () => {
+    ct.treffen.get(G)![0].isCompleted = true;
+    const setzen = vi.fn();
+    schreiben('', setzen);
+    await screen.findByText(/abgeschlossen – die Anwesenheit steht fest/);
+    expect(screen.queryByRole('group', { name: 'Spike Musiker' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Spike Musiker aus dem Protokoll nehmen' }));
+    expect(setzen).toHaveBeenLastCalledWith([19]);
+  });
+});
+
 describe('Anwesenheit beim Lesen (S5-3)', () => {
   it('zugeklappt die Kurzform; keine Knöpfe, keine Vorbelegung', async () => {
     ct.treffen.get(G)![0].hasEditingStarted = true;
@@ -180,6 +273,27 @@ describe('Anwesenheit beim Lesen (S5-3)', () => {
     expect(screen.queryByRole('group', { name: 'Alwin Friesen' })).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Gruppentreffen anlegen' })).toBeNull();
+  });
+
+  it('die Lese-Ansicht des Protokolls reicht props.ohne an den Kasten: die Person fehlt, auch aufgeklappt', async () => {
+    ct.treffen.get(G)![0].hasEditingStarted = true;
+    ct.teilnahme.set(15, new Map([[1, 'present']]));
+    zeige(
+      <ProtokollAnsicht
+        dokument={[
+          {
+            id: 'v',
+            type: 'verweis',
+            props: { art: 'anwesenheit', ohne: ohneWert([19]) },
+            children: [],
+          },
+        ]}
+      />,
+    );
+    const kopfzeile = await screen.findByRole('button', { expanded: false });
+    expect(kopfzeile.textContent).toBe('Anwesend (1): Alwin Friesen');
+    fireEvent.click(kopfzeile);
+    expect(screen.queryByText(/Spike Musiker/)).toBeNull();
   });
 
   it('ohne Treffen beim Lesen: nur der Satz, kein Knopf', () => {
@@ -239,6 +353,41 @@ describe('Im Editor (VerweisBlock)', () => {
     expect(await screen.findByText('Hans Wall')).toBeTruthy();
   });
 
+  it('eine Person aus dem Protokoll nehmen landet in props.ohne – und wieder zurückholen leert es', async () => {
+    const e = editorMit([
+      { id: 'v', type: 'verweis', props: { art: 'anwesenheit' }, children: [] },
+    ]);
+    const block = () => {
+      const b = e.getBlock('v')!;
+      return {
+        id: 'v',
+        props: b.props as { art: string; fest: string; gaeste?: string; ohne?: string },
+      };
+    };
+    const rahmen = (b: ReturnType<typeof block>) => (
+      <FestePunkteRahmen
+        sitzung={SITZUNG}
+        gruppe={G}
+        protokolle={[]}
+        teile={[]}
+        aufgaben={[]}
+        zeitzone="Europe/Berlin"
+      >
+        <VerweisBlock block={b} editor={e} />
+      </FestePunkteRahmen>
+    );
+    const { rerender } = zeige(<VerweisBlock block={block()} editor={e} />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Spike Musiker aus dem Protokoll nehmen' }),
+    );
+    expect(e.getBlock('v')!.props).toMatchObject({ ohne: ohneWert([19]) });
+    act(() => rerender(rahmen(block())));
+    expect(screen.queryByRole('group', { name: 'Spike Musiker' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zeigen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Spike Musiker zurückholen' }));
+    expect(e.getBlock('v')!.props).toMatchObject({ ohne: '' });
+  });
+
   it('gesperrter Editor: nur lesen – kein Tippen, keine Vorbelegung', async () => {
     const e = editorMit([
       { id: 'v', type: 'verweis', props: { art: 'anwesenheit' }, children: [] },
@@ -247,6 +396,7 @@ describe('Im Editor (VerweisBlock)', () => {
     zeige(<VerweisBlock block={{ id: 'v', props: { art: 'anwesenheit', fest: '' } }} editor={e} />);
     await screen.findByRole('button', { expanded: false });
     expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /aus dem Protokoll nehmen/ })).toBeNull();
     expect(ct.teilnahme.get(15)).toBeUndefined();
   });
 });

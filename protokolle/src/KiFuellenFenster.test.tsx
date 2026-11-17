@@ -15,6 +15,7 @@ import {
 import {
   namenFinden,
   platzhalterAnwenden,
+  zuordnungErgaenzen,
   type Fund,
   type Person,
 } from '@shared/protokolle/platzhalter';
@@ -447,6 +448,183 @@ describe('Schritt 2: Antwort', () => {
     expect(screen.getByLabelText<HTMLTextAreaElement>('Antwort der KI').value).toContain(
       '"nr":"1"',
     );
+  });
+});
+
+describe('Direkt zur Antwort (ohne Transkript)', () => {
+  const direkt = () => {
+    const r = zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Antwort schon da? Direkt einfügen' }));
+    return r;
+  };
+  const vorschau = () => fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+  /** Eine Antwort mit Platzhaltern, die dieses Fenster nicht kennt (aus einem früheren Lauf). */
+  const fremdeAntwort = {
+    punkte: [{ nr: '1', stichpunkte: ['[Person 1] hält die Andacht.'] }],
+    todos: [
+      { nr: '3.1', text: 'Zusagen einholen', wer: ['[Person 2]'], bis: '2026-11-20' },
+      { nr: '3.2', text: 'Beamer prüfen', wer: ['[Person 3]'] },
+    ],
+  };
+
+  it('der Link in Schritt 1 führt ohne Transkript zur Antwort – ohne „Auftrag anzeigen“ und ohne Kopier-Hinweis', async () => {
+    direkt();
+    await screen.findByLabelText('Antwort der KI');
+    expect(screen.queryByText('Auftrag anzeigen')).toBeNull();
+    expect(screen.queryByLabelText('Auftrag')).toBeNull();
+    expect(screen.queryByText('Der Auftrag ist noch nicht kopiert.')).toBeNull();
+    expect(screen.queryByText(/in deine KI einfügen und die Antwort hier einfügen/)).toBeNull();
+  });
+
+  it('Zurück geht von dort wieder zu Schritt 1', async () => {
+    direkt();
+    await screen.findByLabelText('Antwort der KI');
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(await screen.findByLabelText('Transkript')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Antwort schon da? Direkt einfügen' })).toBeTruthy();
+  });
+
+  it('der Weg mit Transkript behält seinen Auftrag-Ausweg (der Link ändert nichts daran)', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    expect(screen.getByText('Auftrag anzeigen')).toBeTruthy();
+  });
+
+  it('Platzhalter, die das Fenster nicht kennt, stehen in „Platzhalter zuordnen“ – mit den Gruppenmitgliedern als Vorschlag', async () => {
+    direkt();
+    antworten(fremdeAntwort);
+    await screen.findByRole('heading', { name: 'Platzhalter zuordnen' });
+    for (const p of ['[Person 1]', '[Person 2]', '[Person 3]'])
+      expect(screen.getByLabelText(`Name für ${p}`)).toBeTruthy();
+    const vorschlaege = [...document.querySelectorAll('#ki-gruppenmitglieder option')].map(
+      (o) => (o as HTMLOptionElement).value,
+    );
+    expect(vorschlaege).toEqual(GRUPPE_PERSONEN.map((p) => `${p.vorname} ${p.nachname}`));
+    expect(screen.getByLabelText('Name für [Person 1]').getAttribute('list')).toBe(
+      'ki-gruppenmitglieder',
+    );
+  });
+
+  it('ohne Transkript gilt keine Zuordnung aus den Titeln: dessen „[Person n]“ muss von Hand zugeordnet werden', async () => {
+    direkt();
+    // Der Titel „Besuch von Lea Janzen“ würde im Fenster einen Platzhalter bekommen – ohne Transkript nutzlos.
+    const lea = phVon(fundeFuer(''), 'Lea Janzen');
+    antworten({ punkte: [{ nr: '1', stichpunkte: [`${lea} spricht.`] }] });
+    expect(await screen.findByLabelText(`Name für ${lea}`)).toBeTruthy();
+  });
+
+  it('mit Transkript steht nur, was die Zuordnung nicht kennt', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    const funde = fundeFuer(TRANSKRIPT);
+    antworten({
+      punkte: [
+        { nr: '1', stichpunkte: [`${phVon(funde, 'Peter Wiens')} spricht, [Person 77] hört zu.`] },
+      ],
+    });
+    expect(await screen.findByLabelText('Name für [Person 77]')).toBeTruthy();
+    expect(screen.queryByLabelText(`Name für ${phVon(funde, 'Peter Wiens')}`)).toBeNull();
+  });
+
+  it('ein gewählter Name wird in der Vorschau eingesetzt; ein Mitglied wird zuständige Person – wie die Regeln es rechnen', async () => {
+    const { einfuegen } = direkt();
+    antworten(fremdeAntwort);
+    fireEvent.change(await screen.findByLabelText('Name für [Person 1]'), {
+      target: { value: 'Peter Wiens' },
+    });
+    fireEvent.change(screen.getByLabelText('Name für [Person 2]'), {
+      target: { value: ' Daniel Schmidt ' },
+    });
+    fireEvent.change(screen.getByLabelText('Name für [Person 3]'), {
+      target: { value: 'Fremde Frau' },
+    });
+    vorschau();
+    await screen.findByText('Stichpunkte');
+
+    // Dasselbe, was die Regeln aus dieser Zuordnung machen.
+    const zuordnung = zuordnungErgaenzen(
+      {},
+      {
+        '[Person 1]': 'Peter Wiens',
+        '[Person 2]': 'Daniel Schmidt',
+        '[Person 3]': 'Fremde Frau',
+      },
+    );
+    const r = antwortLesen(JSON.stringify(fremdeAntwort), {
+      dokument: dokument(),
+      zuordnung,
+      funde: [],
+      gruppe: GRUPPE_PERSONEN,
+    });
+    if (!r.ok) throw new Error(r.meldung);
+    const todo = r.eintraege.find((e) => e.art === 'todo' && e.text === 'Zusagen einholen');
+    expect(todo?.art === 'todo' && todo.wer).toEqual([{ name: 'Daniel Schmidt', personId: 4 }]);
+
+    const alles = document.body.textContent ?? '';
+    expect(alles).toContain('Peter Wiens hält die Andacht.');
+    expect(alles).toContain('Daniel Schmidt');
+    expect(alles).not.toContain('Daniel Schmidt (extern)');
+    expect(alles).toContain('Fremde Frau (extern)');
+    expect(alles).not.toMatch(/\[Person \d+\]/);
+    expect(screen.queryByText(/keinem Namen zugeordnet/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Ausgewählte übernehmen/ }));
+    const plan = uebernahmePlanen(r.eintraege.filter(uebernehmbar), dokument(), neueIdFabrik());
+    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    // Die Aufgabe trägt das Mitglied als Zuständigen (vorab.wer), nicht als externen Namen.
+    expect(JSON.stringify(einfuegen.mock.calls)).toContain('\\"wer\\":[4]');
+  });
+
+  it('leer gelassen: der Platzhalter bleibt stehen, EIN Hinweis oben, und als Zuständiger wird er nicht übernommen', async () => {
+    const { einfuegen } = direkt();
+    antworten(fremdeAntwort);
+    await screen.findByLabelText('Name für [Person 1]');
+    vorschau();
+    await screen.findByText('Stichpunkte');
+
+    // Ein Hinweis, gesammelt, mit allen drei.
+    const hinweise = screen.getAllByText(/keinem Namen zugeordnet/);
+    expect(hinweise).toHaveLength(1);
+    expect(hinweise[0].textContent).toBe(
+      '[Person 1], [Person 2], [Person 3] sind keinem Namen zugeordnet – nach dem Übernehmen selbst ersetzen.',
+    );
+    // Der Text zeigt den Platzhalter (blau), die To-Dos haben niemanden zuständig – kein „(extern)“.
+    expect(screen.getByText('[Person 1]', { selector: 'span span' })).toBeTruthy();
+    const todo = screen.getByText('Zusagen einholen').closest('label')!;
+    expect(todo.textContent).toContain('niemand zuständig');
+    expect(todo.textContent).not.toContain('(extern)');
+    expect(todo.textContent).not.toContain('[Person 2]');
+
+    fireEvent.click(screen.getByRole('button', { name: /Ausgewählte übernehmen/ }));
+    const gesendet = JSON.stringify(einfuegen.mock.calls);
+    // Der Stichpunkt behält den Platzhalter zum Ersetzen, die Aufgabe bekommt ihn NICHT als externen Namen.
+    expect(gesendet).toContain('[Person 1] hält die Andacht.');
+    expect(gesendet).not.toContain('extern\\":\\"[Person');
+    expect(gesendet).not.toContain('[Person 2]');
+  });
+
+  it('nur ein einzelner offener Platzhalter: der Hinweis steht in der Einzahl', async () => {
+    direkt();
+    antworten({ punkte: [{ nr: '1', stichpunkte: ['[Person 5] spricht.'] }] });
+    await screen.findByLabelText('Name für [Person 5]');
+    vorschau();
+    await screen.findByText('Stichpunkte');
+    expect(screen.getByText(/ist keinem Namen zugeordnet/).textContent).toBe(
+      '[Person 5] ist keinem Namen zugeordnet – nach dem Übernehmen selbst ersetzen.',
+    );
+  });
+
+  it('kennt die Zuordnung alles (Weg mit Transkript), gibt es weder die Liste noch den Hinweis', async () => {
+    zeige();
+    tippeTranskript();
+    await zuSchritt2();
+    antworten(antwortFuer(fundeFuer(TRANSKRIPT)));
+    expect(screen.queryByRole('heading', { name: 'Platzhalter zuordnen' })).toBeNull();
+    vorschau();
+    await screen.findByText('Stichpunkte');
+    expect(screen.queryByText(/keinem Namen zugeordnet/)).toBeNull();
   });
 });
 

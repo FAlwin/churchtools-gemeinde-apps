@@ -94,6 +94,34 @@
   text-underline-offset: 3px;
 }
 
+// Platzhalter einer eingefügten Antwort einem Namen zuordnen (Schritt 2)
+.zuordnen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zuordnenZeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+
+  .platzhalter {
+    flex: none;
+    min-width: 96px;
+  }
+
+  > input {
+    @include m.eingabefeld;
+    flex: 1 1 180px;
+    min-width: 0;
+    height: var(--knopf-hoehe);
+    padding: 0 10px;
+    font-size: 16px; // unter 16 px zoomt Safari am iPhone beim Antippen hinein (K3a)
+  }
+}
+
 // Gefundene Namen
 .funde {
   border: 1px solid var(--border);

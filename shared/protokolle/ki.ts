@@ -18,7 +18,14 @@
  * Nummern.
  */
 import { ableiten, BLOCK, punktNummer, terminDatum, type Block, type Punkt } from './dokument';
-import { platzhalterAnwenden, zuruecksetzen, type Fund, type Person } from './platzhalter';
+import {
+  istPlatzhalter,
+  platzhalterAnwenden,
+  platzhalterIn,
+  zuruecksetzen,
+  type Fund,
+  type Person,
+} from './platzhalter';
 
 export interface TagesordnungPunkt {
   blockId: string;
@@ -116,7 +123,7 @@ export type Ziel =
 
 /** Eine zuständige Person eines To-Dos. */
 export interface Zustaendig {
-  /** Mit Namen (Platzhalter schon zurückgesetzt) – oder, bei unbekanntem Platzhalter, der Platzhalter selbst. */
+  /** Mit Namen (Platzhalter schon zurückgesetzt). Ein Platzhalter ohne Namen kommt hier nicht vor (`Eintrag.offen`). */
   name: string;
   /** Person der Gruppe → Mitglied; sonst `null` (dann extern). */
   personId: number | null;
@@ -137,6 +144,11 @@ export type Eintrag =
       wer: Zustaendig[];
       /** `JJJJ-MM-TT`; ungültiges Datum → `null`. */
       bis: string | null;
+      /**
+       * Platzhalter, die als Zuständige genannt waren, aber keinem Namen zugeordnet sind – sie stehen NICHT in `wer`
+       * (ein „[Person 1]“ ist kein externer Name). Fehlt, wenn es keine gab.
+       */
+      offen?: string[];
     })
   | (Basis & {
       art: 'termin';
@@ -267,15 +279,19 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
   for (const d of eintraegeVon(o.todos)) {
     const t = text(d.text);
     if (!t) continue;
+    const alle = liste(d.wer)
+      .filter((w): w is string => typeof w === 'string' && !!w.trim())
+      .map(zustaendig);
+    // Ein Platzhalter ohne Namen („[Person 1]“) ist kein Zuständiger – schon gar kein externer Name.
+    const offen = [...new Set(alle.filter((z) => istPlatzhalter(z.name)).map((z) => z.name))];
     eintraege.push({
       id: id('todo'),
       art: 'todo',
       ziel: ziel(d.nr),
       text: zurueck(t),
-      wer: liste(d.wer)
-        .filter((w): w is string => typeof w === 'string' && !!w.trim())
-        .map(zustaendig),
+      wer: alle.filter((z) => !istPlatzhalter(z.name)),
       bis: typeof d.bis === 'string' ? terminDatum({ datum: d.bis.trim() }) : null,
+      ...(offen.length ? { offen } : {}),
     });
   }
   for (const m of eintraegeVon(o.termine)) {
@@ -304,6 +320,21 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
   }
 
   return eintraege.length ? { ok: true, eintraege } : { ok: false, meldung: LEER };
+}
+
+/**
+ * **Platzhalter, die in der Vorschau noch stehen** (Name nicht zugeordnet) – in den Texten der Einträge und bei den
+ * Zuständigen, die deshalb fehlen. Jeder einmal, in der Reihenfolge der Einträge.
+ */
+export function offenePlatzhalter(eintraege: readonly Eintrag[]): string[] {
+  const texte = eintraege.flatMap((e) =>
+    e.art === 'neuerPunkt'
+      ? [e.titel, ...e.stichpunkte]
+      : e.art === 'todo'
+        ? [e.text, ...e.wer.map((w) => w.name), ...(e.offen ?? [])]
+        : [e.text],
+  );
+  return platzhalterIn(texte.join('\n'));
 }
 
 /** Ein Aufruf von `EditorGriff.einfuegen(bloecke, vor)`. */

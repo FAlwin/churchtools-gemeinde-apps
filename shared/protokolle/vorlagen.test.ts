@@ -40,6 +40,21 @@ describe('startDokument', () => {
   });
 });
 
+describe('wieLetztesMal – ausgeblendete Personen der Anwesenheit', () => {
+  it('props.ohne und props.fest des Vorbilds fallen weg – Ausblenden gilt nur für das eine Protokoll', () => {
+    const letztes: Block[] = [
+      {
+        id: 'v',
+        type: BLOCK.verweis,
+        props: { art: 'anwesenheit', ohne: '[19]', fest: 'x' },
+        children: [],
+      },
+    ];
+    const dok = wieLetztesMal(letztes, neueId);
+    expect(dok[0].props).toEqual({ art: 'anwesenheit' });
+  });
+});
+
 describe('wieLetztesMal', () => {
   const letztes: Block[] = [
     {

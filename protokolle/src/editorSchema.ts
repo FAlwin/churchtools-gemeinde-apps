@@ -59,10 +59,12 @@ const verweisBlock = createReactBlockSpec(
     type: BLOCK.verweis,
     // `fest`: was der Punkt bei der Freigabe zeigte (JSON, `festePunkteFesthalten`) – leer = live (S4-3a).
     // `gaeste`: freie Namen beim festen Punkt „Anwesenheit“ (JSON, S5-3).
+    // `ohne`: Personen-IDs, die aus der Anwesenheit DIESES Protokolls genommen sind (JSON) – nur hier, nie im Treffen.
     propSchema: {
       art: { default: 'offene-aufgaben' },
       fest: { default: '' },
       gaeste: { default: '' },
+      ohne: { default: '' },
     },
     content: 'none',
   },

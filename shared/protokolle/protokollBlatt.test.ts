@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Absatz, Rgb } from '../ct/terminBlatt';
 import { neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
+import { ohneWert } from './anwesenheit';
 import type { Block } from './dokument';
 import { protokollBlatt, zeilenAus, type BlattTeil, type ProtokollQuelle } from './protokollBlatt';
 import type { ProtokollKopf } from './speicher';
@@ -372,6 +373,26 @@ describe('Feste Punkte', () => {
     expect(texte(teile(quelle([b])))).toEqual(['Zu dieser Sitzung gibt es kein Gruppentreffen.']);
     expect(texte(teile(quelle([b], { anwesenheit: 'unbekannt' })))).toEqual([
       'Die Anwesenheit ließ sich nicht laden.',
+    ]);
+  });
+
+  it('Anwesenheit: aus dem Protokoll genommene Personen erscheinen weder unter Anwesend noch unter Offen', () => {
+    const stand = {
+      abgeschlossen: false,
+      begonnen: true,
+      personen: [
+        { person: 1, name: 'Alwin Friesen', status: 'da' as const },
+        { person: 19, name: 'Technik ECG', status: 'offen' as const },
+        { person: 23, name: 'Technik Zwei', status: 'da' as const },
+      ],
+    };
+    const mit = verweis('anwesenheit');
+    const ohne = verweis('anwesenheit', { ohne: ohneWert([19, 23]) });
+    expect(texte(teile(quelle([mit], { anwesenheit: stand })))).toEqual([
+      'Anwesend (2): Alwin Friesen, Technik Zwei · Offen: Technik ECG',
+    ]);
+    expect(texte(teile(quelle([ohne], { anwesenheit: stand })))).toEqual([
+      'Anwesend (1): Alwin Friesen',
     ]);
   });
 

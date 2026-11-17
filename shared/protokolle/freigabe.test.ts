@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neueAufgabe, alsGeloescht, type Aufgabe } from './aufgaben';
+import { ohneWert } from './anwesenheit';
 import type { Block } from './dokument';
 import {
   festePunkteFesthalten,
@@ -205,6 +206,29 @@ describe('Hinweise vor dem Freigeben', () => {
       },
     ]);
     expect(h.zusammenfassung).toBe('1 Beschluss, 4 To-Dos, 0 Termine, 2 Tagesordnungspunkte');
+  });
+
+  it('wer aus dem Protokoll genommen ist, zählt nicht als „noch offen“ – steht das Prop am Block (auch eingerückt)', () => {
+    const mitOhne = (ohne: number[]): Block[] =>
+      dok.map((b) => (b.id === 'anw' ? { ...b, props: { ...b.props, ohne: ohneWert(ohne) } } : b));
+    const hinweis = (dokument: Block[]) =>
+      freigabeHinweise({
+        dokument,
+        aufgaben: todos,
+        anwesenheit: treffen,
+        offeneVorschlaege: [],
+      }).hinweise.find((h) => h.art === 'anwesenheit');
+    expect(hinweis(mitOhne([19]))).toMatchObject({
+      text: 'Anwesenheit: 1 noch offen – geprüft?',
+      einzeln: ['Daniel Schmidt'],
+    });
+    // Alle offenen ausgeblendet: der Hinweis entfällt ganz.
+    expect(hinweis(mitOhne([19, 23]))).toBeUndefined();
+    // Eingerückt im Dokument (Kind eines anderen Blocks) gilt dasselbe.
+    const eingerueckt: Block[] = [
+      { ...punkt('p0', 'Vorne'), children: [mitOhne([19, 23]).find((b) => b.id === 'anw')!] },
+    ];
+    expect(hinweis(eingerueckt)).toBeUndefined();
   });
 
   it('alles in Ordnung: keine Hinweise; abgeschlossenes Treffen und gelöschte To-Dos zählen nicht', () => {

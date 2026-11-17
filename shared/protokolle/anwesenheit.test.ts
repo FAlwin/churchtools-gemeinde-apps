@@ -5,6 +5,9 @@ import {
   gaesteWert,
   kurzform,
   nachTipp,
+  ohneAus,
+  ohneAusgeblendete,
+  ohneWert,
   personenAus,
   statusAus,
   treffenStandAus,
@@ -87,15 +90,89 @@ describe('vorbelegung – von selbst aus den Zusagen', () => {
   ];
 
   it('Zusage → anwesend, Absage → abwesend; vielleicht/keine Antwort bleiben offen; schon Eingetragenes bleibt', () => {
-    expect(vorbelegung(stand(), anfragen)).toEqual([
+    expect(vorbelegung(stand(), anfragen, [])).toEqual([
       { person: 1, status: 'da' },
       { person: 2, status: 'weg' },
     ]);
   });
 
   it('nicht mehr, sobald am Treffen jemand etwas eingetragen hat oder es abgeschlossen ist', () => {
-    expect(vorbelegung(stand(true), anfragen)).toEqual([]);
-    expect(vorbelegung(stand(false, true), anfragen)).toEqual([]);
+    expect(vorbelegung(stand(true), anfragen, [])).toEqual([]);
+    expect(vorbelegung(stand(false, true), anfragen, [])).toEqual([]);
+  });
+});
+
+describe('vorbelegung – aus dem Protokoll genommene Personen', () => {
+  const stand: TreffenStand = {
+    begonnen: false,
+    abgeschlossen: false,
+    personen: personenAus([
+      zeile(1, 'unsure', 'A', 'A'),
+      zeile(2, 'unsure', 'B', 'B'),
+      zeile(3, 'unsure', 'C', 'C'),
+    ]),
+  };
+  const anfragen = [
+    { person: 1, antwort: 'zugesagt' as const },
+    { person: 2, antwort: 'abgesagt' as const },
+    { person: 3, antwort: 'zugesagt' as const },
+  ];
+
+  it('wer ausgeblendet ist, bekommt nichts von selbst eingetragen – die anderen schon', () => {
+    expect(vorbelegung(stand, anfragen, [])).toEqual([
+      { person: 1, status: 'da' },
+      { person: 2, status: 'weg' },
+      { person: 3, status: 'da' },
+    ]);
+    expect(vorbelegung(stand, anfragen, ohneAus(ohneWert([2, 3])))).toEqual([
+      { person: 1, status: 'da' },
+    ]);
+  });
+});
+
+describe('ohne – Personen aus diesem Protokoll nehmen', () => {
+  it('ohneAus: Kaputtes, Leeres, Doppeltes und Keine-ID fällt weg; die Reihenfolge bleibt', () => {
+    expect(ohneAus('[19,4,19,"7",0,-2,1.5,null]')).toEqual([19, 4]);
+    expect(ohneAus('')).toEqual([]);
+    expect(ohneAus(undefined)).toEqual([]);
+    expect(ohneAus(42)).toEqual([]);
+    expect(ohneAus('kein json')).toEqual([]);
+    expect(ohneAus('{"a":1}')).toEqual([]);
+  });
+
+  it('ohneWert ⇄ ohneAus: gleicher Weg hin und zurück; leer, wenn niemand ausgeblendet ist', () => {
+    expect(ohneAus(ohneWert([19, 4, 19]))).toEqual([19, 4]);
+    expect(ohneWert([])).toBe('');
+    expect(ohneWert([0, -1])).toBe('');
+  });
+
+  const stand: TreffenStand = {
+    abgeschlossen: false,
+    begonnen: true,
+    personen: personenAus([
+      zeile(1, 'present', 'Alwin', 'Friesen'),
+      zeile(19, 'unsure', 'Technik', 'ECG'),
+      zeile(7, 'absent', 'Johann', 'Becker'),
+    ]),
+  };
+
+  it('ohneAusgeblendete nimmt sie aus der Liste und lässt den Rest des Stands unberührt', () => {
+    const neu = ohneAusgeblendete(stand, [19, 99]);
+    expect(neu.personen.map((p) => p.person)).toEqual([1, 7]);
+    expect(neu).toMatchObject({ abgeschlossen: false, begonnen: true });
+    // Der Stand selbst bleibt vollständig (er gehört ChurchTools, nicht dem Protokoll).
+    expect(stand.personen).toHaveLength(3);
+    expect(ohneAusgeblendete(stand, [])).toBe(stand);
+  });
+
+  it('die Kurzform zählt ohne die Ausgeblendeten', () => {
+    const k = kurzform(ohneAusgeblendete(stand, [19]).personen, []);
+    expect(k).toMatchObject({
+      anwesend: ['Alwin Friesen'],
+      abwesend: ['Johann Becker'],
+      offen: [],
+    });
+    expect(kurzform(stand.personen, []).offen).toEqual(['Technik ECG']);
   });
 });
 

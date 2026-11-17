@@ -405,7 +405,7 @@
 }
 
 .abgesagtSpalte {
-  opacity: 0.55;
+  @include m.abgesagt-blass;
 }
 
 // ── Plätze ──────────────────────────────────────────────────────────────────
@@ -487,6 +487,8 @@
 }
 
 // Entwurf: noch nicht gesendet (E4-3, Entwurf v17) – blau gestrichelt mit Stift.
+// Entwurf, blau: **Anfrage** gestrichelt, **direkt** (und Gast – bekommt nie eine Anfrage) durchgezogen – dieselbe Regel
+// wie in „Personen“ (`PersonenRaster.module.scss`, Alwin 17.11.2026).
 .entwurf {
   border: 1.5px dashed var(--blue);
   background: var(--blue-soft);
@@ -495,6 +497,11 @@
     background: var(--blue);
     color: #fff;
   }
+}
+
+.entwurfDirekt {
+  border-style: solid;
+  border-width: 2px;
 }
 
 // Entwurf „zurückziehen“ (E4-5, Entwurf Abschnitt 2): rot gestrichelt, der Name durchgestrichen.
@@ -546,9 +553,10 @@
   text-align: left;
   cursor: pointer;
 
+  // Darüberfahren dunkelt die Fläche ab – nicht den Rahmen durchziehen, sonst sähe eine Anfrage wie „direkt“ aus.
   @media (hover: hover) {
     &:hover {
-      border-style: solid;
+      background: color-mix(in srgb, var(--blue) 22%, var(--surface));
     }
   }
 

@@ -787,9 +787,9 @@ verwalten“).
    Zeitraum, gleiche Filter), davor **Name** und **Einsätze**; ein Block je Dienst, darin die Personen alphabetisch.
 2. Eine Person, die in zwei Diensten Mitglied ist, steht in **beiden** Blöcken, jeweils mit „auch …“ neben dem Namen. Ist sie
    an einem Tag in beiden Diensten eingeteilt, steht in jeder Zelle der andere als grauer Text „+ Gesang“.
-3. Die Zelle zeigt den Dienst als farbigen Tag: **Haken** = zugesagt, **Kreis mit ?** = angefragt, **Stift, gestrichelt** =
-   Entwurf (einen Entwurf in der Matrix anlegen, wieder zu „Personen“ wechseln). „Einsätze“ zählt zugesagt + angefragt, keine
-   Entwürfe.
+3. Die Zelle zeigt den Dienst als farbigen Tag: **Haken** = zugesagt, **Kreis mit ?** = angefragt, **blau** = Entwurf
+   (gestrichelt mit „?“ = Anfrage, durchgezogen mit Haken = direkt; einen Entwurf in der Matrix anlegen, wieder zu „Personen“
+   wechseln). „Einsätze“ zählt zugesagt + angefragt und gültige Entwürfe (seit P2a-2, TF-ABLAUF-33).
 4. **Filter** → die Gruppe Technik ausblenden: Wer an einem Tag im Ton eingeteilt ist, zeigt in der Musik-Zeile blass und
    schräg „+ Ton (Technik)“.
 5. Abwesenheit: grauer Tag mit dem **Grund**; eine mehrtägige, die vor dem Zeitraum begann, deckt den ersten Termin mit ab.
@@ -1015,8 +1015,8 @@ Gerät – nie ein Klick aus Versehen.
 5. **Neue Entwürfe folgen der Vorgabe:** Ton auf direkt – in „Wer kann?“ eine Person wählen, den Zauberstab (Matrix oder Block
    „Personen“) übernehmen: die Entwürfe sind **direkt** (Matrix: Schild „direkt“; „Personen“: Haken). Bei Licht (Anfrage) entstehen
    Anfragen. **Bestehende Entwürfe bleiben**, wie sie waren.
-6. **Personen, Klick-Zyklus** (Ton auf Anfrage): leere Zelle → 1. Klick: Entwurf **Anfrage** („?“, blass, gestrichelt); 2. Klick auf
-   den Entwurf: **direkt** (Haken im gefüllten Kreis, kräftiger); 3. Klick: **weg**. Steht Ton auf direkt, entsteht beim 1. Klick
+6. **Personen, Klick-Zyklus** (Ton auf Anfrage): leere Zelle → 1. Klick: Entwurf **Anfrage** (gestrichelter Rahmen, „?“ im
+   gefüllten Kreis – auch im Dunkelmodus gut lesbar); 2. Klick auf den Entwurf: **direkt** (durchgezogener Rahmen, Haken); 3. Klick: **weg**. Steht Ton auf direkt, entsteht beim 1. Klick
    gleich „direkt“, der 2. nimmt weg. Das **Warnfenster** (am Tag schon in einem anderen Dienst, abwesend) kommt nur beim 1. Klick.
 7. **Ansehen und senden:** jede Zeile sagt **„Anfrage an …“** oder **„Direkt zuteilen: …“**, oben stehen beide Zahlen – zur Kontrolle.
    Das Wort heißt überall „direkt“, nirgends „fest“.

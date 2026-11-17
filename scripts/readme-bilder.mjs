@@ -322,7 +322,9 @@ async function aufnehmen(browser) {
     await p(1400);
     await knopf('Sitzungen').click();
     await p(1000);
-    await page.getByText('Leitungssitzung', { exact: true }).first().click();
+    // Den Entwurf in „Kommend“ öffnen – nicht das erste „Leitungssitzung“: Das steht seit v1.0.1 im Block „Noch ohne
+    // Protokoll“ (vergangen, nur „Protokoll beginnen“) und öffnet nichts.
+    await page.getByText('Mi, 21.10.2026 · 19:00 Uhr', { exact: true }).first().click();
     await p(1300);
     // Der Editor mit Tagesordnung, To-Dos und Beschluss.
     await page.mouse.move(420, 380);
@@ -348,7 +350,7 @@ async function aufnehmen(browser) {
     await p(1400);
     await knopf('Sitzungen').click();
     await p(1100);
-    await page.getByText('Leitungssitzung', { exact: true }).first().click();
+    await page.getByText('Mi, 21.10.2026 · 19:00 Uhr', { exact: true }).first().click();
     await p(1800);
     await knopf('To-Dos').click();
     await p(900);
@@ -540,7 +542,7 @@ const STANDBILDER = [
     QUER,
     async (p) => {
       await knopfIn(p, 'Sitzungen').click();
-      await p.getByText('Leitungssitzung', { exact: true }).first().click();
+      await p.getByText('Mi, 21.10.2026 · 19:00 Uhr', { exact: true }).first().click();
     },
   ],
   [

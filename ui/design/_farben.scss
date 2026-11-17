@@ -27,6 +27,14 @@
   --fokus-text: #713f12; // yellow-900
   --blue-tile: #dbeafe; // `--color-accent-b-pale` (blue-100) – Datumskachel, gewählter Eintrag
   --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
+  --symbol-tinte: #ffffff; // Haken im gefüllten blauen Symbol (Vorgabe „direkt“ am Dienstnamen, Dienstplaner P2m)
+  // Abwesend in „Personen“ (Dienstplaner P2m, Entwurf `e9-p2-modus.html`, Variante D): die Zelle ist schraffiert und leicht
+  // getönt, der Grund steht als Text. Im Warnfall (abwesend UND eingeteilt) rot – mit rotem Rahmen um die Zelle.
+  --abw-text: #1e293b; // slate-800
+  --abw-schraffur: rgba(100, 116, 139, 0.2); // slate-500
+  --abw-toenung: rgba(100, 116, 139, 0.07);
+  --abw-warn-schraffur: rgba(231, 0, 11, 0.16); // red-600
+  --abw-warn-toenung: rgba(231, 0, 11, 0.05);
   // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`
   // (red-500) und `--color-success-bright` (green-500, Knopf „Gruppe erstellen“) sind dafür auf Weiß zu blass –
   // deshalb je eine Stufe dunkler aus derselben Tailwind-Reihe (wie im Dunkel green-600).

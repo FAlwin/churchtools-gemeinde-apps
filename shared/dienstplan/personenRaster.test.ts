@@ -547,6 +547,32 @@ describe('personenRaster – Entwürfe', () => {
     expect(eva.einsaetze).toBe(1);
   });
 
+  it('die Zelle sagt, ob der Entwurf eine Anfrage oder direkt ist (P2m) – ohne Entwurf `null`', () => {
+    const anfrage = entwurfFuer(
+      { art: 'person', personId: 2, name: 'Eva Hell' },
+      { eventId: 3, serviceId: GITARRE, index: null },
+    );
+    const direkt = { ...anfrage, modus: 'direkt' as const };
+    const raster = (e: Entwurf) =>
+      personenRaster({
+        plan: PLAN,
+        spalten: ALLE_SPALTEN,
+        gruppen: ALLE_GRUPPEN,
+        daten: DATEN,
+        entwurf: suche([e]),
+      });
+    expect(zeile(raster(anfrage), GITARRE, 2).zellen.map((z) => z.modus)).toEqual([
+      null,
+      null,
+      'anfrage',
+    ]);
+    expect(zeile(raster(direkt), GITARRE, 2).zellen.map((z) => z.modus)).toEqual([
+      null,
+      null,
+      'direkt',
+    ]);
+  });
+
   it('ein veralteter Entwurf zählt nicht – am Platz gilt ChurchTools', () => {
     // Der Entwurf wurde auf einen freien Platz gemacht, inzwischen ist dort jemand eingetragen.
     const e = entwurfFuer(

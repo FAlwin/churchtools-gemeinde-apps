@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
 import { zielText, type Entwurf, type EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
+import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import { gemeindeZeitzone, wannText } from '@shared/ct/zeit';
 import type { FreierPlatz } from './WerKann';
 import { grundText } from './ladeEntwuerfe';
@@ -10,8 +11,6 @@ import { aktionText, bisherHinweis } from './sendenTexte';
 // Dieselben Fach-Bausteine (Knöpfe, Hinweiskasten, Unterzeile) wie „Wer kann?“ – ein Aussehen für beide Fächer.
 import styles from './WerKann.module.scss';
 import eigen from './EntwurfFach.module.scss';
-
-type Modus = Entwurf['modus'];
 
 /**
  * **Das Entwurfs-Fach** (Bauplan E4-3-3, Entwurf Abschnitt 3/4): einen Entwurf ansehen und ändern – wer, von

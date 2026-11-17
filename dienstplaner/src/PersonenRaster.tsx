@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { modusWort } from '@shared/dienstplan/modusVorgabe';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { tagKurz } from '@shared/ct/datum';
@@ -20,7 +21,7 @@ import {
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
 import type { PersonenLader } from './ladePersonen';
-import { ZauberKnopf } from './PlanAnsicht';
+import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
@@ -31,52 +32,68 @@ import styles from './PersonenRaster.module.scss';
 /** Die Klasse der Dienstfarbe (`.farbe0 …`) – die Zuordnung Dienst → Farbe kommt von außen (`personenFarben.ts`). */
 const farbKlasse = (farbe: number) => styles[`farbe${farbe % ANZAHL_FARBEN}`];
 
-const ZUSTAND_TEXT = { zugesagt: 'zugesagt', angefragt: 'angefragt', entwurf: 'Entwurf' } as const;
+/** Der Zustand in Worten (Tooltip, Vorleser) – bei einem Entwurf mit der Art: „Entwurf, Anfrage“ / „Entwurf, direkt“. */
+const zustandText = (zustand: NonNullable<RasterZelle['zustand']>, modus: RasterZelle['modus']) =>
+  zustand === 'entwurf' ? `Entwurf, ${modusWort(modus ?? 'anfrage')}` : zustand;
 
-/** Der Dienst als ChurchTools-Tag; das Symbol sagt den Zustand: Haken = zugesagt, Kreis mit ? = angefragt, Stift = Entwurf. */
+/**
+ * Der Dienst als ChurchTools-Tag; das Symbol sagt den Zustand: Haken = zugesagt, Kreis mit ? = angefragt. Ein **Entwurf**
+ * (gestrichelt, blau) zeigt seine Art (P2m): „?“ blass = Anfrage, Haken im gefüllten Kreis und kräftiger = direkt.
+ */
 function DienstTag({
   name,
   farbe,
   zustand,
+  modus = null,
 }: {
   name: string;
   farbe: number;
   zustand?: RasterZelle['zustand'];
+  modus?: RasterZelle['modus'];
 }) {
+  const direkt = zustand === 'entwurf' && modus === 'direkt';
   return (
     <span
-      className={`${styles.tag} ${farbKlasse(farbe)}${zustand === 'entwurf' ? ' ' + styles.entwurf : ''}`}
+      className={`${styles.tag} ${farbKlasse(farbe)}${zustand === 'entwurf' ? ' ' + styles.entwurf : ''}${direkt ? ' ' + styles.entwurfDirekt : ''}`}
       role={zustand ? 'img' : undefined}
-      aria-label={zustand ? `${name}, ${ZUSTAND_TEXT[zustand]}` : undefined}
-      title={zustand ? `${name} – ${ZUSTAND_TEXT[zustand]}` : undefined}
+      aria-label={zustand ? `${name}, ${zustandText(zustand, modus)}` : undefined}
+      title={zustand ? `${name} – ${zustandText(zustand, modus)}` : undefined}
     >
       {zustand === 'zugesagt' && <Icon name="check" size={14} stroke={2.4} />}
-      {zustand === 'angefragt' && (
+      {(zustand === 'angefragt' || (zustand === 'entwurf' && !direkt)) && (
         <span className={styles.frage} aria-hidden="true">
           ?
         </span>
       )}
-      {zustand === 'entwurf' && <Icon name="pencil" size={14} stroke={2.4} />}
+      {direkt && (
+        <span className={styles.haken} aria-hidden="true">
+          <Icon name="check" size={9} stroke={3.4} />
+        </span>
+      )}
       <span className={styles.tagText}>{name}</span>
     </span>
   );
 }
 
 function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: number }) {
+  // Abwesend UND eingeteilt (Warnfall, P2m): nur das durchgestrichene Symbol – davor, ohne Text; der Grund steht im
+  // Tooltip und Namen (und im Warnfenster). Sonst Symbol und Grund als Text.
+  const abwesend = z.abwesend && (
+    <span
+      className={styles.abwesend}
+      role="img"
+      aria-label={`Abwesend: ${z.abwesend.grund}${z.warnung ? ' – trotzdem eingeteilt' : ''}`}
+      title={z.warnung ? `${z.abwesend.grund} – trotzdem eingeteilt` : z.abwesend.grund}
+    >
+      <Icon name="user-slash" size={14} />
+      {!z.warnung && <span className={styles.tagText}>{z.abwesend.grund}</span>}
+    </span>
+  );
   return (
     <>
-      {z.zustand && <DienstTag name={dienst} farbe={farbe} zustand={z.zustand} />}
-      {z.abwesend && (
-        <span
-          className={`${styles.tag} ${styles.abwesend}${z.warnung ? ' ' + styles.warnung : ''}`}
-          role="img"
-          aria-label={`Abwesend: ${z.abwesend.grund}${z.warnung ? ' – trotzdem eingeteilt' : ''}`}
-          title={z.warnung ? `${z.abwesend.grund} – trotzdem eingeteilt` : z.abwesend.grund}
-        >
-          <Icon name="user-slash" size={14} />
-          <span className={styles.tagText}>{z.abwesend.grund}</span>
-        </span>
-      )}
+      {z.warnung && abwesend}
+      {z.zustand && <DienstTag name={dienst} farbe={farbe} zustand={z.zustand} modus={z.modus} />}
+      {!z.warnung && abwesend}
       {z.weitere.map((w) => (
         <span
           key={w.dienst}
@@ -103,9 +120,14 @@ function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: nu
  * (Mitglieder, Abwesenheiten) in `ladePersonen.ts`; hier steht nur die Darstellung.
  *
  * **Eintragen per Klick (P2a):** Eine leere Zelle, in der man den Dienst planen darf, legt mit einem Klick einen Entwurf auf
- * einen freien Platz an (`sicht.personen`, dieselbe Funktion wie „Wer kann?“); ein Klick auf den eigenen Entwurf nimmt
- * ihn wieder weg. Ein Fenster kommt nur bei einer Warnung (am Tag schon in einem anderen Dienst, abwesend) oder wenn der
+ * einen freien Platz an (`sicht.personen`, dieselbe Funktion wie „Wer kann?“); ein Klick auf den eigenen Entwurf
+ * schaltet ihn weiter (P2m, unten). Ein Fenster kommt nur bei einer Warnung (am Tag schon in einem anderen Dienst, abwesend) oder wenn der
  * Dienst voll ist. Eine bestehende Einteilung anklicken tut noch nichts (P2b).
+ *
+ * **Klick-Zyklus (P2m):** leere Zelle → Entwurf (womit er beginnt, sagt die Vorgabe des Dienstes: Anfrage „?“ oder direkt),
+ * ein zweiter Klick stellt eine Anfrage auf „direkt“ um (Haken, kräftiger), der nächste nimmt den Entwurf weg. Das
+ * Warnfenster kommt nur beim ersten Klick. **Abwesend** ist die Zelle schraffiert, der Grund steht als Text; abwesend UND
+ * eingeteilt: rote Schraffur und roter Rahmen um die Zelle.
  */
 export function PersonenRaster({
   sicht,
@@ -191,6 +213,8 @@ export function PersonenRaster({
     const tag = plan.spalten[i].tag;
     if (a.art === 'wegnehmen') {
       void tue(() => personen.wegnehmen(zl, a.entwurf));
+    } else if (a.art === 'direkt') {
+      void tue(() => personen.direkt(zl, a.entwurf));
     } else if (a.art === 'voll') {
       setFenster({ art: 'voll', dienst: b.dienst.name, text: vollText(b.dienst.name, tag, a.von) });
     } else {
@@ -259,7 +283,9 @@ export function PersonenRaster({
         const klasse = [
           termine[pos].abgesagt ? styles.abgesagtSpalte : '',
           a ? styles.klick : '',
-          a && a.art !== 'wegnehmen' ? styles.leerKlick : '',
+          a && (a.art === 'eintragen' || a.art === 'voll') ? styles.leerKlick : '',
+          z.abwesend ? styles.abwZelle : '',
+          z.warnung ? styles.warnZelle : '',
         ]
           .filter(Boolean)
           .join(' ');
@@ -276,11 +302,21 @@ export function PersonenRaster({
                 type="button"
                 className={styles.zellKnopf}
                 aria-label={
-                  a.art === 'wegnehmen' ? `${name}: Entwurf wegnehmen` : `${name} eintragen`
+                  a.art === 'wegnehmen'
+                    ? `${name}: Entwurf wegnehmen`
+                    : a.art === 'direkt'
+                      ? `${name}: auf direkt umstellen`
+                      : `${name} eintragen`
                 }
-                title={a.art === 'wegnehmen' ? 'Entwurf wegnehmen' : undefined}
+                title={
+                  a.art === 'wegnehmen'
+                    ? 'Entwurf wegnehmen'
+                    : a.art === 'direkt'
+                      ? 'Auf direkt umstellen (ohne Rückfrage zugesagt) – noch ein Klick nimmt den Entwurf weg'
+                      : undefined
+                }
               >
-                {a.art !== 'wegnehmen' && (
+                {(a.art === 'eintragen' || a.art === 'voll') && (
                   <span className={styles.plus} aria-hidden="true">
                     <Icon name="plus" size={16} />
                   </span>
@@ -298,6 +334,7 @@ export function PersonenRaster({
     const n = b.zeilen.length;
     const offen = !zugeklappt.has(blockSchluessel(b.dienst.id));
     const zauberGruppe = gruppeJe.get(b.dienst.id);
+    const vorgabeZeile = zeileJe.get(b.dienst.id);
     return (
       <tr key={`k-${b.dienst.id}`}>
         <td className={styles.blockKopf} colSpan={termine.length + 2}>
@@ -318,6 +355,8 @@ export function PersonenRaster({
                 {n} {n === 1 ? 'Person' : 'Personen'}
               </span>
             </button>
+            {/* Vorgabe „Anfrage | direkt“ (P2m) – dasselbe Symbol und Fenster wie in der Matrix. */}
+            {vorgabeZeile && <VorgabeKnopf sicht={sicht} z={vorgabeZeile} spalten={termine} />}
             {/* Zauberstab für diesen Dienst über alle gezeigten Termine – dasselbe Fenster wie in der Matrix. */}
             {zauberGruppe && (
               <ZauberKnopf

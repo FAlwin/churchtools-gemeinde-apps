@@ -9,7 +9,9 @@
  * - **Abwesend** über `decktTermin` (`@shared/absences`) – dieselbe Regel wie auf der Startseite.
  * - **Entwürfe** über den Aufrufer (`entwurf`): er reicht die Regel der Matrix herein (`entwurfAmPlatz`), veraltete
  *   Entwürfe zählen nicht (am Platz gilt dann ChurchTools).
- * - **Noch offen** zählt dieselben Plätze wie die Matrix (`art === 'frei'`; Summe = `terminStand`).
+ * - **Noch offen** zählt dieselben Plätze wie die Matrix (`zaehleFrei`; Summe = `terminStand` mit Entwürfen), **Einsätze**
+ *   zählt, wer am Platz steht (`platzPerson`) – beide mit **gültigen Entwürfen** (P2a-2, Alwin 16.11.2026): ein Entwurf
+ *   zählt schon wie das, was er bewirken wird (`platzNachEntwurf.ts`).
  *
  * **Zeile je Person UND Dienst** (Alwin, 06.11.2026): Wer in zwei Diensten steht (Gitarre und Gesang), steht in beiden
  * Blöcken – unter dem Namen „auch Gesang“, in der Zelle „+ Gesang“, wenn am selben Tag noch ein anderer Dienst dazukommt.
@@ -20,7 +22,8 @@
 import { decktTermin } from '../absences/index';
 import type { Dienst } from '../ct/dienste';
 import { initialenAus } from '../organigramm/mitglieder';
-import type { Entwurf } from './entwuerfe';
+import { platzPerson } from './fokus';
+import { zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
 import {
   gruppenName,
   type Plan,
@@ -31,12 +34,8 @@ import {
 } from './plan';
 import type { GruppenAbwesenheit, PersonenDaten } from './personenDaten';
 
-/** Wie die Matrix einen Entwurf an einem Platz kennt (`entwurfAmPlatz`) – `veraltet`: in ChurchTools steht inzwischen etwas anderes. */
-export type EntwurfSuche = (
-  spalte: number,
-  zeile: PlanZeile,
-  platz: PlanPlatz,
-) => { entwurf: Entwurf; veraltet: boolean } | null;
+/** Wie die Matrix einen Entwurf an einem Platz kennt (`entwurfAmPlatz`) – dieselbe Suche wie für „N frei“ (`platzNachEntwurf.ts`). */
+export type { EntwurfSuche };
 
 export type ZellenZustand = 'zugesagt' | 'angefragt' | 'entwurf';
 
@@ -72,7 +71,7 @@ export interface RasterZeile {
   mitglied: boolean;
   /** Andere gezeigte Dienste, in denen sie Mitglied ist („auch Gesang“). */
   auch: string[];
-  /** Einteilungen (zugesagt + angefragt) in diesem Dienst, in den gezeigten Terminen. */
+  /** Einteilungen (zugesagt + angefragt + gültige Entwürfe, `platzPerson`) in diesem Dienst, in den gezeigten Terminen. */
   einsaetze: number;
   /** Je gezeigte Spalte (Reihenfolge von `spalten`). */
   zellen: RasterZelle[];
@@ -219,16 +218,19 @@ export function personenRaster(o: {
     const einsaetze = new Map<number, number>();
     spalten.forEach((i, pos) => {
       for (const p of z.zellen[i] ?? []) {
+        const e = o.entwurf?.(i, z, p) ?? null;
         if (besetzt(p)) {
           if (p.personId !== null && p.name !== null) {
+            // Die Zeile gibt es, solange ChurchTools die Person dort hat (auch wenn ein Entwurf sie zurückzieht).
             if (!personen.has(p.personId))
               personen.set(p.personId, { name: p.name, initialen: initialenAus(p.name) });
-            einsaetze.set(p.personId, (einsaetze.get(p.personId) ?? 0) + 1);
           } else if (p.gast && p.name !== null) {
             gaeste[pos].push({ name: p.name, entwurf: false });
           }
         }
-        const e = o.entwurf?.(i, z, p);
+        // Einsätze: wer am Platz steht – nach einem gültigen Entwurf, sonst nach ChurchTools (dieselbe Regel wie der Fokus).
+        const wer = platzPerson(p, e);
+        if (wer) einsaetze.set(wer.personId, (einsaetze.get(wer.personId) ?? 0) + 1);
         if (!e || e.veraltet) continue;
         const ziel = e.entwurf.ziel;
         if (ziel.art === 'person') {
@@ -320,7 +322,7 @@ export function personenRaster(o: {
   const offen: RasterOffen[] = spalten.map((i) => ({
     abgesagt: plan.spalten[i].abgesagt,
     dienste: diensteZeilen.flatMap(({ zeile }) => {
-      const anzahl = (zeile.zellen[i] ?? []).filter((p) => p.art === 'frei').length;
+      const anzahl = zaehleFrei(zeile.zellen[i] ?? [], (p) => o.entwurf?.(i, zeile, p) ?? null);
       return anzahl > 0 && !plan.spalten[i].abgesagt ? [{ dienst: zeile.dienst.name, anzahl }] : [];
     }),
   }));

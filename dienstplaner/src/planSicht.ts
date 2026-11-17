@@ -30,12 +30,16 @@ export interface PersonenEintragen {
     personId: number,
     zustand: RasterZelle['zustand'],
   ) => ZellenAktion;
-  /** Entwurf für die Person auf den freien Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. */
+  /**
+   * Entwurf für die Person auf den Platz `nr` (1-basiert) – meldet selbst „eingetragen“ bzw. den Fehler. `ersetzt`: die
+   * Version des „Zurückziehen“-Entwurfs an diesem Platz, den der Eintrag ersetzt („X durch Y ersetzen“).
+   */
   eintragen: (
     spalte: number,
     zeile: PlanZeile,
     nr: number,
     person: { personId: number; name: string },
+    ersetzt?: number,
   ) => Promise<void>;
   /** Den eigenen Entwurf wieder wegnehmen – meldet selbst „entfernt“ bzw. den Fehler. */
   wegnehmen: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;

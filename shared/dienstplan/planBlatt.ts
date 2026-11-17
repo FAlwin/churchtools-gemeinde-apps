@@ -7,6 +7,7 @@
  */
 import { MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
 import type { Lauf, Zelle } from '../ct/terminBlatt';
+import { zaehleFrei } from './platzNachEntwurf';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
 
 export type PlanBlattWahl =
@@ -86,7 +87,8 @@ export function dienstZelle(plaetze: readonly PlanPlatz[] | null): Zelle {
       teile.push([{ text: p.name }, { text: ' (angefragt)', stil: 'grau' }]);
     else teile.push([{ text: p.name }]);
   }
-  const frei = plaetze.filter((p) => p.art === 'frei').length;
+  // Teilen/PDF: bewusst nur der Stand in ChurchTools – ein Entwurf ist noch nicht verbindlich (`platzNachEntwurf.ts`).
+  const frei = zaehleFrei(plaetze);
   if (frei > 0) teile.push([{ text: frei > 1 ? `${frei} frei` : 'frei', stil: 'rot' }]);
   const laeufe = teile.flatMap((t, i) => (i === 0 ? t : [{ text: ', ' }, ...t]));
   return { absaetze: [{ laeufe }] };
@@ -118,7 +120,7 @@ function suchenAbschnitt(plan: Plan, spalten: readonly number[], gruppen: readon
   for (const i of spalten) {
     const gesucht = gruppen.flatMap((g) =>
       g.zeilen.flatMap((z) => {
-        const frei = (z.zellen[i] ?? []).filter((p) => p.art === 'frei').length;
+        const frei = zaehleFrei(z.zellen[i] ?? []); // nur ChurchTools, ohne Entwürfe
         return frei > 0 ? [`${z.dienst.name}${frei > 1 ? ` ×${frei}` : ''}`] : [];
       }),
     );

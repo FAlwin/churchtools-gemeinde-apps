@@ -19,8 +19,12 @@ import { z } from 'zod';
 import type { Antwort, Antworten, Feld, Formular } from './formular';
 import { freiGewaehlt, freiName, freiSchluessel } from './freieAntwort';
 
-/** Höchstlänge einer Antwort – dieselbe für die Antworten selbst, ausgeblendete und Bedingungen (`formular.ts`). */
-export const ANTWORT_MAX = 80;
+/**
+ * Höchstlänge einer Antwort – dieselbe für die Antworten selbst, ausgeblendete, die freie Antwort und Bedingungen
+ * (`formular.ts`). 255 seit F5a: ChurchTools speichert Optionen mit 255 Zeichen vollständig, auch die anonyme Wahl
+ * klappt (gemessen F0, 08.11.2026); die AC-Anmeldung braucht 84 und 88.
+ */
+export const ANTWORT_MAX = 255;
 /** Höchstlänge des freiwilligen Kurznamens einer Frage (Klick-Runde 4). */
 export const KURZ_MAX = 40;
 

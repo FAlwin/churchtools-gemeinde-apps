@@ -32,6 +32,7 @@ import {
   rechtRumpf,
   sollRechte,
   vergebenNachher,
+  vergebenPruefen,
   type GruppenEinstellung,
   type PunkteVonMitgliedern,
   type Recht,
@@ -118,13 +119,18 @@ interface RolleRoh {
   isActive?: boolean;
 }
 
+/** Alle Rollen der Gruppe, wie ChurchTools sie liefert (auch inaktive) – für das Fenster und fürs Einrichten. */
+function rollenLesen(gruppe: number): Promise<RolleRoh[] | null> {
+  return ctDaten<RolleRoh[]>(`/groups/${gruppe}/roles`);
+}
+
 /** Die Rollen der Gruppe und – falls schon eingerichtet – ihre gespeicherte Einstellung. */
 export async function ladeGruppe(
   modul: number,
   gruppe: number,
 ): Promise<{ rollen: GruppenRolle[]; einstellung: GruppenEinstellung | null }> {
   const [rollen, einstellung] = await Promise.all([
-    ctDaten<RolleRoh[]>(`/groups/${gruppe}/roles`),
+    rollenLesen(gruppe),
     einstellungLesen(modul, gruppe),
   ]);
   return {
@@ -231,9 +237,20 @@ export async function gruppeEinrichten(
     versteckt: gruppe.versteckt,
   };
   // Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (Kalender, 10119, Gruppentreffen) – nur die darf sie entziehen.
-  // Ihre Rollen werden mitgelesen, auch wenn eine davon heute nicht mehr in der Wahl steht.
-  const alt = await einstellungLesen(modul, gruppe.id);
-  const vergeben = alt?.inhalt.vergeben ?? [];
+  // Ihre Rollen werden mitgelesen, auch wenn eine davon heute nicht mehr in der Wahl steht. Die Liste steht in einer
+  // Kategorie, die die Leitung beschreiben darf – darum erst geprüft (`vergebenPruefen`, Security-Review 16.11.2026):
+  // nur Zusatzrechte an Rollen dieser Gruppe (frisch aus ChurchTools), Kalenderrechte nur am alten oder neuen Kalender.
+  const [alt, rollenRoh] = await Promise.all([
+    einstellungLesen(modul, gruppe.id),
+    rollenLesen(gruppe.id),
+  ]);
+  const rollenDerGruppe = (rollenRoh ?? []).map((r) => r.id).filter(Number.isInteger);
+  const vergeben = vergebenPruefen(
+    alt?.inhalt.vergeben ?? [],
+    rollenDerGruppe,
+    [alt?.inhalt.kalender ?? null, wahl.kalender],
+    nummern,
+  );
   const rollenIds = [
     ...new Set([...wahl.rollen.map((r) => r.rolle), ...vergeben.map((r) => r.rolle)]),
   ];

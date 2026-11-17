@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.6.0 (17.11.2026: in „Personen“ per Klick eintragen – Anfrage, direkt, weg; Zauberstab je Dienst; Entwürfe zählen mit; Vorgabe „Anfrage oder direkt“ je Dienst; Abwesenheit schraffiert).** Was die Reiter können:
+> **Stand: v0.6.1 (17.11.2026: Anfrage/direkt am Rahmen erkennbar – gestrichelt/durchgezogen; abgesagte Spaltenköpfe deckend. v0.6.0: in „Personen“ per Klick eintragen; Zauberstab je Dienst; Entwürfe zählen mit; Vorgabe „Anfrage oder direkt“ je Dienst; Abwesenheit schraffiert).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen

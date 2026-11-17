@@ -1,0 +1,17 @@
+// **Ein Platz, den ein Entwurf wegnimmt** (E4-5 „zurückziehen“, P2b auch in „Personen“): rot gestrichelt, der Name
+// durchgestrichen. Eine Quelle für die Matrix (`Planen.module.scss`) und die Zellen in „Personen“
+// (`PersonenRaster.module.scss`) – beide setzen den Rahmen in ihrer Bauart (Rand bzw. Outline), Farbe und Fläche kommen von hier.
+$rahmen: 1.5px dashed var(--red);
+
+@mixin flaeche {
+  background: color-mix(in srgb, var(--red) 7%, var(--surface2));
+}
+// Das kleine „−“ im roten Kreis bzw. Feld.
+@mixin symbol {
+  background: var(--red);
+  color: #fff;
+}
+@mixin durchgestrichen {
+  color: var(--text2);
+  text-decoration: line-through;
+}

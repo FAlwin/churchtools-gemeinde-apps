@@ -3,6 +3,7 @@
 // Schattenband in `--hair`, Kopf `--section`, Fußzeile mit dickerer Oberlinie; Dienste als Tags (`c-tag__S`: 20 px hoch,
 // Radius wie die Kacheln). Der Rollbereich (`.rahmen`, Scroll-Leisten) kommt aus `Planen.module.scss` – wie in der Matrix.
 @use '@ui/design/mixins' as m;
+@use './zurueck' as z;
 
 // Die Dienstfarben (`--dienst-0 … --dienst-7`) stehen als EINE Quelle in `ui/design/_farben.scss`. Grund und Schrift
 // des Tags rechnet `.tag` daraus. Die Zuordnung Dienst → Farbe steht in `personenFarben.ts` (P3 macht sie einstellbar);
@@ -322,6 +323,42 @@ $anzahl-farben: 8;
   outline-color: var(--blue-ink);
   font-weight: 700;
 }
+// Wird weggenommen (P2b): rot gestrichelt, der Name durchgestrichen – wie in der Matrix (`_zurueck.scss`). Das „−“ steht im
+// gefüllten roten Kreis (14 px), wie das Symbol des Entwurfs.
+.zurueck {
+  --ti: var(--red);
+  box-shadow: none;
+  outline: z.$rahmen;
+  outline-offset: -1.5px;
+  @include z.flaeche;
+
+  .tagText {
+    @include z.durchgestrichen;
+  }
+}
+.minus {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  @include z.symbol;
+}
+// Ein Gast-Tag, der ein Knopf ist (P2b) – sieht aus wie das Tag.
+.tagKnopf {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
 // Der Haken im gefüllten blauen Kreis (14 px) – „direkt“.
 .haken {
   display: inline-grid;
@@ -395,6 +432,13 @@ $anzahl-farben: 8;
   .tag,
   .dazu {
     position: relative;
+  }
+}
+.raster td.belegtKlick {
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in oklab, var(--blue) 7%, var(--zeile, var(--surface2)));
+    }
   }
 }
 .zellKnopf {

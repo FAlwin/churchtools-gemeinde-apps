@@ -1,6 +1,7 @@
 import { monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import type { RasterZelle } from '@shared/dienstplan/personenRaster';
 import type { FreierPlatz } from './WerKann';
@@ -41,6 +42,11 @@ export interface PersonenEintragen {
     person: { personId: number; name: string },
     ersetzt?: number,
   ) => Promise<void>;
+  /**
+   * Den eigenen Entwurf auf „direkt“ umstellen (P2m, zweiter Klick) – derselbe Weg wie „Beim Senden“ im Entwurfs-Fach,
+   * mit Versions-Schutz; meldet selbst den Fehler.
+   */
+  direkt: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
   /** Den eigenen Entwurf wieder wegnehmen – meldet selbst „entfernt“ bzw. den Fehler. */
   wegnehmen: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
 }
@@ -96,6 +102,14 @@ export interface Sicht {
   infos: MatrixInfos | null;
   /** Eintragen per Klick in „Personen“ (P2a) – fehlt, wo es das nicht gibt (Termin-Ansicht, ohne Anschluss). */
   personen?: PersonenEintragen;
+  /**
+   * Die Vorgabe „Anfrage | direkt“ je Dienst (P2m, nur Matrix): womit ein neuer Entwurf beginnt, und das Fenster dazu.
+   * Fehlt, wo man keine Entwürfe anlegen kann – dann steht am Dienstnamen auch kein Symbol.
+   */
+  vorgabe?: {
+    modus: (dienstId: number) => Modus;
+    oeffnen: (zeile: PlanZeile) => void;
+  };
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */

@@ -904,13 +904,14 @@ ein Fenster.
 
 1. **Planen → Personen.** Mit der **Maus** über eine leere Zelle im Block Ton fahren: blauer Rahmen, blasse blaue Fläche, ein
    **„+“** rechts. Über eine Zelle mit Einteilung (✓ oder ?) oder in einem Dienst, den man nur ansehen darf: nichts.
-2. **Klick** in die leere Zelle (Person ohne Besonderheit): sofort ein **Entwurf** (blau, gestrichelt, Stift), Hinweis
+2. **Klick** in die leere Zelle (Person ohne Besonderheit): sofort ein **Entwurf** (blau, gestrichelt, „?“ = Anfrage), Hinweis
    „… eingetragen – noch nicht gesendet“, unten die Leiste **Ansehen und senden** zählt mit. Kein Fenster. In der Matrix steht der
    Entwurf auf dem **ersten freien Platz** dieses Dienstes an diesem Termin.
-3. **Klick auf den eigenen Entwurf** in der Zelle: er ist weg („Entwurf entfernt.“), die Zelle lädt wieder zum Eintragen ein.
+3. **Klick auf den eigenen Entwurf** in der Zelle: er wird **direkt** (Klick-Zyklus, TF-ABLAUF-35); ein weiterer Klick nimmt ihn weg
+   („Entwurf entfernt.“), die Zelle lädt wieder zum Eintragen ein.
 4. Person mit **„+ Gesang“** am selben Tag: Klick → Fenster „Bitte prüfen“: „<Name> ist am Fr, 20.11. schon bei Gesang
    eingeteilt. Trotzdem für Ton eintragen?“ **Abbrechen** → nichts. Noch einmal klicken, **Trotzdem eintragen** → Entwurf.
-5. Person, die **abwesend** ist (grauer Tag): Fenster mit Grund und Zeitraum („… abwesend: Urlaub (28.11.–30.11.)“), dazu die
+5. Person, die **abwesend** ist (Zelle schraffiert, Grund als Text): Fenster mit Grund und Zeitraum („… abwesend: Urlaub (28.11.–30.11.)“), dazu die
    gleiche Frage. Ist sie zugleich in einem anderen Dienst eingeteilt: **ein** Fenster mit beiden Sätzen.
 6. Termin, an dem der Dienst **voll** ist: Klick in eine leere Zelle → Fenster „Ton ist voll“: „Ton am 27.11. ist voll (2 von
    2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ mit **Schließen**. Es wird nichts eingetragen.
@@ -977,7 +978,7 @@ und Licht) mit freien Plätzen an **mehreren** kommenden Terminen, ein **abgesag
    gibt und in denen du planen darfst (Gruppen, die du nur ansehen darfst: kein Knopf).
 2. Zauberstab antippen: das Fenster **„Automatische Planung · Ton“** zeigt nur Plätze von **Ton**, an allen gezeigten
    Terminen – **nicht** den abgesagten, nicht vergangene Termine, nicht Licht.
-3. **Als Entwurf übernehmen:** die Vorschläge stehen in „Personen“ als **Entwurf** (blau, gestrichelt, Stift); „Einsätze“ und
+3. **Als Entwurf übernehmen:** die Vorschläge stehen in „Personen“ als **Entwurf** (blau, gestrichelt, „?“); „Einsätze“ und
    „Noch offen“ zählen mit; „Ansehen und senden“ zeigt sie. Gesendet ist noch nichts.
 4. Sind in Ton alle freien Plätze besetzt oder haben einen Entwurf, ist **kein Zauberstab** mehr im Ton-Block; Licht behält seinen.
 5. **Matrix:** der Zauberstab in der Gruppenzeile (und je Termin) arbeitet wie bisher – für alle Dienste der Gruppe.
@@ -989,4 +990,44 @@ und Licht) mit freien Plätzen an **mehreren** kommenden Terminen, ein **abgesag
 - **Betrifft:** `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/planSicht.ts`
 - **Automatisiert:** ja – `dienstplaner/src/Planen.p2z.test.tsx` (Knopf je Block da/nicht da, Fenster nur dieser Dienst und nur gezeigte, nicht abgesagte/vergangene Termine, Übernehmen legt Entwürfe an und die Zahlen ziehen mit, Handy, Matrix unverändert), `dienstplaner/src/planEntwuerfe.zauber.test.ts` (ein Dienst statt der Gruppe); Gegenproben je Teil einzeln rot; von Hand bleibt das Aussehen im Block-Kopf
 - **Historie:** Wunsch 5 (Alwin 16./17.11.2026), Scheibe P2z
+</details>
+
+### TF-ABLAUF-35 · Planen: Anfrage oder direkt – Vorgabe je Dienst, Klick-Zyklus, Abwesenheit schraffiert
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf; ein Dienst (z. B. Ton) mit mehreren freien Plätzen an
+kommenden Terminen, ein zweiter Dienst derselben Gruppe (z. B. Licht); ein Mitglied, das an einem Termin **abwesend** ist, und
+eine Person, die zugleich abwesend **und** eingeteilt ist. Am besten dieselbe Person in „Personen“ und in der Matrix ansehen; die
+Prüfung in Hell **und** Dunkel, am Rechner und am Handy.
+
+**Das muss passieren:** Ob neue Einteilungen als Anfrage oder direkt beginnen, entscheidet eine Einstellung je Dienst auf diesem
+Gerät – nie ein Klick aus Versehen.
+
+1. **Matrix:** Am Namen jedes planbaren Dienstes steht ein kleines **rundes Symbol**, blau: **„?“** (Umriss) = neue Einteilungen
+   beginnen als Anfrage. Mit der Maus darüber: Tooltip „Neue Einteilungen für Ton: Anfrage – ändern“ und ein blasser Ring. In
+   Diensten, die du nicht planen darfst, gibt es kein Symbol.
+2. Das Symbol **antippen**: es öffnet nur ein kleines Fenster **„Vorgabe · Ton“** mit **Anfrage | direkt**, dem Satz „direkt = ohne
+   Rückfrage als zugesagt eintragen, z. B. für Prediger“, dem Link „Für alle Dienste übernehmen“ und dem Hinweis „Gilt auf diesem
+   Gerät“. Es wird **nichts** umgeschaltet, bevor du im Fenster wählst. Auch am Handy gut zu treffen (die Tippfläche ist größer als das Symbol).
+3. **direkt** wählen: das Symbol wird zum **gefüllten Haken**. Seite neu laden: es bleibt so (gemerkt auf diesem Gerät). Auf einem
+   anderen Gerät oder Browser gilt es nicht. Licht bleibt „?“.
+4. **„Für alle Dienste übernehmen (direkt)“**: jeder Dienst zeigt den Haken; mit „Anfrage“ und dem Link darunter geht alles zurück.
+5. **Neue Entwürfe folgen der Vorgabe:** Ton auf direkt – in „Wer kann?“ eine Person wählen, den Zauberstab (Matrix oder Block
+   „Personen“) übernehmen: die Entwürfe sind **direkt** (Matrix: Schild „direkt“; „Personen“: Haken). Bei Licht (Anfrage) entstehen
+   Anfragen. **Bestehende Entwürfe bleiben**, wie sie waren.
+6. **Personen, Klick-Zyklus** (Ton auf Anfrage): leere Zelle → 1. Klick: Entwurf **Anfrage** („?“, blass, gestrichelt); 2. Klick auf
+   den Entwurf: **direkt** (Haken im gefüllten Kreis, kräftiger); 3. Klick: **weg**. Steht Ton auf direkt, entsteht beim 1. Klick
+   gleich „direkt“, der 2. nimmt weg. Das **Warnfenster** (am Tag schon in einem anderen Dienst, abwesend) kommt nur beim 1. Klick.
+7. **Ansehen und senden:** jede Zeile sagt **„Anfrage an …“** oder **„Direkt zuteilen: …“**, oben stehen beide Zahlen – zur Kontrolle.
+   Das Wort heißt überall „direkt“, nirgends „fest“.
+8. **Abwesenheit in „Personen“:** Die Zelle eines abwesenden Mitglieds ist **schraffiert**, der Grund steht als Text mit dem
+   Abwesend-Symbol, **kein Kasten**. **Dunkelmodus:** dieselbe Schraffur in der helleren Farbe, der Text hell und gut lesbar.
+9. **Warnfall** (abwesend UND eingeteilt oder Entwurf): die Zelle ist **rot schraffiert** mit einem **2 px roten Rahmen** rundherum;
+   mit der Maus und per Tastatur ist die Zelle weiter klickbar wie vorher.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/modusVorgabe.ts`, `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/VorgabeFach.tsx`, `dienstplaner/src/PlanAnsicht.tsx`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `ui/design/_farben.scss`, `ui/design/_variables.scss`
+- **Automatisiert:** ja – `shared/dienstplan/modusVorgabe.test.ts`, `shared/dienstplan/personenEintragen.test.ts` (Zyklus-Entscheidung), `shared/dienstplan/personenRaster.test.ts` (Modus je Zelle), `dienstplaner/src/geraet.test.ts` (gemerkte Vorgabe lesen), `dienstplaner/src/Planen.p2m.test.tsx` (Zyklus mit Versions-Schutz, Warnfenster nur beim ersten Klick, Vorgabe → erster Klick, Symbol öffnet nur das Fenster, gemerkt nach Neuaufbau, „Für alle“, „Wer kann?“ und Zauberstab folgen der Vorgabe, Bestehendes bleibt, Abwesenheit und Warnfall als Klassen, Modus in der Zelle), `dienstplaner/src/TerminAnsicht.test.tsx` (Vorgabe gilt auch dort); Gegenproben je Teil einzeln rot; von Hand bleiben das Aussehen (Schraffur, roter Rahmen, Symbol, Hover-Ring) in Hell und Dunkel, am Rechner und am Handy
+- **Historie:** Wunsch 2 und Wunsch 1 (Alwin 17.11.2026, Entwurf `e9-p2-modus.html`: Abwesend D, Matrix G4), Scheibe P2m
 </details>

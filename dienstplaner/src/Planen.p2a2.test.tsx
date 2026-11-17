@@ -321,7 +321,13 @@ describe('Personen – Einsätze und „Noch offen“ zählen Entwürfe mit', ()
     expect(einsaetze('Daniel Test', 'Ton', 'So, 22.11.')).toBe('0');
     expect(offen(1)).toBe('Ton ×2');
     fireEvent.click(k);
-    await screen.findByRole('img', { name: 'Ton, Entwurf' });
+    await screen.findByRole('img', { name: 'Ton, Entwurf, Anfrage' });
+    // Zweiter Klick: auf direkt umstellen (P2m) – der Entwurf zählt weiter mit; erst der dritte nimmt ihn weg.
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Daniel Test für Ton am So, 22.11.: auf direkt umstellen',
+      }),
+    );
     const weg = await screen.findByRole('button', {
       name: 'Daniel Test für Ton am So, 22.11.: Entwurf wegnehmen',
     });
@@ -372,7 +378,7 @@ describe('Personen – abgesagte Termine nehmen keine Einträge an', () => {
       entwuerfe: nachgebaut({ entfernen: f, laden: () => Promise.resolve(daten([e])) }),
     });
     const t = await screen.findByRole('table', { name: 'Personen und ihre Einsätze' });
-    await within(t).findByRole('img', { name: 'Ton, Entwurf' });
+    await within(t).findByRole('img', { name: 'Ton, Entwurf, Anfrage' });
     // Der freie zweite Platz ist kein Eintragen-Knopf.
     expect(screen.queryAllByRole('button', { name: /So, 06\.12\. eintragen$/ })).toHaveLength(0);
     fireEvent.click(
@@ -434,6 +440,11 @@ describe('Personen – „Platz übernehmen“: ein Zurückziehen-Platz wird ers
     });
     await warte();
     fireEvent.click(await knopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Daniel Test für Ton am Mi, 02.12.: auf direkt umstellen',
+      }),
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: 'Daniel Test für Ton am Mi, 02.12.: Entwurf wegnehmen',

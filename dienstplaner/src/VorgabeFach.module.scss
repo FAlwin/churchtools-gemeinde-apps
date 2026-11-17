@@ -1,0 +1,22 @@
+// Vorgabe „Anfrage | direkt“ je Dienst (P2m) – nur Tokens aus ui/design; Unterzeile und Hinweis aus WerKann.module.scss.
+@use '@ui/design/mixins' as m;
+
+.wahl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.fuerAlle {
+  margin: 12px 2px 0;
+  font-size: 14px;
+}
+.link {
+  @include m.textKnopf;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}

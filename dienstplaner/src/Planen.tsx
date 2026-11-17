@@ -42,6 +42,8 @@ import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import { dienstFarben } from './personenFarben';
 import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen';
+import { VorgabeFach } from './VorgabeFach';
+import { modusFuerDienst, vorgabeFuerAlle, vorgabeSetzen } from '@shared/dienstplan/modusVorgabe';
 import { FokusLeiste, FokusSuche, type FokusPerson } from './Fokus';
 import { plaetzeZeilen, vorlageFuer, type DiensteKatalog } from './planEntwuerfe';
 import { usePlanZeitraum } from './usePlanZeitraum';
@@ -188,6 +190,8 @@ export function Planen({
     zurueck: WerKannZurueck | null;
   } | null>(null);
   const [fokusEintragen, setFokusEintragen] = useState(false);
+  // Das Fenster „Vorgabe · Dienst“ (P2m): welcher Dienst – die Vorgabe selbst steht in `ansicht.direktDienste` (je Gerät).
+  const [vorgabeFach, setVorgabeFach] = useState<{ id: number; name: string } | null>(null);
   // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
@@ -258,6 +262,8 @@ export function Planen({
     heute,
     handy,
     onGesendet: leiseNeuLaden,
+    // Womit ein neuer Entwurf beginnt – je Dienst, gemerkt je Gerät (P2m); „Wer kann?“, „Personen“, Zauberstab fragen hier.
+    modusFuer: (dienstId) => modusFuerDienst(ansicht.direktDienste, dienstId),
     fokus: {
       hervorheben: (person) => setFokusPerson({ person, zurueck: null }),
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
@@ -452,6 +458,12 @@ export function Planen({
       ablauf: matrixAblauf,
       infos: matrixInfos,
       personen: amPersonen,
+      vorgabe: entwuerfe
+        ? {
+            modus: (dienstId) => modusFuerDienst(ansicht.direktDienste, dienstId),
+            oeffnen: (z) => setVorgabeFach({ id: z.dienst.id, name: z.dienst.name }),
+          }
+        : undefined,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -576,25 +588,59 @@ export function Planen({
         Anzahl der Plätze – sofort; dort schaltest du auch Dienste ein und aus oder übernimmst eine
         Vorlage. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der Rangfolge von
         ChurchTools, ebenfalls als Entwurf; in „Personen“ steht er an jedem Dienst und gilt nur für
-        diesen. Der Stift neben einem Namen ändert dessen Vorlieben – sofort in ChurchTools.
-        Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die Angefragten eine Mitteilung
-        von ChurchTools. „Personen“ zeigt dieselben Termine als Raster: eine Zeile je Person und
-        Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist – einen Dienst antippen
-        klappt seinen Block zu. Eine leere Zelle anklicken trägt die Person dort als Entwurf ein
-        (auf einen freien Platz des Dienstes) – war sie am Tag schon in einem anderen Dienst oder
-        ist abwesend, fragt ein Fenster vorher nach. Den eigenen Entwurf anklicken nimmt ihn wieder
-        weg; ist der Dienst voll, geht „Platz dazunehmen“ vorerst nur über den Regler in der Matrix;
-        bestehende Einteilungen ändert man noch in der Matrix. Entwürfe zählen schon mit – in „N
-        frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im PDF gilt nur, was in ChurchTools
-        steht. In abgesagten Terminen trägst du nichts ein. Im Filter lässt sich unter jeder Gruppe
-        auch ein einzelner Dienst ausblenden – er fehlt dann in Matrix und „Personen“ und zählt
-        nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das Fokus-Symbol am Namen – am
-        Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines belegten Platzes oder „im Plan
-        zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in Matrix und „Personen“ gelb
-        umrandet; „Fokus aus“ beendet ihn.
+        diesen. Der Stift neben einem Namen ändert dessen Vorlieben – sofort in ChurchTools. Am
+        Dienstnamen der Matrix zeigt ein rundes Symbol, womit neue Einteilungen beginnen: „?“ =
+        Anfrage, Haken = direkt (ohne Rückfrage als zugesagt); antippen öffnet die Einstellung, sie
+        gilt nur auf diesem Gerät und für neue Entwürfe – auch für den Zauberstab. Gesendet wird
+        erst mit „Ansehen und senden“ – dort steht je Entwurf „Anfrage“ oder „direkt“; die
+        Angefragten bekommen dann eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben
+        Termine als Raster: eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem,
+        was noch offen ist – einen Dienst antippen klappt seinen Block zu. Eine leere Zelle
+        anklicken trägt die Person dort als Entwurf ein (auf einen freien Platz des Dienstes) – war
+        sie am Tag schon in einem anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach.
+        Ein zweiter Klick auf den eigenen Entwurf stellt ihn von „?“ (Anfrage) auf „✓“ (direkt) um,
+        ein dritter nimmt ihn weg – ist der Dienst auf „direkt“ gestellt, beginnt schon der erste
+        Klick direkt. Abwesenheiten sind schraffiert, mit dem Grund als Text; wer abwesend und
+        eingeteilt ist, steht rot umrahmt da. Ist der Dienst voll, geht „Platz dazunehmen“ vorerst
+        nur über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix.
+        Entwürfe zählen schon mit – in „N frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im
+        PDF gilt nur, was in ChurchTools steht. In abgesagten Terminen trägst du nichts ein. Im
+        Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in
+        Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das
+        Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
+        belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
+        Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
       </p>
       {sendeLeiste}
       {fenster}
+      {vorgabeFach && plan && (
+        <VorgabeFach
+          dienst={vorgabeFach.name}
+          modus={modusFuerDienst(ansicht.direktDienste, vorgabeFach.id)}
+          onModus={(m) =>
+            setAnsicht({
+              ...ansicht,
+              direktDienste: vorgabeSetzen(ansicht.direktDienste, vorgabeFach.id, m),
+            })
+          }
+          onFuerAlle={(m) => {
+            setAnsicht({
+              ...ansicht,
+              direktDienste: vorgabeFuerAlle(
+                ansicht.direktDienste,
+                plan.gruppen.flatMap((g) => g.zeilen.map((x) => x.dienst.id)),
+                m,
+              ),
+            });
+            showToast(
+              m === 'direkt'
+                ? 'Alle Dienste: neue Einteilungen direkt.'
+                : 'Alle Dienste: neue Einteilungen als Anfrage.',
+            );
+          }}
+          onClose={() => setVorgabeFach(null)}
+        />
+      )}
       {alteListe && entwuerfe && ew.art === 'fertig' && (
         <AlteEntwuerfeFach
           zeilen={alteListe}

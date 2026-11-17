@@ -74,6 +74,12 @@ html[data-theme='dark'] {
   --fokus-text: #fef08a; // yellow-200 – Rahmen und Fläche (`_farben.scss`) tragen im Dunkel unverändert
   --blue-tile: #1c398e; // `--color-accent-b-pale` (blue-900)
   --blue-tile-text: #dbeafe; // `--color-accent-primary` (blue-100)
+  --symbol-tinte: #18181b; // Haken im gefüllten blauen Symbol – dunkle Tinte auf blue-500
+  --abw-text: #e2e8f0; // slate-200
+  --abw-schraffur: rgba(144, 161, 185, 0.22); // slate-400
+  --abw-toenung: rgba(144, 161, 185, 0.08);
+  --abw-warn-schraffur: rgba(255, 100, 103, 0.22); // red-400
+  --abw-warn-toenung: rgba(255, 100, 103, 0.06);
   --red: #ff6467; // red-400
   --green: #00a63e; // green-600
   --cp-dir: #5fd0c3;

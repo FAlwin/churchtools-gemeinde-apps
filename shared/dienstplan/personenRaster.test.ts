@@ -363,7 +363,7 @@ describe('personenRaster – Abwesenheiten', () => {
       daten: mitAbwesenheit(roh),
     });
     expect(zeile(r, GESANG, 5).zellen.map((z) => z.abwesend)).toEqual([
-      { grund: 'Urlaub' },
+      { grund: 'Urlaub', von: '2026-11-28', bis: '2026-12-07' },
       null,
       null,
     ]);
@@ -391,7 +391,7 @@ describe('personenRaster – Abwesenheiten', () => {
     expect(zeile(r, GESANG, 11).zellen.map((z) => z.abwesend)).toEqual([
       null,
       null,
-      { grund: 'Abwesend' },
+      { grund: 'Abwesend', von: '2026-12-13', bis: '2026-12-13' },
     ]);
   });
 
@@ -405,7 +405,7 @@ describe('personenRaster – Abwesenheiten', () => {
     });
     const z = zeile(r, GESANG, 5).zellen[0];
     expect(z.zustand).toBe('zugesagt');
-    expect(z.abwesend).toEqual({ grund: 'Urlaub' });
+    expect(z.abwesend).toEqual({ grund: 'Urlaub', von: '2026-12-06', bis: '2026-12-06' });
     expect(z.warnung).toBe(true);
     // Nur abwesend, nicht eingeteilt: keine Warnung.
     const frei = personenRaster({
@@ -424,8 +424,9 @@ describe('personenRaster – Abwesenheiten', () => {
       [90, da([DANIEL], abwesenheitenAus(roh))],
     ]);
     const r = personenRaster({ plan: PLAN, spalten: ALLE_SPALTEN, gruppen: ALLE_GRUPPEN, daten });
-    expect(zeile(r, GITARRE, 12).zellen[1].abwesend).toEqual({ grund: 'Urlaub' });
-    expect(zeile(r, GESANG, 12).zellen[1].abwesend).toEqual({ grund: 'Urlaub' });
+    const urlaub = { grund: 'Urlaub', von: '2026-12-09', bis: '2026-12-09' };
+    expect(zeile(r, GITARRE, 12).zellen[1].abwesend).toEqual(urlaub);
+    expect(zeile(r, GESANG, 12).zellen[1].abwesend).toEqual(urlaub);
   });
 
   it('ohne Recht: der Block sagt es, geliefert wird nichts ausgewertet', () => {

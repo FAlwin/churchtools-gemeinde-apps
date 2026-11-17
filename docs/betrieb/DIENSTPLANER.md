@@ -18,7 +18,7 @@
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
->   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst, nur ansehen), „Wer wie oft?“, Filter nach Kalender,
+>   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; eine leere Zelle anklicken trägt als Entwurf ein), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
@@ -110,7 +110,7 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
   laufen die anderen weiter, am Ende steht, was geklappt hat und was nicht. Sind die Vorlagen von ChurchTools nicht
   erreichbar, sagt das Fach es ruhig; die Plätze lassen sich trotzdem ändern.
 
-**Ansicht „Personen“** (Wunsch 5, P1 – nur ansehen; dritter Knopf in Planen neben „Matrix“ und „Wer wie oft?“, ab
+**Ansicht „Personen“** (Wunsch 5, P1 – ansehen, P2a – eintragen per Klick; dritter Knopf in Planen neben „Matrix“ und „Wer wie oft?“, ab
 16.11.2026): Dieselben Termine wie die Matrix (gleicher Zeitraum, gleiche Filter, auch der Besuch von der Startseite) als
 Raster – Spalten = Termine, Zeilen = Personen, **ein Block je Dienst** in der Reihenfolge der Matrix. Eine Person steht in
 **jedem** ihrer Dienste (Zeile je Person **und** Dienst), daneben „auch Gesang“ (andere gezeigte Dienste, in denen sie
@@ -122,8 +122,32 @@ beide da (roter Rand am grauen Tag – ein Warnfall). „Einsätze“ zählt zug
 in diesem Dienst in den gezeigten Terminen. „Gäste“ sind Plätze mit Namen ohne Person. Die Fußzeile **„Noch offen“** zeigt
 je Termin die freien Plätze der gezeigten Dienste („Gesang ×2“) – gezählt wie in der Matrix. „Namen verbergen“ zeigt auch
 hier nie einen Namen. Maus über dem Namen hebt alle Zeilen der Person schwach blau hervor; Antippen des Namens nimmt die Person in den **Fokus** (s. u.). Am Handy ist es
-dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Ein Klick in eine Zelle tut noch nichts
-(Eintragen kommt mit P2, Kürzel und Farben einstellen mit P3).
+dieselbe Tabelle, waagerecht scrollbar, die Namensspalte bleibt stehen. Kürzel und Farben einstellen kommt mit P3.
+
+**Eintragen per Klick (P2a, 16.11.2026):** Ein Klick in eine **leere Zelle** (Person × Termin im Block eines Dienstes) legt sofort
+einen **Entwurf** an – derselbe Weg wie die Wahl in „Wer kann?“ (gleiche Funktion, gleicher Hinweis „… eingetragen – noch nicht
+gesendet“, gleicher Schutz gegen gleichzeitige Änderungen), auf den **ersten freien Platz** dieses Dienstes an diesem Termin
+(ein Platz mit Entwurf zählt nicht als frei, wie beim Zauberstab). Danach steht in der Zelle der Entwurf (blau, gestrichelt, Stift)
+und unten die Leiste „Ansehen und senden“. Gesendet wird nichts, bevor man dort sendet. Ein Klick auf den **eigenen Entwurf**
+in der Zelle nimmt ihn wieder weg (wie „Entfernen“ im Entwurfs-Fach); der Entwurf eines **anderen Planers** ist kein Knopf –
+den öffnet man in der Matrix.
+
+- **Warnfenster** (nur dann, mit „Abbrechen“ und „Trotzdem eintragen“): die Person ist am selben Tag **schon in einem anderen
+  Dienst** eingeteilt („Daniel F. ist am Fr, 20.11. schon bei Gesang eingeteilt. Trotzdem für Ton eintragen?“) oder an dem Tag
+  **abwesend** (Grund und Zeitraum der Abwesenheit); treffen beide zu, steht beides in einem Fenster. Die Sätze rechnet
+  `shared/dienstplan/personenEintragen.ts` aus dem, was die Zelle ohnehin zeigt („+ Gesang“, Abwesend-Tag).
+- **Dienst voll** (kein freier Platz, auch nicht durch Entwürfe frei): ein schlichtes Fenster „Ton ist voll“ mit
+  „[Dienst] am 27.11. ist voll (2 von 2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ – es wird nichts
+  eingetragen („Platz dazunehmen“ kommt mit P2c).
+- **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
+  Entwürfe der Dienstgruppe geladen und änderbar (`darfAendern`: Schublade bereit). Sonst bleibt die Zelle wie bisher. Eine
+  **bestehende Einteilung** (zugesagt, angefragt, Gast) anklicken tut noch nichts (P2b); die Zeile „Gäste“ und „Noch offen“
+  bleiben unverändert. Abgesagte Termine sind wie in der Matrix nicht gesperrt.
+- **Aussehen:** mit echter Maus (`hover: hover`) bekommt eine leere, eintragbare Zelle beim Darüberfahren einen blauen Rahmen,
+  eine blasse blaue Fläche und ein „+“ rechts; am Handy/Touch zeigt sie ein blasses „+“. Jede dieser Zellen ist ein Knopf
+  (Tastatur, Vorleser: „Daniel F. für Ton am Fr, 20.11. eintragen“). Der Klick auf den **Namen** setzt weiter den Fokus.
+- **„Einsätze“ und „Noch offen“** zählen wie bisher nur zugesagte/angefragte Einteilungen bzw. die freien Plätze von
+  ChurchTools – ein Entwurf ändert sie erst, wenn er gesendet ist (wie „N frei“ in der Matrix).
 
 - **Wer eine Zeile bekommt:** die Mitglieder der ChurchTools-Gruppen des Dienstes (`/services` → `groupIds`, mehrere Gruppen
   werden zusammengeführt – Café hängt an fünf) **plus** wer im Zeitraum dort eingeteilt ist, aber nicht Mitglied ist

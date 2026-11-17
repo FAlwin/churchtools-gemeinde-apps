@@ -17,7 +17,15 @@ import { BelegtFach } from './BelegtFach';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
-import { freierPlatz, stehtInChurchTools, zauberUnter, type Sicht } from './planSicht';
+import { zellenAktion } from '@shared/dienstplan/personenEintragen';
+import {
+  darfPlanen,
+  freierPlatz,
+  stehtInChurchTools,
+  zauberUnter,
+  type PersonenEintragen,
+  type Sicht,
+} from './planSicht';
 import { useEntwuerfe } from './useEntwuerfe';
 import {
   darfAendern,
@@ -230,6 +238,25 @@ export function useEinteilen({
     }
   };
 
+  /**
+   * Einen Entwurf entfernen – **eine Funktion** fürs Entwurfs-Fach („Entfernen“, „Verwerfen“) und für „Personen“ (Klick
+   * auf den eigenen Entwurf): Versions-Schutz im Kern, Ergebnis übernehmen, Bescheid geben. `verwerfen`: der Entwurf war
+   * veraltet.
+   */
+  const entferneEntwurf = async (
+    gruppeId: number,
+    e: Entwurf,
+    erwartet: number,
+    verwerfen: boolean,
+  ): Promise<EntwurfErgebnis> => {
+    if (!entwuerfe || ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
+    const r = await entwuerfe.entfernen(ew.daten, gruppeId, e.ort, erwartet);
+    nachFach(r, ortSchluessel(e.ort), () =>
+      verwerfen ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
+    );
+    return r;
+  };
+
   /** Der Stift in „Wer kann?“ (E5-3) – nur, wo man die Dienstgruppe plant (nicht nur als Termin-Admin). */
   const stiftFuer = (f: FreierPlatz) => {
     const g = plan?.gruppen.find((x) => x.gruppe?.id === f.gruppeId);
@@ -354,14 +381,14 @@ export function useEinteilen({
             );
             return r;
           }}
-          onEntfernen={async (erwartet) => {
-            const e = fach.entwurf;
-            const r = await entwuerfe.entfernen(ew.daten, fach.platz.gruppeId, e.ort, erwartet);
-            nachFach(r, ortSchluessel(e.ort), () =>
-              fach.inChurchTools !== null ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
-            );
-            return r;
-          }}
+          onEntfernen={(erwartet) =>
+            entferneEntwurf(
+              fach.platz.gruppeId,
+              fach.entwurf,
+              erwartet,
+              fach.inChurchTools !== null,
+            )
+          }
           onAnderePerson={() => {
             // „Wer kann?“ für denselben Platz – es ersetzt den Entwurf (mit seiner Version).
             setErsetzt(fach.entwurf.version);
@@ -513,6 +540,37 @@ export function useEinteilen({
     return e?.art === 'bereit' ? e.onWahl(ziel, z.ersetzt) : null;
   };
 
+  /**
+   * Eintragen per Klick in „Personen“ (P2a): was ein Klick tut (`zellenAktion`) – nur wo man den Dienst planen und seine
+   * Entwürfe ändern darf (`darfPlanen`, `darfAendern`, wie in der Matrix) –, das Eintragen über **`trageEin`** (also die
+   * Wahl in „Wer kann?“) und das Wegnehmen über **`entferneEntwurf`** (also „Entfernen“ im Entwurfs-Fach).
+   */
+  const amPersonen: PersonenEintragen = {
+    aktion: (i, zl, personId, zustand) => {
+      if (!plan) return null;
+      const s = plan.spalten[i];
+      if (!darfPlanen(zl, s) || !amPlatz.darfAendern(zl)) return null;
+      return zellenAktion({
+        plaetze: zl.zellen[i],
+        personId,
+        zustand,
+        entwurf: (p) => entwurfAmPlatz(daten, s, zl, p),
+        ichId: amPlatz.ichId,
+      });
+    },
+    eintragen: async (i, zl, nr, person) => {
+      if (!plan) return;
+      const platz = freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr);
+      const r = await trageEin({ platz, ersetzt: null, von: null }, { art: 'person', ...person });
+      if (!r) showToast('Hier kannst du gerade keine Entwürfe anlegen.');
+      else if (!r.ok) showToast(fehlerHinweis(r));
+    },
+    wegnehmen: async (zl, e) => {
+      const r = await entferneEntwurf(zl.dienst.dienstgruppeId ?? 0, e, e.version, false);
+      if (!r.ok) showToast(fehlerHinweis(r));
+    },
+  };
+
   return {
     ew,
     daten,
@@ -525,5 +583,15 @@ export function useEinteilen({
     werKannOeffnen,
     eintragenMoeglich,
     trageEin,
+    amPersonen,
   };
 }
+
+/**
+ * Was der Toast sagt, wenn ein Entwurf nicht angelegt oder entfernt werden konnte – **eine Stelle** für „Hier eintragen“
+ * (Fokus-Leiste) und „Personen“. Bei einem Konflikt zeigt die Matrix schon, was jetzt dasteht.
+ */
+export const fehlerHinweis = (r: Extract<EntwurfErgebnis, { ok: false }>): string =>
+  r.grund === 'konflikt'
+    ? 'Hier hat eben jemand den Platz geändert – bitte noch einmal ansehen.'
+    : grundText(r.grund);

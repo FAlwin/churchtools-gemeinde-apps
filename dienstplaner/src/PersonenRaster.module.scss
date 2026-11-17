@@ -74,7 +74,10 @@ $anzahl-farben: 8;
   min-width: var(--namew);
   max-width: var(--namew);
 }
-thead .name {
+// Die Ecke oben links über allem, was waagerecht darunter durchscrollt. `.raster thead .name` statt `thead .name`:
+// Sonst gewinnt `.raster thead th { z-index: 3 }` (spezifischer), und eine spätere Kopfzelle mit `opacity` (abgesagter
+// Termin) malt sich über „Name“ (Handy, 16.11.2026).
+.raster thead .name {
   z-index: 5;
 }
 
@@ -326,6 +329,63 @@ thead .name {
 }
 .zelleLeer {
   color: var(--text3);
+}
+
+// ── Eintragen per Klick (P2a, Entwurf `e9-p2-eintragen.html`, Variante B) ──────────────────────────────────────────────
+// Die Zelle ist anklickbar, wo man eintragen darf (`.klick`). Der Knopf darunter füllt die Zelle (Tastatur, Vorleser); die
+// Tags liegen darüber, damit ihr Tooltip bleibt – Klicks darauf steigen zur Zelle auf. Maus: blauer Rahmen (Outline, damit
+// er neben dem gelben Fokus-Rahmen der Zeile steht), blasse blaue Fläche, „+“ rechts. Handy/Touch ohne Hover: ein blasses „+“.
+.raster td.klick {
+  position: relative;
+  cursor: pointer;
+
+  .tag,
+  .dazu {
+    position: relative;
+  }
+}
+.zellKnopf {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+.plus {
+  display: none;
+  align-items: center;
+}
+@media (hover: hover) {
+  .raster td.leerKlick:hover {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+    background: color-mix(in oklab, var(--blue) 10%, var(--zeile, var(--surface2)));
+
+    .plus {
+      display: inline-flex;
+    }
+  }
+}
+.raster td.leerKlick .zellKnopf:focus-visible .plus {
+  display: inline-flex;
+}
+@media (hover: none) {
+  .raster td.leerKlick .plus {
+    display: inline-flex;
+    color: var(--text3);
+    opacity: 0.55;
+  }
 }
 
 // ── Gäste und „Noch offen“ ────────────────────────────────────────────────────

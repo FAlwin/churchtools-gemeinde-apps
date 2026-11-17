@@ -787,8 +787,8 @@ für denselben Übergang anzulegen.
    Fenster nicht zu schließen. Danach „Fertig. Alles ist in ChurchTools nachgelesen.“ mit einer Zeile je Baustein (Typ, Rechte,
    Wechsel-Gruppen, Routinen, Regeln, Kindergruppen, Neu berechnet, Einrichtung gespeichert) und dem Kasten „Damit die Leitungen
    den Reiter sehen“. **Fertig** schließt; die Seite „Einrichtung“ steht danach auf lauter ✓, **Status „aktiv“** an allen
-   Wechsel-Gruppen und Kindergruppen (in ChurchTools nachsehen), die Wechsel-Gruppen sind versteckt und hängen unter der
-   Bereichsgruppe.
+   Wechsel-Gruppen und Kindergruppen (in ChurchTools nachsehen), die Wechsel-Gruppen sind **eingeschränkt** (nicht „versteckt“: Eine
+   Kindergruppen-Leitung muss sie sehen und ihre Mitglieder lesen können) und hängen unter der Bereichsgruppe.
 2. **Stufen ändern → Änderungen schreiben** (z. B. eine Stufe entfernen): Die Bereichsgruppe ist gesperrt. Nach dem Schreiben
    fehlen in der entfernten Stufe unsere Regeln (fremde Regeln dort, falls vorhanden, bleiben; ohne Regeln steht der Status auf
    „keiner“), die nicht mehr gebrauchte Wechsel-Gruppe steht noch in ChurchTools und wird in „Fertig“ genannt – **nichts wurde

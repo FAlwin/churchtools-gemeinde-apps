@@ -81,6 +81,8 @@ function gutAntworten(): Record<string, unknown> {
   const je: Record<string, unknown> = {
     '/groups/11/roles': ROLLEN_ROH,
     '/groups/12/roles': ROLLEN_ROH,
+    '/groups/11': { id: 11, settings: { visibility: 'restricted' } },
+    '/groups/12': { id: 12, settings: { visibility: 'restricted' } },
     '/permissions/group_type_role/48': LEITER_RECHTE.map((r) => ({
       authId: r.authId,
       dataId: r.dataId,
@@ -104,6 +106,8 @@ describe('ladeEinrichtungStand', () => {
     await ladeEinrichtungStand(E, f.holen);
     expect(f.pfade.sort()).toEqual(
       [
+        '/groups/11',
+        '/groups/12',
         '/groups/11/roles',
         '/groups/12/roles',
         '/groups/11/members/routines',
@@ -168,6 +172,24 @@ describe('ladeEinrichtungStand', () => {
     expect(z.filter((x) => x.stand.art !== 'ok').map((x) => [x.id, x.stand])).toEqual([]);
   });
 
+  it('liest die Sichtbarkeit je Wechsel-Gruppe; nicht lesbar oder ohne Text ist „nicht gelesen“ – nie ein Wert', async () => {
+    const je = {
+      ...gutAntworten(),
+      '/groups/11': { id: 11, settings: { visibility: 'hidden' } },
+      '/groups/12': { id: 12, settings: {} },
+    };
+    const d = await ladeEinrichtungStand(E, falsch(je).holen);
+    expect(d.sichtbarkeit!.get(11)).toEqual({ ok: true, wert: 'hidden' });
+    expect(d.sichtbarkeit!.get(12)).toEqual({ ok: false });
+    const d2 = await ladeEinrichtungStand(
+      E,
+      falsch({ ...gutAntworten(), '/groups/11': new ApiError(403, 'Forbidden to see group') })
+        .holen,
+    );
+    expect(d2.sichtbarkeit!.get(11)).toEqual({ ok: false });
+    expect(d2.sichtbarkeit!.get(12)).toEqual({ ok: true, wert: 'restricted' });
+  });
+
   it('404 beim Regel-Abruf heißt „keine Regeln“; bei allem anderen ist 404 „nicht gelesen“', async () => {
     const je = gutAntworten();
     delete je['/dynamicgroups/11/ruleset']; // → 404
@@ -190,6 +212,7 @@ describe('ladeEinrichtungStand', () => {
       const d = await ladeEinrichtungStand(E, falsch(je).holen);
       expect(d.rollen.get(11)).toEqual({ ok: false });
       expect(d.routinen.get(11)).toEqual({ ok: false });
+      expect(d.sichtbarkeit!.get(11)).toEqual({ ok: false });
       expect(d.gruppen.get(2)).toEqual({ regeln: { ok: false }, status: { ok: false } });
       expect(d.rechte).toEqual({ leiter: { ok: false }, teilnehmer: { ok: false } });
     }

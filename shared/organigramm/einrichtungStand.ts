@@ -19,6 +19,7 @@ import {
   istWechselTyp,
   LEITER_RECHTE,
   uebergaenge,
+  WECHSEL_SICHTBARKEIT,
   wechselGruppenName,
   type GruppenwechselEinstellung,
   type Regel,
@@ -82,6 +83,8 @@ export interface EinrichtungDaten {
   gruppen: ReadonlyMap<number, GruppenRegelStand>;
   /** Routinen je Wechsel-Gruppe. */
   routinen: ReadonlyMap<number, Gelesen<readonly RoutineRoh[]>>;
+  /** Sichtbarkeit je Wechsel-Gruppe (`settings.visibility`, z. B. `restricted`); fehlt der Eintrag, wurde sie nicht gefragt. */
+  sichtbarkeit?: ReadonlyMap<number, Gelesen<string>>;
 }
 
 /** Was vom Start der Erweiterung gebraucht wird (so ist `Start` zuweisbar). */
@@ -305,11 +308,12 @@ export function waiseKandidaten(a: {
 export const wechselTypIds = (typNamen: ReadonlyMap<number, string>): Set<number> =>
   new Set([...typNamen].filter(([, n]) => istWechselTyp(n)).map(([id]) => id));
 
-function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
+function wechselGruppenZeile(e: Einrichtung, q: StandQuelle, daten: EinrichtungDaten): StandZeile {
   const wege = uebergaenge(e.einstellung);
   const titel = anzahl(wege.length, 'Wechsel-Gruppe', 'Wechsel-Gruppen');
   const bereich = gruppenName(q, e.bereichGruppeId);
   const probleme: string[] = [];
+  let nichtGelesen = 0;
   for (const u of wege) {
     const w = wechselGruppeAb(e, u.von.gruppeId);
     const name = wechselGruppenName(u);
@@ -325,6 +329,12 @@ function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
     }
     if (!(q.eltern.get(w.gruppeId) ?? []).includes(e.bereichGruppeId))
       probleme.push(`${name}: hängt nicht unter „${bereich}“`);
+    const sicht = daten.sichtbarkeit?.get(w.gruppeId);
+    if (sicht && !sicht.ok) nichtGelesen += 1;
+    else if (sicht && sicht.wert !== WECHSEL_SICHTBARKEIT)
+      probleme.push(
+        `${name}: versteckt – Leitungen sehen sie nicht; „Stufen ändern → Änderungen schreiben“ stellt sie um`,
+      );
   }
   // Angelegt, aber nicht eingetragen: der Abbruch zwischen „Gruppe anlegen“ und „Einrichtung speichern“.
   const typIds = wechselTypIds(q.typNamen);
@@ -350,7 +360,11 @@ function wechselGruppenZeile(e: Einrichtung, q: StandQuelle): StandZeile {
             probleme,
             `${anzahl(probleme.length, 'Übergang stimmt', 'Übergänge stimmen')} nicht`,
           )
-        : ok(`unter „${bereich}“: ${wege.map(wechselGruppenName).join(', ')}`),
+        : nichtGelesen > 0
+          ? nichtPruefbar(
+              `nicht prüfbar – ${nichtGelesen === 1 ? 'die Sichtbarkeit einer Gruppe' : 'die Sichtbarkeit von ' + nichtGelesen + ' Gruppen'} ließ sich gerade nicht lesen`,
+            )
+          : ok(`unter „${bereich}“: ${wege.map(wechselGruppenName).join(', ')}`),
   };
 }
 
@@ -619,7 +633,7 @@ export function einrichtungStand(
   return [
     typZeile(e, quelle, daten),
     rechteZeile(daten),
-    wechselGruppenZeile(e, quelle),
+    wechselGruppenZeile(e, quelle, daten),
     wechseltageZeile(regel, naechstesJahr),
     regelnZeile(e, quelle, daten),
     routinenZeile(e, daten),

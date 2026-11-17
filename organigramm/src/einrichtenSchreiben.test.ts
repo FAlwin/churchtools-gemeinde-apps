@@ -135,7 +135,7 @@ describe('Einrichten – der ganze Lauf gegen ein gefälschtes ChurchTools', () 
     expect(f.aufrufe.some((a) => a.pfad.includes('/45'))).toBe(false); // Teilnehmer: keine Rechte
   });
 
-  it('die Wechsel-Gruppen: versteckt, Typ „Gruppenwechsel“, direkt unter dem Bereich', async () => {
+  it('die Wechsel-Gruppen: eingeschränkt (nie „hidden“), Typ „Gruppenwechsel“, direkt unter dem Bereich', async () => {
     const { f } = await einrichten();
     const posts = f.aufrufe.filter((a) => a.methode === 'POST' && a.pfad === '/groups');
     expect(posts.map((a) => a.json)).toEqual([
@@ -144,16 +144,28 @@ describe('Einrichten – der ganze Lauf gegen ein gefälschtes ChurchTools', () 
         groupTypeId: 9,
         groupStatusId: 1,
         parentGroupId: BEREICH,
-        visibility: 'hidden',
+        visibility: 'restricted',
       },
       {
         name: 'Fische → Jungschar',
         groupTypeId: 9,
         groupStatusId: 1,
         parentGroupId: BEREICH,
-        visibility: 'hidden',
+        visibility: 'restricted',
       },
     ]);
+  });
+
+  it('Nachlesen: liefert ChurchTools eine andere Sichtbarkeit zurück, ist es ein Fehler am Schritt – der Rest bleibt offen', async () => {
+    const f = new FakeCt();
+    f.neueSichtbarkeit = 'hidden';
+    const { lauf } = await einrichten(f);
+    const l = gelaufen(lauf);
+    expect(l.ok).toBe(false);
+    const i = l.ergebnisse.findIndex((x) => x.ausgang.art === 'fehler');
+    expect(l.ergebnisse[i].schritt.art).toBe('wechselGruppe');
+    expect(JSON.stringify(l.ergebnisse[i].ausgang)).toContain('„hidden“ statt „eingeschränkt“');
+    expect(l.ergebnisse.slice(i + 1).every((x) => x.ausgang.art === 'offen')).toBe(true);
   });
 
   it('Status „aktiv“ überall: Jede Wechsel-Gruppe und jede Stufe bekommt dynamicGroupStatus active – nie „manual“', async () => {
@@ -634,6 +646,56 @@ describe('Stufen ändern – Status, entfernte Stufen, nichts löschen', () => {
     expect(l.ergebnisse.filter((x) => x.schritt.art === 'statusStufe')).toHaveLength(1);
     expect(l.ergebnisse.filter((x) => x.schritt.art === 'statusWechselGruppe')).toHaveLength(1);
     expect([...f.status.values()].every((x) => x === 'active')).toBe(true);
+  });
+
+  it('eine schon vorhandene Wechsel-Gruppe, die „hidden“ ist: ein Schritt stellt sie auf „restricted“ (flaches PATCH) und liest nach', async () => {
+    const { f, s, ausgang } = await eingerichtet();
+    f.sichtbarkeit.set(100, 'hidden');
+    const davor = f.aufrufe.length;
+    const e: Eingabe = { art: 'aendern', soll: SOLL3, ausgang, von: VON };
+    const l = gelaufen(await schreibeEinrichtung(e, anschluss(f, s, e)));
+    expect(l.ok).toBe(true);
+    const sicht = l.ergebnisse.filter((x) => x.schritt.art === 'sichtbarkeitWechselGruppe');
+    expect(sicht).toHaveLength(1);
+    expect(sicht[0].ausgang).toMatchObject({
+      art: 'ok',
+      text: 'nachgelesen: eingeschränkt sichtbar',
+    });
+    expect(
+      f.aufrufe.slice(davor).filter((a) => a.methode === 'PATCH' && a.pfad === '/groups/100'),
+    ).toEqual([{ methode: 'PATCH', pfad: '/groups/100', json: { visibility: 'restricted' } }]);
+    expect(f.sichtbarkeit.get(100)).toBe('restricted');
+    // Danach nichts mehr zu tun.
+    const e2: Eingabe = { art: 'aendern', soll: SOLL3, ausgang, von: VON };
+    const l2 = gelaufen(await schreibeEinrichtung(e2, anschluss(f, s, e2)));
+    expect(l2.ergebnisse.filter((x) => x.schritt.art === 'sichtbarkeitWechselGruppe')).toHaveLength(
+      0,
+    );
+  });
+
+  it('übernimmt der Lauf eine schon angelegte, noch „versteckte“ Gruppe, stellt er sie um (PATCH) und liest nach', async () => {
+    const f = new FakeCt().mitTyp();
+    const id = f.wechselGruppe('Schäfchen → Fische');
+    f.sichtbarkeit.set(id, 'hidden');
+    const { lauf } = await einrichten(f);
+    expect(gelaufen(lauf).ok).toBe(true);
+    expect(f.sichtbarkeit.get(id)).toBe('restricted');
+    expect(
+      f.aufrufe.filter((a) => a.methode === 'PATCH' && a.pfad === `/groups/${id}`),
+    ).toHaveLength(1);
+    expect(f.anzahl('POST', '/groups')).toBe(1); // nur die zweite entsteht neu
+  });
+
+  it('PATCH ohne Wirkung (200, aber noch „hidden“) → Fehler am Schritt, nicht „erledigt“', async () => {
+    const { f, s, ausgang } = await eingerichtet();
+    f.sichtbarkeit.set(100, 'hidden');
+    f.ignoriere = ['PATCH /groups/100'];
+    const e: Eingabe = { art: 'aendern', soll: SOLL3, ausgang, von: VON };
+    const l = gelaufen(await schreibeEinrichtung(e, anschluss(f, s, e)));
+    expect(l.ok).toBe(false);
+    expect(l.ergebnisse.find((x) => x.ausgang.art === 'fehler')?.schritt.art).toBe(
+      'sichtbarkeitWechselGruppe',
+    );
   });
 
   it('Ändern ohne Änderung an den Stufen: Die Einrichtung wird nicht noch einmal gespeichert (keine neue Version)', async () => {

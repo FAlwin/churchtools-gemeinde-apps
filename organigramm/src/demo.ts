@@ -31,6 +31,8 @@ const gruppe = (id: number, name: string, groupTypeId: number, color: string | n
   id,
   name,
   information: { groupTypeId, groupStatusId: 1, color },
+  // Wie ChurchTools: `settings.visibility`. Wechsel-Gruppen legt „Einrichten“ „eingeschränkt“ an (nicht „hidden“).
+  settings: { visibility: 'restricted' },
 });
 
 const GRUPPEN: ReturnType<typeof gruppe>[] = [
@@ -46,7 +48,7 @@ const GRUPPEN: ReturnType<typeof gruppe>[] = [
   gruppe(24, 'Gemeinsam werden', 2, 'orange'),
   gruppe(37, 'Bibelarbeit', 7, 'violet'),
   gruppe(34, 'Ankündigungen', 9, 'teal'),
-  // Gruppenwechsel der Kinder (O9): Bereich, Stufen und die Wechsel-Gruppen (Typ 20, versteckt)
+  // Gruppenwechsel der Kinder (O9): Bereich, Stufen und die Wechsel-Gruppen (Typ 20, eingeschränkt sichtbar)
   gruppe(300, 'Kinder & Jugend', 2, 'lime'),
   gruppe(301, 'Schäfchen', 7, 'sky'),
   gruppe(302, 'Fische', 7, 'sky'),
@@ -226,17 +228,25 @@ function struktur(
     }
     if (method === 'PATCH' && g) {
       // Umbau (O7-3): Name bzw. Status, wie gemessen – auch ein leerer Name wird angenommen.
-      const f = (body ?? {}) as { name?: string; groupStatusId?: number };
+      const f = (body ?? {}) as { name?: string; groupStatusId?: number; visibility?: string };
       if (f.name !== undefined) g.name = f.name;
+      if (f.visibility !== undefined) g.settings.visibility = f.visibility;
       if (f.groupStatusId !== undefined) g.information.groupStatusId = f.groupStatusId;
       return json({ data: g });
     }
     return g ? json({ data: g }) : json({}, 404);
   }
   if (pfad === '/api/groups' && method === 'POST') {
-    const d = body as { name: string; groupTypeId: number; parentGroupId: number };
+    const d = body as {
+      name: string;
+      groupTypeId: number;
+      parentGroupId: number;
+      visibility?: string;
+    };
     const id = Math.max(100, ...GRUPPEN.map((x) => x.id)) + 1;
-    GRUPPEN.push(gruppe(id, d.name, d.groupTypeId, null));
+    const neu = gruppe(id, d.name, d.groupTypeId, null);
+    if (d.visibility !== undefined) neu.settings.visibility = d.visibility;
+    GRUPPEN.push(neu);
     ELTERN.set(id, [d.parentGroupId]);
     return json({ data: { id } }, 201);
   }

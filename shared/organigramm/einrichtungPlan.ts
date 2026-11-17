@@ -27,6 +27,7 @@ import {
   LEITER_RECHTE,
   regelName,
   uebergaenge,
+  WECHSEL_SICHTBARKEIT,
   WECHSEL_TYP_NAME,
   wechselGruppenName,
   type GruppenwechselEinstellung,
@@ -54,6 +55,8 @@ export type SchrittArt =
   | 'typ'
   | 'rechte'
   | 'wechselGruppe'
+  /** Eine vorhandene Wechsel-Gruppe von „versteckt“ auf „eingeschränkt“ stellen (Leitungen sehen versteckte nicht). */
+  | 'sichtbarkeitWechselGruppe'
   | 'routine'
   | 'regelnWechselGruppe'
   | 'statusWechselGruppe'
@@ -135,6 +138,12 @@ export function istAktiv(stand: EinrichtungDaten | null, id: number): boolean | 
   return s && s.ok ? s.wert === 'active' : null;
 }
 
+/** Steht die Wechsel-Gruppe auf etwas anderem als „eingeschränkt“? `null`: nicht gelesen. */
+export function sichtbarkeitAbweichend(stand: EinrichtungDaten | null, id: number): boolean | null {
+  const s = stand?.sichtbarkeit?.get(id);
+  return s && s.ok ? s.wert !== WECHSEL_SICHTBARKEIT : null;
+}
+
 /** `neu` für alle, `vorhanden` für keinen, sonst `ändern`. */
 function sammel(arten: readonly PlanArt[]): PlanArt {
   if (arten.length > 0 && arten.every((a) => a === 'neu')) return 'neu';
@@ -186,7 +195,7 @@ export function einrichtungsPlan(
     titel: `${anzahl(wege.length, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} unter „${bereich}“`,
     text:
       (wgArt === 'neu'
-        ? `versteckt und im Organigramm ausgeblendet: ${wege.map(wechselGruppenName).join(', ')}`
+        ? `eingeschränkt sichtbar und im Organigramm ausgeblendet: ${wege.map(wechselGruppenName).join(', ')}`
         : wgArt === 'vorhanden'
           ? `gibt es schon: ${wege.map(wechselGruppenName).join(', ')}`
           : `neu: ${listeAuf(neueNamen)} – die übrigen gibt es schon`) +
@@ -280,6 +289,17 @@ export function einrichtungsPlan(
   wege.forEach((u, i) => {
     if (vorhandene[i] === null)
       schritte.push({ art: 'wechselGruppe', aktion: 'neu', ziel: uebergangZiel(u, i) });
+  });
+  // Eine vorhandene Wechsel-Gruppe, die nicht „eingeschränkt“ ist (ältere Installation: „versteckt“): umstellen.
+  // Nicht lesbar heißt hier „kein Schritt“ – es wird nichts geraten.
+  wege.forEach((u, i) => {
+    const id = vorhandene[i];
+    if (id !== null && sichtbarkeitAbweichend(ist.stand, id) === true)
+      schritte.push({
+        art: 'sichtbarkeitWechselGruppe',
+        aktion: 'aendern',
+        ziel: uebergangZiel(u, i),
+      });
   });
   wege.forEach((u, i) => {
     if (routinenArten[i] !== 'vorhanden')

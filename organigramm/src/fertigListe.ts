@@ -20,6 +20,8 @@ const FERTIG: Record<SchrittArt, (n: number) => string> = {
   typ: () => 'Gruppentyp „Gruppenwechsel“ angelegt',
   rechte: () => 'Rechte der Leitung gesetzt',
   wechselGruppe: (n) => `${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} angelegt`,
+  sichtbarkeitWechselGruppe: (n) =>
+    `${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} auf „eingeschränkt“ gestellt`,
   routine: (n) => `${mehr(n, 'Routine', 'Routinen')} eingerichtet`,
   regelnWechselGruppe: (n) =>
     `Regeln in ${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} geschrieben`,
@@ -37,6 +39,8 @@ const OFFEN: Record<SchrittArt, (n: number) => string> = {
   typ: () => 'Gruppentyp „Gruppenwechsel“',
   rechte: () => 'Rechte der Leitung',
   wechselGruppe: (n) => mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen'),
+  sichtbarkeitWechselGruppe: (n) =>
+    `${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} auf „eingeschränkt“ stellen`,
   routine: (n) => mehr(n, 'Routine', 'Routinen'),
   regelnWechselGruppe: (n) => `Regeln in ${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')}`,
   statusWechselGruppe: (n) => `${mehr(n, 'Wechsel-Gruppe', 'Wechsel-Gruppen')} einschalten`,
@@ -59,6 +63,8 @@ function fehlerTitel(s: PlanSchritt): string {
       return 'Rechte der Leitung';
     case 'wechselGruppe':
       return `Wechsel-Gruppe ${name(s)}`;
+    case 'sichtbarkeitWechselGruppe':
+      return `Sichtbarkeit von ${name(s)}`;
     case 'routine':
       return `Routine in ${name(s)}`;
     case 'regelnWechselGruppe':

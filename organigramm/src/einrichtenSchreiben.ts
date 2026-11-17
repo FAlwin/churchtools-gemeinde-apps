@@ -52,6 +52,7 @@ import {
   LEITER_RECHTE,
   regelName,
   uebergaenge,
+  WECHSEL_SICHTBARKEIT,
   WECHSEL_TYP_NAME,
   wechselGruppenName,
   type Regel,
@@ -234,6 +235,7 @@ const nummerAus = (antwort: unknown): number | null =>
 interface GruppeRoh {
   name?: unknown;
   information?: { groupTypeId?: unknown } | null;
+  settings?: { visibility?: unknown } | null;
 }
 
 // ── Der Lauf ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -397,6 +399,8 @@ class Schreiber {
         return this.rechteSetzen();
       case 'wechselGruppe':
         return this.wechselGruppeAnlegen(this.uebergangZu(s));
+      case 'sichtbarkeitWechselGruppe':
+        return this.sichtbarkeitSetzen(this.wechselGruppeZu(this.uebergangZu(s)));
       case 'routine':
         return this.routine(this.uebergangZu(s));
       case 'regelnWechselGruppe':
@@ -576,7 +580,7 @@ class Schreiber {
         groupTypeId: typId,
         groupStatusId: 1,
         parentGroupId: bereich,
-        visibility: 'hidden',
+        visibility: WECHSEL_SICHTBARKEIT,
       });
       const neu = nummerAus(antwort);
       if (neu === null)
@@ -589,6 +593,10 @@ class Schreiber {
     const gelesen = await this.port.holen<GruppeRoh | null>(`/groups/${id}`);
     if (!gelesen || gelesen.name !== name || ctId(gelesen.information?.groupTypeId) !== typId)
       throw fehl(`ChurchTools zeigt „${name}“ nicht mit dem Typ „${WECHSEL_TYP_NAME}“.`);
+    // Eine übernommene Gruppe kann noch „versteckt“ sein (älterer Lauf): umstellen und nachlesen.
+    if (uebernommen && gelesen.settings?.visibility !== WECHSEL_SICHTBARKEIT)
+      await this.sichtbarkeitSetzen(id);
+    else this.sichtbarkeitPruefen(name, gelesen.settings?.visibility);
     const hier = await this.port.holen<unknown>('/groups/hierarchies');
     if (!Array.isArray(hier)) throw unlesbar('Die Hierarchie der Gruppen');
     const obergruppen = elternAus(hier as RohHierarchie[]).get(id) ?? [];
@@ -613,9 +621,27 @@ class Schreiber {
     return {
       art: 'ok',
       text: uebernommen
-        ? 'nachgelesen: eine schon angelegte Gruppe übernommen, versteckt'
-        : 'nachgelesen: versteckt unter der Bereichsgruppe',
+        ? 'nachgelesen: eine schon angelegte Gruppe übernommen, eingeschränkt sichtbar'
+        : 'nachgelesen: eingeschränkt sichtbar unter der Bereichsgruppe',
     };
+  }
+
+  private sichtbarkeitPruefen(name: string, ist: unknown): void {
+    if (ist !== WECHSEL_SICHTBARKEIT)
+      throw fehl(
+        `ChurchTools zeigt „${name}“ mit der Sichtbarkeit „${typeof ist === 'string' ? ist : 'unbekannt'}“ statt „eingeschränkt“. Bitte noch einmal versuchen.`,
+      );
+  }
+
+  /** Eine Wechsel-Gruppe auf „eingeschränkt“ stellen (flaches `PATCH /groups/{id}`) und nachlesen. */
+  private async sichtbarkeitSetzen(id: number): Promise<Ausgang> {
+    await this.port.schicken(`/groups/${id}`, 'PATCH', { visibility: WECHSEL_SICHTBARKEIT });
+    const g = await this.port.holen<GruppeRoh | null>(`/groups/${id}`);
+    this.sichtbarkeitPruefen(
+      typeof g?.name === 'string' ? g.name : `Gruppe ${id}`,
+      g?.settings?.visibility,
+    );
+    return { art: 'ok', text: 'nachgelesen: eingeschränkt sichtbar' };
   }
 
   // ── Einrichtung speichern ───────────────────────────────────────────────────────────────────────────────────────

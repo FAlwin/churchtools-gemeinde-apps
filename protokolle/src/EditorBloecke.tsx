@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@ui/icons/icons';
+import { useEscape } from '@ui/bedienung/useEscape';
 import { tagPunkt } from '@shared/ct/datum';
 import { terminDatum, textAus } from '@shared/protokolle/dokument';
 import {
@@ -61,16 +62,10 @@ function Schildchen({
     const weg = (e: MouseEvent) => {
       if (!rahmen.current?.contains(e.target as Node)) setOffen(false);
     };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOffen(false);
-    };
     document.addEventListener('mousedown', weg);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('mousedown', weg);
-      document.removeEventListener('keydown', esc);
-    };
+    return () => document.removeEventListener('mousedown', weg);
   }, [offen]);
+  useEscape(offen, () => setOffen(false));
   return (
     <span className={styles.rahmen} ref={rahmen} contentEditable={false}>
       <button

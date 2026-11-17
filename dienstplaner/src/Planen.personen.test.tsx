@@ -251,18 +251,17 @@ describe('Planen – Ansicht „Personen“', () => {
     expect(tag.closest('tr')!.textContent).toContain('Ben Test');
   });
 
-  it('ein Klick in eine Zelle tut in P1 nichts – kein Fenster, kein Entwurf', async () => {
-    const entwuerfe = nachgebaut();
+  it('ohne Anschluss für Entwürfe tut ein Klick in eine Zelle nichts – kein Fenster, kein Entwurf (Eintragen: Planen.p2a.test.tsx)', async () => {
     zeige(
       vi.fn(() => Promise.resolve(STAND)),
-      { entwuerfe },
+      { entwuerfe: undefined },
     );
     const t = await raster();
     await waitFor(() => expect(hat(t, 'Ben Test')).toBe(true));
     const zellen = within(t).getAllByRole('cell');
     for (const z of zellen) fireEvent.click(z);
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(entwuerfe.speichern).not.toHaveBeenCalled();
+    expect(screen.queryAllByRole('button', { name: / eintragen$/ })).toHaveLength(0);
   });
 
   it('Antippen eines Namens hebt alle Zeilen der Person hervor – noch einmal antippen nimmt es zurück', async () => {

@@ -798,7 +798,8 @@ verwalten“).
    als rote Tags („Gesang ×2“) – dieselbe Zahl wie „N frei“ im Kopf der Matrix. Ein Dienst mit „Namen verbergen“ zeigt nie
    einen Namen.
 7. Maus über einem Namen (am Handy antippen) hebt **alle** Zeilen dieser Person hell hervor; noch einmal antippen nimmt es
-   zurück. Ein Klick in eine Zelle tut nichts.
+   zurück. Wo man nicht eintragen darf (Dienst nur ansehen, Entwürfe nicht bereit), tut ein Klick in eine Zelle nichts
+   (Eintragen per Klick: TF-ABLAUF-32).
 8. Konto **ohne** das Recht: im Block steht ruhig „Abwesenheiten nicht sichtbar“ statt leerer Zellen.
 9. Am Handy dieselbe Tabelle, **waagerecht scrollbar**, die Namensspalte bleibt stehen.
 10. Verbindung kurz kappen oder ChurchTools bremsen lassen, Ansicht öffnen: Scheitert nur eine Gruppe, steht in **ihrem** Block
@@ -889,4 +890,42 @@ steht (am besten einmal zugesagt, einmal angefragt, einmal als Entwurf), ein fre
 - **Automatisiert:** ja – `shared/dienstplan/fokus.test.ts` (wer steht am Platz, Zählen mit abgesagten/ausgeblendeten/Entwurf, Vorschläge, Einsätze ±7 Tage, Texte), `dienstplaner/src/Planen.fokus.test.tsx` (Umrandung in Matrix/Zettel/Personen, Leiste, Fokus aus, Ansichtswechsel, Verlassen, Fenster-Knopf, Symbol ohne Fenster, langes Drücken mit Fake-Timern, Suchfeld, „Wer kann?“ Mini-Zeile/zeigen/Zurück/Hier eintragen gegen dieselbe Funktion wie die Wahl), `dienstplaner/src/Planen.personen.test.tsx`; 23 Gegenproben einzeln rot (die Sperre „Symbol öffnet kein Fenster“ ist doppelt gesichert – eigener Knopf neben dem Platz und `stopPropagation` – und nur beides zusammen entfernt macht Tests rot); von Hand bleiben das echte Hover-Symbol mit der Maus, das lange Drücken am Handy und das Aussehen in Hell und Dunkel
 - **Historie:** Wunsch 11 (Alwin 16.11.2026, Entwurf `e11-fokus.html`, Farbe A Gelb)
 
+</details>
+
+### TF-ABLAUF-32 · Planen: Personen – Eintragen per Klick in die Zelle
+
+**Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf (Schublade der Dienstgruppe bereit); ein Dienst
+(z. B. Ton) mit mindestens vier Terminen: einer mit freiem Platz, an dem niemand etwas Besonderes hat, einer, an dem eine
+Person im Ton am selben Tag schon in einem anderen Dienst (z. B. Gesang) steht, einer, an dem ein Mitglied der Gruppe
+abwesend ist, und einer, an dem der Dienst **voll** ist (alle Plätze besetzt). Dazu eine eingeteilte Person (zugesagt).
+
+**Das muss passieren:** Ein Klick in eine leere Zelle trägt als Entwurf ein; nur bei einem Grund zum Nachdenken kommt vorher
+ein Fenster.
+
+1. **Planen → Personen.** Mit der **Maus** über eine leere Zelle im Block Ton fahren: blauer Rahmen, blasse blaue Fläche, ein
+   **„+“** rechts. Über eine Zelle mit Einteilung (✓ oder ?) oder in einem Dienst, den man nur ansehen darf: nichts.
+2. **Klick** in die leere Zelle (Person ohne Besonderheit): sofort ein **Entwurf** (blau, gestrichelt, Stift), Hinweis
+   „… eingetragen – noch nicht gesendet“, unten die Leiste **Ansehen und senden** zählt mit. Kein Fenster. In der Matrix steht der
+   Entwurf auf dem **ersten freien Platz** dieses Dienstes an diesem Termin.
+3. **Klick auf den eigenen Entwurf** in der Zelle: er ist weg („Entwurf entfernt.“), die Zelle lädt wieder zum Eintragen ein.
+4. Person mit **„+ Gesang“** am selben Tag: Klick → Fenster „Bitte prüfen“: „<Name> ist am Fr, 20.11. schon bei Gesang
+   eingeteilt. Trotzdem für Ton eintragen?“ **Abbrechen** → nichts. Noch einmal klicken, **Trotzdem eintragen** → Entwurf.
+5. Person, die **abwesend** ist (grauer Tag): Fenster mit Grund und Zeitraum („… abwesend: Urlaub (28.11.–30.11.)“), dazu die
+   gleiche Frage. Ist sie zugleich in einem anderen Dienst eingeteilt: **ein** Fenster mit beiden Sätzen.
+6. Termin, an dem der Dienst **voll** ist: Klick in eine leere Zelle → Fenster „Ton ist voll“: „Ton am 27.11. ist voll (2 von
+   2). Platz dazunehmen geht im Moment über den Regler in der Matrix.“ mit **Schließen**. Es wird nichts eingetragen.
+7. Klick auf eine **bestehende Einteilung** (zugesagt, angefragt): tut nichts (kommt später). Klick auf den **Namen**: setzt
+   weiter den Fokus; ein Klick in eine Zelle tut das nicht.
+8. **Tastatur:** mit Tab zu einer leeren Zelle (Rahmen), Enter → dasselbe wie der Klick; der Vorleser nennt „Daniel F. für Ton am
+   Fr, 20.11. eintragen“.
+9. **Handy:** leere, eintragbare Zellen zeigen ein blasses „+“ (kein Hover); Antippen wie der Klick; die Fenster passen auf den
+   Bildschirm.
+10. Ein Konto, das den Dienst nur ansehen darf, oder ein Dienst ohne Entwurfs-Schublade: keine „+“, kein Rahmen, kein Klick.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/personenEintragen.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planSicht.ts`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/Planen.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (freier Platz ohne Entwurf, Aktion je Zelle: eintragen/voll/wegnehmen/nichts, Texte, Warnung einzeln und beides), `dienstplaner/src/Planen.p2a.test.tsx` (Klick → Entwurf mit denselben Angaben wie „Wer kann?“, Leiste, Entwurf wegnehmen mit Version, fremder Entwurf, Warnfenster anderer Dienst/abwesend/beides mit Abbrechen und „Trotzdem“, voll, kein Recht/keine Schublade/nicht geladen/nur lesen, Doppelklick, Fehlerhinweise, Klick neben dem Knopf, Fokus bleibt), `dienstplaner/src/Planen.personen.test.tsx`, `dienstplaner/src/Planen.fokus.test.tsx`; Gegenproben einzeln rot; von Hand bleiben Hover (Rahmen, „+“), Touch-„+“ und das Aussehen in Hell und Dunkel
+- **Historie:** Wunsch 5 (Alwin 16.11.2026, Entwurf `e9-p2-eintragen.html`, Variante B), Scheibe P2a
 </details>

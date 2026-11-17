@@ -10,6 +10,8 @@ vi.mock('../services/ctRead.js', async (importOriginal) => ({
 vi.mock('../services/ctWrite.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../services/ctWrite.js')>()),
   createVorlage: vi.fn(),
+  createVorlageAusTermin: vi.fn(),
+  replaceVorlageAusTermin: vi.fn(),
   renameVorlage: vi.fn(),
   deleteVorlage: vi.fn(),
   reorderAgenda: vi.fn(),
@@ -96,6 +98,100 @@ describe('Vorlagen als Ganzes', () => {
     ).rejects.toMatchObject({
       status,
     });
+  });
+});
+
+/** „Als Vorlage …“ im Ablauf eines Termins (E10-V5): Eingaben prüfen, die richtigen Nummern in der richtigen Reihenfolge an den Kern. */
+describe('Als Vorlage … (E10-V5)', () => {
+  it('neue Vorlage aus dem Termin: Termin aus dem Pfad, Name und Kalender aus dem Rumpf, die ID kommt zurück', async () => {
+    vi.mocked(schreiben.createVorlageAusTermin).mockResolvedValue(77);
+    const a = aufruf({ eventId: '9' }, { name: 'Neu', kalenderId: '2' });
+    await ctrl.postVorlageAusTerminCtrl(a.req, a.res);
+    expect(schreiben.createVorlageAusTermin).toHaveBeenCalledWith('ct=1', 9, {
+      name: 'Neu',
+      kalenderId: 2,
+    });
+    expect(a.res.json).toHaveBeenCalledWith({ id: 77 });
+  });
+
+  it('neue Vorlage: ohne Name oder Kalender, mit Unsinn-ID oder zu langem Namen wird nichts geschrieben', async () => {
+    const res = aufruf({}).res;
+    for (const [params, body] of [
+      [{ eventId: '9' }, { name: 'X' }],
+      [{ eventId: '9' }, { kalenderId: 2 }],
+      [{ eventId: '9' }, { name: 'X', kalenderId: 0 }],
+      [{ eventId: 'abc' }, { name: 'X', kalenderId: 2 }],
+      [{ eventId: '9' }, { name: 'x'.repeat(501), kalenderId: 2 }],
+    ] as const) {
+      await expect(
+        ctrl.postVorlageAusTerminCtrl(aufruf({ ...params }, body).req, res),
+      ).rejects.toThrow();
+    }
+    expect(schreiben.createVorlageAusTermin).not.toHaveBeenCalled();
+  });
+
+  it('ersetzen: Vorlage und Termin aus dem Pfad (in dieser Reihenfolge), `gesehen` aus dem Rumpf', async () => {
+    const a = aufruf({ vorlageId: '5', eventId: '9' }, { gesehen: '2026-11-13T10:00:00Z' });
+    await ctrl.putVorlageAusTerminCtrl(a.req, a.res);
+    expect(schreiben.replaceVorlageAusTermin).toHaveBeenCalledWith(
+      'ct=1',
+      5,
+      9,
+      '2026-11-13T10:00:00Z',
+    );
+    expect(a.res.json).toHaveBeenCalledWith({ ok: true });
+    const b = aufruf({ vorlageId: '5', eventId: '9' }, {});
+    await ctrl.putVorlageAusTerminCtrl(b.req, b.res);
+    expect(vi.mocked(schreiben.replaceVorlageAusTermin).mock.calls[1]).toEqual([
+      'ct=1',
+      5,
+      9,
+      undefined,
+    ]);
+  });
+
+  it('ersetzen: Unsinn als Vorlagen- oder Termin-ID, zu langer Stempel – nichts geschrieben', async () => {
+    const res = aufruf({}).res;
+    for (const [params, body] of [
+      [{ vorlageId: 'x', eventId: '9' }, {}],
+      [{ vorlageId: '5', eventId: 'x' }, {}],
+      [{ vorlageId: '5' }, {}],
+      [{ eventId: '9' }, {}],
+      [{ vorlageId: '5', eventId: '9' }, { gesehen: 'x'.repeat(61) }],
+    ] as const) {
+      await expect(
+        ctrl.putVorlageAusTerminCtrl(aufruf({ ...params }, body).req, res),
+      ).rejects.toThrow();
+    }
+    expect(schreiben.replaceVorlageAusTermin).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 412, 423, 502])(
+    '%s aus dem Kern geht bei beiden Wegen unverändert durch',
+    async (status) => {
+      vi.mocked(schreiben.createVorlageAusTermin).mockRejectedValue(new HttpError(status, 'Nein'));
+      vi.mocked(schreiben.replaceVorlageAusTermin).mockRejectedValue(new HttpError(status, 'Nein'));
+      const res = aufruf({}).res;
+      await expect(
+        ctrl.postVorlageAusTerminCtrl(
+          aufruf({ eventId: '9' }, { name: 'N', kalenderId: 2 }).req,
+          res,
+        ),
+      ).rejects.toMatchObject({ status });
+      await expect(
+        ctrl.putVorlageAusTerminCtrl(aufruf({ vorlageId: '5', eventId: '9' }).req, res),
+      ).rejects.toMatchObject({ status });
+    },
+  );
+
+  it('die Liedstatistik ändert sich dadurch nicht (kein Lied wird gespielt, nur Vorlage gespeichert)', async () => {
+    vi.mocked(schreiben.createVorlageAusTermin).mockResolvedValue(1);
+    vi.mocked(schreiben.replaceVorlageAusTermin).mockResolvedValue(undefined);
+    const a = aufruf({ eventId: '9' }, { name: 'Neu', kalenderId: 2 });
+    await ctrl.postVorlageAusTerminCtrl(a.req, a.res);
+    const b = aufruf({ vorlageId: '5', eventId: '9' });
+    await ctrl.putVorlageAusTerminCtrl(b.req, b.res);
+    expect(invalidateSongUsageCache).not.toHaveBeenCalled();
   });
 });
 
@@ -242,6 +338,11 @@ describe('Routen', () => {
   it('das Auge gibt es nur am Termin', () => {
     expect(hat('put', '/services/:eventId/agenda/items/:itemId/weglassen')).toBe(true);
     expect(hat('put', '/ablauf-vorlagen/:vorlageId/agenda/items/:itemId/weglassen')).toBe(false);
+  });
+
+  it('„Als Vorlage …“: am Termin und an der Vorlage', () => {
+    expect(hat('post', '/services/:eventId/agenda/als-vorlage')).toBe(true);
+    expect(hat('put', '/ablauf-vorlagen/:vorlageId/aus-termin/:eventId')).toBe(true);
   });
 
   it('die Vorlagen selbst: stand, lesen, anlegen, umbenennen, löschen – `/stand` vor `/:vorlageId`', () => {

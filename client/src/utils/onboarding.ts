@@ -93,7 +93,10 @@ export const TOUR_SETLIST = 'setlist-v2';
 // ausblenden" – der Schritt nennt den Soundcheck als Beispiel. v2.26.1 (produktiv) trägt v4. Im selben
 // Release: „Hinzufügen" ist das schwebende Plus und öffnet den Bearbeiten-Dialog als „Neuer Eintrag".
 // v6 (09.10.2026): neuer Schritt „Abschließen“ – der Schloss-Knopf schließt den Ablauf in ChurchTools ab.
-export const TOUR_SETLIST_EDIT = 'setlist-edit-v6';
+// v7 (17.11.2026, E10-V5): neuer Schritt „Als Vorlage …“ – den Link sehen nur, die im Kalender des Termins Ablaufvorlagen
+// bearbeiten dürfen; für alle anderen überspringt `Coachmarks` den Schritt (kein Ziel). Version erhöht, damit auch
+// Bestandsnutzer ihn zu sehen bekommen.
+export const TOUR_SETLIST_EDIT = 'setlist-edit-v7';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
 // eigene Einträge per Tipp auf die Zeile änderbar – jeder Schritt zeigt jetzt etwas anderes.
@@ -242,6 +245,11 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
     body: 'Hier legst du einen neuen Eintrag an: Wähle Programmpunkt, Lied oder Überschrift. Ein Lied suchst du nach Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du im Fenster danach gleich mit.',
+  },
+  {
+    selector: '[data-tour="als-vorlage"]',
+    title: 'Als Vorlage',
+    body: 'Gefällt dir dieser Ablauf auch für andere Termine? „Als Vorlage …“ speichert ihn als neue Ablaufvorlage oder ersetzt eine vorhandene – mit Dauern, Notizen, Liedern und den Platzhaltern, aber ohne Namen. Den Link siehst du nur, wenn du Vorlagen bearbeiten darfst.',
   },
   {
     selector: '[data-tour="edit-lock"]',

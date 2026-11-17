@@ -11,7 +11,13 @@ import type { HochzuladendeDatei } from '@shared/ct/notenblaetter';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
-import { vorlageAnlegen, vorlageLoeschen, vorlageUmbenennen } from '@shared/ct/ablaufVorlagen';
+import {
+  ablaufAlsVorlage,
+  vorlageAnlegen,
+  vorlageErsetzen,
+  vorlageLoeschen,
+  vorlageUmbenennen,
+} from '@shared/ct/ablaufVorlagen';
 import type { AblaufQuelle } from '@shared/types/index';
 import {
   ablaufAbschliessen,
@@ -303,6 +309,25 @@ export function renameVorlage(cookie: string, vorlageId: number, name: string): 
 /** Eine Vorlage löschen – ChurchTools kennt keinen Papierkorb; „schon weg" ist kein Fehler. */
 export function deleteVorlage(cookie: string, vorlageId: number): Promise<void> {
   return vorlageLoeschen(schreiberFuer(cookie), vorlageId);
+}
+
+/** Den Ablauf eines Termins als neue Vorlage speichern (E10-V5) – liefert die ID. Regel und Nachlesen im Kern. */
+export function createVorlageAusTermin(
+  cookie: string,
+  eventId: number,
+  daten: { name: string; kalenderId: number },
+): Promise<number> {
+  return ablaufAlsVorlage(schreiberFuer(cookie), eventId, daten);
+}
+
+/** Eine Vorlage mit dem Ablauf eines Termins ersetzen (E10-V5); `gesehen` → 412, wenn sie sich inzwischen geändert hat. */
+export function replaceVorlageAusTermin(
+  cookie: string,
+  vorlageId: number,
+  eventId: number,
+  gesehen?: string,
+): Promise<void> {
+  return vorlageErsetzen(schreiberFuer(cookie), vorlageId, eventId, gesehen);
 }
 
 /** Einen Ablauf anlegen (13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */

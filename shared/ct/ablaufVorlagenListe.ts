@@ -21,6 +21,11 @@ export interface VorlagenEintrag extends AblaufVorlage {
   vorlauf: number;
   /** Der Tag der letzten Änderung (`JJJJ-MM-TT`, Ortszeit der Gemeinde) – `null`, wenn ChurchTools ihn nicht nennt. */
   geaendert: string | null;
+  /**
+   * Der Änderungsstempel von ChurchTools **unverändert** (`meta.modifiedDate`) – was „Vorlage ersetzen“ als `gesehen` an den
+   * Kern gibt, damit eine inzwischen woanders geänderte Vorlage nicht überschrieben wird (412). `null`, wenn er fehlt.
+   */
+  modifiedDate: string | null;
 }
 
 /** Die Vorlagen eines Kalenders – ein Band in der Liste. */
@@ -53,6 +58,7 @@ export function vorlagenListeAus(
       ...basis,
       vorlauf: quelle ? vorlaufAnzahl(quelle) : 0,
       geaendert: stand ? tagAusIso(stand, zeitzone) : null,
+      modifiedDate: stand ?? null,
     };
     // Ein Kalender, den `/calendars` nicht nennt (kein Recht, gelöscht): als Nummer, nicht unter „ohne“ – sonst verschwände
     // die Zuordnung, nach der das Bearbeiten-Recht entscheidet.

@@ -38,7 +38,7 @@ import type { AblaufQuelle } from '@shared/types/index';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import * as noten from '@shared/ct/notenblaetter';
 import { ApiError } from './api';
-import { browserVorlagenZugriff } from '@ui/ablauf/browserAblaufZugriff';
+import { browserAlsVorlageZugriff, browserVorlagenZugriff } from '@ui/ablauf/browserAblaufZugriff';
 // Der Schreiber samt Liedverwaltung und die Lied-Wege liegen seit LW2a (06.11.2026) in `@ui/ct/lieder`.
 import { liedSchreiber as schreiber } from '@ui/ct/lieder';
 export { arrangement, liedAendern, liedNeu, notenblatt, notenblattAusCcli } from '@ui/ct/lieder';
@@ -122,6 +122,23 @@ export function vorlageUmbenennen(vorlageId: number, name: string): Promise<void
 /** `DELETE /api/ablauf-vorlagen/:id` */
 export function vorlageLoeschen(vorlageId: number): Promise<void> {
   return browserVorlagenZugriff.loeschen(vorlageId);
+}
+
+/** `POST /api/services/:id/agenda/als-vorlage` – der Ablauf eines Termins als neue Vorlage (E10-V5). */
+export function vorlageAusTermin(
+  eventId: number,
+  daten: { name: string; kalenderId: number },
+): Promise<number> {
+  return browserAlsVorlageZugriff(eventId).speichern(daten);
+}
+
+/** `PUT /api/ablauf-vorlagen/:id/aus-termin/:eventId` – eine Vorlage mit dem Ablauf eines Termins ersetzen (E10-V5). */
+export function vorlageMitTerminErsetzen(
+  vorlageId: number,
+  eventId: number,
+  gesehen?: string,
+): Promise<void> {
+  return browserAlsVorlageZugriff(eventId).ersetzen(vorlageId, gesehen);
 }
 
 /** `POST /api/services/:id/agenda` */

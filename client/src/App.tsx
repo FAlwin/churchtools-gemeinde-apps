@@ -16,6 +16,7 @@ import { Login } from './pages/Login';
 import { Agenda } from './pages/Agenda';
 import {
   ablaufRechteAus,
+  vorlagenRechteAus,
   darfAblaufBearbeiten,
   darfAblaufImKalender,
 } from '@shared/ct/ablaufRecht';
@@ -554,6 +555,7 @@ export default function App() {
         gruppenVerborgen={caps?.siehtAlleDienstgruppen === false}
         infoGruppen={caps?.infoGruppen}
         onAblaufSichtbar={setAblaufSichtbar}
+        vorlagenRechte={vorlagenRechteAus(caps)}
       />
     );
   }

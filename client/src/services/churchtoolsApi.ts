@@ -216,6 +216,37 @@ export async function vorlageLoeschen(vorlageId: number): Promise<void> {
   await apiFetch(`/api/ablauf-vorlagen/${vorlageId}`, { method: 'DELETE' });
 }
 
+/**
+ * Den Ablauf eines Termins **als neue Vorlage** speichern (E10-V5) – liefert die ID der Vorlage. Regel und Nachlesen im Kern
+ * (`ablaufAlsVorlage`); Erweiterung und Server tun dasselbe.
+ */
+export function vorlageAusTermin(
+  eventId: number,
+  daten: { name: string; kalenderId: number },
+): Promise<number> {
+  if (istExtension) return extSchreiben.vorlageAusTermin(eventId, daten);
+  return apiFetch<{ id: number }>(`/api/services/${eventId}/agenda/als-vorlage`, {
+    method: 'POST',
+    body: JSON.stringify(daten),
+  }).then((r) => r.id);
+}
+
+/**
+ * **Eine vorhandene Vorlage** mit dem Ablauf eines Termins **ersetzen** (E10-V5). `gesehen` ist der Änderungsstempel, den
+ * das Fenster beim Öffnen kannte – weicht er ab, kommt 412 statt eines stillen Überschreibens.
+ */
+export async function vorlageMitTerminErsetzen(
+  vorlageId: number,
+  eventId: number,
+  gesehen?: string,
+): Promise<void> {
+  if (istExtension) return extSchreiben.vorlageMitTerminErsetzen(vorlageId, eventId, gesehen);
+  await apiFetch(`/api/ablauf-vorlagen/${vorlageId}/aus-termin/${eventId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ gesehen }),
+  });
+}
+
 /** Einen Ablauf anlegen – aus einer Vorlage, als Kopie oder leer (13.10.2026). */
 export function ablaufAnlegen(
   eventId: number,

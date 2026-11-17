@@ -9,7 +9,7 @@
  * Person – vorhandene Werte werden **überschrieben**. Entschieden (Alwin): so lassen, mit festem Hinweis
  * (`ADRESSE_HINWEIS`); leere Teile werden nie geschickt (`adresseWerte`), damit nichts gelöscht wird.
  */
-import type { Antwort, Antworten, Formular } from './formular';
+import type { Antwort, Antworten, Feld, Formular } from './formular';
 
 /** Die Antwort des Bausteins: drei Texte. */
 export interface AdresseAntwort {
@@ -66,16 +66,26 @@ export function adresseVonPerson(
 }
 
 /**
+ * **Welcher Baustein „Adresse“ gilt** – eingeschaltet, „je Person“ vor „einmal je Anmeldung“; `null`, wenn keiner. Die
+ * EINE Stelle für diese Regel: Antworten lesen (`adresseAntwort`) und vorbelegen (`handStart`).
+ */
+export function adresseFeld(f: Formular): { feld: Feld; jePerson: boolean } | null {
+  const an = (x: Feld) => x.typ === 'adresse' && x.zustand !== 'aus';
+  const jePerson = f.person.find(an);
+  if (jePerson) return { feld: jePerson, jePerson: true };
+  const einmal = f.anmeldung.find(an);
+  return einmal ? { feld: einmal, jePerson: false } : null;
+}
+
+/**
  * **Die Adresse einer Person in den Antworten** – „je Person“ gefragt ihre eigene, einmal je Anmeldung gefragt die der
- * Anmeldung (für alle Personen dieselbe). Ausgeschaltet gibt es keine. Die EINE Stelle für Formular (`senden.ts`) und
- * „Von Hand“; Ausgeblendetes hat `leeren` vorher entfernt.
+ * Anmeldung (für alle Personen dieselbe). Ausgeschaltet gibt es keine. Für Formular (`senden.ts`) und „Von Hand“;
+ * Ausgeblendetes hat `leeren` vorher entfernt.
  */
 export function adresseAntwort(f: Formular, a: Antworten, i: number): Antwort {
-  const an = (x: { typ: string; zustand: string }) => x.typ === 'adresse' && x.zustand !== 'aus';
-  const jePerson = f.person.find(an);
-  if (jePerson) return a.personen[i]?.[jePerson.id];
-  const einmal = f.anmeldung.find(an);
-  return einmal ? a.anmeldung[einmal.id] : undefined;
+  const x = adresseFeld(f);
+  if (!x) return undefined;
+  return x.jePerson ? a.personen[i]?.[x.feld.id] : a.anmeldung[x.feld.id];
 }
 
 /** Normalisiert zum Vergleichen: ohne Rand und doppelte Leerzeichen, ohne Groß/Klein. */

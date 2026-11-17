@@ -509,6 +509,17 @@
     opacity: 0.7;
   }
 }
+// F4: „Gefragt: einmal je Anmeldung | je Person“ an der Adresse (Entwurf `f4-adresse-v1`).
+.bereichWahl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 0.9em;
+}
+.bereichWahl .notiz {
+  flex-basis: 100%;
+}
 .notiz {
   margin: 0;
   font-size: 0.82em;

@@ -747,7 +747,7 @@
   color: var(--p-accent-text);
 }
 
-// ── Zusammengesetzte Bausteine (A6-2b): Erziehungsberechtigte, Unterschrift ─────────────────────────────────
+// ── Zusammengesetzte Bausteine (A6-2b, F4): Erziehungsberechtigte, Unterschrift, Adresse ────────────────────────────
 .pv .baustein {
   display: grid;
   gap: 10px;
@@ -763,6 +763,12 @@
 .pv .bausteinKopf .opt {
   font-weight: 400;
   color: var(--p-muted);
+}
+// F4: PLZ schmal, Ort breit – auch am Handy nebeneinander (Entwurf `f4-adresse-v1`).
+.pv .plzOrt {
+  display: grid;
+  grid-template-columns: minmax(0, 7em) minmax(0, 1fr);
+  gap: 10px;
 }
 .pv .zweitePerson {
   display: grid;

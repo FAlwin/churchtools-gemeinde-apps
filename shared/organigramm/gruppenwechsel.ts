@@ -149,6 +149,14 @@ export function uebergaenge(e: Pick<GruppenwechselEinstellung, 'stufen'>): Ueber
   return e.stufen.slice(1).map((nach, i) => ({ von: e.stufen[i], nach }));
 }
 
+/** Der Name des Gruppentyps, den „Einrichten“ anlegt (O9-0) – und woran „vorhanden“ erkannt wird. */
+export const WECHSEL_TYP_NAME = 'Gruppenwechsel';
+
+/** Gleicher Name heißt gleicher Typ – ohne auf Groß- und Kleinschreibung oder Leerraum zu achten. */
+export const istWechselTyp = (name: unknown): boolean =>
+  typeof name === 'string' &&
+  name.trim().toLocaleLowerCase('de') === WECHSEL_TYP_NAME.toLowerCase();
+
 /** Name der Wechsel-Gruppe eines Übergangs, so wie „Einrichten“ sie anlegt. */
 export const wechselGruppenName = (u: Uebergang): string => `${u.von.name} → ${u.nach.name}`;
 

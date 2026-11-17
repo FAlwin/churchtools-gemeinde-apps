@@ -58,6 +58,8 @@ interface Props {
   zugang: KjZugang;
   /** Abgemeldet gilt für die ganze Seite – dieselbe Stelle wie für den Rest der App. */
   onAbgemeldet: (e: unknown) => void;
+  /** Nach dem Schreiben (Einrichten, Nachtragen, Rechte setzen): Die Einrichtung wird neu gelesen – alles hier lädt neu. */
+  onGeschrieben: () => void;
 }
 
 type Unter = 'gruppe' | 'daten' | 'tage' | 'einrichtung';
@@ -68,7 +70,7 @@ type Laden<T> = { art: 'laedt' } | T;
  * Admins eine Übersicht über alle Stufen; dazu „Daten pflegen“. Ein Kind öffnet ein Fenster; darin setzt man die
  * **Ausnahme** („Bleibt noch ein Jahr“) – wenn das Recht an der Wechsel-Gruppe da ist (`ausnahmeStand`).
  */
-export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props) {
+export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet, onGeschrieben }: Props) {
   const heute = useMemo(() => heuteImKalender(), []);
   const [ferien, setFerien] = useState<Laden<FerienStand>>({ art: 'laedt' });
   const [daten, setDaten] = useState<Laden<KjLadeStand>>({ art: 'laedt' });
@@ -268,10 +270,18 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet }: Props
           sichten={sichten}
           regel={darfRegeln ? regel : null}
           tage={tage}
+          start={start}
+          onGeschrieben={onGeschrieben}
         />
       )}
       {unter === 'einrichtung' && darfRegeln && (
-        <EinrichtungSeite start={start} einrichtung={einrichtung} regel={regel} jahr={jahr.jahr} />
+        <EinrichtungSeite
+          start={start}
+          einrichtung={einrichtung}
+          regel={regel}
+          jahr={jahr.jahr}
+          onGeschrieben={onGeschrieben}
+        />
       )}
       {offen && offenKind && (
         <KindFenster

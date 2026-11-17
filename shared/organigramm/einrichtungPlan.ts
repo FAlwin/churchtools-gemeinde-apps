@@ -3,7 +3,12 @@
  * Funktion, ohne Netz und ohne Oberfläche. Sie sagt je Baustein `neu | vorhanden | ändern`, **und sie ist der Plan, den
  * O9-5d ausführt**: `schritte` ist die geordnete Liste dessen, was zu schreiben ist, in der Reihenfolge der Messung
  * O9-5a (16.11.2026) – Typ → Rechte → Wechsel-Gruppen → Routinen → Regeln der Wechsel-Gruppen → Status → Regeln der
- * Stufen → Status → neu berechnen. Hier wird nichts getan.
+ * Stufen → Status → unsere Regeln aus Stufen entfernen, die keine mehr sind → neu berechnen → Einrichtung speichern.
+ * Hier wird nichts getan.
+ *
+ * **Der Soll-Status ist überall `active`** (O9-5d, OpenAPI der Test-Instanz): Nur aktive dynamische Gruppen nimmt ChurchTools
+ * in die planmäßige Neuberechnung (mindestens täglich, M12/M13); `manual` rechnet nur auf ausdrücklichen Befehl, `inactive`
+ * und `none` gar nicht. Wer `manual` hat, dem verschiebt ChurchTools am Wechseltag niemanden von selbst.
  *
  * **Das Soll kommt aus den Erzeugern** (`LEITER_RECHTE`, `routineBefund` gegen `aufraeumRoutine`, `REGELN`), das Ist aus
  * dem, was `ladeEinrichtungStand` und die Gruppentypen geliefert haben. **Was sich nicht lesen ließ, wird nie zu „fehlt“**
@@ -18,22 +23,20 @@ import {
   type RegelRoh,
 } from './einrichtungStand';
 import {
+  istWechselTyp,
   LEITER_RECHTE,
   regelName,
   uebergaenge,
+  WECHSEL_TYP_NAME,
   wechselGruppenName,
   type GruppenwechselEinstellung,
   type Uebergang,
 } from './gruppenwechsel';
 import type { Einrichtung } from './gruppenwechselEinrichtung';
 
-/** Der Name des Gruppentyps, den „Einrichten“ anlegt (O9-0) – und woran „vorhanden“ erkannt wird. */
-export const WECHSEL_TYP_NAME = 'Gruppenwechsel';
-
-/** Gleicher Name heißt gleicher Typ – ohne auf Groß- und Kleinschreibung oder Leerraum zu achten. */
-export const istWechselTyp = (name: unknown): boolean =>
-  typeof name === 'string' &&
-  name.trim().toLocaleLowerCase('de') === WECHSEL_TYP_NAME.toLowerCase();
+// Der Name des Gruppentyps und `istWechselTyp` stehen seit O9-5d in `gruppenwechsel.ts` (der Abgleich „Stand in
+// ChurchTools“ braucht sie auch – und darf diese Datei nicht einbinden, sie bindet ihn ein).
+export { WECHSEL_TYP_NAME, istWechselTyp };
 
 export type PlanArt = 'neu' | 'vorhanden' | 'aendern';
 export type PlanBaustein = 'typ' | 'rechte' | 'wechselGruppen' | 'routinen' | 'regeln';
@@ -56,7 +59,11 @@ export type SchrittArt =
   | 'statusWechselGruppe'
   | 'regelnStufe'
   | 'statusStufe'
-  | 'neuBerechnen';
+  /** Unsere Regeln aus einer Gruppe nehmen, die keine Stufe (oder Wechsel-Gruppe) mehr ist; fremde bleiben. */
+  | 'regelnEntfernen'
+  | 'neuBerechnen'
+  /** Die Einrichtung (Stufen + Wechsel-Gruppen) im Speicher der Erweiterung – der Vermerk „eingerichtet“. */
+  | 'speichern';
 
 export type SchrittZiel =
   | { art: 'typ' }
@@ -70,7 +77,10 @@ export type SchrittZiel =
       name: string;
       gruppeId: number | null;
     }
-  | { art: 'stufe'; gruppeId: number; name: string };
+  | { art: 'stufe'; gruppeId: number; name: string }
+  /** Eine Gruppe, die früher zur Einrichtung gehörte (Stufe oder Wechsel-Gruppe) und nicht mehr gebraucht wird. */
+  | { art: 'altGruppe'; gruppeId: number; name: string }
+  | { art: 'einrichtung' };
 
 export interface PlanSchritt {
   art: SchrittArt;
@@ -84,6 +94,11 @@ export interface EinrichtungsPlan {
   schritte: PlanSchritt[];
   /** Was sich nicht lesen ließ („Gruppentyp“, „Stand in ChurchTools“) – solange etwas drinsteht, wird nicht geschrieben. */
   unsicher: string[];
+  /**
+   * Wechsel-Gruppen, die zu keinem Übergang mehr gehören: Sie werden **nicht gelöscht** (Kinder, Ausnahmen und Routine
+   * bleiben, wie sie sind); „Fertig“ nennt sie, damit jemand sie in ChurchTools ansieht.
+   */
+  nichtMehrGebraucht: { gruppeId: number; name: string }[];
 }
 
 /** Was in ChurchTools steht – vom Aufrufer gelesen. */
@@ -111,10 +126,13 @@ function hatUnsere(stand: EinrichtungDaten | null, id: number): boolean | null {
   );
 }
 
-/** Läuft die Gruppe schon (Status nicht `none`)? `null`: nicht gelesen. */
-function laeuft(stand: EinrichtungDaten | null, id: number): boolean | null {
+/**
+ * Rechnet ChurchTools die Gruppe von selbst neu (Status `active`)? `null`: nicht gelesen. `manual` und `inactive` zählen
+ * nicht – dort verschiebt am Wechseltag niemand von selbst (siehe Kopf).
+ */
+export function istAktiv(stand: EinrichtungDaten | null, id: number): boolean | null {
   const s = stand?.gruppen.get(id)?.status;
-  return s && s.ok ? s.wert !== 'none' : null;
+  return s && s.ok ? s.wert === 'active' : null;
 }
 
 /** `neu` für alle, `vorhanden` für keinen, sonst `ändern`. */
@@ -282,7 +300,7 @@ export function einrichtungsPlan(
   });
   wege.forEach((u, i) => {
     const id = vorhandene[i];
-    if (id !== null && laeuft(ist.stand, id) === true) return; // läuft schon
+    if (id !== null && istAktiv(ist.stand, id) === true) return; // läuft schon
     schritte.push({
       art: 'statusWechselGruppe',
       aktion: id === null ? 'neu' : 'aendern',
@@ -296,17 +314,53 @@ export function einrichtungsPlan(
       ziel: { art: 'stufe', gruppeId: s.gruppeId, name: s.name },
     });
   for (const s of e.stufen)
-    if (laeuft(ist.stand, s.gruppeId) !== true)
+    if (istAktiv(ist.stand, s.gruppeId) !== true)
       schritte.push({
         art: 'statusStufe',
         aktion: 'aendern',
         ziel: { art: 'stufe', gruppeId: s.gruppeId, name: s.name },
       });
+  // Stufen, die keine mehr sind, und Wechsel-Gruppen ohne Übergang: unsere Regeln gehen, fremde bleiben, gelöscht wird nichts.
+  const neueStufen = new Set(e.stufen.map((s) => s.gruppeId));
+  const entfernt = (ist.alt?.einstellung.stufen ?? []).filter(
+    (s) => !neueStufen.has(s.gruppeId) && ist.gruppen.has(s.gruppeId),
+  );
+  for (const s of entfernt)
+    if (hatUnsere(ist.stand, s.gruppeId) === true)
+      schritte.push({
+        art: 'regelnEntfernen',
+        aktion: 'aendern',
+        ziel: { art: 'altGruppe', gruppeId: s.gruppeId, name: name(s.gruppeId) },
+      });
+  for (const w of verwaist)
+    if (ist.gruppen.has(w.gruppeId) && hatUnsere(ist.stand, w.gruppeId) === true)
+      schritte.push({
+        art: 'regelnEntfernen',
+        aktion: 'aendern',
+        ziel: { art: 'altGruppe', gruppeId: w.gruppeId, name: name(w.gruppeId) },
+      });
   wege.forEach((u, i) =>
     schritte.push({ art: 'neuBerechnen', aktion: 'aendern', ziel: uebergangZiel(u, i) }),
   );
+  schritte.push({
+    art: 'speichern',
+    aktion: ist.alt ? 'aendern' : 'neu',
+    ziel: { art: 'einrichtung' },
+  });
 
-  return { zeilen: [typ, rechte, wechselGruppen, routinen, regeln], schritte, unsicher };
+  const nichtMehrGebraucht = verwaist
+    .filter((w) => ist.gruppen.has(w.gruppeId))
+    .map((w) => ({ gruppeId: w.gruppeId, name: name(w.gruppeId) }));
+  const entferntAnzahl = schritte.filter((x) => x.art === 'regelnEntfernen').length;
+  if (entferntAnzahl > 0)
+    regeln.text += ` Unsere Regeln in ${anzahl(entferntAnzahl, 'Gruppe', 'Gruppen')}, die nicht mehr dazugehören, werden entfernt; fremde bleiben.`;
+
+  return {
+    zeilen: [typ, rechte, wechselGruppen, routinen, regeln],
+    schritte,
+    unsicher,
+    nichtMehrGebraucht,
+  };
 }
 
 // ── Fremde Regeln = Stopp ─────────────────────────────────────────────────────────────────────────────────────

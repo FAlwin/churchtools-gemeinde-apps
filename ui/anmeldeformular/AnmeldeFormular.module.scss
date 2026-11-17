@@ -1161,3 +1161,29 @@
   font-weight: 400;
   color: var(--p-muted);
 }
+
+// ── F3: freie Antwort (Entwurf f3-freie-antwort-v1) ──
+// Das Textfeld klappt unter den Antworten auf – oder steht in der Zeile der freien Antwort („steht immer da“).
+.pv .freiText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.pv .freiText.bad input {
+  border-color: var(--p-err) !important;
+}
+.pv .freiText .err {
+  color: var(--p-err);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+.pv .freiZeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.pv .freiZeile .freiText {
+  flex: 1 1 160px;
+}

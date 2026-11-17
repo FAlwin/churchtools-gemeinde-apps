@@ -343,8 +343,9 @@ describe('einrichtungsPlan – Status „aktiv“ ist das Soll (O9-5d)', () => {
 describe('einrichtungsPlan – Wechsel-Gruppen müssen „eingeschränkt“ sein (Leitungen sehen versteckte nicht)', () => {
   const mit = (w11: Gelesen<string> | undefined, w12: Gelesen<string> = ok('restricted')) => {
     const stand = gut();
-    stand.sichtbarkeit = new Map([[12, w12]]);
-    if (w11) stand.sichtbarkeit.set(11, w11);
+    const sichtbarkeit = new Map<number, Gelesen<string>>([[12, w12]]);
+    if (w11) sichtbarkeit.set(11, w11);
+    stand.sichtbarkeit = sichtbarkeit;
     return stand;
   };
   const schritte = (p: ReturnType<typeof einrichtungsPlan>) =>

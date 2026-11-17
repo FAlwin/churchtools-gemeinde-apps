@@ -1,0 +1,203 @@
+// „Frühere Treffen“ (v1.0.1, Entwurf `fruehere-treffen-v1`): Block „Noch ohne Protokoll“ und Fenster „Protokoll
+// nachtragen“. Karte und Zeilen wie `Sitzungen.module.scss`, damit beides aussieht wie „Kommend“.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+.kartenkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.untertitel {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--section);
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.liste {
+  list-style: none;
+
+  li {
+    border-bottom: 1px solid var(--hair);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+// Eine Zeile im Block: Text links, „Protokoll beginnen“ rechts (Handy: darunter, volle Breite).
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 14px;
+}
+
+// Eine Zeile im Fenster: die ganze Zeile ist der Knopf.
+.zeilenKnopf {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+
+  > svg {
+    flex: none;
+    align-self: center;
+    color: var(--text3);
+  }
+}
+
+.text {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  b {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.marken {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.beginnen {
+  flex: none;
+
+  button {
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid var(--blue);
+    border-radius: var(--r-ctrl);
+    background: var(--blue);
+    color: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  @media (max-width: 600px) {
+    flex-basis: 100%;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+.fehler {
+  padding: 12px 14px;
+}
+
+.leise,
+.unter {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Fenster „Protokoll nachtragen“
+.monat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+
+  b {
+    min-width: 150px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 900;
+  }
+}
+
+.pfeil {
+  display: grid;
+  place-items: center;
+  width: var(--knopf-hoehe);
+  height: var(--knopf-hoehe);
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.fliste {
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  overflow: hidden;
+}
+
+.leer {
+  padding: 22px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-ctrl);
+  color: var(--text2);
+  font-size: 14.5px;
+  text-align: center;
+}
+
+.hinweis {
+  margin-top: 8px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Mindesthöhe der Monatsliste: zwei Zeilen plus Hinweis – so springen die Pfeile beim Blättern nicht.
+.inhalt {
+  min-height: 15rem;
+}

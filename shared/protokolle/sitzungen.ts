@@ -48,6 +48,8 @@ export interface Termin {
 export interface Treffen {
   id: number;
   beginn: string;
+  /** Das Gruppentreffen ist in ChurchTools abgeschlossen – die Anwesenheit steht dann fest (`isCompleted`). */
+  abgeschlossen?: boolean;
 }
 
 export interface Sitzung {
@@ -62,6 +64,8 @@ export interface Sitzung {
   kopf: ProtokollKopf | null;
   /** Besprechungsanfragen des Termins (leer ohne Termin). */
   anfragen: Anfrage[];
+  /** Das Gruppentreffen dazu ist abgeschlossen (nur gesetzt, wenn ja) – „Frühere Treffen“ weist darauf hin. */
+  abgeschlossen?: boolean;
 }
 
 /** Gleicher Beginn auf die Minute – so gehören Termin und Treffen derselben Sitzung zusammen. */
@@ -90,14 +94,20 @@ export function gehoertZu(
 /** Der Listenschlüssel einer Sitzung mit Protokoll – die eine Stelle dafür (Liste, Startseite, Direktlink S6-2). */
 export const protokollSchluessel = (sitzung: string): string => `p:${sitzung}`;
 
-export function sitzungenOrdnen(q: {
+/**
+ * **Termine, Gruppentreffen und Protokoll-Köpfe zu Sitzungen zusammenführen** – die eine Regel dafür („Kommend“,
+ * „Protokolle“ und „Frühere Treffen“ nutzen sie, keine baut sie nach). Ungefiltert und ungeordnet.
+ *
+ * `serieImmer`: Jeder Termin gilt als Teil einer möglichen Serie, ein Kopf gehört ihm also nur beim **selben Beginn**.
+ * Nötig, wo nur ein kurzer Zeitraum gelesen wurde („Frühere Treffen“: ein Monat): Dort kommt ein Serientermin nur einmal
+ * vor, `anzahl` sähe keine Serie, und das Protokoll einer anderen Woche hinge am falschen Termin (wie `gehoertZu`).
+ */
+export function sitzungenZusammenfuehren(q: {
   termine: readonly Termin[];
   treffen: readonly Treffen[];
   koepfe: readonly ProtokollKopf[];
-  /** Heutiger Tag in der Zeitzone der Gemeinde, `JJJJ-MM-TT`. */
-  heute: string;
-  zeitzone: string;
-}): { kommend: Sitzung[]; protokolle: Sitzung[] } {
+  serieImmer?: boolean;
+}): Sitzung[] {
   const sitzungen: Sitzung[] = q.koepfe.map((k) => ({
     schluessel: protokollSchluessel(k.sitzung),
     beginn: k.beginn,
@@ -115,7 +125,7 @@ export function sitzungenOrdnen(q: {
   for (const t of q.termine) {
     const termin = { beginn: t.beginn, termin: { kalender: t.kalender, id: t.id }, treffen: null };
     const da =
-      zuKopf((s) => gehoertZu(s.kopf!, termin, anzahl(t) > 1)) ??
+      zuKopf((s) => gehoertZu(s.kopf!, termin, q.serieImmer === true || anzahl(t) > 1)) ??
       sitzungen.find((s) => !s.termin && minute(s.beginn) === minute(t.beginn));
     if (da) {
       da.termin ??= { kalender: t.kalender, id: t.id };
@@ -141,6 +151,7 @@ export function sitzungenOrdnen(q: {
       sitzungen.find((s) => s.treffen === null && minute(s.beginn) === minute(t.beginn));
     if (da) {
       da.treffen ??= t.id;
+      if (t.abgeschlossen && da.treffen === t.id) da.abgeschlossen = true;
       continue;
     }
     sitzungen.push({
@@ -151,9 +162,21 @@ export function sitzungenOrdnen(q: {
       treffen: t.id,
       kopf: null,
       anfragen: [],
+      ...(t.abgeschlossen ? { abgeschlossen: true } : {}),
     });
   }
+  return sitzungen;
+}
 
+export function sitzungenOrdnen(q: {
+  termine: readonly Termin[];
+  treffen: readonly Treffen[];
+  koepfe: readonly ProtokollKopf[];
+  /** Heutiger Tag in der Zeitzone der Gemeinde, `JJJJ-MM-TT`. */
+  heute: string;
+  zeitzone: string;
+}): { kommend: Sitzung[]; protokolle: Sitzung[] } {
+  const sitzungen = sitzungenZusammenfuehren(q);
   const zeit = (s: Sitzung): number => Date.parse(s.beginn);
   const kommend = sitzungen
     .filter((s) => (s.kopf ? s.kopf.status !== 'frei' : tagAusIso(s.beginn, q.zeitzone) >= q.heute))

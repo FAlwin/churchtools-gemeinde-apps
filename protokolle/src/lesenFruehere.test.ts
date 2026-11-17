@@ -85,6 +85,7 @@ describe('sitzungenOhneProtokoll', () => {
   it('liest Kalender und Treffen genau für den gefragten Zeitraum', async () => {
     ct.treffen.set(194, [{ id: 1, startDate: '2026-09-20T15:00:00Z' }]);
     const r = await sitzungenOhneProtokoll({
+      modul: MODUL,
       gruppe: 194,
       kalender: 4,
       koepfe: [],
@@ -102,6 +103,7 @@ describe('sitzungenOhneProtokoll', () => {
       { id: 25, startDate: '2026-11-08T16:00:00Z', isCanceled: true },
     ]);
     const r = await sitzungenOhneProtokoll({
+      modul: MODUL,
       gruppe: 194,
       kalender: 4,
       koepfe: [],
@@ -130,6 +132,7 @@ describe('sitzungenOhneProtokoll', () => {
     });
     expect(koepfe).toHaveLength(1);
     const r = await sitzungenOhneProtokoll({
+      modul: MODUL,
       gruppe: 194,
       kalender: 4,
       koepfe,
@@ -142,6 +145,7 @@ describe('sitzungenOhneProtokoll', () => {
   it('ohne Kalender: nur Gruppentreffen, kein Kalender-Aufruf', async () => {
     ct.treffen.set(194, [{ id: 24, startDate: '2026-11-15T16:00:00Z' }]);
     const r = await sitzungenOhneProtokoll({
+      modul: MODUL,
       gruppe: 194,
       kalender: null,
       koepfe: [],
@@ -156,6 +160,7 @@ describe('sitzungenOhneProtokoll', () => {
     ct.termine = [TERMIN];
     ct.treffenVerboten = true;
     const r = await sitzungenOhneProtokoll({
+      modul: MODUL,
       gruppe: 194,
       kalender: 4,
       koepfe: [],
@@ -170,6 +175,7 @@ describe('sitzungenOhneProtokoll', () => {
     ct.fehlerBei = { methode: 'GET', status: 503 };
     await expect(
       sitzungenOhneProtokoll({
+        modul: MODUL,
         gruppe: 194,
         kalender: 4,
         koepfe: [],
@@ -194,7 +200,7 @@ describe('sitzungenNochOhneProtokoll – der Block', () => {
     ]);
     protokollAblegen({ sitzung: 'okt', beginn: '2026-10-18T15:00:00Z', treffen: 2 });
     const daten = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
-    const s = await sitzungenNochOhneProtokoll({ id: 194 }, daten, ZONE, JETZT);
+    const s = await sitzungenNochOhneProtokoll(MODUL, { id: 194 }, daten, ZONE, JETZT);
     expect(s.map((x) => x.treffen)).toEqual([4, 3]);
     expect(ct.terminAnfrage).toBe('2026-10-19..2026-11-16');
   });
@@ -205,7 +211,7 @@ describe('sitzungenNochOhneProtokoll – der Block', () => {
       { id: 2, startDate: '2026-10-25T15:00:00Z' },
     ]);
     const daten = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
-    const s = await sitzungenNochOhneProtokoll({ id: 194 }, daten, ZONE, JETZT);
+    const s = await sitzungenNochOhneProtokoll(MODUL, { id: 194 }, daten, ZONE, JETZT);
     expect(s.map((x) => x.treffen)).toEqual([2]);
     expect(ct.terminAnfrage).toBe('2026-10-20..2026-11-16');
   });
@@ -214,7 +220,7 @@ describe('sitzungenNochOhneProtokoll – der Block', () => {
     ct.treffen.set(194, [{ id: 7, startDate: '2026-11-17T17:00:00Z' }]);
     const daten = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
     expect(daten.kommend.map((x) => x.treffen)).toEqual([7]);
-    expect(await sitzungenNochOhneProtokoll({ id: 194 }, daten, ZONE, JETZT)).toEqual([]);
+    expect(await sitzungenNochOhneProtokoll(MODUL, { id: 194 }, daten, ZONE, JETZT)).toEqual([]);
   });
 
   it('war das letzte Protokoll gestern: nichts zu schauen, ChurchTools wird nicht gefragt', async () => {
@@ -222,7 +228,7 @@ describe('sitzungenNochOhneProtokoll – der Block', () => {
     const daten = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
     ct.terminAnfrage = null;
     ct.aufrufe.length = 0;
-    expect(await sitzungenNochOhneProtokoll({ id: 194 }, daten, ZONE, JETZT)).toEqual([]);
+    expect(await sitzungenNochOhneProtokoll(MODUL, { id: 194 }, daten, ZONE, JETZT)).toEqual([]);
     expect(ct.terminAnfrage).toBeNull();
     expect(ct.aufrufe).toEqual([]);
   });

@@ -168,6 +168,26 @@ die ganze Serie). Geteilt hat der neue Termin keine Einladungen – **alle bekom
 Absagen: „Nur diese Sitzung“ und „Serie ab hier beenden“ ohne Mail, „Ganze Serie löschen“ mit Mail „Terminserie
 gelöscht“ (auch vergangene Termine verschwinden aus dem Kalender; freigegebene Protokolle bleiben).
 
+**Mehrere Gruppen, ein Kalender – „das Gruppentreffen entscheidet“ (W4):** Nutzen mehrere Gruppen denselben Kalender
+(live: Technik, Bildtechnik, Kamera, Stream, Tontechnik im Kalender „Technik“), steht ein Termin daraus nicht in allen
+Gruppen unter „Kommend“, „Noch ohne Protokoll“ und „Protokoll nachtragen“. Ein Termin, zu dem eine Gruppe **weder ein
+eigenes Gruppentreffen noch ein eigenes Protokoll** hat, wird dort **ausgeblendet**, sobald eine **andere Gruppe mit
+demselben Kalender** ein Gruppentreffen zur selben Startzeit (auf die Minute) oder ein Protokoll zu genau diesem Termin
+hat. Wer selbst ein Treffen oder Protokoll dazu hat, sieht den Termin weiter – auch wenn eine andere Gruppe ebenfalls
+eins hat. Gruppentreffen und Protokolle ohne Termin sind nie betroffen.
+
+- **Trifft sich nur ein Teilteam** (z. B. nur Bildtechnik): in der **Teilgruppe** ein **Gruppentreffen** zur Startzeit des
+  Termins anlegen (ChurchTools → Gruppe → Treffen). Danach gehört der Termin dieser Gruppe und verschwindet bei den
+  anderen. „Neue Sitzung“ in der Teilgruppe legt Termin und Gruppentreffen dort von selbst richtig an.
+- **Trifft sich das ganze Technikteam:** das Gruppentreffen in der Gruppe anlegen, die das Protokoll führt (z. B. „Technik“).
+  Gibt es noch keins, steht der Termin in allen Gruppen – bis eins ein Treffen oder Protokoll dazu anlegt.
+- **Was gelesen werden kann, zählt:** Die App fragt die anderen Gruppen desselben Kalenders nur, wenn es überhaupt Termine
+  ohne eigenes Treffen/Protokoll gibt. Darf die Person die andere Gruppe nicht lesen (keine Rechte auf deren Kategorie
+  oder Gruppentreffen) oder antwortet ChurchTools gerade nicht, **zählt diese Gruppe nicht** – der Termin bleibt sichtbar
+  (im Browser-Log steht dann eine Warnung mit dem Grund). Ein normales Mitglied von Bildtechnik, das Technik nicht sehen
+  darf, sieht deshalb unter Umständen mehr Termine, als es sollte; die Gruppen sieht die App nur über die Kategorien
+  „Protokolle“, die für die Person sichtbar sind.
+
 **Protokoll schreiben (Leitung, S4-1):** Ein Protokoll im Entwurf öffnet für alle, die in der Gruppe schreiben dürfen,
 direkt im Editor – Mitglieder sehen es weiter nur zum Lesen. Gespeichert wird **automatisch** drei Sekunden nach der
 letzten Eingabe; oben steht „gespeichert 19:42 Uhr“ oder „nicht gespeichert – wird erneut versucht“ (der Text bleibt
@@ -348,7 +368,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
 
 - Regeln (ohne Oberfläche, getestet): `shared/protokolle/` – Dokument und Ableitung (`dokument.ts`), Speicher mit
   Kopf und gepackten Teilen (`speicher.ts`), To-Dos (`aufgaben.ts`), Einrichten (`einrichten.ts`), Vorlagen
-  (`vorlagen.ts`), Namen für die KI (`platzhalter.ts`), Meine Gruppen (`gruppen.ts`), Sitzungen (`sitzungen.ts`),
+  (`vorlagen.ts`), Namen für die KI (`platzhalter.ts`), Meine Gruppen (`gruppen.ts`), Sitzungen (`sitzungen.ts`; darin `fremdeTermineAus`, die Regel „das Gruppentreffen entscheidet“ – angewandt in
+  `protokolle/src/lesen.ts` für `ladeSitzungen` und `sitzungenOhneProtokoll`, nur dort),
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
   gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a; Fenster `ProtokollTeilenFenster.tsx`,
   nachgeladen über `ProtokollTeilen.tsx`, S6-3b).

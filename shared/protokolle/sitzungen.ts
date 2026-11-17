@@ -187,6 +187,58 @@ export function sitzungenOrdnen(q: {
   return { kommend, protokolle };
 }
 
+/**
+ * Was eine **andere Gruppe mit demselben Kalender** vorzuweisen hat (W4): ihre Gruppentreffen (rund um den gelesenen
+ * Zeitraum) und ihre Protokoll-Köpfe. Wer den Kalender teilt, ermittelt der Leser (Einstellung `kalender`); gelesen
+ * werden kann nur, was die Person sehen darf – was nicht zu lesen war, kommt hier gar nicht erst an.
+ */
+export interface GruppeImSelbenKalender {
+  treffen: readonly Pick<Treffen, 'beginn'>[];
+  koepfe: readonly Pick<ProtokollKopf, 'termin' | 'treffen' | 'beginn'>[];
+}
+
+/**
+ * **Besteht die Sitzung nur aus einem Termin?** – ohne eigenen Protokoll-Kopf und ohne eigenes Gruppentreffen. Nur solche
+ * Sitzungen kann `fremdeTermineAus` ausblenden; die eine Stelle dafür, damit der Leser nicht ohne Not bei anderen
+ * Gruppen nachfragt.
+ */
+export const nurTermin = (s: Pick<Sitzung, 'termin' | 'kopf' | 'treffen'>): boolean =>
+  s.termin !== null && s.kopf === null && s.treffen === null;
+
+/**
+ * **„Das Gruppentreffen entscheidet“** (W4, Alwin 17.11.2026): Mehrere Gruppen können denselben Kalender nutzen – ein
+ * Termin daraus gehört aber nicht allen. Ein Termin, der in dieser Gruppe nur als Termin dasteht (`nurTermin`), wird
+ * **ausgeblendet**, wenn eine andere Gruppe desselben Kalenders
+ * 1. ein **Gruppentreffen zur selben Startzeit** hat (Minute, wie die Verknüpfung in `sitzungenZusammenfuehren`), oder
+ * 2. einen **Protokoll-Kopf zu diesem Termin** hat (`gehoertZu`, bei Serien zusätzlich gleicher Beginn).
+ * Alles, was die Gruppe selbst hat (eigenes Treffen, eigener Kopf), bleibt – auch wenn eine andere Gruppe ebenfalls eins
+ * hat. Sitzungen ohne Termin sind nie betroffen. Hat keine andere Gruppe etwas dazu, bleibt der Termin sichtbar (das
+ * Teilteam, das sich wirklich allein trifft, legt dafür ein Gruppentreffen in der Teilgruppe an).
+ *
+ * `andere`: nur Gruppen, die wirklich gelesen werden konnten – Lesefehler zählen nicht als „gehört woanders“.
+ * `serieImmer`: wie bei `sitzungenZusammenfuehren` (kurzer Lesezeitraum). Reihenfolge bleibt erhalten.
+ */
+export function fremdeTermineAus(
+  sitzungen: readonly Sitzung[],
+  q: { andere: readonly GruppeImSelbenKalender[]; serieImmer?: boolean },
+): Sitzung[] {
+  if (!q.andere.length) return [...sitzungen];
+  const anzahl = (s: Sitzung) =>
+    sitzungen.filter(
+      (x) => x.termin?.kalender === s.termin?.kalender && x.termin?.id === s.termin?.id,
+    ).length;
+  return sitzungen.filter((s) => {
+    if (!nurTermin(s)) return true;
+    const serie = q.serieImmer === true || anzahl(s) > 1;
+    const woanders = q.andere.some(
+      (g) =>
+        g.treffen.some((t) => minute(t.beginn) === minute(s.beginn)) ||
+        g.koepfe.some((k) => gehoertZu(k, s, serie)),
+    );
+    return !woanders;
+  });
+}
+
 /** Meine Antwort auf die Besprechungsanfrage – `null`, wenn ich nicht eingeladen bin (oder es keinen Termin gibt). */
 export function meineAntwort(s: Pick<Sitzung, 'anfragen'>, ich: number): Antwort | null {
   return s.anfragen.find((a) => a.person === ich)?.antwort ?? null;

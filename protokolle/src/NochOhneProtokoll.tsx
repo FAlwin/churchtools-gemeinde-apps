@@ -17,12 +17,14 @@ import styles from './Fruehere.module.scss';
  * nutzbar (vorübergehend ist nicht leer – kein stilles Verschwinden).
  */
 export function NochOhneProtokoll({
+  modul,
   gruppe,
   daten,
   zeitzone,
   jetzt = new Date(),
   onBeginnen,
 }: {
+  modul: number;
   gruppe: { id: number };
   daten: { kommend: Sitzung[]; protokolle: Sitzung[]; kalender: number | null };
   zeitzone: string;
@@ -38,6 +40,7 @@ export function NochOhneProtokoll({
     () =>
       von !== null && bis !== null
         ? sitzungenOhneProtokoll({
+            modul,
             gruppe: gruppe.id,
             kalender: daten.kalender,
             koepfe: koepfeAus(daten),
@@ -45,7 +48,7 @@ export function NochOhneProtokoll({
             zeitzone,
           }).then((r) => r.sitzungen)
         : null,
-    [gruppe.id, daten, von, bis, zeitzone],
+    [modul, gruppe.id, daten, von, bis, zeitzone],
   );
 
   if (stand.art === 'aus' || stand.art === 'laedt') return null;

@@ -197,8 +197,32 @@ function fruehereTreffen(): Pick<Speicher, 'termine' | 'treffen'> {
   };
 }
 
+/** In `tage` Tagen um `stunde` Uhr Ortszeit – für die Termine, die sich zwei Gruppen im selben Kalender teilen (W4). */
+function inTagen(tage: number, stunde: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + tage);
+  d.setHours(stunde, 0, 0, 0);
+  return d.toISOString();
+}
+
+/**
+ * **Zwei Gruppen, ein Kalender** (W4, „Das Gruppentreffen entscheidet“): Leitungsteam (11) und Technik-Team (19) nutzen
+ * beide Kalender 4. Termin 140 hat ein Gruppentreffen NUR im Technik-Team → im Leitungsteam nicht zu sehen; Termin 141
+ * hat nirgends eins → in beiden zu sehen. (Termin 114 hat sein Treffen im Leitungsteam → im Technik-Team nicht zu sehen.)
+ */
+const TECHNIK_TERMIN = inTagen(5, 18);
+const TECHNIK_TREFFEN = [{ id: 150, startDate: TECHNIK_TERMIN, isCanceled: false }];
+
 /** Besprechungsanfragen wie in ChurchTools gemessen (S3-1 §2): Person als `domainIdentifier`, Antwort als `state`. */
 const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: string }[]> = {
+  '140': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'accepted' },
+  ],
+  '141': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'pending' },
+  ],
   '114': [
     { person: { domainIdentifier: '1' }, state: 'accepted' },
     { person: { domainIdentifier: '19' }, state: 'declined' },
@@ -373,6 +397,8 @@ function speicherAnlegen(fall: string): Speicher {
             k(60, kuerzelProtokolle(11), kategorieName('Protokolle', 'Leitungsteam')),
             k(61, kuerzelMitarbeit(11), kategorieName('Mitarbeit', 'Leitungsteam')),
             k(70, kuerzelProtokolle(7), kategorieName('Protokolle', 'Jugendleitung')),
+            k(80, kuerzelProtokolle(19), kategorieName('Protokolle', 'Technik-Team')),
+            k(81, kuerzelMitarbeit(19), kategorieName('Mitarbeit', 'Technik-Team')),
             k(5, KUERZEL_VORLAGEN, 'Vorlagen'),
           ],
     // Die Kategorie „Vorlagen“ (5) mit den drei Standard-Vorlagen, wie nach dem ersten Einrichten (S2-3).
@@ -389,6 +415,21 @@ function speicherAnlegen(fall: string): Speicher {
                 value: JSON.stringify(x),
               })),
             ],
+            // Technik-Team (W4): eingerichtet, derselbe Kalender 4 wie das Leitungsteam.
+            [
+              80,
+              [
+                {
+                  art: 'einstellung',
+                  fassung: 1,
+                  gruppe: 19,
+                  rollen: [],
+                  punkte: 'vorschlagen',
+                  kalender: 4,
+                },
+              ].map((x, i) => ({ id: 800 + i, dataCategoryId: 80, value: JSON.stringify(x) })),
+            ],
+            [81, []],
             [
               5,
               STANDARD_VORLAGEN.map((v, i) => ({
@@ -463,11 +504,11 @@ function antwort(
         churchcore: { 'administer persons': fall !== 'mitglied' },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
-          'view custom data': [60, 61, 70, 5],
+          'view custom data': [60, 61, 70, 80, 81, 5],
           ...Object.fromEntries(
             ['create custom data', 'edit custom data', 'delete custom data'].map((k) => [
               k,
-              fall === 'mitglied' ? [61] : [60, 61],
+              fall === 'mitglied' ? [61, 81] : [60, 61, 80, 81],
             ]),
           ),
         },
@@ -536,6 +577,15 @@ function antwort(
         {
           base: { id: 114, title: 'Leitungssitzung', calendar: { id: 4 } },
           calculated: { startDate: '2027-03-17T17:00:00Z' },
+        },
+        // Geteilter Kalender (W4): 140 mit Gruppentreffen nur im Technik-Team, 141 ohne Gruppentreffen.
+        {
+          base: { id: 140, title: 'Technik-Treffen', calendar: { id: 4 } },
+          calculated: { startDate: TECHNIK_TERMIN },
+        },
+        {
+          base: { id: 141, title: 'Teamabend', calendar: { id: 4 } },
+          calculated: { startDate: inTagen(8, 18) },
         },
         {
           base: { id: 117, title: 'Raumputz', calendar: { id: 4 } },
@@ -624,6 +674,8 @@ function antwort(
     s.treffen.push({ id, startDate: String(rumpf.startDate), isCanceled: false });
     return { status: 201, data: { id } };
   }
+  if (treffen && treffen[1] === '19' && methode === 'GET')
+    return { status: 200, data: TECHNIK_TREFFEN };
   if (treffen)
     return treffen[1] === '11'
       ? {

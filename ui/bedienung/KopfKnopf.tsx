@@ -13,6 +13,8 @@ interface KopfKnopfProps {
   haupt?: boolean;
   /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
   neu?: boolean;
+  /** Rot: etwas geht verloren („Löschen“ am Protokoll, W6) – roter Rand und rote Schrift, ohne Fläche wie der Hauptknopf. */
+  gefahr?: boolean;
   disabled?: boolean;
   /** Öffnet der Knopf ein Menü? Dann `aria-expanded` mit dessen Zustand. */
   menuOffen?: boolean;
@@ -57,6 +59,7 @@ export function KopfKnopf({
   symbol,
   haupt,
   neu,
+  gefahr,
   disabled,
   menuOffen,
   aktiv,
@@ -77,11 +80,13 @@ export function KopfKnopf({
           ? ' ' + styles.haupt
           : neu
             ? ' ' + styles.neu
-            : aktiv
-              ? ' ' + styles.aktiv
-              : offen
-                ? ' ' + styles.offen
-                : ''
+            : gefahr
+              ? ' ' + styles.gefahr
+              : aktiv
+                ? ' ' + styles.aktiv
+                : offen
+                  ? ' ' + styles.offen
+                  : ''
       }${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${
         zahl !== undefined ? ' ' + styles.mitZahl : ''
       }`}

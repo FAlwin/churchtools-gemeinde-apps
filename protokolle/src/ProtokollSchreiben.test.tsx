@@ -26,6 +26,7 @@ import {
 import * as V from './vorschlaegeSchreiben';
 import * as BS from './beitragSchreiben';
 import { Unklar } from '@ui/ct/fehler';
+import * as LO from './loeschen';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
@@ -50,6 +51,11 @@ vi.mock('./schreiben', () => ({
   treffenVerknuepfen: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('./planen', () => ({ treffenAnlegen: vi.fn(() => Promise.resolve(88)) }));
+// „Löschen“ (W6): das Löschen selbst als Attrappe – was es tut, prüft `loeschen.test.ts`.
+vi.mock('./loeschen', async (orig) => ({
+  ...(await orig<typeof import('./loeschen')>()),
+  protokollLoeschen: vi.fn(),
+}));
 // Freigabe (S6-1): Anwesenheit lesen und Treffen abschließen als Attrappen.
 vi.mock('./anwesenheitSchreiben', async (orig) => ({
   ...(await orig<typeof import('./anwesenheitSchreiben')>()),
@@ -193,9 +199,10 @@ const SITZUNG = {
   kopf: KOPF,
 } as unknown as Sitzung;
 
-const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void) => {
+const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void, onGeloescht?: () => void) => {
   const props = {
     onBearbeiten,
+    onGeloescht,
     sitzung: SITZUNG,
     gruppe: 'Leitungsteam',
     gruppeId: 194,
@@ -1052,5 +1059,92 @@ describe('Mit KI füllen (S8-2)', () => {
     ).toBeTruthy();
     // Die Änderung wird gespeichert (Sperre nehmen + speichern), nicht nur gemeldet.
     await waitFor(() => expect(vi.mocked(S.speichern)).toHaveBeenCalled());
+  });
+});
+
+describe('Protokoll löschen im Editor (W6)', () => {
+  const loeschen = vi.mocked(LO.protokollLoeschen);
+  const bereit = () => screen.findByRole('button', { name: 'Protokoll löschen' });
+  const rueckfrage = () => screen.getByRole('dialog', { name: 'Protokoll löschen?' });
+  const loeschenKnopf = () =>
+    within(rueckfrage()).getByRole('button', { name: /^(Löschen|Nochmal)/ });
+
+  beforeEach(() => {
+    loeschen.mockReset();
+    loeschen.mockResolvedValue({ art: 'ok' });
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+  });
+
+  it('der Knopf steht im Kopf, wenn „Löschen“ gereicht wird (Leitung) – sonst gibt es ihn nicht', async () => {
+    const r = zeige(vi.fn(), undefined, vi.fn());
+    fireEvent.click(await bereit());
+    expect(rueckfrage()).toBeTruthy();
+    r.unmount();
+    zeige();
+    await screen.findByText(/Entwurf – noch nicht freigegeben/);
+    expect(screen.queryByRole('button', { name: 'Protokoll löschen' })).toBeNull();
+  });
+
+  it('Löschen: mit dem Schreib-Fenster dieses Editors (seine Sperre steht nicht im Weg), dann zurück zur Liste', async () => {
+    const onGeloescht = vi.fn();
+    zeige(vi.fn(), undefined, onGeloescht);
+    await screen.findByText('bearbeitbar');
+    fireEvent.click(await bereit());
+    fireEvent.click(loeschenKnopf());
+    await waitFor(() => expect(onGeloescht).toHaveBeenCalledTimes(1));
+    const plan = loeschen.mock.calls[0][0];
+    expect(plan.ort).toEqual({ modul: 24, kategorie: 62, sitzung: 's1' });
+    expect(plan.ich).toMatchObject({ person: 1, name: 'Alwin' });
+    expect(plan.ich.fenster).toBeTruthy();
+    expect(plan.mitarbeit).toEqual({ modul: 24, kategorie: 65 });
+  });
+
+  it('der Editor schreibt nicht mehr, sobald gelöscht wird: ein laufendes Speichern wird abgewartet, dann erst gelöscht', async () => {
+    let fertig!: () => void;
+    vi.mocked(S.speichern).mockImplementation(
+      () =>
+        new Promise((r) => {
+          fertig = () => r({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+        }),
+    );
+    zeige(vi.fn(), undefined, vi.fn());
+    fireEvent.click(await screen.findByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(S.speichern).toHaveBeenCalledTimes(1));
+    fireEvent.click(await bereit());
+    fireEvent.click(loeschenKnopf());
+    await new Promise((r) => setTimeout(r, 30));
+    expect(loeschen).not.toHaveBeenCalled(); // das Speichern läuft noch
+    fertig();
+    await waitFor(() => expect(loeschen).toHaveBeenCalledTimes(1));
+  });
+
+  it('Löschen scheitert und das Fenster wird abgebrochen: der Editor speichert danach wieder', async () => {
+    loeschen.mockRejectedValue(new Error('Netz'));
+    zeige(vi.fn(), undefined, vi.fn());
+    fireEvent.click(await bereit());
+    fireEvent.click(loeschenKnopf());
+    await within(rueckfrage()).findByRole('alert');
+    fireEvent.click(within(rueckfrage()).getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('dialog', { name: 'Protokoll löschen?' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(S.speichern).toHaveBeenCalled());
+  });
+
+  it('nach dem Löschen speichert der Editor nicht mehr und gibt keine Sperre frei (es gibt keinen Kopf mehr)', async () => {
+    const onGeloescht = vi.fn();
+    const r = zeige(vi.fn(), undefined, onGeloescht);
+    fireEvent.click(await screen.findByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(S.speichern).toHaveBeenCalled());
+    vi.mocked(S.sperreFreigeben).mockClear();
+    vi.mocked(S.speichern).mockClear();
+    fireEvent.click(await bereit());
+    fireEvent.click(loeschenKnopf());
+    await waitFor(() => expect(onGeloescht).toHaveBeenCalled());
+    r.unmount();
+    // Das Aufräumen beim Schließen läuft asynchron (`jetzt()`, dann `sperreFreigeben`) – kurz warten, sonst misst der Test zu früh.
+    await new Promise((x) => setTimeout(x, 30));
+    expect(S.sperreFreigeben).not.toHaveBeenCalled();
+    expect(S.speichern).not.toHaveBeenCalled();
   });
 });

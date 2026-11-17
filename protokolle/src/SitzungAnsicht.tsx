@@ -4,6 +4,7 @@ import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { loeschbar } from '@shared/protokolle/loeschen';
 import { wannLang } from './anzeige';
 import { Marke } from './Marke';
 import { FreigabeMarke, ZurueckVermerk } from './FreigabeVermerk';
@@ -16,7 +17,7 @@ import styles from './SitzungAnsicht.module.scss';
 /**
  * **Eine Sitzung ansehen** (Bauplan S3-2, Entwurf 7) – oben Titel und Stand, darunter das Protokoll als Dokument und
  * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; geschrieben wird im
- * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1), dazu „Bearbeiten“ (K2b). Kommt man aus der Suche (S3-4b),
+ * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1), dazu „Bearbeiten“ (K2b) und „Löschen“ (W6). Kommt man aus der Suche (S3-4b),
  * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor. „Teilen / PDF“ (S6-3b) gibt es für
  * alle, die das Protokoll lesen – im Entwurf mit „ENTWURF“ auf dem PDF.
  */
@@ -34,6 +35,7 @@ export function SitzungAnsicht({
   onBeginnen,
   onBearbeiten,
   onZuruecknehmen,
+  onLoeschen,
   onZurueck,
   onZuSitzung,
 }: {
@@ -57,6 +59,8 @@ export function SitzungAnsicht({
   onBearbeiten?: () => void;
   /** Nur für die Leitung (S6-1): „Freigabe zurücknehmen“ bei einem freigegebenen Protokoll. */
   onZuruecknehmen?: () => void;
+  /** Nur für die Leitung (W6): „Löschen“ bei einem Entwurf oder freigegebenen Protokoll – öffnet die Rückfrage. */
+  onLoeschen?: () => void;
   onZurueck: () => void;
   /** „Öffnen“ im Fenster eines früheren Protokolls: zu dieser Sitzung springen (K3b-2). */
   onZuSitzung?: (s: Sitzung) => void;
@@ -92,7 +96,7 @@ export function SitzungAnsicht({
           )}
           {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || onZuruecknehmen || darfTeilen) && (
+        {(onBearbeiten || onZuruecknehmen || onLoeschen || darfTeilen) && (
           <div className={styles.aktionen}>
             {onBearbeiten && (
               <KopfKnopf
@@ -109,6 +113,15 @@ export function SitzungAnsicht({
                 title="Freigabe zurücknehmen – wieder Entwurf"
                 symbol={<Icon name="undo" size={16} />}
                 onClick={onZuruecknehmen}
+              />
+            )}
+            {onLoeschen && loeschbar(kopf?.status) && (
+              <KopfKnopf
+                gefahr
+                label="Löschen"
+                title="Protokoll löschen"
+                symbol={<Icon name="trash" size={16} />}
+                onClick={onLoeschen}
               />
             )}
           </div>

@@ -1,0 +1,26 @@
+// Fenster „Protokoll löschen?“ (W6) – Felder in `Fensterfelder.module.scss`.
+
+.gruppe {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.ueberschrift {
+  margin-bottom: 6px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.warnung {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.warnung b {
+  color: var(--red);
+}

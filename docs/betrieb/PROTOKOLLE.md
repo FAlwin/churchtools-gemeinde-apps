@@ -164,12 +164,40 @@ gelesen). Termin, Gruppentreffen und Protokoll ziehen mit. **Vor dem Speichern s
 bekommt:** neue Zeit mit „Alle neu einladen“ (vorgewählt) – „Termin geändert“, die Zusagen gehen zurück; abgewählt
 still. Nur der Titel: still. Einladen: „Neue Besprechungsanfrage“, ausladen: „Termin gelöscht“. „Sitzung absagen“
 löscht Termin und Gruppentreffen (Mail „Termin gelöscht“); ein geplantes Protokoll verschwindet, ein begonnenes bleibt
-als Entwurf ohne Termin. Termine mit Anmeldung ändert das Fenster nicht.
+als Entwurf ohne Termin (**das Protokoll selbst löschen** geht über „Löschen“, siehe unten). Termine mit Anmeldung ändert das Fenster nicht.
 **Serien:** Einladungen gelten für die ganze Serie. Titel oder Zeit fragen „Nur diese Sitzung“ (wird aus der Serie
 gelöst) oder „Ab dieser Sitzung“ (die Serie wird hier geteilt, frühere Termine bleiben; am ersten Termin ändert sich
 die ganze Serie). Geteilt hat der neue Termin keine Einladungen – **alle bekommen „Neue Besprechungsanfrage“**.
 Absagen: „Nur diese Sitzung“ und „Serie ab hier beenden“ ohne Mail, „Ganze Serie löschen“ mit Mail „Terminserie
 gelöscht“ (auch vergangene Termine verschwinden aus dem Kalender; freigegebene Protokolle bleiben).
+
+**Protokoll löschen (Leitung, W6):** Etwas anderes als „Sitzung absagen“: Dort bleibt ein begonnenes Protokoll als Entwurf
+stehen – hier **verschwindet das Protokoll selbst**, Entwurf oder freigegeben, ohne Umweg über „Freigabe zurücknehmen“.
+Der Knopf **„Löschen“** (rot) steht im Kopf der Sitzung neben „Bearbeiten“ und „Teilen / PDF“, in der Ansicht und im
+Editor; nur für die Leitung (wer hier schreiben darf) und nur bei einem Protokoll im Entwurf oder freigegeben – ein bloß
+geplantes hat keinen Text und verschwindet mit „Sitzung absagen“. Die Rückfrage „Protokoll löschen?“ zeigt Titel, Datum
+und Status und sagt: **Das lässt sich nicht rückgängig machen.** Darin:
+
+- **To-Dos aus diesem Protokoll (N)** – nur, wenn es welche gibt (die in dieser Sitzung entstanden sind; schon gelöschte
+  zählen nicht): **Mitlöschen** (vorgewählt; sie werden wie beim Löschen im To-Do-Fenster **als gelöscht vermerkt**, nie hart
+  gelöscht, und stehen so im Verlauf) oder **Behalten** (sie bleiben in der To-Do-Liste, ohne Protokoll dahinter).
+- **In ChurchTools außerdem löschen** – je ein Häkchen, **anfangs aus**, nur wo es das gibt: den **Termin** (mit der Zahl
+  der Eingeladenen, die die Mail „Termin gelöscht“ **sofort** bekommen; bei einer Terminserie fällt nur diese Sitzung aus
+  der Serie, **ohne Mail**; ein Termin mit Anmeldung lässt sich hier nicht löschen) und das **Gruppentreffen** (ist es
+  abgeschlossen, geht die Anwesenheit mit verloren).
+
+**Reihenfolge:** erst prüfen, ob jemand anderes (oder ein anderes eigenes Fenster) schreibt – dann wird **nichts**
+gelöscht –, dann die To-Dos, dann Termin und Gruppentreffen (jeweils nachgelesen: ein „gelöscht“ von ChurchTools ist kein
+Beleg), **zuletzt das Protokoll**: erst alle Textteile, dann der Kopf der Sitzung. Bricht es dazwischen ab, steht der Kopf
+noch da (ohne lesbaren Text: „nicht vollständig lesbar“), das Fenster bleibt offen und sagt, was schon erledigt ist und
+was nicht; **„Nochmal versuchen“** macht nichts doppelt (ein vermerktes To-Do, ein schon gelöschter Termin oder ein
+schon gelöschtes Treffen zählt als erledigt). Danach geht es zurück zur Liste mit dem Hinweis „Protokoll gelöscht“; bleiben
+Termin und Treffen bestehen, steht die Sitzung wieder als **„ohne Protokoll“** da und lässt sich neu beginnen.
+**Folgen anderswo:** Ein späteres Protokoll, das das gelöschte als „Protokoll der letzten Sitzung“ **festgehalten** hat,
+zeigt dort „Das damalige Protokoll gibt es nicht mehr“ (auch im PDF); ohne Festhalten gilt das davor als „letztes“. Bei
+„Behalten“ steht an den übrigen To-Dos „Aus einer älteren Sitzung“. Ein Beitrag in der Gruppe („In der Gruppe Bescheid
+geben“) bleibt stehen – sein Link führt dann auf die Liste. Vorschläge, die schon „im Protokoll“ standen, erscheinen unter
+„Erledigt“.
 
 **Mehrere Gruppen, ein Kalender – „das Gruppentreffen entscheidet“ (W4):** Nutzen mehrere Gruppen denselben Kalender
 (live: Technik, Bildtechnik, Kamera, Stream, Tontechnik im Kalender „Technik“), steht ein Termin daraus nicht in allen

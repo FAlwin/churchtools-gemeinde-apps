@@ -174,3 +174,88 @@ describe('SchreibSteuerung', () => {
     expect(a.sperreNehmen).not.toHaveBeenCalled();
   });
 });
+
+describe('anhalten / fortsetzen (Protokoll löschen, W6)', () => {
+  it('anhalten: ein anstehendes Speichern feuert nicht mehr, auch nach der Pause nicht', async () => {
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    s.geaendert();
+    await s.anhalten();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS * 3);
+    expect(a.speichern).not.toHaveBeenCalled();
+    expect(s.zustand.offen).toBe(true); // die Eingabe ist nicht verloren
+  });
+
+  it('anhalten wartet ein laufendes Speichern ab – danach schreibt dieses Fenster nichts mehr', async () => {
+    let fertig!: () => void;
+    a.speichern.mockImplementationOnce(
+      () =>
+        new Promise<SchreibErgebnis>((r) => {
+          fertig = () => r(ok('s1'));
+        }),
+    );
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    s.geaendert();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS);
+    expect(a.speichern).toHaveBeenCalledTimes(1);
+    s.geaendert(); // kommt während des Speicherns dazu
+    let angehalten = false;
+    const warten = s.anhalten().then(() => (angehalten = true));
+    await ruhe();
+    expect(angehalten).toBe(false); // das Speichern läuft noch
+    fertig();
+    await warten;
+    await vi.advanceTimersByTimeAsync(PAUSE_MS * 3);
+    expect(a.speichern).toHaveBeenCalledTimes(1); // das „gleich noch einmal“ fällt weg
+  });
+
+  it('war das „gleich noch einmal“ schon vorgemerkt, wenn angehalten wird, fällt es nach dem Speichern weg', async () => {
+    let fertig!: () => void;
+    a.speichern.mockImplementationOnce(
+      () =>
+        new Promise<SchreibErgebnis>((r) => {
+          fertig = () => r(ok('s1'));
+        }),
+    );
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    s.geaendert();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS); // erstes Speichern läuft
+    s.geaendert();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS); // die Pause läuft ab, während es noch speichert → vorgemerkt
+    const angehalten = s.anhalten();
+    fertig();
+    await angehalten;
+    await vi.advanceTimersByTimeAsync(PAUSE_MS * 3);
+    expect(a.speichern).toHaveBeenCalledTimes(1);
+  });
+
+  it('Eingaben im angehaltenen Zustand planen nichts; fortsetzen speichert, was offen ist', async () => {
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    await s.anhalten();
+    s.geaendert();
+    expect(vi.getTimerCount()).toBe(0); // gar nicht erst geplant
+    await vi.advanceTimersByTimeAsync(PAUSE_MS * 3);
+    expect(a.speichern).not.toHaveBeenCalled();
+    s.fortsetzen();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS);
+    expect(a.speichern).toHaveBeenCalledTimes(1);
+  });
+
+  it('fortsetzen ohne offene Eingabe: nichts wird gespeichert', async () => {
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    await s.anhalten();
+    s.fortsetzen();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS * 3);
+    expect(a.speichern).not.toHaveBeenCalled();
+  });
+
+  it('ein Fehler beim Speichern plant im angehaltenen Zustand keinen neuen Versuch', async () => {
+    a.speichern.mockRejectedValueOnce(new Error('Netz'));
+    const s = new SchreibSteuerung(a, kopf('s0'), 'schreibe');
+    s.geaendert();
+    await vi.advanceTimersByTimeAsync(PAUSE_MS);
+    expect(s.zustand.fehler).toBe('Netz');
+    await s.anhalten();
+    await vi.advanceTimersByTimeAsync(ERNEUT_MS * 3);
+    expect(a.speichern).toHaveBeenCalledTimes(1);
+  });
+});

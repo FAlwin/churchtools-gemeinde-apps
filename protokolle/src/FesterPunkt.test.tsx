@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
 import type { Block } from '@shared/protokolle/dokument';
 import { festePunkteFesthalten } from '@shared/protokolle/festePunkte';
 import { teileBauen, type ProtokollKopf, type ProtokollTeil } from '@shared/protokolle/speicher';
@@ -202,5 +202,58 @@ describe('Fester Punkt im Editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     editor.remove();
+  });
+});
+
+/**
+ * **Ein Protokoll wurde gelöscht (W6)** – was die festen Punkte in späteren Protokollen dann zeigen. Gebaut mit denselben
+ * Erzeugern wie bei der Freigabe (`festePunkteFesthalten`), nicht mit handgeschriebenen `fest`-Werten.
+ */
+describe('Fester Punkt nach „Protokoll löschen“', () => {
+  const zeigeOhne = (
+    dok: Block[],
+    q: { protokolle: Sitzung[]; aufgaben?: Aufgabe[] } = { protokolle: [SEPT] },
+  ) =>
+    render(
+      <FestePunkteRahmen
+        sitzung={HEUTE}
+        gruppe={194}
+        protokolle={q.protokolle}
+        teile={TEILE}
+        aufgaben={q.aufgaben ?? AUFGABEN}
+        zeitzone="Europe/Berlin"
+      >
+        <ProtokollAnsicht dokument={dok} aufgaben={q.aufgaben ?? AUFGABEN} />
+      </FestePunkteRahmen>,
+    );
+
+  it('das festgehaltene „Letztes Protokoll“ ist gelöscht: ein Satz, kein anderes Protokoll, kein „Ansehen“', () => {
+    const fest = festePunkteFesthalten(DOK, {
+      offen: { offen: [], erledigt: [], seit: null },
+      letztes: 'okt',
+    });
+    zeigeOhne(fest); // „okt“ steht nicht mehr in den Protokollen der Gruppe
+    expect(screen.getByText('Das damalige Protokoll gibt es nicht mehr.')).toBeTruthy();
+    expect(screen.queryByText(/vom 09\.09\.2026/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ansehen' })).toBeNull();
+  });
+
+  it('live (nicht festgehalten): ohne das gelöschte gilt das davor als „letztes“', () => {
+    zeigeOhne(DOK);
+    expect(screen.getByText(/vom 09\.09\.2026/)).toBeTruthy();
+  });
+
+  it('festgehaltene To-Dos, die mitgelöscht wurden, fallen aus „Offene To-Dos“ weg – die übrigen bleiben', () => {
+    const fest = festePunkteFesthalten(DOK, {
+      offen: { offen: [AUFGABEN[0], AUFGABEN[1]], erledigt: [], seit: null },
+      letztes: null,
+    });
+    const nachLoeschen = [
+      alsGeloescht(AUFGABEN[0], 1, '2026-11-17T10:00:00Z'),
+      ...AUFGABEN.slice(1),
+    ];
+    zeigeOhne(fest, { protokolle: [SEPT, ALT], aufgaben: nachLoeschen });
+    expect(screen.queryByText('Beamer kaufen')).toBeNull();
+    expect(screen.getByText('Hier entstanden')).toBeTruthy();
   });
 });

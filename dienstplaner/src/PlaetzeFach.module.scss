@@ -105,3 +105,37 @@
     color: var(--text2);
   }
 }
+
+// ── Ein einzelner Dienst im Fenster von „Personen“ (P2c) ─────────────────────────────────────────────────────────────
+// Der Regler (− Zahl +) steht allein, größer als in der Liste des Plätze-Fachs – derselbe Knopf (`.rund`), nur Abstand.
+.einzel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin: 4px 0 12px;
+
+  .rund {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .zahl {
+    width: 36px;
+    font-size: 22px;
+  }
+}
+
+.zahlen {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.gesperrtText {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--red);
+}

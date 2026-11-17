@@ -51,6 +51,21 @@ export interface PersonenEintragen {
   direkt: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
   /** Den eigenen Entwurf wieder wegnehmen – meldet selbst „entfernt“ bzw. den Fehler. */
   wegnehmen: (zeile: PlanZeile, entwurf: Entwurf) => Promise<void>;
+  /**
+   * **Platz dazunehmen und eintragen** (P2c, Dienst voll): erst die Platzzahl in ChurchTools um 1 erhöhen (sofort, derselbe
+   * Weg wie der Regler – `anzahlAendern`), dann – **nach dem Neuladen des Termins**, wenn der neue Platz wirklich da ist – den
+   * Entwurf für die Person anlegen (derselbe Weg wie `eintragen`). Meldet selbst alle Fehler; scheitert das Erhöhen, entsteht
+   * kein Entwurf. Fehlt, wo es keinen Anschluss zum Ändern der Plätze gibt.
+   */
+  dazunehmen?: (
+    spalte: number,
+    zeile: PlanZeile,
+    person: { personId: number; name: string },
+  ) => Promise<void>;
+  /**
+   * Das Fenster „Ansehen und senden“ öffnen (P2c: „Erst senden oder Entwürfe entfernen“) – fehlt, wo nichts zu senden ist.
+   */
+  sendenOeffnen?: () => void;
 }
 
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */
@@ -77,6 +92,12 @@ export interface Sicht {
   onOhnePlatz: (spalte: number, zeile: PlanZeile, e: Entwurf) => void;
   /** Regler in der Gruppenzeile → Plätze-Fach (E4-5-3); `undefined`, wo man keinen Dienst der Gruppe plant. */
   onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
+  /**
+   * Zeile „Plätze“ und roter Tag in „Personen“ (P2c) → Fenster mit dem Regler für **diesen** Dienst an diesem Termin;
+   * `undefined`, wo man es nicht darf (dieselben Rechte wie `onPlaetze`, dazu nicht an abgesagten Terminen) oder es das
+   * nicht gibt (Termin-Ansicht).
+   */
+  onPlatz?: (spalte: number, zeile: PlanZeile) => (() => void) | undefined;
   /**
    * Zauberstab (E5-2): automatische Planung für diese Termine der Gruppe; `undefined`, wo es nichts zu füllen gibt
    * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf). Mit `dienstId` nur für diesen

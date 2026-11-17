@@ -556,3 +556,42 @@ $anzahl-farben: 8;
     color: #422006; // bewusst fest: dunkle Schrift auf Gelb, hell wie dunkel
   }
 }
+
+// ── Zeile „Plätze“ und Fenster „Dienst voll“ (P2c) ─────────────────────────────────────────────────────────────────────
+// Die Zelle ist anklickbar, wo man die Plätze ändern darf: der Tag liegt in einem Knopf, der die Zelle füllt (Tastatur,
+// Vorleser); Maus: blasse blaue Fläche wie bei bestehenden Einteilungen.
+.raster td.plaetzeKlick {
+  position: relative;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in oklab, var(--blue) 7%, var(--zeile, var(--surface2)));
+    }
+  }
+}
+.plaetzeKnopf {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+// Der Satz „Ton bekommt sofort einen dritten Platz …“ im Fenster „Dienst voll“ – ein blasser blauer Kasten.
+.dazuHinweis {
+  margin: 0 0 16px;
+  padding: 8px 10px;
+  border-radius: var(--r-ctrl);
+  background: color-mix(in oklab, var(--blue) 10%, var(--surface2));
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}

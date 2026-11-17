@@ -47,3 +47,18 @@ export function zaehleFrei(
 ): number {
   return zelle.filter((p) => platzGiltFrei(p, entwurf?.(p) ?? null)).length;
 }
+
+/**
+ * **Plätze eines Dienstes an einem Termin – mit Entwürfen gezählt** (P2c, Zeile „Plätze“ in „Personen“): `anzahl` = alle
+ * Plätze, `frei` = die, die nach `platzGiltFrei` als frei gelten (also dieselbe Zahl wie in „Noch offen“ – KEINE zweite
+ * Rechnung), `belegt` = der Rest. Eine Zelle, die es nicht gibt (`null`: Dienst an diesem Termin nicht vorgesehen), hat 0
+ * Plätze.
+ */
+export function plaetzeStand(
+  zelle: readonly PlanPlatz[] | null,
+  entwurf?: (p: PlanPlatz) => PlatzEntwurfMin,
+): { anzahl: number; belegt: number; frei: number } {
+  const plaetze = zelle ?? [];
+  const frei = zaehleFrei(plaetze, entwurf);
+  return { anzahl: plaetze.length, belegt: plaetze.length - frei, frei };
+}

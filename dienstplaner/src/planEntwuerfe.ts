@@ -212,7 +212,7 @@ export const katalogAus = (start: Start): DiensteKatalog => ({
 });
 
 /** Der Stand eines Dienstes an einem Termin – aus seiner Zeile; ohne Zeile hat er dort keinen Platz. */
-function plaetzeZeile(
+export function plaetzeZeile(
   daten: EntwuerfeDaten | null,
   s: PlanSpalte,
   i: number,

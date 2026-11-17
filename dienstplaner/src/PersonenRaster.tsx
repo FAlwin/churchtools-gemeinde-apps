@@ -8,6 +8,7 @@ import type { PlanZeile } from '@shared/dienstplan/plan';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
 import {
   eintragenWarnung,
+  platzDazuText,
   vollText,
   type EintragenWarnung,
   type ZellenAktion,
@@ -15,6 +16,7 @@ import {
 import {
   offenText,
   personenRaster,
+  plaetzeZelleText,
   rasterDienste,
   type RasterBlock,
   type RasterGast,
@@ -24,6 +26,7 @@ import {
 import type { PersonenLader } from './ladePersonen';
 import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
+import { sperreText } from './plaetzeTexte';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
 import { usePersonenDaten } from './usePersonenDaten';
@@ -213,7 +216,20 @@ export function PersonenRaster({
   // Das Fenster zu einem Klick: Warnung (mit „Trotzdem eintragen“) oder „Dienst voll“.
   const [fenster, setFenster] = useState<
     | { art: 'warnung'; titel: string; warnung: EintragenWarnung; ok: () => void }
-    | { art: 'voll'; dienst: string; text: string }
+    | {
+        art: 'voll';
+        dienst: string;
+        tag: string;
+        /** Die Plätze des Dienstes – alle belegt oder von einem Entwurf gehalten. */
+        von: number;
+        /** Entwürfe an diesem Dienst und Termin – bei mehr als 0 gibt es kein „Platz dazunehmen“ (Sperre). */
+        entwuerfe: number;
+        /** Warnung „anderer Dienst am Tag“ / „abwesend“, die zusammen mit „voll“ gefragt wird. */
+        warnung: EintragenWarnung | null;
+        person: { personId: number; name: string };
+        spalte: number;
+        zeile: PlanZeile;
+      }
     | null
   >(null);
   // Während ein Entwurf angelegt oder weggenommen wird, zählt ein zweiter Klick nicht (sonst entstünden zwei).
@@ -279,7 +295,22 @@ export function PersonenRaster({
     } else if (a.art === 'direkt') {
       void tue(() => personen.direkt(zl, a.entwurf));
     } else if (a.art === 'voll') {
-      setFenster({ art: 'voll', dienst: b.dienst.name, text: vollText(b.dienst.name, tag, a.von) });
+      setFenster({
+        art: 'voll',
+        dienst: b.dienst.name,
+        tag,
+        von: a.von,
+        entwuerfe: a.entwuerfe,
+        warnung: eintragenWarnung({
+          name: r.name,
+          dienst: b.dienst.name,
+          tag,
+          zelle: r.zellen[pos],
+        }),
+        person: { personId: r.personId, name: r.name },
+        spalte: i,
+        zeile: zl,
+      });
     } else {
       const eintragen = () =>
         // Noch einmal fragen: Zwischen Klick und „Trotzdem“ kann sich der Platz geändert haben.
@@ -465,6 +496,60 @@ export function PersonenRaster({
     );
   };
 
+  /**
+   * Die Zeile „Plätze“ am Ende eines Dienst-Blocks (P2c): je Termin „belegt von Plätzen“ – gezählt wie „Noch offen“ (Entwürfe
+   * zählen mit). Freie Plätze rot (wie die roten Tags in „Noch offen“; an einem abgesagten Termin nicht), voll neutral, ohne
+   * Plätze „aus“. Ein Klick öffnet den Regler dieses Dienstes an diesem Termin – wo man ihn bedienen darf (`sicht.onPlatz`).
+   */
+  const plaetzeZeile = (b: RasterBlock) => {
+    const zl = zeileJe.get(b.dienst.id);
+    return (
+      <tr key={`p-${b.dienst.id}`}>
+        <th scope="row" className={`${styles.name} ${styles.gaesteName}`}>
+          Plätze
+        </th>
+        <td className={styles.einsaetze} />
+        {b.plaetze.map((p, pos) => {
+          const text = plaetzeZelleText(p);
+          const abgesagt = termine[pos].abgesagt;
+          const oeffnen = zl ? sicht.onPlatz?.(spalten[pos], zl) : undefined;
+          const tag = (
+            <span
+              className={`${styles.tag}${p.frei > 0 && !abgesagt ? ' ' + styles.offenTag : ''}`}
+              title={
+                p.anzahl === 0
+                  ? 'Dienst an diesem Termin aus'
+                  : `${p.belegt} belegt, ${p.frei} frei`
+              }
+            >
+              <span className={styles.tagText}>{text}</span>
+            </span>
+          );
+          return (
+            <td
+              key={termine[pos].id}
+              className={`${abgesagt ? styles.abgesagtSpalte : ''}${oeffnen ? ' ' + styles.plaetzeKlick : ''}`}
+              // Ein Klick irgendwo in der Zelle zählt; der Knopf darin ist für Tastatur und Vorleser, sein Klick steigt hierher auf.
+              onClick={oeffnen}
+            >
+              {oeffnen ? (
+                <button
+                  type="button"
+                  className={styles.plaetzeKnopf}
+                  aria-label={`Plätze ${b.dienst.name} am ${tagKurz(termine[pos].tag)}: ${text} – ändern`}
+                >
+                  {tag}
+                </button>
+              ) : (
+                tag
+              )}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  };
+
   return (
     <>
       {!lader && (
@@ -543,6 +628,7 @@ export function PersonenRaster({
                     </tr>,
                   ]
                 : []),
+              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : [plaetzeZeile(b)]),
             ])}
             <tr className={styles.fuss}>
               <th scope="row" className={styles.name}>
@@ -555,11 +641,27 @@ export function PersonenRaster({
                     {o.abgesagt ? (
                       <span className={styles.blockHinweis}>abgesagt</span>
                     ) : (
-                      o.dienste.map((d) => (
-                        <span key={d.dienst} className={`${styles.tag} ${styles.offenTag}`}>
-                          <span className={styles.tagText}>{offenText(d)}</span>
-                        </span>
-                      ))
+                      o.dienste.map((d) => {
+                        // Der rote Tag öffnet den Regler dieses Dienstes an diesem Termin (P2c) – wo man ihn bedienen darf.
+                        const zl = zeileJe.get(d.serviceId);
+                        const oeffnen = zl ? sicht.onPlatz?.(spalten[pos], zl) : undefined;
+                        return oeffnen ? (
+                          <button
+                            key={d.dienst}
+                            type="button"
+                            className={`${styles.tag} ${styles.offenTag} ${styles.tagKnopf}`}
+                            aria-label={`Plätze ${d.dienst} am ${tagKurz(termine[pos].tag)} ändern`}
+                            title={`Plätze ${d.dienst} ändern`}
+                            onClick={oeffnen}
+                          >
+                            <span className={styles.tagText}>{offenText(d)}</span>
+                          </button>
+                        ) : (
+                          <span key={d.dienst} className={`${styles.tag} ${styles.offenTag}`}>
+                            <span className={styles.tagText}>{offenText(d)}</span>
+                          </span>
+                        );
+                      })
                     )}
                   </div>
                 </td>
@@ -581,17 +683,66 @@ export function PersonenRaster({
           onCancel={() => setFenster(null)}
         />
       )}
-      {fenster?.art === 'voll' && (
-        <ConfirmDialog
-          title={`${fenster.dienst} ist voll`}
-          message={`${fenster.text} Platz dazunehmen geht im Moment über den Regler in der Matrix.`}
-          confirmLabel="Schließen"
-          cancelLabel={null}
-          harmlos
-          onConfirm={() => setFenster(null)}
-          onCancel={() => setFenster(null)}
-        />
-      )}
+      {fenster?.art === 'voll' &&
+        (() => {
+          const f = fenster;
+          const voll = vollText(f.dienst, f.tag, f.von);
+          // Sperre: Liegt an diesem Dienst und Termin ein Entwurf, nimmt „Platz dazunehmen“ nichts an – ChurchTools nummeriert
+          // die Plätze beim Ändern neu, der Entwurf fände seinen Platz nicht mehr (wie beim Regler, `sperreText`).
+          if (f.entwuerfe > 0) {
+            const senden = personen?.sendenOeffnen;
+            return (
+              <ConfirmDialog
+                title={`${f.dienst} ist voll`}
+                message={`${voll} Erst senden oder Entwürfe entfernen.`}
+                confirmLabel={senden ? 'Ansehen und senden' : 'Schließen'}
+                cancelLabel={senden ? 'Schließen' : null}
+                harmlos
+                onConfirm={() => {
+                  setFenster(null);
+                  senden?.();
+                }}
+                onCancel={() => setFenster(null)}
+              >
+                <p className={styles.dazuHinweis}>{sperreText(f.entwuerfe)}</p>
+              </ConfirmDialog>
+            );
+          }
+          const dazunehmen = personen?.dazunehmen;
+          if (!dazunehmen)
+            return (
+              <ConfirmDialog
+                title={`${f.dienst} ist voll`}
+                message={voll}
+                confirmLabel="Schließen"
+                cancelLabel={null}
+                harmlos
+                onConfirm={() => setFenster(null)}
+                onCancel={() => setFenster(null)}
+              />
+            );
+          return (
+            <ConfirmDialog
+              title={f.warnung ? 'Bitte prüfen' : `${f.dienst} ist voll`}
+              message={`${[...(f.warnung?.saetze ?? []), voll].join(' ')} ${
+                f.warnung
+                  ? 'Platz dazunehmen und trotzdem eintragen?'
+                  : 'Platz dazunehmen und eintragen?'
+              }`}
+              confirmLabel={`Platz dazunehmen (${f.von + 1})`}
+              harmlos
+              onConfirm={() => {
+                setFenster(null);
+                void tue(() => dazunehmen(f.spalte, f.zeile, f.person));
+              }}
+              onCancel={() => setFenster(null)}
+            >
+              <p className={styles.dazuHinweis}>
+                {platzDazuText(f.dienst, f.von + 1, f.person.name)}
+              </p>
+            </ConfirmDialog>
+          );
+        })()}
     </>
   );
 }

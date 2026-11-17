@@ -190,7 +190,7 @@ describe('Planen – Ansicht „Personen“', () => {
     await waitFor(() => expect(hat(t, 'Ben Test')).toBe(true));
     expect(lader).toHaveBeenCalledWith([7, 9], '2026-10-18', '2026-10-21');
     // Blöcke in Reihenfolge der Matrix: Ton, Gesang; darin alphabetisch; ein Mitglied ohne Einsatz hat eine Zeile.
-    expect(namen(t).filter((n) => n && !/^(Gäste|Noch offen|Name)$/.test(n))).toEqual([
+    expect(namen(t).filter((n) => n && !/^(Gäste|Plätze|Noch offen|Name)$/.test(n))).toEqual([
       'AnAnna Testauch Gesang', // Ton: Anna (Mitglied beider Gruppen)
       'AnAnna Testauch Ton', // Gesang
       'BeBen Test',

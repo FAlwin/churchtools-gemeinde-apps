@@ -965,3 +965,28 @@ Platz frei** ist, einer eingeteilten Person (zugesagt) im selben Dienst und **ei
 - **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (Regel je Fall, passt zu `platzPerson`, `terminStand`/`gruppenFrei`, `PlanGruppe.frei` bleibt ChurchTools), `shared/dienstplan/personenRaster.test.ts` („Entwürfe zählen mit“), `dienstplaner/src/Planen.p2a2.test.tsx` (Kopf, Balken, Gruppenzeile, Handy, abgesagte Spalte in Matrix und „Personen“, Eintragen/Wegnehmen ändert die Zahlen), `dienstplaner/src/planEntwuerfe.zauber.test.ts`; Gegenproben je Stelle einzeln rot; von Hand bleiben Teilen/PDF und das Aussehen
 - **Historie:** Wunsch 5 (Alwin 16.11.2026), Scheibe P2a-2
 </details>
+
+### TF-ABLAUF-34 · Planen: Personen – Zauberstab je Dienst
+
+**Das brauchst du:** Dienstplaner als Planer; „Planen“ → **Personen**; mindestens zwei Dienste derselben Dienstgruppe (z. B. Ton
+und Licht) mit freien Plätzen an **mehreren** kommenden Terminen, ein **abgesagter** Termin mit freien Plätzen im Zeitraum.
+
+**Das muss passieren:** Der Zauberstab im Dienst-Block schlägt nur für diesen Dienst vor – im selben Fenster wie in der Matrix.
+
+1. Im Kopf des Blocks **Ton** steht rechts neben „N Personen“ ein **Zauberstab**. Nur an Blöcken, in denen es etwas zu füllen
+   gibt und in denen du planen darfst (Gruppen, die du nur ansehen darfst: kein Knopf).
+2. Zauberstab antippen: das Fenster **„Automatische Planung · Ton“** zeigt nur Plätze von **Ton**, an allen gezeigten
+   Terminen – **nicht** den abgesagten, nicht vergangene Termine, nicht Licht.
+3. **Als Entwurf übernehmen:** die Vorschläge stehen in „Personen“ als **Entwurf** (blau, gestrichelt, Stift); „Einsätze“ und
+   „Noch offen“ zählen mit; „Ansehen und senden“ zeigt sie. Gesendet ist noch nichts.
+4. Sind in Ton alle freien Plätze besetzt oder haben einen Entwurf, ist **kein Zauberstab** mehr im Ton-Block; Licht behält seinen.
+5. **Matrix:** der Zauberstab in der Gruppenzeile (und je Termin) arbeitet wie bisher – für alle Dienste der Gruppe.
+6. **Handy:** der Block-Kopf klebt links beim waagerechten Scrollen; der Zauberstab ist erreichbar und öffnet dasselbe Fenster.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/planSicht.ts`
+- **Automatisiert:** ja – `dienstplaner/src/Planen.p2z.test.tsx` (Knopf je Block da/nicht da, Fenster nur dieser Dienst und nur gezeigte, nicht abgesagte/vergangene Termine, Übernehmen legt Entwürfe an und die Zahlen ziehen mit, Handy, Matrix unverändert), `dienstplaner/src/planEntwuerfe.zauber.test.ts` (ein Dienst statt der Gruppe); Gegenproben je Teil einzeln rot; von Hand bleibt das Aussehen im Block-Kopf
+- **Historie:** Wunsch 5 (Alwin 16./17.11.2026), Scheibe P2z
+</details>

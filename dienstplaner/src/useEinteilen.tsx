@@ -187,12 +187,17 @@ export function useEinteilen({
     },
     darfAendern: (zl) => darfAendern(daten, zl),
     ichId: entwuerfe?.ich.personId ?? null,
-    onZauberstab: (idx, g) => {
-      const z = entwuerfe && plan ? zauberZeilen(plan, daten, heute, idx, g) : null;
+    onZauberstab: (idx, g, dienstId) => {
+      const z = entwuerfe && plan ? zauberZeilen(plan, daten, heute, idx, g, dienstId) : null;
       if (!plan || !z || z.zeilen.length === 0) return undefined;
+      // Nur ein Dienst („Personen“): sein Name im Titel, sonst der der Gruppe.
+      const was =
+        dienstId !== undefined
+          ? (g.zeilen.find((x) => x.dienst.id === dienstId)?.dienst.name ?? gruppenName(g))
+          : gruppenName(g);
       return () =>
         setZauber({
-          titel: `Automatische Planung · ${gruppenName(g)}`,
+          titel: `Automatische Planung · ${was}`,
           unter: zauberUnter(plan, idx),
           ...z,
           eingeplant: zauberEingeplant(plan, daten, g),

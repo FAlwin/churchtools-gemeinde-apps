@@ -575,22 +575,23 @@ export function Planen({
         jemand anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die
         Anzahl der Plätze – sofort; dort schaltest du auch Dienste ein und aus oder übernimmst eine
         Vorlage. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der Rangfolge von
-        ChurchTools, ebenfalls als Entwurf. Der Stift neben einem Namen ändert dessen Vorlieben –
-        sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
-        Angefragten eine Mitteilung von ChurchTools. „Personen“ zeigt dieselben Termine als Raster:
-        eine Zeile je Person und Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist –
-        einen Dienst antippen klappt seinen Block zu. Eine leere Zelle anklicken trägt die Person
-        dort als Entwurf ein (auf einen freien Platz des Dienstes) – war sie am Tag schon in einem
-        anderen Dienst oder ist abwesend, fragt ein Fenster vorher nach. Den eigenen Entwurf
-        anklicken nimmt ihn wieder weg; ist der Dienst voll, geht „Platz dazunehmen“ vorerst nur
-        über den Regler in der Matrix; bestehende Einteilungen ändert man noch in der Matrix.
-        Entwürfe zählen schon mit – in „N frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im
-        PDF gilt nur, was in ChurchTools steht. In abgesagten Terminen trägst du nichts ein. Im
-        Filter lässt sich unter jeder Gruppe auch ein einzelner Dienst ausblenden – er fehlt dann in
-        Matrix und „Personen“ und zählt nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das
-        Fokus-Symbol am Namen – am Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines
-        belegten Platzes oder „im Plan zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in
-        Matrix und „Personen“ gelb umrandet; „Fokus aus“ beendet ihn.
+        ChurchTools, ebenfalls als Entwurf; in „Personen“ steht er an jedem Dienst und gilt nur für
+        diesen. Der Stift neben einem Namen ändert dessen Vorlieben – sofort in ChurchTools.
+        Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die Angefragten eine Mitteilung
+        von ChurchTools. „Personen“ zeigt dieselben Termine als Raster: eine Zeile je Person und
+        Dienst, mit Einteilung, Abwesenheit und dem, was noch offen ist – einen Dienst antippen
+        klappt seinen Block zu. Eine leere Zelle anklicken trägt die Person dort als Entwurf ein
+        (auf einen freien Platz des Dienstes) – war sie am Tag schon in einem anderen Dienst oder
+        ist abwesend, fragt ein Fenster vorher nach. Den eigenen Entwurf anklicken nimmt ihn wieder
+        weg; ist der Dienst voll, geht „Platz dazunehmen“ vorerst nur über den Regler in der Matrix;
+        bestehende Einteilungen ändert man noch in der Matrix. Entwürfe zählen schon mit – in „N
+        frei“, „Einsätze“ und „Noch offen“ –, beim Teilen und im PDF gilt nur, was in ChurchTools
+        steht. In abgesagten Terminen trägst du nichts ein. Im Filter lässt sich unter jeder Gruppe
+        auch ein einzelner Dienst ausblenden – er fehlt dann in Matrix und „Personen“ und zählt
+        nicht mit. Mit dem Fokus (Suchfeld „Person hervorheben“, das Fokus-Symbol am Namen – am
+        Handy lang drücken –, „Im Plan hervorheben“ im Fenster eines belegten Platzes oder „im Plan
+        zeigen“ in „Wer kann?“) werden alle Einsätze einer Person in Matrix und „Personen“ gelb
+        umrandet; „Fokus aus“ beendet ihn.
       </p>
       {sendeLeiste}
       {fenster}

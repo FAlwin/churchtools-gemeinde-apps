@@ -71,9 +71,14 @@ export interface Sicht {
   onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
   /**
    * Zauberstab (E5-2): automatische Planung für diese Termine der Gruppe; `undefined`, wo es nichts zu füllen gibt
-   * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf).
+   * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf). Mit `dienstId` nur für diesen
+   * Dienst der Gruppe („Personen“, P2z) – dieselbe Funktion, dasselbe Fenster.
    */
-  onZauberstab: (spalten: number[], gruppe: PlanGruppe) => (() => void) | undefined;
+  onZauberstab: (
+    spalten: number[],
+    gruppe: PlanGruppe,
+    dienstId?: number,
+  ) => (() => void) | undefined;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;

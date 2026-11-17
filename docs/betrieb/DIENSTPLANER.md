@@ -173,6 +173,15 @@ den öffnet man in der Matrix.
   **Vergangene Termine bleiben eintragbar** (Nachtragen); nur der Zauberstab lässt sie zusätzlich aus. Bestehende Einteilungen
   und Entwürfe in abgesagten Terminen bleiben sichtbar; einen belegten Platz antippen (zurückziehen/ersetzen) und einen
   vorhandenen Entwurf in der Matrix öffnen geht weiter.
+- **Zauberstab je Dienst in „Personen“ (P2z):** Im Kopf jedes Dienst-Blocks steht rechts neben „N Personen“ ein Zauberstab
+  („Zauberstab: Ton für alle gezeigten Termine vorschlagen“). Er öffnet **dasselbe Fenster** wie der Zauberstab der Matrix,
+  nur für die freien Plätze **dieses einen Dienstes** an allen gezeigten Terminen (Titel „Automatische Planung · Ton“).
+  Übernommen wird als Entwurf, wie in der Matrix. Es ist **dieselbe Funktion** (`onZauberstab(spalten, gruppe, dienstId?)` →
+  `zauberZeilen`, `planEntwuerfe.ts`): ohne `dienstId` rechnet sie die ganze Gruppe (Matrix), mit `dienstId` einen Dienst
+  („Personen“); die Regeln (abgesagt/vergangen ausgelassen, Plätze mit Entwurf bleiben, Zurückziehen-Plätze nicht gefüllt,
+  Recht und Schublade) sind dieselben. **Kein Knopf**, wo es dort nichts zu füllen gibt – wie in der Matrix (kein freier Platz
+  ohne Entwurf, nichts zu planen, Schublade nur lesbar, nur abgesagte/vergangene Termine frei). Der Block-Kopf klebt am Handy
+  beim Scrollen links, der Knopf bleibt erreichbar.
 
 - **Wer eine Zeile bekommt:** die Mitglieder der ChurchTools-Gruppen des Dienstes (`/services` → `groupIds`, mehrere Gruppen
   werden zusammengeführt – Café hängt an fünf) **plus** wer im Zeitraum dort eingeteilt ist, aber nicht Mitglied ist

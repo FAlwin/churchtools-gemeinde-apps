@@ -86,6 +86,18 @@ beforeEach(() => {
 afterEach(nachbauEnde);
 
 describe('protokollBeginnen', () => {
+  it('Frühere Treffen (v1.0.1): zu einer Sitzung von vor Wochen – Kopf mit genau diesem Termin, Treffen und Beginn', async () => {
+    const frueher = { ...SITZUNG, beginn: '2026-10-04T15:00:00Z' };
+    expect(await beginnen(frueher)).toEqual({ art: 'ok', sitzung: 'neu', hinweis: null });
+    expect(koepfe()).toHaveLength(1);
+    expect(koepfe()[0]).toMatchObject({
+      status: 'entwurf',
+      beginn: '2026-10-04T15:00:00Z',
+      termin: { kalender: 4, id: 114 },
+      treffen: 15,
+    });
+  });
+
   it('legt Teile und Kopf an (Entwurf, mit Termin und Treffen) – das Dokument liest sich gleich zurück', async () => {
     expect(await beginnen()).toEqual({ art: 'ok', sitzung: 'neu', hinweis: null });
     const [kopf] = koepfe();

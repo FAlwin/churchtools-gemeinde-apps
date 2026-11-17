@@ -9,6 +9,7 @@
 import { tagPunkt } from '../ct/datum';
 import { ctAblage, nurText, type Feld, type OeffentlicheEinstellungen } from './formular';
 import { antwortText, listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
+import { adresseText } from './adresse';
 import { euroText, kannEtwasKosten } from './preis';
 import { zahlungTitel } from './zahlung';
 import { EINVERSTANDEN_ZEILE } from './senden';
@@ -53,11 +54,14 @@ export const frageSchluessel = (f: Feld) => `frage:${f.id}`;
 
 /**
  * Fragen mit eigener Spalte in ChurchTools, die das Formular auch stellt – der **eine** Spaltenkatalog der Fragen für
- * Druckliste und Tabelle (U2-1).
+ * Druckliste und Tabelle (U2-1). Dazu die Adresse (F4b): Sie steht an der Person, ist aber eine Frage des Formulars.
  */
 export function fragen(e: OeffentlicheEinstellungen): Feld[] {
   return [...e.formular.person, ...e.formular.anmeldung].filter(
-    (f) => f.zustand !== 'aus' && !nurText(f.typ) && ctAblage(f).ort === 'gruppenfeld',
+    (f) =>
+      f.zustand !== 'aus' &&
+      !nurText(f.typ) &&
+      (ctAblage(f).ort === 'gruppenfeld' || f.typ === 'adresse'),
   );
 }
 
@@ -122,6 +126,8 @@ export function frageAntwort(
 ): string | null {
   const jePerson = e.formular.person.includes(f);
   if (jePerson && !p) return null;
+  // F4b: Die Adresse steht an der Person – mit Person ihre, je Anmeldung die der ersten (alle bekamen dieselbe).
+  if (f.typ === 'adresse') return adresseText((p ?? x.personen[0])?.adresse ?? undefined) || null;
   return antwortText(f, jePerson && p ? p.werte : x.einmal, e.ctFelder);
 }
 

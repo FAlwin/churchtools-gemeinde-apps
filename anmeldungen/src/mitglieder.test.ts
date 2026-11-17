@@ -50,6 +50,8 @@ function antworten(fehler: Record<string, ApiError> = {}, verlauf: unknown[] = V
         lastName: id,
         email: `p${id}@example.org`,
         birthday: '2018-05-01',
+        // F4b: Person 2 hat eine Adresse im Profil, die anderen nicht.
+        ...(id === '2' ? { street: 'Hauptstr. 4', zip: '53797', city: 'Lohmar' } : {}),
       }));
     throw new Error(`unerwartet: ${pfad}`);
   });
@@ -75,6 +77,16 @@ describe('ladeMitglieder', () => {
       `limit=${VERLAUF_MAX}`,
     );
     expect(st?.verlaufGekuerzt).toBe(false);
+  });
+
+  it('F4b: die Adresse aus dem Profil – leer ist null', async () => {
+    ct.ctAlleSeiten.mockResolvedValue([mitglied(2, 'active'), mitglied(3, 'active')]);
+    antworten({}, []);
+    const st = await ladeMitglieder(165);
+    expect(st?.mitglieder.map((m) => [m.personId, m.adresse])).toEqual([
+      [2, { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' }],
+      [3, null],
+    ]);
   });
 
   it('Personen in Paketen zu 50', async () => {

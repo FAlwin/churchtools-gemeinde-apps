@@ -25,6 +25,7 @@ import {
   type ProtokollTeil,
 } from '@shared/protokolle/speicher';
 import { zeitAusTermin } from '@shared/protokolle/bearbeiten';
+import { ohneProtokoll, ohneProtokollZeitraum, type Zeitraum } from '@shared/protokolle/fruehere';
 import {
   minute,
   sitzungenOrdnen,
@@ -90,20 +91,25 @@ async function termineMitAnfrage(kalender: number, von: string, bis: string): Pr
 }
 
 /**
- * **Termine hinter dem Lesefenster, an denen ein Protokoll hängt** (geplant oder begonnen) – sonst kämen solche
+ * **Termine außerhalb des Lesefensters, an denen ein Protokoll hängt** (geplant oder begonnen) – sonst kämen solche
  * Sitzungen ohne Einladungen und Zusagen (Kasten „Nächste Sitzung“, Startseite; bemerkt beim Prüfen von K2b in der
- * Test-Instanz 29.10.2026). Je Termin einmal gelesen; ein gelöschter Termin (404) fällt weg, alles andere wird geworfen
+ * Test-Instanz 29.10.2026). **Auch vor dem Fenster** (seit „Frühere Treffen“, v1.0.1): Ein Protokoll, das zu einem
+ * vergangenen Treffen begonnen wurde, braucht die Antworten auf die Einladung – die Anwesenheit wird daraus
+ * vorbelegt (`FestePunkteRahmen`), und das geschieht nur einmal je Treffen. Je Termin einmal gelesen; ein gelöschter Termin (404) fällt weg, alles andere wird geworfen
  * wie beim Kalender. Was schon im Fenster liegt (gleiche ID, gleiche Minute), kommt nicht doppelt.
  */
-async function termineJenseits(
+async function termineAusserhalb(
   koepfe: readonly ProtokollKopf[],
+  von: string,
   bis: string,
   zeitzone: string,
   imFenster: readonly Termin[],
 ): Promise<Termin[]> {
-  const hinten = koepfe.filter(
-    (k) => k.termin !== null && k.status !== 'frei' && tagAusIso(k.beginn, zeitzone) > bis,
-  );
+  const hinten = koepfe.filter((k) => {
+    if (k.termin === null || k.status === 'frei') return false;
+    const tag = tagAusIso(k.beginn, zeitzone);
+    return tag < von || tag > bis;
+  });
   const gelesen = new Map<
     string,
     { roh: Awaited<ReturnType<typeof terminLaden>>; anfragen: Anfrage[] } | null
@@ -146,7 +152,8 @@ async function termineJenseits(
 /**
  * Gruppentreffen von `von` bis einschließlich `bis` (`JJJJ-MM-TT`); abgesagte zählen nicht. `null` = nicht freigegeben
  * (403). ChurchTools zählt `end_date` **nicht** mit (gemessen 28.10.2026: `start_date` = `end_date` liefert nichts) –
- * deshalb wird ein Tag weiter gefragt. Die eine Stelle dafür: „Kommend“ und das Nachlesen in S5-2 (`planen.ts`).
+ * deshalb wird ein Tag weiter gefragt. Die eine Stelle dafür: „Kommend“, das Nachlesen in S5-2 (`planen.ts`) und
+ * „Frühere Treffen“. `abgeschlossen` (nur gesetzt, wenn ja): `isCompleted` – dann steht die Anwesenheit fest.
  */
 export async function treffenLesen(
   gruppe: number,
@@ -155,10 +162,16 @@ export async function treffenLesen(
 ): Promise<Treffen[] | null> {
   try {
     const roh =
-      (await ctDaten<{ id: number; startDate: string; isCanceled?: boolean }[]>(
-        `/groups/${gruppe}/meetings?start_date=${von}&end_date=${plusTage(bis, 1)}`,
-      )) ?? [];
-    return roh.filter((t) => !t.isCanceled).map((t) => ({ id: t.id, beginn: t.startDate }));
+      (await ctDaten<
+        { id: number; startDate: string; isCanceled?: boolean; isCompleted?: boolean }[]
+      >(`/groups/${gruppe}/meetings?start_date=${von}&end_date=${plusTage(bis, 1)}`)) ?? [];
+    return roh
+      .filter((t) => !t.isCanceled)
+      .map((t) => ({
+        id: t.id,
+        beginn: t.startDate,
+        ...(t.isCompleted === true ? { abgeschlossen: true } : {}),
+      }));
   } catch (e) {
     if (e instanceof KeinSpeicherRecht) return null;
     throw e;
@@ -197,7 +210,10 @@ export async function ladeSitzungen(
     kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis),
     treffenLesen(gruppe.id, heute, bis),
   ]);
-  const termine = [...imFenster, ...(await termineJenseits(koepfe, bis, zeitzone, imFenster))];
+  const termine = [
+    ...imFenster,
+    ...(await termineAusserhalb(koepfe, heute, bis, zeitzone, imFenster)),
+  ];
   return {
     ...sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone }),
     teile,
@@ -205,6 +221,73 @@ export async function ladeSitzungen(
     punkte,
     treffenNichtFreigegeben: treffen === null,
   };
+}
+
+/** Die Protokoll-Köpfe einer Gruppe – aus den geladenen Sitzungen (jeder Kopf ist dort „Kommend“ oder „Protokoll“). */
+export function koepfeAus(daten: {
+  kommend: readonly Sitzung[];
+  protokolle: readonly Sitzung[];
+}): ProtokollKopf[] {
+  return [...daten.kommend, ...daten.protokolle].flatMap((s) => (s.kopf ? [s.kopf] : []));
+}
+
+/**
+ * **Sitzungen ohne Protokoll in einem Zeitraum** (v1.0.1, „Frühere Treffen“) – dieselben Bausteine wie `ladeSitzungen`
+ * (`termineMitAnfrage`, `treffenLesen`, die Zusammenführung), nur für beliebige Tage. `koepfe`: die der Gruppe
+ * (`koepfeAus`) – ein Treffen mit Kopf, egal in welchem Status, kommt nicht. Jeder Fehler wird geworfen
+ * (vorübergehend ist nicht leer); nicht freigegebene Gruppentreffen (403) werden gemeldet wie in `ladeSitzungen`.
+ */
+export async function sitzungenOhneProtokoll(q: {
+  gruppe: number;
+  /** Kalender der Gruppe – `null`: keiner gewählt, dann zählen nur Gruppentreffen. */
+  kalender: number | null;
+  koepfe: readonly ProtokollKopf[];
+  zeitraum: Zeitraum;
+  zeitzone?: string;
+}): Promise<{ sitzungen: Sitzung[]; treffenNichtFreigegeben: boolean }> {
+  const zeitzone = q.zeitzone ?? gemeindeZeitzone();
+  const { von, bis } = q.zeitraum;
+  const [termine, treffen] = await Promise.all([
+    q.kalender === null ? Promise.resolve([]) : termineMitAnfrage(q.kalender, von, bis),
+    treffenLesen(q.gruppe, von, bis),
+  ]);
+  return {
+    sitzungen: ohneProtokoll({
+      termine,
+      treffen: treffen ?? [],
+      koepfe: q.koepfe,
+      zeitraum: q.zeitraum,
+      zeitzone,
+    }),
+    treffenNichtFreigegeben: treffen === null,
+  };
+}
+
+/**
+ * **Der Block „Noch ohne Protokoll“**: seit dem letzten freigegebenen Protokoll (sonst 28 Tage), bis gestern
+ * (`ohneProtokollZeitraum`). Nichts zu schauen → leer, ohne ChurchTools zu fragen.
+ */
+export async function sitzungenNochOhneProtokoll(
+  gruppe: { id: number },
+  daten: Pick<GruppenSitzungen, 'kommend' | 'protokolle' | 'kalender'>,
+  zeitzone = gemeindeZeitzone(),
+  jetzt = new Date(),
+): Promise<Sitzung[]> {
+  const zeitraum = ohneProtokollZeitraum({
+    protokolle: daten.protokolle,
+    heute: heuteImKalender(jetzt, zeitzone),
+    zeitzone,
+  });
+  if (!zeitraum) return [];
+  return (
+    await sitzungenOhneProtokoll({
+      gruppe: gruppe.id,
+      kalender: daten.kalender,
+      koepfe: koepfeAus(daten),
+      zeitraum: { von: zeitraum.von, bis: zeitraum.bis },
+      zeitzone,
+    })
+  ).sitzungen;
 }
 
 /**

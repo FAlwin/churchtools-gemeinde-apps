@@ -580,7 +580,7 @@ export function App() {
         />
       )}
       {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'keine' && (
-        <NichtEingerichtet />
+        <NichtEingerichtet start={start} />
       )}
       {start && ansicht === 'kinder' && rechteVerwalten && einrichtungLesen?.art === 'unlesbar' && (
         <EinrichtungUnlesbar />

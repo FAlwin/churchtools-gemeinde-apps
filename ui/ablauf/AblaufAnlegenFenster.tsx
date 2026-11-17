@@ -4,6 +4,7 @@ import { startQuelle } from '@shared/ct/ablaufVorschlaege';
 import { FensterKnopf } from '../fenster/FensterKnopf';
 import { Sheet } from '../fenster/Sheet';
 import { Icon, type IconName } from '../icons/icons';
+import { punkteText } from './vorlagenMeta';
 import styles from './AblaufAnlegenFenster.module.scss';
 
 /** So viele frühere Veranstaltungen stehen zuerst da; der Rest hinter „Weitere anzeigen". */
@@ -116,7 +117,7 @@ export function AblaufAnlegenFenster({
                 an={quelle.vorlageId === v.id}
                 onWaehle={() => waehle({ art: 'vorlage', vorlageId: v.id })}
                 titel={v.name}
-                meta={v.punkte === 1 ? '1 Punkt' : `${v.punkte} Punkte`}
+                meta={punkteText(v.punkte)}
               />
             ))}
         </Option>
@@ -166,7 +167,8 @@ export function AblaufAnlegenFenster({
   );
 }
 
-function Option({
+/** Eine Wahl-Karte (Kopf zum Anwählen, darunter ihr Inhalt) – auch „Als Vorlage …“ (E10-V5) nimmt sie. */
+export function Option({
   icon,
   titel,
   an,
@@ -193,7 +195,8 @@ function Option({
   );
 }
 
-function Eintrag({
+/** Eine Zeile mit Auswahlpunkt in einer Wahl-Karte. */
+export function Eintrag({
   titel,
   meta,
   an,

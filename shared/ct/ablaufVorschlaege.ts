@@ -18,10 +18,10 @@ export interface VorschlagsTermin {
  * Vorlagen für einen Termin: die seines Kalenders zuerst, danach alle übrigen – jeweils in der
  * Reihenfolge, in der sie kommen (nach Namen sortiert, `vorlagenAus`).
  */
-export function vorlagenFuer(
-  vorlagen: AblaufVorlage[],
+export function vorlagenFuer<T extends AblaufVorlage>(
+  vorlagen: T[],
   kalenderId?: number | null,
-): AblaufVorlage[] {
+): T[] {
   if (kalenderId === undefined || kalenderId === null) return vorlagen;
   return [
     ...vorlagen.filter((v) => v.kalenderId === kalenderId),

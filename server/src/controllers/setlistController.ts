@@ -38,6 +38,8 @@ import {
   setAblaufNeu,
   createAblauf,
   createVorlage,
+  createVorlageAusTermin,
+  replaceVorlageAusTermin,
   deleteVorlage,
   renameVorlage,
 } from '../services/ctWrite.js';
@@ -159,6 +161,31 @@ export async function putVorlageCtrl(req: Request, res: Response): Promise<void>
 /** DELETE /api/ablauf-vorlagen/:vorlageId – löschen (kein Papierkorb; „schon weg“ ist kein Fehler, E10-V3b). */
 export async function deleteVorlageCtrl(req: Request, res: Response): Promise<void> {
   await deleteVorlage(ctCookie(req), idSchema.parse(req.params.vorlageId));
+  res.json({ ok: true });
+}
+
+/** POST /api/services/:eventId/agenda/als-vorlage – den Ablauf eines Termins als neue Vorlage speichern (E10-V5). */
+export async function postVorlageAusTerminCtrl(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const id = await createVorlageAusTermin(ctCookie(req), eventId, vorlageNeuSchema.parse(req.body));
+  res.json({ id });
+}
+
+/**
+ * Der Rumpf von „Vorlage ersetzen“: `gesehen` = der Änderungsstempel (`meta.modifiedDate`), den das Fenster kannte. Eine
+ * großzügige Grenze – der Kern vergleicht den Text unverändert.
+ */
+const vorlageErsetzenSchema = z.object({ gesehen: z.string().max(60).optional() });
+
+/**
+ * PUT /api/ablauf-vorlagen/:vorlageId/aus-termin/:eventId – eine Vorlage mit dem Ablauf eines Termins ersetzen (E10-V5):
+ * 412, wenn sie sich seit `gesehen` geändert hat, 423, wenn sie gesperrt ist.
+ */
+export async function putVorlageAusTerminCtrl(req: Request, res: Response): Promise<void> {
+  const vorlageId = idSchema.parse(req.params.vorlageId);
+  const eventId = idSchema.parse(req.params.eventId);
+  const { gesehen } = vorlageErsetzenSchema.parse(req.body);
+  await replaceVorlageAusTermin(ctCookie(req), vorlageId, eventId, gesehen);
   res.json({ ok: true });
 }
 

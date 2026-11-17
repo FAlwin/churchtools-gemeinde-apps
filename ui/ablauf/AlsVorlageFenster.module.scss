@@ -1,0 +1,41 @@
+// „Als Vorlage speichern“ (E10-V5, Entwurf `e10-vorlagen.html` Abschnitt 4) – die Wahl-Karten kommen aus
+// `AblaufAnlegenFenster.module.scss`, hier stehen nur die Hinweise unter den Karten.
+
+// Blauer Info-Kasten: was in die Vorlage übernommen wird.
+.info {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+  border-radius: var(--r-ctrl);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
+  font-size: 13px;
+  color: var(--text);
+}
+
+// Roter Hinweis: die Vorlage wird überschrieben – dazu der rote Knopf.
+.warnung {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--red);
+  border-radius: var(--r-ctrl);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  font-size: 13px;
+  color: var(--red);
+}
+
+.hinweis {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+
+.nochmal {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--blue-ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

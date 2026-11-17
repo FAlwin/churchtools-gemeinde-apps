@@ -10,14 +10,10 @@ import type { Kalender } from '@shared/types/index';
 import { ConfirmDialog } from '../fenster/ConfirmDialog';
 import { FensterKnopf } from '../fenster/FensterKnopf';
 import { Sheet } from '../fenster/Sheet';
+import { meldung } from './vorlagenMeta';
 import styles from './VorlagenFenster.module.scss';
 
-/** Was schiefging, als Text – `Error.message` kommt aus dem Kern (403, 423, 412 …). */
-function meldung(e: unknown, sonst: string): string {
-  return e instanceof Error && e.message ? e.message : sonst;
-}
-
-function NameFeld({
+export function NameFeld({
   wert,
   onChange,
   fehler,
@@ -44,6 +40,41 @@ function NameFeld({
         onChange={(e) => onChange(e.target.value)}
       />
       {hinweis && <small className={styles.klein}>{hinweis}</small>}
+    </label>
+  );
+}
+
+/** Die Auswahl des Kalenders – „Neue Vorlage“ und „Als Vorlage …“ (E10-V5) nehmen dasselbe Feld. */
+export function KalenderFeld({
+  kalender,
+  wert,
+  onChange,
+  beschaeftigt,
+}: {
+  /** Schon gefiltert: nur Kalender, in denen man Vorlagen bearbeiten darf. */
+  kalender: readonly Kalender[];
+  wert: number | null;
+  onChange: (kalenderId: number) => void;
+  beschaeftigt: boolean;
+}) {
+  return (
+    <label className={styles.feld}>
+      <span className={styles.lab}>Kalender</span>
+      <select
+        className={styles.eingabe}
+        value={wert ?? ''}
+        disabled={beschaeftigt}
+        onChange={(e) => onChange(Number(e.target.value))}
+      >
+        {kalender.map((k) => (
+          <option key={k.id} value={k.id}>
+            {k.name}
+          </option>
+        ))}
+      </select>
+      <small className={styles.klein}>
+        Die Vorlage wird bei Terminen dieses Kalenders angeboten.
+      </small>
     </label>
   );
 }
@@ -110,24 +141,12 @@ export function NeueVorlageFenster({
           fehler={nameFehler}
           beschaeftigt={laeuft}
         />
-        <label className={styles.feld}>
-          <span className={styles.lab}>Kalender</span>
-          <select
-            className={styles.eingabe}
-            value={kalenderId ?? ''}
-            disabled={laeuft}
-            onChange={(e) => setKalenderId(Number(e.target.value))}
-          >
-            {kalender.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.name}
-              </option>
-            ))}
-          </select>
-          <small className={styles.klein}>
-            Die Vorlage wird bei Terminen dieses Kalenders angeboten.
-          </small>
-        </label>
+        <KalenderFeld
+          kalender={kalender}
+          wert={kalenderId}
+          onChange={setKalenderId}
+          beschaeftigt={laeuft}
+        />
         {/* Enter im Namensfeld legt an – ohne verstecktes Absenden-Knöpfchen geht das in manchen Browsern nicht. */}
         <button type="submit" hidden />
       </form>

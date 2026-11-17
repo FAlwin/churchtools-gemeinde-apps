@@ -14,6 +14,8 @@ const api = vi.hoisted(() => ({
   vorlageAnlegen: vi.fn(),
   vorlageUmbenennen: vi.fn(),
   vorlageLoeschen: vi.fn(),
+  vorlageAusTermin: vi.fn(),
+  vorlageMitTerminErsetzen: vi.fn(),
   reorderAgenda: vi.fn(),
   createAgendaItem: vi.fn(),
   updateAgendaItem: vi.fn(),
@@ -23,7 +25,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('../services/churchtoolsApi', () => api);
 
-const { vorlagenZugriffAus } = await import('./useVorlagenZugriff');
+const { vorlagenZugriffAus, alsVorlageZugriffAus } = await import('./useVorlagenZugriff');
 
 const ZETTEL: GeloeschterPunkt = {
   felder: {
@@ -141,5 +143,37 @@ describe('Die Punkte einer Vorlage', () => {
 
   it('die Aktionen kennen kein Auge – eine Vorlage hat keinen Termin', () => {
     expect('setWeggelassen' in vorlagenZugriffAus(qc).aktionen(5, vi.fn())).toBe(false);
+  });
+});
+
+describe('„Als Vorlage …“ im Ablauf eines Termins (E10-V5)', () => {
+  it('Lesen: die Liste frisch über die Weiche – verwirft nichts', async () => {
+    await alsVorlageZugriffAus(qc, 9).stand();
+    expect(api.getVorlagenStand).toHaveBeenCalledTimes(1);
+    expect(auswahlVerworfen()).toBe(0);
+  });
+
+  it('als neue Vorlage: Termin und Daten an die Weiche, liefert die ID, verwirft die Auswahl in „Ablauf anlegen“', async () => {
+    api.vorlageAusTermin.mockResolvedValue(77);
+    await expect(
+      alsVorlageZugriffAus(qc, 9).speichern({ name: 'Neu', kalenderId: 2 }),
+    ).resolves.toBe(77);
+    expect(api.vorlageAusTermin).toHaveBeenCalledWith(9, { name: 'Neu', kalenderId: 2 });
+    expect(auswahlVerworfen()).toBe(1);
+  });
+
+  it('ersetzen: Vorlage, Termin und `gesehen` in der richtigen Reihenfolge, verwirft die Auswahl', async () => {
+    await alsVorlageZugriffAus(qc, 9).ersetzen(5, '2026-11-13T10:00:00Z');
+    expect(api.vorlageMitTerminErsetzen).toHaveBeenCalledWith(5, 9, '2026-11-13T10:00:00Z');
+    expect(auswahlVerworfen()).toBe(1);
+  });
+
+  it('auch nach einem gescheiterten Versuch wird verworfen – ein „nicht vollständig“ hat die Vorlage trotzdem verändert', async () => {
+    api.vorlageAusTermin.mockRejectedValue(new Error('502'));
+    api.vorlageMitTerminErsetzen.mockRejectedValue(new Error('502'));
+    const z = alsVorlageZugriffAus(qc, 9);
+    await expect(z.speichern({ name: 'Neu', kalenderId: 2 })).rejects.toThrow('502');
+    await expect(z.ersetzen(5)).rejects.toThrow('502');
+    expect(auswahlVerworfen()).toBe(2);
   });
 });

@@ -24,6 +24,8 @@ import {
   postVorlageCtrl,
   putVorlageCtrl,
   deleteVorlageCtrl,
+  postVorlageAusTerminCtrl,
+  putVorlageAusTerminCtrl,
   postAblaufCtrl,
   getAblaufBestandCtrl,
   putAblaufNeuCtrl,
@@ -82,6 +84,12 @@ router.post('/ablauf-vorlagen', asyncHandler(postVorlageCtrl));
 router.get('/ablauf-vorlagen/:vorlageId', asyncHandler(getVorlageCtrl));
 router.put('/ablauf-vorlagen/:vorlageId', asyncHandler(putVorlageCtrl));
 router.delete('/ablauf-vorlagen/:vorlageId', asyncHandler(deleteVorlageCtrl));
+// „Als Vorlage …“ im Ablauf eines Termins (E10-V5).
+router.post('/services/:eventId/agenda/als-vorlage', asyncHandler(postVorlageAusTerminCtrl));
+router.put(
+  '/ablauf-vorlagen/:vorlageId/aus-termin/:eventId',
+  asyncHandler(putVorlageAusTerminCtrl),
+);
 router.post('/services/:eventId/agenda', asyncHandler(postAblaufCtrl));
 router.get('/services/:eventId/agenda/bestand', asyncHandler(getAblaufBestandCtrl));
 router.put('/services/:eventId/agenda/neu', asyncHandler(putAblaufNeuCtrl));

@@ -99,6 +99,15 @@ describe('vorlagenListeAus', () => {
     expect(g.vorlagen[0].geaendert).toBe('2026-11-12');
   });
 
+  it('der Änderungsstempel kommt UNVERÄNDERT mit – er geht als `gesehen` an „Vorlage ersetzen“ (E10-V5); ohne Stempel null', () => {
+    const mit = vorlageAus(5, 'Gottesdienst', 1, '2026-11-11T23:30:00Z');
+    const ohne = vorlageAus(6, 'Frei', 1);
+    const [g] = vorlagenListeAus([mit, ohne], [{ id: 1, name: 'G' }], 'Europe/Berlin');
+    const nach = (id: number) => g.vorlagen.find((v) => v.id === id);
+    expect(nach(5)?.modifiedDate).toBe('2026-11-11T23:30:00Z');
+    expect(nach(6)?.modifiedDate).toBeNull();
+  });
+
   it('ohne Stand kein Tag, ohne Kalender ein Band „Ohne Kalender“ ganz unten, unbekannter Kalender als Nummer', () => {
     const roh = [
       vorlageAus(1, 'Frei', null),

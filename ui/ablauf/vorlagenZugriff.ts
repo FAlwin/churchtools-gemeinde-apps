@@ -25,3 +25,18 @@ export interface VorlagenZugriff {
   /** Löscht die Vorlage (kein Papierkorb – die Nachfrage gehört den Bausteinen). „Schon weg“ ist kein Fehler. */
   loeschen: (vorlageId: number) => Promise<void>;
 }
+
+/**
+ * **Was „Als Vorlage …“ im Ablauf eines Termins von seiner App braucht** (E10-V5) – für genau diesen Termin. Wie
+ * `VorlagenZugriff` kennt der Baustein (`AlsVorlageFenster`) weder ChurchTools noch den Weg dorthin; die Regeln stehen im
+ * Kern (`@shared/ct/ablaufVorlagen`: `ablaufAlsVorlage`, `vorlageErsetzen`). Alle Funktionen werfen bei Fehler mit der
+ * Meldung des Kerns (403 `VORLAGE_VERWEIGERT`, 423 `VORLAGE_GESPERRT`, 412 „woanders geändert“, 502 „nicht vollständig …“).
+ */
+export interface AlsVorlageZugriff {
+  /** Die Liste samt Kalendern – **frisch**, mit dem Änderungsstempel je Vorlage (`VorlagenEintrag.modifiedDate`). */
+  stand: () => Promise<VorlagenStand>;
+  /** Den Ablauf als neue Vorlage speichern; liefert ihre ID. */
+  speichern: (daten: { name: string; kalenderId: number }) => Promise<number>;
+  /** Eine vorhandene Vorlage mit dem Ablauf ersetzen; `gesehen` = Stempel, den das Fenster kannte (sonst 412). */
+  ersetzen: (vorlageId: number, gesehen?: string) => Promise<void>;
+}

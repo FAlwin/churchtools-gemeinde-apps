@@ -81,7 +81,8 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
   per Ziehen sortieren, Vorlauf vor dem Beginn festlegen, Ablauf abschließen und wieder öffnen;
   Löschen und Verschieben lassen sich kurz danach **rückgängig** machen
 - **Ablaufvorlagen** (unter **Mehr → Abläufe**): Vorlagen nach Kalender ansehen; mit dem ChurchTools-Recht „Ablaufvorlagen
-  bearbeiten“ (je Kalender) anlegen, füllen, umbenennen und löschen – dieselbe Seite wie im Dienstplaner
+  bearbeiten“ (je Kalender) anlegen, füllen, umbenennen und löschen – dieselbe Seite wie im Dienstplaner; im Bearbeiten-Modus eines
+  Termin-Ablaufs speichert **„Als Vorlage …“** den Ablauf als neue Vorlage oder ersetzt eine vorhandene
 - **Chord Charts als PDF** (SongSelect-Look) mit automatischer Transponierung, Kapo, Spalten- und
   Schrift-Optionen; im Querformat zwei Seiten nebeneinander, als PDF teil-/druckbar
 - **Alle Lieder** durchsuchbar inkl. Nutzungs-Statistik (Häufigkeit / zuletzt gespielt, mit

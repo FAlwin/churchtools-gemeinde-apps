@@ -21,6 +21,7 @@ import {
 import type { Plan, PlanSpalte } from '@shared/dienstplan/plan';
 import { GESPERRT } from './ablaufAktionen';
 import { ablaufBearbeitbar } from './start';
+import { punkteText } from '@ui/ablauf/vorlagenMeta';
 import { TerminAblauf } from './TerminAblauf';
 import type { AblaufZustand, MatrixAblauf } from './useMatrixAblauf';
 import planStyles from './Planen.module.scss';
@@ -48,7 +49,7 @@ function anzahlText(z: AblaufZustand | undefined): string {
   if (z.art === 'fehler') return 'nicht geladen';
   if (z.ablauf === null) return 'kein Ablauf';
   const n = z.ablauf.items.length;
-  return n === 1 ? '1 Punkt' : `${n} Punkte`;
+  return punkteText(n);
 }
 
 /** Darf man den Ablauf dieses Termins bearbeiten? Abgesagte Termine stehen nur zum Ansehen da (Entwurf E6-6). */

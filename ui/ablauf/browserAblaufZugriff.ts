@@ -5,11 +5,17 @@
  * einzelnen Vorgänge über ihre Weiche (`churchtoolsApi.ts`), damit der Server-Betrieb denselben Zugriff hat.
  */
 import type { AblaufAktionen, VorlagenAktionen } from './useAblaufBearbeiten';
-import type { VorlagenZugriff } from './vorlagenZugriff';
+import type { AlsVorlageZugriff, VorlagenZugriff } from './vorlagenZugriff';
 import { ApiError } from '../ct/fehler';
 import { browserSchreiber } from '../ct/schreiber';
 import { ctDaten } from '../ct/verbindung';
-import { vorlageAnlegen, vorlageLoeschen, vorlageUmbenennen } from '@shared/ct/ablaufVorlagen';
+import {
+  ablaufAlsVorlage,
+  vorlageAnlegen,
+  vorlageErsetzen,
+  vorlageLoeschen,
+  vorlageUmbenennen,
+} from '@shared/ct/ablaufVorlagen';
 import { vorlagenStandAusRohdaten } from '@shared/ct/ablaufVorlagenListe';
 import {
   ablaufUmsortieren,
@@ -83,3 +89,16 @@ export const browserVorlagenZugriff: VorlagenZugriff = {
   umbenennen: (id, name) => vorlageUmbenennen(browserSchreiber, id, name),
   loeschen: (id) => vorlageLoeschen(browserSchreiber, id),
 };
+
+/**
+ * „Als Vorlage …“ für den Ablauf eines Termins (E10-V5) – dieselbe Verdrahtung auf den Kern für Dienstplaner und
+ * Musik-App-Erweiterung. Der Termin bleibt dem Aufrufer; der Kern liest den Ablauf selbst frisch.
+ */
+export function browserAlsVorlageZugriff(eventId: number): AlsVorlageZugriff {
+  return {
+    stand: browserVorlagenStand,
+    speichern: (daten) => ablaufAlsVorlage(browserSchreiber, eventId, daten),
+    ersetzen: (vorlageId, gesehen) =>
+      vorlageErsetzen(browserSchreiber, vorlageId, eventId, gesehen),
+  };
+}

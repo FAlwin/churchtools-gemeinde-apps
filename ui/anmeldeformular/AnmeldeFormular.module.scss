@@ -1193,3 +1193,13 @@
 .pv .freiZeile .freiText {
   flex: 1 1 160px;
 }
+
+// ── F5b: Links im Hinweistext (Entwurf f5b-links-v1) ──
+.pv .hinweisText {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.pv .hinweisText a {
+  color: var(--p-accent-text);
+  text-decoration: underline;
+}

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { nurText, type Antwort, type Feld } from '@shared/anmeldung/formular';
 import { wahlAntworten, type AntwortZustand } from '@shared/anmeldung/bedingungen';
 import { freiGewaehlt, freiMitText, freiName } from '@shared/anmeldung/freieAntwort';
+import { hinweisTeile } from '@shared/anmeldung/hinweisLinks';
 import { datumText } from '@shared/ct/datum';
 import { AdresseEingabe, ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
@@ -86,7 +87,20 @@ export function FeldEingabe({
     return (
       <div className={`${s.pf} ${s.infofield}`}>
         <b>{f.frage}</b>
-        {f.hilfe && <span>{f.hilfe}</span>}
+        {/* F5b: Links im Hinweistext (`[Text](https://…)`) – öffnen in einem neuen Tab. */}
+        {f.hilfe && (
+          <span className={s.hinweisText}>
+            {hinweisTeile(f.hilfe).map((t, i) =>
+              t.art === 'text' ? (
+                t.text
+              ) : (
+                <a key={i} href={t.adresse} target="_blank" rel="noopener noreferrer">
+                  {t.text}
+                </a>
+              ),
+            )}
+          </span>
+        )}
       </div>
     );
 

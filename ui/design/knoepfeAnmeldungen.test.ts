@@ -47,6 +47,8 @@ const ERLAUBT: Record<string, string> = {
   'k.antwortNeu': 'Textlink „＋ Antwort“',
   'k.bedPlus': 'Textlink „+ Bedingung“ im Bedingungs-Fenster (F1c)',
   'v.zurueck': '„‹ Übersicht“ / „‹ Vorbereiten“',
+  'k.linkKnopf':
+    'Werkzeugknopf „Link“ über dem Hinweistext (F5b) – wie ein Format-Knopf im Textfeld, aus nur bei leerer Markierung',
   // Besondere Lagen.
   'k.bildKnopf': 'liegt über dem Titelbild',
   'k.info': 'Symbol „i“ neben einer Frage',

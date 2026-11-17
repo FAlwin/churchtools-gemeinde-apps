@@ -340,6 +340,9 @@ describe('Schritt „Vorschau“', () => {
     expect(
       await screen.findByText(/1 Kind ohne Geburtstag wechselt nie von selbst\./),
     ).toBeTruthy();
+    // Einzahl: „Es steht …“, nicht „Sie stehen …“.
+    expect(screen.getByText(/Es steht unter „Daten pflegen“\./)).toBeTruthy();
+    expect(screen.queryByText(/Sie stehen unter „Daten pflegen“/)).toBeNull();
   });
 
   it('„Das legt die Erweiterung in ChurchTools an“: aus dem Plan – beim Ändern ist das meiste „vorhanden“', async () => {

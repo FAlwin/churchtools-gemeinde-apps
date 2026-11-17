@@ -129,6 +129,10 @@ function gut(): EinrichtungDaten {
       [11, ok([routine(U1, 11)])],
       [12, ok([routine(U2, 12)])],
     ]),
+    sichtbarkeit: new Map([
+      [11, ok('restricted')],
+      [12, ok('restricted')],
+    ]),
   };
 }
 
@@ -340,6 +344,44 @@ describe('Zeile Wechsel-Gruppen', () => {
       art: 'warn',
       text: `${wechselGruppenName(U2)}: hängt nicht unter „Kinder & Jugend“`,
     });
+  });
+});
+
+describe('Zeile Wechsel-Gruppen – Sichtbarkeit', () => {
+  const mitSicht = (w11: Gelesen<string>, w12: Gelesen<string> = ok('restricted')) => {
+    const d = gut();
+    d.sichtbarkeit = new Map([
+      [11, w11],
+      [12, w12],
+    ]);
+    return d;
+  };
+
+  it('eine „versteckte“ Wechsel-Gruppe → ⚠ mit dem Weg zur Lösung', () => {
+    const z = zeile(zeilen(mitSicht(ok('hidden'))), 'wechselGruppen');
+    expect(z).toEqual({
+      art: 'warn',
+      text: `${wechselGruppenName(U1)}: versteckt – Leitungen sehen sie nicht; „Stufen ändern → Änderungen schreiben“ stellt sie um`,
+    });
+  });
+
+  it('beide eingeschränkt → ✓', () => {
+    expect(zeile(zeilen(mitSicht(ok('restricted'))), 'wechselGruppen').art).toBe('ok');
+  });
+
+  it('nicht lesbar → „nicht prüfbar“, nie ⚠', () => {
+    expect(zeile(zeilen(mitSicht({ ok: false })), 'wechselGruppen')).toEqual({
+      art: 'nichtPruefbar',
+      text: 'nicht prüfbar – die Sichtbarkeit einer Gruppe ließ sich gerade nicht lesen',
+    });
+    expect(zeile(zeilen(mitSicht({ ok: false }, { ok: false })), 'wechselGruppen')).toEqual({
+      art: 'nichtPruefbar',
+      text: 'nicht prüfbar – die Sichtbarkeit von 2 Gruppen ließ sich gerade nicht lesen',
+    });
+  });
+
+  it('ein echtes Problem geht vor „nicht prüfbar“', () => {
+    expect(zeile(zeilen(mitSicht({ ok: false }, ok('hidden'))), 'wechselGruppen').art).toBe('warn');
   });
 });
 

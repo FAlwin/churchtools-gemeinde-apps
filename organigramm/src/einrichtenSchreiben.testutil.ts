@@ -74,6 +74,7 @@ interface Rumpf {
   sortKey?: number;
   groupTypeId: number;
   parentGroupId: number;
+  visibility: string;
   authId: number;
   dataId?: number[];
   domainContext: { groupId: number; groupTypeRoleId: number; groupMemberStatus: string };
@@ -105,6 +106,12 @@ export class FakeCt {
   routinen = new Map<number, Eintrag[]>();
   regeln = new Map<number, unknown[]>();
   status = new Map<number, string>();
+  /** Sichtbarkeit je Gruppe (`settings.visibility`); fehlt der Eintrag, zeigt `GET /groups/{id}` keine. */
+  sichtbarkeit = new Map<number, string>();
+  /** ChurchTools legt neue Gruppen mit dieser Sichtbarkeit an, gleich was verlangt wurde (`null`: wie verlangt). */
+  neueSichtbarkeit: string | null = null;
+  /** `GET /groups/{id}` scheitert (z. B. 403) – nur das Lesen der Gruppe, nicht die Hierarchie. */
+  gruppeNichtLesbar: ((id: number) => Error | undefined) | null = null;
   private naechste = 100;
   /** Jeder schreibende Aufruf in der Reihenfolge – so lässt sich die Reihenfolge des Plans prüfen. */
   aufrufe: Aufruf[] = [];
@@ -193,7 +200,15 @@ export class FakeCt {
       const id = Number(m[1]);
       const g = this.gruppen.get(id);
       if (!g) throw new ApiError(404, 'Gruppe nicht da');
-      return { id, name: g.name, information: { groupTypeId: g.typId } };
+      const fehler = this.gruppeNichtLesbar?.(id);
+      if (fehler) throw fehler;
+      const sicht = this.sichtbarkeit.get(id);
+      return {
+        id,
+        name: g.name,
+        information: { groupTypeId: g.typId },
+        ...(sicht === undefined ? {} : { settings: { visibility: sicht } }),
+      };
     }
     if ((m = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad)))
       return this.rechte.get(Number(m[1])) ?? [];
@@ -241,7 +256,13 @@ export class FakeCt {
         typId: json.groupTypeId,
         parent: json.parentGroupId,
       });
+      this.sichtbarkeit.set(id, this.neueSichtbarkeit ?? json.visibility);
       return { id };
+    }
+    if ((m = /^\/groups\/(\d+)$/.exec(pfad)) && methode === 'PATCH') {
+      if (!this.gruppen.has(Number(m[1]))) throw new ApiError(404, 'Gruppe nicht da');
+      if (typeof json.visibility === 'string') this.sichtbarkeit.set(Number(m[1]), json.visibility);
+      return {};
     }
     if ((m = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad)) && methode === 'PUT') {
       const rolle = Number(m[1]);

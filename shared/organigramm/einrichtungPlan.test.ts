@@ -86,6 +86,10 @@ function gut(): EinrichtungDaten {
       [11, ok([routine(U1, 11)])],
       [12, ok([routine(U2, 12)])],
     ]),
+    sichtbarkeit: new Map([
+      [11, ok('restricted')],
+      [12, ok('restricted')],
+    ]),
   };
 }
 
@@ -333,6 +337,53 @@ describe('einrichtungsPlan – Status „aktiv“ ist das Soll (O9-5d)', () => {
     const p = einrichtungsPlan(E, ist({ stand: mit('active') }));
     expect(arten(p)).not.toContain('statusWechselGruppe');
     expect(arten(p)).not.toContain('statusStufe');
+  });
+});
+
+describe('einrichtungsPlan – Wechsel-Gruppen müssen „eingeschränkt“ sein (Leitungen sehen versteckte nicht)', () => {
+  const mit = (w11: Gelesen<string> | undefined, w12: Gelesen<string> = ok('restricted')) => {
+    const stand = gut();
+    stand.sichtbarkeit = new Map([[12, w12]]);
+    if (w11) stand.sichtbarkeit.set(11, w11);
+    return stand;
+  };
+  const schritte = (p: ReturnType<typeof einrichtungsPlan>) =>
+    p.schritte.filter((s) => s.art === 'sichtbarkeitWechselGruppe');
+
+  it('eine vorhandene Gruppe, die „hidden“ ist, bekommt einen Schritt – die eingeschränkte nicht', () => {
+    const p = einrichtungsPlan(E, ist({ stand: mit(ok('hidden')) }));
+    expect(schritte(p)).toEqual([
+      expect.objectContaining({
+        aktion: 'aendern',
+        ziel: expect.objectContaining({ art: 'uebergang', gruppeId: 11 }),
+      }),
+    ]);
+    expect(schritte(einrichtungsPlan(E, ist({ stand: mit(ok('restricted')) })))).toHaveLength(0);
+  });
+
+  it('jede andere Sichtbarkeit als „restricted“ zählt (auch „public“)', () => {
+    expect(
+      schritte(einrichtungsPlan(E, ist({ stand: mit(ok('hidden'), ok('public')) }))),
+    ).toHaveLength(2);
+  });
+
+  it('nicht lesbar: kein Schritt (es wird nichts geraten), und das Schreiben wird deshalb nicht blockiert', () => {
+    const p = einrichtungsPlan(E, ist({ stand: mit({ ok: false }) }));
+    expect(schritte(p)).toHaveLength(0);
+    expect(p.unsicher).toEqual([]);
+  });
+
+  it('der Schritt steht nach dem Anlegen der Wechsel-Gruppen und vor den Routinen', () => {
+    const a = arten(einrichtungsPlan(E, ist({ stand: mit(ok('hidden')) })));
+    expect(a.indexOf('sichtbarkeitWechselGruppe')).toBeGreaterThanOrEqual(0);
+    expect(a.indexOf('sichtbarkeitWechselGruppe')).toBeLessThan(a.indexOf('regelnWechselGruppe'));
+  });
+
+  it('beim ersten Einrichten: keine Umstellung (neue Gruppen entstehen „eingeschränkt“), der Text sagt es', () => {
+    const p = einrichtungsPlan(E, erstes());
+    expect(schritte(p)).toHaveLength(0);
+    expect(zeile(p, 'wechselGruppen').text).toContain('eingeschränkt sichtbar');
+    expect(zeile(p, 'wechselGruppen').text).not.toContain('versteckt');
   });
 });
 

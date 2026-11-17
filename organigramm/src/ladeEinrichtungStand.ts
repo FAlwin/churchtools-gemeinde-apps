@@ -5,7 +5,8 @@
  * - `GET /groups/{wechselGruppe}/roles` – die Rollen des Gruppentyps (Leiter, Teilnehmer),
  * - `GET /permissions/group_type_role/{rolle}` – die gruppeninternen Rechte der beiden Rollen am Typ,
  * - `GET /dynamicgroups/{id}/ruleset` und `…/status` – für Stufen und Wechsel-Gruppen,
- * - `GET /groups/{wechselGruppe}/members/routines` – die Aufräum-Routine.
+ * - `GET /groups/{wechselGruppe}/members/routines` – die Aufräum-Routine,
+ * - `GET /groups/{wechselGruppe}` – `settings.visibility` (muss „eingeschränkt“ sein, „versteckt“ sehen Leitungen nicht).
  *
  * Die Rechte und die Regeln darf nur lesen, wer „Berechtigungen verwalten“ hat (O9-F8) – der Aufrufer fragt sonst gar
  * nicht erst. **Nichts davon wirft:** 401 ist hier fehlendes Recht, kein Abmelden (sonst würde ein Gruppen-Admin ohne
@@ -41,6 +42,17 @@ async function liste<T>(holen: Holen, pfad: string): Promise<Gelesen<readonly T[
     const roh = await holen<unknown>(pfad);
     if (Array.isArray(roh)) return { ok: true, wert: roh as T[] };
     return NICHT;
+  } catch {
+    return NICHT;
+  }
+}
+
+/** Die Sichtbarkeit einer Gruppe (`settings.visibility`); alles andere als ein Text ist „nicht gelesen“. */
+async function sichtbarkeitLesen(holen: Holen, id: number): Promise<Gelesen<string>> {
+  try {
+    const roh = await holen<{ settings?: { visibility?: unknown } | null } | null>(`/groups/${id}`);
+    const v = roh?.settings?.visibility;
+    return typeof v === 'string' && v !== '' ? { ok: true, wert: v } : NICHT;
   } catch {
     return NICHT;
   }
@@ -97,10 +109,12 @@ export async function ladeEinrichtungStand(
   const rollen = new Map<number, Gelesen<readonly RolleRoh[]>>();
   const routinen = new Map<number, Gelesen<readonly RoutineRoh[]>>();
   const gruppen = new Map<number, GruppenRegelStand>();
+  const sichtbarkeit = new Map<number, Gelesen<string>>();
 
   await mapLimit(wechsel, GLEICHZEITIG, async (id) => {
     rollen.set(id, await liste<RolleRoh>(holen, `/groups/${id}/roles`));
     routinen.set(id, await liste<RoutineRoh>(holen, `/groups/${id}/members/routines`));
+    sichtbarkeit.set(id, await sichtbarkeitLesen(holen, id));
   });
   await mapLimit(alle, GLEICHZEITIG, async (id) => {
     gruppen.set(id, await gruppenStand(holen, id));
@@ -121,5 +135,5 @@ export async function ladeEinrichtungStand(
     ]);
     break;
   }
-  return { rollen, rechte: { leiter, teilnehmer }, gruppen, routinen };
+  return { rollen, rechte: { leiter, teilnehmer }, gruppen, routinen, sichtbarkeit };
 }

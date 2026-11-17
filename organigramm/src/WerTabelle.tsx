@@ -97,7 +97,7 @@ export function WerTabelle({
               : `${wer.daten.ohneGeburtstag} Kinder ohne Geburtstag wechseln`}{' '}
             nie von selbst.
           </b>{' '}
-          Sie stehen unter „Daten pflegen“.
+          {wer.daten.ohneGeburtstag === 1 ? 'Es steht' : 'Sie stehen'} unter „Daten pflegen“.
         </Hinweis>
       )}
       {wer.daten.nichtGelesen.length > 0 && (

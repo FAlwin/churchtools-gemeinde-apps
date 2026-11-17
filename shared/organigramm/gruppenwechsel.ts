@@ -149,6 +149,12 @@ export function uebergaenge(e: Pick<GruppenwechselEinstellung, 'stufen'>): Ueber
   return e.stufen.slice(1).map((nach, i) => ({ von: e.stufen[i], nach }));
 }
 
+/**
+ * Die Sichtbarkeit der Wechsel-Gruppen: „eingeschränkt“ (`restricted`). „Versteckt“ (`hidden`) sähen Leitungen nur mit dem
+ * gruppeninternen Recht „versteckte Gruppe sehen“ – ohne es: 403 auf Gruppe und Mitglieder (gemessen 17.11.2026).
+ */
+export const WECHSEL_SICHTBARKEIT = 'restricted';
+
 /** Der Name des Gruppentyps, den „Einrichten“ anlegt (O9-0) – und woran „vorhanden“ erkannt wird. */
 export const WECHSEL_TYP_NAME = 'Gruppenwechsel';
 

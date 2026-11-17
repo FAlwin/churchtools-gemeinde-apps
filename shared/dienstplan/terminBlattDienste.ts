@@ -3,6 +3,7 @@ import { diensteAus } from '../ct/dienste';
 import { dienstgruppenAus } from '../ct/dienstgruppen';
 import { siehtDienstGanz, type DienstRechte } from '../ct/dienstRechte';
 import { gruppenName, planAus, type PlanGruppe } from './plan';
+import { zaehleFrei } from './platzNachEntwurf';
 import type { RohTermin } from './termine';
 
 /**
@@ -26,7 +27,7 @@ export function blattGruppenAus(gruppen: readonly PlanGruppe[]): BlattGruppe[] {
               ? [{ name: p.name, angefragt: p.art === 'angefragt' }]
               : [],
           ),
-          frei: plaetze.filter((p) => p.art === 'frei').length,
+          frei: zaehleFrei(plaetze), // Teilen/PDF: nur ChurchTools, ohne Entwürfe
         },
       ];
     }),

@@ -197,7 +197,13 @@ export function PersonenRaster({
         void tue(async () => {
           const jetzt = personen.aktion(i, zl, r.personId, null);
           if (jetzt?.art === 'eintragen')
-            await personen.eintragen(i, zl, jetzt.nr, { personId: r.personId, name: r.name });
+            await personen.eintragen(
+              i,
+              zl,
+              jetzt.nr,
+              { personId: r.personId, name: r.name },
+              jetzt.ersetzt,
+            );
         });
       const warnung = eintragenWarnung({
         name: r.name,

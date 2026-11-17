@@ -3,6 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { KachelLink, TitelLink } from './TerminLink';
 import { kachel, tagKurz } from '@shared/ct/datum';
 import {
+  gruppenFrei,
   gruppenName,
   terminStand,
   type PlanGruppe,
@@ -18,7 +19,10 @@ import { EinteilPlaetze } from './PlanPlaetze';
 import { useBisUnten } from './useBisUnten';
 import styles from './Planen.module.scss';
 
-/** „N frei“ eines Termins – über die gezeigten Gruppen (`terminStand`); „—“, wo keine davon einen Dienst hat. */
+/**
+ * „N frei“ eines Termins – über die gezeigten Gruppen (`terminStand`, **mit gültigen Entwürfen**: sie sind ja blau gestrichelt
+ * zu sehen); „—“, wo keine davon einen Dienst hat.
+ */
 function standText(s: PlanSpalte, stand: TerminStand | null): { text: string; offen: boolean } {
   if (s.abgesagt) return { text: 'abgesagt', offen: false };
   if (!stand) return { text: '—', offen: false };
@@ -128,7 +132,7 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
             {spalten.map((i) => {
               const s = plan.spalten[i];
               const k = kachel(s.tag);
-              const stand = terminStand(gruppen, i);
+              const stand = terminStand(gruppen, i, sicht.entwurf);
               const st = standText(s, stand);
               return (
                 <th
@@ -232,7 +236,7 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                 {spalten.map((i) => (
                   <td key={i}>
                     <div className={styles.gruppenZelle}>
-                      <GruppenStand frei={g.frei[i]} />
+                      <GruppenStand frei={gruppenFrei(g, i, sicht.entwurf)} />
                       <span className={styles.gruppenKnoepfe}>
                         <ZauberKnopf
                           onKlick={sicht.onZauberstab([i], g)}
@@ -293,14 +297,14 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
   }, [amLetzten]);
   const s = plan.spalten[i];
   const k = kachel(s.tag);
-  const st = standText(s, terminStand(gruppen, i));
+  const st = standText(s, terminStand(gruppen, i, sicht.entwurf));
 
   return (
     <div>
       <div className={styles.datumsleiste} role="group" aria-label="Termine">
         {spalten.map((x) => {
           const sx = plan.spalten[x];
-          const stx = standText(sx, terminStand(gruppen, x));
+          const stx = standText(sx, terminStand(gruppen, x, sicht.entwurf));
           return (
             <button
               key={sx.id}
@@ -359,7 +363,7 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
                   onUmschalten={() => onUmschalten(gk)}
                   nurAnsehen={nurAnsehen(g, [s])}
                 />
-                <GruppenStand frei={g.frei[i]} />
+                <GruppenStand frei={gruppenFrei(g, i, sicht.entwurf)} />
                 <ZauberKnopf
                   onKlick={sicht.onZauberstab([i], g)}
                   text={`Automatische Planung ${gruppenName(g)} am ${tagKurz(s.tag)}`}

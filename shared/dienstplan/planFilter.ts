@@ -11,7 +11,7 @@
  * - Das Filter-Menü schaltet über `gruppeUmschalten`/`dienstUmschalten`; beide halten den Satz so, dass er sich nicht
  *   widerspricht.
  */
-import { gruppenSchluessel, type Plan, type PlanGruppe } from './plan';
+import { gruppenFrei, gruppenSchluessel, type Plan, type PlanGruppe } from './plan';
 
 /** Was der Filter ausblendet: ganze Gruppen (Schlüssel wie `gruppenSchluessel`) und einzelne Dienste (ID). */
 export interface PlanAus {
@@ -39,18 +39,9 @@ export const dienstAus = (g: PlanGruppe, dienstId: number, aus: PlanAus): boolea
 function ohneAusgeblendete(g: PlanGruppe, aus: PlanAus): PlanGruppe {
   const zeilen = g.zeilen.filter((z) => !dienstAus(g, z.dienst.id, aus));
   if (zeilen.length === g.zeilen.length) return g;
-  return {
-    ...g,
-    zeilen,
-    frei: g.frei.map((_, i) => {
-      let frei: number | null = null;
-      for (const z of zeilen) {
-        const zelle = z.zellen[i];
-        if (zelle) frei = (frei ?? 0) + zelle.filter((p) => p.art === 'frei').length;
-      }
-      return frei;
-    }),
-  };
+  // Der Stand in ChurchTools (ohne Entwürfe) – wie `PlanGruppe.frei` überall; mit Entwürfen rechnet `gruppenFrei(g, i, entwurf)`.
+  const gezeigt = { ...g, zeilen };
+  return { ...gezeigt, frei: g.frei.map((_, i) => gruppenFrei(gezeigt, i)) };
 }
 
 /**

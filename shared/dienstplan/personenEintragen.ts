@@ -24,16 +24,40 @@ export const freiOhneEntwurf = (p: PlanPlatz, entwurf: { entwurf: Entwurf } | nu
   p.art === 'frei' && entwurf === null;
 
 /**
+ * **Welcher Platz ist für einen neuen Entwurf zu haben?** (P2a-2, Alwin 16.11.2026: „Platz übernehmen“) Zuerst ein wirklich
+ * freier Platz ohne Entwurf (`freiOhneEntwurf`). Gibt es keinen, ein Platz mit **gültigem „Zurückziehen“-Entwurf** (Ziel
+ * `frei`, belegt mit X): Der Eintrag ersetzt dann den Entwurf – aus „X zurückziehen“ wird „X durch Y ersetzen“, wie
+ * „Andere Person wählen“ in der Matrix (mit der Version des Entwurfs als Versions-Schutz). Ein veralteter Entwurf zählt
+ * nicht. `null`: nichts zu haben (voll).
+ *
+ * Der **Zauberstab** nimmt bewusst weiter nur `freiOhneEntwurf`: Er speichert ohne Versions-Schutz (`erwartet: null`), und
+ * ein „Zurückziehen“ hat der Planer absichtlich gesetzt – das überschreibt man nicht automatisch.
+ */
+export function platzFuerEintrag(
+  plaetze: readonly PlanPlatz[],
+  entwurf: PlatzEntwurf,
+): { nr: number; ersetzt: Entwurf | null } | null {
+  const frei = plaetze.findIndex((p) => freiOhneEntwurf(p, entwurf(p)));
+  if (frei >= 0) return { nr: frei + 1, ersetzt: null };
+  for (const [i, p] of plaetze.entries()) {
+    const a = entwurf(p);
+    if (a && !a.veraltet && a.entwurf.ziel.art === 'frei') return { nr: i + 1, ersetzt: a.entwurf };
+  }
+  return null;
+}
+
+/**
  * Was ein Klick in eine Zelle tut:
- * - `eintragen`: Entwurf auf den freien Platz `nr` (1-basiert, wie `freierPlatz`) dieses Dienstes an diesem Termin.
- * - `voll`: kein freier Platz mehr – alle `von` Plätze sind belegt oder haben einen Entwurf (P2c bringt „Platz
- *   dazunehmen“, bis dahin nur ein Hinweis).
+ * - `eintragen`: Entwurf auf den Platz `nr` (1-basiert, wie `freierPlatz`) dieses Dienstes an diesem Termin – ein freier
+ *   Platz oder (`ersetzt`: die Version des Entwurfs) ein Platz, dessen „Zurückziehen“-Entwurf damit ersetzt wird.
+ * - `voll`: kein Platz mehr zu haben – alle `von` Plätze sind belegt oder haben einen Entwurf, der nicht „Zurückziehen“
+ *   ist (P2c bringt „Platz dazunehmen“, bis dahin nur ein Hinweis).
  * - `wegnehmen`: der eigene Entwurf der Person in dieser Zelle – `nr`/`version` des Platzes, damit der Aufrufer ihn
  *   mit dem Versions-Schutz entfernen kann.
  * - `null`: nichts (bestehende Einteilung – kommt mit P2b –, Entwurf eines anderen Planers, Dienst nicht vorgesehen).
  */
 export type ZellenAktion =
-  | { art: 'eintragen'; nr: number }
+  | { art: 'eintragen'; nr: number; ersetzt?: number }
   | { art: 'voll'; von: number }
   | { art: 'wegnehmen'; nr: number; entwurf: Entwurf }
   | null;
@@ -65,8 +89,11 @@ export function zellenAktion(o: {
   }
   // Zugesagt und angefragt: ein Klick tut noch nichts (P2b).
   if (o.zustand !== null) return null;
-  const nr = plaetze.findIndex((p) => freiOhneEntwurf(p, o.entwurf(p))) + 1;
-  if (nr > 0) return { art: 'eintragen', nr };
+  const platz = platzFuerEintrag(plaetze, o.entwurf);
+  if (platz)
+    return platz.ersetzt
+      ? { art: 'eintragen', nr: platz.nr, ersetzt: platz.ersetzt.version }
+      : { art: 'eintragen', nr: platz.nr };
   return { art: 'voll', von: plaetze.length };
 }
 

@@ -18,6 +18,7 @@ import { infosAus } from '../ct/terminInfos';
 import { dateienAus, type TerminDatei } from '../ct/terminDateien';
 import { ortszeitAus } from '../ct/zeit';
 import { belegungAus, type Belegung } from './einteilen';
+import { zaehleFrei, type EntwurfSuche } from './platzNachEntwurf';
 import {
   istFrei,
   istTerminAdmin,
@@ -244,7 +245,8 @@ export function planAus(
       if (planbar) pg.planbar = true;
       reihe.forEach((plaetze, i) => {
         if (plaetze === null) return;
-        pg.frei[i] = (pg.frei[i] ?? 0) + plaetze.filter((p) => p.art === 'frei').length;
+        // `frei` der Gruppe ist der Stand in ChurchTools; was mit Entwürfen gilt, rechnet `gruppenFrei`.
+        pg.frei[i] = (pg.frei[i] ?? 0) + zaehleFrei(plaetze);
       });
     }
   }
@@ -262,8 +264,15 @@ export interface TerminStand {
  * zählen nur die Gruppen, die man gerade sieht – wer von der Startseite „Programm · 3 Plätze frei“ kommt, soll an den
  * Terminen Programms Plätze sehen, nicht „12 frei“ für alle Gruppen. Gezählt wird aus den Zellen, also dieselben Plätze
  * wie in den Zeilen. `null`, wenn keine dieser Gruppen an dem Termin einen Dienst hat.
+ *
+ * Mit `entwurf` (P2a-2, Alwin 16.11.2026) zählen **gültige Entwürfe** mit (`platzGiltFrei`) – so steht „N frei“ in der
+ * Matrix schon so da, wie es nach dem Senden gilt. Ohne zählt nur ChurchTools.
  */
-export function terminStand(gruppen: PlanGruppe[], spalte: number): TerminStand | null {
+export function terminStand(
+  gruppen: PlanGruppe[],
+  spalte: number,
+  entwurf?: EntwurfSuche,
+): TerminStand | null {
   let stand: TerminStand | null = null;
   for (const g of gruppen)
     for (const z of g.zeilen) {
@@ -271,10 +280,31 @@ export function terminStand(gruppen: PlanGruppe[], spalte: number): TerminStand 
       if (!zelle) continue;
       stand ??= { plaetze: 0, frei: 0 };
       stand.plaetze += zelle.length;
-      stand.frei += zelle.filter((p) => p.art === 'frei').length;
+      stand.frei += zaehleFrei(zelle, entwurf && ((p) => entwurf(spalte, z, p)));
     }
   return stand;
 }
+
+/**
+ * **Freie Plätze einer Gruppe an einem Termin** (Gruppenzeile, Handy-Zettel) – `null`, wo die Gruppe dort keinen Dienst
+ * hat. Mit `entwurf` zählen gültige Entwürfe mit, wie in `terminStand`; `PlanGruppe.frei` bleibt der Stand in ChurchTools
+ * (Teilen/PDF).
+ */
+export function gruppenFrei(g: PlanGruppe, spalte: number, entwurf?: EntwurfSuche): number | null {
+  let frei: number | null = null;
+  for (const z of g.zeilen) {
+    const zelle = z.zellen[spalte];
+    if (zelle) frei = (frei ?? 0) + zaehleFrei(zelle, entwurf && ((p) => entwurf(spalte, z, p)));
+  }
+  return frei;
+}
+
+/**
+ * **Nimmt der Termin Einträge an?** (P2a-2, Alwin 16.11.2026) Ein **abgesagter** Termin nicht: In der Matrix lässt sich
+ * dort kein freier Platz antippen, in „Personen“ gibt es keinen Zellen-Knopf, der Zauberstab füllt ihn nicht. Ein
+ * **vergangener** Termin nimmt weiter Einträge an (Nachtragen); nur der Zauberstab lässt ihn zusätzlich aus.
+ */
+export const nimmtEintraegeAn = (s: Pick<PlanSpalte, 'abgesagt'>): boolean => !s.abgesagt;
 
 /**
  * **Nur die Termine von `von` bis `bis`** (E9-3): Für ＋ bei gewähltem Zeitraum lädt die Matrix ein paar Wochen über den

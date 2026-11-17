@@ -566,6 +566,9 @@ export function Baukasten({
             wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
             werkzeug={werkzeug}
             onTyp={typAendern}
+            bereich={bereich}
+            // F4: Die Adresse lässt sich zwischen „einmal je Anmeldung“ und „je Person“ umsetzen (Entwurf f4-adresse-v1).
+            onBereich={f.typ === 'adresse' ? (b) => verschieben(f.id, b, null) : undefined}
           />
         ) : (
           <>

@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { AnmeldeFormular } from './AnmeldeFormular';
@@ -1144,5 +1145,48 @@ describe('Freie Antwort im Formular (F3b)', () => {
       gemeinde: 'Andere Gemeinde',
       'gemeinde.frei': 'FeG Siegburg',
     });
+  });
+});
+
+describe('Adresse im Formular (F4)', () => {
+  /** Eine Person, die Adresse als Pflicht – einmal je Anmeldung oder je Person. */
+  function mitAdresse(wo: 'anmeldung' | 'person'): OeffentlicheEinstellungen {
+    const e = freizeit();
+    e.wer = 'einzeln';
+    e.formular[wo].splice(2, 0, {
+      ...EMPFOHLEN.find((x) => x.id === 'adresse')!.feld,
+      zustand: 'pflicht',
+    });
+    return e;
+  }
+  const absenden = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+
+  it('drei Felder mit Beschriftung und dem festen Hinweis zum Profil', () => {
+    zeigen(mitAdresse('anmeldung'));
+    for (const name of [/^Straße und Hausnummer/, /^PLZ/, /^Ort/])
+      expect(screen.getByLabelText(name)).toBeTruthy();
+    expect(screen.getByText('Wird im Profil in ChurchTools gespeichert.')).toBeTruthy();
+    expect(screen.getByLabelText(/^PLZ/).getAttribute('maxlength')).toBe('20');
+    expect(screen.getByLabelText(/^Straße und Hausnummer/).getAttribute('autocomplete')).toBe(
+      'street-address',
+    );
+  });
+
+  it('Pflicht: jeder leere Teil sagt, was fehlt – ausgefüllt geht es weiter', () => {
+    zeigen(mitAdresse('person'));
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    fireEvent.change(screen.getByLabelText(/^Straße und Hausnummer/), {
+      target: { value: 'Hauptstr. 4' },
+    });
+    absenden();
+    expect(screen.queryByText('Bitte Straße und Hausnummer eintragen.')).toBeNull();
+    expect(screen.getByText('Bitte die PLZ eintragen.')).toBeTruthy();
+    expect(screen.getByText('Bitte den Ort eintragen.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/^PLZ/), { target: { value: '53797' } });
+    fireEvent.change(screen.getByLabelText(/^Ort/), { target: { value: 'Lohmar' } });
+    absenden();
+    expect(screen.queryByText('Bitte die PLZ eintragen.')).toBeNull();
+    expect(screen.queryByText('Bitte den Ort eintragen.')).toBeNull();
   });
 });

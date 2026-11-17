@@ -1896,3 +1896,88 @@ describe('Baukasten (F3c): freie Antwort', () => {
     expect(screen.queryByText(/hat schon jemand gewählt/)).toBeNull();
   });
 });
+
+// ── F5b: Links im Hinweistext (Entwurf f5b-links-v1, Variante A) ──
+describe('Baukasten (F5b): Links im Hinweistext', () => {
+  function mitHinweis(hilfe = 'Bitte lies die Anmeldebedingungen.'): OeffentlicheEinstellungen {
+    const e = einstellungen();
+    e.formular.person.push({
+      id: 'h1',
+      art: 'eigen',
+      typ: 'info',
+      frage: 'Wichtig',
+      hilfe,
+      zustand: 'freiwillig',
+      antworten: [],
+    });
+    return e;
+  }
+  const feld = () => screen.getByLabelText<HTMLTextAreaElement>('Hinweistext');
+  const linkKnopf = () => screen.getByRole('button', { name: 'Link' });
+  /** Wie eine Markierung mit der Maus: Auswahl setzen, Maustaste loslassen. */
+  const markieren = (wort: string) => {
+    const i = feld().value.indexOf(wort);
+    feld().setSelectionRange(i, i + wort.length);
+    fireEvent.mouseUp(feld());
+  };
+  const dialog = () => screen.getByRole('dialog');
+
+  it('Link: erst markieren, dann „Link“ – nur https; gespeichert als [Text](https://…)', async () => {
+    const { huelle } = zeigen(mitHinweis());
+    fireEvent.click(huelle('h1'));
+    expect(linkKnopf()).toHaveProperty('disabled', true);
+    markieren('Anmeldebedingungen');
+    expect(linkKnopf()).toHaveProperty('disabled', false);
+    fireEvent.click(linkKnopf());
+    expect(within(dialog()).getByLabelText<HTMLInputElement>('Angezeigter Text').value).toBe(
+      'Anmeldebedingungen',
+    );
+    fireEvent.change(within(dialog()).getByLabelText('Adresse'), {
+      target: { value: 'http://unsicher.de' },
+    });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Übernehmen' }));
+    expect(within(dialog()).getByRole('alert').textContent).toMatch(/https:\/\//);
+    fireEvent.change(within(dialog()).getByLabelText('Adresse'), {
+      target: { value: 'https://ac-zeltlager.de/b' },
+    });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Übernehmen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(feld().value).toBe('Bitte lies die [Anmeldebedingungen](https://ac-zeltlager.de/b).');
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({
+      id: 'h1',
+      hilfe: 'Bitte lies die [Anmeldebedingungen](https://ac-zeltlager.de/b).',
+    });
+  });
+
+  it('die Liste: „ändern“ öffnet das Fenster mit dem Link, „entfernen“ lässt den Text stehen', () => {
+    const { huelle } = zeigen(mitHinweis('Siehe [hier](https://a.de) bitte.'));
+    fireEvent.click(huelle('h1'));
+    fireEvent.click(screen.getByRole('button', { name: 'ändern' }));
+    expect(within(dialog()).getByLabelText<HTMLInputElement>('Adresse').value).toBe('https://a.de');
+    fireEvent.change(within(dialog()).getByLabelText('Adresse'), {
+      target: { value: 'https://b.de' },
+    });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Übernehmen' }));
+    expect(feld().value).toBe('Siehe [hier](https://b.de) bitte.');
+    fireEvent.click(screen.getByRole('button', { name: 'entfernen' }));
+    expect(feld().value).toBe('Siehe hier bitte.');
+    expect(screen.queryByText('Links in diesem Hinweis')).toBeNull();
+  });
+
+  it('„Link entfernen“ im Fenster eines vorhandenen Links', () => {
+    const { huelle } = zeigen(mitHinweis('Siehe [hier](https://a.de) bitte.'));
+    fireEvent.click(huelle('h1'));
+    fireEvent.click(screen.getByRole('button', { name: 'ändern' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Link entfernen' }));
+    expect(feld().value).toBe('Siehe hier bitte.');
+  });
+
+  it('Hilfetexte unter Fragen bleiben ohne Link-Knopf', () => {
+    const { huelle } = zeigen(mitHinweis());
+    fireEvent.click(huelle('f1'));
+    expect(screen.getByLabelText('Hilfetext')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Link' })).toBeNull();
+  });
+});

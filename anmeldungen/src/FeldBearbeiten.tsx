@@ -21,6 +21,7 @@ import {
 } from '@shared/anmeldung/bedingungen';
 import { FREI_STANDARD } from '@shared/anmeldung/freieAntwort';
 import { BedingungChips, BedingungFenster, BedingungZeichen } from './Bedingungen';
+import { HinweisEingabe } from './HinweisEingabe';
 import {
   entwurfFehler,
   mitAntworten,
@@ -260,15 +261,21 @@ export function FeldBearbeiten({
           onChange={(e) => setFeld({ frage: e.target.value })}
         />
       )}
-      {f.typ !== 'trenner' && !schritt && (
-        <input
-          className={k.hilfe}
-          value={f.hilfe}
-          maxLength={400}
-          aria-label={f.typ === 'info' ? 'Hinweistext' : 'Hilfetext'}
-          placeholder={f.typ === 'info' ? 'Hinweistext' : 'Hilfetext darunter (freiwillig)'}
-          onChange={(e) => setFeld({ hilfe: e.target.value })}
-        />
+      {/* F5b: Der Hinweistext kann Links haben (Knopf „Link“) – der Hilfetext unter Fragen nicht. */}
+      {f.typ === 'info' ? (
+        <HinweisEingabe wert={f.hilfe} maxLength={400} onWert={(hilfe) => setFeld({ hilfe })} />
+      ) : (
+        f.typ !== 'trenner' &&
+        !schritt && (
+          <input
+            className={k.hilfe}
+            value={f.hilfe}
+            maxLength={400}
+            aria-label="Hilfetext"
+            placeholder="Hilfetext darunter (freiwillig)"
+            onChange={(e) => setFeld({ hilfe: e.target.value })}
+          />
+        )
       )}
       {!text && istQuelle(formular, f.id) && (
         <input

@@ -1146,3 +1146,26 @@ describe('Freie Antwort im Formular (F3b)', () => {
     });
   });
 });
+
+// ── F5b: Links im Hinweistext ──
+describe('Links im Hinweistext (F5b)', () => {
+  it('ein Link öffnet in einem neuen Tab; ohne https bleibt es Text', () => {
+    const e = freizeit();
+    e.formular.person.push({
+      id: 'h1',
+      art: 'eigen',
+      typ: 'info',
+      frage: 'Wichtig',
+      hilfe: 'Lies die [Bedingungen](https://ac-zeltlager.de/b) und [das](javascript:alert(1)).',
+      zustand: 'freiwillig',
+      antworten: [],
+    });
+    zeigen(e);
+    const links = screen.getAllByRole('link', { name: 'Bedingungen' });
+    expect(links[0].getAttribute('href')).toBe('https://ac-zeltlager.de/b');
+    expect(links[0].getAttribute('target')).toBe('_blank');
+    expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(screen.queryByRole('link', { name: 'das' })).toBeNull();
+    expect(screen.getAllByText(/\[das\]\(javascript:alert\(1\)\)/).length).toBeGreaterThan(0);
+  });
+});

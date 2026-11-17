@@ -685,6 +685,11 @@ export interface UserCapabilities {
    * Server kennen es nicht – dann gilt `canEditAgendas` wie bisher.
    */
   ablaufKalender?: number[] | null;
+  /**
+   * Kalender, in denen man Ablaufvorlagen bearbeiten darf (`edit agenda templates`); `null` = alle (E10). Optional:
+   * ältere Server kennen es nicht – dann gibt es keinen Knopf (`vorlagenRechteAus`), ChurchTools entscheidet ohnehin.
+   */
+  vorlagenKalender?: number[] | null;
   canEditSongs: boolean;
   /**
    * Darf das Tempo eines Arrangements in ChurchTools speichern (#335, Phase 3b) – dasselbe

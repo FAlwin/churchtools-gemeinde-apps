@@ -94,3 +94,36 @@ export function ablaufRechteAus(
     caps.ablaufKalender !== undefined ? caps.ablaufKalender : caps.canEditAgendas ? null : [];
   return { isAdmin: caps.isAdmin, ablaufKalender };
 }
+
+/** Was die Regel für Ablaufvorlagen aus den Rechten braucht – `vorlagenKalender: null` = das Recht gilt für alle Kalender. */
+export interface VorlagenRechte {
+  isAdmin: boolean;
+  vorlagenKalender: readonly number[] | null;
+}
+
+/**
+ * **Darf man eine Ablaufvorlage bearbeiten?** (E10, gemessen 17.11.2026) – Schwesterregel zu `darfAblaufBearbeiten`:
+ * ChurchTools lässt zu, wer Admin ist oder `edit agenda templates` für den **Kalender der Vorlage** hat (Liste von
+ * Kalender-IDs). Anders als beim Termin gibt es keine Admins je Vorlage.
+ */
+export function darfVorlageBearbeiten(rechte: VorlagenRechte, kalenderId: number | null): boolean {
+  if (rechte.isAdmin || rechte.vorlagenKalender === null) return true;
+  // Kalender unbekannt: irgendein Recht genügt, ChurchTools entscheidet (wie bei `darfAblaufBearbeiten`).
+  if (kalenderId === null) return rechte.vorlagenKalender.length > 0;
+  return rechte.vorlagenKalender.includes(kalenderId);
+}
+
+/**
+ * Die Rechte der Musik-App für die Vorlagen-Regel. Kennt der Server `vorlagenKalender` noch nicht (ältere Version),
+ * gibt es keinen Knopf – anders als beim Ablauf fehlt hier ein älteres „irgendein Recht“, aus dem man schließen könnte.
+ */
+export function vorlagenRechteAus(
+  caps: Pick<UserCapabilities, 'isAdmin' | 'vorlagenKalender'> | undefined,
+): VorlagenRechte {
+  if (!caps) return { isAdmin: false, vorlagenKalender: [] };
+  // Nicht `??`: `null` heißt „alle Kalender“ und darf nicht zu „keiner“ werden.
+  return {
+    isAdmin: caps.isAdmin,
+    vorlagenKalender: caps.vorlagenKalender !== undefined ? caps.vorlagenKalender : [],
+  };
+}

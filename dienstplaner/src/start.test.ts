@@ -102,6 +102,7 @@ describe('ladeStart (Dienstplaner)', () => {
         planbareDienstgruppen: [3],
         sichtbareDienstgruppen: [],
         ablaufKalender: [],
+        vorlagenKalender: [],
         terminKalender: [],
         abwesenheitenAller: false,
       },

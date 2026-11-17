@@ -44,9 +44,10 @@ export function agendaItemWritePayload(
     ? undefined
     : (overrides.arrangementId ?? it.song?.arrangementId);
   const isSong = !overrides.unlink && (overrides.arrangementId !== undefined || !!it.song);
+  const type = isSong ? 'song' : overrides.unlink ? 'text' : it.type;
   return {
     title: overrides.title ?? it.title,
-    type: isSong ? 'song' : overrides.unlink ? 'text' : it.type,
+    type,
     note: overrides.note ?? it.note ?? '',
     duration: overrides.durationSec ?? it.duration ?? 0,
     // Wirkungslos, aber harmlos: ChurchTools leitet `isBeforeEvent` aus der Grenze ab und ignoriert
@@ -58,7 +59,12 @@ export function agendaItemWritePayload(
     // Ohne dieses Feld leert ChurchTools beim Ändern die Notizen je Dienstgruppe (12.10.2026).
     serviceGroupNotes: dienstgruppenNotizen(it),
     ...(overrides.position !== undefined ? { position: overrides.position } : {}),
-    ...(arrangementId ? { arrangementId } : {}),
+    // Ein Lied OHNE Arrangement (`type: 'song'`, `song: null` – so liefert ChurchTools es, gemessen E10-V1 am
+    // 17.11.2026) braucht trotzdem das Feld: `arrangementId: null`. Fehlt es, lehnt ChurchTools den Punkt mit 400 ab
+    // („Das Feld darf nicht leer sein“) – beim Ändern eines Punkts und beim Umsortieren der ganzen Liste. Die
+    // OpenAPI verlangt es für Termin-Abläufe und Vorlagen gleich („Song items require `arrangementId`, which may be
+    // `null`“).
+    ...(arrangementId ? { arrangementId } : type === 'song' ? { arrangementId: null } : {}),
   };
 }
 

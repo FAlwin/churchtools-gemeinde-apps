@@ -119,6 +119,26 @@ describe('agendaItemWritePayload – position und Standardwerte', () => {
   it('Dauer 0 wird übernommen (Dauer entfernen), nicht als „fehlend" behandelt', () => {
     expect(agendaItemWritePayload(songItem(), { durationSec: 0 }).duration).toBe(0);
   });
+
+  it('Lied OHNE Arrangement (song: null) schickt arrangementId: null – sonst 400 (E10-V1)', () => {
+    const offen = songItem({ song: undefined, title: 'Lied offen' });
+    const p = agendaItemWritePayload(offen);
+    expect(p.type).toBe('song');
+    expect(p).toHaveProperty('arrangementId', null);
+    // Auch beim Umsortieren (mit position) und beim Ändern des Titels.
+    expect(agendaItemWritePayload(offen, { position: 2 })).toHaveProperty('arrangementId', null);
+    expect(agendaItemWritePayload(offen, { title: 'X' })).toHaveProperty('arrangementId', null);
+  });
+
+  it('Text und Überschrift bekommen kein arrangementId-Feld', () => {
+    expect(agendaItemWritePayload(textItem())).not.toHaveProperty('arrangementId');
+    expect(agendaItemWritePayload(textItem({ type: 'header' }))).not.toHaveProperty(
+      'arrangementId',
+    );
+    expect(agendaItemWritePayload(songItem(), { unlink: true })).not.toHaveProperty(
+      'arrangementId',
+    );
+  });
 });
 
 /**

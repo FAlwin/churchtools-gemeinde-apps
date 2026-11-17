@@ -153,7 +153,7 @@ function ct(
   return { spy, schreiben, gelesen, weiter: () => weiter() };
 }
 
-function zeige(o: { handy?: boolean; start?: typeof START } = {}) {
+function zeige(o: { handy?: boolean; start?: typeof START; onVorlagen?: () => void } = {}) {
   render(
     <StrictMode>
       <Planen
@@ -165,6 +165,7 @@ function zeige(o: { handy?: boolean; start?: typeof START } = {}) {
         ladeZeitraum={() => new Promise<never>(() => {})}
         heute="2026-10-14"
         ablauf={{ start: o.start ?? START, zeitzone: 'Europe/Berlin' }}
+        onVorlagen={o.onVorlagen}
       />
     </StrictMode>,
   );
@@ -295,6 +296,28 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(knopf.closest('table')).toBeNull();
     fireEvent.click(knopf);
     expect(screen.getByRole('button', { name: 'Fertig' }).textContent).toBe('Fertig');
+  });
+
+  it('„Vorlagen“ (E10-V3a) steht links neben „Ablauf bearbeiten“ und öffnet die Seite; ohne Anschluss kein Knopf', async () => {
+    ct();
+    const onVorlagen = vi.fn();
+    zeige({ onVorlagen });
+    await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
+    const vorlagen = screen.getByRole('button', { name: 'Ablaufvorlagen ansehen und bearbeiten' });
+    const bearbeiten = screen.getByRole('button', {
+      name: 'Ablauf bearbeiten – alle gezeigten Termine',
+    });
+    expect(vorlagen.textContent).toBe('Vorlagen');
+    // links neben dem anderen: davor im Dokument, im selben Kasten
+    expect(vorlagen.parentElement).toBe(bearbeiten.parentElement);
+    expect(
+      vorlagen.compareDocumentPosition(bearbeiten) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(vorlagen);
+    expect(onVorlagen).toHaveBeenCalledTimes(1);
+    cleanup();
+    zeige();
+    expect(screen.queryByRole('button', { name: /Ablaufvorlagen/ })).toBeNull();
   });
 
   it('das Plus neben „N Punkte“ klappt das kleine Menü auf – kein Blatt von unten – und öffnet das Punkt-Fenster', async () => {

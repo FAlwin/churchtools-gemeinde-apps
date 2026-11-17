@@ -15,6 +15,8 @@ import { UnterschriftBild } from '@ui/anmeldeformular/Bausteine';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { euroText } from '@shared/anmeldung/preis';
 import { zahlungTitel } from '@shared/anmeldung/zahlung';
+import { fragen } from '@shared/anmeldung/druckliste';
+import { adresseText } from '@shared/anmeldung/adresse';
 import { unterschriftLesen } from '@shared/anmeldung/unterschrift';
 import {
   antwortZeilen,
@@ -148,6 +150,8 @@ export function AnmeldungAnsehen({
   mitBestaetigung?: boolean;
 }) {
   const [modus, setModus] = useState<FensterModus>(start);
+  /** F4b: Fragt das Formular nach der Adresse? Dieselbe Regel wie Tabelle und Druckliste (`fragen`). */
+  const adresse = fragen(e).find((f) => f.typ === 'adresse');
   const [kopiert, setKopiert] = useState<Kopiert>(null);
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
   const einmal = antwortZeilen(e.formular.anmeldung, x.einmal, e.ctFelder);
@@ -347,6 +351,10 @@ export function AnmeldungAnsehen({
                 <Antworten
                   zeilen={[
                     ...(p.geburtstag ? [{ frage: 'Geburtsdatum', text: lang(p.geburtstag) }] : []),
+                    // F4b: aus dem Profil, nur wenn das Formular nach der Adresse fragt.
+                    ...(adresse && p.adresse
+                      ? [{ frage: adresse.frage, text: adresseText(p.adresse) }]
+                      : []),
                     ...antwortZeilen(e.formular.person, p.werte, e.ctFelder),
                   ]}
                 />

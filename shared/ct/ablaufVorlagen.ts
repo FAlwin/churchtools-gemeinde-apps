@@ -81,10 +81,21 @@ export function vorlagePunkteAus(agenda: CtAgenda): {
       ...(typ === 'song' ? { arrangementId: p.arrangementId ?? null } : {}),
     };
   });
-  const grenze = agenda.eventStartPosition ?? 0;
-  const vorlauf = agenda.items.filter((it, k) => (it.position ?? k) < grenze).length;
   // Gezählt, nicht übernommen: Die Zahl kann nie größer sein als die Anzahl der Punkte.
-  return { items, eventStartPosition: vorlauf };
+  return { items, eventStartPosition: vorlaufAnzahl(agenda) };
+}
+
+/**
+ * Wie viele Punkte vor dem Beginn laufen: die Punkte mit `position` (sonst Listenplatz) unter `eventStartPosition`.
+ * **Die eine Stelle für diese Zählung** – `vorlagePunkteAus` schreibt sie in die neue Vorlage, die Vorlagen-Liste zeigt
+ * sie als „N vor Beginn“. Nie größer als die Anzahl der Punkte.
+ */
+export function vorlaufAnzahl(a: {
+  items?: readonly { position?: number }[];
+  eventStartPosition?: number;
+}): number {
+  const grenze = a.eventStartPosition ?? 0;
+  return (a.items ?? []).filter((it, k) => (it.position ?? k) < grenze).length;
 }
 
 /** Die Titel der Punkte, zum Vergleichen von Geschriebenem und Nachgelesenem (ohne Rand-Leerzeichen). */

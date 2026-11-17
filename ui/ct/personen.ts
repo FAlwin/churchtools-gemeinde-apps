@@ -13,6 +13,10 @@ export interface PersonRoh {
   lastName?: string;
   email?: string | null;
   birthday?: string | null;
+  /** Adresse (F4b) – nur, wenn man sie sehen darf. */
+  street?: string | null;
+  zip?: string | null;
+  city?: string | null;
 }
 
 /** **Personen je Nummer** – in Paketen, eine Anfrage je 50 Personen. */

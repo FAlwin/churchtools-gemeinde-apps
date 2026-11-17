@@ -542,6 +542,26 @@ describe('Zeile Regeln der Gruppen', () => {
     );
   });
 
+  it('eine veraltete Austrag-Regel (alte Form, trug auch Leitungen aus) → Warnung „veraltet“ (O9-6-1)', () => {
+    const d = gut();
+    const alt = d.gruppen.get(1)!;
+    if (!alt.regeln.ok) throw new Error('gelesen');
+    const veraltet = alt.regeln.wert.map((r) =>
+      r.shorty === REGELN.austragen.shorty
+        ? { ...r, query: { method: 'ChurchQuery', params: { filter: { '==': [1, 1] } } } }
+        : r,
+    );
+    d.gruppen = new Map(d.gruppen).set(1, { ...alt, regeln: ok(veraltet) });
+    expect(zeile(zeilen(d), 'regeln')).toEqual({
+      art: 'warn',
+      text: `Schäfchen: ${REGELN.austragen.name} ist veraltet (würde auch Leitungen austragen) – „Stufen ändern“ schreibt sie neu`,
+    });
+  });
+
+  it('die Austrag-Regel genau wie vom Erzeuger → keine Warnung', () => {
+    expect(zeile(zeilen(gut()), 'regeln').art).toBe('ok');
+  });
+
   it('Befunde in mehreren Gruppen → je Gruppe eine Listenzeile, darüber die Zahl', () => {
     const d = gut();
     d.gruppen = new Map(d.gruppen)

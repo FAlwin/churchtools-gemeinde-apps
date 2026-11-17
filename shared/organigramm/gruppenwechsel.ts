@@ -488,19 +488,35 @@ export function aufnahmeRegel(
 }
 
 /**
- * **Austrag-Regel der alten Gruppe**: wer aktiv als Teilnehmer in der neuen Gruppe ist → aus der alten Gruppe austragen
- * (R4b). Nur Teilnehmer: Eine Leitung, die in beiden Gruppen mitarbeitet, bleibt.
+ * **Andere Mitgliedschaft derselben Person** (ChurchQuery-Operator `person--group`, gemessen O9-6-1 am 17.11.2026 –
+ * nirgends dokumentiert): Gruppen-Filter und Mitgliedschafts-Filter werden auf einer ANDEREN Zeile der Person geprüft,
+ * nicht auf der, die die Hauptabfrage gerade ansieht. Die Gruppe nennt man über `groupmember.groupId`.
+ */
+const auchIn = (gruppeId: number, mitgliedschaft: unknown) => ({
+  'person--group': [gleich('groupmember.groupId', gruppeId), mitgliedschaft],
+});
+
+/**
+ * **Austrag-Regel der alten Gruppe** (R4b): wer in der alten Gruppe **Teilnehmer** ist und in der neuen schon aktiver
+ * Teilnehmer → aus der alten Gruppe austragen. Die Hauptabfrage läuft über die Mitgliedschaft in der ALTEN Gruppe und
+ * verlangt dort „Teilnehmer“ – so bleibt eine **Leitung der alten Gruppe**, die in der neuen Teilnehmer, Coach o. Ä. ist
+ * (z. B. Teeny-Leitung bei „Jugend ab 16“). Bis O9-6-1 fragte die Regel nur die neue Gruppe und hätte sie ausgetragen.
  */
 export function austragRegel(u: Uebergang): Regel {
   return regel(
     REGELN.austragen.shorty,
-    `Gruppenwechsel: wer in „${u.nach.name}“ angekommen ist, verlässt „${u.von.name}“`,
+    `Gruppenwechsel: wer in „${u.nach.name}“ angekommen ist, verlässt „${u.von.name}“ (nur Teilnehmer, Leitungen bleiben)`,
     30,
     {
       and: [
-        gleich('groupmember.groupId', u.nach.gruppeId),
+        gleich('groupmember.groupId', u.von.gruppeId),
         gleich('role.type', 'participant'),
-        gleich('groupmember.groupMemberStatus', 'active'),
+        auchIn(u.nach.gruppeId, {
+          and: [
+            gleich('groupmember.groupMemberStatus', 'active'),
+            gleich('role.type', 'participant'),
+          ],
+        }),
       ],
     },
     {

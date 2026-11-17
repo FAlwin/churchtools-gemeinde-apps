@@ -306,6 +306,12 @@ Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kom
    Bleiben Platzhalter ohne Namen stehen, nennt ein Hinweis oben alle auf einmal („… ist keinem Namen zugeordnet – nach
    dem Übernehmen selbst ersetzen“). Ein To-Do, dessen Zuständiger so ein Platzhalter war, bekommt **niemanden**
    („niemand zuständig“) – der Platzhalter wird nicht als externer Name übernommen.
+   **Neue Punkte** tragen nicht nur Stichpunkte, sondern auch **Beschlüsse, To-Dos und Termine**: Die Vorschau zeigt sie
+   unter dem Punkt (mit Zuständigen und Datum) – **ein** Häkchen gilt für den ganzen Punkt. Beim Übernehmen entstehen
+   Tagesordnungspunkt, Stichpunkte, Beschlüsse, To-Dos und Termine in genau dieser Reihenfolge, in denselben Blöcken wie bei
+   einem vorhandenen Punkt. So lässt sich auch ein **leeres Protokoll ohne Tagesordnung** füllen: Der Auftrag bittet die KI
+   dann, den Inhalt selbst in Punkte zu gliedern (`neue_punkte`), mit Beschlüssen, To-Dos und Terminen beim jeweiligen
+   Punkt. Antworten im alten Aufbau (neue Punkte nur mit Stichpunkten) gehen weiter.
 
 **Datenschutz:** Transkript, gefundene Namen und die Zuordnung bleiben **nur im Fenster** – nichts wird in ChurchTools
 oder im Browser gespeichert, Schließen heißt weg. Zur KI geht nur der Text, den du selbst kopierst und einfügst, mit

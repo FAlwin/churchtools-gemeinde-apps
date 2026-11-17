@@ -19,8 +19,16 @@ const liste = (personen = PERSONEN) => {
 describe('Empfänger', () => {
   const mitAdressen = new Map([
     ...PERSONEN,
-    [20, { name: 'Jonas Beispiel', email: null, geburtstag: '2017-05-01' }],
-    [21, { name: 'Lena Beispiel', email: 'tom@beispiel.test', geburtstag: '2019-02-02' }],
+    [20, { name: 'Jonas Beispiel', email: null, geburtstag: '2017-05-01', adresse: null }],
+    [
+      21,
+      {
+        name: 'Lena Beispiel',
+        email: 'tom@beispiel.test',
+        geburtstag: '2019-02-02',
+        adresse: null,
+      },
+    ],
   ]);
 
   it('je Anmeldung eine Mail an die erste Person – ohne Adresse an die nächste mit Adresse', () => {
@@ -37,8 +45,8 @@ describe('Empfänger', () => {
     expect(rundmailEmpfaenger(liste(mitAdressen), 'warte').an.map((x) => x.nr)).toEqual(['BBBBBB']);
     const ohne = new Map([
       ...PERSONEN,
-      [20, { name: 'Jonas Beispiel', email: null, geburtstag: null }],
-      [21, { name: 'Lena Beispiel', email: null, geburtstag: null }],
+      [20, { name: 'Jonas Beispiel', email: null, geburtstag: null, adresse: null }],
+      [21, { name: 'Lena Beispiel', email: null, geburtstag: null, adresse: null }],
     ]);
     expect(rundmailEmpfaenger(liste(ohne), 'alle')).toEqual({
       an: [expect.objectContaining({ nr: 'AAAAAA' })],

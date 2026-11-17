@@ -53,6 +53,18 @@ export function adresseWerte(w: Antwort): { ct: 'street' | 'zip' | 'city'; wert:
   });
 }
 
+/**
+ * **Die Adresse einer Person aus ChurchTools** (`GET /persons`: `street`, `zip`, `city`) – `null`, wenn keiner der
+ * drei Teile gefüllt ist oder man sie nicht sehen darf (F4b).
+ */
+export function adresseVonPerson(
+  p: Partial<Record<'street' | 'zip' | 'city', unknown>>,
+): AdresseAntwort | null {
+  const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const a: AdresseAntwort = { strasse: text(p.street), plz: text(p.zip), ort: text(p.city) };
+  return a.strasse || a.plz || a.ort ? a : null;
+}
+
 /** „Hauptstr. 4, 53797 Lohmar“ – `''`, wenn nichts eingetragen ist. */
 export function adresseText(w: Antwort): string {
   const a = adresseAus(w);

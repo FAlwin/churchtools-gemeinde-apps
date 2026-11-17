@@ -24,6 +24,8 @@ import type { Tausch } from './useTausch';
 import { TauschAmDienst } from './TauschTeile';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HilfeKnopf } from '@ui/bedienung/HilfeKnopf';
+import { HILFE_DIENSTE } from './hilfeTexte';
 import styles from './Termine.module.scss';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 
@@ -131,6 +133,7 @@ export function Termine({
               symbol={<Icon name="share" size={16} />}
             />
           )}
+          <HilfeKnopf seite="Dienste" abschnitte={HILFE_DIENSTE} />
         </div>
         {teilenOffen && ich && (
           <Suspense fallback={null}>
@@ -190,10 +193,6 @@ export function Termine({
         )}
       </section>
       <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
-      <p className={styles.fussnote}>
-        Welche Termine du unter „Alle“ siehst, entscheidet ChurchTools (Kalender-Rechte). Termine,
-        in denen du eingeteilt bist, siehst du immer.
-      </p>
     </div>
   );
 }

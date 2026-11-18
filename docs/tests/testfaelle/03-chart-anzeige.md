@@ -102,20 +102,27 @@ Blättern nicht zurückkommen.
 Browser).
 
 **Das muss passieren:** Die obere Leiste sitzt nach jedem Schritt an derselben Stelle. Keine Lücke
-darüber, keine verschobenen Symbole, nichts rutscht aus dem Bild.
+darüber, keine verschobenen Symbole, nichts rutscht aus dem Bild. **Ein Fenster mit Tastatur steht ruhig:**
+Der Kopf des Fensters bleibt oben stehen, nur die Unterkante rückt kurz nach der Tastatur einmal hoch – kein
+Ruckeln, kein Hoch und Runter, das angetippte Feld bleibt sichtbar. Tastatur zu → das Fenster ist wieder
+so groß wie vorher.
 
 1. Einen Termin öffnen, oben rechts auf den runden **Stift** („Ablauf bearbeiten") tippen.
 2. Einen Eintrag antippen, **Lied verknüpfen**, etwas eintippen, einen Treffer wählen.
 3. **Speichern** tippen und auf die obere Leiste schauen.
 4. Zu einer anderen App wechseln und zurückkommen.
 5. Das Gerät drehen und wieder zurückdrehen.
+6. **Nur am iPhone:** in der Protokolle-App ein Treffen öffnen, **Punkt vorschlagen** tippen und ins Feld **Thema**
+   tippen. Die Tastatur fährt hoch – das Fenster darf nicht in Sprüngen schrumpfen oder auf und ab rutschen, und
+   „Thema“ muss über der Tastatur zu sehen sein. Dann die Tastatur schließen (Tipp auf den Fensterkopf): das
+   Fenster wird sofort wieder groß.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/main.tsx`, `ui/fenster/appHeight.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/Screen.tsx`
-- **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
-- **Historie:** #56, #187, #207
+- **Betrifft:** `client/src/main.tsx`, `ui/fenster/appHeight.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `ui/fenster/Sheet.module.scss`, `client/src/components/Screen.tsx`
+- **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx` (Entprellung, Kennzeichen, Feld ins Bild; das echte Tastatur-Verhalten nur am Gerät)
+- **Historie:** #56, #187, #207, 18.11.2026 (Fenster ruckelte bei offener Tastatur)
 
 </details>
 

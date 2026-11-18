@@ -201,3 +201,8 @@ von iOS hinterlassenen Dokument-Scroll zurück. Ohne beides liegen Trefferlisten
 Tastatur, und die Kopfleiste bleibt nach dem Schließen verrutscht (#207). Ohne Feld, in dem geschrieben wird, ist
 `--kb` immer 0 – iOS meldet die Tastatur manchmal noch, wenn sie längst zu ist, und das Fenster behielt dann 0 px
 (nur der Schleier, 30.10.2026). Ein Overlay behält außerdem immer `FENSTER_PLATZ_PX` (160 px).
+
+**Ruhe statt Pixel-Verfolgung** (18.11.2026): `--kb` gilt erst `TASTATUR_RUHE_MS` nach dem letzten
+`visualViewport`-Ereignis (iOS feuert beim Hochfahren der Tastatur viele); Schließen (0) gilt sofort. Solange die Tastatur
+offen ist, setzt der Hook `data-tastatur` auf den Overlay – `Sheet.module.scss` verankert das Fenster dann oben
+(`align-items: flex-start`, Rand 8 px, `max-height: 100%`), und das fokussierte Feld wird ins Bild geholt.

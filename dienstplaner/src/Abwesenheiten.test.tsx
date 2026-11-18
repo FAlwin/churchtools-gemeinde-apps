@@ -85,7 +85,8 @@ describe('Abwesenheiten im Dienstplaner (E7-2c)', () => {
     expect(dienst.anlegen).toHaveBeenCalledWith(
       expect.objectContaining({
         startTime: '2026-11-08T09:00:00Z',
-        endTime: '2026-11-08T10:30:00Z',
+        // eine Minute vor dem Termin-Ende (E5c-1a, `zeitfensterFuer`)
+        endTime: '2026-11-08T10:29:00Z',
       }),
     );
     // Nach dem Schreiben holt die Seite die Einträge neu.

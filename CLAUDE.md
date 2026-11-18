@@ -487,7 +487,10 @@ Lied: …“ · „Weiter ›“ aus `KopfKnopf` (`symbolHinten`), am Handy nur 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so
 lassen sich zwei Termine am selben Tag einzeln abhaken. Ganztägig (`null`) gilt weiter für jeden
-Termin des Tages und ist das, was das Plus (Zeitraum, Urlaub) schreibt. Die Regel steht **einmal**
+Termin des Tages und ist das, was das Plus (Zeitraum, Urlaub) schreibt. **Seit 18.11.2026 (E5c-1a):** Das
+Fenster endet **eine Minute vor dem Termin-Ende**, und `decktTermin` rechnet die Grenze **geschlossen** – gemessen:
+ChurchTools wertet schon das Berühren als Überschneidung, das volle Fenster sperrte also einen direkt folgenden Termin
+mit (`dienstplaner-planung/docs/messung-e5c.md`, Test `shared/absences/zeitfenster.test.ts`). Die Regel steht **einmal**
 in `shared/absences/index.ts` (`decktTermin`, `zeitfensterFuer`), weil App und Server sie beide
 brauchen: die App für die Häkchen, der Server für die Doppel-Erkennung. **Wer ein Feld an
 `NeueAbsence` ergänzt, muss es auch in `neueAbsenceSchema` (`absencesController.ts`) eintragen** –

@@ -87,15 +87,32 @@ export interface TerminZeit {
   date: string;
 }
 
+/** Um so viel endet das eingetragene Fenster vor dem Termin-Ende (E5c, Messung 18.11.2026). */
+const VOR_DEM_ENDE_MS = 60_000;
+
 /**
- * Das Zeitfenster, das ein Haken an diesem Termin einträgt – oder `null` für „ganztägig".
+ * Das Zeitfenster, das ein Haken („Nein“) an diesem Termin einträgt – oder `null` für „ganztägig".
  *
  * Ohne bekanntes Ende gibt es kein sinnvolles Fenster: Dann bleibt es beim ganzen Tag, wie vorher.
  * Lieber ein Eintrag, der zu viel abdeckt, als einer, der eine Minute lang gilt.
+ *
+ * **Eine Minute vor dem Termin-Ende Schluss** (E5c, gemessen an der Test-Instanz 18.11.2026,
+ * `dienstplaner-planung/docs/messung-e5c.md`): ChurchTools wertet eine Abwesenheit, die genau zum Beginn eines
+ * Termins endet, als Überschneidung (−1000 beim Einteilen). Das volle Fenster 9:00–10:30 sperrte also einen
+ * Termin ab 10:30 gleich mit. 9:00–10:29 deckt den eigenen Termin weiter (Überschneidung), den folgenden nicht.
+ * Ist der Termin höchstens eine Minute lang, bleibt das volle Fenster – ein leeres wäre kein Eintrag.
  */
 export function zeitfensterFuer(ev: TerminZeit): { startTime: string; endTime: string } | null {
-  if (!ev.endDate || ev.endDate <= ev.startDate) return null;
-  return { startTime: ev.startDate, endTime: ev.endDate };
+  const von = Date.parse(ev.startDate);
+  const bis = Date.parse(ev.endDate);
+  if (!ev.endDate || Number.isNaN(von) || Number.isNaN(bis) || !(bis > von)) return null;
+  if (bis - von <= VOR_DEM_ENDE_MS) return { startTime: ev.startDate, endTime: ev.endDate };
+  return { startTime: ev.startDate, endTime: isoOhneMs(bis - VOR_DEM_ENDE_MS) };
+}
+
+/** `2027-01-10T10:29:00Z` – wie ChurchTools schreibt, ohne Millisekunden. */
+function isoOhneMs(ms: number): string {
+  return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 /** Deckt die Abwesenheit diesen Termin ab? Ganztägig deckt alles, sonst zählt die Überschneidung. */
@@ -116,8 +133,11 @@ export function decktTermin(
   const aBis = Date.parse(a.endTime);
   const evVon = Date.parse(ev.startDate);
   const evBis = Date.parse(ev.endDate);
-  // Grenzen offen behandeln, sonst deckte das Fenster eines Termins den unmittelbar folgenden mit
-  // ab (10–12 Uhr und 12–14 Uhr sind zwei verschiedene Termine).
-  if (!(evBis > evVon)) return aVon <= evVon && evVon < aBis;
-  return aVon < evBis && evVon < aBis;
+  /**
+   * **Grenzen geschlossen – wie ChurchTools** (gemessen 18.11.2026, `messung-e5c.md`): Endet die Abwesenheit genau
+   * zum Beginn des Termins oder beginnt sie genau zu seinem Ende, zieht ChurchTools beim Einteilen trotzdem −1000 ab.
+   * Bis dahin rechneten wir offen und zeigten so „nicht abwesend“, wo ChurchTools sperrt. Damit ein „Nein“ den direkt
+   * folgenden Termin nicht trifft, endet sein Fenster eine Minute früher (`zeitfensterFuer`).
+   */
+  return aVon <= evBis && evVon <= aBis;
 }

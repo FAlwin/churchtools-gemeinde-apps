@@ -1172,7 +1172,8 @@ Konto, das den Dienst nur ansehen darf.
 **Das muss passieren:** Wer neu anfangen will, wirft mit einem Knopf alle Entwürfe weg – ohne jede Person einzeln
 herauszunehmen. In ChurchTools ändert sich dabei nichts.
 
-1. Unten die Leiste **„N Entwürfe noch nicht gesendet“** mit rotem **Alle verwerfen** links neben **Ansehen und senden**.
+1. Die Entwürfe **in dieser Sitzung** anlegen und die Seite **nicht** neu laden (genau dieser Fall ging in der ersten Fassung
+   schief). Unten die Leiste **„N Entwürfe noch nicht gesendet“** mit rotem **Alle verwerfen** links neben **Ansehen und senden**.
 2. **Alle verwerfen** → Rückfrage **„Alle N Entwürfe verwerfen?“**: „Die Entwürfe werden gelöscht, ohne gesendet zu werden – in
    ChurchTools ändert sich nichts.“; liegt ein fremder darunter, steht dort „1 davon stammt von anderen Planern.“; zum Schluss
    „Das lässt sich nicht rückgängig machen.“ **Abbrechen** (oder Escape) → nichts passiert, alle Entwürfe bleiben.
@@ -1187,7 +1188,7 @@ herauszunehmen. In ChurchTools ändert sich dabei nichts.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/ladeEntwuerfe.ts`
-- **Automatisiert:** ja – `dienstplaner/src/Planen.test.tsx` (Rückfrage, alle gezählten entfernt samt fremden, mit Version, neu geladen, Bescheid; Abbrechen; Konflikt lässt die anderen weiterlaufen), Leisten-Texte in `Planen.test.tsx` und `TerminAnsicht.test.tsx`; vier Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
-- **Historie:** Wunsch Alwin 18.11.2026 („komplett zurücksetzen, nicht alle Personen einzeln“), Knopf in der Leiste, auch fremde Entwürfe
+- **Betrifft:** `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/useEntwuerfe.ts`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/ladeEntwuerfe.ts`
+- **Automatisiert:** ja – `dienstplaner/src/Planen.test.tsx` (Rückfrage, alle gezählten entfernt samt fremden, mit Version, neu geladen, Bescheid; Abbrechen; Konflikt lässt die anderen weiterlaufen; frisch angelegter Entwurf; Gruppe aus der Zeile), `dienstplaner/src/useEntwuerfe.test.tsx` (`gruppeJe` wird mitgeführt), Leisten-Texte in `Planen.test.tsx` und `TerminAnsicht.test.tsx`; Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
+- **Historie:** Wunsch Alwin 18.11.2026 („komplett zurücksetzen, nicht alle Personen einzeln“), Knopf in der Leiste, auch fremde Entwürfe; Fund bei der Abnahme auf der Test-Instanz (18.11.2026): frisch angelegte Entwürfe fehlten in `gruppeJe` und wurden übersprungen
 </details>

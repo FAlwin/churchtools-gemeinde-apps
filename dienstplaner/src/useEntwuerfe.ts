@@ -41,13 +41,24 @@ export function useEntwuerfe(
         : { art: 'laedt' };
   const daten = ew.art === 'fertig' ? ew.daten : null;
 
-  /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
-  const setzen = (k: string, e: Entwurf | null) =>
+  /**
+   * Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. **Samt `gruppeJe`**
+   * (18.11.2026, Abnahme „Alle verwerfen“ auf der Test-Instanz): Vorher stand dort nur, was beim Laden da war – ein
+   * frisch angelegter Entwurf fehlte bis zum Neuladen, „Alle verwerfen“ übersprang ihn, und der Zauberstab zählte ihn
+   * nicht als eingeplant (`zauberEingeplant`).
+   */
+  const setzen = (k: string, e: Entwurf | null, gruppeId: number) =>
     setze((alt) => {
       const map = new Map(alt.entwuerfe);
-      if (e) map.set(k, e);
-      else map.delete(k);
-      return { ...alt, entwuerfe: map };
+      const gruppen = new Map(alt.gruppeJe);
+      if (e) {
+        map.set(k, e);
+        gruppen.set(k, gruppeId);
+      } else {
+        map.delete(k);
+        gruppen.delete(k);
+      }
+      return { ...alt, entwuerfe: map, gruppeJe: gruppen };
     });
 
   /**
@@ -75,8 +86,8 @@ export function useEntwuerfe(
       erwartet,
     );
     const k = ortSchluessel(e.ort);
-    if (r.ok) setzen(k, r.entwurf);
-    else if (r.grund === 'konflikt') setzen(k, r.jetzt ?? null);
+    if (r.ok) setzen(k, r.entwurf, gruppeId);
+    else if (r.grund === 'konflikt') setzen(k, r.jetzt ?? null, gruppeId);
     return r;
   };
 

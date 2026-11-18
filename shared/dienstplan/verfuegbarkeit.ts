@@ -187,7 +187,7 @@ export async function eigeneAntwortenLesen(
 // ── Schreiben ────────────────────────────────────────────────────────────────
 
 /** Gleiche Antworten – unabhängig von der Reihenfolge der Schlüssel. */
-function gleicheAntworten(a: Antworten, b: Antworten): boolean {
+export function gleicheAntworten(a: Antworten, b: Antworten): boolean {
   const ka = Object.keys(a).sort();
   const kb = Object.keys(b).sort();
   return (

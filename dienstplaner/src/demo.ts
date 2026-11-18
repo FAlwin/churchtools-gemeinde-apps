@@ -801,7 +801,21 @@ function ablaufDemo(
  * Entwurf von Spike; für Technik zeigt „Einrichten“, wie es beim ersten Mal aussieht.
  */
 function speicherDemo(fall: string) {
-  const kategorien = [{ id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' }];
+  const kategorien = [
+    { id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' },
+    // „Wann kann ich?“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Schublade, wäre aber „Einrichten“.
+    { id: 41, shorty: 'dienstplaner-antworten-4', name: 'Antworten Musik' },
+  ];
+  const meineAntworten = {
+    art: 'dienstplaner-verfuegbarkeit',
+    fassung: 1,
+    person: 1,
+    antworten: {
+      '102': { a: 'ja', tag: zeit(7, '00:00').slice(0, 10) },
+      '103': { a: 'vielleicht', tag: zeit(11, '00:00').slice(0, 10) },
+    },
+    stand: zeit(0, '07:00'),
+  };
   const spike = {
     art: 'dienstplaner-entwurf',
     fassung: 1,
@@ -841,6 +855,7 @@ function speicherDemo(fall: string) {
     ziel: { art: 'person', personId, name },
   });
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
+    [41, [{ id: 410, dataCategoryId: 41, value: JSON.stringify(meineAntworten) }]],
     [
       40,
       [

@@ -20,6 +20,7 @@ import {
   type Zeitraum,
 } from '@shared/ct/zeitraum';
 import { MAX_VORAUS_TAGE, decktTermin, zeitfensterFuer } from '@shared/absences/index';
+import { gleicheAntworten, type Antworten, type Zusage } from '@shared/dienstplan/verfuegbarkeit';
 import { plusTage, tagImMonat } from '@shared/ct/wochen';
 import { letzterTag, monatLabel, monatNurKurz, monatPlus, monatVon } from '@shared/ct/monate';
 import { AbsenceSheet, type Entwurf } from './AbsenceSheet';
@@ -81,6 +82,28 @@ export interface AbwesenheitenTeile {
   neuLaden: () => Promise<unknown>;
 }
 
+/**
+ * **„Wann kann ich?“ (Dienstplaner E5c-1c):** Mit dieser Angabe zeigt jeder Termin **Ja · Vielleicht · Nein** statt des
+ * Hakens „Abwesend“. „Nein“ ist der bisherige Haken (eine ChurchTools-Abwesenheit mit Terminfenster); Ja und Vielleicht
+ * gehören in den Speicher der Dienstgruppen (`@shared/dienstplan/verfuegbarkeit`) – wie sie dorthin kommen, regelt die App.
+ * **Ohne diese Angabe bleibt alles wie bisher** (Musik-App: Abhakfeld).
+ */
+export interface Zusagen {
+  /** Die gespeicherten eigenen Antworten (Termin-ID als Text → Antwort); leer, solange nichts da ist. */
+  antworten: Antworten;
+  /** Kann man Ja/Vielleicht speichern? Sonst sind die zwei Knöpfe gesperrt. */
+  bereit: boolean;
+  /** Der Hinweis oben, warum Ja/Vielleicht gesperrt ist; `null`, wenn es geht (oder noch lädt). */
+  hinweis: string | null;
+  /** Darf man den Speicher selbst einrichten? Dann steht neben dem Hinweis „Einrichten“. */
+  einrichten?: { gruppen: string[]; los: () => Promise<void> };
+  /**
+   * Die **vollständige** neue Antworten-Karte speichern (gespeichert + vorgemerkt, `tag` = Tag des Termins). Wirft nicht;
+   * ein Fehlschlag trägt den Text für die Person. Danach hat die App die Antworten neu geladen.
+   */
+  speichern: (antworten: Antworten) => Promise<{ ok: true } | { ok: false; text: string }>;
+}
+
 export interface AbwesenheitenSeiteProps {
   /** Schreiben braucht Netz (ChurchTools). */
   online: boolean;
@@ -106,6 +129,8 @@ export interface AbwesenheitenSeiteProps {
    * sitzt (auch vorgemerkt), damit die App warnen kann („bitte auch den Dienst absagen“). Ohne: nichts.
    */
   terminZusatz?: (ev: AbsenceEvent, abwesend: boolean) => ReactNode;
+  /** „Wann kann ich?“ – drei Knöpfe statt des Hakens, siehe `Zusagen`. Ohne: der Haken. */
+  zusagen?: Zusagen;
   /** Setzt die Teile in den Rahmen der App. */
   rahmen: (teile: AbwesenheitenTeile) => ReactNode;
 }
@@ -153,6 +178,7 @@ export function AbwesenheitenSeite({
   arten: artenVorgabe,
   filter,
   terminZusatz,
+  zusagen,
   rahmen,
 }: AbwesenheitenSeiteProps) {
   const laufend = monatVon(heute);
@@ -184,12 +210,19 @@ export function AbwesenheitenSeite({
   const [pending, setPending] = useState<Record<number, boolean>>({});
   /** Vorgemerkt zu löschende Zeiträume (IDs). */
   const [loeschen, setLoeschen] = useState<number[]>([]);
+  /**
+   * Vorgemerkte Ja/Vielleicht-Antworten (nur mit `zusagen`): **Termin-ID** → gewünschte Antwort, `null` = Antwort weg.
+   * Ein Eintrag steht nur da, solange er vom Gespeicherten abweicht.
+   */
+  const [pendingZ, setPendingZ] = useState<Record<number, Zusage | null>>({});
   const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const [frage, setFrage] = useState<{
     tag: string;
     absence: Absence;
     /** Die anderen Termine, die derselbe Eintrag abdeckt – leer bei einem reinen Zeitraum. */
     weitere: string[];
+    /** „Ja/Vielleicht“ an diesem Termin gewählt, während ein Zeitraum ihn abdeckt: erst nach „Zeitraum löschen“ vormerken. */
+    danach?: { ev: AbsenceEvent; wahl: Zusage };
   } | null>(null);
   /**
    * Ausgeblendete Termin-Arten (#400, seit 28.10.2026 mit Häkchen) – vom Gerät gelesen, dorthin geschrieben. `null`:
@@ -237,7 +270,18 @@ export function AbwesenheitenSeite({
   }));
   const terminText = (n: number) => `${n} ${n === 1 ? 'Termin' : 'Termine'}`;
 
-  const anzahl = Object.keys(pending).length + loeschen.length;
+  // Ein Wechsel Nein → Ja ist EIN Schritt für die Person: Termin mit Abwesenheit UND Antwort zählt einmal, ebenso der
+  // Zeitraum, der nur wegen einer Antwort gelöscht wird.
+  const zusageTermine = Object.keys(pendingZ).map(Number);
+  const geaenderteTermine = new Set([...Object.keys(pending).map(Number), ...zusageTermine]);
+  const loeschenOhneAntwort = loeschen.filter(
+    (id) =>
+      !zusageTermine.some((tid) => {
+        const t = alleEvents.find((e) => e.id === tid);
+        return t !== undefined && abwesenheitFuerTermin(liste, t)?.id === id;
+      }),
+  );
+  const anzahl = geaenderteTermine.size + loeschenOhneAntwort.length;
 
   const meldeFehler = (e: unknown, sonst: string): void => {
     onToast(e instanceof ApiError ? e.message : sonst);
@@ -252,7 +296,7 @@ export function AbwesenheitenSeite({
     return { absence, soll, vorgemerkt: ev.id in pending || weg };
   };
 
-  const haken = (ev: AbsenceEvent): void => {
+  const haken = (ev: AbsenceEvent, danach?: Zusage): void => {
     if (!online) return onToast('Zum Ändern brauchst du Netz.');
     const a = abwesenheitFuerTermin(liste, ev);
     /**
@@ -267,7 +311,14 @@ export function AbwesenheitenSeite({
     if (a && (a.startDate !== a.endDate || weitere.length > 0)) {
       // Entweder die vorgemerkte Löschung zurücknehmen – oder nachfragen.
       if (loeschen.includes(a.id)) setLoeschen((l) => l.filter((id) => id !== a.id));
-      else setFrage({ tag: ev.date, absence: a, weitere: weitere.map((e) => e.name) });
+      else {
+        setFrage({
+          tag: ev.date,
+          absence: a,
+          weitere: weitere.map((e) => e.name),
+          ...(danach ? { danach: { ev, wahl: danach } } : {}),
+        });
+      }
       return;
     }
     const ist = a !== undefined;
@@ -278,11 +329,66 @@ export function AbwesenheitenSeite({
       else n[ev.id] = soll;
       return n;
     });
+    if (danach) merkeZusage(ev, danach);
+  };
+
+  /* ---------------------------------------------------------------- Ja / Vielleicht (nur mit `zusagen`) */
+
+  const gespeicherteZusage = (ev: AbsenceEvent): Zusage | null =>
+    zusagen?.antworten[String(ev.id)]?.a ?? null;
+
+  /** Eine Antwort vormerken – steht sie schon so gespeichert da, ist nichts vorzumerken. */
+  const merkeZusage = (ev: AbsenceEvent, z: Zusage | null): void => {
+    setPendingZ((p) => {
+      const n = { ...p };
+      if (z === gespeicherteZusage(ev)) delete n[ev.id];
+      else n[ev.id] = z;
+      return n;
+    });
+  };
+
+  /**
+   * Was der Termin zeigt. **Eine ChurchTools-Abwesenheit gilt immer** (Nein), auch wenn noch eine alte Ja-Antwort
+   * gespeichert ist – ChurchTools plant eine abwesende Person nicht ein.
+   */
+  const antwortFuer = (ev: AbsenceEvent): Zusage | 'nein' | null => {
+    if (kasten(ev).soll) return 'nein';
+    return ev.id in pendingZ ? pendingZ[ev.id] : gespeicherteZusage(ev);
+  };
+
+  const waehle = (ev: AbsenceEvent, wahl: Zusage | 'nein'): void => {
+    if (!online) return onToast('Zum Ändern brauchst du Netz.');
+    // „Nein“ ist der Haken: ein Tipp setzt ihn, ein zweiter nimmt ihn weg. Eine vorgemerkte Ja-Antwort bleibt dabei
+    // stehen (und kommt zurück, wenn man „Nein“ wieder wegnimmt); gespeichert wird sie nur, wo kein „Nein“ gilt.
+    if (wahl === 'nein') return haken(ev);
+    if (!zusagen?.bereit) return;
+    const jetzt = antwortFuer(ev);
+    // Ja/Vielleicht auf einem „Nein“: erst die Abwesenheit wegnehmen (mit der Rückfrage bei Zeiträumen), die Antwort
+    // dann gleich mit vormerken.
+    if (jetzt === 'nein') return haken(ev, wahl);
+    // Noch einmal auf den aktiven Knopf: die Antwort ist weg.
+    merkeZusage(ev, jetzt === wahl ? null : wahl);
+  };
+
+  /** Die neue Antworten-Karte; `null`, wenn sich gegenüber dem Gespeicherten nichts ändert. */
+  const neueZusagen = (): Antworten | null => {
+    if (!zusagen) return null;
+    const karte: Antworten = { ...zusagen.antworten };
+    for (const [id, z] of Object.entries(pendingZ)) {
+      const ev = alleEvents.find((e) => e.id === Number(id));
+      if (!ev) continue;
+      if (z) karte[id] = { a: z, tag: ev.date };
+      else delete karte[id];
+    }
+    // Wo „Nein“ gilt (Abwesenheit steht oder wird eingetragen), gibt es keine Ja/Vielleicht-Antwort.
+    for (const ev of alleEvents) if (kasten(ev).soll) delete karte[String(ev.id)];
+    return gleicheAntworten(karte, zusagen.antworten) ? null : karte;
   };
 
   const verwerfen = (): void => {
     setPending({});
     setLoeschen([]);
+    setPendingZ({});
   };
 
   const speichernAlles = (): void => {
@@ -308,6 +414,7 @@ export function AbwesenheitenSeite({
         })
         .filter((id): id is number => id !== undefined),
     ];
+    const zusageNeu = neueZusagen();
     setLaeuft('sichern');
     void (async () => {
       try {
@@ -318,11 +425,32 @@ export function AbwesenheitenSeite({
          */
         for (const e of eintragen) await schreiben.anlegen(e);
         for (const id of weg) await schreiben.loeschen(id);
-        const n = eintragen.length + weg.length;
-        verwerfen();
-        onToast(
-          `${n} ${n === 1 ? 'Änderung' : 'Änderungen'} gespeichert – steht jetzt in ChurchTools.`,
-        );
+        const n = zusagen ? anzahl : eintragen.length + weg.length;
+        // Danach, in EINEM Aufruf, die Antworten. Gelingt das nicht ganz, bleiben sie vorgemerkt – die Abwesenheiten
+        // stehen dann schon und werden nicht noch einmal geschrieben.
+        let zusageFehler: string | null = null;
+        if (zusagen && zusageNeu) {
+          try {
+            const r = await zusagen.speichern(zusageNeu);
+            if (!r.ok) zusageFehler = r.text;
+          } catch {
+            zusageFehler = 'Ja/Vielleicht konnte nicht gespeichert werden – bitte noch einmal.';
+          }
+        }
+        if (zusageFehler === null) {
+          verwerfen();
+          onToast(
+            `${n} ${n === 1 ? 'Änderung' : 'Änderungen'} gespeichert – steht jetzt in ChurchTools.`,
+          );
+        } else {
+          setPending({});
+          setLoeschen([]);
+          onToast(
+            eintragen.length + weg.length > 0
+              ? `Abwesenheiten gespeichert. ${zusageFehler}`
+              : zusageFehler,
+          );
+        }
       } catch (e) {
         meldeFehler(e, 'Konnte nicht gespeichert werden – bitte noch einmal.');
       } finally {
@@ -396,12 +524,51 @@ export function AbwesenheitenSeite({
     </div>
   );
 
+  /** Ja · Vielleicht · Nein – eine Gruppe, der gewählte Knopf trägt `aria-pressed` (Variante 1A, Entwurf 18.11.2026). */
+  const dreiKnoepfe = (ev: AbsenceEvent, k: Kasten) => {
+    const jetzt = antwortFuer(ev);
+    const wahlen: { wert: Zusage | 'nein'; text: string; klasse: string }[] = [
+      { wert: 'ja', text: 'Ja', klasse: styles.antwortJa },
+      { wert: 'vielleicht', text: 'Vielleicht', klasse: styles.antwortVielleicht },
+      { wert: 'nein', text: 'Nein', klasse: styles.antwortNein },
+    ];
+    return (
+      <div
+        className={styles.antwort}
+        role="group"
+        aria-label={`Antwort – ${ev.name}, ${tagKurz(ev.date)}`}
+      >
+        {wahlen.map((w) => {
+          const an = jetzt === w.wert;
+          const vorgemerkt = w.wert === 'nein' ? k.vorgemerkt : ev.id in pendingZ;
+          const gesperrt = w.wert === 'nein' ? !online : !zusagen?.bereit;
+          return (
+            <button
+              key={w.wert}
+              type="button"
+              className={`${w.klasse}${an ? ' ' + styles.antwortAn : ''}${an && vorgemerkt ? ' ' + styles.antwortVorgemerkt : ''}`}
+              aria-pressed={an}
+              aria-label={`${w.text} – ${ev.name}, ${tagKurz(ev.date)}`}
+              disabled={gesperrt || laeuft === 'sichern'}
+              onClick={() => waehle(ev, w.wert)}
+            >
+              {w.text}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   const terminZeile = (ev: AbsenceEvent) => {
     const k = kasten(ev);
     const a = k.absence;
     const teil = a !== undefined && a.startDate !== a.endDate;
     return (
-      <div key={`ev-${ev.id}`} className={styles.zeile}>
+      <div
+        key={`ev-${ev.id}`}
+        className={`${styles.zeile}${zusagen ? ' ' + styles.zeileAntwort : ''}`}
+      >
         {datumKachel(ev.date, uhrzeit(ev.startDate), k.soll ? 'rot' : 'blau')}
         <div className={styles.text}>
           <span className={styles.titel}>{ev.name}</span>
@@ -415,16 +582,20 @@ export function AbwesenheitenSeite({
           </span>
           {terminZusatz?.(ev, k.soll)}
         </div>
-        <button
-          className={`${styles.kasten}${k.soll ? ' ' + styles.kastenAn : ''}${k.vorgemerkt ? ' ' + styles.vorgemerkt : ''}`}
-          aria-pressed={k.soll}
-          aria-label={`Abwesend – ${ev.name}, ${tagKurz(ev.date)}`}
-          disabled={!online || laeuft === 'sichern'}
-          onClick={() => haken(ev)}
-        >
-          <span className={styles.box}>{k.soll ? '✓' : ''}</span>
-          Abwesend
-        </button>
+        {zusagen ? (
+          dreiKnoepfe(ev, k)
+        ) : (
+          <button
+            className={`${styles.kasten}${k.soll ? ' ' + styles.kastenAn : ''}${k.vorgemerkt ? ' ' + styles.vorgemerkt : ''}`}
+            aria-pressed={k.soll}
+            aria-label={`Abwesend – ${ev.name}, ${tagKurz(ev.date)}`}
+            disabled={!online || laeuft === 'sichern'}
+            onClick={() => haken(ev)}
+          >
+            <span className={styles.box}>{k.soll ? '✓' : ''}</span>
+            Abwesend
+          </button>
+        )}
       </div>
     );
   };
@@ -520,6 +691,9 @@ export function AbwesenheitenSeite({
           </div>
         )}
       </div>
+      {zusagen?.hinweis && (
+        <ZusageHinweis hinweis={zusagen.hinweis} einrichten={zusagen.einrichten} />
+      )}
       <section data-tour="verf-termine">
         {monatsGruppen.length === 0 && (
           <div className={styles.liste}>
@@ -542,8 +716,10 @@ export function AbwesenheitenSeite({
        * ChurchTools sehen darf. Wer welchen Dienst hat, weiß die App nicht (Dienst-Einteilung ist Phase 2).
        */}
       <p className={styles.hinweis}>
-        Alle Termine aus ChurchTools – wer eingeteilt ist, spielt hier keine Rolle. Ein Haken wird
-        erst mit „Speichern" eingetragen.
+        Alle Termine aus ChurchTools – wer eingeteilt ist, spielt hier keine Rolle.{' '}
+        {zusagen
+          ? 'Deine Antwort wird erst mit „Speichern“ übernommen – Ja und Vielleicht kann deine Dienstgruppe sehen, Nein steht als Abwesenheit in ChurchTools.'
+          : 'Ein Haken wird erst mit „Speichern" eingetragen.'}
       </p>
     </>
   );
@@ -565,7 +741,9 @@ export function AbwesenheitenSeite({
           <b>{frueher ? 'Nichts in der Vergangenheit.' : 'Noch nichts eingetragen.'}</b>
           {frueher
             ? 'Was du einträgst, bleibt hier ein Jahr lang stehen.'
-            : 'Unter „Termine" ein Kästchen abhaken – oder über das Plus einen Zeitraum eintragen.'}
+            : zusagen
+              ? 'Unter „Termine“ bei einem Termin „Nein“ wählen – oder über das Plus einen Zeitraum eintragen.'
+              : 'Unter „Termine" ein Kästchen abhaken – oder über das Plus einen Zeitraum eintragen.'}
         </div>
       ) : (
         gruppiert(eintraegeListe).map((g) => (
@@ -645,6 +823,7 @@ export function AbwesenheitenSeite({
           weitereTermine={frage.weitere}
           onLoeschen={() => {
             setLoeschen((l) => (l.includes(frage.absence.id) ? l : [...l, frage.absence.id]));
+            if (frage.danach) merkeZusage(frage.danach.ev, frage.danach.wahl);
             setFrage(null);
           }}
           onAnpassen={() => {
@@ -687,4 +866,63 @@ export function AbwesenheitenSeite({
     fehler,
     neuLaden,
   });
+}
+
+/**
+ * Der Hinweis oben, wenn Ja/Vielleicht gesperrt ist – mit „Einrichten“, wenn man den Speicher selbst anlegen darf (wie
+ * bei den Entwürfen in „Planen“: erst nach dem Recht fragen, sonst entsteht ein zweiter). Scheitert es, steht der Grund da.
+ */
+function ZusageHinweis({
+  hinweis,
+  einrichten,
+}: {
+  hinweis: string;
+  einrichten: Zusagen['einrichten'];
+}) {
+  const [stand, setStand] = useState<
+    { art: 'bereit' | 'laeuft' } | { art: 'fehler'; text: string }
+  >({
+    art: 'bereit',
+  });
+  const los = async (): Promise<void> => {
+    if (!einrichten) return;
+    setStand({ art: 'laeuft' });
+    try {
+      await einrichten.los();
+      setStand({ art: 'bereit' });
+    } catch (e) {
+      setStand({
+        art: 'fehler',
+        text: e instanceof Error ? e.message : 'Einrichten hat nicht geklappt.',
+      });
+    }
+  };
+  return (
+    <div className={styles.zusageHinweis} role="note">
+      <p>{hinweis}</p>
+      {einrichten && (
+        <>
+          <p>
+            <b>Für {einrichten.gruppen.map((g) => `„${g}“`).join(', ')} einrichten.</b> Dafür gibt
+            es in ChurchTools noch keinen Platz – oder du darfst ihn nur nicht sehen. Dann bitte
+            erst nach dem Recht fragen, sonst entsteht ein zweiter. Danach stellt die
+            Gemeinde-Verwaltung in ChurchTools ein, wer die Antworten sehen und ändern darf.
+          </p>
+          <button
+            type="button"
+            className={styles.einrichten}
+            disabled={stand.art === 'laeuft'}
+            onClick={() => void los()}
+          >
+            {stand.art === 'laeuft' ? 'Wird eingerichtet …' : 'Einrichten'}
+          </button>
+          {stand.art === 'fehler' && (
+            <p className={styles.zusageFehler} role="alert">
+              {stand.text}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
 }

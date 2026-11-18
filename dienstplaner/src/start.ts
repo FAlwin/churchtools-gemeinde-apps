@@ -157,6 +157,22 @@ export function planbareDienstgruppen(start: Start): Dienstgruppe[] {
   );
 }
 
+/**
+ * **Die eigenen Dienstgruppen** (E5c-1c, „Wann kann ich?“): die, an deren Diensten eine ChurchTools-Gruppe hängt, in der man
+ * Mitglied ist (`Dienst.gruppenIds`, `Start.gruppen` – aktive Mitgliedschaften, Leitung zählt mit). Dieselbe Verbindung
+ * Person → Gruppe → Dienst, über die auch „Personen“ die Mitglieder eines Dienstes findet. In der Reihenfolge der Gemeinde.
+ * Dorthin schreibt „Wann kann ich?“ die Ja/Vielleicht-Antworten.
+ */
+export function eigeneDienstgruppen(
+  start: Pick<Start, 'gruppen' | 'dienste' | 'dienstgruppen'>,
+): Dienstgruppe[] {
+  const meine = new Set(start.gruppen.map((g) => g.id));
+  const dienste = [...start.dienste.values()];
+  return start.dienstgruppen.filter((g) =>
+    dienste.some((d) => d.dienstgruppeId === g.id && d.gruppenIds.some((id) => meine.has(id))),
+  );
+}
+
 /** Die Lied-Rechte aus der Rechte-Antwort – `rechteAus` wie in der Musik-App, übersetzt mit `liedRechteAus`. */
 export function startLiederAus(
   rechteRoh: Record<string, Record<string, unknown>> | null,

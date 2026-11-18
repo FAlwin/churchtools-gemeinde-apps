@@ -140,12 +140,12 @@ describe('Startseite (E3-3)', () => {
         onMeineTermine={() => {}}
       />,
     );
-    expect(await screen.findByText(/^1 eingetragen/)).toBeTruthy();
+    expect(await screen.findByText(/^1 Abwesenheit eingetragen/)).toBeTruthy();
     unmount();
     abwesenheiten.mockRejectedValue(new Error('weg'));
     zeige();
     await waitFor(() => expect(abwesenheiten).toHaveBeenCalledTimes(2));
-    expect(screen.getByText('Trag ein, wann du nicht kannst.')).toBeTruthy();
+    expect(screen.getByText('Sag, wann du kannst – und wann nicht.')).toBeTruthy();
     expect(screen.queryByText('Noch nichts eingetragen')).toBeNull();
   });
 

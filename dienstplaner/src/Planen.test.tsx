@@ -1365,7 +1365,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         ),
     });
     await waitFor(() =>
-      expect(offenTexte()).toBe('2 Entwürfe noch nicht gesendetAnsehen und senden'),
+      expect(offenTexte()).toBe('2 Entwürfe noch nicht gesendetAlle verwerfenAnsehen und senden'),
     );
     cleanup();
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) });
@@ -1382,12 +1382,95 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         entwuerfe={a}
       />,
     );
-    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfAnsehen & senden'));
+    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfVerwerfenAnsehen & senden'));
     cleanup();
     const leer = zeige4({});
     await waitFor(() => expect(leer.laden).toHaveBeenCalled());
     await screen.findAllByRole('button', { name: /frei – Wer kann/ });
     expect(offenTexte()).toBeNull();
+  });
+
+  // ── „Alle verwerfen“ (18.11.2026) ────────────────────────────────────────
+  it('„Alle verwerfen“: Rückfrage, dann jeden gezählten Entwurf entfernen (auch fremde), neu laden, Bescheid', async () => {
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    const laden = vi.fn(() =>
+      Promise.resolve(
+        daten([
+          entwurf({ version: 4 }),
+          entwurf({
+            ort: { eventId: 20, serviceId: 6, index: null },
+            ziel: { art: 'gast', name: 'Max' },
+            von: { personId: 19, name: 'Spike' },
+            version: 9,
+          }),
+          entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } }), // veraltet – zählt nicht, bleibt
+        ]),
+      ),
+    );
+    zeige4({ laden, entfernen });
+    await waitFor(() => expect(offenTexte()).toMatch(/^2 Entwürfe/));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle verwerfen' }));
+    const frage = screen.getByRole('alertdialog');
+    expect(within(frage).getByText('Alle 2 Entwürfe verwerfen?')).toBeTruthy();
+    expect(frage.textContent).toMatch(/1 davon stammt von anderen Planern/);
+    expect(entfernen).not.toHaveBeenCalled();
+    fireEvent.click(within(frage).getByRole('button', { name: 'Verwerfen' }));
+    expect(await screen.findByText('2 Entwürfe verworfen.')).toBeTruthy();
+    expect(
+      entfernen.mock.calls.map((c) => [
+        (c as unknown[])[1],
+        (c as unknown[])[2],
+        (c as unknown[])[3],
+      ]),
+    ).toEqual([
+      [3, { eventId: 20, serviceId: 7, index: 2 }, 4],
+      [3, { eventId: 20, serviceId: 6, index: null }, 9],
+    ]);
+    expect(laden).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('„Alle verwerfen“ abgebrochen: nichts entfernt, nichts neu geladen', async () => {
+    const entfernen = vi.fn();
+    const laden = vi.fn(() => Promise.resolve(daten([entwurf()])));
+    zeige4({ laden, entfernen });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle verwerfen' }));
+    expect(within(screen.getByRole('alertdialog')).getByText('Entwurf verwerfen?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(entfernen).not.toHaveBeenCalled();
+    expect(laden).toHaveBeenCalledTimes(1);
+  });
+
+  it('„Alle verwerfen“ mit Konflikt: die anderen gehen weiter, der Bescheid nennt, was liegen blieb', async () => {
+    const entfernen = vi
+      .fn<EntwurfAnschluss['entfernen']>()
+      .mockResolvedValueOnce({ ok: false, grund: 'konflikt', jetzt: entwurf({ version: 5 }) })
+      .mockResolvedValueOnce({ ok: true, entwurf: null });
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf(),
+            entwurf({
+              ort: { eventId: 20, serviceId: 6, index: null },
+              ziel: { art: 'gast', name: 'Max' },
+            }),
+          ]),
+        ),
+      entfernen,
+    });
+    await waitFor(() => expect(offenTexte()).toMatch(/^2 Entwürfe/));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle verwerfen' }));
+    expect(screen.getByRole('alertdialog').textContent).not.toMatch(/anderen Planern/);
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    expect(
+      await screen.findByText(
+        '1 verworfen, 1 nicht – inzwischen geändert oder gerade nicht erreichbar.',
+      ),
+    ).toBeTruthy();
+    expect(entfernen).toHaveBeenCalledTimes(2);
   });
 
   // ── E4-4-2: Senden-Fach ──────────────────────────────────────────────────

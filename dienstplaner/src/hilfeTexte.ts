@@ -46,6 +46,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     titel: 'Senden',
     punkte: [
       'Entwürfe gehen erst mit „Ansehen und senden“ an ChurchTools.',
+      '„Alle verwerfen“ löscht alle Entwürfe auf einmal, ohne zu senden.',
       'Teilen und PDF zeigen nur, was schon in ChurchTools steht.',
     ],
   },
@@ -89,6 +90,7 @@ export const HILFE_TERMIN: readonly HilfeAbschnitt[] = [
     titel: 'Senden',
     punkte: [
       'Gesendet wird erst mit „Ansehen und senden“ – nur, was an diesem Termin steht.',
+      '„Alle verwerfen“ löscht die Entwürfe dieses Termins, ohne zu senden.',
       'Entwürfe anderer Termine sendest du unter „Planen“.',
     ],
   },

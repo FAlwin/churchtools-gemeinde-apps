@@ -20,7 +20,7 @@
 >   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
->   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden**, **Teilen** = Plan,
+>   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
 > - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
@@ -86,6 +86,9 @@ in ChurchTools im Speicher des Dienstplaners, je Dienstgruppe in einer eigenen K
 **Senden** (E4-4, 15.10.2026): „Ansehen und senden“ zeigt alle gültigen Entwürfe im geladenen Zeitraum, wo man
 planen und die Entwürfe der Gruppe ändern darf – auch die anderer Planer. Je Zeile ein Häkchen; Abgewähltes bleibt
 Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden geht trotzdem.
+**Alle verwerfen** (18.11.2026) daneben in der Leiste löscht nach einer Rückfrage genau diese Entwürfe – auch die anderer
+Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein anderer inzwischen geändert hat, bleibt liegen
+(Versions-Schutz wie bei „Entfernen“), der Hinweis danach nennt die Zahl.
 
 - **Mitteilungen schickt ChurchTools**, nicht der Dienstplaner. Gemessen (14./15.10.2026): Eine **Anfrage** und
   **„Direkt zuteilen“** lösen die Push-Mitteilung der ChurchTools-App aus, aber keine Mail je Einteilung. Ein **Gast**

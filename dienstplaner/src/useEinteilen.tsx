@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { gruppenName, nimmtEintraegeAn, type Plan, type PlanZeile } from '@shared/dienstplan/plan';
@@ -151,6 +152,9 @@ export function useEinteilen({
   const [werKannVon, setWerKannVon] = useState<WerKannVon | null>(null);
   // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
   const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
+  // „Alle verwerfen“ aus der Leiste: die Rückfrage mit der Liste (beim Klick festgehalten) und ob es gerade läuft.
+  const [verwerfenListe, setVerwerfenListe] = useState<SendeZeile[] | null>(null);
+  const [verwirft, setVerwirft] = useState(false);
   const { toast, showToast } = useToast();
 
   // Entwürfe (E4-3) und wo sie stehen (#582) – Laden, Speichern und Regeln in `useEntwuerfe` / `planEntwuerfe`.
@@ -278,6 +282,39 @@ export function useEinteilen({
   };
 
   /**
+   * **Alle Entwürfe verwerfen** (Alwin, 18.11.2026: „komplett zurücksetzen, nicht alle Personen einzeln“) – genau die,
+   * die die Leiste zählt (`sendbareZeilen`), auch die anderer Planer. Einer nach dem anderen über dasselbe `entfernen`
+   * wie „Entfernen“ im Fach, also mit Versions-Schutz: Was ein anderer inzwischen geändert hat, bleibt liegen. Danach
+   * die Entwürfe neu laden – die Matrix zeigt dann, was übrig ist.
+   */
+  const alleVerwerfen = async (zeilen: SendeZeile[]) => {
+    if (!entwuerfe || ew.art !== 'fertig') return;
+    setVerwirft(true);
+    let weg = 0;
+    try {
+      for (const z of zeilen) {
+        const gruppeId = ew.daten.gruppeJe.get(ortSchluessel(z.entwurf.ort));
+        if (gruppeId === undefined) continue;
+        const r = await entwuerfe.entfernen(ew.daten, gruppeId, z.entwurf.ort, z.entwurf.version);
+        if (r.ok) weg++;
+      }
+    } finally {
+      // Auch wenn mittendrin etwas wirft: Fenster zu, neu laden – die Matrix zeigt dann, was wirklich noch liegt.
+      setVerwirft(false);
+      setVerwerfenListe(null);
+      ewNeu();
+    }
+    const rest = zeilen.length - weg;
+    showToast(
+      rest === 0
+        ? weg === 1
+          ? 'Entwurf verworfen.'
+          : `${weg} Entwürfe verworfen.`
+        : `${weg} verworfen, ${rest} nicht – inzwischen geändert oder gerade nicht erreichbar.`,
+    );
+  };
+
+  /**
    * Den `modus` eines Entwurfs ändern (Anfrage ⇄ direkt) – **eine Funktion** fürs Entwurfs-Fach („Beim Senden“) und für
    * „Personen“ (zweiter Klick, P2m): Versions-Schutz im Kern (`erwartet`), Ergebnis übernehmen, Bescheid geben.
    */
@@ -399,15 +436,29 @@ export function useEinteilen({
         {handy ? '' : ' noch nicht gesendet'}
         {leisteZusatz && !handy && <small>{leisteZusatz}</small>}
       </span>
-      <button
-        type="button"
-        className={styles.sendenKnopf}
-        onClick={() => setSendenListe(sendbareZeilen(plan, daten))}
-      >
-        {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
-      </button>
+      <span className={styles.leisteKnoepfe}>
+        <button
+          type="button"
+          className={styles.verwerfenKnopf}
+          onClick={() => setVerwerfenListe(sendbareZeilen(plan, daten))}
+        >
+          {handy ? 'Verwerfen' : 'Alle verwerfen'}
+        </button>
+        <button
+          type="button"
+          className={styles.sendenKnopf}
+          onClick={() => setSendenListe(sendbareZeilen(plan, daten))}
+        >
+          {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
+        </button>
+      </span>
     </div>
   );
+
+  // Für die Rückfrage: wie viele es sind und wie viele davon andere angelegt haben.
+  const vonAnderen = (verwerfenListe ?? []).filter(
+    (z) => z.entwurf.von.personId !== entwuerfe?.ich.personId,
+  ).length;
 
   const fenster: ReactNode = (
     <>
@@ -537,6 +588,24 @@ export function useEinteilen({
               onGesendet();
             }
           }}
+        />
+      )}
+      {verwerfenListe && (
+        <ConfirmDialog
+          title={
+            verwerfenListe.length === 1
+              ? 'Entwurf verwerfen?'
+              : `Alle ${verwerfenListe.length} Entwürfe verwerfen?`
+          }
+          message={`${verwerfenListe.length === 1 ? 'Der Entwurf wird' : 'Die Entwürfe werden'} gelöscht, ohne gesendet zu werden – in ChurchTools ändert sich nichts.${
+            vonAnderen > 0
+              ? ` ${vonAnderen === verwerfenListe.length ? (vonAnderen === 1 ? 'Er stammt' : 'Alle stammen') : `${vonAnderen} davon ${vonAnderen === 1 ? 'stammt' : 'stammen'}`} von anderen Planern.`
+              : ''
+          } Das lässt sich nicht rückgängig machen.`}
+          confirmLabel={verwirft ? 'Wird verworfen …' : 'Verwerfen'}
+          beschaeftigt={verwirft}
+          onConfirm={() => void alleVerwerfen(verwerfenListe)}
+          onCancel={() => setVerwerfenListe(null)}
         />
       )}
       {zauber && (

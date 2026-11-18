@@ -1791,7 +1791,9 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
     });
     zeige({ entwuerfe: anschluss });
     await waitFor(() =>
-      expect(leiste()).toBe('1 Entwurf noch nicht gesendetan diesem TerminAnsehen und senden'),
+      expect(leiste()).toBe(
+        '1 Entwurf noch nicht gesendetan diesem TerminAlle verwerfenAnsehen und senden',
+      ),
     );
     expect(screen.getByTitle(/^Entwurf von/).textContent).toContain('Ben Test');
     // Die anderen Termine werden hier nicht nachgefragt (nur „Planen“ sucht alte Entwürfe).
@@ -1873,6 +1875,6 @@ describe('Einteilen in der Termin-Ansicht (F1, 09.11.2026)', () => {
       handy: true,
       entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([hier()])) }),
     });
-    await waitFor(() => expect(leiste()).toBe('1 EntwurfAnsehen & senden'));
+    await waitFor(() => expect(leiste()).toBe('1 EntwurfVerwerfenAnsehen & senden'));
   });
 });

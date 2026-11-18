@@ -1,6 +1,7 @@
 import { Fragment, useId } from 'react';
 import { Icon } from '../icons/icons';
 import { useAufklapp } from './useAufklapp';
+import { useMenueImBild } from './useMenueImBild';
 import { abschnittMitWahl, type FilterAbschnitt } from './filterAbschnitt';
 import styles from './FilterKnopf.module.scss';
 
@@ -20,7 +21,8 @@ export function FilterKnopf({
   /** Für die Lage in der Leiste (z. B. rechtsbündig). */
   className?: string;
 }) {
-  const { offen, setOffen, rahmen } = useAufklapp();
+  const { offen, setOffen, rahmen, menue } = useAufklapp();
+  useMenueImBild(menue, offen, 'rechts');
   const id = useId();
   const sichtbar = abschnitte.filter(abschnittMitWahl);
   const ausgeblendet = sichtbar.reduce(
@@ -50,7 +52,7 @@ export function FilterKnopf({
         {ausgeblendet > 0 && <span className={styles.zahl}>{ausgeblendet}</span>}
       </button>
       {offen && (
-        <div className={styles.menue} id={id} role="dialog" aria-label="Filter">
+        <div ref={menue} className={styles.menue} id={id} role="dialog" aria-label="Filter">
           {sichtbar.map((a) => (
             <fieldset key={a.titel} className={styles.abschnitt}>
               <legend>{a.titel}</legend>

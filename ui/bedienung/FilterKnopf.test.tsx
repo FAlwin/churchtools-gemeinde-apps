@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { FilterKnopf } from './FilterKnopf';
@@ -34,6 +34,8 @@ function Mit({ start = [] as string[], gruppen = ['Programm', 'Technik'] }) {
 
 /** Ist das Häkchen gesetzt? (Hilfsfunktion: so passt der Typ für Compiler und Lint gleichermaßen.) */
 const angehakt = (el: HTMLElement): boolean => (el as HTMLInputElement).checked;
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
   it('zu, bis man tippt; dann je Abschnitt eine Überschrift und Häkchen = wird gezeigt', () => {
@@ -70,6 +72,24 @@ describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('ragt das Menü links aus dem Bild (Knopf am Handy links in der Leiste), rückt es nach rechts (18.11.2026)', () => {
+    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(375);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 5,
+      right: 235,
+      width: 230,
+      top: 0,
+      bottom: 200,
+      height: 200,
+      x: 5,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    render(<Mit />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(screen.getByRole('dialog', { name: 'Filter' }).style.right).toBe('-11px');
   });
 
   it('Abschnitte mit nur einer Möglichkeit fehlen; ganz ohne Wahl kein Knopf', () => {

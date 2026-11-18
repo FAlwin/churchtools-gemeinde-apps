@@ -18,6 +18,17 @@ export function menueVersatz(links: number, breite: number, fensterBreite: numbe
 }
 
 /**
+ * Dasselbe für ein Menü, das am **rechten** Rand seines Knopfs hängt (Filter, Sortieren): Wie weit es nach rechts rücken
+ * muss, damit es links nicht über den Bildschirm ragt – höchstens so weit, dass es rechts noch `RAND` Abstand hat. Am
+ * Handy steht „Sortieren“ links in der Leiste; sein 230 px breites Menü ragte 42 px links hinaus (Protokolle, 18.11.2026).
+ */
+export function menueVersatzRechts(links: number, breite: number, fensterBreite: number): number {
+  const ueber = RAND - links;
+  if (ueber <= 0) return 0;
+  return Math.min(ueber, Math.max(0, fensterBreite - RAND - (links + breite)));
+}
+
+/**
  * Wohin die Liste scrollen muss, damit eine Zeile ganz zu sehen ist – sonst bleibt sie, wo sie ist. Bewusst von Hand
  * statt `scrollIntoView`: Das scrollt auch alle Behälter darüber, und in ChurchTools rückte so die ganze Seite um 49 px
  * zur Seite (Test-Instanz 11.11.2026).

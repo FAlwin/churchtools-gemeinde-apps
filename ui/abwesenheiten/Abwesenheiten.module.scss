@@ -246,6 +246,10 @@
     border-left: 1px solid var(--border);
   }
 }
+// Breit genug für „Vielleicht“ in Fett – sonst rückt die Gruppe beim Wählen um 4 px (am Rechner geprüft 18.11.2026).
+.antwort .antwortVielleicht {
+  min-width: 92px;
+}
 .antwortJa.antwortAn {
   background: color-mix(in srgb, var(--green) 14%, var(--surface2));
   color: var(--green);

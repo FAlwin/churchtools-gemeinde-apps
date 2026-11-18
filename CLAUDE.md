@@ -320,7 +320,9 @@ churchtools-gemeinde-apps/
   (0 px hoch). Zusätzlich behält ein Overlay immer `FENSTER_PLATZ_PX`.
   **Ruhe statt Pixel-Verfolgung** (18.11.2026): iOS feuert während der Tastatur-Animation viele `visualViewport`-Ereignisse –
   `--kb` wird deshalb erst `TASTATUR_RUHE_MS` nach dem letzten geschrieben (Schließen = 0 gilt sofort), der Dokument-Scroll
-  wird dagegen bei jedem Ereignis zurückgeholt. Solange die Tastatur offen ist, trägt der Overlay `data-tastatur`:
+  wird dagegen bei jedem Ereignis zurückgeholt – **immer mit `seiteNachOben()`** (`behavior: 'instant'`), nie mit einem
+  schlichten `scrollTo` auf 0/0: ChurchTools setzt `scroll-behavior: smooth` auf `html`, die Seite kroch dann ~4 s ruckelnd
+  zurück (Quelltext-Wächter `quelltexteSeiteNachOben.test.ts`). Solange die Tastatur offen ist, trägt der Overlay `data-tastatur`:
   `Sheet.module.scss` verankert das Fenster dann OBEN (Kopf steht, nur die Unterkante folgt) und das fokussierte Feld
   wird in seinem Scrollbereich ins Bild geholt – von Hand (`feldZeigen` mit `listenScroll`), **nie `scrollIntoView`**:
   das scrollt alle Behälter darüber und verschob in ChurchTools schon die ganze Seite (`feldInsBild: false` für den

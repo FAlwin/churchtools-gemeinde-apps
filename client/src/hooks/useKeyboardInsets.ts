@@ -1,6 +1,7 @@
 import { useEffect, type MutableRefObject } from 'react';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
 import { grundHoehe, tastaturHoehe } from '@ui/fenster/useTastaturOffen';
+import { seiteNachOben } from '@ui/fenster/seiteNachOben';
 
 // Gelernte Höhe der iOS-Bildschirmtastatur (px). Damit heben wir den Chart-Bereich schon BEIM
 // Fokussieren an – ist der Cursor beim Öffnen der Tastatur bereits sichtbar, verschiebt iOS die
@@ -16,7 +17,7 @@ function learnKbHeight(kb: number): void {
 // Vorfahren (trotz overflow:hidden), um den Cursor freizustellen → alles zurückdrehen; das
 // Freistellen übernimmt unser gezielter transform-Hub auf dem Chart-Bereich.
 export function resetRevealScrolls(el: HTMLElement): void {
-  if (window.scrollY !== 0) window.scrollTo(0, 0);
+  if (window.scrollY !== 0) seiteNachOben();
   for (let n = el.parentElement; n; n = n.parentElement) {
     // Ein Container, der absichtlich scrollt (Scroll-Modus, #608), behält seine Stelle – sonst spränge
     // das Liederheft beim Tippen eines Textfelds an den Anfang des Ablaufs.

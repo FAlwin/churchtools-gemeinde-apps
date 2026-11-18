@@ -15,6 +15,7 @@ import { zoomBeimTippenAus } from '@ui/fenster/tippZoom';
 import { istExtension } from './services/modus';
 import { latoMitbringen } from '@ui/design/schrift';
 import './styles/main.scss';
+import { seiteNachOben } from '@ui/fenster/seiteNachOben';
 
 // Früh registrieren: das `beforeinstallprompt`-Event feuert einmalig kurz nach dem Laden.
 initPwaInstall();
@@ -41,7 +42,7 @@ window.visualViewport?.addEventListener('resize', syncAppHeight);
 // feste Höhe hat und nur innere Container scrollen, ist ein Dokument-Scroll immer ein Artefakt.
 window.addEventListener('focusout', () =>
   setTimeout(() => {
-    if (window.scrollY !== 0) window.scrollTo(0, 0);
+    if (window.scrollY !== 0) seiteNachOben();
     syncAppHeight();
   }, 50),
 );

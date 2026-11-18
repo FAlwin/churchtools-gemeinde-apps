@@ -264,22 +264,3 @@ Namen enthalten.
   Das muss vor einer Store-Angabe bei VDO.Ninja nachgelesen werden.
 
 **Im Browser:** nichts gespeichert.
-
-## Offene Punkte vor einer Store-Veröffentlichung
-
-Hier wird nichts entschieden. Die Liste sammelt, was vor den Store-Angaben geklärt werden muss.
-
-1. **Musik-App, Server:** Wer die PWA für andere Gemeinden betreibt, verarbeitet deren Daten im Auftrag → AVV.
-   Betreibt jede Gemeinde ihren eigenen Server, ist sie selbst verantwortlich (so in
-   `docs/entwicklung/entscheidungen.md`). In der Extension gibt es keinen Server.
-2. **Musik-App, Update-Abfrage:** Der Browser fragt GitHub direkt (IP-Adresse an GitHub). Entweder als Fremddienst
-   angeben oder weglassen, sobald der Store die Updates meldet.
-3. **Persönliche Dateien an der Person** (Musik-App, Protokolle) sind für andere Mitglieder lesbar. Das muss in den
-   Angaben stehen. Die angekündigte Datenablage mit „Owner“ je Eintrag könnte das ablösen.
-4. **Gebetsabend:** VDO.Ninja als Fremddienst mit Video, Audio und Namen angeben und dessen Datenschutz klären.
-   Offen ist auch, ob im `label` der volle Name nötig ist.
-5. **Anmelde-Formular:** Das Hosting auf dem Webspace der Gemeinde ist ein eigener Verarbeitungsort mit
-   Zugriffsprotokollen. Fällt weg, falls das Formular einmal als öffentliches Modul in ChurchTools laufen kann.
-6. **Profilbilder** (Dienstplaner, Protokolle, Organigramm) werden über die Adresse aus ChurchTools geladen, ohne
-   Prüfung auf die eigene Instanz (`ui/bedienung/PersonBild.tsx`). In der Praxis liegen sie auf der Instanz. Für die
-   Angabe „keine Fremdhosts“ sollte das belegt oder abgesichert werden.

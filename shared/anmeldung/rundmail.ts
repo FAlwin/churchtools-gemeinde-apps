@@ -67,7 +67,7 @@ export const RUNDMAIL_PLATZHALTER = [
 ] as const;
 
 /** Platzhalter der Person – fest in ChurchTools (gemessen 22.10.2026: `{{person.firstName}}` → „Nora“). */
-const PERSON: Record<string, string> = {
+export const PERSON_PLATZHALTER: Readonly<Record<string, string>> = {
   Vorname: '{{person.firstName}}',
   Nachname: '{{person.lastName}}',
 };
@@ -86,7 +86,7 @@ export function mitCtPlatzhaltern(
   const unbekannt = new Set<string>();
   const ersetzt = text.replace(KLAMMER, (ganz, name: string) => {
     const t = name.trim();
-    const ct = PERSON[t] ?? ctPlatzhalter.get(t);
+    const ct = PERSON_PLATZHALTER[t] ?? ctPlatzhalter.get(t);
     if (ct) return ct;
     unbekannt.add(t);
     return ganz;

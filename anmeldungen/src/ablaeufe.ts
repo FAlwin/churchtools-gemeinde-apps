@@ -35,6 +35,7 @@ import {
   OHNE_EIGENEN_TEXT,
   ROUTINEN,
   ablaufMails,
+  fehltInChurchTools,
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
@@ -58,6 +59,7 @@ import {
   systemfelderNachziehen,
   teilnehmerRolle,
 } from './einrichten';
+import { ctFelderLesen } from './formularFelder';
 import { platzhalterLaden } from './rundmail';
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -253,6 +255,18 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
   };
 }
 
+/**
+ * **Was die Mails zum Einsetzen brauchen** – die Platzhalter der Gruppe und (F7a) die Namen ihrer Spalten, damit
+ * `[Frage]` in der Bestätigung seinen Platzhalter findet. Die EINE Stelle für Speichern, Abgleich und Vorschau: Fehlten
+ * die Namen an einer davon, schriebe sie eine andere Mail als die übrigen.
+ */
+export async function mailPlatzhalterLaden(
+  id: number,
+): Promise<{ platzhalter: Map<string, string>; spalten: Map<number, string> }> {
+  const [platzhalter, felder] = await Promise.all([platzhalterLaden(id), ctFelderLesen(id)]);
+  return { platzhalter, spalten: new Map([...felder].map(([nr, f]) => [nr, f.name])) };
+}
+
 /** Der eigene Text aller Mails aus den Beschreibungen der Routinen – die Erinnerung steht in der von „Platz“. */
 function texteVon(zuordnungen: ZuordnungRoh[], rolle: number): Record<MailArt, EigenerText> {
   const platz = unsereFuer(zuordnungen, rolle, 'active')?.description;
@@ -315,9 +329,9 @@ export async function ablaeufeEinrichten(
   }
   // Das Feld „Link zur Anmeldung“ muss es geben, bevor eine Mail es als Platzhalter nennt.
   const e = await systemfelderNachziehen(id);
-  const [g, platzhalter, rolle, zuordnungen] = await Promise.all([
+  const [g, { platzhalter, spalten }, rolle, zuordnungen] = await Promise.all([
     ctDaten<GruppeRoh>(`/groups/${id}`),
-    platzhalterLaden(id),
+    mailPlatzhalterLaden(id),
     teilnehmerRolle(id),
     ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
   ]);
@@ -343,12 +357,8 @@ export async function ablaeufeEinrichten(
   const zuLang = eigenerTextFehler(texte.platz, texte.erinnerung);
   if (zuLang) throw new ApiError(422, zuLang);
   const mitQr = qr ?? checkinAn(g);
-  const mails = ablaufMails(e, g.name, platzhalter, texte, mitQr);
-  if (mails.unbekannt.length)
-    throw new ApiError(
-      422,
-      `Für die Bestätigungsmail fehlen in ChurchTools: ${mails.unbekannt.join(', ')}.`,
-    );
+  const mails = ablaufMails(e, g.name, platzhalter, texte, mitQr, spalten);
+  if (mails.unbekannt.length) throw new ApiError(422, fehltInChurchTools(mails.unbekannt));
   const datum = loeschDatum(e);
   const liste = erinnerungen(e, heute);
   if (datum !== null && datum <= heute && !loeschenBestaetigt) {
@@ -614,16 +624,16 @@ export async function ablaeufeAbgleichen(
 ): Promise<AblaufStand> {
   const stand = await ablaeufeLesen(id);
   if (!stand.platz || !stand.warte || stand.absenderId === null) return stand;
-  const [e, g, platzhalter, rolle, zuordnungen] = await Promise.all([
+  const [e, g, { platzhalter, spalten }, rolle, zuordnungen] = await Promise.all([
     systemfelderNachziehen(id),
     ctDaten<GruppeRoh>(`/groups/${id}`),
-    platzhalterLaden(id),
+    mailPlatzhalterLaden(id),
     teilnehmerRolle(id),
     ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
   ]);
   // Maßgeblich ist der Check-in der Gruppe – auch, wenn ihn jemand in ChurchTools umgeschaltet hat (A9-2b).
   const mitQr = checkinAn(g);
-  const soll = ablaufMails(e, g.name, platzhalter, stand.eigen, mitQr);
+  const soll = ablaufMails(e, g.name, platzhalter, stand.eigen, mitQr, spalten);
   if (soll.unbekannt.length) return stand;
   const datum = loeschDatum(e);
   // A9-3b: Termin oder Tage geändert, oder ein Tag erreicht (R7: ältere vorbeie aus) → die Erinnerungen ziehen mit.

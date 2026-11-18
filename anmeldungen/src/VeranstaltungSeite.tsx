@@ -358,6 +358,10 @@ function MailsKarte({
     (x) => stand.eigen[x].betreff || stand.eigen[x].absatz || stand.eigen[x].gruss,
   );
   const EIGEN_NAME = { platz: 'Bestätigung', warte: 'Warteliste', erinnerung: 'Erinnerung' };
+  // F7a: „Alle Angaben mitschicken“ steht mit in der Zeile der Bestätigung.
+  const mitWas = [kostet && 'Betrag, Bankdaten', stand.eigen.platz.alle && 'allen Angaben']
+    .filter(Boolean)
+    .join(', ');
   return (
     <Karte
       titel="Mails"
@@ -365,7 +369,7 @@ function MailsKarte({
       knopf={einrichten ? 'Jetzt einrichten' : 'Bearbeiten'}
     >
       <Zeile titel="Nach dem Anmelden">
-        {stand.platz ? `✓ Bestätigung${kostet ? ' mit Betrag, Bankdaten' : ''} und Link` : fehlt}
+        {stand.platz ? `✓ Bestätigung${mitWas ? ` mit ${mitWas}` : ''} und Link` : fehlt}
         {ohneRecht}
       </Zeile>
       <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>

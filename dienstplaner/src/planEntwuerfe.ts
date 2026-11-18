@@ -311,7 +311,8 @@ export function sendbareZeilen(plan: Plan | null, daten: EntwuerfeDaten | null):
     for (const g of plan.gruppen) {
       for (const zl of g.zeilen) {
         if (!darfPlanen(zl, spalte) || !darfAendern(daten, zl)) continue;
-        const kategorie = daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.kategorie;
+        const gruppeId = zl.dienst.dienstgruppeId ?? 0;
+        const kategorie = daten.schubladen.get(gruppeId)?.kategorie;
         if (kategorie == null) continue;
         for (const p of zl.zellen[i] ?? []) {
           const a = entwurfAmPlatz(daten, spalte, zl, p);
@@ -319,6 +320,7 @@ export function sendbareZeilen(plan: Plan | null, daten: EntwuerfeDaten | null):
           zeilen.push({
             entwurf: a.entwurf,
             kategorie,
+            gruppeId,
             tag: spalte.tag,
             termin: spalte.name,
             dienst: zl.dienst.name,

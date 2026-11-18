@@ -13,6 +13,8 @@ import styles from './SendenFach.module.scss';
 export interface SendeZeile {
   entwurf: Entwurf;
   kategorie: number;
+  /** Die Dienstgruppe, deren Schublade das ist – zum Verwerfen („Alle verwerfen“, 18.11.2026). */
+  gruppeId: number;
   /** `YYYY-MM-DD` */
   tag: string;
   termin: string;

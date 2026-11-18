@@ -23,6 +23,7 @@ const entwurf = (eventId: number, serviceId: number, x: Partial<Entwurf> = {}): 
 const zeile = (e: Entwurf, tag: string, dienst: string): SendeZeile => ({
   entwurf: e,
   kategorie: 30,
+  gruppeId: 3,
   tag,
   termin: 'Gottesdienst',
   dienst,

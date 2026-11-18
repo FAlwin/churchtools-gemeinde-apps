@@ -1473,6 +1473,44 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(entfernen).toHaveBeenCalledTimes(2);
   });
 
+  it('„Alle verwerfen“ nimmt auch Entwürfe, die erst nach dem Laden angelegt wurden (Fund Test-Instanz 18.11.2026)', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const speichern = vi.fn(
+      (_d: EntwuerfeDaten, _g: number, eingabe: Omit<Entwurf, 'zeit' | 'version'>) =>
+        Promise.resolve({ ok: true as const, entwurf: { ...eingabe, zeit: 'jetzt', version: 1 } }),
+    );
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({ speichern, entfernen });
+    const licht = within(zeileVon('Licht'));
+    fireEvent.click(await licht.findByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle verwerfen' }));
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Verwerfen' }),
+    );
+    expect(await screen.findByText('Entwurf verworfen.')).toBeTruthy();
+    expect((entfernen.mock.calls as unknown[][]).map((c) => c.slice(1))).toEqual([
+      [3, { eventId: 20, serviceId: 7, index: 2 }, 1],
+    ]);
+  });
+
+  it('„Alle verwerfen“ nimmt die Gruppe aus der Zeile der Leiste – nicht aus `gruppeJe`', async () => {
+    const d = daten([entwurf({ version: 2 })]);
+    d.gruppeJe.clear();
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({ laden: () => Promise.resolve(d), entfernen });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle verwerfen' }));
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Verwerfen' }),
+    );
+    expect(await screen.findByText('Entwurf verworfen.')).toBeTruthy();
+    expect((entfernen.mock.calls as unknown[][]).map((c) => c.slice(1))).toEqual([
+      [3, { eventId: 20, serviceId: 7, index: 2 }, 2],
+    ]);
+  });
+
   // ── E4-4-2: Senden-Fach ──────────────────────────────────────────────────
   it('„Ansehen und senden“ öffnet das Fach mit genau den gezählten Entwürfen (eine Regel), samt Kategorie', async () => {
     const senden = gesendet();

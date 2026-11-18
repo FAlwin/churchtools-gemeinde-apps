@@ -248,15 +248,15 @@ export function useEinteilen({
   }
 
   /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
-  const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
+  const nachFach = (r: EntwurfErgebnis, gruppeId: number, k: string, text: () => string) => {
     if (r.ok) {
-      ewSetzen(k, r.entwurf);
+      ewSetzen(k, r.entwurf, gruppeId);
       setFach(null);
       showToast(text());
     } else if (r.grund === 'konflikt') {
       // Was jetzt dasteht, zeigt die Matrix sofort – und das offene Fach auch (sonst zeigte es die alte Fassung,
       // Prüfung mit zwei Planern 16.10.2026). Ist der Entwurf weg, bleibt das Fach mit seinem Hinweis stehen.
-      ewSetzen(k, r.jetzt ?? null);
+      ewSetzen(k, r.jetzt ?? null, gruppeId);
       const jetzt = r.jetzt;
       if (jetzt) setFach((f) => (f ? { ...f, entwurf: jetzt } : f));
     }
@@ -275,7 +275,7 @@ export function useEinteilen({
   ): Promise<EntwurfErgebnis> => {
     if (!entwuerfe || ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
     const r = await entwuerfe.entfernen(ew.daten, gruppeId, e.ort, erwartet);
-    nachFach(r, ortSchluessel(e.ort), () =>
+    nachFach(r, gruppeId, ortSchluessel(e.ort), () =>
       verwerfen ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
     );
     return r;
@@ -292,10 +292,10 @@ export function useEinteilen({
     setVerwirft(true);
     let weg = 0;
     try {
+      // Die Gruppe aus der Zeile selbst (wie die Schublade beim Senden) – nicht aus `gruppeJe`: Dort fehlte bis
+      // 18.11.2026 jeder Entwurf, der seit dem Laden angelegt wurde (auf der Test-Instanz gefunden).
       for (const z of zeilen) {
-        const gruppeId = ew.daten.gruppeJe.get(ortSchluessel(z.entwurf.ort));
-        if (gruppeId === undefined) continue;
-        const r = await entwuerfe.entfernen(ew.daten, gruppeId, z.entwurf.ort, z.entwurf.version);
+        const r = await entwuerfe.entfernen(ew.daten, z.gruppeId, z.entwurf.ort, z.entwurf.version);
         if (r.ok) weg++;
       }
     } finally {
@@ -331,7 +331,7 @@ export function useEinteilen({
       { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen },
       erwartet,
     );
-    nachFach(r, ortSchluessel(e.ort), () =>
+    nachFach(r, gruppeId, ortSchluessel(e.ort), () =>
       modus === 'direkt'
         ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
         : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,

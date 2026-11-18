@@ -110,6 +110,30 @@
   }
 }
 
+// „Punkte ordnen“ (W7): rechts außen, abgesetzt von den Textwerkzeugen – eine Aktion am ganzen Protokoll. Am Handy steht der
+// Knopf als Erstes in der Leiste (`Werkzeugleiste.tsx`).
+.ordnenRahmen {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+.knopf.ordnen {
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--blue-ink);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+  }
+
+  &:disabled {
+    color: var(--text3);
+  }
+}
+
 .aa {
   font-size: 14px;
 }

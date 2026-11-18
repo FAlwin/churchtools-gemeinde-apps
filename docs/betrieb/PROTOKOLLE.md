@@ -229,12 +229,12 @@ Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte
 Tabellen. Der Umschalter **„Schreiben | Lesen“** zeigt dasselbe Protokoll als Lese-Ansicht – ohne Sperre; was noch
 nicht gespeichert war, wird beim Umschalten gespeichert.
 
-**Die Werkzeugleiste (K3a):** vorn Rückgängig/Wiederholen, die **Textart** (Text · Tagesordnungspunkt · Unterpunkt ·
+**Die Werkzeugleiste (K3a, W7):** vorn Rückgängig/Wiederholen, die **Textart** (Text · Tagesordnungspunkt · Unterpunkt ·
 Überschrift) und Fett · Kursiv · Unterstrichen · Durchgestrichen · Formatierung entfernen; dahinter drei Menüs:
 **Markieren** (Hintergrund und Schrift in den neun Farben des Editors, „keine“/„auto“ nimmt sie weg), **Absatz**
 (Aufzählung, Nummerierung, Aus- und Einrücken, Zitat) und **Einfügen** (To-Do, Beschluss, Termin, Tabelle, die festen
-Punkte, Trennlinie). Am Rechner steht alles in einer Zeile. Am Handy stehen Fett und „Aa“ (Textart, Kursiv & Co.) vorn,
-die drei Menüs nur als Zeichen. Die **Checkliste** gibt es nicht mehr zum Einfügen – nur noch To-Dos; alte Checklisten
+Punkte, Trennlinie). **Punkte ordnen** steht rechts außen (siehe unten). Am Rechner steht alles in einer Zeile. Am Handy steht „Punkte ordnen“
+als Erstes, dann Fett und „Aa“ (Textart, Kursiv & Co.), die drei Menüs nur als Zeichen. Die **Checkliste** gibt es nicht mehr zum Einfügen – nur noch To-Dos; alte Checklisten
 bleiben lesbar und lassen sich über die Textart in Text verwandeln. Eine **Tabelle** hat eine Kopfzeile; Zeilen und
 Spalten kommen über die Griffe an der Tabelle dazu, „Kopfzeile“/„Kopfspalte“ schaltet man im Griff-Menü links.
 
@@ -371,11 +371,20 @@ Personenliste und Gruppenmitglieder geladen sind; lässt sich die Personenliste 
 und Namen müssen von Hand unter „Weiteres verbergen“ eingetragen werden. Wer die Mitgliederliste nicht sehen darf, bekommt
 Vornamen nicht von selbst ersetzt (volle Namen weiterhin).
 
-**Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten
-Überschrift gleicher oder höherer Stufe. Abgelegt wird nur an Abschnittsgrenzen: Lässt man mitten in einem anderen
-Punkt los, rückt der Abschnitt an die nächste Grenze. Das Griff-Menü einer Überschrift hat „Nach oben“ und „Nach
-unten“ (am Handy der Weg zum Umsortieren: auf die Überschrift tippen, dann auf den Griff). Andere Blöcke (Listen,
-Aufgaben …) zieht man einzeln wie bisher.
+**Punkte ordnen (W7, seit S4-3b im Text, jetzt im Fenster):** Tagesordnungspunkte und Unterpunkte stellt man **nur noch
+im Fenster „Punkte ordnen“** um – der Knopf steht **rechts in der Werkzeugleiste** (am Handy als Erstes) und ist
+ausgegraut, solange es nichts zu ordnen gibt (weniger als zwei Punkte unter demselben Punkt). Das Fenster listet alle
+Punkte mit Nummer, Titel und einer Zeile, was mitwandert („3 Stichpunkte · 1 To-Do · 1 Beschluss“; ein fester Punkt
+trägt „fester Punkt“). **Ein Punkt nimmt seine Unterpunkte und seinen ganzen Inhalt mit, die Ebene bleibt:** Unterpunkte
+nur innerhalb ihres Punkts, Tagesordnungspunkte nur zwischen Tagesordnungspunkten; feste Punkte wandern normal mit; eine
+„Überschrift“ (ohne Nummer) wandert mit ihrem Abschnitt; Text vor dem ersten Punkt bleibt oben. Bedienung: am **Griff
+ziehen** (Maus sofort, Finger nach kurzem Halten – eine blaue Linie zeigt nur erlaubte Stellen), **↑ ↓** an jeder Zeile,
+auf dem Griff die **Pfeiltasten**; „Rückgängig“ im Fenster nimmt den letzten Schritt zurück. Erst **„Übernehmen“** (erst
+nach einer Änderung bedienbar) ändert das Protokoll – als **ein** Schritt: ein Strg+Z im Editor holt alles zurück; die
+Blöcke behalten ihre IDs (To-Dos bleiben verbunden). „Abbrechen“ ändert nichts; mit nicht übernommener Änderung schließen
+weder X noch Esc noch ein Tipp daneben das Fenster. Am Handy füllt das Fenster den Bildschirm. **Im Text** haben
+Überschriften keinen Griff mehr (kein Abschnitt-Ziehen, kein „Nach oben/unten“); Listen, Zitate, eigene Blöcke und
+Tabellen zieht man einzeln wie bisher.
 
 **Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
 auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
@@ -443,9 +452,9 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in
   `shared/protokolle/sitzungen.ts`, Schreiben `protokolle/src/beginnen.ts`, Fenster `ProtokollBeginnen.tsx`.
-- Griff und Ziehen im Editor: Griff mittig zur ersten Textzeile (`protokolle/src/griffLage.ts`); beim Ziehen eines
-  Abschnitts zeichnet BlockNote die Linie dort, wo er landet (`abschnittLinie` über `dropCursor.hooks.computeDropPosition`,
-  dieselbe Rechnung `abschnittZiel` wie beim Ablegen).
+- Griff im Editor: Griff mittig zur ersten Textzeile (`protokolle/src/griffLage.ts`); Überschriften haben seit W7 keinen
+  Griff (`Griff` in `DokumentEditor.tsx`); enthält die Markierung eine Überschrift, zieht der Griff einer Zeile nur diese
+  Zeile (`nurDieseZeile`) – sonst nähme BlockNote die ganze Markierung samt Überschrift mit.
 - Wer/Bis vor dem Text: `props.vorab` am Aufgaben-Block (JSON), übernommen beim Anlegen des To-Dos (`vorabAnwenden` in
   `aufgabenAbgleich` und beim ersten Tipp); danach leert der Block es.
 - Frühere Treffen (v1.0.1): Regeln `shared/protokolle/fruehere.ts` (`ohneProtokollZeitraum`, `monatsZeitraum`,
@@ -480,8 +489,11 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   herausgelöster Tag wird abgewiesen statt doppelt angelegt), Fenster `SitzungBearbeiten.tsx`, Felder
   `Planungsfelder.tsx`. Termin und Besprechungsanfragen liest `protokolle/src/termin.ts` (auch Liste und Festlegen);
   Protokolle mit Termin hinter den 180 Tagen der Liste liest `lesen.ts` gezielt nach (`termineAusserhalb`, seit v1.0.1 auch Termine vor dem Fenster). Gemessen: `protokolle-planung/docs/messung-k2b-2026-10-29.md`, `messung-k2b2-2026-10-29.md`.
-- Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
-  das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
+- Punkte ordnen (W7): Abschnitts-Regel `shared/protokolle/abschnitte.ts` (`abschnittEnde`, `abschnittVerschoben`),
+  Gliederung und Umstellen mit Ebenen-Regel `shared/protokolle/gliederung.ts` (`gliederung`, `punktVerschieben`,
+  `gibtZuOrdnen`; Nummern aus `ableiten`), Fenster `PunkteOrdnen.tsx` mit dem Ziehen in `usePunkteZiehen.ts`, Übernehmen
+  in den Editor `punkteUebernehmen.ts` (`reihenfolgeUebernehmen`: ein `transact`, nur die geänderte Spanne, nur auf dem
+  Stand, von dem das Fenster ausging). Der Knopf hängt in `Werkzeugleiste.tsx`; `Sheet` hat dafür `handyVoll`. Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).
 - Bauplan und Messungen liegen in einem Planungsordner außerhalb des Repos – die Verweise auf `protokolle-planung/…` in
   dieser Anleitung meinen diesen Ordner.

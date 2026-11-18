@@ -261,3 +261,93 @@ describe('Werkzeugleiste (K3a)', () => {
     expect(e.document[0]).toMatchObject({ type: 'heading', props: { level: 1 } });
   });
 });
+
+describe('Punkte ordnen (W7): der Knopf rechts in der Leiste und der Weg bis in den Editor', () => {
+  const h = (id: string, text: string, level = 1): Block => ({
+    id,
+    type: 'heading',
+    props: { level },
+    content: text,
+  });
+  const DOK: Block[] = [
+    h('A', 'Andacht'),
+    { id: 'a1', type: 'bulletListItem', content: 'Impuls' },
+    h('B', 'Technik'),
+    { id: 'todo', type: 'aufgabe', props: { aufgabe: 'aufgabe-4' }, content: 'Batterien' },
+    h('C', 'Ausblick'),
+  ];
+  const ids = (e: ProtokollEditor) => e.document.map((b) => b.id);
+
+  it('ist ausgegraut, solange es nichts zu ordnen gibt – und frei, sobald zwei Punkte da sind', () => {
+    const e = editorMit([
+      h('A', 'Einziger Punkt'),
+      { id: 'x', type: 'paragraph', content: 'Text' },
+    ]);
+    e.setTextCursorPosition('x', 'start');
+    render(<Werkzeugleiste editor={e} />);
+    const knopf = screen.getByRole<HTMLButtonElement>('button', { name: 'Punkte ordnen' });
+    expect(knopf.disabled).toBe(true);
+    expect(knopf.title).toMatch(/mindestens zwei Punkte/);
+    act(() => {
+      e.insertBlocks([h('B', 'Zweiter Punkt')] as Teil[], 'x', 'after');
+    });
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Punkte ordnen' }).disabled).toBe(
+      false,
+    );
+  });
+
+  it('Fenster auf, umstellen, Übernehmen: der Editor hat die neue Reihenfolge, ein Strg+Z holt alles zurück', () => {
+    const e = editorMit(DOK);
+    e.setTextCursorPosition('a1', 'start');
+    render(<Werkzeugleiste editor={e} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Punkte ordnen' }));
+    expect(screen.getByRole('dialog', { name: 'Punkte ordnen' })).toBeTruthy();
+    // Zwei Züge im Fenster …
+    fireEvent.click(screen.getByRole('button', { name: 'Ausblick nach oben' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andacht nach unten' }));
+    // … das Dokument ist bis „Übernehmen“ unberührt.
+    expect(ids(e)).toEqual(DOK.map((b) => b.id));
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(ids(e)).toEqual(['C', 'A', 'a1', 'B', 'todo']);
+    expect(e.getBlock('todo')?.props).toMatchObject({ aufgabe: 'aufgabe-4' });
+    e.undo();
+    expect(ids(e)).toEqual(DOK.map((b) => b.id));
+  });
+
+  it('das Fenster hängt an `body`, nicht in der Leiste – sonst lag es am Handy unter der Reiterleiste', () => {
+    const e = editorMit(DOK);
+    e.setTextCursorPosition('a1', 'start');
+    const { container } = render(<Werkzeugleiste editor={e} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Punkte ordnen' }));
+    const fenster = screen.getByRole('dialog', { name: 'Punkte ordnen' });
+    expect(container.contains(fenster)).toBe(false);
+    expect(document.body.contains(fenster)).toBe(true);
+  });
+
+  it('Abbrechen lässt das Dokument, wie es ist', () => {
+    const e = editorMit(DOK);
+    e.setTextCursorPosition('a1', 'start');
+    render(<Werkzeugleiste editor={e} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Punkte ordnen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ausblick nach oben' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(ids(e)).toEqual(DOK.map((b) => b.id));
+  });
+
+  it('PC: der Knopf steht rechts außen, am Handy als Erstes in der Leiste', () => {
+    const e = editorMit(DOK);
+    e.setTextCursorPosition('a1', 'start');
+    const pc = render(<Werkzeugleiste editor={e} />);
+    const alle = (r: ReturnType<typeof render>) =>
+      [...r.container.querySelectorAll('[role="toolbar"] button')].map((b) =>
+        b.getAttribute('aria-label'),
+      );
+    expect(alle(pc).at(-1)).toBe('Punkte ordnen');
+    pc.unmount();
+    handy();
+    const mobil = render(<Werkzeugleiste editor={e} />);
+    expect(alle(mobil)[0]).toBe('Punkte ordnen');
+  });
+});

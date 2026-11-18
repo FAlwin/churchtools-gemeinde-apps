@@ -344,6 +344,25 @@ describe('Teilergebnisse werden ehrlich gemeldet', () => {
     expect(leiste()!.textContent).toContain('1 Änderung');
   });
 
+  /**
+   * Fund 18.11.2026 (Test-Instanz): Jemand hatte anderswo inzwischen umgestellt, das Speichern scheiterte an der
+   * Abwesenheit. Die Abwesenheiten kamen frisch, Ja/Vielleicht blieben auf dem alten Stand – der Termin stand ohne
+   * Antwort da, obwohl im Speicher „Vielleicht“ lag. Nach JEDEM Speicherversuch müssen beide neu geladen werden.
+   */
+  it('Abwesenheit scheitert → Ja/Vielleicht werden trotzdem frisch geladen (anderswo Geändertes erscheint)', async () => {
+    dienst.anlegen.mockRejectedValue(new Error('weg'));
+    zeige();
+    await bereitSein();
+    expect(gedrueckt(knopf('Vielleicht', 'Gebetsabend', GA))).toBe(false);
+    // Inzwischen sagt dieselbe Person auf einem anderen Gerät „Vielleicht“ zum Gebetsabend.
+    stand = bereit(antw({ '2': ['vielleicht', '2026-11-11'] }));
+    await klick(knopf('Nein', 'Gottesdienst', GD1));
+    await speichereKlick();
+    expect(await screen.findByText(/Konnte nicht gespeichert werden/)).not.toBeNull();
+    expect(speichern).not.toHaveBeenCalled();
+    await waitFor(() => expect(gedrueckt(knopf('Vielleicht', 'Gebetsabend', GA))).toBe(true));
+  });
+
   it('der Speicher wirft → eine verständliche Meldung, nichts geht verloren', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     speichern.mockRejectedValue(new Error('boom'));

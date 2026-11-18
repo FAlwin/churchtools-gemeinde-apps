@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Icon, type IconName } from '../icons/icons';
 import { useAufklapp } from './useAufklapp';
+import { useMenueImBild } from './useMenueImBild';
 import styles from './FilterKnopf.module.scss';
 
 /**
@@ -23,7 +24,8 @@ export function WahlKnopf<T extends string>({
   vorgabe: T;
   onWahl: (w: T) => void;
 }) {
-  const { offen, setOffen, rahmen } = useAufklapp();
+  const { offen, setOffen, rahmen, menue } = useAufklapp();
+  useMenueImBild(menue, offen, 'rechts');
   const id = useId();
   const gewaehlt = optionen.find((o) => o.wert === wert);
   const anders = wert !== vorgabe;
@@ -38,10 +40,12 @@ export function WahlKnopf<T extends string>({
         onClick={() => setOffen(!offen)}
       >
         <Icon name={icon} size={15} />
-        {anders && gewaehlt ? gewaehlt.text : titel}
+        {/* `styles.text`: Am Handy zeigt der Knopf wie der Filter nur das Symbol (blau getönt, wenn nicht die Vorgabe) –
+            ohne die Klasse lief das Wort über den schmalen Knopf hinaus („Sortierer“, Alwin 18.11.2026). */}
+        <span className={styles.text}>{anders && gewaehlt ? gewaehlt.text : titel}</span>
       </button>
       {offen && (
-        <div className={styles.menue} id={id} role="dialog" aria-label={titel}>
+        <div ref={menue} className={styles.menue} id={id} role="dialog" aria-label={titel}>
           <fieldset className={styles.abschnitt}>
             <legend>{titel}</legend>
             {optionen.map((o) => (

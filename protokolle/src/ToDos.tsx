@@ -475,6 +475,7 @@ export function ToDos({
             onChange={(n) => setzen({ nach: n })}
             ariaLabel="Einteilen"
             verbunden
+            className={styles.einteilen}
           />
           <WahlKnopf
             titel="Sortieren"

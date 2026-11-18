@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listenScroll, menueVersatz } from './menueLage';
+import { listenScroll, menueVersatz, menueVersatzRechts } from './menueLage';
 
 describe('menueVersatz', () => {
   it('passt es, bleibt es; ragt es rechts hinaus, rückt es genau so weit nach links', () => {
@@ -9,6 +9,18 @@ describe('menueVersatz', () => {
   it('links bleibt der Rand frei, auch wenn es dann rechts nicht ganz reicht', () => {
     expect(menueVersatz(30, 400, 375)).toBe(-14);
     expect(menueVersatz(10, 400, 375)).toBe(-0);
+  });
+});
+
+describe('menueVersatzRechts (Menü hängt rechts am Knopf)', () => {
+  it('passt es, bleibt es; ragt es links hinaus, rückt es genau bis an den Rand nach rechts', () => {
+    expect(menueVersatzRechts(23, 230, 375)).toBe(0);
+    // „Sortieren“ am Handy (gemessen 18.11.2026): Menü von -42 bis 188 → 58 nach rechts, links 16 frei.
+    expect(menueVersatzRechts(-42, 230, 375)).toBe(58);
+  });
+  it('rechts bleibt der Rand frei, auch wenn es dann links nicht ganz reicht', () => {
+    expect(menueVersatzRechts(-42, 380, 375)).toBe(21);
+    expect(menueVersatzRechts(-42, 420, 375)).toBe(0);
   });
 });
 

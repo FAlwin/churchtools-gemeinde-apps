@@ -28,6 +28,15 @@
   gap: 8px;
 }
 
+// Am Handy (dieselbe Grenze wie bei den Symbol-Knöpfen, `FilterKnopf`/`KopfKnopf`): „Nach Status | Nach Person“ in die
+// zweite Zeile, damit Liste/Board, Sortieren, Filter und „+“ zusammen in der ersten stehen – vorher stand „+“ allein in
+// einer eigenen Zeile (Alwin 18.11.2026: „Sortieren am Handy ordentlich machen“).
+@media (max-width: 759px) {
+  .einteilen {
+    order: 1;
+  }
+}
+
 .karte {
   @include m.card-list;
 }

@@ -23,13 +23,16 @@ nach dem Neuladen.
 6. Die Seite neu laden: „TEST Ziehen A“ steht weiter in „In Arbeit“.
 7. Oben **Sortieren → Manuell** wählen und in „Offen“ „TEST Ziehen B“ über eine andere Karte ziehen: Die Reihenfolge
    ändert sich und bleibt nach dem Neuladen.
+8. Am iPhone die Kopfzeile ansehen: **Liste | Board**, das Sortieren-Symbol (⇅), das Filter-Symbol und **+** stehen in
+   einer Zeile, **Nach Status | Nach Person** darunter; kein Wort ist abgeschnitten. Das Sortieren-Symbol antippen: Das
+   Menü steht ganz im Bild (links nicht abgeschnitten); nach „Manuell“ ist das Symbol blau getönt. Ebenso das Filter-Menü.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `protokolle/src/ToDoZiehen.tsx`, `protokolle/src/toDoZiehenRegel.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `ui/bedienung/useZiehSensoren.ts`
-- **Automatisiert:** teilweise – `protokolle/src/toDoZiehenRegel.test.ts`, `protokolle/src/ToDoZiehen.test.tsx`, `protokolle/src/ToDos.board.test.tsx`, `ui/bedienung/useZiehSensoren.test.ts` (Regeln und Sensoren); das echte Liegenlassen des Fingers und die Breite des Zieh-Bilds nur am Gerät
-- **Historie:** #811 (30.10.2026: Zieh-Bild am iPhone breiter als die Karte; ein To-Do mit zwei Zuständigen verlor beim Umordnen eine Person)
+- **Betrifft:** `protokolle/src/ToDoZiehen.tsx`, `protokolle/src/toDoZiehenRegel.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `ui/bedienung/useZiehSensoren.ts`, `ui/bedienung/WahlKnopf.tsx`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/useMenueImBild.ts`
+- **Automatisiert:** teilweise – `ui/bedienung/WahlKnopf.test.tsx`, `ui/bedienung/FilterKnopf.test.tsx`, `ui/bedienung/menueLage.test.ts` (Wort ausblendbar, Menü rückt ins Bild), `protokolle/src/toDoZiehenRegel.test.ts`, `protokolle/src/ToDoZiehen.test.tsx`, `protokolle/src/ToDos.board.test.tsx`, `ui/bedienung/useZiehSensoren.test.ts` (Regeln und Sensoren); das echte Liegenlassen des Fingers und die Breite des Zieh-Bilds nur am Gerät
+- **Historie:** #811 (30.10.2026: Zieh-Bild am iPhone breiter als die Karte; ein To-Do mit zwei Zuständigen verlor beim Umordnen eine Person; 18.11.2026: „Sortieren“ am Handy abgeschnitten, sein Menü ragte links aus dem Bild, „+“ stand allein in einer Zeile)
 
 </details>
 

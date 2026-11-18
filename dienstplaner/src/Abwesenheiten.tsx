@@ -156,6 +156,13 @@ function useZusagen(
   dienstgruppen: Dienstgruppe[],
   heute: string,
   dienste: { id: number; name: string }[],
+  /**
+   * Zählt nach JEDEM Speicherversuch hoch (derselbe Zähler wie bei den Abwesenheiten, `geaendert`). Daran laden auch die
+   * Antworten neu – auch nach einem Fehlschlag. Fund 18.11.2026 (Test-Instanz): Hatte jemand anderswo inzwischen
+   * umgestellt, scheiterte das Speichern an der Abwesenheit; die Abwesenheiten kamen frisch, Ja/Vielleicht blieben alt –
+   * der Termin stand bis zum Neuladen ohne Antwort da.
+   */
+  schreibStand: number,
 ): Zusagen {
   // Geladen wie überall in den Erweiterungen (`useLaden`): späte Antworten zählen nicht, und beim Neuladen bleibt der
   // bisherige Stand stehen, bis der neue da ist – scheitert das Neuladen, gilt weiter der bisherige.
@@ -166,6 +173,11 @@ function useZusagen(
       behalten: true,
     },
   );
+  // Nach jedem Speicherversuch neu – auch nach einem gescheiterten (siehe `schreibStand`). Beim ersten Zeichnen nicht,
+  // da lädt `useLaden` ohnehin.
+  useEffect(() => {
+    if (schreibStand > 0) neu();
+  }, [schreibStand, neu]);
   const v: Verfuegbarkeit | null = stand.art === 'fertig' ? stand.daten : null;
   const fehlerText = stand.art === 'fehler' ? stand.fehler.text : null;
   useEffect(() => {
@@ -199,10 +211,9 @@ function useZusagen(
           text: 'Ja/Vielleicht konnte nicht gespeichert werden – bitte noch einmal.',
         };
       }
-      // Gelungen heißt: nachgelesen steht es da – dann gilt die geschriebene Karte sofort. Danach in jedem Fall den
-      // wahren Stand holen (bei einem Teilerfolg steht in einer Dienstgruppe schon das Neue).
+      // Gelungen heißt: nachgelesen steht es da – dann gilt die geschriebene Karte sofort. Den wahren Stand holt danach
+      // in jedem Fall `schreibStand` (die Seite meldet jeden Speicherversuch über `geaendert`, auch einen gescheiterten).
       if (r.ok) setze((alt) => ({ ...alt, antworten }));
-      neu();
       return r;
     },
   };
@@ -251,7 +262,7 @@ export function Abwesenheiten({
     geaendert: () => setStand((n) => n + 1),
   };
   const quelle = useMemo(() => ({ dienst, heute, stand }), [dienst, heute, stand]);
-  const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste);
+  const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste, stand);
 
   return (
     <QuelleKontext.Provider value={quelle}>

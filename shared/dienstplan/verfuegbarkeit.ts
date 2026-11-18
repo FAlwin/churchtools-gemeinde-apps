@@ -151,7 +151,7 @@ export async function alleAntwortenLesen(
     const { je } = jePerson(await werteLesen(p, modul, kategorie));
     return { ok: true, wert: new Map([...je].map(([person, v]) => [person, v.antworten])) };
   } catch (e) {
-    return { ok: false, grund: grundAus(p, e) as VerfuegbarkeitGrund };
+    return { ok: false, grund: grundAus(p, e) };
   }
 }
 
@@ -177,7 +177,7 @@ export async function eigeneAntwortenLesen(
       // Strikt neuer: bei Gleichstand bleibt die Kategorie mit der kleineren ID.
       if (eigener && (!beste || eigener.stand > beste.stand)) beste = eigener;
     } catch (e) {
-      fehler ??= grundAus(p, e) as VerfuegbarkeitGrund;
+      fehler ??= grundAus(p, e);
     }
   }
   if (gelesen === 0 && fehler) return { ok: false, grund: fehler };
@@ -232,7 +232,7 @@ async function eineKategorieSchreiben(
   try {
     eigene = eigeneWerte(await werteLesen(p, modul, kategorie), person);
   } catch (e) {
-    return fehl(grundAus(p, e) as VerfuegbarkeitGrund);
+    return fehl(grundAus(p, e));
   }
 
   // 2. Schreiben – nie wiederholt. Den neuesten eigenen Wert ändern, die Doppel löschen.
@@ -247,7 +247,7 @@ async function eineKategorieSchreiben(
         await wertLoeschen(p, modul, kategorie, v.wert.id, VERWEIGERT);
     }
   } catch (e) {
-    const g = grundAus(p, e) as VerfuegbarkeitGrund;
+    const g = grundAus(p, e);
     if (g !== 'voruebergehend') return fehl(g);
     abgebrochen = true; // Nicht bestätigt – nachlesen, ob es doch angekommen ist.
   }
@@ -257,7 +257,7 @@ async function eineKategorieSchreiben(
   try {
     jetzt = eigeneWerte(await werteLesen(p, modul, kategorie), person);
   } catch (e) {
-    return fehl(grundAus(p, e) as VerfuegbarkeitGrund);
+    return fehl(grundAus(p, e));
   }
   const da = jetzt[0];
   const angekommen = leer

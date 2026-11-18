@@ -21,7 +21,8 @@ import { bankZeilen } from './bezahlung';
 import { grussZeilen } from './bewegung';
 import { SYSTEMFELDER, type OeffentlicheEinstellungen } from './formular';
 import { kannEtwasKosten } from './preis';
-import { htmlSicher, mitCtPlatzhaltern } from './rundmail';
+import { absatzMitAntworten, alleAngaben, mailBausteine, mailText } from './mailAntworten';
+import { mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
 import { plusTage } from '../ct/datum';
 import { utcAus } from '../ct/zeit';
@@ -70,6 +71,8 @@ export interface EigenerText {
   betreff: string;
   absatz: string;
   gruss: string;
+  /** F7a, nur Bestätigung: „Alle Angaben mitschicken“ – fehlt bei allem, was vorher gespeichert wurde (= aus). */
+  alle?: boolean;
 }
 
 export const OHNE_EIGENEN_TEXT: EigenerText = { betreff: '', absatz: '', gruss: '' };
@@ -81,6 +84,7 @@ const TextSchema = z.object({
   betreff: z.string().default(''),
   absatz: z.string().default(''),
   gruss: z.string().default(''),
+  alle: z.boolean().optional(),
 });
 const EigenSchema = TextSchema.extend({ v: z.literal(1), erinnerung: TextSchema.optional() });
 
@@ -99,6 +103,7 @@ const nurText = (t: z.infer<typeof TextSchema>): EigenerText => ({
   betreff: t.betreff,
   absatz: t.absatz,
   gruss: t.gruss,
+  ...(t.alle ? { alle: true } : {}),
 });
 
 /** Der eigene Text aus der Beschreibung einer Routine. Was nicht von uns stammt (oder leer ist), gilt als „kein eigener“. */
@@ -117,8 +122,9 @@ const getrimmt = (t: EigenerText): EigenerText => ({
   betreff: t.betreff.trim(),
   absatz: t.absatz.trim(),
   gruss: t.gruss.trim(),
+  ...(t.alle ? { alle: true } : {}),
 });
-const leer = (t: EigenerText) => !t.betreff && !t.absatz && !t.gruss;
+const leer = (t: EigenerText) => !t.betreff && !t.absatz && !t.gruss && !t.alle;
 
 /**
  * Der eigene Text als Beschreibung der Routine – `null`, wenn nichts Eigenes da ist. `erinnerung` nur bei der Routine
@@ -212,16 +218,20 @@ export function erinnerungen(
   return liste.map((x) => ({ ...x, an: x.datum > heute || x === zuletztFaellig }));
 }
 
-/** Was aus den Einstellungen kommt: HTML-sicher und ohne `{{`, damit ChurchTools nichts davon als Platzhalter liest. */
-function wert(text: string): string {
-  return htmlSicher(text).replace(/\{/g, '&#123;').split('\n').join('<br>');
+/** **Die Meldung, wenn Platzhalter fehlen** – die eine für Speichern und Vorschau (`ablaufMails` → `unbekannt`). */
+export function fehltInChurchTools(unbekannt: readonly string[]): string {
+  return `Für die Bestätigungsmail fehlen in ChurchTools: ${unbekannt.join(', ')}.`;
 }
+
+/** Was aus den Einstellungen kommt: HTML-sicher und ohne `{{` (`mailText`, seit F7a dort). */
+const wert = mailText;
 
 /**
  * **Die Mails einer Veranstaltung** – Bestätigung (Platz) und Warteliste, als HTML mit den Platzhaltern von ChurchTools.
  * `ctPlatzhalter`: Bezeichnung → Platzhalter aus `/placeholders/group/{id}`. Fehlt dort ein Feld, steht es in
  * `unbekannt` – dann darf nichts geschrieben werden (die Mail zeigte sonst „[Betrag]“). `qr` (A9-2b): Check-in-Code in
- * der Bestätigung – maßgeblich ist `qrCodeCheckin` der Gruppe.
+ * der Bestätigung – maßgeblich ist `qrCodeCheckin` der Gruppe. `spalten` (F7a): Nummer → Name der Spalten der Gruppe –
+ * damit `[Frage]` im eigenen Absatz der Bestätigung und „Alle Angaben“ ihren Platzhalter finden (`mailAntworten.ts`).
  */
 export function ablaufMails(
   e: OeffentlicheEinstellungen,
@@ -232,6 +242,7 @@ export function ablaufMails(
     warte: OHNE_EIGENEN_TEXT,
   },
   qr = false,
+  spalten: ReadonlyMap<number, string> = new Map(),
 ): { platz: AblaufMail; warte: AblaufMail; erinnerung: AblaufMail; unbekannt: string[] } {
   const unbekannt = new Set<string>();
   /** Lesbaren Text mit `[…]` umwandeln; `§name§` wird danach durch `werte[name]` ersetzt. */
@@ -270,6 +281,16 @@ export function ablaufMails(
       .filter(Boolean)
       .map((a) => `<p>${wert(a.trim())}</p>`)
       .join('');
+  /**
+   * F7a: In der Bestätigung wird `[Frage]` zur Antwort der Person, dazu auf Wunsch alle Angaben (Entwurf
+   * `f7-mails-v1`: Warteliste und Erinnerung bleiben, wie sie sind).
+   */
+  const mitAntworten = (t: EigenerText) => {
+    const r = absatzMitAntworten(t.absatz, mailBausteine(e, ctPlatzhalter, spalten));
+    const liste = t.alle ? alleAngaben(e, ctPlatzhalter, spalten) : { html: '', unbekannt: [] };
+    [...r.unbekannt, ...liste.unbekannt].forEach((u) => unbekannt.add(u));
+    return r.html + liste.html;
+  };
   /** „Bei Fragen …“ und der Gruß wie in den übrigen Mails (`grussZeilen`) – nur der Gruß selbst ist austauschbar. */
   const gruss = (t: EigenerText) => {
     const zeilen = grussZeilen(e).filter(Boolean);
@@ -319,7 +340,7 @@ export function ablaufMails(
         '</p>',
       zahlen,
       code,
-      absatz(eigen.platz),
+      mitAntworten(eigen.platz),
       link('absagen'),
       gruss(eigen.platz),
     ].join(''),

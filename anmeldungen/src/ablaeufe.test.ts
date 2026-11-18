@@ -122,6 +122,8 @@ let offenBeimLoeschen: string[];
 let vorherAngemeldet: { person: string; status: 'active' | 'waiting' }[];
 /** Status der Gruppe: 1 freigegeben, 2 Entwurf (dort laufen Routinen nicht – echte Prüfung #866, 05.11.2026). */
 let gruppenStatus: number;
+/** F7a: die Spalten der Gruppe (`/groups/{id}/memberfields`) – Nummer und Name in ChurchTools. */
+let spalten: { id: number; name: string }[];
 
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
@@ -170,6 +172,7 @@ beforeEach(() => {
   offenBeimLoeschen = [];
   vorherAngemeldet = [];
   gruppenStatus = 1;
+  spalten = [];
   ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
     const m = /^\/routines\/(\d+)\/runs(\?with_potential_domain_objects=true)?$/.exec(pfad);
     if (!m) throw new Error(`unerwartet: ${pfad}`);
@@ -206,6 +209,8 @@ beforeEach(() => {
         }));
     const m = /^\/routines\/(\d+)$/.exec(pfad);
     if (m) return structuredClone(routinen.get(Number(m[1])));
+    if (/^\/groups\/\d+\/memberfields$/.test(pfad))
+      return spalten.map((f) => ({ type: 'group', field: f }));
     throw new Error(`unerwartet: ${pfad}`);
   });
   ct.ctAnfrage.mockImplementation(async (pfad: string, init?: RequestInit) => {
@@ -515,6 +520,53 @@ describe('Eigener Text (A9-2a)', () => {
     await expect(ablaeufeEinrichten(165, 7, { platz: eigen })).rejects.toBeInstanceOf(
       NichtUebernommen,
     );
+  });
+});
+
+describe('F7a – Antworten in der Bestätigung', () => {
+  /** „Telefon“ heißt in ChurchTools „Telefon (2)“ (`ctFeldName`) – der Platzhalter geht über den Namen der Spalte. */
+  function mitTelefon() {
+    const e = { ...neueEinstellungen('kinder'), ctFelder: { tel: 603 } };
+    spalten = [{ id: 603, name: 'Telefon (2)' }];
+    ru.platzhalterLaden.mockResolvedValue(
+      new Map([...PLATZHALTER, ['Telefon (2)', '{{{groupMemberField.telefon2}}}']]),
+    );
+    ei.systemfelderNachziehen.mockResolvedValue(e);
+    return e;
+  }
+  const bestaetigung = () =>
+    String([...routinen.values()].find((r) => r.status === 'active')!.steps[0].actionData.body);
+
+  it('Speichern: [Telefon] wird zum Platzhalter der Spalte, wie sie in ChurchTools heißt', async () => {
+    mitTelefon();
+    await ablaeufeEinrichten(165, 7, {
+      platz: { betreff: '', absatz: 'Wir rufen dich unter [Telefon] an.', gruss: '' },
+    });
+    expect(bestaetigung()).toContain(
+      '<p>Wir rufen dich unter {{{groupMemberField.telefon2}}} an.</p>',
+    );
+  });
+
+  it('Abgleich (Kontakt geändert): schreibt mit denselben Spalten – der Platzhalter bleibt', async () => {
+    const e = mitTelefon();
+    await ablaeufeEinrichten(165, 7, {
+      platz: { betreff: '', absatz: 'Wir rufen dich unter [Telefon] an.', gruss: '' },
+    });
+    ei.systemfelderNachziehen.mockResolvedValue({ ...e, kontakt: 'neu@x.de' });
+    await ablaeufeAbgleichen(165);
+    expect(bestaetigung()).toContain('neu@x.de');
+    expect(bestaetigung()).toContain('{{{groupMemberField.telefon2}}}');
+  });
+
+  it('Spalte fehlt in ChurchTools: nichts geschrieben, die Meldung nennt die Frage', async () => {
+    mitTelefon();
+    spalten = [];
+    await expect(
+      ablaeufeEinrichten(165, 7, {
+        platz: { betreff: '', absatz: 'Telefon: [Telefon]', gruss: '' },
+      }),
+    ).rejects.toThrow('Für die Bestätigungsmail fehlen in ChurchTools: Telefon.');
+    expect(routinen.size).toBe(0);
   });
 });
 

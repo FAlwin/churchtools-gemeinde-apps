@@ -538,6 +538,22 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(within(karte).getByText('Eigener Text').nextSibling?.textContent).toBe('Erinnerung');
   });
 
+  it('F7a: „Alle Angaben mitschicken“ steht in der Zeile der Bestätigung', async () => {
+    const stand = await ab.ablaeufeLesen(91);
+    ab.ablaeufeLesen.mockResolvedValue({
+      ...stand,
+      eigen: { ...stand.eigen, platz: { ...stand.eigen.platz, alle: true } },
+    });
+    stelle(false, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() =>
+      expect(
+        within(karte).getByText(/✓ Bestätigung mit (.+, )?allen Angaben und Link/),
+      ).toBeTruthy(),
+    );
+  });
+
   it('A9-2a: mit Recht wird abgeglichen, ohne nur gelesen; „Bearbeiten“ öffnet das Fenster „Mails“', async () => {
     stelle(false, 1);
     zeigen();

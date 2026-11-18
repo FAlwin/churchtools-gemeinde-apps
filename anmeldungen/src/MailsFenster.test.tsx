@@ -14,6 +14,7 @@ vi.mock('./ablaeufe', async (original) => ({
   ...(await original<typeof import('./ablaeufe')>()),
   ablaeufeEinrichten: vi.fn(),
   vorschauPerson: vi.fn(),
+  mailPlatzhalterLaden: vi.fn(),
 }));
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
@@ -22,7 +23,6 @@ vi.mock('./einrichten', async (original) => ({
 }));
 vi.mock('./rundmail', async (original) => ({
   ...(await original<typeof import('./rundmail')>()),
-  platzhalterLaden: vi.fn(),
   vorschauLaden: vi.fn(),
 }));
 const ab = vi.mocked(AB);
@@ -78,13 +78,15 @@ beforeEach(() => {
   ]);
   ab.ablaeufeEinrichten.mockResolvedValue();
   ab.vorschauPerson.mockResolvedValue({ personId: 41, echt: true });
-  ru.platzhalterLaden.mockResolvedValue(
-    new Map([
+  ab.mailPlatzhalterLaden.mockResolvedValue({
+    platzhalter: new Map([
       ...SYSTEMFELDER.map((f, i): [string, string] => [f.name, `{{{groupMemberField.f${i}}}}`]),
       ['Wartelistenplatz', '{{{groupMember.waitinglistPosition}}}'],
       ['Check-in-Code (QR-Code)', '{{{groupMember.checkInCodeQr}}}'],
+      ['Telefon', '{{{groupMemberField.telefon}}}'],
     ]),
-  );
+    spalten: new Map([[603, 'Telefon']]),
+  });
   ru.vorschauLaden.mockResolvedValue({ betreff: 'B', html: '<p>gerendert</p>' });
 });
 
@@ -193,6 +195,54 @@ describe('MailsFenster', () => {
     expect(html).toContain('<p>Neu: Taschenlampe.</p>');
     expect(ab.vorschauPerson).toHaveBeenCalledWith(165, 'platz', 7);
     expect(await screen.findByTitle('Vorschau der Mail')).toBeTruthy();
+  });
+  it('F7a: [Telefon] an der Schreibmarke, „Alle Angaben“ – beides in Vorschau und Speichern, nur bei der Bestätigung', async () => {
+    zeigen(STAND, { ...neueEinstellungen('kinder'), ctFelder: { tel: 603 } });
+    const absatz = feld('Eigener Absatz (freiwillig)');
+    // Schreibmarke hinter „Bitte“ – dort landet die Antwort.
+    absatz.setSelectionRange(5, 5);
+    fireEvent.click(screen.getByRole('button', { name: '[Telefon]' }));
+    expect(absatz.value).toBe('Bitte[Telefon] Schlafsack mitbringen.');
+    const alle = screen.getByRole('button', { name: 'Alle Angaben mitschicken' });
+    expect(alle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(alle);
+    expect(alle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    await waitFor(() => expect(ru.vorschauLaden).toHaveBeenCalled());
+    expect(ru.vorschauLaden.mock.calls[0][3]).toContain(
+      '<p>Bitte{{{groupMemberField.telefon}}} Schlafsack mitbringen.</p>',
+    );
+    expect(ru.vorschauLaden.mock.calls[0][3]).toContain('Deine Angaben');
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+    expect(ab.ablaeufeEinrichten.mock.calls[0][2]?.platz).toEqual({
+      betreff: '',
+      absatz: 'Bitte[Telefon] Schlafsack mitbringen.',
+      gruss: '',
+      alle: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Warteliste' }));
+    expect(screen.queryByRole('button', { name: '[Telefon]' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Alle Angaben mitschicken' })).toBeNull();
+  });
+
+  it('F7a: fehlt die Spalte einer Frage, sagt es die Vorschau – wie beim Speichern', async () => {
+    zeigen(); // Kinder-Vorlage ohne Spalten: „Telefon“ gibt es in ChurchTools (noch) nicht.
+    fireEvent.change(feld('Eigener Absatz (freiwillig)'), { target: { value: '[Telefon]' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    expect(
+      await screen.findByText('Für die Bestätigungsmail fehlen in ChurchTools: Telefon.'),
+    ).toBeTruthy();
+  });
+
+  it('F7a: eckige Klammern ohne Frage werden genannt – sie bleiben Text', () => {
+    zeigen();
+    fireEvent.change(feld('Eigener Absatz (freiwillig)'), {
+      target: { value: 'Mitbringen: [Schlafsack], [Telefon]' },
+    });
+    expect(screen.getByText('Bleibt als Text stehen (keine Frage): [Schlafsack]')).toBeTruthy();
   });
 });
 

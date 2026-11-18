@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
@@ -10,15 +10,22 @@ import {
   eigenerTextAlsBeschreibung,
   eigenerTextFehler,
   erinnerungTageFehler,
+  fehltInChurchTools,
   standardBetreff,
   BESCHREIBUNG_MAX,
   type EigenerText,
   type MailArt,
 } from '@shared/anmeldung/ablaeufe';
-import { ablaeufeEinrichten, vorschauPerson, type AblaufStand } from './ablaeufe';
+import { mailBausteinNamen } from '@shared/anmeldung/mailAntworten';
+import {
+  ablaeufeEinrichten,
+  mailPlatzhalterLaden,
+  vorschauPerson,
+  type AblaufStand,
+} from './ablaeufe';
 import { aendereEinstellungen, leitungsKandidaten } from './einrichten';
 import { ErinnerungWahl } from './ErinnerungWahl';
-import { platzhalterLaden, vorschauLaden } from './rundmail';
+import { vorschauLaden } from './rundmail';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
@@ -31,7 +38,8 @@ import bk from './Baukasten.module.scss';
  * Routinen von ChurchTools (der eigene Text in deren Beschreibung), danach nachgelesen. Die Vorschau rechnet ChurchTools
  * – mit dem Text, der gerade im Fenster steht, auch vor dem Speichern. Reiter „Erinnerung“ (A9-3b): die Tage stehen in
  * den Einstellungen der Veranstaltung (R1), ihr Text in der Beschreibung der Routine „Platz“ – mit der Bestätigung
- * zusammen höchstens 1.000 Zeichen (E4).
+ * zusammen höchstens 1.000 Zeichen (E4). F7a (Entwurf `f7-mails-v1`): In der Bestätigung setzen „Antwort einfügen“ die
+ * Antworten der Person ein, „Alle Angaben mitschicken“ hängt sie alle an (`mailAntworten.ts`).
  */
 export function MailsFenster({
   id,
@@ -76,6 +84,27 @@ export function MailsFenster({
     setTexte((alt) => ({ ...alt, [art]: { ...alt[art], ...teil } }));
     setVorschau(null);
   };
+  const absatzRef = useRef<HTMLTextAreaElement>(null);
+  const bausteine = useMemo(() => mailBausteinNamen(e), [e]);
+  /** `[Name]` an der Schreibmarke – wie die Platzhalter der Rundmail. */
+  const einfuegen = (name: string) => {
+    const feld = absatzRef.current;
+    const token = `[${name}]`;
+    const von = feld?.selectionStart ?? t.absatz.length;
+    const bis = feld?.selectionEnd ?? t.absatz.length;
+    aendern({ absatz: t.absatz.slice(0, von) + token + t.absatz.slice(bis) });
+    requestAnimationFrame(() => {
+      feld?.focus();
+      feld?.setSelectionRange(von + token.length, von + token.length);
+    });
+  };
+  // Eckige Klammern, die keine Frage meinen, bleiben Text – das soll niemanden überraschen.
+  const bleibtText =
+    art === 'platz'
+      ? [...new Set([...t.absatz.matchAll(/\[([^[\]\n]+)\]/g)].map((m) => m[1]))].filter(
+          (n) => !bausteine.includes(n),
+        )
+      : [];
   const pruefung = useMemo(
     () =>
       eigenerTextFehler(texte.platz, texte.erinnerung) ??
@@ -104,14 +133,17 @@ export function MailsFenster({
     setArbeitet(true);
     setFehler(null);
     try {
-      const [platzhalter, person] = await Promise.all([
-        platzhalterLaden(id),
+      const [{ platzhalter, spalten }, person] = await Promise.all([
+        mailPlatzhalterLaden(id),
         vorschauPerson(id, art === 'warte' ? 'warte' : 'platz', absender),
       ]);
-      const mails = ablaufMails(e, veranstaltung, platzhalter, texte, qr);
+      const mails = ablaufMails(e, veranstaltung, platzhalter, texte, qr, spalten);
       const m = mails[art];
       const r = await vorschauLaden(id, person.personId, m.betreff, m.html);
       setVorschau({ ...r, echt: person.echt });
+      // Wie beim Speichern (dort bricht es ab): Fehlt eine Spalte, sagt es auch die Vorschau – sonst fehlte die Antwort
+      // darin einfach.
+      if (mails.unbekannt.length) setFehler(fehltInChurchTools(mails.unbekannt));
     } catch (x) {
       setFehler(fehlerMeldung(x).text);
     }
@@ -203,6 +235,7 @@ export function MailsFenster({
           <label className={f.feld}>
             <span>Eigener Absatz (freiwillig)</span>
             <textarea
+              ref={absatzRef}
               className={`${f.eingabe} ${a.rundmailText}`}
               value={t.absatz}
               placeholder={
@@ -215,6 +248,43 @@ export function MailsFenster({
               onChange={(ev) => aendern({ absatz: ev.target.value })}
             />
           </label>
+          {art === 'platz' && (
+            <>
+              <p className={a.leise}>
+                Antwort einfügen – ChurchTools füllt sie je Person:{' '}
+                {bausteine.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`${a.pille} ${a.platzhalterKnopf}`}
+                    onClick={() => einfuegen(n)}
+                  >
+                    [{n}]
+                  </button>
+                ))}
+              </p>
+              {bleibtText.length > 0 && (
+                <p className={a.leise}>
+                  Bleibt als Text stehen (keine Frage): {bleibtText.map((n) => `[${n}]`).join(', ')}
+                </p>
+              )}
+              <button
+                type="button"
+                className={bk.schalterZeile}
+                aria-pressed={!!t.alle}
+                onClick={() => aendern({ alle: !t.alle })}
+              >
+                <Schalter an={!!t.alle} />
+                Alle Angaben mitschicken
+              </button>
+              <p className={a.leise}>
+                {t.alle
+                  ? 'Unter deinem Absatz steht eine Liste aller Antworten der Person – leere fallen weg.'
+                  : 'Nur das, was du oben einfügst.'}{' '}
+                Fragen zur Anmeldung (z. B. Telefon) stehen nur in der Mail der ersten Person.
+              </p>
+            </>
+          )}
           <label className={f.feld}>
             <span>Gruß</span>
             <textarea

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { SYSTEMFELDER } from '@shared/anmeldung/formular';
-import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
+import { OHNE_EIGENEN_TEXT, warteBeschreibung } from '@shared/anmeldung/ablaeufe';
 import * as AB from './ablaeufe';
 import * as E from './einrichten';
 import * as R from './rundmail';
@@ -44,6 +44,7 @@ const STAND: AB.AblaufStand = {
   loeschDatum: null,
   anmeldeschluss: null,
   erinnerungen: [],
+  zweite: null,
 };
 
 let gespeichert: ReturnType<typeof vi.fn<(text: string) => void>>;
@@ -135,6 +136,7 @@ describe('MailsFenster', () => {
         platz: STAND.eigen.platz,
         warte: { betreff: '', absatz: 'Wir melden uns.', gruss: '' },
         erinnerung: OHNE_EIGENEN_TEXT,
+        zweite: null,
       },
       false,
     );
@@ -346,5 +348,100 @@ describe('MailsFenster – Erinnerung (A9-3b)', () => {
     expect(ab.vorschauPerson).toHaveBeenCalledWith(165, 'platz', 7);
     expect(ru.vorschauLaden.mock.calls[0][2]).toBe('Bald ist es so weit: Kinderfreizeit');
     expect(ru.vorschauLaden.mock.calls[0][3]).toContain('ist bei „Kinderfreizeit“ dabei');
+  });
+});
+
+describe('MailsFenster – zweite Mail (F7b)', () => {
+  const reiter = () => fireEvent.click(screen.getByRole('button', { name: 'Zweite Mail' }));
+  const absender = async () => {
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+  };
+  const speichern = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+    return ab.ablaeufeEinrichten.mock.calls[0][2]?.zweite;
+  };
+
+  it('aus: Hinweis, kein Knopf „Vorschau“; einschalten → sofort, Betreff, Text mit „Antwort einfügen“ → gespeichert', async () => {
+    zeigen();
+    reiter();
+    expect(screen.getByText('Aus – es gibt nur die Bestätigung.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Vorschau' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zweite Mail verschicken' }));
+    fireEvent.change(feld('Betreff'), { target: { value: 'Einladung' } });
+    fireEvent.change(feld('Text'), { target: { value: 'Hallo ' } });
+    feld('Text').setSelectionRange(6, 6);
+    fireEvent.click(screen.getByRole('button', { name: '[Vorname]' }));
+    expect(feld('Text').value).toBe('Hallo [Vorname]');
+    await absender();
+    expect(await speichern()).toEqual({
+      wann: { art: 'sofort' },
+      betreff: 'Einladung',
+      text: 'Hallo [Vorname]',
+    });
+  });
+
+  it('nach Tagen: Zahl wird gespeichert; leeres Feld → Hinweis, Speichern gesperrt', async () => {
+    zeigen();
+    reiter();
+    fireEvent.click(screen.getByRole('button', { name: 'Zweite Mail verschicken' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nach Tagen' }));
+    fireEvent.change(feld('Text'), { target: { value: 'Hallo' } });
+    const tage = screen.getByRole<HTMLInputElement>('spinbutton', {
+      name: 'Tage nach der Anmeldung',
+    });
+    expect(tage.value).toBe('3');
+    fireEvent.change(tage, { target: { value: '' } });
+    expect(screen.getByText('Zweite Mail: bitte 1 bis 365 Tage.')).toBeTruthy();
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Speichern' }).disabled).toBe(
+      true,
+    );
+    fireEvent.change(tage, { target: { value: '5' } });
+    await absender();
+    expect((await speichern())?.wann).toEqual({ art: 'tage', tage: 5 });
+  });
+
+  it('an einem Tag: am oder nach dem Löschdatum → Hinweis; davor gespeichert', async () => {
+    zeigen(STAND, { ...mitTermin(), loeschfristMonate: 3 });
+    reiter();
+    fireEvent.click(screen.getByRole('button', { name: 'Zweite Mail verschicken' }));
+    fireEvent.click(screen.getByRole('button', { name: 'An einem Tag' }));
+    fireEvent.change(feld('Text'), { target: { value: 'Hallo' } });
+    const tag = screen.getByLabelText('Tag');
+    fireEvent.change(tag, { target: { value: '2030-01-01' } });
+    expect(screen.getByText(/Löschdatum oder danach/)).toBeTruthy();
+    fireEvent.change(tag, { target: { value: '2026-11-25' } });
+    await absender();
+    expect((await speichern())?.wann).toEqual({ art: 'datum', datum: '2026-11-25' });
+  });
+
+  it('schon gespeichert: Reiter zeigt sie; Vorschau rechnet die zweite Mail; Zähler zählt Warteliste mit', async () => {
+    zeigen({
+      ...STAND,
+      eigen: { ...STAND.eigen, warte: { betreff: '', absatz: 'Wir melden uns.', gruss: '' } },
+      zweite: { wann: { art: 'tage', tage: 2 }, betreff: 'Infos', text: 'Hallo [Vorname]' },
+    });
+    reiter();
+    expect(
+      screen.getByRole('button', { name: 'Zweite Mail verschicken' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(feld('Text').value).toBe('Hallo [Vorname]');
+    const belegt = warteBeschreibung(
+      { betreff: '', absatz: 'Wir melden uns.', gruss: '' },
+      { wann: { art: 'tage', tage: 2 }, betreff: 'Infos', text: 'Hallo [Vorname]' },
+    )!.length;
+    expect(
+      screen.getByText(`${belegt} von 1000 Zeichen belegt – Warteliste und zweite Mail zusammen.`),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    await waitFor(() => expect(ru.vorschauLaden).toHaveBeenCalled());
+    expect(ru.vorschauLaden.mock.calls[0][2]).toBe('Infos');
+    expect(ru.vorschauLaden.mock.calls[0][3]).toContain('<p>Hallo {{person.firstName}}</p>');
+    expect(ab.vorschauPerson).toHaveBeenCalledWith(165, 'platz', 7);
+    // Ausschalten → gespeichert als „aus“.
+    fireEvent.click(screen.getByRole('button', { name: 'Zweite Mail verschicken' }));
+    await absender();
+    expect(await speichern()).toBeNull();
   });
 });

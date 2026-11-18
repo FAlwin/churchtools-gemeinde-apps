@@ -24,7 +24,7 @@ import { kannEtwasKosten } from './preis';
 import { absatzMitAntworten, alleAngaben, mailBausteine, mailText } from './mailAntworten';
 import { mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
-import { plusTage } from '../ct/datum';
+import { datumText, plusTage } from '../ct/datum';
 import { utcAus } from '../ct/zeit';
 import type { RoutinenSchritt } from '../ct/routinen';
 
@@ -77,6 +77,31 @@ export interface EigenerText {
 
 export const OHNE_EIGENEN_TEXT: EigenerText = { betreff: '', absatz: '', gruss: '' };
 
+/**
+ * **Wann die zweite Mail kommt** (F7b, Klick-Runde 11, Messung M3): gleich nach der Bestätigung, X Tage danach
+ * (Warten mit `duration` – zählt in Tagen ab der Bestätigung) oder an einem Datum (`JJJJ-MM-TT`, wie die Erinnerungen).
+ */
+export type ZweiteWann =
+  | { art: 'sofort' }
+  | { art: 'tage'; tage: number }
+  | { art: 'datum'; datum: string };
+
+/**
+ * **Die zweite Mail** (F7b, Alwin 18.11.2026) – eigener Betreff und Text, an jede Person mit Platz; wer nachrückt,
+ * bekommt sie dann. `null`: aus. Gespeichert: der Text in der Beschreibung der Routine „Warteliste“ (mit deren Text
+ * höchstens 1.000 Zeichen), **wann** in der von „Platz“ – dort stehen ihre Schritte, und beides wird im selben Aufruf
+ * geschrieben. So passt beim Lesen der Schritte (`schrittFolge`) immer das „Wann“ zu dem, was in ChurchTools steht.
+ */
+export interface ZweiteMail {
+  wann: ZweiteWann;
+  betreff: string;
+  text: string;
+}
+
+/** Grenzen für „X Tage nach der Anmeldung“. */
+export const ZWEITE_TAGE_MIN = 1;
+export const ZWEITE_TAGE_MAX = 365;
+
 /** Höchstlänge der Beschreibung einer Routine (Schnittstelle, gemessen: 1.001 → 400). */
 export const BESCHREIBUNG_MAX = 1000;
 
@@ -86,7 +111,18 @@ const TextSchema = z.object({
   gruss: z.string().default(''),
   alle: z.boolean().optional(),
 });
-const EigenSchema = TextSchema.extend({ v: z.literal(1), erinnerung: TextSchema.optional() });
+const WannSchema = z.discriminatedUnion('art', [
+  z.object({ art: z.literal('sofort') }),
+  z.object({ art: z.literal('tage'), tage: z.number().int() }),
+  z.object({ art: z.literal('datum'), datum: z.string() }),
+]);
+const EigenSchema = TextSchema.extend({
+  v: z.literal(1),
+  erinnerung: TextSchema.optional(),
+  // F7b: „wann“ in der Beschreibung von „Platz“, Betreff und Text in der von „Warteliste“.
+  zweiteWann: WannSchema.optional(),
+  zweite: z.object({ betreff: z.string().default(''), text: z.string().default('') }).optional(),
+});
 
 /** Die Beschreibung gelesen – `null`, wenn sie nicht von uns stammt. */
 function beschreibungLesen(beschreibung: string | null | undefined) {
@@ -112,6 +148,24 @@ export function eigenerTextAus(beschreibung: string | null | undefined): Eigener
   return b ? nurText(b) : OHNE_EIGENEN_TEXT;
 }
 
+/** F7b: Wann die zweite Mail kommt – aus der Beschreibung der Routine „Platz“; `null`: keine. */
+export function zweiteWannAus(beschreibung: string | null | undefined): ZweiteWann | null {
+  return beschreibungLesen(beschreibung)?.zweiteWann ?? null;
+}
+
+/**
+ * **Die zweite Mail** (F7b) aus den Beschreibungen beider Routinen. Fehlt eine Hälfte (nur von Hand in ChurchTools
+ * möglich – geschrieben wird erst „Warteliste“, dann „Platz“), gilt sie als aus: lieber keine Mail als eine leere.
+ */
+export function zweiteMailAus(
+  platz: string | null | undefined,
+  warte: string | null | undefined,
+): ZweiteMail | null {
+  const wann = zweiteWannAus(platz);
+  const t = beschreibungLesen(warte)?.zweite;
+  return wann && t ? { wann, betreff: t.betreff, text: t.text } : null;
+}
+
 /** Der eigene Text der Erinnerung (A9-3b) – aus der Beschreibung der Routine „Platz“. */
 export function erinnerungsTextAus(beschreibung: string | null | undefined): EigenerText {
   const e = beschreibungLesen(beschreibung)?.erinnerung;
@@ -133,11 +187,28 @@ const leer = (t: EigenerText) => !t.betreff && !t.absatz && !t.gruss && !t.alle;
 export function eigenerTextAlsBeschreibung(
   t: EigenerText,
   erinnerung: EigenerText = OHNE_EIGENEN_TEXT,
+  zweite: ZweiteMail | null = null,
 ): string | null {
   const x = getrimmt(t);
   const er = getrimmt(erinnerung);
-  if (leer(x) && leer(er)) return null;
-  return JSON.stringify({ v: 1, ...x, ...(leer(er) ? {} : { erinnerung: er }) });
+  if (leer(x) && leer(er) && !zweite) return null;
+  return JSON.stringify({
+    v: 1,
+    ...x,
+    ...(leer(er) ? {} : { erinnerung: er }),
+    ...(zweite ? { zweiteWann: zweite.wann } : {}),
+  });
+}
+
+/** F7b: Die Beschreibung der Routine „Warteliste“ – ihr eigener Text und Betreff + Text der zweiten Mail. */
+export function warteBeschreibung(t: EigenerText, zweite: ZweiteMail | null): string | null {
+  const x = getrimmt(t);
+  if (leer(x) && !zweite) return null;
+  return JSON.stringify({
+    v: 1,
+    ...x,
+    ...(zweite ? { zweite: { betreff: zweite.betreff.trim(), text: zweite.text.trim() } } : {}),
+  });
 }
 
 /**
@@ -147,21 +218,64 @@ export function eigenerTextAlsBeschreibung(
 export function eigenerTextFehler(
   t: EigenerText,
   erinnerung: EigenerText = OHNE_EIGENEN_TEXT,
+  zweite: ZweiteMail | null = null,
 ): string | null {
   if (t.betreff.trim().length > BETREFF_MAX || erinnerung.betreff.trim().length > BETREFF_MAX)
     return `Der Betreff hat höchstens ${BETREFF_MAX} Zeichen.`;
-  const laenge = eigenerTextAlsBeschreibung(t, erinnerung)?.length ?? 0;
+  const laenge = eigenerTextAlsBeschreibung(t, erinnerung, zweite)?.length ?? 0;
   if (laenge > BESCHREIBUNG_MAX)
     return `Eigener Absatz und Gruß sind zusammen zu lang (${laenge - BESCHREIBUNG_MAX} Zeichen zu viel).`;
   return null;
 }
 
+/**
+ * **Was an Warteliste-Text und zweiter Mail nicht passt** (F7b) – `null`, wenn alles passt. Beide teilen sich die
+ * Beschreibung der Routine „Warteliste“. `loeschen`: das Löschdatum – eine zweite Mail an diesem Tag oder danach käme
+ * nie an (die Anmeldungen sind dann weg), und das Warten darauf hielte das Löschen auf.
+ */
+export function warteFehler(
+  t: EigenerText,
+  zweite: ZweiteMail | null,
+  loeschen: string | null = null,
+): string | null {
+  if (t.betreff.trim().length > BETREFF_MAX)
+    return `Der Betreff hat höchstens ${BETREFF_MAX} Zeichen.`;
+  if (zweite) {
+    if (!zweite.text.trim()) return 'Die zweite Mail braucht einen Text.';
+    if (zweite.betreff.trim().length > BETREFF_MAX)
+      return `Der Betreff hat höchstens ${BETREFF_MAX} Zeichen.`;
+    const w = zweite.wann;
+    if (
+      w.art === 'tage' &&
+      (!Number.isInteger(w.tage) || w.tage < ZWEITE_TAGE_MIN || w.tage > ZWEITE_TAGE_MAX)
+    )
+      return `Zweite Mail: bitte ${ZWEITE_TAGE_MIN} bis ${ZWEITE_TAGE_MAX} Tage.`;
+    if (w.art === 'datum' && !/^\d{4}-\d{2}-\d{2}$/.test(w.datum))
+      return 'Zweite Mail: bitte ein Datum wählen.';
+    if (w.art === 'datum' && loeschen && w.datum >= loeschen)
+      return 'Zweite Mail: Das Datum liegt am Löschdatum oder danach – dann sind die Anmeldungen schon weg.';
+  }
+  const laenge = warteBeschreibung(t, zweite)?.length ?? 0;
+  if (laenge > BESCHREIBUNG_MAX)
+    return `Warteliste und zweite Mail sind zusammen zu lang (${laenge - BESCHREIBUNG_MAX} Zeichen zu viel).`;
+  return null;
+}
+
+/** Wie die Karte „Mails“ und das Fenster den Zeitpunkt nennen. */
+export function zweiteWannText(w: ZweiteWann): string {
+  if (w.art === 'sofort') return 'gleich nach der Bestätigung';
+  if (w.art === 'tage') return `${w.tage === 1 ? '1 Tag' : `${w.tage} Tage`} nach der Anmeldung`;
+  return `am ${datumText(w.datum)}`;
+}
+
 /** Der Betreff, wenn Veranstalter keinen eigenen schreiben. */
-export function standardBetreff(art: MailArt, veranstaltung: string): string {
+export function standardBetreff(art: MailArt | 'zweite', veranstaltung: string): string {
   const text =
-    art === 'erinnerung'
-      ? `Bald ist es so weit: ${veranstaltung}`
-      : `${veranstaltung}: ${art === 'platz' ? 'Anmeldung bestätigt' : 'Warteliste'}`;
+    art === 'zweite'
+      ? `${veranstaltung}: Weitere Infos`
+      : art === 'erinnerung'
+        ? `Bald ist es so weit: ${veranstaltung}`
+        : `${veranstaltung}: ${art === 'platz' ? 'Anmeldung bestätigt' : 'Warteliste'}`;
   return text.slice(0, BETREFF_MAX);
 }
 
@@ -237,13 +351,22 @@ export function ablaufMails(
   e: OeffentlicheEinstellungen,
   veranstaltung: string,
   ctPlatzhalter: ReadonlyMap<string, string>,
-  eigen: Readonly<Record<RoutinenArt, EigenerText>> & { readonly erinnerung?: EigenerText } = {
+  eigen: Readonly<Record<RoutinenArt, EigenerText>> & {
+    readonly erinnerung?: EigenerText;
+    readonly zweite?: ZweiteMail | null;
+  } = {
     platz: OHNE_EIGENEN_TEXT,
     warte: OHNE_EIGENEN_TEXT,
   },
   qr = false,
   spalten: ReadonlyMap<number, string> = new Map(),
-): { platz: AblaufMail; warte: AblaufMail; erinnerung: AblaufMail; unbekannt: string[] } {
+): {
+  platz: AblaufMail;
+  warte: AblaufMail;
+  erinnerung: AblaufMail;
+  zweite: AblaufMail | null;
+  unbekannt: string[];
+} {
   const unbekannt = new Set<string>();
   /** Lesbaren Text mit `[…]` umwandeln; `§name§` wird danach durch `werte[name]` ersetzt. */
   const html = (vorlage: string, werte: Record<string, string> = {}): string => {
@@ -298,10 +421,11 @@ export function ablaufMails(
     return `<p>${zeilen.map((z) => wert(z)).join('<br>')}</p>`;
   };
   /** Der Betreff ist reiner Text – `{{` darin läse ChurchTools sonst als Platzhalter. */
-  const betreff = (art: MailArt) =>
-    ((eigen[art] ?? OHNE_EIGENEN_TEXT).betreff.trim() || standardBetreff(art, veranstaltung))
+  const betreffAus = (eigener: string, art: MailArt | 'zweite') =>
+    (eigener.trim() || standardBetreff(art, veranstaltung))
       .replace(/\{\{/g, '{ {')
       .slice(0, BETREFF_MAX);
+  const betreff = (art: MailArt) => betreffAus((eigen[art] ?? OHNE_EIGENEN_TEXT).betreff, art);
 
   const b = e.bezahlung;
   const bank = bankZeilen(b, '§nachname§');
@@ -377,7 +501,20 @@ export function ablaufMails(
       gruss(er),
     ].join(''),
   };
-  return { platz, warte, erinnerung, unbekannt: [...unbekannt] };
+  // F7b: die zweite Mail – nur ihr Text (mit „Antwort einfügen“ wie in der Bestätigung) und der Gruß. Was im Text
+  // steht, schreibt die Leitung selbst (Entwurf `f7-mails-v1`: „Hallo [Vorname], …“).
+  const z = eigen.zweite;
+  const zweite: AblaufMail | null = z
+    ? {
+        betreff: betreffAus(z.betreff, 'zweite'),
+        html: (() => {
+          const r = absatzMitAntworten(z.text, mailBausteine(e, ctPlatzhalter, spalten));
+          r.unbekannt.forEach((u) => unbekannt.add(u));
+          return r.html + gruss(OHNE_EIGENEN_TEXT);
+        })(),
+      }
+    : null;
+  return { platz, warte, erinnerung, zweite, unbekannt: [...unbekannt] };
 }
 
 /**
@@ -432,31 +569,72 @@ export function anmeldeschlussVorLoeschen(
  * **Welcher Schritt welcher ist** (A9-3b) – nach seiner **Stellung**, nicht nach seiner Art: Bestätigung zuerst, dann je
  * Erinnerung „warten bis“ + Mail, dann „warten bis zum Löschdatum“ + „entfernen“. Mit mehreren Erinnerungen gibt es
  * mehrere Mail- und Warte-Schritte; „der erste Schritt dieser Art“ fände dann den falschen.
+ *
+ * F7b: die **zweite Mail** – `zweite` sagt, wann sie kommt (aus der Beschreibung derselben Routine, `zweiteWannAus`; sie
+ * wird im selben Aufruf geschrieben wie die Schritte). „Sofort“: die Mail direkt nach der Bestätigung; „X Tage“: Warten
+ * mit Dauer + Mail direkt danach; „Datum“: das Paar „warten bis“ + Mail mit ihrem Datum zwischen den Erinnerungen (bei
+ * gleichem Tag das erste). `zweiteVor`: so viele Erinnerungen stehen vor ihr.
  */
 export interface SchrittFolge {
   bestaetigung?: number;
+  zweite?: { warte?: number; mail: number };
+  zweiteVor?: number;
   erinnerungen: { warte: number; mail: number }[];
   loeschWarte?: number;
   entfernen?: number;
 }
 
-export function schrittFolge(schritte: readonly { id: number; actionKey: string }[]): SchrittFolge {
+/** Ein Schritt, wie ChurchTools ihn liefert – soweit `schrittFolge` ihn braucht. */
+export interface SchrittRoh {
+  id: number;
+  actionKey: string;
+  isEnabled?: boolean;
+  actionData?: Readonly<Record<string, unknown>> | null;
+}
+
+export function schrittFolge(
+  schritte: readonly SchrittRoh[],
+  zweite: ZweiteWann | null = null,
+): SchrittFolge {
   const f: SchrittFolge = { erinnerungen: [] };
   const ende = schritte.findIndex((s) => s.actionKey === 'remove-member');
   const loesch = ende > 0 && schritte[ende - 1].actionKey === 'special:wait' ? ende - 1 : -1;
   if (schritte[0]?.actionKey === 'send-member-email') f.bestaetigung = schritte[0].id;
   const bis = loesch >= 0 ? loesch : schritte.length;
-  for (let i = f.bestaetigung === undefined ? 0 : 1; i + 1 < bis; i++)
-    if (
-      schritte[i].actionKey === 'special:wait' &&
-      schritte[i + 1].actionKey === 'send-member-email'
-    ) {
-      f.erinnerungen.push({ warte: schritte[i].id, mail: schritte[i + 1].id });
+  const ist = (i: number, art: string) => i < bis && schritte[i]?.actionKey === art;
+  let i = f.bestaetigung === undefined ? 0 : 1;
+  if (zweite?.art === 'sofort' && ist(i, 'send-member-email')) {
+    f.zweite = { mail: schritte[i].id };
+    f.zweiteVor = 0;
+    i++;
+  } else if (zweite?.art === 'tage' && ist(i, 'special:wait') && ist(i + 1, 'send-member-email')) {
+    f.zweite = { warte: schritte[i].id, mail: schritte[i + 1].id };
+    f.zweiteVor = 0;
+    i += 2;
+  }
+  for (; i + 1 < bis; i++)
+    if (ist(i, 'special:wait') && ist(i + 1, 'send-member-email')) {
+      const paar = { warte: schritte[i].id, mail: schritte[i + 1].id };
+      if (
+        zweite?.art === 'datum' &&
+        !f.zweite &&
+        schritte[i].actionData?.untilDate === zweite.datum
+      ) {
+        f.zweite = paar;
+        f.zweiteVor = f.erinnerungen.length;
+      } else f.erinnerungen.push(paar);
       i++;
     }
   if (loesch >= 0) f.loeschWarte = schritte[loesch].id;
   if (ende >= 0) f.entfernen = schritte[ende].id;
   return f;
+}
+
+/** F7b: die zweite Mail für `routinenSchritte` – `an: false` schaltet nur ihre Mail aus (Nachstarten). */
+export interface ZweiteSchritte {
+  mail: AblaufMail;
+  wann: ZweiteWann;
+  an: boolean;
 }
 
 /**
@@ -469,16 +647,24 @@ export function schrittFolge(schritte: readonly { id: number; actionKey: string 
  * ChurchTools führte an „Deine Anmeldung“ vorbei. `mailAn: false` schaltet nur die Bestätigung aus – für das
  * Nachstarten schon Angemeldeter (gemessen 28.10.2026). Erinnerungen gibt es nur mit Löschdatum (beide brauchen den
  * Termin).
+ *
+ * F7b: die **zweite Mail** (`zweite`) steht bei „sofort“ und „X Tage“ direkt nach der Bestätigung, mit Datum nach Datum
+ * zwischen den Erinnerungen (vor einer am selben Tag) – unabhängig vom Löschdatum. `vorherWann`: wann sie in `vorher`
+ * kam (Beschreibung der Routine), damit ihre Schritte erkannt werden. Ihre Nummern bleiben nur, wenn sie an **derselben
+ * Stelle** bleibt (gleiche Art, gleich viele Erinnerungen davor) – ein Schritt mit Wartenden wandert nie; sonst wird sie
+ * neu angelegt, und die alten Schritte fallen weg (Wartende vorher über „bis heute“ weiter, `wegfallendeWarten`).
  */
 export function routinenSchritte(
   mail: AblaufMail,
   absenderId: number,
-  vorher: { id: number; actionKey: string }[] = [],
+  vorher: readonly SchrittRoh[] = [],
   loeschen: string | null = null,
   mailAn = true,
   erinnerung: { mail: AblaufMail; liste: readonly Erinnerung[] } | null = null,
+  zweite: ZweiteSchritte | null = null,
+  vorherWann: ZweiteWann | null = null,
 ): RoutinenSchritt[] {
-  const f = schrittFolge(vorher);
+  const f = schrittFolge(vorher, vorherWann);
   const nr = (id: number | undefined) => (id ? { id } : {});
   const mailDaten = (m: AblaufMail) => ({
     subject: m.betreff,
@@ -494,8 +680,42 @@ export function routinenSchritte(
       actionData: mailDaten(mail),
     },
   ];
-  if (!loeschen) return schritte;
-  (erinnerung?.liste ?? []).forEach((x, i) =>
+  const liste = loeschen ? (erinnerung?.liste ?? []) : [];
+  // Wie viele Erinnerungen vor der zweiten Mail stehen – mit Datum nach Datum, vor einer am selben Tag.
+  const zweiteVor =
+    zweite?.wann.art === 'datum'
+      ? liste.filter((x) => x.datum < (zweite.wann as { datum: string }).datum).length
+      : 0;
+  const bleibt = !!zweite && vorherWann?.art === zweite.wann.art && f.zweiteVor === zweiteVor;
+  const zweiteSchritte = (z: ZweiteSchritte): RoutinenSchritt[] => {
+    const m: RoutinenSchritt = {
+      ...nr(bleibt ? f.zweite?.mail : undefined),
+      actionKey: 'send-member-email',
+      isEnabled: z.an,
+      actionData: mailDaten(z.mail),
+    };
+    if (z.wann.art === 'sofort') return [m];
+    const warte = nr(bleibt ? f.zweite?.warte : undefined);
+    return [
+      z.wann.art === 'tage'
+        ? {
+            ...warte,
+            actionKey: 'special:wait',
+            isEnabled: true,
+            actionData: { duration: { numDays: z.wann.tage } },
+          }
+        : {
+            ...warte,
+            actionKey: 'special:wait',
+            isEnabled: true,
+            actionData: { untilDate: z.wann.datum },
+          },
+      m,
+    ];
+  };
+  if (zweite && zweite.wann.art !== 'datum') schritte.push(...zweiteSchritte(zweite));
+  liste.forEach((x, i) => {
+    if (zweite?.wann.art === 'datum' && i === zweiteVor) schritte.push(...zweiteSchritte(zweite));
     schritte.push(
       {
         ...nr(f.erinnerungen[i]?.warte),
@@ -509,8 +729,11 @@ export function routinenSchritte(
         isEnabled: x.an,
         actionData: mailDaten(erinnerung!.mail),
       },
-    ),
-  );
+    );
+  });
+  if (zweite?.wann.art === 'datum' && zweiteVor === liste.length)
+    schritte.push(...zweiteSchritte(zweite));
+  if (!loeschen) return schritte;
   schritte.push(
     {
       ...nr(f.loeschWarte),
@@ -521,4 +744,41 @@ export function routinenSchritte(
     { ...nr(f.entfernen), actionKey: 'remove-member', isEnabled: true, actionData: {} },
   );
   return schritte;
+}
+
+/**
+ * **Warte-Schritte, die wegfallen** (F7b, verallgemeinert aus A9-3b): Nummern aus `vorher`, die in den neuen Schritten
+ * nicht mehr vorkommen. Wartet dort jemand, nimmt ChurchTools sie nicht weg (422, gemessen M5 und M3).
+ */
+export function wegfallendeWarten(
+  vorher: readonly SchrittRoh[],
+  neu: readonly RoutinenSchritt[],
+): number[] {
+  const bleiben = new Set(neu.map((s) => s.id).filter((id): id is number => id !== undefined));
+  return vorher
+    .filter((s) => s.actionKey === 'special:wait' && !bleiben.has(s.id))
+    .map((s) => s.id);
+}
+
+/**
+ * **Erst durchlassen, dann wegnehmen** (gemessen M5-5, M3): die bisherigen Schritte unverändert, nur die wegfallenden
+ * Warte-Schritte „bis heute“ und die Mail direkt dahinter aus – so laufen Wartende ohne diese Mail weiter. Danach
+ * können die neuen Schritte geschrieben werden. **Nie eine `emailId` mitschicken** (M5-1).
+ */
+export function durchlassSchritte(
+  vorher: readonly SchrittRoh[],
+  weg: readonly number[],
+  heute: string,
+): Record<string, unknown>[] {
+  const fort = new Set(weg);
+  return vorher.map((s, i) => {
+    const { emailId: _id, ...daten } = (s.actionData ?? {}) as Record<string, unknown>;
+    const nachWeg = i > 0 && fort.has(vorher[i - 1].id) && s.actionKey === 'send-member-email';
+    return {
+      id: s.id,
+      actionKey: s.actionKey,
+      isEnabled: nachWeg ? false : s.isEnabled !== false,
+      actionData: fort.has(s.id) ? { untilDate: heute } : daten,
+    };
+  });
 }

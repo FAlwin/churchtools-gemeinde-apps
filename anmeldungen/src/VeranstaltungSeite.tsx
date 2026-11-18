@@ -14,6 +14,7 @@ import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
 import { loeschDatum } from '@shared/anmeldung/termin';
+import { zweiteWannText } from '@shared/anmeldung/ablaeufe';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
@@ -385,6 +386,9 @@ function MailsKarte({
                   (x.an ? ' (vorbei – geht noch an Spätangemeldete)' : ' (vorbei)')}
               </span>
             ))}
+      </Zeile>
+      <Zeile titel="Zweite Mail">
+        {stand.zweite ? `✓ ${zweiteWannText(stand.zweite.wann)}` : 'aus'}
       </Zeile>
       <Zeile titel="Check-in-Code">{stand.qr ? '✓ in der Bestätigung' : 'aus'}</Zeile>
       {stand.absender && <Zeile titel="Absender">{stand.absender}</Zeile>}

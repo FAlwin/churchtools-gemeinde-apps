@@ -3,8 +3,8 @@ import * as V from '@ui/ct/verbindung';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import * as E from './einrichten';
 import * as R from './rundmail';
-import { SYSTEMFELDER } from '@shared/anmeldung/formular';
-import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
+import { SYSTEMFELDER, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { OHNE_EIGENEN_TEXT, type ZweiteMail, type ZweiteWann } from '@shared/anmeldung/ablaeufe';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import {
   LoeschdatumVorbei,
@@ -125,6 +125,13 @@ let gruppenStatus: number;
 /** F7a: die Spalten der Gruppe (`/groups/{id}/memberfields`) – Nummer und Name in ChurchTools. */
 let spalten: { id: number; name: string }[];
 
+/**
+ * Bis wann ein Warte-Schritt hält. F7b, gemessen M3 (18.11.2026): Warten mit Dauer (`duration`, mindestens ein Tag) hält
+ * wie ein künftiges Datum; an Ort und Stelle auf „bis heute“ umgestellt, laufen Wartende sofort durch.
+ */
+const haeltBis = (s: Schritt) =>
+  s.actionData.duration ? '9999-12-31' : String(s.actionData.untilDate);
+
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
     if (s.actionKey === 'send-member-email') {
@@ -133,7 +140,7 @@ function laufWeiter(r: Routine, l: Lauf, ab: number) {
         mailBetreffe.push(`${l.person}: ${String(s.actionData.subject)}`);
       }
     } else if (s.actionKey === 'special:wait') {
-      if (String(s.actionData.untilDate) > HEUTE) {
+      if (haeltBis(s) > HEUTE) {
         l.status = 'waiting';
         l.schritt = s.id;
         return;
@@ -289,7 +296,7 @@ beforeEach(() => {
       r.steps = neu;
       for (const l of laeufe.filter((x) => x.routine === r.id && x.status === 'waiting')) {
         const i = neu.findIndex((s) => s.id === l.schritt);
-        if (String(neu[i].actionData.untilDate) <= HEUTE) laufWeiter(r, l, i + 1);
+        if (haeltBis(neu[i]) <= HEUTE) laufWeiter(r, l, i + 1);
       }
       return null;
     }
@@ -314,7 +321,9 @@ beforeEach(() => {
 describe('ablaeufeEinrichten', () => {
   it('legt Platz (aktiv) und Warteliste (wartend) für die Teilnehmerrolle an, beide an; danach Standard-Mail aus', async () => {
     await ablaeufeEinrichten(165, 7);
-    const liste = [...routinen.values()];
+    // F7b: erst „Warteliste“ (Text der zweiten Mail), dann „Platz“ (ihr „Wann“ und ihre Schritte).
+    expect([...routinen.values()].map((r) => r.status)).toEqual(['waiting', 'active']);
+    const liste = [...routinen.values()].sort((x, y) => x.status.localeCompare(y.status));
     expect(liste.map((r) => [r.name, r.rolle, r.status, r.isEnabled])).toEqual([
       ['Anmeldungen: Platz', 32, 'active', true],
       ['Anmeldungen: Warteliste', 32, 'waiting', true],
@@ -396,6 +405,7 @@ describe('ablaeufeLesen', () => {
       loeschDatum: null,
       anmeldeschluss: null,
       erinnerungen: [],
+      zweite: null,
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -413,6 +423,7 @@ describe('ablaeufeLesen', () => {
       loeschDatum: null,
       anmeldeschluss: null,
       erinnerungen: [],
+      zweite: null,
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -1362,5 +1373,302 @@ describe('Ältere Veranstaltungen (A9-5)', () => {
     expect(f).toBeInstanceOf(LoeschdatumVorbei);
     expect((f as LoeschdatumVorbei).anzahl).toBe(2);
     expect(routinen.size).toBe(0);
+  });
+});
+
+describe('Zweite Mail (F7b)', () => {
+  const ZONE = 'Europe/Berlin';
+  const optionen = { heute: HEUTE, zeitzone: ZONE };
+  /** Termin am So, 15.11.2026 (Löschen 15.02.2027); `tage`: Erinnerungen davor. */
+  const mitTermin = (tage?: number[], x: Partial<OeffentlicheEinstellungen> = {}) => {
+    const e = {
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: '2026-11-15T10:00', ende: '2026-11-15T18:00', ort: '', terminId: 1 },
+      loeschfristMonate: 3,
+      ...(tage ? { erinnerungTage: tage } : {}),
+      ...x,
+    };
+    ei.systemfelderNachziehen.mockResolvedValue(e);
+    return e;
+  };
+  const zweite = (wann: ZweiteWann, text = 'Hallo [Vorname], bis bald!'): ZweiteMail => ({
+    wann,
+    betreff: 'Infos zum Wochenende',
+    text,
+  });
+  const einrichten = (z?: ZweiteMail | null) =>
+    ablaeufeEinrichten(165, 7, z === undefined ? undefined : { zweite: z }, undefined, optionen);
+  const routine = (status: string) => [...routinen.values()].find((x) => x.status === status)!;
+  const schritte = (status = 'active') =>
+    routine(status).steps.map((s) =>
+      s.actionKey !== 'special:wait'
+        ? s.actionKey === 'send-member-email'
+          ? `mail ${String(s.actionData.subject)}`
+          : s.actionKey
+        : s.actionData.duration
+          ? `warten ${(s.actionData.duration as { numDays: number }).numDays} Tage`
+          : `warten ${String(s.actionData.untilDate)}`,
+    );
+  /** Nummer des n-ten Warte-Schritts in „Platz“. */
+  const warten = (n: number) =>
+    routine('active').steps.filter((s) => s.actionKey === 'special:wait')[n].id;
+  /** Eine neue Anmeldung: ChurchTools startet ihren Lauf in „Platz“ (gemessen A9). */
+  const anmelden = (person: string) => {
+    const r = routine('active');
+    const l: Lauf = { routine: r.id, person, status: 'waiting', schritt: null };
+    laeufe.push(l);
+    laufWeiter(r, l, 0);
+  };
+  const BEST = 'mail Kinderfreizeit: Anmeldung bestätigt';
+  const ZWEITE = 'mail Infos zum Wochenende';
+  afterEach(() => expect(offenBeimLoeschen).toEqual([]));
+
+  it('sofort: direkt nach der Bestätigung; eine neue Anmeldung bekommt beide; Lesen liefert sie', async () => {
+    mitTermin();
+    const z = zweite({ art: 'sofort' });
+    await einrichten(z);
+    expect(schritte()).toEqual([BEST, ZWEITE, 'warten 2027-02-15', 'remove-member']);
+    // Die Warteliste bekommt sie nicht – dort steht nur ihr Text.
+    expect(schritte('waiting')).toEqual([
+      'mail Kinderfreizeit: Warteliste',
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    expect(JSON.parse(routine('active').description!)).toMatchObject({
+      zweiteWann: { art: 'sofort' },
+    });
+    expect(JSON.parse(routine('waiting').description!)).toMatchObject({
+      zweite: { betreff: 'Infos zum Wochenende', text: 'Hallo [Vorname], bis bald!' },
+    });
+    expect(String(routine('active').steps[1].actionData.body)).toContain(
+      'Hallo {{person.firstName}}, bis bald!',
+    );
+    anmelden('Mia');
+    expect(mailBetreffe).toEqual([
+      'Mia: Kinderfreizeit: Anmeldung bestätigt',
+      'Mia: Infos zum Wochenende',
+    ]);
+    expect((await ablaeufeLesen(165)).zweite).toEqual(z);
+  });
+
+  it('X Tage: Warten mit Dauer, dann die Mail – die neue Anmeldung wartet dort', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'tage', tage: 3 }));
+    expect(schritte()).toEqual([
+      BEST,
+      'warten 3 Tage',
+      ZWEITE,
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    anmelden('Mia');
+    expect(mailBetreffe).toEqual(['Mia: Kinderfreizeit: Anmeldung bestätigt']);
+    expect(laeufe.map((l) => l.schritt)).toEqual([warten(0)]);
+  });
+
+  it('Datum: nach Datum zwischen den Erinnerungen; Lesen trennt Erinnerungen und zweite Mail', async () => {
+    mitTermin([14, 3]); // Erinnerungen am 01.11. und 12.11.
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }));
+    expect(schritte()).toEqual([
+      BEST,
+      'warten 2026-11-01',
+      'mail Bald ist es so weit: Kinderfreizeit',
+      'warten 2026-11-05',
+      ZWEITE,
+      'warten 2026-11-12',
+      'mail Bald ist es so weit: Kinderfreizeit',
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    const stand = await ablaeufeLesen(165);
+    expect(stand.erinnerungen.map((x) => x.datum)).toEqual(['2026-11-01', '2026-11-12']);
+    expect(stand.zweite?.wann).toEqual({ art: 'datum', datum: '2026-11-05' });
+    expect(stand.loeschDatum).toBe('2027-02-15');
+  });
+
+  it('Text ändern: Schritte behalten ihre Nummern, wer an der zweiten Mail wartet, bleibt dort', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'tage', tage: 3 }));
+    anmelden('Mia');
+    const vorher = warten(0);
+    await einrichten(zweite({ art: 'tage', tage: 5 }, 'Neuer Text'));
+    expect(warten(0)).toBe(vorher);
+    expect(schritte()[1]).toBe('warten 5 Tage');
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', vorher]]);
+  });
+
+  it('Zeitpunkt wechseln, während jemand an der zweiten Mail wartet (X Tage → sofort): läuft ohne sie weiter, kein 422', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'tage', tage: 3 }));
+    anmelden('Mia');
+    mailBetreffe = [];
+    await einrichten(zweite({ art: 'sofort' }));
+    expect(schritte()).toEqual([BEST, ZWEITE, 'warten 2027-02-15', 'remove-member']);
+    expect(mailBetreffe).toEqual([]);
+    expect(entfernt).toEqual([]);
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', warten(0)]]);
+  });
+
+  it('Datum über eine Erinnerung hinweg verschoben: neue Schritte, Wartende laufen ohne zweite Mail weiter', async () => {
+    mitTermin([14]); // Erinnerung am 01.11.
+    await einrichten(zweite({ art: 'datum', datum: '2026-10-30' }));
+    anmelden('Mia'); // wartet am 30.10. (vor der Erinnerung)
+    const alt = laeufe[0].schritt;
+    mailBetreffe = [];
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }));
+    expect(schritte()).toEqual([
+      BEST,
+      'warten 2026-11-01',
+      'mail Bald ist es so weit: Kinderfreizeit',
+      'warten 2026-11-05',
+      ZWEITE,
+      'warten 2027-02-15',
+      'remove-member',
+    ]);
+    expect(routine('active').steps.some((s) => s.id === alt)).toBe(false);
+    expect(mailBetreffe).toEqual([]);
+    // Neu gestartet? Nein – durchgelassen: Sie steht an der nächsten Stelle, der Erinnerung.
+    expect(laeufe.map((l) => l.schritt)).toEqual([warten(0)]);
+  });
+
+  it('aus, während jemand an ihr wartet: läuft ohne Mail bis zum Löschen; Lesen: keine', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }));
+    anmelden('Mia');
+    mailBetreffe = [];
+    await einrichten(null);
+    expect(schritte()).toEqual([BEST, 'warten 2027-02-15', 'remove-member']);
+    expect(mailBetreffe).toEqual([]);
+    expect(laeufe.map((l) => l.schritt)).toEqual([warten(0)]);
+    const stand = await ablaeufeLesen(165);
+    expect(stand.zweite).toBeNull();
+    expect(JSON.parse(routine('waiting').description ?? '{}')).not.toHaveProperty('zweite');
+  });
+
+  it('ohne Termin: die zweite Mail gibt es trotzdem (kein Löschen, keine Erinnerung)', async () => {
+    ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }));
+    expect(schritte()).toEqual([BEST, 'warten 2026-11-05', ZWEITE]);
+  });
+
+  it('schon Angemeldete (Nachstarten, sofort): laufen ohne Bestätigung und ohne zweite Mail bis zum Löschen', async () => {
+    ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
+    await einrichten(zweite({ art: 'sofort' }));
+    laeufe = [{ routine: routine('active').id, person: 'Alt', status: 'finished', schritt: null }];
+    mailBetreffe = [];
+    mitTermin();
+    await einrichten();
+    expect(mailBetreffe).toEqual([]);
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', warten(0)]]);
+    // Danach ist sie wieder an – für neue Anmeldungen.
+    expect(routine('active').steps[1].isEnabled).toBe(true);
+  });
+
+  it('Nachstarten: wer schon an einer Erinnerung wartet, wird wegen einer zweiten Mail mit Datum davor nicht neu gestartet', async () => {
+    mitTermin([3]); // Erinnerung am 12.11.
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }));
+    // Angemeldet, bevor es die zweite Mail gab: wartet an der Erinnerung.
+    const erinnerung = warten(1);
+    laeufe = [
+      { routine: routine('active').id, person: 'Alt', status: 'waiting', schritt: erinnerung },
+    ];
+    mailBetreffe = [];
+    await einrichten(zweite({ art: 'datum', datum: '2026-11-05' }, 'Neuer Text'));
+    expect(laeufe.map((l) => [l.status, l.schritt])).toEqual([['waiting', erinnerung]]);
+    expect(mailBetreffe).toEqual([]);
+  });
+
+  it('Abgleich: passt alles → nichts geschrieben; Kontakt geändert → die zweite Mail wird mitgeschrieben', async () => {
+    const e = mitTermin();
+    await einrichten(zweite({ art: 'tage', tage: 3 }));
+    aufrufe = [];
+    await ablaeufeAbgleichen(165, HEUTE, ZONE);
+    expect(aufrufe).toEqual([]);
+    mitTermin(undefined, { ...e, kontakt: 'neu@x.de' });
+    await ablaeufeAbgleichen(165, HEUTE, ZONE);
+    expect(String(routine('active').steps[2].actionData.body)).toContain('neu@x.de');
+  });
+
+  it('Abgleich: weicht nur die zweite Mail in ChurchTools ab, wird sie neu geschrieben', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'sofort' }));
+    routine('active').steps[1].actionData = {
+      ...routine('active').steps[1].actionData,
+      body: '<p>von Hand geändert</p>',
+    };
+    await ablaeufeAbgleichen(165, HEUTE, ZONE);
+    expect(String(routine('active').steps[1].actionData.body)).toContain('bis bald!');
+  });
+
+  it('Nachlesen: übernimmt ChurchTools die neue Dauer nicht → Fehler statt „gespeichert“', async () => {
+    mitTermin();
+    await einrichten(zweite({ art: 'tage', tage: 3 }));
+    datumSchlucken = true;
+    await expect(einrichten(zweite({ art: 'tage', tage: 5 }))).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+
+  it('Datum am Löschdatum oder danach, ohne Text, zu lang → 422, bevor etwas geschrieben ist', async () => {
+    mitTermin();
+    await expect(einrichten(zweite({ art: 'datum', datum: '2027-02-15' }))).rejects.toMatchObject({
+      status: 422,
+    });
+    await expect(einrichten(zweite({ art: 'sofort' }, '  '))).rejects.toMatchObject({
+      status: 422,
+    });
+    await expect(einrichten(zweite({ art: 'sofort' }, 'x'.repeat(1000)))).rejects.toMatchObject({
+      status: 422,
+    });
+    expect(routinen.size).toBe(0);
+  });
+
+  it('Kopie: die zweite Mail der Vorlage kommt mit – mit Datum nicht (es gehört zur alten Veranstaltung)', async () => {
+    const vorlage = (z: ZweiteMail) => {
+      routinen.set(5, {
+        id: 5,
+        name: 'Anmeldungen: Platz',
+        isEnabled: true,
+        steps: [],
+        rolle: 32,
+        status: 'active',
+        gruppe: 90,
+        description: JSON.stringify({
+          v: 1,
+          betreff: '',
+          absatz: '',
+          gruss: '',
+          zweiteWann: z.wann,
+        }),
+      });
+      routinen.set(6, {
+        id: 6,
+        name: 'Anmeldungen: Warteliste',
+        isEnabled: true,
+        steps: [],
+        rolle: 32,
+        status: 'waiting',
+        gruppe: 90,
+        description: JSON.stringify({
+          v: 1,
+          betreff: '',
+          absatz: '',
+          gruss: '',
+          zweite: { betreff: z.betreff, text: z.text },
+        }),
+      });
+    };
+    vorlage(zweite({ art: 'tage', tage: 3 }));
+    mitTermin(undefined, { kopieVon: 90 });
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    const neu = (s: string) =>
+      [...routinen.values()].find((r) => r.gruppe === 165 && r.status === s)!;
+    expect(neu('active').steps.map((s) => s.actionKey)).toContain('special:wait');
+    expect((await ablaeufeLesen(165)).zweite).toEqual(zweite({ art: 'tage', tage: 3 }));
+
+    for (const r of [...routinen.values()].filter((x) => x.gruppe === 165)) routinen.delete(r.id);
+    vorlage(zweite({ art: 'datum', datum: '2025-05-01' }));
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect((await ablaeufeLesen(165)).zweite).toBeNull();
   });
 });

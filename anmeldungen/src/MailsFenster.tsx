@@ -12,6 +12,8 @@ import {
   erinnerungTageFehler,
   fehltInChurchTools,
   standardBetreff,
+  warteBeschreibung,
+  warteFehler,
   BESCHREIBUNG_MAX,
   type EigenerText,
   type MailArt,
@@ -24,7 +26,11 @@ import {
   type AblaufStand,
 } from './ablaeufe';
 import { aendereEinstellungen, leitungsKandidaten } from './einrichten';
+import { AntwortKnoepfe } from './AntwortKnoepfe';
 import { ErinnerungWahl } from './ErinnerungWahl';
+import { ZweiteMailWahl } from './ZweiteMailWahl';
+import { entwurfAus, zweiteAusEntwurf, type ZweiteEntwurf } from './zweiteEntwurf';
+import { loeschDatum } from '@shared/anmeldung/termin';
 import { vorschauLaden } from './rundmail';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
@@ -59,11 +65,13 @@ export function MailsFenster({
   onClose: () => void;
   onGespeichert: (text: string) => void;
 }) {
-  const [art, setArt] = useState<MailArt>('platz');
+  const [art, setArt] = useState<MailArt | 'zweite'>('platz');
   const [texte, setTexte] = useState<Record<MailArt, EigenerText>>(stand.eigen);
   const [tage, setTage] = useState<(number | null)[]>(e.erinnerungTage ?? []);
   const [absender, setAbsender] = useState<number | null>(stand.absenderId);
   const [qr, setQr] = useState(stand.qr);
+  const [zweiteEntwurf, setZweiteEntwurf] = useState<ZweiteEntwurf>(() => entwurfAus(stand.zweite));
+  const zweite = zweiteAusEntwurf(zweiteEntwurf);
   const leitungStand = useLaden(
     () => leitungsKandidaten(id).then((k) => k.filter((x) => x.leitung)),
     [id],
@@ -79,44 +87,33 @@ export function MailsFenster({
   // Lässt sich die Leitung nicht laden, steht es unten – wie ein Fehler beim Speichern.
   const fehler = eigenerFehler ?? (leitungStand.art === 'fehler' ? leitungStand.fehler.text : null);
 
-  const t = texte[art];
+  // Im Reiter „Zweite Mail“ gibt es keinen eigenen Absatz – `t` ist dort nur ein Platzhalter.
+  const t = art === 'zweite' ? texte.platz : texte[art];
   const aendern = (teil: Partial<EigenerText>) => {
+    if (art === 'zweite') return;
     setTexte((alt) => ({ ...alt, [art]: { ...alt[art], ...teil } }));
+    setVorschau(null);
+  };
+  const aendernZweite = (teil: Partial<ZweiteEntwurf>) => {
+    setZweiteEntwurf((alt) => ({ ...alt, ...teil }));
     setVorschau(null);
   };
   const absatzRef = useRef<HTMLTextAreaElement>(null);
   const bausteine = useMemo(() => mailBausteinNamen(e), [e]);
-  /** `[Name]` an der Schreibmarke – wie die Platzhalter der Rundmail. */
-  const einfuegen = (name: string) => {
-    const feld = absatzRef.current;
-    const token = `[${name}]`;
-    const von = feld?.selectionStart ?? t.absatz.length;
-    const bis = feld?.selectionEnd ?? t.absatz.length;
-    aendern({ absatz: t.absatz.slice(0, von) + token + t.absatz.slice(bis) });
-    requestAnimationFrame(() => {
-      feld?.focus();
-      feld?.setSelectionRange(von + token.length, von + token.length);
-    });
-  };
-  // Eckige Klammern, die keine Frage meinen, bleiben Text – das soll niemanden überraschen.
-  const bleibtText =
-    art === 'platz'
-      ? [...new Set([...t.absatz.matchAll(/\[([^[\]\n]+)\]/g)].map((m) => m[1]))].filter(
-          (n) => !bausteine.includes(n),
-        )
-      : [];
   const pruefung = useMemo(
     () =>
-      eigenerTextFehler(texte.platz, texte.erinnerung) ??
-      eigenerTextFehler(texte.warte) ??
+      eigenerTextFehler(texte.platz, texte.erinnerung, zweite) ??
+      warteFehler(texte.warte, zweite, loeschDatum(e)) ??
       erinnerungTageFehler(tage),
-    [texte, tage],
+    [texte, tage, zweite, e],
   );
-  // Bestätigung und Erinnerung teilen sich die Beschreibung der Routine „Platz“ (E4).
+  // Bestätigung und Erinnerung teilen sich die Beschreibung der Routine „Platz“ (E4), Warteliste und zweite Mail die
+  // von „Warteliste“ (F7b).
+  const mitWarte = art === 'warte' || art === 'zweite';
   const belegt =
-    (art === 'warte'
-      ? eigenerTextAlsBeschreibung(texte.warte)
-      : eigenerTextAlsBeschreibung(texte.platz, texte.erinnerung)
+    (mitWarte
+      ? warteBeschreibung(texte.warte, zweite)
+      : eigenerTextAlsBeschreibung(texte.platz, texte.erinnerung, zweite)
     )?.length ?? 0;
   const tageGeaendert =
     JSON.stringify([...tage].sort()) !== JSON.stringify([...(e.erinnerungTage ?? [])].sort());
@@ -137,10 +134,13 @@ export function MailsFenster({
         mailPlatzhalterLaden(id),
         vorschauPerson(id, art === 'warte' ? 'warte' : 'platz', absender),
       ]);
-      const mails = ablaufMails(e, veranstaltung, platzhalter, texte, qr, spalten);
-      const m = mails[art];
-      const r = await vorschauLaden(id, person.personId, m.betreff, m.html);
-      setVorschau({ ...r, echt: person.echt });
+      const mails = ablaufMails(e, veranstaltung, platzhalter, { ...texte, zweite }, qr, spalten);
+      // Die zweite Mail gibt es nur eingeschaltet – ausgeschaltet hat der Reiter keinen Knopf „Vorschau“.
+      const m = art === 'zweite' ? mails.zweite : mails[art];
+      if (m) {
+        const r = await vorschauLaden(id, person.personId, m.betreff, m.html);
+        setVorschau({ ...r, echt: person.echt });
+      }
       // Wie beim Speichern (dort bricht es ab): Fehlt eine Spalte, sagt es auch die Vorschau – sonst fehlte die Antwort
       // darin einfach.
       if (mails.unbekannt.length) setFehler(fehltInChurchTools(mails.unbekannt));
@@ -163,7 +163,7 @@ export function MailsFenster({
           const neu = tage.filter((n): n is number => n !== null);
           return neu.length ? { ...rest, erinnerungTage: neu } : rest;
         });
-      await ablaeufeEinrichten(id, absender, texte, qr);
+      await ablaeufeEinrichten(id, absender, { ...texte, zweite }, qr);
       onGespeichert('Mails gespeichert.');
       return;
     } catch (x) {
@@ -190,13 +190,15 @@ export function MailsFenster({
         ChurchTools verschickt sie von selbst. Termin, Betrag, Bankdaten, der Link zu „Deine
         Anmeldung“ und der Kontakt kommen aus den Karten – hier steht, was ihr dazuschreibt.
       </p>
-      <Segment<MailArt>
+      <Segment<MailArt | 'zweite'>
         value={art}
+        className={a.mailReiter}
         ariaLabel="Welche Mail"
         options={[
           { value: 'platz', label: 'Bestätigung' },
           { value: 'warte', label: 'Warteliste' },
           { value: 'erinnerung', label: 'Erinnerung' },
+          { value: 'zweite', label: 'Zweite Mail' },
         ]}
         onChange={(x) => {
           setArt(x);
@@ -208,8 +210,26 @@ export function MailsFenster({
           ? 'Kommt nach dem Anmelden und beim Nachrücken – an jede Person mit Platz.'
           : art === 'warte'
             ? 'Kommt, wenn jemand auf die Warteliste kommt – mit dem Platz auf der Warteliste.'
-            : 'Kommt vor dem Termin an jede Person mit Platz – nicht an Wartende. Mit Datum, Ort und Link.'}
+            : art === 'zweite'
+              ? 'Eine weitere Mail mit eigenem Betreff und Text – gleich nach der Bestätigung, ein paar Tage später oder an einem bestimmten Tag.'
+              : 'Kommt vor dem Termin an jede Person mit Platz – nicht an Wartende. Mit Datum, Ort und Link.'}
       </p>
+      {art === 'zweite' && (
+        <>
+          <ZweiteMailWahl
+            wert={zweiteEntwurf}
+            onWert={aendernZweite}
+            veranstaltung={veranstaltung}
+            bausteine={bausteine}
+          />
+          {zweiteEntwurf.an && (
+            <p className={pruefung ? f.fehler : a.leise}>
+              {pruefung ??
+                `${belegt} von ${BESCHREIBUNG_MAX} Zeichen belegt – Warteliste und zweite Mail zusammen.`}
+            </p>
+          )}
+        </>
+      )}
       {art === 'erinnerung' && (
         <ErinnerungWahl
           tage={tage}
@@ -221,7 +241,7 @@ export function MailsFenster({
           heute={heute}
         />
       )}
-      {(art !== 'erinnerung' || tage.length > 0) && (
+      {art !== 'zweite' && (art !== 'erinnerung' || tage.length > 0) && (
         <>
           <label className={f.feld}>
             <span>Betreff</span>
@@ -250,24 +270,12 @@ export function MailsFenster({
           </label>
           {art === 'platz' && (
             <>
-              <p className={a.leise}>
-                Antwort einfügen – ChurchTools füllt sie je Person:{' '}
-                {bausteine.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`${a.pille} ${a.platzhalterKnopf}`}
-                    onClick={() => einfuegen(n)}
-                  >
-                    [{n}]
-                  </button>
-                ))}
-              </p>
-              {bleibtText.length > 0 && (
-                <p className={a.leise}>
-                  Bleibt als Text stehen (keine Frage): {bleibtText.map((n) => `[${n}]`).join(', ')}
-                </p>
-              )}
+              <AntwortKnoepfe
+                namen={bausteine}
+                feld={absatzRef}
+                wert={t.absatz}
+                onWert={(absatz) => aendern({ absatz })}
+              />
               <button
                 type="button"
                 className={bk.schalterZeile}
@@ -298,7 +306,9 @@ export function MailsFenster({
           <p className={pruefung ? f.fehler : a.leise}>
             {pruefung ??
               (art === 'warte'
-                ? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`
+                ? zweite
+                  ? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen belegt – Warteliste und zweite Mail zusammen.`
+                  : `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`
                 : `${belegt} von ${BESCHREIBUNG_MAX} Zeichen belegt – Bestätigung und Erinnerung zusammen.`)}
           </p>
         </>
@@ -371,7 +381,7 @@ export function MailsFenster({
           />
         </div>
       ) : (
-        (art !== 'erinnerung' || tage.length > 0) && (
+        (art === 'zweite' ? zweiteEntwurf.an : art !== 'erinnerung' || tage.length > 0) && (
           <button
             type="button"
             className={a.linkKnopf}

@@ -224,7 +224,11 @@ export function inhaltAusWerten(werte: Wert[]): Schubladeninhalt {
 
 type Lesen = { ok: true; inhalt: Schubladeninhalt } | { ok: false; grund: EntwurfGrund };
 
-function grundAus(p: EntwurfPort, e: unknown): EntwurfGrund {
+/** Was ein Lese-/Schreibfehler heißen kann – Teilmenge von `EntwurfGrund`, auch für `verfuegbarkeit.ts`. */
+export type FehlerGrund = Extract<EntwurfGrund, 'abgemeldet' | 'kein-recht' | 'voruebergehend'>;
+
+/** Fehler → Grund: abgemeldet, kein Recht, sonst vorübergehend. Auch `verfuegbarkeit.ts` nutzt sie (eine Regel). */
+export function grundAus(p: EntwurfPort, e: unknown): FehlerGrund {
   if (p.istAbgemeldet(e)) return 'abgemeldet';
   if (p.istKeinRecht(e)) return 'kein-recht';
   return 'voruebergehend';

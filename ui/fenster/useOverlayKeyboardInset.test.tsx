@@ -91,7 +91,7 @@ describe('useOverlayKeyboardInset', () => {
     const { unmount } = render(<Overlay />);
     scrollTo.mockClear();
     unmount();
-    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
   });
 
   it('ohne Feld, in dem geschrieben wird, spart es nichts aus – auch wenn iOS die Tastatur noch meldet', () => {
@@ -294,7 +294,7 @@ describe('useOverlayKeyboardInset – Ruhe statt Pixel-Verfolgung', () => {
     scrollTo.mockClear();
     vv.offsetTop = 40; // iOS hat das Dokument hochgeschoben
     vv.dispatchEvent(new Event('scroll'));
-    expect(scrollTo).toHaveBeenCalledWith(0, 0); // sofort, die Ruhezeit ist noch nicht um
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' }); // sofort, die Ruhezeit ist noch nicht um
     scrollTo.mockClear();
     vv.offsetTop = 0; // nichts verschoben → nichts zu tun
     vv.dispatchEvent(new Event('resize'));

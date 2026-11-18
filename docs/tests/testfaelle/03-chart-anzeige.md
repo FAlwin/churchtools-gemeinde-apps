@@ -120,9 +120,9 @@ so groß wie vorher.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/main.tsx`, `ui/fenster/appHeight.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `ui/fenster/Sheet.module.scss`, `client/src/components/Screen.tsx`
+- **Betrifft:** `client/src/main.tsx`, `ui/fenster/appHeight.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `ui/fenster/seiteNachOben.ts`, `ui/fenster/Sheet.module.scss`, `client/src/components/Screen.tsx`
 - **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx` (Entprellung, Kennzeichen, Feld ins Bild; das echte Tastatur-Verhalten nur am Gerät)
-- **Historie:** #56, #187, #207, 18.11.2026 (Fenster ruckelte bei offener Tastatur)
+- **Historie:** #56, #187, #207, 18.11.2026 (Fenster ruckelte bei offener Tastatur; danach: Seite kroch in ChurchTools langsam zurück – `scroll-behavior: smooth`, jetzt `seiteNachOben`)
 
 </details>
 

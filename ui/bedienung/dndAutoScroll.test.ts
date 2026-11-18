@@ -30,7 +30,7 @@ describe('resetViewportAfterDrag', () => {
 
     resetViewportAfterDrag();
 
-    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
     expect(dispatched).toContain('resize');
 
     scrollTo.mockRestore();

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { syncAppHeight } from './appHeight';
 import { tastaturHoehe } from './useTastaturOffen';
 import { listenScroll } from '../bedienung/menueLage';
+import { seiteNachOben } from './seiteNachOben';
 
 /**
  * So viel Höhe bleibt dem Overlay über der Tastatur mindestens (samt Rand) – genug für Kopf und Knöpfe eines
@@ -60,7 +61,8 @@ export function feldZeigen(feld: HTMLElement, grenze: HTMLElement): void {
  *  2. iOS scrollt zusätzlich das DOKUMENT nach oben, um das Feld über die Tastatur zu heben. Da die
  *     App eine feste Höhe hat (`--app-h`) und nur innere Container scrollen, bleibt die Seite danach
  *     verschoben: Die Kopfleiste wandert aus dem Bild und „klebt" hinterher oben mit einer Lücke.
- *     `scrollTo(0, 0)` neutralisiert das – bei JEDEM Ereignis, nicht entprellt: Es verändert `--kb` nicht und ist ein
+ *     `seiteNachOben()` neutralisiert das – SOFORT (ChurchTools scrollt `html` sonst weich, die Seite kroch ~4 s
+ *     ruckelnd zurück, 18.11.2026) und bei JEDEM Ereignis, nicht entprellt: Es verändert `--kb` nicht und ist ein
  *     No-op, solange nichts verschoben ist; verzögert würde der Dokument-Versatz sichtbar hinter dem Schleier stehen.
  *
  * Ist die Tastatur oben und das neue Maß angewendet, holt der Hook das fokussierte Feld ins Bild, falls das Fenster
@@ -110,7 +112,7 @@ export function useOverlayKeyboardInset(
       }
     };
     const beiAenderung = () => {
-      if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0);
+      if (window.scrollY !== 0 || vv.offsetTop !== 0) seiteNachOben();
       if (messen() === 0) {
         // Tastatur zu: sofort, ein noch wartender Zwischenwert wird verworfen.
         clearTimeout(timer);
@@ -121,7 +123,7 @@ export function useOverlayKeyboardInset(
       timer = setTimeout(anwenden, TASTATUR_RUHE_MS);
     };
     anwenden();
-    if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0);
+    if (window.scrollY !== 0 || vv.offsetTop !== 0) seiteNachOben();
     vv.addEventListener('resize', beiAenderung);
     vv.addEventListener('scroll', beiAenderung);
     return () => {
@@ -135,7 +137,7 @@ export function useOverlayKeyboardInset(
       // `syncAppHeight` direkt statt eines synthetischen `resize`-Events (#215): Der Hook sitzt in
       // JEDEM Dialog, und das Event hätte beim Schließen eines Pickers nebenbei die Resize-Handler
       // von PageDeck/ChordChart/useChartNavigation ausgelöst – Fernwirkung auf Verdacht.
-      window.scrollTo(0, 0);
+      seiteNachOben();
       syncAppHeight();
     };
   }, [el, feldInsBild]);

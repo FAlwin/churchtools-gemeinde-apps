@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Coachmarks.module.scss';
 import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
+import { seiteNachOben } from '@ui/fenster/seiteNachOben';
 
 /** Ein Schritt der Einführung: hebt das per `selector` gefundene Element hervor und erklärt es. */
 export interface CoachStep {
@@ -90,7 +91,7 @@ export function Coachmarks({ steps, onClose }: CoachmarksProps) {
     closedRef.current = true;
     // Sicherheitsnetz: einen etwaigen Viewport-Versatz (durch scrollIntoView) zurücksetzen, bevor
     // die App weiterrendert/navigiert – sonst startet die nächste Ansicht verschoben.
-    if (window.scrollY !== 0) window.scrollTo(0, 0);
+    if (window.scrollY !== 0) seiteNachOben();
     onClose();
   }
   function next() {

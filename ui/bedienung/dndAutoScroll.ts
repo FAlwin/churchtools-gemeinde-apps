@@ -1,3 +1,5 @@
+import { seiteNachOben } from '../fenster/seiteNachOben';
+
 /**
  * Zähmt den dnd-kit-AutoScroll für iOS-PWA (#56): Beim Ziehen mit Auto-Scroll scrollte dnd-kit
  * neben dem inneren `.scroll`-Container auch das DOKUMENT (html/body haben zwar overflow:hidden,
@@ -20,6 +22,6 @@ export const innerScrollOnly = {
  * bisher nur das manuelle Drehen des Geräts bewirkte.
  */
 export function resetViewportAfterDrag(): void {
-  window.scrollTo(0, 0);
+  seiteNachOben();
   window.dispatchEvent(new Event('resize'));
 }

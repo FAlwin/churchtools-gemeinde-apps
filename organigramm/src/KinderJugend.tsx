@@ -3,6 +3,7 @@ import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Segment } from '@ui/bedienung/Segment';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Schalter } from '@ui/bedienung/Schalter';
+import { TitelWahl } from '@ui/bedienung/TitelWahl';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
@@ -223,15 +224,6 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet, onGesch
         ariaLabel="Kinder & Jugend"
         verbunden
       />
-      {unter === 'gruppe' && !bereich && sichten.length > 1 && (
-        <Segment<string>
-          value={String(stufeWahl)}
-          options={sichten.map((s) => ({ value: String(s.stufe.gruppeId), label: s.stufe.name }))}
-          onChange={(v) => setStufeWahl(Number(v))}
-          ariaLabel="Gruppe"
-          verbunden
-        />
-      )}
       {unter === 'gruppe' &&
         (offeneSicht ? (
           <GruppenSeite
@@ -240,6 +232,18 @@ export function KinderJugend({ start, einrichtung, zugang, onAbgemeldet, onGesch
             phase={phase}
             bereich={bereich}
             onZurueck={bereich ? () => setStufeWahl(null) : undefined}
+            // Leitung mehrerer Stufen: Die Überschrift mit dem Namen der Stufe ist die Gruppenwahl.
+            wahl={
+              !bereich && sichten.length > 1
+                ? {
+                    optionen: sichten.map((x) => ({
+                      wert: String(x.stufe.gruppeId),
+                      text: x.stufe.name,
+                    })),
+                    onWahl: (v) => setStufeWahl(Number(v)),
+                  }
+                : undefined
+            }
             onKind={kindOeffnen(offeneSicht)}
           />
         ) : bereich ? (
@@ -441,6 +445,7 @@ function GruppenSeite({
   phase,
   bereich,
   onZurueck,
+  wahl,
   onKind,
 }: {
   sicht: GruppenSicht;
@@ -448,6 +453,8 @@ function GruppenSeite({
   phase: Phase;
   bereich: boolean;
   onZurueck?: () => void;
+  /** Mehrere Stufen zur Wahl: Die Überschrift wird zum Auswahlknopf. */
+  wahl?: { optionen: { wert: string; text: string }[]; onWahl: (stufeId: string) => void };
   onKind: (k: KindZeile) => void;
 }) {
   const s = sicht;
@@ -466,7 +473,15 @@ function GruppenSeite({
             Übersicht
           </button>
         )}
-        <h2>{s.stufe.name}</h2>
+        {wahl ? (
+          <TitelWahl
+            optionen={wahl.optionen}
+            wert={String(s.stufe.gruppeId)}
+            onWahl={wahl.onWahl}
+          />
+        ) : (
+          <h2>{s.stufe.name}</h2>
+        )}
         <span className={styles.leise}>
           {s.leitung.length > 0 ? `Leitung: ${s.leitung.join(', ')} · ` : ''}
           {s.kinder.length} Kinder

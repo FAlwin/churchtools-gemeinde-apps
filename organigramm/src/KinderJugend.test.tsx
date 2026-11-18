@@ -365,3 +365,22 @@ describe('Unterreiter „Einrichtung“ (O9-5c)', () => {
     expect(standLaden).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('Gruppenwahl bei Leitung mehrerer Stufen (18.11.2026)', () => {
+  const ZWEI: KjZugang = { art: 'leitung', stufen: [FISCHE, JUNGSCHAR] };
+
+  it('die Überschrift mit dem Stufennamen ist der Auswahlknopf – keine Leiste, kein doppelter Name', async () => {
+    zeigen({ zugang: ZWEI });
+    fireEvent.click(await screen.findByRole('button', { name: 'Gruppe wählen: Fische' }));
+    expect(screen.queryByRole('group', { name: 'Gruppe' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Jungschar' }));
+    expect(screen.getByRole('button', { name: 'Gruppe wählen: Jungschar' })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 2, name: /Jungschar/ })).toHaveLength(1);
+  });
+
+  it('eine Stufe: einfache Überschrift ohne Knopf', async () => {
+    zeigen({ zugang: LEITUNG });
+    expect(await screen.findByRole('heading', { name: 'Fische' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Gruppe wählen/ })).toBeNull();
+  });
+});

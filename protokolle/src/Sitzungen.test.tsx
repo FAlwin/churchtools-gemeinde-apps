@@ -121,10 +121,14 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   it('Gruppe wechseln lädt deren Sitzungen', async () => {
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     await screen.findByText('Klausur');
-    fireEvent.click(screen.getByRole('button', { name: 'Jugendleitung' }));
+    // Die Überschrift ist die Gruppenwahl (kein Segment mit einem Knopf je Gruppe mehr).
+    fireEvent.click(screen.getByRole('button', { name: `Gruppe wählen: ${GRUPPEN[0].name}` }));
+    fireEvent.click(screen.getByRole('option', { name: 'Jugendleitung' }));
     await waitFor(() =>
       expect(m.ladeSitzungen).toHaveBeenLastCalledWith(24, GRUPPEN[1], expect.any(String)),
     );
+    expect(screen.getByRole('button', { name: 'Gruppe wählen: Jugendleitung' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Gruppe' })).toBeNull();
   });
 
   it('Hinweise: kein Kalender gewählt, Gruppentreffen nicht freigegeben', async () => {
@@ -228,9 +232,10 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
     // „Zurück“ führt zur Liste dieser Gruppe – die Auswahl öffnet die Sitzung nicht noch einmal.
     fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
-    expect(await screen.findByRole('heading', { name: 'Jugendleitung' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Leitungsteam' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Jugendleitung' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gruppe wählen: Jugendleitung' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Leitungsteam' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe wählen: Leitungsteam' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Jugendleitung' }));
     expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
     expect(screen.queryByText('Andacht & Gebet')).toBeNull();
   });

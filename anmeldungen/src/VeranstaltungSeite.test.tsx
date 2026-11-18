@@ -207,6 +207,7 @@ beforeEach(() => {
     loeschDatum: null,
     anmeldeschluss: null,
     erinnerungen: [],
+    zweite: null,
   });
   // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
@@ -392,6 +393,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       loeschDatum: null,
       anmeldeschluss: null,
       erinnerungen: [],
+      zweite: null,
     });
     stelle(true, 1);
     zeigen();
@@ -426,6 +428,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         loeschDatum: null,
         anmeldeschluss: null,
         erinnerungen: [],
+        zweite: null,
         ...x,
       });
 
@@ -536,6 +539,22 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       ].join(''),
     );
     expect(within(karte).getByText('Eigener Text').nextSibling?.textContent).toBe('Erinnerung');
+  });
+
+  it('F7b: Karte „Mails“ nennt die zweite Mail mit Zeitpunkt – oder „aus“', async () => {
+    const stand = await ab.ablaeufeLesen(91);
+    ab.ablaeufeLesen.mockResolvedValue({
+      ...stand,
+      zweite: { wann: { art: 'tage', tage: 3 }, betreff: 'Infos', text: 'Hallo' },
+    });
+    stelle(false, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() =>
+      expect(
+        within(karte).getByText('Zweite Mail', { selector: 'dt' }).nextSibling?.textContent,
+      ).toBe('✓ 3 Tage nach der Anmeldung'),
+    );
   });
 
   it('F7a: „Alle Angaben mitschicken“ steht in der Zeile der Bestätigung', async () => {
@@ -1494,6 +1513,7 @@ describe('Löschen (A9-3a)', () => {
       loeschDatum: null,
       anmeldeschluss: null,
       erinnerungen: [],
+      zweite: null,
       ...x,
     });
   const karte = () => screen.findByRole('region', { name: 'Datenschutz' });

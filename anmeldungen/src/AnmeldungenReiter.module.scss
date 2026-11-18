@@ -470,3 +470,14 @@
   border: 0;
   background: #fff;
 }
+
+// F7b: Vier Mails (mit der zweiten) passen am Handy nicht in eine Reihe – dort zwei mal zwei.
+.mailReiter {
+  flex-wrap: wrap;
+
+  @media (max-width: 480px) {
+    > * {
+      flex-basis: calc(50% - 3px);
+    }
+  }
+}

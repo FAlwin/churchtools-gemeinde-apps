@@ -861,9 +861,11 @@ den Skill `/festhalten`, der genau das automatisiert.
    PR eine Demo-Ansicht einer veröffentlichten App sichtbar ändert. Steht dort etwas: `npm run readme-bilder` (braucht
    `ffmpeg`, startet und beendet die Dev-Server selbst), Videos ansehen, mit dem Release committen. Steht dort nichts:
    nicht neu erzeugen – jede GIF ist danach ein anderes Binärfile im Verlauf. **Erstes Release einer neuen App:** in
-   `scripts/readme-bilder.mjs` Server (`SERVER`), Ablauf (`aufnehmen`), Namensschild (`KARTEN`), GIF (`gifsBauen`) und
-   Standbilder (`STANDBILDER`) ergänzen, ihren Ordner in `readme-bilder.yml` unter `paths` eintragen, im README Zeile
-   in „Die Apps“ + eigenen Abschnitt anlegen – alle sechs Stellen, sonst fehlt sie im Rundgang oder in der Erinnerung.
+   `scripts/readme-bilder.mjs` Server (`SERVER`), Ablauf (`aufnehmen`), GIF (`gifsBauen`) und Standbilder
+   (`STANDBILDER`) ergänzen, ihren Ordner in `readme-bilder.yml` unter `paths` eintragen, im README einen
+   Download-Knopf im Kopf (Badge mit `filter=<Release-Name>*`), eine Zeile in „Die Apps“ und einen eigenen Abschnitt
+   anlegen – alle sieben Stellen, sonst fehlt sie im README oder in der Erinnerung. (Den Rundgang aller Apps als GIF
+   ganz oben gibt es seit 18.11.2026 nicht mehr – Alwin: jede App stellt sich in ihrem Abschnitt vor.)
 4. **Installations-Anleitung gegen die Realität prüfen:** `INSTALL.md` + `UPDATE.md` +
    die Setup-/Update-Skripte in `deploy/` müssen zum tatsächlichen Vorgehen passen.
 5. **CHANGELOG pflegen:** Die Einträge liegen seit 22.10.2026 als Dateien in `changelog.d/` (eine je PR,

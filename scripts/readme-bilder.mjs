@@ -4,8 +4,8 @@
  *
  * Startet die Dev-Server der Musik-App und der veröffentlichten Erweiterungen (falls sie nicht schon aus DIESER
  * Arbeitskopie laufen), nimmt deren **Demo-Modi** (`?demo`) mit Playwright auf und baut daraus mit `ffmpeg` die GIFs
- * und Bilder in `docs/bilder/`. Zu sehen sind also nur Beispieldaten, nie echte Personen. Zwischenstände (Rohvideos,
- * Namensschilder) landen in `test-results/readme-bilder/` (nicht im Repo).
+ * und Bilder in `docs/bilder/`. Zu sehen sind also nur Beispieldaten, nie echte Personen. Zwischenstände (Rohvideos)
+ * landen in `test-results/readme-bilder/` (nicht im Repo).
  *
  * Voraussetzungen: `ffmpeg` (z. B. `brew install ffmpeg`) und der Playwright-Chromium (`npx playwright install
  * chromium`, steht nach einem E2E-Lauf ohnehin bereit).
@@ -20,8 +20,7 @@
  * Aufruf:
  * - `npm run readme-bilder` – alles neu aufnehmen; `npm run readme-bilder -- protokolle` nur Aufnahmen **und GIFs**,
  *   deren Name so beginnt – es starten nur die Dev-Server der passenden App, und alle anderen Bilder in `docs/bilder/`
- *   bleiben unangetastet (jede neue Aufnahme wäre ein anderes Binärfile im Verlauf). Die Übersicht
- *   (`apps-uebersicht.gif`) entsteht deshalb nur beim Lauf ohne Filter.
+ *   bleiben unangetastet (jede neue Aufnahme wäre ein anderes Binärfile im Verlauf).
  * - `npm run readme-bilder -- --offen` – welche gemergten PRs seit dem letzten Bilder-Stand das Label „README-Bilder“
  *   tragen, also sichtbar etwas geändert haben. **Teil der Release-Routine** (siehe `CLAUDE.md`).
  * - `--standbilder <ziel> [<arbeitskopie>]` und `--vergleichen <alt> <neu>` – für die CI-Erinnerung
@@ -226,13 +225,12 @@ async function bild(browser, name, groesse, url) {
 }
 
 /**
- * Liedblatt-Demo: Liedmenü → Transponieren nach A; lang zusätzlich „Nur Text“ und zurück.
+ * Liedblatt-Demo: Liedmenü → Transponieren nach A, dann „Nur Text“ und zurück.
  *
  * @param {import('@playwright/test').Page} page
  * @param {(ms: number) => Promise<void>} p
- * @param {boolean} lang
  */
-async function liedblatt(page, p, lang) {
+async function liedblatt(page, p) {
   const menue = () => page.getByText('Akustik').first().click();
   const zu = async () => {
     const x = page.getByRole('dialog').getByRole('button', { name: /schlie/i });
@@ -247,7 +245,6 @@ async function liedblatt(page, p, lang) {
   await p(500);
   await zu();
   await p(2200);
-  if (!lang) return;
   await menue();
   await p(900);
   await page.getByText('Nur Text', { exact: true }).click();
@@ -268,10 +265,7 @@ async function aufnehmen(browser) {
 
   await bild(browser, 'musik-liedblatt', IPAD, url('musik', 'chart'));
   await bild(browser, 'musik-handy', HANDY, url('musik', 'chart'));
-  await video(browser, 'musik', HOCH, url('musik', 'chart'), (page, p) => liedblatt(page, p, true));
-  await video(browser, 'musik-kurz', QUER, url('musik', 'chart'), (page, p) =>
-    liedblatt(page, p, false),
-  );
+  await video(browser, 'musik', HOCH, url('musik', 'chart'), (page, p) => liedblatt(page, p));
 
   await video(browser, 'dienstplaner', QUER, url('dienstplaner'), async (page, p, knopf) => {
     await p(1800);
@@ -285,13 +279,6 @@ async function aufnehmen(browser) {
     await p(1600);
     await knopf('Planen').click();
     await p(2800);
-  });
-  await video(browser, 'dienstplaner-kurz', QUER, url('dienstplaner'), async (page, p, knopf) => {
-    await p(1600);
-    await knopf('Zusagen').click();
-    await p(1300);
-    await knopf('Planen').click();
-    await p(2200);
   });
 
   await video(browser, 'organigramm', QUER, url('organigramm'), async (page, p, knopf) => {
@@ -309,13 +296,6 @@ async function aufnehmen(browser) {
     await p(2000);
     await page.getByRole('dialog').getByRole('button', { name: 'Mindmap', exact: true }).click();
     await p(2200);
-  });
-  await video(browser, 'organigramm-kurz', QUER, url('organigramm'), async (_page, p, knopf) => {
-    await p(1300);
-    await knopf('Mindmap').click();
-    await p(1600);
-    await knopf('Karten').click();
-    await p(1800);
   });
 
   await video(browser, 'protokolle', QUER, url('protokolle'), async (page, p, knopf) => {
@@ -346,17 +326,6 @@ async function aufnehmen(browser) {
     await page.getByText('Board', { exact: true }).first().click();
     await p(1800);
   });
-  await video(browser, 'protokolle-kurz', QUER, url('protokolle'), async (page, p, knopf) => {
-    await p(1400);
-    await knopf('Sitzungen').click();
-    await p(1100);
-    await page.getByText('Mi, 21.10.2026 · 19:00 Uhr', { exact: true }).first().click();
-    await p(1800);
-    await knopf('To-Dos').click();
-    await p(900);
-    await page.getByText('Board', { exact: true }).first().click();
-    await p(1800);
-  });
 
   await video(
     browser,
@@ -382,36 +351,6 @@ async function aufnehmen(browser) {
       await p(2600);
     },
   );
-}
-
-// ---------- Namensschilder für den Rundgang ----------
-
-const KARTEN = [
-  ['titel', 'Gemeinde-Apps für ChurchTools', 'Fünf Apps, direkt mit eurem ChurchTools verbunden'],
-  ['musik', 'Musik-App', 'Chord Charts der Setlist – automatisch in der richtigen Tonart'],
-  ['dienstplaner', 'Dienstplaner', 'Dienste planen, zusagen und tauschen – für alle Gruppen'],
-  ['organigramm', 'Organigramm', 'Bereiche, Gruppen und Leitung auf einen Blick'],
-  ['protokolle', 'Protokolle', 'Sitzungen, Beschlüsse und To-Dos – alles in ChurchTools'],
-  ['gebetsabend', 'Gebetsabend', 'Übertragung des Gebetsabends nur für Mitglieder'],
-];
-
-/** @param {import('@playwright/test').Browser} browser */
-async function namensschilder(browser) {
-  const icon = readFileSync(join(WURZEL, 'client', 'public', 'icon-192.png')).toString('base64');
-  const page = await browser.newPage({ viewport: QUER });
-  for (const [name, titel, zeile] of KARTEN) {
-    const istTitel = name === 'titel';
-    await page.setContent(`<!doctype html><meta charset="utf-8"><style>
-      body{margin:0;height:${QUER.height}px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-        background:#f1f4f9;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;color:#1e293b;text-align:center}
-      img{width:84px;height:84px;margin-bottom:22px}
-      h1{font-size:${istTitel ? 40 : 52}px;margin:0 0 14px;font-weight:700;letter-spacing:-.5px}
-      p{font-size:22px;margin:0;color:#475569;max-width:640px;line-height:1.35}
-      .strich{width:64px;height:5px;border-radius:3px;background:#2563eb;margin:0 0 22px}
-    </style>${istTitel ? `<img src="data:image/png;base64,${icon}">` : '<div class="strich"></div>'}<h1>${titel}</h1><p>${zeile}</p>`);
-    await page.screenshot({ path: join(ROH, `karte-${name}.png`) });
-  }
-  await page.close();
 }
 
 // ---------- GIFs ----------
@@ -485,24 +424,6 @@ function gifsBauen() {
     720,
     480,
     'gebetsabend-demo.gif',
-  );
-  bauen(
-    [
-      { bild: 'karte-titel.png', sekunden: 2 },
-      { bild: 'karte-musik.png', sekunden: 1.4 },
-      { video: 'musik-kurz' },
-      { bild: 'karte-dienstplaner.png', sekunden: 1.4 },
-      { video: 'dienstplaner-kurz' },
-      { bild: 'karte-organigramm.png', sekunden: 1.4 },
-      { video: 'organigramm-kurz' },
-      { bild: 'karte-protokolle.png', sekunden: 1.4 },
-      { video: 'protokolle-kurz' },
-      { bild: 'karte-gebetsabend.png', sekunden: 1.4 },
-      { video: 'gebetsabend' },
-    ],
-    720,
-    480,
-    'apps-uebersicht.gif',
   );
 }
 
@@ -724,7 +645,7 @@ async function mitServern(
   /** @type {(b: import('@playwright/test').Browser) => Promise<void>} */ arbeit,
   /** @type {string} */ nur = '',
 ) {
-  // Mit Filter nur die Server der passenden Apps – `musik-kurz` gehört zu `musik`, `protokolle` zu `protokolle`.
+  // Mit Filter nur die Server der passenden Apps – `gebetsabend-zuhoeren` gehört zu `gebetsabend`.
   const noetig = Object.entries(SERVER).filter(
     ([app]) => app.startsWith(nur) || nur.startsWith(app),
   );
@@ -772,7 +693,6 @@ if (MODUS === '--offen') {
     async (browser) => {
       console.log('Aufnahmen:');
       await aufnehmen(browser);
-      await namensschilder(browser);
     },
     NUR,
   );

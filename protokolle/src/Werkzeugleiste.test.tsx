@@ -315,6 +315,16 @@ describe('Punkte ordnen (W7): der Knopf rechts in der Leiste und der Weg bis in 
     expect(ids(e)).toEqual(DOK.map((b) => b.id));
   });
 
+  it('das Fenster hängt an `body`, nicht in der Leiste – sonst lag es am Handy unter der Reiterleiste', () => {
+    const e = editorMit(DOK);
+    e.setTextCursorPosition('a1', 'start');
+    const { container } = render(<Werkzeugleiste editor={e} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Punkte ordnen' }));
+    const fenster = screen.getByRole('dialog', { name: 'Punkte ordnen' });
+    expect(container.contains(fenster)).toBe(false);
+    expect(document.body.contains(fenster)).toBe(true);
+  });
+
   it('Abbrechen lässt das Dokument, wie es ist', () => {
     const e = editorMit(DOK);
     e.setTextCursorPosition('a1', 'start');

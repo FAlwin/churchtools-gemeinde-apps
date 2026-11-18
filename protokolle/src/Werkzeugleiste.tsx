@@ -408,15 +408,19 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
       <span>Punkte ordnen</span>
     </button>
   );
+  // An `body` gehängt (W7, beim Durchklicken 18.11.2026 gefunden): Die Leiste ist `sticky` mit eigener Stapel-Ebene –
+  // darin lag das Fenster am Handy UNTER der Reiterleiste unten, „Abbrechen“/„Übernehmen“ waren verdeckt.
   const ordnenFenster = ordnen && (
-    <PunkteOrdnen
-      dokument={ordnen}
-      onUebernehmen={(reihenfolge) => reihenfolgeUebernehmen(editor, reihenfolge)}
-      onClose={() => {
-        setOrdnen(null);
-        editor.focus();
-      }}
-    />
+    <BodyPortal>
+      <PunkteOrdnen
+        dokument={ordnen}
+        onUebernehmen={(reihenfolge) => reihenfolgeUebernehmen(editor, reihenfolge)}
+        onClose={() => {
+          setOrdnen(null);
+          editor.focus();
+        }}
+      />
+    </BodyPortal>
   );
 
   const markieren = (

@@ -11,7 +11,6 @@ import { filterSuggestionItems } from '@blocknote/core/extensions';
 import { SideMenuExtension } from '@blocknote/core/extensions';
 import { de } from '@blocknote/core/locales';
 import {
-  AddBlockButton,
   DragHandleButton,
   DragHandleMenu,
   getDefaultReactSlashMenuItems,
@@ -45,14 +44,12 @@ import styles from './ProtokollSchreiben.module.scss';
 
 /**
  * **Das Protokoll als Dokument bearbeiten** (Bauplan S4-1, Entwurf 7) – BlockNote mit unserem Schema, der festen
- * Werkzeugleiste, dem „/“-Menü und Griffen zum Verschieben. Speichern und Sperre regelt der Bildschirm darüber
+ * Werkzeugleiste und dem „/“-Menü. Speichern und Sperre regelt der Bildschirm darüber
  * (`ProtokollSchreiben`); hier wird nur gemeldet, dass sich der Text geändert hat.
  *
- * - **Normaler Text hat keinen Griff** (Alwin 22.10.2026): Verschieben im Text gibt es für Listen, Zitate und die
- *   eigenen Blöcke – ein Absatz ist einfach Text. **Überschriften haben seit W7 keinen Griff:** Tagesordnungspunkte und
- *   Unterpunkte stellt man im Fenster „Punkte ordnen“ um (Werkzeugleiste, `PunkteOrdnen.tsx`).
- * - Das Griff-Menü kennt „Löschen“ und an Tabellen Kopfzeile/Kopfspalte (K3a). Blockfarben bietet es nicht an – markiert
- *   wird Text, über die Leiste („Markieren ▾“).
+ * - **Links im Text gibt es weder „+“ noch Griff** (W7, Alwin 18.11.2026): Tagesordnungspunkte und Unterpunkte stellt
+ *   man im Fenster „Punkte ordnen“ um (Werkzeugleiste, `PunkteOrdnen.tsx`). Nur **Tabellen** haben einen Griff – sein
+ *   Menü kennt Kopfzeile/Kopfspalte (K3a) und „Löschen“.
  * - **Einfügen aus Word**: Listen werden vorher zu echten Listen (`wordListen.ts`).
  */
 
@@ -119,17 +116,17 @@ const EIGENE_ALIASE = {
 /**
  * Der Griff steht oben am Block – ohne BlockNotes Versatz für Überschriften (S4-3b, beim Durchklicken gefunden). BlockNote
  * schiebt ihn bei Überschrift 1 um 39 px nach unten, passend zu seinen großen Überschriften; unsere sind kleiner (S4-1).
- * Seit W7 hat eine Überschrift keinen Griff mehr; die Lage gilt weiter für die übrigen Blöcke (Listen unter „Punkt 2“
- * standen sonst neben dem falschen Block).
+ * Seit W7 haben nur noch Tabellen einen Griff; die Lage gilt für sie weiter.
  */
 const GRIFF_LAGE = { useFloatingOptions: { middleware: [] } };
 
 type GriffBlock = { block?: { id?: string; type?: string } } | undefined;
 
 /**
- * Griff an den Blöcken, die man im Text verschieben soll (`hatGriff`: nicht an normalem Text und seit W7 nicht an
- * Überschriften – die ordnet man im Fenster „Punkte ordnen“). Er steht auf Höhe der ersten Textzeile (`griffVersatz`, K1);
- * enthält die Markierung eine Überschrift, zieht er nur seine Zeile (`nurDieseZeile`).
+ * Griff nur noch an **Tabellen** (`hatGriff`, W7): sein Menü schaltet Kopfzeile/Kopfspalte. Sonst gibt es links im Text
+ * weder „+“ noch Griff – Punkte ordnet man im Fenster „Punkte ordnen“, eingefügt wird über „Einfügen ▾“ und „/“. Er
+ * steht auf Höhe der ersten Textzeile (`griffVersatz`, K1); enthält die Markierung eine Überschrift, zieht er nur die
+ * Tabelle (`nurDieseZeile`).
  */
 function Griff() {
   const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
@@ -149,15 +146,14 @@ function Griff() {
   return (
     <div ref={rahmen} style={{ transform: `translateY(${versatz}px)` }}>
       <SideMenu>
-        <AddBlockButton />
-        {/* `flex`, nicht inline: Ein Inline-`span` stellt den Knopf auf die Grundlinie – der Griff stand 2 px über dem „+“
-            (in Safari und Chrome gemessen 29.10.2026, Alwin: „sitzt zu hoch“). */}
+        {/* `flex`, nicht inline: Ein Inline-`span` stellt den Knopf auf die Grundlinie (gemessen 29.10.2026, Alwin: „sitzt zu
+            hoch“). */}
         <span style={{ display: 'flex' }} onDragStartCapture={() => nurDieseZeile(editor, id)}>
           <DragHandleButton
             dragHandleMenu={() => (
               <DragHandleMenu>
-                {art === 'table' && <TableRowHeaderItem>Kopfzeile</TableRowHeaderItem>}
-                {art === 'table' && <TableColumnHeaderItem>Kopfspalte</TableColumnHeaderItem>}
+                <TableRowHeaderItem>Kopfzeile</TableRowHeaderItem>
+                <TableColumnHeaderItem>Kopfspalte</TableColumnHeaderItem>
                 <RemoveBlockItem>Löschen</RemoveBlockItem>
               </DragHandleMenu>
             )}

@@ -646,8 +646,8 @@ Stichpunkten und einem To-Do („TEST Lautstärke messen“), **4 Abläufe** mit
 sie um. Ein Punkt nimmt seine Unterpunkte und seinen Inhalt mit, die Ebene bleibt, die Nummern folgen der Reihenfolge.
 Erst „Übernehmen“ ändert das Protokoll – als ein Schritt.
 
-1. Das Test-Protokoll öffnen (Schreiben). Die Maus über die Überschrift **2 Andacht** halten: Links steht **kein Griff**
-   (bei einem Stichpunkt darunter schon). Rechts außen in der Werkzeugleiste steht **Punkte ordnen**.
+1. Das Test-Protokoll öffnen (Schreiben). Die Maus über die Überschrift **2 Andacht** halten, dann über einen Stichpunkt
+   und ein To-Do: Links steht **weder „+“ noch Griff**. Rechts außen in der Werkzeugleiste steht **Punkte ordnen**.
 2. **Punkte ordnen** antippen. Das Fenster zeigt alle Punkte mit Nummer, Titel und einer Zeile darunter, z. B. „3 Stichpunkte ·
    1 To-Do“, bei Punkt 1 „fester Punkt · Anwesenheitsliste“, bei Punkt 4 „3 Unterpunkte“; die Unterpunkte stehen eingerückt.
    **Übernehmen** und **Rückgängig** sind grau.
@@ -667,8 +667,9 @@ Erst „Übernehmen“ ändert das Protokoll – als ein Schritt.
    das To-Do sind mit ihren Punkten mitgewandert; unter **To-Dos** steht „TEST Lautstärke messen“ weiter mit demselben
    Zuständigen. Im Text **Strg+Z** (Mac: Cmd+Z): Mit einem Schritt ist die ursprüngliche Reihenfolge zurück.
 9. Wieder **Punkte ordnen**, einen Punkt verschieben, **Abbrechen**: Das Protokoll ist unverändert.
-10. Im Text einen **Stichpunkt** am Griff ziehen: Das geht wie bisher. Dann zwei Zeilen markieren, von denen eine eine
-    Überschrift ist, und den Griff eines Stichpunkts ziehen: Es bewegt sich nur der Stichpunkt, die Überschrift bleibt.
+10. Über **Einfügen → Tabelle** eine Tabelle einfügen und die Maus darüber halten: Nur sie hat links einen Griff; sein Menü
+    zeigt **Kopfzeile**, **Kopfspalte** und **Löschen**. Mit **Löschen** die Tabelle wieder entfernen. Direkt hinter einer
+    Überschrift mit festem Punkt darunter **Entf** drücken: Der feste Punkt ist weg (Strg+Z holt ihn zurück).
 11. Mit nur **einem** Punkt im Protokoll (ohne Unterpunkte): **Punkte ordnen** ist grau, der Hinweis beim Darüberhalten sagt,
     dass es mindestens zwei Punkte braucht.
 12. **Am Handy** (oder schmalem Fenster): **Punkte ordnen** steht als Erstes in der Leiste; das Fenster füllt den Bildschirm,
@@ -678,8 +679,8 @@ Erst „Übernehmen“ ändert das Protokoll – als ein Schritt.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/protokolle/gliederung.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/PunkteOrdnen.tsx`, `protokolle/src/usePunkteZiehen.ts`, `protokolle/src/punkteUebernehmen.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/DokumentEditor.tsx`, `ui/fenster/Sheet.tsx`
-- **Automatisiert:** größtenteils – `shared/protokolle/gliederung.test.ts` (Regel gegen die Ableitung: mitwandern, Ebene bleibt, Vorspann oben, feste Punkte, „Überschrift“), `shared/protokolle/abschnitte.test.ts`, `protokolle/src/punkteUebernehmen.test.ts` (echter Editor: IDs, ein Schritt, veralteter Stand), `protokolle/src/PunkteOrdnen.test.tsx` (Knöpfe, Tastatur, Esc, Ziehen mit nachgestellter Lage, Übernehmen/Abbrechen), `protokolle/src/Werkzeugleiste.test.tsx` (Knopf, Weg bis in den Editor); **nur von Hand:** die echte Lage der Linie, das Halten mit dem Finger, die Bildschirmfüllung am Handy, dass die Überschrift keinen Griff hat, das Ziehen einer Zeile aus einer Markierung mit Überschrift
-- **Historie:** W7 (18.11.2026: Tagesordnungspunkte im Text zu verschieben „landet falsch, ist hakelig, unklar, was passiert“)
+- **Betrifft:** `shared/protokolle/gliederung.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/PunkteOrdnen.tsx`, `protokolle/src/usePunkteZiehen.ts`, `protokolle/src/punkteUebernehmen.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/zeilenGriff.ts`, `ui/fenster/Sheet.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/gliederung.test.ts` (Regel gegen die Ableitung: mitwandern, Ebene bleibt, Vorspann oben, feste Punkte, „Überschrift“), `shared/protokolle/abschnitte.test.ts`, `protokolle/src/punkteUebernehmen.test.ts` (echter Editor: IDs, ein Schritt, veralteter Stand), `protokolle/src/PunkteOrdnen.test.tsx` (Knöpfe, Tastatur, Esc, Ziehen mit nachgestellter Lage, Übernehmen/Abbrechen), `protokolle/src/Werkzeugleiste.test.tsx` (Knopf, Weg bis in den Editor); **nur von Hand:** die echte Lage der Linie, das Halten mit dem Finger, die Bildschirmfüllung am Handy, dass im Text außer an Tabellen kein „+“/Griff erscheint (`zeilenGriff.test.ts` prüft nur die Regel `hatGriff`)
+- **Historie:** W7 (18.11.2026: Tagesordnungspunkte im Text zu verschieben „landet falsch, ist hakelig, unklar, was passiert“); nach v1.0.5 auch „+“ und Griff an Zeilen entfernt, außer an Tabellen (Alwin 18.11.2026)
 
 </details>

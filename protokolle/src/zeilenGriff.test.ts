@@ -6,7 +6,7 @@ import { schema, type ProtokollEditor } from './editorSchema';
 import { einhaengen } from './editorTest.testutil';
 import { hatGriff, nurDieseZeile } from './zeilenGriff';
 
-/** Griff im Text (W7): Überschriften haben keinen, und der Griff einer Zeile zieht keine Überschrift mit. */
+/** Griff im Text (W7): nur Tabellen haben einen, und sein Ziehen nimmt keine markierte Überschrift mit. */
 
 type Teil = PartialBlock<
   typeof schema.blockSchema,
@@ -25,20 +25,22 @@ const editorMit = (): ProtokollEditor =>
 const markiert = (e: ProtokollEditor) => e.getSelection()?.blocks.map((b) => b.id);
 
 describe('hatGriff', () => {
-  it('Überschriften und normaler Text: kein Griff – Listen, Zitat, Tabelle und eigene Blöcke: einer', () => {
-    for (const art of ['heading', 'paragraph', undefined]) expect(hatGriff(art)).toBe(false);
+  it('nur Tabellen haben einen Griff (Kopfzeile/Kopfspalte) – alles andere keinen, auch kein „+“', () => {
+    expect(hatGriff('table')).toBe(true);
     for (const art of [
+      'heading',
+      'paragraph',
+      undefined,
       'bulletListItem',
       'numberedListItem',
       'quote',
-      'table',
       'divider',
       'aufgabe',
       'beschluss',
       'termin',
       'verweis',
     ])
-      expect(hatGriff(art)).toBe(true);
+      expect(hatGriff(art)).toBe(false);
   });
 
   it('jede Überschrift-Stufe gleich: der Block heißt immer „heading“', () => {

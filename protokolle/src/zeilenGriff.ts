@@ -1,16 +1,16 @@
 import type { ProtokollEditor } from './editorSchema';
 
 /**
- * **Welche Blöcke im Text einen Griff haben** (W7, Alwin 18.11.2026) – und was er zieht.
+ * **Welche Blöcke im Text einen Griff haben** (W7, Alwin 18.11.2026) – nur noch **Tabellen**.
  *
  * Tagesordnungspunkte und Unterpunkte stellt man im Fenster „Punkte ordnen“ um; das Ziehen im Text „landete falsch, war
- * hakelig, ließ offen, was passiert“. Darum hat eine **Überschrift gar keinen Griff**. Ein Griff ohne Ziehen und mit einem
- * Menü nur aus „Löschen“ (das Entf/Rücktaste auch kann) wäre ein Knopf, der aussieht wie der alte und nicht tut, was er
- * verspricht – genau das „Hakelige“. Normaler Text hat ohnehin keinen (Alwin 22.10.2026); Listen, Zitate, Tabellen und
- * die eigenen Blöcke behalten Griff und Menü.
+ * hakelig, ließ offen, was passiert“. Zuerst verloren nur Überschriften ihren Griff; nach v1.0.5 wollte Alwin auch „+“ und
+ * Griff an Listen, To-Dos und Beschlüssen weg („Mach die bitte weg. Das Verschieben der Punkte nur noch über Punkte
+ * ordnen“). **Tabellen behalten ihn** (Alwin, Klick-Runde 18.11.2026): Nur sein Menü schaltet Kopfzeile und Kopfspalte.
+ * Einfügen geht über „Einfügen ▾“ und „/“, Löschen mit Entf/Rücktaste.
  */
 export function hatGriff(art: string | undefined): boolean {
-  return !!art && art !== 'paragraph' && art !== 'heading';
+  return art === 'table';
 }
 
 /**

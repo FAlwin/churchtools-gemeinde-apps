@@ -382,9 +382,10 @@ ziehen** (Maus sofort, Finger nach kurzem Halten – eine blaue Linie zeigt nur 
 auf dem Griff die **Pfeiltasten**; „Rückgängig“ im Fenster nimmt den letzten Schritt zurück. Erst **„Übernehmen“** (erst
 nach einer Änderung bedienbar) ändert das Protokoll – als **ein** Schritt: ein Strg+Z im Editor holt alles zurück; die
 Blöcke behalten ihre IDs (To-Dos bleiben verbunden). „Abbrechen“ ändert nichts; mit nicht übernommener Änderung schließen
-weder X noch Esc noch ein Tipp daneben das Fenster. Am Handy füllt das Fenster den Bildschirm. **Im Text** haben
-Überschriften keinen Griff mehr (kein Abschnitt-Ziehen, kein „Nach oben/unten“); Listen, Zitate, eigene Blöcke und
-Tabellen zieht man einzeln wie bisher.
+weder X noch Esc noch ein Tipp daneben das Fenster. Am Handy füllt das Fenster den Bildschirm. **Im Text** gibt es
+links weder „+“ noch Griff (seit v1.0.6, Alwin: „Verschieben der Punkte nur noch über Punkte ordnen“) – eingefügt wird
+über **„Einfügen“** und „/“, gelöscht mit Entf/Rücktaste (Entf am Ende einer Überschrift löscht auch einen festen Punkt
+darunter). Nur **Tabellen** haben noch einen Griff: sein Menü schaltet Kopfzeile/Kopfspalte und löscht die Tabelle.
 
 **Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
 auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
@@ -452,9 +453,9 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in
   `shared/protokolle/sitzungen.ts`, Schreiben `protokolle/src/beginnen.ts`, Fenster `ProtokollBeginnen.tsx`.
-- Griff im Editor: Griff mittig zur ersten Textzeile (`protokolle/src/griffLage.ts`); Überschriften haben seit W7 keinen
-  Griff (`Griff` in `DokumentEditor.tsx`); enthält die Markierung eine Überschrift, zieht der Griff einer Zeile nur diese
-  Zeile (`nurDieseZeile`) – sonst nähme BlockNote die ganze Markierung samt Überschrift mit.
+- Griff im Editor: nur noch an Tabellen (`hatGriff` in `protokolle/src/zeilenGriff.ts`, `Griff` in `DokumentEditor.tsx`,
+  ohne „+“), mittig zur ersten Textzeile (`protokolle/src/griffLage.ts`); enthält die Markierung eine Überschrift, zieht er
+  nur die Tabelle (`nurDieseZeile`) – sonst nähme BlockNote die ganze Markierung samt Überschrift mit.
 - Wer/Bis vor dem Text: `props.vorab` am Aufgaben-Block (JSON), übernommen beim Anlegen des To-Dos (`vorabAnwenden` in
   `aufgabenAbgleich` und beim ersten Tipp); danach leert der Block es.
 - Frühere Treffen (v1.0.1): Regeln `shared/protokolle/fruehere.ts` (`ohneProtokollZeitraum`, `monatsZeitraum`,

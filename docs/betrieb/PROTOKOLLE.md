@@ -142,6 +142,9 @@ vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nich
   demselben Beginn). Grenze: Wurde ein Termin nach Beginn des Protokolls verschoben, steht er (vergangen) wieder als „ohne
   Protokoll“ da; „Protokoll beginnen“ legt dann ein zweites an – beim Verschieben über „Sitzung bearbeiten“ passiert das nicht.
 
+**Gruppe wählen (Reiter „Sitzungen“):** Die Überschrift mit dem Gruppennamen ist der Auswahlknopf („Bildtechnik ▾“) – ein Tipp klappt
+die Liste aller Gruppen auf, die aktuelle trägt ein Häkchen. Wer nur eine Gruppe sieht, sieht eine einfache Überschrift.
+
 **Neues Protokoll (Leitung, K2a):** „Neues Protokoll“ auf der Startseite und im Reiter „Sitzungen“ legt ein Protokoll
 **ohne Termin** an – Gruppe wählen, Titel, Datum/Uhrzeit (auch nachträglich), Vorlage / „Wie letztes Mal“ / leer, auf
 Wunsch mit Gruppentreffen für die Anwesenheit. Keine Mail; der Editor öffnet sich gleich.

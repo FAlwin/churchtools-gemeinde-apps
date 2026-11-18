@@ -830,3 +830,29 @@ für denselben Übergang anzulegen.
   nur als Text), O9-F13 (Testlauf); Status „aktiv“ statt „manual“ (OpenAPI der Test-Instanz, 17.11.2026)
 
 </details>
+
+### TF-ORG-23 · Kinder & Jugend: mehrere Stufen leiten – die Gruppe über die Überschrift wählen
+
+**Das brauchst du:** In der Test-Instanz ein Konto, das **zwei Kindergruppen** (Stufen) leitet, dazu ein Rechner und ein Handy
+(oder 390 px Breite). Außerdem ein Konto, das nur **eine** Stufe leitet.
+
+**Das muss passieren:** Im Unterreiter **Meine Gruppe** ist die Überschrift mit dem Namen der Stufe der Auswahlknopf („Fische ▾“).
+Es gibt keine Leiste mit einem Knopf je Stufe und den Namen nicht doppelt.
+
+1. Reiter **Kinder & Jugend** → **Meine Gruppe**: Über dem Jahresband steht der Stufenname mit einem kleinen Pfeil nach unten;
+   darüber oder daneben keine zweite Leiste mit den Stufen.
+2. Auf den Namen tippen: Die Liste zeigt beide Stufen, die aktuelle mit **Häkchen**. Die andere wählen: Die Liste schließt, die
+   Überschrift und die Kinder wechseln zur anderen Stufe.
+3. **Esc** oder ein Tipp daneben schließt die Liste, ohne etwas zu ändern. Am Handy liegt sie ganz im Bild.
+4. Mit dem Konto, das nur eine Stufe leitet: Der Name ist eine einfache Überschrift ohne Pfeil.
+5. Als Bereichsleitung: Die **Übersicht** zeigt Kacheln, die Gruppe öffnet sich mit **Übersicht**-Pfeil zurück – hier steht
+   **kein** Auswahlknopf (die Kacheln sind die Wahl).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/bedienung/TitelWahl.tsx`, `organigramm/src/KinderJugend.tsx`
+- **Automatisiert:** größtenteils – `ui/bedienung/TitelWahl.test.tsx`, `organigramm/src/KinderJugend.test.tsx` (zwei Stufen: Überschrift als Knopf, Wechsel, Name nicht doppelt; eine Stufe: keine Schaltfläche); Aussehen am Handy nur am Gerät
+- **Historie:** 18.11.2026 (Anlass: dieselbe Gruppen-Leiste wie in Protokolle lief am Handy über; Alwin wollte dort dasselbe)
+
+</details>

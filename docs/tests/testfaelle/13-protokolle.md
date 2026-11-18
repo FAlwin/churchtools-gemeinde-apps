@@ -535,7 +535,7 @@ etwa einer Woche.
 **Das muss passieren:** Ein Termin steht nur in der Gruppe, die ein Gruppentreffen zur selben Startzeit hat. Hat keine
 Gruppe eins, steht er in beiden. Auch bei „Noch ohne Protokoll“ und „Protokoll nachtragen“.
 
-1. Im Reiter **Sitzungen** nacheinander „TEST Technik“ und „TEST Bildtechnik“ öffnen: Unter **Kommend** stehen in beiden
+1. Im Reiter **Sitzungen** nacheinander „TEST Technik“ und „TEST Bildtechnik“ öffnen (über die Überschrift, siehe TF-PROT-20): Unter **Kommend** stehen in beiden
    Gruppen „TEST Treffen A“ und „TEST Treffen B“, außerdem bei der Leitung oben **Noch ohne Protokoll** mit „TEST Treffen C“.
 2. In ChurchTools in der Gruppe „TEST Bildtechnik“ ein **Gruppentreffen** anlegen, das zur selben Uhrzeit beginnt wie
    „TEST Treffen A“ (gleicher Tag, gleiche Minute).
@@ -685,5 +685,34 @@ Erst „Übernehmen“ ändert das Protokoll – als ein Schritt.
 - **Betrifft:** `shared/protokolle/gliederung.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/PunkteOrdnen.tsx`, `protokolle/src/usePunkteZiehen.ts`, `protokolle/src/punkteUebernehmen.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/zeilenGriff.ts`, `ui/fenster/Sheet.tsx`
 - **Automatisiert:** größtenteils – `shared/protokolle/gliederung.test.ts` (Regel gegen die Ableitung: mitwandern, Ebene bleibt, Vorspann oben, feste Punkte, „Überschrift“), `shared/protokolle/abschnitte.test.ts`, `protokolle/src/punkteUebernehmen.test.ts` (echter Editor: IDs, ein Schritt, veralteter Stand), `protokolle/src/PunkteOrdnen.test.tsx` (Knöpfe, Tastatur, Esc, Ziehen mit nachgestellter Lage, Übernehmen/Abbrechen), `protokolle/src/Werkzeugleiste.test.tsx` (Knopf, Weg bis in den Editor); **nur von Hand:** die echte Lage der Linie, das Halten mit dem Finger, die Bildschirmfüllung am Handy, dass im Text außer an Tabellen kein „+“/Griff erscheint (`zeilenGriff.test.ts` prüft nur die Regel `hatGriff`)
 - **Historie:** W7 (18.11.2026: Tagesordnungspunkte im Text zu verschieben „landet falsch, ist hakelig, unklar, was passiert“); nach v1.0.5 auch „+“ und Griff an Zeilen entfernt, außer an Tabellen (Alwin 18.11.2026)
+
+</details>
+
+### TF-PROT-20 · Sitzungen: die Gruppe über die Überschrift wählen
+
+**Das brauchst du:** In der Test-Instanz mindestens **drei Gruppen**, die in Protokolle eingerichtet sind und die du sehen darfst
+(am besten sieben, wie die Technik-Gruppen), dazu ein Rechner und ein Handy (oder das Browserfenster auf 390 px Breite). Außerdem
+ein Konto, das nur **eine** Gruppe sieht.
+
+**Das muss passieren:** Die Überschrift im Reiter **Sitzungen** ist der Knopf zur Gruppenwahl („Bildtechnik ▾“). Es gibt keine
+Leiste mit einem Knopf je Gruppe mehr, die Seite lässt sich am Handy nicht seitlich verschieben.
+
+1. Reiter **Sitzungen** öffnen: Oben steht der Name der Gruppe mit einem kleinen Pfeil nach unten, sonst nichts daneben.
+2. Auf die Überschrift tippen: Eine Liste mit allen Gruppen klappt unter ihr auf, die aktuelle hat ein **Häkchen** und ist
+   fett. Der Pfeil zeigt nach oben.
+3. Eine andere Gruppe wählen: Die Liste schließt, die Überschrift nennt die neue Gruppe, darunter stehen deren Sitzungen.
+4. Wieder aufklappen und **Esc** drücken (am Rechner) oder daneben tippen: Die Liste schließt, die Gruppe bleibt.
+5. Am Handy (390 px): Die Liste liegt ganz im Bild (mindestens 16 px Rand), ist bei vielen Gruppen selbst scrollbar, und die
+   **Seite** lässt sich nicht nach rechts schieben. Ein sehr langer Gruppenname bricht um.
+6. Mit der Tastatur: Tab bis zur Überschrift, Eingabe öffnet, Tab/Umschalt+Tab wandert durch die Gruppen, Eingabe wählt. Danach
+   steht der Fokus wieder auf der Überschrift. Ein Screenreader liest „Gruppe wählen: …“.
+7. Mit dem Konto, das nur eine Gruppe sieht: Die Überschrift ist **kein** Knopf, kein Pfeil.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/bedienung/TitelWahl.tsx`, `ui/bedienung/TitelWahl.module.scss`, `protokolle/src/Sitzungen.tsx`
+- **Automatisiert:** größtenteils – `ui/bedienung/TitelWahl.test.tsx` (öffnen, wählen, Häkchen, Esc und Tipp daneben, eine Möglichkeit = keine Schaltfläche), `protokolle/src/Sitzungen.test.tsx` (Gruppe wechseln lädt deren Sitzungen); wie es am Handy aussieht (Breite, Rand, Scrollen), nur am Gerät
+- **Historie:** 18.11.2026 (Anlass: Die Gruppen-Leiste mit sieben Knöpfen war am Handy 600 px breit und schob die ganze Seite seitlich; Alwin entschied sich für die Überschrift als Auswahlknopf, Variante A)
 
 </details>

@@ -302,7 +302,8 @@ Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die n
 - **Jahresband:** Angekündigt · Wechseltag · Stichtag. Der **Wechseltag** ist der erste Montag nach den
   Sommerferien; er kommt **live aus dem Kalender „Schulferien NRW“**. Der **Stichtag** zählt fürs Alter.
 - **Je Gruppe:** wer wechselt, wer bleibt (auch als Ausnahme), wer neu dazukommt. Leitungen sehen neue Kinder erst
-  ab der Ankündigung, die Bereichsleitung schon vorher als Vorschau.
+  ab der Ankündigung, die Bereichsleitung schon vorher als Vorschau. Wer mehrere Stufen leitet, wählt die Gruppe über die
+  Überschrift (Name mit Pfeil, Liste mit Häkchen).
 - **Daten pflegen:** Kinder ohne Geburtstag (die wechseln nie von selbst) und – nur für die Bereichsleitung – wer
   bis zum Stichtag 18 wird.
 - **Wechseltage:** nur für Bereichsleitung und Admins – die Termine, bis wann sie in ChurchTools stehen und der Text für

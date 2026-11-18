@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
-import { Segment } from '@ui/bedienung/Segment';
+import { TitelWahl } from '@ui/bedienung/TitelWahl';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt, datumText } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shared/ct/zeit';
@@ -596,16 +596,12 @@ export function Sitzungen({
     <div className={styles.seite}>
       {toast && <Toast message={toast} />}
       <div className={styles.kopf}>
-        <h2>{gruppe.name}</h2>
-        {gruppen.length > 1 && (
-          <Segment
-            value={String(gruppe.id)}
-            options={gruppen.map((g) => ({ value: String(g.id), label: g.name }))}
-            onChange={(v) => setGruppeId(Number(v))}
-            ariaLabel="Gruppe"
-            verbunden
-          />
-        )}
+        {/* Die Überschrift ist die Gruppenwahl (eine Gruppe: einfache Überschrift) – keine Leiste, die am Handy überläuft. */}
+        <TitelWahl
+          optionen={gruppen.map((g) => ({ wert: String(g.id), text: g.name }))}
+          wert={String(gruppe.id)}
+          onWahl={(v) => setGruppeId(Number(v))}
+        />
       </div>
       {zustand.art === 'laedt' && <p className={styles.ruhig}>Wird geladen …</p>}
       {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={laden} />}

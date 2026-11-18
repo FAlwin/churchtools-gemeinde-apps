@@ -197,7 +197,8 @@ export function ChordEditor({
   // Tastatur (--kb) → Kopf-/Werkzeugleiste bleiben stehen, nur der intern scrollende
   // Editor-Bereich wird kürzer. Die Mechanik liegt in `useOverlayKeyboardInset` (seit #207 gemeinsam mit
   // den Dialogen genutzt, damit die Kopien nicht auseinanderlaufen).
-  const overlayRef = useOverlayKeyboardInset();
+  // `feldInsBild: false`: Das Feld ist hier der CodeMirror-Editor, der seinen Cursor selbst im Bild hält.
+  const overlayRef = useOverlayKeyboardInset({ feldInsBild: false });
 
   // Menüs bei Klick außerhalb schließen
   useEffect(() => {

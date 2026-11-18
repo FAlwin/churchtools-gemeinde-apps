@@ -17,6 +17,18 @@
   animation: fadeIn 0.15s ease both;
 }
 
+// Tastatur offen (`data-tastatur` setzt useOverlayKeyboardInset, 18.11.2026): Das Fenster steht OBEN verankert, nur seine
+// Unterkante folgt der Tastatur – zentriert wanderten bei jeder Änderung auch Kopf und Oberkante, und 12 % Höhe plus
+// 2 × 16 px Rand blieben ungenutzt (Alwin am iPhone: „Punkt vorschlagen“ schrumpfte bis auf ~100 px Inhalt).
+.overlay[data-tastatur] {
+  align-items: flex-start;
+  padding: 8px 16px calc(8px + var(--kb, 0px));
+
+  .sheet {
+    max-height: 100%;
+  }
+}
+
 .sheet {
   width: min(380px, 100%);
   max-height: 88%;
@@ -78,7 +90,10 @@
 // Abstand nach oben (`--inhalt-pad-top`, `obenBand.test.ts`) – ohne Rand säße der Titel sonst unter der Statusleiste bzw.
 // dem Unschärfe-Band.
 @media (max-width: 759px) {
-  .overlayVoll {
+  // `[data-tastatur]` mit aufgeführt: Der Selektor oben hat sonst mehr Gewicht und gäbe dem Vollbild-Fenster wieder Rand
+  // (es hatte bisher nie eine Aussparung: `padding: 0` stach den Innenabstand unten aus – es füllt den Bildschirm).
+  .overlayVoll,
+  .overlayVoll[data-tastatur] {
     padding: 0;
   }
 

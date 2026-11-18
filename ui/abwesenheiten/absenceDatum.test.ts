@@ -95,7 +95,13 @@ describe('absenceDatum', () => {
     expect(abwesenheitFuerTermin([fenster], termin)?.id).toBe(11);
   });
 
-  it('das Fenster eines Termins deckt den unmittelbar folgenden NICHT mit ab', () => {
+  /**
+   * **Direkt anschließende Termine – wie ChurchTools** (gemessen 18.11.2026, `messung-e5c.md`): Ein Fenster, das genau
+   * zum Beginn des nächsten Termins endet, trifft ihn in ChurchTools mit (−1000 beim Einteilen). Bis dahin zeigten
+   * wir ihn als frei. Ein neuer Haken trägt deshalb eine Minute weniger ein (`zeitfensterFuer`) – das trifft den
+   * folgenden Termin dann nicht mehr.
+   */
+  it('ein Fenster bis genau zum nächsten Beginn deckt den folgenden Termin mit – wie ChurchTools', () => {
     const erster = ev({
       id: 1,
       startDate: '2026-10-04T10:00:00Z',
@@ -106,13 +112,21 @@ describe('absenceDatum', () => {
       startDate: '2026-10-04T12:00:00Z',
       endDate: '2026-10-04T14:00:00Z',
     });
-    const nurErster = ab({
+    const bisZumBeginn = ab({
       id: 9,
       startTime: '2026-10-04T10:00:00Z',
       endTime: '2026-10-04T12:00:00Z',
     });
-    expect(abwesenheitFuerTermin([nurErster], erster)?.id).toBe(9);
-    expect(abwesenheitFuerTermin([nurErster], zweiter)).toBeUndefined();
+    expect(abwesenheitFuerTermin([bisZumBeginn], erster)?.id).toBe(9);
+    expect(abwesenheitFuerTermin([bisZumBeginn], zweiter)?.id).toBe(9);
+
+    const eineMinuteFrueher = ab({
+      id: 10,
+      startTime: '2026-10-04T10:00:00Z',
+      endTime: '2026-10-04T11:59:00Z',
+    });
+    expect(abwesenheitFuerTermin([eineMinuteFrueher], erster)?.id).toBe(10);
+    expect(abwesenheitFuerTermin([eineMinuteFrueher], zweiter)).toBeUndefined();
   });
 
   it('tagKurz zeigt Wochentag und Tag, das Jahr nur wenn es nicht das laufende ist', () => {

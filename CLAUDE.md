@@ -322,8 +322,9 @@ churchtools-gemeinde-apps/
   `--kb` wird deshalb erst `TASTATUR_RUHE_MS` nach dem letzten geschrieben (Schließen = 0 gilt sofort), der Dokument-Scroll
   wird dagegen bei jedem Ereignis zurückgeholt. Solange die Tastatur offen ist, trägt der Overlay `data-tastatur`:
   `Sheet.module.scss` verankert das Fenster dann OBEN (Kopf steht, nur die Unterkante folgt) und das fokussierte Feld
-  wird mit `scrollIntoView({ block: 'nearest' })` ins Bild geholt (`feldInsBild: false` für den Lied-Editor, dessen
-  CodeMirror den Cursor selbst führt). Neue Overlays mit Eingabefeldern: Hook + `[data-tastatur]`-Regel übernehmen.
+  wird in seinem Scrollbereich ins Bild geholt – von Hand (`feldZeigen` mit `listenScroll`), **nie `scrollIntoView`**:
+  das scrollt alle Behälter darüber und verschob in ChurchTools schon die ganze Seite (`feldInsBild: false` für den
+  Lied-Editor, dessen CodeMirror den Cursor selbst führt). Neue Overlays mit Eingabefeldern: Hook + `[data-tastatur]`-Regel übernehmen.
 - **Ein 401 heißt „Sitzung abgelaufen" und führt zum Login** (#186, #210, #211): Der globale Fänger
   sitzt in **`services/api.ts`** (`setSessionExpiredHandler`, registriert in `App.tsx`) – bewusst in
   `apiFetch` und nicht mehr am QueryClient, denn `services/annotations.ts` und

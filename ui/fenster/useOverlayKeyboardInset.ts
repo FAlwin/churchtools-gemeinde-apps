@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { syncAppHeight } from './appHeight';
 import { tastaturHoehe } from './useTastaturOffen';
+import { listenScroll } from '../bedienung/menueLage';
 
 /**
  * So viel Höhe bleibt dem Overlay über der Tastatur mindestens (samt Rand) – genug für Kopf und Knöpfe eines
@@ -21,11 +22,28 @@ export const TASTATUR_RUHE_MS = 140;
 /** Optionen von `useOverlayKeyboardInset`. */
 export interface TastaturAussparungOptionen {
   /**
-   * Das fokussierte Feld nach dem Anwenden ins Bild holen (`scrollIntoView({ block: 'nearest' })`), wenn es im Overlay
+   * Das fokussierte Feld nach dem Anwenden in seinem Scrollbereich ins Bild holen (`feldZeigen`), wenn es im Overlay
    * liegt. Standard: ja. **Aus** für den Lied-Editor: Dort ist das Feld der CodeMirror-Editor selbst, der seinen
-   * Cursor eigenständig im Bild hält – ein `scrollIntoView` auf das ganze Editor-Element würde dagegen arbeiten.
+   * Cursor eigenständig im Bild hält – das ganze Editor-Element ins Bild zu rücken, würde dagegen arbeiten.
    */
   feldInsBild?: boolean;
+}
+
+/**
+ * **Holt `feld` in seinem Scrollbereich innerhalb von `grenze` ins Bild** (der Inhalt eines Fensters) – sonst bleibt alles,
+ * wo es ist. Bewusst von Hand statt `scrollIntoView`: Das scrollt auch alle Behälter darüber, und in ChurchTools rückte
+ * so schon einmal die ganze Seite zur Seite (Lehre aus `listenScroll`, `menueLage.ts`, Test-Instanz 11.11.2026).
+ */
+export function feldZeigen(feld: HTMLElement, grenze: HTMLElement): void {
+  for (let b = feld.parentElement; b && grenze.contains(b); b = b.parentElement) {
+    const oy = getComputedStyle(b).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && b.scrollHeight > b.clientHeight) {
+      const f = feld.getBoundingClientRect();
+      const oben = f.top - b.getBoundingClientRect().top + b.scrollTop;
+      b.scrollTop = listenScroll(b.scrollTop, b.clientHeight, oben, f.height);
+      return;
+    }
+  }
 }
 
 /**
@@ -46,7 +64,7 @@ export interface TastaturAussparungOptionen {
  *     No-op, solange nichts verschoben ist; verzögert würde der Dokument-Versatz sichtbar hinter dem Schleier stehen.
  *
  * Ist die Tastatur oben und das neue Maß angewendet, holt der Hook das fokussierte Feld ins Bild, falls das Fenster
- * kürzer geworden ist und es verdeckt (`feldInsBild`).
+ * kürzer geworden ist und es verdeckt (`feldInsBild`, `feldZeigen` – nur im Fenster, nie die Seite).
  *
  * Das Rezept stammt aus dem ChordEditor, wo es sich bewährt hat – es liegt hier gemeinsam, damit die
  * beiden Kopien nicht auseinanderlaufen. Der Overlay MUSS `position: fixed` sein (nicht `absolute`),
@@ -85,13 +103,10 @@ export function useOverlayKeyboardInset(
       el.style.setProperty('--kb', `${kb}px`);
       if (kb > 0) el.setAttribute('data-tastatur', '');
       else el.removeAttribute('data-tastatur');
-      // Erst nach dem neuen Maß: Vorher war das Fenster höher und das Feld womöglich sichtbar. In Klammern, weil Chrome
-      // 152 bei `scrollIntoView` ein Promise zurückgibt (nie als Effekt-Rückgabe, siehe `Rueckgaengig`).
+      // Erst nach dem neuen Maß: Vorher war das Fenster höher und das Feld womöglich sichtbar.
       if (kb > 0 && feldInsBild) {
         const feld = document.activeElement;
-        if (feld instanceof HTMLElement && el.contains(feld)) {
-          feld.scrollIntoView?.({ block: 'nearest' });
-        }
+        if (feld instanceof HTMLElement && el.contains(feld)) feldZeigen(feld, el);
       }
     };
     const beiAenderung = () => {

@@ -179,9 +179,33 @@ describe('useOverlayKeyboardInset – Ruhe statt Pixel-Verfolgung', () => {
     const ref = useOverlayKeyboardInset({ feldInsBild });
     return (
       <div ref={ref} data-testid="overlay">
-        <input data-testid="innen" />
+        <div data-testid="inhalt" style={{ overflowY: 'auto' }}>
+          <input data-testid="innen" />
+        </div>
       </div>
     );
+  }
+
+  /**
+   * Gibt dem Inhalt ein Layout (jsdom hat keins): 100 px hoch, 400 px Inhalt, ab y = 100; das Feld bei y = 300, 42 px hoch –
+   * also unterhalb des sichtbaren Bereichs. Liefert jede Zuweisung an `scrollTop`.
+   */
+  function layout(inhalt: HTMLElement, feld: HTMLElement): number[] {
+    let top = 0;
+    const gesetzt: number[] = [];
+    Object.defineProperty(inhalt, 'scrollHeight', { value: 400, configurable: true });
+    Object.defineProperty(inhalt, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(inhalt, 'scrollTop', {
+      configurable: true,
+      get: () => top,
+      set: (v: number) => {
+        top = v;
+        gesetzt.push(v);
+      },
+    });
+    inhalt.getBoundingClientRect = () => ({ top: 100, height: 100 }) as DOMRect;
+    feld.getBoundingClientRect = () => ({ top: 300, height: 42 }) as DOMRect;
+    return gesetzt;
   }
 
   let scrollIntoView: ReturnType<typeof vi.fn>;
@@ -313,39 +337,44 @@ describe('useOverlayKeyboardInset – Ruhe statt Pixel-Verfolgung', () => {
   it('holt das fokussierte Feld im Fenster nach dem Anwenden ins Bild', () => {
     const vv = stubEchtesViewport(800);
     const { getByTestId } = render(<FensterMitFeld />);
+    const gesetzt = layout(getByTestId('inhalt'), getByTestId('innen'));
     getByTestId('innen').focus();
 
     melde(vv, 500, TASTATUR_RUHE_MS - 1);
-    expect(scrollIntoView).not.toHaveBeenCalled(); // erst nach dem Anwenden
+    expect(gesetzt).toEqual([]); // erst nach dem Anwenden
     vi.advanceTimersByTime(1);
-    expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
-    expect(scrollIntoView.mock.contexts[0]).toBe(getByTestId('innen'));
+    // Unterkante des Felds (300 − 100 + 42) an die Unterkante des Inhalts (100): 142.
+    expect(gesetzt).toEqual([142]);
+    // Nur der Inhalt des Fensters scrollt – nie `scrollIntoView`, das in ChurchTools die Seite verschob (menueLage.ts).
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('ein Feld außerhalb des Fensters wird nicht angefasst', () => {
     const vv = stubEchtesViewport(800);
-    render(<FensterMitFeld />);
+    const { getByTestId } = render(<FensterMitFeld />);
+    const gesetzt = layout(getByTestId('inhalt'), getByTestId('innen'));
     schreibfeld.focus(); // das Feld liegt im body, nicht im Overlay
     melde(vv, 500, TASTATUR_RUHE_MS);
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(gesetzt).toEqual([]);
   });
 
   it('beim Schließen der Tastatur wird nichts ins Bild geholt', () => {
     const vv = stubEchtesViewport(500);
     const { getByTestId } = render(<FensterMitFeld />);
+    const gesetzt = layout(getByTestId('inhalt'), getByTestId('innen'));
     getByTestId('innen').focus();
-    scrollIntoView.mockClear();
+    gesetzt.length = 0;
     melde(vv, 800);
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(gesetzt).toEqual([]);
   });
 
   it('feldInsBild: false schaltet das Ins-Bild-Holen ab (Lied-Editor)', () => {
     const vv = stubEchtesViewport(800);
     const { getByTestId } = render(<FensterMitFeld feldInsBild={false} />);
+    const gesetzt = layout(getByTestId('inhalt'), getByTestId('innen'));
     getByTestId('innen').focus();
     melde(vv, 500, TASTATUR_RUHE_MS);
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(gesetzt).toEqual([]);
     expect(getByTestId('overlay').style.getPropertyValue('--kb')).toBe('300px');
   });
 });

@@ -20,10 +20,18 @@ import {
   type Zeitraum,
 } from '@shared/ct/zeitraum';
 import { MAX_VORAUS_TAGE, decktTermin, zeitfensterFuer } from '@shared/absences/index';
-import { gleicheAntworten, type Antworten, type Zusage } from '@shared/dienstplan/verfuegbarkeit';
+import {
+  antwortBereinigt,
+  gleicheAntwort,
+  gleicheAntworten,
+  type Antwort,
+  type Antworten,
+  type Zusage,
+} from '@shared/dienstplan/verfuegbarkeit';
 import { plusTage, tagImMonat } from '@shared/ct/wochen';
 import { letzterTag, monatLabel, monatNurKurz, monatPlus, monatVon } from '@shared/ct/monate';
 import { AbsenceSheet, type Entwurf } from './AbsenceSheet';
+import { NotizFenster } from './NotizFenster';
 import { ZeitraumFrage } from './ZeitraumFrage';
 import {
   abwesenheitFuerTermin,
@@ -91,6 +99,11 @@ export interface AbwesenheitenTeile {
 export interface Zusagen {
   /** Die gespeicherten eigenen Antworten (Termin-ID als Text → Antwort); leer, solange nichts da ist. */
   antworten: Antworten;
+  /**
+   * Die eigenen Dienste (ID, Name) – daraus wählt das Notiz-Fenster „Nur bestimmte Dienste“ (E5c-2). Leer oder ohne: der
+   * Abschnitt entfällt, die Antwort gilt für alle.
+   */
+  dienste?: { id: number; name: string }[];
   /** Kann man Ja/Vielleicht speichern? Sonst sind die zwei Knöpfe gesperrt. */
   bereit: boolean;
   /** Der Hinweis oben, warum Ja/Vielleicht gesperrt ist; `null`, wenn es geht (oder noch lädt). */
@@ -136,6 +149,18 @@ export interface AbwesenheitenSeiteProps {
 }
 
 type Seite = 'termine' | 'eintraege';
+/** Eine vorgemerkte Ja/Vielleicht-Antwort samt Notiz und Diensten – wie `Antwort`, ohne den Tag (den hat der Termin). */
+type ZusageWahl = Omit<Antwort, 'tag'>;
+
+/** Antwort, Notiz und Dienste in die gespeicherte Form bringen (`antwortBereinigt`: dieselbe Regel wie beim Speichern). */
+function wahlAus(a: Zusage, notiz?: string, dienste?: number[]): ZusageWahl {
+  const b = antwortBereinigt({ a, tag: '', notiz, dienste });
+  return {
+    a: b.a,
+    ...(b.notiz ? { notiz: b.notiz } : {}),
+    ...(b.dienste ? { dienste: b.dienste } : {}),
+  };
+}
 /** Was ein Kästchen zeigt: der Eintrag dahinter, ob er zum Löschen vorgemerkt ist, ob der Haken sitzt. */
 interface Kasten {
   absence: Absence | undefined;
@@ -214,7 +239,14 @@ export function AbwesenheitenSeite({
    * Vorgemerkte Ja/Vielleicht-Antworten (nur mit `zusagen`): **Termin-ID** → gewünschte Antwort, `null` = Antwort weg.
    * Ein Eintrag steht nur da, solange er vom Gespeicherten abweicht.
    */
-  const [pendingZ, setPendingZ] = useState<Record<number, Zusage | null>>({});
+  const [pendingZ, setPendingZ] = useState<Record<number, ZusageWahl | null>>({});
+  /**
+   * Vorgemerkte Kommentare bei „Nein“ (E5c-2): **Termin-ID** → Kommentar der ChurchTools-Abwesenheit. Ein Eintrag steht nur
+   * da, solange er vom Gespeicherten abweicht; er gilt nur, wo „Nein“ gilt.
+   */
+  const [pendingK, setPendingK] = useState<Record<number, string>>({});
+  /** Der Termin, dessen Notiz-Fenster offen ist. */
+  const [notizFuer, setNotizFuer] = useState<AbsenceEvent | null>(null);
   const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const [frage, setFrage] = useState<{
     tag: string;
@@ -270,10 +302,28 @@ export function AbwesenheitenSeite({
   }));
   const terminText = (n: number) => `${n} ${n === 1 ? 'Termin' : 'Termine'}`;
 
+  const kasten = (ev: AbsenceEvent): Kasten => {
+    const absence = abwesenheitFuerTermin(liste, ev);
+    const weg = absence !== undefined && loeschen.includes(absence.id);
+    const soll = weg ? false : ev.id in pending ? pending[ev.id] : absence !== undefined;
+    return { absence, soll, vorgemerkt: ev.id in pending || weg };
+  };
+
   // Ein Wechsel Nein → Ja ist EIN Schritt für die Person: Termin mit Abwesenheit UND Antwort zählt einmal, ebenso der
   // Zeitraum, der nur wegen einer Antwort gelöscht wird.
   const zusageTermine = Object.keys(pendingZ).map(Number);
-  const geaenderteTermine = new Set([...Object.keys(pending).map(Number), ...zusageTermine]);
+  // Ein vorgemerkter Kommentar zählt nur, wo „Nein“ gilt – sonst hängt er an keiner Abwesenheit.
+  const kommentarTermine = Object.keys(pendingK)
+    .map(Number)
+    .filter((id) => {
+      const t = alleEvents.find((e) => e.id === id);
+      return t !== undefined && kasten(t).soll;
+    });
+  const geaenderteTermine = new Set([
+    ...Object.keys(pending).map(Number),
+    ...zusageTermine,
+    ...kommentarTermine,
+  ]);
   const loeschenOhneAntwort = loeschen.filter(
     (id) =>
       !zusageTermine.some((tid) => {
@@ -288,13 +338,6 @@ export function AbwesenheitenSeite({
   };
 
   /* ---------------------------------------------------------------- Häkchen (vorgemerkt) */
-
-  const kasten = (ev: AbsenceEvent): Kasten => {
-    const absence = abwesenheitFuerTermin(liste, ev);
-    const weg = absence !== undefined && loeschen.includes(absence.id);
-    const soll = weg ? false : ev.id in pending ? pending[ev.id] : absence !== undefined;
-    return { absence, soll, vorgemerkt: ev.id in pending || weg };
-  };
 
   const haken = (ev: AbsenceEvent, danach?: Zusage): void => {
     if (!online) return onToast('Zum Ändern brauchst du Netz.');
@@ -323,26 +366,69 @@ export function AbwesenheitenSeite({
     }
     const ist = a !== undefined;
     const soll = ev.id in pending ? !pending[ev.id] : !ist;
+    // Der Kommentar, der gerade am „Nein“ hängt – vorgemerkt oder der der Abwesenheit (vor dem Umschalten gelesen).
+    const kommentarVorher = kommentarFuer(ev);
+    // Die Antwort, die gerade (vorgemerkt oder gespeichert) am Termin steht – vor dem Umschalten gelesen.
+    const zusageVorher = zusageFuer(ev);
     setPending((p) => {
       const n = { ...p };
       if (soll === ist) delete n[ev.id];
       else n[ev.id] = soll;
       return n;
     });
-    if (danach) merkeZusage(ev, danach);
+    if (soll && !ist) {
+      // Ja/Vielleicht → Nein: der Kommentar wandert mit und wird der Kommentar der Abwesenheit; „nur bestimmte Dienste“
+      // fällt weg (die Antwort wird beim Speichern gelöscht).
+      merkeKommentar(ev, zusageVorher?.notiz ?? '', true);
+    } else {
+      setPendingK((k) => {
+        const n = { ...k };
+        delete n[ev.id];
+        return n;
+      });
+    }
+    // Nein → Ja/Vielleicht: der Kommentar wandert wieder zurück (die Dienste hat die Antwort noch, wenn sie vor dem Nein
+    // schon da war). Wechsel zu „keine Antwort“ (kein `danach`): Notiz und Dienste sind weg.
+    if (danach) merkeZusage(ev, wahlAus(danach, kommentarVorher, zusageVorher?.dienste));
   };
 
   /* ---------------------------------------------------------------- Ja / Vielleicht (nur mit `zusagen`) */
 
-  const gespeicherteZusage = (ev: AbsenceEvent): Zusage | null =>
-    zusagen?.antworten[String(ev.id)]?.a ?? null;
+  const gespeicherteAntwort = (ev: AbsenceEvent): Antwort | null =>
+    zusagen?.antworten[String(ev.id)] ?? null;
 
-  /** Eine Antwort vormerken – steht sie schon so gespeichert da, ist nichts vorzumerken. */
-  const merkeZusage = (ev: AbsenceEvent, z: Zusage | null): void => {
+  /** Die Antwort, die der Termin zeigt (vorgemerkt vor gespeichert) – samt Notiz und Diensten; unabhängig von „Nein“. */
+  const zusageFuer = (ev: AbsenceEvent): ZusageWahl | null =>
+    ev.id in pendingZ ? pendingZ[ev.id] : gespeicherteAntwort(ev);
+
+  /** Eine Antwort vormerken – steht sie schon genau so gespeichert da (auch Notiz und Dienste), ist nichts vorzumerken. */
+  const merkeZusage = (ev: AbsenceEvent, z: ZusageWahl | null): void => {
+    const da = gespeicherteAntwort(ev);
+    const gleich =
+      z === null ? da === null : da !== null && gleicheAntwort({ ...z, tag: da.tag }, da);
     setPendingZ((p) => {
       const n = { ...p };
-      if (z === gespeicherteZusage(ev)) delete n[ev.id];
+      if (gleich) delete n[ev.id];
       else n[ev.id] = z;
+      return n;
+    });
+  };
+
+  /** Der Kommentar am „Nein“ eines Termins: vorgemerkt, sonst der der Abwesenheit. */
+  const kommentarFuer = (ev: AbsenceEvent): string =>
+    ev.id in pendingK ? pendingK[ev.id] : (kasten(ev).absence?.comment ?? '');
+
+  /**
+   * Einen Kommentar am „Nein“ vormerken – steht er schon so an der Abwesenheit, ist nichts vorzumerken. `neu`: die
+   * Abwesenheit wird erst mit „Speichern“ angelegt (dann ist „nichts“ der Vergleich).
+   */
+  const merkeKommentar = (ev: AbsenceEvent, text: string, neu: boolean): void => {
+    const gespeichert = neu ? '' : (kasten(ev).absence?.comment ?? '');
+    const sauber = text.trim();
+    setPendingK((k) => {
+      const n = { ...k };
+      if (sauber === gespeichert) delete n[ev.id];
+      else n[ev.id] = sauber;
       return n;
     });
   };
@@ -353,7 +439,7 @@ export function AbwesenheitenSeite({
    */
   const antwortFuer = (ev: AbsenceEvent): Zusage | 'nein' | null => {
     if (kasten(ev).soll) return 'nein';
-    return ev.id in pendingZ ? pendingZ[ev.id] : gespeicherteZusage(ev);
+    return zusageFuer(ev)?.a ?? null;
   };
 
   const waehle = (ev: AbsenceEvent, wahl: Zusage | 'nein'): void => {
@@ -366,8 +452,11 @@ export function AbwesenheitenSeite({
     // Ja/Vielleicht auf einem „Nein“: erst die Abwesenheit wegnehmen (mit der Rückfrage bei Zeiträumen), die Antwort
     // dann gleich mit vormerken.
     if (jetzt === 'nein') return haken(ev, wahl);
-    // Noch einmal auf den aktiven Knopf: die Antwort ist weg.
-    merkeZusage(ev, jetzt === wahl ? null : wahl);
+    // Noch einmal auf den aktiven Knopf: die Antwort ist weg – mit Notiz und Diensten.
+    if (jetzt === wahl) return merkeZusage(ev, null);
+    // Von Ja auf Vielleicht (oder umgekehrt): Notiz und Dienste bleiben.
+    const alt = zusageFuer(ev);
+    merkeZusage(ev, wahlAus(wahl, alt?.notiz, alt?.dienste));
   };
 
   /** Die neue Antworten-Karte; `null`, wenn sich gegenüber dem Gespeicherten nichts ändert. */
@@ -377,7 +466,7 @@ export function AbwesenheitenSeite({
     for (const [id, z] of Object.entries(pendingZ)) {
       const ev = alleEvents.find((e) => e.id === Number(id));
       if (!ev) continue;
-      if (z) karte[id] = { a: z, tag: ev.date };
+      if (z) karte[id] = antwortBereinigt({ ...z, tag: ev.date });
       else delete karte[id];
     }
     // Wo „Nein“ gilt (Abwesenheit steht oder wird eingetragen), gibt es keine Ja/Vielleicht-Antwort.
@@ -385,10 +474,27 @@ export function AbwesenheitenSeite({
     return gleicheAntworten(karte, zusagen.antworten) ? null : karte;
   };
 
+  /**
+   * Darf der Kommentar am „Nein“ dieses Termins hier geändert werden? Nur, wo die Abwesenheit **dem Termin allein
+   * gehört** (neu vorgemerkt oder ein einzelner Tag, den kein anderer Termin teilt) – der Kommentar eines Zeitraums
+   * gehört dem Zeitraum (zu ändern unter „Einträge“).
+   */
+  const kommentarAenderbar = (ev: AbsenceEvent): boolean => {
+    if (ev.id in pending) return true;
+    const a = kasten(ev).absence;
+    return (
+      a !== undefined &&
+      a.startDate === a.endDate &&
+      !alleEvents.some((e) => e.id !== ev.id && decktTermin(a, e))
+    );
+  };
+
   const verwerfen = (): void => {
     setPending({});
     setLoeschen([]);
     setPendingZ({});
+    setPendingK({});
+    setNotizFuer(null);
   };
 
   const speichernAlles = (): void => {
@@ -402,8 +508,23 @@ export function AbwesenheitenSeite({
       .map((ev) => {
         // Ein Haken trägt das Zeitfenster GENAU dieses Termins ein; ohne bekanntes Ende den Tag.
         const fenster = zeitfensterFuer(ev);
-        return { startDate: ev.date, endDate: ev.date, ...(fenster ?? {}) };
+        const kommentar = pendingK[ev.id]?.trim();
+        return {
+          startDate: ev.date,
+          endDate: ev.date,
+          ...(fenster ?? {}),
+          ...(kommentar ? { comment: kommentar } : {}),
+        };
       });
+    // Der Kommentar einer schon gespeicherten Abwesenheit (nur, wo „Nein“ gilt und sie dem Termin allein gehört).
+    const kommentarAendern = alleEvents.flatMap((ev) => {
+      const a = kasten(ev).absence;
+      if (!(ev.id in pendingK) || ev.id in pending || !a || !kasten(ev).soll) return [];
+      if (!kommentarAenderbar(ev) || pendingK[ev.id] === a.comment) return [];
+      return [
+        { id: a.id, neu: { startDate: a.startDate, endDate: a.endDate, comment: pendingK[ev.id] } },
+      ];
+    });
     const weg = [
       ...loeschen,
       ...Object.entries(pending)
@@ -424,6 +545,7 @@ export function AbwesenheitenSeite({
          * Haken zu viel gesetzt, nie einer zu wenig. Danach in jedem Fall neu holen (`geaendert`).
          */
         for (const e of eintragen) await schreiben.anlegen(e);
+        for (const k of kommentarAendern) await schreiben.aendern(k.id, k.neu);
         for (const id of weg) await schreiben.loeschen(id);
         const n = zusagen ? anzahl : eintragen.length + weg.length;
         // Danach, in EINEM Aufruf, die Antworten. Gelingt das nicht ganz, bleiben sie vorgemerkt – die Abwesenheiten
@@ -445,8 +567,9 @@ export function AbwesenheitenSeite({
         } else {
           setPending({});
           setLoeschen([]);
+          setPendingK({});
           onToast(
-            eintragen.length + weg.length > 0
+            eintragen.length + weg.length + kommentarAendern.length > 0
               ? `Abwesenheiten gespeichert. ${zusageFehler}`
               : zusageFehler,
           );
@@ -540,7 +663,9 @@ export function AbwesenheitenSeite({
       >
         {wahlen.map((w) => {
           const an = jetzt === w.wert;
-          const vorgemerkt = w.wert === 'nein' ? k.vorgemerkt : ev.id in pendingZ;
+          // Auch eine vorgemerkte Notiz (bei Ja/Vielleicht) oder ein vorgemerkter Kommentar (bei Nein) bekommt den Ring.
+          const vorgemerkt =
+            w.wert === 'nein' ? k.vorgemerkt || (ev.id in pendingK && k.soll) : ev.id in pendingZ;
           const gesperrt = w.wert === 'nein' ? !online : !zusagen?.bereit;
           return (
             <button
@@ -557,6 +682,30 @@ export function AbwesenheitenSeite({
           );
         })}
       </div>
+    );
+  };
+
+  /**
+   * Der Link „Notiz“ unter dem Termin (E5c-2) – mit Notiz: „Notiz: <Anfang>“. **Ohne Antwort gibt es ihn nicht**: Eine
+   * Notiz braucht ein Ja, Vielleicht oder Nein, an dem sie hängt; ein gesperrter Link mit Erklärung an jeder Zeile
+   * machte die Liste unruhig. Bei „Nein“ nur, wo der Kommentar dem Termin allein gehört (`kommentarAenderbar`).
+   */
+  const notizLink = (ev: AbsenceEvent) => {
+    const jetzt = antwortFuer(ev);
+    if (!zusagen || jetzt === null) return null;
+    const nein = jetzt === 'nein';
+    if (nein && !kommentarAenderbar(ev)) return null;
+    const text = nein ? kommentarFuer(ev) : (zusageFuer(ev)?.notiz ?? '');
+    return (
+      <button
+        type="button"
+        className={styles.notizLink}
+        aria-label={`Notiz – ${ev.name}, ${tagKurz(ev.date)}${text ? `: ${text}` : ''}`}
+        disabled={(nein ? !online : !zusagen.bereit) || laeuft === 'sichern'}
+        onClick={() => setNotizFuer(ev)}
+      >
+        {text ? `Notiz: ${text}` : 'Notiz'}
+      </button>
     );
   };
 
@@ -581,6 +730,7 @@ export function AbwesenheitenSeite({
               : ''}
           </span>
           {terminZusatz?.(ev, k.soll)}
+          {notizLink(ev)}
         </div>
         {zusagen ? (
           dreiKnoepfe(ev, k)
@@ -816,6 +966,32 @@ export function AbwesenheitenSeite({
         />
       )}
 
+      {notizFuer && zusagen && (
+        <NotizFenster
+          termin={notizFuer}
+          art={antwortFuer(notizFuer) === 'nein' ? 'nein' : 'zusage'}
+          notiz={
+            antwortFuer(notizFuer) === 'nein'
+              ? kommentarFuer(notizFuer)
+              : (zusageFuer(notizFuer)?.notiz ?? '')
+          }
+          dienste={zusageFuer(notizFuer)?.dienste}
+          alleDienste={zusagen.dienste ?? []}
+          onClose={() => setNotizFuer(null)}
+          onUebernehmen={(text, dienste) => {
+            const ev = notizFuer;
+            const jetzt = antwortFuer(ev);
+            if (jetzt === 'nein') merkeKommentar(ev, text, ev.id in pending);
+            else if (jetzt !== null) {
+              // Ohne eigene Dienste zeigt das Fenster keinen Abschnitt – dann bleibt, was schon dasteht.
+              const behalten = (zusagen.dienste ?? []).length === 0;
+              merkeZusage(ev, wahlAus(jetzt, text, behalten ? zusageFuer(ev)?.dienste : dienste));
+            }
+            setNotizFuer(null);
+          }}
+        />
+      )}
+
       {frage && (
         <ZeitraumFrage
           tag={frage.tag}
@@ -823,7 +999,7 @@ export function AbwesenheitenSeite({
           weitereTermine={frage.weitere}
           onLoeschen={() => {
             setLoeschen((l) => (l.includes(frage.absence.id) ? l : [...l, frage.absence.id]));
-            if (frage.danach) merkeZusage(frage.danach.ev, frage.danach.wahl);
+            if (frage.danach) merkeZusage(frage.danach.ev, wahlAus(frage.danach.wahl));
             setFrage(null);
           }}
           onAnpassen={() => {

@@ -16,7 +16,7 @@ import {
   verfuegbarkeitLesen,
   verfuegbarkeitSpeichern,
 } from './ladeVerfuegbarkeit';
-import { eigeneDienstgruppen } from './start';
+import { eigeneDienste, eigeneDienstgruppen } from './start';
 
 const MODUL = 16;
 const ICH = 19;
@@ -124,6 +124,23 @@ describe('eigeneDienstgruppen – wer in welcher Dienstgruppe ist', () => {
     expect(eigeneDienstgruppen(start([9, 7]))).toEqual([TECHNIK, MUSIK]);
     expect(eigeneDienstgruppen(start([99]))).toEqual([]);
     expect(eigeneDienstgruppen(start([]))).toEqual([]);
+  });
+
+  it('eigeneDienste (E5c-2): die Dienste, an denen eine eigene CT-Gruppe hängt – in der Reihenfolge der Gemeinde', () => {
+    expect(eigeneDienste(start([7])).map((d) => d.id)).toEqual([6, 7]);
+    expect(eigeneDienste(start([12])).map((d) => d.id)).toEqual([10]);
+    expect(eigeneDienste(start([9, 7])).map((d) => d.id)).toEqual([6, 7, 9, 10]);
+    expect(eigeneDienste(start([99]))).toEqual([]);
+  });
+
+  it('die Dienstgruppen sind genau die der eigenen Dienste (eine Regel, nicht zwei)', () => {
+    for (const meine of [[7], [12], [9, 7], [6], [99], []]) {
+      const s = start(meine);
+      const ausDiensten = new Set(eigeneDienste(s).map((d) => d.dienstgruppeId));
+      expect(eigeneDienstgruppen(s).map((g) => g.id)).toEqual(
+        s.dienstgruppen.map((g) => g.id).filter((id) => ausDiensten.has(id)),
+      );
+    }
   });
 });
 

@@ -812,7 +812,7 @@ function speicherDemo(fall: string) {
     person: 1,
     antworten: {
       '102': { a: 'ja', tag: zeit(7, '00:00').slice(0, 10) },
-      '103': { a: 'vielleicht', tag: zeit(11, '00:00').slice(0, 10) },
+      '103': { a: 'vielleicht', tag: zeit(11, '00:00').slice(0, 10), notiz: 'nur bis 12 Uhr' },
     },
     stand: zeit(0, '07:00'),
   };

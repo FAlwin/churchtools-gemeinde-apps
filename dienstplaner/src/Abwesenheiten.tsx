@@ -141,6 +141,8 @@ export function DienstHinweis({
   );
 }
 
+const KEINE_DIENSTE: { id: number; name: string }[] = [];
+
 const GERADE_NICHT =
   'Ja/Vielleicht geht gerade nicht: ChurchTools antwortet nicht. Nichts verloren – Nein geht weiter, später bitte noch einmal.';
 
@@ -149,7 +151,12 @@ const GERADE_NICHT =
  * reicht sie samt Speichern, Sperr-Hinweis und „Einrichten“ herein. Ohne bereiten Speicher oder bei einem Lesefehler
  * sind Ja/Vielleicht gesperrt – „Nein“ (die Abwesenheit) geht immer.
  */
-function useZusagen(ichId: number, dienstgruppen: Dienstgruppe[], heute: string): Zusagen {
+function useZusagen(
+  ichId: number,
+  dienstgruppen: Dienstgruppe[],
+  heute: string,
+  dienste: { id: number; name: string }[],
+): Zusagen {
   // Geladen wie überall in den Erweiterungen (`useLaden`): späte Antworten zählen nicht, und beim Neuladen bleibt der
   // bisherige Stand stehen, bis der neue da ist – scheitert das Neuladen, gilt weiter der bisherige.
   const { stand, neu, setze } = useLaden(
@@ -167,6 +174,7 @@ function useZusagen(ichId: number, dienstgruppen: Dienstgruppe[], heute: string)
   const einrichtbar = v ? einrichtbareGruppen(v) : [];
   return {
     antworten: v?.antworten ?? {},
+    dienste,
     bereit: v !== null && v.bereit.length > 0 && v.lesefehler === null,
     hinweis: stand.art === 'fehler' ? GERADE_NICHT : v ? verfuegbarkeitHinweis(v) : null,
     einrichten:
@@ -212,12 +220,15 @@ export function Abwesenheiten({
   zeitzone,
   heute,
   dienstgruppen,
+  eigeneDienste = KEINE_DIENSTE,
 }: {
   ichId: number;
   zeitzone: string;
   heute: string;
   /** Die eigenen Dienstgruppen (`eigeneDienstgruppen`) – in sie gehören Ja/Vielleicht. Eine feste Liste je Start. */
   dienstgruppen: Dienstgruppe[];
+  /** Die eigenen Dienste (`eigeneDienste`) – für „nur bestimmte Dienste“ bei der Notiz. Eine feste Liste je Start. */
+  eigeneDienste?: { id: number; name: string }[];
 }) {
   const dienst = useMemo(
     () => abwesenheitenDienst({ ich: () => Promise.resolve(ichId), zeitzone }),
@@ -240,7 +251,7 @@ export function Abwesenheiten({
     geaendert: () => setStand((n) => n + 1),
   };
   const quelle = useMemo(() => ({ dienst, heute, stand }), [dienst, heute, stand]);
-  const zusagen = useZusagen(ichId, dienstgruppen, heute);
+  const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste);
 
   return (
     <QuelleKontext.Provider value={quelle}>

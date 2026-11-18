@@ -4,9 +4,12 @@ import { Fehler } from './einteilen.testutil';
 import { MAX_ZEICHEN, type Wert } from '../ct/modulDaten';
 import {
   alleAntwortenLesen,
+  antwortBereinigt,
   antwortenSchublade,
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
+  gleicheAntworten,
+  MAX_NOTIZ,
   personenWertAus,
   type Antworten,
 } from './verfuegbarkeit';
@@ -495,5 +498,163 @@ describe('Lesen', () => {
     expect(await alleAntwortenLesen(port, MODUL, K1)).toEqual({ ok: false, grund: 'kein-recht' });
     s.lesenWirft.set(K1, new Fehler(401));
     expect(await alleAntwortenLesen(port, MODUL, K1)).toEqual({ ok: false, grund: 'abgemeldet' });
+  });
+});
+
+describe('Notiz und „nur bestimmte Dienste“ (E5c-2)', () => {
+  const MIT = (): Antworten => ({
+    '1': { a: 'ja', tag: '2026-12-06', notiz: 'nur bis 12 Uhr', dienste: [12, 7] },
+    '2': { a: 'vielleicht', tag: '2026-12-13' },
+  });
+  /** Der Wert, den der Schreiber erzeugt, mit beliebigem Antwort-Inhalt (für kaputte Felder). */
+  const roh = (s: ReturnType<typeof speicher>['s'], antworten: unknown) =>
+    s.werte.push({
+      id: 900,
+      dataCategoryId: K1,
+      value: JSON.stringify({
+        art: 'dienstplaner-verfuegbarkeit',
+        fassung: 1,
+        person: ANNA,
+        antworten,
+        stand: '2026-11-18T20:00:00.000Z',
+      }),
+    });
+
+  it('schreibt Notiz und Dienste und liest sie nach – Dienste aufsteigend, ohne Notiz bleibt das Feld weg', async () => {
+    const { port, eigene } = speicher();
+    const r = await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, MIT(), HEUTE);
+    expect(r).toEqual([{ kategorie: K1, ok: true }]);
+    const g = await eigeneAntwortenLesen(port, MODUL, [K1], ANNA);
+    expect(g).toMatchObject({
+      ok: true,
+      wert: {
+        antworten: {
+          '1': { a: 'ja', tag: '2026-12-06', notiz: 'nur bis 12 Uhr', dienste: [7, 12] },
+          '2': { a: 'vielleicht', tag: '2026-12-13' },
+        },
+      },
+    });
+    const gespeichert = JSON.parse(eigene(K1, ANNA)[0].value) as { antworten: Antworten };
+    expect(gespeichert.antworten['2']).toEqual({ a: 'vielleicht', tag: '2026-12-13' });
+  });
+
+  it('alte Werte ohne die Felder bleiben gültig (fassung 1)', () => {
+    const { s } = speicher();
+    roh(s, { '1': { a: 'ja', tag: '2026-12-06' } });
+    expect(personenWertAus(s.werte[0])?.antworten).toEqual({
+      '1': { a: 'ja', tag: '2026-12-06' },
+    });
+  });
+
+  it('kaputte Felder lassen nur das Feld weg, nicht den ganzen Eintrag', () => {
+    const { s } = speicher();
+    const lang = 'x'.repeat(MAX_NOTIZ + 30);
+    roh(s, {
+      '1': { a: 'ja', tag: '2026-12-06', notiz: 5, dienste: 'alle' },
+      '2': { a: 'ja', tag: '2026-12-06', notiz: '   ', dienste: [] },
+      '3': { a: 'ja', tag: '2026-12-06', notiz: lang, dienste: [3, 'x', 3, 1.5, null, 2] },
+      '4': { a: 'ja', tag: '2026-12-06', notiz: 'ok', dienste: { 0: 1 } },
+    });
+    expect(personenWertAus(s.werte[0])?.antworten).toEqual({
+      '1': { a: 'ja', tag: '2026-12-06' },
+      '2': { a: 'ja', tag: '2026-12-06' },
+      '3': { a: 'ja', tag: '2026-12-06', notiz: 'x'.repeat(MAX_NOTIZ), dienste: [2, 3] },
+      '4': { a: 'ja', tag: '2026-12-06', notiz: 'ok' },
+    });
+  });
+
+  it('eine zu lange Notiz wird beim Schreiben gekürzt – und das Nachlesen gilt trotzdem als angekommen', async () => {
+    const { port, eigene } = speicher();
+    const lang = antw();
+    lang['1'] = { a: 'ja', tag: '2026-12-06', notiz: 'y'.repeat(MAX_NOTIZ + 50) };
+    const r = await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, lang, HEUTE);
+    expect(r).toEqual([{ kategorie: K1, ok: true }]);
+    const g = await eigeneAntwortenLesen(port, MODUL, [K1], ANNA);
+    expect(g).toMatchObject({
+      wert: { antworten: { '1': { notiz: 'y'.repeat(MAX_NOTIZ) } } },
+    });
+    // Und gespeichert wird schon die gekürzte Fassung, nicht die lange (der Wert hat nur `MAX_ZEICHEN`).
+    const stehtDa = JSON.parse(eigene(K1, ANNA)[0].value) as { antworten: Antworten };
+    expect(stehtDa.antworten['1'].notiz).toBe('y'.repeat(MAX_NOTIZ));
+  });
+
+  it('gleicheAntworten erkennt jeden Unterschied: Notiz, Dienste (Reihenfolge egal), Antwort, Tag', () => {
+    const basis = (): Antworten => ({
+      '1': { a: 'ja', tag: '2026-12-06', notiz: 'n', dienste: [1, 2] },
+    });
+    expect(gleicheAntworten(basis(), basis())).toBe(true);
+    expect(
+      gleicheAntworten(basis(), {
+        '1': { a: 'ja', tag: '2026-12-06', notiz: 'n', dienste: [2, 1] },
+      }),
+    ).toBe(true);
+    // Leere Notiz = keine Notiz, leere Dienste = alle.
+    expect(
+      gleicheAntworten(
+        { '1': { a: 'ja', tag: '2026-12-06' } },
+        { '1': { a: 'ja', tag: '2026-12-06', notiz: ' ', dienste: [] } },
+      ),
+    ).toBe(true);
+    const abweichung: Antworten[] = [
+      { '1': { a: 'ja', tag: '2026-12-06', notiz: 'anders', dienste: [1, 2] } },
+      { '1': { a: 'ja', tag: '2026-12-06', dienste: [1, 2] } },
+      { '1': { a: 'ja', tag: '2026-12-06', notiz: 'n', dienste: [1] } },
+      { '1': { a: 'ja', tag: '2026-12-06', notiz: 'n' } },
+      { '1': { a: 'vielleicht', tag: '2026-12-06', notiz: 'n', dienste: [1, 2] } },
+      { '1': { a: 'ja', tag: '2026-12-07', notiz: 'n', dienste: [1, 2] } },
+    ];
+    for (const a of abweichung) expect(gleicheAntworten(basis(), a)).toBe(false);
+  });
+
+  it('Nachlesen: ChurchTools behält die Antwort, verliert aber die Notiz → nicht-angekommen (nicht Erfolg)', async () => {
+    const { port, s } = speicher();
+    // Ein Speicher, der beim Schreiben die Notiz fallen lässt.
+    const schreibe = port.schreibe;
+    port.schreibe = (pfad, a) => {
+      const j = a.json as { value?: string } | undefined;
+      if (j?.value) {
+        const w = JSON.parse(j.value) as { antworten: Antworten };
+        for (const e of Object.values(w.antworten)) delete e.notiz;
+        j.value = JSON.stringify(w);
+      }
+      return schreibe(pfad, a);
+    };
+    const r = await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, MIT(), HEUTE);
+    expect(r).toEqual([{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }]);
+    expect(s.werte).toHaveLength(1);
+  });
+
+  it('Nachlesen: ChurchTools verliert die Dienste → nicht-angekommen', async () => {
+    const { port } = speicher();
+    const schreibe = port.schreibe;
+    port.schreibe = (pfad, a) => {
+      const j = a.json as { value?: string } | undefined;
+      if (j?.value) {
+        const w = JSON.parse(j.value) as { antworten: Antworten };
+        for (const e of Object.values(w.antworten)) delete e.dienste;
+        j.value = JSON.stringify(w);
+      }
+      return schreibe(pfad, a);
+    };
+    const r = await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, MIT(), HEUTE);
+    expect(r).toEqual([{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }]);
+  });
+
+  it('antwortBereinigt: eine Stelle für Lesen und Schreiben', () => {
+    expect(
+      antwortBereinigt({ a: 'ja', tag: '2026-12-06', notiz: '  hi  ', dienste: [5, 5, 3] }),
+    ).toEqual({ a: 'ja', tag: '2026-12-06', notiz: 'hi', dienste: [3, 5] });
+  });
+
+  it('Größe: eine Antwort mit höchster Notiz und zehn Diensten bleibt unter 300 Zeichen – 30 davon unter dem Wert-Limit', () => {
+    const e = antwortBereinigt({
+      a: 'vielleicht',
+      tag: '2026-12-06',
+      notiz: 'ä'.repeat(MAX_NOTIZ),
+      dienste: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
+    });
+    const eintrag = JSON.stringify({ '12345': e }).length;
+    expect(eintrag).toBeLessThan(300);
+    expect(eintrag * 30).toBeLessThan(MAX_ZEICHEN);
   });
 });

@@ -357,3 +357,39 @@ stehen die drei Knöpfe als eigene Zeile unter dem Termin, gleich breit.
 - **Historie:** Dienstplaner E5c-1c (18.11.2026), Entwurf `e5c-wann-kann-ich.html` Variante 1A
 
 </details>
+
+### TF-VERF-12 · Notiz und „nur bestimmte Dienste“ zu einer Antwort
+
+**Das brauchst du:** Wie TF-VERF-11 – Dienstplaner in der **Test-Instanz**, Konto in einer Dienstgruppe mit bereitem Speicher
+„Antworten …“, das an mehreren Diensten (z. B. Gesang, Gitarre, Ton) teilnehmen kann. Zugriff auf ChurchTools zum Nachsehen.
+
+**Das muss passieren:** Unter jedem Termin mit einer Antwort steht ein kleiner Link **Notiz** (mit Text: „Notiz: …“). Er öffnet
+ein Fenster **Notiz** mit dem Termin darüber. Eine Notiz ist – wie jede Wahl – nur **vorgemerkt** (blauer Ring am Knopf, die
+Leiste zählt mit), bis unten **Speichern** gedrückt ist. Termine ohne Antwort haben keinen Link.
+
+1. Bei einem Termin **Ja** wählen, **Notiz** öffnen: Feld **Kommentar** (Platzhalter „z. B. nur bis 12 Uhr“, höchstens 140
+   Zeichen), darunter „Kann deine Dienstgruppe sehen.“ und **Nur bestimmte Dienste** mit einem Schalter je eigenem Dienst, alle an.
+2. „nur bis 12 Uhr“ eintragen, **Ton** ausschalten, **Übernehmen** → Link heißt „Notiz: nur bis 12 Uhr“, die Leiste zählt 1.
+   **Verwerfen** → Notiz weg. Nochmal, dann **Speichern**; neu laden (F5): Notiz und die Dienste stehen noch da.
+3. Alle Dienste ausschalten → „Mindestens ein Dienst muss an bleiben.“, **Übernehmen** ist gesperrt. **Esc** oder **Abbrechen**
+   schließt das Fenster, ohne etwas zu übernehmen.
+4. Bei einem **gespeicherten** Ja nur die Notiz ändern, **Übernehmen** → eine Änderung vorgemerkt, nach „Speichern“ steht der
+   neue Text da (auch ohne dass Antwort oder Dienste sich ändern).
+5. Bei einem Termin **Nein** wählen, **Notiz**: nur das Feld Kommentar (kein „Nur bestimmte Dienste“), darunter „Steht als
+   Kommentar der Abwesenheit in ChurchTools.“ Text eintragen, **Übernehmen**, **Speichern** → in ChurchTools hat die Abwesenheit
+   diesen Kommentar. Den Kommentar bei einer gespeicherten Abwesenheit ändern → nach „Speichern“ ist er dort geändert
+   (die Abwesenheit bleibt dieselbe).
+6. **Ja mit Notiz → Nein:** Der Kommentar steht im Notiz-Fenster von „Nein“, nach „Speichern“ als Kommentar der Abwesenheit; die
+   Dienste und die Ja-Antwort sind weg. **Nein → Ja** (vor dem Speichern): Notiz und Dienste wie vorher.
+7. Bei einem Termin in einem **mehrtägigen** Urlaub (Nein): kein Link **Notiz** – der Kommentar gehört dem Zeitraum (unter
+   „Einträge“ zu ändern).
+8. Aufräumen: Notizen, Abwesenheiten und Antworten wieder entfernen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/abwesenheiten/NotizFenster.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `shared/dienstplan/verfuegbarkeit.ts`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/start.ts`
+- **Automatisiert:** weitgehend – `dienstplaner/src/Abwesenheiten.notiz.test.tsx` (Link, Fenster, vormerken, nur Notiz/Dienste geändert, mindestens ein Dienst, Esc/Abbrechen, Nein-Kommentar an die Abwesenheit, Wechsel Ja ↔ Nein), Kern `shared/dienstplan/verfuegbarkeit.test.ts` (Notiz/Dienste schreiben, nachlesen, alte und kaputte Werte, Vergleich), `dienstplaner/src/ladeVerfuegbarkeit.test.ts` (`eigeneDienste`); von Hand bleibt, dass ChurchTools den Kommentar an der Abwesenheit zeigt und das Fenster am Handy gut zu bedienen ist
+- **Historie:** Dienstplaner E5c-2 (18.11.2026), Entwurf `e5c-wann-kann-ich.html` (Notiz-Fenster)
+
+</details>

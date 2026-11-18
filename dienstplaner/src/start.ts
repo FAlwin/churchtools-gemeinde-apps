@@ -158,19 +158,24 @@ export function planbareDienstgruppen(start: Start): Dienstgruppe[] {
 }
 
 /**
- * **Die eigenen Dienstgruppen** (E5c-1c, „Wann kann ich?“): die, an deren Diensten eine ChurchTools-Gruppe hängt, in der man
+ * **Die eigenen Dienste** (E5c-2, „nur bestimmte Dienste“): die Dienste, an denen eine ChurchTools-Gruppe hängt, in der man
  * Mitglied ist (`Dienst.gruppenIds`, `Start.gruppen` – aktive Mitgliedschaften, Leitung zählt mit). Dieselbe Verbindung
  * Person → Gruppe → Dienst, über die auch „Personen“ die Mitglieder eines Dienstes findet. In der Reihenfolge der Gemeinde.
- * Dorthin schreibt „Wann kann ich?“ die Ja/Vielleicht-Antworten.
+ */
+export function eigeneDienste(start: Pick<Start, 'gruppen' | 'dienste'>): Dienst[] {
+  const meine = new Set(start.gruppen.map((g) => g.id));
+  return [...start.dienste.values()].filter((d) => d.gruppenIds.some((id) => meine.has(id)));
+}
+
+/**
+ * **Die eigenen Dienstgruppen** (E5c-1c, „Wann kann ich?“): die, an deren eigenen Diensten (`eigeneDienste`) man teilnimmt.
+ * In der Reihenfolge der Gemeinde. Dorthin schreibt „Wann kann ich?“ die Ja/Vielleicht-Antworten.
  */
 export function eigeneDienstgruppen(
   start: Pick<Start, 'gruppen' | 'dienste' | 'dienstgruppen'>,
 ): Dienstgruppe[] {
-  const meine = new Set(start.gruppen.map((g) => g.id));
-  const dienste = [...start.dienste.values()];
-  return start.dienstgruppen.filter((g) =>
-    dienste.some((d) => d.dienstgruppeId === g.id && d.gruppenIds.some((id) => meine.has(id))),
-  );
+  const dienste = eigeneDienste(start);
+  return start.dienstgruppen.filter((g) => dienste.some((d) => d.dienstgruppeId === g.id));
 }
 
 /** Die Lied-Rechte aus der Rechte-Antwort – `rechteAus` wie in der Musik-App, übersetzt mit `liedRechteAus`. */

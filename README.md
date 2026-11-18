@@ -10,21 +10,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?filter=v*&label=Musik-App" alt="Musik-App Version"></a>
   <img src="https://img.shields.io/badge/ChurchTools-Erweiterung-2b6cb0" alt="Läuft als ChurchTools-Erweiterung">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/FAlwin/churchtools-gemeinde-apps" alt="MIT-Lizenz"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest"><strong>Musik-App herunterladen</strong></a>
-  &nbsp;·&nbsp;
-  <a href="#die-apps">Alle Apps</a>
-  &nbsp;·&nbsp;
-  <a href="docs/betrieb/ERWEITERUNG.md">So installiert ihr sie</a>
+  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?display_name=release&label=Download&filter=Musik-App%2A" alt="Musik-App herunterladen"></a>
+  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?display_name=release&label=Download&filter=Dienstplaner%2A" alt="Dienstplaner herunterladen"></a>
+  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?display_name=release&label=Download&filter=Organigramm%2A" alt="Organigramm herunterladen"></a>
+  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=protokolle"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?display_name=release&label=Download&filter=Protokolle%2A" alt="Protokolle herunterladen"></a>
+  <a href="https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend"><img src="https://img.shields.io/github/v/release/FAlwin/churchtools-gemeinde-apps?display_name=release&label=Download&filter=Gebetsabend%2A" alt="Gebetsabend herunterladen"></a>
 </p>
 
 <p align="center">
-  <img src="docs/bilder/apps-uebersicht.gif" width="640" alt="Kurzer Rundgang durch die vier Apps: Musik-App, Dienstplaner, Organigramm und Gebetsabend">
+  <a href="docs/betrieb/ERWEITERUNG.md"><strong>So installiert ihr sie</strong></a>
 </p>
 
 ---
@@ -33,25 +32,25 @@ Die Apps holen ihre Daten aus dem ChurchTools eurer Gemeinde und schreiben dorth
 zweite Datenbank und keine zentrale Stelle: Jede Gemeinde installiert die Apps selbst, jede Person meldet sich
 mit ihren eigenen ChurchTools-Zugangsdaten an und sieht nur, was ihre Rechte erlauben.
 
-> **Hinweis:** Dies ist ein **inoffizielles Community-Projekt** und steht in keiner Verbindung
-> zur ChurchTools GmbH. „ChurchTools" ist eine Marke der jeweiligen Inhaber. Die Namen der Apps
-> sind rein beschreibend gemeint („Musik-App **für** ChurchTools").
-
 ## Die Apps
 
 Alle Apps gibt es als **ChurchTools-Erweiterung**: ein ZIP, das ihr in ChurchTools unter
 _Administration → Erweiterungen_ hochladet. Die Musik-App läuft außerdem auf einem eigenen Server
-(dann auch offline und als App auf dem Home-Bildschirm).
+(dann auch offline und als App auf dem Home-Bildschirm). Weiter unten stellt sich jede App mit einem kurzen Video vor.
 
-| App              | Wofür                                                                                 | Download                                                                                        | Anleitung                                                         |
-| ---------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Musik-App**    | Chord Charts der Setlist, automatisch transponiert; Ablauf, Lieder, Abwesenheiten     | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest)        | [Erweiterung](docs/betrieb/ERWEITERUNG.md) · [Server](INSTALL.md) |
-| **Dienstplaner** | Dienste aller Gruppen planen, zusagen, tauschen; freie Plätze auf einen Blick         | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)  | [Anleitung](docs/betrieb/DIENSTPLANER.md)                         |
-| **Organigramm**  | Bereiche, Gruppen und Leitung als Baum, Karten oder Mindmap – auch als PDF            | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm) | [Anleitung](docs/betrieb/ORGANIGRAMM.md)                          |
-| **Protokolle**   | Sitzungsprotokolle mit Beschlüssen und To-Dos; die Leitung schreibt, die Gruppe liest | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=protokolle)  | [Anleitung](docs/betrieb/PROTOKOLLE.md)                           |
-| **Gebetsabend**  | Gebetsabend als Audio-/Video-Übertragung nur für Mitglieder                           | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend) | [Anleitung](docs/betrieb/GEBETSABEND.md)                          |
+| App                               | Wofür                                                                                 | Download                                                                                        | Anleitung                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [**Musik-App**](#musik-app)       | Chord Charts der Setlist, automatisch transponiert; Ablauf, Lieder, Abwesenheiten     | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases/latest)        | [Erweiterung](docs/betrieb/ERWEITERUNG.md) · [Server](INSTALL.md) |
+| [**Dienstplaner**](#dienstplaner) | Dienste aller Gruppen planen, zusagen, tauschen; freie Plätze auf einen Blick         | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)  | [Anleitung](docs/betrieb/DIENSTPLANER.md)                         |
+| [**Organigramm**](#organigramm)   | Bereiche, Gruppen und Leitung als Baum, Karten oder Mindmap – auch als PDF            | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=organigramm) | [Anleitung](docs/betrieb/ORGANIGRAMM.md)                          |
+| [**Protokolle**](#protokolle)     | Sitzungsprotokolle mit Beschlüssen und To-Dos; die Leitung schreibt, die Gruppe liest | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=protokolle)  | [Anleitung](docs/betrieb/PROTOKOLLE.md)                           |
+| [**Gebetsabend**](#gebetsabend)   | Gebetsabend als Audio-/Video-Übertragung nur für Mitglieder                           | [ZIP herunterladen](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=gebetsabend) | [Anleitung](docs/betrieb/GEBETSABEND.md)                          |
 
 **In Arbeit:** [Anmeldungen](docs/betrieb/ANMELDUNGEN.md) (Ersatz für Jotform & Co.).
+
+> **Hinweis:** Dies ist ein **inoffizielles Community-Projekt** und steht in keiner Verbindung
+> zur ChurchTools GmbH. „ChurchTools" ist eine Marke der jeweiligen Inhaber. Die Namen der Apps
+> sind rein beschreibend gemeint („Musik-App **für** ChurchTools").
 
 ## Musik-App
 

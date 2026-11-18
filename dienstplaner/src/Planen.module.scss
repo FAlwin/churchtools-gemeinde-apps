@@ -671,7 +671,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   max-width: 560px;
   margin: 12px auto 0;
   padding: 8px 8px 8px 16px;
@@ -690,9 +690,44 @@
     font-weight: 500;
   }
 
+  // Die Zahl bricht nicht um („3 / Entwürfe“ am Handy, seit „Verwerfen“ daneben steht – 18.11.2026).
+  > span:first-child {
+    white-space: nowrap;
+  }
+
   button {
     flex: none;
     white-space: nowrap;
+  }
+}
+
+// Die Knöpfe rechts in der Leiste: „Alle verwerfen“ · „Ansehen und senden“.
+.leisteKnoepfe {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+// „Alle verwerfen“ (18.11.2026) – roter Text ohne Fläche wie „Eintrag löschen“ im Fenster: ein Weg, der löscht, aber
+// nicht der Hauptweg. Was er tut, fragt eine Rückfrage vorher ab.
+.verwerfenKnopf {
+  height: 36px;
+  // Schmal gehalten: Am Handy (375 px) passen „3 Entwürfe · Verwerfen · Ansehen & senden“ sonst nicht in eine Zeile.
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--red);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 

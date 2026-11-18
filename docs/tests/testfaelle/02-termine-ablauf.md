@@ -726,14 +726,14 @@ steht.
    Gruppen sind nicht antippbar.
 2. „frei“ antippen → **„Wer kann?“** (Titel „Dienst · Tag“), dasselbe Fenster wie in „Planen“. Jemanden wählen → das
    Fenster schließt, am Platz steht der Entwurf blau gestrichelt, Meldung „… eingetragen – noch nicht gesendet“.
-3. Unten die Leiste **„1 Entwurf noch nicht gesendet · an diesem Termin“** mit **Ansehen und senden**.
+3. Unten die Leiste **„1 Entwurf noch nicht gesendet · an diesem Termin“** mit **Alle verwerfen** und **Ansehen und senden**.
 4. Einen belegten Platz antippen → zurückziehen oder ersetzen wie in der Matrix; den Entwurf antippen → Entwurfs-Fach.
 5. In der Gruppenüberschrift rechts der **Zauberstab** → automatische Planung nur für diesen Termin.
 6. **Ansehen und senden** → nur die Entwürfe dieses Termins; darunter „An einem anderen Termin liegen noch Entwürfe – die
    sendest du unter „Planen“.“ Senden → danach zeigt die Ansicht ohne Neuladen, was jetzt in ChurchTools steht; die
    Leiste ist weg. In „Planen“ steht der Entwurf des anderen Termins weiter da.
 7. Ohne Planen-Recht (andere Person): Plätze nur ansehen, kein Hilfe-Knopf, kein Zauberstab, keine Leiste.
-8. Am Handy: Leiste „1 Entwurf · Ansehen & senden“, Fenster von unten.
+8. Am Handy: Leiste „1 Entwurf · Verwerfen · Ansehen & senden“, Fenster von unten.
 
 <details><summary>Technisches</summary>
 
@@ -1162,4 +1162,32 @@ Konto, das den Dienst nur ansehen darf.
 - **Betrifft:** `shared/dienstplan/personenEintragen.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/GastFenster.tsx`, `dienstplaner/src/GastFeld.tsx`, `dienstplaner/src/gastName.ts`, `dienstplaner/src/WerKann.tsx`, `dienstplaner/src/usePlatzDazu.ts`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/planSicht.ts`
 - **Automatisiert:** ja – `shared/dienstplan/personenEintragen.test.ts` (`gastNeuAktion`), `dienstplaner/src/Planen.p2d.test.tsx` (Zeile immer da, Fenster, 2 Zeichen, Platz, „+“, Gast-Tags wie P2b, voll, Dazunehmen, Sperre, Rechte, abgesagt); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
 - **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 8), Scheibe P2d
+</details>
+
+### TF-ABLAUF-40 · Planen: alle Entwürfe auf einmal verwerfen
+
+**Das brauchst du:** Dienstplaner als Planer einer Dienstgruppe; in „Planen“ mindestens drei Entwürfe (z. B. zwei eigene über
+„Wer kann?“ und ein Gast), am besten dazu einer von einer **anderen** Person, die dieselbe Gruppe plant. Nichts senden.
+
+**Das muss passieren:** Wer neu anfangen will, wirft mit einem Knopf alle Entwürfe weg – ohne jede Person einzeln
+herauszunehmen. In ChurchTools ändert sich dabei nichts.
+
+1. Unten die Leiste **„N Entwürfe noch nicht gesendet“** mit rotem **Alle verwerfen** links neben **Ansehen und senden**.
+2. **Alle verwerfen** → Rückfrage **„Alle N Entwürfe verwerfen?“**: „Die Entwürfe werden gelöscht, ohne gesendet zu werden – in
+   ChurchTools ändert sich nichts.“; liegt ein fremder darunter, steht dort „1 davon stammt von anderen Planern.“; zum Schluss
+   „Das lässt sich nicht rückgängig machen.“ **Abbrechen** (oder Escape) → nichts passiert, alle Entwürfe bleiben.
+3. Noch einmal, dann **Verwerfen** → der Knopf heißt kurz „Wird verworfen …“, danach Hinweis **„N Entwürfe verworfen.“**; die
+   Matrix zeigt wieder „frei“, die Leiste ist weg, auch die Entwürfe des anderen Planers sind fort. Bei ihm verschwinden sie nach
+   dem Neuladen.
+4. In ChurchTools (Termin ansehen) steht niemand neu und niemand ist weg; Mitteilungen gehen keine raus.
+5. **Termin-Ansicht** mit Entwürfen an diesem und an einem anderen Termin: **Alle verwerfen** nimmt nur die dieses Termins, der
+   andere steht in „Planen“ weiter da.
+6. **Handy (375 px):** Leiste „N Entwürfe · Verwerfen · Ansehen & senden“ passt in eine Zeile.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/ladeEntwuerfe.ts`
+- **Automatisiert:** ja – `dienstplaner/src/Planen.test.tsx` (Rückfrage, alle gezählten entfernt samt fremden, mit Version, neu geladen, Bescheid; Abbrechen; Konflikt lässt die anderen weiterlaufen), Leisten-Texte in `Planen.test.tsx` und `TerminAnsicht.test.tsx`; vier Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
+- **Historie:** Wunsch Alwin 18.11.2026 („komplett zurücksetzen, nicht alle Personen einzeln“), Knopf in der Leiste, auch fremde Entwürfe
 </details>

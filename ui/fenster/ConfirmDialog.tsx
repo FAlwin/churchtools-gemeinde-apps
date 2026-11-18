@@ -48,8 +48,11 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titelId = useId();
   const knopfZeile = useKnopfZeile<HTMLDivElement>();
-  // Escape = Abbrechen – nur wo es ein Abbrechen gibt und nichts gerade schreibt (wie der Klick daneben).
-  useEscape(cancelLabel !== null && !beschaeftigt, onCancel);
+  // Escape = Abbrechen – nur wo es ein Abbrechen gibt und nichts gerade schreibt (wie der Klick daneben). Offen bleibt
+  // es auch dann, damit die Taste nicht zum Fenster darunter durchrutscht (18.11.2026).
+  useEscape(true, () => {
+    if (cancelLabel !== null && !beschaeftigt) onCancel();
+  });
   return (
     <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
       <div

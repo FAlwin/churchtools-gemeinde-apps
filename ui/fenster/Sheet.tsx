@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
+import { useEscape } from '../bedienung/useEscape';
 import { FensterKnopf } from './FensterKnopf';
 import { useKnopfZeile } from './useKnopfZeile';
 import { useOverlayKeyboardInset } from './useOverlayKeyboardInset';
@@ -85,6 +86,12 @@ export function Sheet({
   const overlayRef = useOverlayKeyboardInset();
   const titelId = useId();
   const knopfZeile = useKnopfZeile<HTMLDivElement>();
+  // Escape = der Klick daneben (18.11.2026; vorher schloss die Taste kein Fenster): Wer ungespeicherte Änderungen hat,
+  // reicht dort etwas, das nicht schließt – so verwirft auch Escape nichts. Gesperrt, solange etwas läuft – aber offen
+  // bleibt es dabei, damit die Taste nicht das Fenster darunter schließt.
+  useEscape(true, () => {
+    if (!beschaeftigt) (knoepfe !== undefined ? onHintergrund : onClose)();
+  });
 
   if (knoepfe !== undefined) {
     // Kopf und Fußzeile bleiben stehen, dazwischen scrollt der Inhalt – das ist die eine Scrollfläche des Fensters.

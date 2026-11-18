@@ -53,7 +53,10 @@ beforeEach(() => {
   );
 });
 
-const zeige = () => render(<Abwesenheiten ichId={19} zeitzone="Europe/Berlin" heute={HEUTE} />);
+// Ohne eigene Dienstgruppe: kein Speicher für Ja/Vielleicht, „Nein“ (die Abwesenheit) geht – das prüft diese Datei.
+const KEINE: never[] = [];
+const zeige = () =>
+  render(<Abwesenheiten ichId={19} zeitzone="Europe/Berlin" heute={HEUTE} dienstgruppen={KEINE} />);
 const kasten = (name: RegExp) => screen.getByRole<HTMLButtonElement>('button', { name });
 
 describe('Abwesenheiten im Dienstplaner (E7-2c)', () => {
@@ -74,7 +77,7 @@ describe('Abwesenheiten im Dienstplaner (E7-2c)', () => {
   it('abgehakt an einem Termin mit Dienst → in Rot „bitte auch den Dienst absagen“; Speichern trägt ein', async () => {
     zeige();
     await screen.findByText('Du bist eingeteilt: Ton');
-    fireEvent.click(kasten(/Abwesend – Gottesdienst, So, 08\.11\./));
+    fireEvent.click(kasten(/Nein – Gottesdienst, So, 08\.11\./));
     expect(
       screen.getByText('Du bist eingeteilt: Ton – bitte auch den Dienst absagen'),
     ).not.toBeNull();

@@ -123,7 +123,7 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
       within(bereiche)
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Start', 'Dienste', 'Planen', 'Abwesenheiten']);
+    ).toEqual(['Start', 'Dienste', 'Planen', 'Wann kann ich?']);
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     expect(window.location.hash).toBe('#/termine');

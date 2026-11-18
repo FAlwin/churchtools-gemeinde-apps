@@ -5,8 +5,10 @@ import {
 } from '@ui/bedienung/reiterAdresse';
 
 /**
- * Die Bereiche des Dienstplaners (Entwurf v17): Start · Dienste · Planen · Abwesenheiten. „Dienste“ hieß bis 28.10.2026
- * „Termine“ (Alwin: passt besser); die Adresse bleibt `#/termine`, damit gemerkte Links weiter gehen.
+ * Die Bereiche des Dienstplaners (Entwurf v17): Start · Dienste · Planen · Wann kann ich? „Dienste“ hieß bis 28.10.2026
+ * „Termine“ (Alwin: passt besser); die Adresse bleibt `#/termine`, damit gemerkte Links weiter gehen. Ebenso
+ * „Wann kann ich?“ (E5c-1c, vorher „Abwesenheiten“): ID und Adresse bleiben `abwesenheiten` / `#/abwesenheiten` – gemerkte
+ * Links und die Erinnerungs-Mail zeigen dorthin.
  */
 export type ReiterId = 'start' | 'termine' | 'planen' | 'abwesenheiten';
 
@@ -14,7 +16,7 @@ export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
   { id: 'termine', label: 'Dienste', icon: 'calendar' },
   { id: 'planen', label: 'Planen', icon: 'grid' },
-  { id: 'abwesenheiten', label: 'Abwesenheiten', icon: 'user-slash' },
+  { id: 'abwesenheiten', label: 'Wann kann ich?', icon: 'user-slash' },
 ];
 
 /**

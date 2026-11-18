@@ -7,7 +7,13 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { ladeStart, planbareDienstgruppen, vorlageBearbeitbar, type Start } from './start';
+import {
+  eigeneDienstgruppen,
+  ladeStart,
+  planbareDienstgruppen,
+  vorlageBearbeitbar,
+  type Start,
+} from './start';
 import { vorlagenZugriff } from './vorlagenZugriff';
 import { Startseite } from './Startseite';
 import { Abwesenheiten } from './Abwesenheiten';
@@ -41,7 +47,7 @@ import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
 
 /**
- * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Abwesenheiten. Am Computer
+ * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Wann kann ich? Am Computer
  * stehen die Reiter oben neben dem Namen, am Handy unten wie in der Musik-App (Entwurf v17).
  * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  */
@@ -55,6 +61,8 @@ export function App() {
   const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);
   const zeitzone = gemeindeZeitzone();
   // Die Liedauswahl im Punkt-Fenster (LW2b) – mit den Lied-Rechten aus dem Start.
+  // Die eigenen Dienstgruppen – dorthin gehören Ja/Vielleicht in „Wann kann ich?“. Eine feste Liste je Start.
+  const eigeneGruppen = useMemo(() => (start ? eigeneDienstgruppen(start) : []), [start]);
   const liedZugriff = useMemo(() => dienstplanerLiedZugriff(start?.lieder?.rechte), [start]);
 
   const laden = useCallback(() => {
@@ -304,7 +312,12 @@ export function App() {
             />
           )}
           {hauptSicht && aktiv === 'abwesenheiten' && start && (
-            <Abwesenheiten ichId={start.ichId} zeitzone={zeitzone} heute={heuteImKalender()} />
+            <Abwesenheiten
+              ichId={start.ichId}
+              zeitzone={zeitzone}
+              heute={heuteImKalender()}
+              dienstgruppen={eigeneGruppen}
+            />
           )}
         </ErweiterungsSeite>
       </LiedZugriffKontext.Provider>

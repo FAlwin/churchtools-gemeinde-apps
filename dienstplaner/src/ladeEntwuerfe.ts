@@ -39,11 +39,12 @@ import { ladeTerminStaende, type TerminStand } from './terminStand';
 import { ladeVorliebe, speichereVorliebe } from './ladeVorlieben';
 import type { Vorliebe, VorliebenGrund } from '@shared/dienstplan/vorlieben';
 
-const port = entwurfPortFuer(() => MODUL_KUERZEL);
+/** Der Anschluss an den Speicher des Dienstplaners – auch „Wann kann ich?“ (`ladeVerfuegbarkeit`) liest und schreibt darüber. */
+export const port = entwurfPortFuer(() => MODUL_KUERZEL);
 
 /** Die ID des eigenen Moduls – je Sitzung einmal gesucht; ein Fehlschlag wird nicht gemerkt. */
 const modulSuche = merkeVersprechen<number>();
-function modulId(): Promise<number> {
+export function modulId(): Promise<number> {
   return modulSuche.hole('modul', () => modulSuchen(port, 'Der Dienstplaner'));
 }
 

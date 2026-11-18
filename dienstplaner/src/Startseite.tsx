@@ -182,11 +182,11 @@ export function Startseite({
         </section>
 
         <section className={styles.karte}>
-          <ReiterLink reiter="abwesenheiten" icon="user-slash" titel="Abwesenheiten">
+          <ReiterLink reiter="abwesenheiten" icon="user-slash" titel="Wann kann ich?">
             {kommendeAbwesenheiten === undefined
-              ? 'Trag ein, wann du nicht kannst.'
+              ? 'Sag, wann du kannst – und wann nicht.'
               : kommendeAbwesenheiten > 0
-                ? `${kommendeAbwesenheiten} eingetragen – rechtzeitig nachtragen hilft den Planern`
+                ? `${kommendeAbwesenheiten} ${kommendeAbwesenheiten === 1 ? 'Abwesenheit' : 'Abwesenheiten'} eingetragen – rechtzeitig Bescheid zu sagen hilft den Planern`
                 : 'Noch nichts eingetragen'}
           </ReiterLink>
         </section>

@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.8.0 (17.11.2026: in „Personen“ Plätze einstellen, „Platz dazunehmen“ und Gäste von Hand eintragen – damit ist Planen in „Personen“ komplett. v0.7.0: Einteilungen per Klick bearbeiten, Hilfe „?“, Ablaufvorlagen).** Was die Reiter können:
+> **Stand: v0.9.0 (18.11.2026: „Alle verwerfen“ – alle Entwürfe auf einmal löschen, ohne zu senden; Fenster schließen mit Escape. v0.8.0: in „Personen“ Plätze einstellen, „Platz dazunehmen“ und Gäste von Hand eintragen).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen

@@ -74,6 +74,26 @@
   width: min(560px, 100%);
 }
 
+// Am Handy bildschirmfüllend (`handyVoll`, W7 „Punkte ordnen“): kein Rand, keine Rundung, volle Höhe. Der Kopf hält den
+// Abstand nach oben (`--inhalt-pad-top`, `obenBand.test.ts`) – ohne Rand säße der Titel sonst unter der Statusleiste bzw.
+// dem Unschärfe-Band.
+@media (max-width: 759px) {
+  .overlayVoll {
+    padding: 0;
+  }
+
+  .handyVoll {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+
+    .kopf {
+      padding-top: max(16px, var(--inhalt-pad-top));
+    }
+  }
+}
+
 // Ein Fenster, das ein gleiches ersetzt (‹ › im Punkt-Fenster), blendet nicht noch einmal ein.
 .still {
   animation: none;

@@ -39,6 +39,11 @@ interface SheetProps {
   /** Nur mit `knoepfe`: mittelbreit (bis 560 px) – für eine Feldliste „Beschriftung | Feld“ (Punkt-Fenster, E6-O O3). */
   mittel?: boolean;
   /**
+   * Nur mit `knoepfe`: **am Handy bildschirmfüllend** (bis `HANDY_BREITE`), ohne Rand und Rundung – für ein Fenster, in dem
+   * man mit dem Finger arbeitet und viel Platz braucht („Punkte ordnen“, W7). Am Rechner bleibt es ein Fenster.
+   */
+  handyVoll?: boolean;
+  /**
    * Was der Tipp neben das Fenster tut – ohne Angabe dasselbe wie X. Ein Fenster mit ungespeicherten Änderungen reicht
    * hier etwas, das dann nicht schließt: Ein versehentlicher Tipp daneben soll nichts verwerfen (Punkt-Fenster).
    */
@@ -77,6 +82,7 @@ export function Sheet({
   beschaeftigt = false,
   breit = false,
   mittel = false,
+  handyVoll = false,
   onHintergrund = onClose,
   einblenden = true,
   zurueck,
@@ -98,11 +104,11 @@ export function Sheet({
     return (
       <div
         ref={overlayRef}
-        className={`${styles.overlay}${einblenden ? '' : ` ${styles.still}`}`}
+        className={`${styles.overlay}${einblenden ? '' : ` ${styles.still}`}${handyVoll ? ` ${styles.overlayVoll}` : ''}`}
         onClick={beschaeftigt ? undefined : onHintergrund}
       >
         <div
-          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}${mittel ? ` ${styles.mittel}` : ''}`}
+          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}${mittel ? ` ${styles.mittel}` : ''}${handyVoll ? ` ${styles.handyVoll}` : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titelId}

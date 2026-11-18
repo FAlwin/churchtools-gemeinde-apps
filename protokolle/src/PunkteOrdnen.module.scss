@@ -1,0 +1,279 @@
+// Fenster „Punkte ordnen“ (Protokolle W7, Entwurf `punkte-ordnen-v1`, Variante A). Farben und Rundungen aus `ui/design`.
+// Am Handy (bis 759 px = `HANDY_BREITE`) größere Griffe und Pfeilknöpfe zum Tippen.
+
+.info {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+// Steht beim Blättern oben (der Satz, was zuletzt passiert ist, und „Rückgängig“ bleiben im Blick).
+.leiste {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 0;
+  background: var(--surface2);
+}
+
+.satz {
+  min-width: 0;
+  color: var(--text2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.rueckgaengig {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.warnung,
+.fehler {
+  margin: 4px 0 8px;
+  color: var(--red);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.liste {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  list-style: none;
+}
+
+.punkt {
+  background: var(--surface2);
+  list-style: none;
+
+  & + & {
+    border-top: 1px solid var(--hair);
+  }
+}
+
+// Der gezogene Punkt lässt einen blassen Schatten zurück; das Bild folgt dem Zeiger.
+.zieht {
+  opacity: 0.28;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 4px 6px 4px 2px;
+  border-radius: var(--r-ctrl);
+
+  // Beim Ziehen eines Unterpunkts: alles außerhalb seines Punkts abblenden.
+  &.abgeblendet {
+    opacity: 0.45;
+  }
+
+  @media (max-width: 759px) {
+    gap: 3px;
+    min-height: 60px;
+    padding-right: 4px;
+  }
+}
+
+.kinder {
+  margin: 0 0 0 30px;
+  padding: 0;
+  border-left: 2px solid var(--border);
+  background: var(--section);
+  list-style: none;
+
+  .punkt {
+    background: transparent;
+  }
+
+  .zeile {
+    min-height: 48px;
+    padding-left: 0;
+
+    @media (max-width: 759px) {
+      min-height: 56px;
+    }
+  }
+
+  @media (max-width: 759px) {
+    margin-left: 20px;
+  }
+}
+
+.nummer {
+  flex: none;
+  min-width: 28px;
+  padding-right: 4px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: right;
+}
+
+.text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+
+  b {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+}
+
+.kinder .text b {
+  font-weight: 600;
+}
+
+.griff {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text3);
+  cursor: grab;
+  // Der Finger blättert senkrecht, bis das Ziehen beginnt (Halten, dann hält `touchmove` die Seite still).
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+  }
+
+  @media (max-width: 759px) {
+    width: 44px;
+    height: 48px;
+  }
+}
+
+.pfeil {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 759px) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+// Die Einfügelinie – nur an erlaubten Stellen (`usePunkteZiehen`).
+.linie {
+  position: absolute;
+  z-index: 5;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--blue);
+  list-style: none;
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+}
+
+// Das Bild unter dem Zeiger: hängt an `body`, über dem Fenster.
+.bild {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 4px 12px 4px 46px;
+  border: 1px solid var(--blue);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.hilfe {
+  margin: 8px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}

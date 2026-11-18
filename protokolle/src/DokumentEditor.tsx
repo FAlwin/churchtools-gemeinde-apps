@@ -1,11 +1,9 @@
 import {
   useContext,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
-  type ReactNode,
   type Ref,
 } from 'react';
 import { insertOrUpdateBlockForSlashMenu, type PartialBlock } from '@blocknote/core';
@@ -24,7 +22,6 @@ import {
   TableColumnHeaderItem,
   TableRowHeaderItem,
   useBlockNoteEditor,
-  useComponentsContext,
   useCreateBlockNote,
   useExtensionState,
   type DefaultReactSuggestionItem,
@@ -35,20 +32,12 @@ import type { Block } from '@shared/protokolle/dokument';
 import { bloeckeEinfuegen } from './bloeckeEinfuegen';
 import { Icon } from '@ui/icons/icons';
 import { useThema } from '@ui/design/useThema';
-import {
-  abschnittAblegen,
-  abschnittLinie,
-  abschnittSchieben,
-  blockGrenze,
-  abschnittZiehenBeginnt,
-  abschnittZiehenEndet,
-  kannSchieben,
-} from './abschnittZiehen';
 import { aufgabenIdsSetzen, schema, TABELLEN, type ProtokollEditor } from './editorSchema';
 import { blockInhalt, griffVersatz } from './griffLage';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { festeImMenue } from './festeImMenue';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
+import { hatGriff, nurDieseZeile } from './zeilenGriff';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
 import './DokumentEditor.scss';
@@ -59,10 +48,11 @@ import styles from './ProtokollSchreiben.module.scss';
  * Werkzeugleiste, dem „/“-Menü und Griffen zum Verschieben. Speichern und Sperre regelt der Bildschirm darüber
  * (`ProtokollSchreiben`); hier wird nur gemeldet, dass sich der Text geändert hat.
  *
- * - **Normaler Text hat keinen Griff** (Alwin 22.10.2026): Verschieben gibt es für Überschriften, Listen, Zitate und
- *   die eigenen Blöcke – ein Absatz ist einfach Text.
- * - Das Griff-Menü kennt „Löschen“, an Überschriften „Nach oben/unten“ und an Tabellen Kopfzeile/Kopfspalte (K3a).
- *   Blockfarben bietet es nicht an – markiert wird Text, über die Leiste („Markieren ▾“).
+ * - **Normaler Text hat keinen Griff** (Alwin 22.10.2026): Verschieben im Text gibt es für Listen, Zitate und die
+ *   eigenen Blöcke – ein Absatz ist einfach Text. **Überschriften haben seit W7 keinen Griff:** Tagesordnungspunkte und
+ *   Unterpunkte stellt man im Fenster „Punkte ordnen“ um (Werkzeugleiste, `PunkteOrdnen.tsx`).
+ * - Das Griff-Menü kennt „Löschen“ und an Tabellen Kopfzeile/Kopfspalte (K3a). Blockfarben bietet es nicht an – markiert
+ *   wird Text, über die Leiste („Markieren ▾“).
  * - **Einfügen aus Word**: Listen werden vorher zu echten Listen (`wordListen.ts`).
  */
 
@@ -128,47 +118,18 @@ const EIGENE_ALIASE = {
 
 /**
  * Der Griff steht oben am Block – ohne BlockNotes Versatz für Überschriften (S4-3b, beim Durchklicken gefunden). BlockNote
- * schiebt ihn bei Überschrift 1 um 39 px nach unten, passend zu seinen großen Überschriften; unsere sind kleiner (S4-1),
- * und so stand der Griff neben dem nächsten Block: Wer „Punkt 2“ ziehen wollte, zog Punkt 1.
+ * schiebt ihn bei Überschrift 1 um 39 px nach unten, passend zu seinen großen Überschriften; unsere sind kleiner (S4-1).
+ * Seit W7 hat eine Überschrift keinen Griff mehr; die Lage gilt weiter für die übrigen Blöcke (Listen unter „Punkt 2“
+ * standen sonst neben dem falschen Block).
  */
 const GRIFF_LAGE = { useFloatingOptions: { middleware: [] } };
 
-/** Lage der Blöcke unter `wurzel` auf dem Bildschirm – fürs Ablegen und für die Linie beim Ziehen. */
-const lageIn =
-  (wurzel: ParentNode) =>
-  (id: string): { top: number; bottom: number } | null =>
-    wurzel.querySelector(`.bn-block-outer[data-id="${CSS.escape(id)}"]`)?.getBoundingClientRect() ??
-    null;
-
 type GriffBlock = { block?: { id?: string; type?: string } } | undefined;
 
-/** „Nach oben“ / „Nach unten“ im Griff-Menü einer Überschrift (S4-3b) – fehlt, wenn es in die Richtung nicht geht. */
-function SchiebenEintrag({
-  id,
-  richtung,
-  children,
-}: {
-  id: string;
-  richtung: 'hoch' | 'runter';
-  children: ReactNode;
-}) {
-  const Components = useComponentsContext()!;
-  const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
-  if (!kannSchieben(editor, id, richtung)) return null;
-  return (
-    <Components.Generic.Menu.Item
-      className="bn-menu-item"
-      onClick={() => abschnittSchieben(editor, id, richtung)}
-    >
-      {children}
-    </Components.Generic.Menu.Item>
-  );
-}
-
 /**
- * Griff nur an Blöcken, die man verschieben soll – nicht an normalem Text. An einer Überschrift zieht er den ganzen
- * Abschnitt (S4-3b, `abschnittZiehen.ts`), und das Menü kann ihn nach oben und unten schieben. Er steht auf Höhe der
- * ersten Textzeile (`griffVersatz`, K1).
+ * Griff an den Blöcken, die man im Text verschieben soll (`hatGriff`: nicht an normalem Text und seit W7 nicht an
+ * Überschriften – die ordnet man im Fenster „Punkte ordnen“). Er steht auf Höhe der ersten Textzeile (`griffVersatz`, K1);
+ * enthält die Markierung eine Überschrift, zieht er nur seine Zeile (`nurDieseZeile`).
  */
 function Griff() {
   const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
@@ -184,31 +145,17 @@ function Griff() {
     const el = rahmen.current;
     setVersatz(el && id ? griffVersatz(blockInhalt(document, id), el.offsetHeight) : 0);
   }, [id, art]);
-  if (!art || !id || art === 'paragraph') return null;
-  const ueberschrift = art === 'heading';
+  if (!id || !hatGriff(art)) return null;
   return (
     <div ref={rahmen} style={{ transform: `translateY(${versatz}px)` }}>
       <SideMenu>
         <AddBlockButton />
         {/* `flex`, nicht inline: Ein Inline-`span` stellt den Knopf auf die Grundlinie – der Griff stand 2 px über dem „+“
             (in Safari und Chrome gemessen 29.10.2026, Alwin: „sitzt zu hoch“). */}
-        <span
-          style={{ display: 'flex' }}
-          onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}
-        >
+        <span style={{ display: 'flex' }} onDragStartCapture={() => nurDieseZeile(editor, id)}>
           <DragHandleButton
             dragHandleMenu={() => (
               <DragHandleMenu>
-                {ueberschrift && (
-                  <SchiebenEintrag id={id} richtung="hoch">
-                    Nach oben
-                  </SchiebenEintrag>
-                )}
-                {ueberschrift && (
-                  <SchiebenEintrag id={id} richtung="runter">
-                    Nach unten
-                  </SchiebenEintrag>
-                )}
                 {art === 'table' && <TableRowHeaderItem>Kopfzeile</TableRowHeaderItem>}
                 {art === 'table' && <TableColumnHeaderItem>Kopfspalte</TableColumnHeaderItem>}
                 <RemoveBlockItem>Löschen</RemoveBlockItem>
@@ -254,21 +201,6 @@ export function DokumentEditor({
       dictionary: TEXTE,
       initialContent: start.length ? (start as Teil[]) : undefined,
       tables: TABELLEN,
-      // Beim Ziehen eines Abschnitts steht die Linie dort, wo er landet (K1) – dieselbe Rechnung wie beim Ablegen.
-      dropCursor: {
-        hooks: {
-          computeDropPosition: ({ editor: e, event, view, defaultPosition }) => {
-            const l = abschnittLinie(e as ProtokollEditor, event.clientY, lageIn(view.dom));
-            if (l === 'frei') return defaultPosition;
-            if (l === 'keine') return null;
-            const pos =
-              'vor' in l
-                ? blockGrenze(view.state.doc, l.vor, 'vor')
-                : blockGrenze(view.state.doc, l.nach, 'nach');
-            return pos === null ? null : { pos, orientation: 'block-horizontal' };
-          },
-        },
-      },
       pasteHandler: ({ event, editor: e, defaultPasteHandler }) => {
         const html = event.clipboardData?.getData('text/html') ?? '';
         if (!istWordHtml(html)) return defaultPasteHandler();
@@ -281,25 +213,6 @@ export function DokumentEditor({
   const thema = useThema();
   // `ersetzen` ist keine Eingabe: Meldet der Editor die Änderung gleich (`stumm`) oder erst danach (`ersetzt` = der
   // Text dieses Stands), wird sie übergangen.
-  const blatt = useRef<HTMLDivElement>(null);
-  // Ein gezogener Abschnitt (S4-3b) wird beim Loslassen von uns gesetzt – an der nächsten Abschnittsgrenze. Das Blatt
-  // hört vor dem Editor (Einfangphase); was keine Überschrift ist, legt BlockNote wie bisher ab.
-  useEffect(() => {
-    const el = blatt.current;
-    if (!el) return;
-    const ablegen = (e: DragEvent) => {
-      if (!abschnittAblegen(editor, e.clientY, lageIn(el))) return;
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    const vorbei = () => abschnittZiehenEndet(editor);
-    el.addEventListener('drop', ablegen, true);
-    document.addEventListener('dragend', vorbei, true);
-    return () => {
-      el.removeEventListener('drop', ablegen, true);
-      document.removeEventListener('dragend', vorbei, true);
-    };
-  }, [editor]);
   const stumm = useRef(false);
   const ersetzt = useRef<string | null>(null);
 
@@ -331,7 +244,7 @@ export function DokumentEditor({
           <Werkzeugleiste editor={editor} />
         </div>
       )}
-      <div className={styles.blatt} ref={blatt}>
+      <div className={styles.blatt}>
         <BlockNoteView
           editor={editor}
           theme={thema}

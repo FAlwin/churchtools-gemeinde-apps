@@ -634,3 +634,52 @@ gelöscht“ da; bleiben Termin und Gruppentreffen bestehen, steht die Sitzung w
 - **Historie:** 17.11.2026 (Anlass: ein falsch begonnenes Protokoll ließ sich nur über „Absagen“ als Entwurf stehen lassen oder gar nicht entfernen)
 
 </details>
+
+### TF-PROT-19 · Punkte ordnen: im Fenster umstellen, im Text nicht mehr ziehbar
+
+**Das brauchst du:** In der Test-Instanz ein eigenes Test-Protokoll im Entwurf (Titel beginnt mit „TEST“) mit dieser
+Tagesordnung: **1 Anwesenheit** (der feste Punkt), **2 Andacht** mit zwei Stichpunkten, **3 Rückblick** mit drei
+Stichpunkten und einem To-Do („TEST Lautstärke messen“), **4 Abläufe** mit den Unterpunkten **4.1 Ton**, **4.2 Bild**
+(darunter ein Beschluss) und **4.3 Stream**, **5 Ausblick**. Dazu ein Rechner mit Maus und Tastatur, ein Handy oder iPad.
+
+**Das muss passieren:** Tagesordnungspunkte lassen sich im Text nicht mehr ziehen; im Fenster „Punkte ordnen“ stellt man
+sie um. Ein Punkt nimmt seine Unterpunkte und seinen Inhalt mit, die Ebene bleibt, die Nummern folgen der Reihenfolge.
+Erst „Übernehmen“ ändert das Protokoll – als ein Schritt.
+
+1. Das Test-Protokoll öffnen (Schreiben). Die Maus über die Überschrift **2 Andacht** halten: Links steht **kein Griff**
+   (bei einem Stichpunkt darunter schon). Rechts außen in der Werkzeugleiste steht **Punkte ordnen**.
+2. **Punkte ordnen** antippen. Das Fenster zeigt alle Punkte mit Nummer, Titel und einer Zeile darunter, z. B. „3 Stichpunkte ·
+   1 To-Do“, bei Punkt 1 „fester Punkt · Anwesenheitsliste“, bei Punkt 4 „3 Unterpunkte“; die Unterpunkte stehen eingerückt.
+   **Übernehmen** und **Rückgängig** sind grau.
+3. Bei **Andacht** den Pfeil **nach unten** drücken: Andacht steht jetzt an Stelle 3, die Nummern haben sich angepasst, darüber
+   steht „„Andacht“ nach unten verschoben (jetzt 3.)“, **Übernehmen** und **Rückgängig** sind bedienbar. **Rückgängig**:
+   Andacht steht wieder an Stelle 2, **Übernehmen** ist wieder grau.
+4. **Abläufe** am **Griff** mit der Maus ganz nach oben ziehen: Beim Ziehen folgt der Punkt der Maus, eine blaue Linie zeigt
+   die Stelle. Loslassen: Abläufe steht oben, **mit** Ton, Bild und Stream darunter. Beim Ziehen **Esc** drücken: Der Zug wird
+   abgebrochen, das Fenster bleibt offen.
+5. **Stream** nach ganz oben ziehen: Er springt nur an die erste Stelle **unter Abläufe** (4.1), nicht aus dem Punkt heraus;
+   die Linie zeigt nur Stellen innerhalb von Abläufe. Mit der Tastatur: den Griff von **Bild** anklicken, **Pfeil hoch** – Bild
+   rückt eine Stelle, der Fokus bleibt auf dem Griff.
+6. **Anwesenheit** (fester Punkt) mit dem Pfeil nach unten verschieben: Er wandert ganz normal mit seiner Liste.
+7. Jetzt nicht „Abbrechen“, sondern **Esc** drücken: Es erscheint „Erst „Übernehmen“ oder „Abbrechen“ wählen.“ Auch
+   ein Tipp neben das Fenster und das X schließen es nicht.
+8. **Übernehmen**: Im Text stehen die Punkte in der neuen Reihenfolge, die Nummern stimmen, die Stichpunkte, der Beschluss und
+   das To-Do sind mit ihren Punkten mitgewandert; unter **To-Dos** steht „TEST Lautstärke messen“ weiter mit demselben
+   Zuständigen. Im Text **Strg+Z** (Mac: Cmd+Z): Mit einem Schritt ist die ursprüngliche Reihenfolge zurück.
+9. Wieder **Punkte ordnen**, einen Punkt verschieben, **Abbrechen**: Das Protokoll ist unverändert.
+10. Im Text einen **Stichpunkt** am Griff ziehen: Das geht wie bisher. Dann zwei Zeilen markieren, von denen eine eine
+    Überschrift ist, und den Griff eines Stichpunkts ziehen: Es bewegt sich nur der Stichpunkt, die Überschrift bleibt.
+11. Mit nur **einem** Punkt im Protokoll (ohne Unterpunkte): **Punkte ordnen** ist grau, der Hinweis beim Darüberhalten sagt,
+    dass es mindestens zwei Punkte braucht.
+12. **Am Handy** (oder schmalem Fenster): **Punkte ordnen** steht als Erstes in der Leiste; das Fenster füllt den Bildschirm,
+    die Pfeile sind groß genug zum Tippen, es gibt kein seitliches Wischen. Einen Punkt mit dem Finger **kurz halten, dann
+    ziehen**: Er löst sich und folgt dem Finger; wer sofort wischt, blättert nur die Liste.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/gliederung.ts`, `shared/protokolle/abschnitte.ts`, `protokolle/src/PunkteOrdnen.tsx`, `protokolle/src/usePunkteZiehen.ts`, `protokolle/src/punkteUebernehmen.ts`, `protokolle/src/Werkzeugleiste.tsx`, `protokolle/src/DokumentEditor.tsx`, `ui/fenster/Sheet.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/gliederung.test.ts` (Regel gegen die Ableitung: mitwandern, Ebene bleibt, Vorspann oben, feste Punkte, „Überschrift“), `shared/protokolle/abschnitte.test.ts`, `protokolle/src/punkteUebernehmen.test.ts` (echter Editor: IDs, ein Schritt, veralteter Stand), `protokolle/src/PunkteOrdnen.test.tsx` (Knöpfe, Tastatur, Esc, Ziehen mit nachgestellter Lage, Übernehmen/Abbrechen), `protokolle/src/Werkzeugleiste.test.tsx` (Knopf, Weg bis in den Editor); **nur von Hand:** die echte Lage der Linie, das Halten mit dem Finger, die Bildschirmfüllung am Handy, dass die Überschrift keinen Griff hat, das Ziehen einer Zeile aus einer Markierung mit Überschrift
+- **Historie:** W7 (18.11.2026: Tagesordnungspunkte im Text zu verschieben „landet falsch, ist hakelig, unklar, was passiert“)
+
+</details>

@@ -5,7 +5,8 @@ import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { useAufklapp } from '@ui/bedienung/useAufklapp';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useThema } from '@ui/design/useThema';
-import { punktEbene } from '@shared/protokolle/dokument';
+import { punktEbene, type Block } from '@shared/protokolle/dokument';
+import { gibtZuOrdnen } from '@shared/protokolle/gliederung';
 import { FESTE_PUNKTE } from './anzeige';
 import type { ProtokollEditor } from './editorSchema';
 import { kannRuecken, ruecken } from './einruecken';
@@ -13,6 +14,8 @@ import { farbWert, MARKIER_FARBEN, type FarbArt } from './farben';
 import { FESTE } from './festenPunktEinfuegen';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { festenPunktAnbieten } from './fruehesProtokoll';
+import { PunkteOrdnen } from './PunkteOrdnen';
+import { reihenfolgeUebernehmen } from './punkteUebernehmen';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
 import styles from './Werkzeugleiste.module.scss';
 
@@ -23,6 +26,12 @@ import styles from './Werkzeugleiste.module.scss';
  * Fett · Kursiv · Unterstrichen · Durchgestrichen · Formatierung entfernen stehen direkt da; **Markieren ▾ · Absatz ▾ ·
  * Einfügen ▾** klappen als Menüs auf. Am PC passt das in eine Zeile. Am Handy: Fett direkt, der Rest der Schrift unter
  * „Aa ▾“, die drei Menüs nur als Zeichen (Absatz = Zeilen, nicht ¶ – Alwin). „/“-Menü, Kürzel und Tab bleiben.
+ *
+ * **„Punkte ordnen“** (W7, Alwin 18.11.2026) steht rechts außen (am Handy als Erstes – im wischbaren Streifen wäre es
+ * rechts außer Sicht): keine Textformatierung, sondern eine Aktion am ganzen Protokoll – sie öffnet das Fenster, in dem
+ * Tagesordnungspunkte umgestellt werden (im Text lassen sie sich nicht mehr ziehen). Der Knopf steht immer da, ist aber
+ * **ausgegraut, solange es nichts zu ordnen gibt** (`gibtZuOrdnen`: weniger als zwei Punkte unter demselben Punkt) –
+ * so findet man ihn auch im leeren Protokoll, und der Tooltip sagt, warum er noch nicht geht.
  *
  * Knöpfe und Menüs nehmen dem Text den Fokus nicht weg (`onMouseDown` → `preventDefault`), sonst ginge die Markierung
  * verloren, bevor „Fett“ oder eine Farbe wirkt. Die Menüs hängen an `body` – in der wischbaren Leiste würden sie
@@ -321,6 +330,8 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const thema = useThema();
   const feste = useContext(FestePunkteKontext);
+  // Die obersten Blöcke, wie sie beim Öffnen von „Punkte ordnen“ waren – `null`: Fenster zu.
+  const [ordnen, setOrdnen] = useState<Block[] | null>(null);
   const z = useEditorState({
     editor,
     // `editor` aus der Hülle – der Schnappschuss reicht ihn nur untypisiert durch.
@@ -339,6 +350,7 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
         durch: !!s.strike,
         hintergrund: farbName(s.backgroundColor),
         schrift: farbName(s.textColor),
+        ordnen: gibtZuOrdnen(e.document),
         ein: kannRuecken(e, 1),
         aus: kannRuecken(e, -1),
       };
@@ -376,6 +388,35 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
     <Knopf titel="Fett (Strg+B)" aktiv={z.fett} aus={!z.mitText} onKlick={stil('bold')}>
       <b>B</b>
     </Knopf>
+  );
+
+  const ordnenKnopf = (
+    <button
+      type="button"
+      className={`${styles.knopf} ${styles.wort} ${styles.ordnen}`}
+      aria-label="Punkte ordnen"
+      title={
+        z.ordnen
+          ? 'Reihenfolge der Punkte ändern'
+          : 'Punkte ordnen – dafür braucht es mindestens zwei Punkte'
+      }
+      disabled={!z.ordnen}
+      onMouseDown={behalteFokus}
+      onClick={() => setOrdnen(editor.document)}
+    >
+      <Icon name="sortieren" size={18} />
+      <span>Punkte ordnen</span>
+    </button>
+  );
+  const ordnenFenster = ordnen && (
+    <PunkteOrdnen
+      dokument={ordnen}
+      onUebernehmen={(reihenfolge) => reihenfolgeUebernehmen(editor, reihenfolge)}
+      onClose={() => {
+        setOrdnen(null);
+        editor.focus();
+      }}
+    />
   );
 
   const markieren = (
@@ -529,115 +570,123 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
 
   if (handy) {
     return (
+      <>
+        <div className={styles.leiste} role="toolbar" aria-label="Formatierung">
+          {ordnenKnopf}
+          {rueckgaengig}
+          <div className={styles.gruppe}>
+            {fett}
+            <Menue titel="Text" zeichen={<b className={styles.aa}>Aa</b>}>
+              {(zu) => {
+                const tun = (f: () => void) => () => {
+                  zu();
+                  f();
+                };
+                return (
+                  <>
+                    <Abschnitt>Textart</Abschnitt>
+                    {wahl.map((t) => (
+                      <MenuePunkt
+                        key={t}
+                        text={textartText(t)}
+                        aktiv={z.art === t}
+                        aus={!textart}
+                        onKlick={tun(() => artSetzen(editor, t))}
+                      />
+                    ))}
+                    <Abschnitt>Schrift</Abschnitt>
+                    <MenuePunkt
+                      zeichen={<i>I</i>}
+                      text="Kursiv"
+                      aktiv={z.kursiv}
+                      aus={!z.mitText}
+                      onKlick={tun(stil('italic'))}
+                    />
+                    <MenuePunkt
+                      zeichen={<u>U</u>}
+                      text="Unterstrichen"
+                      aktiv={z.unter}
+                      aus={!z.mitText}
+                      onKlick={tun(stil('underline'))}
+                    />
+                    <MenuePunkt
+                      zeichen={<s>S</s>}
+                      text="Durchgestrichen"
+                      aktiv={z.durch}
+                      aus={!z.mitText}
+                      onKlick={tun(stil('strike'))}
+                    />
+                    <MenuePunkt
+                      icon="format-weg"
+                      text="Formatierung entfernen"
+                      aus={!z.mitText}
+                      onKlick={tun(formatWeg)}
+                    />
+                  </>
+                );
+              }}
+            </Menue>
+          </div>
+          <div className={styles.gruppe}>
+            {markieren}
+            {absatz}
+            {einfuegen}
+          </div>
+        </div>
+        {ordnenFenster}
+      </>
+    );
+  }
+
+  return (
+    <>
       <div className={styles.leiste} role="toolbar" aria-label="Formatierung">
         {rueckgaengig}
+        <select
+          className={styles.textart}
+          aria-label="Textart"
+          value={textart}
+          disabled={!textart}
+          onChange={(e) => istTextart(e.target.value) && artSetzen(editor, e.target.value)}
+        >
+          {!textart && <option value="">–</option>}
+          {wahl.map((t) => (
+            <option key={t} value={t}>
+              {textartText(t)}
+            </option>
+          ))}
+        </select>
         <div className={styles.gruppe}>
           {fett}
-          <Menue titel="Text" zeichen={<b className={styles.aa}>Aa</b>}>
-            {(zu) => {
-              const tun = (f: () => void) => () => {
-                zu();
-                f();
-              };
-              return (
-                <>
-                  <Abschnitt>Textart</Abschnitt>
-                  {wahl.map((t) => (
-                    <MenuePunkt
-                      key={t}
-                      text={textartText(t)}
-                      aktiv={z.art === t}
-                      aus={!textart}
-                      onKlick={tun(() => artSetzen(editor, t))}
-                    />
-                  ))}
-                  <Abschnitt>Schrift</Abschnitt>
-                  <MenuePunkt
-                    zeichen={<i>I</i>}
-                    text="Kursiv"
-                    aktiv={z.kursiv}
-                    aus={!z.mitText}
-                    onKlick={tun(stil('italic'))}
-                  />
-                  <MenuePunkt
-                    zeichen={<u>U</u>}
-                    text="Unterstrichen"
-                    aktiv={z.unter}
-                    aus={!z.mitText}
-                    onKlick={tun(stil('underline'))}
-                  />
-                  <MenuePunkt
-                    zeichen={<s>S</s>}
-                    text="Durchgestrichen"
-                    aktiv={z.durch}
-                    aus={!z.mitText}
-                    onKlick={tun(stil('strike'))}
-                  />
-                  <MenuePunkt
-                    icon="format-weg"
-                    text="Formatierung entfernen"
-                    aus={!z.mitText}
-                    onKlick={tun(formatWeg)}
-                  />
-                </>
-              );
-            }}
-          </Menue>
+          <Knopf titel="Kursiv (Strg+I)" aktiv={z.kursiv} aus={!z.mitText} onKlick={stil('italic')}>
+            <i>I</i>
+          </Knopf>
+          <Knopf
+            titel="Unterstrichen (Strg+U)"
+            aktiv={z.unter}
+            aus={!z.mitText}
+            onKlick={stil('underline')}
+          >
+            <u>U</u>
+          </Knopf>
+          <Knopf titel="Durchgestrichen" aktiv={z.durch} aus={!z.mitText} onKlick={stil('strike')}>
+            <s>S</s>
+          </Knopf>
+          <SymbolKnopf
+            titel="Formatierung entfernen"
+            icon="format-weg"
+            aus={!z.mitText}
+            onKlick={formatWeg}
+          />
         </div>
         <div className={styles.gruppe}>
           {markieren}
           {absatz}
           {einfuegen}
         </div>
+        <div className={styles.ordnenRahmen}>{ordnenKnopf}</div>
       </div>
-    );
-  }
-
-  return (
-    <div className={styles.leiste} role="toolbar" aria-label="Formatierung">
-      {rueckgaengig}
-      <select
-        className={styles.textart}
-        aria-label="Textart"
-        value={textart}
-        disabled={!textart}
-        onChange={(e) => istTextart(e.target.value) && artSetzen(editor, e.target.value)}
-      >
-        {!textart && <option value="">–</option>}
-        {wahl.map((t) => (
-          <option key={t} value={t}>
-            {textartText(t)}
-          </option>
-        ))}
-      </select>
-      <div className={styles.gruppe}>
-        {fett}
-        <Knopf titel="Kursiv (Strg+I)" aktiv={z.kursiv} aus={!z.mitText} onKlick={stil('italic')}>
-          <i>I</i>
-        </Knopf>
-        <Knopf
-          titel="Unterstrichen (Strg+U)"
-          aktiv={z.unter}
-          aus={!z.mitText}
-          onKlick={stil('underline')}
-        >
-          <u>U</u>
-        </Knopf>
-        <Knopf titel="Durchgestrichen" aktiv={z.durch} aus={!z.mitText} onKlick={stil('strike')}>
-          <s>S</s>
-        </Knopf>
-        <SymbolKnopf
-          titel="Formatierung entfernen"
-          icon="format-weg"
-          aus={!z.mitText}
-          onKlick={formatWeg}
-        />
-      </div>
-      <div className={styles.gruppe}>
-        {markieren}
-        {absatz}
-        {einfuegen}
-      </div>
-    </div>
+      {ordnenFenster}
+    </>
   );
 }

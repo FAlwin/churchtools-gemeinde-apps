@@ -499,3 +499,61 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+// Notiz-Fenster (E5c-2): Hinweis unter dem Kommentarfeld, „Nur bestimmte Dienste“ mit einer Zeile je Dienst.
+.notizHinweis {
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--text2);
+}
+.dienstWahl {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  legend {
+    padding: 0;
+    margin-bottom: 4px;
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+.dienstZeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-family: var(--ui);
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+  input {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    accent-color: var(--blue);
+  }
+}
+
+// Der Link „Notiz“ unter dem Termin – ruhig wie ein Hinweis, mit Notiz in der Textfarbe; gesperrt ohne Hand.
+.notizLink {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font-family: var(--ui);
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  &:disabled {
+    color: var(--text3);
+    cursor: default;
+  }
+}

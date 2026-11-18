@@ -36,8 +36,24 @@ const TAG = /^\d{4}-\d{2}-\d{2}$/;
 
 export type Zusage = 'ja' | 'vielleicht';
 
-/** Je Termin (ID als Text) die Antwort und der Tag des Termins – an `tag` erkennt man Vergangenes. */
-export type Antworten = Record<string, { a: Zusage; tag: string }>;
+/** So lang darf die Notiz zu einer Antwort sein (E5c-2) – länger wird beim Lesen und Schreiben gekürzt. */
+export const MAX_NOTIZ = 140;
+
+/**
+ * Eine Antwort auf einen Termin. `tag` = Tag des Termins (daran erkennt man Vergangenes).
+ * **E5c-2, beides optional und abwärtskompatibel** (`fassung` bleibt 1; alte Werte ohne die Felder gelten weiter):
+ * - `notiz`: Kommentar der Person („nur bis 12 Uhr“), höchstens `MAX_NOTIZ` Zeichen.
+ * - `dienste`: die Dienste (ChurchTools-Dienst-IDs), für die die Antwort gilt; **fehlt = alle**. Nie leer, aufsteigend.
+ */
+export interface Antwort {
+  a: Zusage;
+  tag: string;
+  notiz?: string;
+  dienste?: number[];
+}
+
+/** Je Termin (ID als Text) die Antwort. */
+export type Antworten = Record<string, Antwort>;
 
 interface Ablage {
   art: typeof ART;
@@ -96,6 +112,32 @@ export function antwortenSchublade(gruppe: { id: number; name: string }): Katego
 
 const istZahl = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const istText = (x: unknown): x is string => typeof x === 'string' && x.trim() !== '';
+const istGanzeZahl = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x);
+
+/**
+ * **Die eine Stelle, die eine Antwort in ihre Form bringt** – beim Lesen UND beim Schreiben (sonst läse das Nachlesen
+ * etwas anderes zurück, als geschrieben wurde): Notiz getrimmt und auf `MAX_NOTIZ` gekürzt, leer → weglassen; Dienste nur
+ * ganze Zahlen, ohne Doppel, aufsteigend, leer → weglassen (= alle). Ein falscher Typ lässt nur das Feld weg.
+ */
+export function antwortBereinigt(e: {
+  a: Zusage;
+  tag: string;
+  notiz?: unknown;
+  dienste?: unknown;
+}): Antwort {
+  const aus: Antwort = { a: e.a, tag: e.tag };
+  if (typeof e.notiz === 'string') {
+    const notiz = e.notiz.trim().slice(0, MAX_NOTIZ).trim();
+    if (notiz !== '') aus.notiz = notiz;
+  }
+  if (Array.isArray(e.dienste)) {
+    const dienste = [...new Set((e.dienste as unknown[]).filter(istGanzeZahl))].sort(
+      (x, y) => x - y,
+    );
+    if (dienste.length > 0) aus.dienste = dienste;
+  }
+  return aus;
+}
 
 /** Ein Wert → Antworten einer Person, wenn er von uns ist und vollständig; sonst `null`. Einzelne kaputte Einträge fallen weg. */
 export function personenWertAus(w: Wert): PersonenWert | null {
@@ -104,9 +146,14 @@ export function personenWertAus(w: Wert): PersonenWert | null {
   if (!a.antworten || typeof a.antworten !== 'object' || Array.isArray(a.antworten)) return null;
   const antworten: Antworten = {};
   for (const [termin, e] of Object.entries(a.antworten)) {
-    const v = e as Partial<Antworten[string]> | null;
+    const v = e as Partial<Record<keyof Antwort, unknown>> | null;
     if (v && (v.a === 'ja' || v.a === 'vielleicht') && typeof v.tag === 'string' && TAG.test(v.tag))
-      antworten[termin] = { a: v.a, tag: v.tag };
+      antworten[termin] = antwortBereinigt({
+        a: v.a,
+        tag: v.tag,
+        notiz: v.notiz,
+        dienste: v.dienste,
+      });
   }
   return { wert: w, person: a.person, antworten, stand: a.stand };
 }
@@ -186,14 +233,26 @@ export async function eigeneAntwortenLesen(
 
 // ── Schreiben ────────────────────────────────────────────────────────────────
 
-/** Gleiche Antworten – unabhängig von der Reihenfolge der Schlüssel. */
+/** Dieselbe Antwort – **alle** Felder (Antwort, Tag, Notiz, Dienste), nach der Bereinigung verglichen. */
+export function gleicheAntwort(x: Antwort, y: Antwort): boolean {
+  const a = antwortBereinigt(x);
+  const b = antwortBereinigt(y);
+  const da = a.dienste ?? [];
+  const db = b.dienste ?? [];
+  return (
+    a.a === b.a &&
+    a.tag === b.tag &&
+    (a.notiz ?? '') === (b.notiz ?? '') &&
+    da.length === db.length &&
+    da.every((d, i) => d === db[i])
+  );
+}
+
+/** Gleiche Antworten – unabhängig von der Reihenfolge der Schlüssel. Der Maßstab für „angekommen“ UND „unverändert“. */
 export function gleicheAntworten(a: Antworten, b: Antworten): boolean {
   const ka = Object.keys(a).sort();
   const kb = Object.keys(b).sort();
-  return (
-    ka.length === kb.length &&
-    ka.every((k, i) => k === kb[i] && a[k].a === b[k].a && a[k].tag === b[k].tag)
-  );
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && gleicheAntwort(a[k], b[k]));
 }
 
 /** Die eigenen Werte einer Kategorie, neueste zuerst. */
@@ -282,7 +341,9 @@ export async function eigeneAntwortenSchreiben(
   heute: string,
 ): Promise<KategorieErgebnis[]> {
   const bleibt: Antworten = {};
-  for (const [termin, e] of Object.entries(antworten)) if (e.tag >= heute) bleibt[termin] = e;
+  // Bereinigt wie beim Lesen: Was hier geschrieben wird, ist genau das, was das Nachlesen zurückgibt.
+  for (const [termin, e] of Object.entries(antworten))
+    if (e.tag >= heute) bleibt[termin] = antwortBereinigt(e);
   const ergebnisse: KategorieErgebnis[] = [];
   for (const kat of kategorien)
     ergebnisse.push(await eineKategorieSchreiben(p, modul, kat, person, bleibt));

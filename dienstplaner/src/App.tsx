@@ -8,6 +8,7 @@ import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import {
+  eigeneDienste,
   eigeneDienstgruppen,
   ladeStart,
   planbareDienstgruppen,
@@ -63,6 +64,11 @@ export function App() {
   // Die Liedauswahl im Punkt-Fenster (LW2b) – mit den Lied-Rechten aus dem Start.
   // Die eigenen Dienstgruppen – dorthin gehören Ja/Vielleicht in „Wann kann ich?“. Eine feste Liste je Start.
   const eigeneGruppen = useMemo(() => (start ? eigeneDienstgruppen(start) : []), [start]);
+  // Die eigenen Dienste – daraus wählt man in „Wann kann ich?“ bei der Notiz „nur bestimmte Dienste“ (E5c-2).
+  const meineDienste = useMemo(
+    () => (start ? eigeneDienste(start).map((d) => ({ id: d.id, name: d.name })) : []),
+    [start],
+  );
   const liedZugriff = useMemo(() => dienstplanerLiedZugriff(start?.lieder?.rechte), [start]);
 
   const laden = useCallback(() => {
@@ -317,6 +323,7 @@ export function App() {
               zeitzone={zeitzone}
               heute={heuteImKalender()}
               dienstgruppen={eigeneGruppen}
+              eigeneDienste={meineDienste}
             />
           )}
         </ErweiterungsSeite>

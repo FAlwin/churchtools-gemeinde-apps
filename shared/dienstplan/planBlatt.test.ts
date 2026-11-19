@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { diensteAus } from '../ct/dienste';
 import type { Zelle } from '../ct/terminBlatt';
 import { planAus } from './plan';
-import { planBlatt, spanneLang, type PlanBlattQuelle } from './planBlatt';
+import {
+  PLAN_BLATT_STANDARD,
+  planBlatt,
+  planBlattWahlAus,
+  spanneLang,
+  type PlanBlattQuelle,
+} from './planBlatt';
 import type { RohTermin } from './termine';
 
 /** Das Plan-Blatt (E8-2) – aus einem Plan, wie `planAus` ihn aus rohen ChurchTools-Terminen baut. */
@@ -71,7 +77,7 @@ const tabelle = (zeilen: Zelle[][]) => zeilen.map((z) => z.map(text));
 
 describe('Plan-Blatt (E8-2)', () => {
   it('ganzer Plan: je Gruppe ein Abschnitt mit Titel, nur ihre Termine, Namen, „(angefragt)“, „frei“', () => {
-    const b = planBlatt(QUELLE, { art: 'plan' });
+    const b = planBlatt(QUELLE, PLAN_BLATT_STANDARD);
     expect(b.titel).toBe('Dienstplan');
     expect(b.untertitel).toBe('8. November – 22. November 2026');
     expect(b.abschnitte.map((a) => [a.titel, a.kopf])).toEqual([
@@ -92,64 +98,28 @@ describe('Plan-Blatt (E8-2)', () => {
   });
 
   it('nur eine Gruppe: ohne Abschnittstitel, Titel mit Gruppenname', () => {
-    const b = planBlatt(QUELLE, { art: 'gruppe', gruppe: 3 });
+    const b = planBlatt(QUELLE, { was: 'gruppe', gruppe: 3, ansicht: 'termine' });
     expect(b.titel).toBe('Dienstplan Technik');
     expect(b.abschnitte).toHaveLength(1);
     expect(b.abschnitte[0].titel).toBeNull();
     expect(b.dateiname).toBe('Dienstplan Technik 08.11.-22.11.2026');
   });
 
-  it('„Wir suchen noch …“: nur Termine mit freien Plätzen, ohne Namen, mit Anzahl', () => {
-    const b = planBlatt(QUELLE, { art: 'suchen' });
-    expect(b.titel).toBe('Wir suchen noch …');
-    expect(b.oben).toContain('Offene Dienste in Programm, Technik, Musik');
-    expect(tabelle(b.abschnitte[0].zeilen)).toEqual([
-      ['So, 08.11. 10:00 Gottesdienst', 'Licht, Gesang'],
-      ['So, 15.11. 10:00 Gottesdienst', 'Ton'],
-    ]);
-    expect(JSON.stringify(b)).not.toContain('Tobias Hahn');
-  });
-
   it('nur die eingeblendeten Gruppen und gezeigten Termine', () => {
     const b = planBlatt(
       { ...QUELLE, spalten: [1], gruppen: plan.gruppen.slice(1, 2) },
-      { art: 'plan' },
+      PLAN_BLATT_STANDARD,
     );
     expect(b.abschnitte.map((a) => a.titel)).toEqual([null]);
     expect(b.abschnitte[0].zeilen).toHaveLength(1);
     expect(b.untertitel).toBe('15. November 2026');
   });
 
-  it('alles besetzt → Hinweis statt leerer Tabelle; abgesagte Termine werden nicht gesucht', () => {
-    const voll = planAus([termin(9, '2026-12-06', [p(1, 'Jakob Weber')])], {
-      ichId: 0,
-      dienste: DIENSTE,
-      dienstgruppen: GRUPPEN,
-      zeitzone: 'Europe/Berlin',
-      planbar: () => false,
-      ganzSichtbar: () => true,
-    });
-    const b = planBlatt(
-      { ...QUELLE, plan: voll, spalten: [0], gruppen: voll.gruppen },
-      { art: 'suchen' },
-    );
+  it('keine Dienste im Zeitraum → Hinweis statt leerer Tabelle', () => {
+    const b = planBlatt(QUELLE, { was: 'gruppe', gruppe: 999, ansicht: 'termine' });
     expect(b.abschnitte).toEqual([]);
-    expect(b.leer).toContain('Alles besetzt');
-    // Ein abgesagter Termin mit freiem Platz wird nicht gesucht.
-    const abgesagt = planAus([termin(10, '2026-12-13', [p(6, null)], { isCanceled: true })], {
-      ichId: 0,
-      dienste: DIENSTE,
-      dienstgruppen: GRUPPEN,
-      zeitzone: 'Europe/Berlin',
-      planbar: () => false,
-      ganzSichtbar: () => true,
-    });
-    expect(
-      planBlatt(
-        { ...QUELLE, plan: abgesagt, spalten: [0], gruppen: abgesagt.gruppen },
-        { art: 'suchen' },
-      ).leer,
-    ).toContain('Alles besetzt');
+    expect(b.leer).toBe('In diesem Zeitraum sind keine Dienste vorgesehen.');
+    expect(planBlatt(QUELLE, PLAN_BLATT_STANDARD).leer).toBeNull();
   });
 
   it('keine leeren Spalten: ein Dienst, der an keinem gezeigten Termin vorgesehen ist, fehlt', () => {
@@ -171,18 +141,44 @@ describe('Plan-Blatt (E8-2)', () => {
     );
     const b = planBlatt(
       { ...QUELLE, plan: zwei, spalten: [1], gruppen: zwei.gruppen },
-      { art: 'gruppe', gruppe: 3 },
+      { was: 'gruppe', gruppe: 3, ansicht: 'termine' },
     );
     expect(b.abschnitte[0].kopf).toEqual(['Termin', 'Ton']);
   });
 
   it('ab sechs Spalten quer – wie die Druckliste', () => {
-    expect(planBlatt(QUELLE, { art: 'plan' }).quer).toBe(false);
+    expect(planBlatt(QUELLE, PLAN_BLATT_STANDARD).quer).toBe(false);
     const breit = {
       ...QUELLE.plan.gruppen[1],
       zeilen: Array(5).fill(QUELLE.plan.gruppen[1].zeilen[0]),
     };
-    expect(planBlatt({ ...QUELLE, gruppen: [breit] }, { art: 'plan' }).quer).toBe(true);
+    expect(planBlatt({ ...QUELLE, gruppen: [breit] }, PLAN_BLATT_STANDARD).quer).toBe(true);
+  });
+
+  it('die gemerkte Wahl: neue und alte Formen werden gelesen, „Wir suchen noch“ und Unbekanntes sind der ganze Plan', () => {
+    // Erst die Erzeuger: was `planBlatt` annimmt, kommt unverändert zurück.
+    const gruppe = { was: 'gruppe', gruppe: 3, ansicht: 'termine' } as const;
+    expect(planBlattWahlAus(gruppe)).toEqual(gruppe);
+    expect(planBlattWahlAus({ was: 'gruppe', gruppe: null, ansicht: 'termine' })).toEqual({
+      was: 'gruppe',
+      gruppe: null,
+      ansicht: 'termine',
+    });
+    expect(planBlattWahlAus(PLAN_BLATT_STANDARD)).toEqual(PLAN_BLATT_STANDARD);
+    // Bis E8-2 gemerkt: `art` statt `was`, keine Ansicht.
+    expect(planBlattWahlAus({ art: 'plan' })).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus({ art: 'gruppe', gruppe: 7 })).toEqual({
+      was: 'gruppe',
+      gruppe: 7,
+      ansicht: 'termine',
+    });
+    // Gestrichen und Unbekanntes.
+    expect(planBlattWahlAus({ art: 'suchen' })).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus({ was: 'gruppe', gruppe: 'x' })).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus({ was: 'gruppe' })).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus({ was: 'kalender', ansicht: 'kalender' })).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus(null)).toEqual(PLAN_BLATT_STANDARD);
+    expect(planBlattWahlAus('suchen')).toEqual(PLAN_BLATT_STANDARD);
   });
 
   it('spanneLang über den Jahreswechsel', () => {

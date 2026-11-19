@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { leseImGeraet, merkeImGeraet } from '@ui/bedienung/geraet';
+import { Segment } from '@ui/bedienung/Segment';
 import { PdfKnoepfe, PdfStandUndVorschau } from '@ui/teilen/pdfFenster';
 import { useGebautesPdf, useStand } from '@ui/teilen/pdfFensterZustand';
 import { planBlattPdf } from '@ui/teilen/planBlattPdf';
 import styles from '@ui/teilen/TeilenFenster.module.scss';
 import { gruppenName } from '@shared/dienstplan/plan';
 import {
+  PLAN_BLATT_STANDARD,
   planBlatt,
+  planBlattWahlAus,
   spanneLang,
   type PlanBlattQuelle,
   type PlanBlattWahl,
@@ -15,21 +18,16 @@ import {
 
 const SCHLUESSEL = 'teilen.planBlatt';
 
-/** Gemerktes lesen – nur bekannte Formen, sonst der ganze Plan. */
-function wahlAus(roh: unknown): PlanBlattWahl {
-  const r = roh as { art?: unknown; gruppe?: unknown } | null;
-  if (r?.art === 'suchen') return { art: 'suchen' };
-  if (r?.art === 'gruppe' && (typeof r.gruppe === 'number' || r.gruppe === null))
-    return { art: 'gruppe', gruppe: r.gruppe };
-  return { art: 'plan' };
-}
+/** Schlüssel einer Gruppe für die Knöpfe (`null` = „Weitere Dienste“). */
+const gruppenSchluessel = (id: number | null) => String(id ?? 'ohne');
 
 /**
- * **„Plan teilen“** (Bauplan E8-2, Entwurf `e8-teilen.html`) – aus „Planen“: der ganze Plan, nur eine Gruppe oder „Wir
- * suchen noch …“, jeweils für die Termine und Gruppen, die „Planen“ gerade zeigt. Hier gibt es nur diese eine Wahl, darum
- * keine Unterseiten; darunter die fertigen Seiten und „Herunterladen“/„Teilen“ wie bei „Termin teilen“
- * (`ui/teilen/pdfFenster.tsx`). Das Gerät merkt sich die Wahl; eine gemerkte Gruppe, die gerade ausgeblendet ist, wird
- * zum ganzen Plan.
+ * **„Plan teilen“** (Bauplan E8-2/E8-4, Entwurf `e8-4-ansichten.html`) – aus „Planen“: **was** geteilt wird (der ganze
+ * Plan oder eine Gruppe, dann mit einer Zeile der eingeblendeten Gruppen), jeweils für die Termine und Gruppen, die
+ * „Planen“ gerade zeigt. Eine Reihe „Ansicht“ kommt mit E8-4b, sobald es mehr als eine gibt. Darunter die fertigen
+ * Seiten und „Herunterladen“/„Teilen“ wie bei „Termin teilen“ (`ui/teilen/pdfFenster.tsx`). Das Gerät merkt sich die
+ * Wahl (`planBlattWahlAus` liest auch die ältere Form); eine gemerkte Gruppe, die gerade ausgeblendet ist, wird zum ganzen
+ * Plan.
  */
 export function PlanTeilenFenster({
   quelle,
@@ -40,12 +38,12 @@ export function PlanTeilenFenster({
 }) {
   const stand = useStand();
   const [gemerkt, setGemerkt] = useState<PlanBlattWahl>(() =>
-    leseImGeraet(SCHLUESSEL, { art: 'plan' }, wahlAus),
+    leseImGeraet(SCHLUESSEL, PLAN_BLATT_STANDARD, planBlattWahlAus),
   );
   const wahl: PlanBlattWahl =
-    gemerkt.art === 'gruppe' &&
+    gemerkt.was === 'gruppe' &&
     !quelle.gruppen.some((g) => (g.gruppe?.id ?? null) === gemerkt.gruppe)
-      ? { art: 'plan' }
+      ? { ...gemerkt, was: 'plan' }
       : gemerkt;
   const waehle = (w: PlanBlattWahl) => {
     setGemerkt(w);
@@ -65,19 +63,12 @@ export function PlanTeilenFenster({
 
   const tage = quelle.spalten.map((i) => quelle.plan.spalten[i].tag).sort();
   const zeitraum = tage.length > 0 ? spanneLang(tage[0], tage[tage.length - 1]) : '';
-  const optionen: { wahl: PlanBlattWahl; titel: string; klein?: string }[] = [
-    { wahl: { art: 'plan' }, titel: 'Ganzer Plan', klein: 'alle eingeblendeten Gruppen' },
-    ...quelle.gruppen.map((g, i) => ({
-      wahl: { art: 'gruppe' as const, gruppe: g.gruppe?.id ?? null },
-      titel: `Nur ${gruppenName(g)}`,
-      ...(i === 0 ? { klein: 'z. B. für den Gruppenchat' } : {}),
-    })),
-    {
-      wahl: { art: 'suchen' },
-      titel: 'Wir suchen noch …',
-      klein: 'nur offene Dienste – zum Rumschicken',
-    },
-  ];
+  const waehleWas = (was: 'plan' | 'gruppe') => {
+    if (was === wahl.was) return; // „Eine Gruppe“ noch einmal angetippt: die gewählte Gruppe bleibt
+    if (was === 'plan') return waehle({ was: 'plan', ansicht: wahl.ansicht });
+    const erste = quelle.gruppen[0]; // „Eine Gruppe“: zuerst die erste eingeblendete
+    if (erste) waehle({ was: 'gruppe', gruppe: erste.gruppe?.id ?? null, ansicht: wahl.ansicht });
+  };
 
   return (
     <Sheet
@@ -93,24 +84,36 @@ export function PlanTeilenFenster({
       }
     >
       <div className={styles.inhalt}>
-        <div className={styles.liste} role="radiogroup" aria-label="Was teilen">
-          {optionen.map((o) => (
-            <button
-              key={JSON.stringify(o.wahl)}
-              type="button"
-              role="radio"
-              aria-checked={JSON.stringify(o.wahl) === wahlText}
-              className={styles.wahl}
-              onClick={() => waehle(o.wahl)}
-            >
-              <span className={styles.punkt} aria-hidden="true" />
-              <span className={styles.text}>
-                <b>{o.titel}</b>
-                {o.klein && <small>{o.klein}</small>}
-              </span>
-            </button>
-          ))}
-        </div>
+        <div className={styles.ueber}>Was</div>
+        <Segment<'plan' | 'gruppe'>
+          verbunden
+          ariaLabel="Was teilen"
+          value={wahl.was}
+          options={[
+            { value: 'plan', label: 'Ganzer Plan' },
+            { value: 'gruppe', label: 'Eine Gruppe' },
+          ]}
+          onChange={waehleWas}
+        />
+        {wahl.was === 'gruppe' && (
+          <>
+            <div className={styles.ueber}>Gruppe</div>
+            <Segment
+              verbunden
+              ariaLabel="Welche Gruppe"
+              value={gruppenSchluessel(wahl.gruppe)}
+              options={quelle.gruppen.map((g) => ({
+                value: gruppenSchluessel(g.gruppe?.id ?? null),
+                label: gruppenName(g),
+              }))}
+              onChange={(k) => {
+                const g = quelle.gruppen.find((x) => gruppenSchluessel(x.gruppe?.id ?? null) === k);
+                if (g)
+                  waehle({ was: 'gruppe', gruppe: g.gruppe?.id ?? null, ansicht: wahl.ansicht });
+              }}
+            />
+          </>
+        )}
         <p className={styles.hinweis}>
           {zeitraum} · {quelle.spalten.length} {quelle.spalten.length === 1 ? 'Termin' : 'Termine'}{' '}
           – wie gerade in „Planen“ eingestellt.

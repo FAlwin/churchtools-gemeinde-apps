@@ -61,6 +61,10 @@ beforeEach(() => {
     'POST /api/publicgroups/66/signup': [
       { status: 200, body: { verificationNotice: false, verificationEmail: null } },
     ],
+    // F7c: „Leiter kontaktieren“ (gemessen M2: 200 „Mail(s) sent successfully“).
+    'POST /api/publicgroups/66/mailToLeaders': [
+      { status: 200, body: { data: 'Mail(s) sent successfully' } },
+    ],
   };
   vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input));
@@ -131,6 +135,9 @@ describe('Echt anmelden (A6-2)', () => {
       'POST /api/publicgroups/66/token',
       'GET /api/publicgroups/66/form',
       'POST /api/publicgroups/66/signup',
+      // F7c: danach die Team-Mail – mit eigenem Schlüssel.
+      'POST /api/publicgroups/66/token',
+      'POST /api/publicgroups/66/mailToLeaders',
     ]);
     expect(aufrufe.every((a) => a.credentials === 'omit')).toBe(true);
     const body = geschickt()[0].body as {
@@ -159,6 +166,47 @@ describe('Echt anmelden (A6-2)', () => {
     expect(screen.queryByRole('button', { name: 'Zurück zum Formular' })).toBeNull();
   });
 
+  it('F7c Team-Mail: Absender ist, wer anmeldet; die Antworten in einem Absatz', async () => {
+    await ausfuellenUndAbschicken();
+    expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
+    const team = aufrufe.find((a) => a.pfad.endsWith('/mailToLeaders'))!.body as Record<
+      string,
+      string
+    >;
+    expect(team.token).toBe('T1');
+    expect(team.name).toBe('Maria Beispiel');
+    expect(team.email).toBe('maria@beispiel.test');
+    expect(team.message).toMatch(
+      /^Anmelde-Nr\. [A-Z0-9]{6} \| Telefon: 0151 111 \| Jonas Beispiel \(Platz\)$/,
+    );
+  });
+
+  it('F7c Team-Mail aus: kein „Leiter kontaktieren“', async () => {
+    const e = { ...einstellungen(), teamMail: { an: false, text: '', ohne: [] } };
+    antworten['GET /api/publicgroups/66'] = [
+      {
+        status: 200,
+        body: {
+          data: {
+            ...GRUPPE,
+            information: { ...GRUPPE.information, note: einstellungenAlsText(e) },
+          },
+        },
+      },
+    ];
+    await ausfuellenUndAbschicken();
+    expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
+    expect(aufrufe.some((a) => a.pfad.endsWith('/mailToLeaders'))).toBe(false);
+  });
+
+  it('F7c Team-Mail scheitert (keine Leitung mit Mail-Adresse → 500): die Anmeldung steht trotzdem', async () => {
+    antworten['POST /api/publicgroups/66/mailToLeaders'] = [{ status: 500 }];
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await ausfuellenUndAbschicken();
+    expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
+    expect(console.warn).toHaveBeenCalledWith('Team-Mail nicht verschickt', expect.anything());
+  });
+
   it('schon bekannt → „Fast geschafft“, bitte per Mail bestätigen', async () => {
     antworten['POST /api/publicgroups/66/signup'] = [
       { status: 200, body: { verificationNotice: true, verificationEmail: 'maria@beispiel.test' } },
@@ -168,6 +216,12 @@ describe('Echt anmelden (A6-2)', () => {
     expect(screen.getByText(/bestätige die Anmeldung über den Link/).textContent).toMatch(
       /maria@beispiel\.test/,
     );
+    // F7c (Klick-Runde 12): Die Team-Mail geht trotzdem sofort raus – mit Vermerk.
+    const team = aufrufe.find((x) => x.pfad.endsWith('/mailToLeaders'))!.body as {
+      message: string;
+    };
+    expect(team.message).toContain('Jonas Beispiel (muss die Anmeldung noch per Mail bestätigen)');
+    expect(team.message).toContain('Die Person muss ihre Anmeldung noch per Mail bestätigen');
   });
 
   it('vorübergehend (503 beim Anmelden) → Meldung, Eingaben bleiben, zweiter Klick schickt erneut', async () => {

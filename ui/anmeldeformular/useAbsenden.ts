@@ -5,6 +5,7 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import {
+  kontaktVon,
   neueAnmeldeNr,
   personenNamen,
   type Abgeschickt,
@@ -145,7 +146,7 @@ export function useAbsenden({
           name,
           ergebnis: 'angemeldet',
         })),
-        mail: typeof antworten.anmeldung.mail === 'string' ? antworten.anmeldung.mail : '',
+        mail: kontaktVon(e, antworten).mail,
       });
       return;
     }

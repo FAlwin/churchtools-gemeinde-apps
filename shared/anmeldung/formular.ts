@@ -622,6 +622,21 @@ export interface TabellenWahl {
 /** Name von Schritt 1, solange keiner eingetragen ist (Klick-Runde 8). */
 export const ERSTER_SCHRITT = 'Deine Angaben';
 
+/** Höchstlänge des eigenen Texts der Team-Mail (F7c) – er steht in den Einstellungen (Beschreibung der Gruppe). */
+export const TEAM_TEXT_MAX = 500;
+
+/**
+ * **Die Team-Mail** (F7c, Entwurf `f7-mails-v1`, Klick-Runden 11/12): Nach dem Absenden schickt das Formular über
+ * „Leiter kontaktieren“ (`mailToLeaders`, gemessen M2) eine Mail an alle Leiter der Gruppe. `text`: eigener Text mit
+ * `[Frage]`, das Formular füllt ihn selbst. `ohne`: Fragen (IDs), deren Antworten nicht mitkommen – neue Fragen sind so
+ * von selbst dabei. Fehlt die Einstellung: an, ohne eigenen Text, alle Antworten (Alwin: Standard an).
+ */
+export interface TeamMailEinstellung {
+  an: boolean;
+  text: string;
+  ohne: string[];
+}
+
 export interface OeffentlicheEinstellungen {
   /** `null`, solange ein Entwurf noch kein Datum hat. */
   termin: TerminAngabe | null;
@@ -641,6 +656,8 @@ export interface OeffentlicheEinstellungen {
    * eingeschaltet sind (hält die Einstellungen kurz). Die Routine dazu baut `erinnerungen` in `ablaeufe.ts`.
    */
   erinnerungTage?: number[];
+  /** F7c: die Team-Mail – fehlt = an, ohne eigenen Text, alle Antworten (`TeamMailEinstellung`). */
+  teamMail?: TeamMailEinstellung;
   /**
    * **Name von Schritt 1** (F2, Klick-Runde 8): Sobald das Formular Schritte hat, steht oben der feste Balken
    * „Schritt 1“ – sein Name steht hier (die übrigen Schritte tragen ihren Namen am Baustein). Fehlt = `ERSTER_SCHRITT`.
@@ -849,6 +866,14 @@ const einstellungenSchema = z.object({
   loeschfristMonate: z.number().int().min(1).max(36).default(3),
   // Seit A9-3b: nur, wenn Erinnerungen eingeschaltet sind.
   erinnerungTage: z.array(z.number().int().min(1).max(30)).max(3).optional(),
+  // Seit F7c: nur, wenn die Leitung die Team-Mail angepasst hat.
+  teamMail: z
+    .object({
+      an: z.boolean(),
+      text: z.string().max(TEAM_TEXT_MAX),
+      ohne: z.array(z.string()).max(FELDER_MAX * 2),
+    })
+    .optional(),
   // Seit F2a: der Name von Schritt 1 (nur bei Formularen mit Schritten).
   ersterSchritt: z.string().max(60).optional(),
   // Seit K1: nur, nachdem der Termin aus dem Kalender nachgezogen wurde.

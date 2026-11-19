@@ -29,6 +29,10 @@ import { aendereEinstellungen, leitungsKandidaten } from './einrichten';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
 import { ErinnerungWahl } from './ErinnerungWahl';
 import { ZweiteMailWahl } from './ZweiteMailWahl';
+import { TeamMailWahl } from './TeamMailWahl';
+import { TEAM_STANDARD, teamMailText, teamMailVon } from '@shared/anmeldung/teamMail';
+import { htmlSicher } from '@shared/anmeldung/rundmail';
+import type { TeamMailEinstellung } from '@shared/anmeldung/formular';
 import { entwurfAus, zweiteAusEntwurf, type ZweiteEntwurf } from './zweiteEntwurf';
 import { loeschDatum } from '@shared/anmeldung/termin';
 import { vorschauLaden } from './rundmail';
@@ -65,13 +69,14 @@ export function MailsFenster({
   onClose: () => void;
   onGespeichert: (text: string) => void;
 }) {
-  const [art, setArt] = useState<MailArt | 'zweite'>('platz');
+  const [art, setArt] = useState<MailArt | 'zweite' | 'team'>('platz');
   const [texte, setTexte] = useState<Record<MailArt, EigenerText>>(stand.eigen);
   const [tage, setTage] = useState<(number | null)[]>(e.erinnerungTage ?? []);
   const [absender, setAbsender] = useState<number | null>(stand.absenderId);
   const [qr, setQr] = useState(stand.qr);
   const [zweiteEntwurf, setZweiteEntwurf] = useState<ZweiteEntwurf>(() => entwurfAus(stand.zweite));
   const zweite = zweiteAusEntwurf(zweiteEntwurf);
+  const [team, setTeam] = useState<TeamMailEinstellung>(() => teamMailVon(e));
   const leitungStand = useLaden(
     () => leitungsKandidaten(id).then((k) => k.filter((x) => x.leitung)),
     [id],
@@ -87,11 +92,15 @@ export function MailsFenster({
   // Lässt sich die Leitung nicht laden, steht es unten – wie ein Fehler beim Speichern.
   const fehler = eigenerFehler ?? (leitungStand.art === 'fehler' ? leitungStand.fehler.text : null);
 
-  // Im Reiter „Zweite Mail“ gibt es keinen eigenen Absatz – `t` ist dort nur ein Platzhalter.
-  const t = art === 'zweite' ? texte.platz : texte[art];
+  // In den Reitern „Zweite Mail“ und „Team-Mail“ gibt es keinen eigenen Absatz – `t` ist dort nur ein Platzhalter.
+  const t = art === 'zweite' || art === 'team' ? texte.platz : texte[art];
   const aendern = (teil: Partial<EigenerText>) => {
-    if (art === 'zweite') return;
+    if (art === 'zweite' || art === 'team') return;
     setTexte((alt) => ({ ...alt, [art]: { ...alt[art], ...teil } }));
+    setVorschau(null);
+  };
+  const aendernTeam = (teil: Partial<TeamMailEinstellung>) => {
+    setTeam((alt) => ({ ...alt, ...teil }));
     setVorschau(null);
   };
   const aendernZweite = (teil: Partial<ZweiteEntwurf>) => {
@@ -117,6 +126,8 @@ export function MailsFenster({
     )?.length ?? 0;
   const tageGeaendert =
     JSON.stringify([...tage].sort()) !== JSON.stringify([...(e.erinnerungTage ?? [])].sort());
+  // F7c: Die Team-Mail steht in den Einstellungen (das Formular schickt sie) – der Standard wird nicht hineingeschrieben.
+  const teamGeaendert = JSON.stringify(team) !== JSON.stringify(teamMailVon(e));
   // Wer nicht (mehr) zur Leitung gehört, bleibt wählbar, bis jemand anderes gewählt ist.
   const auswahl = useMemo(() => {
     const l = leitung ?? [];
@@ -126,6 +137,22 @@ export function MailsFenster({
   }, [leitung, absender, stand.absender]);
 
   async function zeigeVorschau() {
+    // F7c: Die Team-Mail baut das Formular selbst – die Vorschau zeigt ihren Text mit „…“ statt Antworten.
+    if (art === 'team') {
+      const text = teamMailText(
+        { ...e, teamMail: team },
+        { anmeldung: {}, personen: [{}] },
+        [{ index: 0, name: 'Vorname Nachname', ergebnis: 'angemeldet' }],
+        'ABC234',
+        () => '…',
+      );
+      setVorschau({
+        betreff: `Formularanfrage zur Gruppe ${veranstaltung}`,
+        html: `<p style="font-family:sans-serif">${htmlSicher(text)}</p>`,
+        echt: true,
+      });
+      return;
+    }
     if (absender === null) return;
     setArbeitet(true);
     setFehler(null);
@@ -157,11 +184,18 @@ export function MailsFenster({
     try {
       // Erst die Tage (die Routine liest sie aus den Einstellungen), dann die Routinen. Scheitert das Zweite, zieht der
       // Abgleich beim nächsten Öffnen nach.
-      if (tageGeaendert)
+      if (tageGeaendert || teamGeaendert)
         await aendereEinstellungen(id, (x) => {
-          const { erinnerungTage: _alt, ...rest } = x;
+          const { erinnerungTage: _alt, teamMail: _team, ...rest } = x;
           const neu = tage.filter((n): n is number => n !== null);
-          return neu.length ? { ...rest, erinnerungTage: neu } : rest;
+          const teamMail = teamGeaendert ? team : x.teamMail;
+          return {
+            ...rest,
+            ...(neu.length ? { erinnerungTage: neu } : {}),
+            ...(teamMail && JSON.stringify(teamMail) !== JSON.stringify(TEAM_STANDARD)
+              ? { teamMail }
+              : {}),
+          };
         });
       await ablaeufeEinrichten(id, absender, { ...texte, zweite }, qr);
       onGespeichert('Mails gespeichert.');
@@ -190,7 +224,7 @@ export function MailsFenster({
         ChurchTools verschickt sie von selbst. Termin, Betrag, Bankdaten, der Link zu „Deine
         Anmeldung“ und der Kontakt kommen aus den Karten – hier steht, was ihr dazuschreibt.
       </p>
-      <Segment<MailArt | 'zweite'>
+      <Segment<MailArt | 'zweite' | 'team'>
         value={art}
         className={a.mailReiter}
         ariaLabel="Welche Mail"
@@ -199,6 +233,7 @@ export function MailsFenster({
           { value: 'warte', label: 'Warteliste' },
           { value: 'erinnerung', label: 'Erinnerung' },
           { value: 'zweite', label: 'Zweite Mail' },
+          { value: 'team', label: 'Team-Mail' },
         ]}
         onChange={(x) => {
           setArt(x);
@@ -212,8 +247,19 @@ export function MailsFenster({
             ? 'Kommt, wenn jemand auf die Warteliste kommt – mit dem Platz auf der Warteliste.'
             : art === 'zweite'
               ? 'Eine weitere Mail mit eigenem Betreff und Text – gleich nach der Bestätigung, ein paar Tage später oder an einem bestimmten Tag.'
-              : 'Kommt vor dem Termin an jede Person mit Platz – nicht an Wartende. Mit Datum, Ort und Link.'}
+              : art === 'team'
+                ? 'Sagt dem Team Bescheid, sobald sich jemand anmeldet – mit den Antworten. Das Formular schickt sie selbst.'
+                : 'Kommt vor dem Termin an jede Person mit Platz – nicht an Wartende. Mit Datum, Ort und Link.'}
       </p>
+      {art === 'team' && (
+        <TeamMailWahl
+          wert={team}
+          onWert={aendernTeam}
+          e={e}
+          veranstaltung={veranstaltung}
+          leitung={leitung && leitung.map((x) => x.name)}
+        />
+      )}
       {art === 'zweite' && (
         <>
           <ZweiteMailWahl
@@ -241,7 +287,7 @@ export function MailsFenster({
           heute={heute}
         />
       )}
-      {art !== 'zweite' && (art !== 'erinnerung' || tage.length > 0) && (
+      {art !== 'zweite' && art !== 'team' && (art !== 'erinnerung' || tage.length > 0) && (
         <>
           <label className={f.feld}>
             <span>Betreff</span>
@@ -334,26 +380,31 @@ export function MailsFenster({
           </p>
         </>
       )}
-      <label className={f.feld}>
-        <span>Absender</span>
-        <select
-          className={f.eingabe}
-          value={absender ?? ''}
-          disabled={leitung === null}
-          onChange={(ev) => setAbsender(Number(ev.target.value))}
-        >
-          {leitung === null && <option value={absender ?? ''}>Wird geladen …</option>}
-          {auswahl.map((x) => (
-            <option key={x.personId} value={x.personId}>
-              {x.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className={a.leise}>
-        Erscheint als „Name &lt;noreply@churchtools.de&gt;“ – Antworten gehen an diese Person. Zur
-        Wahl steht die Leitung der Veranstaltung.
-      </p>
+      {/* Die Team-Mail hat keinen Absender – sie kommt von der Person, die anmeldet. */}
+      {art !== 'team' && (
+        <>
+          <label className={f.feld}>
+            <span>Absender</span>
+            <select
+              className={f.eingabe}
+              value={absender ?? ''}
+              disabled={leitung === null}
+              onChange={(ev) => setAbsender(Number(ev.target.value))}
+            >
+              {leitung === null && <option value={absender ?? ''}>Wird geladen …</option>}
+              {auswahl.map((x) => (
+                <option key={x.personId} value={x.personId}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className={a.leise}>
+            Erscheint als „Name &lt;noreply@churchtools.de&gt;“ – Antworten gehen an diese Person.
+            Zur Wahl steht die Leitung der Veranstaltung.
+          </p>
+        </>
+      )}
       {vorschau ? (
         <div className={a.mail}>
           <div className={a.mailKopf}>
@@ -381,7 +432,11 @@ export function MailsFenster({
           />
         </div>
       ) : (
-        (art === 'zweite' ? zweiteEntwurf.an : art !== 'erinnerung' || tage.length > 0) && (
+        (art === 'zweite'
+          ? zweiteEntwurf.an
+          : art === 'team'
+            ? team.an
+            : art !== 'erinnerung' || tage.length > 0) && (
           <button
             type="button"
             className={a.linkKnopf}

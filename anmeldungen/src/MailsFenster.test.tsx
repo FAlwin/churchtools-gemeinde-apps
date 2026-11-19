@@ -445,3 +445,78 @@ describe('MailsFenster – zweite Mail (F7b)', () => {
     expect(await speichern()).toBeNull();
   });
 });
+
+describe('MailsFenster – Team-Mail (F7c)', () => {
+  const reiter = () => fireEvent.click(screen.getByRole('button', { name: 'Team-Mail' }));
+  const mitFragen = () => {
+    const e = neueEinstellungen('kinder');
+    return e;
+  };
+  const speichern = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+  };
+  /** Was `aendereEinstellungen` aus den Einstellungen `e` macht. */
+  const geschrieben = (e: ReturnType<typeof mitFragen>) =>
+    ei.aendereEinstellungen.mock.calls[0][1](e);
+
+  it('Standard an: an wen, Betreff von ChurchTools; kein Absender; ohne Änderung wird nichts in die Einstellungen geschrieben', async () => {
+    const e = mitFragen();
+    zeigen(STAND, e);
+    // Den Absender braucht das Speichern – erst laden lassen, dann in den Reiter.
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    reiter();
+    expect(
+      screen
+        .getByRole('button', { name: 'Team-Mail bei jeder Anmeldung' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.getByText(/Anna Leitung, Ben Leitung/)).toBeTruthy();
+    expect(screen.getByText(/Formularanfrage zur Gruppe Kinderfreizeit/)).toBeTruthy();
+    expect(
+      screen.getByText(/Antwort einfügen – das Formular füllt sie aus der Anmeldung/),
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Absender' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+  });
+
+  it('Text mit „Antwort einfügen“ und abgewählte Antworten → in die Einstellungen; Vorschau zeigt den Absatz', async () => {
+    const e = mitFragen();
+    zeigen(STAND, e);
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    reiter();
+    fireEvent.change(feld('Eigener Text (freiwillig)'), { target: { value: 'Neu: ' } });
+    feld('Eigener Text (freiwillig)').setSelectionRange(5, 5);
+    fireEvent.click(screen.getByRole('button', { name: '[Anmelde-Nr.]' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Allergien oder Unverträglichkeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    const rahmen = await screen.findByTitle<HTMLIFrameElement>('Vorschau der Mail');
+    expect(rahmen.getAttribute('srcdoc')).toContain('Neu: ABC234 | Anmelde-Nr. ABC234');
+    expect(rahmen.getAttribute('srcdoc')).not.toContain('Allergien');
+    expect(ru.vorschauLaden).not.toHaveBeenCalled();
+    await speichern();
+    expect(geschrieben(e).teamMail).toEqual({
+      an: true,
+      text: 'Neu: [Anmelde-Nr.]',
+      ohne: ['allergy'],
+    });
+  });
+
+  it('ausschalten → „an: false“ steht in den Einstellungen; wieder Standard → Feld fällt weg', async () => {
+    const e = { ...mitFragen(), teamMail: { an: false, text: '', ohne: [] } };
+    zeigen(STAND, e);
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    reiter();
+    expect(
+      screen.getByText('Aus – neue Anmeldungen seht ihr nur in der Erweiterung.'),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Team-Mail bei jeder Anmeldung' }));
+    await speichern();
+    expect(geschrieben(e)).not.toHaveProperty('teamMail');
+  });
+});

@@ -157,6 +157,23 @@ export function personenNamen(e: OeffentlicheEinstellungen, a: Antworten): strin
 }
 
 /**
+ * **Wer anmeldet** – Name und Mail-Adresse aus den Kontakt-Fragen (`name`, `email`). Die EINE Stelle für die Anmeldung
+ * selbst und die Team-Mail (F7c: Absender von „Leiter kontaktieren“, Antworten gehen an diese Adresse).
+ */
+export function kontaktVon(
+  e: OeffentlicheEinstellungen,
+  a: Antworten,
+): { vor: string; nach: string; mail: string } {
+  const kontaktFeld = e.formular.anmeldung.find((f) => f.typ === 'name');
+  const mailFeld = e.formular.anmeldung.find((f) => f.typ === 'email');
+  const w = mailFeld ? a.anmeldung[mailFeld.id] : undefined;
+  return {
+    ...nameVon(kontaktFeld ? a.anmeldung[kontaktFeld.id] : undefined),
+    mail: typeof w === 'string' ? w.trim() : '',
+  };
+}
+
+/**
  * **Was je Person herauskam** (#602 – jede Person wird einzeln angemeldet): angemeldet, auf der Warteliste, schon
  * bekannt (per Mail bestätigen), ausgebucht (voll, keine Warteliste – nichts geschickt) oder offen (Fehler, „Noch
  * einmal“ schickt sie erneut).
@@ -317,11 +334,7 @@ export function anmeldungAufbauen(
   };
   const datenschutz = ct.form.find((x) => x.type === 'privacy');
 
-  const kontaktFeld = e.formular.anmeldung.find((f) => f.typ === 'name');
-  const mailFeld = e.formular.anmeldung.find((f) => f.typ === 'email');
-  const kontakt = nameVon(kontaktFeld ? a.anmeldung[kontaktFeld.id] : undefined);
-  const mailWert = mailFeld ? a.anmeldung[mailFeld.id] : undefined;
-  const mail = typeof mailWert === 'string' ? mailWert.trim() : '';
+  const { mail, ...kontakt } = kontaktVon(e, a);
   const namePerson = e.formular.person.find((f) => f.typ === 'name');
 
   // Wer unterschreibt: die erste erziehungsberechtigte Person, sonst der Kontakt.

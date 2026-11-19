@@ -63,6 +63,8 @@ describe('Erfolg und Auftrag', () => {
         subject: 'Betreff',
         body: 'Hallo Anna Gans',
         sendCopyToMe: false,
+        appendAgendaButton: false,
+        files: [],
       },
       {
         eventIds: [2],
@@ -70,6 +72,8 @@ describe('Erfolg und Auftrag', () => {
         subject: 'Betreff',
         body: 'Hallo Ben Kunz',
         sendCopyToMe: false,
+        appendAgendaButton: false,
+        files: [],
       },
       {
         eventIds: [1, 2, 3],
@@ -77,6 +81,8 @@ describe('Erfolg und Auftrag', () => {
         subject: 'Betreff',
         body: 'Hallo Clara Neu',
         sendCopyToMe: false,
+        appendAgendaButton: false,
+        files: [],
       },
     ]);
     expect([5, 8, 11].map((id) => art(lauf, id))).toEqual([

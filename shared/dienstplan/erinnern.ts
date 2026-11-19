@@ -237,9 +237,18 @@ export function htmlText(t: string): string {
 export const terminZeile = (t: OffenerTermin): string =>
   `${tagKurz(t.tag)} · ${t.name} · ${t.uhrzeit} Uhr`;
 
-/** „So, 06.12., Mi, 09.12.“ – die kurze Form im Fenster (Tag ohne Titel). */
+/**
+ * „So, 06.12. · Mi, 09.12.“ – die kurze Form im Fenster (Tag ohne Titel). Liegen zwei Termine am selben Tag (9 und 10:30 Uhr),
+ * steht die Uhrzeit dabei – sonst stünde „So, 06.12. · So, 06.12.“ da (Probe Test-Instanz 19.11.2026).
+ */
 export const offenKurz = (termine: readonly OffenerTermin[]): string =>
-  termine.map((t) => tagKurz(t.tag)).join(' · ');
+  termine
+    .map((t) =>
+      termine.some((u) => u !== t && u.tag === t.tag)
+        ? `${tagKurz(t.tag)} ${t.uhrzeit}`
+        : tagKurz(t.tag),
+    )
+    .join(' · ');
 
 /**
  * Der Knopf in der Mail – **inline gestylt** (Mailprogramme kennen kein CSS der App), wie in der Probe vom 19.11.2026.

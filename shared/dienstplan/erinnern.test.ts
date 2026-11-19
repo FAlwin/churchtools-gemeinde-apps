@@ -10,6 +10,7 @@ import {
   gruppeGrund,
   htmlText,
   mailInhalt,
+  offenKurz,
   terminZeile,
   vorname,
   type Fehlende,
@@ -438,5 +439,28 @@ describe('Die Mail', () => {
     );
     expect(betreffAus('  ')).toBe('Wann kannst du? Bitte trag dich im Dienstplaner ein');
     expect(betreffAus(' Hallo ')).toBe('Hallo');
+  });
+});
+
+describe('offenKurz – die kurze Terminliste im Fenster', () => {
+  const t = (terminId: number, tag: string, uhrzeit: string) => ({
+    terminId,
+    tag,
+    name: 'GD',
+    uhrzeit,
+  });
+  it('ein Termin je Tag: nur der Tag', () => {
+    expect(offenKurz([t(1, '2026-12-06', '10:00'), t(2, '2026-12-13', '10:00')])).toBe(
+      'So, 06.12. · So, 13.12.',
+    );
+  });
+  it('zwei Termine am selben Tag: mit Uhrzeit (sonst „So, 06.12. · So, 06.12.“, Probe 19.11.)', () => {
+    expect(
+      offenKurz([
+        t(1, '2026-12-06', '09:00'),
+        t(2, '2026-12-06', '10:30'),
+        t(3, '2026-12-13', '10:00'),
+      ]),
+    ).toBe('So, 06.12. 09:00 · So, 06.12. 10:30 · So, 13.12.');
   });
 });

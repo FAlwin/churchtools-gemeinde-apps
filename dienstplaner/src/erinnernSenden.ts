@@ -28,6 +28,12 @@ export interface MailAuftrag {
   /** HTML. */
   body: string;
   sendCopyToMe: boolean;
+  /**
+   * **Pflichtfelder von ChurchTools** (Probe 19.11.2026, Test-Instanz: ohne sie **400** „validation.error“ –
+   * `appendAgendaButton` „muss TRUE oder FALSE sein“, `files` „muss ein Array sein“). Kein Ablauf-Knopf, keine Anhänge.
+   */
+  appendAgendaButton: false;
+  files: [];
 }
 
 /** Schickt einen Auftrag und liefert den Rumpf der Antwort (`ctAnfrage`); wirft `ApiError` oder einen Netzfehler. */
@@ -132,6 +138,8 @@ export async function erinnernSenden(o: {
         subject,
         body,
         sendCopyToMe: !lauf.kopieAngefordert,
+        appendAgendaButton: false,
+        files: [],
       });
       const { gesendet, abgelehnt } = listenAus(rumpf);
       if (gesendet.has(e.personId)) {

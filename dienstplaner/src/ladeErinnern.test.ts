@@ -24,6 +24,8 @@ describe('ctMailSenden', () => {
       subject: 'Betreff',
       body: '<p>Hallo</p>',
       sendCopyToMe: false,
+      appendAgendaButton: false as const,
+      files: [] as [],
     };
     anfrage.mockResolvedValueOnce({ data: { sentRecipientIds: [5] } });
     await expect(ctMailSenden(auftrag)).resolves.toEqual({ data: { sentRecipientIds: [5] } });

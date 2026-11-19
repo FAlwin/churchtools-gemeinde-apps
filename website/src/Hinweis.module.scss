@@ -1,0 +1,26 @@
+// Eine ruhige Hinweiskarte (Bauplan Website W3a-1) – wie die Karten der anderen Erweiterungen.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  p {
+    font-size: 14.5px;
+    color: var(--text);
+  }
+
+  // Nach `p`, damit die ruhigere Farbe gewinnt (gleiche Tiefe, spätere Regel).
+  .leise {
+    color: var(--text2);
+  }
+}

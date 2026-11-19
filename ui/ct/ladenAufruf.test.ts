@@ -13,6 +13,7 @@ const UMGESTELLT = [
   'ui',
   'organigramm/src',
   'gebetsabend/src',
+  'website/src',
   'protokolle/src',
   'anmeldungen/src',
   'dienstplaner/src',

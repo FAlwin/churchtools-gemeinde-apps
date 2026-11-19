@@ -101,6 +101,7 @@ describe('Fenster im ChurchTools-Aufbau (E6-O)', () => {
         'organigramm/src',
         'protokolle/src',
         'gebetsabend/src',
+        'website/src',
         'ui',
       ]),
     );

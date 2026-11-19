@@ -30,6 +30,7 @@ export const APPS = {
   organigramm: /Organigramm/,
   protokolle: /Protokolle/,
   gebetsabend: /Gebetsabend/,
+  website: /Website/,
 };
 const ALLE = /alle Apps|alle Erweiterungen|gemeinsam/;
 
@@ -58,7 +59,7 @@ export function ueberschriftFehler(kopf) {
   if (!(art in GEZEIGT))
     return `„${kopf}“: Art „${art}“ unbekannt – erlaubt sind ${[...Object.keys(GEZEIGT), ...NUR_INTERN].join(', ')}`;
   if (!Object.values(APPS).some((r) => r.test(zusatz)) && !ALLE.test(zusatz))
-    return `„${kopf}“: In der Klammer fehlt die App (Musik-App, Dienstplaner, Anmeldungen, Organigramm, Protokolle, Gebetsabend – oder „alle Apps“), sonst landet der Eintrag in keiner Release-Beschreibung`;
+    return `„${kopf}“: In der Klammer fehlt die App (Musik-App, Dienstplaner, Anmeldungen, Organigramm, Protokolle, Gebetsabend, Website – oder „alle Apps“), sonst landet der Eintrag in keiner Release-Beschreibung`;
   return null;
 }
 

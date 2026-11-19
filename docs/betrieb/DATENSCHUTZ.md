@@ -18,6 +18,7 @@
 | Protokolle            | nein                             | keine (KI nur von Hand über die Zwischenablage)  | keine                                                  |
 | Organigramm           | nein                             | keine                                            | keine                                                  |
 | Gebetsabend           | nein                             | **VDO.Ninja** (iframe: Video/Audio, Zuhörername) | VDO.Ninja                                              |
+| Website (im Aufbau)   | nein                             | keine (Vorschau lädt nichts nach)                | keine                                                  |
 
 Für alle Erweiterungen gilt:
 
@@ -264,3 +265,23 @@ Namen enthalten.
   Das muss vor einer Store-Angabe bei VDO.Ninja nachgelesen werden.
 
 **Im Browser:** nichts gespeichert.
+
+## Website (im Aufbau, W3a-1)
+
+**Daten in ChurchTools**
+
+- Lesen: eigene Person und deren Gruppen (Name, Mitgliedschaften, Rollen – nur um zu wissen, ob jemand die Gruppe „Website“
+  leitet), globale Rechte (`administer groups`), die Liste der Gruppen (nur beim Einrichten durch einen Admin).
+- Erweiterungs-Speicher (`shared/website/speicher.ts`): Kategorien „Website: Entwürfe · <Gruppe>“ und „Website: Veröffentlicht ·
+  <Gruppe>“ – Seiten, Menü und Einstellungen der Website (Texte der Gemeinde, **keine Personendaten**; ob Personennamen auf einer
+  Seite stehen, entscheidet die Gemeinde mit ihren Texten). Wer lesen darf, bestimmen die Rechte an den Kategorien.
+
+**Fremddienste:** keine. Die Vorschau ist ein abgeschottetes `iframe` (`sandbox="allow-scripts"`, kein `allow-same-origin`,
+`website/src/vorschauHtml.ts`); Stylesheet und Platzhalter-Bild stecken als `data:`-Adressen im Dokument, Schriften werden in der
+Vorschau nicht geladen. Der Baustein „Eigenes HTML“ (nur Leitung) läuft dort ohne Zugriff auf ChurchTools.
+
+**Im Browser:** nichts gespeichert.
+
+**Später (nicht in W3a-1):** Der Bau-Dienst liest die Kategorie „Veröffentlicht“ mit einem eigenen ChurchTools-Benutzer und
+legt fertige Seiten auf dem Webspace der Gemeinde ab; YouTube nur mit Einwilligung der Besucher. Diese Seite wird dann mit dem
+Bau-Dienst ergänzt.

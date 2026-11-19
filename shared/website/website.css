@@ -1,0 +1,1344 @@
+/* ============================================================================================
+   Website – gemeinsames Stylesheet (W3a-1, 20.11.2026)
+   Aus dem abgenommenen Entwurf W2/W3 (v1). EIN Stylesheet für alle Gemeinden: Farben und Schriften
+   kommen ausschließlich aus den Variablen in :root – die setzt das Theme jeder Seite
+   (`shared/website/theme.ts`, aus den Einstellungen der Gemeinde) NACH diesem Stylesheet. Die Werte
+   unten sind nur die neutrale Vorgabe (`NEUTRALE_FARBEN`, Systemschrift); nichts davon gehört einer
+   bestimmten Gemeinde. Die Schriftdateien (Regeln für geladene Schriften) liefert ebenfalls das Theme, nie dieses Blatt.
+   Wer eine Klasse im Renderer (`shared/website/render.ts`) ergänzt, ergänzt sie hier –
+   `stylesheet.test.ts` prüft, dass keine Klasse ohne Regel ausgegeben wird.
+   ============================================================================================ */
+
+:root {
+  /* — Vorgabe, bis das Theme die Einstellungen der Gemeinde setzt — */
+  --farbe-haupt: #24476b;
+  --farbe-haupt-tief: #1a3350;
+  --farbe-akzent: #d97706;
+  --farbe-grund: #ffffff;
+  --farbe-sanft: #e8edf2;
+  --farbe-text: #1a1a1a;
+  --schrift-text: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --schrift-ueberschrift: var(--schrift-text);
+  --schrift-akzent: var(--schrift-ueberschrift);
+
+  /* — abgeleitet, nicht einstellbar — */
+  --text-weich: color-mix(in srgb, var(--farbe-text) 72%, transparent);
+  --linie: color-mix(in srgb, var(--farbe-text) 14%, transparent);
+  --sanft-hell: color-mix(in srgb, var(--farbe-sanft) 45%, var(--farbe-grund));
+  --rand: clamp(1rem, 4vw, 2.5rem);
+  --breite: 72rem;
+  --radius: 0.375rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 7rem; /* fester Kopf verdeckt sonst den Anfang beim Springen */
+}
+body {
+  margin: 0;
+  background: var(--farbe-grund);
+  color: var(--farbe-text);
+  font-family: var(--schrift-text);
+  font-weight: 500;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+a {
+  color: var(--farbe-haupt);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 0.08em;
+}
+a:hover {
+  color: var(--farbe-akzent);
+}
+:focus-visible {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 3px;
+}
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.6em;
+  text-wrap: balance;
+}
+h1 {
+  font-size: clamp(2.25rem, 5.5vw, 3.75rem);
+}
+h2 {
+  font-size: clamp(1.75rem, 3.6vw, 2.5rem);
+}
+h3 {
+  font-size: 1.3rem;
+}
+p {
+  margin: 0 0 1em;
+}
+
+/* Handschrift-Akzent („Herzlich willkommen“) – sparsam, eine Zeile je Abschnitt */
+.w-akzent {
+  display: block;
+  font-family: var(--schrift-akzent);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1;
+  color: var(--farbe-akzent);
+  transform: rotate(-2deg);
+  transform-origin: left bottom;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0;
+}
+.w-zentriert .w-akzent {
+  transform-origin: center bottom;
+}
+.w-punkt {
+  color: var(--farbe-akzent);
+}
+
+.w-sprungmarke {
+  position: absolute;
+  left: -999px;
+}
+.w-sprungmarke:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 10;
+  background: var(--farbe-grund);
+  padding: 0.5rem 1rem;
+}
+
+/* ── Kopf ───────────────────────────────────────────────────────────────────────────────── */
+
+.w-kopf {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: color-mix(in srgb, var(--farbe-grund) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--linie);
+}
+.w-kopf-innen {
+  max-width: var(--breite);
+  margin: 0 auto;
+  padding: 0.75rem var(--rand);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.w-logo img {
+  height: clamp(3rem, 6vw, 4.25rem);
+  width: auto;
+}
+.w-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 0.25rem;
+}
+.w-nav a {
+  display: block;
+  padding: 0.5rem 0.85rem;
+  color: var(--farbe-text);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: var(--radius);
+}
+.w-nav a:hover {
+  color: var(--farbe-haupt);
+  background: var(--sanft-hell);
+}
+.w-nav a[aria-current='page'] {
+  color: var(--farbe-haupt);
+  box-shadow: inset 0 -3px 0 var(--farbe-akzent);
+  border-radius: 0;
+}
+.w-menue-knopf {
+  display: none;
+}
+
+/* Handy: Menü hinter einem Knopf (braucht das kleine Skript; ohne Skript bleibt das Menü sichtbar) */
+@media (max-width: 52rem) {
+  .js .w-menue-knopf {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--farbe-haupt);
+    background: none;
+    padding: 0.5rem 0.85rem;
+    border: 2px solid var(--farbe-haupt);
+    border-radius: var(--radius);
+  }
+  .w-menue-knopf::before {
+    content: '';
+    width: 1.1rem;
+    height: 0.75rem;
+    background:
+      linear-gradient(currentColor 0 0) top / 100% 2px no-repeat,
+      linear-gradient(currentColor 0 0) center / 100% 2px no-repeat,
+      linear-gradient(currentColor 0 0) bottom / 100% 2px no-repeat;
+  }
+  .js .w-nav:not(.w-offen) {
+    display: none;
+  }
+  .js .w-nav {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: var(--farbe-grund);
+    border-bottom: 1px solid var(--linie);
+    padding: 0.25rem var(--rand) 1.25rem;
+    box-shadow: 0 1rem 2rem color-mix(in srgb, var(--farbe-text) 12%, transparent);
+  }
+  .js .w-nav ul {
+    flex-direction: column;
+  }
+  .js .w-nav a {
+    padding: 0.85rem 0.25rem;
+    font-size: 1.15rem;
+    border-bottom: 1px solid var(--linie);
+    border-radius: 0;
+  }
+  .js .w-nav a[aria-current='page'] {
+    box-shadow: inset 3px 0 0 var(--farbe-akzent);
+    padding-left: 0.75rem;
+  }
+  .w-nav ul {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Abschnitte (E-W11) ─────────────────────────────────────────────────────────────────────
+   Jeder Abschnitt: Hintergrund (grund | sanft | haupt | foto), Abstand (klein | normal | gross),
+   Breite (schmal | normal | breit | voll). Text hell/dunkel folgt aus dem Hintergrund.        */
+
+.w-abschnitt {
+  --abstand: clamp(3rem, 7vw, 5.5rem);
+  padding: var(--abstand) var(--rand);
+  position: relative;
+}
+.w-abschnitt-innen {
+  max-width: var(--breite);
+  margin: 0 auto;
+}
+.w-abschnitt--schmal .w-abschnitt-innen {
+  max-width: 44rem;
+}
+.w-abschnitt--breit .w-abschnitt-innen {
+  max-width: 84rem;
+}
+.w-abschnitt--abstand-klein {
+  --abstand: clamp(1.5rem, 3vw, 2.25rem);
+}
+.w-abschnitt--abstand-gross {
+  --abstand: clamp(4.5rem, 11vw, 8.5rem);
+}
+.w-abschnitt--sanft {
+  background: var(--sanft-hell);
+}
+.w-abschnitt--haupt {
+  background: var(--farbe-haupt);
+  color: var(--farbe-grund);
+}
+.w-abschnitt--haupt a:not(.w-knopf) {
+  color: var(--farbe-grund);
+}
+.w-abschnitt--haupt .w-akzent {
+  color: var(--farbe-sanft);
+}
+.w-abschnitt--haupt .w-text-weich {
+  color: color-mix(in srgb, var(--farbe-grund) 78%, transparent);
+}
+.w-abschnitt--foto {
+  color: var(--farbe-grund);
+  background: var(--farbe-haupt-tief);
+  isolation: isolate;
+}
+.w-abschnitt--foto > img.w-hintergrund {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+.w-abschnitt--foto::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--farbe-haupt-tief) 92%, transparent) 0%,
+    color-mix(in srgb, var(--farbe-haupt-tief) 55%, transparent) 60%,
+    color-mix(in srgb, var(--farbe-haupt-tief) 25%, transparent) 100%
+  );
+}
+.w-abschnitt--foto .w-akzent {
+  color: var(--farbe-sanft);
+}
+
+.w-text-weich {
+  color: var(--text-weich);
+}
+.w-zentriert {
+  text-align: center;
+}
+.w-zentriert .w-knopfreihe {
+  justify-content: center;
+}
+
+/* Kopfzeile eines Abschnitts: Überschrift links, Link rechts */
+.w-abschnitt-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.w-abschnitt-kopf h2 {
+  margin: 0;
+}
+
+/* ── Spalten/Bereiche ───────────────────────────────────────────────────────────────────── */
+
+.w-spalten {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+}
+.w-spalten--mitte {
+  align-items: center;
+}
+@media (min-width: 48rem) {
+  .w-spalten--1-1 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .w-spalten--2-1 {
+    grid-template-columns: 2fr 1fr;
+  }
+  .w-spalten--1-2 {
+    grid-template-columns: 1fr 2fr;
+  }
+  .w-spalten--1-1-1 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 47.99rem) {
+  /* Bereich auf dem Handy nach oben holen (Einstellung je Spalte) */
+  .w-spalte--handy-zuerst {
+    order: -1;
+  }
+}
+
+/* ── Bausteine ──────────────────────────────────────────────────────────────────────────── */
+
+.w-knopfreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+.w-knopf {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.35rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 2px solid var(--farbe-haupt);
+  background: var(--farbe-haupt);
+  color: var(--farbe-grund);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.w-knopf:hover {
+  background: var(--farbe-haupt-tief);
+  border-color: var(--farbe-haupt-tief);
+  color: var(--farbe-grund);
+}
+.w-knopf--neben {
+  background: transparent;
+  color: var(--farbe-haupt);
+}
+.w-knopf--neben:hover {
+  background: var(--farbe-haupt);
+  color: var(--farbe-grund);
+}
+.w-abschnitt--haupt .w-knopf,
+.w-abschnitt--foto .w-knopf {
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+  color: #fff;
+}
+.w-abschnitt--haupt .w-knopf:hover,
+.w-abschnitt--foto .w-knopf:hover {
+  background: color-mix(in srgb, var(--farbe-akzent) 85%, #000);
+}
+.w-abschnitt--haupt .w-knopf--neben,
+.w-abschnitt--foto .w-knopf--neben {
+  background: transparent;
+  border-color: var(--farbe-grund);
+  color: var(--farbe-grund);
+}
+.w-abschnitt--haupt .w-knopf--neben:hover,
+.w-abschnitt--foto .w-knopf--neben:hover {
+  background: var(--farbe-grund);
+  color: var(--farbe-haupt);
+}
+.w-pfeil::after {
+  content: '→';
+  transition: transform 0.15s;
+}
+a:hover > .w-pfeil::after,
+.w-pfeil:hover::after {
+  transform: translateX(3px);
+}
+.w-textlink {
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.w-bild {
+  margin: 0;
+}
+.w-bild img {
+  border-radius: var(--radius);
+  width: 100%;
+}
+.w-bild figcaption {
+  font-size: 0.9rem;
+  color: var(--text-weich);
+  margin-top: 0.5rem;
+}
+.w-bild--hoch img {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.w-bild--breit img {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+/* Bild + Text nebeneinander: am Handy untereinander, ab 48rem zwei gleich breite Spalten; „rechts“ tauscht die Seiten. */
+.w-bildtext {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  align-items: center;
+}
+.w-bildtext-bild {
+  margin: 0;
+}
+.w-bildtext-bild img {
+  width: 100%;
+  border-radius: var(--radius);
+}
+.w-bildtext .w-text > :last-child {
+  margin-bottom: 0;
+}
+@media (min-width: 48rem) {
+  .w-bildtext {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .w-bildtext-rechts .w-bildtext-bild {
+    order: 2;
+  }
+}
+
+.w-trenner {
+  border: 0;
+  border-top: 1px solid var(--linie);
+  margin: 2.5rem 0;
+}
+
+/* Slider (Aktuelles & Einladungen): ohne JS als waagerechte Reihe mit Einrasten */
+.w-slider {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(85%, 34rem);
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--farbe-haupt) transparent;
+}
+.w-slider > * {
+  scroll-snap-align: start;
+}
+.w-folie {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--farbe-haupt);
+}
+.w-folie img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.w-folie--beispiel {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--farbe-grund);
+  text-decoration: none;
+}
+.w-folie--beispiel strong {
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  line-height: 1.1;
+}
+.w-folie--beispiel .w-akzent {
+  color: var(--farbe-sanft);
+  transform-origin: center;
+}
+.w-folie--sanft {
+  background: var(--farbe-sanft);
+  color: var(--farbe-haupt-tief);
+}
+.w-folie--sanft .w-akzent {
+  color: var(--farbe-akzent);
+}
+
+/* Termine: Liste mit Datumsblock, keine Karten */
+.w-termine {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--linie);
+}
+.w-termin {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr auto;
+  gap: 0 1.25rem;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--linie);
+}
+.w-termin-datum {
+  text-align: center;
+  line-height: 1;
+  color: var(--farbe-haupt);
+}
+.w-termin-datum .w-tag {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+}
+.w-termin-datum .w-monat {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.w-termin h3 {
+  margin: 0 0 0.15rem;
+  font-size: 1.15rem;
+}
+.w-termin p {
+  margin: 0;
+  color: var(--text-weich);
+  font-size: 0.95rem;
+}
+.w-termin-wochentag {
+  font-weight: 700;
+  color: var(--farbe-text);
+}
+.w-termin-marke {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--farbe-haupt);
+  background: var(--sanft-hell);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+@media (max-width: 36rem) {
+  .w-termin {
+    grid-template-columns: 3.5rem 1fr;
+  }
+  .w-termin-marke {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+}
+
+/* Beiträge */
+.w-beitraege {
+  display: grid;
+  gap: 2rem;
+}
+@media (min-width: 48rem) {
+  .w-beitraege {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.w-beitrag img {
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+.w-beitrag time {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--farbe-akzent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.w-beitrag h3 {
+  margin: 0.35rem 0 0.5rem;
+}
+.w-beitrag h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.w-beitrag h3 a:hover {
+  color: var(--farbe-haupt);
+}
+
+/* Gruppen */
+.w-gruppen {
+  display: grid;
+  gap: 1.25rem 2.5rem;
+}
+@media (min-width: 40rem) {
+  .w-gruppen {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 64rem) {
+  .w-gruppen {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.w-gruppe {
+  border-top: 3px solid var(--farbe-haupt);
+  padding-top: 1rem;
+}
+.w-gruppe .w-gruppe-bild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+.w-gruppe h3 {
+  margin-bottom: 0.25rem;
+}
+.w-gruppe-wann {
+  font-weight: 700;
+  color: var(--farbe-haupt);
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Galerie */
+.w-galerie {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+}
+.w-galerie img {
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+  width: 100%;
+}
+
+/* Fakten-Leiste unter dem Kopf der Startseite */
+.w-fakten {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem 2rem;
+}
+@media (min-width: 48rem) {
+  .w-fakten {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.w-fakten li {
+  display: flex;
+  gap: 0.85rem;
+  align-items: baseline;
+}
+.w-fakten strong {
+  display: block;
+  color: var(--farbe-haupt);
+}
+.w-fakten .w-zahl {
+  font-family: var(--schrift-akzent);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--farbe-akzent);
+  min-width: 1.6rem;
+}
+
+/* ── Startseite Variante A: ruhig, Schriftzug ─────────────────────────────────────────────── */
+
+.w-start-a {
+  text-align: center;
+  padding-top: clamp(4rem, 12vw, 9rem);
+  padding-bottom: clamp(3.5rem, 9vw, 7rem);
+}
+.w-schriftzug {
+  font-size: clamp(3.25rem, 12vw, 8.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  color: var(--farbe-haupt);
+  margin: 0 0 1.5rem;
+}
+.w-leitsatz {
+  font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+  font-weight: 500;
+  max-width: 42ch;
+  margin: 0 auto;
+  color: var(--text-weich);
+}
+
+/* ── Startseite Variante B: Foto + Petrol-Fläche ─────────────────────────────────────────── */
+
+.w-start-b {
+  display: grid;
+  background: var(--farbe-haupt);
+  color: var(--farbe-grund);
+}
+.w-start-b-text {
+  padding: clamp(3rem, 8vw, 6.5rem) var(--rand);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.w-start-b-text > div {
+  max-width: 32rem;
+  margin-left: auto;
+}
+.w-start-b h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: -0.03em;
+}
+.w-start-b .w-akzent {
+  color: var(--farbe-sanft);
+}
+.w-start-b-foto {
+  min-height: 18rem;
+  position: relative;
+}
+.w-start-b-foto img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (min-width: 52rem) {
+  .w-start-b {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    min-height: min(78vh, 44rem);
+  }
+}
+@media (max-width: 51.99rem) {
+  .w-start-b-foto {
+    order: -1;
+    min-height: 15rem;
+  }
+  .w-start-b-text > div {
+    margin-left: 0;
+  }
+}
+
+/* Seitenkopf der Unterseiten */
+.w-seitenkopf {
+  padding-top: clamp(3rem, 8vw, 5.5rem);
+  padding-bottom: clamp(2rem, 5vw, 3.5rem);
+  border-bottom: 1px solid var(--linie);
+}
+.w-seitenkopf p {
+  font-size: 1.2rem;
+  max-width: 40rem;
+  color: var(--text-weich);
+  margin: 0;
+}
+
+/* ── Kontakt ────────────────────────────────────────────────────────────────────────────── */
+
+.w-formular {
+  display: grid;
+  gap: 1.1rem;
+}
+.w-formular label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+.w-feld {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid color-mix(in srgb, var(--farbe-text) 30%, transparent);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.w-feld:focus {
+  border-color: var(--farbe-haupt);
+  outline: 3px solid color-mix(in srgb, var(--farbe-haupt) 25%, transparent);
+  outline-offset: 0;
+}
+textarea.w-feld {
+  min-height: 9rem;
+  resize: vertical;
+}
+.w-anliegen {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.w-anliegen legend {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.w-anliegen-wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.w-anliegen-wahl label {
+  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.w-anliegen-wahl input {
+  position: absolute;
+  opacity: 0;
+}
+.w-anliegen-wahl span {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border: 1.5px solid var(--farbe-haupt);
+  border-radius: 999px;
+  color: var(--farbe-haupt);
+}
+.w-anliegen-wahl input:checked + span {
+  background: var(--farbe-haupt);
+  color: var(--farbe-grund);
+}
+.w-anliegen-wahl input:focus-visible + span {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+.w-hinweis-klein {
+  font-size: 0.875rem;
+  color: var(--text-weich);
+  margin: 0;
+}
+.w-kasten {
+  background: var(--sanft-hell);
+  border-radius: var(--radius);
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+.w-kasten h3 {
+  margin-bottom: 0.35rem;
+}
+.w-kasten + .w-kasten {
+  margin-top: 1.25rem;
+}
+.w-kasten dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 1rem;
+}
+.w-kasten dt {
+  font-weight: 700;
+}
+.w-kasten dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── Livestream mit Einwilligung (E-W13) ────────────────────────────────────────────────── */
+
+.w-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--farbe-haupt-tief);
+  color: var(--farbe-grund);
+}
+.w-video > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.45;
+}
+.w-video-sperre {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  padding: 1.5rem;
+  gap: 0.75rem;
+}
+.w-play {
+  width: clamp(3.5rem, 9vw, 5.5rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 0;
+  background: var(--farbe-akzent);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.w-play::before {
+  content: '';
+  border-style: solid;
+  border-width: 0.75em 0 0.75em 1.25em;
+  border-color: transparent transparent transparent #fff;
+  margin-left: 0.25em;
+  font-size: clamp(0.9rem, 2vw, 1.3rem);
+}
+.w-video-sperre strong {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+}
+.w-video-sperre small {
+  max-width: 34rem;
+  color: color-mix(in srgb, var(--farbe-grund) 82%, transparent);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.w-video-sperre small a {
+  color: inherit;
+}
+@media (max-width: 36rem) {
+  /* Auf dem Handy wächst der Kasten mit der Beschriftung, statt sie abzuschneiden */
+  .w-video:has(.w-video-sperre) {
+    aspect-ratio: auto;
+    min-height: 15rem;
+  }
+  .w-video-sperre {
+    position: relative;
+    padding: 2rem 1.25rem;
+  }
+}
+.w-video-geladen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: #000;
+  font-size: 0.95rem;
+  padding: 1rem;
+}
+.w-live-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--farbe-akzent);
+}
+.w-live-marke::before {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.w-videos {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+.w-videokarte {
+  text-decoration: none;
+  color: inherit;
+}
+.w-videokarte .w-video-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.w-videokarte > .w-video-bild,
+.w-videokarte .w-video-link .w-video-bild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--farbe-haupt);
+  margin-bottom: 0.6rem;
+}
+.w-videokarte .w-video-titel {
+  display: block;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.w-videokarte strong {
+  line-height: 1.3;
+}
+.w-videokarte time {
+  font-size: 0.875rem;
+  color: var(--text-weich);
+}
+
+/* Einwilligungs-Banner */
+.w-banner {
+  position: fixed;
+  z-index: 20;
+  left: var(--rand);
+  right: var(--rand);
+  bottom: var(--rand);
+  max-width: 40rem;
+  margin: 0 auto;
+  background: var(--farbe-grund);
+  border: 1px solid var(--linie);
+  border-top: 4px solid var(--farbe-haupt);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1rem 3rem color-mix(in srgb, var(--farbe-text) 22%, transparent);
+}
+.w-banner[hidden] {
+  display: none;
+}
+.w-banner h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+.w-banner p {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+.w-banner .w-knopfreihe {
+  margin-top: 0;
+}
+.w-banner .w-knopf {
+  padding: 0.65rem 1.15rem;
+}
+
+/* ── Fuß ────────────────────────────────────────────────────────────────────────────────── */
+
+.w-fuss {
+  background: var(--farbe-haupt-tief);
+  color: color-mix(in srgb, var(--farbe-grund) 88%, transparent);
+  padding: clamp(3rem, 6vw, 4.5rem) var(--rand) 2rem;
+  font-size: 0.95rem;
+}
+.w-fuss a {
+  color: var(--farbe-grund);
+}
+.w-fuss-innen {
+  max-width: var(--breite);
+  margin: 0 auto;
+  display: grid;
+  gap: 2rem;
+}
+@media (min-width: 48rem) {
+  .w-fuss-innen {
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+}
+.w-fuss h2 {
+  font-size: 1rem;
+  color: var(--farbe-grund);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0;
+}
+.w-fuss-marke {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--farbe-grund);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+}
+.w-fuss ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.w-fuss-unten {
+  max-width: var(--breite);
+  margin: 2.5rem auto 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--farbe-grund) 18%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+.w-fuss-unten button {
+  font: inherit;
+  color: var(--farbe-grund);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ============================================================================================
+   Ergänzungen für W1b (Abschnitte mit Gestaltung) – Grundlage des echten Stylesheets
+   ============================================================================================ */
+
+h1,
+h2,
+h3,
+.w-ueberschrift {
+  font-family: var(--schrift-ueberschrift, var(--schrift-text));
+}
+.w-baustein + .w-baustein {
+  margin-top: 1rem;
+}
+.w-b-akzentzeile + .w-baustein {
+  margin-top: 0;
+}
+.w-b-text .w-text > :last-child {
+  margin-bottom: 0;
+}
+.w-ueberschrift--gross {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: -0.03em;
+}
+.w-ueberschrift--riesig {
+  font-size: clamp(3.25rem, 12vw, 8.5rem);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+.w-zentriert .w-b-text {
+  max-width: 42ch;
+  margin-inline: auto;
+  font-size: clamp(1.1rem, 2.4vw, 1.45rem);
+}
+
+/* Hintergründe für Abschnitt und Spalte */
+.w-abschnitt--akzent,
+.w-spalte--akzent {
+  background: var(--farbe-akzent);
+}
+.w-abschnitt--farbe {
+  background: var(--abschnitt-farbe);
+}
+.w-spalte--farbe {
+  background: var(--spalte-farbe);
+}
+.w-spalte--sanft {
+  background: var(--sanft-hell);
+}
+.w-spalte--haupt {
+  background: var(--farbe-haupt);
+}
+.w-spalte--foto {
+  position: relative;
+  isolation: isolate;
+  background: var(--farbe-haupt-tief);
+}
+.w-spalte--foto > img.w-hintergrund {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+.w-abschnitt--foto::before,
+.w-spalte--foto::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(
+    in srgb,
+    var(--farbe-haupt-tief) calc(var(--abdunkeln, 0.5) * 100%),
+    transparent
+  );
+}
+.w-spalte:is(
+  .w-spalte--sanft,
+  .w-spalte--haupt,
+  .w-spalte--akzent,
+  .w-spalte--farbe,
+  .w-spalte--foto
+) {
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 3rem);
+  border-radius: var(--radius);
+}
+.w-abschnitt--voll
+  .w-spalte:is(
+    .w-spalte--sanft,
+    .w-spalte--haupt,
+    .w-spalte--akzent,
+    .w-spalte--farbe,
+    .w-spalte--foto
+  ) {
+  border-radius: 0;
+}
+
+/* Textfarbe folgt dem Hintergrund (vom Renderer entschieden) */
+.w-abschnitt--text-dunkel {
+  color: var(--farbe-text);
+}
+.w-abschnitt--text-hell,
+.w-spalte--text-hell {
+  color: var(--farbe-grund);
+}
+.w-abschnitt--text-dunkel .w-spalte--text-hell {
+  color: var(--farbe-grund);
+}
+.w-abschnitt--text-hell .w-spalte--text-dunkel {
+  color: var(--farbe-text);
+}
+:is(.w-abschnitt--text-hell, .w-spalte--text-hell) a:not(.w-knopf) {
+  color: inherit;
+}
+:is(.w-abschnitt--text-hell, .w-spalte--text-hell) .w-akzent {
+  color: var(--farbe-sanft);
+}
+:is(.w-abschnitt--text-hell, .w-spalte--text-hell) .w-text-weich {
+  color: color-mix(in srgb, var(--farbe-grund) 80%, transparent);
+}
+:is(.w-abschnitt--text-hell, .w-spalte--text-hell) .w-knopf {
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+  color: #fff;
+}
+:is(.w-abschnitt--text-hell, .w-spalte--text-hell) .w-knopf--neben {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
+}
+:is(.w-abschnitt--text-dunkel) .w-ueberschrift:not(.w-schriftzug) {
+  color: inherit;
+}
+.w-schriftzug {
+  color: var(--farbe-haupt);
+}
+.w-abschnitt--text-hell .w-schriftzug {
+  color: inherit;
+}
+
+/* Abstand, Breite, Höhe */
+.w-abschnitt--abstand-kein {
+  --abstand: 0;
+  padding-inline: 0;
+}
+.w-abschnitt--abstand-kein .w-spalten {
+  gap: 0;
+}
+.w-abschnitt--voll .w-abschnitt-innen {
+  max-width: none;
+}
+.w-abschnitt--hoehe-halb {
+  min-height: 60vh;
+  display: grid;
+  align-items: center;
+}
+.w-abschnitt--hoehe-voll {
+  min-height: calc(100vh - 5rem);
+  display: grid;
+  align-items: center;
+}
+.w-abschnitt--hoehe-halb > .w-abschnitt-innen,
+.w-abschnitt--hoehe-voll > .w-abschnitt-innen {
+  width: 100%;
+}
+.w-abschnitt--hoehe-halb .w-spalten,
+.w-abschnitt--hoehe-voll .w-spalten {
+  min-height: inherit;
+}
+
+/* Spalten */
+@media (min-width: 48rem) {
+  .w-spalten--1-1-1-1 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.w-spalten:has(.w-bild--fuellen) {
+  align-items: stretch;
+}
+.w-spalte {
+  min-width: 0;
+}
+.w-spalte:has(> .w-b-bild .w-bild--fuellen) {
+  display: flex;
+  flex-direction: column;
+}
+.w-b-bild:has(.w-bild--fuellen) {
+  flex: 1;
+  display: flex;
+}
+.w-bild--fuellen {
+  flex: 1;
+  min-height: 16rem;
+  position: relative;
+}
+.w-bild--fuellen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Termine aus dem Renderer */
+.w-termin-titel {
+  font-weight: 700;
+  display: block;
+}
+.w-termin-wann,
+.w-ort {
+  color: var(--text-weich);
+  font-size: 0.95rem;
+}
+.w-leer {
+  color: var(--text-weich);
+  font-style: italic;
+}

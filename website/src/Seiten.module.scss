@@ -1,0 +1,140 @@
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Seitenliste links, Vorschau rechts; am Handy untereinander (die Liste zuerst).
+.raster {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.liste {
+  @include m.card-list;
+  padding: 8px 0;
+}
+
+.gruppe {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px 8px;
+}
+
+.gruppenTitel {
+  margin: 0;
+  padding: 8px 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.leer {
+  margin: 0;
+  padding: 4px 8px 8px;
+  font-size: 13.5px;
+  color: var(--text3);
+}
+
+.eintrag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--knopf-hoehe);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+
+  &.an {
+    background: var(--blue-soft);
+    color: var(--blue-ink);
+    font-weight: 600;
+  }
+}
+
+.titel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marke {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text2);
+}
+
+.listenFuss {
+  display: flex;
+  padding: 8px 16px 8px;
+  border-top: 1px solid var(--hair);
+}
+
+.arbeit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.werkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 160px;
+
+  strong {
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--text2);
+  }
+}
+
+.aktionen {
+  display: flex;
+  gap: 8px;
+}
+
+.probleme {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.fehlerText {
+  margin: 12px 0 0;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}

@@ -640,6 +640,9 @@ describe('Vorschläge beim Schreiben (S5-4)', () => {
     expect(E.einfuegen).toHaveBeenCalledTimes(1);
     expect(kasten.textContent).toContain('Thema v1');
     expect(kasten.textContent).not.toContain('Thema v2');
+    // Kurzform (W8c): Die Knöpfe stehen erst im aufgeklappten Vorschlag.
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Thema v1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
     await waitFor(() => expect(stand('v1').stand).toBe('imProtokoll'));
     expect(E.einfuegen).toHaveBeenCalledTimes(2);
@@ -652,9 +655,11 @@ describe('Vorschläge beim Schreiben (S5-4)', () => {
     ablegen(vorschlag('v1'), vorschlag('v2'));
     zeigeMit(false);
     await screen.findByRole('region', { name: 'Vorschläge' });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Nächstes Mal' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Thema v1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nächstes Mal' }));
     await waitFor(() => expect(stand('v1').ziel).toEqual({ art: 'naechste', nach: SITZ.beginn }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Ablehnen' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Thema v2/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ablehnen' }));
     fireEvent.change(await screen.findByPlaceholderText(/Klären wir im Gemeinderat/), {
       target: { value: 'Nicht jetzt' },
     });

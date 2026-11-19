@@ -306,50 +306,115 @@ export interface VorschlagGruppe {
   vorschlaege: Vorschlag[];
 }
 
-/** So lange stehen entschiedene Vorschläge unter „Erledigt“, nachdem ihre Sitzung vorbei ist. */
-export const ERLEDIGT_TAGE = 60;
-
 /**
- * **Die Karte „Vorschläge“** (Reiter „Sitzungen“): je kommende Sitzung (in ihrer Reihenfolge), dann „Nächste Sitzung“,
- * dann „Erledigt“ (entschieden, Sitzung vorbei, höchstens `ERLEDIGT_TAGE` alt; neueste zuerst). Zurückgezogene nie.
- * Offene und angenommene folgen `zielSitzung`; im Protokoll stehende ihrer Sitzung; abgelehnte ihrem Ziel.
+ * **Die Karte „Vorschläge“** (Reiter „Sitzungen“, W8c): nur die **offenen** Vorschläge – je kommende Sitzung (in ihrer
+ * Reihenfolge), dann „Nächste Sitzung“. Übernommene (`angenommen`, `imProtokoll`), zurückgezogene und abgelehnte stehen
+ * nicht mehr in der Liste: Übernommene zeigt die Sitzungszeile (`uebernommenFuer`), Abgelehnte eine eigene kleine
+ * Gruppe (`abgelehntSichtbar`). Gespeichert bleiben alle – nie hart löschen.
  */
 export function vorschlaegeOrdnen(
   liste: readonly Vorschlag[],
   kommend: readonly Sitzung[],
   heute: string,
   zeitzone: string,
-): { gruppen: VorschlagGruppe[]; erledigt: Vorschlag[] } {
+): { gruppen: VorschlagGruppe[] } {
   const je = new Map<Sitzung | null, Vorschlag[]>();
-  const erledigt: Vorschlag[] = [];
-  const dazu = (s: Sitzung | null, v: Vorschlag) => je.set(s, [...(je.get(s) ?? []), v]);
   for (const v of liste) {
-    if (v.stand === 'zurueckgezogen') continue;
-    if (v.stand === 'offen' || v.stand === 'angenommen') {
-      dazu(zielSitzung(v, kommend, heute, zeitzone), v);
-      continue;
-    }
-    const s =
-      v.stand === 'imProtokoll'
-        ? kommend.find((x) => x.kopf?.sitzung === v.sitzung)
-        : genau(v.ziel, kommend);
-    if (s) dazu(s, v);
-    else erledigt.push(v);
+    if (v.stand !== 'offen') continue;
+    const s = zielSitzung(v, kommend, heute, zeitzone);
+    je.set(s, [...(je.get(s) ?? []), v]);
   }
-  const zuletzt = (v: Vorschlag) => v.verlauf[v.verlauf.length - 1]?.am ?? '';
-  const grenze = Date.parse(`${heute}T00:00:00Z`) - ERLEDIGT_TAGE * 86_400_000;
   return {
     gruppen: [
       ...kommend.filter((s) => je.has(s)).map((s) => ({ sitzung: s, vorschlaege: je.get(s)! })),
       ...(je.has(null) ? [{ sitzung: null, vorschlaege: je.get(null)! }] : []),
     ],
-    erledigt: erledigt
-      .filter((v) => Date.parse(zuletzt(v)) >= grenze)
-      .sort((a, b) => zuletzt(b).localeCompare(zuletzt(a))),
   };
 }
 
-/** Die Sitzung, die das Ziel genau meint (ohne Weiterrutschen) – die eine Stelle für `zielSitzung` und „Erledigt“. */
+/**
+ * Wie viele Vorschläge für diese Sitzung **übernommen** sind – für die Marke „2 Vorschläge übernommen“ in der Liste
+ * „Kommend“. Zählt die vorgemerkten (`angenommen`, folgen `zielSitzung`) und die schon eingefügten (`imProtokoll`,
+ * über die Protokoll-ID der Sitzung).
+ */
+export function uebernommenFuer(
+  liste: readonly Vorschlag[],
+  s: Sitzung,
+  kommend: readonly Sitzung[],
+  heute: string,
+  zeitzone: string,
+): number {
+  return liste.filter((v) =>
+    v.stand === 'angenommen'
+      ? zielSitzung(v, kommend, heute, zeitzone)?.schluessel === s.schluessel
+      : v.stand === 'imProtokoll' && v.sitzung !== null && s.kopf?.sitzung === v.sitzung,
+  ).length;
+}
+
+/** So viele Tage bleibt ein abgelehnter Vorschlag für den Vorschlagenden und die Leitung sichtbar. */
+export const ABGELEHNT_TAGE = 7;
+
+/** Wann die Leitung abgelehnt hat (ISO-Zeit, letzter Verlaufseintrag „abgelehnt“) – `null`, wenn er nicht abgelehnt ist. */
+export function abgelehntAm(v: Pick<Vorschlag, 'stand' | 'verlauf'>): string | null {
+  if (v.stand !== 'abgelehnt') return null;
+  for (let i = v.verlauf.length - 1; i >= 0; i--) {
+    if (v.verlauf[i].art === 'abgelehnt') return v.verlauf[i].am;
+  }
+  return null;
+}
+
+const TAG_MS = 86_400_000;
+const tagesZahl = (tag: string) => Date.parse(`${tag}T00:00:00Z`) / TAG_MS;
+
+/**
+ * **Wie viele Tage ein abgelehnter Vorschlag noch sichtbar ist** – ganze Kalendertage in der Uhr der Gemeinde
+ * (`tagAusIso`, wie die übrigen Datumsregeln): am Tag des Ablehnens 7, am sechsten Tag danach 1, danach 0 (weg).
+ * Ohne lesbares Ablehn-Datum: 0.
+ */
+export function abgelehntNoch(
+  v: Pick<Vorschlag, 'stand' | 'verlauf'>,
+  heute: string,
+  zeitzone: string,
+): number {
+  const am = abgelehntAm(v);
+  if (am === null || Number.isNaN(Date.parse(am))) return 0;
+  const her = tagesZahl(heute) - tagesZahl(tagAusIso(am, zeitzone));
+  return Math.max(0, ABGELEHNT_TAGE - Math.max(0, her));
+}
+
+/**
+ * **Die Gruppe „Abgelehnt“**: abgelehnte Vorschläge, die noch sichtbar sind (`ABGELEHNT_TAGE`), nur für die Person, die
+ * vorschlug, und die Leitung – und nicht, wenn sie auf diesem Gerät früher ausgeblendet wurden (`ausgeblendet`, IDs).
+ * Neueste zuerst.
+ */
+export function abgelehntSichtbar(
+  liste: readonly Vorschlag[],
+  ich: number,
+  leitung: boolean,
+  heute: string,
+  zeitzone: string,
+  ausgeblendet: readonly string[] = [],
+): Vorschlag[] {
+  return liste
+    .filter(
+      (v) =>
+        v.stand === 'abgelehnt' &&
+        (leitung || v.von === ich) &&
+        !ausgeblendet.includes(v.id) &&
+        abgelehntNoch(v, heute, zeitzone) > 0,
+    )
+    .sort((a, b) => (abgelehntAm(b) ?? '').localeCompare(abgelehntAm(a) ?? ''));
+}
+
+/**
+ * **Ist der Bereich „Vorschläge“ offen?** Hat das Gerät eine Wahl gemerkt (`gemerkt`), gilt sie – sonst ist er offen, wenn
+ * es offene Vorschläge gibt, und zu, wenn nicht.
+ */
+export function bereichOffen(gemerkt: boolean | null, offene: number): boolean {
+  return gemerkt ?? offene > 0;
+}
+
+/** Die Sitzung, die das Ziel genau meint (ohne Weiterrutschen) – die eine Stelle für `zielSitzung`. */
 function genau(z: VorschlagZiel, kommend: readonly Sitzung[]): Sitzung | undefined {
   if (z.art !== 'sitzung') return undefined;
   return kommend.find(

@@ -1,0 +1,209 @@
+// Karte und Tabellenzeile eines To-Dos (W8b, Entwurf todos-vorschlaege-v2). Die Karte steht in der Liste am Handy und im
+// Board; die Zeile in der Liste am PC.
+
+// ── Karte ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+.todo {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 12px 10px 4px;
+
+  // Die 44 px Treffläche des Hakens macht die Karte nicht höher.
+  > :first-child {
+    margin: -10px 0;
+  }
+}
+
+.koerper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.gruppe {
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.titel {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--blue-ink);
+    }
+  }
+}
+
+.durch {
+  color: var(--text3);
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.notizzeile {
+  overflow: hidden;
+  color: var(--text3);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Fußzeile: links Frist, Schild, Symbole; rechts die Gesichter.
+.fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.rechts {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.rueck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Im Board: die Fußzeile geht über die ganze Kartenbreite, abgesetzt durch eine feine Linie (wie bei Planner).
+.imBoard {
+  flex-wrap: wrap;
+  padding: 10px 10px 0 2px;
+
+  > .fuss {
+    flex: 1 0 100%;
+    margin: 8px -10px 0 -2px;
+    padding: 7px 10px 7px 14px;
+    border-top: 1px solid var(--hair);
+  }
+}
+
+// ── Tabelle ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Feste Spalten: Haken · Aufgabe · [Gruppe] · Fällig · Zuständig · Stand · Überblick.
+.mitGruppe {
+  --spalten: 44px minmax(0, 1fr) 112px 104px 130px 112px 104px;
+}
+
+.ohneGruppe {
+  --spalten: 44px minmax(0, 1fr) 96px 124px 108px 104px;
+}
+
+.tabKopf,
+.zeile {
+  display: grid;
+  grid-template-columns: var(--spalten);
+  align-items: center;
+  column-gap: 10px;
+}
+
+.tabKopf {
+  padding: 8px 12px 8px 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 700;
+
+  > :first-child {
+    grid-column: 2;
+  }
+}
+
+.zeile {
+  min-height: 46px;
+  padding: 6px 12px 6px 4px;
+
+  > :first-child {
+    margin: -8px 0;
+  }
+}
+
+.einzeilig {
+  display: block;
+  justify-self: start;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zelle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text2);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.zelle.gruppe {
+  color: var(--blue-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.ueber {
+  gap: 10px;
+}
+
+.leise {
+  color: var(--text3);
+}
+
+// Eben abgehakt: der Rest der Zeile ist ein Satz mit „Rückgängig“.
+.zeileRueck {
+  display: flex;
+  grid-column: 2 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-width: 0;
+}
+
+.zeileAuf {
+  padding: 0 12px 10px 48px;
+}

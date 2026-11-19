@@ -11,8 +11,10 @@
  */
 import { plusTage } from '../ct/datum';
 import { erledigtAm, gruppieren, istJeder, type Aufgabe, type ToDoAenderung } from './aufgaben';
+import { faelligkeit } from './frist';
 
-export type Einteilung = 'status' | 'person';
+/** Wie die Liste eingeteilt wird. Das Board kennt nur Status und Person (`spalten`) – bei „frist“ zeigt es Status. */
+export type Einteilung = 'status' | 'person' | 'frist';
 /** Liste oder Board (S7-3). */
 export type Ansicht = 'liste' | 'board';
 /** Wie innerhalb eines Bereichs bzw. einer Spalte sortiert wird (S7-3, eine Wahl für alles). */
@@ -27,7 +29,18 @@ export interface ToDoEintrag {
 export interface Bereich {
   schluessel: string;
   titel: string;
-  art: 'ueberfaellig' | 'arbeit' | 'offen' | 'erledigt' | 'person' | 'extern' | 'ohne';
+  art:
+    | 'ueberfaellig'
+    | 'arbeit'
+    | 'offen'
+    | 'erledigt'
+    | 'person'
+    | 'extern'
+    | 'ohne'
+    // Nach Fälligkeit (W8b):
+    | 'woche'
+    | 'spaeter'
+    | 'ohneFrist';
   eintraege: ToDoEintrag[];
 }
 
@@ -50,6 +63,28 @@ export type Zustaendig = 'ich' | 'andere' | 'niemand';
  */
 export function ohneHerkunft(a: Pick<Aufgabe, 'sitzung'>): string {
   return a.sitzung === null ? 'Ohne Sitzung angelegt.' : 'Aus einer älteren Sitzung.';
+}
+
+/**
+ * **Die Schnellfilter „Alle | Meine“** (W8b) sind nur ein Kurzweg auf den Filter „Zuständig“ – derselbe Zustand
+ * (`aus.zustaendig`: was **ausgeblendet** ist), keine zweite Filterlogik. „Meine“ blendet „andere“ und „noch niemand“ aus,
+ * „Alle“ nichts. Hat jemand im Filter etwas anderes gewählt, ist keine der beiden Pillen an.
+ */
+export type Schnellfilter = 'alle' | 'meine';
+
+const OHNE_MEINE: readonly Zustaendig[] = ['andere', 'niemand'];
+
+/** Welche Pille zu dem passt, was im Filter „Zuständig“ ausgeblendet ist – `null`: eine eigene Auswahl. */
+export function schnellfilterVon(ausgeblendet: readonly string[]): Schnellfilter | null {
+  if (ausgeblendet.length === 0) return 'alle';
+  const gleich =
+    ausgeblendet.length === OHNE_MEINE.length && OHNE_MEINE.every((z) => ausgeblendet.includes(z));
+  return gleich ? 'meine' : null;
+}
+
+/** Was die Pille im Filter „Zuständig“ ausblendet. */
+export function schnellfilterAus(s: Schnellfilter): string[] {
+  return s === 'meine' ? [...OHNE_MEINE] : [];
 }
 
 /** Für den Filter „Zuständig“: ich (auch zusammen mit anderen), nur andere (auch Externe), noch niemand. */
@@ -79,6 +114,26 @@ export function einteilen(
     q.heute,
   );
   const rein = (x: Aufgabe[]) => x.map((a) => zu.get(a)!);
+  if (q.nach === 'frist') {
+    // Eine Regel für Kästchen und Fach (`faelligkeit`); die Reihenfolge darin bleibt die von `gruppieren`.
+    const reihe = rein([...g.ueberfaellig, ...g.arbeit, ...g.offen, ...g.erledigt]);
+    const fach = (f: ReturnType<typeof faelligkeit>) =>
+      reihe.filter((e) => faelligkeit(e.aufgabe, q.heute) === f);
+    return (
+      [
+        {
+          schluessel: 'ueberfaellig',
+          titel: 'Überfällig',
+          art: 'ueberfaellig',
+          eintraege: fach('ueberfaellig'),
+        },
+        { schluessel: 'woche', titel: 'Diese Woche', art: 'woche', eintraege: fach('woche') },
+        { schluessel: 'spaeter', titel: 'Später', art: 'spaeter', eintraege: fach('spaeter') },
+        { schluessel: 'ohneFrist', titel: 'Ohne Frist', art: 'ohneFrist', eintraege: fach('ohne') },
+        { schluessel: 'erledigt', titel: 'Erledigt', art: 'erledigt', eintraege: fach('erledigt') },
+      ] satisfies Bereich[]
+    ).filter((b) => b.eintraege.length);
+  }
   if (q.nach === 'status')
     return (
       [
@@ -161,7 +216,8 @@ export function spalten(
     q.heute,
   );
   const reihe = [...g.ueberfaellig, ...g.arbeit, ...g.offen, ...g.erledigt].map((a) => zu.get(a)!);
-  if (q.nach === 'status')
+  // Das Board hat Spalten, in die man ablegt – „nach Fälligkeit“ gäbe es dort nichts abzulegen: es zeigt dann Status.
+  if (q.nach !== 'person')
     return (['offen', 'arbeit', 'erledigt'] as const).map((st) => ({
       schluessel: st,
       titel: st === 'offen' ? 'Offen' : st === 'arbeit' ? 'In Arbeit' : 'Erledigt',

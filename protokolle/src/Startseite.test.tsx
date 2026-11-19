@@ -204,11 +204,20 @@ describe('Startseite (S3-3)', () => {
     zeigen();
     await screen.findByText('Beamer-Angebote');
     expect(zeilen('Meine offenen To-Dos')).toEqual([
-      'Beamer-AngeboteLeitungsteam · aus „Leitungssitzung September“überfällig · Di, 20.10.',
-      'Farbe besorgenLeitungsteam · in Arbeit · aus „Leitungssitzung Oktober“bis So, 01.11.',
+      'Beamer-AngeboteLeitungsteam · aus „Leitungssitzung September“seit 20.10.',
+      'Farbe besorgenLeitungsteam · in Arbeit · aus „Leitungssitzung Oktober“01.11.',
       'Andacht vorbereitenJugendleitung',
     ]);
-    expect(screen.getByText(/überfällig/).className).toMatch(/ueberfaellig/);
+    expect(screen.getByText('seit 20.10.').className).toMatch(/ueberfaellig/);
+  });
+
+  it('Meine offenen To-Dos (W8b): derselbe Haken und dasselbe Frist-Kästchen wie in der Übersicht – der Haken nur als Anzeige, die Zeile bleibt EIN Knopf', async () => {
+    zeigen();
+    await screen.findByText('Beamer-Angebote');
+    const li = screen.getByText('Beamer-Angebote').closest('li')!;
+    expect(within(li).getAllByRole('button')).toHaveLength(1);
+    expect(within(li).getByRole('img', { name: 'Status: offen' })).toBeTruthy();
+    expect(within(li).getByTitle(/^überfällig seit /)).toBeTruthy();
   });
 
   it('„Jeder für sich“ (W8a): solange MEIN Teil fehlt steht es da – mit „2 von 3 fertig“ statt „in Arbeit“; ist mein Teil erledigt, nicht mehr', async () => {

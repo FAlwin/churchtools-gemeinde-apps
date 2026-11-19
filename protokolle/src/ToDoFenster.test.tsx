@@ -221,7 +221,7 @@ describe('ToDoFenster', () => {
     expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({
       status: 'erledigt',
       notiz: 'Angebot da',
-      karte: { notiz: true, sitzung: false },
+      karte: { notiz: true },
     });
   });
 
@@ -473,5 +473,51 @@ describe('ToDoFenster', () => {
     // Schrieb er nie mit Namen, steht im Verlauf „jemand“ – nie eine Personennummer.
     expect(screen.queryByText(/Person 23/)).toBeNull();
     expect(screen.getByText('jemand')).toBeTruthy();
+  });
+});
+
+describe('ToDoFenster: Reihenfolge und „Erledigt von“ (W8b, Entwurf v2)', () => {
+  /** Die Beschriftungen der Felder, in der Reihenfolge, in der sie im Fenster stehen. */
+  const reihenfolge = (namen: string[]) => {
+    const dialog = screen.getByRole('dialog');
+    const text = dialog.textContent ?? '';
+    return namen
+      .map((n) => ({ n, i: text.indexOf(n) }))
+      .sort((a, b) => a.i - b.i)
+      .map((x) => x.n);
+  };
+
+  it('Was · Bis · Zuständig · So wird es erledigt · Status · Notizen – das Wichtige vorn', () => {
+    zeige();
+    const soll = [
+      'Was ist zu tun?',
+      'Bis',
+      'Zuständig',
+      'So wird es erledigt',
+      'Status',
+      'Notizen',
+    ];
+    expect(reihenfolge([...soll].reverse())).toEqual(soll);
+  });
+
+  it('Jeder für sich: „Wer ist fertig?“ steht ebenfalls nach „Zuständig“', () => {
+    zeige({ eintrag: { aufgabe: modusSetzen(BEAMER, true, 1, AM), gruppe: LT } });
+    const soll = ['Zuständig', 'So wird es erledigt', 'Wer ist fertig?', 'Notizen'];
+    expect(reihenfolge([...soll].reverse())).toEqual(soll);
+  });
+
+  it('gemeinsam und erledigt: unter dem Status „Erledigt von Johann am 30.10.“', () => {
+    const erledigt = statusSetzen(BEAMER, 'erledigt', 23, AM);
+    zeige({ eintrag: { aufgabe: erledigt, gruppe: LT } });
+    expect(screen.getByText('Erledigt von Johann am 30.10.')).toBeTruthy();
+  });
+
+  it('nicht erledigt: kein „Erledigt von“; ändert man den Status weg von „Erledigt“, verschwindet es', () => {
+    zeige();
+    expect(screen.queryByText(/^Erledigt von/)).toBeNull();
+    cleanup();
+    zeige({ eintrag: { aufgabe: statusSetzen(BEAMER, 'erledigt', 23, AM), gruppe: LT } });
+    fireEvent.click(knopf('Offen'));
+    expect(screen.queryByText(/^Erledigt von/)).toBeNull();
   });
 });

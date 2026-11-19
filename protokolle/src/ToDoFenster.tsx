@@ -26,6 +26,7 @@ import {
 } from '@shared/protokolle/aufgaben';
 import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
+import { erledigtSatz } from './todoText';
 import { imEntwurfNachziehen } from './nachziehen';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
 import felder from './Fensterfelder.module.scss';
@@ -135,7 +136,6 @@ export function ToDoFenster({
   const [extern, setExtern] = useState(a?.extern ?? '');
   const [notiz, setNotiz] = useState('');
   const [karteNotiz, setKarteNotiz] = useState(!!a?.karte?.notiz);
-  const [karteSitzung, setKarteSitzung] = useState(!!a?.karte?.sitzung);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [loeschenFragen, setLoeschenFragen] = useState(false);
@@ -186,8 +186,7 @@ export function ToDoFenster({
     if (teile().length) x.teile = teile();
     if (!jederAn && status !== a.status) x.status = status;
     if (notiz.trim()) x.notiz = notiz;
-    if (karteNotiz !== !!a.karte?.notiz || karteSitzung !== !!a.karte?.sitzung)
-      x.karte = { notiz: karteNotiz, sitzung: karteSitzung };
+    if (karteNotiz !== !!a.karte?.notiz) x.karte = { notiz: karteNotiz };
     return x;
   };
   const geaendert = !a || verschoben || Object.keys(aenderung()).length > 0;
@@ -263,7 +262,7 @@ export function ToDoFenster({
             jeder: jederAn || undefined,
             teile: teile(),
             notiz,
-            karte: { notiz: karteNotiz, sitzung: karteSitzung },
+            karte: { notiz: karteNotiz },
           },
           ich,
           leitungIn(gruppe),
@@ -402,6 +401,39 @@ export function ToDoFenster({
           Verlauf zieht mit.
         </p>
       )}
+      <div className={felder.feld}>
+        <span>Zuständig</span>
+        <Einladeliste
+          liste={bekannt}
+          gewaehlt={wer}
+          onChange={setWer}
+          gesperrt={laeuft}
+          ich={ich.person}
+          mitAlle
+          zusatz={(id) => (id === ich.person ? 'du' : null)}
+        />
+        {weitere.length > 0 && (
+          <p className={felder.leise}>
+            Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} – das
+            bleibt so.
+          </p>
+        )}
+        <input
+          className={felder.eingabe}
+          value={extern}
+          disabled={laeuft}
+          placeholder="Außerhalb der Gruppe (nur Name)"
+          aria-label="Außerhalb der Gruppe (nur Name)"
+          onChange={(e) => setExtern(e.target.value)}
+        />
+        <p className={felder.leise}>Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.</p>
+      </div>
+      {ohneMich && (
+        <p className={felder.hinweis} role="note">
+          Du bist nicht dabei – nach dem Speichern siehst du dieses To-Do nicht mehr (Mitglieder
+          sehen nur ihre eigenen).
+        </p>
+      )}
       {wer.size >= 2 && (
         <div className={felder.feld}>
           <span>So wird es erledigt</span>
@@ -496,40 +528,13 @@ export function ToDoFenster({
             ariaLabel="Status"
             verbunden
           />
+          {/* Gemeinsam und erledigt: wer es war – wie auf der Karte (`erledigtSatz`). */}
+          {a?.status === 'erledigt' && status === 'erledigt' && (
+            <p className={felder.leise}>
+              {erledigtSatz(a, ich.person, (p) => (p === ich.person ? ich.name : name(p)))}
+            </p>
+          )}
         </div>
-      )}
-      <div className={felder.feld}>
-        <span>Zuständig</span>
-        <Einladeliste
-          liste={bekannt}
-          gewaehlt={wer}
-          onChange={setWer}
-          gesperrt={laeuft}
-          ich={ich.person}
-          mitAlle
-          zusatz={(id) => (id === ich.person ? 'du' : null)}
-        />
-        {weitere.length > 0 && (
-          <p className={felder.leise}>
-            Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} – das
-            bleibt so.
-          </p>
-        )}
-        <input
-          className={felder.eingabe}
-          value={extern}
-          disabled={laeuft}
-          placeholder="Außerhalb der Gruppe (nur Name)"
-          aria-label="Außerhalb der Gruppe (nur Name)"
-          onChange={(e) => setExtern(e.target.value)}
-        />
-        <p className={felder.leise}>Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.</p>
-      </div>
-      {ohneMich && (
-        <p className={felder.hinweis} role="note">
-          Du bist nicht dabei – nach dem Speichern siehst du dieses To-Do nicht mehr (Mitglieder
-          sehen nur ihre eigenen).
-        </p>
       )}
       <div className={felder.feld}>
         <span className={styles.kopf}>
@@ -550,15 +555,7 @@ export function ToDoFenster({
       </div>
       {a && (
         <div className={felder.feld}>
-          <span className={styles.kopf}>
-            Aus welcher Sitzung
-            {/* Ohne Sitzung zeigte die Karte nichts – der Schalter wäre wirkungslos (Test-Instanz 30.10.2026). */}
-            {a.sitzung !== null && (
-              <SchalterKnopf an={karteSitzung} onClick={() => setKarteSitzung(!karteSitzung)}>
-                Auf Karte anzeigen
-              </SchalterKnopf>
-            )}
-          </span>
+          <span className={styles.kopf}>Aus welcher Sitzung</span>
           {herkunft ? (
             <button
               type="button"

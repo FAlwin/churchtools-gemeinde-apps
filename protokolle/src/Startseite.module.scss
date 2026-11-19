@@ -165,16 +165,11 @@
   gap: 4px 8px;
 }
 
-.frist,
-.ueberfaellig {
+// Der Haken (44 px Treffläche) macht die Zeile nicht höher als bisher das Symbol.
+.haken {
+  display: inline-flex;
   flex: none;
-  font-size: 13px;
-  color: var(--text2);
-}
-
-.ueberfaellig {
-  color: var(--red);
-  font-weight: 600;
+  margin: -12px -6px -12px -10px;
 }
 
 .innen,

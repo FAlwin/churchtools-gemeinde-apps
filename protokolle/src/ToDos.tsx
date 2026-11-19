@@ -5,22 +5,15 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { FilterKnopf, type FilterAbschnitt } from '@ui/bedienung/FilterKnopf';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Icon } from '@ui/icons/icons';
-import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import { WahlKnopf } from '@ui/bedienung/WahlKnopf';
-import { tagKurz } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   bearbeiten,
-  istUeberfaellig,
-  letzteNotiz,
-  nameFuer,
   nameImVerlauf,
-  weitereZustaendige,
-  zustaendigKurz,
   type Aufgabe,
   type AufgabenStatus,
   type HakenSchritt,
@@ -31,23 +24,32 @@ import {
   einteilen,
   eintragSchluessel,
   langeErledigt,
-  ohneHerkunft,
+  schnellfilterAus,
+  schnellfilterVon,
   sichtbarFuer,
   sortieren,
   spalten,
   umordnen,
   zustaendigFuer,
+  type Einteilung,
+  type Schnellfilter,
   type Sortierung,
   type Spalte,
   type ToDoEintrag,
 } from '@shared/protokolle/uebersicht';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { ladeGruppenMitglieder } from './mitglieder';
-import { Marke } from './Marke';
-import { Haken } from './Haken';
 import { ToDoFenster, type Herkunft } from './ToDoFenster';
+import {
+  TabellenKopf,
+  ToDoKarte,
+  ToDoZeile,
+  type KartenEintrag,
+  type KartenKontext,
+} from './ToDoKarte';
 import { toDoAendern } from './todoSchreiben';
 import { ToDoZiehBereich, ZiehKarte, ZiehSpalte } from './ToDoZiehen';
+import { listenForm, useKastenBreite } from './useKastenBreite';
 import { useToDoEinstellungen } from './useToDoEinstellungen';
 import type { AufgabenStand } from './useFaellige';
 import styles from './ToDos.module.scss';
@@ -76,6 +78,18 @@ interface Frage {
   an: string;
 }
 
+const GRUPPIEREN: { wert: Einteilung; text: string }[] = [
+  { wert: 'status', text: 'Nach Status' },
+  { wert: 'frist', text: 'Nach Fälligkeit' },
+  { wert: 'person', text: 'Nach Person' },
+];
+/** Das Board hat nur Spalten, in die man ablegt – Status und Person, keine Fälligkeit. */
+const GRUPPIEREN_BOARD = GRUPPIEREN.filter((o) => o.wert !== 'frist');
+const PILLEN: { wert: Schnellfilter; text: string }[] = [
+  { wert: 'alle', text: 'Alle' },
+  { wert: 'meine', text: 'Meine' },
+];
+
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /** Wie lange eine eben abgehakte Karte an ihrem Platz bleibt (mit „Rückgängig“ an der Karte), bevor sie weiterrutscht. */
@@ -85,51 +99,6 @@ export const HALTEN_MS = 5000;
 interface Gehalten {
   vorher: Aufgabe;
   zurueck: ToDoAenderung;
-}
-
-/**
- * Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), mit dem Namen aus
- * dem Verlauf oder als Zahl (`weitereZustaendige`).
- */
-function Wer({ a, personen }: { a: Aufgabe; personen: ReadonlyMap<number, Person> }) {
-  const bekannt = a.wer.flatMap((p) => {
-    const x = personen.get(p);
-    return x ? [x] : [];
-  });
-  const namen = [
-    ...bekannt.map((p) => p.name.split(' ')[0]),
-    ...(a.extern.trim() ? [a.extern.trim()] : []),
-    ...weitereZustaendige(
-      a,
-      a.wer.filter((p) => !personen.has(p)),
-    ),
-  ];
-  if (!namen.length) return <span className={styles.niemand}>noch niemand zuständig</span>;
-  // Höchstens 3 Bilder und Namen, danach „+N“ (W5) – die volle Liste steht im Tooltip und für Screenreader.
-  const kurz = zustaendigKurz(namen);
-  return (
-    <span
-      className={styles.wer}
-      {...(kurz.gekuerzt
-        ? { title: kurz.voll, role: 'group', 'aria-label': `Zuständig: ${kurz.voll}` }
-        : {})}
-    >
-      {bekannt.length > 0 && (
-        <span className={styles.bilder}>
-          {bekannt.slice(0, 3).map((p) => (
-            <PersonBild
-              key={p.id}
-              name={p.name}
-              bild={p.bild}
-              initialen={p.initialen}
-              groesse={20}
-            />
-          ))}
-        </span>
-      )}
-      {kurz.text}
-    </span>
-  );
 }
 
 /**
@@ -170,6 +139,10 @@ export function ToDos({
   const [frage, setFrage] = useState<Frage | null>(null);
   const [aeltere, setAeltere] = useState(false);
   const [laeuft, setLaeuft] = useState<ReadonlySet<string>>(new Set());
+  // Bei „Jeder für sich“: bei welchen Karten „Wer ist fertig?“ aufgeklappt ist.
+  const [fertigOffen, setFertigOffen] = useState<ReadonlySet<string>>(new Set());
+  // Breite des Kastens – daran hängt, ob die Liste Karten oder Tabelle zeigt (Container-Abfrage in Schrift).
+  const [kastenRef, kastenBreite] = useKastenBreite();
   const [hinweis, setHinweis] = useState<string | null>(null);
   // Eben abgehakte Karten bleiben `HALTEN_MS` an ihrem Platz – mit „Rückgängig“ an der Karte selbst (W8a).
   const [gehalten, setGehalten] = useState<ReadonlyMap<string, Gehalten>>(new Map());
@@ -418,105 +391,64 @@ export function ToDos({
   };
   const mitMitarbeit = gruppen.filter((g) => g.mitarbeit !== null);
 
-  /** Was auf einer Karte steht – in Liste und Board derselbe Baustein (Entwurf v2). */
-  const inhalt = (e: ToDoEintrag) => {
+  /** Ein To-Do, wie es jetzt gezeigt wird (nach dem Abhaken bleibt es 5 s mit altem Platz, aber neuem Stand). */
+  const eintragFuer = (e: ToDoEintrag): KartenEintrag => {
     const k = eintragSchluessel(e);
     const g = gehalten.get(k);
     // Gehalten: die Karte steht mit dem alten Stand am alten Platz, gezeigt wird der aktuelle.
     const a = (g && sichtbarGezeigt.find((x) => eintragSchluessel(x) === k)?.aufgabe) || e.aufgabe;
     const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
-    const herkunft = herkunftVon(e);
-    const notiz = a.karte?.notiz ? letzteNotiz(a) : null;
-    const ueber = istUeberfaellig(a, heute);
-    const text = (
-      <span className={a.status === 'erledigt' || g ? styles.erledigt : undefined}>{a.text}</span>
-    );
-    return (
-      <>
-        <button
-          type="button"
-          className={styles.text}
-          title="To-Do öffnen"
-          onClick={() => setFenster({ eintrag: e })}
-        >
-          {text}
-        </button>
-        <span className={styles.meta}>
-          <Haken
-            a={a}
-            ich={ich.person}
-            art="marke"
-            beschaeftigt={laeuft.has(a.id)}
-            onSchritt={u && u.gruppe.mitarbeit !== null && !g ? (s) => haken(e, s) : undefined}
-          />
-          <Wer a={a} personen={bekannte} />
-          {a.bis && (
-            <span className={ueber ? styles.ueberfaellig : styles.frist}>
-              {ueber ? 'überfällig · ' : 'bis '}
-              {tagKurz(a.bis)}
-            </span>
-          )}
-          {mehrereGruppen && <Marke art="leise">{e.gruppe.name}</Marke>}
-        </span>
-        {g && (
-          <span className={styles.rueckgaengig} role="status">
-            Erledigt
-            <button
-              type="button"
-              className={styles.link}
-              onClick={() => {
-                loslassen(k);
-                aendern(e, g.zurueck);
-              }}
-            >
-              Rückgängig
-            </button>
-          </span>
-        )}
-        {a.karte?.notiz && (
-          <span className={styles.abschnitt}>
-            <b>Notizen</b>
-            {notiz ? (
-              <span>
-                {notiz.text}{' '}
-                <span className={styles.leise}>
-                  –{' '}
-                  {notiz.von === ich.person
-                    ? ich.name
-                    : (nameFuer(a, notiz.von, namen) ?? 'jemand')}
-                </span>
-              </span>
-            ) : (
-              <span>Noch keine Notiz.</span>
-            )}
-          </span>
-        )}
-        {a.karte?.sitzung && a.sitzung !== null && (
-          <span className={styles.abschnitt}>
-            <b>Aus welcher Sitzung</b>
-            {herkunft ? (
-              <button
-                type="button"
-                className={styles.link}
-                onClick={() => onSitzung(e.gruppe.id, herkunft.schluessel)}
-              >
-                {herkunft.titel} – im Protokoll zeigen
-              </button>
-            ) : (
-              <span>{ohneHerkunft(a)}</span>
-            )}
-          </span>
-        )}
-      </>
-    );
+    const liste = mitglieder.get(e.gruppe.id);
+    return {
+      e,
+      a,
+      herkunft: herkunftVon(e),
+      gehalten: !!g,
+      darfHaken: !!u && u.gruppe.mitarbeit !== null && !g,
+      beschaeftigt: laeuft.has(a.id),
+      gruppeGroesse: Array.isArray(liste) ? liste.length : undefined,
+    };
   };
+  /** Was für alle Karten gleich ist. */
+  const kx: KartenKontext = {
+    ich,
+    heute,
+    personen: bekannte,
+    namen,
+    mehrereGruppen,
+    fertigOffen,
+    onFertig: (k) =>
+      setFertigOffen((s) => {
+        const n = new Set(s);
+        if (n.has(k)) n.delete(k);
+        else n.add(k);
+        return n;
+      }),
+    onOeffnen: (e) => setFenster({ eintrag: e }),
+    onHaken: haken,
+    onRueckgaengig: (e) => {
+      const k = eintragSchluessel(e);
+      const g = gehalten.get(k);
+      if (!g) return;
+      loslassen(k);
+      aendern(e, g.zurueck);
+    },
+    onSitzung,
+  };
+  const form = listenForm(kastenBreite);
+  const tabelle = form !== 'karten';
+  const mitGruppe = form === 'tabelle' && mehrereGruppen;
 
   const zieh = (l: readonly { schluessel: string; eintraege: ToDoEintrag[] }[]) =>
     new Map(l.map((b) => [b.schluessel, b.eintraege.map(eintragSchluessel)]));
   const bild = (karte: string): ReactNode => {
     const e = gezeigt.find((x) => eintragSchluessel(x) === karte);
     return e ? (
-      <ul className={styles.liste}>{<li className={styles.zeile}>{inhalt(e)}</li>}</ul>
+      <ul className={styles.liste}>
+        <li className={styles.zeile}>
+          <ToDoKarte k={eintragFuer(e)} kx={kx} imBoard />
+        </li>
+      </ul>
     ) : null;
   };
   const altSchalter = (alteErledigte > 0 || aeltere) && (
@@ -559,17 +491,6 @@ export function ToDos({
             ariaLabel="Ansicht"
             verbunden
           />
-          <Segment
-            value={nach}
-            options={[
-              { value: 'status', label: 'Nach Status' },
-              { value: 'person', label: 'Nach Person' },
-            ]}
-            onChange={(n) => setzen({ nach: n })}
-            ariaLabel="Einteilen"
-            verbunden
-            className={styles.einteilen}
-          />
           <WahlKnopf
             titel="Sortieren"
             icon="sortieren"
@@ -589,6 +510,30 @@ export function ToDos({
             />
           )}
         </span>
+      </div>
+      <div className={styles.zeile2}>
+        {/* Nur ein Kurzweg auf den Filter „Zuständig“ – derselbe Zustand, keine zweite Filterlogik (`schnellfilterVon`). */}
+        <div className={styles.pillen} role="group" aria-label="Zuständigkeit">
+          {PILLEN.map((p) => (
+            <button
+              key={p.wert}
+              type="button"
+              className={styles.pille}
+              aria-pressed={schnellfilterVon(aus.zustaendig) === p.wert}
+              onClick={() => ausSetzen({ zustaendig: schnellfilterAus(p.wert) })}
+            >
+              {p.text}
+            </button>
+          ))}
+        </div>
+        <WahlKnopf
+          titel="Gruppieren"
+          icon="liste"
+          optionen={ansicht === 'board' ? GRUPPIEREN_BOARD : GRUPPIEREN}
+          wert={ansicht === 'board' && nach === 'frist' ? 'status' : nach}
+          vorgabe="status"
+          onWahl={(w) => setzen({ nach: w })}
+        />
       </div>
       {fenster && (
         <ToDoFenster
@@ -637,7 +582,7 @@ export function ToDos({
       {zustand.art === 'laedt' && <p className={styles.ruhig}>Wird geladen …</p>}
       {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={laden} />}
       {zustand.art === 'fertig' && ansicht === 'liste' && (
-        <section className={styles.karte} aria-label="To-Dos">
+        <section ref={kastenRef} className={styles.karte} aria-label="To-Dos">
           {leer ??
             (!bereiche.length ? (
               <p className={styles.innen}>
@@ -652,6 +597,7 @@ export function ToDos({
                 onUmordnen={umgeordnet}
                 bild={bild}
               >
+                {tabelle && <TabellenKopf mitGruppe={mitGruppe} />}
                 {bereiche.map((b) => (
                   <div key={b.schluessel} role="group" aria-label={b.titel}>
                     <h3
@@ -677,7 +623,11 @@ export function ToDos({
                             spalte={b.schluessel}
                             darf={sortierung === 'manuell'}
                           >
-                            {inhalt(e)}
+                            {tabelle ? (
+                              <ToDoZeile k={eintragFuer(e)} kx={kx} mitGruppe={mitGruppe} />
+                            ) : (
+                              <ToDoKarte k={eintragFuer(e)} kx={kx} />
+                            )}
                           </ZiehKarte>
                         ))}
                       </ul>
@@ -731,7 +681,7 @@ export function ToDos({
                             spalte={sp.schluessel}
                             darf={!laeuft.has(e.aufgabe.id)}
                           >
-                            {inhalt(e)}
+                            <ToDoKarte k={eintragFuer(e)} kx={kx} imBoard spalteArt={sp.art} />
                           </ZiehKarte>
                         ))}
                       </ul>

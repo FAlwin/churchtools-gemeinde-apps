@@ -9,20 +9,19 @@ import {
   type AufgabenStatus,
   type HakenSchritt,
 } from '@shared/protokolle/aufgaben';
-import { Marke } from './Marke';
 import styles from './Haken.module.scss';
 
 const ZEICHEN = { offen: 'kreis', arbeit: 'kreis-halb', erledigt: 'kreis-haken' } as const;
-const ART = { offen: 'leise', arbeit: 'info', erledigt: 'gut' } as const;
 const FARBE = { offen: '', arbeit: styles.arbeit, erledigt: styles.erledigt } as const;
-const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /**
- * **Der Haken eines To-Dos** (W8a, Alwin 19.11.2026: Haken statt Weiterschalten) – eine Stelle für die To-Do-Übersicht
- * (`art="marke"`, mit Wort), den Protokoll-Editor und den festen Punkt (`art="kreis"`). Ein Klick hakt ab (offen oder in
+ * **Der Haken eines To-Dos** (W8a, Alwin 19.11.2026: Haken statt Weiterschalten) – eine Stelle für die To-Do-Übersicht und
+ * die Startseite (`art="karte"`: Kreis mit 44 px Treffläche, grün gefüllt = erledigt; „in Arbeit“ zeigt das Schild an der
+ * Karte, nicht der Kreis), den Protokoll-Editor und den festen Punkt (`art="kreis"`). Ein Klick hakt ab (offen oder in
  * Arbeit → erledigt) oder nimmt zurück (erledigt → offen); **nie** in „in Arbeit“ – das stellt man im Fenster oder im Board
- * ein. Bei „Jeder für sich“ ist es **mein Teil** (nur wenn ich zuständig bin; sonst nur der Fortschritt „2/5“). Ohne
- * `onSchritt` nur Anzeige. Was ein Klick bewirkt, sagt `hakenSchritt` – hier wird es nicht nachgerechnet.
+ * ein. Bei „Jeder für sich“ ist es **mein Teil** (nur wenn ich zuständig bin; sonst nur Anzeige). Ohne `onSchritt` nur
+ * Anzeige (bei `art="karte"` kein Knopf – die Startseite steckt ihn in eine Zeile, die selbst ein Knopf ist). Was ein Klick
+ * bewirkt, sagt `hakenSchritt` – hier wird es nicht nachgerechnet.
  */
 export function Haken({
   a,
@@ -33,7 +32,7 @@ export function Haken({
 }: {
   a: Aufgabe;
   ich: number;
-  art?: 'kreis' | 'marke';
+  art?: 'kreis' | 'karte';
   onSchritt?: (s: HakenSchritt) => void;
   beschaeftigt?: boolean;
 }) {
@@ -46,7 +45,6 @@ export function Haken({
     jeder && schritt?.art === 'teil' ? (gesetzt ? 'erledigt' : 'offen') : a.status;
   const fortschritt = stand ? `${stand.fertig}/${stand.gesamt}` : null;
   const aktiv = !!onSchritt && !!schritt && !beschaeftigt;
-  const wort = gross(statusText(a.status));
 
   const hinweis = !schritt
     ? ''
@@ -67,12 +65,39 @@ export function Haken({
     </span>
   );
 
+  if (art === 'karte') {
+    const ring = (
+      <span className={`${styles.ring}${gesetzt ? ' ' + styles.an : ''}`}>
+        <Icon name="check" size={13} />
+      </span>
+    );
+    // Nur Anzeige: nicht zuständig bei „Jeder für sich“, kein Schreibrecht, oder die Startseite.
+    if (!onSchritt || (jeder && !schritt))
+      return (
+        <span className={styles.treffer} role="img" aria-label={label}>
+          {ring}
+        </span>
+      );
+    return (
+      <button
+        type="button"
+        className={styles.treffer}
+        disabled={!aktiv}
+        aria-busy={beschaeftigt || undefined}
+        aria-label={label}
+        onClick={() => schritt && onSchritt(schritt)}
+      >
+        {ring}
+      </button>
+    );
+  }
+
   // Nicht zuständig bei „Jeder für sich“: kein Haken, nur der Stand.
   if (jeder && !schritt)
     return (
       <span className={styles.reihe} role="img" aria-label={label}>
         <span className={`${styles.kreis} ${FARBE[a.status]}`}>
-          <Icon name={ZEICHEN[a.status]} size={art === 'marke' ? 16 : 20} />
+          <Icon name={ZEICHEN[a.status]} size={20} />
         </span>
         {zeigeFortschritt}
       </span>
@@ -81,26 +106,6 @@ export function Haken({
   const klick = () => {
     if (schritt && onSchritt) onSchritt(schritt);
   };
-
-  if (art === 'marke')
-    return (
-      <button
-        type="button"
-        className={styles.knopf}
-        disabled={!aktiv}
-        aria-busy={beschaeftigt || undefined}
-        aria-label={label}
-        onClick={klick}
-      >
-        <Marke art={ART[a.status]}>
-          <span className={styles.innen}>
-            <Icon name={ZEICHEN[zeichenStatus]} size={16} />
-            {wort}
-            {fortschritt ? ` · ${fortschritt}` : ''}
-          </span>
-        </Marke>
-      </button>
-    );
 
   return (
     <span className={styles.reihe}>

@@ -1,0 +1,37 @@
+// Felder in den Fenstern der Website (Neue Seite, Seite löschen) – dieselbe Gestalt wie in den anderen Erweiterungen.
+@use '@ui/design/mixins' as m;
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.leise {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fehler {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}

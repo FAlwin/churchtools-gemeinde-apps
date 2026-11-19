@@ -34,7 +34,7 @@ ausgezählt, nicht fortgeschrieben.
 Der Render-Smoke fährt den Dev-Server hoch und lädt `?demo=chart` (mountet die Chart-Ansicht ohne
 ChurchTools-Login) → prüft, dass die PDF-Seiten rendern und keine unbehandelte JS-Ausnahme auftritt.
 
-**Rauchtest je Erweiterung (#845):** Anmeldungen, Dienstplaner, Organigramm, Protokolle und Gebetsabend laufen je mit eigenem
+**Rauchtest je Erweiterung (#845):** Anmeldungen, Dienstplaner, Organigramm, Protokolle, Gebetsabend und Website laufen je mit eigenem
 Dev-Server auf eigenem Port (528x, Liste in `e2e/erweiterungen.ts`), weil `?demo` nur dort existiert. Je App:
 Startseite da, Klasse `ct-extension` gesetzt, ein Hauptweg führt weiter (nur gegen die Demo, keine echte Instanz), kein Seiten- und kein
 Konsolenfehler. Das ist das Netz für den Umbau von Ladeschicht und großen Komponenten.

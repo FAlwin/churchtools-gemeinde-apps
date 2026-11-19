@@ -1,0 +1,23 @@
+name: Release Website
+
+# Die Website hat ihren eigenen Release-Weg – getrennt von der Musik-App (Bauplan Website W3a-1):
+# Tag `website-vX.Y.Z` → Erweiterung bauen und packen → GitHub Release mit der ZIP (`make_latest: false`,
+# siehe Vorlage). Der Tag-Filter `v*` der Musik-App greift hier nicht: `website-v…` beginnt nicht mit `v`.
+#
+# Ablauf: erst in main mergen (CI grün) → `git tag website-vX.Y.Z && git push origin website-vX.Y.Z`.
+on:
+  push:
+    tags:
+      - 'website-v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/erweiterung-release.yml
+    with:
+      praefix: website-
+      workspace: website
+      kuerzel: website
+      titel: Website
+      anleitung: docs/betrieb/WEBSITE.md

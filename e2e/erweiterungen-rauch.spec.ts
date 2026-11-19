@@ -45,6 +45,13 @@ const WEGE: Record<
     gehe: (p) => p.getByRole('button', { name: 'Einrichten', exact: true }).click(),
     da: 'Noch keine Übertragung',
   },
+  // Ohne Fall ist die Website noch nicht eingerichtet (Admin); „Einrichten“ legt in der Demo nur im Speicher an. Die
+  // Gruppe „Website“ ist vorgewählt, danach fehlt noch die Startseite – der Hinweis mit seinem Knopf ist der Beleg.
+  website: {
+    start: 'Einrichten',
+    gehe: (p) => p.getByRole('button', { name: 'Einrichten', exact: true }).click(),
+    da: 'Diese Website hat noch keine Startseite',
+  },
 };
 
 for (const { app } of ERWEITERUNGEN) {

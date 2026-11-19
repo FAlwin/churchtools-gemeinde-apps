@@ -41,6 +41,7 @@ describe('zoomBeimTippenAus in jeder App', () => {
         'organigramm',
         'protokolle',
         'gebetsabend',
+        'website',
       ]),
     );
     const selbst = erweiterungen.filter(

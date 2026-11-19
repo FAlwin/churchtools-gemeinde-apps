@@ -77,6 +77,10 @@ jobs:
       - name: Gebetsabend-Erweiterung packen
         run: npm run paket -w gebetsabend
 
+      # Die Website (Bauplan Website W3a-1) ist ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Website-Erweiterung packen
+        run: npm run paket -w website
+
       - name: Test
         run: npm test
 

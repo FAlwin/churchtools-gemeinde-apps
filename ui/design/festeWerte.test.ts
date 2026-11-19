@@ -54,6 +54,7 @@ describe('Rundungen nur über die gemeinsamen Werte (#654)', () => {
       'organigramm',
       'protokolle',
       'gebetsabend',
+      'website',
       'formular',
     ]) {
       expect(ORDNER).toContain(`${app}/src`);

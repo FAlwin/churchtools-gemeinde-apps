@@ -10,6 +10,7 @@ export const ERWEITERUNGEN = [
   { app: 'organigramm', port: 5283 },
   { app: 'protokolle', port: 5284 },
   { app: 'gebetsabend', port: 5285 },
+  { app: 'website', port: 5286 },
 ] as const;
 
 export type Erweiterung = (typeof ERWEITERUNGEN)[number]['app'];

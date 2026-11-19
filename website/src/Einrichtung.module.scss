@@ -1,0 +1,28 @@
+@use '@ui/design/mixins' as m;
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.knoepfe {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}

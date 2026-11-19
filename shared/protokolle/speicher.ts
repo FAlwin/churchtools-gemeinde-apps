@@ -12,8 +12,7 @@
  * - **Meine Gruppen** kommen aus den sichtbaren Kategorien: Teilnehmer versteckter Gruppen sehen ihre eigene
  *   Gruppe in ChurchTools nicht (S0, 403), die Kategorie aber schon.
  */
-import { MAX_ZEICHEN } from '../ct/modulDaten';
-import { textEntpacken, textPacken } from '../ct/packen';
+import { pruefsumme, teileBauen as teileAllgemein, TEIL_ZEICHEN, textAusTeilen } from '../ct/teile';
 import { istDokument, type Block } from './dokument';
 
 export const KUERZEL_VORLAGEN = 'vorlagen';
@@ -85,18 +84,9 @@ export interface ProtokollTeil {
   daten: string;
 }
 
-/** Wie lang das gepackte Stück in einem Teil sein darf – Platz für die Hülle bleibt (`teileBauen` prüft das). */
-export const TEIL_ZEICHEN = 9_500;
-
-/** FNV-1a über den Text – reicht, um „ist das derselbe Stand?“ zu beantworten (kein Schutz gegen Absicht). */
-export function pruefsumme(text: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(16).padStart(8, '0');
-}
+// Die Aufteilung selbst (`TEIL_ZEICHEN`, `pruefsumme`, Teile bauen und zusammensetzen) steht in `shared/ct/teile.ts` – die
+// Website teilt ihre Seiten genauso. Hier nur die Hülle der Protokolle.
+export { TEIL_ZEICHEN, pruefsumme };
 
 /**
  * Das Dokument als Teil-Werte (fertige Texte für `customdatavalues`) und den Stand für den Kopf. Wirft, wenn
@@ -106,29 +96,20 @@ export function teileBauen(
   dokument: readonly Block[],
   sitzung: string,
 ): { stand: string; werte: string[] } {
-  const json = JSON.stringify(dokument);
-  const stand = pruefsumme(json);
-  const code = textPacken(json);
-  const stuecke: string[] = [];
-  for (let i = 0; i < code.length; i += TEIL_ZEICHEN) stuecke.push(code.slice(i, i + TEIL_ZEICHEN));
-  if (!stuecke.length) stuecke.push('');
-  const werte = stuecke.map((daten, nr) =>
-    JSON.stringify({
-      art: 'protokoll-teil',
-      fassung: 1,
-      sitzung,
-      stand,
-      nr,
-      von: stuecke.length,
-      daten,
-    } satisfies ProtokollTeil),
+  return teileAllgemein(
+    JSON.stringify(dokument),
+    (t) =>
+      ({
+        art: 'protokoll-teil',
+        fassung: 1,
+        sitzung,
+        stand: t.stand,
+        nr: t.nr,
+        von: t.von,
+        daten: t.daten,
+      }) satisfies ProtokollTeil,
+    'Ein Protokoll-Teil',
   );
-  const zuLang = werte.find((w) => w.length > MAX_ZEICHEN);
-  if (zuLang)
-    throw new Error(
-      `Ein Protokoll-Teil hätte ${zuLang.length} Zeichen (höchstens ${MAX_ZEICHEN}).`,
-    );
-  return { stand, werte };
 }
 
 /**
@@ -139,19 +120,12 @@ export function dokumentAusTeilen(
   kopf: Pick<ProtokollKopf, 'sitzung' | 'stand'>,
   teile: readonly ProtokollTeil[],
 ): Block[] | null {
-  // Gleicher Stand heißt gleicher Inhalt: Liegt ein Teil doppelt da (ein früheres Speichern mit demselben Text, dessen
-  // Aufräumen scheiterte), zählt er einmal – sonst wäre das Protokoll unlesbar, bis jemand von Hand aufräumt.
-  const jeNr = new Map<number, ProtokollTeil>();
-  for (const t of teile)
-    if (t.sitzung === kopf.sitzung && t.stand === kopf.stand && !jeNr.has(t.nr)) jeNr.set(t.nr, t);
-  const passend = [...jeNr.values()].sort((a, b) => a.nr - b.nr);
-  if (!passend.length) return null;
-  const anzahl = passend[0].von;
-  if (passend.length !== anzahl || passend.some((t, i) => t.nr !== i || t.von !== anzahl))
-    return null;
+  const json = textAusTeilen(
+    kopf.stand,
+    teile.filter((t) => t.sitzung === kopf.sitzung),
+  );
+  if (json === null) return null;
   try {
-    const json = textEntpacken(passend.map((t) => t.daten).join(''));
-    if (pruefsumme(json) !== kopf.stand) return null;
     const dok: unknown = JSON.parse(json);
     return istDokument(dok) ? dok : null;
   } catch {

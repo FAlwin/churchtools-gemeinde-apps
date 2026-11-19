@@ -19,6 +19,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Vitest macht sonst jede CSS-Datei leer – auch `…?raw`. Das Stylesheet der Website (`shared/website/website.css`) wird
+    // aber als Text gebraucht (Vorschau, `website/src/vorschauHtml.ts`), und ein leeres Blatt ließe den Test dazu ins Leere laufen.
+    css: { include: [/shared\/website\/website\.css/] },
     // Standard 'node' (reine Logik); Komponenten-Tests (*.test.tsx) setzen
     // ihre Umgebung per `// @vitest-environment jsdom`-Docblock selbst.
     environment: 'node',
@@ -37,7 +40,7 @@ export default defineConfig({
     // Aufrufen des vorigen Tests). Dieselbe Fehlerklasse, dieselbe Antwort: einmal hier.
     clearMocks: true,
     // ui/ (gemeinsame Bausteine, #469), shared/ (Regeln aller Apps), anmeldungen/ (#474), formular/ (das
-    // öffentliche Formular, A6-1 #542), dienstplaner/, organigramm/, protokolle/, gebetsabend/ und scripts/ haben keinen eigenen Testlauf – ihre Tests laufen hier mit.
+    // öffentliche Formular, A6-1 #542), dienstplaner/, organigramm/, protokolle/, gebetsabend/, website/ und scripts/ haben keinen eigenen Testlauf – ihre Tests laufen hier mit.
     include: [
       'src/**/*.test.{ts,tsx}',
       '../ui/**/*.test.{ts,tsx}',
@@ -48,6 +51,7 @@ export default defineConfig({
       '../organigramm/src/**/*.test.{ts,tsx}',
       '../protokolle/src/**/*.test.{ts,tsx}',
       '../gebetsabend/src/**/*.test.{ts,tsx}',
+      '../website/src/**/*.test.{ts,tsx}',
       // Werkzeuge mit eigenen Regeln (Formular hochladen, 15.10.2026).
       '../scripts/**/*.test.mjs',
     ],

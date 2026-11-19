@@ -25,6 +25,7 @@ const ORDNER = [
   'organigramm/src',
   'protokolle/src',
   'gebetsabend/src',
+  'website/src',
 ];
 
 function dateien(ordner: string): string[] {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baustein, einstellungen, kontext, menue, seite } from './website.testdaten';
+import { baustein, einstellungen, kontext, menue, seite, seiteMit } from './website.testdaten';
 import { BAUSTEIN_TYPEN, type Baustein, type Link, type Seite } from './modell';
 import { renderBaustein, renderSeite, standardAdresse, type RenderKontext } from './render';
 
@@ -72,14 +72,12 @@ function vollerKontext(o: Partial<RenderKontext> = {}): RenderKontext {
 }
 
 describe('renderBaustein', () => {
-  it('jeder Typ wird gerendert (ein 14. Typ ohne Renderer fällt hier auf)', () => {
+  it('jeder Typ wird gerendert (ein neuer Typ ohne Renderer fällt hier auf)', () => {
     const k = vollerKontext();
     for (const typ of BAUSTEIN_TYPEN) {
       const html = renderBaustein(baustein(typ), k);
-      expect(html, typ).toContain(`class="w-baustein w-b-${typ}"`);
-      expect(html.length, typ).toBeGreaterThan(
-        `<section class="w-baustein w-b-${typ}"></section>`.length,
-      );
+      expect(html, typ).toContain(`<div class="w-baustein w-b-${typ}">`);
+      expect(html.length, typ).toBeGreaterThan(`<div class="w-baustein w-b-${typ}"></div>`.length);
     }
   });
 
@@ -222,13 +220,11 @@ describe('renderBaustein', () => {
     expect(html).not.toContain('loading="lazy"');
     expect(renderBaustein(baustein('bild'), k)).toContain('loading="lazy"');
 
-    const s = seite({
-      bausteine: [
-        baustein('ueberschrift'),
-        baustein('bild', { id: 'a' }),
-        baustein('bild', { id: 'b' }),
-      ],
-    });
+    const s = seiteMit([
+      baustein('ueberschrift'),
+      baustein('bild', { id: 'a' }),
+      baustein('bild', { id: 'b' }),
+    ]);
     const doc = renderSeite(s, k);
     expect(doc.match(/loading="lazy"/g)).toHaveLength(1);
   });
@@ -260,33 +256,54 @@ describe('renderBaustein', () => {
 
   it('Slider: Folien als Liste, Intervall als Datenattribut, ohne Folien nichts', () => {
     const html = renderBaustein(baustein('slider'), vollerKontext());
-    expect(html).toContain('<ul class="w-slider-folien" data-intervall="6">');
-    expect(html.match(/<li class="w-folie">/g)).toHaveLength(2);
-    expect(html).toContain('href="https://a.de"');
+    expect(html).toContain('<div class="w-slider" data-intervall="6">');
+    expect(html.match(/class="w-folie"/g)).toHaveLength(2);
+    expect(html).toContain('<a class="w-folie" href="https://a.de" rel="noopener">');
     expect(renderBaustein(baustein('slider'), kontext())).toBe(
-      '<section class="w-baustein w-b-slider"></section>',
+      '<div class="w-baustein w-b-slider"></div>',
     );
   });
 
-  it('Knopf und Seiten-Link über adresseVon des Kontexts', () => {
+  /** Eine Knopf-Reihe mit EINEM Knopf. */
+  const einKnopf = (ziel: Link, art: 'haupt' | 'neben' = 'haupt', text = 'Los') =>
+    baustein('knoepfe', { knoepfe: [{ text, ziel, art }] });
+
+  it('Knöpfe und Seiten-Link über adresseVon des Kontexts', () => {
     const k = kontext({ seiten: [seite(), seite({ id: 'x', pfad: 'zweite', startseite: false })] });
-    expect(renderBaustein(baustein('knopf'), k)).toContain('href="/"');
-    const zweite = baustein('knopf', { ziel: { art: 'seite', seiteId: 'x' } });
+    expect(renderBaustein(baustein('knoepfe'), k)).toContain('href="/"');
+    const zweite = einKnopf({ art: 'seite', seiteId: 'x' });
     expect(renderBaustein(zweite, k)).toContain('href="/zweite/"');
     const vorschau = kontext({ seiten: k.seiten, adresseVon: (s) => `?seite=${s.id}` });
     expect(renderBaustein(zweite, vorschau)).toContain('href="?seite=x"');
     // toter Link: kein href
-    const tot = baustein('knopf', { ziel: { art: 'seite', seiteId: 'weg' } });
+    const tot = einKnopf({ art: 'seite', seiteId: 'weg' });
     expect(renderBaustein(tot, k)).not.toContain('href');
+    // Sprunglink
+    expect(renderBaustein(einKnopf({ art: 'anker', anker: 'termine' }), k)).toContain(
+      'href="#termine"',
+    );
   });
 
-  it('keine externen Ressourcen: kein Skript, kein iframe, keine fremden Hosts in src/srcset', () => {
-    const s = seite({ bausteine: BAUSTEIN_TYPEN.map((t) => baustein(t)) });
+  it('Knopf-Reihe: Klassen des Entwurfs, Reihenfolge, haupt/neben', () => {
+    const html = renderBaustein(baustein('knoepfe'), kontext());
+    expect(html).toContain('<div class="w-knopfreihe">');
+    expect(html).toMatch(/<a class="w-knopf" href="\/">Mehr erfahren<\/a>/);
+    expect(html).toMatch(
+      /<a class="w-knopf w-knopf--neben" href="https:\/\/beispiel.de" rel="noopener">Zweiter Weg<\/a>/,
+    );
+    expect(html.indexOf('Mehr erfahren')).toBeLessThan(html.indexOf('Zweiter Weg'));
+  });
+
+  it('keine externen Ressourcen: nur der eine Skript-Verweis, nie ein iframe, keine fremden Hosts in src/srcset', () => {
+    const s = seiteMit(BAUSTEIN_TYPEN.map((t) => baustein(t)));
     const doc = renderSeite(s, vollerKontext());
-    expect(doc).not.toMatch(/<(script|iframe|object|embed)\b/i);
-    expect(doc).not.toMatch(/\sstyle=/);
-    expect(doc).not.toMatch(/(src|srcset)="https?:/);
+    expect(doc.match(/<script\b/gi)).toHaveLength(1);
+    expect(doc).toContain('<script src="/website.js" defer></script>');
+    expect(doc).not.toMatch(/<(iframe|object|embed)\b/i);
     expect(doc).not.toMatch(/\son\w+=/i);
+    expect(doc).not.toMatch(/(?:src|srcset)="https?:/);
+    // `style="…"` gibt es nur, wenn ein Abschnitt oder eine Spalte eigene Werte hat – hier keine
+    expect(doc).not.toMatch(/\sstyle=/);
   });
 });
 
@@ -296,7 +313,9 @@ describe('Schutz vor Einschleusen (XSS)', () => {
    * ohnehin als Text da – gefährlich wäre nur ein ECHTES Tag `<script>` oder ein ECHTES Attribut `on…=`. Weil alles
    * geschützt wird, kommt in Tags kein `>` aus Daten vor; die Tag-Suche ist deshalb sicher.
    */
-  function pruefe(doc: string) {
+  function pruefe(vollesDoc: string) {
+    // Der EINE erlaubte Skript-Verweis (Adresse vom Kontext) gehört dazu – alles andere nicht.
+    const doc = vollesDoc.replace(/<script src="[^"]*" defer><\/script>/g, '');
     const tags = doc.match(/<[a-z!/][^>]*>/gi) ?? [];
     for (const tag of tags) {
       expect(tag, 'Skript-Tag').not.toMatch(/^<\/?script/i);
@@ -322,7 +341,13 @@ describe('Schutz vor Einschleusen (XSS)', () => {
       baustein('bild', { alt: BOESE_ATTR, unterschrift: BOESE_TEXT, bild }),
       baustein('bildText', { alt: BOESE_ATTR, markdown: BOESE_TEXT, bild }),
       baustein('galerie', { bilder: [{ bild, alt: BOESE_ATTR, unterschrift: BOESE_TEXT }] }),
-      baustein('knopf', { text: BOESE_TEXT, ziel: BOESE_LINK }),
+      baustein('knoepfe', {
+        knoepfe: [
+          { text: BOESE_TEXT, ziel: BOESE_LINK, art: 'haupt' },
+          { text: BOESE_ATTR, ziel: BOESE_LINK, art: 'neben' },
+        ],
+      }),
+      baustein('akzentzeile', { text: BOESE_TEXT }),
       baustein('kontaktformular', { einleitung: BOESE_TEXT, id: BOESE_ATTR }),
     ];
     const k = vollerKontext({
@@ -359,7 +384,7 @@ describe('Schutz vor Einschleusen (XSS)', () => {
       baustein('gruppenliste', { id: 'g2' }),
     ];
     for (const b of alle) pruefe(renderBaustein(b, k));
-    pruefe(renderSeite(seite({ bausteine: alle }), k));
+    pruefe(renderSeite(seiteMit(alle), k));
   });
 
   it('Seitentitel, Beschreibung, Gemeindename, Stylesheet, Sprache, Menü und Fußzeile', () => {
@@ -367,6 +392,7 @@ describe('Schutz vor Einschleusen (XSS)', () => {
     const k = kontext({
       seiten: [start],
       stylesheet: BOESE_ATTR,
+      skriptAdresse: BOESE_ATTR,
       einstellungen: einstellungen({
         name: BOESE_TEXT,
         sprache: 'de',
@@ -390,7 +416,9 @@ describe('Schutz vor Einschleusen (XSS)', () => {
   it('Anführungszeichen im Attribut werden ersetzt – auch im Alt-Text und in Adressen', () => {
     const html = renderBaustein(baustein('bild', { alt: 'a"b\'c' }), kontext());
     expect(html).toContain('alt="a&quot;b&#39;c"');
-    const knopf = baustein('knopf', { ziel: { art: 'extern', url: 'https://a.de/?q="x"' } });
+    const knopf = baustein('knoepfe', {
+      knoepfe: [{ text: 'x', ziel: { art: 'extern', url: 'https://a.de/?q="x"' }, art: 'haupt' }],
+    });
     expect(renderBaustein(knopf, kontext())).toContain('href="https://a.de/?q=&quot;x&quot;"');
   });
 });
@@ -419,7 +447,7 @@ describe('renderSeite', () => {
   });
 
   it('gleiche Eingabe, gleiche Ausgabe', () => {
-    const s = seite({ bausteine: BAUSTEIN_TYPEN.map((t) => baustein(t)) });
+    const s = seiteMit(BAUSTEIN_TYPEN.map((t) => baustein(t)));
     expect(renderSeite(s, vollerKontext())).toBe(renderSeite(s, vollerKontext()));
   });
 

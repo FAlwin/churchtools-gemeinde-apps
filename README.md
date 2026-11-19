@@ -144,6 +144,7 @@ Ein Dienstplan für alle Dienstgruppen der Gemeinde – gespeichert in ChurchToo
 - **Zusagen, absagen, tauschen** mit einem Tipp; eigene Dienste als PDF teilen
 - **Wann kann ich?** – je Termin Ja, Vielleicht oder Nein (Nein = Abwesenheit in ChurchTools), mit Notiz; Urlaub als Zeitraum
 - **Planen** für Planer: Termine als Spalten, freier Platz → „Wer kann?“ (sortiert nach den Antworten), Vorschläge per Zauberstab, „Personen“ mit den Antworten als Farbe, „Wer wie oft?“
+- **Erinnern** – eine Mail an alle, die noch nicht geantwortet haben, mit ihren offenen Terminen; **Plan teilen** als PDF: nach Terminen, nach Personen oder je Person
 
 **[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)** · [Anleitung](docs/betrieb/DIENSTPLANER.md)
 

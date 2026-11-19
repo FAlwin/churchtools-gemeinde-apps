@@ -3,9 +3,13 @@ import { ableiten, type Block } from './dokument';
 import type { ProtokollKopf } from './speicher';
 import { sitzungenOrdnen, type Termin } from './sitzungen';
 import {
+  abgelehntAm,
+  abgelehntNoch,
+  abgelehntSichtbar,
   ablehnen,
   annehmen,
   aufsNaechsteMal,
+  bereichOffen,
   darfAendern,
   einfuegeStelle,
   imProtokoll,
@@ -15,6 +19,7 @@ import {
   offeneFuer,
   SchonEntschieden,
   schonImDokument,
+  uebernommenFuer,
   vorschlaegeOrdnen,
   vorschlagAendern,
   vorschlagBloecke,
@@ -187,49 +192,136 @@ describe('Stände', () => {
   });
 });
 
-describe('Karte „Vorschläge“', () => {
-  it('ordnet nach Sitzung, dann „Nächste Sitzung“, dann Erledigt; Zurückgezogene nie', () => {
+describe('Karte „Vorschläge“ (W8c: nur Offene)', () => {
+  it('ordnet die offenen nach Sitzung, dann „Nächste Sitzung“ – alles Entschiedene steht nicht darin', () => {
     const k = kommend({ termine: [T11, T12] });
     const a = vorschlag({ id: 'a', ziel: zielVon(k[1]) });
     const b = vorschlag({ id: 'b' });
     const c = aufsNaechsteMal(vorschlag({ id: 'c' }), k[1], LEITUNG, AM);
     const d = zurueckziehen(vorschlag({ id: 'd' }), ANNA, AM);
-    const e = ablehnen(
-      vorschlag({
-        id: 'e',
-        ziel: zielVon({
-          beginn: '2026-10-14T17:00:00Z',
-          termin: { kalender: 4, id: 9 },
-          treffen: null,
-          kopf: null,
-        }),
-      }),
-      'nein',
-      LEITUNG,
-      '2026-10-14T20:00:00Z',
-    );
-    const f = ablehnen(vorschlag({ id: 'f', ziel: zielVon(k[0]) }), '', LEITUNG, AM);
-    const o = vorschlaegeOrdnen([a, b, c, d, e, f], k, HEUTE, ZONE);
+    const e = ablehnen(vorschlag({ id: 'e', ziel: zielVon(k[0]) }), 'nein', LEITUNG, AM);
+    const f = annehmen(vorschlag({ id: 'f' }), k[0], LEITUNG, AM);
+    const g = imProtokoll(vorschlag({ id: 'g', ziel: zielVon(k[0]) }), 'p1', LEITUNG, AM);
+    const o = vorschlaegeOrdnen([a, b, c, d, e, f, g], k, HEUTE, ZONE);
     expect(
-      o.gruppen.map((g) => [g.sitzung?.termin?.id ?? null, g.vorschlaege.map((v) => v.id)]),
+      o.gruppen.map((x) => [x.sitzung?.termin?.id ?? null, x.vorschlaege.map((v) => v.id)]),
     ).toEqual([
-      [11, ['b', 'f']],
+      [11, ['b']],
       [12, ['a']],
       [null, ['c']],
     ]);
-    expect(o.erledigt.map((v) => v.id)).toEqual(['e']);
+  });
+});
+
+describe('Übernommene (Marke an der Sitzung)', () => {
+  const k = kommend({ termine: [T11, T12], koepfe: [kopf({})] });
+
+  it('zählt vorgemerkte (angenommen) und schon eingefügte (im Protokoll) der Sitzung – sonst nichts', () => {
+    const an = annehmen(vorschlag({ id: 'a' }), k[0], LEITUNG, AM);
+    const imP = imProtokoll(vorschlag({ id: 'i', ziel: zielVon(k[0]) }), 'p1', LEITUNG, AM);
+    const andere = annehmen(vorschlag({ id: 'x' }), k[1], LEITUNG, AM);
+    const offen = vorschlag({ id: 'o' });
+    const weg = ablehnen(vorschlag({ id: 'w', ziel: zielVon(k[0]) }), '', LEITUNG, AM);
+    const liste = [an, imP, andere, offen, weg];
+    expect(uebernommenFuer(liste, k[0], k, HEUTE, ZONE)).toBe(2);
+    expect(uebernommenFuer(liste, k[1], k, HEUTE, ZONE)).toBe(1);
   });
 
-  it('Erledigtes älter als 60 Tage fällt weg', () => {
-    const alt = ablehnen(vorschlag(), '', LEITUNG, '2026-08-01T00:00:00Z');
-    expect(vorschlaegeOrdnen([alt], [], HEUTE, ZONE).erledigt).toEqual([]);
+  it('„Nächstes Mal“ nimmt die Übernahme zurück: er zählt nicht mehr, steht wieder bei den Offenen', () => {
+    const an = annehmen(vorschlag({ id: 'a' }), k[0], LEITUNG, AM);
+    const weiter = aufsNaechsteMal(an, k[0], LEITUNG, AM);
+    expect(uebernommenFuer([weiter], k[0], k, HEUTE, ZONE)).toBe(0);
+    expect(vorschlaegeOrdnen([weiter], k, HEUTE, ZONE).gruppen[0].vorschlaege).toEqual([weiter]);
+  });
+});
+
+describe('Abgelehnt: 7 Tage sichtbar (W8c)', () => {
+  // Ortszeit Berlin (Winter, +1): 23:30 UTC am 4.11. ist schon der 5.11.
+  const abgelehnt = (am: string, id = 'v1', ich = ANNA) =>
+    ablehnen(vorschlag({ id, ich }), 'Passt nicht', LEITUNG, am);
+
+  it('abgelehntAm: der Zeitpunkt des Ablehnens – nur bei abgelehnten', () => {
+    const v = abgelehnt('2026-11-04T10:00:00Z');
+    expect(abgelehntAm(v)).toBe('2026-11-04T10:00:00Z');
+    expect(abgelehntAm(vorschlag())).toBeNull();
   });
 
-  it('im Protokoll: unter seiner Sitzung, solange sie kommt', () => {
-    const k = kommend({ termine: [T11], koepfe: [kopf({})] });
-    const v = imProtokoll(vorschlag(), 'p1', LEITUNG, AM);
-    expect(vorschlaegeOrdnen([v], k, HEUTE, ZONE).gruppen[0].vorschlaege).toEqual([v]);
-    expect(vorschlaegeOrdnen([v], [], HEUTE, ZONE).erledigt).toEqual([v]);
+  it('abgelehntNoch: am Tag des Ablehnens 7, danach je Tag eins weniger, nach dem 6. Tag 0', () => {
+    const v = abgelehnt('2026-11-04T10:00:00Z');
+    const noch = (heute: string) => abgelehntNoch(v, heute, ZONE);
+    expect([
+      noch('2026-11-04'),
+      noch('2026-11-05'),
+      noch('2026-11-09'),
+      noch('2026-11-10'),
+      noch('2026-11-11'),
+      noch('2026-11-20'),
+    ]).toEqual([7, 6, 2, 1, 0, 0]);
+  });
+
+  it('rechnet in Ortszeit der Gemeinde, nicht in UTC', () => {
+    const v = abgelehnt('2026-11-04T23:30:00Z'); // 5.11. 00:30 Berlin
+    expect(abgelehntNoch(v, '2026-11-05', ZONE)).toBe(7);
+    expect(abgelehntNoch(v, '2026-11-05', 'UTC')).toBe(6);
+  });
+
+  it('abgelehntNoch: ohne lesbares Datum oder nicht abgelehnt → 0', () => {
+    expect(abgelehntNoch(vorschlag(), HEUTE, ZONE)).toBe(0);
+    expect(abgelehntNoch(abgelehnt('kaputt'), HEUTE, ZONE)).toBe(0);
+  });
+
+  it('sichtbar nur für den Vorschlagenden und die Leitung', () => {
+    const v = abgelehnt('2026-11-04T10:00:00Z');
+    const sicht = (ich: number, leitung: boolean) =>
+      abgelehntSichtbar([v], ich, leitung, HEUTE, ZONE).map((x) => x.id);
+    expect(sicht(7, false)).toEqual(['v1']); // der Vorschlagende
+    expect(sicht(1, true)).toEqual(['v1']); // die Leitung
+    expect(sicht(9, false)).toEqual([]); // ein anderes Mitglied
+  });
+
+  it('nach 7 Tagen weg; Offene, Übernommene und Zurückgezogene gehören nie in die Gruppe', () => {
+    const alt = abgelehnt('2026-10-28T10:00:00Z', 'alt'); // 9 Tage her
+    const neu = abgelehnt('2026-11-05T10:00:00Z', 'neu');
+    const andere = [
+      vorschlag({ id: 'o' }),
+      annehmen(vorschlag({ id: 'a' }), kommend({ termine: [T11] })[0], LEITUNG, AM),
+      zurueckziehen(vorschlag({ id: 'z' }), ANNA, AM),
+    ];
+    expect(abgelehntSichtbar([alt, neu, ...andere], 7, true, HEUTE, ZONE).map((x) => x.id)).toEqual(
+      ['neu'],
+    );
+  });
+
+  it('ausgeblendete (×) fehlen – nur diese; neueste zuerst', () => {
+    const a = abgelehnt('2026-11-02T10:00:00Z', 'a');
+    const b = abgelehnt('2026-11-05T10:00:00Z', 'b');
+    const c = abgelehnt('2026-11-03T10:00:00Z', 'c');
+    expect(abgelehntSichtbar([a, b, c], 7, true, HEUTE, ZONE).map((x) => x.id)).toEqual([
+      'b',
+      'c',
+      'a',
+    ]);
+    expect(abgelehntSichtbar([a, b, c], 7, true, HEUTE, ZONE, ['c']).map((x) => x.id)).toEqual([
+      'b',
+      'a',
+    ]);
+  });
+
+  it('gespeichert bleibt er: ablehnen löscht nichts, nur die Anzeige filtert', () => {
+    const alt = abgelehnt('2026-10-01T10:00:00Z');
+    expect(alt.stand).toBe('abgelehnt');
+    expect(abgelehntSichtbar([alt], 7, true, HEUTE, ZONE)).toEqual([]);
+  });
+});
+
+describe('Bereich „Vorschläge“: offen oder zu', () => {
+  it('ohne gemerkte Wahl: offen, wenn es Offene gibt – sonst zu', () => {
+    expect(bereichOffen(null, 2)).toBe(true);
+    expect(bereichOffen(null, 0)).toBe(false);
+  });
+  it('eine gemerkte Wahl gilt immer', () => {
+    expect(bereichOffen(false, 2)).toBe(false);
+    expect(bereichOffen(true, 0)).toBe(true);
   });
 });
 

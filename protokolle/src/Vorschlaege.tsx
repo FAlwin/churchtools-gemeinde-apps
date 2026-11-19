@@ -1,9 +1,17 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { darfAendern, vorschlaegeOrdnen, type Vorschlag } from '@shared/protokolle/vorschlaege';
+import {
+  abgelehntNoch,
+  abgelehntSichtbar,
+  bereichOffen,
+  darfAendern,
+  vorschlaegeOrdnen,
+  type Vorschlag,
+} from '@shared/protokolle/vorschlaege';
 import { wannLang } from './anzeige';
 import { Marke } from './Marke';
+import { useAusgeblendet, useBereichWahl } from './vorschlaegeMerken';
 import styles from './Vorschlaege.module.scss';
 
 /** Was man mit einem Vorschlag tun kann – fehlt eine Aktion, gibt es den Knopf nicht. */
@@ -17,42 +25,46 @@ export interface VorschlagAktionen {
   ablehnen?: (v: Vorschlag) => void;
 }
 
+/** Das Schild in der Zeile: nur wo es etwas sagt – „offen“ ist der Normalfall der Liste, Übernommene stehen nicht darin. */
 function standMarke(v: Vorschlag, direkt: boolean): ReactNode {
-  switch (v.stand) {
-    case 'offen':
-      return direkt ? (
-        <Marke art="info">kommt ins Protokoll</Marke>
-      ) : (
-        <Marke art="leise">offen</Marke>
-      );
-    case 'angenommen':
-      return <Marke art="gut">übernommen</Marke>;
-    case 'imProtokoll':
-      return <Marke art="gut">im Protokoll</Marke>;
-    case 'abgelehnt':
-      return <Marke art="problem">abgelehnt</Marke>;
-    case 'zurueckgezogen':
-      return null;
+  if (v.stand === 'offen' && direkt) return <Marke art="info">kommt ins Protokoll</Marke>;
+  if (v.stand === 'abgelehnt') {
+    // Am Handy entfällt es: Die Gruppe heißt schon „Abgelehnt“ (Entwurf W8c).
+    return (
+      <span className={styles.nurBreit}>
+        <Marke art="problem">abgelehnt</Marke>
+      </span>
+    );
   }
+  return null;
 }
 
 /**
- * **Ein Vorschlag als Zeile** – Thema, Text, von wem, Stand (S5-4). Die Knöpfe hängen an `aktionen`: eigene offene
- * Vorschläge ändern/zurückziehen, die Leitung entscheidet. Läuft eine Aktion, sind die Knöpfe der Zeile gesperrt.
+ * **Ein Vorschlag als Zeile** (S5-4, Kurzform seit W8c): Pfeil, Titel (eine Zeile), darunter höchstens eine Zeile Text
+ * und „von …“. Antippen klappt auf: ganzer Text und die Knöpfe – **nur dort**. Die Knöpfe hängen an `aktionen`: eigene
+ * offene Vorschläge ändern/zurückziehen, die Leitung entscheidet. Läuft eine Aktion, sind die Knöpfe der Zeile gesperrt.
+ * Welche Zeile aufgeklappt ist, weiß der Aufrufer (`auf`, `onKlick`) – es ist immer nur eine.
  */
 export function VorschlagZeile({
   v,
   ich,
   direkt,
   aktionen,
+  auf,
+  onKlick,
   ohneMarke = false,
+  abgelehnt,
 }: {
   v: Vorschlag;
   ich: number;
   direkt: boolean;
   aktionen: VorschlagAktionen;
+  auf: boolean;
+  onKlick: () => void;
   /** Im Kasten beim Schreiben: alle offen – das Schild sagte nichts. */
   ohneMarke?: boolean;
+  /** In der Gruppe „Abgelehnt“: noch so viele Tage sichtbar, „×“ blendet früher aus. */
+  abgelehnt?: { noch: number; onWeg: () => void };
 }) {
   const [laeuft, setLaeuft] = useState(false);
   const tun = (f?: (v: Vorschlag) => Promise<void>) => () => {
@@ -121,32 +133,70 @@ export function VorschlagZeile({
       </button>
     ),
   ].filter(Boolean);
+  const kurz = abgelehnt ? (v.grund ? `Grund: ${v.grund}` : '') : v.text;
+  const eineZeile = kurz.split('\n')[0];
   return (
     <li className={styles.vorschlag}>
-      <div className={styles.oben}>
-        <div className={styles.inhalt}>
-          <b>{v.titel}</b>
-          {v.text && <p>{v.text}</p>}
-          <small>
-            von {v.name}
-            {meins ? ' (du)' : ''}
-            {verschoben ? ' · verschoben' : ''}
-          </small>
-        </div>
-        {!ohneMarke && standMarke(v, direkt)}
+      <div className={styles.kopfzeile}>
+        <button type="button" className={styles.zeile} aria-expanded={auf} onClick={onKlick}>
+          <Icon name={auf ? 'chev-down' : 'chev-right'} size={16} />
+          <span className={styles.inhalt}>
+            <b className={styles.eine}>{v.titel}</b>
+            {!auf && eineZeile && (
+              <span className={`${styles.eine} ${styles.textzeile}`}>{eineZeile}</span>
+            )}
+            <small>
+              von {v.name}
+              {meins ? ' (du)' : ''}
+              {verschoben ? ' · verschoben' : ''}
+              {abgelehnt
+                ? ` · noch ${abgelehnt.noch} ${abgelehnt.noch === 1 ? 'Tag' : 'Tage'} sichtbar`
+                : ''}
+            </small>
+          </span>
+          {!ohneMarke && standMarke(v, direkt)}
+        </button>
+        {abgelehnt && (
+          <button
+            type="button"
+            className={styles.weg}
+            title="Ausblenden"
+            aria-label={`„${v.titel}“ ausblenden`}
+            onClick={abgelehnt.onWeg}
+          >
+            <Icon name="x" size={16} />
+          </button>
+        )}
       </div>
-      {v.stand === 'abgelehnt' && v.grund && <p className={styles.grund}>{v.grund}</p>}
-      {knoepfe.length > 0 && <div className={styles.knoepfe}>{knoepfe}</div>}
+      {auf && (
+        <div className={styles.auf}>
+          {v.text ? (
+            <p className={styles.voll}>{v.text}</p>
+          ) : (
+            <p className={styles.leise}>Ohne Text.</p>
+          )}
+          {v.stand === 'abgelehnt' && v.grund && (
+            <p className={styles.grund}>
+              <b>Begründung:</b> {v.grund}
+            </p>
+          )}
+          {knoepfe.length > 0 && <div className={styles.knoepfe}>{knoepfe}</div>}
+        </div>
+      )}
     </li>
   );
 }
 
 /**
- * **Karte „Vorschläge“** im Reiter „Sitzungen“ (S5-4, Entwurf v1): alle Vorschläge der Gruppe, je kommende Sitzung, dann
- * „Nächste Sitzung“ (noch nicht festgelegt), dann „Erledigt“. Die Leitung kann offene Vorschläge einer festgelegten
- * Sitzung schon hier übernehmen – eingefügt wird beim Öffnen des Protokolls.
+ * **Karte „Vorschläge“** im Reiter „Sitzungen“ (S5-4, Kurzform + Aufräumen W8c): die **offenen** Vorschläge der Gruppe,
+ * je kommende Sitzung, dann „Nächste Sitzung“ (noch nicht festgelegt) – darunter, nur für den Vorschlagenden und die
+ * Leitung, die kleine Gruppe „Abgelehnt“ (7 Tage). Übernommene stehen nicht hier, sondern als Marke an der Sitzung. Der
+ * Kopf klappt den Bereich auf und zu (das Gerät merkt es). Die Leitung kann offene Vorschläge einer festgelegten Sitzung
+ * schon hier übernehmen – eingefügt wird beim Öffnen des Protokolls.
  */
 export function VorschlaegeKarte({
+  gruppe,
+  leitung,
   liste,
   kommend,
   heute,
@@ -156,6 +206,10 @@ export function VorschlaegeKarte({
   aktionen,
   fehler,
 }: {
+  /** Die Gruppe – das Gerät merkt Einklappen und Ausblenden je Person und Gruppe. */
+  gruppe: number;
+  /** Darf entscheiden – sieht auch die abgelehnten der anderen. */
+  leitung: boolean;
   liste: readonly Vorschlag[];
   kommend: readonly Sitzung[];
   heute: string;
@@ -166,53 +220,90 @@ export function VorschlaegeKarte({
   aktionen: (s: Sitzung | null) => VorschlagAktionen;
   fehler: string | null;
 }) {
-  const { gruppen, erledigt } = vorschlaegeOrdnen(liste, kommend, heute, zeitzone);
+  const [aufId, setAufId] = useState<string | null>(null);
+  const [wahl, setWahl] = useBereichWahl(ich, gruppe);
+  const [aus, ausblenden] = useAusgeblendet(ich, gruppe);
+  const { gruppen } = vorschlaegeOrdnen(liste, kommend, heute, zeitzone);
+  const abgelehnt = abgelehntSichtbar(liste, ich, leitung, heute, zeitzone, aus);
   const offen = liste.filter((v) => v.stand === 'offen').length;
+  const bereichAuf = bereichOffen(wahl, offen);
+  const umschalten = (id: string) => setAufId(aufId === id ? null : id);
   return (
-    <section className={styles.karte} aria-labelledby="vorschlaege">
-      <div className={styles.kartenkopf}>
-        <h3 id="vorschlaege">Vorschläge</h3>
-        <span className={styles.anzahl}>{offen} offen</span>
-      </div>
+    <section className={styles.karte} aria-label="Vorschläge">
+      <h3 className={styles.kartenkopf}>
+        <button
+          type="button"
+          className={styles.klapp}
+          aria-expanded={bereichAuf}
+          onClick={() => setWahl(!bereichAuf)}
+        >
+          <Icon name={bereichAuf ? 'chev-down' : 'chev-right'} size={16} />
+          <span className={styles.titel}>Vorschläge</span>
+          <span className={styles.anzahl}>{offen} offen</span>
+        </button>
+      </h3>
       {fehler && (
         <p className={styles.fehler} role="alert">
           {fehler}
         </p>
       )}
-      {!gruppen.length && !erledigt.length && (
-        <p className={styles.leer}>
-          Noch keine Vorschläge. Mit „Punkt vorschlagen“ bringst du ein Thema für eine Sitzung ein.
-        </p>
-      )}
-      {gruppen.map((g) => (
-        <div key={g.sitzung?.schluessel ?? 'naechste'}>
-          <div className={styles.gruppe}>
-            Für{' '}
-            {g.sitzung
-              ? `${g.sitzung.titel} · ${wannLang(g.sitzung.beginn, zeitzone)}`
-              : 'die nächste Sitzung · noch nicht festgelegt'}
-          </div>
-          <ul className={styles.liste}>
-            {g.vorschlaege.map((v) => (
-              <VorschlagZeile
-                key={v.id}
-                v={v}
-                ich={ich}
-                direkt={direkt}
-                aktionen={aktionen(g.sitzung)}
-              />
-            ))}
-          </ul>
-        </div>
-      ))}
-      {erledigt.length > 0 && (
-        <div>
-          <div className={styles.gruppe}>Erledigt</div>
-          <ul className={styles.liste}>
-            {erledigt.map((v) => (
-              <VorschlagZeile key={v.id} v={v} ich={ich} direkt={direkt} aktionen={{}} />
-            ))}
-          </ul>
+      {bereichAuf && (
+        <div className={styles.rumpf}>
+          {!gruppen.length && !abgelehnt.length && (
+            <p className={styles.leer}>
+              Keine offenen Vorschläge. Mit „Punkt vorschlagen“ bringst du ein Thema für eine
+              Sitzung ein.
+            </p>
+          )}
+          {gruppen.map((g) => (
+            <div key={g.sitzung?.schluessel ?? 'naechste'}>
+              <div className={styles.gruppe}>
+                Für{' '}
+                {g.sitzung
+                  ? `${g.sitzung.titel} · ${wannLang(g.sitzung.beginn, zeitzone)}`
+                  : 'die nächste Sitzung · noch nicht festgelegt'}
+              </div>
+              <ul className={styles.liste}>
+                {g.vorschlaege.map((v) => (
+                  <VorschlagZeile
+                    key={v.id}
+                    v={v}
+                    ich={ich}
+                    direkt={direkt}
+                    aktionen={aktionen(g.sitzung)}
+                    auf={aufId === v.id}
+                    onKlick={() => umschalten(v.id)}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
+          {abgelehnt.length > 0 && (
+            <div>
+              <div className={styles.gruppe}>Abgelehnt · verschwindet nach 7 Tagen</div>
+              <ul className={styles.liste}>
+                {abgelehnt.map((v) => (
+                  <VorschlagZeile
+                    key={v.id}
+                    v={v}
+                    ich={ich}
+                    direkt={direkt}
+                    aktionen={{}}
+                    auf={aufId === v.id}
+                    onKlick={() => umschalten(v.id)}
+                    abgelehnt={{
+                      noch: abgelehntNoch(v, heute, zeitzone),
+                      onWeg: () =>
+                        ausblenden(
+                          v.id,
+                          liste.filter((x) => x.stand === 'abgelehnt').map((x) => x.id),
+                        ),
+                    }}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -220,8 +311,9 @@ export function VorschlaegeKarte({
 }
 
 /**
- * **Kasten „Vorschläge · n“** beim Schreiben (S5-4, Gruppe „Vorschlagen“): die offenen Vorschläge dieser Sitzung mit
- * Übernehmen / Nächstes Mal / Ablehnen; aufklappbar. Ohne offene Vorschläge steht er nicht da.
+ * **Kasten „Vorschläge · n“** beim Schreiben (S5-4, Gruppe „Vorschlagen“): die offenen Vorschläge dieser Sitzung in der
+ * Kurzform der Karte (W8c) mit Übernehmen / Nächstes Mal / Ablehnen im aufgeklappten Vorschlag; der Kasten selbst ist
+ * auch aufklappbar. Ohne offene Vorschläge steht er nicht da.
  */
 export function VorschlaegeKasten({
   liste,
@@ -235,6 +327,7 @@ export function VorschlaegeKasten({
   fehler: string | null;
 }) {
   const [offen, setOffen] = useState(true);
+  const [aufId, setAufId] = useState<string | null>(null);
   if (!liste.length && !fehler) return null;
   return (
     <section className={styles.karte} aria-label="Vorschläge">
@@ -262,6 +355,8 @@ export function VorschlaegeKasten({
               direkt={false}
               aktionen={aktionen}
               ohneMarke
+              auf={aufId === v.id}
+              onKlick={() => setAufId(aufId === v.id ? null : v.id)}
             />
           ))}
         </ul>

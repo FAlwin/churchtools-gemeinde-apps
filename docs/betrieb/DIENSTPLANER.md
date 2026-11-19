@@ -110,17 +110,30 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
 - **Entwürfe ohne Platz, alte Entwürfe:** Ändert jemand direkt in ChurchTools die Platzzahl (die Plätze werden dabei
   neu nummeriert) oder nimmt den Dienst heraus, oder ist der Termin vorbei bzw. gelöscht, passt ein Entwurf nirgends
   mehr. Dann steht beim Dienst ein Schild „Entwurf ohne Platz“ bzw. über der Matrix „N alte Entwürfe“ – beides mit
-  „verwerfen“. In ChurchTools ändert sich dabei nichts. Im Dienstplaner selbst ist die Platzzahl gesperrt, solange
-  dort Entwürfe liegen.
+  „verwerfen“. In ChurchTools ändert sich dabei nichts. **Ändert man die Platzzahl im Dienstplaner (19.11.2026), gehen die
+  Entwürfe dieses Dienstes an diesem Termin mit:** Nach der geglückten Änderung trägt der Dienstplaner sie selbst auf ihre neuen
+  Nummern um (`anzahlMitEntwuerfen` in `ladeEntwuerfe.ts`; Rechnung `umzuegeRechnen`, Ablauf `entwuerfeMitnehmen` in
+  `shared/dienstplan/umnummerieren.ts`, ein Entwurf zieht über `entwurfUmziehen` um – frisch lesen, Version vergleichen,
+  schreiben, nachlesen, nie wiederholt). Gemessen (Test-Instanz, 19.11.2026): Vergrößern hängt hinten an, bestehende Plätze
+  behalten ID und Nummer (nur 1 → 2 macht aus „ohne Nummer“ die 1); Verkleinern nimmt freie Plätze von hinten weg und rückt die
+  übrigen lückenlos auf, die ID bleibt – über sie findet jeder Entwurf seinen neuen Platz (die ID ist zwischen dem Lesen
+  vorher und nachher stabil, nur unser `PUT` liegt dazwischen). Fällt der Platz mit dem Entwurf weg, geht er auf einen freien
+  Platz ohne Entwurf; findet sich keiner, bleibt er liegen und das Schild „ohne Platz“ zeigt ihn. Gelingt ein Umzug nicht,
+  steht die Platzzahl trotzdem (nichts wird zurückgedreht), eine Meldung sagt „N Entwürfe konnten nicht mitgehen – bitte neu
+  laden“; danach lädt „Planen“ Plan und Entwürfe neu. **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
+  entfernen“) ist ein Dienst mit Entwürfen nur noch, wo man die Entwürfe der Gruppe nicht ändern darf (Schublade nicht „bereit“).
 - **Plätze-Regler in der Gruppenzeile** (Plätze-Fach, jede Änderung gilt sofort, ChurchTools verschickt dabei nichts):
   Das Fach zeigt **jeden Dienst der Dienstgruppe**, den man an diesem Termin planen darf – auch Dienste, die im
   gezeigten Zeitraum noch nirgends einen Platz haben (dann „nicht vorgesehen“, 0): „+“ schaltet den Dienst für diesen
-  Termin ein, „−“ bis 0 wieder aus. Belegte Plätze und Dienste mit Entwürfen bleiben unverändert. Die Matrix zeigt einen
+  Termin ein, „−“ bis 0 wieder aus. **„+“ geht immer** – auch mit Entwürfen (sie gehen mit); **„−“ stoppt bei den Plätzen mit Inhalt:**
+  Untergrenze = belegte Plätze + Entwürfe auf **freien** Plätzen (ein Entwurf auf einem belegten Platz – Ersetzen, Zurückziehen –
+  zählt nicht extra), dazu der Hinweis „Auf den freien Plätzen liegen Entwürfe – zum Verkleinern erst einen entfernen.“ (eine
+  Rechnung: `plaetzeGrenze` in `plaetzeGrenze.ts`, für Regler, Hinweise und Fenster). Die Matrix zeigt einen
   neu eingeschalteten Dienst nach dem Schließen des Fachs (sie lädt dann neu). Oben steht, wenn es für den Kalender des
   Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau (im Fach Moderation & Predigt etwa
   „Abendmahl: 0 → 1“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
   Zahl der Vorlage erhöht, nie verringert oder entfernt; sie ändert **nur die Dienste der Gruppe, deren Fach offen ist**
-  (Dienste anderer Gruppen in der Vorlage übergeht sie still), lässt Dienste mit Entwürfen aus, und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
+  (Dienste anderer Gruppen in der Vorlage übergeht sie still), lässt nur Dienste aus, die gesperrt sind (Entwürfe, die man nicht umtragen darf), und der Terminname bleibt. Jeder Dienst wird einzeln gespeichert – scheitert einer,
   laufen die anderen weiter, am Ende steht, was geklappt hat und was nicht. Sind die Vorlagen von ChurchTools nicht
   erreichbar, sagt das Fach es ruhig; die Plätze lassen sich trotzdem ändern.
 
@@ -181,15 +194,16 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   ChurchTools um 1 (sofort, derselbe Weg wie der Regler: `entwuerfe.anzahl` → `anzahlAendern`), lädt den Termin neu und legt –
   **erst, wenn der neue Platz im neuen Plan wirklich da ist** – den Entwurf an (derselbe Weg wie der normale Klick, Modus aus der
   Vorgabe; Warnungen „anderer Dienst“/„abwesend“ stehen vorher im selben Fenster). Scheitert das Erhöhen: Meldung des Reglers, kein
-  Entwurf. Scheitert erst der Entwurf: der Platz bleibt, es erscheint die Meldung des Entwurfs. Kommt der neue Platz binnen 20 s nicht,
-  gibt es eine Meldung und keinen Entwurf. **Sperre:** liegt an diesem Dienst und Termin ein Entwurf (auch ein veralteter), gibt es
-  kein Dazunehmen – das Fenster sagt „Erst senden oder Entwürfe entfernen“ mit **„Ansehen und senden“** (ChurchTools nummeriert Plätze
-  beim Ändern neu, gemessen 15.10.2026; wie beim Regler).
+  Entwurf. Scheitert erst der Entwurf: der Platz bleibt, es erscheint die Meldung des Entwurfs. Kommt der neue Platz – oder ein
+  mit umgezogener Entwurf (bei 1 → 2) – binnen 20 s nicht, gibt es eine Meldung und keinen Entwurf. **Liegt an diesem Dienst
+  und Termin ein Entwurf, geht „Platz dazunehmen“ trotzdem** (seit 19.11.2026: die Entwürfe gehen mit, die Sperre „Erst senden
+  oder Entwürfe entfernen“ ist weg; wer die Entwürfe der Gruppe nicht ändern darf, bekommt in „Personen“ ohnehin keinen
+  Klick). Gingen Entwürfe nicht mit, gibt es eine Meldung, keinen neuen Entwurf, und Plan und Entwürfe laden neu.
 - **Zeile „Plätze“ (P2c):** am Ende jedes geöffneten Dienst-Blocks, je Termin „belegt von Plätzen“ („2 von 3“), gezählt wie „Noch offen“
   (`plaetzeStand` → `zaehleFrei`, Entwürfe zählen mit): freie Plätze rot, voll neutral, ohne Plätze „aus“. Ein Klick darauf – und auf
   einen roten Tag in „Noch offen“ – öffnet ein Fenster mit − / + für **diesen** Dienst an diesem Termin (`PlatzFenster`, Regler und
-  Logik wie das Plätze-Fach der Matrix: `PlatzRegler`, `useAnzahlSetzen`). Sofort gespeichert, − nicht unter die Belegten, + ohne
-  Obergrenze, bei einem Entwurf an Dienst und Termin beide gesperrt. Rechte wie der Regler (`darfPlanen`, Anschluss zum Ändern der
+  Logik wie das Plätze-Fach der Matrix: `PlatzRegler`, `useAnzahlSetzen`). Sofort gespeichert, − nicht unter die Belegten und die Entwürfe auf freien Plätzen, + ohne
+  Obergrenze (auch mit Entwürfen – sie gehen mit); beide gesperrt nur, wo die Entwürfe nicht umgetragen werden dürfen. Rechte wie der Regler (`darfPlanen`, Anschluss zum Ändern der
   Plätze); an abgesagten Terminen kein Regler.
 - **Wo es ein Knopf ist:** nur, wo man in der Matrix auch einen freien Platz antippen kann – den Dienst planen dürfen (`darfPlanen`),
   Entwürfe der Dienstgruppe geladen und änderbar (`darfAendern`: Schublade bereit). Sonst bleibt die Zelle wie bisher. Eine
@@ -231,8 +245,8 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   (`freierPlatzAktion` in `shared/dienstplan/personenEintragen.ts`; für die Gäste-Zelle als `gastNeuAktion`); die Rechte sind
   `personenErlaubt` (`darfPlanen`, Schublade/`darfAendern`, `nimmtEintraegeAn`). Hat die Zelle schon Gäste (bestehend oder
   Entwurf), bleibt das Tag ein Knopf wie in P2b, dazu ein kleines „+“ für einen weiteren Gast. **Dienst voll:** dasselbe
-  Fenster mit Voll-Satz und „Platz dazunehmen (n)“ (`usePlatzDazu`, jetzt für `Besetzung` – Person **oder** Gast); liegt an Dienst
-  und Termin ein Entwurf, kommt gleich die Sperre „Erst senden oder Entwürfe entfernen“ (kein Namensfeld). Gast-Entwürfe zählen
+  Fenster mit Voll-Satz und „Platz dazunehmen (n)“ (`usePlatzDazu`, jetzt für `Besetzung` – Person **oder** Gast); auch mit
+  einem Entwurf an Dienst und Termin (er geht mit). Gast-Entwürfe zählen
   über `platzGiltFrei` bei „Plätze“ und „Noch offen“ mit (nichts Neues).
 - **Abgesagte Termine nehmen keine Einträge an (P2a-2):** In der Matrix ist der freie Platz in einem abgesagten Termin kein
   Knopf („Wer kann?“ öffnet nicht), in „Personen“ gibt es dort zum **Eintragen** keinen Zellen-Knopf, kein Hover und kein „+“ –

@@ -323,7 +323,7 @@ export function ToDos({
     setHinweis(null);
     setLaeuft((s) => new Set(s).add(id));
     ersetzen(u.gruppe.id, bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString()));
-    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich, leitungIn(u.gruppe))
+    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich)
       .then(
         (gespeichert) => ersetzen(u.gruppe.id, gespeichert),
         (f: unknown) => {

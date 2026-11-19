@@ -1,20 +1,25 @@
 /**
  * **Das Plan-Blatt** (Bauplan E8-2/E8-4, Entwürfe `e8-teilen.html`, `e8-4-ansichten.html`) – was aus „Planen“ aufs geteilte
  * PDF kommt: **was** (der ganze Plan mit je einem Abschnitt je Gruppe, oder nur eine Gruppe, z. B. für den Gruppenchat) in
- * welcher **Ansicht**: „Termine × Dienste“ (je Gruppe eine Tabelle) oder „Personen × Termine“ (E8-4b: eine Tabelle über alle
- * gewählten Gruppen, je Eingeteilter eine Zeile, je nicht abgesagtem Termin eine Spalte, höchstens acht Termine je Tabelle;
- * gezählt wird mit `werWieOft`, nichts nachgebaut); „Je Person“ folgt in E8-4c. Geteilt werden die
+ * welcher **Ansicht** (Knöpfe „Termine“ · „Personen“ · „Je Person“): „Termine“ = Termine × Dienste (je Gruppe eine Tabelle),
+ * „Personen“ = Personen × Termine (E8-4b: eine Tabelle über alle gewählten Gruppen, je Eingeteilter eine Zeile, je nicht
+ * abgesagtem Termin eine Spalte, höchstens acht Termine je Tabelle) und „Je Person“ (E8-4c: je Eingeteilter ein Abschnitt
+ * mit seinen Terminen, auf einer eigenen Seite oder alle untereinander). Gezählt wird in beiden Personen-Ansichten mit
+ * `werWieOft`, abgesagte Termine fehlen in beiden (`personenTermine`) – nichts nachgebaut. Geteilt werden die
  * Termine und Gruppen, die „Planen“ gerade zeigt; Entwürfe stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
  * denselben Zellen wie das Termin-Blatt (`terminBlatt.ts`).
  */
-import { MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
+import { datumText, MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
 import type { Lauf, Zelle } from '../ct/terminBlatt';
 import { zaehleFrei } from './platzNachEntwurf';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
-import { werWieOft, type PersonEinsaetze } from './werWieOft';
+import { werWieOft, type Einsatz, type PersonEinsaetze } from './werWieOft';
 
-/** Die Ansichten des Blatts – E8-4c ergänzt „Je Person“. */
-export type PlanBlattAnsicht = 'termine' | 'personen';
+/** Die Ansichten des Blatts: „Termine“ (Termine × Dienste), „Personen“ (Personen × Termine) und „Je Person“ (E8-4c). */
+export type PlanBlattAnsicht = 'termine' | 'personen' | 'person';
+
+/** „Je Person“: jede Person auf einer eigenen Seite (`seite`) oder alle untereinander (`alle`). */
+export type PlanBlattSeiten = 'seite' | 'alle';
 
 /** **Was** geteilt wird – der ganze Plan oder eine Gruppe. */
 export type PlanBlattWas =
@@ -22,15 +27,26 @@ export type PlanBlattWas =
   /** Eine Gruppe – Schlüssel wie im Filter von „Planen“ (`id` oder `null` für „Weitere Dienste“). */
   | { was: 'gruppe'; gruppe: number | null };
 
-/** Die Wahl im Fenster „Plan teilen“: **was** (erste Reihe) in welcher **Ansicht** (zweite Reihe). */
-export type PlanBlattWahl = PlanBlattWas & { ansicht: PlanBlattAnsicht };
+/**
+ * Die Wahl im Fenster „Plan teilen“: **was** (erste Reihe) in welcher **Ansicht** (zweite Reihe); bei „Je Person“ dazu die
+ * **Seiten** (dritte Reihe) – sie bleiben Teil der Wahl, auch wenn gerade eine andere Ansicht steht.
+ */
+export type PlanBlattWahl = PlanBlattWas & { ansicht: PlanBlattAnsicht; seiten: PlanBlattSeiten };
 
-export const PLAN_BLATT_STANDARD: PlanBlattWahl = { was: 'plan', ansicht: 'termine' };
+export const PLAN_BLATT_STANDARD: PlanBlattWahl = {
+  was: 'plan',
+  ansicht: 'termine',
+  seiten: 'seite',
+};
+
+/** Der Hinweis, wenn in den Personen-Ansichten niemand eingeteilt ist – eine Stelle für beide. */
+const NIEMAND_EINGETEILT = 'In diesem Zeitraum ist niemand eingeteilt.';
 
 /**
  * **Die gemerkte Wahl lesen** (`leseImGeraet`): nur bekannte Formen, sonst der ganze Plan. Bis E8-2 stand dort
  * `{ art: 'plan' | 'gruppe' | 'suchen', gruppe }` – `plan` und `gruppe` (mit der Gruppe) werden übernommen, „Wir suchen
- * noch …“ gibt es nicht mehr und wird zum ganzen Plan. Die Ansicht: `personen` bleibt, alles andere ist „Termine × Dienste“.
+ * noch …“ gibt es nicht mehr und wird zum ganzen Plan. Die Ansicht: `personen` und `person` bleiben, alles andere ist
+ * „Termine“; die Seiten: `alle` bleibt, alles andere (auch fehlend, ältere Wahl) ist `seite`.
  */
 export function planBlattWahlAus(roh: unknown): PlanBlattWahl {
   const r = (roh && typeof roh === 'object' ? roh : {}) as {
@@ -38,12 +54,15 @@ export function planBlattWahlAus(roh: unknown): PlanBlattWahl {
     art?: unknown;
     gruppe?: unknown;
     ansicht?: unknown;
+    seiten?: unknown;
   };
   const was = r.was ?? r.art;
-  const ansicht: PlanBlattAnsicht = r.ansicht === 'personen' ? 'personen' : 'termine';
+  const ansicht: PlanBlattAnsicht =
+    r.ansicht === 'personen' || r.ansicht === 'person' ? r.ansicht : 'termine';
+  const seiten: PlanBlattSeiten = r.seiten === 'alle' ? 'alle' : 'seite';
   if (was === 'gruppe' && (typeof r.gruppe === 'number' || r.gruppe === null))
-    return { was: 'gruppe', gruppe: r.gruppe, ansicht };
-  return { ...PLAN_BLATT_STANDARD, ansicht };
+    return { was: 'gruppe', gruppe: r.gruppe, ansicht, seiten };
+  return { ...PLAN_BLATT_STANDARD, ansicht, seiten };
 }
 
 export interface PlanBlattQuelle {
@@ -62,8 +81,16 @@ export interface PlanBlattAbschnitt {
   titel: string | null;
   kopf: string[];
   zeilen: Zelle[][];
-  /** „Personen × Termine“: die erste Spalte ist der Name, die letzte die schmale Summe (`planSpalten`). */
+  /** „Personen“: die erste Spalte ist der Name, die letzte die schmale Summe (`planSpalten`). */
   personen?: true;
+  /** „Je Person“: Datum · Uhrzeit · Termin · Dienst (`planSpalten`); der Titel ist der Name. */
+  person?: true;
+  /** Grauer Text hinter dem Titel im Band („8 Dienste“). */
+  zusatz?: string;
+  /** „Je Person“ mit „Eine Seite je Person“: dieser Abschnitt beginnt auf einer neuen Seite (der erste nicht). */
+  neueSeite?: true;
+  /** „Je Person“ mit „Untereinander“: der Abschnitt wird nicht über eine Seite geteilt, solange er auf eine Seite passt. */
+  zusammen?: true;
 }
 
 export interface PlanBlatt {
@@ -186,9 +213,8 @@ function personenAbschnitt(
   titel: string | null,
 ): PlanBlattAbschnitt | null {
   // Die Zählung ist die von „Wer wie oft?“ – hier nur auf die Termine dieser Tabelle begrenzt.
-  const { personen } = werWieOft(plan, { spalten: [...spalten], gruppen });
+  const personen = eingeteilte(plan, spalten, gruppen);
   if (personen.length === 0) return null;
-  personen.sort((a, b) => a.name.localeCompare(b.name, 'de'));
   return {
     titel,
     personen: true,
@@ -197,6 +223,52 @@ function personenAbschnitt(
       { absaetze: [{ laeufe: [{ text: p.name, stil: 'fett' }] }] },
       ...spalten.map((i) => personenZelle(p, plan.spalten[i])),
       { absaetze: [{ laeufe: [{ text: String(p.einsaetze.length) }] }] },
+    ]),
+  };
+}
+
+/**
+ * Die Termine der Personen-Ansichten („Personen“ und „Je Person“): die gezeigten ohne abgesagte. **Die eine Stelle für
+ * diese Regel.** Spalten sind nach Zeit sortiert (`planAus`).
+ */
+function personenTermine(q: PlanBlattQuelle): number[] {
+  return q.spalten.filter((i) => !q.plan.spalten[i].abgesagt);
+}
+
+/** Die Eingeteilten in den gegebenen Terminen und Gruppen – gezählt von `werWieOft`, alphabetisch („deutsch“ sortiert). */
+function eingeteilte(
+  plan: Plan,
+  spalten: readonly number[],
+  gruppen: readonly PlanGruppe[],
+): PersonEinsaetze[] {
+  const { personen } = werWieOft(plan, { spalten: [...spalten], gruppen });
+  return personen.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+/** „Je Person“: ein Abschnitt mit den Terminen einer Person – ein Termin eine Zeile, mehrere Dienste darin untereinander. */
+function personAbschnitt(p: PersonEinsaetze, mitGruppe: boolean): PlanBlattAbschnitt {
+  const nachTermin = new Map<PlanSpalte, Einsatz[]>();
+  // Die Einsätze sind schon nach Zeit sortiert (`werWieOft`).
+  for (const e of p.einsaetze) nachTermin.set(e.spalte, [...(nachTermin.get(e.spalte) ?? []), e]);
+  const einfach = (laeufe: Lauf[]): Zelle => ({ absaetze: [{ laeufe }] });
+  return {
+    titel: p.name,
+    person: true,
+    zusatz: `${p.einsaetze.length} ${p.einsaetze.length === 1 ? 'Dienst' : 'Dienste'}`,
+    kopf: ['Datum', 'Uhrzeit', 'Termin', 'Dienst'],
+    zeilen: [...nachTermin].map(([s, eins]) => [
+      einfach([{ text: datumText(s.tag), stil: 'fett' }]),
+      einfach([{ text: s.uhrzeit }]),
+      einfach([{ text: s.name }]),
+      {
+        absaetze: eins.map((e) => ({
+          laeufe: [
+            { text: e.dienst },
+            ...(e.zugesagt ? [] : [{ text: ' (angefragt)', stil: 'grau' as const }]),
+            ...(mitGruppe ? [{ text: ` · ${e.gruppe}`, stil: 'grau' as const }] : []),
+          ],
+        })),
+      },
     ]),
   };
 }
@@ -214,9 +286,27 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
     wahl.was === 'gruppe' ? q.gruppen.filter((g) => gruppenId(g) === wahl.gruppe) : q.gruppen;
   const dienstTitel =
     wahl.was === 'gruppe' && gruppen[0] ? `Dienstplan ${gruppenName(gruppen[0])}` : 'Dienstplan';
+  if (wahl.ansicht === 'person') {
+    const personen = eingeteilte(q.plan, personenTermine(q), gruppen);
+    const abschnitte = personen.map((p, k): PlanBlattAbschnitt => {
+      const a = personAbschnitt(p, wahl.was === 'plan');
+      if (wahl.seiten === 'alle') a.zusammen = true;
+      else if (k > 0) a.neueSeite = true;
+      return a;
+    });
+    return {
+      ...kopf,
+      untertitel: untertitel ? `${untertitel} · Je Person` : '',
+      titel: dienstTitel,
+      quer: false,
+      abschnitte,
+      leer: abschnitte.length > 0 ? null : NIEMAND_EINGETEILT,
+      dateiname: `${dienstTitel} je Person ${datei}`.trim(),
+    };
+  }
   if (wahl.ansicht === 'personen') {
-    // Abgesagte Termine gibt es in dieser Ansicht nicht; Spalten sind nach Zeit sortiert (`planAus`).
-    const termine = q.spalten.filter((i) => !q.plan.spalten[i].abgesagt);
+    // Abgesagte Termine gibt es in dieser Ansicht nicht.
+    const termine = personenTermine(q);
     const bloecke: number[][] = [];
     for (let k = 0; k < termine.length; k += PERSONEN_TERMINE_MAX)
       bloecke.push(termine.slice(k, k + PERSONEN_TERMINE_MAX));
@@ -236,7 +326,7 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
       titel: dienstTitel,
       quer: tabellen.some((a) => a.kopf.length >= QUER_AB),
       abschnitte: tabellen,
-      leer: tabellen.length > 0 ? null : 'In diesem Zeitraum ist niemand eingeteilt.',
+      leer: tabellen.length > 0 ? null : NIEMAND_EINGETEILT,
       dateiname: `${dienstTitel} Personen ${datei}`.trim(),
     };
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tagKurz } from '../ct/datum';
+import { datumText, tagKurz } from '../ct/datum';
 import { diensteAus } from '../ct/dienste';
 import type { Zelle } from '../ct/terminBlatt';
 import { planAus } from './plan';
@@ -13,6 +13,7 @@ import {
   type PlanBlattWahl,
 } from './planBlatt';
 import type { RohTermin } from './termine';
+import { werWieOft } from './werWieOft';
 
 /** Das Plan-Blatt (E8-2) – aus einem Plan, wie `planAus` ihn aus rohen ChurchTools-Terminen baut. */
 const DIENSTE = diensteAus([
@@ -101,7 +102,7 @@ describe('Plan-Blatt (E8-2)', () => {
   });
 
   it('nur eine Gruppe: ohne Abschnittstitel, Titel mit Gruppenname', () => {
-    const b = planBlatt(QUELLE, { was: 'gruppe', gruppe: 3, ansicht: 'termine' });
+    const b = planBlatt(QUELLE, { was: 'gruppe', gruppe: 3, ansicht: 'termine', seiten: 'seite' });
     expect(b.titel).toBe('Dienstplan Technik');
     expect(b.abschnitte).toHaveLength(1);
     expect(b.abschnitte[0].titel).toBeNull();
@@ -119,7 +120,12 @@ describe('Plan-Blatt (E8-2)', () => {
   });
 
   it('keine Dienste im Zeitraum → Hinweis statt leerer Tabelle', () => {
-    const b = planBlatt(QUELLE, { was: 'gruppe', gruppe: 999, ansicht: 'termine' });
+    const b = planBlatt(QUELLE, {
+      was: 'gruppe',
+      gruppe: 999,
+      ansicht: 'termine',
+      seiten: 'seite',
+    });
     expect(b.abschnitte).toEqual([]);
     expect(b.leer).toBe('In diesem Zeitraum sind keine Dienste vorgesehen.');
     expect(planBlatt(QUELLE, PLAN_BLATT_STANDARD).leer).toBeNull();
@@ -144,7 +150,7 @@ describe('Plan-Blatt (E8-2)', () => {
     );
     const b = planBlatt(
       { ...QUELLE, plan: zwei, spalten: [1], gruppen: zwei.gruppen },
-      { was: 'gruppe', gruppe: 3, ansicht: 'termine' },
+      { was: 'gruppe', gruppe: 3, ansicht: 'termine', seiten: 'seite' },
     );
     expect(b.abschnitte[0].kopf).toEqual(['Termin', 'Ton']);
   });
@@ -160,12 +166,15 @@ describe('Plan-Blatt (E8-2)', () => {
 
   it('die gemerkte Wahl: neue und alte Formen werden gelesen, „Wir suchen noch“ und Unbekanntes sind der ganze Plan', () => {
     // Erst die Erzeuger: was `planBlatt` annimmt, kommt unverändert zurück.
-    const gruppe = { was: 'gruppe', gruppe: 3, ansicht: 'termine' } as const;
+    const gruppe = { was: 'gruppe', gruppe: 3, ansicht: 'termine', seiten: 'seite' } as const;
     expect(planBlattWahlAus(gruppe)).toEqual(gruppe);
-    expect(planBlattWahlAus({ was: 'gruppe', gruppe: null, ansicht: 'termine' })).toEqual({
+    expect(
+      planBlattWahlAus({ was: 'gruppe', gruppe: null, ansicht: 'termine', seiten: 'seite' }),
+    ).toEqual({
       was: 'gruppe',
       gruppe: null,
       ansicht: 'termine',
+      seiten: 'seite',
     });
     expect(planBlattWahlAus(PLAN_BLATT_STANDARD)).toEqual(PLAN_BLATT_STANDARD);
     // Bis E8-2 gemerkt: `art` statt `was`, keine Ansicht.
@@ -174,6 +183,7 @@ describe('Plan-Blatt (E8-2)', () => {
       was: 'gruppe',
       gruppe: 7,
       ansicht: 'termine',
+      seiten: 'seite',
     });
     // Gestrichen und Unbekanntes.
     expect(planBlattWahlAus({ art: 'suchen' })).toEqual(PLAN_BLATT_STANDARD);
@@ -184,23 +194,50 @@ describe('Plan-Blatt (E8-2)', () => {
     expect(planBlattWahlAus('suchen')).toEqual(PLAN_BLATT_STANDARD);
   });
 
-  it('die gemerkte Ansicht: „personen“ bleibt, Unbekanntes ist „Termine × Dienste“ (E8-4b)', () => {
-    const personen = { was: 'plan', ansicht: 'personen' } as const;
+  it('die gemerkte Ansicht: „personen“ und „person“ bleiben, Unbekanntes ist „Termine“ (E8-4b/c)', () => {
+    const personen = { was: 'plan', ansicht: 'personen', seiten: 'seite' } as const;
     expect(planBlattWahlAus(personen)).toEqual(personen);
-    expect(planBlattWahlAus({ was: 'gruppe', gruppe: 3, ansicht: 'personen' })).toEqual({
+    expect(
+      planBlattWahlAus({ was: 'gruppe', gruppe: 3, ansicht: 'personen', seiten: 'seite' }),
+    ).toEqual({
       was: 'gruppe',
       gruppe: 3,
       ansicht: 'personen',
+      seiten: 'seite',
     });
-    expect(planBlattWahlAus({ was: 'gruppe', gruppe: null, ansicht: 'personen' })).toEqual({
+    expect(
+      planBlattWahlAus({ was: 'gruppe', gruppe: null, ansicht: 'personen', seiten: 'seite' }),
+    ).toEqual({
       was: 'gruppe',
       gruppe: null,
       ansicht: 'personen',
+      seiten: 'seite',
     });
-    // „Je Person“ gibt es erst mit E8-4c; Unbekanntes und die alte Form ohne Ansicht.
-    expect(planBlattWahlAus({ was: 'plan', ansicht: 'person' })).toEqual(PLAN_BLATT_STANDARD);
+    // Unbekanntes und die alte Form ohne Ansicht.
     expect(planBlattWahlAus({ was: 'plan', ansicht: 7 })).toEqual(PLAN_BLATT_STANDARD);
     expect(planBlattWahlAus({ art: 'plan' })).toEqual(PLAN_BLATT_STANDARD);
+  });
+
+  it('„Je Person“ und die Seiten werden gelesen (E8-4c); fehlend oder Unbekanntes ist „seite“', () => {
+    const alle = { was: 'plan', ansicht: 'person', seiten: 'alle' } as const;
+    expect(planBlattWahlAus(alle)).toEqual(alle);
+    const gruppe = { was: 'gruppe', gruppe: 3, ansicht: 'person', seiten: 'alle' } as const;
+    expect(planBlattWahlAus(gruppe)).toEqual(gruppe);
+    // Die Seiten bleiben auch bei einer anderen Ansicht erhalten.
+    expect(planBlattWahlAus({ was: 'plan', ansicht: 'termine', seiten: 'alle' })).toEqual({
+      was: 'plan',
+      ansicht: 'termine',
+      seiten: 'alle',
+    });
+    // Ältere gemerkte Formen ohne Seiten, Unbekanntes.
+    expect(planBlattWahlAus({ was: 'plan', ansicht: 'person' })).toEqual({
+      was: 'plan',
+      ansicht: 'person',
+      seiten: 'seite',
+    });
+    expect(planBlattWahlAus({ was: 'plan', ansicht: 'person', seiten: 'x' }).seiten).toBe('seite');
+    expect(planBlattWahlAus({ art: 'plan' }).seiten).toBe('seite');
+    expect(PLAN_BLATT_STANDARD.seiten).toBe('seite');
   });
 
   it('spanneLang über den Jahreswechsel', () => {
@@ -257,7 +294,7 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
     spalten: planP.spalten.map((_, i) => i),
     gruppen: planP.gruppen,
   };
-  const PERSONEN_WAHL: PlanBlattWahl = { was: 'plan', ansicht: 'personen' };
+  const PERSONEN_WAHL: PlanBlattWahl = { was: 'plan', ansicht: 'personen', seiten: 'seite' };
   const zeilen = (b: ReturnType<typeof planBlatt>) => tabelle(b.abschnitte[0].zeilen);
 
   it('eine Tabelle über alle Gruppen: nur Eingeteilte, alphabetisch, Gast nach Namen, verborgen fehlt', () => {
@@ -321,7 +358,7 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
   });
 
   it('Gruppe oder ganzer Plan: bei einer Gruppe nur deren Dienste, Titel und Dateiname', () => {
-    const musik = planBlatt(QP, { was: 'gruppe', gruppe: 4, ansicht: 'personen' });
+    const musik = planBlatt(QP, { was: 'gruppe', gruppe: 4, ansicht: 'personen', seiten: 'seite' });
     expect(musik.titel).toBe('Dienstplan Musik');
     expect(zeilen(musik).map((z) => z[0])).toEqual(['Irene Lang', 'Zoe Gast']);
     expect(musik.dateiname).toBe('Dienstplan Musik Personen 06.12.-16.12.2026');
@@ -339,9 +376,9 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
     const b = planBlatt({ ...QP, spalten: [2] }, PERSONEN_WAHL);
     expect(b.abschnitte).toEqual([]);
     expect(b.leer).toBe('In diesem Zeitraum ist niemand eingeteilt.');
-    expect(planBlatt(QP, { was: 'gruppe', gruppe: 999, ansicht: 'personen' }).leer).toBe(
-      'In diesem Zeitraum ist niemand eingeteilt.',
-    );
+    expect(
+      planBlatt(QP, { was: 'gruppe', gruppe: 999, ansicht: 'personen', seiten: 'seite' }).leer,
+    ).toBe('In diesem Zeitraum ist niemand eingeteilt.');
   });
 
   it('ab sechs Spalten quer (Name + Termine + Summe)', () => {
@@ -397,11 +434,181 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
   });
 
   it('„Termine × Dienste“ bleibt unverändert: abgesagte Spalte steht weiter da', () => {
-    const b = planBlatt(QP, { was: 'gruppe', gruppe: 3, ansicht: 'termine' });
+    const b = planBlatt(QP, { was: 'gruppe', gruppe: 3, ansicht: 'termine', seiten: 'seite' });
     expect(
       tabelle(b.abschnitte[0].zeilen)
         .map((z) => z[0])
         .join('|'),
     ).toContain('(abgesagt)');
+  });
+});
+
+/** „Je Person“ (E8-4c) – dieselben echten Pläne (`planAus`) wie oben. */
+describe('Plan-Blatt: Je Person (E8-4c)', () => {
+  const PERSONEN: Record<string, number> = {
+    'Wilhelm Brandt': 11,
+    'Tobias Hahn': 12,
+    'Irene Lang': 13,
+    'Ömer Kaya': 14,
+    'Nora Nur-Abgesagt': 15,
+  };
+  const q = (serviceId: number, name: string | null, isAccepted = true) => ({
+    id: Math.random(),
+    serviceId,
+    personId: name === '?' ? -2 : name ? (PERSONEN[name] ?? null) : null,
+    name: name === '?' ? null : name,
+    isAccepted,
+    index: null,
+  });
+  const planP = planAus(
+    [
+      termin(1, '2026-12-06', [
+        q(1, 'Wilhelm Brandt'),
+        q(6, 'Tobias Hahn'),
+        q(7, 'Wilhelm Brandt'),
+        q(9, 'Irene Lang', false),
+        q(9, 'Zoe Gast'),
+        q(9, '?'),
+        q(9, null),
+      ]),
+      termin(2, '2026-12-06', [q(1, 'Ömer Kaya')], { startDate: '2026-12-06T17:00:00Z' }),
+      termin(3, '2026-12-13', [q(6, 'Tobias Hahn'), q(7, 'Nora Nur-Abgesagt')], {
+        isCanceled: true,
+      }),
+      termin(4, '2026-12-16', [q(6, 'Tobias Hahn')], { name: 'Gebetsabend' }),
+    ],
+    {
+      ichId: 0,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => false,
+      ganzSichtbar: () => true,
+    },
+  );
+  const QP: PlanBlattQuelle = {
+    ...QUELLE,
+    plan: planP,
+    spalten: planP.spalten.map((_, i) => i),
+    gruppen: planP.gruppen,
+  };
+  const wahl = (x: Partial<PlanBlattWahl> = {}): PlanBlattWahl =>
+    ({ was: 'plan', ansicht: 'person', seiten: 'seite', ...x }) as PlanBlattWahl;
+  const von = (b: ReturnType<typeof planBlatt>, name: string) =>
+    b.abschnitte.find((a) => a.titel === name)!;
+
+  it('ein Abschnitt je Person, alphabetisch; Band mit Name und „n Dienste“; Gast nach Namen, verborgen fehlt', () => {
+    const b = planBlatt(QP, wahl());
+    expect(b.leer).toBeNull();
+    expect(b.quer).toBe(false);
+    expect(b.abschnitte.map((a) => [a.titel, a.zusatz])).toEqual([
+      ['Irene Lang', '1 Dienst'],
+      ['Ömer Kaya', '1 Dienst'],
+      ['Tobias Hahn', '2 Dienste'],
+      ['Wilhelm Brandt', '2 Dienste'],
+      ['Zoe Gast', '1 Dienst'],
+    ]);
+    expect(b.abschnitte.every((a) => a.person && !a.personen)).toBe(true);
+    expect(b.abschnitte[0].kopf).toEqual(['Datum', 'Uhrzeit', 'Termin', 'Dienst']);
+    expect(JSON.stringify(b)).not.toContain('besetzt');
+  });
+
+  it('die Zahl stimmt mit „Wer wie oft?“ überein – dieselbe Zählung', () => {
+    const b = planBlatt(QP, wahl());
+    const { personen } = werWieOft(planP, {
+      spalten: planP.spalten.map((_, i) => i).filter((i) => !planP.spalten[i].abgesagt),
+      gruppen: planP.gruppen,
+    });
+    for (const p of personen)
+      expect(von(b, p.name).zusatz).toBe(
+        `${p.einsaetze.length} ${p.einsaetze.length === 1 ? 'Dienst' : 'Dienste'}`,
+      );
+  });
+
+  it('abgesagte Termine fehlen – ihre Person gar nicht erst', () => {
+    const b = planBlatt(QP, wahl());
+    expect(JSON.stringify(b)).not.toContain('Nur-Abgesagt');
+    // Tobias: 06.12. und 16.12., nicht der abgesagte 13.12.
+    expect(tabelle(von(b, 'Tobias Hahn').zeilen).map((z) => z[0])).toEqual([
+      'So, 06.12.2026',
+      'Mi, 16.12.2026',
+    ]);
+    // Dieselbe Regel wie „Personen“: dieselben Namen.
+    const personen = planBlatt(QP, wahl({ ansicht: 'personen' }));
+    expect(personen.abschnitte[0].zeilen.map((z) => text(z[0]))).toEqual(
+      b.abschnitte.map((a) => a.titel),
+    );
+  });
+
+  it('Zeilen: Datum mit Jahr, Uhrzeit, Terminname; zwei Dienste am selben Termin in EINER Zeile', () => {
+    const b = planBlatt(QP, wahl());
+    const wilhelm = von(b, 'Wilhelm Brandt');
+    expect(wilhelm.zeilen).toHaveLength(1);
+    expect(wilhelm.zeilen[0].map((c) => c.absaetze.length)).toEqual([1, 1, 1, 2]);
+    expect(wilhelm.zeilen[0].slice(0, 3).map(text)).toEqual([
+      datumText('2026-12-06'),
+      planP.spalten[0].uhrzeit,
+      'Gottesdienst',
+    ]);
+    expect(wilhelm.zeilen[0][0].absaetze[0].laeufe[0].stil).toBe('fett');
+    expect(wilhelm.zeilen[0][3].absaetze.map((a) => a.laeufe.map((l) => l.text).join(''))).toEqual([
+      'Predigt · Programm',
+      'Licht · Technik',
+    ]);
+    expect(tabelle(von(b, 'Tobias Hahn').zeilen)[1][2]).toBe('Gebetsabend');
+  });
+
+  it('Gruppenname hinter dem Dienst (grau) nur beim ganzen Plan, nicht bei einer Gruppe', () => {
+    const ganz = von(planBlatt(QP, wahl()), 'Tobias Hahn');
+    expect(ganz.zeilen[0][3].absaetze[0].laeufe).toEqual([
+      { text: 'Ton' },
+      { text: ' · Technik', stil: 'grau' },
+    ]);
+    const technik = planBlatt(QP, wahl({ was: 'gruppe', gruppe: 3 }));
+    expect(technik.titel).toBe('Dienstplan Technik');
+    expect(von(technik, 'Tobias Hahn').zeilen[0][3].absaetze[0].laeufe).toEqual([{ text: 'Ton' }]);
+    // Bei einer Gruppe nur deren Dienste: Wilhelm hat nur noch Licht, nicht Predigt.
+    expect(tabelle(von(technik, 'Wilhelm Brandt').zeilen)[0][3]).toBe('Licht');
+    expect(technik.abschnitte.map((a) => a.titel)).toEqual(['Tobias Hahn', 'Wilhelm Brandt']);
+  });
+
+  it('angefragt: „ (angefragt)“ grau, vor dem Gruppennamen', () => {
+    const irene = von(planBlatt(QP, wahl()), 'Irene Lang');
+    expect(irene.zeilen[0][3].absaetze[0].laeufe).toEqual([
+      { text: 'Gesang' },
+      { text: ' (angefragt)', stil: 'grau' },
+      { text: ' · Musik', stil: 'grau' },
+    ]);
+  });
+
+  it('Seiten: „seite“ = jeder außer der ersten Person beginnt neu; „alle“ = zusammenhalten', () => {
+    const seite = planBlatt(QP, wahl({ seiten: 'seite' }));
+    expect(seite.abschnitte.map((a) => a.neueSeite)).toEqual([undefined, true, true, true, true]);
+    expect(seite.abschnitte.some((a) => a.zusammen)).toBe(false);
+    const alle = planBlatt(QP, wahl({ seiten: 'alle' }));
+    expect(alle.abschnitte.every((a) => a.zusammen === true)).toBe(true);
+    expect(alle.abschnitte.some((a) => a.neueSeite)).toBe(false);
+  });
+
+  it('Untertitel, Dateiname, Titel; die anderen Ansichten kennen die Seiten-Felder nicht', () => {
+    const b = planBlatt(QP, wahl());
+    expect(b.untertitel).toBe(`${spanneLang('2026-12-06', '2026-12-16')} · Je Person`);
+    expect(b.dateiname).toBe('Dienstplan je Person 06.12.-16.12.2026');
+    expect(planBlatt(QP, wahl({ was: 'gruppe', gruppe: 4 })).dateiname).toBe(
+      'Dienstplan Musik je Person 06.12.-16.12.2026',
+    );
+    for (const ansicht of ['termine', 'personen'] as const)
+      expect(
+        planBlatt(QP, wahl({ ansicht, seiten: 'alle' })).abschnitte.some(
+          (a) => a.zusammen || a.neueSeite || a.zusatz,
+        ),
+      ).toBe(false);
+  });
+
+  it('niemand eingeteilt → derselbe Hinweis wie bei „Personen“', () => {
+    const b = planBlatt({ ...QP, spalten: [2] }, wahl());
+    expect(b.abschnitte).toEqual([]);
+    expect(b.leer).toBe('In diesem Zeitraum ist niemand eingeteilt.');
+    expect(b.leer).toBe(planBlatt({ ...QP, spalten: [2] }, wahl({ ansicht: 'personen' })).leer);
   });
 });

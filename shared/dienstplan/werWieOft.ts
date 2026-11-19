@@ -6,11 +6,13 @@
  * „Namen verbergen“ fehlen (man weiß nicht, wer es ist). Die Monatsauslastung aus ChurchTools
  * (`possiblepersons`) kommt erst mit E4 – sie kostet je Termin 2,6 s und 508 KB (gemessen 07.10.2026).
  */
-import type { Plan, PlanGruppe, PlanSpalte } from './plan';
+import { gruppenName, type Plan, type PlanGruppe, type PlanSpalte } from './plan';
 
 export interface Einsatz {
   spalte: PlanSpalte;
   dienst: string;
+  /** Name der Dienstgruppe (`gruppenName`) – „Je Person“ im Plan-Blatt zeigt ihn beim ganzen Plan. */
+  gruppe: string;
   zugesagt: boolean;
 }
 
@@ -46,6 +48,7 @@ export function werWieOft(
           eintrag.einsaetze.push({
             spalte: plan.spalten[i],
             dienst: z.dienst.name,
+            gruppe: gruppenName(g),
             zugesagt: p.art === 'zugesagt',
           });
           if (!eintrag.dienste.includes(z.dienst.name)) eintrag.dienste.push(z.dienst.name);

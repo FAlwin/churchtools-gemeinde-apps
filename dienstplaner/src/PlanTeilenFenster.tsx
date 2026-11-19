@@ -14,6 +14,7 @@ import {
   spanneLang,
   type PlanBlattAnsicht,
   type PlanBlattQuelle,
+  type PlanBlattSeiten,
   type PlanBlattWahl,
 } from '@shared/dienstplan/planBlatt';
 
@@ -25,8 +26,9 @@ const gruppenSchluessel = (id: number | null) => String(id ?? 'ohne');
 /**
  * **„Plan teilen“** (Bauplan E8-2/E8-4, Entwurf `e8-4-ansichten.html`) – aus „Planen“: **was** geteilt wird (der ganze
  * Plan oder eine Gruppe, dann mit einer Zeile der eingeblendeten Gruppen), jeweils für die Termine und Gruppen, die
- * „Planen“ gerade zeigt, in der **Ansicht** „Termine × Dienste“ oder „Personen × Termine“ (E8-4b; „Je Person“ folgt in E8-4c).
- * Was und Ansicht sind unabhängig – der Wechsel der einen behält die andere. Darunter die fertigen
+ * „Planen“ gerade zeigt, in der **Ansicht** „Termine“ (Termine × Dienste), „Personen“ (Personen × Termine, E8-4b) oder
+ * „Je Person“ (E8-4c; dann eine Reihe **Seiten**: „Seite je Person“ oder „Untereinander“). Was, Ansicht und Seiten sind
+ * unabhängig – der Wechsel der einen behält die anderen. Darunter die fertigen
  * Seiten und „Herunterladen“/„Teilen“ wie bei „Termin teilen“ (`ui/teilen/pdfFenster.tsx`). Das Gerät merkt sich die
  * Wahl (`planBlattWahlAus` liest auch die ältere Form); eine gemerkte Gruppe, die gerade ausgeblendet ist, wird zum ganzen
  * Plan.
@@ -67,9 +69,10 @@ export function PlanTeilenFenster({
   const zeitraum = tage.length > 0 ? spanneLang(tage[0], tage[tage.length - 1]) : '';
   const waehleWas = (was: 'plan' | 'gruppe') => {
     if (was === wahl.was) return; // „Eine Gruppe“ noch einmal angetippt: die gewählte Gruppe bleibt
-    if (was === 'plan') return waehle({ was: 'plan', ansicht: wahl.ansicht });
+    const { ansicht, seiten } = wahl;
+    if (was === 'plan') return waehle({ was: 'plan', ansicht, seiten });
     const erste = quelle.gruppen[0]; // „Eine Gruppe“: zuerst die erste eingeblendete
-    if (erste) waehle({ was: 'gruppe', gruppe: erste.gruppe?.id ?? null, ansicht: wahl.ansicht });
+    if (erste) waehle({ was: 'gruppe', gruppe: erste.gruppe?.id ?? null, ansicht, seiten });
   };
 
   return (
@@ -111,7 +114,12 @@ export function PlanTeilenFenster({
               onChange={(k) => {
                 const g = quelle.gruppen.find((x) => gruppenSchluessel(x.gruppe?.id ?? null) === k);
                 if (g)
-                  waehle({ was: 'gruppe', gruppe: g.gruppe?.id ?? null, ansicht: wahl.ansicht });
+                  waehle({
+                    was: 'gruppe',
+                    gruppe: g.gruppe?.id ?? null,
+                    ansicht: wahl.ansicht,
+                    seiten: wahl.seiten,
+                  });
               }}
             />
           </>
@@ -122,11 +130,27 @@ export function PlanTeilenFenster({
           ariaLabel="Ansicht"
           value={wahl.ansicht}
           options={[
-            { value: 'termine', label: 'Termine × Dienste' },
-            { value: 'personen', label: 'Personen × Termine' },
+            { value: 'termine', label: 'Termine' },
+            { value: 'personen', label: 'Personen' },
+            { value: 'person', label: 'Je Person' },
           ]}
           onChange={(ansicht) => waehle({ ...wahl, ansicht })}
         />
+        {wahl.ansicht === 'person' && (
+          <>
+            <div className={styles.ueber}>Seiten</div>
+            <Segment<PlanBlattSeiten>
+              verbunden
+              ariaLabel="Seiten"
+              value={wahl.seiten}
+              options={[
+                { value: 'seite', label: 'Seite je Person' },
+                { value: 'alle', label: 'Untereinander' },
+              ]}
+              onChange={(seiten) => waehle({ ...wahl, seiten })}
+            />
+          </>
+        )}
         <p className={styles.hinweis}>
           {zeitraum} · {quelle.spalten.length} {quelle.spalten.length === 1 ? 'Termin' : 'Termine'}{' '}
           – wie gerade in „Planen“ eingestellt.

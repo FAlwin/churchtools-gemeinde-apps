@@ -323,8 +323,9 @@ const FAELLIGE_AUFGABEN = [
 ];
 
 /**
- * Vorschläge (S5-4): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
- * (ändern, zurückziehen) und ein abgelehnter mit Begründung (Erledigt).
+ * Vorschläge (S5-4, W8c): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
+ * (ändern, zurückziehen), ein übernommener (steht nur als Marke an der Sitzung „Kommend“) und ein abgelehnter mit
+ * Begründung von vor drei Tagen (Gruppe „Abgelehnt“, 7 Tage sichtbar).
  */
 const ENTWURF_ZIEL = {
   art: 'sitzung' as const,
@@ -373,8 +374,21 @@ const DEMO_VORSCHLAEGE = [
     }),
     'Klären wir mit dem Vermieter, nicht im Leitungskreis.',
     { person: 7, name: 'Johann Becker' },
-    '2026-10-14T19:00:00Z',
+    // Immer „vor drei Tagen“, damit die Demo die Gruppe „Abgelehnt“ zeigt, wann immer man sie öffnet.
+    new Date(Date.now() - 3 * 86_400_000).toISOString(),
   ),
+  {
+    ...neuerVorschlag({
+      id: 'demo-v5',
+      gruppe: 11,
+      titel: 'Gemeindefreizeit 2027 – Haus anfragen',
+      text: 'Das Haus in Hachenburg ist für Pfingsten noch frei.',
+      ziel: ENTWURF_ZIEL,
+      ich: { person: 23, name: 'Daniel Schmidt' },
+      am: '2026-10-18T18:00:00Z',
+    }),
+    stand: 'angenommen' as const,
+  },
 ];
 
 const MODUL = 20;

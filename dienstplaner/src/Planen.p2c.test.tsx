@@ -211,11 +211,12 @@ function zeige(
     entwuerfeDaten?: Entwurf[];
     neuLadenKlappt?: boolean;
     direkt?: number[];
+    unteransicht?: 'matrix' | 'raster';
   } = {},
 ) {
   localStorage.setItem(
     'dienstplaner.planen.ansicht',
-    JSON.stringify({ unteransicht: 'raster', direktDienste: o.direkt ?? [] }),
+    JSON.stringify({ unteransicht: o.unteransicht ?? 'raster', direktDienste: o.direkt ?? [] }),
   );
   const aktualisiert = vi.fn();
   const anzahl = anzahlOk();
@@ -494,6 +495,37 @@ describe('Zeile „Plätze“', () => {
     const t = await warte();
     expect(within(t).getAllByText('0 von 2').length).toBeGreaterThan(0);
     expect(screen.queryAllByRole('button', { name: /Plätze .* ändern/ })).toHaveLength(0);
+  });
+});
+
+describe('Plätze-Fach der Matrix nach einer Änderung', () => {
+  it('rechnet mit dem NEUEN Plan – nicht mit den Plätzen vom Öffnen (19.11.2026, beim Durchklicken gefunden)', async () => {
+    // Am Mi hat Ton 2 belegte Plätze; ein Entwurf wartet schon auf Platz 3 (noch „ohne Platz“).
+    const auf3 = entwurf({
+      ort: { eventId: MI, serviceId: 6, index: 3 },
+      ziel: { art: 'person', personId: 11, name: 'Carla Test' },
+    });
+    const { anzahl, aktualisiert } = zeige({ unteransicht: 'matrix', entwuerfeDaten: [auf3] });
+    const knoepfe = await screen.findAllByRole('button', {
+      name: 'Plätze Technik am Mi, 02.12. ändern',
+    });
+    fireEvent.click(knoepfe[0]);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(MI, 6, 2, 3));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    // Der neue Plan hat Platz 3 – frei, mit dem Entwurf darauf: „−“ hört bei 3 auf.
+    expect(within(f).getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(f).getByText(/Auf den freien Plätzen liegen Entwürfe/)).toBeTruthy();
   });
 });
 

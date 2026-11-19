@@ -222,8 +222,8 @@ export function Planen({
   const [fokusEintragen, setFokusEintragen] = useState(false);
   // Das Fenster „Vorgabe · Dienst“ (P2m): welcher Dienst – die Vorgabe selbst steht in `ansicht.direktDienste` (je Gerät).
   const [vorgabeFach, setVorgabeFach] = useState<{ id: number; name: string } | null>(null);
-  // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
-  const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
+  // Das Plätze-Fach (E4-5-3): Termin und Gruppe – beim Zeichnen aus dem AKTUELLEN Plan geholt (s. dort).
+  const [plaetzeFach, setPlaetzeFach] = useState<{ eventId: number; gruppe: PlanGruppe } | null>(
     null,
   );
   // Das Fenster für EINEN Dienst an einem Termin (P2c, Zeile „Plätze“ und roter Tag in „Personen“): Termin und Dienst.
@@ -551,7 +551,7 @@ export function Planen({
         entwuerfe &&
         nimmtEintraegeAn(plan.spalten[i]) &&
         ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
-          ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
+          ? () => setPlaetzeFach({ eventId: plan.spalten[i].id, gruppe: ganzeGruppe(g) })
           : undefined,
       onPlatz: (i, zl) =>
         entwuerfe && nimmtEintraegeAn(plan.spalten[i]) && darfPlanen(zl, plan.spalten[i])
@@ -775,38 +775,37 @@ export function Planen({
             />
           );
         })()}
-      {plaetzeFach && entwuerfe && plan && (
-        <PlaetzeFach
-          titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}
-          unter={`${plan.spalten[plaetzeFach.spalte].name} · ${tagKurz(plan.spalten[plaetzeFach.spalte].tag)}`}
-          zeilen={plaetzeZeilen(
-            daten,
-            plan.spalten[plaetzeFach.spalte],
-            plaetzeFach.spalte,
-            plaetzeFach.gruppe,
-            katalog,
-          )}
-          vorlage={
-            katalog && ladeVorlagen
-              ? vorlageFuer(
-                  katalog,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.gruppe,
-                  ladeVorlagen,
-                )
-              : undefined
-          }
-          aendern={(z, gesehen, neu) =>
-            anzahlSetzen(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
-          }
-          laedt={plaetzeFrisch.laedt}
-          onGespeichert={showToast}
-          onClose={(geaendert) => {
-            setPlaetzeFach(null);
-            if (geaendert) leiseNeuLaden();
-          }}
-        />
-      )}
+      {plaetzeFach &&
+        entwuerfe &&
+        plan &&
+        (() => {
+          // Termin und Gruppe aus dem AKTUELLEN Plan – wie beim Fenster eines Dienstes (oben). Mit der Gruppe vom Öffnen
+          // rechnete das Fach nach einer Änderung mit den alten Plätzen weiter: nach 2 → 1 suchte es den Entwurf noch auf
+          // „Platz 1“, fand ihn nicht und ließ „−“ bis 0 zu (19.11.2026, beim Durchklicken gefunden).
+          const i = plan.spalten.findIndex((s) => s.id === plaetzeFach.eventId);
+          if (i < 0) return null;
+          const s = plan.spalten[i];
+          const g =
+            plan.gruppen.find((x) => schluessel(x) === schluessel(plaetzeFach.gruppe)) ??
+            plaetzeFach.gruppe;
+          return (
+            <PlaetzeFach
+              titel={`${gruppenName(g)} · Plätze`}
+              unter={`${s.name} · ${tagKurz(s.tag)}`}
+              zeilen={plaetzeZeilen(daten, s, i, g, katalog)}
+              vorlage={
+                katalog && ladeVorlagen ? vorlageFuer(katalog, s, g, ladeVorlagen) : undefined
+              }
+              aendern={(z, gesehen, neu) => anzahlSetzen(s.id, z.serviceId, gesehen, neu)}
+              laedt={plaetzeFrisch.laedt}
+              onGespeichert={showToast}
+              onClose={(geaendert) => {
+                setPlaetzeFach(null);
+                if (geaendert) leiseNeuLaden();
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }

@@ -124,7 +124,8 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
   beim Schließen** (`usePlaetzeFrisch`, beim Durchklicken am 19.11.2026 gefunden): Sonst rechnete das offene Fenster mit neuen
   Entwurfs-Nummern auf alten Plätzen – nach 1 → 2 fiel die Untergrenze für „−“ auf 0, und die Matrix zeigte kurz „Entwurf ohne
   Platz“. Bis beide da sind, sind „+“, „−“ und „Vorlage übernehmen“ aus (Schließen geht); kommt nach 20 s nichts, gibt es frei
-  mit „… bitte die Seite neu laden“. **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
+  mit „… bitte die Seite neu laden“. Beide Fenster holen Termin, Gruppe und Plätze bei jedem Zeichnen aus dem **aktuellen** Plan
+  (das Plätze-Fach merkte sich bis dahin die Gruppe vom Öffnen und ließ nach 2 → 1 „−“ am Entwurf vorbei bis 0 zu). **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
   entfernen“) ist ein Dienst mit Entwürfen nur noch, wo man die Entwürfe der Gruppe nicht ändern darf (Schublade nicht „bereit“).
 - **Plätze-Regler in der Gruppenzeile** (Plätze-Fach, jede Änderung gilt sofort, ChurchTools verschickt dabei nichts):
   Das Fach zeigt **jeden Dienst der Dienstgruppe**, den man an diesem Termin planen darf – auch Dienste, die im

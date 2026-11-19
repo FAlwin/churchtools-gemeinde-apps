@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.10.0 (19.11.2026: „Wann kann ich?“ – Mitarbeitende sagen je Termin Ja, Vielleicht oder Nein; Planer sehen die Antworten in „Personen“, in „Wer kann?“ und beim Zauberstab. v0.9.0: „Alle verwerfen“, Fenster schließen mit Escape).** Was die Reiter können:
+> **Stand: v0.11.0 (19.11.2026: „Erinnern“ – Mail an alle, die noch nicht geantwortet haben; „Plan teilen“ in drei Ansichten – Termine, Personen, Je Person; Platzzahl auch mit Entwürfen ändern. v0.10.0: „Wann kann ich?“ – Ja, Vielleicht oder Nein je Termin, die Antworten in „Personen“, „Wer kann?“ und beim Zauberstab).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen

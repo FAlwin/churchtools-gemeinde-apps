@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { ProtokollKopf } from '@shared/protokolle/speicher';
@@ -226,11 +226,16 @@ describe('Startseite (S3-3)', () => {
     expect(screen.queryByText(/in Arbeit/)).toBeNull();
     cleanup();
     m.ladeUebersicht.mockResolvedValue([
-      { ...UEBERSICHT[0], aufgaben: [teilSetzen(einer, ICH, true, ICH, '2026-10-22T11:00:00Z')] },
+      {
+        ...UEBERSICHT[0],
+        aufgaben: [UEBERFAELLIG, teilSetzen(einer, ICH, true, ICH, '2026-10-22T11:00:00Z')],
+      },
     ]);
     zeigen();
-    await waitFor(() => expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull());
+    // Erst warten, bis geladen ist (ein anderes To-Do steht da) – sonst wäre „nicht da“ schon vor dem Laden wahr.
+    await screen.findByText('Beamer-Angebote');
     // Der Gesamtstand ist „in Arbeit“ (2 von 3), mein Teil aber erledigt – für mich ist es nicht mehr offen.
+    expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
   });
 
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {

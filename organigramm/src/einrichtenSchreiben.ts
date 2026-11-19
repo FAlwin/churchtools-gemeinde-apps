@@ -25,7 +25,18 @@
  * Plan nicht `unsicher`) – er verlässt sich nicht auf den Knopf.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
-import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
+import { KeinSpeicherRecht } from '@ui/ct/verbindung';
+import { ctPortMit } from '@ui/ct/ctPort';
+import {
+  gruppenartAnlegen,
+  gruppenartRollen,
+  gruppenartSuchen,
+  GruppenartFehler,
+  listeHolen,
+  rechteErgaenzen,
+  type CtPort,
+  type GruppenartVorgabe,
+} from '@shared/ct/gruppenart';
 import type { SpeicherErgebnis } from '@shared/ct/versionierterWert';
 import {
   einrichtungsPlan,
@@ -34,13 +45,11 @@ import {
   type PlanSchritt,
 } from '@shared/organigramm/einrichtungPlan';
 import {
-  fehlendeLeiterRechte,
   rollenAus,
   routineBefund,
   waiseKandidaten,
   type EinrichtungDaten,
   type Gelesen,
-  type RechtRoh,
   type RegelRoh,
   type RolleRoh,
   type RoutineRoh,
@@ -139,25 +148,11 @@ export type Lauf =
       nichtMehrGebraucht: { gruppeId: number; name: string }[];
     };
 
-/** Der Anschluss an ChurchTools – für Tests austauschbar. */
-export interface CtPort {
-  /** `GET /api<pfad>`, `data` ausgepackt. */
-  holen<T>(pfad: string): Promise<T>;
-  /** Schreibender Aufruf; liefert `data` (sonst den Rumpf). */
-  schicken(pfad: string, methode: 'POST' | 'PUT' | 'PATCH', json?: unknown): Promise<unknown>;
-}
+export type { CtPort };
 
-export const ctPort: CtPort = {
-  holen: (pfad) => ctDaten(pfad),
-  async schicken(pfad, methode, json) {
-    const body = await ctAnfrage<{ data?: unknown } | null>(pfad, {
-      method: methode,
-      body: json === undefined ? undefined : JSON.stringify(json),
-      verweigert: 'Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).',
-    });
-    return body && typeof body === 'object' && 'data' in body ? body.data : body;
-  },
-};
+export const ctPort: CtPort = ctPortMit(
+  'Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).',
+);
 
 export interface Anschluss {
   lage: () => Promise<Lage>;
@@ -194,6 +189,11 @@ export function fehlerSortieren(e: unknown): { grund: FehlerGrund; text: string 
   if (e instanceof SchrittFehler) return { grund: e.grund, text: e.message };
   if (e instanceof KeinSpeicherRecht) return { grund: 'abgelehnt', text: KEIN_RECHT };
   if (e instanceof NichtUebernommen) return { grund: 'anderer', text: e.message };
+  // Der gemeinsame Baustein (`shared/ct/gruppenart`): nicht nachlesbar = vorübergehend, alles andere liegt an ChurchTools.
+  if (e instanceof GruppenartFehler)
+    return e.art === 'unlesbar'
+      ? { grund: 'voruebergehend', text: `${e.was} ließ sich nicht nachlesen. ${VORUEBERGEHEND}` }
+      : { grund: 'anderer', text: e.message };
   if (e instanceof ApiError) {
     if (e.status === 401)
       return { grund: 'abgelehnt', text: 'Du bist bei ChurchTools nicht mehr angemeldet.' };
@@ -206,17 +206,21 @@ export function fehlerSortieren(e: unknown): { grund: FehlerGrund; text: string 
   return { grund: 'voruebergehend', text: VORUEBERGEHEND };
 }
 
+/** Wie der Gruppentyp der Wechsel-Gruppen angelegt wird (Rest des Körpers: `gruppenartAnlegen`). */
+const WECHSEL_TYP_VORGABE: GruppenartVorgabe = {
+  name: WECHSEL_TYP_NAME,
+  namePlural: WECHSEL_TYP_NAME,
+  shorty: 'GW',
+  color: 'gray',
+  description:
+    'Angelegt von der Erweiterung „Organigramm“: Wechsel-Gruppen für den Gruppenwechsel der Kinder.',
+};
+
 const fehl = (text: string): SchrittFehler => new SchrittFehler('anderer', text);
 const unlesbar = (was: string): SchrittFehler =>
   new SchrittFehler('voruebergehend', `${was} ließ sich nicht nachlesen. ${VORUEBERGEHEND}`);
 
 // ── Hilfen ─────────────────────────────────────────────────────────────────────────────────────────────────────
-
-const liste = async <T>(port: CtPort, pfad: string, was: string): Promise<T[]> => {
-  const roh = await port.holen<unknown>(pfad);
-  if (!Array.isArray(roh)) throw unlesbar(was);
-  return roh as T[];
-};
 
 const gleich = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -450,101 +454,29 @@ class Schreiber {
 
   // ── Typ und Rechte ──────────────────────────────────────────────────────────────────────────────────────────────
 
-  /** Die Nummer des Gruppentyps „Gruppenwechsel“ – bei mehreren gleichen die kleinste. `null`: gibt es nicht. */
-  private async typSuchen(): Promise<{ id: number | null; sortKeyMax: number }> {
-    const typen = await liste<{ id?: unknown; name?: unknown; sortKey?: unknown }>(
-      this.port,
-      '/group/grouptypes',
-      'Die Liste der Gruppentypen',
-    );
-    const ids = typen
-      .filter((t) => istWechselTyp(t.name))
-      .map((t) => ctId(t.id))
-      .filter((x): x is number => x !== null);
-    const sortKeys = typen.map((t) => t.sortKey).filter((k): k is number => typeof k === 'number');
-    return {
-      id: ids.length ? Math.min(...ids) : null,
-      sortKeyMax: sortKeys.length ? Math.max(...sortKeys) : 0,
-    };
-  }
-
+  /** Die Nummer des Gruppentyps „Gruppenwechsel“ – bei mehreren gleichen die kleinste. */
   private async typId(): Promise<number> {
     if (this.typNr !== null) return this.typNr;
-    const { id } = await this.typSuchen();
+    const { id } = await gruppenartSuchen(this.port, istWechselTyp);
     if (id === null) throw fehl(`Den Gruppentyp „${WECHSEL_TYP_NAME}“ gibt es nicht.`);
     this.typNr = id;
     return id;
   }
 
-  /** Die Rollen eines Gruppentyps aus `GET /group/roles` (`id` = `groupTypeRoleId`, `isLeader`). */
-  private async typRollen(
-    typId: number,
-  ): Promise<{ leiter: number | null; teilnehmer: number | null }> {
-    const rollen = await liste<{
-      id?: unknown;
-      groupTypeId?: unknown;
-      isLeader?: unknown;
-      isHidden?: unknown;
-      isDefault?: unknown;
-    }>(this.port, '/group/roles', 'Die Rollen der Gruppentypen');
-    const vomTyp = rollen.filter((r) => ctId(r.groupTypeId) === typId && r.isHidden !== true);
-    const waehle = (leiter: boolean) => {
-      const passend = vomTyp.filter((r) => (r.isLeader === true) === leiter);
-      const w = passend.find((r) => r.isDefault === true) ?? passend[0];
-      return w ? ctId(w.id) : null;
-    };
-    return { leiter: waehle(true), teilnehmer: waehle(false) };
-  }
-
   private async typAnlegen(): Promise<Ausgang> {
-    const da = await this.typSuchen();
-    if (da.id === null) {
-      // Vorläufig – vor O9-6 an der Test-Instanz gemessen (O9-0: `POST /group/grouptypes`); die Rollen Teilnehmer und
-      // Leiter entstehen von selbst. Keine Beiträge, kein Pflicht-Leiter, nicht für neue Personen.
-      await this.port.schicken('/group/grouptypes', 'POST', {
-        name: WECHSEL_TYP_NAME,
-        namePlural: WECHSEL_TYP_NAME,
-        shorty: 'GW',
-        postsEnabled: false,
-        isLeaderNecessary: false,
-        availableForNewPerson: false,
-        // 0 = die Rechte des Typs gehen an keine Untergruppe weiter – Wechsel-Gruppen haben keine (OpenAPI; Typ 9 aus
-        // O9-0 hat 0).
-        permissionDepth: 0,
-        sortKey: da.sortKeyMax + 1,
-        color: 'gray',
-        description:
-          'Angelegt von der Erweiterung „Organigramm“: Wechsel-Gruppen für den Gruppenwechsel der Kinder.',
-      });
-    }
-    this.typNr = null;
-    const typId = await this.typId();
-    const r = await this.typRollen(typId);
-    if (r.leiter === null || r.teilnehmer === null)
-      throw fehl(
-        `Der Gruppentyp „${WECHSEL_TYP_NAME}“ steht in ChurchTools, hat aber nicht beide Rollen (Leiter und Teilnehmer).`,
-      );
+    // Vorläufig – vor O9-6 an der Test-Instanz gemessen (O9-0: `POST /group/grouptypes`); die Rollen Teilnehmer und
+    // Leiter entstehen von selbst.
+    const { typId } = await gruppenartAnlegen(this.port, WECHSEL_TYP_VORGABE, istWechselTyp);
+    this.typNr = typId;
     return { art: 'ok', text: 'nachgelesen: Typ mit den Rollen Leiter und Teilnehmer' };
   }
 
   private async rechteSetzen(): Promise<Ausgang> {
     const typId = await this.typId();
-    const { leiter } = await this.typRollen(typId);
+    const { leiter } = await gruppenartRollen(this.port, typId);
     if (leiter === null) throw fehl(`Der Typ „${WECHSEL_TYP_NAME}“ hat keine Rolle „Leiter“.`);
-    const pfad = `/permissions/group_type_role/${leiter}`;
-    const vorher = await liste<RechtRoh>(this.port, pfad, 'Die Rechte der Rolle „Leiter“');
     // Nur ergänzen, nie entziehen: Was jemand von Hand zusätzlich gesetzt hat, bleibt.
-    for (const r of fehlendeLeiterRechte(vorher))
-      await this.port.schicken(pfad, 'PUT', {
-        authId: r.authId,
-        ...(r.dataId === null ? {} : { dataId: [r.dataId] }),
-      });
-    const nachher = await liste<RechtRoh>(this.port, pfad, 'Die Rechte der Rolle „Leiter“');
-    const fehlt = fehlendeLeiterRechte(nachher);
-    if (fehlt.length > 0)
-      throw fehl(
-        `ChurchTools hat ${fehlt.map((r) => `„${r.name}“`).join(', ')} nicht übernommen. Bitte noch einmal versuchen.`,
-      );
+    await rechteErgaenzen(this.port, leiter, LEITER_RECHTE);
     return { art: 'ok', text: `nachgelesen: ${LEITER_RECHTE.length} Rechte an der Rolle „Leiter“` };
   }
 
@@ -703,7 +635,7 @@ class Schreiber {
   // ── Routine ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
   private async rollenDerGruppe(id: number): Promise<RolleRoh[]> {
-    return liste<RolleRoh>(this.port, `/groups/${id}/roles`, 'Die Rollen der Gruppe');
+    return listeHolen<RolleRoh>(this.port, `/groups/${id}/roles`, 'Die Rollen der Gruppe');
   }
 
   private async wechselRollen(id: number): Promise<WechselRollen> {
@@ -719,7 +651,7 @@ class Schreiber {
     const { neu, schritte } = aufraeumRoutine(u, gruppe, rollen, this.soll.einstellung);
     const pfad = `/groups/${gruppe}/members/routines`;
     const vorhanden = (
-      await liste<RoutineRoh & { id?: unknown }>(this.port, pfad, 'Die Routinen')
+      await listeHolen<RoutineRoh & { id?: unknown }>(this.port, pfad, 'Die Routinen')
     ).find(
       (r) => ctId(r.groupTypeRoleId) === rollen.teilnehmer && r.groupMemberStatus === 'active',
     );
@@ -747,7 +679,7 @@ class Schreiber {
       });
       await this.port.schicken(`/routines/${id}`, 'PATCH', { isEnabled: true, steps: mitNummer });
     }
-    const nachher = await liste<RoutineRoh>(this.port, pfad, 'Die Routinen');
+    const nachher = await listeHolen<RoutineRoh>(this.port, pfad, 'Die Routinen');
     const daten: EinrichtungDaten = {
       rollen: new Map([[gruppe, { ok: true, wert: await this.rollenDerGruppe(gruppe) }]]),
       routinen: new Map([[gruppe, { ok: true, wert: nachher }]]),

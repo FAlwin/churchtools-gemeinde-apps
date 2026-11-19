@@ -20,8 +20,16 @@
  *   ChurchTools nimmt nur den jeweils nächsten, also gilt der nähere von beiden, nicht die Summe;
  * - „höchstens N× im Monat“ erreicht −100 (`preference.max-reached`) – damit ausgeschlossen.
  * Bei Gleichstand zuerst, wer im Lauf seltener dran ist (Alwin, 16.10.), dann nach Namen.
+ *
+ * **Antworten aus „Wann kann ich?“ (E5c-4, Alwin 19.11.2026):** Sind sie sichtbar (`ZauberPlatz.antworten`), gehen **Stufen vor
+ * Punkten**: erst wer **Ja** gesagt hat, dann **Vielleicht**, dann **keine Antwort** (`antwortStufe`, dieselbe Einordnung wie
+ * in „Wer kann?“ und im Raster); **innerhalb** einer Stufe gilt wie bisher Punktzahl, dann `imLauf`, dann Name. Die Grenze
+ * −100 bleibt: Eine Ja-Person unter −100 wird nicht genommen. Wer „nur bestimmte Dienste“ gesagt hat, ohne diesen Dienst,
+ * wird für diesen Dienst **nicht** genommen (`laufGrund: 'andere-dienste'`, wie ausgeschlossen, mit Grund). Ohne sichtbare
+ * Antworten (`antworten` fehlt) ist alles wie vor E5c-4 – eine fehlende Antwort darf nie wie „keine Antwort“ zählen.
  */
 import { monateBis, tageBis } from '../ct/datum';
+import { antwortStufe, STUFEN, type AntwortStufe, type ZellenAntwort } from './personenAntworten';
 import { kandidatenAus, type Kandidat, type RohKandidat } from './werKann';
 
 /** Ab hier nimmt der Zauberstab niemanden (ChurchTools: `if (-100 < e)`). */
@@ -38,6 +46,11 @@ export interface ZauberPlatz {
   schonDa: readonly number[];
   /** Die Antwort von `possiblepersons` für diesen Termin und Dienst. */
   roh: readonly RohKandidat[];
+  /**
+   * Die Antworten aus „Wann kann ich?“ für diesen Termin und Dienst, je Person (nur wer geantwortet hat) – `antwortenFuerPlatz`.
+   * **Fehlt** = nicht sichtbar oder nicht geladen: dann gibt es keine Stufen, alles wie bisher.
+   */
+  antworten?: ReadonlyMap<number, ZellenAntwort>;
 }
 
 /** Schon im Lauf eingeplant: ein eigener Vorschlag, ein von Hand gewählter Name oder ein vorhandener Entwurf. */
@@ -52,7 +65,11 @@ export interface Bewertet extends Kandidat {
   /** Wie oft die Person im Lauf schon eingeplant ist (alle Termine). */
   imLauf: number;
   /** Warum der Lauf sie ausschließt – `null`, wenn er es nicht tut. */
-  laufGrund: 'am-tag' | 'hoechstens' | null;
+  laufGrund: 'am-tag' | 'hoechstens' | 'andere-dienste' | null;
+  /** Die Antwort aus „Wann kann ich?“ auf diesen Termin (`null` = keine, oder Antworten nicht sichtbar). */
+  antwort: ZellenAntwort | null;
+  /** Die Stufe (`antwortStufe`); `null`, wenn die Antworten nicht sichtbar sind – dann ordnet nur die Punktzahl. */
+  stufe: AntwortStufe | null;
   /** Kommt für den Zauberstab in Frage (`wert` über der Grenze). */
   passt: boolean;
 }
@@ -103,11 +120,30 @@ export function bewerte(platz: ZauberPlatz, eingeplant: readonly Eingeplant[]): 
       laufGrund ??= 'hoechstens';
     }
 
+    const antwort = platz.antworten?.get(k.personId) ?? null;
+    const stufe = platz.antworten ? antwortStufe(k.abwesend !== null, antwort) : null;
+    // „Nur andere Dienste“ (Antwort gilt hier nicht): wie ausgeschlossen. Abwesenheit regelt ChurchTools' Punktzahl (−1000).
+    const andereDienste = antwort !== null && !antwort.gilt;
+    if (andereDienste) laufGrund ??= 'andere-dienste';
+
     const wert = k.punkte + k.frueherAbgesagt + abzug;
-    return { ...k, wert, imLauf: meine.length, laufGrund, passt: wert > GRENZE };
+    return {
+      ...k,
+      wert,
+      imLauf: meine.length,
+      laufGrund,
+      antwort,
+      stufe,
+      passt: wert > GRENZE && !andereDienste,
+    };
   });
+  const rang = (b: Bewertet): number => (b.stufe === null ? 0 : STUFEN.indexOf(b.stufe));
   return out.sort(
-    (a, b) => b.wert - a.wert || a.imLauf - b.imLauf || a.name.localeCompare(b.name, 'de'),
+    (a, b) =>
+      rang(a) - rang(b) ||
+      b.wert - a.wert ||
+      a.imLauf - b.imLauf ||
+      a.name.localeCompare(b.name, 'de'),
   );
 }
 

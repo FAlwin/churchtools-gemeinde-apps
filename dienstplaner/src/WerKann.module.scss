@@ -235,3 +235,73 @@
     outline-offset: 1px;
   }
 }
+
+// ── Antworten aus „Wann kann ich?“ (E5c-4, Variante A): Abschnitte mit Zahl, die Notiz als zweite Zeile ──
+.abschnitt {
+  margin-top: 12px;
+
+  &:first-of-type {
+    margin-top: 4px;
+  }
+}
+
+.abschnittKopf {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.zahl {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+// „Kann nicht / abwesend“ – der Kopf ist ein Knopf, der aufklappt (Pfeil wie im Entwurf).
+.aufzu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+.pfeil {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text2);
+  border-bottom: 2px solid var(--text2);
+  transform: rotate(-45deg);
+  transition: transform 0.12s;
+
+  &.offen {
+    transform: rotate(45deg);
+  }
+}
+
+.wer small.antwort {
+  font-style: italic;
+}
+
+// „Nochmal versuchen“ im Satz.
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -15,6 +15,8 @@ import { ALWIN, TECHNIK, daten, entwurf, gesendet, nachgebaut } from './entwurfA
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
 import { ladeWerKann } from './ladeWerKann';
+import type { AntwortenLader } from './ladeAntworten';
+import { antwortBereinigt } from '@shared/dienstplan/verfuegbarkeit';
 
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 
@@ -624,6 +626,43 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     expect(laden).toHaveBeenCalledWith(20, 7);
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
+  });
+
+  // E5c-4: Der Lader aus „Personen“ (`ladeAntworten`) geht bis in „Wer kann?“ – für die Dienstgruppe des Platzes, mit dem Dienstnamen.
+  it('mit den Antworten aus „Wann kann ich?“ zeigt „Wer kann?“ Abschnitte (Lader aus Planen)', async () => {
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '5', title: 'Anna Test' }, score: 0 },
+      { person: { domainIdentifier: '6', title: 'Ben Test' }, score: 0 },
+      { person: { domainIdentifier: '7', title: 'Clara Test' }, score: 0 },
+    ]);
+    const lader = vi.fn<AntwortenLader>(() =>
+      Promise.resolve({
+        jePerson: new Map([
+          [7, { '20': antwortBereinigt({ a: 'ja', tag: '2026-11-08', dienste: [1] }) }],
+          [6, { '20': antwortBereinigt({ a: 'vielleicht', tag: '2026-11-08', notiz: 'ab 10' }) }],
+        ]),
+        sichtbar: new Set([3]),
+      }),
+    );
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN3, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        ladeAntworten={lader}
+      />,
+    );
+    fireEvent.click(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    );
+    const vielleicht = await screen.findByRole('region', { name: 'Vielleicht' });
+    expect(within(vielleicht).getByText('Vielleicht: „ab 10“')).toBeTruthy();
+    const kannNicht = screen.getByRole('button', { name: /Kann nicht \/ abwesend 1/ });
+    fireEvent.click(kannNicht);
+    expect(screen.getByText('Ja – nur für Predigt')).toBeTruthy(); // Clara: nur Predigt, hier Licht
+    expect(lader).toHaveBeenCalledWith([3]);
   });
 
   // Alwin, 16.10.2026: „nur ansehen“ folgt derselben Regel wie die Knöpfe – Admin eines Termins zählt mit.

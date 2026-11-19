@@ -818,7 +818,9 @@ function speicherDemo(fall: string) {
   };
   // Die Antworten der anderen (Ansicht „Personen“, E5c-3) – ein Wert je Person in „Antworten Musik“. Alle Fälle: Ja,
   // Vielleicht, mit Notiz, „nur bestimmte Dienste“ (Gesang = 9, Ton = 6), Antwort UND Abwesenheit (Abwesenheit schlägt),
-  // keine Antwort (Termin 105 hat niemand beantwortet, Anna ist am 104 offen).
+  // keine Antwort (Anna ist am 104 offen; am 105 hat nur Spike geantwortet). E5c-4: Am freien Gesang-Platz des 106 zeigt „Wer
+  // kann?“ alle Abschnitte (Anna Ja, Clara Vielleicht mit Notiz, Spike „Ja nur für Ton“ + David im Urlaub = Kann nicht, Ben und
+  // Alwin ohne Antwort); am freien Gesang-Platz des 105 nimmt der Zauberstab Spike (Ja) vor Anna (mehr Punkte, keine Antwort).
   const tagVon = (tage: number) => zeit(tage, '00:00').slice(0, 10);
   const antwortenVon = (personId: number, antworten: Record<string, object>) => ({
     art: 'dienstplaner-verfuegbarkeit',
@@ -840,12 +842,15 @@ function speicherDemo(fall: string) {
       '101': { a: 'vielleicht', tag: tagVon(4) },
       '103': { a: 'ja', tag: tagVon(11) },
       '104': { a: 'ja', tag: tagVon(16) },
+      '106': { a: 'vielleicht', tag: tagVon(39), notiz: 'erst ab 10 Uhr' },
     }),
     // Spike: Ja mit Notiz · Vielleicht · Ja nur für Gesang.
     antwortenVon(19, {
       '101': { a: 'ja', tag: tagVon(4), notiz: 'nur bis 12 Uhr' },
       '102': { a: 'vielleicht', tag: tagVon(7) },
       '104': { a: 'ja', tag: tagVon(16), dienste: [9] },
+      '105': { a: 'ja', tag: tagVon(21) },
+      '106': { a: 'ja', tag: tagVon(39), dienste: [6] },
     }),
   ];
   const spike = {

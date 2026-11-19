@@ -10,9 +10,15 @@
  *   Planer herausgenommen oder ersetzt“ zu unterscheiden.** Alwin (14.10.): frühere Absagen werden gar nicht
  *   gezeigt – deshalb zählt dieser Abzug auch nicht für die Reihenfolge, sonst stünde jemand still unten.
  * - `monthlyUtilization` zählt je Monat die Dienste **in dieser Dienstgruppe**, nicht über alle Dienste.
+ * - **Antworten aus „Wann kann ich?“ (E5c-4, Variante A):** Sind sie sichtbar, ordnet `abschnitteAus` die Liste in Abschnitte
+ *   „Hat Ja gesagt“ · „Vielleicht“ · „Keine Antwort“ · „Kann nicht / abwesend“ (`antwortStufe`, dieselbe Einordnung wie im
+ *   Raster und im Zauberstab); innerhalb eines Abschnitts bleibt die Reihenfolge von oben. Sind sie nicht sichtbar, gibt es
+ *   die eine Liste wie vor E5c-4 – nie alle unter „Keine Antwort“.
  * - Abwesenheiten mit Grund (`absenceReason.nameTranslated`) und einem freien Kommentar – der Kommentar kann
  *   privat sein und wird nicht gezeigt.
  */
+
+import { antwortStufe, STUFEN, type AntwortStufe, type ZellenAntwort } from './personenAntworten';
 
 export interface Kandidat {
   personId: number;
@@ -150,4 +156,37 @@ export function kandidatHinweis(k: Kandidat): { text: string; warnung: boolean }
   if (k.abwesend) return { text: `abwesend: ${k.abwesend}`, warnung: true };
   if (k.amTag.length) return { text: `am Tag schon: ${k.amTag.join(', ')}`, warnung: true };
   return { text: 'frei', warnung: false };
+}
+
+/** Ein Abschnitt der Liste (Variante A): die Stufe, die Personen darin und deren Antwort. */
+export interface WerKannAbschnitt {
+  stufe: AntwortStufe;
+  personen: { kandidat: Kandidat; antwort: ZellenAntwort | null }[];
+}
+
+/** Die Überschriften der Abschnitte. */
+export const ABSCHNITT_TITEL: Record<AntwortStufe, string> = {
+  ja: 'Hat Ja gesagt',
+  vielleicht: 'Vielleicht',
+  keine: 'Keine Antwort',
+  kannNicht: 'Kann nicht / abwesend',
+};
+
+/**
+ * Die Liste in Abschnitten – **alle vier, auch leere** (die Zahl im Kopf ist die Auskunft). `antworten` = die Antworten
+ * dieses Termins und Dienstes (`antwortenFuerPlatz`); **`null` = nicht sichtbar → `null`**, die Aufrufer zeigen dann die eine
+ * Liste wie bisher. Wer in ChurchTools abwesend ist, steht unter „Kann nicht“ – auch mit Ja (Abwesenheit schlägt die Antwort).
+ */
+export function abschnitteAus(
+  liste: readonly Kandidat[],
+  antworten: ReadonlyMap<number, ZellenAntwort> | null,
+): WerKannAbschnitt[] | null {
+  if (!antworten) return null;
+  const abschnitte: WerKannAbschnitt[] = STUFEN.map((stufe) => ({ stufe, personen: [] }));
+  for (const kandidat of liste) {
+    const antwort = antworten.get(kandidat.personId) ?? null;
+    const stufe = antwortStufe(kandidat.abwesend !== null, antwort);
+    abschnitte.find((a) => a.stufe === stufe)?.personen.push({ kandidat, antwort });
+  }
+  return abschnitte;
 }

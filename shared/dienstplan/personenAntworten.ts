@@ -8,6 +8,10 @@
  * - **„Nur bestimmte Dienste“** (`Antwort.dienste`, fehlt = alle): In einem Dienst, der nicht dabei steht, gilt die Antwort
  *   nicht – die Zelle bleibt weiß, der Tooltip sagt es („Ja – nur für Gesang“). Im Spaltenkopf zählt die Person trotzdem.
  * - **Notiz** (`Antwort.notiz`) steht im Tooltip und im Vorlesetext der Zelle.
+ *
+ * **Eine Regel für drei Stellen (E5c-4):** Raster, „Wer kann?“ und Zauberstab benutzen dieselben Funktionen – `antwortFuer`
+ * (gilt die Antwort für diesen Dienst, ist die Gruppe sichtbar?) und `antwortStufe` (Ja / Vielleicht / keine Antwort / kann
+ * nicht). Nirgends sonst wird entschieden, was eine Antwort bedeutet.
  */
 import type { Antwort, Antworten, Zusage } from './verfuegbarkeit';
 
@@ -90,3 +94,87 @@ export interface AntwortZahlen {
 
 /** „5 ja · 1 vielleicht“ – der Text im Spaltenkopf. */
 export const zahlenText = (z: AntwortZahlen): string => `${z.ja} ja · ${z.vielleicht} vielleicht`;
+
+/**
+ * Die Antwort einer Person auf einen Termin im Blick auf einen Dienst – **mit der Sichtbarkeit**: Ist die Dienstgruppe nicht
+ * sichtbar (`PersonenAntworten.sichtbar`), gibt es keine Antwort (`null`) – und „keine Antwort“ darf dann nicht
+ * wie eine echte aussehen; wer das unterscheiden muss, fragt `antwortenSichtbar`.
+ */
+export function antwortFuer(
+  antworten: PersonenAntworten | null | undefined,
+  o: {
+    gruppeId: number | null;
+    personId: number;
+    terminId: number;
+    dienstId: number;
+    dienstName: (id: number) => string | undefined;
+  },
+): ZellenAntwort | null {
+  if (!antwortenSichtbar(antworten, o.gruppeId)) return null;
+  return zellenAntwort(
+    antworten?.jePerson.get(o.personId)?.[String(o.terminId)],
+    o.dienstId,
+    o.dienstName,
+  );
+}
+
+/** Hat man die Antworten dieser Dienstgruppe lesen können? Nein = nichts davon zeigen (und nichts als „keine Antwort“ werten). */
+export function antwortenSichtbar(
+  antworten: PersonenAntworten | null | undefined,
+  gruppeId: number | null,
+): boolean {
+  return gruppeId !== null && antworten?.sichtbar.has(gruppeId) === true;
+}
+
+/**
+ * Die Antworten **aller Personen** auf einen Termin für einen Dienst (nur, wer geantwortet hat). `null`, wenn die
+ * Dienstgruppe nicht sichtbar ist – dann zeigen „Wer kann?“ und der Zauberstab keine Antworten, wie vor E5c.
+ */
+export function antwortenFuerPlatz(
+  antworten: PersonenAntworten | null | undefined,
+  o: {
+    gruppeId: number | null;
+    terminId: number;
+    dienstId: number;
+    dienstName: (id: number) => string | undefined;
+  },
+): Map<number, ZellenAntwort> | null {
+  if (!antwortenSichtbar(antworten, o.gruppeId)) return null;
+  const out = new Map<number, ZellenAntwort>();
+  for (const personId of antworten?.jePerson.keys() ?? []) {
+    const a = antwortFuer(antworten, { ...o, personId });
+    if (a) out.set(personId, a);
+  }
+  return out;
+}
+
+/**
+ * Wo eine Person bei „Wer kann?“ und im Zauberstab einsortiert wird:
+ * - **`ja` / `vielleicht`**: hat für diesen Termin und Dienst geantwortet,
+ * - **`keine`**: keine (für diesen Dienst geltende) Antwort – und nicht abwesend,
+ * - **`kannNicht`**: in ChurchTools abwesend (das ist das „Nein“, auch trotz Ja) **oder** hat „nur bestimmte Dienste“
+ *   gesagt, ohne diesen Dienst (Alwin, 19.11.2026).
+ */
+export type AntwortStufe = 'ja' | 'vielleicht' | 'keine' | 'kannNicht';
+
+/** Die Reihenfolge der Stufen: Ja vor Vielleicht vor keiner Antwort, „kann nicht“ zuletzt. */
+export const STUFEN: readonly AntwortStufe[] = ['ja', 'vielleicht', 'keine', 'kannNicht'];
+
+export function antwortStufe(abwesend: boolean, antwort: ZellenAntwort | null): AntwortStufe {
+  if (abwesend) return 'kannNicht';
+  if (!antwort) return 'keine';
+  return antwort.gilt ? antwort.a : 'kannNicht';
+}
+
+/**
+ * Die zweite Zeile unter dem Namen in „Wer kann?“ – `null`, wenn der Abschnitt schon alles sagt:
+ * - Antwort gilt hier, ohne Notiz und Beschränkung: keine Zeile (die Überschrift „Hat Ja gesagt“ genügt);
+ * - mit Notiz: `Vielleicht: „nur bis 12 Uhr“`;
+ * - mit Beschränkung auf andere Dienste, oder bei Abwesenheit: derselbe Text wie im Raster (`antwortText`/`zellenText`).
+ */
+export function antwortZeile(a: ZellenAntwort | null, abwesend: boolean): string | null {
+  if (!a) return null;
+  if (abwesend || !a.gilt) return zellenText(a, abwesend);
+  if (a.nurFuer) return antwortText(a);
+  return a.notiz ? `${a.a === 'ja' ? 'Ja' : 'Vielleicht'}: „${a.notiz}“` : null;
+}

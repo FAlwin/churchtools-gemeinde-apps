@@ -427,3 +427,36 @@ abwesend) oder weiß (keine Antwort); die Tags „zugesagt“, „angefragt“ u
 - **Historie:** Dienstplaner E5c-3 (19.11.2026), Entwurf `e5c-wann-kann-ich.html` Bereich 2, Variante D
 
 </details>
+
+### TF-VERF-14 · „Wer kann?“ und Zauberstab mit den Antworten aus „Wann kann ich?“
+
+**Das brauchst du:** Wie TF-VERF-13 – Dienstplaner in der **Test-Instanz**, ein Konto, das die Dienstgruppe (Musik) **planen** darf, der
+Speicher „Antworten Musik“ mit dem Recht „sehen“, und für einen Termin mit **freiem Platz** mindestens: eine Person mit Ja, eine mit
+Vielleicht und Notiz, eine ohne Antwort, eine in ChurchTools **abwesende** und eine mit „nur für Ton“ (der Platz ist Gesang).
+
+**Das muss passieren:** „Wer kann?“ zeigt die Abschnitte „Hat Ja gesagt“, „Vielleicht“, „Keine Antwort“ mit Zahlen und darunter
+eingeklappt „Kann nicht / abwesend“. Der Zauberstab schlägt für diesen Platz die Person mit Ja vor, auch wenn eine andere mehr
+ChurchTools-Punkte hat.
+
+1. Freien Platz im Gesang antippen: Die Abschnitte stehen in der Reihenfolge Ja, Vielleicht, Keine Antwort; „Kann nicht / abwesend“ ist zu
+   und zeigt die Zahl.
+2. Die Person mit Notiz: Unter dem Namen steht kursiv „Vielleicht: „…““.
+3. „Kann nicht / abwesend“ aufklappen: Die abwesende Person (Grund steht rot) und die „nur für Ton“-Person („Ja – nur für Ton“) stehen darin,
+   sind aber antippbar – ein Tipp legt einen Entwurf an (Warnung wie bisher).
+4. Mehr als 6 Kandidaten: Das Suchfeld filtert über alle Abschnitte, Abschnitte ohne Treffer verschwinden.
+5. Zauberstab (Gruppe oder „Personen“, Dienst Gesang): Der Vorschlag für den Platz ist die Person mit Ja; im Auswahlfeld steht hinter dem
+   Namen „– Ja“, „– Vielleicht …“; die „nur für Ton“-Person steht unter „Passt eher nicht“ mit „Antwort gilt nicht für diesen Dienst“.
+6. Dienstgruppe, deren Antworten man **nicht sehen** darf (oder Termin-Admin ohne Planrecht): „Wer kann?“ ist **eine** Liste wie früher,
+   der Zauberstab rechnet wie früher – kein Hinweis, keine Abschnitte.
+7. Netz kurz trennen (oder die Kategorie sperren) und „Wer kann?“ öffnen: eine Liste wie früher plus der Hinweis „Antworten aus „Wann kann
+   ich?“ gerade nicht geladen“ mit **Nochmal versuchen**; im Zauberstab steht der Hinweis über den Vorschlägen. Niemand steht dann unter
+   „Keine Antwort“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/werKann.ts`, `shared/dienstplan/zauberstab.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/WerKann.tsx`, `dienstplaner/src/WerKann.module.scss`, `dienstplaner/src/ZauberstabFach.tsx`, `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenAntworten.einordnung.test.ts` (Einordnung Ja/Vielleicht/keine/kann nicht, Sichtbarkeit, Abschnitte), `shared/dienstplan/zauberstab.antworten.test.ts` (Stufen vor Punkten, Grenze −100, „nur andere Dienste“, ohne Antworten wie bisher), `dienstplaner/src/WerKann.antworten.test.tsx` (Abschnitte, Zahlen, eingeklappt, Notiz, Suche, nicht sichtbar, Fehlerhinweis), `dienstplaner/src/ZauberstabFach.antworten.test.tsx`, `dienstplaner/src/Planen.test.tsx` (Lader aus Planen bis ins Fenster); von Hand bleibt der Eindruck am Handy und mit echten ChurchTools-Rechten
+- **Historie:** Dienstplaner E5c-4 (19.11.2026), Entwurf `e5c-wann-kann-ich.html` Bereich 3, Variante A
+
+</details>

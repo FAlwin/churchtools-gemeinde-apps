@@ -13,6 +13,7 @@ import {
 import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import { einsaetzeUm, einsaetzeUmText } from '@shared/dienstplan/fokus';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
+import type { AntwortenLader } from './ladeAntworten';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
@@ -92,6 +93,7 @@ export function useEinteilen({
   sendenZusatz,
   fokus,
   modusFuer = () => 'anfrage',
+  antwortenLader,
 }: {
   plan: Plan | null;
   /** Ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
@@ -124,6 +126,11 @@ export function useEinteilen({
    * immer die Anfrage.
    */
   modusFuer?: (dienstId: number) => Modus;
+  /**
+   * Die Antworten aus „Wann kann ich?“ (E5c-4) für „Wer kann?“ und den Zauberstab – derselbe Lader wie in „Personen“ (App:
+   * `antwortenLaden`, nur planbare Dienstgruppen). Ohne Angabe sind beide wie vor E5c-4.
+   */
+  antwortenLader?: AntwortenLader;
 }) {
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
@@ -156,6 +163,10 @@ export function useEinteilen({
   const [verwerfenListe, setVerwerfenListe] = useState<SendeZeile[] | null>(null);
   const [verwirft, setVerwirft] = useState(false);
   const { toast, showToast } = useToast();
+  // Dienst-ID → Name für „nur für Gesang“ in den Antworten – aus dem Plan, wie im Raster.
+  const dienstName = (id: number): string | undefined =>
+    plan?.gruppen.flatMap((g) => g.zeilen).find((z) => z.dienst.id === id)?.dienst.name;
+  const antworten = antwortenLader ? { lader: antwortenLader, dienstName } : undefined;
 
   // Entwürfe (E4-3) und wo sie stehen (#582) – Laden, Speichern und Regeln in `useEntwuerfe` / `planEntwuerfe`.
   const {
@@ -491,6 +502,7 @@ export function useEinteilen({
       {frei && (
         <WerKann
           platz={frei}
+          antworten={antworten}
           onClose={() => {
             setFrei(null);
             setErsetzt(null);
@@ -611,6 +623,7 @@ export function useEinteilen({
       {zauber && (
         <ZauberstabFach
           {...zauber}
+          antworten={antworten}
           vorlieben={entwuerfe?.vorlieben}
           uebernehmen={zauberUebernehmen}
           onClose={(n) => {

@@ -18,4 +18,4 @@
 ### Geändert (Dienstplaner)
 
 - **„Abwesend“ ist in „Personen“ jetzt rot schraffiert** (vorher grau) – zusammen mit den neuen Farben für Ja und Vielleicht
-  (neue Farbwerte `--antwort-*` in `ui/design`, hell und dunkel; „Wer kann?“ nutzt sie später auch).
+  (neue Farbwerte `--antwort-*` in `ui/design`, hell und dunkel).

@@ -778,6 +778,10 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   kompletten lokalen Läufen haben den Entwickler-Mac regelmäßig ausgelastet. Lokal vor dem Push nur gezielt:
   - die Tests der geänderten Dateien: `TZ=UTC npx vitest related <dateien> --run` im betroffenen Teilprojekt
     (die CI läuft in UTC);
+  - **dazu immer die Quelltext-Wächter** (`ui/design/*.test.ts`, z. B. `eineZeitzone`, `festeWerte`):
+    `cd client && TZ=UTC npx vitest run ../ui/design`. Sie lesen den Quelltext ALLER Apps und hängen nicht per Import
+    an den geänderten Dateien – `related` findet sie deshalb nie (19.11.2026: `shared/website/render.ts` mit fester
+    Zeitzone fiel erst in der CI auf);
   - der Build des betroffenen Teilprojekts (s. o.) und `npx eslint <geänderte dateien>`;
   - die billigen Textprüfungen, die sonst gern erst in der CI scheitern: `npm run format:check`,
     `npm run doc-check`, `npm run changelog -- --pruefen`, `npm run testplan -- --pruefen`.

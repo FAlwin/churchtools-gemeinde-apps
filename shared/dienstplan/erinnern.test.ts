@@ -205,16 +205,27 @@ describe('Wer fehlt: Antwort, Abwesenheit, Einteilung', () => {
     });
   });
 
-  it('Vergangenes und Abgesagtes zählt nicht; ein Termin von heute schon', () => {
+  it('Vergangenes zählt nicht; ein Termin von heute schon', () => {
     const plan = planMit([
-      termin(1, '2026-12-06T08:00:00Z', [platz(GESANG, null, null)], { isCanceled: true }),
+      termin(1, '2026-12-06T08:00:00Z', [platz(GESANG, null, null)]),
       termin(2, '2026-12-13T08:00:00Z', [platz(GESANG, null, null)]),
       termin(3, '2026-12-20T08:00:00Z', [platz(GESANG, null, null)]),
     ]);
-    expect(erinnerSpalten(plan, [0, 1, 2], '2026-12-13')).toEqual([1, 2]); // 13. = heute zählt, 06. abgesagt
+    expect(erinnerSpalten(plan, [0, 1, 2], '2026-12-13')).toEqual([1, 2]); // der 13. ist heute und zählt
     expect(erinnerSpalten(plan, [0, 1, 2], '2026-12-14')).toEqual([2]);
     const e = musikFehlend({ plan, spalten: [0, 1, 2], heute: '2026-12-14' });
     expect(offen(e)['Clara Neu']).toEqual(['2026-12-20']);
+  });
+
+  it('ein abgesagter Termin zählt nicht (auch in der Zukunft)', () => {
+    const plan = planMit([
+      termin(1, '2026-12-06T08:00:00Z', [platz(GESANG, null, null)]),
+      termin(2, '2026-12-13T08:00:00Z', [platz(GESANG, null, null)], { isCanceled: true }),
+      termin(3, '2026-12-20T08:00:00Z', [platz(GESANG, null, null)]),
+    ]);
+    expect(erinnerSpalten(plan, [0, 1, 2], HEUTE)).toEqual([0, 2]);
+    const e = musikFehlend({ plan, spalten: [0, 1, 2] });
+    expect(offen(e)['Clara Neu']).toEqual(['2026-12-06', '2026-12-20']);
   });
 
   it('nur die gezeigten Spalten zählen – und gezeigt werden die Mitglieder der Dienste, die dort vorkommen (wie in „Personen“)', () => {

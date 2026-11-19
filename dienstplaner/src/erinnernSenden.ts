@@ -18,7 +18,6 @@
 import { ctId } from '@shared/ct/ctId';
 import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { KeinSpeicherRecht } from '@ui/ct/verbindung';
 import type { Empfaenger } from '@shared/dienstplan/erinnern';
 
 /** Was `POST /events/send` bekommt. */
@@ -80,8 +79,8 @@ export function ausgangAus(
 ): { art: 'ohneMail' } | { art: 'anhalten'; ergebnis: 'unklar' | 'abgelehnt'; grund: AnhaltGrund } {
   if (e instanceof ApiError) {
     if (e.status === 401) return { art: 'anhalten', ergebnis: 'abgelehnt', grund: 'abgemeldet' };
-    if (e instanceof KeinSpeicherRecht || e.status === 403)
-      return { art: 'anhalten', ergebnis: 'abgelehnt', grund: 'keinRecht' };
+    // 403 – auch „fehlendes Recht“ (`KeinSpeicherRecht`, ChurchTools meldet es oft als 401) trägt den Status 403.
+    if (e.status === 403) return { art: 'anhalten', ergebnis: 'abgelehnt', grund: 'keinRecht' };
     if (e.status === 422) return { art: 'ohneMail' };
     // 408, 429 (Bremse kommt als 503), 5xx: ChurchTools kann es angenommen haben.
     if (e.status === 408 || e.status === 429 || e.status >= 500)

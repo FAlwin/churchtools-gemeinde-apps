@@ -178,7 +178,7 @@ describe('Der Knopf „Erinnern“ in der Planen-Leiste', () => {
     zeige({
       start: startFuer({
         dienste: START.dienste,
-        rechte: { ...START.rechte, planbareDienstgruppen: [] },
+        rechte: { ...START.rechte, planbareDienstgruppen: [], sichtbareDienstgruppen: null },
       }),
     });
     expect(knopf()).toBeNull();
@@ -202,6 +202,19 @@ describe('Das Fenster: Gruppen, Empfänger, Vorschau', () => {
     expect(
       within(fenster).getByText('Technik ist gesperrt: Antworten nicht sichtbar.'),
     ).toBeTruthy();
+  });
+
+  it('nur planbare Dienstgruppen stehen zur Wahl – eine Gruppe, die man nur sehen darf, nicht', async () => {
+    const { fenster } = await oeffnen({
+      start: startFuer({
+        dienste: START.dienste,
+        rechte: { ...START.rechte, planbareDienstgruppen: [4], sichtbareDienstgruppen: null },
+      }),
+    });
+    const gruppen = await geladen(fenster);
+    expect(within(gruppen).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(gruppen).getByRole('button', { name: 'Musik · 2' })).toBeTruthy();
+    expect(within(gruppen).queryByRole('button', { name: /Technik/ })).toBeNull();
   });
 
   it('Empfänger: Anna (offen: So, 18.10.) und Carla (Mi, 21.10.), je mit Haken; Zähler im Senden-Knopf', async () => {
@@ -266,7 +279,8 @@ describe('Das Fenster: Gruppen, Empfänger, Vorschau', () => {
     // Vergleich über den DOM: was verschickt wird, ist das, was die Vorschau zeigt.
     const zeigt = document.createElement('div');
     zeigt.innerHTML = gesendet.body;
-    expect(vorschau.querySelector('p')?.outerHTML).toBe(zeigt.querySelector('p')?.outerHTML);
+    // Betreff-Zeile, dann der Inhalt der Mail: Wort für Wort derselbe wie der gesendete (`children[1]`).
+    expect(vorschau.children[1].innerHTML).toBe(zeigt.innerHTML);
     expect(gesendet.body).toBe(
       mailInhalt({
         name: 'Anna Test',
@@ -475,6 +489,27 @@ describe('Senden und Ergebnis', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'An die 1 übrige senden' }));
     await screen.findByText('2 Mails verschickt.');
     expect(bodies(senden).map((b) => b.recipients)).toEqual([[5], [11], [11]]);
+  });
+
+  it('„Eine Kopie an mich“ gilt für das ganze Erinnern: der zweite Lauf („An die übrigen“) fordert keine zweite an', async () => {
+    const senden = vi
+      .fn<MailSender>()
+      .mockResolvedValueOnce({ data: { sentRecipientIds: [5] } })
+      .mockRejectedValueOnce(new ApiError(504, 'x'))
+      .mockResolvedValueOnce({ data: { sentRecipientIds: [11] } });
+    const { fenster } = await oeffnen({
+      senden,
+      antworten: () => Promise.resolve({ ...ANTWORTEN(), jePerson: new Map() }),
+    });
+    await geladen(fenster);
+    fireEvent.click(within(fenster).getByRole('checkbox', { name: 'Eine Kopie an mich' }));
+    fireEvent.click(sendeKnopf(fenster, /^An 3 Personen senden$/));
+    await screen.findByText('1 von 3 verschickt.');
+    const dialog = screen.getByRole('dialog', { name: 'Erinnern – nur zum Teil' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'An die 1 übrige senden' }));
+    await screen.findByText('2 von 3 verschickt.');
+    expect(bodies(senden).map((b) => b.recipients)).toEqual([[5], [8], [11]]);
+    expect(bodies(senden).map((b) => b.sendCopyToMe)).toEqual([true, false, false]);
   });
 
   it('kein Recht (403): angehalten mit dem Satz dazu – und ohne „An die übrigen“ (dieselbe Wand)', async () => {

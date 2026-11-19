@@ -206,6 +206,31 @@ describe('Anlegen einer neuen Nachweis-Art', () => {
     expect(erg.erledigt).toEqual(['grundlage', 'gruppe', 'einstellungen']);
   });
 
+  it('(c) allein die zu niedrige Stufe genügt: ein sonst vollständiges Feld wird heraufgesetzt', async () => {
+    falsch.mitArt();
+    const g = falsch.gruppeAnlegen('Nachweis: Führungszeugnis');
+    falsch.felder.set(
+      g.id,
+      NACHWEIS_FELDER.map((f, i) => ({
+        ...nachweisFeldAnlage(f),
+        id: i + 1,
+        // Eine Stufe weit unter der Vorgabe – sonst ist alles da (Antworten, nicht im Anmeldeformular).
+        securityLevel: STUFE_NACHWEIS - 2,
+        options: 'optionen' in f ? f.optionen.map((name, k) => ({ id: `o${k}`, name })) : undefined,
+      })),
+    );
+    const erg = await nachweisArtSichern({ ...EINGABE, gruppeId: g.id }, ICH);
+    expect(erg.fehler).toBeNull();
+    expect(falsch.felder.get(g.id)!.map((f) => f.securityLevel)).toEqual([
+      STUFE_NACHWEIS,
+      STUFE_NACHWEIS,
+      STUFE_NACHWEIS,
+    ]);
+    // keine neuen Felder, die Antworten behalten ihre Nummern
+    expect(falsch.felder.get(g.id)).toHaveLength(3);
+    expect(falsch.felder.get(g.id)![2].options?.map((o) => o.id)).toEqual(['o0', 'o1']);
+  });
+
   it('(c) ein Feld mit zu niedriger Stufe wird auf die Stufe heraufgesetzt, die Antworten bleiben', async () => {
     falsch.mitArt();
     const g = falsch.gruppeAnlegen('Nachweis: Führungszeugnis');

@@ -13,6 +13,7 @@
  * anderes nicht prüfbar war.
  */
 import { ctId } from '../ct/ctId';
+import { fehlendeRechte, rechteAus, rechtSchluessel, type RechtRoh } from '../ct/gruppenart';
 import {
   alleRegeln,
   aufraeumRoutine,
@@ -46,12 +47,7 @@ export interface RolleRoh {
   isDefault?: unknown;
   isHidden?: unknown;
 }
-/** Eine Zeile aus `GET /permissions/group_type_role/{id}`. */
-export interface RechtRoh {
-  authId?: unknown;
-  dataId?: unknown;
-  isInherited?: unknown;
-}
+export type { RechtRoh };
 export interface RegelRoh {
   shorty?: unknown;
 }
@@ -208,22 +204,6 @@ function typZeile(e: Einrichtung, q: StandQuelle, d: EinrichtungDaten): StandZei
 
 // ── Zeile: Rechte der Leitung am Typ ───────────────────────────────────────────────────────────────────────────
 
-interface Recht {
-  authId: number;
-  dataId: number | null;
-  geerbt: boolean;
-}
-
-function rechteAus(rows: readonly RechtRoh[]): Recht[] {
-  return rows.flatMap((r) => {
-    const authId = ctId(r.authId);
-    if (authId === null) return [];
-    const dataId = ctId(r.dataId);
-    return [{ authId, dataId, geerbt: r.isInherited === true }];
-  });
-}
-const rechtSchluessel = (r: { authId: number; dataId: number | null }) =>
-  `${r.authId}:${r.dataId ?? ''}`;
 const rechtName = (r: { authId: number; dataId: number | null }): string => {
   const bekannt = LEITER_RECHTE.find((x) => x.authId === r.authId);
   const name = bekannt?.name ?? `Recht ${r.authId}`;
@@ -234,10 +214,8 @@ const rechtName = (r: { authId: number; dataId: number | null }): string => {
  * **Welche Rechte der Leiter-Rolle fehlen** – gegen `LEITER_RECHTE`. Eine Stelle für die Zeile „Rechte der Leitung“ und
  * für den Plan „Das legt die Erweiterung an“ (O9-5c-2); geerbte Rechte zählen als vorhanden.
  */
-export function fehlendeLeiterRechte(rows: readonly RechtRoh[]): (typeof LEITER_RECHTE)[number][] {
-  const da = new Set(rechteAus(rows).map(rechtSchluessel));
-  return LEITER_RECHTE.filter((r) => !da.has(rechtSchluessel(r)));
-}
+export const fehlendeLeiterRechte = (rows: readonly RechtRoh[]): (typeof LEITER_RECHTE)[number][] =>
+  fehlendeRechte(rows, LEITER_RECHTE);
 
 /** Gruppeninfos sehen: ohne dieses Recht ist die Gruppe für die Leitung unsichtbar (gemessen O9-0). */
 const GRUPPENINFOS = 10102;

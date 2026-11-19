@@ -109,6 +109,7 @@ describe('Haken in der To-Do-Übersicht (W8a)', () => {
     aufgaben(EINZEL);
     zeige();
     await screen.findByText('Raum prüfen');
+    expect(HALTEN_MS).toBe(5000); // „5 Sekunden“ ist die abgenommene Vorgabe (Entwurf v1/v2)
     fireEvent.click(within(zeile('Raum prüfen')).getByRole('button', { name: /Status: offen/ }));
     await waitFor(() =>
       expect(within(zeile('Raum prüfen')).getByRole('button', { name: 'Rückgängig' })).toBeTruthy(),

@@ -242,6 +242,7 @@ churchtools-gemeinde-apps/
 ├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (nur Erweiterung, Kürzel `organigramm`; Stand O7: Baum, Personen/Hinweise für Leitungen, Präsentation (Admins auch „Neue Gliederung“), Gruppen umhängen/anlegen, Mitglieder pflegen, Reiter „Neue Gliederung“ (Plan und Umbau) für Admins, Ansichten Karten/Liste/von oben/von links/Mindmap mit „Anfangen bei“ (O7b), Organigramm als PDF mit Vorschau (O7b-4), Präsentation mit Kacheln/von oben/von links/Mindmap (O7b-5), Reiter „Kinder & Jugend“ (O9-2: Einrichtung aus der Kategorie `gruppenwechsel`, Wechseltage live aus dem Ferienkalender; O9-3: Ausnahme „Bleibt noch ein Jahr“ im Kind-Fenster, `ausnahmeTexte.ts`, Rechte je Wechsel-Gruppe beim Laden; O9-4: Unterreiter „Wechseltage“ für Bereichsleitung/Admins in `Wechseltage.tsx`, Status je Jahr aus den Regeln nur mit „Berechtigungen verwalten“ in `ladeRegelStand.ts`, Kopieren über `ui/bedienung/useKopieren.ts`) – Anleitung `docs/betrieb/ORGANIGRAMM.md`, manuelle Tests TF-ORG)
 ├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1), hinweis (fällige To-Dos)
 ├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
+├── shared/website/          # Kern der neuen Gemeinde-Website (W1): modell (Schemas, Speicherformat `website:v1:`, Gesamtprüfung), markdown (schlank, kein rohes HTML), html (Escape), render (Seite/Bausteine → HTML, Vorschau = Bau)
 ├── shared/gebetsabend/      # Regeln des Gebetsabends: zugang (StreamID/Passwort), links (VDO.Ninja), zustand (Player-Meldungen), einrichten (G1)
 ├── gebetsabend/             # Gebetsabend: ChurchTools-Erweiterung, überträgt den Gebetsabend per VDO.Ninja an Mitglieder (Bauplan Gebetsabend, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
@@ -777,6 +778,10 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   kompletten lokalen Läufen haben den Entwickler-Mac regelmäßig ausgelastet. Lokal vor dem Push nur gezielt:
   - die Tests der geänderten Dateien: `TZ=UTC npx vitest related <dateien> --run` im betroffenen Teilprojekt
     (die CI läuft in UTC);
+  - **dazu immer die Quelltext-Wächter** (`ui/design/*.test.ts`, z. B. `eineZeitzone`, `festeWerte`):
+    `cd client && TZ=UTC npx vitest run ../ui/design`. Sie lesen den Quelltext ALLER Apps und hängen nicht per Import
+    an den geänderten Dateien – `related` findet sie deshalb nie (19.11.2026: `shared/website/render.ts` mit fester
+    Zeitzone fiel erst in der CI auf);
   - der Build des betroffenen Teilprojekts (s. o.) und `npx eslint <geänderte dateien>`;
   - die billigen Textprüfungen, die sonst gern erst in der CI scheitern: `npm run format:check`,
     `npm run doc-check`, `npm run changelog -- --pruefen`, `npm run testplan -- --pruefen`.

@@ -9,12 +9,13 @@
  *  - Links aus den Daten werden beim Ausgeben **noch einmal** geprüft (`linkAdresse`) – auch wenn das Schema es schon
  *    tut: Daten kommen aus ChurchTools-Werten, die jemand an der Oberfläche vorbei ändern kann.
  *  - Fehlen Daten der dynamischen Bausteine, steht ein ruhiger Hinweis da statt eines Absturzes.
- *  - Datum und Uhrzeit deutsch in `Europe/Berlin` (über `shared/ct/zeit.ts` + `datum.ts`, unabhängig von der Zone des
- *    Rechners – die Tests laufen mit `TZ=UTC`).
+ *  - Datum und Uhrzeit deutsch in der **Zeitzone der Gemeinde** (`kontext.zeitzone`, #847: keine eigene Zone im Code –
+ *    die Vorschau gibt `gemeindeZeitzone()`, der Bau-Dienst die Zone aus der ChurchTools-Konfiguration). Über
+ *    `shared/ct/zeit.ts` + `datum.ts`, unabhängig von der Zone des Rechners – die Tests laufen mit `TZ=UTC`.
  *  - Gestaltung ist W2: hier nur semantisches HTML mit stabilen Klassen (Präfix `w-`), kein Inline-CSS.
  */
 import { datumText, tagPunkt } from '../ct/datum';
-import { ortszeitAus, tagAusIso } from '../ct/zeit';
+import { tagAusIso, uhrText } from '../ct/zeit';
 import { htmlAttr, htmlText } from './html';
 import { markdownZuHtml } from './markdown';
 import {
@@ -27,9 +28,6 @@ import {
   type MenueEintrag,
   type Seite,
 } from './modell';
-
-/** Zeitzone aller Anzeigen (Deutschland). */
-export const ANZEIGE_ZEITZONE = 'Europe/Berlin';
 
 /** Breiten, in denen der Bau-Dienst Bilder bereithält (`srcset`). */
 export const BILD_BREITEN = [480, 800, 1200, 1600] as const;
@@ -85,6 +83,8 @@ export type RenderKontext = {
   bildAdresse: (bild: BildRef, breite: number) => string;
   /** Adresse der Stylesheet-Datei. */
   stylesheet: string;
+  /** IANA-Zeitzone der Gemeinde für alle Datums- und Uhrzeitangaben (#847). */
+  zeitzone: string;
   beitraege?: Beitrag[];
   termine?: Termin[];
   sliderFolien?: SliderFolie[];
@@ -140,19 +140,15 @@ function bildTag(
 
 // ── Datum ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** „14.11.2026“ – der Tag in Berlin. */
-function tagText(iso: string): string {
-  return tagPunkt(tagAusIso(iso, ANZEIGE_ZEITZONE));
+/** „14.11.2026“ – der Tag in der Zeitzone der Gemeinde. */
+function tagText(iso: string, zeitzone: string): string {
+  return tagPunkt(tagAusIso(iso, zeitzone));
 }
 
-/** „18:30“ – die Uhrzeit in Berlin. */
-function uhrzeit(iso: string): string {
-  return ortszeitAus(iso, ANZEIGE_ZEITZONE).slice(11, 16);
-}
-
-function terminWann(t: Termin): string {
-  const tag = tagAusIso(t.beginn, ANZEIGE_ZEITZONE);
-  const endTag = tagAusIso(t.ende, ANZEIGE_ZEITZONE);
+function terminWann(t: Termin, zeitzone: string): string {
+  const uhrzeit = (iso: string) => uhrText(iso, zeitzone);
+  const tag = tagAusIso(t.beginn, zeitzone);
+  const endTag = tagAusIso(t.ende, zeitzone);
   if (t.ganztaegig) {
     return endTag > tag
       ? `${datumText(tag)} – ${datumText(endTag)}`
@@ -178,7 +174,7 @@ function beitraegeHtml(b: Extract<Baustein, { typ: 'beitraege' }>, k: RenderKont
     (x) =>
       `<article class="w-beitrag">${x.bild ? bildTag(x.bild, '', k, false, 'w-beitrag-bild') : ''}` +
       `<h3 class="w-beitrag-titel">${htmlText(x.titel)}</h3>` +
-      `<p class="w-datum"><time datetime="${htmlAttr(x.datum)}">${htmlText(tagText(x.datum))}</time></p>` +
+      `<p class="w-datum"><time datetime="${htmlAttr(x.datum)}">${htmlText(tagText(x.datum, k.zeitzone))}</time></p>` +
       `<div class="w-beitrag-text">${markdownZuHtml(x.text)}</div></article>`,
   );
   return `<div class="w-beitraege">${karten.join('\n')}</div>`;
@@ -193,7 +189,7 @@ function termineHtml(b: Extract<Baustein, { typ: 'termine' }>, k: RenderKontext)
   const zeilen = gewaehlt.map(
     (t) =>
       `<li class="w-termin"><h3 class="w-termin-titel">${htmlText(t.titel)}</h3>` +
-      `<p class="w-termin-wann"><time datetime="${htmlAttr(t.beginn)}">${htmlText(terminWann(t))}</time></p>` +
+      `<p class="w-termin-wann"><time datetime="${htmlAttr(t.beginn)}">${htmlText(terminWann(t, k.zeitzone))}</time></p>` +
       (t.ort ? `<p class="w-ort">${htmlText(t.ort)}</p>` : '') +
       '</li>',
   );
@@ -223,7 +219,7 @@ function videoKarte(v: Video, k: RenderKontext): string {
   const kopf = sicher
     ? `<a class="w-video-link" href="${htmlAttr(sicher)}" rel="noopener">${bild}<span class="w-video-titel">${titel}</span></a>`
     : `${bild}<span class="w-video-titel">${titel}</span>`;
-  return `<article class="w-video">${kopf}<p class="w-datum"><time datetime="${htmlAttr(v.datum)}">${htmlText(tagText(v.datum))}</time></p></article>`;
+  return `<article class="w-video">${kopf}<p class="w-datum"><time datetime="${htmlAttr(v.datum)}">${htmlText(tagText(v.datum, k.zeitzone))}</time></p></article>`;
 }
 
 function livestreamHtml(b: Extract<Baustein, { typ: 'livestream' }>, k: RenderKontext): string {

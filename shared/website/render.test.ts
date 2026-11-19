@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baustein, einstellungen, kontext, menue, seite } from './bauhilfen';
+import { baustein, einstellungen, kontext, menue, seite } from './website.testdaten';
 import { BAUSTEIN_TYPEN, type Baustein, type Link, type Seite } from './modell';
 import { renderBaustein, renderSeite, standardAdresse, type RenderKontext } from './render';
 
@@ -136,6 +136,28 @@ describe('renderBaustein', () => {
     expect(renderBaustein(baustein('termine', { kalender: [1] }), winter)).toContain(
       'Mi, 02.12.2026, 00:30 – 01:30 Uhr',
     );
+  });
+
+  it('Zeitzone kommt aus dem Kontext, nicht aus dem Code (#847, andere Gemeinden)', () => {
+    const termine = [
+      {
+        titel: 'Abend',
+        beginn: '2026-07-02T02:00:00Z',
+        ende: '2026-07-02T03:00:00Z',
+        ganztaegig: false,
+        kalenderId: 1,
+      },
+    ];
+    const beitraege = [{ id: 'x', titel: 'Spät', text: 't', datum: '2026-07-02T02:00:00Z' }];
+    const k = kontext({ termine, beitraege, zeitzone: 'America/New_York' });
+    expect(renderBaustein(baustein('termine', { kalender: [1] }), k)).toContain(
+      'Mi, 01.07.2026, 22:00 – 23:00 Uhr',
+    );
+    expect(renderBaustein(baustein('beitraege'), k)).toContain('01.07.2026');
+    const archiv = { archiv: [{ id: 'v', titel: 'V', datum: '2026-07-02T02:00:00Z' }] };
+    expect(
+      renderBaustein(baustein('livestream', { zeigen: 'archiv' }), { ...k, livestream: archiv }),
+    ).toContain('01.07.2026');
   });
 
   it('ganztägige und mehrtägige Termine', () => {

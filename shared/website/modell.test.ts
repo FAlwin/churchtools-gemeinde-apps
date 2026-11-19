@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baustein, BEISPIELE, einstellungen, menue, seite } from './bauhilfen';
+import { baustein, BEISPIELE, einstellungen, menue, seite } from './website.testdaten';
 import {
   BAUSTEIN_TYPEN,
   bausteinSchema,

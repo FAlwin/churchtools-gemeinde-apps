@@ -93,6 +93,7 @@ export function kontext(ueberschreibe: Partial<RenderKontext> = {}): RenderKonte
     adresseVon: standardAdresse,
     bildAdresse: (bild, breite) => `/bilder/${bild.id}-${breite}.jpg`,
     stylesheet: '/website.css',
+    zeitzone: 'Europe/Berlin',
     ...ueberschreibe,
   };
 }

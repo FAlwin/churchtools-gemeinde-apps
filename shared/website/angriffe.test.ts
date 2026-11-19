@@ -3,7 +3,7 @@
 /// <reference lib="dom.iterable" />
 import { describe, it, expect } from 'vitest';
 import { renderSeite } from './render';
-import { BEISPIELE, seite, kontext, einstellungen } from './bauhilfen';
+import { BEISPIELE, seite, kontext, einstellungen } from './website.testdaten';
 import { markdownZuHtml } from './markdown';
 import { seiteAlsText, seiteAusText } from './modell';
 

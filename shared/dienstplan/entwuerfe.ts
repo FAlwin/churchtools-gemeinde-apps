@@ -390,3 +390,78 @@ export async function entwurfEntfernen(
     jetzt: rest.entwurf,
   };
 }
+
+// ── Umtragen ─────────────────────────────────────────────────────────────────
+
+/**
+ * **Einen Entwurf auf einen anderen Platz umtragen** (Platzzahl geändert: ChurchTools nummeriert die Plätze eines
+ * Dienstes dabei neu, der Entwurf muss auf die neue Nummer – `umnummerieren.ts` rechnet, wohin). Derselbe Wert
+ * (gleiche Wert-ID) bekommt den neuen Ort und `version + 1`.
+ *
+ * Wie beim Speichern und Entfernen: frisch lesen → am alten Ort muss die `erwartet`e Version stehen, am neuen Ort
+ * **nichts** (sonst `konflikt`, nichts geschrieben) → schreiben, nie wiederholt → nachlesen. Doppelte Werte am alten
+ * Ort werden **zuerst** gelöscht – bliebe einer nach dem Umtragen zurück, stünde er dort als „gültiger“ Entwurf wieder
+ * auf (wie bei `entwurfEntfernen`); scheitert das Löschen, ist noch nichts umgetragen. Ein vorübergehender Fehler
+ * löscht und verwirft nichts: Der Entwurf liegt dann am alten oder am neuen Ort, nachgelesen entscheidet.
+ */
+export async function entwurfUmziehen(
+  p: EntwurfPort,
+  modul: number,
+  kategorie: number,
+  von: PlatzOrt,
+  nach: PlatzOrt,
+  erwartet: number,
+): Promise<EntwurfErgebnis> {
+  const kVon = ortSchluessel(von);
+  const kNach = ortSchluessel(nach);
+  // 1. Frisch lesen.
+  const erst = await schubladeLesen(p, modul, kategorie);
+  if (!erst.ok) return { ok: false, grund: erst.grund };
+  const da = erst.inhalt.je.get(kVon);
+  if (!da) return { ok: false, grund: 'konflikt', jetzt: null };
+  if (da.entwurf.version !== erwartet) return { ok: false, grund: 'konflikt', jetzt: da.entwurf };
+  const besetzt = erst.inhalt.je.get(kNach);
+  if (besetzt) return { ok: false, grund: 'konflikt', jetzt: besetzt.entwurf };
+
+  const neu: Entwurf = {
+    ...da.entwurf,
+    ort: nach,
+    zeit: p.jetzt(),
+    version: da.entwurf.version + 1,
+  };
+  const text = JSON.stringify({ art: ART, fassung: FASSUNG, ...neu } satisfies Ablage);
+  if (text.length > MAX_ZEICHEN) return { ok: false, grund: 'zu-gross' };
+
+  // 2. Schreiben – nie wiederholt. Erst die doppelten Werte des alten Ortes, dann der Umzug selbst.
+  let sonst: EntwurfGrund = 'nicht-angekommen';
+  try {
+    for (const w of erst.inhalt.doppelt.get(kVon) ?? [])
+      await wertLoeschen(p, modul, kategorie, w.id, VERWEIGERT);
+    await wertAendern(p, modul, kategorie, da.wert.id, text, VERWEIGERT);
+  } catch (e) {
+    const g = grundAus(p, e);
+    if (g !== 'voruebergehend') return { ok: false, grund: g };
+    // Gelöscht, während wir ändern wollten (gemessen: 404) – ein anderer war schneller.
+    sonst = p.istNichtGefunden(e) ? 'konflikt' : 'voruebergehend';
+  }
+
+  // 3. Nachlesen – erst was dasteht, ist der Erfolg: am neuen Ort unser Stand, am alten nichts mehr.
+  const l = await schubladeLesen(p, modul, kategorie);
+  if (!l.ok) return { ok: false, grund: l.grund };
+  const jetzt = l.inhalt.je.get(kNach)?.entwurf ?? null;
+  const rest = l.inhalt.je.get(kVon)?.entwurf ?? null;
+  if (
+    jetzt &&
+    jetzt.version === neu.version &&
+    jetzt.zeit === neu.zeit &&
+    jetzt.von.personId === neu.von.personId &&
+    !rest
+  ) {
+    return { ok: true, entwurf: jetzt };
+  }
+  // Am neuen Ort steht etwas anderes als unser Stand: ein anderer Planer war gleichzeitig dran.
+  if (jetzt && jetzt.version >= neu.version && jetzt.zeit !== neu.zeit) {
+    return { ok: false, grund: 'konflikt', jetzt };
+  }
+  return { ok: false, grund: sonst, jetzt: rest ?? jetzt };
+}

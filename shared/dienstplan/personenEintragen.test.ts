@@ -117,24 +117,19 @@ describe('zellenAktion', () => {
     expect(zellenAktion({ ...o, plaetze: [besetzt(1, 5, 'Anna'), besetzt(2, 6, 'Ben')] })).toEqual({
       art: 'voll',
       von: 2,
-      entwuerfe: 0,
     });
     const e = suche([{ entwurf: entwurf(2, 8) }]);
     expect(zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), frei(2)] })).toEqual({
       art: 'voll',
       von: 2,
-      entwuerfe: 1,
     });
   });
 
-  it('voll: `entwuerfe` zählt jeden Entwurf am Dienst – auch einen veralteten (die Sperre „Platz dazunehmen“)', () => {
+  it('voll auch mit einem veralteten Entwurf – „Platz dazunehmen“ gibt es trotzdem (19.11.2026: die Entwürfe gehen mit)', () => {
     const e = suche([{ entwurf: entwurf(2, 8), veraltet: true }]);
     expect(
       zellenAktion({ ...o, entwurf: e, plaetze: [besetzt(1, 5, 'Anna'), besetzt(2, 6, 'Ben')] }),
-    ).toMatchObject({
-      art: 'voll',
-      entwuerfe: 1,
-    });
+    ).toEqual({ art: 'voll', von: 2 });
   });
 
   it('voller Dienst mit „Zurückziehen“-Entwurf: Eintragen ersetzt ihn – `ersetzt` ist die Version (P2a-2)', () => {
@@ -265,15 +260,14 @@ describe('gastNeuAktion (leere Gäste-Zelle, P2d)', () => {
     });
   });
 
-  it('voll: alle Plätze belegt oder von einem Entwurf gehalten – mit der Zahl der Entwürfe (Sperre)', () => {
+  it('voll: alle Plätze belegt oder von einem Entwurf gehalten', () => {
     const plaetze = [besetzt(1, 5, 'Anna'), besetzt(2, 8, 'Ben')];
-    expect(gastNeuAktion(plaetze, ohne)).toEqual({ art: 'voll', von: 2, entwuerfe: 0 });
+    expect(gastNeuAktion(plaetze, ohne)).toEqual({ art: 'voll', von: 2 });
     expect(
       gastNeuAktion([besetzt(1, 5, 'Anna'), frei(2)], suche([{ entwurf: entwurf(2, 12) }])),
     ).toEqual({
       art: 'voll',
       von: 2,
-      entwuerfe: 1,
     });
   });
 

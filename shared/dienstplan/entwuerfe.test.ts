@@ -6,6 +6,7 @@ import { KAT, MODUL, speicher } from './entwuerfe.testutil';
 import {
   entwurfAus,
   entwurfEntfernen,
+  entwurfUmziehen,
   entwurfSpeichern,
   entwurfVeraltet,
   inhaltAusWerten,
@@ -389,5 +390,156 @@ describe('Veraltet (in ChurchTools steht inzwischen etwas anderes)', () => {
     expect(entwurfVeraltet(angefragt, { art: 'frei' })).toBe(true);
     const gast = entwurf({ gesehen: { art: 'gast', name: 'Max ' } });
     expect(entwurfVeraltet(gast, { art: 'gast', name: 'Max' })).toBe(false);
+  });
+});
+
+describe('Umziehen (Platzzahl geändert, 19.11.2026)', () => {
+  const NACH: PlatzOrt = { ...ORT, index: 2 };
+  const stand = (s: { werte: Wert[] }) =>
+    inhaltAusWerten(s.werte).je.get(ortSchluessel(NACH))?.entwurf;
+
+  it('derselbe Wert (gleiche ID) bekommt den neuen Ort, Version + 1; am alten Ort steht nichts mehr', async () => {
+    const { s, port } = speicher([wert(100, entwurf({ version: 3 }))]);
+    const r = await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 3);
+    expect(r).toMatchObject({ ok: true, entwurf: { ort: NACH, version: 4 } });
+    expect(s.werte.map((w) => w.id)).toEqual([100]);
+    expect(gelesen(s.werte)).toBeUndefined();
+    expect(stand(s)).toMatchObject({ version: 4, ziel: { name: 'Anna Test' } });
+    expect(s.schreibvorgaenge.map((a) => a.method)).toEqual(['PUT']);
+  });
+
+  it('andere Version am alten Ort → konflikt, nichts geschrieben', async () => {
+    const { s, port } = speicher([wert(100, entwurf({ version: 5, von: SPIKE }))]);
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 3)).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+      jetzt: { version: 5 },
+    });
+    expect(s.schreibvorgaenge).toEqual([]);
+  });
+
+  it('am alten Ort ist nichts mehr (inzwischen entfernt) → konflikt ohne „jetzt“, nichts geschrieben', async () => {
+    const { s, port } = speicher();
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toEqual({
+      ok: false,
+      grund: 'konflikt',
+      jetzt: null,
+    });
+    expect(s.schreibvorgaenge).toEqual([]);
+  });
+
+  it('das Ziel ist besetzt → konflikt mit dem Entwurf dort, nichts geschrieben', async () => {
+    const { s, port } = speicher([
+      wert(100, entwurf()),
+      wert(101, entwurf({ ort: NACH, von: SPIKE })),
+    ]);
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+      jetzt: { ort: NACH, von: SPIKE },
+    });
+    expect(s.schreibvorgaenge).toEqual([]);
+  });
+
+  it('doppelte Werte am alten Ort werden mit gelöscht – sonst stünde einer dort wieder als Entwurf da', async () => {
+    const { s, port } = speicher([
+      wert(100, entwurf({ version: 2 })),
+      wert(101, entwurf({ von: SPIKE })),
+    ]);
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 2)).toMatchObject({ ok: true });
+    expect(s.werte.map((w) => w.id)).toEqual([100]);
+    expect(gelesen(s.werte)).toBeUndefined();
+    // Erst die doppelten, dann der Umzug selbst.
+    expect(s.schreibvorgaenge.map((a) => a.method)).toEqual(['DELETE', 'PUT']);
+  });
+
+  it('vorübergehender Fehler, nicht angekommen → „vorübergehend“; nichts gelöscht, Entwurf liegt am alten Ort, kein zweiter Versuch', async () => {
+    for (const status of [503, 504, 429, null]) {
+      const { s, port } = speicher([wert(100, entwurf())]);
+      s.schreibenWirft = new Fehler(status);
+      expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+        ok: false,
+        grund: 'voruebergehend',
+        jetzt: { ort: ORT, version: 1 },
+      });
+      expect(s.werte).toHaveLength(1);
+      expect(gelesen(s.werte)).toMatchObject({ version: 1 });
+      expect(s.schreibvorgaenge).toHaveLength(1);
+    }
+  });
+
+  it('vorübergehender Fehler, aber angekommen → Erfolg', async () => {
+    const { s, port } = speicher([wert(100, entwurf())]);
+    s.schreibenWirft = new Fehler(504);
+    s.trotzdemSchreiben = true;
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+      ok: true,
+      entwurf: { ort: NACH },
+    });
+    expect(s.schreibvorgaenge).toHaveLength(1);
+  });
+
+  it('doppelter Wert lässt sich nicht löschen (vorübergehend) → noch nichts umgetragen', async () => {
+    const { s, port } = speicher([wert(100, entwurf({ version: 2 })), wert(101, entwurf())]);
+    s.schreibenWirft = new Fehler(503);
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 2)).toMatchObject({
+      ok: false,
+      grund: 'voruebergehend',
+    });
+    expect(s.schreibvorgaenge).toHaveLength(1);
+    expect(gelesen(s.werte)).toMatchObject({ version: 2 });
+    expect(stand(s)).toBeUndefined();
+  });
+
+  it('abgemeldet bzw. kein Recht → genau das', async () => {
+    for (const [status, grund] of [
+      [401, 'abgemeldet'],
+      [403, 'kein-recht'],
+    ] as const) {
+      const { s, port } = speicher([wert(100, entwurf())]);
+      s.schreibenWirft = new Fehler(status);
+      expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+        ok: false,
+        grund,
+      });
+      expect(gelesen(s.werte)).toMatchObject({ version: 1 });
+    }
+  });
+
+  it('beim Umtragen inzwischen gelöscht (404) → konflikt', async () => {
+    const { s, port } = speicher([wert(100, entwurf())]);
+    s.vorher = () => {
+      s.vorher = null;
+      s.werte.splice(0, 1);
+    };
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+    });
+  });
+
+  it('ChurchTools sagt OK, nachgelesen steht es am alten Ort → „nicht angekommen“', async () => {
+    const { s, port } = speicher([wert(100, entwurf())]);
+    s.verschlucken = true;
+    expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+      ok: false,
+      grund: 'nicht-angekommen',
+    });
+  });
+
+  it('Lesen scheitert → nichts geschrieben; abgemeldet / kein Recht / vorübergehend getrennt', async () => {
+    for (const [status, grund] of [
+      [401, 'abgemeldet'],
+      [403, 'kein-recht'],
+      [503, 'voruebergehend'],
+    ] as const) {
+      const { s, port } = speicher([wert(100, entwurf())]);
+      s.lesenWirft = new Fehler(status);
+      expect(await entwurfUmziehen(port, MODUL, KAT, ORT, NACH, 1)).toMatchObject({
+        ok: false,
+        grund,
+      });
+      expect(s.schreibvorgaenge).toEqual([]);
+    }
   });
 });

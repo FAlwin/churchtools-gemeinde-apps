@@ -51,9 +51,9 @@ export function platzFuerEintrag(
  * - `eintragen`: Entwurf auf den Platz `nr` (1-basiert, wie `freierPlatz`) dieses Dienstes an diesem Termin – ein freier
  *   Platz oder (`ersetzt`: die Version des Entwurfs) ein Platz, dessen „Zurückziehen“-Entwurf damit ersetzt wird.
  * - `voll`: kein Platz mehr zu haben – alle `von` Plätze sind belegt oder haben einen Entwurf, der nicht „Zurückziehen“
- *   ist. Das Fenster bietet „Platz dazunehmen“ (P2c) – **nicht**, wenn an diesem Dienst und Termin ein Entwurf liegt
- *   (`entwuerfe` > 0, gültig oder veraltet): ChurchTools nummeriert die Plätze beim Ändern neu (gemessen 15.10.2026), ein
- *   Entwurf fände seinen Platz nicht mehr – dieselbe Sperre wie beim Regler (`PlaetzeFach`).
+ *   ist. Das Fenster bietet „Platz dazunehmen“ (P2c) – auch mit Entwürfen an diesem Dienst und Termin: ChurchTools
+ *   nummeriert die Plätze beim Ändern neu (gemessen 15.10.2026), der Dienstplaner trägt die Entwürfe dabei selbst um
+ *   (19.11.2026, `anzahlMitEntwuerfen`). Wer die Entwürfe der Gruppe nicht ändern darf, bekommt hier ohnehin keine Aktion.
  * - `direkt` / `wegnehmen`: der eigene Entwurf der Person in dieser Zelle (P2m, Klick-Zyklus **Anfrage → direkt → weg**):
  *   ist er noch eine Anfrage, stellt der Klick ihn auf „direkt“ um (`direkt`), ist er schon direkt, nimmt er ihn weg
  *   (`wegnehmen`). `nr`/`entwurf`: der Platz und der Entwurf mit seiner Version, damit der Aufrufer mit dem
@@ -66,7 +66,7 @@ export function platzFuerEintrag(
  */
 export type ZellenAktion =
   | { art: 'eintragen'; nr: number; ersetzt?: number }
-  | { art: 'voll'; von: number; entwuerfe: number }
+  | { art: 'voll'; von: number }
   | { art: 'wegnehmen'; nr: number; entwurf: Entwurf }
   | { art: 'direkt'; nr: number; entwurf: Entwurf }
   | { art: 'belegt'; nr: number }
@@ -136,8 +136,8 @@ export function zellenAktion(o: {
 
 /**
  * **Wohin ein neuer Eintrag kommt** – `eintragen` (ein Platz ist zu haben, `platzFuerEintrag`) oder `voll`. Eine Stelle für
- * die leere Personen-Zelle (`zellenAktion`) und die leere Gäste-Zelle (`gastNeuAktion`, P2d): Was frei ist und wann die
- * Sperre bei „Platz dazunehmen“ greift, wird nur hier entschieden.
+ * die leere Personen-Zelle (`zellenAktion`) und die leere Gäste-Zelle (`gastNeuAktion`, P2d): Was frei ist und wann „voll“ ist
+ * (und damit „Platz dazunehmen“), wird nur hier entschieden.
  */
 export function freierPlatzAktion(
   plaetze: readonly PlanPlatz[],
@@ -148,11 +148,7 @@ export function freierPlatzAktion(
     return platz.ersetzt
       ? { art: 'eintragen', nr: platz.nr, ersetzt: platz.ersetzt.version }
       : { art: 'eintragen', nr: platz.nr };
-  return {
-    art: 'voll',
-    von: plaetze.length,
-    entwuerfe: plaetze.filter((p) => entwurf(p) !== null).length,
-  };
+  return { art: 'voll', von: plaetze.length };
 }
 
 /**

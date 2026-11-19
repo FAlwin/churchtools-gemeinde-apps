@@ -2,9 +2,10 @@
  * **Was eine Terminvorlage an einem Termin ändern würde** (Dienstplaner, Plätze-Fach, „Vorlage übernehmen“).
  *
  * Die Regel, entschieden mit Alwin am 13.11.2026: **nur dazunehmen.** Für jeden Dienst der Vorlage, den man an diesem
- * Termin planen darf, wird die Anzahl auf die Zahl der Vorlage **erhöht** – nie verringert, nie entfernt. Dienste mit
- * Entwürfen am Termin bleiben, wie sie sind (ChurchTools nummeriert die Plätze beim Ändern neu, ein Entwurf fände
- * seinen Platz nicht mehr – dieselbe Begründung wie bei der Sperre im Plätze-Fach).
+ * Termin planen darf, wird die Anzahl auf die Zahl der Vorlage **erhöht** – nie verringert, nie entfernt. Entwürfe stören
+ * nicht (19.11.2026): Beim Erhöhen gehen sie mit – bei 1 → 2 wird aus „ohne Nummer“ die 1, der Dienstplaner trägt sie dabei
+ * um (`anzahlMitEntwuerfen`). Nur wo er sie nicht umtragen darf (Schublade der Gruppe nicht „bereit“) bleibt der Dienst
+ * gesperrt (`plaetzeGrenze`) – den überspringt auch die Vorlage.
  *
  * Reine Rechnung ohne ChurchTools-Aufrufe: Wer planen darf und wie viele Plätze schon da sind, bestimmt der Aufrufer
  * (`plaetzeZeilen` in `dienstplaner/src/planEntwuerfe.ts` – dieselbe Regel wie das Fach selbst).
@@ -21,7 +22,7 @@ export interface VorlagenSchritt {
   nach: number;
 }
 
-export type VorlagenGrund = 'entwurf' | 'nicht-planbar' | 'unbekannt';
+export type VorlagenGrund = 'gesperrt' | 'nicht-planbar' | 'unbekannt';
 
 /** Ein Dienst der Vorlage, der übersprungen wird – mit Grund. */
 export interface VorlagenUebersprungen {
@@ -42,7 +43,8 @@ export interface VorlagenRechnung {
 export interface VorlagenStand {
   name: string;
   anzahl: number;
-  entwuerfe: number;
+  /** Gesperrt, weil dort Entwürfe liegen, die nicht umgetragen werden dürfen (`plaetzeGrenze`: `art: 'gesperrt'`). */
+  gesperrt: boolean;
 }
 
 export function vorlageRechnen(
@@ -66,10 +68,10 @@ export function vorlageRechnen(
       });
     } else if (!stand) {
       r.uebersprungen.push({ serviceId: d.serviceId, name, grund: 'nicht-planbar' });
-    } else if (stand.entwuerfe > 0) {
-      // Auch, wenn schon genug Plätze da sind? Dann gäbe es nichts zu überspringen – Entwürfe sperren nur eine Änderung.
+    } else if (stand.gesperrt) {
+      // Auch, wenn schon genug Plätze da sind? Dann gäbe es nichts zu überspringen – die Sperre betrifft nur eine Änderung.
       if (stand.anzahl < d.count)
-        r.uebersprungen.push({ serviceId: d.serviceId, name, grund: 'entwurf' });
+        r.uebersprungen.push({ serviceId: d.serviceId, name, grund: 'gesperrt' });
       else r.schonErfuellt++;
     } else if (stand.anzahl < d.count) {
       r.aendern.push({ serviceId: d.serviceId, name, von: stand.anzahl, nach: d.count });
@@ -83,8 +85,8 @@ export function vorlageRechnen(
 /** Der Grund in Worten, für die Vorschau. */
 export function vorlagenGrundText(g: VorlagenGrund): string {
   switch (g) {
-    case 'entwurf':
-      return 'hier liegt ein Entwurf';
+    case 'gesperrt':
+      return 'hier liegen Entwürfe, die du nicht ändern darfst';
     case 'nicht-planbar':
       return 'darfst du nicht planen';
     case 'unbekannt':

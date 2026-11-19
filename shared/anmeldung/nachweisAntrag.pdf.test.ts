@@ -67,6 +67,8 @@ describe('Seitenformat: aus der PDF, nicht fest A4', () => {
     expect(html).toContain(stilText(pdfSeitenStil(b)));
     expect(html).toContain('width:210mm;height:148.5mm;overflow:hidden');
     expect(html).toContain(stilText(pdfHintergrundStil(b)));
+    // das Hintergrundbild füllt genau diese Seite (nicht fest A4)
+    expect(html).toContain('position:absolute;left:0;top:0;width:210mm;height:148.5mm');
   });
 });
 

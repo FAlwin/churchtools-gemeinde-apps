@@ -22,6 +22,7 @@ import { Planen } from './Planen';
 import { katalogAus } from './planEntwuerfe';
 import { ladeTerminVorlagen } from './ladeBeiwerk';
 import { ladePersonen } from './ladePersonen';
+import { ladeAntworten } from './ladeAntworten';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -145,6 +146,16 @@ export function App() {
     (gruppen: readonly number[], von: string, bis: string) =>
       start
         ? ladePersonen(gruppen, { von, bis, abwesenheitenAller: start.rechte.abwesenheitenAller })
+        : Promise.reject(new Error('kein Start')),
+    [start],
+  );
+
+  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf (Mitglieder
+  // sehen sie erst mit E5c-6). Stabil, solange der Start gleich bleibt.
+  const antwortenLaden = useCallback(
+    (ids: readonly number[]) =>
+      start
+        ? ladeAntworten(planbareDienstgruppen(start).filter((g) => ids.includes(g.id)))
         : Promise.reject(new Error('kein Start')),
     [start],
   );
@@ -312,6 +323,7 @@ export function App() {
               katalog={katalogAus(start)}
               ladeVorlagen={ladeTerminVorlagen}
               ladePersonen={personenLaden}
+              ladeAntworten={antwortenLaden}
               onVorlagen={() => {
                 window.location.hash = ADRESSE_VORLAGEN;
               }}

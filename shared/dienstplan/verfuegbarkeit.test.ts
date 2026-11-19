@@ -5,11 +5,13 @@ import { MAX_ZEICHEN, type Wert } from '../ct/modulDaten';
 import {
   alleAntwortenLesen,
   antwortBereinigt,
+  antwortenZusammen,
   antwortenSchublade,
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
   gleicheAntworten,
   MAX_NOTIZ,
+  neuesterStand,
   personenWertAus,
   type Antworten,
 } from './verfuegbarkeit';
@@ -96,6 +98,10 @@ const BERT = 47;
 
 const antw = (x: Record<string, ['ja' | 'vielleicht', string]> = {}): Antworten =>
   Object.fromEntries(Object.entries(x).map(([t, [a, tag]]) => [t, { a, tag }]));
+
+/** Nur die Antworten (ohne `stand`) aus dem Ergebnis von `alleAntwortenLesen`. */
+const nurAntworten = (r: Awaited<ReturnType<typeof alleAntwortenLesen>>) =>
+  r.ok ? new Map([...r.wert].map(([p, v]) => [p, v.antworten])) : r;
 
 const A1 = antw({ '1': ['ja', '2026-12-06'], '2': ['vielleicht', '2026-12-13'] });
 
@@ -466,10 +472,9 @@ describe('Lesen', () => {
       ok: true,
       wert: { antworten: antw({ '1': ['ja', '2026-12-06'] }) },
     });
-    expect(await alleAntwortenLesen(port, MODUL, K1)).toEqual({
-      ok: true,
-      wert: new Map([[ANNA, antw({ '1': ['ja', '2026-12-06'] })]]),
-    });
+    expect(nurAntworten(await alleAntwortenLesen(port, MODUL, K1))).toEqual(
+      new Map([[ANNA, antw({ '1': ['ja', '2026-12-06'] })]]),
+    );
   });
 
   it('alleAntwortenLesen: je Person der neueste Wert; Fehler werden als Grund gemeldet', async () => {
@@ -487,13 +492,14 @@ describe('Lesen', () => {
       wertMit(900, K1, ANNA, antw({ '5': ['ja', '2026-12-27'] }), '2000-01-01T00:00:00.000Z'),
     ); // älteres Doppel
     const g = await alleAntwortenLesen(port, MODUL, K1);
-    expect(g).toEqual({
-      ok: true,
-      wert: new Map([
+    expect(nurAntworten(g)).toEqual(
+      new Map([
         [ANNA, A1],
         [BERT, antw({ '9': ['ja', '2026-12-20'] })],
       ]),
-    });
+    );
+    // Der `stand` kommt mit (E5c-3: Grundlage für „neuester gewinnt“ über mehrere Kategorien).
+    expect(g.ok && g.wert.get(ANNA)?.stand).toMatch(/^2026-11-18T/);
     s.lesenWirft.set(K1, new Fehler(403));
     expect(await alleAntwortenLesen(port, MODUL, K1)).toEqual({ ok: false, grund: 'kein-recht' });
     s.lesenWirft.set(K1, new Fehler(401));
@@ -656,5 +662,66 @@ describe('Notiz und „nur bestimmte Dienste“ (E5c-2)', () => {
     const eintrag = JSON.stringify({ '12345': e }).length;
     expect(eintrag).toBeLessThan(300);
     expect(eintrag * 30).toBeLessThan(MAX_ZEICHEN);
+  });
+});
+
+describe('Mehrere Kategorien – eine Regel für „eigene“ und „alle“ (E5c-3)', () => {
+  /** Alle gelesenen Kategorien als Eingang für `antwortenZusammen` – gelesen mit dem Erzeuger `alleAntwortenLesen`. */
+  async function zusammen(port: EntwurfPort, kats: number[]) {
+    const je = new Map<number, Map<number, { antworten: Antworten; stand: string }>>();
+    for (const k of kats) {
+      const r = await alleAntwortenLesen(port, MODUL, k);
+      if (r.ok) je.set(k, r.wert);
+    }
+    return antwortenZusammen(je);
+  }
+
+  it('neuesterStand: neuerer gewinnt, bei Gleichstand die kleinere Kategorie – unabhängig von der Reihenfolge', () => {
+    const alt = { stand: '2026-11-01T10:00:00.000Z', n: 'alt' };
+    const neu = { stand: '2026-11-05T10:00:00.000Z', n: 'neu' };
+    expect(neuesterStand([])).toBeNull();
+    for (const liste of [
+      [
+        { kategorie: 1, wert: alt },
+        { kategorie: 2, wert: neu },
+      ],
+      [
+        { kategorie: 2, wert: neu },
+        { kategorie: 1, wert: alt },
+      ],
+    ])
+      expect(neuesterStand(liste)).toBe(neu);
+    const gleich = { ...alt, n: 'gleich' };
+    for (const liste of [
+      [
+        { kategorie: 5, wert: alt },
+        { kategorie: 3, wert: gleich },
+      ],
+      [
+        { kategorie: 3, wert: gleich },
+        { kategorie: 5, wert: alt },
+      ],
+    ])
+      expect(neuesterStand(liste)).toBe(gleich);
+  });
+
+  it('je Person gilt der neueste stand – genau das, was „eigeneAntwortenLesen“ für die Person liefert', async () => {
+    const { port, s } = speicher();
+    const stand = '2026-11-05T10:00:00.000Z';
+    // Anna: K2 neuer. Bert: Gleichstand (K1 gewinnt). Cora: nur in K2.
+    s.werte.push(
+      wertMit(1, K1, ANNA, antw({ '1': ['ja', '2026-12-06'] }), '2026-11-01T10:00:00.000Z'),
+      wertMit(2, K2, ANNA, antw({ '2': ['vielleicht', '2026-12-13'] }), stand),
+      wertMit(3, K1, BERT, antw({ '3': ['ja', '2026-12-20'] }), stand),
+      wertMit(4, K2, BERT, antw({ '4': ['vielleicht', '2026-12-27'] }), stand),
+      wertMit(5, K2, 48, antw({ '5': ['ja', '2026-12-06'] }), stand),
+    );
+    const alle = await zusammen(port, [K1, K2]);
+    expect([...alle.keys()].sort()).toEqual([ANNA, BERT, 48]);
+    for (const person of alle.keys()) {
+      const eigene = await eigeneAntwortenLesen(port, MODUL, [K1, K2], person);
+      expect(eigene.ok && eigene.wert.antworten).toEqual(alle.get(person));
+    }
+    expect(alle.get(BERT)).toEqual(antw({ '3': ['ja', '2026-12-20'] }));
   });
 });

@@ -393,3 +393,37 @@ Leiste zählt mit), bis unten **Speichern** gedrückt ist. Termine ohne Antwort 
 - **Historie:** Dienstplaner E5c-2 (18.11.2026), Entwurf `e5c-wann-kann-ich.html` (Notiz-Fenster)
 
 </details>
+
+### TF-VERF-13 · Antworten aus „Wann kann ich?“ in der Planer-Ansicht „Personen“
+
+**Das brauchst du:** Dienstplaner in der **Test-Instanz**, ein Konto, das den Dienst **planen** darf (Gruppe Musik), und der
+Speicher „Antworten Musik“ mit dem Recht „sehen“ darauf. Mehrere Personen, die vorher in „Wann kann ich?“ geantwortet haben
+(Ja, Vielleicht, eine mit Notiz, eine mit „nur Gesang“, eine mit Ja an einem Tag, an dem sie auch abwesend ist), sowie ein
+Termin, den niemand beantwortet hat.
+
+**Das muss passieren:** Unter **Planen → Personen** steht über dem Raster die Legende „Antwort der Person: Ja · Vielleicht ·
+keine Antwort · Nein oder abwesend · Entwurf“. Jede Zelle ist grün (Ja), gelblich (Vielleicht), rot schraffiert (Nein oder
+abwesend) oder weiß (keine Antwort); die Tags „zugesagt“, „angefragt“ und „Entwurf“ stehen unverändert davor.
+
+1. **Planen → Personen** öffnen: Legende und Farben sind da; unter jedem Termin im Spaltenkopf steht fett „n ja · m vielleicht“.
+2. Die Zahlen nachzählen: Eine Person, die in zwei Dienst-Blöcken steht (z. B. Gitarre und Gesang), zählt **einmal**.
+3. Mit der Maus über eine grüne oder gelbe Zelle: der Tooltip nennt die Antwort, bei einer Notiz mit Text („Ja – nur bis 12 Uhr“).
+4. Eine Person, die **„nur für Ton“** geantwortet hat, steht im Block Gesang **weiß**; der Tooltip sagt „Ja – nur für Ton“. Im
+   Spaltenkopf ist sie trotzdem mitgezählt.
+5. Eine Person mit **Ja und Abwesenheit** am selben Termin: die Zelle ist **rot schraffiert** (Abwesenheit schlägt die Antwort),
+   die Person ist im Kopf nicht mitgezählt. Ist sie dort auch eingeteilt, sieht man weiter den roten Rahmen.
+6. Einen **Dienst-Block, dessen Antworten man nicht sehen darf** (kein Recht auf „Antworten …“ der Gruppe oder noch nicht
+   eingerichtet): Im Block steht „Antworten nicht sichtbar“, die Zellen sind **nicht** weiß eingefärbt-als-„keine Antwort“.
+7. Netz kurz trennen und die Seite neu laden: über dem Raster steht „Die Antworten aus „Wann kann ich?“ konnten nicht geladen
+   werden …“ mit **Erneut versuchen**; es gibt keine Legende und keine Zahlen im Kopf. Netz wieder an, Knopf → Farben da.
+8. Am Handy: die Legende bricht um (kein Querscrollen der Seite), die Farben sind gut zu unterscheiden; Dunkelmodus: dieselben
+   Farben, nur abgedunkelt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/verfuegbarkeit.ts`, `dienstplaner/src/ladeAntworten.ts`, `dienstplaner/src/usePersonenAntworten.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `ui/design/_farben.scss`, `ui/design/_variables.scss`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenRaster.antworten.test.ts` (Farbe, Vorrang Abwesenheit, „nur bestimmte Dienste“, Notiz, Kopfzählung), `dienstplaner/src/ladeAntworten.test.ts` (Zweige: kein Recht/fehlt, vorübergehend, 401, mehrere Kategorien), `dienstplaner/src/usePersonenAntworten.test.tsx` (bisherige Antworten bleiben), `dienstplaner/src/Planen.personen.antworten.test.tsx` (Zelle, Kopf, Legende, Hinweis, Fehlerkasten), Kern `shared/dienstplan/verfuegbarkeit.test.ts` (eine Regel „neuester Stand“ für eigene und alle); von Hand bleibt, dass Farben und Schraffur gut zu unterscheiden sind (hell/dunkel, Handy) und ChurchTools die Rechte am Speicher so vergibt
+- **Historie:** Dienstplaner E5c-3 (19.11.2026), Entwurf `e5c-wann-kann-ich.html` Bereich 2, Variante D
+
+</details>

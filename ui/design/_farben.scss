@@ -29,10 +29,16 @@
   --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
   --symbol-tinte: #ffffff; // Haken im gefüllten blauen Symbol (Vorgabe „direkt“ am Dienstnamen, Dienstplaner P2m)
   // Abwesend in „Personen“ (Dienstplaner P2m, Entwurf `e9-p2-modus.html`, Variante D): die Zelle ist schraffiert und leicht
-  // getönt, der Grund steht als Text. Im Warnfall (abwesend UND eingeteilt) rot – mit rotem Rahmen um die Zelle.
+  // getönt, der Grund steht als Text. Im Warnfall (abwesend UND eingeteilt) kräftiger rot – mit rotem Rahmen um die Zelle.
   --abw-text: #1e293b; // slate-800
-  --abw-schraffur: rgba(100, 116, 139, 0.2); // slate-500
-  --abw-toenung: rgba(100, 116, 139, 0.07);
+  // Antworten aus „Wann kann ich?“ (Dienstplaner E5c-3, Entwurf `e5c-wann-kann-ich.html`, Variante D „Grün/Gelb, Rot
+  // schraffiert“) – EINE Regel für „Personen“ und (E5c-4) „Wer kann?“: Ja grün (green-600), Vielleicht gelblich (yellow-500,
+  // wie Fokus und der Knopf „Vielleicht“ in „Wann kann ich?“), Nein/abwesend rot schraffiert (red-600). Als Auflage, damit
+  // Zebra, Fokus und Hervorhebung der Zeile darunter stehen bleiben. Keine Antwort = keine Fläche (weiß).
+  --antwort-ja: rgba(0, 166, 62, 0.16); // green-600
+  --antwort-vielleicht: rgba(234, 179, 8, 0.3); // yellow-500
+  --antwort-nein-schraffur: rgba(231, 0, 11, 0.14); // red-600
+  --antwort-nein-toenung: rgba(231, 0, 11, 0.04);
   --abw-warn-schraffur: rgba(231, 0, 11, 0.16); // red-600
   --abw-warn-toenung: rgba(231, 0, 11, 0.05);
   // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`

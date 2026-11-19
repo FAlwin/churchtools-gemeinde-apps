@@ -26,7 +26,7 @@ describe('zaehle', () => {
 describe('anzahlAendern – Erfolg erst, wenn die Zahl nachgelesen dasteht', () => {
   it('mehr: genau dieser Dienst, richtiger Rumpf, nachgelesen', async () => {
     const c = nachbau(plaetze());
-    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 2)).toEqual({ ok: true, anzahl: 2 });
+    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 2)).toMatchObject({ ok: true, anzahl: 2 });
     expect(c.ct.geschrieben).toEqual([
       {
         pfad: '/events/7/eventservices',
@@ -39,9 +39,30 @@ describe('anzahlAendern – Erfolg erst, wenn die Zahl nachgelesen dasteht', () 
 
   it('weniger: leere fallen weg, die belegte bleibt; bis auf 0 (Dienst nicht mehr vorgesehen)', async () => {
     const c = nachbau(plaetze());
-    expect(await anzahlAendern(c.port, 7, GESANG, 2, 1)).toEqual({ ok: true, anzahl: 1 });
+    expect(await anzahlAendern(c.port, 7, GESANG, 2, 1)).toMatchObject({ ok: true, anzahl: 1 });
     expect(c.ct.plaetze.find((p) => p.serviceId === GESANG)).toMatchObject({ personId: 46 });
-    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 0)).toEqual({ ok: true, anzahl: 0 });
+    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 0)).toMatchObject({ ok: true, anzahl: 0 });
+  });
+
+  it('liefert die Plätze vorher und nachher – mit den IDs, die nach dem Umnummerieren stehen bleiben (19.11.2026)', async () => {
+    const c = nachbau([
+      { id: 1, serviceId: GESANG, index: 1, personId: 46, name: 'Anna' },
+      { id: 2, serviceId: GESANG, index: 2, personId: null, name: null },
+      { id: 3, serviceId: GESANG, index: 3, personId: 47, name: 'Ben' },
+    ]);
+    const r = await anzahlAendern(c.port, 7, GESANG, 3, 2);
+    expect(r).toMatchObject({ ok: true, anzahl: 2 });
+    if (!r.ok) throw new Error('erwartet: ok');
+    expect(r.plaetze?.vorher.map((p) => [p.id, p.index])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+    // Der freie Platz in der Mitte fällt weg, der letzte rückt auf – seine ID bleibt.
+    expect(r.plaetze?.nachher.map((p) => [p.id, p.index])).toEqual([
+      [1, 1],
+      [3, 2],
+    ]);
   });
 
   it('weniger als belegt → „belegt“, nichts geschrieben', async () => {
@@ -105,7 +126,7 @@ describe('anzahlAendern – jeder Fehlerzweig einzeln, nie ein zweiter Schreibve
     const c = nachbau(plaetze());
     c.ct.schreibenFehler = 504;
     c.ct.trotzdemSchreiben = true;
-    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 2)).toEqual({ ok: true, anzahl: 2 });
+    expect(await anzahlAendern(c.port, 7, VIDEO, 1, 2)).toMatchObject({ ok: true, anzahl: 2 });
     expect(c.ct.geschrieben).toHaveLength(1);
   });
 

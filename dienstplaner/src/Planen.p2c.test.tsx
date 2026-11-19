@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
-import type { Entwurf, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
+import { ortSchluessel, type Entwurf, type EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import type { RohTermin } from '@shared/dienstplan/termine';
 import type { GruppenStand, PersonenDaten } from '@shared/dienstplan/personenDaten';
@@ -23,7 +23,7 @@ import { startFuer } from './start.testutil';
  * - So 22.11.: Ton 2 Plätze, beide frei (0 von 2)
  * - So 29.11.: Ton 3 Plätze, Anna + Ben zugesagt (2 von 3)
  * - Mi 02.12.: Ton 2 Plätze, Anna + Ben zugesagt – voll; Daniel ist abwesend? nein (nur Do)
- * - Do 03.12.: Ton 2 Plätze, Anna + Ben zugesagt – voll, aber Carla ersetzt Ben als Entwurf (Sperre); Daniel abwesend
+ * - Do 03.12.: Ton 2 Plätze, Anna + Ben zugesagt – voll, aber Carla ersetzt Ben als Entwurf; Daniel abwesend
  * - Fr 04.12.: abgesagt, Ton 2 frei
  * - Sa 05.12.: nur Gesang – Ton ist dort „aus“
  */
@@ -137,7 +137,7 @@ const STAND: PersonenDaten = new Map<number, GruppenStand>([
   [9, da([DANIEL])],
 ]);
 
-/** Ein Entwurf an Ton: Carla ersetzt Ben am Do 03.12. (Platz 2) – der Dienst bleibt voll, aber es liegt ein Entwurf dort. */
+/** Ein Entwurf an Ton: Carla ersetzt Ben am Do 03.12. (Platz 2) – der Dienst bleibt voll, aber es liegt ein Entwurf dort (der Entwurf liegt auf einem BELEGTEN Platz). */
 const ERSETZT = entwurf({
   ort: { eventId: DO, serviceId: 6, index: 2 },
   ziel: { art: 'person', personId: 11, name: 'Carla Test' },
@@ -211,11 +211,12 @@ function zeige(
     entwuerfeDaten?: Entwurf[];
     neuLadenKlappt?: boolean;
     direkt?: number[];
+    unteransicht?: 'matrix' | 'raster';
   } = {},
 ) {
   localStorage.setItem(
     'dienstplaner.planen.ansicht',
-    JSON.stringify({ unteransicht: 'raster', direktDienste: o.direkt ?? [] }),
+    JSON.stringify({ unteransicht: o.unteransicht ?? 'raster', direktDienste: o.direkt ?? [] }),
   );
   const aktualisiert = vi.fn();
   const anzahl = anzahlOk();
@@ -299,13 +300,17 @@ describe('Zeile „Plätze“', () => {
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 2, 3));
     expect(await screen.findByText('Ton: jetzt 3 Plätze.')).toBeTruthy();
     expect(within(f).getByLabelText('Ton: 3 Plätze')).toBeTruthy();
-    // Keine Obergrenze: weiter hoch.
-    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
-    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 3, 4));
-    // Schließen lädt neu – die Zeile zeigt dann, was in ChurchTools steht.
-    expect(aktualisiert).not.toHaveBeenCalled();
-    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    // Jede Änderung lädt den Plan sofort neu; bis er da ist, sind die Knöpfe aus (`usePlaetzeFrisch`).
     expect(aktualisiert).toHaveBeenCalledTimes(1);
+    const plus = within(f).getByRole('button', { name: 'Ton: ein Platz mehr' });
+    await waitFor(() => expect(plus).toHaveProperty('disabled', false));
+    // Keine Obergrenze: weiter hoch.
+    fireEvent.click(plus);
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 3, 4));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(2));
+    // Schließen lädt noch einmal – die Zeile zeigt dann, was in ChurchTools steht.
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    expect(aktualisiert).toHaveBeenCalledTimes(3);
   });
 
   it('der rote Tag in „Noch offen“ öffnet dasselbe Fenster', async () => {
@@ -335,18 +340,113 @@ describe('Zeile „Plätze“', () => {
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(22, 6, 3, 2));
   });
 
-  it('liegt an diesem Dienst und Termin ein Entwurf: − und + gesperrt, mit dem Satz des Reglers', async () => {
+  it('liegt ein Entwurf auf einem freien Platz: „+“ geht, „−“ stoppt dort – mit Hinweis (19.11.2026: die Entwürfe gehen mit)', async () => {
     const { anzahl } = zeige({ entwuerfeDaten: [AUF_FREIEN] });
     await warte();
     await waitFor(() => expect(plaetzeKnopf('Ton', 'So, 29.11.', '3 von 3')).toBeTruthy());
     fireEvent.click(plaetzeKnopf('Ton', 'So, 29.11.', '3 von 3')!);
     const f = await fenster();
-    expect(f.textContent).toContain('Hier liegt ein Entwurf – erst senden oder entfernen.');
+    expect(f.textContent).toContain('Auf den freien Plätzen liegen Entwürfe');
+    expect(f.textContent).not.toContain('erst senden oder entfernen');
     // Die Zahlen im Fenster wie in der Zeile („3 von 3“) – nicht „frei 1“ nach ChurchTools allein (17.11.2026).
     expect(f.textContent).toContain('belegt 3 · Plätze 3 · frei 0 (mit Entwürfen)');
+    expect(
+      within(f).getByRole<HTMLButtonElement>('button', { name: 'Ton: ein Platz weniger' }).disabled,
+    ).toBe(true);
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(22, 6, 3, 4));
+    // „frei“ rechnet mit der neuen Zahl im Fenster, nicht mit der vom Öffnen.
+    await waitFor(() =>
+      expect(f.textContent).toContain('belegt 3 · Plätze 4 · frei 1 (mit Entwürfen)'),
+    );
+  });
+
+  it('ein Entwurf auf einem BELEGTEN Platz (Zurückziehen) hält die Zahl nicht fest: „−“ geht bis zu den Belegten', async () => {
+    const zurueck = entwurf({
+      ort: { eventId: 20, serviceId: 6, index: 1 },
+      ziel: { art: 'frei' },
+      gesehen: { art: 'zusage', personId: 5 },
+    });
+    const { anzahl } = zeige({ entwuerfeDaten: [zurueck] });
+    await warte();
+    // Das Zurückziehen zählt schon als frei: „0 von 3“ (ChurchTools: Anna steht noch da, belegt 1).
+    await waitFor(() => expect(plaetzeKnopf('Ton', 'Fr, 20.11.', '0 von 3')).toBeTruthy());
+    fireEvent.click(plaetzeKnopf('Ton', 'Fr, 20.11.', '0 von 3')!);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz weniger' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 3, 2));
+    fireEvent.click(await within(f).findByRole('button', { name: 'Ton: ein Platz weniger' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 2, 1));
+    // Bei 1 (dem belegten Platz) ist Schluss.
+    await waitFor(() => expect(within(f).getByLabelText('Ton: 1 Plätze')).toBeTruthy());
+    expect(
+      within(f).getByRole<HTMLButtonElement>('button', { name: 'Ton: ein Platz weniger' }).disabled,
+    ).toBe(true);
+  });
+
+  it('darf man die Entwürfe der Gruppe nicht ändern (Schublade nur zum Lesen), bleibt die alte Sperre – „−“ und „+“, mit dem alten Satz', async () => {
+    const { anzahl } = zeige({
+      entwuerfe: {
+        laden: () => Promise.resolve(daten([AUF_FREIEN], { stand: 'nur-lesen' })),
+      },
+    });
+    await warte();
+    await waitFor(() => expect(plaetzeKnopf('Ton', 'So, 29.11.', '3 von 3')).toBeTruthy());
+    fireEvent.click(plaetzeKnopf('Ton', 'So, 29.11.', '3 von 3')!);
+    const f = await fenster();
+    expect(f.textContent).toContain('Hier liegt ein Entwurf – erst senden oder entfernen.');
     for (const name of ['Ton: ein Platz weniger', 'Ton: ein Platz mehr'])
       expect(within(f).getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
     expect(anzahl).not.toHaveBeenCalled();
+  });
+
+  it('gingen Entwürfe mit, lädt „Planen“ die Entwürfe neu – sonst arbeitet die Matrix mit den alten Nummern weiter', async () => {
+    const mit = vi.fn((_e: number, _s: number, _g: number, neu: number) =>
+      Promise.resolve({
+        ok: true as const,
+        anzahl: neu,
+        entwuerfe: { umgetragen: ['21|6|1'], offen: 0, unklar: false },
+      } satisfies AnzahlErgebnis),
+    );
+    const laden = vi.fn(() => Promise.resolve(daten([])));
+    zeige({ entwuerfe: { anzahl: mit, laden } });
+    await warte();
+    expect(laden).toHaveBeenCalledTimes(1);
+    fireEvent.click(plaetzeKnopf('Ton', 'So, 22.11.', '0 von 2')!);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(mit).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+  });
+
+  it('ging nichts mit (keine Entwürfe an diesem Dienst): kein unnötiges Neuladen der Entwürfe', async () => {
+    const laden = vi.fn(() => Promise.resolve(daten([])));
+    const { anzahl } = zeige({ entwuerfe: { laden } });
+    await warte();
+    fireEvent.click(plaetzeKnopf('Ton', 'So, 22.11.', '0 von 2')!);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Ton: jetzt 3 Plätze.')).toBeTruthy();
+    expect(laden).toHaveBeenCalledTimes(1);
+  });
+
+  it('gingen Entwürfe NICHT mit, steht es im Fenster – die Zahl gilt, die Entwürfe laden neu', async () => {
+    const offen = vi.fn((_e: number, _s: number, _g: number, neu: number) =>
+      Promise.resolve({
+        ok: true as const,
+        anzahl: neu,
+        entwuerfe: { umgetragen: [], offen: 2, unklar: false },
+      } satisfies AnzahlErgebnis),
+    );
+    const laden = vi.fn(() => Promise.resolve(daten([])));
+    zeige({ entwuerfe: { anzahl: offen, laden } });
+    await warte();
+    fireEvent.click(plaetzeKnopf('Ton', 'So, 22.11.', '0 von 2')!);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    expect(await within(f).findByText(/2 Entwürfe konnten nicht mitgehen/)).toBeTruthy();
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
   });
 
   it('ein Fehler beim Speichern erscheint im Fenster – mit der Meldung des Reglers', async () => {
@@ -398,6 +498,37 @@ describe('Zeile „Plätze“', () => {
   });
 });
 
+describe('Plätze-Fach der Matrix nach einer Änderung', () => {
+  it('rechnet mit dem NEUEN Plan – nicht mit den Plätzen vom Öffnen (19.11.2026, beim Durchklicken gefunden)', async () => {
+    // Am Mi hat Ton 2 belegte Plätze; ein Entwurf wartet schon auf Platz 3 (noch „ohne Platz“).
+    const auf3 = entwurf({
+      ort: { eventId: MI, serviceId: 6, index: 3 },
+      ziel: { art: 'person', personId: 11, name: 'Carla Test' },
+    });
+    const { anzahl, aktualisiert } = zeige({ unteransicht: 'matrix', entwuerfeDaten: [auf3] });
+    const knoepfe = await screen.findAllByRole('button', {
+      name: 'Plätze Technik am Mi, 02.12. ändern',
+    });
+    fireEvent.click(knoepfe[0]);
+    const f = await fenster();
+    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(MI, 6, 2, 3));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    // Der neue Plan hat Platz 3 – frei, mit dem Entwurf darauf: „−“ hört bei 3 auf.
+    expect(within(f).getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(f).getByText(/Auf den freien Plätzen liegen Entwürfe/)).toBeTruthy();
+  });
+});
+
 describe('Dienst voll – „Platz dazunehmen“', () => {
   const vollKlick = async () => {
     await warte();
@@ -416,7 +547,8 @@ describe('Dienst voll – „Platz dazunehmen“', () => {
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
     // Erst die Plätze (2 → 3, derselbe Port wie der Regler), dann das Neuladen, dann der Entwurf.
     expect(anzahl).toHaveBeenCalledWith(MI, 6, 2, 3);
-    expect(aktualisiert).toHaveBeenCalledTimes(1);
+    // Zweimal: einmal nach jeder Platzänderung (`Planen`), einmal beim Warten auf den neuen Platz (`usePlatzDazu`).
+    expect(aktualisiert).toHaveBeenCalledTimes(2);
     expect(anzahl.mock.invocationCallOrder[0]).toBeLessThan(speichern.mock.invocationCallOrder[0]);
     expect(aktualisiert.mock.invocationCallOrder[0]).toBeLessThan(
       speichern.mock.invocationCallOrder[0],
@@ -447,8 +579,8 @@ describe('Dienst voll – „Platz dazunehmen“', () => {
   it('mit Warnung (abwesend) steht sie im selben Fenster: „… und trotzdem eintragen?“', async () => {
     zeige();
     await warte();
-    // Do 03.12.: Daniel ist krank. Voll – aber mit Entwurf (Sperre); darum Mi 02.12. mit Daniel ist ohne Warnung. Hier:
-    // Fr 20.11. hat Platz. Die Warnung gibt es also nur am Do – dort greift die Sperre zuerst (eigener Test unten).
+    // Mi 02.12.: voll, Daniel ist dort nicht abwesend – das Fenster hat keine Warnung. Die gibt es nur am Do (Daniel krank,
+    // eigener Test unten, mit einem Entwurf am Dienst).
     fireEvent.click(await eintragenKnopf('Daniel Test', 'Ton', 'Mi, 02.12.'));
     const f = await screen.findByRole('alertdialog');
     expect(within(f).getByText('Ton ist voll')).toBeTruthy();
@@ -523,25 +655,82 @@ describe('Dienst voll – „Platz dazunehmen“', () => {
     expect(screen.getByText(/der Termin ließ sich aber nicht neu laden/)).toBeTruthy();
   });
 
-  it('Sperre: liegt an Dienst und Termin ein Entwurf, kein Dazunehmen – Hinweis und „Ansehen und senden“', async () => {
+  it('liegt am Dienst ein Entwurf, geht „Platz dazunehmen“ trotzdem (19.11.2026: die Entwürfe gehen mit)', async () => {
     const { anzahl, speichern } = zeige({ entwuerfeDaten: [ERSETZT] });
     await warte();
     await waitFor(() =>
       expect(screen.queryByRole('status', { name: 'Noch nicht gesendet' })).toBeTruthy(),
     );
-    // Do 03.12.: voll, Carla ersetzt Ben (Entwurf) – Daniel ist dort krank, die Sperre kommt vor der Warnung.
+    // Do 03.12.: voll, Carla ersetzt Ben (Entwurf) – Daniel ist dort krank: die Warnung steht im selben Fenster.
     fireEvent.click(await eintragenKnopf('Daniel Test', 'Ton', 'Do, 03.12.'));
     const f = await screen.findByRole('alertdialog');
-    expect(f.textContent).toContain(
-      'Ton am 03.12. ist voll (2 von 2). Erst senden oder Entwürfe entfernen.',
+    expect(within(f).getByText('Bitte prüfen')).toBeTruthy();
+    expect(f.textContent).not.toContain('Erst senden oder Entwürfe entfernen');
+    fireEvent.click(within(f).getByRole('button', { name: 'Platz dazunehmen (3)' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(DO, 6, 2, 3));
+    expect(speichern).not.toHaveBeenCalled(); // der neue Platz ist erst nach dem Neuladen da
+  });
+
+  it('der Entwurf, der mit umgezogen ist, muss neu geladen sein, bevor der neue angelegt wird – nicht auf einem Platz, der falsch frei aussieht', async () => {
+    // Wie 1 → 2: Der Entwurf zieht um; erst wenn er in den geladenen Entwürfen steht, kommt der neue Entwurf.
+    const umgezogen = entwurf({
+      ort: { eventId: MI, serviceId: 6, index: 2 },
+      ziel: { art: 'frei' },
+      gesehen: { art: 'zusage', personId: 8 },
+    });
+    const mit = vi.fn((_e: number, _s: number, _g: number, neu: number) =>
+      Promise.resolve({
+        ok: true as const,
+        anzahl: neu,
+        entwuerfe: { umgetragen: [ortSchluessel(umgezogen.ort)], offen: 0, unklar: false },
+      } satisfies AnzahlErgebnis),
     );
-    expect(within(f).queryByRole('button', { name: /Platz dazunehmen/ })).toBeNull();
-    expect(anzahl).not.toHaveBeenCalled();
-    fireEvent.click(within(f).getByRole('button', { name: 'Ansehen und senden' }));
-    // Dasselbe Fenster wie die Leiste unten.
-    expect(await screen.findByText(/Anfrage an Carla Test statt Ben Test/)).toBeTruthy();
-    expect(screen.queryByRole('alertdialog')).toBeNull();
+    // Die Entwürfe kommen nach dem Plan an – der neue Entwurf darf nicht vorher angelegt werden.
+    let fertig: () => void = () => {};
+    let aufrufe = 0;
+    const laden = vi.fn(() => {
+      aufrufe++;
+      if (aufrufe === 1) return Promise.resolve(daten([]));
+      return new Promise<ReturnType<typeof daten>>((ok) => {
+        fertig = () => ok(daten([umgezogen]));
+      });
+    });
+    const { speichern, aktualisiert } = zeige({ entwuerfe: { anzahl: mit, laden } });
+    const f = await vollKlick();
+    fireEvent.click(within(f).getByRole('button', { name: 'Platz dazunehmen (3)' }));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(2));
+    // Der Plan hat den neuen Platz …
+    await waitFor(() => expect(plaetzeKnopf('Ton', 'Mi, 02.12.', '2 von 3')).toBeTruthy());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    // … aber der umgezogene Entwurf ist noch nicht da: noch kein neuer Entwurf.
     expect(speichern).not.toHaveBeenCalled();
+    await act(async () => {
+      fertig();
+    });
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(laden).toHaveBeenCalledTimes(2);
+    expect(speichern.mock.calls[0][1]).toBe(3);
+  });
+
+  it('gingen Entwürfe nicht mit: kein neuer Entwurf, eine Meldung, Plan und Entwürfe laden neu', async () => {
+    const offen = vi.fn((_e: number, _s: number, _g: number, neu: number) =>
+      Promise.resolve({
+        ok: true as const,
+        anzahl: neu,
+        entwuerfe: { umgetragen: [], offen: 1, unklar: false },
+      } satisfies AnzahlErgebnis),
+    );
+    const laden = vi.fn(() => Promise.resolve(daten([])));
+    const { speichern, aktualisiert } = zeige({ entwuerfe: { anzahl: offen, laden } });
+    const f = await vollKlick();
+    fireEvent.click(within(f).getByRole('button', { name: 'Platz dazunehmen (3)' }));
+    expect(await screen.findByText(/1 Entwurf konnte nicht mitgehen/)).toBeTruthy();
+    expect(screen.getByText(/Daniel Test wurde nicht eingetragen/)).toBeTruthy();
+    expect(speichern).not.toHaveBeenCalled();
+    expect(aktualisiert).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
   });
 
   it('abgesagter Termin: kein Eintragen, also auch kein Dazunehmen', async () => {

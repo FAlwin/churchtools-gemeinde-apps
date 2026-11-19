@@ -29,10 +29,12 @@ import { gruppenAbschnitt } from './gruppenAbschnitt';
 import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { PlaetzeFach } from './PlaetzeFach';
 import { PlatzFenster } from './PlatzFenster';
 import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
 import { usePlatzDazu } from './usePlatzDazu';
+import { usePlaetzeFrisch } from './usePlaetzeFrisch';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
@@ -220,8 +222,8 @@ export function Planen({
   const [fokusEintragen, setFokusEintragen] = useState(false);
   // Das Fenster „Vorgabe · Dienst“ (P2m): welcher Dienst – die Vorgabe selbst steht in `ansicht.direktDienste` (je Gerät).
   const [vorgabeFach, setVorgabeFach] = useState<{ id: number; name: string } | null>(null);
-  // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
-  const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
+  // Das Plätze-Fach (E4-5-3): Termin und Gruppe – beim Zeichnen aus dem AKTUELLEN Plan geholt (s. dort).
+  const [plaetzeFach, setPlaetzeFach] = useState<{ eventId: number; gruppe: PlanGruppe } | null>(
     null,
   );
   // Das Fenster für EINEN Dienst an einem Termin (P2c, Zeile „Plätze“ und roter Tag in „Personen“): Termin und Dienst.
@@ -302,10 +304,40 @@ export function Planen({
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
     },
   });
+  // Nach einer Platzänderung Plan und Entwürfe gemeinsam neu – bis beide da sind, sperren die Plätze-Fenster.
+  const plaetzeFrisch = usePlaetzeFrisch({
+    plan,
+    daten,
+    planNeu: leiseNeuLaden,
+    entwuerfeNeu: ewNeu,
+    showToast,
+  });
+  /**
+   * **Die Platzzahl ändern** (Regler, Plätze-Fach, „Platz dazunehmen“): der Anschluss trägt die Entwürfe des Dienstes mit um
+   * (19.11.2026, `anzahlMitEntwuerfen`) – danach müssen Plan **und** Entwürfe neu geladen werden, und zwar sofort, nicht erst
+   * beim Schließen: Sonst rechnet das offene Fenster mit neuen Entwurfs-Nummern auf alten Plätzen (`usePlaetzeFrisch`).
+   * Die Fenster gibt es nur mit Anschluss; ohne ihn kommt „nicht bestätigt“ zurück.
+   */
+  const anzahlSetzen = async (
+    eventId: number,
+    serviceId: number,
+    gesehen: number,
+    neu: number,
+  ): Promise<AnzahlErgebnis> => {
+    if (!entwuerfe) return { ok: false, grund: 'voruebergehend' };
+    const r = await entwuerfe.anzahl(eventId, serviceId, gesehen, neu);
+    if (r.ok && r.anzahl !== gesehen) {
+      const e = r.entwuerfe;
+      plaetzeFrisch.geaendert(!!e && (e.umgetragen.length > 0 || e.offen > 0 || e.unklar));
+    }
+    return r;
+  };
   // „Platz dazunehmen“ im Fenster „Dienst voll“ (P2c): Platz in ChurchTools, nach dem Neuladen der Entwurf.
   const dazunehmen = usePlatzDazu({
     plan,
     entwuerfe,
+    daten,
+    anzahl: anzahlSetzen,
     personen: amPersonen,
     neuLaden: leiseNeuLaden,
     showToast,
@@ -519,7 +551,7 @@ export function Planen({
         entwuerfe &&
         nimmtEintraegeAn(plan.spalten[i]) &&
         ganzeGruppe(g).zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
-          ? () => setPlaetzeFach({ spalte: i, gruppe: ganzeGruppe(g) })
+          ? () => setPlaetzeFach({ eventId: plan.spalten[i].id, gruppe: ganzeGruppe(g) })
           : undefined,
       onPlatz: (i, zl) =>
         entwuerfe && nimmtEintraegeAn(plan.spalten[i]) && darfPlanen(zl, plan.spalten[i])
@@ -733,7 +765,8 @@ export function Planen({
                   ? plaetzeStand(zl.zellen[i] ?? null, (p) => entwurfAmPlatz(daten, s, zl, p))
                   : null
               }
-              aendern={(z, gesehen, neu) => entwuerfe.anzahl(s.id, z.serviceId, gesehen, neu)}
+              aendern={(z, gesehen, neu) => anzahlSetzen(s.id, z.serviceId, gesehen, neu)}
+              laedt={plaetzeFrisch.laedt}
               onGespeichert={showToast}
               onClose={(geaendert) => {
                 setPlatzFenster(null);
@@ -742,37 +775,37 @@ export function Planen({
             />
           );
         })()}
-      {plaetzeFach && entwuerfe && plan && (
-        <PlaetzeFach
-          titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}
-          unter={`${plan.spalten[plaetzeFach.spalte].name} · ${tagKurz(plan.spalten[plaetzeFach.spalte].tag)}`}
-          zeilen={plaetzeZeilen(
-            daten,
-            plan.spalten[plaetzeFach.spalte],
-            plaetzeFach.spalte,
-            plaetzeFach.gruppe,
-            katalog,
-          )}
-          vorlage={
-            katalog && ladeVorlagen
-              ? vorlageFuer(
-                  katalog,
-                  plan.spalten[plaetzeFach.spalte],
-                  plaetzeFach.gruppe,
-                  ladeVorlagen,
-                )
-              : undefined
-          }
-          aendern={(z, gesehen, neu) =>
-            entwuerfe.anzahl(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
-          }
-          onGespeichert={showToast}
-          onClose={(geaendert) => {
-            setPlaetzeFach(null);
-            if (geaendert) leiseNeuLaden();
-          }}
-        />
-      )}
+      {plaetzeFach &&
+        entwuerfe &&
+        plan &&
+        (() => {
+          // Termin und Gruppe aus dem AKTUELLEN Plan – wie beim Fenster eines Dienstes (oben). Mit der Gruppe vom Öffnen
+          // rechnete das Fach nach einer Änderung mit den alten Plätzen weiter: nach 2 → 1 suchte es den Entwurf noch auf
+          // „Platz 1“, fand ihn nicht und ließ „−“ bis 0 zu (19.11.2026, beim Durchklicken gefunden).
+          const i = plan.spalten.findIndex((s) => s.id === plaetzeFach.eventId);
+          if (i < 0) return null;
+          const s = plan.spalten[i];
+          const g =
+            plan.gruppen.find((x) => schluessel(x) === schluessel(plaetzeFach.gruppe)) ??
+            plaetzeFach.gruppe;
+          return (
+            <PlaetzeFach
+              titel={`${gruppenName(g)} · Plätze`}
+              unter={`${s.name} · ${tagKurz(s.tag)}`}
+              zeilen={plaetzeZeilen(daten, s, i, g, katalog)}
+              vorlage={
+                katalog && ladeVorlagen ? vorlageFuer(katalog, s, g, ladeVorlagen) : undefined
+              }
+              aendern={(z, gesehen, neu) => anzahlSetzen(s.id, z.serviceId, gesehen, neu)}
+              laedt={plaetzeFrisch.laedt}
+              onGespeichert={showToast}
+              onClose={(geaendert) => {
+                setPlaetzeFach(null);
+                if (geaendert) leiseNeuLaden();
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }

@@ -11,9 +11,23 @@
  */
 import { lesegrund, type DienstPort, type Grund } from './einteilen';
 import { istFrei, type RohTermin } from './termine';
+import { platzStaende, type MitnehmenErgebnis, type PlatzStand } from './umnummerieren';
+
+/** Die Plätze des Dienstes vor und nach der Änderung – daran erkennen die Entwürfe ihre neue Nummer (`umnummerieren.ts`). */
+export interface PlaetzeVorherNachher {
+  vorher: PlatzStand[];
+  nachher: PlatzStand[];
+}
 
 export type AnzahlErgebnis =
-  | { ok: true; anzahl: number }
+  | {
+      ok: true;
+      anzahl: number;
+      /** Nur wenn wirklich geändert wurde (bei „steht schon so“ gibt es nichts umzunummerieren). */
+      plaetze?: PlaetzeVorherNachher;
+      /** Was mit den Entwürfen dieses Termins und Dienstes geschah – setzt der Anschluss der App (`ladeEntwuerfe`). */
+      entwuerfe?: MitnehmenErgebnis;
+    }
   /** `jetzt`: so viele Plätze hat der Dienst jetzt (bei Konflikt und „nicht angekommen“). */
   | { ok: false; grund: Grund | 'belegt'; jetzt?: number };
 
@@ -27,9 +41,10 @@ async function lesen(
   port: DienstPort,
   eventId: number,
   serviceId: number,
-): Promise<{ anzahl: number; belegt: number } | { grund: Grund }> {
+): Promise<{ anzahl: number; belegt: number; plaetze: PlatzStand[] } | { grund: Grund }> {
   try {
-    return zaehle(await port.termin(eventId), serviceId);
+    const t = await port.termin(eventId);
+    return { ...zaehle(t, serviceId), plaetze: platzStaende(t.eventServices ?? [], serviceId) };
   } catch (e) {
     return { grund: lesegrund(port, e) };
   }
@@ -73,6 +88,6 @@ export async function anzahlAendern(
   const nach = await lesen(port, eventId, serviceId);
   if ('grund' in nach) return { ok: false, grund: nach.grund };
   return nach.anzahl === neu
-    ? { ok: true, anzahl: neu }
+    ? { ok: true, anzahl: neu, plaetze: { vorher: erst.plaetze, nachher: nach.plaetze } }
     : { ok: false, grund: sonst, jetzt: nach.anzahl };
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import type { Start } from './start';
+import { startFuer } from './start.testutil';
 import {
   _vergissModul,
   entferneEntwurf,
@@ -249,20 +249,124 @@ describe('sendeEntwuerfe (Durchstich mit den echten Anschlüssen)', () => {
 });
 
 describe('Anzahl der Plätze (E4-5-3, Durchstich über den Anschluss)', () => {
-  it('liest frisch, schreibt eventservices, liest nach – erst dann „ok“', async () => {
-    let plaetze = [{ id: 1, serviceId: 8, index: null, personId: null, name: null }];
+  type Roh = { id: number; serviceId: number; index: number | null; personId: null; name: null };
+  const START = startFuer();
+
+  /**
+   * ChurchTools und der Speicher der Erweiterung zum Anfassen: Termin 20 mit Licht (Dienst 7, Technik) – `eventservices`
+   * nummeriert wie gemessen (19.11.2026: die ID bleibt, ein einzelner Platz hat keine Nummer); die Schublade 30 (Technik) hält
+   * die Werte.
+   */
+  function welt(
+    plaetze: Roh[],
+    werte: ReturnType<typeof wert>[],
+    routen: Record<string, Antwort> = {},
+  ) {
+    let naechste = 900;
+    const w = { plaetze, werte };
     const spy = ct({
+      ...GRUND,
       'GET /api/csrftoken': () => json(200, { data: 'tok' }),
-      'GET /api/events/20': () => json(200, { data: { id: 20, eventServices: plaetze } }),
+      'GET /api/events/20': () => json(200, { data: { id: 20, eventServices: w.plaetze } }),
       'PUT /api/events/20/eventservices': (init) => {
         const b = JSON.parse(String(init?.body)) as { services: { count: number }[] };
-        expect(b).toEqual({ eventId: 20, services: [{ serviceId: 8, count: 2 }] });
-        plaetze = [...plaetze, { id: 2, serviceId: 8, index: null, personId: null, name: null }];
+        const n = b.services[0].count;
+        while (w.plaetze.length < n)
+          w.plaetze.push({ id: naechste++, serviceId: 7, index: null, personId: null, name: null });
+        w.plaetze.length = n;
+        w.plaetze.forEach((p, i) => (p.index = n === 1 ? null : i + 1));
         return new Response(null, { status: 204 });
       },
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: w.werte }),
+      ...Object.fromEntries(
+        w.werte.map((x) => [
+          `PUT /api/custommodules/16/customdatacategories/30/customdatavalues/${x.id}`,
+          (init?: RequestInit) => {
+            x.value = (JSON.parse(String(init?.body)) as { value: string }).value;
+            return json(200, { data: x });
+          },
+        ]),
+      ),
+      ...routen,
     });
-    const a = entwurfAnschluss({ ichId: 1, vorname: 'Alwin' } as Start, () => []);
-    expect(await a.anzahl(20, 8, 1, 2)).toEqual({ ok: true, anzahl: 2 });
+    return { w, spy };
+  }
+  const platz = (id: number, index: number | null): Roh => ({
+    id,
+    serviceId: 7,
+    index,
+    personId: null,
+    name: null,
+  });
+  const ortVon = (x: { value: string }) =>
+    (JSON.parse(x.value) as { ort: { index: number | null }; version: number }).ort.index;
+
+  it('liest frisch, schreibt eventservices, liest nach – erst dann „ok“', async () => {
+    const { spy } = welt([platz(1, null)], []);
+    const a = entwurfAnschluss(START, () => []);
+    const r = await a.anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({ ok: true, anzahl: 2 });
     expect(spy.mock.calls.filter((c) => c[1]?.method === 'PUT')).toHaveLength(1);
+  });
+
+  it('1 → 2: der Entwurf auf dem einzelnen Platz (ohne Nummer) zieht auf Platz 1 um – derselbe Wert, Version + 1 (19.11.2026)', async () => {
+    const { w } = welt([platz(1, null)], [wert(100, 20)]);
+    const a = entwurfAnschluss(START, () => []);
+    const r = await a.anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({
+      ok: true,
+      anzahl: 2,
+      entwuerfe: { umgetragen: ['20|7|1'], offen: 0, unklar: false },
+    });
+    expect(w.werte.map((x) => [x.id, ortVon(x)])).toEqual([[100, 1]]);
+    expect((JSON.parse(w.werte[0].value) as { version: number }).version).toBe(2);
+  });
+
+  it('keine Entwürfe an diesem Dienst: es wird nichts in die Schublade geschrieben', async () => {
+    const { w, spy } = welt([platz(1, null)], [wert(100, 21)]); // Entwurf an einem anderen Termin
+    const r = await entwurfAnschluss(START, () => []).anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({ ok: true, entwuerfe: { umgetragen: [], offen: 0, unklar: false } });
+    expect(
+      spy.mock.calls.filter(
+        (c) => String(c[0]).includes('customdatavalues') && c[1]?.method === 'PUT',
+      ),
+    ).toHaveLength(0);
+    expect(w.werte.map(ortVon)).toEqual([null]);
+  });
+
+  it('Schublade nur zum Lesen: die Zahl steht, der Anschluss meldet „unklar“ und fasst die Entwürfe nicht an', async () => {
+    const { w } = welt([platz(1, null)], [wert(100, 20)], {
+      'GET /api/permissions/global': () =>
+        json(200, { data: { dienstplaner: { ...RECHTE, 'edit custom data': [] } } }),
+    });
+    const r = await entwurfAnschluss(START, () => []).anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({ ok: true, anzahl: 2, entwuerfe: { unklar: true } });
+    expect(w.werte.map(ortVon)).toEqual([null]);
+  });
+
+  it('Speicher vorübergehend nicht erreichbar: die Zahl steht, „unklar“ – nichts verloren', async () => {
+    const { w } = welt([platz(1, null)], [wert(100, 20)], {
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () => json(503, {}),
+    });
+    const r = await entwurfAnschluss(START, () => []).anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({ ok: true, anzahl: 2, entwuerfe: { unklar: true } });
+    expect(w.werte).toHaveLength(1);
+  });
+
+  it('Dienst ohne Dienstgruppe oder Gruppe ohne Schublade: nur die Zahl, kein Eintrag „entwuerfe“', async () => {
+    welt([platz(1, null)], []);
+    // Musik (Gruppe 4) hat in GRUND keine Schublade mit Werten; ein Dienst ohne Gruppe gar keine.
+    const ohneGruppe = startFuer({ dienste: new Map() });
+    const r = await entwurfAnschluss(ohneGruppe, () => []).anzahl(20, 7, 1, 2);
+    expect(r).toMatchObject({ ok: true, anzahl: 2 });
+    expect(r.ok && r.entwuerfe).toBeFalsy();
+  });
+
+  it('scheitert die Änderung selbst, passiert mit den Entwürfen nichts', async () => {
+    const { w } = welt([platz(1, null)], [wert(100, 20)]);
+    const r = await entwurfAnschluss(START, () => []).anzahl(20, 7, 5, 6); // gesehen ≠ jetzt → Konflikt
+    expect(r).toMatchObject({ ok: false, grund: 'konflikt' });
+    expect(w.werte.map(ortVon)).toEqual([null]);
   });
 });

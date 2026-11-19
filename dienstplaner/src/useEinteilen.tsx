@@ -731,11 +731,6 @@ export function useEinteilen({
       const r = await entferneEntwurf(zl.dienst.dienstgruppeId ?? 0, e, e.version, false);
       if (!r.ok) showToast(fehlerHinweis(r));
     },
-    // „Ansehen und senden“ – dieselbe Liste wie die Leiste unten; nur, wo es etwas zu senden gibt.
-    sendenOeffnen:
-      offen > 0 && entwuerfe && ew.art === 'fertig'
-        ? () => setSendenListe(sendbareZeilen(plan, daten))
-        : undefined,
   };
 
   return {

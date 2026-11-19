@@ -1822,7 +1822,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
   });
 
   // ── E4-5-3: Anzahl der Plätze (Regler) ───────────────────────────────────────
-  it('Regler in der Gruppenzeile → Plätze-Fach; liegt an einem Dienst ein Entwurf, bleibt seine Zahl', async () => {
+  it('Regler in der Gruppenzeile → Plätze-Fach; Entwürfe auf freien Plätzen halten die Zahl fest („−“), „+“ geht immer', async () => {
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) }); // Entwurf an Licht Platz 2
     await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
@@ -1830,13 +1830,19 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(screen.getByText('Gottesdienst · So, 08.11.')).toBeTruthy();
     expect(screen.getByLabelText('Licht: 2 Plätze')).toBeTruthy();
     expect(screen.getByLabelText('Ton: 1 Plätze')).toBeTruthy();
-    // Licht: Entwurf an Platz 2 → weder weniger noch mehr (ChurchTools nummeriert die Plätze sonst neu).
-    for (const k of ['Licht: ein Platz weniger', 'Licht: ein Platz mehr']) {
-      expect(screen.getByRole('button', { name: k })).toHaveProperty('disabled', true);
-    }
-    expect(screen.getByText(/Hier liegt ein Entwurf/)).toBeTruthy();
+    // Licht: Anna belegt Platz 1, der Entwurf liegt auf dem freien Platz 2 → „−“ stoppt dort; „+“ geht (19.11.2026: der
+    // Dienstplaner trägt die Entwürfe nach der Änderung selbst um).
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz mehr' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    expect(screen.getByText(/Auf den freien Plätzen liegen Entwürfe/)).toBeTruthy();
     cleanup();
-    // Auch ein Entwurf an einem belegten Platz (zurückziehen) sperrt die Zahl.
+    // Ein Entwurf an einem BELEGTEN Platz (zurückziehen) hält die Zahl nicht fest: Anna steht schon dort.
     zeige4({
       laden: () =>
         Promise.resolve(
@@ -1855,7 +1861,11 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
     expect(screen.getByRole('button', { name: 'Licht: ein Platz mehr' })).toHaveProperty(
       'disabled',
-      true,
+      false,
+    );
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      false,
     );
     expect(screen.getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
       'disabled',
@@ -1863,7 +1873,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     );
   });
 
-  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu); Schließen lädt die Termine leise neu', async () => {
+  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu) und lädt die Termine SOFORT leise neu (19.11.2026)', async () => {
     const onAktualisieren = vi.fn();
     const anzahl = vi.fn(() => Promise.resolve({ ok: true as const, anzahl: 2 }));
     zeige4({ anzahl }, { onAktualisieren });
@@ -1873,9 +1883,20 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ton: ein Platz mehr' }));
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 1, 2));
     expect(await screen.findByText('Ton: jetzt 2 Plätze.')).toBeTruthy();
-    expect(onAktualisieren).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    // Nicht erst beim Schließen: sonst rechnet das offene Fach mit neuen Entwürfen auf alten Plätzen (`usePlaetzeFrisch`).
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
+    // Bis der neue Plan da ist (hier kommt keiner), sind die Knöpfe aus – Schließen geht trotzdem.
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz mehr' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('button', { name: 'Ton: ein Platz mehr' })).toBeNull();
+    expect(onAktualisieren).toHaveBeenCalledTimes(2);
   });
 
   it('im Plätze-Fach nur die Dienste, die man plant (Planrecht je Dienst)', async () => {

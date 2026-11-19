@@ -82,6 +82,10 @@ export function nachbau(plaetze: RohPlatz[]) {
                 if (eigene().length <= count) break;
                 if (!p.name) ct.plaetze.splice(ct.plaetze.indexOf(p), 1);
               }
+              // Wie ChurchTools (gemessen 19.11.2026): lückenlos neu nummeriert, die ID bleibt; ein einzelner Platz hat keine Nummer.
+              eigene().forEach((p, i, alle) => {
+                p.index = alle.length === 1 ? null : i + 1;
+              });
             }
           }
         : () => {

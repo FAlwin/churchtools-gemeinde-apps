@@ -65,10 +65,6 @@ export interface PersonenEintragen {
    * kein Entwurf. Fehlt, wo es keinen Anschluss zum Ändern der Plätze gibt.
    */
   dazunehmen?: (spalte: number, zeile: PlanZeile, wer: Besetzung) => Promise<void>;
-  /**
-   * Das Fenster „Ansehen und senden“ öffnen (P2c: „Erst senden oder Entwürfe entfernen“) – fehlt, wo nichts zu senden ist.
-   */
-  sendenOeffnen?: () => void;
 }
 
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */

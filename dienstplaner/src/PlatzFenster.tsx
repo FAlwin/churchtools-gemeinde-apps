@@ -1,6 +1,6 @@
 import { Sheet } from '@ui/fenster/Sheet';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
-import { sperreText } from './plaetzeTexte';
+import { plaetzeGrenze } from './plaetzeGrenze';
 import { PlatzRegler } from './PlatzRegler';
 import type { PlaetzeZeile } from './PlaetzeFach';
 import { useAnzahlSetzen } from './useAnzahlSetzen';
@@ -13,8 +13,9 @@ import eigen from './PlaetzeFach.module.scss';
  * **Die Plätze EINES Dienstes an EINEM Termin** (P2c, Entwurf `e9-p2-eintragen.html` Fall 9): aufgerufen von der Zeile
  * „Plätze“ in „Personen“ und vom roten Tag in „Noch offen“. Derselbe Regler und dieselbe Logik wie das Plätze-Fach der
  * Matrix (`PlatzRegler`, `useAnzahlSetzen` → `anzahlAendern`): jeder Tipp wird sofort in ChurchTools gespeichert und
- * nachgelesen, − nicht unter die Belegten, + ohne Obergrenze, bei einem Entwurf an diesem Dienst und Termin gesperrt
- * (ChurchTools nummeriert die Plätze beim Ändern neu). `onClose(true)`, wenn sich etwas geändert hat.
+ * nachgelesen, − nicht unter die Belegten und die Entwürfe auf freien Plätzen, + ohne Obergrenze – auch mit Entwürfen (der
+ * Dienstplaner trägt sie dabei um, 19.11.2026); gesperrt nur, wo die Entwürfe der Gruppe nicht umgetragen werden dürfen
+ * (`plaetzeGrenze`). `onClose(true)`, wenn sich etwas geändert hat.
  */
 export function PlatzFenster({
   titel,
@@ -22,6 +23,7 @@ export function PlatzFenster({
   z,
   mitEntwuerfen = null,
   aendern,
+  laedt = false,
   onGespeichert,
   onClose,
 }: {
@@ -30,21 +32,26 @@ export function PlatzFenster({
   z: PlaetzeZeile;
   /**
    * Belegt und frei, gezählt wie die Zeile „Plätze“ (`plaetzeStand`, Entwürfe zählen mit). Liegen Entwürfe vor, zeigt das
-   * Fenster diese Zahlen – sonst stünde „frei 0“ neben einer roten Zeile „1 von 2“ (17.11.2026). Der Regler selbst ist
-   * dann ohnehin gesperrt; ohne Entwürfe sind beide Zählungen gleich.
+   * Fenster die belegten samt Entwürfen – sonst stünde „frei 0“ neben einer roten Zeile „1 von 2“ (17.11.2026); „frei“
+   * rechnet es mit der Zahl im Fenster (die sich mit „+“ ändert, `frei` hier ist die vom Öffnen). Ohne Entwürfe sind beide
+   * Zählungen gleich.
    */
   mitEntwuerfen?: { belegt: number; frei: number } | null;
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
+  /** Plan und Entwürfe laden nach einer Änderung neu (`usePlaetzeFrisch`) – solange sind die Knöpfe gesperrt. */
+  laedt?: boolean;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
-  const { anzahl, laeuft, geaendert, meldung, beschaeftigt, setze } = useAnzahlSetzen({
+  const { anzahl, laeuft, geaendert, meldung, beschaeftigt, knoepfeAus, setze } = useAnzahlSetzen({
     zeilen: [z],
     aendern,
     onGespeichert,
+    laedt,
   });
   const hinweisRef = useInsBild<HTMLDivElement>(meldung);
   const n = anzahl.get(z.serviceId) ?? z.anzahl;
+  const grenze = plaetzeGrenze(z, n);
   return (
     <Sheet
       title={titel}
@@ -58,21 +65,16 @@ export function PlatzFenster({
           z={z}
           n={n}
           laeuft={laeuft === z.serviceId}
-          beschaeftigt={beschaeftigt}
+          beschaeftigt={knoepfeAus}
           onSetze={(neu) => void setze(z, neu)}
         />
       </div>
       <p className={eigen.zahlen}>
         {z.entwuerfe > 0 && mitEntwuerfen
-          ? `belegt ${mitEntwuerfen.belegt} · Plätze ${n} · frei ${mitEntwuerfen.frei} (mit Entwürfen)`
+          ? `belegt ${mitEntwuerfen.belegt} · Plätze ${n} · frei ${Math.max(n - mitEntwuerfen.belegt, 0)} (mit Entwürfen)`
           : `belegt ${z.belegt} · Plätze ${n} · frei ${Math.max(n - z.belegt, 0)}`}
       </p>
-      {z.entwuerfe > 0 && <p className={eigen.gesperrtText}>{sperreText(z.entwuerfe)}</p>}
-      {z.entwuerfe === 0 && n <= z.belegt && z.belegt > 0 && (
-        <p className={eigen.gesperrtText}>
-          Erst jemanden herausnehmen – unter die Zahl der Belegten geht es nicht.
-        </p>
-      )}
+      {grenze.hinweis && <p className={eigen.gesperrtText}>{grenze.hinweis}</p>}
       <p className={styles.hinweis}>
         {n === 0
           ? '0 Plätze: Der Dienst ist an diesem Termin aus.'

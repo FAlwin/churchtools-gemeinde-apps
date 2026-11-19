@@ -13,9 +13,9 @@ const vorlage = (...dienste: [number, number][]) =>
     },
   ])[0];
 
-const stand = (...z: [number, string, number, number?][]) =>
+const stand = (...z: [number, string, number, boolean?][]) =>
   new Map<number, VorlagenStand>(
-    z.map(([id, name, anzahl, entwuerfe = 0]) => [id, { name, anzahl, entwuerfe }]),
+    z.map(([id, name, anzahl, gesperrt = false]) => [id, { name, anzahl, gesperrt }]),
   );
 const NAMEN = new Map([
   [6, 'Ton'],
@@ -63,18 +63,24 @@ describe('vorlageRechnen', () => {
     expect(r.aendern).toEqual([]);
   });
 
-  it('liegt ein Entwurf am Dienst und fehlen Plätze → übersprungen', () => {
+  it('Entwürfe am Dienst stören nicht mehr: fehlen Plätze, wird erhöht (19.11.2026 – sie gehen mit)', () => {
+    const r = vorlageRechnen(vorlage([9, 4]), { stand: stand([9, 'Gesang', 2]), namen: NAMEN });
+    expect(r.aendern).toEqual([{ serviceId: 9, name: 'Gesang', von: 2, nach: 4 }]);
+    expect(r.uebersprungen).toEqual([]);
+  });
+
+  it('gesperrt (Entwürfe, die nicht umgetragen werden dürfen) und fehlen Plätze → übersprungen', () => {
     const r = vorlageRechnen(vorlage([9, 4]), {
-      stand: stand([9, 'Gesang', 2, 1]),
+      stand: stand([9, 'Gesang', 2, true]),
       namen: NAMEN,
     });
-    expect(r.uebersprungen).toEqual([{ serviceId: 9, name: 'Gesang', grund: 'entwurf' }]);
+    expect(r.uebersprungen).toEqual([{ serviceId: 9, name: 'Gesang', grund: 'gesperrt' }]);
     expect(r.aendern).toEqual([]);
   });
 
-  it('liegt ein Entwurf am Dienst, aber die Plätze reichen schon → nichts zu melden', () => {
+  it('gesperrt, aber die Plätze reichen schon → nichts zu melden', () => {
     const r = vorlageRechnen(vorlage([9, 2]), {
-      stand: stand([9, 'Gesang', 2, 1]),
+      stand: stand([9, 'Gesang', 2, true]),
       namen: NAMEN,
     });
     expect(r).toEqual({ aendern: [], uebersprungen: [], schonErfuellt: 1 });

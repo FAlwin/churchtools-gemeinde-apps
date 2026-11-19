@@ -30,7 +30,6 @@ import type { PersonenLader } from './ladePersonen';
 import type { AntwortenLader } from './ladeAntworten';
 import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
-import { sperreText } from './plaetzeTexte';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
 import { usePersonenDaten } from './usePersonenDaten';
@@ -272,12 +271,10 @@ export function PersonenRaster({
         tag: string;
         /** Die Plätze des Dienstes – alle belegt oder von einem Entwurf gehalten. */
         von: number;
-        /** Entwürfe an diesem Dienst und Termin – bei mehr als 0 gibt es kein „Platz dazunehmen“ (Sperre). */
-        entwuerfe: number;
         /** Warnung „anderer Dienst am Tag“ / „abwesend“, die zusammen mit „voll“ gefragt wird. */
         warnung: EintragenWarnung | null;
-        /** Wer eingetragen wird – `null` bei einem Gast, dessen Name erst im Fenster „Gast eintragen“ kommt. */
-        wer: Besetzung | null;
+        /** Wer eingetragen wird. */
+        wer: Besetzung;
         spalte: number;
         zeile: PlanZeile;
       }
@@ -346,7 +343,7 @@ export function PersonenRaster({
 
   /**
    * Ein Klick in eine leere Gäste-Zelle oder auf das „+“ (P2d): das Fenster „Gast eintragen“ – bei vollem Dienst mit „Platz
-   * dazunehmen“; liegt an diesem Dienst und Termin schon ein Entwurf, die Sperre wie bei den Personen („Ansehen und senden“).
+   * dazunehmen“ (auch mit Entwürfen am Dienst: der Dienstplaner trägt sie dabei um, 19.11.2026).
    */
   const gastNeuKlick = (b: RasterBlock, pos: number) => {
     const zl = zeileJe.get(b.dienst.id);
@@ -354,20 +351,6 @@ export function PersonenRaster({
     if (!zl || !a || laeuft || (a.art !== 'eintragen' && a.art !== 'voll')) return;
     const i = spalten[pos];
     const tag = plan.spalten[i].tag;
-    if (a.art === 'voll' && a.entwuerfe > 0) {
-      setFenster({
-        art: 'voll',
-        dienst: b.dienst.name,
-        tag,
-        von: a.von,
-        entwuerfe: a.entwuerfe,
-        warnung: null,
-        wer: null,
-        spalte: i,
-        zeile: zl,
-      });
-      return;
-    }
     setFenster({
       art: 'gast',
       dienst: b.dienst.name,
@@ -412,7 +395,6 @@ export function PersonenRaster({
         dienst: b.dienst.name,
         tag,
         von: a.von,
-        entwuerfe: a.entwuerfe,
         warnung: eintragenWarnung({
           name: r.name,
           dienst: b.dienst.name,
@@ -905,30 +887,9 @@ export function PersonenRaster({
         (() => {
           const f = fenster;
           const voll = vollText(f.dienst, f.tag, f.von);
-          // Sperre: Liegt an diesem Dienst und Termin ein Entwurf, nimmt „Platz dazunehmen“ nichts an – ChurchTools nummeriert
-          // die Plätze beim Ändern neu, der Entwurf fände seinen Platz nicht mehr (wie beim Regler, `sperreText`).
-          if (f.entwuerfe > 0) {
-            const senden = personen?.sendenOeffnen;
-            return (
-              <ConfirmDialog
-                title={`${f.dienst} ist voll`}
-                message={`${voll} Erst senden oder Entwürfe entfernen.`}
-                confirmLabel={senden ? 'Ansehen und senden' : 'Schließen'}
-                cancelLabel={senden ? 'Schließen' : null}
-                harmlos
-                onConfirm={() => {
-                  setFenster(null);
-                  senden?.();
-                }}
-                onCancel={() => setFenster(null)}
-              >
-                <p className={styles.dazuHinweis}>{sperreText(f.entwuerfe)}</p>
-              </ConfirmDialog>
-            );
-          }
           const dazunehmen = personen?.dazunehmen;
           const wer = f.wer;
-          if (!dazunehmen || !wer)
+          if (!dazunehmen)
             return (
               <ConfirmDialog
                 title={`${f.dienst} ist voll`}

@@ -1,12 +1,13 @@
-import { sperreText } from './plaetzeTexte';
+import { minusErlaubt, plaetzeGrenze, plusErlaubt } from './plaetzeGrenze';
 import type { PlaetzeZeile } from './PlaetzeFach';
 import eigen from './PlaetzeFach.module.scss';
 
 /**
  * **− Zahl +** für einen Dienst – der Regler des Plätze-Fachs (`PlaetzeFach`) und des Fensters in „Personen“
- * (`PlatzFenster`, P2c) sind dasselbe Stück. − geht nicht unter die Belegten, + hat keine Obergrenze; **liegt an diesem
- * Dienst und Termin ein Entwurf, sind beide gesperrt** (`sperreText`: ChurchTools nummeriert die Plätze beim Ändern neu,
- * ein Entwurf fände seinen Platz nicht mehr – gemessen 15.10.2026).
+ * (`PlatzFenster`, P2c) sind dasselbe Stück. − geht nicht unter die Belegten und die Entwürfe auf freien Plätzen, + hat
+ * keine Obergrenze – auch mit Entwürfen (19.11.2026: der Dienstplaner trägt sie nach der Änderung selbst auf die neuen
+ * Nummern um). **Gesperrt** sind beide nur, wo die Entwürfe der Gruppe nicht umgetragen werden dürfen. Die Grenzen rechnet
+ * `plaetzeGrenze` – eine Stelle für Regler und Hinweise.
  */
 export function PlatzRegler({
   z,
@@ -22,14 +23,15 @@ export function PlatzRegler({
   beschaeftigt: boolean;
   onSetze: (neu: number) => void;
 }) {
+  const grenze = plaetzeGrenze(z, n);
   return (
     <>
       <button
         type="button"
         className={eigen.rund}
-        disabled={beschaeftigt || n <= z.belegt || z.entwuerfe > 0}
+        disabled={beschaeftigt || !minusErlaubt(grenze, n)}
         aria-label={`${z.name}: ein Platz weniger`}
-        title={z.entwuerfe > 0 ? sperreText(z.entwuerfe) : undefined}
+        title={grenze.hinweis ?? undefined}
         onClick={() => onSetze(n - 1)}
       >
         −
@@ -40,9 +42,9 @@ export function PlatzRegler({
       <button
         type="button"
         className={eigen.rund}
-        disabled={beschaeftigt || z.entwuerfe > 0}
+        disabled={beschaeftigt || !plusErlaubt(grenze)}
         aria-label={`${z.name}: ein Platz mehr`}
-        title={z.entwuerfe > 0 ? sperreText(z.entwuerfe) : undefined}
+        title={grenze.art === 'gesperrt' ? grenze.hinweis : undefined}
         onClick={() => onSetze(n + 1)}
       >
         +

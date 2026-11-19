@@ -1106,21 +1106,27 @@ des belegten Platzes – keine zweite Logik, kein eigenes Fenster.
 **Das brauchst du:** Dienstplaner als Planer, der Entwürfe anlegen darf; ein Dienst (Ton) mit einem Termin „2 von 3“ (ein Platz offen),
 einem **vollen** Termin (2 von 2) und einem vollen Termin, an dem schon ein Entwurf liegt. Dazu ein Konto, das den Dienst nur ansehen darf.
 
-**Das muss passieren:** Plätze lassen sich in „Personen“ sofort einstellen; „Platz dazunehmen“ erhöht den Platz in ChurchTools und
-trägt die Person danach als Entwurf ein.
+**Das muss passieren:** Plätze lassen sich in „Personen“ sofort einstellen – auch mit Entwürfen am Dienst (sie gehen mit);
+„Platz dazunehmen“ erhöht den Platz in ChurchTools und trägt die Person danach als Entwurf ein.
 
 1. **Planen → Personen.** Am Ende des Blocks Ton steht die Zeile **„Plätze“**: je Termin „2 von 3“. Freie Plätze **rot**, voll grau,
    ohne Plätze **„aus“**. Ein Entwurf auf einem freien Platz zählt mit („3 von 3“) – genauso wie bei „Noch offen“.
 2. **Klick** auf die Zahl (oder auf den roten Tag in „Noch offen“): Fenster „Plätze – Ton · Fr, 27.11.“ mit − / + und „belegt 2 · Plätze 3 · frei 1“.
    **−** → „Ton: jetzt 2 Plätze.“, **+** mehrmals geht ohne Obergrenze. Es gilt sofort, ChurchTools schickt nichts.
-3. **−** ist **aus** (Hinweis „Erst jemanden herausnehmen“), wenn alle Plätze belegt sind. Liegt an Ton an diesem Termin ein **Entwurf**:
-   − und + sind aus, „Hier liegt ein Entwurf – erst senden oder entfernen.“
+3. **−** ist **aus** (Hinweis „Erst jemanden herausnehmen“), wenn alle Plätze belegt sind. Liegt an Ton an diesem Termin ein **Entwurf**
+   auf einem **freien** Platz: **+** geht (der Entwurf zieht auf seine neue Platznummer um, er bleibt am selben Menschen), **−** hört bei den
+   Plätzen mit Inhalt auf – „Auf den freien Plätzen liegen Entwürfe – zum Verkleinern erst einen entfernen.“ Ein Entwurf auf einem
+   **belegten** Platz (Zurückziehen, Ersetzen) hält die Zahl nicht fest. Nur mit einem Konto, das die Entwürfe der Gruppe nicht ändern
+   darf: − und + sind aus, „Hier liegt ein Entwurf – erst senden oder entfernen.“
+   **Nach + oder −:** der Entwurf steht in der Matrix weiter am selben Dienst (nicht als Schild „Entwurf ohne Platz“), in der Sende-Liste
+   unverändert; nach dem Senden landet die Person auf dem richtigen Platz.
 4. Voller Termin, Klick in die leere Zelle einer Person → Fenster „Ton ist voll“ mit „Ton bekommt sofort einen dritten Platz (in
    ChurchTools gespeichert). <Name> wird als Entwurf eingetragen.“ → **Platz dazunehmen (3)**. Ergebnis: Ton hat 3 Plätze (Zeile
    „Plätze“), die Person steht als **Entwurf** in der Zelle, unten zählt die Leiste. In ChurchTools hat Ton jetzt 3 Plätze, die Person
    ist **nicht** eingeteilt.
 5. Entwurf wieder wegnehmen: der dritte Platz **bleibt** (so gewollt).
-6. Voller Termin **mit Entwurf**: Fenster „Erst senden oder Entwürfe entfernen“ mit **Ansehen und senden** (öffnet die Sende-Liste), kein Dazunehmen.
+6. Voller Termin **mit Entwurf**: **Platz dazunehmen** geht trotzdem (der Entwurf geht mit); danach steht die neue Person auf dem neuen
+   Platz, der alte Entwurf unverändert an seinem Platz. Kein Fenster „Erst senden oder Entwürfe entfernen“ mehr.
 7. **Abgesagter Termin:** die Zahl steht da, ist aber kein Knopf. Konto **ohne Recht**: ebenfalls keine Knöpfe.
 8. **Handy (375 px):** Zeile und Fenster sind benutzbar, nichts läuft aus dem Bild.
 
@@ -1128,7 +1134,7 @@ trägt die Person danach als Entwurf ein.
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/dienstplan/platzNachEntwurf.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/personenEintragen.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PlatzFenster.tsx`, `dienstplaner/src/PlatzRegler.tsx`, `dienstplaner/src/PlaetzeFach.tsx`, `dienstplaner/src/useAnzahlSetzen.ts`, `dienstplaner/src/usePlatzDazu.ts`, `dienstplaner/src/Planen.tsx`
-- **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (`plaetzeStand`), `shared/dienstplan/personenRaster.test.ts` (Zeile „Plätze“, `plaetzeZelleText`), `shared/dienstplan/personenEintragen.test.ts` (`voll` mit `entwuerfe`, `platzDazuText`), `dienstplaner/src/Planen.p2c.test.tsx` (Zeile, Fenster, Sperre, Dazunehmen, Fehlerzweige, Wartezeit, abgesagt, ohne Recht); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
+- **Automatisiert:** ja – `shared/dienstplan/platzNachEntwurf.test.ts` (`plaetzeStand`), `shared/dienstplan/personenRaster.test.ts` (Zeile „Plätze“, `plaetzeZelleText`), `shared/dienstplan/personenEintragen.test.ts` (`voll`, `platzDazuText`), `shared/dienstplan/umnummerieren.test.ts` + `entwuerfe.test.ts` (Entwürfe beim Ändern der Platzzahl mitnehmen: Regel, `entwurfUmziehen`), `dienstplaner/src/plaetzeGrenze.test.ts` (Untergrenze fürs „−“), `dienstplaner/src/Planen.p2c.test.tsx` (Zeile, Fenster, Untergrenze, Sperre nur ohne Schreibrecht, Neuladen der Entwürfe, Dazunehmen mit Entwurf, Fehlerzweige, Wartezeit, abgesagt, ohne Recht); Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
 - **Historie:** Wunsch 5 (Alwin 16./17.11.2026, Entwurf `e9-p2-eintragen.html` Fall 6 und 9), Scheibe P2c
 </details>
 
@@ -1153,7 +1159,8 @@ Konto, das den Dienst nur ansehen darf.
 5. **Voller Termin:** Klick in die leere Gäste-Zelle → dasselbe Fenster mit Feld **und** „Ton am 02.12. ist voll (2 von 2). Platz
    dazunehmen und eintragen?“; der Hauptknopf heißt **Platz dazunehmen (3)** (aus, bis ein Name da ist). Ergebnis: Ton hat 3 Plätze,
    der Gast steht als Entwurf auf dem neuen Platz (TF-ABLAUF-38). **Abbrechen** → nichts.
-6. Voller Termin **mit Entwurf**: gleich das Fenster „Erst senden oder Entwürfe entfernen“ mit **Ansehen und senden**, kein Namensfeld.
+6. Voller Termin **mit Entwurf**: dasselbe Fenster mit Feld und **Platz dazunehmen (3)** – der vorhandene Entwurf geht mit, der Gast
+   kommt auf den neuen Platz.
 7. **Handy (375 px):** leere Gäste-Zellen zeigen ein blasses „+“; Antippen öffnet das Fenster, es passt auf den Bildschirm.
 
 <details><summary>Technisches</summary>

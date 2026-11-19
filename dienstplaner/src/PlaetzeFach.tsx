@@ -4,7 +4,8 @@ import { useLaden } from '@ui/ct/useLaden';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { vorlagenFuerKalender, type TerminVorlage } from '@shared/ct/terminVorlagen';
 import { vorlageRechnen, vorlagenGrundText, type VorlagenStand } from '@shared/dienstplan/vorlage';
-import { anzahlFehlerText, plaetzeText, sperreText } from './plaetzeTexte';
+import { anzahlFehlerText, mitnehmenText, plaetzeText } from './plaetzeTexte';
+import { plaetzeGrenze } from './plaetzeGrenze';
 import { PlatzRegler } from './PlatzRegler';
 import { useAnzahlSetzen } from './useAnzahlSetzen';
 import { useInsBild } from './useInsBild';
@@ -19,11 +20,21 @@ export interface PlaetzeZeile {
   anzahl: number;
   belegt: number;
   /**
-   * Entwürfe an diesem Dienst und Termin (gültig oder veraltet). Dann bleibt die Zahl, wie sie ist: Gemessen
-   * (15.10.2026) nummeriert ChurchTools die Plätze beim Ändern neu (ein einzelner Platz hat keine Nummer, ab zwei
-   * heißen sie 1, 2, …) – ein Entwurf fände seinen Platz nicht mehr.
+   * Entwürfe an diesem Dienst und Termin (gültig oder veraltet). Gemessen (15.10.2026) nummeriert ChurchTools die Plätze
+   * beim Ändern neu (ein einzelner Platz hat keine Nummer, ab zwei heißen sie 1, 2, …) – seit 19.11.2026 trägt der
+   * Dienstplaner die Entwürfe dabei selbst um (`anzahlMitEntwuerfen`).
    */
   entwuerfe: number;
+  /**
+   * Davon die auf **freien** Plätzen – nur sie halten die Zahl fest (die Untergrenze für „−“ ist belegt + diese;
+   * `plaetzeGrenze`). Ein Entwurf auf einem belegten Platz zählt nicht extra.
+   */
+  entwuerfeAufFreien: number;
+  /**
+   * Dürfen die Entwürfe dieses Dienstes umgetragen werden (Schublade der Dienstgruppe „bereit“)? Sonst bleibt der Dienst
+   * mit Entwürfen gesperrt. Ohne Entwürfe ohne Bedeutung (`true`).
+   */
+  mitnehmbar: boolean;
 }
 
 /**
@@ -35,7 +46,7 @@ export interface PlaetzeZeile {
  * **Alle Dienste der Gruppe** stehen da, auch die ohne Platz an diesem Termin (Anzahl 0, „nicht vorgesehen“) – „+“ schaltet
  * sie ein, „−“ bis 0 aus. Oben kann man eine **ChurchTools-Terminvorlage übernehmen** (13.11.2026): erst die Vorschau,
  * dann „Übernehmen“; sie **nimmt nur dazu** (nie weniger), **nur bei den Diensten dieser Gruppe** (Alwin, 16.11.2026 – andere
- * Gruppen übergeht sie still), und lässt Dienste mit Entwürfen aus (`vorlageRechnen`). Jeder Dienst wird einzeln gespeichert – scheitert einer, laufen die anderen weiter.
+ * Gruppen übergeht sie still). Entwürfe stören nicht mehr (19.11.2026: sie gehen mit, `anzahlMitEntwuerfen`); nur wo sie nicht umgetragen werden dürfen, lässt sie den Dienst aus (`vorlageRechnen`). Jeder Dienst wird einzeln gespeichert – scheitert einer, laufen die anderen weiter.
  */
 export function PlaetzeFach({
   titel,
@@ -43,6 +54,7 @@ export function PlaetzeFach({
   zeilen,
   vorlage,
   aendern,
+  laedt = false,
   onGespeichert,
   onClose,
 }: {
@@ -61,6 +73,8 @@ export function PlaetzeFach({
     gruppenDienste: ReadonlySet<number>;
   };
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
+  /** Plan und Entwürfe laden nach einer Änderung neu (`usePlaetzeFrisch`) – solange sind die Knöpfe gesperrt. */
+  laedt?: boolean;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
@@ -77,8 +91,9 @@ export function PlaetzeFach({
     meldung,
     setMeldung,
     beschaeftigt,
+    knoepfeAus,
     setze: setzeEinen,
-  } = useAnzahlSetzen({ zeilen, aendern, onGespeichert, gesperrt: vorlageLaeuft });
+  } = useAnzahlSetzen({ zeilen, aendern, onGespeichert, gesperrt: vorlageLaeuft, laedt });
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? ergebnis);
 
   // Einmal beim Öffnen (und je Kalender): `vorlage` selbst ist bei jedem Zeichnen ein neues Objekt.
@@ -94,7 +109,11 @@ export function PlaetzeFach({
     new Map(
       zeilen.map((z) => [
         z.serviceId,
-        { name: z.name, anzahl: anzahl.get(z.serviceId) ?? z.anzahl, entwuerfe: z.entwuerfe },
+        {
+          name: z.name,
+          anzahl: anzahl.get(z.serviceId) ?? z.anzahl,
+          gesperrt: plaetzeGrenze(z, anzahl.get(z.serviceId) ?? z.anzahl).art === 'gesperrt',
+        },
       ]),
     );
 
@@ -123,7 +142,7 @@ export function PlaetzeFach({
 
   /** Die Vorlage übernehmen: Dienst für Dienst, jeder mit frisch lesen und nachlesen – ein Fehler hält die anderen nicht auf. */
   const uebernehmen = async () => {
-    if (!rechnung || beschaeftigt || rechnung.r.aendern.length === 0) return;
+    if (!rechnung || knoepfeAus || rechnung.r.aendern.length === 0) return;
     const alle = new Map(zeilen.map((z) => [z.serviceId, z]));
     const jetzt = new Map(anzahl);
     const geklappt: string[] = [];
@@ -143,6 +162,9 @@ export function PlaetzeFach({
       if (r.ok) {
         jetzt.set(z.serviceId, r.anzahl);
         geklappt.push(`${z.name}: ${plaetzeText(r.anzahl)}`);
+        // Die Plätze sind geändert – gingen Entwürfe nicht mit, steht das bei den Fehlern (und der Planer lädt neu).
+        const offen = mitnehmenText(r);
+        if (offen) fehler.push(`${z.name}: ${offen}`);
       } else {
         // Was jetzt dasteht, gilt – auch wenn es nicht das ist, was wir wollten.
         if (r.jetzt !== undefined) jetzt.set(z.serviceId, r.jetzt);
@@ -189,7 +211,7 @@ export function PlaetzeFach({
             className={eigen.auswahl}
             aria-label="Vorlage"
             value={gewaehlt ?? ''}
-            disabled={beschaeftigt}
+            disabled={knoepfeAus}
             onChange={(e) => {
               setGewaehlt(e.target.value === '' ? null : Number(e.target.value));
               setErgebnis(null);
@@ -225,7 +247,7 @@ export function PlaetzeFach({
                 <button
                   type="button"
                   className={`${styles.knopf} ${styles.primaer}`}
-                  disabled={beschaeftigt}
+                  disabled={knoepfeAus}
                   onClick={() => void uebernehmen()}
                 >
                   {vorlageLaeuft ? 'Wird übernommen …' : 'Übernehmen'}
@@ -238,6 +260,9 @@ export function PlaetzeFach({
       <ul className={eigen.liste} aria-label="Plätze je Dienst">
         {zeilen.map((z) => {
           const n = anzahl.get(z.serviceId) ?? z.anzahl;
+          // Im Fach nur, was mit Entwürfen zu tun hat (die Sperre, die Grenze durch Entwürfe) – „belegt“ steht ohnehin da.
+          const g = plaetzeGrenze(z, n);
+          const hinweis = g.art === 'gesperrt' || g.grund === 'entwuerfe' ? g.hinweis : null;
           return (
             <li key={z.serviceId} className={eigen.zeile}>
               <span className={eigen.dienst}>
@@ -245,15 +270,13 @@ export function PlaetzeFach({
                 <small>
                   {n === 0 ? 'nicht vorgesehen' : z.belegt > 0 ? `${z.belegt} belegt` : 'frei'}
                 </small>
-                {z.entwuerfe > 0 && (
-                  <small className={eigen.gesperrt}>{sperreText(z.entwuerfe)}</small>
-                )}
+                {hinweis && <small className={eigen.gesperrt}>{hinweis}</small>}
               </span>
               <PlatzRegler
                 z={z}
                 n={n}
                 laeuft={laeuft === z.serviceId}
-                beschaeftigt={beschaeftigt}
+                beschaeftigt={knoepfeAus}
                 onSetze={(neu) => void setze(z, neu)}
               />
             </li>

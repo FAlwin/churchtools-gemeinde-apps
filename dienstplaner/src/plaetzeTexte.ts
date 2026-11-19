@@ -27,6 +27,23 @@ export function anzahlFehlerText(r: Extract<AnzahlErgebnis, { ok: false }>): str
   }
 }
 
-/** „Hier liegt ein Entwurf – erst senden oder entfernen.“ – der Satz der Sperre (Regler und Fenster in „Personen“). */
+/**
+ * „Hier liegt ein Entwurf – erst senden oder entfernen.“ – der Satz der **Sperre** (nur wo die Entwürfe der Gruppe nicht
+ * umgetragen werden dürfen, `plaetzeGrenze`).
+ */
 export const sperreText = (entwuerfe: number): string =>
   `${entwuerfe === 1 ? 'Hier liegt ein Entwurf' : `Hier liegen ${entwuerfe} Entwürfe`} – erst senden oder entfernen.`;
+
+/**
+ * Nach einer geglückten Änderung der Platzzahl: Was mit den Entwürfen geschah, wenn etwas offen blieb – sonst `null`.
+ * Die Platzzahl IST dann schon geändert; der Planer lädt neu (Plan und Entwürfe).
+ */
+export function mitnehmenText(r: Extract<AnzahlErgebnis, { ok: true }>): string | null {
+  const e = r.entwuerfe;
+  if (!e) return null;
+  if (e.unklar) {
+    return `${plaetzeText(r.anzahl)} gespeichert – ob Entwürfe mitgehen müssen, ließ sich nicht prüfen. Bitte die Seite neu laden.`;
+  }
+  if (e.offen === 0) return null;
+  return `${plaetzeText(r.anzahl)} gespeichert – ${e.offen === 1 ? '1 Entwurf konnte' : `${e.offen} Entwürfe konnten`} nicht mitgehen und ${e.offen === 1 ? 'liegt' : 'liegen'} noch am alten Platz. Bitte neu laden.`;
+}

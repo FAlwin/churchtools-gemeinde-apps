@@ -4,7 +4,19 @@ import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstplan/werKann';
+import {
+  ABSCHNITT_TITEL,
+  abschnitteAus,
+  kandidatenAus,
+  kandidatHinweis,
+  type Kandidat,
+  type WerKannAbschnitt,
+} from '@shared/dienstplan/werKann';
+import {
+  antwortenFuerPlatz,
+  antwortZeile,
+  type ZellenAntwort,
+} from '@shared/dienstplan/personenAntworten';
 import {
   zielText,
   type Besetzung,
@@ -19,6 +31,8 @@ import { grundText } from './ladeEntwuerfe';
 import { GastFeld } from './GastFeld';
 import { GAST_HINWEIS, gastNameAus } from './gastName';
 import { useInsBild } from './useInsBild';
+import type { AntwortenLader } from './ladeAntworten';
+import { usePersonenAntworten } from './usePersonenAntworten';
 import styles from './WerKann.module.scss';
 
 /** Welcher freie Platz – alles, was das Fach zum Laden und für die Überschrift braucht. */
@@ -92,6 +106,7 @@ export function WerKann({
   eintragen,
   stift,
   fokus,
+  antworten,
 }: {
   platz: FreierPlatz;
   onClose: () => void;
@@ -112,6 +127,12 @@ export function WerKann({
     mini: (personId: number) => string;
     zeigen: (k: { personId: number; name: string }) => void;
   };
+  /**
+   * Die Antworten aus „Wann kann ich?“ (E5c-4): `lader` ist derselbe wie in „Personen“ (`AntwortenLader`), `dienstName`
+   * übersetzt Dienst-IDs in Namen („nur für Gesang“). Ohne Angabe – oder wenn die Antworten dieser Dienstgruppe nicht
+   * sichtbar sind – ist die Liste wie vor E5c-4.
+   */
+  antworten?: { lader: AntwortenLader; dienstName: (id: number) => string | undefined };
 }) {
   const { stand, neu } = useLaden(
     () =>
@@ -120,13 +141,28 @@ export function WerKann({
       ),
     [platz.eventId, platz.serviceId, platz.monat, platz.schonDa],
   );
+  // Die Antworten laden unabhängig von den Kandidaten – scheitern sie, steht die Liste trotzdem da (nur ohne Abschnitte).
+  // Sie gelten je Dienstgruppe des Platzes; ohne Gruppe (0) gibt es nichts zu laden.
+  const antw = usePersonenAntworten(antworten?.lader, platz.gruppeId > 0 ? [platz.gruppeId] : []);
+  const zuPlatz = antworten
+    ? antwortenFuerPlatz(antw.antworten, {
+        gruppeId: platz.gruppeId > 0 ? platz.gruppeId : null,
+        terminId: platz.eventId,
+        dienstId: platz.serviceId,
+        dienstName: antworten.dienstName,
+      })
+    : null;
+  const antwortFehler = antw.fehler ?? antw.neuFehler;
   const zustand: Zustand =
     stand.art === 'fertig'
-      ? { art: 'fertig', liste: stand.daten }
+      ? antw.laedt
+        ? { art: 'laedt' } // erst, wenn auch die Antworten da (oder gescheitert) sind – sonst spränge die Liste um
+        : { art: 'fertig', liste: stand.daten }
       : stand.art === 'fehler'
         ? stand
         : { art: 'laedt' };
   const [suche, setSuche] = useState('');
+  const [kannNichtOffen, setKannNichtOffen] = useState(false);
   const [gast, setGast] = useState('');
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -151,6 +187,69 @@ export function WerKann({
   };
 
   const q = suche.trim().toLowerCase();
+  const passtZurSuche = (x: { kandidat: Kandidat }) =>
+    q === '' || x.kandidat.name.toLowerCase().includes(q);
+  const abschnitte: WerKannAbschnitt[] | null =
+    zustand.art === 'fertig' ? abschnitteAus(zustand.liste, zuPlatz) : null;
+
+  /** Eine Zeile der Liste – in allen Abschnitten und in der einen Liste dieselbe. */
+  const zeile = (k: Kandidat, antwort: ZellenAntwort | null) => {
+    const h = kandidatHinweis(k);
+    const zweite = antwortZeile(antwort, k.abwesend !== null);
+    const inhalt = (
+      <>
+        <span className={styles.wer}>
+          <b>{k.name}</b>
+          <small className={h.warnung ? styles.warnung : undefined}>{h.text}</small>
+          {zweite && <small className={styles.antwort}>{zweite}</small>}
+          {fokus && <small className={styles.mini}>{fokus.mini(k.personId)}</small>}
+        </span>
+        <span className={styles.anzahl}>
+          {k.imMonat}× im {platz.monatName}
+        </span>
+      </>
+    );
+    const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
+    return (
+      <li key={k.personId} className={stift || fokus ? styles.mitStift : undefined}>
+        {bereit ? (
+          <button
+            type="button"
+            className={`${klasse} ${styles.waehlbar}`}
+            disabled={laeuft}
+            onClick={() =>
+              void waehle(
+                { art: 'person', personId: k.personId, name: k.name },
+                bereit.erwartet ?? null,
+              )
+            }
+          >
+            {inhalt}
+          </button>
+        ) : (
+          <div className={klasse}>{inhalt}</div>
+        )}
+        {fokus && (
+          <button
+            type="button"
+            className={styles.zeigen}
+            onClick={() => fokus.zeigen({ personId: k.personId, name: k.name })}
+            aria-label={`Im Plan zeigen: ${k.name}`}
+            title="Im Plan zeigen – das Fenster schließt, die Person wird hervorgehoben"
+          >
+            <Icon name="fokus" size={16} />
+          </button>
+        )}
+        {stift && (
+          <StiftKnopf
+            name={k.name}
+            disabled={laeuft}
+            onKlick={() => setStiftFuer({ id: k.personId, name: k.name })}
+          />
+        )}
+      </li>
+    );
+  };
   return (
     <Sheet
       title={`${platz.dienst} · ${platz.tag}`}
@@ -178,72 +277,74 @@ export function WerKann({
             />
           )}
           {notiz && <p className={styles.notiz}>{notiz}</p>}
-          <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
-          {zustand.liste.length === 0 ? (
-            <p className={styles.hinweis}>
-              Für diesen Dienst schlägt ChurchTools niemanden vor – in der ChurchTools-Gruppe des
-              Dienstes ist sonst niemand.
+          {antwortFehler && (
+            <p className={styles.hinweis} role="status">
+              Antworten aus „Wann kann ich?“ gerade nicht geladen – die Liste zeigt sie deshalb
+              nicht.{' '}
+              {antwortFehler.nochmal && (
+                <button type="button" className={styles.link} onClick={antw.neuLaden}>
+                  Nochmal versuchen
+                </button>
+              )}
             </p>
+          )}
+          {zustand.liste.length === 0 ? (
+            <>
+              <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
+              <p className={styles.hinweis}>
+                Für diesen Dienst schlägt ChurchTools niemanden vor – in der ChurchTools-Gruppe des
+                Dienstes ist sonst niemand.
+              </p>
+            </>
+          ) : abschnitte ? (
+            <>
+              {abschnitte.map((ab) => {
+                const treffer = ab.personen.filter(passtZurSuche);
+                if (q !== '' && treffer.length === 0) return null;
+                const kannNicht = ab.stufe === 'kannNicht';
+                const zu = kannNicht && !kannNichtOffen;
+                const titel = ABSCHNITT_TITEL[ab.stufe];
+                return (
+                  <section key={ab.stufe} className={styles.abschnitt} aria-label={titel}>
+                    {kannNicht ? (
+                      <h3 className={styles.abschnittKopf}>
+                        <button
+                          type="button"
+                          className={styles.aufzu}
+                          aria-expanded={!zu}
+                          onClick={() => setKannNichtOffen(!kannNichtOffen)}
+                        >
+                          <i className={`${styles.pfeil} ${zu ? '' : styles.offen}`} aria-hidden />
+                          {titel} <span className={styles.zahl}>{treffer.length}</span>
+                        </button>
+                      </h3>
+                    ) : (
+                      <h3 className={styles.abschnittKopf}>
+                        {titel} <span className={styles.zahl}>{treffer.length}</span>
+                      </h3>
+                    )}
+                    {!zu && treffer.length > 0 && (
+                      <ul className={styles.liste} aria-label={titel}>
+                        {treffer.map((x) => zeile(x.kandidat, x.antwort))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+              <p className={styles.hinweis}>
+                Die Antwort ersetzt nicht die Prüfung von ChurchTools: Warnungen bleiben rot, ein
+                Klick trägt trotzdem ein.
+              </p>
+            </>
           ) : (
-            <ul className={styles.liste} aria-label="Wer kann?">
-              {zustand.liste
-                .filter((k) => q === '' || k.name.toLowerCase().includes(q))
-                .map((k) => {
-                  const h = kandidatHinweis(k);
-                  const inhalt = (
-                    <>
-                      <span className={styles.wer}>
-                        <b>{k.name}</b>
-                        <small className={h.warnung ? styles.warnung : undefined}>{h.text}</small>
-                        {fokus && <small className={styles.mini}>{fokus.mini(k.personId)}</small>}
-                      </span>
-                      <span className={styles.anzahl}>
-                        {k.imMonat}× im {platz.monatName}
-                      </span>
-                    </>
-                  );
-                  const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
-                  return (
-                    <li key={k.personId} className={stift || fokus ? styles.mitStift : undefined}>
-                      {bereit ? (
-                        <button
-                          type="button"
-                          className={`${klasse} ${styles.waehlbar}`}
-                          disabled={laeuft}
-                          onClick={() =>
-                            void waehle(
-                              { art: 'person', personId: k.personId, name: k.name },
-                              bereit.erwartet ?? null,
-                            )
-                          }
-                        >
-                          {inhalt}
-                        </button>
-                      ) : (
-                        <div className={klasse}>{inhalt}</div>
-                      )}
-                      {fokus && (
-                        <button
-                          type="button"
-                          className={styles.zeigen}
-                          onClick={() => fokus.zeigen({ personId: k.personId, name: k.name })}
-                          aria-label={`Im Plan zeigen: ${k.name}`}
-                          title="Im Plan zeigen – das Fenster schließt, die Person wird hervorgehoben"
-                        >
-                          <Icon name="fokus" size={16} />
-                        </button>
-                      )}
-                      {stift && (
-                        <StiftKnopf
-                          name={k.name}
-                          disabled={laeuft}
-                          onKlick={() => setStiftFuer({ id: k.personId, name: k.name })}
-                        />
-                      )}
-                    </li>
-                  );
-                })}
-            </ul>
+            <>
+              <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
+              <ul className={styles.liste} aria-label="Wer kann?">
+                {zustand.liste
+                  .filter((k) => passtZurSuche({ kandidat: k }))
+                  .map((k) => zeile(k, null))}
+              </ul>
+            </>
           )}
           {bereit && (
             <form

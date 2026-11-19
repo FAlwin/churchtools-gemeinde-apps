@@ -287,6 +287,7 @@ export function Planen({
     heute,
     handy,
     onGesendet: leiseNeuLaden,
+    antwortenLader: ladeAntworten,
     // Womit ein neuer Entwurf beginnt – je Dienst, gemerkt je Gerät (P2m); „Wer kann?“, „Personen“, Zauberstab fragen hier.
     modusFuer: (dienstId) => modusFuerDienst(ansicht.direktDienste, dienstId),
     fokus: {

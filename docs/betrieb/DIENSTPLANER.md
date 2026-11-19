@@ -275,7 +275,7 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
 - **Antworten aus „Wann kann ich?“ (E5c-3, 19.11.2026, Entwurf `e5c-wann-kann-ich.html` Bereich 2, Variante D):** Die Fläche jeder
   Zelle zeigt die Antwort der Person auf diesen Termin: **Ja grün**, **Vielleicht gelblich**, **Nein/abwesend rot schraffiert**,
   **keine Antwort weiß** (Tokens `--antwort-ja`, `--antwort-vielleicht`, `--antwort-nein-schraffur`/`-toenung` in `ui/design`,
-  hell und dunkel – dieselben Werte sollen später „Wer kann?“ färben). Die Tags (zugesagt/angefragt/Entwurf) liegen davor.
+  hell und dunkel; „Wer kann?“ nutzt sie nicht – dort sind es Abschnitte, E5c-4). Die Tags (zugesagt/angefragt/Entwurf) liegen davor.
   Regeln in `shared/dienstplan/personenAntworten.ts`: **Abwesenheit schlägt die Antwort** (`flaecheAus`); bei **„nur bestimmte
   Dienste“** (`Antwort.dienste`, fehlt = alle) gilt die Antwort in einem anderen Dienst nicht – die Zelle bleibt weiß, Tooltip und
   Vorlesetext sagen es („Ja – nur für Gesang“); die **Notiz** steht dort ebenfalls („Ja – nur bis 12 Uhr“, `antwortText`). Der
@@ -291,6 +291,24 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
     401 und jede vorübergehende Störung (Netz, 5xx, gebremst, Zeitüberschreitung) **werfen** für das Ganze: Beim ersten Laden steht
     ein Hinweis mit „Erneut versuchen“ (ohne Legende und Zahlen), beim Neuladen bleiben die bisherigen Antworten stehen und der
     Hinweis steht daneben. Ein Fehlschlag wird nie als „keine Antwort“ gezeigt.
+- **Antworten in „Wer kann?“ und im Zauberstab (E5c-4, 19.11.2026, Entwurf `e5c-wann-kann-ich.html` Bereich 3, Variante A):**
+  **Eine Regel für Raster, „Wer kann?“ und Zauberstab** in `shared/dienstplan/personenAntworten.ts`: `antwortFuer` (Antwort einer
+  Person auf einen Termin im Blick auf einen Dienst, mit Sichtbarkeit der Dienstgruppe) und `antwortStufe` (Ja / Vielleicht / keine /
+  kann nicht). **„Wer kann?“** (`werKann.ts` → `abschnitteAus`, `WerKann.tsx`) zeigt, sobald die Antworten der Dienstgruppe des Platzes
+  sichtbar sind, die Abschnitte **„Hat Ja gesagt“ · „Vielleicht“ · „Keine Antwort“** und **„Kann nicht / abwesend“ (eingeklappt)**, je mit
+  Zahl; innerhalb eines Abschnitts bleibt die Reihenfolge „frei und selten dran“, die Notiz steht kursiv als zweite Zeile
+  (`Vielleicht: „nur bis 12 Uhr“`). In „Kann nicht“ steht, wer in ChurchTools **abwesend** ist (auch mit Ja – Abwesenheit schlägt die Antwort)
+  und wer **nur für andere Dienste** geantwortet hat („Ja – nur für Gesang“); die Personen dort bleiben wählbar, Warnungen bleiben rot,
+  ein Klick trägt trotzdem ein. Die Suche (ab 7 Kandidaten) filtert über alle Abschnitte. **Nicht sichtbar** (Kategorie fehlt, kein Recht,
+  Dienstgruppe nicht planbar) = die eine Liste wie vor E5c-4; **vorübergehender Fehler** = dieselbe Liste plus Hinweis „Antworten aus
+  „Wann kann ich?“ gerade nicht geladen“ (mit „Nochmal versuchen“) – nie alle unter „Keine Antwort“; die Kandidaten warten nicht auf
+  die Antworten, nur auf deren Ergebnis (geladen oder gescheitert). Geladen wird mit **demselben Lader wie „Personen“** (`AntwortenLader`,
+  in `App.tsx` durch `Planen`/`TerminAnsicht` → `useEinteilen` → `WerKann`/`ZauberstabFach`), je Fenster für die eine Dienstgruppe des Platzes.
+  **Zauberstab** (`zauberstab.ts`): bei sichtbaren Antworten gehen **Stufen vor Punkten** – Ja, dann Vielleicht, dann keine Antwort; innerhalb
+  einer Stufe wie bisher Punktzahl, `imLauf`, Name; die Grenze −100 bleibt; wer „nur für andere Dienste“ geantwortet hat, wird für diesen
+  Dienst nicht genommen (`laufGrund: 'andere-dienste'`). Ohne sichtbare Antworten oder beim Ladefehler rechnet er wie früher (Hinweis im Fenster).
+  Das Fenster zeigt die Antwort hinter dem Namen („Ben (0×) – Ja“). Dienstnamen für „nur für Gesang“ kommen aus dem Plan (nur Dienste, die
+  darin stehen – wie im Raster).
 - **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
   Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
 
@@ -377,7 +395,7 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
   wie bei den Anmeldungen.
 - Vorlieben (Stift, E5-3): nur über die alte Schnittstelle, an einer Stelle `shared/dienstplan/vorlieben.ts` (Erfolg erst nach dem Nachlesen – ohne Recht meldet ChurchTools `success` und schreibt nichts).
 - Zauberstab (E5): Regeln in `shared/dienstplan/zauberstab.ts`, Fenster `dienstplaner/src/ZauberstabFach.tsx`, Symbol aus der ChurchTools-Schrift über `CtSymbol.tsx` – wie der ChurchTools-Zauberstab (über −100),
-  eigene Vorschläge zählen mit den Abzügen von ChurchTools mit (Messprotokoll E5-0); geladen in
+  eigene Vorschläge zählen mit den Abzügen von ChurchTools mit (Messprotokoll E5-0); seit E5c-4 gehen bei sichtbaren Antworten Stufen (Ja, Vielleicht, keine) vor Punkten; geladen in
   `dienstplaner/src/ladeZauberstab.ts`.
 - Termin-Ansicht (E6-1b): `dienstplaner/src/TerminAnsicht.tsx`, Adresse `#/termin/<id>` (`reiter.ts`); der Ablauf ist
   derselbe Baustein wie in der Musik-App (`ui/ablauf/AblaufListe`, Regeln einer Zeile in `shared/ct/ablaufZeile.ts`).

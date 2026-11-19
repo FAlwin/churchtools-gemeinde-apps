@@ -20,6 +20,7 @@ import { useMusikApp } from './useMusikApp';
 import { EinteilPlaetze } from './PlanPlaetze';
 import { ZauberKnopf } from './PlanAnsicht';
 import { useEinteilen } from './useEinteilen';
+import type { AntwortenLader } from './ladeAntworten';
 import { darfPlanen } from './planSicht';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { andereTermineText } from './planEntwuerfe';
@@ -89,6 +90,7 @@ export function TerminAnsicht({
   onGeaendert,
   tausch,
   entwuerfe,
+  ladeAntworten,
   heute,
   handy,
 }: {
@@ -108,6 +110,8 @@ export function TerminAnsicht({
   tausch?: Tausch;
   /** Einteilen als Entwurf (F1) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
   entwuerfe?: EntwurfAnschluss;
+  /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
+  ladeAntworten?: AntwortenLader;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde) – für den Zauberstab. */
   heute: string;
   /** Schmaler Bildschirm: die Leiste kürzer („Ansehen & senden“). */
@@ -131,6 +135,7 @@ export function TerminAnsicht({
     entwuerfe,
     heute,
     handy,
+    antwortenLader: ladeAntworten,
     nachfragen: false,
     leisteZusatz: 'an diesem Termin',
     sendenZusatz: (daten) => andereTermineText(daten, terminId),

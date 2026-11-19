@@ -22,6 +22,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     titel: 'Eintragen',
     punkte: [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
+      '„Wer kann?“ sortiert nach den Antworten aus „Wann kann ich?“: erst Ja, dann Vielleicht, dann keine Antwort; „Kann nicht / abwesend“ ist eingeklappt.',
       '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
       'Belegten Platz antippen (auch in „Personen“): zurückziehen oder ersetzen.',
       '„Personen“, Zeile „Gäste“: Name eintragen – ohne ChurchTools-Konto, keine Anfrage.',
@@ -45,7 +46,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     titel: 'Plätze und Zauberstab',
     punkte: [
       'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort (Plätze auch über die Zeile „Plätze“ in „Personen“).',
-      'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf.',
+      'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf – wer in „Wann kann ich?“ Ja gesagt hat, kommt zuerst.',
       'Stift am Namen: Vorlieben der Person – wirkt sofort.',
     ],
   },

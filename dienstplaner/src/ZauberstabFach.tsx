@@ -11,11 +11,18 @@ import {
   type Eingeplant,
   type ZauberPlatz,
 } from '@shared/dienstplan/zauberstab';
+import {
+  antwortenFuerPlatz,
+  antwortText,
+  KEINE_ANTWORTEN,
+  type PersonenAntworten,
+} from '@shared/dienstplan/personenAntworten';
 import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { Belegung } from '@shared/dienstplan/einteilen';
 import { abfrageSchluessel, ladeZauberstab } from './ladeZauberstab';
 import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
 import { vergissWerKann } from './ladeWerKann';
+import type { AntwortenLader } from './ladeAntworten';
 import { StiftKnopf, VorliebenFach } from './VorliebenFach';
 import styles from './ZauberstabFach.module.scss';
 
@@ -58,12 +65,33 @@ type Zustand =
   | { art: 'speichert' }
   | { art: 'fertig' };
 
+/** Der Antworten-Teil eines Platzes: `null` = nicht sichtbar (Stufen gibt es dann nicht). */
+function antwortenDes(
+  z: ZauberZeile,
+  antworten: PersonenAntworten,
+  dienstName: (id: number) => string | undefined,
+): ZauberPlatz['antworten'] {
+  return (
+    antwortenFuerPlatz(antworten, {
+      gruppeId: z.gruppeId > 0 ? z.gruppeId : null,
+      terminId: z.terminId,
+      dienstId: z.serviceId,
+      dienstName,
+    }) ?? undefined
+  );
+}
+
+/** Die Antwort aus „Wann kann ich?“ als kurzer Text hinter dem Namen („Ja“, „Vielleicht – nur bis 12 Uhr“). */
+const antwortKurz = (k: Bewertet): string | null => (k.antwort ? antwortText(k.antwort) : null);
+
 /** Warum jemand eher nicht passt – die Texte von „Wer kann?“ und ChurchTools, dazu was der Lauf beiträgt. */
 function eherNichtText(k: Bewertet): string {
   const h = kandidatHinweis(k);
   if (h.warnung) return h.text;
   if (k.laufGrund === 'am-tag') return 'an diesem Tag schon vorgeschlagen';
   if (k.laufGrund === 'hoechstens') return `höchstens ${k.hoechstensImMonat}× im Monat`;
+  if (k.laufGrund === 'andere-dienste' && k.antwort)
+    return `Antwort gilt nicht für diesen Dienst: ${antwortText(k.antwort)}`;
   // ChurchTools unterscheidet nicht, ob jemand selbst abgesagt hat oder vom Planer herausgenommen wurde (E4-0).
   if (k.frueherAbgesagt < 0) return 'hat zuvor abgesagt oder wurde herausgenommen';
   return k.hauptGrund ?? 'passt laut ChurchTools nicht';
@@ -88,6 +116,7 @@ export function ZauberstabFach({
   onClose,
   gruppe,
   vorlieben,
+  antworten,
 }: {
   titel: string;
   unter: string;
@@ -105,10 +134,18 @@ export function ZauberstabFach({
   gruppe: { id: number; name: string };
   /** Ohne Anschluss kein Stift. */
   vorlieben?: EntwurfAnschluss['vorlieben'];
+  /**
+   * Die Antworten aus „Wann kann ich?“ (E5c-4): Ja vor Vielleicht vor keiner Antwort. Ohne Angabe – oder wenn sie nicht
+   * sichtbar sind oder nicht geladen werden konnten – rechnet der Zauberstab wie vor E5c-4.
+   */
+  antworten?: { lader: AntwortenLader; dienstName: (id: number) => string | undefined };
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt', fertig: 0, gesamt: 0 });
   const [versuch, setVersuch] = useState(0);
   const [roh, setRoh] = useState<Map<string, RohKandidat[]> | null>(null);
+  // Die Antworten – geladen mit den Kandidaten; scheitern sie, rechnet der Zauberstab ohne und sagt es (`antwortFehler`).
+  const [antw, setAntw] = useState<PersonenAntworten>(KEINE_ANTWORTEN);
+  const [antwortFehler, setAntwortFehler] = useState(false);
   const [wahl, setWahl] = useState<Map<string, number | null>>(new Map());
   const [hand, setHand] = useState<Set<string>>(new Set());
   const [ergebnisse, setErgebnisse] = useState<Map<string, EntwurfErgebnis>>(new Map());
@@ -120,9 +157,12 @@ export function ZauberstabFach({
         ? zeilen.map((z) => ({
             ...z,
             roh: roh.get(abfrageSchluessel(z.terminId, z.serviceId)) ?? [],
+            antworten: antworten ? antwortenDes(z, antw, antworten.dienstName) : undefined,
           }))
         : [],
-    [roh, zeilen],
+    // `antworten` ist je Öffnen derselbe Lader; die Namen ändern sich nicht, solange das Fenster offen ist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roh, zeilen, antw],
   );
 
   // Abbrechen hält die Abfragen selbst an – nicht erst, wenn der Aufrufer das Fenster entfernt.
@@ -136,18 +176,33 @@ export function ZauberstabFach({
     const ab = new AbortController();
     abbruch.current = ab;
     setZustand({ art: 'laedt', fertig: 0, gesamt: 0 });
-    ladeZauberstab(zeilen, {
-      signal: ab.signal,
-      fortschritt: (fertig, gesamt) =>
-        !ab.signal.aborted && setZustand({ art: 'laedt', fertig, gesamt }),
-    }).then(
-      (m) => {
+    // Die Antworten stören den Lauf nie: Scheitert das Laden, rechnet der Zauberstab ohne sie (nichts sichtbar, keine Stufen) und
+    // sagt es – er sortiert nie alle als „keine Antwort“ ein.
+    const antwortenLaden: Promise<{ a: PersonenAntworten; fehler: boolean }> =
+      antworten && gruppe.id > 0
+        ? antworten.lader([gruppe.id]).then(
+            (a) => ({ a, fehler: false }),
+            () => ({ a: KEINE_ANTWORTEN, fehler: true }),
+          )
+        : Promise.resolve({ a: KEINE_ANTWORTEN, fehler: false });
+    Promise.all([
+      ladeZauberstab(zeilen, {
+        signal: ab.signal,
+        fortschritt: (fertig, gesamt) =>
+          !ab.signal.aborted && setZustand({ art: 'laedt', fertig, gesamt }),
+      }),
+      antwortenLaden,
+    ]).then(
+      ([m, { a, fehler }]) => {
         if (ab.signal.aborted) return;
         const p = zeilen.map((z) => ({
           ...z,
           roh: m.get(abfrageSchluessel(z.terminId, z.serviceId)) ?? [],
+          antworten: antworten ? antwortenDes(z, a, antworten.dienstName) : undefined,
         }));
         setRoh(m);
+        setAntw(a);
+        setAntwortFehler(fehler);
         const fest = festNachLaden.current;
         setWahl(vorschlagen(p, { eingeplant, fest }));
         setHand(new Set(fest.keys()));
@@ -267,6 +322,13 @@ export function ZauberstabFach({
 
       {notiz && <p className={styles.notiz}>{notiz}</p>}
 
+      {antwortFehler && zustand.art !== 'laedt' && (
+        <p className={styles.hinweis} role="status">
+          Antworten aus „Wann kann ich?“ gerade nicht geladen – die Vorschläge sind ohne sie
+          berechnet.
+        </p>
+      )}
+
       {zustand.art === 'fehler' && (
         <FehlerKasten fehler={zustand.fehler} onNochmal={() => setVersuch((v) => v + 1)} />
       )}
@@ -344,7 +406,7 @@ export function ZauberstabFach({
                         <optgroup label="Passt">
                           {passt.map((o) => (
                             <option key={o.personId} value={o.personId}>
-                              {o.name} ({o.imMonat}×)
+                              {o.name} ({o.imMonat}×){antwortKurz(o) ? ` – ${antwortKurz(o)}` : ''}
                             </option>
                           ))}
                         </optgroup>
@@ -354,6 +416,9 @@ export function ZauberstabFach({
                           {eher.map((o) => (
                             <option key={o.personId} value={o.personId}>
                               {o.name} – {eherNichtText(o)}
+                              {antwortKurz(o) && o.laufGrund !== 'andere-dienste'
+                                ? ` (${antwortKurz(o)})`
+                                : ''}
                             </option>
                           ))}
                         </optgroup>
@@ -393,7 +458,7 @@ export function ZauberstabFach({
                             : 'bleibt frei'
                           : gewaehlt && !gewaehlt.passt
                             ? `Achtung: ${eherNichtText(gewaehlt)}`
-                            : `${gewaehlt?.imMonat ?? 0}× im ${z.monatName} eingeteilt · bekommt beim Senden eine Anfrage`}
+                            : `${gewaehlt?.imMonat ?? 0}× im ${z.monatName} eingeteilt${gewaehlt && antwortKurz(gewaehlt) ? ` · ${antwortKurz(gewaehlt)}` : ''} · bekommt beim Senden eine Anfrage`}
                     </small>
                   </div>
                 );

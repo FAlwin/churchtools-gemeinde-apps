@@ -39,7 +39,8 @@ import {
 import type { GruppenAbwesenheit, PersonenDaten } from './personenDaten';
 import {
   flaecheAus,
-  zellenAntwort,
+  antwortFuer,
+  antwortenSichtbar,
   type AntwortZahlen,
   type PersonenAntworten,
   type ZellenAntwort,
@@ -203,8 +204,7 @@ export function personenRaster(o: {
   entwurf?: EntwurfSuche;
 }): Raster {
   const { plan, spalten, gruppen, daten } = o;
-  const antwortSicht = (d: Dienst): boolean =>
-    d.dienstgruppeId !== null && o.antworten?.sichtbar.has(d.dienstgruppeId) === true;
+  const antwortSicht = (d: Dienst): boolean => antwortenSichtbar(o.antworten, d.dienstgruppeId);
   const dienstNamen = new Map(
     plan.gruppen.flatMap((g) => g.zeilen.map((z) => [z.dienst.id, z.dienst.name] as const)),
   );
@@ -366,13 +366,13 @@ export function personenRaster(o: {
             });
           const abwesend = abwesendAm(personId, plan.spalten[i]);
           // Termin-ID als Text – derselbe Schlüssel, unter dem „Wann kann ich?“ die Antwort speichert.
-          const antwort = antwortSicht(dienst)
-            ? zellenAntwort(
-                o.antworten?.jePerson.get(personId)?.[String(plan.spalten[i].id)],
-                dienst.id,
-                (id) => dienstNamen.get(id),
-              )
-            : null;
+          const antwort = antwortFuer(o.antworten, {
+            gruppeId: dienst.dienstgruppeId,
+            personId,
+            terminId: plan.spalten[i].id,
+            dienstId: dienst.id,
+            dienstName: (id) => dienstNamen.get(id),
+          });
           const modus =
             zustand === 'entwurf' ? (entwurfZelle.get(personId)?.get(pos) ?? null) : null;
           return {

@@ -74,6 +74,14 @@ export function antwortText(a: ZellenAntwort): string {
   return teile.join(' – ');
 }
 
+/**
+ * Der Text der Zelle (Tooltip, Vorleser): `antwortText`, bei einer Abwesenheit mit „– aber abwesend“ – sonst sagte die rot
+ * schraffierte Zelle im Tooltip „Ja“ (Abwesenheit schlägt die Antwort, `flaecheAus`).
+ */
+export function zellenText(a: ZellenAntwort, abwesend: boolean): string {
+  return abwesend ? `${antwortText(a)} – aber abwesend` : antwortText(a);
+}
+
 /** Die Anzahl **verschiedener Personen** mit Ja bzw. Vielleicht an einem Termin (Spaltenkopf). */
 export interface AntwortZahlen {
   ja: number;

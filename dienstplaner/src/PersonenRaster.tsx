@@ -7,7 +7,7 @@ import { tagKurz } from '@shared/ct/datum';
 import type { PlanZeile } from '@shared/dienstplan/plan';
 import type { Besetzung } from '@shared/dienstplan/entwuerfe';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
-import { antwortText, zahlenText } from '@shared/dienstplan/personenAntworten';
+import { zahlenText, zellenText } from '@shared/dienstplan/personenAntworten';
 import {
   eintragenWarnung,
   platzDazuText,
@@ -485,6 +485,7 @@ export function PersonenRaster({
       <td className={styles.einsaetze}>{r.einsaetze}</td>
       {r.zellen.map((z, pos) => {
         const a = aktionFuer(b, r, pos);
+        const antwort = z.antwort ? zellenText(z.antwort, !!z.abwesend) : null;
         const name = `${r.name} für ${b.dienst.name} am ${tagKurz(termine[pos].tag)}`;
         const klasse = [
           termine[pos].abgesagt ? styles.abgesagtSpalte : '',
@@ -503,8 +504,8 @@ export function PersonenRaster({
             key={termine[pos].id}
             className={klasse || undefined}
             // Die Antwort aus „Wann kann ich?“ in Worten – die Farbe allein trägt die Bedeutung nicht (Notiz, „nur für …“).
-            title={z.antwort ? antwortText(z.antwort) : undefined}
-            aria-label={z.antwort ? antwortText(z.antwort) : undefined}
+            // Für Vorleser steht sie als versteckter Text in der Zelle (ein `aria-label` an der Zelle würde deren Inhalt verdecken).
+            title={antwort ?? undefined}
             // Ein Klick irgendwo in der Zelle (auch auf einem Tag darin) – der Knopf darunter ist für Tastatur und Vorleser;
             // sein Klick steigt hierher auf, so wird nichts doppelt gerechnet.
             onClick={a ? () => klick(b, r, pos) : undefined}
@@ -539,6 +540,7 @@ export function PersonenRaster({
                 )}
               </button>
             )}
+            {antwort && <span className={styles.vorleser}>{antwort}</span>}
             <Zelle z={z} dienst={b.dienst.name} farbe={farbe(b.dienst.id)} />
           </td>
         );

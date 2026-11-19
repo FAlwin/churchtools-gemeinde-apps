@@ -159,7 +159,9 @@ describe('Personen-Raster mit Antworten', () => {
     expect(annaJa.className).toMatch(/antwortJa/);
     expect(annaViel.className).toMatch(/antwortVielleicht/);
     expect(annaViel.title).toBe('Vielleicht – nur bis 12 Uhr');
-    expect(annaViel.getAttribute('aria-label')).toBe('Vielleicht – nur bis 12 Uhr');
+    // Kein aria-label an der Zelle (würde ihren Inhalt verdecken) – die Antwort steht als versteckter Text in der Zelle.
+    expect(annaViel.hasAttribute('aria-label')).toBe(false);
+    expect(annaViel.textContent).toContain('Vielleicht – nur bis 12 Uhr');
     // Ben im Gesang: „Ja nur für Ton“ → weiß, aber der Text sagt es; am 21 Ja → grün.
     const ben = zellen(t, 8, 0);
     expect(ben[0].className).not.toMatch(/antwort(Ja|Vielleicht)/);
@@ -169,6 +171,7 @@ describe('Personen-Raster mit Antworten', () => {
     const carla = zellen(t, 11, 0);
     expect(carla[0].className).toMatch(/abwZelle/);
     expect(carla[0].className).not.toMatch(/antwortJa/);
+    expect(carla[0].title).toBe('Ja – aber abwesend');
     expect(carla[1].className).not.toMatch(/antwort(Ja|Vielleicht)|abwZelle/);
     expect(carla[1].title).toBe('');
   });

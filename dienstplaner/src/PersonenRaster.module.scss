@@ -711,3 +711,13 @@ $anzahl-farben: 8;
     margin-right: 0;
   }
 }
+
+// Die Antwort in Worten nur für Vorleser (E5c-3) – sichtbar ist die Fläche, im Tooltip der Text.
+.vorleser {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

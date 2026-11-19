@@ -606,7 +606,7 @@ kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 
 **Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe,
-in der Ansicht „Termine × Dienste“ oder „Personen × Termine“. „Wir suchen noch …“ gibt es nicht mehr.
+in der Ansicht „Termine“, „Personen“ oder „Je Person“. „Wir suchen noch …“ gibt es nicht mehr.
 
 1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
    Plan** · **Eine Gruppe** (kein „Wir suchen noch …“); darunter Zeitraum und Zahl der Termine – dieselben wie
@@ -619,20 +619,28 @@ in der Ansicht „Termine × Dienste“ oder „Personen × Termine“. „Wir s
 4. Eine alte gemerkte Wahl „Wir suchen noch …“ (aus einer früheren Version) → es ist **Ganzer Plan** gewählt.
 5. Viele Termine → mehrere Seiten, auf jeder Kopf, Tabellenkopf und „Seite x von y“; ab sechs Spalten quer.
 6. **Herunterladen** → „Dienstplan <Gruppe> TT.MM.-TT.MM.JJJJ.pdf“; **Teilen** → Teilen-Menü.
-7. Unter „Was“ (und der Gruppenzeile) die Reihe **Ansicht**: **Termine × Dienste** (gewählt) · **Personen × Termine**; auch bei 375 px Breite
-   ohne Überlauf. **Personen × Termine** → eine Tabelle quer über alle gewählten Gruppen: erste Spalte der Name (fett, alphabetisch, nur wer
+7. Unter „Was“ (und der Gruppenzeile) die Reihe **Ansicht**: **Termine** (gewählt; = Termine × Dienste) · **Personen** · **Je Person** – drei kurze Knöpfe, auch bei 375 px Breite
+   in einer Reihe und ohne Überlauf. **Personen** (= Personen × Termine) → eine Tabelle quer über alle gewählten Gruppen: erste Spalte der Name (fett, alphabetisch, nur wer
    mindestens einen Dienst hat), je Termin eine Spalte „So, 06.12.“ (am selben Tag zwei Termine: „So, 06.12. 18:00“), in der Zelle die Dienste
    mit Komma, angefragte mit grauem „(angefragt)“, sonst leer; hinten schmal „Dienste“ = Anzahl. Ein abgesagter Termin hat keine Spalte, ein
    verborgener Name („besetzt“) keine Zeile. Mehr als acht Termine → Blöcke mit dem Zeitraum als Band. Dateiname „Dienstplan Personen …“.
    Niemand eingeteilt → „In diesem Zeitraum ist niemand eingeteilt.“ Was oder Gruppe wechseln → die Ansicht bleibt (und umgekehrt); Fenster
    neu öffnen → alles ist noch gewählt.
+8. **Je Person** → darunter die Reihe **Seiten**: **Seite je Person** (gewählt) · **Untereinander**; bei „Termine“ und „Personen“ gibt es diese Reihe nicht.
+   Das Blatt (hoch): je Eingeteiltem ein graues Band mit dem Namen und rechts „8 Dienste“ (bei einem „1 Dienst“), darunter Datum („So, 06.12.2026“),
+   Uhrzeit, Termin, Dienst; je Termin eine Zeile, mehrere Dienste am selben Termin untereinander in einer Zeile; beim **ganzen Plan** hinter dem Dienst
+   grau „· Gruppe“, bei **Eine Gruppe** nicht; angefragte mit grauem „(angefragt)“. Abgesagte Termine fehlen, ein verborgener Name („besetzt“) hat keinen
+   Abschnitt. **Seite je Person** → jede Person beginnt eine neue Seite. **Untereinander** → die Abschnitte laufen hintereinander; passt einer nicht mehr
+   auf die Seite, steht er ganz auf der nächsten (Band nie allein unten), nur ein Abschnitt, der allein länger als eine Seite ist, geht über den Seitenumbruch
+   (der Tabellenkopf wiederholt sich). Dateiname „Dienstplan je Person …“, Untertitel „… · Je Person“. Niemand eingeteilt → „In diesem Zeitraum ist niemand
+   eingeteilt.“ Die Seiten-Wahl bleibt beim Wechsel von Was, Gruppe und Ansicht (auch hin und zurück) und nach dem erneuten Öffnen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`, `shared/dienstplan/werWieOft.ts`
-- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer; Personen × Termine: Zeilen, Spalten ohne abgesagte, Uhrzeit bei doppeltem Tag, Zellen, Blöcke ab neun Terminen), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten, schmale Summenspalte), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen, Reihe „Ansicht“ gemerkt und beim Wechsel behalten); von Hand bleiben Aussehen und Teilen-Menü am Gerät
-- **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`); E8-4b (19.11.2026, Entwurf `e8-4-ansichten.html`)
+- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer; Personen × Termine: Zeilen, Spalten ohne abgesagte, Uhrzeit bei doppeltem Tag, Zellen, Blöcke ab neun Terminen; Je Person: Abschnitte, Band-Zusatz, Zeilen, Gruppenname nur beim ganzen Plan, Seiten-Felder, Wahl lesen), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten, schmale Summenspalte; Je Person: neue Seite, Zusammenhalten, langer Block getrennt), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen, Reihe „Ansicht“ gemerkt und beim Wechsel behalten, Je Person mit Reihe „Seiten“); von Hand bleiben Aussehen und Teilen-Menü am Gerät
+- **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`); E8-4b und E8-4c (19.11.2026, Entwurf `e8-4-ansichten.html`)
 
 </details>
 

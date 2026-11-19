@@ -12,7 +12,6 @@ const blatt = (termine: number, gruppen = ['Technik', 'Musik']): PlanBlatt => ({
   app: 'Dienstplaner',
   stand: 'Stand 05.11.2026, 14:00',
   quer: false,
-  oben: null,
   leer: null,
   dateiname: 'Dienstplan',
   abschnitte: gruppen.map((g) => ({
@@ -51,15 +50,14 @@ describe('Plan-Blatt als PDF', () => {
     expect(roh).toContain(`(Seite ${seiten} von ${seiten})`);
   });
 
-  it('oben und leer stehen als Zeile da – statt einer leeren Tabelle', async () => {
+  it('leer steht als Zeile da – statt einer leeren Tabelle', async () => {
     const roh = (
       await planBlattPdf(
-        { ...blatt(0), abschnitte: [], oben: 'Offene Dienste in Technik', leer: 'Alles besetzt' },
+        { ...blatt(0), abschnitte: [], leer: 'In diesem Zeitraum sind keine Dienste vorgesehen.' },
         'helvetica',
       )
     ).output();
-    expect(roh).toContain('(Offene Dienste in Technik)');
-    expect(roh).toContain('(Alles besetzt)');
+    expect(roh).toContain('(In diesem Zeitraum sind keine Dienste vorgesehen.)');
   });
 
   it('„Termin“ nimmt sich nur, was er braucht – den Rest teilen sich die Dienste', () => {

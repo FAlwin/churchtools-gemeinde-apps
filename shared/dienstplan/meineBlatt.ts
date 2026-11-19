@@ -41,7 +41,6 @@ export function meineBlatt(q: MeineBlattQuelle): PlanBlatt {
     app: q.app,
     stand: q.stand,
     quer: false,
-    oben: null,
     abschnitte:
       zeilen.length > 0
         ? [

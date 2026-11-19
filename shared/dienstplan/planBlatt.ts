@@ -1,8 +1,8 @@
 /**
- * **Das Plan-Blatt** (Bauplan E8-2, Entwurf `e8-teilen.html`) – was aus „Planen“ aufs geteilte PDF kommt: der ganze Plan
- * (je Gruppe ein Abschnitt), nur eine Gruppe (z. B. für den Gruppenchat) oder „Wir suchen noch …“ (nur die offenen
- * Dienste, ohne Namen – zum Rumschicken). Geteilt werden die Termine und Gruppen, die „Planen“ gerade zeigt; Entwürfe
- * stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
+ * **Das Plan-Blatt** (Bauplan E8-2/E8-4, Entwürfe `e8-teilen.html`, `e8-4-ansichten.html`) – was aus „Planen“ aufs geteilte
+ * PDF kommt: **was** (der ganze Plan mit je einem Abschnitt je Gruppe, oder nur eine Gruppe, z. B. für den Gruppenchat) in
+ * welcher **Ansicht** (heute nur „Termine × Dienste“; Personen und „Je Person“ folgen in E8-4b/c). Geteilt werden die
+ * Termine und Gruppen, die „Planen“ gerade zeigt; Entwürfe stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
  * denselben Zellen wie das Termin-Blatt (`terminBlatt.ts`).
  */
 import { MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
@@ -10,11 +10,36 @@ import type { Lauf, Zelle } from '../ct/terminBlatt';
 import { zaehleFrei } from './platzNachEntwurf';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
 
-export type PlanBlattWahl =
-  | { art: 'plan' }
+/** Die Ansichten des Blatts – E8-4b/c ergänzen „Personen × Termine“ und „Je Person“. */
+export type PlanBlattAnsicht = 'termine';
+
+/** **Was** geteilt wird – der ganze Plan oder eine Gruppe. */
+export type PlanBlattWas =
+  | { was: 'plan' }
   /** Eine Gruppe – Schlüssel wie im Filter von „Planen“ (`id` oder `null` für „Weitere Dienste“). */
-  | { art: 'gruppe'; gruppe: number | null }
-  | { art: 'suchen' };
+  | { was: 'gruppe'; gruppe: number | null };
+
+/** Die Wahl im Fenster „Plan teilen“: **was** (erste Reihe) in welcher **Ansicht** (zweite Reihe). */
+export type PlanBlattWahl = PlanBlattWas & { ansicht: PlanBlattAnsicht };
+
+export const PLAN_BLATT_STANDARD: PlanBlattWahl = { was: 'plan', ansicht: 'termine' };
+
+/**
+ * **Die gemerkte Wahl lesen** (`leseImGeraet`): nur bekannte Formen, sonst der ganze Plan. Bis E8-2 stand dort
+ * `{ art: 'plan' | 'gruppe' | 'suchen', gruppe }` – `plan` und `gruppe` (mit der Gruppe) werden übernommen, „Wir suchen
+ * noch …“ gibt es nicht mehr und wird zum ganzen Plan.
+ */
+export function planBlattWahlAus(roh: unknown): PlanBlattWahl {
+  const r = (roh && typeof roh === 'object' ? roh : {}) as {
+    was?: unknown;
+    art?: unknown;
+    gruppe?: unknown;
+  };
+  const was = r.was ?? r.art;
+  if (was === 'gruppe' && (typeof r.gruppe === 'number' || r.gruppe === null))
+    return { was: 'gruppe', gruppe: r.gruppe, ansicht: 'termine' };
+  return PLAN_BLATT_STANDARD;
+}
 
 export interface PlanBlattQuelle {
   plan: Plan;
@@ -41,8 +66,6 @@ export interface PlanBlatt {
   app: string;
   stand: string;
   quer: boolean;
-  /** Eine Zeile über der Tabelle („Offene Dienste in …“). */
-  oben: string | null;
   abschnitte: PlanBlattAbschnitt[];
   /** Statt einer leeren Tabelle. */
   leer: string | null;
@@ -114,25 +137,6 @@ function gruppenAbschnitt(
   };
 }
 
-/** „Wir suchen noch …“: je Termin die Dienste mit freien Plätzen („Gesang ×2“) – ohne Namen. */
-function suchenAbschnitt(plan: Plan, spalten: readonly number[], gruppen: readonly PlanGruppe[]) {
-  const zeilen: Zelle[][] = [];
-  for (const i of spalten) {
-    const gesucht = gruppen.flatMap((g) =>
-      g.zeilen.flatMap((z) => {
-        const frei = zaehleFrei(z.zellen[i] ?? []); // nur ChurchTools, ohne Entwürfe
-        return frei > 0 ? [`${z.dienst.name}${frei > 1 ? ` ×${frei}` : ''}`] : [];
-      }),
-    );
-    if (gesucht.length === 0 || plan.spalten[i].abgesagt) continue;
-    zeilen.push([
-      terminZelle(plan.spalten[i]),
-      { absaetze: [{ laeufe: [{ text: gesucht.join(', ') }] }] },
-    ]);
-  }
-  return zeilen;
-}
-
 /** **Das Blatt bauen** – alles, was gezeichnet wird, steht danach fest. */
 export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
   const tage = q.spalten.map((i) => q.plan.spalten[i].tag).sort();
@@ -142,33 +146,19 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
   const datei = von ? `${tagMonat(von)}-${tagPunkt(bis)}` : '';
   const kopf = { untertitel, gemeinde: q.gemeinde, app: q.app, stand: q.stand };
 
-  if (wahl.art === 'suchen') {
-    const zeilen = suchenAbschnitt(q.plan, q.spalten, q.gruppen);
-    return {
-      ...kopf,
-      titel: 'Wir suchen noch …',
-      quer: false,
-      oben: `Offene Dienste in ${q.gruppen.map(gruppenName).join(', ')} – wer kann? Bitte bei der Gruppenleitung melden.`,
-      abschnitte: zeilen.length > 0 ? [{ titel: null, kopf: ['Termin', 'Gesucht'], zeilen }] : [],
-      leer: zeilen.length > 0 ? null : 'Alles besetzt – in diesem Zeitraum ist kein Dienst frei.',
-      dateiname: `Wir suchen noch ${datei}`.trim(),
-    };
-  }
-
   const gruppen =
-    wahl.art === 'gruppe' ? q.gruppen.filter((g) => gruppenId(g) === wahl.gruppe) : q.gruppen;
-  const mitTitel = wahl.art === 'plan' && gruppen.length > 1;
+    wahl.was === 'gruppe' ? q.gruppen.filter((g) => gruppenId(g) === wahl.gruppe) : q.gruppen;
+  const mitTitel = wahl.was === 'plan' && gruppen.length > 1;
   const abschnitte = gruppen.flatMap((g) => {
     const a = gruppenAbschnitt(q.plan, q.spalten, g, mitTitel ? gruppenName(g) : null);
     return a ? [a] : [];
   });
   const titel =
-    wahl.art === 'gruppe' && gruppen[0] ? `Dienstplan ${gruppenName(gruppen[0])}` : 'Dienstplan';
+    wahl.was === 'gruppe' && gruppen[0] ? `Dienstplan ${gruppenName(gruppen[0])}` : 'Dienstplan';
   return {
     ...kopf,
     titel,
     quer: abschnitte.some((a) => a.kopf.length >= QUER_AB),
-    oben: null,
     abschnitte,
     leer: abschnitte.length > 0 ? null : 'In diesem Zeitraum sind keine Dienste vorgesehen.',
     dateiname: `${titel} ${datei}`.trim(),

@@ -600,23 +600,23 @@ kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 
 </details>
 
-### TF-ABLAUF-23 · Plan teilen: ganzer Plan, eine Gruppe, „Wir suchen noch …“
+### TF-ABLAUF-23 · Plan teilen: ganzer Plan, eine Gruppe
 
 **Das brauchst du:** „Planen“ mit mehreren Terminen und mindestens zwei Dienstgruppen, darunter freie und angefragte
 Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 
-**Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, je Gruppe oder
-als Liste der offenen Dienste ohne Namen.
+**Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe.
+„Wir suchen noch …“ gibt es nicht mehr.
 
-1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit **Ganzer Plan**, **Nur
-   <Gruppe>** je eingeblendeter Gruppe und **Wir suchen noch …**; darunter Zeitraum und Zahl der Termine – dieselben wie
+1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
+   Plan** · **Eine Gruppe** (kein „Wir suchen noch …“); darunter Zeitraum und Zahl der Termine – dieselben wie
    im Zeitraum-Knopf.
 2. **Ganzer Plan** → Vorschau: je Gruppe ein graues Band und eine Tabelle (Termin, dann die Dienste); Namen, angefragte
    mit „(angefragt)“, freie Plätze rot „frei“; keine Spalte für einen Dienst, der an keinem Termin vorgesehen ist.
-3. **Nur <Gruppe>** → Titel „Dienstplan <Gruppe>“, nur diese Tabelle. Fenster schließen und neu öffnen → die Wahl ist
+3. **Eine Gruppe** → darunter eine Zeile mit den eingeblendeten Gruppen (zuerst die erste gewählt); eine andere
+   antippen → Titel „Dienstplan <Gruppe>“, nur diese Tabelle. Fenster schließen und neu öffnen → die Wahl ist
    noch da. Die Gruppe im Filter ausblenden, neu öffnen → „Ganzer Plan“ ist gewählt.
-4. **Wir suchen noch …** → nur Termine mit freien Plätzen, „Gesucht: Ton, Gesang ×2“, keine Namen; abgesagte Termine
-   fehlen; ist alles besetzt, steht das da.
+4. Eine alte gemerkte Wahl „Wir suchen noch …“ (aus einer früheren Version) → es ist **Ganzer Plan** gewählt.
 5. Viele Termine → mehrere Seiten, auf jeder Kopf, Tabellenkopf und „Seite x von y“; ab sechs Spalten quer.
 6. **Herunterladen** → „Dienstplan <Gruppe> TT.MM.-TT.MM.JJJJ.pdf“; **Teilen** → Teilen-Menü.
 
@@ -624,7 +624,7 @@ als Liste der offenen Dienste ohne Namen.
 
 - **Priorität:** normal
 - **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`
-- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, „Wir suchen noch“ ohne Namen und ohne Abgesagte, keine leeren Spalten, quer), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Wahl, gemerkt, ausgeblendete Gruppe, verborgene Namen); von Hand bleiben Aussehen und Teilen-Menü am Gerät
+- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen); von Hand bleiben Aussehen und Teilen-Menü am Gerät
 - **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`)
 
 </details>
@@ -835,7 +835,7 @@ noch, was zählt.
 5. Den **Gruppenhaken mit Strich** antippen: Alle Dienste der Gruppe sind wieder an. Den Haken noch einmal antippen: Gruppe
    aus, alle ihre Dienste abgehakt. Alle Dienste einer Gruppe **einzeln** abhaken: Der Gruppenhaken ist dann ebenfalls aus.
 6. Das Gerät merkt sich die Wahl: App neu laden → derselbe Filter. Über **Teilen** → Plan: Der ausgeblendete Dienst steht
-   weder im PDF noch unter „Wir suchen noch …“.
+   nicht im PDF.
 7. **Personen**: Den Kopf eines Dienstes („Ton · 5 Personen“) antippen → nur der Kopf bleibt, die Zeilen und Gäste sind weg,
    **Noch offen** zählt den Dienst weiter. Noch einmal antippen klappt auf. Zuklappen ist **kein** Ausblenden: Der Filter
    ändert sich nicht.
@@ -949,7 +949,7 @@ Platz frei** ist, einer eingeteilten Person (zugesagt) im selben Dienst und **ei
    Zelle anklicken (Entwurf): „Einsätze“ der Person **+1**, „Noch offen“ dieses Termins **−1**. Den eigenen Entwurf anklicken
    (weg): beides wieder wie vorher.
 5. Ein Entwurf, der **veraltet** ist (in ChurchTools hat inzwischen jemand anderes den Platz belegt): zählt nicht.
-6. **Teilen / PDF:** „Plan teilen“ mit einem offenen Entwurf: „Wir suchen noch …“ und die roten „N frei“ zeigen weiter den
+6. **Teilen / PDF:** „Plan teilen“ mit einem offenen Entwurf: die roten „N frei“ im PDF zeigen weiter den
    Stand von ChurchTools (der Entwurf ist noch nicht verbindlich).
 7. **Abgesagter Termin, Matrix:** der freie Platz ist **kein Knopf** (nichts öffnet „Wer kann?“); Namen und bestehende
    Einteilungen stehen da wie bisher. Der Zauberstab füllt ihn nicht.

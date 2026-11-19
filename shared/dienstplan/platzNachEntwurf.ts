@@ -11,7 +11,7 @@
  * 2. **Wer steht am Platz?** – das beantwortet `platzPerson` (`fokus.ts`) mit derselben Gültigkeitsregel; daraus rechnen
  *    „Einsätze“ in „Personen“ und der Fokus. Beide Funktionen müssen zusammen passen (Test `platzNachEntwurf.test.ts`).
  *
- * **Bewusst ohne Entwürfe** zählt, was an ChurchTools geht oder im Teilen/PDF steht („Wir suchen noch …“): ein Entwurf ist
+ * **Bewusst ohne Entwürfe** zählt, was an ChurchTools geht oder im Teilen/PDF steht (Plan als PDF): ein Entwurf ist
  * dort noch nicht verbindlich. Diese Stellen rufen `zaehleFrei` ohne Entwurfs-Suche – das steht dann sichtbar im Code.
  *
  * Nur Typ-Importe aus `plan.ts` (`plan.ts` selbst ruft diese Datei auf).

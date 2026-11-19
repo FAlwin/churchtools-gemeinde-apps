@@ -48,7 +48,6 @@ class PlanZeichner extends PdfSatz {
   }
 
   alles() {
-    if (this.b.oben) this.text(this.b.oben);
     if (this.b.leer) this.text(this.b.leer);
     this.b.abschnitte.forEach((a, i) => {
       if (i > 0) this.y += 5;
@@ -57,7 +56,7 @@ class PlanZeichner extends PdfSatz {
     this.kopfUndFuss(this.b);
   }
 
-  /** Eine graue Zeile über der Tabelle (oder statt ihrer). */
+  /** Eine graue Zeile statt der Tabelle. */
   private text(t: string) {
     this.d.setFont(this.font, 'normal');
     this.d.setFontSize(GROSS + 0.5);

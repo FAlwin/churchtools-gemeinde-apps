@@ -21,8 +21,8 @@
 >   Zauberstab (erst Ja, dann Vielleicht, dann ohne Antwort – je Stufe nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf; Antworten als Fläche: Ja grün, Vielleicht gelb, Nein/abwesend rot schraffiert), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
->   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Erinnern** (Mail an alle, die noch nicht geantwortet haben), **Teilen** = Plan,
->   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
+>   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Erinnern** (Mail an alle, die noch nicht geantwortet haben), **Teilen** = der ganze Plan
+>   oder eine Gruppe als PDF (Reihe „Was“, bei „Eine Gruppe“ dazu die Gruppen; „Wir suchen noch …“ gibt es seit E8-4a nicht mehr). Am Handy ein Termin auf einmal.
 > - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
 >   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
@@ -225,7 +225,7 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   wandern. **Veraltete Entwürfe zählen nicht** (dort gilt ChurchTools). Einen Extra-Hinweis gibt es nicht – die Entwürfe stehen
   ja blau gestrichelt da. Die Regel steht in `shared/dienstplan/platzNachEntwurf.ts` (`platzGiltFrei`, `zaehleFrei`; daraus
   `terminStand` und `gruppenFrei` in `plan.ts`); „wer steht am Platz“ beantwortet weiter `platzPerson` (`fokus.ts`), mit
-  derselben Gültigkeit. **Bewusst ohne Entwürfe** bleiben **Teilen/PDF** („Wir suchen noch …“, Plan als PDF, Termin-Blatt) und
+  derselben Gültigkeit. **Bewusst ohne Entwürfe** bleiben **Teilen/PDF** (Plan als PDF, Termin-Blatt) und
   alles, was an ChurchTools geht: dort zählt nur ChurchTools, ein Entwurf ist noch nicht verbindlich (`PlanGruppe.frei` ist
   der ChurchTools-Stand). Ebenso unverändert: die Termin-Liste und die Startseite („Plätze frei“), „Wer wie oft?“ und die Zeile
   „+ Gesang“ in „Personen“.

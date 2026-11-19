@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { diensteAus } from '@shared/ct/dienste';
 import { planAus } from '@shared/dienstplan/plan';
 import type { PlanBlatt } from '@shared/dienstplan/planBlatt';
 import type { RohTermin } from '@shared/dienstplan/termine';
 
 /**
- * **Plan teilen** (E8-2): „Teilen“ in der Werkzeugleiste von „Planen“ öffnet „Plan teilen“ – ganzer Plan, eine Gruppe
- * oder „Wir suchen noch …“, für die gezeigten Termine und eingeblendeten Gruppen. Das Blatt wird festgehalten statt
+ * **Plan teilen** (E8-2): „Teilen“ in der Werkzeugleiste von „Planen“ öffnet „Plan teilen“ – ganzer Plan oder eine Gruppe
+ * (E8-4a: zwei Segment-Reihen, „Wir suchen noch …“ gibt es nicht mehr), für die gezeigten Termine und eingeblendeten Gruppen. Das Blatt wird festgehalten statt
  * gezeichnet – geprüft wird, was aus dem echten Plan (`planAus`) entsteht.
  */
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
@@ -92,48 +92,80 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Plan teilen (E8-2)', () => {
-  it('„Teilen“ in der Werkzeugleiste öffnet „Plan teilen“ – ganzer Plan, je Gruppe, „Wir suchen noch …“', async () => {
+  // Nur im Fenster – „Planen“ dahinter hat selbst Knöpfe „Technik“ & Co.
+  const knopf = (name: string) =>
+    within(screen.getByRole('dialog', { name: 'Plan teilen' })).getByRole('button', { name });
+  const an = (name: string) => knopf(name).getAttribute('aria-pressed') === 'true';
+
+  it('„Teilen“ in der Werkzeugleiste öffnet „Plan teilen“ – Reihe „Was“, bei „Eine Gruppe“ die Gruppen', async () => {
     zeige();
     await oeffnen();
-    expect(screen.getAllByRole('radio').map((r) => r.textContent)).toEqual([
-      'Ganzer Planalle eingeblendeten Gruppen',
-      'Nur Programmz. B. für den Gruppenchat',
-      'Nur Technik',
-      'Wir suchen noch …nur offene Dienste – zum Rumschicken',
+    const was = screen.getByRole('group', { name: 'Was teilen' });
+    expect(Array.from(was.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'Ganzer Plan',
+      'Eine Gruppe',
     ]);
-    expect(screen.getByRole('radio', { name: /Ganzer Plan/ }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
+    expect(an('Ganzer Plan')).toBe(true);
+    // Beim ganzen Plan keine Gruppenzeile, keine Reihe „Ansicht“, kein „Wir suchen noch …“.
+    expect(screen.queryByRole('group', { name: 'Welche Gruppe' })).toBeNull();
+    expect(
+      within(screen.getByRole('dialog', { name: 'Plan teilen' })).queryByRole('group', {
+        name: /Ansicht/,
+      }),
+    ).toBeNull();
+    expect(screen.queryByText(/Wir suchen/)).toBeNull();
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
     expect(letztesBlatt().abschnitte.map((a) => a.titel)).toEqual(['Programm', 'Technik']);
     expect(screen.getByText(/18\. Oktober – 21\. Oktober 2026 · 2 Termine/)).toBeTruthy();
+
+    fireEvent.click(knopf('Eine Gruppe'));
+    const gruppen = await screen.findByRole('group', { name: 'Welche Gruppe' });
+    expect(Array.from(gruppen.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'Programm',
+      'Technik',
+    ]);
+    // Zuerst die erste eingeblendete Gruppe.
+    expect(an('Programm')).toBe(true);
+    await waitFor(() => expect(letztesBlatt().titel).toBe('Dienstplan Programm'));
   });
 
-  it('„Nur Technik“ – das Blatt nur mit Technik, das Gerät merkt sich die Wahl', async () => {
+  it('„Technik“ – das Blatt nur mit Technik, das Gerät merkt sich die Wahl', async () => {
     zeige();
     await oeffnen();
-    fireEvent.click(screen.getByRole('radio', { name: /Nur Technik/ }));
+    fireEvent.click(knopf('Eine Gruppe'));
+    fireEvent.click(knopf('Technik'));
     await waitFor(() => expect(letztesBlatt().titel).toBe('Dienstplan Technik'));
+    expect(JSON.stringify(letztesBlatt())).not.toContain('Gastprediger');
+    // „Eine Gruppe“ noch einmal angetippt: Technik bleibt.
+    fireEvent.click(knopf('Eine Gruppe'));
+    expect(an('Technik')).toBe(true);
     cleanup();
     zeige();
     await oeffnen();
-    expect(screen.getByRole('radio', { name: /Nur Technik/ }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
-  });
-
-  it('„Wir suchen noch …“ – nur offene Dienste, keine Namen; verborgene Namen nie', async () => {
-    zeige();
-    await oeffnen();
-    fireEvent.click(screen.getByRole('radio', { name: /Wir suchen noch/ }));
-    await waitFor(() => expect(letztesBlatt().titel).toBe('Wir suchen noch …'));
-    expect(JSON.stringify(letztesBlatt())).not.toContain('Anna Test');
-    fireEvent.click(screen.getByRole('radio', { name: /Ganzer Plan/ }));
+    expect(an('Eine Gruppe')).toBe(true);
+    expect(an('Technik')).toBe(true);
+    // Zurück zum ganzen Plan.
+    fireEvent.click(knopf('Ganzer Plan'));
     await waitFor(() => expect(letztesBlatt().titel).toBe('Dienstplan'));
     expect(JSON.stringify(letztesBlatt())).not.toContain('Echter Name');
   });
 
-  it('ein ausgeblendeter Dienst steht weder im Blatt noch unter „Wir suchen noch …“ (Wunsch 10)', async () => {
+  it('eine alte gemerkte Wahl („Wir suchen noch“) ist der ganze Plan, eine alte Gruppe bleibt', async () => {
+    localStorage.setItem('teilen.planBlatt', JSON.stringify({ art: 'suchen' }));
+    zeige();
+    await oeffnen();
+    expect(an('Ganzer Plan')).toBe(true);
+    await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
+    cleanup();
+    localStorage.setItem('teilen.planBlatt', JSON.stringify({ art: 'gruppe', gruppe: 3 }));
+    zeige();
+    await oeffnen();
+    expect(an('Eine Gruppe')).toBe(true);
+    expect(an('Technik')).toBe(true);
+    await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan Technik'));
+  });
+
+  it('ein ausgeblendeter Dienst steht nicht im Blatt (Wunsch 10)', async () => {
     zeige();
     await oeffnen();
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
@@ -149,9 +181,6 @@ describe('Plan teilen (E8-2)', () => {
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
     expect(JSON.stringify(letztesBlatt())).not.toContain('Licht');
     expect(JSON.stringify(letztesBlatt())).toContain('Ton');
-    fireEvent.click(screen.getByRole('radio', { name: /Wir suchen noch/ }));
-    await waitFor(() => expect(letztesBlatt().titel).toBe('Wir suchen noch …'));
-    expect(JSON.stringify(letztesBlatt())).not.toContain('Licht');
   });
 
   it('eine gemerkte Gruppe, die gerade ausgeblendet ist, wird zum ganzen Plan', async () => {
@@ -168,9 +197,8 @@ describe('Plan teilen (E8-2)', () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByRole('radio', { name: /Ganzer Plan/ }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
+    expect(an('Ganzer Plan')).toBe(true);
+    expect(screen.queryByRole('group', { name: 'Welche Gruppe' })).toBeNull();
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
   });
 });

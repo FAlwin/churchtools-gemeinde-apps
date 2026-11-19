@@ -23,6 +23,7 @@ import { katalogAus } from './planEntwuerfe';
 import { ladeTerminVorlagen } from './ladeBeiwerk';
 import { ladePersonen } from './ladePersonen';
 import { ladeAntworten } from './ladeAntworten';
+import { ERINNERN } from './ladeErinnern';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -325,6 +326,7 @@ export function App() {
               ladeVorlagen={ladeTerminVorlagen}
               ladePersonen={personenLaden}
               ladeAntworten={antwortenLaden}
+              erinnern={ERINNERN}
               onVorlagen={() => {
                 window.location.hash = ADRESSE_VORLAGEN;
               }}

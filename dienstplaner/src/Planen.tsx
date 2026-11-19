@@ -31,6 +31,7 @@ import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { PlaetzeFach } from './PlaetzeFach';
 import { PlatzFenster } from './PlatzFenster';
+import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
 import { usePlatzDazu } from './usePlatzDazu';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
@@ -103,6 +104,11 @@ interface Props {
    */
   ladeAntworten?: AntwortenLader;
   /**
+   * „Erinnern“ (E5c-5): wie die Mail verschickt wird und wohin ihr Knopf führt. Ohne – oder ohne `ladePersonen` und
+   * `ladeAntworten`, aus denen sich „fehlt noch“ rechnet – gibt es den Knopf nicht.
+   */
+  erinnern?: ErinnernAnschluss;
+  /**
    * Von der Startseite (Wunsch 7, `#/planen/gruppe/3`): nur diese Dienstgruppe und die nächsten 6 Wochen – nur für diesen
    * Besuch, der gemerkte Filter und Zeitraum bleiben. `null`/fehlt: Planen wie gewohnt.
    */
@@ -150,6 +156,7 @@ export function Planen({
   ladeVorlagen,
   ladePersonen,
   ladeAntworten,
+  erinnern,
   fokusGruppe = null,
   onFokusEnde,
   onVorlagen,
@@ -308,6 +315,15 @@ export function Planen({
   // „Plan teilen“ (E8-2): geteilt werden die Termine, die gerade zählen – dieselben wie in der Aufschrift des
   // Zeitraum-Knopfs – und die eingeblendeten Gruppen.
   const [teilenOffen, setTeilenOffen] = useState(false);
+  // „Erinnern“ (E5c-5): die planbaren Dienstgruppen, die der Plan zeigt – als ganze Gruppen (mit allen Diensten, auch den
+  // ausgeblendeten: wer dort eingeteilt ist, ist eingeteilt). Ohne planbare Gruppe gibt es den Knopf nicht.
+  const [erinnernOffen, setErinnernOffen] = useState(false);
+  const erinnernGruppen: PlanGruppe[] =
+    plan && erinnern && ladePersonen && ladeAntworten
+      ? gezeigteGruppen(plan, gruppenAus(ansicht))
+          .filter((g) => g.planbar && g.gruppe !== null)
+          .map((g) => plan.gruppen.find((x) => schluessel(x) === schluessel(g)) ?? g)
+      : [];
 
   const knopf = (
     <ZeitraumKnopf
@@ -409,6 +425,14 @@ export function Planen({
             ),
           ]}
         />
+        {erinnernGruppen.length > 0 && (
+          <KopfKnopf
+            onClick={() => setErinnernOffen(true)}
+            label="Erinnern"
+            title="Erinnern: Mail an alle, die noch nicht geantwortet haben"
+            symbol={<Icon name="brief" size={16} />}
+          />
+        )}
         <KopfKnopf
           onClick={() => setTeilenOffen(true)}
           label="Teilen"
@@ -632,6 +656,19 @@ export function Planen({
       <div ref={rahmen}>{inhalt}</div>
       {sendeLeiste}
       {fenster}
+      {erinnernOffen && plan && erinnern && ladePersonen && ladeAntworten && (
+        <ErinnernFenster
+          plan={plan}
+          // „Wie gezeigt“ – dieselben Termine wie „Teilen“ und die Aufschrift des Zeitraum-Knopfs.
+          spalten={teilenSpalten}
+          gruppen={erinnernGruppen}
+          heute={heute}
+          ladePersonen={ladePersonen}
+          ladeAntworten={ladeAntworten}
+          anschluss={erinnern}
+          onClose={() => setErinnernOffen(false)}
+        />
+      )}
       {vorgabeFach && plan && (
         <VorgabeFach
           dienst={vorgabeFach.name}

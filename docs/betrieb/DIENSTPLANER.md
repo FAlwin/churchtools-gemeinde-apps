@@ -21,7 +21,7 @@
 >   Zauberstab (erst Ja, dann Vielleicht, dann ohne Antwort – je Stufe nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf; Antworten als Fläche: Ja grün, Vielleicht gelb, Nein/abwesend rot schraffiert), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
->   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Teilen** = Plan,
+>   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Erinnern** (Mail an alle, die noch nicht geantwortet haben), **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
 > - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
 >   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
@@ -344,6 +344,37 @@ verbergen“ sind nie fokussierbar.
   Regel „wer steht an diesem Platz“ ist `shared/dienstplan/fokus.ts` (`platzPerson`) – Umrandung, Zählen, Suchvorschläge und
   Mini-Zeile rechnen alle daraus. Farben: `--fokus`, `--fokus-grund`, `--fokus-text` in `ui/design/_farben.scss` (Dunkel:
   nur die Schrift in `_variables.scss`).
+
+**Erinnern** (E5c-5, 19.11.2026; Entwurf `e5c-5-erinnern.html`, Variante B „Alles in einem“): In **Planen** steht neben „Teilen“ der
+Knopf **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planbaren Dienstgruppe im gezeigten Plan, am Handy nur das
+Symbol). Er schickt **eine Mail an jede Person, der noch eine Antwort aus „Wann kann ich?“ fehlt** – Absender ist der Planer
+(ChurchTools verschickt, `POST /events/send`). **Es wird wirklich verschickt** – auf der Test-Instanz nur an eigene Konten ausprobieren.
+
+- **Das Fenster:** oben die **Dienstgruppen** als Knöpfe mit der Zahl der Fehlenden („Musik · 3“; vorgewählt ist die erste Gruppe mit
+  Fehlenden), darunter die **Empfänger** – je Person einmal („N offen: So, 06.12. · Mi, 09.12.“, mit Haken zum Abwählen und
+  **Vorschau**, die genau die Mail zeigt, die verschickt wird). Gehört eine Person zu zwei gewählten Gruppen, steht sie einmal da
+  (mit beiden Gruppen und allen offenen Terminen). **„Text anpassen“** (einklappbar): Betreff und Text nach „Hallo <Vorname>,“; darunter
+  folgen automatisch ihre offenen Termine und der Knopf **„Im Dienstplaner eintragen“** (führt auf „Wann kann ich?“ der Erweiterung,
+  volle Adresse mit Instanz und Kürzel). ChurchTools hängt je Termin zusätzlich einen eigenen Knopf zum Termin an (nicht abschaltbar).
+  **„Eine Kopie an mich“**: genau eine Kopie, nicht je Person.
+- **Wer „fehlt“** (Regel in `shared/dienstplan/erinnern.ts`, gerechnet aus denselben Daten wie die Ansicht „Personen“): Mitglied
+  der Dienstgruppe, das für **mindestens einen** Termin weder Ja/Vielleicht noch Nein hat. Termine: die gezeigten (wie bei „Teilen“),
+  **heute oder später**, nicht abgesagt, und nur solche, an denen die Dienstgruppe einen Dienst hat. **Beantwortet** zählt: Ja,
+  Vielleicht (auch „nur bestimmte Dienste“, selbst wenn es den eigenen Dienst nicht nennt) und Nein = Abwesenheit in ChurchTools
+  (dieselbe Regel `decktTermin` wie überall). Wer an dem Termin **in dieser Gruppe schon eingeteilt** ist (zugesagt oder angefragt),
+  fehlt dort nicht.
+- **Gesperrte Gruppe:** Ist die Lage unsicher – Antworten oder Abwesenheiten nicht sichtbar, Mitglieder verborgen, Laden
+  gescheitert –, ist die Gruppe **gesperrt**, mit kurzem Grund („Antworten nicht sichtbar“); nie wird so getan, als fehlten alle.
+  Vorübergehende Gründe bieten „Erneut versuchen“.
+- **Versand** (`dienstplaner/src/erinnernSenden.ts`): je Person **ein** Aufruf, nacheinander; Erfolg erst, wenn ChurchTools die Person in
+  `sentRecipientIds` nennt. In `rejectedRecipientIds` oder bei 422 (keine Mail-Adresse): **nicht erinnert**, es geht weiter. Bei einem
+  **vorübergehenden Fehler** (Netz, Zeitüberschreitung, Bremse, 5xx) **hält es an**: Die Mail könnte trotzdem rausgegangen sein, darum
+  wird nichts wiederholt, und die Person steht als „unklar, ob die Mail rausging“. Abgemeldet (401) und fehlendes Recht (403) halten
+  ebenfalls an. Das Ergebnis nennt, wer verschickt ist, wer nicht erinnert ist (keine Mail-Adresse) und wer noch offen ist;
+  **„An die übrigen senden“** schickt nur Personen ohne Ergebnis – wer unklar ist, ist **nicht vorgewählt** (man kann ihn bewusst
+  anhaken). Während es läuft, schließt Esc das Fenster nicht.
+- **Offen/ungemessen:** Dürfen Planer ohne Admin-Recht `POST /events/send` aufrufen? (Gemessen nur mit einem Konto mit allen
+  Rechten.) Fehlt das Recht, steht „ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.“
 
 **Ablaufvorlagen ansehen und bearbeiten** (E10-V3a, 17.11.2026; Entwurf `e10-vorlagen.html`): In **Planen** steht in der
 Werkzeugleiste links neben „Ablauf bearbeiten“ der Knopf **„Vorlagen“** – kein eigener Reiter, „Planen“ bleibt markiert,

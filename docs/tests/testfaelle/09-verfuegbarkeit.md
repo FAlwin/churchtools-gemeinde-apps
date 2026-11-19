@@ -460,3 +460,36 @@ ChurchTools-Punkte hat.
 - **Historie:** Dienstplaner E5c-4 (19.11.2026), Entwurf `e5c-wann-kann-ich.html` Bereich 3, Variante A
 
 </details>
+
+### TF-VERF-15 · „Erinnern“: Mail an alle, die noch nicht geantwortet haben
+
+**⚠️ Das verschickt echte Mails.** Nur auf der **Test-Instanz** und nur an **dich selbst** (oder ein eigenes Test-Konto) ausprobieren – die
+anderen Personen vor dem Senden **abwählen**.
+
+**Das brauchst du:** Dienstplaner in der **Test-Instanz**, ein Konto, das die Dienstgruppe (Musik) **planen** darf, der Speicher „Antworten
+Musik“ mit dem Recht „sehen“, mehrere kommende Termine mit Musik-Diensten und ein Mitglied der Gruppe (du oder ein Test-Konto mit Mail-Adresse), das
+für mindestens einen Termin **weder Ja/Vielleicht noch Nein** (Abwesenheit) eingetragen hat und dort nicht eingeteilt ist.
+
+**Das muss passieren:** In Planen steht neben „Teilen“ der Knopf „Erinnern“. Das Fenster nennt die Fehlenden mit ihren offenen Terminen, zeigt vorher
+die Mail und verschickt je Person eine eigene.
+
+1. In Planen auf „Erinnern“ tippen: Die Unterzeile nennt den gezeigten Zeitraum, die Dienstgruppen stehen als Knöpfe mit der Zahl der Fehlenden da;
+   die erste Gruppe mit Fehlenden ist gewählt. Eine Gruppe, deren Antworten du nicht sehen darfst, ist gesperrt – mit Grund darunter.
+2. Alle Personen außer dir abwählen („An 1 Person senden“). Bei dir „Vorschau“ antippen: Betreff, „Hallo <Vorname>,“, deine offenen Termine und der Knopf
+   „Im Dienstplaner eintragen“.
+3. „Text anpassen“: Betreff und Text ändern (auch ein `<` und `&` eintippen) – die Vorschau zeigt es, in der Mail steht der Text unverändert als Text.
+4. „Eine Kopie an mich“ anhaken und senden: „1 Mail verschickt.“ Im Postfach kommt **eine** Mail an (plus genau **eine** Kopie, nicht mehrere); der Knopf
+   „Im Dienstplaner eintragen“ öffnet „Wann kann ich?“ der Erweiterung; darunter hängen die Termin-Knöpfe von ChurchTools.
+5. Mit Ja/Nein beantworten und das Fenster neu öffnen: Du stehst nicht mehr in der Liste. An einem Termin, an dem du eingeteilt bist, auch nicht.
+6. Konto ohne das Recht, Mails zu Terminen zu schicken (falls vorhanden): „ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.“, nichts verschickt.
+7. Netz trennen und senden (mit zwei Test-Konten): angehalten, „X von Y verschickt“; die Person, bei der es hakte, steht als „unklar, ob die Mail rausging“ und
+   ist **nicht vorgewählt**. „An die übrigen senden“ schickt niemandem etwas doppelt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/erinnern.ts`, `dienstplaner/src/erinnernSenden.ts`, `dienstplaner/src/ErinnernFenster.tsx`, `dienstplaner/src/ErinnernErgebnis.tsx`, `dienstplaner/src/ladeErinnern.ts`, `dienstplaner/src/Planen.tsx`, `ui/erweiterung/kuerzel.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/erinnern.test.ts` (Regel „wer fehlt“, gesperrte Lage, Empfänger über Gruppen, Mail-Text mit Maskierung), `dienstplaner/src/erinnernSenden.test.ts` (alle Zweige: Erfolg, abgelehnt, 422, 401, 403, 429/5xx/Netz = unklar, Kopie nur einmal, nur die übrigen), `dienstplaner/src/Planen.erinnern.test.tsx` (Knopf, Fenster, Vorschau = Versand, Ergebnis, Esc), `dienstplaner/src/ladeErinnern.test.ts`; von Hand bleibt, dass die Mail wirklich ankommt (Absender, Knopf, Termin-Knöpfe, Kopie) und ob Planer ohne Admin-Recht `POST /events/send` dürfen
+- **Historie:** Dienstplaner E5c-5 (19.11.2026), Entwurf `e5c-5-erinnern.html`, Variante B
+
+</details>

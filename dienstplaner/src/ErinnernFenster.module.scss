@@ -1,0 +1,241 @@
+// Fenster „Erinnern“ (E5c-5, Entwurf e5c-5-erinnern.html, Variante B) – nur Tokens aus ui/design (hell und dunkel).
+@use '@ui/design/mixins' as m;
+
+.unter {
+  margin: -4px 0 12px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.titel {
+  margin: 14px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hinweis {
+  margin: 8px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.gesperrt {
+  margin: 4px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+// ── Dienstgruppen als Knöpfe ────────────────────────────────────────────────
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: var(--blue);
+    background: var(--blue-tile);
+    color: var(--blue-tile-text);
+    font-weight: 600;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+// ── Empfänger ───────────────────────────────────────────────────────────────
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zeile {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+}
+
+.blass {
+  opacity: 0.6;
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--blue);
+}
+
+.wer {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  b {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  small {
+    font-size: 12.5px;
+    color: var(--text2);
+  }
+}
+
+.warnung {
+  color: var(--red) !important;
+}
+
+.link {
+  @include m.textKnopf;
+  flex: none;
+  font-size: 13px;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+// ── Text anpassen ───────────────────────────────────────────────────────────
+.klapp {
+  @include m.textKnopf;
+  margin-top: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+.feldName {
+  display: block;
+  margin: 10px 0 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.mehrzeilig {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.kopie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+// ── Vorschau der Mail ───────────────────────────────────────────────────────
+.mail {
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  ul {
+    margin: 0 0 10px;
+    padding-left: 18px;
+  }
+}
+
+.betreff {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.ct {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  color: var(--text3);
+  font-size: 12.5px;
+}
+
+// ── Fortschritt und Ergebnis ────────────────────────────────────────────────
+.fortschritt {
+  height: 6px;
+  margin: 0 0 12px;
+  border-radius: 3px;
+  background: var(--hair);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+    transition: width 0.2s;
+  }
+}
+
+.erfolg {
+  margin: 0 0 8px;
+  padding: 12px;
+  border-radius: var(--r-card);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.gut {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.halb {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}

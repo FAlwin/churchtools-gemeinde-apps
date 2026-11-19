@@ -43,6 +43,14 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     ],
   },
   {
+    titel: 'Erinnern',
+    punkte: [
+      '„Erinnern“ schickt jedem, der für Termine im gezeigten Zeitraum noch nicht geantwortet hat, eine eigene Mail mit den offenen Terminen – Absender bist du.',
+      'Wer an dem Termin schon eingeteilt ist, ein Ja/Vielleicht eingetragen hat oder in ChurchTools abwesend ist, wird nicht erinnert. Eine Gruppe, deren Antworten du nicht sehen darfst, ist gesperrt.',
+      'Das Fenster zeigt vorher, wer die Mail bekommt, mit Vorschau. Verschickt wird wirklich – bei einem Fehler hält es an und schickt nichts doppelt.',
+    ],
+  },
+  {
     titel: 'Plätze und Zauberstab',
     punkte: [
       'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort (Plätze auch über die Zeile „Plätze“ in „Personen“).',

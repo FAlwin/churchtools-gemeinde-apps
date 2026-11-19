@@ -247,6 +247,33 @@ describe('Startseite (S3-3)', () => {
     expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
   });
 
+  it('„Jeder für sich“ (W8a): solange MEIN Teil fehlt steht es da – mit „2 von 3 fertig“ statt „in Arbeit“; ist mein Teil erledigt, nicht mehr', async () => {
+    const jeder = modusSetzen(
+      aufgabe({ id: 'j1', text: 'Abwesenheiten eintragen', wer: [ICH, 19, 23] }),
+      true,
+      1,
+      '2026-10-22T08:00:00Z',
+    );
+    const einer = teilSetzen(jeder, 19, true, 19, '2026-10-22T09:00:00Z');
+    m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [einer] }]);
+    zeigen();
+    await screen.findByText('Abwesenheiten eintragen');
+    expect(zeilen('Meine offenen To-Dos')[0]).toMatch(/Leitungsteam · 1 von 3 fertig/);
+    expect(screen.queryByText(/in Arbeit/)).toBeNull();
+    cleanup();
+    m.ladeUebersicht.mockResolvedValue([
+      {
+        ...UEBERSICHT[0],
+        aufgaben: [UEBERFAELLIG, teilSetzen(einer, ICH, true, ICH, '2026-10-22T11:00:00Z')],
+      },
+    ]);
+    zeigen();
+    // Erst warten, bis geladen ist (ein anderes To-Do steht da) – sonst wäre „nicht da“ schon vor dem Laden wahr.
+    await screen.findByText('Beamer-Angebote');
+    // Der Gesamtstand ist „in Arbeit“ (2 von 3), mein Teil aber erledigt – für mich ist es nicht mehr offen.
+    expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
+  });
+
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: /Farbe besorgen/ }));

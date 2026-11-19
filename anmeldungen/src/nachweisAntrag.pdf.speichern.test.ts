@@ -254,6 +254,34 @@ describe('(c) Der Hintergrund geht nicht verloren', () => {
   });
 });
 
+describe('Nachlesen: jedes Bild muss so zurückkommen, wie es hochgeladen wurde', () => {
+  it('ChurchTools liefert das Blatt ohne Seitenbild zurück: gemeldet, nicht „fertig“', async () => {
+    falsch.htmlOhneBild = 'hintergrund';
+    const erg = await nachweisArtSichern(EINGABE, ICH);
+    expect(erg.fehler).toBeInstanceOf(ApiError);
+    expect(erg.erledigt).not.toContain('antrag');
+    expect(erg.befund).toBeNull();
+  });
+
+  it('ChurchTools liefert das Blatt ohne Unterschrift zurück: gemeldet', async () => {
+    falsch.htmlOhneBild = 'unterschrift';
+    const erg = await nachweisArtSichern(EINGABE, ICH);
+    expect(erg.fehler).toBeInstanceOf(ApiError);
+    expect(erg.erledigt).not.toContain('antrag');
+  });
+});
+
+describe('Aufrufer ohne Angabe zum Seitenbild (wie vor N1d)', () => {
+  it('„unverändert“ gilt auch für den Hintergrund: das Seitenbild bleibt, wie es in ChurchTools steht', async () => {
+    const erg = await angelegt();
+    const zweite = await nochmal(erg.gruppeId!, {
+      antragBilder: { logo: { art: 'unveraendert' }, unterschrift: { art: 'unveraendert' } },
+    });
+    expect(zweite.fehler).toBeNull();
+    expect(antragBilderLesen(inhalt())!.hintergrund).toBe(JPG);
+  });
+});
+
 describe('Wechsel zwischen Baukasten und PDF', () => {
   it('von PDF auf Baukasten: dieselbe Vorlage, Blatt ohne Hintergrund, die Unterschrift bleibt', async () => {
     const erg = await angelegt();

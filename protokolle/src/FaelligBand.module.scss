@@ -1,0 +1,59 @@
+// Hinweisband auf der Startseite der Protokolle – rot getönt (überfällig) oder ruhig blau (nur bald fällig).
+@use '@ui/design/mixins' as m;
+
+.band {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r-card);
+  color: var(--text);
+
+  svg {
+    flex: none;
+  }
+}
+
+.rot {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border-color: color-mix(in srgb, var(--red) 35%, transparent);
+
+  svg {
+    color: var(--red);
+  }
+
+  b {
+    color: var(--red);
+  }
+}
+
+.ruhig {
+  background: var(--blue-soft);
+  border-color: color-mix(in srgb, var(--blue) 30%, transparent);
+
+  svg {
+    color: var(--blue-ink);
+  }
+}
+
+.text {
+  flex: 1 1 14em;
+  min-width: 0;
+  font-size: 14.5px;
+}
+
+.knopf {
+  @include m.textKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  font-size: 14px;
+
+  svg {
+    color: currentcolor;
+  }
+}

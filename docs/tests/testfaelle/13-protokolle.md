@@ -716,3 +716,37 @@ Leiste mit einem Knopf je Gruppe mehr, die Seite lässt sich am Handy nicht seit
 - **Historie:** 18.11.2026 (Anlass: Die Gruppen-Leiste mit sieben Knöpfen war am Handy 600 px breit und schob die ganze Seite seitlich; Alwin entschied sich für die Überschrift als Auswahlknopf, Variante A)
 
 </details>
+
+### TF-PROT-21 · Hinweis auf fällige To-Dos: Band, roter Zähler und die Einstellung der Verwaltung
+
+**Das brauchst du:** In der Test-Instanz ein **Admin-Konto** (für die Verwaltung) und eine eingerichtete Gruppe, in der du
+Mitglied bist. Lege dir als Test-To-Dos an (Text beginnt mit „TEST“, du bist zuständig): „TEST Überfällig“ (Bis **gestern**),
+„TEST Bald“ (Bis **übermorgen**), „TEST Später“ (Bis in **zehn Tagen**) und „TEST Erledigt“ (Bis gestern, auf **Erledigt**). Dazu ein
+Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
+
+**Das muss passieren:** Beim Öffnen steht auf der Startseite ein Band, am Reiter „To-Dos“ eine rote Zahl – beides zählt nur
+**deine** offenen To-Dos. Die Verwaltung stellt ein, ab wann ein To-Do „bald fällig“ ist; ohne Einstellung gelten **3 Tage**.
+
+1. **Protokolle** öffnen (ohne Einstellung gespeichert zu haben, falls möglich): Unter der Begrüßung steht ein **rotes Band**
+   „**1 To-Do überfällig**, 1 bis … fällig“ mit „Zu meinen To-Dos“. Am Reiter **To-Dos** steht eine **rote 2**.
+   „TEST Später“ und „TEST Erledigt“ zählen nicht.
+2. Am Computer steht die Zahl am Reiter oben, am Handy am Reiter **unten**. Wechsle auf **Sitzungen** und **Start**: Die Zahl
+   bleibt auf jeder Seite. Ein Screenreader liest „To-Dos, 2 fällig“.
+3. „Zu meinen To-Dos“ antippen: Der Reiter **To-Dos** öffnet sich. Setze dort „TEST Überfällig“ auf **Erledigt**: Die Zahl am
+   Reiter wird **1**. Gehe zurück auf **Start**: Das Band sagt jetzt nur noch „**1 To-Do** bis … fällig“ und ist **blau**, nicht rot.
+4. Als Admin: **Verwaltung → Hinweis auf fällige To-Dos**: Das Feld zeigt „Überfällige und 3 Tage vorher“. Wähle **„Nur Überfällige“**
+   → „Hinweis gespeichert“. Zurück auf **Start**: Kein Band mehr (nichts überfällig), die Zahl am Reiter ist weg. Wähle
+   **„Überfällige und 14 Tage vorher“**: Jetzt zählt auch „TEST Später“ (Zahl 2).
+5. Wähle **„Aus (kein Hinweis, kein Zähler)“**: Weder Band noch Zahl – auch nicht nach dem Neuladen und nicht bei einem anderen
+   Konto in derselben Gruppe. Stelle danach wieder **3 Tage** ein.
+6. Ein Konto **ohne** eigene To-Dos: Weder Band noch Zahl. Öffne die Erweiterung mit **#/sitzungen** in der Adresse: Die Zahl erscheint
+   nach kurzer Zeit auch dort.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/hinweis.ts`, `protokolle/src/todoHinweis.ts`, `protokolle/src/useFaellige.ts`, `protokolle/src/FaelligBand.tsx`, `protokolle/src/TodoHinweisKarte.tsx`, `protokolle/src/App.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/reiter.ts`, `ui/bedienung/ReiterLeiste.tsx`, `ui/bedienung/ReiterZaehler.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/hinweis.test.ts` (Grenzen heute/heute+N, erledigt, fremd, „Aus“, „Nur überfällig“, Band-Texte, Wächter, Standard bei kaputtem Wert), `protokolle/src/todoHinweis.test.ts` (lesen/speichern gegen den ChurchTools-Nachbau, Lesefehler → Standard, verschlucktes Speichern), `protokolle/src/TodoHinweisKarte.test.tsx`, `protokolle/src/FaelligBand.test.tsx`, `protokolle/src/App.test.tsx` (Zähler am Computer und Handy, Ladeaufwand, Folge der Verwaltung), `ui/bedienung/ReiterLeiste.test.tsx`; **nur von Hand:** Aussehen (rotes Band, Zähler in beiden Leisten, Dunkelmodus), echter Wechsel der Einstellung zwischen zwei Konten
+- **Historie:** 19.11.2026 (Alwin: ChurchTools hat keine zeitgesteuerten Erinnerungen, darum ein Hinweis beim Öffnen; Einstellung für die ganze Erweiterung, Standard 3 Tage)
+
+</details>

@@ -16,6 +16,8 @@ import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen } from '@shared/protokolle/speicher';
 import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import { plusTage } from '@shared/ct/datum';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
 import type { Block } from '@shared/protokolle/dokument';
 
@@ -294,6 +296,33 @@ const FRUEHERE_AUFGABEN = [
 ];
 
 /**
+ * **Fällige To-Dos für mich** (Hinweis auf fällige To-Dos): eins überfällig, eins in zwei Tagen fällig – relativ zu heute,
+ * damit Band und roter Zähler in der Demo immer zu sehen sind. Ohne Sitzung (frei angelegt).
+ */
+const FAELLIGE_AUFGABEN = [
+  neueAufgabe({
+    id: 'demo-f1',
+    gruppe: 11,
+    sitzung: null,
+    text: 'Einladung für den Gemeindeabend verschicken',
+    wer: [1],
+    bis: plusTage(heuteImKalender(), -4),
+    von: 1,
+    am: '2026-10-21T19:00:00Z',
+  }),
+  neueAufgabe({
+    id: 'demo-f2',
+    gruppe: 11,
+    sitzung: null,
+    text: 'Raum für Samstag vorbereiten',
+    wer: [1],
+    bis: plusTage(heuteImKalender(), 2),
+    von: 1,
+    am: '2026-10-21T19:00:00Z',
+  }),
+];
+
+/**
  * Vorschläge (S5-4): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
  * (ändern, zurückziehen) und ein abgelehnter mit Begründung (Erledigt).
  */
@@ -411,11 +440,13 @@ function speicherAnlegen(fall: string): Speicher {
             [60, protokollWerte(60, 600, fall)],
             [
               61,
-              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN, ...DEMO_VORSCHLAEGE].map((x, i) => ({
-                id: 700 + i,
-                dataCategoryId: 61,
-                value: JSON.stringify(x),
-              })),
+              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN, ...FAELLIGE_AUFGABEN, ...DEMO_VORSCHLAEGE].map(
+                (x, i) => ({
+                  id: 700 + i,
+                  dataCategoryId: 61,
+                  value: JSON.stringify(x),
+                }),
+              ),
             ],
             // Technik-Team (W4): eingerichtet, derselbe Kalender 4 wie das Leitungsteam.
             [

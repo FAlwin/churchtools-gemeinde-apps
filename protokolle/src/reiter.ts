@@ -1,4 +1,5 @@
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
+import { reiterName } from '@shared/protokolle/hinweis';
 
 /** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1) und – nur für Admins – Verwaltung (S2-2). */
 export type ReiterId = 'start' | 'sitzungen' | 'todos' | 'verwaltung';
@@ -42,4 +43,18 @@ export function sitzungsLink(
   sitzung: string,
 ): string {
   return `${basis.replace(/\/+$/, '')}/ccm/${encodeURIComponent(kuerzel)}/${adresseFuerSitzung(gruppe, sitzung)}`;
+}
+
+/**
+ * **Der rote Zähler am Reiter „To-Dos“** (fällige To-Dos, `faelligZahl`): setzt `zaehler` und den Namen für Vorleser
+ * („To-Dos, 3 fällig“). Null oder unbekannt (`null`) → die Reiter bleiben, wie sie sind.
+ */
+export function reiterMitZaehler(
+  reiter: Reiter<ReiterId>[],
+  zahl: number | null,
+): Reiter<ReiterId>[] {
+  if (!zahl) return reiter;
+  return reiter.map((r) =>
+    r.id === 'todos' ? { ...r, zaehler: zahl, zaehlerName: reiterName(zahl) } : r,
+  );
 }

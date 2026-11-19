@@ -79,4 +79,38 @@ describe('ReiterLeiste', () => {
     const { container } = render(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={vi.fn()} />);
     expect(container.querySelectorAll('svg')).toHaveLength(REITER.length);
   });
+
+  it('roter Zähler: neben dem Text, Name für Vorleser mit Klartext; 0 oder ohne = kein Zähler; ab 100 „99+“', () => {
+    const { rerender } = render(
+      <ReiterLeiste
+        reiter={[REITER[0], { ...REITER[1], zaehler: 3, zaehlerName: 'Zwei, 3 fällig' }]}
+        aktiv="a"
+        onWechsel={vi.fn()}
+      />,
+    );
+    const zwei = screen.getByRole('button', { name: 'Zwei, 3 fällig' });
+    expect(zwei.querySelector('[data-zaehler]')!.textContent).toBe('3');
+    expect(screen.getByRole('button', { name: 'Eins' }).querySelector('[data-zaehler]')).toBeNull();
+
+    rerender(
+      <ReiterLeiste
+        reiter={[REITER[0], { ...REITER[1], zaehler: 0, zaehlerName: 'Zwei, 0 fällig' }]}
+        aktiv="a"
+        onWechsel={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Zwei' }).querySelector('[data-zaehler]')).toBeNull();
+
+    rerender(
+      <ReiterLeiste
+        reiter={[REITER[0], { ...REITER[1], zaehler: 120, zaehlerName: 'Zwei, viele' }]}
+        aktiv="a"
+        onWechsel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Zwei, viele' }).querySelector('[data-zaehler]')!
+        .textContent,
+    ).toBe('99+');
+  });
 });

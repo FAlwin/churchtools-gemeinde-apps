@@ -1,0 +1,16 @@
+// Roter Zähler an einem Reiter – Rot und die Tinte darauf sind Tokens (hell: weiß auf red-600, dunkel: dunkle Tinte auf red-400).
+.zaehler {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--symbol-tinte);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}

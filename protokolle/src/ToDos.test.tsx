@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
@@ -439,5 +439,64 @@ describe('Startseite: „Alle anzeigen“', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: /Alle To-Dos/ }));
     expect(onAlle).toHaveBeenCalled();
+  });
+});
+
+describe('ToDos: gibt seine To-Dos für den Zähler am Reiter nach oben', () => {
+  type OnAufgaben = (stand: readonly { gruppe: number; aufgaben: Aufgabe[] }[]) => void;
+  const stand = (onAufgaben: Mock<OnAufgaben>) =>
+    onAufgaben.mock.calls
+      .at(-1)![0]
+      .flatMap((s) => s.aufgaben.map((a) => [s.gruppe, a.id, a.status]));
+  const mitCallback = (onAufgaben: Mock<OnAufgaben>) =>
+    render(
+      <ToDos
+        modul={24}
+        ich={{ person: 1, name: 'Alwin' }}
+        gruppen={[LT, JG]}
+        schreibbar={[60]}
+        onSitzung={vi.fn()}
+        onAufgaben={onAufgaben}
+      />,
+    );
+
+  it('nach dem Laden: alle To-Dos beider Gruppen, mit Gruppe', async () => {
+    const onAufgaben = vi.fn<OnAufgaben>();
+    mitCallback(onAufgaben);
+    await screen.findByText('Raum prüfen');
+    expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'offen']);
+    expect(stand(onAufgaben)).toContainEqual([194, FREMD_JG.id, 'offen']);
+  });
+
+  it('nach einer Statusänderung zeigt der letzte Stand den neuen Status; scheitert sie, den alten', async () => {
+    const onAufgaben = vi.fn<OnAufgaben>();
+    vi.mocked(S.aufgabeAendern).mockImplementation((_o, _id, aendern) =>
+      Promise.resolve(aendern(FREMD_LT)),
+    );
+    mitCallback(onAufgaben);
+    await screen.findByText('Raum prüfen');
+    fireEvent.click(
+      within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
+        name: /Status: Offen/,
+      }),
+    );
+    await waitFor(() => expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'arbeit']));
+
+    cleanup();
+    onAufgaben.mockClear();
+    vi.mocked(S.aufgabeAendern).mockRejectedValue(new Error('weg'));
+    mitCallback(onAufgaben);
+    await screen.findByText('Raum prüfen');
+    fireEvent.click(
+      within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
+        name: /Status: Offen/,
+      }),
+    );
+    // Erst die Meldung (dann ist die Rückrollung geschehen), und der Zwischenstand „arbeit“ wurde gemeldet.
+    expect((await screen.findByRole('alert')).textContent).toMatch(/ChurchTools/);
+    expect(
+      onAufgaben.mock.calls.some((c) => JSON.stringify(c[0]).includes('"status":"arbeit"')),
+    ).toBe(true);
+    await waitFor(() => expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'offen']));
   });
 });

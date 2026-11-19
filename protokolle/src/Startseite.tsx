@@ -21,6 +21,9 @@ import {
   type Sitzung,
 } from '@shared/protokolle/sitzungen';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
+import { FaelligBand } from './FaelligBand';
+import type { AufgabenStand } from './useFaellige';
+import type { Faellige, Vorlauf } from '@shared/protokolle/hinweis';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { ProtokollNeu } from './ProtokollNeu';
@@ -57,6 +60,11 @@ export interface StartseiteProps {
   onGruppe: (gruppe: number) => void;
   /** Den Reiter „To-Dos“ öffnen (S7-1) – „Alle anzeigen“ an „Meine offenen To-Dos“. */
   onAlleToDos?: () => void;
+  /** Hinweis auf fällige To-Dos (Band oben) – meine fälligen To-Dos und der eingestellte Vorlauf aus `App`. */
+  faellige?: Faellige | null;
+  vorlauf?: Vorlauf | null;
+  /** Gelesene To-Dos je Gruppe nach oben geben – speist den Zähler am Reiter, ohne dass jemand neu liest. */
+  onAufgaben?: (stand: readonly AufgabenStand[]) => void;
 }
 
 /** „2 von 5 zugesagt“ – gezählt über die Besprechungsanfragen des Termins; ohne Anfragen nichts. */
@@ -88,6 +96,9 @@ export function Startseite({
   onSitzung,
   onGruppe,
   onAlleToDos,
+  faellige = null,
+  vorlauf = null,
+  onAufgaben,
 }: StartseiteProps) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [neu, setNeu] = useState(false);
@@ -106,6 +117,11 @@ export function Startseite({
   }, [modul, gruppen]);
 
   useEffect(laden, [laden]);
+
+  useEffect(() => {
+    if (zustand.art === 'fertig')
+      onAufgaben?.(zustand.uebersicht.map((u) => ({ gruppe: u.gruppe.id, aufgaben: u.aufgaben })));
+  }, [zustand, onAufgaben]);
 
   const ue = zustand.art === 'fertig' ? zustand.uebersicht : [];
   const anstehend = naechsteSitzungen(
@@ -130,131 +146,173 @@ export function Startseite({
     ) : null;
 
   return (
-    <div className={styles.raster}>
-      <div className={styles.spalte}>
-        {jetzt && (
-          <section className={`${styles.karte} ${styles.heute}`} aria-label="Heute">
-            <div className={styles.heuteKopf}>
-              <DatumKachel {...kachelVon(jetzt.sitzung.beginn, gemeindeZeitzone())} />
-              <div>
-                <span className={styles.heuteMarke}>Heute</span>
-                <h2>
-                  {jetzt.sitzung.titel} · {jetzt.gruppe.name}
-                </h2>
-                <p>
-                  {uhrzeit(jetzt.sitzung.beginn, gemeindeZeitzone())}
-                  {zusagen(jetzt.sitzung)}
-                </p>
+    <>
+      <FaelligBand faellige={faellige} vorlauf={vorlauf} heute={heute} onZuToDos={onAlleToDos} />
+      <div className={styles.raster}>
+        <div className={styles.spalte}>
+          {jetzt && (
+            <section className={`${styles.karte} ${styles.heute}`} aria-label="Heute">
+              <div className={styles.heuteKopf}>
+                <DatumKachel {...kachelVon(jetzt.sitzung.beginn, gemeindeZeitzone())} />
+                <div>
+                  <span className={styles.heuteMarke}>Heute</span>
+                  <h2>
+                    {jetzt.sitzung.titel} · {jetzt.gruppe.name}
+                  </h2>
+                  <p>
+                    {uhrzeit(jetzt.sitzung.beginn, gemeindeZeitzone())}
+                    {zusagen(jetzt.sitzung)}
+                  </p>
+                </div>
               </div>
-            </div>
-            <button
-              type="button"
-              className={styles.hauptknopf}
-              onClick={() => onSitzung(jetzt.gruppe.id, jetzt.sitzung.schluessel)}
-            >
-              Sitzung öffnen
-            </button>
-          </section>
-        )}
+              <button
+                type="button"
+                className={styles.hauptknopf}
+                onClick={() => onSitzung(jetzt.gruppe.id, jetzt.sitzung.schluessel)}
+              >
+                Sitzung öffnen
+              </button>
+            </section>
+          )}
 
-        <section className={styles.karte} aria-labelledby="meine-todos">
-          <div className={styles.kopf}>
-            <h2 id="meine-todos">Meine offenen To-Dos</h2>
-            {zustand.art === 'fertig' && <span className={styles.anzahl}>{meine.length}</span>}
-            {onAlleToDos && (
-              <KopfKnopf
-                label="Alle anzeigen"
-                title="Alle To-Dos im Reiter „To-Dos“"
-                symbol={<Icon name="todo-liste" size={16} />}
-                onClick={onAlleToDos}
-              />
-            )}
-          </div>
-          {ladeTeil}
-          {zustand.art === 'fertig' &&
-            (meine.length ? (
-              <ul className={styles.liste}>
-                {meine.map(({ a, u }) => {
-                  const s = herkunft(a, u);
-                  const ueber = istUeberfaellig(a, heute);
-                  const inhalt = (
-                    <>
-                      <Icon name={a.status === 'arbeit' ? 'refresh' : 'clock'} size={18} />
-                      <span className={styles.text}>
-                        <b>{a.text}</b>
-                        <small>
-                          {u.gruppe.name}
-                          {a.status === 'arbeit' ? ` · ${statusText(a.status)}` : ''}
-                          {s ? ` · aus „${s.titel}“` : ''}
-                        </small>
-                      </span>
-                      {a.bis && (
-                        <span className={ueber ? styles.ueberfaellig : styles.frist}>
-                          {ueber ? 'überfällig · ' : 'bis '}
-                          {tagKurz(a.bis)}
+          <section className={styles.karte} aria-labelledby="meine-todos">
+            <div className={styles.kopf}>
+              <h2 id="meine-todos">Meine offenen To-Dos</h2>
+              {zustand.art === 'fertig' && <span className={styles.anzahl}>{meine.length}</span>}
+              {onAlleToDos && (
+                <KopfKnopf
+                  label="Alle anzeigen"
+                  title="Alle To-Dos im Reiter „To-Dos“"
+                  symbol={<Icon name="todo-liste" size={16} />}
+                  onClick={onAlleToDos}
+                />
+              )}
+            </div>
+            {ladeTeil}
+            {zustand.art === 'fertig' &&
+              (meine.length ? (
+                <ul className={styles.liste}>
+                  {meine.map(({ a, u }) => {
+                    const s = herkunft(a, u);
+                    const ueber = istUeberfaellig(a, heute);
+                    const inhalt = (
+                      <>
+                        <Icon name={a.status === 'arbeit' ? 'refresh' : 'clock'} size={18} />
+                        <span className={styles.text}>
+                          <b>{a.text}</b>
+                          <small>
+                            {u.gruppe.name}
+                            {a.status === 'arbeit' ? ` · ${statusText(a.status)}` : ''}
+                            {s ? ` · aus „${s.titel}“` : ''}
+                          </small>
                         </span>
-                      )}
-                    </>
-                  );
-                  return (
-                    <li key={`${u.gruppe.id}:${a.id}`}>
-                      {s ? (
+                        {a.bis && (
+                          <span className={ueber ? styles.ueberfaellig : styles.frist}>
+                            {ueber ? 'überfällig · ' : 'bis '}
+                            {tagKurz(a.bis)}
+                          </span>
+                        )}
+                      </>
+                    );
+                    return (
+                      <li key={`${u.gruppe.id}:${a.id}`}>
+                        {s ? (
+                          <button
+                            type="button"
+                            className={styles.zeile}
+                            onClick={() => onSitzung(u.gruppe.id, s.schluessel)}
+                          >
+                            {inhalt}
+                          </button>
+                        ) : (
+                          <div className={`${styles.zeile} ${styles.still}`}>{inhalt}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className={styles.innen}>Nichts offen. Schön!</p>
+              ))}
+          </section>
+        </div>
+
+        <div className={styles.spalte}>
+          <section className={styles.karte} aria-labelledby="naechste">
+            <div className={styles.kopf}>
+              <h2 id="naechste">Nächste Sitzungen</h2>
+              {schreibGruppen.length > 0 && (
+                <KopfKnopf
+                  neu
+                  label="Neues Protokoll"
+                  title="Neues Protokoll ohne Termin"
+                  symbol={<Icon name="plus" size={16} />}
+                  onClick={() => setNeu(true)}
+                />
+              )}
+            </div>
+            {ladeTeil}
+            {zustand.art === 'fertig' &&
+              (naechste.length ? (
+                <ul className={styles.liste}>
+                  {naechste.map((n) => {
+                    const antwort = meineAntwort(n.sitzung, ich.person);
+                    return (
+                      <li key={`${n.gruppe.id}:${n.sitzung.schluessel}`}>
                         <button
                           type="button"
                           className={styles.zeile}
-                          onClick={() => onSitzung(u.gruppe.id, s.schluessel)}
+                          onClick={() => onSitzung(n.gruppe.id, n.sitzung.schluessel)}
                         >
-                          {inhalt}
+                          <DatumKachel {...kachelVon(n.sitzung.beginn, gemeindeZeitzone())} />
+                          <span className={styles.text}>
+                            <b>{n.gruppe.name}</b>
+                            <small>
+                              {n.sitzung.titel} ·{' '}
+                              {datumText(tagAusIso(n.sitzung.beginn, gemeindeZeitzone()))} ·{' '}
+                              {uhrzeit(n.sitzung.beginn, gemeindeZeitzone())}
+                              {antwort ? ` · ${ANTWORT_TEXT[antwort]}` : ''}
+                            </small>
+                          </span>
+                          <Icon name="chev-right" size={18} />
                         </button>
-                      ) : (
-                        <div className={`${styles.zeile} ${styles.still}`}>{inhalt}</div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className={styles.innen}>Nichts offen. Schön!</p>
-            ))}
-        </section>
-      </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className={styles.innen}>Keine geplant.</p>
+              ))}
+          </section>
 
-      <div className={styles.spalte}>
-        <section className={styles.karte} aria-labelledby="naechste">
-          <div className={styles.kopf}>
-            <h2 id="naechste">Nächste Sitzungen</h2>
-            {schreibGruppen.length > 0 && (
-              <KopfKnopf
-                neu
-                label="Neues Protokoll"
-                title="Neues Protokoll ohne Termin"
-                symbol={<Icon name="plus" size={16} />}
-                onClick={() => setNeu(true)}
-              />
-            )}
-          </div>
-          {ladeTeil}
-          {zustand.art === 'fertig' &&
-            (naechste.length ? (
+          <section className={styles.karte} aria-labelledby="deine-gruppen">
+            <div className={styles.kopf}>
+              <h2 id="deine-gruppen">Deine Gruppen</h2>
+              <span className={styles.anzahl}>{gruppen.length}</span>
+            </div>
+            {gruppen.length === 0 ? (
+              <p className={styles.innen}>
+                Du bist in keiner Gruppe, die hier Protokolle führen kann.
+              </p>
+            ) : (
               <ul className={styles.liste}>
-                {naechste.map((n) => {
-                  const antwort = meineAntwort(n.sitzung, ich.person);
+                {gruppen.map((g) => {
+                  const u = ue.find((x) => x.gruppe.id === g.id);
+                  const zahl = u ? offene(u.aufgaben, heute).length : null;
                   return (
-                    <li key={`${n.gruppe.id}:${n.sitzung.schluessel}`}>
-                      <button
-                        type="button"
-                        className={styles.zeile}
-                        onClick={() => onSitzung(n.gruppe.id, n.sitzung.schluessel)}
-                      >
-                        <DatumKachel {...kachelVon(n.sitzung.beginn, gemeindeZeitzone())} />
+                    <li key={g.id}>
+                      <button type="button" className={styles.zeile} onClick={() => onGruppe(g.id)}>
                         <span className={styles.text}>
-                          <b>{n.gruppe.name}</b>
-                          <small>
-                            {n.sitzung.titel} ·{' '}
-                            {datumText(tagAusIso(n.sitzung.beginn, gemeindeZeitzone()))} ·{' '}
-                            {uhrzeit(n.sitzung.beginn, gemeindeZeitzone())}
-                            {antwort ? ` · ${ANTWORT_TEXT[antwort]}` : ''}
-                          </small>
+                          <b>{g.name}</b>
+                          {/* Schild unter dem Namen: in der schmalen Spalte bleibt so der Name ganz. */}
+                          <span className={styles.unter}>
+                            {zahl !== null && (
+                              <small>
+                                {zahl === 1 ? '1 offenes To-Do' : `${zahl} offene To-Dos`}
+                              </small>
+                            )}
+                            <Marke art={LAGE[g.lage].art}>{LAGE[g.lage].text}</Marke>
+                          </span>
                         </span>
                         <Icon name="chev-right" size={18} />
                       </button>
@@ -262,66 +320,27 @@ export function Startseite({
                   );
                 })}
               </ul>
-            ) : (
-              <p className={styles.innen}>Keine geplant.</p>
-            ))}
-        </section>
-
-        <section className={styles.karte} aria-labelledby="deine-gruppen">
-          <div className={styles.kopf}>
-            <h2 id="deine-gruppen">Deine Gruppen</h2>
-            <span className={styles.anzahl}>{gruppen.length}</span>
-          </div>
-          {gruppen.length === 0 ? (
-            <p className={styles.innen}>
-              Du bist in keiner Gruppe, die hier Protokolle führen kann.
+            )}
+            {/* Gruppen ohne Zugriff stehen nicht in der Liste (S2-4) – deshalb immer dieser Hinweis. */}
+            <p className={styles.fuss}>
+              Fehlt eine Gruppe? Ein Admin richtet sie ein oder gibt dir Zugriff.
             </p>
-          ) : (
-            <ul className={styles.liste}>
-              {gruppen.map((g) => {
-                const u = ue.find((x) => x.gruppe.id === g.id);
-                const zahl = u ? offene(u.aufgaben, heute).length : null;
-                return (
-                  <li key={g.id}>
-                    <button type="button" className={styles.zeile} onClick={() => onGruppe(g.id)}>
-                      <span className={styles.text}>
-                        <b>{g.name}</b>
-                        {/* Schild unter dem Namen: in der schmalen Spalte bleibt so der Name ganz. */}
-                        <span className={styles.unter}>
-                          {zahl !== null && (
-                            <small>
-                              {zahl === 1 ? '1 offenes To-Do' : `${zahl} offene To-Dos`}
-                            </small>
-                          )}
-                          <Marke art={LAGE[g.lage].art}>{LAGE[g.lage].text}</Marke>
-                        </span>
-                      </span>
-                      <Icon name="chev-right" size={18} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {/* Gruppen ohne Zugriff stehen nicht in der Liste (S2-4) – deshalb immer dieser Hinweis. */}
-          <p className={styles.fuss}>
-            Fehlt eine Gruppe? Ein Admin richtet sie ein oder gibt dir Zugriff.
-          </p>
-        </section>
+          </section>
+        </div>
+        {neu && (
+          <ProtokollNeu
+            modul={modul}
+            gruppen={schreibGruppen}
+            ich={ich}
+            zeitzone={gemeindeZeitzone()}
+            onAngelegt={(g, id) => {
+              setNeu(false);
+              onSitzung(g, protokollSchluessel(id));
+            }}
+            onClose={() => setNeu(false)}
+          />
+        )}
       </div>
-      {neu && (
-        <ProtokollNeu
-          modul={modul}
-          gruppen={schreibGruppen}
-          ich={ich}
-          zeitzone={gemeindeZeitzone()}
-          onAngelegt={(g, id) => {
-            setNeu(false);
-            onSitzung(g, protokollSchluessel(id));
-          }}
-          onClose={() => setNeu(false)}
-        />
-      )}
-    </div>
+    </>
   );
 }

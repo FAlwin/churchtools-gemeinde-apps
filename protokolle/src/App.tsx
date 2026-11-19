@@ -13,7 +13,10 @@ import { Sitzungen, type SitzungsAuswahl } from './Sitzungen';
 import { SuchLeiste } from './SuchLeiste';
 import { Suche } from './Suche';
 import { protokollSchluessel } from '@shared/protokolle/sitzungen';
-import { sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
+import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
+import { useFaellige } from './useFaellige';
+import { ReiterZaehler } from '@ui/bedienung/ReiterZaehler';
+import { reiterName } from '@shared/protokolle/hinweis';
 
 /**
  * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Verwaltung. Am
@@ -70,6 +73,14 @@ export function App() {
 
   const reiter = sichtbareReiter(start?.darfVerwalten ?? false);
   const aktiv = reiterAusAdresse<ReiterId>(hash, reiter, 'start');
+  // Hinweis auf fällige To-Dos: Zähler am Reiter „To-Dos“ und Band auf der Startseite (Einstellung: Verwaltung).
+  const faellig = useFaellige({
+    modul: start?.modul ?? null,
+    person: start?.id ?? null,
+    gruppen: start?.gruppen ?? [],
+    seiteLiefert: aktiv === 'start' || aktiv === 'todos',
+  });
+  const mitZaehler = reiterMitZaehler(reiter, faellig.zahl);
   const zu = () => setSuche({ offen: false, begriff: '' });
   const wechseln = (id: ReiterId) => {
     setAuswahl(null);
@@ -99,7 +110,17 @@ export function App() {
       {mitReitern && !handy && (
         <Segment
           value={aktiv}
-          options={reiter.map((r) => ({ value: r.id, label: r.label }))}
+          options={mitZaehler.map((r) => ({
+            value: r.id,
+            label: r.zaehler ? (
+              <>
+                {r.label} <ReiterZaehler zahl={r.zaehler} />
+              </>
+            ) : (
+              r.label
+            ),
+            name: r.zaehler ? reiterName(r.zaehler) : undefined,
+          }))}
           onChange={wechseln}
           ariaLabel="Bereiche"
           verbunden
@@ -110,7 +131,7 @@ export function App() {
   );
   const unten =
     mitReitern && handy ? (
-      <ReiterLeiste reiter={reiter} aktiv={aktiv} onWechsel={wechseln} />
+      <ReiterLeiste reiter={mitZaehler} aktiv={aktiv} onWechsel={wechseln} />
     ) : undefined;
 
   return (
@@ -139,6 +160,9 @@ export function App() {
           onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
           onGruppe={(gruppe) => zuSitzungen({ gruppe })}
           onAlleToDos={() => wechseln('todos')}
+          faellige={faellig.faellige}
+          vorlauf={faellig.vorlauf}
+          onAufgaben={faellig.melden}
         />
       )}
       {start && !suche.offen && aktiv === 'todos' && (
@@ -148,6 +172,7 @@ export function App() {
           gruppen={start.gruppen}
           schreibbar={start.schreibbar}
           onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
+          onAufgaben={faellig.melden}
         />
       )}
       {start && !suche.offen && aktiv === 'sitzungen' && (
@@ -164,7 +189,9 @@ export function App() {
           auswahl={auswahl}
         />
       )}
-      {start && !suche.offen && aktiv === 'verwaltung' && <Verwaltung modul={start.modul} />}
+      {start && !suche.offen && aktiv === 'verwaltung' && (
+        <Verwaltung modul={start.modul} onVorlauf={faellig.vorlaufSetzen} />
+      )}
     </ErweiterungsSeite>
   );
 }

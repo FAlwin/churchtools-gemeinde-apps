@@ -129,7 +129,7 @@ export function ToDoKarte({
         {kx.mehrereGruppen && <span className={styles.gruppe}>{e.gruppe.name}</span>}
         <button
           type="button"
-          className={`${styles.titel}${erledigt || k.gehalten ? ' ' + styles.durch : ''}`}
+          className={`${styles.titel}${erledigt || (k.gehalten && !istJeder(a)) ? ' ' + styles.durch : ''}`}
           title="To-Do öffnen"
           onClick={() => kx.onOeffnen(e)}
         >
@@ -203,7 +203,7 @@ export function ToDoZeile({
           <div className={styles.zeileRueck}>
             <button
               type="button"
-              className={`${styles.titel} ${styles.durch}`}
+              className={`${styles.titel}${erledigt || !istJeder(a) ? ' ' + styles.durch : ''}`}
               title="To-Do öffnen"
               onClick={() => kx.onOeffnen(e)}
             >

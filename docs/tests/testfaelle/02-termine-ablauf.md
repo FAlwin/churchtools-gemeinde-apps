@@ -600,13 +600,13 @@ kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 
 </details>
 
-### TF-ABLAUF-23 · Plan teilen: ganzer Plan, eine Gruppe
+### TF-ABLAUF-23 · Plan teilen: ganzer Plan, eine Gruppe, Ansicht
 
 **Das brauchst du:** „Planen“ mit mehreren Terminen und mindestens zwei Dienstgruppen, darunter freie und angefragte
 Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 
-**Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe.
-„Wir suchen noch …“ gibt es nicht mehr.
+**Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe,
+in der Ansicht „Termine × Dienste“ oder „Personen × Termine“. „Wir suchen noch …“ gibt es nicht mehr.
 
 1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
    Plan** · **Eine Gruppe** (kein „Wir suchen noch …“); darunter Zeitraum und Zahl der Termine – dieselben wie
@@ -619,13 +619,20 @@ Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 4. Eine alte gemerkte Wahl „Wir suchen noch …“ (aus einer früheren Version) → es ist **Ganzer Plan** gewählt.
 5. Viele Termine → mehrere Seiten, auf jeder Kopf, Tabellenkopf und „Seite x von y“; ab sechs Spalten quer.
 6. **Herunterladen** → „Dienstplan <Gruppe> TT.MM.-TT.MM.JJJJ.pdf“; **Teilen** → Teilen-Menü.
+7. Unter „Was“ (und der Gruppenzeile) die Reihe **Ansicht**: **Termine × Dienste** (gewählt) · **Personen × Termine**; auch bei 375 px Breite
+   ohne Überlauf. **Personen × Termine** → eine Tabelle quer über alle gewählten Gruppen: erste Spalte der Name (fett, alphabetisch, nur wer
+   mindestens einen Dienst hat), je Termin eine Spalte „So, 06.12.“ (am selben Tag zwei Termine: „So, 06.12. 18:00“), in der Zelle die Dienste
+   mit Komma, angefragte mit grauem „(angefragt)“, sonst leer; hinten schmal „Dienste“ = Anzahl. Ein abgesagter Termin hat keine Spalte, ein
+   verborgener Name („besetzt“) keine Zeile. Mehr als zehn Termine → Blöcke mit dem Zeitraum als Band. Dateiname „Dienstplan Personen …“.
+   Niemand eingeteilt → „In diesem Zeitraum ist niemand eingeteilt.“ Was oder Gruppe wechseln → die Ansicht bleibt (und umgekehrt); Fenster
+   neu öffnen → alles ist noch gewählt.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`
-- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen); von Hand bleiben Aussehen und Teilen-Menü am Gerät
-- **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`)
+- **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`, `shared/dienstplan/werWieOft.ts`
+- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer; Personen × Termine: Zeilen, Spalten ohne abgesagte, Uhrzeit bei doppeltem Tag, Zellen, Blöcke ab elf Terminen), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten, schmale Summenspalte), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen, Reihe „Ansicht“ gemerkt und beim Wechsel behalten); von Hand bleiben Aussehen und Teilen-Menü am Gerät
+- **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`); E8-4b (19.11.2026, Entwurf `e8-4-ansichten.html`)
 
 </details>
 

@@ -22,7 +22,9 @@
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf; Antworten als Fläche: Ja grün, Vielleicht gelb, Nein/abwesend rot schraffiert), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Erinnern** (Mail an alle, die noch nicht geantwortet haben), **Teilen** = der ganze Plan
->   oder eine Gruppe als PDF (Reihe „Was“, bei „Eine Gruppe“ dazu die Gruppen; „Wir suchen noch …“ gibt es seit E8-4a nicht mehr). Am Handy ein Termin auf einmal.
+>   oder eine Gruppe als PDF (Reihe „Was“, bei „Eine Gruppe“ dazu die Gruppen; „Wir suchen noch …“ gibt es seit E8-4a nicht mehr) in der Reihe **„Ansicht“**
+>   „Termine × Dienste“ (je Gruppe eine Tabelle) oder „Personen × Termine“ (eine Tabelle: eine Zeile je Eingeteiltem, alphabetisch, eine Spalte je nicht abgesagtem Termin,
+>   hinten die Zahl der Dienste; ab elf Terminen in Blöcken zu je zehn; gezählt wie „Wer wie oft?“). Am Handy ein Termin auf einmal.
 > - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
 >   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.

@@ -1,7 +1,9 @@
 /**
  * **Das Plan-Blatt** (Bauplan E8-2/E8-4, Entwürfe `e8-teilen.html`, `e8-4-ansichten.html`) – was aus „Planen“ aufs geteilte
  * PDF kommt: **was** (der ganze Plan mit je einem Abschnitt je Gruppe, oder nur eine Gruppe, z. B. für den Gruppenchat) in
- * welcher **Ansicht** (heute nur „Termine × Dienste“; Personen und „Je Person“ folgen in E8-4b/c). Geteilt werden die
+ * welcher **Ansicht**: „Termine × Dienste“ (je Gruppe eine Tabelle) oder „Personen × Termine“ (E8-4b: eine Tabelle über alle
+ * gewählten Gruppen, je Eingeteilter eine Zeile, je nicht abgesagtem Termin eine Spalte, höchstens zehn Termine je Tabelle;
+ * gezählt wird mit `werWieOft`, nichts nachgebaut); „Je Person“ folgt in E8-4c. Geteilt werden die
  * Termine und Gruppen, die „Planen“ gerade zeigt; Entwürfe stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
  * denselben Zellen wie das Termin-Blatt (`terminBlatt.ts`).
  */
@@ -9,9 +11,10 @@ import { MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
 import type { Lauf, Zelle } from '../ct/terminBlatt';
 import { zaehleFrei } from './platzNachEntwurf';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
+import { werWieOft, type PersonEinsaetze } from './werWieOft';
 
-/** Die Ansichten des Blatts – E8-4b/c ergänzen „Personen × Termine“ und „Je Person“. */
-export type PlanBlattAnsicht = 'termine';
+/** Die Ansichten des Blatts – E8-4c ergänzt „Je Person“. */
+export type PlanBlattAnsicht = 'termine' | 'personen';
 
 /** **Was** geteilt wird – der ganze Plan oder eine Gruppe. */
 export type PlanBlattWas =
@@ -27,18 +30,20 @@ export const PLAN_BLATT_STANDARD: PlanBlattWahl = { was: 'plan', ansicht: 'termi
 /**
  * **Die gemerkte Wahl lesen** (`leseImGeraet`): nur bekannte Formen, sonst der ganze Plan. Bis E8-2 stand dort
  * `{ art: 'plan' | 'gruppe' | 'suchen', gruppe }` – `plan` und `gruppe` (mit der Gruppe) werden übernommen, „Wir suchen
- * noch …“ gibt es nicht mehr und wird zum ganzen Plan.
+ * noch …“ gibt es nicht mehr und wird zum ganzen Plan. Die Ansicht: `personen` bleibt, alles andere ist „Termine × Dienste“.
  */
 export function planBlattWahlAus(roh: unknown): PlanBlattWahl {
   const r = (roh && typeof roh === 'object' ? roh : {}) as {
     was?: unknown;
     art?: unknown;
     gruppe?: unknown;
+    ansicht?: unknown;
   };
   const was = r.was ?? r.art;
+  const ansicht: PlanBlattAnsicht = r.ansicht === 'personen' ? 'personen' : 'termine';
   if (was === 'gruppe' && (typeof r.gruppe === 'number' || r.gruppe === null))
-    return { was: 'gruppe', gruppe: r.gruppe, ansicht: 'termine' };
-  return PLAN_BLATT_STANDARD;
+    return { was: 'gruppe', gruppe: r.gruppe, ansicht };
+  return { ...PLAN_BLATT_STANDARD, ansicht };
 }
 
 export interface PlanBlattQuelle {
@@ -57,6 +62,8 @@ export interface PlanBlattAbschnitt {
   titel: string | null;
   kopf: string[];
   zeilen: Zelle[][];
+  /** „Personen × Termine“: die erste Spalte ist der Name, die letzte die schmale Summe (`planSpalten`). */
+  personen?: true;
 }
 
 export interface PlanBlatt {
@@ -137,6 +144,59 @@ function gruppenAbschnitt(
   };
 }
 
+/** Höchstens so viele Termine je Tabelle der Ansicht „Personen × Termine“ – darüber wird in Blöcke geteilt. */
+export const PERSONEN_TERMINE_MAX = 10;
+
+/**
+ * Die Termin-Köpfe der Personen-Tabelle: „So, 06.12.“; kommt derselbe Tag in DIESER Tabelle mehrfach vor, steht bei diesen
+ * Spalten die Uhrzeit dahinter („So, 06.12. 18:00“). Der Kopf ist einzeilig – kein Terminname.
+ */
+function personenKoepfe(plan: Plan, spalten: readonly number[]): string[] {
+  const proTag = new Map<string, number>();
+  for (const i of spalten)
+    proTag.set(plan.spalten[i].tag, (proTag.get(plan.spalten[i].tag) ?? 0) + 1);
+  return spalten.map((i) => {
+    const s = plan.spalten[i];
+    return (proTag.get(s.tag) ?? 0) > 1 ? `${tagKurz(s.tag)} ${s.uhrzeit}` : tagKurz(s.tag);
+  });
+}
+
+/** Die Zelle einer Person an einem Termin: ihre Dienste mit „, “, angefragte wie in `dienstZelle` grau; sonst leer. */
+function personenZelle(p: PersonEinsaetze, spalte: PlanSpalte): Zelle {
+  const teile = p.einsaetze
+    .filter((e) => e.spalte === spalte)
+    .map((e): Lauf[] =>
+      e.zugesagt
+        ? [{ text: e.dienst }]
+        : [{ text: e.dienst }, { text: ' (angefragt)', stil: 'grau' }],
+    );
+  const laeufe = teile.flatMap((t, i) => (i === 0 ? t : [{ text: ', ' }, ...t]));
+  return { absaetze: [{ laeufe }] };
+}
+
+/** Eine Personen-Tabelle für höchstens zehn Termine; `null`, wenn in ihnen niemand eingeteilt ist. */
+function personenAbschnitt(
+  plan: Plan,
+  spalten: readonly number[],
+  gruppen: readonly PlanGruppe[],
+  titel: string | null,
+): PlanBlattAbschnitt | null {
+  // Die Zählung ist die von „Wer wie oft?“ – hier nur auf die Termine dieser Tabelle begrenzt.
+  const { personen } = werWieOft(plan, { spalten: [...spalten], gruppen });
+  if (personen.length === 0) return null;
+  personen.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return {
+    titel,
+    personen: true,
+    kopf: ['Person', ...personenKoepfe(plan, spalten), 'Dienste'],
+    zeilen: personen.map((p) => [
+      { absaetze: [{ laeufe: [{ text: p.name, stil: 'fett' }] }] },
+      ...spalten.map((i) => personenZelle(p, plan.spalten[i])),
+      { absaetze: [{ laeufe: [{ text: String(p.einsaetze.length) }] }] },
+    ]),
+  };
+}
+
 /** **Das Blatt bauen** – alles, was gezeichnet wird, steht danach fest. */
 export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
   const tage = q.spalten.map((i) => q.plan.spalten[i].tag).sort();
@@ -148,13 +208,40 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
 
   const gruppen =
     wahl.was === 'gruppe' ? q.gruppen.filter((g) => gruppenId(g) === wahl.gruppe) : q.gruppen;
+  const dienstTitel =
+    wahl.was === 'gruppe' && gruppen[0] ? `Dienstplan ${gruppenName(gruppen[0])}` : 'Dienstplan';
+  if (wahl.ansicht === 'personen') {
+    // Abgesagte Termine gibt es in dieser Ansicht nicht; Spalten sind nach Zeit sortiert (`planAus`).
+    const termine = q.spalten.filter((i) => !q.plan.spalten[i].abgesagt);
+    const bloecke: number[][] = [];
+    for (let k = 0; k < termine.length; k += PERSONEN_TERMINE_MAX)
+      bloecke.push(termine.slice(k, k + PERSONEN_TERMINE_MAX));
+    const tabellen = bloecke.flatMap((b) => {
+      const tage = b.map((i) => q.plan.spalten[i].tag);
+      const a = personenAbschnitt(
+        q.plan,
+        b,
+        gruppen,
+        bloecke.length > 1 ? spanneLang(tage[0], tage[tage.length - 1]) : null,
+      );
+      return a ? [a] : [];
+    });
+    return {
+      ...kopf,
+      untertitel: untertitel ? `${untertitel} · Personen × Termine` : '',
+      titel: dienstTitel,
+      quer: tabellen.some((a) => a.kopf.length >= QUER_AB),
+      abschnitte: tabellen,
+      leer: tabellen.length > 0 ? null : 'In diesem Zeitraum ist niemand eingeteilt.',
+      dateiname: `${dienstTitel} Personen ${datei}`.trim(),
+    };
+  }
   const mitTitel = wahl.was === 'plan' && gruppen.length > 1;
   const abschnitte = gruppen.flatMap((g) => {
     const a = gruppenAbschnitt(q.plan, q.spalten, g, mitTitel ? gruppenName(g) : null);
     return a ? [a] : [];
   });
-  const titel =
-    wahl.was === 'gruppe' && gruppen[0] ? `Dienstplan ${gruppenName(gruppen[0])}` : 'Dienstplan';
+  const titel = dienstTitel;
   return {
     ...kopf,
     titel,

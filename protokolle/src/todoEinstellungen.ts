@@ -1,5 +1,5 @@
 /**
- * **Die Einstellungen der To-Do-Übersicht** (S7-1, S7-3) – Ansicht (Liste | Board), Einteilung (Status | Person),
+ * **Die Einstellungen der To-Do-Übersicht** (S7-1, S7-3) – Ansicht (Liste | Board), Einteilung (Status | Person | Fälligkeit),
  * Filter, Sortierung und meine Reihenfolge („Manuell“). Eine Stelle für alle, damit sie zusammen gemerkt werden
  * (Alwin 30.10.2026: „alles je Benutzer“). Prüfen, was gelesen wird: Gemerktes kann von Hand verändert sein.
  */
@@ -33,7 +33,7 @@ const SORTIERUNGEN: readonly Sortierung[] = ['dringlichkeit', 'bis', 'alpha', 'm
 /** Je Feld prüfen; Unlesbares → Vorgabe dieses Felds (ein kaputtes Feld kostet nicht die anderen). */
 export const pruefen: { [K in keyof ToDoEinstellungen]: (roh: unknown) => ToDoEinstellungen[K] } = {
   ansicht: (x) => (x === 'board' ? 'board' : 'liste'),
-  nach: (x) => (x === 'person' ? 'person' : 'status'),
+  nach: (x) => (x === 'person' || x === 'frist' ? x : 'status'),
   aus: (x) => {
     const o = (x ?? {}) as Record<string, unknown>;
     return { gruppen: texte(o.gruppen), zustaendig: texte(o.zustaendig) };

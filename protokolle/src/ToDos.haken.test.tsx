@@ -115,6 +115,7 @@ describe('Haken in der To-Do-Übersicht (W8a)', () => {
       expect(within(zeile('Raum prüfen')).getByRole('button', { name: 'Rückgängig' })).toBeTruthy(),
     );
     expect(within(gruppe('Offen')).getByText('Raum prüfen')).toBeTruthy();
+    expect(within(zeile('Raum prüfen')).getByText('Raum prüfen').className).toMatch(/durch/);
     expect(screen.queryByRole('group', { name: 'Erledigt' })).toBeNull();
     // Kurz vor Ablauf: noch da.
     await vor(HALTEN_MS - 100);
@@ -182,6 +183,10 @@ describe('Haken in der To-Do-Übersicht (W8a)', () => {
     expect(nachher.fertig).toHaveProperty('23');
     expect(nachher.status).toBe('arbeit');
     await screen.findByRole('button', { name: 'Rückgängig' });
+    // Nur mein Teil ist fertig, das To-Do nicht – also nicht durchgestrichen (Entwurf: durch nur bei Gesamtstand erledigt).
+    expect(
+      within(zeile('Abwesenheiten eintragen')).getByText('Abwesenheiten eintragen').className,
+    ).not.toMatch(/durch/);
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     await waitFor(() => expect(S.aufgabeAendern).toHaveBeenCalledTimes(2));
     const [, , zurueck] = vi.mocked(S.aufgabeAendern).mock.calls[1];

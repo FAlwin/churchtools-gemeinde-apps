@@ -16,15 +16,15 @@ Karte**, der Text darin bricht nicht anders um. Nach dem Loslassen in einer ande
 nach dem Neuladen.
 
 1. In ChurchTools im Menü auf **Protokolle**, unten auf **To-Dos**.
-2. Oben **Board** und **Nach Status** wählen.
+2. Oben **Board** wählen (Gruppieren steht auf **Nach Status**).
 3. Mit dem Finger schnell über die Karten in „Offen“ wischen: Die Seite blättert, keine Karte bewegt sich.
 4. Auf „TEST Ziehen A“ den Finger legen und liegen lassen, bis die Karte sich anhebt.
-5. In die Spalte **In Arbeit** ziehen und loslassen: Die Karte steht dort, ihre Status-Marke zeigt „In Arbeit“.
+5. In die Spalte **In Arbeit** ziehen und loslassen: Die Karte steht dort.
 6. Die Seite neu laden: „TEST Ziehen A“ steht weiter in „In Arbeit“.
 7. Oben **Sortieren → Manuell** wählen und in „Offen“ „TEST Ziehen B“ über eine andere Karte ziehen: Die Reihenfolge
    ändert sich und bleibt nach dem Neuladen.
 8. Am iPhone die Kopfzeile ansehen: **Liste | Board**, das Sortieren-Symbol (⇅), das Filter-Symbol und **+** stehen in
-   einer Zeile, **Nach Status | Nach Person** darunter; kein Wort ist abgeschnitten. Das Sortieren-Symbol antippen: Das
+   einer Zeile, darunter links **Alle | Meine** und rechts das Gruppieren-Symbol; kein Wort ist abgeschnitten. Das Sortieren-Symbol antippen: Das
    Menü steht ganz im Bild (links nicht abgeschnitten); nach „Manuell“ ist das Symbol blau getönt. Ebenso das Filter-Menü.
 
 <details><summary>Technisches</summary>
@@ -45,7 +45,7 @@ Sortieren, Filter, die eigene Reihenfolge –, steht nach kurzer Zeit auch auf d
 die Einstellung auf dem Gerät und geht mit, sobald das Netz wieder da ist.
 
 1. Auf Gerät 1 im Menü auf **Protokolle**, unten auf **To-Dos**.
-2. Oben **Board**, **Nach Person** und **Sortieren → Alphabetisch** wählen.
+2. Oben **Board**, **Gruppieren → Nach Person** und **Sortieren → Alphabetisch** wählen.
 3. Ein paar Sekunden warten.
 4. Auf Gerät 2 die To-Dos öffnen (bzw. neu laden): Board, Nach Person und Alphabetisch sind eingestellt.
 5. Auf Gerät 2 zurück auf **Liste** stellen, auf Gerät 1 neu laden: Gerät 1 zeigt die Liste.
@@ -68,7 +68,7 @@ nie mit echten Gemeindegliedern).
 Status) – nicht in der der ersten. An ihrem Konto entsteht dabei keine Einstellungs-Datei mit den Werten der ersten
 Person.
 
-1. Als Person A die To-Dos öffnen und **Board** und **Nach Person** wählen, ein paar Sekunden warten.
+1. Als Person A die To-Dos öffnen und **Board** und **Gruppieren → Nach Person** wählen, ein paar Sekunden warten.
 2. Als Person B anmelden (oder B simulieren), im Menü auf **Protokolle**, unten auf **To-Dos**.
 3. B sieht ihre eigene Einstellung, nicht Board/Nach Person von A.
 4. Zurück als A: Board und Nach Person sind wieder da.
@@ -760,20 +760,22 @@ Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
 **Leitung** und ein **Mitglied**). Lege dir als Test-To-Dos an: „TEST Haken“ (nur du zuständig), „TEST Jeder“ (du und das andere
 Konto zuständig) und „TEST Gemeinsam“ (beide zuständig). Dazu ein Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
 
-**Das muss passieren:** Der Haken hakt ab und nimmt zurück – nie springt er auf „in Arbeit“. Eine eben abgehakte Karte bleibt
+**Das muss passieren:** Der Haken (Kreis vorn an der Karte) hakt ab und nimmt zurück – nie springt er auf „in Arbeit“. Eine eben abgehakte Karte bleibt
 5 Sekunden an ihrem Platz, mit „Rückgängig“ an der Karte. Bei „Jeder für sich“ hakt jeder nur seinen Teil ab; fertig ist das To-Do,
 wenn alle fertig sind.
 
-1. **To-Dos → Liste, Nach Status.** Tippe bei „TEST Haken“ auf die Marke „Offen“: Sie wird **grün „Erledigt“**, die Karte ist
-   durchgestrichen und bleibt **an ihrem Platz**, daneben steht **„Rückgängig“**. Warte 5 Sekunden: Die Karte rutscht zu **Erledigt**.
-2. Tippe bei „TEST Haken“ (jetzt erledigt) noch einmal auf die Marke: **Offen**, kein „Rückgängig“. Hake wieder ab und tippe diesmal
+1. **To-Dos → Liste, Gruppieren → Nach Status.** Tippe bei „TEST Haken“ auf den **Kreis** vorn: Er wird **grün mit Haken**, der Titel ist
+   durchgestrichen und die Karte bleibt **an ihrem Platz**, in der Fußzeile steht **„Rückgängig“**. Warte 5 Sekunden: Die Karte rutscht zu **Erledigt**
+   und zeigt dort „Erledigt von dir am …“.
+2. Tippe bei „TEST Haken“ (jetzt erledigt) noch einmal auf den Kreis: **Offen**, kein „Rückgängig“. Hake wieder ab und tippe diesmal
    gleich auf **„Rückgängig“**: Das To-Do ist wieder offen und bleibt es auch nach 5 Sekunden und nach dem Neuladen.
-3. Öffne „TEST Haken“ (Text antippen), stelle den Status auf **In Arbeit** und speichere: Die Marke zeigt „In Arbeit“. Ein Tipp auf die
-   Marke hakt ab (**Erledigt**), nicht „weiter“. Im **Board** lässt sich die Karte in die Spalte „In Arbeit“ ziehen.
+3. Öffne „TEST Haken“ (Titel antippen), stelle den Status auf **In Arbeit** und speichere: Die Karte zeigt das Schild **„in Arbeit“**. Ein Tipp auf
+   den Kreis hakt ab (**Erledigt**), nicht „weiter“. Im **Board** lässt sich die Karte in die Spalte „In Arbeit“ ziehen (dort ohne Schild).
 4. Öffne „TEST Jeder“: Unter „Zuständig“ steht **„So wird es erledigt“** mit **Gemeinsam | Jeder für sich** (bei nur einem Zuständigen
    fehlt der Umschalter). Wähle **Jeder für sich**: Statt „Status“ steht **„Wer ist fertig?“** mit beiden Namen, beide „offen“.
-   Speichere. Die Karte zeigt „Offen · 0/2“.
-5. Tippe auf der Karte auf die Marke: Es ist **dein Teil** („Offen · 0/2“ → „In Arbeit · 1/2“), „Rückgängig“ erscheint. Auf der
+   Speichere. Die Karte zeigt in der Fußzeile **☑ 0/2** (kein Schild „in Arbeit“).
+5. Tippe auf der Karte auf den Kreis: Es ist **dein Teil** (☑ 0/2 → ☑ 1/2), „Rückgängig“ erscheint. Tippe auf **☑ 1/2**: Es klappt auf, wer fertig ist
+   (du mit „✓ Datum“, der andere „offen“). Auf der
    **Startseite** steht das To-Do jetzt **nicht** mehr unter „Meine offenen To-Dos“; das andere Konto sieht es dort weiter, mit „1 von 2 fertig“.
 6. Mit dem **Mitglied-Konto**: Das To-Do öffnen. In „Wer ist fertig?“ ist **nur der eigene Name** zum Anhaken frei, der andere Name ist ausgegraut.
    Eigenen Teil abhaken, speichern: Die Karte steht auf **Erledigt (2/2)**, im Verlauf stehen beide Teile und „Status: erledigt“.
@@ -790,5 +792,46 @@ wenn alle fertig sind.
 - **Betrifft:** `shared/protokolle/aufgaben.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/Haken.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/FesterPunkt.tsx`, `protokolle/src/todoSchreiben.ts`, `protokolle/src/Startseite.tsx`
 - **Automatisiert:** größtenteils – `shared/protokolle/aufgaben.test.ts` („Jeder für sich“: Gesamtstand, Zuständige, Modus, Rechte-Regel, „für mich offen“, Teile aus zwei Ständen, Haken-Schritte), `shared/protokolle/hinweis.test.ts` (Hinweis/Zähler), `shared/protokolle/uebersicht.test.ts` (Ziehen), `protokolle/src/ToDos.haken.test.tsx` (Haken, 5 s und „Rückgängig“ mit Fake-Timern, mein Teil, nur Anzeige), `protokolle/src/todoSchreiben.test.ts` (zwei Teile nacheinander, Rechte im Schreibweg), `protokolle/src/ToDoFenster.test.tsx`, `protokolle/src/EditorBloecke.test.tsx`, `protokolle/src/FesterPunkt.test.tsx`, `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen, echtes gleichzeitiges Abhaken zweier Konten, Handy
 - **Historie:** 19.11.2026 (W8a: Alwin wollte bei „Alle“ auch „jeder für sich“; der Status-Knopf sprang beim Klick weiter)
+
+</details>
+
+### TF-PROT-23 · To-Do-Übersicht: Karte, Frist in Worten, Tabelle am Computer und die Kopfzeile
+
+**Das brauchst du:** In der Test-Instanz **zwei** eingerichtete Gruppen, in der ersten mindestens **drei Mitglieder** (du als **Leitung**). Lege
+dir Test-To-Dos an: „TEST Heute“ (Bis heute), „TEST Morgen“, „TEST Samstag“ (Bis in 2 bis 6 Tagen), „TEST Spät“ (Bis in zwei Wochen),
+„TEST Alt“ (Bis vor einer Woche), „TEST Ohne“ (ohne Bis), „TEST Jeder“ (alle drei zuständig, **Jeder für sich**, einer hat schon abgehakt), „TEST Notiz“
+(mit zwei Notizen, bei der letzten **Auf Karte anzeigen**), ein To-Do in der zweiten Gruppe und eins, das jemand anderes erledigt hat. Ein Rechner
+mit breitem Fenster und ein Handy (oder das Browserfenster auf 390 px Breite).
+
+**Das muss passieren:** Frist, Gesichter und Symbole stehen auf Karte und Tabelle gleich; am Computer ist die Liste eine Tabelle mit festen
+Spalten, am Handy bleiben es Karten; „Meine“ und „Gruppieren“ stehen sofort in der Kopfzeile.
+
+1. **To-Dos → Liste** am **Handy**: Jede Karte hat vorn den Kreis, darüber klein und blau die Gruppe (weil zwei Gruppen im Spiel sind), darunter den Titel;
+   darunter die Fußzeile: links das **Frist-Kästchen**, rechts die **Gesichter**. „TEST Alt“ zeigt **„seit …“ rot umrandet**, „TEST Heute“ und „TEST Morgen“
+   **orange** mit den Worten „heute“ bzw. „morgen“, „TEST Samstag“ den **Wochentag** („Samstag“), „TEST Spät“ das **Datum**. Halte den Finger auf dem Kästchen
+   (am Computer: Maus darauf): Es erscheint das volle Datum.
+2. „TEST Jeder“: In der Fußzeile steht **☑ 1/3** (und kein Schild „in Arbeit“). Tippe darauf: Eine Liste klappt auf mit allen drei Namen, „✓ Datum“ oder
+   „offen“. Noch ein Tipp klappt sie zu. „TEST Notiz“ zeigt unter dem Titel die **letzte Notiz** in einer leisen Zeile und die **Sprechblase mit 2**.
+   Ein To-Do aus einer Sitzung zeigt das **Dokument-Symbol**; ein Tipp darauf springt in das Protokoll.
+3. Das erledigte To-Do zeigt statt der Fußzeile **„Erledigt von … am …“** mit dem Gesicht, der Titel ist durchgestrichen und grau.
+4. Am **Computer** (breites Fenster) sieht die Liste wie eine **Tabelle** aus: Haken · Aufgabe · Gruppe · Fällig · Zuständig · Stand · Überblick. Der Titel ist
+   einzeilig abgeschnitten. „Stand“ zeigt „offen“ (grau), „in Arbeit“ (blau), „1 von 3 fertig“, bei Erledigten Gesicht und Datum. Mache das Fenster **schmaler**:
+   Zuerst verschwindet die Spalte **Gruppe**, noch schmaler (unter etwa 720 px Breite des Kastens) werden es wieder **Karten**. Nichts läuft seitlich über.
+   Hake in der Tabelle ein To-Do ab: Die Zeile bleibt 5 Sekunden, mit **Rückgängig** in der Zeile.
+5. Das **Board** besteht auch am Computer aus Karten, die Fußzeile ist durch eine feine Linie abgesetzt. In der Spalte „In Arbeit“ fehlt das Schild „in Arbeit“.
+6. Kopfzeile: Tippe **Meine**: Es bleiben nur To-Dos, bei denen du zuständig bist; öffne **Filter**: Unter „Zuständig“ sind „Andere“ und „Noch niemand“ abgehakt – es
+   ist derselbe Filter. Nimm dort „Andere“ wieder dazu: **weder Alle noch Meine** ist dann blau. **Alle** zeigt wieder alles.
+7. **Gruppieren → Nach Fälligkeit**: Die Bereiche heißen Überfällig · Diese Woche · Später · Ohne Frist · Erledigt, „TEST Heute“ steht in „Diese Woche“. Im **Board** gibt es
+   nur „Nach Status“ und „Nach Person“. Neu laden: Die Wahl bleibt.
+8. Öffne ein To-Do (Titel antippen): Die Felder stehen in der Reihenfolge **Was · Gruppe/Bis · Zuständig · So wird es erledigt · Status · Notiz**. Bei einem erledigten
+   gemeinsamen To-Do steht unter dem Status „Erledigt von … am …“.
+9. **Start**: „Meine offenen To-Dos“ zeigen vorn denselben Kreis (nur Anzeige) und dasselbe Frist-Kästchen; die Zeile bleibt als Ganzes antippbar.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/frist.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDoKarte.tsx`, `protokolle/src/ToDoBausteine.tsx`, `protokolle/src/FristKaestchen.tsx`, `protokolle/src/useKastenBreite.ts`, `protokolle/src/Haken.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/todoEinstellungen.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/frist.test.ts` (Frist in Worten je Zweig, Fälligkeits-Fächer), `shared/protokolle/uebersicht.test.ts` (Nach Fälligkeit, Board ohne Fälligkeit, Schnellfilter), `protokolle/src/useKastenBreite.test.ts` (Karten/Tabelle/Gruppe nach Breite), `protokolle/src/ToDos.karte.test.tsx` (Karte, Tabelle, Kopfzeile), `protokolle/src/ToDos.test.tsx` (Gesichter, Symbole, Notizzeile), `protokolle/src/ToDoFenster.test.tsx` (Reihenfolge, „Erledigt von“), `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen und Abstände (Handy, Tablet, Computer, Dunkelmodus), echte Breitenwechsel beim Verkleinern des Fensters
+- **Historie:** 20.11.2026 (W8b: Karte zweiteilig, Frist in Worten, Tabelle am Computer, „Alle | Meine“, Nach Fälligkeit – Entwurf `todos-vorschlaege-v2`, von Alwin abgenommen)
 
 </details>

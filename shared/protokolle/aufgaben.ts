@@ -477,7 +477,7 @@ export function verschieben(
 }
 
 /** Überfällig: nicht erledigt und das Datum liegt vor heute (`heute` als `JJJJ-MM-TT`, Ortszeit des Aufrufers). */
-export function istUeberfaellig(a: Aufgabe, heute: string): boolean {
+export function istUeberfaellig(a: Pick<Aufgabe, 'status' | 'bis'>, heute: string): boolean {
   return a.status !== 'erledigt' && a.bis !== null && a.bis < heute;
 }
 

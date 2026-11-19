@@ -119,6 +119,11 @@ const zeige = (schreibbar = [60], onSitzung = vi.fn()) => {
   return onSitzung;
 };
 const texte = () => screen.queryAllByRole('listitem').map((li) => li.textContent ?? '');
+/** „Gruppieren“ ist ein Auswahlmenü (Status · Fälligkeit · Person) – `name` wie im Menü. */
+const gruppiereNach = (name: string) => {
+  fireEvent.click(screen.getByRole('button', { name: /^Gruppieren:/ }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Gruppieren' })).getByLabelText(name));
+};
 const bereiche = () =>
   within(screen.getByRole('region', { name: 'To-Dos' }))
     .queryAllByRole('group')
@@ -150,7 +155,7 @@ describe('ToDos', () => {
     await waitFor(() => expect(abgleich).toHaveBeenCalled());
   });
 
-  it('Karte: 17 Zuständige → höchstens 3 Bilder und Namen, „+14“, voll im Tooltip; wenige unverändert (W5)', async () => {
+  it('Karte: 17 Zuständige → 2 Gesichter und „+15“, alle Namen im Tooltip; bis zu 3 ohne „+“ (W5, W8b)', async () => {
     const viele = Array.from({ length: 17 }, (_, i) => ({
       id: 100 + i,
       name: `Person${i + 1} Nach`,
@@ -176,13 +181,18 @@ describe('ToDos', () => {
     zeige();
     await screen.findByText('Alle ran');
     const karte = screen.getByText('Alle ran').closest('li') as HTMLElement;
-    const wer = within(karte).getByRole('group', { name: /^Zuständig: / });
-    expect(wer.textContent).toContain('Person1, Person2, Person3 +14');
-    expect(wer.querySelectorAll('[title]').length).toBe(3);
-    expect(wer.getAttribute('title')).toBe(viele.map((v) => v.name.split(' ')[0]).join(', '));
-    const zwei = (screen.getByText('Zu zweit').closest('li') as HTMLElement).textContent;
-    expect(zwei).toContain('Alwin, Johann');
-    expect(zwei).not.toContain('+');
+    const wer = within(karte).getByRole('img', { name: /^Zuständig: / });
+    const alle = viele.map((v) => v.name.split(' ')[0]).join(', ');
+    // Bei mehr als 3: zwei Gesichter (hier Initialen) und „+15“ – nicht drei und „+14“.
+    expect(wer.textContent).toBe('P1P2+15');
+    expect(wer.getAttribute('title')).toBe(alle);
+    expect(wer.getAttribute('aria-label')).toBe(`Zuständig: ${alle}`);
+    const zwei = within(screen.getByText('Zu zweit').closest('li') as HTMLElement).getByRole(
+      'img',
+      { name: /^Zuständig: / },
+    );
+    expect(zwei.getAttribute('title')).toBe('Alwin, Johann');
+    expect(zwei.textContent).toBe('AFJB');
   });
 
   it('Nach Person: ein To-Do mit vielen Zuständigen steht in jeder Personenspalte (W5, nur geprüft)', async () => {
@@ -191,7 +201,7 @@ describe('ToDos', () => {
     );
     zeige();
     await screen.findByText('Alle ran');
-    fireEvent.click(screen.getByRole('button', { name: 'Nach Person' }));
+    gruppiereNach('Nach Person');
     await waitFor(() => expect(bereiche()).toEqual(['Alwin Friesen (du)', 'Johann Becker']));
     for (const name of ['Alwin Friesen (du)', 'Johann Becker']) {
       const spalte = screen
@@ -224,7 +234,7 @@ describe('ToDos', () => {
   it('nach Person: ich zuerst, Namen aus den Mitgliedern, „Noch niemand zuständig“ zuletzt – und gemerkt', async () => {
     zeige();
     await screen.findByText('Raum prüfen');
-    fireEvent.click(screen.getByRole('button', { name: 'Nach Person' }));
+    gruppiereNach('Nach Person');
     await waitFor(() =>
       expect(bereiche()).toEqual(['Alwin Friesen (du)', 'Johann Becker', 'Noch niemand zuständig']),
     );
@@ -321,49 +331,66 @@ describe('ToDos', () => {
     expect(screen.queryByText('Wird geladen …')).toBeNull();
   });
 
-  it('„Auf Karte anzeigen“: letzte Notiz und Sitzung auf der Karte, die Sitzung führt ins Protokoll', async () => {
-    const mitKarte = {
-      ...MEINS,
-      karte: { notiz: true, sitzung: true },
-      verlauf: [
-        ...MEINS.verlauf,
-        { am: tageZurueck(1), von: 1, art: 'notiz' as const, text: 'Zwei Angebote da' },
-      ],
-    };
-    vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([mitKarte]));
-    const onSitzung = zeige();
-    await screen.findByText('Beamer-Angebote einholen');
-    const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
-    expect(zeile.textContent).toMatch(/Notizen.*Zwei Angebote da/);
-    fireEvent.click(
-      within(zeile).getByRole('button', { name: /Leitungssitzung – im Protokoll zeigen/ }),
-    );
-    expect(onSitzung).toHaveBeenCalledWith(11, 'p:s1');
-  });
+  describe('Symbole und Notizzeile (W8b)', () => {
+    const notiz = (text: string, von = 1) => ({
+      am: tageZurueck(1),
+      von,
+      art: 'notiz' as const,
+      text,
+    });
 
-  it('Karte: Sitzung eingeschaltet, aber ohne Sitzung angelegt → kein Abschnitt; ältere Sitzung → so benannt', async () => {
-    vi.mocked(L.ladeUebersicht).mockResolvedValue(
-      uebersicht([
-        aufgabe('Ohne Sitzung', 11, { wer: [1], karte: { sitzung: true } }),
-        aufgabe('Alte Sitzung', 11, { wer: [1], sitzung: 'weg', karte: { sitzung: true } }),
-      ]),
-    );
-    zeige();
-    await screen.findByText('Ohne Sitzung');
-    expect(screen.getByText('Ohne Sitzung').closest('li')!.textContent).not.toMatch(
-      /Aus welcher Sitzung/,
-    );
-    expect(screen.getByText('Alte Sitzung').closest('li')!.textContent).toMatch(
-      /Aus welcher Sitzung.*Aus einer älteren Sitzung\./,
-    );
-  });
+    it('„Auf Karte anzeigen“ (Notiz): die letzte Notiz als eine leise Zeile unter dem Titel; die Sprechblase zählt alle', async () => {
+      const mitKarte = {
+        ...MEINS,
+        karte: { notiz: true },
+        verlauf: [...MEINS.verlauf, notiz('Erste Idee'), notiz('Zwei Angebote da')],
+      };
+      vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([mitKarte]));
+      zeige();
+      await screen.findByText('Beamer-Angebote einholen');
+      const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
+      expect(zeile.textContent).toContain('„Zwei Angebote da“ – Alwin');
+      expect(zeile.textContent).not.toContain('Erste Idee');
+      expect(within(zeile).getByTitle('2 Notizen').textContent).toBe('2');
+    });
 
-  it('ohne „Auf Karte anzeigen“: keine Notiz und keine Sitzung auf der Karte', async () => {
-    zeige();
-    await screen.findByText('Beamer-Angebote einholen');
-    expect(screen.getByText('Beamer-Angebote einholen').closest('li')!.textContent).not.toMatch(
-      /Notizen|Aus welcher Sitzung/,
-    );
+    it('ohne „Auf Karte anzeigen“: keine Notizzeile – das Symbol mit der Anzahl bleibt', async () => {
+      const ohneKarte = { ...MEINS, verlauf: [...MEINS.verlauf, notiz('Zwei Angebote da')] };
+      vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([ohneKarte]));
+      zeige();
+      await screen.findByText('Beamer-Angebote einholen');
+      const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
+      expect(zeile.textContent).not.toContain('Zwei Angebote da');
+      expect(within(zeile).getByTitle('1 Notiz')).toBeTruthy();
+    });
+
+    it('aus einer Sitzung: Dokument-Symbol (Tooltip „Aus …“), der Klick führt ins Protokoll – auch ohne die alte Karten-Option', async () => {
+      const onSitzung = zeige();
+      await screen.findByText('Beamer-Angebote einholen');
+      const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
+      const symbol = within(zeile).getByRole('button', {
+        name: /Leitungssitzung – im Protokoll zeigen/,
+      });
+      expect(symbol.getAttribute('title')).toBe('Aus Leitungssitzung – im Protokoll zeigen');
+      fireEvent.click(symbol);
+      expect(onSitzung).toHaveBeenCalledWith(11, 'p:s1');
+    });
+
+    it('ohne Sitzung angelegt → kein Symbol; Sitzung nicht mehr geladen → Symbol „Aus einer älteren Sitzung.“', async () => {
+      vi.mocked(L.ladeUebersicht).mockResolvedValue(
+        uebersicht([
+          aufgabe('Ohne Sitzung', 11, { wer: [1] }),
+          aufgabe('Alte Sitzung', 11, { wer: [1], sitzung: 'weg' }),
+        ]),
+      );
+      zeige();
+      await screen.findByText('Ohne Sitzung');
+      const ohne = screen.getByText('Ohne Sitzung').closest('li')!;
+      expect(within(ohne).queryByTitle(/Aus /)).toBeNull();
+      const alt = screen.getByText('Alte Sitzung').closest('li')!;
+      expect(within(alt).getByTitle('Aus einer älteren Sitzung.')).toBeTruthy();
+      expect(within(alt).queryByRole('button', { name: /im Protokoll zeigen/ })).toBeNull();
+    });
   });
 
   it('Wer: Namen aus den Mitgliedern, sonst „eine weitere Person“, ohne Zuständige ein Hinweis', async () => {
@@ -375,7 +402,12 @@ describe('ToDos', () => {
     );
     zeige();
     await screen.findByText('Zwei Leute');
-    expect(texte().join(' | ')).toMatch(/Zwei Leute.*Alwin, eine weitere Person/);
+    const zwei = within(screen.getByText('Zwei Leute').closest('li')!);
+    expect(zwei.getByRole('img', { name: /^Zuständig: / }).getAttribute('title')).toBe(
+      'Alwin, eine weitere Person',
+    );
+    // Der Unbekannte ohne Namen hat kein Gesicht, zählt aber mit: „AF“ und „+1“.
+    expect(zwei.getByRole('img', { name: /^Zuständig: / }).textContent).toBe('AF+1');
     expect(texte().join(' | ')).toMatch(/Extern.*Hausmeister Müller/);
   });
 
@@ -385,8 +417,8 @@ describe('ToDos', () => {
     zeige();
     await screen.findByText('Beamer-Angebote einholen');
     const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
-    expect(zeile.textContent).toMatch(/Alwin/);
-    expect(zeile.textContent).not.toMatch(/weitere/);
+    expect(within(zeile).getByRole('img', { name: 'Zuständig: Alwin' })).toBeTruthy();
+    expect(zeile.querySelector('[title*="weitere"]')).toBeNull();
   });
 
   it('Mitgliederliste verborgen: Namen aus dem Verlauf – auf der Karte (Wer, Notiz) und nach Person (S7-2a)', async () => {
@@ -405,9 +437,9 @@ describe('ToDos', () => {
     zeige();
     await screen.findByText('Zu zweit');
     const zeile = screen.getByText('Zu zweit').closest('li')!;
-    expect(zeile.textContent).toMatch(/Alwin, Johann/);
-    expect(zeile.textContent).toMatch(/Angebot da – Maria/);
-    fireEvent.click(screen.getByRole('button', { name: 'Nach Person' }));
+    expect(within(zeile).getByRole('img', { name: 'Zuständig: Alwin, Johann' })).toBeTruthy();
+    expect(zeile.textContent).toMatch(/„Angebot da“ – Maria/);
+    gruppiereNach('Nach Person');
     expect(screen.getByRole('heading', { name: /^Johann/ })).toBeTruthy();
     expect(screen.queryByText(/Person 23/)).toBeNull();
   });
@@ -429,7 +461,8 @@ describe('ToDos', () => {
     zeige();
     await screen.findByText('Zu spät');
     expect(bereiche()).toEqual(['Überfällig', 'Offen']);
-    expect(texte()[0]).toMatch(/überfällig/);
+    expect(texte()[0]).toMatch(/seit 01\.01\./);
+    expect(screen.getByTitle(/^überfällig seit .*2020$/).className).toMatch(/ueberfaellig/);
   });
 });
 

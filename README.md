@@ -134,15 +134,15 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
 ## Dienstplaner
 
 <p align="center">
-  <img src="docs/bilder/dienstplaner-demo.gif" width="640" alt="Dienstplaner: Dienst zusagen, eigene Dienste, Abwesenheit eintragen, Planen">
+  <img src="docs/bilder/dienstplaner-demo.gif" width="640" alt="Dienstplaner: Dienst zusagen, eigene Dienste, „Wann kann ich?“ beantworten, Planen">
 </p>
 
 Ein Dienstplan für alle Dienstgruppen der Gemeinde – gespeichert in ChurchTools.
 
 - **Startseite** mit dem nächsten Dienst samt Team und Liedern, offenen Anfragen und freien Plätzen
 - **Zusagen, absagen, tauschen** mit einem Tipp; eigene Dienste als PDF teilen
-- **Abwesenheiten** je Termin per Häkchen oder als Zeitraum eintragen
-- **Planen** für Planer: Termine als Spalten, freier Platz → „Wer kann?“, Vorschläge per Zauberstab, „Wer wie oft?“
+- **Wann kann ich?** – je Termin Ja, Vielleicht oder Nein (Nein = Abwesenheit in ChurchTools), mit Notiz; Urlaub als Zeitraum
+- **Planen** für Planer: Termine als Spalten, freier Platz → „Wer kann?“ (sortiert nach den Antworten), Vorschläge per Zauberstab, „Personen“ mit den Antworten als Farbe, „Wer wie oft?“
 
 **[Download](https://github.com/FAlwin/churchtools-gemeinde-apps/releases?q=dienstplan)** · [Anleitung](docs/betrieb/DIENSTPLANER.md)
 

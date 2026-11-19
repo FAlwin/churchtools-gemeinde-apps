@@ -1,6 +1,6 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: v0.9.0 (18.11.2026: „Alle verwerfen“ – alle Entwürfe auf einmal löschen, ohne zu senden; Fenster schließen mit Escape. v0.8.0: in „Personen“ Plätze einstellen, „Platz dazunehmen“ und Gäste von Hand eintragen).** Was die Reiter können:
+> **Stand: v0.10.0 (19.11.2026: „Wann kann ich?“ – Mitarbeitende sagen je Termin Ja, Vielleicht oder Nein; Planer sehen die Antworten in „Personen“, in „Wer kann?“ und beim Zauberstab. v0.9.0: „Alle verwerfen“, Fenster schließen mit Escape).** Was die Reiter können:
 >
 > - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen
@@ -17,12 +17,15 @@
 >   planen darf, **teilt hier ein** wie in „Planen“ (freier Platz → „Wer kann?“, Entwurf, Zauberstab je Gruppe) und
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
->   Freien Platz antippen → „Wer kann?“ → **Entwurf**; Zauberstab (Vorschläge nach der ChurchTools-Rangfolge),
->   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
+>   Freien Platz antippen → „Wer kann?“ (Abschnitte nach den Antworten: Ja, Vielleicht, keine Antwort, kann nicht) → **Entwurf**;
+>   Zauberstab (erst Ja, dann Vielleicht, dann ohne Antwort – je Stufe nach der ChurchTools-Rangfolge),
+>   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf; Antworten als Fläche: Ja grün, Vielleicht gelb, Nein/abwesend rot schraffiert), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
 >   Veranstaltung, Gruppe **und einzelnem Dienst** (unter der Gruppe; gilt für Matrix und „Personen“, in „Personen“ klappt ein
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Teilen** = Plan,
 >   eine Gruppe oder „Wir suchen noch …“ als PDF. Am Handy ein Termin auf einmal.
-> - **Abwesenheiten:** eigene eintragen, ändern, löschen – direkt in ChurchTools.
+> - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
+>   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
+>   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
 > - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
 >   „?“ ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
 >   Kurze Hinweise in Fenstern, Status-, Fehler- und Leer-Texte und Warnungen bleiben dort, wo sie stehen.

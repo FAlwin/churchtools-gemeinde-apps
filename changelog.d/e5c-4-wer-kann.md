@@ -14,7 +14,7 @@
   sehen „Wer kann?“ und der Zauberstab aus wie bisher. Gelingt das Laden nur vorübergehend nicht, steht die bisherige Liste da mit dem
   Hinweis „Antworten aus „Wann kann ich?“ gerade nicht geladen“ – niemand wird dann als „Keine Antwort“ einsortiert.
 
-### Geändert (Dienstplaner)
+### Intern (Dienstplaner)
 
 - Raster, „Wer kann?“ und Zauberstab ordnen eine Antwort mit **derselben Regel** ein (`antwortFuer`/`antwortStufe` in
   `shared/dienstplan/personenAntworten.ts`).

@@ -1,0 +1,422 @@
+import { useRef, useState } from 'react';
+import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { Segment } from '@ui/bedienung/Segment';
+import { useLaden } from '@ui/ct/useLaden';
+import { personenSuchen, type Gefunden } from '@ui/ct/personen';
+import {
+  NACHWEIS_JAHRE_MAX,
+  NACHWEIS_JAHRE_MIN,
+  NACHWEIS_NAME_MAX,
+  nachweisEinstellungenFehler,
+  nachweisNameFehler,
+  type NachweisAb,
+} from '@shared/anmeldung/nachweise';
+import { AntwortKnoepfe } from './AntwortKnoepfe';
+import {
+  NACHWEIS_SCHRITTE,
+  NACHWEIS_SCHRITT_TEXT,
+  ichLaden,
+  nachweisArtSichern,
+  type NachweisArt,
+  type NachweisErgebnis,
+  type Vertrauensperson,
+} from './nachweisArten';
+import type { NachweisGrundlage } from './nachweise';
+import { fehlerMeldung } from './zustand';
+import f from './Formular.module.scss';
+import a from './AnmeldungenReiter.module.scss';
+import n from './Nachweise.module.scss';
+
+/** Die Vorgabe für eine neue Art – frei änderbar; `[Vorname]` ist der einzige Platzhalter der Mail. */
+const VORLAGE_BETREFF = 'Bitte Nachweis vorlegen';
+const VORLAGE_TEXT =
+  'Hallo [Vorname],\n\nfür deine Mitarbeit brauchen wir einen Nachweis von dir. Alles Weitere findest du in ChurchTools unter „Meine Gruppen“. Zeig den Nachweis danach einer Vertrauensperson.\n\nDie Einladung zu ChurchTools kommt in einer eigenen Mail.';
+
+/**
+ * **„Nachweis-Art“** (N1b, Entwurf `n-nachweise-v2`, Ansicht 3) – anlegen und bearbeiten: Name, Gültigkeit, die Aufforderung an
+ * die Person und die Vertrauenspersonen. Der Abschnitt „Antrag (Bescheinigung)“ kommt mit N1c und N1d.
+ *
+ * Gespeichert wird alles in ChurchTools (`nachweisArtSichern`) und danach nachgelesen. **Scheitert ein Schritt**, bleibt das
+ * Fenster offen und sagt, was steht und was fehlt; „Nochmal“ legt nichts doppelt an (das Fenster merkt sich die Gruppe).
+ * Eine Vertrauensperson wird nur auf ausdrücklichen Klick entfernt („Entfernen“, bei Gespeichertem erst beim Speichern).
+ */
+export function NachweisArtFenster({
+  art,
+  grundlage,
+  onClose,
+  onFertig,
+}: {
+  /** `null`: neue Art. */
+  art: NachweisArt | null;
+  grundlage: NachweisGrundlage;
+  onClose: () => void;
+  /** Alles gespeichert und nachgelesen – die Seite lädt neu. */
+  onFertig: (text: string) => void;
+}) {
+  const ichStand = useLaden(() => ichLaden(), []).stand;
+  const ich = ichStand.art === 'fertig' ? ichStand.daten : null;
+
+  const [name, setName] = useState(art?.name ?? '');
+  const [jahre, setJahre] = useState<number | null>(art?.einstellungen?.gueltigJahre ?? 3);
+  const [ab, setAb] = useState<NachweisAb>(art?.einstellungen?.ab ?? 'ausstellung');
+  const [betreff, setBetreff] = useState(art?.einstellungen?.betreff ?? VORLAGE_BETREFF);
+  const [text, setText] = useState(art?.einstellungen?.text ?? VORLAGE_TEXT);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // Die Vertrauenspersonen: bei einer neuen Art zuerst die Person, die gerade anlegt.
+  const [eigene, setEigene] = useState<Vertrauensperson[] | null>(null);
+  const liste = eigene ?? (art ? (art.vertrauen ?? []) : ich ? [ich] : []);
+  /** Schon gespeicherte Vertrauenspersonen, die beim Speichern entfernt werden sollen (Klick auf „Entfernen“). */
+  const [entfernen, setEntfernen] = useState<Set<number>>(new Set());
+  const gespeichertSind = new Set((art?.vertrauen ?? []).map((p) => p.personId));
+  const bleiben = liste.filter((p) => !entfernen.has(p.personId));
+
+  const [suche, setSuche] = useState('');
+  const [treffer, setTreffer] = useState<Gefunden[] | null>(null);
+  const [sucht, setSucht] = useState(false);
+
+  const [gruppeId, setGruppeId] = useState<number | null>(art?.id ?? null);
+  const [arbeitet, setArbeitet] = useState(false);
+  const [eingabeFehler, setEingabeFehler] = useState<string | null>(null);
+  const [ergebnis, setErgebnis] = useState<NachweisErgebnis | null>(null);
+
+  const einstellungen = { gueltigJahre: jahre ?? 0, ab, betreff, text };
+  const fehler =
+    nachweisNameFehler(name) ??
+    nachweisEinstellungenFehler(einstellungen) ??
+    (bleiben.length === 0 ? 'Bitte mindestens eine Vertrauensperson eintragen.' : null);
+
+  const hinzu = (p: Vertrauensperson) => {
+    setEntfernen((x) => {
+      const neu = new Set(x);
+      neu.delete(p.personId);
+      return neu;
+    });
+    if (!liste.some((x) => x.personId === p.personId)) setEigene([...liste, p]);
+  };
+  const weg = (p: Vertrauensperson) => {
+    // Gespeicherte erst beim Speichern entfernen (und bis dahin zurückholen); eben Hinzugefügte einfach aus der Liste.
+    if (gespeichertSind.has(p.personId))
+      setEntfernen((x) => {
+        const neu = new Set(x);
+        if (neu.has(p.personId)) neu.delete(p.personId);
+        else neu.add(p.personId);
+        return neu;
+      });
+    else setEigene(liste.filter((x) => x.personId !== p.personId));
+  };
+
+  async function suchen() {
+    setSucht(true);
+    setEingabeFehler(null);
+    try {
+      setTreffer(await personenSuchen(suche));
+    } catch (e) {
+      setEingabeFehler(fehlerMeldung(e).text);
+    }
+    setSucht(false);
+  }
+
+  async function speichern() {
+    if (fehler) return setEingabeFehler(fehler);
+    setArbeitet(true);
+    setEingabeFehler(null);
+    try {
+      const erg = await nachweisArtSichern(
+        {
+          gruppeId,
+          name,
+          einstellungen,
+          vertrauen: bleiben.map((p) => p.personId),
+          entfernen: [...entfernen],
+        },
+        ich?.personId ?? null,
+      );
+      // Die Gruppe merken – „Nochmal“ nach einem Teilerfolg findet sie wieder und legt keine zweite an.
+      setGruppeId(erg.gruppeId);
+      setErgebnis(erg);
+    } catch (e) {
+      // Eingabefehler und „gibt es schon“: vor dem Schreiben abgewiesen, es steht nichts in ChurchTools.
+      setEingabeFehler(fehlerMeldung(e).text);
+    }
+    setArbeitet(false);
+  }
+
+  const alleErledigt =
+    ergebnis !== null && NACHWEIS_SCHRITTE.every((s) => ergebnis.erledigt.includes(s));
+
+  // ── Ergebnis: alles geschrieben und nachgelesen ──
+  if (ergebnis && alleErledigt) {
+    const b = ergebnis.befund;
+    const titel = `„${name.trim()}“ ${art ? 'gespeichert' : 'angelegt'}`;
+    return (
+      <Sheet
+        title={art ? 'Nachweis-Art gespeichert' : 'Nachweis-Art angelegt'}
+        onClose={() => onFertig(`${titel}.`)}
+        cancelLabel={null}
+        knoepfe={<FensterKnopf onClick={() => onFertig(`${titel}.`)}>Fertig</FensterKnopf>}
+      >
+        <p className={f.hinweis}>In ChurchTools nachgelesen:</p>
+        {b ? (
+          <ul className={n.schritte} aria-label="Nachgelesen">
+            <li>
+              <span className={n.fertig} aria-hidden="true">
+                ✓
+              </span>
+              Gruppe „{b.gruppenName}“ (Nummer {b.gruppeId}), eingeschränkt sichtbar
+            </li>
+            <li>
+              <span className={n.fertig} aria-hidden="true">
+                ✓
+              </span>
+              Angaben je Person: {b.felder.join(', ')}
+            </li>
+            <li>
+              <span className={n.fertig} aria-hidden="true">
+                ✓
+              </span>
+              Vertrauenspersonen: {b.vertrauen.map((p) => p.name).join(', ')}
+            </li>
+            <li>
+              <span className={b.ablauf?.an ? n.fertig : n.fehlt} aria-hidden="true">
+                {b.ablauf?.an ? '✓' : '✗'}
+              </span>
+              {b.ablauf
+                ? `Ablauf mit ${b.ablauf.schritte} Schritten, ${b.ablauf.an ? 'eingeschaltet' : 'ausgeschaltet'}`
+                : 'Ablauf nicht gefunden'}
+            </li>
+          </ul>
+        ) : (
+          <p className={f.hinweis}>
+            Alles ist geschrieben und beim Schreiben nachgelesen. Die Zusammenfassung ließ sich
+            gerade nicht laden – die Seite „Nachweise“ zeigt den Stand.
+          </p>
+        )}
+      </Sheet>
+    );
+  }
+
+  const teilErfolg = ergebnis !== null && !alleErledigt;
+  const ersteinrichtung = grundlage.typId === null || grundlage.rechtFehlt !== false;
+
+  return (
+    <Sheet
+      title={art ? `Nachweis-Art · ${art.name}` : 'Neue Nachweis-Art'}
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf disabled={arbeitet || !!fehler} onClick={() => void speichern()}>
+          {arbeitet ? 'Wird gespeichert …' : teilErfolg ? 'Nochmal' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
+      {teilErfolg && (
+        <div role="alert">
+          <p className={f.fehler}>
+            Noch nicht alles geschrieben: {fehlerMeldung(ergebnis.fehler).text}
+          </p>
+          <ul className={n.schritte} aria-label="Stand">
+            {NACHWEIS_SCHRITTE.map((s) => {
+              const da = ergebnis.erledigt.includes(s);
+              return (
+                <li key={s}>
+                  <span className={da ? n.fertig : n.fehlt} aria-hidden="true">
+                    {da ? '✓' : '✗'}
+                  </span>
+                  {NACHWEIS_SCHRITT_TEXT[s]} – {da ? 'steht in ChurchTools' : 'fehlt noch'}
+                </li>
+              );
+            })}
+          </ul>
+          <p className={f.hinweis}>
+            „Nochmal“ schreibt nur, was fehlt – es entsteht nichts doppelt.
+          </p>
+        </div>
+      )}
+
+      {!art && ersteinrichtung && (
+        <p className={f.hinweis}>
+          Beim ersten Speichern legt die Erweiterung in ChurchTools die Gruppenart „Nachweis“ an und
+          setzt die Rechte der Leiter-Rolle. Das darf nur, wer „Berechtigungen verwalten“ hat –
+          sonst sagt dir das Fenster, wer es tun muss.
+        </p>
+      )}
+
+      <label className={f.feld}>
+        <span>Name</span>
+        <input
+          className={f.eingabe}
+          value={name}
+          maxLength={NACHWEIS_NAME_MAX}
+          placeholder="Führungszeugnis"
+          onChange={(ev) => setName(ev.target.value)}
+        />
+        <small className={f.hinweis}>
+          Die Gruppe in ChurchTools heißt „Nachweis: {name.trim() || '…'}“.
+        </small>
+      </label>
+
+      <div className={f.feld} role="group" aria-label="Gültig">
+        <span>Gültig</span>
+        <div className={n.gueltig}>
+          <input
+            className={`${f.eingabe} ${n.jahre}`}
+            type="number"
+            inputMode="numeric"
+            min={NACHWEIS_JAHRE_MIN}
+            max={NACHWEIS_JAHRE_MAX}
+            aria-label="Jahre"
+            value={jahre ?? ''}
+            onChange={(ev) => setJahre(ev.target.value === '' ? null : Number(ev.target.value))}
+          />
+          Jahre ab
+          <Segment<NachweisAb>
+            ariaLabel="Ab wann"
+            value={ab}
+            onChange={setAb}
+            options={[
+              { value: 'ausstellung', label: 'Ausstellung' },
+              { value: 'einsicht', label: 'Einsicht' },
+            ]}
+          />
+        </div>
+        <small className={f.hinweis}>
+          Danach legt ChurchTools die nächste Aufgabe „Erneut einsehen“ an.
+        </small>
+      </div>
+
+      <div className={f.feld}>
+        <span>Aufforderung an die Person</span>
+        <p className={f.hinweis}>
+          Jede Person in dieser Nachweis-Art bekommt automatisch die Einladung zu ChurchTools
+          (Standardmail von ChurchTools) und diese Mail. Die Aufgabe „Einsicht nehmen“ erscheint bei
+          den Vertrauenspersonen.
+        </p>
+      </div>
+      <label className={f.feld}>
+        <span>Betreff</span>
+        <input
+          className={f.eingabe}
+          value={betreff}
+          onChange={(ev) => setBetreff(ev.target.value)}
+        />
+      </label>
+      <label className={f.feld}>
+        <span>Text</span>
+        <textarea
+          ref={textRef}
+          className={`${f.eingabe} ${a.rundmailText}`}
+          value={text}
+          onChange={(ev) => setText(ev.target.value)}
+        />
+      </label>
+      <div className={f.feld}>
+        <AntwortKnoepfe
+          namen={['Vorname']}
+          beschriftung="Einfügen"
+          wer="ChurchTools setzt den Namen je Person ein"
+          streng
+          feld={textRef}
+          wert={text}
+          onWert={setText}
+        />
+      </div>
+
+      <div className={f.feld}>
+        <span>Vertrauenspersonen (dürfen sehen und abhaken)</span>
+        {art && art.vertrauen === null && (
+          <p className={f.hinweis}>
+            Die Vertrauenspersonen lassen sich für dich in ChurchTools nicht lesen. Hier
+            hinzugefügte kommen dazu; entfernt wird nichts.
+          </p>
+        )}
+        <ul className={f.zahlarten} aria-label="Vertrauenspersonen">
+          {liste.length === 0 && (
+            <li className={f.zahlart}>
+              <span className={n.personen}>
+                {ichStand.art === 'laedt' && !art ? 'Wird geladen …' : 'Noch niemand.'}
+              </span>
+            </li>
+          )}
+          {liste.map((p) => {
+            const geht = entfernen.has(p.personId);
+            return (
+              <li key={p.personId} className={f.zahlart}>
+                <span className={geht ? n.wirdEntfernt : undefined}>
+                  {p.name}
+                  {geht && ' – wird beim Speichern entfernt'}
+                </span>
+                <button
+                  type="button"
+                  className={f.textKnopf}
+                  aria-label={`${p.name} ${geht ? 'doch behalten' : 'entfernen'}`}
+                  onClick={() => weg(p)}
+                >
+                  {geht ? 'Doch behalten' : 'Entfernen'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <form
+          className={n.suche}
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            void suchen();
+          }}
+        >
+          <input
+            type="search"
+            className={f.eingabe}
+            aria-label="Person suchen"
+            placeholder="Person suchen"
+            value={suche}
+            onChange={(ev) => setSuche(ev.target.value)}
+          />
+          <FensterKnopf type="submit" art="zweit" disabled={sucht || suche.trim().length < 2}>
+            {sucht ? 'Sucht …' : 'Suchen'}
+          </FensterKnopf>
+        </form>
+        {treffer && (
+          <ul className={n.treffer} aria-label="Gefunden">
+            {treffer.length === 0 && <li className={f.hinweis}>Niemand gefunden.</li>}
+            {treffer.map((p) => {
+              const person = { personId: p.personId, name: `${p.vor} ${p.nach}`.trim() };
+              const schonDa = bleiben.some((x) => x.personId === p.personId);
+              return (
+                <li key={p.personId}>
+                  <button
+                    type="button"
+                    className={f.aktion}
+                    disabled={schonDa}
+                    onClick={() => hinzu(person)}
+                  >
+                    <span>
+                      <b>{person.name}</b>
+                      {p.email && <small>{p.email}</small>}
+                    </span>
+                    {schonDa && <em className={a.pille}>schon dabei</em>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <small className={f.hinweis}>
+          Sie bekommen in ChurchTools das Recht, die Angaben zu sehen, einzutragen und die Aufgaben
+          abzuhaken.
+        </small>
+      </div>
+
+      {eingabeFehler && (
+        <p className={f.fehler} role="alert">
+          {eingabeFehler}
+        </p>
+      )}
+      {!eingabeFehler && fehler && (name.trim() !== '' || art) && (
+        <p className={f.hinweis}>{fehler}</p>
+      )}
+    </Sheet>
+  );
+}

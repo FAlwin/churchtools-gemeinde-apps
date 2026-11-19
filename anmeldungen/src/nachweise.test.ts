@@ -148,7 +148,7 @@ describe('nachweisGrundlageSichern', () => {
     await nachweisGrundlageSichern();
     expect(falsch.rechte.get(56)).toEqual([
       { authId: 777, dataId: 2 },
-      { authId: 10110, dataId: null },
+      ...NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
     ]);
   });
 
@@ -157,15 +157,17 @@ describe('nachweisGrundlageSichern', () => {
     falsch.ignoriere = ['PUT /permissions'];
     const e = await nachweisGrundlageSichern().catch((x: unknown) => x);
     expect(e).toBeInstanceOf(NichtUebernommen);
+    // Die Namen kommen aus den Rechten, nicht aus einem abgeschriebenen Satz.
     expect((e as Error).message).toBe(
-      'ChurchTools hat „Follow-ups durchführen“ nicht übernommen. Bitte noch einmal versuchen.',
+      `ChurchTools hat ${NACHWEIS_LEITER_RECHTE.map((r) => `„${r.name}“`).join(', ')} nicht übernommen. Bitte noch einmal versuchen.`,
     );
   });
 
-  it('Rollen fehlen: ApiError mit verständlichem Text', async () => {
+  it('Rollen fehlen: ApiError mit verständlichem Text – 422, nicht 502 (sonst liest die Anzeige „ChurchTools antwortet nicht“)', async () => {
     falsch.typen = [{ id: 11, name: 'Nachweis', sortKey: 1 }];
     const e = await nachweisGrundlageSichern().catch((x: unknown) => x);
     expect(e).toBeInstanceOf(ApiError);
+    expect((e as ApiError).status).toBe(422);
     expect((e as Error).message).toContain('nicht beide Rollen');
   });
 });

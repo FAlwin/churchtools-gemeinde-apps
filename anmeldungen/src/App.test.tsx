@@ -12,6 +12,7 @@ import { ladeStart } from './start';
 import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
 import { anlegenMoeglich, istGruppenAdmin } from './einrichten';
 import { gemeindeEinstellungen } from './gemeinde';
+import { nachweisEinstieg } from './nachweisArten';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // Die Veranstaltungsseite als Attrappe: Ein Knopf meldet „archiviert“ – wie „Verwalten → Löschen“.
@@ -37,6 +38,9 @@ vi.mock('./einrichten', async (original) => ({
   istGruppenAdmin: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('./gemeinde', () => ({ gemeindeEinstellungen: vi.fn() }));
+// Der Einstieg „Nachweise“ (N1b) liest ChurchTools – hier gibt es ihn (oder nicht) auf Zuruf.
+vi.mock('./nachweisArten', () => ({ nachweisEinstieg: vi.fn() }));
+const nachweisEinstiegMock = vi.mocked(nachweisEinstieg);
 const gemeinde = vi.mocked(gemeindeEinstellungen);
 /** Die Adresse der Formular-Seite in den Einstellungen der Gemeinde (A6-2; seit A7-2 mit den Zahlarten geladen). */
 const adresse = {
@@ -58,6 +62,7 @@ const LEER: Uebersicht = {
 beforeEach(() => {
   adresse.mockResolvedValue('https://anmeldung.beispiel.de/');
   admin.mockResolvedValue(false);
+  nachweisEinstiegMock.mockResolvedValue(null);
 });
 
 describe('App der Anmeldungen (#474, #480)', () => {
@@ -91,6 +96,31 @@ describe('App der Anmeldungen (#474, #480)', () => {
       expect.any(Date),
       5,
     );
+  });
+
+  it('Nachweise (N1b): die Karte gibt es nur, wenn der Einstieg etwas liefert – und „Öffnen“ geht zu #/nachweise', async () => {
+    laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockResolvedValue(LEER);
+    const erst = render(<App />);
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Nachweise' })).toBeNull();
+    erst.unmount();
+
+    nachweisEinstiegMock.mockResolvedValue({ darfEinrichten: false });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Nachweise' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    expect(window.location.hash).toBe('#/nachweise');
+    window.location.hash = '';
+  });
+
+  it('Nachweise nicht lesbar (null): die Startseite bleibt ganz, nur die Karte fehlt', async () => {
+    laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockResolvedValue(LEER);
+    nachweisEinstiegMock.mockResolvedValue(null);
+    render(<App />);
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Öffnen' })).toBeNull();
   });
 
   it('keine Gruppen → erklärt, warum', async () => {

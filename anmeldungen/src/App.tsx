@@ -10,6 +10,8 @@ import { Startseite } from './Startseite';
 import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
+import { NachweisSeite } from './NachweisSeite';
+import { nachweisEinstieg } from './nachweisArten';
 import { GemeindeFenster } from './GemeindeFenster';
 import { ErstEinrichten } from './ErstEinrichten';
 import { gemeindeEinstellungen } from './gemeinde';
@@ -26,8 +28,8 @@ import {
  * (#480, A2) und das Anlegen und Einrichten (#486, A3). Erst Person und Gruppen, dann Veranstaltungen und
  * Anlege-Rechte – scheitert eines vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  *
- * Welche Seite offen ist, steht in der Adresse (`#/v/91` = Veranstaltung 91, `#/archiv` = Archiv), damit
- * Neuladen und der Zurück-Knopf des Browsers funktionieren.
+ * Welche Seite offen ist, steht in der Adresse (`#/v/91` = Veranstaltung 91, `#/archiv` = Archiv, `#/nachweise` = die
+ * Nachweis-Arten, N1b), damit Neuladen und der Zurück-Knopf des Browsers funktionieren.
  *
  * Über jeder Seite steht nach einer Änderung die Leiste „Rückgängig“ (A4-Nachtrag) – auch nach einem
  * Seitenwechsel, denn nach dem Archivieren geht es zur Übersicht.
@@ -35,7 +37,8 @@ import {
 type Ansicht =
   | { art: 'start' }
   | { art: 'veranstaltung'; id: number; reiter?: Reiter }
-  | { art: 'archiv' };
+  | { art: 'archiv' }
+  | { art: 'nachweise' };
 
 function ansichtAusAdresse(): Ansicht {
   // `#/v/91` = je nach Stand (U1: Entwurf → Vorbereiten, freigegeben → Anmeldungen), `#/v/91/vorbereiten`,
@@ -51,6 +54,7 @@ function ansichtAusAdresse(): Ansicht {
       reiter: m[2] === 'gestaltung' ? 'formular' : (m[2] as Reiter | undefined),
     };
   if (window.location.hash === '#/archiv') return { art: 'archiv' };
+  if (window.location.hash === '#/nachweise') return { art: 'nachweise' };
   return { art: 'start' };
 }
 
@@ -76,16 +80,19 @@ export function App() {
         // Erst die Gruppenart: Die Übersicht erkennt daran Veranstaltungen, deren Einstellungen in
         // ChurchTools überschrieben wurden, und repariert sie (A5).
         const anlegen = await anlegenMoeglich(teamIds);
-        const [uebersicht, admin, gemeinde] = await Promise.all([
+        const [uebersicht, admin, gemeinde, nachweise] = await Promise.all([
           ladeUebersicht(start.gruppen, new Date(), anlegen.artId),
           istGruppenAdmin(),
           gemeindeEinstellungen(),
+          // Der Einstieg „Nachweise“ (N1b): wirft nie – ist er nicht lesbar, fehlt nur die Karte.
+          nachweisEinstieg(new Set(start.gruppen.filter((g) => g.leitung).map((g) => g.id))),
         ]);
         return {
           start,
           uebersicht,
           anlegen,
           admin,
+          nachweise,
           formular: gemeinde.formularAdresse,
           zahlarten: gemeinde.zahlarten,
         };
@@ -151,6 +158,15 @@ export function App() {
             if (weg) zurUebersicht();
           }}
         />
+      </ErweiterungsRahmen>
+    );
+  }
+
+  if (ansicht.art === 'nachweise') {
+    return (
+      <ErweiterungsRahmen>
+        {leiste}
+        <NachweisSeite key={stand} onZurueck={zurUebersicht} onGeaendert={setAenderung} />
       </ErweiterungsRahmen>
     );
   }
@@ -231,6 +247,13 @@ export function App() {
             setAenderung(a);
             laden();
           }}
+          onNachweise={
+            fertig.nachweise
+              ? () => {
+                  window.location.hash = '#/nachweise';
+                }
+              : undefined
+          }
           onArchiv={
             fertig.anlegen.artId !== null
               ? () => {

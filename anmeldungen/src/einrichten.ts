@@ -714,14 +714,15 @@ export interface LeitungsKandidat {
   leitung: boolean;
 }
 
-interface MitgliedRoh {
+export interface MitgliedRoh {
   personId?: number;
   groupTypeRoleId?: number;
   groupMemberStatus?: string;
   person?: { title?: string; domainAttributes?: { firstName?: string; lastName?: string } };
 }
 
-const personName = (m: MitgliedRoh) => {
+/** Der Name einer Person aus einer Mitgliedschaft – auch die Nachweise zeigen ihre Vertrauenspersonen so. */
+export const personName = (m: MitgliedRoh) => {
   const d = m.person?.domainAttributes;
   return (`${d?.firstName ?? ''} ${d?.lastName ?? ''}`.trim() || m.person?.title) ?? '';
 };

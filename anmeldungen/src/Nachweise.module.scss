@@ -1,0 +1,73 @@
+// Seite „Nachweise“ und Fenster „Nachweis-Art“ (N1b). Karten und Eingaben kommen aus `Startseite.module.scss` und
+// `Formular.module.scss`; hier nur, was es dort nicht gibt. Nur Werte aus `ui/design` (keine festen Rundungen oder Farben).
+
+// „Gültig [3] Jahre ab [Ausstellung | Einsicht]“ – Zahl und Umschalter in einer Zeile, am Handy untereinander.
+.gueltig {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.jahre {
+  width: 84px;
+}
+
+// Die Personen der Art in der Liste: eine ruhige Zeile unter dem Namen.
+.personen {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Was beim Speichern geschehen ist: eine Zeile je Schritt, mit Haken oder „fehlt“.
+.schritte {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+
+  li {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+}
+
+.fertig {
+  color: var(--green);
+}
+
+.fehlt {
+  color: var(--red);
+}
+
+// Eine Person aus der Suche, die schon dabei ist, oder eine, die gleich entfernt wird.
+.wirdEntfernt {
+  color: var(--text3);
+  text-decoration: line-through;
+}
+
+.suche {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.treffer {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -14,15 +14,19 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Nachziehen } from '@shared/protokolle/nachziehen';
 import type { Sperre } from '@shared/protokolle/speicher';
 import {
+  bearbeiten,
   nameFuer,
   statusText,
+  teilFertig,
   weitereZustaendige,
+  type Aufgabe,
   type AufgabenStatus,
   type ToDoAenderung,
   type VerlaufEintrag,
 } from '@shared/protokolle/aufgaben';
 import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
+import { erledigtSatz } from './todoText';
 import { imEntwurfNachziehen } from './nachziehen';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
 import felder from './Fensterfelder.module.scss';
@@ -45,6 +49,10 @@ function verlaufText(v: VerlaufEintrag, name: (p: number) => string): string {
   if (v.art === 'notiz') return `Notiz: ${v.text ?? ''}`;
   if (v.art === 'geloescht') return 'gelöscht';
   if (v.art === 'wiederhergestellt') return 'wiederhergestellt';
+  if (v.art === 'teil')
+    return `${v.person !== undefined ? name(v.person) : 'jemand'}: ${v.fertig ? 'Teil erledigt' : 'Teil wieder offen'}`;
+  if (v.art === 'modus')
+    return v.jeder ? 'So wird es erledigt: jeder für sich' : 'So wird es erledigt: gemeinsam';
   if (v.art === 'zustaendig') {
     const wer = (l: readonly number[] | undefined) =>
       l?.length ? l.map(name).join(', ') : 'niemand';
@@ -118,13 +126,16 @@ export function ToDoFenster({
   const [gruppeId, setGruppeId] = useState(eintrag?.gruppe.id ?? gruppen[0]?.id ?? 0);
   const [bis, setBis] = useState(a?.bis ?? '');
   const [status, setStatus] = useState<AufgabenStatus>(a?.status ?? vorlage?.status ?? 'offen');
+  // „Jeder für sich“ (W8a): gewählter Modus und welche Teile ich im Fenster umgeschaltet habe (gegenüber dem Stand,
+  // den der Modus ergäbe – `vorschau`).
+  const [jederWahl, setJederWahl] = useState(a?.jeder === true);
+  const [umgeschaltet, setUmgeschaltet] = useState<ReadonlySet<number>>(new Set());
   const [wer, setWer] = useState<ReadonlySet<number>>(
     () => new Set(a ? a.wer : (vorlage?.wer ?? [])),
   );
   const [extern, setExtern] = useState(a?.extern ?? '');
   const [notiz, setNotiz] = useState('');
   const [karteNotiz, setKarteNotiz] = useState(!!a?.karte?.notiz);
-  const [karteSitzung, setKarteSitzung] = useState(!!a?.karte?.sitzung);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [loeschenFragen, setLoeschenFragen] = useState(false);
@@ -149,6 +160,20 @@ export function ToDoFenster({
 
   const gleicheMenge = (x: ReadonlySet<number>, y: readonly number[]) =>
     x.size === y.length && y.every((p) => x.has(p));
+  // „Jeder für sich“ gibt es nur ab zwei Zuständigen (Mitglieder; Externe zählen nicht).
+  const jederAn = jederWahl && wer.size >= 2;
+  // So stünde das To-Do nach dem Speichern, **ohne** meine Umschalter – daraus kommt, wer als fertig angezeigt wird.
+  const vorschau: Aufgabe | null = a
+    ? bearbeiten(a, { wer: [...wer], jeder: jederAn }, 0, '1970-01-01T00:00:00.000Z')
+    : null;
+  const teilJetzt = (p: number): boolean =>
+    (vorschau ? teilFertig(vorschau, p) : false) !== umgeschaltet.has(p);
+  const teile = (): { person: number; fertig: boolean }[] =>
+    jederAn
+      ? [...umgeschaltet]
+          .filter((p) => wer.has(p))
+          .map((p) => ({ person: p, fertig: !(vorschau ? teilFertig(vorschau, p) : false) }))
+      : [];
   const aenderung = (): ToDoAenderung => {
     if (!a) return {};
     const x: ToDoAenderung = {};
@@ -156,10 +181,12 @@ export function ToDoFenster({
     if (!gleicheMenge(wer, a.wer)) x.wer = [...wer];
     if (extern.trim() !== a.extern) x.extern = extern;
     if ((bis || null) !== a.bis) x.bis = bis || null;
-    if (status !== a.status) x.status = status;
+    if (jederAn !== (a.jeder === true && a.wer.length >= 2) && (jederAn || a.jeder === true))
+      x.jeder = jederAn;
+    if (teile().length) x.teile = teile();
+    if (!jederAn && status !== a.status) x.status = status;
     if (notiz.trim()) x.notiz = notiz;
-    if (karteNotiz !== !!a.karte?.notiz || karteSitzung !== !!a.karte?.sitzung)
-      x.karte = { notiz: karteNotiz, sitzung: karteSitzung };
+    if (karteNotiz !== !!a.karte?.notiz) x.karte = { notiz: karteNotiz };
     return x;
   };
   const geaendert = !a || verschoben || Object.keys(aenderung()).length > 0;
@@ -232,10 +259,13 @@ export function ToDoFenster({
             extern,
             bis: bis || null,
             status,
+            jeder: jederAn || undefined,
+            teile: teile(),
             notiz,
-            karte: { notiz: karteNotiz, sitzung: karteSitzung },
+            karte: { notiz: karteNotiz },
           },
           ich,
+          leitungIn(gruppe),
         ).then(() => null),
       );
     const alt = gruppen.find((g) => g.id === eintrag?.gruppe.id);
@@ -250,6 +280,7 @@ export function ToDoFenster({
           x,
           wer: [...wer],
           ich,
+          leitung: leitungIn(gruppe),
         }).then((r) => r.hinweis);
       // Im Entwurf: erst in der neuen Gruppe anlegen (unter der Sperre), dann wird die Aufgabe ein Absatz mit Hinweis.
       return ausfuehren(() =>
@@ -259,12 +290,13 @@ export function ToDoFenster({
       );
     }
     const x = aenderung();
-    const aendern = () => toDoAendern(ort, a.id, x, ich).then(() => null);
+    const leitung = leitungIn(gruppe);
+    const aendern = () => toDoAendern(ort, a.id, x, ich, leitung).then(() => null);
     // Text im Entwurf: erst das Protokoll (der Abgleich zieht den Text ins To-Do), dann der Rest – falls es einen gibt.
     if (x.text !== undefined) {
       const { text: _text, ...rest } = x;
       const danach = Object.keys(rest).length
-        ? () => toDoAendern(ort, a.id, rest, ich).then(() => null)
+        ? () => toDoAendern(ort, a.id, rest, ich, leitung).then(() => null)
         : undefined;
       return ausfuehren(() => mitEntwurf({ art: 'text', text }, aendern, { danach }));
     }
@@ -370,25 +402,6 @@ export function ToDoFenster({
         </p>
       )}
       <div className={felder.feld}>
-        <span>Status</span>
-        <Segment
-          value={status}
-          options={STATUS.map((s) => ({
-            value: s,
-            name: gross(statusText(s)),
-            label: (
-              <span className={styles.status}>
-                <Icon name={ZEICHEN[s]} size={16} />
-                {gross(statusText(s))}
-              </span>
-            ),
-          }))}
-          onChange={setStatus}
-          ariaLabel="Status"
-          verbunden
-        />
-      </div>
-      <div className={felder.feld}>
         <span>Zuständig</span>
         <Einladeliste
           liste={bekannt}
@@ -421,6 +434,108 @@ export function ToDoFenster({
           sehen nur ihre eigenen).
         </p>
       )}
+      {wer.size >= 2 && (
+        <div className={felder.feld}>
+          <span>So wird es erledigt</span>
+          <Segment
+            value={jederWahl ? 'jeder' : 'gemeinsam'}
+            options={[
+              {
+                value: 'gemeinsam',
+                name: 'Gemeinsam',
+                label: (
+                  <span className={styles.modus}>
+                    Gemeinsam<small>einer erledigt es für alle</small>
+                  </span>
+                ),
+              },
+              {
+                value: 'jeder',
+                name: 'Jeder für sich',
+                label: (
+                  <span className={styles.modus}>
+                    Jeder für sich<small>jeder hakt selbst ab</small>
+                  </span>
+                ),
+              },
+            ]}
+            onChange={(m) => setJederWahl(m === 'jeder')}
+            ariaLabel="So wird es erledigt"
+            verbunden
+          />
+        </div>
+      )}
+      {jederAn ? (
+        <div className={felder.feld}>
+          <span>Wer ist fertig?</span>
+          <ul className={styles.fertigListe}>
+            {[...wer].map((p) => {
+              const darf = p === ich.person || leitungIn(gruppe ?? gruppen[0]);
+              const fertig = teilJetzt(p);
+              const am = vorschau?.fertig?.[String(p)];
+              return (
+                <li key={p}>
+                  <label className={styles.fertigZeile} aria-disabled={!darf || laeuft}>
+                    <input
+                      type="checkbox"
+                      checked={fertig}
+                      disabled={!darf || laeuft}
+                      onChange={() =>
+                        setUmgeschaltet((u) => {
+                          const n = new Set(u);
+                          if (n.has(p)) n.delete(p);
+                          else n.add(p);
+                          return n;
+                        })
+                      }
+                    />
+                    {p === ich.person ? `${ich.name} (du)` : name(p)}
+                    <span className={`${styles.fertigRechts} ${fertig ? styles.fertigOk : ''}`}>
+                      {fertig
+                        ? am && !umgeschaltet.has(p)
+                          ? `✓ am ${tagKurz(tagAusIso(am, gemeindeZeitzone()))}`
+                          : '✓'
+                        : 'offen'}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <p className={felder.leise}>
+            {leitungIn(gruppe ?? gruppen[0])
+              ? 'Als Leitung kannst du auch für andere abhaken (z. B. wenn jemand Bescheid sagt).'
+              : 'Du hakst nur deinen eigenen Teil ab.'}{' '}
+            Fertig ist das To-Do, wenn alle fertig sind.
+          </p>
+        </div>
+      ) : (
+        <div className={felder.feld}>
+          <span>Status</span>
+          <Segment
+            value={status}
+            options={STATUS.map((s) => ({
+              value: s,
+              name: gross(statusText(s)),
+              label: (
+                <span className={styles.status}>
+                  <Icon name={ZEICHEN[s]} size={16} />
+                  {gross(statusText(s))}
+                </span>
+              ),
+            }))}
+            onChange={setStatus}
+            ariaLabel="Status"
+            verbunden
+          />
+          {/* Gemeinsam und erledigt: wer es war – wie auf der Karte (`erledigtSatz`). */}
+          {a?.status === 'erledigt' && status === 'erledigt' && (
+            <p className={felder.leise}>
+              {erledigtSatz(a, ich.person, (p) => (p === ich.person ? ich.name : name(p)))}
+            </p>
+          )}
+        </div>
+      )}
       <div className={felder.feld}>
         <span className={styles.kopf}>
           Notizen
@@ -440,15 +555,7 @@ export function ToDoFenster({
       </div>
       {a && (
         <div className={felder.feld}>
-          <span className={styles.kopf}>
-            Aus welcher Sitzung
-            {/* Ohne Sitzung zeigte die Karte nichts – der Schalter wäre wirkungslos (Test-Instanz 30.10.2026). */}
-            {a.sitzung !== null && (
-              <SchalterKnopf an={karteSitzung} onClick={() => setKarteSitzung(!karteSitzung)}>
-                Auf Karte anzeigen
-              </SchalterKnopf>
-            )}
-          </span>
+          <span className={styles.kopf}>Aus welcher Sitzung</span>
           {herkunft ? (
             <button
               type="button"

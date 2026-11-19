@@ -15,7 +15,13 @@ import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/p
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen } from '@shared/protokolle/speicher';
-import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import {
+  modusSetzen,
+  neueAufgabe,
+  notizHinzufuegen,
+  statusSetzen,
+  teilSetzen,
+} from '@shared/protokolle/aufgaben';
 import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
@@ -323,6 +329,148 @@ const FAELLIGE_AUFGABEN = [
 ];
 
 /**
+ * **„Jeder für sich“** (W8a): Alle vier Mitglieder des Leitungsteams sollen ihre Abwesenheiten eintragen, zwei haben es schon
+ * getan (Johann, Peter) – für mich fehlt es noch (Haken „mein Teil“, Hinweis „2 von 4 fertig“). Über die Erzeuger gebaut, nicht als
+ * Literal – so bleibt die Demo stimmig, wenn sich das Datenmodell ändert.
+ */
+const JEDER_AUFGABE = teilSetzen(
+  teilSetzen(
+    modusSetzen(
+      neueAufgabe({
+        id: 'demo-j1',
+        gruppe: 11,
+        sitzung: null,
+        text: 'Abwesenheiten bis Ende Januar in ChurchTools eintragen',
+        wer: [1, 7, 19, 23],
+        bis: plusTage(heuteImKalender(), 8),
+        von: 1,
+        am: '2026-10-21T19:00:00Z',
+      }),
+      true,
+      1,
+      '2026-10-21T19:00:00Z',
+    ),
+    7,
+    true,
+    7,
+    '2026-10-22T08:00:00Z',
+  ),
+  19,
+  true,
+  19,
+  '2026-10-23T08:00:00Z',
+);
+
+/**
+ * **Die Fälle der neuen Karte** (W8b): Frist heute und morgen, Notizen (eine als Zeile auf der Karte), erledigt von jemandem,
+ * „Jeder für sich“ ganz erledigt, dazu zwei To-Dos des Technik-Teams (dann steht die Gruppe auf der Karte). Relativ zu
+ * heute, damit die Fristen in Worten immer zu sehen sind; über die Erzeuger gebaut.
+ */
+const jetztTag = (n: number) => `${plusTage(heuteImKalender(), n)}T09:00:00Z`;
+/** „Jeder für sich“, alle vier haben abgehakt (an verschiedenen Tagen). */
+const ALLE_FERTIG = [1, 7, 19, 23].reduce(
+  (a, p, i) => teilSetzen(a, p, true, p, jetztTag(-6 + i)),
+  modusSetzen(
+    neueAufgabe({
+      id: 'demo-w4',
+      gruppe: 11,
+      sitzung: null,
+      text: 'Fotos für den Jahresrückblick abgeben',
+      wer: [1, 7, 19, 23],
+      von: 1,
+      am: '2026-11-01T19:00:00Z',
+    }),
+    true,
+    1,
+    '2026-11-01T19:00:00Z',
+  ),
+);
+const W8B_LEITUNG = [
+  {
+    // Notiz „auf der Karte“ (Zeile unter dem Titel) und aus einer Sitzung (Symbol).
+    ...notizHinzufuegen(
+      neueAufgabe({
+        id: 'demo-w1',
+        gruppe: 11,
+        sitzung: 'demo-okt',
+        text: 'Liedblätter für Weihnachten drucken',
+        wer: [19, 7, 23, 1],
+        bis: plusTage(heuteImKalender(), 0),
+        von: 1,
+        am: '2026-10-21T19:00:00Z',
+      }),
+      'Vorlage liegt im Wiki unter „Weihnachten 2026“.',
+      7,
+      jetztTag(-2),
+    ),
+    karte: { notiz: true },
+  },
+  notizHinzufuegen(
+    notizHinzufuegen(
+      neueAufgabe({
+        id: 'demo-w2',
+        gruppe: 11,
+        sitzung: null,
+        text: 'Mikrofon-Akkus nachbestellen',
+        wer: [19],
+        bis: plusTage(heuteImKalender(), 1),
+        von: 1,
+        am: '2026-10-21T19:00:00Z',
+      }),
+      'Angebot liegt vor.',
+      19,
+      jetztTag(-3),
+    ),
+    'Bestellung geht heute raus.',
+    19,
+    jetztTag(-1),
+  ),
+  statusSetzen(
+    neueAufgabe({
+      id: 'demo-w3',
+      gruppe: 11,
+      sitzung: null,
+      text: 'Raum für die Klausur buchen und die Tische stellen',
+      wer: [19],
+      bis: plusTage(heuteImKalender(), -6),
+      von: 1,
+      am: '2026-11-01T19:00:00Z',
+    }),
+    'erledigt',
+    19,
+    jetztTag(-3),
+  ),
+  ALLE_FERTIG,
+];
+const W8B_TECHNIK = [
+  neueAufgabe({
+    id: 'demo-t1',
+    gruppe: 19,
+    sitzung: null,
+    text: 'Kabelkiste beschriften',
+    wer: [19, 7],
+    bis: plusTage(heuteImKalender(), 3),
+    von: 1,
+    am: '2026-10-21T19:00:00Z',
+  }),
+  statusSetzen(
+    neueAufgabe({
+      id: 'demo-t2',
+      gruppe: 19,
+      sitzung: null,
+      text: 'Farbe für die Bühnenkante besorgen',
+      wer: [1],
+      bis: plusTage(heuteImKalender(), 12),
+      von: 1,
+      am: '2026-10-21T19:00:00Z',
+    }),
+    'arbeit',
+    1,
+    jetztTag(-2),
+  ),
+];
+
+/**
  * Vorschläge (S5-4, W8c): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
  * (ändern, zurückziehen), ein übernommener (steht nur als Marke an der Sitzung „Kommend“) und ein abgelehnter mit
  * Begründung von vor drei Tagen (Gruppe „Abgelehnt“, 7 Tage sichtbar).
@@ -454,13 +602,18 @@ function speicherAnlegen(fall: string): Speicher {
             [60, protokollWerte(60, 600, fall)],
             [
               61,
-              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN, ...FAELLIGE_AUFGABEN, ...DEMO_VORSCHLAEGE].map(
-                (x, i) => ({
-                  id: 700 + i,
-                  dataCategoryId: 61,
-                  value: JSON.stringify(x),
-                }),
-              ),
+              [
+                DEMO_AUFGABE,
+                ...FRUEHERE_AUFGABEN,
+                ...FAELLIGE_AUFGABEN,
+                JEDER_AUFGABE,
+                ...W8B_LEITUNG,
+                ...DEMO_VORSCHLAEGE,
+              ].map((x, i) => ({
+                id: 700 + i,
+                dataCategoryId: 61,
+                value: JSON.stringify(x),
+              })),
             ],
             // Technik-Team (W4): eingerichtet, derselbe Kalender 4 wie das Leitungsteam.
             [
@@ -476,7 +629,14 @@ function speicherAnlegen(fall: string): Speicher {
                 },
               ].map((x, i) => ({ id: 800 + i, dataCategoryId: 80, value: JSON.stringify(x) })),
             ],
-            [81, []],
+            [
+              81,
+              W8B_TECHNIK.map((x, i) => ({
+                id: 900 + i,
+                dataCategoryId: 81,
+                value: JSON.stringify(x),
+              })),
+            ],
             [
               5,
               STANDARD_VORLAGEN.map((v, i) => ({

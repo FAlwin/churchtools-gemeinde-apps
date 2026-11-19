@@ -1,0 +1,109 @@
+// Haken eines To-Dos (W8a): ein Baustein für Übersicht (Marke mit Wort), Protokoll-Editor und festen Punkt (Kreis).
+// Zeichen und Farben wie bisher: offen grau, in Arbeit blau halb gefüllt, erledigt grün mit Haken.
+.kreis {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.arbeit {
+  color: var(--blue);
+}
+
+.erledigt {
+  color: var(--green);
+}
+
+// Der Haken an der Karte und in der Tabelle (`art="karte"`): 44 px Treffläche, innen der Kreis wie im Entwurf v2 – Rand grau,
+// erledigt grün gefüllt mit weißem Haken, am PC mit der Maus ein zarter grüner Hinweis.
+.treffer {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &[aria-busy='true'] {
+    opacity: 0.6;
+  }
+}
+
+.ring {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--text3);
+  border-radius: 50%;
+  color: transparent;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+span.treffer {
+  cursor: default;
+}
+
+button.treffer:not(:disabled) {
+  @media (hover: hover) {
+    &:hover .ring:not(.an) {
+      border-color: var(--green);
+      color: color-mix(in srgb, var(--green) 45%, transparent);
+    }
+  }
+}
+
+.an {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--symbol-tinte);
+}
+
+// „2/5“ bei „Jeder für sich“ – neben dem Haken bzw. statt seiner, wenn man nicht zuständig ist.
+.fortschritt {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.reihe {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}

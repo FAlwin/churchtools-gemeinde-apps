@@ -46,6 +46,9 @@
   // deshalb je eine Stufe dunkler aus derselben Tailwind-Reihe (wie im Dunkel green-600).
   --red: #e7000b; // red-600
   --green: #00a63e; // green-600
+  // „Bald fällig“ (heute, morgen) im Frist-Kästchen der To-Dos (Protokolle W8b): Schrift amber-700 auf amber-getönter Fläche.
+  --amber: #b45309; // amber-700
+  --amber-soft: rgba(180, 83, 9, 0.09);
   --cp-dir: #0d7a6f; // ChordPro-Direktiven {…} im Editor (ChurchTools-passendes Teal)
   // Dienstfarben der Ansicht „Personen“ (Dienstplaner, Wunsch 5): die kräftige Stufe der ChurchTools-Tags (`-bright`,
   // Tailwind 500). Grund und Schrift des Tags rechnet `PersonenRaster.module.scss` per `color-mix` – hell wie dunkel,

@@ -1,0 +1,27 @@
+// Frist-Kästchen (W8b): klein, mit Kalender-Symbol; überfällig rot umrandet, heute/morgen orange, sonst neutral.
+.kaestchen {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ueberfaellig {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  color: var(--red);
+}
+
+.bald {
+  border-color: var(--amber);
+  background: var(--amber-soft);
+  color: var(--amber);
+}

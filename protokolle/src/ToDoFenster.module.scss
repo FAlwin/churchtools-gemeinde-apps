@@ -78,3 +78,56 @@
     font-weight: 600;
   }
 }
+
+// „So wird es erledigt“ (W8a): Name und eine Zeile darunter in jedem Knopf.
+.modus {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.25;
+
+  small {
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
+
+// „Wer ist fertig?“ (W8a): Name links, rechts „✓ am …“ bzw. „offen“.
+.fertigListe {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fertigZeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--knopf-hoehe);
+  cursor: pointer;
+
+  &[aria-disabled='true'] {
+    color: var(--text2);
+    cursor: default;
+  }
+
+  input {
+    flex: none;
+  }
+}
+
+.fertigRechts {
+  margin-left: auto;
+  color: var(--text2);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.fertigOk {
+  color: var(--green);
+  font-weight: 600;
+}

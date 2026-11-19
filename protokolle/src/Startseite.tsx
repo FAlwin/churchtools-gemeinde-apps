@@ -3,12 +3,12 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Icon } from '@ui/icons/icons';
-import { datumText, tagKurz } from '@shared/ct/datum';
+import { datumText } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
-  istUeberfaellig,
   meineOffenen,
+  teilText,
   offene,
   type Aufgabe,
   statusText,
@@ -22,6 +22,8 @@ import {
 } from '@shared/protokolle/sitzungen';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { FaelligBand } from './FaelligBand';
+import { FristKaestchen } from './FristKaestchen';
+import { Haken } from './Haken';
 import type { AufgabenStand } from './useFaellige';
 import type { Faellige, Vorlauf } from '@shared/protokolle/hinweis';
 import { kachelVon, uhrzeit } from './anzeige';
@@ -194,24 +196,27 @@ export function Startseite({
                 <ul className={styles.liste}>
                   {meine.map(({ a, u }) => {
                     const s = herkunft(a, u);
-                    const ueber = istUeberfaellig(a, heute);
+                    // „Jeder für sich“: statt „in Arbeit“ der Fortschritt – mein Teil fehlt noch, sonst stünde es nicht hier.
+                    const teil = teilText(a);
                     const inhalt = (
                       <>
-                        <Icon name={a.status === 'arbeit' ? 'refresh' : 'clock'} size={18} />
+                        {/* Derselbe Haken wie in der Übersicht, hier nur Anzeige: die Zeile ist selbst ein Knopf. */}
+                        <span className={styles.haken}>
+                          <Haken a={a} ich={ich.person} art="karte" />
+                        </span>
                         <span className={styles.text}>
                           <b>{a.text}</b>
                           <small>
                             {u.gruppe.name}
-                            {a.status === 'arbeit' ? ` · ${statusText(a.status)}` : ''}
+                            {teil
+                              ? ` · ${teil}`
+                              : a.status === 'arbeit'
+                                ? ` · ${statusText(a.status)}`
+                                : ''}
                             {s ? ` · aus „${s.titel}“` : ''}
                           </small>
                         </span>
-                        {a.bis && (
-                          <span className={ueber ? styles.ueberfaellig : styles.frist}>
-                            {ueber ? 'überfällig · ' : 'bis '}
-                            {tagKurz(a.bis)}
-                          </span>
-                        )}
+                        <FristKaestchen a={a} heute={heute} />
                       </>
                     );
                     return (

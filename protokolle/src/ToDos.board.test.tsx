@@ -106,7 +106,7 @@ const spalte = (name: string) => screen.getByRole('group', { name });
 const karten = (name: string) =>
   within(spalte(name))
     .queryAllByRole('listitem')
-    .map((li) => li.querySelector('button')?.textContent);
+    .map((li) => li.querySelector('[title="To-Do öffnen"]')?.textContent);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -246,7 +246,7 @@ describe('Board (S7-3)', () => {
     await screen.findByText('Zebra');
     const offen = within(screen.getByRole('group', { name: 'Offen' }))
       .getAllByRole('listitem')
-      .map((li) => li.querySelector('button')?.textContent);
+      .map((li) => li.querySelector('[title="To-Do öffnen"]')?.textContent);
     expect(offen).toEqual(['apfel', 'Beamer', 'Zebra']);
   });
 });

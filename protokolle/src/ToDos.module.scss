@@ -28,12 +28,36 @@
   gap: 8px;
 }
 
-// Am Handy (dieselbe Grenze wie bei den Symbol-Knöpfen, `FilterKnopf`/`KopfKnopf`): „Nach Status | Nach Person“ in die
-// zweite Zeile, damit Liste/Board, Sortieren, Filter und „+“ zusammen in der ersten stehen – vorher stand „+“ allein in
-// einer eigenen Zeile (Alwin 18.11.2026: „Sortieren am Handy ordentlich machen“).
-@media (max-width: 759px) {
-  .einteilen {
-    order: 1;
+.zeile2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+}
+
+// Schnellfilter „Alle | Meine“ (W8b): Kurzweg auf den Filter „Zuständig“.
+.pillen {
+  display: flex;
+  gap: 6px;
+}
+
+.pille {
+  height: var(--knopf-hoehe);
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+    color: var(--blue-ink);
   }
 }
 
@@ -73,78 +97,8 @@
 }
 
 .zeile {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 14px;
-}
-
-.text {
-  align-self: flex-start;
-  max-width: 100%;
+  // Der Inhalt (Karte oder Tabellenzeile, `ToDoKarte`) trägt sein Polster selbst.
   padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-button.text {
-  cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      color: var(--blue-ink);
-    }
-  }
-}
-
-.erledigt {
-  color: var(--text2);
-  font-weight: 400;
-  text-decoration: line-through;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  color: var(--text2);
-  font-size: 13px;
-}
-
-.wer {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.bilder {
-  display: inline-flex;
-
-  > * + * {
-    margin-left: -6px;
-  }
-}
-
-.niemand {
-  color: var(--text3);
-  font-style: italic;
-}
-
-.frist {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.ueberfaellig {
-  color: var(--red);
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .innen {
@@ -182,47 +136,6 @@ button.text {
   @media (hover: hover) {
     &:hover {
       background: var(--surface3);
-    }
-  }
-}
-
-// Abschnitte, die eine Karte auf Wunsch zeigt („Auf Karte anzeigen“, S7-2a): letzte Notiz, aus welcher Sitzung.
-.abschnitt {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 2px 0 2px 10px;
-  border-left: 2px solid var(--border);
-  color: var(--text2);
-  font-size: 13.5px;
-
-  b {
-    color: var(--text3);
-    font-size: 11.5px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-}
-
-.leise {
-  color: var(--text3);
-}
-
-.link {
-  align-self: flex-start;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--blue-ink);
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      text-decoration: underline;
     }
   }
 }

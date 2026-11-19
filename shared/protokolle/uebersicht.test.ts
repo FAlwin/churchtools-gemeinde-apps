@@ -5,6 +5,8 @@ import {
   einteilen,
   eintragSchluessel,
   langeErledigt,
+  schnellfilterAus,
+  schnellfilterVon,
   sortieren,
   spalten,
   umordnen,
@@ -175,6 +177,10 @@ describe('S7-3: Board', () => {
     expect(ablegen(a, s('p19'), s('ohne'))).toEqual({ wer: [1] });
     expect(ablegen(liste[3].aufgabe, s('ohne'), s('p23'))).toEqual({ wer: [23] });
     expect(ablegen(a, s('p1'), s('extern'))).toBeNull();
+    // „Jeder für sich“ (W8a): der Gesamtstand ist abgeleitet – ziehen in eine Status-Spalte ändert nichts.
+    const jeder = { ...a, jeder: true } as Aufgabe;
+    expect(ablegen(jeder, st[1], st[2])).toBeNull();
+    expect(ablegen(jeder, s('p1'), s('p23'))).toEqual({ wer: [19, 23] }); // Personen ziehen geht weiter
   });
 
   it('sortieren: Dringlichkeit bleibt, Bis (Erledigte nach erledigt am), Alphabetisch, Manuell (Neue ans Ende)', () => {
@@ -221,5 +227,67 @@ describe('S7-3: Board', () => {
     ]);
     expect(umordnen(['a', 'b'], ['a', 'b', 'neu'], 'a', null)).toEqual(['b', 'neu', 'a']);
     expect(umordnen([], ['a', 'b'], 'b', 'a')).toEqual(['b', 'a']);
+  });
+});
+
+describe('W8b: Nach Fälligkeit', () => {
+  const liste = [
+    ein(aufgabe('ueber', { bis: '2026-10-20' })),
+    ein(aufgabe('heute', { bis: HEUTE })),
+    ein(aufgabe('spaet', { bis: '2026-12-24' })),
+    ein(aufgabe('ohne')),
+    ein(erledigt('fertig', '2026-10-29T10:00:00Z', { bis: '2026-10-01' })),
+    ein(aufgabe('arbeit', { bis: '2026-11-02', status: 'arbeit' })),
+  ];
+  const q = { nach: 'frist' as const, heute: HEUTE, ich: 1, namen: new Map<number, string>() };
+  const ids = (l: ToDoEintrag[]) => l.map((e) => e.aufgabe.id);
+
+  it('Überfällig · Diese Woche · Später · Ohne Frist · Erledigt – leere fehlen', () => {
+    const b = einteilen(liste, q);
+    expect(b.map((x) => [x.schluessel, ids(x.eintraege)])).toEqual([
+      ['ueberfaellig', ['ueber']],
+      ['woche', ['arbeit', 'heute']],
+      ['spaeter', ['spaet']],
+      ['ohneFrist', ['ohne']],
+      ['erledigt', ['fertig']],
+    ]);
+    expect(b.map((x) => x.titel)).toEqual([
+      'Überfällig',
+      'Diese Woche',
+      'Später',
+      'Ohne Frist',
+      'Erledigt',
+    ]);
+    expect(einteilen([ein(aufgabe('x'))], q).map((x) => x.schluessel)).toEqual(['ohneFrist']);
+  });
+  it('gelöschte fehlen', () => {
+    expect(einteilen([ein(alsGeloescht(aufgabe('weg', { bis: HEUTE }), 1, 'x'))], q)).toEqual([]);
+  });
+  it('das Board kennt keine Fälligkeit: es zeigt dann die Statusspalten', () => {
+    const s = spalten(liste, q);
+    expect(s.map((x) => x.schluessel)).toEqual(['offen', 'arbeit', 'erledigt']);
+    expect(s.every((x) => x.nimmtAn)).toBe(true);
+  });
+});
+
+describe('W8b: Schnellfilter „Alle | Meine“ = Kurzweg auf den Filter „Zuständig“', () => {
+  it('Meine blendet andere und noch niemand aus – und trifft damit nur meine To-Dos', () => {
+    const aus = schnellfilterAus('meine');
+    const dabei = (a: Aufgabe) => !aus.includes(zustaendigFuer(a, 1));
+    expect(dabei(aufgabe('m', { wer: [1, 23] }))).toBe(true);
+    expect(dabei(aufgabe('a', { wer: [23] }))).toBe(false);
+    expect(dabei(aufgabe('e', { extern: 'Becker' }))).toBe(false);
+    expect(dabei(aufgabe('n'))).toBe(false);
+  });
+  it('Alle blendet nichts aus', () => {
+    expect(schnellfilterAus('alle')).toEqual([]);
+  });
+  it('welche Pille an ist, kommt aus dem Filter – eigene Auswahl: keine', () => {
+    expect(schnellfilterVon([])).toBe('alle');
+    expect(schnellfilterVon(schnellfilterAus('meine'))).toBe('meine');
+    expect(schnellfilterVon(['niemand', 'andere'])).toBe('meine');
+    expect(schnellfilterVon(['niemand'])).toBeNull();
+    expect(schnellfilterVon(['ich'])).toBeNull();
+    expect(schnellfilterVon(['andere', 'niemand', 'ich'])).toBeNull();
   });
 });

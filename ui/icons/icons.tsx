@@ -95,7 +95,8 @@ export type IconName =
   | 'idee'
   | 'tabelle'
   | 'sortieren'
-  | 'verlauf';
+  | 'verlauf'
+  | 'sprechblase';
 
 interface IconProps {
   name: IconName;
@@ -587,6 +588,13 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
           <path d="M3.5 4v4.5H8" />
           <path d="M12 8v4.5l3 1.8" />
+        </svg>
+      );
+    // Sprechblase – „Notizen“ an der To-Do-Karte (Protokolle W8b, Entwurf `todos-vorschlaege-v2`).
+    case 'sprechblase':
+      return (
+        <svg {...p}>
+          <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5Z" />
         </svg>
       );
     // Tabelle einfügen im Protokoll-Editor (K3a, Entwurf `k3-leiste-v1`).

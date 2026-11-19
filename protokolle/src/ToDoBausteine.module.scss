@@ -1,0 +1,135 @@
+// Bausteine der To-Do-Karte und Tabellenzeile (W8b, Entwurf todos-vorschlaege-v2): Gesichter, Symbole, „Wer ist fertig?“.
+.zustaendig {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stapel {
+  display: inline-flex;
+  align-items: center;
+  // Der Tooltip mit allen Namen gehört dem Stapel – die Bilder darunter melden sich nicht mit ihrem eigenen.
+  > * {
+    pointer-events: none;
+  }
+}
+
+// Gesichter überlappen sich; der Rand in Kartenfarbe trennt sie.
+.gesicht {
+  display: inline-grid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface2);
+
+  + .gesicht {
+    margin-left: -6px;
+  }
+}
+
+.mehr {
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extern {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.niemand {
+  color: var(--text3);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+// Symbole „mehr dahinter“: leise grau; der Fortschritt ist ein Knopf.
+.symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text3);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+button.symbol {
+  margin: -2px -4px;
+  padding: 2px 4px;
+  border-radius: var(--r-ctrl);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+  }
+}
+
+.voll {
+  color: var(--green);
+}
+
+// „Wer ist fertig?“ – zweispaltig, solange Platz ist.
+.fertigListe {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  font-size: 13px;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+}
+
+.fertigName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ok {
+  margin-left: auto;
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.offen {
+  margin-left: auto;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.erledigtVon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}

@@ -20,8 +20,21 @@ export interface VerlaufEintrag {
    * ohne ihn stand für sie „Person 1“ (S7-2a, Test-Instanz 30.10.2026). Ältere Einträge haben ihn nicht.
    */
   name?: string;
-  art: 'angelegt' | 'status' | 'notiz' | 'geloescht' | 'wiederhergestellt' | 'zustaendig';
+  art:
+    | 'angelegt'
+    | 'status'
+    | 'notiz'
+    | 'geloescht'
+    | 'wiederhergestellt'
+    | 'zustaendig'
+    | 'teil'
+    | 'modus';
   status?: AufgabenStatus;
+  /** Bei `teil` (W8a): wessen Teil, und ob er fertig (`true`) oder wieder offen (`false`) ist. */
+  person?: number;
+  fertig?: boolean;
+  /** Bei `modus` (W8a): `true` = „Jeder für sich“, `false` = „Gemeinsam“. */
+  jeder?: boolean;
   text?: string;
   /** Bei `zustaendig` (S7-3): wer vorher und nachher zuständig war. */
   vorher?: number[];
@@ -50,22 +63,23 @@ export interface Aufgabe {
    * gespeichert): die letzte Notiz und aus welcher Sitzung. Fehlt bei älteren To-Dos – dann nichts davon.
    */
   karte?: { notiz?: boolean; sitzung?: boolean };
+  /**
+   * **„Jeder für sich“** (W8a, Alwin 19.11.2026): Bei zwei oder mehr Zuständigen hakt jeder seinen Teil selbst ab. Fehlt das
+   * Feld, gilt „gemeinsam“ (einer erledigt es für alle – wie bisher; alte To-Dos ändern sich nicht). Wirksam ist es nur ab
+   * zwei Zuständigen (`istJeder`).
+   */
+  jeder?: true;
+  /**
+   * Bei „Jeder für sich“: wer seinen Teil erledigt hat – Person-ID (als Text) → ISO-Zeit. Wer nicht (mehr) in `wer`
+   * steht, zählt nicht mit. **Das gespeicherte `status` ist dann immer der daraus abgeleitete Gesamtstand**
+   * (`gesamtstandNeu`) – darum lesen alle Stellen, die nur `status` kennen, automatisch richtig.
+   */
+  fertig?: Record<string, string>;
 }
-
-const FOLGE: Record<AufgabenStatus, AufgabenStatus> = {
-  offen: 'arbeit',
-  arbeit: 'erledigt',
-  erledigt: 'offen',
-};
 
 /** **Wie ein Status heißt** – die eine Stelle dafür (Protokoll, Sitzung, Startseite, Suche). */
 export function statusText(s: AufgabenStatus): string {
   return s === 'arbeit' ? 'in Arbeit' : s;
-}
-
-/** Der Kreis in der Liste: offen → in Arbeit → erledigt → wieder offen. */
-export function naechsterStatus(s: AufgabenStatus): AufgabenStatus {
-  return FOLGE[s];
 }
 
 export function neueAufgabe(a: {
@@ -95,10 +109,131 @@ export function neueAufgabe(a: {
   };
 }
 
-/** Neuer Status mit Verlaufseintrag. Gleicher Status → unverändert zurück (kein doppelter Eintrag). */
+/**
+ * Neuer Status mit Verlaufseintrag. Gleicher Status → unverändert zurück (kein doppelter Eintrag). **Bei „Jeder für sich“
+ * ändert das nichts** – dort ist der Status der abgeleitete Gesamtstand (`gesamtstandNeu`), gesetzt wird der eigene Teil
+ * (`teilSetzen`).
+ */
 export function statusSetzen(a: Aufgabe, status: AufgabenStatus, von: number, am: string): Aufgabe {
+  if (a.status === status || istJeder(a)) return a;
+  return { ...a, status, verlauf: [...a.verlauf, { am, von, art: 'status', status }] };
+}
+
+/** **Gilt „Jeder für sich“?** Nur mit dem Merkmal und ab zwei Zuständigen – sonst immer „gemeinsam“. */
+export function istJeder(a: Pick<Aufgabe, 'jeder' | 'wer'>): boolean {
+  return a.jeder === true && a.wer.length >= 2;
+}
+
+/** Hat `person` ihren Teil erledigt? (Nur bei „Jeder für sich“ von Bedeutung.) */
+export function teilFertig(a: Pick<Aufgabe, 'fertig'>, person: number): boolean {
+  return !!a.fertig?.[String(person)];
+}
+
+/** **Wie weit ist es?** Bei „Jeder für sich“ `{ fertig, gesamt }` über die Zuständigen, sonst `null`. */
+export function teilStand(a: Pick<Aufgabe, 'jeder' | 'wer' | 'fertig'>): {
+  fertig: number;
+  gesamt: number;
+} | null {
+  if (!istJeder(a)) return null;
+  return { fertig: a.wer.filter((p) => teilFertig(a, p)).length, gesamt: a.wer.length };
+}
+
+/** „2 von 5 fertig“ – `null`, wenn nicht „Jeder für sich“. Karte, Startseite und Fenster sagen es gleich. */
+export function teilText(a: Pick<Aufgabe, 'jeder' | 'wer' | 'fertig'>): string | null {
+  const t = teilStand(a);
+  return t ? `${t.fertig} von ${t.gesamt} fertig` : null;
+}
+
+/**
+ * **Der Gesamtstand neu gerechnet** – die eine Stelle dafür (Teil gesetzt, Zuständige geändert, Modus gewechselt). Bei „Jeder
+ * für sich“: niemand fertig = offen, einige = in Arbeit, alle = erledigt; ändert sich der Gesamtstand, kommt ein
+ * `status`-Eintrag in den Verlauf (so findet `erledigtAm` den Zeitpunkt). Bei „gemeinsam“ bleibt alles, wie es ist.
+ */
+export function gesamtstandNeu(a: Aufgabe, von: number, am: string): Aufgabe {
+  const t = teilStand(a);
+  if (!t) return a;
+  const status: AufgabenStatus =
+    t.fertig === 0 ? 'offen' : t.fertig === t.gesamt ? 'erledigt' : 'arbeit';
   if (a.status === status) return a;
   return { ...a, status, verlauf: [...a.verlauf, { am, von, art: 'status', status }] };
+}
+
+/**
+ * **Den Teil einer Person setzen** (fertig oder wieder offen) – mit Verlaufseintrag `teil`, danach rechnet
+ * `gesamtstandNeu` den Gesamtstand neu. Nichts zu tun (nicht „Jeder für sich“, Person nicht zuständig, schon so) →
+ * unverändert zurück. Läuft auf dem **frisch gelesenen** Stand: Zwei, die kurz nacheinander abhaken, löschen sich nicht
+ * gegenseitig (jeder ändert nur seinen eigenen Eintrag).
+ */
+export function teilSetzen(
+  a: Aufgabe,
+  person: number,
+  fertig: boolean,
+  von: number,
+  am: string,
+): Aufgabe {
+  if (!istJeder(a) || !a.wer.includes(person) || teilFertig(a, person) === fertig) return a;
+  const map = { ...a.fertig };
+  if (fertig) map[String(person)] = am;
+  else delete map[String(person)];
+  return gesamtstandNeu(
+    { ...a, fertig: map, verlauf: [...a.verlauf, { am, von, art: 'teil', person, fertig }] },
+    von,
+    am,
+  );
+}
+
+/**
+ * **Wer darf den Teil von `person` setzen?** (W8a, Alwin 19.11.2026) Jeder nur seinen eigenen; die Leitung alle. Die Regel
+ * gilt im Schreibweg (`toDoAendern`), nicht nur in der Oberfläche – ChurchTools selbst kennt dafür kein Recht, die Prüfung
+ * liegt in der Erweiterung.
+ */
+export function darfTeilSetzen(person: number, ich: number, leitung: boolean): boolean {
+  return person === ich || leitung;
+}
+
+/**
+ * **Modus wechseln** (Gemeinsam ↔ Jeder für sich) – mit Verlaufseintrag `modus`. Wird aus „gemeinsam / erledigt“ zu „Jeder für
+ * sich“ gewechselt, gelten alle Zuständigen als fertig (sonst fiele ein erledigtes To-Do auf „offen“ zurück). Danach rechnet
+ * `gesamtstandNeu`. Schon so → unverändert zurück.
+ */
+export function modusSetzen(a: Aufgabe, jeder: boolean, von: number, am: string): Aufgabe {
+  if ((a.jeder === true) === jeder) return a;
+  let n: Aufgabe = { ...a, verlauf: [...a.verlauf, { am, von, art: 'modus', jeder }] };
+  if (jeder) {
+    n.jeder = true;
+    if (a.status === 'erledigt' && a.wer.length >= 2)
+      n.fertig = { ...a.fertig, ...Object.fromEntries(a.wer.map((p) => [String(p), am])) };
+  } else delete n.jeder;
+  n = gesamtstandNeu(n, von, am);
+  return n;
+}
+
+/**
+ * **Der Haken** (W8a, Alwin 19.11.2026: Haken statt Weiterschalten) – was ein Klick bei `ich` bewirkt: bei „Jeder für sich“
+ * den eigenen Teil (nur wenn man zuständig ist, sonst `null` = nur Anzeige), sonst erledigt ↔ offen. Nie „in Arbeit“.
+ */
+export type HakenSchritt =
+  | { art: 'status'; neu: 'offen' | 'erledigt' }
+  | { art: 'teil'; person: number; fertig: boolean };
+
+export function hakenSchritt(a: Aufgabe, ich: number): HakenSchritt | null {
+  if (istJeder(a)) {
+    if (!a.wer.includes(ich)) return null;
+    return { art: 'teil', person: ich, fertig: !teilFertig(a, ich) };
+  }
+  return { art: 'status', neu: a.status === 'erledigt' ? 'offen' : 'erledigt' };
+}
+
+/** Ist der Haken gesetzt? Bei „Jeder für sich“: mein Teil (nicht zuständig: der Gesamtstand), sonst `erledigt`. */
+export function hakenGesetzt(a: Aufgabe, ich: number): boolean {
+  return istJeder(a) && a.wer.includes(ich) ? teilFertig(a, ich) : a.status === 'erledigt';
+}
+
+/** Einen Haken-Schritt anwenden – auf den (frischen) Stand. Eine Regel für Editor, feste Punkte und Übersicht. */
+export function hakenAnwenden(a: Aufgabe, s: HakenSchritt, von: number, am: string): Aufgabe {
+  return s.art === 'teil'
+    ? teilSetzen(a, s.person, s.fertig, von, am)
+    : statusSetzen(a, s.neu, von, am);
 }
 
 export function notizHinzufuegen(a: Aufgabe, text: string, von: number, am: string): Aufgabe {
@@ -255,6 +390,10 @@ export interface ToDoAenderung {
   extern?: string;
   bis?: string | null;
   status?: AufgabenStatus;
+  /** „Jeder für sich“ ein/aus (W8a). */
+  jeder?: boolean;
+  /** Die Teile einzelner Personen setzen (W8a, „Jeder für sich“). */
+  teile?: { person: number; fertig: boolean }[];
   /** Neue Notiz (leer = keine). */
   notiz?: string;
   karte?: { notiz?: boolean; sitzung?: boolean };
@@ -274,11 +413,16 @@ export function zustaendigSetzen(
   const nachher = [...new Set(wer)];
   const gleich = nachher.length === a.wer.length && nachher.every((p) => a.wer.includes(p));
   if (gleich) return a;
-  return {
-    ...a,
-    wer: nachher,
-    verlauf: [...a.verlauf, { am, von, art: 'zustaendig', vorher: [...a.wer], nachher }],
-  };
+  // Wer dazukommt oder geht, ändert bei „Jeder für sich“ den Gesamtstand (alle fertig? niemand fertig?).
+  return gesamtstandNeu(
+    {
+      ...a,
+      wer: nachher,
+      verlauf: [...a.verlauf, { am, von, art: 'zustaendig', vorher: [...a.wer], nachher }],
+    },
+    von,
+    am,
+  );
 }
 
 /**
@@ -293,6 +437,8 @@ export function bearbeiten(a: Aufgabe, x: ToDoAenderung, von: number, am: string
   if (x.extern !== undefined) n.extern = x.extern.trim();
   if (x.bis !== undefined) n.bis = x.bis || null;
   if (x.karte !== undefined) n.karte = { ...a.karte, ...x.karte };
+  if (x.jeder !== undefined) n = modusSetzen(n, x.jeder, von, am);
+  for (const t of x.teile ?? []) n = teilSetzen(n, t.person, t.fertig, von, am);
   if (x.status !== undefined) n = statusSetzen(n, x.status, von, am);
   if (x.notiz) n = notizHinzufuegen(n, x.notiz, von, am);
   return n;
@@ -331,12 +477,37 @@ export function verschieben(
 }
 
 /** Überfällig: nicht erledigt und das Datum liegt vor heute (`heute` als `JJJJ-MM-TT`, Ortszeit des Aufrufers). */
-export function istUeberfaellig(a: Aufgabe, heute: string): boolean {
+export function istUeberfaellig(a: Pick<Aufgabe, 'status' | 'bis'>, heute: string): boolean {
   return a.status !== 'erledigt' && a.bis !== null && a.bis < heute;
 }
 
 export function istMeine(a: Aufgabe, person: number): boolean {
   return !a.geloescht && a.wer.includes(person);
+}
+
+/**
+ * **Ist das To-Do für mich offen?** – die eine Stelle für „meine offenen To-Dos“ (Startseite, Hinweis-Band und Zähler):
+ * ich bin zuständig, und bei „Jeder für sich“ fehlt **mein** Teil, sonst ist der Gesamtstand nicht erledigt.
+ */
+export function istFuerMichOffen(a: Aufgabe, person: number): boolean {
+  if (!istMeine(a, person)) return false;
+  return istJeder(a) ? !teilFertig(a, person) && a.status !== 'erledigt' : a.status !== 'erledigt';
+}
+
+/**
+ * **Erledigt von wem, wann?** (aus dem Verlauf, für die Karte „Erledigt von … am …“): bei „gemeinsam“ der, der zuletzt auf
+ * erledigt setzte; bei „Jeder für sich“ alle Zuständigen, die ihren Teil erledigt haben (in der Reihenfolge der Zuständigen),
+ * `am` = wann der Gesamtstand erledigt wurde. `null`, solange nicht erledigt.
+ */
+export function erledigtVon(a: Aufgabe): { von: number[]; am: string } | null {
+  const am = erledigtAm(a);
+  if (am === null) return null;
+  if (istJeder(a)) return { von: a.wer.filter((p) => teilFertig(a, p)), am };
+  for (let i = a.verlauf.length - 1; i >= 0; i--) {
+    const e = a.verlauf[i];
+    if (e.art === 'status' && e.status === 'erledigt') return { von: [e.von], am };
+  }
+  return null;
 }
 
 /** Wann zuletzt auf „erledigt“ gesetzt (ISO) – `null`, wenn nicht erledigt. */
@@ -392,7 +563,7 @@ export function offene(liste: readonly Aufgabe[], heute: string): Aufgabe[] {
 /** **Meine offenen To-Dos** (Startseite, S3-3): die mir zugewiesenen unter `offene`. */
 export function meineOffenen(liste: readonly Aufgabe[], ich: number, heute: string): Aufgabe[] {
   return offene(
-    liste.filter((a) => istMeine(a, ich)),
+    liste.filter((a) => istFuerMichOffen(a, ich)),
     heute,
   );
 }
@@ -417,7 +588,13 @@ export function istAufgabe(x: unknown): x is Aufgabe {
     typeof a.text === 'string' &&
     Array.isArray(a.wer) &&
     (a.status === 'offen' || a.status === 'arbeit' || a.status === 'erledigt') &&
-    Array.isArray(a.verlauf)
+    Array.isArray(a.verlauf) &&
+    (a.jeder === undefined || a.jeder === true) &&
+    (a.fertig === undefined ||
+      (!!a.fertig &&
+        typeof a.fertig === 'object' &&
+        !Array.isArray(a.fertig) &&
+        Object.values(a.fertig).every((z) => typeof z === 'string')))
   );
 }
 

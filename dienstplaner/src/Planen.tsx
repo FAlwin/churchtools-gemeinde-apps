@@ -44,6 +44,7 @@ import { TabellenPlan, HandyPlan } from './PlanAnsicht';
 import { WerWieOft } from './WerWieOft';
 import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
+import type { AntwortenLader } from './ladeAntworten';
 import { dienstFarben } from './personenFarben';
 import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen';
 import { VorgabeFach } from './VorgabeFach';
@@ -97,6 +98,11 @@ interface Props {
    */
   ladePersonen?: PersonenLader;
   /**
+   * Die Antworten aus „Wann kann ich?“ für die Ansicht „Personen“ (E5c-3) – Ja/Vielleicht färben die Zellen. Ohne zeigt die
+   * Ansicht keine Antworten (und sagt es).
+   */
+  ladeAntworten?: AntwortenLader;
+  /**
    * Von der Startseite (Wunsch 7, `#/planen/gruppe/3`): nur diese Dienstgruppe und die nächsten 6 Wochen – nur für diesen
    * Besuch, der gemerkte Filter und Zeitraum bleiben. `null`/fehlt: Planen wie gewohnt.
    */
@@ -143,6 +149,7 @@ export function Planen({
   katalog,
   ladeVorlagen,
   ladePersonen,
+  ladeAntworten,
   fokusGruppe = null,
   onFokusEnde,
   onVorlagen,
@@ -512,7 +519,12 @@ export function Planen({
       ) : ansicht.unteransicht === 'werWieOft' ? (
         <WerWieOft sicht={sicht} />
       ) : ansicht.unteransicht === 'raster' ? (
-        <PersonenRaster sicht={sicht} lader={ladePersonen} farbe={(id) => farben.get(id) ?? 0} />
+        <PersonenRaster
+          sicht={sicht}
+          lader={ladePersonen}
+          antwortenLader={ladeAntworten}
+          farbe={(id) => farben.get(id) ?? 0}
+        />
       ) : handy ? (
         <HandyPlan sicht={sicht} amEnde={kannNachladen ? () => nachladen('passend') : undefined} />
       ) : (

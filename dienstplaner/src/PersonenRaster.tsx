@@ -7,6 +7,7 @@ import { tagKurz } from '@shared/ct/datum';
 import type { PlanZeile } from '@shared/dienstplan/plan';
 import type { Besetzung } from '@shared/dienstplan/entwuerfe';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
+import { zahlenText, zellenText } from '@shared/dienstplan/personenAntworten';
 import {
   eintragenWarnung,
   platzDazuText,
@@ -26,12 +27,14 @@ import {
 } from '@shared/dienstplan/personenRaster';
 import { GastFenster } from './GastFenster';
 import type { PersonenLader } from './ladePersonen';
+import type { AntwortenLader } from './ladeAntworten';
 import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
 import { ANZAHL_FARBEN } from './personenFarben';
 import { sperreText } from './plaetzeTexte';
 import { blockSchluessel, type Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
 import { usePersonenDaten } from './usePersonenDaten';
+import { usePersonenAntworten } from './usePersonenAntworten';
 import planen from './Planen.module.scss';
 import styles from './PersonenRaster.module.scss';
 
@@ -122,6 +125,38 @@ function GastTag({ g, onKlick }: { g: RasterGast; onKlick?: () => void }) {
   );
 }
 
+/**
+ * Die Legende über dem Raster (E5c-3): was die Farbe einer Zelle heißt. Farbe allein trägt die Bedeutung nicht – darum
+ * steht sie hier, und jede Zelle mit Antwort sagt sie auch im Tooltip.
+ */
+function Legende() {
+  return (
+    <div className={styles.legende} role="group" aria-label="Legende zu den Farben">
+      <span className={styles.legendeTitel}>Antwort der Person:</span>
+      <span className={styles.legendeEintrag}>
+        <span className={`${styles.muster} ${styles.musterJa}`} aria-hidden="true" />
+        Ja
+      </span>
+      <span className={styles.legendeEintrag}>
+        <span className={`${styles.muster} ${styles.musterVielleicht}`} aria-hidden="true" />
+        Vielleicht
+      </span>
+      <span className={styles.legendeEintrag}>
+        <span className={`${styles.muster} ${styles.musterKeine}`} aria-hidden="true" />
+        keine Antwort
+      </span>
+      <span className={styles.legendeEintrag}>
+        <span className={`${styles.muster} ${styles.musterNein}`} aria-hidden="true" />
+        Nein oder abwesend
+      </span>
+      <span className={styles.legendeEintrag}>
+        <span className={`${styles.muster} ${styles.musterEntwurf}`} aria-hidden="true" />
+        Entwurf
+      </span>
+    </div>
+  );
+}
+
 function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: number }) {
   // Abwesend UND eingeteilt (Warnfall, P2m): nur das durchgestrichene Symbol – davor, ohne Text; der Grund steht im
   // Tooltip und Namen (und im Warnfenster). Sonst Symbol und Grund als Text.
@@ -184,11 +219,14 @@ function Zelle({ z, dienst, farbe }: { z: RasterZelle; dienst: string; farbe: nu
 export function PersonenRaster({
   sicht,
   lader,
+  antwortenLader,
   farbe,
 }: {
   sicht: Sicht;
   /** Lädt Mitglieder und Abwesenheiten – ohne bleibt es bei den Eingeteilten. */
   lader?: PersonenLader;
+  /** Lädt die Antworten aus „Wann kann ich?“ (E5c-3) – ohne gibt es keine Farbe aus Antworten. */
+  antwortenLader?: AntwortenLader;
   /** Die Farbe eines Dienstes (`personenFarben.ts`). */
   farbe: (dienstId: number) => number;
 }) {
@@ -214,6 +252,16 @@ export function PersonenRaster({
     gruppenIds,
     zeitraum,
   );
+
+  // Die Antworten aus „Wann kann ich?“ (E5c-3): je Dienstgruppe der gezeigten Dienste (nicht je Zeitraum – sie gelten je Termin).
+  const antwortGruppen = [
+    ...new Set(
+      rasterDienste(plan, spalten, gruppen).flatMap((x) =>
+        x.zeile.dienst.dienstgruppeId === null ? [] : [x.zeile.dienst.dienstgruppeId],
+      ),
+    ),
+  ];
+  const antw = usePersonenAntworten(antwortenLader, antwortGruppen);
 
   // Das Fenster zu einem Klick: Warnung (mit „Trotzdem eintragen“) oder „Dienst voll“.
   const [fenster, setFenster] = useState<
@@ -251,7 +299,14 @@ export function PersonenRaster({
   const [laeuft, setLaeuft] = useState(false);
   const personen = sicht.personen;
 
-  const raster = personenRaster({ plan, spalten, gruppen, daten, entwurf: sicht.entwurf });
+  const raster = personenRaster({
+    plan,
+    spalten,
+    gruppen,
+    daten,
+    antworten: antw.antworten,
+    entwurf: sicht.entwurf,
+  });
   if (raster.blocks.length === 0) {
     return (
       <p className={styles.leer}>
@@ -430,6 +485,7 @@ export function PersonenRaster({
       <td className={styles.einsaetze}>{r.einsaetze}</td>
       {r.zellen.map((z, pos) => {
         const a = aktionFuer(b, r, pos);
+        const antwort = z.antwort ? zellenText(z.antwort, !!z.abwesend) : null;
         const name = `${r.name} für ${b.dienst.name} am ${tagKurz(termine[pos].tag)}`;
         const klasse = [
           termine[pos].abgesagt ? styles.abgesagtSpalte : '',
@@ -437,6 +493,8 @@ export function PersonenRaster({
           a && (a.art === 'eintragen' || a.art === 'voll') ? styles.leerKlick : '',
           a && (a.art === 'belegt' || a.art === 'entwurfFach') ? styles.belegtKlick : '',
           z.abwesend ? styles.abwZelle : '',
+          z.flaeche === 'ja' ? styles.antwortJa : '',
+          z.flaeche === 'vielleicht' ? styles.antwortVielleicht : '',
           z.warnung ? styles.warnZelle : '',
         ]
           .filter(Boolean)
@@ -445,6 +503,9 @@ export function PersonenRaster({
           <td
             key={termine[pos].id}
             className={klasse || undefined}
+            // Die Antwort aus „Wann kann ich?“ in Worten – die Farbe allein trägt die Bedeutung nicht (Notiz, „nur für …“).
+            // Für Vorleser steht sie als versteckter Text in der Zelle (ein `aria-label` an der Zelle würde deren Inhalt verdecken).
+            title={antwort ?? undefined}
             // Ein Klick irgendwo in der Zelle (auch auf einem Tag darin) – der Knopf darunter ist für Tastatur und Vorleser;
             // sein Klick steigt hierher auf, so wird nichts doppelt gerechnet.
             onClick={a ? () => klick(b, r, pos) : undefined}
@@ -479,6 +540,7 @@ export function PersonenRaster({
                 )}
               </button>
             )}
+            {antwort && <span className={styles.vorleser}>{antwort}</span>}
             <Zelle z={z} dienst={b.dienst.name} farbe={farbe(b.dienst.id)} />
           </td>
         );
@@ -526,6 +588,9 @@ export function PersonenRaster({
                   ? 'Abwesenheiten nicht sichtbar'
                   : 'Abwesenheiten nur teilweise sichtbar'}
               </span>
+            )}
+            {antwortenLader && !antw.laedt && !antw.fehler && b.antworten === 'nichtSichtbar' && (
+              <span className={styles.blockHinweis}>Antworten nicht sichtbar</span>
             )}
             {b.mitgliederVerborgen && (
               <span className={styles.blockHinweis}>
@@ -692,6 +757,9 @@ export function PersonenRaster({
       )}
       {fehler && <FehlerKasten fehler={fehler} onNochmal={neuLaden} />}
       {neuFehler && <FehlerKasten fehler={neuFehler} onNochmal={neuLaden} />}
+      {antw.fehler && <FehlerKasten fehler={antw.fehler} onNochmal={antw.neuLaden} />}
+      {antw.neuFehler && <FehlerKasten fehler={antw.neuFehler} onNochmal={antw.neuLaden} />}
+      {raster.antwortZahlen.some((z) => z !== null) && <Legende />}
       <div className={planen.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
         <table
           className={styles.raster}
@@ -709,7 +777,7 @@ export function PersonenRaster({
               <th scope="col" className={styles.einsaetze}>
                 Einsätze
               </th>
-              {termine.map((s) => (
+              {termine.map((s, pos) => (
                 <th
                   key={s.id}
                   scope="col"
@@ -718,6 +786,9 @@ export function PersonenRaster({
                   <b>{tagKurz(s.tag)}</b>
                   {s.name}
                   <i>{s.abgesagt ? 'abgesagt' : `${s.uhrzeit} Uhr`}</i>
+                  {raster.antwortZahlen[pos] && (
+                    <b className={styles.antwortZahl}>{zahlenText(raster.antwortZahlen[pos])}</b>
+                  )}
                 </th>
               ))}
             </tr>

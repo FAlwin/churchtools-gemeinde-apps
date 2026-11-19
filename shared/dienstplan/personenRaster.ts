@@ -18,6 +18,9 @@
  * Das gilt auch für **ausgeblendete** Dienste: aus einer ausgeblendeten Gruppe „+ Ton (Technik)“, ein einzeln
  * ausgeblendeter Dienst einer gezeigten Gruppe „+ Bild“ (beide blass) – dafür zählen die Einteilungen aller geladenen
  * Dienste, nicht nur der gezeigten.
+ *
+ * **Antworten aus „Wann kann ich?“ (E5c-3):** Ja/Vielleicht färben die Zelle, Abwesenheit schlägt sie (Regeln in
+ * `personenAntworten.ts`); der Spaltenkopf zählt verschiedene Personen je Antwort.
  */
 import { decktTermin } from '../absences/index';
 import type { Dienst } from '../ct/dienste';
@@ -34,6 +37,14 @@ import {
   type PlanZeile,
 } from './plan';
 import type { GruppenAbwesenheit, PersonenDaten } from './personenDaten';
+import {
+  flaecheAus,
+  zellenAntwort,
+  type AntwortZahlen,
+  type PersonenAntworten,
+  type ZellenAntwort,
+  type ZellenFlaeche,
+} from './personenAntworten';
 
 /** Wie die Matrix einen Entwurf an einem Platz kennt (`entwurfAmPlatz`) – dieselbe Suche wie für „N frei“ (`platzNachEntwurf.ts`). */
 export type { EntwurfSuche };
@@ -66,6 +77,10 @@ export interface RasterZelle {
   abwesend: { grund: string; von: string; bis: string } | null;
   /** Abwesend UND eingeteilt: ein Warnfall, beides bleibt sichtbar. */
   warnung: boolean;
+  /** Die Antwort aus „Wann kann ich?“ – `null` ohne Antwort **oder** wenn die Antworten dieses Dienstes nicht sichtbar sind. */
+  antwort: ZellenAntwort | null;
+  /** Die Fläche der Zelle: Abwesenheit → `nein`, sonst die Antwort, wenn sie für diesen Dienst gilt; `null` = weiß. */
+  flaeche: ZellenFlaeche | null;
 }
 
 export interface RasterZeile {
@@ -111,6 +126,8 @@ export interface RasterBlock {
   mitgliederVerborgen: boolean;
   /** Ob man die Abwesenheiten dieses Dienstes sieht – ohne Recht sagt der Block es, statt leere Zellen zu zeigen. */
   abwesenheit: 'ok' | 'nichtSichtbar' | 'teilweise';
+  /** Ob man die Antworten aus „Wann kann ich?“ für diesen Dienst sieht – sonst sagt der Block es, statt weißer Zellen. */
+  antworten: 'ok' | 'nichtSichtbar';
   /** Vorübergehend gescheiterte Gruppen – „Nochmal versuchen“. */
   fehler: { gruppenIds: number[]; text: string; nochmal: boolean } | null;
   /**
@@ -135,6 +152,12 @@ export interface RasterOffen {
 
 export interface Raster {
   blocks: RasterBlock[];
+  /**
+   * Je gezeigte Spalte: wie viele **verschiedene Personen** im Raster dort Ja bzw. Vielleicht geantwortet haben (eine Person
+   * in zwei Blöcken zählt einmal; auch wenn die Antwort in einem Block wegen „nur bestimmte Dienste“ nicht färbt; eine
+   * Abwesenheit am Termin schlägt die Antwort und zählt nicht). `null`, wenn keine Antworten sichtbar sind.
+   */
+  antwortZahlen: (AntwortZahlen | null)[];
   /** Je gezeigte Spalte die Fußzeile „Noch offen“. */
   offen: RasterOffen[];
 }
@@ -175,9 +198,16 @@ export function personenRaster(o: {
   /** Die gezeigten Gruppen mit den gezeigten Diensten (`gezeigteGruppen`, Gruppen- und Dienstfilter), in der Reihenfolge der Matrix. */
   gruppen: PlanGruppe[];
   daten: PersonenDaten;
+  /** Die Antworten aus „Wann kann ich?“ – ohne sieht keine Gruppe welche (kein Fehler, nur keine Farbe). */
+  antworten?: PersonenAntworten;
   entwurf?: EntwurfSuche;
 }): Raster {
   const { plan, spalten, gruppen, daten } = o;
+  const antwortSicht = (d: Dienst): boolean =>
+    d.dienstgruppeId !== null && o.antworten?.sichtbar.has(d.dienstgruppeId) === true;
+  const dienstNamen = new Map(
+    plan.gruppen.flatMap((g) => g.zeilen.map((z) => [z.dienst.id, z.dienst.name] as const)),
+  );
 
   // ── Einteilungen je Person und Spalte – aus ALLEN Gruppen, nicht nur den gezeigten. ──
   const einteilungen = new Map<number, Einteilung[][]>();
@@ -335,6 +365,14 @@ export function personenRaster(o: {
               };
             });
           const abwesend = abwesendAm(personId, plan.spalten[i]);
+          // Termin-ID als Text – derselbe Schlüssel, unter dem „Wann kann ich?“ die Antwort speichert.
+          const antwort = antwortSicht(dienst)
+            ? zellenAntwort(
+                o.antworten?.jePerson.get(personId)?.[String(plan.spalten[i].id)],
+                dienst.id,
+                (id) => dienstNamen.get(id),
+              )
+            : null;
           const modus =
             zustand === 'entwurf' ? (entwurfZelle.get(personId)?.get(pos) ?? null) : null;
           return {
@@ -344,6 +382,8 @@ export function personenRaster(o: {
             abwesend,
             // Wird sie ohnehin weggenommen, ist die Abwesenheit kein Warnfall mehr.
             warnung: abwesend !== null && zustand !== null && zustand !== 'zurueck',
+            antwort,
+            flaeche: flaecheAus(abwesend !== null, antwort),
           };
         });
         return {
@@ -374,6 +414,7 @@ export function personenRaster(o: {
       ),
       gruppenIds: dienst.gruppenIds,
       mitgliederVerborgen: da.some((s) => s.mitglieder === 'verborgen'),
+      antworten: antwortSicht(dienst) ? 'ok' : 'nichtSichtbar',
       abwesenheit: ohneRecht === 0 ? 'ok' : ohneRecht === da.length ? 'nichtSichtbar' : 'teilweise',
       fehler:
         fehlerStand?.art === 'fehler'
@@ -396,7 +437,24 @@ export function personenRaster(o: {
         : [];
     }),
   }));
-  return { blocks, offen };
+
+  // ── Spaltenkopf: verschiedene Personen mit Ja / Vielleicht – nur aus Blöcken, deren Antworten sichtbar sind. ──
+  const antwortZahlen = spalten.map((_, pos): AntwortZahlen | null => {
+    const ja = new Set<number>();
+    const vielleicht = new Set<number>();
+    let sichtbar = false;
+    for (const b of blocks) {
+      if (b.antworten !== 'ok') continue;
+      sichtbar = true;
+      for (const r of b.zeilen) {
+        const z = r.zellen[pos];
+        if (z.abwesend || !z.antwort) continue; // Abwesenheit schlägt die Antwort
+        (z.antwort.a === 'ja' ? ja : vielleicht).add(r.personId);
+      }
+    }
+    return sichtbar ? { ja: ja.size, vielleicht: vielleicht.size } : null;
+  });
+  return { blocks, antwortZahlen, offen };
 }
 
 /**

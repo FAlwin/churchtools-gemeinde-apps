@@ -156,10 +156,10 @@ schaltet ihn weiter (**Klick-Zyklus**, P2m, s. u.: Anfrage → direkt → weg; �
   Die Entscheidung „was tut der Klick“ steht in `zellenAktion` (`personenEintragen.ts`: `eintragen`, `direkt`, `wegnehmen`).
   „Platz übernehmen“ behält den Modus des ersetzten Entwurfs wie bisher.
 - **Abwesenheit als Schraffur (P2m, Variante D):** Eine Zelle, in der die Person abwesend ist, ist **diagonal schraffiert** (leicht
-  getönt); der Grund steht nur als Text mit dem Abwesend-Symbol, **kein Kasten** mehr. Im Dunkelmodus dieselbe Schraffur in der
-  helleren Farbe, der Text hell. **Warnfall** (abwesend UND eingeteilt/Entwurf): rote Schraffur und ein 2 px roter Rahmen um die ganze
-  Zelle. Im Warnfall steht **kein Grund als Text**, nur das durchgestrichene Abwesend-Symbol **vor** dem Entwurf- bzw. Einteilungs-Tag; der Grund steht im Tooltip und Namen der Zelle („Krank – trotzdem eingeteilt“) und im Warnfenster. Die Farben sind Tokens in `ui/design` (`--abw-text`, `--abw-schraffur`,
-  `--abw-toenung`, `--abw-warn-schraffur`, `--abw-warn-toenung`, hell in `_farben.scss`, dunkel in `_variables.scss`); Klick und Hover
+  getönt, seit E5c-3 **rot** statt grau); der Grund steht nur als Text mit dem Abwesend-Symbol, **kein Kasten** mehr. Im Dunkelmodus dieselbe Schraffur in der
+  helleren Farbe, der Text hell. **Warnfall** (abwesend UND eingeteilt/Entwurf): kräftigere rote Schraffur und ein 2 px roter Rahmen um die ganze
+  Zelle. Im Warnfall steht **kein Grund als Text**, nur das durchgestrichene Abwesend-Symbol **vor** dem Entwurf- bzw. Einteilungs-Tag; der Grund steht im Tooltip und Namen der Zelle („Krank – trotzdem eingeteilt“) und im Warnfenster. Die Farben sind Tokens in `ui/design` (`--abw-text`, `--antwort-nein-schraffur`,
+  `--antwort-nein-toenung`, `--abw-warn-schraffur`, `--abw-warn-toenung`, hell in `_farben.scss`, dunkel in `_variables.scss`); Klick und Hover
   der Zelle bleiben wie in P2a.
 - **Platz übernehmen (P2a-2):** Gibt es keinen freien Platz ohne Entwurf, nimmt der Klick einen Platz mit **gültigem
   „Zurückziehen“-Entwurf** (belegt mit X): aus „X zurückziehen“ wird **„X durch Y ersetzen“** – derselbe Weg wie „Andere Person
@@ -272,6 +272,25 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
 - **Aussetzer zerstören nichts:** Scheitert eine Gruppe vorübergehend (Netz, Zeitüberschreitung, 5xx, gebremst), steht im
   Block dieses Dienstes der Hinweis mit **„Nochmal versuchen“** – es wird nur diese Gruppe neu geholt, der Rest bleibt.
   Abgemeldet (401) zeigt den Hinweis zum Neuladen der Seite. Bei einem späteren Neuladen bleibt der bisherige Stand stehen.
+- **Antworten aus „Wann kann ich?“ (E5c-3, 19.11.2026, Entwurf `e5c-wann-kann-ich.html` Bereich 2, Variante D):** Die Fläche jeder
+  Zelle zeigt die Antwort der Person auf diesen Termin: **Ja grün**, **Vielleicht gelblich**, **Nein/abwesend rot schraffiert**,
+  **keine Antwort weiß** (Tokens `--antwort-ja`, `--antwort-vielleicht`, `--antwort-nein-schraffur`/`-toenung` in `ui/design`,
+  hell und dunkel – dieselben Werte sollen später „Wer kann?“ färben). Die Tags (zugesagt/angefragt/Entwurf) liegen davor.
+  Regeln in `shared/dienstplan/personenAntworten.ts`: **Abwesenheit schlägt die Antwort** (`flaecheAus`); bei **„nur bestimmte
+  Dienste“** (`Antwort.dienste`, fehlt = alle) gilt die Antwort in einem anderen Dienst nicht – die Zelle bleibt weiß, Tooltip und
+  Vorlesetext sagen es („Ja – nur für Gesang“); die **Notiz** steht dort ebenfalls („Ja – nur bis 12 Uhr“, `antwortText`). Der
+  **Spaltenkopf** zeigt fett „n ja · m vielleicht“ = **verschiedene Personen** im Raster mit dieser Antwort am Termin (eine
+  Person in zwei Blöcken zählt einmal; „nur für Ton“ zählt auch im Gesang-Block mit; Abwesende zählen nicht); die **Legende** steht
+  über dem Raster, sobald Antworten sichtbar sind. Der Schlüssel der Antwort ist die **Termin-ID als Text** (wie in „Wann kann ich?“).
+  - **Laden** (`ladeAntworten.ts`, `usePersonenAntworten.ts`): je **Dienstgruppe** der gezeigten Dienste eine Kategorie
+    `dienstplaner-antworten-<Dienstgruppe>`, alle Personen einer Kategorie (`alleAntwortenLesen`), höchstens drei gleichzeitig.
+    Es werden nur Dienstgruppen gelesen, die man **planen** darf (Sichtbarkeit für Mitglieder: E5c-6); nötig ist nur das Recht
+    **„sehen“** auf die Kategorie, nicht „bereit“. Über mehrere Kategorien gilt je Person der **neueste `stand`** (bei Gleichstand
+    die kleinere Kategorie-ID) – **dieselbe Funktion** (`neuesterStand`) wie bei den eigenen Antworten.
+  - **Zweige:** Kategorie fehlt oder kein Recht (auch 403 beim Lesen) = „Antworten nicht sichtbar“ im Block, dauerhaft, keine Farbe.
+    401 und jede vorübergehende Störung (Netz, 5xx, gebremst, Zeitüberschreitung) **werfen** für das Ganze: Beim ersten Laden steht
+    ein Hinweis mit „Erneut versuchen“ (ohne Legende und Zahlen), beim Neuladen bleiben die bisherigen Antworten stehen und der
+    Hinweis steht daneben. Ein Fehlschlag wird nie als „keine Antwort“ gezeigt.
 - **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
   Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
 

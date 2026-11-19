@@ -816,6 +816,38 @@ function speicherDemo(fall: string) {
     },
     stand: zeit(0, '07:00'),
   };
+  // Die Antworten der anderen (Ansicht „Personen“, E5c-3) – ein Wert je Person in „Antworten Musik“. Alle Fälle: Ja,
+  // Vielleicht, mit Notiz, „nur bestimmte Dienste“ (Gesang = 9, Ton = 6), Antwort UND Abwesenheit (Abwesenheit schlägt),
+  // keine Antwort (Termin 105 hat niemand beantwortet, Anna ist am 104 offen).
+  const tagVon = (tage: number) => zeit(tage, '00:00').slice(0, 10);
+  const antwortenVon = (personId: number, antworten: Record<string, object>) => ({
+    art: 'dienstplaner-verfuegbarkeit',
+    fassung: 1,
+    person: personId,
+    antworten,
+    stand: zeit(0, '07:00'),
+  });
+  const andereAntworten = [
+    // Anna: Ja · Vielleicht mit Notiz · Ja nur für Ton (gilt im Gesang nicht) · Ja am 106 – aber da ist sie abwesend.
+    antwortenVon(46, {
+      '101': { a: 'ja', tag: tagVon(4) },
+      '102': { a: 'vielleicht', tag: tagVon(7), notiz: 'nur nach dem Gottesdienst' },
+      '103': { a: 'ja', tag: tagVon(11), dienste: [6] },
+      '106': { a: 'ja', tag: tagVon(39) },
+    }),
+    // Clara: Vielleicht · Ja am 103, aber im Urlaub (Abwesenheit schlägt) · Ja am 104.
+    antwortenVon(52, {
+      '101': { a: 'vielleicht', tag: tagVon(4) },
+      '103': { a: 'ja', tag: tagVon(11) },
+      '104': { a: 'ja', tag: tagVon(16) },
+    }),
+    // Spike: Ja mit Notiz · Vielleicht · Ja nur für Gesang.
+    antwortenVon(19, {
+      '101': { a: 'ja', tag: tagVon(4), notiz: 'nur bis 12 Uhr' },
+      '102': { a: 'vielleicht', tag: tagVon(7) },
+      '104': { a: 'ja', tag: tagVon(16), dienste: [9] },
+    }),
+  ];
   const spike = {
     art: 'dienstplaner-entwurf',
     fassung: 1,
@@ -855,7 +887,17 @@ function speicherDemo(fall: string) {
     ziel: { art: 'person', personId, name },
   });
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
-    [41, [{ id: 410, dataCategoryId: 41, value: JSON.stringify(meineAntworten) }]],
+    [
+      41,
+      [
+        { id: 410, dataCategoryId: 41, value: JSON.stringify(meineAntworten) },
+        ...andereAntworten.map((w, i) => ({
+          id: 411 + i,
+          dataCategoryId: 41,
+          value: JSON.stringify(w),
+        })),
+      ],
+    ],
     [
       40,
       [

@@ -188,15 +188,62 @@ function jePerson(werte: Wert[]): {
 
 export type LesenErgebnis<T> = { ok: true; wert: T } | { ok: false; grund: VerfuegbarkeitGrund };
 
-/** Alle Antworten einer Kategorie, je Person der neueste Wert – **frisch**, nie aus einem Cache. */
+/** Die Antworten einer Person samt dem Zeitpunkt, an dem sie geschrieben wurden (`stand`). */
+export interface StandAntworten {
+  antworten: Antworten;
+  stand: string;
+}
+
+/**
+ * **Die eine Regel, welche Antworten gelten, wenn eine Person in mehreren Kategorien (Dienstgruppen) welche hat**
+ * (E5c-3 aus `eigeneAntwortenLesen` herausgezogen – die Ansicht „Personen“ braucht sie für alle Personen): Eine Person
+ * schreibt in alle ihre Dienstgruppen dasselbe, es gilt der **neueste `stand`**; bei Gleichstand die Kategorie mit der
+ * **kleineren ID**. `null`, wenn es keinen Kandidaten gibt.
+ */
+export function neuesterStand<T extends { stand: string }>(
+  kandidaten: readonly { kategorie: number; wert: T }[],
+): T | null {
+  let beste: T | null = null;
+  for (const k of [...kandidaten].sort((a, b) => a.kategorie - b.kategorie)) {
+    // Strikt neuer: bei Gleichstand bleibt die Kategorie mit der kleineren ID.
+    if (!beste || k.wert.stand > beste.stand) beste = k.wert;
+  }
+  return beste;
+}
+
+/**
+ * Die Antworten aller Personen aus mehreren Kategorien zusammenführen: je Person gilt `neuesterStand`. Eingang: je
+ * Kategorie das Ergebnis von `alleAntwortenLesen`.
+ */
+export function antwortenZusammen(
+  jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
+): Map<number, Antworten> {
+  const kandidaten = new Map<number, { kategorie: number; wert: StandAntworten }[]>();
+  for (const [kategorie, personen] of jeKategorie)
+    for (const [person, wert] of personen)
+      kandidaten.set(person, [...(kandidaten.get(person) ?? []), { kategorie, wert }]);
+  const zusammen = new Map<number, Antworten>();
+  for (const [person, liste] of kandidaten) {
+    const beste = neuesterStand(liste);
+    if (beste) zusammen.set(person, beste.antworten);
+  }
+  return zusammen;
+}
+
+/** Alle Antworten einer Kategorie, je Person der neueste Wert (mit `stand`) – **frisch**, nie aus einem Cache. */
 export async function alleAntwortenLesen(
   p: EntwurfPort,
   modul: number,
   kategorie: number,
-): Promise<LesenErgebnis<Map<number, Antworten>>> {
+): Promise<LesenErgebnis<Map<number, StandAntworten>>> {
   try {
     const { je } = jePerson(await werteLesen(p, modul, kategorie));
-    return { ok: true, wert: new Map([...je].map(([person, v]) => [person, v.antworten])) };
+    return {
+      ok: true,
+      wert: new Map(
+        [...je].map(([person, v]) => [person, { antworten: v.antworten, stand: v.stand }]),
+      ),
+    };
   } catch (e) {
     return { ok: false, grund: grundAus(p, e) };
   }
@@ -204,9 +251,9 @@ export async function alleAntwortenLesen(
 
 /**
  * Die eigenen Antworten – aus allen Kategorien der Person der Wert mit dem **neuesten `stand`** (bei
- * Gleichstand die kleinere Kategorie-ID). Nacheinander gelesen (ChurchTools drosselt). Ist eine Kategorie nicht
- * lesbar, zählen die übrigen; **keine** lesbar → Fehler (nicht „keine Antworten“). `stand` ist `null`, wenn
- * noch nichts gespeichert ist.
+ * Gleichstand die kleinere Kategorie-ID, `neuesterStand`). Nacheinander gelesen (ChurchTools drosselt). Ist eine
+ * Kategorie nicht lesbar, zählen die übrigen; **keine** lesbar → Fehler (nicht „keine Antworten“). `stand` ist `null`,
+ * wenn noch nichts gespeichert ist.
  */
 export async function eigeneAntwortenLesen(
   p: EntwurfPort,
@@ -214,20 +261,20 @@ export async function eigeneAntwortenLesen(
   kategorien: number[],
   person: number,
 ): Promise<LesenErgebnis<{ antworten: Antworten; stand: string | null }>> {
-  let beste: PersonenWert | null = null;
+  const kandidaten: { kategorie: number; wert: PersonenWert }[] = [];
   let gelesen = 0;
   let fehler: VerfuegbarkeitGrund | null = null;
   for (const kat of [...kategorien].sort((a, b) => a - b)) {
     try {
       const eigener = jePerson(await werteLesen(p, modul, kat)).je.get(person);
       gelesen++;
-      // Strikt neuer: bei Gleichstand bleibt die Kategorie mit der kleineren ID.
-      if (eigener && (!beste || eigener.stand > beste.stand)) beste = eigener;
+      if (eigener) kandidaten.push({ kategorie: kat, wert: eigener });
     } catch (e) {
       fehler ??= grundAus(p, e);
     }
   }
   if (gelesen === 0 && fehler) return { ok: false, grund: fehler };
+  const beste = neuesterStand(kandidaten);
   return { ok: true, wert: { antworten: beste?.antworten ?? {}, stand: beste?.stand ?? null } };
 }
 

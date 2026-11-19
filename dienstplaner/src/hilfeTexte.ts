@@ -28,6 +28,13 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     ],
   },
   {
+    titel: 'Antworten in „Personen“',
+    punkte: [
+      'Die Farbe der Zelle ist die Antwort aus „Wann kann ich?“: grün = Ja, gelb = Vielleicht, rot schraffiert = Nein oder abwesend, weiß = keine Antwort.',
+      'Darunter im Spaltenkopf: wie viele Personen Ja oder Vielleicht geantwortet haben. Notiz und „nur für …“ stehen im Tooltip der Zelle.',
+    ],
+  },
+  {
     titel: 'Anfrage oder direkt',
     punkte: [
       'Rahmen gestrichelt = Anfrage, durchgezogen = direkt (ohne Rückfrage zugesagt).',

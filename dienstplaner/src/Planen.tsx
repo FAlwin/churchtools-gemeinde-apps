@@ -29,6 +29,7 @@ import { gruppenAbschnitt } from './gruppenAbschnitt';
 import { terminAbschnitte } from './terminAbschnitte';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { PlaetzeFach } from './PlaetzeFach';
 import { PlatzFenster } from './PlatzFenster';
 import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
@@ -302,10 +303,30 @@ export function Planen({
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
     },
   });
+  /**
+   * **Die Platzzahl ändern** (Regler, Plätze-Fach, „Platz dazunehmen“): der Anschluss trägt die Entwürfe des Dienstes mit um
+   * (19.11.2026, `anzahlMitEntwuerfen`) – danach müssen die Entwürfe neu geladen werden, sonst arbeitet die Matrix mit den
+   * alten Nummern weiter. Den Plan laden die Aufrufer selbst neu (beim Schließen des Fensters bzw. nach „dazunehmen“).
+   * Die Fenster gibt es nur mit Anschluss; ohne ihn kommt „nicht bestätigt“ zurück.
+   */
+  const anzahlSetzen = async (
+    eventId: number,
+    serviceId: number,
+    gesehen: number,
+    neu: number,
+  ): Promise<AnzahlErgebnis> => {
+    if (!entwuerfe) return { ok: false, grund: 'voruebergehend' };
+    const r = await entwuerfe.anzahl(eventId, serviceId, gesehen, neu);
+    const e = r.ok ? r.entwuerfe : undefined;
+    if (e && (e.umgetragen.length > 0 || e.offen > 0 || e.unklar)) ewNeu();
+    return r;
+  };
   // „Platz dazunehmen“ im Fenster „Dienst voll“ (P2c): Platz in ChurchTools, nach dem Neuladen der Entwurf.
   const dazunehmen = usePlatzDazu({
     plan,
     entwuerfe,
+    daten,
+    anzahl: anzahlSetzen,
     personen: amPersonen,
     neuLaden: leiseNeuLaden,
     showToast,
@@ -733,7 +754,7 @@ export function Planen({
                   ? plaetzeStand(zl.zellen[i] ?? null, (p) => entwurfAmPlatz(daten, s, zl, p))
                   : null
               }
-              aendern={(z, gesehen, neu) => entwuerfe.anzahl(s.id, z.serviceId, gesehen, neu)}
+              aendern={(z, gesehen, neu) => anzahlSetzen(s.id, z.serviceId, gesehen, neu)}
               onGespeichert={showToast}
               onClose={(geaendert) => {
                 setPlatzFenster(null);
@@ -764,7 +785,7 @@ export function Planen({
               : undefined
           }
           aendern={(z, gesehen, neu) =>
-            entwuerfe.anzahl(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
+            anzahlSetzen(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
           }
           onGespeichert={showToast}
           onClose={(geaendert) => {

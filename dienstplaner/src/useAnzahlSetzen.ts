@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
-import { anzahlFehlerText, plaetzeText } from './plaetzeTexte';
+import { anzahlFehlerText, mitnehmenText, plaetzeText } from './plaetzeTexte';
 import type { PlaetzeZeile } from './PlaetzeFach';
 
 /**
  * **Die Plätze eines Dienstes ändern – eine Stelle für das Gruppen-Fach (`PlaetzeFach`) und das Fenster eines einzelnen
  * Dienstes in „Personen“ (`PlatzFenster`, P2c).** Jeder Tipp wird sofort gespeichert und nachgelesen (`aendern` →
  * `anzahlAendern`); die Zahl im Fenster ist, was ChurchTools nachgelesen hat – bei einem Fehlschlag, was jetzt dasteht
- * (damit der nächste Tipp vom richtigen Stand ausgeht). `gesperrt`: von außen gesperrt (z. B. läuft eine Vorlage).
+ * (damit der nächste Tipp vom richtigen Stand ausgeht); gingen Entwürfe bei einer Änderung nicht mit, steht das als Meldung
+ * da (`mitnehmenText`). `gesperrt`: von außen gesperrt (z. B. läuft eine Vorlage).
  */
 export function useAnzahlSetzen({
   zeilen,
@@ -38,6 +39,9 @@ export function useAnzahlSetzen({
       setAnzahl((alt) => new Map(alt).set(z.serviceId, r.anzahl));
       setGeaendert(true);
       onGespeichert(`${z.name}: jetzt ${plaetzeText(r.anzahl)}.`);
+      // Die Zahl gilt – gingen Entwürfe aber nicht mit, steht das daneben (und der Aufrufer lädt neu).
+      const offen = mitnehmenText(r);
+      if (offen) setMeldung(`${z.name}: ${offen}`);
       return;
     }
     // Was jetzt dasteht, gilt – damit der nächste Tipp vom richtigen Stand ausgeht.

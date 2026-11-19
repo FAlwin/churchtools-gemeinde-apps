@@ -34,6 +34,7 @@ import { MODUL_KUERZEL, type Start } from './start';
 import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
 import { dienstPort } from './dienstPort';
 import { anzahlAendern, type AnzahlErgebnis } from '@shared/dienstplan/anzahl';
+import { entwuerfeMitnehmen } from '@shared/dienstplan/umnummerieren';
 import { ladeSendeHinweise, type SendeHinweis } from './sendeHinweise';
 import { ladeTerminStaende, type TerminStand } from './terminStand';
 import { ladeVorliebe, speichereVorliebe } from './ladeVorlieben';
@@ -134,6 +135,53 @@ export function entferneEntwurf(
   return entwurfEntfernen(port, daten.modul, kategorie, ort, erwartet);
 }
 
+/**
+ * **Die Platzzahl ändern – und die Entwürfe dieses Termins und Dienstes mitnehmen** (Alwin, 19.11.2026: „Alles bleibt in
+ * der Planung anpassbar“). ChurchTools nummeriert die Plätze eines Dienstes beim Ändern neu, ein Entwurf merkt sich seinen
+ * Platz über die Nummer (`ortSchluessel`) – also trägt der Dienstplaner ihn danach selbst auf die neue Nummer um (Regel
+ * `umzuegeRechnen`, Ablauf `entwuerfeMitnehmen`; die Platz-ID vorher/nachher liefert `anzahlAendern`).
+ *
+ * Die Platzzahl IST nach `ok` geändert, was mit den Entwürfen geschah, steht in `entwuerfe` (`offen`/`unklar` → der Aufrufer
+ * meldet es und lädt Plan UND Entwürfe neu). Die Schublade der Dienstgruppe wird dafür **frisch** gelesen – samt Rechten
+ * (nur „bereit“ darf umtragen). Gibt es keine Schublade (oder sie ist nicht zu sehen), gibt es hier keine Entwürfe.
+ */
+export async function anzahlMitEntwuerfen(
+  start: Start,
+  eventId: number,
+  serviceId: number,
+  gesehen: number,
+  neu: number,
+): Promise<AnzahlErgebnis> {
+  const r = await anzahlAendern(dienstPort, eventId, serviceId, gesehen, neu);
+  if (!r.ok || !r.plaetze) return r;
+  const gruppe = start.dienstgruppen.find(
+    (g) => g.id === start.dienste.get(serviceId)?.dienstgruppeId,
+  );
+  if (!gruppe) return r;
+  const unklar = { ...r, entwuerfe: { umgetragen: [], offen: 0, unklar: true } };
+  try {
+    const modul = await modulId();
+    const [rechteRoh, liste] = await Promise.all([
+      port.daten<Record<string, unknown> | null>('/permissions/global'),
+      kategorienLesen(port, modul),
+    ]);
+    const kategorie = kategorieAusListe(liste, schublade(gruppe).kuerzel);
+    const stand = schubladenStand(modulRechteAus(rechteRoh?.[MODUL_KUERZEL]), kategorie);
+    // Nicht zu sehen: Dann kennen wir hier keine Entwürfe. Nur zu lesen: Es gäbe vielleicht welche, wir dürften sie aber nicht umtragen.
+    if (kategorie === null || stand === 'fehlt') return r;
+    if (stand !== 'bereit') return unklar;
+    const entwuerfe = await entwuerfeMitnehmen(port, modul, kategorie, {
+      eventId,
+      serviceId,
+      ...r.plaetze,
+    });
+    return { ...r, entwuerfe };
+  } catch {
+    // Vorübergehend (Netz, Drosselung): die Platzzahl steht – ob Entwürfe mitgehen müssen, ist offen.
+    return unklar;
+  }
+}
+
 /** Entwürfe senden (E4-4) – einer nach dem anderen, im Kern (`senden.ts`). */
 export function sendeEntwuerfe(
   daten: EntwuerfeDaten,
@@ -186,7 +234,10 @@ export interface EntwurfAnschluss {
   ): Promise<Map<string, SendeHinweis>>;
   /** Gibt es diese Termine noch, und wann waren sie? (Entwürfe ohne Platz, #582) */
   termine(ids: readonly number[]): Promise<Map<number, TerminStand>>;
-  /** Anzahl der Plätze eines Dienstes am Termin sofort ändern (E4-5-3) – im Kern `anzahl.ts`. */
+  /**
+   * Anzahl der Plätze eines Dienstes am Termin sofort ändern (E4-5-3) – im Kern `anzahl.ts`; die Entwürfe des Dienstes an
+   * diesem Termin gehen mit (`anzahlMitEntwuerfen`). Danach muss der Aufrufer Plan und Entwürfe neu laden.
+   */
   anzahl(eventId: number, serviceId: number, gesehen: number, neu: number): Promise<AnzahlErgebnis>;
   /** Vorlieben einer Person je Dienstgruppe – der Stift (E5-3), sofort in ChurchTools; im Kern `vorlieben.ts`. */
   vorlieben: {
@@ -213,7 +264,7 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     hinweise: ladeSendeHinweise,
     termine: (ids) => ladeTerminStaende(ids),
     anzahl: (eventId, serviceId, gesehen, neu) =>
-      anzahlAendern(dienstPort, eventId, serviceId, gesehen, neu),
+      anzahlMitEntwuerfen(start, eventId, serviceId, gesehen, neu),
     vorlieben: { lesen: ladeVorliebe, speichern: speichereVorliebe },
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);

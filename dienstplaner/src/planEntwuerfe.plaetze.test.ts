@@ -104,6 +104,43 @@ describe('plaetzeZeilen – alle Dienste der Gruppe', () => {
     expect(z.find((x) => x.name === 'Kamera')).toMatchObject({ belegt: 0, entwuerfe: 0 });
   });
 
+  it('Untergrenze fürs Verkleinern: nur Entwürfe auf FREIEN Plätzen zählen extra (19.11.2026)', () => {
+    const s = start();
+    const plan = planFuer(s);
+    const zeilen = (eintraege: Parameters<typeof entwurf>[0][]) =>
+      plaetzeZeilen(daten(eintraege.map((x) => entwurf(x))), plan.spalten[0], 0, gruppe(plan, 3));
+    // Ton: Platz 1 Anna (belegt), Platz 2 frei. Ein Entwurf auf dem freien Platz 2 hält ihn fest …
+    expect(zeilen([{ ort: { eventId: 20, serviceId: 6, index: 2 } }])[0]).toMatchObject({
+      entwuerfe: 1,
+      entwuerfeAufFreien: 1,
+    });
+    // … ein Entwurf auf dem belegten Platz 1 (Zurückziehen) nicht.
+    expect(
+      zeilen([
+        {
+          ort: { eventId: 20, serviceId: 6, index: 1 },
+          ziel: { art: 'frei' },
+          gesehen: { art: 'zusage', personId: 5 },
+        },
+      ])[0],
+    ).toMatchObject({ entwuerfe: 1, entwuerfeAufFreien: 0 });
+    // Ohne Entwurf: nichts, und umtragen darf man (Voreinstellung der Schublade: bereit).
+    expect(zeilen([])[0]).toMatchObject({ entwuerfe: 0, entwuerfeAufFreien: 0, mitnehmbar: true });
+  });
+
+  it('mitnehmbar: nur, wo man die Schublade der Dienstgruppe ändern darf – ohne Entwürfe ist es egal', () => {
+    const s = start();
+    const plan = planFuer(s);
+    const e = { ort: { eventId: 20, serviceId: 6, index: 2 } };
+    const lesen = daten([entwurf(e)], { stand: 'nur-lesen' });
+    const z = plaetzeZeilen(lesen, plan.spalten[0], 0, gruppe(plan, 3));
+    expect(z.find((x) => x.name === 'Ton')).toMatchObject({ entwuerfe: 1, mitnehmbar: false });
+    // Licht hat keinen Entwurf: nichts umzutragen, also nicht gesperrt.
+    expect(z.find((x) => x.name === 'Licht')).toMatchObject({ entwuerfe: 0, mitnehmbar: true });
+    const bereit = plaetzeZeilen(daten([entwurf(e)]), plan.spalten[0], 0, gruppe(plan, 3));
+    expect(bereit.find((x) => x.name === 'Ton')).toMatchObject({ mitnehmbar: true });
+  });
+
   it('Dienste, die man nicht planen darf, stehen nicht da – auch nicht ohne Zeile', () => {
     const s = start({ planbareDienstgruppen: [5] }); // Technik nicht
     const plan = planFuer(s);

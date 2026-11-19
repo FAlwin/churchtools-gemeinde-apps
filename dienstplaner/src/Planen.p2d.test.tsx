@@ -23,7 +23,7 @@ import { startFuer } from './start.testutil';
  * - So 22.11.: Ton 2 Plätze, Gast „Marie Gast“ + ein freier Platz
  * - So 29.11.: Ton 3 Plätze, Anna + Ben zugesagt, einer frei
  * - Mi 02.12.: Ton 2 Plätze, Anna + Ben zugesagt – voll
- * - Do 03.12.: Ton 2 Plätze, voll, Carla ersetzt Ben als Entwurf (Sperre)
+ * - Do 03.12.: Ton 2 Plätze, voll, Carla ersetzt Ben als Entwurf
  * - Fr 04.12.: abgesagt, Ton 2 frei
  * - Sa 05.12.: nur Gesang – Ton ist dort „aus“
  */
@@ -492,23 +492,23 @@ describe('Gast bei vollem Dienst', () => {
     expect(speichern).not.toHaveBeenCalled();
   });
 
-  it('Sperre: liegt an Dienst und Termin ein Entwurf, kein Dazunehmen – „Ansehen und senden“, kein Namensfeld', async () => {
+  it('liegt am Dienst ein Entwurf (Carla ersetzt Ben), geht „Platz dazunehmen“ trotzdem – die Entwürfe gehen mit (19.11.2026)', async () => {
     const { anzahl, speichern } = zeige({ entwuerfeDaten: [ERSETZT] });
     await warte();
     await waitFor(() =>
       expect(screen.queryByRole('status', { name: 'Noch nicht gesendet' })).toBeTruthy(),
     );
     fireEvent.click(await gastKnopf('Ton', 'Do, 03.12.'));
-    const f = await screen.findByRole('alertdialog');
+    const f = await fenster();
     expect(f.textContent).toContain(
-      'Ton am 03.12. ist voll (2 von 2). Erst senden oder Entwürfe entfernen.',
+      'Ton am 03.12. ist voll (2 von 2). Platz dazunehmen und eintragen?',
     );
-    expect(within(f).queryByRole('button', { name: /Platz dazunehmen/ })).toBeNull();
-    expect(screen.queryByRole('textbox', { name: 'Name eines Gastes' })).toBeNull();
-    fireEvent.click(within(f).getByRole('button', { name: 'Ansehen und senden' }));
-    expect(await screen.findByText(/Anfrage an Carla Test statt Ben Test/)).toBeTruthy();
-    expect(anzahl).not.toHaveBeenCalled();
-    expect(speichern).not.toHaveBeenCalled();
+    expect(f.textContent).not.toContain('Erst senden oder Entwürfe entfernen');
+    expect(within(f).queryByRole('button', { name: 'Ansehen und senden' })).toBeNull();
+    tippe('Max Gast');
+    fireEvent.click(eintragenButton(f, 'Platz dazunehmen (3)'));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(DO, 6, 2, 3));
+    expect(speichern).not.toHaveBeenCalled(); // der neue Platz ist erst nach dem Neuladen da
   });
 });
 

@@ -55,7 +55,8 @@ export const darfAendern = (daten: EntwuerfeDaten | null, zl: PlanZeile) =>
 
 /**
  * Entwürfe ohne Platz (#582): Am geladenen Termin passt die Platznummer nicht mehr (Platzzahl in ChurchTools
- * geändert – gemessen: dann wird neu nummeriert) → Schild beim Dienst. Gehört der Dienst nicht mehr zum Termin,
+ * geändert – gemessen: dann wird neu nummeriert; geschieht das über den Dienstplaner, trägt er die Entwürfe um, das
+ * Schild bleibt für Änderungen in ChurchTools selbst und für Entwürfe ohne Ziel) → Schild beim Dienst. Gehört der Dienst nicht mehr zum Termin,
  * oder ist der Termin vorbei bzw. gelöscht → „alte Entwürfe“ zum Aufräumen. Termine außerhalb des Zeitraums sind
  * `fremd` – ihr Stand (`staende`) wird nachgefragt; ein künftiger Termin dort ist normal.
  */
@@ -220,12 +221,17 @@ export function plaetzeZeile(
   zl: PlanZeile | undefined,
 ): PlaetzeZeile {
   const zelle = zl?.zellen[i] ?? [];
+  const mit = zl ? zelle.filter((p) => entwurfAmPlatz(daten, s, zl, p) !== null) : [];
   return {
     serviceId: dienst.id,
     name: dienst.name,
     anzahl: zelle.length,
     belegt: zelle.filter((p) => p.art !== 'frei').length,
-    entwuerfe: zl ? zelle.filter((p) => entwurfAmPlatz(daten, s, zl, p) !== null).length : 0,
+    entwuerfe: mit.length,
+    // Nur Entwürfe auf FREIEN Plätzen halten die Zahl fest – ein Entwurf auf einem belegten Platz zählt nicht extra.
+    entwuerfeAufFreien: mit.filter((p) => p.art === 'frei').length,
+    // Die Entwürfe dürfen umgetragen werden, wo man die Schublade der Dienstgruppe ändern darf (`darfAendern`).
+    mitnehmbar: mit.length === 0 || (!!zl && darfAendern(daten, zl)),
   };
 }
 
@@ -244,8 +250,9 @@ function darfImFach(
 }
 
 /**
- * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
- * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
+ * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“ und nicht unter die
+ * Entwürfe auf freien Plätzen (`plaetzeGrenze`); die Entwürfe gehen bei einer Änderung mit (ChurchTools nummeriert die
+ * Plätze dabei neu – gemessen 15.10.2026; `anzahlMitEntwuerfen`).
  *
  * Mit `katalog` stehen **alle Dienste der Gruppe** da, auch die ohne Matrixzeile – mit Anzahl 0 („nicht vorgesehen“), dort
  * schaltet „+“ sie ein (13.11.2026: „Abendmahl“ fehlte, weil er im Zeitraum nirgends vorkam). Die Matrix selbst bekommt

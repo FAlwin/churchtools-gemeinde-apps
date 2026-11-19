@@ -8,19 +8,49 @@ import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
 import { anzahlFehlerText } from './plaetzeTexte';
 import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
-const LICHT: PlaetzeZeile = { serviceId: 7, name: 'Licht', anzahl: 1, belegt: 0, entwuerfe: 0 };
-const TON: PlaetzeZeile = { serviceId: 6, name: 'Ton', anzahl: 1, belegt: 1, entwuerfe: 0 };
-const VIDEO: PlaetzeZeile = { serviceId: 8, name: 'Video', anzahl: 0, belegt: 0, entwuerfe: 0 };
-const KAMERA: PlaetzeZeile = { serviceId: 9, name: 'Kamera', anzahl: 1, belegt: 0, entwuerfe: 1 };
+/** Eine Zeile des Fachs – Vorgabe: keine Entwürfe, Entwürfe dürften umgetragen werden. */
+const zeile = (
+  x: Pick<PlaetzeZeile, 'serviceId' | 'name' | 'anzahl' | 'belegt'> & Partial<PlaetzeZeile>,
+): PlaetzeZeile => ({
+  entwuerfe: 0,
+  entwuerfeAufFreien: 0,
+  mitnehmbar: true,
+  ...x,
+});
+const LICHT = zeile({ serviceId: 7, name: 'Licht', anzahl: 1, belegt: 0 });
+const TON = zeile({ serviceId: 6, name: 'Ton', anzahl: 1, belegt: 1 });
+const VIDEO = zeile({ serviceId: 8, name: 'Video', anzahl: 0, belegt: 0 });
+/** Ein Entwurf auf dem einzigen (freien) Platz – er hält die Zahl fest. */
+const KAMERA = zeile({
+  serviceId: 9,
+  name: 'Kamera',
+  anzahl: 1,
+  belegt: 0,
+  entwuerfe: 1,
+  entwuerfeAufFreien: 1,
+});
+/** Ein Entwurf, der nicht umgetragen werden darf (Schublade der Gruppe nicht „bereit“): alles gesperrt. */
+const BUEHNE = zeile({
+  serviceId: 10,
+  name: 'Bühne',
+  anzahl: 2,
+  belegt: 0,
+  entwuerfe: 1,
+  entwuerfeAufFreien: 1,
+  mitnehmbar: false,
+});
 type Aendern = (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
 
-function zeige(aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, anzahl: neu })) {
+function zeige(
+  aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, anzahl: neu }),
+  zeilen: PlaetzeZeile[] = [LICHT, TON, VIDEO, KAMERA],
+) {
   const p = { aendern: vi.fn(aendern), onGespeichert: vi.fn(), onClose: vi.fn() };
   render(
     <PlaetzeFach
       titel="Technik · Plätze"
       unter="Gottesdienst · So, 25.10."
-      zeilen={[LICHT, TON, VIDEO, KAMERA]}
+      zeilen={zeilen}
       {...p}
     />,
   );
@@ -41,11 +71,60 @@ describe('PlaetzeFach (E4-5-3)', () => {
     expect(knopf('Licht: ein Platz weniger')).toHaveProperty('disabled', false);
   });
 
-  it('liegen Entwürfe dort, bleibt die Zahl (ChurchTools nummeriert sonst die Plätze neu) – mit Hinweis', () => {
+  it('liegt ein Entwurf auf dem freien Platz: „+“ geht (der Entwurf geht mit), „−“ stoppt dort – mit Hinweis (19.11.2026)', () => {
     zeige();
-    expect(knopf('Kamera: ein Platz mehr')).toHaveProperty('disabled', true);
+    expect(knopf('Kamera: ein Platz mehr')).toHaveProperty('disabled', false);
     expect(knopf('Kamera: ein Platz weniger')).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Auf den freien Plätzen liegen Entwürfe/)).toBeTruthy();
+    expect(screen.queryByText(/erst senden oder entfernen/)).toBeNull();
+  });
+
+  it('darf man die Entwürfe der Gruppe nicht umtragen, bleibt die alte Sperre samt Satz – „+“ und „−“', () => {
+    zeige(undefined, [LICHT, BUEHNE]);
+    expect(knopf('Bühne: ein Platz mehr')).toHaveProperty('disabled', true);
+    expect(knopf('Bühne: ein Platz weniger')).toHaveProperty('disabled', true);
     expect(screen.getByText(/Hier liegt ein Entwurf – erst senden oder entfernen\./)).toBeTruthy();
+  });
+
+  it('„−“ geht bis zu den Plätzen mit Inhalt: Belegte und Entwürfe auf freien zählen, ein Entwurf auf einem belegten Platz nicht extra', async () => {
+    const z = zeile({
+      serviceId: 11,
+      name: 'Gesang',
+      anzahl: 4,
+      belegt: 1,
+      entwuerfe: 2,
+      entwuerfeAufFreien: 1,
+    });
+    const p = {
+      aendern: vi.fn((_z: PlaetzeZeile, _g: number, neu: number) =>
+        Promise.resolve({ ok: true as const, anzahl: neu }),
+      ),
+      onGespeichert: vi.fn(),
+      onClose: vi.fn(),
+    };
+    render(<PlaetzeFach titel="t" unter="u" zeilen={[z]} {...p} />);
+    fireEvent.click(knopf('Gesang: ein Platz weniger'));
+    await waitFor(() => expect(zahl('Gesang')).toBe('3'));
+    fireEvent.click(knopf('Gesang: ein Platz weniger'));
+    await waitFor(() => expect(zahl('Gesang')).toBe('2'));
+    // 2 = 1 belegt + 1 Entwurf auf einem freien Platz: weiter geht es nicht.
+    expect(knopf('Gesang: ein Platz weniger')).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Auf den freien Plätzen liegen Entwürfe/)).toBeTruthy();
+    expect(knopf('Gesang: ein Platz mehr')).toHaveProperty('disabled', false);
+  });
+
+  it('gingen Entwürfe bei einer Änderung nicht mit, steht das als Meldung da – die Zahl gilt trotzdem', async () => {
+    const p = zeige((_z, _g, neu) =>
+      Promise.resolve({
+        ok: true,
+        anzahl: neu,
+        entwuerfe: { umgetragen: [], offen: 1, unklar: false },
+      }),
+    );
+    fireEvent.click(knopf('Licht: ein Platz mehr'));
+    await waitFor(() => expect(zahl('Licht')).toBe('2'));
+    expect(p.onGespeichert).toHaveBeenCalledWith('Licht: jetzt 2 Plätze.');
+    expect(screen.getByRole('alert').textContent).toContain('1 Entwurf konnte nicht mitgehen');
   });
 
   it('„+“ speichert sofort mit der gesehenen Zahl; danach zählt die neue, der Aufrufer sagt Bescheid', async () => {
@@ -129,21 +208,18 @@ describe('PlaetzeFach im ChurchTools-Aufbau', () => {
 
 // ── Dienste ein-/ausschalten und Vorlage übernehmen (13.11.2026) ─────────────
 describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
-  const ABENDMAHL: PlaetzeZeile = {
-    serviceId: 24,
-    name: 'Abendmahl',
-    anzahl: 0,
-    belegt: 0,
-    entwuerfe: 0,
-  };
-  const GESANG: PlaetzeZeile = { serviceId: 9, name: 'Gesang', anzahl: 2, belegt: 1, entwuerfe: 0 };
-  const PREDIGT: PlaetzeZeile = {
+  const ABENDMAHL = zeile({ serviceId: 24, name: 'Abendmahl', anzahl: 0, belegt: 0 });
+  const GESANG = zeile({ serviceId: 9, name: 'Gesang', anzahl: 2, belegt: 1 });
+  // Mit Entwurf, der nicht umgetragen werden darf → gesperrt, die Vorlage lässt ihn aus.
+  const PREDIGT = zeile({
     serviceId: 1,
     name: 'Predigt',
     anzahl: 1,
     belegt: 0,
     entwuerfe: 1,
-  };
+    entwuerfeAufFreien: 1,
+    mitnehmbar: false,
+  });
   const NAMEN = new Map([
     [6, 'Ton'],
     [7, 'Licht'],
@@ -195,13 +271,14 @@ describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
     aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, anzahl: neu }),
     laden: () => Promise<TerminVorlage[]> = () => Promise.resolve(VORLAGEN),
     gruppenDienste: ReadonlySet<number> = GRUPPE,
+    zeilen: PlaetzeZeile[] = [ABENDMAHL, GESANG, TON, PREDIGT],
   ) {
     const p = { aendern: vi.fn(aendern), onGespeichert: vi.fn(), onClose: vi.fn() };
     render(
       <PlaetzeFach
         titel="Moderation · Plätze"
         unter="Gottesdienst · So, 25.10."
-        zeilen={[ABENDMAHL, GESANG, TON, PREDIGT]}
+        zeilen={zeilen}
         vorlage={{ kalenderId: 1, laden, namen: NAMEN, gruppenDienste }}
         {...p}
       />,
@@ -235,13 +312,28 @@ describe('PlaetzeFach – Dienste ohne Platz und Vorlage übernehmen', () => {
     expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeTruthy();
     expect(p.aendern).not.toHaveBeenCalled();
     await waehle('Mit Entwurf und Fremdem');
-    // Predigt: Entwurf; Kaffee: in dieser Gruppe, aber nicht planbar (nicht im Stand); 99 gehört keiner Gruppe: still weg.
+    // Predigt: gesperrt (Entwurf, nicht umtragbar); Kaffee: in dieser Gruppe, aber nicht planbar (nicht im Stand); 99 gehört keiner Gruppe: still weg.
     expect(
       screen.getByText(
-        'Übersprungen: Predigt – hier liegt ein Entwurf · Kaffee – darfst du nicht planen',
+        'Übersprungen: Predigt – hier liegen Entwürfe, die du nicht ändern darfst · Kaffee – darfst du nicht planen',
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+  });
+
+  it('liegt ein Entwurf am Dienst und darf umgetragen werden, erhöht die Vorlage ihn wie jeden anderen (19.11.2026)', async () => {
+    const mitEntwurf = zeile({
+      serviceId: 9,
+      name: 'Gesang',
+      anzahl: 2,
+      belegt: 1,
+      entwuerfe: 1,
+      entwuerfeAufFreien: 1,
+    });
+    zeigeMitVorlage(undefined, undefined, undefined, [ABENDMAHL, mitEntwurf, TON, PREDIGT]);
+    await waehle('Abendmahl');
+    expect(screen.getByText('Abendmahl: 0 → 1 · Gesang: 2 → 3')).toBeTruthy();
+    expect(screen.queryByText(/Übersprungen/)).toBeNull();
   });
 
   it('Dienste anderer Gruppen in der Vorlage: nicht in der Vorschau, nicht übersprungen, nie geändert', async () => {

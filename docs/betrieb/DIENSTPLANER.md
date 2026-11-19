@@ -39,6 +39,10 @@ ChurchTools-App und zusätzlich im Dienstplaner.
 
 ## Installieren
 
+> **Vorher einmalig:** Erweiterungen muss der ChurchTools-Support für eure Instanz freischalten. Fehlt unter
+> _Administration_ der Punkt „Erweiterungen“, beim Support melden – siehe
+> [Erweiterungen freischalten](ERWEITERUNG.md#erweiterungen-freischalten).
+
 1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei
    **`dienstplaner-v….zip`** herunterladen (nicht entpacken). Die Dienstplaner-Releases heißen
    „Dienstplaner v…" – nicht verwechseln mit den Releases der Musik App oder der Anmeldungen.

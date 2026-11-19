@@ -35,7 +35,8 @@ mit ihren eigenen ChurchTools-Zugangsdaten an und sieht nur, was ihre Rechte erl
 ## Die Apps
 
 Alle Apps gibt es als **ChurchTools-Erweiterung**: ein ZIP, das ihr in ChurchTools unter
-_Administration → Erweiterungen_ hochladet. Die Musik-App läuft außerdem auf einem eigenen Server
+_Administration → Erweiterungen_ hochladet (einmalig vom ChurchTools-Support
+[freischalten lassen](docs/betrieb/ERWEITERUNG.md#erweiterungen-freischalten)). Die Musik-App läuft außerdem auf einem eigenen Server
 (dann auch offline und als App auf dem Home-Bildschirm). Weiter unten stellt sich jede App mit einem kurzen Video vor.
 
 | App                               | Wofür                                                                                 | Download                                                                                        | Anleitung                                                         |

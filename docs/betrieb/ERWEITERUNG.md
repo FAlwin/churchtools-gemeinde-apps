@@ -20,6 +20,16 @@ Die Musik App gibt es in zwei Formen:
 | Team-Notizen („Notizen von …")       | ✓ (ab v2.29.0, Rechte siehe unten)                 | ✓                                                   |
 | In der ChurchTools-App am Handy      | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
 
+## Erweiterungen freischalten
+
+Erweiterungen (in ChurchTools „Custom Modules“) sind nicht in jeder Instanz von Anfang an da: **Der ChurchTools-Support
+schaltet sie frei** (Auskunft von ChurchTools). Woran man es merkt: Unter _Administration_ fehlt der Punkt
+„Erweiterungen“, und in der Rechtevergabe gibt es kein Recht mit dem Schlüssel `administer custom modules`. Dann einmal
+beim Support melden und um die Freischaltung bitten – das gilt für alle Apps dieses Projekts.
+
+Zum Ausprobieren kann man sich bei ChurchTools auch ein **Test-System** geben lassen, dann muss nichts an der echten
+Instanz getestet werden.
+
 ## Installieren
 
 1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei

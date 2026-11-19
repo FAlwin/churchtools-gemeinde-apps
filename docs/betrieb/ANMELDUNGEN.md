@@ -19,6 +19,10 @@ Sie besteht aus zwei Teilen:
 
 ## Installieren
 
+> **Vorher einmalig:** Erweiterungen muss der ChurchTools-Support für eure Instanz freischalten. Fehlt unter
+> _Administration_ der Punkt „Erweiterungen“, beim Support melden – siehe
+> [Erweiterungen freischalten](ERWEITERUNG.md#erweiterungen-freischalten).
+
 1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei
    **`anmeldungen-v….zip`** herunterladen (nicht entpacken). Die Anmelde-Releases heißen „Anmeldungen
    v…" – nicht verwechseln mit den Releases der Musik App.

@@ -14,6 +14,10 @@ eigenen Server.
 
 ## Installieren
 
+> **Vorher einmalig:** Erweiterungen muss der ChurchTools-Support für eure Instanz freischalten. Fehlt unter
+> _Administration_ der Punkt „Erweiterungen“, beim Support melden – siehe
+> [Erweiterungen freischalten](ERWEITERUNG.md#erweiterungen-freischalten).
+
 1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei
    **`organigramm-v….zip`** herunterladen (nicht entpacken). Die Organigramm-Releases heißen „Organigramm v…“.
 2. In ChurchTools: **Administration → Erweiterungen → Erweiterung hinzufügen**.

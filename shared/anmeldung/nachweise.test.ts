@@ -281,12 +281,23 @@ describe('Schritte des Ablaufs', () => {
       expect(nachweisAblaufStimmt(da, ART, 7)).toBe(true);
     });
 
-    it('stimmt nicht bei anderem Absender, anderen Jahren, anderem Betreff oder fehlendem Schritt', () => {
-      const da = nachweisSchritte(ART, 7) as NachweisSchrittRoh[];
-      expect(nachweisAblaufStimmt(da, ART, 8)).toBe(false);
-      expect(nachweisAblaufStimmt(da, { ...ART, gueltigJahre: 4 }, 7)).toBe(false);
-      expect(nachweisAblaufStimmt(da, { ...ART, betreff: 'Anders' }, 7)).toBe(false);
-      expect(nachweisAblaufStimmt(da.slice(0, 3), ART, 7)).toBe(false);
+    const so = () => nachweisSchritte(ART, 7) as NachweisSchrittRoh[];
+    it('stimmt nicht bei anderem Absender', () => {
+      expect(nachweisAblaufStimmt(so(), ART, 8)).toBe(false);
+    });
+    it('stimmt nicht bei anderen Jahren', () => {
+      expect(nachweisAblaufStimmt(so(), { ...ART, gueltigJahre: 4 }, 7)).toBe(false);
+    });
+    it('stimmt nicht bei anderem Betreff', () => {
+      expect(nachweisAblaufStimmt(so(), { ...ART, betreff: 'Anders' }, 7)).toBe(false);
+    });
+    it('stimmt nicht bei fehlendem Schritt', () => {
+      expect(nachweisAblaufStimmt(so().slice(0, 3), ART, 7)).toBe(false);
+    });
+    it('stimmt nicht bei fehlendem Mailtext', () => {
+      const da = so();
+      da[0].actionData = { ...da[0].actionData, body: '' };
+      expect(nachweisAblaufStimmt(da, ART, 7)).toBe(false);
     });
   });
 });

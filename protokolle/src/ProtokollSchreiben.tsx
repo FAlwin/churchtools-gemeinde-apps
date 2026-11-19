@@ -20,10 +20,10 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import {
   aufgabenAbgleich,
   nameAusListe,
+  hakenAnwenden,
   neueAufgabe,
-  statusSetzen,
   type Aufgabe,
-  type AufgabenStatus,
+  type HakenSchritt,
 } from '@shared/protokolle/aufgaben';
 import type { Person } from '@shared/organigramm/mitglieder';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
@@ -358,9 +358,9 @@ export function ProtokollSchreiben({
 
   // Feste Punkte (S4-3a): Abhaken in „Offene To-Dos“ ändert das To-Do wie der Kreis an der Aufgabe.
   const statusFest = useCallback(
-    (a: Aufgabe, neu: AufgabenStatus) =>
+    (a: Aufgabe, schritt: HakenSchritt) =>
       todoAendern(a.id, a.text, (x) =>
-        statusSetzen(x, neu, schreiber.person, new Date().toISOString()),
+        hakenAnwenden(x, schritt, schreiber.person, new Date().toISOString()),
       ),
     [todoAendern, schreiber.person],
   );
@@ -683,6 +683,7 @@ export function ProtokollSchreiben({
       zeitzone={zeitzone}
       name={nameVon}
       status={mOrt ? statusFest : undefined}
+      ich={schreiber.person}
       onTreffenAnlegen={neuesTreffen}
       onZuSitzung={
         onZuSitzung

@@ -175,6 +175,10 @@ describe('S7-3: Board', () => {
     expect(ablegen(a, s('p19'), s('ohne'))).toEqual({ wer: [1] });
     expect(ablegen(liste[3].aufgabe, s('ohne'), s('p23'))).toEqual({ wer: [23] });
     expect(ablegen(a, s('p1'), s('extern'))).toBeNull();
+    // „Jeder für sich“ (W8a): der Gesamtstand ist abgeleitet – ziehen in eine Status-Spalte ändert nichts.
+    const jeder = { ...a, jeder: true } as Aufgabe;
+    expect(ablegen(jeder, st[1], st[2])).toBeNull();
+    expect(ablegen(jeder, s('p1'), s('p23'))).toEqual({ wer: [19, 23] }); // Personen ziehen geht weiter
   });
 
   it('sortieren: Dringlichkeit bleibt, Bis (Erledigte nach erledigt am), Alphabetisch, Manuell (Neue ans Ende)', () => {

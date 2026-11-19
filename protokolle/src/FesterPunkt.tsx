@@ -18,7 +18,7 @@ import { istVerweisArt } from '@shared/protokolle/dokument';
 import { VERWEIS_TEXT } from './anzeige';
 import { Anwesenheit } from './Anwesenheit';
 import { FestePunkteKontext, type FestePunkteWert } from './festePunkteKontext';
-import { StatusKreis } from './StatusKreis';
+import { Haken } from './Haken';
 import ansicht from './ProtokollAnsicht.module.scss';
 import styles from './FesterPunkt.module.scss';
 
@@ -136,7 +136,7 @@ function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boo
   const aendern = abhaken ? w.status : undefined;
   return (
     <li className={styles.zeile}>
-      <StatusKreis status={a.status} onWechsel={aendern ? (neu) => aendern(a, neu) : undefined} />
+      <Haken a={a} ich={w.ich ?? 0} onSchritt={aendern ? (s) => aendern(a, s) : undefined} />
       <span className={styles.text}>
         <span className={a.status === 'erledigt' ? styles.erledigt : undefined}>{a.text}</span>
         {(wer.length > 0 || a.bis) && (

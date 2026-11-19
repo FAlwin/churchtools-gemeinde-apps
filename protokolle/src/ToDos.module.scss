@@ -343,3 +343,17 @@ button.text {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
   cursor: grabbing;
 }
+
+// „Erledigt – Rückgängig“ direkt an der eben abgehakten Karte (W8a), nie in einer Leiste am Seitenende.
+.rueckgaengig {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+
+  > .link {
+    align-self: center;
+  }
+}

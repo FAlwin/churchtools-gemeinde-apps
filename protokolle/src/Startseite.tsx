@@ -9,6 +9,7 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   istUeberfaellig,
   meineOffenen,
+  teilText,
   offene,
   type Aufgabe,
   statusText,
@@ -195,14 +196,23 @@ export function Startseite({
                   {meine.map(({ a, u }) => {
                     const s = herkunft(a, u);
                     const ueber = istUeberfaellig(a, heute);
+                    // „Jeder für sich“: statt „in Arbeit“ der Fortschritt – mein Teil fehlt noch, sonst stünde es nicht hier.
+                    const teil = teilText(a);
                     const inhalt = (
                       <>
-                        <Icon name={a.status === 'arbeit' ? 'refresh' : 'clock'} size={18} />
+                        <Icon
+                          name={a.status === 'arbeit' && !teil ? 'refresh' : 'clock'}
+                          size={18}
+                        />
                         <span className={styles.text}>
                           <b>{a.text}</b>
                           <small>
                             {u.gruppe.name}
-                            {a.status === 'arbeit' ? ` · ${statusText(a.status)}` : ''}
+                            {teil
+                              ? ` · ${teil}`
+                              : a.status === 'arbeit'
+                                ? ` · ${statusText(a.status)}`
+                                : ''}
                             {s ? ` · aus „${s.titel}“` : ''}
                           </small>
                         </span>

@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   aufgabenAbgleich,
+  modusSetzen,
   neueAufgabe,
+  statusSetzen,
   vorabLesen,
   type Aufgabe,
 } from '@shared/protokolle/aufgaben';
@@ -72,6 +74,48 @@ const VIELE = Array.from({ length: 17 }, (_, i) => ({
   bild: null,
   initialen: 'PN',
 }));
+
+describe('Haken und „Jeder hakt für sich ab“ (W8a)', () => {
+  const haken = (name: RegExp) => screen.getByRole('button', { name });
+
+  it('der Haken hakt ab (offen/in Arbeit → erledigt) und nimmt zurück (erledigt → offen) – nie „in Arbeit“', () => {
+    const { k } = zeige({ text: 'Beamer', todo: todo({ wer: [7] }) });
+    fireEvent.click(haken(/Status: offen/));
+    const von = (a: Aufgabe) => vi.mocked(k.aendern).mock.calls.at(-1)![2](a);
+    expect(von(todo()).status).toBe('erledigt');
+    expect(von(statusSetzen(todo(), 'arbeit', 1, 'x')).status).toBe('erledigt');
+    cleanup();
+    const z = zeige({ text: 'Beamer', todo: statusSetzen(todo(), 'erledigt', 1, 'x') });
+    fireEvent.click(haken(/Status: erledigt/));
+    expect(
+      vi.mocked(z.k.aendern).mock.calls[0][2](statusSetzen(todo(), 'erledigt', 1, 'x')).status,
+    ).toBe('offen');
+  });
+
+  it('„Jeder für sich“: der Haken ist mein Teil; die Auswahl „Jeder hakt für sich ab“ gibt es ab zwei Zuständigen', () => {
+    const jeder = modusSetzen(todo({ wer: [1, 7, 19] }), true, 1, 'x');
+    const { k } = zeige({ text: 'Beamer', todo: jeder });
+    fireEvent.click(haken(/mein Teil/));
+    const nachher = vi.mocked(k.aendern).mock.calls[0][2](jeder);
+    expect(nachher.fertig).toHaveProperty('1');
+    expect(nachher.status).toBe('arbeit');
+    fireEvent.click(screen.getByRole('button', { name: 'Wer kümmert sich?' }));
+    const box = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Jeder hakt für sich ab' });
+    expect(box.checked).toBe(true);
+    fireEvent.click(box);
+    expect(vi.mocked(k.aendern).mock.calls[1][2](jeder).jeder).toBeUndefined();
+  });
+
+  it('der Modus-Schalter fehlt bei einem Zuständigen und solange es das To-Do nicht gibt', () => {
+    zeige({ text: 'Beamer', todo: todo({ wer: [7] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Wer kümmert sich?' }));
+    expect(screen.queryByRole('checkbox', { name: 'Jeder hakt für sich ab' })).toBeNull();
+    cleanup();
+    zeige({ text: '' });
+    fireEvent.click(screen.getByRole('button', { name: 'Wer kümmert sich?' }));
+    expect(screen.queryByRole('checkbox', { name: 'Jeder hakt für sich ab' })).toBeNull();
+  });
+});
 
 describe('Zuständige: Alle und Kürzung (W5)', () => {
   const wer = () => screen.getByRole('button', { name: 'Wer kümmert sich?' });

@@ -10,8 +10,10 @@ import {
   zustaendigKurz,
   alleGewaehlt,
   alleSetzen,
+  hakenAnwenden,
+  istJeder,
+  modusSetzen,
   neueAufgabe,
-  statusSetzen,
   vorabAnwenden,
   vorabLesen,
   zustaendigSetzen,
@@ -22,7 +24,10 @@ import { fruehesAendern } from './fruehesProtokoll';
 import { gaesteWert, ohneWert } from '@shared/protokolle/anwesenheit';
 import type { ProtokollEditor } from './editorSchema';
 import { AufgabenKontext } from './aufgabenKontext';
-import { StatusKreis } from './StatusKreis';
+import { Haken } from './Haken';
+/** Platzhalter, solange es das To-Do noch nicht gibt (ohne Text): der Haken zeigt „offen“, bedienbar ist er nicht. */
+const LEERE_AUFGABE = neueAufgabe({ id: '', gruppe: 0, sitzung: null, text: '', von: 0, am: '' });
+
 // Dieselben Marken wie in der Lese-Ansicht – Aufgabe, Beschluss und Termin sehen beim Schreiben aus wie beim Lesen.
 import ansicht from './ProtokollAnsicht.module.scss';
 import styles from './EditorBloecke.module.scss';
@@ -32,7 +37,7 @@ import { heuteImKalender } from '@shared/ct/zeit';
  * **Wie die eigenen Blöcke im Editor aussehen und bedient werden** (S4-1/S4-2, Entwurf 7) – die Darstellung zu den
  * Blockarten aus `editorSchema.ts`. `contentRef` ist die Stelle, an der BlockNote den bearbeitbaren Text einhängt.
  *
- * - **Aufgabe:** Status-Kreis vorne, rechts die Schildchen „Wer?“ (Mitglieder mit Häkchen + externer Name) und „Bis“.
+ * - **Aufgabe:** Haken vorne, rechts die Schildchen „Wer?“ (Mitglieder mit Häkchen + externer Name) und „Bis“.
  *   Geändert wird das To-Do in „Mitarbeit“ (über `AufgabenKontext`), nicht das Protokoll (Alwin 24.10.2026).
  * - **Termin:** Datum-Schildchen; das Datum steht im Block selbst (`props.datum`), nur im Protokoll.
  * - **Fester Punkt** (S4-3a): `FesterPunkt` – „Offene To-Dos“ bzw. „Letztes Protokoll“.
@@ -149,12 +154,12 @@ export function AufgabeBlock({
   return (
     <div className={`${ansicht.marke} ${ansicht.aufgabe} ${styles.aufgabe}`}>
       <span contentEditable={false} className={styles.vorne}>
-        <StatusKreis
-          status={status}
-          onWechsel={
+        <Haken
+          a={a ?? LEERE_AUFGABE}
+          ich={k?.ich.person ?? 0}
+          onSchritt={
             mitText && k.statusAenderbar
-              ? (neu) =>
-                  aendern((x) => statusSetzen(x, neu, k.ich.person, new Date().toISOString()))
+              ? (s) => aendern((x) => hakenAnwenden(x, s, k.ich.person, new Date().toISOString()))
               : undefined
           }
         />
@@ -221,6 +226,22 @@ export function AufgabeBlock({
                   </label>
                 );
               })}
+              {a && a.wer.length >= 2 && (
+                <label className={styles.person}>
+                  <input
+                    type="checkbox"
+                    checked={istJeder(a)}
+                    onChange={(e) => {
+                      // Vorab lesen (wie bei „Alle“): `aendern` ruft die Funktion erst später auf.
+                      const jeder = e.target.checked;
+                      aendern((x) =>
+                        modusSetzen(x, jeder, k?.ich.person ?? 0, new Date().toISOString()),
+                      );
+                    }}
+                  />
+                  <b>Jeder hakt für sich ab</b>
+                </label>
+              )}
               <label className={styles.extern}>
                 <small>Außerhalb der Gruppe (nur Name)</small>
                 <input

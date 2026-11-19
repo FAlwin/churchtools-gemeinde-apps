@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  alsGeloescht,
+  modusSetzen,
+  neueAufgabe,
+  statusSetzen,
+  type Aufgabe,
+} from '@shared/protokolle/aufgaben';
 import type { Block } from '@shared/protokolle/dokument';
 import { festePunkteFesthalten } from '@shared/protokolle/festePunkte';
 import { teileBauen, type ProtokollKopf, type ProtokollTeil } from '@shared/protokolle/speicher';
@@ -9,6 +15,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { VerweisBlock } from './EditorBloecke';
+import { FesterPunkt } from './FesterPunkt';
 
 /** Die festen Punkte (S4-3a) in der Lese-Ansicht – über den echten Rahmen, so wie Sitzung und Editor sie zeigen. */
 
@@ -202,6 +209,45 @@ describe('Fester Punkt im Editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     editor.remove();
+  });
+});
+
+describe('Fester Punkt: der Haken im Editor (W8a)', () => {
+  const OFFEN = aufgabe('Beamer kaufen', { wer: [1] });
+  const IN_ARBEIT = statusSetzen(aufgabe('Kabel prüfen', { wer: [1] }), 'arbeit', 1, 'x');
+  const JEDER = modusSetzen(aufgabe('Abwesenheiten', { wer: [1, 19, 23] }), true, 1, 'x');
+  const zeigeHaken = (aufgaben: Aufgabe[], status = vi.fn()) => {
+    render(
+      <FestePunkteRahmen
+        sitzung={HEUTE}
+        gruppe={194}
+        protokolle={[SEPT, ALT]}
+        teile={TEILE}
+        aufgaben={aufgaben}
+        zeitzone="Europe/Berlin"
+        status={status}
+        ich={1}
+      >
+        <FesterPunkt art="offene-aufgaben" fest="" abhaken />
+      </FestePunkteRahmen>,
+    );
+    return status;
+  };
+
+  it('abhaken: offen und in Arbeit gehen auf „erledigt“ – nie auf „in Arbeit“', () => {
+    const status = zeigeHaken([OFFEN, IN_ARBEIT]);
+    fireEvent.click(screen.getByRole('button', { name: /Status: offen/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Status: in Arbeit/ }));
+    expect(status.mock.calls).toEqual([
+      [OFFEN, { art: 'status', neu: 'erledigt' }],
+      [IN_ARBEIT, { art: 'status', neu: 'erledigt' }],
+    ]);
+  });
+
+  it('„Jeder für sich“: der Haken ist mein Teil', () => {
+    const status = zeigeHaken([JEDER]);
+    fireEvent.click(screen.getByRole('button', { name: /mein Teil/ }));
+    expect(status).toHaveBeenCalledWith(JEDER, { art: 'teil', person: 1, fertig: true });
   });
 });
 

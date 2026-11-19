@@ -15,7 +15,7 @@ import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/p
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen } from '@shared/protokolle/speicher';
-import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import { modusSetzen, neueAufgabe, statusSetzen, teilSetzen } from '@shared/protokolle/aufgaben';
 import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
@@ -323,6 +323,39 @@ const FAELLIGE_AUFGABEN = [
 ];
 
 /**
+ * **„Jeder für sich“** (W8a): Alle vier Mitglieder des Leitungsteams sollen ihre Abwesenheiten eintragen, zwei haben es schon
+ * getan (Johann, Peter) – für mich fehlt es noch (Haken „mein Teil“, Hinweis „2 von 4 fertig“). Über die Erzeuger gebaut, nicht als
+ * Literal – so bleibt die Demo stimmig, wenn sich das Datenmodell ändert.
+ */
+const JEDER_AUFGABE = teilSetzen(
+  teilSetzen(
+    modusSetzen(
+      neueAufgabe({
+        id: 'demo-j1',
+        gruppe: 11,
+        sitzung: null,
+        text: 'Abwesenheiten bis Ende Januar in ChurchTools eintragen',
+        wer: [1, 7, 19, 23],
+        bis: plusTage(heuteImKalender(), 8),
+        von: 1,
+        am: '2026-10-21T19:00:00Z',
+      }),
+      true,
+      1,
+      '2026-10-21T19:00:00Z',
+    ),
+    7,
+    true,
+    7,
+    '2026-10-22T08:00:00Z',
+  ),
+  19,
+  true,
+  19,
+  '2026-10-23T08:00:00Z',
+);
+
+/**
  * Vorschläge (S5-4, W8c): zwei für den Entwurf vom 21.10. (Kasten beim Schreiben), einer von mir „für die nächste Sitzung“
  * (ändern, zurückziehen), ein übernommener (steht nur als Marke an der Sitzung „Kommend“) und ein abgelehnter mit
  * Begründung von vor drei Tagen (Gruppe „Abgelehnt“, 7 Tage sichtbar).
@@ -454,13 +487,17 @@ function speicherAnlegen(fall: string): Speicher {
             [60, protokollWerte(60, 600, fall)],
             [
               61,
-              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN, ...FAELLIGE_AUFGABEN, ...DEMO_VORSCHLAEGE].map(
-                (x, i) => ({
-                  id: 700 + i,
-                  dataCategoryId: 61,
-                  value: JSON.stringify(x),
-                }),
-              ),
+              [
+                DEMO_AUFGABE,
+                ...FRUEHERE_AUFGABEN,
+                ...FAELLIGE_AUFGABEN,
+                JEDER_AUFGABE,
+                ...DEMO_VORSCHLAEGE,
+              ].map((x, i) => ({
+                id: 700 + i,
+                dataCategoryId: 61,
+                value: JSON.stringify(x),
+              })),
             ],
             // Technik-Team (W4): eingerichtet, derselbe Kalender 4 wie das Leitungsteam.
             [

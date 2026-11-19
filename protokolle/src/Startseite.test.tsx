@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  alsGeloescht,
+  modusSetzen,
+  neueAufgabe,
+  statusSetzen,
+  teilSetzen,
+  type Aufgabe,
+} from '@shared/protokolle/aufgaben';
 import { faellige, type Vorlauf } from '@shared/protokolle/hinweis';
 import * as L from './lesen';
 import { Startseite } from './Startseite';
@@ -202,6 +209,33 @@ describe('Startseite (S3-3)', () => {
       'Andacht vorbereitenJugendleitung',
     ]);
     expect(screen.getByText(/überfällig/).className).toMatch(/ueberfaellig/);
+  });
+
+  it('„Jeder für sich“ (W8a): solange MEIN Teil fehlt steht es da – mit „2 von 3 fertig“ statt „in Arbeit“; ist mein Teil erledigt, nicht mehr', async () => {
+    const jeder = modusSetzen(
+      aufgabe({ id: 'j1', text: 'Abwesenheiten eintragen', wer: [ICH, 19, 23] }),
+      true,
+      1,
+      '2026-10-22T08:00:00Z',
+    );
+    const einer = teilSetzen(jeder, 19, true, 19, '2026-10-22T09:00:00Z');
+    m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [einer] }]);
+    zeigen();
+    await screen.findByText('Abwesenheiten eintragen');
+    expect(zeilen('Meine offenen To-Dos')[0]).toMatch(/Leitungsteam · 1 von 3 fertig/);
+    expect(screen.queryByText(/in Arbeit/)).toBeNull();
+    cleanup();
+    m.ladeUebersicht.mockResolvedValue([
+      {
+        ...UEBERSICHT[0],
+        aufgaben: [UEBERFAELLIG, teilSetzen(einer, ICH, true, ICH, '2026-10-22T11:00:00Z')],
+      },
+    ]);
+    zeigen();
+    // Erst warten, bis geladen ist (ein anderes To-Do steht da) – sonst wäre „nicht da“ schon vor dem Laden wahr.
+    await screen.findByText('Beamer-Angebote');
+    // Der Gesamtstand ist „in Arbeit“ (2 von 3), mein Teil aber erledigt – für mich ist es nicht mehr offen.
+    expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
   });
 
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {

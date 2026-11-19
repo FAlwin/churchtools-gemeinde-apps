@@ -5,7 +5,7 @@
  */
 import { createContext } from 'react';
 import type { Anfrage, Sitzung } from '@shared/protokolle/sitzungen';
-import type { Aufgabe, AufgabenStatus } from '@shared/protokolle/aufgaben';
+import type { Aufgabe, HakenSchritt } from '@shared/protokolle/aufgaben';
 
 export interface FestePunkteWert {
   /** ID der Sitzung, in der die Punkte stehen (`kopf.sitzung`). */
@@ -22,8 +22,10 @@ export interface FestePunkteWert {
   letztes: Sitzung | null;
   /** Name einer Person – nur, wo die Mitglieder geladen sind (Editor). */
   name?: (person: number) => string | null;
-  /** Status eines To-Dos ändern – nur im Editor; fehlt er, zeigt der Kreis nur an. */
-  status?: (a: Aufgabe, neu: AufgabenStatus) => void;
+  /** Ich (Person-ID) – für den Haken bei „Jeder für sich“ (mein Teil). */
+  ich?: number;
+  /** Den Haken eines To-Dos setzen (`hakenSchritt`) – nur im Editor; fehlt er, zeigt der Kreis nur an. */
+  status?: (a: Aufgabe, schritt: HakenSchritt) => void;
   /** Ein Protokoll im Fenster öffnen – fehlt im Fenster selbst (kein Fenster im Fenster). */
   oeffnen?: (s: Sitzung) => void;
   /** Die früheren Protokolle zur Wahl (`fruehereProtokolle`, K3b-2) – neueste zuerst. */

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Wert } from '../ct/modulDaten';
-import { alsGeloescht, neueAufgabe, statusSetzen, istUeberfaellig, meineOffenen } from './aufgaben';
+import {
+  alsGeloescht,
+  neueAufgabe,
+  statusSetzen,
+  istUeberfaellig,
+  meineOffenen,
+  modusSetzen,
+  teilSetzen,
+} from './aufgaben';
 import type { Aufgabe } from './aufgaben';
 import {
   faelligZahl,
@@ -119,6 +127,22 @@ describe('faellige – meine To-Dos unter dem Vorlauf', () => {
 
   it('ein anderer Nutzer zählt seine eigenen', () => {
     expect(ids(faellige(liste, 2, HEUTE, 3).ueberfaellig)).toEqual(['fremd']);
+  });
+});
+
+describe('faellige – „Jeder für sich“ (W8a)', () => {
+  it('hat jemand seinen Teil erledigt, hinweist es für ihn nicht mehr – für die anderen weiter', () => {
+    const j = teilSetzen(
+      modusSetzen(todo('abw', '2026-11-18', { wer: [ICH, 2, 3] }), true, 9, 'x'),
+      ICH,
+      true,
+      ICH,
+      'y',
+    );
+    expect(j.status).toBe('arbeit'); // Gesamtstand „in Arbeit“ – für mich trotzdem erledigt
+    expect(ids(faellige([j], ICH, HEUTE, 3).ueberfaellig)).toEqual([]);
+    expect(faelligZahl(faellige([j], ICH, HEUTE, 3))).toBe(0);
+    expect(ids(faellige([j], 2, HEUTE, 3).ueberfaellig)).toEqual(['abw']);
   });
 });
 

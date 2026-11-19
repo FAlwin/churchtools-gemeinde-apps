@@ -52,6 +52,14 @@ export function felderNeuZuordnen(
  */
 export const STUFE_ANTWORTEN = 3;
 
+/**
+ * Sicherheitsstufe der **Angaben zu einem Nachweis** (Eingesehen am, Ausgestellt am, Ergebnis; N1b – Alwin, 19.11.2026:
+ * „Stufe 4“, ChurchTools: „Sehr hoch“). Dieselbe Zahl steht als Stufe der gruppeninternen Rechte „Gruppenmitgliedsfelder
+ * sehen/bearbeiten“ an der Leiter-Rolle der Gruppenart „Nachweis“ (`NACHWEIS_LEITER_RECHTE`) – nur die Vertrauenspersonen
+ * sehen die Angaben. EINE Quelle: Wer die Stufe der Felder ändert, ändert damit auch das Recht.
+ */
+export const STUFE_NACHWEIS = 4;
+
 /** Eine Antwortmöglichkeit eines Gruppenfelds; ChurchTools vergibt die `id`. */
 export interface CtOption {
   id?: string;

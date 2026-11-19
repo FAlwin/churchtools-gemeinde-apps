@@ -12,10 +12,16 @@ export function AntwortKnoepfe({
   wert,
   onWert,
   wer = 'ChurchTools füllt sie je Person',
+  beschriftung = 'Antwort einfügen',
+  streng = false,
 }: {
   namen: readonly string[];
   /** Wer die Antworten einsetzt – die Team-Mail (F7c) füllt das Formular selbst. */
   wer?: string;
+  /** Was die Knöpfe tun – „Antwort einfügen“ (Mails der Anmeldungen) oder „Einfügen“ (Nachweise: nur `[Vorname]`). */
+  beschriftung?: string;
+  /** Eckige Klammern, die keine Antwort meinen, sind hier ein Fehler (Nachweise) statt Text – der Hinweis sagt es so. */
+  streng?: boolean;
   /** Das Textfeld, in das eingefügt wird – für die Schreibmarke. */
   feld: RefObject<HTMLTextAreaElement | null>;
   wert: string;
@@ -38,7 +44,7 @@ export function AntwortKnoepfe({
   return (
     <>
       <p className={a.leise}>
-        Antwort einfügen – {wer}:{' '}
+        {beschriftung} – {wer}:{' '}
         {namen.map((n) => (
           <button
             key={n}
@@ -52,7 +58,10 @@ export function AntwortKnoepfe({
       </p>
       {bleibtText.length > 0 && (
         <p className={a.leise}>
-          Bleibt als Text stehen (keine Frage): {bleibtText.map((n) => `[${n}]`).join(', ')}
+          {streng
+            ? 'Das kennt die Mail nicht – bitte ohne eckige Klammern schreiben'
+            : 'Bleibt als Text stehen (keine Frage)'}
+          : {bleibtText.map((n) => `[${n}]`).join(', ')}
         </p>
       )}
     </>

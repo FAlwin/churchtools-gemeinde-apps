@@ -48,11 +48,13 @@ import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einr
 
 export type { Bereich };
 
-interface CtFeld {
+export interface CtFeld {
   id: number;
   name: string;
   note?: string | null;
   fieldTypeCode?: string;
+  /** Sicherheitsstufe der Spalte (1–4) – die Nachweise prüfen sie nach dem Anlegen (N1b). */
+  securityLevel?: number;
   options?: { id: string | number; name: string }[];
   useInRegistrationForm?: boolean;
   requiredInRegistrationForm?: boolean;
@@ -68,7 +70,7 @@ export async function ctFelderLesen(id: number): Promise<Map<number, CtFeld>> {
   return m;
 }
 
-const optionenVon = (f: CtFeld | undefined) =>
+export const optionenVon = (f: CtFeld | undefined) =>
   (f?.options ?? []).map((o) => ({ id: String(o.id), name: o.name }));
 
 /** Wie oft ein Feld beantwortet ist – gesamt und je Antwortmöglichkeit (ID). */
@@ -325,7 +327,7 @@ async function spalteUndName(
  * z. B. „Rückgängig“ nach dem Entfernen) `POST`. Danach muss dastehen, was geschickt wurde (Name, im
  * Anmeldeformular, Pflicht, Antworten) – ein 200 allein beweist das nicht. Gibt die Nummer der Spalte zurück.
  */
-async function spalteSpeichern(
+export async function spalteSpeichern(
   id: number,
   bisher: CtFeld | undefined,
   definition: CtFeldDefinition,

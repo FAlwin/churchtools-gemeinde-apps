@@ -42,10 +42,18 @@ export interface NachweisGrundlage {
   darfEinrichten: boolean;
 }
 
-/** Übersetzt den Fehler des Bausteins in die Fehlerarten des Projekts; alles andere geht unverändert durch. */
+/**
+ * Übersetzt den Fehler des Bausteins in die Fehlerarten des Projekts; alles andere geht unverändert durch.
+ *
+ * - `nichtUebernommen` → `NichtUebernommen` (sagt, WAS fehlt),
+ * - `unlesbar` → 502: ließ sich nicht nachlesen – vorübergehend, „Erneut versuchen“,
+ * - `anders` (z. B. „Rollen fehlen“) → **422** mit dem Text des Bausteins: Das ist keine Störung von ChurchTools, sondern
+ *   etwas, das jemand in ChurchTools ansehen muss. Mit 502 las `fehlerMeldung` es als „antwortet gerade nicht“ (N1b).
+ */
 function uebersetzt(e: unknown): unknown {
   if (!(e instanceof GruppenartFehler)) return e;
-  return e.art === 'nichtUebernommen' ? new NichtUebernommen(e.was) : new ApiError(502, e.message);
+  if (e.art === 'nichtUebernommen') return new NichtUebernommen(e.was);
+  return new ApiError(e.art === 'anders' ? 422 : 502, e.message);
 }
 
 /** Wie steht es um die Grundlage? Liest nur. */

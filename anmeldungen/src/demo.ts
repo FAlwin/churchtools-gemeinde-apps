@@ -3,12 +3,18 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen). Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
 import { einstellungenAlsText, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import {
+  NACHWEIS_ABLAUF_NAME,
+  nachweisEinstellungenLesen,
+  nachweisNotiz,
+  nachweisSchritte,
+} from '@shared/anmeldung/nachweise';
 
 function beschreibung(
   beginn: string,
@@ -55,6 +61,8 @@ interface G {
   personenfelder?: string[];
   /** Titelbild (A5). */
   bild?: string;
+  /** Gruppenart; ohne Angabe „Anmeldung“ (5). Die Nachweis-Arten (N1b) sind Art 11. */
+  typ?: number;
 }
 
 let naechste = 500;
@@ -236,8 +244,65 @@ const familie = (seit: string) => ({
   meta: { pagination: { lastPage: 1 } },
 });
 
+/** Die Angaben je Person einer Nachweis-Gruppe – Stufe 4, nicht im Anmeldeformular (N1b). */
+const nachweisFelder = () =>
+  [
+    { id: 91, name: 'Eingesehen am', fieldTypeCode: 'date' },
+    { id: 92, name: 'Ausgestellt am', fieldTypeCode: 'date' },
+    {
+      id: 93,
+      name: 'Ergebnis',
+      fieldTypeCode: 'radioselect',
+      options: [
+        { id: '931', name: 'Keine Eintragung, die einer Mitarbeit entgegensteht' },
+        { id: '932', name: 'Eintragung – Rücksprache mit der Leitung nötig' },
+      ],
+    },
+  ].map((f) => ({
+    ...f,
+    securityLevel: 4,
+    useInRegistrationForm: false,
+    requiredInRegistrationForm: false,
+  }));
+
 function demoGruppen(): Map<number, G> {
   return new Map([
+    [
+      61,
+      {
+        ...g(
+          'Nachweis: Führungszeugnis',
+          0,
+          nachweisNotiz({
+            gueltigJahre: 3,
+            ab: 'ausstellung',
+            betreff: 'Bitte erweitertes Führungszeugnis beantragen',
+            text: 'Hallo [Vorname],\n\nfür deine Mitarbeit brauchen wir ein erweitertes Führungszeugnis. Den Antrag findest du in ChurchTools unter „Meine Gruppen“.',
+          }),
+          { visibility: 'restricted' },
+        ),
+        typ: 11,
+        felder: nachweisFelder(),
+      },
+    ],
+    [
+      62,
+      {
+        ...g(
+          'Nachweis: JuLeiCa',
+          0,
+          nachweisNotiz({
+            gueltigJahre: 5,
+            ab: 'einsicht',
+            betreff: 'Bitte JuLeiCa vorlegen',
+            text: 'Hallo [Vorname],\n\nbitte zeig einer Vertrauensperson deine JuLeiCa.',
+          }),
+          { visibility: 'restricted' },
+        ),
+        typ: 11,
+        felder: nachweisFelder(),
+      },
+    ],
     [
       40,
       g('Lobpreisabend', 9, beschreibung(tag(20), null, 'Gemeindesaal', fest(0)), {
@@ -412,7 +477,7 @@ export function demoStarten(fall: string): void {
     information: {
       note: x.note,
       groupStatusId: x.status,
-      groupTypeId: 5,
+      groupTypeId: x.typ ?? 5,
       imageUrl: x.bild ?? null,
     },
     settings: x.settings,
@@ -420,6 +485,74 @@ export function demoStarten(fall: string): void {
   // Archivierte Gruppen stehen weder in `children` noch in `hierarchies` (gemessen 13.10.2026).
   const kinderVon = (p: number) => [...gruppen].filter(([, x]) => x.parent === p && x.status !== 3);
   const TEAMS: Record<number, string> = { 7: 'Technik', 9: 'Lobpreisteam' };
+
+  // ── Nachweise (N1b): Mitglieder, Rechte der Leiter-Rolle und Abläufe merkt sich die Demo, bis neu geladen wird ──
+  const NACHWEIS_TYP = 11;
+  const LEITER_ROLLE = 56;
+  const TEILNEHMER_ROLLE = 53;
+  const nachweisRechte: { authId: number; dataId: number | null }[] = [];
+  let naechsteRoutine = 700;
+  interface Schritt {
+    id?: number;
+    specId?: number;
+    actionKey: string;
+    children?: Schritt[];
+    [k: string]: unknown;
+  }
+  const routinen = new Map<
+    number,
+    {
+      id: number;
+      name: string;
+      isEnabled: boolean;
+      steps: Schritt[];
+      groupId: number;
+      groupTypeRoleId: number;
+      groupMemberStatus: string;
+    }
+  >();
+  const nachweisMitglieder = new Map<
+    number,
+    { personId: number; groupTypeRoleId: number; groupMemberStatus: string }[]
+  >([
+    [61, [{ personId: 903, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' }]],
+    [
+      62,
+      [
+        { personId: 903, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
+        { personId: 901, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
+      ],
+    ],
+  ]);
+  /** Den Ablauf der beiden vorhandenen Arten gibt es schon – mit den Nummern, die ChurchTools vergibt. */
+  const schritteNummern = (liste: Schritt[]): Schritt[] =>
+    liste.map((x) => ({
+      ...x,
+      id: x.id ?? naechsteRoutine++,
+      ...(x.actionKey === 'create-follow-up' ? { specId: x.specId ?? naechsteRoutine++ } : {}),
+      ...(x.children ? { children: schritteNummern(x.children) } : {}),
+    }));
+  for (const [gid, e] of [
+    [61, { name: 'Führungszeugnis', jahre: 3 }],
+    [62, { name: 'JuLeiCa', jahre: 5 }],
+  ] as const) {
+    const einst = nachweisEinstellungenLesen(gruppen.get(gid)?.note)!;
+    routinen.set(naechsteRoutine, {
+      id: naechsteRoutine,
+      name: NACHWEIS_ABLAUF_NAME,
+      isEnabled: true,
+      steps: schritteNummern(
+        nachweisSchritte({ name: e.name, ...einst }, 903) as unknown as Schritt[],
+      ),
+      groupId: gid,
+      groupTypeRoleId: TEILNEHMER_ROLLE,
+      groupMemberStatus: 'active',
+    });
+    naechsteRoutine++;
+  }
+  // Die angemeldete Demo-Person (`/whoami`: Nummer 1) steht nicht in der Personensuche, soll aber als Leitung einen Namen haben.
+  const personName = (id: number) =>
+    id === 1 ? { firstName: 'Alwin', lastName: '' } : DEMO_PERSONEN.find((p) => p.id === id);
 
   window.fetch = (input, init) => {
     const url = new URL(
@@ -450,7 +583,17 @@ export function demoStarten(fall: string): void {
         groupMemberStatus: 'active',
       });
       return antwort({
-        data: fall === 'leer' ? [] : [team('Technik', 7, 15), team('Lobpreisteam', 9, 16)],
+        data:
+          fall === 'leer'
+            ? []
+            : [
+                team('Technik', 7, 15),
+                team('Lobpreisteam', 9, 16),
+                // Die Vertrauensperson leitet eine Nachweis-Gruppe (N1b).
+                ...(fall === 'vertrauen'
+                  ? [team('Nachweis: Führungszeugnis', 61, LEITER_ROLLE)]
+                  : []),
+              ],
       });
     }
     if (pfad === '/group/roles') {
@@ -458,6 +601,9 @@ export function demoStarten(fall: string): void {
         data: [
           { id: 16, name: 'Leiter', isLeader: true },
           { id: 15, name: 'Mitarbeiter', isLeader: false },
+          // Gruppenart „Nachweis“ (N1b): Teilnehmer und Leiter, wie ChurchTools sie beim Anlegen der Art erzeugt.
+          { id: TEILNEHMER_ROLLE, groupTypeId: NACHWEIS_TYP, isLeader: false, isDefault: true },
+          { id: LEITER_ROLLE, groupTypeId: NACHWEIS_TYP, isLeader: true },
         ],
       });
     }
@@ -466,6 +612,7 @@ export function demoStarten(fall: string): void {
         data: [
           { id: 2, name: 'Dienst' },
           { id: 5, name: 'Anmeldung' },
+          { id: NACHWEIS_TYP, name: 'Nachweis', sortKey: 100 },
         ],
       });
     }
@@ -477,9 +624,109 @@ export function demoStarten(fall: string): void {
     if (pfad === '/permissions/global') {
       // `?demo=admin`: Gruppen-Admin (darf verschieben und endgültig löschen).
       const churchdb = fall === 'admin' ? { 'administer groups': true } : {};
-      return antwort({ data: { churchdb, churchcal: { 'edit category': [1] } } });
+      // „Berechtigungen verwalten“ (Nachweise einrichten) – nur nicht für `?demo=vertrauen`.
+      const churchcore =
+        fall === 'vertrauen' ? { 'view birthdays': true } : { 'administer persons': true };
+      return antwort({ data: { churchcore, churchdb, churchcal: { 'edit category': [1] } } });
     }
-    let r = /^\/permissions\/internal\/groups\/(\d+)$/.exec(pfad);
+    // ── Nachweise (N1b) ──
+    let r = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad);
+    if (r && Number(r[1]) === LEITER_ROLLE) {
+      if (m === 'PUT') {
+        const dataId = Array.isArray(body.dataId) ? Number(body.dataId[0]) : null;
+        nachweisRechte.push({ authId: Number(body.authId), dataId });
+        return antwort({ data: {} });
+      }
+      return antwort({ data: nachweisRechte.map((x) => ({ ...x, isInherited: false })) });
+    }
+    if (r) return antwort({ data: [] });
+    r = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad);
+    if (r)
+      return antwort({
+        data: [...routinen.values()]
+          .filter((x) => x.groupId === Number(r![1]))
+          .map((x) => ({
+            id: x.id,
+            groupTypeRoleId: x.groupTypeRoleId,
+            groupMemberStatus: x.groupMemberStatus,
+            routine: { id: x.id, name: x.name, isEnabled: x.isEnabled, steps: x.steps },
+          })),
+      });
+    if (pfad === '/routines' && m === 'POST') {
+      const ctx = body.domainContext as {
+        groupId: number;
+        groupTypeRoleId: number;
+        groupMemberStatus: string;
+      };
+      const id = naechsteRoutine++;
+      routinen.set(id, {
+        id,
+        name: String(body.name),
+        isEnabled: body.isEnabled === true,
+        steps: [],
+        groupId: ctx.groupId,
+        groupTypeRoleId: ctx.groupTypeRoleId,
+        groupMemberStatus: ctx.groupMemberStatus,
+      });
+      return antwort({ data: { id } }, 201);
+    }
+    r = /^\/routines\/(\d+)$/.exec(pfad);
+    if (r) {
+      const x = routinen.get(Number(r[1]));
+      if (!x) return antwort({}, 404);
+      if (m === 'PATCH') {
+        if (typeof body.isEnabled === 'boolean') x.isEnabled = body.isEnabled;
+        if (Array.isArray(body.steps)) x.steps = schritteNummern(body.steps as Schritt[]);
+        return antwort({ data: {} });
+      }
+      return antwort({ data: { id: x.id, name: x.name, isEnabled: x.isEnabled, steps: x.steps } });
+    }
+    r = /^\/groups\/(\d+)\/members\/(\d+)$/.exec(pfad);
+    if (r && gruppen.get(Number(r[1]))?.typ === NACHWEIS_TYP) {
+      const liste = nachweisMitglieder.get(Number(r[1])) ?? [];
+      const da = liste.find((x) => x.personId === Number(r![2]));
+      if (m === 'PUT') {
+        if (da) return antwort({ message: 'member.add.already-in-group' }, 403);
+        liste.push({
+          personId: Number(r[2]),
+          groupTypeRoleId: Number(body.groupTypeRoleId),
+          groupMemberStatus:
+            typeof body.groupMemberStatus === 'string' ? body.groupMemberStatus : 'active',
+        });
+        nachweisMitglieder.set(Number(r[1]), liste);
+        return antwort({ data: {} });
+      }
+      if (!da) return antwort({}, 404);
+      if (m === 'PATCH') {
+        if (typeof body.groupTypeRoleId === 'number') da.groupTypeRoleId = body.groupTypeRoleId;
+        if (typeof body.groupMemberStatus === 'string')
+          da.groupMemberStatus = body.groupMemberStatus;
+        return antwort({ data: {} });
+      }
+      if (m === 'DELETE') {
+        nachweisMitglieder.set(
+          Number(r[1]),
+          liste.filter((x) => x !== da),
+        );
+        return antwort({}, 204);
+      }
+    }
+    r = /^\/groups\/(\d+)\/members$/.exec(pfad);
+    if (r && gruppen.get(Number(r[1]))?.typ === NACHWEIS_TYP)
+      return antwort({
+        data: (nachweisMitglieder.get(Number(r[1])) ?? []).map((x) => ({
+          ...x,
+          person: {
+            domainAttributes: {
+              firstName: personName(x.personId)?.firstName,
+              lastName: personName(x.personId)?.lastName,
+            },
+          },
+          fields: [],
+        })),
+        meta: { pagination: { lastPage: 1 } },
+      });
+    r = /^\/permissions\/internal\/groups\/(\d+)$/.exec(pfad);
     if (r) {
       const id = Number(r[1]);
       // Wie bei Alwin: Leitung im Lobpreisteam (darf anlegen und einrichten), Mitglied in Technik.
@@ -506,9 +753,13 @@ export function demoStarten(fall: string): void {
     }
     if (pfad === '/groups' && m === 'GET' && url.searchParams.has('group_status_ids[]')) {
       const status = Number(url.searchParams.get('group_status_ids[]'));
+      // Mit `group_type_ids[]` nur diese Gruppenart (N1b: die Nachweis-Arten); ohne alle, wie bisher.
+      const art = url.searchParams.has('group_type_ids[]')
+        ? Number(url.searchParams.get('group_type_ids[]'))
+        : null;
       return antwort({
         data: [...gruppen]
-          .filter(([, x]) => x.status === status)
+          .filter(([, x]) => x.status === status && (art === null || (x.typ ?? 5) === art))
           .map(([id, x]) => gruppeRoh(id, x)),
         meta: { pagination: { lastPage: 1 } },
       });
@@ -556,10 +807,11 @@ export function demoStarten(fall: string): void {
       gruppen.set(id, {
         name: String(body.name),
         parent: Number(body.parentGroupId),
-        status: 2,
+        status: Number(body.groupStatusId ?? 2),
         note: '',
-        settings: {},
+        settings: typeof body.visibility === 'string' ? { visibility: body.visibility } : {},
         felder: [],
+        ...(Number(body.groupTypeId) === NACHWEIS_TYP ? { typ: NACHWEIS_TYP } : {}),
       });
       return antwort({ data: { id } }, 201);
     }

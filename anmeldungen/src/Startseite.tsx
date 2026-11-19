@@ -33,6 +33,8 @@ interface Props {
   onOeffnen: (id: number) => void;
   /** Zum Archiv der gelöschten Veranstaltungen (A4-Nachtrag); fehlt, wenn es die Gruppenart nicht gibt. */
   onArchiv?: () => void;
+  /** Zur Seite „Nachweise“ (N1b); fehlt, wenn die Person sie nicht sehen darf – dann gibt es die Karte nicht. */
+  onNachweise?: () => void;
   /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5). */
   admin?: boolean;
   /** Nach einer Änderung von hier aus (A9-4: endgültig gelöscht, ins Archiv) – meldet sie und lädt neu. */
@@ -309,6 +311,7 @@ export function Startseite({
   zeitzone,
   onOeffnen,
   onArchiv,
+  onNachweise,
   admin = false,
   onGeaendert = () => {},
 }: Props) {
@@ -537,6 +540,27 @@ export function Startseite({
             ändert außerdem Eckdaten, Preise, Formular und Gestaltung und gibt frei.
           </p>
         </section>
+        {onNachweise && (
+          <section className={styles.karte} aria-labelledby="nachweise-karte">
+            <div className={styles.kopf}>
+              <h2 id="nachweise-karte">Nachweise</h2>
+            </div>
+            <ul className={styles.liste}>
+              <li className={styles.zeile}>
+                <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
+                  <Icon name="kreis-haken" size={18} />
+                </span>
+                <div className={styles.mitte}>
+                  <b>Führungszeugnis &amp; Co.</b>
+                  <small>Nachweis-Arten ansehen und einrichten</small>
+                </div>
+                <FensterKnopf art="zweit" onClick={onNachweise}>
+                  Öffnen
+                </FensterKnopf>
+              </li>
+            </ul>
+          </section>
+        )}
       </div>
       {einrichten && (
         <EinrichtenFenster

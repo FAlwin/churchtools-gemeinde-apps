@@ -14,6 +14,11 @@ export type Zustand =
       uebersicht: Uebersicht;
       /** Wo die Person anlegen darf (A3); `artId: null` = Gruppenart „Anmeldung“ fehlt. */
       anlegen: { artId: number | null; teamIds: number[] };
+      /**
+       * Der Einstieg „Nachweise“ (N1b): `null` = nichts zu zeigen (kein Recht, keine Nachweis-Gruppe geleitet – oder
+       * nicht lesbar; dann fehlt nur die Karte). `darfEinrichten`: „Berechtigungen verwalten“.
+       */
+      nachweise: { darfEinrichten: boolean } | null;
       /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5: Hinweis auf der Startseite). */
       admin: boolean;
       /** Adresse der Formular-Seite der Gemeinde – `null`, solange keine eingerichtet ist (A6-2). */

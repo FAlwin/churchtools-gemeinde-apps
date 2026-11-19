@@ -134,20 +134,27 @@ describe('fehlendeRechte', () => {
       s.map(({ authId, dataId }) => ({ authId, dataId }));
     expect(fehlendeRechte(alle(NACHWEIS_LEITER_RECHTE), NACHWEIS_LEITER_RECHTE)).toEqual([]);
     expect(fehlendeRechte(alle(LEITER_RECHTE), LEITER_RECHTE)).toEqual([]);
-    expect(fehlendeRechte(alle(LEITER_RECHTE), NACHWEIS_LEITER_RECHTE)).toEqual(
-      NACHWEIS_LEITER_RECHTE,
-    );
+    // Gruppeninfos/Mitglieder sehen (Stufe 1) haben beide; es fehlen die Feld-Rechte und die Folgeaufgaben.
+    expect(
+      fehlendeRechte(alle(LEITER_RECHTE), NACHWEIS_LEITER_RECHTE).map((r) => r.authId),
+    ).toEqual([10126, 10133, 10110]);
   });
 });
+
+/**
+ * Der Baustein wird mit **einem** Recht geprüft – unabhängig davon, welche Rechte eine App verlangt (die Nachweis-Leiter
+ * haben seit N1b fünf; das prüfen die Tests der Anmeldungen gegen `NACHWEIS_LEITER_RECHTE`).
+ */
+const EIN_RECHT = [{ authId: 10110, name: 'Follow-ups durchführen', dataId: null }] as const;
 
 describe('rechteErgaenzen', () => {
   it('fehlt das Recht: PUT mit authId (ohne dataId bei null), danach nachgelesen', async () => {
     const ct = new FalschesCt();
-    await rechteErgaenzen(ct.port, 56, NACHWEIS_LEITER_RECHTE);
+    await rechteErgaenzen(ct.port, 56, EIN_RECHT);
     expect(ct.schreibende('PUT')).toEqual([
       { methode: 'PUT', pfad: '/permissions/group_type_role/56', json: { authId: 10110 } },
     ]);
-    expect(fehlendeRechte(ct.rechte.get(56) ?? [], NACHWEIS_LEITER_RECHTE)).toEqual([]);
+    expect(fehlendeRechte(ct.rechte.get(56) ?? [], EIN_RECHT)).toEqual([]);
   });
 
   it('mit dataId: als Liste geschickt', async () => {
@@ -162,12 +169,12 @@ describe('rechteErgaenzen', () => {
       { authId: 10110, dataId: null },
       { authId: 777, dataId: 2 },
     ]);
-    await rechteErgaenzen(ct.port, 56, NACHWEIS_LEITER_RECHTE);
+    await rechteErgaenzen(ct.port, 56, EIN_RECHT);
     expect(ct.aufrufe).toEqual([]);
     expect(ct.rechte.get(56)).toHaveLength(2);
     // Auch beim Ergänzen: das Fremde steht danach noch da, es gibt nur PUT.
     ct.rechte.set(57, [{ authId: 777, dataId: 2 }]);
-    await rechteErgaenzen(ct.port, 57, NACHWEIS_LEITER_RECHTE);
+    await rechteErgaenzen(ct.port, 57, EIN_RECHT);
     expect(ct.rechte.get(57)).toEqual([
       { authId: 777, dataId: 2 },
       { authId: 10110, dataId: null },
@@ -178,7 +185,7 @@ describe('rechteErgaenzen', () => {
   it('PUT wird geschluckt (200, nichts übernommen): Fehler mit dem Namen des Rechts', async () => {
     const ct = new FalschesCt();
     ct.ignoriere = ['PUT /permissions'];
-    const e = await rechteErgaenzen(ct.port, 56, NACHWEIS_LEITER_RECHTE).catch((x: unknown) => x);
+    const e = await rechteErgaenzen(ct.port, 56, EIN_RECHT).catch((x: unknown) => x);
     expect(e).toBeInstanceOf(GruppenartFehler);
     expect(e).toMatchObject({ art: 'nichtUebernommen', was: '„Follow-ups durchführen“' });
     expect((e as Error).message).toBe(

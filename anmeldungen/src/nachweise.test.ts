@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as V from '@ui/ct/verbindung';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
-import { NACHWEIS_ART, NACHWEIS_LEITER_RECHTE } from '@shared/anmeldung/nachweise';
+import {
+  NACHWEIS_ART,
+  NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_TEILNEHMER_RECHTE,
+} from '@shared/anmeldung/nachweise';
 import { FalschesCt } from '@shared/ct/gruppenart.testutil';
 import { nachweisGrundlageLesen, nachweisGrundlageSichern } from './nachweise';
 
@@ -22,13 +26,20 @@ let gelesen: string[];
 const ADMIN = { churchcore: { 'administer persons': true } };
 const OHNE_ADMIN = { churchcore: { 'view birthdays': true }, churchdb: { 'view alldata': true } };
 
-function mitNachweisArt(rechte: { authId: number; dataId: number | null }[] = []) {
+const alsRechte = (l: readonly { authId: number; dataId: number | null }[]) =>
+  l.map(({ authId, dataId }) => ({ authId, dataId }));
+
+function mitNachweisArt(
+  rechte: { authId: number; dataId: number | null }[] = [],
+  teilnehmer: { authId: number; dataId: number | null }[] = [],
+) {
   falsch.typen = [{ id: 11, name: 'Nachweis', sortKey: 100 }];
   falsch.rollen = [
     { id: 53, groupTypeId: 11, isLeader: false, isDefault: true },
     { id: 56, groupTypeId: 11, isLeader: true },
   ];
   falsch.rechte.set(56, rechte);
+  falsch.rechte.set(53, teilnehmer);
 }
 
 beforeEach(() => {
@@ -52,8 +63,8 @@ beforeEach(() => {
 });
 
 describe('nachweisGrundlageLesen', () => {
-  it('Admin, Art und Recht da: nichts fehlt', async () => {
-    mitNachweisArt(NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })));
+  it('Admin, Art und Rechte da: nichts fehlt', async () => {
+    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
     expect(await nachweisGrundlageLesen()).toEqual({
       typId: 11,
       rechtFehlt: false,
@@ -70,6 +81,12 @@ describe('nachweisGrundlageLesen', () => {
     });
     expect(falsch.aufrufe).toEqual([]);
     expect(ct.ctAnfrage).not.toHaveBeenCalled();
+  });
+
+  it('(i) Leiter-Rechte da, aber das der Teilnehmer-Rolle fehlt: rechtFehlt true, nichts geschrieben', async () => {
+    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE));
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
+    expect(falsch.aufrufe).toEqual([]);
   });
 
   it('keine Art: typId null, rechtFehlt null (es gibt nichts zu lesen)', async () => {
@@ -128,13 +145,13 @@ describe('nachweisGrundlageSichern', () => {
     expect(r).toEqual({ typId: 11, teilnehmerRolle: 53, leiterRolle: 54 });
     const post = falsch.aufrufe.find((a) => a.pfad === '/group/grouptypes');
     expect(post?.json).toMatchObject({ name: NACHWEIS_ART.name, shorty: NACHWEIS_ART.shorty });
-    expect(falsch.rechte.get(54)).toEqual(
-      NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
-    );
+    expect(falsch.rechte.get(54)).toEqual(alsRechte(NACHWEIS_LEITER_RECHTE));
+    // M6: die Teilnehmer-Rolle bekommt genau „Gruppeninfos sehen“ (Stufe 1) – sonst nichts
+    expect(falsch.rechte.get(53)).toEqual(alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
   });
 
-  it('Art und Recht schon da: nichts geschrieben; zweiter Lauf ändert nichts', async () => {
-    mitNachweisArt(NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })));
+  it('Art und Rechte schon da: nichts geschrieben; zweiter Lauf ändert nichts', async () => {
+    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
     expect(await nachweisGrundlageSichern()).toEqual({
       typId: 11,
       leiterRolle: 56,

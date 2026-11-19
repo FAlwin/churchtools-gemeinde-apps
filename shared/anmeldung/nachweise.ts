@@ -15,6 +15,7 @@ import { textEntpacken, textPacken } from '../ct/packen';
 import { STUFE_NACHWEIS } from './felder';
 import { BESCHREIBUNG_MAX } from './formular';
 import { mitCtPlatzhaltern, textZuHtml } from './rundmail';
+import { antragFehler, antragSchema, gleicherAntrag, type NachweisAntrag } from './nachweisAntrag';
 
 /** Wie die Gruppenart angelegt wird. */
 export const NACHWEIS_ART: GruppenartVorgabe = {
@@ -47,6 +48,15 @@ export const NACHWEIS_LEITER_RECHTE: readonly SollRecht[] = [
   { authId: 10126, name: 'Gruppenmitgliedsfelder sehen', dataId: STUFE_NACHWEIS },
   { authId: 10133, name: 'Gruppenmitgliedsfelder bearbeiten', dataId: STUFE_NACHWEIS },
   { authId: 10110, name: 'Follow-ups durchführen', dataId: null },
+];
+
+/**
+ * Das eine Recht der **Teilnehmer-Rolle** (Alwin nach Messung M6, 19.11.2026): „Gruppeninfos sehen“ (10102, Stufe 1). Ohne
+ * es ist „Meine Gruppen“ leer, und die Person fände ihre Bescheinigung nicht (das PDF selbst braucht kein Recht). Folge:
+ * Teilnehmer sehen die Gruppe und die Namen der anderen Mitglieder – keine Angaben, keine Ergebnisse. Sonst nichts.
+ */
+export const NACHWEIS_TEILNEHMER_RECHTE: readonly SollRecht[] = [
+  { authId: 10102, name: 'Gruppeninfos sehen', dataId: STUFE_SEHEN },
 ];
 
 // ── Name der Gruppe ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -131,17 +141,24 @@ export interface NachweisEinstellungen {
   betreff: string;
   /** Mit `[Vorname]` als einzigem Platzhalter. */
   text: string;
+  /**
+   * Der Antrag als Bescheinigung (N1c, Fassung 2 des Blocks) – ohne Bilder. Fehlt er, ist es eine Art ohne Antrag oder aus
+   * N1b (Fassung 1): „kein Antrag“.
+   */
+  antrag?: NachweisAntrag;
 }
 
 const ART_KENNUNG = 'nachweis-einstellungen';
 
 const einstellungenSchema = z.object({
   art: z.literal(ART_KENNUNG),
-  fassung: z.literal(1),
+  // 1: N1b (ohne Antrag), 2: N1c (mit `antrag`) – beide lesbar; geschrieben wird 1 ohne und 2 mit Antrag.
+  fassung: z.union([z.literal(1), z.literal(2)]),
   gueltigJahre: z.number().int().min(NACHWEIS_JAHRE_MIN).max(NACHWEIS_JAHRE_MAX),
   ab: z.enum(['ausstellung', 'einsicht']),
   betreff: z.string().max(NACHWEIS_BETREFF_MAX),
   text: z.string().max(NACHWEIS_TEXT_MAX),
+  antrag: antragSchema.optional(),
 });
 
 /** Beginn der unsichtbaren Zeile; dahinter der gepackte Code. Eigene Kennung – nie mit `[anmeldung]` verwechselbar. */
@@ -169,13 +186,15 @@ export function nachweisEinstellungenFehler(e: NachweisEinstellungen): string | 
   const { unbekannt } = mitCtPlatzhaltern(e.text, new Map());
   if (unbekannt.length)
     return `Im Text steht ${unbekannt.map((u) => `[${u}]`).join(', ')} – nur [Vorname] kennt die Mail. Eckige Klammern sonst bitte weglassen.`;
-  return null;
+  return e.antrag ? antragFehler(e.antrag) : null;
 }
 
 /** Die Einstellungen als gepackter Code (deflate, Base64url). Wirft bei ungültigen Einstellungen. */
 export function nachweisEinstellungenPacken(e: NachweisEinstellungen): string {
   return textPacken(
-    JSON.stringify(einstellungenSchema.parse({ art: ART_KENNUNG, fassung: 1, ...e })),
+    JSON.stringify(
+      einstellungenSchema.parse({ art: ART_KENNUNG, fassung: e.antrag ? 2 : 1, ...e }),
+    ),
   );
 }
 
@@ -208,8 +227,8 @@ export function nachweisEinstellungenLesen(
   try {
     const r = einstellungenSchema.safeParse(JSON.parse(textEntpacken(m[1])));
     if (!r.success) return null;
-    const { gueltigJahre, ab, betreff, text } = r.data;
-    return { gueltigJahre, ab, betreff, text };
+    const { gueltigJahre, ab, betreff, text, antrag } = r.data;
+    return { gueltigJahre, ab, betreff, text, ...(antrag ? { antrag } : {}) };
   } catch {
     return null;
   }
@@ -226,7 +245,8 @@ export const gleicheNachweisEinstellungen = (a: NachweisEinstellungen, b: Nachwe
   a.gueltigJahre === b.gueltigJahre &&
   a.ab === b.ab &&
   a.betreff === b.betreff &&
-  a.text === b.text;
+  a.text === b.text &&
+  gleicherAntrag(a.antrag, b.antrag);
 
 /** Text der Gültigkeit für die Liste: „3 Jahre ab Ausstellung“. */
 export function nachweisGueltigText(e: Pick<NachweisEinstellungen, 'gueltigJahre' | 'ab'>): string {

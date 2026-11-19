@@ -5,7 +5,9 @@
  * 1. ihren **Einstellungen** (Gültigkeit, Aufforderung) unsichtbar in der Beschreibung (`nachweisNotiz`),
  * 2. drei **Gruppenfeldern** auf Stufe 4 (`NACHWEIS_FELDER`),
  * 3. den **Vertrauenspersonen** als Leiter,
- * 4. einem **Ablauf** für die Rolle Teilnehmer (`nachweisSchritte`).
+ * 4. einem **Ablauf** für die Rolle Teilnehmer (`nachweisSchritte`),
+ * 5. (N1c, optional) dem **Antrag als Bescheinigung**: eine globale HTML-Vorlage (`antragSichern`), an die **Gruppenrolle**
+ *    Teilnehmer gehängt – Logo und Unterschrift stecken NUR im HTML der Vorlage (`nachweisAntrag.ts`).
  *
  * **Jeder Schritt liest nach.** Ein `200`/`201` ist kein Beleg (Lehre vom 11.08.2026): Erst was beim Nachlesen dasteht,
  * zählt. **Jeder Schritt ist wiederholbar** und legt nur an, was fehlt – „Nochmal“ nach einem Teilerfolg macht nichts
@@ -43,8 +45,14 @@ import {
   type NachweisSchrittRoh,
 } from '@shared/anmeldung/nachweise';
 import { STUFE_NACHWEIS } from '@shared/anmeldung/felder';
+import {
+  antragBilderLesen,
+  antragBlatt,
+  antragHtml,
+  type NachweisAntrag,
+} from '@shared/anmeldung/nachweisAntrag';
 import { absenderAus } from './ablaeufe';
-import { personName, type MitgliedRoh } from './einrichten';
+import { gemeindeLogo, personName, type MitgliedRoh } from './einrichten';
 import { optionenVon, spalteSpeichern, type CtFeld } from './formularFelder';
 import { nachweisGrundlageLesen, nachweisGrundlageSichern } from './nachweise';
 
@@ -188,6 +196,7 @@ export const NACHWEIS_SCHRITTE = [
   'felder',
   'leitung',
   'ablauf',
+  'antrag',
 ] as const;
 export type NachweisSchrittName = (typeof NACHWEIS_SCHRITTE)[number];
 
@@ -198,7 +207,17 @@ export const NACHWEIS_SCHRITT_TEXT: Record<NachweisSchrittName, string> = {
   felder: 'Angaben je Person (Eingesehen am, Ausgestellt am, Ergebnis)',
   leitung: 'Vertrauenspersonen',
   ablauf: 'Ablauf (Aufforderung, Einladung, Folgeaufgaben)',
+  antrag: 'Antrag als Bescheinigung (Vorlage, Inhalt, Rolle Teilnehmer)',
 };
+
+/** Was ein Bild im Antrag beim Speichern ist: neu gewählt, so lassen wie in ChurchTools, oder keins. */
+export type BildWahl = { art: 'neu'; src: string } | { art: 'unveraendert' } | { art: 'keins' };
+
+/** Eigenes Logo und Unterschrift – ohne Angabe bleiben beide, wie sie in ChurchTools stehen. */
+export interface AntragBilder {
+  logo: BildWahl;
+  unterschrift: BildWahl;
+}
 
 export interface NachweisEingabe {
   /** `null`: neue Art. Sonst die Gruppe – auch nach einem Teilerfolg („Nochmal“ legt dann nichts doppelt an). */
@@ -210,6 +229,8 @@ export interface NachweisEingabe {
   vertrauen: number[];
   /** Nur Bearbeiten, nur auf ausdrücklichen Klick: Diese Leitungen verlassen die Gruppe. */
   entfernen?: number[];
+  /** Bilder des Antrags (N1c); ohne Angabe bleiben sie, wie sie sind. Der Rest des Antrags steht in `einstellungen.antrag`. */
+  antragBilder?: AntragBilder;
 }
 
 /** Was nachgelesen in ChurchTools steht. */
@@ -219,11 +240,15 @@ export interface NachweisBefund {
   felder: string[];
   vertrauen: Vertrauensperson[];
   ablauf: { an: boolean; schritte: number } | null;
+  /** Der Antrag (nur mit „Mit Antrag“): Nummer der Vorlage und ob sie an der Rolle Teilnehmer hängt. */
+  antrag: { vorlageId: number; haengt: boolean } | null;
 }
 
 export interface NachweisErgebnis {
   /** Nummer der Gruppe, sobald es sie gibt – damit „Nochmal“ sie wiederfindet. */
   gruppeId: number | null;
+  /** Nummer der Vorlage des Antrags, sobald es sie gibt – damit „Nochmal“ keine zweite anlegt. */
+  vorlageId: number | null;
   erledigt: NachweisSchrittName[];
   /** Woran es gescheitert ist (`null`: alles geschrieben und nachgelesen). */
   fehler: unknown;
@@ -464,7 +489,296 @@ async function ablaufSichern(
   return { an: true, schritte: nachher.steps?.length ?? 0 };
 }
 
-/** Das Gesamtbild nachlesen: Gruppe, Felder, Vertrauenspersonen, Ablauf. */
+// ── Der Antrag als Bescheinigung (N1c) ───────────────────────────────────────────────────────────────────────────
+
+const VORLAGE_TYP = 'groupmember-document';
+const RECHT_VORLAGEN = 'Gemeinde-HTML-Vorlagen verwalten';
+
+/** So sagt es die Meldung, wenn dieses Recht fehlt – sie nennt auch den Ausweg. */
+export const VORLAGEN_RECHT_MELDUNG = `Dir fehlt in ChurchTools das Recht „${RECHT_VORLAGEN}“. Ohne dieses Recht lässt sich der Antrag nicht als Bescheinigung anlegen oder ändern. Bitte eine Person mit diesem Recht, die Nachweis-Art zu speichern – oder „Mit Antrag“ ausschalten. Es wurde nichts geändert.`;
+
+interface VorlageRoh {
+  id: number;
+  name?: string;
+  domainType?: string;
+  htmlFileId?: number | null;
+}
+
+interface GruppenRolleRoh {
+  /** Nummer der Rolle IN DER GRUPPE – nicht die der Gruppenart (`groupTypeRoleId`). */
+  id: number;
+  groupTypeRoleId: number;
+  htmlTemplateIds?: unknown;
+}
+
+/** Der Name der Vorlage – eindeutig je Art. */
+export const antragVorlagenName = (artName: string): string =>
+  `Antrag: ${nachweisGruppenName(artName)}`;
+
+/**
+ * Hat die angemeldete Person das Recht „Gemeinde-HTML-Vorlagen verwalten“ (gemessen 19.11.2026, M6: churchcore 16,
+ * Schlüssel `administer church html templates`)? Fehlt der Schlüssel in der Antwort, gilt das Recht als nicht vorhanden (wie
+ * bei allen Rechten). `null` nur, wenn die Antwort gar keinen Block `churchcore` hat – dann sagt ChurchTools es selbst (403).
+ */
+export function htmlVorlagenRecht(global: unknown): boolean | null {
+  const modul = (global as { churchcore?: unknown } | null | undefined)?.churchcore;
+  if (!modul || typeof modul !== 'object') return null;
+  return !!(modul as Record<string, unknown>)['administer church html templates'];
+}
+
+const idsAus = (v: unknown): number[] =>
+  Array.isArray(v) ? v.map(ctId).filter((n): n is number => n !== null) : [];
+
+async function vorlageLesen(id: number): Promise<VorlageRoh | null> {
+  try {
+    return await ctDaten<VorlageRoh>(`/htmltemplates/${id}`);
+  } catch (x) {
+    if (x instanceof ApiError && x.status === 404) return null;
+    throw x;
+  }
+}
+
+/** Das HTML einer Vorlage. Wirft, wenn ChurchTools es nicht als Text liefert (leer, JSON ohne `data`, Fehler). */
+async function antragHtmlLesen(id: number): Promise<string> {
+  const r = await ctAnfrage<unknown>(`/htmltemplates/${id}/html`);
+  const text = typeof r === 'string' ? r : (r as { data?: unknown } | null | undefined)?.data;
+  if (typeof text !== 'string' || text.trim() === '')
+    throw new ApiError(502, 'ChurchTools hat den Inhalt des Antrags nicht geliefert.');
+  return text;
+}
+
+/**
+ * Die Bilder des gespeicherten Antrags fürs Fenster. `null` = nicht lesbar (Fehler, leer, kein Blatt von uns) – nie „keine
+ * Bilder“: Das Fenster sagt dann, dass sie unverändert bleiben, und `antragSichern` schreibt nichts, was sie verlieren könnte.
+ */
+export async function antragLaden(
+  vorlageId: number,
+): Promise<{ logo: string | null; unterschrift: string | null } | null> {
+  try {
+    return antragBilderLesen(await antragHtmlLesen(vorlageId));
+  } catch {
+    return null;
+  }
+}
+
+/** Die Vorlage dieses Namens, falls der letzte Versuch sie angelegt hat, ohne dass ihre Nummer gespeichert wurde. */
+async function vorlageFinden(name: string): Promise<VorlageRoh | null> {
+  let liste: VorlageRoh[];
+  try {
+    // `domain_type` ist Pflicht – ohne antwortet ChurchTools mit 400 (gemessen 19.11.2026, echter Lauf N1c).
+    liste = await ctAlleSeiten<VorlageRoh>(`/htmltemplates?domain_type=${VORLAGE_TYP}`);
+  } catch (x) {
+    // Gibt es die Liste nicht, bleibt es beim Merken der Nummer; jeder andere Fehler bricht ab (nichts blind anlegen).
+    if (x instanceof ApiError && (x.status === 404 || x.status === 405)) return null;
+    throw x;
+  }
+  const gleiche = liste.filter(
+    (v) =>
+      (v.domainType === undefined || v.domainType === VORLAGE_TYP) &&
+      typeof v.name === 'string' &&
+      gleicherGruppenName(v.name, name),
+  );
+  if (gleiche.length > 1)
+    throw new ApiError(
+      409,
+      `In ChurchTools gibt es ${gleiche.length} Vorlagen „${name}“ (${gleiche.map((v) => v.id).join(', ')}). Welche gemeint ist, lässt sich nicht erraten – bitte die überzähligen dort entfernen.`,
+    );
+  return gleiche[0] ? await vorlageLesen(gleiche[0].id) : null;
+}
+
+async function vorlageAnlegen(name: string): Promise<VorlageRoh> {
+  const neu = await ctAnfrage<{ data?: { id?: number } } | null>('/htmltemplates', {
+    method: 'POST',
+    body: json({ domainType: VORLAGE_TYP, name, isGlobal: true }),
+    verweigert: VORLAGEN_RECHT_MELDUNG,
+  });
+  const id = ctId(neu?.data?.id);
+  if (id === null)
+    throw new NichtUebernommen(
+      `die Vorlage „${name}“ (Nummer nicht geliefert; „Nochmal“ findet sie wieder und legt keine zweite an)`,
+    );
+  const da = await vorlageLesen(id);
+  if (!da || !gleicherGruppenName(da.name ?? '', name))
+    throw new NichtUebernommen(`die Vorlage „${name}“`);
+  return da;
+}
+
+/**
+ * Logo und Unterschrift fürs HTML. Neu gewählt: wie gewählt. **Unverändert: aus dem HTML, das jetzt in ChurchTools steht** –
+ * ist es nicht lesbar, wird abgebrochen (nichts geschrieben): Lieber nicht speichern als ein Bild verlieren. Gibt es noch
+ * keinen Inhalt (`bisher === null` und keine Lesestörung), gab es auch keine Bilder.
+ */
+function bilderAufloesen(
+  e: { logo: NachweisAntrag['logo']; bilder: AntragBilder },
+  gemeindeUrl: string | null,
+  bisher: { html: string | null; gelesen: boolean; fehler: unknown },
+): { logo: string | null; unterschrift: string | null } {
+  const vorhanden = (): { logo: string | null; unterschrift: string | null } => {
+    if (!bisher.gelesen) return { logo: null, unterschrift: null };
+    const b = bisher.html === null ? null : antragBilderLesen(bisher.html);
+    if (b === null)
+      throw bisher.fehler instanceof ApiError && bisher.fehler.status !== 502
+        ? bisher.fehler
+        : new ApiError(
+            502,
+            'Der bisherige Antrag lässt sich in ChurchTools gerade nicht lesen. Damit Logo und Unterschrift nicht verloren gehen, wurde nichts geändert – bitte gleich noch einmal versuchen.',
+          );
+    return b;
+  };
+  const wahl = (w: BildWahl, art: 'logo' | 'unterschrift'): string | null =>
+    w.art === 'neu' ? w.src : w.art === 'keins' ? null : vorhanden()[art];
+  return {
+    logo:
+      e.logo === 'ohne' ? null : e.logo === 'gemeinde' ? gemeindeUrl : wahl(e.bilder.logo, 'logo'),
+    unterschrift: wahl(e.bilder.unterschrift, 'unterschrift'),
+  };
+}
+
+/**
+ * Die Vorlage an die **Gruppenrolle** Teilnehmer hängen (`haengen`) oder abhängen – nie die Rolle der Gruppenart (deren
+ * Nummer ist eine andere, `GET /groups/{g}/roles` liefert beide). **Fremde Vorlagen bleiben**: es wird nur die eigene
+ * ergänzt oder entfernt. Nachgelesen. Beim Abhängen: gibt es die Rolle nicht, hängt auch nichts daran.
+ */
+async function vorlageAnRolle(
+  gruppeId: number,
+  teilnehmerRolle: number,
+  vorlageId: number,
+  haengen: boolean,
+): Promise<void> {
+  const lesen = async () => {
+    const rollen = await ctDaten<GruppenRolleRoh[]>(`/groups/${gruppeId}/roles`);
+    return rollen.find((r) => r.groupTypeRoleId === teilnehmerRolle) ?? null;
+  };
+  const rolle = await lesen();
+  if (!rolle) {
+    if (!haengen) return;
+    throw new ApiError(
+      422,
+      'In ChurchTools hat die Gruppe keine Rolle „Teilnehmer“, an die sich der Antrag hängen ließe. Bitte die Rollen der Gruppe dort ansehen.',
+    );
+  }
+  const vorher = idsAus(rolle.htmlTemplateIds);
+  const soll = haengen
+    ? vorher.includes(vorlageId)
+      ? vorher
+      : [...vorher, vorlageId]
+    : vorher.filter((x) => x !== vorlageId);
+  if (soll.length !== vorher.length) {
+    await ctAnfrage(`/groups/${gruppeId}/roles/${rolle.id}`, {
+      method: 'PATCH',
+      body: json({ htmlTemplateIds: soll }),
+    });
+  }
+  const nachher = idsAus((await lesen())?.htmlTemplateIds);
+  const fremdeDa = vorher.filter((x) => x !== vorlageId).every((x) => nachher.includes(x));
+  if (nachher.includes(vorlageId) !== haengen || !fremdeDa)
+    throw new NichtUebernommen(
+      haengen
+        ? 'das Anhängen des Antrags an die Rolle „Teilnehmer“'
+        : 'das Abhängen des Antrags von der Rolle „Teilnehmer“',
+    );
+}
+
+/**
+ * Der Inhalt: HTML hochladen (`POST /files/html_template/{id}`), `htmlFileId` setzen, nachlesen. Ist das HTML schon
+ * dasselbe, wird nichts hochgeladen. Nachgelesen wird mit dem, was ChurchTools zurückgibt: Nummer der Datei, Blatt-Marker
+ * und beide Bilder – ein Erfolgssignal allein beweist nichts.
+ */
+async function antragInhaltSetzen(
+  vorlage: VorlageRoh,
+  html: string,
+  bisher: string | null,
+  bilder: { logo: string | null; unterschrift: string | null },
+): Promise<void> {
+  if (bisher === html && vorlage.htmlFileId != null) return;
+  const form = new FormData();
+  form.append('files[]', new Blob([html], { type: 'text/html' }), 'antrag.html');
+  const r = await ctAnfrage<{ data?: unknown } | null>(`/files/html_template/${vorlage.id}`, {
+    method: 'POST',
+    body: form,
+    verweigert: VORLAGEN_RECHT_MELDUNG,
+  });
+  const d = r?.data;
+  const dateiId = ctId(
+    (Array.isArray(d) ? d[0] : d) && ((Array.isArray(d) ? d[0] : d) as { id?: unknown }).id,
+  );
+  if (dateiId === null) throw new NichtUebernommen('die Datei mit dem Antrag');
+  await ctAnfrage(`/htmltemplates/${vorlage.id}`, {
+    method: 'PATCH',
+    body: json({ htmlFileId: dateiId }),
+    verweigert: VORLAGEN_RECHT_MELDUNG,
+  });
+  if ((await vorlageLesen(vorlage.id))?.htmlFileId !== dateiId)
+    throw new NichtUebernommen('den Inhalt des Antrags');
+  const zurueck = antragBilderLesen(await antragHtmlLesen(vorlage.id));
+  if (zurueck === null)
+    throw new NichtUebernommen(
+      'den Inhalt des Antrags (ChurchTools liefert ihn nicht wie hochgeladen zurück)',
+    );
+  if (zurueck.logo !== bilder.logo || zurueck.unterschrift !== bilder.unterschrift)
+    throw new NichtUebernommen('Logo und Unterschrift im Antrag');
+}
+
+/**
+ * **Schritt 7: der Antrag.** Mit Antrag: Vorlage (aus der Nummer im Block, sonst über den Namen, sonst neu) → Nummer sofort im
+ * Block festhalten (`vorlageId`) → HTML hochladen und nachlesen → an die Gruppenrolle Teilnehmer hängen und nachlesen.
+ * Ohne Antrag: eine vorhandene Vorlage wird von der Rolle abgehängt – **nie gelöscht**.
+ */
+async function antragSichern(a: {
+  gruppeId: number;
+  teilnehmerRolle: number;
+  name: string;
+  einstellungen: NachweisEinstellungen;
+  bilder: AntragBilder;
+  merke: (vorlageId: number) => void;
+}): Promise<void> {
+  const antrag = a.einstellungen.antrag;
+  if (!antrag) return;
+  if (!antrag.an) {
+    if (antrag.vorlageId !== null)
+      await vorlageAnRolle(a.gruppeId, a.teilnehmerRolle, antrag.vorlageId, false);
+    return;
+  }
+  const vorlagenName = antragVorlagenName(a.name);
+  let vorlage = antrag.vorlageId !== null ? await vorlageLesen(antrag.vorlageId) : null;
+  vorlage ??= (await vorlageFinden(vorlagenName)) ?? (await vorlageAnlegen(vorlagenName));
+  a.merke(vorlage.id);
+
+  // Die Nummer sofort festhalten: scheitert etwas danach, findet „Nochmal“ die Vorlage wieder.
+  if (vorlage.id !== antrag.vorlageId) {
+    const note = (await gruppe(a.gruppeId)).information?.note ?? null;
+    await einstellungenSichern(a.gruppeId, note, {
+      ...a.einstellungen,
+      antrag: { ...antrag, vorlageId: vorlage.id },
+    });
+  }
+
+  // Was in ChurchTools schon als Inhalt steht (für „unverändert“ und um Gleiches nicht noch einmal hochzuladen).
+  const bisher: { html: string | null; gelesen: boolean; fehler: unknown } = {
+    html: null,
+    gelesen: vorlage.htmlFileId != null,
+    fehler: null,
+  };
+  if (bisher.gelesen)
+    try {
+      bisher.html = await antragHtmlLesen(vorlage.id);
+    } catch (x) {
+      bisher.fehler = x;
+    }
+  const gemeindeUrl = antrag.logo === 'gemeinde' ? await gemeindeLogo() : null;
+  const bilder = bilderAufloesen({ logo: antrag.logo, bilder: a.bilder }, gemeindeUrl, bisher);
+  const html = antragHtml(antragBlatt(antrag, bilder));
+  await antragInhaltSetzen(vorlage, html, bisher.html, bilder);
+  await vorlageAnRolle(a.gruppeId, a.teilnehmerRolle, vorlage.id, true);
+}
+
+/** Vor dem ersten Schreiben: Darf die Person Vorlagen anlegen? Nur ein ausdrückliches „nein“ weist ab (`htmlVorlagenRecht`). */
+async function vorlagenRechtPruefen(): Promise<void> {
+  const global = await ctDaten<unknown>('/permissions/global');
+  if (htmlVorlagenRecht(global) === false) throw new ApiError(422, VORLAGEN_RECHT_MELDUNG);
+}
+
+/** Das Gesamtbild nachlesen: Gruppe, Felder, Vertrauenspersonen, Ablauf, Antrag. */
 export async function nachweisArtBefund(
   id: number,
   leiterRolle: number,
@@ -483,6 +797,16 @@ export async function nachweisArtBefund(
       z.routine?.name === NACHWEIS_ABLAUF_NAME,
   );
   const routine = meine ? await ctDaten<RoutineRoh>(`/routines/${meine.id}`) : null;
+  const antrag = nachweisEinstellungenLesen(g.information?.note)?.antrag;
+  let antragBefund: NachweisBefund['antrag'] = null;
+  if (antrag?.an && antrag.vorlageId !== null) {
+    const rollen = await ctDaten<GruppenRolleRoh[]>(`/groups/${id}/roles`);
+    const rolle = rollen.find((r) => r.groupTypeRoleId === teilnehmerRolle);
+    antragBefund = {
+      vorlageId: antrag.vorlageId,
+      haengt: !!rolle && idsAus(rolle.htmlTemplateIds).includes(antrag.vorlageId),
+    };
+  }
   return {
     gruppeId: id,
     gruppenName: g.name,
@@ -491,6 +815,7 @@ export async function nachweisArtBefund(
     ablauf: routine
       ? { an: routine.isEnabled === true, schritte: routine.steps?.length ?? 0 }
       : null,
+    antrag: antragBefund,
   };
 }
 
@@ -528,14 +853,32 @@ export async function nachweisArtSichern(
   )
     throw new ApiError(422, 'Bitte mindestens eine Person als Vertrauensperson eintragen.');
   if (e.gruppeId === null) await vorhandeneArtPruefen(e.name);
+  // Vor dem ersten Schreiben: ein fehlendes Recht für die Vorlage meldet sich hier, nicht erst nach der halben Einrichtung.
+  if (e.einstellungen.antrag?.an) await vorlagenRechtPruefen();
 
-  const erg: NachweisErgebnis = { gruppeId: e.gruppeId, erledigt: [], fehler: null, befund: null };
+  const erg: NachweisErgebnis = {
+    gruppeId: e.gruppeId,
+    vorlageId: e.einstellungen.antrag?.vorlageId ?? null,
+    erledigt: [],
+    fehler: null,
+    befund: null,
+  };
   try {
     const grundlage = await nachweisGrundlageSichern();
     erg.erledigt.push('grundlage');
     const { id, note } = await gruppeSichern(e, grundlage.typId, (nr) => (erg.gruppeId = nr));
     erg.erledigt.push('gruppe');
-    await einstellungenSichern(id, note, e.einstellungen);
+    // Die Nummer der Vorlage zählt, wie sie in ChurchTools steht (ein früherer Versuch kann sie festgehalten haben).
+    const bisher = nachweisEinstellungenLesen(note)?.antrag;
+    const antragEin = e.einstellungen.antrag ?? bisher;
+    const einstellungen: NachweisEinstellungen = {
+      ...e.einstellungen,
+      ...(antragEin
+        ? { antrag: { ...antragEin, vorlageId: bisher?.vorlageId ?? antragEin.vorlageId } }
+        : {}),
+    };
+    erg.vorlageId = einstellungen.antrag?.vorlageId ?? null;
+    await einstellungenSichern(id, note, einstellungen);
     erg.erledigt.push('einstellungen');
     await felderSichern(id);
     erg.erledigt.push('felder');
@@ -549,12 +892,27 @@ export async function nachweisArtSichern(
       ich,
     );
     erg.erledigt.push('ablauf');
+    await antragSichern({
+      gruppeId: id,
+      teilnehmerRolle: grundlage.teilnehmerRolle,
+      name: e.name,
+      einstellungen,
+      bilder: e.antragBilder ?? {
+        logo: { art: 'unveraendert' },
+        unterschrift: { art: 'unveraendert' },
+      },
+      merke: (nr) => (erg.vorlageId = nr),
+    });
+    erg.erledigt.push('antrag');
     erg.befund = await nachweisArtBefund(id, grundlage.leiterRolle, grundlage.teilnehmerRolle);
   } catch (x) {
     erg.fehler = x;
   }
   return erg;
 }
+
+/** Das Logo der Gemeinde für die Vorschau im Fenster (`null`: keins eingestellt) – eine Stelle, die das Fenster ersetzen lässt. */
+export const gemeindeLogoLaden = (): Promise<string | null> => gemeindeLogo();
 
 /** Wer gerade speichert – vorbelegt als erste Vertrauensperson und Absender der Aufforderung. */
 export async function ichLaden(): Promise<Vertrauensperson> {

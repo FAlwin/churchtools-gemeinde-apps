@@ -490,7 +490,30 @@ export function demoStarten(fall: string): void {
   const NACHWEIS_TYP = 11;
   const LEITER_ROLLE = 56;
   const TEILNEHMER_ROLLE = 53;
-  const nachweisRechte: { authId: number; dataId: number | null }[] = [];
+  // Rechte je Rolle der Gruppenart (Leiter und – seit M6 – Teilnehmer).
+  const nachweisRechte = new Map<number, { authId: number; dataId: number | null }[]>();
+  // Bescheinigungen (N1c): Vorlagen, Dateien und Rollen IN den Gruppen (andere Nummern als die der Art).
+  const vorlagen = new Map<
+    number,
+    { id: number; name: string; domainType: string; htmlFileId: number | null }
+  >();
+  const dateien = new Map<number, string>();
+  const gruppenRollen = new Map<
+    number,
+    { id: number; groupTypeRoleId: number; htmlTemplateIds: number[] }[]
+  >();
+  const rollenVon = (gid: number) => {
+    let l = gruppenRollen.get(gid);
+    if (!l) {
+      l = [
+        { id: 3000 + gid, groupTypeRoleId: TEILNEHMER_ROLLE, htmlTemplateIds: [] },
+        { id: 4000 + gid, groupTypeRoleId: LEITER_ROLLE, htmlTemplateIds: [] },
+      ];
+      gruppenRollen.set(gid, l);
+    }
+    return l;
+  };
+  let naechsteVorlage = 800;
   let naechsteRoutine = 700;
   interface Schritt {
     id?: number;
@@ -626,20 +649,74 @@ export function demoStarten(fall: string): void {
       const churchdb = fall === 'admin' ? { 'administer groups': true } : {};
       // „Berechtigungen verwalten“ (Nachweise einrichten) – nur nicht für `?demo=vertrauen`.
       const churchcore =
-        fall === 'vertrauen' ? { 'view birthdays': true } : { 'administer persons': true };
+        fall === 'vertrauen'
+          ? { 'view birthdays': true }
+          : { 'administer persons': true, 'administer church html templates': true };
       return antwort({ data: { churchcore, churchdb, churchcal: { 'edit category': [1] } } });
     }
     // ── Nachweise (N1b) ──
     let r = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad);
-    if (r && Number(r[1]) === LEITER_ROLLE) {
+    if (r && [LEITER_ROLLE, TEILNEHMER_ROLLE].includes(Number(r[1]))) {
+      const liste = nachweisRechte.get(Number(r[1])) ?? [];
       if (m === 'PUT') {
         const dataId = Array.isArray(body.dataId) ? Number(body.dataId[0]) : null;
-        nachweisRechte.push({ authId: Number(body.authId), dataId });
+        nachweisRechte.set(Number(r[1]), [...liste, { authId: Number(body.authId), dataId }]);
         return antwort({ data: {} });
       }
-      return antwort({ data: nachweisRechte.map((x) => ({ ...x, isInherited: false })) });
+      return antwort({ data: liste.map((x) => ({ ...x, isInherited: false })) });
     }
     if (r) return antwort({ data: [] });
+    // ── Bescheinigungen (N1c) ──
+    if (pfad === '/htmltemplates') {
+      if (m === 'POST') {
+        if (body.isGlobal !== true) return antwort({ message: 'global html template' }, 403);
+        const id = naechsteVorlage++;
+        vorlagen.set(id, {
+          id,
+          name: String(body.name),
+          domainType: String(body.domainType),
+          htmlFileId: null,
+        });
+        return antwort({ data: { id } }, 201);
+      }
+      return antwort({ data: [...vorlagen.values()] });
+    }
+    r = /^\/htmltemplates\/(\d+)(\/html)?$/.exec(pfad);
+    if (r) {
+      const v = vorlagen.get(Number(r[1]));
+      if (!v) return antwort({}, 404);
+      if (r[2]) {
+        const html = v.htmlFileId === null ? undefined : dateien.get(v.htmlFileId);
+        return html === undefined ? antwort({}, 404) : antwort({ data: html });
+      }
+      if (m === 'PATCH') {
+        if (typeof body.htmlFileId === 'number') v.htmlFileId = body.htmlFileId;
+        return antwort({ data: {} });
+      }
+      return antwort({ data: v });
+    }
+    r = /^\/files\/html_template\/(\d+)$/.exec(pfad);
+    if (r && m === 'POST') {
+      const datei = (init?.body as FormData | undefined)?.get('files[]');
+      if (!(datei instanceof Blob)) return antwort({}, 400);
+      return datei.text().then((html) => {
+        const id = naechsteVorlage++;
+        dateien.set(id, html);
+        return antwort({ data: [{ id }] });
+      });
+    }
+    r = /^\/groups\/(\d+)\/roles(?:\/(\d+))?$/.exec(pfad);
+    if (r && gruppen.get(Number(r[1]))?.typ === NACHWEIS_TYP) {
+      const rollen = rollenVon(Number(r[1]));
+      if (r[2] && m === 'PATCH') {
+        const x = rollen.find((y) => y.id === Number(r![2]));
+        if (!x) return antwort({}, 404);
+        if (Array.isArray(body.htmlTemplateIds))
+          x.htmlTemplateIds = (body.htmlTemplateIds as unknown[]).map(Number);
+        return antwort({ data: {} });
+      }
+      return antwort({ data: rollen });
+    }
     r = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad);
     if (r)
       return antwort({

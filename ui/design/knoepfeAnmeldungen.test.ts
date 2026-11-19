@@ -22,6 +22,7 @@ const ERLAUBT: Record<string, string> = {
   'k.vorlage': 'Vorlage im Baukasten',
   'k.schalterZeile': 'Zeile mit Schalter (an/aus)',
   'bk.schalterZeile': 'Zeile mit Schalter (an/aus)',
+  'n.antragSchalter': 'Zeile mit Schalter (an/aus): „Mit Antrag“ bei den Nachweisen (N1c)',
   'k.farbe': 'Farbfeld im Design',
   'k.schrift': 'Schrift im Design',
   'k.logoKachel': 'Logo zum Auswählen',

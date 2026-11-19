@@ -25,7 +25,12 @@ import {
   type CtPort,
   type RechtRoh,
 } from '@shared/ct/gruppenart';
-import { istNachweisArt, NACHWEIS_ART, NACHWEIS_LEITER_RECHTE } from '@shared/anmeldung/nachweise';
+import {
+  istNachweisArt,
+  NACHWEIS_ART,
+  NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_TEILNEHMER_RECHTE,
+} from '@shared/anmeldung/nachweise';
 
 const port = (): CtPort =>
   ctPortMit('Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).');
@@ -70,14 +75,19 @@ export async function nachweisGrundlageLesen(): Promise<NachweisGrundlage> {
     if (typId === null || !darfEinrichten) return { typId, rechtFehlt: null, darfEinrichten };
     let rechtFehlt: boolean | null = null;
     try {
-      const { leiter } = await gruppenartRollen(p, typId);
-      if (leiter !== null) {
-        const rows = await listeHolen<RechtRoh>(
-          p,
-          `/permissions/group_type_role/${leiter}`,
-          'Die Rechte der Rolle „Leiter“',
-        );
-        rechtFehlt = fehlendeRechte(rows, NACHWEIS_LEITER_RECHTE).length > 0;
+      const { leiter, teilnehmer } = await gruppenartRollen(p, typId);
+      if (leiter !== null && teilnehmer !== null) {
+        const lesen = (rolle: number, name: string) =>
+          listeHolen<RechtRoh>(
+            p,
+            `/permissions/group_type_role/${rolle}`,
+            `Die Rechte der Rolle „${name}“`,
+          );
+        // Fehlt bei einer der beiden Rollen ein Recht, fehlt es.
+        rechtFehlt =
+          fehlendeRechte(await lesen(leiter, 'Leiter'), NACHWEIS_LEITER_RECHTE).length > 0 ||
+          fehlendeRechte(await lesen(teilnehmer, 'Teilnehmer'), NACHWEIS_TEILNEHMER_RECHTE).length >
+            0;
       }
     } catch {
       rechtFehlt = null;
@@ -88,7 +98,7 @@ export async function nachweisGrundlageLesen(): Promise<NachweisGrundlage> {
   }
 }
 
-/** Legt die Gruppenart an (falls nötig) und ergänzt das Recht an der Leiter-Rolle; liest nach. Wirft bei jedem Fehler. */
+/** Legt die Gruppenart an (falls nötig) und ergänzt die Rechte an Leiter- und Teilnehmer-Rolle; liest nach. Wirft bei jedem Fehler. */
 export async function nachweisGrundlageSichern(): Promise<{
   typId: number;
   leiterRolle: number;
@@ -98,6 +108,7 @@ export async function nachweisGrundlageSichern(): Promise<{
     const p = port();
     const { typId, leiter, teilnehmer } = await gruppenartAnlegen(p, NACHWEIS_ART, istNachweisArt);
     await rechteErgaenzen(p, leiter, NACHWEIS_LEITER_RECHTE);
+    await rechteErgaenzen(p, teilnehmer, NACHWEIS_TEILNEHMER_RECHTE, 'Teilnehmer');
     return { typId, leiterRolle: leiter, teilnehmerRolle: teilnehmer };
   } catch (e) {
     throw uebersetzt(e);

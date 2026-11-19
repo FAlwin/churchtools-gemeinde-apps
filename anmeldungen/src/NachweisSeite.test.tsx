@@ -16,6 +16,8 @@ vi.mock('./nachweisArten', async (original) => ({
   nachweiseSeiteLaden: vi.fn(),
   nachweisArtSichern: vi.fn(),
   ichLaden: vi.fn(),
+  gemeindeLogoLaden: vi.fn(),
+  antragLaden: vi.fn(),
 }));
 const arten = vi.mocked(Arten);
 
@@ -43,6 +45,7 @@ const grundlage = (darfEinrichten: boolean) => ({
 
 const alles: NachweisErgebnis = {
   gruppeId: 99,
+  vorlageId: null,
   erledigt: [...NACHWEIS_SCHRITTE],
   fehler: null,
   befund: {
@@ -51,6 +54,7 @@ const alles: NachweisErgebnis = {
     felder: NACHWEIS_FELDER.map((f) => f.name),
     vertrauen: [{ personId: 7, name: 'Anna Leitung' }],
     ablauf: { an: true, schritte: 4 },
+    antrag: null,
   },
 };
 
@@ -60,6 +64,8 @@ const oeffnen = () => render(<NachweisSeite onZurueck={() => {}} onGeaendert={()
 
 beforeEach(() => {
   arten.ichLaden.mockResolvedValue({ personId: 7, name: 'Anna Leitung' });
+  arten.gemeindeLogoLaden.mockResolvedValue('https://ct.example/images/1/logo.png');
+  arten.antragLaden.mockResolvedValue(null);
 });
 
 describe('Seite „Nachweise“', () => {
@@ -159,6 +165,8 @@ describe('Fenster „Nachweis-Art“', () => {
         einstellungen: expect.objectContaining({ gueltigJahre: 5, ab: 'einsicht' }),
         vertrauen: [7],
         entfernen: [],
+        // Neue Art: „Mit Antrag“ ist vorbelegt, Bilder gibt es noch keine.
+        antragBilder: { logo: { art: 'keins' }, unterschrift: { art: 'keins' } },
       },
       7,
     ]);
@@ -178,6 +186,7 @@ describe('Fenster „Nachweis-Art“', () => {
     arten.nachweisArtSichern
       .mockResolvedValueOnce({
         gruppeId: 99,
+        vorlageId: null,
         erledigt: ['grundlage', 'gruppe', 'einstellungen', 'felder', 'leitung'],
         fehler: new NichtUebernommen('den Ablauf'),
         befund: null,
@@ -192,7 +201,8 @@ describe('Fenster „Nachweis-Art“', () => {
     expect(await screen.findByText(/Noch nicht alles geschrieben/)).toBeTruthy();
     const stand = screen.getByRole('list', { name: 'Stand' });
     expect(within(stand).getAllByText(/steht in ChurchTools/)).toHaveLength(5);
-    expect(within(stand).getAllByText(/fehlt noch/)).toHaveLength(1);
+    // Der Ablauf ist gescheitert, der Antrag danach nicht mehr erreicht worden.
+    expect(within(stand).getAllByText(/fehlt noch/)).toHaveLength(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
     await waitFor(() => expect(arten.nachweisArtSichern).toHaveBeenCalledTimes(2));

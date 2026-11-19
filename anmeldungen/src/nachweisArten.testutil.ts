@@ -57,19 +57,46 @@ export interface RoutineStand {
   groupMemberStatus: string;
 }
 
+export interface VorlageStand {
+  id: number;
+  name: string;
+  domainType: string;
+  isGlobal: boolean;
+  htmlFileId: number | null;
+}
+
+/** Eine Rolle IN DER GRUPPE: ihre Nummer ist NICHT die der Gruppenart-Rolle (`groupTypeRoleId`) – gemessen N0. */
+export interface GruppenRolleStand {
+  id: number;
+  groupTypeRoleId: number;
+  htmlTemplateIds: number[];
+}
+
 export class FalschesNachweisCt {
   readonly basis = new FalschesCt();
   gruppen = new Map<number, GruppeStand>();
   felder = new Map<number, FeldStand[]>();
   mitglieder = new Map<number, MitgliedStand[]>();
   routinen = new Map<number, RoutineStand>();
+  /** HTML-Vorlagen (Bescheinigungen), Inhalte der hochgeladenen Dateien und die Rollen je Gruppe (N1c). */
+  vorlagen = new Map<number, VorlageStand>();
+  dateien = new Map<number, string>();
+  gruppenRollen = new Map<number, GruppenRolleStand[]>();
+  /** `POST /htmltemplates` und Datei-Uploads antworten 403 (Recht „Gemeinde-HTML-Vorlagen verwalten“ fehlt). */
+  keinVorlagenRecht = false;
+  /** Die Liste `GET /htmltemplates` gibt es nicht (404). */
+  ohneVorlagenListe = false;
+  /** `GET /htmltemplates/{id}/html` liefert etwas, das kein Blatt von uns ist (z. B. von ChurchTools umgeformt). */
+  htmlUmgeformt = false;
   /** Gruppen, deren Mitglieder man nicht lesen darf (403). */
   ohneMitgliederRecht = new Set<number>();
   ignoriere: string[] = [];
   scheitert: { muster: string; status: number }[] = [];
   sichtbarkeitFest: string | null = null;
   /** Rechte der angemeldeten Person (`/permissions/global`). */
-  global: unknown = { churchcore: { 'administer persons': true } };
+  global: unknown = {
+    churchcore: { 'administer persons': true, 'administer church html templates': true },
+  };
   aufrufe: Aufruf[] = [];
   private naechste = 1000;
 
@@ -125,6 +152,19 @@ export class FalschesNachweisCt {
     };
   }
 
+  /** Die Rollen einer Gruppe: je Gruppenart-Rolle eine, mit einer anderen Nummer als die der Art (3000/4000 + Gruppe). */
+  rollenVon(gruppeId: number): GruppenRolleStand[] {
+    let liste = this.gruppenRollen.get(gruppeId);
+    if (!liste) {
+      liste = [
+        { id: 3000 + gruppeId, groupTypeRoleId: 53, htmlTemplateIds: [] },
+        { id: 4000 + gruppeId, groupTypeRoleId: 56, htmlTemplateIds: [] },
+      ];
+      this.gruppenRollen.set(gruppeId, liste);
+    }
+    return liste;
+  }
+
   private rohMitglied(m: MitgliedStand) {
     const [vor = '', ...rest] = m.title.split(' ');
     return {
@@ -178,6 +218,13 @@ export class FalschesNachweisCt {
       if (!r) throw new ApiError(404, 'Ablauf nicht gefunden');
       return this.rohRoutine(r) as T;
     }
+    if ((m = /^\/htmltemplates\/(\d+)$/.exec(pfad))) {
+      const v = this.vorlagen.get(Number(m[1]));
+      if (!v) throw new ApiError(404, 'Vorlage nicht gefunden');
+      return structuredClone(v) as T;
+    }
+    if ((m = /^\/groups\/(\d+)\/roles$/.exec(pfad)))
+      return structuredClone(this.rollenVon(Number(m[1]))) as T;
     return await this.basis.holen<T>(pfad);
   };
 
@@ -192,6 +239,14 @@ export class FalschesNachweisCt {
         .filter((g) => !typ || g.groupTypeId === Number(typ[1]))
         .filter((g) => !status || g.groupStatusId === Number(status[1]))
         .map((g) => this.rohGruppe(g)) as T[];
+    }
+    if (pfad === '/htmltemplates') {
+      // Wie ChurchTools (gemessen 19.11.2026): ohne den Pflicht-Filter `domain_type` gibt es 400.
+      throw new ApiError(400, 'There are validation errors');
+    }
+    if (pfad === '/htmltemplates?domain_type=groupmember-document') {
+      if (this.ohneVorlagenListe) throw new ApiError(404, 'Nicht gefunden');
+      return structuredClone([...this.vorlagen.values()]) as T[];
     }
     if ((m = /^\/groups\/(\d+)\/members$/.exec(pfad))) {
       const id = Number(m[1]);
@@ -296,6 +351,51 @@ export class FalschesNachweisCt {
           );
         return { data: {} };
       }
+    }
+    // ── Bescheinigungen (N1c) ──
+    if (pfad === '/htmltemplates' && methode === 'POST') {
+      if (this.keinVorlagenRecht || k.isGlobal !== true) throw new ApiError(403, 'Kein Recht');
+      const id = this.naechste++;
+      if (!ignorieren)
+        this.vorlagen.set(id, {
+          id,
+          name: String(k.name),
+          domainType: String(k.domainType),
+          isGlobal: true,
+          htmlFileId: null,
+        });
+      return { data: { id } };
+    }
+    if ((m = /^\/htmltemplates\/(\d+)$/.exec(pfad)) && methode === 'PATCH') {
+      const v = this.vorlagen.get(Number(m[1]));
+      if (!v) throw new ApiError(404, 'Vorlage nicht gefunden');
+      if (this.keinVorlagenRecht) throw new ApiError(403, 'Kein Recht');
+      if (!ignorieren && typeof k.htmlFileId === 'number') {
+        if (!this.dateien.has(k.htmlFileId)) throw new ApiError(404, 'Datei nicht gefunden');
+        v.htmlFileId = k.htmlFileId;
+      }
+      return { data: {} };
+    }
+    if ((m = /^\/files\/html_template\/(\d+)$/.exec(pfad)) && methode === 'POST') {
+      if (!this.vorlagen.has(Number(m[1]))) throw new ApiError(404, 'Vorlage nicht gefunden');
+      if (this.keinVorlagenRecht) throw new ApiError(403, 'Kein Recht');
+      const id = this.naechste++;
+      if (!ignorieren) this.dateien.set(id, String((k as { html?: unknown }).html));
+      return { data: [{ id }] };
+    }
+    if ((m = /^\/htmltemplates\/(\d+)\/html$/.exec(pfad)) && methode === 'GET') {
+      const v = this.vorlagen.get(Number(m[1]));
+      const html = v?.htmlFileId != null ? this.dateien.get(v.htmlFileId) : undefined;
+      if (html === undefined) throw new ApiError(404, 'Kein Inhalt');
+      return { data: this.htmlUmgeformt ? '<p>umgeformt</p>' : html };
+    }
+    if ((m = /^\/groups\/(\d+)\/roles\/(\d+)$/.exec(pfad)) && methode === 'PATCH') {
+      const [, gruppeNr, rolleNr] = m;
+      const rolle = this.rollenVon(Number(gruppeNr)).find((r) => r.id === Number(rolleNr));
+      if (!rolle) throw new ApiError(404, 'Rolle nicht gefunden');
+      if (!ignorieren && Array.isArray(k.htmlTemplateIds))
+        rolle.htmlTemplateIds = (k.htmlTemplateIds as unknown[]).map(Number);
+      return { data: {} };
     }
     if (pfad === '/routines' && methode === 'POST') {
       const ctx = k.domainContext as {

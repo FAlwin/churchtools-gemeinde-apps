@@ -455,7 +455,8 @@ describe('Gast bei vollem Dienst', () => {
     fireEvent.click(eintragenButton(f, 'Platz dazunehmen (3)'));
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
     expect(anzahl).toHaveBeenCalledWith(MI, 6, 2, 3);
-    expect(aktualisiert).toHaveBeenCalledTimes(1);
+    // Zweimal: nach der Platzänderung (`Planen`) und beim Warten auf den neuen Platz (`usePlatzDazu`).
+    expect(aktualisiert).toHaveBeenCalledTimes(2);
     expect(anzahl.mock.invocationCallOrder[0]).toBeLessThan(speichern.mock.invocationCallOrder[0]);
     expect(aktualisiert.mock.invocationCallOrder[0]).toBeLessThan(
       speichern.mock.invocationCallOrder[0],

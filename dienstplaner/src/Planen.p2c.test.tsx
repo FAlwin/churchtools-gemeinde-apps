@@ -299,13 +299,17 @@ describe('Zeile „Plätze“', () => {
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 2, 3));
     expect(await screen.findByText('Ton: jetzt 3 Plätze.')).toBeTruthy();
     expect(within(f).getByLabelText('Ton: 3 Plätze')).toBeTruthy();
-    // Keine Obergrenze: weiter hoch.
-    fireEvent.click(within(f).getByRole('button', { name: 'Ton: ein Platz mehr' }));
-    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 3, 4));
-    // Schließen lädt neu – die Zeile zeigt dann, was in ChurchTools steht.
-    expect(aktualisiert).not.toHaveBeenCalled();
-    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    // Jede Änderung lädt den Plan sofort neu; bis er da ist, sind die Knöpfe aus (`usePlaetzeFrisch`).
     expect(aktualisiert).toHaveBeenCalledTimes(1);
+    const plus = within(f).getByRole('button', { name: 'Ton: ein Platz mehr' });
+    await waitFor(() => expect(plus).toHaveProperty('disabled', false));
+    // Keine Obergrenze: weiter hoch.
+    fireEvent.click(plus);
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(21, 6, 3, 4));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(2));
+    // Schließen lädt noch einmal – die Zeile zeigt dann, was in ChurchTools steht.
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    expect(aktualisiert).toHaveBeenCalledTimes(3);
   });
 
   it('der rote Tag in „Noch offen“ öffnet dasselbe Fenster', async () => {
@@ -511,7 +515,8 @@ describe('Dienst voll – „Platz dazunehmen“', () => {
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
     // Erst die Plätze (2 → 3, derselbe Port wie der Regler), dann das Neuladen, dann der Entwurf.
     expect(anzahl).toHaveBeenCalledWith(MI, 6, 2, 3);
-    expect(aktualisiert).toHaveBeenCalledTimes(1);
+    // Zweimal: einmal nach jeder Platzänderung (`Planen`), einmal beim Warten auf den neuen Platz (`usePlatzDazu`).
+    expect(aktualisiert).toHaveBeenCalledTimes(2);
     expect(anzahl.mock.invocationCallOrder[0]).toBeLessThan(speichern.mock.invocationCallOrder[0]);
     expect(aktualisiert.mock.invocationCallOrder[0]).toBeLessThan(
       speichern.mock.invocationCallOrder[0],
@@ -661,7 +666,7 @@ describe('Dienst voll – „Platz dazunehmen“', () => {
     const { speichern, aktualisiert } = zeige({ entwuerfe: { anzahl: mit, laden } });
     const f = await vollKlick();
     fireEvent.click(within(f).getByRole('button', { name: 'Platz dazunehmen (3)' }));
-    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(aktualisiert).toHaveBeenCalledTimes(2));
     // Der Plan hat den neuen Platz …
     await waitFor(() => expect(plaetzeKnopf('Ton', 'Mi, 02.12.', '2 von 3')).toBeTruthy());
     await act(async () => {

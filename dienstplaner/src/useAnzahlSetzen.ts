@@ -8,28 +8,33 @@ import type { PlaetzeZeile } from './PlaetzeFach';
  * Dienstes in „Personen“ (`PlatzFenster`, P2c).** Jeder Tipp wird sofort gespeichert und nachgelesen (`aendern` →
  * `anzahlAendern`); die Zahl im Fenster ist, was ChurchTools nachgelesen hat – bei einem Fehlschlag, was jetzt dasteht
  * (damit der nächste Tipp vom richtigen Stand ausgeht); gingen Entwürfe bei einer Änderung nicht mit, steht das als Meldung
- * da (`mitnehmenText`). `gesperrt`: von außen gesperrt (z. B. läuft eine Vorlage).
+ * da (`mitnehmenText`). `gesperrt`: von außen gesperrt (z. B. läuft eine Vorlage) – auch Schließen geht dann nicht.
+ * `laedt`: Plan und Entwürfe laden nach einer Änderung neu (`usePlaetzeFrisch`) – nur die Knöpfe sind aus (`knoepfeAus`),
+ * Schließen geht.
  */
 export function useAnzahlSetzen({
   zeilen,
   aendern,
   onGespeichert,
   gesperrt = false,
+  laedt = false,
 }: {
   zeilen: readonly PlaetzeZeile[];
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
   onGespeichert: (text: string) => void;
   gesperrt?: boolean;
+  laedt?: boolean;
 }) {
   const [anzahl, setAnzahl] = useState(() => new Map(zeilen.map((z) => [z.serviceId, z.anzahl])));
   const [laeuft, setLaeuft] = useState<number | null>(null);
   const [geaendert, setGeaendert] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const beschaeftigt = laeuft !== null || gesperrt;
+  const knoepfeAus = beschaeftigt || laedt;
 
   /** Einen Dienst auf `neu` Plätze stellen. */
   const setze = async (z: PlaetzeZeile, neu: number) => {
-    if (beschaeftigt) return;
+    if (knoepfeAus) return;
     const gesehen = anzahl.get(z.serviceId) ?? z.anzahl;
     setLaeuft(z.serviceId);
     setMeldung(null);
@@ -62,6 +67,7 @@ export function useAnzahlSetzen({
     meldung,
     setMeldung,
     beschaeftigt,
+    knoepfeAus,
     setze,
   };
 }

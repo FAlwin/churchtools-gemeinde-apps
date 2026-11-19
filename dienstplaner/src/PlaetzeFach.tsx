@@ -54,6 +54,7 @@ export function PlaetzeFach({
   zeilen,
   vorlage,
   aendern,
+  laedt = false,
   onGespeichert,
   onClose,
 }: {
@@ -72,6 +73,8 @@ export function PlaetzeFach({
     gruppenDienste: ReadonlySet<number>;
   };
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
+  /** Plan und Entwürfe laden nach einer Änderung neu (`usePlaetzeFrisch`) – solange sind die Knöpfe gesperrt. */
+  laedt?: boolean;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
@@ -88,8 +91,9 @@ export function PlaetzeFach({
     meldung,
     setMeldung,
     beschaeftigt,
+    knoepfeAus,
     setze: setzeEinen,
-  } = useAnzahlSetzen({ zeilen, aendern, onGespeichert, gesperrt: vorlageLaeuft });
+  } = useAnzahlSetzen({ zeilen, aendern, onGespeichert, gesperrt: vorlageLaeuft, laedt });
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? ergebnis);
 
   // Einmal beim Öffnen (und je Kalender): `vorlage` selbst ist bei jedem Zeichnen ein neues Objekt.
@@ -138,7 +142,7 @@ export function PlaetzeFach({
 
   /** Die Vorlage übernehmen: Dienst für Dienst, jeder mit frisch lesen und nachlesen – ein Fehler hält die anderen nicht auf. */
   const uebernehmen = async () => {
-    if (!rechnung || beschaeftigt || rechnung.r.aendern.length === 0) return;
+    if (!rechnung || knoepfeAus || rechnung.r.aendern.length === 0) return;
     const alle = new Map(zeilen.map((z) => [z.serviceId, z]));
     const jetzt = new Map(anzahl);
     const geklappt: string[] = [];
@@ -207,7 +211,7 @@ export function PlaetzeFach({
             className={eigen.auswahl}
             aria-label="Vorlage"
             value={gewaehlt ?? ''}
-            disabled={beschaeftigt}
+            disabled={knoepfeAus}
             onChange={(e) => {
               setGewaehlt(e.target.value === '' ? null : Number(e.target.value));
               setErgebnis(null);
@@ -243,7 +247,7 @@ export function PlaetzeFach({
                 <button
                   type="button"
                   className={`${styles.knopf} ${styles.primaer}`}
-                  disabled={beschaeftigt}
+                  disabled={knoepfeAus}
                   onClick={() => void uebernehmen()}
                 >
                   {vorlageLaeuft ? 'Wird übernommen …' : 'Übernehmen'}
@@ -272,7 +276,7 @@ export function PlaetzeFach({
                 z={z}
                 n={n}
                 laeuft={laeuft === z.serviceId}
-                beschaeftigt={beschaeftigt}
+                beschaeftigt={knoepfeAus}
                 onSetze={(neu) => void setze(z, neu)}
               />
             </li>

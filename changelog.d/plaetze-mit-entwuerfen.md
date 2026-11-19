@@ -9,3 +9,5 @@
   Zurückziehen) hält die Zahl nicht fest. Fällt ein Platz mit Entwurf weg, zieht der Entwurf auf einen freien Platz ohne Entwurf.
 - **Gesperrt bleibt es nur,** wo du die Entwürfe der Dienstgruppe nicht ändern darfst. Geht beim Umtragen etwas schief, steht die neue
   Platzzahl trotzdem – eine Meldung nennt, wie viele Entwürfe nicht mitgehen konnten, und die Seite lädt Plan und Entwürfe neu.
+- **Nach dem Ändern der Platzzahl lädt der Plan sofort neu,** nicht erst beim Schließen des Fensters – bis Plätze und Entwürfe
+  zusammenpassen, sind „+“ und „−“ kurz aus (Schließen geht). So zeigt die Matrix nach einer Änderung gleich den neuen Stand.

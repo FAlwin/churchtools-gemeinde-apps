@@ -23,6 +23,7 @@ export function PlatzFenster({
   z,
   mitEntwuerfen = null,
   aendern,
+  laedt = false,
   onGespeichert,
   onClose,
 }: {
@@ -37,13 +38,16 @@ export function PlatzFenster({
    */
   mitEntwuerfen?: { belegt: number; frei: number } | null;
   aendern: (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
+  /** Plan und Entwürfe laden nach einer Änderung neu (`usePlaetzeFrisch`) – solange sind die Knöpfe gesperrt. */
+  laedt?: boolean;
   onGespeichert: (text: string) => void;
   onClose: (geaendert: boolean) => void;
 }) {
-  const { anzahl, laeuft, geaendert, meldung, beschaeftigt, setze } = useAnzahlSetzen({
+  const { anzahl, laeuft, geaendert, meldung, beschaeftigt, knoepfeAus, setze } = useAnzahlSetzen({
     zeilen: [z],
     aendern,
     onGespeichert,
+    laedt,
   });
   const hinweisRef = useInsBild<HTMLDivElement>(meldung);
   const n = anzahl.get(z.serviceId) ?? z.anzahl;
@@ -61,7 +65,7 @@ export function PlatzFenster({
           z={z}
           n={n}
           laeuft={laeuft === z.serviceId}
-          beschaeftigt={beschaeftigt}
+          beschaeftigt={knoepfeAus}
           onSetze={(neu) => void setze(z, neu)}
         />
       </div>

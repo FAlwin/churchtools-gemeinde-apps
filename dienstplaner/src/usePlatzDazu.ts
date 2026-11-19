@@ -56,7 +56,7 @@ export function usePlatzDazu({
   entwuerfe: EntwurfAnschluss | undefined;
   /** Die geladenen Entwürfe (`null`, solange sie neu geladen werden). */
   daten: EntwuerfeDaten | null;
-  /** Die Platzzahl ändern und die Entwürfe mitnehmen – lädt die Entwürfe neu, wenn welche umgezogen sind (`Planen`). */
+  /** Die Platzzahl ändern und die Entwürfe mitnehmen – lädt nach einer echten Änderung Plan und Entwürfe neu (`Planen`). */
   anzahl: EntwurfAnschluss['anzahl'];
   personen: PersonenEintragen;
   /** Die Termine leise neu laden (`leiseNeuLaden`) – danach kommt der Plan mit dem neuen Platz. */
@@ -123,11 +123,11 @@ export function usePlatzDazu({
       return;
     }
     const neu = r.anzahl;
-    // Gingen Entwürfe nicht mit (oder ließ es sich nicht prüfen), legen wir nichts Neues darauf: Plan und Entwürfe laden neu.
+    // Gingen Entwürfe nicht mit (oder ließ es sich nicht prüfen), legen wir nichts Neues darauf. Plan und Entwürfe lädt
+    // `anzahl` nach jeder echten Änderung selbst neu (`usePlaetzeFrisch` in `Planen`).
     const offen = mitnehmenText(r);
     if (offen) {
       showToast(`${zeile.dienst.name}: ${offen} ${wer.name} wurde nicht eingetragen.`);
-      neuLaden();
       return;
     }
     showToast(`${zeile.dienst.name}: jetzt ${plaetzeText(neu)}.`);
@@ -150,6 +150,8 @@ export function usePlatzDazu({
         fertig,
         timer,
       };
+      // Noch einmal laden, obwohl `anzahl` es schon angestoßen hat: Das kann fertig sein, bevor hier gewartet wird – dann
+      // käme kein neuer Plan mehr, und es bliebe beim Warten bis zur Zeitgrenze.
       neuLaden();
     });
   };

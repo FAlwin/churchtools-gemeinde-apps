@@ -1873,7 +1873,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     );
   });
 
-  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu); Schließen lädt die Termine leise neu', async () => {
+  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu) und lädt die Termine SOFORT leise neu (19.11.2026)', async () => {
     const onAktualisieren = vi.fn();
     const anzahl = vi.fn(() => Promise.resolve({ ok: true as const, anzahl: 2 }));
     zeige4({ anzahl }, { onAktualisieren });
@@ -1883,9 +1883,20 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ton: ein Platz mehr' }));
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 1, 2));
     expect(await screen.findByText('Ton: jetzt 2 Plätze.')).toBeTruthy();
-    expect(onAktualisieren).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    // Nicht erst beim Schließen: sonst rechnet das offene Fach mit neuen Entwürfen auf alten Plätzen (`usePlaetzeFrisch`).
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
+    // Bis der neue Plan da ist (hier kommt keiner), sind die Knöpfe aus – Schließen geht trotzdem.
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz mehr' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('button', { name: 'Ton: ein Platz mehr' })).toBeNull();
+    expect(onAktualisieren).toHaveBeenCalledTimes(2);
   });
 
   it('im Plätze-Fach nur die Dienste, die man plant (Planrecht je Dienst)', async () => {

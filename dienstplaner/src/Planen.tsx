@@ -34,6 +34,7 @@ import { PlaetzeFach } from './PlaetzeFach';
 import { PlatzFenster } from './PlatzFenster';
 import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
 import { usePlatzDazu } from './usePlatzDazu';
+import { usePlaetzeFrisch } from './usePlaetzeFrisch';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { AblaufBearbeitenKnopf } from './MatrixAblauf';
@@ -303,10 +304,18 @@ export function Planen({
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
     },
   });
+  // Nach einer Platzänderung Plan und Entwürfe gemeinsam neu – bis beide da sind, sperren die Plätze-Fenster.
+  const plaetzeFrisch = usePlaetzeFrisch({
+    plan,
+    daten,
+    planNeu: leiseNeuLaden,
+    entwuerfeNeu: ewNeu,
+    showToast,
+  });
   /**
    * **Die Platzzahl ändern** (Regler, Plätze-Fach, „Platz dazunehmen“): der Anschluss trägt die Entwürfe des Dienstes mit um
-   * (19.11.2026, `anzahlMitEntwuerfen`) – danach müssen die Entwürfe neu geladen werden, sonst arbeitet die Matrix mit den
-   * alten Nummern weiter. Den Plan laden die Aufrufer selbst neu (beim Schließen des Fensters bzw. nach „dazunehmen“).
+   * (19.11.2026, `anzahlMitEntwuerfen`) – danach müssen Plan **und** Entwürfe neu geladen werden, und zwar sofort, nicht erst
+   * beim Schließen: Sonst rechnet das offene Fenster mit neuen Entwurfs-Nummern auf alten Plätzen (`usePlaetzeFrisch`).
    * Die Fenster gibt es nur mit Anschluss; ohne ihn kommt „nicht bestätigt“ zurück.
    */
   const anzahlSetzen = async (
@@ -317,8 +326,10 @@ export function Planen({
   ): Promise<AnzahlErgebnis> => {
     if (!entwuerfe) return { ok: false, grund: 'voruebergehend' };
     const r = await entwuerfe.anzahl(eventId, serviceId, gesehen, neu);
-    const e = r.ok ? r.entwuerfe : undefined;
-    if (e && (e.umgetragen.length > 0 || e.offen > 0 || e.unklar)) ewNeu();
+    if (r.ok && r.anzahl !== gesehen) {
+      const e = r.entwuerfe;
+      plaetzeFrisch.geaendert(!!e && (e.umgetragen.length > 0 || e.offen > 0 || e.unklar));
+    }
     return r;
   };
   // „Platz dazunehmen“ im Fenster „Dienst voll“ (P2c): Platz in ChurchTools, nach dem Neuladen der Entwurf.
@@ -755,6 +766,7 @@ export function Planen({
                   : null
               }
               aendern={(z, gesehen, neu) => anzahlSetzen(s.id, z.serviceId, gesehen, neu)}
+              laedt={plaetzeFrisch.laedt}
               onGespeichert={showToast}
               onClose={(geaendert) => {
                 setPlatzFenster(null);
@@ -787,6 +799,7 @@ export function Planen({
           aendern={(z, gesehen, neu) =>
             anzahlSetzen(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
           }
+          laedt={plaetzeFrisch.laedt}
           onGespeichert={showToast}
           onClose={(geaendert) => {
             setPlaetzeFach(null);

@@ -120,7 +120,11 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
   vorher und nachher stabil, nur unser `PUT` liegt dazwischen). Fällt der Platz mit dem Entwurf weg, geht er auf einen freien
   Platz ohne Entwurf; findet sich keiner, bleibt er liegen und das Schild „ohne Platz“ zeigt ihn. Gelingt ein Umzug nicht,
   steht die Platzzahl trotzdem (nichts wird zurückgedreht), eine Meldung sagt „N Entwürfe konnten nicht mitgehen – bitte neu
-  laden“; danach lädt „Planen“ Plan und Entwürfe neu. **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
+  laden“. **Nach jeder echten Änderung lädt „Planen“ sofort Plan und (wenn Entwürfe umgezogen sind) Entwürfe neu – nicht erst
+  beim Schließen** (`usePlaetzeFrisch`, beim Durchklicken am 19.11.2026 gefunden): Sonst rechnete das offene Fenster mit neuen
+  Entwurfs-Nummern auf alten Plätzen – nach 1 → 2 fiel die Untergrenze für „−“ auf 0, und die Matrix zeigte kurz „Entwurf ohne
+  Platz“. Bis beide da sind, sind „+“, „−“ und „Vorlage übernehmen“ aus (Schließen geht); kommt nach 20 s nichts, gibt es frei
+  mit „… bitte die Seite neu laden“. **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
   entfernen“) ist ein Dienst mit Entwürfen nur noch, wo man die Entwürfe der Gruppe nicht ändern darf (Schublade nicht „bereit“).
 - **Plätze-Regler in der Gruppenzeile** (Plätze-Fach, jede Änderung gilt sofort, ChurchTools verschickt dabei nichts):
   Das Fach zeigt **jeden Dienst der Dienstgruppe**, den man an diesem Termin planen darf – auch Dienste, die im
@@ -129,7 +133,7 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
   Untergrenze = belegte Plätze + Entwürfe auf **freien** Plätzen (ein Entwurf auf einem belegten Platz – Ersetzen, Zurückziehen –
   zählt nicht extra), dazu der Hinweis „Auf den freien Plätzen liegen Entwürfe – zum Verkleinern erst einen entfernen.“ (eine
   Rechnung: `plaetzeGrenze` in `plaetzeGrenze.ts`, für Regler, Hinweise und Fenster). Die Matrix zeigt einen
-  neu eingeschalteten Dienst nach dem Schließen des Fachs (sie lädt dann neu). Oben steht, wenn es für den Kalender des
+  neu eingeschalteten Dienst gleich nach der Änderung (sie lädt sofort neu, beim Schließen noch einmal). Oben steht, wenn es für den Kalender des
   Termins ChurchTools-Terminvorlagen gibt, **„Vorlage übernehmen“**: Vorlage wählen → Vorschau (im Fach Moderation & Predigt etwa
   „Abendmahl: 0 → 1“, dazu was übersprungen wird) → „Übernehmen“. Die Vorlage **nimmt nur dazu**: Ein Dienst wird auf die
   Zahl der Vorlage erhöht, nie verringert oder entfernt; sie ändert **nur die Dienste der Gruppe, deren Fach offen ist**

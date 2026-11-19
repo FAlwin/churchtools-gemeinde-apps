@@ -9,6 +9,7 @@
 import {
   alsGeloescht,
   bearbeiten,
+  darfTeilSetzen,
   neueAufgabe,
   verschieben,
   type Aufgabe,
@@ -28,20 +29,41 @@ const WEG = 'Dieses To-Do gibt es nicht mehr – bitte neu laden.';
 const fehlt = (): never => {
   throw new ApiError(409, WEG);
 };
+const NUR_EIGENER_TEIL = 'Du kannst nur deinen eigenen Teil abhaken – die anderen nur die Leitung.';
 const jetzt = () => new Date().toISOString();
 
-/** Ändern – `x` enthält nur, was im Fenster angefasst wurde; angewendet auf den frisch gelesenen Stand. */
+/** Wer einen Teil setzt, der nicht seiner ist, ohne Leitung zu sein, scheitert mit einer Meldung (`darfTeilSetzen`). */
+function teileErlaubt(x: ToDoAenderung, ich: Schreibend, leitung: boolean): void {
+  if (x.teile?.some((t) => !darfTeilSetzen(t.person, ich.person, leitung)))
+    throw new ApiError(409, NUR_EIGENER_TEIL);
+}
+
+/**
+ * Ändern – `x` enthält nur, was im Fenster angefasst wurde; angewendet auf den frisch gelesenen Stand. Bei „Jeder für sich“
+ * (W8a) darf ein Mitglied nur den **eigenen** Teil setzen, die Leitung (`leitung`) alle – geprüft hier im Schreibweg, nicht
+ * nur in der Oberfläche (`darfTeilSetzen`). ChurchTools selbst kennt dafür kein Recht.
+ */
 export function toDoAendern(
   ort: MitarbeitOrt,
   id: string,
   x: ToDoAenderung,
   ich: Schreibend,
+  leitung = false,
 ): Promise<Aufgabe> {
-  return aufgabeAendern(ort, id, (a) => bearbeiten(a, x, ich.person, jetzt()), fehlt, ich);
+  return aufgabeAendern(
+    ort,
+    id,
+    (a) => {
+      teileErlaubt(x, ich, leitung);
+      return bearbeiten(a, x, ich.person, jetzt());
+    },
+    fehlt,
+    ich,
+  );
 }
 
 /** Neu anlegen (ohne Sitzung). Gibt es `neueId` schon (zweiter Versuch), bleibt es, wie es ist. */
-export function toDoAnlegen(
+export async function toDoAnlegen(
   ort: MitarbeitOrt,
   q: {
     neueId: string;
@@ -51,11 +73,16 @@ export function toDoAnlegen(
     extern: string;
     bis: string | null;
     status: AufgabenStatus;
+    /** „Jeder für sich“ (nur ab zwei Zuständigen wirksam). */
+    jeder?: boolean;
+    teile?: { person: number; fertig: boolean }[];
     notiz: string;
     karte: { notiz?: boolean; sitzung?: boolean };
   },
   ich: Schreibend,
+  leitung = false,
 ): Promise<Aufgabe> {
+  teileErlaubt({ teile: q.teile }, ich, leitung);
   const am = jetzt();
   const neu = bearbeiten(
     neueAufgabe({
@@ -69,7 +96,7 @@ export function toDoAnlegen(
       von: ich.person,
       am,
     }),
-    { status: q.status, notiz: q.notiz, karte: q.karte },
+    { status: q.status, jeder: q.jeder, teile: q.teile, notiz: q.notiz, karte: q.karte },
     ich.person,
     am,
   );
@@ -100,7 +127,9 @@ export async function toDoVerschieben(q: {
   x: ToDoAenderung;
   wer: number[];
   ich: Schreibend;
+  leitung?: boolean;
 }): Promise<{ hinweis: string | null }> {
+  teileErlaubt(q.x, q.ich, q.leitung ?? false);
   const am = jetzt();
   const wohin = {
     gruppe: q.nach.gruppe,

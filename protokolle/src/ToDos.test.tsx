@@ -245,21 +245,27 @@ describe('ToDos', () => {
     expect(screen.getByRole('button', { name: /Filter, 1 ausgeblendet/ })).toBeTruthy();
   });
 
-  it('Status-Marke: antippen schreibt den nächsten Status und zeigt den gespeicherten Stand', async () => {
+  it('Haken: antippen schreibt „erledigt“ – die Karte bleibt an ihrem Platz, mit „Rückgängig“ an der Karte', async () => {
     vi.mocked(S.aufgabeAendern).mockImplementation((_o, _id, aendern) =>
       Promise.resolve(aendern(FREMD_LT)),
     );
     zeige();
     await screen.findByText('Raum prüfen');
     const zeile = screen.getByText('Raum prüfen').closest('li')!;
-    fireEvent.click(within(zeile).getByRole('button', { name: /Status: Offen/ }));
-    await waitFor(() => expect(screen.getByRole('group', { name: 'In Arbeit' })).toBeTruthy());
+    fireEvent.click(within(zeile).getByRole('button', { name: /Status: offen/ }));
+    await waitFor(() =>
+      expect(within(zeile).getByRole('button', { name: 'Rückgängig' })).toBeTruthy(),
+    );
+    // Noch in „Offen“ (5 s), nicht schon bei „Erledigt“ – siehe `ToDos.haken.test.tsx`.
+    expect(
+      within(screen.getByRole('group', { name: 'Offen' })).getByText('Raum prüfen'),
+    ).toBeTruthy();
     const [ort, id, aendern] = vi.mocked(S.aufgabeAendern).mock.calls[0];
     expect(ort).toEqual({ modul: 24, kategorie: 61 });
     expect(id).toBe(FREMD_LT.id);
     expect(aendern(FREMD_LT)).toMatchObject({
-      status: 'arbeit',
-      verlauf: [{}, { art: 'status', von: 1 }],
+      status: 'erledigt',
+      verlauf: [{}, { art: 'status', von: 1, status: 'erledigt' }],
     });
   });
 
@@ -269,11 +275,14 @@ describe('ToDos', () => {
     await screen.findByText('Raum prüfen');
     fireEvent.click(
       within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
-        name: /Status: Offen/,
+        name: /Status: offen/,
       }),
     );
     expect((await screen.findByRole('alert')).textContent).toMatch(/ChurchTools/);
-    expect(screen.queryByRole('group', { name: 'In Arbeit' })).toBeNull();
+    expect(
+      within(screen.getByRole('group', { name: 'Offen' })).getByText('Raum prüfen'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
   });
 
   it('Status-Marke: To-Do inzwischen weg → genau das wird gesagt (nicht „antwortet gerade nicht“)', async () => {
@@ -284,7 +293,7 @@ describe('ToDos', () => {
     await screen.findByText('Raum prüfen');
     fireEvent.click(
       within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
-        name: /Status: Offen/,
+        name: /Status: offen/,
       }),
     );
     expect((await screen.findByRole('alert')).textContent).toMatch(/gibt es nicht mehr/);
@@ -477,10 +486,10 @@ describe('ToDos: gibt seine To-Dos für den Zähler am Reiter nach oben', () => 
     await screen.findByText('Raum prüfen');
     fireEvent.click(
       within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
-        name: /Status: Offen/,
+        name: /Status: offen/,
       }),
     );
-    await waitFor(() => expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'arbeit']));
+    await waitFor(() => expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'erledigt']));
 
     cleanup();
     onAufgaben.mockClear();
@@ -489,13 +498,13 @@ describe('ToDos: gibt seine To-Dos für den Zähler am Reiter nach oben', () => 
     await screen.findByText('Raum prüfen');
     fireEvent.click(
       within(screen.getByText('Raum prüfen').closest('li')!).getByRole('button', {
-        name: /Status: Offen/,
+        name: /Status: offen/,
       }),
     );
-    // Erst die Meldung (dann ist die Rückrollung geschehen), und der Zwischenstand „arbeit“ wurde gemeldet.
+    // Erst die Meldung (dann ist die Rückrollung geschehen), und der Zwischenstand „erledigt“ wurde gemeldet.
     expect((await screen.findByRole('alert')).textContent).toMatch(/ChurchTools/);
     expect(
-      onAufgaben.mock.calls.some((c) => JSON.stringify(c[0]).includes('"status":"arbeit"')),
+      onAufgaben.mock.calls.some((c) => JSON.stringify(c[0]).includes('"status":"erledigt"')),
     ).toBe(true);
     await waitFor(() => expect(stand(onAufgaben)).toContainEqual([11, FREMD_LT.id, 'offen']));
   });

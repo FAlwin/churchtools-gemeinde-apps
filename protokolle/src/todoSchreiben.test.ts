@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { istAufgabe, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  istAufgabe,
+  modusSetzen,
+  neueAufgabe,
+  statusSetzen,
+  type Aufgabe,
+} from '@shared/protokolle/aufgaben';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
 import { MODUL, nachbauEnde, nachbauStarten, werteVon, type Nachbau } from './nachbau.testhilfe';
@@ -54,6 +60,70 @@ describe('toDoAendern', () => {
     );
     expect(fehlerMeldung(e).text).toMatch(/gibt es nicht mehr/);
     expect(lies(LT)).toEqual([]);
+  });
+});
+
+describe('„Jeder für sich“ schreiben (W8a)', () => {
+  const JEDER = modusSetzen({ ...BEAMER, wer: [1, 19, 23] }, true, 1, AM);
+  const teil = (person: number) => ({ teile: [{ person, fertig: true }] });
+
+  it('zwei Personen haken kurz nacheinander ab – keiner löscht den Teil des anderen', async () => {
+    ablegen(LT, JEDER);
+    // Beide haben denselben (alten) Stand auf dem Bildschirm; geschrieben wird auf den frisch gelesenen.
+    await toDoAendern(ort(LT), 'b', teil(1), ALWIN);
+    const n = await toDoAendern(ort(LT), 'b', teil(19), SPIKE);
+    expect(Object.keys(n.fertig ?? {}).sort()).toEqual(['1', '19']);
+    expect(n.status).toBe('arbeit');
+    expect(lies(LT)[0]).toEqual(n);
+    const letzte = await toDoAendern(ort(LT), 'b', teil(23), { person: 23, name: 'Spike2' });
+    expect(letzte.status).toBe('erledigt');
+    expect(Object.keys(letzte.fertig ?? {})).toHaveLength(3);
+  });
+
+  it('Rechte: ein Mitglied setzt nur den eigenen Teil – für einen anderen scheitert es, nichts wird geschrieben', async () => {
+    ablegen(LT, JEDER);
+    const vorher = ct.aufrufe.length;
+    const e: unknown = await toDoAendern(ort(LT), 'b', teil(23), ALWIN, false).catch(
+      (x: unknown) => x,
+    );
+    expect(fehlerMeldung(e).text).toMatch(/nur deinen eigenen Teil/);
+    expect(ct.aufrufe.slice(vorher).filter((x) => !x.startsWith('GET'))).toEqual([]);
+    expect(lies(LT)[0].fertig).toBeUndefined();
+  });
+
+  it('Rechte: die Leitung darf für andere abhaken – der Verlauf nennt, wer es getan hat', async () => {
+    ablegen(LT, JEDER);
+    const n = await toDoAendern(ort(LT), 'b', teil(23), ALWIN, true);
+    expect(n.fertig).toHaveProperty('23');
+    expect(n.verlauf.find((v) => v.art === 'teil')).toMatchObject({
+      von: 1,
+      person: 23,
+      fertig: true,
+    });
+  });
+
+  it('anlegen: Modus „jeder“ mit Teilen; fremder Teil ohne Leitung scheitert', async () => {
+    const q = {
+      neueId: 'n1',
+      gruppe: 11,
+      text: 'Abwesenheiten eintragen',
+      wer: [1, 19],
+      extern: '',
+      bis: null,
+      status: 'offen' as const,
+      jeder: true,
+      notiz: '',
+      karte: {},
+    };
+    const n = await toDoAnlegen(ort(LT), { ...q, teile: [{ person: 1, fertig: true }] }, ALWIN);
+    expect(n).toMatchObject({ jeder: true, status: 'arbeit' });
+    expect(Object.keys(n.fertig ?? {})).toEqual(['1']);
+    const e: unknown = await toDoAnlegen(
+      ort(LT),
+      { ...q, neueId: 'n2', teile: [{ person: 19, fertig: true }] },
+      ALWIN,
+    ).catch((x: unknown) => x);
+    expect(fehlerMeldung(e).text).toMatch(/nur deinen eigenen Teil/);
   });
 });
 

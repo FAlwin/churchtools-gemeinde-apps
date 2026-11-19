@@ -7,7 +7,6 @@ import {
   istAufgabe,
   istMeine,
   istUeberfaellig,
-  naechsterStatus,
   neueAufgabe,
   notizHinzufuegen,
   statusSetzen,
@@ -29,6 +28,19 @@ import {
   alleGewaehlt,
   alleSetzen,
   zustaendigKurz,
+  darfTeilSetzen,
+  erledigtVon,
+  gesamtstandNeu,
+  hakenAnwenden,
+  hakenGesetzt,
+  hakenSchritt,
+  istFuerMichOffen,
+  istJeder,
+  modusSetzen,
+  teilFertig,
+  teilSetzen,
+  teilStand,
+  teilText,
 } from './aufgaben';
 import { ableiten, type Block } from './dokument';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -60,10 +72,13 @@ describe('neueAufgabe', () => {
 });
 
 describe('Status', () => {
-  it('der Kreis geht offen → in Arbeit → erledigt → offen', () => {
-    expect(naechsterStatus('offen')).toBe('arbeit');
-    expect(naechsterStatus('arbeit')).toBe('erledigt');
-    expect(naechsterStatus('erledigt')).toBe('offen');
+  it('der Haken geht offen/in Arbeit → erledigt → offen – nie in „in Arbeit“ (W8a)', () => {
+    const a = basis('H', { wer: [1] });
+    expect(hakenSchritt(a, 1)).toEqual({ art: 'status', neu: 'erledigt' });
+    expect(hakenSchritt({ ...a, status: 'arbeit' }, 1)).toEqual({ art: 'status', neu: 'erledigt' });
+    expect(hakenSchritt({ ...a, status: 'erledigt' }, 1)).toEqual({ art: 'status', neu: 'offen' });
+    // Bei „gemeinsam“ darf jeder haken – auch wer nicht zuständig ist.
+    expect(hakenSchritt(a, 99)).toEqual({ art: 'status', neu: 'erledigt' });
   });
   it('statusSetzen schreibt den Verlauf und lässt das Original unberührt', () => {
     const a = basis('X');
@@ -611,5 +626,161 @@ describe('zustaendigKurz (W5)', () => {
     expect(zustaendigKurz(['A', 'B', 'C', 'Müller (extern)']).text).toBe('A, B, C +1');
     expect(zustaendigKurz(['A', 'B', 'C'], 2).text).toBe('A, B +1');
     expect(zustaendigKurz(namen(17), Infinity).gekuerzt).toBe(false);
+  });
+});
+
+describe('„Jeder für sich“ (W8a)', () => {
+  const T1 = '2026-11-19T08:00:00Z';
+  const T2 = '2026-11-19T09:00:00Z';
+  const T3 = '2026-11-19T10:00:00Z';
+  const alle = (): Aufgabe => modusSetzen(basis('Abwesenheiten', { wer: [1, 2, 3] }), true, 9, T1);
+
+  it('ab zwei Zuständigen wirksam, sonst immer „gemeinsam“; alte Werte bleiben gültig', () => {
+    expect(istJeder(alle())).toBe(true);
+    expect(istJeder({ jeder: true, wer: [1] })).toBe(false);
+    expect(istJeder({ wer: [1, 2] })).toBe(false);
+    expect(istAufgabe(alle())).toBe(true);
+    expect(istAufgabe({ ...basis('X'), jeder: false })).toBe(false);
+    expect(istAufgabe({ ...basis('X'), fertig: { '1': 5 } })).toBe(false);
+  });
+
+  it('der Gesamtstand folgt den Teilen: niemand = offen, einige = in Arbeit, alle = erledigt', () => {
+    let a = alle();
+    expect(a.status).toBe('offen');
+    a = teilSetzen(a, 1, true, 1, T1);
+    expect(a.status).toBe('arbeit');
+    a = teilSetzen(a, 2, true, 2, T2);
+    expect(a.status).toBe('arbeit');
+    a = teilSetzen(a, 3, true, 3, T3);
+    expect(a.status).toBe('erledigt');
+    expect(erledigtAm(a)).toBe(T3);
+    a = teilSetzen(a, 2, false, 1, T3);
+    expect(a.status).toBe('arbeit');
+    expect(teilText(a)).toBe('2 von 3 fertig');
+    expect(a.verlauf.filter((v) => v.art === 'teil')).toHaveLength(4);
+  });
+
+  it('der Verlauf trägt Person und fertig; der Gesamtstand-Wechsel steht als „status“ darin', () => {
+    const a = teilSetzen(alle(), 2, true, 2, T2);
+    expect(a.verlauf.slice(-2)).toEqual([
+      { am: T2, von: 2, art: 'teil', person: 2, fertig: true },
+      { am: T2, von: 2, art: 'status', status: 'arbeit' },
+    ]);
+  });
+
+  it('teilSetzen: nichts zu tun → dasselbe Objekt (kein doppelter Eintrag)', () => {
+    const a = teilSetzen(alle(), 1, true, 1, T1);
+    expect(teilSetzen(a, 1, true, 1, T2)).toBe(a);
+    expect(teilSetzen(a, 99, true, 1, T2)).toBe(a); // nicht zuständig
+    expect(teilSetzen(basis('X', { wer: [1, 2] }), 1, true, 1, T1).fertig).toBeUndefined(); // gemeinsam
+  });
+
+  it('statusSetzen ändert bei „Jeder für sich“ nichts – der Status ist abgeleitet', () => {
+    const a = alle();
+    expect(statusSetzen(a, 'erledigt', 1, T2)).toBe(a);
+  });
+
+  it('Zuständige ändern den Gesamtstand: der letzte Offene geht → erledigt; jemand kommt dazu → wieder in Arbeit', () => {
+    let a = alle();
+    a = teilSetzen(teilSetzen(a, 1, true, 1, T1), 2, true, 2, T2);
+    expect(a.status).toBe('arbeit');
+    const ohne3 = zustaendigSetzen(a, [1, 2], 9, T3);
+    expect(ohne3.status).toBe('erledigt');
+    const mit4 = zustaendigSetzen(ohne3, [1, 2, 4], 9, T3);
+    expect(mit4.status).toBe('arbeit');
+    expect(teilStand(mit4)).toEqual({ fertig: 2, gesamt: 3 });
+  });
+
+  it('wer nicht mehr zuständig ist, zählt nicht – auch wenn sein Eintrag noch da ist', () => {
+    let a = teilSetzen(alle(), 3, true, 3, T1);
+    a = zustaendigSetzen(a, [1, 2], 9, T2);
+    expect(teilStand(a)).toEqual({ fertig: 0, gesamt: 2 });
+    expect(a.status).toBe('offen');
+    expect(teilFertig(a, 3)).toBe(true); // Eintrag bleibt für den Fall „wieder dabei“
+  });
+
+  it('weniger als zwei Zuständige: gemeinsam; der Status bleibt, wie er zuletzt abgeleitet war', () => {
+    let a = teilSetzen(alle(), 1, true, 1, T1);
+    a = zustaendigSetzen(a, [1], 9, T2);
+    expect(istJeder(a)).toBe(false);
+    expect(teilText(a)).toBeNull();
+    expect(a.status).toBe('arbeit');
+    // Danach gilt der normale Haken.
+    expect(hakenSchritt(a, 1)).toEqual({ art: 'status', neu: 'erledigt' });
+  });
+
+  it('Modus: gemeinsam → jeder mit erledigtem To-Do bleibt erledigt; zurück zu gemeinsam behält den Stand', () => {
+    const fertig = statusSetzen(basis('E', { wer: [1, 2] }), 'erledigt', 1, T1);
+    const j = modusSetzen(fertig, true, 9, T2);
+    expect(j.status).toBe('erledigt');
+    expect(teilStand(j)).toEqual({ fertig: 2, gesamt: 2 });
+    const g = modusSetzen(j, false, 9, T3);
+    expect(istJeder(g)).toBe(false);
+    expect(g.status).toBe('erledigt');
+    expect(modusSetzen(g, false, 9, T3)).toBe(g);
+    expect(g.verlauf.filter((v) => v.art === 'modus').map((v) => v.jeder)).toEqual([true, false]);
+  });
+
+  it('bearbeiten: Teil, Modus und Zuständige laufen über dieselben Funktionen; ein gezogener Status wird ignoriert', () => {
+    const a = alle();
+    const b = bearbeiten(a, { teile: [{ person: 1, fertig: true }], status: 'erledigt' }, 1, T2);
+    expect(b.status).toBe('arbeit');
+    expect(bearbeiten(b, { jeder: false }, 1, T3).jeder).toBeUndefined();
+    expect(bearbeiten(basis('N', { wer: [1, 2] }), { jeder: true }, 1, T1).jeder).toBe(true);
+  });
+
+  it('Teile aus zwei verschiedenen Ständen löschen sich nicht (frisch gelesen, dann angewendet)', () => {
+    const start = alle();
+    const vonA = (x: Aufgabe) => teilSetzen(x, 1, true, 1, T1);
+    const vonB = (x: Aufgabe) => teilSetzen(x, 2, true, 2, T2);
+    // B schreibt zuerst, A wendet seine Änderung auf den frisch gelesenen Stand (mit B) an.
+    expect(vonA(vonB(start)).fertig).toEqual({ '1': T1, '2': T2 });
+    expect(vonB(vonA(start)).fertig).toEqual({ '1': T1, '2': T2 });
+  });
+
+  it('Haken: eigener Teil; wer nicht zuständig ist, hat keinen (nur Anzeige)', () => {
+    const a = alle();
+    expect(hakenSchritt(a, 2)).toEqual({ art: 'teil', person: 2, fertig: true });
+    expect(hakenSchritt(a, 99)).toBeNull();
+    const b = hakenAnwenden(a, { art: 'teil', person: 2, fertig: true }, 2, T2);
+    expect(hakenGesetzt(b, 2)).toBe(true);
+    expect(hakenGesetzt(b, 1)).toBe(false);
+    expect(hakenSchritt(b, 2)).toEqual({ art: 'teil', person: 2, fertig: false });
+  });
+
+  it('Rechte: jeder nur den eigenen Teil, die Leitung alle', () => {
+    expect(darfTeilSetzen(2, 2, false)).toBe(true);
+    expect(darfTeilSetzen(3, 2, false)).toBe(false);
+    expect(darfTeilSetzen(3, 2, true)).toBe(true);
+  });
+
+  it('„für mich offen“: bei jeder nur, solange MEIN Teil fehlt', () => {
+    let a = alle();
+    expect(istFuerMichOffen(a, 2)).toBe(true);
+    expect(istFuerMichOffen(a, 99)).toBe(false);
+    a = teilSetzen(a, 2, true, 2, T2);
+    expect(istFuerMichOffen(a, 2)).toBe(false); // Gesamtstand „in Arbeit“, aber mein Teil ist fertig
+    expect(istFuerMichOffen(a, 1)).toBe(true);
+    expect(meineOffenen([a], 2, '2026-11-19')).toEqual([]);
+    expect(meineOffenen([a], 1, '2026-11-19')).toHaveLength(1);
+    // gemeinsam wie bisher
+    const g = basis('G', { wer: [1, 2] });
+    expect(istFuerMichOffen(g, 2)).toBe(true);
+    expect(istFuerMichOffen(statusSetzen(g, 'erledigt', 1, T1), 2)).toBe(false);
+  });
+
+  it('gesamtstandNeu ändert gemeinsame To-Dos nicht', () => {
+    const g = basis('G', { wer: [1, 2] });
+    expect(gesamtstandNeu(g, 1, T1)).toBe(g);
+  });
+
+  it('erledigtVon: gemeinsam = wer zuletzt abhakte, jeder = alle, die ihren Teil erledigt haben', () => {
+    const g = statusSetzen(basis('G', { wer: [1, 2] }), 'erledigt', 2, T2);
+    expect(erledigtVon(g)).toEqual({ von: [2], am: T2 });
+    expect(erledigtVon(basis('O'))).toBeNull();
+    let a = alle();
+    a = teilSetzen(teilSetzen(teilSetzen(a, 3, true, 3, T1), 1, true, 1, T2), 2, true, 2, T3);
+    expect(erledigtVon(a)).toEqual({ von: [1, 2, 3], am: T3 });
+    expect(erledigtVon(teilSetzen(a, 1, false, 9, T3))).toBeNull();
   });
 });

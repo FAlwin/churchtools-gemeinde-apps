@@ -10,7 +10,7 @@
  * - **Erledigte:** die der letzten 30 Tage; ältere nur auf Wunsch (Filter).
  */
 import { plusTage } from '../ct/datum';
-import { erledigtAm, gruppieren, type Aufgabe, type ToDoAenderung } from './aufgaben';
+import { erledigtAm, gruppieren, istJeder, type Aufgabe, type ToDoAenderung } from './aufgaben';
 
 export type Einteilung = 'status' | 'person';
 /** Liste oder Board (S7-3). */
@@ -214,7 +214,8 @@ export function spalten(
 export function ablegen(a: Aufgabe, von: Spalte, nach: Spalte): ToDoAenderung | null {
   if (von.schluessel === nach.schluessel || !nach.nimmtAn) return null;
   if (nach.art === 'offen' || nach.art === 'arbeit' || nach.art === 'erledigt')
-    return a.status === nach.art ? null : { status: nach.art };
+    // „Jeder für sich“: der Status ist der Gesamtstand aus den Teilen – man kann ihn nicht ziehen (W8a).
+    return a.status === nach.art || istJeder(a) ? null : { status: nach.art };
   const ohne = von.person === undefined ? a.wer : a.wer.filter((p) => p !== von.person);
   const wer =
     nach.person === undefined || ohne.includes(nach.person) ? ohne : [...ohne, nach.person];

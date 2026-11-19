@@ -29,6 +29,7 @@ export function FestePunkteRahmen({
   zeitzone,
   name,
   status,
+  ich,
   imFenster = false,
   onZuSitzung,
   onTreffenAnlegen,
@@ -44,6 +45,7 @@ export function FestePunkteRahmen({
   zeitzone: string;
   name?: FestePunkteWert['name'];
   status?: FestePunkteWert['status'];
+  ich?: number;
   imFenster?: boolean;
   /** „Öffnen“ im Fenster: zu dieser Sitzung springen (K3b-2) – fehlt, bleibt das Fenster ohne Knopf. */
   onZuSitzung?: (s: Sitzung) => void;
@@ -73,6 +75,7 @@ export function FestePunkteRahmen({
       fruehere: fruehereProtokolle(protokolle, sitzung),
       name,
       status,
+      ich,
       oeffnen: imFenster ? undefined : setOffen,
       waehlen: imFenster ? undefined : (q, fertig) => setWahl({ ...q, fertig }),
       treffen,
@@ -90,6 +93,7 @@ export function FestePunkteRahmen({
       protokolle,
       name,
       status,
+      ich,
       imFenster,
       treffen,
       onTreffenAnlegen,

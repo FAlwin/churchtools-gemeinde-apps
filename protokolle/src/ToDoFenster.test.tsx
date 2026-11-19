@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { modusSetzen, neueAufgabe, statusSetzen, teilSetzen } from '@shared/protokolle/aufgaben';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Person } from '@shared/organigramm/mitglieder';
 import type { ToDoEintrag } from '@shared/protokolle/uebersicht';
@@ -95,6 +95,95 @@ beforeEach(() => {
   vi.mocked(N.imEntwurfNachziehen).mockResolvedValue({ art: 'ok', hinweis: null });
 });
 
+describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
+  const modus = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
+  /** Das Kästchen in der Liste „Wer ist fertig?“ (nicht das bei „Zuständig“). */
+  const fertigBox = (name: RegExp) =>
+    within(screen.getByText('Wer ist fertig?').parentElement!).getByRole<HTMLInputElement>(
+      'checkbox',
+      {
+        name,
+      },
+    );
+  const JEDER = teilSetzen(modusSetzen(BEAMER, true, 1, AM), 23, true, 23, AM);
+  const EINTRAG_JEDER: ToDoEintrag = { aufgabe: JEDER, gruppe: LT };
+
+  it('der Umschalter erscheint ab zwei Zuständigen – mit einem Zuständigen nicht', () => {
+    zeige();
+    expect(modus('Gemeinsam')).toBeTruthy();
+    expect(modus('Jeder für sich')).toBeTruthy();
+    cleanup();
+    zeige({ eintrag: { aufgabe: { ...BEAMER, wer: [1] }, gruppe: LT } });
+    expect(screen.queryByRole('button', { name: 'Jeder für sich' })).toBeNull();
+  });
+
+  it('Jeder für sich: „Wer ist fertig?“ ersetzt den Status-Umschalter; Speichern schickt nur den Modus', async () => {
+    const { onFertig } = zeige();
+    expect(screen.getByRole('group', { name: 'Status' })).toBeTruthy();
+    fireEvent.click(modus('Jeder für sich'));
+    expect(screen.queryByRole('group', { name: 'Status' })).toBeNull();
+    expect(screen.getByText('Wer ist fertig?')).toBeTruthy();
+    expect(screen.getAllByText('offen')).toHaveLength(2);
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ jeder: true });
+  });
+
+  it('wer schon fertig ist, steht mit Datum da; Leitung hakt für andere, ein Mitglied nur sich selbst', async () => {
+    const { onFertig } = zeige({ eintrag: EINTRAG_JEDER, leitung: false });
+    expect(screen.getByText(/✓ am/)).toBeTruthy();
+    const johann = fertigBox(/Johann/);
+    const ich = fertigBox(/Alwin/);
+    expect(johann.disabled).toBe(true); // nicht meiner, ich bin keine Leitung
+    expect(ich.disabled).toBe(false);
+    fireEvent.click(ich);
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({
+      teile: [{ person: 1, fertig: true }],
+    });
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][4]).toBe(false);
+  });
+
+  it('als Leitung: auch der Teil eines anderen lässt sich zurücknehmen', async () => {
+    const { onFertig } = zeige({ eintrag: EINTRAG_JEDER, leitung: true });
+    const johann = fertigBox(/Johann/);
+    expect(johann.disabled).toBe(false);
+    expect(johann.checked).toBe(true);
+    fireEvent.click(johann);
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({
+      teile: [{ person: 23, fertig: false }],
+    });
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][4]).toBe(true);
+  });
+
+  it('zurück zu „Gemeinsam“: der Status-Umschalter ist wieder da, der Modus geht mit', async () => {
+    const { onFertig } = zeige({ eintrag: EINTRAG_JEDER });
+    fireEvent.click(modus('Gemeinsam'));
+    expect(screen.getByRole('group', { name: 'Status' })).toBeTruthy();
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ jeder: false });
+  });
+
+  it('ein neues To-Do mit „Jeder für sich“: Modus und mein Teil gehen ans Anlegen', async () => {
+    const { onFertig } = zeige({ eintrag: null });
+    fireEvent.change(screen.getByLabelText('Was ist zu tun?'), { target: { value: 'Neu' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Alwin/ })); // zuständig: ich
+    fireEvent.click(screen.getByRole('checkbox', { name: /Johann/ })); // und Johann
+    fireEvent.click(modus('Jeder für sich'));
+    fireEvent.click(fertigBox(/Alwin/)); // mein Teil
+    fireEvent.click(knopf('Anlegen'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAnlegen).mock.calls[0][1]).toMatchObject({
+      jeder: true,
+      teile: [{ person: 1, fertig: true }],
+    });
+  });
+});
+
 describe('ToDoFenster', () => {
   it('zeigt das To-Do; Speichern erst nach einer Änderung – und dann nur das Geänderte', async () => {
     const { onFertig } = zeige();
@@ -109,6 +198,7 @@ describe('ToDoFenster', () => {
       'b',
       { bis: '2026-11-20' },
       { person: 1, name: 'Alwin' },
+      expect.any(Boolean),
     ]);
   });
 

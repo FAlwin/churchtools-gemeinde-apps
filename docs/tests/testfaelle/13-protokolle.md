@@ -750,3 +750,42 @@ Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
 - **Historie:** 19.11.2026 (Alwin: ChurchTools hat keine zeitgesteuerten Erinnerungen, darum ein Hinweis beim Öffnen; Einstellung für die ganze Erweiterung, Standard 3 Tage)
 
 </details>
+
+### TF-PROT-22 · Haken statt Weiterschalten, „Rückgängig“ an der Karte und „Jeder für sich“
+
+**Das brauchst du:** In der Test-Instanz eine eingerichtete Gruppe mit mindestens **zwei Mitgliedern** und zwei Konten (du als
+**Leitung** und ein **Mitglied**). Lege dir als Test-To-Dos an: „TEST Haken“ (nur du zuständig), „TEST Jeder“ (du und das andere
+Konto zuständig) und „TEST Gemeinsam“ (beide zuständig). Dazu ein Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
+
+**Das muss passieren:** Der Haken hakt ab und nimmt zurück – nie springt er auf „in Arbeit“. Eine eben abgehakte Karte bleibt
+5 Sekunden an ihrem Platz, mit „Rückgängig“ an der Karte. Bei „Jeder für sich“ hakt jeder nur seinen Teil ab; fertig ist das To-Do,
+wenn alle fertig sind.
+
+1. **To-Dos → Liste, Nach Status.** Tippe bei „TEST Haken“ auf die Marke „Offen“: Sie wird **grün „Erledigt“**, die Karte ist
+   durchgestrichen und bleibt **an ihrem Platz**, daneben steht **„Rückgängig“**. Warte 5 Sekunden: Die Karte rutscht zu **Erledigt**.
+2. Tippe bei „TEST Haken“ (jetzt erledigt) noch einmal auf die Marke: **Offen**, kein „Rückgängig“. Hake wieder ab und tippe diesmal
+   gleich auf **„Rückgängig“**: Das To-Do ist wieder offen und bleibt es auch nach 5 Sekunden und nach dem Neuladen.
+3. Öffne „TEST Haken“ (Text antippen), stelle den Status auf **In Arbeit** und speichere: Die Marke zeigt „In Arbeit“. Ein Tipp auf die
+   Marke hakt ab (**Erledigt**), nicht „weiter“. Im **Board** lässt sich die Karte in die Spalte „In Arbeit“ ziehen.
+4. Öffne „TEST Jeder“: Unter „Zuständig“ steht **„So wird es erledigt“** mit **Gemeinsam | Jeder für sich** (bei nur einem Zuständigen
+   fehlt der Umschalter). Wähle **Jeder für sich**: Statt „Status“ steht **„Wer ist fertig?“** mit beiden Namen, beide „offen“.
+   Speichere. Die Karte zeigt „Offen · 0/2“.
+5. Tippe auf der Karte auf die Marke: Es ist **dein Teil** („Offen · 0/2“ → „In Arbeit · 1/2“), „Rückgängig“ erscheint. Auf der
+   **Startseite** steht das To-Do jetzt **nicht** mehr unter „Meine offenen To-Dos“; das andere Konto sieht es dort weiter, mit „1 von 2 fertig“.
+6. Mit dem **Mitglied-Konto**: Das To-Do öffnen. In „Wer ist fertig?“ ist **nur der eigene Name** zum Anhaken frei, der andere Name ist ausgegraut.
+   Eigenen Teil abhaken, speichern: Die Karte steht auf **Erledigt (2/2)**, im Verlauf stehen beide Teile und „Status: erledigt“.
+7. Als **Leitung** („TEST Jeder“ öffnen): Du kannst den Teil des Mitglieds zurücknehmen → Gesamtstand **In Arbeit**. Im Board lässt sich die
+   Karte **nicht** in eine andere Status-Spalte ziehen (sie wandert von selbst); nach Person zu ziehen geht weiter.
+8. Beide Konten haken kurz nacheinander ab (mehrmals, auch gleichzeitig am Rechner und Handy): Keiner löscht den Teil des anderen.
+9. Im **Protokoll-Editor** (Entwurf): An einer Aufgabe mit zwei Zuständigen steht beim Schildchen „Wer?“ der Haken **„Jeder hakt für sich
+   ab“**. Der runde Haken vorne hakt ab bzw. nimmt zurück (bei „Jeder für sich“ **mein Teil**, mit „1/2“ daneben); ebenso in „Offene To-Dos“
+   (fester Punkt) – nie auf „in Arbeit“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/aufgaben.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/Haken.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/FesterPunkt.tsx`, `protokolle/src/todoSchreiben.ts`, `protokolle/src/Startseite.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/aufgaben.test.ts` („Jeder für sich“: Gesamtstand, Zuständige, Modus, Rechte-Regel, „für mich offen“, Teile aus zwei Ständen, Haken-Schritte), `shared/protokolle/hinweis.test.ts` (Hinweis/Zähler), `shared/protokolle/uebersicht.test.ts` (Ziehen), `protokolle/src/ToDos.haken.test.tsx` (Haken, 5 s und „Rückgängig“ mit Fake-Timern, mein Teil, nur Anzeige), `protokolle/src/todoSchreiben.test.ts` (zwei Teile nacheinander, Rechte im Schreibweg), `protokolle/src/ToDoFenster.test.tsx`, `protokolle/src/EditorBloecke.test.tsx`, `protokolle/src/FesterPunkt.test.tsx`, `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen, echtes gleichzeitiges Abhaken zweier Konten, Handy
+- **Historie:** 19.11.2026 (W8a: Alwin wollte bei „Alle“ auch „jeder für sich“; der Status-Knopf sprang beim Klick weiter)
+
+</details>

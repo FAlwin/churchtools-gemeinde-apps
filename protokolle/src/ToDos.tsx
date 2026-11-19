@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -23,6 +23,7 @@ import {
   zustaendigKurz,
   type Aufgabe,
   type AufgabenStatus,
+  type HakenSchritt,
   type ToDoAenderung,
 } from '@shared/protokolle/aufgaben';
 import {
@@ -43,7 +44,7 @@ import {
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { Marke } from './Marke';
-import { StatusMarke } from './StatusMarke';
+import { Haken } from './Haken';
 import { ToDoFenster, type Herkunft } from './ToDoFenster';
 import { toDoAendern } from './todoSchreiben';
 import { ToDoZiehBereich, ZiehKarte, ZiehSpalte } from './ToDoZiehen';
@@ -76,6 +77,15 @@ interface Frage {
 }
 
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** Wie lange eine eben abgehakte Karte an ihrem Platz bleibt (mit „Rückgängig“ an der Karte), bevor sie weiterrutscht. */
+export const HALTEN_MS = 5000;
+
+/** Eine eben abgehakte Karte: wie sie vorher stand (für ihren Platz) und was „Rückgängig“ ändert. */
+interface Gehalten {
+  vorher: Aufgabe;
+  zurueck: ToDoAenderung;
+}
 
 /**
  * Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), mit dem Namen aus
@@ -161,6 +171,13 @@ export function ToDos({
   const [aeltere, setAeltere] = useState(false);
   const [laeuft, setLaeuft] = useState<ReadonlySet<string>>(new Set());
   const [hinweis, setHinweis] = useState<string | null>(null);
+  // Eben abgehakte Karten bleiben `HALTEN_MS` an ihrem Platz – mit „Rückgängig“ an der Karte selbst (W8a).
+  const [gehalten, setGehalten] = useState<ReadonlyMap<string, Gehalten>>(new Map());
+  const timer = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const t = timer.current;
+    return () => t.forEach((id) => clearTimeout(id));
+  }, []);
   const heute = heuteImKalender();
 
   // `still`: nach dem Speichern im Fenster ohne „Wird geladen …“ – die Liste bleibt stehen, bis das Neue da ist.
@@ -228,7 +245,14 @@ export function ToDos({
       !aus.zustaendig.includes(zustaendigFuer(e.aufgabe, ich.person)),
   );
   const alteErledigte = gefiltert.filter((e) => langeErledigt(e.aufgabe, heute)).length;
-  const gezeigt = aeltere ? gefiltert : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
+  const sichtbarGezeigt = aeltere
+    ? gefiltert
+    : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
+  // Eine gehaltene Karte steht mit ihrem alten Stand in der Einteilung – so bleibt sie an ihrem Platz.
+  const gezeigt = sichtbarGezeigt.map((e) => {
+    const g = gehalten.get(eintragSchluessel(e));
+    return g ? { ...e, aufgabe: g.vorher } : e;
+  });
   const namen = new Map([...bekannte].map(([id, p]) => [id, p.name]));
   // Wen die Liste nicht kennt, kennt vielleicht der Verlauf („nach Person“ zeigte sonst „Person 1“).
   for (const e of sichtbar)
@@ -292,19 +316,20 @@ export function ToDos({
    * **Status oder Zuständige ändern** (Status-Marke, Ziehen im Board) – ein Weg. Sofort zeigen (sonst springt die Karte
    * nach dem Loslassen zurück), dann schreiben; ChurchTools' Stand gilt. Scheitert es, kommt der alte Stand zurück.
    */
-  const aendern = (e: ToDoEintrag, x: ToDoAenderung) => {
+  const aendern = (e: ToDoEintrag, x: ToDoAenderung, beiFehler?: () => void) => {
     const u = ue.find((v) => v.gruppe.id === e.gruppe.id);
     if (!u || u.gruppe.mitarbeit === null) return;
     const id = e.aufgabe.id;
     setHinweis(null);
     setLaeuft((s) => new Set(s).add(id));
     ersetzen(u.gruppe.id, bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString()));
-    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich)
+    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich, leitungIn(u.gruppe))
       .then(
         (gespeichert) => ersetzen(u.gruppe.id, gespeichert),
         (f: unknown) => {
           ersetzen(u.gruppe.id, e.aufgabe);
           setHinweis(fehlerMeldung(f).text);
+          beiFehler?.();
         },
       )
       .finally(() =>
@@ -316,6 +341,46 @@ export function ToDos({
       );
   };
 
+  const loslassen = (schluessel: string) => {
+    clearTimeout(timer.current.get(schluessel));
+    timer.current.delete(schluessel);
+    setGehalten((m) => {
+      const n = new Map(m);
+      n.delete(schluessel);
+      return n;
+    });
+  };
+
+  /**
+   * **Der Haken an der Karte** (W8a): abhaken oder zurücknehmen – ein Weg (`hakenSchritt`). Nach dem Abhaken bleibt die Karte
+   * `HALTEN_MS` an ihrem Platz, durchgestrichen, mit „Rückgängig“ direkt an der Karte (nie in einer Leiste am Seitenende).
+   */
+  const haken = (e: ToDoEintrag, s: HakenSchritt) => {
+    const vorher = e.aufgabe;
+    const k = eintragSchluessel(e);
+    // Scheitert das Schreiben, ist nichts erledigt – dann auch kein „Rückgängig“.
+    const beiFehler = () => loslassen(k);
+    if (s.art === 'teil')
+      aendern(e, { teile: [{ person: s.person, fertig: s.fertig }] }, beiFehler);
+    else aendern(e, { status: s.neu }, beiFehler);
+    const erledigt = s.art === 'teil' ? s.fertig : s.neu === 'erledigt';
+    if (!erledigt) return;
+    clearTimeout(timer.current.get(k));
+    timer.current.set(
+      k,
+      setTimeout(() => loslassen(k), HALTEN_MS),
+    );
+    setGehalten((m) =>
+      new Map(m).set(k, {
+        vorher,
+        zurueck:
+          s.art === 'teil'
+            ? { teile: [{ person: s.person, fertig: false }] }
+            : { status: vorher.status },
+      }),
+    );
+  };
+
   /** Im Board abgelegt (S7-3): was das heißt, sagt `ablegen`; gibt ein Mitglied sein To-Do ab, erst nachfragen. */
   const abgelegt = (karte: string, von: string, nach_: string) => {
     const e = gezeigt.find((x) => eintragSchluessel(x) === karte);
@@ -324,7 +389,7 @@ export function ToDos({
     if (!e || !v || !n) return;
     const x = ablegen(e.aufgabe, v, n);
     if (!x) return;
-    const danach = { ...e.aufgabe, ...x };
+    const danach = bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString());
     const g = ue.find((u) => u.gruppe.id === e.gruppe.id)?.gruppe;
     const leitung = !!g && leitungIn(g);
     if (!sichtbarFuer(danach, { ich: ich.person, leitung })) return setFrage({ e, x, an: n.titel });
@@ -355,13 +420,16 @@ export function ToDos({
 
   /** Was auf einer Karte steht – in Liste und Board derselbe Baustein (Entwurf v2). */
   const inhalt = (e: ToDoEintrag) => {
-    const a = e.aufgabe;
+    const k = eintragSchluessel(e);
+    const g = gehalten.get(k);
+    // Gehalten: die Karte steht mit dem alten Stand am alten Platz, gezeigt wird der aktuelle.
+    const a = (g && sichtbarGezeigt.find((x) => eintragSchluessel(x) === k)?.aufgabe) || e.aufgabe;
     const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
     const herkunft = herkunftVon(e);
     const notiz = a.karte?.notiz ? letzteNotiz(a) : null;
     const ueber = istUeberfaellig(a, heute);
     const text = (
-      <span className={a.status === 'erledigt' ? styles.erledigt : undefined}>{a.text}</span>
+      <span className={a.status === 'erledigt' || g ? styles.erledigt : undefined}>{a.text}</span>
     );
     return (
       <>
@@ -374,12 +442,12 @@ export function ToDos({
           {text}
         </button>
         <span className={styles.meta}>
-          <StatusMarke
-            status={a.status}
+          <Haken
+            a={a}
+            ich={ich.person}
+            art="marke"
             beschaeftigt={laeuft.has(a.id)}
-            onWechsel={
-              u && u.gruppe.mitarbeit !== null ? (neu) => aendern(e, { status: neu }) : undefined
-            }
+            onSchritt={u && u.gruppe.mitarbeit !== null && !g ? (s) => haken(e, s) : undefined}
           />
           <Wer a={a} personen={bekannte} />
           {a.bis && (
@@ -390,6 +458,21 @@ export function ToDos({
           )}
           {mehrereGruppen && <Marke art="leise">{e.gruppe.name}</Marke>}
         </span>
+        {g && (
+          <span className={styles.rueckgaengig} role="status">
+            Erledigt
+            <button
+              type="button"
+              className={styles.link}
+              onClick={() => {
+                loslassen(k);
+                aendern(e, g.zurueck);
+              }}
+            >
+              Rückgängig
+            </button>
+          </span>
+        )}
         {a.karte?.notiz && (
           <span className={styles.abschnitt}>
             <b>Notizen</b>

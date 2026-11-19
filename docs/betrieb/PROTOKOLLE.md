@@ -106,15 +106,18 @@ von Start oder „To-Dos“ nach.
 **Reiter „To-Dos“ (S7-1):** alle To-Dos der eigenen Gruppen in einer Liste – **nach Status** (Überfällig · In Arbeit ·
 Offen · Erledigt) oder **nach Person** (ich zuerst, dann nach Namen; „Außerhalb der Gruppe“, „Noch niemand
 zuständig“). Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mitglieder** ihre eigenen und die,
-für die noch niemand zuständig ist. Die **Status-Marke** („◐ In Arbeit“) schaltet mit einem Tipp weiter – ohne ins
-Protokoll zu springen, auch wenn es schon freigegeben ist. Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
+für die noch niemand zuständig ist. Der **Haken** an der Karte („◐ In Arbeit“, „○ Offen“) hakt mit einem Tipp ab (offen oder in Arbeit → erledigt) und
+nimmt zurück (erledigt → offen) – **nie** weiter auf „in Arbeit“; das stellt man im Fenster ein oder zieht im Board. Nach dem Abhaken
+bleibt die Karte **5 Sekunden an ihrem Platz** (durchgestrichen) mit **„Rückgängig“ direkt an der Karte**, dann rutscht sie zu „Erledigt“.
+Das geht ohne ins Protokoll zu springen, auch wenn es schon freigegeben ist. Bei **„Jeder für sich“** (siehe Fenster „To-Do“) ist der
+Haken **mein Teil**, daneben steht der Fortschritt („2/4“); wer nicht zuständig ist, sieht nur den Fortschritt. Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
 Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste.
 
 **Board und Sortieren (S7-3):** „Liste | Board“ oben. Das Board zeigt **nach Status** die Spalten Offen · In Arbeit ·
 Erledigt (Überfällige rot in ihrer Spalte), **nach Person** je Person (bei genau einer Gruppe im Filter auch deren
 Mitglieder ohne To-Do), „Außerhalb der Gruppe“ und „Noch niemand zuständig“; je Spalte „+ Neues To-Do“ mit
 vorbelegtem Status bzw. Zuständigen. **Ziehen:** mit der Maus die ganze Karte, mit dem Finger **lange drücken** (~0,4 s)
-– vorher blättert ein Wischen. Nach Status ändert Ziehen den Status, nach Person **tauscht es nur die gezogene Person**
+– vorher blättert ein Wischen. Nach Status ändert Ziehen den Status (bei „Jeder für sich“ nicht – der Gesamtstand ergibt sich aus den Teilen), nach Person **tauscht es nur die gezogene Person**
 („Außerhalb“ nimmt nichts an). Gibt ein Mitglied sein eigenes To-Do ab (danach sieht es es nicht mehr), fragt die Seite
 vorher. Jeder Wechsel der Zuständigen steht im **Verlauf** („Zuständig: Spike → Johann“) – im Board, im Fenster, im
 Editor und beim Verschieben in eine andere Gruppe. **Sortieren** (ein Knopf, gilt für alle Spalten und Abschnitte):
@@ -128,7 +131,13 @@ To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen 
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und
 „Löschen“ (nur vermerkt, mit Rückfrage). Bei den Zuständigen steht oben **„Alle (N)“**: das wirkt, als hätte man alle
 Mitglieder der Liste von Hand angehakt (ein Haken weniger schaltet „Alle“ wieder aus; gleich im Editor am Schildchen
-„Wer?“). Karten, feste Punkte und das Schildchen zeigen bei vielen Zuständigen **höchstens drei Namen und „+N“** (die
+„Wer?“). Ab **zwei Zuständigen** wählt **„So wird es erledigt“**: **Gemeinsam** (einer erledigt es für alle – wie bisher) oder
+**Jeder für sich** (jeder hakt seinen Teil selbst ab). Dann ersetzt die Liste **„Wer ist fertig?“** den Status-Umschalter: Name, „✓ am …“ bzw. „offen“;
+den eigenen Teil hakt man selbst ab, **für andere nur die Leitung** (z. B. wenn jemand Bescheid sagt). Der **Gesamtstand läuft von selbst**:
+niemand fertig = offen, einige = in Arbeit, alle = erledigt (so stehen die Karten im Board in der richtigen Spalte). Auf der Startseite
+und im To-Do-Hinweis steht ein solches To-Do nur, **solange mein Teil fehlt**. Im Protokoll-Editor schaltet das Schildchen „Wer?“ den Modus
+(„Jeder hakt für sich ab“, sobald das To-Do existiert und zwei Personen zuständig sind). Die Regel „nur den eigenen Teil“ prüft die Erweiterung beim Schreiben
+– ChurchTools kennt dafür kein eigenes Recht. Karten, feste Punkte und das Schildchen zeigen bei vielen Zuständigen **höchstens drei Namen und „+N“** (die
 volle Liste im Tooltip); im Lesen und im PDF steht immer die ganze Liste. Je Abschnitt „Notizen“ und „Aus welcher Sitzung“ ein Schalter **„Auf Karte
 anzeigen“** – für alle gespeichert. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
 Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
@@ -314,14 +323,13 @@ Schreiben wählt **„Ändern“** am Kasten ein anderes. Der Kasten aus der Vor
 
 **Aufgaben, Beschlüsse, Termine (S4-2):** über „Einfügen“ in der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
 (Aufgabe; in Leiste und Menü heißt sie seit K3a „To-Do“). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter
-„Meine offenen To-Dos“, auch solange das Protokoll Entwurf ist. An der Aufgabe: Status-Kreis (offen → in Arbeit →
-erledigt), „Wer?“ (Mitglieder der Gruppe, dazu ein externer Name ohne eigenen Zugang) und „Bis“. Das Protokoll führt:
+„Meine offenen To-Dos“, auch solange das Protokoll Entwurf ist. An der Aufgabe: der Haken (abhaken ↔ wieder offen; „in Arbeit“ stellt man im Fenster „To-Do“ ein), „Wer?“ (Mitglieder der Gruppe, dazu ein externer Name ohne eigenen Zugang) und „Bis“. Das Protokoll führt:
 geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do als gelöscht vermerkt (nie endgültig),
 „Rückgängig“ holt es mit allen Angaben zurück. Ein Termin steht nur im Protokoll (kein Eintrag im Kalender).
 
 **Feste Punkte (S4-3a):** „Offene To-Dos“ zeigt die offenen To-Dos der Gruppe aus früheren Sitzungen (überfällige
-zuerst) mit Status-Kreis, Wer und Bis; darunter eingeklappt „Seit der Sitzung am … erledigt“. Im Editor hakt man sie
-am Kreis ab, in der Lese-Ansicht ist es nur Anzeige. „Protokoll der letzten Sitzung“ zeigt das letzte **freigegebene**
+zuerst) mit Haken, Wer und Bis; darunter eingeklappt „Seit der Sitzung am … erledigt“. Im Editor hakt man sie
+am Haken ab, in der Lese-Ansicht ist es nur Anzeige. „Protokoll der letzten Sitzung“ zeigt das letzte **freigegebene**
 Protokoll der Gruppe vor dieser Sitzung; „Öffnen“ zeigt es im Fenster. Beide füllen sich **bis zur Freigabe live**;
 bei der Freigabe merkt sich das Protokoll, was sie zeigten (wird die Freigabe zurückgenommen, sind sie wieder live; ein
 bewusst gewähltes früheres Protokoll bleibt). Einfügen über „Einfügen“ in der Werkzeugleiste oder das „/“-Menü
@@ -501,7 +509,7 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   noch Hinweise, nie zurückrollen; unklare Antwort → im Kalender nachsehen, Fehlerklasse `Unklar`), Fenster
   `SitzungFestlegen.tsx`, Kasten `NaechsteSitzung.tsx`. Gemessen: `protokolle-planung/docs/messung-s5-2-2026-10-28.md`.
 - To-Do-Übersicht (S7): Regel `shared/protokolle/uebersicht.ts` (`sichtbarFuer`, `einteilen`, `langeErledigt`), Seite
-  `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`, Fenster `ToDoFenster.tsx`; Regeln `bearbeiten`, `verschieben`, `letzteNotiz` in
+  `protokolle/src/ToDos.tsx`, Haken `Haken.tsx` (Übersicht, Editor, feste Punkte – Regel `hakenSchritt`), Fenster `ToDoFenster.tsx`; Regeln `bearbeiten`, `verschieben`, `letzteNotiz`, „Jeder für sich“ (`istJeder`, `teilSetzen`, `gesamtstandNeu`, `modusSetzen`, `istFuerMichOffen`, `erledigtVon`) in
   `shared/protokolle/aufgaben.ts`; geschrieben wird über `protokolle/src/todoSchreiben.ts` (`aufgabeAendern`; beide Schreibtore stempeln den eigenen Vornamen per `mitNamen`; neue IDs
   entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Nachziehen im Entwurf (S7-2b):
   Regel `shared/protokolle/nachziehen.ts` (`aufgabeNachziehen`), Ablauf `protokolle/src/nachziehen.ts`

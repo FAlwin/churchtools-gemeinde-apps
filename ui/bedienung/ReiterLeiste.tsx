@@ -1,4 +1,5 @@
 import { Icon, type IconName } from '../icons/icons';
+import { ReiterZaehler } from './ReiterZaehler';
 import styles from './ReiterLeiste.module.scss';
 
 export interface Reiter<T extends string> {
@@ -7,6 +8,12 @@ export interface Reiter<T extends string> {
   icon: IconName;
   /** Eine Anzahl hinter dem Text, leiser gesetzt (Bereich „Anmeldungen“: „Warteliste 2“, U2-1). */
   zahl?: number;
+  /**
+   * **Roter Zähler** neben dem Text (Protokolle: fällige To-Dos). Mit `zaehlerName` als Name des Reiters für Vorleser
+   * („To-Dos, 3 fällig“); 0 oder fehlend = kein Zähler.
+   */
+  zaehler?: number;
+  zaehlerName?: string;
 }
 
 interface Props<T extends string> {
@@ -63,12 +70,19 @@ export function ReiterLeiste<T extends string>({
             type="button"
             aria-pressed={an}
             className={`${styles.tab}${an ? ' ' + styles.on : ''}${aus ? ' ' + styles.off : ''}`}
+            aria-label={r.zaehler ? r.zaehlerName : undefined}
             onClick={() => (an ? onErneut?.() : onWechsel(r.id))}
           >
             {!oben && <Icon name={r.icon} size={24} stroke={1.9} />}
             <span>
               {r.label}
               {r.zahl !== undefined && <span className={styles.zahl}> {r.zahl}</span>}
+              {r.zaehler ? (
+                <>
+                  {' '}
+                  <ReiterZaehler zahl={r.zaehler} />
+                </>
+              ) : null}
             </span>
           </button>
         );

@@ -132,3 +132,26 @@
     overflow-wrap: anywhere;
   }
 }
+
+// Karte „Hinweis auf fällige To-Dos“ (`TodoHinweisKarte`): ein Auswahlfeld unter seiner Beschriftung.
+.feldTitel {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.auswahl {
+  @include m.eingabefeld;
+  width: 100%;
+  max-width: 24em;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 15px;
+}
+
+.fehlerText {
+  margin-top: 8px;
+  color: var(--red);
+  font-size: 13.5px;
+}

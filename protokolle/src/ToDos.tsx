@@ -48,6 +48,7 @@ import { ToDoFenster, type Herkunft } from './ToDoFenster';
 import { toDoAendern } from './todoSchreiben';
 import { ToDoZiehBereich, ZiehKarte, ZiehSpalte } from './ToDoZiehen';
 import { useToDoEinstellungen } from './useToDoEinstellungen';
+import type { AufgabenStand } from './useFaellige';
 import styles from './ToDos.module.scss';
 
 type Zustand =
@@ -134,6 +135,7 @@ export function ToDos({
   gruppen,
   schreibbar,
   onSitzung,
+  onAufgaben,
 }: {
   modul: number;
   ich: { person: number; name: string };
@@ -141,6 +143,8 @@ export function ToDos({
   /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – wer „Protokolle“ schreibt, ist Leitung. */
   schreibbar: readonly number[];
   onSitzung: (gruppe: number, sitzung: string) => void;
+  /** Gelesene To-Dos je Gruppe nach oben geben (Zähler am Reiter) – auch nach jeder Änderung hier. */
+  onAufgaben?: (stand: readonly AufgabenStand[]) => void;
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [mitglieder, setMitglieder] = useState<ReadonlyMap<number, Person[] | 'verborgen'>>(
@@ -187,6 +191,12 @@ export function ToDos({
   const laden = useCallback(() => holen(false), [holen]);
 
   useEffect(laden, [laden]);
+
+  // Jeder Stand der Übersicht (frisch gelesen, sofort gezeigt, zurückgerollt) speist den Zähler am Reiter.
+  useEffect(() => {
+    if (zustand.art === 'fertig')
+      onAufgaben?.(zustand.uebersicht.map((u) => ({ gruppe: u.gruppe.id, aufgaben: u.aufgaben })));
+  }, [zustand, onAufgaben]);
 
   const ausSetzen = (teil: Partial<typeof aus>) => setzen({ aus: { ...aus, ...teil } });
 

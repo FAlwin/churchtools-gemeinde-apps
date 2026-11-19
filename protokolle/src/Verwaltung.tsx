@@ -8,6 +8,8 @@ import { ladeVerwaltung, type Verwaltung as Daten, type VerwaltungsGruppe } from
 import { GruppeEinrichten } from './GruppeEinrichten';
 import { Marke } from './Marke';
 import { VorlagenKarte } from './VorlagenKarte';
+import { TodoHinweisKarte } from './TodoHinweisKarte';
+import type { Vorlauf } from '@shared/protokolle/hinweis';
 import styles from './Verwaltung.module.scss';
 
 type Zustand =
@@ -17,9 +19,16 @@ type Zustand =
 
 /**
  * **Verwaltung** (Bauplan S2-2, nur Admins): alle Gruppen der Gemeinde als Liste (Alwin, 22.10.2026), je Gruppe
- * „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet das Fenster „Gruppe einrichten“. Darunter die Vorlagen (S2-3).
+ * „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet das Fenster „Gruppe einrichten“. Darunter der Hinweis auf fällige To-Dos und die Vorlagen (S2-3).
  */
-export function Verwaltung({ modul }: { modul: number }) {
+export function Verwaltung({
+  modul,
+  onVorlauf,
+}: {
+  modul: number;
+  /** Der Admin hat den Vorlauf des To-Do-Hinweises gespeichert – `App` zeigt Band und Zähler damit sofort richtig. */
+  onVorlauf?: (v: Vorlauf) => void;
+}) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<VerwaltungsGruppe | null>(null);
   const { toast, showToast } = useToast();
@@ -74,6 +83,7 @@ export function Verwaltung({ modul }: { modul: number }) {
           ))}
         </ul>
       </section>
+      <TodoHinweisKarte modul={modul} onHinweis={showToast} onVorlauf={onVorlauf} />
       <VorlagenKarte modul={modul} onHinweis={showToast} />
       {offen && (
         <GruppeEinrichten

@@ -70,6 +70,15 @@ vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten 
 Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
 ändern nur Admins.
 
+**Hinweis auf fällige To-Dos** (Reiter „Verwaltung“, Karte „Hinweis auf fällige To-Dos“, nur Admins, gilt für die ganze
+Erweiterung): ChurchTools kann keine zeitgesteuerten Erinnerungen schicken, die Erweiterung läuft nur im Browser – darum
+weist sie **beim Öffnen** hin (siehe unten, Startseite). Der Admin wählt, was „bald fällig“ heißt: **Aus** (kein Band, kein
+Zähler) · **Nur Überfällige** · **Überfällige und 1 / 3 / 7 / 14 Tage vorher**. **Standard: 3 Tage**, solange nichts eingestellt
+ist. Die Wahl wird sofort gespeichert (und nachgelesen). Sie liegt als eigener Wert (`art: "todo-hinweis"`, `fassung: 1`,
+`vorlauf`) in der Kategorie „Vorlagen“ – lesen darf jede Person mit einer eingerichteten Gruppe, schreiben nur ein Admin,
+genau wie bei den Vorlagen; die Vorlagen-Liste überliest den Wert. **Wer den Wert nicht lesen kann** (kein Recht, Netz- oder
+Serverfehler, kaputter Wert), arbeitet mit dem **Standard von 3 Tagen** – nie mit „Aus“, und die Seite wartet nie darauf.
+
 **Startseite:** „Heute“ erscheint nur, wenn heute eine Sitzung ansteht. „Meine offenen To-Dos“ sind die mir
 zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind dieselben wie unter „Kommend“ im Reiter
 „Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen – zurückliegende
@@ -77,6 +86,18 @@ Sitzungen ohne Protokoll stehen dort nicht, sondern in „Noch ohne Protokoll“
 dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
 Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
 „Alle anzeigen“ an „Meine offenen To-Dos“ öffnet den Reiter „To-Dos“.
+
+**Hinweis auf fällige To-Dos:** Hat man **eigene** offene To-Dos (mir zugewiesen, nicht erledigt, aus allen Gruppen – dieselbe
+Menge wie „Meine offenen To-Dos“), die überfällig oder bald fällig sind (Einstellung der Verwaltung, siehe oben), steht unter der
+Begrüßung ein **Band**: „**2 To-Dos überfällig**, 1 bis Sa, 21.11. fällig“ – rot, solange etwas überfällig ist; sind nur bald
+fällige da, ruhig blau („**3 To-Dos** in den nächsten 7 Tagen fällig“). „Zu meinen To-Dos“ öffnet den Reiter „To-Dos“. Dazu zeigt
+der Reiter „To-Dos“ auf **jeder Seite** eine **rote Zahl** (überfällig + bald fällig; unten in der Leiste am Handy, oben im
+Umschalter am Computer; für Vorleser „To-Dos, 3 fällig“). Nichts fällig oder „Aus“: weder Band noch Zahl. **Woher die Zahlen
+kommen:** Start und Reiter „To-Dos“ lesen die To-Dos ohnehin und geben sie weiter – es kostet keinen zusätzlichen Abruf, und die
+Zahl stimmt nach jedem Neuladen und jeder Änderung dort (Abhaken, Ziehen, Speichern im Fenster). Nur wer die Erweiterung gleich
+im Reiter „Sitzungen“ oder „Verwaltung“ öffnet, löst einmal beim Start einen leichten Abruf aus (je Gruppe die „Mitarbeit“-Werte);
+scheitert er, gibt es keine Zahl. Ändert man To-Dos direkt im Protokoll (Reiter „Sitzungen“), zieht die Zahl beim nächsten Besuch
+von Start oder „To-Dos“ nach.
 
 **Reiter „To-Dos“ (S7-1):** alle To-Dos der eigenen Gruppen in einer Liste – **nach Status** (Überfällig · In Arbeit ·
 Offen · Erledigt) oder **nach Person** (ich zuerst, dann nach Namen; „Außerhalb der Gruppe“, „Noch niemand

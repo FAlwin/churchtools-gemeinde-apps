@@ -6,6 +6,7 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { faellige, type Vorlauf } from '@shared/protokolle/hinweis';
 import * as L from './lesen';
 import { Startseite } from './Startseite';
 import { uhrzeit } from './anzeige';
@@ -268,5 +269,79 @@ describe('Startseite (S3-3)', () => {
     zeigen([]);
     expect(screen.getByText(/keiner Gruppe/)).toBeTruthy();
     expect(m.ladeUebersicht).not.toHaveBeenCalled();
+  });
+});
+
+describe('Startseite: Hinweisband auf fällige To-Dos', () => {
+  // Heute: Fr, 23.10.2026. Meine To-Dos aus UEBERSICHT: `UEBERFAELLIG` (bis 20.10.), `IN_ARBEIT` (bis 01.11., 9 Tage).
+  const bandFuer = (vorlauf: Vorlauf) =>
+    faellige(
+      UEBERSICHT.flatMap((u) => u.aufgaben),
+      ICH,
+      '2026-10-23',
+      vorlauf,
+    );
+  const zeigenMitBand = (vorlauf: Vorlauf | null, onAlle = vi.fn(), onAufgaben = vi.fn()) => {
+    render(
+      <Startseite
+        modul={24}
+        ich={{ person: ICH, name: 'Alwin' }}
+        gruppen={GRUPPEN}
+        onSitzung={onSitzung}
+        onGruppe={onGruppe}
+        onAlleToDos={onAlle}
+        faellige={vorlauf === null ? null : bandFuer(vorlauf)}
+        vorlauf={vorlauf}
+        onAufgaben={onAufgaben}
+      />,
+    );
+    return { onAlle, onAufgaben };
+  };
+
+  it('überfällig → rotes Band mit Text und Weg „Zu meinen To-Dos“', async () => {
+    const { onAlle } = zeigenMitBand(14);
+    const band = await screen.findByRole('region', { name: 'Fällige To-Dos' });
+    expect(band.getAttribute('data-art')).toBe('rot');
+    expect(band.textContent).toContain('1 To-Do überfällig, 1 bis So, 01.11. fällig');
+    fireEvent.click(within(band).getByRole('button', { name: /Zu meinen To-Dos/ }));
+    expect(onAlle).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['Aus', 'aus' as const],
+    ['noch nicht gelesen', null],
+  ])('kein Band bei: %s', async (_name, v) => {
+    zeigenMitBand(v);
+    await screen.findByText('Beamer-Angebote');
+    expect(screen.queryByRole('region', { name: 'Fällige To-Dos' })).toBeNull();
+  });
+
+  it('nichts fällig: kein Band', async () => {
+    m.ladeUebersicht.mockResolvedValue([
+      { ...UEBERSICHT[0], aufgaben: [FREMD, ERLEDIGT] },
+      UEBERSICHT[1],
+    ]);
+    render(
+      <Startseite
+        modul={24}
+        ich={{ person: ICH, name: 'Alwin' }}
+        gruppen={GRUPPEN}
+        onSitzung={onSitzung}
+        onGruppe={onGruppe}
+        faellige={{ ueberfaellig: [], bald: [] }}
+        vorlauf={3}
+      />,
+    );
+    await screen.findByText('Andacht vorbereiten');
+    expect(screen.queryByRole('region', { name: 'Fällige To-Dos' })).toBeNull();
+  });
+
+  it('gibt die gelesenen To-Dos je Gruppe nach oben (speist den Zähler am Reiter)', async () => {
+    const { onAufgaben } = zeigenMitBand(3);
+    await screen.findByText('Beamer-Angebote');
+    expect(onAufgaben).toHaveBeenLastCalledWith([
+      { gruppe: 11, aufgaben: UEBERSICHT[0].aufgaben },
+      { gruppe: 7, aufgaben: UEBERSICHT[1].aufgaben },
+    ]);
   });
 });

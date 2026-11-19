@@ -1,12 +1,25 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
+import * as L from './lesen';
+import { ladeVorlaufOderStandard } from './todoHinweis';
+import { neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Vorlauf } from '@shared/protokolle/hinweis';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
-vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
+vi.mock('./Verwaltung', () => ({
+  Verwaltung: ({ onVorlauf }: { onVorlauf?: (v: 'aus') => void }) => (
+    <div>
+      <p>VERWALTUNG</p>
+      <button type="button" onClick={() => onVorlauf?.('aus')}>
+        VORLAUF AUS
+      </button>
+    </div>
+  ),
+}));
 vi.mock('./Sitzungen', () => ({
   Sitzungen: ({
     auswahl,
@@ -21,7 +34,17 @@ vi.mock('./Sitzungen', () => ({
     </p>
   ),
 }));
-vi.mock('./lesen', () => ({ ladeUebersicht: vi.fn(() => Promise.resolve([])) }));
+vi.mock('./lesen', () => ({
+  ladeUebersicht: vi.fn(() => Promise.resolve([])),
+  ladeAufgaben: vi.fn(() => Promise.resolve([])),
+}));
+vi.mock('./todoHinweis', () => ({ ladeVorlaufOderStandard: vi.fn(() => Promise.resolve(3)) }));
+vi.mock('./mitglieder', () => ({
+  ladeGruppenMitglieder: vi.fn(() => Promise.resolve('verborgen')),
+}));
+vi.mock('./useToDoEinstellungen', async (orig) =>
+  (await import('./ohneAbgleich.testutil')).ohneAbgleich(orig),
+);
 vi.mock('./Suche', () => ({
   Suche: ({
     begriff,
@@ -213,5 +236,163 @@ describe('Direktlink auf eine Sitzung (S6-2, „Protokoll öffnen“ im Beitrag)
     window.location.hash = '#/sitzungen/11/s9';
     expect(await screen.findByText('SITZUNGEN 11/p:s9')).toBeTruthy();
     expect(window.location.hash).toBe('#/sitzungen');
+  });
+});
+
+/** `matchMedia` wie im Browser: `handy` = schmaler als 760 px. */
+function breite(handy: boolean) {
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: handy && q.includes('max-width: 759px'),
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
+describe('Hinweis auf fällige To-Dos: Zähler am Reiter und Band', () => {
+  // Heute: Do, 19.11.2026. Ich (1) habe ein überfälliges und ein am 21.11. fälliges To-Do (bei 3 Tagen) sowie ein
+  // spätes, ein erledigtes und ein fremdes – gezählt werden genau die beiden ersten.
+  const todo = (id: string, bis: string, x: Partial<Aufgabe> = {}): Aufgabe => ({
+    ...neueAufgabe({ id, gruppe: 11, sitzung: null, text: id, wer: [1], bis, von: 1, am: 'x' }),
+    ...x,
+  });
+  const MEINE = [
+    todo('ueber', '2026-11-10'),
+    todo('bald', '2026-11-21'),
+    todo('spaet', '2026-12-24'),
+    statusSetzen(todo('fertig', '2026-11-10'), 'erledigt', 1, 'x'),
+    todo('fremd', '2026-11-10', { wer: [2] }),
+  ];
+  const leer = {
+    kommend: [],
+    protokolle: [],
+    teile: [],
+    kalender: null,
+    punkte: 'vorschlagen' as const,
+    treffenNichtFreigegeben: false,
+  };
+  const uebersicht = (aufgaben: Aufgabe[]): L.GruppenUebersicht[] =>
+    START.gruppen.map((g, i) => ({
+      gruppe: g,
+      sitzungen: leer,
+      aufgaben: i === 0 ? aufgaben : [],
+    }));
+  const vorlauf = (v: Vorlauf) => vi.mocked(ladeVorlaufOderStandard).mockResolvedValue(v);
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-19T10:00:00Z'));
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht(MEINE));
+    vi.mocked(L.ladeAufgaben).mockImplementation((_m, g) =>
+      Promise.resolve(g.mitarbeit === 61 ? MEINE : []),
+    );
+    vorlauf(3);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('Computer: roter Zähler 2 am Reiter „To-Dos“ (Klartext als Name), Band auf der Startseite', async () => {
+    breite(false);
+    render(<App />);
+    const reiter = await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    expect(reiter.querySelector('[data-zaehler]')!.textContent).toBe('2');
+    const band = await screen.findByRole('region', { name: 'Fällige To-Dos' });
+    expect(band.textContent).toContain('1 To-Do überfällig, 1 bis Sa, 21.11. fällig');
+  });
+
+  it('Handy: derselbe Zähler unten in der Reiterleiste, auf jeder Seite', async () => {
+    breite(true);
+    render(<App />);
+    const unten = await screen.findByRole('navigation', { name: 'Bereiche' });
+    await within(unten).findByRole('button', { name: 'To-Dos, 2 fällig' });
+    fireEvent.click(within(unten).getByRole('button', { name: 'Sitzungen' }));
+    await screen.findByText('SITZUNGEN ohne Auswahl');
+    expect(within(unten).getByRole('button', { name: 'To-Dos, 2 fällig' })).toBeTruthy();
+  });
+
+  it('Start oder To-Dos zuerst: kein zusätzlicher Abruf der To-Dos – die Seite liefert sie', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    expect(L.ladeAufgaben).not.toHaveBeenCalled();
+  });
+
+  it('zuerst auf „Sitzungen“ (Direktlink): einmal leicht je Gruppe, dann steht der Zähler da', async () => {
+    window.location.hash = '#/sitzungen';
+    render(<App />);
+    await screen.findByText('SITZUNGEN ohne Auswahl');
+    await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    expect(L.ladeAufgaben).toHaveBeenCalledTimes(2);
+    expect(L.ladeUebersicht).not.toHaveBeenCalled();
+  });
+
+  it('der leichte Abruf scheitert: kein Zähler, nichts bricht', async () => {
+    window.location.hash = '#/sitzungen';
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(L.ladeAufgaben).mockRejectedValue(new ApiError(503, 'weg'));
+    render(<App />);
+    await screen.findByText('SITZUNGEN ohne Auswahl');
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'To-Dos' })).toBeTruthy();
+    warn.mockRestore();
+  });
+
+  it('„Aus“: weder Zähler noch Band', async () => {
+    vorlauf('aus');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Hallo Alwin' });
+    await waitFor(() => expect(L.ladeUebersicht).toHaveBeenCalled());
+    expect(
+      screen.getByRole('button', { name: 'To-Dos' }).querySelector('[data-zaehler]'),
+    ).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Fällige To-Dos' })).toBeNull();
+  });
+
+  it('„Nur überfällig“: Zähler 1 (das bald fällige zählt nicht), Band ohne „bald“', async () => {
+    vorlauf('ueberfaellig');
+    render(<App />);
+    await screen.findByRole('button', { name: 'To-Dos, 1 fällig' });
+    const band = await screen.findByRole('region', { name: 'Fällige To-Dos' });
+    expect(band.textContent).toContain('1 To-Do überfällig');
+    expect(band.textContent).not.toContain('21.11.');
+  });
+
+  it('nichts fällig: kein Zähler, kein Band', async () => {
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([todo('spaet', '2026-12-24')]));
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Hallo Alwin' });
+    await waitFor(() => expect(L.ladeUebersicht).toHaveBeenCalled());
+    expect(
+      screen.getByRole('button', { name: 'To-Dos' }).querySelector('[data-zaehler]'),
+    ).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Fällige To-Dos' })).toBeNull();
+  });
+
+  it('der Zähler folgt dem neuen Stand: im Reiter „To-Dos“ erledigt → Start zeigt weniger', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(
+      uebersicht([statusSetzen(MEINE[0], 'erledigt', 1, 'x'), ...MEINE.slice(1)]),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'To-Dos, 2 fällig' }));
+    await screen.findByRole('button', { name: 'To-Dos, 1 fällig' });
+  });
+
+  it('Admin ändert den Vorlauf in der Verwaltung: Zähler und Band richten sich sofort danach', async () => {
+    laden.mockResolvedValue({ ...START, darfVerwalten: true });
+    render(<App />);
+    await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    fireEvent.click(screen.getByRole('button', { name: 'Verwaltung' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'VORLAUF AUS' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'To-Dos' }).querySelector('[data-zaehler]'),
+      ).toBeNull(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await screen.findByRole('heading', { name: 'Hallo Alwin' });
+    expect(screen.queryByRole('region', { name: 'Fällige To-Dos' })).toBeNull();
   });
 });

@@ -565,7 +565,8 @@ export async function antragLaden(
 async function vorlageFinden(name: string): Promise<VorlageRoh | null> {
   let liste: VorlageRoh[];
   try {
-    liste = await ctAlleSeiten<VorlageRoh>('/htmltemplates');
+    // `domain_type` ist Pflicht – ohne antwortet ChurchTools mit 400 (gemessen 19.11.2026, echter Lauf N1c).
+    liste = await ctAlleSeiten<VorlageRoh>(`/htmltemplates?domain_type=${VORLAGE_TYP}`);
   } catch (x) {
     // Gibt es die Liste nicht, bleibt es beim Merken der Nummer; jeder andere Fehler bricht ab (nichts blind anlegen).
     if (x instanceof ApiError && (x.status === 404 || x.status === 405)) return null;

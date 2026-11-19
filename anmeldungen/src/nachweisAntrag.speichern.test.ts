@@ -341,7 +341,7 @@ describe('(d) „Nochmal“ legt keine zweite Vorlage an', () => {
     falsch.mitArt();
     falsch.scheitert = [];
     ct.ctAlleSeiten.mockImplementation((pfad: string) =>
-      pfad === '/htmltemplates'
+      pfad.startsWith('/htmltemplates')
         ? Promise.reject(new ApiError(503, 'weg'))
         : falsch.alleSeiten(pfad),
     );

@@ -241,6 +241,10 @@ export class FalschesNachweisCt {
         .map((g) => this.rohGruppe(g)) as T[];
     }
     if (pfad === '/htmltemplates') {
+      // Wie ChurchTools (gemessen 19.11.2026): ohne den Pflicht-Filter `domain_type` gibt es 400.
+      throw new ApiError(400, 'There are validation errors');
+    }
+    if (pfad === '/htmltemplates?domain_type=groupmember-document') {
       if (this.ohneVorlagenListe) throw new ApiError(404, 'Nicht gefunden');
       return structuredClone([...this.vorlagen.values()]) as T[];
     }

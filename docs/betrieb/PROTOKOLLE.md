@@ -224,8 +224,8 @@ Termin und Treffen bestehen, steht die Sitzung wieder als **„ohne Protokoll“
 **Folgen anderswo:** Ein späteres Protokoll, das das gelöschte als „Protokoll der letzten Sitzung“ **festgehalten** hat,
 zeigt dort „Das damalige Protokoll gibt es nicht mehr“ (auch im PDF); ohne Festhalten gilt das davor als „letztes“. Bei
 „Behalten“ steht an den übrigen To-Dos „Aus einer älteren Sitzung“. Ein Beitrag in der Gruppe („In der Gruppe Bescheid
-geben“) bleibt stehen – sein Link führt dann auf die Liste. Vorschläge, die schon „im Protokoll“ standen, erscheinen unter
-„Erledigt“.
+geben“) bleibt stehen – sein Link führt dann auf die Liste. Vorschläge, die schon „im Protokoll“ standen, bleiben gespeichert; in der Liste stehen sie ohnehin nicht mehr (nur als
+Marke „übernommen“ an der Sitzung).
 
 **Mehrere Gruppen, ein Kalender – „das Gruppentreffen entscheidet“ (W4):** Nutzen mehrere Gruppen denselben Kalender
 (live: Technik, Bildtechnik, Kamera, Stream, Tontechnik im Kalender „Technik“), steht ein Termin daraus nicht in allen
@@ -294,8 +294,16 @@ Protokoll über „Wie letztes Mal“ übernimmt die ausgeblendeten Personen **n
 **Punkte vorschlagen (S5-4):** Im Reiter „Sitzungen“ steht bei „Kommend“ **„Punkt vorschlagen“** – für alle, die die
 Gruppe sehen. Man wählt die Sitzung (vorbelegt die nächste; ohne festgelegte heißt sie „Nächste Sitzung“, der
 Vorschlag rutscht dann von selbst dorthin), ein Thema und freiwillig ein, zwei Sätze. Die Karte **„Vorschläge“** unter
-„Kommend“ zeigt alle Vorschläge der Gruppe mit Stand; eigene, offene lassen sich ändern und zurückziehen. Was dann
-passiert, stellt „Gruppe einrichten“ ein:
+„Kommend“ zeigt die **offenen** Vorschläge der Gruppe in der Kurzform (W8c): Titel, darunter höchstens eine Zeile Text
+und „von …“. **Antippen klappt den Vorschlag auf** – dann stehen der ganze Text und die Knöpfe da (eigene, offene:
+**Ändern**, **Zurückziehen**; Leitung: **Übernehmen**, **Nächstes Mal**, **Ablehnen**); aufgeklappt ist immer nur einer.
+Der Kopf **„Vorschläge · n offen“** klappt die ganze Karte zu und auf: Standard offen, wenn es offene gibt, sonst zu –
+die Wahl merkt sich das Gerät (je Person und Gruppe). **Übernommene** verschwinden aus der Liste: In „Kommend“ trägt die
+Sitzung dafür die Marke **„n Vorschläge übernommen“** (neben „n Vorschläge offen“). **Zurückgezogene** stehen nicht
+mehr in der Liste. **Abgelehnte** stehen **7 Tage** in einer kleinen Gruppe „Abgelehnt · verschwindet nach 7 Tagen“
+– nur für den, der vorschlug, und die Leitung – mit „Grund: …“ und „noch n Tage sichtbar“; ein **×** blendet einen
+früher aus (nur auf diesem Gerät). Gespeichert bleibt alles, nichts wird gelöscht. Was nach dem Vorschlagen passiert,
+stellt „Gruppe einrichten“ ein:
 
 - **Vorschlagen:** Die Leitung sieht beim Schreiben oben „Vorschläge · n“ – **Übernehmen** setzt einen Punkt vor
   „Verschiedenes“ (sonst ans Ende), **Nächstes Mal** schiebt ihn zur Sitzung danach, **Ablehnen** fragt nach einer

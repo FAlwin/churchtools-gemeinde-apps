@@ -112,6 +112,8 @@
 // „2 Vorschläge“ unter dem Datum einer kommenden Sitzung (S5-4).
 .vorschlaege {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 2px;
 }
 

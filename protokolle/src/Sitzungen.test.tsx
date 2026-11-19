@@ -7,7 +7,15 @@ import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { teileBauen, type ProtokollKopf } from '@shared/protokolle/speicher';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { NAECHSTE, neuerVorschlag, zielVon, type Vorschlag } from '@shared/protokolle/vorschlaege';
+import {
+  ablehnen,
+  annehmen,
+  NAECHSTE,
+  neuerVorschlag,
+  zielVon,
+  type Vorschlag,
+} from '@shared/protokolle/vorschlaege';
+import { ausSchluessel, bereichSchluessel } from './vorschlaegeMerken';
 import * as L from './lesen';
 import * as V from './vorschlaegeSchreiben';
 import * as SCH from './schreiben';
@@ -104,6 +112,7 @@ const DATEN: L.GruppenSitzungen = {
 beforeEach(() => {
   vi.clearAllMocks();
   VS.stand.clear();
+  localStorage.clear();
   m.ladeSitzungen.mockResolvedValue(DATEN);
   m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [] });
 });
@@ -341,10 +350,13 @@ describe('Vorschläge (S5-4)', () => {
     const k = await karte();
     expect(within(k).getByText('Neue Lieder')).toBeTruthy();
     expect(within(k).getByText(/von Alwin Friesen \(du\)/)).toBeTruthy();
+    // Die Knöpfe stehen erst im aufgeklappten Vorschlag.
+    expect(within(k).queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
+    fireEvent.click(within(k).getByRole('button', { name: /Neue Lieder/ }));
     expect(within(k).getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
     expect(within(k).queryByRole('button', { name: 'Übernehmen' })).toBeNull();
     const kommend = screen.getByRole('region', { name: 'Kommend' });
-    expect(within(kommend).getByText('1 Vorschlag')).toBeTruthy();
+    expect(within(kommend).getByText('1 Vorschlag offen')).toBeTruthy();
   });
 
   it('ohne festgelegte Sitzung: „Nächste Sitzung (noch nicht festgelegt)“', async () => {
@@ -365,9 +377,14 @@ describe('Vorschläge (S5-4)', () => {
     m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [vorschlag('v1')] });
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
     const k = await karte();
+    fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
     expect(within(k).queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
     fireEvent.click(within(k).getByRole('button', { name: 'Übernehmen' }));
-    expect(await within(k).findByText('übernommen')).toBeTruthy();
+    // Übernommene verschwinden aus der Liste – an der Sitzung steht die Marke.
+    await waitFor(() => expect(within(k).queryByText('Thema v1')).toBeNull());
+    const kommend = screen.getByRole('region', { name: 'Kommend' });
+    expect(await within(kommend).findByText('1 Vorschlag übernommen')).toBeTruthy();
+    expect(within(kommend).queryByText(/Vorschlag offen/)).toBeNull();
     expect(VS.stand.get('v1')).toMatchObject({ stand: 'angenommen', ziel: zielVon(KOMMEND) });
   });
 
@@ -377,8 +394,195 @@ describe('Vorschläge (S5-4)', () => {
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
     const k = await karte();
     expect(within(k).getByText('kommt ins Protokoll')).toBeTruthy();
+    fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
     expect(within(k).queryByRole('button', { name: 'Übernehmen' })).toBeNull();
     expect(within(k).queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+  });
+
+  describe('Kurzform und Aufräumen (W8c)', () => {
+    const TAGE = 86_400_000;
+    const vorTagen = (n: number) => new Date(Date.now() - n * TAGE).toISOString();
+    const abgelehnt = (
+      id: string,
+      vor = 3,
+      von = PETER,
+      grund = 'Passt besser in die Jahresplanung.',
+    ) => {
+      const v = ablehnen(
+        neuerVorschlag({
+          id,
+          gruppe: 11,
+          titel: `Thema ${id}`,
+          text: 'Ein längerer Text.',
+          ziel: zielVon(KOMMEND),
+          ich: von,
+          am: '2026-11-01T10:00:00Z',
+        }),
+        grund,
+        { person: 1, name: 'Alwin' },
+        vorTagen(vor),
+      );
+      VS.stand.set(id, v);
+      return v;
+    };
+    const mitText = (id: string, text: string) => {
+      const v = { ...vorschlag(id), text };
+      VS.stand.set(id, v);
+      return v;
+    };
+    const laden = (vorschlaege: Vorschlag[], schreibbar: number[] = [60]) => {
+      m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege });
+      render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={schreibbar} />);
+    };
+
+    it('Kurzform: Titel und erste Textzeile, Knöpfe und voller Text erst aufgeklappt – immer nur einer', async () => {
+      laden([mitText('a', 'Erste Zeile\nZweite Zeile'), mitText('b', 'Text B')]);
+      const k = await karte();
+      expect(within(k).getByText('Erste Zeile')).toBeTruthy();
+      expect(within(k).queryByText(/Zweite Zeile/)).toBeNull();
+      expect(within(k).queryAllByRole('button', { name: 'Übernehmen' })).toHaveLength(0);
+      fireEvent.click(within(k).getByRole('button', { name: /Thema a/ }));
+      expect(within(k).getByText(/Zweite Zeile/)).toBeTruthy();
+      expect(within(k).getAllByRole('button', { name: 'Übernehmen' })).toHaveLength(1);
+      // Ein zweiter klappt den ersten zu.
+      fireEvent.click(within(k).getByRole('button', { name: /Thema b/ }));
+      expect(within(k).queryByText(/Zweite Zeile/)).toBeNull();
+      expect(within(k).getAllByRole('button', { name: 'Übernehmen' })).toHaveLength(1);
+      // Noch einmal darauf: zu.
+      fireEvent.click(within(k).getByRole('button', { name: /Thema b/ }));
+      expect(within(k).queryAllByRole('button', { name: 'Übernehmen' })).toHaveLength(0);
+    });
+
+    it('Bereich: mit Offenen standardmäßig offen, ohne zu; Klick klappt zu, das Gerät merkt es', async () => {
+      laden([vorschlag('a')]);
+      const k = await karte();
+      const kopf = within(k).getByRole('button', { name: /Vorschläge.*1 offen/ });
+      expect(kopf.getAttribute('aria-expanded')).toBe('true');
+      fireEvent.click(kopf);
+      expect(kopf.getAttribute('aria-expanded')).toBe('false');
+      expect(within(k).queryByText('Thema a')).toBeNull();
+      expect(localStorage.getItem(bereichSchluessel(1, 11))).toBe('false');
+    });
+
+    it('Bereich: eine gemerkte Wahl gilt beim nächsten Öffnen', async () => {
+      localStorage.setItem(bereichSchluessel(1, 11), 'false');
+      laden([vorschlag('a')]);
+      const k = await karte();
+      expect(
+        within(k)
+          .getByRole('button', { name: /Vorschläge/ })
+          .getAttribute('aria-expanded'),
+      ).toBe('false');
+      expect(within(k).queryByText('Thema a')).toBeNull();
+    });
+
+    it('Bereich ohne Offene: zu – und aufklappbar', async () => {
+      laden([abgelehnt('x')]);
+      const k = await karte();
+      const kopf = within(k).getByRole('button', { name: /Vorschläge.*0 offen/ });
+      expect(kopf.getAttribute('aria-expanded')).toBe('false');
+      fireEvent.click(kopf);
+      expect(within(k).getByText('Thema x')).toBeTruthy();
+    });
+
+    it('ohne Speicher im Gerät: alles funktioniert trotzdem', async () => {
+      const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('gesperrt');
+      });
+      const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('gesperrt');
+      });
+      try {
+        laden([vorschlag('a'), abgelehnt('x')]);
+        const k = await karte();
+        const kopf = within(k).getByRole('button', { name: /Vorschläge.*1 offen/ });
+        expect(kopf.getAttribute('aria-expanded')).toBe('true');
+        fireEvent.click(kopf);
+        expect(kopf.getAttribute('aria-expanded')).toBe('false');
+        fireEvent.click(kopf);
+        fireEvent.click(within(k).getByRole('button', { name: /„Thema x“ ausblenden/ }));
+        expect(within(k).queryByText('Thema x')).toBeNull();
+      } finally {
+        get.mockRestore();
+        set.mockRestore();
+      }
+    });
+
+    it('Übernommene und im Protokoll stehende stehen nicht in der Liste – die Sitzung zeigt sie als Marke', async () => {
+      const an = annehmen(
+        vorschlag('a'),
+        KOMMEND,
+        { person: 1, name: 'Alwin' },
+        '2026-11-02T10:00:00Z',
+      );
+      VS.stand.set('a', an);
+      laden([an, vorschlag('b')]);
+      const k = await karte();
+      expect(within(k).queryByText('Thema a')).toBeNull();
+      expect(within(k).getByText('Thema b')).toBeTruthy();
+      const kommend = screen.getByRole('region', { name: 'Kommend' });
+      expect(within(kommend).getByText('1 Vorschlag übernommen')).toBeTruthy();
+      expect(within(kommend).getByText('1 Vorschlag offen')).toBeTruthy();
+    });
+
+    it('Abgelehnt: eigene Gruppe mit „Grund“ und „noch N Tage“, aufgeklappt die volle Begründung – sonst keine Knöpfe', async () => {
+      laden([abgelehnt('x', 3)]);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      expect(within(k).getByText(/Abgelehnt · verschwindet nach 7 Tagen/)).toBeTruthy();
+      expect(within(k).getByText(/Grund: Passt besser/)).toBeTruthy();
+      expect(within(k).getByText(/noch 4 Tage sichtbar/)).toBeTruthy();
+      fireEvent.click(within(k).getByRole('button', { name: /^Thema x/ }));
+      expect(within(k).getByText('Begründung:')).toBeTruthy();
+      expect(within(k).queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+      expect(within(k).queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+    });
+
+    it('Abgelehnt: nach 7 Tagen weg (noch gespeichert)', async () => {
+      laden([abgelehnt('alt', 8), abgelehnt('neu', 6)]);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      expect(within(k).queryByText('Thema alt')).toBeNull();
+      expect(within(k).getByText('Thema neu')).toBeTruthy();
+      expect(within(k).getByText(/noch 1 Tag sichtbar/)).toBeTruthy();
+      expect(VS.stand.get('alt')).toMatchObject({ stand: 'abgelehnt' });
+    });
+
+    it('Abgelehnt sehen nur der Vorschlagende und die Leitung', async () => {
+      // Ein anderes Mitglied (ICH = 1, der Vorschlagende ist Peter): nichts.
+      laden([abgelehnt('x', 1, PETER), abgelehnt('y', 1, ICH)], []);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      expect(within(k).queryByText('Thema x')).toBeNull();
+      expect(within(k).getByText('Thema y')).toBeTruthy(); // der eigene
+    });
+
+    it('Abgelehnt: die Leitung sieht auch fremde', async () => {
+      laden([abgelehnt('x', 1, PETER)]);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      expect(within(k).getByText('Thema x')).toBeTruthy();
+    });
+
+    it('„×“ blendet einen Abgelehnten früher aus – je Gerät gemerkt, auch nach dem Neuladen', async () => {
+      laden([abgelehnt('x', 1), abgelehnt('y', 1)]);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      fireEvent.click(within(k).getByRole('button', { name: /„Thema x“ ausblenden/ }));
+      expect(within(k).queryByText('Thema x')).toBeNull();
+      expect(within(k).getByText('Thema y')).toBeTruthy();
+      expect(JSON.parse(localStorage.getItem(ausSchluessel(1, 11)) ?? 'null')).toEqual(['x']);
+      expect(VS.stand.get('x')).toMatchObject({ stand: 'abgelehnt' });
+    });
+
+    it('ausgeblendet bleibt ausgeblendet, wenn die Seite neu geladen wird', async () => {
+      localStorage.setItem(ausSchluessel(1, 11), JSON.stringify(['x']));
+      laden([abgelehnt('x', 1), abgelehnt('y', 1)]);
+      const k = await karte();
+      fireEvent.click(within(k).getByRole('button', { name: /Vorschläge/ }));
+      expect(within(k).queryByText('Thema x')).toBeNull();
+      expect(within(k).getByText('Thema y')).toBeTruthy();
+    });
   });
 
   it('Gruppe ohne Mitarbeit-Kategorie (unvollständig): kein Vorschlagen, keine Karte', async () => {

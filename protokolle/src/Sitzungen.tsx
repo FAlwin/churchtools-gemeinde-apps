@@ -16,6 +16,8 @@ import {
   annehmen,
   aufsNaechsteMal,
   neuerVorschlag,
+  offeneFuer,
+  uebernommenFuer,
   vorschlagAendern,
   zielSitzung,
   zurueckziehen,
@@ -58,11 +60,14 @@ type Zustand =
 function SitzungZeile({
   s,
   vorschlaege = 0,
+  uebernommen = 0,
   onOeffnen,
 }: {
   s: Sitzung;
   /** Offene Vorschläge für diese Sitzung (S5-4). */
   vorschlaege?: number;
+  /** Übernommene Vorschläge für diese Sitzung – sie stehen nicht mehr in der Karte (W8c). */
+  uebernommen?: number;
   onOeffnen: () => void;
 }) {
   const k = kachelVon(s.beginn, gemeindeZeitzone());
@@ -81,11 +86,18 @@ function SitzungZeile({
               : ''}
           </small>
           {/* Unter dem Datum, nicht daneben – am Handy drückte das Schild den Titel zusammen. */}
-          {vorschlaege > 0 && (
+          {(vorschlaege > 0 || uebernommen > 0) && (
             <span className={styles.vorschlaege}>
-              <Marke art="info">
-                {vorschlaege} {vorschlaege === 1 ? 'Vorschlag' : 'Vorschläge'}
-              </Marke>
+              {vorschlaege > 0 && (
+                <Marke art="info">
+                  {vorschlaege} {vorschlaege === 1 ? 'Vorschlag' : 'Vorschläge'} offen
+                </Marke>
+              )}
+              {uebernommen > 0 && (
+                <Marke art="gut">
+                  {uebernommen} {uebernommen === 1 ? 'Vorschlag' : 'Vorschläge'} übernommen
+                </Marke>
+              )}
             </span>
           )}
         </span>
@@ -364,11 +376,9 @@ export function Sitzungen({
       : {}),
     ...(leitung ? { ablehnen: (v: Vorschlag) => setVorschlagFenster({ art: 'ablehnen', v }) } : {}),
   });
-  const offeneFuerZeile = (s: Sitzung) =>
-    vorschlaege.filter(
-      (v) =>
-        v.stand === 'offen' && zielSitzung(v, kommend, heute, zone)?.schluessel === s.schluessel,
-    ).length;
+  const offeneFuerZeile = (s: Sitzung) => offeneFuer(vorschlaege, s, kommend, heute, zone).length;
+  const uebernommenFuerZeile = (s: Sitzung) =>
+    uebernommenFuer(vorschlaege, s, kommend, heute, zone);
   const vorschlagFensterAnzeigen = () => {
     if (!vorschlagFenster || !gruppe || !mOrt) return null;
     if (vorschlagFenster.art === 'ablehnen') {
@@ -665,6 +675,7 @@ export function Sitzungen({
                     key={s.schluessel}
                     s={s}
                     vorschlaege={offeneFuerZeile(s)}
+                    uebernommen={uebernommenFuerZeile(s)}
                     onOeffnen={() => setOffen(s)}
                   />
                 ))}
@@ -687,6 +698,8 @@ export function Sitzungen({
           </section>
           {mOrt && (
             <VorschlaegeKarte
+              gruppe={gruppe.id}
+              leitung={leitung}
               liste={vorschlaege}
               kommend={kommend}
               heute={heute}

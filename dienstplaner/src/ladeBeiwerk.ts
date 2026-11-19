@@ -6,6 +6,7 @@
 import { ctAlleSeiten, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { dienstAusAnfragen, type MeinDienstKurz } from '@shared/dienstplan/meineDienste';
 import { ApiError } from '@ui/ct/fehler';
+import { erweiterungsLink } from '@ui/erweiterung/kuerzel';
 import { abwesenheitPort } from '@ui/ct/abwesenheitPort';
 import { ctAbwesenheiten } from '@shared/absences/abwesenheiten';
 import type { CtAbsence, CtAgenda, CtSong } from '@shared/ct/typen';
@@ -65,7 +66,7 @@ export async function ladeMusikApp(): Promise<string | null> {
   const musik = (module ?? []).find(
     (m) => typeof m.shorty === 'string' && m.shorty.startsWith('musik-app'),
   );
-  return musik ? `${ctBasis()}/ccm/${String(musik.shorty)}/` : null;
+  return musik ? erweiterungsLink(ctBasis(), String(musik.shorty)) : null;
 }
 
 /**

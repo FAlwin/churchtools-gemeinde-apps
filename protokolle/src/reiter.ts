@@ -1,5 +1,6 @@
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { reiterName } from '@shared/protokolle/hinweis';
+import { erweiterungsLink } from '@ui/erweiterung/kuerzel';
 
 /** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1) und – nur für Admins – Verwaltung (S2-2). */
 export type ReiterId = 'start' | 'sitzungen' | 'todos' | 'verwaltung';
@@ -42,7 +43,7 @@ export function sitzungsLink(
   gruppe: number,
   sitzung: string,
 ): string {
-  return `${basis.replace(/\/+$/, '')}/ccm/${encodeURIComponent(kuerzel)}/${adresseFuerSitzung(gruppe, sitzung)}`;
+  return erweiterungsLink(basis, kuerzel, adresseFuerSitzung(gruppe, sitzung));
 }
 
 /**

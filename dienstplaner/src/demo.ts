@@ -1078,6 +1078,28 @@ export function demoStarten(fall: string): void {
         ),
       );
     }
+    // „Erinnern“ (E5c-5): `POST /events/send` verschickt in der Demo nichts – wie ChurchTools meldet es `sentRecipientIds` und
+    // `rejectedRecipientIds`. Clara Dyck (52) hat „keine Mail-Adresse“: sie kommt als abgelehnt zurück.
+    if (url.pathname === '/api/events/send' && methode === 'POST') {
+      const an = (rumpf as { recipients?: number[] } | undefined)?.recipients ?? [];
+      return new Promise((fertig) =>
+        setTimeout(
+          () =>
+            fertig(
+              new Response(
+                JSON.stringify({
+                  data: {
+                    sentRecipientIds: an.filter((id) => id !== 52),
+                    rejectedRecipientIds: an.filter((id) => id === 52),
+                  },
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } },
+              ),
+            ),
+          500,
+        ),
+      );
+    }
     if (url.pathname === '/api/csrftoken') {
       return Promise.resolve(new Response(JSON.stringify({ data: 'demo' }), { status: 200 }));
     }

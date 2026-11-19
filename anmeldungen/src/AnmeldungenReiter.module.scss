@@ -481,3 +481,18 @@
     }
   }
 }
+
+// F7c: Häkchen „Diese Antworten kommen mit“ im Reiter „Team-Mail“ – Überschrift wie bei `.feld` (Formular).
+.teamFragen {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: 4px;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}

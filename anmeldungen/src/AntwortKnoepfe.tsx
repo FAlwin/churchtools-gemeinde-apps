@@ -11,8 +11,11 @@ export function AntwortKnoepfe({
   feld,
   wert,
   onWert,
+  wer = 'ChurchTools füllt sie je Person',
 }: {
   namen: readonly string[];
+  /** Wer die Antworten einsetzt – die Team-Mail (F7c) füllt das Formular selbst. */
+  wer?: string;
   /** Das Textfeld, in das eingefügt wird – für die Schreibmarke. */
   feld: RefObject<HTMLTextAreaElement | null>;
   wert: string;
@@ -35,7 +38,7 @@ export function AntwortKnoepfe({
   return (
     <>
       <p className={a.leise}>
-        Antwort einfügen – ChurchTools füllt sie je Person:{' '}
+        Antwort einfügen – {wer}:{' '}
         {namen.map((n) => (
           <button
             key={n}

@@ -21,12 +21,14 @@ import { optionRest } from '@shared/anmeldung/kontingent';
 import {
   PasstNicht,
   anmeldungAufbauen,
+  kontaktVon,
   mitLink,
   personenNamen,
   type Abgeschickt,
   type CtFormular,
   type PreisWahl,
 } from '@shared/anmeldung/senden';
+import { teamMailText, teamMailVon, teamPersonen } from '@shared/anmeldung/teamMail';
 import { WARTEN_MS, zielFehler } from './laden';
 
 /**
@@ -166,7 +168,7 @@ export async function abschicken(
     throw fehler;
   }
   const namen = personenNamen(e, antworten);
-  const mail = typeof antworten.anmeldung.mail === 'string' ? antworten.anmeldung.mail.trim() : '';
+  const mail = kontaktVon(e, antworten).mail;
   const ergebnis: Abgeschickt = { personen: [], mail };
   const reihe = nur ?? antworten.personen.map((_, i) => i);
   for (const [n, i] of reihe.entries()) {
@@ -223,7 +225,40 @@ export async function abschicken(
       break;
     }
   }
+  await teamMail(basis, e, antworten, ergebnis, nr);
   return ergebnis;
+}
+
+/**
+ * **Die Team-Mail** (F7c) – über „Leiter kontaktieren“ an alle Leiter der Gruppe (gemessen M2), für die Personen, die
+ * dieser Aufruf angemeldet hat („Noch einmal“ schickt dann eine eigene für den Rest). Absender ist, wer anmeldet:
+ * Antworten gehen an sie. **Die Anmeldung steht schon** – scheitert die Mail (Netz, keine Leitung mit Mail-Adresse →
+ * 500), bleibt die Ergebnis-Seite, wie sie ist; die Leitung sieht die Anmeldung ja in der Erweiterung.
+ */
+async function teamMail(
+  basis: string,
+  e: OeffentlicheEinstellungen,
+  antworten: Antworten,
+  ergebnis: Abgeschickt,
+  nr: string | undefined,
+): Promise<void> {
+  if (!teamMailVon(e).an) return;
+  const personen = teamPersonen(ergebnis.personen);
+  if (!personen.length) return;
+  try {
+    const k = kontaktVon(e, antworten);
+    await anfrage(`${basis}/mailToLeaders`, {
+      method: 'POST',
+      body: JSON.stringify({
+        token: await neuerToken(basis),
+        name: `${k.vor} ${k.nach}`.trim() || personen[0].name,
+        email: k.mail || ergebnis.mail,
+        message: teamMailText(e, antworten, personen, nr),
+      }),
+    });
+  } catch (x) {
+    console.warn('Team-Mail nicht verschickt', x);
+  }
 }
 
 async function neuerToken(basis: string): Promise<string> {

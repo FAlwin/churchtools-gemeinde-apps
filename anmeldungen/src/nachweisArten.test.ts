@@ -7,6 +7,7 @@ import {
   NACHWEIS_ABLAUF_NAME,
   NACHWEIS_FELDER,
   NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_TEILNEHMER_RECHTE,
   nachweisEinstellungenLesen,
   nachweisFeldAnlage,
   nachweisGruppenName,
@@ -108,12 +109,17 @@ describe('Anlegen einer neuen Nachweis-Art', () => {
     });
   });
 
-  it('Rechte: genau die fünf der Leiter-Rolle, Teilnehmer keine', async () => {
+  it('Rechte: genau die fünf der Leiter-Rolle, an der Teilnehmer-Rolle nur „Gruppeninfos sehen“ (M6)', async () => {
     await nachweisArtSichern(EINGABE, ICH);
     expect(falsch.basis.rechte.get(54)).toEqual(
       NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
     );
-    expect(falsch.basis.rechte.get(53)).toBeUndefined();
+    expect(falsch.basis.rechte.get(53)).toEqual(
+      NACHWEIS_TEILNEHMER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
+    );
+    expect(NACHWEIS_TEILNEHMER_RECHTE).toEqual([
+      { authId: 10102, name: 'Gruppeninfos sehen', dataId: 1 },
+    ]);
   });
 
   it('Felder: drei, Stufe aus der Konstante, nicht im Anmeldeformular', async () => {

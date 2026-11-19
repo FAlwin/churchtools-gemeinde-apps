@@ -11,11 +11,20 @@ import {
   nachweisEinstellungenFehler,
   nachweisNameFehler,
   type NachweisAb,
+  type NachweisEinstellungen,
 } from '@shared/anmeldung/nachweise';
+import {
+  antragVorgabe,
+  nachweisMailVorgabe,
+  type NachweisAntrag,
+} from '@shared/anmeldung/nachweisAntrag';
+import { AntragAbschnitt, type AntragFormular } from './AntragAbschnitt';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
 import {
   NACHWEIS_SCHRITTE,
   NACHWEIS_SCHRITT_TEXT,
+  antragLaden,
+  gemeindeLogoLaden,
   ichLaden,
   nachweisArtSichern,
   type NachweisArt,
@@ -28,14 +37,12 @@ import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import n from './Nachweise.module.scss';
 
-/** Die Vorgabe für eine neue Art – frei änderbar; `[Vorname]` ist der einzige Platzhalter der Mail. */
+/** Die Vorgabe des Betreffs für eine neue Art – frei änderbar; der Text (`nachweisMailVorgabe`) nennt bei „Mit Antrag“ den Weg zur Bescheinigung. */
 const VORLAGE_BETREFF = 'Bitte Nachweis vorlegen';
-const VORLAGE_TEXT =
-  'Hallo [Vorname],\n\nfür deine Mitarbeit brauchen wir einen Nachweis von dir. Alles Weitere findest du in ChurchTools unter „Meine Gruppen“. Zeig den Nachweis danach einer Vertrauensperson.\n\nDie Einladung zu ChurchTools kommt in einer eigenen Mail.';
 
 /**
  * **„Nachweis-Art“** (N1b, Entwurf `n-nachweise-v2`, Ansicht 3) – anlegen und bearbeiten: Name, Gültigkeit, die Aufforderung an
- * die Person und die Vertrauenspersonen. Der Abschnitt „Antrag (Bescheinigung)“ kommt mit N1c und N1d.
+ * die Person und die Vertrauenspersonen. Dazu der **Antrag als Bescheinigung** (N1c: Baukasten mit A4-Vorschau; die eigene PDF kommt mit N1d).
  *
  * Gespeichert wird alles in ChurchTools (`nachweisArtSichern`) und danach nachgelesen. **Scheitert ein Schritt**, bleibt das
  * Fenster offen und sagt, was steht und was fehlt; „Nochmal“ legt nichts doppelt an (das Fenster merkt sich die Gruppe).
@@ -44,12 +51,15 @@ const VORLAGE_TEXT =
 export function NachweisArtFenster({
   art,
   grundlage,
+  gemeinde = null,
   onClose,
   onFertig,
 }: {
   /** `null`: neue Art. */
   art: NachweisArt | null;
   grundlage: NachweisGrundlage;
+  /** Name der Gemeinde – Vorgabe für den Briefkopf des Antrags. */
+  gemeinde?: string | null;
   onClose: () => void;
   /** Alles gespeichert und nachgelesen – die Seite lädt neu. */
   onFertig: (text: string) => void;
@@ -61,7 +71,23 @@ export function NachweisArtFenster({
   const [jahre, setJahre] = useState<number | null>(art?.einstellungen?.gueltigJahre ?? 3);
   const [ab, setAb] = useState<NachweisAb>(art?.einstellungen?.ab ?? 'ausstellung');
   const [betreff, setBetreff] = useState(art?.einstellungen?.betreff ?? VORLAGE_BETREFF);
-  const [text, setText] = useState(art?.einstellungen?.text ?? VORLAGE_TEXT);
+  // Der Text der Mail: Eine neue Art folgt der Vorgabe (sie nennt den Namen der Art und den Weg zum Antrag), bis jemand selbst schreibt.
+  const [eigenerText, setEigenerText] = useState<string | null>(art?.einstellungen?.text ?? null);
+
+  // Der Antrag (N1c): Texte kommen in den Datenblock der Art, die Bilder nur ins HTML der Vorlage.
+  const antragArt = art?.einstellungen?.antrag;
+  const antragVorg = antragVorgabe(gemeinde);
+  const [antrag, setAntrag] = useState<AntragFormular>({
+    an: art ? (antragArt?.an ?? false) : true,
+    logo: antragArt?.logo ?? antragVorg.logo,
+    briefkopf: antragArt?.briefkopf ?? antragVorg.briefkopf,
+    ueberschrift: antragArt?.ueberschrift ?? antragVorg.ueberschrift,
+    text: antragArt?.text ?? antragVorg.text,
+    logoBild: antragArt?.vorlageId ? { art: 'unveraendert' } : { art: 'keins' },
+    unterschrift: antragArt?.vorlageId ? { art: 'unveraendert' } : { art: 'keins' },
+  });
+  const [vorlageId, setVorlageId] = useState<number | null>(antragArt?.vorlageId ?? null);
+  const text = eigenerText ?? nachweisMailVorgabe(name, antrag.an);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   // Die Vertrauenspersonen: bei einer neuen Art zuerst die Person, die gerade anlegt.
@@ -81,7 +107,39 @@ export function NachweisArtFenster({
   const [eingabeFehler, setEingabeFehler] = useState<string | null>(null);
   const [ergebnis, setErgebnis] = useState<NachweisErgebnis | null>(null);
 
-  const einstellungen = { gueltigJahre: jahre ?? 0, ab, betreff, text };
+  const gemeindeLogoStand = useLaden(() => gemeindeLogoLaden(), []).stand;
+  const gemeindeLogo =
+    gemeindeLogoStand.art === 'fertig'
+      ? gemeindeLogoStand.daten
+      : gemeindeLogoStand.art === 'fehler'
+        ? null
+        : undefined;
+  const bisherStand = useLaden(
+    () => (antragArt?.vorlageId ? antragLaden(antragArt.vorlageId) : null),
+    [antragArt?.vorlageId],
+  ).stand;
+  const bisher =
+    bisherStand.art === 'fertig' ? bisherStand.daten : bisherStand.art === 'laedt' ? 'laedt' : null;
+
+  // Nur eine Art mit Antrag (oder die schon einen hatte) trägt ihn im Datenblock; „aus“ behält die Nummer der Vorlage.
+  const antragDaten: NachweisAntrag | undefined =
+    antrag.an || antragArt
+      ? {
+          an: antrag.an,
+          logo: antrag.logo,
+          briefkopf: antrag.briefkopf,
+          ueberschrift: antrag.ueberschrift,
+          text: antrag.text,
+          vorlageId,
+        }
+      : undefined;
+  const einstellungen: NachweisEinstellungen = {
+    gueltigJahre: jahre ?? 0,
+    ab,
+    betreff,
+    text,
+    ...(antragDaten ? { antrag: antragDaten } : {}),
+  };
   const fehler =
     nachweisNameFehler(name) ??
     nachweisEinstellungenFehler(einstellungen) ??
@@ -130,11 +188,14 @@ export function NachweisArtFenster({
           einstellungen,
           vertrauen: bleiben.map((p) => p.personId),
           entfernen: [...entfernen],
+          antragBilder: { logo: antrag.logoBild, unterschrift: antrag.unterschrift },
         },
         ich?.personId ?? null,
       );
       // Die Gruppe merken – „Nochmal“ nach einem Teilerfolg findet sie wieder und legt keine zweite an.
       setGruppeId(erg.gruppeId);
+      // Ebenso die Vorlage des Antrags – „Nochmal“ legt keine zweite an.
+      if (erg.vorlageId !== null) setVorlageId(erg.vorlageId);
       setErgebnis(erg);
     } catch (e) {
       // Eingabefehler und „gibt es schon“: vor dem Schreiben abgewiesen, es steht nichts in ChurchTools.
@@ -186,6 +247,15 @@ export function NachweisArtFenster({
                 ? `Ablauf mit ${b.ablauf.schritte} Schritten, ${b.ablauf.an ? 'eingeschaltet' : 'ausgeschaltet'}`
                 : 'Ablauf nicht gefunden'}
             </li>
+            {b.antrag && (
+              <li>
+                <span className={b.antrag.haengt ? n.fertig : n.fehlt} aria-hidden="true">
+                  {b.antrag.haengt ? '✓' : '✗'}
+                </span>
+                Antrag als Bescheinigung (Vorlage Nummer {b.antrag.vorlageId})
+                {b.antrag.haengt ? '' : ' – hängt noch nicht an der Rolle „Teilnehmer“'}
+              </li>
+            )}
           </ul>
         ) : (
           <p className={f.hinweis}>
@@ -205,6 +275,7 @@ export function NachweisArtFenster({
       title={art ? `Nachweis-Art · ${art.name}` : 'Neue Nachweis-Art'}
       onClose={onClose}
       beschaeftigt={arbeitet}
+      breit
       knoepfe={
         <FensterKnopf disabled={arbeitet || !!fehler} onClick={() => void speichern()}>
           {arbeitet ? 'Wird gespeichert …' : teilErfolg ? 'Nochmal' : 'Speichern'}
@@ -238,8 +309,10 @@ export function NachweisArtFenster({
       {!art && ersteinrichtung && (
         <p className={f.hinweis}>
           Beim ersten Speichern legt die Erweiterung in ChurchTools die Gruppenart „Nachweis“ an und
-          setzt die Rechte der Leiter-Rolle. Das darf nur, wer „Berechtigungen verwalten“ hat –
-          sonst sagt dir das Fenster, wer es tun muss.
+          setzt die Rechte der Leiter-Rolle und an der Teilnehmer-Rolle „Gruppeninfos sehen“ (damit
+          sie ihren Antrag unter „Meine Gruppen“ finden – sie sehen dann die Gruppe und die Namen
+          der anderen Mitglieder, aber keine Angaben oder Ergebnisse). Das darf nur, wer
+          „Berechtigungen verwalten“ hat – sonst sagt dir das Fenster, wer es tun muss.
         </p>
       )}
 
@@ -308,7 +381,7 @@ export function NachweisArtFenster({
           ref={textRef}
           className={`${f.eingabe} ${a.rundmailText}`}
           value={text}
-          onChange={(ev) => setText(ev.target.value)}
+          onChange={(ev) => setEigenerText(ev.target.value)}
         />
       </label>
       <div className={f.feld}>
@@ -319,9 +392,16 @@ export function NachweisArtFenster({
           streng
           feld={textRef}
           wert={text}
-          onWert={setText}
+          onWert={setEigenerText}
         />
       </div>
+
+      <AntragAbschnitt
+        wert={antrag}
+        onAendern={(x) => setAntrag((alt) => ({ ...alt, ...x }))}
+        gemeindeLogo={gemeindeLogo}
+        bisher={bisher}
+      />
 
       <div className={f.feld}>
         <span>Vertrauenspersonen (dürfen sehen und abhaken)</span>

@@ -26,9 +26,12 @@ const WER_DARF = 'Neue Nachweis-Arten legt an, wer in ChurchTools „Berechtigun
  * leere Liste.
  */
 export function NachweisSeite({
+  gemeinde = null,
   onZurueck,
   onGeaendert,
 }: {
+  /** Name der Gemeinde – Vorgabe für den Briefkopf des Antrags. */
+  gemeinde?: string | null;
   onZurueck: () => void;
   onGeaendert: (a: Aenderung) => void;
 }) {
@@ -110,6 +113,9 @@ export function NachweisSeite({
                       : 'Noch nicht fertig eingerichtet – „Bearbeiten“ holt das nach.'}
                   </small>
                   <small className={n.personen}>
+                    {a.einstellungen?.antrag?.an ? 'Mit Antrag' : 'Ohne Antrag'}
+                  </small>
+                  <small className={n.personen}>
                     {a.vertrauen === null
                       ? 'Vertrauenspersonen: für dich nicht sichtbar'
                       : a.vertrauen.length === 0
@@ -139,6 +145,7 @@ export function NachweisSeite({
           key={fenster === 'neu' ? 'neu' : fenster.id}
           art={fenster === 'neu' ? null : fenster}
           grundlage={grundlage}
+          gemeinde={gemeinde}
           onClose={() => setFenster(null)}
           onFertig={(text) => {
             setFenster(null);

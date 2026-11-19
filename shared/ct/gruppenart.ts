@@ -192,9 +192,10 @@ export async function rechteErgaenzen(
   port: CtPort,
   rolleId: number,
   soll: readonly SollRecht[],
+  rolleName = 'Leiter',
 ): Promise<void> {
   const pfad = `/permissions/group_type_role/${rolleId}`;
-  const was = 'Die Rechte der Rolle „Leiter“';
+  const was = `Die Rechte der Rolle „${rolleName}“`;
   const vorher = await listeHolen<RechtRoh>(port, pfad, was);
   for (const r of fehlendeRechte(vorher, soll))
     await port.schicken(pfad, 'PUT', {

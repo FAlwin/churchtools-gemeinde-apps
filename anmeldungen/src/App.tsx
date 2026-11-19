@@ -166,7 +166,12 @@ export function App() {
     return (
       <ErweiterungsRahmen>
         {leiste}
-        <NachweisSeite key={stand} onZurueck={zurUebersicht} onGeaendert={setAenderung} />
+        <NachweisSeite
+          key={stand}
+          gemeinde={fertig?.start.gemeinde ?? null}
+          onZurueck={zurUebersicht}
+          onGeaendert={setAenderung}
+        />
       </ErweiterungsRahmen>
     );
   }

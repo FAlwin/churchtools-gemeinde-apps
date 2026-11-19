@@ -1,6 +1,6 @@
 # Gebetsabend – ChurchTools-Erweiterung
 
-> **Stand: erste Version v0.1.0 (06.11.2026, Bauplan G1–G4).** Die Erweiterung lässt sich installieren und
+> **Stand: v0.1.1 (19.11.2026: volle Fensterbreite, Esc schließt Fenster, Fenster am iPhone ruckeln nicht mehr; erste Version v0.1.0 vom 06.11.2026, Bauplan G1–G4).** Die Erweiterung lässt sich installieren und
 > **einrichten** (legt ihre zwei Kategorien an). Danach zeigt sie den **nächsten Termin** und **„Gebetsabend
 > zuhören“**; die Technik **startet und beendet** die Übertragung direkt in der Seite, sieht **wer zuhört** und stellt
 > den Kalender ein. Die Zuhörer richtet man am besten persönlich ein: anmelden mit „Angemeldet bleiben“, Passwort im

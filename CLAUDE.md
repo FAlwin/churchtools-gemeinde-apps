@@ -936,6 +936,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.40.1 (19.11.2026) = Fenster und Tastatur am iPhone.** Nur Fehlerbehebungen aus `ui/`: Fenster bei offener Tastatur
+  oben verankert und entprellt (#1023), Dokument-Scroll sofort zurück über `seiteNachOben` (ChurchTools setzt
+  `scroll-behavior: smooth`, #1026), Menüs im Bild, Esc. Kein neues Bedienelement → Touren unverändert. Mit demselben
+  Stand: `organigramm-v0.3.3` (Stufenwahl `TitelWahl`, #1022) und `gebetsabend-v0.1.1`. README-Bilder: offen ist nur #1031
+  (Dienstplaner E5c, unveröffentlicht) → mit dem nächsten Dienstplaner-Release aufnehmen.
 - **v2.40.0 (17.11.2026) = Ablaufvorlagen (E10).** Musik-App: **Mehr → Abläufe → Ablaufvorlagen** (ansehen, mit Recht
   `edit agenda templates` je Kalender anlegen/bearbeiten/umbenennen/löschen, #991) und **„Als Vorlage …“** im
   Bearbeiten-Modus des Ablaufs (neue Vorlage oder vorhandene ersetzen, nichts vorausgewählt, #999); Kern #979, gemeinsamer

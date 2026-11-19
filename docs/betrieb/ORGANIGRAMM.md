@@ -1,6 +1,6 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O9-3 (16.11.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: v0.3.3 (19.11.2026: Stufe über die Überschrift wählen, Fenster am iPhone ruckeln nicht mehr, Esc schließt Fenster; Gruppenwechsel O9 seit v0.3.0–v0.3.2)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines

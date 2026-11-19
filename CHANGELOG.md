@@ -7,6 +7,310 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.40.1] – 2026-11-19
+
+**Überblick.** Musik-App: nur Fehlerbehebungen aus dem gemeinsamen Teil – Fenster ruckeln und schrumpfen am iPhone nicht
+mehr, wenn die Tastatur aufgeht, und die Seite springt nach dem Antippen eines Feldes sofort zurück (in ChurchTools kroch sie
+vorher langsam nach); Filter- und Sortier-Menüs bleiben am Handy im Bild; Fenster schließen mit Esc; eine Abwesenheit für
+einen Termin sperrt den direkt anschließenden nicht mehr mit. Aus dem anderen Teil des Repos (eigene Erweiterungen, mit
+eigenen Releases): Protokolle v1.0.3–v1.0.9 (Punkte ordnen, Gruppenwahl über die Überschrift, To-Dos am Handy),
+Organigramm v0.3.3 (Stufenwahl über die Überschrift), Gebetsabend v0.1.1, Dienstplaner „Wann kann ich?“ (im Bau, noch
+nicht veröffentlicht), Anmeldungen F7 (Mails, noch nicht veröffentlicht).
+
+### Doku (Organigramm + Gebetsabend)
+
+- Anleitungen `docs/betrieb/ORGANIGRAMM.md` (Stand v0.3.3) und `docs/betrieb/GEBETSABEND.md` (Stand v0.1.1) auf den
+  aktuellen Stand gebracht.
+
+### Neu (Dienstplaner)
+
+- **„Wann kann ich?“ – Notiz zu jeder Antwort.** Unter jedem Termin, bei dem du Ja, Vielleicht oder Nein gewählt hast, steht
+  der Link **Notiz**. Er öffnet ein Fenster mit einem **Kommentar** (höchstens 140 Zeichen, z. B. „nur bis 12 Uhr“). Bei Ja und
+  Vielleicht kann ihn deine Dienstgruppe sehen; bei Nein steht er als **Kommentar der Abwesenheit** in ChurchTools. Wie
+  alles andere wird die Notiz erst mit „Speichern“ übernommen, „Verwerfen“ nimmt sie zurück.
+- **Nur bestimmte Dienste.** Bei Ja und Vielleicht kannst du im Notiz-Fenster einzelne deiner Dienste ausschalten (z. B. nur
+  Gesang, nicht Ton), wenn deine Antwort nicht für alle gilt. Mindestens ein Dienst bleibt an. Wechselst du zu Nein, wandert
+  der Kommentar in die Abwesenheit und die Auswahl der Dienste fällt weg.
+
+### Neu (Dienstplaner)
+
+- **„Wann kann ich?“ – Ja, Vielleicht oder Nein zu jedem Termin.** Der Reiter „Abwesenheiten“ heißt jetzt „Wann kann
+  ich?“ und hat statt des Hakens drei Knöpfe je Termin: **Ja**, **Vielleicht** und **Nein**. „Nein“ ist wie bisher
+  eine Abwesenheit in ChurchTools (nur für die Zeit des Termins); Ja und Vielleicht merkt sich der Dienstplaner bei
+  deiner Dienstgruppe (angezeigt wird es den Planern in einem nächsten Schritt). Wie bisher wird erst mit „Speichern“ übernommen, und „Verwerfen“
+  nimmt alles zurück. Wer eine Abwesenheit in ChurchTools hat, steht immer auf „Nein“.
+- Ist für deine Dienstgruppe noch kein Platz für die Antworten eingerichtet, sind Ja und Vielleicht gesperrt und oben
+  steht, woran es liegt – „Nein“ geht trotzdem. Wer in ChurchTools Kategorien anlegen darf, kann den Platz mit
+  „Einrichten“ gleich selbst anlegen. Klappt das Speichern nur zum Teil, steht da, was gespeichert ist und was noch
+  einmal versucht werden muss.
+- Die Adresse des Reiters bleibt gleich, gemerkte Links führen weiter dorthin. In der Musik-App ändert sich nichts.
+
+### Intern
+
+- Neue Seite `docs/betrieb/DATENSCHUTZ.md`: je App, welche Daten sie in ChurchTools liest und schreibt, was im
+  Erweiterungs-Speicher und im Browser liegt, welche Fremddienste (GitHub, VDO.Ninja) und Server beteiligt sind, wie
+  gelöscht wird – Vorlage für die Angaben im angekündigten Extension Store.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.9 gebracht: Nach dem Antippen eines Feldes springt die
+  Seite am iPhone sofort zurück, statt langsam und ruckelnd nachzurutschen.
+
+### Intern (Dienstplaner)
+
+- „Wann kann ich?“, Baustein 1b: Speicher-Kern für Ja/Vielleicht-Antworten (`shared/dienstplan/verfuegbarkeit.ts`) – eine Kategorie je Dienstgruppe, ein Wert je Person, geschrieben und nachgelesen, Vergangenes fällt raus. Noch ohne Oberfläche.
+
+### Behoben (alle Apps)
+
+- **Nach dem Antippen eines Feldes kriecht die Seite nicht mehr langsam und ruckelnd zurück.** Am iPhone schiebt sich
+  beim Tippen die ganze Seite samt ChurchTools-Leiste hoch. Das Zurückholen dauerte in ChurchTools rund vier Sekunden
+  und ruckelte, und erst danach passte sich das Fenster (zum Beispiel „Punkt vorschlagen“) an die Tastatur an. Jetzt
+  springt die Seite sofort zurück.
+
+### Behoben (Musik-App + Dienstplaner)
+
+- **Eine Abwesenheit für einen Termin sperrt den direkt anschließenden nicht mehr mit.** Wer bei den Abwesenheiten
+  einen Termin abhakt (zum Beispiel 9:00–10:30 Uhr), bekam bisher genau diese Zeit in ChurchTools eingetragen.
+  ChurchTools zählt aber schon das Berühren als Überschneidung: Ein Termin, der um 10:30 Uhr beginnt, galt dort beim
+  Einteilen ebenfalls als „abwesend“. Jetzt endet der Eintrag eine Minute früher (10:29 Uhr) – der eigene Termin bleibt
+  abgedeckt, der folgende frei.
+- **Die Anzeige rechnet die Grenze jetzt wie ChurchTools.** Ein älterer Eintrag, der genau zum Beginn des nächsten
+  Termins endet, gilt auch in der App für diesen Termin – vorher zeigte sie ihn als frei, während ChurchTools beim
+  Einteilen sperrte.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.8 gebracht: Die Gruppe wird über die Überschrift gewählt
+  („Bildtechnik ▾“) statt über eine Reiterleiste, und Fenster ruckeln bei offener iPhone-Tastatur nicht mehr.
+
+### Intern
+
+- **Anmeldungen: Zweite Mail** (Etappe F, Scheibe F7b; veröffentlicht wird erst nach Etappe F). Entwurf
+  `f7-mails-v1`, Klick-Runde 11 und Entscheidungen vom 18.11.2026, Messung M3 (Warten mit Dauer).
+  - Fenster „Mails“, neuer Reiter **„Zweite Mail“**: Schalter, Zeitpunkt (gleich nach der Bestätigung, X Tage nach der
+    Anmeldung oder an einem Tag), Betreff und Text mit „Antwort einfügen“ (wie in der Bestätigung). Darunter der Gruß.
+    Geht an jede Person mit Platz; wer nachrückt, bekommt sie dann. Schon Angemeldete bekommen sie nicht (Hinweis:
+    dafür die Rundmail). Die Karte „Mails“ nennt sie („Zweite Mail: ✓ 3 Tage nach der Anmeldung“).
+  - Gespeichert: Betreff und Text in der Beschreibung des Ablaufs „Warteliste“ (mit deren Text höchstens 1.000
+    Zeichen, Zähler), das „Wann“ in der von „Platz“ – dort stehen ihre Schritte, beides im selben Aufruf geschrieben.
+    Geschrieben wird erst „Warteliste“, dann „Platz“: Scheitert das Zweite, gibt es höchstens Text ohne Mail.
+  - Schritte: „sofort“ und „X Tage“ (Warten mit `duration`) direkt nach der Bestätigung, ein Tag nach Datum zwischen
+    den Erinnerungen. Ein Tag am Löschdatum oder danach wird abgelehnt. Nummern bleiben nur, wenn sie an derselben
+    Stelle bleibt; sonst kommen die alten Schritte über „bis heute“ (Mail aus) weg – wer dort wartet, läuft ohne die
+    zweite Mail weiter (gemessen M3). Das gilt jetzt allgemein für wegfallende Warte-Schritte
+    (`wegfallendeWarten`/`durchlassSchritte`, vorher nur für Erinnerungen).
+  - Nachstarten: „sofort“ ist dabei aus wie die Bestätigung; mit Warten bleibt sie an (neue Anmeldungen, die dort
+    warten, sollen sie bekommen – Neugestartete, die dort hängen bleiben, dann auch; Alwin: so lassen). Wer an einer
+    Erinnerung wartet, wird ihretwegen nicht neu gestartet.
+  - Abgleich und Nachlesen vergleichen sie mit; eine Kopie übernimmt sie von der Vorlage – mit Datum nicht.
+  - „Antwort einfügen“ ist jetzt ein eigener Baustein (`AntwortKnoepfe`) für Bestätigung und zweite Mail.
+  - Die vier Reiter des Fensters brechen am Handy zwei mal zwei um (vorher wäre „Zweite Mail“ abgeschnitten).
+
+### Behoben (alle Apps)
+
+- **Fenster ruckeln und schrumpfen nicht mehr, wenn am iPhone die Tastatur aufgeht.** Tippte man in ein Feld
+  (zum Beispiel „Thema“ bei „Punkt vorschlagen“), schrumpfte das Fenster über etwa zwei Sekunden in vielen kleinen
+  Sprüngen und rutschte dabei hoch und runter – bis das Feld hinter den Knöpfen verschwand. Jetzt wartet das Fenster,
+  bis sich die Tastatur gesetzt hat, und passt sich dann einmal an. Solange die Tastatur offen ist, bleibt der Kopf des
+  Fensters oben stehen, und das angetippte Feld wird ins Bild geholt. Beim Schließen der Tastatur ist das Fenster
+  sofort wieder groß.
+
+### Geändert (Protokolle + Organigramm)
+
+- **Die Gruppe wählt man jetzt über die Überschrift.** Im Reiter „Sitzungen“ der Protokolle (und bei Leitungen mehrerer Stufen
+  im Organigramm unter „Kinder & Jugend“ → „Meine Gruppe“) steht der Gruppenname als Knopf, zum Beispiel „Bildtechnik ▾“. Ein
+  Tipp klappt eine Liste mit allen Gruppen auf, die aktuelle hat ein Häkchen. Die breite Leiste mit einem Knopf je Gruppe ist
+  weg: Sie lief am Handy über und schob die ganze Seite zur Seite. Wer nur eine Gruppe sieht, sieht wie bisher eine einfache
+  Überschrift.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.7 gebracht: Die Kopfzeile der To-Dos ist am Handy
+  aufgeräumt, Sortieren und Filter zeigen nur ihr Symbol und ihre Menüs bleiben im Bild.
+
+### Behoben (Protokolle)
+
+- **To-Dos am Handy: Kopfzeile aufgeräumt.** „Sortieren“ war abgeschnitten („Sortierer“) – der Knopf zeigt jetzt wie
+  „Filter“ nur sein Symbol (blau getönt, wenn nicht nach Dringlichkeit sortiert wird). „Liste | Board“, Sortieren, Filter
+  und „+“ stehen in einer Zeile, „Nach Status | Nach Person“ darunter; vorher stand „+“ allein in einer eigenen Zeile.
+
+### Behoben (alle Apps)
+
+- **Filter- und Sortier-Menü bleiben am Handy im Bild.** Stand der Knopf weit links, ragte sein Menü links über den
+  Bildschirmrand hinaus; jetzt rückt es so weit nach rechts, dass es ganz zu sehen ist.
+
+### Intern
+
+- **Anmeldungen: Antworten in der Bestätigungsmail** (Etappe F, Scheibe F7a; veröffentlicht wird erst nach
+  Etappe F). Entwurf `f7-mails-v1`, Klick-Runde 11 und Messung M2 vom 18.11.2026.
+  - Fenster „Mails“, Reiter „Bestätigung“: Knöpfe **„Antwort einfügen“** setzen `[Frage]` (Kurzname) an die
+    Schreibmarke im eigenen Absatz, dazu `[Vorname]` und `[Anmelde-Nr.]`. ChurchTools ersetzt sie je Person durch die
+    Antwort – bei einer freien Antwort mit Text steht ihr Text da (bei Mehrfachauswahl in Klammern dahinter), die
+    Adresse kommt aus der Person. Eckige Klammern ohne Frage bleiben Text; das Fenster nennt sie.
+  - Schalter **„Alle Angaben mitschicken“**: eine Liste aller Antworten der Person unter dem eigenen Absatz, leere
+    fallen weg. Gespeichert als `alle` in der Beschreibung der Routine (ältere ohne das Feld = aus). Die Karte „Mails“
+    nennt es („✓ Bestätigung mit … allen Angaben und Link“).
+  - Warteliste und Erinnerung bleiben, wie sie sind. Häkchen-Fragen fehlen (nicht gemessen). Fragen zur Anmeldung
+    stehen nur in der Mail der ersten Person.
+  - Der Platzhalter geht über den **Namen der Spalte** in ChurchTools (er kann vom Text der Frage abweichen, „(2)“).
+    Speichern, Abgleich und Vorschau laden Platzhalter und Spalten an einer Stelle (`mailPlatzhalterLaden`); fehlt
+    eine Spalte, wird nichts geschrieben und die Meldung nennt die Frage – dieselbe Meldung zeigt jetzt auch die
+    Vorschau (`fehltInChurchTools`), statt die Antwort darin still wegzulassen.
+  - Neuer Baustein `shared/anmeldung/mailAntworten.ts`; `mailText` ist jetzt dort die eine Stelle für Text in
+    Routine-Mails, `PERSON_PLATZHALTER` (Vorname, Nachname) kommt aus `rundmail.ts`.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.6 gebracht: Im Protokoll-Text gibt es links weder „+“ noch
+  Griff mehr, nur Tabellen behalten ihren Griff.
+
+### Geändert (Protokolle)
+
+- **Links im Protokoll-Text gibt es weder „+“ noch Griff mehr.** Tagesordnungspunkte und Unterpunkte stellt man nur noch über
+  **„Punkte ordnen“** um; Stichpunkte, To-Dos und Beschlüsse lassen sich im Text nicht mehr ziehen. Eingefügt wird über
+  **„Einfügen“** und „/“, gelöscht mit Entf oder Rücktaste. Nur **Tabellen** behalten ihren Griff – sein Menü schaltet
+  Kopfzeile und Kopfspalte und löscht die Tabelle.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.9.0 gebracht: „Alle verwerfen“ in der Leiste, Fenster
+  schließen mit Escape.
+
+### Behoben (Dienstplaner)
+
+- **Der Zauberstab kennt gerade angelegte Entwürfe sofort.** Wer in dieser Sitzung schon als Entwurf eingetragen war,
+  zählte für den Zauberstab erst nach dem Neuladen als eingeplant – er konnte dieselbe Person am selben Tag noch einmal
+  vorschlagen.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.5 gebracht: Tagesordnungspunkte stellt man im Fenster
+  „Punkte ordnen“ um, im Text haben Überschriften keinen Griff mehr.
+
+### Neu (Protokolle)
+
+- **Punkte ordnen.** Tagesordnungspunkte und Unterpunkte stellt man jetzt in einem eigenen Fenster um: der Knopf **„Punkte
+  ordnen“** steht rechts in der Werkzeugleiste (am Handy als Erstes) und ist ausgegraut, solange es nichts zu ordnen gibt.
+  Das Fenster zeigt alle Punkte mit Nummer, Titel und einer Zeile, was mitwandert („3 Stichpunkte · 1 To-Do · 1 Beschluss“).
+  **Ein Punkt nimmt seine Unterpunkte und seinen ganzen Inhalt mit, die Ebene bleibt:** Unterpunkte nur innerhalb ihres Punkts,
+  Tagesordnungspunkte nur zwischen Tagesordnungspunkten; feste Punkte wie die Anwesenheit wandern normal mit, Text vor dem
+  ersten Punkt bleibt oben. Umstellen geht mit **Ziehen am Griff** (Maus sofort, Finger nach kurzem Halten, eine blaue Linie
+  zeigt nur erlaubte Stellen), mit **↑ ↓** an jeder Zeile und mit den Pfeiltasten auf dem Griff; **„Rückgängig“** im Fenster
+  nimmt den letzten Schritt zurück. Erst **„Übernehmen“** ändert das Protokoll, als ein Schritt (ein Strg+Z im Editor holt
+  alles zurück; To-Dos bleiben mit ihren Punkten verbunden). Am Handy füllt das Fenster den Bildschirm.
+
+### Geändert (Protokolle)
+
+- **Im Text lassen sich Tagesordnungspunkte und Unterpunkte nicht mehr ziehen.** Überschriften haben keinen Griff mehr (das
+  Ziehen des ganzen Abschnitts und „Nach oben/Nach unten“ im Griff-Menü entfallen – dafür gibt es „Punkte ordnen“). Listen,
+  Zitate, eigene Blöcke und Tabellen zieht man weiter einzeln am Griff; wer dabei mehrere Zeilen mit einer Überschrift
+  markiert hat, zieht nur die Zeile am Griff.
+
+### Intern (Protokolle)
+
+- Neue Regel `shared/protokolle/gliederung.ts` (Gliederung aus dem Dokument, Umstellen mit Ebenen-Prüfung am Ergebnis) auf
+  `abschnittEnde`/`abschnittVerschoben`; `ablegeStelle` und `nachbarStelle` sind entfallen, ebenso `abschnittZiehen.ts`
+  samt Linie über `dropCursor`. `Sheet` hat `handyVoll` (bildschirmfüllend am Handy).
+
+### Neu (Dienstplaner)
+
+- **Alle Entwürfe auf einmal verwerfen.** In der Leiste „N Entwürfe noch nicht gesendet“ steht neben „Ansehen und senden“
+  jetzt **Alle verwerfen**. Nach einer Rückfrage sind alle diese Entwürfe weg – auch die anderer Planer, und in der
+  Termin-Ansicht nur die dieses Termins. Gesendet wird dabei nichts, in ChurchTools ändert sich nichts. Bisher musste man
+  jeden Entwurf einzeln entfernen.
+
+### Behoben (alle Apps)
+
+- **Fenster schließen mit der Escape-Taste.** Bisher reagierte nur das Rückfrage-Fenster auf Escape – alle anderen
+  Fenster (etwa „Plätze“ und „Gast eintragen“ im Dienstplaner) blieben offen. Escape wirkt jetzt wie der Klick neben das
+  Fenster: Ein Fenster mit ungespeicherten Änderungen bleibt offen, und solange etwas gespeichert oder gesendet wird,
+  tut die Taste nichts. Liegen zwei Fenster übereinander (Rückfrage über einem Fenster, Menü in einem Fenster), schließt
+  sie nur das oberste.
+
+### Intern (alle Apps)
+
+- **README-Kopf neu:** Statt des Rundgangs aller Apps als GIF stehen oben Download-Knöpfe für jede App (mit der
+  Version des neuesten Releases) und direkt darunter die Übersicht „Die Apps“; jede App stellt sich weiter unten
+  in ihrem eigenen Abschnitt mit Video vor. `apps-uebersicht.gif` samt Namensschildern und Kurzvideos ist aus
+  `scripts/readme-bilder.mjs` entfernt.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.4 gebracht: Protokolle lassen sich löschen, To-Dos haben bei
+  den Zuständigen „Alle“, und ein Termin aus einem geteilten Kalender gehört der Gruppe mit dem Gruppentreffen.
+
+### Neu (Protokolle)
+
+- **Protokoll löschen.** Die Leitung kann ein Protokoll – Entwurf oder freigegeben – mit „Löschen“ im Kopf der Sitzung
+  (neben „Bearbeiten“ und „Teilen / PDF“, in der Ansicht und im Editor) endgültig löschen. Eine Rückfrage nennt Titel,
+  Datum und Status und sagt, dass sich das nicht rückgängig machen lässt. Darin wählt man: die **To-Dos aus diesem
+  Protokoll** mitlöschen (vorgewählt; sie werden als gelöscht vermerkt und stehen so im Verlauf) oder behalten, und
+  **in ChurchTools außerdem** den **Termin** (die Rückfrage nennt, wie viele Eingeladene die Mail „Termin gelöscht“
+  bekommen; bei einer Terminserie fällt nur diese Sitzung heraus, ohne Mail) und das **Gruppentreffen** (bei einem
+  abgeschlossenen geht die Anwesenheit verloren) – beide Häkchen sind anfangs aus. Danach steht die Liste der Sitzungen
+  mit dem Hinweis „Protokoll gelöscht“ da; bleiben Termin und Treffen bestehen, erscheint die Sitzung wieder „ohne
+  Protokoll“. Schreibt gerade jemand anderes am Protokoll, wird nichts gelöscht. Scheitert unterwegs ein Schritt,
+  bleibt das Fenster offen und sagt, was schon erledigt ist; ein zweiter Versuch macht nichts doppelt. Ein späteres
+  Protokoll, das das gelöschte als „Protokoll der letzten Sitzung“ festgehalten hat, zeigt dort „Das damalige Protokoll
+  gibt es nicht mehr“.
+
+### Intern (Protokolle)
+
+- „Sitzung absagen“ und „Protokoll löschen“ benutzen jetzt dieselben Bausteine für „Termin absagen“ (`terminAbsagen`,
+  auch Serie „nur diese“) und „Gruppentreffen löschen“ (`treffenLoeschen`) – das Verhalten von „Sitzung absagen“ ist
+  unverändert. Der Editor kann sein automatisches Speichern anhalten und fortsetzen (`anhalten`/`fortsetzen` an der
+  Schreibsteuerung), solange gelöscht wird. `KopfKnopf` hat einen roten Gefahr-Stil.
+
+### Neu (Protokolle)
+
+- **To-Dos: Schalter „Alle“ bei den Zuständigen.** Im Fenster „To-Do“ und im Editor (Schildchen „Wer?“) steht oben in der
+  Liste „Alle (N)“. Der Schalter wirkt genau so, als hätte man alle Mitglieder der Liste von Hand angehakt: an wählt alle,
+  aus wählt alle ab; nimmt man danach einen Haken weg, ist er wieder aus. Ein externer Name und Zuständige, die man nicht
+  kennt, bleiben unberührt; gespeichert wird weiter die Liste der Personen. Bei Einladungen gibt es den Schalter nicht.
+- **To-Dos mit vielen Zuständigen bleiben lesbar.** Karten, feste Punkte und das Schildchen „Wer?“ zeigen höchstens drei
+  Namen (die Karte auch höchstens drei Bilder), danach „+14“; die volle Liste steht im Tooltip. In Protokoll-Ansicht
+  (Lesen) und PDF bleibt die Liste vollständig.
+
+### Geändert (Protokolle)
+
+- **Mehrere Gruppen, ein Kalender: der Termin steht nur dort, wo das Gruppentreffen ist.** Nutzen mehrere Gruppen denselben
+  Kalender (live: Technik, Bildtechnik, Kamera, Stream, Tontechnik), stand jeder Termin mit Besprechungsanfrage in allen
+  diesen Gruppen unter „Kommend“, „Noch ohne Protokoll“ und „Protokoll nachtragen“ – und es entstand versehentlich ein
+  zweites Protokoll in der falschen Gruppe. Jetzt gilt „das Gruppentreffen entscheidet“: Ein Termin, zu dem eine Gruppe
+  weder ein eigenes Gruppentreffen noch ein eigenes Protokoll hat, wird dort ausgeblendet, wenn eine **andere Gruppe
+  desselben Kalenders** ein Gruppentreffen zur selben Startzeit oder ein Protokoll zu diesem Termin hat. Wer selbst eins
+  hat, sieht den Termin weiter (auch wenn die andere Gruppe ebenfalls eins hat); Gruppentreffen und Protokolle ohne Termin
+  sind nie betroffen. Trifft sich nur ein Teilteam, legt es in seiner Gruppe ein Gruppentreffen zur Startzeit an. Hat keine
+  Gruppe eins, bleibt der Termin überall sichtbar.
+- **Nicht lesbare Gruppen zählen nicht.** Darf die Person die andere Gruppe oder ihre Gruppentreffen nicht lesen, oder
+  antwortet ChurchTools gerade nicht, bleibt der Termin sichtbar und die Liste lädt trotzdem; im Browser-Log steht eine
+  Warnung mit dem Grund (ohne Namen). Die anderen Gruppen werden nur gefragt, wenn es überhaupt Termine ohne eigenes
+  Treffen oder Protokoll gibt.
+
+### Intern
+
+- `shared/protokolle/sitzungen.ts`: `fremdeTermineAus` (die eine Regel), `nurTermin`, `GruppeImSelbenKalender`. Angewandt an
+  der einen Stelle `ohneFremdeTermine` in `protokolle/src/lesen.ts` – für `ladeSitzungen` (damit auch die Startseite,
+  „Nächste Sitzungen“, die Suche und „Protokoll beginnen“) und `sitzungenOhneProtokoll`. `sitzungenOhneProtokoll` und
+  `sitzungenNochOhneProtokoll` brauchen dafür `modul`. Demo (`?demo`): Technik-Team teilt den Kalender mit dem Leitungsteam.
+
+### Behoben (Organigramm)
+
+- **Kindergruppen-Leitungen sehen ihre Wechsel-Gruppe.** „Einrichten“ legte die Wechsel-Gruppen „versteckt“ an. Eine
+  versteckte Gruppe sieht ein Mitglied nur mit dem Recht „versteckte Gruppe sehen“, das die App nicht setzt – eine Leitung
+  bekam deshalb „Forbidden to see group“, und der Reiter meldete „Ob jemand als Ausnahme noch bleibt, ist gerade nicht
+  lesbar“. Die Wechsel-Gruppen entstehen jetzt „eingeschränkt“; eine schon angelegte, noch versteckte Gruppe stellt der Lauf
+  beim Übernehmen um. **Ältere Installationen:** Die Seite „Einrichtung“ zeigt eine versteckte Wechsel-Gruppe als ⚠, und
+  „Stufen ändern → Änderungen schreiben“ stellt sie auf „eingeschränkt“ (mit Nachlesen). Lässt sich die Sichtbarkeit nicht
+  lesen, steht dort „nicht prüfbar“ – nie ein ⚠.
+- **„Es steht unter „Daten pflegen““:** In der Vorschau von „Einrichten“ hieß es bei einem einzigen Kind ohne Geburtstag
+  „Sie stehen …“; jetzt „Es steht …“ (bei mehreren weiter „Sie stehen …“).
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.0.3 gebracht: Neue Punkte aus „Mit KI füllen“ tragen auch
+  Beschlüsse, To-Dos und Termine; ein leeres Protokoll lässt sich so in einem Schritt füllen.
+
 ## [2.40.0] – 2026-11-17
 
 **Überblick.** Musik-App: **Ablaufvorlagen** – unter **Mehr → Abläufe** die Vorlagen nach Kalender ansehen und, mit dem

@@ -729,6 +729,22 @@ describe('„Jeder für sich“ (W8a)', () => {
     expect(bearbeiten(basis('N', { wer: [1, 2] }), { jeder: true }, 1, T1).jeder).toBe(true);
   });
 
+  it('bearbeiten setzt mehrere Teile auf einmal (Leitung hakt im Fenster für zwei andere ab)', () => {
+    const b = bearbeiten(
+      alle(),
+      {
+        teile: [
+          { person: 2, fertig: true },
+          { person: 3, fertig: true },
+        ],
+      },
+      1,
+      T2,
+    );
+    expect(Object.keys(b.fertig ?? {}).sort()).toEqual(['2', '3']);
+    expect(teilStand(b)).toEqual({ fertig: 2, gesamt: 3 });
+  });
+
   it('Teile aus zwei verschiedenen Ständen löschen sich nicht (frisch gelesen, dann angewendet)', () => {
     const start = alle();
     const vonA = (x: Aufgabe) => teilSetzen(x, 1, true, 1, T1);

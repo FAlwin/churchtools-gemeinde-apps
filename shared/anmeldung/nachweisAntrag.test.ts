@@ -120,19 +120,23 @@ describe('Bilder', () => {
     const html = antragHtml(BLATT);
     expect(html).toContain('data-nachweis="logo"');
     expect(html).toContain('data-nachweis="unterschrift"');
-    expect(antragBilderLesen(html)).toEqual({ logo: PNG, unterschrift: JPG });
+    expect(antragBilderLesen(html)).toEqual({ logo: PNG, unterschrift: JPG, hintergrund: null });
   });
 
   it('die https-Adresse des Gemeindelogos übersteht das Escapen (&)', () => {
     const html = antragHtml({ ...BLATT, logo: LOGO_URL, unterschrift: null });
     expect(html).toContain('&amp;b=2');
-    expect(antragBilderLesen(html)).toEqual({ logo: LOGO_URL, unterschrift: null });
+    expect(antragBilderLesen(html)).toEqual({
+      logo: LOGO_URL,
+      unterschrift: null,
+      hintergrund: null,
+    });
   });
 
   it('ohne Logo und ohne Unterschrift: Blatt ohne Bilder, aber lesbar (nicht „unlesbar“)', () => {
     const html = antragHtml({ ...BLATT, logo: null, unterschrift: null });
     expect(html).not.toContain('<img');
-    expect(antragBilderLesen(html)).toEqual({ logo: null, unterschrift: null });
+    expect(antragBilderLesen(html)).toEqual({ logo: null, unterschrift: null, hintergrund: null });
     // die Linie mit der Beschriftung steht trotzdem da
     expect(html).toContain('Unterschrift / Stempel der Gemeinde');
   });
@@ -159,7 +163,7 @@ describe('Bilder', () => {
 
   it('ein fremdes Bild im Blatt mit unzulässiger Adresse zählt nicht', () => {
     const html = `<div data-nachweis="blatt"><img data-nachweis="logo" src="javascript:x"></div>`;
-    expect(antragBilderLesen(html)).toEqual({ logo: null, unterschrift: null });
+    expect(antragBilderLesen(html)).toEqual({ logo: null, unterschrift: null, hintergrund: null });
   });
 });
 

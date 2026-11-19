@@ -49,6 +49,9 @@ import {
   antragBilderLesen,
   antragBlatt,
   antragHtml,
+  antragPdfHtml,
+  pdfBlatt,
+  type AntragBilderGelesen,
   type NachweisAntrag,
 } from '@shared/anmeldung/nachweisAntrag';
 import { absenderAus } from './ablaeufe';
@@ -213,10 +216,14 @@ export const NACHWEIS_SCHRITT_TEXT: Record<NachweisSchrittName, string> = {
 /** Was ein Bild im Antrag beim Speichern ist: neu gewählt, so lassen wie in ChurchTools, oder keins. */
 export type BildWahl = { art: 'neu'; src: string } | { art: 'unveraendert' } | { art: 'keins' };
 
-/** Eigenes Logo und Unterschrift – ohne Angabe bleiben beide, wie sie in ChurchTools stehen. */
+/**
+ * Eigenes Logo, Unterschrift und (eigene PDF, N1d) Hintergrund – ohne Angabe bleiben sie, wie sie in ChurchTools stehen.
+ * Ohne `hintergrund` gilt „unverändert“.
+ */
 export interface AntragBilder {
   logo: BildWahl;
   unterschrift: BildWahl;
+  hintergrund?: BildWahl;
 }
 
 export interface NachweisEingabe {
@@ -551,9 +558,7 @@ async function antragHtmlLesen(id: number): Promise<string> {
  * Die Bilder des gespeicherten Antrags fürs Fenster. `null` = nicht lesbar (Fehler, leer, kein Blatt von uns) – nie „keine
  * Bilder“: Das Fenster sagt dann, dass sie unverändert bleiben, und `antragSichern` schreibt nichts, was sie verlieren könnte.
  */
-export async function antragLaden(
-  vorlageId: number,
-): Promise<{ logo: string | null; unterschrift: string | null } | null> {
+export async function antragLaden(vorlageId: number): Promise<AntragBilderGelesen | null> {
   try {
     return antragBilderLesen(await antragHtmlLesen(vorlageId));
   } catch {
@@ -612,9 +617,9 @@ function bilderAufloesen(
   e: { logo: NachweisAntrag['logo']; bilder: AntragBilder },
   gemeindeUrl: string | null,
   bisher: { html: string | null; gelesen: boolean; fehler: unknown },
-): { logo: string | null; unterschrift: string | null } {
-  const vorhanden = (): { logo: string | null; unterschrift: string | null } => {
-    if (!bisher.gelesen) return { logo: null, unterschrift: null };
+): AntragBilderGelesen {
+  const vorhanden = (): AntragBilderGelesen => {
+    if (!bisher.gelesen) return { logo: null, unterschrift: null, hintergrund: null };
     const b = bisher.html === null ? null : antragBilderLesen(bisher.html);
     if (b === null)
       throw bisher.fehler instanceof ApiError && bisher.fehler.status !== 502
@@ -625,12 +630,13 @@ function bilderAufloesen(
           );
     return b;
   };
-  const wahl = (w: BildWahl, art: 'logo' | 'unterschrift'): string | null =>
+  const wahl = (w: BildWahl, art: keyof AntragBilderGelesen): string | null =>
     w.art === 'neu' ? w.src : w.art === 'keins' ? null : vorhanden()[art];
   return {
     logo:
       e.logo === 'ohne' ? null : e.logo === 'gemeinde' ? gemeindeUrl : wahl(e.bilder.logo, 'logo'),
     unterschrift: wahl(e.bilder.unterschrift, 'unterschrift'),
+    hintergrund: wahl(e.bilder.hintergrund ?? { art: 'unveraendert' }, 'hintergrund'),
   };
 }
 
@@ -688,7 +694,7 @@ async function antragInhaltSetzen(
   vorlage: VorlageRoh,
   html: string,
   bisher: string | null,
-  bilder: { logo: string | null; unterschrift: string | null },
+  bilder: AntragBilderGelesen,
 ): Promise<void> {
   if (bisher === html && vorlage.htmlFileId != null) return;
   const form = new FormData();
@@ -715,8 +721,12 @@ async function antragInhaltSetzen(
     throw new NichtUebernommen(
       'den Inhalt des Antrags (ChurchTools liefert ihn nicht wie hochgeladen zurück)',
     );
-  if (zurueck.logo !== bilder.logo || zurueck.unterschrift !== bilder.unterschrift)
-    throw new NichtUebernommen('Logo und Unterschrift im Antrag');
+  if (
+    zurueck.logo !== bilder.logo ||
+    zurueck.unterschrift !== bilder.unterschrift ||
+    zurueck.hintergrund !== bilder.hintergrund
+  )
+    throw new NichtUebernommen('die Bilder im Antrag (Logo, Unterschrift, Hintergrund)');
 }
 
 /**
@@ -765,9 +775,26 @@ async function antragSichern(a: {
     } catch (x) {
       bisher.fehler = x;
     }
-  const gemeindeUrl = antrag.logo === 'gemeinde' ? await gemeindeLogo() : null;
-  const bilder = bilderAufloesen({ logo: antrag.logo, bilder: a.bilder }, gemeindeUrl, bisher);
-  const html = antragHtml(antragBlatt(antrag, bilder));
+  // Die eigene PDF (N1d) braucht kein Logo; der Baukasten keinen Hintergrund. Bilder der anderen Art werden nicht gelesen.
+  const pdf = antrag.art === 'pdf';
+  const gemeindeUrl = !pdf && antrag.logo === 'gemeinde' ? await gemeindeLogo() : null;
+  const bilder = bilderAufloesen(
+    {
+      logo: pdf ? 'ohne' : antrag.logo,
+      bilder: pdf ? a.bilder : { ...a.bilder, hintergrund: { art: 'keins' } },
+    },
+    gemeindeUrl,
+    bisher,
+  );
+  if (pdf && (bilder.hintergrund === null || !antrag.pdf))
+    throw new ApiError(
+      422,
+      'Für die eigene PDF fehlt das Bild der Seite. Bitte die PDF noch einmal wählen. Es wurde nichts am Antrag geändert.',
+    );
+  const html =
+    pdf && antrag.pdf
+      ? antragPdfHtml(pdfBlatt(antrag.pdf, bilder))
+      : antragHtml(antragBlatt(antrag, bilder));
   await antragInhaltSetzen(vorlage, html, bisher.html, bilder);
   await vorlageAnRolle(a.gruppeId, a.teilnehmerRolle, vorlage.id, true);
 }
@@ -853,6 +880,13 @@ export async function nachweisArtSichern(
   )
     throw new ApiError(422, 'Bitte mindestens eine Person als Vertrauensperson eintragen.');
   if (e.gruppeId === null) await vorhandeneArtPruefen(e.name);
+  // Eigene PDF ohne Seitenbild: vor dem ersten Schreiben abweisen, nicht erst nach der halben Einrichtung.
+  if (
+    e.einstellungen.antrag?.an &&
+    e.einstellungen.antrag.art === 'pdf' &&
+    e.antragBilder?.hintergrund?.art === 'keins'
+  )
+    throw new ApiError(422, 'Bitte eine PDF mit dem Antragsformular wählen.');
   // Vor dem ersten Schreiben: ein fehlendes Recht für die Vorlage meldet sich hier, nicht erst nach der halben Einrichtung.
   if (e.einstellungen.antrag?.an) await vorlagenRechtPruefen();
 

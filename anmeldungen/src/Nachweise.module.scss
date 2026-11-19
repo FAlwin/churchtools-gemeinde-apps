@@ -167,3 +167,91 @@
   background: white;
   color: black;
 }
+
+// ── Eigene PDF (N1d): die Seite mit ziehbaren Platzhaltern ───────────────────────────────────────────────────────
+
+.pdfEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// Der Rahmen nimmt die Fensterbreite (höchstens eine gut greifbare Seite); die Seite darin hat ihre wirklichen Maße (mm)
+// und wird per transform verkleinert. Papier bleibt hell, auch im dunklen Thema.
+.pdfRahmen {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-tile);
+  box-shadow: var(--shadow);
+}
+
+.pdfSeite {
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: white;
+  color: black;
+}
+
+// Ein Platzhalter: genau der Textkasten wie im Antrag (Anker links oben), nur sichtbar gemacht. Ziehen = kein Scrollen.
+// Die unsichtbare ::after-Fläche macht ihn am Handy leichter zu treffen.
+.pdfChip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  outline: 1px dashed var(--blue);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.pdfChipGewaehlt {
+  outline: 2px solid var(--blue);
+  background: color-mix(in srgb, var(--blue) 24%, transparent);
+}
+
+.pdfUnterschriftLeer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12mm;
+  border: 1px dashed var(--blue);
+  color: var(--blue-ink);
+  font: 700 9pt/1 sans-serif;
+}
+
+// Unter der Seite: was zum gewählten Platzhalter gehört.
+.pdfWerkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.pdfDavor {
+  flex: 1;
+  min-width: 140px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+}

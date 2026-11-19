@@ -142,7 +142,7 @@ export interface NachweisEinstellungen {
   /** Mit `[Vorname]` als einzigem Platzhalter. */
   text: string;
   /**
-   * Der Antrag als Bescheinigung (N1c, Fassung 2 des Blocks) – ohne Bilder. Fehlt er, ist es eine Art ohne Antrag oder aus
+   * Der Antrag als Bescheinigung (N1c, Fassung 2; mit eigener PDF Fassung 3) – ohne Bilder. Fehlt er, ist es eine Art ohne Antrag oder aus
    * N1b (Fassung 1): „kein Antrag“.
    */
   antrag?: NachweisAntrag;
@@ -152,8 +152,8 @@ const ART_KENNUNG = 'nachweis-einstellungen';
 
 const einstellungenSchema = z.object({
   art: z.literal(ART_KENNUNG),
-  // 1: N1b (ohne Antrag), 2: N1c (mit `antrag`) – beide lesbar; geschrieben wird 1 ohne und 2 mit Antrag.
-  fassung: z.union([z.literal(1), z.literal(2)]),
+  // 1: N1b (ohne Antrag), 2: N1c (Baukasten), 3: N1d (eigene PDF) – alle lesbar; geschrieben wird 1 ohne, 2 mit Baukasten, 3 mit PDF.
+  fassung: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   gueltigJahre: z.number().int().min(NACHWEIS_JAHRE_MIN).max(NACHWEIS_JAHRE_MAX),
   ab: z.enum(['ausstellung', 'einsicht']),
   betreff: z.string().max(NACHWEIS_BETREFF_MAX),
@@ -193,7 +193,11 @@ export function nachweisEinstellungenFehler(e: NachweisEinstellungen): string | 
 export function nachweisEinstellungenPacken(e: NachweisEinstellungen): string {
   return textPacken(
     JSON.stringify(
-      einstellungenSchema.parse({ art: ART_KENNUNG, fassung: e.antrag ? 2 : 1, ...e }),
+      einstellungenSchema.parse({
+        art: ART_KENNUNG,
+        fassung: e.antrag?.art === 'pdf' ? 3 : e.antrag ? 2 : 1,
+        ...e,
+      }),
     ),
   );
 }

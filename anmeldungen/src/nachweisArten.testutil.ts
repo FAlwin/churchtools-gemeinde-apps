@@ -88,6 +88,8 @@ export class FalschesNachweisCt {
   ohneVorlagenListe = false;
   /** `GET /htmltemplates/{id}/html` liefert etwas, das kein Blatt von uns ist (z. B. von ChurchTools umgeformt). */
   htmlUmgeformt = false;
+  /** … liefert das Blatt, aber ohne das `<img>` mit der Markierung `data-nachweis="…"` – so ein Bild ginge beim Zurücklesen verloren (N1d). */
+  htmlOhneBild: 'hintergrund' | 'unterschrift' | 'logo' | null = null;
   /** Gruppen, deren Mitglieder man nicht lesen darf (403). */
   ohneMitgliederRecht = new Set<number>();
   ignoriere: string[] = [];
@@ -387,7 +389,11 @@ export class FalschesNachweisCt {
       const v = this.vorlagen.get(Number(m[1]));
       const html = v?.htmlFileId != null ? this.dateien.get(v.htmlFileId) : undefined;
       if (html === undefined) throw new ApiError(404, 'Kein Inhalt');
-      return { data: this.htmlUmgeformt ? '<p>umgeformt</p>' : html };
+      const ohne = this.htmlOhneBild;
+      const gekuerzt = ohne
+        ? html.replace(new RegExp(`<img data-nachweis="${ohne}"[^>]*>`), '')
+        : html;
+      return { data: this.htmlUmgeformt ? '<p>umgeformt</p>' : gekuerzt };
     }
     if ((m = /^\/groups\/(\d+)\/roles\/(\d+)$/.exec(pfad)) && methode === 'PATCH') {
       const [, gruppeNr, rolleNr] = m;

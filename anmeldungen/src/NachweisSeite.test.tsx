@@ -166,7 +166,11 @@ describe('Fenster „Nachweis-Art“', () => {
         vertrauen: [7],
         entfernen: [],
         // Neue Art: „Mit Antrag“ ist vorbelegt, Bilder gibt es noch keine.
-        antragBilder: { logo: { art: 'keins' }, unterschrift: { art: 'keins' } },
+        antragBilder: {
+          logo: { art: 'keins' },
+          unterschrift: { art: 'keins' },
+          hintergrund: { art: 'keins' },
+        },
       },
       7,
     ]);

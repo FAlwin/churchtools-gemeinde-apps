@@ -415,6 +415,19 @@ describe('Senden und Ergebnis', () => {
     ).toBeTruthy();
   });
 
+  it('niemand hat eine Mail-Adresse: Titel „Niemand erinnert“, „Keine Mail verschickt.“ – nicht „Erinnert“', async () => {
+    const senden = vi
+      .fn<MailSender>()
+      .mockResolvedValueOnce({ data: { sentRecipientIds: [], rejectedRecipientIds: [5] } })
+      .mockResolvedValueOnce({ data: { sentRecipientIds: [], rejectedRecipientIds: [11] } });
+    const { fenster } = await oeffnen({ senden });
+    await geladen(fenster);
+    fireEvent.click(sendeKnopf(fenster, /^An 2 Personen senden$/));
+    await screen.findByText('Keine Mail verschickt.');
+    expect(screen.getByText('Niemand erinnert')).toBeTruthy();
+    expect(screen.queryByText('Erinnert')).toBeNull();
+  });
+
   it('Abbruch (504 bei Carla): „1 von 2 verschickt“, Carla unklar und NICHT vorgewählt; Senden an die übrigen nur auf Wunsch', async () => {
     const senden = vi
       .fn<MailSender>()

@@ -81,7 +81,7 @@ export function ErinnernErgebnis({
   if (!nichtErledigt && !angehalten) {
     return (
       <Sheet
-        title="Erinnert"
+        title={verschickt.length > 0 ? 'Erinnert' : 'Niemand erinnert'}
         onClose={onClose}
         einblenden={false}
         cancelLabel={null}
@@ -89,9 +89,11 @@ export function ErinnernErgebnis({
       >
         <div className={`${styles.erfolg} ${verschickt.length > 0 ? styles.gut : styles.halb}`}>
           <b>
-            {verschickt.length === 1
-              ? '1 Mail verschickt.'
-              : `${verschickt.length} Mails verschickt.`}
+            {verschickt.length === 0
+              ? 'Keine Mail verschickt.'
+              : verschickt.length === 1
+                ? '1 Mail verschickt.'
+                : `${verschickt.length} Mails verschickt.`}
           </b>{' '}
           {namen(verschickt)}
           {verschickt.length > 0 ? '.' : ''}

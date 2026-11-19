@@ -129,6 +129,15 @@ describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
     expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ jeder: true });
   });
 
+  it('ein im Fenster gewählter Status geht bei „Jeder für sich“ nicht mit (der Gesamtstand ist abgeleitet)', async () => {
+    const { onFertig } = zeige();
+    fireEvent.click(knopf('Erledigt')); // Status-Umschalter, solange „Gemeinsam“ gilt
+    fireEvent.click(modus('Jeder für sich'));
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ jeder: true });
+  });
+
   it('wer schon fertig ist, steht mit Datum da; Leitung hakt für andere, ein Mitglied nur sich selbst', async () => {
     const { onFertig } = zeige({ eintrag: EINTRAG_JEDER, leitung: false });
     expect(screen.getByText(/✓ am/)).toBeTruthy();

@@ -721,6 +721,16 @@ describe('„Jeder für sich“ (W8a)', () => {
     expect(g.verlauf.filter((v) => v.art === 'modus').map((v) => v.jeder)).toEqual([true, false]);
   });
 
+  it('Modus „jeder“ aus „in Arbeit“: niemand ist fertig, der Gesamtstand ist „offen“ (mit Verlaufseintrag)', () => {
+    const arbeit = statusSetzen(basis('A', { wer: [1, 2] }), 'arbeit', 1, T1);
+    const j = modusSetzen(arbeit, true, 9, T2);
+    expect(j.status).toBe('offen');
+    expect(j.verlauf.slice(-2)).toEqual([
+      { am: T2, von: 9, art: 'modus', jeder: true },
+      { am: T2, von: 9, art: 'status', status: 'offen' },
+    ]);
+  });
+
   it('bearbeiten: Teil, Modus und Zuständige laufen über dieselben Funktionen; ein gezogener Status wird ignoriert', () => {
     const a = alle();
     const b = bearbeiten(a, { teile: [{ person: 1, fertig: true }], status: 'erledigt' }, 1, T2);

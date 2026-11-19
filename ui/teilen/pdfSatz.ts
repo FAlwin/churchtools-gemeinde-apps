@@ -71,12 +71,13 @@ export async function neuesDokument(
 export type Messen = (text: string, stil: Lauf['stil'], pt: number) => number;
 
 /**
- * Wie eine Spalte breit wird: `fest` = so breit wie ihr längster Wert, sie bricht nie um (Uhrzeit, Datum); sonst nach
+ * Wie eine Spalte breit wird: `fest` = so breit wie ihr längster Wert, sie bricht nie um (Uhrzeit, Datum) – mit `max`
+ * höchstens so breit, darüber bricht sie an Wortgrenzen um (Namen in „Personen × Termine“); sonst nach
  * Bedarf zwischen `min` und `max`. Die Spalte mit `rest` bekommt übrigen Platz; ohne `rest`-Spalte teilen ihn sich alle
  * übrigen – außer denen mit `ohneRest` (die Termin-Spalte des Plans soll die Dienste nicht nach rechts schieben).
  */
 export type SpaltenRegel =
-  | { fest: true }
+  | { fest: true; max?: number }
   | { min: number; max: number; rest?: boolean; ohneRest?: boolean };
 
 /** So breit wie der längste Absatz der Spalte (ohne Umbruch), mindestens wie ihr Kopf – samt Polster. */
@@ -120,7 +121,9 @@ export function tabellenBreiten(
       zeilen.map((z) => z[k]),
       messen,
     );
-  const fest = regeln.map((r, k) => ('fest' in r ? natur(k) + 0.5 : null));
+  const fest = regeln.map((r, k) =>
+    'fest' in r ? Math.min(natur(k) + 0.5, r.max ?? Infinity) : null,
+  );
   const bedarf = regeln.map((r, k) => {
     const f = fest[k];
     if (f !== null || 'fest' in r) return f ?? 0;

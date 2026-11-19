@@ -32,9 +32,18 @@ export async function planBlattPdf(b: PlanBlatt, schrift?: string): Promise<jsPD
  * Dienste – sonst rückten sie weit nach rechts (Probe 05.11.2026).
  */
 export function planSpalten(a: PlanBlattAbschnitt, innen: number, messen: Messen): number[] {
-  const regeln: SpaltenRegel[] = a.kopf.map((_, k) =>
-    k === 0 ? { min: 40, max: 75, ohneRest: true } : { min: 20, max: 55 },
-  );
+  // „Personen × Termine“: Name und Summe so breit wie nötig (der Name höchstens 60 mm) – auch wenn es eng wird, sonst
+  // bekäme der Name nur den gleichen Anteil wie ein Termin und bräche mitten im Wort um (Probe 19.11.2026).
+  // Den Platz teilen sich die Termine.
+  const regeln: SpaltenRegel[] = a.kopf.map((_, k): SpaltenRegel => {
+    if (a.personen)
+      return k === 0
+        ? { fest: true, max: 60 }
+        : k === a.kopf.length - 1
+          ? { fest: true }
+          : { min: 20, max: 55 };
+    return k === 0 ? { min: 40, max: 75, ohneRest: true } : { min: 20, max: 55 };
+  });
   return tabellenBreiten(a.kopf, a.zeilen, innen, messen, regeln);
 }
 

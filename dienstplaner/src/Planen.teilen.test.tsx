@@ -106,13 +106,16 @@ describe('Plan teilen (E8-2)', () => {
       'Eine Gruppe',
     ]);
     expect(an('Ganzer Plan')).toBe(true);
-    // Beim ganzen Plan keine Gruppenzeile, keine Reihe „Ansicht“, kein „Wir suchen noch …“.
+    // Beim ganzen Plan keine Gruppenzeile und kein „Wir suchen noch …“; dafür die Reihe „Ansicht“ (E8-4b).
     expect(screen.queryByRole('group', { name: 'Welche Gruppe' })).toBeNull();
-    expect(
-      within(screen.getByRole('dialog', { name: 'Plan teilen' })).queryByRole('group', {
-        name: /Ansicht/,
-      }),
-    ).toBeNull();
+    const ansicht = within(screen.getByRole('dialog', { name: 'Plan teilen' })).getByRole('group', {
+      name: 'Ansicht',
+    });
+    expect(Array.from(ansicht.querySelectorAll('button')).map((x) => x.textContent)).toEqual([
+      'Termine × Dienste',
+      'Personen × Termine',
+    ]);
+    expect(an('Termine × Dienste')).toBe(true);
     expect(screen.queryByText(/Wir suchen/)).toBeNull();
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
     expect(letztesBlatt().abschnitte.map((a) => a.titel)).toEqual(['Programm', 'Technik']);
@@ -200,5 +203,96 @@ describe('Plan teilen (E8-2)', () => {
     expect(an('Ganzer Plan')).toBe(true);
     expect(screen.queryByRole('group', { name: 'Welche Gruppe' })).toBeNull();
     await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
+  });
+
+  it('Ansicht „Personen × Termine“ (E8-4b): Blatt, Dateiname, Merken, bleibt beim Wechsel von Was und Gruppe', async () => {
+    zeige();
+    await oeffnen();
+    await waitFor(() => expect(letztesBlatt()?.titel).toBe('Dienstplan'));
+    expect(letztesBlatt().abschnitte[0].personen).toBeUndefined();
+    expect(letztesBlatt().dateiname).toBe('Dienstplan 18.10.-21.10.2026');
+
+    fireEvent.click(knopf('Personen × Termine'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Personen 18.10.-21.10.2026'),
+    );
+    expect(an('Personen × Termine')).toBe(true);
+    expect(letztesBlatt().untertitel).toContain('Personen × Termine');
+    // Eine Tabelle über alle Gruppen; Name und Gast, nicht der verborgene Platz.
+    expect(letztesBlatt().abschnitte).toHaveLength(1);
+    expect(letztesBlatt().abschnitte[0].titel).toBeNull();
+    expect(letztesBlatt().abschnitte[0].zeilen.map((z) => z[0].absaetze[0].laeufe[0].text)).toEqual(
+      ['Anna Test', 'Gastprediger'],
+    );
+    expect(JSON.stringify(letztesBlatt())).not.toContain('Echter Name');
+
+    // Was und Gruppe wechseln – die Ansicht bleibt.
+    fireEvent.click(knopf('Eine Gruppe'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Programm Personen 18.10.-21.10.2026'),
+    );
+    expect(an('Personen × Termine')).toBe(true);
+    fireEvent.click(knopf('Technik'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Technik Personen 18.10.-21.10.2026'),
+    );
+    expect(an('Personen × Termine')).toBe(true);
+    expect(JSON.stringify(letztesBlatt())).not.toContain('Gastprediger');
+    // Umgekehrt: die Ansicht wechseln – Was und Gruppe bleiben.
+    fireEvent.click(knopf('Termine × Dienste'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Technik 18.10.-21.10.2026'),
+    );
+    expect(an('Technik')).toBe(true);
+    fireEvent.click(knopf('Personen × Termine'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Technik Personen 18.10.-21.10.2026'),
+    );
+
+    // Zurück zum ganzen Plan: die Ansicht bleibt.
+    fireEvent.click(knopf('Ganzer Plan'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Personen 18.10.-21.10.2026'),
+    );
+    expect(an('Personen × Termine')).toBe(true);
+    fireEvent.click(knopf('Eine Gruppe'));
+    fireEvent.click(knopf('Technik'));
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Technik Personen 18.10.-21.10.2026'),
+    );
+
+    // Das Gerät merkt sich alles unter einem Schlüssel und stellt es beim erneuten Öffnen her.
+    expect(JSON.parse(localStorage.getItem('teilen.planBlatt') ?? '{}')).toEqual({
+      was: 'gruppe',
+      gruppe: 3,
+      ansicht: 'personen',
+    });
+    cleanup();
+    zeige();
+    await oeffnen();
+    expect(an('Eine Gruppe')).toBe(true);
+    expect(an('Technik')).toBe(true);
+    expect(an('Personen × Termine')).toBe(true);
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Technik Personen 18.10.-21.10.2026'),
+    );
+  });
+
+  it('die Ansicht allein wird gemerkt – ohne dass Was oder Gruppe angefasst werden (E8-4b)', async () => {
+    zeige();
+    await oeffnen();
+    fireEvent.click(knopf('Personen × Termine'));
+    expect(JSON.parse(localStorage.getItem('teilen.planBlatt') ?? '{}')).toEqual({
+      was: 'plan',
+      ansicht: 'personen',
+    });
+    cleanup();
+    zeige();
+    await oeffnen();
+    expect(an('Ganzer Plan')).toBe(true);
+    expect(an('Personen × Termine')).toBe(true);
+    await waitFor(() =>
+      expect(letztesBlatt().dateiname).toBe('Dienstplan Personen 18.10.-21.10.2026'),
+    );
   });
 });

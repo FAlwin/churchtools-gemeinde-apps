@@ -12,6 +12,7 @@ import {
   planBlatt,
   planBlattWahlAus,
   spanneLang,
+  type PlanBlattAnsicht,
   type PlanBlattQuelle,
   type PlanBlattWahl,
 } from '@shared/dienstplan/planBlatt';
@@ -24,7 +25,8 @@ const gruppenSchluessel = (id: number | null) => String(id ?? 'ohne');
 /**
  * **„Plan teilen“** (Bauplan E8-2/E8-4, Entwurf `e8-4-ansichten.html`) – aus „Planen“: **was** geteilt wird (der ganze
  * Plan oder eine Gruppe, dann mit einer Zeile der eingeblendeten Gruppen), jeweils für die Termine und Gruppen, die
- * „Planen“ gerade zeigt. Eine Reihe „Ansicht“ kommt mit E8-4b, sobald es mehr als eine gibt. Darunter die fertigen
+ * „Planen“ gerade zeigt, in der **Ansicht** „Termine × Dienste“ oder „Personen × Termine“ (E8-4b; „Je Person“ folgt in E8-4c).
+ * Was und Ansicht sind unabhängig – der Wechsel der einen behält die andere. Darunter die fertigen
  * Seiten und „Herunterladen“/„Teilen“ wie bei „Termin teilen“ (`ui/teilen/pdfFenster.tsx`). Das Gerät merkt sich die
  * Wahl (`planBlattWahlAus` liest auch die ältere Form); eine gemerkte Gruppe, die gerade ausgeblendet ist, wird zum ganzen
  * Plan.
@@ -114,6 +116,17 @@ export function PlanTeilenFenster({
             />
           </>
         )}
+        <div className={styles.ueber}>Ansicht</div>
+        <Segment<PlanBlattAnsicht>
+          verbunden
+          ariaLabel="Ansicht"
+          value={wahl.ansicht}
+          options={[
+            { value: 'termine', label: 'Termine × Dienste' },
+            { value: 'personen', label: 'Personen × Termine' },
+          ]}
+          onChange={(ansicht) => waehle({ ...wahl, ansicht })}
+        />
         <p className={styles.hinweis}>
           {zeitraum} · {quelle.spalten.length} {quelle.spalten.length === 1 ? 'Termin' : 'Termine'}{' '}
           – wie gerade in „Planen“ eingestellt.

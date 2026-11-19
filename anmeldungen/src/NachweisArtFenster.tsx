@@ -42,7 +42,7 @@ const VORLAGE_BETREFF = 'Bitte Nachweis vorlegen';
 
 /**
  * **„Nachweis-Art“** (N1b, Entwurf `n-nachweise-v2`, Ansicht 3) – anlegen und bearbeiten: Name, Gültigkeit, die Aufforderung an
- * die Person und die Vertrauenspersonen. Dazu der **Antrag als Bescheinigung** (N1c: Baukasten mit A4-Vorschau; die eigene PDF kommt mit N1d).
+ * die Person und die Vertrauenspersonen. Dazu der **Antrag als Bescheinigung** (N1c: Baukasten mit A4-Vorschau; N1d: eigene PDF mit ziehbaren Platzhaltern).
  *
  * Gespeichert wird alles in ChurchTools (`nachweisArtSichern`) und danach nachgelesen. **Scheitert ein Schritt**, bleibt das
  * Fenster offen und sagt, was steht und was fehlt; „Nochmal“ legt nichts doppelt an (das Fenster merkt sich die Gruppe).
@@ -85,6 +85,12 @@ export function NachweisArtFenster({
     text: antragArt?.text ?? antragVorg.text,
     logoBild: antragArt?.vorlageId ? { art: 'unveraendert' } : { art: 'keins' },
     unterschrift: antragArt?.vorlageId ? { art: 'unveraendert' } : { art: 'keins' },
+    art: antragArt?.art ?? 'baukasten',
+    hintergrund:
+      antragArt?.vorlageId && antragArt.art === 'pdf' ? { art: 'unveraendert' } : { art: 'keins' },
+    seite: antragArt?.pdf ?? null,
+    pdfName: null,
+    pdfHinweis: null,
   });
   const [vorlageId, setVorlageId] = useState<number | null>(antragArt?.vorlageId ?? null);
   const text = eigenerText ?? nachweisMailVorgabe(name, antrag.an);
@@ -131,6 +137,10 @@ export function NachweisArtFenster({
           ueberschrift: antrag.ueberschrift,
           text: antrag.text,
           vorlageId,
+          // Gespeichert wird die gewählte Art; Seite und Platzhalter der PDF nur, wenn sie gewählt ist.
+          ...(antrag.art === 'pdf'
+            ? { art: 'pdf' as const, ...(antrag.seite ? { pdf: antrag.seite } : {}) }
+            : {}),
         }
       : undefined;
   const einstellungen: NachweisEinstellungen = {
@@ -143,6 +153,9 @@ export function NachweisArtFenster({
   const fehler =
     nachweisNameFehler(name) ??
     nachweisEinstellungenFehler(einstellungen) ??
+    (antrag.an && antrag.art === 'pdf' && antrag.hintergrund.art === 'keins'
+      ? 'Bitte eine PDF mit dem Antragsformular wählen.'
+      : null) ??
     (bleiben.length === 0 ? 'Bitte mindestens eine Vertrauensperson eintragen.' : null);
 
   const hinzu = (p: Vertrauensperson) => {
@@ -188,7 +201,11 @@ export function NachweisArtFenster({
           einstellungen,
           vertrauen: bleiben.map((p) => p.personId),
           entfernen: [...entfernen],
-          antragBilder: { logo: antrag.logoBild, unterschrift: antrag.unterschrift },
+          antragBilder: {
+            logo: antrag.logoBild,
+            unterschrift: antrag.unterschrift,
+            hintergrund: antrag.hintergrund,
+          },
         },
         ich?.personId ?? null,
       );

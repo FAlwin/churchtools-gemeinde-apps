@@ -90,7 +90,9 @@ const aufruf = () => arten.nachweisArtSichern.mock.calls[0][0];
 beforeEach(() => {
   arten.ichLaden.mockReset().mockResolvedValue({ personId: 7, name: 'Anna Leitung' });
   arten.gemeindeLogoLaden.mockReset().mockResolvedValue(LOGO);
-  arten.antragLaden.mockReset().mockResolvedValue({ logo: PNG, unterschrift: JPG });
+  arten.antragLaden
+    .mockReset()
+    .mockResolvedValue({ logo: PNG, unterschrift: JPG, hintergrund: null });
   arten.nachweisArtSichern.mockReset().mockResolvedValue(alles);
   bild.antragBildLaden.mockReset().mockResolvedValue(PNG);
 });
@@ -229,6 +231,7 @@ describe('Neue Art', () => {
     expect(aufruf().antragBilder).toEqual({
       logo: { art: 'keins' },
       unterschrift: { art: 'neu', src: PNG },
+      hintergrund: { art: 'keins' },
     });
   });
 
@@ -263,6 +266,7 @@ describe('Art mit Antrag bearbeiten', () => {
     expect(aufruf().antragBilder).toEqual({
       logo: { art: 'unveraendert' },
       unterschrift: { art: 'unveraendert' },
+      hintergrund: { art: 'keins' },
     });
     expect(aufruf().einstellungen.antrag).toMatchObject({ an: true, vorlageId: 17 });
   });

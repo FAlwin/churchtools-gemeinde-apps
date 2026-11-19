@@ -157,7 +157,11 @@ describe('Neue Nachweis-Art mit Antrag', () => {
 
     // Inhalt: ChurchTools-Platzhalter, Unterschrift eingebettet und lesbar
     expect(inhalt()).toContain('{{person.firstName}}');
-    expect(antragBilderLesen(inhalt())).toEqual({ logo: GEMEINDE_LOGO, unterschrift: JPG });
+    expect(antragBilderLesen(inhalt())).toEqual({
+      logo: GEMEINDE_LOGO,
+      unterschrift: JPG,
+      hintergrund: null,
+    });
     expect(v.htmlFileId).not.toBeNull();
 
     // Block: Texte und Nummer der Vorlage – keine Bilder
@@ -418,7 +422,11 @@ describe('(e) Bilder gehen nicht verloren', () => {
     falsch.scheitert = [];
     const zweite = await nochmal(erste.gruppeId!, {}, { vorlageId: erste.vorlageId });
     expect(zweite.fehler).toBeNull();
-    expect(antragBilderLesen(inhalt())).toEqual({ logo: GEMEINDE_LOGO, unterschrift: null });
+    expect(antragBilderLesen(inhalt())).toEqual({
+      logo: GEMEINDE_LOGO,
+      unterschrift: null,
+      hintergrund: null,
+    });
   });
 
   it('ohne Änderung wird nichts noch einmal hochgeladen', async () => {
@@ -431,7 +439,11 @@ describe('(e) Bilder gehen nicht verloren', () => {
 
   it('antragLaden: lesbar → die Bilder; nicht lesbar (Fehler, kein Blatt) → null, nie „keine Bilder“', async () => {
     const erg = await angelegt();
-    expect(await antragLaden(vorlage().id)).toEqual({ logo: GEMEINDE_LOGO, unterschrift: JPG });
+    expect(await antragLaden(vorlage().id)).toEqual({
+      logo: GEMEINDE_LOGO,
+      unterschrift: JPG,
+      hintergrund: null,
+    });
     falsch.htmlUmgeformt = true;
     expect(await antragLaden(vorlage().id)).toBeNull();
     falsch.htmlUmgeformt = false;

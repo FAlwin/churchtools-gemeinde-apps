@@ -10,10 +10,18 @@ import {
   ANTRAG_UEBERSCHRIFT_MAX,
   antragBlatt,
   antragVorschau,
+  type AntragArt,
+  type AntragBilderGelesen,
   type AntragLogo,
+  type PdfFeld,
+  type PdfSeite,
+  antragOrt,
+  pdfVorgabeFelder,
 } from '@shared/anmeldung/nachweisAntrag';
 import { AntwortKnoepfe } from './AntwortKnoepfe';
 import { antragBildLaden } from './antragBild';
+import { antragPdfLaden } from './antragPdf';
+import { PdfSeiteEditor } from './PdfSeiteEditor';
 import type { BildWahl } from './nachweisArten';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
@@ -29,17 +37,23 @@ export interface AntragFormular {
   text: string;
   logoBild: BildWahl;
   unterschrift: BildWahl;
+  /** Gestaltung (N1d): Baukasten oder eigene PDF. Die Eingaben der anderen Art bleiben stehen, solange das Fenster offen ist. */
+  art: AntragArt;
+  /** Die erste Seite der PDF (JPEG), nur im HTML der Vorlage. */
+  hintergrund: BildWahl;
+  /** Seitenformat und Platzhalter der PDF – `null`: noch keine PDF gewählt. */
+  seite: PdfSeite | null;
+  /** Name der zuletzt gewählten PDF-Datei (nur zur Anzeige). */
+  pdfName: string | null;
+  /** „Nur die erste Seite wird verwendet“ bei mehrseitiger PDF. */
+  pdfHinweis: string | null;
 }
 
 /**
  * Die Bilder, die schon in ChurchTools stehen. `undefined` = es gibt noch keinen Antrag, `'laedt'` = wird gelesen,
  * `null` = nicht lesbar (dann bleiben die Bilder beim Speichern unverändert – `antragSichern` prüft das selbst).
  */
-export type BisherigeBilder =
-  | { logo: string | null; unterschrift: string | null }
-  | null
-  | undefined
-  | 'laedt';
+export type BisherigeBilder = AntragBilderGelesen | null | undefined | 'laedt';
 
 /** A4 bei 96 dpi – die Vorschau zeichnet das Blatt in dieser Größe und verkleinert es auf die Fensterbreite. */
 const A4_BREITE = 794;
@@ -179,9 +193,92 @@ function BildZeile({
   );
 }
 
+/** Die Zeile „PDF“: Name, Seitenzahl-Hinweis, „Andere PDF“ – wählt die Datei und liefert Bild, Format und Hinweis. */
+function PdfZeile({
+  wert,
+  vorhanden,
+  unlesbar,
+  onAendern,
+}: {
+  wert: AntragFormular;
+  /** Es gibt ein Seitenbild (neu gewählt oder schon gespeichert). */
+  vorhanden: boolean;
+  unlesbar: boolean;
+  onAendern: (aenderung: Partial<AntragFormular>) => void;
+}) {
+  const datei = useRef<HTMLInputElement>(null);
+  const [arbeitet, setArbeitet] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  async function waehlen(d: File) {
+    setArbeitet(true);
+    setFehler(null);
+    try {
+      const r = await antragPdfLaden(d);
+      // Schon gesetzte Platzhalter bleiben (eine andere PDF mit gleichem Aufbau); sonst die Vorgabe.
+      const felder: PdfFeld[] = wert.seite?.felder.length
+        ? wert.seite.felder
+        : pdfVorgabeFelder(antragOrt(wert.briefkopf));
+      onAendern({
+        hintergrund: { art: 'neu', src: r.hintergrund },
+        seite: { breiteMm: r.breiteMm, hoeheMm: r.hoeheMm, felder },
+        pdfName: d.name,
+        pdfHinweis:
+          r.seiten > 1
+            ? `Die PDF hat ${r.seiten} Seiten – nur die erste Seite wird verwendet.`
+            : null,
+      });
+    } catch (e) {
+      setFehler(fehlerMeldung(e).text);
+    }
+    setArbeitet(false);
+  }
+
+  return (
+    <div>
+      <div className={n.bild}>
+        <span className={n.bildMarke}>PDF</span>
+        <span className={n.bildText}>
+          <b>{wert.pdfName ?? (vorhanden ? 'Gespeicherte PDF' : 'Noch keine PDF')}</b>
+          <small className={f.hinweis}>
+            {wert.pdfHinweis ??
+              (vorhanden
+                ? unlesbar && wert.hintergrund.art === 'unveraendert'
+                  ? 'Das bisherige Bild der Seite lässt sich gerade nicht anzeigen – es bleibt beim Speichern, wie es ist.'
+                  : 'Erste Seite der PDF als Hintergrund.'
+                : 'Dein Antragsformular als PDF. Nur die erste Seite wird verwendet.')}
+          </small>
+        </span>
+        <span className={n.bildKnoepfe}>
+          <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => datei.current?.click()}>
+            {arbeitet ? 'Lädt …' : vorhanden ? 'Andere PDF' : 'PDF wählen'}
+          </FensterKnopf>
+        </span>
+      </div>
+      {fehler && (
+        <p className={f.fehler} role="alert">
+          {fehler}
+        </p>
+      )}
+      <input
+        ref={datei}
+        type="file"
+        accept="application/pdf"
+        hidden
+        aria-label="PDF hochladen"
+        onChange={(ev) => {
+          const d = ev.target.files?.[0];
+          ev.target.value = '';
+          if (d) void waehlen(d);
+        }}
+      />
+    </div>
+  );
+}
+
 /**
- * **„Antrag (Bescheinigung in ChurchTools)“** im Fenster „Nachweis-Art“ (N1c, Entwurf `n-nachweise-v2`, Ansicht 3, nur der
- * Baukasten): Schalter „Mit Antrag“, Logo, Briefkopf, Überschrift, Text mit Einfüge-Pillen, Unterschrift und die A4-Vorschau.
+ * **„Antrag (Bescheinigung in ChurchTools)“** im Fenster „Nachweis-Art“ (N1c, Entwurf `n-nachweise-v2`, Ansicht 3; N1d: Baukasten
+ * oder eigene PDF mit ziehbaren Platzhaltern): Schalter „Mit Antrag“, Logo, Briefkopf, Überschrift, Text mit Einfüge-Pillen, Unterschrift und die A4-Vorschau.
  * Die Eingaben gehören dem Fenster; hier wird nur angezeigt und geändert.
  */
 export function AntragAbschnitt({
@@ -209,14 +306,13 @@ export function AntragAbschnitt({
         ? (gemeindeLogo ?? null)
         : bildSrc(wert.logoBild, bisherige?.logo);
   const unterschriftSrc = bildSrc(wert.unterschrift, bisherige?.unterschrift);
+  const hintergrundSrc = bildSrc(wert.hintergrund, bisherige?.hintergrund);
 
+  const heute = useMemo(() => heuteText(), []);
   const html = useMemo(
     () =>
-      antragVorschau(
-        antragBlatt(wert, { logo: logoSrc, unterschrift: unterschriftSrc }),
-        heuteText(),
-      ),
-    [wert, logoSrc, unterschriftSrc],
+      antragVorschau(antragBlatt(wert, { logo: logoSrc, unterschrift: unterschriftSrc }), heute),
+    [wert, logoSrc, unterschriftSrc, heute],
   );
 
   return (
@@ -240,6 +336,64 @@ export function AntragAbschnitt({
       </div>
 
       {wert.an && (
+        <div className={f.feld} role="group" aria-label="Gestaltung des Antrags">
+          <span>Gestaltung</span>
+          <Segment<AntragArt>
+            ariaLabel="Gestaltung des Antrags"
+            value={wert.art}
+            onChange={(art) => onAendern({ art })}
+            options={[
+              { value: 'baukasten', label: 'Baukasten' },
+              { value: 'pdf', label: 'Eigene PDF' },
+            ]}
+          />
+        </div>
+      )}
+
+      {wert.an && wert.art === 'pdf' && (
+        <>
+          <PdfZeile
+            wert={wert}
+            vorhanden={
+              wert.hintergrund.art === 'neu' ||
+              (wert.hintergrund.art === 'unveraendert' && !!wert.seite)
+            }
+            unlesbar={unlesbar}
+            onAendern={onAendern}
+          />
+          {wert.seite ? (
+            <PdfSeiteEditor
+              seite={wert.seite}
+              hintergrund={hintergrundSrc}
+              unterschrift={unterschriftSrc}
+              heute={heute}
+              onFelder={(felder) => wert.seite && onAendern({ seite: { ...wert.seite, felder } })}
+            />
+          ) : (
+            <small className={f.hinweis}>
+              Danach erscheint hier die Seite. Die Platzhalter ziehst du an die richtige Stelle;
+              ChurchTools setzt die Angaben der Person als Text darüber.
+            </small>
+          )}
+          <BildZeile
+            marke="Unterschrift"
+            src={unterschriftSrc}
+            leerText="Noch keine Unterschrift. PNG oder JPG, steht an der Stelle des Platzhalters „Unterschrift“."
+            unlesbar={unlesbar && wert.unterschrift.art === 'unveraendert'}
+            bildVorhanden={
+              unterschriftSrc !== null || (unlesbar && wert.unterschrift.art === 'unveraendert')
+            }
+            onNeu={(src) => onAendern({ unterschrift: { art: 'neu', src } })}
+            onEntfernen={() => onAendern({ unterschrift: { art: 'keins' } })}
+          />
+          <small className={f.hinweis}>
+            Seite und Unterschrift werden nur in den Antrag eingebettet – nicht als Bild irgendwo in
+            ChurchTools abgelegt.
+          </small>
+        </>
+      )}
+
+      {wert.an && wert.art === 'baukasten' && (
         <>
           <div className={f.feld} role="group" aria-label="Logo">
             <span>Logo</span>

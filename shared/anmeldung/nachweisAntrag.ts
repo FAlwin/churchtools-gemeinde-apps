@@ -13,6 +13,12 @@
  * `data-nachweis="unterschrift"` – nie als Gruppenbild (M4: Gruppenbilder sind über den Link öffentlich). Beim Bearbeiten
  * liest `antragBilderLesen` sie wieder heraus; **`null` heißt „nicht lesbar“** (kein Blatt von uns) – dann darf nichts
  * überschrieben werden, was ein Bild verlieren könnte.
+ *
+ * **Zwei Gestaltungen (`art`)** – N1d: der **Baukasten** (Briefkopf, Überschrift, Text) und die **eigene PDF**: Die Gemeinde
+ * lädt ihr Antragsformular hoch, die Erweiterung macht aus der ersten Seite ein Hintergrundbild (JPEG, nur im HTML, markiert
+ * mit `data-nachweis="hintergrund"`), die Platzhalter liegen als absolut positionierte Felder darüber (`antragPdfHtml`).
+ * **Der Anker eines Feldes ist seine linke obere Ecke**, Positionen stehen in Prozent der Seite – Editor (`pdfFeldStil`) und
+ * HTML benutzen dieselbe Funktion, sonst säße der Text im PDF versetzt.
  */
 import { z } from 'zod';
 
@@ -22,6 +28,71 @@ export type AntragLogo = (typeof ANTRAG_LOGOS)[number];
 export const ANTRAG_BRIEFKOPF_MAX = 200;
 export const ANTRAG_UEBERSCHRIFT_MAX = 120;
 export const ANTRAG_TEXT_MAX = 3000;
+
+export const ANTRAG_ARTEN = ['baukasten', 'pdf'] as const;
+export type AntragArt = (typeof ANTRAG_ARTEN)[number];
+
+/** Was auf der eigenen PDF-Seite stehen kann: Angaben der Person (ChurchTools setzt sie ein) und die Unterschrift (Bild). */
+export const PDF_FELD_ARTEN = [
+  'NachnameVorname',
+  'Vorname',
+  'Nachname',
+  'Geburtsdatum',
+  'Adresse',
+  'Heute',
+  'Email',
+  'Unterschrift',
+] as const;
+export type PdfFeldArt = (typeof PDF_FELD_ARTEN)[number];
+
+/** Schriftgrößen (pt), aus denen man je Platzhalter wählt. */
+export const PDF_SCHRIFTEN = [9, 11, 13] as const;
+export const PDF_SCHRIFT_STANDARD = 11;
+/** Breite der Unterschrift in mm. */
+export const PDF_UNTERSCHRIFT_BREITEN = [30, 40, 50, 60, 70] as const;
+export const PDF_UNTERSCHRIFT_STANDARD = 50;
+export const PDF_FELDER_MAX = 20;
+export const PDF_VORSATZ_MAX = 60;
+/** Seitenformat, das die Erweiterung akzeptiert (mm) – A4 hoch ist der Normalfall. */
+export const PDF_MASS_MIN = 50;
+export const PDF_MASS_MAX = 500;
+
+/** Ein Platzhalter auf der Seite. `x`/`y` in Prozent der Seite, Anker = linke obere Ecke des Textkastens. */
+export interface PdfFeld {
+  id: string;
+  art: PdfFeldArt;
+  x: number;
+  y: number;
+  /** Schriftgröße in pt (bei der Unterschrift ohne Wirkung). */
+  pt: number;
+  /** Nur Unterschrift: Breite in mm. */
+  breiteMm?: number;
+  /** Nur Heute: Text davor, z. B. „Lohmar, “. */
+  vorsatz?: string;
+}
+
+/** Seitenformat und Platzhalter der eigenen PDF – **ohne Bild** (Hintergrund und Unterschrift stehen nur im HTML). */
+export interface PdfSeite {
+  breiteMm: number;
+  hoeheMm: number;
+  felder: PdfFeld[];
+}
+
+const pdfFeldSchema = z.object({
+  id: z.string().min(1).max(24),
+  art: z.enum(PDF_FELD_ARTEN),
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+  pt: z.number().int().min(6).max(24),
+  breiteMm: z.number().min(10).max(150).optional(),
+  vorsatz: z.string().max(PDF_VORSATZ_MAX).optional(),
+});
+
+const pdfSeiteSchema = z.object({
+  breiteMm: z.number().min(PDF_MASS_MIN).max(PDF_MASS_MAX),
+  hoeheMm: z.number().min(PDF_MASS_MIN).max(PDF_MASS_MAX),
+  felder: z.array(pdfFeldSchema).max(PDF_FELDER_MAX),
+});
 
 /** Die Einstellungen des Antrags, die im Datenblock der Art stehen – **ohne Bilder** (zu groß). */
 export interface NachweisAntrag {
@@ -35,6 +106,10 @@ export interface NachweisAntrag {
   text: string;
   /** Nummer der Vorlage in ChurchTools – `null`, solange es sie nicht gibt. */
   vorlageId: number | null;
+  /** Gestaltung (N1d, Fassung 3 des Blocks). Fehlt sie, ist es der Baukasten (N1c). Die Felder des anderen bleiben stehen. */
+  art?: AntragArt;
+  /** Seitenformat und Platzhalter der eigenen PDF (nur mit `art: 'pdf'` gebraucht). */
+  pdf?: PdfSeite;
 }
 
 export const antragSchema = z.object({
@@ -44,6 +119,8 @@ export const antragSchema = z.object({
   ueberschrift: z.string().max(ANTRAG_UEBERSCHRIFT_MAX),
   text: z.string().max(ANTRAG_TEXT_MAX),
   vorlageId: z.number().int().positive().nullable(),
+  art: z.enum(ANTRAG_ARTEN).optional(),
+  pdf: pdfSeiteSchema.optional(),
 });
 
 export const ANTRAG_VORGABE_UEBERSCHRIFT = 'Bestätigung zur Vorlage bei der Meldebehörde';
@@ -96,6 +173,7 @@ export const ANTRAG_BEISPIEL = {
   strasse: 'Bachweg 7',
   plz: '53797',
   ort: 'Lohmar',
+  email: 'lena.probst@example.org',
 } as const;
 
 const istPlatzhalter = (n: string): n is Platzhalter =>
@@ -113,6 +191,7 @@ export function antragUnbekannte(text: string): string[] {
 /** Was an den Einstellungen des Antrags nicht passt – `null`, wenn sie taugen. Gilt nur bei „Mit Antrag“. */
 export function antragFehler(a: NachweisAntrag): string | null {
   if (!a.an) return null;
+  if (a.art === 'pdf') return pdfSeiteFehler(a.pdf);
   if (a.briefkopf.length > ANTRAG_BRIEFKOPF_MAX)
     return `Der Briefkopf ist zu lang (höchstens ${ANTRAG_BRIEFKOPF_MAX} Zeichen).`;
   if (!a.ueberschrift.trim()) return 'Bitte eine Überschrift für den Antrag eintragen.';
@@ -127,6 +206,17 @@ export function antragFehler(a: NachweisAntrag): string | null {
   return null;
 }
 
+/** Was an der eigenen PDF-Seite nicht passt – `null`, wenn sie taugt. */
+export function pdfSeiteFehler(p: PdfSeite | undefined): string | null {
+  if (!p) return 'Bitte eine PDF mit dem Antragsformular wählen.';
+  const r = pdfSeiteSchema.safeParse(p);
+  if (!r.success) return 'Die Seite der PDF hat ein Format oder Platzhalter, die nicht passen.';
+  if (p.felder.length === 0) return 'Bitte mindestens einen Platzhalter auf die Seite setzen.';
+  if (p.felder.filter((f) => f.art === 'Unterschrift').length > 1)
+    return 'Die Unterschrift darf nur einmal auf der Seite stehen.';
+  return null;
+}
+
 /** Gleicher Antrag? (Zum Vergleichen nach dem Nachlesen; „kein Antrag“ und „kein Antrag“ sind gleich.) */
 export const gleicherAntrag = (a: NachweisAntrag | undefined, b: NachweisAntrag | undefined) =>
   a === b ||
@@ -137,7 +227,9 @@ export const gleicherAntrag = (a: NachweisAntrag | undefined, b: NachweisAntrag 
     a.briefkopf === b.briefkopf &&
     a.ueberschrift === b.ueberschrift &&
     a.text === b.text &&
-    a.vorlageId === b.vorlageId);
+    a.vorlageId === b.vorlageId &&
+    (a.art ?? 'baukasten') === (b.art ?? 'baukasten') &&
+    JSON.stringify(a.pdf ?? null) === JSON.stringify(b.pdf ?? null));
 
 // ── Bilder ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -146,6 +238,9 @@ const BILD_ADRESSE =
   /^(?:data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}|https:\/\/[^\s"'<>]+)$/;
 export const bildAdresseOk = (s: unknown): s is string =>
   typeof s === 'string' && BILD_ADRESSE.test(s);
+/** Nur eingebettet (`data:`) – für Hintergrund und Unterschrift der eigenen PDF: nie eine fremde Adresse im Antrag. */
+export const dataBildOk = (s: unknown): s is string =>
+  typeof s === 'string' && s.startsWith('data:') && BILD_ADRESSE.test(s);
 
 // ── HTML ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -248,18 +343,23 @@ export function antragHtml(b: AntragBlatt): string {
   ].join('\n');
 }
 
-/** Die Vorschau im Fenster: dasselbe Blatt, die Platzhalter durch die Beispielperson ersetzt (`heute` schon formatiert). */
-export function antragVorschau(b: AntragBlatt, heute: string): string {
+/** Die Beispielperson statt der ChurchTools-Platzhalter (`heute` schon formatiert) – für jede Vorschau dieselbe Ersetzung. */
+function beispielEinsetzen(html: string, heute: string): string {
   const x = ANTRAG_BEISPIEL;
-  return antragKoerper(b)
+  return html
     .replaceAll('{{person.firstName}}', x.vorname)
     .replaceAll('{{person.lastName}}', x.nachname)
     .replaceAll('{{person.birthday}}', x.geburtsdatum)
     .replaceAll('{{person.street}}', x.strasse)
     .replaceAll('{{person.zip}}', x.plz)
     .replaceAll('{{person.city}}', x.ort)
+    .replaceAll('{{person.email}}', x.email)
     .replaceAll('{{currentDate}}', antragEscape(heute));
 }
+
+/** Die Vorschau im Fenster: dasselbe Blatt, die Platzhalter durch die Beispielperson ersetzt (`heute` schon formatiert). */
+export const antragVorschau = (b: AntragBlatt, heute: string): string =>
+  beispielEinsetzen(antragKoerper(b), heute);
 
 /** Das Blatt aus den Einstellungen und den (schon aufgelösten) Bildern. */
 export const antragBlatt = (
@@ -273,29 +373,228 @@ export const antragBlatt = (
   unterschrift: bilder.unterschrift,
 });
 
+/** Die Bilder eines gespeicherten Blatts: Logo/Unterschrift (Baukasten), Hintergrund/Unterschrift (eigene PDF). */
+export interface AntragBilderGelesen {
+  logo: string | null;
+  unterschrift: string | null;
+  hintergrund: string | null;
+}
+
 /**
  * **Die Bilder aus dem HTML einer Vorlage** – oder `null`, wenn es kein Blatt von dieser Erweiterung ist (Marker fehlt:
  * jemand hat die Vorlage in ChurchTools umgebaut, ChurchTools hat das HTML umgeformt, die Antwort war leer). `null` ist
  * NICHT „keine Bilder“: Ohne Marker weiß man nicht, ob Bilder da waren – der Aufrufer darf dann nichts schreiben, das eins
- * verlieren könnte. Mit Marker und ohne `<img>` ist es ein Blatt ohne dieses Bild.
+ * verlieren könnte. Mit Marker und ohne `<img>` ist es ein Blatt ohne dieses Bild. Hintergrund und Unterschrift der eigenen
+ * PDF gelten nur als `data:`-Bild.
  */
-export function antragBilderLesen(
-  html: string,
-): { logo: string | null; unterschrift: string | null } | null {
+export function antragBilderLesen(html: string): AntragBilderGelesen | null {
   if (!html.includes('data-nachweis="blatt"')) return null;
-  const erg: { logo: string | null; unterschrift: string | null } = {
-    logo: null,
-    unterschrift: null,
-  };
+  const erg: AntragBilderGelesen = { logo: null, unterschrift: null, hintergrund: null };
   for (const tag of html.match(/<img\b[^>]*>/g) ?? []) {
-    const art = /\bdata-nachweis="(logo|unterschrift)"/.exec(tag)?.[1] as
-      | 'logo'
-      | 'unterschrift'
+    const art = /\bdata-nachweis="(logo|unterschrift|hintergrund)"/.exec(tag)?.[1] as
+      | keyof AntragBilderGelesen
       | undefined;
     const src = /\bsrc="([^"]*)"/.exec(tag)?.[1];
     if (!art || src === undefined) continue;
     const adresse = entschluesseln(src);
-    if (bildAdresseOk(adresse) && erg[art] === null) erg[art] = adresse;
+    const ok = art === 'hintergrund' ? dataBildOk(adresse) : bildAdresseOk(adresse);
+    if (ok && erg[art] === null) erg[art] = adresse;
   }
   return erg;
+}
+
+// ── Eigene PDF (N1d) ────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Was ChurchTools für die Angaben einsetzt (gemessen 19.11.2026; `person.email` wie die übrigen `person.…`). */
+const CT_PDF_TEXT: Record<Exclude<PdfFeldArt, 'Unterschrift'>, string> = {
+  NachnameVorname: `${CT_PLATZHALTER.Nachname}, ${CT_PLATZHALTER.Vorname}`,
+  Vorname: CT_PLATZHALTER.Vorname,
+  Nachname: CT_PLATZHALTER.Nachname,
+  Geburtsdatum: CT_PLATZHALTER.Geburtsdatum,
+  Adresse: CT_PLATZHALTER.Adresse,
+  Heute: CT_PLATZHALTER.Heute,
+  Email: '{{person.email}}',
+};
+
+/** So heißt der Platzhalter auf dem Knopf und im Editor. */
+export const PDF_FELD_NAME: Record<PdfFeldArt, string> = {
+  NachnameVorname: '[Nachname], [Vorname]',
+  Vorname: '[Vorname]',
+  Nachname: '[Nachname]',
+  Geburtsdatum: '[Geburtsdatum]',
+  Adresse: '[Adresse]',
+  Heute: '[Heute]',
+  Email: '[E-Mail]',
+  Unterschrift: 'Unterschrift',
+};
+
+/** Das Blatt der eigenen PDF: Format, Bilder (`data:`) und Platzhalter. */
+export interface PdfBlatt extends PdfSeite {
+  /** Die erste Seite der PDF als JPEG-`data:`-Adresse – `null`: noch keine. */
+  hintergrund: string | null;
+  /** Die Unterschrift als `data:`-Adresse – `null`: keine (das Feld bleibt dann leer). */
+  unterschrift: string | null;
+}
+
+/** Das Blatt aus den Einstellungen der Seite und den (schon aufgelösten) Bildern. */
+export const pdfBlatt = (
+  p: PdfSeite,
+  bilder: { hintergrund: string | null; unterschrift: string | null },
+): PdfBlatt => ({ ...p, hintergrund: bilder.hintergrund, unterschrift: bilder.unterschrift });
+
+/** pt (PDF-Einheit) in mm, auf 0,1 mm gerundet (A4: 595,28 pt → 210 mm). */
+export const ptZuMm = (pt: number): number => Math.round(((pt * 25.4) / 72) * 10) / 10;
+
+const zahl = (n: number): string => String(Math.round(n * 100) / 100);
+
+/** Ein Stil als Text für `style="…"` (aus camelCase wird kebab-case). */
+export const stilText = (o: Record<string, string>): string =>
+  Object.entries(o)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${v}`)
+    .join(';');
+
+/** Der Stil der Seite: Maße in mm, Bezugspunkt der Felder. */
+export const pdfSeitenStil = (
+  p: Pick<PdfSeite, 'breiteMm' | 'hoeheMm'>,
+): Record<string, string> => ({
+  position: 'relative',
+  width: `${zahl(p.breiteMm)}mm`,
+  height: `${zahl(p.hoeheMm)}mm`,
+  overflow: 'hidden',
+});
+
+/** Das Hintergrundbild füllt die ganze Seite. */
+export const pdfHintergrundStil = (
+  p: Pick<PdfSeite, 'breiteMm' | 'hoeheMm'>,
+): Record<string, string> => ({
+  position: 'absolute',
+  left: '0',
+  top: '0',
+  width: `${zahl(p.breiteMm)}mm`,
+  height: `${zahl(p.hoeheMm)}mm`,
+});
+
+/**
+ * **Die EINE Stelle für die Lage eines Platzhalters** – der Editor (React-Stil) und das HTML für ChurchTools rechnen
+ * beide damit. Anker = linke obere Ecke (`left`/`top` in Prozent der Seite, kein `transform`), Text einzeilig.
+ */
+export function pdfFeldStil(f: PdfFeld): Record<string, string> {
+  const lage = { position: 'absolute', left: `${zahl(f.x)}%`, top: `${zahl(f.y)}%` };
+  if (f.art === 'Unterschrift')
+    return {
+      ...lage,
+      width: `${zahl(f.breiteMm ?? PDF_UNTERSCHRIFT_STANDARD)}mm`,
+      height: 'auto',
+      margin: '0',
+    };
+  return {
+    ...lage,
+    margin: '0',
+    padding: '0',
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontSize: `${zahl(f.pt)}pt`,
+    lineHeight: '1.2',
+    color: '#000',
+    whiteSpace: 'nowrap',
+  };
+}
+
+/** Der Text eines Feldes mit den ChurchTools-Platzhaltern (escaped, `{`/`}` nur aus unseren eigenen `{{…}}`). */
+export function pdfFeldChurchTools(f: PdfFeld): string {
+  if (f.art === 'Unterschrift') return '';
+  return `${antragEscape(f.vorsatz ?? '')}${CT_PDF_TEXT[f.art]}`;
+}
+
+/** Der Text eines Feldes mit der Beispielperson – so zeigt ihn der Editor (`heute` schon formatiert). */
+export const pdfFeldBeispiel = (f: PdfFeld, heute: string): string =>
+  f.art === 'Unterschrift' ? '' : entschluesseln(beispielEinsetzen(pdfFeldChurchTools(f), heute));
+
+/** **Das Blatt der eigenen PDF** (ohne Dokument-Rahmen): Hintergrund ganzseitig, darüber die Felder an ihrer Stelle. */
+export function antragPdfKoerper(b: PdfBlatt): string {
+  const teile = [
+    `<div data-nachweis="blatt" data-art="pdf" style="${stilText(pdfSeitenStil(b))}">`,
+  ];
+  if (dataBildOk(b.hintergrund))
+    teile.push(
+      `<img data-nachweis="hintergrund" src="${antragEscape(b.hintergrund)}" alt="" style="${stilText(pdfHintergrundStil(b))}">`,
+    );
+  for (const f of b.felder) {
+    if (f.art === 'Unterschrift') {
+      if (dataBildOk(b.unterschrift))
+        teile.push(
+          `<img data-nachweis="unterschrift" src="${antragEscape(b.unterschrift)}" alt="" style="${stilText(pdfFeldStil(f))}">`,
+        );
+      continue;
+    }
+    teile.push(
+      `<span data-nachweis="feld" style="${stilText(pdfFeldStil(f))}">${pdfFeldChurchTools(f)}</span>`,
+    );
+  }
+  teile.push('</div>');
+  return teile.join('\n');
+}
+
+/** **Das HTML für ChurchTools**: Seitenformat der PDF, kein Rand (gemessen M5: 1 Seite, Felder landen exakt). */
+export function antragPdfHtml(b: PdfBlatt): string {
+  return [
+    '<!doctype html>',
+    '<html lang="de">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<title>Antrag</title>',
+    `<style>@page { size: ${zahl(b.breiteMm)}mm ${zahl(b.hoeheMm)}mm; margin: 0 } html, body { margin: 0; padding: 0 }</style>`,
+    '</head>',
+    '<body style="margin:0">',
+    antragPdfKoerper(b),
+    '</body>',
+    '</html>',
+  ].join('\n');
+}
+
+/** Dasselbe Blatt mit der Beispielperson – die Vorschau rechnet nicht anders als das HTML für ChurchTools. */
+export const antragPdfVorschau = (b: PdfBlatt, heute: string): string =>
+  beispielEinsetzen(antragPdfKoerper(b), heute);
+
+/** Die nächste freie Kennung (`f1`, `f2` …) – nie eine doppelte. */
+export function pdfNeueId(felder: readonly PdfFeld[]): string {
+  const hoechste = felder.reduce((m, f) => Math.max(m, Number(/^f(\d+)$/.exec(f.id)?.[1] ?? 0)), 0);
+  return `f${hoechste + 1}`;
+}
+
+/** Ein neuer Platzhalter mit den Vorgaben der Art (Schrift 11 pt, Unterschrift 50 mm). */
+export function pdfNeuesFeld(
+  felder: readonly PdfFeld[],
+  art: PdfFeldArt,
+  x: number,
+  y: number,
+  vorsatz?: string,
+): PdfFeld {
+  return {
+    id: pdfNeueId(felder),
+    art,
+    x,
+    y,
+    pt: PDF_SCHRIFT_STANDARD,
+    ...(art === 'Unterschrift' ? { breiteMm: PDF_UNTERSCHRIFT_STANDARD } : {}),
+    ...(art === 'Heute' && vorsatz ? { vorsatz } : {}),
+  };
+}
+
+/** Der Ort aus dem Briefkopf („… · 53797 Lohmar“) – `null`, wenn keiner zu erkennen ist. Vorgabe für „Ort, [Heute]“. */
+export function antragOrt(briefkopf: string): string | null {
+  const m = /\b\d{5}\s+([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.\- ]*?)\s*(?:[,·|;/\n]|$)/.exec(briefkopf);
+  return m?.[1] ? m[1].trim() : null;
+}
+
+/** Die Platzhalter beim ersten Hochladen: Name, Geburtsdatum, Adresse, „Ort, [Heute]“ und Unterschrift untereinander. */
+export function pdfVorgabeFelder(ort: string | null): PdfFeld[] {
+  const liste: PdfFeld[] = [];
+  const dazu = (art: PdfFeldArt, y: number, vorsatz?: string) =>
+    liste.push(pdfNeuesFeld(liste, art, 36, y, vorsatz));
+  dazu('NachnameVorname', 17.6);
+  dazu('Geburtsdatum', 23.1);
+  dazu('Adresse', 28.6);
+  dazu('Heute', 40.2, ort ? `${ort}, ` : undefined);
+  dazu('Unterschrift', 50);
+  return liste;
 }

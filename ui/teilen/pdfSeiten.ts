@@ -36,6 +36,40 @@ export async function renderPdfSeite(
   return seiteZeichnen(pdf, seite, scale);
 }
 
+/** Eine geöffnete PDF-Seite: Maße in pt (1 pt = 1/72 Zoll, nach Drehung der Seite), Seitenzahl und ein Zeichner für beliebigen Maßstab. */
+export interface PdfSeiteGeoeffnet {
+  /** Seitenzahl des ganzen Dokuments. */
+  seiten: number;
+  breitePt: number;
+  hoehePt: number;
+  /** Die Seite als Leinwand; `scale` 1 = 72 dpi. Darf mehrfach (mit anderem Maßstab) aufgerufen werden. */
+  zeichnen: (scale: number) => Promise<HTMLCanvasElement>;
+  /** Gibt das Dokument frei. */
+  schliessen: () => void;
+}
+
+/**
+ * Öffnet EINE Seite (1-basiert) und liefert, was man vor dem Zeichnen wissen will: Seitenzahl und Maße. Das Dokument bleibt
+ * offen, bis `schliessen()` – so lässt sich dieselbe Seite bei Bedarf kleiner nachzeichnen, ohne die PDF neu zu parsen
+ * (Hintergrund der eigenen PDF-Anträge, N1d). Wirft, wenn die PDF kaputt oder verschlüsselt ist (pdf.js-Ausnahmen).
+ */
+export async function pdfSeiteOeffnen(data: ArrayBuffer, seite = 1): Promise<PdfSeiteGeoeffnet> {
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  try {
+    const basis = (await pdf.getPage(seite)).getViewport({ scale: 1 });
+    return {
+      seiten: pdf.numPages,
+      breitePt: basis.width,
+      hoehePt: basis.height,
+      zeichnen: (scale) => seiteZeichnen(pdf, seite, scale),
+      schliessen: () => void pdf.destroy(),
+    };
+  } catch (e) {
+    void pdf.destroy();
+    throw e;
+  }
+}
+
 async function seiteZeichnen(
   pdf: pdfjsLib.PDFDocumentProxy,
   nr: number,

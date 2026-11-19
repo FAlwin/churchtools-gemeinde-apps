@@ -24,7 +24,7 @@
 >   Antippen des Dienstes seinen Block zu), **Fokus** (eine Person im ganzen Plan gelb umranden), **Ansehen und senden** bzw. **Alle verwerfen**, **Erinnern** (Mail an alle, die noch nicht geantwortet haben), **Teilen** = der ganze Plan
 >   oder eine Gruppe als PDF (Reihe „Was“, bei „Eine Gruppe“ dazu die Gruppen; „Wir suchen noch …“ gibt es seit E8-4a nicht mehr) in der Reihe **„Ansicht“**
 >   „Termine × Dienste“ (je Gruppe eine Tabelle) oder „Personen × Termine“ (eine Tabelle: eine Zeile je Eingeteiltem, alphabetisch, eine Spalte je nicht abgesagtem Termin,
->   hinten die Zahl der Dienste; ab elf Terminen in Blöcken zu je zehn; gezählt wie „Wer wie oft?“). Am Handy ein Termin auf einmal.
+>   hinten die Zahl der Dienste; ab neun Terminen in Blöcken zu je acht; gezählt wie „Wer wie oft?“). Am Handy ein Termin auf einmal.
 > - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
 >   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.

@@ -2,7 +2,7 @@
  * **Das Plan-Blatt** (Bauplan E8-2/E8-4, Entwürfe `e8-teilen.html`, `e8-4-ansichten.html`) – was aus „Planen“ aufs geteilte
  * PDF kommt: **was** (der ganze Plan mit je einem Abschnitt je Gruppe, oder nur eine Gruppe, z. B. für den Gruppenchat) in
  * welcher **Ansicht**: „Termine × Dienste“ (je Gruppe eine Tabelle) oder „Personen × Termine“ (E8-4b: eine Tabelle über alle
- * gewählten Gruppen, je Eingeteilter eine Zeile, je nicht abgesagtem Termin eine Spalte, höchstens zehn Termine je Tabelle;
+ * gewählten Gruppen, je Eingeteilter eine Zeile, je nicht abgesagtem Termin eine Spalte, höchstens acht Termine je Tabelle;
  * gezählt wird mit `werWieOft`, nichts nachgebaut); „Je Person“ folgt in E8-4c. Geteilt werden die
  * Termine und Gruppen, die „Planen“ gerade zeigt; Entwürfe stehen nicht im Plan, aufs Blatt kommt also nur Gesendetes. Gezeichnet wird in `ui/teilen/planBlattPdf.ts` – mit
  * denselben Zellen wie das Termin-Blatt (`terminBlatt.ts`).
@@ -144,8 +144,12 @@ function gruppenAbschnitt(
   };
 }
 
-/** Höchstens so viele Termine je Tabelle der Ansicht „Personen × Termine“ – darüber wird in Blöcke geteilt. */
-export const PERSONEN_TERMINE_MAX = 10;
+/**
+ * Höchstens so viele Termine je Tabelle der Ansicht „Personen × Termine“ – darüber wird in Blöcke geteilt. Bei zehn
+ * stießen auf A4 quer die Köpfe mit Uhrzeit („SO, 13.12. 18:00“) aneinander (Probe 19.11.2026); bei acht bleiben je
+ * Termin gut 25 mm.
+ */
+export const PERSONEN_TERMINE_MAX = 8;
 
 /**
  * Die Termin-Köpfe der Personen-Tabelle: „So, 06.12.“; kommt derselbe Tag in DIESER Tabelle mehrfach vor, steht bei diesen
@@ -174,7 +178,7 @@ function personenZelle(p: PersonEinsaetze, spalte: PlanSpalte): Zelle {
   return { absaetze: [{ laeufe }] };
 }
 
-/** Eine Personen-Tabelle für höchstens zehn Termine; `null`, wenn in ihnen niemand eingeteilt ist. */
+/** Eine Personen-Tabelle für höchstens acht Termine; `null`, wenn in ihnen niemand eingeteilt ist. */
 function personenAbschnitt(
   plan: Plan,
   spalten: readonly number[],

@@ -368,23 +368,23 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
     gruppen: pl.gruppen,
   });
 
-  it('bis zu zehn Termine eine Tabelle ohne Titel; ab elf in Blöcken mit Zeitraum, Personen und Summe je Block', () => {
-    expect(PERSONEN_TERMINE_MAX).toBe(10);
-    const zehn = planBlatt(zuQuelle(bauePlan(sonntage(10))), PERSONEN_WAHL);
-    expect(zehn.abschnitte).toHaveLength(1);
-    expect(zehn.abschnitte[0].titel).toBeNull();
-    expect(zehn.abschnitte[0].kopf).toHaveLength(12);
+  it('bis zu acht Termine eine Tabelle ohne Titel; ab neun in Blöcken mit Zeitraum, Personen und Summe je Block', () => {
+    expect(PERSONEN_TERMINE_MAX).toBe(8);
+    const acht = planBlatt(zuQuelle(bauePlan(sonntage(8))), PERSONEN_WAHL);
+    expect(acht.abschnitte).toHaveLength(1);
+    expect(acht.abschnitte[0].titel).toBeNull();
+    expect(acht.abschnitte[0].kopf).toHaveLength(10);
 
-    const pl = bauePlan(sonntage(11));
+    const pl = bauePlan(sonntage(9));
     const b = planBlatt(zuQuelle(pl), PERSONEN_WAHL);
     expect(b.abschnitte).toHaveLength(2);
-    expect(b.abschnitte[0].titel).toBe(spanneLang(pl.spalten[0].tag, pl.spalten[9].tag));
-    expect(b.abschnitte[1].titel).toBe(spanneLang(pl.spalten[10].tag, pl.spalten[10].tag));
-    expect(b.abschnitte[0].kopf).toHaveLength(12);
+    expect(b.abschnitte[0].titel).toBe(spanneLang(pl.spalten[0].tag, pl.spalten[7].tag));
+    expect(b.abschnitte[1].titel).toBe(spanneLang(pl.spalten[8].tag, pl.spalten[8].tag));
+    expect(b.abschnitte[0].kopf).toHaveLength(10);
     expect(b.abschnitte[1].kopf).toHaveLength(3);
-    // Block 1: nur Wilhelm (10×); Block 2: Tobias und Wilhelm (je 1×) – Personen und Summe je Block.
+    // Block 1: nur Wilhelm (8×); Block 2: Tobias und Wilhelm (je 1×) – Personen und Summe je Block.
     expect(tabelle(b.abschnitte[0].zeilen).map((z) => [z[0], z.at(-1)])).toEqual([
-      ['Wilhelm Brandt', '10'],
+      ['Wilhelm Brandt', '8'],
     ]);
     expect(tabelle(b.abschnitte[1].zeilen).map((z) => [z[0], z.at(-1)])).toEqual([
       ['Tobias Hahn', '1'],

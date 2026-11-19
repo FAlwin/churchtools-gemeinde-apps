@@ -623,7 +623,7 @@ in der Ansicht „Termine × Dienste“ oder „Personen × Termine“. „Wir s
    ohne Überlauf. **Personen × Termine** → eine Tabelle quer über alle gewählten Gruppen: erste Spalte der Name (fett, alphabetisch, nur wer
    mindestens einen Dienst hat), je Termin eine Spalte „So, 06.12.“ (am selben Tag zwei Termine: „So, 06.12. 18:00“), in der Zelle die Dienste
    mit Komma, angefragte mit grauem „(angefragt)“, sonst leer; hinten schmal „Dienste“ = Anzahl. Ein abgesagter Termin hat keine Spalte, ein
-   verborgener Name („besetzt“) keine Zeile. Mehr als zehn Termine → Blöcke mit dem Zeitraum als Band. Dateiname „Dienstplan Personen …“.
+   verborgener Name („besetzt“) keine Zeile. Mehr als acht Termine → Blöcke mit dem Zeitraum als Band. Dateiname „Dienstplan Personen …“.
    Niemand eingeteilt → „In diesem Zeitraum ist niemand eingeteilt.“ Was oder Gruppe wechseln → die Ansicht bleibt (und umgekehrt); Fenster
    neu öffnen → alles ist noch gewählt.
 
@@ -631,7 +631,7 @@ in der Ansicht „Termine × Dienste“ oder „Personen × Termine“. „Wir s
 
 - **Priorität:** normal
 - **Betrifft:** `shared/dienstplan/planBlatt.ts`, `ui/teilen/planBlattPdf.ts`, `ui/teilen/pdfSatz.ts`, `ui/teilen/pdfFenster.tsx`, `ui/teilen/pdfFensterZustand.ts`, `dienstplaner/src/PlanTeilenFenster.tsx`, `dienstplaner/src/Planen.tsx`, `shared/dienstplan/werWieOft.ts`
-- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer; Personen × Termine: Zeilen, Spalten ohne abgesagte, Uhrzeit bei doppeltem Tag, Zellen, Blöcke ab elf Terminen), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten, schmale Summenspalte), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen, Reihe „Ansicht“ gemerkt und beim Wechsel behalten); von Hand bleiben Aussehen und Teilen-Menü am Gerät
+- **Automatisiert:** ja – `shared/dienstplan/planBlatt.test.ts` (aus `planAus`: Abschnitte, Namen/angefragt/frei, eine Gruppe, gemerkte Wahl lesen (alte Formen, „Wir suchen noch“ → ganzer Plan), keine leeren Spalten, quer; Personen × Termine: Zeilen, Spalten ohne abgesagte, Uhrzeit bei doppeltem Tag, Zellen, Blöcke ab neun Terminen), `ui/teilen/planBlattPdf.test.ts` (Kopf/Fuß je Seite, Tabellenkopf nach Umbruch, Spaltenbreiten, schmale Summenspalte), `dienstplaner/src/Planen.teilen.test.tsx` (Knopf, Was-Reihe und Gruppenzeile, gemerkt, alte gemerkte Wahl, ausgeblendete Gruppe, verborgene Namen, Reihe „Ansicht“ gemerkt und beim Wechsel behalten); von Hand bleiben Aussehen und Teilen-Menü am Gerät
 - **Historie:** E8-2 (05.11.2026, Entwurf `e8-teilen.html`); E8-4b (19.11.2026, Entwurf `e8-4-ansichten.html`)
 
 </details>

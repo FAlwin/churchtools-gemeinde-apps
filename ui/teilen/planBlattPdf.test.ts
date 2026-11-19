@@ -114,11 +114,34 @@ describe('Plan-Blatt als PDF', () => {
     const summe = breiten.at(-1) as number;
     expect(summe).toBeLessThan(20);
     expect(summe).toBeCloseTo(1.5 * 'DIENSTE'.length + 3 + 0.5, 0);
-    // Der Name ebenfalls ohne Rest (so breit wie nötig, mindestens 30 mm).
-    expect(breiten[0]).toBe(30);
+    // Der Name so breit wie nötig, ohne Rest: „ANNA BEISPIEL“ (13 Zeichen, der längste Wert) + Polster.
+    expect(breiten[0]).toBeCloseTo(1.5 * 'Anna Beispiel'.length + 3 + 0.5, 0);
     // Die Termin-Spalten sind breiter als in der Termine-Tabelle mit festem Rest …
     expect(breiten[1]).toBeGreaterThan(20);
     expect(breiten[1]).toBeCloseTo(breiten[10]);
+  });
+
+  it('Personen × Termine, wenn es eng wird: der Name wird nicht gestaucht, höchstens 60 mm', () => {
+    // Lange Zellen in jeder Terminspalte – zusammen breiter als die Seite, also teilen sich die Termine den Platz.
+    const a = personenBlatt(8).abschnitte[0];
+    const lang = (name: string) => ({
+      ...a,
+      zeilen: [
+        [
+          zelle(name),
+          ...a.kopf.slice(1, -1).map(() => zelle('Gesang (angefragt), Ton, Licht, Beamer')),
+          zelle('8'),
+        ],
+      ],
+    });
+    const messen = (t: string) => t.length * 1.5;
+    const eng = planSpalten(lang('Clara Schmidt-Langenfeld'), 269, messen);
+    expect(eng[0]).toBeCloseTo(1.5 * 'Clara Schmidt-Langenfeld'.length + 3 + 0.5, 0);
+    expect(eng.reduce((s, x) => s + x, 0)).toBeCloseTo(269);
+    expect(eng[1]).toBeLessThan(eng[0]);
+    // Ein überlanger Name bekommt höchstens 60 mm und bricht dann an Wortgrenzen um.
+    const sehrLang = planSpalten(lang('A'.repeat(80)), 269, messen);
+    expect(sehrLang[0]).toBe(60);
   });
 
   it('Termine × Dienste bleibt unverändert breit gerechnet – auch mit letzter Spalte „Dienste“ im Namen', () => {

@@ -118,3 +118,31 @@
   border-bottom: 0;
   gap: 22px;
 }
+
+// **Mit App-Namen** (`appName`): der Block zeichnet Hintergrund, Rand und Seitenabstand, darin Name und flache Reiter.
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 16px 0;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+  z-index: 20;
+
+  &.rand {
+    padding-top: calc(var(--reiter-oben-polster) + 4px);
+  }
+
+  .oben.flach {
+    gap: 24px;
+  }
+}
+
+// Wie der App-Name im Kopf der Erweiterungen (`ErweiterungsSeite`).
+.appName {
+  margin: 0;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}

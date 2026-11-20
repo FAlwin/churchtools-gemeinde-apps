@@ -43,8 +43,10 @@ des Bandes.
    Datum des Gottesdienstes. Am iPad stehen die Knöpfe mit Beschriftung, am Handy nur als Symbol (Zurück behält
    „Termine“). Alles **scharf**; beim Hochschieben scrollt die Karte mit (wie in ChurchTools). Im Bearbeiten heißt
    der blaue Knopf „Fertig“, daneben „Abschließen“ bzw. hellblau „Öffnen“ (Scheibe S, 26.10.2026).
-   4a. **Reiter:** Am iPad/Rechner stehen Termine · Lieder · Abwesenheiten · Mehr **oben** als Text, der gewählte blau
-   unterstrichen; am Handy unten mit Symbolen, der gewählte mit blauer Linie oben.
+   4a. **Reiter:** Am iPad/Rechner steht ganz oben klein der App-Name **„Musik-App“** (seit B8c, wie „Dienstplaner“ in den
+   anderen Erweiterungen), darunter Termine · Lieder · Abwesenheiten · **Mehr** als Text, der gewählte blau unterstrichen
+   („Mehr“ bleibt der letzte Reiter: dort liegen die Einstellungen **und** Ablaufvorlagen, Links, Team-Notizen); am Handy unten
+   mit Symbolen, der gewählte mit blauer Linie oben, **ohne App-Namen** – die Seite beginnt gleich mit ihrem Kopf.
    4b. **Knöpfe in Listen (Scheibe S2):** In **Lieder** stehen rechts in jeder Zeile **Plus** und **Stift** als
    eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs. Bei einem Termin ohne Ablauf steht
    rechts das **leise gestrichelte Feld „+ Ablauf anlegen“** (B8; wer nichts anlegen darf, sieht das Etikett „Kein Ablauf“).

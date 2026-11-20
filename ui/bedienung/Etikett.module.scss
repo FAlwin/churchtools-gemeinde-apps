@@ -1,6 +1,8 @@
 // Das Status-Etikett (R9/E24): EINE Form (Kapsel, 12 px fett), vier Töne. Farben nur aus Tokens (ChurchTools-Look).
 .etikett {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex: none;
   padding: 1px 8px;
   border-radius: 999px;

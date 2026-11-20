@@ -9,6 +9,7 @@ import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from '@ui/bedienung/Spinner';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { usePastServices, useServicesOhneAblauf } from '../hooks/useServices';
@@ -166,7 +167,7 @@ export function Agenda({
             <div className={styles.meta}>
               {!darf && (
                 <>
-                  <span className={styles.keinAblauf}>Kein Ablauf</span>
+                  <Etikett>Kein Ablauf</Etikett>
                   <span className={styles.dotSep}>·</span>
                 </>
               )}

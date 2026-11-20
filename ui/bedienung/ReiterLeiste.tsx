@@ -47,6 +47,12 @@ interface Props<T extends string> {
    * Entwurf B8). Die Lupe der Erweiterungen steht dagegen in der Reiterzeile der Seite (`ErweiterungsSeite`).
    */
   rechts?: ReactNode;
+  /**
+   * **App-Name klein über den Reitern** (nur mit `oben`, ohne `flach`; R8/E24 „Ruhige Bedienung“ B8c): Die Musik-App
+   * zeichnet ihre Leiste selbst am Bildschirmrand – die Erweiterungen zeigen den Namen im Seitenkopf
+   * (`ErweiterungsSeite`). Gleiche Schrift, damit jede App gleich beginnt. Am Handy (unten) gibt es keinen Namen.
+   */
+  appName?: string;
   /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */
   name?: string;
 }
@@ -66,13 +72,15 @@ export function ReiterLeiste<T extends string>({
   amRand = false,
   flach = false,
   rechts,
+  appName,
   name = 'Bereiche',
 }: Props<T>) {
-  return (
+  const mitName = oben && !flach && !!appName;
+  const leiste = (
     <nav
       className={
         oben
-          ? `${styles.oben}${amRand ? ' ' + styles.rand : ''}${flach ? ' ' + styles.flach : ''}`
+          ? `${styles.oben}${amRand && !mitName ? ' ' + styles.rand : ''}${flach || mitName ? ' ' + styles.flach : ''}`
           : styles.tabbar
       }
       data-tour={tour}
@@ -106,5 +114,12 @@ export function ReiterLeiste<T extends string>({
       })}
       {oben && rechts ? <div className={styles.rechts}>{rechts}</div> : null}
     </nav>
+  );
+  if (!mitName) return leiste;
+  return (
+    <div className={`${styles.block}${amRand ? ' ' + styles.rand : ''}`}>
+      <p className={styles.appName}>{appName}</p>
+      {leiste}
+    </div>
   );
 }

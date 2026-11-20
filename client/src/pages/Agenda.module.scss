@@ -144,13 +144,6 @@
 .svcNameOhne {
   color: var(--text2);
 }
-.keinAblauf {
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px dashed var(--text3);
-  color: var(--text2);
-  font-size: 11.5px;
-}
 // Das leise „+ Ablauf anlegen“ (R10, B8) sitzt rechts in der Zeile, neben dem klickbaren Hauptbereich.
 .leisesPlus {
   display: flex;

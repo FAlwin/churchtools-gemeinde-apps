@@ -138,4 +138,39 @@ describe('ReiterLeiste', () => {
     );
     expect(screen.queryByRole('button', { name: 'Vollbild' })).toBeNull();
   });
+
+  it('App-Name (R8/E24, B8c): klein über den Reitern, nur oben und nicht flach; unten nie', () => {
+    const { container, rerender } = render(
+      <ReiterLeiste
+        reiter={REITER}
+        aktiv="a"
+        onWechsel={() => {}}
+        oben
+        amRand
+        appName="Musik-App"
+      />,
+    );
+    const name = screen.getByText('Musik-App');
+    // Der Name steht vor der Leiste, beide im selben Block (der trägt Rand und Polster für die Statusleiste).
+    const nav = container.querySelector('nav')!;
+    expect(name.nextElementSibling).toBe(nav);
+    expect(nav.parentElement?.className).toMatch(/block.*rand|rand.*block/);
+    expect(nav.className).not.toMatch(/rand/);
+    // Die Reiter bleiben bedienbar und die Leiste behält ihren Namen für Vorleser.
+    expect(screen.getByRole('navigation', { name: 'Bereiche' })).toBe(nav);
+
+    rerender(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={() => {}} appName="Musik-App" />);
+    expect(screen.queryByText('Musik-App')).toBeNull();
+    rerender(
+      <ReiterLeiste
+        reiter={REITER}
+        aktiv="a"
+        onWechsel={() => {}}
+        oben
+        flach
+        appName="Musik-App"
+      />,
+    );
+    expect(screen.queryByText('Musik-App')).toBeNull();
+  });
 });

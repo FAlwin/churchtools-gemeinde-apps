@@ -13,7 +13,8 @@ import { dateien, WURZEL } from './quelltexte.testutil';
  * Anzeige – eine Anzeige ist ein `<Etikett>`:
  *  - Steigt eine Zahl, schlägt der Test fehl: nimm `Etikett` (Anzeige) oder einen Knopf-Baustein aus `ui/bedienung`.
  *  - Fällt sie, verlangt der Test die niedrigere Obergrenze. **Obergrenzen nie erhöhen.**
- * Die Musik-App (`client`) folgt mit ihrem Kopf in einem eigenen Schritt und fehlt hier noch.
+ * Die Musik-App (`client`) ist seit B8c dabei; ihre Etiketten aus `ui/abwesenheiten`/`ui/ablauf` zählen hier nicht (die
+ * Wähler `.chip` sind Knöpfe, `aenderungsTag`/`verdecktKnopf` gehören zum Ablauf).
  */
 const APPS = [
   'anmeldungen',
@@ -23,10 +24,11 @@ const APPS = [
   'website',
   'gebetsabend',
   'formular',
+  'client',
 ] as const;
 type App = (typeof APPS)[number];
 
-/** Stand 20.11.2026 nach B8b. */
+/** Stand 20.11.2026 nach B8b/B8c. */
 const OBERGRENZE: Record<App, number> = {
   anmeldungen: 10,
   protokolle: 1,
@@ -35,6 +37,9 @@ const OBERGRENZE: Record<App, number> = {
   website: 0,
   gebetsabend: 0,
   formular: 0,
+  // Musik-App (B8c): Werkzeugleiste Zeichnen (5), Spendenknopf (1), Seitenwähler und Vorschau-Schalter im Liedblatt (3) – alles
+  // Knöpfe und Schalter, keine Anzeige. „Kein Ablauf“ und „Standard“ sind `<Etikett>`, „nur ansehen“ (Vorlagen) auch.
+  client: 9,
 };
 
 /** Kapseln in einem SCSS-Text: `border-radius` mit 99px oder mehr, ohne Kommentare. */

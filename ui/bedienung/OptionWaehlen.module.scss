@@ -1,54 +1,6 @@
 @use '../design/mixins' as m;
 
-// „Option wählen“ (Scheibe S2) – Blatt von unten wie in der ChurchTools-App, am Rechner ein kleines Menü.
-.hintergrund {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: var(--scrim);
-  display: flex;
-  align-items: flex-end;
-}
-
-.blatt {
-  width: 100%;
-  background: var(--bg);
-  border-radius: var(--r-dialog) var(--r-dialog) 0 0;
-  padding: 8px 12px calc(var(--unten-strich) + 20px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.griff {
-  align-self: center;
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--border);
-}
-
-.kopf {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.titel {
-  margin: 0;
-  font-family: var(--ui);
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text);
-}
-
-// ✕ rund mit Rahmen wie in der ChurchTools-App.
-.zu {
-  @include m.fensterX;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-}
-
+// „Option wählen“ (Scheibe S2) – am Handy ein Fenster (`Sheet`, `AuswahlFenster`), am Rechner ein kleines Menü.
 .liste {
   @include m.card-list;
 }

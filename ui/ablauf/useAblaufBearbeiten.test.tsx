@@ -480,14 +480,14 @@ describe('„Option wählen“ nach dem Plus (Scheibe S2)', () => {
   );
   const optionen = () => screen.getAllByRole('button').map((k) => k.textContent);
 
-  it('das schwebende Plus öffnet das Blatt „Option wählen“ – ohne Liedwahl nur Programmpunkt und Überschrift', () => {
+  it('das schwebende Plus öffnet das Fenster „Option wählen“ – ohne Liedwahl nur Programmpunkt und Überschrift', () => {
     render(<Harness aktionen={aktionen()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
     const blatt = screen.getByRole('dialog', { name: 'Option wählen' });
     expect(blatt.textContent).toContain('Programmpunkt hinzufügen');
     expect(blatt.textContent).toContain('Überschrift hinzufügen');
     expect(blatt.textContent).not.toContain('Lied hinzufügen');
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
   });
 

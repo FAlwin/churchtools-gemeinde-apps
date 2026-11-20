@@ -102,7 +102,7 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 
 **Das muss passieren:** Im Bearbeiten-Modus gibt es **„Eintrag hinzufügen“** – wie in ChurchTools: am
 **iPad/Rechner grün oben im Seitenkopf** (wie „+ Gruppe erstellen“), am **Handy als rundes blaues Plus** unten
-rechts. Es fragt zuerst **„Option wählen“** (am Rechner als kleines Menü, am Handy als Blatt von unten mit ✕):
+rechts. Es fragt zuerst **„Option wählen“** (am Rechner als kleines Menü, am Handy als Fenster mit ✕):
 **Programmpunkt hinzufügen · Lied hinzufügen · Überschrift hinzufügen**. Danach öffnet **dasselbe Fenster wie das
 Bearbeiten**, nur mit „Neuer Eintrag“ und schon passend eingestellt. „Lied hinzufügen“ zeigt gleich die Liedsuche –
 nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen sich gleich setzen; wer die Suche ohne
@@ -403,7 +403,7 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
    schon an. **Hinzufügen** → er steht über dem Balken „Beginn“, der Soundcheck bleibt Vorlauf, alle Punkte darunter
    bleiben im Gottesdienst.
 4. Einen Punkt antippen → links unten **„Darunter einfügen“** → am **Rechner/iPad** klappt direkt am Knopf ein kleines
-   Menü nach oben auf, **am Handy** das Blatt „Nach „…“ einfügen“ von unten (Fund F2, 07.11.2026) → **Programmpunkt
+   Menü nach oben auf, **am Handy** das Fenster „Nach „…“ einfügen“ (Fund F2, 07.11.2026) → **Programmpunkt
    hinzufügen** → „Einfügen nach“ nennt den Punkt. Erst etwas am Punkt ändern: „Darunter einfügen“ ist gesperrt, bis
    gespeichert ist.
 5. **Am Rechner:** Maus über eine Zeile → am rechten Rand ein **Plus** und ein **roter Papierkorb**. Plus →
@@ -506,7 +506,7 @@ die am Ende wieder gelöscht wird. Bestehende Vorlagen nicht anfassen.
 **Das muss passieren:** Dieselbe Seite wie im Dienstplaner (TF-EDIT-17), erreichbar über **Termine → ⋯ → Ablaufvorlagen** (bis 20.11.2026: Einstellungen → Abläufe).
 Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Termine“ bleibt markiert.
 
-1. **Termine**: Rechts in der Werkzeugzeile (neben dem Filter) steht das **⋯**; am Handy öffnet es ein Blatt von unten. Darin der
+1. **Termine**: Rechts in der Werkzeugzeile (neben dem Filter) steht das **⋯**; am Handy öffnet es ein Fenster. Darin der
    Eintrag **Ablaufvorlagen**. Unter **Einstellungen** gibt es keinen Abschnitt „Abläufe“ mehr. Ein Konto, das **keine Abläufe sehen** darf,
    sieht den Reiter Termine nicht.
 2. **⋯ → Ablaufvorlagen**: Das Menü schließt sich, die Seite zeigt die Vorlagen **nach Kalender**; oben **‹ Termine**. Beim ersten Mal erscheint die Einführung
@@ -529,7 +529,7 @@ Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Termine�
 
 - **Priorität:** hoch
 - **Betrifft:** `client/src/pages/Agenda.tsx`, `client/src/pages/Vorlagen.tsx`, `client/src/hooks/useVorlagenSeite.ts`, `client/src/hooks/useVorlagenZugriff.ts`, `client/src/hooks/useTourSobaldDa.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctSchreiben.ts`, `client/src/utils/onboarding.ts`, `client/src/App.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `ui/ablauf/VorlagenBereich.tsx`, `server/src/routes/setlist.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `server/src/services/ctRead.ts`, `shared/ct/ablaufVorlagenListe.ts`
-- **Automatisiert:** teilweise – `client/src/pages/Vorlagen.test.tsx` (Rechte, „‹ Termine“, Vorlage öffnen), `client/src/pages/Agenda.werkzeug.test.tsx` (⋯ nur mit Angebot, Menü schließt, Handy-Blatt), `client/src/pages/Settings.test.tsx` (kein Abschnitt „Abläufe“ mehr), `client/src/hooks/useVorlagenSeite.test.tsx` (Navigation), `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts` (Weiche Erweiterung/Server je Vorgang), `client/src/hooks/useTourSobaldDa.test.tsx` (Einführung), `server/src/controllers/setlistController.vorlagen.test.ts` (Ziel Termin/Vorlage, Routen, durchgereichte Fehler), `server/src/services/ctWrite.test.ts` (Token-Wächter); von Hand bleiben das Schreiben gegen echtes ChurchTools und beide Auslieferungen
+- **Automatisiert:** teilweise – `client/src/pages/Vorlagen.test.tsx` (Rechte, „‹ Termine“, Vorlage öffnen), `client/src/pages/Agenda.werkzeug.test.tsx` (⋯ nur mit Angebot, Menü schließt, Handy-Fenster), `client/src/pages/Settings.test.tsx` (kein Abschnitt „Abläufe“ mehr), `client/src/hooks/useVorlagenSeite.test.tsx` (Navigation), `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts` (Weiche Erweiterung/Server je Vorgang), `client/src/hooks/useTourSobaldDa.test.tsx` (Einführung), `server/src/controllers/setlistController.vorlagen.test.ts` (Ziel Termin/Vorlage, Routen, durchgereichte Fehler), `server/src/services/ctWrite.test.ts` (Token-Wächter); von Hand bleiben das Schreiben gegen echtes ChurchTools und beide Auslieferungen
 - **Historie:** 17.11.2026 (E10-V3b; Baustein aus V3a)
 
 </details>
@@ -548,7 +548,7 @@ Termins, ein zweites mit „Abläufe bearbeiten“, aber **ohne** das Vorlagen-R
 für den Kalender des Termins) und speichert den Ablauf als Vorlage – ohne Namen von Personen.
 
 1. Termin öffnen, **Ablauf bearbeiten**: In der **Musik-App** liegt **Als Vorlage …** im **⋯-Menü** oben, direkt vor **Neu aufsetzen …**
-   (Handy: Blatt von unten). Im **Dienstplaner** liegt es seit 21.11.2026 ebenso im **⋯-Menü** vor **Neu aufsetzen …** (Handy: Blatt von unten). In der **Matrix** (Dienstplaner) und in der **Ansicht** (ohne Bearbeiten) gibt es den Link nicht.
+   (Handy: Fenster). Im **Dienstplaner** liegt es seit 21.11.2026 ebenso im **⋯-Menü** vor **Neu aufsetzen …** (Handy: Fenster). In der **Matrix** (Dienstplaner) und in der **Ansicht** (ohne Bearbeiten) gibt es den Link nicht.
 2. Mit dem Konto **ohne** Vorlagen-Recht: kein Link.
 3. Link antippen: Fenster **Als Vorlage speichern**, Unterzeile „Ablauf von: <Termin> · <Datum> · N Punkte“. **Als neue Vorlage** ist
    offen: Name = Termin-Titel, Kalender = Kalender des Termins, blauer Hinweis „… keine Namen von Personen“. Nur Kalender mit Recht in der Auswahl.

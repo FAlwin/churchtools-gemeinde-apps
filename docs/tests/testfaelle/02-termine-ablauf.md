@@ -611,7 +611,7 @@ Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 **Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe,
 in der Ansicht „Termine“, „Personen“ oder „Je Person“. „Wir suchen noch …“ gibt es nicht mehr.
 
-1. Planen → rechts in der Werkzeugzeile **⋯** → **Teilen** (seit B3 im Menü; am Handy als Blatt von unten) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
+1. Planen → rechts in der Werkzeugzeile **⋯** → **Teilen** (seit B3 im Menü; am Handy öffnet ein Fenster mit den Einträgen) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
    Plan** · **Eine Gruppe** (kein „Wir suchen noch …“); darunter Zeitraum und Zahl der Termine – dieselben wie
    im Zeitraum-Knopf.
 2. **Ganzer Plan** → Vorschau: je Gruppe ein graues Band und eine Tabelle (Termin, dann die Dienste); Namen, angefragte
@@ -655,7 +655,7 @@ weg als die geladenen Wochen.
 **Das muss passieren:** Die eigenen kommenden Dienste kommen als PDF, z. B. für den Familienkalender.
 
 1. Dienste → **Meine**: **⋯** (rechts neben „Filter“) → **Teilen** (bei „Alle“ fehlt der Eintrag, „Hilfe“ bleibt; seit B4, vorher ein Knopf
-   neben „Meine | Alle“). Am Handy ist „⋯“ ein Knopf mit Rahmen, das Menü ein Blatt von unten.
+   neben „Meine | Alle“). Am Handy ist „⋯“ ein Knopf mit Rahmen, das Menü ein Fenster mit Titel „Mehr“ und ✕ (kein Blatt von unten).
 2. **⋯ → Teilen** → „Meine Dienste teilen“, kurz „Deine Dienste werden geladen …“, dann „Fertig · 1 Seite · Meine Dienste
    <Name>.pdf“ und die Vorschau.
 3. Das Blatt: Kopf „Meine Dienste“, darunter Name und Zeitraum; Tabelle Datum (mit Uhrzeit), Termin, Dienst, Stand –
@@ -751,7 +751,7 @@ steht.
    sendest du unter „Planen“.“ Senden → danach zeigt die Ansicht ohne Neuladen, was jetzt in ChurchTools steht; die
    Leiste ist weg. In „Planen“ steht der Entwurf des anderen Termins weiter da.
 7. Ohne Planen-Recht (andere Person): Plätze nur ansehen, kein Hilfe-Knopf, kein Zauberstab, keine Leiste.
-8. Am Handy: Leiste „1 Entwurf · Verwerfen · Ansehen & senden“, Fenster von unten.
+8. Am Handy: Leiste „1 Entwurf · Verwerfen · Ansehen & senden“; „Ansehen & senden“ öffnet ein Fenster in der Mitte, das über der Leiste und der Reiterleiste liegt.
 
 <details><summary>Technisches</summary>
 
@@ -1240,8 +1240,8 @@ einmal am Rechner (1280 px) und einmal am Handy (390 px).
 6. **Freie Plätze** sind ein graues, gestricheltes Feld mit „＋ frei“; rot ist nur die Zahl „N frei“ am Termin (und in der Gruppenzeile).
 7. **Gruppenzeile** (z. B. „Technik“): Zauberstab und Regler erscheinen am Rechner erst, wenn die Maus auf der Zeile steht.
 8. **Personen** und **Wer wie oft?** wählen: dieselbe Zeile und dasselbe ⋯-Menü; der Abschnitt „Anzeige“ fehlt im Filter.
-9. **Handy:** oben ein **blauer Knopf mit dem Wort der Ansicht und Pfeil** (tippen → die drei Ansichten als Blatt), rechts daneben
-   **Lupe, Filter, ⋯ – jeder mit Rahmen**; darunter der Zeitraum **gerahmt über die ganze Breite**. **⋯** öffnet ein Blatt von unten
+9. **Handy:** oben ein **blauer Knopf mit dem Wort der Ansicht und Pfeil** (tippen → die drei Ansichten in einem Fenster), rechts daneben
+   **Lupe, Filter, ⋯ – jeder mit Rahmen**; darunter der Zeitraum **gerahmt über die ganze Breite**. **⋯** öffnet ein Fenster „Mehr“
    mit denselben Einträgen (ohne „Ablauf bearbeiten“ – dort der Stift am Termin). Die Lupe legt sich beim Aufklappen über die obere
    Reihe. Zauberstab und Regler in den Gruppenköpfen sind immer sichtbar.
 
@@ -1269,8 +1269,8 @@ Fall – eines ohne kommende Dienste.
    „wird geladen …“, gesperrt.
 5. **Leere Liste** (Meine, keine Dienste): fetter Satz „In den nächsten 8 Wochen hast du keine Dienste.“ und darunter der Link
    **Alle Termine zeigen** – er schaltet auf „Alle“.
-6. **Handy:** oben ein blauer Knopf **Meine ⌄** (tippen → Blatt mit Meine/Alle), rechts **Filter** und **⋯** mit Rahmen; **⋯** öffnet ein
-   Blatt von unten mit denselben Einträgen. Zusagen, Absagen und Tauschen unter den Zeilen bleiben, wie sie waren.
+6. **Handy:** oben ein blauer Knopf **Meine ⌄** (tippen → Fenster mit Meine/Alle), rechts **Filter** und **⋯** mit Rahmen; **⋯** öffnet ein
+   Fenster mit denselben Einträgen. Zusagen, Absagen und Tauschen unter den Zeilen bleiben, wie sie waren.
 
 <details><summary>Technisches</summary>
 

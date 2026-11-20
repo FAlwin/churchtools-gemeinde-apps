@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ArrangementFileEntry, SetlistSong } from '@shared/types/index';
 import type { useArrangementDateien } from '../hooks/useArrangementDateien';
 import type { NamenQuelle } from '../utils/annotationLevelLabel';
@@ -74,7 +74,7 @@ describe('DateiFenster', () => {
     const zu = zeigen({}, { overlay: null });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(zu.setOverlay).not.toHaveBeenCalled();
-    document.body.innerHTML = '';
+    cleanup();
     const { setOverlay } = zeigen();
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     expect(setOverlay).toHaveBeenLastCalledWith('menu');
@@ -85,7 +85,7 @@ describe('DateiFenster', () => {
   it('SongSelect nur mit dem Recht der Gemeinde; erst die Rückfrage, dann geholt mit der CCLI-Nummer', () => {
     zeigen({}, { canUseCcli: false });
     expect(screen.queryByText(/aus SongSelect holen/)).toBeNull();
-    document.body.innerHTML = '';
+    cleanup();
     const { datei } = zeigen();
     fireEvent.click(screen.getByText('Notenblatt aus SongSelect holen …'));
     expect(datei.chordProHolen).not.toHaveBeenCalled();

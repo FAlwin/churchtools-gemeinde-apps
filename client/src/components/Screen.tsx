@@ -128,8 +128,9 @@ function PullScroll({
             // Der Inhalt macht dem Anzeiger Platz: beim Ziehen um die Zugstrecke, während des
             // Ladens um die Höhe des Anzeigers. In Ruhe KEIN transform (20.11.2026): Schon
             // `translateY(0px)` macht diesen Block zum Bezugsrahmen für `position: fixed` und zu
-            // einem eigenen Stapel – das Blatt von unten (`AuswahlBlatt`, ⋯ und „Kommende ⌄“ am
-            // Handy) lag dadurch hinter der Reiterleiste und war halb verdeckt.
+            // einem eigenen Stapel – ein Fenster in diesem Block (damals das Blatt von ⋯ und „Kommende ⌄“) lag
+            // dadurch hinter der Reiterleiste. Fenster hängen seit `FensterEbene` ohnehin nicht mehr hier im Inhalt;
+            // das `none` bleibt, damit auch sonst nichts im Block eingesperrt oder verschoben wird.
             transform:
               refreshing || pull > 0 ? `translateY(${refreshing ? PULL_HOEHE : pull}px)` : 'none',
             transition: pull === 0 ? 'transform .2s' : 'none',

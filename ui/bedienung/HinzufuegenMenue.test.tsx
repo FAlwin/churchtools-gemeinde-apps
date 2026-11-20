@@ -104,10 +104,10 @@ describe('HinzufuegenMenue als „Neu ⌄“', () => {
     expect(menue.getByRole('menuitem', { name: 'Neue Sitzung' }).className).not.toMatch(/trenner/);
   });
 
-  it('Handy: ✕ schließt das Blatt, ohne etwas auszulösen', () => {
+  it('Handy: ✕ schließt das Fenster, ohne etwas auszulösen', () => {
     render(<Seite handy />);
     fireEvent.click(screen.getByRole('button', { name: 'Neu' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('dialog', { name: 'Neu' })).toBeNull();
     expect(ausgabe()).toBe('nichts');
   });

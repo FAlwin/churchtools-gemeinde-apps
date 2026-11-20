@@ -299,8 +299,8 @@ describe('Schritt „Stufen“', () => {
   });
 
   it('ein Tipp neben das Fenster schließt es nicht, wenn etwas eingegeben wurde – ohne Eingaben schon', () => {
-    const { container } = fenster('aendern');
-    const overlay = container.firstElementChild as HTMLElement;
+    fenster('aendern');
+    const overlay = screen.getByRole('dialog').parentElement as HTMLElement;
     onSchliessen.mockClear();
     fireEvent.click(overlay);
     expect(onSchliessen).toHaveBeenCalledTimes(1);

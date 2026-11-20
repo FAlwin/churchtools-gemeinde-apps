@@ -107,7 +107,10 @@ describe('Fenster „Vorlage“', () => {
     expect(fensterKnoepfe().slice(-3)).toEqual(['Vorlage löschen', 'Abbrechen', 'Speichern']);
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage löschen' }));
     expect(screen.getByText('Vorlage löschen?')).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Abbrechen' })[0]);
+    // Das Abbrechen der Rückfrage – die Fenster liegen in der Reihenfolge ihres Öffnens untereinander, nicht mehr ineinander.
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Abbrechen' }),
+    );
     expect(m.vorlageLoeschen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage löschen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));

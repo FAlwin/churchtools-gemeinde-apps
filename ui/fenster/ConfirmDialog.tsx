@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { useEscape } from '../bedienung/useEscape';
+import { FensterEbene } from './FensterEbene';
 import { FensterKnopf } from './FensterKnopf';
 import { useKnopfZeile } from './useKnopfZeile';
 import styles from './ConfirmDialog.module.scss';
@@ -54,56 +55,58 @@ export function ConfirmDialog({
     if (cancelLabel !== null && !beschaeftigt) onCancel();
   });
   return (
-    <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
-      <div
-        className={styles.card}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titelId}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.kopf}>
-          <div id={titelId} className={styles.title}>
-            {title}
+    <FensterEbene>
+      <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
+        <div
+          className={styles.card}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={titelId}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={styles.kopf}>
+            <div id={titelId} className={styles.title}>
+              {title}
+            </div>
+            {cancelLabel !== null && (
+              <button
+                className={styles.x}
+                aria-label="Fenster schließen"
+                onClick={onCancel}
+                disabled={beschaeftigt}
+              >
+                <Icon name="x" size={20} />
+              </button>
+            )}
           </div>
-          {cancelLabel !== null && (
-            <button
-              className={styles.x}
-              aria-label="Fenster schließen"
-              onClick={onCancel}
+          <div className={styles.msg}>{message}</div>
+          {children}
+          <div
+            ref={knopfZeile.ref}
+            className={styles.actions}
+            data-stapel={knopfZeile.stapel || undefined}
+          >
+            {cancelLabel !== null && (
+              <FensterKnopf art="zweit" onClick={onCancel} disabled={beschaeftigt}>
+                {cancelLabel}
+              </FensterKnopf>
+            )}
+            {zweit && (
+              <FensterKnopf art="hell" onClick={zweit.onClick} disabled={beschaeftigt}>
+                {zweit.label}
+              </FensterKnopf>
+            )}
+            <FensterKnopf
+              art={harmlos ? 'haupt' : 'gefahr'}
+              onClick={onConfirm}
               disabled={beschaeftigt}
             >
-              <Icon name="x" size={20} />
-            </button>
-          )}
-        </div>
-        <div className={styles.msg}>{message}</div>
-        {children}
-        <div
-          ref={knopfZeile.ref}
-          className={styles.actions}
-          data-stapel={knopfZeile.stapel || undefined}
-        >
-          {cancelLabel !== null && (
-            <FensterKnopf art="zweit" onClick={onCancel} disabled={beschaeftigt}>
-              {cancelLabel}
+              {confirmLabel}
             </FensterKnopf>
-          )}
-          {zweit && (
-            <FensterKnopf art="hell" onClick={zweit.onClick} disabled={beschaeftigt}>
-              {zweit.label}
-            </FensterKnopf>
-          )}
-          <FensterKnopf
-            art={harmlos ? 'haupt' : 'gefahr'}
-            onClick={onConfirm}
-            disabled={beschaeftigt}
-          >
-            {confirmLabel}
-          </FensterKnopf>
+          </div>
+          {fuss && <p className={styles.fuss}>{fuss}</p>}
         </div>
-        {fuss && <p className={styles.fuss}>{fuss}</p>}
       </div>
-    </div>
+    </FensterEbene>
   );
 }

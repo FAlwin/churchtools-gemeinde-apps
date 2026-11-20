@@ -103,9 +103,9 @@
     **Seit Scheibe S2 (26.10.2026) wie die ChurchTools-App:** Das Plus fragt erst **„Option wählen“**
     (`ui/bedienung/OptionWaehlen.tsx`) – Programmpunkt · Lied (nur mit Liedwahl) · Überschrift; das Punkt-Fenster
     startet entsprechend (`startArt`, `startLied`; „Lied hinzufügen“ ohne Wahl abgebrochen = alles zu). Am Handy als
-    Blatt von unten (`AuswahlBlatt`), am iPad/Rechner mit `plusImKopf` grün im Seitenkopf mit Menü
+    Fenster (`AuswahlFenster`, seit 20.11.2026 – vorher Blatt von unten), am iPad/Rechner mit `plusImKopf` grün im Seitenkopf mit Menü
     (`HinzufuegenMenue`, wie „+ Gruppe erstellen“ in CT; Hook liefert `kopfKnopf`). Der Dienstplaner behält das
-    schwebende Plus, bekommt aber dasselbe Blatt. Die Abwesenheiten öffnen „Zeitraum eintragen“ direkt – am
+    schwebende Plus, bekommt aber dasselbe Fenster. Die Abwesenheiten öffnen „Zeitraum eintragen“ direkt – am
     iPad/Rechner als grüner `KopfKnopf neu`, am Handy schwebend; beides nicht, solange etwas vorgemerkt ist.
     Das frühere `AddItemSheet` ist gelöscht.
 
@@ -252,7 +252,7 @@ churchtools-gemeinde-apps/
     ├── design/              # _variables.scss (Tokens; helle Farben im Mixin `hell` in _farben.scss), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren),
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
-    ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
+    ├── fenster/             # Sheet (Modal), FensterEbene (jedes Fenster ganz oben, unter #root), useOverlayKeyboardInset, appHeight
     ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), useNeuAnlegen (Anlegen: groß grüner KopfKnopf, Handy SchwebePlus – Abwesenheiten, Lieder), FilterKnopf + ZeitraumKnopf + useAufklapp (aus dem Dienstplaner, auch Abwesenheiten), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf (+ oeffnePdf), listenPdf, qr; svgSeitenPdf (SVG-Seiten → PDF), pdfSchrift (PDF-Schrift „Gemeinde Sans“ = gekürzte Lato, `schrift/` + HERKUNFT + OFL)
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6

@@ -1,14 +1,17 @@
 /**
  * **Die feste Schriftauswahl der Website** (Bauplan Website, E-W14).
  *
- * Gemeinden wählen im Builder aus dieser Liste freier Schriften (SIL Open Font License) oder laden eigene Dateien
- * hoch. Hier steht **nur die Liste** – die Schriftdateien selbst kommen mit W5 ins Bau-Paket (lokal, nie von einem
- * fremden Dienst: DSGVO). `datei` ist der Dateiname, unter dem sie dort liegen werden; die Adresse im fertigen
- * Stylesheet bildet der Kontext (`schriftAdresse`), der Renderer erfindet keine.
+ * Gemeinden wählen im Builder aus dieser Liste freier Schriften oder laden eigene Dateien hoch. Die Schriften stehen unter
+ * der SIL Open Font License 1.1, **Roboto Slab unter Apache 2.0** – beides erlaubt Einbetten und Weitergeben, wenn der
+ * Lizenztext mitgeliefert wird. Die Dateien liegen in `shared/website/schriften/` (je Paket mit Lizenztext, Herkunft in
+ * `QUELLEN.md`; ein Wächter-Test hält Liste und Dateien zusammen). Sie werden **lokal** ausgeliefert, nie von einem fremden
+ * Dienst (DSGVO): in der Vorschau als `data:`-Adresse aus dem Erweiterungs-Bündel (`website/src/schriftLader.ts`), später
+ * vom Bau-Dienst (W5) als Dateien neben der Seite. `datei` ist der Dateiname; die Adresse im fertigen Stylesheet bildet der
+ * Kontext (`schriftAdresse`), der Renderer erfindet keine.
  *
  * Alle Einträge sind **variable Schriften** (eine Datei deckt den ganzen Gewichtsbereich ab, `gewichte` = Bereich für
  * `font-weight`), sonst bräuchte eine Schrift mehrere Dateien. Lato (nur in festen Schnitten erhältlich) fehlt
- * deshalb, dafür steht Raleway in der Liste.
+ * deshalb, dafür steht Raleway in der Liste. Ausnahme: Caveat Brush gibt es nur in einem Schnitt.
  */
 
 export type SchriftKategorie = 'serifenlos' | 'serif' | 'hand' | 'display';
@@ -145,6 +148,29 @@ export const SCHRIFTEN: readonly Schrift[] = [
     ersatz: HAND,
   },
 ];
+
+/**
+ * Die Dateien der **Auswahl-Schriften** in diesen Einstellungen, ohne Doppelte, in der Reihenfolge Text, Überschrift,
+ * Handschrift. Das sind genau die Dateien, nach denen `themeCss` über `schriftAdresse` fragt (der Test vergleicht beides);
+ * eigene Schriften gehören nicht dazu – sie liegen nicht in der Auswahl.
+ */
+export function schriftDateien(
+  schriften:
+    | { text: SchriftWahlKurz; ueberschrift: SchriftWahlKurz; akzent?: SchriftWahlKurz }
+    | undefined,
+): string[] {
+  if (!schriften) return [];
+  const dateien: string[] = [];
+  for (const w of [schriften.text, schriften.ueberschrift, schriften.akzent]) {
+    if (w?.art !== 'auswahl') continue;
+    const s = findeSchrift(w.name);
+    if (s && !dateien.includes(s.datei)) dateien.push(s.datei);
+  }
+  return dateien;
+}
+
+/** Nur das, was `schriftDateien` von einer Schrift-Wahl braucht (der volle Typ steht in `modell.ts`, das diese Datei nutzt). */
+type SchriftWahlKurz = { art: 'auswahl'; name: string } | { art: 'eigene'; name: string };
 
 /** Die Schrift mit diesem Namen aus der Auswahl – `undefined`, wenn es sie nicht gibt. */
 export function findeSchrift(name: string): Schrift | undefined {

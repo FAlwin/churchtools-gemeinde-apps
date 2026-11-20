@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sperreVon } from '../ct/sperre';
-import { einheitLoeschen, seiteSpeichern, websiteAusWerten } from './speicher';
+import { EINSTELLUNGEN_ID, einheitLoeschen, seiteSpeichern, websiteAusWerten } from './speicher';
 import {
   bearbeitungBeenden,
   bearbeitungBeginnen,
@@ -251,5 +251,64 @@ describe('Das Lesen der Website kennt die Sperr-Werte', () => {
     expect(warn).toHaveBeenCalled();
     expect(websiteAusWerten(s.werte).seiten).toEqual([]);
     warn.mockRestore();
+  });
+});
+
+describe('Die Einstellungen haben ihre eigene Sperre (W3a-3, derselbe Ablauf wie bei den Seiten)', () => {
+  const ZIEL = { einheit: 'einstellungen', id: EINSTELLUNGEN_ID } as const;
+  const einstellungenSperrWert = (von: typeof ICH | null, wann = JETZT) =>
+    JSON.stringify({
+      art: 'website-sperre',
+      fassung: 1,
+      einheit: 'einstellungen',
+      id: EINSTELLUNGEN_ID,
+      sperre: von ? sperreVon(von, wann) : null,
+    });
+
+  it('nehmen: legt einen eigenen Sperr-Wert mit `einheit: einstellungen` an – die Seiten bleiben frei', async () => {
+    const s = fakeSpeicher();
+    const r = await bearbeitungBeginnen(s.ort, ZIEL, ICH, JETZT);
+    expect(r.art).toBe('ok');
+    expect(JSON.parse(s.werte[0].value)).toMatchObject({
+      einheit: 'einstellungen',
+      id: EINSTELLUNGEN_ID,
+    });
+    expect(sperreAusWerten(s.werte, 'einstellungen', EINSTELLUNGEN_ID)?.sperre).toMatchObject({
+      von: 1,
+    });
+    // Eine Seite mit der Kennung „einstellungen“ ist davon nicht berührt.
+    expect(sperreAusWerten(s.werte, 'seite', EINSTELLUNGEN_ID)).toBeNull();
+    const b = await bearbeitungBeginnen(s.ort, 'a', ANDERER, JETZT);
+    expect(b.art).toBe('ok');
+  });
+
+  it('jemand anderes bearbeitet die Einstellungen: gesperrt, nichts geschrieben; übernehmen nimmt sie', async () => {
+    const s = fakeSpeicher();
+    s.lege(einstellungenSperrWert(ANDERER, vor(2)));
+    const r = await bearbeitungBeginnen(s.ort, ZIEL, ICH, JETZT);
+    expect(r).toMatchObject({ art: 'gesperrt', sperre: { von: 2 } });
+    expect(s.schreibzugriffe()).toEqual([]);
+    expect((await bearbeitungUebernehmen(s.ort, ZIEL, ICH, JETZT)).art).toBe('ok');
+    expect(sperreAusWerten(s.werte, 'einstellungen', EINSTELLUNGEN_ID)?.sperre?.von).toBe(1);
+  });
+
+  it('freigeben: nur die eigene, und nur die der Einstellungen', async () => {
+    const s = fakeSpeicher();
+    await bearbeitungBeginnen(s.ort, ZIEL, ICH, JETZT);
+    await bearbeitungBeginnen(s.ort, 'a', ICH, JETZT);
+    await bearbeitungBeenden(s.ort, ZIEL, ICH, JETZT);
+    expect(sperreAusWerten(s.werte, 'einstellungen', EINSTELLUNGEN_ID)?.sperre).toBeNull();
+    expect(sperreAusWerten(s.werte, 'seite', 'a')?.sperre).not.toBeNull();
+  });
+
+  it('das Lesen der Website trennt beide: `einstellungenSperre` hier, `sperren` für die Seiten', () => {
+    const s = fakeSpeicher();
+    s.lege(einstellungenSperrWert(ANDERER, vor(1)));
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    const stand = websiteAusWerten(s.werte);
+    expect(stand.probleme).toEqual([]);
+    expect(stand.einstellungenSperre?.name).toBe('Jonas Peters');
+    expect(Object.keys(stand.sperren)).toEqual(['a']);
+    expect(websiteAusWerten([]).einstellungenSperre).toBeNull();
   });
 });

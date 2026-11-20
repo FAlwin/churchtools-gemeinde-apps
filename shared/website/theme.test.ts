@@ -10,6 +10,8 @@ import {
   brauchtHellenText,
   cssAdresse,
   cssFuerStyleTag,
+  KONTRAST_MINDEST,
+  kontrast,
   luminanz,
   themeCss,
   wirksameFarben,
@@ -353,5 +355,32 @@ describe('Theme auf allen Seiten, nicht nur der ersten', () => {
     expect(stil(renderSeite(seite(), k))).toBe(
       stil(renderSeite(seiteMit([baustein('text')], { id: 'z', pfad: 'z', startseite: false }), k)),
     );
+  });
+});
+
+describe('kontrast (WCAG)', () => {
+  it('schwarz auf weiß ist 21 : 1, gleiche Farben 1 : 1, die Reihenfolge ist egal', () => {
+    expect(kontrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(kontrast('#ffffff', '#000')).toBeCloseTo(21, 5);
+    expect(kontrast('#336699', '#336699')).toBeCloseTo(1, 5);
+  });
+
+  it('bekannte Werte: #767676 auf Weiß ist knapp über 4,5 (die bekannte AA-Grenze), #777 knapp darunter', () => {
+    expect(kontrast('#767676', '#fff')).toBeGreaterThanOrEqual(KONTRAST_MINDEST);
+    expect(kontrast('#777777', '#fff')).toBeLessThan(KONTRAST_MINDEST);
+  });
+
+  it('die Kurzform #rgb zählt wie die lange', () => {
+    expect(kontrast('#f80', '#000')).toBe(kontrast('#ff8800', '#000000'));
+  });
+
+  it('keine Hex-Farbe: null – nie eine Zahl aus einem Fehler', () => {
+    expect(kontrast('red', '#fff')).toBeNull();
+    expect(kontrast('#fff', 'rgb(0,0,0)')).toBeNull();
+  });
+
+  it('die neutralen Farben der Vorgabe sind gut lesbar (sonst warnte schon der Anfang)', () => {
+    expect(kontrast(NEUTRALE_FARBEN.text, NEUTRALE_FARBEN.grund)).toBeGreaterThan(KONTRAST_MINDEST);
+    expect(kontrast(NEUTRALE_FARBEN.text, NEUTRALE_FARBEN.sanft)).toBeGreaterThan(KONTRAST_MINDEST);
   });
 });

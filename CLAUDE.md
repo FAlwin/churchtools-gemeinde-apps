@@ -425,6 +425,15 @@ churchtools-gemeinde-apps/
 
 ## Design & Branding (feste ChurchTools-Version)
 
+> **Bedienregeln – verbindlich seit 20.11.2026 („Ruhige Bedienung“, alle Apps):** Neue oder geänderte Oberflächen folgen
+> den Regeln **R1–R13** und **„Fenster sind immer Modale“** in `docs/entwicklung/design-system.md` (Abschnitt „Ruhige
+> Bedienung: Regeln R1–R13“, je Regel Baustein + Wächter). Kurz: ein gefüllter Knopf je Ansicht; „Neu anlegen“ grün über
+> `useNeuAnlegen`/`HinzufuegenMenue` (am Handy das schwebende Plus); eine `Werkzeugzeile`, Seltenes im `MehrMenue` (⋯);
+> Reiter unterstrichen, „Einstellungen“ immer der letzte Reiter; ein `Etikett` in vier Farben; am Handy jeder Knopf mit
+> Rahmen; Auswahlen am Handy als `AuswahlFenster`, jedes Fenster ein `Sheet` über `FensterEbene`. Die Wächter in
+> `ui/design/` (u. a. `bedienKnoepfe`, `neuNurSchwebend`, `einstellungenReiter`, `ebeneFenster`) lassen die CI bei
+> Verstößen rot werden – **Obergrenzen nie erhöhen**, einen Baustein nehmen. Planung: `../bedienung-planung/docs/bauplan.md`.
+
 Das frühere White-Label (Farb-/Logo-Anpassung pro Gemeinde) wurde **zurückgebaut**: Die App ist eine
 **feste ChurchTools-Version** mit eigenem Schallwellen-Logo. Aussehen = ChurchTools-Designsprache
 (helle gruppierte Listen auf Grau, **blaue** Primärfarbe `#155DFC` – seit #654 (22.10.2026) der Look der

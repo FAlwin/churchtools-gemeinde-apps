@@ -66,7 +66,7 @@ export async function clearPersistedCache(): Promise<void> {
 }
 
 /**
- * Diagnose für den Mehr-Tab: was liegt tatsächlich offline bereit? Zeigt, ob Persistenz +
+ * Diagnose für den Reiter „Einstellungen“: was liegt tatsächlich offline bereit? Zeigt, ob Persistenz +
  * Datei-Cache greifen (macht die bisher unsichtbare Offline-Reserve überprüfbar).
  */
 export async function getOfflineStatus(): Promise<{

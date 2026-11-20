@@ -233,12 +233,12 @@ der App wie im ChurchTools-Kalender.
 Gottesdienst), einen Termin mit Ablauf in einem **anderen** Kalender und einen Termin in einem anderen Kalender,
 bei dem dieses Konto als **Admin des Termins** eingetragen ist.
 
-**Das muss passieren:** Den Stift („Ablauf bearbeiten") gibt es genau dort, wo ChurchTools das Bearbeiten auch
+**Das muss passieren:** Den Knopf **Bearbeiten** („Ablauf bearbeiten") gibt es genau dort, wo ChurchTools das Bearbeiten auch
 erlaubt – nie ein Knopf, der mit „verboten" endet.
 
-1. Einen Termin aus dem erlaubten Kalender öffnen: Der Stift ist da.
-2. Den Termin aus dem anderen Kalender öffnen: Der Ablauf ist zu sehen, ein Stift **nicht**.
-3. Den Termin öffnen, dessen Admin das Konto ist: Der Stift ist da, obwohl das Recht für diesen Kalender fehlt.
+1. Einen Termin aus dem erlaubten Kalender öffnen: **Bearbeiten** ist da.
+2. Den Termin aus dem anderen Kalender öffnen: Der Ablauf ist zu sehen, **Bearbeiten** **nicht**.
+3. Den Termin öffnen, dessen Admin das Konto ist: **Bearbeiten** ist da, obwohl das Recht für diesen Kalender fehlt.
    Einen Punkt ändern und speichern – ChurchTools übernimmt es.
 4. Reiter **Lieder** → bei einem Lied **+** („Zu Ablauf hinzufügen"): Zur Wahl stehen nur die Termine aus 1 und 3.
 

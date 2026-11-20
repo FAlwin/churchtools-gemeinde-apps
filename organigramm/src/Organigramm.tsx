@@ -78,6 +78,8 @@ interface Props {
   praesentierenGesperrt: boolean;
   /** „PDF / Drucken“ im „⋯“-Menü. */
   onPdf: () => void;
+  /** „Neue Gliederung“ im „⋯“-Menü – nur für Gruppen-Admins (R13): öffnet den Plan als eigene Seite. */
+  onGliederung?: () => void;
 }
 
 /**
@@ -112,6 +114,7 @@ export function Organigramm({
   onPraesentieren,
   praesentierenGesperrt,
   onPdf,
+  onGliederung,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const farbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
@@ -262,6 +265,16 @@ export function Organigramm({
       trenner: ansicht !== 'karten',
       onClick: onPdf,
     },
+    ...(onGliederung
+      ? [
+          {
+            label: 'Neue Gliederung',
+            symbol: <Icon name="pencil" size={16} />,
+            trenner: true,
+            onClick: onGliederung,
+          },
+        ]
+      : []),
   ];
 
   return (

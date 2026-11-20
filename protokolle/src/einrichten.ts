@@ -22,20 +22,16 @@ import {
   wertAendern,
   wertAnlegen,
 } from '@shared/ct/modulDaten';
+import { darfVerwalten, rechteAusrichten, rollenIdsAus } from '@shared/ct/rollenRechte';
 import {
-  abweichungen,
-  ausrichten,
-  darfVerwalten,
   istEinstellung,
-  rechteAus,
   rechteNummernAus,
-  rechtRumpf,
   sollRechte,
   vergebenNachher,
   vergebenPruefen,
+  verwaltetVon,
   type GruppenEinstellung,
   type PunkteVonMitgliedern,
-  type Recht,
   type Stufe,
 } from '@shared/protokolle/einrichten';
 import { kategorieName } from '@shared/protokolle/gruppen';
@@ -43,7 +39,7 @@ import { kuerzelLesen, kuerzelMitarbeit, kuerzelProtokolle } from '@shared/proto
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { NUR_ADMIN, vorlagenKategorie } from './vorlagen';
-import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
+import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
 
 /** Kürzel des Moduls – danach heißen die Rechte in `/permissions/definitions`. */
 const MODUL_KUERZEL = 'protokolle';
@@ -176,21 +172,6 @@ export function vorschlag(rollen: readonly GruppenRolle[]): Wahl {
   };
 }
 
-async function rechteDerRollen(rollen: readonly number[]): Promise<Recht[]> {
-  const listen = await Promise.all(
-    rollen.map(async (r) => rechteAus(r, await ctDaten(`/permissions/group_role/${r}`))),
-  );
-  return listen.flat();
-}
-
-async function recht(methode: 'PUT' | 'DELETE', r: Recht): Promise<void> {
-  await ctAnfrage(`/permissions/group_role/${r.rolle}`, {
-    method: methode,
-    body: JSON.stringify(rechtRumpf(r)),
-    verweigert: NUR_ADMIN,
-  });
-}
-
 /**
  * **Eine Gruppe einrichten oder ihre Einrichtung ändern.** Liefert die gespeicherte Einstellung; wirft
  * `NichtUebernommen`, wenn das Nachlesen etwas anderes zeigt als verlangt.
@@ -244,7 +225,7 @@ export async function gruppeEinrichten(
     einstellungLesen(modul, gruppe.id),
     rollenLesen(gruppe.id),
   ]);
-  const rollenDerGruppe = (rollenRoh ?? []).map((r) => r.id).filter(Number.isInteger);
+  const rollenDerGruppe = rollenIdsAus(rollenRoh);
   const vergeben = vergebenPruefen(
     alt?.inhalt.vergeben ?? [],
     rollenDerGruppe,
@@ -255,13 +236,17 @@ export async function gruppeEinrichten(
     ...new Set([...wahl.rollen.map((r) => r.rolle), ...vergeben.map((r) => r.rolle)]),
   ];
   const soll = sollRechte(einrichtung, nummern);
-  const plan = ausrichten(soll, await rechteDerRollen(rollenIds), einrichtung, nummern, vergeben);
-  for (const r of plan.setzen) await recht('PUT', r);
-  for (const r of plan.entziehen) await recht('DELETE', r);
-  // Ohne dieses PUT wirkt ein Entzug unbestimmt lange weiter (S0, S2-1) – auch ein entzogenes Leserecht.
-  if (plan.nachschieben) await recht('PUT', plan.nachschieben);
-  const { fehlt, nochDa } = abweichungen(soll, plan.entziehen, await rechteDerRollen(rollenIds));
-  if (fehlt.length || nochDa.length) throw new NichtUebernommen('die Rechte der Rollen');
+  // Ist lesen → setzen → entziehen → nachschieben → nachlesen: der gemeinsame Ablauf (`@shared/ct/rollenRechte`).
+  const ausgerichtet = await rechteAusrichten(modulPort, {
+    rollen: rollenIds,
+    soll,
+    verwaltet: verwaltetVon(einrichtung, nummern, vergeben),
+    modulSehen: nummern.modulSehen,
+    verweigert: NUR_ADMIN,
+  });
+  const plan = ausgerichtet.plan;
+  if (ausgerichtet.fehlt.length || ausgerichtet.nochDa.length)
+    throw new NichtUebernommen('die Rechte der Rollen');
 
   // 4. Die Einstellung – erst jetzt, sie ist der Vermerk „eingerichtet“. Scheitert sie, bleiben die gerade
   // gesetzten Zusatzrechte ungemerkt (und werden später nicht entzogen) – lieber das als ein falsches „eingerichtet“.

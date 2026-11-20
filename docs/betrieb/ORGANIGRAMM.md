@@ -1,6 +1,6 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: v0.3.3 (19.11.2026: Stufe über die Überschrift wählen, Fenster am iPhone ruckeln nicht mehr, Esc schließt Fenster; Gruppenwechsel O9 seit v0.3.0–v0.3.2)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: v0.4.0 (20.11.2026, „Ruhige Bedienung“: eine Werkzeugzeile mit Ansicht, Bereich, Filter, Präsentieren und ⋯; „Neue Gliederung“ jetzt im ⋯ des Reiters Organigramm statt als eigener Reiter, am Handy heißt „Kinder & Jugend“ kurz „Kinder“; Einstellungen als letzter Reiter; Auswahlen am Handy als Fenster. v0.3.3, 19.11.2026: Stufe über die Überschrift wählen, Fenster am iPhone ruckeln nicht mehr, Esc schließt Fenster; Gruppenwechsel O9 seit v0.3.0–v0.3.2)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und die Seite **Neue Gliederung** (Plan
 > und Umbau, im „⋯“ des Reiters Organigramm) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines

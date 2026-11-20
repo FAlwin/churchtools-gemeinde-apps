@@ -101,7 +101,10 @@
   &[type='date'],
   &[type='time'],
   &[type='datetime-local'] {
-    display: block;
+    // Flex statt block: Safari/WebKit setzt den Datumswert sonst an den oberen Rand des Feldes (W10, 42 px hohes Feld) –
+    // `align-items: center` zentriert ihn bei jeder Feldhöhe, ohne feste Zeilenhöhe.
+    display: flex;
+    align-items: center;
     min-width: 0;
     max-width: 100%;
     -webkit-appearance: none;

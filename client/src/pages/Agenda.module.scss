@@ -151,3 +151,19 @@
   flex-shrink: 0;
   padding-right: 12px;
 }
+// Am Handy ist rechts kein Platz: Das Feld rechts schnitt die Titel auf „Gottesdienst…“ ab (Abnahme 20.11.2026). Dort steht
+// es in einer eigenen Zeile unter dem Titel, bündig mit dem Text (Zeilenabstand 14 + Datumskachel 50 + Lücke 13).
+@media (max-width: 759px) {
+  .cardOhne {
+    flex-wrap: wrap;
+
+    .cardMain {
+      padding-bottom: 6px;
+    }
+
+    .leisesPlus {
+      width: 100%;
+      padding: 0 14px 13px 77px;
+    }
+  }
+}

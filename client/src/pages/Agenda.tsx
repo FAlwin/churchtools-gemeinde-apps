@@ -160,7 +160,8 @@ export function Agenda({
   function ohneAblaufZeile(s: Service) {
     const darf = kannAblaufAnlegen(s);
     return (
-      <div key={s.id} className={styles.card}>
+      // Am Handy rückt das leise Feld unter den Titel (`cardOhne`), sonst schneidet es ihn ab (Abnahme 20.11.2026).
+      <div key={s.id} className={darf ? `${styles.card} ${styles.cardOhne}` : styles.card}>
         <button
           className={styles.cardMain}
           onClick={() =>

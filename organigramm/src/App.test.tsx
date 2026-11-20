@@ -529,19 +529,51 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     expect(screen.getByRole('button', { name: 'Hinweise' })).toBeTruthy();
   });
 
-  it('„Neue Gliederung“ (O7) nur für Gruppen-Admins – Leitung kommt auch über die Adresse nicht hin', async () => {
+  it('„Neue Gliederung“ (O7, R13) nur für Gruppen-Admins – im ⋯ des Organigramms, kein Reiter; Leitung kommt auch über die Adresse nicht hin', async () => {
     window.location.hash = '#gliederung';
     const { unmount } = render(<App />);
     expect(await screen.findByRole('button', { name: 'Plan anlegen' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Neue Gliederung' })).toBeTruthy();
+    // Kein Reiter mehr – der Reiter „Organigramm“ bleibt markiert, „‹ Organigramm“ führt zurück.
+    expect(screen.queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Organigramm', pressed: true })).toBeTruthy();
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
     unmount();
 
+    window.location.hash = '';
     laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
     render(<App />);
     await screen.findByRole('button', { name: 'Personen' });
-    expect(screen.queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    expect(mehrEintraege()).not.toContain('Neue Gliederung');
+    cleanup();
+    window.location.hash = '#gliederung';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
     expect(screen.queryByRole('button', { name: 'Plan anlegen' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
+  });
+
+  it('Admin: ⋯ → „Neue Gliederung“ öffnet die Seite, „‹ Organigramm“ führt zurück (Adresse folgt)', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    // Es gibt keinen Reiter „Neue Gliederung“ – nur den Eintrag im Menü.
+    expect(screen.queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    mehrKlick('Neue Gliederung');
+    expect(await screen.findByRole('button', { name: 'Plan anlegen' })).toBeTruthy();
+    expect(window.location.hash).toBe('#gliederung');
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zu Organigramm' }));
+    expect(await screen.findByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Plan anlegen' })).toBeNull();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('Tipp auf den markierten Reiter „Organigramm“ führt von der Gliederung zurück', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    window.location.hash = '#gliederung';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Plan anlegen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Organigramm', pressed: true }));
+    expect(await screen.findByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
   });
 
   it('wer nichts leitet und kein Admin ist: keine Reiter, auch nicht über die Adresse', async () => {
@@ -1393,7 +1425,7 @@ describe('O7b-2: Ansichten, Liste, „Bereich“', () => {
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
     ansicht('Karten');
     // In den Karten gibt es nichts auf- oder zuzuklappen: das Menü hat nur noch das PDF.
-    expect(mehrEintraege()).toEqual(['PDF / Drucken']);
+    expect(mehrEintraege()).toEqual(['PDF / Drucken', 'Neue Gliederung']);
   });
 
   it('am Handy ohne Wahl die Liste; eine gewählte Ansicht gilt auch dort', async () => {
@@ -1888,9 +1920,14 @@ describe('B5: die Werkzeugzeile', () => {
     localStorage.removeItem('organigramm-ansicht');
     render(<App />);
     await screen.findByRole('button', { name: 'Präsentieren' });
-    expect(mehrEintraege()).toEqual(['Alle aufklappen', 'Alle zuklappen', 'PDF / Drucken']);
+    expect(mehrEintraege()).toEqual([
+      'Alle aufklappen',
+      'Alle zuklappen',
+      'PDF / Drucken',
+      'Neue Gliederung',
+    ]);
     ansichtWaehlen('Karten');
-    expect(mehrEintraege()).toEqual(['PDF / Drucken']);
+    expect(mehrEintraege()).toEqual(['PDF / Drucken', 'Neue Gliederung']);
   });
 
   it('jeder Menüpunkt einzeln: die Aktion bleibt bestehen – das Schließen setzt sie nicht zurück (Lehre 05.08.2026)', async () => {
@@ -2358,6 +2395,30 @@ describe('O9-2: Reiter „Kinder & Jugend“', () => {
       await screen.findByRole('button', { name: 'Wechseltage' });
       expect(screen.queryByRole('button', { name: 'Einrichtung' })).toBeNull();
     });
+  });
+
+  it('Reiterleiste am Handy: „Kinder“ statt „Kinder & Jugend“, kein „Neue Gliederung“ – am Rechner der volle Name', async () => {
+    const handy = (an: boolean) =>
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: an && q.includes('max-width'),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    try {
+      handy(true);
+      render(<App />);
+      const kinder = await screen.findByRole('button', { name: 'Kinder & Jugend' });
+      expect(kinder.textContent).toBe('Kinder');
+      expect(screen.queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+      cleanup();
+      handy(false);
+      render(<App />);
+      expect((await screen.findByRole('button', { name: 'Kinder & Jugend' })).textContent).toBe(
+        'Kinder & Jugend',
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('Admin: Übersicht mit Kacheln je Stufe, Kachel → Gruppe, Kind → Fenster nur zum Lesen', async () => {

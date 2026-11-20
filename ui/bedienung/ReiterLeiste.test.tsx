@@ -173,4 +173,22 @@ describe('ReiterLeiste', () => {
     );
     expect(screen.queryByText('Musik-App')).toBeNull();
   });
+
+  it('Kurzbeschriftung: unten (Handy) steht `kurz`, oben immer `label`; der Name für Vorleser bleibt der lange', () => {
+    const reiter = [
+      { id: 'a', label: 'Organigramm', icon: 'home' as const },
+      { id: 'b', label: 'Kinder & Jugend', kurz: 'Kinder', icon: 'people' as const },
+    ];
+    const { unmount } = render(<ReiterLeiste reiter={reiter} aktiv="a" onWechsel={vi.fn()} />);
+    const unten = screen.getByRole('button', { name: 'Kinder & Jugend' });
+    expect(unten.textContent).toBe('Kinder');
+    expect(
+      screen.getByRole('button', { name: 'Organigramm' }).getAttribute('aria-label'),
+    ).toBeNull();
+    unmount();
+    render(<ReiterLeiste reiter={reiter} aktiv="a" onWechsel={vi.fn()} oben />);
+    const oben = screen.getByRole('button', { name: 'Kinder & Jugend' });
+    expect(oben.textContent).toBe('Kinder & Jugend');
+    expect(oben.getAttribute('aria-label')).toBeNull();
+  });
 });

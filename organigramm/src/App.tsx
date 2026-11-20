@@ -65,17 +65,18 @@ import {
 
 type Ansicht = 'organigramm' | 'personen' | 'hinweise' | 'kinder' | 'gliederung';
 /**
- * Die Reiter: „Kinder & Jugend“ (O9-2) nur für Leitungen der Stufen, Bereichsleitung und Admins; der Plan „neue
- * Gliederung“ (O7) nur für Gruppen-Admins (Alwin, 24.10.2026). Personen und Hinweise nur mit eigenem Bereich.
+ * Die Reiter: „Kinder & Jugend“ (O9-2) nur für Leitungen der Stufen, Bereichsleitung und Admins; Personen und Hinweise
+ * nur mit eigenem Bereich. Der Plan „neue Gliederung“ (O7, nur für Gruppen-Admins) ist seit R13 (20.11.2026) kein Reiter
+ * mehr, sondern ein Eintrag im „⋯“ des Reiters Organigramm – er hat nur noch die Adresse `#gliederung`.
  */
-function reiterFuer(bereich: boolean, kinder: boolean, admin: boolean): Reiter<Ansicht>[] {
+function reiterFuer(bereich: boolean, kinder: boolean): Reiter<Ansicht>[] {
   const r: Reiter<Ansicht>[] = [{ id: 'organigramm', label: 'Organigramm', icon: 'grid' }];
   if (bereich) {
     r.push({ id: 'personen', label: 'Personen', icon: 'people' });
     r.push({ id: 'hinweise', label: 'Hinweise', icon: 'info' });
   }
-  if (kinder) r.push({ id: 'kinder', label: 'Kinder & Jugend', icon: 'people' });
-  if (admin) r.push({ id: 'gliederung', label: 'Neue Gliederung', icon: 'pencil' });
+  // Am Handy kurz: sonst bricht der Name in der Leiste unten um (Alwin, 20.11.2026).
+  if (kinder) r.push({ id: 'kinder', label: 'Kinder & Jugend', kurz: 'Kinder', icon: 'people' });
   return r;
 }
 /** Die Ansicht aus der Adresse – nur eine, die es für diese Person als Reiter gibt. */
@@ -332,9 +333,15 @@ export function App() {
     [start, einrichtung, admin, rechteVerwalten],
   );
   const kinderReiter = !!kinderZugang || (rechteVerwalten && !!einrichtungLesen && !einrichtung);
-  const reiter = reiterFuer(zeigtMehr, kinderReiter, admin);
+  const reiter = reiterFuer(zeigtMehr, kinderReiter);
   const zeigtReiter = reiter.length > 1;
-  const ansicht: Ansicht = zeigtReiter ? ansichtAusAdresse(hash, reiter) : 'organigramm';
+  // Der Plan hat keinen Reiter, nur die Adresse – und die gilt nur für Gruppen-Admins (auch ohne weitere Reiter).
+  const ansicht: Ansicht =
+    admin && hash === '#gliederung'
+      ? 'gliederung'
+      : zeigtReiter
+        ? ansichtAusAdresse(hash, reiter)
+        : 'organigramm';
 
   // Lesbare Mitglieder und Anfragen – Grundlage für Personen, Hinweise und das Personenfenster.
   const lesbar = useMemo(() => {
@@ -437,7 +444,10 @@ export function App() {
   };
   const fertig = zustand.art === 'fertig';
   const bereiche =
-    fertig && zeigtReiter ? { reiter, aktiv: ansicht, onWechsel: wechseln } : undefined;
+    fertig && zeigtReiter
+      ? // Auf dem Plan bleibt „Organigramm“ markiert (wie „Termine“ auf den Ablaufvorlagen); Tippen darauf führt zurück.
+        { reiter, aktiv: ansicht === 'gliederung' ? 'organigramm' : ansicht, onWechsel: wechseln }
+      : undefined;
 
   const offenerKnoten = offeneGruppe === null ? undefined : knoten.get(offeneGruppe);
   // „Hier anfangen“ (O7b-2): nur für eine Gruppe mit Untergruppen, die im gefilterten Baum steht.
@@ -511,6 +521,8 @@ export function App() {
       app="Organigramm"
       zustand={zustand}
       bereiche={bereiche}
+      // Auf dem Plan keine Begrüßung – er ist eine Unterseite des Organigramms, nicht dessen Start.
+      gruss={ansicht !== 'gliederung'}
       handy={handy}
       // „Einstellungen“ ist der letzte Reiter (E24, B8b) – vorher ein Knopf im Kopf neben „Hallo …“, nur im Organigramm.
       einstellungen={
@@ -550,6 +562,7 @@ export function App() {
           onPraesentieren={praesentieren}
           praesentierenGesperrt={!mitglieder}
           onPdf={() => setPdfOffen(true)}
+          onGliederung={admin ? () => wechseln('gliederung') : undefined}
         />
       )}
       {start && ansicht === 'personen' && (
@@ -597,7 +610,11 @@ export function App() {
         />
       )}
       {start && ansicht === 'gliederung' && (
-        <NeueGliederung start={start} onStruktur={strukturNeu} />
+        <NeueGliederung
+          start={start}
+          onStruktur={strukturNeu}
+          onZurueck={() => wechseln('organigramm')}
+        />
       )}
       {start && offenerKnoten && (
         <GruppenFenster

@@ -20,10 +20,20 @@
   justify-content: flex-end;
 }
 
+// Rechts bleibt in der rechten Spalte, auch wenn es keine Mitte gibt („Dienste“ hat keinen Zeitraum, B4) – sonst rutschte es
+// in die schmale mittlere.
+.zeile:not(.handy) .rechts {
+  grid-column: 3;
+}
+
 // Schmaler als Rechner: Mitte in eine eigene Reihe, damit nichts überläuft (Tablet).
 @media (max-width: 1019px) {
   .zeile:not(.handy) {
     grid-template-columns: 1fr auto;
+
+    .rechts {
+      grid-column: 2;
+    }
 
     .mitte {
       grid-row: 2;

@@ -1,6 +1,10 @@
 import { lazy, Suspense, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { Segment } from '@ui/bedienung/Segment';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -23,8 +27,7 @@ import type { Antworten } from './useAntworten';
 import type { Tausch } from './useTausch';
 import { TauschAmDienst } from './TauschTeile';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { HilfeKnopf } from '@ui/bedienung/HilfeKnopf';
+import { HilfeFenster } from '@ui/bedienung/HilfeKnopf';
 import { HILFE_DIENSTE } from './hilfeTexte';
 import styles from './Termine.module.scss';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
@@ -62,6 +65,8 @@ interface Props {
   zeitzone?: string;
   /** Wer man ist – für „Meine Dienste teilen“ (E8-3); ohne: kein „Teilen“. */
   ich?: { id: number; name: string; gemeinde: string | null };
+  /** Handy-Breite? Dann zweizeilige Werkzeugzeile mit Rahmen um jedes Werkzeug (R12) und die Ansichtswahl als Knopf. */
+  handy?: boolean;
 }
 
 /**
@@ -69,6 +74,10 @@ interface Props {
  * Filter nach Kalender und Veranstaltung (`terminFilter`), Plaketten mit den eigenen Diensten; Planer sehen „N frei“ ihrer
  * Dienstgruppen. Eine Zeile öffnet die Termin-Ansicht (E6-1b); offene Anfragen lassen sich darunter zusagen oder absagen
  * (E7-1, `AntwortKnoepfe`).
+ *
+ * **Seit „Ruhige Bedienung“ B4 (20.11.2026, Entwurf „Restliche Bildschirme“ Abschnitt 3):** Die Werkzeugzeile (R5) steht über
+ * der Karte statt darin – links „Meine | Alle“, rechts „Filter“ (still) und das „⋯“-Menü mit „Teilen“ (nur bei „Meine“) und
+ * „Hilfe“. „Weitere Wochen laden“ ist ein stilles blaues Wort unter der Karte; eine leere Liste führt mit einem Link zu „Alle“.
  */
 export function Termine({
   zustand,
@@ -80,15 +89,18 @@ export function Termine({
   tausch,
   zeitzone = gemeindeZeitzone(),
   ich,
+  handy = false,
 }: Props) {
   const [teilenOffen, setTeilenOffen] = useState(false);
+  // „Hilfe“ liegt im „⋯“-Menü (R6) – das Fenster gehört der Seite, nicht dem Menü.
+  const [hilfeOffen, setHilfeOffen] = useState(false);
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in
   // diesem Bild vorbei. Vorher räumte ein Effekt das ein Bild zu spät weg – dann stand „wird geladen …“ neben
   // „Erneut versuchen“ (wie in Planen, `laedtNach`).
   const [geklicktBei, setGeklicktBei] = useState<Props['zustand'] | null>(null);
   const laeuft = geklicktBei !== null && geklicktBei === zustand;
-  const mehr = () => {
+  const mehrLaden = () => {
     setGeklicktBei(zustand);
     onMehr();
   };
@@ -103,12 +115,32 @@ export function Termine({
   const angebot = terminFilter(alle, aus);
   const monate = nachMonat(filtere(alle, auswahl));
 
+  // Das „⋯“-Menü (R6): „Teilen“ nur bei „Meine“ (Entwurf E8: alle kommenden eigenen Dienste als PDF), „Hilfe“ immer.
+  const teilenMoeglich = !!ich && auswahl.nurMeine;
+  const mehr: Option[] = [
+    ...(teilenMoeglich
+      ? [
+          {
+            label: 'Teilen',
+            symbol: <Icon name="share" size={16} />,
+            onClick: () => setTeilenOffen(true),
+          },
+        ]
+      : []),
+    {
+      label: 'Hilfe',
+      symbol: <Icon name="hilfe" size={16} />,
+      onClick: () => setHilfeOffen(true),
+      trenner: teilenMoeglich,
+    },
+  ];
+
   return (
-    <div>
-      <section className={styles.karte} aria-labelledby="termine-titel">
-        <div className={styles.kopf}>
-          <h2 id="termine-titel">Dienste</h2>
-          <Segment
+    <div className={styles.seite}>
+      <Werkzeugzeile
+        handy={handy}
+        links={
+          <AnsichtWahl
             value={auswahl.nurMeine ? 'meine' : 'alle'}
             options={[
               { value: 'meine', label: 'Meine' },
@@ -116,25 +148,29 @@ export function Termine({
             ]}
             onChange={(v) => aendern({ ...auswahl, nurMeine: v === 'meine' })}
             ariaLabel="Welche Termine"
-            verbunden
+            handy={handy}
           />
-          <FilterKnopf
-            className={styles.filterRechts}
-            abschnitte={terminAbschnitte(angebot, aus, (a) =>
-              aendern({ ...auswahl, ausgeblendeteKalender: a.kalender, ausgeblendet: a.arten }),
-            )}
-          />
-          {/* Nur bei „Meine“ (Entwurf E8): alle kommenden eigenen Dienste als PDF. */}
-          {ich && auswahl.nurMeine && (
-            <KopfKnopf
-              onClick={() => setTeilenOffen(true)}
-              label="Teilen"
-              title="Meine Dienste als PDF teilen"
-              symbol={<Icon name="share" size={16} />}
+        }
+        rechts={
+          <>
+            <FilterKnopf
+              still
+              abschnitte={terminAbschnitte(angebot, aus, (a) =>
+                aendern({ ...auswahl, ausgeblendeteKalender: a.kalender, ausgeblendet: a.arten }),
+              )}
             />
-          )}
-          <HilfeKnopf seite="Dienste" abschnitte={HILFE_DIENSTE} />
-        </div>
+            <MehrMenue optionen={mehr} handy={handy} />
+          </>
+        }
+      />
+      {hilfeOffen && (
+        <HilfeFenster
+          seite="Dienste"
+          abschnitte={HILFE_DIENSTE}
+          onClose={() => setHilfeOffen(false)}
+        />
+      )}
+      <section className={styles.karte} aria-label="Dienste">
         {teilenOffen && ich && (
           <Suspense fallback={null}>
             <MeineTeilenFenster
@@ -153,11 +189,18 @@ export function Termine({
         )}
 
         {zustand.art === 'fertig' && monate.length === 0 && (
-          <p className={styles.leer}>
-            {auswahl.nurMeine
-              ? `Du hast in den nächsten ${zustand.wochen} Wochen keine Dienste. Unter „Alle“ stehen alle Termine.`
-              : 'Keine Termine für diese Auswahl.'}
-          </p>
+          <div className={styles.leer}>
+            {auswahl.nurMeine ? (
+              <>
+                <b>In den nächsten {zustand.wochen} Wochen hast du keine Dienste.</b>
+                <TextKnopf onClick={() => aendern({ ...auswahl, nurMeine: false })}>
+                  Alle Termine zeigen
+                </TextKnopf>
+              </>
+            ) : (
+              'Keine Termine für diese Auswahl.'
+            )}
+          </div>
         )}
 
         {monate.map((m) => (
@@ -181,17 +224,17 @@ export function Termine({
 
         {zustand.art === 'fertig' && zustand.nachladeFehler && (
           <div className={styles.hinweis}>
-            <FehlerKasten fehler={zustand.nachladeFehler} onNochmal={mehr} />
-          </div>
-        )}
-        {zustand.art === 'fertig' && (
-          <div className={styles.mehr}>
-            <button type="button" className={styles.knopf} onClick={mehr} disabled={laeuft}>
-              {laeuft ? 'wird geladen …' : 'Weitere Termine laden'}
-            </button>
+            <FehlerKasten fehler={zustand.nachladeFehler} onNochmal={mehrLaden} />
           </div>
         )}
       </section>
+      {zustand.art === 'fertig' && (
+        <div className={styles.mehr}>
+          <TextKnopf onClick={mehrLaden} disabled={laeuft}>
+            {laeuft ? 'wird geladen …' : 'Weitere Wochen laden'}
+          </TextKnopf>
+        </div>
+      )}
       <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
     </div>
   );

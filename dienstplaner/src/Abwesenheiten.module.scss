@@ -5,17 +5,11 @@
   @include m.card-list;
 }
 
-.kopf {
+// Werkzeugzeile über der Karte (B4, R5) – wie in „Planen“ ein Abstand von 10 px dazwischen.
+.seite {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--hair);
-}
-
-.rechts {
-  margin-left: auto;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .hinweis {

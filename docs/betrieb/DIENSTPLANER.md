@@ -7,7 +7,10 @@
 >   öffnet Planen mit nur dieser Gruppe und diesen 6 Wochen (nur für diesen Besuch). Datum oder Titel eines Termins
 >   führen direkt in die Termin-Ansicht.
 > - **Dienste:** Liste nach Monaten, „Meine | Alle“, Filter nach Kalender und Veranstaltung. Offene Anfragen zusagen oder absagen,
->   eigene Dienste **tauschen**; unter „Meine“ **Teilen** = alle kommenden eigenen Dienste als PDF.
+>   eigene Dienste **tauschen**; unter „Meine“ **Teilen** (im **⋯-Menü**) = alle kommenden eigenen Dienste als PDF.
+>   **Die Werkzeugzeile** (seit „Ruhige Bedienung“ B4, 20.11.2026) steht über der Karte: links „Meine | Alle“, rechts **Filter** und
+>   **⋯** (Teilen, Hilfe). „Weitere Wochen laden“ ist ein stilles blaues Wort unter der Liste; ist die Liste leer, führt „Alle Termine
+>   zeigen“ zu „Alle“. Am Handy: „Meine ⌄“ als blauer Knopf, Filter und ⋯ mit Rahmen.
 > - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App, mit Recht **bearbeiten** (Stift, Ziehen,
 >   „An diesem Termin weglassen“, „Ablauf anlegen“ / „Neu aufsetzen …“), die Dienste des Termins, **Infos & Dateien**
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
@@ -33,10 +36,13 @@
 >   mit der Gruppe hinter dem Dienst; dazu die Reihe **„Seiten“**: _Seite je Person_ oder _Untereinander_, dann wandert ein Abschnitt, der nicht mehr auf die Seite passt, ganz auf die nächste).
 >   Abgesagte Termine fehlen in beiden Personen-Ansichten; gezählt wird wie bei „Wer wie oft?“. Am Handy ein Termin auf einmal.
 > - **Wann kann ich?:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
->   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
+>   dazu eine Notiz (leise „+ Notiz“, mit Notiz nur ihr Text) und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage).
+>   **Eine Werkzeugzeile** (seit B4): links „Termine | Einträge“ (an „Einträge“ ein blauer Kreis mit der Zahl der anstehenden Einträge),
+>   in der Mitte der Zeitraum mit ‹ ›, rechts **Filter** und der grüne Knopf **+ Zeitraum eintragen** (am Handy das runde Plus).
+>   Unter „Einträge“ gibt es weder Zeitraum noch Filter. Dieselbe Seite nutzt die Musik-App (Abwesenheiten). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
 > - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
->   „?“ (in Planen der Eintrag „Hilfe“ im ⋯-Menü) ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
+>   „?“ (in Planen und Dienste der Eintrag „Hilfe“ im ⋯-Menü) ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
 >   Kurze Hinweise in Fenstern, Status-, Fehler- und Leer-Texte und Warnungen bleiben dort, wo sie stehen.
 >
 > Hell oder dunkel wie in ChurchTools gewählt. Diese Anleitung wächst mit.

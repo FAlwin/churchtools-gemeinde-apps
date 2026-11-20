@@ -1,0 +1,59 @@
+@use '../design/mixins' as m;
+
+// Die Zeitraum-Leiste (R5, B3/B4): ein gerahmtes Element mit seinen Pfeilen – ‹ Zeitraum ›. Pfeile und Zeitraum-Knopf haben darin
+// keinen eigenen Rand.
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+
+  > button,
+  > div > button:first-child {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  > button:first-child {
+    border-right: 1px solid var(--hair);
+    border-radius: calc(var(--r-ctrl) - 1px) 0 0 calc(var(--r-ctrl) - 1px);
+  }
+
+  > button:last-child {
+    border-left: 1px solid var(--hair);
+    border-radius: 0 calc(var(--r-ctrl) - 1px) calc(var(--r-ctrl) - 1px) 0;
+  }
+}
+
+.pfeil {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // Quadratisch und so hoch wie der Zeitraum-Knopf daneben (`--knopf-hoehe`, 28.10.2026 – vorher 32 px).
+  height: var(--knopf-hoehe);
+  min-width: var(--knopf-hoehe);
+  padding: 0 7px;
+  border-radius: var(--r-ctrl);
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+// Am Handy: der Knopf füllt die Breite (‹ › nur, wo der Aufrufer sie zeigt).
+.handy {
+  flex-basis: 100%;
+
+  > :not(button) {
+    flex: 1;
+  }
+
+  button[aria-expanded] {
+    width: 100%;
+  }
+}

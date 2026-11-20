@@ -12,7 +12,7 @@ import { WURZEL } from '../design/quelltexte.testutil';
 const KNOEPFE: [datei: string, klasse: string][] = [
   ['ui/bedienung/ZeitraumKnopf.module.scss', 'knopf'],
   ['ui/bedienung/FilterKnopf.module.scss', 'knopf'],
-  ['dienstplaner/src/Planen.module.scss', 'leistenKnopf'],
+  ['ui/bedienung/ZeitraumLeiste.module.scss', 'pfeil'],
 ];
 
 /** Der Rumpf der ersten Regel `.klasse { … }` auf oberster Ebene – ohne verschachtelte Blöcke. */

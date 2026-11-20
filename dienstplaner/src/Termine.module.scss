@@ -6,19 +6,11 @@
   @include m.card-list;
 }
 
-.kopf {
+// Werkzeugzeile über der Karte statt darin (B4, R5) – derselbe Abstand wie in „Planen“.
+.seite {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--hair);
-
-  h2 {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--text);
-  }
+  flex-direction: column;
+  gap: 10px;
 }
 
 .monat {
@@ -113,7 +105,6 @@
   color: var(--green);
 }
 
-.leer,
 .hinweis {
   padding: 14px;
   color: var(--text2);
@@ -121,21 +112,24 @@
   line-height: 1.45;
 }
 
+// „Weitere Wochen laden“ unter der Karte, ein stilles blaues Wort (B4).
 .mehr {
   display: flex;
   justify-content: center;
-  padding: 10px 14px 14px;
-  border-top: 1px solid var(--hair);
 }
 
-.knopf {
-  @include m.auswahlKnopf;
-  padding: 6px 14px;
-  border-radius: var(--r-ctrl);
+// Leere Liste (B4): ein fetter Satz, darunter ein Link zu „Alle“ – oder nur der Satz „Keine Termine für diese Auswahl.“
+.leer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px 14px;
+  color: var(--text2);
   font-size: 14px;
-}
+  line-height: 1.45;
 
-// Der Filter-Knopf rechts im Kopf (Entwurf A, 14.10.2026).
-.filterRechts {
-  margin-left: auto;
+  b {
+    color: var(--text);
+  }
 }

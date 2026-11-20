@@ -1,0 +1,21 @@
+@use '../design/mixins' as m;
+
+// Ein stiller Knopf als blaues Wort (B4). Die Fläche zum Tippen ist am Handy 40 px hoch, auch wenn nur das Wort zu sehen ist.
+.knopf {
+  @include m.textKnopf;
+  font-size: 14px;
+  min-height: 40px;
+  padding: 0 4px;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      text-decoration: underline;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+    border-radius: var(--r-ctrl);
+  }
+}

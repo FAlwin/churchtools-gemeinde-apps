@@ -651,9 +651,9 @@ weg als die geladenen Wochen.
 
 **Das muss passieren:** Die eigenen kommenden Dienste kommen als PDF, z. B. für den Familienkalender.
 
-1. Dienste → **Meine**: neben „Meine | Alle“ steht **Teilen** (bei „Alle“ nicht). Am Handy stehen Filter und Teilen
-   nur als Symbol in derselben Zeile wie „Dienste | Meine | Alle“.
-2. **Teilen** → „Meine Dienste teilen“, kurz „Deine Dienste werden geladen …“, dann „Fertig · 1 Seite · Meine Dienste
+1. Dienste → **Meine**: **⋯** (rechts neben „Filter“) → **Teilen** (bei „Alle“ fehlt der Eintrag, „Hilfe“ bleibt; seit B4, vorher ein Knopf
+   neben „Meine | Alle“). Am Handy ist „⋯“ ein Knopf mit Rahmen, das Menü ein Blatt von unten.
+2. **⋯ → Teilen** → „Meine Dienste teilen“, kurz „Deine Dienste werden geladen …“, dann „Fertig · 1 Seite · Meine Dienste
    <Name>.pdf“ und die Vorschau.
 3. Das Blatt: Kopf „Meine Dienste“, darunter Name und Zeitraum; Tabelle Datum (mit Uhrzeit), Termin, Dienst, Stand –
    „zugesagt“ bzw. grau „angefragt“; nach Datum sortiert, auch Dienste nach den geladenen Wochen; abgesagte fehlen.
@@ -664,7 +664,7 @@ weg als die geladenen Wochen.
 
 - **Priorität:** normal
 - **Betrifft:** `shared/dienstplan/meineBlatt.ts`, `dienstplaner/src/MeineTeilenFenster.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/App.tsx`, `ui/ct/ich.ts`, `ui/teilen/planBlattPdf.ts`, `ui/bedienung/FilterKnopf.tsx`
-- **Automatisiert:** ja – `shared/dienstplan/meineBlatt.test.ts` (aus `einteilungenAus`: Sortierung, Ortszeit, zugesagt/angefragt, leer), `dienstplaner/src/MeineTeilen.test.tsx` (Knopf nur bei „Meine“, frisch gelesen, Fehler mit „Erneut versuchen“), `ui/ct/ich.test.ts` und `dienstplaner/src/start.test.ts` (Nachname), `ui/bedienung/FilterKnopf.test.tsx` + `ui/bedienung/leistenKnoepfe.test.ts` (Filter am Handy nur Symbol); von Hand bleiben Aussehen und Teilen-Menü
+- **Automatisiert:** ja – `shared/dienstplan/meineBlatt.test.ts` (aus `einteilungenAus`: Sortierung, Ortszeit, zugesagt/angefragt, leer), `dienstplaner/src/MeineTeilen.test.tsx` (Menüeintrag nur bei „Meine“, frisch gelesen, Fehler mit „Erneut versuchen“), `ui/ct/ich.test.ts` und `dienstplaner/src/start.test.ts` (Nachname), `ui/bedienung/FilterKnopf.test.tsx` + `ui/bedienung/leistenKnoepfe.test.ts` (Filter am Handy nur Symbol); von Hand bleiben Aussehen und Teilen-Menü
 - **Historie:** E8-3 (05.11.2026, Entwurf `e8-teilen.html`)
 
 </details>
@@ -1062,8 +1062,8 @@ Die Erklärung steht in einem Fenster hinter dem Knopf **„?“**, in kurzen Ab
 2. **⋯ → Hilfe** → Fenster **„Hilfe · Planen“** mit den Abschnitten „Was du siehst“, „Werkzeugzeile“, „Eintragen“, „Anfrage oder direkt“,
    „Plätze und Zauberstab“, „Senden“, „Filter und Fokus“. Es scrollt, wenn es länger ist als der Bildschirm.
 3. Schließen mit dem **X** oben rechts und mit **Esc**; ein Tipp daneben schließt ebenfalls.
-4. **Dienste:** Rechts in der Kopfzeile (nach „Teilen“, falls „Meine“ gewählt ist) steht **„?“** → „Hilfe · Dienste“. Die Fußnote
-   unter der Liste ist weg.
+4. **Dienste:** Rechts in der Werkzeugzeile liegt **Hilfe** seit B4 im **⋯**-Menü (nach „Teilen“, falls „Meine“ gewählt ist) →
+   „Hilfe · Dienste“. Die Fußnote unter der Liste ist weg, ein eigenes „?“ gibt es dort nicht mehr.
 5. **Termin-Ansicht (nur als Planer):** neben dem Teilen-Symbol steht **„?“** → „Hilfe · Termin“. Ohne Planen-Recht gibt es
    den Knopf nicht.
 6. **Bleibt, wo es ist:** kurze Hinweise in Fenstern und an Bedienelementen, Lade-, Fehler- und Leer-Texte und Warnungen
@@ -1248,4 +1248,32 @@ einmal am Rechner (1280 px) und einmal am Handy (390 px).
 - **Betrifft:** `ui/bedienung/Werkzeugzeile.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/MehrMenue.tsx`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/ZeitraumKnopf.tsx`, `ui/bedienung/SuchLupe.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/Terminleiste.tsx`, `dienstplaner/src/Fokus.tsx`, `dienstplaner/src/App.tsx`, `dienstplaner/src/ablaufBearbeiten.ts`, `dienstplaner/src/Planen.module.scss`
 - **Automatisiert:** ja – `ui/bedienung/Werkzeugzeile.test.tsx`, `ui/bedienung/AnsichtWahl.test.tsx`, `ui/bedienung/MehrMenue.test.tsx` (jeder Eintrag einzeln, Rechner und Handy), `ui/bedienung/FilterKnopf.test.tsx` (Anzeige zählt nicht), `ui/bedienung/ZeitraumKnopf.test.tsx` (＋ im Fenster), `dienstplaner/src/Planen.werkzeug.test.tsx` (Reihenfolge, Menüeinträge, Handy), `dienstplaner/src/Planen.test.tsx`, `dienstplaner/src/MatrixAblauf.test.tsx`; von Hand bleibt der Eindruck (Mitte, Rahmen, Hover) im Browser und am Handy
 - **Historie:** „Ruhige Bedienung“ B3 (20.11.2026, Entwurf `planen-ruhiger-v5.html`, Entscheidungen E2/E3/E5/E6/E9)
+</details>
+
+### TF-ABLAUF-42 · Dienste: ruhige Werkzeugzeile – „Meine | Alle“, Filter, „⋯“, leere Liste
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz** (oder `?demo`), ein Konto mit eigenen Diensten und – für den leeren
+Fall – eines ohne kommende Dienste.
+
+**Das muss passieren:** Über der Karte steht **eine** Zeile ohne gefüllten Knopf; was selten ist, liegt im „⋯“-Menü; nichts ist weggefallen.
+
+1. **Rechner:** links **Meine | Alle**, rechts **Filter** und **⋯** – ohne Rahmen, erst beim Darüberfahren hinterlegt. Die Zeile steht
+   **über** der Karte, im Kopf der Karte steht keine Überschrift „Dienste“ mehr (das sagt der Reiter).
+2. **⋯** antippen: **Teilen** (nur bei „Meine“) | **Hilfe**. Jeden einmal antippen: das Menü geht zu, „Teilen“ öffnet „Meine Dienste
+   teilen“, „Hilfe“ das Fenster „Hilfe · Dienste“.
+3. **Filter**: Kalender und Veranstaltungen wie bisher; die Zahl zählt ausgeblendete Einträge.
+4. **Weitere Wochen laden** steht unter der Karte als stilles blaues Wort (vorher grauer Knopf „Weitere Termine laden“); beim Laden
+   „wird geladen …“, gesperrt.
+5. **Leere Liste** (Meine, keine Dienste): fetter Satz „In den nächsten 8 Wochen hast du keine Dienste.“ und darunter der Link
+   **Alle Termine zeigen** – er schaltet auf „Alle“.
+6. **Handy:** oben ein blauer Knopf **Meine ⌄** (tippen → Blatt mit Meine/Alle), rechts **Filter** und **⋯** mit Rahmen; **⋯** öffnet ein
+   Blatt von unten mit denselben Einträgen. Zusagen, Absagen und Tauschen unter den Zeilen bleiben, wie sie waren.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/Termine.tsx`, `dienstplaner/src/Termine.module.scss`, `dienstplaner/src/hilfeTexte.ts`, `ui/bedienung/TextKnopf.tsx`, `ui/bedienung/Werkzeugzeile.module.scss`
+- **Automatisiert:** ja – `dienstplaner/src/Termine.test.tsx` (Zeile, Reihenfolge, Menü, Handy, leere Liste, „Weitere Wochen laden“), `dienstplaner/src/MeineTeilen.test.tsx`, `dienstplaner/src/App.test.tsx`, `ui/bedienung/TextKnopf.test.tsx`, `ui/bedienung/werkzeugzeileSpalten.test.ts`; von Hand bleibt der Eindruck im Browser und am Handy
+- **Historie:** „Ruhige Bedienung“ B4 (20.11.2026, Entwurf `restliche-ruhiger-v2.html` Abschnitt 3, E24)
+
 </details>

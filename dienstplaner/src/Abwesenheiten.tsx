@@ -279,26 +279,26 @@ export function Abwesenheiten({
           <DienstHinweis dienste={dienste?.get(ev.id)} abwesend={abwesend} />
         )}
         rahmen={(t) => (
-          <section className={styles.karte} aria-label="Wann kann ich?">
-            <div className={styles.kopf}>
-              {t.kopf}
-              <span className={styles.rechts}>{t.aktionen}</span>
-            </div>
-            {t.fehler ? (
-              <div className={styles.hinweis}>
-                <FehlerKasten
-                  fehler={fehlerMeldung(new Error('Abwesenheiten konnten nicht geladen werden.'))}
-                  onNochmal={() => void t.neuLaden()}
-                />
-              </div>
-            ) : t.laedt ? (
-              <p className={styles.hinweis}>Deine Termine werden geladen …</p>
-            ) : (
-              t.inhalt
-            )}
-            <div className={styles.unten}>{t.ueberlagerung}</div>
-            <Toast message={toast} />
-          </section>
+          <div className={styles.seite}>
+            {/* Die Werkzeugzeile steht über der Karte, nicht darin (B4, R5). */}
+            {t.werkzeug}
+            <section className={styles.karte} aria-label="Wann kann ich?">
+              {t.fehler ? (
+                <div className={styles.hinweis}>
+                  <FehlerKasten
+                    fehler={fehlerMeldung(new Error('Abwesenheiten konnten nicht geladen werden.'))}
+                    onNochmal={() => void t.neuLaden()}
+                  />
+                </div>
+              ) : t.laedt ? (
+                <p className={styles.hinweis}>Deine Termine werden geladen …</p>
+              ) : (
+                t.inhalt
+              )}
+              <div className={styles.unten}>{t.ueberlagerung}</div>
+              <Toast message={toast} />
+            </section>
+          </div>
         )}
       />
     </QuelleKontext.Provider>

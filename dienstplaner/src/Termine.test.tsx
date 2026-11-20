@@ -5,6 +5,7 @@ import { LEERER_PLAN, zeile, mein } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
 import type { Tausch } from './useTausch';
 import { tauschAttrappe } from './tausch.testutil';
+import { mehrEintrag, mehrEintragOder } from './mehrMenue.testutil';
 
 const z = zeile;
 
@@ -63,10 +64,12 @@ describe('Termine (E3-2)', () => {
     expect(screen.getByText('abgesagt')).toBeTruthy();
   });
 
-  it('Hilfe „?“ statt Fußnote: Knopf da, Fenster nennt, was man unter „Alle“ sieht', () => {
+  it('Hilfe im „⋯“-Menü statt Fußnote: Eintrag da, Fenster nennt, was man unter „Alle“ sieht', () => {
     zeige();
     expect(screen.queryByText(/entscheidet ChurchTools \(Kalender-Rechte\)/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Dienste' }));
+    // Kein eigener „?“-Knopf mehr in der Zeile (B4).
+    expect(screen.queryByRole('button', { name: 'Hilfe zu Dienste' })).toBeNull();
+    mehrEintrag('Hilfe');
     expect(screen.getByRole('dialog', { name: 'Hilfe · Dienste' })).toBeTruthy();
     expect(screen.getByText(/entscheidet ChurchTools \(Kalender-Rechte\)/)).toBeTruthy();
   });
@@ -169,25 +172,30 @@ describe('Termine (E3-2)', () => {
         onMehr={() => {}}
       />,
     );
-    expect(screen.getByText(/in den nächsten 8 Wochen keine Dienste/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Weitere Termine laden' })).toBeTruthy();
+    expect(screen.getByText(/In den nächsten 8 Wochen hast du keine Dienste/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Weitere Wochen laden' })).toBeTruthy();
+    // Der Satz führt mit einem Link zu „Alle“ (B4).
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Termine zeigen' }));
+    expect(titel()).toEqual(['Gebetsabend']);
+    expect(screen.getByRole('button', { name: 'Alle' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Alle Termine zeigen' })).toBeNull();
   });
 
-  it('„Weitere Termine laden“ ruft das Nachladen; bis die Antwort da ist: „wird geladen …“, gesperrt', () => {
+  it('„Weitere Wochen laden“ ruft das Nachladen; bis die Antwort da ist: „wird geladen …“, gesperrt', () => {
     const onMehr = vi.fn();
     const el = (zustand: Parameters<typeof Termine>[0]['zustand']) => (
       <Termine zustand={zustand} planer onNochmal={() => {}} onMehr={onMehr} />
     );
     const fertig = { art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 } as const;
     const { rerender } = render(el(fertig));
-    fireEvent.click(screen.getByRole('button', { name: 'Weitere Termine laden' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Wochen laden' }));
     expect(onMehr).toHaveBeenCalledTimes(1);
     // Das Bisherige bleibt stehen (still nachladen) – kein Doppelklick, der zweimal lädt.
     const knopf = screen.getByRole('button', { name: 'wird geladen …' });
     expect(knopf).toHaveProperty('disabled', true);
     expect(titel()).toEqual(['Gottesdienst']); // Vorgabe „Meine“
     rerender(el({ ...fertig, wochen: 16 }));
-    expect(screen.getByRole('button', { name: 'Weitere Termine laden' })).toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Weitere Wochen laden' })).toHaveProperty(
       'disabled',
       false,
     );
@@ -265,5 +273,72 @@ describe('Dienste: Tauschen (E7-3)', () => {
     const eigene = mitPlatz.reduce((n, z) => n + z.meine.length, 0);
     expect(eigene).toBeGreaterThan(1);
     expect(screen.getAllByRole('button', { name: /Tauschen/ })).toHaveLength(eigene);
+  });
+});
+
+describe('Dienste: Werkzeugzeile (Ruhige Bedienung B4, R5/R6)', () => {
+  const zeigeMit = (handy: boolean, ich = true) =>
+    render(
+      <Termine
+        zustand={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
+        planer
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        handy={handy}
+        ich={ich ? { id: 1, name: 'Alwin Friesen', gemeinde: null } : undefined}
+      />,
+    );
+
+  it('Rechner: eine Werkzeugzeile über der Karte – links „Meine | Alle“, rechts Filter und „Mehr“, sonst nichts', () => {
+    zeigeMit(false);
+    const zeile = screen.getByRole('toolbar', { name: 'Werkzeuge' });
+    const karte = screen.getByRole('region', { name: 'Dienste' });
+    // Über der Karte, nicht darin.
+    expect(zeile.compareDocumentPosition(karte) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(karte.contains(zeile)).toBe(false);
+    expect(
+      within(zeile)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['Meine', 'Alle', 'Filter', 'Mehr']);
+    // Kein gefüllter (Haupt-/Neu-)Knopf: die Seite hat keine Hauptaktion (R1).
+    expect(screen.queryByRole('heading', { name: 'Dienste', level: 2 })).toBeNull();
+  });
+
+  it('das „⋯“-Menü: „Teilen“ nur bei „Meine“, „Hilfe“ immer – jeder Eintrag tut seins', () => {
+    zeigeMit(false);
+    expect(mehrEintragOder('Teilen')).toBeTruthy();
+    expect(mehrEintragOder('Hilfe')).toBeTruthy();
+    mehrEintrag('Hilfe');
+    expect(screen.getByRole('dialog', { name: 'Hilfe · Dienste' })).toBeTruthy();
+    // „Teilen“ öffnet sein Fenster erst nach dem Schließen des Menüs (Lehre 05.08.2026) – hier: das Menü ist zu.
+    expect(screen.queryByRole('menu', { name: 'Mehr' })).toBeNull();
+  });
+
+  it('ohne „ich“ gibt es kein „Teilen“, aber weiter die Hilfe', () => {
+    zeigeMit(false, false);
+    expect(mehrEintragOder('Teilen')).toBeNull();
+    expect(mehrEintragOder('Hilfe')).toBeTruthy();
+  });
+
+  it('Handy: die Ansicht ist ein Knopf mit Blatt, „Mehr“ ein Blatt von unten – dieselben Einträge', () => {
+    zeigeMit(true);
+    expect(screen.queryByRole('group', { name: 'Welche Termine' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Welche Termine: Meine' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Welche Termine' })).getByRole('button', {
+        name: 'Alle',
+      }),
+    );
+    expect(titel()).toHaveLength(5);
+    mehrEintrag('Hilfe');
+    expect(screen.getByRole('dialog', { name: 'Hilfe · Dienste' })).toBeTruthy();
+  });
+
+  it('„Weitere Wochen laden“ steht unter der Karte, nicht darin', () => {
+    zeigeMit(false);
+    const karte = screen.getByRole('region', { name: 'Dienste' });
+    const mehr = screen.getByRole('button', { name: 'Weitere Wochen laden' });
+    expect(karte.contains(mehr)).toBe(false);
   });
 });

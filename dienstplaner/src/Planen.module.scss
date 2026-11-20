@@ -982,50 +982,6 @@
   gap: 10px;
 }
 
-.leiste {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  // Ein gerahmtes Element mit seinen Pfeilen (R5, B3): ‹ Zeitraum ›. Pfeile und Zeitraum-Knopf haben darin keinen eigenen Rand.
-  border: 1px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-
-  > button,
-  > div > button:first-child {
-    border: 0;
-    background: transparent;
-    border-radius: 0;
-  }
-
-  > button:first-child {
-    border-right: 1px solid var(--hair);
-    border-radius: calc(var(--r-ctrl) - 1px) 0 0 calc(var(--r-ctrl) - 1px);
-  }
-
-  > button:last-child {
-    border-left: 1px solid var(--hair);
-    border-radius: 0 calc(var(--r-ctrl) - 1px) calc(var(--r-ctrl) - 1px) 0;
-  }
-}
-
-.leistenKnopf {
-  @include m.auswahlKnopf;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  // Quadratisch und so hoch wie der Zeitraum-Knopf daneben (`--knopf-hoehe`, 28.10.2026 – vorher 32 px).
-  height: var(--knopf-hoehe);
-  min-width: var(--knopf-hoehe);
-  padding: 0 7px;
-  border-radius: var(--r-ctrl);
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-}
-
 // Termine einer anderen Veranstaltung als der häufigsten (Entwurf: Gebetsabende abgesetzt).
 .neben {
   background: color-mix(in srgb, var(--section) 70%, var(--surface2)) !important;
@@ -1081,18 +1037,5 @@
     height: 6px;
     border-radius: 3px;
     background: var(--blue);
-  }
-}
-
-// Am Handy: Zeitraum-Leiste in eigener Reihe, der Knopf füllt die Breite (‹ › nur bei gewähltem Zeitraum).
-.leisteHandy {
-  flex-basis: 100%;
-
-  > :not(button) {
-    flex: 1;
-  }
-
-  button[aria-expanded] {
-    width: 100%;
   }
 }

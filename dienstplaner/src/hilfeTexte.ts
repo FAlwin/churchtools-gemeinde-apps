@@ -93,10 +93,12 @@ export const HILFE_DIENSTE: readonly HilfeAbschnitt[] = [
     ],
   },
   {
-    titel: 'Filter und Teilen',
+    titel: 'Werkzeugzeile',
     punkte: [
+      'Links „Meine | Alle“, rechts Filter und „Mehr“ (drei Punkte).',
       'Im Filter lassen sich Kalender und Terminarten ausblenden.',
-      'Bei „Meine“ teilt „Teilen“ alle kommenden eigenen Dienste als PDF.',
+      'Bei „Meine“ steht im Menü „Mehr“ der Eintrag „Teilen“: alle kommenden eigenen Dienste als PDF.',
+      'Ist die Liste leer, führt „Alle Termine zeigen“ direkt zu „Alle“; „Weitere Wochen laden“ steht unter der Liste.',
     ],
   },
 ];

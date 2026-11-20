@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
 import type { PlanBlatt } from '@shared/dienstplan/planBlatt';
+import { mehrEintrag, mehrEintragOder } from './mehrMenue.testutil';
 
 /**
- * **Meine Dienste teilen** (E8-3): „Teilen“ neben „Meine | Alle“, nur bei „Meine“; das Fenster liest die eigenen
+ * **Meine Dienste teilen** (E8-3): „Teilen“ im „⋯“-Menü (seit B4, vorher neben „Meine | Alle“), nur bei „Meine“; das Fenster liest die eigenen
  * Einteilungen frisch (`tauschPort.einteilungen`) – das Blatt wird festgehalten statt gezeichnet.
  */
 const port = vi.hoisted(() => ({ einteilungen: vi.fn<(ich: number) => Promise<unknown[]>>() }));
@@ -36,7 +37,8 @@ const zeige = () =>
       ich={{ id: 1, name: 'Alwin Friesen', gemeinde: 'ECG Donrath' }}
     />,
   );
-const knopf = () => screen.queryByRole('button', { name: 'Meine Dienste als PDF teilen' });
+/** „Teilen“ im „⋯“-Menü – `null`, wo es keinen gibt. */
+const teilen = () => mehrEintragOder('Teilen');
 
 beforeEach(() => {
   blaetter.length = 0;
@@ -48,9 +50,11 @@ afterEach(cleanup);
 describe('Meine Dienste teilen (E8-3)', () => {
   it('„Teilen“ nur bei „Meine“ – bei „Alle“ nicht', () => {
     zeige();
-    expect(knopf()).toBeTruthy();
+    expect(teilen()).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
-    expect(knopf()).toBeNull();
+    expect(teilen()).toBeNull();
+    // Das Menü selbst bleibt (mit „Hilfe“) – nur „Teilen“ fehlt.
+    expect(mehrEintragOder('Hilfe')).toBeTruthy();
   });
 
   it('öffnet „Meine Dienste teilen“ mit allen kommenden Diensten der eigenen Person', async () => {
@@ -64,7 +68,7 @@ describe('Meine Dienste teilen (E8-3)', () => {
       },
     ]);
     zeige();
-    fireEvent.click(knopf()!);
+    mehrEintrag('Teilen');
     expect(await screen.findByRole('dialog', { name: 'Meine Dienste teilen' })).toBeTruthy();
     await waitFor(() => expect(blaetter.length).toBeGreaterThan(0));
     expect(port.einteilungen).toHaveBeenCalledWith(1);
@@ -80,7 +84,7 @@ describe('Meine Dienste teilen (E8-3)', () => {
     port.einteilungen.mockRejectedValueOnce(new Error('503')).mockResolvedValueOnce([]);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     zeige();
-    fireEvent.click(knopf()!);
+    mehrEintrag('Teilen');
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     // Der Grund steht im Log – auf der Seite nur „ließen sich nicht laden“.
     expect(warn).toHaveBeenCalledWith('[meine dienste] nicht geladen:', expect.any(Error));

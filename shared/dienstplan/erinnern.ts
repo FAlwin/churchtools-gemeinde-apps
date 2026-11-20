@@ -10,6 +10,10 @@
  * - **Nein = Abwesenheit** aus ChurchTools (`decktTermin`, im Raster `RasterZelle.abwesend`) – dieselbe Regel wie überall.
  * - **Wer an dem Termin in dieser Gruppe schon eingeteilt ist** (zugesagt oder angefragt, in irgendeinem Dienst der
  *   Gruppe), zählt dort nicht als fehlend – er wird ja eingeplant (Vorgabe Alwins Hauptchat, 19.11.2026).
+ * - **Pause (PL-3):** Wer in der **Personenliste dieser Dienstgruppe** an dem Termin pausiert (`pauseAm`, „bis“ einschließlich),
+ *   zählt dort nicht als fehlend – ist dadurch nichts mehr offen, gibt es keine Mail. Eine Pause einer **anderen** Dienstgruppe
+ *   wirkt hier nicht. Wie viele Personen deshalb ausgelassen werden, steht in `GruppenErgebnis.pausiert`. Antworten kann die
+ *   Person trotzdem selbst – es wird nur nicht nachgefragt.
  *
  * **Nichts neu erfunden, nichts nachgebaut:** Mitglieder, Antworten und Abwesenheiten kommen aus `personenRaster` – derselben
  * Rechnung wie die Ansicht „Personen“, die die Zellen färbt. Was dort „Antwort“ oder „abwesend“ heißt, heißt es hier.
@@ -21,6 +25,7 @@
 import { monatName, tagKurz } from '../ct/datum';
 import { antwortenSichtbar, type PersonenAntworten } from './personenAntworten';
 import type { PersonenDaten } from './personenDaten';
+import { pauseAm, type Personenliste } from './personenliste';
 import { istVorgesehen, personenRaster, rasterDienste } from './personenRaster';
 import type { Plan, PlanGruppe, PlanSpalte } from './plan';
 
@@ -44,7 +49,12 @@ export interface Fehlende {
 /** Das Ergebnis je Dienstgruppe: gesperrt (mit Grund) oder die Fehlenden. */
 export type GruppenErgebnis =
   | { art: 'gesperrt'; grund: string; nochmal: boolean }
-  | { art: 'ok'; personen: Fehlende[] };
+  | {
+      art: 'ok';
+      personen: Fehlende[];
+      /** Wer ohne Pause eine Mail bekäme (PL-3): `personId`s, denen **alle** offenen Termine wegen Pause entfallen. */
+      pausiert: number[];
+    };
 
 /** Ein Empfänger über alle gewählten Gruppen: einmal, mit den vereinigten offenen Terminen und den Gruppen, in denen er fehlt. */
 export interface Empfaenger {
@@ -129,11 +139,15 @@ export function fehlendeInGruppe(o: {
   antworten: PersonenAntworten | null | undefined;
   /** Heute, `YYYY-MM-DD` (Ortszeit der Gemeinde). */
   heute: string;
+  /** Die Personenlisten je Dienstgruppe (PL-3: Pause). Ohne Angabe oder ohne Liste dieser Gruppe gilt keine Pause. */
+  personenlisten?: ReadonlyMap<number, Personenliste>;
 }): GruppenErgebnis {
   const spalten = erinnerSpalten(o.plan, o.spalten, o.heute);
   const grund = gruppeGrund({ ...o, spalten });
   if (grund !== null) return { art: 'gesperrt', ...grund };
-  if (spalten.length === 0) return { art: 'ok', personen: [] };
+  if (spalten.length === 0) return { art: 'ok', personen: [], pausiert: [] };
+  // Die Liste dieser Dienstgruppe – eine Pause gilt nur für sie.
+  const liste = o.gruppe.gruppe ? o.personenlisten?.get(o.gruppe.gruppe.id) : undefined;
 
   const raster = personenRaster({
     plan: o.plan,
@@ -165,17 +179,20 @@ export function fehlendeInGruppe(o: {
   const hatDienste = spalten.map((_, pos) => raster.blocks.some((b) => b.plaetze[pos].anzahl > 0));
 
   const personen: Fehlende[] = [];
+  const pausiert: number[] = [];
   for (const personId of mitglieder) {
-    const termine = spalten.flatMap((i, pos) =>
+    const ohnePause = spalten.flatMap((i, pos) =>
       hatDienste[pos] && !beantwortet[pos].has(personId) && !eingeteilt[pos].has(personId)
         ? [offenerTermin(o.plan.spalten[i])]
         : [],
     );
+    const termine = ohnePause.filter((t) => pauseAm(liste, personId, t.tag) === null);
     if (termine.length > 0)
       personen.push({ personId, name: namen.get(personId) ?? `Person ${personId}`, termine });
+    else if (ohnePause.length > 0) pausiert.push(personId);
   }
   personen.sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
-  return { art: 'ok', personen };
+  return { art: 'ok', personen, pausiert };
 }
 
 /**
@@ -214,6 +231,18 @@ export function empfaengerAus(
       ),
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
+}
+
+/**
+ * **Wie viele Personen wegen Pause keine Mail bekommen** (PL-3): wer in einer der gewählten Gruppen wegen Pause ausgelassen
+ * wird, aber über eine andere Gruppe doch eine Mail bekommt, zählt nicht (er wird ja erinnert). Jede Person einmal.
+ */
+export function pausiertAusgelassen(
+  ergebnisse: readonly { pausiert: readonly number[] }[],
+  empfaenger: readonly Pick<Empfaenger, 'personId'>[],
+): number {
+  const bekommen = new Set(empfaenger.map((e) => e.personId));
+  return new Set(ergebnisse.flatMap((e) => e.pausiert).filter((id) => !bekommen.has(id))).size;
 }
 
 // ── Die Mail ────────────────────────────────────────────────────────────────

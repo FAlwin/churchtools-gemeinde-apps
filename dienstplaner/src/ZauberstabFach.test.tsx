@@ -7,6 +7,8 @@ import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import { ladeWerKann, vergissWerKann } from './ladeWerKann';
 import { STANDARD } from '@shared/dienstplan/vorlieben';
+import { leereListe, pauseSetzen } from '@shared/dienstplan/personenliste';
+import { liste } from '@shared/dienstplan/personenliste.testutil';
 import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
@@ -108,6 +110,27 @@ describe('ZauberstabFach (E5-2)', () => {
     expect(screen.getByRole('option', { name: 'David – abwesend: Urlaub' })).toBeTruthy();
     fireEvent.change(auswahl('09:00'), { target: { value: '3' } });
     expect(screen.getByText('Achtung: abwesend: Urlaub')).toBeTruthy();
+  });
+
+  it('Pause (PL-3): wer in der Liste der Dienstgruppe pausiert, wird nicht vorgeschlagen und steht unter „Passt eher nicht“ mit „Pause bis …“', async () => {
+    laden.mockResolvedValue([ANNA, BEN]);
+    zeige({
+      zeilen: [NEUN],
+      personenliste: liste(pauseSetzen(leereListe(), 1, { bis: '2026-10-25' })),
+    });
+    await screen.findByText('1 Vorschlag');
+    expect(gewaehlt('09:00')).toBe('Ben (0×)');
+    expect(screen.getByRole('option', { name: 'Anna – Pause bis 25.10.26' })).toBeTruthy();
+  });
+
+  it('Pause (PL-3): endet sie vor dem Termin, bleibt Anna die Wahl', async () => {
+    laden.mockResolvedValue([ANNA, BEN]);
+    zeige({
+      zeilen: [NEUN],
+      personenliste: liste(pauseSetzen(leereListe(), 1, { bis: '2026-10-24' })),
+    });
+    await screen.findByText('1 Vorschlag');
+    expect(gewaehlt('09:00')).toBe('Anna (0×)');
   });
 
   it('„hat zuvor abgesagt“ (wie ChurchTools): passt eher nicht, ehrlich benannt – bewusst wählbar', async () => {

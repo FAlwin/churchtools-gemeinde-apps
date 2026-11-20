@@ -7,6 +7,935 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.41.0] – 2026-11-20
+
+### Geändert (alle Apps)
+
+- **Fenster statt Blatt von unten.** Am Handy öffnen „⋯“, die Ansichtswahl („Matrix ⌄“, „Termine ⌄“, „Kommende ⌄“ …) und das schwebende Plus mit mehreren Möglichkeiten („Neu“ in den Protokollen, Eintrag hinzufügen im Ablauf) ihre Auswahl jetzt als **Fenster in der Mitte** – mit Titel, ✕ und den Einträgen als Liste, wie jedes andere Fenster. Das Blatt mit dem Griff unten ist weg; ✕, Escape und ein Tipp daneben schließen. Am iPad und Rechner bleiben es die kleinen Menüs am Knopf.
+- **Gewohnheit: Das Fenster liegt immer ganz oben.** Vorher lag in „Wann kann ich?“ das grüne Plus über dem offenen Fenster „Zeitraum eintragen“. Jetzt liegt jedes Fenster und jede Rückfrage über dem Plus, der Reiterleiste und Leisten wie „3 Entwürfe … Ansehen & senden“ – in allen Apps.
+
+### Intern
+
+- Ursache des Plus über dem Fenster: `Sheet` und `ConfirmDialog` hingen im Inhalt der Seite. Ein Kasten darüber mit eigenem Stapel (in „Wann kann ich?“ die klebende Leiste mit `position: sticky; z-index: 2`) sperrte das Fenster mit seinen 100 dort ein; das Plus (Ebene 3) lag darüber. Jetzt zeichnen sich beide über den neuen Baustein `FensterEbene` (`ui/fenster`) als Kind direkt unter `#root`; die Ebenen stehen als `--ebene-fenster` (2600), `--ebene-bestaetigung` (2700) und `--ebene-hinweis` (2800, `Toast`) in `_variables.scss`. Wächter: `ebeneFenster.test.ts` (Ebenen geordnet, kein zweites Fenster-Gerüst), `FensterEbene.test.tsx`.
+- `AuswahlBlatt` heißt `AuswahlFenster` und ist ein `Sheet` (`knoepfe={null}`); `MehrMenue`, `AnsichtWahl`, `HinzufuegenMenue` und `useAblaufBearbeiten` rufen es auf. Fenster liegen im DOM nicht mehr im Inhalt der Seite: Tests suchen den Schleier über `getByRole('dialog').parentElement`, nicht über `container`.
+
+### Neu (Website)
+
+- **Rechte beim Einrichten (W3b-1):** Beim Einrichten wählt ein Admin **je Rolle der Gruppe „Website“** die Stufe – **Kein Zugriff,
+  Redakteur oder Leitung** (vorbelegt: Rollen mit Leiter-Kennzeichen = Leitung, alle anderen = Redakteur). Die Erweiterung setzt die
+  Rechte in ChurchTools selbst und liest nach, ob sie übernommen wurden. **Redakteure** bearbeiten die Entwürfe und dürfen
+  „Veröffentlicht“ nur lesen; die **Leitung** darf zusätzlich in „Veröffentlicht“ schreiben. Entzogen wird nur, was auf die beiden
+  Kategorien der Website zeigt – von Hand gesetzte Rechte anderswo bleiben.
+- **„Wer darf was“ im Fenster „Einstellungen“:** Dieselbe Liste später noch einmal, mit „Rechte setzen“. Die Stufe wird **nicht
+  zusätzlich gespeichert**, sondern aus den Rechten in ChurchTools abgeleitet; Rechte, die von Hand verändert wurden, zeigt die Liste
+  als „Weicht ab“. Sehen und setzen darf das nur, wer in ChurchTools „Personen administrieren“ hat.
+- **Hinweis beim Start (nur für diese Admins):** Haben die Rollen keine oder abweichende Rechte, steht oben ein ruhiger Hinweis mit
+  dem Weg zu „Wer darf was“.
+- **Redakteure in der Oberfläche:** Reiter „Seiten“ und „Freigaben“; **kein** Aussehen, **keine** Einstellungen, kein Menü in „Seite
+  einstellen“ (Menütitel ziehen dem Seitentitel weiter nach) und kein Baustein „Eigenes HTML“. Einreichen und Freigeben folgen mit
+  W3b-2.
+
+### Geändert (Website)
+
+- **Zugang aus den eigenen Rechten:** Wer die Website bearbeiten darf, ergibt sich jetzt aus den **Rechten der Person an den
+  Kategorien** (Schreiben in „Entwürfe“ und „Veröffentlicht“ = Leitung, nur „Entwürfe“ = Redakteur) – nicht mehr daraus, ob sie die
+  Gruppe leitet. Vorher bekam eine Leitung ohne Rechte den Editor gezeigt, und Speichern scheiterte. Leitet jemand die Gruppe, hat
+  aber noch keine Rechte, sagt der Hinweis, dass ein Admin sie unter Einstellungen → „Wer darf was“ einrichtet. **Für bestehende
+  Einrichtungen:** Die von Hand gesetzten Rechte genügen weiter; wer Redakteure oder weitere Rollen will, setzt sie in „Wer darf was“.
+
+### Intern (alle Apps)
+
+- **Rechte an Gruppenrollen als gemeinsamer Baustein:** Lesen, Rechte-Nummern aus den Definitionen, Soll gegen Ist, Entziehen,
+  Nachschieben und Nachlesen stehen in `shared/ct/rollenRechte.ts` (aus den Protokollen gehoben) – Protokolle und Website nutzen
+  denselben Ablauf. Das Verhalten der Protokolle bleibt gleich, ihre Tests sind unverändert grün.
+
+### Neu (Dienstplaner)
+
+- **Die Personenliste lässt sich bearbeiten** (Scheibe PL-2, Entwurf `personenliste.html`, Variante B). Im „⋯“-Menü von Planen gibt es
+  den neuen Eintrag **„Liste bearbeiten“** – er steht da, wo man die Liste mindestens einer gezeigten Dienstgruppe ändern darf
+  (dieselben Rechte wie bei den Entwürfen) und wechselt bei Bedarf nach „Personen“. Im Modus steht unter der Werkzeugzeile ein blaues Band
+  mit **„Tags verwalten …“** und **„Fertig“**. Alles gilt **für alle Planer der Dienstgruppe**.
+  - **Reihenfolge:** Jede obere Zeile hat vor dem Bild einen **Griff**; am Griff ziehen (Maus, Finger, Tastatur) ordnet die Zeile im
+    Block um und speichert die Reihenfolge der Dienstgruppe – sie gilt in allen Blöcken dieser Gruppe, in „Wer kann?“ und im PDF. Wer
+    pausiert oder ganz abwesend ist (blass unten), hat keinen Griff.
+  - **Personen-Fenster:** Im Modus öffnet der Klick auf einen Namen ein Fenster (immer in der Mitte, auch am Handy) mit den **Tags bei
+    diesem Dienst** (Häkchen aus der festen Liste der Dienstgruppe) und der **Pause in der Dienstgruppe** (Keine · Bis Datum, einschließlich ·
+    Ohne Ende). Ohne Tags führt ein Hinweis zu „Tags verwalten“.
+  - **„Tags verwalten“:** Name und Kürzel (1–2 Zeichen, großgeschrieben) je Tag, „+ Tag“ legt einen an, das Kreuz löscht – ein gelöschter Tag
+    verschwindet bei allen Personen. Die Dienstgruppe wählt man oben (nur Gruppen, die man ändern darf).
+  - **Ohne Recht** in einer Gruppe gibt es dort keine Griffe, und der Name setzt weiter den Fokus. Ein Wechsel der Ansicht beendet den Modus.
+  - **Wenn ein anderer Planer schneller war:** Nichts wird überschrieben; ein ruhiger Hinweis sagt es, der neue Stand ist geladen, das
+    Fenster bleibt mit der Eingabe offen. Ein vorübergehender ChurchTools-Fehler verliert nichts und wiederholt nichts von selbst.
+  - Angezeigt wird nur, was nach dem Speichern **nachgelesen** wirklich in ChurchTools steht.
+
+### Intern (Dienstplaner)
+
+- **Schreiben der Liste:** `personenlisteSpeichern` (`shared/dienstplan/personenlisteSpeichern.ts`, eigene Datei, weil `entwuerfe.ts` die Liste
+  liest) – frisch lesen, Version vergleichen, anlegen (POST) oder ändern (PUT), doppelte Werte (zwei gleichzeitige POST) beim Schreiben mitlöschen,
+  nachlesen, nie automatisch wiederholen; Gründe wie bei den Entwürfen (`abgemeldet`, `kein-recht`, `konflikt`, `voruebergehend`,
+  `nicht-angekommen`, `zu-gross`). Gemeinsame Teile stehen nur einmal: Gewinner-Regel (`gewinnt`), `grundAus` und `schubladeLesen` in `entwuerfe.ts`,
+  neu **`nachleseUrteil` in `shared/ct/modulDaten.ts`** (das Urteil nach dem Nachlesen: angekommen · Konflikt · sonst) – `entwurfSpeichern`,
+  die Personenliste und der Baustein `versionierterWert` (Organigramm, Gebetsabend) rufen alle diese eine Regel auf. `Schubladeninhalt` nennt für die
+  Liste den Wert (`listeWert`) und die Doppelten (`listeDoppelt`).
+- **Reine Änderungen** in `shared/dienstplan/personenliste.ts`: `reiheSetzen`, `reiheNachZiehen`, `tagsSetzen`, `pauseSetzen`, `tagListeSetzen`
+  (+ `tagKuerzel`, `neueTagId`). Sie setzen **absolute** Werte, damit ein Versuch, der doch angekommen ist, als „schon gespeichert“ erkannt wird,
+  und liefern nur, was `personenlisteAus` wieder liest (Kürzel nie leer, Datum geprüft).
+- Oberfläche: `useListeBearbeiten` (Modus, Rechte, Übernahme ins Raster), `PersonFenster`, `TagsVerwaltenFenster`, `ZiehZeile`; der Anschluss
+  (`EntwurfAnschluss.personenliste`) und `useEntwuerfe.setzeListe` übernehmen die bestätigte Liste in die geladenen Daten.
+- Die Demo (`?demo`) kann in die Schubladen von Musik und Technik schreiben – Reihenfolge, Tags und Pause lassen sich durchklicken.
+
+### Geändert (Organigramm)
+
+- **„Neue Gliederung“ ist kein Reiter mehr**, sondern liegt im **⋯** des Reiters Organigramm (nur für Gruppen-Admins, wie
+  bisher). Sie öffnet als eigene Seite mit **‹ Organigramm** zum Zurückgehen; die Adresse `#gliederung` funktioniert
+  weiter. Gewohnheit: Neue Gliederung findest du jetzt im ⋯ des Reiters Organigramm.
+- Am Handy heißt der Reiter **„Kinder & Jugend“** kurz **„Kinder“** – die Leiste unten bricht nicht mehr um. Am Rechner und
+  iPad bleibt der volle Name.
+
+### Intern (Organigramm)
+
+- Die Reiterleiste kennt eine optionale **Kurzbeschriftung fürs Handy** (`Reiter.kurz`, `ui/bedienung/ReiterLeiste`).
+
+### Geändert (Dienstplaner)
+
+- **„Planen“ am Handy:** Im Abschnitt „Ablauf“ eines Termins ist „Bearbeiten“ jetzt derselbe Knopf wie im Ablauf der
+  Musik-App und der Termin-Ansicht – mit Rahmen statt eines frei stehenden Stifts, im Bearbeiten das blaue **„Fertig“**.
+  Am iPad und Rechner steht das Wort dabei, am Handy wie überall nur das Symbol.
+
+### Geändert (Dienstplaner)
+
+- **Der Ablauf in der Termin-Ansicht ist jetzt wie in der Musik-App.** Ein Tipp auf einen Punkt zeigt alles dazu (Position, Davor/Danach –
+  das gab es seit der Einzelansicht schon); neu ist der **Kopf in Stufen**: beim Ansehen **Live**, **Musik-App**, **⋯** und **Bearbeiten**;
+  im Bearbeiten das grüne **Eintrag hinzufügen** (am Handy der grüne Kreis), **⋯** und das blaue **Fertig**.
+- **Gewohnheit: Der Stift an jeder Zeile entfällt.** Im Bearbeiten die **Zeile antippen** – das Fenster „Punkt bearbeiten“ geht auf wie bisher.
+  Auch die Matrix in „Planen“ (Ablauf bearbeiten) und der Ablauf am Handy zeigen keinen Zeilen-Stift mehr; Plus und Papierkorb beim
+  Darüberfahren bleiben.
+- **Gewohnheit: Spalten, Ablauf zeigen, Als Vorlage und Neu aufsetzen liegen im „⋯“-Menü.** Beim Ansehen: **Spalten wählen** (ein kleines
+  Fenster mit Häkchen, statt des Knopfs „Spalten“) und **Ablauf zeigen** (statt eines eigenen Knopfs). Beim Bearbeiten: **Als Vorlage …**
+  (nur mit dem Recht) und **Neu aufsetzen …** (statt der Links in der Hinweiszeile). **Live** und **Musik-App** bleiben sichtbar im Kopf.
+- **„+ Ablauf anlegen“ ist das leise gestrichelte Feld** (wie in der Musik-App) – bei einem Termin ohne Ablauf in der Termin-Ansicht, in
+  „Planen“ am Handy und in leeren Spalten der Matrix; vorher ein Rahmen-Knopf bzw. ein blau gestrichelter Knopf.
+
+### Intern
+
+- `TerminAblauf` reicht statt `spaltenKnopf`/`zeigenKnopf` ein `mehrKnopf` (`MehrMenue`) an den Aufrufer und nutzt `linksImMenue`/`ohneStift`
+  aus `useAblaufBearbeiten`, `InfoSpaltenFenster` und `LeisesPlus` – dieselben Bausteine wie die Musik-App. Die Obergrenzen im Wächter
+  `bedienKnoepfe` für den Dienstplaner sinken auf 78 Knöpfe und 21 feste Höhen. Eine Dienstplaner-Einführung mit Zielen am Stift gibt es
+  nicht – Tour-Versionen unverändert.
+
+### Geändert (Protokolle + Anmeldungen + Organigramm)
+
+- **„Neu anlegen“ ist am Handy überall der schwebende grüne Kreis mit „+“** (unten rechts über der Reiterleiste) statt eines grünen Quadrats in der Kopf- oder Werkzeugzeile – wie schon in Dienstplaner, Website und Musik-App. Am Rechner und iPad bleibt es der grüne Knopf. Betroffen: **Protokolle** (Neues To-Do, Neu ⌄ in den Sitzungen – das Plus öffnet dasselbe Menü als Blatt von unten –, Neues Protokoll auf der Startseite), **Anmeldungen** (Neue Veranstaltung, Neue Nachweis-Art, Neue Regel, Von Hand) und **Organigramm** (Neuer Bereich im Plan). Rechte und Bedingungen sind unverändert: Wer den Knopf sah, sieht das Plus.
+- Am Rechner behalten „Neues To-Do“ und „Neues Protokoll“ ihren Hinweistext („auch ohne Protokoll“, „ohne Termin“); das Plus am Handy trägt nur den Namen.
+
+### Intern
+
+- Neuer Wächter `ui/design/neuNurSchwebend.test.ts`: `KopfKnopf neu` darf nur noch in `ui/bedienung` stehen (`useNeuAnlegen`, `HinzufuegenMenue`); jede Seite nimmt einen der beiden Bausteine und bekommt den Handy-Zweig mit.
+
+### Geändert (Musik-App)
+
+- **Termine am Handy:** Bei Terminen ohne Ablauf steht „+ Ablauf anlegen“ jetzt unter dem Titel statt rechts daneben –
+  die Titel werden nicht mehr abgeschnitten. Am Rechner und iPad bleibt das Feld rechts.
+
+### Neu (Protokolle)
+
+- **To-Dos vorschlagen (W9b):** Mitglieder (wer in der Gruppe keine Protokolle schreibt) können der Gruppe ein To-Do
+  **vorschlagen**; die Leitung übernimmt oder lehnt ab.
+  - **„Neues To-Do“ als Mitglied:** oben die Wahl **„Für mich | Vorschlag an die Gruppe“**. Ein Vorschlag hat Text, „Bis“,
+    „Warum? (optional)“ und die Gruppe – wer es macht, legt die Leitung beim Übernehmen fest. Die Leitung sieht die Wahl
+    nicht; sie legt wie bisher an.
+  - **Bereich „Vorgeschlagen“** im Reiter To-Dos, über der Liste und über dem Board, einklappbar (das Gerät merkt es). Die
+    Leitung sieht alle offenen Vorschläge ihrer Gruppen („N warten auf dich“), ein Mitglied nur die eigenen („wartet auf die
+    Leitung“). Abgelehnte stehen sieben Tage mit der Begründung da und lassen sich mit „×“ ausblenden – dieselben Regeln und
+    dieselbe Zeile wie bei den Vorschlägen für Tagesordnungspunkte. Gibt es nichts zu zeigen, fehlt der Bereich.
+  - **Wer vorschlug:** „Ändern“ und „Zurückziehen“, solange der Vorschlag offen ist (zurückgezogen wird nur vermerkt, nie
+    gelöscht). **Die Leitung:** „Übernehmen …“ öffnet das Fenster **„Vorschlag übernehmen“** – vorausgefüllt, dort wählt sie
+    die Zuständigen; aus demselben Eintrag wird ein gewöhnliches To-Do (Notiz und Verlauf bleiben). „Ablehnen …“ fragt nach
+    einer Begründung, die der Vorschlagende sieben Tage lang sieht.
+  - **Ein Vorschlag ist kein To-Do:** Er steht in keiner Liste, keinem Board, keiner Zahl (Startseite, Hinweis am Reiter,
+    „Das mache ich“), keiner Suche, keinem PDF und keinem Protokoll – erst das Übernehmen macht ihn dazu. Das wird beim
+    **Lesen an einer Stelle** getrennt (`aufgabenAusRoh`, `istToDoVorschlag`), nicht in jeder Ansicht einzeln. Die normalen
+    To-Do-Wege (Haken, Status, Notiz, Löschen, „Das mache ich“) lehnen einen Vorschlag mit einem verständlichen Satz ab; die
+    Rechte stehen in `toDoRechte` (Fall „Vorschlag“) und `vorschlagVerboten` und gelten auch beim Speichern.
+  - Alte Einträge bleiben unverändert gültig (das Kennzeichen `vorschlag` ist neu und optional).
+
+### Geändert (Website)
+
+- **„Neue Seite“ ist jetzt grün** wie jedes „Neu anlegen“ in den Erweiterungen (Regel R3 der ruhigen Bedienung): am Rechner
+  der grüne Knopf unter der Seitenliste, am Handy das runde grüne Plus unten rechts.
+
+### Neu (Dienstplaner)
+
+- **Die Personenliste einer Dienstgruppe wird angezeigt** (Scheibe PL-1 – nur Ansehen; Anlegen und Ändern kommen mit PL-2).
+  Sie liegt als **ein Wert je Dienstgruppe** in der Schublade der Entwürfe und enthält die **Reihenfolge** der Personen, **Tags**
+  (z. B. „Begleitung“ mit Kürzel „B“) je Person und Dienst und die **Pause** je Person (bis zu einem Datum oder ohne Ende).
+  Ohne gespeicherte Liste sieht alles genau so aus wie bisher.
+  - **„Personen“:** Die Zeilen eines Dienstes stehen in der gespeicherten Reihenfolge, wer fehlt, danach alphabetisch. Wer an allen
+    gezeigten Terminen **pausiert** oder **ganz abwesend** ist (und dort nicht eingeteilt), steht **unten im Block, blass**, unter der
+    Zeile „In Pause oder ganz abwesend · N“ – bleibt aber einteilbar. Bei einer Pause steht „Pause bis 31.01.27“ statt „auch …“.
+    Die **Tags** erscheinen als kleines **Kürzel unten rechts am Personenbild**, der volle Name steht beim Darüberfahren; unter der
+    Legende „Antwort der Person“ nennt eine Zeile **„Tags:“** alle Kürzel der gezeigten Dienste.
+  - **„Wer kann?“:** Hat die Dienstgruppe eine Reihenfolge, steht jeder Abschnitt (bzw. die eine Liste) in dieser Reihenfolge –
+    die Überschrift sagt „In der Reihenfolge der Personenliste“; „N× im Monat“ bleibt sichtbar. Wer **pausiert**, steht unter
+    „Kann nicht / abwesend“ (in der einen Liste blass am Ende) mit „Pause bis …“. Die Kürzel stehen grau hinter dem Namen.
+  - **PDF „Personen“:** Bei „Eine Gruppe“ in der gespeicherten Reihenfolge, beim ganzen Plan weiter alphabetisch. Die Tags stehen grau
+    mit vollem Namen hinter dem Namen („Clara Dyck · Begleitung, Leitung“); gilt ein Tag nur für einen Teil der gezeigten Dienste einer
+    Person, steht der Dienst dahinter („Einweisung (Ton)“). „Je Person“ bleibt unverändert.
+
+### Intern (Dienstplaner)
+
+- Neue Regeln **an einer Stelle** (`shared/dienstplan/personenliste.ts`): Lesen und Prüfen des Werts (`personenlisteAus`),
+  Sortierung (`sortiereNachListe`), Tags (`tagsFuer`) und Pause (`pauseAm`, `pausiertAnAllen`, `pauseText`). Raster, „Wer kann?“ und PDF
+  rufen sie nur auf. Die Liste kommt aus denselben Werten der Schublade wie die Entwürfe (keine zusätzliche Anfrage,
+  `EntwuerfeDaten.personenlisten`); die Leser der Entwürfe ignorieren sie weiterhin, und bei zwei gleichzeitigen Werten gewinnt dieselbe
+  Regel wie bei Entwürfen (höhere Version, spätere Zeit, höhere ID – `gewinnt` in `entwuerfe.ts`, jetzt für beide).
+- Die Demo (`?demo`) hat für Musik und Technik je eine Personenliste mit Tags, Reihenfolge und Pause.
+
+### Neu (Protokolle)
+
+- **Rechte im To-Do (W9a):** Mitglieder (wer in der Gruppe keine Protokolle schreibt) bearbeiten nur noch, was zu ihrem
+  To-Do passt – die Leitung darf wie bisher alles.
+  - **Eigenes To-Do** (nur ich bin zuständig): abhaken, „in Arbeit“, Notiz, Frist, **an ein anderes Mitglied abgeben**
+    („Abgeben an“ im Fenster), Text ändern und löschen. Steht es noch in einem Protokoll-Entwurf, bleiben Text und Löschen
+    bei der Leitung – das Fenster sagt es.
+  - **Geteiltes To-Do** (mehrere Zuständige oder „Alle“): nur abhaken (bei „Jeder für sich“ den eigenen Teil) und Notizen.
+  - **To-Do ohne Zuständigen:** statt des Hakens der Knopf **„Das mache ich“** (an Karte, Tabellenzeile und im Fenster) –
+    er trägt nur mich ein, danach ist es mein eigenes To-Do.
+  - **Fenster:** Was man nicht ändern darf, steht als normaler Text (Beschriftung und Wert), nicht als ausgegrautes Feld;
+    ein Satz mit Schloss sagt, wer den Rest ändert. Kein „Löschen“, wo es nicht erlaubt ist.
+  - **„Neues To-Do“ als Mitglied:** vorerst nur für sich selbst (Zuständig steht fest).
+  - **Im Board** lässt sich nur noch ziehen, was man auch im Fenster ändern dürfte; sonst steht ein Hinweis da.
+  - Die Regel steht an **einer** Stelle (`toDoRechte` in `shared/protokolle/aufgaben.ts`) und gilt **auch beim Speichern**
+    (`toDoAendern`, `toDoAnlegen`, `toDoLoeschen`, `toDoVerschieben` prüfen am frisch gelesenen Stand) – nicht nur in der
+    Oberfläche. ChurchTools selbst kennt dafür kein Recht.
+
+### Behoben (Website)
+
+- **Seiten-Vorschau zeigt nach „Einstellungen“ sofort den neuen Stand (W3a-3c):** Wer im Fenster „Einstellungen“ Name oder Fußzeile
+  speicherte, während der Reiter „Seiten“ offen war, sah in der Vorschau noch den alten Namen und die alte Fußzeile – bis zum
+  Reiterwechsel oder Neuladen. Der Reiter „Seiten“ liest nach jedem gelungenen Speichern der Einstellungen nur diese neu; eine
+  offene Seiten-Bearbeitung bleibt unberührt. Lässt sich nicht nachlesen, bleibt die bisherige Vorschau stehen und ein leiser Hinweis
+  sagt es.
+
+### Geändert (Website)
+
+- **Aussehen:** Im Feld „Hauptfarbe dunkel“ zeigt der Platzhalter nur noch die Farbe (im schmalen Feld wurde „(abgeleitet)“
+  abgeschnitten); „wird aus der Hauptfarbe abgeleitet“ steht in der Unterzeile, solange kein eigener Wert gesetzt ist.
+
+### Geändert (Musik-App + Protokolle)
+
+- **Überall derselbe Name: „Einstellungen“** („Ruhige Bedienung“, neue Regel R13). In jeder Erweiterung gibt es höchstens
+  einen Reiter „Einstellungen“, er steht immer ganz hinten und enthält nur Einstellungen – wie es die ChurchTools Dev
+  Platform je Erweiterung vorsieht.
+- **Musik-App:** Der Reiter „Mehr“ heißt jetzt **„Einstellungen“** (mit dem Zahnrad wie in den anderen Erweiterungen). Die
+  **Ablaufvorlagen** findest du jetzt bei den **Terminen im „⋯“-Menü** rechts oben (früher: Mehr → Abläufe); „‹ Termine“
+  führt zurück. Darstellung, Links, Team-Notizen, Verwaltung, Hilfe und Abmelden bleiben unter „Einstellungen“.
+- **Protokolle:** Der Reiter „Verwaltung“ heißt jetzt **„Einstellungen“** (weiterhin nur für Admins); die Hinweise in den
+  Sitzungen sprechen ebenfalls von den „Einstellungen“.
+- **Einführung zum Ablauf startet einmal neu** (Ablauf ansehen und Ablauf bearbeiten), weil der Ablauf zuletzt umgebaut
+  wurde. Die Termine-Einführung erwähnt die Ablaufvorlagen im „⋯“ und bleibt sonst, wie sie ist.
+
+### Behoben (Musik-App)
+
+- Am Handy lag das Blatt von unten (das „⋯“-Menü und die Auswahl „Kommende ⌄“ in den Terminen) hinter der Reiterleiste
+  und war halb verdeckt. Es liegt jetzt wieder darüber.
+
+### Intern
+
+- Neuer Quelltext-Wächter `ui/design/einstellungenReiter.test.ts` (R13): kein Reiter heißt „Mehr“ oder „Verwaltung“,
+  „Einstellungen“ ist in jeder Reiter-Liste der letzte. Design-System: R13 neu, bei R3 die Ausnahme für `gefahr`-Knöpfe
+  (roter Rand erlaubt, wie in ChurchTools).
+
+### Neu (Website)
+
+- **Reiter „Einstellungen“ (W3a-3b):** Der letzte Reiter öffnet ein Fenster für den Namen der Gemeinde, die Links in der Fußzeile
+  (Seite oder Adresse, hinzufügen, entfernen, Reihenfolge ändern, höchstens 10), den Datenschutz-Link (mit Hinweis, wenn ein
+  Livestream da ist, der Link aber fehlt) und den Text des YouTube-Banners (leer = Standardtext). Gespeichert wird mit „Speichern“;
+  Ungültiges wird nicht gespeichert und die Meldung nennt den Link.
+
+### Geändert (Website)
+
+- **Aussehen und Einstellungen teilen sich einen Zustand und eine Sperre:** Beide schreiben dieselbe Einheit; was im einen geändert
+  wurde, geht beim Speichern im anderen nicht verloren.
+- **Aussehen:** Die Hex-Felder zeigen die geltenden Farben als Platzhalter, solange nichts gespeichert ist; die Seitenwahl der
+  Vorschau schreibt „Startseite“ nicht mehr doppelt.
+
+### Neu (Anmeldungen)
+
+- **Nachweise: „Fällige anschreiben“** (N2c). Im Kopf jeder Nachweis-Art steht für die Vertrauenspersonen (und Admins) ein stiller Knopf – am Handy als Brief-Symbol –, solange jemand bald abläuft oder schon abgelaufen ist. Das Fenster zeigt alle, deren Nachweis in den nächsten 8 Wochen abläuft oder abgelaufen ist, mit Häkchen (vorausgewählt, abwählbar; wer keine Mailadresse hat, steht grau da). Betreff und Text sind vorgegeben und änderbar (nur `[Vorname]`), „N Mails senden“ verschickt je Person eine Mail über ChurchTools, Absender ist die angemeldete Vertrauensperson. Auf Wunsch (Häkchen) steht danach an der offenen Aufgabe „Erneut einsehen“ der Vermerk „Angeschrieben am … von …“, damit die anderen Vertrauenspersonen sehen, wer schon eine Mail hat – der Vermerk wird in ChurchTools nachgelesen. Ist unklar, ob die Mails rausgingen, gibt es keinen Vermerk und kein automatisches zweites Senden; fehlt ein Vermerk, bleibt die Mail verschickt und die Meldung nennt, bei wem er fehlt. Ausgelöst wird nur von Hand.
+
+### Intern (Anmeldungen)
+
+- `rundmailSenden` nimmt optional die Meldung bei verweigertem Senden entgegen; die Nachweise sagen verständlich, dass nichts verschickt wurde.
+- Die Demo (`?demo=vertrauen`) simuliert Rundmail, Protokoll und Notizen – es wird nichts gesendet; dazu eine Person ohne Mailadresse (Tom Leise).
+
+### Intern (Anmeldungen)
+
+- **Nachweise: Vertrauenspersonen kommen jetzt in die Erweiterung.** Die Leiter-Rolle der Gruppenart „Nachweis“ bekommt zu den
+  fünf Gruppenrechten das Modulrecht „‚Anmeldungen‘ sehen“ (sechs Rechte statt fünf; Teilnehmer bekommen es nicht). Ohne es ließ
+  ChurchTools eine Vertrauensperson ohne Admin gar nicht hinein (Lauf auf der Test-Instanz, 20.11.2026). Die Nummer des Rechts
+  ist je Instanz anders und wird darum per Schlüssel aus den Rechte-Definitionen gelesen; kennt ChurchTools es nicht, sagt die
+  Erweiterung das klar. „Nachweis-Art speichern“ setzt es mit, und die Seite meldet „fertig“ erst, wenn es an der Rolle steht.
+
+### Intern (Anmeldungen)
+
+- **Nachweise: „Einsicht festhalten“** (Etappe F, Scheibe N2b; veröffentlicht wird erst nach Etappe F). Entwurf `n2-stand-v1`,
+  Ansicht 3. Auf der Seite „Nachweise“ öffnet ein Klick auf eine Person (Rechner: Zeile, auch mit Tab und Eingabe; Handy:
+  Listenzeile) das Fenster – für Vertrauenspersonen der Art und Admins; eine Art ohne fertige Einstellungen bleibt nur zum Ansehen.
+  - **Fenster:** Eingesehen am, Ausgestellt am (Pflicht nur bei Arten „ab Ausstellung“), Ergebnis. Vorbelegt: keine Einsicht
+    oder „läuft ab“/„abgelaufen“ → neue Einsicht (heute), sonst die gespeicherten Werte. Fünf Prüftexte, „Festhalten“ bleibt
+    gesperrt, solange etwas fehlt. Ein blauer Kasten sagt vorher, was in ChurchTools geschieht („Neue Einsicht“ / „Nur die
+    Angaben werden berichtigt“, welche Aufgabe erledigt wird, Rücksprache). Fehler stehen im Fenster, es bleibt offen.
+  - **Neue Einsicht oder berichtigen** entscheidet EINE Regel (`aufgabeErledigtDurch`): „Einsicht nehmen“ erledigt jede festgehaltene
+    Einsicht (auch eine vor der Anforderung); „Erneut einsehen“ – angelegt am Tag, an dem die vorige Einsicht festgehalten
+    wurde – nur eine Einsicht nach diesem Tag, sodass eine Berichtigung (z. B. Rücksprache → keine Eintragung) sie offen
+    lässt. Die Regel gilt auch nach Abbruch und Neuladen, weil sie nicht an „anders als vorher“ hängt.
+  - **Geschrieben** wird in fester Reihenfolge und jeder Schritt nachgelesen: Gruppenfelder (nach Namen, das Ergebnis als
+    Options-Nummer) → Aufgabe erledigen (`doneDate` gesetzt, sonst „nicht übernommen“) → „Erneut einsehen“ auf „Gültig bis“
+    verschieben (nach „Einsicht nehmen“ legt der Ablauf sie binnen Sekunden an: bis zu fünfmal kurz nachsehen; nach „Erneut
+    einsehen“ erst am nächsten Tag). ChurchTools verschiebt nur auf ein Datum nach heute – ein Gültig bis bis heute wird
+    ausgelassen, kein Fehler. Scheitert ein Schritt nach den Feldern, steht im Fenster, was schon gespeichert ist; noch
+    einmal „Festhalten“ ist gefahrlos (nichts doppelt, eine schon erledigte Aufgabe wird nicht noch einmal erledigt).
+  - **Nachziehen beim Öffnen:** Beim Laden der Seite wird für jede Person mit Einsicht eine offene „Erneut einsehen“, die die
+    Einsicht nicht erledigt hat und deren Fälligkeit von „Gültig bis“ abweicht, verschoben – nur verschieben, nie erledigen.
+    Fehler dabei stören die Seite nicht (nächstes Öffnen, nächster Versuch).
+  - **Demo:** `?demo=vertrauen` speichert die Felder, erledigt und verschiebt Aufgaben (der Ablauf legt „Erneut einsehen“ an).
+- Die Adresse einer Person in ChurchTools steht an einer Stelle (`ui/ct/links.ts`, `personLink`) – vorher fünfmal
+  ausgeschrieben (Anmeldungen und Organigramm).
+
+### Intern (Anmeldungen)
+
+- **Nachweise: der Stand je Person wird gelesen und angezeigt** (Etappe F, Scheibe N2a „Stand lesen“; veröffentlicht wird
+  erst nach Etappe F). Entwurf `n2-stand-v1`, nur lesen – „Einsicht festhalten“ und „Fällige anschreiben“ kommen mit
+  N2b und N2c.
+  - **Seite „Nachweise“:** je Nachweis-Art eine Karte. Im Kopf stehen Gültigkeit, „mit/ohne Antrag“ und die
+    Vertrauenspersonen (die frühere Liste „Nachweis-Arten“ geht darin auf), „Nachweis-Art bearbeiten“ liegt im „⋯“-Menü
+    (nur mit „Berechtigungen verwalten“). Darunter die Personen: am Rechner eine Tabelle (Name, Stand, Eingesehen am,
+    Ausgestellt am, Gültig bis), am Handy eine Liste. Wer dich braucht, steht oben (rot vor blau, dann angefordert, dann
+    gültig). Oben links die Ansicht „Alle | Braucht Aufmerksamkeit“ (Adresse `#/nachweise/aufmerksam`).
+  - **Der Stand** (eine Regel-Datei, `shared/anmeldung/nachweisStand.ts`, „heute“ als Parameter): angefordert (bis 28 Tage),
+    fehlt seit N Wochen (älter), gültig, läuft ab (Ablauf in 0–56 Tagen, blau), abgelaufen, Rücksprache (Ergebnis
+    „Eintragung“ schlägt jedes Datum), noch keine Aufgabe, Angaben unvollständig. „Gültig bis“ = Ausstellung bzw. Einsicht
+    plus Jahre der Art (29.02. → 28.02.).
+  - **„Antrag unvollständig“** (rot unter dem Namen) – nur bei Arten mit Antrag und solange die Person ihn braucht: fehlt das
+    Geburtsdatum und/oder die Adresse im ChurchTools-Profil. Lässt sich das Profil nicht lesen, gibt es keinen Hinweis statt
+    eines falschen Alarms.
+  - **Startseite:** „Braucht deine Aufmerksamkeit“ bekommt je Art mit Fällen eine Zeile (fehlt / läuft bald ab /
+    abgelaufen / Rücksprache, dazu „N Personen brauchen dich als Vertrauensperson.“); die Karte „Nachweise“ zeigt je Art die
+    Zählung („7 Personen: 2 gültig · 1 angefordert · 4 brauchen dich“). Scheitert das Lesen der Personen, bleibt die Karte
+    wie bisher, ohne Zahlen.
+  - **Gelesen** wird aus den Gruppenfeldern „Eingesehen am“, „Ausgestellt am“, „Ergebnis“ (nach Namen; die Auswahl kommt als
+    Nummer der Option), den Folgeaufgaben der Gruppe („Einsicht nehmen“, „Erneut einsehen“; offen = nicht erledigt;
+    „angefordert am“ aus dem Anlagedatum in der Uhr der Gemeinde) und – nur bei Arten mit Antrag – Geburtstag und Adresse.
+    Die Folgeaufgaben werden seitenweise gelesen (mit jeder Erneuerung kommen erledigte dazu; `limit`/`page` greifen,
+    gemessen 20.11.2026). Ein 403 heißt „für dich nicht sichtbar“, jeder andere Fehler wird gemeldet, nicht als „niemand“
+    gezeigt. Admins sehen alle Arten, Vertrauenspersonen nur die, die sie leiten – fremde Arten fehlen auf der Seite ganz.
+  - Die Titel der beiden Folgeaufgaben stehen jetzt an einer Stelle (`NACHWEIS_AUFGABE_ERSTE/ERNEUT`), Ablauf und Stand lesen
+    dieselben.
+  - **Demo:** Die Art „Führungszeugnis“ hat sechs Teilnehmer, je einer pro Stand (fehlt, Rücksprache, abgelaufen, läuft
+    ab, angefordert, gültig), dazu Folgeaufgaben; `?demo=vertrauen` leitet sie.
+
+### Neu (Website)
+
+- **Reiter „Aussehen“ (W3a-3a).** Links das Formular, rechts die Vorschau der Startseite (eine andere Seite ist wählbar; am Handy untereinander). **Farben:** sechs Felder (Hauptfarbe, Hauptfarbe dunkel, Akzent, Hintergrund, Sanft, Text) mit Farbwähler und Hex-Eingabe – ein ungültiger Wert wird nicht übernommen. Ist Text auf dem Hintergrund oder auf „Sanft“ schwer lesbar (unter 4,5 : 1), steht ein ruhiger Hinweis unter „Text“ (je Problem einer); gespeichert werden kann trotzdem. **Schriften:** Text, Überschriften und die Handschrift-Zeile aus einer nach Art gruppierten Auswahl (14 freie Schriften); „Eigene Schrift“ erklärt, dass das mit dem Hochladen der Bilder kommt. **Logo:** das vorhandene wird genannt, ändern geht später mit den Bildern. **Eigenes CSS:** Textfeld mit Zeichenzähler, die Vorschau folgt kurz verzögert.
+- **Die Vorschau zeigt jetzt die gewählten Schriften** – auch im Reiter „Seiten“. Es werden nur die Schriften geladen, die gerade gewählt sind (nicht alle 14); bis eine Schrift da ist, zeigt die Vorschau die Ersatzschrift. Lässt sich eine Schrift einmal nicht laden, steht ein leiser Hinweis mit „Erneut laden“; die Einstellungen bleiben unverändert.
+- **Gespeichert wird von selbst**, kurz nach der letzten Änderung, mit demselben Ablauf wie bei den Seiten: eine Person bearbeitet, die anderen sehen zu („Das Aussehen bearbeitet gerade …“, „Bearbeitung übernehmen“, „Hier weiterbearbeiten“), „Speichert … / Gespeichert / Nicht gespeichert“ und „Erneut versuchen“. Hat jemand das Aussehen inzwischen geändert, wird nicht darüber geschrieben. Lassen sich die gespeicherten Einstellungen nicht lesen, bleiben sie unberührt und der Reiter bietet nichts zum Ändern an.
+- Die Schriftdateien (14 Stück, nur Latin, mit ihren Lizenztexten) liegen in `shared/website/schriften/`. Roboto Slab steht unter Apache 2.0, alle anderen unter der SIL Open Font License.
+- Der Demo-Modus (`?demo=seiten`) hat gespeicherte Einstellungen (Farben, Quicksand und Caveat Brush) und den neuen Fall `?demo=aussehen-gesperrt`.
+
+### Behoben (Website)
+
+- Eine eingebettete Schrift (`data:font/woff2;base64,…`) wäre im fertigen Stylesheet unbrauchbar geworden: Beim Absichern der Adresse wurde das Semikolon zu `%3B` und die Adresse damit keine Base64-Adresse mehr. Genau diese eine Form bleibt jetzt unverändert (strikt geprüft: nur Base64-Zeichen); alles andere wird wie bisher entschärft.
+
+### Intern (Website)
+
+- Sperre, Speicher-Schlange und „Übernehmen/Neu laden“ stehen jetzt einmal im Ablauf `useSperrarbeit` (`website/src/useSperrarbeit.ts`, Bänder in `SperrBaender.tsx`, Worte in `sperrTexte.ts`); Seiten und Aussehen nutzen ihn. Verhalten der Seiten unverändert. Beim Verlassen des Reiters mit noch laufendem Speichern wird die Sperre erst nach dem Speichern freigegeben.
+- Die Sperre nimmt ein Ziel (Seite oder Einstellungen); `websiteAusWerten` liefert `einstellungenSperre`; `einstellungenSpeichern` prüft wie `seiteSpeichern` vorher mit dem Schema. `kontrast(a, b)` (WCAG) in `shared/website/theme.ts`, die Regeln des Reiters in `shared/website/aussehen.ts`.
+- Schriften als nachgeladene Bündel-Teile (`import.meta.glob` mit `?inline`, `website/src/schriftLader.ts`); Wächter `shared/website/schriftdateien.test.ts` (Liste, Dateien, WOFF2-Kennung, Größe, `QUELLEN.md`, Lizenzen) und Tabellen-Wächter in `schriftLader.test.ts`.
+- Testfall TF-WEBSITE-10.
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **Einen Ablaufpunkt ansehen – wie in der ChurchTools-App.** Ein Tipp auf einen **Punkt** im Ablauf zeigt jetzt **alles** dazu:
+  Uhrzeit, Dauer, Zuständige (offene Dienste rot), Bemerkung, Lied und die Infos je Dienstgruppe – mit **„Position 3/10“** und
+  **Davor / Danach** zum Weiterblättern (Überschriften zählen nicht mit). Am **Handy** ist es eine eigene Seite („‹ Ablauf“ oben,
+  Davor und Danach unten), am **iPad und Rechner** ein Fenster im Aussehen von „Punkt bearbeiten“, nur zum Ansehen. Ablauf-Ansicht
+  der Musik-App und Termin-Ansicht des Dienstplaners zeigen dasselbe; die schmalen Matrix-Spalten des Dienstplaners bleiben, wie sie waren.
+- **Gewohnheit: ein Lied hat zwei Tipp-Ziele.** Die **Lied-Karte** öffnet das Liedblatt (im Dienstplaner die Lied-Ansicht) wie bisher,
+  ein Tipp auf den **Punkt** daneben – Uhrzeit, Titel, Namen – öffnet die Einzelansicht. Vorher war die ganze Zeile der Knopf zum Liedblatt.
+  Hat ein Lied keine Angaben (Titel = Liedname, kein Ton, kein Tempo), steht der Liedname selbst als Karte da, damit der Weg zum
+  Liedblatt bleibt. „Bearbeiten“ öffnet weiter „Punkt bearbeiten“ (unverändert); der blaue Streifen am Lied und der rote Hinweis
+  „Moderation ?“ bleiben.
+- **Gewohnheit (Musik-App): Teilen, Spalten, Vorlage und Co. liegen im „⋯“-Menü.** Im Ablauf bleibt oben **Bearbeiten** (grau), im
+  Bearbeiten **Fertig** als einziger blauer Knopf und – am Rechner – das grüne **Eintrag hinzufügen** (am Handy der grüne Kreis). Neu im
+  **⋯-Menü**: **Spalten wählen** (öffnet ein kleines Fenster mit Häkchen) und **Als PDF teilen** beim Ansehen; **Als Vorlage …**,
+  **Neu aufsetzen …** und **Ablauf abschließen** beim Bearbeiten. Ist der Ablauf abgeschlossen, steht oben weiter der Knopf **Öffnen**.
+  Der blaue **Stift** rechts an jeder Zeile entfällt im Bearbeiten: die Zeile selbst antippen öffnet das Fenster
+  (im Dienstplaner seit dem Nachzug, siehe `feat-bedienung-ablauf-dienstplaner`).
+
+### Intern
+
+- Neue Bausteine in `ui/ablauf`: `PunktAnsicht` (Inhalt `PunktInhalt` + Hüllen `PunktAnsichtFenster`/`PunktSeite`), `usePunktAnsicht`,
+  `liedMeta`; `InfoSpaltenFenster`; `AblaufListe` bekommt `onPunkt` (der Punkt ist ein Knopf **hinter** dem Inhalt, die Lied-Karte ein
+  eigener Knopf davor). `useAblaufBearbeiten` kennt `linksImMenue`/`mehrOptionen` und `ohneStift`; `MehrMenue` bekommt `dataTour`.
+  Das Schildchen „neu/geändert“ am Punkt ist ein `Etikett`. Einführung der Musik-App: Schritte „Lieder öffnen“, „Teilen und Spalten“
+  und „Mehr: Abschließen, Vorlage, Neu aufsetzen“ angepasst, der Schritt „Als Vorlage“ ist darin aufgegangen.
+
+### Geändert (Musik-App)
+
+- **Kopf wie in den anderen Erweiterungen.** Am iPad und Rechner steht über den Reitern klein der App-Name „Musik-App“ – so beginnt
+  jede App gleich. Am Handy bleibt alles beim Alten (Reiter unten, die Seite beginnt gleich mit ihrem Kopf). „Mehr“ bleibt der letzte
+  Reiter: Dort liegen die Einstellungen **und** die Ablaufvorlagen, Links, Team-Notizen und das Abmelden – es fällt nichts weg.
+- **Ein Status-Etikett.** „Kein Ablauf“ (Termin, den man nicht anlegen darf), „Standard“ (Arrangement) und „nur ansehen“
+  (Ablaufvorlagen eines fremden Kalenders) haben jetzt dieselbe Form wie in den anderen Apps: eine Kapsel, grau oder blau.
+
+### Intern
+
+- `ReiterLeiste` kennt `appName` (nur oben). Der Wächter `etiketten.test.ts` zählt jetzt auch die Musik-App (`client`: 9 Kapseln,
+  alle Knöpfe oder Schalter: Zeichen-Leiste, Spendenknopf, Seitenwähler im Liedblatt).
+
+### Doku
+
+- Ruhige Bedienung, Scheibe B9: Im Design-System steht jetzt der Abschnitt „Ruhige Bedienung: Regeln R1–R12“. Er nennt die
+  zwölf Regeln aus dem Bauplan in einfacher Sprache, je Regel den Baustein in `ui/bedienung` und den Wächter-Test in
+  `ui/design`. Die Anleitungen in `docs/betrieb` sind auf veraltete Bedienhinweise geprüft. Am Verhalten ändert sich nichts.
+
+### Geändert (Dienstplaner + Organigramm + Protokolle + Website + Anmeldungen + Gebetsabend)
+
+- **Ein Seitenkopf in jeder Erweiterung.** Oben steht klein der App-Name – ohne Gemeindenamen, der steht schon in der
+  ChurchTools-Leiste –, darunter die unterstrichenen Reiter. **„Hallo …“ steht nur noch auf der Startseite** (im Organigramm stand
+  es bisher auf jedem Reiter). Alle Apps nutzen die ganze Fensterbreite.
+- **Gewohnheit: „Einstellungen“ ist jetzt der letzte Reiter.** Im **Organigramm** (Gruppen-Admins), in den **Anmeldungen**
+  (Gruppen-Admins) und im **Gebetsabend** (wer die Einstellungen ändern darf) steht „Einstellungen“ ganz rechts in der Reiterleiste,
+  am Handy ganz rechts unten, statt als Knopf neben „Hallo …“. Der Reiter öffnet dasselbe Fenster wie vorher der Knopf; wer die
+  Einstellungen nicht öffnen darf, sieht den Reiter nicht. In den Anmeldungen und im Gebetsabend gibt es dafür nun die Reiter
+  „Start“ und „Einstellungen“. „Neue Veranstaltung“ bleibt in den Anmeldungen neben „Hallo …“. Die Website hat ebenfalls
+  „Einstellungen“ als letzten Reiter; in den Protokollen heißt der letzte Reiter jetzt auch „Einstellungen“ (vorher „Verwaltung“,
+  er zeigt eine Seite). Der Dienstplaner hat keine Einstellungen.
+- **Ein Status-Etikett.** „Leitung“/„Mitglied“, „eingerichtet“, „Entwurf“, „Warteliste 2“, „offen“, „nur ansehen“, „wechselt“,
+  „neu“ und alle ähnlichen Hinweise haben jetzt dieselbe Form in vier Farben: grau (leise Auskunft), blau (deine Rolle, wartet auf
+  dich), grün (in Ordnung), rot (braucht Aufmerksamkeit). Zwei Hinweise, die bisher gelb waren („Ausnahme vom letzten Jahr“,
+  „unvollständig“ bei den Wechseltagen), sind blau bzw. rot.
+
+### Intern
+
+- Neuer Baustein `Etikett` in `ui/bedienung` (vorher `anmeldungen/src/Etikett.tsx`; die `Marke` der Protokolle, die Chips der
+  Kinder-&-Jugend-Seiten im Organigramm und die Pillen der Anmeldungen sind darauf umgestellt). `ErweiterungsSeite` kennt
+  `einstellungen`, `startName` und zeigt „Hallo …“ nur bei aktivem erstem Reiter. Neuer Wächter `etiketten.test.ts`
+  (Kapseln je App: Anmeldungen 10, Protokolle 1, Dienstplaner 2, Organigramm 1, übrige 0 – alle Knöpfe oder Wähler).
+
+### Geändert (Musik-App)
+
+- **Ruhigere Termine.** Statt Umschalter, Filter und Vollbild in einer vollen Zeile steht über der Liste **eine Werkzeugzeile**:
+  links **Kommende | Vergangene** (am Handy der blaue Knopf „Kommende ⌄“), rechts der **Filter** – still, ohne Rand. Der Umschalter
+  ist nur noch so breit wie seine Wörter.
+- **Gewohnheit: Vollbild steht neben den Reitern.** In der ChurchTools-Erweiterung sitzt der Vollbild-Knopf am iPad und Rechner
+  ganz rechts in der Reiterzeile (Termine · Lieder · Mehr) statt in jedem Seitenkopf. Am Handy bleibt er im Seitenkopf.
+- **Gewohnheit: „+ Anlegen“ bei einem Termin ohne Ablauf heißt jetzt „+ Ablauf anlegen“** und ist ein leises gestricheltes
+  Feld; das Etikett „Kein Ablauf“ entfällt, weil es dasselbe sagte. Wer keinen Ablauf anlegen darf, sieht das Etikett weiter.
+  „Mehr laden“ unter den vergangenen Terminen ist ein stilles blaues Wort statt eines breiten Knopfs.
+- **Lieder: die Sortierung** (A–Z · Häufigkeit · Zuletzt) steht in derselben Werkzeugzeile wie überall – am Rechner verbunden,
+  am Handy als Auswahlknopf in Wortbreite. Das Suchfeld bleibt, wo es ist: Die Suche ist das Wichtigste dieser Seite und
+  braucht kein Aufklappen.
+- **Liedblatt: die Werkzeuge** (Aussehen, Tempo, Anmerken …) und Vollbild sind am iPad und Rechner still, ohne Rahmen; am
+  Handy behalten sie ihren Rahmen. Zeichenwerkzeuge, Tempo-Menü und Fußleiste bleiben unverändert.
+
+### Geändert (alle Apps)
+
+- **Zwei Arten von „+“.** Grün gefüllt heißt immer **etwas Neues anlegen**: Am Handy ist der schwebende Kreis mit „+“ jetzt
+  **grün** statt blau (Neues Lied, Neue Vorlage, Zeitraum eintragen, Eintrag im Ablauf), wie der grüne Knopf „Neu“ am
+  Rechner. Grau und gestrichelt heißt „hier fehlt etwas“ (`+ Ablauf anlegen`).
+
+### Behoben (Dienstplaner)
+
+- **„Wann kann ich?“ am Handy: das „+“ stand unter dem Bildschirmrand.** Der Kreis lag am Ende der Liste (bei 844 px Höhe auf
+  y≈1000) statt fest unten rechts über der Reiterleiste. Ebenso klebte die Speichern-Leiste nach dem Abhaken am Ende der Karte
+  statt am unteren Rand. Ursache: Die Karte schneidet ab (`overflow: hidden`), und das machte sie zum Rollbereich der klebenden
+  Hülle. Das schwebende „+“ zeichnet sich jetzt auf die Fläche über der Reiterleiste, egal wo die Seite es aufruft – auch im
+  Bearbeiten eines Ablaufs und bei den Vorlagen.
+
+### Intern
+
+- Neu: `LeisesPlus` (gestricheltes „+“, R10), `SchwebeFlaeche` (Fläche des schwebenden Plus, vom `ErweiterungsRahmen` gesetzt),
+  `ReiterLeiste rechts`, `AnsichtWahl gedimmt`, `SongStatsBar werkzeug`, `VollbildImReiter`. Obergrenze rohe Knöpfe Musik-App
+  111 → 110.
+
+### Geändert (Anmeldungen)
+
+- **Startseite: jede Zeile ist selbst der Knopf.** Veranstaltungen, die Hinweise unter „Braucht deine Aufmerksamkeit“ und die
+  Karte „Nachweise“ enden mit „›“; was zu tun ist, steht als Etikett („wartet auf Freigabe“, „3 Zahlungen offen“). Die Knöpfe
+  „Anzeigen“, „Ansehen“, „Öffnen“ und „In ChurchTools“ neben den Zeilen entfallen. Führt eine Zeile nach ChurchTools, steht klein
+  „in ChurchTools“ dabei. **Anstehend · Entwürfe · Vorbei** zeigt die Zahlen grau hinter den Wörtern (am Handy als „Anstehend ⌄“).
+- **Veranstaltung: ein wandernder blauer Knopf.** Im Band „Nächster Schritt“ ist immer genau der nächste fällige Schritt blau
+  (Termin wählen → Anmeldung einstellen → Bezahlung eintragen → Freigeben). Nach der Freigabe gibt es oben keinen blauen Knopf mehr.
+  „Bearbeiten“ an den Karten ist blauer Text ohne Rahmen.
+- **Gewohnheit: „Freigeben“ und „Verwalten“ liegen im ⋯-Menü.** „Verwalten“ steht jetzt oben rechts im **⋯**-Menü der
+  Veranstaltung; „Freigeben“ steht erst im Band, wenn alles andere erledigt ist – vorher ebenfalls im **⋯**-Menü. „In ChurchTools“
+  bleibt oben sichtbar; in der Liste der Startseite fehlt es – es ist einen Klick weiter, in der geöffneten Veranstaltung.
+- **Gewohnheit: Anmeldungen.** **Spalten**, **Druckliste** und **Rundmail** liegen im **⋯**-Menü der Liste; **Von Hand** ist grün
+  („Hinzufügen“). Die Gruppen der Startseite wählt man im **Filter** statt mit Knöpfen über der Liste.
+
+### Intern
+
+- Neuer Baustein `KlickZeile` (ganze Zeile als Knopf oder Link mit „›“), `AnsichtWahl` kennt eine Anzahl hinter dem Wort, `KopfLink`
+  gibt es still. In `anmeldungen`: `Etikett` ist die eine Stelle für Status-Etiketten (B8b stellt dort um), `schritte.ts` kennt
+  `blauerSchritt` und `freigebenPlatz`. Wächter `bedienKnoepfe`: Anmeldungen 104 → 102 rohe Knöpfe.
+
+### Geändert (Protokolle)
+
+- **Ruhigere To-Dos.** Statt vier Umschalter-Zeilen steht über der Liste **eine Werkzeugzeile**: links **Liste | Board** (am Handy
+  der blaue Knopf „Liste ⌄“), rechts der **Filter** und der grüne Knopf **Neues To-Do**. Die Überschrift „To-Dos“ entfällt, sie
+  steht schon im Reiter.
+- **Gewohnheit: „Gruppieren“, „Sortieren“ und „Alle | Meine“ sind jetzt im Filter.** Im **Filter** stehen **Gruppieren nach**
+  (im Board „Spalten nach“: Status, Fälligkeit, Person), **Reihenfolge** (Dringlichkeit, Bis-Datum, Alphabetisch, Manuell) und
+  unter „Zuständig“ die Kurzwege **Alle** und **Nur meine**. Die Zahl am Filter zählt weiter nur, was ausgeblendet ist.
+- **Ein grüner Knopf „Neu ⌄“ in den Sitzungen.** Statt vier Knöpfen in der Kopfzeile von „Kommend“, zwei davon grün, steht neben
+  dem Gruppennamen **ein** grüner Knopf: **Neues Protokoll**, **Neue Sitzung**, **Punkt vorschlagen** und – hinter einer Linie –
+  **Protokoll nachtragen**. Wer nur vorschlagen darf, sieht nur diesen Eintrag. Am Handy kommt das Menü als Blatt von unten.
+  Nichts ist weggefallen, nur einen Klick tiefer.
+
+### Intern
+
+- `HinzufuegenMenue` kennt `pfeil` („Neu ⌄“) und `handy` (Blatt von unten, `AuswahlBlatt`), `KopfKnopf` einen Pfeil nach unten
+  (`pfeil`); `WahlKnopf` ist entfallen (der Filter trägt die Wahlen). Obergrenze rohe Knöpfe Protokolle 82 → 81.
+
+### Geändert (Organigramm)
+
+- **Ruhigere Werkzeugzeile im Reiter Organigramm.** Statt vier Zeilen über dem Bild steht jetzt eine: links die **Ansicht** als
+  Auswahlknopf („Von oben ⌄“ zeigt Karten, Liste, Von oben, Von links, Mindmap), in der Mitte **Bereich: Ganze Gemeinde**,
+  rechts **Filter**, **Präsentieren** und **⋯**. Am Handy ist sie zweizeilig, jedes Element mit Rahmen.
+- **Gewohnheit: „Anfangen bei“ heißt jetzt „Bereich“.** **PDF / Drucken**, **Alle aufklappen** und **Alle zuklappen** liegen im
+  **⋯**-Menü; **Personen** (Aus · Nur Rollen · Alle) und **Welche Rollen** liegen im **Filter** – die Zahl am Filter zeigt, wie viele
+  Rollen abgewählt sind. **Präsentieren** bleibt sichtbar, **Einstellungen** steht weiter rechts neben „Hallo …“. Nichts ist
+  weggefallen, nur einen Klick tiefer.
+- **Personen: Suche als Lupe** rechts neben den Reitern (am Handy neben dem App-Namen) statt eines festen Suchfelds über der
+  Tabelle.
+
+### Intern
+
+- `AnsichtWahl` kann auch am Rechner als Auswahlknopf mit Menü erscheinen (`alsKnopf`, ab etwa vier Ansichten); `FilterKnopf`
+  kennt jetzt eine Wahl mit Punkten (`eineWahl`) und Abkürzungen unter den Häkchen (`kurz`); `SpitzenAuswahl` hat einen Vorsatz
+  („Bereich“); „Nur Leitung“ der Rollen steht nur noch in `nurLeitungAus`.
+
+### Geändert (Dienstplaner)
+
+- **Dienste: ruhigere Werkzeugzeile.** Über der Karte steht eine Zeile statt eines Kartenkopfs: links „Meine | Alle“, rechts
+  **Filter** und **⋯**. Am Handy ist „Meine ⌄“ ein blauer Knopf, Filter und ⋯ haben einen Rahmen.
+- **Gewohnheit: „Teilen“ und die Hilfe liegen jetzt im ⋯-Menü** (Teilen nur bei „Meine“, wie bisher). Das „?“ in der Zeile gibt
+  es nicht mehr. Nichts ist weggefallen, nur einen Klick tiefer.
+- **Dienste: „Weitere Wochen laden“** (vorher „Weitere Termine laden“) steht als stilles blaues Wort unter der Liste. Ist die Liste
+  leer, steht dort ein Satz mit dem Link „Alle Termine zeigen“, der gleich zu „Alle“ springt.
+- **Wann kann ich?: alles in einer Zeile.** Links „Termine | Einträge“ – die Zahl der anstehenden Einträge ist jetzt ein blauer
+  Kreis direkt hinter dem Wort –, in der Mitte der Zeitraum mit ‹ › zum Blättern (nichts Vergangenes), rechts **Filter** und der
+  grüne Knopf **+ Zeitraum eintragen** (am Handy wie bisher das runde Plus). Unter „Einträge“ stehen Zeitraum und Filter nicht
+  mehr, sie wirken nur auf die Termine.
+- **Wann kann ich?: leisere Notiz.** Ohne Notiz steht ein graues „+ Notiz“, mit Notiz nur ihr Text (ohne „Notiz:“ davor).
+
+### Geändert (Musik-App)
+
+- **Abwesenheiten: dieselbe ruhige Zeile wie im Dienstplaner** („Wann kann ich?“, siehe oben): „Termine | Einträge“ mit blauem
+  Kreis, Zeitraum mit ‹ ›, „Filter“ und der grüne Knopf „+ Zeitraum eintragen“ in einer Zeile; „+ Notiz“ gibt es hier nicht
+  (die Musik-App kennt keine Notiz an Terminen). Der Haken „Abwesend“ je Termin bleibt.
+
+### Intern
+
+- Neue Bausteine in `ui/bedienung`: `ZeitraumLeiste` (‹ Zeitraum › als ein Rahmen, vorher in „Planen“ von Hand;
+  `Terminleiste` nutzt ihn jetzt) und `TextKnopf` (stilles blaues Wort). `AnsichtWahl` kann einen Merker tragen (`zahl`),
+  `ReiterZaehler` gibt es in Blau (`ton="blau"`), `FilterKnopf` bekommt `dataTour`; die Werkzeugzeile hält „rechts“ auch ohne Mitte
+  rechts. `AbwesenheitenSeite` gibt dem Rahmen nur noch `werkzeug` statt `kopf` + `aktionen`.
+- Wächter `bedienKnoepfe`: Obergrenze Dienstplaner 81 → 79. Der eigene rote Zähler der Abwesenheiten ist durch `ReiterZaehler`
+  ersetzt.
+
+### Geändert (Dienstplaner)
+
+- **Planen: ruhigere Werkzeugzeile.** Über der Tabelle steht jetzt eine Zeile statt dreien: links die Ansicht (Matrix ·
+  Personen · Wer wie oft?), in der Fenstermitte der Zeitraum mit ‹ ›, rechts **Filter** und **⋯**. Am Handy ist sie
+  zweizeilig: oben die Ansicht als blauer Knopf mit Pfeil, daneben Lupe, Filter und ⋯ (alle mit Rahmen), darunter der Zeitraum.
+- **Gewohnheit: Erinnern und Teilen liegen jetzt im ⋯-Menü** – ebenso **Ablauf bearbeiten**, **Vorlagen** und **Hilfe**, jeweils
+  mit Symbol und Wort. Wer „Ablauf bearbeiten“ einschaltet, sieht oben den blauen Knopf „Fertig“, bis er fertig ist. Nichts
+  ist weggefallen, nur einen Klick tiefer.
+- **Breite Spalten** steht im Filter unter „Anzeige“ (vorher zwei Symbole in der Zeile). Die Zahl am Filter zählt nur
+  ausgeblendete Einträge, nicht die Anzeige. **＋ früheren / späteren Termin dazunehmen** liegt im Fenster des Zeitraums.
+- **Person hervorheben** ist jetzt eine Lupe rechts neben den Reitern (am Handy in der Werkzeugzeile); ein Tipp klappt das
+  Feld auf, Esc oder ✕ klappt es zu. Das Hervorheben selbst ist unverändert.
+- **Freie Plätze leiser:** ein graues, gestricheltes Feld mit „＋ frei“. Rot ist nur noch die Zahl „N frei“ am Termin.
+- **Zauberstab und Regler** in der Gruppenzeile erscheinen am Rechner erst, wenn die Maus auf der Zeile steht; am Handy sind
+  sie immer sichtbar.
+
+### Intern
+
+- Neue Bausteine in `ui/bedienung`: `Werkzeugzeile` (links · Mitte · rechts, Handy zweizeilig mit Rahmen), `AnsichtWahl`,
+  `MehrMenue` („⋯“-Menü; `Option` bekommt `symbol`, `gesperrt`, `gewaehlt`) und `HilfeFenster`; `FilterKnopf` bekommt `still`
+  und Abschnitte vom Typ `anzeige`, `ZeitraumKnopf` den Bereich `dazu`, `SuchLupe` Namen, Tastenfang und Platz für Vorschläge.
+  Neue Icons `mehr` und `hilfe`. Wächter `bedienKnoepfe`: Obergrenze Dienstplaner 83 → 81.
+- Testhilfe `dienstplaner/src/mehrMenue.testutil.ts` (Menü öffnen, Eintrag antippen, Zeitraum-Fenster, Filter).
+- `tsc -p ui`: zwei Altlasten in `KopfKnopf.test.tsx` und `SuchLupe.test.tsx` behoben.
+
+### Geändert (Dienstplaner + Organigramm + Protokolle + Website)
+
+- **Ruhigere Reiter am Computer.** Die Bereiche oben (z. B. Start · Dienste · Planen) stehen jetzt als Text mit blauer
+  Unterstreichung unter dem App-Namen, wie in ChurchTools und in der Musik-App – nicht mehr als Kasten-Umschalter.
+  Am Handy bleibt die Leiste unten. Nichts ist weggefallen, nur das Aussehen ist leiser. In den Protokollen steht die
+  Lupe am Computer rechts neben den Reitern, der rote Zähler am Reiter „To-Dos“ ist unverändert.
+
+### Intern
+
+- Die Reiter zeichnet `ErweiterungsSeite` selbst (`bereiche`, `handy`, `lupe`) – eine Stelle für alle Apps statt vier
+  Kopien. Neuer Wächter `ui/design/reiterUnterstrichen.test.ts`: kein `Segment` mit dem Namen „Bereiche“.
+
+### Intern
+
+- Ruhige Bedienung, Scheibe B1 (noch ohne sichtbare Änderung): `KopfKnopf` bekommt die stille Stufe `still` (ohne Rand
+  und Fläche, am Handy mit Rahmen), die aufklappende Suche der Protokolle wandert als `SuchLupe` nach
+  `ui/bedienung`, und der Wächter `ui/design/bedienKnoepfe.test.ts` hält die Zahl roher Knöpfe und fester
+  Knopfhöhen je App als Obergrenze fest.
+
+### Behoben (Website)
+
+- **Nach dem Neuladen sperrt man sich nicht mehr selbst aus.** Wer eine Seite bearbeitet hatte und die Browserseite neu lud, sah „Diese Seite ist gerade in einem anderen Fenster von dir geöffnet“ – die eigene Sperre vom alten Fenster, die beim Verlassen nicht mehr freigegeben werden konnte, hielt bis zu zehn Minuten. Jetzt steht neben dem Hinweis **„Hier weiterbearbeiten“** (mit Rückfrage).
+- Ist die Seite von jemand anderem gesperrt, gibt es **„Bearbeitung übernehmen“**: Die Rückfrage nennt die Person und wie lange ihr letztes Lebenszeichen her ist und sagt deutlich, dass ihre ungespeicherten Änderungen verloren gehen. Das verdrängte Fenster zeigt „Ein anderes Fenster hat die Bearbeitung übernommen“ und speichert nichts mehr; seine letzten Änderungen bleiben dort sichtbar. Wie „Schreiben übernehmen“ in den Protokollen.
+
+### Behoben (Website)
+
+- **Die Vorschau der Website ist in ChurchTools jetzt gestaltet und lässt sich dort bearbeiten.** ChurchTools sperrt Stylesheets als `data:`-Adresse und Skripte ohne Erlaubnis – darum sah die Vorschau nach „Startseite anlegen“ ungestaltet aus, und die Leisten zum Bearbeiten fehlten. Das Stylesheet steht jetzt direkt im Vorschau-Dokument, und die Bearbeiten-Leiste trägt die Erlaubnis (Nonce) der ChurchTools-Seite.
+- Läuft das Bearbeiten-Skript in der Vorschau trotzdem nicht, steht oben ein Hinweis („Bearbeiten in der Vorschau ist gerade nicht möglich …“) statt dass die Leisten still fehlen.
+- Im Baustein-Fenster „Eigenes HTML“ steht dazu: Skripte darin laufen in der Vorschau in ChurchTools nicht, auf der Website schon.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.11.1 gebracht.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.2.0 gebracht: To-Dos „Gemeinsam“ oder „Jeder für sich“, Haken
+  statt Weiterschalten, neue Karte und Tabelle, Vorschläge in Kurzform.
+
+### Intern
+
+- README-Bilder-Skript: Der Reiter „To-Dos“ der Protokolle heißt seit v1.1.0 für Bildschirmleser „To-Dos, 4 fällig“ –
+  Aufnahme und Standbild suchen ihn jetzt mit und ohne Zähler (vorher brach der Lauf ab). Protokolle-GIF neu (W8).
+
+### Neu (Website)
+
+- **Seiten direkt in der Vorschau bearbeiten (W3a-2).** Wie bei Squarespace: Fährt man über einen Abschnitt, erscheint eine Leiste (Gestalten, nach oben, nach unten, kopieren, löschen); zwischen den Abschnitten steht „Abschnitt einfügen“, in jeder Spalte „+ Baustein“, und ein Klick auf einen Baustein öffnet ihn. Am Handy genügt ein Tipp auf den Abschnitt. In der Vorschau führt kein Link irgendwohin und kein Formular schickt etwas ab.
+- **Abschnitt einfügen:** die Vorlagen als Kacheln mit kleinem Schema-Bild („Eigenes HTML“ nur für die Leitung). **Abschnitt gestalten:** Hintergrund (Hell, Sanft, Hauptfarbe, Akzent, eigene Farbe, Foto mit Abdunkeln – das Foto ist vorerst ein Platzhalter, eigene Bilder kommen später), Spalten, Abstand, Breite, Höhe, Ausrichtung, Textfarbe und Sprungmarke. Änderungen sieht man sofort; „Abbrechen“ stellt den Stand vor dem Öffnen wieder her. Weniger Spalten: Die Inhalte rutschen in die letzte, nichts geht verloren.
+- **Baustein bearbeiten** für alle 15 Arten (Überschrift, Text mit Knöpfen für Fett/Kursiv/Link/Liste/Zwischenüberschrift, Knöpfe, Bilder, Galerie, Termine mit Kalenderwahl aus ChurchTools, Beiträge, Slider, Livestream, Kontaktformular, Gruppen, Trenner, Eigenes HTML), dazu **Baustein hinzufügen** und **Entfernen** (fragt nach). **Seite einstellen:** Titel, Adresse, Beschreibung, „Im Menü zeigen“ und die Reihenfolge im Menü; „Seite löschen“ steht jetzt hier.
+- **Gespeichert wird von selbst** – nach „Fertig“ und nach jeder Leistenaktion – in die „Entwürfe“. Oben steht immer „Speichert … / Gespeichert / Nicht gespeichert“. Scheitert das Speichern vorübergehend (ChurchTools antwortet nicht), bleibt die Änderung stehen: „Erneut versuchen“, nichts wird neu geladen. Ungültiges (z. B. eine Adresse mit „javascript:“, eine doppelte Sprungmarke) wird nie gespeichert; die Meldung steht im Fenster.
+- **Eine Person bearbeitet, die anderen sehen zu:** Wer eine Seite anfasst, sperrt sie für andere („Gerade bearbeitet von …“ – dann nur ansehen). Die Sperre hält, solange die Seite offen ist, und verfällt nach zehn Minuten ohne Lebenszeichen. Hat jemand die Seite inzwischen geändert, wird nicht darüber geschrieben, sondern gefragt, ob neu geladen werden soll.
+- Der Demo-Modus (`?demo`) spielt das Bearbeiten ganz ohne ChurchTools durch – mit den Fällen „gesperrt“ und „Speichern scheitert einmal“.
+
+### Intern (Website)
+
+- Die Schreibsperre („eine Person schreibt, alle lesen“) steht jetzt einmal in `shared/ct/sperre.ts`; die Protokolle nutzen sie von dort (`shared/protokolle/speicher.ts` führt sie unter dem alten Namen weiter), Verhalten unverändert. Die Website legt sie als eigenen Wert je Seite ab (`shared/website/sperre.ts`), damit ein Lebenszeichen nicht mit dem Speichern der Seite um denselben Wert streitet.
+- Rechenregeln des Editors rein und getestet (`shared/website/bearbeiten.ts`), Speichern eins nach dem anderen (`shared/website/schlange.ts`), neue Bausteine aus denselben Erzeugern wie die Vorlagen (`neuerBaustein`). Nachrichten der Vorschau nimmt die Erweiterung nur aus dem eigenen `iframe`, in fester Form und mit Stellen, die es gibt; Löschen fragt immer nach.
+- Testfälle TF-WEBSITE-05 bis 09.
+
+### Behoben (Dienstplaner)
+
+- **„Planen“ zeigt jetzt jeden Dienst, den du planen darfst – auch wenn ihn gerade kein Termin braucht.** Bisher fehlte
+  z. B. „Abendmahl“ (Moderation & Predigt) im Filter und als Zeile, solange er an keinem Termin im gezeigten Zeitraum
+  vorgesehen war; man musste ihn erst in ChurchTools einschalten. Jetzt steht er in der Matrix und in „Personen“ da und
+  lässt sich über die Plätze einschalten – am Handy über den Plätze-Knopf im Kopf der Gruppe, der dafür jetzt auch an
+  Terminen steht, an denen die Gruppe nichts vorgesehen hat. Wer einen Dienst nur sehen darf, bekommt keine leeren Zeilen.
+
+### Neu (Website)
+
+- **Neue ChurchTools-Erweiterung „Website“ (Grundgerüst, W3a-1).** Ein Admin wählt die Gruppe „Website“ und richtet mit einem Knopf ein (zwei Bereiche für die Daten: „Entwürfe“ und „Veröffentlicht“). Bearbeiten dürfen die Website Admins und die Leitung dieser Gruppe; alle anderen sehen einen freundlichen Hinweis. Die Rechte an den Bereichen vergibt die Verwaltung vorerst von Hand (Anleitung `docs/betrieb/WEBSITE.md`).
+- **Seiten:** links die Seitenliste („Im Menü“, „Weitere Seiten“, die Startseite markiert), rechts die **Vorschau** mit dem Umschalter Computer | Handy. **Neue Seite** (Titel eingeben, die Adresse entsteht daraus) und **Seite löschen** (mit Rückfrage, ein Menüpunkt dazu geht mit). Hat die Website keine Startseite, bietet ein Hinweis „Startseite anlegen“ an – nie von selbst. „Aussehen“ und „Freigaben“ folgen in späteren Schritten.
+- **Vorschau mit dem echten Renderer** in einem abgeschotteten Fenster (`sandbox="allow-scripts"` ohne `allow-same-origin`), damit der Baustein „Eigenes HTML“ nie an ChurchTools herankommt. Das gemeinsame Stylesheet der Website (`shared/website/website.css`) ist jetzt Teil des Repos; ein Test stellt sicher, dass jede Klasse, die der Renderer ausgibt, eine Regel hat (dabei ergänzt: Bild + Text nebeneinander, Gruppen- und Videobilder).
+- **Speichern in Kopf + Teilen:** Seiten, Menü und Einstellungen liegen im Speicher der Erweiterung, bei Bedarf auf mehrere Werte verteilt (ein Wert fasst höchstens 10.000 Zeichen). Zuerst die neuen Teile, dann der Kopf, zuletzt die alten Teile weg – bricht es unterwegs ab, bleibt der bisherige Stand lesbar. Beschädigte oder fremde Werte werden angezeigt und nie gelöscht; ein vorübergehender Fehler beim Lesen verändert nichts.
+
+### Intern (Website)
+
+- Die Aufteilung großer Werte in Teile (`teileBauen`, `textAusTeilen`, `pruefsumme`) steht jetzt einmal in `shared/ct/teile.ts`; die Protokolle nutzen sie von dort (`shared/protokolle/speicher.ts` ist nur noch die Hülle), Verhalten unverändert.
+- Neu eingehängt wie die anderen Erweiterungen: Workspace `website`, Build, Lint, CI-Paketschritt, Release-Workflow `website-v*` (kein Tag gesetzt), Release-Notizen, E2E-Rauchtest mit Demo (`?demo`), Quelltext-Wächter, `docs/betrieb/WEBSITE.md`, Testfälle TF-WEBSITE-01 bis 04, Datenschutz-Eintrag.
+
+### Neu (Protokolle)
+
+- **To-Do-Karte in zwei Teilen.** Oben der Haken (ein Kreis, 44 px zum Antippen), klein und blau die Gruppe (nur wenn mehrere Gruppen zu sehen sind)
+  und der Titel; darunter eine **Fußzeile**: links das Frist-Kästchen, das Schild „in Arbeit“ und die Symbole, rechts die **Gesichter** der Zuständigen
+  (höchstens 3, bei mehr 2 und „+N“, der Tooltip nennt alle Namen). Im Board ist die Fußzeile durch eine feine Linie abgesetzt. Die bisherige
+  Status-Marke mit Wort entfällt – ein leerer Kreis heißt „offen“.
+- **Frist in Worten.** „seit 20.10.“ (rot umrandet), „heute“ und „morgen“ (orange), innerhalb der nächsten 7 Tage der Wochentag („Samstag“), sonst
+  „29.11.“; der Tooltip nennt das volle Datum, bei Erledigten steht nur das Datum. Dasselbe Kästchen steht auch auf der Startseite bei „Meine offenen To-Dos“.
+- **Symbole.** Bei „Jeder für sich“ ☑ 2/5: ein Tipp klappt auf, wer fertig ist (in Liste, Tabelle und Board). Dazu die Sprechblase mit der Zahl der
+  Notizen und das Dokument-Symbol „aus einer Sitzung“ (ein Tipp führt ins Protokoll). „Auf Karte anzeigen“ bei den Notizen zeigt die letzte Notiz als leise Zeile
+  unter dem Titel.
+- **Erledigte Karten** sagen „Erledigt von Peter am 12.11.“ (mit Gesicht), bei „Jeder für sich“ „Alle fertig am …“; im Fenster steht der Satz unter dem Status.
+- **Tabelle am Computer.** Die Liste wird eine Tabelle mit festen Spalten: Haken · Aufgabe · Gruppe · Fällig · Zuständig · Stand · Überblick. Die Form richtet sich
+  nach der Breite des Kastens (die Erweiterung läuft in ChurchTools mit unbekannter Fensterbreite): zuerst fällt die Spalte „Gruppe“ weg, darunter
+  werden es wieder Karten. Das Board bleibt Karten.
+- **Kopfzeile.** Die Pillen **„Alle | Meine“** stehen direkt sichtbar – sie sind ein Kurzweg auf den Filter „Zuständig“ (derselbe Zustand, keine zweite
+  Filterlogik). **Gruppieren** ist jetzt ein Auswahlknopf: Nach Status, **Nach Fälligkeit** (Überfällig · Diese Woche · Später · Ohne Frist · Erledigt),
+  Nach Person.
+
+### Geändert (Protokolle)
+
+- **Fenster „To-Do“:** Die Reihenfolge ist Was · Gruppe/Bis · **Zuständig** · So wird es erledigt · Status bzw. „Wer ist fertig?“ · Notizen. Bei „Aus welcher
+  Sitzung“ gibt es keinen Schalter „Auf Karte anzeigen“ mehr – das Dokument-Symbol steht immer da.
+
+### Neu (Protokolle)
+
+- **„Jeder für sich“.** Bei zwei oder mehr Zuständigen wählt das Fenster „To-Do“ unter **„So wird es erledigt“**: **Gemeinsam** (einer
+  erledigt es für alle – wie bisher, bestehende To-Dos ändern sich nicht) oder **Jeder für sich** (jeder hakt seinen Teil selbst ab).
+  Statt des Status-Umschalters steht dann die Liste **„Wer ist fertig?“** (Name, „✓ am …“ bzw. „offen“). Den eigenen Teil hakt man selbst ab,
+  **für andere nur die Leitung**. Der Gesamtstand läuft von selbst: niemand fertig = offen, einige = in Arbeit, alle = erledigt – so steht die
+  Karte im Board in der richtigen Spalte. Auf der Startseite und im To-Do-Hinweis (Band, Zähler) steht ein solches To-Do nur, **solange mein Teil fehlt**.
+  Im Protokoll-Editor schaltet das Schildchen „Wer?“ den Modus. Zwei, die kurz nacheinander abhaken, löschen sich nicht gegenseitig.
+- **Rückgängig an der Karte.** Nach dem Abhaken in der To-Do-Übersicht bleibt die Karte 5 Sekunden an ihrem Platz (durchgestrichen) mit
+  „Rückgängig“ direkt an der Karte, dann rutscht sie zu „Erledigt“.
+
+### Geändert (Protokolle)
+
+- **Haken statt Weiterschalten.** Die Status-Marke in der To-Do-Übersicht, der Kreis an der Aufgabe im Protokoll und der Kreis in „Offene
+  To-Dos“ sind jetzt ein Haken: ein Tipp hakt ab (offen oder in Arbeit → erledigt), noch ein Tipp nimmt zurück (erledigt → offen) – er springt
+  nicht mehr auf „in Arbeit“. „In Arbeit“ stellt man im Fenster „To-Do“ ein oder zieht die Karte im Board in die Spalte.
+
+### Geändert (Protokolle)
+
+- **Vorschläge in Kurzform.** In der Karte „Vorschläge“ (Reiter „Sitzungen“) und im Kasten beim Protokollschreiben steht jeder
+  Vorschlag als eine Zeile: Titel, darunter höchstens eine Zeile Text und „von …“. **Antippen klappt ihn auf** – erst dann stehen
+  der ganze Text und die Knöpfe (Ändern, Zurückziehen, Übernehmen, Nächstes Mal, Ablehnen) da; aufgeklappt ist immer nur einer.
+- **Karte einklappbar.** Der Kopf „Vorschläge · n offen“ klappt die Karte zu und auf: Standard offen, wenn es offene gibt, sonst
+  zu. Das Gerät merkt sich die Wahl (je Person und Gruppe).
+- **Übernommene verschwinden aus der Liste.** Stattdessen trägt die Sitzung in „Kommend“ die Marke „n Vorschläge übernommen“;
+  die Marke für die offenen heißt jetzt „n Vorschläge offen“. Zurückgezogene stehen ebenfalls nicht mehr in der Liste.
+- **Abgelehnte bleiben 7 Tage.** In einer kleinen Gruppe „Abgelehnt · verschwindet nach 7 Tagen“, nur für den, der vorschlug, und
+  die Leitung – mit „Grund: …“ und „noch n Tage sichtbar“. Ein „×“ blendet einen früher aus (nur auf diesem Gerät). Gespeichert
+  bleibt alles; nichts wird gelöscht. Die Gruppe „Erledigt“ mit 60 Tagen entfällt.
+
+### Intern (Protokolle)
+
+- Die Regeln (nur Offene in der Karte, übernommen je Sitzung, 7-Tage-Sichtbarkeit in Ortszeit der Gemeinde, Einklapp-Standard)
+  stehen als Funktionen in `shared/protokolle/vorschlaege.ts` und sind dort getestet; die Sitzungszeile nutzt `offeneFuer`
+  statt einer eigenen Nachrechnung.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` und README auf den Stand v0.11.0 gebracht: „Erinnern“, „Plan teilen“ in drei Ansichten,
+  Platzzahl mit Entwürfen; Bild des Dienstplaners im README neu (mit dem Knopf „Erinnern“).
+
+### Intern (Website)
+
+- Website-Kern umgebaut auf **Abschnitte mit Spalten und Gestaltung**: Eine Seite besteht aus Abschnitten (Hintergrund als Farbe der Gemeinde, eigene Farbe oder Foto, Textfarbe, Abstand, Breite, Höhe, Anker), jeder Abschnitt aus 1 bis 4 Spalten (Aufteilung 1, 1-1, 2-1, 1-2, 1-1-1, 1-1-1-1; die Spaltenzahl muss passen), jede Spalte darf einen eigenen Hintergrund haben. Der Renderer gibt die Klassen des abgenommenen Entwurfs aus; eigene Werte gehen nur als geprüfte CSS-Variablen ins `style`.
+- Neue und geänderte Bausteine: Überschrift mit Größe und Punkt, Akzentzeile, Knopf-Reihe (1 bis 4 Knöpfe, auch Sprunglinks auf Anker), Bild füllt die Spalte, „Eigenes HTML“ (bewusst ungeschützt, nur für die Leitung; Rechte folgen mit dem Builder). Einstellungen um Farben, Schriften, eigenes CSS, Bannertext und Datenschutz-Link erweitert; ohne Angaben gelten neutrale Vorgaben. Das Theme (Variablen, `@font-face`, eigenes CSS) steht im `<style>` jeder Seite, eigenes CSS kann nicht daraus ausbrechen. Feste Schriftauswahl mit 14 freien Schriften (nur die Liste, die Dateien folgen) und 15 Abschnitt-Vorlagen mit Platzhalter-Inhalten.
+- YouTube nur mit Einwilligung: Videos mit gültiger Kennung zeigt der Renderer als Sperre (Vorschaubild, Abspiel-Knopf, Datenschutz-Link, „Auf YouTube ansehen“), nie als iframe – den Player setzt erst das Seiten-Skript nach der Zustimmung ein. Banner und „Einwilligung ändern“ erscheinen nur auf Seiten mit Video; das Skript (Handy-Menü) ist auf jeder Seite eingebunden. `pruefeWebsite` prüft zusätzlich doppelte Anker und IDs über Abschnitte, Spalten und Bausteine, Sprunglinks und den Datenschutz-Link.
+
+### Neu (Dienstplaner)
+
+- **„Plan teilen“: dritte Ansicht „Je Person“.** Für jede Eingeteilte ein eigener Abschnitt mit Datum, Uhrzeit, Termin und Dienst – beim ganzen Plan mit der
+  Gruppe dahinter. Darunter die Reihe **Seiten**: _Seite je Person_ (jede beginnt eine neue Seite, zum Verteilen oder Aushängen) oder _Untereinander_
+  (ein Abschnitt, der nicht mehr auf die Seite passt, steht ganz auf der nächsten). Abgesagte Termine fehlen wie bei „Personen“; die Wahl merkt sich das Gerät.
+
+### Intern (Website)
+
+- Kern der neuen Gemeinde-Website (`shared/website/`): Inhaltsmodell mit 13 Bausteinen, Seiten, Menü und Einstellungen als geprüfte Schemas, Speicherformat `website:v1:` je Einheit (Grenze 10.000 Zeichen je Wert) und Gesamtprüfung (eine Startseite, keine doppelten Pfade, keine toten Links).
+- Ein Renderer für Vorschau und Bau: Seite und Bausteine werden zu semantischem HTML ohne Skripte und fremde Ressourcen; Texte und Links sind gegen Einschleusen geschützt, Daten und Uhrzeiten deutsch in der Zeitzone der Gemeinde (kommt aus den Einstellungen, keine feste Zone im Code).
+
+### Neu (Dienstplaner)
+
+- **„Plan teilen“: zweite Ansicht „Personen“.** Unter „Was“ gibt es jetzt die Reihe **Ansicht** (_Termine_ · _Personen_). Bei _Personen_ steht auf dem Blatt
+  eine Tabelle: je Eingeteiltem eine Zeile (alphabetisch), je Termin eine Spalte, in der Zelle die Dienste, ganz hinten die Zahl der Dienste.
+  Abgesagte Termine fehlen, ab neun Terminen wird in Blöcke zu acht geteilt. Was, Gruppe und Ansicht merkt sich das Gerät.
+
+### Geändert (Dienstplaner)
+
+- **„Plan teilen“ ist übersichtlicher.** Oben steht jetzt die Reihe **Was**: _Ganzer Plan_ oder _Eine Gruppe_ – bei „Eine Gruppe“ darunter eine
+  Zeile mit den eingeblendeten Gruppen. Die Wahl merkt sich das Gerät wie bisher.
+- **„Wir suchen noch …“ gibt es nicht mehr.** Wer es zuletzt gewählt hatte, sieht beim nächsten Mal den ganzen Plan; eine gemerkte Gruppe bleibt.
+
+### Intern (Anmeldungen)
+
+- **Nachweise: der Antrag als eigene PDF** (Etappe F, Scheibe N1d; veröffentlicht wird erst nach Etappe F). Im Abschnitt „Antrag
+  (Bescheinigung in ChurchTools)“ des Fensters „Nachweis-Art“ gibt es neben dem Baukasten die Gestaltung **„Eigene PDF“**: Die
+  Gemeinde lädt ihr vorhandenes Antragsformular als PDF hoch (bis 15 MB), die Erweiterung macht aus der **ersten Seite** ein
+  Hintergrundbild (JPEG, ~150 dpi; wird es über 2 MB, erneut mit gröberer Auflösung) und übernimmt das **Seitenformat** der PDF. Die
+  Platzhalter `[Nachname], [Vorname]`, `[Vorname]`, `[Nachname]`, `[Geburtsdatum]`, `[Adresse]`, `[Heute]`, `[E-Mail]` und die
+  **Unterschrift** (Bild) zieht man mit Maus oder Finger an ihre Stelle; beim ersten Hochladen stehen Name, Geburtsdatum, Adresse,
+  „Ort, [Heute]“ und Unterschrift schon untereinander. Schriftgröße je Platzhalter (9, 11, 13 pt), Breite der Unterschrift (30 bis
+  70 mm), Pfeiltasten verschieben, Entf entfernt. Eine mehrseitige PDF nimmt nur Seite 1 (mit Hinweis); eine kaputte oder
+  verschlüsselte PDF meldet es verständlich und ändert nichts. Wechseln zwischen Baukasten und PDF verliert im offenen Fenster nichts.
+- **Wie es gespeichert wird:** derselbe Weg wie beim Baukasten (globale Vorlage „Antrag: Nachweis: …“, HTML-Datei, Gruppenrolle
+  Teilnehmer, alles nachgelesen). Das HTML hat das Seitenformat der PDF (`@page`), das Hintergrundbild ganzseitig und die Felder
+  absolut positioniert – **Positionen in Prozent der Seite, Anker ist die linke obere Ecke**; Editor und HTML rechnen mit
+  derselben Funktion. Seitenformat und Platzhalter stehen im Datenblock der Art (Fassung 3, Fassung 1 und 2 bleiben lesbar), das
+  Seitenbild nur im HTML. Ist der bisherige Antrag nicht lesbar, wird nichts geschrieben, was das Seitenbild verlieren könnte.
+- **pdf.js wird erst beim Wählen einer PDF geladen** (eigener Baustein, Worker als eigene Datei); die Erweiterung wächst dadurch von
+  etwa 0,5 auf 1,0 MB (ChurchTools nimmt Pakete bis etwa 2,2 MB). `pdfjs-dist` steht jetzt auch in den Abhängigkeiten der
+  Anmeldungen. Neu in `ui/teilen/pdfSeiten.ts`: `pdfSeiteOeffnen` (Seitenzahl, Maße in pt, Zeichnen in beliebigem Maßstab).
+
+### Geändert (Dienstplaner)
+
+- **Plätze ändern geht jetzt auch, wenn Entwürfe dort liegen.** Bisher waren „+“ und „−“ gesperrt („Hier liegt ein Entwurf – erst
+  senden oder entfernen.“), weil ChurchTools die Plätze beim Ändern neu nummeriert. Jetzt trägt der Dienstplaner die Entwürfe dieses
+  Dienstes an diesem Termin danach selbst auf ihre neuen Plätze um – im Plätze-Fach der Matrix, im Fenster in „Personen“ und bei
+  „Platz dazunehmen“ im Fenster „Dienst voll“ (auch für Gäste), ebenso bei „Vorlage übernehmen“.
+- **„+“ geht immer, „−“ hört bei den Plätzen mit Inhalt auf:** nicht unter die belegten Plätze und die Entwürfe auf freien Plätzen
+  („Auf den freien Plätzen liegen Entwürfe – zum Verkleinern erst einen entfernen.“). Ein Entwurf auf einem belegten Platz (Ersetzen,
+  Zurückziehen) hält die Zahl nicht fest. Fällt ein Platz mit Entwurf weg, zieht der Entwurf auf einen freien Platz ohne Entwurf.
+- **Gesperrt bleibt es nur,** wo du die Entwürfe der Dienstgruppe nicht ändern darfst. Geht beim Umtragen etwas schief, steht die neue
+  Platzzahl trotzdem – eine Meldung nennt, wie viele Entwürfe nicht mitgehen konnten, und die Seite lädt Plan und Entwürfe neu.
+- **Nach dem Ändern der Platzzahl lädt der Plan sofort neu,** nicht erst beim Schließen des Fensters – bis Plätze und Entwürfe
+  zusammenpassen, sind „+“ und „−“ kurz aus (Schließen geht). So zeigt die Matrix nach einer Änderung gleich den neuen Stand.
+
+### Intern (Anmeldungen)
+
+- **Nachweise: der Antrag als ChurchTools-Bescheinigung** (Etappe F, Scheibe N1c; veröffentlicht wird erst nach Etappe F). Im Fenster
+  „Nachweis-Art“ gibt es den Abschnitt „Antrag (Bescheinigung in ChurchTools)“ mit dem Schalter „Mit Antrag“ (bei neuen Arten an):
+  Logo (der Gemeinde, eigenes Bild oder ohne), Briefkopf, Überschrift, Text mit den Einfüge-Pillen `[Vorname] [Nachname]
+[Geburtsdatum] [Adresse] [Heute]`, Unterschrift als Bild und eine A4-Vorschau mit Beispielperson. Jede Person der Gruppe
+  „Nachweis: …“ lädt den Antrag in ChurchTools mit ihren Daten als PDF herunter. Die Aufforderungs-Mail neuer Arten nennt den Weg
+  dorthin. In der Liste steht je Art „Mit Antrag“ oder „Ohne Antrag“.
+- **Wie es gespeichert wird:** eine globale HTML-Vorlage vom Typ „Bescheinigung“ (Name „Antrag: Nachweis: …“), an die
+  **Gruppenrolle** Teilnehmer gehängt; fremde Bescheinigungen an der Rolle bleiben. Die Texte stehen im Datenblock der Art
+  (Fassung 2, Fassung 1 bleibt lesbar), die Bilder nur im HTML der Vorlage – nie als Gruppenbild. Bilder werden im Browser
+  verkleinert (längste Seite 800 Pixel). Jeder Schritt wird nachgelesen; „Nochmal“ legt keine zweite Vorlage an. Ist der bisherige
+  Antrag nicht lesbar, wird nichts geschrieben, was ein Bild verlieren könnte. „Mit Antrag“ aus hängt die Vorlage ab, löscht sie nicht.
+  Fehlt das Recht „Gemeinde-HTML-Vorlagen verwalten“, sagt es das Fenster vor dem ersten Schreiben.
+- **Die Teilnehmer-Rolle der Gruppenart „Nachweis“ bekommt „Gruppeninfos sehen“** (Messung M6): Nur so finden Teilnehmer ihren Antrag
+  unter „Meine Gruppen“. Sie sehen dann die Gruppe und die Namen der anderen Mitglieder, keine Angaben oder Ergebnisse. Der
+  Hinweis im Fenster sagt es.
+
+### Intern (Anmeldungen)
+
+- **Nachweise: die Seite „Nachweise“ und das Fenster „Nachweis-Art“** (Etappe F, Scheibe N1b; veröffentlicht wird erst nach Etappe F). Auf der Startseite gibt es unter
+  „Deine Gruppen“ die Karte „Nachweise“ – sichtbar für alle mit „Berechtigungen verwalten“ und für die Leitung einer
+  Nachweis-Gruppe. Die Seite (`#/nachweise`) listet die Nachweis-Arten (z. B. Führungszeugnis) mit Gültigkeit und
+  Vertrauenspersonen. Wer „Berechtigungen verwalten“ hat, legt neue Arten an und bearbeitet vorhandene; allen anderen sagt
+  ein Hinweis, wer das darf.
+- **Was „Speichern“ in ChurchTools anlegt:** die Gruppe „Nachweis: …“ (eingeschränkt sichtbar), die drei Angaben je Person
+  (Eingesehen am, Ausgestellt am, Ergebnis – auf Sicherheitsstufe 4, nicht im Anmeldeformular), die Einstellungen der Art
+  unsichtbar in der Beschreibung, die Vertrauenspersonen als Leiter und der Ablauf (Aufforderung, Einladung zu ChurchTools,
+  Folgeaufgabe „Einsicht nehmen“, Kreislauf „Erneut einsehen“ nach der eingestellten Gültigkeit). Jeder Schritt wird
+  nachgelesen; danach zeigt das Fenster, was in ChurchTools steht. Scheitert ein Schritt, sagt es, was steht und was fehlt –
+  „Nochmal“ legt nichts doppelt an. Eine Art, die es schon gibt, wird nicht noch einmal angelegt.
+- **Beim Bearbeiten** behält der Ablauf seine Schritte samt Nummern, laufende Personen gehen nicht verloren. Eine
+  Vertrauensperson wird nur auf ausdrücklichen Klick entfernt – und nicht, wenn sie selbst Angaben in der Gruppe hat.
+  Hat jemand den Ablauf in ChurchTools umgebaut, lässt die Erweiterung ihn stehen und sagt es.
+- **Die Leiter-Rolle der Gruppenart „Nachweis“ bekommt fünf Rechte** statt einem: Gruppeninfos sehen, Gruppenmitglieder sehen,
+  Gruppenmitgliedsfelder sehen und bearbeiten (Stufe 4) und Follow-ups durchführen. Die Teilnehmer-Rolle bekommt keins.
+
+- „Rollen fehlen“ bei der Grundlage für Nachweise heißt jetzt mit eigener, klarer Meldung (statt „ChurchTools antwortet gerade
+  nicht“): Es ist keine Störung, sondern etwas, das in ChurchTools nachzusehen ist.
+
+- Demo (`?demo`): zwei Nachweis-Arten (Führungszeugnis, JuLeiCa) und das Anlegen einer neuen; `?demo=vertrauen` zeigt die
+  Seite für eine Vertrauensperson ohne „Berechtigungen verwalten“.
+
+### Neu (Dienstplaner)
+
+- **„Erinnern“ in Planen.** Neben „Teilen“ steht der Knopf **Erinnern** (nur für Planer). Er schickt jedem, der für Termine im gezeigten
+  Zeitraum noch nicht geantwortet hat, **eine eigene Mail mit seinen offenen Terminen** und einem Knopf „Im Dienstplaner eintragen“ direkt in
+  „Wann kann ich?“. Das Fenster zeigt die Dienstgruppen als Knöpfe mit der Zahl der Fehlenden, darunter die Empfänger – mit Haken zum Abwählen
+  und **Vorschau** der Mail –, „Text anpassen“ (Betreff und Text) und „Eine Kopie an mich“. Erinnert wird, wer weder Ja/Vielleicht noch Nein
+  (Abwesenheit) eingetragen hat und dort nicht schon eingeteilt ist. **Es wird wirklich verschickt** – über ChurchTools, Absender bist du.
+- **Sicher beim Verschicken.** Antworten oder Abwesenheiten einer Gruppe nicht sichtbar, Ladefehler: Die Gruppe ist **gesperrt** (mit Grund) –
+  nie bekommt jemand eine Erinnerung, nur weil man seine Antwort nicht sehen kann. Hakt ChurchTools mitten im Versand, **hält das Fenster an**
+  („3 von 8 verschickt“), schickt nichts doppelt und sagt, bei wem unklar ist, ob die Mail rausging; „An die übrigen senden“ schickt nur, was
+  noch fehlt.
+
+### Intern (Dienstplaner)
+
+- Die volle Adresse einer Seite der Erweiterung (Instanz + `/ccm/<Kürzel>/` + Adresse) baut **eine** Funktion (`erweiterungsLink` in
+  `ui/erweiterung/kuerzel.ts`) – für die Mail „Erinnern“, den Beitrag der Protokolle und den Link zur Musik-App.
+
+### Doku (alle Apps)
+
+- Die Anleitungen nennen jetzt die Voraussetzung: **Erweiterungen muss der ChurchTools-Support freischalten.** Fehlt unter
+  _Administration_ der Punkt „Erweiterungen“, ist das der Grund – neuer Abschnitt „Erweiterungen freischalten“ in
+  `docs/betrieb/ERWEITERUNG.md`, Hinweis in allen Installations-Anleitungen und im README.
+
+### Intern (Anmeldungen + Organigramm)
+
+- **Anmeldungen: Grundlage für Nachweise** (Etappe F, Scheibe N1a; noch ohne Oberfläche, die kommt in N1b).
+  `anmeldungen/src/nachweise.ts` liest (`nachweisGrundlageLesen`) und sichert (`nachweisGrundlageSichern`), was
+  ChurchTools für Nachweis-Arten braucht: die Gruppenart „Nachweis“ und an ihrer Leiter-Rolle das gruppeninterne Recht
+  „Follow-ups durchführen“. Angelegt wird nur, was fehlt; das Recht wird nur ergänzt, nie entzogen; alles wird nachgelesen.
+  Die Rechte der Rolle liest die Erweiterung nur mit „Berechtigungen verwalten“; „nicht lesbar“ wird nie zu „fehlt“.
+- **Ein gemeinsamer Baustein statt zwei Abschriften:** Suchen, Anlegen, Rollen und Rechte der Gruppenart stehen jetzt in
+  `shared/ct/gruppenart.ts`, der echte ChurchTools-Anschluss in `ui/ct/ctPort.ts`. Das Organigramm („Gruppenwechsel
+  einrichten“) nutzt ihn – Verhalten und Texte unverändert; `fehlendeLeiterRechte` ist ein Einzeiler darauf.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` und README auf den Stand v0.10.0 gebracht: Reiter „Wann kann ich?“ statt
+  „Abwesenheiten“, Antworten in „Personen“, „Wer kann?“ und beim Zauberstab.
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.1.0 gebracht: Hinweis auf fällige To-Dos (Band auf der
+  Startseite, Zähler am Reiter „To-Dos“, Einstellung in der Verwaltung).
+
+### Neu (Dienstplaner)
+
+- **„Wer kann?“ zeigt die Antworten aus „Wann kann ich?“.** Die Liste ist in Abschnitte geteilt: **Hat Ja gesagt**, **Vielleicht**,
+  **Keine Antwort** – jeweils mit der Zahl – und darunter eingeklappt **Kann nicht / abwesend** (aufklappbar, die Personen dort bleiben
+  wählbar). Innerhalb eines Abschnitts bleibt die Reihenfolge „frei und selten dran“. Die **Notiz** der Antwort steht kursiv als zweite
+  Zeile („Vielleicht: „nur bis 12 Uhr““). Wer in ChurchTools abwesend ist (auch mit Ja) oder **nur für andere Dienste** geantwortet
+  hat („Ja – nur für Gesang“), steht unter „Kann nicht / abwesend“. Unten der Hinweis: Die Antwort ersetzt nicht die Prüfung von
+  ChurchTools – Warnungen bleiben rot, ein Klick trägt trotzdem ein. Die Suche filtert über alle Abschnitte.
+- **Der Zauberstab bevorzugt Ja.** Er nimmt zuerst, wer Ja gesagt hat, dann Vielleicht, dann Personen ohne Antwort – innerhalb davon wie
+  bisher nach ChurchTools-Punkten, Einsätzen im Lauf und Namen. Die Grenze von −100 Punkten bleibt (auch ein Ja darunter wird nicht
+  genommen); wer nur für andere Dienste geantwortet hat, wird für diesen Dienst nicht genommen. Im Fenster steht die Antwort hinter
+  dem Namen („Ben (0×) – Ja“).
+- **Sicher, wenn die Antworten fehlen.** Sind sie nicht sichtbar (Speicher nicht eingerichtet, kein Recht, Dienstgruppe nicht planbar),
+  sehen „Wer kann?“ und der Zauberstab aus wie bisher. Gelingt das Laden nur vorübergehend nicht, steht die bisherige Liste da mit dem
+  Hinweis „Antworten aus „Wann kann ich?“ gerade nicht geladen“ – niemand wird dann als „Keine Antwort“ einsortiert.
+
+### Intern (Dienstplaner)
+
+- Raster, „Wer kann?“ und Zauberstab ordnen eine Antwort mit **derselben Regel** ein (`antwortFuer`/`antwortStufe` in
+  `shared/dienstplan/personenAntworten.ts`).
+
+### Neu (Protokolle)
+
+- **Hinweis auf fällige To-Dos.** ChurchTools kann keine zeitgesteuerten Erinnerungen schicken – darum weist die Erweiterung
+  jetzt **beim Öffnen** hin: Auf der **Startseite** steht unter der Begrüßung ein Band („**2 To-Dos überfällig**, 1 bis Sa, 21.11.
+  fällig“, rot; nur bald Fälliges ruhig blau) mit dem Weg „Zu meinen To-Dos“, und der Reiter **„To-Dos“** trägt auf jeder Seite eine
+  **rote Zahl** (überfällig + bald fällig; unten am Handy, oben am Computer). Gezählt werden nur **deine** offenen To-Dos aus allen
+  Gruppen. Die Zahlen kosten keinen zusätzlichen Abruf – Start und Reiter „To-Dos“ geben ihre gelesenen To-Dos weiter.
+- **Einstellbar in der Verwaltung** (Karte „Hinweis auf fällige To-Dos“, nur Admins, gilt für alle): **Aus**, **Nur Überfällige** oder
+  **1 / 3 / 7 / 14 Tage vorher**; Standard **3 Tage**. Wer die Einstellung nicht lesen kann, arbeitet mit dem Standard – nie mit „Aus“.
+
+### Intern
+
+- **Anmeldungen: Team-Mail** (Etappe F, Scheibe F7c; veröffentlicht wird erst nach Etappe F). Entwurf `f7-mails-v1`,
+  Klick-Runden 11 und 12, Messung M2 – ohne Server-Teil.
+  - Nach dem Absenden schickt das Formular über „Leiter kontaktieren“ (`POST /publicgroups/{id}/mailToLeaders`, ohne
+    Login, mit frischem Schlüssel) eine Mail an alle Leiter der Gruppe mit Mail-Adresse. Absender ist, wer anmeldet –
+    Antworten gehen an diese Person. Eine Mail je Anmeldung; „Noch einmal“ schickt eine eigene für den Rest.
+  - Inhalt in einem Absatz (ChurchTools übernimmt keine Umbrüche): eigener Text mit gefüllten `[Frage]`, Anmelde-Nr.,
+    Antworten zur Anmeldung, je Person Name, Stand („Platz“, „Warteliste“, „muss die Anmeldung noch per Mail
+    bestätigen“) und ihre Antworten; bei noch zu bestätigenden ein Vermerk. Ausgeblendete Fragen zählen nicht.
+  - Scheitert die Mail (Netz, keine Leitung mit Mail-Adresse → 500), steht die Anmeldung trotzdem; die Ergebnis-Seite
+    bleibt, wie sie ist. Bei „Von Hand“ gibt es keine Team-Mail.
+  - Fenster „Mails“, neuer Reiter **„Team-Mail“**: Schalter (Standard an), an wen sie geht, eigener Text mit „Antwort
+    einfügen“, Häkchen „Diese Antworten kommen mit“ (alle an, Hinweis auf Gesundheitsangaben), Vorschau des Absatzes.
+    Gespeichert in den Einstellungen der Veranstaltung (`teamMail`) – nur, wenn sie vom Standard abweicht.
+  - Name und Mail-Adresse der Kontaktperson an EINER Stelle (`kontaktVon`): Anmeldung, Ergebnis-Seite und Team-Mail
+    lasen sie vorher teils über den festen Schlüssel `mail`.
+
+### Neu (Dienstplaner)
+
+- **„Personen“ zeigt die Antworten aus „Wann kann ich?“.** In der Planer-Ansicht **Personen** ist jede Zelle nach der Antwort
+  der Person gefärbt: **grün = Ja**, **gelblich = Vielleicht**, **rot schraffiert = Nein oder abwesend**, **weiß = keine
+  Antwort**. Zugesagt-, angefragt- und Entwurf-Tags stehen unverändert davor, der rote Rahmen bei „abwesend, aber eingeteilt“
+  bleibt. Die **Abwesenheit** aus ChurchTools schlägt eine Ja-/Vielleicht-Antwort am selben Termin.
+- **Spaltenkopf mit Zahlen.** Unter Termin und Uhrzeit steht fett „5 ja · 1 vielleicht“ – gezählt werden **verschiedene
+  Personen** im Raster (wer in zwei Diensten steht, zählt einmal; wer abwesend ist, nicht).
+- **Legende** über dem Raster („Antwort der Person: Ja · Vielleicht · keine Antwort · Nein oder abwesend · Entwurf“); am Handy
+  bricht sie um.
+- **Notiz und „nur bestimmte Dienste“.** Die Notiz einer Antwort steht im Tooltip der Zelle („Ja – nur bis 12 Uhr“). Gilt eine
+  Antwort nur für bestimmte Dienste, bleibt die Zelle in den anderen Diensten weiß, der Tooltip sagt es („Ja – nur für Gesang“);
+  im Spaltenkopf zählt die Person trotzdem.
+- **Wer sieht die Antworten?** Wer die Dienstgruppe planen darf und in ChurchTools das Recht „sehen“ auf den Speicher „Antworten …“
+  hat. Sonst steht im Block „Antworten nicht sichtbar“ (keine Farbe). Scheitert das Laden nur vorübergehend, steht über dem Raster ein
+  Hinweis mit „Erneut versuchen“ – die bisherigen Antworten bleiben stehen, nie wird daraus „keine Antwort“.
+
+### Geändert (Dienstplaner)
+
+- **„Abwesend“ ist in „Personen“ jetzt rot schraffiert** (vorher grau) – passend zu den neuen Farben für Ja und Vielleicht,
+  hell wie dunkel.
+
 ## [2.40.1] – 2026-11-19
 
 **Überblick.** Musik-App: nur Fehlerbehebungen aus dem gemeinsamen Teil – Fenster ruckeln und schrumpfen am iPhone nicht

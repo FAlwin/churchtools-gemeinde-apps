@@ -945,6 +945,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.41.0 (20.11.2026) = „Ruhige Bedienung“ (Bauplan `bedienung-planung`, Scheiben B1–B9, Ablauf, R13, Abnahme-Funde
+  #1064–#1094).** Weniger und leisere Knöpfe in allen Apps: Werkzeugzeilen mit ⋯-Menü, Reiter unterstrichen, ein Seitenkopf,
+  ein Status-Etikett, „Einstellungen“ als letzter Reiter (Musik-App: „Mehr“ → „Einstellungen“, Ablaufvorlagen unter
+  Termine → ⋯), Ablauf wie in der ChurchTools-App (Einzelansicht, Kopf in Stufen, kein Stift an der Zeile), „Neu anlegen“ am
+  Handy als schwebendes Plus, **Fenster statt Blatt von unten, jedes Fenster ganz oben** (`ui/fenster/FensterEbene.tsx`).
+  Touren `setlist-v3`/`setlist-edit-v8` (Ablauf-Einführungen starten einmal neu). In der Test-Instanz abgenommen. Mit
+  demselben Stand: `dienstplan-v0.12.0` (dazu Personenliste PL-1/PL-2), `protokolle-v1.3.0` (dazu W9 Rechte im To-Do,
+  To-Do-Vorschläge), `organigramm-v0.4.0`, `gebetsabend-v0.2.0`. Anmeldungen und Website bleiben unveröffentlicht.
 - **v2.40.1 (19.11.2026) = Fenster und Tastatur am iPhone.** Nur Fehlerbehebungen aus `ui/`: Fenster bei offener Tastatur
   oben verankert und entprellt (#1023), Dokument-Scroll sofort zurück über `seiteNachOben` (ChurchTools setzt
   `scroll-behavior: smooth`, #1026), Menüs im Bild, Esc. Kein neues Bedienelement → Touren unverändert. Mit demselben

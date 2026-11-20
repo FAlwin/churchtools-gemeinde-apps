@@ -27,10 +27,16 @@
  * −100 bleibt: Eine Ja-Person unter −100 wird nicht genommen. Wer „nur bestimmte Dienste“ gesagt hat, ohne diesen Dienst,
  * wird für diesen Dienst **nicht** genommen (`laufGrund: 'andere-dienste'`, wie ausgeschlossen, mit Grund). Ohne sichtbare
  * Antworten (`antworten` fehlt) ist alles wie vor E5c-4 – eine fehlende Antwort darf nie wie „keine Antwort“ zählen.
+ *
+ * **Pause (PL-3):** Wer in der Personenliste der Dienstgruppe (`ZauberPlatz.personenliste`) an dem Tag des Termins pausiert
+ * (`pauseDerPerson` – dieselbe Frage wie in „Wer kann?“), wird **nie vorgeschlagen** (`passt: false`, `pause` gesetzt) und
+ * steht – wie ein Abwesender – in der Stufe „Kann nicht“. Von Hand wählen lässt er sich trotzdem. Eine Pause gilt nur für die
+ * Dienstgruppe ihrer Liste: Die Liste gehört zum Platz, nicht zur Person.
  */
 import { monateBis, tageBis } from '../ct/datum';
 import { antwortStufe, STUFEN, type AntwortStufe, type ZellenAntwort } from './personenAntworten';
-import { kandidatenAus, type Kandidat, type RohKandidat } from './werKann';
+import type { Pause, Personenliste } from './personenliste';
+import { kandidatenAus, pauseDerPerson, type Kandidat, type RohKandidat } from './werKann';
 
 /** Ab hier nimmt der Zauberstab niemanden (ChurchTools: `if (-100 < e)`). */
 export const GRENZE = -100;
@@ -51,6 +57,8 @@ export interface ZauberPlatz {
    * **Fehlt** = nicht sichtbar oder nicht geladen: dann gibt es keine Stufen, alles wie bisher.
    */
   antworten?: ReadonlyMap<number, ZellenAntwort>;
+  /** Die Personenliste der Dienstgruppe dieses Platzes (PL-3, Pause) – fehlt sie, gibt es keine Pause. */
+  personenliste?: Personenliste | null;
 }
 
 /** Schon im Lauf eingeplant: ein eigener Vorschlag, ein von Hand gewählter Name oder ein vorhandener Entwurf. */
@@ -70,7 +78,9 @@ export interface Bewertet extends Kandidat {
   antwort: ZellenAntwort | null;
   /** Die Stufe (`antwortStufe`); `null`, wenn die Antworten nicht sichtbar sind – dann ordnet nur die Punktzahl. */
   stufe: AntwortStufe | null;
-  /** Kommt für den Zauberstab in Frage (`wert` über der Grenze). */
+  /** Die Pause der Person am Tag des Termins (PL-3) – `null`, wenn sie nicht pausiert. */
+  pause: Pause | null;
+  /** Kommt für den Zauberstab in Frage (`wert` über der Grenze, nicht pausiert, Antwort gilt für den Dienst). */
   passt: boolean;
 }
 
@@ -121,7 +131,11 @@ export function bewerte(platz: ZauberPlatz, eingeplant: readonly Eingeplant[]): 
     }
 
     const antwort = platz.antworten?.get(k.personId) ?? null;
-    const stufe = platz.antworten ? antwortStufe(k.abwesend !== null, antwort) : null;
+    const pause = pauseDerPerson({ liste: platz.personenliste, tag: platz.tag }, k.personId);
+    // Wer pausiert, steht – wie ein Abwesender – unter „Kann nicht“ (dieselbe Einordnung wie in „Wer kann?“).
+    const stufe = platz.antworten
+      ? antwortStufe(k.abwesend !== null || pause !== null, antwort)
+      : null;
     // „Nur andere Dienste“ (Antwort gilt hier nicht): wie ausgeschlossen. Abwesenheit regelt ChurchTools' Punktzahl (−1000).
     const andereDienste = antwort !== null && !antwort.gilt;
     if (andereDienste) laufGrund ??= 'andere-dienste';
@@ -134,7 +148,8 @@ export function bewerte(platz: ZauberPlatz, eingeplant: readonly Eingeplant[]): 
       laufGrund,
       antwort,
       stufe,
-      passt: wert > GRENZE && !andereDienste,
+      pause,
+      passt: wert > GRENZE && !andereDienste && pause === null,
     };
   });
   const rang = (b: Bewertet): number => (b.stufe === null ? 0 : STUFEN.indexOf(b.stufe));

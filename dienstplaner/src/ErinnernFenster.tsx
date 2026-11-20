@@ -13,9 +13,11 @@ import {
   mailInhalt,
   nurVorgesehene,
   offenKurz,
+  pausiertAusgelassen,
   type Empfaenger,
   type GruppenErgebnis,
 } from '@shared/dienstplan/erinnern';
+import type { Personenliste } from '@shared/dienstplan/personenliste';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
 import { rasterDienste } from '@shared/dienstplan/personenRaster';
 import {
@@ -64,6 +66,7 @@ export function ErinnernFenster({
   ladePersonen,
   ladeAntworten,
   anschluss,
+  personenlisten,
   onClose,
 }: {
   plan: Plan;
@@ -75,6 +78,8 @@ export function ErinnernFenster({
   ladePersonen: PersonenLader;
   ladeAntworten: AntwortenLader;
   anschluss: ErinnernAnschluss;
+  /** Die Personenlisten je Dienstgruppe (PL-3): Wer dort pausiert, wird nicht erinnert. Ohne Angabe gibt es keine Pause. */
+  personenlisten?: ReadonlyMap<number, Personenliste>;
   onClose: () => void;
 }) {
   // ── Laden: Mitglieder und Abwesenheiten der CT-Gruppen, Antworten je Dienstgruppe – beim Öffnen ──
@@ -130,6 +135,7 @@ export function ErinnernFenster({
             daten: personen.daten,
             antworten: antw.antworten,
             heute,
+            personenlisten,
           }),
     }),
   );
@@ -149,6 +155,13 @@ export function ErinnernFenster({
         ? [{ gruppe: z.name, personen: z.ergebnis.personen }]
         : [],
     ),
+  );
+  // PL-3: wer wegen Pause ausgelassen wird – nur aus den gewählten Gruppen.
+  const wegenPause = pausiertAusgelassen(
+    zeilen.flatMap((z) =>
+      gewaehlt.has(z.schluessel) && z.ergebnis.art === 'ok' ? [z.ergebnis] : [],
+    ),
+    empfaenger,
   );
   const zuSenden = empfaenger.filter((e) => !aus.has(e.personId));
   const betreff = betreffEigen ?? betreffStandard(empfaenger.flatMap((e) => e.termine));
@@ -260,11 +273,21 @@ export function ErinnernFenster({
             hat – und dort nicht schon eingeteilt ist.
           </p>
 
+          {wegenPause > 0 && (
+            <p className={styles.hinweis} role="status">
+              {wegenPause === 1
+                ? '1 Person wird wegen Pause nicht erinnert.'
+                : `${wegenPause} Personen werden wegen Pause nicht erinnert.`}
+            </p>
+          )}
+
           <h3 className={styles.titel}>
             {empfaenger.length === 0
               ? gewaehlt.size === 0
                 ? 'Wähle mindestens eine Dienstgruppe.'
-                : 'In den gewählten Dienstgruppen haben alle geantwortet.'
+                : wegenPause > 0
+                  ? 'In den gewählten Dienstgruppen muss niemand erinnert werden.'
+                  : 'In den gewählten Dienstgruppen haben alle geantwortet.'
               : `${zuSenden.length} ${zuSenden.length === 1 ? 'bekommt' : 'bekommen'} eine eigene Mail mit ihren offenen Terminen`}
           </h3>
           <ul className={styles.liste} aria-label="Empfänger">

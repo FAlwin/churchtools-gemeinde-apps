@@ -287,9 +287,10 @@ async function aufnehmen(browser) {
 
   await video(browser, 'organigramm', QUER, url('organigramm'), async (page, p, knopf) => {
     await p(1600);
-    await knopf('Mindmap').click();
+    // Seit „Ruhige Bedienung“ B5 ist die Ansicht ein Auswahlknopf („Ansicht: …“ mit Menü), keine Knopfreihe mehr.
+    await ansichtWaehlen(page, 'Mindmap');
     await p(2000);
-    await knopf('Karten').click();
+    await ansichtWaehlen(page, 'Karten');
     await p(2000);
     await knopf('Präsentieren').click();
     await p(2000);
@@ -457,8 +458,8 @@ const STANDBILDER = [
   ],
   ['dienstplaner-planen', 'dienstplaner', '', QUER, (p) => knopfIn(p, 'Planen').click()],
   ['organigramm-baum', 'organigramm', '', QUER],
-  ['organigramm-mindmap', 'organigramm', '', QUER, (p) => knopfIn(p, 'Mindmap').click()],
-  ['organigramm-karten', 'organigramm', '', QUER, (p) => knopfIn(p, 'Karten').click()],
+  ['organigramm-mindmap', 'organigramm', '', QUER, (p) => ansichtWaehlen(p, 'Mindmap')],
+  ['organigramm-karten', 'organigramm', '', QUER, (p) => ansichtWaehlen(p, 'Karten')],
   ['organigramm-praesentation', 'organigramm', '', QUER, (p) => knopfIn(p, 'Präsentieren').click()],
   ['protokolle-start', 'protokolle', '', QUER],
   [
@@ -491,6 +492,15 @@ const REITER_TODOS = /^To-Dos(, \d+ fällig)?$/;
 /** @param {import('@playwright/test').Page} page @param {string} name */
 function knopfIn(page, name) {
   return page.getByRole('button', { name, exact: true }).first();
+}
+
+/** Eine Ansicht über den Auswahlknopf wählen („Ansicht: …“ öffnet das Menü, B5) – am Rechner ein Menü am Knopf. */
+async function ansichtWaehlen(page, name) {
+  await page
+    .getByRole('button', { name: /^Ansicht: / })
+    .first()
+    .click();
+  await page.getByRole('menuitem', { name, exact: true }).first().click();
 }
 
 /**

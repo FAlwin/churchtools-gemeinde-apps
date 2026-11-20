@@ -3,12 +3,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { einrichtungAus } from '@shared/website/einrichten';
 import { kategorienFuer } from '@shared/website/einrichten';
+import { statusSetzen } from '@shared/website/status';
+import { seiteSpeichern, websiteAusWerten, type WebsiteStand } from '@shared/website/speicher';
+import { gibFrei } from '@shared/website/freigabe';
+import { ENTWUERFE, ONLINE, fakeFreigabeSpeicher } from '@shared/website/freigabe.testutil';
+import { baustein, seiteMit } from '@shared/website/website.testdaten';
 import { App } from './App';
+import { ladeFreigaben } from './daten';
 import type { Start } from './start';
 import * as S from './start';
 import { pruefeRechte } from './rechte';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+// Der Reiter „Freigaben“ ist in `Freigaben.test.tsx` geprüft; hier geht es um den Zähler am Reiter und wer was sieht. Gelesen wird
+// über `ladeFreigaben` – sein Ergebnis steht in den Tests fest (aus dem echten Schreiben, nicht aus Literalen).
+vi.mock('./daten', () => ({ ladeFreigaben: vi.fn() }));
+vi.mock('./Freigaben', () => ({
+  Freigaben: ({ zugang }: { zugang: string }) => <p>FREIGABEN-INHALT {zugang}</p>,
+}));
+const freigaben = vi.mocked(ladeFreigaben);
 // Die Seiten selbst sind in `Seiten.test.tsx` geprüft – hier geht es um den Rahmen und wer hineindarf.
 vi.mock('./Seiten', () => ({
   // Die Rechte, mit denen die Seiten gezeigt werden, stehen als Attribut da – daran sieht der Test, was der Zugang erlaubt.
@@ -59,7 +72,37 @@ const start = (o: Partial<Start> = {}): Start => ({
   ...o,
 });
 
-beforeEach(() => {
+/** Entwurf und Online-Stand nach echtem Schreiben: a eingereicht (Person 5), b zurückgegeben an Person 5, c Löschen angefragt (Person 5). */
+async function freigabeStand(): Promise<{ entwurf: WebsiteStand; online: WebsiteStand }> {
+  const s = fakeFreigabeSpeicher();
+  for (const id of ['a', 'b', 'c'])
+    await seiteSpeichern(
+      s.entwurfsOrt,
+      seiteMit([baustein('text')], { id, pfad: id, titel: id.toUpperCase() }),
+    );
+  await gibFrei(s.freigabeOrt, 'seite', 'c');
+  const rita = { person: 5, name: 'Rita', fenster: 'f' };
+  await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, rita);
+  await statusSetzen(
+    s.entwurfsOrt,
+    'b',
+    { zustand: 'zurueck', anmerkung: 'Bitte ändern', einreicher: { von: 5, name: 'Rita' } },
+    { person: 1, name: 'Helene', fenster: 'g' },
+  );
+  await statusSetzen(s.entwurfsOrt, 'c', { zustand: 'loeschenAngefragt' }, rita);
+  return {
+    entwurf: websiteAusWerten(s.werte[ENTWUERFE]),
+    online: websiteAusWerten(s.werte[ONLINE]),
+  };
+}
+const zaehlerAmReiter = () =>
+  screen.getByRole('button', { name: /^Freigaben/ }).querySelector('[data-zaehler]');
+
+beforeEach(async () => {
+  freigaben.mockResolvedValue({
+    entwurf: websiteAusWerten([]),
+    online: websiteAusWerten([]),
+  });
   ladeStart.mockResolvedValue(start());
   pruefung.mockResolvedValue(null);
 });
@@ -81,14 +124,14 @@ describe('Rahmen und Zugang', () => {
     );
   });
 
-  it('„Aussehen“ zeigt den Reiter Aussehen, „Freigaben“ noch einen ruhigen Hinweis', async () => {
+  it('„Aussehen“ zeigt den Reiter Aussehen, „Freigaben“ den Reiter Freigaben', async () => {
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     fireEvent.click(screen.getByRole('button', { name: 'Aussehen' }));
     expect(screen.getByText('AUSSEHEN-INHALT')).toBeTruthy();
     expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Freigaben' }));
-    expect(screen.getByText(/Das kommt in einem der nächsten Schritte/)).toBeTruthy();
+    expect(await screen.findByText(/FREIGABEN-INHALT leitung/)).toBeTruthy();
     expect(screen.queryByText('AUSSEHEN-INHALT')).toBeNull();
   });
 
@@ -167,13 +210,13 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
   });
 
-  it('Redakteur: weder Menü noch Eigenes HTML; Freigaben zeigt weiter den Hinweis', async () => {
+  it('Redakteur: weder Menü noch Eigenes HTML; „Freigaben“ ist der Reiter für Redakteure', async () => {
     ladeStart.mockResolvedValue(start({ zugang: 'redakteur' }));
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     expect(rechteDerSeiten()).toEqual({ html: false, menue: false });
     fireEvent.click(screen.getByRole('button', { name: 'Freigaben' }));
-    expect(screen.getByText(/Das kommt in einem der nächsten Schritte/)).toBeTruthy();
+    expect(await screen.findByText(/FREIGABEN-INHALT redakteur/)).toBeTruthy();
   });
 
   it('Leitung und Admin: Menü und Eigenes HTML, Aussehen und Einstellungen', async () => {
@@ -249,5 +292,40 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
     ).toBeTruthy();
     expect(screen.getByText(/Einstellungen → „Wer darf was“/)).toBeTruthy();
     expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
+  });
+});
+
+describe('Zähler am Reiter „Freigaben“ (W3b-2)', () => {
+  it('Leitung: eingereichte Seiten + „Löschen angefragt“ (2), nicht die Zurückgegebenen', async () => {
+    freigaben.mockResolvedValue(await freigabeStand());
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    await waitFor(() => expect(zaehlerAmReiter()?.textContent).toBe('2'));
+    expect(screen.getByRole('button', { name: 'Freigaben, 2 offen' })).toBeTruthy();
+  });
+
+  it('Redakteur (Person 5): nur seine zurückgegebenen Seiten (1)', async () => {
+    freigaben.mockResolvedValue(await freigabeStand());
+    ladeStart.mockResolvedValue(start({ zugang: 'redakteur', ichId: 5 }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    await waitFor(() => expect(zaehlerAmReiter()?.textContent).toBe('1'));
+    expect(screen.getByRole('button', { name: 'Freigaben, 1 zurückgegeben' })).toBeTruthy();
+  });
+
+  it('Redakteur (eine andere Person): kein Zähler – fremde Seiten zählen nicht', async () => {
+    freigaben.mockResolvedValue(await freigabeStand());
+    ladeStart.mockResolvedValue(start({ zugang: 'redakteur', ichId: 77 }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    await waitFor(() => expect(freigaben).toHaveBeenCalled());
+    expect(zaehlerAmReiter()).toBeNull();
+  });
+
+  it('nichts zu tun: kein Zähler', async () => {
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    await waitFor(() => expect(freigaben).toHaveBeenCalled());
+    expect(zaehlerAmReiter()).toBeNull();
   });
 });

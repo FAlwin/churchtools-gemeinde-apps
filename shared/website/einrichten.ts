@@ -5,7 +5,7 @@
  * vergibt „Daten sehen/ändern“ je Kategorie):
  *  - `entwuerfe-g<ID>` – die Arbeitsfassung aller Seiten, des Menüs und der Einstellungen;
  *  - `veroeffentlicht-g<ID>` – nur die freigegebene Fassung (schreibt später nur die Leiter-Rolle; der Bau-Dienst liest
- *    nur sie). In W3a-1 wird sie angelegt, aber noch nicht beschrieben.
+ *    nur sie). Beschrieben wird sie seit W3b-2 – allein durch „Freigeben“ (`freigabe.ts`).
  *
  * **Die Gruppe steckt im Kürzel** (wie bei den Protokollen: `protokolle-g<ID>`): Die Erweiterung erfährt so, welche
  * Gruppe „Website“ gewählt wurde, ohne etwas zusätzlich zu speichern, und – wichtig – das Kürzel ist auch für den sichtbar,

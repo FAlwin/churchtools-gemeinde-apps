@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { darfAussehenUndMenue, darfEigenesHtml } from '@shared/website/zugang';
+import { useLaden } from '@ui/ct/useLaden';
+import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { freigabeListe, freigabeZaehler } from '@shared/website/freigabe';
+import { darfAussehenUndMenue, darfEigenesHtml, darfFreigeben } from '@shared/website/zugang';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Aussehen } from './Aussehen';
 import { EinstellungenFenster } from './EinstellungenFenster';
 import { EinstellungenProvider } from './EinstellungenQuelle';
 import { Einrichtung } from './Einrichtung';
+import { Freigaben } from './Freigaben';
 import { Hinweis, Leise } from './Hinweis';
 import { RechteHinweis } from './RechteHinweis';
 import { Seiten } from './Seiten';
+import { ladeFreigaben } from './daten';
 import { neueId } from './ids';
 import { ladeStart, type Start } from './start';
 
@@ -27,7 +32,7 @@ const REITER: Reiter<ReiterId>[] = [
  * - nicht eingerichtet, Admin → Einrichten (Gruppe wählen); sonst ein freundlicher Hinweis;
  * - eingerichtet, aber ohne Rechte an der Website (weder Admin noch Leitung/Redakteur nach den Rechten in ChurchTools) → Hinweis,
  *   wer die Website bearbeiten darf;
- * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** (Freigaben kommt in einem späteren Schritt) und ganz rechts
+ * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** und ganz rechts
  * **Einstellungen** (W3a-3b, ein Fenster). **Redakteure** (W3b-1) sehen nur „Seiten“ und „Freigaben“ – kein Aussehen, keine
  * Einstellungen (E-W22); Admins, die Rechte setzen dürfen, haben im Fenster „Einstellungen“ den Bereich „Wer darf was“.
  *
@@ -43,6 +48,8 @@ export function App() {
   const [rechtePruefung, setRechtePruefung] = useState(0);
   /** Zählt gelungene Speicherungen der Einstellungen – „Seiten“ liest daraufhin die Einstellungen neu (W3a-3c). */
   const [einstellungenStand, setEinstellungenStand] = useState(0);
+  /** Zählt Statuswechsel und Veröffentlichungen (W3b-2) – der Zähler am Reiter „Freigaben“ und dessen Liste lesen daraufhin neu. */
+  const [freigabeStand, setFreigabeStand] = useState(0);
   const handy = useMedienAbfrage(HANDY_BREITE);
   /** Dieses Fenster – zwei Fenster derselben Person sperren sich gegenseitig (`shared/ct/sperre.ts`). */
   const fenster = useRef(neueId());
@@ -75,11 +82,47 @@ export function App() {
   const leitungsebene = darfAussehenUndMenue(editor?.zugang ?? null);
   const reiter = leitungsebene ? REITER : REITER.filter((r) => r.id !== 'aussehen');
   const reiterAktiv: ReiterId = !leitungsebene && aktiv === 'aussehen' ? 'seiten' : aktiv;
-  const bereiche = editor ? { reiter, aktiv: reiterAktiv, onWechsel: setAktiv } : undefined;
   const kategorien =
     editor?.einrichtung && entwuerfe !== null && editor.einrichtung.veroeffentlicht !== null
       ? { entwuerfe, veroeffentlicht: editor.einrichtung.veroeffentlicht }
       : null;
+  const freigabeKategorien = editor && kategorien ? { modul: editor.modul, ...kategorien } : null;
+  // Entwurf und Online-Stand zusammen: für die Liste „Freigaben“ **und** den Zähler am Reiter. Neu gelesen wird beim Wechsel des
+  // Reiters (so sieht man, was andere inzwischen eingereicht haben) und nach jeder Handlung (`freigabeStand`); die bisherigen
+  // Daten bleiben stehen, bis neue da sind (vorübergehend ist nicht leer).
+  const fModul = freigabeKategorien?.modul;
+  const fEntwuerfe = freigabeKategorien?.entwuerfe;
+  const fVeroeffentlicht = freigabeKategorien?.veroeffentlicht;
+  const freigaben = useLaden(
+    () =>
+      fModul !== undefined && fEntwuerfe !== undefined && fVeroeffentlicht !== undefined
+        ? ladeFreigaben({ modul: fModul, entwuerfe: fEntwuerfe, veroeffentlicht: fVeroeffentlicht })
+        : null,
+    // `freigabeStand` und `reiterAktiv` kommen im Aufruf nicht vor – sie sind nur der Anstoß zum Neulesen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fModul, fEntwuerfe, fVeroeffentlicht, freigabeStand, reiterAktiv],
+    { behalten: true },
+  );
+  const freigabeDaten = freigaben.stand.art === 'fertig' ? freigaben.stand.daten : null;
+  const zaehler =
+    editor?.zugang && freigabeDaten
+      ? freigabeZaehler(
+          freigabeListe(freigabeDaten.entwurf, freigabeDaten.online, editor.zugang, ich.person),
+          editor.zugang,
+        )
+      : 0;
+  const reiterMitZaehler = reiter.map((r) =>
+    r.id === 'freigaben' && zaehler > 0
+      ? {
+          ...r,
+          zaehler,
+          zaehlerName: `Freigaben, ${zaehler} ${darfFreigeben(editor?.zugang ?? null) ? 'offen' : 'zurückgegeben'}`,
+        }
+      : r,
+  );
+  const bereiche = editor
+    ? { reiter: reiterMitZaehler, aktiv: reiterAktiv, onWechsel: setAktiv }
+    : undefined;
   const werDarfWas =
     editor?.darfRechteSetzen && editor.einrichtung && kategorien
       ? { gruppe: editor.einrichtung.gruppe, kategorien }
@@ -121,6 +164,15 @@ export function App() {
           ich={ich}
           rechte={{ html: darfEigenesHtml(editor.zugang), menue: leitungsebene }}
           einstellungenStand={einstellungenStand}
+          freigabe={
+            editor.zugang && kategorien
+              ? {
+                  zugang: editor.zugang,
+                  veroeffentlicht: kategorien.veroeffentlicht,
+                  onGeaendert: () => setFreigabeStand((n) => n + 1),
+                }
+              : undefined
+          }
         />
       )}
       {/* EIN Zustand für die Einheit „einstellungen“: Aussehen und das Fenster teilen ihn (`EinstellungenQuelle`). Er steht
@@ -141,13 +193,26 @@ export function App() {
             )}
           </EinstellungenProvider>
         )}
-      {editor && reiterAktiv === 'freigaben' && (
-        <Hinweis titel="Freigaben">
-          <Leise>
-            Hier gibst du später Seiten zur Veröffentlichung frei, und das Website-Team reicht
-            Änderungen zur Prüfung ein. Das kommt in einem der nächsten Schritte.
-          </Leise>
-        </Hinweis>
+      {editor && editor.zugang && reiterAktiv === 'freigaben' && (
+        <>
+          {freigaben.stand.art === 'laedt' && <Leise>Die Freigaben werden geladen …</Leise>}
+          {freigaben.stand.art === 'fehler' && (
+            <FehlerKasten fehler={freigaben.stand.fehler} onNochmal={freigaben.neu} />
+          )}
+          {freigaben.stand.art === 'fertig' && freigaben.stand.neuFehler && (
+            <FehlerKasten fehler={freigaben.stand.neuFehler} onNochmal={freigaben.neu} />
+          )}
+          {freigabeKategorien && freigabeDaten && (
+            <Freigaben
+              kategorien={freigabeKategorien}
+              daten={freigabeDaten}
+              zugang={editor.zugang}
+              ich={ich}
+              gemeinde={editor.gemeinde}
+              onGeaendert={() => setFreigabeStand((n) => n + 1)}
+            />
+          )}
+        </>
       )}
     </ErweiterungsSeite>
   );

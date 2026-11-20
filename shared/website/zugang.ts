@@ -83,3 +83,13 @@ export function darfEigenesHtml(zugang: Zugang | null): boolean {
 export function darfAussehenUndMenue(zugang: Zugang | null): boolean {
   return zugang === 'admin' || zugang === 'leitung';
 }
+
+/**
+ * Darf die Person **freigeben** (Seiten, Menü, Einstellungen nach „Veröffentlicht“), **direkt veröffentlichen**, „Löschen
+ * angefragt“ bestätigen und Seiten **löschen**? (W3b-2, E-W23) – nur Leitung und Admin; ein Redakteur reicht ein und fragt das
+ * Löschen an. Das spiegelt die Rechte an den Kategorien (nur die Leitung schreibt in „Veröffentlicht“); **geschützt sind die
+ * Daten allein durch diese Rechte**, nicht durch die Oberfläche. W3b-4 ergänzt hier den Bereich (Untergruppe).
+ */
+export function darfFreigeben(zugang: Zugang | null): boolean {
+  return zugang === 'admin' || zugang === 'leitung';
+}

@@ -5,9 +5,13 @@
  *  - `?demo` – Admin, noch nicht eingerichtet; „Einrichten“ legt die Kategorien im Speicher an und setzt die Rechte je Rolle.
  *  - `?demo=leer` – Admin, eingerichtet, noch keine Seite (Hinweis „Startseite anlegen“).
  *  - `?demo=seiten` – Admin, eingerichtet, Startseite plus zwei Seiten, eine im Menü.
- *  - `?demo=leitung` – Leitung der Gruppe (kein Admin; Rechte an Entwürfe UND Veröffentlicht), sonst wie `seiten`.
- *  - `?demo=redakteur` (W3b-1) – Redakteur (kein Admin; Rechte nur an Entwürfe): Reiter „Seiten“ und „Freigaben“, kein
- *    Aussehen, kein Fenster „Einstellungen“, kein Menü in „Seite einstellen“, kein Baustein „Eigenes HTML“.
+ *  - `?demo=leitung` – Leitung der Gruppe (kein Admin; Rechte an Entwürfe UND Veröffentlicht), sonst wie `seiten` – **mit
+ *    Eingereichtem** (W3b-2): „Impressum“ (Jonas Peters) und die neue Seite „Jugend“ (Lena Kraft) sind eingereicht, „Alte Seite“
+ *    ist zum Löschen angefragt, „Unsere Gruppen“ ist seit der Freigabe geändert; der Reiter „Freigaben“ zeigt die Zahl 3.
+ *  - `?demo=redakteur` (W3b-1, W3b-2) – Redakteur (kein Admin; Rechte nur an Entwürfe): Reiter „Seiten“ und „Freigaben“, kein
+ *    Aussehen, kein Fenster „Einstellungen“, kein Menü in „Seite einstellen“, kein Baustein „Eigenes HTML“. **Mit einer
+ *    zurückgegebenen Seite:** „Impressum“ kam von der Leitung mit Anmerkung zurück (Zähler 1 am Reiter „Freigaben“); „Unsere
+ *    Gruppen“ ist online. Einreichen, Löschen anfragen und der Reiter „Freigaben“ lassen sich durchklicken.
  *  - `?demo=leitung-ohne-rechte` (W3b-1) – leitet die Gruppe, hat aber keine Rechte: Hinweis „noch nicht eingerichtet“.
  *  - `?demo=rechte-leer` (W3b-1) – Admin, eingerichtet, aber noch keine Rechte an den Rollen: Hinweis oben, „Wer darf was“ im
  *    Fenster „Einstellungen“ (letzter Reiter) setzt sie.
@@ -52,6 +56,7 @@ import { neueStartseite, vorlaeufigeEinstellungen } from '@shared/website/seiten
 import { sollRechte as sollRechteWebsite } from '@shared/website/rechte';
 import { rechteAus, type DatenRechteNummern, type Recht } from '@shared/ct/rollenRechte';
 import type { WebsiteSperre } from '@shared/website/sperre';
+import type { WebsiteStatus } from '@shared/website/status';
 
 const MODUL = 40;
 const GRUPPE = 7;
@@ -103,7 +108,7 @@ export function demoStarten(fall: string): void {
   ]);
   let naechsteId = 1000;
   /** Eine Einheit so ablegen, wie `einheitSpeichern` es tut: Teile und Kopf. */
-  const lege = (einheit: Einheit, id: string, text: string) => {
+  const lege = (einheit: Einheit, id: string, text: string, kategorie = ENTWUERFE) => {
     const { stand, werte: teile } = teileBauen(
       text,
       (t) =>
@@ -119,8 +124,8 @@ export function demoStarten(fall: string): void {
         }) satisfies WebsiteTeil,
       'Ein Website-Teil',
     );
-    const liste = werte.get(ENTWUERFE)!;
-    for (const value of teile) liste.push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value });
+    const liste = werte.get(kategorie)!;
+    for (const value of teile) liste.push({ id: naechsteId++, dataCategoryId: kategorie, value });
     const kopf: WebsiteKopf = {
       art: 'website-kopf',
       fassung: 1,
@@ -129,7 +134,7 @@ export function demoStarten(fall: string): void {
       stand,
       zeit: new Date().toISOString(),
     };
-    liste.push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(kopf) });
+    liste.push({ id: naechsteId++, dataCategoryId: kategorie, value: JSON.stringify(kopf) });
   };
 
   if (
@@ -168,6 +173,7 @@ export function demoStarten(fall: string): void {
       eintraege: [{ titel: 'Unsere Gruppen', ziel: { art: 'seite', seiteId: gruppen.id } }],
     };
     lege('menue', MENUE_ID, menueAlsText(menue));
+    const vorMin = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
     const aussehen: Einstellungen = {
       ...vorlaeufigeEinstellungen('Demo-Gemeinde'),
       noindex: false,
@@ -187,6 +193,65 @@ export function demoStarten(fall: string): void {
       },
     };
     lege('einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(aussehen));
+
+    // ── Freigabe (W3b-2): was online steht, und wer was eingereicht hat – für `leitung` und `redakteur`.
+    if (fall === 'leitung' || fall === 'redakteur') {
+      const alt: Seite = {
+        id: 'demo-alt',
+        titel: 'Alte Seite',
+        pfad: 'alte-seite',
+        abschnitte: [],
+      };
+      const jugend: Seite = { id: 'demo-jugend', titel: 'Jugend', pfad: 'jugend', abschnitte: [] };
+      const gruppenAlt: Seite = { ...gruppen, titel: 'Gruppen' };
+      // Online: Startseite, „Unsere Gruppen“ (in der Fassung vor der letzten Änderung bei `leitung`), Impressum, Menü, Einstellungen.
+      // „Impressum“ steht in einer früheren Fassung online – im Entwurf ist es seitdem geändert.
+      const impressumOnline: Seite = { ...impressum, beschreibung: 'Frühere Fassung' };
+      for (const s of [start, fall === 'leitung' ? gruppenAlt : gruppen, impressumOnline])
+        lege('seite', s.id, seiteAlsText(s), VEROEFFENTLICHT);
+      lege('menue', MENUE_ID, menueAlsText(menue), VEROEFFENTLICHT);
+      lege('einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(aussehen), VEROEFFENTLICHT);
+      const setzeStatus = (
+        seiteId: string,
+        st: Omit<WebsiteStatus, 'art' | 'fassung' | 'id'>,
+      ): void => {
+        const w: WebsiteStatus = { art: 'website-status', fassung: 1, id: seiteId, ...st };
+        werte
+          .get(ENTWUERFE)!
+          .push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(w) });
+      };
+      if (fall === 'leitung') {
+        for (const s of [jugend, alt]) lege('seite', s.id, seiteAlsText(s));
+        lege('seite', alt.id, seiteAlsText(alt), VEROEFFENTLICHT);
+        setzeStatus(impressum.id, {
+          zustand: 'eingereicht',
+          von: 2,
+          name: 'Jonas Peters',
+          zeit: vorMin(25),
+        });
+        setzeStatus(jugend.id, {
+          zustand: 'eingereicht',
+          von: 5,
+          name: 'Lena Kraft',
+          zeit: vorMin(90),
+        });
+        setzeStatus(alt.id, {
+          zustand: 'loeschenAngefragt',
+          von: 5,
+          name: 'Lena Kraft',
+          zeit: vorMin(10),
+        });
+      } else {
+        setzeStatus(impressum.id, {
+          zustand: 'zurueck',
+          von: 2,
+          name: 'Jonas Peters',
+          zeit: vorMin(40),
+          anmerkung: 'Bitte die Anschrift prüfen – die Hausnummer fehlt noch.',
+          einreicher: { von: 1, name: 'Helene Wiebe' },
+        });
+      }
+    }
     if (fall === 'aussehen-gesperrt') {
       const sperre: WebsiteSperre = {
         art: 'website-sperre',

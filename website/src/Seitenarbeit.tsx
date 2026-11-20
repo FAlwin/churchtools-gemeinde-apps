@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
@@ -91,6 +91,9 @@ export function Seitenarbeit({
   onGespeichert,
   onOffen,
   onLoeschen,
+  loeschen,
+  freigabeLeiste,
+  freigabeBand,
 }: {
   /** Die gespeicherte Seite beim Öffnen. */
   seite: Seite;
@@ -107,6 +110,12 @@ export function Seitenarbeit({
   onOffen: (offen: boolean) => void;
   /** „Seite löschen“ – das Fenster dafür hat die Seitenliste. */
   onLoeschen: () => void;
+  /** Was „Seite löschen“ im Fenster „Seite einstellen“ heißt (W3b-2): löschen, anfragen (Redakteur), schon angefragt. */
+  loeschen?: 'loeschen' | 'anfragen' | 'angefragt';
+  /** Etikett und Knopf der Freigabe (W3b-2) – gehören der Seitenliste, die den Online-Stand kennt. */
+  freigabeLeiste?: ReactNode;
+  /** Das Band darunter (Anmerkung der Leitung, angefragtes Löschen). */
+  freigabeBand?: ReactNode;
 }) {
   const [arbeit, setArbeit] = useState<Seite>(seite);
   const [arbeitMenue, setArbeitMenue] = useState<Menue | null>(stand.menue);
@@ -395,6 +404,7 @@ export function Seitenarbeit({
               if (p.length > 0) setMeldungen(p);
               else schliessen();
             }}
+            loeschen={loeschen}
             onLoeschen={() => {
               schliessen();
               onLoeschen();
@@ -413,6 +423,7 @@ export function Seitenarbeit({
           <strong>{arbeit.titel}</strong>
           <span>{arbeit.startseite ? '/' : `/${arbeit.pfad}/`}</span>
         </div>
+        {freigabeLeiste}
         <SpeicherZustand stand={sperre.speicher} />
         <Segment
           value={ansicht}
@@ -432,6 +443,7 @@ export function Seitenarbeit({
         />
       </div>
 
+      {freigabeBand}
       <SperrBaender a={sperre} ich={ich} texte={SEITEN_TEXTE} />
 
       <Vorschau

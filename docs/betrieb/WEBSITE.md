@@ -44,8 +44,8 @@ Einmal, von einem **Admin** (Recht „Gruppen verwalten“, dazu bei der Erweite
 3. **Einrichten** legt zwei Kategorien im Speicher der Erweiterung an – nacheinander, jede erst nach Nachsehen und danach
    nachgelesen:
    - **„Website: Entwürfe · <Gruppe>“** (Kürzel `entwuerfe-g<ID>`) – die Arbeitsfassung.
-   - **„Website: Veröffentlicht · <Gruppe>“** (Kürzel `veroeffentlicht-g<ID>`) – die freigegebene Fassung; noch leer, bis W3b-2
-     das Freigeben bringt.
+   - **„Website: Veröffentlicht · <Gruppe>“** (Kürzel `veroeffentlicht-g<ID>`) – die freigegebene Fassung; sie wird allein durch
+     „Freigeben“ beschrieben (siehe „Freigabe“).
 
    Die **Gruppe steckt im Kürzel**: So erfährt die Erweiterung, welche Gruppe gewählt wurde, ohne etwas Zusätzliches zu
    speichern. Gibt es mehrere solcher Kategorien, gilt die mit der kleinsten Kategorie-ID.
@@ -71,8 +71,8 @@ Einmal, von einem **Admin** (Recht „Gruppen verwalten“, dazu bei der Erweite
 | **Admin** („Gruppen verwalten“) | unabhängig von der Rolle                                                                                                          | alles, dazu Einrichten                                                                                      |
 
 **Online geht technisch nur, was eine Leitung in „Veröffentlicht“ schreibt** (der spätere Bau-Dienst liest nur diese Kategorie).
-Redakteure lesen „Veröffentlicht“, damit die Oberfläche später „online / geändert seit der Freigabe“ zeigen kann (gemessen W3b-0:
-lesen `200`, schreiben `401`).
+Redakteure lesen „Veröffentlicht“, damit die Oberfläche „online / geändert seit der Freigabe“ zeigen kann (gemessen W3b-0:
+lesen `200`, schreiben `401`). Seit W3b-2 tut sie das (Abschnitt „Freigabe“).
 
 **Wie die Oberfläche den Zugang bestimmt** (`shared/website/zugang.ts`, `website/src/start.ts`): aus den **eigenen Rechten** der
 Person, `GET /permissions/global` → Block `website`. Wer in „Entwürfe“ **und** „Veröffentlicht“ schreiben darf (anlegen, ändern **und**
@@ -106,6 +106,81 @@ Regel der Oberfläche, nicht der Schutz der Daten.
 **Von Hand gesetzte Rechte (frühere Einrichtungen, z. B. die Test-Instanz):** Sie genügen weiter. Wer sie auf die neue Einrichtung
 überführen will, öffnet „Wer darf was“, prüft die Stufen und drückt **Rechte setzen**. Stehen bei einer Rolle zusätzlich Rechte an
 den beiden Kategorien, die zu keiner Stufe gehören, zeigt „Weicht ab“ das; „Rechte setzen“ entzieht sie.
+
+## Freigabe – Stand W3b-2
+
+**Der Weg einer Seite:** Ein Redakteur ändert sie in „Entwürfe“ und **reicht sie zur Prüfung ein**; die Leitung sieht sie im Reiter
+**Freigaben**, schaut sich die Vorschau an und **gibt frei** – oder **gibt sie mit einer Anmerkung zurück**. Freigeben heißt: der Entwurf
+wird **unverändert** nach „Veröffentlicht“ geschrieben. Die Leitung kann auch **direkt veröffentlichen** (Reiter „Seiten“, Menü „⋯“ →
+„Veröffentlichen“). Die Mail beim Einreichen und Zurückgeben folgt mit W3b-3, die Untergruppen mit W3b-4.
+
+**Der Status** (`shared/website/status.ts`): je Seite ein **eigener Wert** `website-status` in „Entwürfe“ – wie die Sperre, damit das
+Speichern der Seite und der Status nicht um denselben Wert streiten (der Kopf der Seite wird bei jedem Speichern neu geschrieben).
+**Kein Wert = Entwurf.** Zustände: `eingereicht` · `zurueck` (mit Anmerkung, höchstens 1000 Zeichen, und wer eingereicht hatte) ·
+`loeschenAngefragt`; jeweils mit **wer** (Person-ID + Name) und **wann**. Der Status wird vor dem Schreiben frisch gelesen und danach
+**nachgelesen** – ein `201` ist kein Beleg. Ein Status, der auf eine nicht mehr vorhandene Seite zeigt, wird ignoriert (`websiteAusWerten`)
+und beim nächsten Setzen eines Status aufgeräumt; beim Löschen einer Seite geht der Status mit. Das Lesen der Website meldet den
+Status-Wert **nicht** als Problem.
+
+**Der Online-Stand** (`shared/website/freigabe.ts`, `onlineVergleich`): Die Kategorie „Veröffentlicht“ wird wie „Entwürfe“ gelesen (alle
+Rollen dürfen das), und je Einheit (Seite, Menü, Einstellungen) wird die **Prüfsumme** (`stand` im Kopf) verglichen – nicht die Zeit:
+Wer eine Seite speichert, ohne etwas zu ändern, macht sie nicht „geändert“.
+
+| Lage                          | Etikett     | Bedeutung                                              |
+| ----------------------------- | ----------- | ------------------------------------------------------ |
+| nie veröffentlicht            | Entwurf     | gibt es nur in „Entwürfe“                              |
+| online, unverändert           | Online      | dieselbe Prüfsumme                                     |
+| geändert seit der Freigabe    | Geändert    | online steht noch die frühere Fassung                  |
+| online, aber Entwurf gelöscht | (Freigaben) | „Online, Entwurf gelöscht“ – Leitung nimmt sie offline |
+
+Ein Status hat immer Vorrang vor dem Etikett der Lage („Eingereicht“, „Zurück“, „Löschen angefragt“). Ist „Veröffentlicht“ nicht
+lesbar, zeigt die Oberfläche **nichts** an („nichts Falsches sagen“); Einreichen geht trotzdem.
+
+**Redakteur** (Reiter „Seiten“): Etikett an der Seite; **„Zur Prüfung einreichen“** – nur, wenn sie vom Online-Stand abweicht oder nie
+online war und nicht schon eingereicht ist; nach „zurück“ steht die **Anmerkung** der Leitung als Band an der Seite, und die Seite
+lässt sich erneut einreichen. **Ändern nach dem Einreichen ist erlaubt** (E-W24): Der Status bleibt „eingereicht“, die Leitung sieht und
+gibt immer den **neuesten** Entwurf frei. Einreichen geht nicht, solange an der Seite etwas nicht gespeichert ist. **Löschen:** Statt
+„Seite löschen“ steht in „Seite einstellen“ **„Löschen anfragen“** (E-W23) – die Seite bleibt unverändert, der Menüeintrag auch; die Leitung
+entscheidet. Redakteure löschen nie selbst; „Seite löschen“ (samt Menüeintrag entfernen) gibt es nur für Leitung und Admin.
+Im Reiter **Freigaben** sieht ein Redakteur **nur seine eigenen** eingereichten, zurückgegebenen und zum Löschen angefragten Seiten
+– zum Ansehen, ohne Knöpfe. Der **Zähler** am Reiter zählt seine zurückgegebenen Seiten.
+
+**Leitung und Admin** (Reiter „Freigaben“, `website/src/Freigaben.tsx`): links alles, was vom Online-Stand abweicht, **gruppiert in
+dieser Reihenfolge:** Eingereicht (die älteste Bitte oben) · Löschen angefragt · Zurückgegeben · Änderungen (eigene geänderte oder
+neue Seiten – auch **nicht eingereichte Entwürfe**, die vielleicht noch nicht fertig sind) · Menü und Aussehen (Menü, Einstellungen) ·
+Nur noch online. Rechts die **Vorschau** mit dem echten Renderer (Computer | Handy) und die Knöpfe:
+
+- **Freigeben** (eingereicht) / **Veröffentlichen** (alles andere), **Mit Anmerkung zurück** (nur eingereichte; die Anmerkung ist Pflicht).
+- **Löschen angefragt:** **Löschen und offline nehmen** (mit Rückfrage; erst das Menü ohne die Seite, dann aus „Veröffentlicht“
+  entfernen, dann der Entwurf samt Status) oder **Ablehnen** (nur der Status geht, die Seite bleibt).
+- **Online, aber Entwurf gelöscht:** **Offline nehmen** (mit Rückfrage).
+- **Alles freigeben** (mit Rückfrage): nacheinander **die eingereichten Seiten, das Menü und die Einstellungen** – Seiten zuerst, damit das
+  Menü nie auf eine Seite zeigt, die noch nicht online ist. **Nicht eingereichte Entwürfe gehören bewusst nicht dazu** (sie hat noch
+  niemand zur Prüfung gegeben). Es **bricht beim ersten Fehler ab** und sagt, wie viele schon online sind und wie viele nicht mehr versucht wurden.
+  Das Menü warnt vor dem Veröffentlichen, wenn es auf Seiten verweist, die noch nicht online sind.
+
+Der **Zähler am Reiter** „Freigaben“: Leitung = eingereichte Seiten + „Löschen angefragt“; Redakteur = seine zurückgegebenen Seiten.
+Er wird beim Öffnen, beim Wechsel des Reiters und nach jeder Handlung neu gelesen.
+
+**Wie Freigeben schreibt** (`gibFrei`): (1) „Entwürfe“ frisch lesen, den **Text** der Einheit zusammensetzen (nicht lesbar → Abbruch);
+(2) mit dem Schema prüfen – **Ungültiges geht nie nach „Veröffentlicht“**; (3) mit **demselben Anschluss wie das Speichern**
+(`einheitSpeichern`: neue Teile → nachlesen → Kopf → nachlesen → alte Teile weg) nach „Veröffentlicht“ schreiben; (4) „Veröffentlicht“
+**nachlesen: derselbe `stand`, vollständig lesbar?** – sonst Fehler, nichts gilt als online; (5) **erst dann** den Status entfernen, und nur,
+wenn der Entwurf sich inzwischen **nicht weitergeändert** hat (sonst bleibt „eingereicht“ und die Meldung sagt es – E-W24). Kann der Status
+nach erfolgreicher Freigabe nicht entfernt werden, ist die Seite trotzdem online; die Meldung sagt, dass er geblieben ist, ein neuer
+Versuch räumt auf.
+
+**Fehlerzweige:** Netz, 5xx, Bremse → Fehler; **nichts wird als „online“ gemeldet, der Status bleibt**, ein neuer Versuch ist möglich.
+`401`/`403` beim Schreiben (oder Lesen) von „Veröffentlicht“ → die klare Meldung „Dafür fehlt dir das Recht …“ (nicht „abgemeldet“).
+Bricht eine Freigabe mitten im Schreiben ab (Teile geschrieben, Kopf nicht), **bleibt der alte Online-Stand gültig** (Schreibreihenfolge
+des Speichers); der nächste Versuch nutzt oder räumt die liegengebliebenen Teile.
+
+**Der Rahmen** (`website/src/App.tsx`) liest „Entwürfe“ und „Veröffentlicht“ zusammen für Liste und Zähler (`ladeFreigaben`) – beim
+Öffnen, beim Wechsel des Reiters und nach jeder Handlung; die bisherigen Daten bleiben stehen, bis neue da sind.
+
+**Offen / bewusst noch nicht:** Mail beim Einreichen und Zurückgeben (W3b-3); Untergruppen und „Seite einem Bereich zuordnen“ (W3b-4: die Regel
+`freigabeListe` und `darfFreigeben` sind die Stellen, an denen der Bereich ergänzt wird). Nimmt die Leitung eine Seite offline, bleibt der
+**veröffentlichte Menüpunkt** bestehen, bis das Menü unter „Freigaben“ veröffentlicht wird (der Entwurf des Menüs ist schon ohne die Seite).
 
 ## Wie die Daten im Speicher liegen
 
@@ -163,18 +238,21 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
 
 ## Die Oberfläche
 
-- **Reiter:** Seiten | Aussehen | Freigaben (am Computer oben, am Handy unten). „Freigaben“ zeigt bisher nur einen Hinweis
-  „kommt“. **Redakteure** sehen nur Seiten und Freigaben (kein Aussehen, kein Reiter „Einstellungen“).
+- **Reiter:** Seiten | Aussehen | Freigaben (am Computer oben, am Handy unten), „Freigaben“ mit Zähler (siehe „Freigabe“).
+  **Redakteure** sehen nur Seiten und Freigaben (kein Aussehen, kein Reiter „Einstellungen“).
 - **Seiten:** links die Liste („Im Menü“ in der Reihenfolge des Menüs, „Weitere Seiten“; die Startseite ist markiert), rechts
   die **Vorschau** mit dem Umschalter **Computer | Handy** (390 px).
 - **Neue Seite** (grüner Knopf unter der Seitenliste, am Handy das runde grüne Plus unten rechts): Titel eingeben; der Pfad (die Adresse) entsteht daraus (Umlaute ausgeschrieben, bei Streit `-2`). Die Seite
   ist leer.
-- **Seite löschen:** steht im Fenster „Seite einstellen“; mit Rückfrage, steht sie im Menü, wird der Menüpunkt mit entfernt.
+- **Seite löschen:** steht im Fenster „Seite einstellen“ (nur Leitung und Admin); mit Rückfrage, steht sie im Menü, wird der Menüpunkt mit
+  entfernt. Eine Seite, die schon online steht, bleibt dort, bis sie unter „Freigaben“ offline genommen wird. **Redakteure** sehen dort
+  „Löschen anfragen“ (siehe „Freigabe“).
 - **Startseite anlegen:** Hat die Website keine Startseite, steht ein Hinweis mit dem Knopf „Startseite anlegen“ (Vorlage
   `start-schriftzug`). Angelegt wird **nie von selbst**.
 - Demo ohne ChurchTools (nur beim Entwickeln): `npm run dev -w website`, dann `…/ccm/website/?demo` (Fälle: siehe
   `website/src/demo.ts`; u. a. `?demo=seiten` zum Durchspielen des Bearbeitens, `?demo=gesperrt` – jemand anderes bearbeitet die
-  Startseite –, `?demo=wackelt` – das erste Speichern scheitert vorübergehend; Rollen seit W3b-1: `?demo=redakteur`, `?demo=leitung`,
+  Startseite –, `?demo=wackelt` – das erste Speichern scheitert vorübergehend; Rollen seit W3b-1: `?demo=redakteur` (mit einer zurückgegebenen Seite), `?demo=leitung` (mit zwei eingereichten Seiten und einer
+  Löschen-Anfrage, Zähler 3),
   `?demo=leitung-ohne-rechte`, `?demo=rechte-leer`, `?demo=rechte-abweicht` – die Admin-Ansicht zeigt `?demo=seiten`). Im Demo-Modus geht **keine** Anfrage ins Netz:
   `fetch` wird ersetzt, was unbekannt ist, bekommt 404 und eine Warnung (`website/src/demo.test.ts`).
 
@@ -342,7 +420,7 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3b-2 Freigabe (einreichen, freigeben, Reiter „Freigaben“) · W3b-3 Mail · W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
+W3b-3 Mail · W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 
 ## Release

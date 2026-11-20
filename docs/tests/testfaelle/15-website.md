@@ -371,3 +371,54 @@ sieht alles. Wer nicht „Personen administrieren“ hat, sieht „Wer darf was�
 - **Historie:** neu mit W3b-1 (20.11.2026)
 
 </details>
+
+### TF-WEBSITE-13 · Freigabe: einreichen, freigeben, zurückgeben, Löschen anfragen, Alles freigeben
+
+**Das brauchst du:** Die Website in der Test-Instanz, eingerichtet, mit einer Testperson (Spike, 19) in der Gruppe „Website“ – **ihre
+Rolle wechselst du per Werkzeug** (Leiter ↔ Mitarbeiter), **nicht** über „Person simulieren“ – und ein Admin-Konto. Mindestens zwei Seiten,
+eine davon im Menü.
+
+**Das muss passieren:** Ein **Redakteur** (Mitarbeiter) sieht an jeder Seite, wo sie steht (**Entwurf · Eingereicht · Zurück · Online**),
+reicht sie **zur Prüfung ein** und kann das Löschen nur **anfragen**. Die **Leitung** sieht alles im Reiter **Freigaben**, gibt frei, gibt mit
+Anmerkung zurück, bestätigt oder lehnt ein angefragtes Löschen ab. Was die Leitung freigibt, steht danach **unverändert in der Kategorie
+„Veröffentlicht“**. Der **Zähler** am Reiter „Freigaben“ zählt bei der Leitung Eingereichtes und „Löschen angefragt“, beim Redakteur
+Zurückgegebenes.
+
+1. **Redakteur, erste Seite:** Als Mitarbeiter eine Seite ändern (Text), warten bis „Gespeichert“. An der Seite steht **Entwurf** und
+   **Zur Prüfung einreichen**. Tippen: Etikett **Eingereicht**, der Knopf ist weg. Die Seite weiter ändern ist erlaubt – das Etikett bleibt
+   „Eingereicht“. Beim Menü in „Seite einstellen“ fehlen „Im Menü zeigen“ und die Reihenfolge; dort steht **Löschen anfragen** statt „Seite löschen“.
+2. **Leitung:** Als Leiter im Reiter **Freigaben**: Zähler **1**, die Seite steht unter „Eingereicht“ mit „von … am …“. Die Vorschau zeigt den
+   **neuesten** Entwurf (auch die Änderung aus Schritt 1 nach dem Einreichen). **Mit Anmerkung zurück** geht nur mit einer Anmerkung.
+   „Bitte Überschrift ändern“ eintragen, zurückgeben: Die Seite wandert nach „Zurückgegeben“, der Zähler der Leitung ist **0**.
+3. **Redakteur:** Der Zähler am Reiter **Freigaben** steht auf **1**; an der Seite steht **Zurück** und über der Vorschau die Anmerkung
+   „Bitte Überschrift ändern“. Ändern, **Zur Prüfung einreichen** (erneut möglich): **Eingereicht**, die Anmerkung ist weg, der Zähler **0**. Im
+   Reiter Freigaben stehen nur **seine** Seiten, ohne einen einzigen Knopf; weder Menü noch Einstellungen sind dort zu sehen.
+4. **Freigeben:** Als Leiter die Seite **Freigeben**: „… ist online.“ In ChurchTools (Administration → Erweiterung „Website“ → Daten, Kategorie
+   „Veröffentlicht“) liegt jetzt ein Kopf dieser Seite; **der Stand im Kopf ist derselbe wie in „Entwürfe“**. An der Seite steht **Online**, bei
+   Leitung wie Redakteur; der Redakteur hat keinen „Einreichen“-Knopf mehr. Die Seite im Entwurf ändern: **Geändert**, „Zur Prüfung
+   einreichen“ ist wieder da. **Dasselbe Speichern ohne Änderung** (Seite öffnen, nichts tun) macht sie nicht „Geändert“.
+5. **Direkt veröffentlichen:** Als Leiter eine andere Seite ändern: unter „⋯“ **Veröffentlichen** – „Online“. Der Knopf fehlt, solange die
+   Seite schon so online steht, und ist aus, solange etwas nicht gespeichert ist.
+6. **Menü und Aussehen:** Als Leiter das Menü ändern (eine Seite hinzufügen, die noch nicht online ist) und Farben ändern: Unter
+   **Freigaben → Menü und Aussehen** stehen **Menü** und **Einstellungen und Aussehen**; beim Menü der Hinweis auf die Seite, die noch nicht
+   online ist. **Veröffentlichen** je Eintrag. Ein Redakteur sieht diese Einträge nie.
+7. **Löschen anfragen:** Als Redakteur bei einer Seite **Löschen anfragen** → Rückfrage → „Löschen angefragt“; die Seite bleibt, das Menü
+   bleibt. Als Leiter: Zähler **1**, Gruppe **Löschen angefragt**. **Ablehnen** → die Seite bleibt, der Status ist weg. Noch einmal anfragen,
+   dann **Löschen und offline nehmen** → Rückfrage → die Seite ist weg (Entwurf **und** „Veröffentlicht“), der Menüeintrag auch.
+8. **Online, aber Entwurf gelöscht:** Als Leiter eine online stehende Seite über „Seite einstellen“ **löschen** (der Hinweis sagt, dass sie
+   online bleibt). Unter Freigaben: Gruppe **Nur noch online** → **Offline nehmen**.
+9. **Alles freigeben:** Zwei Seiten einreichen lassen, dazu eine **dritte nur ändern, nicht einreichen**; das Menü ändern. Als Leiter **Alles
+   freigeben**: Die Rückfrage nennt die beiden eingereichten Seiten und das Menü – **nicht** die dritte. Danach steht die dritte weiter
+   unter „Änderungen“.
+10. **Fehler:** Während einer Freigabe das Netz trennen: Meldung „… wurde nicht veröffentlicht – online steht weiter die bisherige Fassung“;
+    das Etikett bleibt **Eingereicht**. Netz an, **Freigeben**: klappt. Dem Leiter das Recht „Daten anlegen“ an „Veröffentlicht“ entziehen:
+    **Freigeben** meldet „Dafür fehlt dir das Recht …“ (nicht „abgemeldet“).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/website/status.ts`, `shared/website/freigabe.ts`, `shared/website/speicher.ts`, `shared/website/zugang.ts`, `website/src/Freigaben.tsx`, `website/src/FreigabeLeiste.tsx`, `website/src/freigabeAnzeige.ts`, `website/src/Seiten.tsx`, `website/src/Seitenarbeit.tsx`, `website/src/SeiteEinstellen.tsx`, `website/src/App.tsx`, `website/src/daten.ts`
+- **Automatisiert:** teilweise – `shared/website/status.test.ts` (Status schreiben, lesen, nachlesen, Waisen), `shared/website/freigabe.test.ts` (Online-Vergleich in allen vier Zuständen, Freigeben schreibt den Entwurfstext unverändert, Status erst nach dem Nachlesen und nur bei unverändertem Entwurf, vorübergehende Fehler, `401`/`403`, halb geschriebene Freigabe, Offline nehmen, „Alles freigeben“, Liste und Zähler je Rolle), `website/src/Freigaben.test.tsx`, `website/src/FreigabeLeiste.test.tsx`, `website/src/Seiten.freigabe.test.tsx`, `website/src/Seiten.freigabe-offen.test.tsx`, `website/src/App.test.tsx` (Zähler), `website/src/demo.test.ts`; die echten Rechte in ChurchTools („Veröffentlicht“ lesen/schreiben je Rolle), das Zusammenspiel zweier Konten und der Rollenwechsel nur in der Test-Instanz
+- **Historie:** neu mit W3b-2 (20.11.2026)
+
+</details>

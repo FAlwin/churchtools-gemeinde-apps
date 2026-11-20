@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { htmlAttr } from '@shared/website/html';
 import { cssFuerStyleTag } from '@shared/website/theme';
 import { renderSeite } from '@shared/website/render';
@@ -294,6 +294,215 @@ describe('Bearbeiten-Ebene: Nachrichten nur aus dem eigenen iframe', () => {
       return { rahmen: screen.getByTitle('Vorschau: Start') };
     })();
     expect(rahmen.getAttribute('srcdoc')).toContain('gerade nicht zeichnen');
+  });
+});
+
+describe('Text direkt tippen (W3c-1): Rahmen und iframe', () => {
+  const EDITOR = seiteMit([baustein('text', { id: 'b0' }), baustein('html', { id: 'h0' })], {
+    titel: 'Start',
+  });
+  const M = (rest: Record<string, unknown>) => ({ websiteEditor: true, ...rest });
+  const TIPPEN = M({ was: 'tippen', i: 0, j: 0, k: 0, feld: 'markdown', n: 0 });
+  const TEXT = (rest: Record<string, unknown> = {}) =>
+    M({
+      was: 'text',
+      i: 0,
+      j: 0,
+      k: 0,
+      feld: 'markdown',
+      n: 0,
+      bloecke: [{ art: 'p', laeufe: [{ t: 'Neu' }] }],
+      ...rest,
+    });
+  const schicke = (daten: unknown, von: Window | null) =>
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: daten, source: von }));
+    });
+  const rahmen = () => screen.getByTitle<HTMLIFrameElement>('Vorschau: Start');
+
+  function zeigen(extra: Record<string, unknown> = {}) {
+    const onAktion = vi.fn();
+    const onTippen = vi.fn();
+    const props = (seite = EDITOR, version = 0) => (
+      <Vorschau
+        seite={seite}
+        stand={STAND}
+        gemeinde="ECG"
+        ansicht="computer"
+        version={version}
+        bearbeiten={{ onAktion, onTippen, ...extra }}
+      />
+    );
+    const r = render(props());
+    return { onAktion, onTippen, fenster: rahmen().contentWindow!, props, ...r };
+  }
+
+  it('der Text kommt nur an, wenn dasselbe Feld vorher als „wird getippt“ gemeldet wurde – und nur einmal', () => {
+    const { onAktion, onTippen, fenster } = zeigen();
+    schicke(TEXT(), fenster); // ohne „tippen“: ignoriert
+    expect(onAktion).not.toHaveBeenCalled();
+    schicke(TIPPEN, fenster);
+    expect(onTippen).toHaveBeenCalledTimes(1);
+    schicke(TEXT({ k: 1, feld: 'text', bloecke: undefined, wert: 'x' }), fenster); // anderes Feld: ignoriert
+    expect(onAktion).not.toHaveBeenCalled();
+    schicke(TEXT(), fenster);
+    expect(onAktion).toHaveBeenCalledTimes(1);
+    expect(onAktion.mock.calls[0][0]).toMatchObject({ was: 'text', bloecke: [{ art: 'p' }] });
+    schicke(TEXT(), fenster); // ein zweites Mal: ignoriert
+    expect(onAktion).toHaveBeenCalledTimes(1);
+  });
+
+  it('von woanders (anderes Fenster, ohne Quelle) kommt weder „tippen“ noch „text“ an', () => {
+    const { onAktion, onTippen } = zeigen();
+    for (const von of [window, null]) {
+      schicke(TIPPEN, von);
+      schicke(TEXT(), von);
+    }
+    expect(onTippen).not.toHaveBeenCalled();
+    expect(onAktion).not.toHaveBeenCalled();
+  });
+
+  it('„Eigenes HTML“ ist nie tippbar: weder „tippen“ noch „text“ kommen an', () => {
+    const { onAktion, onTippen, fenster } = zeigen();
+    schicke(M({ was: 'tippen', i: 0, j: 0, k: 1, feld: 'markdown', n: 0 }), fenster);
+    schicke(TEXT({ k: 1 }), fenster);
+    expect(onTippen).not.toHaveBeenCalled();
+    expect(onAktion).not.toHaveBeenCalled();
+  });
+
+  it('ein Text mit ungültigem Link kommt nicht an', () => {
+    const { onAktion, fenster } = zeigen();
+    schicke(TIPPEN, fenster);
+    schicke(
+      TEXT({ bloecke: [{ art: 'p', laeufe: [{ t: 'x', link: 'javascript:alert(1)' }] }] }),
+      fenster,
+    );
+    expect(onAktion).not.toHaveBeenCalled();
+  });
+
+  describe('Links prüft der RAHMEN mit der echten Regel', () => {
+    it('erlaubt → ok, nicht erlaubt → nicht ok; geantwortet wird nur dem iframe', () => {
+      const { fenster } = zeigen();
+      const antwort = vi.spyOn(fenster, 'postMessage').mockImplementation(() => {});
+      for (const [url, ok] of [
+        ['https://a.de/x', true],
+        ['mailto:a@b.de', true],
+        ['/gruppen/', true],
+        ['javascript:alert(1)', false],
+        ['//evil.de', false],
+        ['a b', false],
+        ['', false],
+      ] as const) {
+        schicke(M({ was: 'link-pruefen', id: 4, url }), fenster);
+        expect(antwort).toHaveBeenLastCalledWith(
+          { websiteParent: true, was: 'link-ergebnis', id: 4, ok },
+          '*',
+        );
+      }
+      expect(antwort).toHaveBeenCalledTimes(7);
+    });
+
+    it('eine Frage aus einem anderen Fenster bekommt keine Antwort', () => {
+      const { fenster } = zeigen();
+      const antwort = vi.spyOn(fenster, 'postMessage').mockImplementation(() => {});
+      schicke(M({ was: 'link-pruefen', id: 1, url: 'https://a.de' }), window);
+      schicke(M({ was: 'link-pruefen', id: 1, url: 'https://a.de' }), null);
+      expect(antwort).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Während des Tippens wird nicht neu gezeichnet', () => {
+    const NEU = { ...EDITOR, beschreibung: 'inzwischen geändert' };
+
+    it('ändert sich die Seite beim Tippen, bleibt das iframe, wie es ist – erst danach kommt der neue Stand', () => {
+      const { fenster, props, rerender } = zeigen();
+      const vorher = rahmen().getAttribute('srcdoc');
+      schicke(TIPPEN, fenster);
+      rerender(props(NEU));
+      expect(rahmen().getAttribute('srcdoc')).toBe(vorher);
+      schicke(M({ was: 'tippen-ende' }), fenster);
+      expect(rahmen().getAttribute('srcdoc')).not.toBe(vorher);
+      expect(rahmen().getAttribute('srcdoc')).toContain('inzwischen geändert');
+    });
+
+    it('ohne Tippen zeichnet jede Änderung sofort', () => {
+      const { props, rerender } = zeigen();
+      const vorher = rahmen().getAttribute('srcdoc');
+      rerender(props(NEU));
+      expect(rahmen().getAttribute('srcdoc')).not.toBe(vorher);
+    });
+
+    it('das iframe bleibt auch dabei dasselbe Element (kein Neuladen, der Cursor bleibt)', () => {
+      const { fenster, props, rerender } = zeigen();
+      const el = rahmen();
+      schicke(TIPPEN, fenster);
+      rerender(props(NEU));
+      expect(rahmen()).toBe(el);
+    });
+
+    it('„version“ zeichnet das iframe neu, auch wenn sich die Seite nicht geändert hat (abgelehnter Text)', () => {
+      const { props, rerender } = zeigen();
+      const el = rahmen();
+      rerender(props(EDITOR, 1));
+      expect(rahmen()).not.toBe(el); // ein neues iframe
+    });
+
+    it('fällt die Bearbeiten-Ebene weg (Seite gesperrt), gilt nichts mehr als „wird getippt“', () => {
+      const onAktion = vi.fn();
+      const mit = (b?: object) => (
+        <Vorschau
+          seite={EDITOR}
+          stand={STAND}
+          gemeinde="ECG"
+          ansicht="computer"
+          bearbeiten={b as never}
+        />
+      );
+      const { rerender } = render(mit({ onAktion }));
+      schicke(TIPPEN, rahmen().contentWindow);
+      rerender(mit(undefined));
+      rerender(mit({ onAktion }));
+      schicke(TEXT(), rahmen().contentWindow);
+      expect(onAktion).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('weiter tippen im nächsten Feld', () => {
+    it('„weiter“ aus dem Text kommt im nächsten srcdoc an und gilt nur für dieses eine Neuzeichnen', () => {
+      const { fenster, props, rerender } = zeigen();
+      schicke(TIPPEN, fenster);
+      schicke(TEXT({ weiter: { i: 0, j: 0, k: 0, feld: 'markdown', n: 0 } }), fenster);
+      schicke(M({ was: 'tippen-ende' }), fenster);
+      rerender(props({ ...EDITOR, beschreibung: 'x' }, 1));
+      expect(rahmen().getAttribute('srcdoc')).toContain(
+        '"weiter":{"i":0,"j":0,"k":0,"feld":"markdown","n":0}',
+      );
+      schicke(M({ was: 'bereit' }), rahmen().contentWindow);
+      rerender(props({ ...EDITOR, beschreibung: 'y' }, 2));
+      expect(rahmen().getAttribute('srcdoc')).toContain('"weiter":null');
+    });
+  });
+
+  it('Rechte und Ansicht stehen in den Einstellungen der Schicht: „Eigenes HTML“ nur mit Recht, Handy-Modus', () => {
+    zeigen({ darfHtml: true });
+    expect(rahmen().getAttribute('srcdoc')).toContain('"darfHtml":true');
+    expect(rahmen().getAttribute('srcdoc')).toContain('"modus":"computer"');
+    cleanup();
+    zeigen();
+    expect(rahmen().getAttribute('srcdoc')).toContain('"darfHtml":false');
+    cleanup();
+    const onAktion = vi.fn();
+    render(
+      <Vorschau
+        seite={EDITOR}
+        stand={STAND}
+        gemeinde="ECG"
+        ansicht="handy"
+        bearbeiten={{ onAktion }}
+      />,
+    );
+    expect(rahmen().getAttribute('srcdoc')).toContain('"modus":"handy"');
+    expect(screen.getByText(/Am Handy bearbeitest du über die Fenster/)).toBeTruthy();
   });
 });
 

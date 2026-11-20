@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { seitenNonce } from './ebene';
+import { seitenNonce, type WeiterStelle } from './ebene';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 import type { Seite } from '@shared/website/modell';
-import { nachrichtLesen, type EditorAktion } from './nachricht';
+import { istLinkAdresse } from '@shared/website/markdown';
+import { gleicheTippStelle, nachrichtLesen, type EditorAktion, type TippStelle } from './nachricht';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { schriftDateien } from '@shared/website/schriften';
 import { useSchriften } from './useSchriften';
@@ -25,6 +26,11 @@ export type Ansicht = 'computer' | 'handy';
  * `nachricht.ts` (der Baustein „Eigenes HTML“ läuft im selben iframe und könnte Nachrichten fälschen).
  *
  * Die Scrollposition der Vorschau bleibt beim Neuzeichnen: Das iframe meldet sie, die nächste Fassung stellt sie wieder ein.
+ *
+ * **Text direkt tippen (W3c-1):** Solange im iframe getippt wird (`tippen` … `tippen-ende`), wird er **nicht neu gezeichnet** – auch
+ * dann nicht, wenn sich die Seite inzwischen ändert (der Stand wird danach nachgezogen). Der Text selbst kommt nur an, wenn
+ * dasselbe Feld vorher als „wird getippt“ gemeldet wurde (`nachricht.ts`, Punkt 5), und die Adresse eines Links prüft **dieser
+ * Rahmen** (`istLinkAdresse`, die echte Regel) und antwortet dem iframe.
  */
 export function Vorschau({
   seite,
@@ -32,21 +38,46 @@ export function Vorschau({
   gemeinde,
   ansicht,
   bearbeiten,
+  version = 0,
 }: {
   seite: Seite;
   stand: VorschauStand;
   gemeinde: string | null;
   ansicht: Ansicht;
   /** Mit der Bearbeiten-Ebene; `onAktion` bekommt, was angeklickt wurde. */
-  bearbeiten?: { onAktion: (aktion: EditorAktion) => void };
+  bearbeiten?: {
+    onAktion: (aktion: EditorAktion) => void;
+    /** Es wird in einem Textfeld getippt (der Aufrufer nimmt zum Beispiel die Sperre). */
+    onTippen?: () => void;
+    /** Darf „Eigenes HTML“ geändert werden? Sonst gibt es dafür keine Leiste. */
+    darfHtml?: boolean;
+  };
+  /** Zählt hoch, wenn die Vorschau neu gezeichnet werden soll, obwohl sich die Seite nicht geändert hat (getippter Text abgelehnt). */
+  version?: number;
 }) {
   const rahmen = useRef<HTMLIFrameElement>(null);
   const scroll = useRef(0);
-  const aktuell = useRef({ seite, onAktion: bearbeiten?.onAktion });
-  aktuell.current = { seite, onAktion: bearbeiten?.onAktion };
+  const aktuell = useRef({
+    seite,
+    onAktion: bearbeiten?.onAktion,
+    onTippen: bearbeiten?.onTippen,
+  });
+  aktuell.current = {
+    seite,
+    onAktion: bearbeiten?.onAktion,
+    onTippen: bearbeiten?.onTippen,
+  };
   const mitEbene = bearbeiten !== undefined;
+  const darfHtml = bearbeiten?.darfHtml === true;
   const bereit = useRef(false);
   const [blockiert, setBlockiert] = useState(false);
+  /** Das Feld, das gerade getippt wird und dessen Text einmal ankommen darf. */
+  const tippStelle = useRef<TippStelle | null>(null);
+  /** Wird gerade getippt? Dann bleibt das iframe, wie es ist. */
+  const tippt = useRef(false);
+  const [, nachziehen] = useState(0);
+  /** Wo nach einem Klick in ein anderes Textfeld gleich weitergetippt wird. */
+  const weiter = useRef<WeiterStelle | null>(null);
 
   // Eine andere Seite beginnt oben – schon beim ersten Zeichnen, nicht erst nach einem Effekt (der käme nach dem `srcdoc`).
   const letzteSeite = useRef(seite.id);
@@ -69,11 +100,25 @@ export function Vorschau({
         stand,
         gemeinde,
         gemeindeZeitzone(),
-        mitEbene ? { scroll: scroll.current, nonce: seitenNonce() } : undefined,
+        mitEbene
+          ? {
+              scroll: scroll.current,
+              nonce: seitenNonce(),
+              modus: ansicht,
+              darfHtml,
+              weiter: weiter.current,
+            }
+          : undefined,
         schriften.adresse,
       ),
-    [seite, stand, gemeinde, mitEbene, schriften.adresse],
+    // `version` kommt im Rumpf nicht vor, soll aber eine neue Fassung erzwingen – sie trägt dann die aktuelle Scrollstelle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [seite, stand, gemeinde, mitEbene, schriften.adresse, ansicht, darfHtml, version],
   );
+  // Beim Tippen bleibt das iframe, wie es ist (sonst ginge der Cursor verloren); danach kommt der neueste Stand.
+  const gezeigt = useRef(html);
+  if (!tippt.current || !mitEbene) gezeigt.current = html;
+  const angezeigt = gezeigt.current;
 
   useEffect(() => {
     if (!mitEbene) return;
@@ -86,11 +131,43 @@ export function Vorschau({
       if (m.was === 'scroll') scroll.current = m.y;
       else if (m.was === 'bereit') {
         bereit.current = true;
+        weiter.current = null;
+        tippStelle.current = null;
+        tippt.current = false;
         setBlockiert(false);
+      } else if (m.was === 'link-pruefen') {
+        // Die echte Regel entscheidet, nicht eine Kopie in der Ebene; geantwortet wird nur diesem iframe.
+        rahmen.current.contentWindow?.postMessage(
+          { websiteParent: true, was: 'link-ergebnis', id: m.id, ok: istLinkAdresse(m.url) },
+          '*',
+        );
+      } else if (m.was === 'tippen') {
+        tippStelle.current = m;
+        tippt.current = true;
+        aktuell.current.onTippen?.();
+      } else if (m.was === 'tippen-ende') {
+        tippStelle.current = null;
+        tippt.current = false;
+        nachziehen((n) => n + 1);
+      } else if (m.was === 'text') {
+        // Nur das Feld, das als „wird getippt“ gemeldet wurde – und nur einmal.
+        if (!tippStelle.current || !gleicheTippStelle(tippStelle.current, m)) return;
+        tippStelle.current = null;
+        // Der Text ist abgegeben: Ab hier darf das iframe wieder neu gezeichnet werden (auch wenn „fertig“ nie käme).
+        tippt.current = false;
+        weiter.current = m.weiter ?? null;
+        aktuell.current.onAktion?.(m);
       } else aktuell.current.onAktion?.(m);
     };
     window.addEventListener('message', an);
     return () => window.removeEventListener('message', an);
+  }, [mitEbene]);
+
+  // Fällt die Bearbeiten-Ebene weg (die Seite wurde gesperrt), gilt nichts mehr als „wird getippt“.
+  useEffect(() => {
+    if (mitEbene) return;
+    tippStelle.current = null;
+    tippt.current = false;
   }, [mitEbene]);
 
   // Läuft die Ebene? Sie meldet sich nach dem Laden („bereit“). Bleibt das aus, hat ChurchTools das Skript blockiert – dann
@@ -106,7 +183,7 @@ export function Vorschau({
       setBlockiert(true);
     }, EBENE_WARTEZEIT_MS);
     return () => clearTimeout(t);
-  }, [html, mitEbene]);
+  }, [angezeigt, mitEbene]);
 
   return (
     <>
@@ -123,13 +200,20 @@ export function Vorschau({
           <TextKnopf onClick={schriften.nochmal}>Erneut laden</TextKnopf>
         </div>
       )}
+      {mitEbene && ansicht === 'handy' && (
+        <div className={styles.hinweis} role="status">
+          Am Handy bearbeitest du über die Fenster – Tippen auf einen Abschnitt oder Baustein öffnet
+          sie. Text direkt tippen und die Leisten gibt es nur am Computer.
+        </div>
+      )}
       <div className={`${styles.buehne}${ansicht === 'handy' ? ' ' + styles.handy : ''}`}>
         <iframe
+          key={version}
           ref={rahmen}
           className={styles.rahmen}
           title={`Vorschau: ${seite.titel}`}
           sandbox={VORSCHAU_SANDBOX}
-          srcDoc={html}
+          srcDoc={angezeigt}
         />
       </div>
     </>

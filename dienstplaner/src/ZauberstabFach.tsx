@@ -4,6 +4,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kandidatHinweis, type RohKandidat } from '@shared/dienstplan/werKann';
+import { pauseText, type Personenliste } from '@shared/dienstplan/personenliste';
 import {
   bewerte,
   vorschlagen,
@@ -88,6 +89,7 @@ const antwortKurz = (k: Bewertet): string | null => (k.antwort ? antwortText(k.a
 function eherNichtText(k: Bewertet): string {
   const h = kandidatHinweis(k);
   if (h.warnung) return h.text;
+  if (k.pause) return pauseText(k.pause);
   if (k.laufGrund === 'am-tag') return 'an diesem Tag schon vorgeschlagen';
   if (k.laufGrund === 'hoechstens') return `höchstens ${k.hoechstensImMonat}× im Monat`;
   if (k.laufGrund === 'andere-dienste' && k.antwort)
@@ -117,6 +119,7 @@ export function ZauberstabFach({
   gruppe,
   vorlieben,
   antworten,
+  personenliste,
 }: {
   titel: string;
   unter: string;
@@ -139,6 +142,8 @@ export function ZauberstabFach({
    * sichtbar sind oder nicht geladen werden konnten – rechnet der Zauberstab wie vor E5c-4.
    */
   antworten?: { lader: AntwortenLader; dienstName: (id: number) => string | undefined };
+  /** Die Personenliste der Dienstgruppe (PL-3): Wer an dem Termin pausiert, wird nie vorgeschlagen. Ohne Angabe keine Pause. */
+  personenliste?: Personenliste | null;
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt', fertig: 0, gesamt: 0 });
   const [versuch, setVersuch] = useState(0);
@@ -158,11 +163,12 @@ export function ZauberstabFach({
             ...z,
             roh: roh.get(abfrageSchluessel(z.terminId, z.serviceId)) ?? [],
             antworten: antworten ? antwortenDes(z, antw, antworten.dienstName) : undefined,
+            personenliste,
           }))
         : [],
     // `antworten` ist je Öffnen derselbe Lader; die Namen ändern sich nicht, solange das Fenster offen ist.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [roh, zeilen, antw],
+    [roh, zeilen, antw, personenliste],
   );
 
   // Abbrechen hält die Abfragen selbst an – nicht erst, wenn der Aufrufer das Fenster entfernt.
@@ -199,6 +205,7 @@ export function ZauberstabFach({
           ...z,
           roh: m.get(abfrageSchluessel(z.terminId, z.serviceId)) ?? [],
           antworten: antworten ? antwortenDes(z, a, antworten.dienstName) : undefined,
+          personenliste,
         }));
         setRoh(m);
         setAntw(a);

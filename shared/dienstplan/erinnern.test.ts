@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tagKurz } from '../ct/datum';
 import { diensteAus } from '../ct/dienste';
 import type { Person } from '../organigramm/mitglieder';
 import {
@@ -10,6 +11,7 @@ import {
   gruppeGrund,
   htmlText,
   mailInhalt,
+  pausiertAusgelassen,
   offenKurz,
   terminZeile,
   vorname,
@@ -19,6 +21,8 @@ import {
 import { abwesenheitenAus, type GruppenStand, type PersonenDaten } from './personenDaten';
 import type { PersonenAntworten } from './personenAntworten';
 import { planAus, type Plan, type PlanGruppe } from './plan';
+import { leereListe, pauseSetzen, type Personenliste } from './personenliste';
+import { liste } from './personenliste.testutil';
 import type { RohTermin } from './termine';
 import { antwortBereinigt, type Antworten, type Zusage } from './verfuegbarkeit';
 
@@ -140,6 +144,7 @@ const musikFehlend = (
     daten?: PersonenDaten;
     antworten?: PersonenAntworten;
     heute?: string;
+    personenlisten?: ReadonlyMap<number, Personenliste>;
   } = {},
 ): GruppenErgebnis => {
   const plan = o.plan ?? PLAN;
@@ -150,6 +155,7 @@ const musikFehlend = (
     daten: o.daten ?? daten(),
     antworten: o.antworten ?? antworten(),
     heute: o.heute ?? HEUTE,
+    personenlisten: o.personenlisten,
   });
 };
 /** Je Person die Tage der offenen Termine – `Name → ['2026-12-06', …]`. */
@@ -491,5 +497,85 @@ describe('Dienste, die niemand vorgesehen hat (20.11.2026: Plan mit `immerZeigen
     const mit = musikFehlend({ plan });
     expect(mit.art).toBe('ok');
     expect(offen(mit)).toEqual(offen(musikFehlend()));
+  });
+});
+
+describe('Pause: wer pausiert, wird nicht erinnert (PL-3)', () => {
+  /** Die Liste einer Dienstgruppe mit Pausen – gebaut mit `pauseSetzen`, gelesen mit `personenlisteAus` (Erzeuger). */
+  const mitPausen = (...p: [number, string?][]): Personenliste =>
+    liste(p.reduce((l, [id, bis]) => pauseSetzen(l, id, bis ? { bis } : {}), leereListe()));
+  const fuerMusik = (l: Personenliste) => new Map([[MUSIK, l]]);
+  const personen = (e: GruppenErgebnis) => (e.art === 'ok' ? e.personen.map((p) => p.name) : []);
+
+  it('ohne Liste oder ohne Pausen ist alles wie vorher; pausiert ist leer', () => {
+    const e = musikFehlend({ personenlisten: fuerMusik(liste()) });
+    expect(offen(e)).toEqual(offen(musikFehlend()));
+    expect(e.art === 'ok' && e.pausiert).toEqual([]);
+  });
+
+  it('eine unbefristete Pause nimmt die Person aus der Liste – sie bekommt keine Mail', () => {
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([CLARA.id])) });
+    expect(personen(e)).not.toContain('Clara Neu');
+    expect(personen(e)).toContain('Eva Hell');
+    expect(e.art === 'ok' && e.pausiert).toEqual([CLARA.id]);
+  });
+
+  it('„bis“ einschließlich: Clara pausiert bis 13.12. – offen bleibt nur der 20. (sie bekommt eine Mail, aber nur dafür)', () => {
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([CLARA.id, '2026-12-13'])) });
+    expect(offen(e)['Clara Neu']).toEqual(['2026-12-20']);
+    expect(e.art === 'ok' && e.pausiert).toEqual([]); // sie wird erinnert, also nicht „ausgelassen“
+  });
+
+  it('eine Pause, die vor allen Terminen endet, wirkt nicht', () => {
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([CLARA.id, '2026-12-05'])) });
+    expect(offen(e)['Clara Neu']).toEqual(['2026-12-06', '2026-12-13', '2026-12-20']);
+  });
+
+  it('eine Pause aus der Liste einer ANDEREN Dienstgruppe wirkt in Musik nicht', () => {
+    const technikListe = new Map([[TECHNIK, mitPausen([CLARA.id])]]);
+    const e = musikFehlend({ personenlisten: technikListe });
+    expect(personen(e)).toContain('Clara Neu');
+    expect(e.art === 'ok' && e.pausiert).toEqual([]);
+  });
+
+  it('wer nichts mehr offen hat, steht auch nicht als „pausiert“ da (nur wirklich ausgelassene zählen)', () => {
+    // Daniel ist am 06. und 20. eingeteilt, offen nur der 13. – Pause bis 12.12. ändert daran nichts.
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([DANIEL.id, '2026-12-05'])) });
+    expect(offen(e)['Daniel Fink']).toEqual(['2026-12-13']);
+    const f = musikFehlend({ personenlisten: fuerMusik(mitPausen([ANNA.id])) });
+    // Anna hätte offen: 06. und 20. → mit Pause ausgelassen und gezählt.
+    expect(f.art === 'ok' && f.pausiert).toEqual([ANNA.id]);
+  });
+
+  it('der Mail-Inhalt nennt nur die nicht pausierten Termine', () => {
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([CLARA.id, '2026-12-13'])) });
+    const empf = empfaengerAus(e.art === 'ok' ? [{ gruppe: 'Musik', personen: e.personen }] : []);
+    const clara = empf.find((x) => x.personId === CLARA.id)!;
+    const html = mailInhalt({
+      name: clara.name,
+      einleitung: '',
+      termine: clara.termine,
+      link: 'https://x.test',
+    });
+    expect(html).toContain(tagKurz('2026-12-20'));
+    expect(html).not.toContain(tagKurz('2026-12-06'));
+    expect(html).not.toContain(tagKurz('2026-12-13'));
+  });
+
+  it('Hinweiszahl: jede ausgelassene Person einmal; wer über eine andere Gruppe doch eine Mail bekommt, zählt nicht', () => {
+    expect(pausiertAusgelassen([{ pausiert: [1, 2] }, { pausiert: [2, 3] }], [])).toBe(3);
+    expect(
+      pausiertAusgelassen([{ pausiert: [1, 2] }, { pausiert: [2, 3] }], [{ personId: 2 }]),
+    ).toBe(2);
+    expect(pausiertAusgelassen([], [])).toBe(0);
+    // mit echten Ergebnissen
+    const e = musikFehlend({ personenlisten: fuerMusik(mitPausen([CLARA.id], [EVA.id])) });
+    expect(
+      e.art === 'ok' &&
+        pausiertAusgelassen(
+          [e],
+          empfaengerAus([{ gruppe: 'Musik', personen: e.art === 'ok' ? e.personen : [] }]),
+        ),
+    ).toBe(2);
   });
 });

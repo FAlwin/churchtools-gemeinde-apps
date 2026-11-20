@@ -626,6 +626,7 @@ export function useEinteilen({
         <ZauberstabFach
           {...zauber}
           antworten={antworten}
+          personenliste={daten?.personenlisten.get(zauber.gruppe.id) ?? null}
           vorlieben={entwuerfe?.vorlieben}
           uebernehmen={zauberUebernehmen}
           onClose={(n) => {

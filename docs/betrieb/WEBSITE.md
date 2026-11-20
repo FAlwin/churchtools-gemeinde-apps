@@ -256,12 +256,62 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
   `?demo=leitung-ohne-rechte`, `?demo=rechte-leer`, `?demo=rechte-abweicht` – die Admin-Ansicht zeigt `?demo=seiten`). Im Demo-Modus geht **keine** Anfrage ins Netz:
   `fetch` wird ersetzt, was unbekannt ist, bekommt 404 und eine Warnung (`website/src/demo.test.ts`).
 
-### Bearbeiten in der Vorschau (W3a-2)
+### Bearbeiten in der Vorschau (W3a-2, neu gestaltet in W3c-1)
 
-Die Vorschau ist zugleich die Arbeitsfläche. Fährt man über einen Abschnitt (am Handy: tippt man ihn an), erscheint seine
-**Leiste**: Gestalten · nach oben · nach unten · kopieren · löschen. Zwischen den Abschnitten (und in einer leeren Seite) steht
-**Abschnitt einfügen**, in jeder Spalte **+ Baustein**; ein Klick auf einen Baustein öffnet ihn. Alle Fenster sind die
-gewohnten Fenster der Erweiterungen (`Sheet`, mittig):
+Die Vorschau ist zugleich die Arbeitsfläche. **Am Computer** (W3c-1) liegt alles Bedienbare in **einer Schicht über der Seite**
+und erscheint nur, wo die Maus ist – nie über Text und nie übereinander:
+
+- **Abschnitt-Leiste** auf der Oberkante des Abschnitts (rechts am Inhaltsrand): Griff · nach oben · nach unten · Gestalten · kopieren ·
+  löschen. Der **Griff** verschiebt vorerst nur mit den Pfeiltasten (hoch/runter) – Ziehen kommt mit W3c-2.
+- **Baustein-Leiste** (nur eine, hell): der **Stift** öffnet das bisherige Fenster des Bausteins. Text-Bausteine tippt man direkt (siehe unten);
+  alle anderen öffnen mit einem Klick auf den Baustein das Fenster.
+- **Abstand-Pille** unten mittig („Abstand: Normal“): öffnet vorerst das Fenster „Gestalten“ (Ziehen kommt mit W3c-3).
+- **Abschnitt einfügen** an der Grenze zwischen zwei Abschnitten (und auf einer leeren Seite), **+** in einer Lücke zwischen Bausteinen und
+  **Baustein hinzufügen** in einer leeren Spalte öffnen das bisherige Hinzufügen.
+- **Kollisionsregel** (`website/src/ebene.kern.txt`, `K.ordne`, mit Tests): Rangordnung Baustein-Leiste > Abschnitt-Leiste > „+ Abschnitt“ >
+  „+“ zwischen Bausteinen > Abstand-Pille. Jedes Element nennt Wunschplätze; genommen wird der erste, der weder eine Textzeile noch ein Bild
+  noch einen Knopf noch ein höher eingestuftes Element berührt (und nicht unter dem festen Seitenkopf liegt). Geht keiner, weicht ein
+  niedrigeres Element aus oder wird ausgeblendet; die beiden Leisten nehmen als Notlösung den Platz mit der geringsten Überdeckung, damit man
+  sie immer erreicht. Die Farben sind fest (hell mit Rand und Schatten) – egal wie die Website aussieht.
+- **Am Handy** (Ansicht „Handy“) gibt es nur die Abschnitt-Leiste und **Abschnitt einfügen**; ein Tippen auf einen Baustein öffnet das Fenster.
+  Direktes Tippen im Text und die Baustein-Leiste gibt es nur am Computer (ein Hinweis über der Vorschau sagt es).
+- **Fremd gesperrt** (jemand anderes bearbeitet die Seite): keine Schicht, nur ansehen. **Redakteure** haben keine Leiste und keinen Stift für
+  „Eigenes HTML“ (`darfEigenesHtml`).
+
+**Text direkt tippen (W3c-1).** Klick auf eine Überschrift, Akzentzeile, einen Text (auch in Bild+Text) oder eine Knopf-Beschriftung: Das Feld
+bekommt einen blauen Ring und lässt sich schreiben.
+
+- **Markieren** zeigt eine kleine Leiste: **F** fett · **K** kursiv · **Link** · **Liste** · **H** Zwischenüberschrift (`###`). Beim Link fragt ein
+  Feld nach der Adresse; die Erweiterung prüft sie mit der echten Regel (`istLinkAdresse`, dieselbe wie beim Rendern) und antwortet dem iframe –
+  nicht erlaubt → Hinweis im Feld, kein Link. (Das Link-Feld ist **kein** `<form>`: im abgeschotteten iframe ohne `allow-forms` käme nie ein
+  „submit“.) Tastenkürzel für Fett/Kursiv gehen denselben Weg.
+- **Esc** bricht ab (der alte Text steht wieder da). **Klick daneben** übernimmt; bei Überschrift, Akzentzeile und Knopf auch die
+  **Eingabetaste**, im Text **Strg/Cmd+Eingabe** (die Eingabetaste macht dort einen neuen Absatz, Umschalt+Eingabe einen Zeilenumbruch). Ein Klick in
+  ein anderes Textfeld übernimmt das alte und tippt dort gleich weiter. **Unverändert** → nichts wird gesendet, nichts gespeichert.
+- **Während des Tippens wird nicht neu gezeichnet** (auch nicht, wenn sich die Seite inzwischen ändert – sie wird danach nachgezogen). Nach dem
+  Übernehmen zeichnet die Vorschau immer neu: Was dort steht, ist das, was gespeichert wird.
+- **Eingefügtes ist immer reiner Text**, einzeilig in Überschrift, Akzentzeile und Knopf, im Text Leerzeile = neuer Absatz.
+- **Rückgängig/Wiederholen** (Strg/Cmd+Z, Umschalt+Strg/Cmd+Z, Strg+Y) gelten im Text mit Auszeichnung über einen **eigenen Verlauf**
+  (Änderungen am DOM durch die Leiste zerstören den des Browsers; der Browser meldet „Wiederholen“ sonst nie). In den einzeiligen Feldern gilt der
+  Verlauf des Browsers.
+- **Ohne `execCommand`:** Das bearbeitete DOM wird in Blöcke gelesen (`p`, Zwischenüberschrift, Listenpunkte; Läufe mit fett/kursiv/Link), die
+  Rechenschritte (fett umschalten, Link, Liste, Eingabe, Einfügen) laufen auf diesem Modell (`ebene.kern.txt`), danach wird neu gezeichnet und
+  die Auswahl wieder eingestellt. Dasselbe Modell ist die Nachricht an die Erweiterung (`bloecke`).
+- **Speichern wie jede Änderung:** `textUebernehmen` (`website/src/textAenderung.ts`) baut die neue Seite, `seitePruefen` prüft das Schema (zu
+  lang, leere Überschrift → nicht übernommen, ruhiger Hinweis „Das geht so nicht“, die Vorschau zeigt wieder den gespeicherten Text), dann die
+  Schlange. Scheitert das Speichern, steht „Nicht gespeichert“ mit „Erneut versuchen“ – der Text bleibt in der Vorschau. Die **Sperre** wird schon
+  beim ersten Tippen genommen.
+
+**Markdown und Escape (W3c-1).** Der Text der Bausteine „Text“ und „Bild und Text“ ist Markdown (`shared/website/markdown.ts`). Ein **Backslash** macht
+das folgende Zeichen zum Zeichen: `\*`, `\_`, `\[`, `\]`, `\(`, `\)`, `\\`, `\#` überall, am Anfang einer Zeile auch `\-` und `1\.` (sonst wären sie Liste).
+`***text***` ist fett und kursiv. Ein Backslash vor einem anderen Zeichen bleibt, wie er ist – vorhandene Texte rendern unverändert
+(`shared/website/markdown.golden.json`, aus dem Stand vor dem Escape erzeugt). Der **Rückweg** vom getippten Text (`markdownAusBloecken`)
+setzt die Backslashes, wo sie nötig sind, **an derselben Stelle** wie der Leser (eine Datei, eine Regel). Davor prüft `formatierungEindeutig`, ob
+sich die Formatierung eindeutig schreiben lässt (zwei ausgezeichnete Stücke ohne Leerzeichen dazwischen – zum Beispiel kursiv direkt vor fett –
+lassen sich nicht schreiben), danach `markdownSichtbarerText`, ob das Markdown genau den getippten Text zeigt; sonst wird **nichts**
+übernommen. Im Fenster „Baustein bearbeiten“ (Markdown von Hand) gilt dieselbe Regel.
+
+Alle Fenster sind die gewohnten Fenster der Erweiterungen (`Sheet`, mittig):
 
 | Fenster             | Inhalt                                                                                                                                                          |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -272,7 +322,7 @@ gewohnten Fenster der Erweiterungen (`Sheet`, mittig):
 | Seite einstellen    | Titel, Adresse (die Startseite hat immer „/“), Beschreibung, „Im Menü zeigen“, Reihenfolge im Menü, Seite löschen                                               |
 
 - **Änderungen sieht man sofort** in der Vorschau; **„Abbrechen“ stellt den Stand vor dem Öffnen wieder her** (auch X). Erst
-  „Fertig“ prüft und speichert. Leistenaktionen (verschieben, kopieren, einfügen, löschen) speichern gleich.
+  „Fertig“ prüft und speichert. Leistenaktionen (verschieben, kopieren, einfügen, löschen) und direkt getippter Text speichern gleich.
 - **Weniger Spalten:** Die Inhalte der wegfallenden Spalten wandern hinten in die letzte – nie geht ein Baustein verloren
   (`aufteilungAendern`, getestet für jede Aufteilung in jede andere).
 - **Bilder** sind in W3a-2 ein Platzhalter (klar beschriftet); die Bildwahl kommt mit W4. Beim Baustein „Termine“ kommt die
@@ -334,18 +384,25 @@ Folgen:
   W3a-3a). **Bilder:** `img-src *` erlaubt `data:`,
   `blob:` und Adressen im ganzen Netz – unkritisch.
 
-**Nachrichten aus der Vorschau (W3a-2).** Die Bearbeiten-Ebene (`website/src/ebene.css`, `ebene.skript.txt`) läuft im selben
-`iframe` und meldet per `postMessage`, was angeklickt wurde – **nur als Zahlen** (Abschnitt, Spalte, Baustein in der Reihenfolge
-der Seite). Weil der Baustein „Eigenes HTML“ im selben `iframe` läuft und Nachrichten **fälschen** könnte, gilt:
+**Nachrichten aus der Vorschau (W3a-2, W3c-1).** Die Bedien-Schicht (`website/src/ebene.css`, `ebene.kern.txt`, `ebene.skript.txt`) läuft
+im selben `iframe` und meldet per `postMessage`, was angeklickt wurde – **als Zahlen** (Abschnitt, Spalte, Baustein in der Reihenfolge
+der Seite); nur beim Text direkt tippen kommt auch der getippte Text mit (Punkt 5). Weil der Baustein „Eigenes HTML“ im selben `iframe` läuft und Nachrichten **fälschen** könnte, gilt:
 
 1. Die Erweiterung nimmt **nur** Nachrichten an, deren `event.source` genau dieses `iframe` ist (`Vorschau.tsx`).
 2. Die Form wird geprüft (`nachricht.ts`, zod): bekannte Art, nur ganze Zahlen; **nichts** außer diesen Zahlen wird übernommen.
 3. Die Zahlen werden gegen die Seite geprüft: Einen Abschnitt, den es nicht gibt, gibt es nicht.
 4. Eine Nachricht löst nie mehr aus als ein Klick: ein Fenster öffnen, verschieben, kopieren. **Löschen fragt immer erst nach.**
+5. **Die eine Ausnahme: der getippte Text** (`text`). Er kommt nur an, wenn (a) die Stelle ein tippbares Feld ist (`textFeldGueltig`: Überschrift,
+   Akzentzeile, Text, Bild+Text, Knopf-Beschriftung – nie „Eigenes HTML“), (b) die Form stimmt (feste Läufe aus Text, Fett, Kursiv, Link, nichts
+   sonst, Längen begrenzt), (c) **jede Link-Adresse die echte Regel besteht** (sonst ist die ganze Nachricht ungültig) und (d) dasselbe Feld
+   vorher als „wird getippt“ gemeldet wurde (nur einmal gültig). Der Text geht danach durch Schema und Schlange wie jede Änderung. Das schützt
+   **nicht** vor dem Baustein „Eigenes HTML“ (der könnte „tippen“ und „text“ fälschen) – sein Spielraum ist aber nur, Text in einem Textfeld zu
+   ändern, und das kann die Leitung, die ihn gebaut hat, ohnehin.
 
-Die Ebene wird **nur** in die Vorschau gehängt (`vorschauHtml(…, { scroll })`), nie in den Bau; der Renderer hat dafür keinen
-Sonderweg (kein `data-w-id`: die Ebene findet Abschnitte, Spalten und Bausteine an der Reihenfolge im Dokument). Das Skript liegt
-als Textdatei (`.txt`), weil die Prüfung des Repos (`eslint .`) TypeScript liest und kein Fremdskript für das `iframe`.
+Die Schicht wird **nur** in die Vorschau gehängt (`vorschauHtml(…, { scroll, … })`), nie in den Bau; der Renderer hat dafür keinen
+Sonderweg (kein `data-w-id`: die Ebene findet Abschnitte, Spalten und Bausteine an der Reihenfolge im Dokument). Skript und Kern liegen
+als Textdateien (`.txt`), weil die Prüfung des Repos (`eslint .`) TypeScript liest und kein Fremdskript für das `iframe`; die Tests
+spielen sie im Dokument der Testumgebung nach (`ebene.testutil.ts`).
 
 ## Aussehen (W3a-3a)
 

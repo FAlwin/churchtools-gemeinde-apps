@@ -90,15 +90,17 @@ export function App() {
   // Entwurf und Online-Stand zusammen: für die Liste „Freigaben“ **und** den Zähler am Reiter. Neu gelesen wird beim Wechsel des
   // Reiters (so sieht man, was andere inzwischen eingereicht haben) und nach jeder Handlung (`freigabeStand`); die bisherigen
   // Daten bleiben stehen, bis neue da sind (vorübergehend ist nicht leer).
+  const fModul = freigabeKategorien?.modul;
+  const fEntwuerfe = freigabeKategorien?.entwuerfe;
+  const fVeroeffentlicht = freigabeKategorien?.veroeffentlicht;
   const freigaben = useLaden(
-    () => (freigabeKategorien ? ladeFreigaben(freigabeKategorien) : null),
-    [
-      freigabeKategorien?.modul,
-      freigabeKategorien?.entwuerfe,
-      freigabeKategorien?.veroeffentlicht,
-      freigabeStand,
-      reiterAktiv,
-    ],
+    () =>
+      fModul !== undefined && fEntwuerfe !== undefined && fVeroeffentlicht !== undefined
+        ? ladeFreigaben({ modul: fModul, entwuerfe: fEntwuerfe, veroeffentlicht: fVeroeffentlicht })
+        : null,
+    // `freigabeStand` und `reiterAktiv` kommen im Aufruf nicht vor – sie sind nur der Anstoß zum Neulesen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fModul, fEntwuerfe, fVeroeffentlicht, freigabeStand, reiterAktiv],
     { behalten: true },
   );
   const freigabeDaten = freigaben.stand.art === 'fertig' ? freigaben.stand.daten : null;

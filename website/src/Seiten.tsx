@@ -125,15 +125,16 @@ export function Seiten({
   const einstellungenAlt = nachgelesen.stand.art === 'fehler';
 
   // Der Online-Stand (W3b-2): nur gelesen, nie geschrieben; scheitert das Lesen, bleibt „unbekannt“ (nichts Falsches anzeigen).
-  const kategorien = freigabe
-    ? { modul, entwuerfe: kategorie, veroeffentlicht: freigabe.veroeffentlicht }
-    : null;
+  const veroeffentlicht = freigabe?.veroeffentlicht;
+  const kategorien =
+    veroeffentlicht !== undefined ? { modul, entwuerfe: kategorie, veroeffentlicht } : null;
   const online = useLaden(
-    () => (kategorien ? ladeOnline(kategorien) : null),
-    [modul, kategorie, freigabe?.veroeffentlicht],
-    {
-      behalten: true,
-    },
+    () =>
+      veroeffentlicht !== undefined
+        ? ladeOnline({ modul, entwuerfe: kategorie, veroeffentlicht })
+        : null,
+    [modul, kategorie, veroeffentlicht],
+    { behalten: true },
   );
   const onlineStaende = online.stand.art === 'fertig' ? online.stand.daten.staende : null;
 

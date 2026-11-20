@@ -51,8 +51,8 @@ describe('FreigabeLeiste', () => {
     const { onEinreichen } = leiste({ gesperrt: true });
     const knopf = screen.getByRole('button', {
       name: 'Zur Prüfung einreichen',
-    }) as HTMLButtonElement;
-    expect(knopf.disabled).toBe(true);
+    });
+    expect(knopf).toHaveProperty('disabled', true);
     fireEvent.click(knopf);
     expect(onEinreichen).not.toHaveBeenCalled();
   });

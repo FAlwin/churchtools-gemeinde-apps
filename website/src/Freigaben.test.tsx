@@ -243,12 +243,12 @@ describe('Freigeben und Zurückgeben', () => {
     waehle('A');
     fireEvent.click(knopf('Mit Anmerkung zurück'));
     const fenster = await screen.findByRole('dialog');
-    const geben = within(fenster).getByRole('button', { name: 'Zurückgeben' }) as HTMLButtonElement;
-    expect(geben.disabled).toBe(true);
+    const geben = within(fenster).getByRole('button', { name: 'Zurückgeben' });
+    expect(geben).toHaveProperty('disabled', true);
     fireEvent.change(within(fenster).getByRole('textbox'), {
       target: { value: '  Bitte die Uhrzeit prüfen.  ' },
     });
-    expect(geben.disabled).toBe(false);
+    expect(geben).toHaveProperty('disabled', false);
     fireEvent.click(geben);
     await waitFor(() => expect(d.setzeStatus).toHaveBeenCalledTimes(1));
     expect(d.setzeStatus).toHaveBeenCalledWith(

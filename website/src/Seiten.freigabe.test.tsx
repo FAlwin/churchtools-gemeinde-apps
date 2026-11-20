@@ -125,9 +125,10 @@ describe('Redakteur: Etikett und Einreichen', () => {
     await seiteWaehlen('Unsere Gruppen');
     expect(within(toolbar()).getByText('Eingereicht')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Zur Prüfung einreichen' })).toBeNull();
-    expect(
-      (screen.getByRole('button', { name: 'Seite einstellen' }) as HTMLButtonElement).disabled,
-    ).toBe(false);
+    expect(screen.getByRole('button', { name: 'Seite einstellen' })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 
   it('nach „zurück“ steht die Anmerkung der Leitung an der Seite – und sie lässt sich erneut einreichen', async () => {
@@ -205,10 +206,10 @@ describe('Redakteur: Löschen anfragen statt Löschen (E-W23)', () => {
   it('ist es schon angefragt, ist der Knopf aus', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('loeschenAngefragt') } }));
     await einstellenOeffnen();
-    const knopf = (await screen.findByRole('button', {
+    const knopf = await screen.findByRole('button', {
       name: 'Löschen angefragt',
-    })) as HTMLButtonElement;
-    expect(knopf.disabled).toBe(true);
+    });
+    expect(knopf).toHaveProperty('disabled', true);
   });
 });
 

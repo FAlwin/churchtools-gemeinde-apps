@@ -57,15 +57,15 @@ describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
         freigabe={{ zugang: 'redakteur', veroeffentlicht: 21, onGeaendert: vi.fn() }}
       />,
     );
-    const knopf = (await screen.findByRole('button', {
+    const knopf = await screen.findByRole('button', {
       name: 'Zur Prüfung einreichen',
-    })) as HTMLButtonElement;
-    expect(knopf.disabled).toBe(false);
+    });
+    expect(knopf).toHaveProperty('disabled', false);
     fireEvent.click(screen.getByRole('button', { name: 'OFFEN' }));
-    expect(
-      (screen.getByRole('button', { name: 'Zur Prüfung einreichen' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Zur Prüfung einreichen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('Leitung: „Veröffentlichen“ ist dann nicht wählbar', async () => {

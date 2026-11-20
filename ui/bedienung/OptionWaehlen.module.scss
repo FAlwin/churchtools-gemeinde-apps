@@ -113,6 +113,12 @@
     left: 0;
   }
 
+  // Linksbündig mit dem Knopf (Ansichtswahl links in der Werkzeugzeile).
+  &.links {
+    right: auto;
+    left: 0;
+  }
+
   .option {
     padding: 12px 14px;
     font-size: 15px;

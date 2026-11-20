@@ -28,10 +28,13 @@ export function MenueListe({
   optionen,
   schliessen,
   nachOben = false,
+  links = false,
   titel = 'Option wählen',
 }: {
   optionen: Option[];
   schliessen: () => void;
+  /** Linksbündig mit dem Knopf statt rechtsbündig – für einen Knopf links in der Werkzeugzeile (Ansichtswahl). */
+  links?: boolean;
   /** Name des Menüs für Screenreader – „Mehr“ beim „⋯“-Menü der Werkzeugzeile. */
   titel?: string;
   /** Über dem Knopf statt darunter – für einen Knopf in der Fußzeile eines Fensters („Darunter einfügen“). */
@@ -39,7 +42,7 @@ export function MenueListe({
 }) {
   return (
     <div
-      className={`${styles.menue}${nachOben ? ` ${styles.nachOben}` : ''}`}
+      className={`${styles.menue}${nachOben ? ` ${styles.nachOben}` : ''}${links ? ` ${styles.links}` : ''}`}
       role="menu"
       aria-label={titel}
     >
@@ -50,6 +53,7 @@ export function MenueListe({
           role="menuitem"
           className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
           disabled={o.gesperrt}
+          aria-current={o.gewaehlt || undefined}
           onClick={() => {
             schliessen();
             o.onClick();
@@ -162,11 +166,14 @@ export function KnopfMitMenue({
   optionen,
   knopf,
   nachOben = false,
+  links = false,
   titel,
 }: {
   optionen: Option[];
   knopf: (a: { offen: boolean; umschalten: () => void }) => ReactNode;
   nachOben?: boolean;
+  /** Das Menü steht linksbündig unter dem Knopf (`MenueListe`). */
+  links?: boolean;
   titel?: string;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
@@ -178,6 +185,7 @@ export function KnopfMitMenue({
           optionen={optionen}
           schliessen={() => setOffen(false)}
           nachOben={nachOben}
+          links={links}
           titel={titel}
         />
       )}

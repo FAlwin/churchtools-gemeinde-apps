@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { rollenAus } from '@shared/organigramm/mitglieder';
 import type { PersonenGrenze } from '@shared/organigramm/personen';
-import { kastenInhalt, pdfPersonenWahl, personenInhalt, rollenKnopfText } from './kastenPersonen';
+import {
+  kastenInhalt,
+  nurLeitungAus,
+  pdfPersonenWahl,
+  personenInhalt,
+  rollenKnopfText,
+} from './kastenPersonen';
 import type { MitgliederStand } from './ladeMitglieder';
 
 // Rollen eines Dienstes wie gemessen (Test-Instanz 29.10.2026): Mitarbeiter ist die Standardrolle.
@@ -111,6 +117,16 @@ describe('Rollenfilter im Kästchen (#915)', () => {
     expect(rollenKnopfText(rollen, new Set())).toBe('Alle');
     expect(rollenKnopfText(rollen, new Set(['Organisator']))).toBe('Alle');
     expect(rollenKnopfText(rollen, new Set(['Mitarbeiter']))).toBe('1 von 2');
+  });
+
+  it('„Nur Leitung“: abgewählt sind genau die Rollen, die nicht leiten – dieselbe Regel für Filter und Auswahl', () => {
+    const rollen = [
+      { name: 'Leiter', leitung: true },
+      { name: 'Co-Leiter', leitung: true },
+      { name: 'Mitarbeiter', leitung: false },
+    ];
+    expect([...nurLeitungAus(rollen)]).toEqual(['Mitarbeiter']);
+    expect(rollenKnopfText(rollen, nurLeitungAus(rollen))).toBe('2 von 3');
   });
 });
 

@@ -5,6 +5,7 @@ import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ApiError } from '@ui/ct/fehler';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Icon } from '@ui/icons/icons';
+import { SuchLupe } from '@ui/bedienung/SuchLupe';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { baumOhneTypen, knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
@@ -133,6 +134,8 @@ export function App() {
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
   // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
   const [pdfOffen, setPdfOffen] = useState(false);
+  // Die Lupe „Person suchen“ im Reiter Personen (R7/E11): neben den Reitern; die App hält den Zustand, `Personen` filtert.
+  const [personenSuche, setPersonenSuche] = useState({ offen: false, begriff: '' });
   // Gruppenwechsel der Kinder (O9-2): die Einrichtung aus dem Speicher; `null`, solange sie nicht gelesen ist. Ohne sie –
   // nicht eingerichtet, nicht lesbar oder gerade nicht erreichbar – gibt es den Reiter „Kinder & Jugend“ nur für
   // „Berechtigungen verwalten“ (O9-5c), und dort sagt er genau, welcher der Fälle es ist. Nichts geht dabei verloren.
@@ -490,6 +493,21 @@ export function App() {
   // Den Verlauf muss das X nicht leeren: Ein neues Fenster aus der Seite fängt ohnehin neu an.
   const fensterZu = () => zeigen(null);
 
+  // Die Lupe gibt es dort, wo es etwas zu suchen gibt: im Reiter Personen (Namen). Im Baum sucht „Bereich“ nach Gruppen.
+  const lupe =
+    zustand.art === 'fertig' && ansicht === 'personen' ? (
+      <SuchLupe
+        platzhalter="Person suchen …"
+        knopfName="Person suchen"
+        feldName="Person suchen"
+        offen={personenSuche.offen}
+        begriff={personenSuche.begriff}
+        onOeffnen={() => setPersonenSuche({ offen: true, begriff: '' })}
+        onBegriff={(begriff) => setPersonenSuche({ offen: true, begriff })}
+        onSchliessen={() => setPersonenSuche({ offen: false, begriff: '' })}
+      />
+    ) : undefined;
+
   return (
     <ErweiterungsSeite
       app="Organigramm"
@@ -497,8 +515,9 @@ export function App() {
       bereiche={bereiche}
       handy={handy}
       kopfAktion={
-        // Rechts neben „Hallo …“ wie „+ Gruppe erstellen“ in ChurchTools (Alwin, 28.10.2026: Variante B). Bis die
-        // Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation.
+        // Rechts neben „Hallo …“ wie „+ Gruppe erstellen“ in ChurchTools (Alwin, 28.10.2026: Variante B). Seit B5
+        // („Ruhige Bedienung“) steht hier nur noch „Einstellungen“: „Präsentieren“ und „PDF / Drucken“ sind in die
+        // Werkzeugzeile des Reiters gezogen. „Einstellungen“ wird in B8b der letzte Reiter (E24).
         start && ansicht === 'organigramm' ? (
           <>
             {start.rechte.gruppenVerwalten && (
@@ -509,21 +528,10 @@ export function App() {
                 onClick={() => setEinstellungenOffen(true)}
               />
             )}
-            <KopfKnopf
-              label="PDF / Drucken"
-              title="Als PDF speichern oder drucken"
-              symbol={<Icon name="dokument" size={16} />}
-              onClick={() => setPdfOffen(true)}
-            />
-            <KopfKnopf
-              label="Präsentieren"
-              symbol={<Icon name="play" size={16} />}
-              disabled={!mitglieder}
-              onClick={praesentieren}
-            />
           </>
         ) : undefined
       }
+      lupe={lupe}
       onNochmal={laden}
     >
       {start && ansicht === 'organigramm' && (
@@ -550,6 +558,10 @@ export function App() {
           onAlleZu={() => setOffenWahl(alleZu(sichtBaum, spitze, offen))}
           onNachladen={nachladen}
           onGruppe={gruppeOeffnen}
+          handy={handy}
+          onPraesentieren={praesentieren}
+          praesentierenGesperrt={!mitglieder}
+          onPdf={() => setPdfOffen(true)}
         />
       )}
       {start && ansicht === 'personen' && (
@@ -558,6 +570,7 @@ export function App() {
           mitglieder={mitglieder}
           einsaetze={einsaetze}
           bereich={bereich}
+          suche={personenSuche.begriff}
           onPerson={personOeffnen}
           onEinsaetzeNachladen={einsaetzeLaden}
         />

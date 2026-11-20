@@ -25,6 +25,8 @@ interface Props {
   mitglieder: MitgliederDaten | null;
   einsaetze: EinsaetzeStand;
   bereich: Sichtbereich;
+  /** Der Suchbegriff – die Lupe neben den Reitern (R7/E11) gehört der App, hier wird nur danach gefiltert. */
+  suche: string;
   onPerson: (id: number) => void;
   onEinsaetzeNachladen: () => void;
 }
@@ -39,11 +41,11 @@ export function Personen({
   mitglieder,
   einsaetze,
   bereich,
+  suche,
   onPerson,
   onEinsaetzeNachladen,
 }: Props) {
   const [filter, setFilter] = useState<Filter>('alle');
-  const [suche, setSuche] = useState('');
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const e: Einsaetze | null = einsaetze.art === 'fertig' ? einsaetze.einsaetze : null;
 
@@ -93,14 +95,6 @@ export function Personen({
           </button>
         ))}
       </div>
-      <input
-        className={styles.suche}
-        type="search"
-        placeholder="Person suchen …"
-        aria-label="Person suchen"
-        value={suche}
-        onChange={(ev) => setSuche(ev.target.value)}
-      />
       {einsaetze.art === 'laedt' && <p className={styles.leise}>Einsätze werden geladen …</p>}
       {einsaetze.art === 'fehler' && (
         <p className={styles.hinweis} role="status">

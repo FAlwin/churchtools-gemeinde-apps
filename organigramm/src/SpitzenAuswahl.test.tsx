@@ -27,6 +27,22 @@ const suche = () => screen.getByRole('combobox', { name: 'Gruppe suchen' });
 afterEach(cleanup);
 
 describe('SpitzenAuswahl (#915)', () => {
+  it('Vorsatz („Bereich: Ganze Gemeinde“, B5/E13): steht vor dem Namen, der Name des Knopfs sagt beides', () => {
+    render(
+      <SpitzenAuswahl
+        label="Bereich"
+        vorsatz="Bereich"
+        baum={BAUM}
+        wert="10"
+        onWahl={vi.fn()}
+        feldKlasse=""
+      />,
+    );
+    const knopf = spitzenKnopf('Bereich');
+    expect(knopf.getAttribute('aria-label')).toBe('Bereich: Technik');
+    expect(knopf.textContent).toBe('BereichTechnik');
+  });
+
   it('zeigt die Wahl; aufgeklappt die Gemeinde und jede Gruppe, nach Ebene eingerückt', () => {
     zeigen('1/2');
     expect(spitzenKnopf('Anfangen bei').textContent).toBe('Café-Team');

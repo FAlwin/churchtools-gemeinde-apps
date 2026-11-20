@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { FilterKnopf } from './FilterKnopf';
+import { eineWahl } from './filterAbschnitt';
 
 /** Wie Termine und Planen: der Aufrufer hält die Liste der ausgeschalteten Werte. */
 function Mit({ start = [] as string[], gruppen = ['Programm', 'Technik'] }) {
@@ -266,5 +267,67 @@ describe('FilterKnopf – Abschnitt „Anzeige“ (R6, B3)', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+  });
+});
+
+describe('FilterKnopf – eine Wahl und Abkürzungen (Organigramm, B5)', () => {
+  function Personen() {
+    const [wahl, setWahl] = useState('aus');
+    const [rollen, setRollen] = useState<string[]>([]);
+    return (
+      <>
+        <FilterKnopf
+          abschnitte={[
+            eineWahl(
+              'Personen',
+              [
+                { wert: 'aus', text: 'Aus' },
+                { wert: 'rollen', text: 'Nur Rollen' },
+                { wert: 'alle', text: 'Alle' },
+              ],
+              wahl,
+              setWahl,
+            ),
+            {
+              titel: 'Rollen',
+              optionen: ['Leiter', 'Mitarbeiter'].map((t) => ({ wert: t, text: t })),
+              aus: rollen,
+              onAus: setRollen,
+              kurz: [
+                { text: 'Alle', onClick: () => setRollen([]) },
+                { text: 'Nur Leitung', onClick: () => setRollen(['Mitarbeiter']) },
+              ],
+            },
+          ]}
+        />
+        <output>{`${wahl}|${rollen.join(',')}`}</output>
+      </>
+    );
+  }
+  const ausgabe = () => screen.getByRole('status', { hidden: true }).textContent;
+
+  it('Punkte statt Kästchen: genau eine gilt, ein Tipp wählt sie – und zählt nicht in die Zahl am Knopf', () => {
+    render(<Personen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    const gruppe = within(screen.getByRole('group', { name: 'Personen' }));
+    expect(gruppe.getAllByRole('radio')).toHaveLength(3);
+    expect(angehakt(gruppe.getByRole('radio', { name: 'Aus' }))).toBe(true);
+    fireEvent.click(gruppe.getByRole('radio', { name: 'Alle' }));
+    expect(ausgabe()).toBe('alle|');
+    expect(angehakt(gruppe.getByRole('radio', { name: 'Alle' }))).toBe(true);
+    expect(angehakt(gruppe.getByRole('radio', { name: 'Aus' }))).toBe(false);
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+  });
+
+  it('Abkürzungen schalten mehrere Häkchen auf einmal; die Zahl zählt die abgewählten Rollen', () => {
+    render(<Personen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    const rollen = within(screen.getByRole('group', { name: 'Rollen' }));
+    fireEvent.click(rollen.getByRole('button', { name: 'Nur Leitung' }));
+    expect(ausgabe()).toBe('aus|Mitarbeiter');
+    expect(angehakt(rollen.getByRole('checkbox', { name: 'Mitarbeiter' }))).toBe(false);
+    expect(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
+    fireEvent.click(rollen.getByRole('button', { name: 'Alle' }));
+    expect(ausgabe()).toBe('aus|');
   });
 });

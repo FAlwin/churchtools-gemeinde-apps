@@ -35,6 +35,7 @@ export function SpitzenAuswahl({
   onWahl,
   feldKlasse,
   leerName,
+  vorsatz,
 }: {
   /** Steht vor dem Knopf und nennt ihn für Bildschirmleser („Anfangen bei“, „Ausschnitt“). */
   label: string;
@@ -49,6 +50,8 @@ export function SpitzenAuswahl({
    * Auswahl EINER Gruppe, die noch fehlen darf (Fenster „Gruppenwechsel einrichten“, O9-5c-2).
    */
   leerName?: string;
+  /** Ein Wort VOR dem Namen im Knopf („Bereich“ – Organigramm B5/E13: „Bereich: Ganze Gemeinde“). */
+  vorsatz?: string;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
   const maus = useMedienAbfrage('(hover: hover) and (pointer: fine)');
@@ -115,7 +118,10 @@ export function SpitzenAuswahl({
         data-wert={gewaehlt.wert}
         onClick={umschalten}
       >
-        <span className={styles.name}>{gewaehlt.name}</span>
+        <span className={styles.beides}>
+          {vorsatz && <span className={styles.vorsatz}>{vorsatz}</span>}
+          <span className={styles.name}>{gewaehlt.name}</span>
+        </span>
         <Icon name="chev-down" size={14} />
       </button>
       {offen && (

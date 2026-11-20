@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../icons/icons';
 import { Segment } from './Segment';
-import { AuswahlBlatt } from './OptionWaehlen';
+import { AuswahlBlatt, KnopfMitMenue } from './OptionWaehlen';
 import { ReiterZaehler } from './ReiterZaehler';
 import styles from './AnsichtWahl.module.scss';
 
@@ -14,21 +14,55 @@ import styles from './AnsichtWahl.module.scss';
  * Eine Ansicht kann einen **Merker** tragen (`zahl`, B4/E24: „Einträge“ in „Wann kann ich?“): ein blau gefüllter Kreis direkt
  * hinter dem Wort, in derselben Zeile. Am Handy steht der Merker einer anderen Ansicht hinter dem Pfeil, damit man ihn
  * nicht erst im Blatt findet; im Blatt selbst steht die Zahl in Klammern.
+ *
+ * **Viele Ansichten** (`alsKnopf`, Organigramm B5/E13: fünf sind zu viele für einen Kasten): auch am Rechner der Auswahlknopf –
+ * dort klappt ein kleines Menü darunter auf (`KnopfMitMenue`, die gewählte Ansicht fett), am Handy wie sonst das Blatt.
  */
 export function AnsichtWahl<T extends string>({
   value,
   options,
   onChange,
   handy,
+  alsKnopf = false,
   ariaLabel = 'Ansicht',
 }: {
   value: T;
   options: { value: T; label: string; zahl?: number }[];
   onChange: (v: T) => void;
   handy: boolean;
+  /** Auch am Rechner als Auswahlknopf mit Menü statt als Umschalter – ab etwa vier Ansichten. */
+  alsKnopf?: boolean;
   ariaLabel?: string;
 }) {
   const [offen, setOffen] = useState(false);
+  const jetzt = options.find((o) => o.value === value)?.label ?? ariaLabel;
+  const merker = options.find((o) => o.zahl)?.zahl ?? 0;
+  if (!handy && alsKnopf)
+    return (
+      <KnopfMitMenue
+        links
+        titel={ariaLabel}
+        optionen={options.map((o) => ({
+          label: o.zahl ? `${o.label} (${o.zahl})` : o.label,
+          gewaehlt: o.value === value,
+          onClick: () => onChange(o.value),
+        }))}
+        knopf={({ offen: auf, umschalten }) => (
+          <button
+            type="button"
+            className={styles.knopf}
+            aria-haspopup="menu"
+            aria-expanded={auf}
+            aria-label={`${ariaLabel}: ${jetzt}`}
+            onClick={umschalten}
+          >
+            {jetzt}
+            <Icon name="chev-down" size={14} stroke={2.4} />
+            <ReiterZaehler zahl={merker} ton="blau" />
+          </button>
+        )}
+      />
+    );
   if (!handy)
     return (
       <Segment
@@ -52,8 +86,6 @@ export function AnsichtWahl<T extends string>({
         verbunden
       />
     );
-  const jetzt = options.find((o) => o.value === value)?.label ?? ariaLabel;
-  const merker = options.find((o) => o.zahl)?.zahl ?? 0;
   return (
     <>
       <button

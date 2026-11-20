@@ -49,13 +49,6 @@
   }
 }
 
-.suche {
-  @include m.eingabefeld;
-  height: var(--knopf-hoehe);
-  padding: 0 10px;
-  font-size: 14px;
-}
-
 .karte {
   @include m.card-list;
   overflow: auto;

@@ -11,8 +11,9 @@ export const spitzenKnopf = (label: string, wo: Wo = screen) =>
 export const spitzenWert = (label: string, wo: Wo = screen) =>
   spitzenKnopf(label, wo).getAttribute('data-wert');
 
-/** Der Name der Wahl, wie er auf dem Knopf steht. */
-export const spitzenName = (label: string, wo: Wo = screen) => spitzenKnopf(label, wo).textContent;
+/** Der Name der Wahl – aus dem Namen des Knopfs („Bereich: Technik“); ein Vorsatz im Knopf gehört nicht dazu. */
+export const spitzenName = (label: string, wo: Wo = screen) =>
+  (spitzenKnopf(label, wo).getAttribute('aria-label') ?? '').slice(label.length + 2);
 
 /** Aufklappen, die Namen in der Liste lesen, wieder zuklappen. */
 export function spitzenOptionen(label: string, wo: Wo = screen): string[] {

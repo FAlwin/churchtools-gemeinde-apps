@@ -28,7 +28,13 @@ export interface VerlaufEintrag {
     | 'wiederhergestellt'
     | 'zustaendig'
     | 'teil'
-    | 'modus';
+    | 'modus'
+    /** Vorschläge (W9b): vorgeschlagen, geändert, von der Leitung übernommen/abgelehnt, vom Vorschlagenden zurückgezogen. */
+    | 'vorgeschlagen'
+    | 'vorschlagGeaendert'
+    | 'uebernommen'
+    | 'abgelehnt'
+    | 'zurueckgezogen';
   status?: AufgabenStatus;
   /** Bei `teil` (W8a): wessen Teil, und ob er fertig (`true`) oder wieder offen (`false`) ist. */
   person?: number;
@@ -39,6 +45,27 @@ export interface VerlaufEintrag {
   /** Bei `zustaendig` (S7-3): wer vorher und nachher zuständig war. */
   vorher?: number[];
   nachher?: number[];
+}
+
+/**
+ * **Das Kennzeichen „Vorschlag“** (W9b, Alwin 20.11.2026): Ein Mitarbeiter schlägt der Gruppe ein To-Do vor. Es ist derselbe
+ * Datensatz wie jedes To-Do (Kategorie „Mitarbeit“, ohne Zuständige) – **solange das Kennzeichen daran hängt, ist es KEIN
+ * To-Do** (`istToDoVorschlag`): Es erscheint in keiner Liste, keinem Zähler, keiner Suche. Übernimmt die Leitung den
+ * Vorschlag, fällt das Kennzeichen weg (`vorschlagUebernehmen`), und derselbe Datensatz ist ein normales To-Do.
+ * `offen` wartet auf die Leitung, `abgelehnt` bleibt sieben Tage sichtbar (`abgelehntAm`). Ein zurückgezogener Vorschlag ist
+ * als gelöscht vermerkt (nie hart löschen). Alte Datensätze haben das Feld nicht – dann ist es ein To-Do.
+ */
+export interface ToDoVorschlag {
+  stand: 'offen' | 'abgelehnt';
+  /** Wer vorschlug – mit Namen, weil Mitglieder die Mitgliederliste oft nicht sehen. */
+  von: number;
+  name: string;
+  /** ISO-Zeit des Vorschlags. */
+  am: string;
+  /** Begründung beim Ablehnen – fehlt, wenn keine genannt wurde. */
+  grund?: string;
+  /** ISO-Zeit des Ablehnens. */
+  abgelehntAm?: string;
 }
 
 export interface Aufgabe {
@@ -75,6 +102,29 @@ export interface Aufgabe {
    * (`gesamtstandNeu`) – darum lesen alle Stellen, die nur `status` kennen, automatisch richtig.
    */
   fertig?: Record<string, string>;
+  /** **Vorschlag** (W9b): solange es gesetzt ist, ist das hier KEIN To-Do. Siehe `ToDoVorschlag`. */
+  vorschlag?: ToDoVorschlag;
+}
+
+/**
+ * **Ist das ein Vorschlag und noch kein To-Do?** (W9b) – die eine Stelle dafür. Jeder Leser der To-Do-Liste lässt solche
+ * Datensätze weg (`trenneToDoVorschlaege`, `aufgabenAusRoh`, `aufgabenWerte`); der Schreibweg lehnt normale Änderungen daran ab.
+ */
+export function istToDoVorschlag(a: Pick<Aufgabe, 'vorschlag'>): boolean {
+  return a.vorschlag !== undefined;
+}
+
+/**
+ * **To-Dos und Vorschläge trennen** – die eine Stelle beim Lesen (W9b). Die Reihenfolge bleibt; gelöschte (auch
+ * zurückgezogene Vorschläge) bleiben in ihrer Liste, das Weglassen geschieht dort, wo es schon immer geschah.
+ */
+export function trenneToDoVorschlaege<T extends Pick<Aufgabe, 'vorschlag'>>(
+  liste: readonly T[],
+): { aufgaben: T[]; vorschlaege: T[] } {
+  return {
+    aufgaben: liste.filter((a) => !istToDoVorschlag(a)),
+    vorschlaege: liste.filter(istToDoVorschlag),
+  };
 }
 
 /** **Wie ein Status heißt** – die eine Stelle dafür (Protokoll, Sitzung, Startseite, Suche). */
@@ -207,7 +257,7 @@ export function ohneZustaendige(a: Pick<Aufgabe, 'wer' | 'extern'>): boolean {
  * Steht das To-Do noch in einem **Protokoll-Entwurf** (`imEntwurf`), führt dort das Protokoll: Text und Löschen bleiben bei
  * der Leitung. ChurchTools kennt dafür kein Recht – die Prüfung liegt in der Erweiterung.
  */
-export type ToDoFall = 'leitung' | 'eigen' | 'geteilt' | 'ohne' | 'fremd';
+export type ToDoFall = 'leitung' | 'eigen' | 'geteilt' | 'ohne' | 'fremd' | 'vorschlag';
 
 export interface ToDoRechte {
   fall: ToDoFall;
@@ -232,6 +282,12 @@ export interface ToDoRechte {
   loeschen: boolean;
   /** „Das mache ich“ – mich selbst eintragen. */
   mache: boolean;
+  /** Nur bei einem Vorschlag (W9b, Fall `vorschlag`): die Leitung übernimmt oder lehnt ab – nur solange er offen ist. */
+  uebernehmen: boolean;
+  ablehnen: boolean;
+  /** Nur bei einem Vorschlag: wer vorschlug, ändert ihn oder zieht ihn zurück – nur solange er offen ist. */
+  vorschlagAendern: boolean;
+  zurueckziehen: boolean;
 }
 
 const NICHTS: Omit<ToDoRechte, 'fall' | 'sehen'> = {
@@ -247,12 +303,31 @@ const NICHTS: Omit<ToDoRechte, 'fall' | 'sehen'> = {
   abgeben: false,
   loeschen: false,
   mache: false,
+  uebernehmen: false,
+  ablehnen: false,
+  vorschlagAendern: false,
+  zurueckziehen: false,
 };
 
 export function toDoRechte(
-  a: Pick<Aufgabe, 'wer' | 'extern' | 'jeder'>,
+  a: Pick<Aufgabe, 'wer' | 'extern' | 'jeder' | 'vorschlag'>,
   q: { ich: number; leitung: boolean; imEntwurf?: boolean },
 ): ToDoRechte {
+  // **Ein Vorschlag ist kein To-Do** (W9b): Haken, Status, „Das mache ich“ und alle Felder gibt es nicht – auch nicht für die
+  // Leitung. Sie übernimmt oder lehnt ab; wer vorschlug, ändert oder zieht zurück (beides nur, solange er offen ist).
+  if (a.vorschlag) {
+    const offen = a.vorschlag.stand === 'offen';
+    const meiner = a.vorschlag.von === q.ich;
+    return {
+      ...NICHTS,
+      fall: 'vorschlag',
+      sehen: q.leitung || meiner,
+      uebernehmen: q.leitung && offen,
+      ablehnen: q.leitung && offen,
+      vorschlagAendern: meiner && offen,
+      zurueckziehen: meiner && offen,
+    };
+  }
   if (q.leitung)
     return {
       fall: 'leitung',
@@ -269,6 +344,10 @@ export function toDoRechte(
       abgeben: false,
       loeschen: true,
       mache: false,
+      uebernehmen: false,
+      ablehnen: false,
+      vorschlagAendern: false,
+      zurueckziehen: false,
     };
   if (ohneZustaendige(a)) return { ...NICHTS, fall: 'ohne', sehen: true, mache: true };
   if (!a.wer.includes(q.ich)) return { ...NICHTS, fall: 'fremd', sehen: false };
@@ -296,6 +375,10 @@ export function toDoRechte(
   };
 }
 
+/** Der Satz, wenn ein normaler To-Do-Weg einen Vorschlag trifft (Haken, Status, „Das mache ich“, Board, Editor …). */
+export const VORSCHLAG_KEIN_TODO =
+  'Das ist noch ein Vorschlag – die Leitung muss ihn erst übernehmen.';
+
 /**
  * **Darf `x` an diesem (frisch gelesenen) To-Do geschrieben werden?** – `null` ja, sonst der Satz, warum nicht. Die Regel
  * für den Schreibweg (`toDoAendern`) **und** für die Oberfläche, die vorher fragt (Ziehen im Board). Nur Felder, die sich
@@ -308,6 +391,7 @@ export function aenderungVerboten(
   q: { ich: number; leitung: boolean; imEntwurf?: boolean },
 ): string | null {
   const r = toDoRechte(a, q);
+  if (r.fall === 'vorschlag') return VORSCHLAG_KEIN_TODO;
   if (r.fall === 'leitung') return null;
   if (r.fall === 'fremd') return 'Dieses To-Do gehört jemand anderem.';
   const nur = 'Das darf nur die Leitung.';
@@ -343,12 +427,19 @@ export function aenderungVerboten(
   return null;
 }
 
-/** **Darf ein neues To-Do so angelegt werden?** Ein Mitarbeiter legt nur eines für sich selbst an – `null` ja, sonst der Satz. */
+/**
+ * **Darf ein neues To-Do so angelegt werden?** Ein Mitarbeiter legt nur eines für sich selbst an – **oder einen Vorschlag**
+ * (`vorschlag`, W9b: ohne Zuständige; die legt die Leitung beim Übernehmen fest) – `null` ja, sonst der Satz.
+ */
 export function anlegenVerboten(
-  q: { wer: readonly number[]; extern: string },
+  q: { wer: readonly number[]; extern: string; vorschlag?: boolean },
   w: { ich: number; leitung: boolean },
 ): string | null {
   if (w.leitung) return null;
+  if (q.vorschlag)
+    return q.wer.length === 0 && !q.extern.trim()
+      ? null
+      : 'Ein Vorschlag hat noch keine Zuständigen – die legt die Leitung beim Übernehmen fest.';
   return q.wer.length === 1 && q.wer[0] === w.ich && !q.extern.trim()
     ? null
     : 'Als Mitglied legst du To-Dos nur für dich selbst an.';
@@ -757,7 +848,24 @@ export function istAufgabe(x: unknown): x is Aufgabe {
       (!!a.fertig &&
         typeof a.fertig === 'object' &&
         !Array.isArray(a.fertig) &&
-        Object.values(a.fertig).every((z) => typeof z === 'string')))
+        Object.values(a.fertig).every((z) => typeof z === 'string'))) &&
+    // Ein Vorschlag (W9b): fehlt das Feld, ist es ein To-Do; ist es kaputt, ist der Wert keiner von uns – nie versehentlich ein
+    // To-Do.
+    (a.vorschlag === undefined || istToDoVorschlagFeld(a.vorschlag))
+  );
+}
+
+function istToDoVorschlagFeld(x: unknown): x is ToDoVorschlag {
+  const v = x as Partial<ToDoVorschlag> | null;
+  return (
+    !!v &&
+    typeof v === 'object' &&
+    (v.stand === 'offen' || v.stand === 'abgelehnt') &&
+    typeof v.von === 'number' &&
+    typeof v.name === 'string' &&
+    typeof v.am === 'string' &&
+    (v.grund === undefined || typeof v.grund === 'string') &&
+    (v.abgelehntAm === undefined || typeof v.abgelehntAm === 'string')
   );
 }
 

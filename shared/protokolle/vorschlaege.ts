@@ -296,7 +296,7 @@ export function zielSitzung(
 }
 
 /** Wer darf hier was? Mitglied: eigene, offene ändern/zurückziehen. Leitung: offene entscheiden. */
-export function darfAendern(v: Vorschlag, ich: number): boolean {
+export function darfAendern(v: Pick<Vorschlag, 'stand' | 'von'>, ich: number): boolean {
   return v.stand === 'offen' && v.von === ich;
 }
 
@@ -376,10 +376,56 @@ export function abgelehntNoch(
   heute: string,
   zeitzone: string,
 ): number {
-  const am = abgelehntAm(v);
+  return tageNoch(abgelehntAm(v), heute, zeitzone);
+}
+
+/**
+ * **Die Tage-Rechnung hinter `abgelehntNoch`** – eine Stelle für Punkt-Vorschläge und To-Do-Vorschläge (W9b): `am` = wann
+ * abgelehnt wurde (ISO), `null` = nie.
+ */
+export function tageNoch(am: string | null, heute: string, zeitzone: string): number {
   if (am === null || Number.isNaN(Date.parse(am))) return 0;
   const her = tagesZahl(heute) - tagesZahl(tagAusIso(am, zeitzone));
   return Math.max(0, ABGELEHNT_TAGE - Math.max(0, her));
+}
+
+/** Was die Regel „Abgelehnt“ von einem Vorschlag wissen muss – Punkt-Vorschläge und To-Do-Vorschläge geben es her. */
+export interface AbgelehntAnsicht {
+  id: string;
+  /** Wer vorschlug. */
+  von: number;
+  abgelehnt: boolean;
+  /** Wann abgelehnt (ISO) – `null`, wenn nicht abgelehnt. */
+  am: string | null;
+}
+
+/**
+ * **Welche abgelehnten Vorschläge noch zu sehen sind** – die eine Regel (W8c, W9b): noch sichtbar (`ABGELEHNT_TAGE`), nur für
+ * den Vorschlagenden und die Leitung, nicht früher auf diesem Gerät ausgeblendet. Neueste zuerst.
+ */
+export function abgelehnteSichtbar<T>(
+  liste: readonly T[],
+  ansicht: (x: T) => AbgelehntAnsicht,
+  q: {
+    ich: number;
+    /** Ist `x` ein Vorschlag, den ich als Leitung entscheide? */
+    leitung: (x: T) => boolean;
+    heute: string;
+    zeitzone: string;
+    ausgeblendet?: readonly string[];
+  },
+): T[] {
+  return liste
+    .filter((x) => {
+      const v = ansicht(x);
+      return (
+        v.abgelehnt &&
+        (q.leitung(x) || v.von === q.ich) &&
+        !(q.ausgeblendet ?? []).includes(v.id) &&
+        tageNoch(v.am, q.heute, q.zeitzone) > 0
+      );
+    })
+    .sort((a, b) => (ansicht(b).am ?? '').localeCompare(ansicht(a).am ?? ''));
 }
 
 /**
@@ -395,15 +441,11 @@ export function abgelehntSichtbar(
   zeitzone: string,
   ausgeblendet: readonly string[] = [],
 ): Vorschlag[] {
-  return liste
-    .filter(
-      (v) =>
-        v.stand === 'abgelehnt' &&
-        (leitung || v.von === ich) &&
-        !ausgeblendet.includes(v.id) &&
-        abgelehntNoch(v, heute, zeitzone) > 0,
-    )
-    .sort((a, b) => (abgelehntAm(b) ?? '').localeCompare(abgelehntAm(a) ?? ''));
+  return abgelehnteSichtbar(
+    liste,
+    (v) => ({ id: v.id, von: v.von, abgelehnt: v.stand === 'abgelehnt', am: abgelehntAm(v) }),
+    { ich, leitung: () => leitung, heute, zeitzone, ausgeblendet },
+  );
 }
 
 /**

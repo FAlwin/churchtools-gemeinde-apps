@@ -300,6 +300,7 @@ describe('Hinweis auf fällige To-Dos: Zähler am Reiter und Band', () => {
     START.gruppen.map((g, i) => ({
       gruppe: g,
       sitzungen: leer,
+      todoVorschlaege: [],
       aufgaben: i === 0 ? aufgaben : [],
     }));
   const vorlauf = (v: Vorlauf) => vi.mocked(ladeVorlaufOderStandard).mockResolvedValue(v);

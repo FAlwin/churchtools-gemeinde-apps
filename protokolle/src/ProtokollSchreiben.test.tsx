@@ -16,6 +16,7 @@ import * as W from './mitarbeitWerte';
 import * as P from './planen';
 import * as AW from './anwesenheitSchreiben';
 import { neueAufgabe } from '@shared/protokolle/aufgaben';
+import { neuerToDoVorschlag } from '@shared/protokolle/todoVorschlag';
 import {
   annehmen,
   neuerVorschlag,
@@ -490,6 +491,46 @@ describe('ProtokollSchreiben', () => {
       { modul: 24, kategorie: 62, sitzung: 's1' },
       88,
     );
+  });
+
+  it('To-Do-Vorschläge (W9b) sind keine To-Dos: der feste Punkt „Offen von früher“ zeigt sie nicht', async () => {
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce([
+      {
+        wert: 1,
+        x: neueAufgabe({
+          id: 'frueher',
+          gruppe: 194,
+          sitzung: 'alt',
+          text: 'Beamer von früher',
+          von: 1,
+          am: '2026-10-01T10:00:00Z',
+        }),
+      },
+      {
+        wert: 2,
+        x: neuerToDoVorschlag({
+          id: 'vorschlag',
+          gruppe: 194,
+          text: 'Nur ein Vorschlag',
+          bis: null,
+          warum: '',
+          von: { person: 19, name: 'Peter Wiens' },
+          am: '2026-10-02T10:00:00Z',
+        }),
+      },
+    ]);
+    lesen.mockResolvedValue({
+      kopf: KOPF,
+      dokument: [
+        ...DOK,
+        { id: 'v', type: 'verweis', props: { art: 'offene-aufgaben' }, children: [] },
+      ],
+    });
+    zeige();
+    await screen.findByText('bearbeitbar');
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    expect(screen.getByText('Beamer von früher')).toBeTruthy();
+    expect(screen.queryByText('Nur ein Vorschlag')).toBeNull();
   });
 
   it('Mitgliederliste verborgen: im festen Punkt steht bei eigenen To-Dos trotzdem der eigene Name (S7-2a)', async () => {

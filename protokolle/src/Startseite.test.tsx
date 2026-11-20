@@ -147,11 +147,13 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
   {
     gruppe: GRUPPEN[0],
     sitzungen: { kommend: [GESTERN, HEUTE, MAERZ, DEZEMBER], protokolle: [FREI], ...leer },
+    todoVorschlaege: [],
     aufgaben: [UEBERFAELLIG, IN_ARBEIT, FREMD, ERLEDIGT, GELOESCHT],
   },
   {
     gruppe: GRUPPEN[1],
     sitzungen: { kommend: [NOVEMBER], protokolle: [], ...leer },
+    todoVorschlaege: [],
     aufgaben: [{ ...OHNE_HERKUNFT, gruppe: 7 }],
   },
 ];
@@ -300,6 +302,7 @@ describe('Startseite (S3-3)', () => {
       {
         gruppe: GRUPPEN[0],
         sitzungen: { kommend: [], protokolle: [], ...leer },
+        todoVorschlaege: [],
         aufgaben: [FREMD],
       },
     ]);

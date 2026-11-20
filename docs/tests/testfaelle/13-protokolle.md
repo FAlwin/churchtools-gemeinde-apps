@@ -893,7 +893,8 @@ ein Satz mit Schloss sagt, wer es ändert.
 5. **Board** (nach Person): Ziehe „TEST Geteilt“ in die Spalte einer anderen Person: Es passiert nichts außer dem Hinweis **„Die Zuständigen ändert nur die Leitung.“**
    Ziehe „TEST Eigen“ nach **Noch niemand zuständig**: Hinweis „Du kannst es nur an ein anderes Mitglied abgeben.“ Ziehe ein To-Do ohne Zuständigen in **deine** Spalte:
    Du bist eingetragen.
-6. **Neues To-Do** als Mitglied: Bei „Zuständig“ steht fest dein Name (keine Liste, kein Feld für Externe); „Anlegen“ legt es für dich an.
+6. **Neues To-Do** als Mitglied: Oben steht **„Wofür? Für mich | Vorschlag an die Gruppe“**; bei „Für mich“ steht bei „Zuständig“ fest dein Name (keine Liste, kein
+   Feld für Externe) und „Anlegen“ legt es für dich an. („Vorschlag an die Gruppe“: siehe TF-PROT-26.)
 7. Als **Leitung**: Alle vier To-Dos zeigen alle Felder, „Löschen“, die Zuständigen-Liste und „So wird es erledigt“ – kein Schloss-Satz.
 8. **Entwurf:** Hat „TEST Eigen“ eine Aufgabe in einem Protokoll-**Entwurf**, steht beim Mitglied dort **Text als Text**, **kein Löschen** und ein Satz, dass die Leitung
    das im Entwurf macht; die Frist bleibt änderbar.
@@ -906,5 +907,44 @@ ein Satz mit Schloss sagt, wer es ändert.
 - **Betrifft:** `shared/protokolle/aufgaben.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/todoSchreiben.ts`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/ToDoKarte.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/loeschen.ts`
 - **Automatisiert:** größtenteils – `shared/protokolle/aufgaben.rechte.test.ts` (`toDoRechte`, `aenderungVerboten`, `anlegenVerboten`: jeder Fall, jedes Feld), `protokolle/src/todoSchreiben.test.ts` (Schreibweg: 409 für Text, Frist, Zuständige, Modus, Löschen, Anlegen, Verschieben; frisch gelesener Stand), `protokolle/src/ToDoFenster.test.tsx` (Mitarbeiter-Sicht: Text statt Feld, kein Löschen, „Abgeben an“, „Das mache ich“, neues To-Do für mich), `protokolle/src/ToDos.rechte.test.tsx` (Karte/Zeile: „Das mache ich“, Haken), `protokolle/src/ToDos.board.test.tsx` (Ziehen nur mit Recht); **nur von Hand:** Aussehen am Handy, echtes Zweikonto-Rennen
 - **Historie:** 20.11.2026 (W9a, Alwin simulierte Manuel als Mitarbeiter und durfte in v1.2.0 alles ändern)
+
+</details>
+
+### TF-PROT-26 · To-Dos vorschlagen, übernehmen, ablehnen
+
+**Das brauchst du:** In der Test-Instanz eine eingerichtete Gruppe mit zwei Konten: du als **Leitung** und ein **Mitglied** (ohne Protokoll-Schreibrecht; z. B. „Benutzer
+simulieren“ – danach wieder beenden und in `/api/logs` nach „simulates“ sehen, dass nichts hängen blieb). Ein Rechner und ein Handy (oder Browser auf 375 px). In der
+Entwicklung zeigt `?demo` die Leitungs-Sicht, `?demo=mitglied` die Mitglieder-Sicht (Gruppe „Technik-Team“).
+
+**Das muss passieren:** Ein Vorschlag ist **kein To-Do**, bis die Leitung ihn übernimmt – er steht nur im Bereich „Vorgeschlagen“ über der Liste, in keiner Zahl und in keiner
+Spalte. Aus demselben Eintrag wird beim Übernehmen ein gewöhnliches To-Do.
+
+1. Als **Mitglied** in **To-Dos** auf **+ Neues To-Do**: Oben steht **„Wofür?“** mit **Für mich** und **Vorschlag an die Gruppe**. Wähle den Vorschlag: Die Überschrift heißt
+   **„To-Do vorschlagen“**, es gibt **keine** Zuständigen-Liste, dafür **„Warum? (optional)“** und den Satz „Wer es macht, legt die Leitung fest, wenn sie den Vorschlag
+   übernimmt.“ Der Knopf **Vorschlagen** geht erst mit Text. Schreibe „TEST Vorschlag A“, Bis in einer Woche, Warum „zum Testen“, **Vorschlagen**.
+2. Über der Liste steht **„Vorgeschlagen · 1 offen“** mit „TEST Vorschlag A“ und **„wartet auf die Leitung“**; darunter der Satz „Übernimmt die Leitung deinen Vorschlag, wird er
+   ein To-Do der Gruppe und verschwindet hier.“ „TEST Vorschlag A“ steht **nicht** in der Liste, nicht im Board (umschalten) und **nicht** in „Meine offenen To-Dos“ auf der
+   Startseite; bei einem anderen Mitglied ist es gar nicht zu sehen.
+3. Zeile antippen: **Ändern** (Fenster „Vorschlag ändern“, vorausgefüllt; ändere das Warum) und **Zurückziehen** (der Vorschlag verschwindet; mache danach einen neuen).
+4. Als **Leitung**: Der Bereich zeigt **„Vorgeschlagen · 1 warten auf dich“** mit dem Vorschlag, „von <Name>“ und der Frist. Zeile antippen: **Übernehmen …** und
+   **Ablehnen …** – kein Ändern, kein Zurückziehen.
+5. **Übernehmen …**: Das Fenster heißt **„Vorschlag übernehmen“**, Text und Bis sind vorausgefüllt, oben steht „Vorschlag von <Name>. Wähle die Zuständigen – danach ist es ein
+   To-Do der Gruppe und der Vorschlag verschwindet.“, unten **Übernehmen**, kein Löschen. Wähle eine Person, **Übernehmen**: Der Vorschlag ist aus dem Bereich weg und steht
+   als gewöhnliches To-Do in der Liste (mit der Notiz „zum Testen“ im Verlauf: „hat das vorgeschlagen“, „hat den Vorschlag übernommen“). Das Mitglied sieht es jetzt (wenn es
+   zuständig ist) mit Haken.
+6. Vorschlag B (als Mitglied) → als Leitung **Ablehnen …**: Das Fenster fragt „Begründung (freiwillig – sieht <Name> 7 Tage lang)“. Schreibe „Haben wir schon“, **Ablehnen**. Als
+   **Mitglied** steht B jetzt unter **„Abgelehnt · verschwindet nach 7 Tagen“** mit „Grund: Haben wir schon“ und „noch 7 Tage sichtbar“; **×** blendet ihn aus (bleibt nach dem
+   Neuladen aus). Die Leitung sieht ihn dort auch.
+7. **Als Leitung** zeigt „+ Neues To-Do“ die Wahl **„Wofür?“ nicht** – sie legt wie bisher an.
+8. **Handy (375 px):** Der Bereich, die Zeilen und beide Fenster stehen ganz im Bild, nichts läuft über.
+9. **Schreibweg:** Öffne als Mitglied einen eigenen offenen Vorschlag, lass inzwischen als Leitung **ablehnen**, dann im Fenster **Speichern**: eine Meldung sagt, dass der
+   Vorschlag nicht mehr offen ist – nichts wird überschrieben.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/todoVorschlag.ts`, `shared/protokolle/aufgaben.ts`, `protokolle/src/todoVorschlagSchreiben.ts`, `protokolle/src/aufgabenSchreiben.ts`, `protokolle/src/lesen.ts`, `protokolle/src/mitarbeitWerte.ts`, `protokolle/src/ToDoVorschlaege.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/ToDos.tsx`
+- **Automatisiert:** größtenteils – `shared/protokolle/todoVorschlag.test.ts` (Regeln, Rechte, Sichtbarkeit), `protokolle/src/todoVorschlagSchreiben.test.ts` (Schreibweg und Leser gegen die nachgestellte ChurchTools-Instanz: 409, Übernehmen, Nachlesen), `protokolle/src/todoVorschlagLeser.test.tsx` (Reiter To-Dos, Startseite, Zähler), `protokolle/src/ToDos.vorschlaege.test.tsx` (Bereich, Fenster, Wahl), `protokolle/src/ProtokollSchreiben.test.tsx` (feste Punkte); **nur von Hand:** Aussehen am Handy, echtes Zweikonto-Rennen
+- **Historie:** 20.11.2026 (W9b, Entwurf `todos-rechte-w9-v1`)
 
 </details>

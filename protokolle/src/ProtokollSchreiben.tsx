@@ -39,7 +39,6 @@ import {
   zumEinfuegen,
   type Vorschlag,
 } from '@shared/protokolle/vorschlaege';
-import { istAufgabe } from '@shared/protokolle/aufgaben';
 import { AufgabenKontext, type AufgabenKontextWert } from './aufgabenKontext';
 import {
   aufgabeAendern,
@@ -47,7 +46,7 @@ import {
   aufgabenWerte,
   type MitarbeitOrt,
 } from './aufgabenSchreiben';
-import { derArt, mitarbeitRoh } from './mitarbeitWerte';
+import { aufgabenAusRoh, derArt, mitarbeitRoh } from './mitarbeitWerte';
 import { vorschlagSchreiben } from './vorschlaegeSchreiben';
 import { VorschlaegeKasten } from './Vorschlaege';
 import { VorschlagAblehnen } from './VorschlagFenster';
@@ -250,7 +249,8 @@ export function ProtokollSchreiben({
     eingefuegt.current = false;
     Promise.all([protokollLesen(ort), mOrt ? mitarbeitRoh(mOrt) : Promise.resolve([])]).then(
       ([{ kopf, dokument }, roh]) => {
-        setTodos(derArt(roh, istAufgabe).map((w) => w.x));
+        // Ohne To-Do-Vorschläge (W9b) – ein Vorschlag steht in keinem Protokoll und ist kein To-Do.
+        setTodos(aufgabenAusRoh(roh).aufgaben.map((w) => w.x));
         setVorschlaege(derArt(roh, istVorschlag).map((w) => w.x));
         if (!kopf || !dokument) {
           setLaden({

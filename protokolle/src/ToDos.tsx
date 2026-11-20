@@ -13,6 +13,7 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
+import { ABGELEHNT_TAGE } from '@shared/protokolle/todoVorschlag';
 import {
   aenderungVerboten,
   bearbeiten,
@@ -50,6 +51,10 @@ import {
   type KartenKontext,
 } from './ToDoKarte';
 import { toDoAendern } from './todoSchreiben';
+import { todoVorschlagAblehnen, todoVorschlagZurueckziehen } from './todoVorschlagSchreiben';
+import { ToDoVorschlaege, type ToDoVorschlagZeile } from './ToDoVorschlaege';
+import type { VorschlagAktionen } from './Vorschlaege';
+import { VorschlagAblehnen } from './VorschlagFenster';
 import { ToDoZiehBereich, ZiehKarte, ZiehSpalte } from './ToDoZiehen';
 import { listenForm, useKastenBreite } from './useKastenBreite';
 import { useToDoEinstellungen } from './useToDoEinstellungen';
@@ -132,7 +137,11 @@ export function ToDos({
   const [fenster, setFenster] = useState<{
     eintrag: ToDoEintrag | null;
     vorlage?: { status?: AufgabenStatus; wer?: number[] };
+    /** Ein To-Do-Vorschlag (W9b): übernehmen (Leitung) oder ändern (wer vorschlug). */
+    modus?: 'uebernehmen' | 'aendern';
   } | null>(null);
+  // Vorschlag ablehnen (W9b): das kleine Fenster mit der Begründung.
+  const [ablehnen, setAblehnen] = useState<ToDoEintrag | null>(null);
   const [einst, setzen] = useToDoEinstellungen(ich.person);
   const { ansicht, nach, aus, sortierung, reihenfolge } = einst;
   const [frage, setFrage] = useState<Frage | null>(null);
@@ -427,6 +436,44 @@ export function ToDos({
   };
   const mitMitarbeit = gruppen.filter((g) => g.mitarbeit !== null);
 
+  /**
+   * **Die To-Do-Vorschläge** im Bereich „Vorgeschlagen“ (W9b) – getrennt von den To-Dos (`GruppenUebersicht.todoVorschlaege`),
+   * nur die Gruppen im Blick (Filter „Gruppen“). Was ich damit tun kann: Wer vorschlug, ändert und zieht zurück; die Leitung
+   * der Gruppe übernimmt (öffnet das Fenster) oder lehnt ab. Danach liest die Übersicht neu – ein Vorschlag, der inzwischen
+   * entschieden ist, verschwindet so von selbst.
+   */
+  const vorschlaege = ue
+    .filter((u) => !aus.gruppen.includes(String(u.gruppe.id)))
+    .flatMap((u) => u.todoVorschlaege);
+  const vorschlagAktionen = (a: Aufgabe): VorschlagAktionen<ToDoVorschlagZeile> => {
+    const u = ue.find((x) => x.gruppe.id === a.gruppe);
+    if (!u || u.gruppe.mitarbeit === null) return {};
+    const ort = { modul, kategorie: u.gruppe.mitarbeit };
+    const e: ToDoEintrag = { aufgabe: a, gruppe: u.gruppe };
+    const leitung = leitungIn(u.gruppe);
+    return {
+      aendern: () => setFenster({ eintrag: e, modus: 'aendern' }),
+      zurueckziehen: async () => {
+        setHinweis(null);
+        try {
+          await todoVorschlagZurueckziehen(ort, a.id, ich, leitung);
+        } catch (f) {
+          setHinweis(fehlerMeldung(f).text);
+        }
+        holen(true);
+      },
+      ...(leitung
+        ? {
+            uebernehmen: () => {
+              setFenster({ eintrag: e, modus: 'uebernehmen' });
+              return Promise.resolve();
+            },
+            ablehnen: () => setAblehnen(e),
+          }
+        : {}),
+    };
+  };
+
   /** Ein To-Do, wie es jetzt gezeigt wird (nach dem Abhaken bleibt es 5 s mit altem Platz, aber neuem Stand). */
   const eintragFuer = (e: ToDoEintrag): KartenEintrag => {
     const k = eintragSchluessel(e);
@@ -562,6 +609,7 @@ export function ToDos({
           mitglieder={mitglieder}
           eintrag={fenster.eintrag}
           vorlage={fenster.vorlage}
+          modus={fenster.modus}
           herkunft={fenster.eintrag ? herkunftVon(fenster.eintrag) : null}
           leitungIn={leitungIn}
           onSitzung={(g, s) => {
@@ -574,6 +622,30 @@ export function ToDos({
             holen(true);
           }}
           onClose={() => setFenster(null)}
+        />
+      )}
+      {ablehnen?.aufgabe.vorschlag && (
+        <VorschlagAblehnen
+          vorschlag={{ titel: ablehnen.aufgabe.text, name: ablehnen.aufgabe.vorschlag.name }}
+          sieht={`sieht ${ablehnen.aufgabe.vorschlag.name.split(' ')[0]} ${ABGELEHNT_TAGE} Tage lang`}
+          onAblehnen={async (grund) => {
+            const g = ue.find((u) => u.gruppe.id === ablehnen.gruppe.id)?.gruppe;
+            if (!g || g.mitarbeit === null) return;
+            try {
+              await todoVorschlagAblehnen(
+                { modul, kategorie: g.mitarbeit },
+                ablehnen.aufgabe.id,
+                grund,
+                ich,
+                leitungIn(g),
+              );
+            } finally {
+              // Auch bei einer Verweigerung (inzwischen entschieden) neu lesen – dann stimmt die Anzeige wieder.
+              holen(true);
+            }
+            setAblehnen(null);
+          }}
+          onClose={() => setAblehnen(null)}
         />
       )}
       {frage && (
@@ -600,6 +672,20 @@ export function ToDos({
       )}
       {zustand.art === 'laedt' && <p className={styles.ruhig}>Wird geladen …</p>}
       {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={laden} />}
+      {zustand.art === 'fertig' && (
+        <ToDoVorschlaege
+          ich={ich.person}
+          liste={vorschlaege}
+          leitungIn={(g) => {
+            const x = ue.find((u) => u.gruppe.id === g);
+            return !!x && leitungIn(x.gruppe);
+          }}
+          irgendwoLeitung={irgendwoLeitung}
+          heute={heute}
+          zeitzone={gemeindeZeitzone()}
+          aktionen={vorschlagAktionen}
+        />
+      )}
       {zustand.art === 'fertig' && ansicht === 'liste' && (
         <section ref={kastenRef} className={styles.karte} aria-label="To-Dos">
           {leer ??

@@ -115,7 +115,7 @@ beforeEach(() => {
   VS.stand.clear();
   localStorage.clear();
   m.ladeSitzungen.mockResolvedValue(DATEN);
-  m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [] });
+  m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], todoVorschlaege: [], vorschlaege: [] });
 });
 
 describe('Reiter „Sitzungen“ (S3-2)', () => {
@@ -373,7 +373,11 @@ describe('Vorschläge (S5-4)', () => {
   });
 
   it('Leitung übernimmt in der Liste: für diese Sitzung vorgemerkt', async () => {
-    m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [vorschlag('v1')] });
+    m.ladeMitarbeit.mockResolvedValue({
+      aufgaben: [],
+      todoVorschlaege: [],
+      vorschlaege: [vorschlag('v1')],
+    });
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
     const k = await karte();
     fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
@@ -389,7 +393,11 @@ describe('Vorschläge (S5-4)', () => {
 
   it('„Direkt eintragen“: keine Entscheidung nötig – „kommt ins Protokoll“, keine Leitungs-Knöpfe', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, punkte: 'direkt' });
-    m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [vorschlag('v1')] });
+    m.ladeMitarbeit.mockResolvedValue({
+      aufgaben: [],
+      todoVorschlaege: [],
+      vorschlaege: [vorschlag('v1')],
+    });
     render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
     const k = await karte();
     expect(within(k).getByText('kommt ins Protokoll')).toBeTruthy();
@@ -430,7 +438,7 @@ describe('Vorschläge (S5-4)', () => {
       return v;
     };
     const laden = (vorschlaege: Vorschlag[], schreibbar: number[] = [60]) => {
-      m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege });
+      m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], todoVorschlaege: [], vorschlaege });
       render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={schreibbar} />);
     };
 

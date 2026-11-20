@@ -5,6 +5,7 @@
  * ist kein Beleg). Jeder Fehler wird geworfen. Gelöscht wird nie hart (S0).
  */
 import { werteLesen, wertAendern, wertAnlegen } from '@shared/ct/modulDaten';
+import { istAufgabe, istToDoVorschlag, type Aufgabe } from '@shared/protokolle/aufgaben';
 import { wertInhalt } from '@shared/protokolle/speicher';
 import { modulPort } from '@ui/ct/modulPort';
 
@@ -33,6 +34,22 @@ export function derArt<T extends { id: string }>(
   const je = new Map<string, { wert: number; x: T }>();
   for (const r of roh) if (ist(r.x) && !je.has(r.x.id)) je.set(r.x.id, { wert: r.wert, x: r.x });
   return [...je.values()];
+}
+
+/**
+ * **To-Dos und To-Do-Vorschläge aus einem gelesenen Stand – die EINE Trennung beim Lesen** (W9b). Ein Vorschlag ist kein
+ * To-Do: Wer To-Dos liest, nimmt `aufgaben`; nur der Bereich „Vorgeschlagen“ liest `vorschlaege`. Gelöschte stehen noch
+ * in ihrer Liste (der Protokoll-Editor braucht sie), die Aufrufer lassen sie weg, wo sie nicht gebraucht werden.
+ */
+export function aufgabenAusRoh(roh: readonly { wert: number; x: unknown }[]): {
+  aufgaben: { wert: number; x: Aufgabe }[];
+  vorschlaege: { wert: number; x: Aufgabe }[];
+} {
+  const alle = derArt(roh, istAufgabe);
+  return {
+    aufgaben: alle.filter((w) => !istToDoVorschlag(w.x)),
+    vorschlaege: alle.filter((w) => istToDoVorschlag(w.x)),
+  };
 }
 
 /** Stimmt der gelesene Stand mit dem geschriebenen überein? */

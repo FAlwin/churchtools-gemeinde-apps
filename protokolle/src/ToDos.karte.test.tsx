@@ -83,6 +83,7 @@ const aufgaben = (lt: Aufgabe[], jg: Aufgabe[] = []) =>
         treffenNichtFreigegeben: false,
         punkte: 'vorschlagen' as const,
       },
+      todoVorschlaege: [],
       aufgaben: liste as Aufgabe[],
     })),
   );

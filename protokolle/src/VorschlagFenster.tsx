@@ -143,13 +143,18 @@ export function VorschlagFenster({
   );
 }
 
-/** **Vorschlag ablehnen** (S5-4) – die Begründung ist freiwillig; wer vorschlug, sieht sie beim Vorschlag. */
+/**
+ * **Vorschlag ablehnen** (S5-4, auch für To-Do-Vorschläge W9b) – die Begründung ist freiwillig; wer vorschlug, sieht sie beim
+ * Vorschlag. `sieht` ersetzt den Satz, wie lange und wo sie zu sehen ist.
+ */
 export function VorschlagAblehnen({
   vorschlag,
+  sieht,
   onAblehnen,
   onClose,
 }: {
-  vorschlag: Vorschlag;
+  vorschlag: Pick<Vorschlag, 'titel' | 'name'>;
+  sieht?: string;
   onAblehnen: (grund: string) => Promise<void>;
   onClose: () => void;
 }) {
@@ -182,7 +187,7 @@ export function VorschlagAblehnen({
         <b>{vorschlag.titel}</b> · von {vorschlag.name}
       </p>
       <label className={felder.feld}>
-        <span>Begründung (freiwillig – {vorname} sieht sie beim Vorschlag)</span>
+        <span>Begründung (freiwillig – {sieht ?? `${vorname} sieht sie beim Vorschlag`})</span>
         <textarea
           className={`${felder.eingabe} ${styles.text}`}
           value={grund}

@@ -159,11 +159,24 @@ auch mit einer Person außerhalb, oder „Alle“) – nur abhaken (bei „Jeder
 **Ohne Zuständigen** – kein Haken, dafür der Knopf **„Das mache ich“** (Karte, Tabellenzeile, Fenster): trägt nur mich ein, danach gilt „eigen“. **Fremde**
 To-Dos (andere zuständig, ich nicht) sieht ein Mitglied nicht. Nie für Mitglieder: Gruppe wechseln, weitere Zuständige hinzufügen oder wegnehmen, „Gemeinsam |
 Jeder für sich“ umstellen. Steht ein To-Do noch in einem **Protokoll-Entwurf**, bleiben Text und Löschen bei der Leitung (dort führt das Protokoll). **Neues To-Do**
-als Mitglied: vorerst nur für sich selbst. Im **Fenster** steht, was man nicht ändern darf, als **normaler Text** (kein ausgegrautes Feld), dazu ein Satz mit
+als Mitglied: für sich selbst **oder als Vorschlag an die Gruppe** (W9b, unten). Im **Fenster** steht, was man nicht ändern darf, als **normaler Text** (kein ausgegrautes Feld), dazu ein Satz mit
 Schloss („Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.“); ohne Recht gibt es keinen „Löschen“-Knopf. **Im Board** lässt sich nur
 ziehen, was das Fenster auch erlaubte; sonst steht ein Hinweis da. Die Regel ist **eine Funktion** (`toDoRechte` in `shared/protokolle/aufgaben.ts`) – Fenster, Karte,
 Zeile, Board und der Schreibweg (`toDoAendern`, `toDoAnlegen`, `toDoLoeschen`, `toDoVerschieben`, geprüft am frisch gelesenen Stand) fragen nur sie. ChurchTools kennt dafür kein
 Recht; wer in „Mitarbeit“ schreiben darf, kann an der Erweiterung vorbei alles ändern – die Sperre schützt vor Versehen, nicht vor Absicht.
+
+**To-Dos vorschlagen und übernehmen (W9b, 20.11.2026):** Ein **Mitglied** (ohne Protokoll-Schreibrecht) wählt bei **+ Neues To-Do** oben **„Für mich |
+Vorschlag an die Gruppe“** (die Leitung sieht diese Wahl nicht). Der **Vorschlag** hat Text, „Bis“, „Warum? (optional)“ (wird die erste Notiz) und die Gruppe; wer es
+macht, legt die Leitung beim Übernehmen fest. Er steht im Bereich **„Vorgeschlagen“** über der Liste bzw. dem Board (einklappbar, das Gerät merkt es – je Person, über
+alle Gruppen). **Leitung:** sieht alle offenen Vorschläge der Gruppen, in denen sie Leitung ist („N warten auf dich“), dazu die Abgelehnten; Zeile aufklappen →
+**„Übernehmen …“** (öffnet das Fenster **„Vorschlag übernehmen“**, vorausgefüllt – Zuständige wählen, dann **Übernehmen**: aus demselben Eintrag wird ein gewöhnliches
+To-Do, Notiz und Verlauf bleiben) oder **„Ablehnen …“** (Begründung freiwillig; der Vorschlagende sieht sie **7 Tage** lang mit „×“ zum Ausblenden). **Mitglied:** sieht nur
+die eigenen („wartet auf die Leitung“), kann sie **ändern** und **zurückziehen**, solange sie offen sind; sonst nichts. **Ein Vorschlag ist kein To-Do** – er steht in keiner Liste,
+keinem Board, keiner Zahl (Startseite, Hinweis am Reiter, „Das mache ich“), keiner Suche, keinem PDF und keinem Protokoll. Technisch ist er derselbe Eintrag in der Kategorie
+„Mitarbeit“ mit dem Kennzeichen `vorschlag` (`stand` offen/abgelehnt, `von`, `name`, `am`, `grund`, `abgelehntAm`); alte Einträge haben es nicht. Die Trennung geschieht **beim Lesen an einer
+Stelle** (`aufgabenAusRoh`/`istToDoVorschlag` → `ladeMitarbeit` liefert `aufgaben` und `todoVorschlaege` getrennt). Die Rechte sind `toDoRechte` (Fall „vorschlag“) und
+`vorschlagVerboten` in `shared/protokolle/todoVorschlag.ts` und gelten auch beim Speichern (`todoVorschlagSchreiben.ts`, am frisch gelesenen Stand, danach nachgelesen);
+die normalen To-Do-Wege lehnen einen Vorschlag ab („Das ist noch ein Vorschlag – die Leitung muss ihn erst übernehmen.“). Zurückziehen vermerkt nur (`geloescht`), nie hart gelöscht.
 
 **Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und

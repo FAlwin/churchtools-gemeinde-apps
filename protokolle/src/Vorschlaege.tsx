@@ -14,19 +14,36 @@ import { Etikett } from '@ui/bedienung/Etikett';
 import { useAusgeblendet, useBereichWahl } from './vorschlaegeMerken';
 import styles from './Vorschlaege.module.scss';
 
+/**
+ * Was eine Vorschlag-Zeile zeigt – Vorschläge für Punkte (`Vorschlag`) und für To-Dos (W9b, `ToDoVorschlaege`) sehen gleich
+ * aus und benutzen **dieselbe Zeile**. `zusatz` hängt der Aufrufer an die Kleinzeile („bis 3. Dez. · wartet auf die Leitung“).
+ */
+export type ZeilenDaten = Pick<
+  Vorschlag,
+  'id' | 'titel' | 'text' | 'von' | 'name' | 'stand' | 'grund' | 'verlauf'
+> & { zusatz?: string };
+
+/** Beschriftungen, wo ein To-Do-Vorschlag anders heißt als ein Punkt-Vorschlag. */
+export interface ZeilenTexte {
+  uebernehmen?: string;
+  ablehnen?: string;
+  /** Statt „Ohne Text.“ im aufgeklappten Vorschlag. */
+  leer?: string;
+}
+
 /** Was man mit einem Vorschlag tun kann – fehlt eine Aktion, gibt es den Knopf nicht. */
-export interface VorschlagAktionen {
+export interface VorschlagAktionen<T extends ZeilenDaten = Vorschlag> {
   /** Wer vorschlug: ändern (Fenster) und zurückziehen. */
-  aendern?: (v: Vorschlag) => void;
-  zurueckziehen?: (v: Vorschlag) => Promise<void>;
+  aendern?: (v: T) => void;
+  zurueckziehen?: (v: T) => Promise<void>;
   /** Die Leitung (Gruppe „Vorschlagen“): übernehmen, aufs nächste Mal, ablehnen (Fenster). */
-  uebernehmen?: (v: Vorschlag) => Promise<void>;
-  naechstesMal?: (v: Vorschlag) => Promise<void>;
-  ablehnen?: (v: Vorschlag) => void;
+  uebernehmen?: (v: T) => Promise<void>;
+  naechstesMal?: (v: T) => Promise<void>;
+  ablehnen?: (v: T) => void;
 }
 
 /** Das Schild in der Zeile: nur wo es etwas sagt – „offen“ ist der Normalfall der Liste, Übernommene stehen nicht darin. */
-function standMarke(v: Vorschlag, direkt: boolean): ReactNode {
+function standMarke(v: ZeilenDaten, direkt: boolean): ReactNode {
   if (v.stand === 'offen' && direkt) return <Etikett ton="blau">kommt ins Protokoll</Etikett>;
   if (v.stand === 'abgelehnt') {
     // Am Handy entfällt es: Die Gruppe heißt schon „Abgelehnt“ (Entwurf W8c).
@@ -45,7 +62,7 @@ function standMarke(v: Vorschlag, direkt: boolean): ReactNode {
  * offene Vorschläge ändern/zurückziehen, die Leitung entscheidet. Läuft eine Aktion, sind die Knöpfe der Zeile gesperrt.
  * Welche Zeile aufgeklappt ist, weiß der Aufrufer (`auf`, `onKlick`) – es ist immer nur eine.
  */
-export function VorschlagZeile({
+export function VorschlagZeile<T extends ZeilenDaten = Vorschlag>({
   v,
   ich,
   direkt,
@@ -54,20 +71,22 @@ export function VorschlagZeile({
   onKlick,
   ohneMarke = false,
   abgelehnt,
+  texte = {},
 }: {
-  v: Vorschlag;
+  v: T;
   ich: number;
   direkt: boolean;
-  aktionen: VorschlagAktionen;
+  aktionen: VorschlagAktionen<T>;
   auf: boolean;
   onKlick: () => void;
   /** Im Kasten beim Schreiben: alle offen – das Schild sagte nichts. */
   ohneMarke?: boolean;
   /** In der Gruppe „Abgelehnt“: noch so viele Tage sichtbar, „×“ blendet früher aus. */
   abgelehnt?: { noch: number; onWeg: () => void };
+  texte?: ZeilenTexte;
 }) {
   const [laeuft, setLaeuft] = useState(false);
-  const tun = (f?: (v: Vorschlag) => Promise<void>) => () => {
+  const tun = (f?: (v: T) => Promise<void>) => () => {
     if (!f) return;
     setLaeuft(true);
     void f(v).finally(() => setLaeuft(false));
@@ -107,7 +126,7 @@ export function VorschlagZeile({
         disabled={laeuft}
         onClick={tun(aktionen.uebernehmen)}
       >
-        Übernehmen
+        {texte.uebernehmen ?? 'Übernehmen'}
       </button>
     ),
     entscheiden && aktionen.naechstesMal && (
@@ -129,7 +148,7 @@ export function VorschlagZeile({
         disabled={laeuft}
         onClick={() => aktionen.ablehnen!(v)}
       >
-        Ablehnen
+        {texte.ablehnen ?? 'Ablehnen'}
       </button>
     ),
   ].filter(Boolean);
@@ -149,6 +168,7 @@ export function VorschlagZeile({
               von {v.name}
               {meins ? ' (du)' : ''}
               {verschoben ? ' · verschoben' : ''}
+              {v.zusatz ? ` · ${v.zusatz}` : ''}
               {abgelehnt
                 ? ` · noch ${abgelehnt.noch} ${abgelehnt.noch === 1 ? 'Tag' : 'Tage'} sichtbar`
                 : ''}
@@ -173,7 +193,7 @@ export function VorschlagZeile({
           {v.text ? (
             <p className={styles.voll}>{v.text}</p>
           ) : (
-            <p className={styles.leise}>Ohne Text.</p>
+            <p className={styles.leise}>{texte.leer ?? 'Ohne Text.'}</p>
           )}
           {v.stand === 'abgelehnt' && v.grund && (
             <p className={styles.grund}>
@@ -184,6 +204,32 @@ export function VorschlagZeile({
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * **Der Kopf eines klappbaren Vorschlag-Bereichs** (Karte „Vorschläge“ der Sitzungen, Bereich „Vorgeschlagen“ der To-Dos, W9b):
+ * Pfeil, Titel, Zahl – ein Knopf, der den Bereich auf- und zuklappt.
+ */
+export function BereichKopf({
+  titel,
+  anzahl,
+  auf,
+  onKlick,
+}: {
+  titel: string;
+  anzahl: string;
+  auf: boolean;
+  onKlick: () => void;
+}) {
+  return (
+    <h3 className={styles.kartenkopf}>
+      <button type="button" className={styles.klapp} aria-expanded={auf} onClick={onKlick}>
+        <Icon name={auf ? 'chev-down' : 'chev-right'} size={16} />
+        <span className={styles.titel}>{titel}</span>
+        <span className={styles.anzahl}>{anzahl}</span>
+      </button>
+    </h3>
   );
 }
 
@@ -230,18 +276,12 @@ export function VorschlaegeKarte({
   const umschalten = (id: string) => setAufId(aufId === id ? null : id);
   return (
     <section className={styles.karte} aria-label="Vorschläge">
-      <h3 className={styles.kartenkopf}>
-        <button
-          type="button"
-          className={styles.klapp}
-          aria-expanded={bereichAuf}
-          onClick={() => setWahl(!bereichAuf)}
-        >
-          <Icon name={bereichAuf ? 'chev-down' : 'chev-right'} size={16} />
-          <span className={styles.titel}>Vorschläge</span>
-          <span className={styles.anzahl}>{offen} offen</span>
-        </button>
-      </h3>
+      <BereichKopf
+        titel="Vorschläge"
+        anzahl={`${offen} offen`}
+        auf={bereichAuf}
+        onKlick={() => setWahl(!bereichAuf)}
+      />
       {fehler && (
         <p className={styles.fehler} role="alert">
           {fehler}

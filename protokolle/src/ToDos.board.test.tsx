@@ -80,6 +80,7 @@ const uebersicht = (lt: Aufgabe[]): L.GruppenUebersicht[] =>
       treffenNichtFreigegeben: false,
       punkte: 'vorschlagen',
     },
+    todoVorschlaege: [],
     aufgaben: i === 0 ? lt : [],
   }));
 /** Einstellungen vorab ins Gerät legen (wie zuletzt gemerkt). */

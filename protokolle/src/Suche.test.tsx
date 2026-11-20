@@ -86,6 +86,7 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
   {
     gruppe: GRUPPEN[0],
     sitzungen: { ...ohne, protokolle: [OKT.s], teile: OKT.teile },
+    todoVorschlaege: [],
     aufgaben: [
       neueAufgabe({
         id: 'x9',
@@ -101,6 +102,7 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
   {
     gruppe: GRUPPEN[1],
     sitzungen: { ...ohne, protokolle: [JUG.s], teile: JUG.teile },
+    todoVorschlaege: [],
     aufgaben: [],
   },
 ];
@@ -226,6 +228,7 @@ describe('Suche (S3-4b)', () => {
       {
         gruppe: GRUPPEN[0],
         sitzungen: { ...ohne, protokolle: [viele.s], teile: viele.teile },
+        todoVorschlaege: [],
         aufgaben: [],
       },
     ]);

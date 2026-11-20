@@ -154,11 +154,13 @@ describe('Startseite (A2, #480)', () => {
       .getAllByText(/frei$|offen$|wartet auf Freigabe$/)
       .map((e) => e.textContent);
     // Grundkurs (Technik, nicht Leitung) hat auch offene Zahlungen – erscheint aber nicht.
-    expect(texte).toEqual([
-      'Lobpreisabend: 1 Platz frei',
-      'Freizeit: 3 Zahlungen offen',
-      'Workshop wartet auf Freigabe',
-    ]);
+    expect(texte).toEqual(['1 Platz frei', '3 Zahlungen offen', 'wartet auf Freigabe']);
+    // Der Name steht über dem Etikett in derselben Zeile (E24).
+    const zeilen = within(abschnitt('Braucht deine Aufmerksamkeit'));
+    const namen = [...zeilen.getAllByRole('button'), ...zeilen.getAllByRole('link')].map(
+      (z) => z.querySelector('div > b')?.textContent,
+    );
+    expect(namen).toEqual(expect.arrayContaining(['Lobpreisabend', 'Freizeit', 'Workshop']));
   });
 
   it('nachrücken ohne Platzgrenze: „Plätze frei“ ohne Zahl; gezählt werden wartende Personen', () => {
@@ -182,8 +184,8 @@ describe('Startseite (A2, #480)', () => {
     });
     const bereich = within(abschnitt('Braucht deine Aufmerksamkeit'));
     expect(bereich.getAllByText(/frei$/).map((e) => e.textContent)).toEqual([
-      'Lobpreisabend: 1 Platz frei',
-      'Gemeindeabend: Plätze frei',
+      '1 Platz frei',
+      'Plätze frei',
     ]);
     expect(bereich.getByText('1 Person wartet auf der Warteliste. Wer rückt nach?')).toBeTruthy();
     expect(bereich.getByText('2 Personen warten auf der Warteliste. Wer rückt nach?')).toBeTruthy();
@@ -192,7 +194,8 @@ describe('Startseite (A2, #480)', () => {
   it('Anstehend mit Monatsüberschriften; Zähler an den Reitern; Entwürfe und Vorbei auf Klick', () => {
     zeigen();
     const liste = abschnitt('Veranstaltungen');
-    expect(within(liste).getByRole('button', { name: /Anstehend\s*3/ })).toBeTruthy();
+    expect(within(liste).getByRole('button', { name: 'Anstehend, 3' })).toBeTruthy();
+    expect(within(liste).getByRole('button', { name: 'Entwürfe, 1' })).toBeTruthy();
     expect(within(liste).getByText('November 2026')).toBeTruthy();
     expect(
       within(liste)
@@ -220,10 +223,13 @@ describe('Startseite (A2, #480)', () => {
   it('Gruppen-Filter blendet die Veranstaltungen einer Gruppe aus und wieder ein', () => {
     zeigen();
     const liste = abschnitt('Veranstaltungen');
-    const technik = within(liste).getByRole('button', { name: 'Technik' });
+    // Die Gruppen stehen im Filter (R6, B7): angehakt heißt „wird gezeigt“, die Zahl am Knopf sagt, wie viel fehlt.
+    fireEvent.click(within(liste).getByRole('button', { name: 'Filter' }));
+    const technik = within(liste).getByRole('checkbox', { name: 'Technik' });
     fireEvent.click(technik);
-    expect(technik.getAttribute('aria-pressed')).toBe('false');
+    expect((technik as HTMLInputElement).checked).toBe(false);
     expect(within(liste).queryByText('Grundkurs')).toBeNull();
+    expect(within(liste).getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
     fireEvent.click(technik);
     expect(within(liste).getByText('Grundkurs')).toBeTruthy();
   });
@@ -246,24 +252,38 @@ describe('Startseite (A2, #480)', () => {
     ]);
   });
 
-  it('ein Klick auf den Namen öffnet die Veranstaltung; „Ansehen“ beim Entwurf ebenso (A3)', () => {
+  it('die ganze Zeile öffnet die Veranstaltung (E24); beim Entwurf in „Braucht deine Aufmerksamkeit“ ebenso (A3)', () => {
     const oeffnen = zeigen();
     fireEvent.click(
-      within(abschnitt('Veranstaltungen')).getByRole('button', { name: 'Grundkurs' }),
+      within(abschnitt('Veranstaltungen')).getByRole('button', { name: /^Grundkurs/ }),
     );
     expect(oeffnen).toHaveBeenLastCalledWith(52);
     fireEvent.click(
-      within(abschnitt('Braucht deine Aufmerksamkeit')).getByRole('button', { name: 'Ansehen' }),
+      within(abschnitt('Braucht deine Aufmerksamkeit')).getByRole('button', {
+        name: /^Workshop wartet auf Freigabe/,
+      }),
     );
     expect(oeffnen).toHaveBeenLastCalledWith(43);
   });
 
-  it('jede Veranstaltung führt zu ihrer Gruppe in ChurchTools', () => {
+  it('keine Zeile hat mehr einen eigenen Knopf daneben: jede ist EIN Knopf oder Link mit „›“', () => {
     zeigen();
-    const link = within(abschnitt('Veranstaltungen')).getByRole('link', {
-      name: 'Lobpreisabend in ChurchTools öffnen',
+    const zeilen = [
+      ...within(abschnitt('Veranstaltungen')).getAllByRole('button'),
+      ...within(abschnitt('Braucht deine Aufmerksamkeit')).getAllByRole('button'),
+      ...within(abschnitt('Braucht deine Aufmerksamkeit')).getAllByRole('link'),
+    ].filter((z) => z.querySelector('svg:last-child') && z.textContent !== 'Filter');
+    expect(zeilen.length).toBeGreaterThan(5);
+    for (const z of zeilen) expect(z.querySelector('button, a')).toBeNull();
+  });
+
+  it('Hinweise, die nach ChurchTools führen, sind Links mit „in ChurchTools“; die Veranstaltungszeile nicht (der Weg steht im Kopf der Veranstaltung)', () => {
+    zeigen();
+    const link = within(abschnitt('Braucht deine Aufmerksamkeit')).getByRole('link', {
+      name: /^Lobpreisabend.*in ChurchTools/,
     });
     expect(link.getAttribute('href')).toMatch(/\/groups\/40$/);
+    expect(within(abschnitt('Veranstaltungen')).queryByRole('link')).toBeNull();
   });
 });
 
@@ -335,11 +355,12 @@ describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6–D8)', () => {
   it('wer darf (Probelauf): „Endgültig löschen“ mit Namen eintippen, danach gemeldet – ohne Rückgängig', async () => {
     ei.loeschenEndgueltig.mockResolvedValue();
     const geaendert = mitSommerfest(9, [55]);
-    expect(bereich().getByText('Sommerfest: Anmeldungen gelöscht')).toBeTruthy();
+    expect(bereich().getByText('Anmeldungen gelöscht')).toBeTruthy();
     expect(
       bereich().getByText(/Seit dem Di, 01\.09\.2026 – die Antworten stehen aber noch im Verlauf/),
     ).toBeTruthy();
-    fireEvent.click(bereich().getByRole('button', { name: 'Endgültig löschen' }));
+    // Die ganze Zeile öffnet die Rückfrage – gelöscht wird erst dort, nach dem Eintippen des Namens.
+    fireEvent.click(bereich().getByRole('button', { name: /^Sommerfest/ }));
     const fenster = screen.getByRole('dialog', { name: 'Endgültig löschen?' });
     expect(within(fenster).getByText(/Verlauf mit allen Antworten/)).toBeTruthy();
     const los = within(fenster).getByRole<HTMLButtonElement>('button', {
@@ -364,7 +385,7 @@ describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6–D8)', () => {
     ar.insArchiv.mockResolvedValue(meldung);
     const geaendert = mitSommerfest(9, []);
     expect(bereich().getByText(/Endgültig löschen kann ein Admin – im Archiv/)).toBeTruthy();
-    expect(bereich().queryByRole('button', { name: 'Endgültig löschen' })).toBeNull();
+    expect(bereich().queryByRole('button', { name: /^Sommerfest/ })).toBeNull();
     fireEvent.click(bereich().getByRole('button', { name: 'Ins Archiv' }));
     await waitFor(() => expect(geaendert).toHaveBeenCalledWith(meldung));
     expect(ar.insArchiv).toHaveBeenCalledWith(55, 'Sommerfest', E.STATUS.freigegeben);
@@ -372,9 +393,11 @@ describe('Abgelaufen: endgültig löschen (A9-4, D3/D4/D6–D8)', () => {
 
   it('D6: Mitglied ohne Leitung sieht den Hinweis, aber weder Löschen noch Archiv', () => {
     mitSommerfest(7, []);
-    expect(bereich().getByText('Sommerfest: Anmeldungen gelöscht')).toBeTruthy();
+    expect(bereich().getByText('Anmeldungen gelöscht')).toBeTruthy();
     expect(bereich().queryByRole('button', { name: 'Ins Archiv' })).toBeNull();
-    expect(bereich().queryByRole('button', { name: 'Endgültig löschen' })).toBeNull();
+    expect(bereich().queryByRole('button', { name: /^Sommerfest/ })).toBeNull();
+    // Er führt nur nach ChurchTools.
+    expect(bereich().getByRole('link', { name: /^Sommerfest/ })).toBeTruthy();
   });
 });
 
@@ -420,7 +443,10 @@ describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', (
     const { geaendert } = mitGrundkurs(true);
     expect(bereich().getByText('Grundkurs: Mails und Löschen einrichten')).toBeTruthy();
     expect(bereich().getByText('Bisher löscht ChurchTools die Anmeldungen nie.')).toBeTruthy();
-    fireEvent.click(bereich().getByRole('button', { name: 'Einrichten' }));
+    // Die ganze Zeile öffnet die Rückfrage.
+    fireEvent.click(
+      bereich().getByRole('button', { name: /^Grundkurs: Mails und Löschen einrichten/ }),
+    );
     const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
     await waitFor(() =>
       expect(
@@ -446,7 +472,9 @@ describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', (
       .mockRejectedValueOnce(new AB.LoeschdatumVorbei('2026-09-01', 2))
       .mockResolvedValueOnce();
     const { geaendert } = mitGrundkurs(true);
-    fireEvent.click(bereich().getByRole('button', { name: 'Einrichten' }));
+    fireEvent.click(
+      bereich().getByRole('button', { name: /^Grundkurs: Mails und Löschen einrichten/ }),
+    );
     const fenster = screen.getByRole('dialog', { name: 'Mails und Löschen einrichten?' });
     await waitFor(() =>
       expect(
@@ -468,8 +496,11 @@ describe('Ohne Abläufe: „Mails und Löschen einrichten“ (A9-5, F1–F3)', (
     expect(
       bereich().getByText(/Einrichten kann, wer in ChurchTools Routinen verwalten darf/),
     ).toBeTruthy();
-    expect(bereich().queryByRole('button', { name: 'Einrichten' })).toBeNull();
-    fireEvent.click(bereich().getByRole('button', { name: 'Ansehen' }));
+    // Dieselbe Zeile, aber sie öffnet die Veranstaltung statt der Rückfrage.
+    fireEvent.click(
+      bereich().getByRole('button', { name: /^Grundkurs: Mails und Löschen einrichten/ }),
+    );
+    expect(screen.queryByRole('dialog', { name: 'Mails und Löschen einrichten?' })).toBeNull();
     expect(oeffnen).toHaveBeenCalledWith(52);
   });
 });
@@ -508,17 +539,17 @@ describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prü
   }
   const bereich = () => within(abschnitt('Braucht deine Aufmerksamkeit'));
 
-  it('drei: eine Zeile für alle, die einzelnen erst nach „Anzeigen“; „Ausblenden“ klappt wieder zu', () => {
+  it('drei: eine Zeile für alle, die einzelnen erst nach dem Aufklappen; ein zweiter Klick klappt wieder zu', () => {
     zeigeAlte(3);
     expect(bereich().getByText('3 Veranstaltungen: Mails und Löschen einrichten')).toBeTruthy();
     expect(bereich().queryByText('Alt 1: Mails und Löschen einrichten')).toBeNull();
-    const knopf = bereich().getByRole('button', { name: 'Anzeigen' });
+    const knopf = bereich().getByRole('button', { name: /^3 Veranstaltungen: Mails/ });
     expect(knopf.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(knopf);
+    expect(knopf.getAttribute('aria-expanded')).toBe('true');
     for (const n of [1, 2, 3])
       expect(bereich().getByText(`Alt ${n}: Mails und Löschen einrichten`)).toBeTruthy();
-    expect(bereich().getAllByRole('button', { name: 'Einrichten' })).toHaveLength(3);
-    fireEvent.click(bereich().getByRole('button', { name: 'Ausblenden' }));
+    fireEvent.click(knopf);
     expect(bereich().queryByText('Alt 2: Mails und Löschen einrichten')).toBeNull();
   });
 
@@ -554,7 +585,7 @@ describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prü
         onOeffnen={() => {}}
       />,
     );
-    fireEvent.click(bereich().getByRole('button', { name: 'Anzeigen' }));
+    fireEvent.click(bereich().getByRole('button', { name: /^3 Veranstaltungen: Mails/ }));
     const titel = abschnitt('Braucht deine Aufmerksamkeit').querySelectorAll('b');
     // Die Kacheln tragen den Tag ebenfalls fett – gezählt werden nur die Überschriften.
     expect([...titel].map((b) => b.textContent).filter((t) => !/^\d+$/.test(t ?? ''))).toEqual([
@@ -562,7 +593,7 @@ describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prü
       'Alt 1: Mails und Löschen einrichten',
       'Alt 2: Mails und Löschen einrichten',
       'Alt 3: Mails und Löschen einrichten',
-      'Dazwischen wartet auf Freigabe',
+      'Dazwischen',
     ]);
   });
 

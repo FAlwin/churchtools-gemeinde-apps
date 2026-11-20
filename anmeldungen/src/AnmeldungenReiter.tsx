@@ -2,6 +2,9 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import type { OeffentlicheEinstellungen, TabellenWahl } from '@shared/anmeldung/formular';
 import { euroText } from '@shared/anmeldung/preis';
@@ -35,6 +38,8 @@ import { leseZeilenOben, zeileUmschalten } from './zeilenOben';
 import { aendereEinstellungen } from './einrichten';
 import { fehlerMeldung } from './zustand';
 import { anzahlText } from './anzeige';
+import { Etikett } from './Etikett';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { VonHandFenster } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
 import { RundmailFenster } from './RundmailFenster';
@@ -147,6 +152,7 @@ export function AnmeldungenReiter({
     () => (stand ? anmeldungenAus(e, stand, stichtag) : []),
     [e, stand, stichtag],
   );
+  const handy = useMedienAbfrage(HANDY_BREITE);
   // ── Die Fenster (`useFenster`) ──
   const {
     meldung,
@@ -211,6 +217,36 @@ export function AnmeldungenReiter({
     { filter, suche, sortierung, jePerson, oben },
   );
   const frei = maxPlaetze === null ? null : maxPlaetze - z.belegt;
+  // Das „⋯“-Menü der Liste (R6, B7): was vorher drei Knöpfe nebeneinander waren.
+  const mehr: Option[] = [
+    ...(filter !== 'abgesagt' && liste.length > 0
+      ? [
+          {
+            label: 'Spalten',
+            symbol: <Icon name="columns" size={16} />,
+            onClick: () => setSpaltenOffen(true),
+          },
+        ]
+      : []),
+    ...(liste.length > 0
+      ? [
+          {
+            label: 'Druckliste',
+            symbol: <Icon name="drucker" size={16} />,
+            onClick: () => setDruck(true),
+          },
+        ]
+      : []),
+    ...(darf && liste.length > 0
+      ? [
+          {
+            label: 'Rundmail',
+            symbol: <Icon name="brief" size={16} />,
+            onClick: () => setRundmail(true),
+          },
+        ]
+      : []),
+  ];
   /** Eine Zeile an- oder abheften – was es nicht mehr gibt, fällt dabei aus dem Gerätespeicher. */
   const anheftenUm = (k: string) =>
     setOben(
@@ -277,11 +313,7 @@ export function AnmeldungenReiter({
       case 'name':
         return x.wer;
       case 'nr':
-        return x.nr ? (
-          <span className={v.nr}>{x.nr}</span>
-        ) : (
-          <span className={s.chip}>ohne Nr.</span>
-        );
+        return x.nr ? <span className={v.nr}>{x.nr}</span> : <Etikett>ohne Nr.</Etikett>;
       case 'personen':
         return (
           <span className={a.personen}>
@@ -438,27 +470,15 @@ export function AnmeldungenReiter({
             />
           )}
           <span className={a.rechts}>
-            {filter !== 'abgesagt' && liste.length > 0 && (
-              <FensterKnopf art="zweit" aria-label="Spalten" onClick={() => setSpaltenOffen(true)}>
-                <Icon name="columns" size={18} />
-                <span className={a.breit}>Spalten</span>
-              </FensterKnopf>
-            )}
-            {liste.length > 0 && (
-              <FensterKnopf art="zweit" aria-label="Druckliste" onClick={() => setDruck(true)}>
-                <Icon name="drucker" size={18} />
-                <span className={a.breit}>Druckliste</span>
-              </FensterKnopf>
-            )}
-            {darf && liste.length > 0 && (
-              <FensterKnopf art="zweit" aria-label="Rundmail" onClick={() => setRundmail(true)}>
-                <Icon name="brief" size={18} />
-                <span className={a.breit}>Rundmail</span>
-              </FensterKnopf>
-            )}
             {darf && (
-              <FensterKnopf onClick={() => setVonHand({ dazu: null })}>＋ Von Hand</FensterKnopf>
+              <KopfKnopf
+                neu
+                label="Von Hand"
+                symbol={<Icon name="plus" size={18} />}
+                onClick={() => setVonHand({ dazu: null })}
+              />
             )}
+            <MehrMenue optionen={mehr} handy={handy} titel="Mehr zur Liste" />
           </span>
         </div>
 

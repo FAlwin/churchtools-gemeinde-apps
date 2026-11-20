@@ -1,6 +1,10 @@
-import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Fragment, useState } from 'react';
-import { Segment } from '@ui/bedienung/Segment';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import { KlickZeile } from '@ui/bedienung/KlickZeile';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import type { Hinweis, Veranstaltung } from '@shared/anmeldung/uebersicht';
@@ -12,6 +16,7 @@ import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
 import { insArchiv } from './archiv';
 import { STATUS } from './einrichten';
 import { fehlerMeldung } from './zustand';
+import { Etikett } from './Etikett';
 import { STAND_TEXT, anzahlText, datumText, kachel, monatTitel, schlussText } from './anzeige';
 import styles from './Startseite.module.scss';
 import f from './Formular.module.scss';
@@ -62,21 +67,15 @@ function Kachel({ tag, grau }: { tag: string | null; grau?: boolean }) {
   );
 }
 
-function ZurGruppe({
-  id,
-  name,
-  text = 'In ChurchTools',
-}: {
-  id: number;
-  name: string;
-  text?: string;
-}) {
+/**
+ * Führt eine Zeile nach ChurchTools, steht das klein dabei (E24) – die Zeile selbst ist der Link
+ * (`KlickZeile href`), kein eigener Knopf daneben.
+ */
+function NachCt() {
   return (
-    // Schmal nur das Symbol; für Screenreader steht dran, WOHIN es geht – drei gleiche „Öffnen“ helfen nicht.
-    <a className={styles.link} href={gruppenUrl(id)} aria-label={`${name} in ChurchTools öffnen`}>
-      <span className={styles.linkText}>{text}</span>
-      <Icon name="external" size={14} />
-    </a>
+    <small className={styles.nachCt}>
+      in ChurchTools <Icon name="external" size={12} />
+    </small>
   );
 }
 
@@ -96,16 +95,18 @@ function EinrichtenSammelZeile({
   onUmschalten: () => void;
 }) {
   return (
-    <div className={styles.zeile}>
+    <KlickZeile
+      className={styles.zeile}
+      onClick={onUmschalten}
+      ariaExpanded={offen}
+      pfeil={offen ? 'auf' : 'zu'}
+    >
       <Kachel tag={null} grau />
       <div className={styles.mitte}>
         <b>{anzahl} Veranstaltungen: Mails und Löschen einrichten</b>
         <small>Bisher löscht ChurchTools ihre Anmeldungen nie.</small>
       </div>
-      <FensterKnopf art="zweit" aria-expanded={offen} onClick={onUmschalten}>
-        {offen ? 'Ausblenden' : 'Anzeigen'}
-      </FensterKnopf>
-    </div>
+    </KlickZeile>
   );
 }
 
@@ -131,51 +132,70 @@ function HinweisZeile({
 }) {
   if (h.art === 'kaputt') {
     return (
-      <div className={styles.zeile}>
+      <KlickZeile className={styles.zeile} href={gruppenUrl(h.id)}>
         <Kachel tag={null} grau />
         <div className={styles.mitte}>
-          <b>{h.name}: Einstellungen lassen sich nicht lesen</b>
+          <b>{h.name}</b>
+          <span className={styles.chips}>
+            <Etikett ton="rot">Einstellungen lassen sich nicht lesen</Etikett>
+            <NachCt />
+          </span>
           <small>
             {gruppenName(h.gruppeId)} · Die Beschreibung der Gruppe wurde wohl in ChurchTools
             geändert. Bis das behoben ist, fehlt die Veranstaltung in der Liste.
           </small>
         </div>
-        <ZurGruppe id={h.id} name={h.name} />
-      </div>
+      </KlickZeile>
     );
   }
   const v = h.v;
   if (h.art === 'endgueltig') {
     // A9-4 (D3, D4, D8): Wer darf, löscht gleich; die Leitung ohne Recht legt ins Archiv, dort löscht ein Admin.
     const archiv = !h.darf && darfArchivieren(v.gruppeId);
-    return (
-      <div className={styles.zeile}>
+    const inhalt = (
+      <>
         <Kachel tag={v.tag} grau />
         <div className={styles.mitte}>
-          <b>{v.name}: Anmeldungen gelöscht</b>
+          <b>{v.name}</b>
+          <span className={styles.chips}>
+            <Etikett ton="rot">Anmeldungen gelöscht</Etikett>
+            {!h.darf && !archiv && <NachCt />}
+          </span>
           <small>
             Seit dem {datumText(h.seit)} – die Antworten stehen aber noch im Verlauf der Gruppe.{' '}
             {h.darf ? 'Jetzt endgültig löschen?' : 'Endgültig löschen kann ein Admin – im Archiv.'}
           </small>
         </div>
-        {h.darf ? (
-          <FensterKnopf art="loeschen" onClick={() => onEndgueltig(v)}>
-            Endgültig löschen
-          </FensterKnopf>
-        ) : archiv ? (
-          <FensterKnopf art="zweit" onClick={() => onInsArchiv(v)}>
-            Ins Archiv
-          </FensterKnopf>
-        ) : (
-          <ZurGruppe id={v.id} name={v.name} />
-        )}
-      </div>
+      </>
+    );
+    // „Endgültig löschen“ fragt im Fenster nach (Namen eintippen) – die ganze Zeile darf es öffnen. „Ins Archiv“ legt
+    // sofort ab (mit „Rückgängig“): Das bleibt ein eigener, stiller Knopf, damit ein Fehlklick auf die Zeile nichts tut.
+    if (h.darf)
+      return (
+        <KlickZeile className={styles.zeile} onClick={() => onEndgueltig(v)}>
+          {inhalt}
+        </KlickZeile>
+      );
+    if (archiv)
+      return (
+        <div className={styles.zeile}>
+          {inhalt}
+          <TextKnopf onClick={() => onInsArchiv(v)}>Ins Archiv</TextKnopf>
+        </div>
+      );
+    return (
+      <KlickZeile className={styles.zeile} href={gruppenUrl(v.id)}>
+        {inhalt}
+      </KlickZeile>
     );
   }
-  if (h.art === 'einrichten')
-    // A9-5 (F1, F3): für alle in der Gruppe; den Knopf hat, wer Routinen verwalten darf – er öffnet gleich die Rückfrage.
+  if (h.art === 'einrichten') {
+    // A9-5 (F1, F3): für alle in der Gruppe; wer Routinen verwalten darf, öffnet gleich die Rückfrage, alle anderen die Veranstaltung.
     return (
-      <div className={styles.zeile}>
+      <KlickZeile
+        className={styles.zeile}
+        onClick={() => (h.darf ? onEinrichten(v) : onOeffnen(v.id))}
+      >
         <Kachel tag={v.tag} grau={v.phase === 'vorbei'} />
         <div className={styles.mitte}>
           <b>{v.name}: Mails und Löschen einrichten</b>
@@ -184,21 +204,13 @@ function HinweisZeile({
             {!h.darf && ' Einrichten kann, wer in ChurchTools Routinen verwalten darf.'}
           </small>
         </div>
-        {h.darf ? (
-          <FensterKnopf art="zweit" onClick={() => onEinrichten(v)}>
-            Einrichten
-          </FensterKnopf>
-        ) : (
-          <FensterKnopf art="zweit" onClick={() => onOeffnen(v.id)}>
-            Ansehen
-          </FensterKnopf>
-        )}
-      </div>
+      </KlickZeile>
     );
+  }
   const text =
     h.art === 'freigabe'
       ? {
-          titel: `${v.name} wartet auf Freigabe`,
+          etikett: <Etikett ton="blau">wartet auf Freigabe</Etikett>,
           // Admins dürfen jede freigeben (A3-Abnahme: Alwin las „kann die Leitung“, obwohl er selbst darf).
           zeile: h.darfFreigeben
             ? `${gruppenName(v.gruppeId)} · Freigeben kannst du als Leitung der Gruppe.`
@@ -208,32 +220,41 @@ function HinweisZeile({
         }
       : h.art === 'nachruecken'
         ? {
-            titel:
-              h.frei === null
-                ? `${v.name}: Plätze frei`
-                : `${v.name}: ${anzahlText(h.frei, 'Platz', 'Plätze')} frei`,
+            etikett: (
+              <Etikett ton="blau">
+                {h.frei === null ? 'Plätze frei' : `${anzahlText(h.frei, 'Platz', 'Plätze')} frei`}
+              </Etikett>
+            ),
             zeile: `${anzahlText(h.wartend, 'Person wartet', 'Personen warten')} auf der Warteliste. Wer rückt nach?`,
           }
         : {
-            titel: `${v.name}: ${anzahlText(h.offen, 'Zahlung', 'Zahlungen')} offen`,
+            etikett: (
+              <Etikett ton="rot">{anzahlText(h.offen, 'Zahlung', 'Zahlungen')} offen</Etikett>
+            ),
             zeile: 'In der Liste „bezahlt“ abhaken, sobald das Geld da ist.',
           };
-  return (
-    <div className={styles.zeile}>
+  const inhalt = (
+    <>
       <Kachel tag={v.tag} />
       <div className={styles.mitte}>
-        <b>{text.titel}</b>
+        <b>{v.name}</b>
+        <span className={styles.chips}>
+          {text.etikett}
+          {h.art !== 'freigabe' && <NachCt />}
+        </span>
         <small>{text.zeile}</small>
       </div>
-      {h.art === 'freigabe' ? (
-        <FensterKnopf art="zweit" onClick={() => onOeffnen(v.id)}>
-          Ansehen
-        </FensterKnopf>
-      ) : (
-        // Nachrücken und Zahlungen gehen bis zur Anmeldungsliste (A7) in ChurchTools.
-        <ZurGruppe id={v.id} name={v.name} />
-      )}
-    </div>
+    </>
+  );
+  return h.art === 'freigabe' ? (
+    <KlickZeile className={styles.zeile} onClick={() => onOeffnen(v.id)}>
+      {inhalt}
+    </KlickZeile>
+  ) : (
+    // Nachrücken und Zahlungen gehen bis zur Anmeldungsliste (A7) in ChurchTools.
+    <KlickZeile className={styles.zeile} href={gruppenUrl(v.id)}>
+      {inhalt}
+    </KlickZeile>
   );
 }
 
@@ -277,21 +298,20 @@ function VeranstaltungZeile({
   const schluss = schlussText(v, heute, zeitzone);
   const wartend = v.belegung?.wartend ?? 0;
   return (
-    <div className={styles.zeile}>
+    // Die ganze Zeile öffnet die Veranstaltung (E24). „In ChurchTools“ steht dort im Kopf – ein Klick weiter.
+    <KlickZeile className={styles.zeile} onClick={() => onOeffnen(v.id)}>
       <Kachel tag={v.tag} grau={v.phase === 'vorbei'} />
       <div className={styles.mitte}>
-        <button type="button" className={styles.titelKnopf} onClick={() => onOeffnen(v.id)}>
-          {v.name}
-        </button>
+        <b>{v.name}</b>
         <small>{teile.join(' · ')}</small>
         <span className={styles.chips}>
-          {v.phase === 'entwurf' && <span className={styles.chip}>Entwurf</span>}
+          {v.phase === 'entwurf' && <Etikett>Entwurf</Etikett>}
           {v.anmeldung && (
-            <span
-              className={`${styles.chip}${v.anmeldung === 'offen' ? ' ' + styles.chipGruen : ''}${v.anmeldung === 'voll' ? ' ' + styles.chipRot : ''}`}
+            <Etikett
+              ton={v.anmeldung === 'offen' ? 'gruen' : v.anmeldung === 'voll' ? 'rot' : 'neutral'}
             >
               {STAND_TEXT[v.anmeldung]}
-            </span>
+            </Etikett>
           )}
           {schluss && <small>{schluss}</small>}
           {wartend > 0 && <small>{wartend} auf der Warteliste</small>}
@@ -299,8 +319,7 @@ function VeranstaltungZeile({
         </span>
       </div>
       <Belegung v={v} />
-      <ZurGruppe id={v.id} name={v.name} />
-    </div>
+    </KlickZeile>
   );
 }
 
@@ -316,6 +335,7 @@ export function Startseite({
   onGeaendert = () => {},
 }: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const [loeschen, setLoeschen] = useState<Veranstaltung | null>(null);
   const [einrichten, setEinrichten] = useState<Veranstaltung | null>(null);
   const [einrichtenOffen, setEinrichtenOffen] = useState(false);
@@ -349,20 +369,8 @@ export function Startseite({
     else monate.push({ titel, eintraege: [v] });
   }
 
-  const zaehler = (r: Reiter, text: string) => (
-    <>
-      {text}
-      {einteilung[r].length > 0 && <span className={styles.zaehler}>{einteilung[r].length}</span>}
-    </>
-  );
-
-  const umschalten = (id: number) =>
-    setAuswahl((alt) => {
-      const neu = new Set(alt);
-      if (neu.has(id)) neu.delete(id);
-      else neu.add(id);
-      return neu;
-    });
+  // Gruppen im Filter („Gruppen“): ausgeschaltet sind die, die nicht in der Auswahl stehen.
+  const gruppenAus = start.gruppen.filter((g) => !auswahl.has(g.id)).map((g) => String(g.id));
 
   const zahlEinrichten = hinweise.filter((h) => h.art === 'einrichten').length;
   const sammeln = zahlEinrichten >= EINRICHTEN_ZUSAMMEN;
@@ -418,34 +426,46 @@ export function Startseite({
         <section className={styles.karte} aria-labelledby="veranstaltungen">
           <div className={styles.kopf}>
             <h2 id="veranstaltungen">Veranstaltungen</h2>
-            <Segment<Reiter>
-              className={styles.reiter}
-              ariaLabel="Auswahl"
-              value={reiter}
-              onChange={setReiter}
-              options={[
-                { value: 'anstehend', label: zaehler('anstehend', 'Anstehend') },
-                { value: 'entwuerfe', label: zaehler('entwuerfe', 'Entwürfe') },
-                { value: 'vorbei', label: zaehler('vorbei', 'Vorbei') },
-              ]}
+          </div>
+          <div className={styles.werkzeuge}>
+            <Werkzeugzeile
+              handy={handy}
+              ariaLabel="Veranstaltungen"
+              links={
+                <AnsichtWahl<Reiter>
+                  ariaLabel="Auswahl"
+                  value={reiter}
+                  onChange={setReiter}
+                  handy={handy}
+                  options={[
+                    { value: 'anstehend', label: 'Anstehend', anzahl: einteilung.anstehend.length },
+                    { value: 'entwuerfe', label: 'Entwürfe', anzahl: einteilung.entwuerfe.length },
+                    { value: 'vorbei', label: 'Vorbei', anzahl: einteilung.vorbei.length },
+                  ]}
+                />
+              }
+              rechts={
+                <FilterKnopf
+                  still
+                  abschnitte={[
+                    {
+                      titel: 'Gruppen',
+                      optionen: start.gruppen.map((g) => ({ wert: String(g.id), text: g.name })),
+                      aus: gruppenAus,
+                      onAus: (aus) =>
+                        setAuswahl(
+                          new Set(
+                            start.gruppen
+                              .filter((g) => !aus.includes(String(g.id)))
+                              .map((g) => g.id),
+                          ),
+                        ),
+                    },
+                  ]}
+                />
+              }
             />
           </div>
-          {start.gruppen.length > 1 && (
-            <div className={styles.filter} role="group" aria-label="Gruppen">
-              <span className={styles.leise}>Gruppen</span>
-              {start.gruppen.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  className={styles.filterChip}
-                  aria-pressed={auswahl.has(g.id)}
-                  onClick={() => umschalten(g.id)}
-                >
-                  {g.name}
-                </button>
-              ))}
-            </div>
-          )}
           <div className={styles.liste}>
             {start.gruppen.length === 0 ? (
               <div className={styles.leer}>
@@ -546,17 +566,16 @@ export function Startseite({
               <h2 id="nachweise-karte">Nachweise</h2>
             </div>
             <ul className={styles.liste}>
-              <li className={styles.zeile}>
-                <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
-                  <Icon name="kreis-haken" size={18} />
-                </span>
-                <div className={styles.mitte}>
-                  <b>Führungszeugnis &amp; Co.</b>
-                  <small>Nachweis-Arten ansehen und einrichten</small>
-                </div>
-                <FensterKnopf art="zweit" onClick={onNachweise}>
-                  Öffnen
-                </FensterKnopf>
+              <li>
+                <KlickZeile className={styles.zeile} onClick={onNachweise}>
+                  <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
+                    <Icon name="kreis-haken" size={18} />
+                  </span>
+                  <div className={styles.mitte}>
+                    <b>Führungszeugnis &amp; Co.</b>
+                    <small>Nachweis-Arten ansehen und einrichten</small>
+                  </div>
+                </KlickZeile>
               </li>
             </ul>
           </section>

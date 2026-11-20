@@ -119,6 +119,12 @@ const fertig = (
   verlauf = [dazu(10, '2026-10-17')],
 ) => ({ art: 'fertig', stand: { ...stand(roh, verlauf), verlaufGekuerzt: false } }) as const;
 
+/** Einen Eintrag des „⋯“-Menüs der Liste wählen (B7: Spalten, Druckliste, Rundmail liegen dort). */
+const menuPunkt = (name: string) => {
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+  fireEvent.click(screen.getByRole('menuitem', { name }));
+};
+
 describe('Reiter Anmeldungen', () => {
   // Die Zahlen (Plätze, Warteliste, Zahlung offen) stehen seit U1 oben auf der Seite – getestet in `Einstieg.test.tsx`.
   it('eine Zeile je Anmeldung; „frei, aber jemand wartet“ steht nur im Reiter Warteliste (U2-1)', () => {
@@ -223,6 +229,49 @@ describe('Reiter Anmeldungen', () => {
   });
 });
 
+describe('„⋯“-Menü der Liste (B7, E24)', () => {
+  beforeEach(() => {
+    rm.platzhalterLaden.mockResolvedValue(new Map());
+  });
+  const ohneMenue = () => expect(screen.queryByRole('menu')).toBeNull();
+  const punkte = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+    const namen = screen.getAllByRole('menuitem').map((x) => x.textContent);
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+    return namen;
+  };
+
+  // Jeder Eintrag einzeln (Lehre 05.08.2026): erst geht das Menü zu, dann öffnet sich das Fenster – nicht umgekehrt.
+  for (const [name, fenster] of [
+    ['Spalten', /Spalten/],
+    ['Druckliste', /Druckliste/],
+    ['Rundmail', /Rundmail/],
+  ] as const)
+    it(`„${name}“ öffnet sein Fenster und schließt das Menü`, () => {
+      zeigen(fertig());
+      menuPunkt(name);
+      ohneMenue();
+      expect(screen.getByRole('dialog', { name: fenster })).toBeTruthy();
+    });
+
+  it('„Von Hand“ ist der eine grüne Knopf, kein Eintrag im Menü; die Leiste hat keinen blauen Knopf', () => {
+    zeigen(fertig());
+    expect(punkte()).toEqual(['Spalten', 'Druckliste', 'Rundmail']);
+    expect(screen.getByRole('button', { name: 'Von Hand' })).toBeTruthy();
+  });
+
+  it('ohne Recht: kein „Von Hand“, kein „Rundmail“ – Spalten und Druckliste bleiben', () => {
+    zeigen(fertig(), 10, false, false);
+    expect(screen.queryByRole('button', { name: 'Von Hand' })).toBeNull();
+    expect(punkte()).toEqual(['Spalten', 'Druckliste']);
+  });
+
+  it('ohne Anmeldungen: kein Menü, wo nichts zu tun ist', () => {
+    zeigen(fertig([], []));
+    expect(screen.queryByRole('button', { name: 'Mehr zur Liste' })).toBeNull();
+  });
+});
+
 describe('Tabelle (U2-1)', () => {
   const zwei = () =>
     fertig(
@@ -247,9 +296,11 @@ describe('Tabelle (U2-1)', () => {
     expect(kopf.slice(-3)).toEqual(['Betrag', 'Bezahlt', 'Angemeldet am']);
     // Lange Fragen sind auf zwei Zeilen gekürzt – ganz stehen sie beim Darüberfahren (echte Prüfung U2-1).
     for (const k of spaltenKoepfe()) expect(k.getAttribute('title')).toBe(k.textContent);
-    // Druckliste und Rundmail mit Linien-Symbol statt Zeichen (am Handy nur das Symbol).
-    for (const name of ['Druckliste', 'Rundmail'])
-      expect(screen.getByRole('button', { name }).querySelector('svg')).toBeTruthy();
+    // Druckliste und Rundmail liegen im „⋯“-Menü (B7), jeder Eintrag mit Linien-Symbol und Wort.
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+    for (const name of ['Spalten', 'Druckliste', 'Rundmail'])
+      expect(screen.getByRole('menuitem', { name }).querySelector('svg')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
     const summe = screen.getAllByRole('row').at(-1)!.textContent;
     expect(summe).toMatch(/^2 Anmeldungen/);
     expect(summe).toMatch(/3 Personen\+ 1 auf der Warteliste/);
@@ -669,7 +720,7 @@ describe('Anmeldung von Hand (A7-4a)', () => {
       adresseFehlt: false,
     });
     const z = zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     // Fenster wie ChurchTools (E6-O F4): erst suchen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten).
     expect(fensterKnoepfe()).not.toContain('Abbrechen');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
@@ -729,7 +780,7 @@ describe('Anmeldung von Hand (A7-4a)', () => {
 
   it('mit Bestätigungsmails (A9-1): Von Hand nennt die Bestätigung statt „keine Mail“', async () => {
     zeigen(fertig(), 10, false, true, true);
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Probe' },
     });
@@ -751,7 +802,7 @@ describe('Anmeldung von Hand (A7-4a)', () => {
       adresseFehlt: false,
     });
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Nina Neu' },
     });
@@ -990,7 +1041,7 @@ describe('Zurückholen (A7-4c)', () => {
       },
     ]);
     zeigen(mitAbsage());
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Lena' },
     });
@@ -1012,7 +1063,7 @@ describe('Zurückholen (A7-4c)', () => {
       },
     ]);
     zeigen(mitAbsage(), 10, false, true, true);
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Lena' },
     });
@@ -1112,7 +1163,7 @@ describe('Rundmail (A7-5)', () => {
   it('Rückfrage „jetzt senden?“: „Abbrechen“ führt zum Schreiben zurück – der Text bleibt (02.11.2026)', async () => {
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    menuPunkt('Rundmail');
     fireEvent.change(screen.getByLabelText('Betreff'), {
       target: { value: 'Mein eigener Betreff' },
     });
@@ -1131,7 +1182,7 @@ describe('Rundmail (A7-5)', () => {
   it('Zahlungserinnerung an „Zahlung offen“: je Anmeldung eine Mail, Platzhalter für ChurchTools, Rückfrage, verschickt', async () => {
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    menuPunkt('Rundmail');
     // Aus dem Filter „Zahlung offen“ → gleich mit der Zahlungserinnerung.
     expect(screen.getByLabelText<HTMLInputElement>('Betreff').value).toBe(
       'Kinderfreizeit: Bitte noch überweisen',
@@ -1166,7 +1217,7 @@ describe('Rundmail (A7-5)', () => {
 
   it('unbekannter Platzhalter → Hinweis, Senden gesperrt; eigener Text wird nicht still durch eine Vorlage ersetzt', async () => {
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    menuPunkt('Rundmail');
     await waitFor(() => expect(rm.platzhalterLaden).toHaveBeenCalled());
     fireEvent.change(screen.getByLabelText('Betreff'), { target: { value: 'Hallo' } });
     fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'Größe: [Schuhgröße]' } });
@@ -1187,7 +1238,7 @@ describe('Rundmail (A7-5)', () => {
     rm.vorschauLaden.mockResolvedValue({ betreff: 'Kinderfreizeit', html: '<p>Hallo</p>' });
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    menuPunkt('Rundmail');
     const vorschau = screen.getByRole<HTMLButtonElement>('button', { name: 'Vorschau' });
     await waitFor(() => expect(vorschau.disabled).toBe(false));
     fireEvent.click(vorschau);
@@ -1204,7 +1255,7 @@ describe('Rundmail (A7-5)', () => {
       Object.assign(new R.UnklarObVerschickt(), { message: 'unklar – bitte erst nachsehen' }),
     );
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    menuPunkt('Rundmail');
     fireEvent.click(screen.getByRole('button', { name: 'Zahlungserinnerung' }));
     const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
     await waitFor(() => expect(senden.disabled).toBe(false));
@@ -1229,7 +1280,7 @@ describe('Druckliste (A8-1)', () => {
       ).toBe(false),
     );
   const oeffnen = async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Druckliste' }));
+    menuPunkt('Druckliste');
     await pdfFertig();
   };
 
@@ -1264,7 +1315,7 @@ describe('Druckliste (A8-1)', () => {
   it('lässt sich das PDF nicht bauen: Fehler im Fenster, kein Teilen', async () => {
     vi.mocked(LP.listenPdf).mockRejectedValueOnce(new Error('jsPDF'));
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: 'Druckliste' }));
+    menuPunkt('Druckliste');
     expect((await within(fenster()).findByRole('alert')).textContent).toMatch(
       /antwortet gerade nicht/,
     );
@@ -1330,7 +1381,7 @@ describe('Spalten wählen (U2-3)', () => {
   });
   const kopf = () => spaltenKoepfe().map((k) => k.textContent);
   const fenster = () => screen.getByRole('dialog');
-  const spalten = () => fireEvent.click(screen.getByRole('button', { name: 'Spalten' }));
+  const spalten = () => menuPunkt('Spalten');
   const haken = (name: string) =>
     fireEvent.click(within(fenster()).getByRole('checkbox', { name }));
   const uebernehmen = () =>
@@ -1463,9 +1514,15 @@ describe('Spalten wählen (U2-3)', () => {
 
   it('bei „Abgesagt“ kein Knopf „Spalten“ (feste Spalten)', () => {
     zeigen(fertig());
-    expect(screen.getByRole('button', { name: 'Spalten' })).toBeTruthy();
+    const hatSpalten = () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      const da = screen.queryByRole('menuitem', { name: 'Spalten' }) !== null;
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      return da;
+    };
+    expect(hatSpalten()).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
-    expect(screen.queryByRole('button', { name: 'Spalten' })).toBeNull();
+    expect(hatSpalten()).toBe(false);
   });
 });
 
@@ -1640,7 +1697,7 @@ describe('Von Hand in Schritten (F2d)', () => {
   const stufe = () => screen.getByText(/^Schritt \d von \d/).textContent;
   async function paulWaehlen(x: ReturnType<typeof e>) {
     zeigen(fertig(), 10, false, true, false, false, x);
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Probe' },
     });
@@ -1802,7 +1859,7 @@ describe('Von Hand: freie Antwort (F3b)', () => {
     x.formular.person.find((f) => f.id === 'foto')!.frei = { name: NOCH_NICHT, textfeld: 'auf' };
     x.ctFelder = { ...x.ctFelder, 'foto.frei': TEXT_SPALTE };
     zeigen(fertig(), 10, false, true, false, false, x);
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Probe' },
     });
@@ -1917,7 +1974,7 @@ describe('Adresse von Hand (F4c, Entwurf f4c-von-hand-v1)', () => {
       { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null, adresse },
     ]);
     zeigen(fertig(), 10, false, true, false, false, einst());
-    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Von Hand' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Probe' },
     });

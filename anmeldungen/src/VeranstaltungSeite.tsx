@@ -49,10 +49,16 @@ import { nachpruefungAus } from './nachpruefung';
 import { ladeMitglieder } from './mitglieder';
 import { AnmeldungenReiter, type ListenFilter, type MitgliederZustand } from './AnmeldungenReiter';
 import { Kennzahlen, SchrittLeiste } from './Einstieg';
-import { schritteBisZurFreigabe, type SchrittId } from './schritte';
+import { freigebenPlatz, schritteBisZurFreigabe, type SchrittId } from './schritte';
+import { Etikett } from './Etikett';
 import { Baukasten } from './Baukasten';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
-import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { KopfLink } from '@ui/bedienung/KopfKnopf';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
 import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText, schlussVorLoeschenText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
@@ -123,11 +129,7 @@ function Karte({
     <section className={s.karte} aria-label={titel}>
       <div className={s.kopf}>
         <h2>{titel}</h2>
-        {onBearbeiten && (
-          <FensterKnopf art="zweit" onClick={onBearbeiten}>
-            {knopf}
-          </FensterKnopf>
-        )}
+        {onBearbeiten && <TextKnopf onClick={onBearbeiten}>{knopf}</TextKnopf>}
       </div>
       <dl className={v.kv}>{children}</dl>
     </section>
@@ -434,6 +436,7 @@ export function VeranstaltungSeite({
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [fenster, setFenster] = useState<Fenster>(null);
+  const handy = useMedienAbfrage(HANDY_BREITE);
   // A7-1: Mitglieder einmal laden – für die Liste und die Nachprüfung (A6-5c). `null` = Entwurf, nichts geladen.
   const [mitglieder, setMitglieder] = useState<MitgliederZustand | null>(null);
   const ladeLauf = useRef(0);
@@ -639,6 +642,26 @@ export function VeranstaltungSeite({
   const offen: Reiter = reiter ?? (entwurf ? 'vorbereiten' : 'anmeldungen');
   const bereich: Bereich = offen === 'anmeldungen' ? 'anmeldungen' : 'vorbereiten';
   const schritte = schritteBisZurFreigabe(e, a, zeitzone);
+  const kopfMenue: Option[] = [
+    ...(freigebenPlatz(schritte, entwurf, darf) === 'menue'
+      ? [
+          {
+            label: 'Freigeben',
+            symbol: <Icon name="kreis-haken" size={16} />,
+            onClick: () => setFenster('freigeben'),
+          },
+        ]
+      : []),
+    ...(darf
+      ? [
+          {
+            label: 'Verwalten',
+            symbol: <Icon name="zahnrad" size={16} />,
+            onClick: () => setFenster('verwalten'),
+          },
+        ]
+      : []),
+  ];
   const schritt = (id: SchrittId) => {
     if (id === 'formular') onReiter('formular');
     else setFenster(id);
@@ -654,23 +677,18 @@ export function VeranstaltungSeite({
       <header className={v.kopf}>
         <div>
           <h1>{daten.name}</h1>
-          <span className={entwurf ? s.chip : `${s.chip} ${s.chipGruen}`}>
+          <Etikett ton={entwurf ? 'neutral' : 'gruen'}>
             {entwurf ? 'Entwurf' : 'Freigegeben'}
-          </span>
+          </Etikett>
         </div>
         <div className={v.aktionen}>
-          {entwurf && darf && (
-            <FensterKnopf onClick={() => setFenster('freigeben')}>Freigeben</FensterKnopf>
-          )}
-          {darf && (
-            <FensterKnopf art="zweit" onClick={() => setFenster('verwalten')}>
-              Verwalten
-            </FensterKnopf>
-          )}
-          <FensterLink art="zweit" href={`${ctBasis()}/groups/${id}`}>
-            In ChurchTools
-            <Icon name="external" size={14} />
-          </FensterLink>
+          <KopfLink
+            still
+            href={`${ctBasis()}/groups/${id}`}
+            label="In ChurchTools"
+            symbol={<Icon name="external" size={14} />}
+          />
+          <MehrMenue optionen={kopfMenue} handy={handy} />
         </div>
       </header>
       {!darf && (

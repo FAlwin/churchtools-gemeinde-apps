@@ -189,4 +189,17 @@ describe('KopfLink', () => {
     expect(link.className).toBe(screen.getByRole('button', { name: 'Bearbeiten' }).className);
     cleanup();
   });
+
+  it('still (B7): dieselben Klassen wie der stille Knopf daneben', () => {
+    render(
+      <>
+        <KopfKnopf still onClick={vi.fn()} label="Mehr" symbol={<b>M</b>} />
+        <KopfLink still href="https://ct.example/g/5" label="In ChurchTools" symbol={<b>C</b>} />
+      </>,
+    );
+    expect(screen.getByRole('link', { name: 'In ChurchTools' }).className).toBe(
+      screen.getByRole('button', { name: 'Mehr' }).className,
+    );
+    cleanup();
+  });
 });

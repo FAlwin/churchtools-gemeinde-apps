@@ -109,7 +109,8 @@ describe('App der Anmeldungen (#474, #480)', () => {
     nachweisEinstiegMock.mockResolvedValue({ darfEinrichten: false });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Nachweise' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    // Die ganze Zeile „Führungszeugnis & Co.“ ist der Knopf (E24, B7).
+    fireEvent.click(screen.getByRole('button', { name: /Führungszeugnis/ }));
     expect(window.location.hash).toBe('#/nachweise');
     window.location.hash = '';
   });
@@ -120,7 +121,7 @@ describe('App der Anmeldungen (#474, #480)', () => {
     nachweisEinstiegMock.mockResolvedValue(null);
     render(<App />);
     expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Öffnen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Führungszeugnis/ })).toBeNull();
   });
 
   it('keine Gruppen → erklärt, warum', async () => {

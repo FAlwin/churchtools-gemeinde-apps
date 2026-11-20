@@ -99,3 +99,31 @@ export const NAECHSTER: Record<SchrittId, { satz: string; knopf: string }> = {
 export function naechsterSchritt(schritte: Schritt[]): Schritt {
   return schritte.find((s) => !s.fertig) ?? schritte[schritte.length - 1];
 }
+
+/**
+ * **Der eine blaue Knopf einer Veranstaltung** (E24, „Ruhige Bedienung“ B7: „ein wandernder blauer Knopf“) – welcher
+ * Schritt gerade gefüllt im Band „Nächster Schritt“ steht. Nur vor der Freigabe und nur, wer einrichten darf; danach
+ * (Kennzahlen, Anmeldungen) gibt es auf der Seite keinen gefüllten Knopf dieser Art, ohne Recht ebenso wenig. Die eine
+ * Stelle dafür: Das Band (`SchrittLeiste`) und die Kopfzeile fragen beide hier.
+ */
+export function blauerSchritt(
+  schritte: Schritt[],
+  entwurf: boolean,
+  darf: boolean,
+): SchrittId | null {
+  return entwurf && darf ? naechsterSchritt(schritte).id : null;
+}
+
+/**
+ * **Wo „Freigeben“ steht** (E24): als blauer Knopf im Band, sobald es dran ist (alle anderen Schritte sind erledigt) –
+ * vorher im „⋯“-Menü, damit niemand versehentlich zu früh freigibt, aber jede, die es muss, es findet. Nach der Freigabe
+ * oder ohne Recht gibt es „Freigeben“ nirgends (`null`).
+ */
+export function freigebenPlatz(
+  schritte: Schritt[],
+  entwurf: boolean,
+  darf: boolean,
+): 'band' | 'menue' | null {
+  if (!entwurf || !darf) return null;
+  return blauerSchritt(schritte, entwurf, darf) === 'freigeben' ? 'band' : 'menue';
+}

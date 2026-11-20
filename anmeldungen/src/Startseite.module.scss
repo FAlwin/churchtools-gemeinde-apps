@@ -44,38 +44,24 @@
   font-size: 14px;
 }
 
-.zaehler {
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--surface3);
-  color: var(--text2);
-  font-size: 12px;
-  font-weight: 600;
+.liste {
+  list-style: none;
 }
 
-.filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
+// Werkzeugzeile der Veranstaltungen (R5, B7): Auswahl links, Filter rechts, unter der Überschrift.
+.werkzeuge {
+  padding: 8px 14px;
   border-bottom: 1px solid var(--hair);
 }
 
-.filterChip {
-  @include m.auswahlKnopf;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-
-  &[aria-pressed='true'] {
-    @include m.auswahlKnopfAn;
-  }
-}
-
-.liste {
-  list-style: none;
+// „in ChurchTools ↗“ klein in einer Zeile, die dorthin führt (E24).
+.nachCt {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .monat {
@@ -136,6 +122,11 @@
 .chipGruen {
   background: color-mix(in srgb, var(--green) 14%, transparent);
   color: var(--green);
+}
+
+.chipBlau {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
 }
 
 .chipRot {
@@ -221,9 +212,14 @@
   }
 }
 
-.linkText {
-  @media (max-width: 560px) {
-    display: none;
+.filterChip {
+  @include m.auswahlKnopf;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
   }
 }
 

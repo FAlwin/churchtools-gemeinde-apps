@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { LEITER_RECHTE } from '@shared/organigramm/gruppenwechsel';
@@ -91,9 +92,9 @@ export function RechteFenster({
           <ul className={`${styles.anlage} ${kj.karte}`} aria-label="Rechte der Rolle Leiter">
             {LEITER_RECHTE.map((r) => (
               <li key={r.authId}>
-                <span className={`${kj.chip} ${fehlt.has(r.authId) ? kj.blau : kj.gruen}`}>
+                <Etikett ton={fehlt.has(r.authId) ? 'blau' : 'gruen'}>
                   {fehlt.has(r.authId) ? 'ergänzen' : 'vorhanden'}
-                </span>
+                </Etikett>
                 <span className={styles.anlageMitte}>
                   <b>{r.name}</b>
                 </span>

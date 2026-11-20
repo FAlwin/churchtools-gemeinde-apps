@@ -58,7 +58,7 @@ import { Bereiche } from './Bereiche';
 import { DokumentEditor, type EditorGriff } from './DokumentEditor';
 import { EDITOR_TYPEN } from './editorSchema';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import {
   freigeben,
@@ -746,7 +746,7 @@ export function ProtokollSchreiben({
         </h2>
         <p>{wannLang(sitzung.beginn, zeitzone)}</p>
         <div className={ansicht.marken}>
-          <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
+          <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
         {(onBearbeiten || darfFreigeben || darfTeilen || darfLoeschen) && (

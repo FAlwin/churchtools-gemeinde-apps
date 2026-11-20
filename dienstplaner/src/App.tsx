@@ -224,7 +224,8 @@ export function App() {
               <span ref={setLupeOrt} style={{ display: 'contents' }} />
             ) : undefined
           }
-          gruss={terminId === null && aktiv === 'start'}
+          // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Termin-Ansicht nie.
+          gruss={terminId === null}
           onNochmal={laden}
         >
           {start && terminId !== null && (

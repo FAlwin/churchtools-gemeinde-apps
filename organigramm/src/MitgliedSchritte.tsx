@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { personenSuchen, type Gefunden } from '@ui/ct/personen';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
@@ -106,7 +107,11 @@ export function PersonAufnehmen({
                         groesse={24}
                       />
                       <span>{ganzerName(p)}</span>
-                      {ist && <span className={styles.marke}>schon dabei</span>}
+                      {ist && (
+                        <span className={styles.schonDabei}>
+                          <Etikett>schon dabei</Etikett>
+                        </span>
+                      )}
                     </button>
                   </li>
                 );

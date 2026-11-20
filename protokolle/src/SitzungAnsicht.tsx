@@ -6,7 +6,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { loeschbar } from '@shared/protokolle/loeschen';
 import { wannLang } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FreigabeMarke, ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
@@ -89,10 +89,10 @@ export function SitzungAnsicht({
         </h2>
         <p>{wannLang(sitzung.beginn, zeitzone)}</p>
         <div className={styles.marken}>
-          {!kopf && <Marke art="leise">noch kein Protokoll</Marke>}
-          {kopf?.status === 'geplant' && <Marke art="leise">geplant</Marke>}
+          {!kopf && <Etikett ton="neutral">noch kein Protokoll</Etikett>}
+          {kopf?.status === 'geplant' && <Etikett ton="neutral">geplant</Etikett>}
           {kopf?.status === 'entwurf' && (
-            <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
+            <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
           )}
           {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
         </div>

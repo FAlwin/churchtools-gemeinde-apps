@@ -49,12 +49,7 @@ export function AntwortKnoepfe({
       <p className={a.leise}>
         {beschriftung} – {wer}:{' '}
         {namen.map((n) => (
-          <button
-            key={n}
-            type="button"
-            className={`${a.pille} ${a.platzhalterKnopf}`}
-            onClick={() => einfuegen(n)}
-          >
+          <button key={n} type="button" className={a.platzhalterKnopf} onClick={() => einfuegen(n)}>
             [{n}]
           </button>
         ))}

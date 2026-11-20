@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { createPortal } from 'react-dom';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
@@ -187,7 +188,11 @@ export function Praesentation({
           <li key={p.id}>
             <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} groesse={28} />
             <span>{p.name}</span>
-            {rolle && <span className={styles.rolle}>{rolle.name}</span>}
+            {rolle && (
+              <span className={styles.rolle}>
+                <Etikett ton="blau">{rolle.name}</Etikett>
+              </span>
+            )}
           </li>
         );
       })}

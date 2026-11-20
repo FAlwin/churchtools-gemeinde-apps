@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Schalter } from '@ui/bedienung/Schalter';
 import type { HandLage, HandPlatz } from '@shared/anmeldung/vonHand';
 import a from './AnmeldungenReiter.module.scss';
@@ -40,11 +41,11 @@ export function PlatzWahl({
       <p className={a.summe}>
         <span>{vor} kommt auf</span>
         {platz.status === 'active' ? (
-          <span className={`${a.pille} ${a.pilleOk}`}>
+          <Etikett ton="gruen">
             einen Platz{platz.neuesMax !== null ? ` (Plätze → ${platz.neuesMax})` : ''}
-          </span>
+          </Etikett>
         ) : (
-          <span className={`${a.pille} ${a.pilleWarte}`}>Warteliste {platz.warteplatz}</span>
+          <Etikett ton="blau">Warteliste {platz.warteplatz}</Etikett>
         )}
       </p>
       {platz.wuerdeWarten && !platz.nurMitPlatz && (

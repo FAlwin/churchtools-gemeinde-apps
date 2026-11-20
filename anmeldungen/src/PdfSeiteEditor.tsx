@@ -151,7 +151,7 @@ export function PdfSeiteEditor({
           <button
             key={art}
             type="button"
-            className={`${a.pille} ${a.platzhalterKnopf}`}
+            className={a.platzhalterKnopf}
             disabled={
               (art === 'Unterschrift' && hatUnterschrift) || felder.length >= PDF_FELDER_MAX
             }

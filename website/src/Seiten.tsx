@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
@@ -263,7 +264,7 @@ function ListenGruppe({
         >
           <Icon name={s.startseite ? 'home' : 'dokument'} size={16} />
           <span className={styles.titel}>{s.titel}</span>
-          {s.startseite && <span className={styles.marke}>Startseite</span>}
+          {s.startseite && <Etikett>Startseite</Etikett>}
         </button>
       ))}
     </div>

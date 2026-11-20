@@ -16,7 +16,7 @@ import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
 import { insArchiv } from './archiv';
 import { STATUS } from './einrichten';
 import { fehlerMeldung } from './zustand';
-import { Etikett } from './Etikett';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { STAND_TEXT, anzahlText, datumText, kachel, monatTitel, schlussText } from './anzeige';
 import styles from './Startseite.module.scss';
 import f from './Formular.module.scss';
@@ -548,9 +548,9 @@ export function Startseite({
                       {verborgen > 0 && ' · Untergruppen für dich nicht freigegeben'}
                     </small>
                   </div>
-                  <span className={g.leitung ? styles.rolleLeitung : styles.rolle}>
+                  <Etikett ton={g.leitung ? 'blau' : 'neutral'}>
                     {g.leitung ? 'Leitung' : 'Mitglied'}
-                  </span>
+                  </Etikett>
                 </li>
               );
             })}

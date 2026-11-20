@@ -23,7 +23,7 @@ offen“). Führt eine Zeile nach ChurchTools, steht klein „in ChurchTools“ 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `anmeldungen/src/Startseite.tsx`, `anmeldungen/src/Startseite.module.scss`, `anmeldungen/src/Etikett.tsx`, `ui/bedienung/KlickZeile.tsx`, `ui/bedienung/AnsichtWahl.tsx`
+- **Betrifft:** `anmeldungen/src/Startseite.tsx`, `anmeldungen/src/Startseite.module.scss`, `ui/bedienung/Etikett.tsx`, `ui/bedienung/KlickZeile.tsx`, `ui/bedienung/AnsichtWahl.tsx`
 - **Automatisiert:** teilweise – `Startseite.test.tsx` (Zeilen als Knopf oder Link, Etiketten, Filter, Sammelzeile), `KlickZeile.test.tsx`; das Aussehen am Handy prüft nur dieser Fall
 - **Historie:** Ruhige Bedienung B7 (20.11.2026, Entwurf „Restliche Bildschirme“ v2, E24)
 

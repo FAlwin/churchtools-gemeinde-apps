@@ -17,7 +17,7 @@ import {
 } from '@shared/protokolle/suche';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { kachelVon } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import styles from './Suche.module.scss';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 
@@ -29,11 +29,11 @@ const ARTEN: { wert: SuchArt | 'alles'; text: string }[] = [
   { wert: 'text', text: 'Protokolltext' },
 ];
 
-const MARKE: Record<SuchArt, { text: string; art: 'gut' | 'info' | 'leise' }> = {
-  beschluss: { text: 'Beschluss', art: 'gut' },
-  aufgabe: { text: 'To-Do', art: 'info' },
-  termin: { text: 'Termin', art: 'leise' },
-  text: { text: 'Protokolltext', art: 'leise' },
+const MARKE: Record<SuchArt, { text: string; ton: 'gruen' | 'blau' | 'neutral' }> = {
+  beschluss: { text: 'Beschluss', ton: 'gruen' },
+  aufgabe: { text: 'To-Do', ton: 'blau' },
+  termin: { text: 'Termin', ton: 'neutral' },
+  text: { text: 'Protokolltext', ton: 'neutral' },
 };
 
 /** So viele Treffer zeigt die Liste – mehr wird unübersichtlich und langsam; die Suche grenzt dann weiter ein. */
@@ -194,7 +194,7 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
                       </b>
                       {/* Schild in der zweiten Zeile: am Handy bleibt so die Breite für den Text. */}
                       <span className={styles.unter}>
-                        <Marke art={MARKE[e.art].art}>{MARKE[e.art].text}</Marke>
+                        <Etikett ton={MARKE[e.art].ton}>{MARKE[e.art].text}</Etikett>
                         <small>
                           <Markiert text={wo(e)} woerter={woerter} />
                         </small>

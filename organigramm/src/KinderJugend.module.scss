@@ -181,40 +181,6 @@
   gap: 4px;
 }
 
-.chip {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.blau {
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-}
-
-.gruen {
-  background: color-mix(in srgb, var(--green) 14%, transparent);
-  color: var(--green);
-}
-
-.rot {
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  color: var(--red);
-}
-
-.grau {
-  background: var(--surface3);
-  color: var(--text2);
-}
-
-// Ausnahme vom letzten Jahr: der Textmarker der App (`--markiert`).
-.gelb {
-  background: var(--markiert);
-  color: var(--text);
-}
-
 // Übersicht: je Stufe eine Kachel.
 .kacheln {
   display: grid;

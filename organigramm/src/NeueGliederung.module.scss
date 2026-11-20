@@ -45,34 +45,6 @@
   gap: 4px;
 }
 
-.marke {
-  padding: 2px 7px;
-  border-radius: var(--r-ctrl);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.mNeu {
-  background: color-mix(in srgb, var(--green) 18%, transparent);
-  color: var(--text);
-}
-
-.mUm {
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-}
-
-.mName {
-  background: var(--section);
-  color: var(--text2);
-}
-
-.mArch {
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  color: var(--red);
-}
-
 // ── Umbau (O7-3) ──────────────────────────────────────────────────────────────
 
 .fortschritt {

@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ApiError } from '@ui/ct/fehler';
@@ -496,12 +497,12 @@ export function VonHandFenster({
                       </small>
                     </span>
                     {ist ? (
-                      <em className={`${a.pille} ${a.pilleOk} ${a.trefferMarke}`}>schon dabei</em>
+                      <Etikett ton="gruen">schon dabei</Etikett>
                     ) : (
                       abgesagt.has(p.personId) && (
-                        <em className={`${a.pille} ${a.pilleWarte} ${a.trefferMarke}`}>
+                        <Etikett ton="blau">
                           {onZurueckholen ? 'hat abgesagt – zurückholen' : 'hat abgesagt'}
-                        </em>
+                        </Etikett>
                       )
                     )}
                   </button>
@@ -645,7 +646,7 @@ export function VonHandFenster({
                   </small>
                 </span>
                 {dabei.has(p.personId) ? (
-                  <em className={`${a.pille} ${a.pilleOk} ${a.trefferMarke}`}>schon dabei</em>
+                  <Etikett ton="gruen">schon dabei</Etikett>
                 ) : (
                   <em className={`${a.nachKnopf} ${a.trefferMarke}`}>Diese nehmen</em>
                 )}

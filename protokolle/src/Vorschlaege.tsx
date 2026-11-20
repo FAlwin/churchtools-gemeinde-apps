@@ -10,7 +10,7 @@ import {
   type Vorschlag,
 } from '@shared/protokolle/vorschlaege';
 import { wannLang } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { useAusgeblendet, useBereichWahl } from './vorschlaegeMerken';
 import styles from './Vorschlaege.module.scss';
 
@@ -27,12 +27,12 @@ export interface VorschlagAktionen {
 
 /** Das Schild in der Zeile: nur wo es etwas sagt – „offen“ ist der Normalfall der Liste, Übernommene stehen nicht darin. */
 function standMarke(v: Vorschlag, direkt: boolean): ReactNode {
-  if (v.stand === 'offen' && direkt) return <Marke art="info">kommt ins Protokoll</Marke>;
+  if (v.stand === 'offen' && direkt) return <Etikett ton="blau">kommt ins Protokoll</Etikett>;
   if (v.stand === 'abgelehnt') {
     // Am Handy entfällt es: Die Gruppe heißt schon „Abgelehnt“ (Entwurf W8c).
     return (
       <span className={styles.nurBreit}>
-        <Marke art="problem">abgelehnt</Marke>
+        <Etikett ton="rot">abgelehnt</Etikett>
       </span>
     );
   }

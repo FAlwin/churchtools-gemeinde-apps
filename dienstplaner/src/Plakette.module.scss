@@ -1,7 +1,7 @@
 // Plaketten für Dienste – Grün = zugesagt, „?“ = angefragt (Entwurf v17, ChurchTools-Look). Eine Stelle
 // für Termine-Liste und Startseite.
 // Klein (Termine-Liste) bewusst **ohne Fläche**: Es ist ein Status, kein Knopf – getönte Pillen sahen neben
-// den Filter-Knöpfen selbst wie Knöpfe aus (Alwin, 14.10.2026). Groß (Startseite „Du: …“) bleibt getönt.
+// den Filter-Knöpfen selbst wie Knöpfe aus (Alwin, 14.10.2026). Groß (Startseite „Du: …“) ist ein `Etikett` (B8b).
 .plakette {
   display: inline-flex;
   align-items: center;
@@ -16,24 +16,4 @@
 
 .abgesagt {
   color: var(--text3);
-}
-
-.gross {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--text);
-
-  &.zugesagt {
-    background: color-mix(in srgb, var(--green) 18%, transparent);
-  }
-
-  &.angefragt {
-    background: var(--blue-soft);
-  }
-
-  &.abgesagt {
-    background: var(--surface3);
-    color: var(--text2);
-  }
 }

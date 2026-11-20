@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useKopieren } from '@ui/bedienung/useKopieren';
 import { Icon } from '@ui/icons/icons';
@@ -198,15 +199,15 @@ export function Wechseltage({
 function StatusChip({ regel, jahr }: { regel: { art: 'laedt' } | RegelStand; jahr: number }) {
   const stand: JahrStand | undefined =
     regel.art === 'da' ? regel.staende.find((x) => x.jahr === jahr)?.stand : undefined;
-  const [farbe, text] =
+  const [ton, text]: [EtikettTon, string] =
     regel.art === 'laedt'
-      ? [styles.grau, 'wird geprüft']
+      ? ['neutral', 'wird geprüft']
       : !stand
-        ? [styles.grau, 'nicht prüfbar']
+        ? ['neutral', 'nicht prüfbar']
         : stand.art === 'eingetragen'
-          ? [styles.gruen, 'eingetragen']
+          ? ['gruen', 'eingetragen']
           : stand.art === 'unvollstaendig'
-            ? [styles.gelb, `unvollständig – fehlt bei ${stand.fehlend.join(', ')}`]
-            : [styles.gelb, 'fehlt noch'];
-  return <span className={`${styles.chip} ${farbe}`}>{text}</span>;
+            ? ['rot', `unvollständig – fehlt bei ${stand.fehlend.join(', ')}`]
+            : ['rot', 'fehlt noch'];
+  return <Etikett ton={ton}>{text}</Etikett>;
 }

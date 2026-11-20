@@ -111,7 +111,8 @@ export function App() {
       bereiche={bereiche}
       handy={handy}
       lupe={lupe}
-      gruss={aktiv === 'start' && !suche.offen}
+      // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Suche nie.
+      gruss={!suche.offen}
       onNochmal={laden}
     >
       {start && suche.offen && (

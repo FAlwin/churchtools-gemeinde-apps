@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { useLaden } from '@ui/ct/useLaden';
@@ -164,7 +165,7 @@ export function NachtragenFenster({
           <div className={styles.unter}>Das schreibt die Erweiterung in ChurchTools</div>
           <ul className={`${styles.anlage} ${kj.karte}`} aria-label="Das schreibt die Erweiterung">
             <li>
-              <span className={`${kj.chip} ${kj.blau}`}>ergänzen</span>
+              <Etikett ton="blau">ergänzen</Etikett>
               <span className={styles.anlageMitte}>
                 <b>
                   {neu.length > 0

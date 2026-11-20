@@ -1,7 +1,7 @@
 import { tagPunkt } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
 import { freigabeVermerk, zurueckText, type KopfMitVerlauf } from '@shared/protokolle/freigabe';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import styles from './Freigabe.module.scss';
 
 const tag = (iso: string, zeitzone: string) => tagPunkt(tagAusIso(iso, zeitzone));
@@ -13,10 +13,10 @@ const tag = (iso: string, zeitzone: string) => tagPunkt(tagAusIso(iso, zeitzone)
 export function FreigabeMarke({ kopf, zeitzone }: { kopf: KopfMitVerlauf; zeitzone: string }) {
   const f = freigabeVermerk(kopf).freigabe;
   return (
-    <Marke art="gut">
+    <Etikett ton="gruen">
       freigegeben{f ? ` am ${tag(f.am, zeitzone)}` : ''}
       {f?.name ? ` von ${f.name}` : ''}
-    </Marke>
+    </Etikett>
   );
 }
 

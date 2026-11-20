@@ -91,6 +91,16 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
     schließen sich im Typ aus; `offen`/`aktiv` behalten ihre hellblaue Fläche. **Am Handy** (Grenze `HANDY_BREITE`)
     bekommt der stille Knopf von selbst Rand und Fläche zurück (R12 – „kein Knopf ohne Rahmen“); dafür gibt es keine
     eigene Angabe. Seit B3 nutzen sie die Werkzeugzeilen (`MehrMenue`, `FilterKnopf still`).
+  - **Seitenkopf der Erweiterungen** (`ErweiterungsSeite`, B8b; R8/E24): EINE Stelle für alle Apps – oben klein der App-Name (ohne
+    Gemeindenamen, der steht in der ChurchTools-Leiste), darunter die unterstrichenen Reiter (am Handy unten), **„Hallo …“ nur auf der
+    Startseite** (= der erste Reiter ist aktiv; `gruss={false}` sperrt es zusätzlich, z. B. in der Suche), volle Breite (Wächter
+    `seitenBreite`). **Einstellungen als letzter Reiter** (E24): die App gibt nur `einstellungen={{ onOeffnen, offen }}` – Name, Zahnrad und
+    Platz (ganz rechts) kommen vom Rahmen; ohne eigene Reiter entsteht davor ein einzelner Start-Reiter (`startName`). Der Reiter öffnet das
+    Fenster der App (E18), hat keine eigene Adresse; wer die Einstellungen nicht öffnen darf, gibt nichts – kein Recht, kein Reiter.
+  - **`Etikett`** (`ui/bedienung`, aus `anmeldungen/src/Etikett.tsx` gehoben; R9/E24): das eine Status-Etikett – eine Kapsel, vier Töne
+    (`neutral` grau, `blau` deine Rolle/in Arbeit/wartet, `gruen` fertig, `rot` Aufmerksamkeit). Nur Anzeige: Was man antippt, ist ein
+    Knopf; ein Zähler am Reiter ist `ReiterZaehler`. Wächter `etiketten.test.ts` zählt je App die Kapseln (`border-radius: 999px`) in
+    den Stildateien und kennt nur noch Knöpfe/Wähler (Obergrenzen, nie erhöhen).
   - **`SuchLupe`** (`ui/bedienung`, aus der `SuchLeiste` der Protokolle gehoben; R7): Lupe rechts neben den Reitern,
     ein Tipp klappt das Feld auf und setzt den Cursor hinein; ✕ oder Esc (`useEscape`) klappt zu. Die App hält
     `offen` und `begriff` selbst. Feste Suchfelder auf Seiten (nicht in Fenstern) wechseln später darauf: Organigramm

@@ -61,12 +61,25 @@ describe('App des Dienstplaners (E2/E3-3)', () => {
       .getAllByRole('button')
       .map((b) => b.querySelector('b')?.textContent);
 
-  it('Gruß, Gemeinde und – für Planer – die Dienstgruppen in der Reihenfolge der Gemeinde', async () => {
+  it('Gruß, App-Name (ohne Gemeinde) und – für Planer – die Dienstgruppen in der Reihenfolge der Gemeinde', async () => {
     laden.mockResolvedValue(start([4, 3]));
     render(<App />);
     expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
-    expect(screen.getByText(/Dienstplaner · Evangeliumschristen- Gemeinde e\.V\./)).toBeTruthy();
+    // Nur der App-Name – der Gemeindename steht schon in der ChurchTools-Leiste (R8/E24, B8b).
+    expect(screen.getByText('Dienstplaner')).toBeTruthy();
+    expect(screen.queryByText(/Evangeliumschristen- Gemeinde e\.V\./)).toBeNull();
     expect(planenKnoepfe()).toEqual(['Technik', 'Musik']);
+  });
+
+  it('„Hallo …“ nur auf Start – auf „Dienste“ nicht, und Planen/Dienste stehen weiter in den Reitern (R8)', async () => {
+    laden.mockResolvedValue(start([4, 3]));
+    window.location.hash = '#/termine';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Dienste' });
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    window.location.hash = '';
   });
 
   it('Recht ohne Aufzählung (null) → alle Dienstgruppen', async () => {

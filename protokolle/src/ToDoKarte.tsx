@@ -1,5 +1,5 @@
 import { Haken } from './Haken';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FristKaestchen } from './FristKaestchen';
 import { ErledigtVon, FertigListe, Gesichter, Symbole } from './ToDoBausteine';
 import type { Herkunft } from './ToDoFenster';
@@ -108,7 +108,7 @@ export function ToDoKarte({
   ) : (
     <div className={styles.fuss}>
       <FristKaestchen a={a} heute={kx.heute} />
-      {schild && <Marke art="info">in Arbeit</Marke>}
+      {schild && <Etikett ton="blau">in Arbeit</Etikett>}
       <Symbole
         a={a}
         herkunft={k.herkunft}
@@ -174,10 +174,10 @@ export function TabellenKopf({ mitGruppe }: { mitGruppe: boolean }) {
 function Stand({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
   const { a } = k;
   const t = teilText(a);
-  if (t) return <Marke art={a.status === 'erledigt' ? 'gut' : 'leise'}>{t}</Marke>;
+  if (t) return <Etikett ton={a.status === 'erledigt' ? 'gruen' : 'neutral'}>{t}</Etikett>;
   if (a.status === 'erledigt')
     return <ErledigtVon a={a} ich={kx.ich.person} personen={kx.personen} namen={kx.namen} kurz />;
-  if (a.status === 'arbeit') return <Marke art="info">in Arbeit</Marke>;
+  if (a.status === 'arbeit') return <Etikett ton="blau">in Arbeit</Etikett>;
   return <span className={styles.leise}>offen</span>;
 }
 

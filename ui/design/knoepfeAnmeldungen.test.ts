@@ -30,7 +30,8 @@ const ERLAUBT: Record<string, string> = {
     '„Nur zeigen, wenn …“ / „Bedingung ändern“ im Fuß des Felds – Pille aus Entwurf F1, zeigt an, ob es eine Bedingung gibt (F1c)',
   'k.bedPfeil':
     'Pfeil an einer Antwort – „nur wählbar, wenn …“, markiert, wenn es eine Bedingung gibt (F1c)',
-  'a.pille': 'Empfänger-Pille in der Rundmail',
+  'a.platzhalterKnopf':
+    'Platzhalter-Pille in der Rundmail, im Antrag-Editor und in den Mails (zum Einfügen)',
   // Klickbare Zeilen und Überschriften – die ganze Fläche öffnet etwas.
   't.oeffnen':
     'Name in einer Zeile der Tabelle – öffnet die Anmeldung wie ein Klick in die Zeile (U2-1)',

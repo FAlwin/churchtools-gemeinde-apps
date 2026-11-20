@@ -1,4 +1,5 @@
 import { tagKurz } from '@shared/ct/datum';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { werWieOft } from '@shared/dienstplan/werWieOft';
 import type { Sicht } from './planSicht';
 import { useBisUnten } from './useBisUnten';
@@ -40,11 +41,11 @@ export function WerWieOft({ sicht }: { sicht: Sicht }) {
                 {p.gast && <span className={styles.gast}>Gast</span>}
               </th>
               <td>
-                {p.dienste.map((d) => (
-                  <span key={d} className={styles.etikett}>
-                    {d}
-                  </span>
-                ))}
+                <div className={styles.etiketten}>
+                  {p.dienste.map((d) => (
+                    <Etikett key={d}>{d}</Etikett>
+                  ))}
+                </div>
               </td>
               <td>
                 <span className={styles.anzahl}>
@@ -53,12 +54,14 @@ export function WerWieOft({ sicht }: { sicht: Sicht }) {
                 </span>
               </td>
               <td>
-                {p.einsaetze.map((e, i) => (
-                  <span key={i} className={styles.etikett}>
-                    {tagKurz(e.spalte.tag)} {e.dienst}
-                    {!e.zugesagt && ' ?'}
-                  </span>
-                ))}
+                <div className={styles.etiketten}>
+                  {p.einsaetze.map((e, i) => (
+                    <Etikett key={i}>
+                      {tagKurz(e.spalte.tag)} {e.dienst}
+                      {!e.zugesagt && ' ?'}
+                    </Etikett>
+                  ))}
+                </div>
               </td>
             </tr>
           ))}

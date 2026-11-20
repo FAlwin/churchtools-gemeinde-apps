@@ -34,7 +34,7 @@ import { useToast } from '@ui/fenster/useToast';
 import { loeschbar } from '@shared/protokolle/loeschen';
 import { ProtokollLoeschen } from './ProtokollLoeschen';
 import { kachelVon, uhrzeit } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { SitzungAnsicht } from './SitzungAnsicht';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
 import { ProtokollNachtragen } from './ProtokollNachtragen';
@@ -90,21 +90,21 @@ function SitzungZeile({
           {(vorschlaege > 0 || uebernommen > 0) && (
             <span className={styles.vorschlaege}>
               {vorschlaege > 0 && (
-                <Marke art="info">
+                <Etikett ton="blau">
                   {vorschlaege} {vorschlaege === 1 ? 'Vorschlag' : 'Vorschläge'} offen
-                </Marke>
+                </Etikett>
               )}
               {uebernommen > 0 && (
-                <Marke art="gut">
+                <Etikett ton="gruen">
                   {uebernommen} {uebernommen === 1 ? 'Vorschlag' : 'Vorschläge'} übernommen
-                </Marke>
+                </Etikett>
               )}
             </span>
           )}
         </span>
-        {status === 'entwurf' && <Marke art="leise">Entwurf</Marke>}
-        {status === 'geplant' && <Marke art="leise">geplant</Marke>}
-        {status === 'frei' && <Marke art="gut">freigegeben</Marke>}
+        {status === 'entwurf' && <Etikett ton="neutral">Entwurf</Etikett>}
+        {status === 'geplant' && <Etikett ton="neutral">geplant</Etikett>}
+        {status === 'frei' && <Etikett ton="gruen">freigegeben</Etikett>}
         <Icon name="chev-right" size={18} />
       </button>
     </li>

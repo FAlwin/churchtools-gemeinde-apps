@@ -84,6 +84,8 @@ export async function rundmailSenden(
   an: { personId: number; email: string }[],
   betreff: string,
   html: string,
+  /** Die Meldung, wenn ChurchTools das Senden verweigert (403) – die Nachweise sagen es anders als die Anmeldungen. */
+  verweigert = 'Mails über ChurchTools schicken darfst du hier nicht.',
 ): Promise<{ bestaetigt: number | null }> {
   if (an.length === 0) throw new ApiError(422, 'Niemand ausgewählt.');
   const ab = Date.now() - 5_000;
@@ -92,7 +94,7 @@ export async function rundmailSenden(
     await ctAltAnfrage(
       'sendEMailToPersonIds',
       {},
-      { verweigert: 'Mails über ChurchTools schicken darfst du hier nicht.' },
+      { verweigert },
       {
         modul: 'churchhome',
         json: {

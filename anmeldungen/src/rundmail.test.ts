@@ -36,6 +36,18 @@ beforeEach(() => {
   ]);
 });
 
+describe('Meldung bei verweigertem Senden', () => {
+  it('ohne Angabe die bisherige Meldung, mit Angabe die des Aufrufers (Nachweise sagen es anders)', async () => {
+    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>');
+    expect(ct.ctAltAnfrage.mock.calls[0][2]).toEqual({
+      verweigert: 'Mails über ChurchTools schicken darfst du hier nicht.',
+    });
+    ct.ctAltAnfrage.mockClear();
+    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>', 'Eigene Meldung.');
+    expect(ct.ctAltAnfrage.mock.calls[0][2]).toEqual({ verweigert: 'Eigene Meldung.' });
+  });
+});
+
 describe('Senden', () => {
   it('eine Anfrage mit allen Personen und der Gruppe; im Protokoll nachgelesen (Groß-/Kleinschreibung egal)', async () => {
     await expect(rundmailSenden(165, AN, 'Test', '<p>Hallo</p>')).resolves.toEqual({

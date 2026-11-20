@@ -1,4 +1,7 @@
+import { useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../icons/icons';
+import { SchwebeFlaeche } from './SchwebeFlaeche';
 import styles from './SchwebePlus.module.scss';
 
 /**
@@ -20,7 +23,8 @@ export function SchwebePlus({
   disabled?: boolean;
   dataTour?: string;
 }) {
-  return (
+  const flaeche = useContext(SchwebeFlaeche);
+  const knopf = (
     <button
       type="button"
       className={styles.plus}
@@ -33,4 +37,5 @@ export function SchwebePlus({
       <Icon name="plus" size={26} stroke={2.2} />
     </button>
   );
+  return flaeche ? createPortal(knopf, flaeche) : knopf;
 }

@@ -202,6 +202,23 @@ describe('Wann kann ich? – Werkzeugzeile am Handy (B4, R12)', () => {
     expect(within(z).queryByRole('button', { name: 'Zeitraum davor' })).toBeNull();
   });
 
+  /**
+   * **B8a, 20.11.2026:** Die Karte hat `overflow: hidden`; was darin klebt (`position: sticky`), klebt am Kartenende statt am
+   * unteren Rand des Bildschirms – das Plus stand bei 844 px Höhe auf y≈1000. Weder das Plus noch die Speichern-Leiste
+   * dürfen deshalb in der Karte hängen.
+   */
+  it('Plus und Speichern-Leiste hängen nicht in der Karte mit `overflow: hidden`', async () => {
+    setzeHandy(true);
+    zeige();
+    await zeile();
+    const karte = screen.getByRole('region', { name: 'Wann kann ich?' });
+    expect(karte.contains(screen.getByRole('button', { name: 'Zeitraum eintragen' }))).toBe(false);
+    // Etwas vormerken → die Speichern-Leiste erscheint, und auch sie steht außerhalb der Karte.
+    fireEvent.click(screen.getByRole('button', { name: /Nein – Gottesdienst, So, 08\.11\./ }));
+    const speichern = await screen.findByRole('button', { name: 'Speichern' });
+    expect(karte.contains(speichern)).toBe(false);
+  });
+
   it('der Filter bleibt erreichbar', async () => {
     zeige();
     const z = await zeile();

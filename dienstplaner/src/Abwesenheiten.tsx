@@ -295,9 +295,11 @@ export function Abwesenheiten({
               ) : (
                 t.inhalt
               )}
-              <div className={styles.unten}>{t.ueberlagerung}</div>
               <Toast message={toast} />
             </section>
+            {/* Außerhalb der Karte: `.karte` hat `overflow: hidden`, und das machte die Karte zum Rollbereich der
+                klebenden Leiste – sie klebte am Kartenende statt am unteren Rand (B8a). */}
+            <div className={styles.unten}>{t.ueberlagerung}</div>
           </div>
         )}
       />

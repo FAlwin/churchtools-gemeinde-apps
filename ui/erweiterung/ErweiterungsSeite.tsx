@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ReiterLeiste, type Reiter } from '../bedienung/ReiterLeiste';
+import { SchwebeFlaeche } from '../bedienung/SchwebeFlaeche';
 import type { Fehlermeldung } from '../ct/fehlerMeldung';
 import styles from './ErweiterungsSeite.module.scss';
 
@@ -24,6 +25,8 @@ export function ErweiterungsRahmen({
   children?: ReactNode;
   unten?: ReactNode;
 }) {
+  // Die Fläche über der Leiste, außerhalb des Rollbereichs: Dorthin zeichnet sich das schwebende Plus (`SchwebeFlaeche`).
+  const [flaeche, setFlaeche] = useState<HTMLElement | null>(null);
   const rolle = (
     <div className={styles.rolle}>
       <main className={styles.seite}>
@@ -40,7 +43,9 @@ export function ErweiterungsRahmen({
   // ganze Seite neu – offene Fenster, „Ablauf zeigen“ und Bearbeiten gingen zu. Jetzt unterscheidet nur eine Klasse.
   return (
     <div className={`${styles.huelle}${unten ? ` ${styles.mitUnten}` : ''}`}>
-      <div className={styles.flaeche}>{rolle}</div>
+      <div className={styles.flaeche} ref={setFlaeche}>
+        <SchwebeFlaeche.Provider value={flaeche}>{rolle}</SchwebeFlaeche.Provider>
+      </div>
       {unten}
     </div>
   );

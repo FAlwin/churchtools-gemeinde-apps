@@ -1117,7 +1117,7 @@ describe('personenRaster – Personenliste (PL-1)', () => {
     expect(zeile(teil, GESANG, 11).ruhend).toBeNull();
   });
 
-  it('ohne Liste der Dienstgruppe rückt auch „ganz abwesend“ nicht nach unten (alles wie vorher)', () => {
+  it('ohne Liste der Dienstgruppe rückt „ganz abwesend“ trotzdem nach unten (Rest alphabetisch)', () => {
     const daten: PersonenDaten = new Map<number, GruppenStand>([
       ...DATEN,
       [
@@ -1129,8 +1129,9 @@ describe('personenRaster – Personenliste (PL-1)', () => {
       ],
     ]);
     const r = raster(undefined, daten);
-    expect(namen(r)).toEqual(['Anna Gans', 'Ben Kunz', 'Clara Neu', 'Daniel Fink']);
-    expect(block(r, GESANG).ruhend).toBe(0);
+    expect(namen(r)).toEqual(['Anna Gans', 'Ben Kunz', 'Daniel Fink', 'Clara Neu']);
+    expect(zeile(r, GESANG, 11)).toMatchObject({ ruhend: 'abwesend', pause: null });
+    expect(block(r, GESANG).ruhend).toBe(1);
   });
 
   it('wer in den gezeigten Terminen eingeteilt ist, bleibt oben – auch mit Pause (der Warnfall bleibt sichtbar)', () => {

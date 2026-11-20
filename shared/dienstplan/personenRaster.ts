@@ -25,8 +25,8 @@
  * oben, damit der Warnfall sichtbar bleibt. Pause UND „ganz abwesend“ gelten nur für **alle** gezeigten Termine (nicht nur
  * für den ersten): Ein „bis 31.01.“ bei einem Zeitraum bis Ende Februar macht die Person nicht für den ganzen Zeitraum
  * unwichtig; der Hinweis „Pause bis …“ (`pause`) steht trotzdem, sobald die Pause am ersten gezeigten Termin gilt. Tags
- * (`tagsFuer`) je Zeile und Dienst, dazu die Legende (`tagLegende`). **Ohne Liste der Dienstgruppe bleibt alles wie vorher**
- * (alphabetisch, nichts unten) – auch „ganz abwesend“ rückt erst nach unten, wenn es eine Liste gibt.
+ * (`tagsFuer`) je Zeile und Dienst, dazu die Legende (`tagLegende`). **Ohne Liste der Dienstgruppe** bleibt die Reihenfolge
+ * alphabetisch wie vorher; **„ganz abwesend“ rückt trotzdem nach unten** (Alwin, 20.11.2026: entschieden ohne Bedingung).
  *
  * **Antworten aus „Wann kann ich?“ (E5c-3):** Ja/Vielleicht färben die Zelle, Abwesenheit schlägt sie (Regeln in
  * `personenAntworten.ts`); der Spaltenkopf zählt verschiedene Personen je Antwort.
@@ -443,9 +443,9 @@ export function personenRaster(o: {
         pause: pauseAm(liste, personId, tage[0]),
         ruhend:
           // Wer eingeteilt ist, bleibt oben – ein Warnfall (abwesend/pausiert und eingeteilt) soll sichtbar bleiben.
-          !liste || zellen.some((c) => c.zustand !== null)
+          zellen.some((c) => c.zustand !== null)
             ? null
-            : pausiertAnAllen(liste, personId, tage)
+            : liste && pausiertAnAllen(liste, personId, tage)
               ? ('pause' as const)
               : zellen.length > 0 && zellen.every((c) => c.abwesend !== null)
                 ? ('abwesend' as const)

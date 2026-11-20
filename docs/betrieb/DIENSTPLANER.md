@@ -368,8 +368,8 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   **Alle Regeln stehen in `shared/dienstplan/personenliste.ts`** (`personenlisteAus`, `sortiereNachListe`, `tagsFuer`, `pauseAm`,
   `pausiertAnAllen`, `pauseText`); Raster, „Wer kann?“ und PDF rufen sie nur auf. **„Personen“:** Zeilen je Dienst in der Reihenfolge der Liste
   (wer fehlt, danach alphabetisch); wer an **allen** gezeigten Terminen pausiert oder ganz abwesend ist **und dort nicht eingeteilt ist**,
-  steht unten im Block, blass, unter „In Pause oder ganz abwesend · N“ (die Zellen bleiben bedienbar) – Abwesende rücken erst nach unten, wenn
-  die Dienstgruppe eine Liste hat; „Pause bis …“ ersetzt „auch …“, sobald die Pause am ersten gezeigten Termin gilt; die Tags des Dienstes
+  steht unten im Block, blass, unter „In Pause oder ganz abwesend · N“ (die Zellen bleiben bedienbar) – „ganz abwesend“ auch ohne Liste
+  der Dienstgruppe (dann sonst alphabetisch); „Pause bis …“ ersetzt „auch …“, sobald die Pause am ersten gezeigten Termin gilt; die Tags des Dienstes
   stehen als Kürzel unten rechts am Personenbild, unter der Farblegende nennt eine Zeile „Tags:“ die Tags der gezeigten Dienste.
   **„Wer kann?“:** mit gespeicherter Reihenfolge sortiert jeder Abschnitt (und die eine Liste) danach, Überschrift „In der Reihenfolge der
   Personenliste“ statt „Oben: frei und selten dran“; wer pausiert, steht unter „Kann nicht / abwesend“ bzw. am Ende der einen Liste, blass,

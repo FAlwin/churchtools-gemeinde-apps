@@ -109,11 +109,17 @@ describe('Anlegen einer neuen Nachweis-Art', () => {
     });
   });
 
-  it('Rechte: genau die fünf der Leiter-Rolle, an der Teilnehmer-Rolle nur „Gruppeninfos sehen“ (M6)', async () => {
+  it('Rechte: die fünf der Leiter-Rolle plus das Modulrecht „Anmeldungen sehen“, an der Teilnehmer-Rolle nur „Gruppeninfos sehen“ (M6)', async () => {
     await nachweisArtSichern(EINGABE, ICH);
-    expect(falsch.basis.rechte.get(54)).toEqual(
-      NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
-    );
+    // Die Nummer des Modulrechts kommt aus den Definitionen des falschen ChurchTools (nicht abgeschrieben).
+    const modulId = (
+      falsch.basis.definitionen as { modules: { permissions: { authId: number }[] }[] }
+    ).modules[0].permissions[0].authId;
+    expect(falsch.basis.rechte.get(54)).toEqual([
+      ...NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
+      { authId: modulId, dataId: null },
+    ]);
+    expect(falsch.basis.rechte.get(53)?.some((r) => r.authId === modulId)).toBe(false);
     expect(falsch.basis.rechte.get(53)).toEqual(
       NACHWEIS_TEILNEHMER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
     );

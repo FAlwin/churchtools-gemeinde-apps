@@ -67,6 +67,51 @@
     outline-offset: 2px;
   }
 }
+// Der Punkt als Knopf HINTER dem Inhalt (B8, E20): Ein Tipp auf den Punkt öffnet die Einzelansicht, die Lied-Karte darin
+// bleibt ein eigener Knopf (Liedblatt). Der Inhalt lässt Tipps durch (`pointer-events: none`), nur die Karte fängt sie auf.
+.punktTipp {
+  position: relative;
+
+  > :not(.punktFlaeche) {
+    position: relative;
+    pointer-events: none;
+  }
+}
+.punktFlaeche {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+
+  &:active {
+    background: var(--surface3);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+// Die Lied-Karte als Knopf (öffnet das Liedblatt): sieht aus wie die Karte, fängt als Einzige Tipps im Punkt.
+.liedKnopf {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+    border-radius: var(--r-ctrl);
+  }
+}
 // Lied-Zeile: blauer Streifen links (wie in der App) – schnell auffindbar.
 .songRow {
   box-shadow: inset 4px 0 0 var(--blue);
@@ -241,18 +286,7 @@
   }
 }
 
-// Schildchen „neu“/„geändert“ am Punkt (Musik-App, #161).
-.aenderungsTag {
-  flex: none;
-  padding: 1px 7px;
-  border-radius: var(--r-ctrl);
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
+// Das Schildchen „neu“/„geändert“ am Punkt ist ein `Etikett` (R9, `ui/bedienung`) – keine eigene Pille hier.
 
 // An diesem Termin weggelassen (Auge, E6-3b): blass, statt der Uhrzeit „—“, dazu der Hinweis – in Ansicht und
 // Bearbeiten-Liste gleich.

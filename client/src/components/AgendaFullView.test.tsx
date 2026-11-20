@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import { StrictMode } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { AgendaFullView } from './AgendaFullView';
@@ -139,11 +139,62 @@ describe('AgendaFullView – Lied antippen', () => {
     expect(onSelect).toHaveBeenCalledWith(1); // zweites LIED = Index 1
   });
 
-  it('Punkte ohne Lied sind nicht antippbar', () => {
-    const { container } = render(
-      <AgendaFullView items={[item({ title: 'Predigt' })]} eventId={1} onSelect={vi.fn()} />,
+  it('Tipp auf den Punkt öffnet die Einzelansicht, nicht die Charts (B8, E20) – auch bei einem Punkt ohne Lied', () => {
+    const onSelect = vi.fn();
+    render(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'Predigt', note: 'Thema Hoffnung' })]}
+        eventId={1}
+        onSelect={onSelect}
+      />,
     );
-    expect(container.querySelectorAll('button')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: '„Predigt“ ansehen' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    const fenster = screen.getByRole('dialog', { name: 'Predigt' });
+    expect(fenster.textContent).toContain('Position 1 von 1');
+    expect(fenster.textContent).toContain('Thema Hoffnung');
+  });
+
+  it('ein Lied hat zwei Ziele: die Karte → Charts, der Punkt daneben → Einzelansicht (B8, E20)', () => {
+    const onSelect = vi.fn();
+    render(
+      <AgendaFullView
+        items={[
+          item({
+            id: 2,
+            title: 'Lobpreis',
+            song: {
+              title: 'Treu',
+              songId: 2,
+              arrangementId: 2,
+              originalKey: 'G',
+              bpm: 90,
+            } as never,
+          }),
+        ]}
+        eventId={1}
+        onSelect={onSelect}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '„Lobpreis – Treu“ ansehen' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Lobpreis – Treu' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByText('Treu').closest('button')!);
+    expect(onSelect).toHaveBeenCalledWith(0);
+  });
+
+  it('aus der Einzelansicht führt das Lied zu den Charts – die Ansicht schließt sich dabei', () => {
+    const onSelect = vi.fn();
+    render(<AgendaFullView items={[songItem(2, 'Treu')]} eventId={1} onSelect={onSelect} />);
+    // Titel = Liedname, keine Angaben: die Karte nimmt den Titel auf und ist der Weg zum Liedblatt.
+    expect(screen.getByText('Treu').closest('button')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '„Treu“ ansehen' }));
+    const fenster = screen.getByRole('dialog', { name: 'Treu' });
+    fireEvent.click(within(fenster).getByRole('button', { name: /Treu/ }));
+    expect(onSelect).toHaveBeenCalledWith(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

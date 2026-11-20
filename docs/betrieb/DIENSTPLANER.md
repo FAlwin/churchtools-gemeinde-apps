@@ -11,7 +11,8 @@
 >   **Die Werkzeugzeile** (seit „Ruhige Bedienung“ B4, 20.11.2026) steht über der Karte: links „Meine | Alle“, rechts **Filter** und
 >   **⋯** (Teilen, Hilfe). „Weitere Wochen laden“ ist ein stilles blaues Wort unter der Liste; ist die Liste leer, führt „Alle Termine
 >   zeigen“ zu „Alle“. Am Handy: „Meine ⌄“ als blauer Knopf, Filter und ⋯ mit Rahmen.
-> - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App, mit Recht **bearbeiten** (Stift, Ziehen,
+> - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App – ein Tipp auf einen **Punkt** zeigt alle Infos dazu
+>   (am Handy eine Seite mit „Davor / Danach“, sonst ein Fenster; die Lied-Karte öffnet die Lied-Ansicht) –, mit Recht **bearbeiten** (Stift, Ziehen,
 >   „An diesem Termin weglassen“, „Ablauf anlegen“ / „Neu aufsetzen …“), die Dienste des Termins, **Infos & Dateien**
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
 >   als PDF, Sprung in die Musik-App. **Lieder** im Punkt-Fenster wie in der Musik-App: anderes Lied wählen (Suche,

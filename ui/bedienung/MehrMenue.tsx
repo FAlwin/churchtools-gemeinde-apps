@@ -17,11 +17,14 @@ export function MehrMenue({
   optionen,
   handy,
   titel = 'Mehr',
+  dataTour,
 }: {
   optionen: Option[];
   handy: boolean;
   /** Name von Knopf und Menü. */
   titel?: string;
+  /** Ziel der geführten Einführung (`utils/onboarding.ts`) – der „⋯“-Knopf selbst. */
+  dataTour?: string;
 }) {
   const [blatt, setBlatt] = useState(false);
   if (optionen.length === 0) return null;
@@ -37,6 +40,7 @@ export function MehrMenue({
             nurSymbol
             label={titel}
             symbol={symbol}
+            dataTour={dataTour}
             menuOffen={offen}
             offen={offen}
             onClick={umschalten}
@@ -51,6 +55,7 @@ export function MehrMenue({
         nurSymbol
         label={titel}
         symbol={symbol}
+        dataTour={dataTour}
         menuOffen={blatt}
         offen={blatt}
         onClick={() => setBlatt(true)}

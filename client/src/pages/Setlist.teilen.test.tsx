@@ -107,7 +107,11 @@ function zeige(items: AgendaItem[]) {
     </QueryClientProvider>,
   );
 }
-const teilen = () => fireEvent.click(screen.getByRole('button', { name: 'Ablauf als PDF teilen' }));
+/** „Als PDF teilen“ liegt im „⋯“-Menü des Kopfs (B8, R6). */
+const teilen = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Als PDF teilen' }));
+};
 const letztesBlatt = () => blaetter.at(-1) as TerminBlatt;
 
 beforeEach(() => {

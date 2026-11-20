@@ -111,7 +111,7 @@ Lied verlässt, hat nichts angelegt (alles zu). Die Rückfrage beim Löschen nen
 „„Titel" gelöscht · Rückgängig" (Näheres in TF-ABLAUF-10). Alles steht danach so in ChurchTools.
 
 1. Test-Termin öffnen, **Bearbeiten**. Am Rechner steht oben grün **„+ Eintrag hinzufügen“**; am Handy erscheint
-   das Plus unten rechts und verdeckt den Stift des letzten Punkts nicht.
+   das Plus unten rechts und verdeckt den letzten Punkt nicht.
 2. **Eintrag hinzufügen** → **„Option wählen“** mit drei Möglichkeiten. Am Rechner: Das Menü ragt über die
    Kopfkarte hinaus, nichts ist abgeschnitten; **Escape** schließt es. Am Handy: **✕** schließt das Blatt.
 3. **Programmpunkt hinzufügen** → **„Neuer Eintrag"**, **Programmpunkt** ist gewählt. Titel eintragen,
@@ -334,7 +334,7 @@ Für Schritt 5 zwei Test-Termine, die sich in ChurchTools einen Ablauf teilen (s
 **Das muss passieren:** Der Ablauf wird erst nach einer klaren Nachfrage ersetzt – bei einem geteilten Ablauf nur
 für diesen Termin, wenn man das wählt.
 
-1. **Bearbeiten** → rechts in der Hinweiszeile **„Neu aufsetzen …“** → das Fenster „Ablauf neu aufsetzen“ mit
+1. **Bearbeiten** → oben das **⋯-Menü** → **„Neu aufsetzen …“** (in der Musik-App; im Dienstplaner weiter rechts in der Hinweiszeile) → das Fenster „Ablauf neu aufsetzen“ mit
    Vorlage, „Wie eine frühere“ und „Leer“.
 2. Vorlage wählen, **Weiter** → „Ablauf ersetzen?“ nennt die Zahl der Punkte und „Rückgängig geht danach nicht“.
    **Abbrechen** → nichts ändert sich.
@@ -344,7 +344,7 @@ für diesen Termin, wenn man das wählt.
    **keine** Nachfrage (es geht nichts verloren).
 5. Geteilter Ablauf: **Weiter** → die Nachfrage nennt den anderen Termin. **Nur für diesen Termin neu** → dieser Termin
    hat den neuen Ablauf, der andere den alten (in ChurchTools nachsehen).
-6. Abgeschlossener Ablauf: **„Neu aufsetzen …“** zeigt den Sperr-Hinweis, kein Fenster.
+6. Abgeschlossener Ablauf: **„Neu aufsetzen …“** (im ⋯-Menü bzw. der Hinweiszeile) zeigt den Sperr-Hinweis, kein Fenster.
 
 <details><summary>Technisches</summary>
 
@@ -363,7 +363,7 @@ für diesen Termin, wenn man das wählt.
 **Das muss passieren:** Die Info steht in der App – am Rechner als Spalte, am Handy als Zeile – und lässt sich im
 Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 
-1. Ablauf öffnen → oben **„Spalten“** → die Liste nennt nur Gruppen, die man in ChurchTools sieht, mit „N Punkte“.
+1. Ablauf öffnen → in der **Musik-App** oben **⋯ → „Spalten wählen“** (ein kleines Fenster mit Häkchen; im Dienstplaner der Knopf **„Spalten“**) → die Liste nennt nur Gruppen, die man in ChurchTools sieht, mit „N Punkte“.
 2. **Technik** anhaken → rechts eine Spalte „Technik“ mit der Info; leere Zellen zeigen „–“, der Kopf „Technik · 1“.
    Seite neu laden → die Spalte ist noch da (auf diesem Gerät gemerkt).
 3. **Alle Gruppen anhaken** (seit 02.11.2026): Die Spalten fluchten in allen Zeilen; eine lange Info macht ihre Spalte
@@ -406,7 +406,7 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
    Menü nach oben auf, **am Handy** das Blatt „Nach „…“ einfügen“ von unten (Fund F2, 07.11.2026) → **Programmpunkt
    hinzufügen** → „Einfügen nach“ nennt den Punkt. Erst etwas am Punkt ändern: „Darunter einfügen“ ist gesperrt, bis
    gespeichert ist.
-5. **Am Rechner:** Maus über eine Zeile → neben dem Stift ein **Plus** und ein **roter Papierkorb**. Plus →
+5. **Am Rechner:** Maus über eine Zeile → am rechten Rand (im Dienstplaner neben dem Stift) ein **Plus** und ein **roter Papierkorb**. Plus →
    „Programmpunkt/Überschrift dahinter einfügen“, Linie, „… davor einfügen“ (Musik-App auch „Lied …“). **Davor** bei
    dem ersten Punkt unter „Beginn“ → der neue Punkt steht unter „Beginn“, nicht im Vorlauf. Papierkorb → dieselbe
    Rückfrage wie „Eintrag löschen“. Am Handy erscheinen Plus und Papierkorb nicht.
@@ -543,11 +543,11 @@ ein Platzhalter „[Moderation]“, ein ausgeblendeter Punkt, ein Punkt vor dem 
 Termins, ein zweites mit „Abläufe bearbeiten“, aber **ohne** das Vorlagen-Recht für diesen Kalender. **Dreimal durchführen:** im
 **Dienstplaner**, in der **Musik-App als ChurchTools-Erweiterung** und in der **Musik-App im Server-Betrieb**.
 
-**Das muss passieren:** Im Bearbeiten-Modus des Ablaufs steht **„Als Vorlage …“** links neben „Neu aufsetzen …“ (nur mit dem Recht
+**Das muss passieren:** Im Bearbeiten-Modus des Ablaufs steht **„Als Vorlage …“** vor „Neu aufsetzen …“ (Musik-App: im ⋯-Menü; Dienstplaner: Hinweiszeile; nur mit dem Recht
 für den Kalender des Termins) und speichert den Ablauf als Vorlage – ohne Namen von Personen.
 
-1. Termin öffnen, **Ablauf bearbeiten**: rechts in der Hinweiszeile **Als Vorlage …** links von **Neu aufsetzen …**. Am Handy steht es
-   mit den anderen Links in der eigenen Zeile. In der **Matrix** (Dienstplaner) und in der **Ansicht** (ohne Bearbeiten) gibt es den Link nicht.
+1. Termin öffnen, **Ablauf bearbeiten**: In der **Musik-App** liegt **Als Vorlage …** im **⋯-Menü** oben, direkt vor **Neu aufsetzen …**
+   (Handy: Blatt von unten). Im **Dienstplaner** steht es weiter rechts in der Hinweiszeile links von **Neu aufsetzen …**. In der **Matrix** (Dienstplaner) und in der **Ansicht** (ohne Bearbeiten) gibt es den Link nicht.
 2. Mit dem Konto **ohne** Vorlagen-Recht: kein Link.
 3. Link antippen: Fenster **Als Vorlage speichern**, Unterzeile „Ablauf von: <Termin> · <Datum> · N Punkte“. **Als neue Vorlage** ist
    offen: Name = Termin-Titel, Kalender = Kalender des Termins, blauer Hinweis „… keine Namen von Personen“. Nur Kalender mit Recht in der Auswahl.

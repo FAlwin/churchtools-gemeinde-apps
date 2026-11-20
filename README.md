@@ -76,7 +76,9 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
 <details>
 <summary><strong>Alle Funktionen im Detail</strong></summary>
 
-- **Ablaufpläne & Setlists** aus ChurchTools anzeigen (kompletter Ablauf, nicht nur Lieder)
+- **Ablaufpläne & Setlists** aus ChurchTools anzeigen (kompletter Ablauf, nicht nur Lieder) – ein Tipp auf einen **Punkt** zeigt alles dazu
+  (Uhrzeit, Dauer, Zuständige, Bemerkung, Lied, Infos je Gruppe) mit **Davor / Danach** zum Weiterblättern: am Handy als eigene
+  Seite, am iPad und Rechner als Fenster; die **Lied-Karte** öffnet direkt das Liedblatt. Teilen und Spalten liegen im **⋯-Menü**
 - **Ablauf bearbeiten** (mit dem ChurchTools-Recht dafür): Punkte und Lieder anlegen, ändern, löschen und
   per Ziehen sortieren, Vorlauf vor dem Beginn festlegen, Ablauf abschließen und wieder öffnen;
   Löschen und Verschieben lassen sich kurz danach **rückgängig** machen

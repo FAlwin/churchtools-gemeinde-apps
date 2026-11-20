@@ -219,12 +219,12 @@ export const SETLIST_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="setlist-song"]',
     title: 'Lieder öffnen',
-    body: 'Tippe ein Lied im Ablauf an, um seine Akkord-Blätter zu öffnen.',
+    body: 'Tippe die Lied-Karte im Ablauf an, um die Akkord-Blätter zu öffnen. Tippst du auf den Punkt daneben, siehst du alle Infos dazu – mit „Davor“ und „Danach“ blätterst du durch den Ablauf.',
   },
   {
     selector: '[data-tour="setlist-share"]',
-    title: 'Als PDF teilen',
-    body: 'Alle Lieder dieses Gottesdienstes auf einmal als PDF teilen – z. B. per Mail oder zum Drucken. Vorher siehst du die Seiten, wählst, ob deine Anmerkungen mit hinein sollen, und kannst das PDF auch einfach herunterladen.',
+    title: 'Teilen und Spalten',
+    body: 'Im Menü „Mehr“ (drei Punkte): „Als PDF teilen“ schickt alle Lieder dieses Gottesdienstes auf einmal als PDF – z. B. per Mail oder zum Drucken. Vorher siehst du die Seiten, wählst, ob deine Anmerkungen mit hinein sollen, und kannst das PDF auch einfach herunterladen. „Spalten wählen“ zeigt die Infos der Dienstgruppen als Spalten.',
   },
   {
     selector: '[data-tour="setlist-edit"]',
@@ -251,14 +251,9 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
     body: 'Hier legst du einen neuen Eintrag an: Wähle Programmpunkt, Lied oder Überschrift. Ein Lied suchst du nach Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du im Fenster danach gleich mit.',
   },
   {
-    selector: '[data-tour="als-vorlage"]',
-    title: 'Als Vorlage',
-    body: 'Gefällt dir dieser Ablauf auch für andere Termine? „Als Vorlage …“ speichert ihn als neue Ablaufvorlage oder ersetzt eine vorhandene – mit Dauern, Notizen, Liedern und den Platzhaltern, aber ohne Namen. Den Link siehst du nur, wenn du Vorlagen bearbeiten darfst.',
-  },
-  {
     selector: '[data-tour="edit-lock"]',
-    title: 'Abschließen',
-    body: 'Steht der Ablauf, schließt das Schloss ihn in ChurchTools ab – dann kann ihn niemand mehr versehentlich ändern. Zum Ändern öffnest du ihn hier wieder.',
+    title: 'Mehr: Abschließen, Vorlage, Neu aufsetzen',
+    body: 'Im Menü „Mehr“ (drei Punkte) liegt das Seltene. „Ablauf abschließen“ sperrt ihn in ChurchTools – dann kann ihn niemand mehr versehentlich ändern; zum Ändern öffnest du ihn dort wieder. „Als Vorlage …“ speichert den Ablauf als Ablaufvorlage (nur, wenn du Vorlagen bearbeiten darfst), „Neu aufsetzen …“ ersetzt ihn durch eine Vorlage oder einen früheren Termin.',
   },
 ];
 

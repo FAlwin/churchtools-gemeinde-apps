@@ -1,0 +1,265 @@
+// Ein Ablaufpunkt zum Ansehen (B8, E19): dieselbe Feldliste im Fenster (iPad/Rechner) und auf der Handy-Seite. Aussehen wie
+// das Punkt-Fenster (`PunktFenster.module.scss`: „Position n von m“ mit ‹ ›, umrandete Fläche, eine feine Linie je Zeile).
+// Farben, Rundungen und Ebenen nur aus Tokens (`festeWerte`, `ebeneVollflaeche`).
+
+// ── Fenster: „Position 3 von 10 · 10:04 – 10:07“ und ‹ › ──
+.position {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 10px;
+}
+.positionText {
+  flex: 1;
+  min-width: 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+.blaettern {
+  display: flex;
+  gap: 6px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background: var(--surface3);
+      }
+    }
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+}
+
+// ── Die Feldliste (beide Hüllen) ──
+.liste {
+  border: 1px solid var(--border);
+  border-radius: var(--r-dialog);
+  overflow: hidden;
+  background: var(--surface2);
+}
+.zeile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text);
+  font-size: 14px;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.lab {
+  flex: none;
+  width: 150px;
+  color: var(--text2);
+  font-weight: 600;
+}
+.wert {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.abschnitt {
+  padding: 12px 14px 4px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.leer {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Zuständige: Kreis, Name, Dienst grau – offene Dienste rot mit „offen“.
+.personen {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 8px;
+}
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.name {
+  color: var(--text);
+}
+.dienst {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+.offen {
+  color: var(--red);
+  font-weight: 600;
+}
+
+// Das Lied: Karte, antippbar (→ Liedblatt) mit Pfeil wie die Zeilen im Punkt-Fenster.
+.liedKnopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pfeil {
+  flex: none;
+  margin-left: auto;
+  color: var(--text2);
+}
+
+// ── Handy: eine eigene Seite wie in der ChurchTools-App ──
+.seite {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ebene-vollflaeche);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+}
+.seitenKopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  // Unter dem Unschärfe-Band der installierten App (`--inhalt-pad-top`, wie jeder Kopf).
+  padding: var(--inhalt-pad-top) 14px 8px 8px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--surface2);
+}
+.zurueck {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: var(--knopf-hoehe);
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.seitenPosition {
+  color: var(--text2);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.seitenInhalt {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 14px;
+}
+.seitenTitel {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+// Davor / Danach – unten, wie in der App; über dem Home-Strich.
+.nachbarn {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px 14px max(10px, var(--unten-strich));
+  border-top: 1px solid var(--hair);
+  background: var(--surface2);
+}
+.nachbar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+.danach {
+  align-items: flex-end;
+  text-align: right;
+}
+.nachbarArt {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--blue-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.nachbarZeit {
+  color: var(--text2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nachbarTitel {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 759px) {
+  // Am Handy steht die Beschriftung über dem Wert – 150 px daneben ließen dem Text zu wenig Platz.
+  .zeile {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .lab {
+    width: auto;
+    font-size: 12.5px;
+  }
+}

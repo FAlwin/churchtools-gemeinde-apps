@@ -47,3 +47,50 @@ describe('AnsichtWahl (R4/E9, B3)', () => {
     expect(screen.getByRole('button', { name: 'Ansicht: Wer wie oft?' })).toBeTruthy();
   });
 });
+
+describe('AnsichtWahl: Merker (B4/E24)', () => {
+  const MIT = [
+    { value: 'termine', label: 'Termine' },
+    { value: 'eintraege', label: 'Einträge', zahl: 3 },
+  ] as const;
+
+  it('Rechner: ein blauer Kreis direkt hinter dem Wort, derselbe Knopf – der Name trägt die Zahl', () => {
+    render(<AnsichtWahl value="termine" options={[...MIT]} onChange={() => {}} handy={false} />);
+    const knopf = screen.getByRole('button', { name: 'Einträge, 3' });
+    const kreis = knopf.querySelector('[data-zaehler]');
+    expect(kreis?.textContent).toBe('3');
+    expect(kreis?.className).toMatch(/blau/);
+    // Kein Merker an der Ansicht ohne Zahl.
+    expect(
+      screen.getByRole('button', { name: 'Termine' }).querySelector('[data-zaehler]'),
+    ).toBeNull();
+  });
+
+  it('Zahl 0 → kein Kreis, Name nur das Wort', () => {
+    render(
+      <AnsichtWahl
+        value="termine"
+        options={[
+          { value: 'termine', label: 'Termine' },
+          { value: 'eintraege', label: 'Einträge', zahl: 0 },
+        ]}
+        onChange={() => {}}
+        handy={false}
+      />,
+    );
+    const knopf = screen.getByRole('button', { name: 'Einträge' });
+    expect(knopf.querySelector('[data-zaehler]')).toBeNull();
+  });
+
+  it('Handy: der Merker der anderen Ansicht steht am Knopf, im Blatt die Zahl in Klammern', () => {
+    render(<AnsichtWahl value="termine" options={[...MIT]} onChange={() => {}} handy />);
+    const knopf = screen.getByRole('button', { name: 'Ansicht: Termine' });
+    expect(knopf.querySelector('[data-zaehler]')?.textContent).toBe('3');
+    fireEvent.click(knopf);
+    expect(
+      within(screen.getByRole('dialog', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Einträge (3)',
+      }),
+    ).toBeTruthy();
+  });
+});

@@ -295,6 +295,7 @@ export function App() {
                 gemeinde: start.gemeinde,
               }}
               planer={darfPlanen}
+              handy={handy}
               onNochmal={() => termineLaden(start, wochen)}
               onMehr={mehrLaden}
             />

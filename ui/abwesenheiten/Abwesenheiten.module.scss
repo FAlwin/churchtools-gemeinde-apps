@@ -12,29 +12,6 @@
   gap: 12px;
 }
 
-// Unterseiten-Schalter „Termine | Einträge" – wie <Segment>, nur mit Zähler.
-.zaehler {
-  font-size: 11px;
-  font-weight: 700;
-  background: var(--red);
-  color: #fff;
-  border-radius: 999px;
-  padding: 0 6px;
-  line-height: 17px;
-}
-
-// Zeitraum-Knopf links, Filter-Knopf rechts – wie die Werkzeugzeile in Dienstplaner › Planen (28.10.2026).
-// Bricht um, wenn Zeitraum und Filter nicht nebeneinander passen (sehr schmal, z. B. der Dienstplaner in einer
-// schmalen Spalte) – sonst ragte der Filter über den Rand (gefunden bei der Abnahme E7-2c, 04.11.2026).
-.werkzeug {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
 // Gruppen-Überschrift: Monat links, Anzahl rechts.
 .sec {
   display: flex;
@@ -544,7 +521,8 @@
   padding: 2px 0;
   border: 0;
   background: none;
-  color: var(--blue);
+  // Leise (B4): ohne Notiz ein graues „+ Notiz“, mit Notiz ihr Text in der zweiten Textfarbe – Blau gehört den Knöpfen.
+  color: var(--text3);
   font-family: var(--ui);
   font-size: 13px;
   text-align: left;
@@ -552,8 +530,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      color: var(--blue);
+    }
+  }
   &:disabled {
     color: var(--text3);
     cursor: default;
   }
+}
+.notizLinkMit {
+  color: var(--text2);
 }

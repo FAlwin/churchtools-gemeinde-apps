@@ -88,7 +88,7 @@ export function Availability({ online, onToast, heute = heuteImKalender() }: Ava
       rahmen={(t) => (
         <SeitenGeruest
           titel="Abwesenheiten"
-          stattTitel={t.kopf}
+          stattTitel={t.werkzeug}
           onNeuLaden={t.neuLaden}
           ueberlagerung={
             <>
@@ -96,7 +96,6 @@ export function Availability({ online, onToast, heute = heuteImKalender() }: Ava
               <Einfuehrung bereit={!t.laedt} tour={tour} setTour={setTour} />
             </>
           }
-          aktionen={t.aktionen}
         >
           {t.laedt ? (
             <CenterMessage loading text="Wird geladen…" />

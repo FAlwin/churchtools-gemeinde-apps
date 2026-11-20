@@ -152,7 +152,7 @@ describe('Der Link „Notiz“ unter dem Termin', () => {
     await bereitSein();
     expect(notizLink('Gottesdienst', GD1)).toBeNull();
     await klick(knopf('Ja', 'Gottesdienst', GD1));
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
     await klick(knopf('Vielleicht', 'Gottesdienst', GD1));
     expect(notizLink('Gottesdienst', GD1)).not.toBeNull();
     await klick(knopf('Nein', 'Gottesdienst', GD1));
@@ -163,11 +163,11 @@ describe('Der Link „Notiz“ unter dem Termin', () => {
     expect(notizLink('Gottesdienst', GD1)).toBeNull();
   });
 
-  it('mit Notiz steht der Anfang im Link: „Notiz: …“', async () => {
+  it('mit Notiz steht nur ihr Text im Link (B4, ohne „Notiz:“)', async () => {
     stand = bereit({ '1': { a: 'ja', tag: '2026-11-08', notiz: 'nur bis 12 Uhr' } });
     zeige();
     await bereitSein();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: nur bis 12 Uhr');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('nur bis 12 Uhr');
   });
 
   it('gesperrt, wenn Ja/Vielleicht nicht gespeichert werden können (keine bereite Schublade)', async () => {
@@ -201,7 +201,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     await klick(schalter(f, 'Ton'));
     await uebernehmen(f);
     expect(screen.queryByRole('dialog', { name: 'Notiz' })).toBeNull();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: nur bis 12 Uhr');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('nur bis 12 Uhr');
     expect(leiste()!.textContent).toContain('1 Änderung vorgemerkt');
     expect(knopf('Ja', 'Gottesdienst', GD1).className).toMatch(/antwortVorgemerkt/);
     expect(speichern).not.toHaveBeenCalled();
@@ -212,7 +212,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     });
     // Danach neu geladen: der gespeicherte Stand steht ohne Vormerkung da.
     await waitFor(() => expect(leiste()).toBeUndefined());
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: nur bis 12 Uhr');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('nur bis 12 Uhr');
   });
 
   it('alle Dienste an → die Karte hat kein `dienste` (gilt für alle)', async () => {
@@ -240,7 +240,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     await klick(ok);
     // Das Fenster bleibt offen; vorgemerkt ist weiter nur das „Ja“.
     expect(screen.queryByRole('dialog', { name: 'Notiz' })).not.toBeNull();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
     await klick(schalter(f, 'Gitarre'));
     expect(ok.disabled).toBe(false);
     expect(within(f).queryByText('Mindestens ein Dienst muss an bleiben.')).toBeNull();
@@ -293,7 +293,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     expect(leiste()).toBeUndefined();
     expect(knopf('Ja', 'Gottesdienst', GD1).getAttribute('aria-pressed')).toBe('false');
     await klick(knopf('Ja', 'Gottesdienst', GD1));
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
   });
 
   it('Esc schließt das Fenster, ohne zu übernehmen', async () => {
@@ -307,7 +307,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
       await Promise.resolve();
     });
     expect(screen.queryByRole('dialog', { name: 'Notiz' })).toBeNull();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
   });
 
   it('Abbrechen schließt ohne zu übernehmen', async () => {
@@ -318,7 +318,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     tippe(f, 'verloren');
     await klick(within(f).getByText('Abbrechen'));
     expect(screen.queryByRole('dialog', { name: 'Notiz' })).toBeNull();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
   });
 
   it('Ja → Vielleicht lässt Notiz und Dienste stehen; noch einmal auf den aktiven Knopf löscht beides', async () => {
@@ -326,7 +326,7 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     zeige();
     await bereitSein();
     await klick(knopf('Vielleicht', 'Gottesdienst', GD1));
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: bleibt');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('bleibt');
     await speichereKlick();
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
     expect(karte()['1']).toEqual({
@@ -381,7 +381,7 @@ describe('Nein: der Kommentar gehört der ChurchTools-Abwesenheit', () => {
     tippe(f, 'Familienfeier');
     await uebernehmen(f);
     expect(leiste()!.textContent).toContain('1 Änderung vorgemerkt');
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: Familienfeier');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Familienfeier');
     await speichereKlick();
     await waitFor(() => expect(dienst.anlegen).toHaveBeenCalledTimes(1));
     expect(dienst.anlegen.mock.calls[0][0]).toMatchObject({
@@ -404,7 +404,7 @@ describe('Nein: der Kommentar gehört der ChurchTools-Abwesenheit', () => {
     dienst.meine.mockResolvedValue([abw(77, '2026-11-08', '2026-11-08', 'alt')]);
     zeige();
     await bereitSein();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: alt');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('alt');
     const f = await oeffneNotiz('Gottesdienst', GD1);
     expect(within(f).getByLabelText<HTMLTextAreaElement>('Kommentar').value).toBe('alt');
     tippe(f, 'neu');
@@ -449,7 +449,7 @@ describe('Wechsel der Antwort', () => {
     zeige();
     await bereitSein();
     await klick(knopf('Nein', 'Gottesdienst', GD1));
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: nur bis 12 Uhr');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('nur bis 12 Uhr');
     const f = await oeffneNotiz('Gottesdienst', GD1);
     expect(within(f).queryByText('Nur bestimmte Dienste')).toBeNull();
     await klick(within(f).getByText('Abbrechen'));
@@ -467,7 +467,7 @@ describe('Wechsel der Antwort', () => {
     await klick(knopf('Nein', 'Gottesdienst', GD1));
     await klick(knopf('Ja', 'Gottesdienst', GD1));
     expect(leiste()).toBeUndefined();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: bis 12');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('bis 12');
     const f = await oeffneNotiz('Gottesdienst', GD1);
     expect(schalter(f, 'Gitarre').checked).toBe(false);
   });
@@ -478,7 +478,7 @@ describe('Wechsel der Antwort', () => {
     await bereitSein();
     await klick(knopf('Ja', 'Gottesdienst', GD1));
     expect(leiste()!.textContent).toContain('1 Änderung vorgemerkt');
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: Familienfeier');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Familienfeier');
     await speichereKlick();
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
     expect(dienst.loeschen).toHaveBeenCalledWith(77);
@@ -496,7 +496,7 @@ describe('Wechsel der Antwort', () => {
     expect(leiste()).toBeUndefined();
     expect(notizLink('Gottesdienst', GD1)).toBeNull();
     await klick(knopf('Nein', 'Gottesdienst', GD1));
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('+ Notiz');
   });
 
   it('Verwerfen nimmt auch einen vorgemerkten Nein-Kommentar zurück', async () => {
@@ -508,7 +508,7 @@ describe('Wechsel der Antwort', () => {
     await uebernehmen(f);
     await klick(screen.getByRole('button', { name: 'Verwerfen' }));
     expect(leiste()).toBeUndefined();
-    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('Notiz: alt');
+    expect(notizLink('Gottesdienst', GD1)!.textContent).toBe('alt');
   });
 });
 

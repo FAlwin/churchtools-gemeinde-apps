@@ -9,14 +9,19 @@ import type {
 import { Icon } from '../icons/icons';
 import { useNeuAnlegen } from '../bedienung/NeuAnlegen';
 import { ZeitraumKnopf } from '../bedienung/ZeitraumKnopf';
+import { ZeitraumLeiste } from '../bedienung/ZeitraumLeiste';
 import { FilterKnopf } from '../bedienung/FilterKnopf';
 import { Segment } from '../bedienung/Segment';
+import { AnsichtWahl } from '../bedienung/AnsichtWahl';
+import { Werkzeugzeile } from '../bedienung/Werkzeugzeile';
+import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { ApiError } from '../ct/fehler';
 import {
   AB_HEUTE,
   spanneText,
   zeitraumGrenzen,
   zeitraumText,
+  zeitraumVerschieben,
   type Zeitraum,
 } from '@shared/ct/zeitraum';
 import { MAX_VORAUS_TAGE, decktTermin, zeitfensterFuer } from '@shared/absences/index';
@@ -75,12 +80,13 @@ export interface AbwesenheitenSchreiben {
   geaendert: () => void;
 }
 
-/** Was die App in ihren Rahmen setzt (Seitenkopf, Knopf rechts oben, Inhalt, was darüber schwebt). */
+/** Was die App in ihren Rahmen setzt (Werkzeugzeile, Inhalt, was darüber schwebt). */
 export interface AbwesenheitenTeile {
-  /** „Termine | Einträge“ – steht an der Stelle der Überschrift. */
-  kopf: ReactNode;
-  /** Am Rechner der grüne Knopf „Zeitraum eintragen“ im Kopf. */
-  aktionen: ReactNode;
+  /**
+   * Die Werkzeugzeile (R5, B4): links „Termine | Einträge“, in der Mitte der Zeitraum, rechts Filter und – am Rechner – der
+   * grüne Knopf „Zeitraum eintragen“. Steht an der Stelle der Überschrift; die App legt sie nur an ihren Platz.
+   */
+  werkzeug: ReactNode;
   /** Die Liste – nur zeigen, wenn weder `laedt` noch `fehler`. */
   inhalt: ReactNode;
   /** Speichern-Leiste oder schwebendes Plus, dazu die Fenster. */
@@ -189,6 +195,11 @@ interface Kasten {
  *
  * Kopfleiste nur mit Titel, wie bei Termine und Lieder (Alwin, 19.09.2026).
  *
+ * **Seit „Ruhige Bedienung“ B4 (20.11.2026, Entwurf „Restliche Bildschirme“ Abschnitt 4, E24):** Zeitraum, Filter, Ansicht und
+ * „Zeitraum eintragen“ stehen in EINER Werkzeugzeile (`Werkzeugzeile`, R5): links „Termine | Einträge“ (Merker an „Einträge“ als
+ * blauer Kreis), in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“ (still) und der grüne Knopf – am Handy statt seiner das
+ * schwebende Plus. Die App setzt die Zeile nur an ihren Platz (`AbwesenheitenTeile.werkzeug`).
+ *
  * **Gemeinsamer Baustein seit Dienstplaner E7-2b** (04.11.2026): Die Seite gehört Musik-App und Dienstplaner. Was je App
  * verschieden ist, kommt von außen – Daten (`useDaten`), Schreiben (`schreiben`), Rahmen (`rahmen`), Termin-Arten und
  * die gemerkte Filter-Wahl. Seit E7-2b sehen alle Einträge gleich aus, egal wo sie eingetragen wurden, und Löschen fragt
@@ -221,6 +232,7 @@ export function AbwesenheitenSeite({
   const vorab = letzterTag(bisMonat);
   const ladenBis = grenzen.bis > vorab ? grenzen.bis : vorab;
   const daten = useDaten({ von: plusTage(heute, -RUECKBLICK_TAGE), bis: ladenBis });
+  const handy = useMedienAbfrage(HANDY_BREITE);
   /** Was gerade geschrieben wird – Fenster, einzelnes Löschen oder die gesammelten Häkchen. */
   const [laeuft, setLaeuft] = useState<'fenster' | 'loeschen' | 'sichern' | null>(null);
 
@@ -686,7 +698,8 @@ export function AbwesenheitenSeite({
   };
 
   /**
-   * Der Link „Notiz“ unter dem Termin (E5c-2) – mit Notiz: „Notiz: <Anfang>“. **Ohne Antwort gibt es ihn nicht**: Eine
+   * Der Link „Notiz“ unter dem Termin (E5c-2) – leise (B4, Entwurf Abschnitt 4): ohne Notiz ein graues „+ Notiz“, mit Notiz nur
+   * ihr Text (grau, ohne Vorsatz „Notiz:“; der Name für Screenreader bleibt „Notiz – …: <Text>“). **Ohne Antwort gibt es ihn nicht**: Eine
    * Notiz braucht ein Ja, Vielleicht oder Nein, an dem sie hängt; ein gesperrter Link mit Erklärung an jeder Zeile
    * machte die Liste unruhig. Bei „Nein“ nur, wo der Kommentar dem Termin allein gehört (`kommentarAenderbar`).
    */
@@ -699,12 +712,12 @@ export function AbwesenheitenSeite({
     return (
       <button
         type="button"
-        className={styles.notizLink}
+        className={`${styles.notizLink}${text ? ' ' + styles.notizLinkMit : ''}`}
         aria-label={`Notiz – ${ev.name}, ${tagKurz(ev.date)}${text ? `: ${text}` : ''}`}
         disabled={(nein ? !online : !zusagen.bereit) || laeuft === 'sichern'}
         onClick={() => setNotizFuer(ev)}
       >
-        {text ? `Notiz: ${text}` : 'Notiz'}
+        {text || '+ Notiz'}
       </button>
     );
   };
@@ -806,29 +819,98 @@ export function AbwesenheitenSeite({
     }));
   };
 
-  const termineSeite = (
-    <>
-      <div className={styles.werkzeug}>
-        {/* Zeitraum- und Filter-Knopf: dieselben Komponenten wie im Dienstplaner (28.10.2026). */}
-        <div data-tour="verf-zeitraum">
-          <ZeitraumKnopf
-            zeitraum={zeitraum}
-            zeile1={
-              zeitraum.art === 'abHeute'
-                ? spanneText(grenzen.von, grenzen.bis)
-                : zeitraumText(zeitraum)
+  // Am iPad/Rechner grün rechts in der Werkzeugzeile, am Handy das Plus (`useNeuAnlegen`). Solange etwas vorgemerkt ist, gibt
+  // es keins – EIN Speichern-Weg.
+  const neu = useNeuAnlegen({
+    label: 'Zeitraum eintragen',
+    onClick: zeitraumOeffnen,
+    sichtbar: !laedt && !fehler && anzahl === 0,
+    disabled: !online,
+    dataTour: 'verf-plus',
+  });
+
+  /**
+   * Der Schritt ‹ / › der Zeitraum-Leiste (R5, B4): der Zeitraum um seine eigene Länge verschoben (`zeitraumVerschieben`, wie in
+   * „Planen“; „ab heute“ gilt dabei als die vier Wochen, die es gerade zeigt). `null`, wo es nichts zu zeigen gäbe: ganz in
+   * der Vergangenheit (die steht unter „Einträge → Früher“) oder hinter dem, was der Server holt (`spaetestens`).
+   */
+  const schritt = (richtung: 1 | -1): Zeitraum | null => {
+    const grund: Zeitraum =
+      zeitraum.art === 'abHeute' ? { art: 'eigen', von: grenzen.von, bis: grenzen.bis } : zeitraum;
+    const z = zeitraumVerschieben(grund, richtung, heute);
+    const g = zeitraumGrenzen(z, heute);
+    if (!g || g.bis < heute || g.von > spaetestens) return null;
+    // Ein eigener Zeitraum beginnt nicht vor heute und endet nicht hinter dem, was der Server holt.
+    if (z.art === 'eigen')
+      return {
+        art: 'eigen',
+        von: z.von < heute ? heute : z.von,
+        bis: z.bis > spaetestens ? spaetestens : z.bis,
+      };
+    return z;
+  };
+  const davor = schritt(-1);
+  const danach = schritt(1);
+
+  // Die Werkzeugzeile (R5/E24, B4): Ansicht links, Zeitraum in der Mitte, Filter und „+ Zeitraum eintragen“ rechts. Ein Wort
+  // für den Reiter „Einträge“ trägt den Merker (blau gefüllter Kreis, in derselben Zeile). Auf „Einträge“ gibt es keinen
+  // Zeitraum und keinen Filter – beides wirkt nur auf die Termine.
+  const imTermineReiter = seite === 'termine';
+  const werkzeug = (
+    <Werkzeugzeile
+      handy={handy}
+      links={
+        <AnsichtWahl
+          value={seite}
+          onChange={setSeite}
+          handy={handy}
+          options={[
+            { value: 'termine', label: 'Termine' },
+            { value: 'eintraege', label: 'Einträge', zahl: anstehend.length },
+          ]}
+        />
+      }
+      mitte={
+        imTermineReiter ? (
+          <ZeitraumLeiste
+            dataTour="verf-zeitraum"
+            handy={handy}
+            blaettern={!handy || zeitraum.art !== 'abHeute'}
+            davor={{
+              aktiv: davor !== null,
+              label: 'Zeitraum davor',
+              onClick: () => davor && setZeitraum(davor),
+            }}
+            danach={{
+              aktiv: danach !== null,
+              label: 'Zeitraum danach',
+              onClick: () => danach && setZeitraum(danach),
+            }}
+            knopf={
+              <ZeitraumKnopf
+                zeitraum={zeitraum}
+                zeile1={
+                  zeitraum.art === 'abHeute'
+                    ? spanneText(grenzen.von, grenzen.bis)
+                    : zeitraumText(zeitraum)
+                }
+                zeile2={`${terminText(zeitraumEvents.length)}${zeitraum.art === 'abHeute' ? ' · ab heute' : ''}`}
+                heute={heute}
+                abHeuteZusatz="die nächsten 4 Wochen"
+                spaetestens={spaetestens}
+                fruehestens={`${laufend}-01`}
+                onWahl={setZeitraum}
+              />
             }
-            zeile2={`${terminText(zeitraumEvents.length)}${zeitraum.art === 'abHeute' ? ' · ab heute' : ''}`}
-            heute={heute}
-            abHeuteZusatz="die nächsten 4 Wochen"
-            spaetestens={spaetestens}
-            fruehestens={`${laufend}-01`}
-            onWahl={setZeitraum}
           />
-        </div>
-        {knoepfe.length > 1 && (
-          <div data-tour="verf-filter">
+        ) : undefined
+      }
+      rechts={
+        <>
+          {imTermineReiter && knoepfe.length > 1 && (
             <FilterKnopf
+              still
+              dataTour="verf-filter"
               abschnitte={[
                 {
                   titel: 'Veranstaltungen',
@@ -838,9 +920,15 @@ export function AbwesenheitenSeite({
                 },
               ]}
             />
-          </div>
-        )}
-      </div>
+          )}
+          {neu.kopf}
+        </>
+      }
+    />
+  );
+
+  const termineSeite = (
+    <>
       {zusagen?.hinweis && (
         <ZusageHinweis hinweis={zusagen.hinweis} einrichten={zusagen.einrichten} />
       )}
@@ -919,16 +1007,6 @@ export function AbwesenheitenSeite({
    * dazu die Fenster und die Einführung. Es scrollt nicht mit, deshalb steht es neben dem Inhalt
    * und nicht darin.
    */
-  // Am iPad/Rechner grün im Seitenkopf, am Handy das Plus (`useNeuAnlegen`). Solange etwas vorgemerkt ist, gibt es
-  // keins – EIN Speichern-Weg.
-  const neu = useNeuAnlegen({
-    label: 'Zeitraum eintragen',
-    onClick: zeitraumOeffnen,
-    sichtbar: !laedt && !fehler && anzahl === 0,
-    disabled: !online,
-    dataTour: 'verf-plus',
-  });
-
   const ueberlagerung = (
     <>
       {anzahl > 0 ? (
@@ -1013,27 +1091,8 @@ export function AbwesenheitenSeite({
   );
 
   return rahmen({
-    // „Termine | Einträge“ steht an der Stelle der Überschrift – „Abwesenheiten“ sagt schon der Reiter (28.10.2026).
-    kopf: (
-      <Segment
-        ariaLabel="Ansicht"
-        value={seite}
-        onChange={setSeite}
-        options={[
-          { value: 'termine', label: 'Termine' },
-          {
-            value: 'eintraege',
-            label: (
-              <>
-                Einträge
-                {anstehend.length > 0 && <span className={styles.zaehler}>{anstehend.length}</span>}
-              </>
-            ),
-          },
-        ]}
-      />
-    ),
-    aktionen: neu.kopf,
+    // Die Werkzeugzeile steht an der Stelle der Überschrift – „Abwesenheiten“ sagt schon der Reiter (28.10.2026).
+    werkzeug,
     inhalt: (
       <div className={styles.wrap}>{seite === 'termine' ? termineSeite : eintraegeSeite}</div>
     ),

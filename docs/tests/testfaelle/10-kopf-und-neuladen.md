@@ -22,7 +22,7 @@ des Bandes.
    bis unter die Uhr.
 2. **Lieder:** ganz oben das Suchfeld (Vollbild daneben), darunter die Sortierung – keine Überschrift. **Mehr:** ganz
    oben die Gemeinde-Karte, Vollbild oben rechts daneben – keine Überschrift. **Abwesenheiten** (Reiter nur in der
-   eigenen App): ganz oben „Termine | Einträge“, am iPad rechts daneben grün „+ Zeitraum eintragen“ – keine Überschrift. Wähler, Suchfeld und Karte enden rechts bündig mit der
+   eigenen App): ganz oben die Werkzeugzeile (seit B4): „Termine | Einträge“ links, in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“ und am iPad grün „+ Zeitraum eintragen“ – keine Überschrift. Wähler, Suchfeld und Karte enden rechts bündig mit der
    Liste darunter.
    2a. **ChurchTools-App vom Home-Bildschirm** (iPhone, Erweiterung): Der Kopf jeder Seite beginnt **knapp** unter der
    blauen ChurchTools-Leiste, kein leerer Streifen dazwischen (vorher ~36 pt). Das runde **Plus** (Abwesenheiten,

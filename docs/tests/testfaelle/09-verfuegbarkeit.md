@@ -16,9 +16,10 @@ eine Abwesenheit mit dessen **Uhrzeit** und dem Kommentar `[Musikteam]` an, alle
 (seit 22.09.2026; vorher ganztägig je Tag). Ein zweiter Tipp nimmt einen Haken zurück.
 
 1. Anmelden, unten auf **Abwesenheiten**. Beim ersten Öffnen erscheint die Einführung (vier Blasen, drei ohne Termin-Arten) –
-   schließen. Oben der Schalter **Termine | Einträge**, darunter links der **Zeitraum-Knopf** (z. B.
-   „28.10. – 24.11.2026 · 6 Termine · ab heute“) und rechts – wenn es mehrere Termin-Arten gibt – der Knopf
-   **Filter**. Beide sehen aus wie im Dienstplaner.
+   schließen. Oben die **Werkzeugzeile** (seit B4, alles in EINER Zeile): links der Schalter **Termine | Einträge**
+   (an „Einträge“ ein blau gefüllter Kreis mit der Zahl), in der Mitte der **Zeitraum** als ein Rahmen ‹ „28.10. – 24.11.2026 · 6 Termine ·
+   ab heute“ › und rechts – wenn es mehrere Termin-Arten gibt – **Filter** (mit dem Wort), am iPad daneben grün **+ Zeitraum eintragen**.
+   Alles sieht aus wie im Dienstplaner. ‹ geht ab heute nicht (Vergangenes steht unter „Einträge → Früher“), › zeigt die nächsten vier Wochen.
 2. Beim nächsten Gottesdienst das Kästchen **Abwesend** antippen: Haken rot, blauer Ring, die
    Datumskachel wird rot. Unten erscheint die Leiste **„Verwerfen · 1 Änderung vorgemerkt ·
    Speichern"**, das Plus ist weg. **In ChurchTools steht noch nichts.**
@@ -300,7 +301,11 @@ Unter jedem Termin stehen die eigenen Dienste; wer bei einem Termin mit Dienst �
 Dienst absagen soll.
 
 1. Dienstplaner öffnen → Reiter **Wann kann ich?** (am Handy unten, am Rechner oben). Statt „Hier trägst du bald ein …"
-   steht die Terminliste ab heute, darüber Zeitraum und – wenn eine Veranstaltung mehrfach vorkommt – **Filter**.
+   steht die Terminliste ab heute, darüber **eine Werkzeugzeile** (seit B4): links **Termine | Einträge** (Merker an „Einträge“),
+   in der Mitte der **Zeitraum** mit ‹ ›, rechts – wenn eine Veranstaltung mehrfach vorkommt – **Filter** und der grüne Knopf
+   **+ Zeitraum eintragen**. Unter „Einträge“ fehlen Zeitraum und Filter, der grüne Knopf bleibt. Eine leere Notiz heißt leise
+   **+ Notiz**, eine vorhandene zeigt nur ihren Text. **Handy:** blauer Knopf **Termine ⌄** (Blatt: Termine · Einträge (n)), rechts
+   der Filter mit Rahmen, darunter der Zeitraum über die ganze Breite, statt des grünen Knopfs das runde Plus.
 2. Unter dem Termin mit Dienst: **„Du bist eingeteilt: …"**, unter dem mit Anfrage **„Angefragt: …"**.
 3. Beim Termin mit Dienst **Nein** wählen → die Zeile darunter wird rot: **„… – bitte auch den Dienst absagen"**.
    **Speichern** → in ChurchTools ein Eintrag mit der Uhrzeit des Termins, ohne Kennzeichen. Der Dienst selbst bleibt
@@ -313,7 +318,7 @@ Dienst absagen soll.
 
 - **Priorität:** hoch
 - **Betrifft:** `dienstplaner/src/Abwesenheiten.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `ui/abwesenheiten/ctDienst.ts`, `shared/dienstplan/meineDienste.ts`, `dienstplaner/src/ladeBeiwerk.ts`
-- **Automatisiert:** überwiegend – `dienstplaner/src/Abwesenheiten.test.tsx` (Termine ab heute, Dienst-Hinweis, rote Warnung, Speichern mit Fenster, Neuladen, Filter, Fehler), `shared/dienstplan/meineDienste.test.ts`; Kern und Anschluss wie TF-VERF-09; von Hand bleibt, dass ChurchTools den Eintrag so zeigt und die eigenen Dienste stimmen
+- **Automatisiert:** überwiegend – `dienstplaner/src/Abwesenheiten.test.tsx` (Termine ab heute, Dienst-Hinweis, rote Warnung, Speichern mit Fenster, Neuladen, Filter, Fehler), `dienstplaner/src/Abwesenheiten.werkzeug.test.tsx` (Werkzeugzeile: Reihenfolge, Merker, ‹ ›, Einträge ohne Zeitraum, Handy), `ui/bedienung/ZeitraumLeiste.test.tsx`, `ui/bedienung/AnsichtWahl.test.tsx`, `shared/dienstplan/meineDienste.test.ts`; Kern und Anschluss wie TF-VERF-09; von Hand bleibt, dass ChurchTools den Eintrag so zeigt und die eigenen Dienste stimmen
 - **Historie:** Dienstplaner E7-2c (04.11.2026), Entwurf `e7-2-abwesenheiten.html`
 
 </details>

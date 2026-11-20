@@ -2,6 +2,9 @@
 
 // Die Beschriftung bricht nicht um („Wer wie oft?“ stand in zwei Zeilen, Prüfung 13.10.2026).
 .segment button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   white-space: nowrap;
 }
 

@@ -178,7 +178,7 @@ describe('Termine im Reiter (E3-2)', () => {
     // Schon die Startseite braucht die Termine („Als Nächstes“, deine Dienste).
     await waitFor(() => expect(termineLaden).toHaveBeenCalledTimes(1));
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
-    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    await screen.findByRole('button', { name: 'Weitere Wochen laden' });
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
     // Die Reiterleiste ignoriert einen Tipp auf den schon gewählten Reiter – erst warten, bis „Start“ gewählt ist
     // (die Adresse wechselt über `hashchange`, nicht gleichzeitig).
@@ -188,10 +188,10 @@ describe('Termine im Reiter (E3-2)', () => {
       ).toBe('true'),
     );
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
-    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    await screen.findByRole('button', { name: 'Weitere Wochen laden' });
     expect(termineLaden).toHaveBeenCalledTimes(1);
     expect(termineLaden.mock.calls[0][1]).toBe(8);
-    fireEvent.click(screen.getByRole('button', { name: 'Weitere Termine laden' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Wochen laden' }));
     expect(termineLaden).toHaveBeenCalledTimes(2);
     expect(termineLaden.mock.calls[1][1]).toBe(16);
   });
@@ -203,11 +203,11 @@ describe('Termine im Reiter (E3-2)', () => {
     termineLaden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce(KEINE_TERMINE);
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
-    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    await screen.findByRole('button', { name: 'Weitere Wochen laden' });
     expect(termineLaden).toHaveBeenCalledTimes(2);
   });
 
-  it('Termine: im ersten Bild mit dem Fehler ist „Weitere Termine laden“ wieder frei – nicht noch „wird geladen …“', async () => {
+  it('Termine: im ersten Bild mit dem Fehler ist „Weitere Wochen laden“ wieder frei – nicht noch „wird geladen …“', async () => {
     breite(false);
     window.location.hash = '#/termine';
     laden.mockResolvedValue(start([3]));
@@ -218,7 +218,7 @@ describe('Termine im Reiter (E3-2)', () => {
         return;
       const knopf = screen
         .getAllByRole('button')
-        .find((b) => /Termine laden|wird geladen/.test(b.textContent ?? ''));
+        .find((b) => /Wochen laden|wird geladen/.test(b.textContent ?? ''));
       imFehlerBild.push(
         `${knopf?.textContent} ${(knopf as HTMLButtonElement | undefined)?.disabled ? 'gesperrt' : 'frei'}`,
       );
@@ -228,11 +228,11 @@ describe('Termine im Reiter (E3-2)', () => {
         <App />
       </Profiler>,
     );
-    const mehr = await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    const mehr = await screen.findByRole('button', { name: 'Weitere Wochen laden' });
     termineLaden.mockRejectedValueOnce(new ApiError(502, 'x'));
     fireEvent.click(mehr);
     await screen.findByRole('button', { name: 'Erneut versuchen' });
-    expect(imFehlerBild).toEqual(['Weitere Termine laden frei']);
+    expect(imFehlerBild).toEqual(['Weitere Wochen laden frei']);
   });
 
   it('Nachladen ist still: das Bisherige bleibt stehen; ein Fehler dabei bleibt neben der Liste (14.10.2026)', async () => {
@@ -240,11 +240,11 @@ describe('Termine im Reiter (E3-2)', () => {
     window.location.hash = '#/termine';
     laden.mockResolvedValue(start([3]));
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Termine laden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Wochen laden' }));
     // Nicht wieder „lädt …“ über die ganze Seite – die Liste und ihr Knopf bleiben.
     expect(screen.getByRole('button', { name: 'wird geladen …' })).toBeTruthy();
     termineLaden.mockRejectedValueOnce(new ApiError(502, 'x'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Termine laden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Wochen laden' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     expect(screen.getByRole('button', { name: 'wird geladen …' })).toBeTruthy();
     expect(termineLaden.mock.calls.map((c) => c[1])).toEqual([8, 16, 24, 24]);

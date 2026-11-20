@@ -17,6 +17,7 @@ export function FilterKnopf({
   abschnitte,
   className,
   still = false,
+  dataTour,
 }: {
   abschnitte: FilterAbschnitt[];
   /**
@@ -26,6 +27,8 @@ export function FilterKnopf({
   still?: boolean;
   /** Für die Lage in der Leiste (z. B. rechtsbündig). */
   className?: string;
+  /** Ziel der geführten Einführung – an der Hülle, damit der Knopf direkt unter der Werkzeugzeile bleibt (R12-Rahmen am Handy). */
+  dataTour?: string;
 }) {
   const { offen, setOffen, rahmen, menue } = useAufklapp();
   useMenueImBild(menue, offen, 'rechts');
@@ -46,7 +49,11 @@ export function FilterKnopf({
 
   if (sichtbar.length === 0) return null;
   return (
-    <div className={`${styles.rahmen}${className ? ' ' + className : ''}`} ref={rahmen}>
+    <div
+      className={`${styles.rahmen}${className ? ' ' + className : ''}`}
+      ref={rahmen}
+      data-tour={dataTour}
+    >
       <button
         type="button"
         className={`${styles.knopf}${still ? ' ' + styles.still : ''}${ausgeblendet ? ' ' + styles.aktiv + ' ' + styles.mitZahl : ''}`}

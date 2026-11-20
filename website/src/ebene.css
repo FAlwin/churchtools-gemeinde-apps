@@ -1,0 +1,171 @@
+/* Die Bearbeiten-Ebene in der Vorschau (W3a-2) – wird NUR in die Vorschau gehängt, nie in den Bau. Alle Namen beginnen mit
+   `b-`, damit sie nichts der Website treffen. Farben fest: Die Ebene sieht immer gleich aus, egal wie die Website aussieht. */
+.b-werk {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  display: none;
+  gap: 2px;
+  background: #0f172a;
+  border-radius: 6px;
+  padding: 3px;
+  font: 700 12px/1 system-ui, sans-serif;
+}
+.b-werk button {
+  border: 0;
+  background: none;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.b-werk button:focus-visible {
+  background: #334155;
+}
+@media (hover: hover) {
+  .b-werk button:hover {
+    background: #334155;
+  }
+}
+.b-werk svg,
+.b-einfuegen svg {
+  width: 15px;
+  height: 15px;
+}
+/* Mit der Maus zeigt das Darüberfahren den Abschnitt; am Handy (kein Hover) gilt der zuletzt angetippte (`b-aktiv`). */
+section.w-abschnitt.b-aktiv {
+  outline: 2px solid #155dfc;
+  outline-offset: -2px;
+}
+section.w-abschnitt.b-aktiv > .b-werk,
+section.w-abschnitt:focus-within > .b-werk {
+  display: flex;
+}
+@media (hover: hover) {
+  section.w-abschnitt:hover {
+    outline: 2px solid #155dfc;
+    outline-offset: -2px;
+  }
+  section.w-abschnitt:hover > .b-werk {
+    display: flex;
+  }
+  .w-baustein:hover {
+    outline: 2px dashed #155dfc;
+  }
+}
+.w-baustein {
+  cursor: pointer;
+  border-radius: 4px;
+  outline-offset: 3px;
+}
+.b-einfuegen {
+  position: relative;
+  height: 0;
+  z-index: 25;
+  display: flex;
+  justify-content: center;
+  padding: 14px 0;
+  margin: -14px 0;
+}
+.b-einfuegen button {
+  position: absolute;
+  top: -15px;
+  border: 0;
+  background: #155dfc;
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 700 12px/1 system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  white-space: nowrap;
+  gap: 4px;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.b-einfuegen button:focus-visible,
+section.w-abschnitt.b-aktiv + .b-einfuegen button {
+  opacity: 1;
+}
+/* Der Knopf VOR dem aktiven Abschnitt (`:has` einzeln, damit ein Browser ohne `:has` die Regel darüber behält). */
+.b-einfuegen:has(+ section.w-abschnitt.b-aktiv) button {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .b-einfuegen:hover button {
+    opacity: 1;
+  }
+}
+/* Am Handy gibt es kein Darüberfahren: Die Knöpfe stehen immer da. */
+@media (hover: none) {
+  .b-einfuegen button {
+    opacity: 1;
+  }
+}
+/* Eine leere Seite: der Knopf steht sichtbar mitten im Platz. */
+.b-leer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 72px 16px;
+  color: #475569;
+  font: 600 15px/1.4 system-ui, sans-serif;
+  text-align: center;
+}
+.b-leer button {
+  border: 0;
+  background: #155dfc;
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: 700 14px/1 system-ui, sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.b-leer svg {
+  width: 16px;
+  height: 16px;
+}
+.w-spalte {
+  position: relative;
+}
+.b-neu-baustein {
+  display: none;
+  margin-top: 12px;
+  border: 1px dashed currentColor;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font: 700 12px/1 system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+section.w-abschnitt.b-aktiv .b-neu-baustein,
+section.w-abschnitt:focus-within .b-neu-baustein {
+  display: inline-flex;
+}
+@media (hover: hover) {
+  section.w-abschnitt:hover .b-neu-baustein {
+    display: inline-flex;
+  }
+  .b-neu-baustein:hover {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,116 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
+import { _vergissModul } from '@ui/ct/modulPort';
+import { neueLeereSeite } from '@shared/website/seitenListe';
+import { beginneBearbeiten, ladeWebsite, speichereSeite } from './daten';
+import { demoStarten } from './demo';
+import { ladeStart } from './start';
+
+/**
+ * `?demo` spielt ChurchTools nach – ohne dass eine Anfrage ins Netz geht (W3a-2). Die Tests laufen über dieselben Wege wie die
+ * Oberfläche (`ladeStart`, `ladeWebsite`, `speichereSeite`, `beginneBearbeiten`), nicht über handgebaute Antworten.
+ */
+const ICH = { person: 1, name: 'Helene Wiebe', fenster: 'f1' };
+const echtesFetch = vi.fn<typeof fetch>(() =>
+  Promise.reject(new Error('echtes Netz – das darf der Demo-Modus nie berühren')),
+);
+const vorher = window.fetch;
+
+beforeEach(() => {
+  vi.stubEnv('BASE_URL', '/ccm/website/');
+  _vergissCsrf();
+  _bremseLoesen();
+  _vergissModul();
+  (window as { settings?: { base_url?: string } }).settings = { base_url: 'https://ct.test/' };
+  window.fetch = echtesFetch;
+  echtesFetch.mockClear();
+});
+afterEach(() => {
+  window.fetch = vorher;
+  delete (window as { settings?: unknown }).settings;
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+
+async function ort(fall: string) {
+  demoStarten(fall);
+  const start = await ladeStart();
+  return { start, ort: { modul: start.modul, kategorie: start.einrichtung!.entwuerfe! } };
+}
+
+describe('Demo ohne echte Anfragen', () => {
+  it('Start, Lesen, Speichern, Sperre nehmen, Kalender: keine einzige Anfrage geht an das echte `fetch`, keine ist unbekannt', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { start, ort: o } = await ort('seiten');
+    expect(start.zugang).toBe('admin');
+    const stand = await ladeWebsite(o);
+    expect(stand.seiten.map((s) => s.titel).sort()).toEqual([
+      'Impressum',
+      'Startseite',
+      'Unsere Gruppen',
+    ]);
+    const neu = neueLeereSeite('Jugend', stand.seiten, () => 'n1');
+    await speichereSeite(o, neu);
+    expect((await ladeWebsite(o)).seiten.map((s) => s.id)).toContain('n1');
+    expect((await beginneBearbeiten(o, 'n1', ICH)).art).toBe('ok');
+    const kalender = await window.fetch('https://ct.test/api/calendars');
+    expect(kalender.status).toBe(200);
+    expect(echtesFetch).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('eine unbekannte Anfrage geht auch nicht ins Netz: 404 und eine Warnung', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    demoStarten('seiten');
+    const r = await window.fetch('https://ct.test/api/gibt-es-nicht');
+    expect(r.status).toBe(404);
+    expect(warn).toHaveBeenCalledWith('Demo: unbekannte Anfrage', 'GET', '/gibt-es-nicht');
+    expect(echtesFetch).not.toHaveBeenCalled();
+  });
+
+  it('der Demo-Speicher behält, was gespeichert wird, für die Sitzung (zweites Lesen zeigt es)', async () => {
+    const { ort: o } = await ort('seiten');
+    const stand = await ladeWebsite(o);
+    const start = stand.seiten.find((s) => s.startseite)!;
+    await speichereSeite(o, { ...start, titel: 'Neu benannt' });
+    expect((await ladeWebsite(o)).seiten.find((s) => s.id === start.id)?.titel).toBe('Neu benannt');
+  });
+});
+
+describe('Demo: fremd gesperrt', () => {
+  it('die Startseite bearbeitet gerade Jonas Peters – beim Lesen und beim Nehmen', async () => {
+    const { ort: o } = await ort('gesperrt');
+    const stand = await ladeWebsite(o);
+    const start = stand.seiten.find((s) => s.startseite)!;
+    expect(stand.sperren[start.id]).toMatchObject({ von: 2, name: 'Jonas Peters' });
+    expect(await beginneBearbeiten(o, start.id, ICH)).toMatchObject({
+      art: 'gesperrt',
+      sperre: { name: 'Jonas Peters' },
+    });
+    // andere Seiten sind frei
+    const andere = stand.seiten.find((s) => !s.startseite)!;
+    expect((await beginneBearbeiten(o, andere.id, ICH)).art).toBe('ok');
+  });
+});
+
+describe('Demo: Speichern scheitert vorübergehend', () => {
+  it('das ERSTE Speichern einer Seite wirft (503) – das zweite klappt, der Stand ist dann da', async () => {
+    const { ort: o } = await ort('wackelt');
+    const stand = await ladeWebsite(o);
+    const start = stand.seiten.find((s) => s.startseite)!;
+    const neu = { ...start, titel: 'Nach dem Wackeln' };
+    await expect(speichereSeite(o, neu)).rejects.toMatchObject({ status: 503 });
+    expect((await ladeWebsite(o)).seiten.find((s) => s.id === start.id)?.titel).toBe(start.titel); // nichts halb geschrieben
+    await speichereSeite(o, neu);
+    expect((await ladeWebsite(o)).seiten.find((s) => s.id === start.id)?.titel).toBe(
+      'Nach dem Wackeln',
+    );
+  });
+
+  it('andere Fälle wackeln nicht', async () => {
+    const { ort: o } = await ort('seiten');
+    const start = (await ladeWebsite(o)).seiten.find((s) => s.startseite)!;
+    await expect(speichereSeite(o, { ...start, titel: 'Gleich klar' })).resolves.toBeUndefined();
+  });
+});

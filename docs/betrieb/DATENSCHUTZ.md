@@ -266,7 +266,7 @@ Namen enthalten.
 
 **Im Browser:** nichts gespeichert.
 
-## Website (im Aufbau, W3a-1)
+## Website (im Aufbau, W3a-2)
 
 **Daten in ChurchTools**
 
@@ -275,6 +275,10 @@ Namen enthalten.
 - Erweiterungs-Speicher (`shared/website/speicher.ts`): Kategorien „Website: Entwürfe · <Gruppe>“ und „Website: Veröffentlicht ·
   <Gruppe>“ – Seiten, Menü und Einstellungen der Website (Texte der Gemeinde, **keine Personendaten**; ob Personennamen auf einer
   Seite stehen, entscheidet die Gemeinde mit ihren Texten). Wer lesen darf, bestimmen die Rechte an den Kategorien.
+- **Sperre je Seite (seit W3a-2):** Wer eine Seite gerade bearbeitet, steht als kleiner Wert in der Kategorie „Entwürfe“ – ChurchTools-
+  Nummer, **Name** (Vor- und Nachname), Zeit des letzten Lebenszeichens und eine zufällige Fenster-Kennung (`shared/website/sperre.ts`).
+  Der Name erscheint anderen Bearbeitern als „Gerade bearbeitet von …“. Beim Verlassen der Seite wird die Sperre auf „frei“ gesetzt
+  (der Name bleibt dabei nicht stehen), gelöscht wird sie mit der Seite; ein verlassener Wert verfällt nach zehn Minuten.
 
 **Fremddienste:** keine. Die Vorschau ist ein abgeschottetes `iframe` (`sandbox="allow-scripts"`, kein `allow-same-origin`,
 `website/src/vorschauHtml.ts`); Stylesheet und Platzhalter-Bild stecken als `data:`-Adressen im Dokument, Schriften werden in der

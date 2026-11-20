@@ -8,9 +8,17 @@
  *  - `?demo=leitung` – Leitung der Gruppe (kein Admin), sonst wie `seiten`.
  *  - `?demo=mitglied` – Mitglied der Gruppe, sieht den Editor nicht.
  *  - `?demo=kaputt` – wie `seiten`, aber ein Wert in „Entwürfe“ ist beschädigt (Hinweis „stimmt etwas nicht“).
+ *  - `?demo=gesperrt` – wie `seiten`, aber die Startseite bearbeitet gerade jemand anderes („Gerade bearbeitet von …“,
+ *    nur ansehen). Die Sperre gilt zehn Minuten ab dem Laden der Seite.
+ *  - `?demo=wackelt` – wie `seiten`, aber das erste Speichern einer Seite scheitert vorübergehend (503): „Nicht gespeichert“,
+ *    die Änderung bleibt stehen, „Erneut versuchen“ klappt.
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
+ *
+ * **Im Demo-Modus geht keine Anfrage ins Netz:** `fetch` wird vor dem ersten Zeichnen ersetzt und beantwortet jeden Pfad
+ * selbst – was nicht bekannt ist, bekommt 404 und wird in der Konsole genannt, statt an einen Server zu gehen.
  */
 import { teileBauen } from '@shared/ct/teile';
+import { sperreVon } from '@shared/ct/sperre';
 import { kategorienFuer } from '@shared/website/einrichten';
 import { seiteAlsText, menueAlsText, type Menue, type Seite } from '@shared/website/modell';
 import {
@@ -20,6 +28,7 @@ import {
   type WebsiteTeil,
 } from '@shared/website/speicher';
 import { neueStartseite } from '@shared/website/seitenListe';
+import type { WebsiteSperre } from '@shared/website/sperre';
 
 const MODUL = 40;
 const GRUPPE = 7;
@@ -30,8 +39,16 @@ export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
-  const eingerichtet = ['leer', 'seiten', 'leitung', 'mitglied', 'kaputt'].includes(fall);
-  const admin = fall === '' || fall === 'leer' || fall === 'seiten' || fall === 'kaputt';
+  const eingerichtet = [
+    'leer',
+    'seiten',
+    'leitung',
+    'mitglied',
+    'kaputt',
+    'gesperrt',
+    'wackelt',
+  ].includes(fall);
+  const admin = ['', 'leer', 'seiten', 'kaputt', 'gesperrt', 'wackelt'].includes(fall);
   const kategorien: { id: number; shorty: string; name: string }[] = [];
   const [e, v] = kategorienFuer(GRUPPE, 'Website');
   if (eingerichtet)
@@ -75,7 +92,7 @@ export function demoStarten(fall: string): void {
     liste.push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(kopf) });
   };
 
-  if (fall === 'seiten' || fall === 'leitung' || fall === 'mitglied' || fall === 'kaputt') {
+  if (['seiten', 'leitung', 'mitglied', 'kaputt', 'gesperrt', 'wackelt'].includes(fall)) {
     let n = 0;
     const id = () => `demo-${++n}`;
     const start = neueStartseite([], id);
@@ -96,6 +113,22 @@ export function demoStarten(fall: string): void {
       eintraege: [{ titel: 'Unsere Gruppen', ziel: { art: 'seite', seiteId: gruppen.id } }],
     };
     lege('menue', MENUE_ID, menueAlsText(menue));
+    if (fall === 'gesperrt') {
+      // Jemand anderes hat die Startseite gerade offen (Person 2, Lebenszeichen jetzt).
+      const sperre: WebsiteSperre = {
+        art: 'website-sperre',
+        fassung: 1,
+        einheit: 'seite',
+        id: start.id,
+        sperre: sperreVon(
+          { person: 2, name: 'Jonas Peters', fenster: 'anderes-fenster' },
+          new Date(),
+        ),
+      };
+      werte
+        .get(ENTWUERFE)!
+        .push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(sperre) });
+    }
     if (fall === 'kaputt')
       werte
         .get(ENTWUERFE)!
@@ -121,6 +154,9 @@ export function demoStarten(fall: string): void {
         headers: { 'Content-Type': 'application/json' },
       }),
     );
+
+  /** `?demo=wackelt`: Das erste Schreiben eines Seiteninhalts scheitert vorübergehend (wie ein 503 von ChurchTools). */
+  let ausfaelle = fall === 'wackelt' ? 1 : 0;
 
   window.fetch = (input, init) => {
     const url = new URL(
@@ -159,6 +195,11 @@ export function demoStarten(fall: string): void {
         { id: 9, name: 'Jugend' },
       ]);
     if (pfad === '/custommodules') return antwort([{ id: MODUL, shorty: 'website' }]);
+    if (pfad === '/calendars')
+      return antwort([
+        { id: 1, name: 'Gemeindeveranstaltungen' },
+        { id: 2, name: 'Jugend' },
+      ]);
     if (pfad === `/custommodules/${MODUL}/customdatacategories`) {
       if (method === 'POST' && typeof init?.body === 'string') {
         const k = JSON.parse(init.body) as { shorty: string; name: string };
@@ -176,6 +217,14 @@ export function demoStarten(fall: string): void {
       const liste = werte.get(kat) ?? [];
       const rumpf =
         typeof init?.body === 'string' ? (JSON.parse(init.body) as { value: string }) : null;
+      if (
+        ausfaelle > 0 &&
+        (method === 'POST' || method === 'PUT') &&
+        rumpf?.value.includes('"art":"website-teil"')
+      ) {
+        ausfaelle--;
+        return antwort(null, 503);
+      }
       if (method === 'POST' && rumpf) {
         liste.push({ id: naechsteId++, dataCategoryId: kat, value: rumpf.value });
         werte.set(kat, liste);
@@ -195,6 +244,8 @@ export function demoStarten(fall: string): void {
       }
       return antwort(liste);
     }
+    // Nichts geht ins Netz: Was hier nicht bekannt ist, bekommt 404 – und wird genannt, damit es auffällt.
+    console.warn('Demo: unbekannte Anfrage', method, pfad);
     return antwort(null, 404);
   };
 }

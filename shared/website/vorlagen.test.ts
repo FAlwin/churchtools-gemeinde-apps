@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
   abschnittSchema,
+  BAUSTEIN_TYPEN,
+  bausteinSchema,
   bausteineDerSeite,
   pruefeWebsite,
   seiteSchema,
   spaltenAnzahl,
 } from './modell';
 import { renderAbschnitt, renderSeite } from './render';
-import { findeVorlage, PLATZHALTER_BILD, PLATZHALTER_LINK, VORLAGEN } from './vorlagen';
-import { einstellungen, idZaehler, kontext, menue, seite } from './website.testdaten';
+import {
+  findeVorlage,
+  neuerBaustein,
+  PLATZHALTER_BILD,
+  PLATZHALTER_LINK,
+  VORLAGEN,
+} from './vorlagen';
+import { einstellungen, gestaltung, idZaehler, kontext, menue, seite } from './website.testdaten';
 
 const ERWARTET = [
   'start-schriftzug',
@@ -161,5 +169,63 @@ describe('Abschnitt-Vorlagen', () => {
     expect(findeVorlage('bild-text')!.erzeugen(idZaehler()).spalten[0].bausteine[0].typ).toBe(
       'bild',
     );
+  });
+});
+
+describe('Neue Bausteine („Baustein hinzufügen“)', () => {
+  it('jeder Typ des Modells hat einen Erzeuger – und der Baustein besteht das Schema, mit seiner Kennung aus `neueId`', () => {
+    for (const typ of BAUSTEIN_TYPEN) {
+      const neu = neuerBaustein(typ, idZaehler());
+      expect(neu.typ).toBe(typ);
+      expect(neu.id).toBe('id-1');
+      expect(bausteinSchema.safeParse(neu).success, typ).toBe(true);
+    }
+  });
+
+  it('eine Seite mit einem neuen Baustein jedes Typs besteht das Schema (und lässt sich ausgeben)', () => {
+    const nr = idZaehler();
+    const s = seite({
+      abschnitte: [
+        {
+          id: 'a',
+          gestaltung: gestaltung(),
+          aufteilung: '1',
+          spalten: [{ id: 's', bausteine: BAUSTEIN_TYPEN.map((t) => neuerBaustein(t, nr)) }],
+        },
+      ],
+    });
+    expect(seiteSchema.safeParse(s).success).toBe(true);
+    expect(() => renderSeite(s, kontext())).not.toThrow();
+  });
+
+  it('sie sind dieselben Erzeuger wie in den Vorlagen: ein Baustein, den es in einer Vorlage gibt, hat dort dieselbe Gestalt (Typ und Pflichtfelder)', () => {
+    for (const v of VORLAGEN)
+      for (const b of bausteineDerSeite(seite({ abschnitte: [v.erzeugen(idZaehler())] }))) {
+        if (
+          ![
+            'termine',
+            'beitraege',
+            'slider',
+            'livestream',
+            'kontaktformular',
+            'gruppenliste',
+            'galerie',
+            'html',
+            'trenner',
+          ].includes(b.typ)
+        )
+          continue;
+        expect(
+          neuerBaustein(b.typ, () => b.id),
+          `${v.name}/${b.typ}`,
+        ).toEqual(b);
+      }
+  });
+
+  it('neue Platzhalter sind als solche erkennbar (Bild = Platzhalter-Bild, Knopf-Link = example.org)', () => {
+    const bild = neuerBaustein('bild', idZaehler());
+    expect(bild.typ === 'bild' && bild.bild).toEqual(PLATZHALTER_BILD);
+    const k = neuerBaustein('knoepfe', idZaehler());
+    expect(k.typ === 'knoepfe' && k.knoepfe[0].ziel).toEqual(PLATZHALTER_LINK);
   });
 });

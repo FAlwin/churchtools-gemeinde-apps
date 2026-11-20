@@ -16,8 +16,8 @@
  *   Schritt wird nachgelesen.
  * - **Vorübergehend ist nicht ungültig:** Jeder Fehler beim Lesen oder Schreiben wird geworfen; nichts wird deswegen
  *   gelöscht oder überschrieben. Der Aufrufer behält die Änderung und versucht es erneut.
- * - Der Speicher kennt keine Versionen: Zwei gleichzeitige Speicherungen derselben Einheit – die spätere gewinnt. Eine
- *   Sperre kommt mit dem Editor (W3a-2).
+ * - Der Speicher kennt keine Versionen: Zwei gleichzeitige Speicherungen derselben Einheit – die spätere gewinnt. Dagegen
+ *   schützen die Sperre je Seite (`sperre.ts`, W3a-2) und die Schlange des Editors (`schlange.ts`).
  */
 import {
   werteLesen,
@@ -28,6 +28,8 @@ import {
   type Wert,
 } from '../ct/modulDaten';
 import { teileBauen, textAusTeilen } from '../ct/teile';
+import type { Sperre } from '../ct/sperre';
+import { istSperrWert, sperreAusWerten, sperreWert } from './sperre';
 import {
   einstellungenAlsText,
   einstellungenAusText,
@@ -35,6 +37,7 @@ import {
   menueAusText,
   seiteAlsText,
   seiteAusText,
+  seiteSchema,
   type Einstellungen,
   type Menue,
   type Seite,
@@ -136,6 +139,11 @@ export interface WebsiteStand {
   probleme: Problem[];
   /** Teile ohne Kopf (ein erstes Speichern ist abgebrochen) – unschädlich, das nächste Speichern räumt sie ab. */
   verwaist: number;
+  /**
+   * Wer bearbeitet welche Seite (Seiten-ID → Sperre), so wie gespeichert – **ob sie noch gilt, entscheidet `sperreLage`**
+   * (Zeit!). Nur, was die Oberfläche beim Öffnen einer Seite wissen will; genommen und erneuert wird in `sperre.ts`.
+   */
+  sperren: Record<string, Sperre>;
 }
 
 /**
@@ -146,6 +154,8 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
   const probleme: Problem[] = [];
   const koepfe = new Map<string, { wert: number; kopf: WebsiteKopf }>();
   const teile = new Map<string, WebsiteTeil[]>();
+  const sperren: Record<string, Sperre> = {};
+  const sperrSeiten = new Set<string>();
 
   for (const w of [...werte].sort((a, b) => a.id - b.id)) {
     const x = inhalt(w);
@@ -173,6 +183,14 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
     } else if (istTeil(x)) {
       const s = schluessel(x.einheit, x.id);
       teile.set(s, [...(teile.get(s) ?? []), x]);
+    } else if (istSperrWert(w)) {
+      // Wer bearbeitet gerade? (`sperre.ts`) – gehört zur Website, ist aber kein Inhalt und kein Problem.
+      const sw = sperreWert(w);
+      // Wie `sperreAusWerten`: bei mehreren Werten für dieselbe Seite gilt der mit der kleinsten ID.
+      if (sw && sw.einheit === 'seite' && !sperrSeiten.has(sw.id)) {
+        sperrSeiten.add(sw.id);
+        if (sw.sperre) sperren[sw.id] = sw.sperre;
+      }
     } else {
       probleme.push({
         wert: w.id,
@@ -219,7 +237,7 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
 
   let verwaist = 0;
   for (const [s, liste] of teile) if (!koepfe.has(s)) verwaist += liste.length;
-  return { seiten, menue, einstellungen, probleme, verwaist };
+  return { seiten, menue, einstellungen, probleme, verwaist, sperren };
 }
 
 /** **Die ganze Kategorie lesen** und zusammensetzen. Wirft bei jedem Fehler (vorübergehend ist nicht leer). */
@@ -363,10 +381,31 @@ export async function einheitLoeschen(
       console.warn('Website: Teil einer gelöschten Seite bleibt vorerst liegen', t.wert, e);
     }
   }
+  // Die Sperre der Seite (W3a-2) hat mit der Seite nichts mehr zu tun – Aufräumen darf scheitern (unschädlich).
+  const sperre = sperreAusWerten(f2, einheit, id);
+  if (sperre) {
+    try {
+      await wertLoeschen(p, modul, kategorie, sperre.wert, VERWEIGERT);
+    } catch (e) {
+      console.warn('Website: Sperre einer gelöschten Seite bleibt vorerst liegen', sperre.wert, e);
+    }
+  }
 }
 
-export const seiteSpeichern = (o: Ort, seite: Seite, jetzt?: Date) =>
-  einheitSpeichern(o, 'seite', seite.id, seiteAlsText(seite), jetzt);
+/**
+ * Eine Seite speichern. **Geprüft wird vorher mit dem Schema** (`seiteSchema`): Was nicht passt, wird nicht geschrieben –
+ * gleich, aus welchem Weg es kommt (W3a-2: der Editor prüft vor dem Speichern auch selbst und zeigt die Meldung im Fenster;
+ * das hier ist die letzte Sicherung, damit nie etwas Unlesbares im Speicher landet).
+ */
+export async function seiteSpeichern(o: Ort, seite: Seite, jetzt?: Date): Promise<void> {
+  const r = seiteSchema.safeParse(seite);
+  if (!r.success)
+    throw o.p.fehler(
+      422,
+      `Diese Seite ist nicht gültig und wurde nicht gespeichert: ${r.error.issues[0]?.message ?? 'unbekannter Fehler'}`,
+    );
+  await einheitSpeichern(o, 'seite', seite.id, seiteAlsText(seite), jetzt);
+}
 export const menueSpeichern = (o: Ort, menue: Menue, jetzt?: Date) =>
   einheitSpeichern(o, 'menue', MENUE_ID, menueAlsText(menue), jetzt);
 export const einstellungenSpeichern = (o: Ort, e: Einstellungen, jetzt?: Date) =>

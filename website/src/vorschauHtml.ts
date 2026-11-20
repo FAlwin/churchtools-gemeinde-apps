@@ -15,6 +15,7 @@ import css from '@shared/website/website.css?raw';
 import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import { renderSeite, type RenderKontext } from '@shared/website/render';
 import { vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
+import { mitEbene } from './ebene';
 
 /** Was das iframe darf: Skripte (Eigenes HTML), aber **nie** `allow-same-origin`. Test: `Vorschau.test.tsx`. */
 export const VORSCHAU_SANDBOX = 'allow-scripts';
@@ -56,12 +57,24 @@ export function vorschauKontext(
   };
 }
 
-/** Die Seite als vollständiges HTML-Dokument für `srcdoc`. */
+/**
+ * Die Seite als vollständiges HTML-Dokument für `srcdoc`. Mit `bearbeiten` hängt die **Bearbeiten-Ebene** daran (W3a-2:
+ * Leisten, „Abschnitt einfügen“, Klick auf Bausteine; `ebene.ts`) – **nur hier, in der Vorschau**. Der Renderer selbst
+ * bekommt dafür keinen Sonderweg: Die Ebene findet Abschnitte, Spalten und Bausteine an der Reihenfolge im Dokument.
+ */
 export function vorschauHtml(
   seite: Seite,
   stand: VorschauStand,
   gemeinde: string | null,
   zeitzone: string,
+  bearbeiten?: { scroll: number },
 ): string {
-  return renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone));
+  try {
+    const html = renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone));
+    return bearbeiten ? mitEbene(html, bearbeiten.scroll) : html;
+  } catch {
+    // Mitten im Bearbeiten kann etwas Unfertiges stehen, das der Renderer nicht mag – die Erweiterung soll deshalb nicht
+    // abstürzen. Gespeichert wird so etwas nie (`seitePruefen`).
+    return '<!doctype html><meta charset="utf-8"><p style="font:15px system-ui,sans-serif;padding:24px">Die Vorschau lässt sich mit diesen Angaben gerade nicht zeichnen.</p>';
+  }
 }

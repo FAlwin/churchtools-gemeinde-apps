@@ -457,3 +457,18 @@ describe('Kopf und Teil erkennen', () => {
     expect(abschnitt().spalten).toHaveLength(1);
   });
 });
+
+describe('Eine ungültige Seite wird nicht gespeichert (Schema vor dem Schreiben)', () => {
+  it('seiteSpeichern wirft VOR dem ersten Zugriff – es wird nichts gelesen und nichts geschrieben', async () => {
+    const s = fakeSpeicher();
+    const kaputt = seite({ id: 'k', pfad: 'Großer Pfad!' });
+    await expect(seiteSpeichern(s.ort, kaputt, JETZT)).rejects.toThrow(/nicht gültig/);
+    expect(s.log).toEqual([]);
+  });
+
+  it('eine gültige Seite geht weiter wie bisher', async () => {
+    const s = fakeSpeicher();
+    await seiteSpeichern(s.ort, seite({ id: 'g', pfad: 'g', startseite: false }), JETZT);
+    expect((await websiteLesen(s.port, 7, 1)).seiten).toHaveLength(1);
+  });
+});

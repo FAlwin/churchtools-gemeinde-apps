@@ -2,12 +2,11 @@ import { useMemo, useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { Segment } from '@ui/bedienung/Segment';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
-import type { Seite } from '@shared/website/modell';
+import type { Schreiber } from '@shared/ct/sperre';
+import type { Menue, Seite } from '@shared/website/modell';
 import {
   hatStartseite,
   menueOhneSeite,
@@ -16,7 +15,9 @@ import {
 } from '@shared/website/seitenListe';
 import { Hinweis, Leise } from './Hinweis';
 import { NeueSeite } from './NeueSeite';
-import { Vorschau, type Ansicht } from './Vorschau';
+import type { Rechte } from './regeln';
+import { Seitenarbeit } from './Seitenarbeit';
+import type { Ansicht } from './Vorschau';
 import {
   ladeWebsite,
   loescheSeite,
@@ -33,10 +34,25 @@ import styles from './Seiten.module.scss';
  * Entwürfe. Gelesen wird die ganze Kategorie mit einem Aufruf; nach jedem Schreiben wird neu gelesen, damit die Liste
  * zeigt, was wirklich gespeichert ist.
  *
+ * **Seit W3a-2 wird die gezeigte Seite direkt in der Vorschau bearbeitet** (`Seitenarbeit`). Die Liste bekommt nach jedem
+ * Speichern den neuen Stand der Seite (`onGespeichert`), ohne neu zu lesen; solange etwas nicht gespeichert ist, lässt sich
+ * keine andere Seite wählen – die Arbeitskopie bliebe sonst ohne Besitzer.
+ *
  * Eine Website ohne Startseite zeigt einen Hinweis mit dem Knopf „Startseite anlegen“ (Vorlage `start-schriftzug`) –
  * angelegt wird nie von selbst.
  */
-export function Seiten({ ort, gemeinde }: { ort: EntwurfsOrt; gemeinde: string | null }) {
+export function Seiten({
+  ort,
+  gemeinde,
+  ich,
+  rechte,
+}: {
+  ort: EntwurfsOrt;
+  gemeinde: string | null;
+  /** Wer bearbeitet – für die Sperre je Seite (W3a-2). */
+  ich: Schreiber;
+  rechte: Rechte;
+}) {
   const { modul, kategorie } = ort;
   const geladen = useLaden(() => ladeWebsite({ modul, kategorie }), [modul, kategorie], {
     behalten: true,
@@ -47,6 +63,8 @@ export function Seiten({ ort, gemeinde }: { ort: EntwurfsOrt; gemeinde: string |
   const [loeschen, setLoeschen] = useState<Seite | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [laeuft, setLaeuft] = useState(false);
+  /** Ist an der gezeigten Seite etwas noch nicht gespeichert? Dann bleibt man auf ihr. */
+  const [ungespeichert, setUngespeichert] = useState(false);
 
   const stand = geladen.stand.art === 'fertig' ? geladen.stand.daten : null;
   const listen = useMemo(
@@ -61,6 +79,16 @@ export function Seiten({ ort, gemeinde }: { ort: EntwurfsOrt; gemeinde: string |
         listen.weitere[0] ??
         null)
       : null;
+
+  /** Eine gespeicherte Seite (und ggf. das Menü) in den gelesenen Stand übernehmen – ohne neu zu lesen. */
+  const uebernehmen = (neueSeite: Seite, neuesMenue: Menue | null) =>
+    geladen.setze((alt) => ({
+      ...alt,
+      seiten: alt.seiten.some((x) => x.id === neueSeite.id)
+        ? alt.seiten.map((x) => (x.id === neueSeite.id ? neueSeite : x))
+        : [...alt.seiten, neueSeite],
+      menue: neuesMenue ?? alt.menue,
+    }));
 
   const startseiteAnlegen = async () => {
     if (!stand) return;
@@ -129,6 +157,7 @@ export function Seiten({ ort, gemeinde }: { ort: EntwurfsOrt; gemeinde: string |
                 seiten={listen.imMenue}
                 aktuell={aktuell}
                 onWahl={(s) => setGewaehlt(s.id)}
+                gesperrt={ungespeichert}
               />
               <ListenGruppe
                 titel="Weitere Seiten"
@@ -136,49 +165,36 @@ export function Seiten({ ort, gemeinde }: { ort: EntwurfsOrt; gemeinde: string |
                 seiten={listen.weitere}
                 aktuell={aktuell}
                 onWahl={(s) => setGewaehlt(s.id)}
+                gesperrt={ungespeichert}
               />
               <div className={styles.listenFuss}>
-                <FensterKnopf art="hell" onClick={() => setNeu(true)}>
+                <FensterKnopf art="hell" disabled={ungespeichert} onClick={() => setNeu(true)}>
                   <Icon name="plus" size={16} />
                   Neue Seite
                 </FensterKnopf>
               </div>
             </aside>
 
-            <section className={styles.arbeit} aria-label="Vorschau">
-              {aktuell ? (
-                <>
-                  <div className={styles.werkzeug}>
-                    <div className={styles.name}>
-                      <strong>{aktuell.titel}</strong>
-                      <span>{aktuell.startseite ? '/' : `/${aktuell.pfad}/`}</span>
-                    </div>
-                    <Segment
-                      value={ansicht}
-                      options={[
-                        { value: 'computer', label: 'Computer' },
-                        { value: 'handy', label: 'Handy' },
-                      ]}
-                      onChange={setAnsicht}
-                      ariaLabel="Vorschau-Ansicht"
-                      verbunden
-                    />
-                    <KopfKnopf
-                      gefahr
-                      label="Seite löschen"
-                      symbol={<Icon name="trash" size={16} />}
-                      onClick={() => setLoeschen(aktuell)}
-                    />
-                  </div>
-                  {aktuell.abschnitte.length === 0 && (
-                    <Leise>Diese Seite ist noch leer – Inhalte kommen im nächsten Schritt.</Leise>
-                  )}
-                  <Vorschau seite={aktuell} stand={stand} gemeinde={gemeinde} ansicht={ansicht} />
-                </>
-              ) : (
+            {aktuell ? (
+              <Seitenarbeit
+                key={aktuell.id}
+                seite={aktuell}
+                stand={stand}
+                ort={ort}
+                ich={ich}
+                gemeinde={gemeinde}
+                ansicht={ansicht}
+                onAnsicht={setAnsicht}
+                rechte={rechte}
+                onGespeichert={(neueSeite, neuesMenue) => uebernehmen(neueSeite, neuesMenue)}
+                onOffen={setUngespeichert}
+                onLoeschen={() => setLoeschen(aktuell)}
+              />
+            ) : (
+              <section className={styles.arbeit} aria-label="Vorschau">
                 <Leise>Noch keine Seite – lege die erste an.</Leise>
-              )}
-            </section>
+              </section>
+            )}
           </div>
         </>
       )}
@@ -222,12 +238,15 @@ function ListenGruppe({
   seiten,
   aktuell,
   onWahl,
+  gesperrt,
 }: {
   titel: string;
   leer: string;
   seiten: readonly Seite[];
   aktuell: Seite | null;
   onWahl: (s: Seite) => void;
+  /** Etwas ist noch nicht gespeichert: Die Seite wechseln geht erst danach. */
+  gesperrt: boolean;
 }) {
   return (
     <div className={styles.gruppe}>
@@ -239,6 +258,7 @@ function ListenGruppe({
           type="button"
           className={`${styles.eintrag}${s.id === aktuell?.id ? ' ' + styles.an : ''}`}
           aria-current={s.id === aktuell?.id ? 'page' : undefined}
+          disabled={gesperrt && s.id !== aktuell?.id}
           onClick={() => onWahl(s)}
         >
           <Icon name={s.startseite ? 'home' : 'dokument'} size={16} />

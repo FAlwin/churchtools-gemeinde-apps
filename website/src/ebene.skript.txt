@@ -1,0 +1,137 @@
+// Die Bearbeiten-Ebene in der Vorschau (W3a-2) – läuft IM abgeschotteten iframe (sandbox="allow-scripts", kein
+// allow-same-origin) und nirgends sonst. Sie meldet der Erweiterung nur per postMessage, was angeklickt wurde, und nur als
+// Zahlen: welcher Abschnitt (i), welche Spalte (j), welcher Baustein (k) – in der Reihenfolge der Seite. Mehr braucht die
+// Erweiterung nicht, und sie nimmt auch nicht mehr an (`nachricht.ts`).
+//
+// `config` kommt von der Erweiterung: { scroll: Zahl, symbole: { plus, stift, hoch, runter, kopie, muell } } – die Symbole
+// sind fertige SVG-Zeichen aus dem gemeinsamen Satz (`ui/icons`), nichts wird hier gezeichnet.
+(function (config) {
+  var senden = function (m) {
+    parent.postMessage(Object.assign({ websiteEditor: true }, m), '*');
+  };
+  var S = config.symbole;
+  var knopf = function (was, symbol, text, titel) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.w = was;
+    if (titel) {
+      b.title = titel;
+      b.setAttribute('aria-label', titel);
+    }
+    b.innerHTML = symbol + (text ? '<span>' + text + '</span>' : '');
+    return b;
+  };
+  var einfuegen = function (i) {
+    var d = document.createElement('div');
+    d.className = 'b-einfuegen';
+    var b = knopf('einfuegen', S.plus, 'Abschnitt einfügen');
+    b.onclick = function () {
+      senden({ was: 'einfuegen', i: i });
+    };
+    d.appendChild(b);
+    return d;
+  };
+
+  var haupt = document.getElementById('inhalt');
+  var abschnitte = haupt ? Array.prototype.slice.call(haupt.children).filter(function (e) {
+    return e.matches('section.w-abschnitt');
+  }) : [];
+
+  abschnitte.forEach(function (s, i) {
+    var w = document.createElement('div');
+    w.className = 'b-werk';
+    [
+      ['gestalten', S.stift, 'Gestalten', 'Abschnitt gestalten'],
+      ['hoch', S.hoch, '', 'Nach oben'],
+      ['runter', S.runter, '', 'Nach unten'],
+      ['kopieren', S.kopie, '', 'Abschnitt kopieren'],
+      ['loeschen', S.muell, '', 'Abschnitt löschen'],
+    ].forEach(function (a) {
+      w.appendChild(knopf(a[0], a[1], a[2], a[3]));
+    });
+    w.addEventListener('click', function (e) {
+      var k = e.target.closest('button');
+      if (!k) return;
+      e.stopPropagation();
+      senden({ was: k.dataset.w, i: i });
+    });
+    s.insertBefore(w, s.firstChild);
+    // Am Handy gibt es kein Darüberfahren: Der zuletzt angetippte Abschnitt zeigt seine Leiste.
+    s.addEventListener('pointerdown', function () {
+      abschnitte.forEach(function (x) {
+        x.classList.toggle('b-aktiv', x === s);
+      });
+    });
+    if (i === 0) s.parentNode.insertBefore(einfuegen(0), s);
+    s.parentNode.insertBefore(einfuegen(i + 1), s.nextSibling);
+
+    var innen = s.querySelector(':scope > .w-abschnitt-innen');
+    var spalten = innen
+      ? Array.prototype.slice.call(innen.children).filter(function (e) {
+          return e.classList.contains('w-spalte');
+        })
+      : [];
+    spalten.forEach(function (spalte, j) {
+      var bausteine = Array.prototype.slice.call(spalte.children).filter(function (e) {
+        return e.classList.contains('w-baustein');
+      });
+      var neu = document.createElement('button');
+      neu.type = 'button';
+      neu.className = 'b-neu-baustein';
+      neu.textContent = '+ Baustein';
+      neu.onclick = function (e) {
+        e.stopPropagation();
+        senden({ was: 'baustein-neu', i: i, j: j });
+      };
+      spalte.appendChild(neu);
+      bausteine.forEach(function (b, k) {
+        b.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          senden({ was: 'baustein', i: i, j: j, k: k });
+        });
+      });
+    });
+  });
+
+  if (haupt && abschnitte.length === 0) {
+    var leer = document.createElement('div');
+    leer.className = 'b-leer';
+    var p = document.createElement('p');
+    p.textContent = 'Diese Seite ist noch leer.';
+    var b = knopf('einfuegen', S.plus, 'Abschnitt einfügen');
+    b.onclick = function () {
+      senden({ was: 'einfuegen', i: 0 });
+    };
+    leer.appendChild(p);
+    leer.appendChild(b);
+    haupt.appendChild(leer);
+  }
+
+  // In der Vorschau führt nichts weg und nichts wird abgeschickt.
+  document.addEventListener(
+    'click',
+    function (e) {
+      var a = e.target.closest && e.target.closest('a');
+      if (a) e.preventDefault();
+    },
+    true,
+  );
+  document.addEventListener(
+    'submit',
+    function (e) {
+      e.preventDefault();
+    },
+    true,
+  );
+
+  // Die Scrollposition bleibt beim Neuzeichnen stehen: gemerkt in der Erweiterung, hier wieder eingestellt.
+  addEventListener(
+    'scroll',
+    function () {
+      senden({ was: 'scroll', y: Math.round(window.scrollY) });
+    },
+    { passive: true },
+  );
+  if (config.scroll > 0) window.scrollTo(0, config.scroll);
+})

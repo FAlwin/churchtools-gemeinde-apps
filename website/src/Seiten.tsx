@@ -74,29 +74,27 @@ export function Seiten({
   /** Ist an der gezeigten Seite etwas noch nicht gespeichert? Dann bleibt man auf ihr. */
   const [ungespeichert, setUngespeichert] = useState(false);
 
-  /** Das Nachlesen der Einstellungen ist gescheitert – die Vorschau zeigt die bisherigen. */
-  const [einstellungenAlt, setEinstellungenAlt] = useState(false);
   const zaehlerBeimOeffnen = useRef(einstellungenStand);
-  const { setze } = geladen;
   // **Der Server bleibt die einzige Quelle**: Hier wird nichts Eigenes gehalten, nur nachgelesen und – ausschließlich – die
   // Einstellungen im gelesenen Stand ersetzt. Seiten, Menü, Sperren und die offene Bearbeitung (`Seitenarbeit` hält ihre
-  // eigene Arbeitskopie) bleiben unberührt. Scheitert das Lesen, bleibt die bisherige Vorschau stehen (vorübergehend ist
-  // nicht ungültig); der nächste gelungene Speicherstand versucht es wieder.
+  // eigene Arbeitskopie) bleiben unberührt. Späte Antworten und Fehler regelt `useLaden` (Wächter `ladenAufruf`: kein
+  // handgeschriebener Ladeblock). Beim Öffnen gibt es nichts nachzulesen (`null` = aus).
+  const nachgelesen = useLaden(
+    () =>
+      einstellungenStand === zaehlerBeimOeffnen.current
+        ? null
+        : ladeWebsite({ modul, kategorie }).then((w) => ({ einstellungen: w.einstellungen })),
+    [einstellungenStand, modul, kategorie],
+  );
+  const { setze } = geladen;
   useEffect(() => {
-    if (einstellungenStand === zaehlerBeimOeffnen.current) return;
-    let aktuell = true;
-    ladeWebsite({ modul, kategorie }).then(
-      (neu) => {
-        if (!aktuell) return;
-        setEinstellungenAlt(false);
-        setze((alt) => ({ ...alt, einstellungen: neu.einstellungen }));
-      },
-      () => aktuell && setEinstellungenAlt(true),
-    );
-    return () => {
-      aktuell = false;
-    };
-  }, [einstellungenStand, modul, kategorie, setze]);
+    if (nachgelesen.stand.art !== 'fertig') return;
+    const { einstellungen } = nachgelesen.stand.daten;
+    setze((alt) => ({ ...alt, einstellungen }));
+  }, [nachgelesen.stand, setze]);
+  /** Das Nachlesen ist gescheitert – die Vorschau zeigt die bisherigen (vorübergehend ist nicht ungültig); der nächste
+   *  gelungene Speicherstand versucht es wieder. */
+  const einstellungenAlt = nachgelesen.stand.art === 'fehler';
 
   const stand = geladen.stand.art === 'fertig' ? geladen.stand.daten : null;
   const listen = useMemo(

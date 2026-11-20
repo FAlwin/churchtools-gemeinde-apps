@@ -29,6 +29,7 @@ import {
   type SchubladenStand,
 } from '@shared/dienstplan/entwuerfe';
 import type { PlatzOrt } from '@shared/dienstplan/einteilen';
+import type { Personenliste } from '@shared/dienstplan/personenliste';
 import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
 import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
@@ -71,6 +72,11 @@ export interface EntwuerfeDaten {
   entwuerfe: Map<string, Entwurf>;
   /** Je Platz die Dienstgruppe, in deren Schublade der Entwurf liegt – zum Verwerfen auch ohne Matrix-Zeile. */
   gruppeJe: Map<string, number>;
+  /**
+   * Die Personenliste je Dienstgruppe (ID) – aus denselben Werten der Schublade, ohne weitere Anfrage (PL-1). Gruppen
+   * ohne sichtbare Schublade oder ohne Liste fehlen hier; dann gilt alles wie bisher.
+   */
+  personenlisten: Map<number, Personenliste>;
 }
 
 /**
@@ -90,6 +96,7 @@ export async function ladeEntwuerfe(gruppen: Dienstgruppe[]): Promise<EntwuerfeD
   const schubladen = new Map<number, Schublade>();
   const entwuerfe = new Map<string, Entwurf>();
   const gruppeJe = new Map<string, number>();
+  const personenlisten = new Map<number, Personenliste>();
   await Promise.all(
     gruppen.map(async (gruppe) => {
       const kategorie = kategorieAusListe(liste, schublade(gruppe).kuerzel);
@@ -106,9 +113,10 @@ export async function ladeEntwuerfe(gruppen: Dienstgruppe[]): Promise<EntwuerfeD
         entwuerfe.set(k, entwurf);
         gruppeJe.set(k, gruppe.id);
       }
+      if (l.inhalt.personenliste) personenlisten.set(gruppe.id, l.inhalt.personenliste);
     }),
   );
-  return { modul, schubladen, entwuerfe, gruppeJe };
+  return { modul, schubladen, entwuerfe, gruppeJe, personenlisten };
 }
 
 /** Einen Entwurf speichern (frisch lesen, Version vergleichen, schreiben, nachlesen – im Kern). */

@@ -9,7 +9,11 @@ import {
   abschnitteAus,
   kandidatenAus,
   kandidatHinweis,
+  nachListe,
+  pauseDerPerson,
+  werKannTitel,
   type Kandidat,
+  type ListenBezug,
   type WerKannAbschnitt,
 } from '@shared/dienstplan/werKann';
 import {
@@ -24,6 +28,7 @@ import {
   type EntwurfErgebnis,
 } from '@shared/dienstplan/entwuerfe';
 import type { Belegung } from '@shared/dienstplan/einteilen';
+import { hatReihenfolge, tagsFuer, type Personenliste } from '@shared/dienstplan/personenliste';
 import { ladeWerKann, vergissWerKann } from './ladeWerKann';
 import { StiftKnopf, VorliebenFach } from './VorliebenFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
@@ -107,6 +112,7 @@ export function WerKann({
   stift,
   fokus,
   antworten,
+  personenliste,
 }: {
   platz: FreierPlatz;
   onClose: () => void;
@@ -133,7 +139,13 @@ export function WerKann({
    * sichtbar sind – ist die Liste wie vor E5c-4.
    */
   antworten?: { lader: AntwortenLader; dienstName: (id: number) => string | undefined };
+  /**
+   * Die Personenliste der Dienstgruppe (PL-1): Reihenfolge, Tags und Pause. Ohne Angabe (oder ohne gespeicherte Reihenfolge)
+   * ist die Liste „frei und selten dran“ wie bisher.
+   */
+  personenliste?: Personenliste | null;
 }) {
+  const bezug: ListenBezug = { liste: personenliste, tag: platz.datum };
   const { stand, neu } = useLaden(
     () =>
       ladeWerKann(platz.eventId, platz.serviceId).then((roh) =>
@@ -190,16 +202,25 @@ export function WerKann({
   const passtZurSuche = (x: { kandidat: Kandidat }) =>
     q === '' || x.kandidat.name.toLowerCase().includes(q);
   const abschnitte: WerKannAbschnitt[] | null =
-    zustand.art === 'fertig' ? abschnitteAus(zustand.liste, zuPlatz) : null;
+    zustand.art === 'fertig' ? abschnitteAus(zustand.liste, zuPlatz, bezug) : null;
 
   /** Eine Zeile der Liste – in allen Abschnitten und in der einen Liste dieselbe. */
   const zeile = (k: Kandidat, antwort: ZellenAntwort | null) => {
-    const h = kandidatHinweis(k);
+    const pause = pauseDerPerson(bezug, k.personId);
+    const h = kandidatHinweis(k, pause);
+    const tags = tagsFuer(personenliste, platz.serviceId, k.personId);
     const zweite = antwortZeile(antwort, k.abwesend !== null);
     const inhalt = (
       <>
         <span className={styles.wer}>
-          <b>{k.name}</b>
+          <span className={styles.nameZeile}>
+            <b>{k.name}</b>
+            {tags.length > 0 && (
+              <i className={styles.kuerzel} title={tags.map((t) => t.name).join(', ')}>
+                {tags.map((t) => t.kuerzel).join('')}
+              </i>
+            )}
+          </span>
           <small className={h.warnung ? styles.warnung : undefined}>{h.text}</small>
           {zweite && <small className={styles.antwort}>{zweite}</small>}
           {fokus && <small className={styles.mini}>{fokus.mini(k.personId)}</small>}
@@ -209,7 +230,7 @@ export function WerKann({
         </span>
       </>
     );
-    const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
+    const klasse = `${styles.kandidat}${k.abwesend || pause ? ' ' + styles.blass : ''}`;
     return (
       <li key={k.personId} className={stift || fokus ? styles.mitStift : undefined}>
         {bereit ? (
@@ -290,7 +311,7 @@ export function WerKann({
           )}
           {zustand.liste.length === 0 ? (
             <>
-              <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
+              <h3 className={styles.titel}>{werKannTitel(personenliste)}</h3>
               <p className={styles.hinweis}>
                 Für diesen Dienst schlägt ChurchTools niemanden vor – in der ChurchTools-Gruppe des
                 Dienstes ist sonst niemand.
@@ -335,12 +356,17 @@ export function WerKann({
                 Die Antwort ersetzt nicht die Prüfung von ChurchTools: Warnungen bleiben rot, ein
                 Klick trägt trotzdem ein.
               </p>
+              {hatReihenfolge(personenliste) && (
+                <p className={styles.hinweis}>
+                  In jedem Abschnitt stehen die Personen in der Reihenfolge der Personenliste.
+                </p>
+              )}
             </>
           ) : (
             <>
-              <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
+              <h3 className={styles.titel}>{werKannTitel(personenliste)}</h3>
               <ul className={styles.liste} aria-label="Wer kann?">
-                {zustand.liste
+                {nachListe(zustand.liste, bezug)
                   .filter((k) => passtZurSuche({ kandidat: k }))
                   .map((k) => zeile(k, null))}
               </ul>

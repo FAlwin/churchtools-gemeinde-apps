@@ -208,6 +208,7 @@ $anzahl-farben: 8;
   cursor: pointer;
 }
 .avatar {
+  position: relative;
   display: inline-grid;
   place-items: center;
   flex: none;
@@ -219,6 +220,24 @@ $anzahl-farben: 8;
   color: #fff;
   font-size: 8px;
   font-weight: 700;
+}
+// Die Tags des Dienstes als Kürzel unten rechts am Bild (PL-1, Entwurf „Kürzel am Bild“): klein, grau, kein Etikett.
+.kuerzel {
+  position: absolute;
+  right: -7px;
+  bottom: -5px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 10px;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 // Der Name geht vor: Er wird nie abgeschnitten, „auch …“ und „nicht in der Gruppe“ geben nach (Ellipse, volle Zeile im Titel).
 .personName {
@@ -408,6 +427,13 @@ $anzahl-farben: 8;
   color: var(--text2);
   font-size: 13px;
 }
+.legendeZeile {
+  display: flex;
+  flex: 0 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+}
 .legendeTitel {
   font-weight: 700;
   color: var(--text);
@@ -416,6 +442,29 @@ $anzahl-farben: 8;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+// Das Kürzel in der Zeile „Tags:“ – fett, wie am Bild.
+.legendeKuerzel {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+// Pausiert oder ganz abwesend (PL-1): unten im Block, blass – die Zellen bleiben bedienbar (nur die Deckkraft ändert sich).
+.raster tr.ruhend > * > * {
+  opacity: 0.55;
+}
+.raster tr.ruhendKopf td {
+  height: auto;
+  padding: 8px 8px 2px;
+  background: var(--surface2);
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 700;
+}
+// Klebt links wie der Blockkopf, damit der Satz beim Scrollen im Bild bleibt.
+.ruhendText {
+  position: sticky;
+  left: 8px;
 }
 .muster {
   flex: none;

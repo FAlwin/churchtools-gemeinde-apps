@@ -32,6 +32,7 @@ import {
 } from '../ct/modulDaten';
 import { gleicherStand, type Belegung, type PlatzOrt } from './einteilen';
 import type { ModulRechte } from '../ct/modulRechte';
+import { personenlisteAus, type Personenliste } from './personenliste';
 
 const ART = 'dienstplaner-entwurf';
 const FASSUNG = 1;
@@ -185,27 +186,50 @@ export function entwurfAus(w: Wert): Entwurf | null {
   return entwurf;
 }
 
-/** Gewinnt bei zwei Werten für denselben Platz: höhere Version, dann spätere Zeit, dann höhere ID. */
-function gewinnt(
-  a: { wert: Wert; entwurf: Entwurf },
-  b: { wert: Wert; entwurf: Entwurf },
-): boolean {
-  if (a.entwurf.version !== b.entwurf.version) return a.entwurf.version > b.entwurf.version;
-  if (a.entwurf.zeit !== b.entwurf.zeit) return a.entwurf.zeit > b.entwurf.zeit;
+/** Was bei zwei Werten für dieselbe Sache entscheidet – Entwürfe (je Platz) und die Personenliste (je Schublade). */
+interface Stand {
+  wert: Wert;
+  version: number;
+  zeit: string;
+}
+
+/** Gewinnt bei zwei Werten für dasselbe: höhere Version, dann spätere Zeit, dann höhere ID. **Die eine Regel** für beide. */
+function gewinnt(a: Stand, b: Stand): boolean {
+  if (a.version !== b.version) return a.version > b.version;
+  if (a.zeit !== b.zeit) return a.zeit > b.zeit;
   return a.wert.id > b.wert.id;
 }
+
+const standVon = (x: { wert: Wert; entwurf: Entwurf }): Stand => ({
+  wert: x.wert,
+  version: x.entwurf.version,
+  zeit: x.entwurf.zeit,
+});
 
 export interface Schubladeninhalt {
   /** Je Platz (`ortSchluessel`) der gültige Entwurf und sein Wert. */
   je: Map<string, { wert: Wert; entwurf: Entwurf }>;
   /** Weitere Werte für einen schon belegten Platz (zwei gleichzeitige `POST`) – nicht gültig. */
   doppelt: Map<string, Wert[]>;
+  /**
+   * Die Personenliste der Dienstgruppe (PL-1) – der gültige Wert mit `art: 'dienstplaner-personenliste'`, `null` ohne.
+   * Liegt nur zum **Lesen** hier: Entfernen, Doppelte und Umzug der Entwürfe fassen sie nie an (`je`/`doppelt` kennen sie
+   * nicht). Bei zwei gleichzeitigen `POST` gewinnt dieselbe Regel wie bei Entwürfen (`gewinnt`).
+   */
+  personenliste: Personenliste | null;
 }
 
 export function inhaltAusWerten(werte: Wert[]): Schubladeninhalt {
   const je = new Map<string, { wert: Wert; entwurf: Entwurf }>();
   const doppelt = new Map<string, Wert[]>();
+  let liste: { wert: Wert; liste: Personenliste } | null = null;
   for (const wert of werte) {
+    const pl = personenlisteAus(wert);
+    if (pl) {
+      const neu = { wert, liste: pl };
+      if (!liste || gewinnt({ wert, ...pl }, { wert: liste.wert, ...liste.liste })) liste = neu;
+      continue;
+    }
     const entwurf = entwurfAus(wert);
     if (!entwurf) continue;
     const k = ortSchluessel(entwurf.ort);
@@ -213,13 +237,13 @@ export function inhaltAusWerten(werte: Wert[]): Schubladeninhalt {
     const neu = { wert, entwurf };
     let verlierer: Wert | null = null;
     if (!da) je.set(k, neu);
-    else if (gewinnt(neu, da)) {
+    else if (gewinnt(standVon(neu), standVon(da))) {
       je.set(k, neu);
       verlierer = da.wert;
     } else verlierer = wert;
     if (verlierer) doppelt.set(k, [...(doppelt.get(k) ?? []), verlierer]);
   }
-  return { je, doppelt };
+  return { je, doppelt, personenliste: liste?.liste ?? null };
 }
 
 type Lesen = { ok: true; inhalt: Schubladeninhalt } | { ok: false; grund: EntwurfGrund };

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
+import { listeWert } from '@shared/dienstplan/personenliste.testutil';
 import { startFuer } from './start.testutil';
 import {
   _vergissModul,
@@ -36,6 +37,9 @@ const wert = (id: number, eventId: number, von = 'Alwin') => ({
     version: 1,
   }),
 });
+
+/** Ein Personenliste-Wert der Schublade – gebaut mit der Test-Hilfe, die auch die Leser-Tests nutzen. */
+const listenWert = (id: number, x: Parameters<typeof listeWert>[0]) => listeWert(x, id);
 
 type Antwort = (init?: RequestInit) => Response;
 function ct(routen: Record<string, Antwort>) {
@@ -99,6 +103,22 @@ describe('ladeEntwuerfe', () => {
       ['20|7|-', 3],
       ['21|7|-', 3],
     ]);
+  });
+
+  it('die Personenliste je Dienstgruppe kommt aus denselben Werten – ohne weitere Anfrage, nicht als Entwurf', async () => {
+    const spy = ct({
+      ...GRUND,
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: [wert(100, 20), listenWert(102, { reihe: [46, 1] })] }),
+    });
+    const d = await ladeEntwuerfe([TECHNIK, MUSIK]);
+    expect(d.personenlisten.get(3)?.reihe).toEqual([46, 1]);
+    expect(d.personenlisten.has(4)).toBe(false);
+    // Der Wert ist kein Entwurf: nur der echte steht bei den Entwürfen.
+    expect([...d.entwuerfe.keys()]).toEqual(['20|7|-']);
+    // Eine Anfrage je Schublade wie vorher – die Liste kostet keine zusätzliche.
+    const werteAnfragen = spy.mock.calls.filter(([u]) => String(u).includes('customdatavalues'));
+    expect(werteAnfragen).toHaveLength(2);
   });
 
   it('Rechte jedes Mal frisch – nach dem Einrichten sind sie neu (im Browser-Check gefunden)', async () => {

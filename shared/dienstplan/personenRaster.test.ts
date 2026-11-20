@@ -13,6 +13,7 @@ import {
 } from './personenRaster';
 import { gezeigteGruppen } from './planFilter';
 import { termineAus, type RohTermin } from './termine';
+import { BEGLEITUNG, EINWEISUNG, LEITUNG, liste } from './personenliste.testutil';
 
 /**
  * Tests gegen die Erzeuger: Der Plan kommt aus `planAus` mit rohen Terminen, die Abwesenheiten aus `abwesenheitenAus`
@@ -1035,5 +1036,146 @@ describe('rasterDienste – planbare Dienste ohne Platz (Fund 20.11.2026)', () =
 
   it('ein nicht planbarer ohne Platz bekommt keinen (Regel wie bisher)', () => {
     expect(ids(plan((d) => d.id === GESANG || d.id === GITARRE))).toEqual([GITARRE, GESANG]);
+  });
+});
+
+describe('personenRaster – Personenliste (PL-1)', () => {
+  // Gesang (Dienstgruppe 4): Anna 5, Ben 8, Clara 11, Daniel 12 – Termine 06.12., 09.12., 13.12. (abgesagt).
+  const raster = (
+    l?: Parameters<typeof liste>[0],
+    daten: PersonenDaten = DATEN,
+    gruppen: PlanGruppe[] = ALLE_GRUPPEN,
+  ) =>
+    personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen,
+      daten,
+      personenlisten: l ? new Map([[4, liste(l)]]) : undefined,
+    });
+  const namen = (r: ReturnType<typeof raster>) => block(r, GESANG).zeilen.map((z) => z.name);
+
+  it('Reihenfolge: gespeicherte zuerst, wer fehlt danach alphabetisch', () => {
+    expect(namen(raster({ reihe: [12, 8] }))).toEqual([
+      'Daniel Fink',
+      'Ben Kunz',
+      'Anna Gans',
+      'Clara Neu',
+    ]);
+  });
+
+  it('ohne Liste und mit der Liste einer anderen Dienstgruppe bleibt alles alphabetisch', () => {
+    const alphabetisch = ['Anna Gans', 'Ben Kunz', 'Clara Neu', 'Daniel Fink'];
+    expect(namen(raster())).toEqual(alphabetisch);
+    const fremd = personenRaster({
+      plan: PLAN,
+      spalten: ALLE_SPALTEN,
+      gruppen: ALLE_GRUPPEN,
+      daten: DATEN,
+      personenlisten: new Map([[3, liste({ reihe: [12, 8], pause: { '8': {} } })]]),
+    });
+    expect(namen(fremd)).toEqual(alphabetisch);
+    expect(block(fremd, GESANG).ruhend).toBe(0);
+  });
+
+  it('Pause an allen gezeigten Terminen: unten, in der Reihenfolge der Liste, mit „Pause“', () => {
+    const r = raster({ reihe: [11, 8, 5], pause: { '11': {}, '8': { bis: '2026-12-13' } } });
+    expect(namen(r)).toEqual(['Anna Gans', 'Daniel Fink', 'Clara Neu', 'Ben Kunz']);
+    expect(block(r, GESANG).ruhend).toBe(2);
+    expect(zeile(r, GESANG, 11)).toMatchObject({ ruhend: 'pause', pause: {} });
+    expect(zeile(r, GESANG, 8)).toMatchObject({ ruhend: 'pause', pause: { bis: '2026-12-13' } });
+    expect(zeile(r, GESANG, 5).ruhend).toBeNull();
+  });
+
+  it('eine Pause, die nicht für alle gezeigten Termine gilt, hält die Person an ihrer Stelle – der Hinweis steht trotzdem', () => {
+    const r = raster({ pause: { '8': { bis: '2026-12-09' } } });
+    expect(namen(r)).toEqual(['Anna Gans', 'Ben Kunz', 'Clara Neu', 'Daniel Fink']);
+    expect(zeile(r, GESANG, 8)).toMatchObject({ ruhend: null, pause: { bis: '2026-12-09' } });
+    // Eine abgelaufene Pause gilt nirgends.
+    expect(zeile(raster({ pause: { '8': { bis: '2026-12-05' } } }), GESANG, 8)).toMatchObject({
+      ruhend: null,
+      pause: null,
+    });
+  });
+
+  it('ganz abwesend (an allen gezeigten Terminen): unten; nur an einem Termin abwesend: nicht', () => {
+    const mitAbwesenheit = (roh: object[]): PersonenDaten =>
+      new Map<number, GruppenStand>([
+        ...DATEN,
+        [90, da([ANNA, BEN, DANIEL, CLARA], abwesenheitenAus(roh))],
+      ]);
+    const ganz = raster(
+      { reihe: [] },
+      mitAbwesenheit([abwesend(1, 11, '2026-12-01', '2026-12-31')]),
+    );
+    expect(namen(ganz)).toEqual(['Anna Gans', 'Ben Kunz', 'Daniel Fink', 'Clara Neu']);
+    expect(zeile(ganz, GESANG, 11)).toMatchObject({ ruhend: 'abwesend', pause: null });
+    const teil = raster(
+      { reihe: [] },
+      mitAbwesenheit([abwesend(2, 11, '2026-12-06', '2026-12-06')]),
+    );
+    expect(zeile(teil, GESANG, 11).ruhend).toBeNull();
+  });
+
+  it('ohne Liste der Dienstgruppe rückt „ganz abwesend“ trotzdem nach unten (Rest alphabetisch)', () => {
+    const daten: PersonenDaten = new Map<number, GruppenStand>([
+      ...DATEN,
+      [
+        90,
+        da(
+          [ANNA, BEN, DANIEL, CLARA],
+          abwesenheitenAus([abwesend(1, 11, '2026-12-01', '2026-12-31')]),
+        ),
+      ],
+    ]);
+    const r = raster(undefined, daten);
+    expect(namen(r)).toEqual(['Anna Gans', 'Ben Kunz', 'Daniel Fink', 'Clara Neu']);
+    expect(zeile(r, GESANG, 11)).toMatchObject({ ruhend: 'abwesend', pause: null });
+    expect(block(r, GESANG).ruhend).toBe(1);
+  });
+
+  it('wer in den gezeigten Terminen eingeteilt ist, bleibt oben – auch mit Pause (der Warnfall bleibt sichtbar)', () => {
+    // Daniel ist am 06.12. angefragt (Gesang).
+    const r = raster({ pause: { '12': {}, '8': {} } });
+    expect(zeile(r, GESANG, 12).ruhend).toBeNull();
+    expect(zeile(r, GESANG, 8).ruhend).toBe('pause');
+    // Die Zellen bleiben unverändert: einteilbar wie sonst.
+    expect(zeile(r, GESANG, 12).zellen[0].zustand).toBe('angefragt');
+  });
+
+  it('Tags: je Person und Dienst, die Zeile trägt sie, die Legende nennt jeden Tag einmal', () => {
+    const r = raster({
+      tags: [BEGLEITUNG, LEITUNG, EINWEISUNG],
+      tagsVon: { [`${GESANG}|5`]: ['b', 'l'], [`${GESANG}|12`]: ['b'], [`${GITARRE}|12`]: ['e'] },
+    });
+    expect(zeile(r, GESANG, 5).tags.map((t) => t.kuerzel)).toEqual(['B', 'L']);
+    expect(zeile(r, GESANG, 8).tags).toEqual([]);
+    // Daniel hat in Gitarre einen anderen Tag als in Gesang.
+    expect(zeile(r, GITARRE, 12).tags.map((t) => t.kuerzel)).toEqual(['E']);
+    expect(zeile(r, GESANG, 12).tags.map((t) => t.kuerzel)).toEqual(['B']);
+    // In der Reihenfolge der Blöcke (Gitarre vor Gesang).
+    expect(r.tagLegende).toEqual([
+      { name: 'Einweisung', kuerzel: 'E' },
+      { name: 'Begleitung', kuerzel: 'B' },
+      { name: 'Leitung', kuerzel: 'L' },
+    ]);
+  });
+
+  it('Legende: nur Tags aus den gezeigten Diensten; ohne Tags leer', () => {
+    const nurGitarre = ALLE_GRUPPEN.map((g) => ({
+      ...g,
+      zeilen: g.zeilen.filter((z) => z.dienst.id === GITARRE),
+    })).filter((g) => g.zeilen.length > 0);
+    const r = raster(
+      {
+        tags: [BEGLEITUNG, EINWEISUNG],
+        tagsVon: { [`${GESANG}|5`]: ['b'], [`${GITARRE}|12`]: ['e'] },
+      },
+      DATEN,
+      nurGitarre,
+    );
+    expect(r.tagLegende).toEqual([{ name: 'Einweisung', kuerzel: 'E' }]);
+    expect(raster({ reihe: [12] }).tagLegende).toEqual([]);
+    expect(raster().tagLegende).toEqual([]);
   });
 });

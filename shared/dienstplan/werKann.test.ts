@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { FRUEHER_ABGESAGT, kandidatenAus, kandidatHinweis, type RohKandidat } from './werKann';
+import type { ZellenAntwort } from './personenAntworten';
+import { BEGLEITUNG, liste } from './personenliste.testutil';
+import {
+  abschnitteAus,
+  FRUEHER_ABGESAGT,
+  kandidatenAus,
+  kandidatHinweis,
+  nachListe,
+  pauseDerPerson,
+  werKannTitel,
+  type RohKandidat,
+} from './werKann';
 
 /** Ein Kandidat in der Form, die E4-0 gemessen hat. */
 function roh(id: number, vorname: string, o: Partial<RohKandidat> = {}): RohKandidat {
@@ -196,5 +207,100 @@ describe('kandidatHinweis', () => {
       warnung: true,
     });
     expect(kandidatHinweis(k)).toEqual({ text: 'frei', warnung: false });
+  });
+});
+
+describe('„Wer kann?“ mit Personenliste (PL-1)', () => {
+  // Punkte bestimmen die bisherige Reihenfolge: Anna (1) vorn, dann Ben (2), Clara (3), Daniel (4) hinten.
+  const kandidaten = () =>
+    kandidatenAus(
+      [
+        roh(1, 'Anna', { score: 0 }),
+        roh(2, 'Ben', { score: -1 }),
+        roh(3, 'Clara', { score: -2 }),
+        roh(4, 'Daniel', { score: -3 }),
+      ],
+      O,
+    );
+  const bezug = (x: Parameters<typeof liste>[0], tag: string | undefined = '2026-12-06') => ({
+    liste: liste(x),
+    tag,
+  });
+  const namen = (l: { name: string }[]) => l.map((k) => k.name.split(' ')[0]);
+
+  it('Reihenfolge: ohne gespeicherte Reihenfolge bleibt „frei und selten dran“', () => {
+    expect(namen(nachListe(kandidaten(), undefined))).toEqual(['Anna', 'Ben', 'Clara', 'Daniel']);
+    expect(namen(nachListe(kandidaten(), bezug({ tags: [BEGLEITUNG] })))).toEqual([
+      'Anna',
+      'Ben',
+      'Clara',
+      'Daniel',
+    ]);
+  });
+
+  it('Reihenfolge: mit gespeicherter Reihenfolge sortiert die Liste, wer fehlt danach alphabetisch', () => {
+    expect(namen(nachListe(kandidaten(), bezug({ reihe: [4, 2] })))).toEqual([
+      'Daniel',
+      'Ben',
+      'Anna',
+      'Clara',
+    ]);
+  });
+
+  it('Überschrift sagt, wonach sortiert ist', () => {
+    expect(werKannTitel(undefined)).toBe('Wer kann? Oben: frei und selten dran');
+    expect(werKannTitel(liste({ tags: [BEGLEITUNG] }))).toBe(
+      'Wer kann? Oben: frei und selten dran',
+    );
+    expect(werKannTitel(liste({ reihe: [1] }))).toBe(
+      'Wer kann? In der Reihenfolge der Personenliste',
+    );
+  });
+
+  it('Pause: wer pausiert, steht hinten – auch ohne Reihenfolge; „bis“ gilt einschließlich', () => {
+    const b = bezug({ pause: { '1': { bis: '2026-12-06' }, '2': { bis: '2026-12-05' } } });
+    // Anna pausiert am 06.12. (einschließlich), Bens Pause ist am 06.12. vorbei.
+    expect(namen(nachListe(kandidaten(), b))).toEqual(['Ben', 'Clara', 'Daniel', 'Anna']);
+  });
+
+  it('Pause: unter „Kann nicht / abwesend“, auch mit Ja-Antwort; Pausierte behalten die Reihenfolge der Liste', () => {
+    const antworten = new Map<number, ZellenAntwort>([
+      [1, { a: 'ja', gilt: true, notiz: null, nurFuer: null }],
+    ]);
+    const a = abschnitteAus(
+      kandidaten(),
+      antworten,
+      bezug({ reihe: [3, 1, 2], pause: { '1': {}, '4': {} } }),
+    );
+    const von = (stufe: string) =>
+      namen(a!.find((x) => x.stufe === stufe)!.personen.map((p) => p.kandidat));
+    expect(von('ja')).toEqual([]);
+    expect(von('kannNicht')).toEqual(['Anna', 'Daniel']);
+    expect(von('keine')).toEqual(['Clara', 'Ben']);
+  });
+
+  it('Pause: ohne Liste stehen dieselben Leute in „Hat Ja gesagt“', () => {
+    const antworten = new Map<number, ZellenAntwort>([
+      [1, { a: 'ja', gilt: true, notiz: null, nurFuer: null }],
+    ]);
+    const a = abschnitteAus(kandidaten(), antworten);
+    expect(namen(a!.find((x) => x.stufe === 'ja')!.personen.map((p) => p.kandidat))).toEqual([
+      'Anna',
+    ]);
+  });
+
+  it('Hinweis: „Pause bis …“ nach der Abwesenheit, vor „am Tag schon“; ohne Pause wie bisher', () => {
+    const k = kandidaten()[0];
+    expect(kandidatHinweis({ ...k, amTag: ['Ton'] }, { bis: '2027-01-31' })).toEqual({
+      text: 'Pause bis 31.01.27',
+      warnung: false,
+    });
+    expect(kandidatHinweis({ ...k, abwesend: 'Urlaub' }, {})).toEqual({
+      text: 'abwesend: Urlaub',
+      warnung: true,
+    });
+    expect(kandidatHinweis(k, null)).toEqual({ text: 'frei', warnung: false });
+    expect(pauseDerPerson(bezug({ pause: { '1': {} } }), 1)).toEqual({});
+    expect(pauseDerPerson(undefined, 1)).toBeNull();
   });
 });

@@ -358,6 +358,24 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   Dienst nicht genommen (`laufGrund: 'andere-dienste'`). Ohne sichtbare Antworten oder beim Ladefehler rechnet er wie früher (Hinweis im Fenster).
   Das Fenster zeigt die Antwort hinter dem Namen („Ben (0×) – Ja“). Dienstnamen für „nur für Gesang“ kommen aus dem Plan (nur Dienste, die
   darin stehen – wie im Raster).
+- **Die Personenliste (PL-1, 20.11.2026, Entwurf `personenliste.html`, Variante „Kürzel am Bild“) – nur Anzeige:** Je Dienstgruppe gibt es
+  **einen Wert** in der Entwurfs-Schublade (`dienstplaner-entwuerfe-<Dienstgruppe>`, `art: 'dienstplaner-personenliste'`, `fassung: 1`, mit
+  `version` und `zeit`): `reihe` (Personen-IDs), `tags` (`{id, name, kuerzel}`), `tagsVon` (`"<Dienst>|<Person>"` → Tag-IDs, ein Tag gilt je Person
+  **und** Dienst) und `pause` (`"<Person>"` → `{ bis? }`, „bis“ einschließlich, ohne Ende = unbefristet). Die Entwurfs-Leser ignorieren den
+  Wert (sie nehmen nur `art: 'dienstplaner-entwurf'`) und Entfernen/Umziehen fassen ihn nie an; zwei gleichzeitige Werte: höhere Version, dann
+  spätere Zeit, dann höhere ID (`gewinnt`, dieselbe Regel wie bei den Entwürfen). Geladen wird er mit den ohnehin gelesenen Werten
+  (`ladeEntwuerfe` → `EntwuerfeDaten.personenlisten`, je Dienstgruppe) – ohne Schublade, ohne Recht oder ohne Wert gilt alles wie vorher.
+  **Alle Regeln stehen in `shared/dienstplan/personenliste.ts`** (`personenlisteAus`, `sortiereNachListe`, `tagsFuer`, `pauseAm`,
+  `pausiertAnAllen`, `pauseText`); Raster, „Wer kann?“ und PDF rufen sie nur auf. **„Personen“:** Zeilen je Dienst in der Reihenfolge der Liste
+  (wer fehlt, danach alphabetisch); wer an **allen** gezeigten Terminen pausiert oder ganz abwesend ist **und dort nicht eingeteilt ist**,
+  steht unten im Block, blass, unter „In Pause oder ganz abwesend · N“ (die Zellen bleiben bedienbar) – „ganz abwesend“ auch ohne Liste
+  der Dienstgruppe (dann sonst alphabetisch); „Pause bis …“ ersetzt „auch …“, sobald die Pause am ersten gezeigten Termin gilt; die Tags des Dienstes
+  stehen als Kürzel unten rechts am Personenbild, unter der Farblegende nennt eine Zeile „Tags:“ die Tags der gezeigten Dienste.
+  **„Wer kann?“:** mit gespeicherter Reihenfolge sortiert jeder Abschnitt (und die eine Liste) danach, Überschrift „In der Reihenfolge der
+  Personenliste“ statt „Oben: frei und selten dran“; wer pausiert, steht unter „Kann nicht / abwesend“ bzw. am Ende der einen Liste, blass,
+  mit „Pause bis …“; Kürzel grau hinter dem Namen. **PDF „Personen“:** bei „Eine Gruppe“ in der Reihenfolge der Liste, beim ganzen Plan
+  alphabetisch; die Tags mit vollem Namen grau hinter dem Namen, gilt einer nur für einen Teil der gezeigten Dienste der Person, steht der Dienst
+  dahinter; „Je Person“ unverändert. Anlegen und Ändern der Liste kommen mit PL-2, „Pause wirkt“ (Erinnern, Zauberstab) mit PL-3.
 - **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
   Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
 

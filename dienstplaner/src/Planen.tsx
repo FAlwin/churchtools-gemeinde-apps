@@ -557,6 +557,7 @@ export function Planen({
               plan,
               spalten: teilenSpalten,
               gruppen: gezeigteGruppen(plan, gruppenAus(ansicht)),
+              personenlisten: daten?.personenlisten,
               gemeinde: ablauf?.start.gemeinde ?? null,
               app: 'Dienstplaner',
             }}
@@ -615,6 +616,7 @@ export function Planen({
       plan,
       spalten: handy ? d.gefiltert : imFenster,
       gruppen,
+      personenlisten: daten?.personenlisten,
       zugeklappt,
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,

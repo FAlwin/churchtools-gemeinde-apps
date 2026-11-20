@@ -3,6 +3,7 @@ import type { Wert } from '../ct/modulDaten';
 import type { PlatzOrt } from './einteilen';
 import { Fehler } from './einteilen.testutil';
 import { KAT, MODUL, speicher } from './entwuerfe.testutil';
+import { listeRoh, listeWert } from './personenliste.testutil';
 import {
   entwurfAus,
   entwurfEntfernen,
@@ -541,5 +542,67 @@ describe('Umziehen (Platzzahl geändert, 19.11.2026)', () => {
       });
       expect(s.schreibvorgaenge).toEqual([]);
     }
+  });
+});
+
+describe('Personenliste in der Schublade (PL-1, Fremdwert-Sicherheit)', () => {
+  const pl = (id: number, x: Parameters<typeof listeWert>[0] = {}) => listeWert(x, id);
+
+  it('ein Personenliste-Wert ist kein Entwurf: nicht gelesen, nicht „doppelt“ – und die Entwürfe bleiben', () => {
+    const inhalt = inhaltAusWerten([pl(900, { reihe: [1, 2] }), wert(5, entwurf())]);
+    expect([...inhalt.je.keys()]).toEqual([ortSchluessel(ORT)]);
+    expect(inhalt.doppelt.size).toBe(0);
+    expect(entwurfAus(pl(900))).toBeNull();
+  });
+
+  it('die Liste wird gelesen – ohne Wert null', () => {
+    expect(inhaltAusWerten([wert(5, entwurf())]).personenliste).toBeNull();
+    expect(inhaltAusWerten([pl(900, { reihe: [7, 3] }), wert(5, entwurf())]).personenliste).toEqual(
+      listeRoh({ reihe: [7, 3] }),
+    );
+  });
+
+  it('ein kaputter Personenliste-Wert ergibt keine Liste (und keinen Entwurf)', () => {
+    const kaputt: Wert = {
+      id: 901,
+      dataCategoryId: KAT,
+      value: '{"art":"dienstplaner-personenliste","fassung":1}',
+    };
+    const inhalt = inhaltAusWerten([kaputt]);
+    expect(inhalt.personenliste).toBeNull();
+    expect(inhalt.je.size).toBe(0);
+  });
+
+  it('zwei Werte (zwei gleichzeitige POST): höhere Version gewinnt, dann spätere Zeit, dann höhere ID', () => {
+    const reihe = (w: Wert) => inhaltAusWerten([w]).personenliste?.reihe;
+    const mehr = pl(10, { version: 2, reihe: [2], zeit: '2026-11-20T09:00:00.000Z' });
+    const weniger = pl(11, { version: 1, reihe: [1], zeit: '2026-11-20T12:00:00.000Z' });
+    expect(inhaltAusWerten([mehr, weniger]).personenliste?.reihe).toEqual(reihe(mehr));
+    expect(inhaltAusWerten([weniger, mehr]).personenliste?.reihe).toEqual(reihe(mehr));
+    // Gleiche Version: die spätere Zeit.
+    const spaeter = pl(12, { version: 2, reihe: [3], zeit: '2026-11-20T10:00:00.000Z' });
+    expect(inhaltAusWerten([mehr, spaeter]).personenliste?.reihe).toEqual([3]);
+    expect(inhaltAusWerten([spaeter, mehr]).personenliste?.reihe).toEqual([3]);
+    // Alles gleich: die höhere ID.
+    const gleichA = pl(20, { version: 2, reihe: [4] });
+    const gleichB = pl(21, { version: 2, reihe: [5] });
+    expect(inhaltAusWerten([gleichA, gleichB]).personenliste?.reihe).toEqual([5]);
+    expect(inhaltAusWerten([gleichB, gleichA]).personenliste?.reihe).toEqual([5]);
+  });
+
+  it('Entfernen und Umziehen eines Entwurfs lassen die Personenliste stehen', async () => {
+    const { s, port } = speicher([pl(900, { reihe: [1, 2] }), wert(5, entwurf())]);
+    await entwurfEntfernen(port, MODUL, KAT, ORT, 1);
+    expect(s.werte.map((w) => w.id)).toEqual([900]);
+    const { s: s2, port: p2 } = speicher([pl(900), wert(5, entwurf())]);
+    await entwurfUmziehen(p2, MODUL, KAT, ORT, { ...ORT, index: 2 }, 1);
+    expect(s2.werte.find((w) => w.id === 900)).toEqual(pl(900));
+  });
+
+  it('Speichern eines Entwurfs lässt die Personenliste stehen – und braucht keine eigene Version', async () => {
+    const { s, port } = speicher([pl(900, { reihe: [1, 2] })]);
+    const r = await entwurfSpeichern(port, MODUL, KAT, eingabe(), null);
+    expect(r).toMatchObject({ ok: true });
+    expect(s.werte.find((w) => w.id === 900)).toEqual(pl(900, { reihe: [1, 2] }));
   });
 });

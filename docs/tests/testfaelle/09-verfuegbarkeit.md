@@ -498,3 +498,32 @@ die Mail und verschickt je Person eine eigene.
 - **Historie:** Dienstplaner E5c-5 (19.11.2026), Entwurf `e5c-5-erinnern.html`, Variante B
 
 </details>
+
+### TF-VERF-16 · Personenliste: Reihenfolge, Tags und Pause in „Personen“, „Wer kann?“ und im PDF
+
+**Das brauchst du:** Den Dienstplaner im Demo-Modus (`?demo` an der Adresse). Dort haben **Musik** und **Technik** eine Personenliste
+(Anlegen und Ändern gibt es erst mit dem nächsten Schritt, PL-2 – bis dahin nur Ansehen).
+
+**Das muss passieren:** Wo eine Liste da ist, folgt die Anzeige ihr; wo keine ist, bleibt alles wie vorher.
+
+1. **Planen → Personen.** Im Block **Gesang** steht oben Clara, dann Anna, Spike, Alwin (die gespeicherte Reihenfolge); Anna macht
+   Pause bis in zehn Tagen: Bei ihr steht „Pause bis …“ statt „auch …“, sie steht aber an ihrer Stelle (die Pause gilt nicht für den
+   ganzen Zeitraum). An Claras Personenbild sitzt unten rechts ein kleines **„BL“**, an Spikes „B“; mit der Maus darüber steht der volle Name.
+2. Im Block **Ton** und **Licht**: Ben hat **Pause ohne Ende** und steht **unten, blass**, unter der Zeile „In Pause oder ganz abwesend · 1“.
+   Seine Zellen lassen sich weiter antippen (einteilen geht).
+3. Über der Tabelle steht unter der Legende eine Zeile **„Tags:“** mit „B Begleitung · L Leitung · E Einweisung · S Springer“ – nur die Tags der
+   gerade gezeigten Dienste (Gesang ausblenden: „B“ und „L“ verschwinden).
+4. Ein **freier Platz** im Gesang antippen: **„Wer kann?“** nennt „In der Reihenfolge der Personenliste“; Claras Kürzel steht grau hinter dem
+   Namen; wer pausiert, steht unter „Kann nicht / abwesend“ (aufklappen) mit „Pause bis …“.
+5. **⋯ → Teilen → Eine Gruppe → Musik → Personen:** Die Zeilen folgen der Reihenfolge, hinter den Namen steht grau „Begleitung, Leitung“.
+   **Ganzer Plan:** alphabetisch, die Tags stehen trotzdem dahinter. **Je Person:** wie vorher, ohne Tags.
+6. Am **Handy**: das Kürzel am Bild kostet keine Breite, der Name wird nicht abgeschnitten, die Zwischenzeile bricht nicht um.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/personenliste.ts`, `shared/dienstplan/personenRaster.ts`, `shared/dienstplan/werKann.ts`, `shared/dienstplan/planBlatt.ts`, `shared/dienstplan/entwuerfe.ts`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonenRaster.module.scss`, `dienstplaner/src/WerKann.tsx`, `dienstplaner/src/ladeEntwuerfe.ts`, `dienstplaner/src/demo.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenliste.test.ts` (Lesen, Reihenfolge, Tags, Pause), `shared/dienstplan/entwuerfe.test.ts` (Fremdwert-Sicherheit, Gewinner), `shared/dienstplan/personenRaster.test.ts`, `shared/dienstplan/werKann.test.ts`, `shared/dienstplan/planBlatt.test.ts`, `dienstplaner/src/Planen.personen.liste.test.tsx`, `dienstplaner/src/WerKann.liste.test.tsx`, `dienstplaner/src/Planen.teilen.test.tsx`, `dienstplaner/src/ladeEntwuerfe.test.ts`; von Hand bleibt der Eindruck (Größe und Lage des Kürzels am Bild, „blass“, Handy)
+- **Historie:** Dienstplaner PL-1 (20.11.2026), Entwurf `personenliste.html` (Variante „Kürzel am Bild“)
+
+</details>

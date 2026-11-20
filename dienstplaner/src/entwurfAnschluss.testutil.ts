@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { STANDARD } from '@shared/dienstplan/vorlieben';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Personenliste } from '@shared/dienstplan/personenliste';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 
@@ -27,6 +28,8 @@ export const entwurf = (x: Partial<Entwurf> = {}): Entwurf => ({
 export const daten = (
   entwuerfe: Entwurf[] = [],
   schublade: Partial<Schublade> = {},
+  /** Die Personenliste je Dienstgruppe (PL-1) – ohne Angabe gibt es keine. */
+  personenlisten: [number, Personenliste][] = [],
 ): EntwuerfeDaten => ({
   modul: 16,
   schubladen: new Map([[3, { gruppe: TECHNIK, kategorie: 30, stand: 'bereit', ...schublade }]]),
@@ -36,6 +39,7 @@ export const daten = (
   gruppeJe: new Map(
     entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, 3]),
   ),
+  personenlisten: new Map(personenlisten),
 });
 
 /** Der Anschluss zum Anfassen – `a` überschreibt einzelne Funktionen. */

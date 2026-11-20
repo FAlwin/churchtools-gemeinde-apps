@@ -12,8 +12,11 @@
 >   **⋯** (Teilen, Hilfe). „Weitere Wochen laden“ ist ein stilles blaues Wort unter der Liste; ist die Liste leer, führt „Alle Termine
 >   zeigen“ zu „Alle“. Am Handy: „Meine ⌄“ als blauer Knopf, Filter und ⋯ mit Rahmen.
 > - **Termin-Ansicht** (Zeile antippen): Ablauf wie in der ChurchTools-App – ein Tipp auf einen **Punkt** zeigt alle Infos dazu
->   (am Handy eine Seite mit „Davor / Danach“, sonst ein Fenster; die Lied-Karte öffnet die Lied-Ansicht) –, mit Recht **bearbeiten** (Stift, Ziehen,
->   „An diesem Termin weglassen“, „Ablauf anlegen“ / „Neu aufsetzen …“), die Dienste des Termins, **Infos & Dateien**
+>   (am Handy eine Seite mit „Davor / Danach“, sonst ein Fenster; die Lied-Karte öffnet die Lied-Ansicht) –, mit Recht **bearbeiten** (**Bearbeiten** im
+>   Ablauf-Kopf, Ziehen, „An diesem Termin weglassen“, „Ablauf anlegen“ als leises gestricheltes Feld, „Neu aufsetzen …“ im **⋯-Menü**;
+>   **seit „Ruhige Bedienung“ B8 (21.11.2026) wie in der Musik-App:** der Kopf in Stufen – beim Ansehen **Live**, **Musik-App**, **⋯**
+>   (Spalten wählen, Ablauf zeigen) und **Bearbeiten**; im Bearbeiten grünes **Eintrag hinzufügen**, **⋯** (Als Vorlage …,
+>   Neu aufsetzen …) und blaues **Fertig**; der **Stift an jeder Zeile entfällt** – die Zeile antippen öffnet „Punkt bearbeiten“), die Dienste des Termins, **Infos & Dateien**
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
 >   als PDF, Sprung in die Musik-App. **Lieder** im Punkt-Fenster wie in der Musik-App: anderes Lied wählen (Suche,
 >   Häufigkeit, Zuletzt), „Verknüpfung aufheben“, „Neues Lied“ samt SongSelect und Notenblatt-Editor – mit dem Recht,
@@ -454,8 +457,8 @@ und Neuladen gehen).
 - **Löschen** fragt nach und lässt sich **nicht rückgängig machen** (ChurchTools hat dafür keinen Papierkorb); Abläufe, die schon aus
   der Vorlage entstanden sind, bleiben. Gesperrte Vorlagen (in ChurchTools gesperrt, per Schnittstelle nicht zu entsperren)
   melden das und lassen sich nur dort ändern.
-- **Als Vorlage …** (E10-V5, 17.11.2026): Im **Bearbeiten-Modus eines Termin-Ablaufs** steht rechts in der Hinweiszeile **„Als
-  Vorlage …“** – **links neben „Neu aufsetzen …“**, nur in der Termin-Ansicht (nicht in der Matrix) und nur mit dem Recht
+- **Als Vorlage …** (E10-V5, 17.11.2026): Im **Bearbeiten-Modus eines Termin-Ablaufs** steht im **⋯-Menü** des Ablauf-Kopfs **„Als
+  Vorlage …“** (seit B8, 21.11.2026; vorher in der Hinweiszeile) – **vor „Neu aufsetzen …“**, nur in der Termin-Ansicht (nicht in der Matrix) und nur mit dem Recht
   „Ablaufvorlagen bearbeiten“ **für den Kalender des Termins**. Ein Fenster, zwei Wege: **Als neue Vorlage** (Name, vorbelegt mit dem
   Termin-Titel; Kalender, vorbelegt mit dem des Termins; nur Kalender mit Recht) oder **Vorhandene Vorlage ersetzen** (nur
   Vorlagen, die man bearbeiten darf, die des Termin-Kalenders zuerst; roter Hinweis mit den Zahlen, roter Knopf „Ersetzen“; Name und

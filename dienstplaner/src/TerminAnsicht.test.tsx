@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { diensteAus } from '@shared/ct/dienste';
 import { startFuer } from './start.testutil';
+import { leisesFeldKlasse } from './leisesFeld.testutil';
+import { mehrEintrag, mehrEintragOder, oeffneMehr } from './mehrMenue.testutil';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
 import { einteilungSchluessel } from '@shared/dienstplan/tausch';
@@ -133,6 +135,11 @@ function zeige(
   return { onTermin, onZurueck, wechsel, onGeaendert };
 }
 
+/** Den ersten Punkt im Bearbeiten antippen – der Stift an der Zeile ist weg (B8), die Zeile selbst öffnet das Fenster. */
+function ersterPunkt(): void {
+  fireEvent.click(document.querySelector<HTMLElement>('[data-tour="edit-item"]')!);
+}
+
 beforeEach(() => {
   _vergissCsrf();
   _bremseLoesen();
@@ -162,14 +169,13 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
     // Nur ansehen – bis auf die Punkte (B8, E20: Tipp auf den Punkt = Einzelansicht, Tipp auf die Lied-Karte = Lied-Ansicht,
-    // E6-O O4). Im Kopf dazu „Ablauf zeigen“ (E6b-1) und „Spalten“ (Infos je Gruppe, E6-4).
+    // E6-O O4). Im Kopf dazu das „⋯“-Menü (B8): „Spalten wählen“ (Infos je Gruppe, E6-4) und „Ablauf zeigen“ (E6b-1).
     expect(
       within(ablauf)
         .queryAllByRole('button')
         .map((b) => b.getAttribute('aria-label') ?? b.textContent),
     ).toEqual([
-      'Ablauf im Vollbild zeigen',
-      'Infos je Gruppe zeigen',
+      'Mehr',
       '„Soundcheck“ ansehen',
       '„Lied – Du großer Gott“ ansehen',
       'Du großer Gott',
@@ -394,7 +400,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
   /** Den ersten Punkt (Soundcheck) über sein Punkt-Fenster löschen. */
   async function ersterWeg(): Promise<void> {
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     fireEvent.click(await screen.findByRole('button', { name: /Eintrag löschen/ }));
     fireEvent.click(screen.getByRole('button', { name: /^Löschen$/ }));
   }
@@ -437,7 +443,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     const ct = ctMitAblauf();
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(ct.schreiben).toEqual(['PUT /api/events/7/agenda/items/1']));
@@ -463,7 +469,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     const ct = ctMitAblauf({ gesperrt: true });
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     expect(await screen.findByText(/Dieser Ablauf ist in ChurchTools abgeschlossen/)).toBeTruthy();
     expect(screen.queryByPlaceholderText('Titel')).toBeNull();
     expect(ct.schreiben).toEqual([]);
@@ -473,7 +479,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     const ct = ctMitAblauf();
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     ct.fremdWeg(1);
     const vorher = ct.lesen();
     fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
@@ -522,7 +528,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     const ct = ctMitAblauf();
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     fireEvent.click(screen.getByRole('button', { name: /An diesem Termin weglassen/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(ct.schreiben).toEqual(['POST /api/events/7/agenda/items/1/hide']));
@@ -532,7 +538,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     const ct = ctMitAblauf();
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     ct.fremdTitel(1, 'Soundcheck von außen');
     const vorher = ct.lesen();
     fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
@@ -569,6 +575,96 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
     expect(screen.queryByText(/Du siehst nicht alle Dienstgruppen/)).toBeNull();
+  });
+
+  /**
+   * **Der Ablauf wie in der Musik-App (Ruhige Bedienung B8, Alwin 20.11.2026):** Tipp auf den Punkt → Einzelansicht,
+   * kein Stift an der Zeile, der Kopf in Stufen („Bearbeiten“ + „⋯“, im Bearbeiten „+ Eintrag hinzufügen“, „⋯“ und
+   * „Fertig“). Dieselben Bausteine (`ui/ablauf`) – hier nur die Verdrahtung im Dienstplaner.
+   */
+  describe('wie in der Musik-App (B8)', () => {
+    afterEach(() => vi.unstubAllGlobals());
+    const breite = (handy: boolean) =>
+      vi.stubGlobal('matchMedia', () => ({
+        matches: handy,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    const ablaufKarte = () => screen.getByRole('region', { name: 'Ablauf' });
+    const knoepfe = (wurzel: HTMLElement) =>
+      within(wurzel)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim());
+
+    it('Tipp auf den Punkt öffnet die Einzelansicht „Position 1 von 2“; › blättert, der Rand ist gesperrt', async () => {
+      breite(false);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      fireEvent.click(await screen.findByRole('button', { name: '„Soundcheck“ ansehen' }));
+      const fenster = await screen.findByRole('dialog', { name: 'Soundcheck' });
+      expect(within(fenster).getByText(/^Position 1 von 2/)).toBeTruthy();
+      expect(within(fenster).getByRole('button', { name: 'Voriger Punkt' })).toHaveProperty(
+        'disabled',
+        true,
+      );
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Nächster Punkt' }));
+      expect(within(fenster).getByText(/^Position 2 von 2/)).toBeTruthy();
+      expect(within(fenster).getByRole('button', { name: 'Nächster Punkt' })).toHaveProperty(
+        'disabled',
+        true,
+      );
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Fenster schließen' }));
+      expect(screen.queryByText(/^Position \d/)).toBeNull();
+    });
+
+    it('am Handy eine eigene Seite („Position 1/2“, „‹ Ablauf“), kein Fenster', async () => {
+      breite(true);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]), handy: true });
+      fireEvent.click(await screen.findByRole('button', { name: '„Soundcheck“ ansehen' }));
+      const seite = await screen.findByRole('dialog', { name: 'Soundcheck' });
+      expect(within(seite).getByText('Position 1/2')).toBeTruthy();
+      fireEvent.click(within(seite).getByRole('button', { name: /Ablauf/ }));
+      expect(screen.queryByRole('dialog', { name: 'Soundcheck' })).toBeNull();
+    });
+
+    it('Kopf in Stufen: Ansehen = „Bearbeiten“ + „⋯“ (Spalten, Ablauf zeigen); Bearbeiten = „+“, „⋯“, „Fertig“', async () => {
+      breite(false);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+      expect(knoepfe(ablaufKarte()).slice(0, 2)).toEqual(['Mehr', 'Ablauf bearbeiten']);
+      expect(
+        within(oeffneMehr())
+          .getAllByRole('menuitem')
+          .map((m) => m.textContent),
+      ).toEqual(['Spalten wählen', 'Ablauf zeigen']);
+      fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
+      // Im Bearbeiten: grünes „+“, „⋯“ (Als Vorlage …/Neu aufsetzen …), blaues „Fertig“ – und es steht nichts dazwischen.
+      expect(knoepfe(ablaufKarte()).slice(0, 3)).toEqual(['Eintrag hinzufügen', 'Mehr', 'Fertig']);
+      expect(mehrEintragOder('Ablauf zeigen')).toBeNull();
+      expect(mehrEintragOder(/Neu aufsetzen/)).toBeTruthy();
+    });
+
+    it('der Stift an der Zeile entfällt – die Zeile antippen öffnet das Punkt-Fenster', async () => {
+      breite(false);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+      expect(screen.queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+      ersterPunkt();
+      expect(await screen.findByPlaceholderText('Titel')).toBeTruthy();
+    });
+
+    it('„Ablauf zeigen“ im „⋯“-Menü öffnet die Anzeige (Aktion, nicht nur Menü zu)', async () => {
+      breite(false);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+      mehrEintrag('Ablauf zeigen');
+      expect(screen.getByRole('dialog', { name: /^Ablauf: / })).toBeTruthy();
+      expect(screen.queryByRole('menu', { name: 'Mehr' })).toBeNull();
+    });
   });
 
   describe('grünes „+“ oben im Ablauf (Alwin, 28.10.2026 – wie „+ Termin“ im ChurchTools-Kalender)', () => {
@@ -687,6 +783,13 @@ describe('TerminAnsicht – Ablauf anlegen (E6-5a)', () => {
     expect(screen.queryByRole('button', { name: /Ablauf anlegen/ })).toBeNull();
   });
 
+  it('„Ablauf anlegen“ ist das leise gestrichelte Feld (R10, B8) wie in der Musik-App – kein eigener Knopf', async () => {
+    ctAnlegen();
+    zeige({ start: darf });
+    const knopf = await screen.findByRole('button', { name: /Ablauf anlegen/ });
+    expect(knopf.className).toBe(leisesFeldKlasse());
+  });
+
   it('Vorlage des eigenen Kalenders vorausgewählt; früherer Termin nur mit Ablauf aus demselben Kalender; Anlegen schreibt und öffnet das Bearbeiten', async () => {
     const ct = ctAnlegen();
     zeige({ start: darf });
@@ -800,7 +903,7 @@ describe('TerminAnsicht – Neu aufsetzen (E6-5b)', () => {
 
   async function bisZurNachfrage(): Promise<void> {
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getByRole('button', { name: /Neu aufsetzen/ }));
+    mehrEintrag(/Neu aufsetzen/);
     await screen.findByRole('button', { name: /Sonntag/ });
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
   }
@@ -880,9 +983,12 @@ describe('TerminAnsicht – Als Vorlage … (E10-V5)', () => {
     const ct = ctVorlage();
     zeige({ start: darf });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    const namen = screen.getAllByRole('button').map((b) => b.textContent?.trim());
-    expect(namen.indexOf('Als Vorlage …')).toBe(namen.indexOf('Neu aufsetzen …') - 1);
-    fireEvent.click(screen.getByRole('button', { name: /Als Vorlage/ }));
+    // Im „⋯“-Menü (B8, R6), nicht mehr in der Hinweiszeile: „Als Vorlage …“ vor „Neu aufsetzen …“.
+    const namen = within(oeffneMehr())
+      .getAllByRole('menuitem')
+      .map((b) => b.textContent?.trim());
+    expect(namen).toEqual(['Als Vorlage …', 'Neu aufsetzen …']);
+    mehrEintrag(/Als Vorlage/);
     expect(
       await screen.findByText(/Ablauf von: Gottesdienst · So, 18.10.2026 · 3 Punkte/),
     ).toBeTruthy();
@@ -905,14 +1011,15 @@ describe('TerminAnsicht – Als Vorlage … (E10-V5)', () => {
     ctVorlage();
     zeige({ start: nurAblauf });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    expect(screen.getByRole('button', { name: /Neu aufsetzen/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
+    expect(mehrEintragOder(/Neu aufsetzen/)).toBeTruthy();
+    expect(mehrEintragOder(/Als Vorlage/)).toBeNull();
   });
 
-  it('in der Ansicht (nicht beim Bearbeiten) steht der Link nicht', async () => {
+  it('in der Ansicht (nicht beim Bearbeiten) steht der Eintrag nicht', async () => {
     ctVorlage();
     zeige({ start: darf });
     await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+    expect(mehrEintragOder(/Als Vorlage/)).toBeNull();
     expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
   });
 });
@@ -1120,7 +1227,7 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     ctLied();
     zeige({ start: darf });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     fireEvent.change(screen.getByPlaceholderText('z. B. Lied'), { target: { value: 'Lobpreis' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Lied: Treu – ansehen' }));
     expect(await screen.findByText('Uwe Peters · Beispiel-Verlag · CCLI 1234567')).toBeTruthy();
@@ -1144,7 +1251,7 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     ctLied();
     zeige({ start: mitLiedern(true) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     expect(await screen.findByRole('button', { name: 'Verknüpfung aufheben' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Lied: Treu – ansehen' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Lied: Treu – anderes wählen' }));
@@ -1160,7 +1267,7 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     ctLied();
     zeige({ start: mitLiedern(false) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     expect(await screen.findByRole('button', { name: 'Lied: Treu – ansehen' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Verknüpfung aufheben' })).toBeNull();
   });
@@ -1243,8 +1350,9 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
   it('„Spalten“ → Technik angehakt → eigene Spalte mit der Info; Programm (nicht sichtbar) wird nicht angeboten', async () => {
     ctInfos();
     zeige({ start: darf });
-    fireEvent.click(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' }));
-    const menue = screen.getByRole('dialog', { name: 'Infos je Gruppe zeigen' });
+    await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+    mehrEintrag('Spalten wählen');
+    const menue = screen.getByRole('dialog', { name: 'Infos als Spalten zeigen' });
     expect(
       within(menue)
         .getAllByRole('checkbox')
@@ -1257,7 +1365,7 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     expect(ablauf.querySelector('img')?.getAttribute('src')).toBe('https://ct.test/anna.jpg');
     // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster; die gewählte Info steht unter dem Punkt (02.11.2026).
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
-    expect(screen.queryByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeNull();
+    expect(mehrEintragOder('Spalten wählen')).toBeNull();
     expect(
       within(screen.getByRole('region', { name: 'Ablauf' })).getByText(/Mikro 1/).textContent,
     ).toBe('Technik: Mikro 1');
@@ -1267,7 +1375,7 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     const { schreiben } = ctInfos();
     zeige({ start: darf });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     const feld = await screen.findByRole<HTMLTextAreaElement>('textbox', {
       name: 'Info für Technik',
     });
@@ -1284,16 +1392,22 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
   it('„Ablauf zeigen“ (E6b-1): öffnet die Anzeige mit den gewählten Infos; nicht beim Bearbeiten; „Schließen“ führt zurück', async () => {
     ctInfos();
     zeige({ start: darf });
-    fireEvent.click(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+    mehrEintrag('Spalten wählen');
     fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Ablauf im Vollbild zeigen' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Infos als Spalten zeigen' })).getByRole('button', {
+        name: 'Fenster schließen',
+      }),
+    );
+    mehrEintrag('Ablauf zeigen');
     const anzeige = screen.getByRole('dialog', { name: /^Ablauf: / });
     expect(within(anzeige).getByText('Begrüßung')).toBeTruthy();
     expect(within(anzeige).getByText(/Mikro 1/).textContent).toBe('Technik: Mikro 1');
     fireEvent.click(within(anzeige).getByRole('button', { name: 'Schließen' }));
     expect(screen.queryByRole('dialog', { name: /^Ablauf: / })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
-    expect(screen.queryByRole('button', { name: 'Ablauf im Vollbild zeigen' })).toBeNull();
+    expect(mehrEintragOder('Ablauf zeigen')).toBeNull();
   });
 });
 

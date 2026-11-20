@@ -9,6 +9,7 @@ import type { RohTermin } from '@shared/dienstplan/termine';
 import { startFuer } from './start.testutil';
 import { leseAnsicht } from './planenAnsicht';
 import { Planen } from './Planen';
+import { leisesFeldKlasse } from './leisesFeld.testutil';
 
 /**
  * **Der Ablauf in der Matrix** (E6-6a, Entwurf `e6-6-entwurf-2.html`) – mit dem echten Laden (`ladeAblauf`) und dem
@@ -185,6 +186,10 @@ const ablaufZelle = (n: number) =>
     .closest('tr')!
     .nextElementSibling!.querySelectorAll('td')[n];
 
+/** Den ersten Punkt in einer Zelle antippen – der Stift an der Zeile ist weg (B8), die Zeile selbst öffnet das Fenster. */
+const ersterPunkt = (zelle: Element) =>
+  fireEvent.click(zelle.querySelector<HTMLElement>('[data-tour="edit-item"]')!);
+
 beforeEach(() => {
   _vergissCsrf();
   _bremseLoesen();
@@ -277,7 +282,9 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(within(gruppenZeile()[2]).getByLabelText('Nur ansehen')).toBeTruthy();
     expect(within(ablaufZelle(2)).queryByRole('button', { name: /Ablauf anlegen/ })).toBeNull();
     // Termin 13 (ohne Ablauf, mit Recht): „Ablauf anlegen“ erst jetzt.
-    expect(within(ablaufZelle(3)).getByRole('button', { name: /Ablauf anlegen/ })).toBeTruthy();
+    const leer = within(ablaufZelle(3)).getByRole('button', { name: /Ablauf anlegen/ });
+    // Das leise gestrichelte Feld (R10, B8) wie in der Musik-App – nicht ein eigener Knopf daneben.
+    expect(leer.className).toBe(leisesFeldKlasse());
     expect(within(gruppenZeile()[0]).queryByLabelText(/ansehen/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
@@ -357,7 +364,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
     mehrEintrag('Ablauf bearbeiten');
-    fireEvent.click(within(ablaufZelle(0)).getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt(ablaufZelle(0));
     fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
     const vorher = c.gelesen.filter((id) => id === '10').length;
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
@@ -376,7 +383,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
     mehrEintrag('Ablauf bearbeiten');
     const speichere = async (titel: string, nr: number) => {
-      fireEvent.click(within(ablaufZelle(0)).getAllByRole('button', { name: 'Bearbeiten' })[0]);
+      ersterPunkt(ablaufZelle(0));
       fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: titel } });
       fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
       await waitFor(() => expect(c.schreiben).toHaveLength(nr));

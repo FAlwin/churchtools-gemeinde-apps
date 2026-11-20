@@ -14,8 +14,8 @@
   Bearbeiten **Fertig** als einziger blauer Knopf und – am Rechner – das grüne **Eintrag hinzufügen** (am Handy der grüne Kreis). Neu im
   **⋯-Menü**: **Spalten wählen** (öffnet ein kleines Fenster mit Häkchen) und **Als PDF teilen** beim Ansehen; **Als Vorlage …**,
   **Neu aufsetzen …** und **Ablauf abschließen** beim Bearbeiten. Ist der Ablauf abgeschlossen, steht oben weiter der Knopf **Öffnen**.
-  Der blaue **Stift** rechts an jeder Zeile entfällt im Bearbeiten der Musik-App: die Zeile selbst antippen öffnet das Fenster
-  (der Dienstplaner behält den Stift).
+  Der blaue **Stift** rechts an jeder Zeile entfällt im Bearbeiten: die Zeile selbst antippen öffnet das Fenster
+  (im Dienstplaner seit dem Nachzug, siehe `feat-bedienung-ablauf-dienstplaner`).
 
 ### Intern
 

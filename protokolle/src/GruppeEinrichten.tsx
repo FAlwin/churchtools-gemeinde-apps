@@ -4,12 +4,12 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
+import type { GruppenRolle } from '@shared/ct/rollenRechte';
 import { STUFEN, type PunkteVonMitgliedern, type Stufe } from '@shared/protokolle/einrichten';
 import {
   gruppeEinrichten,
   ladeGruppe,
   vorschlag,
-  type GruppenRolle,
   type Kalender,
   type VerwaltungsGruppe,
   type Wahl,

@@ -12,6 +12,7 @@ import {
 } from './daten';
 import { demoStarten } from './demo';
 import { ladeStart } from './start';
+import { ladeRollen, ladeWerDarfWas, pruefeRechte, rechteSetzen } from './rechte';
 
 /**
  * `?demo` spielt ChurchTools nach – ohne dass eine Anfrage ins Netz geht (W3a-2). Die Tests laufen über dieselben Wege wie die
@@ -154,5 +155,75 @@ describe('Demo: Aussehen', () => {
   it('in den anderen Fällen ist das Aussehen frei', async () => {
     const { ort: o } = await ort('seiten');
     expect((await beginneEinstellungen(o, ICH)).art).toBe('ok');
+  });
+});
+
+describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
+  it('Admin, Leitung, Redakteur: der Zugang kommt aus den Rechten der Demo-Person', async () => {
+    expect((await ort('seiten')).start).toMatchObject({ zugang: 'admin', darfRechteSetzen: true });
+    expect((await ort('leitung')).start).toMatchObject({
+      zugang: 'leitung',
+      darfRechteSetzen: false,
+    });
+    expect((await ort('redakteur')).start).toMatchObject({
+      zugang: 'redakteur',
+      darfRechteSetzen: false,
+    });
+  });
+
+  it('Leitung ohne Rechte und Mitglied: kein Zugang – nur die Leitung bekommt den Hinweis', async () => {
+    expect((await ort('leitung-ohne-rechte')).start).toMatchObject({
+      zugang: null,
+      leitungOhneRechte: true,
+    });
+    expect((await ort('mitglied')).start).toMatchObject({
+      zugang: null,
+      leitungOhneRechte: false,
+    });
+  });
+
+  it('`seiten`: Leiter = Leitung, Mitarbeiter = Redakteur, Coach = kein Zugriff – aus den Rechten abgeleitet', async () => {
+    const { start } = await ort('seiten');
+    const kat = {
+      entwuerfe: start.einrichtung!.entwuerfe!,
+      veroeffentlicht: start.einrichtung!.veroeffentlicht!,
+    };
+    const w = await ladeWerDarfWas(start.einrichtung!.gruppe, kat);
+    expect(w.rollen.map((r) => [r.name, r.leitung])).toEqual([
+      ['Leiter', true],
+      ['Mitarbeiter', false],
+      ['Coach', false],
+    ]);
+    expect(w.ist.map((r) => r.stufe)).toEqual(['leitung', 'redakteur', 'keine']);
+    expect(await pruefeRechte(start.einrichtung!.gruppe, kat)).toBeNull();
+  });
+
+  it('`rechte-leer` → Hinweis „nichts“; Rechte setzen → alles stimmt; `rechte-abweicht` → Hinweis, setzen nimmt es zurück', async () => {
+    const leer = await ort('rechte-leer');
+    const g = leer.start.einrichtung!.gruppe;
+    const kat = {
+      entwuerfe: leer.start.einrichtung!.entwuerfe!,
+      veroeffentlicht: leer.start.einrichtung!.veroeffentlicht!,
+    };
+    expect(await pruefeRechte(g, kat)).toEqual({ art: 'nichts' });
+    await rechteSetzen(g, kat, [
+      { rolle: 2, stufe: 'leitung' },
+      { rolle: 3, stufe: 'redakteur' },
+    ]);
+    expect(await pruefeRechte(g, kat)).toBeNull();
+
+    const ab = await ort('rechte-abweicht');
+    expect(await pruefeRechte(g, kat)).toEqual({ art: 'abweicht', rollen: ['Mitarbeiter'] });
+    await rechteSetzen(g, kat, [{ rolle: 3, stufe: 'redakteur' }]);
+    expect(await pruefeRechte(g, kat)).toBeNull();
+    expect(ab.start.zugang).toBe('admin');
+  });
+
+  it('nicht eingerichtet: Rollen jeder Gruppe lesbar, nichts geht ins Netz', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    demoStarten('');
+    expect((await ladeRollen(9)).map((r) => r.name)).toEqual(['Leiter', 'Mitarbeiter', 'Coach']);
+    expect(warn).not.toHaveBeenCalled();
+    expect(echtesFetch).not.toHaveBeenCalled();
   });
 });

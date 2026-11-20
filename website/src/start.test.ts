@@ -101,29 +101,62 @@ describe('ladeStart', () => {
   });
 });
 
-describe('Zugang: nur Admins und die Leitung der gewählten Gruppe', () => {
+/** Der Block des Moduls in `/permissions/global` – Schreiben (anlegen, ändern, löschen) in diesen Kategorien. */
+const schreibt = (...ids: number[]) => ({
+  website: {
+    'view custom data': ids,
+    'create custom data': ids,
+    'edit custom data': ids,
+    'delete custom data': ids,
+  },
+});
+const [ENTWUERFE, VEROEFFENTLICHT] = [20, 21];
+
+describe('Zugang: aus den EIGENEN Rechten (W3b-1), nicht daraus, ob man die Gruppe leitet', () => {
   it('Admin → Zugang „admin“', async () => {
     alsPerson([], ADMIN);
     expect(await ladeStart()).toMatchObject({ admin: true, zugang: 'admin' });
   });
 
-  it('Leitung der Website-Gruppe (kein Admin) → Zugang „leitung“', async () => {
-    alsPerson(inGruppe(GRUPPE, 2), {});
+  it('Rechte an Entwürfe UND Veröffentlicht → „leitung“ – auch ohne Mitglied der Gruppe zu sein', async () => {
+    alsPerson([], schreibt(ENTWUERFE, VEROEFFENTLICHT));
     expect(await ladeStart()).toMatchObject({ admin: false, zugang: 'leitung' });
   });
 
-  it('Mitarbeiter der Website-Gruppe → kein Zugang', async () => {
-    alsPerson(inGruppe(GRUPPE, 3), {});
+  it('Rechte nur an Entwürfe → „redakteur“', async () => {
+    alsPerson(inGruppe(GRUPPE, 3), schreibt(ENTWUERFE));
+    expect(await ladeStart()).toMatchObject({ zugang: 'redakteur' });
+  });
+
+  it('Rechte nur an FREMDE Kategorien → kein Zugang', async () => {
+    alsPerson(inGruppe(GRUPPE, 3), schreibt(999, 1000));
     expect(await ladeStart()).toMatchObject({ zugang: null });
   });
 
-  it('Leitung einer ANDEREN Gruppe → kein Zugang', async () => {
+  it('leitet die Gruppe, hat aber keine Rechte → kein Zugang, aber der Hinweis „noch nicht eingerichtet“', async () => {
+    alsPerson(inGruppe(GRUPPE, 2), {});
+    expect(await ladeStart()).toMatchObject({ zugang: null, leitungOhneRechte: true });
+  });
+
+  it('Mitarbeiter ohne Rechte → kein Zugang, kein Hinweis auf fehlende Rechte', async () => {
+    alsPerson(inGruppe(GRUPPE, 3), {});
+    expect(await ladeStart()).toMatchObject({ zugang: null, leitungOhneRechte: false });
+  });
+
+  it('Leitung einer ANDEREN Gruppe ohne Rechte → kein Zugang, kein Hinweis', async () => {
     alsPerson(inGruppe(99, 2), {});
-    expect(await ladeStart()).toMatchObject({ zugang: null });
+    expect(await ladeStart()).toMatchObject({ zugang: null, leitungOhneRechte: false });
   });
 
   it('weder Admin noch in einer Gruppe → kein Zugang', async () => {
     expect(await ladeStart()).toMatchObject({ admin: false, zugang: null });
+  });
+
+  it('Rechte setzen darf, wer „Personen administrieren“ hat (nicht schon der Admin für Gruppen)', async () => {
+    alsPerson([], ADMIN);
+    expect((await ladeStart()).darfRechteSetzen).toBe(false);
+    alsPerson([], { ...ADMIN, churchcore: { 'administer persons': true } });
+    expect((await ladeStart()).darfRechteSetzen).toBe(true);
   });
 
   it('nicht eingerichtet: nur der Admin darf einrichten, alle anderen sehen den Hinweis', async () => {
@@ -134,7 +167,7 @@ describe('Zugang: nur Admins und die Leitung der gewählten Gruppe', () => {
       stand: 'einrichten',
       zugang: 'admin',
     });
-    alsPerson(inGruppe(GRUPPE, 2), {});
+    alsPerson(inGruppe(GRUPPE, 2), schreibt(ENTWUERFE, VEROEFFENTLICHT));
     expect(await ladeStart()).toMatchObject({ einrichtung: null, stand: 'fehlt', zugang: null });
   });
 });

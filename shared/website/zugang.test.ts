@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { darfEigenesHtml, istAdmin, leitetGruppe, zugangFuer } from './zugang';
+import {
+  darfAussehenUndMenue,
+  darfEigenesHtml,
+  istAdmin,
+  leitetGruppe,
+  schreibtIn,
+  zugangFuer,
+} from './zugang';
+import { MODUL_KUERZEL } from './rechte';
 
 const mitglied = (
   gruppe: number,
@@ -62,19 +70,90 @@ describe('leitetGruppe', () => {
   });
 });
 
-describe('zugangFuer', () => {
-  it('Admin → admin, Leitung → leitung, sonst keiner – der Admin hat Vorrang', () => {
-    expect(zugangFuer(true, false)).toBe('admin');
-    expect(zugangFuer(true, true)).toBe('admin');
-    expect(zugangFuer(false, true)).toBe('leitung');
-    expect(zugangFuer(false, false)).toBeNull();
+const KAT = { entwuerfe: 104, veroeffentlicht: 107 };
+/** Der Block des Moduls in `GET /permissions/global`, wie ChurchTools ihn liefert (gemessen W3b-0: `create custom data: [104, 107]`). */
+const global = (schreiben: Record<string, unknown>) => ({
+  [MODUL_KUERZEL]: { view: true, ...schreiben },
+});
+const schreibt = (ids: number[]) =>
+  global({
+    'create custom data': ids,
+    'edit custom data': ids,
+    'delete custom data': ids,
+  });
+
+describe('schreibtIn (aus den EIGENEN Rechten)', () => {
+  it('liest, wo die Person anlegen, ändern UND löschen darf', () => {
+    expect(schreibtIn(schreibt([104, 107]))).toEqual([104, 107]);
+    expect(schreibtIn(schreibt([104]))).toEqual([104]);
+  });
+
+  it('nur anlegen (ohne ändern/löschen) zählt nicht – Speichern bräche mittendrin ab', () => {
+    expect(
+      schreibtIn(
+        global({
+          'create custom data': [104, 107],
+          'edit custom data': [104],
+          'delete custom data': [104, 107],
+        }),
+      ),
+    ).toEqual([104]);
+  });
+
+  it('kein Block des Moduls, fremdes Modul, leere Antwort: keine', () => {
+    expect(schreibtIn({})).toEqual([]);
+    expect(schreibtIn(null)).toEqual([]);
+    expect(schreibtIn({ protokolle: { 'create custom data': [104] } })).toEqual([]);
   });
 });
 
-describe('darfEigenesHtml', () => {
-  it('Admin und Leitung dürfen; wer keinen Zugang hat, nicht (W3b speist hier die Rolle ein)', () => {
+describe('zugangFuer', () => {
+  it('Admin → admin, hat Vorrang vor allem (auch ohne Rechte und vor der Einrichtung)', () => {
+    expect(zugangFuer(true, [], KAT)).toBe('admin');
+    expect(zugangFuer(true, [104, 107], KAT)).toBe('admin');
+    expect(zugangFuer(true, [], null)).toBe('admin');
+  });
+
+  it('schreibt in Entwürfe UND Veröffentlicht → leitung', () => {
+    expect(zugangFuer(false, [104, 107], KAT)).toBe('leitung');
+  });
+
+  it('schreibt nur in Entwürfe → redakteur', () => {
+    expect(zugangFuer(false, [104], KAT)).toBe('redakteur');
+  });
+
+  it('keine Rechte → keiner', () => {
+    expect(zugangFuer(false, [], KAT)).toBeNull();
+  });
+
+  it('Rechte an FREMDEN Kategorien zählen nicht', () => {
+    expect(zugangFuer(false, [1, 2, 3, 999], KAT)).toBeNull();
+    expect(zugangFuer(false, [999, 104], KAT)).toBe('redakteur');
+  });
+
+  it('nur in „Veröffentlicht“ schreiben (ohne Entwürfe): kein Zugang – der Editor arbeitet in Entwürfen', () => {
+    expect(zugangFuer(false, [107], KAT)).toBeNull();
+  });
+
+  it('nicht eingerichtet (keine Kategorien): nur der Admin', () => {
+    expect(zugangFuer(false, [104, 107], null)).toBeNull();
+    expect(zugangFuer(false, [104], { entwuerfe: null, veroeffentlicht: null })).toBeNull();
+    expect(zugangFuer(false, [104], { entwuerfe: 104, veroeffentlicht: null })).toBe('redakteur');
+  });
+});
+
+describe('Was ein Zugang darf (E-W12, E-W22)', () => {
+  it('Eigenes HTML: Admin und Leitung, nie ein Redakteur oder wer keinen Zugang hat', () => {
     expect(darfEigenesHtml('admin')).toBe(true);
     expect(darfEigenesHtml('leitung')).toBe(true);
+    expect(darfEigenesHtml('redakteur')).toBe(false);
     expect(darfEigenesHtml(null)).toBe(false);
+  });
+
+  it('Aussehen, Einstellungen und Menü: Admin und Leitung, nie ein Redakteur', () => {
+    expect(darfAussehenUndMenue('admin')).toBe(true);
+    expect(darfAussehenUndMenue('leitung')).toBe(true);
+    expect(darfAussehenUndMenue('redakteur')).toBe(false);
+    expect(darfAussehenUndMenue(null)).toBe(false);
   });
 });

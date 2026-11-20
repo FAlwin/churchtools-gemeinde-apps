@@ -39,7 +39,8 @@ const stand = (o: Partial<WebsiteStand> = {}): WebsiteStand => ({
 });
 
 const ICH = { person: 1, name: 'Helene Wiebe', fenster: 'f1' };
-const zeigen = () => render(<Seiten ort={ORT} gemeinde="ECG" ich={ICH} rechte={{ html: true }} />);
+const zeigen = () =>
+  render(<Seiten ort={ORT} gemeinde="ECG" ich={ICH} rechte={{ html: true, menue: true }} />);
 
 beforeEach(() => {
   d.ladeWebsite.mockResolvedValue(stand());

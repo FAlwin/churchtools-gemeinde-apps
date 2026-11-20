@@ -22,7 +22,14 @@ import {
   wertAendern,
   wertAnlegen,
 } from '@shared/ct/modulDaten';
-import { darfVerwalten, rechteAusrichten, rollenIdsAus } from '@shared/ct/rollenRechte';
+import {
+  darfVerwalten,
+  gruppenRollenAus,
+  rechteAusrichten,
+  rollenIdsAus,
+  rollenLesen,
+  type GruppenRolle,
+} from '@shared/ct/rollenRechte';
 import {
   istEinstellung,
   rechteNummernAus,
@@ -100,43 +107,17 @@ export async function ladeVerwaltung(modul: number): Promise<Verwaltung> {
   };
 }
 
-export interface GruppenRolle {
-  /** `group_role`-ID – daran hängen die Rechte. */
-  id: number;
-  name: string;
-  leitung: boolean;
-}
-
-interface RolleRoh {
-  id: number;
-  name?: string;
-  nameTranslated?: string;
-  isLeader?: boolean;
-  isActive?: boolean;
-}
-
-/** Alle Rollen der Gruppe, wie ChurchTools sie liefert (auch inaktive) – für das Fenster und fürs Einrichten. */
-function rollenLesen(gruppe: number): Promise<RolleRoh[] | null> {
-  return ctDaten<RolleRoh[]>(`/groups/${gruppe}/roles`);
-}
-
 /** Die Rollen der Gruppe und – falls schon eingerichtet – ihre gespeicherte Einstellung. */
 export async function ladeGruppe(
   modul: number,
   gruppe: number,
 ): Promise<{ rollen: GruppenRolle[]; einstellung: GruppenEinstellung | null }> {
   const [rollen, einstellung] = await Promise.all([
-    rollenLesen(gruppe),
+    rollenLesen(modulPort, gruppe),
     einstellungLesen(modul, gruppe),
   ]);
   return {
-    rollen: (rollen ?? [])
-      .filter((r) => r.isActive !== false)
-      .map((r) => ({
-        id: r.id,
-        name: r.nameTranslated ?? r.name ?? `Rolle ${r.id}`,
-        leitung: r.isLeader === true,
-      })),
+    rollen: gruppenRollenAus(rollen),
     einstellung: einstellung?.inhalt ?? null,
   };
 }
@@ -223,7 +204,7 @@ export async function gruppeEinrichten(
   // nur Zusatzrechte an Rollen dieser Gruppe (frisch aus ChurchTools), Kalenderrechte nur am alten oder neuen Kalender.
   const [alt, rollenRoh] = await Promise.all([
     einstellungLesen(modul, gruppe.id),
-    rollenLesen(gruppe.id),
+    rollenLesen(modulPort, gruppe.id),
   ]);
   const rollenDerGruppe = rollenIdsAus(rollenRoh);
   const vergeben = vergebenPruefen(

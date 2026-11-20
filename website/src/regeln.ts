@@ -21,8 +21,11 @@ export function lebenszeichenAlter(seit: string, jetzt: Date): string {
   return min === 1 ? 'vor einer Minute' : `vor ${min} Minuten`;
 }
 
-/** Wer darf „Eigenes HTML“ einfügen und ändern? In W3a die Leitung und die Admins – W3b speist hier die Rolle ein. */
-export type Rechte = { html: boolean };
+/**
+ * Was die Person im Editor darf (aus ihrem Zugang, `@shared/website/zugang`): „Eigenes HTML“ einfügen/ändern (E-W12) und das
+ * **Menü** ändern (E-W22) – beides nur Leitung und Admin, nie ein Redakteur. Die Regel der Oberfläche, nicht der Schutz der Daten.
+ */
+export type Rechte = { html: boolean; menue: boolean };
 
 /** Die Vorlagen, die diese Person sieht: „Eigenes HTML“ nur mit dem Recht dafür (E-W12). */
 export function sichtbareVorlagen(rechte: Rechte): readonly Vorlage[] {

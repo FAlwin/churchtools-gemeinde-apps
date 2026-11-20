@@ -229,7 +229,45 @@ export async function rechteAusrichten(
   return { plan, fehlt, nochDa };
 }
 
-/** Die `group_role`-IDs aus `GET /groups/{id}/roles` – Zeilen ohne lesbare ID fallen weg. */
+/** Eine Rolle der Gruppe, wie ChurchTools sie liefert (`GET /groups/{id}/roles`) – nur was hier zählt. */
+export interface RolleRoh {
+  id?: unknown;
+  name?: unknown;
+  nameTranslated?: unknown;
+  isLeader?: unknown;
+  isActive?: unknown;
+}
+
+/** Eine Rolle der Gruppe, wie die Oberfläche sie braucht. */
+export interface GruppenRolle {
+  /** `group_role`-ID – daran hängen die Rechte. */
+  id: number;
+  name: string;
+  /** Leiter-Kennzeichen in ChurchTools (Leiter, Co-Leiter) – Grundlage der Vorbelegung „Leitung“. */
+  leitung: boolean;
+}
+
+/** Alle Rollen der Gruppe, wie ChurchTools sie liefert (auch inaktive) – für die Oberfläche und fürs Einrichten. */
+export function rollenLesen(
+  port: Pick<ModulPort, 'daten'>,
+  gruppe: number,
+): Promise<RolleRoh[] | null> {
+  return port.daten<RolleRoh[] | null>(`/groups/${gruppe}/roles`);
+}
+
+/** Die **aktiven** Rollen als Auswahl für die Oberfläche (inaktive Rollen gibt es dort nicht). Zeilen ohne ID fallen weg. */
+export function gruppenRollenAus(roh: readonly RolleRoh[] | null): GruppenRolle[] {
+  return (roh ?? []).flatMap((r) => {
+    const id = ctId(r.id);
+    if (id === null || r.isActive === false) return [];
+    const name = [r.nameTranslated, r.name].find((t) => typeof t === 'string' && t !== '');
+    return [
+      { id, name: typeof name === 'string' ? name : `Rolle ${id}`, leitung: r.isLeader === true },
+    ];
+  });
+}
+
+/** Die `group_role`-IDs aus `GET /groups/{id}/roles` – Zeilen ohne lesbare ID fallen weg (auch inaktive Rollen: ihre Rechte gehören mit gelesen). */
 export function rollenIdsAus(rollen: readonly { id?: unknown }[] | null): number[] {
   return (rollen ?? []).map((r) => ctId(r.id)).filter((x): x is number => x !== null);
 }

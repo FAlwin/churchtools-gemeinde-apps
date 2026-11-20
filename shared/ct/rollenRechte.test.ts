@@ -3,12 +3,14 @@ import {
   abweichungen,
   darfVerwalten,
   datenRechteNummernAus,
+  gruppenRollenAus,
   istDatenRechtAn,
   rechteAusrichten,
   rechteAus,
   rechteDerRollen,
   rechteVergleichen,
   rechtRumpf,
+  rollenLesen,
   rechtSchluessel,
   rollenIdsAus,
   type DatenRechteNummern,
@@ -258,5 +260,36 @@ describe('rechteDerRollen', () => {
   it('liest je Rolle und fasst zusammen', async () => {
     const ct = nachbau([r(1, 5, 1), r(2, 6)]);
     expect(await rechteDerRollen(ct.port, [1, 2])).toEqual([r(1, 5, 1), r(2, 6)]);
+  });
+});
+
+describe('Rollen der Gruppe (`GET /groups/{id}/roles`)', () => {
+  it('gruppenRollenAus: nur aktive Rollen, Name übersetzt vor Rohname, Leiter-Kennzeichen, Zeilen ohne ID fallen weg', () => {
+    expect(
+      gruppenRollenAus([
+        { id: 1, name: 'Leader', nameTranslated: 'Leiter', isLeader: true, isActive: true },
+        { id: 2, name: 'Mitarbeiter' },
+        { id: 3, name: 'Alt', isActive: false },
+        { id: null, name: 'ohne ID' },
+        { id: '5' },
+      ]),
+    ).toEqual([
+      { id: 1, name: 'Leiter', leitung: true },
+      { id: 2, name: 'Mitarbeiter', leitung: false },
+      { id: 5, name: 'Rolle 5', leitung: false },
+    ]);
+    expect(gruppenRollenAus(null)).toEqual([]);
+  });
+
+  it('rollenLesen fragt die Rollen genau dieser Gruppe', async () => {
+    const pfade: string[] = [];
+    const port = {
+      daten: <T>(pfad: string): Promise<T> => {
+        pfade.push(pfad);
+        return Promise.resolve([] as T);
+      },
+    };
+    await rollenLesen(port, 344);
+    expect(pfade).toEqual(['/groups/344/roles']);
   });
 });

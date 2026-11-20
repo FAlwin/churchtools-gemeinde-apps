@@ -22,7 +22,10 @@
   - **Gelesen** wird aus den Gruppenfeldern „Eingesehen am“, „Ausgestellt am“, „Ergebnis“ (nach Namen; die Auswahl kommt als
     Nummer der Option), den Folgeaufgaben der Gruppe („Einsicht nehmen“, „Erneut einsehen“; offen = nicht erledigt;
     „angefordert am“ aus dem Anlagedatum in der Uhr der Gemeinde) und – nur bei Arten mit Antrag – Geburtstag und Adresse.
-    Ein 403 heißt „für dich nicht sichtbar“, jeder andere Fehler wird gemeldet, nicht als „niemand“ gezeigt. Admins sehen
-    alle Arten, Vertrauenspersonen nur die, die sie leiten.
+    Die Folgeaufgaben werden seitenweise gelesen (mit jeder Erneuerung kommen erledigte dazu; `limit`/`page` greifen,
+    gemessen 20.11.2026). Ein 403 heißt „für dich nicht sichtbar“, jeder andere Fehler wird gemeldet, nicht als „niemand“
+    gezeigt. Admins sehen alle Arten, Vertrauenspersonen nur die, die sie leiten – fremde Arten fehlen auf der Seite ganz.
   - Die Titel der beiden Folgeaufgaben stehen jetzt an einer Stelle (`NACHWEIS_AUFGABE_ERSTE/ERNEUT`), Ablauf und Stand lesen
     dieselben.
+  - **Demo:** Die Art „Führungszeugnis“ hat sechs Teilnehmer, je einer pro Stand (fehlt, Rücksprache, abgelaufen, läuft
+    ab, angefordert, gültig), dazu Folgeaufgaben; `?demo=vertrauen` leitet sie.

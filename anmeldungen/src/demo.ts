@@ -161,6 +161,80 @@ const DEMO_FELDER = [
   { id: 80, name: 'Team-Erfahrung' },
   { id: 81, name: 'Bereich (Anderer Bereich)' },
 ];
+/** Ein Tag (`YYYY-MM-DD`) relativ zu heute, optional Jahre davor/danach – für die Nachweise (N2a). */
+function isoTag(abHeute: number, jahre = 0): string {
+  const d = new Date(Date.now() + abHeute * 86_400_000);
+  d.setUTCFullYear(d.getUTCFullYear() + jahre);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Teilnehmer der Nachweis-Arten (N2a, Entwurf `n2-stand-v1`): je ein Stand – fehlt, Rücksprache, abgelaufen, läuft ab,
+ * angefordert (ohne Geburtsdatum und Adresse), gültig. Nicht in der Personensuche.
+ */
+const NACHWEIS_PERSONEN = [
+  {
+    id: 911,
+    firstName: 'Lena',
+    lastName: 'Probst',
+    email: 'lena@beispiel.test',
+    birthday: '2001-03-14',
+    street: 'Bachweg 7',
+    zip: '53797',
+    city: 'Lohmar',
+  },
+  {
+    id: 912,
+    firstName: 'Jonas',
+    lastName: 'Weber',
+    email: 'jonas@beispiel.test',
+    birthday: '1999-07-02',
+    street: 'Ringstr. 1',
+    zip: '53797',
+    city: 'Lohmar',
+  },
+  {
+    id: 913,
+    firstName: 'Ben',
+    lastName: 'Alt',
+    email: 'ben@beispiel.test',
+    birthday: '1990-01-20',
+    street: '',
+    zip: '',
+    city: '',
+  },
+  {
+    id: 914,
+    firstName: 'Mia',
+    lastName: 'Muster',
+    email: 'mia@beispiel.test',
+    birthday: '2003-11-05',
+    street: 'Am Bach 2',
+    zip: '51766',
+    city: 'Engelskirchen',
+  },
+  {
+    id: 915,
+    firstName: 'Paula',
+    lastName: 'Neu',
+    email: 'paula@beispiel.test',
+    birthday: null,
+    street: '',
+    zip: '',
+    city: '',
+  },
+  {
+    id: 916,
+    firstName: 'Sara',
+    lastName: 'Weber',
+    email: 'sara@beispiel.test',
+    birthday: '1997-05-30',
+    street: 'Ringstr. 1',
+    zip: '53797',
+    city: 'Lohmar',
+  },
+];
+
 const DEMO_PERSONEN = [
   {
     id: 901,
@@ -534,18 +608,61 @@ export function demoStarten(fall: string): void {
       groupMemberStatus: string;
     }
   >();
+  // N2a: Teilnehmer mit Angaben (Feld 91 Eingesehen am, 92 Ausgestellt am, 93 Ergebnis: '931' ohne, '932' Eintragung).
+  type Angaben = Partial<Record<91 | 92 | 93, string>>;
+  const teilnehmer = (personId: number, fields: Angaben = {}) => ({
+    personId,
+    groupTypeRoleId: TEILNEHMER_ROLLE,
+    groupMemberStatus: 'active',
+    fields,
+  });
   const nachweisMitglieder = new Map<
     number,
-    { personId: number; groupTypeRoleId: number; groupMemberStatus: string }[]
+    { personId: number; groupTypeRoleId: number; groupMemberStatus: string; fields?: Angaben }[]
   >([
-    [61, [{ personId: 903, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' }]],
+    [
+      61,
+      [
+        { personId: 903, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
+        // Die angemeldete Demo-Person leitet „Führungszeugnis“ (`?demo=vertrauen`, `/persons/1/groups`).
+        { personId: 1, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
+        teilnehmer(911),
+        teilnehmer(912, { 91: isoTag(-17), 92: isoTag(-31), 93: '932' }),
+        teilnehmer(913, { 91: isoTag(-42, -3), 92: isoTag(-49, -3), 93: '931' }),
+        teilnehmer(914, { 91: isoTag(45, -3), 92: isoTag(38, -3), 93: '931' }),
+        teilnehmer(915),
+        teilnehmer(916, { 91: isoTag(-9), 92: isoTag(-17), 93: '931' }),
+      ],
+    ],
     [
       62,
       [
         { personId: 903, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
         { personId: 901, groupTypeRoleId: LEITER_ROLLE, groupMemberStatus: 'active' },
+        teilnehmer(916, { 91: isoTag(-9), 93: '931' }),
       ],
     ],
+  ]);
+  // Folgeaufgaben wie aus dem Ablauf (N2a): offen = `doneDate` null; „angefordert am“ = Tag der Anlage.
+  const aufgabe = (personId: number, title: string, angelegt: number, erledigt: number | null) => ({
+    personId,
+    title,
+    doneDate: erledigt === null ? null : `${isoTag(erledigt)}T10:00:00Z`,
+    meta: { createdDate: `${isoTag(angelegt)}T10:00:00Z` },
+  });
+  const nachweisAufgaben = new Map<number, ReturnType<typeof aufgabe>[]>([
+    [
+      61,
+      [
+        aufgabe(911, 'Einsicht nehmen', -35, null),
+        aufgabe(912, 'Einsicht nehmen', -60, -17),
+        aufgabe(912, 'Erneut einsehen', -17, null),
+        aufgabe(915, 'Einsicht nehmen', -1, null),
+        aufgabe(916, 'Einsicht nehmen', -40, -9),
+        aufgabe(916, 'Erneut einsehen', -9, null),
+      ],
+    ],
+    [62, [aufgabe(916, 'Einsicht nehmen', -30, -9), aufgabe(916, 'Erneut einsehen', -9, null)]],
   ]);
   /** Den Ablauf der beiden vorhandenen Arten gibt es schon – mit den Nummern, die ChurchTools vergibt. */
   const schritteNummern = (liste: Schritt[]): Schritt[] =>
@@ -575,7 +692,9 @@ export function demoStarten(fall: string): void {
   }
   // Die angemeldete Demo-Person (`/whoami`: Nummer 1) steht nicht in der Personensuche, soll aber als Leitung einen Namen haben.
   const personName = (id: number) =>
-    id === 1 ? { firstName: 'Alwin', lastName: '' } : DEMO_PERSONEN.find((p) => p.id === id);
+    id === 1
+      ? { firstName: 'Alwin', lastName: '' }
+      : [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN].find((p) => p.id === id);
 
   window.fetch = (input, init) => {
     const url = new URL(
@@ -799,7 +918,21 @@ export function demoStarten(fall: string): void {
               lastName: personName(x.personId)?.lastName,
             },
           },
-          fields: [],
+          fields: Object.entries(x.fields ?? {}).map(([id, value]) => ({
+            id: Number(id),
+            name: gruppen.get(Number(r![1]))?.felder.find((f) => f.id === Number(id))?.name,
+            value,
+          })),
+        })),
+        meta: { pagination: { lastPage: 1 } },
+      });
+    r = /^\/groups\/(\d+)\/followups$/.exec(pfad);
+    if (r && gruppen.get(Number(r[1]))?.typ === NACHWEIS_TYP)
+      return antwort({
+        data: (nachweisAufgaben.get(Number(r[1])) ?? []).map((a, i) => ({
+          id: 700 + i,
+          groupId: Number(r![1]),
+          ...a,
         })),
         meta: { pagination: { lastPage: 1 } },
       });
@@ -870,7 +1003,9 @@ export function demoStarten(fall: string): void {
     }
     if (pfad === '/persons' && m === 'GET' && url.searchParams.has('ids[]')) {
       const ids = url.searchParams.getAll('ids[]').map(Number);
-      return antwort({ data: DEMO_PERSONEN.filter((p) => ids.includes(p.id)) });
+      return antwort({
+        data: [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN].filter((p) => ids.includes(p.id)),
+      });
     }
     if (pfad === '/groups' && m === 'GET') {
       const ids = url.searchParams.getAll('ids[]').map(Number);

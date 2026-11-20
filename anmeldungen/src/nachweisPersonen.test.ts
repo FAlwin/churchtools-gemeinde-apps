@@ -204,6 +204,14 @@ describe('Personen einer Nachweis-Art lesen', () => {
     expect(l[0].eingesehenAm).toBe('2026-11-03');
   });
 
+  it('liest die Folgeaufgaben seitenweise – mit jeder Erneuerung kommen erledigte dazu (limit/page greifen, gemessen 20.11.2026)', async () => {
+    const g = art();
+    dabei(g.id, 10, 'Anna Eins');
+    await nachweisPersonenLesen({ id: g.id, einstellungen: E }, TEILNEHMER);
+    expect(ct.ctAlleSeiten).toHaveBeenCalledWith(`/groups/${g.id}/followups`);
+    expect(ct.ctDaten).not.toHaveBeenCalledWith(`/groups/${g.id}/followups`);
+  });
+
   it('Mitglieder nicht lesbar (403): null, nicht „niemand“ – ebenso die Aufgaben', async () => {
     const g = art();
     falsch.ohneMitgliederRecht.add(g.id);
@@ -219,11 +227,11 @@ describe('Personen einer Nachweis-Art lesen', () => {
     const lesen = () => nachweisPersonenLesen({ id: g.id, einstellungen: E_ANTRAG }, TEILNEHMER);
     for (const teil of ['/members', '/followups', '/persons?']) {
       ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
-        if (teil === '/members' && pfad.includes(teil)) throw new ApiError(500, 'weg');
+        if (teil !== '/persons?' && pfad.includes(teil)) throw new ApiError(500, 'weg');
         return await falsch.alleSeiten(pfad);
       });
       ct.ctDaten.mockImplementation(async (pfad: string) => {
-        if (teil !== '/members' && pfad.includes(teil)) throw new ApiError(503, 'weg');
+        if (teil === '/persons?' && pfad.includes(teil)) throw new ApiError(503, 'weg');
         return await falsch.holen(pfad);
       });
       await expect(lesen(), teil).rejects.toBeInstanceOf(ApiError);
@@ -297,7 +305,7 @@ describe('Seite und Einstieg: wer was sieht', () => {
     ]);
   });
 
-  it('Vertrauensperson (kein Admin) sieht nur die Arten, die sie leitet', async () => {
+  it('Vertrauensperson (kein Admin) sieht nur die Arten, die sie leitet – fremde Arten fehlen ganz', async () => {
     falsch.global = OHNE_ADMIN;
     const meine = art(E, 'Nachweis: Meine');
     const fremde = art(E, 'Nachweis: Fremde');
@@ -312,7 +320,7 @@ describe('Seite und Einstieg: wer was sieht', () => {
     const nach = Object.fromEntries(
       s.arten.map((x) => [x.name, x.personen?.map((p) => p.name) ?? null]),
     );
-    expect(nach).toEqual({ Meine: ['Anna Eins'], Fremde: null });
+    expect(nach).toEqual({ Meine: ['Anna Eins'] });
   });
 
   it('Admin, aber die Mitglieder einer Art nicht lesbar (403): personen null, die anderen stehen', async () => {
@@ -326,9 +334,9 @@ describe('Seite und Einstieg: wer was sieht', () => {
 
   it('die Seite wirft bei einem vorübergehenden Fehler (Fehlerkasten statt leerer Zahlen)', async () => {
     const g = art();
-    ct.ctDaten.mockImplementation(async (pfad: string) => {
+    ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
       if (pfad.includes(`/groups/${g.id}/followups`)) throw new ApiError(503, 'weg');
-      return await falsch.holen(pfad);
+      return await falsch.alleSeiten(pfad);
     });
     await expect(nachweiseSeiteLaden()).rejects.toMatchObject({ status: 503 });
   });
@@ -349,9 +357,9 @@ describe('Seite und Einstieg: wer was sieht', () => {
 
   it('Startseite: scheitert nur das Lesen der Personen, bleibt der Einstieg – ohne Zahlen, nie ein Fehler', async () => {
     const g = art();
-    ct.ctDaten.mockImplementation(async (pfad: string) => {
+    ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
       if (pfad.includes(`/groups/${g.id}/followups`)) throw new ApiError(500, 'weg');
-      return await falsch.holen(pfad);
+      return await falsch.alleSeiten(pfad);
     });
     expect(await nachweisEinstieg(new Set())).toEqual({ darfEinrichten: true, arten: [] });
   });

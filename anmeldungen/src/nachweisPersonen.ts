@@ -9,7 +9,7 @@
  * Nicht lesbar (403) ist „für dich nicht sichtbar“ (`null`), nicht „niemand“; jeder andere Fehler wirft – vorübergehend ist
  * nicht „leer“. Die Regeln (Stand, Text, Farbe) stehen in `shared/anmeldung/nachweisStand.ts`.
  */
-import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
+import { ctAlleSeiten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { personenRoh } from '@ui/ct/personen';
 import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
@@ -128,7 +128,8 @@ export async function nachweisPersonenLesen(
   const [mitglieder, felder, aufgaben] = await Promise.all([
     oder403(ctAlleSeiten<MitgliedMitFeldern>(`/groups/${art.id}/members`, 200)),
     oder403(gruppenfelderLaden(art.id)),
-    oder403(ctDaten<AufgabeRoh[]>(`/groups/${art.id}/followups`)),
+    // Seitenweise: `limit`/`page` greifen hier (gemessen 20.11.2026); mit jeder Erneuerung kommen erledigte Aufgaben dazu.
+    oder403(ctAlleSeiten<AufgabeRoh>(`/groups/${art.id}/followups`)),
   ]);
   if (mitglieder === null || felder === null || aufgaben === null) return null;
 
@@ -141,7 +142,7 @@ export async function nachweisPersonenLesen(
       m.groupMemberStatus === 'active' &&
       typeof m.personId === 'number',
   );
-  const offen = offeneAufgaben(Array.isArray(aufgaben) ? aufgaben : []);
+  const offen = offeneAufgaben(aufgaben);
 
   // Nur bei Arten mit Antrag. `null` = nicht gelesen (kein Recht): dann gibt es auch keinen Hinweis „Antrag unvollständig“.
   let profile: Map<number, NonNullable<PersonAngaben['profil']>> | null = null;

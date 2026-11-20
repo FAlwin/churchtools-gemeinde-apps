@@ -337,6 +337,7 @@ export class FalschesNachweisCt {
       if (this.ohneVorlagenListe) throw new ApiError(404, 'Nicht gefunden');
       return structuredClone([...this.vorlagen.values()]) as T[];
     }
+    if (/^\/groups\/\d+\/followups$/.test(pfad)) return await this.holen<T[]>(pfad);
     if ((m = /^\/groups\/(\d+)\/members$/.exec(pfad))) {
       const id = Number(m[1]);
       if (this.ohneMitgliederRecht.has(id)) throw new ApiError(403, 'Kein Recht');

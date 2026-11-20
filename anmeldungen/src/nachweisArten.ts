@@ -192,14 +192,13 @@ export interface NachweiseSeite {
 export async function nachweiseSeiteLaden(): Promise<NachweiseSeite> {
   const grundlage = await nachweisGrundlageLesen();
   if (grundlage.typId === null) return { grundlage, arten: [] };
-  // Wer nicht alles einrichten darf, sieht die Personen der Arten, die er leitet.
+  // Wer nicht alles einrichten darf, sieht nur die Arten, die er leitet – samt Personen (Entwurf N2, abgenommen 20.11.2026).
   const ich = grundlage.darfEinrichten ? null : (await ichLaden()).personId;
+  const meine = (a: NachweisArt) =>
+    grundlage.darfEinrichten || a.vertrauen?.some((p) => p.personId === ich) === true;
   return {
     grundlage,
-    arten: await artenMitPersonen(
-      grundlage.typId,
-      (a) => grundlage.darfEinrichten || a.vertrauen?.some((p) => p.personId === ich) === true,
-    ),
+    arten: (await artenMitPersonen(grundlage.typId, meine)).filter(meine),
   };
 }
 

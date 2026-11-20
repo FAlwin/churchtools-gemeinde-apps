@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { darfEigenesHtml } from '@shared/website/zugang';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Einrichtung } from './Einrichtung';
 import { Hinweis, Leise } from './Hinweis';
 import { Seiten } from './Seiten';
+import { neueId } from './ids';
 import { ladeStart, type Start } from './start';
 
 type ReiterId = 'seiten' | 'aussehen' | 'freigaben';
@@ -31,6 +33,16 @@ export function App() {
   const [start, setStart] = useState<Start | null>(null);
   const [aktiv, setAktiv] = useState<ReiterId>('seiten');
   const handy = useMedienAbfrage(HANDY_BREITE);
+  /** Dieses Fenster – zwei Fenster derselben Person sperren sich gegenseitig (`shared/ct/sperre.ts`). */
+  const fenster = useRef(neueId());
+  const ich = useMemo(
+    () => ({
+      person: start?.ichId ?? 0,
+      name: start?.name || start?.vorname || '',
+      fenster: fenster.current,
+    }),
+    [start],
+  );
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -74,7 +86,12 @@ export function App() {
     >
       {start && !editor && <Zugangsseite start={start} onEingerichtet={laden} />}
       {editor && entwuerfe !== null && aktiv === 'seiten' && (
-        <Seiten ort={{ modul: editor.modul, kategorie: entwuerfe }} gemeinde={editor.gemeinde} />
+        <Seiten
+          ort={{ modul: editor.modul, kategorie: entwuerfe }}
+          gemeinde={editor.gemeinde}
+          ich={ich}
+          rechte={{ html: darfEigenesHtml(editor.zugang) }}
+        />
       )}
       {editor && aktiv === 'aussehen' && (
         <Hinweis titel="Aussehen">

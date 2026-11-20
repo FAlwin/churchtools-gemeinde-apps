@@ -69,6 +69,26 @@ describe('ladeStart', () => {
     expect(daten).toHaveBeenCalledWith('/permissions/global');
   });
 
+  it('der Name für „Gerade bearbeitet von …“ ist Vor- und Nachname (ohne Nachnamen nur der Vorname)', async () => {
+    ich.mockResolvedValue({
+      id: 1,
+      vorname: 'Helene',
+      nachname: 'Wiebe',
+      gemeinde: 'ECG',
+      rollen: [],
+      mitgliedschaften: [],
+    });
+    expect((await ladeStart()).name).toBe('Helene Wiebe');
+    ich.mockResolvedValue({
+      id: 1,
+      vorname: 'Helene',
+      gemeinde: 'ECG',
+      rollen: [],
+      mitgliedschaften: [],
+    });
+    expect((await ladeStart()).name).toBe('Helene');
+  });
+
   it('eingerichtet: Gruppe, Namen und beide Kategorien kommen aus den Kürzeln', async () => {
     const s = await ladeStart();
     expect(s.einrichtung).toEqual({

@@ -40,3 +40,15 @@ export function zugangFuer(admin: boolean, leitung: boolean): Zugang | null {
   if (admin) return 'admin';
   return leitung ? 'leitung' : null;
 }
+
+/**
+ * Darf die Person den Baustein „Eigenes HTML“ einfügen und ändern? **Eigenes HTML wird unverändert auf die Website
+ * übernommen** (E-W12) – darum nur die Leitung. In W3a haben ohnehin nur Admins und die Leitung der Gruppe Zugang, also
+ * gilt es für alle, die den Editor sehen; die Abfrage steht trotzdem schon hier, damit W3b (Redakteure) nur die Rolle
+ * einspeist und nicht jede Stelle der Oberfläche sucht.
+ *
+ * **Auch das ist die Regel der Oberfläche, nicht der Schutz der Daten** – den bilden die Rechte an den Kategorien (W3b).
+ */
+export function darfEigenesHtml(zugang: Zugang | null): boolean {
+  return zugang === 'admin' || zugang === 'leitung';
+}

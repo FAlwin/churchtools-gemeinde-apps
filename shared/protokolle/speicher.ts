@@ -13,7 +13,13 @@
  *   Gruppe in ChurchTools nicht (S0, 403), die Kategorie aber schon.
  */
 import { pruefsumme, teileBauen as teileAllgemein, TEIL_ZEICHEN, textAusTeilen } from '../ct/teile';
+import { sperreLage, sperreVon, SPERRE_MINUTEN, type Schreiber, type Sperre } from '../ct/sperre';
 import { istDokument, type Block } from './dokument';
+
+// Die Schreibsperre (Regel, Zeitgrenze, Typen) steht seit der Website (W3a-2) in `shared/ct/sperre.ts`; hier bleibt sie
+// unter dem alten Namen erreichbar. Gespeichert wird sie bei den Protokollen im Kopf der Sitzung (`ProtokollKopf.sperre`).
+export { sperreLage, sperreVon, SPERRE_MINUTEN };
+export type { Schreiber, Sperre };
 
 export const KUERZEL_VORLAGEN = 'vorlagen';
 
@@ -34,27 +40,6 @@ export function kuerzelLesen(
 }
 
 export type SitzungsStatus = 'geplant' | 'entwurf' | 'frei';
-
-/** Wer gerade schreibt (Bauplan 3.3: eine Person schreibt, alle lesen). */
-export interface Sperre {
-  von: number;
-  name: string;
-  /** ISO-Zeit des letzten Lebenszeichens. */
-  seit: string;
-  /**
-   * Kennung des Editor-Fensters (S4-1). Dieselbe Person in zwei Fenstern oder auf zwei Geräten sperrt sich gegenseitig
-   * – sonst überschriebe das eine Fenster still, was das andere gerade gespeichert hat. Fehlt sie (ältere Werte),
-   * ist die Sperre für jedes Fenster fremd.
-   */
-  fenster?: string;
-}
-
-/** Wer schreiben will: Person, Name für die Anzeige („Alwin schreibt gerade“) und das eigene Fenster. */
-export interface Schreiber {
-  person: number;
-  name: string;
-  fenster: string;
-}
 
 export interface ProtokollKopf {
   art: 'protokoll';
@@ -142,29 +127,6 @@ export function dokumentDerSitzung(
   teile: readonly ProtokollTeil[],
 ): Block[] | null {
   return kopf && kopf.status !== 'geplant' ? dokumentAusTeilen(kopf, teile) : null;
-}
-
-/** Nach so vielen Minuten ohne Lebenszeichen gilt eine Schreibsperre als verlassen. */
-export const SPERRE_MINUTEN = 10;
-
-/**
- * Darf ich schreiben? `frei` = niemand (oder die Sperre ist verlassen), `meine` = dieses Fenster, `fremd` = jemand
- * anderes – oder ich selbst in einem anderen Fenster (`sperre.von === ich.person` unterscheidet das für die Anzeige).
- */
-export function sperreLage(
-  sperre: Sperre | null,
-  ich: Pick<Schreiber, 'person' | 'fenster'>,
-  jetzt: Date,
-): 'frei' | 'meine' | 'fremd' {
-  if (!sperre) return 'frei';
-  const alter = jetzt.getTime() - new Date(sperre.seit).getTime();
-  if (!Number.isFinite(alter) || alter > SPERRE_MINUTEN * 60_000) return 'frei';
-  return sperre.von === ich.person && sperre.fenster === ich.fenster ? 'meine' : 'fremd';
-}
-
-/** Die Sperre dieses Fensters, Lebenszeichen jetzt. */
-export function sperreVon(ich: Schreiber, jetzt: Date): Sperre {
-  return { von: ich.person, name: ich.name, seit: jetzt.toISOString(), fenster: ich.fenster };
 }
 
 /** Ein Wert, wie er aus der Kategorie kommt (`Wert` aus `modulDaten`, hier ohne die Abhängigkeit). */

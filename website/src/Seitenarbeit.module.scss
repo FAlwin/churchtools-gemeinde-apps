@@ -1,0 +1,71 @@
+// Die Arbeitsfläche einer Seite (Bauplan Website W3a-2): Werkzeugleiste mit Speicherzustand, Hinweise, Vorschau.
+@use '@ui/design/mixins' as m;
+
+.arbeit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.werkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 160px;
+
+  strong {
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--text2);
+  }
+}
+
+// „Speichert … / Gespeichert / Nicht gespeichert“ – immer da, damit man weiß, woran man ist.
+.zustand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+
+  &.fehler {
+    color: var(--red);
+  }
+}
+
+.nochmal {
+  @include m.textKnopf;
+  font-size: 13px;
+}
+
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+
+  p {
+    flex: 1 1 260px;
+    margin: 0;
+  }
+}

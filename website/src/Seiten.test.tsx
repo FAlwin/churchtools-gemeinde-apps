@@ -12,6 +12,8 @@ vi.mock('./daten', () => ({
   speichereSeite: vi.fn(),
   loescheSeite: vi.fn(),
   speichereMenue: vi.fn(),
+  beginneBearbeiten: vi.fn(),
+  beendeBearbeiten: vi.fn(),
 }));
 const d = vi.mocked(D);
 
@@ -31,16 +33,20 @@ const stand = (o: Partial<WebsiteStand> = {}): WebsiteStand => ({
   einstellungen: null,
   probleme: [],
   verwaist: 0,
+  sperren: {},
   ...o,
 });
 
-const zeigen = () => render(<Seiten ort={ORT} gemeinde="ECG" />);
+const ICH = { person: 1, name: 'Helene Wiebe', fenster: 'f1' };
+const zeigen = () => render(<Seiten ort={ORT} gemeinde="ECG" ich={ICH} rechte={{ html: true }} />);
 
 beforeEach(() => {
   d.ladeWebsite.mockResolvedValue(stand());
   d.speichereSeite.mockResolvedValue(undefined);
   d.loescheSeite.mockResolvedValue(undefined);
   d.speichereMenue.mockResolvedValue(undefined);
+  d.beginneBearbeiten.mockResolvedValue({ art: 'ok', seite: START, menue: null });
+  d.beendeBearbeiten.mockResolvedValue(undefined);
 });
 
 describe('Seitenliste und Vorschau', () => {
@@ -178,7 +184,13 @@ describe('Seite löschen', () => {
     zeigen();
     const liste = await screen.findByRole('complementary', { name: 'Seiten' });
     fireEvent.click(within(liste).getByText(titel));
-    fireEvent.click(screen.getByRole('button', { name: 'Seite löschen' }));
+    // „Seite löschen“ steht seit W3a-2 im Fenster „Seite einstellen“ (wie im abgenommenen Entwurf).
+    d.beginneBearbeiten.mockImplementation(async (_o, id) => {
+      const s = [START, GRUPPEN, IMPRESSUM].find((x) => x.id === id) ?? null;
+      return { art: 'ok', seite: s, menue: null };
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Seite löschen' }));
     return screen.getByRole('alertdialog');
   }
 

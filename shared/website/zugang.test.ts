@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { istAdmin, leitetGruppe, zugangFuer } from './zugang';
+import { darfEigenesHtml, istAdmin, leitetGruppe, zugangFuer } from './zugang';
 
 const mitglied = (
   gruppe: number,
@@ -68,5 +68,13 @@ describe('zugangFuer', () => {
     expect(zugangFuer(true, true)).toBe('admin');
     expect(zugangFuer(false, true)).toBe('leitung');
     expect(zugangFuer(false, false)).toBeNull();
+  });
+});
+
+describe('darfEigenesHtml', () => {
+  it('Admin und Leitung dürfen; wer keinen Zugang hat, nicht (W3b speist hier die Rolle ein)', () => {
+    expect(darfEigenesHtml('admin')).toBe(true);
+    expect(darfEigenesHtml('leitung')).toBe(true);
+    expect(darfEigenesHtml(null)).toBe(false);
   });
 });

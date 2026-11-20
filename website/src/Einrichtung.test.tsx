@@ -12,6 +12,7 @@ const e = vi.mocked(E);
 const START: Start = {
   ichId: 1,
   vorname: 'Helene',
+  name: 'Helene Wiebe',
   gemeinde: 'ECG',
   modul: 26,
   einrichtung: null,

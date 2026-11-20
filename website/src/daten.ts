@@ -1,17 +1,21 @@
 /**
  * **Die Website im Speicher der Erweiterung** – die dünne Hülle der Oberfläche um `@shared/website/speicher` (dort stehen
- * Aufbau, Lesen und die Reihenfolge beim Schreiben). Hier nur: der Anschluss dieser Erweiterung (`modulPort`) und die
- * Kategorie „Entwürfe“. Gelesen und geschrieben wird in W3a-1 nur dort; „Veröffentlicht“ folgt mit der Freigabe (W3b).
+ * Aufbau, Lesen und die Reihenfolge beim Schreiben) und `@shared/website/sperre` (wer bearbeitet gerade). Hier nur: der
+ * Anschluss dieser Erweiterung (`modulPort`) und die Kategorie „Entwürfe“. Gelesen und geschrieben wird bis W3b nur dort;
+ * „Veröffentlicht“ folgt mit der Freigabe.
  */
 import { modulPort } from '@ui/ct/modulPort';
+import type { Schreiber, Sperre } from '@shared/ct/sperre';
 import {
   menueSpeichern,
   seiteLoeschen,
   seiteSpeichern,
+  websiteAusWerten,
   websiteLesen,
   type SpeicherOrt,
   type WebsiteStand,
 } from '@shared/website/speicher';
+import { bearbeitungBeenden, bearbeitungBeginnen } from '@shared/website/sperre';
 import type { Menue, Seite } from '@shared/website/modell';
 
 export interface EntwurfsOrt {
@@ -27,3 +31,31 @@ export const ladeWebsite = (o: EntwurfsOrt): Promise<WebsiteStand> =>
 export const speichereSeite = (o: EntwurfsOrt, seite: Seite) => seiteSpeichern(ort(o), seite);
 export const loescheSeite = (o: EntwurfsOrt, id: string) => seiteLoeschen(ort(o), id);
 export const speichereMenue = (o: EntwurfsOrt, menue: Menue) => menueSpeichern(ort(o), menue);
+
+/**
+ * Was beim Beginnen (oder Erneuern) des Bearbeitens herauskommt: die Sperre gehört uns – dann mit der **frisch gelesenen**
+ * Seite und dem frischen Menü (der Editor sieht daran, ob jemand sie inzwischen geändert hat) – oder jemand anderes
+ * bearbeitet.
+ */
+export type Beginn =
+  | { art: 'ok'; seite: Seite | null; menue: Menue | null }
+  | { art: 'gesperrt'; sperre: Sperre };
+
+export async function beginneBearbeiten(
+  o: EntwurfsOrt,
+  seiteId: string,
+  ich: Schreiber,
+): Promise<Beginn> {
+  const r = await bearbeitungBeginnen(ort(o), seiteId, ich);
+  if (r.art === 'gesperrt') return r;
+  const frisch = websiteAusWerten(r.werte);
+  return {
+    art: 'ok',
+    seite: frisch.seiten.find((s) => s.id === seiteId) ?? null,
+    menue: frisch.menue,
+  };
+}
+
+/** Die eigene Sperre freigeben – „so gut es geht“: der Aufrufer fängt Fehler ab (die Sperre verfällt dann von selbst). */
+export const beendeBearbeiten = (o: EntwurfsOrt, seiteId: string, ich: Schreiber) =>
+  bearbeitungBeenden(ort(o), seiteId, ich);

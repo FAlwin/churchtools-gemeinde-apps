@@ -1,4 +1,4 @@
-// Felder in den Fenstern der Website (Neue Seite, Seite löschen) – dieselbe Gestalt wie in den anderen Erweiterungen.
+// Felder in den Fenstern der Website (Neue Seite, Seite löschen, Bearbeiten) – dieselbe Gestalt wie in den anderen Erweiterungen.
 @use '@ui/design/mixins' as m;
 
 .feld {
@@ -34,4 +34,303 @@
   color: var(--red);
   font-size: 14px;
   font-weight: 600;
+}
+
+// ── Bearbeiten in der Vorschau (W3a-2): Abschnitt einfügen, gestalten, Baustein bearbeiten, Seite einstellen ─────────────
+
+.gruppe {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.unterText {
+  margin: 6px 0 0;
+  color: var(--text3);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.haken {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 14.5px;
+  color: var(--text);
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}
+
+// Eine Reihe großer Kacheln (Hintergrund, Spalten): wie die Auswahl-Knöpfe, nur größer.
+.kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.kachel {
+  @include m.auswahlKnopf;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+  padding: 8px;
+  border-radius: var(--r-ctrl);
+  font-size: 13px;
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+  }
+}
+
+.farbe {
+  display: block;
+  width: 100%;
+  height: 22px;
+  border-radius: var(--r-ctrl);
+  border: 1px solid var(--border);
+}
+
+// Das Schema-Bild einer Aufteilung (zwei Drittel : ein Drittel …) und einer Vorlage.
+.muster {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+  height: 22px;
+
+  i {
+    background: var(--text3);
+    opacity: 0.45;
+    border-radius: 2px;
+  }
+}
+
+.vorlagen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.vorlage {
+  @include m.aktionKnopf;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--r-tile);
+  text-align: left;
+
+  strong {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  span {
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--text2);
+    line-height: 1.35;
+  }
+}
+
+.schema {
+  display: flex;
+  gap: 4px;
+  height: 52px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+
+  > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  i {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+
+  .stark {
+    height: 7px;
+    background: var(--text3);
+  }
+
+  .block {
+    flex: 1;
+    height: auto;
+    border-radius: 3px;
+    background: var(--surface3);
+  }
+
+  .fuell {
+    background: var(--blue-soft);
+  }
+}
+
+.fotoPlatz {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+
+  img {
+    flex: none;
+    width: 84px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--r-ctrl);
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text2);
+  }
+}
+
+.zahlenfeld {
+  width: 120px;
+}
+
+.textfeld {
+  @include m.eingabefeld;
+  width: 100%;
+  min-height: 150px;
+  padding: 10px 12px;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  min-height: 220px;
+}
+
+.leiste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.leistenKnopf {
+  @include m.aktionKnopf;
+  min-width: 36px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r-ctrl);
+  font-size: 13.5px;
+}
+
+.knopfBlock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-tile);
+
+  > input,
+  > select {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+}
+
+.reihe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--hair);
+
+  > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14.5px;
+    color: var(--text);
+  }
+}
+
+.sperrhinweis {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.meldungen {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sehrKlein {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--r-ctrl);
+}
+
+.volleBreite {
+  flex-basis: 100%;
+}
+
+.kurz {
+  min-height: 64px;
+}
+
+.fett {
+  font-weight: 700;
 }

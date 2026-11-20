@@ -21,6 +21,8 @@ import { istAdmin, leitetGruppe, zugangFuer, type Zugang } from '@shared/website
 export interface Start {
   ichId: number;
   vorname: string;
+  /** Vor- und Nachname – so steht man in „Gerade bearbeitet von …“. */
+  name: string;
   gemeinde: string | null;
   modul: number;
   /** Die sichtbare Website – `null`, wenn keine Kategorie zu sehen ist. */
@@ -46,6 +48,7 @@ export async function ladeStart(): Promise<Start> {
   return {
     ichId: ich.id,
     vorname: ich.vorname,
+    name: [ich.vorname, ich.nachname].filter((t) => t && t.trim() !== '').join(' '),
     gemeinde: ich.gemeinde,
     modul,
     einrichtung,

@@ -19,6 +19,7 @@ const einrichtung = einrichtungAus(
 const start = (o: Partial<Start> = {}): Start => ({
   ichId: 1,
   vorname: 'Helene',
+  name: 'Helene Wiebe',
   gemeinde: 'ECG',
   modul: 7,
   einrichtung,

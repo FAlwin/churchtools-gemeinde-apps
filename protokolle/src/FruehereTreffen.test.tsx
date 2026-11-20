@@ -12,6 +12,7 @@ import * as L from './lesen';
 import * as B from './beginnen';
 import * as V from './vorlagen';
 import { Sitzungen } from './Sitzungen';
+import { neuAngebot, neuWaehlen } from './neuMenue.testutil';
 
 /**
  * „Frühere Treffen“ (v1.0.1): Block „Noch ohne Protokoll“ und Fenster „Protokoll nachtragen“ im Reiter „Sitzungen“.
@@ -172,14 +173,11 @@ describe('Block „Noch ohne Protokoll“', () => {
   it('Mitglied: kein Knopf „Protokoll nachtragen“, die Leitung hat ihn', async () => {
     const { unmount } = zeigen([]);
     await screen.findByRole('region', { name: 'Kommend' });
-    expect(
-      screen.queryByRole('button', { name: /Protokoll zu einem früheren Treffen beginnen/ }),
-    ).toBeNull();
+    expect(await neuAngebot()).not.toContain('Protokoll nachtragen');
     unmount();
     zeigen([60]);
-    expect(
-      await screen.findByRole('button', { name: /Protokoll zu einem früheren Treffen beginnen/ }),
-    ).toBeTruthy();
+    await screen.findByRole('region', { name: 'Kommend' });
+    expect(await neuAngebot()).toContain('Protokoll nachtragen');
   });
 
   it('nichts offen: der Block ist weg', async () => {
@@ -196,9 +194,7 @@ describe('Block „Noch ohne Protokoll“', () => {
     const block = await screen.findByRole('region', { name: 'Noch ohne Protokoll' });
     expect(await within(block).findByRole('alert')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Kommend' })).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: /Protokoll zu einem früheren Treffen beginnen/ }),
-    ).toBeTruthy();
+    expect(await neuAngebot()).toContain('Protokoll nachtragen');
     fireEvent.click(within(block).getByRole('button', { name: 'Erneut versuchen' }));
     expect(
       await within(await screen.findByRole('region', { name: 'Noch ohne Protokoll' })).findByText(
@@ -234,9 +230,7 @@ describe('Fenster „Protokoll nachtragen“', () => {
   const oeffnen = async () => {
     zeigen();
     await screen.findByRole('region', { name: 'Kommend' });
-    fireEvent.click(
-      screen.getByRole('button', { name: /Protokoll zu einem früheren Treffen beginnen/ }),
-    );
+    await neuWaehlen('Protokoll nachtragen');
     return screen.findByRole('dialog', { name: 'Protokoll nachtragen' });
   };
 

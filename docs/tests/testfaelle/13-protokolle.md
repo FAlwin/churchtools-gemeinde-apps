@@ -16,23 +16,24 @@ Karte**, der Text darin bricht nicht anders um. Nach dem Loslassen in einer ande
 nach dem Neuladen.
 
 1. In ChurchTools im Menü auf **Protokolle**, unten auf **To-Dos**.
-2. Oben **Board** wählen (Gruppieren steht auf **Nach Status**).
+2. Oben **Board** wählen (im **Filter** steht „Spalten nach“ auf **Status**).
 3. Mit dem Finger schnell über die Karten in „Offen“ wischen: Die Seite blättert, keine Karte bewegt sich.
 4. Auf „TEST Ziehen A“ den Finger legen und liegen lassen, bis die Karte sich anhebt.
 5. In die Spalte **In Arbeit** ziehen und loslassen: Die Karte steht dort.
 6. Die Seite neu laden: „TEST Ziehen A“ steht weiter in „In Arbeit“.
-7. Oben **Sortieren → Manuell** wählen und in „Offen“ „TEST Ziehen B“ über eine andere Karte ziehen: Die Reihenfolge
+7. Oben **Filter → Reihenfolge → Manuell** wählen und in „Offen“ „TEST Ziehen B“ über eine andere Karte ziehen: Die Reihenfolge
    ändert sich und bleibt nach dem Neuladen.
-8. Am iPhone die Kopfzeile ansehen: **Liste | Board**, das Sortieren-Symbol (⇅), das Filter-Symbol und **+** stehen in
-   einer Zeile, darunter links **Alle | Meine** und rechts das Gruppieren-Symbol; kein Wort ist abgeschnitten. Das Sortieren-Symbol antippen: Das
-   Menü steht ganz im Bild (links nicht abgeschnitten); nach „Manuell“ ist das Symbol blau getönt. Ebenso das Filter-Menü.
+8. Am iPhone die Werkzeugzeile ansehen: links **Liste ⌄** (blau hinterlegt), rechts das **Filter**-Symbol und das grüne **+**, alles mit
+   Rahmen in einer Zeile; kein Wort ist abgeschnitten. Das Filter-Fenster antippen: Es steht ganz im Bild (nicht abgeschnitten) und enthält
+   „Spalten nach“, „Reihenfolge“, „Zuständig“ (mit **Alle** und **Nur meine**) und „Gruppen“. Nach „Manuell“ steht keine Zahl am Filter – nur
+   ausgeblendete To-Dos zählen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `protokolle/src/ToDoZiehen.tsx`, `protokolle/src/toDoZiehenRegel.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `ui/bedienung/useZiehSensoren.ts`, `ui/bedienung/WahlKnopf.tsx`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/useMenueImBild.ts`
-- **Automatisiert:** teilweise – `ui/bedienung/WahlKnopf.test.tsx`, `ui/bedienung/FilterKnopf.test.tsx`, `ui/bedienung/menueLage.test.ts` (Wort ausblendbar, Menü rückt ins Bild), `protokolle/src/toDoZiehenRegel.test.ts`, `protokolle/src/ToDoZiehen.test.tsx`, `protokolle/src/ToDos.board.test.tsx`, `ui/bedienung/useZiehSensoren.test.ts` (Regeln und Sensoren); das echte Liegenlassen des Fingers und die Breite des Zieh-Bilds nur am Gerät
-- **Historie:** #811 (30.10.2026: Zieh-Bild am iPhone breiter als die Karte; ein To-Do mit zwei Zuständigen verlor beim Umordnen eine Person; 18.11.2026: „Sortieren“ am Handy abgeschnitten, sein Menü ragte links aus dem Bild, „+“ stand allein in einer Zeile)
+- **Betrifft:** `protokolle/src/ToDoZiehen.tsx`, `protokolle/src/toDoZiehenRegel.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `ui/bedienung/useZiehSensoren.ts`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/useMenueImBild.ts`
+- **Automatisiert:** teilweise – `ui/bedienung/FilterKnopf.test.tsx`, `ui/bedienung/menueLage.test.ts` (Wort ausblendbar, Menü rückt ins Bild), `protokolle/src/toDoZiehenRegel.test.ts`, `protokolle/src/ToDoZiehen.test.tsx`, `protokolle/src/ToDos.board.test.tsx`, `ui/bedienung/useZiehSensoren.test.ts` (Regeln und Sensoren); das echte Liegenlassen des Fingers und die Breite des Zieh-Bilds nur am Gerät
+- **Historie:** #811 (30.10.2026: Zieh-Bild am iPhone breiter als die Karte; ein To-Do mit zwei Zuständigen verlor beim Umordnen eine Person; 18.11.2026: „Sortieren“ am Handy abgeschnitten, sein Menü ragte links aus dem Bild, „+“ stand allein in einer Zeile; 20.11.2026 B6: „Sortieren“ und „Gruppieren“ liegen im Filter-Fenster, `WahlKnopf` entfällt)
 
 </details>
 
@@ -40,14 +41,14 @@ nach dem Neuladen.
 
 **Das brauchst du:** Zwei Geräte mit demselben ChurchTools-Konto (z. B. iPhone und iPad oder Laptop).
 
-**Das muss passieren:** Was man auf dem einen Gerät einstellt – Liste oder Board, Nach Status oder Nach Person,
-Sortieren, Filter, die eigene Reihenfolge –, steht nach kurzer Zeit auch auf dem anderen Gerät so da. Ohne Netz bleibt
+**Das muss passieren:** Was man auf dem einen Gerät einstellt – Liste oder Board, Einteilung nach Status oder Person,
+Reihenfolge, Filter, die eigene Reihenfolge –, steht nach kurzer Zeit auch auf dem anderen Gerät so da. Ohne Netz bleibt
 die Einstellung auf dem Gerät und geht mit, sobald das Netz wieder da ist.
 
 1. Auf Gerät 1 im Menü auf **Protokolle**, unten auf **To-Dos**.
-2. Oben **Board**, **Gruppieren → Nach Person** und **Sortieren → Alphabetisch** wählen.
+2. Oben **Board**, im **Filter** **Spalten nach → Person** und **Reihenfolge → Alphabetisch** wählen.
 3. Ein paar Sekunden warten.
-4. Auf Gerät 2 die To-Dos öffnen (bzw. neu laden): Board, Nach Person und Alphabetisch sind eingestellt.
+4. Auf Gerät 2 die To-Dos öffnen (bzw. neu laden): Board, Person und Alphabetisch sind eingestellt.
 5. Auf Gerät 2 zurück auf **Liste** stellen, auf Gerät 1 neu laden: Gerät 1 zeigt die Liste.
 
 <details><summary>Technisches</summary>
@@ -68,10 +69,10 @@ nie mit echten Gemeindegliedern).
 Status) – nicht in der der ersten. An ihrem Konto entsteht dabei keine Einstellungs-Datei mit den Werten der ersten
 Person.
 
-1. Als Person A die To-Dos öffnen und **Board** und **Gruppieren → Nach Person** wählen, ein paar Sekunden warten.
+1. Als Person A die To-Dos öffnen und **Board** und im Filter **Spalten nach → Person** wählen, ein paar Sekunden warten.
 2. Als Person B anmelden (oder B simulieren), im Menü auf **Protokolle**, unten auf **To-Dos**.
-3. B sieht ihre eigene Einstellung, nicht Board/Nach Person von A.
-4. Zurück als A: Board und Nach Person sind wieder da.
+3. B sieht ihre eigene Einstellung, nicht Board/Person von A.
+4. Zurück als A: Board und Person sind wieder da.
 
 <details><summary>Technisches</summary>
 
@@ -210,7 +211,7 @@ Test-Vorschläge zurückziehen bzw. das Test-Protokoll aufräumen.
 Schreiben – er steht vor „Verschiedenes“ mit „vorgeschlagen von …“ – oder lehnt ab; wer vorschlug, sieht die
 Begründung. Bei „Direkt eintragen“ steht der Punkt beim Öffnen schon drin, nie doppelt.
 
-1. Als Mitglied in ChurchTools auf **Protokolle** → Reiter **Sitzungen** → **Punkt vorschlagen** (Glühbirne).
+1. Als Mitglied in ChurchTools auf **Protokolle** → Reiter **Sitzungen** → grüner Knopf **Neu ⌄** → **Punkt vorschlagen**.
 2. Sitzung lassen, Thema „TEST Vorschlag“ eintippen, **Vorschlagen**: Er steht in der Karte „Vorschläge“ unter seiner
    Sitzung (eine Zeile mit Titel). Antippen klappt ihn auf: **Ändern** und **Zurückziehen** stehen erst dort; in der
    Sitzungszeile steht „1 Vorschlag offen“.
@@ -391,9 +392,9 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
    Treffen von vor drei Tagen (Datum, Uhrzeit, „vor 3 Tagen“, Marken „Einladung“ und „Gruppentreffen“, „1 Zusage · 1
    Absage“). Der Untertitel nennt das letzte freigegebene Protokoll (gibt es keins: „In den letzten 28 Tagen …“). Das
    Treffen im Vormonat steht dort nicht, wenn es vor dem letzten freigegebenen Protokoll liegt oder älter als 28 Tage ist.
-2. In der Kopfzeile von „Kommend“ steht neben „Neues Protokoll“ und „Neue Sitzung“ der Knopf **Protokoll nachtragen**
-   (am Handy nur das Symbol).
-3. **Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
+2. Oben rechts neben der Gruppen-Überschrift steht der grüne Knopf **Neu ⌄**; unter einer Linie am Ende seines Menüs steht
+   **Protokoll nachtragen** (am Handy öffnet der Knopf ein Blatt von unten).
+3. **Neu ⌄ → Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
    steht das abgeschlossene Treffen mit der Marke „Gruppentreffen abgeschlossen“ und „Anwesenheit steht in ChurchTools
    fest“. Ein Monat ohne Treffen: „Im … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
    (auch ein Entwurf) stehen nirgends.
@@ -410,7 +411,7 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
 8. Den ChurchTools-Server kurz unerreichbar machen (oder offline gehen) und die Seite neu laden: Im Block steht ein Hinweis
    mit „Erneut versuchen“, „Kommend“ und „Protokolle“ funktionieren, im Fenster steht beim Blättern der Hinweis statt
    „nichts nachzutragen“.
-9. Als **Mitglied** (Spike) anmelden: Es gibt weder den Block „Noch ohne Protokoll“ noch den Knopf „Protokoll nachtragen“;
+9. Als **Mitglied** (Spike) anmelden: Es gibt weder den Block „Noch ohne Protokoll“ noch den Eintrag „Protokoll nachtragen“ im Menü „Neu ⌄“;
    bei den Sitzungen kein „Protokoll beginnen“.
 
 <details><summary>Technisches</summary>
@@ -573,7 +574,7 @@ Bilder und Namen, danach „+N“; der Tooltip nennt alle. Im PDF stehen alle Na
 2. **Alle** antippen: Alle Mitglieder sind angehakt. Einen Haken wegnehmen: **Alle** ist aus. Wieder setzen: **Alle** ist an.
 3. **Alle** abschalten: Niemand ist angehakt. Wieder einschalten und **Speichern**.
 4. In der Liste zeigt die Karte höchstens **drei** Bilder und Namen und dahinter **+N**; mit der Maus darüber steht die volle
-   Liste. In **Nach Person** steht das To-Do in der Spalte jeder Person.
+   Liste. Bei **Person** (Filter → Gruppieren nach) steht das To-Do in der Spalte jeder Person.
 5. In einem Protokoll-Entwurf der Gruppe einen To-Do-Punkt mit dem Schildchen **Wer?** öffnen: Dort steht ebenfalls oben
    **Alle (N)** mit demselben Verhalten; das Schildchen zeigt drei Namen und **+N**.
 6. Beim Einladen (**Nächste Sitzung festlegen**) gibt es **kein** „Alle“.
@@ -764,7 +765,7 @@ Konto zuständig) und „TEST Gemeinsam“ (beide zuständig). Dazu ein Rechner 
 5 Sekunden an ihrem Platz, mit „Rückgängig“ an der Karte. Bei „Jeder für sich“ hakt jeder nur seinen Teil ab; fertig ist das To-Do,
 wenn alle fertig sind.
 
-1. **To-Dos → Liste, Gruppieren → Nach Status.** Tippe bei „TEST Haken“ auf den **Kreis** vorn: Er wird **grün mit Haken**, der Titel ist
+1. **To-Dos → Liste, Filter → Gruppieren nach → Status.** Tippe bei „TEST Haken“ auf den **Kreis** vorn: Er wird **grün mit Haken**, der Titel ist
    durchgestrichen und die Karte bleibt **an ihrem Platz**, in der Fußzeile steht **„Rückgängig“**. Warte 5 Sekunden: Die Karte rutscht zu **Erledigt**
    und zeigt dort „Erledigt von dir am …“.
 2. Tippe bei „TEST Haken“ (jetzt erledigt) noch einmal auf den Kreis: **Offen**, kein „Rückgängig“. Hake wieder ab und tippe diesmal
@@ -804,7 +805,7 @@ dir Test-To-Dos an: „TEST Heute“ (Bis heute), „TEST Morgen“, „TEST Sam
 mit breitem Fenster und ein Handy (oder das Browserfenster auf 390 px Breite).
 
 **Das muss passieren:** Frist, Gesichter und Symbole stehen auf Karte und Tabelle gleich; am Computer ist die Liste eine Tabelle mit festen
-Spalten, am Handy bleiben es Karten; „Meine“ und „Gruppieren“ stehen sofort in der Kopfzeile.
+Spalten, am Handy bleiben es Karten; „Nur meine“ und „Gruppieren nach“ stehen im Filter-Fenster der Werkzeugzeile.
 
 1. **To-Dos → Liste** am **Handy**: Jede Karte hat vorn den Kreis, darüber klein und blau die Gruppe (weil zwei Gruppen im Spiel sind), darunter den Titel;
    darunter die Fußzeile: links das **Frist-Kästchen**, rechts die **Gesichter**. „TEST Alt“ zeigt **„seit …“ rot umrandet**, „TEST Heute“ und „TEST Morgen“
@@ -819,10 +820,10 @@ Spalten, am Handy bleiben es Karten; „Meine“ und „Gruppieren“ stehen sof
    Zuerst verschwindet die Spalte **Gruppe**, noch schmaler (unter etwa 720 px Breite des Kastens) werden es wieder **Karten**. Nichts läuft seitlich über.
    Hake in der Tabelle ein To-Do ab: Die Zeile bleibt 5 Sekunden, mit **Rückgängig** in der Zeile.
 5. Das **Board** besteht auch am Computer aus Karten, die Fußzeile ist durch eine feine Linie abgesetzt. In der Spalte „In Arbeit“ fehlt das Schild „in Arbeit“.
-6. Kopfzeile: Tippe **Meine**: Es bleiben nur To-Dos, bei denen du zuständig bist; öffne **Filter**: Unter „Zuständig“ sind „Andere“ und „Noch niemand“ abgehakt – es
-   ist derselbe Filter. Nimm dort „Andere“ wieder dazu: **weder Alle noch Meine** ist dann blau. **Alle** zeigt wieder alles.
-7. **Gruppieren → Nach Fälligkeit**: Die Bereiche heißen Überfällig · Diese Woche · Später · Ohne Frist · Erledigt, „TEST Heute“ steht in „Diese Woche“. Im **Board** gibt es
-   nur „Nach Status“ und „Nach Person“. Neu laden: Die Wahl bleibt.
+6. Werkzeugzeile: Öffne **Filter** und tippe unter „Zuständig“ auf **Nur meine**: Es bleiben nur To-Dos, bei denen du zuständig bist; „Andere“ und „Noch niemand“
+   sind abgehakt – es ist derselbe Filter, am Knopf steht die Zahl **2**. Nimm „Andere“ wieder dazu: Die Zahl wird **1**. **Alle** zeigt wieder alles.
+7. **Filter → Gruppieren nach → Fälligkeit**: Die Bereiche heißen Überfällig · Diese Woche · Später · Ohne Frist · Erledigt, „TEST Heute“ steht in „Diese Woche“. Im **Board** gibt es
+   nur „Status“ und „Person“ (die Wahl heißt dort „Spalten nach“). Neu laden: Die Wahl bleibt.
 8. Öffne ein To-Do (Titel antippen): Die Felder stehen in der Reihenfolge **Was · Gruppe/Bis · Zuständig · So wird es erledigt · Status · Notiz**. Bei einem erledigten
    gemeinsamen To-Do steht unter dem Status „Erledigt von … am …“.
 9. **Start**: „Meine offenen To-Dos“ zeigen vorn denselben Kreis (nur Anzeige) und dasselbe Frist-Kästchen; die Zeile bleibt als Ganzes antippbar.
@@ -831,7 +832,40 @@ Spalten, am Handy bleiben es Karten; „Meine“ und „Gruppieren“ stehen sof
 
 - **Priorität:** normal
 - **Betrifft:** `shared/protokolle/frist.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/ToDos.tsx`, `protokolle/src/ToDoKarte.tsx`, `protokolle/src/ToDoBausteine.tsx`, `protokolle/src/FristKaestchen.tsx`, `protokolle/src/useKastenBreite.ts`, `protokolle/src/Haken.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/todoEinstellungen.ts`
-- **Automatisiert:** größtenteils – `shared/protokolle/frist.test.ts` (Frist in Worten je Zweig, Fälligkeits-Fächer), `shared/protokolle/uebersicht.test.ts` (Nach Fälligkeit, Board ohne Fälligkeit, Schnellfilter), `protokolle/src/useKastenBreite.test.ts` (Karten/Tabelle/Gruppe nach Breite), `protokolle/src/ToDos.karte.test.tsx` (Karte, Tabelle, Kopfzeile), `protokolle/src/ToDos.test.tsx` (Gesichter, Symbole, Notizzeile), `protokolle/src/ToDoFenster.test.tsx` (Reihenfolge, „Erledigt von“), `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen und Abstände (Handy, Tablet, Computer, Dunkelmodus), echte Breitenwechsel beim Verkleinern des Fensters
+- **Automatisiert:** größtenteils – `shared/protokolle/frist.test.ts` (Frist in Worten je Zweig, Fälligkeits-Fächer), `shared/protokolle/uebersicht.test.ts` (Nach Fälligkeit, Board ohne Fälligkeit, Schnellfilter), `protokolle/src/useKastenBreite.test.ts` (Karten/Tabelle/Gruppe nach Breite), `protokolle/src/ToDos.karte.test.tsx` (Karte, Tabelle, Filter), `protokolle/src/ToDos.werkzeug.test.tsx` (Werkzeugzeile: jede Wahl im Filter einzeln, Handy), `protokolle/src/ToDos.test.tsx` (Gesichter, Symbole, Notizzeile), `protokolle/src/ToDoFenster.test.tsx` (Reihenfolge, „Erledigt von“), `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen und Abstände (Handy, Tablet, Computer, Dunkelmodus), echte Breitenwechsel beim Verkleinern des Fensters
 - **Historie:** 20.11.2026 (W8b: Karte zweiteilig, Frist in Worten, Tabelle am Computer, „Alle | Meine“, Nach Fälligkeit – Entwurf `todos-vorschlaege-v2`, von Alwin abgenommen)
+
+</details>
+
+### TF-PROT-24 · Werkzeugzeile der To-Dos und ein grüner Knopf „Neu ⌄“ in den Sitzungen
+
+**Das brauchst du:** In der Test-Instanz eine eingerichtete Gruppe mit Kalender, du als **Leitung**, dazu ein **Mitglied** (z. B. „Benutzer
+simulieren“) und ein Rechner und ein Handy (oder das Browserfenster auf 390 px Breite). Ein paar Test-To-Dos und -Sitzungen. Alles, was du anlegst,
+beginnt mit „TEST“ und wird danach aufgeräumt.
+
+**Das muss passieren:** Über den To-Dos steht **eine** Zeile (Ansicht links, Filter und „Neues To-Do“ rechts), über den Sitzungen steht **ein** grüner Knopf
+**Neu ⌄** für alles, was etwas hinzufügt. Keine Funktion fehlt – was früher eine Zeile war, liegt einen Klick tiefer.
+
+1. **To-Dos** am **Rechner**: Unter den Reitern steht nur eine Zeile: links **Liste | Board**, rechts **Filter** und der grüne Knopf **Neues To-Do**. Es gibt keine Überschrift
+   „To-Dos“, keine Pillen „Alle | Meine“ und keine Knöpfe „Sortieren“ oder „Gruppieren“ mehr.
+2. **Filter** öffnen: Oben stehen **Gruppieren nach** (Status · Fälligkeit · Person; im Board **Spalten nach** mit Status und Person) und **Reihenfolge**
+   (Dringlichkeit · Bis-Datum · Alphabetisch · Manuell), dann **Zuständig** (mit den Kurzwegen **Alle** und **Nur meine**) und **Gruppen**. Wähle jede Möglichkeit einmal: Die Liste ändert sich
+   sofort, das Fenster bleibt offen, nach dem Neuladen gilt die Wahl noch. Am Knopf steht **keine** Zahl, solange nichts ausgeblendet ist; nach **Nur meine** steht dort **2**.
+3. **Handy**: Links steht ein blau hinterlegter Knopf **Liste ⌄**, rechts der **Filter** mit Rahmen und das grüne **+**. **Liste ⌄**
+   antippen: Ein Blatt von unten bietet Liste und Board an; **Board** wählen: Das Blatt geht zu, das Board steht da.
+4. **Sitzungen** als Leitung am Rechner: Rechts neben dem Gruppennamen steht der grüne Knopf **Neu ⌄**, sonst **kein** grüner Knopf auf der Seite; in der Karte „Kommend“ stehen keine
+   Knöpfe mehr. Das Menü zeigt **Neues Protokoll · Neue Sitzung · Punkt vorschlagen** und, hinter einer Linie, **Protokoll nachtragen**. Jeder Eintrag öffnet sein
+   Fenster (Neues Protokoll, Neue Sitzung mit Einladen, Punkt vorschlagen, Protokoll nachtragen) und das Menü ist dabei zu.
+5. Am Handy dieselben Einträge im Blatt **Neu**; der Knopf zeigt dort Plus und Pfeil. **Hinweis:** Der schwebende Kreis unten rechts kommt in den Protokollen noch nicht vor
+   (er folgt mit der Musik-App-Scheibe).
+6. Als **Mitglied** (ohne Leitung): **Neu ⌄** bietet nur **Punkt vorschlagen**; fehlt die Mitarbeit-Kategorie der Gruppe, gibt es den Knopf gar nicht. In den To-Dos sieht das Mitglied
+   dieselbe Zeile.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `protokolle/src/Sitzungen.tsx`, `ui/bedienung/OptionWaehlen.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/Werkzeugzeile.tsx`, `ui/bedienung/FilterKnopf.tsx`
+- **Automatisiert:** größtenteils – `protokolle/src/ToDos.werkzeug.test.tsx` (eine Zeile, jede Wahl im Filter einzeln und gemerkt, Zähler, Handy-Blatt), `protokolle/src/ToDos.karte.test.tsx` und `ToDos.board.test.tsx` (Nur meine als Kurzweg, Reihenfolge Manuell), `protokolle/src/SitzungFestlegen.test.tsx` (ein grüner Knopf, Reihenfolge der Einträge, Handy-Blatt), `protokolle/src/FruehereTreffen.test.tsx` und `Sitzungen.test.tsx` (nachtragen, Vorschlagen, nur mit Recht), `ui/bedienung/HinzufuegenMenue.test.tsx` (jeder Eintrag einzeln, Aktion bleibt nach dem Schließen), `ui/bedienung/KopfKnopf.test.tsx` (Pfeil); **nur von Hand:** Aussehen am Handy und Abstände
+- **Historie:** 20.11.2026 (B6 „Ruhige Bedienung“, Entwurf Organigramm/Protokolle v2, E14: „Immer wenn was Grünes kommt, ist es etwas hinzufügen“)
 
 </details>

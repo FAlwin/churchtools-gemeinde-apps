@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { FilterKnopf, type FilterAbschnitt } from '@ui/bedienung/FilterKnopf';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import { eineWahl, type FilterAbschnitt } from '@ui/bedienung/filterAbschnitt';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
-import { Segment } from '@ui/bedienung/Segment';
-import { WahlKnopf } from '@ui/bedienung/WahlKnopf';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
@@ -25,14 +27,12 @@ import {
   eintragSchluessel,
   langeErledigt,
   schnellfilterAus,
-  schnellfilterVon,
   sichtbarFuer,
   sortieren,
   spalten,
   umordnen,
   zustaendigFuer,
   type Einteilung,
-  type Schnellfilter,
   type Sortierung,
   type Spalte,
   type ToDoEintrag,
@@ -78,17 +78,14 @@ interface Frage {
   an: string;
 }
 
+/** Wonach die Liste oder das Board eingeteilt wird – steht im Filter unter „Spalten nach“ (B6, R6). */
 const GRUPPIEREN: { wert: Einteilung; text: string }[] = [
-  { wert: 'status', text: 'Nach Status' },
-  { wert: 'frist', text: 'Nach Fälligkeit' },
-  { wert: 'person', text: 'Nach Person' },
+  { wert: 'status', text: 'Status' },
+  { wert: 'frist', text: 'Fälligkeit' },
+  { wert: 'person', text: 'Person' },
 ];
 /** Das Board hat nur Spalten, in die man ablegt – Status und Person, keine Fälligkeit. */
 const GRUPPIEREN_BOARD = GRUPPIEREN.filter((o) => o.wert !== 'frist');
-const PILLEN: { wert: Schnellfilter; text: string }[] = [
-  { wert: 'alle', text: 'Alle' },
-  { wert: 'meine', text: 'Meine' },
-];
 
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -152,6 +149,8 @@ export function ToDos({
     return () => t.forEach((id) => clearTimeout(id));
   }, []);
   const heute = heuteImKalender();
+  // Handy-Breite: zweizeilige Werkzeugzeile, Ansichtswahl als Blatt von unten (R12/E9).
+  const handy = useMedienAbfrage(HANDY_BREITE);
 
   // `still`: nach dem Speichern im Fenster ohne „Wird geladen …“ – die Liste bleibt stehen, bis das Neue da ist.
   const holen = useCallback(
@@ -251,7 +250,20 @@ export function ToDos({
   const mehrereGruppen = new Set(gezeigt.map((e) => e.gruppe.id)).size > 1;
   const irgendwoLeitung = gruppen.some(leitungIn);
 
+  // Was selten gewechselt wird (Einteilung, Reihenfolge) und der Kurzweg „Nur meine“ stehen im Filter-Fenster (B6, R6/E15) –
+  // vorher vier Umschalter-Zeilen über der Liste. „Spalten nach“ und „Reihenfolge“ sind Anzeige, nicht Filter: Sie zählen
+  // nicht in die Zahl am Knopf (`eineWahl`).
   const filter: FilterAbschnitt[] = [
+    eineWahl(
+      ansicht === 'board' ? 'Spalten nach' : 'Gruppieren nach',
+      ansicht === 'board' ? GRUPPIEREN_BOARD : GRUPPIEREN,
+      ansicht === 'board' && nach === 'frist' ? 'status' : nach,
+      // Die Wahl kommt aus den Möglichkeiten oben – `Einteilung` ist ihr Wertetyp.
+      (w) => setzen({ nach: w as Einteilung }),
+    ),
+    eineWahl('Reihenfolge', SORTIERUNGEN, sortierung, (w) =>
+      setzen({ sortierung: w as Sortierung }),
+    ),
     {
       titel: 'Gruppen',
       optionen: ue.map((u) => ({ wert: String(u.gruppe.id), text: u.gruppe.name })),
@@ -267,6 +279,12 @@ export function ToDos({
       ],
       aus: aus.zustaendig,
       onAus: (x) => ausSetzen({ zustaendig: x }),
+      // Der frühere Schnellfilter „Alle | Meine“ (W8b): nur ein Kurzweg auf diesen Filter – derselbe Zustand, keine zweite
+      // Filterlogik (`schnellfilterAus`/`schnellfilterVon`).
+      kurz: [
+        { text: 'Alle', onClick: () => ausSetzen({ zustaendig: schnellfilterAus('alle') }) },
+        { text: 'Nur meine', onClick: () => ausSetzen({ zustaendig: schnellfilterAus('meine') }) },
+      ],
     },
   ];
 
@@ -478,63 +496,38 @@ export function ToDos({
 
   return (
     <div className={ansicht === 'board' ? `${styles.seite} ${styles.breit}` : styles.seite}>
-      <div className={styles.kopf}>
-        <h2>To-Dos</h2>
-        <span className={styles.werkzeug}>
-          <Segment
+      <Werkzeugzeile
+        handy={handy}
+        ariaLabel="To-Dos"
+        links={
+          <AnsichtWahl
             value={ansicht}
             options={[
               { value: 'liste', label: 'Liste' },
               { value: 'board', label: 'Board' },
             ]}
             onChange={(a) => setzen({ ansicht: a })}
-            ariaLabel="Ansicht"
-            verbunden
+            handy={handy}
           />
-          <WahlKnopf
-            titel="Sortieren"
-            icon="sortieren"
-            optionen={SORTIERUNGEN}
-            wert={sortierung}
-            vorgabe="dringlichkeit"
-            onWahl={(w) => setzen({ sortierung: w })}
-          />
-          <FilterKnopf abschnitte={filter} />
-          {mitMitarbeit.length > 0 && (
-            <KopfKnopf
-              neu
-              label="Neues To-Do"
-              title="Neues To-Do – auch ohne Protokoll"
-              symbol={<Icon name="plus" size={16} />}
-              onClick={() => setFenster({ eintrag: null })}
-            />
-          )}
-        </span>
-      </div>
-      <div className={styles.zeile2}>
-        {/* Nur ein Kurzweg auf den Filter „Zuständig“ – derselbe Zustand, keine zweite Filterlogik (`schnellfilterVon`). */}
-        <div className={styles.pillen} role="group" aria-label="Zuständigkeit">
-          {PILLEN.map((p) => (
-            <button
-              key={p.wert}
-              type="button"
-              className={styles.pille}
-              aria-pressed={schnellfilterVon(aus.zustaendig) === p.wert}
-              onClick={() => ausSetzen({ zustaendig: schnellfilterAus(p.wert) })}
-            >
-              {p.text}
-            </button>
-          ))}
-        </div>
-        <WahlKnopf
-          titel="Gruppieren"
-          icon="liste"
-          optionen={ansicht === 'board' ? GRUPPIEREN_BOARD : GRUPPIEREN}
-          wert={ansicht === 'board' && nach === 'frist' ? 'status' : nach}
-          vorgabe="status"
-          onWahl={(w) => setzen({ nach: w })}
-        />
-      </div>
+        }
+        rechts={
+          <>
+            <FilterKnopf still abschnitte={filter} />
+            {mitMitarbeit.length > 0 && (
+              // Die Hülle hält den grünen Knopf aus dem Rahmen heraus, den die Werkzeugzeile am Handy um stille Knöpfe legt (R12).
+              <span className={styles.neu}>
+                <KopfKnopf
+                  neu
+                  label="Neues To-Do"
+                  title="Neues To-Do – auch ohne Protokoll"
+                  symbol={<Icon name="plus" size={16} />}
+                  onClick={() => setFenster({ eintrag: null })}
+                />
+              </span>
+            )}
+          </>
+        }
+      />
       {fenster && (
         <ToDoFenster
           ich={ich}

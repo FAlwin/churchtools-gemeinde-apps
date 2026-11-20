@@ -15,7 +15,7 @@ import { dateien, WURZEL } from './quelltexte.testutil';
  * Nicht jeder rohe Knopf ist ein Fehler (Tabellenzellen, Zeichenwerkzeuge, Listenzeilen als Knopf) – deshalb gilt
  * keine Null, sondern der **heutige Stand als Obergrenze**:
  *  - Steigt eine Zahl, schlägt der Test fehl: nimm `KopfKnopf`, `ZeilenKnopf`, `FensterKnopf`, `KnopfMitMenue`,
- *    `FilterKnopf` oder `WahlKnopf` aus `ui/bedienung`.
+ *    `FilterKnopf` oder `HinzufuegenMenue` aus `ui/bedienung`.
  *  - Fällt sie, schlägt er ebenfalls fehl und verlangt die niedrigere Obergrenze – so wird die Liste mit jeder
  *    Scheibe kürzer und kann nicht wieder wachsen. **Obergrenzen nie erhöhen.**
  */
@@ -35,7 +35,7 @@ type App = (typeof APPS)[number];
 const OBERGRENZE: Record<App, { knoepfe: number; hoehen: number }> = {
   client: { knoepfe: 111, hoehen: 21 },
   anmeldungen: { knoepfe: 104, hoehen: 6 },
-  protokolle: { knoepfe: 82, hoehen: 27 },
+  protokolle: { knoepfe: 81, hoehen: 27 },
   dienstplaner: { knoepfe: 79, hoehen: 23 },
   organigramm: { knoepfe: 62, hoehen: 2 },
   website: { knoepfe: 12, hoehen: 3 },

@@ -8,57 +8,10 @@
   gap: 16px;
 }
 
-.kopf {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-
-  h2 {
-    font-size: 18px;
-    font-weight: 700;
-  }
-}
-
-.werkzeug {
+// Der grüne „Neues To-Do“ in der Werkzeugzeile – eine Hülle, damit ihn der Rahmen der Werkzeugzeile am Handy (R12) nicht
+// grau überdeckt; er ist als gefüllter Knopf ohnehin gerahmt.
+.neu {
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.zeile2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 10px;
-}
-
-// Schnellfilter „Alle | Meine“ (W8b): Kurzweg auf den Filter „Zuständig“.
-.pillen {
-  display: flex;
-  gap: 6px;
-}
-
-.pille {
-  height: var(--knopf-hoehe);
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface2);
-  color: var(--text2);
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &[aria-pressed='true'] {
-    border-color: var(--blue);
-    background: var(--blue-soft);
-    color: var(--blue-ink);
-  }
 }
 
 .karte {

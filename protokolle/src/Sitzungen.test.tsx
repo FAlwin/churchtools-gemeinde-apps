@@ -20,6 +20,7 @@ import * as L from './lesen';
 import * as V from './vorschlaegeSchreiben';
 import * as SCH from './schreiben';
 import { Sitzungen } from './Sitzungen';
+import { neuAngebot, neuWaehlen } from './neuMenue.testutil';
 
 // Vorschläge (S5-4): die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
 const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
@@ -325,9 +326,7 @@ describe('Vorschläge (S5-4)', () => {
   };
   const karte = () => screen.findByRole('region', { name: 'Vorschläge' });
   const vorschlagen = async (thema: string) => {
-    fireEvent.click(
-      await screen.findByRole('button', { name: /Punkt für eine Sitzung vorschlagen/ }),
-    );
+    await neuWaehlen('Punkt vorschlagen');
     fireEvent.change(screen.getByPlaceholderText(/Kinderbetreuung beim Gemeindeessen/), {
       target: { value: thema },
     });
@@ -588,7 +587,7 @@ describe('Vorschläge (S5-4)', () => {
   it('Gruppe ohne Mitarbeit-Kategorie (unvollständig): kein Vorschlagen, keine Karte', async () => {
     render(<Sitzungen ich={ICH} modul={24} gruppen={[{ ...GRUPPEN[0], mitarbeit: null }]} />);
     await screen.findByRole('region', { name: 'Kommend' });
-    expect(screen.queryByRole('button', { name: /Punkt für eine Sitzung vorschlagen/ })).toBeNull();
+    expect(await neuAngebot()).not.toContain('Punkt vorschlagen');
     expect(screen.queryByRole('region', { name: 'Vorschläge' })).toBeNull();
   });
 });

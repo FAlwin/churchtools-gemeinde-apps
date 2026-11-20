@@ -233,6 +233,17 @@ const NACHWEIS_PERSONEN = [
     zip: '53797',
     city: 'Lohmar',
   },
+  // N2c: läuft bald ab, aber ChurchTools kennt keine Mailadresse – steht in „Fällige anschreiben“ grau da.
+  {
+    id: 917,
+    firstName: 'Tom',
+    lastName: 'Leise',
+    email: '',
+    birthday: '1995-09-09',
+    street: 'Dorfstr. 3',
+    zip: '53797',
+    city: 'Lohmar',
+  },
 ];
 
 const DEMO_PERSONEN = [
@@ -632,6 +643,7 @@ export function demoStarten(fall: string): void {
         teilnehmer(914, { 91: isoTag(45, -3), 92: isoTag(38, -3), 93: '931' }),
         teilnehmer(915),
         teilnehmer(916, { 91: isoTag(-9), 92: isoTag(-17), 93: '931' }),
+        teilnehmer(917, { 91: isoTag(-3), 92: isoTag(20, -3), 93: '931' }),
       ],
     ],
     [
@@ -676,10 +688,18 @@ export function demoStarten(fall: string): void {
         aufgabe(915, 'Einsicht nehmen', -1, null),
         aufgabe(916, 'Einsicht nehmen', -40, -9),
         aufgabe(916, 'Erneut einsehen', -9, null),
+        // N2c: die fälligen Personen haben ihre offene „Erneut einsehen“ – daran landet der Vermerk.
+        aufgabe(913, 'Erneut einsehen', -20, null),
+        aufgabe(914, 'Erneut einsehen', -5, null),
+        aufgabe(917, 'Erneut einsehen', -2, null),
       ],
     ],
     [62, [aufgabe(916, 'Einsicht nehmen', -30, -9), aufgabe(916, 'Erneut einsehen', -9, null)]],
   ]);
+  // N2c: Notizen an Folgeaufgaben und der Protokoll-Stand der „verschickten“ Mails – nichts wird wirklich gesendet.
+  const aufgabenNotizen = new Map<number, { id: number; text: string }[]>();
+  const mailProtokoll: { date: string; message: string }[] = [];
+  let naechsteNotiz = 5000;
   /** Den Ablauf der beiden vorhandenen Arten gibt es schon – mit den Nummern, die ChurchTools vergibt. */
   const schritteNummern = (liste: Schritt[]): Schritt[] =>
     liste.map((x) => ({
@@ -984,6 +1004,43 @@ export function demoStarten(fall: string): void {
         })),
         meta: { pagination: { lastPage: 1 } },
       });
+    // N2c: Notiz an einer Folgeaufgabe (204 ohne Inhalt, wie ChurchTools) und Nachlesen.
+    r = /^\/followups\/(\d+)\/notes$/.exec(pfad);
+    if (r && m === 'POST') {
+      const liste = aufgabenNotizen.get(Number(r[1])) ?? [];
+      liste.push({ id: naechsteNotiz++, text: String(body.comment) });
+      aufgabenNotizen.set(Number(r[1]), liste);
+      return antwort(null, 204);
+    }
+    r = /^\/notes\/follow_up\/(\d+)$/.exec(pfad);
+    if (r && m === 'GET')
+      return antwort({
+        data: (aufgabenNotizen.get(Number(r[1])) ?? []).map((x) => ({
+          id: x.id,
+          domainType: 'follow_up',
+          domainId: Number(r![1]),
+          text: x.text,
+          meta: { createdDate: new Date().toISOString() },
+        })),
+      });
+    // N2c: Rundmail über die alte Schnittstelle – hier geht NICHTS raus; das Protokoll merkt sich nur die Adressen.
+    if (
+      m === 'POST' &&
+      url.pathname.endsWith('index.php') &&
+      url.searchParams.get('q') === 'churchhome/ajax'
+    ) {
+      const ids = (typeof body.ids === 'string' ? body.ids : '').split(',').map(Number);
+      for (const p of [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN])
+        if (ids.includes(p.id) && p.email)
+          mailProtokoll.push({
+            date: new Date().toISOString(),
+            message: `Speichere Mail an ${p.email} von Demo - ${String(body.betreff)}`,
+          });
+      return antwort({ status: 'success', data: {} });
+    }
+    // Wie bei einer Vertrauensperson ohne Admin: das Protokoll von ChurchTools ist nicht lesbar (→ „Bestätigung nicht lesbar“).
+    if (pfad === '/logs')
+      return fall === 'vertrauen' ? antwort({}, 403) : antwort({ data: mailProtokoll });
     // N2b: Folgeaufgabe erledigen (der Ablauf legt nach „Einsicht nehmen“ gleich „Erneut einsehen“ an) und verschieben.
     r = /^\/followups\/(\d+)\/(complete|postpone)$/.exec(pfad);
     if (r && m === 'POST') {

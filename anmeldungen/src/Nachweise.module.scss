@@ -342,6 +342,13 @@
   }
 }
 
+.artAktionen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .artText {
   flex: 1;
   min-width: 0;
@@ -459,5 +466,66 @@
     color: var(--text2);
     font-size: 13px;
     font-weight: 600;
+  }
+}
+
+// ── Fällige anschreiben (N2c) ────────────────────────────────────────────────────────────────────────────────────
+
+// Die Liste „An“: je Person ein Häkchen, Name und darunter klein, wann und was sonst noch auffällt.
+.empfaenger {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  input {
+    margin-top: 3px;
+  }
+}
+
+// Ohne Mailadresse: grau, nicht wählbar.
+.empfaengerGrau {
+  color: var(--text2);
+  cursor: default;
+}
+
+.empfaengerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+// Das Häkchen „Vermerk“ unter dem Text.
+.vermerkZeile {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+
+  input {
+    margin-top: 3px;
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    color: var(--text2);
+    font-size: 13px;
   }
 }

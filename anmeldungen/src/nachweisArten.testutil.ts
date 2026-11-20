@@ -47,6 +47,8 @@ export interface PersonRohStand {
   id: number;
   firstName: string;
   lastName: string;
+  /** Fehlt oder leer: ChurchTools kennt keine Adresse (N2c). */
+  email?: string | null;
   birthday: string | null;
   street: string | null;
   zip: string | null;
@@ -136,6 +138,10 @@ export class FalschesNachweisCt {
   aufgabenLesenScheitert: number | null = null;
   /** „Heute“ des Servers – `postpone` verlangt ein Datum strikt danach (OpenAPI der Test-Instanz). */
   serverHeute = '2026-11-20';
+  /** Notizen an Folgeaufgaben (N2c): `POST /followups/{id}/notes` legt an (204), `GET /notes/follow_up/{id}` liest sie. */
+  notizen = new Map<number, { id: number; text: string }[]>();
+  /** `GET /notes/follow_up/{id}` antwortet mit diesem Status (z. B. 503). */
+  notizenLesenScheitert: number | null = null;
   /** Wartende neue Aufgaben (noch nicht sichtbar): `bei` = Lesezählerstand, ab dem sie erscheinen. */
   private wartend: { gruppe: number; bei: number; a: AufgabeStand }[] = [];
   /** Die angemeldete Person (`/whoami`). */
@@ -290,6 +296,17 @@ export class FalschesNachweisCt {
     if (pfad === '/permissions/global') return this.global as T;
     if (pfad === '/whoami') return { id: this.ichId, firstName: 'Anna', lastName: 'Leitung' } as T;
     let m: RegExpExecArray | null;
+    if ((m = /^\/notes\/follow_up\/(\d+)$/.exec(pfad))) {
+      if (this.notizenLesenScheitert !== null)
+        throw new ApiError(this.notizenLesenScheitert, 'ChurchTools antwortet nicht');
+      // Wie ChurchTools (gemessen 20.11.2026): `text`, `domainType`, `domainId`.
+      return (this.notizen.get(Number(m[1])) ?? []).map((x) => ({
+        id: x.id,
+        domainType: 'follow_up',
+        domainId: Number(m![1]),
+        text: x.text,
+      })) as T;
+    }
     if ((m = /^\/groups\/(\d+)\/followups$/.exec(pfad))) {
       if (this.ohneAufgabenRecht.has(Number(m[1]))) throw new ApiError(403, 'Kein Recht');
       if (this.aufgabenLesenScheitert !== null)
@@ -478,6 +495,18 @@ export class FalschesNachweisCt {
           );
         return { data: {} };
       }
+    }
+    // ── Notiz an einer Folgeaufgabe (N2c): 204, die Antwort hat keinen Inhalt ──
+    if ((m = /^\/followups\/(\d+)\/notes$/.exec(pfad)) && methode === 'POST') {
+      const alle = [...this.aufgaben.values()].flat();
+      if (!alle.some((x) => x.id === Number(m![1])))
+        throw new ApiError(404, 'Aufgabe nicht gefunden');
+      if (!ignorieren) {
+        const liste = this.notizen.get(Number(m[1])) ?? [];
+        liste.push({ id: this.naechste++, text: String(k.comment) });
+        this.notizen.set(Number(m[1]), liste);
+      }
+      return { data: null };
     }
     // ── Folgeaufgaben (N2b) ──
     if ((m = /^\/followups\/(\d+)\/(complete|postpone)$/.exec(pfad)) && methode === 'POST') {

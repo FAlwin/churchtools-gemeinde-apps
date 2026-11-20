@@ -12,6 +12,7 @@ import { useLaden } from '@ui/ct/useLaden';
 import { tagPunkt } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { nachweisGueltigText } from '@shared/anmeldung/nachweise';
+import { faelligeZahl } from '@shared/anmeldung/nachweisFaellige';
 import {
   aufmerksamkeitZaehlen,
   brauchtAufmerksamkeit,
@@ -22,6 +23,7 @@ import { nachweiseSeiteLaden, type NachweisArt } from './nachweisArten';
 import { personenMitStand, type PersonMitStand } from './nachweisPersonen';
 import { NachweisArtFenster } from './NachweisArtFenster';
 import { EinsichtFenster } from './EinsichtFenster';
+import { FaelligeFenster } from './FaelligeFenster';
 import type { Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
@@ -40,7 +42,7 @@ const datumOderStrich = (tag: string | null) => (tag ? tagPunkt(tag) : '–');
  * **Die Seite „Nachweise“** (N1b; N2a Entwurf `n2-stand-v1`, Ansicht 2 und 5) – je **Nachweis-Art eine Karte**: im Kopf
  * Gültigkeit, Antrag und Vertrauenspersonen (die frühere Liste „Nachweis-Arten“), „Nachweis-Art bearbeiten“ im „⋯“-Menü,
  * darunter ihre Personen mit dem Stand (am Handy als Liste, am Rechner als Tabelle). Der Stand wird **nur gelesen**; die Regeln
- * stehen in `shared/anmeldung/nachweisStand.ts`. Einsicht festhalten (N2b): ein Klick auf eine Person; Anschreiben kommt mit N2c.
+ * stehen in `shared/anmeldung/nachweisStand.ts`. Einsicht festhalten (N2b): ein Klick auf eine Person. Fällige anschreiben (N2c): stiller Knopf im Kartenkopf.
  *
  * Sehen darf die Seite, wer „Berechtigungen verwalten“ hat oder eine Nachweis-Gruppe leitet (die Startseite entscheidet).
  * Neu anlegen und Bearbeiten nur mit „Berechtigungen verwalten“ – sonst steht da, wer das darf.
@@ -68,6 +70,10 @@ export function NachweisSeite({
   const heute = heuteImKalender();
   /** Welche Art im Fenster offen ist: `null` = keins, `'neu'` = neue Art. */
   const [fenster, setFenster] = useState<NachweisArt | 'neu' | null>(null);
+  /** Die Art, für die gerade „Fällige anschreiben“ offen ist (N2c). */
+  const [faellige, setFaellige] = useState<{ art: NachweisArt; personen: PersonMitStand[] } | null>(
+    null,
+  );
   /** Die Person, deren Einsicht gerade festgehalten wird. */
   const [einsicht, setEinsicht] = useState<{ art: NachweisArt; person: PersonMitStand } | null>(
     null,
@@ -191,19 +197,31 @@ export function NachweisSeite({
                           : `Vertrauenspersonen: ${a.vertrauen.map((p) => p.name).join(', ')}`}
                     </small>
                   </div>
-                  {darf && (
-                    <MehrMenue
-                      handy={handy}
-                      titel={`${a.name}: Mehr`}
-                      optionen={[
-                        {
-                          label: 'Nachweis-Art bearbeiten',
-                          symbol: <Icon name="pencil" size={18} />,
-                          onClick: () => setFenster(a),
-                        },
-                      ]}
-                    />
-                  )}
+                  <div className={n.artAktionen}>
+                    {/* Still (R1/R2): gefüllt ist nur der grüne Knopf oben. Nur, wenn es jemanden gibt, der Post braucht. */}
+                    {a.einstellungen && personen && faelligeZahl(personen) > 0 && (
+                      <KopfKnopf
+                        still
+                        label="Fällige anschreiben"
+                        title={`${a.name}: Fällige anschreiben`}
+                        symbol={<Icon name="brief" size={18} />}
+                        onClick={() => setFaellige({ art: a, personen })}
+                      />
+                    )}
+                    {darf && (
+                      <MehrMenue
+                        handy={handy}
+                        titel={`${a.name}: Mehr`}
+                        optionen={[
+                          {
+                            label: 'Nachweis-Art bearbeiten',
+                            symbol: <Icon name="pencil" size={18} />,
+                            onClick: () => setFenster(a),
+                          },
+                        ]}
+                      />
+                    )}
+                  </div>
                 </div>
                 <PersonenBereich
                   personen={zeilen}
@@ -233,6 +251,21 @@ export function NachweisSeite({
           }}
           onFertig={(text) => {
             setEinsicht(null);
+            onGeaendert({ text, rueckgaengig: null });
+            neu();
+          }}
+        />
+      )}
+      {faellige && faellige.art.einstellungen && (
+        <FaelligeFenster
+          // Eine andere Art beginnt mit frischem Text.
+          key={faellige.art.id}
+          art={faellige.art}
+          personen={faellige.personen}
+          heute={heute}
+          onClose={() => setFaellige(null)}
+          onFertig={(text) => {
+            setFaellige(null);
             onGeaendert({ text, rueckgaengig: null });
             neu();
           }}

@@ -11,6 +11,7 @@ import { plusJahre } from '@shared/anmeldung/nachweisStand';
 import { NACHWEIS_SCHRITTE, type NachweisErgebnis } from './nachweisArten';
 import * as Arten from './nachweisArten';
 import * as Einsicht from './nachweisEinsicht';
+import * as Faellige from './nachweisFaellige';
 import type { NachweisArtMitPersonen, NachweisPerson } from './nachweisPersonen';
 import { offeneAufgabe } from './nachweisArten.testutil';
 import { NachweisSeite, type NachweisFilter } from './NachweisSeite';
@@ -31,7 +32,14 @@ vi.mock('./nachweisEinsicht', async (original) => ({
   ...(await original<typeof import('./nachweisEinsicht')>()),
   einsichtFesthalten: vi.fn(),
 }));
+vi.mock('./nachweisFaellige', async (original) => ({
+  ...(await original<typeof import('./nachweisFaellige')>()),
+  faelligeLaden: vi.fn(),
+  faelligeSenden: vi.fn(),
+}));
 const einsichtSchreiben = vi.mocked(Einsicht.einsichtFesthalten);
+const faelligeLaden = vi.mocked(Faellige.faelligeLaden);
+const faelligeSenden = vi.mocked(Faellige.faelligeSenden);
 const arten = vi.mocked(Arten);
 
 const E: NachweisEinstellungen = {
@@ -562,6 +570,114 @@ describe('Seite „Nachweise“: Einsicht festhalten öffnen (N2b)', () => {
       }),
     );
     expect(arten.nachweiseSeiteLaden.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('Seite „Nachweise“: Fällige anschreiben (N2c)', () => {
+  const knopf = (art = 'Führungszeugnis') =>
+    screen.queryByRole('button', { name: `${art}: Fällige anschreiben` });
+
+  beforeEach(() => {
+    faelligeLaden.mockReset().mockResolvedValue({
+      emails: new Map([[3, 'mia@x.test']]),
+      ich: { personId: 7, name: 'Anna Leitung' },
+    });
+    faelligeSenden.mockReset();
+  });
+
+  it('der stille Knopf steht im Kopf der Art, die jemanden zum Anschreiben hat – nicht bei einer Art, deren Leute alle gültig sind', async () => {
+    seite(grundlage(true), [FZ_STAND, JULEICA]);
+    oeffnen();
+    await screen.findAllByRole('table');
+    expect(knopf()).toBeTruthy();
+    expect(knopf('JuLeiCa')).toBeNull();
+    // Still (R2): ohne gefüllte Fläche – die Klasse `still` des gemeinsamen Knopfs.
+    expect(knopf()!.className).toMatch(/still/);
+  });
+
+  it('auch die Vertrauensperson ohne „Berechtigungen verwalten“ sieht ihn (sie sieht nur ihre Arten)', async () => {
+    seite(grundlage(false), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    expect(knopf()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Führungszeugnis: Mehr' })).toBeNull();
+  });
+
+  it('niemand fällig (nur fehlt, Rücksprache, gültig, angefordert): kein Knopf', async () => {
+    seite(grundlage(true), [{ ...FZ_STAND, personen: [TOM, PAULA, JONAS, LENA] }]);
+    oeffnen();
+    await screen.findByRole('table');
+    expect(knopf()).toBeNull();
+  });
+
+  it('Personen nicht sichtbar oder Art nicht fertig eingerichtet: kein Knopf', async () => {
+    seite(grundlage(true), [
+      { ...FZ_STAND, personen: null },
+      { ...JULEICA, id: 63, name: 'Zeugnis B', einstellungen: null, personen: [MIA] },
+    ]);
+    oeffnen();
+    await screen.findByText('Zeugnis B');
+    expect(screen.queryByRole('button', { name: /Fällige anschreiben/ })).toBeNull();
+  });
+
+  it('am Handy bleibt er (als Symbol mit Rahmen, das macht das CSS) – mit Namen für Screenreader', async () => {
+    handyAn();
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    expect(
+      await screen.findByRole('button', { name: 'Führungszeugnis: Fällige anschreiben' }),
+    ).toBeTruthy();
+  });
+
+  it('auch in der Ansicht „Braucht Aufmerksamkeit“ (dort stehen nur die Fälle, der Knopf bleibt)', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen('aufmerksam');
+    await screen.findByRole('table');
+    expect(knopf()).toBeTruthy();
+  });
+
+  it('ein Klick öffnet das Fenster dieser Art; Abbrechen schließt es, ohne etwas zu senden', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    fireEvent.click(knopf()!);
+    expect(await screen.findByRole('dialog', { name: /Fällige anschreiben/ })).toBeTruthy();
+    // Gelesen werden nur die Adressen der Fälligen (Mia).
+    await waitFor(() => expect(faelligeLaden).toHaveBeenCalledWith([3]));
+    await waitFor(() => within(screen.getByRole('dialog')).getByText('Mia Muster'));
+    fireEvent.click(screen.getByRole('button', { name: /Abbrechen/ }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(faelligeSenden).not.toHaveBeenCalled();
+  });
+
+  it('Senden: die Seite meldet den Satz und lädt neu', async () => {
+    faelligeSenden.mockResolvedValue({
+      gesendet: 1,
+      bestaetigt: 1,
+      adressen: 1,
+      vermerkGewollt: true,
+      vermerkt: ['Mia Muster'],
+      vermerkFehlt: [],
+      ohneAufgabe: [],
+      vermerkUnsicher: false,
+      text: '1 Mail verschickt, Vermerk an der Aufgabe.',
+    });
+    seite(grundlage(true), [FZ_STAND]);
+    const gemeldet = vi.fn();
+    render(<NachweisSeite onZurueck={() => {}} onGeaendert={gemeldet} />);
+    await screen.findByRole('table');
+    const vorher = arten.nachweiseSeiteLaden.mock.calls.length;
+    fireEvent.click(knopf()!);
+    await waitFor(() => within(screen.getByRole('dialog')).getByText('Mia Muster'));
+    fireEvent.click(screen.getByRole('button', { name: '1 Mail senden' }));
+    await waitFor(() =>
+      expect(gemeldet).toHaveBeenCalledWith({
+        text: '1 Mail verschickt, Vermerk an der Aufgabe.',
+        rueckgaengig: null,
+      }),
+    );
+    expect(arten.nachweiseSeiteLaden.mock.calls.length).toBeGreaterThan(vorher);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

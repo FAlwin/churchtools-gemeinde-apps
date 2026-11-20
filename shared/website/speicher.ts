@@ -30,6 +30,7 @@ import {
 import { teileBauen, textAusTeilen } from '../ct/teile';
 import type { Sperre } from '../ct/sperre';
 import { istSperrWert, sperreAusWerten, sperreWert } from './sperre';
+import { istStatusWert, statusAusWerten, statusWertIds, type SeitenStatus } from './status';
 import {
   einstellungenAlsText,
   einstellungenAusText,
@@ -131,6 +132,18 @@ export interface Problem {
   text: string;
 }
 
+/** Der gespeicherte Stand einer Einheit – nur aus dem Kopf; der Vergleich „Entwurf ↔ online“ (`freigabe.ts`) braucht nicht mehr. */
+export interface EinheitStand {
+  einheit: Einheit;
+  id: string;
+  /** Prüfsumme des Inhalts (`WebsiteKopf.stand`). */
+  stand: string;
+  /** ISO-Zeit der letzten Speicherung. */
+  zeit: string;
+  /** Liegen alle Teile zu diesem Stand da? Sonst lässt sich die Einheit nicht lesen – und nicht freigeben. */
+  lesbar: boolean;
+}
+
 export interface WebsiteStand {
   /** Alle lesbaren Seiten, in der Reihenfolge, in der sie angelegt wurden. */
   seiten: Seite[];
@@ -151,6 +164,13 @@ export interface WebsiteStand {
    * wie die Einstellungen.
    */
   einstellungenSperre: Sperre | null;
+  /**
+   * Wo steht welche Seite im Freigabe-Weg (Seiten-ID → Status, `status.ts`, W3b-2)? Kein Eintrag = Entwurf. **Nur für Seiten,
+   * die es gibt** – ein Status ohne Seite wird ignoriert (und beim nächsten Setzen eines Status aufgeräumt).
+   */
+  status: Record<string, SeitenStatus>;
+  /** Der Stand jeder Einheit (aus den Köpfen) – Grundlage des Vergleichs mit „Veröffentlicht“. */
+  staende: EinheitStand[];
 }
 
 /**
@@ -192,6 +212,9 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
     } else if (istTeil(x)) {
       const s = schluessel(x.einheit, x.id);
       teile.set(s, [...(teile.get(s) ?? []), x]);
+    } else if (istStatusWert(w)) {
+      // Wo steht die Seite im Freigabe-Weg? (`status.ts`) – gehört zur Website, ist aber kein Inhalt und kein Problem.
+      // Gelesen wird unten gesammelt (`statusAusWerten`).
     } else if (istSperrWert(w)) {
       // Wer bearbeitet gerade? (`sperre.ts`) – gehört zur Website, ist aber kein Inhalt und kein Problem.
       const sw = sperreWert(w);
@@ -255,7 +278,28 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
 
   let verwaist = 0;
   for (const [s, liste] of teile) if (!koepfe.has(s)) verwaist += liste.length;
-  return { seiten, menue, einstellungen, probleme, verwaist, sperren, einstellungenSperre };
+  const seitenIds = new Set(seiten.map((x) => x.id));
+  const status = Object.fromEntries(
+    Object.entries(statusAusWerten(werte)).filter(([id]) => seitenIds.has(id)),
+  );
+  const staende: EinheitStand[] = [...koepfe.entries()].map(([s, { kopf }]) => ({
+    einheit: kopf.einheit,
+    id: kopf.id,
+    stand: kopf.stand,
+    zeit: kopf.zeit,
+    lesbar: textAusTeilen(kopf.stand, teile.get(s) ?? []) !== null,
+  }));
+  return {
+    seiten,
+    menue,
+    einstellungen,
+    probleme,
+    verwaist,
+    sperren,
+    einstellungenSperre,
+    status,
+    staende,
+  };
 }
 
 /** **Die ganze Kategorie lesen** und zusammensetzen. Wirft bei jedem Fehler (vorübergehend ist nicht leer). */
@@ -304,6 +348,26 @@ function vollstaendig(
 }
 
 const VERWEIGERT = 'Du darfst die Website nicht bearbeiten.';
+
+/**
+ * **Der Text einer Einheit, wie er gespeichert ist** – aus einem frisch gelesenen Stand (`werteLesen`): Kopf, Teile
+ * zusammengesetzt. `null`, wenn es die Einheit nicht gibt oder sie nicht vollständig lesbar ist. Das ist, was die Freigabe
+ * **unverändert** nach „Veröffentlicht“ schreibt (`freigabe.ts`).
+ */
+export function einheitText(
+  werte: readonly Wert[],
+  einheit: Einheit,
+  id: string,
+): { text: string; stand: string; zeit: string } | null {
+  const da = dieEinheit(werte, einheit, id);
+  const kopf = da.koepfe[0]?.kopf;
+  if (!kopf) return null;
+  const text = textAusTeilen(
+    kopf.stand,
+    da.teile.map((t) => t.teil),
+  );
+  return text === null ? null : { text, stand: kopf.stand, zeit: kopf.zeit };
+}
 
 /**
  * **Eine Einheit speichern** (Seite, Menü oder Einstellungen) – `text` ist der Text aus `modell.ts` (`seiteAlsText` …).
@@ -397,6 +461,16 @@ export async function einheitLoeschen(
       await wertLoeschen(p, modul, kategorie, t.wert, VERWEIGERT);
     } catch (e) {
       console.warn('Website: Teil einer gelöschten Seite bleibt vorerst liegen', t.wert, e);
+    }
+  }
+  // Status der Seite (W3b-2): Ohne Seite zeigt er ins Leere – Aufräumen darf scheitern (er wird ohnehin ignoriert).
+  if (einheit === 'seite') {
+    for (const wert of statusWertIds(f2, id)) {
+      try {
+        await wertLoeschen(p, modul, kategorie, wert, VERWEIGERT);
+      } catch (e) {
+        console.warn('Website: Status einer gelöschten Seite bleibt vorerst liegen', wert, e);
+      }
     }
   }
   // Die Sperre der Seite (W3a-2) hat mit der Seite nichts mehr zu tun – Aufräumen darf scheitern (unschädlich).

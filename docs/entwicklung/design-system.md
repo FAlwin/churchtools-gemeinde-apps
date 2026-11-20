@@ -85,6 +85,20 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   in der Musik-App nur am Handy; „etwas anlegen“ groß grün / Handy Plus baut **`useNeuAnlegen`** für alle Seiten),
   `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).
+- **Ruhige Bedienung (Bauplan `bedienung-planung`, Scheibe B1, 20.11.2026):**
+  - **Stille Stufe:** `KopfKnopf still` – ohne Rand und Fläche, Schrift in der Knopffarbe, erst beim Darüberfahren
+    (nur Maus) hellblau hinterlegt; in Werkzeugzeilen der Normalfall (R2). `still` und `haupt`/`neu`/`gefahr`
+    schließen sich im Typ aus; `offen`/`aktiv` behalten ihre hellblaue Fläche. **Am Handy** (Grenze `HANDY_BREITE`)
+    bekommt der stille Knopf von selbst Rand und Fläche zurück (R12 – „kein Knopf ohne Rahmen“); dafür gibt es keine
+    eigene Angabe. Noch nutzt keine App die Stufe (ab B3).
+  - **`SuchLupe`** (`ui/bedienung`, aus der `SuchLeiste` der Protokolle gehoben; R7): Lupe rechts neben den Reitern,
+    ein Tipp klappt das Feld auf und setzt den Cursor hinein; ✕ oder Esc (`useEscape`) klappt zu. Die App hält
+    `offen` und `begriff` selbst. Feste Suchfelder auf Seiten (nicht in Fenstern) wechseln später darauf: Organigramm
+    `Personen`, Dienstplaner `Fokus`/`WerKann`, Anmeldungen `AnmeldungenReiter`/`BaukastenLeiste`, Musik-App
+    `LiedSucheKopf`.
+  - **Wächter `ui/design/bedienKnoepfe.test.ts`:** zählt je App rohe `<button>` und feste Pixelhöhen in Knopf-Regeln
+    und hält den Stand als Obergrenze fest. Steigt eine Zahl, nimm einen Baustein aus `ui/bedienung`; fällt sie,
+    verlangt der Test die niedrigere Obergrenze – **Obergrenzen nie erhöhen**.
 - **Lied suchen – ein Feld, eine Zeile, ein Angebot** (#378): `LiedSucheKopf` (nur das Suchfeld, Lupe
   innen, `m.eingabefeld`), **`LiedZeile`** (die Liedzeile mit Auge = Vorschau und Plus = einfügen; ohne
   `aktion` eine Pfeil-Zeile – dieselbe Optik für Bibliothek, SongSelect und Liedtexte, vorher drei

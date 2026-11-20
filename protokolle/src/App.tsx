@@ -3,6 +3,7 @@ import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/Erweiteru
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
+import { SuchLupe } from '@ui/bedienung/SuchLupe';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
 import { ladeStart, type Start } from './start';
@@ -10,7 +11,6 @@ import { Startseite } from './Startseite';
 import { ToDos } from './ToDos';
 import { Verwaltung } from './Verwaltung';
 import { Sitzungen, type SitzungsAuswahl } from './Sitzungen';
-import { SuchLeiste } from './SuchLeiste';
 import { Suche } from './Suche';
 import { protokollSchluessel } from '@shared/protokolle/sitzungen';
 import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
@@ -97,7 +97,8 @@ export function App() {
   const mitReitern = zustand.art === 'fertig' && reiter.length > 1;
   const lupe =
     zustand.art === 'fertig' ? (
-      <SuchLeiste
+      <SuchLupe
+        platzhalter="Beschlüsse, To-Dos, Protokolle …"
         offen={suche.offen}
         begriff={suche.begriff}
         onOeffnen={() => setSuche({ offen: true, begriff: '' })}

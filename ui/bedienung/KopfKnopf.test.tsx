@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { KopfKnopf, KopfLink, KopfZurueck } from './KopfKnopf';
+import { HANDY_BREITE } from './useMedienAbfrage';
 
 /** Seitenkopf im ChurchTools-Stil (Scheibe S, 26.10.2026): Knöpfe mit Rahmen, Symbol und Beschriftung. */
 describe('KopfKnopf', () => {
@@ -69,6 +72,73 @@ describe('KopfKnopf', () => {
     cleanup();
     render(<KopfKnopf onClick={vi.fn()} label="Zurück" symbol={<b>‹</b>} />);
     expect(screen.getByRole('button', { name: 'Zurück' }).textContent).toBe('‹Zurück');
+  });
+});
+
+describe('KopfKnopf – stille Stufe (R2, B1)', () => {
+  const still = (extra: Record<string, unknown> = {}) => {
+    render(<KopfKnopf onClick={vi.fn()} label="Filter" still symbol={<b>F</b>} {...extra} />);
+    return screen.getByRole('button', { name: 'Filter' });
+  };
+
+  it('`still` trägt die stille Klasse und keine der lauten Stufen', () => {
+    const knopf = still();
+    expect(knopf.className).toMatch(/still/);
+    expect(knopf.className).not.toMatch(/haupt|neu|gefahr|aktiv|offen/);
+    cleanup();
+  });
+
+  it('ohne `still` kein stiller Knopf', () => {
+    render(<KopfKnopf onClick={vi.fn()} label="Filter" symbol={<b>F</b>} />);
+    expect(screen.getByRole('button', { name: 'Filter' }).className).not.toMatch(/still/);
+    cleanup();
+  });
+
+  it('verträgt sich mit `nurSymbol`: nur das Symbol, Name bleibt', () => {
+    const knopf = still({ nurSymbol: true });
+    expect(knopf.className).toMatch(/still/);
+    expect(knopf.className).toMatch(/nurSymbol/);
+    expect(knopf.textContent).toBe('F');
+    cleanup();
+  });
+
+  it('verträgt sich mit `menuOffen`, `offen` und `aktiv` – beide Klassen stehen, das Menü ist für Screenreader offen', () => {
+    const knopf = still({ menuOffen: true, offen: true });
+    expect(knopf.className).toMatch(/still/);
+    expect(knopf.className).toMatch(/offen/);
+    expect(knopf.getAttribute('aria-expanded')).toBe('true');
+    cleanup();
+    const gilt = still({ aktiv: true });
+    expect(gilt.className).toMatch(/still/);
+    expect(gilt.className).toMatch(/aktiv/);
+    expect(gilt.getAttribute('aria-pressed')).toBe('true');
+    cleanup();
+  });
+
+  it('Widerspruch: `still` mit `haupt`/`neu`/`gefahr` – der Typ verbietet es, zur Laufzeit gewinnt die lautere Stufe', () => {
+    for (const stufe of ['haupt', 'neu', 'gefahr'] as const) {
+      render(
+        // @ts-expect-error – `still` und `${stufe}` schließen sich im Typ aus
+        <KopfKnopf onClick={vi.fn()} label="X" still {...{ [stufe]: true }} symbol={<b>X</b>} />,
+      );
+      const knopf = screen.getByRole('button', { name: 'X' });
+      expect(knopf.className).toMatch(new RegExp(stufe));
+      expect(knopf.className).not.toMatch(/still/);
+      cleanup();
+    }
+  });
+
+  it('R12: am Handy bekommt der stille Knopf einen Rahmen – in derselben Grenze wie `HANDY_BREITE`', () => {
+    const scss = readFileSync(
+      resolve(process.cwd(), '../ui/bedienung/KopfKnopf.module.scss'),
+      'utf8',
+    );
+    const grenze = /\(max-width:\s*(\d+)px\)/.exec(HANDY_BREITE)?.[1];
+    expect(grenze).toBeDefined();
+    const block = new RegExp(
+      `@media \\(max-width: ${grenze}px\\) \\{\\s*\\.knopf\\.still \\{[^}]*border-color: var\\(--border\\)`,
+    );
+    expect(scss).toMatch(block);
   });
 });
 

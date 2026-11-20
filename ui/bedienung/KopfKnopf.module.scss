@@ -114,6 +114,23 @@
   }
 }
 
+// Still (R2, „Ruhige Bedienung“ B1): ohne Rand und ohne Fläche, Schrift in der Knopffarbe. Das Hellblau beim Darüberfahren
+// (nur Maus) kommt vom gemeinsamen `aktionKnopf`. Steht vor `.offen`/`.aktiv`, damit „Menü offen“ und „hier gilt etwas“
+// ihre hellblaue Fläche behalten.
+.still {
+  border-color: transparent;
+  background: transparent;
+}
+
+// R12/E8: Am Handy steht kein Knopf ohne Rahmen – dort bekommt der stille Knopf Rand und Fläche der Neben-Stufe zurück.
+// Dieselbe Grenze wie oben (`HANDY_BREITE`); `KopfKnopf.test.tsx` prüft, dass beide übereinstimmen.
+@media (max-width: 759px) {
+  .knopf.still {
+    border-color: var(--border);
+    background: var(--surface3);
+  }
+}
+
 // Sein Fenster ist offen (Aussehen, Tempo) – hellblau ohne blauen Rand; den Rand trägt „hier gilt etwas“ (B1).
 .offen {
   background: var(--blue-soft);

@@ -458,6 +458,19 @@ describe('Matrix am Handy – Ablauf (E6-6a)', () => {
     expect([...new Set(c.gelesen)]).toEqual(['10']);
   });
 
+  it('am Handy ist „Bearbeiten“ der KopfKnopf wie in der Musik-App statt des frei stehenden Stifts; im Bearbeiten „Fertig“ (Abnahme 20.11.2026)', async () => {
+    ct();
+    zeige({ handy: true });
+    await screen.findByText(/Tom Test/);
+    const knopf = screen.getByRole('button', { name: 'Ablauf bearbeiten – Gottesdienst' });
+    expect(knopf.textContent).toContain('Bearbeiten');
+    fireEvent.click(knopf);
+    const fertig = screen.getByRole('button', { name: 'Fertig – Gottesdienst' });
+    expect(fertig.textContent).toContain('Fertig');
+    fireEvent.click(fertig);
+    expect(screen.getByRole('button', { name: 'Ablauf bearbeiten – Gottesdienst' })).toBeTruthy();
+  });
+
   it('Bearbeiten wie in der Termin-Ansicht – aber ohne „Neu aufsetzen …“', async () => {
     ct();
     // Mit dem Vorlagen-Recht für den Kalender: Der Link fehlt trotzdem – es liegt nicht am Recht, sondern an der Matrix.

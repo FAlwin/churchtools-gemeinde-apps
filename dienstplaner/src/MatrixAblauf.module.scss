@@ -29,42 +29,6 @@
   margin-left: auto;
 }
 
-// Am Handy: Stift wie der Zauberstab der Dienstgruppen – blau, ohne Rahmen.
-.stift {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: var(--r-ctrl);
-  background: transparent;
-  color: var(--blue);
-  cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      background: var(--surface2);
-    }
-  }
-}
-
-// Am Handy: „Fertig“ – blau gefüllt wie der Haken in der Termin-Ansicht. Am Rechner `KopfKnopf` (E6-6c).
-.fertig {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--r-ctrl);
-  background: var(--blue);
-  color: #fff;
-  font: 700 12.5px var(--ui);
-  cursor: pointer;
-}
-
 .schloss {
   display: inline-flex;
   margin-right: 4px;

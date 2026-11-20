@@ -327,10 +327,11 @@ export function NachweisArtFenster({
       {!art && ersteinrichtung && (
         <p className={f.hinweis}>
           Beim ersten Speichern legt die Erweiterung in ChurchTools die Gruppenart „Nachweis“ an und
-          setzt die Rechte der Leiter-Rolle und an der Teilnehmer-Rolle „Gruppeninfos sehen“ (damit
-          sie ihren Antrag unter „Meine Gruppen“ finden – sie sehen dann die Gruppe und die Namen
-          der anderen Mitglieder, aber keine Angaben oder Ergebnisse). Das darf nur, wer
-          „Berechtigungen verwalten“ hat – sonst sagt dir das Fenster, wer es tun muss.
+          setzt die Rechte der Leiter-Rolle (dazu „Anmeldungen sehen“, damit die Vertrauenspersonen
+          in die Erweiterung kommen) und an der Teilnehmer-Rolle „Gruppeninfos sehen“ (damit sie
+          ihren Antrag unter „Meine Gruppen“ finden – sie sehen dann die Gruppe und die Namen der
+          anderen Mitglieder, aber keine Angaben oder Ergebnisse). Das darf nur, wer „Berechtigungen
+          verwalten“ hat – sonst sagt dir das Fenster, wer es tun muss.
         </p>
       )}
 

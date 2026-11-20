@@ -16,6 +16,16 @@ export class FalschesCt {
   typen: { id: number; name: string; sortKey: number }[] = [];
   rollen: { id: number; groupTypeId: number; isLeader: boolean; isDefault?: boolean }[] = [];
   rechte = new Map<number, { authId: number; dataId: number | null; isInherited?: boolean }[]>();
+  /** Antwort von `GET /permissions/definitions` (Test-Instanz: Modul „anmeldungen“, Recht „view“ = 2020). */
+  definitionen: unknown = {
+    modules: [
+      {
+        key: 'anmeldungen',
+        name: 'Anmeldungen',
+        permissions: [{ authId: 2020, key: 'view', valueType: 'boolean' }],
+      },
+    ],
+  };
   aufrufe: Aufruf[] = [];
   /** Schreibaufrufe, die „200“ sagen und nichts übernehmen (`"PUT /permissions"` genügt als Teil von „METHODE pfad“). */
   ignoriere: string[] = [];
@@ -30,6 +40,8 @@ export class FalschesCt {
     await Promise.resolve();
     let m: RegExpExecArray | null;
     if (pfad === '/group/grouptypes') return JSON.parse(JSON.stringify(this.typen)) as T;
+    if (pfad === '/permissions/definitions')
+      return JSON.parse(JSON.stringify(this.definitionen)) as T;
     if (pfad === '/group/roles') return JSON.parse(JSON.stringify(this.rollen)) as T;
     if ((m = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad)))
       return JSON.parse(JSON.stringify(this.rechte.get(Number(m[1])) ?? [])) as T;

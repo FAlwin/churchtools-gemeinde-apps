@@ -16,6 +16,9 @@ import type { MailSender } from './erinnernSenden';
 import { Planen } from './Planen';
 import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
+import { daten as entwuerfeDaten, nachgebaut } from './entwurfAnschluss.testutil';
+import { leereListe, pauseSetzen, type Personenliste } from '@shared/dienstplan/personenliste';
+import { liste } from '@shared/dienstplan/personenliste.testutil';
 
 /**
  * E5c-5 „Erinnern“ im Fenster: Knopf, Dienstgruppen mit Zahl, gesperrte Gruppe mit Grund, Empfänger mit Abwählen und
@@ -113,6 +116,8 @@ interface Aufbau {
   antworten?: AntwortenLader;
   erinnern?: boolean;
   start?: ReturnType<typeof startFuer>;
+  /** Die Personenlisten je Dienstgruppe (PL-3: Pause), wie sie aus den Entwürfen kommen. */
+  personenlisten?: [number, Personenliste][];
 }
 function zeige(o: Aufbau = {}) {
   const senden = o.senden ?? vi.fn<MailSender>(() => Promise.resolve({}));
@@ -140,6 +145,13 @@ function zeige(o: Aufbau = {}) {
       ladePersonen={o.personen ?? (() => Promise.resolve(personenStand()))}
       ladeAntworten={o.antworten ?? (() => Promise.resolve(ANTWORTEN()))}
       erinnern={o.erinnern === false ? undefined : { senden, link: () => LINK }}
+      {...(o.personenlisten
+        ? {
+            entwuerfe: nachgebaut({
+              laden: () => Promise.resolve(entwuerfeDaten([], {}, o.personenlisten)),
+            }),
+          }
+        : {})}
     />,
   );
   return { senden, ...r };
@@ -281,6 +293,56 @@ describe('Das Fenster: Gruppen, Empfänger, Vorschau', () => {
       within(fenster).getByText('2 bekommen eine eigene Mail mit ihren offenen Terminen'),
     ).toBeTruthy();
     expect(sendeKnopf(fenster, /^An 2 Personen senden$/)).toBeTruthy();
+  });
+
+  describe('Pause (PL-3)', () => {
+    const pauseVon = (personId: number, bis?: string): Personenliste =>
+      liste(pauseSetzen(leereListe(), personId, bis ? { bis } : {}));
+
+    it('wer in der Personenliste der Dienstgruppe pausiert, steht nicht in der Liste; ein ruhiger Hinweis nennt die Zahl', async () => {
+      const { fenster } = await oeffnen({ personenlisten: [[4, pauseVon(ANNA.id)]] });
+      await geladen(fenster);
+      await screen.findByText('1 Person wird wegen Pause nicht erinnert.');
+      const z = zeilen(fenster);
+      expect(z).toHaveLength(1);
+      expect(z[0].textContent).toContain('Carla Test');
+      expect(sendeKnopf(fenster, /^An 1 Person senden$/)).toBeTruthy();
+      expect(within(fenster).getByRole('button', { name: 'Musik · 1' })).toBeTruthy();
+    });
+
+    it('ohne Pause kein Hinweis; eine Pause aus der Liste einer anderen Dienstgruppe oder vor den Terminen wirkt nicht', async () => {
+      const { fenster } = await oeffnen({
+        personenlisten: [
+          [3, pauseVon(ANNA.id)], // Technik, nicht Musik
+          [4, pauseVon(CARLA.id, '2026-10-01')], // endet vor den Terminen
+        ],
+      });
+      await geladen(fenster);
+      await waitFor(() => expect(zeilen(fenster)).toHaveLength(2));
+      expect(within(fenster).queryByText(/wegen Pause/)).toBeNull();
+    });
+
+    it('pausieren alle Offenen: niemand in der Liste, Hinweis nennt die Zahl, Überschrift sagt „muss niemand erinnert werden“', async () => {
+      const l = liste(pauseSetzen(pauseSetzen(leereListe(), ANNA.id, {}), CARLA.id, {}));
+      const { fenster } = await oeffnen({ personenlisten: [[4, l]] });
+      await geladen(fenster);
+      await screen.findByText('2 Personen werden wegen Pause nicht erinnert.');
+      expect(
+        within(fenster).getByText('In den gewählten Dienstgruppen muss niemand erinnert werden.'),
+      ).toBeTruthy();
+      expect(within(fenster).queryByText(/haben alle geantwortet/)).toBeNull();
+      expect(sendeKnopf(fenster, /^An 0 Personen senden$/)).toBeTruthy();
+    });
+
+    it('der Versand geht nicht an die pausierte Person', async () => {
+      const { fenster, senden } = await oeffnen({ personenlisten: [[4, pauseVon(ANNA.id)]] });
+      await geladen(fenster);
+      await screen.findByText('1 Person wird wegen Pause nicht erinnert.');
+      (senden as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { sentRecipientIds: [11] } });
+      fireEvent.click(sendeKnopf(fenster, /^An 1 Person senden$/));
+      await screen.findByText('1 Mail verschickt.');
+      expect(bodies(senden).map((b) => b.recipients)).toEqual([[11]]);
+    });
   });
 
   it('Abwählen nimmt die Person aus dem Versand; mit nur noch einer heißt es „An 1 Person senden“', async () => {

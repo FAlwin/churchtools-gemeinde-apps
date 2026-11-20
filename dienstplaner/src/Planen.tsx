@@ -867,6 +867,7 @@ export function Planen({
           ladePersonen={ladePersonen}
           ladeAntworten={ladeAntworten}
           anschluss={erinnern}
+          personenlisten={daten?.personenlisten}
           onClose={() => setErinnernOffen(false)}
         />
       )}

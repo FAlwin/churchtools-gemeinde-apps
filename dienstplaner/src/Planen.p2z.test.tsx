@@ -12,6 +12,8 @@ import { ladeWerKann } from './ladeWerKann';
 import { Planen } from './Planen';
 import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
+import { leereListe, pauseSetzen } from '@shared/dienstplan/personenliste';
+import { liste } from '@shared/dienstplan/personenliste.testutil';
 
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 
@@ -253,6 +255,29 @@ describe('Personen – Zauberstab im Block-Kopf (P2z)', () => {
     expect(offen(2)).toEqual([]);
     // Ton ist jetzt überall voll: kein Zauberstab mehr im Ton-Block, Licht bleibt.
     await waitFor(() => expect(knopfName()).toEqual([zauber('Licht')]));
+  });
+
+  it('Pause (PL-3): die Liste der Dienstgruppe kommt im Fenster an – Daniel pausiert, wird nicht vorgeschlagen; die Liste einer anderen Gruppe wirkt nicht', async () => {
+    vi.mocked(ladeWerKann).mockResolvedValue(KANDIDATEN);
+    const pauseDaniel = liste(pauseSetzen(leereListe(), 12, {}));
+    // Technik (3): Pause wirkt – Daniel steht unter „Passt eher nicht“.
+    const mit = zeige({
+      entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([], {}, [[3, pauseDaniel]])) }),
+    });
+    await warteAufRaster();
+    fireEvent.click(await screen.findByRole('button', { name: zauber('Ton') }));
+    await screen.findByText('Automatische Planung · Ton');
+    await screen.findAllByRole('option', { name: 'Daniel Test – Pause' });
+    mit.unmount();
+    // Dieselbe Pause in der Liste einer ANDEREN Gruppe (4): Technik bleibt unberührt.
+    zeige({
+      entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([], {}, [[4, pauseDaniel]])) }),
+    });
+    await warteAufRaster();
+    fireEvent.click(await screen.findByRole('button', { name: zauber('Ton') }));
+    await screen.findByText('Automatische Planung · Ton');
+    await screen.findAllByRole('option', { name: /^Daniel Test \(/ });
+    expect(screen.queryAllByRole('option', { name: 'Daniel Test – Pause' })).toHaveLength(0);
   });
 
   it('Handy: der Knopf ist im Block-Kopf auch am schmalen Bildschirm da und öffnet dasselbe Fenster', async () => {

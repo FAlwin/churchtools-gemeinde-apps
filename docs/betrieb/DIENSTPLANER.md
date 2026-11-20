@@ -356,7 +356,8 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   „Wann kann ich?“ gerade nicht geladen“ (mit „Nochmal versuchen“) – nie alle unter „Keine Antwort“; die Kandidaten warten nicht auf
   die Antworten, nur auf deren Ergebnis (geladen oder gescheitert). Geladen wird mit **demselben Lader wie „Personen“** (`AntwortenLader`,
   in `App.tsx` durch `Planen`/`TerminAnsicht` → `useEinteilen` → `WerKann`/`ZauberstabFach`), je Fenster für die eine Dienstgruppe des Platzes.
-  **Zauberstab** (`zauberstab.ts`): bei sichtbaren Antworten gehen **Stufen vor Punkten** – Ja, dann Vielleicht, dann keine Antwort; innerhalb
+  **Zauberstab** (`zauberstab.ts`; **Pause seit PL-3:** wer in der Personenliste der Dienstgruppe an dem Termin pausiert, wird nie vorgeschlagen,
+  steht unter „Passt eher nicht“ mit „Pause bis …“ und in der Stufe „Kann nicht“; von Hand wählbar): bei sichtbaren Antworten gehen **Stufen vor Punkten** – Ja, dann Vielleicht, dann keine Antwort; innerhalb
   einer Stufe wie bisher Punktzahl, `imLauf`, Name; die Grenze −100 bleibt; wer „nur für andere Dienste“ geantwortet hat, wird für diesen
   Dienst nicht genommen (`laufGrund: 'andere-dienste'`). Ohne sichtbare Antworten oder beim Ladefehler rechnet er wie früher (Hinweis im Fenster).
   Das Fenster zeigt die Antwort hinter dem Namen („Ben (0×) – Ja“). Dienstnamen für „nur für Gesang“ kommen aus dem Plan (nur Dienste, die
@@ -378,7 +379,15 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   Personenliste“ statt „Oben: frei und selten dran“; wer pausiert, steht unter „Kann nicht / abwesend“ bzw. am Ende der einen Liste, blass,
   mit „Pause bis …“; Kürzel grau hinter dem Namen. **PDF „Personen“:** bei „Eine Gruppe“ in der Reihenfolge der Liste, beim ganzen Plan
   alphabetisch; die Tags mit vollem Namen grau hinter dem Namen, gilt einer nur für einen Teil der gezeigten Dienste der Person, steht der Dienst
-  dahinter; „Je Person“ unverändert. „Pause wirkt“ (Erinnern, Zauberstab) kommt mit PL-3.
+  dahinter; „Je Person“ unverändert. **„Pause wirkt“ (PL-3, 20.11.2026):** Erinnern und Zauberstab nehmen Pausierte aus – siehe unten und bei
+  „Erinnern“.
+- **Pause wirkt (PL-3, 20.11.2026):** Wer in der Personenliste einer Dienstgruppe pausiert (`pauseAm`, „bis“ einschließlich, ohne „bis“ unbefristet),
+  wird **für diese Dienstgruppe** an den Tagen der Pause (a) **nicht erinnert**, (b) vom **Zauberstab nie vorgeschlagen** und (c) steht in „Wer kann?“ unter
+  „Kann nicht“ (seit PL-1). **Selbst antworten und sich einteilen lassen geht weiter**; eine Pause einer anderen Dienstgruppe wirkt nicht – die Liste
+  gehört zum Platz bzw. zur Gruppe, nicht zur Person. Die Regel steht nur in `shared/dienstplan/personenliste.ts` (`pauseAm`); Erinnern nutzt sie
+  direkt, Zauberstab und „Wer kann?“ über `pauseDerPerson` (`werKann.ts`). Die Liste kommt aus `EntwuerfeDaten.personenlisten` (je Dienstgruppe) in
+  `ErinnernFenster` (Prop `personenlisten`, von `Planen`) und `ZauberstabFach` (Prop `personenliste`, von `useEinteilen`). Nicht betroffen: der
+  Hinweis beim Senden (`sendeHinweise.ts`) und „Ansehen und senden“ – wer pausiert, kann bewusst trotzdem eingeteilt werden.
 - **Die Personenliste bearbeiten (PL-2, 20.11.2026, Entwurf `personenliste.html`, Variante B):** **⋯ → „Liste bearbeiten“** (nur, wo man die Liste
   mindestens einer gezeigten Dienstgruppe ändern darf: `schubladenStand === 'bereit'`, dieselben Rechte wie bei den Entwürfen; wechselt nach
   „Personen“). Im Modus (`useListeBearbeiten`, `Sicht.liste`) steht ein blaues Band mit „Tags verwalten …“ und „Fertig“; jede **obere** Zeile einer
@@ -440,6 +449,11 @@ Eintrag **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planb
   Vielleicht (auch „nur bestimmte Dienste“, selbst wenn es den eigenen Dienst nicht nennt) und Nein = Abwesenheit in ChurchTools
   (dieselbe Regel `decktTermin` wie überall). Wer an dem Termin **in dieser Gruppe schon eingeteilt** ist (zugesagt oder angefragt),
   fehlt dort nicht.
+- **Pause (PL-3):** Wer in der **Personenliste dieser Dienstgruppe** an dem Termin pausiert (`pauseAm`), fehlt dort nicht – ist dadurch kein Termin mehr
+  offen, gibt es **keine Mail**; die Mail nennt nur die nicht pausierten offenen Termine. Eine Pause aus der Liste einer **anderen** Dienstgruppe zählt
+  nicht. Im Fenster sagt ein ruhiger Hinweis „N Personen werden wegen Pause nicht erinnert.“ (nur wenn N > 0; wer über eine andere gewählte Gruppe doch
+  eine Mail bekommt, zählt nicht, `pausiertAusgelassen`); sind alle Offenen pausiert, steht „… muss niemand erinnert werden.“ Antworten kann die
+  Person trotzdem selbst. Das Ergebnis je Gruppe nennt die Ausgelassenen (`GruppenErgebnis.pausiert`).
 - **Gesperrte Gruppe:** Ist die Lage unsicher – Antworten oder Abwesenheiten nicht sichtbar, Mitglieder verborgen, Laden
   gescheitert –, ist die Gruppe **gesperrt**, mit kurzem Grund („Antworten nicht sichtbar“); nie wird so getan, als fehlten alle.
   Vorübergehende Gründe bieten „Erneut versuchen“.

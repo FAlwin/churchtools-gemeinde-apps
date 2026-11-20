@@ -891,6 +891,8 @@ function speicherDemo(fall: string) {
   // Die Personenlisten (PL-1) – ein Wert je Dienstgruppe in der Entwurfs-Schublade, erkennbar an `art`.
   // Musik: Reihenfolge Clara · Anna · Spike · Alwin · Ben; Tags Begleitung (B) und Leitung (L) für Gesang; Anna (46) macht
   // bis in 10 Tagen Pause (gilt nicht für den ganzen Zeitraum: bleibt an ihrer Stelle, nur mit „Pause bis …“).
+  // PL-3: Pause wirkt – Anna wird vom Zauberstab für die ersten Termine nicht vorgeschlagen; Clara (52) pausiert bis zum
+  // 27.11. und bekommt dafür keine Erinnerung (Erinnern: „1 Person wird wegen Pause nicht erinnert.“).
   const personenlisteMusik = {
     art: 'dienstplaner-personenliste',
     fassung: 1,
@@ -902,10 +904,11 @@ function speicherDemo(fall: string) {
       { id: 'l', name: 'Leitung', kuerzel: 'L' },
     ],
     tagsVon: { '9|52': ['b', 'l'], '9|19': ['b'] },
-    pause: { '46': { bis: tagVon(10) } },
+    pause: { '46': { bis: tagVon(10) }, '52': { bis: tagVon(7) } },
   };
   // Technik: Reihenfolge Anna · Alwin · Spike · David · Ben; Tags Einweisung (E) und Springer (S) – Anna ist nur im Ton
-  // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass.
+  // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass. Anna pausiert hier bis nach dem 1. Dezember –
+  // der Zauberstab schlägt sie für den Ton am 01.12. nicht vor (PL-3), obwohl sie die beste Punktzahl hat.
   const personenlisteTechnik = {
     art: 'dienstplaner-personenliste',
     fassung: 1,
@@ -917,7 +920,7 @@ function speicherDemo(fall: string) {
       { id: 's', name: 'Springer', kuerzel: 'S' },
     ],
     tagsVon: { '6|46': ['e'], '6|19': ['s'], '7|19': ['s'] },
-    pause: { '49': {} },
+    pause: { '49': {}, '46': { bis: tagVon(12) } },
   };
   const alt = (eventId: number, index: number | null, name: string, personId: number) => ({
     ...spike,

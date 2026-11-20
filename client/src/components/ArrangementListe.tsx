@@ -14,6 +14,7 @@
  */
 import type { ArrangementAnsicht } from '@shared/types/index';
 import { Icon } from '@ui/icons/icons';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { unterzeile } from '@ui/lied/arrangementFormular';
 import styles from './ArrangementListe.module.scss';
 import neu from '@ui/lied/NewSongSheet.module.scss';
@@ -37,7 +38,7 @@ export function ArrangementListe({ arrangements, onOeffnen, onNeu }: Arrangement
               <span className={styles.text}>
                 <span className={styles.name}>
                   {arr.name}
-                  {arr.isDefault && <span className={styles.standard}>Standard</span>}
+                  {arr.isDefault && <Etikett ton="blau">Standard</Etikett>}
                 </span>
                 {unter && <span className={styles.unter}>{unter}</span>}
               </span>

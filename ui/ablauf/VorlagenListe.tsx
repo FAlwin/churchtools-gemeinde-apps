@@ -8,6 +8,7 @@
  */
 import type { VorlagenGruppe } from '@shared/ct/ablaufVorlagenListe';
 import { Icon } from '../icons/icons';
+import { Etikett } from '../bedienung/Etikett';
 import { vorlagenMeta } from './vorlagenMeta';
 import styles from './VorlagenListe.module.scss';
 
@@ -40,9 +41,9 @@ export function VorlagenListe({
                 {g.vorlagen.length === 1 ? '1 Vorlage' : `${g.vorlagen.length} Vorlagen`}
               </span>
             ) : (
-              <span className={styles.nurAnsehen}>
+              <Etikett title="Du darfst in diesem Kalender Vorlagen nur ansehen">
                 <Icon name="lock" size={12} stroke={2.2} /> nur ansehen
-              </span>
+              </Etikett>
             )}
           </div>
           {g.vorlagen.map((v) => (

@@ -100,7 +100,10 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   - **`Etikett`** (`ui/bedienung`, aus `anmeldungen/src/Etikett.tsx` gehoben; R9/E24): das eine Status-Etikett – eine Kapsel, vier Töne
     (`neutral` grau, `blau` deine Rolle/in Arbeit/wartet, `gruen` fertig, `rot` Aufmerksamkeit). Nur Anzeige: Was man antippt, ist ein
     Knopf; ein Zähler am Reiter ist `ReiterZaehler`. Wächter `etiketten.test.ts` zählt je App die Kapseln (`border-radius: 999px`) in
-    den Stildateien und kennt nur noch Knöpfe/Wähler (Obergrenzen, nie erhöhen).
+    den Stildateien und kennt nur noch Knöpfe/Wähler (Obergrenzen, nie erhöhen). Seit B8c auch für die Musik-App (`client`): „Kein Ablauf“,
+    „Standard“ (Arrangement) und „nur ansehen“ (Ablaufvorlagen) sind `Etikett`; Tonart-Pille (Daten), Wähler-`chip` und Ablauf-Tags bleiben.
+    Die Musik-App zeichnet ihre Reiter selbst (`TabBar` → `ReiterLeiste`): `appName` setzt den kleinen App-Namen über die Reiter, nur
+    oben (iPad/Rechner), nie am Handy.
   - **`SuchLupe`** (`ui/bedienung`, aus der `SuchLeiste` der Protokolle gehoben; R7): Lupe rechts neben den Reitern,
     ein Tipp klappt das Feld auf und setzt den Cursor hinein; ✕ oder Esc (`useEscape`) klappt zu. Die App hält
     `offen` und `begriff` selbst. Feste Suchfelder auf Seiten (nicht in Fenstern) wechseln später darauf: Organigramm

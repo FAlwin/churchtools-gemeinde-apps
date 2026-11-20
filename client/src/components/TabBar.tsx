@@ -3,6 +3,9 @@ import type { IconName } from '@ui/icons/icons';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { scrolleZumAnfang } from '../hooks/useZumAnfang';
 
+/** Der Name oben über den Reitern (R8/E24) – fest, nicht `site.appName` („Churchtools Musik App“): kurz wie „Dienstplaner“. */
+export const APP_NAME = 'Musik-App';
+
 export type TabId = 'termine' | 'lieder' | 'verfuegbarkeit' | 'mehr';
 
 const TAB_META: Record<TabId, { label: string; icon: IconName }> = {
@@ -47,6 +50,7 @@ export function TabBar({ active, tabs, dimmed = [], onChange, oben, rechts }: Ta
       // Die Reiter der Musik-App stehen oben immer am Bildschirmrand (Platz für die Statusleiste, 12.11.2026).
       amRand={oben}
       rechts={rechts}
+      appName={oben ? APP_NAME : undefined}
     />
   );
 }

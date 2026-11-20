@@ -277,6 +277,9 @@ export function BlattKopf({
             label={label}
             kurz={kurz}
             raster={kompakt}
+            // Werkzeuge einer Werkzeugzeile sind still (R2, B8) – am iPad/Rechner. Am Handy (kompakt, flach) behalten sie
+            // ihren Rahmen: Das Handy quer ist breiter als die Grenze des Stylesheets, dort wäre ein stiller Knopf rahmenlos (R12).
+            still={aufbau === 'breit'}
             nurSymbol={flach}
             symbol={werkzeugSymbol(id, drawMode, kompakt)}
             aktiv={
@@ -315,7 +318,9 @@ export function BlattKopf({
     wurzel.setProperty('--werkzeug-verschub', '-50% 0');
   }, [offenesWerkzeug, aufbau]);
 
-  const vollbild = onVollbild ? <VollbildKopfKnopf an={vollbildAn} onClick={onVollbild} /> : null;
+  const vollbild = onVollbild ? (
+    <VollbildKopfKnopf an={vollbildAn} onClick={onVollbild} still={aufbau === 'breit'} />
+  ) : null;
   const leiste = (
     <AblaufLeiste
       lieder={lieder}

@@ -1,0 +1,38 @@
+// Das leise „+“ mitten im Inhalt (R10, B8) – gestrichelt und grau; beim Darüberfahren (nur Maus) und beim Fokus blau.
+// Entwurf `musik-app-ruhiger-v5.html` (`.frei-leise`): 1px gestrichelt, 13px Schrift, Ecken wie die übrigen Knöpfe.
+.feld {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border: 1px dashed var(--text3);
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: var(--blue);
+      color: var(--blue-ink);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

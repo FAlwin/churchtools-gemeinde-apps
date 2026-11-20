@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import type { Service } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
-import { Segment } from '@ui/bedienung/Segment';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from '@ui/bedienung/Spinner';
 import { Toast } from '../components/Toast';
@@ -78,6 +82,7 @@ export function Agenda({
   kannAblaufAnlegen = () => false,
   darfAblaufImKalender = () => false,
 }: AgendaProps) {
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [monthsBack, setMonthsBack] = useState(1);
   // Gerade laufende „Für offline speichern"-Aktion (Termin-Zeile) → Spinner statt Knopf.
@@ -138,14 +143,19 @@ export function Agenda({
     }
   }
 
-  /** Eine Veranstaltung ohne Ablauf: graue Kachel, „Kein Ablauf", rechts „Ablauf anlegen". */
+  /**
+   * Eine Veranstaltung ohne Ablauf: graue Kachel, rechts das leise „+ Ablauf anlegen“ (R10, B8: gestricheltes Feld statt
+   * Etikett „Kein Ablauf“ und Knopf „+ Anlegen“ – beides sagte dasselbe). Wer keinen Ablauf anlegen darf, sieht stattdessen
+   * das Etikett: Es ist dann die einzige Auskunft, warum die Zeile grau ist.
+   */
   function ohneAblaufZeile(s: Service) {
+    const darf = kannAblaufAnlegen(s);
     return (
       <div key={s.id} className={styles.card}>
         <button
           className={styles.cardMain}
           onClick={() =>
-            kannAblaufAnlegen(s)
+            darf
               ? setAnlegenFuer(s)
               : showToast('Für diese Veranstaltung gibt es noch keinen Ablauf.')
           }
@@ -153,21 +163,24 @@ export function Agenda({
           <DatumKachel tag={s.day} monat={s.month} gedimmt />
           <div className={styles.info}>
             <div className={`${styles.svcName} ${styles.svcNameOhne}`}>{s.name}</div>
-            {/* „Kein Ablauf" VORN: Am Handy ist die Zeile schmal, und genau das muss sichtbar bleiben. */}
             <div className={styles.meta}>
-              <span className={styles.keinAblauf}>Kein Ablauf</span>
-              <span>{s.weekday.slice(0, 2)}</span>
+              {!darf && (
+                <>
+                  <span className={styles.keinAblauf}>Kein Ablauf</span>
+                  <span className={styles.dotSep}>·</span>
+                </>
+              )}
+              <span>{darf ? s.weekday : s.weekday.slice(0, 2)}</span>
               <span className={styles.dotSep}>·</span>
               <span>{s.time}</span>
             </div>
           </div>
-          {kannAblaufAnlegen(s) && (
-            <span className={styles.ablaufAnlegen} aria-label="Ablauf anlegen">
-              <Icon name="plus" size={14} stroke={2.4} />
-              Anlegen
-            </span>
-          )}
         </button>
+        {darf && (
+          <div className={styles.leisesPlus}>
+            <LeisesPlus label="Ablauf anlegen" onClick={() => setAnlegenFuer(s)} />
+          </div>
+        )}
       </div>
     );
   }
@@ -263,31 +276,37 @@ export function Agenda({
   return (
     <SeitenGeruest
       titel="Termine"
-      // Kommende/Vergangene steht an der Stelle der Überschrift – „Termine“ sagt schon der Reiter (28.10.2026).
+      // Die Werkzeugzeile steht an der Stelle der Überschrift – „Termine“ sagt schon der Reiter (28.10.2026): links Kommende |
+      // Vergangene (am Handy ein Auswahlknopf), rechts der Filter, still (R5/R2, B8). Vollbild steht neben den Reitern.
       stattTitel={
-        <Segment
-          value={tab}
-          options={[
-            { value: 'upcoming', label: 'Kommende' },
-            { value: 'past', label: 'Vergangene' },
-          ]}
-          dimmed={online ? [] : ['past']}
-          onChange={(v) => {
-            if (!online && v === 'past') {
-              showToast('Vergangene Gottesdienste sind offline nicht verfügbar.');
-              return;
-            }
-            setTab(v);
-          }}
+        <Werkzeugzeile
+          handy={handy}
+          ariaLabel="Termine"
+          links={
+            <AnsichtWahl
+              value={tab}
+              options={[
+                { value: 'upcoming', label: 'Kommende' },
+                { value: 'past', label: 'Vergangene' },
+              ]}
+              gedimmt={online ? [] : ['past']}
+              onChange={(v) => {
+                if (!online && v === 'past') {
+                  showToast('Vergangene Gottesdienste sind offline nicht verfügbar.');
+                  return;
+                }
+                setTab(v);
+              }}
+              handy={handy}
+            />
+          }
+          rechts={
+            // Nur mit etwas zu wählen – sonst zeigte die Einführung auf einen leeren Rahmen.
+            abschnittMitWahl(filter.abschnitt) ? (
+              <FilterKnopf still dataTour="termine-filter" abschnitte={[filter.abschnitt]} />
+            ) : undefined
+          }
         />
-      }
-      aktionen={
-        // Nur mit etwas zu wählen – sonst zeigte die Einführung auf einen leeren Rahmen.
-        abschnittMitWahl(filter.abschnitt) && (
-          <div data-tour="termine-filter">
-            <FilterKnopf abschnitte={[filter.abschnitt]} />
-          </div>
-        )
       }
       onNeuLaden={
         tab === 'upcoming'
@@ -351,13 +370,11 @@ export function Agenda({
           ) : (
             groups(past)
           )}
-          <button
-            className={styles.loadMore}
-            disabled={pastQuery.isFetching}
-            onClick={() => setMonthsBack((m) => m + 1)}
-          >
-            {pastQuery.isFetching ? 'Lädt…' : 'Mehr laden'}
-          </button>
+          <div className={styles.loadMore}>
+            <TextKnopf disabled={pastQuery.isFetching} onClick={() => setMonthsBack((m) => m + 1)}>
+              {pastQuery.isFetching ? 'Lädt…' : 'Mehr laden'}
+            </TextKnopf>
+          </div>
         </>
       )}
     </SeitenGeruest>

@@ -9,7 +9,7 @@ import {
 /**
  * **Ablauf in der App anlegen** (Alwin, 13.10.2026) – der ganze Weg über den echten Server. Seit dem 05.11.2026 über
  * den Filter der Terminliste statt über die Verwaltung: Kalender „Anlegeprobe“ → „auch ohne Ablauf“ → die
- * Veranstaltung steht mit „Kein Ablauf" in der Liste → „Ablauf anlegen" → die Vorlage ist vorausgewählt → angelegt, der
+ * Veranstaltung steht mit dem leisen „+ Ablauf anlegen" (gestricheltes Feld, B8) in der Liste → „Ablauf anlegen" → die Vorlage ist vorausgewählt → angelegt, der
  * neue Ablauf öffnet sich mit den Punkten der Vorlage. Das Suchwort gibt es nicht mehr – der Gebetsabend im selben
  * Kalender steht mit da.
  *
@@ -39,7 +39,8 @@ test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page, browser }) =>
   await page.keyboard.press('Escape');
 
   // Terminliste: der Gottesdienst ohne Ablauf – und der Gebetsabend im selben Kalender (kein Suchwort mehr).
-  const zeile = page.getByRole('button', { name: /Gottesdienst zur Anlegeprobe.*Kein Ablauf/ });
+  // Die Zeile selbst (Hauptbereich) und das leise „+ Ablauf anlegen“ daneben öffnen dasselbe; hier die Zeile.
+  const zeile = page.getByRole('button', { name: /Gottesdienst zur Anlegeprobe/ });
   await expect(zeile).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('Gebetsabend zur Anlegeprobe')).toBeVisible();
 

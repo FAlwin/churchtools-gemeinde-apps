@@ -25,6 +25,10 @@ const PREFIX = 'worship:onboard-';
 // Bestandsnutzer hat sich am Liederheft nichts geändert – ein erneutes Zeigen wäre Lärm.
 // termine-v4 (05.11.2026): neuer Schritt „Filter“ – Kalender ausblenden und „auch ohne Ablauf“ direkt in der
 // Terminliste (vorher Mehr → Verwaltung, nur Admin). Neue Bedienung → Versionssprung, damit alle ihn einmal sehen.
+// Scheibe B8a (20.11.2026, „Ruhige Bedienung“): Filter und Kommende/Vergangene in einer Werkzeugzeile, Vollbild neben den
+// Reitern, „+ Ablauf anlegen“ als gestricheltes Feld, „Neues Lied“ am Handy als grüner Kreis – Texte der Schritte „Filter“
+// und „Die Bereiche“ nachgezogen. Version BEWUSST NICHT erhöht (wie am 28.10.2026): nichts davon ist eine neue Funktion, nur
+// ein neuer Platz; die Entscheidung über einen Sprung liegt beim Release.
 export const TOUR_TERMINE = 'termine-v4';
 // chart-v4: Der Tempo-Knopf oeffnet jetzt ein MENUE (#145 Folge) statt nur den Puls zu schalten –
 // und er ist neuerdings auch bei Liedern OHNE gepflegtes Tempo da, weil man genau dort eins
@@ -152,7 +156,7 @@ export const TERMINE_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="termine-filter"]',
     title: 'Filter',
-    body: 'Hier blendest du Kalender aus, die du nicht brauchst. Wo du Abläufe anlegen darfst, holt „auch ohne Ablauf“ auch Termine ohne Ablauf in die Liste – dann legst du den Ablauf direkt hier an. Die Auswahl merkt sich dieses Gerät.',
+    body: 'Hier blendest du Kalender aus, die du nicht brauchst. Wo du Abläufe anlegen darfst, holt „auch ohne Ablauf“ auch Termine ohne Ablauf in die Liste – sie tragen das gestrichelte Feld „+ Ablauf anlegen“, damit legst du den Ablauf direkt hier an. Die Auswahl merkt sich dieses Gerät.',
   },
   {
     selector: '[data-tour="songbook"]',
@@ -172,7 +176,7 @@ export const TERMINE_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="tabbar"]',
     title: 'Die Bereiche',
-    body: 'Unter „Lieder" durchsuchst du alle Lieder; findet der Titel nichts, kannst du darunter auch in den Liedtexten suchen. Über „Neues Lied" legst du eines an, wenn du in ChurchTools Lieder bearbeiten darfst. Unter „Mehr" findest du Einstellungen und kannst diese Einführung erneut starten.',
+    body: 'Unter „Lieder" durchsuchst du alle Lieder; findet der Titel nichts, kannst du darunter auch in den Liedtexten suchen. Über „Neues Lied" – am Rechner der grüne Knopf oben rechts, am Handy das grüne Plus unten – legst du eines an, wenn du in ChurchTools Lieder bearbeiten darfst. Unter „Mehr" findest du Einstellungen und kannst diese Einführung erneut starten.',
   },
 ];
 
@@ -322,6 +326,6 @@ export const VERFUEGBARKEIT_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="verf-plus"]',
     title: 'Zeiträume und Einträge',
-    body: 'Das Plus trägt einen ganzen Zeitraum ein, etwa Urlaub. Unter „Einträge" siehst du alles – auch Vergangenes – und kannst Eigenes ändern oder löschen.',
+    body: 'Der grüne Knopf „+ Zeitraum eintragen" – am Handy der grüne Kreis mit „+" unten rechts – trägt einen ganzen Zeitraum ein, etwa Urlaub. Unter „Einträge" siehst du alles – auch Vergangenes – und kannst Eigenes ändern oder löschen.',
   },
 ];

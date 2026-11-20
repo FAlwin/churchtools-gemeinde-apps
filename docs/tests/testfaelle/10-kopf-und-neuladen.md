@@ -17,21 +17,25 @@ beginnt mit seiner großen Überschrift, und die ist im Ruhezustand **scharf** �
 des Bandes.
 
 1. App vom Home-Bildschirm starten. Tab **Termine**: **keine** Überschrift „Termine“ (das sagt der Reiter, seit
-   28.10.2026) – ganz oben „Kommende | Vergangene“, in der Erweiterung rechts daneben Vollbild, darunter die Liste. Beide Knöpfe liegen auf einer **grauen Schiene**,
-   der nicht gewählte ist klar als Knopf erkennbar, nicht nur als Text (02.10.2026). Über der Überschrift ist nichts – der Inhalt läuft
-   bis unter die Uhr.
-2. **Lieder:** ganz oben das Suchfeld (Vollbild daneben), darunter die Sortierung – keine Überschrift. **Mehr:** ganz
-   oben die Gemeinde-Karte, Vollbild oben rechts daneben – keine Überschrift. **Abwesenheiten** (Reiter nur in der
+   28.10.2026) – ganz oben **eine Werkzeugzeile** (seit B8, 20.11.2026): links „Kommende | Vergangene“ auf einer **grauen Schiene**
+   (der nicht gewählte ist klar als Knopf erkennbar, 02.10.2026; am Handy der blaue Knopf „Kommende ⌄“, ein Tipp klappt „Vergangene“
+   auf), rechts der **Filter** ohne Rand (am Handy mit Rand). **Vollbild** steht in der Erweiterung am iPad/Rechner ganz rechts in
+   der **Reiterzeile** (nicht mehr in der Werkzeugzeile), am Handy rechts oben im Seitenkopf. Über der Zeile ist nichts – der Inhalt
+   läuft bis unter die Uhr.
+2. **Lieder:** ganz oben das Suchfeld (am iPad/Rechner der grüne Knopf „+ Neues Lied“ daneben), darunter die Sortierung in einer Werkzeugzeile (am Handy der Knopf „A–Z ⌄“) – keine Überschrift. **Mehr:** ganz
+   oben die Gemeinde-Karte (Vollbild am Handy oben rechts daneben, am iPad/Rechner in der Reiterzeile) – keine Überschrift. **Abwesenheiten** (Reiter nur in der
    eigenen App): ganz oben die Werkzeugzeile (seit B4): „Termine | Einträge“ links, in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“ und am iPad grün „+ Zeitraum eintragen“ – keine Überschrift. Wähler, Suchfeld und Karte enden rechts bündig mit der
    Liste darunter.
    2a. **ChurchTools-App vom Home-Bildschirm** (iPhone, Erweiterung): Der Kopf jeder Seite beginnt **knapp** unter der
-   blauen ChurchTools-Leiste, kein leerer Streifen dazwischen (vorher ~36 pt). Das runde **Plus** (Abwesenheiten,
+   blauen ChurchTools-Leiste, kein leerer Streifen dazwischen (vorher ~36 pt). Das runde **grüne Plus** (seit B8 grün; Abwesenheiten, Lieder, Vorlagen,
    Ablauf im Bearbeiten) steht wie in der ChurchTools-App rechts 16 pt vom Rand und 16 pt über der Reiterleiste bzw. über
    dem Home-Strich; ganz nach unten gescrollt liegt es nicht auf dem Stift des letzten Eintrags.
    2b. **Unterer Rand in der installierten App und in der ChurchTools-App** (29.10.2026): Die Reiterleiste endet an der
    Bildschirmkante (nichts ragt darunter), die Beschriftung steht wie vorher ~20 pt über der Kante. Im Lied stehen die
    Pfeile der Fußleiste deutlich über dem Home-Strich (62 pt in der installierten App, ~40 pt in der ChurchTools-App).
-   Das Plus steht in **Abwesenheiten** und im **Ablauf** gleich weit über dem, was darunter liegt.
+   Das Plus steht in **Abwesenheiten** und im **Ablauf** gleich weit über dem, was darunter liegt – auch in **„Wann kann ich?“ des
+   Dienstplaners** (Handy, B8a): fest unten rechts über der Reiterleiste, nicht am Listenende unter dem Bildschirmrand. Nach dem
+   Abhaken klebt dort auch die Speichern-Leiste unten am Bildschirm.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
 4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts
@@ -42,9 +46,11 @@ des Bandes.
    4a. **Reiter:** Am iPad/Rechner stehen Termine · Lieder · Abwesenheiten · Mehr **oben** als Text, der gewählte blau
    unterstrichen; am Handy unten mit Symbolen, der gewählte mit blauer Linie oben.
    4b. **Knöpfe in Listen (Scheibe S2):** In **Lieder** stehen rechts in jeder Zeile **Plus** und **Stift** als
-   eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs und **„+ Anlegen“** bei einem
-   Termin ohne Ablauf. Zum Anlegen steht am iPad/Rechner oben ein **grüner** Knopf mit Text (Ablauf im Bearbeiten,
-   Abwesenheiten) – wie „+ Gruppe erstellen“ in ChurchTools.
+   eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs. Bei einem Termin ohne Ablauf steht
+   rechts das **leise gestrichelte Feld „+ Ablauf anlegen“** (B8; wer nichts anlegen darf, sieht das Etikett „Kein Ablauf“).
+   **Zwei Arten von „+“:** Zum Anlegen steht am iPad/Rechner oben ein **grüner** Knopf mit Text (Ablauf im Bearbeiten,
+   Abwesenheiten, Neues Lied) – wie „+ Gruppe erstellen“ in ChurchTools; am Handy derselbe Zweck als grüner Kreis. Grau und
+   gestrichelt heißt „hier fehlt etwas“.
 5. **Ein Lied öffnen (Liedblatt, Scheibe B1+B2):** Oben eine **Fläche in Kartenfarbe bis an den oberen Rand** (unter die
    Uhr bzw. bis an die ChurchTools-Leiste, keine schwebende Karte mit Rand – seit 29.10.2026); Inhalt scharf unter dem Band.
    Am Handy hochkant sind Liedtitel und Knöpfe größer als am iPad.
@@ -79,8 +85,8 @@ des Bandes.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/SeitenKopf.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/ZeilenKnopf.tsx`, `ui/bedienung/ReiterLeiste.tsx`, `client/src/components/BlattKopf.tsx`, `client/src/components/AblaufLeiste.tsx`, `client/src/utils/werkzeuge.ts`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `ui/design/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Kopfkarte nur mit Zurück, „← Ziel“ mit Text, Vollbild ganz rechts, Überlagerung neben dem Scroll-Bereich), `ui/bedienung/KopfKnopf.test.tsx`, `ui/bedienung/ReiterLeiste.test.tsx` (oben ohne Symbole), `client/src/components/BlattKopf.test.tsx` (Knöpfe je Zustand, Tempo-Angabe und Puls, breit/kompakt/flach, Leiste: Nummern, sichtbar/gewählt, Tipp, Mitscrollen, gemessene Unterkante), `e2e/blatt-leiste.spec.ts` (viele Lieder: Sprung, Mitscrollen beim Blättern, Wischen blättert nicht, Querformat wählen ohne Sprung, eine Zeile am iPad hochkant, Fenster unter der Karte, Einzellied ohne Nummer), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl in der Leiste ohne Vollbild, Lied-Menü am gewählten, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/SeitenKopf.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/ZeilenKnopf.tsx`, `ui/bedienung/ReiterLeiste.tsx`, `client/src/components/BlattKopf.tsx`, `client/src/components/AblaufLeiste.tsx`, `client/src/utils/werkzeuge.ts`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/src/components/VollbildOrt.ts`, `client/src/pages/Agenda.tsx`, `ui/bedienung/SchwebePlus.tsx`, `ui/bedienung/LeisesPlus.tsx`, `ui/erweiterung/ErweiterungsSeite.tsx`, `client/index.html`, `ui/design/_variables.scss`
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Kopfkarte nur mit Zurück, „← Ziel“ mit Text, Vollbild ganz rechts, Überlagerung neben dem Scroll-Bereich), `ui/bedienung/KopfKnopf.test.tsx`, `ui/bedienung/ReiterLeiste.test.tsx` (oben ohne Symbole, Vollbild rechts), `client/src/pages/Agenda.werkzeug.test.tsx` (Werkzeugzeile der Termine), `ui/bedienung/SchwebePlus.test.tsx` und `ui/design/stufenPlus.test.ts` (grünes Plus, Fläche), `ui/erweiterung/ErweiterungsRahmen.test.tsx` (Plus nie im Rollbereich), `client/src/components/BlattKopf.test.tsx` (Knöpfe je Zustand, Tempo-Angabe und Puls, breit/kompakt/flach, Leiste: Nummern, sichtbar/gewählt, Tipp, Mitscrollen, gemessene Unterkante), `e2e/blatt-leiste.spec.ts` (viele Lieder: Sprung, Mitscrollen beim Blättern, Wischen blättert nicht, Querformat wählen ohne Sprung, eine Zeile am iPad hochkant, Fenster unter der Karte, Einzellied ohne Nummer), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl in der Leiste ohne Vollbild, Lied-Menü am gewählten, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
 - **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht); Werkzeuge im Hochformat einzeln nach Fensterbreite 05.10.2026; Seitenkopf im ChurchTools-Look + Reiter oben am iPad (Scheibe S, 26.10.2026); Liedblatt-Kopf als Kopfkarte mit Lied-Leiste und beschrifteten Knöpfen 28.10.2026 (Scheibe B1+B2)
 
 </details>

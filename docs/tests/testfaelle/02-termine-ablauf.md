@@ -285,8 +285,8 @@ als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, T
    Tipp daneben schließen. Beim Drüberfahren färben sich nur die Kreise blau. Kein leerer Kreis, auch bei Personen mit
    Foto.
 2. Denselben Termin im Dienstplaner öffnen: dieselbe Liste; die Lied-Karte nennt auch den Autor.
-3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, in der Musik-App kein Stift mehr (die Zeile antippen
-   öffnet das Fenster), im Dienstplaner rechts weiter der Stift (keine Kreise); ein weggelassener Punkt bleibt blass.
+3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, in Musik-App **und** Dienstplaner kein Stift mehr (die Zeile
+   antippen öffnet das Fenster; im Dienstplaner seit 21.11.2026, B8); ein weggelassener Punkt bleibt blass.
 4. Dunkelmodus in ChurchTools einschalten: alles lesbar, Kreise und Balken passen sich an.
 
 <details><summary>Technisches</summary>
@@ -304,18 +304,18 @@ als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, T
 und ein Handy.
 
 **Das muss passieren:** Der Ablauf steht ruhig und groß da – Uhr, Titel, alle Punkte mit Zeit, Dauer, Zuständigen und
-den Infos der unter „Spalten“ gewählten Gruppen. Nichts lässt sich verstellen, der Bildschirm bleibt an.
+den Infos der unter „Spalten wählen“ gewählten Gruppen. Nichts lässt sich verstellen, der Bildschirm bleibt an.
 
-1. Dienstplaner → Termin öffnen → oben **„Ablauf zeigen“** → die Anzeige deckt alles ab: links die Uhr (läuft mit) und
+1. Dienstplaner → Termin öffnen → im Ablauf **⋯ → „Ablauf zeigen“** (seit B8; vorher ein eigener Knopf) → die Anzeige deckt alles ab: links die Uhr (läuft mit) und
    der heutige Tag, rechts Titel und „Beginn … · Ende …“ (Ende = wann der letzte Punkt vorbei ist); ein anderer Tag als
    heute steht vorne dabei.
-2. Ohne Haken unter „Spalten“: keine Infos. Mit **Technik** angehakt: „Technik: …“ unter dem Punkt.
+2. Ohne Haken unter „Spalten wählen“: keine Infos. Mit **Technik** angehakt: „Technik: …“ unter dem Punkt.
 3. Weggelassene Punkte fehlen, „Beginn“ steht nach dem Vorlauf, Überschriften als Band.
 4. Fenster verkleinern → die Schrift wird kleiner, bis alles passt; ganz klein wird gescrollt statt weiter verkleinert.
 5. **Vollbild** (oder Taste F) → Vollbild; **Esc** beendet es. Noch einmal **Esc** oder **Schließen** → zurück im Termin.
 6. Am iPhone: kein „Vollbild“-Knopf, nur „Schließen“; Handy drehen → die Anzeige bleibt offen und passt sich an. Der
    Bildschirm geht nicht aus.
-7. Dunkelmodus in ChurchTools: die Anzeige ist dunkel. **Bearbeiten**: der Knopf „Ablauf zeigen“ ist weg.
+7. Dunkelmodus in ChurchTools: die Anzeige ist dunkel. **Bearbeiten**: der Eintrag „Ablauf zeigen“ im ⋯-Menü ist weg.
 
 <details><summary>Technisches</summary>
 
@@ -1306,12 +1306,17 @@ am Handy eine eigene Seite. Bearbeiten ändert sich nicht.
    Bemerkung, Infos je Gruppe) – unverändert. Der **blaue Streifen** an der Lied-Zeile und der rote Hinweis **„Moderation ?“** bei einem
    unbesetzten Dienst stehen in der Liste wie bisher.
 7. **Dienstplaner, Matrix** (schmale Spalten): dort gibt es die Einzelansicht nicht – die Spalten bleiben wie vorher.
+8. **Dienstplaner, Termin-Ansicht** (seit 21.11.2026, wie die Musik-App): Im Ablauf-Kopf stehen **Live** · **Musik-App** · **⋯** · **Bearbeiten**
+   (am Handy alle mit Rahmen). **⋯** nennt **Spalten wählen** (kleines Fenster mit Häkchen, gemerkt auf dem Gerät) und **Ablauf zeigen**;
+   jeden Eintrag einzeln antippen – das Fenster bzw. die Anzeige geht auf. **Bearbeiten** → grünes **Eintrag hinzufügen** (am Handy der
+   grüne Kreis), **⋯** (**Neu aufsetzen …**, mit Recht **Als Vorlage …**), blaues **Fertig**; an den Zeilen **kein Stift**, Zeile antippen
+   öffnet „Punkt bearbeiten“. Die Lied-Karte öffnet die Lied-Ansicht, der Punkt daneben die Einzelansicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `ui/ablauf/PunktAnsicht.tsx`, `ui/ablauf/usePunktAnsicht.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/liedMeta.ts`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`
-- **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, Escape/X, Seite am Handy mit Davor/Danach, Tipp-Ziele Karte gegen Punkt), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`; Gegenproben (Überschriften mitgezählt, Handy/Fenster vertauscht) einzeln rot; von Hand bleibt der Blick am Gerät
+- **Betrifft:** `ui/ablauf/PunktAnsicht.tsx`, `ui/ablauf/usePunktAnsicht.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/liedMeta.ts`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
+- **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, Escape/X, Seite am Handy mit Davor/Danach, Tipp-Ziele Karte gegen Punkt), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Abschnitt „wie in der Musik-App (B8)“: Einzelansicht mit ‹ ›, Handy-Seite, Kopf in Stufen, kein Stift, Menüpunkt „Ablauf zeigen“, leises „Ablauf anlegen“); Gegenproben (Überschriften mitgezählt, Handy/Fenster vertauscht) einzeln rot; von Hand bleibt der Blick am Gerät
 - **Historie:** „Ruhige Bedienung“ B8 (21.11.2026, Entwurf `musik-app-ruhiger-v5.html`, Entscheidungen E16–E21)
 
 </details>

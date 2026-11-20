@@ -312,20 +312,22 @@ export function TerminAnsicht({
               <h3>Ablauf</h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
-                {teile.zeigenKnopf}
                 {teile.liveKnopf}
-                {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (
                   <KopfLink
                     href={musikAppDirektLink(musikApp, s.id, null, s.tag)}
                     label="Musik-App"
                     symbol={<Icon name="music" size={16} stroke={2.2} />}
+                    still
                   />
                 )}
+                {/* Das Menü „Mehr“ (R6, wie in der Musik-App): Spalten wählen, Ablauf zeigen – im Bearbeiten Als Vorlage, Neu aufsetzen. */}
+                {teile.mehrKnopf}
                 {/* Auch bei einem leeren Ablauf – sonst ließe er sich nicht füllen (wie in der Musik-App). */}
                 {/* „Bearbeiten“ mit Wort wie in der Musik-App und der Matrix – grau, blau erst „Fertig“ (E6-Abschluss,
-                    Alwin 30.10.2026: vorher ein runder Stift ohne Wort, leicht zu übersehen). */}
+                    Alwin 30.10.2026: vorher ein runder Stift ohne Wort, leicht zu übersehen). Seit B8 die Stufen der Musik-App:
+                    „Bearbeiten“ + „Mehr“, im Bearbeiten grünes „+ Eintrag hinzufügen“, „Mehr“ und blaues „Fertig“. */}
                 {teile.darf && ablauf !== null && (
                   <KopfKnopf
                     onClick={() => {

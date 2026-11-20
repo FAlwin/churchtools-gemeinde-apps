@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { usePunktAnsicht } from '@ui/ablauf/usePunktAnsicht';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
@@ -9,7 +13,7 @@ import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnle
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
 import { useAlsVorlage } from '@ui/ablauf/useAlsVorlage';
 import { browserAlsVorlageZugriff } from '@ui/ablauf/browserAblaufZugriff';
-import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
+import { InfoSpaltenFenster } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
@@ -68,15 +72,12 @@ export interface AblaufTeile {
   /** Die Fehlerzeile über der Bearbeiten-Liste leeren (beim Umschalten des Stifts). */
   fehlerLoeschen: () => void;
   /**
-   * Der Knopf „Spalten“ (Infos je Dienstgruppe, E6-4) für den Kopf – nur in der Termin-Ansicht, nicht beim Bearbeiten
-   * und nicht in der Matrix (dort keine Infos, Entwurf Bild 4 A).
+   * Das „⋯“-Menü des Ablauf-Kopfs (Ruhige Bedienung B8, R6 – wie in der Musik-App): in der Ansicht „Spalten wählen“ (Infos
+   * je Dienstgruppe, E6-4) und „Ablauf zeigen“ (E6b-1, der Ablauf ruhig im Vollbild); im Bearbeiten „Als Vorlage …“ und
+   * „Neu aufsetzen …“. `null`, wo es nichts zu wählen gibt – und in der Matrix (dort ist `mitNeuAufsetzen` aus, die
+   * Ansicht-Einträge gibt es nur in der Termin-Ansicht).
    */
-  spaltenKnopf: ReactNode;
-  /**
-   * „Ablauf zeigen“ (E6b-1): der Ablauf ruhig im Vollbild – nur in der Termin-Ansicht, nicht beim Bearbeiten und nicht
-   * in der Matrix. Die Live-Steuerung bekommt später einen eigenen Knopf.
-   */
-  zeigenKnopf: ReactNode;
+  mehrKnopf: ReactNode;
   /**
    * „Live“ (E6b-2 L2): der Live-Stand von ChurchTools zum Folgen – an jedem Termin mit Ablauf (zum Vorbereiten), wie
    * „Ablauf zeigen“ nur in der Termin-Ansicht. Am Tag des Termins mit rotem Punkt, solange ChurchTools ihn als gestartet
@@ -204,6 +205,9 @@ export function TerminAblauf({
     [start.rechte, start.dienstgruppen],
   );
   const spalten = useInfoSpalten('dienstplaner.ablauf.infoSpalten', gruppen);
+  const handy = useMedienAbfrage(HANDY_BREITE);
+  // „Spalten wählen“ aus dem „⋯“-Menü öffnet ein kleines Fenster (wie in der Musik-App).
+  const [spaltenOffen, setSpaltenOffen] = useState(false);
   // Der Punkt zum Ansehen (B8, E16/E20): Tipp auf den Punkt – am Handy eine Seite, sonst ein Fenster; die Lied-Karte öffnet
   // weiter die Lied-Ansicht. In der Matrix (schmal) gibt es sie nicht.
   const punktAnsicht = usePunktAnsicht({
@@ -268,6 +272,10 @@ export function TerminAblauf({
     // (Entwurf E6-6 Bild 2).
     neuAufsetzen: mitNeuAufsetzen ? () => anlegenOeffnen(true) : undefined,
     hinweisLinks: alsVorlage.link ? [alsVorlage.link] : undefined,
+    // „Als Vorlage …“ und „Neu aufsetzen …“ liegen im „⋯“-Menü, der blaue Stift an jeder Zeile entfällt – wie in der
+    // Musik-App (B8): Antippen der Zeile öffnet den Punkt.
+    linksImMenue: true,
+    ohneStift: true,
     // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
     // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix nur das Plus, neben
     // „N Punkte“ in der Gruppenzeile (E6-6c, Alwin 29.10.2026).
@@ -375,19 +383,18 @@ export function TerminAblauf({
   // „Ablauf anlegen“: Wer den Ablauf bearbeiten darf, darf ihn auch anlegen (gemessen E6-0) – dieselbe Regel. In der
   // Matrix steht der Knopf erst nach dem Stift (Entwurf E6-6 Bild 2), sonst stünde er in jeder leeren Spalte.
   const anlegenKnopf = darf && (!schmal || aktiv) && (
-    <button
-      type="button"
-      className={schmal ? styles.anlegenSchmal : styles.anlegenKnopf}
-      onClick={() => anlegenOeffnen()}
-    >
-      <Icon name="plus" size={schmal ? 14 : 16} /> Ablauf anlegen
-    </button>
+    <LeisesPlus label="Ablauf anlegen" onClick={() => anlegenOeffnen()} />
   );
+
+  // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
+  const ansichtKnoepfe = !schmal && !aktiv && ablauf !== null && zeilen.length > 0;
 
   const inhalt =
     ablauf === null ? (
       schmal ? (
-        anlegenKnopf || (
+        anlegenKnopf ? (
+          <div className={styles.anlegenSchmal}>{anlegenKnopf}</div>
+        ) : (
           <span className={styles.keiner} aria-label="kein Ablauf">
             –
           </span>
@@ -427,6 +434,15 @@ export function TerminAblauf({
       {liste.ueberlagerung}
       {alsVorlage.ueberlagerung}
       {!schmal && punktAnsicht.ueberlagerung}
+      {spaltenOffen && ansichtKnoepfe && gruppen.length > 0 && (
+        <InfoSpaltenFenster
+          gruppen={gruppen}
+          zeilen={zeilen}
+          ids={spalten.ids}
+          onIds={spalten.setIds}
+          onClose={() => setSpaltenOffen(false)}
+        />
+      )}
       {liedOffen && liedAnsicht(liedOffen, () => setLiedOffen(null))}
       {zeigen && (
         <AblaufAnzeige
@@ -494,8 +510,28 @@ export function TerminAblauf({
   const liveLaeuft = liveStand.art === 'fertig' && liveStand.daten;
 
   const ende = ablauf !== null ? ablaufEnde(zeilen) : null;
-  // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
-  const ansichtKnoepfe = !schmal && !aktiv && ablauf !== null && zeilen.length > 0;
+
+  // Das „⋯“-Menü (R6): in der Ansicht „Spalten wählen“ und „Ablauf zeigen“, im Bearbeiten „Als Vorlage …“/„Neu aufsetzen …“.
+  const mehrOptionen: Option[] = aktiv
+    ? liste.mehrOptionen
+    : ansichtKnoepfe
+      ? [
+          ...(gruppen.length > 0
+            ? [
+                {
+                  label: 'Spalten wählen',
+                  symbol: <Icon name="columns" size={16} />,
+                  onClick: () => setSpaltenOffen(true),
+                },
+              ]
+            : []),
+          {
+            label: 'Ablauf zeigen',
+            symbol: <Icon name="vollbild" size={16} />,
+            onClick: () => setZeigen(true),
+          },
+        ]
+      : [];
 
   return children({
     inhalt,
@@ -507,22 +543,7 @@ export function TerminAblauf({
     zeilen,
     infoGruppen: gruppen,
     infoSpalten: spalten.ids,
-    spaltenKnopf: ansichtKnoepfe ? (
-      <InfoSpaltenKnopf
-        gruppen={gruppen}
-        zeilen={zeilen}
-        ids={spalten.ids}
-        onIds={spalten.setIds}
-      />
-    ) : null,
-    zeigenKnopf: ansichtKnoepfe ? (
-      <KopfKnopf
-        onClick={() => setZeigen(true)}
-        label="Ablauf zeigen"
-        title="Ablauf im Vollbild zeigen"
-        symbol={<Icon name="vollbild" size={16} stroke={2.2} />}
-      />
-    ) : null,
+    mehrKnopf: <MehrMenue optionen={mehrOptionen} handy={handy} titel="Mehr" />,
     liveKnopf:
       ansichtKnoepfe && agendaId !== undefined ? (
         <KopfKnopf

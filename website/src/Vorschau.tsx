@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { seitenNonce } from './ebene';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 import type { Seite } from '@shared/website/modell';
 import { nachrichtLesen, type EditorAktion } from './nachricht';
 import { vorschauHtml, VORSCHAU_SANDBOX, type VorschauStand } from './vorschauHtml';
 import styles from './Vorschau.module.scss';
+
+/** So lange darf die Ebene brauchen, bis sie „bereit“ meldet; danach gilt sie als blockiert. */
+export const EBENE_WARTEZEIT_MS = 2000;
 
 export type Ansicht = 'computer' | 'handy';
 
@@ -38,6 +42,8 @@ export function Vorschau({
   const aktuell = useRef({ seite, onAktion: bearbeiten?.onAktion });
   aktuell.current = { seite, onAktion: bearbeiten?.onAktion };
   const mitEbene = bearbeiten !== undefined;
+  const bereit = useRef(false);
+  const [blockiert, setBlockiert] = useState(false);
 
   // Eine andere Seite beginnt oben – schon beim ersten Zeichnen, nicht erst nach einem Effekt (der käme nach dem `srcdoc`).
   const letzteSeite = useRef(seite.id);
@@ -53,7 +59,7 @@ export function Vorschau({
         stand,
         gemeinde,
         gemeindeZeitzone(),
-        mitEbene ? { scroll: scroll.current } : undefined,
+        mitEbene ? { scroll: scroll.current, nonce: seitenNonce() } : undefined,
       ),
     [seite, stand, gemeinde, mitEbene],
   );
@@ -67,21 +73,47 @@ export function Vorschau({
       const m = nachrichtLesen(e.data, aktuell.current.seite);
       if (!m) return;
       if (m.was === 'scroll') scroll.current = m.y;
-      else aktuell.current.onAktion?.(m);
+      else if (m.was === 'bereit') {
+        bereit.current = true;
+        setBlockiert(false);
+      } else aktuell.current.onAktion?.(m);
     };
     window.addEventListener('message', an);
     return () => window.removeEventListener('message', an);
   }, [mitEbene]);
 
+  // Läuft die Ebene? Sie meldet sich nach dem Laden („bereit“). Bleibt das aus, hat ChurchTools das Skript blockiert – dann
+  // soll das sichtbar sein, statt dass die Leisten still fehlen.
+  useEffect(() => {
+    if (!mitEbene) return;
+    bereit.current = false;
+    const t = setTimeout(() => {
+      if (bereit.current) return;
+      console.warn(
+        'Website-Vorschau: Die Bearbeiten-Ebene hat sich nicht gemeldet – ChurchTools hat das Skript vermutlich blockiert (Content-Security-Policy).',
+      );
+      setBlockiert(true);
+    }, EBENE_WARTEZEIT_MS);
+    return () => clearTimeout(t);
+  }, [html, mitEbene]);
+
   return (
-    <div className={`${styles.buehne}${ansicht === 'handy' ? ' ' + styles.handy : ''}`}>
-      <iframe
-        ref={rahmen}
-        className={styles.rahmen}
-        title={`Vorschau: ${seite.titel}`}
-        sandbox={VORSCHAU_SANDBOX}
-        srcDoc={html}
-      />
-    </div>
+    <>
+      {mitEbene && blockiert && (
+        <div className={styles.hinweis} role="status">
+          Bearbeiten in der Vorschau ist gerade nicht möglich – ChurchTools hat das
+          Bearbeiten-Skript blockiert. Bitte Seite neu laden.
+        </div>
+      )}
+      <div className={`${styles.buehne}${ansicht === 'handy' ? ' ' + styles.handy : ''}`}>
+        <iframe
+          ref={rahmen}
+          className={styles.rahmen}
+          title={`Vorschau: ${seite.titel}`}
+          sandbox={VORSCHAU_SANDBOX}
+          srcDoc={html}
+        />
+      </div>
+    </>
   );
 }

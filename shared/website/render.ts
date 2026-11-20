@@ -49,7 +49,7 @@ import {
   type Seite,
   type Spalte,
 } from './modell';
-import { brauchtHellenText, themeCss } from './theme';
+import { brauchtHellenText, cssFuerStyleTag, themeCss } from './theme';
 
 /** Breiten, in denen der Bau-Dienst Bilder bereithält (`srcset`). */
 export const BILD_BREITEN = [480, 800, 1200, 1600] as const;
@@ -110,8 +110,13 @@ export type RenderKontext = {
   bildAdresse: (bild: BildRef, breite: number) => string;
   /** Adresse der Stylesheet-Datei. */
   stylesheet: string;
-  /** Adresse des kleinen Seiten-Skripts (Handy-Menü, Einwilligung) – ein Verweis auf jeder Seite, die Datei selbst liefert der Bau. */
-  skriptAdresse: string;
+  /**
+   * Der Stylesheet-**Text**: Ist er gesetzt, steht er als `<style>` im Dokument statt des `<link>` auf `stylesheet` (Vorschau
+   * in ChurchTools: dessen Sicherheitsregel blockiert ein `data:`-Stylesheet, ein `<style>` nicht). Der Bau lässt ihn weg.
+   */
+  stylesheetText?: string;
+  /** Adresse des kleinen Seiten-Skripts (Handy-Menü, Einwilligung) – ein Verweis auf jeder Seite, die Datei selbst liefert der Bau. Fehlt sie (Vorschau), steht kein Skript im Dokument. */
+  skriptAdresse?: string;
   /** Adresse einer Schriftdatei (`Schrift.datei` bzw. die Kennung einer eigenen Schrift). Der Renderer bildet nie selbst eine. */
   schriftAdresse: (datei: string) => string;
   /** IANA-Zeitzone der Gemeinde für alle Datums- und Uhrzeitangaben (#847). */
@@ -731,7 +736,9 @@ export function renderSeite(seite: Seite, k: RenderKontext): string {
     `<title>${htmlText(`${seite.titel} – ${name}`)}</title>`,
     seite.beschreibung ? `<meta name="description" content="${htmlAttr(seite.beschreibung)}">` : '',
     noindex ? '<meta name="robots" content="noindex">' : '',
-    `<link rel="stylesheet" href="${htmlAttr(k.stylesheet)}">`,
+    k.stylesheetText
+      ? `<style>${cssFuerStyleTag(k.stylesheetText)}</style>`
+      : `<link rel="stylesheet" href="${htmlAttr(k.stylesheet)}">`,
     // NACH dem Stylesheet: gleiche Spezifität (`:root`), die spätere Regel – das Theme – gewinnt.
     `<style>${themeCss(k.einstellungen, k)}</style>`,
     '</head>',
@@ -743,7 +750,7 @@ export function renderSeite(seite: Seite, k: RenderKontext): string {
     '</main>',
     fuss(k, mitYoutube),
     mitYoutube ? banner(k) : '',
-    `<script src="${htmlAttr(k.skriptAdresse)}" defer></script>`,
+    k.skriptAdresse ? `<script src="${htmlAttr(k.skriptAdresse)}" defer></script>` : '',
     '</body>',
     '</html>',
   ]

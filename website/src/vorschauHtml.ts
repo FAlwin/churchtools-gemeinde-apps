@@ -4,8 +4,11 @@
  *
  * Das HTML läuft in einem `iframe` mit `srcdoc` und **`sandbox="allow-scripts"` ohne `allow-same-origin`**: Der Baustein
  * „Eigenes HTML“ (E-W12) bringt fremden Code mit; in dieser Sandbox hat er einen eigenen, leeren Ursprung – kein Zugriff
- * auf ChurchTools, die Sitzung oder die Erweiterung. Folge: Das iframe kann nichts von der Erweiterung laden. Deshalb
- * - das **Stylesheet** als `data:`-Adresse (Text aus `website.css`, per `?raw`),
+ * auf ChurchTools, die Sitzung oder die Erweiterung. Folge: Das iframe kann nichts von der Erweiterung laden. Zudem **erbt
+ * es die Content-Security-Policy von ChurchTools** (gemessen 20.11.2026): `data:`-Stylesheets und Skripte ohne Nonce sind
+ * dort blockiert, ein `<style>` im Dokument nicht. Deshalb
+ * - das **Stylesheet** als `<style>` im Dokument (Text aus `website.css`, per `?raw`; `stylesheetText` im Renderer),
+ * - **kein Seiten-Skript** (die Vorschau braucht keins; die Bearbeiten-Ebene trägt die Nonce der ChurchTools-Seite),
  * - **keine Schriftdateien** (die kommen mit W3a-3; die Seite fällt auf die Ersatzschrift zurück),
  * - **Bilder als neutrales Platzhalter-Bild** (`data:`), echte Bilder kommen mit W4.
  * Dynamische Daten (Termine, Beiträge, Slider, Livestream, Gruppen) bleiben leer – der Renderer zeigt dann seine
@@ -20,8 +23,8 @@ import { mitEbene } from './ebene';
 /** Was das iframe darf: Skripte (Eigenes HTML), aber **nie** `allow-same-origin`. Test: `Vorschau.test.tsx`. */
 export const VORSCHAU_SANDBOX = 'allow-scripts';
 
-/** Das Stylesheet als Adresse – das iframe hat keinen Ursprung, von dem es eine Datei laden könnte. */
-export const STYLESHEET_ADRESSE = `data:text/css;charset=utf-8,${encodeURIComponent(css)}`;
+/** Das Stylesheet als Text – das iframe hat keinen Ursprung, von dem es eine Datei laden könnte, und ChurchTools sperrt `data:`-Stylesheets. */
+export const STYLESHEET_TEXT = css;
 
 /** Neutrales Platzhalter-Bild (grau, mit Berg und Sonne) – bis Bilder in W4 hochgeladen werden können. */
 const PLATZHALTER_SVG =
@@ -49,9 +52,9 @@ export function vorschauKontext(
     // Links in der Vorschau führen nirgendwohin: Im Sandkasten gäbe es für `/pfad/` keine Seite.
     adresseVon: (s) => `#/${s.pfad}`,
     bildAdresse: () => PLATZHALTER_ADRESSE,
-    stylesheet: STYLESHEET_ADRESSE,
-    // Das Seiten-Skript (Handy-Menü, Einwilligung) liefert der Bau-Dienst – in der Vorschau läuft keins.
-    skriptAdresse: 'data:text/javascript;charset=utf-8,',
+    stylesheet: '',
+    stylesheetText: STYLESHEET_TEXT,
+    // Das Seiten-Skript (Handy-Menü, Einwilligung) liefert der Bau-Dienst – in der Vorschau läuft keins (`skriptAdresse` fehlt).
     schriftAdresse: () => 'data:,',
     zeitzone,
   };
@@ -67,11 +70,11 @@ export function vorschauHtml(
   stand: VorschauStand,
   gemeinde: string | null,
   zeitzone: string,
-  bearbeiten?: { scroll: number },
+  bearbeiten?: { scroll: number; nonce?: string | null },
 ): string {
   try {
     const html = renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone));
-    return bearbeiten ? mitEbene(html, bearbeiten.scroll) : html;
+    return bearbeiten ? mitEbene(html, bearbeiten.scroll, bearbeiten.nonce) : html;
   } catch {
     // Mitten im Bearbeiten kann etwas Unfertiges stehen, das der Renderer nicht mag – die Erweiterung soll deshalb nicht
     // abstürzen. Gespeichert wird so etwas nie (`seitePruefen`).

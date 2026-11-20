@@ -27,3 +27,15 @@
   border: 10px solid #0f172a; // bewusst fest: Gerätrahmen der Handy-Ansicht, unabhängig vom Thema
   border-radius: 24px; // bewusst fest: Rundung des Gerätrahmens, keine UI-Rundung
 }
+
+// Die Ebene hat sich nicht gemeldet (ChurchTools hat das Skript blockiert): ein ruhiger Hinweis über der Vorschau.
+.hinweis {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}

@@ -63,18 +63,38 @@ export function ebeneSymbole(): Record<string, string> {
 /** JSON für einen `<script>`-Block: `<` wird entschärft, damit nichts den Block beenden kann. */
 const jsonFuerSkript = (x: unknown): string => JSON.stringify(x).replace(/</g, '\\u003c');
 
+/** So sieht eine Nonce aus (Base64/Base64url); alles andere wird nicht übernommen. */
+const NONCE_MUSTER = /^[A-Za-z0-9+/=_-]{8,200}$/;
+
+/** Die Nonce, wenn sie wie eine aussieht – sonst `null`. Sie landet in einem Attribut; das Muster lässt nichts Gefährliches zu. */
+export function nonceGueltig(wert: unknown): string | null {
+  return typeof wert === 'string' && NONCE_MUSTER.test(wert) ? wert : null;
+}
+
+/**
+ * Die Nonce der ChurchTools-Seite, soweit es eine gibt. ChurchTools erlaubt Skripte nur mit ihr (`script-src … 'nonce-…'`), und
+ * das `iframe` mit `srcdoc` erbt diese Regel – ohne Nonce liefe die Ebene dort nicht (gemessen 20.11.2026). Gelesen wird die
+ * **Eigenschaft** `.nonce` (das Attribut ist im DOM leer); sie wechselt bei jedem Laden der Seite. In der Demo (kein CSP) gibt
+ * es keine – dann bleibt das Skript ohne Attribut.
+ */
+export function seitenNonce(doc: Document = document): string | null {
+  return nonceGueltig(doc.querySelector<HTMLScriptElement>('script[nonce]')?.nonce);
+}
+
 /** Stil und Skript als Text zum Einhängen vor `</body>`. `scroll`: wohin das Neuzeichnen die Seite wieder scrollt. */
-export function ebeneHtml(scroll: number): string {
+export function ebeneHtml(scroll: number, nonce?: string | null): string {
   const config = {
     scroll: Number.isFinite(scroll) ? Math.max(0, Math.round(scroll)) : 0,
     symbole: ebeneSymbole(),
   };
-  return `<style>${css}</style><script>(${skript}\n)(${jsonFuerSkript(config)});</script>`;
+  const n = nonceGueltig(nonce);
+  const attr = n ? ` nonce="${maskiere(n)}"` : '';
+  return `<style${attr}>${css}</style><script${attr}>(${skript}\n)(${jsonFuerSkript(config)});</script>`;
 }
 
 /** Die Seite mit der Ebene – vor dem letzten `</body>`. Ohne `</body>` bleibt die Seite, wie sie ist. */
-export function mitEbene(html: string, scroll: number): string {
+export function mitEbene(html: string, scroll: number, nonce?: string | null): string {
   const stelle = html.lastIndexOf('</body>');
   if (stelle < 0) return html;
-  return html.slice(0, stelle) + ebeneHtml(scroll) + html.slice(stelle);
+  return html.slice(0, stelle) + ebeneHtml(scroll, nonce) + html.slice(stelle);
 }

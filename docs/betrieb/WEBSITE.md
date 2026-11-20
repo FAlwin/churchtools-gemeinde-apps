@@ -185,12 +185,43 @@ Die Vorschau ist ein `iframe` mit `srcdoc` und **`sandbox="allow-scripts"` – o
 HTML“ (nur für die Leitung) bringt fremden Code mit; in dieser Sandbox hat er einen eigenen, leeren Ursprung und kommt weder an
 ChurchTools noch an die Sitzung noch an die Erweiterung (`website/src/Vorschau.test.tsx` prüft das Attribut). Folgen:
 
-- Das **Stylesheet** (`shared/website/website.css`) steckt als `data:`-Adresse im Dokument.
+- Das **Stylesheet** (`shared/website/website.css`) steht als `<style>` im Dokument (`stylesheetText` im Renderer; der Bau
+  gibt weiter ein `<link>` aus). Ein `<link>` auf eine `data:`-Adresse blockiert ChurchTools (siehe unten).
+- Die Vorschau bekommt **kein Seiten-Skript** (`skriptAdresse` fehlt, es steht kein `<script src>` im Dokument).
 - **Keine Schriftdateien** in der Vorschau – die Seite fällt auf die Ersatzschrift zurück (Schriften kommen mit W3a-3).
 - **Bilder** sind ein neutrales Platzhalter-Bild (echte Bilder: W4).
 - Termine, Beiträge, Slider, Livestream und Gruppen sind in der Vorschau leer – der Renderer zeigt seine Leer-Hinweise.
 - Links auf andere Seiten führen in der Vorschau nirgendwohin; mit der Bearbeiten-Ebene tut auch ein Klick auf einen Link und das
   Abschicken eines Formulars nichts.
+
+**Content-Security-Policy von ChurchTools (gemessen 20.11.2026, Test-Instanz, ChurchTools 3.138.x, Seite `/ccm/website/`).**
+Das `iframe` mit `srcdoc` **erbt** die Policy der ChurchTools-Seite:
+
+```
+default-src 'self'; script-src 'self' js.stripe.com 'nonce-…' 'unsafe-eval'; style-src 'self' 'unsafe-inline' *.dev.churchtools.website;
+font-src 'self' *.dev.churchtools.website data:; img-src * data: blob: *.church.tools; media-src 'self' https:; child-src * data;
+connect-src *; object-src 'self' www.youtube.com; frame-ancestors 'self'
+```
+
+| Im iframe                                             | Ergebnis                                     |
+| ----------------------------------------------------- | -------------------------------------------- |
+| `<link rel=stylesheet href="data:text/css,…">`        | **blockiert** (die Vorschau war ungestaltet) |
+| `<style>…</style>` im Dokument                        | wirkt                                        |
+| `<script>` inline ohne Nonce, `<script src="data:…">` | **blockiert**                                |
+| `<script nonce="…">` mit der Nonce der Seite          | läuft                                        |
+
+Folgen:
+
+- **Stylesheet** als `<style>` (s. o.). **Ebene:** Die Erweiterung liest die Nonce zur Laufzeit (`seitenNonce()` in `ebene.ts`:
+  Eigenschaft `.nonce` von `script[nonce]`, das Attribut ist im DOM leer; sie wechselt bei jedem Laden der Seite), prüft sie
+  (`^[A-Za-z0-9+/=_-]{8,200}$`) und setzt sie auf `<script>` und `<style>` der Ebene. Ohne Nonce (Demo, Entwicklung) bleibt das
+  Attribut weg.
+- **Kein stiller Ausfall:** Die Ebene meldet sich nach dem Laden per `postMessage` („bereit“). Bleibt das binnen 2 s aus, zeigt die
+  Erweiterung über der Vorschau „Bearbeiten in der Vorschau ist gerade nicht möglich …“ und schreibt eine `console.warn`-Zeile.
+- **„Eigenes HTML“:** Skripte darin laufen in der Vorschau in ChurchTools **nicht** (sie haben keine Nonce) – auf der echten
+  Website schon. Das Baustein-Fenster sagt es dazu.
+- **Schriften (W3a-3):** als `data:`-Adresse einbinden – `font-src` erlaubt `data:`. **Bilder:** `img-src *` erlaubt `data:`,
+  `blob:` und Adressen im ganzen Netz – unkritisch.
 
 **Nachrichten aus der Vorschau (W3a-2).** Die Bearbeiten-Ebene (`website/src/ebene.css`, `ebene.skript.txt`) läuft im selben
 `iframe` und meldet per `postMessage`, was angeklickt wurde – **nur als Zahlen** (Abschnitt, Spalte, Baustein in der Reihenfolge

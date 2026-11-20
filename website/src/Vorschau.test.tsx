@@ -1,14 +1,17 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { htmlAttr } from '@shared/website/html';
+import { cssFuerStyleTag } from '@shared/website/theme';
+import { renderSeite } from '@shared/website/render';
 import { baustein, seiteMit } from '@shared/website/website.testdaten';
-import { Vorschau } from './Vorschau';
+import { EBENE_WARTEZEIT_MS, Vorschau } from './Vorschau';
 import {
   PLATZHALTER_ADRESSE,
-  STYLESHEET_ADRESSE,
+  STYLESHEET_TEXT,
   VORSCHAU_SANDBOX,
   vorschauHtml,
+  vorschauKontext,
 } from './vorschauHtml';
 
 const STAND = { seiten: [], menue: null, einstellungen: null };
@@ -50,11 +53,26 @@ describe('Vorschau-Fenster: Sandkasten', () => {
 describe('vorschauHtml: nichts wird nachgeladen', () => {
   const html = vorschauHtml(SEITE, STAND, 'ECG', 'Europe/Berlin');
 
-  it('das Stylesheet steckt als `data:`-Adresse im Dokument (das iframe hat keinen Ursprung für eine Datei)', () => {
-    expect(STYLESHEET_ADRESSE.startsWith('data:text/css')).toBe(true);
-    expect(html).toContain(`<link rel="stylesheet" href="${htmlAttr(STYLESHEET_ADRESSE)}">`);
-    // Das ganze Blatt ist darin: eine Regel aus der Mitte, kodiert.
-    expect(decodeURIComponent(STYLESHEET_ADRESSE)).toContain('.w-abschnitt');
+  it('das Stylesheet steckt als `<style>` im Dokument – ChurchTools sperrt `data:`-Stylesheets und `<link>` (gemessen 20.11.2026)', () => {
+    expect(html).toContain(`<style>${cssFuerStyleTag(STYLESHEET_TEXT)}</style>`);
+    expect(html).not.toMatch(/<link\b/);
+    expect(html).not.toContain('data:text/css');
+    // Das ganze Blatt ist darin: eine Regel aus der Mitte.
+    expect(STYLESHEET_TEXT).toContain('.w-abschnitt');
+  });
+
+  it('kein Seiten-Skript im Dokument (kein `data:`-Skript, das ChurchTools nur blockiert)', () => {
+    expect(html).not.toMatch(/<script\b/);
+    expect(html).not.toContain('data:text/javascript');
+  });
+
+  it('ein `</style>` im Stylesheet-Text bricht nicht aus dem `<style>` aus', () => {
+    const doc = renderSeite(SEITE, {
+      ...vorschauKontext(STAND, 'ECG', 'Europe/Berlin'),
+      stylesheetText: 'a{color:red}</style><script>alert(1)</script><style>',
+    });
+    expect(doc).not.toContain('</style><script>');
+    expect(doc).toContain('a{color:red}<\\/style>');
   });
 
   it('Bilder sind das Platzhalter-Bild als `data:` – keine Adresse auf ChurchTools oder ins Netz', () => {
@@ -186,6 +204,85 @@ describe('Bearbeiten-Ebene: Nachrichten nur aus dem eigenen iframe', () => {
       />,
     );
     expect(screen.getByTitle('Vorschau: Andere').getAttribute('srcdoc')).toMatch(/"scroll":0/);
+  });
+
+  describe('Hinweis, wenn die Ebene sich nicht meldet (ChurchTools blockiert das Skript)', () => {
+    const HINWEIS = /ChurchTools hat das Bearbeiten-Skript blockiert/;
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it('keine „bereit“-Meldung binnen 2 s: ruhiger Hinweis + console.warn', () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      zeigen();
+      expect(screen.queryByText(HINWEIS)).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(EBENE_WARTEZEIT_MS - 1);
+      });
+      expect(screen.queryByText(HINWEIS)).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(2);
+      });
+      expect(screen.getByText(HINWEIS)).toBeTruthy();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('kommt „bereit“ rechtzeitig, bleibt der Hinweis aus – und eine späte Meldung nimmt ihn zurück', () => {
+      vi.useFakeTimers();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { fenster } = zeigen();
+      schicke(M({ was: 'bereit' }), fenster);
+      act(() => {
+        vi.advanceTimersByTime(EBENE_WARTEZEIT_MS + 500);
+      });
+      expect(screen.queryByText(HINWEIS)).toBeNull();
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('späte „bereit“-Meldung nach dem Hinweis lässt ihn wieder verschwinden', () => {
+      vi.useFakeTimers();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { fenster } = zeigen();
+      act(() => {
+        vi.advanceTimersByTime(EBENE_WARTEZEIT_MS + 1);
+      });
+      expect(screen.getByText(HINWEIS)).toBeTruthy();
+      schicke(M({ was: 'bereit' }), fenster);
+      expect(screen.queryByText(HINWEIS)).toBeNull();
+    });
+
+    it('ohne Bearbeiten-Ebene gibt es nichts zu warnen', () => {
+      vi.useFakeTimers();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      zeigen(false);
+      act(() => {
+        vi.advanceTimersByTime(EBENE_WARTEZEIT_MS * 3);
+      });
+      expect(screen.queryByText(HINWEIS)).toBeNull();
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('„bereit“ aus einem anderen Fenster zählt nicht', () => {
+      vi.useFakeTimers();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      zeigen();
+      schicke(M({ was: 'bereit' }), window);
+      act(() => {
+        vi.advanceTimersByTime(EBENE_WARTEZEIT_MS + 1);
+      });
+      expect(screen.getByText(HINWEIS)).toBeTruthy();
+    });
+  });
+
+  it('die Nonce der ChurchTools-Seite landet auf dem Skript der Ebene im srcdoc', () => {
+    const s = document.createElement('script');
+    s.nonce = 'NonceVonChurchTools123';
+    document.head.append(s);
+    const { rahmen } = zeigen();
+    s.remove();
+    expect(rahmen.getAttribute('srcdoc')).toContain('<script nonce="NonceVonChurchTools123">');
   });
 
   it('kann der Renderer etwas Unfertiges nicht zeichnen, steht ein Hinweis statt eines Absturzes', () => {

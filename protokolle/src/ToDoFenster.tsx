@@ -604,13 +604,13 @@ export function ToDoFenster({
     >
       {wofuer}
       {uebernehmen && a?.vorschlag && (
-        <p className={felder.hinweis} role="note">
+        <p className={`${felder.hinweis} ${styles.vorFeld}`} role="note">
           Vorschlag von {a.vorschlag.name}. Wähle die Zuständigen – danach ist es ein To-Do der
           Gruppe und der Vorschlag verschwindet.
         </p>
       )}
       {imEntwurf && herkunft && r?.fall === 'leitung' && (
-        <p className={felder.hinweis}>
+        <p className={`${felder.hinweis} ${styles.vorFeld}`}>
           Steht im Protokoll-Entwurf „{herkunft.titel}“ – Text, Gruppe und Löschen werden dort mit
           geändert.
         </p>

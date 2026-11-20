@@ -52,25 +52,20 @@ function anzahlText(z: AblaufZustand | undefined): string {
   return punkteText(n);
 }
 
-/** Am Handy: Stift (bearbeiten) bzw. „Fertig“ – wie in der Termin-Ansicht. */
-function StiftKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
-  if (ma.bearbeiten) {
-    return (
-      <button type="button" className={styles.fertig} onClick={() => umschalten(ma)}>
-        <Icon name="check" size={14} /> Fertig
-      </button>
-    );
-  }
+/**
+ * Am Handy: „Bearbeiten“ bzw. „Fertig“ – derselbe `KopfKnopf` wie in der Termin-Ansicht und der Musik-App (am Handy Symbol mit
+ * Rahmen, R12; „Fertig“ blau). Bis 20.11.2026 ein frei stehender Stift ohne Rahmen (Abnahme: angleichen). Der Name nennt den Termin, damit Screenreader
+ * die Knöpfe mehrerer Termine unterscheiden.
+ */
+function BearbeitenKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
   return (
-    <button
-      type="button"
-      className={styles.stift}
-      aria-label={`Ablauf bearbeiten – ${fuer}`}
-      title={`Ablauf bearbeiten – ${fuer}`}
+    <KopfKnopf
       onClick={() => umschalten(ma)}
-    >
-      <Icon name="pencil" size={15} />
-    </button>
+      label={ma.bearbeiten ? 'Fertig' : 'Bearbeiten'}
+      title={ma.bearbeiten ? `Fertig – ${fuer}` : `Ablauf bearbeiten – ${fuer}`}
+      haupt={ma.bearbeiten}
+      symbol={<Icon name={ma.bearbeiten ? 'check' : 'pencil'} size={16} stroke={2.2} />}
+    />
   );
 }
 
@@ -436,7 +431,7 @@ export function HandyAblauf({ ma, s }: { ma: MatrixAblauf; s: PlanSpalte }) {
           Ablauf
         </button>
         <span className={`${styles.anzahl} ${styles.handyAnzahl}`}>{anzahlText(z)}</span>
-        {darf && <StiftKnopf ma={ma} fuer={s.name} />}
+        {darf && <BearbeitenKnopf ma={ma} fuer={s.name} />}
       </div>
       {!ma.zu && (
         <div className={styles.handyInhalt}>

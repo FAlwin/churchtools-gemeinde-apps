@@ -107,7 +107,7 @@ Der Kopf des Fensters bleibt oben stehen, nur die Unterkante rückt kurz nach de
 Ruckeln, kein Hoch und Runter, das angetippte Feld bleibt sichtbar. Tastatur zu → das Fenster ist wieder
 so groß wie vorher.
 
-1. Einen Termin öffnen, oben rechts auf den runden **Stift** („Ablauf bearbeiten") tippen.
+1. Einen Termin öffnen, oben rechts auf **Bearbeiten** tippen.
 2. Einen Eintrag antippen, **Lied verknüpfen**, etwas eintippen, einen Treffer wählen.
 3. **Speichern** tippen und auf die obere Leiste schauen.
 4. Zu einer anderen App wechseln und zurückkommen.

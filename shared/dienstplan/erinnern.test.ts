@@ -464,3 +464,32 @@ describe('offenKurz – die kurze Terminliste im Fenster', () => {
     ).toBe('So, 06.12. 09:00 · So, 06.12. 10:30 · So, 13.12.');
   });
 });
+
+describe('Dienste, die niemand vorgesehen hat (20.11.2026: Plan mit `immerZeigen`)', () => {
+  // Schlagzeug (Musik, CT-Gruppe 200) ist planbar, kommt aber nirgends vor – „Planen“ zeigt ihn trotzdem.
+  const SCHLAGZEUG = 11;
+  const mitSchlagzeug = (): Plan =>
+    planAus(ROH, {
+      ichId: 1,
+      dienste: diensteAus([
+        { id: TON, name: 'Ton', serviceGroupId: TECHNIK, groupIds: [7], sortKey: 1 },
+        { id: GITARRE, name: 'Gitarre', serviceGroupId: MUSIK, groupIds: [100], sortKey: 2 },
+        { id: GESANG, name: 'Gesang', serviceGroupId: MUSIK, groupIds: [90], sortKey: 3 },
+        { id: SCHLAGZEUG, name: 'Schlagzeug', serviceGroupId: MUSIK, groupIds: [200], sortKey: 4 },
+      ]),
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => true,
+      ganzSichtbar: () => true,
+      immerZeigen: () => true,
+    });
+
+  it('der Plan führt die Zeile, die Erinnerung ignoriert sie – dieselben Fehlenden wie ohne', () => {
+    const plan = mitSchlagzeug();
+    expect(musik(plan).zeilen.map((z) => z.dienst.name)).toContain('Schlagzeug');
+    // Die Mitglieder von 200 sind nicht geladen – das darf die Gruppe nicht sperren und niemanden zum Fehlenden machen.
+    const mit = musikFehlend({ plan });
+    expect(mit.art).toBe('ok');
+    expect(offen(mit)).toEqual(offen(musikFehlend()));
+  });
+});

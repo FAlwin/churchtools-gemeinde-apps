@@ -255,8 +255,9 @@ function darfImFach(
  * Plätze dabei neu – gemessen 15.10.2026; `anzahlMitEntwuerfen`).
  *
  * Mit `katalog` stehen **alle Dienste der Gruppe** da, auch die ohne Matrixzeile – mit Anzahl 0 („nicht vorgesehen“), dort
- * schaltet „+“ sie ein (13.11.2026: „Abendmahl“ fehlte, weil er im Zeitraum nirgends vorkam). Die Matrix selbst bekommt
- * keine Leerzeilen. Ohne `katalog` nur die Dienste mit Zeile.
+ * schaltet „+“ sie ein (13.11.2026: „Abendmahl“ fehlte, weil er im Zeitraum nirgends vorkam). Seit 20.11.2026 hat auch die
+ * Matrix für jeden planbaren Dienst eine Zeile (`planAus` mit `immerZeigen`); der Katalog bleibt für Dienste, die man nur
+ * an diesem Termin planen darf. Ohne `katalog` nur die Dienste mit Zeile.
  */
 export function plaetzeZeilen(
   daten: EntwuerfeDaten | null,

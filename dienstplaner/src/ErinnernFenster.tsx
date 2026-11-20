@@ -11,6 +11,7 @@ import {
   erinnerSpalten,
   fehlendeInGruppe,
   mailInhalt,
+  nurVorgesehene,
   offenKurz,
   type Empfaenger,
   type GruppenErgebnis,
@@ -78,7 +79,11 @@ export function ErinnernFenster({
 }) {
   // ── Laden: Mitglieder und Abwesenheiten der CT-Gruppen, Antworten je Dienstgruppe – beim Öffnen ──
   const termine = erinnerSpalten(plan, spalten, heute);
-  const dienste = rasterDienste(plan, termine, gruppen);
+  const dienste = rasterDienste(
+    plan,
+    termine,
+    gruppen.map((g) => nurVorgesehene(plan, termine, g)),
+  );
   const ctGruppen = gruppenDerDienste(dienste.map((x) => x.zeile.dienst));
   const zeitraum = plan.spalten.length
     ? { von: plan.spalten[0].tag, bis: plan.spalten[plan.spalten.length - 1].tag }

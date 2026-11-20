@@ -74,6 +74,18 @@ export function erinnerSpalten(plan: Plan, spalten: readonly number[], heute: st
 }
 
 /**
+ * Die Gruppe mit nur den Diensten, die an den gezeigten Terminen vorgesehen sind. `planAus` führt seit 20.11.2026 auch
+ * planbare Dienste ohne einen Platz (zum Einschalten in „Planen“); „Erinnern“ fragt aber nur dort nach Antworten, wo
+ * wirklich Dienste gebraucht werden – die Mitglieder eines Dienstes, den niemand vorgesehen hat, bekommen keine Mail.
+ */
+export function nurVorgesehene(plan: Plan, spalten: readonly number[], g: PlanGruppe): PlanGruppe {
+  const zeilen = g.zeilen.filter((z) =>
+    spalten.some((i) => plan.spalten[i] && z.zellen[i] !== null),
+  );
+  return zeilen.length === g.zeilen.length ? g : { ...g, zeilen };
+}
+
+/**
  * **Warum man diese Gruppe nicht beurteilen kann** – `null`, wenn die Lage klar ist. Der erste Grund gewinnt. Geprüft wird
  * für die Dienste, die an den Terminen vorkommen (`rasterDienste`, dieselben, für die „Personen“ lädt). `nochmal`: der Grund
  * ist vorübergehend (noch nicht geladen, ChurchTools hat nicht geantwortet) – „Erneut versuchen“ lohnt; die anderen sind
@@ -89,7 +101,11 @@ export function gruppeGrund(o: {
   const id = o.gruppe.gruppe?.id ?? null;
   if (!antwortenSichtbar(o.antworten, id))
     return { grund: 'Antworten nicht sichtbar', nochmal: false };
-  const dienste = rasterDienste(o.plan, [...o.spalten], [o.gruppe]);
+  const dienste = rasterDienste(
+    o.plan,
+    [...o.spalten],
+    [nurVorgesehene(o.plan, o.spalten, o.gruppe)],
+  );
   const staende = dienste.flatMap((x) => x.zeile.dienst.gruppenIds.map((g) => o.daten.get(g)));
   if (staende.some((s) => s === undefined))
     return { grund: 'Mitglieder noch nicht geladen', nochmal: true };
@@ -124,7 +140,7 @@ export function fehlendeInGruppe(o: {
   const raster = personenRaster({
     plan: o.plan,
     spalten,
-    gruppen: [o.gruppe],
+    gruppen: [nurVorgesehene(o.plan, spalten, o.gruppe)],
     daten: o.daten,
     antworten: o.antworten ?? undefined,
   });

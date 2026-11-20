@@ -131,6 +131,11 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
   mit „… bitte die Seite neu laden“. Beide Fenster holen Termin, Gruppe und Plätze bei jedem Zeichnen aus dem **aktuellen** Plan
   (das Plätze-Fach merkte sich bis dahin die Gruppe vom Öffnen und ließ nach 2 → 1 „−“ am Entwurf vorbei bis 0 zu). **Gesperrt** (− und +, „Hier liegt ein Entwurf – erst senden oder
   entfernen“) ist ein Dienst mit Entwürfen nur noch, wo man die Entwürfe der Gruppe nicht ändern darf (Schublade nicht „bereit“).
+- **Welche Dienste „Planen“ zeigt** (Fund 20.11.2026: „Abendmahl“ war nirgends vorgesehen und deshalb weder im Filter noch
+  als Zeile zu finden): **Jeder Dienst, den man planen darf, steht in Matrix und „Personen“ – auch ohne einen einzigen Platz
+  im Zeitraum** (Zeilen „–“ bzw. Plätze „aus“; `planAus` mit `immerZeigen`, `rasterDienste`). Wer einen Dienst nur sehen darf,
+  bekommt keine leeren Zeilen. Gilt nur für den Zeitraum, nicht für die Termin-Ansicht, Teilen/PDF und das Handy-Blatt je
+  Termin (die zeigen weiter nur, was es dort gibt). „Erinnern“ fragt nur dort nach Antworten, wo Dienste vorgesehen sind.
 - **Plätze-Regler in der Gruppenzeile** (Plätze-Fach, jede Änderung gilt sofort, ChurchTools verschickt dabei nichts):
   Das Fach zeigt **jeden Dienst der Dienstgruppe**, den man an diesem Termin planen darf – auch Dienste, die im
   gezeigten Zeitraum noch nirgends einen Platz haben (dann „nicht vorgesehen“, 0): „+“ schaltet den Dienst für diesen

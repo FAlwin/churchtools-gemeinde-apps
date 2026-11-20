@@ -4,7 +4,13 @@ import type { Person } from '../organigramm/mitglieder';
 import { entwurfVeraltet, ortSchluessel, type Entwurf, type EntwurfZiel } from './entwuerfe';
 import { planAus, terminStand, type Plan, type PlanGruppe } from './plan';
 import { abwesenheitenAus, type GruppenStand, type PersonenDaten } from './personenDaten';
-import { offenText, personenRaster, plaetzeZelleText, type EntwurfSuche } from './personenRaster';
+import {
+  offenText,
+  personenRaster,
+  plaetzeZelleText,
+  rasterDienste,
+  type EntwurfSuche,
+} from './personenRaster';
 import { gezeigteGruppen } from './planFilter';
 import { termineAus, type RohTermin } from './termine';
 
@@ -223,9 +229,28 @@ describe('personenRaster – Blöcke und Zeilen', () => {
     expect(block(r, CAFE).gruppenIds).toEqual([47, 49]);
   });
 
-  it('ein Dienst ohne Platz an den gezeigten Terminen bekommt keinen Block', () => {
-    // Nur der Mittwoch: Café hat dort keine Plätze.
+  it('ein planbarer Dienst ohne Platz an den gezeigten Terminen bekommt trotzdem einen Block (zum Einschalten)', () => {
+    // Nur der Mittwoch: Café hat dort keine Plätze – hier ist alles planbar (`planDaraus`).
     const r = personenRaster({ plan: PLAN, spalten: [1], gruppen: ALLE_GRUPPEN, daten: DATEN });
+    expect(r.blocks.map((b) => b.dienst.name)).toEqual(['Ton', 'Gitarre', 'Gesang', 'Café']);
+    expect(block(r, CAFE).plaetze[0].anzahl).toBe(0);
+  });
+
+  it('ein nicht planbarer Dienst ohne Platz an den gezeigten Terminen bekommt keinen Block', () => {
+    const nurSehen = planAus(ROH, {
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: (d) => d.id !== CAFE,
+      ganzSichtbar: () => true,
+    });
+    const r = personenRaster({
+      plan: nurSehen,
+      spalten: [1],
+      gruppen: nurSehen.gruppen,
+      daten: DATEN,
+    });
     expect(r.blocks.map((b) => b.dienst.name)).toEqual(['Ton', 'Gitarre', 'Gesang']);
   });
 
@@ -986,5 +1011,29 @@ describe('Ende der Spalte – dieselbe Regel wie in der Terminliste', () => {
     expect(plan.spalten.map((s) => s.ende)).toEqual(zeilen.map((z) => z.ende));
     expect(plan.spalten[0].ende).toBe('2026-12-06T10:00:00Z');
     expect(plan.spalten[2].ende).toBe(T3);
+  });
+});
+
+describe('rasterDienste – planbare Dienste ohne Platz (Fund 20.11.2026)', () => {
+  // Gitarre hat einen Platz; Gesang und Ton kommen im Zeitraum nirgends vor.
+  const roh = [termin(1, T1, [platz(GITARRE, 12, 'Daniel Fink')])];
+  const plan = (planbar: (d: { id: number }) => boolean) =>
+    planAus(roh, {
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar,
+      ganzSichtbar: () => true,
+      immerZeigen: () => true,
+    });
+  const ids = (p: Plan) => rasterDienste(p, [0], p.gruppen).map((x) => x.zeile.dienst.id);
+
+  it('ein planbarer Dienst bekommt seinen Block auch ohne Platz', () => {
+    expect(ids(plan(() => true))).toEqual([TON, GITARRE, GESANG, CAFE]);
+  });
+
+  it('ein nicht planbarer ohne Platz bekommt keinen (Regel wie bisher)', () => {
+    expect(ids(plan((d) => d.id === GESANG || d.id === GITARRE))).toEqual([GITARRE, GESANG]);
   });
 });

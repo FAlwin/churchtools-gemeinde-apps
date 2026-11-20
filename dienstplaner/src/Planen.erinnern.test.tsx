@@ -185,6 +185,56 @@ describe('Der Knopf „Erinnern“ in der Planen-Leiste', () => {
   });
 });
 
+describe('Dienste ohne Platz (20.11.2026: „Planen“ führt jeden planbaren Dienst)', () => {
+  it('ein Dienst, den niemand vorgesehen hat, wird nicht geladen und macht niemanden zum Fehlenden', async () => {
+    // Schlagzeug (Musik, CT-Gruppe 77) kommt an keinem Termin vor – der Plan führt ihn trotzdem (`immerZeigen`).
+    const start = startFuer({
+      dienste: diensteAus([
+        { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7], sortKey: 1 },
+        { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9], sortKey: 2 },
+        { id: 12, name: 'Schlagzeug', serviceGroupId: 4, groupIds: [77], sortKey: 3 },
+      ]),
+    });
+    const plan = planAus(ROH, {
+      ichId: start.ichId,
+      dienste: start.dienste,
+      dienstgruppen: start.dienstgruppen,
+      zeitzone: 'Europe/Berlin',
+      planbar: (d) => planbar(start, d),
+      ganzSichtbar: (d) => ganzSichtbar(start, d),
+      immerZeigen: (d) => planbar(start, d),
+    });
+    expect(plan.gruppen.flatMap((g) => g.zeilen.map((z) => z.dienst.name))).toContain('Schlagzeug');
+    const lader = vi.fn<PersonenLader>(() => Promise.resolve(personenStand()));
+    localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ unteransicht: 'matrix' }));
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        mehrMoeglich={false}
+        ladeZeitraum={vi.fn(() => new Promise<never>(() => {}))}
+        heute="2026-10-14"
+        ladePersonen={lader}
+        ladeAntworten={() => Promise.resolve(ANTWORTEN())}
+        erinnern={{ senden: vi.fn<MailSender>(() => Promise.resolve({})), link: () => LINK }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Erinnern:/ }));
+    const fenster = await screen.findByRole('dialog', { name: 'Erinnern' });
+    await geladen(fenster);
+    expect(lader).toHaveBeenCalled();
+    for (const [ids] of lader.mock.calls) expect(ids).not.toContain(77);
+    // Dieselben Fehlenden wie ohne den Dienst.
+    expect(
+      within(within(fenster).getByRole('list', { name: 'Dienstgruppen' })).getByRole('button', {
+        name: 'Musik · 2',
+      }),
+    ).toBeTruthy();
+  });
+});
+
 describe('Das Fenster: Gruppen, Empfänger, Vorschau', () => {
   it('Titel und Unterzeile; die Gruppen als Knöpfe mit Zahl – Musik vorgewählt, Technik gesperrt mit Grund', async () => {
     const { fenster } = await oeffnen();

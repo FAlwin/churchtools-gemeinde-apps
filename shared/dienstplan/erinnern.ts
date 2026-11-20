@@ -21,7 +21,7 @@
 import { monatName, tagKurz } from '../ct/datum';
 import { antwortenSichtbar, type PersonenAntworten } from './personenAntworten';
 import type { PersonenDaten } from './personenDaten';
-import { personenRaster, rasterDienste } from './personenRaster';
+import { istVorgesehen, personenRaster, rasterDienste } from './personenRaster';
 import type { Plan, PlanGruppe, PlanSpalte } from './plan';
 
 /** Ein Termin, wie die Mail ihn aufführt. */
@@ -79,9 +79,7 @@ export function erinnerSpalten(plan: Plan, spalten: readonly number[], heute: st
  * wirklich Dienste gebraucht werden – die Mitglieder eines Dienstes, den niemand vorgesehen hat, bekommen keine Mail.
  */
 export function nurVorgesehene(plan: Plan, spalten: readonly number[], g: PlanGruppe): PlanGruppe {
-  const zeilen = g.zeilen.filter((z) =>
-    spalten.some((i) => plan.spalten[i] && z.zellen[i] !== null),
-  );
+  const zeilen = g.zeilen.filter((z) => istVorgesehen(plan, spalten, z));
   return zeilen.length === g.zeilen.length ? g : { ...g, zeilen };
 }
 

@@ -174,6 +174,13 @@ const besetzt = (p: PlanPlatz): p is PlanPlatz & { art: 'zugesagt' | 'angefragt'
   p.art !== 'frei' && !p.verborgen;
 
 /**
+ * **Ist der Dienst an mindestens einem der gezeigten Termine vorgesehen?** Die eine Stelle für diese Regel –
+ * `rasterDienste` und „Erinnern“ (`nurVorgesehene`) fragen hier.
+ */
+export const istVorgesehen = (plan: Plan, spalten: readonly number[], z: PlanZeile): boolean =>
+  spalten.some((i) => plan.spalten[i] !== undefined && z.zellen[i] !== null);
+
+/**
  * **Welche Dienste einen Block bekommen**: die der gezeigten Gruppen, die an mindestens einem gezeigten Termin vorgesehen
  * sind (sonst bliebe der Block leer) – und jeder **planbare** Dienst, auch ohne Platz im Zeitraum: Über seine Zeile
  * „Plätze“ (alles „aus“) schaltet man ihn ein (Fund 20.11.2026). Eine Stelle für die Rechnung und fürs Laden – geladen werden nur die CT-Gruppen
@@ -187,8 +194,7 @@ export function rasterDienste(
   const dienste: { zeile: PlanZeile; gruppe: PlanGruppe }[] = [];
   for (const g of gruppen)
     for (const z of g.zeilen)
-      if (z.planbar || spalten.some((i) => plan.spalten[i] && z.zellen[i] !== null))
-        dienste.push({ zeile: z, gruppe: g });
+      if (z.planbar || istVorgesehen(plan, spalten, z)) dienste.push({ zeile: z, gruppe: g });
   return dienste;
 }
 

@@ -24,6 +24,7 @@ import {
 import { AblaufHinweis } from './AblaufHinweis';
 import { useKurzerHinweis } from '../hooks/useKurzerHinweis';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
+import { usePunktAnsicht } from '@ui/ablauf/usePunktAnsicht';
 import { istExtension } from '../services/ctRuntime';
 
 export function AgendaFullView({
@@ -33,6 +34,8 @@ export function AgendaFullView({
   onSelect,
   onSichtbar,
   infoSpalten,
+  infoGruppen,
+  zurueckLabel,
 }: {
   items: AgendaItem[];
   eventId: number;
@@ -48,6 +51,10 @@ export function AgendaFullView({
   onSichtbar?: (sichtbar: boolean) => void;
   /** Die gewählten Dienstgruppen (Knopf „Spalten“, E6-4) – Spalten bzw. am Handy Zeilen. */
   infoSpalten?: readonly InfoGruppe[];
+  /** Alle Dienstgruppen, deren Infos man sieht – die Einzelansicht eines Punkts zeigt jede mit Text (B8, E21). */
+  infoGruppen?: readonly InfoGruppe[];
+  /** Name der Seite, zu der „‹“ in der Einzelansicht am Handy zurückführt („Ablauf“). */
+  zurueckLabel?: string;
 }) {
   useEffect(() => {
     onSichtbar?.(true);
@@ -84,17 +91,29 @@ export function AgendaFullView({
   // Schildchen „neu/geändert“ (solange der Hinweis steht) und das Antippen der Lieder dazu.
   const schild = (id: number) =>
     !sichtbar ? null : meldung.neu.has(id) ? 'neu' : meldung.geaendert.has(id) ? 'geändert' : null;
+  // Die Einzelansicht eines Punkts (B8, E16/E20): Tipp auf den Punkt – am Handy eine Seite, sonst ein Fenster.
+  const punkt = usePunktAnsicht({
+    zeilen: items,
+    infoGruppen,
+    // Fotos nur in ChurchTools selbst – auf dem eigenen Server Kürzel (Alwin, 02.11.2026).
+    fotos: istExtension,
+    onLied: (i) => onSelect(i),
+    zurueckLabel,
+  });
   return (
-    <AblaufListe
-      zeilen={items}
-      beginn={beginn}
-      onLied={(i) => onSelect(i)}
-      schild={schild}
-      kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
-      infoSpalten={infoSpalten}
-      // Fotos nur in ChurchTools selbst – auf dem eigenen Server Kürzel (Alwin, 02.11.2026).
-      fotos={istExtension}
-    />
+    <>
+      <AblaufListe
+        zeilen={items}
+        beginn={beginn}
+        onLied={(i) => onSelect(i)}
+        onPunkt={punkt.oeffnen}
+        schild={schild}
+        kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
+        infoSpalten={infoSpalten}
+        fotos={istExtension}
+      />
+      {punkt.ueberlagerung}
+    </>
   );
 }
 

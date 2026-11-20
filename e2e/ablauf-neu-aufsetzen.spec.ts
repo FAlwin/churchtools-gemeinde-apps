@@ -40,7 +40,9 @@ async function oeffneNeuAufsetzen(page: Page): Promise<void> {
   await page.getByText('Neu-Probe (Stub)', { exact: true }).click();
   await expect(page.locator('#root').getByText('Predigt (geteilt)')).toBeVisible();
   await page.getByRole('button', { name: 'Ablauf bearbeiten' }).click();
-  await page.getByRole('button', { name: /Neu aufsetzen/ }).click();
+  // „Neu aufsetzen …“ liegt im „⋯“-Menü des Kopfs (B8, R6).
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('menuitem', { name: /Neu aufsetzen/ }).click();
   await expect(page.getByText('Ablauf neu aufsetzen')).toBeVisible();
   // Bis die Vorlagen da sind, steht „Wie eine frühere“ vorn – erst danach ist die Vorlage gewählt.
   await expect(page.getByText('Probe-Vorlage (Stub)')).toBeVisible();
@@ -66,7 +68,8 @@ test('geteilt, „Nur für diesen Termin neu“: eigener Ablauf aus der Vorlage,
   expect(await titelImStub(page, ANDERER)).toEqual(['Ankommen (geteilt)', 'Predigt (geteilt)']);
   // Die Liste zeigt den neuen Ablauf, man bleibt im Bearbeiten.
   await expect(page.locator('#root').getByText('Begrüßung (Vorlage)')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Neu aufsetzen/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await expect(page.getByRole('menuitem', { name: /Neu aufsetzen/ })).toBeVisible();
 });
 
 test('geteilt, leer „Für beide leeren“: beide Termine stehen ohne Punkte da', async ({ page }) => {

@@ -7,10 +7,13 @@ import type {
   Service,
   SetlistSong,
 } from '@shared/types/index';
-import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
+import { InfoSpaltenFenster } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
@@ -123,6 +126,9 @@ export function Setlist({
   vorlagenRechte,
 }: SetlistProps) {
   const [editMode, setEditMode] = useState(false);
+  const handy = useMedienAbfrage(HANDY_BREITE);
+  // „Spalten wählen“ aus dem „⋯“-Menü (B8, R6) öffnet ein kleines Fenster.
+  const [spaltenOffen, setSpaltenOffen] = useState(false);
   // Infos je Dienstgruppe als Spalten (E6-4) – dieselbe Wahl wie im Dienstplaner, aber je App gemerkt.
   const spalten = useInfoSpalten('musikapp.ablauf.infoSpalten', infoGruppen);
   // Geführte Einführung (#Onboarding, Gruppen 3+4): Ablauf-Ansicht beim ersten Öffnen, Bearbeiten-
@@ -185,6 +191,9 @@ export function Setlist({
     },
     neuAufsetzen: () => setNeuAufsetzenOffen(true),
     hinweisLinks: alsVorlage.link ? [alsVorlage.link] : undefined,
+    // „Als Vorlage …“ und „Neu aufsetzen …“ liegen im „⋯“-Menü, der blaue Stift an jeder Zeile entfällt (B8, Entwurf v5).
+    linksImMenue: true,
+    ohneStift: true,
     plusImKopf: true,
   });
   const { fehlerZeigen } = bearbeiten;
@@ -291,53 +300,70 @@ export function Setlist({
   }
 
   /**
-   * Die Knöpfe im Seitenkopf (`KopfKnopf`, Scheibe S, 26.10.2026): mit Rahmen und Beschriftung wie in ChurchTools,
-   * im Bearbeiten „Fertig“ blau (vorher war „Bearbeiten“ selbst blau, 28.10.2026 geändert); am Handy nur das Symbol. Vorher runde Knöpfe (`RundKnopf`, 02.10.2026).
+   * Die Knöpfe im Seitenkopf in **Stufen** (R1/R2, Ruhige Bedienung B8): Ansehen zeigt „Bearbeiten“ (Neben) und ein „⋯“ (still)
+   * mit dem Seltenen – „Spalten wählen“ und „Als PDF teilen“. Im Bearbeiten steht grün „Eintrag hinzufügen“ (am Rechner), das
+   * „⋯“ mit „Als Vorlage …“, „Neu aufsetzen …“ und „Ablauf abschließen/öffnen“ und als EINZIGER blauer Knopf „Fertig“. Am
+   * Handy nur Symbole (CSS).
    */
   // Auch bei einem LEEREN Ablauf (13.10.2026): Sonst gab es keinen Stift, und ein in der App leer
   // angelegter Ablauf ließ sich nicht füllen. Das Teilen braucht Lieder und fragt selbst (`teilbar`).
+  const mehrAnsehen: Option[] =
+    !editMode && items.length > 0
+      ? [
+          ...(infoGruppen && infoGruppen.length > 0
+            ? [
+                {
+                  label: 'Spalten wählen',
+                  symbol: <Icon name="columns" size={16} />,
+                  onClick: () => setSpaltenOffen(true),
+                },
+              ]
+            : []),
+          {
+            label: 'Als PDF teilen',
+            symbol: <Icon name="share" size={16} />,
+            onClick: teilenOeffnen,
+          },
+        ]
+      : [];
+  const mehrBearbeiten: Option[] =
+    canEdit && editMode
+      ? [
+          ...bearbeiten.mehrOptionen,
+          // Abgeschlossen steht „Öffnen“ sichtbar im Kopf (ein Zustand, kein Seltenes – sonst fragt man sich, warum nichts
+          // geht); abschließen kann man nur, solange er offen ist.
+          ...(abgeschlossen
+            ? []
+            : [
+                {
+                  label: 'Ablauf abschließen',
+                  symbol: <Icon name="lock" size={16} />,
+                  onClick: () => setAbschliessenFrage(true),
+                },
+              ]),
+        ]
+      : [];
   const aktionen =
     !isLoading && !isError ? (
       <>
-        {!editMode && items.length > 0 && (
-          <InfoSpaltenKnopf
-            gruppen={infoGruppen}
-            zeilen={items}
-            ids={spalten.ids}
-            onIds={spalten.setIds}
-          />
-        )}
-        {items.length > 0 && !editMode && (
-          <KopfKnopf
-            onClick={teilenOeffnen}
-            label="Teilen"
-            title="Ablauf als PDF teilen"
-            dataTour="setlist-share"
-            symbol={<Icon name="share" size={18} stroke={2.2} />}
-          />
-        )}
         {/* Grünes „+ Eintrag hinzufügen“ am iPad/Rechner (S2) – am Handy schwebt das Plus. */}
         {canEdit && editMode && bearbeiten.kopfKnopf}
-        {canEdit && editMode && !abgeschlossen && (
-          <KopfKnopf
-            onClick={() => setAbschliessenFrage(true)}
-            label="Abschließen"
-            title="Ablauf abschließen"
-            dataTour="edit-lock"
-            symbol={<Icon name="lock" size={18} stroke={2.2} />}
-          />
-        )}
         {/* Öffnen ohne Rückfrage – es zerstört nichts. */}
         {canEdit && editMode && abgeschlossen && (
           <KopfKnopf
             onClick={() => !abschluss.isPending && abschlussSetzen(false)}
             label="Öffnen"
             title="Ablauf öffnen"
-            dataTour="edit-lock"
             aktiv
             symbol={<Icon name="lock-open" size={18} stroke={2.2} />}
           />
         )}
+        <MehrMenue
+          optionen={editMode ? mehrBearbeiten : mehrAnsehen}
+          handy={handy}
+          titel="Mehr"
+          dataTour={editMode ? 'edit-lock' : 'setlist-share'}
+        />
         {canEdit && (
           <KopfKnopf
             onClick={() => {
@@ -346,8 +372,7 @@ export function Setlist({
             }}
             label={editMode ? 'Fertig' : 'Bearbeiten'}
             title={editMode ? 'Fertig' : 'Ablauf bearbeiten'}
-            // Blau nur „Fertig“ – der Schritt, der im Bearbeiten als Nächstes kommt. „Bearbeiten“ selbst war blau gefüllt
-            // „zu präsent“ (Alwin, 28.10.2026) und steht jetzt grau wie „Teilen“.
+            // Blau nur „Fertig“ – der Schritt, der im Bearbeiten als Nächstes kommt. „Bearbeiten“ selbst steht als Neben-Knopf.
             haupt={editMode}
             dataTour="setlist-edit"
             symbol={<Icon name={editMode ? 'check' : 'pencil'} size={18} stroke={2.2} />}
@@ -377,6 +402,15 @@ export function Setlist({
   /** Dialoge und Fenster schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (
     <>
+      {spaltenOffen && !editMode && infoGruppen && (
+        <InfoSpaltenFenster
+          gruppen={infoGruppen}
+          zeilen={items}
+          ids={spalten.ids}
+          onIds={spalten.setIds}
+          onClose={() => setSpaltenOffen(false)}
+        />
+      )}
       {neuAufsetzenOffen && (
         <AblaufNeuAufsetzen termin={service} onClose={() => setNeuAufsetzenOffen(false)} />
       )}
@@ -480,6 +514,8 @@ export function Setlist({
           onSelect={onSelect}
           onSichtbar={onAblaufSichtbar}
           infoSpalten={spalten.gewaehlt}
+          infoGruppen={infoGruppen}
+          zurueckLabel="Ablauf"
         />
       )}
     </SeitenGeruest>

@@ -181,18 +181,19 @@ kurz sperren darfst.
 **Das muss passieren:** Abschließen und Öffnen gehen in der App. Ist der Ablauf abgeschlossen, sagt die
 App das – nicht mehr „Keine Berechtigung".
 
-1. Den Ablauf öffnen und oben auf den **Stift** tippen (Bearbeiten).
-2. Das **Schloss** oben antippen → Rückfrage „Ablauf abschließen?" → **Abschließen**.
-3. Oben rechts steht statt des Schlosses jetzt das **offene Schloss** („Ablauf öffnen", blau gefüllt); es
-   gibt keinen Kasten über dem Ablauf. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
+1. Den Ablauf öffnen und oben auf **Bearbeiten** tippen.
+2. Oben das **⋯-Menü** antippen → **Ablauf abschließen** → Rückfrage „Ablauf abschließen?" → **Abschließen**
+   (seit 20.11.2026 im Menü; vorher ein eigener Schloss-Knopf).
+3. Oben rechts steht jetzt der Knopf **Öffnen** mit dem **offenen Schloss** („Ablauf öffnen"); es
+   gibt keinen Kasten über dem Ablauf, und im ⋯-Menü fehlt „Ablauf abschließen". In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
 4. Einen Punkt antippen, einen Punkt ziehen und das **Plus** antippen → jedes Mal erscheint unten
    „Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen." –
    es öffnet sich kein Fenster, der gezogene Punkt springt zurück.
-5. Das **offene Schloss** antippen (ohne Rückfrage) → oben steht wieder das Schloss zum Abschließen,
+5. **Öffnen** antippen (ohne Rückfrage) → der Knopf ist weg, im ⋯-Menü steht wieder „Ablauf abschließen“,
    Bearbeiten geht wie vorher.
 6. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
    Punkt löschen → statt „Keine Berechtigung" erscheint die Meldung „abgeschlossen", und kurz danach
-   oben das offene Schloss.
+   oben der Knopf „Öffnen“.
 7. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
 
 <details><summary>Technisches</summary>
@@ -278,13 +279,14 @@ Dienste rot mit „?“), rechts runde Kreise – im Dienstplaner Foto oder Kür
 offene Dienste rot „offen“. Überschriften und „Beginn“ stehen
 als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, Tonart · Tempo · Autor).
 
-1. Termin in der Musik-App öffnen: Ansicht wie beschrieben; das Lied antippen öffnet das Blatt, die Kreise daneben
+1. Termin in der Musik-App öffnen: Ansicht wie beschrieben; die **Lied-Karte** antippen öffnet das Blatt (ein Tipp auf den
+   Punkt daneben öffnet die Einzelansicht, TF-ABLAUF-43), die Kreise daneben
    klappen die Zuständigen am Knopf auf (nicht das Blatt) – unten am Bildschirm nach oben; Scrollen, Escape oder ein
    Tipp daneben schließen. Beim Drüberfahren färben sich nur die Kreise blau. Kein leerer Kreis, auch bei Personen mit
    Foto.
 2. Denselben Termin im Dienstplaner öffnen: dieselbe Liste; die Lied-Karte nennt auch den Autor.
-3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, rechts nur der Stift (keine Kreise); ein
-   weggelassener Punkt bleibt blass.
+3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, in der Musik-App kein Stift mehr (die Zeile antippen
+   öffnet das Fenster), im Dienstplaner rechts weiter der Stift (keine Kreise); ein weggelassener Punkt bleibt blass.
 4. Dunkelmodus in ChurchTools einschalten: alles lesbar, Kreise und Balken passen sich an.
 
 <details><summary>Technisches</summary>
@@ -575,7 +577,8 @@ mindestens zwei Gruppen, einer davon frei und einer angefragt; Infos einer Grupp
 **Das muss passieren:** Das Termin-Blatt zeigt Dienste und Ablauf übersichtlich im ChurchTools-Look; was aufs Blatt
 kommt, lässt sich im Fenster wählen, das Gerät merkt es sich.
 
-1. Termin öffnen → hinter dem Titel **„Teilen“** (am Handy rechts in der Titelzeile, nichts verdeckt).
+1. Termin öffnen → hinter dem Titel **„Teilen“** (am Handy rechts in der Titelzeile, nichts verdeckt). In der **Musik-App**
+   liegt es seit 20.11.2026 im **⋯-Menü** oben („Als PDF teilen“).
 2. **Teilen** → „Termin teilen“ mit drei Zeilen: **Dienste** (Gruppen · über dem Ablauf), **Ablauf** (Uhrzeit, Dauer,
    Zuständig · Lieder mit Tonart), **Infos** (Gruppen wie unter „Spalten“ – wie in der Ansicht); darunter
    „Fertig · N Seiten · Titel TT.MM.JJJJ.pdf“ und die Seiten als Vorschau.
@@ -1275,5 +1278,40 @@ Fall – eines ohne kommende Dienste.
 - **Betrifft:** `dienstplaner/src/Termine.tsx`, `dienstplaner/src/Termine.module.scss`, `dienstplaner/src/hilfeTexte.ts`, `ui/bedienung/TextKnopf.tsx`, `ui/bedienung/Werkzeugzeile.module.scss`
 - **Automatisiert:** ja – `dienstplaner/src/Termine.test.tsx` (Zeile, Reihenfolge, Menü, Handy, leere Liste, „Weitere Wochen laden“), `dienstplaner/src/MeineTeilen.test.tsx`, `dienstplaner/src/App.test.tsx`, `ui/bedienung/TextKnopf.test.tsx`, `ui/bedienung/werkzeugzeileSpalten.test.ts`; von Hand bleibt der Eindruck im Browser und am Handy
 - **Historie:** „Ruhige Bedienung“ B4 (20.11.2026, Entwurf `restliche-ruhiger-v2.html` Abschnitt 3, E24)
+
+</details>
+
+### TF-ABLAUF-43 · Einen Ablaufpunkt ansehen: „Position n/m“, Davor und Danach
+
+**Das brauchst du:** Einen Termin mit Ablauf in Musik-App **und** Dienstplaner, mit einer Überschrift, einem Lied, einem Punkt mit
+Bemerkung, Zuständigen (auch einem offenen Dienst) und einer Info je Dienstgruppe; einmal am Rechner/iPad, einmal am Handy (390 px).
+
+**Das muss passieren:** Ein Tipp auf den **Punkt** (nicht auf die Lied-Karte, nicht auf die Kreise) zeigt **alle** Infos dieses Punkts und
+lässt sich weiterblättern – wie in der ChurchTools-App. Am iPad und Rechner ist es ein Fenster im Aussehen des Punkt-Fensters,
+am Handy eine eigene Seite. Bearbeiten ändert sich nicht.
+
+1. **Rechner/iPad:** einen Punkt ohne Lied antippen → Fenster mit dem Titel, „Position 3 von 10 · 10:04 – 10:07“ und ‹ ›, darunter
+   Uhrzeit, Dauer, Zuständig (Kreis, Name, Dienst; offener Dienst rot mit „offen“), Bemerkung, Lied (nur bei Liedern) und
+   „Infos je Gruppe“ (nur Gruppen mit Text). Es gibt keine Fußzeile; geschlossen wird mit **✕** oder **Escape**.
+2. **›** und **‹** blättern von Punkt zu Punkt; **Überschriften werden übersprungen und nicht mitgezählt**. Am ersten Punkt ist ‹
+   gesperrt, am letzten ›. Es steht immer nur ein Fenster da.
+3. Ein **Lied** antippen (Punkt, nicht die Karte) → die Ansicht zeigt dazu die Lied-Karte mit Tonart · Tempo. Die Karte dort antippen →
+   in der Musik-App das Liedblatt, im Dienstplaner die Lied-Ansicht; die Einzelansicht ist dann zu.
+4. **Lied-Karte in der Liste** antippen → direkt das Liedblatt bzw. die Lied-Ansicht, **nicht** die Einzelansicht. Die **Kreise** öffnen weiter die
+   Zuständigen am Knopf.
+5. **Handy:** derselbe Punkt öffnet eine **Seite**: oben **‹ Ablauf** und „Position 3/10“, der Titel groß, darunter dieselben Zeilen wie im
+   Fenster, unten **DAVOR** und **DANACH** mit Uhrzeit · Dauer und Titel des Nachbarn. Antippen blättert; am Rand ist der Knopf grau und leer.
+   **‹ Ablauf** (oder Escape) führt zur Liste zurück.
+6. **Bearbeiten** (Musik-App): Zeile antippen öffnet wie bisher das Fenster „Punkt bearbeiten“ (Position, Titel, Dauer, Lied, Zuständig,
+   Bemerkung, Infos je Gruppe) – unverändert. Der **blaue Streifen** an der Lied-Zeile und der rote Hinweis **„Moderation ?“** bei einem
+   unbesetzten Dienst stehen in der Liste wie bisher.
+7. **Dienstplaner, Matrix** (schmale Spalten): dort gibt es die Einzelansicht nicht – die Spalten bleiben wie vorher.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/ablauf/PunktAnsicht.tsx`, `ui/ablauf/usePunktAnsicht.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/liedMeta.ts`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`
+- **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, Escape/X, Seite am Handy mit Davor/Danach, Tipp-Ziele Karte gegen Punkt), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`; Gegenproben (Überschriften mitgezählt, Handy/Fenster vertauscht) einzeln rot; von Hand bleibt der Blick am Gerät
+- **Historie:** „Ruhige Bedienung“ B8 (21.11.2026, Entwurf `musik-app-ruhiger-v5.html`, Entscheidungen E16–E21)
 
 </details>

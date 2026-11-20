@@ -151,6 +151,16 @@ interface BearbeitenBasis<T extends AblaufZeile> {
    * „+ Gruppe erstellen“ in ChurchTools (Scheibe S2, Alwin 26.10.2026). Am Handy bleibt das Plus.
    */
   plusImKopf?: boolean;
+  /**
+   * „Neu aufsetzen …“ und die `hinweisLinks` („Als Vorlage …“) stehen nicht in der Hinweiszeile, sondern als Einträge im
+   * „⋯“-Menü der Werkzeugzeile (`mehrOptionen`, R6 – Musik-App B8). Die Anleitung bleibt. Ohne: wie bisher.
+   */
+  linksImMenue?: boolean;
+  /**
+   * Ohne den blauen Stift rechts an jeder Zeile (Musik-App B8: „Antippen öffnet die Zeile ohnehin“) – der Punkt selbst
+   * bleibt der Knopf zum Punkt-Fenster.
+   */
+  ohneStift?: boolean;
   /** Wofür das Plus ist, wenn es nur als Symbol steht (`schmal`): „Eintrag hinzufügen – Gottesdienst, So, 01.11.“. */
   plusName?: string;
   /**
@@ -187,6 +197,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   ueberlagerung: ReactNode;
   /** Das grüne „+ Eintrag hinzufügen“ für den Seitenkopf – nur mit `plusImKopf` auf breiten Bildschirmen, sonst `null`. */
   kopfKnopf: ReactNode;
+  /** Mit `linksImMenue`: „Als Vorlage …“, „Neu aufsetzen …“ als Einträge fürs „⋯“-Menü – sonst leer. */
+  mehrOptionen: Option[];
   /** Eine Fehlermeldung in der Zeile über der Liste zeigen (und `beiFehler` auslösen). */
   fehlerZeigen: (e: unknown, sonst: string) => void;
   fehlerLoeschen: () => void;
@@ -439,6 +451,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               item={item}
               infoZeilen={o.infoSpalten}
               vorlage={vorlage}
+              ohneStift={o.ohneStift}
               aktionen={zeilenAktionen(item, i)}
               {...(spalte !== undefined
                 ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
@@ -466,7 +479,37 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     </SortableContext>
   );
 
-  const hatLinks = !!o.neuAufsetzen || (o.hinweisLinks?.length ?? 0) > 0;
+  // Im „⋯“-Menü (R6) statt in der Hinweiszeile: erst die Eingaben, die Aufrufer-Reihenfolge – „Als Vorlage …“ davor.
+  const imMenue = !!o.linksImMenue;
+  const mehrOptionen: Option[] = imMenue
+    ? [
+        ...(o.hinweisLinks ?? [])
+          .filter((l) => l.davor)
+          .map((l) => ({
+            label: l.label,
+            symbol: <Icon name={l.icon} size={16} />,
+            onClick: l.onClick,
+          })),
+        ...(o.neuAufsetzen
+          ? [
+              {
+                label: 'Neu aufsetzen …',
+                symbol: <Icon name="refresh" size={16} />,
+                onClick: () =>
+                  abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : o.neuAufsetzen?.(),
+              },
+            ]
+          : []),
+        ...(o.hinweisLinks ?? [])
+          .filter((l) => !l.davor)
+          .map((l) => ({
+            label: l.label,
+            symbol: <Icon name={l.icon} size={16} />,
+            onClick: l.onClick,
+          })),
+      ]
+    : [];
+  const hatLinks = !imMenue && (!!o.neuAufsetzen || (o.hinweisLinks?.length ?? 0) > 0);
   const linkKnopf = (l: HinweisLink) => (
     <button
       key={l.label}
@@ -656,5 +699,12 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     </>
   );
 
-  return { liste, ueberlagerung, kopfKnopf, fehlerZeigen, fehlerLoeschen: () => setErr(null) };
+  return {
+    liste,
+    ueberlagerung,
+    kopfKnopf,
+    mehrOptionen,
+    fehlerZeigen,
+    fehlerLoeschen: () => setErr(null),
+  };
 }

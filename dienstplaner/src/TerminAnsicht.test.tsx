@@ -161,13 +161,19 @@ describe('TerminAnsicht (E6-1b)', () => {
     const zeit = within(ablauf).getByText('10:05').parentElement!;
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
-    // Nur ansehen – bis auf die Lieder: Sie öffnen die Lied-Ansicht (E6-O O4, vorher keine Knöpfe). Im Kopf dazu
-    // „Ablauf zeigen“ (E6b-1) und „Spalten“ (Infos je Gruppe, E6-4).
+    // Nur ansehen – bis auf die Punkte (B8, E20: Tipp auf den Punkt = Einzelansicht, Tipp auf die Lied-Karte = Lied-Ansicht,
+    // E6-O O4). Im Kopf dazu „Ablauf zeigen“ (E6b-1) und „Spalten“ (Infos je Gruppe, E6-4).
     expect(
       within(ablauf)
         .queryAllByRole('button')
-        .map((b) => b.textContent),
-    ).toEqual(['Ablauf zeigen', 'Spalten', expect.stringContaining('Du großer Gott')]);
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual([
+      'Ablauf im Vollbild zeigen',
+      'Infos je Gruppe zeigen',
+      '„Soundcheck“ ansehen',
+      '„Lied – Du großer Gott“ ansehen',
+      'Du großer Gott',
+    ]);
     expect(
       spy.mock.calls.map((c) => new URL(String(c[0])).pathname + new URL(String(c[0])).search),
     ).toEqual(

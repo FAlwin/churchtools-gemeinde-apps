@@ -32,7 +32,9 @@ test('Schloss schließt ab, „Ablauf öffnen" öffnet wieder', async ({ page })
   const plus = page.getByRole('button', { name: 'Eintrag hinzufügen' });
   await expect(plus).toBeVisible();
 
-  await page.getByRole('button', { name: 'Ablauf abschließen' }).click();
+  // „Ablauf abschließen“ liegt im „⋯“-Menü des Kopfs (B8, R6).
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('menuitem', { name: 'Ablauf abschließen' }).click();
   await page.getByRole('button', { name: 'Abschließen', exact: true }).click();
 
   // Abgeschlossen (Alwin, 13.10.2026): kein Kasten, oben rechts „Ablauf öffnen". Wer trotzdem ändern
@@ -44,8 +46,7 @@ test('Schloss schließt ab, „Ablauf öffnen" öffnet wieder', async ({ page })
   await expect(page.getByText('Neuer Eintrag')).toHaveCount(0);
 
   await oeffnen.click();
-  await expect(page.getByRole('button', { name: 'Ablauf abschließen' })).toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(oeffnen).toHaveCount(0);
+  await expect(oeffnen).toHaveCount(0, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Ablauf abschließen' })).toBeVisible();
 });

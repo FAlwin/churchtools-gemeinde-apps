@@ -6,8 +6,15 @@
  * (→ Charts) und setzt Schildchen „neu/geändert“. Die Regeln einer Zeile stehen in `@shared/ct/ablaufZeile`.
  */
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import {
+  ablaufEnde,
+  beginnStelle,
+  itemLabel,
+  itemTitleParts,
+  type AblaufZeile,
+} from '@shared/ct/ablaufZeile';
 import type { InfoGruppe } from '@shared/types/index';
+import { Etikett } from '../bedienung/Etikett';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import {
   BeginnLinie,
@@ -19,6 +26,7 @@ import {
   WeggelassenHinweis,
   ZeitText,
 } from './AblaufTeile';
+import { liedKarteLeer } from './liedMeta';
 import styles from './AblaufListe.module.scss';
 
 /** Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. */
@@ -48,9 +56,18 @@ export function ZeilenInhalt({
   schmal = false,
   infoZeilen = [],
   vorlage = false,
+  onLiedKarte,
+  liedKarteTour,
 }: {
   item: AblaufZeile;
   tag?: ReactNode;
+  /**
+   * Die Lied-Karte ist ein eigener Knopf (B8, E20): Tipp auf die Karte öffnet das Liedblatt, der Rest der Zeile die
+   * Einzelansicht des Punkts. Ohne: die Karte ist nur Anzeige (Bearbeiten-Liste, Matrix).
+   */
+  onLiedKarte?: () => void;
+  /** Ziel der Einführung an der Lied-Karte (`setlist-song`: „Tippe die Lied-Karte …“) – nicht an der ganzen Zeile. */
+  liedKarteTour?: string;
   schmal?: boolean;
   /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral statt rot – `ResponsibleLine`. */
   vorlage?: boolean;
@@ -66,10 +83,13 @@ export function ZeilenInhalt({
   }
   // Heißt der Punkt wie sein Lied (oder hat keinen eigenen Titel), steht der Liedname schon in der Titelzeile.
   const liedImTitel = !!item.song && itemTitleParts(item).songName === null;
+  // Ist die Karte der Knopf zum Liedblatt (B8, E20) und stünde sie leer da (Titel = Liedname, keine Angaben), nimmt sie den
+  // Titel selbst auf – sonst gäbe es für dieses Lied keinen Weg zum Liedblatt mehr.
+  const karteAlsTitel = !!onLiedKarte && !!item.song && liedKarteLeer(item.song, liedImTitel);
   return (
     <>
       <div className={styles.flowHead}>
-        <ItemTitle item={item} ohneLiedname={!!item.song} />
+        {!karteAlsTitel && <ItemTitle item={item} ohneLiedname={!!item.song} />}
         {tag}
         {item.weggelassen && <WeggelassenHinweis />}
       </div>
@@ -86,7 +106,19 @@ export function ZeilenInhalt({
           </div>
         ) : null;
       })}
-      {item.song && <LiedKarte song={item.song} ohneTitel={liedImTitel} />}
+      {item.song &&
+        (onLiedKarte ? (
+          <button
+            type="button"
+            className={styles.liedKnopf}
+            data-tour={liedKarteTour}
+            onClick={onLiedKarte}
+          >
+            <LiedKarte song={item.song} ohneTitel={liedImTitel && !karteAlsTitel} />
+          </button>
+        ) : (
+          <LiedKarte song={item.song} ohneTitel={liedImTitel} />
+        ))}
     </>
   );
 }
@@ -100,6 +132,7 @@ export function AblaufListe({
   zeilen,
   beginn,
   onLied,
+  onPunkt,
   schild,
   kopf,
   schmal = false,
@@ -116,6 +149,12 @@ export function AblaufListe({
    * (Dienstplaner: Lied-Ansicht, E6-O O4).
    */
   onLied?: (liedIndex: number, punkt: AblaufZeile) => void;
+  /**
+   * Den Punkt antippbar machen – öffnet die **Einzelansicht** (`PunktAnsicht`, B8/E20). Mit `onLied` teilen sich die
+   * Zeile: Tipp auf die **Lied-Karte** → `onLied`, Tipp auf den Punkt (alles andere außer den Kreisen) → `onPunkt`.
+   * Ohne `onPunkt` bleibt es, wie es war: bei Liedern ist der ganze Punkt der Knopf zu `onLied`. Nicht in der schmalen Form.
+   */
+  onPunkt?: (punkt: AblaufZeile) => void;
   /** Ein Schildchen am Punkt („neu“, „geändert“) – Musik-App. */
   schild?: (id: number) => string | null;
   /** Steht als Erstes in der Liste (Musik-App: der Hinweis „Ablauf geändert“) – mit denselben Abständen. */
@@ -153,7 +192,7 @@ export function AblaufListe({
 
   const zeile = (item: AblaufZeile) => {
     const tagText = schild?.(item.id) ?? null;
-    const tag = tagText && <span className={styles.aenderungsTag}>{tagText}</span>;
+    const tag = tagText && <Etikett ton="blau">{tagText}</Etikett>;
     const vl =
       (item.vorBeginn ? ` ${styles.vorlauf}` : '') +
       (item.weggelassen ? ` ${styles.weggelassen}` : '');
@@ -181,9 +220,35 @@ export function AblaufListe({
       </>
     );
     let punktTeil: ReactNode;
-    if (item.song && onLied) {
-      liedIndex += 1;
-      const idx = liedIndex;
+    const tippbar = !!onPunkt && !schmal;
+    if (item.song && onLied) liedIndex += 1;
+    const idx = liedIndex;
+    if (tippbar) {
+      // Zwei Ziele (E20): die Lied-Karte → Liedblatt, der Rest des Punkts → Einzelansicht. Der Punkt ist ein Knopf, der
+      // HINTER dem Inhalt liegt (`punktTipp`) – so steckt der Knopf der Karte nicht in einem Knopf.
+      const karte = item.song && onLied ? () => onLied(idx, item) : undefined;
+      punktTeil = (
+        <div className={`${styles.punktInhalt} ${styles.punktTipp}`}>
+          <button
+            type="button"
+            className={styles.punktFlaeche}
+            aria-label={`„${itemLabel(item)}“ ansehen`}
+            onClick={() => onPunkt(item)}
+          />
+          <ZeitSpalte item={item} />
+          <div className={styles.flowBody}>
+            <ZeilenInhalt
+              item={item}
+              tag={tag}
+              infoZeilen={alsSpalten ? [] : infos}
+              vorlage={vorlage}
+              onLiedKarte={karte}
+              liedKarteTour={karte && idx === 0 ? 'setlist-song' : undefined}
+            />
+          </div>
+        </div>
+      );
+    } else if (item.song && onLied) {
       // Nur der Punkt ist der Knopf zu den Charts – die Kreise daneben sind ein eigener Knopf (kein Knopf im Knopf).
       punktTeil = (
         <button

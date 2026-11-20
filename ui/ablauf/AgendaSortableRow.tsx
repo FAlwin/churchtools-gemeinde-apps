@@ -36,7 +36,15 @@ export interface ZeilenAktionen {
  * Das Menü hängt an `body`, fest unter dem Plus: In der Ablauf-Karte schnitt deren Rand es ab (Test-Instanz,
  * 30.10.2026). Beim Scrollen ginge es sonst mit dem Plus auseinander – dann schließt es.
  */
-function ZeilenKnoepfe({ label, aktionen }: { label: string; aktionen: ZeilenAktionen }) {
+function ZeilenKnoepfe({
+  label,
+  aktionen,
+  ohneStift,
+}: {
+  label: string;
+  aktionen: ZeilenAktionen;
+  ohneStift?: boolean;
+}) {
   const { offen, setOffen, rahmen, menue } = useAufklapp();
   const plus = useRef<HTMLButtonElement>(null);
   const [stelle, setStelle] = useState<{ top: number; right: number } | null>(null);
@@ -59,7 +67,10 @@ function ZeilenKnoepfe({ label, aktionen }: { label: string; aktionen: ZeilenAkt
   }
 
   return (
-    <div ref={rahmen} className={`${styles.zeilenKnoepfe}${offen ? ` ${styles.offen}` : ''}`}>
+    <div
+      ref={rahmen}
+      className={`${styles.zeilenKnoepfe}${offen ? ` ${styles.offen}` : ''}${ohneStift ? ` ${styles.ohneStift}` : ''}`}
+    >
       <button
         type="button"
         className={styles.zeilenLoeschen}
@@ -106,8 +117,11 @@ export function SortableRow<T extends AblaufZeile>({
   daten,
   infoZeilen,
   vorlage = false,
+  ohneStift = false,
 }: {
   item: T;
+  /** Ohne den blauen Stift rechts (Musik-App B8): Antippen der Zeile öffnet das Punkt-Fenster auch so. */
+  ohneStift?: boolean;
   /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral – `ZeilenInhalt`. */
   vorlage?: boolean;
   /** Die Infos der als Spalten gewählten Gruppen – als Zeile unter dem Punkt (02.11.2026). */
@@ -155,14 +169,18 @@ export function SortableRow<T extends AblaufZeile>({
           {item.title}
           {item.weggelassen && <WeggelassenHinweis />}
         </button>
-        {aktionen && <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} />}
-        <button
-          className={styles.rowEdit}
-          onClick={() => onOpenActions(item)}
-          aria-label="Bearbeiten"
-        >
-          <Icon name="pencil" size={15} stroke={2} />
-        </button>
+        {aktionen && (
+          <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} ohneStift={ohneStift} />
+        )}
+        {!ohneStift && (
+          <button
+            className={styles.rowEdit}
+            onClick={() => onOpenActions(item)}
+            aria-label="Bearbeiten"
+          >
+            <Icon name="pencil" size={15} stroke={2} />
+          </button>
+        )}
       </div>
     );
   }
@@ -189,14 +207,18 @@ export function SortableRow<T extends AblaufZeile>({
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
         <ZeilenInhalt item={item} schmal={schmal} infoZeilen={infoZeilen} vorlage={vorlage} />
       </button>
-      {aktionen && <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} />}
-      <button
-        className={styles.rowEdit}
-        onClick={() => onOpenActions(item)}
-        aria-label="Bearbeiten"
-      >
-        <Icon name="pencil" size={15} stroke={2} />
-      </button>
+      {aktionen && (
+        <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} ohneStift={ohneStift} />
+      )}
+      {!ohneStift && (
+        <button
+          className={styles.rowEdit}
+          onClick={() => onOpenActions(item)}
+          aria-label="Bearbeiten"
+        >
+          <Icon name="pencil" size={15} stroke={2} />
+        </button>
+      )}
     </div>
   );
 }

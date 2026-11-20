@@ -89,6 +89,16 @@ function zeige(
   return qc;
 }
 
+/** Ein Eintrag im „⋯“-Menü des Kopfs (B8, R6): erst das Menü auf, dann der Eintrag. */
+function imMenue(eintrag: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: eintrag }));
+}
+
+/** Den ersten Punkt im Bearbeiten-Modus antippen – der Stift ist weg (B8), die Zeile selbst öffnet das Fenster. */
+const ersterPunkt = () =>
+  fireEvent.click(document.querySelector<HTMLElement>('[data-tour="edit-item"]')!);
+
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(`worship:onboard-${TOUR_SETLIST}`, '1');
@@ -103,6 +113,30 @@ describe('Kopf-Knöpfe: blau nur „Fertig“ (Alwin, 28.10.2026)', () => {
     expect(bearbeiten.className).not.toMatch(/haupt/);
     fireEvent.click(bearbeiten);
     expect(screen.getByTitle('Fertig').className).toMatch(/haupt/);
+  });
+});
+
+describe('Kopf in Stufen (B8, R1/R2/R6)', () => {
+  it('Ansehen: „Bearbeiten“ (Neben) und „⋯“ mit Spalten/Teilen; Bearbeiten: kein Stift, „⋯“ mit Abschließen, nur „Fertig“ blau', () => {
+    zeige(false, undefined, [ITEM], false, [{ id: 3, name: 'Technik' }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Spalten wählen',
+      'Als PDF teilen',
+    ]);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    // Die alten Einzelknöpfe sind weg – nichts anderes als „⋯“ führt zu Teilen und Spalten.
+    expect(screen.queryByTitle('Ablauf als PDF teilen')).toBeNull();
+    expect(screen.queryByTitle('Infos je Gruppe zeigen')).toBeNull();
+    fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
+    expect(screen.queryByLabelText('Bearbeiten')).toBeNull(); // der Stift an der Zeile
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Neu aufsetzen …',
+      'Ablauf abschließen',
+    ]);
+    const blau = [...document.querySelectorAll('button')].filter((b) => /haupt/.test(b.className));
+    expect(blau.map((b) => b.title)).toEqual(['Fertig']);
   });
 });
 
@@ -121,7 +155,10 @@ describe('Ablauf abgeschlossen', () => {
     zeige(true);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
     expect(screen.queryByText(/abgeschlossen/)).toBeNull();
-    expect(screen.queryByTitle('Ablauf abschließen')).toBeNull();
+    // Abgeschlossen: „Öffnen“ steht im Kopf, „Ablauf abschließen“ gibt es im „⋯“ nicht.
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    expect(screen.queryByRole('menuitem', { name: 'Ablauf abschließen' })).toBeNull();
+    fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(screen.getByTitle('Ablauf öffnen'));
     await waitFor(() => expect(api.setAblaufAbgeschlossen).toHaveBeenCalledWith(1, false));
   });
@@ -129,7 +166,7 @@ describe('Ablauf abgeschlossen', () => {
   it('wer trotzdem ändern will – Punkt antippen oder Plus –, bekommt den Hinweis', async () => {
     zeige(true);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
-    fireEvent.click(screen.getAllByLabelText('Bearbeiten')[0]);
+    ersterPunkt();
     expect(await screen.findByText(/Dieser Ablauf ist in ChurchTools abgeschlossen/)).toBeTruthy();
     expect(screen.queryByText('Eintrag löschen')).toBeNull(); // kein Bearbeiten-Fenster
   });
@@ -145,7 +182,7 @@ describe('Ablauf abgeschlossen', () => {
   it('offen: das Schloss schließt erst nach der Rückfrage ab', async () => {
     zeige(false);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
-    fireEvent.click(screen.getByTitle('Ablauf abschließen'));
+    imMenue('Ablauf abschließen');
     expect(api.setAblaufAbgeschlossen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Abschließen' }));
     await waitFor(() => expect(api.setAblaufAbgeschlossen).toHaveBeenCalledWith(1, true));
@@ -155,7 +192,7 @@ describe('Ablauf abgeschlossen', () => {
     const qc = zeige(false, () => Promise.reject(new ApiError(423, ABLAUF_ABGESCHLOSSEN)));
     const neu = vi.spyOn(qc, 'invalidateQueries');
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
-    fireEvent.click(screen.getAllByLabelText('Bearbeiten')[0]);
+    ersterPunkt();
     fireEvent.click(await screen.findByText('Eintrag löschen'));
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(await screen.findByText(ABLAUF_ABGESCHLOSSEN)).toBeTruthy();
@@ -186,8 +223,10 @@ describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
   it('„Spalten“ im Seitenkopf → Technik angehakt → die Info steht im Ablauf', () => {
     zeige(false, undefined, [MIT_INFO], false, TECHNIK);
     expect(screen.queryByText('Mikro 1')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    // „Spalten wählen“ liegt im „⋯“-Menü und öffnet ein kleines Fenster (B8, Entwurf v5).
+    imMenue('Spalten wählen');
     fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.getByText('Mikro 1')).toBeTruthy();
     // Beim Bearbeiten steht sie als Zeile unter dem Punkt (Alwin, 02.11.2026: sonst sieht man nicht, was drinsteht).
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
@@ -197,7 +236,7 @@ describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
   it('im Punkt-Fenster ein Feld je sichtbarer Gruppe', async () => {
     zeige(false, undefined, [MIT_INFO], false, TECHNIK);
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ersterPunkt();
     const feld = await screen.findByRole<HTMLTextAreaElement>('textbox', {
       name: 'Info für Technik',
     });
@@ -206,6 +245,7 @@ describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
 
   it('ohne bekannte Gruppen (Rechte unbekannt): kein „Spalten“', () => {
     zeige(false, undefined, [MIT_INFO]);
-    expect(screen.queryByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    expect(screen.queryByRole('menuitem', { name: 'Spalten wählen' })).toBeNull();
   });
 });

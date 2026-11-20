@@ -58,6 +58,7 @@ import { absenderAus } from './ablaeufe';
 import { gemeindeLogo, personName, type MitgliedRoh } from './einrichten';
 import { optionenVon, spalteSpeichern, type CtFeld } from './formularFelder';
 import { nachweisGrundlageLesen, nachweisGrundlageSichern } from './nachweise';
+import { nachweisPersonenLesen, type NachweisArtMitPersonen } from './nachweisPersonen';
 
 /** Sichtbarkeit der Nachweis-Gruppen: „eingeschränkt“ wie beim Gruppenwechsel – nicht öffentlich, nicht versteckt. */
 export const NACHWEIS_SICHTBARKEIT = 'restricted';
@@ -139,9 +140,11 @@ const portLesen = (): CtPort => ctPortMit('Dir fehlt in ChurchTools das Recht da
 
 // ── Lesen ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Alle Nachweis-Arten, die man sehen darf – mit Gültigkeit und Vertrauenspersonen. Wirft bei jedem Lesefehler. */
-export async function nachweisArtenLesen(typId: number): Promise<NachweisArt[]> {
-  const { leiter } = await gruppenartRollen(portLesen(), typId);
+/** Die Arten (mit Gültigkeit und Vertrauenspersonen) und die Teilnehmer-Rolle der Gruppenart – eine Anfrage nach den Rollen. */
+async function artenUndRollen(
+  typId: number,
+): Promise<{ arten: NachweisArt[]; teilnehmer: number | null }> {
+  const { leiter, teilnehmer } = await gruppenartRollen(portLesen(), typId);
   const gruppen = await gruppenDerArt(typId);
   const arten: NachweisArt[] = [];
   for (const g of gruppen)
@@ -152,38 +155,85 @@ export async function nachweisArtenLesen(typId: number): Promise<NachweisArt[]> 
       einstellungen: nachweisEinstellungenLesen(g.information?.note),
       vertrauen: await vertrauenspersonen(g.id, leiter),
     });
-  return arten.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return { arten: arten.sort((a, b) => a.name.localeCompare(b.name, 'de')), teilnehmer };
+}
+
+/** Alle Nachweis-Arten, die man sehen darf – mit Gültigkeit und Vertrauenspersonen. Wirft bei jedem Lesefehler. */
+export async function nachweisArtenLesen(typId: number): Promise<NachweisArt[]> {
+  return (await artenUndRollen(typId)).arten;
+}
+
+/**
+ * Die Arten samt ihren Personen (N2a). `sichtbar` entscheidet je Art, ob die Personen gelesen werden dürfen – die eine
+ * Regel dafür: Admin („Berechtigungen verwalten“) alle, sonst nur Arten, deren Vertrauensperson man ist. Eine Art, die
+ * nicht sichtbar ist (oder deren Mitglieder ChurchTools nicht herausgibt, 403), hat `personen: null`. Wirft bei jedem
+ * anderen Lesefehler.
+ */
+async function artenMitPersonen(
+  typId: number,
+  sichtbar: (a: NachweisArt) => boolean,
+): Promise<NachweisArtMitPersonen[]> {
+  const { arten, teilnehmer } = await artenUndRollen(typId);
+  return await Promise.all(
+    arten.map(async (a) => ({
+      ...a,
+      personen: sichtbar(a) ? await nachweisPersonenLesen(a, teilnehmer) : null,
+    })),
+  );
 }
 
 export interface NachweiseSeite {
   /** `typId` null: die Gruppenart gibt es noch nicht. */
   grundlage: Awaited<ReturnType<typeof nachweisGrundlageLesen>>;
-  arten: NachweisArt[];
+  arten: NachweisArtMitPersonen[];
 }
 
 /** Alles für die Seite „Nachweise“. */
 export async function nachweiseSeiteLaden(): Promise<NachweiseSeite> {
   const grundlage = await nachweisGrundlageLesen();
+  if (grundlage.typId === null) return { grundlage, arten: [] };
+  // Wer nicht alles einrichten darf, sieht nur die Arten, die er leitet – samt Personen (Entwurf N2, abgenommen 20.11.2026).
+  const ich = grundlage.darfEinrichten ? null : (await ichLaden()).personId;
+  const meine = (a: NachweisArt) =>
+    grundlage.darfEinrichten || a.vertrauen?.some((p) => p.personId === ich) === true;
   return {
     grundlage,
-    arten: grundlage.typId === null ? [] : await nachweisArtenLesen(grundlage.typId),
+    arten: (await artenMitPersonen(grundlage.typId, meine)).filter(meine),
   };
+}
+
+/** Was die Startseite von den Nachweisen braucht (N2a). */
+export interface NachweisEinstiegDaten {
+  darfEinrichten: boolean;
+  /** Die Arten mit ihren Personen; leer, wenn sie sich nicht lesen ließen (dann zeigt die Karte keine Zahlen). */
+  arten: NachweisArtMitPersonen[];
 }
 
 /**
  * **Der Einstieg auf der Startseite**: sichtbar für „Berechtigungen verwalten“ **oder** Leitung mindestens einer
  * Nachweis-Gruppe. `null`, wenn sich das nicht lesen lässt – dann fehlt die Karte, bis neu geladen wird, aber die Startseite
- * bleibt (vorübergehend ist nicht „du darfst nicht“).
+ * bleibt (vorübergehend ist nicht „du darfst nicht“). Die Personen sind eine Zugabe: Scheitert ihr Lesen, bleibt die Karte
+ * wie bisher, nur ohne Zahlen – die Startseite scheitert daran nie.
  */
 export async function nachweisEinstieg(
   meineLeitung: ReadonlySet<number>,
-): Promise<{ darfEinrichten: boolean } | null> {
+): Promise<NachweisEinstiegDaten | null> {
   try {
     const g = await nachweisGrundlageLesen();
-    if (g.darfEinrichten) return { darfEinrichten: true };
-    if (g.typId === null || meineLeitung.size === 0) return null;
-    const leitet = (await gruppenDerArt(g.typId)).some((x) => meineLeitung.has(x.id));
-    return leitet ? { darfEinrichten: false } : null;
+    if (!g.darfEinrichten) {
+      if (g.typId === null || meineLeitung.size === 0) return null;
+      const leitet = (await gruppenDerArt(g.typId)).some((x) => meineLeitung.has(x.id));
+      if (!leitet) return null;
+    }
+    let arten: NachweisArtMitPersonen[] = [];
+    if (g.typId !== null) {
+      try {
+        arten = await artenMitPersonen(g.typId, (a) => g.darfEinrichten || meineLeitung.has(a.id));
+      } catch {
+        arten = [];
+      }
+    }
+    return { darfEinrichten: g.darfEinrichten, arten };
   } catch {
     return null;
   }

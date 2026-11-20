@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
+import { HANDY_BREITE } from '@ui/bedienung/useMedienAbfrage';
+import { plusTage } from '@shared/ct/datum';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { NACHWEIS_FELDER, type NachweisEinstellungen } from '@shared/anmeldung/nachweise';
-import { NACHWEIS_SCHRITTE, type NachweisArt, type NachweisErgebnis } from './nachweisArten';
+import { antragVorgabe } from '@shared/anmeldung/nachweisAntrag';
+import { plusJahre, type PersonAngaben } from '@shared/anmeldung/nachweisStand';
+import { NACHWEIS_SCHRITTE, type NachweisErgebnis } from './nachweisArten';
 import * as Arten from './nachweisArten';
-import { NachweisSeite } from './NachweisSeite';
+import type { NachweisArtMitPersonen, NachweisPerson } from './nachweisPersonen';
+import { NachweisSeite, type NachweisFilter } from './NachweisSeite';
 
 /**
  * Seite „Nachweise“ und Fenster „Nachweis-Art“ (N1b) mit ersetztem `nachweisArten` – was ChurchTools tut, prüft
@@ -27,7 +33,7 @@ const E: NachweisEinstellungen = {
   betreff: 'Bitte Führungszeugnis beantragen',
   text: 'Hallo [Vorname], bitte beantrage ein Führungszeugnis.',
 };
-const FZ: NachweisArt = {
+const FZ: NachweisArtMitPersonen = {
   id: 61,
   gruppenName: 'Nachweis: Führungszeugnis',
   name: 'Führungszeugnis',
@@ -36,6 +42,7 @@ const FZ: NachweisArt = {
     { personId: 7, name: 'Anna Leitung' },
     { personId: 8, name: 'Ben Leitung' },
   ],
+  personen: [],
 };
 const grundlage = (darfEinrichten: boolean) => ({
   typId: 11,
@@ -58,9 +65,20 @@ const alles: NachweisErgebnis = {
   },
 };
 
-const seite = (g = grundlage(true), liste: NachweisArt[] = [FZ]) =>
+const seite = (g = grundlage(true), liste: NachweisArtMitPersonen[] = [FZ]) =>
   arten.nachweiseSeiteLaden.mockResolvedValue({ grundlage: g, arten: liste });
-const oeffnen = () => render(<NachweisSeite onZurueck={() => {}} onGeaendert={() => {}} />);
+const oeffnen = (
+  filter: NachweisFilter = 'alle',
+  onFilter: (f: NachweisFilter) => void = () => {},
+) =>
+  render(
+    <NachweisSeite
+      filter={filter}
+      onFilter={onFilter}
+      onZurueck={() => {}}
+      onGeaendert={() => {}}
+    />,
+  );
 
 beforeEach(() => {
   arten.ichLaden.mockResolvedValue({ personId: 7, name: 'Anna Leitung' });
@@ -73,16 +91,19 @@ describe('Seite „Nachweise“', () => {
     seite();
     oeffnen();
     expect(await screen.findByText('Führungszeugnis')).toBeTruthy();
-    expect(screen.getByText('Gültig 3 Jahre ab Ausstellung')).toBeTruthy();
+    expect(screen.getByText('3 Jahre ab Ausstellung · ohne Antrag')).toBeTruthy();
     expect(screen.getByText('Vertrauenspersonen: Anna Leitung, Ben Leitung')).toBeTruthy();
   });
 
-  it('mit „Berechtigungen verwalten“: „Neue Nachweis-Art“ und „Bearbeiten“', async () => {
+  it('mit „Berechtigungen verwalten“: „Neue Nachweis-Art“ und „Nachweis-Art bearbeiten“ im ⋯-Menü', async () => {
     seite();
     oeffnen();
     await screen.findByText('Führungszeugnis');
     expect(screen.getByRole('button', { name: 'Neue Nachweis-Art' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Führungszeugnis bearbeiten' })).toBeTruthy();
+    // Kein eigener „Bearbeiten“-Knopf mehr (R6): Seltenes liegt im Menü.
+    expect(screen.queryByRole('button', { name: 'Führungszeugnis bearbeiten' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Führungszeugnis: Mehr' }));
+    expect(screen.getByText('Nachweis-Art bearbeiten')).toBeTruthy();
   });
 
   it('ohne das Recht (Vertrauensperson): nur ansehen – und der Hinweis sagt, wer anlegen darf', async () => {
@@ -90,7 +111,8 @@ describe('Seite „Nachweise“', () => {
     oeffnen();
     await screen.findByText('Führungszeugnis');
     expect(screen.queryByRole('button', { name: 'Neue Nachweis-Art' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /bearbeiten/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mehr/ })).toBeNull();
+    expect(screen.queryByText('Nachweis-Art bearbeiten')).toBeNull();
     expect(screen.getByText(/„Berechtigungen verwalten“ hat/)).toBeTruthy();
   });
 
@@ -131,6 +153,200 @@ describe('Seite „Nachweise“', () => {
     seite(grundlage(true), [{ ...FZ, vertrauen: null }]);
     oeffnen();
     expect(await screen.findByText(/für dich nicht sichtbar/)).toBeTruthy();
+  });
+});
+
+/** „⋯“ der Art öffnen und „Nachweis-Art bearbeiten“ wählen. */
+const bearbeiten = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: 'Führungszeugnis: Mehr' }));
+  fireEvent.click(screen.getByText('Nachweis-Art bearbeiten'));
+};
+
+// ── Stand je Person (N2a) ────────────────────────────────────────────────────────────────────────────────────────
+
+const HEUTE = heuteImKalender();
+const P = (personId: number, name: string, p: Partial<PersonAngaben> = {}): NachweisPerson => ({
+  personId,
+  name,
+  eingesehenAm: null,
+  ausgestelltAm: null,
+  ergebnis: null,
+  aufgabe: null,
+  profil: null,
+  ...p,
+});
+/** Eingesehen; „Gültig bis“ liegt `tage` Tage nach heute (3 Jahre ab Ausstellung). */
+const eingesehen = (tage: number, p: Partial<PersonAngaben> = {}): Partial<PersonAngaben> => ({
+  eingesehenAm: plusTage(HEUTE, -5),
+  ausgestelltAm: plusJahre(plusTage(HEUTE, tage), -3),
+  ...p,
+});
+const LUECKE_PROFIL = { geburtstag: null, strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' };
+const MIT_ANTRAG: NachweisEinstellungen = { ...E, antrag: antragVorgabe('ECG Donrath') };
+
+const LENA = P(1, 'Lena Probst', {
+  aufgabe: { seit: plusTage(HEUTE, -35) },
+  profil: LUECKE_PROFIL,
+});
+const JONAS = P(2, 'Jonas Beispiel', eingesehen(900, { ergebnis: 'eintrag' }));
+const MIA = P(3, 'Mia Muster', eingesehen(30));
+const TOM = P(4, 'Tom Klein', eingesehen(900));
+const PAULA = P(5, 'Paula Messnull', { aufgabe: { seit: plusTage(HEUTE, -1) } });
+const FZ_STAND: NachweisArtMitPersonen = {
+  ...FZ,
+  einstellungen: MIT_ANTRAG,
+  personen: [TOM, PAULA, MIA, JONAS, LENA],
+};
+const JULEICA: NachweisArtMitPersonen = {
+  ...FZ,
+  id: 62,
+  gruppenName: 'Nachweis: JuLeiCa',
+  name: 'JuLeiCa',
+  personen: [P(6, 'Sara Weber', eingesehen(900))],
+};
+
+const handyAn = () => {
+  window.matchMedia = ((q: string) => ({
+    matches: q === HANDY_BREITE,
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+};
+afterEach(() => {
+  // @ts-expect-error jsdom hat von Haus aus kein matchMedia
+  delete window.matchMedia;
+});
+
+describe('Seite „Nachweise“: Stand je Person', () => {
+  it('je Art eine Karte mit ihrem Kopf: Name, Gültigkeit, Antrag, Vertrauenspersonen', async () => {
+    seite(grundlage(true), [FZ_STAND, JULEICA]);
+    oeffnen();
+    expect(await screen.findByRole('heading', { name: 'Führungszeugnis' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'JuLeiCa' })).toBeTruthy();
+    expect(screen.getByText('3 Jahre ab Ausstellung · mit Antrag')).toBeTruthy();
+    expect(screen.getByText('3 Jahre ab Ausstellung · ohne Antrag')).toBeTruthy();
+  });
+
+  it('Tabelle: Name | Stand | Eingesehen am | Ausgestellt am | Gültig bis – wer dich braucht, oben', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    const kopf = screen.getAllByRole('columnheader').map((c) => c.textContent);
+    expect(kopf).toEqual(['Name', 'Stand', 'Eingesehen am', 'Ausgestellt am', 'Gültig bis']);
+    const zeilen = screen.getAllByRole('row').slice(1);
+    const namen = zeilen.map(
+      (z) => within(z).getAllByRole('cell')[0].querySelector('b')?.textContent,
+    );
+    // rot (fehlt, Rücksprache; innerhalb nach Name), blau (läuft ab), angefordert, gültig
+    expect(namen).toEqual([
+      'Jonas Beispiel',
+      'Lena Probst',
+      'Mia Muster',
+      'Paula Messnull',
+      'Tom Klein',
+    ]);
+  });
+
+  it('Stand als Etikett: Text und Farbe je Regel', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    const zeile = (name: string) => screen.getByText(name).closest('tr')!;
+    const etikett = (name: string) =>
+      within(zeile(name)).getAllByRole('cell')[1].firstElementChild!;
+    expect(etikett('Lena Probst').textContent).toBe('fehlt seit 5 Wochen');
+    expect(etikett('Jonas Beispiel').textContent).toBe('Rücksprache');
+    expect(etikett('Mia Muster').textContent).toMatch(/^läuft ab am \d\d\.\d\d\.$/);
+    expect(etikett('Paula Messnull').textContent).toMatch(/^angefordert am \d\d\.\d\d\.$/);
+    expect(etikett('Tom Klein').textContent).toBe('gültig');
+    // Verschiedene Töne: „läuft ab“ (blau) ist nicht „fehlt“ (rot) und nicht „gültig“ (grün).
+    const klassen = ['Lena Probst', 'Mia Muster', 'Tom Klein'].map((n) => etikett(n).className);
+    expect(new Set(klassen).size).toBe(3);
+  });
+
+  it('Daten als TT.MM.JJJJ, leer als „–“; Gültig bis aus Ausstellung plus Jahre', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    const zellen = within(screen.getByText('Lena Probst').closest('tr')!).getAllByRole('cell');
+    expect(zellen.slice(2).map((c) => c.textContent)).toEqual(['–', '–', '–']);
+    const mia = within(screen.getByText('Mia Muster').closest('tr')!).getAllByRole('cell');
+    expect(mia[2].textContent).toMatch(/^\d\d\.\d\d\.\d{4}$/);
+    expect(mia[4].textContent).toBe(plusTage(HEUTE, 30).split('-').reverse().join('.'));
+  });
+
+  it('die Lücke im Antrag steht rot unter dem Namen – nur bei Arten mit Antrag', async () => {
+    seite(grundlage(true), [
+      FZ_STAND,
+      { ...JULEICA, personen: [{ ...LENA, personId: 9, name: 'Ohne Antrag' }] },
+    ]);
+    oeffnen();
+    await screen.findByRole('table', { name: '' }).catch(() => null);
+    expect(await screen.findByText('Antrag unvollständig: Geburtsdatum fehlt')).toBeTruthy();
+    // JuLeiCa hat keinen Antrag – dort kommt der Hinweis nicht, obwohl das Profil dieselbe Lücke hat.
+    expect(screen.getAllByText(/Antrag unvollständig/)).toHaveLength(1);
+  });
+
+  it('„Braucht Aufmerksamkeit“: nur die Fälle; Arten ohne Fälle fehlen; der Merker zählt sie', async () => {
+    seite(grundlage(true), [FZ_STAND, JULEICA]);
+    oeffnen('aufmerksam');
+    await screen.findByRole('table');
+    expect(
+      screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((z) => within(z).getAllByRole('cell')[0].querySelector('b')?.textContent),
+    ).toEqual(['Jonas Beispiel', 'Lena Probst', 'Mia Muster']);
+    expect(screen.queryByRole('heading', { name: 'JuLeiCa' })).toBeNull();
+    expect(screen.queryByText('Tom Klein')).toBeNull();
+    // Der Merker an der Ansicht: 3 Fälle (die Zahl hängt am Namen der Ansicht).
+    expect(screen.getByRole('button', { name: /Braucht Aufmerksamkeit, 3/ })).toBeTruthy();
+  });
+
+  it('der Umschalter meldet die gewählte Ansicht (die App legt sie in die Adresse)', async () => {
+    seite(grundlage(true), [FZ_STAND]);
+    const gewaehlt = vi.fn();
+    oeffnen('alle', gewaehlt);
+    await screen.findByRole('table');
+    fireEvent.click(screen.getByRole('button', { name: /Braucht Aufmerksamkeit/ }));
+    expect(gewaehlt).toHaveBeenCalledWith('aufmerksam');
+  });
+
+  it('„Braucht Aufmerksamkeit“ ohne Fälle: sagt es', async () => {
+    seite(grundlage(true), [JULEICA]);
+    oeffnen('aufmerksam');
+    expect(await screen.findByText('Gerade braucht niemand etwas.')).toBeTruthy();
+  });
+
+  it('Personen nicht lesbar: sagt es, behauptet nicht „niemand“; leere Art: „Noch niemand eingetragen“', async () => {
+    seite(grundlage(true), [
+      { ...FZ, personen: null },
+      { ...JULEICA, personen: [] },
+    ]);
+    oeffnen();
+    expect(await screen.findByText('Die Personen sind für dich nicht sichtbar.')).toBeTruthy();
+    expect(screen.getByText('Noch niemand eingetragen.')).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('Vertrauensperson ohne Admin-Recht sieht den Stand, aber kein ⋯-Menü', async () => {
+    seite(grundlage(false), [FZ_STAND]);
+    oeffnen();
+    expect(await screen.findByText('Lena Probst')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Mehr/ })).toBeNull();
+  });
+
+  it('am Handy: eine Liste statt Tabelle – Name, Etikett, EIN Datum, die Lücke', async () => {
+    handyAn();
+    seite(grundlage(true), [FZ_STAND]);
+    oeffnen();
+    expect(await screen.findByText('Lena Probst')).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+    const tom = screen.getByText('Tom Klein').closest('li')!;
+    expect(within(tom).getByText('gültig')).toBeTruthy();
+    expect(within(tom).getByText(/^Gültig bis \d\d\.\d\d\.\d{4}$/)).toBeTruthy();
+    expect(screen.getByText('Antrag unvollständig: Geburtsdatum fehlt')).toBeTruthy();
   });
 });
 
@@ -232,7 +448,7 @@ describe('Fenster „Nachweis-Art“', () => {
     seite();
     arten.nachweisArtSichern.mockResolvedValue(alles);
     oeffnen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Führungszeugnis bearbeiten' }));
+    await bearbeiten();
     const fenster = await screen.findByRole('dialog');
     // Ohne Klick wird niemand entfernt.
     fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }));
@@ -248,7 +464,7 @@ describe('Fenster „Nachweis-Art“', () => {
     seite();
     arten.nachweisArtSichern.mockResolvedValue(alles);
     oeffnen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Führungszeugnis bearbeiten' }));
+    await bearbeiten();
     const fenster = await screen.findByRole('dialog');
     fireEvent.click(within(fenster).getByRole('button', { name: 'Ben Leitung entfernen' }));
     expect(within(fenster).getByText(/wird beim Speichern entfernt/)).toBeTruthy();

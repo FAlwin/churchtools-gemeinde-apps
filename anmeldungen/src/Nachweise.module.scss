@@ -255,3 +255,107 @@
   color: var(--text);
   font: inherit;
 }
+
+// ── Stand je Person (N2a) ────────────────────────────────────────────────────────────────────────────────────────
+
+// Die Tabelle einer Art (Rechner). Nur Klassen – Regeln auf nackte Elemente würden ChurchTools verändern.
+.tabelleRahmen {
+  overflow-x: auto;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tKopf,
+.tZelle {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--hair);
+}
+
+.tKopf {
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tZelle {
+  color: var(--text);
+}
+
+.tDatum {
+  white-space: nowrap;
+}
+
+.tName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// Die Lücke im Antrag, rot unter dem Namen (Rot bleibt dem vorbehalten, was Aufmerksamkeit braucht).
+.luecke {
+  color: var(--red);
+  font-size: 13px;
+}
+
+// Die Zeile einer Person am Handy: Name und Lücke links, Etikett und Datum rechts.
+.person {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+
+.personRechts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+// Der Kopf einer Art-Karte: Name und eine kleine Zeile links, „⋯“ rechts.
+.artKopf {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.artText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.artKarten {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.leer {
+  padding: 12px 14px;
+}

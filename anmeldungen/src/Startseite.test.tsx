@@ -12,6 +12,11 @@ import {
 } from '@shared/anmeldung/uebersicht';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import { plusTage } from '@shared/ct/datum';
+import type { NachweisEinstellungen } from '@shared/anmeldung/nachweise';
+import { plusJahre, type PersonAngaben } from '@shared/anmeldung/nachweisStand';
+import type { NachweisEinstiegDaten } from './nachweisArten';
+import type { NachweisArtMitPersonen, NachweisPerson } from './nachweisPersonen';
 import { Startseite } from './Startseite';
 import * as E from './einrichten';
 import * as A from './archiv';
@@ -602,5 +607,145 @@ describe('Viele ohne Abläufe: ab 3 eine Sammelzeile (A9-5, Fund der echten Prü
     expect(bereich().queryByText(/Veranstaltungen: Mails und Löschen einrichten/)).toBeNull();
     expect(bereich().getByText('Alt 1: Mails und Löschen einrichten')).toBeTruthy();
     expect(bereich().getByText('Alt 2: Mails und Löschen einrichten')).toBeTruthy();
+  });
+});
+
+// ── Nachweise (N2a): Aufmerksamkeit und Karte ────────────────────────────────────────────────────────────────────
+
+describe('Nachweise auf der Startseite (N2a)', () => {
+  const E: NachweisEinstellungen = {
+    gueltigJahre: 3,
+    ab: 'ausstellung',
+    betreff: 'B',
+    text: 'T [Vorname]',
+  };
+  const P = (id: number, p: Partial<PersonAngaben> = {}): NachweisPerson => ({
+    personId: id,
+    name: `Person ${id}`,
+    eingesehenAm: null,
+    ausgestelltAm: null,
+    ergebnis: null,
+    aufgabe: null,
+    profil: null,
+    ...p,
+  });
+  const eingesehen = (tage: number, p: Partial<PersonAngaben> = {}): Partial<PersonAngaben> => ({
+    eingesehenAm: plusTage(HEUTE, -5),
+    ausgestelltAm: plusJahre(plusTage(HEUTE, tage), -3),
+    ...p,
+  });
+  const art = (
+    id: number,
+    name: string,
+    personen: NachweisPerson[] | null,
+  ): NachweisArtMitPersonen => ({
+    id,
+    gruppenName: `Nachweis: ${name}`,
+    name,
+    einstellungen: E,
+    vertrauen: [],
+    personen,
+  });
+  /** Führungszeugnis: 2 gültig, 1 angefordert, je 1 fehlt / läuft ab / abgelaufen / Rücksprache. */
+  const FZ = art(61, 'Führungszeugnis', [
+    P(1, eingesehen(900)),
+    P(2, eingesehen(900)),
+    P(3, { aufgabe: { seit: plusTage(HEUTE, -3) } }),
+    P(4, { aufgabe: { seit: plusTage(HEUTE, -40) } }),
+    P(5, eingesehen(20)),
+    P(6, eingesehen(-20)),
+    P(7, eingesehen(900, { ergebnis: 'eintrag' })),
+  ]);
+  const JULEICA = art(62, 'JuLeiCa', [P(8, eingesehen(900)), P(9, eingesehen(900))]);
+  const LEER_UEBERSICHT: Uebersicht = {
+    einteilung: { anstehend: [], entwuerfe: [], vorbei: [] },
+    hinweise: [],
+    offen: new Map(),
+    verborgen: new Map(),
+  };
+
+  function mit(nachweise: NachweisEinstiegDaten | undefined, u = uebersicht(), mitKlick = true) {
+    const onNachweise = vi.fn();
+    render(
+      <Startseite
+        start={START}
+        uebersicht={u}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={vi.fn()}
+        nachweise={nachweise}
+        onNachweise={mitKlick ? onNachweise : undefined}
+      />,
+    );
+    return onNachweise;
+  }
+
+  it('„Braucht deine Aufmerksamkeit“: eine Zeile je Art mit Fällen, mit allen vier Etiketten und dem Satz', () => {
+    mit({ darfEinrichten: true, arten: [FZ, JULEICA] });
+    const aufm = within(abschnitt('Braucht deine Aufmerksamkeit'));
+    expect(aufm.getByText('1 fehlt seit über 4 Wochen')).toBeTruthy();
+    expect(aufm.getByText('1 läuft bald ab')).toBeTruthy();
+    expect(aufm.getByText('1 abgelaufen')).toBeTruthy();
+    expect(aufm.getByText('1 Rücksprache')).toBeTruthy();
+    expect(aufm.getByText('4 Personen brauchen dich als Vertrauensperson.')).toBeTruthy();
+    // JuLeiCa: alle gültig – keine Zeile hier.
+    expect(aufm.queryByText('JuLeiCa')).toBeNull();
+  });
+
+  it('die Zahl im Kopf zählt die Nachweis-Zeilen mit den anderen Hinweisen', () => {
+    const u = uebersicht();
+    mit({ darfEinrichten: true, arten: [FZ] }, u);
+    const kopf = abschnitt('Braucht deine Aufmerksamkeit').querySelector('h2')!.parentElement!;
+    expect(kopf.textContent).toBe(`Braucht deine Aufmerksamkeit${u.hinweise.length + 1}`);
+  });
+
+  it('die Karte erscheint auch, wenn es NUR Nachweis-Fälle gibt', () => {
+    mit({ darfEinrichten: false, arten: [FZ] }, LEER_UEBERSICHT);
+    expect(abschnitt('Braucht deine Aufmerksamkeit')).toBeTruthy();
+  });
+
+  it('ohne Fälle (und ohne andere Hinweise) gibt es die Karte nicht', () => {
+    mit({ darfEinrichten: false, arten: [JULEICA] }, LEER_UEBERSICHT);
+    expect(screen.queryByRole('region', { name: 'Braucht deine Aufmerksamkeit' })).toBeNull();
+  });
+
+  it('ein Klick auf die Zeile öffnet die Seite mit „Braucht Aufmerksamkeit“', () => {
+    const auf = mit({ darfEinrichten: true, arten: [FZ] });
+    fireEvent.click(
+      within(abschnitt('Braucht deine Aufmerksamkeit')).getByRole('button', {
+        name: /Führungszeugnis/,
+      }),
+    );
+    expect(auf).toHaveBeenCalledWith('aufmerksam');
+  });
+
+  it('Karte „Nachweise“: je Art eine Zeile mit der Zählung; Klick öffnet die Seite (alle)', () => {
+    const auf = mit({ darfEinrichten: true, arten: [FZ, JULEICA] });
+    const karte = within(abschnitt('Nachweise'));
+    expect(karte.getByText('7 Personen: 2 gültig · 1 angefordert · 4 brauchen dich')).toBeTruthy();
+    expect(karte.getByText('2 Personen: alle gültig')).toBeTruthy();
+    fireEvent.click(karte.getByRole('button', { name: /JuLeiCa/ }));
+    expect(auf).toHaveBeenCalledWith('alle');
+  });
+
+  it('eine Art ohne Personen: „Noch niemand eingetragen“; eine nicht sichtbare Art fehlt ganz', () => {
+    mit({ darfEinrichten: true, arten: [art(63, 'Leer', []), art(64, 'Fremd', null)] });
+    const karte = within(abschnitt('Nachweise'));
+    expect(karte.getByText('Noch niemand eingetragen')).toBeTruthy();
+    expect(karte.queryByText('Fremd')).toBeNull();
+  });
+
+  it('keine sichtbare Art (nichts gelesen oder nichts geleitet): die bisherige Zeile zum Einrichten', () => {
+    const auf = mit({ darfEinrichten: true, arten: [] });
+    const karte = within(abschnitt('Nachweise'));
+    expect(karte.getByText('Nachweis-Arten ansehen und einrichten')).toBeTruthy();
+    fireEvent.click(karte.getByRole('button', { name: /Führungszeugnis & Co/ }));
+    expect(auf).toHaveBeenCalledWith('alle');
+  });
+
+  it('ohne Recht (kein Einstieg): weder Karte noch Zeilen', () => {
+    mit({ darfEinrichten: false, arten: [FZ] }, uebersicht(), false);
+    expect(screen.queryByRole('region', { name: 'Nachweise' })).toBeNull();
+    expect(screen.queryByText('1 fehlt seit über 4 Wochen')).toBeNull();
   });
 });

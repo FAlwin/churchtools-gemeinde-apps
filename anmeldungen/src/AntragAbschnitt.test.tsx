@@ -67,7 +67,7 @@ const alles: NachweisErgebnis = {
 const seite = (liste: NachweisArt[]) =>
   arten.nachweiseSeiteLaden.mockResolvedValue({
     grundlage: { typId: 11, rechtFehlt: false, darfEinrichten: true },
-    arten: liste,
+    arten: liste.map((a) => ({ ...a, personen: [] })),
   });
 const oeffnen = () =>
   render(<NachweisSeite gemeinde="ECG Donrath" onZurueck={() => {}} onGeaendert={() => {}} />);
@@ -79,7 +79,9 @@ const neueArt = async () => {
 };
 const bearbeiten = async (name: string) => {
   oeffnen();
-  fireEvent.click(await screen.findByRole('button', { name: `${name} bearbeiten` }));
+  // „Nachweis-Art bearbeiten“ liegt im ⋯-Menü der Karte (N2a, R6).
+  fireEvent.click(await screen.findByRole('button', { name: `${name}: Mehr` }));
+  fireEvent.click(screen.getByText('Nachweis-Art bearbeiten'));
   return await screen.findByRole('dialog');
 };
 /** Der Wert eines Eingabefelds (Testing Library liefert nur `HTMLElement`). */
@@ -102,8 +104,8 @@ describe('Seite „Nachweise“: Antrag in der Liste', () => {
     seite([FZ_MIT, FZ_OHNE]);
     oeffnen();
     await screen.findByText('Führungszeugnis');
-    expect(screen.getAllByText('Mit Antrag')).toHaveLength(1);
-    expect(screen.getAllByText('Ohne Antrag')).toHaveLength(1);
+    expect(screen.getAllByText(/ · mit Antrag$/)).toHaveLength(1);
+    expect(screen.getAllByText(/ · ohne Antrag$/)).toHaveLength(1);
   });
 });
 

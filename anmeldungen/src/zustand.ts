@@ -1,6 +1,7 @@
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
+import type { NachweisEinstiegDaten } from './nachweisArten';
 
 export type { Fehlermeldung };
 export { fehlerMeldung };
@@ -16,9 +17,10 @@ export type Zustand =
       anlegen: { artId: number | null; teamIds: number[] };
       /**
        * Der Einstieg „Nachweise“ (N1b): `null` = nichts zu zeigen (kein Recht, keine Nachweis-Gruppe geleitet – oder
-       * nicht lesbar; dann fehlt nur die Karte). `darfEinrichten`: „Berechtigungen verwalten“.
+       * nicht lesbar; dann fehlt nur die Karte). `darfEinrichten`: „Berechtigungen verwalten“. N2a: dazu die Arten mit
+       * ihren Personen (leer, wenn sie sich nicht lesen ließen – dann ohne Zahlen).
        */
-      nachweise: { darfEinrichten: boolean } | null;
+      nachweise: NachweisEinstiegDaten | null;
       /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5: Hinweis auf der Startseite). */
       admin: boolean;
       /** Adresse der Formular-Seite der Gemeinde – `null`, solange keine eingerichtet ist (A6-2). */

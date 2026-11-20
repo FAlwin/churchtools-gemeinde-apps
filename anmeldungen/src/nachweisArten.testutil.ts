@@ -27,6 +27,27 @@ export interface MitgliedStand {
   groupMemberStatus: string;
   title: string;
   fields: { id: number; value: unknown }[];
+  memberStartDate?: string | null;
+}
+
+/** Eine Folgeaufgabe, wie `GET /groups/{g}/followups` sie liefert (gemessen 20.11.2026): auch erledigte, `doneDate` null = offen. */
+export interface AufgabeStand {
+  id: number;
+  personId: number;
+  title: string;
+  doneDate: string | null;
+  createdDate: string | null;
+}
+
+/** Eine Person, soweit `GET /persons?ids[]=` sie für die Nachweise liefert. */
+export interface PersonRohStand {
+  id: number;
+  firstName: string;
+  lastName: string;
+  birthday: string | null;
+  street: string | null;
+  zip: string | null;
+  city: string | null;
 }
 
 export interface GruppeStand {
@@ -92,6 +113,15 @@ export class FalschesNachweisCt {
   htmlOhneBild: 'hintergrund' | 'unterschrift' | 'logo' | null = null;
   /** Gruppen, deren Mitglieder man nicht lesen darf (403). */
   ohneMitgliederRecht = new Set<number>();
+  /** Gruppen, deren Folgeaufgaben man nicht lesen darf (403). */
+  ohneAufgabenRecht = new Set<number>();
+  /** `GET /persons?ids[]=` antwortet 403 (Geburtstag und Adresse nicht sichtbar). */
+  ohnePersonenRecht = false;
+  /** Folgeaufgaben je Gruppe und Personen (N2a, nur lesen). */
+  aufgaben = new Map<number, AufgabeStand[]>();
+  personen = new Map<number, PersonRohStand>();
+  /** Die angemeldete Person (`/whoami`). */
+  ichId = 7;
   ignoriere: string[] = [];
   scheitert: { muster: string; status: number }[] = [];
   sichtbarkeitFest: string | null = null;
@@ -167,14 +197,52 @@ export class FalschesNachweisCt {
     return liste;
   }
 
-  private rohMitglied(m: MitgliedStand) {
+  /** Ein Feld einer Person setzen (nach dem Namen des Gruppenfelds); `wert` für Auswahlfelder ist die NUMMER der Option. */
+  feldSetzen(gruppeId: number, personId: number, feldName: string, wert: unknown): void {
+    const f = (this.felder.get(gruppeId) ?? []).find((x) => x.name === feldName);
+    if (!f) throw new Error(`Feld „${feldName}“ fehlt in Gruppe ${gruppeId}`);
+    const m = (this.mitglieder.get(gruppeId) ?? []).find((x) => x.personId === personId);
+    if (!m) throw new Error(`Person ${personId} fehlt in Gruppe ${gruppeId}`);
+    m.fields = m.fields.filter((x) => x.id !== f.id);
+    m.fields.push({ id: f.id, value: wert });
+  }
+
+  /** Die Nummer einer Option eines Auswahlfelds. */
+  optionsNummer(gruppeId: number, feldName: string, optionName: string): string {
+    const o = (this.felder.get(gruppeId) ?? [])
+      .find((x) => x.name === feldName)
+      ?.options?.find((x) => x.name === optionName);
+    if (!o) throw new Error(`Option „${optionName}“ fehlt`);
+    return o.id;
+  }
+
+  aufgabeSetzen(gruppeId: number, a: Partial<AufgabeStand> & { personId: number }): void {
+    const liste = this.aufgaben.get(gruppeId) ?? [];
+    liste.push({
+      id: this.naechste++,
+      title: 'Einsicht nehmen',
+      doneDate: null,
+      createdDate: null,
+      ...a,
+    });
+    this.aufgaben.set(gruppeId, liste);
+  }
+
+  /** Wie ChurchTools: die Felder kommen MIT ihrem Namen. */
+  private rohMitglied(m: MitgliedStand, gruppeId: number) {
     const [vor = '', ...rest] = m.title.split(' ');
+    const defs = this.felder.get(gruppeId) ?? [];
     return {
       personId: m.personId,
       groupTypeRoleId: m.groupTypeRoleId,
       groupMemberStatus: m.groupMemberStatus,
+      memberStartDate: m.memberStartDate ?? null,
       person: { title: m.title, domainAttributes: { firstName: vor, lastName: rest.join(' ') } },
-      fields: m.fields,
+      fields: m.fields.map((f) => ({
+        id: f.id,
+        name: defs.find((d) => d.id === f.id)?.name ?? '',
+        value: f.value,
+      })),
     };
   }
 
@@ -202,7 +270,26 @@ export class FalschesNachweisCt {
   holen = async <T>(pfad: string): Promise<T> => {
     await Promise.resolve();
     if (pfad === '/permissions/global') return this.global as T;
+    if (pfad === '/whoami') return { id: this.ichId, firstName: 'Anna', lastName: 'Leitung' } as T;
     let m: RegExpExecArray | null;
+    if ((m = /^\/groups\/(\d+)\/followups$/.exec(pfad))) {
+      if (this.ohneAufgabenRecht.has(Number(m[1]))) throw new ApiError(403, 'Kein Recht');
+      return (this.aufgaben.get(Number(m[1])) ?? []).map((a) => ({
+        id: a.id,
+        personId: a.personId,
+        groupId: Number(m![1]),
+        title: a.title,
+        dueDate: null,
+        effectiveDueDate: null,
+        doneDate: a.doneDate,
+        meta: { createdDate: a.createdDate },
+      })) as T;
+    }
+    if (pfad.startsWith('/persons?')) {
+      if (this.ohnePersonenRecht) throw new ApiError(403, 'Kein Recht');
+      const ids = [...pfad.matchAll(/ids\[\]=(\d+)/g)].map((x) => Number(x[1]));
+      return ids.flatMap((id) => (this.personen.has(id) ? [this.personen.get(id)!] : [])) as T;
+    }
     if ((m = /^\/groups\/(\d+)$/.exec(pfad))) {
       const g = this.gruppen.get(Number(m[1]));
       if (!g) throw new ApiError(404, 'Gruppe nicht gefunden');
@@ -250,10 +337,11 @@ export class FalschesNachweisCt {
       if (this.ohneVorlagenListe) throw new ApiError(404, 'Nicht gefunden');
       return structuredClone([...this.vorlagen.values()]) as T[];
     }
+    if (/^\/groups\/\d+\/followups$/.test(pfad)) return await this.holen<T[]>(pfad);
     if ((m = /^\/groups\/(\d+)\/members$/.exec(pfad))) {
       const id = Number(m[1]);
       if (this.ohneMitgliederRecht.has(id)) throw new ApiError(403, 'Kein Recht');
-      return (this.mitglieder.get(id) ?? []).map((x) => this.rohMitglied(x)) as T[];
+      return (this.mitglieder.get(id) ?? []).map((x) => this.rohMitglied(x, id)) as T[];
     }
     throw new Error(`unbekannt (Liste): ${pfad}`);
   };

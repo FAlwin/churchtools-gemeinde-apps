@@ -11,7 +11,7 @@ import { Startseite } from './Startseite';
 import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
-import { NachweisSeite } from './NachweisSeite';
+import { NachweisSeite, type NachweisFilter } from './NachweisSeite';
 import { nachweisEinstieg } from './nachweisArten';
 import { GemeindeFenster } from './GemeindeFenster';
 import { ErstEinrichten } from './ErstEinrichten';
@@ -39,7 +39,7 @@ type Ansicht =
   | { art: 'start' }
   | { art: 'veranstaltung'; id: number; reiter?: Reiter }
   | { art: 'archiv' }
-  | { art: 'nachweise' };
+  | { art: 'nachweise'; filter: NachweisFilter };
 
 function ansichtAusAdresse(): Ansicht {
   // `#/v/91` = je nach Stand (U1: Entwurf → Vorbereiten, freigegeben → Anmeldungen), `#/v/91/vorbereiten`,
@@ -55,7 +55,10 @@ function ansichtAusAdresse(): Ansicht {
       reiter: m[2] === 'gestaltung' ? 'formular' : (m[2] as Reiter | undefined),
     };
   if (window.location.hash === '#/archiv') return { art: 'archiv' };
-  if (window.location.hash === '#/nachweise') return { art: 'nachweise' };
+  if (window.location.hash === '#/nachweise') return { art: 'nachweise', filter: 'alle' };
+  // Die Ansicht „Braucht Aufmerksamkeit“ (N2a): von der Startseite aus, per Lesezeichen erreichbar.
+  if (window.location.hash === '#/nachweise/aufmerksam')
+    return { art: 'nachweise', filter: 'aufmerksam' };
   return { art: 'start' };
 }
 
@@ -116,6 +119,9 @@ export function App() {
   const oeffnen = (id: number) => {
     window.location.hash = `#/v/${id}`;
   };
+  const nachweiseOeffnen = (filter: NachweisFilter) => {
+    window.location.hash = filter === 'aufmerksam' ? '#/nachweise/aufmerksam' : '#/nachweise';
+  };
   const zurUebersicht = () => {
     window.location.hash = '';
     laden();
@@ -171,6 +177,8 @@ export function App() {
         <NachweisSeite
           key={stand}
           gemeinde={fertig?.start.gemeinde ?? null}
+          filter={ansicht.filter}
+          onFilter={nachweiseOeffnen}
           onZurueck={zurUebersicht}
           onGeaendert={setAenderung}
         />
@@ -252,13 +260,8 @@ export function App() {
             setAenderung(a);
             laden();
           }}
-          onNachweise={
-            fertig.nachweise
-              ? () => {
-                  window.location.hash = '#/nachweise';
-                }
-              : undefined
-          }
+          nachweise={fertig.nachweise ?? undefined}
+          onNachweise={fertig.nachweise ? nachweiseOeffnen : undefined}
           onArchiv={
             fertig.anlegen.artId !== null
               ? () => {

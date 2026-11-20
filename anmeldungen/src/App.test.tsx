@@ -41,6 +41,17 @@ vi.mock('./gemeinde', () => ({ gemeindeEinstellungen: vi.fn() }));
 // Der Einstieg „Nachweise“ (N1b) liest ChurchTools – hier gibt es ihn (oder nicht) auf Zuruf.
 vi.mock('./nachweisArten', () => ({ nachweisEinstieg: vi.fn() }));
 const nachweisEinstiegMock = vi.mocked(nachweisEinstieg);
+// Die Seite „Nachweise“ selbst prüft `NachweisSeite.test.tsx`; hier zählt, welche Ansicht die Adresse ihr gibt.
+vi.mock('./NachweisSeite', () => ({
+  NachweisSeite: ({ filter, onFilter }: { filter: string; onFilter: (f: string) => void }) => (
+    <div>
+      <span>Seite Nachweise: {filter}</span>
+      <button type="button" onClick={() => onFilter(filter === 'alle' ? 'aufmerksam' : 'alle')}>
+        Ansicht wechseln
+      </button>
+    </div>
+  ),
+}));
 const gemeinde = vi.mocked(gemeindeEinstellungen);
 /** Die Adresse der Formular-Seite in den Einstellungen der Gemeinde (A6-2; seit A7-2 mit den Zahlarten geladen). */
 const adresse = {
@@ -108,12 +119,31 @@ describe('App der Anmeldungen (#474, #480)', () => {
     expect(screen.queryByRole('heading', { name: 'Nachweise' })).toBeNull();
     erst.unmount();
 
-    nachweisEinstiegMock.mockResolvedValue({ darfEinrichten: false });
+    nachweisEinstiegMock.mockResolvedValue({ darfEinrichten: false, arten: [] });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Nachweise' })).toBeTruthy();
     // Die ganze Zeile „Führungszeugnis & Co.“ ist der Knopf (E24, B7).
     fireEvent.click(screen.getByRole('button', { name: /Führungszeugnis/ }));
     expect(window.location.hash).toBe('#/nachweise');
+    window.location.hash = '';
+  });
+
+  it('Nachweise (N2a): #/nachweise = alle, #/nachweise/aufmerksam = „Braucht Aufmerksamkeit“; der Umschalter ändert die Adresse', async () => {
+    laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockResolvedValue(LEER);
+    window.location.hash = '#/nachweise';
+    const a = render(<App />);
+    expect(await screen.findByText('Seite Nachweise: alle')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ansicht wechseln' }));
+    expect(window.location.hash).toBe('#/nachweise/aufmerksam');
+    expect(await screen.findByText('Seite Nachweise: aufmerksam')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ansicht wechseln' }));
+    expect(window.location.hash).toBe('#/nachweise');
+    a.unmount();
+
+    window.location.hash = '#/nachweise/aufmerksam';
+    render(<App />);
+    expect(await screen.findByText('Seite Nachweise: aufmerksam')).toBeTruthy();
     window.location.hash = '';
   });
 

@@ -9,10 +9,19 @@
 import { useState } from 'react';
 import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
-export const bereichSchluessel = (person: number, gruppe: number) =>
-  `protokolle.vorschlaege.bereich.${person}.${gruppe}`;
-export const ausSchluessel = (person: number, gruppe: number) =>
-  `protokolle.vorschlaege.aus.${person}.${gruppe}`;
+/**
+ * Zwei Bereiche merken auf diese Weise: die Punkt-Vorschläge der Sitzungen (je Gruppe) und die To-Do-Vorschläge im Reiter
+ * „To-Dos“ (W9b, über alle Gruppen: Gruppe 0). `art` hält die Schlüssel auseinander.
+ */
+export type VorschlagArt = 'vorschlaege' | 'todovorschlaege';
+
+export const bereichSchluessel = (
+  person: number,
+  gruppe: number,
+  art: VorschlagArt = 'vorschlaege',
+) => `protokolle.${art}.bereich.${person}.${gruppe}`;
+export const ausSchluessel = (person: number, gruppe: number, art: VorschlagArt = 'vorschlaege') =>
+  `protokolle.${art}.aus.${person}.${gruppe}`;
 
 const alsWahl = (roh: unknown): boolean | null => (typeof roh === 'boolean' ? roh : null);
 
@@ -20,8 +29,9 @@ const alsWahl = (roh: unknown): boolean | null => (typeof roh === 'boolean' ? ro
 export function useBereichWahl(
   person: number,
   gruppe: number,
+  art: VorschlagArt = 'vorschlaege',
 ): [boolean | null, (offen: boolean) => void] {
-  const schluessel = bereichSchluessel(person, gruppe);
+  const schluessel = bereichSchluessel(person, gruppe, art);
   const [stand, setStand] = useState(() => ({
     schluessel,
     wahl: leseImGeraet<boolean | null>(schluessel, null, alsWahl),
@@ -47,8 +57,9 @@ export function useBereichWahl(
 export function useAusgeblendet(
   person: number,
   gruppe: number,
+  art: VorschlagArt = 'vorschlaege',
 ): [string[], (id: string, nochDa: readonly string[]) => void] {
-  const schluessel = ausSchluessel(person, gruppe);
+  const schluessel = ausSchluessel(person, gruppe, art);
   const [stand, setStand] = useState(() => ({
     schluessel,
     ids: leseImGeraet<string[]>(schluessel, [], texte),

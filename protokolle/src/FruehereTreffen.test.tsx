@@ -130,7 +130,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-11-17T10:00:00Z'));
   vi.clearAllMocks();
   m.ladeSitzungen.mockResolvedValue(DATEN);
-  m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], vorschlaege: [] });
+  m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], todoVorschlaege: [], vorschlaege: [] });
   m.sitzungenOhneProtokoll.mockImplementation((q) =>
     Promise.resolve({ sitzungen: NACH_ZEITRAUM(q.zeitraum), treffenNichtFreigegeben: false }),
   );

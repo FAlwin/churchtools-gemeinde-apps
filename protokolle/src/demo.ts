@@ -22,6 +22,7 @@ import {
   statusSetzen,
   teilSetzen,
 } from '@shared/protokolle/aufgaben';
+import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
 import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
@@ -489,6 +490,41 @@ const W8B_TECHNIK = [
     von: 19,
     am: '2026-10-21T19:00:00Z',
   }),
+  // W9b (To-Do-Vorschläge): zwei offene – einer von Peter, einer von mir (ändern, zurückziehen) – und ein abgelehnter von mir
+  // von vor drei Tagen. Sie stehen nur im Bereich „Vorgeschlagen“ und sind keine To-Dos.
+  neuerToDoVorschlag({
+    id: 'demo-tv1',
+    gruppe: 19,
+    text: 'Kabel im Technikraum neu ordnen',
+    bis: plusTage(heuteImKalender(), 14),
+    warum: 'Beim Aufbau suchen wir jedes Mal ewig.',
+    von: { person: 19, name: 'Peter Wiens' },
+    am: '2026-11-18T18:00:00Z',
+  }),
+  neuerToDoVorschlag({
+    id: 'demo-tv2',
+    gruppe: 19,
+    text: 'Stativ für die zweite Kamera anschaffen',
+    bis: null,
+    warum: '',
+    von: { person: 1, name: 'Alwin Friesen' },
+    am: '2026-11-19T18:00:00Z',
+  }),
+  vorschlagAblehnen(
+    neuerToDoVorschlag({
+      id: 'demo-tv3',
+      gruppe: 19,
+      text: 'Neuen Mischpulttisch kaufen',
+      bis: null,
+      warum: 'Der alte ist zu klein.',
+      von: { person: 1, name: 'Alwin Friesen' },
+      am: '2026-11-10T18:00:00Z',
+    }),
+    'Haben wir schon – liegt im Technikschrank.',
+    { person: 7, name: 'Johann Becker' },
+    // Immer „vor drei Tagen“, damit die Demo die Gruppe „Abgelehnt“ zeigt, wann immer man sie öffnet.
+    new Date(Date.now() - 3 * 86_400_000).toISOString(),
+  ),
 ];
 
 /**

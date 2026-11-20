@@ -73,6 +73,7 @@ const uebersicht = (lt: Aufgabe[], jg: Aufgabe[] = []): L.GruppenUebersicht[] =>
       treffenNichtFreigegeben: false,
       punkte: 'vorschlagen',
     },
+    todoVorschlaege: [],
     aufgaben: lt,
   },
   {
@@ -85,6 +86,7 @@ const uebersicht = (lt: Aufgabe[], jg: Aufgabe[] = []): L.GruppenUebersicht[] =>
       treffenNichtFreigegeben: false,
       punkte: 'vorschlagen',
     },
+    todoVorschlaege: [],
     aufgaben: jg,
   },
 ];

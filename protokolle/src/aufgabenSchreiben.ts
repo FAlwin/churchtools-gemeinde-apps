@@ -7,10 +7,24 @@
  * Gelöscht wird nie hart – auch nicht hier (S0: wer in „Mitarbeit“ ändern darf, dürfte jeden Wert löschen).
  */
 import { wertAendern, wertAnlegen } from '@shared/ct/modulDaten';
-import { istAufgabe, mitNamen, type Aufgabe, type AufgabenPlan } from '@shared/protokolle/aufgaben';
+import {
+  istAufgabe,
+  istToDoVorschlag,
+  mitNamen,
+  VORSCHLAG_KEIN_TODO,
+  type Aufgabe,
+  type AufgabenPlan,
+} from '@shared/protokolle/aufgaben';
 import type { Schreiber } from '@shared/protokolle/speicher';
+import { ApiError } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
-import { derArt, gleich, mitarbeitRoh, wertNachgelesen, type MitarbeitOrt } from './mitarbeitWerte';
+import {
+  aufgabenAusRoh,
+  gleich,
+  mitarbeitRoh,
+  wertNachgelesen,
+  type MitarbeitOrt,
+} from './mitarbeitWerte';
 
 export type { MitarbeitOrt };
 
@@ -25,12 +39,16 @@ const VERWEIGERT = 'Du darfst die To-Dos dieser Gruppe nicht ändern.';
 /**
  * **Alle To-Dos der Kategorie** mit der ID ihres Werts – auch die als gelöscht vermerkten (der Abgleich braucht sie für
  * „wiederhergestellt“). Trägt dieselbe To-Do-ID zweimal (etwa nach einem abgebrochenen Anlegen), gilt der Wert mit der
- * kleinsten ID – wie bei Kategorien. Die eine Stelle zum Lesen der To-Dos (auch `ladeAufgaben`).
+ * kleinsten ID – wie bei Kategorien. Die eine Stelle zum Lesen der To-Dos zum Schreiben. **Ohne To-Do-Vorschläge** (W9b): Sie
+ * sind keine To-Dos – weder der Abgleich mit dem Protokoll noch Löschen, Verschieben oder die Anzeige im Editor sehen sie.
  */
 export async function aufgabenWerte(
   ort: MitarbeitOrt,
 ): Promise<{ wert: number; aufgabe: Aufgabe }[]> {
-  return derArt(await mitarbeitRoh(ort), istAufgabe).map((w) => ({ wert: w.wert, aufgabe: w.x }));
+  return aufgabenAusRoh(await mitarbeitRoh(ort)).aufgaben.map((w) => ({
+    wert: w.wert,
+    aufgabe: w.x,
+  }));
 }
 
 /**
@@ -82,8 +100,20 @@ export function aufgabeAendern(
   anlegen: () => Aufgabe,
   ich: Schreibend,
 ): Promise<Aufgabe> {
-  return wertNachgelesen(ort, istAufgabe, id, (a) => mitNamen(aendern(a), ich), anlegen, {
-    verweigert: VERWEIGERT,
-    nichtUebernommen: 'ChurchTools hat das To-Do nicht übernommen.',
-  });
+  return wertNachgelesen(
+    ort,
+    istAufgabe,
+    id,
+    (a) => {
+      // Ein Vorschlag ist kein To-Do (W9b): Auf diesem Weg (Haken, Status, Löschen, Editor …) lässt er sich nicht ändern –
+      // übernehmen, ablehnen, ändern und zurückziehen laufen über `todoVorschlagSchreiben.ts`.
+      if (istToDoVorschlag(a)) throw new ApiError(409, VORSCHLAG_KEIN_TODO);
+      return mitNamen(aendern(a), ich);
+    },
+    anlegen,
+    {
+      verweigert: VERWEIGERT,
+      nichtUebernommen: 'ChurchTools hat das To-Do nicht übernommen.',
+    },
+  );
 }

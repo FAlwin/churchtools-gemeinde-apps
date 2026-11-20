@@ -60,6 +60,7 @@ const aufgaben = (...l: Aufgabe[]) =>
         treffenNichtFreigegeben: false,
         punkte: 'vorschlagen',
       },
+      todoVorschlaege: [],
       aufgaben: l,
     },
   ]);

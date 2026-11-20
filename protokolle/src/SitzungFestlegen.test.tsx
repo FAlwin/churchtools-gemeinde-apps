@@ -290,7 +290,11 @@ describe('Einstiege (S5-2)', () => {
 
   beforeEach(() => {
     vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([]));
-    vi.mocked(L.ladeMitarbeit).mockResolvedValue({ aufgaben: [], vorschlaege: [] });
+    vi.mocked(L.ladeMitarbeit).mockResolvedValue({
+      aufgaben: [],
+      todoVorschlaege: [],
+      vorschlaege: [],
+    });
   });
 
   it('„Neu ⌄“ (B6): die Leitung hat alles Anlegbare in EINEM grünen Knopf, „nachtragen“ hinter einer Linie', async () => {

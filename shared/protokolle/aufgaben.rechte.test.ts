@@ -38,6 +38,14 @@ const OHNE = aufgabe();
 const FREMD = aufgabe({ wer: [19] });
 const NUR_EXTERN = aufgabe({ extern: 'Herr Meier' });
 
+/** Die vier Vorschlag-Rechte (W9b) gibt es nur im Fall `vorschlag` – an einem To-Do sind sie alle aus. */
+const KEIN_VORSCHLAG = {
+  uebernehmen: false,
+  ablehnen: false,
+  vorschlagAendern: false,
+  zurueckziehen: false,
+};
+
 const mitarbeiter = { ich: ICH, leitung: false };
 const leitung = { ich: ICH, leitung: true };
 
@@ -79,6 +87,7 @@ describe('toDoRechte: was ein Mitarbeiter darf', () => {
       abgeben: true,
       loeschen: true,
       mache: false,
+      ...KEIN_VORSCHLAG,
     });
   });
 
@@ -109,6 +118,7 @@ describe('toDoRechte: was ein Mitarbeiter darf', () => {
       abgeben: false,
       loeschen: false,
       mache: false,
+      ...KEIN_VORSCHLAG,
     });
   });
 

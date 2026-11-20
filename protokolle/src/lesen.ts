@@ -14,9 +14,9 @@ import { mapLimit } from '@shared/ct/mapLimit';
 import { terminPfad } from '@shared/ct/kalenderTermine';
 import { istEinstellung, type PunkteVonMitgliedern } from '@shared/protokolle/einrichten';
 import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { type Aufgabe } from '@shared/protokolle/aufgaben';
 import { istVorschlag, type Vorschlag } from '@shared/protokolle/vorschlaege';
-import { derArt, mitarbeitRoh } from './mitarbeitWerte';
+import { aufgabenAusRoh, derArt, mitarbeitRoh } from './mitarbeitWerte';
 import {
   istKopf,
   istTeil,
@@ -377,20 +377,30 @@ export async function sitzungenNochOhneProtokoll(
   ).sitzungen;
 }
 
+/** Was in „Mitarbeit“ einer Gruppe steht – siehe `ladeMitarbeit`. */
+export interface Mitarbeit {
+  /** To-Dos (gelöschte nicht) – **ohne** To-Do-Vorschläge, die sind keine To-Dos (W9b). */
+  aufgaben: Aufgabe[];
+  /** To-Do-Vorschläge (W9b): offene und abgelehnte, nicht die zurückgezogenen. Nur der Bereich „Vorgeschlagen“ liest sie. */
+  todoVorschlaege: Aufgabe[];
+  /** Vorschläge für Tagesordnungspunkte (S5-4). */
+  vorschlaege: Vorschlag[];
+}
+
 /**
- * **Was in „Mitarbeit“ steht** – To-Dos (gelöschte nicht) und Vorschläge (S5-4), **einmal** gelesen. Ohne
- * Mitarbeit-Kategorie: nichts.
+ * **Was in „Mitarbeit“ steht** – To-Dos (gelöschte nicht), To-Do-Vorschläge und Vorschläge für Punkte (S5-4), **einmal**
+ * gelesen. Ohne Mitarbeit-Kategorie: nichts.
  */
 export async function ladeMitarbeit(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
-): Promise<{ aufgaben: Aufgabe[]; vorschlaege: Vorschlag[] }> {
-  if (gruppe.mitarbeit === null) return { aufgaben: [], vorschlaege: [] };
+): Promise<Mitarbeit> {
+  if (gruppe.mitarbeit === null) return { aufgaben: [], todoVorschlaege: [], vorschlaege: [] };
   const roh = await mitarbeitRoh({ modul, kategorie: gruppe.mitarbeit });
+  const { aufgaben, vorschlaege } = aufgabenAusRoh(roh);
   return {
-    aufgaben: derArt(roh, istAufgabe)
-      .map((w) => w.x)
-      .filter((a) => !a.geloescht),
+    aufgaben: aufgaben.map((w) => w.x).filter((a) => !a.geloescht),
+    todoVorschlaege: vorschlaege.map((w) => w.x).filter((a) => !a.geloescht),
     vorschlaege: derArt(roh, istVorschlag).map((w) => w.x),
   };
 }
@@ -407,6 +417,8 @@ export interface GruppenUebersicht {
   gruppe: ProtokollGruppe;
   sitzungen: GruppenSitzungen;
   aufgaben: Aufgabe[];
+  /** To-Do-Vorschläge (W9b) – nicht in `aufgaben`; nur der Bereich „Vorgeschlagen“ im Reiter To-Dos liest sie. */
+  todoVorschlaege: Aufgabe[];
 }
 
 /**
@@ -421,11 +433,16 @@ export async function ladeUebersicht(
 ): Promise<GruppenUebersicht[]> {
   const ergebnis = new Map<number, GruppenUebersicht>();
   await mapLimit([...gruppen], 2, async (gruppe) => {
-    const [sitzungen, aufgaben] = await Promise.all([
+    const [sitzungen, mitarbeit] = await Promise.all([
       ladeSitzungen(modul, gruppe, zeitzone, jetzt),
-      ladeAufgaben(modul, gruppe),
+      ladeMitarbeit(modul, gruppe),
     ]);
-    ergebnis.set(gruppe.id, { gruppe, sitzungen, aufgaben });
+    ergebnis.set(gruppe.id, {
+      gruppe,
+      sitzungen,
+      aufgaben: mitarbeit.aufgaben,
+      todoVorschlaege: mitarbeit.todoVorschlaege,
+    });
   });
   return gruppen.map((g) => ergebnis.get(g.id)!);
 }

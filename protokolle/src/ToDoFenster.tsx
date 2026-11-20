@@ -27,11 +27,17 @@ import {
   type ToDoAenderung,
   type VerlaufEintrag,
 } from '@shared/protokolle/aufgaben';
+import { warumVon } from '@shared/protokolle/todoVorschlag';
 import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
 import { erledigtSatz } from './todoText';
 import { imEntwurfNachziehen } from './nachziehen';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
+import {
+  todoVorschlagAendern,
+  todoVorschlagUebernehmen,
+  vorschlagAnlegen,
+} from './todoVorschlagSchreiben';
 import felder from './Fensterfelder.module.scss';
 import styles from './ToDoFenster.module.scss';
 
@@ -56,6 +62,13 @@ function verlaufText(v: VerlaufEintrag, name: (p: number) => string): string {
     return `${v.person !== undefined ? name(v.person) : 'jemand'}: ${v.fertig ? 'Teil erledigt' : 'Teil wieder offen'}`;
   if (v.art === 'modus')
     return v.jeder ? 'So wird es erledigt: jeder für sich' : 'So wird es erledigt: gemeinsam';
+  // Vorschläge (W9b).
+  if (v.art === 'vorgeschlagen') return 'hat das vorgeschlagen';
+  if (v.art === 'vorschlagGeaendert') return 'hat den Vorschlag geändert';
+  if (v.art === 'uebernommen') return 'hat den Vorschlag übernommen';
+  if (v.art === 'abgelehnt')
+    return v.text ? `hat den Vorschlag abgelehnt: ${v.text}` : 'hat den Vorschlag abgelehnt';
+  if (v.art === 'zurueckgezogen') return 'hat den Vorschlag zurückgezogen';
   if (v.art === 'zustaendig') {
     const wer = (l: readonly number[] | undefined) =>
       l?.length ? l.map(name).join(', ') : 'niemand';
@@ -116,6 +129,7 @@ export function ToDoFenster({
   mitglieder,
   eintrag,
   vorlage,
+  modus,
   herkunft,
   leitungIn,
   onSitzung,
@@ -132,6 +146,8 @@ export function ToDoFenster({
   eintrag: ToDoEintrag | null;
   /** Neues To-Do aus einer Board-Spalte (S7-3): Status bzw. Zuständige vorbelegt. */
   vorlage?: { status?: AufgabenStatus; wer?: number[] };
+  /** Bei einem Vorschlag (W9b): die Leitung übernimmt ihn, oder wer vorschlug ändert ihn. */
+  modus?: 'uebernehmen' | 'aendern';
   herkunft: Herkunft | null;
   leitungIn: (g: ProtokollGruppe) => boolean;
   onSitzung: (gruppe: number, schluessel: string) => void;
@@ -162,6 +178,9 @@ export function ToDoFenster({
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [loeschenFragen, setLoeschenFragen] = useState(false);
+  // Neues To-Do als Mitarbeiter (W9b): für mich oder als Vorschlag an die Gruppe. „Warum?“ ist beim Vorschlag die erste Notiz.
+  const [ziel, setZiel] = useState<'mich' | 'gruppe'>('mich');
+  const [warum, setWarum] = useState(a?.vorschlag ? warumVon(a) : '');
 
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0];
   const imEntwurf = !!herkunft?.entwurf;
@@ -169,14 +188,27 @@ export function ToDoFenster({
   // sich nach seiner Gruppe, ein neues nach der gewählten. Ein Mitglied legt nur To-Dos für sich selbst an.
   const urspruenglich = eintrag ? gruppen.find((g) => g.id === eintrag.gruppe.id) : gruppe;
   const leitungOrig = !!urspruenglich && leitungIn(urspruenglich);
-  const r = a ? toDoRechte(a, { ich: ich.person, leitung: leitungOrig, imEntwurf }) : null;
+  // Ein Vorschlag (W9b): Wer vorschlug, ändert ihn (eigenes Fenster-Formular); die Leitung übernimmt – dann gilt er wie ein
+  // gewöhnliches To-Do, an dem sie alles wählt (`toDoRechte` ohne Kennzeichen), bis „Übernehmen“ das Kennzeichen entfernt.
+  const rVorschlag = a?.vorschlag ? toDoRechte(a, { ich: ich.person, leitung: leitungOrig }) : null;
+  const uebernehmen = modus === 'uebernehmen' && !!rVorschlag?.uebernehmen;
+  const vorschlagAendernRecht = modus === 'aendern' && !!rVorschlag?.vorschlagAendern;
+  const r = a
+    ? toDoRechte(uebernehmen ? { ...a, vorschlag: undefined } : a, {
+        ich: ich.person,
+        leitung: leitungOrig,
+        imEntwurf,
+      })
+    : null;
   const neuMitglied = !a && !leitungOrig;
+  const vorschlagNeu = neuMitglied && ziel === 'gruppe';
+  const vorschlagForm = vorschlagNeu || vorschlagAendernRecht;
   const wer: ReadonlySet<number> = neuMitglied ? new Set([ich.person]) : werWahl;
   const extern = neuMitglied ? '' : externWahl;
   const darf = {
     text: r ? r.text : true,
     frist: r ? r.frist : true,
-    gruppe: r ? r.gruppe : true,
+    gruppe: r ? r.gruppe && !uebernehmen : true,
     zustaendig: r ? r.zustaendig : leitungOrig,
     notiz: r ? r.notiz : true,
     status: r ? r.status : true,
@@ -235,8 +267,17 @@ export function ToDoFenster({
     if (karteNotiz !== !!a.karte?.notiz) x.karte = { notiz: karteNotiz };
     return x;
   };
-  const geaendert = !a || verschoben || Object.keys(aenderung()).length > 0;
-  const bereit = !!gruppe && gruppe.mitarbeit !== null && !!text.trim() && geaendert && !laeuft;
+  const geaendert = !a || verschoben || uebernehmen || Object.keys(aenderung()).length > 0;
+  const vorschlagGeaendert =
+    vorschlagNeu ||
+    (!!a &&
+      (text.trim() !== a.text || (bis || null) !== a.bis || warum.trim() !== warumVon(a).trim()));
+  const bereit =
+    !!gruppe &&
+    gruppe.mitarbeit !== null &&
+    !!text.trim() &&
+    (vorschlagForm ? vorschlagGeaendert : geaendert) &&
+    !laeuft;
 
   const ausfuehren = (arbeit: () => Promise<string | null>) => {
     setLaeuft(true);
@@ -293,6 +334,24 @@ export function ToDoFenster({
   const speichern = () => {
     if (!bereit || !gruppe || gruppe.mitarbeit === null) return;
     const ort = { modul, kategorie: gruppe.mitarbeit };
+    // Vorschlagen oder den eigenen Vorschlag ändern (W9b).
+    if (vorschlagForm)
+      return ausfuehren(() =>
+        (a
+          ? todoVorschlagAendern(ort, a.id, { text, bis: bis || null, warum }, ich, leitungOrig)
+          : vorschlagAnlegen(
+              ort,
+              { neueId, gruppe: gruppe.id, text, bis: bis || null, warum },
+              ich,
+              leitungIn(gruppe),
+            )
+        ).then(() => null),
+      );
+    // Übernehmen (W9b, die Leitung): aus demselben Datensatz wird ein To-Do; danach wird nachgelesen.
+    if (a && uebernehmen)
+      return ausfuehren(() =>
+        todoVorschlagUebernehmen(ort, a.id, aenderung(), ich, leitungOrig).then(() => null),
+      );
     if (!a)
       return ausfuehren(() =>
         toDoAnlegen(
@@ -395,6 +454,107 @@ export function ToDoFenster({
             ? 'Mit „Das mache ich“ wirst du zuständig und kannst es danach bearbeiten.'
             : null;
 
+  /** „Wofür?“ – nur beim neuen To-Do eines Mitarbeiters (W9b): für mich anlegen oder der Gruppe vorschlagen. */
+  const wofuer = neuMitglied && (
+    <div className={felder.feld}>
+      <span>Wofür?</span>
+      <Segment
+        value={ziel}
+        options={[
+          { value: 'mich', name: 'Für mich', label: 'Für mich' },
+          {
+            value: 'gruppe',
+            name: 'Vorschlag an die Gruppe',
+            label: (
+              <span className={styles.modus}>
+                Vorschlag an die Gruppe<small>die Leitung entscheidet</small>
+              </span>
+            ),
+          },
+        ]}
+        onChange={setZiel}
+        ariaLabel="Wofür?"
+        verbunden
+      />
+    </div>
+  );
+
+  if (vorschlagForm)
+    return (
+      <Sheet
+        title={vorschlagNeu ? 'To-Do vorschlagen' : 'Vorschlag ändern'}
+        onClose={onClose}
+        beschaeftigt={laeuft}
+        knoepfe={
+          <FensterKnopf disabled={!bereit} onClick={speichern}>
+            {laeuft ? 'Wird gespeichert …' : vorschlagNeu ? 'Vorschlagen' : 'Speichern'}
+          </FensterKnopf>
+        }
+      >
+        {wofuer}
+        <label className={felder.feld}>
+          <span>Was ist zu tun?</span>
+          <textarea
+            className={`${felder.eingabe} ${styles.text}`}
+            value={text}
+            rows={2}
+            disabled={laeuft}
+            onChange={(e) => setText(e.target.value)}
+          />
+        </label>
+        <div className={felder.zeile}>
+          {a ? (
+            <Lesen titel="Gruppe">{eintrag?.gruppe.name}</Lesen>
+          ) : (
+            <label className={felder.feld}>
+              <span>Gruppe</span>
+              <select
+                className={felder.eingabe}
+                value={gruppeId}
+                disabled={laeuft || gruppen.length < 2}
+                onChange={(e) => setGruppeId(Number(e.target.value))}
+              >
+                {gruppen.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className={felder.feld}>
+            <span>Bis (Vorschlag)</span>
+            <input
+              type="date"
+              className={felder.eingabe}
+              value={bis}
+              disabled={laeuft}
+              onChange={(e) => setBis(e.target.value)}
+            />
+          </label>
+        </div>
+        <p className={felder.leise}>
+          Wer es macht, legt die Leitung fest, wenn sie den Vorschlag übernimmt.
+        </p>
+        <label className={felder.feld}>
+          <span>Warum? (optional)</span>
+          <textarea
+            className={`${felder.eingabe} ${styles.text}`}
+            value={warum}
+            rows={2}
+            disabled={laeuft}
+            placeholder="Kurz, damit die Leitung entscheiden kann"
+            onChange={(e) => setWarum(e.target.value)}
+          />
+        </label>
+        {fehler && (
+          <p className={felder.fehler} role="alert">
+            {fehler.text}
+          </p>
+        )}
+      </Sheet>
+    );
+
   if (loeschenFragen)
     return (
       <ConfirmDialog
@@ -413,12 +573,12 @@ export function ToDoFenster({
 
   return (
     <Sheet
-      title={a ? 'To-Do' : 'Neues To-Do'}
+      title={uebernehmen ? 'Vorschlag übernehmen' : a ? 'To-Do' : 'Neues To-Do'}
       onClose={onClose}
       beschaeftigt={laeuft}
       cancelLabel={r?.mache ? 'Schließen' : undefined}
       links={
-        a && r?.loeschen ? (
+        a && r?.loeschen && !uebernehmen ? (
           <FensterKnopf art="loeschen" disabled={laeuft} onClick={() => setLoeschenFragen(true)}>
             Löschen
           </FensterKnopf>
@@ -431,11 +591,24 @@ export function ToDoFenster({
           </FensterKnopf>
         ) : (
           <FensterKnopf disabled={!bereit} onClick={speichern}>
-            {laeuft ? 'Wird gespeichert …' : a ? 'Speichern' : 'Anlegen'}
+            {laeuft
+              ? 'Wird gespeichert …'
+              : uebernehmen
+                ? 'Übernehmen'
+                : a
+                  ? 'Speichern'
+                  : 'Anlegen'}
           </FensterKnopf>
         )
       }
     >
+      {wofuer}
+      {uebernehmen && a?.vorschlag && (
+        <p className={felder.hinweis} role="note">
+          Vorschlag von {a.vorschlag.name}. Wähle die Zuständigen – danach ist es ein To-Do der
+          Gruppe und der Vorschlag verschwindet.
+        </p>
+      )}
       {imEntwurf && herkunft && r?.fall === 'leitung' && (
         <p className={felder.hinweis}>
           Steht im Protokoll-Entwurf „{herkunft.titel}“ – Text, Gruppe und Löschen werden dort mit

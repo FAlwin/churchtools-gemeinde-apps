@@ -78,6 +78,7 @@ beforeEach(() => {
         treffenNichtFreigegeben: false,
         punkte: 'vorschlagen',
       },
+      todoVorschlaege: [],
       aufgaben: [a('Eins', { wer: [1] }), a('Zwei', { wer: [23] })],
     },
   ]);

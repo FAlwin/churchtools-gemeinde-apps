@@ -237,18 +237,10 @@
   transition: transform 0.15s;
 }
 
-// „nur ansehen“ (16.10.2026): leise, grau, immer am rechten Rand der Spalte.
+// „nur ansehen“ (16.10.2026): leise, grau (`Etikett`), immer am rechten Rand der Spalte.
 .nurAnsehen {
   margin-left: auto;
   flex: none;
-  white-space: nowrap;
-  padding: 1px 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface2);
-  color: var(--text2);
-  font-size: 11px;
-  font-weight: 600;
 }
 
 // Gruppenzeile je Termin: Stand links, Regler rechts (E4-5-3).
@@ -828,17 +820,6 @@
   }
 }
 
-.chipStand {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--red);
-}
-
-.chipBesetzt {
-  composes: chipStand;
-  color: var(--green);
-}
-
 .handyOeffnen {
   display: inline-flex;
   align-items: center;
@@ -1015,14 +996,10 @@
   }
 }
 
-.etikett {
-  display: inline-block;
-  margin: 0 4px 4px 0;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--surface3);
-  font-size: 12px;
-  color: var(--text2);
+.etiketten {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .anzahl {

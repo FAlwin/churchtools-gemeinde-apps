@@ -72,8 +72,8 @@ trennt alle. Unter „Einstellungen“ lassen sich Kalender und Suchwort ändern
 Technik gehört, sieht nichts davon.
 
 1. Als Technik auf **Gebetsabend**: am Computer zwei Spalten – links die Karte „Übertragung“ (rechts im Kopf „nur
-   Technik“), „Nicht gestartet“, „Bild + Ton“ gewählt; rechts der Gebetsabend. Neben „Hallo …“ der Knopf
-   **Einstellungen** mit demselben Zahnrad wie „System-Einstellungen“ in ChurchTools.
+   Technik“), „Nicht gestartet“, „Bild + Ton“ gewählt; rechts der Gebetsabend. Oben die Reiter **Start ·
+   Einstellungen** (der Reiter mit demselben Zahnrad wie „System-Einstellungen“ in ChurchTools; am Handy unten in der Leiste).
 2. **Übertragung starten**: Der Browser fragt nach Kamera und Mikrofon (beim ersten Mal) – erlauben. Das Kamerabild
    steht in der Karte, darüber „Läuft seit … Uhr · Sender auf diesem Gerät“. Rechts erscheint die Karte „Wer hört zu?“,
    darunter beim Gebetsabend statt „Gebetsabend zuhören“ der Hinweis, ein anderes Gerät zu nehmen.
@@ -89,7 +89,7 @@ Technik gehört, sieht nichts davon.
 9. „Nur Ton“ wählen und starten: VDO.Ninja zeigt im Sender eine Geräteauswahl – Mikrofon bestätigen; am zweiten Gerät
    kommt nur Ton. Danach beenden.
 10. Die Person ohne Rechte simulieren: nur die Karte „Gebetsabend“ (volle Breite), keine „Übertragung“, kein
-    Knopf „Einstellungen“. Simulation beenden.
+    Reiter „Einstellungen“ (und keine Reiterleiste). Simulation beenden.
 
 <details><summary>Technisches</summary>
 

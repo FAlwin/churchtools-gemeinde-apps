@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
@@ -549,7 +550,7 @@ export function KiFuellenFenster({
                       <span className={styles.fundText}>
                         <b>{f.text}</b> · {f.anzahl}×
                       </span>
-                      <span className={styles.art}>{ART[f.art]}</span>
+                      <Etikett>{ART[f.art]}</Etikett>
                       <span className={styles.platzhalter}>{f.platzhalter}</span>
                       {f.art === 'eigen' && (
                         <button

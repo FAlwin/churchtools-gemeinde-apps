@@ -45,7 +45,7 @@ Erst danach lassen sich die Rechte auf diese Kategorien vergeben (vorher stehen 
 ## Zuhören
 
 Die Seite zeigt eine Karte wie „Als Nächstes“ im Dienstplaner: oben den **nächsten Gebetsabend** aus dem gewählten
-Kalender (Titel enthält „Gebet“; die Technik stellt beides unter **„Einstellungen“** neben „Hallo …“ ein), darunter den
+Kalender (Titel enthält „Gebet“; die Technik stellt beides im Reiter **„Einstellungen“** ein), darunter den
 Knopf **„Gebetsabend zuhören“**. Ohne passenden Termin steht schlicht „Gebetsabend“ oben. Wer nicht zur Technik
 gehört, sieht nur diese eine Karte (über die volle Breite wie alle Erweiterungen):
 
@@ -98,7 +98,7 @@ Handy steht alles untereinander.
   **„Ohne Namen“** heißt meist: Jemand hört mit einem weitergegebenen Link zu. Die Liste gibt es nur auf dem Gerät,
   das sendet, und nur solange der Sender dort läuft; gespeichert wird nichts. Den Namen setzt der Zuhörer selbst –
   die Liste ist ein Hinweis, kein Schutz.
-- **Einstellungen (Knopf neben „Hallo …“, nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
+- **Einstellungen (letzter Reiter neben „Start“, seit B8b; nur wer „Einstellungen“ bearbeiten darf):** aus welchem Kalender der nächste Termin kommt
   und an welchem Wort im Titel er erkannt wird. Zur Auswahl stehen die Kalender, die man selbst sieht.
 
 Zugang und Einstellungen liegen je als ein Eintrag **mit Versionsnummer** in ihrer Kategorie (wie der Plan im

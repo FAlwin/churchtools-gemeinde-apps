@@ -76,3 +76,150 @@ describe('ErweiterungsSeite: Bereiche und Lupe', () => {
     ).toBe(true);
   });
 });
+
+describe('ErweiterungsSeite: Kopf (R8/E24, „Ruhige Bedienung“ B8b)', () => {
+  const gemeindeZustand = { art: 'fertig', vorname: 'Alwin', gemeinde: 'ECG Donrath' } as const;
+
+  it('oben steht nur der App-Name – ohne Gemeindenamen', () => {
+    render(<ErweiterungsSeite zustand={gemeindeZustand} app="Test" onNochmal={() => {}} />);
+    expect(screen.getByText('Test')).toBeTruthy();
+    expect(screen.queryByText(/ECG Donrath/)).toBeNull();
+  });
+
+  it('„Hallo …“ nur, wenn der erste Reiter aktiv ist; `gruss={false}` sperrt es auch dort', () => {
+    const { rerender } = render(
+      <ErweiterungsSeite zustand={zustand} app="Test" bereiche={bereiche()} onNochmal={() => {}} />,
+    );
+    expect(screen.getByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+
+    rerender(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={{ ...bereiche(), aktiv: 'planen' }}
+        onNochmal={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+
+    rerender(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche()}
+        gruss={false}
+        onNochmal={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('Tipp auf den schon gewählten Reiter wechselt noch einmal dorthin (Rückweg aus Unterseiten, wie vor B2)', () => {
+    const wechsel = vi.fn();
+    const oeffnen = vi.fn();
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche(wechsel)}
+        einstellungen={{ onOeffnen: oeffnen, offen: false }}
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Start' }));
+    expect(wechsel).toHaveBeenCalledWith('start');
+    expect(oeffnen).not.toHaveBeenCalled();
+  });
+
+  it('Einstellungen: letzter Reiter, öffnet das Fenster der App und wechselt keinen Bereich', () => {
+    const wechsel = vi.fn();
+    const oeffnen = vi.fn();
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche(wechsel)}
+        einstellungen={{ onOeffnen: oeffnen }}
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    const namen = within(nav)
+      .getAllByRole('button')
+      .map((b) => b.textContent);
+    expect(namen).toEqual(['Start', 'Planen', 'Einstellungen']);
+    fireEvent.click(within(nav).getByRole('button', { name: 'Einstellungen' }));
+    expect(oeffnen).toHaveBeenCalledOnce();
+    expect(wechsel).not.toHaveBeenCalled();
+    // Ein anderer Reiter wechselt weiter ganz normal.
+    fireEvent.click(within(nav).getByRole('button', { name: 'Planen' }));
+    expect(wechsel).toHaveBeenCalledWith('planen');
+  });
+
+  it('Einstellungen: hervorgehoben, solange das Fenster offen ist; der Bereich dahinter ist es dann nicht', () => {
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche()}
+        einstellungen={{ onOeffnen: () => {}, offen: true }}
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    expect(
+      within(nav).getByRole('button', { name: 'Einstellungen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(within(nav).getByRole('button', { name: 'Start' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
+  it('Einstellungen ohne weitere Reiter: ein einzelner Start-Reiter davor (`startName`), „Hallo …“ bleibt', () => {
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        startName="Organigramm"
+        einstellungen={{ onOeffnen: () => {} }}
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    expect(
+      within(nav)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Organigramm', 'Einstellungen']);
+    expect(screen.getByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+  });
+
+  it('ohne Einstellungen kein zusätzlicher Reiter (kein Recht = kein Reiter)', () => {
+    render(
+      <ErweiterungsSeite zustand={zustand} app="Test" bereiche={bereiche()} onNochmal={() => {}} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
+    expect(screen.queryByRole('navigation')).not.toBeNull();
+    cleanup();
+    render(<ErweiterungsSeite zustand={zustand} app="Test" onNochmal={() => {}} />);
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('Handy: Einstellungen steht als letzter Reiter unten in der Leiste', () => {
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche()}
+        einstellungen={{ onOeffnen: () => {} }}
+        handy
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    expect(nav.closest('header')).toBeNull();
+    const knoepfe = within(nav).getAllByRole('button');
+    expect(knoepfe[knoepfe.length - 1].textContent).toBe('Einstellungen');
+  });
+});

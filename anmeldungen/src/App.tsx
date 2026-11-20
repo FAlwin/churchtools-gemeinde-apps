@@ -1,4 +1,5 @@
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
@@ -62,6 +63,7 @@ export function App() {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [ansicht, setAnsicht] = useState<Ansicht>(ansichtAusAdresse);
   const [neu, setNeu] = useState(false);
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const [einstellungen, setEinstellungen] = useState(false);
   const [aenderung, setAenderungRoh] = useState<(Aenderung & { nr: number }) | null>(null);
   // Jede Änderung bekommt eine neue Leiste – auch wenn der Text gleich lautet („Preise gespeichert.“).
@@ -209,27 +211,25 @@ export function App() {
   return (
     <ErweiterungsSeite
       app="Anmeldungen"
+      handy={handy}
       zustand={seite}
       nebenGruss={datumText(heute)}
       onNochmal={laden}
+      // „Einstellungen“ ist der letzte Reiter (E24, B8b) – vorher ein Knopf im Kopf neben „Neue Veranstaltung“.
+      einstellungen={
+        fertig?.admin
+          ? { onOeffnen: () => setEinstellungen(true), offen: einstellungen }
+          : undefined
+      }
       kopfAktion={
-        <>
-          {fertig?.admin && (
-            <KopfKnopf
-              label="Einstellungen"
-              symbol={<Icon name="zahnrad" size={16} />}
-              onClick={() => setEinstellungen(true)}
-            />
-          )}
-          {anlegeTeams.length > 0 && fertig?.formular && (
-            <KopfKnopf
-              neu
-              label="Neue Veranstaltung"
-              symbol={<Icon name="plus" size={18} />}
-              onClick={() => setNeu(true)}
-            />
-          )}
-        </>
+        anlegeTeams.length > 0 && fertig?.formular ? (
+          <KopfKnopf
+            neu
+            label="Neue Veranstaltung"
+            symbol={<Icon name="plus" size={18} />}
+            onClick={() => setNeu(true)}
+          />
+        ) : undefined
       }
       hinweis={
         fertig?.anlegen.artId === null &&

@@ -366,3 +366,40 @@ runden Ecken angeschnitten.
   „Einstellungen“ im Organigramm; iPhone, Reiterleiste und Präsentation zu tief)
 
 </details>
+
+### TF-EXT-13 · Ein Seitenkopf in jeder Erweiterung: Einstellungen als letzter Reiter, ein Status-Etikett
+
+**Das brauchst du:** In der Test-Instanz die Erweiterungen Dienstplaner, Organigramm, Protokolle, Website, Anmeldungen und
+Gebetsabend mit dem aktuellen Paket; eine Person mit Admin-Recht (sieht alle Einstellungen) und eine ohne.
+
+**Das muss passieren:** Jede Erweiterung beginnt gleich: oben klein der **App-Name** (ohne Gemeindenamen – der steht schon in
+der ChurchTools-Leiste), darunter die unterstrichenen Reiter. **„Hallo …“** steht nur auf der Startseite. Alle Apps nutzen
+die volle Fensterbreite. **Einstellungen** ist in jeder App, die welche hat (Organigramm, Anmeldungen, Gebetsabend), der
+**letzte Reiter** ganz rechts – am Handy ganz rechts unten in der Leiste mit Zahnrad – und nur für die, die sie heute
+auch öffnen dürfen. Status-Wörter („Leitung“, „eingerichtet“, „Warteliste 2“, „offen“ …) sehen überall gleich aus: eine Form,
+vier Farben (grau, blau, grün, rot).
+
+1. In jeder der sechs Apps die Startseite öffnen: App-Name klein oben, Reiter darunter, „Hallo …“ darunter. Den Reiter
+   wechseln (z. B. Dienstplaner **Dienste**, Organigramm **Personen**, Protokolle **To-Dos**): „Hallo …“ ist weg, der Reiter
+   bleibt unterstrichen.
+2. Als Admin im **Organigramm**, in den **Anmeldungen** und im **Gebetsabend** (Technik): Der letzte Reiter heißt
+   **Einstellungen**. Anklicken öffnet dasselbe Fenster wie früher der Knopf neben „Hallo …“ (der ist weg); schließen – die
+   Seite dahinter ist unverändert. In den Anmeldungen steht **Neue Veranstaltung** weiterhin rechts neben „Hallo …“.
+3. Als Person ohne das Recht: kein Reiter **Einstellungen** (Anmeldungen und Gebetsabend dann ganz ohne Reiterleiste).
+4. **Dienstplaner**, **Website** und **Protokolle** haben keine Einstellungen als Fenster: Dort ist nichts verschwunden;
+   **Verwaltung** (Protokolle, nur Admins) bleibt der letzte Reiter.
+5. Am Handy (schmal): die Reiter stehen unten; **Einstellungen** ist der letzte, in den Anmeldungen und im Gebetsabend gibt
+   es nur **Start** und **Einstellungen**.
+6. Status-Etiketten ansehen: Anmeldungen (Startseite „Leitung“/„Mitglied“, „Warteliste 2“, Zahlung „offen“), Protokolle
+   („eingerichtet“, „Entwurf“, „freigegeben“), Organigramm (Kinder & Jugend: „wechselt“, „wird 18“; Neue Gliederung: „neu“,
+   „wird archiviert“), Dienstplaner (Planen: „nur ansehen“, Startseite „Du: … · zugesagt“). Alle haben dieselbe Kapsel in
+   derselben Größe; grün = in Ordnung, rot = braucht Aufmerksamkeit, blau = deine Rolle oder wartet auf dich.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/erweiterung/ErweiterungsSeite.tsx`, `ui/bedienung/Etikett.tsx`, `ui/bedienung/Etikett.module.scss`, `organigramm/src/App.tsx`, `anmeldungen/src/App.tsx`, `gebetsabend/src/App.tsx`, `dienstplaner/src/App.tsx`, `protokolle/src/App.tsx`
+- **Automatisiert:** ja – `ErweiterungsSeite.test.tsx` (Kopf ohne Gemeinde, „Hallo …“ nur auf dem ersten Reiter, Einstellungen als letzter Reiter, Handy), `App.test.tsx` je App (Organigramm, Anmeldungen, Gebetsabend mit und ohne Recht; Dienstplaner und Protokolle „Hallo …“ nur auf Start), `Etikett.test.tsx`, Wächter `etiketten.test.ts` (keine eigene Pille in den Apps); das Aussehen am Rechner und Handy prüft nur dieser Fall
+- **Historie:** Ruhige Bedienung B8b (20.11.2026, Entwurf „Restliche Bildschirme“ v2, R8/R9/E24)
+
+</details>

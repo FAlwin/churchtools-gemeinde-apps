@@ -50,7 +50,7 @@ import { ladeMitglieder } from './mitglieder';
 import { AnmeldungenReiter, type ListenFilter, type MitgliederZustand } from './AnmeldungenReiter';
 import { Kennzahlen, SchrittLeiste } from './Einstieg';
 import { freigebenPlatz, schritteBisZurFreigabe, type SchrittId } from './schritte';
-import { Etikett } from './Etikett';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Baukasten } from './Baukasten';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';

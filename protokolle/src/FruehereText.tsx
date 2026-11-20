@@ -3,7 +3,7 @@ import { ortszeitAus, tagAusIso } from '@shared/ct/zeit';
 import { vorZeit } from '@shared/protokolle/fruehere';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { uhrzeit } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import styles from './Fruehere.module.scss';
 
 /** Zusagen und Absagen der Einladung – „4 Zusagen · 1 Absage“; ohne Einladung leer. */
@@ -24,7 +24,8 @@ function anwesenheitHinweis(s: Pick<Sitzung, 'termin' | 'treffen' | 'abgeschloss
   if (s.treffen !== null && s.abgeschlossen)
     return (
       <>
-        <Marke art="gut">Gruppentreffen abgeschlossen</Marke> Anwesenheit steht in ChurchTools fest.
+        <Etikett ton="gruen">Gruppentreffen abgeschlossen</Etikett> Anwesenheit steht in ChurchTools
+        fest.
       </>
     );
   return s.termin ? (
@@ -60,9 +61,9 @@ export function FruehereText({
       </small>
       <span className={styles.marken}>
         {s.termin && (
-          <Marke art="info">{s.treffen !== null ? 'Einladung' : 'Termin mit Einladung'}</Marke>
+          <Etikett ton="blau">{s.treffen !== null ? 'Einladung' : 'Termin mit Einladung'}</Etikett>
         )}
-        {s.treffen !== null && <Marke art="leise">Gruppentreffen</Marke>}
+        {s.treffen !== null && <Etikett ton="neutral">Gruppentreffen</Etikett>}
       </span>
       {antworten && <small>{antworten}</small>}
       {hinweis && <small>{anwesenheitHinweis(s)}</small>}

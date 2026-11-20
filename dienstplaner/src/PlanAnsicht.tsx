@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Icon } from '@ui/icons/icons';
 import { KachelLink, TitelLink } from './TerminLink';
 import { kachel, tagKurz } from '@shared/ct/datum';
@@ -135,7 +136,11 @@ function GruppenKnopf({
         <Icon name="chev-down" size={16} />
       </span>
       {gruppenName(g)}
-      {nurAnsehen && <span className={styles.nurAnsehen}>nur ansehen</span>}
+      {nurAnsehen && (
+        <span className={styles.nurAnsehen}>
+          <Etikett>nur ansehen</Etikett>
+        </span>
+      )}
     </button>
   );
 }
@@ -361,7 +366,7 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
             >
               <b>{tagKurz(sx.tag)}</b>
               <small>{sx.name}</small>
-              <span className={stx.offen ? styles.chipStand : styles.chipBesetzt}>{stx.text}</span>
+              <Etikett ton={stx.offen ? 'rot' : 'gruen'}>{stx.text}</Etikett>
             </button>
           );
         })}

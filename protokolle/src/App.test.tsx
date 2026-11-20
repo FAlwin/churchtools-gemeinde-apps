@@ -83,10 +83,20 @@ beforeEach(() => {
 });
 
 describe('App (S1)', () => {
-  it('zeigt Gruß, Gemeinde und die Gruppen mit ihrem Stand', async () => {
+  it('„Hallo …“ nur auf Start (R8) – auf „To-Dos“ nicht', async () => {
+    window.location.hash = '#/todos';
+    render(<App />);
+    await screen.findByRole('button', { name: /^To-Dos/ });
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+  });
+
+  it('zeigt Gruß, App-Name (ohne Gemeinde) und die Gruppen mit ihrem Stand', async () => {
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
-    expect(screen.getByText('Protokolle · ECG Donrath')).toBeTruthy();
+    expect(screen.getByText('Protokolle')).toBeTruthy();
+    expect(screen.queryByText(/ECG Donrath/)).toBeNull();
     const liste = screen.getByRole('list');
     const zeilen = within(liste)
       .getAllByRole('listitem')

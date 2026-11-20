@@ -83,7 +83,7 @@ ANMELDUNG_CT_INSTANZEN=<instanz>.church.tools npm run formular:hochladen` (Insta
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
    jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu
    nutzen, die ChurchTools für Gäste ohnehin hat.
-4. In der Erweiterung **„Einstellungen“** (nur Gruppen-Admins): die Adresse eintragen. Die Erweiterung prüft,
+4. In der Erweiterung im Reiter **„Einstellungen“** (nur Gruppen-Admins): die Adresse eintragen. Die Erweiterung prüft,
    ob die Seite antwortet und ob sie als erlaubte Herkunft eingetragen ist.
 
 **Spam-Schutz** (unsichtbar): ein verstecktes Feld, das nur Bots ausfüllen, und eine Mindest-Ausfüllzeit von 3
@@ -377,7 +377,7 @@ wählt man die Leitung (Leute aus dem Team; wer freigibt, ist vorgewählt) – s
 „Leiter“, sieht die Anmeldungen auch direkt in ChurchTools und ist dort Ansprechpartner. Danach fragt die
 Erweiterung ChurchTools wie ein Gast, ob Anmeldungen angenommen werden, und sagt sonst, was fehlt.
 
-**Einstellungen der Gemeinde** (Startseite → „Einstellungen“, nur Gruppen-Admins): Status, Standort und Bereich
+**Einstellungen der Gemeinde** (Reiter „Einstellungen“ neben „Start“ – seit B8b ein Reiter statt eines Knopfes neben „Neue Veranstaltung“; nur Gruppen-Admins): Status, Standort und Bereich
 für neue Personen – einmal für alle Veranstaltungen. Ohne gespeicherte Einstellung gilt der Vorschlag
 „Interessent“ und – wenn es nur einen gibt – der einzige Standort und Bereich. Gespeichert im Datenbereich der
 Erweiterung (Kategorie „Einstellungen der Anmeldungen“, beim ersten Speichern angelegt). Damit Veranstalter die

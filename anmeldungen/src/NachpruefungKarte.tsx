@@ -5,7 +5,7 @@ import { euroText } from '@shared/anmeldung/preis';
 import type { Betragsbefund, Nachpruefung } from '@shared/anmeldung/nachpruefung';
 import { bedingungsText, type Bedingungsbefund } from '@shared/anmeldung/antwortenAusListe';
 import { datumText } from './anzeige';
-import { Etikett } from './Etikett';
+import { Etikett } from '@ui/bedienung/Etikett';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 

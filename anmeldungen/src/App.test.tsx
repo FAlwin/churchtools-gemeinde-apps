@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { ChurchToolsBremst } from '@ui/ct/verbindung';
 import { App } from './App';
@@ -68,7 +68,7 @@ beforeEach(() => {
 describe('App der Anmeldungen (#474, #480)', () => {
   beforeEach(() => anlegen.mockResolvedValue({ artId: 5, teamIds: [] }));
 
-  it('zeigt Gruß, Gemeinde und die Gruppen mit Leitung/Mitglied', async () => {
+  it('zeigt Gruß, App-Name (ohne Gemeinde) und die Gruppen mit Leitung/Mitglied', async () => {
     laden.mockResolvedValue({
       vorname: 'Alwin',
       gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
@@ -80,7 +80,9 @@ describe('App der Anmeldungen (#474, #480)', () => {
     ladenUebersicht.mockResolvedValue(LEER);
     render(<App />);
     expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
-    expect(screen.getByText(/Evangeliumschristen- Gemeinde e\.V\./)).toBeTruthy();
+    // Der Gemeindename steht nur in der ChurchTools-Leiste, nicht im Kopf (R8/E24, B8b).
+    expect(screen.queryByText(/Evangeliumschristen- Gemeinde e\.V\./)).toBeNull();
+    expect(screen.getByText('Anmeldungen')).toBeTruthy();
     // Neben dem Gruß steht das heutige Datum („Di, 13.10.2026“) – über den gemeinsamen Rahmen.
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     expect(screen.getByText(datumText(tagAusIso(new Date().toISOString(), zone)))).toBeTruthy();
@@ -197,6 +199,42 @@ describe('Anlegen auf der Startseite (A3, #486)', () => {
     render(<App />);
     expect(await screen.findByText(/fehlt die Gruppenart „Anmeldung“/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Neue Veranstaltung/ })).toBeNull();
+  });
+});
+
+describe('Kopf: „Einstellungen“ als letzter Reiter (E24, B8b)', () => {
+  const START = {
+    vorname: 'Alwin',
+    gemeinde: null,
+    gruppen: [{ id: 7, name: 'Technik', leitung: true }],
+  };
+  beforeEach(() => {
+    laden.mockResolvedValue(START);
+    ladenUebersicht.mockResolvedValue(LEER);
+    anlegen.mockResolvedValue({ artId: 5, teamIds: [7] });
+  });
+
+  it('Admin: Reiter „Start“ · „Einstellungen“ (letzter), der Reiter öffnet das Fenster; „Neue Veranstaltung“ bleibt im Kopf', async () => {
+    admin.mockResolvedValue(true);
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    expect(
+      within(nav)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Start', 'Einstellungen']);
+    expect(screen.getAllByRole('button', { name: 'Einstellungen' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Neue Veranstaltung/ })).toBeTruthy();
+    fireEvent.click(within(nav).getByRole('button', { name: 'Einstellungen' }));
+    expect(await screen.findByRole('dialog', { name: 'Einstellungen der Gemeinde' })).toBeTruthy();
+  });
+
+  it('ohne Admin-Recht: kein Reiter „Einstellungen“, keine Leiste', async () => {
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Bereiche' })).toBeNull();
   });
 });
 

@@ -227,9 +227,7 @@ async function typFuerAlleUmschalten(typ: RegExp) {
       },
     }),
   );
-  fireEvent.click(
-    await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
-  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Einstellungen' }));
   const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
   fireEvent.click(d.getByRole('checkbox', { name: typ }));
   fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
@@ -1745,7 +1743,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     laden.mockResolvedValue(start({ rechte: rechte() }));
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    expect(screen.queryByRole('button', { name: 'Was das Organigramm für alle zeigt' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
   });
 
   it('Fenster: abwählen, Untergruppen gehen mit; Speichern mit der gesehenen Version – danach gilt es sofort', async () => {
@@ -1754,9 +1752,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
       Promise.resolve({ ok: true, daten: stand(inhalt, 4) }),
     );
     render(<App />);
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Einstellungen' }));
     const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
     fireEvent.click(d.getByRole('checkbox', { name: /^Verteiler/ }));
     fireEvent.click(d.getByRole('checkbox', { name: /^Technik/ }));
@@ -1787,9 +1783,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
       jetzt: stand({ typen: [], gruppen: [47], personen: 'zahl' }, 4, 'Bea'),
     });
     render(<App />);
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Einstellungen' }));
     const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
     fireEvent.click(d.getByRole('checkbox', { name: /^Verteiler/ }));
     fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
@@ -1816,14 +1810,28 @@ describe('B5: „Präsentieren“ in der Werkzeugzeile', () => {
     expect(screen.queryByRole('toolbar', { name: 'Werkzeuge' })).toBeNull();
   });
 
-  it('im Seitenkopf bleibt „Einstellungen“ (wird in B8b der letzte Reiter); „Präsentieren“ und PDF sind nicht mehr dort', async () => {
+  it('„Einstellungen“ ist der letzte Reiter (E24, B8b) – nicht mehr ein Knopf im Kopf; „Präsentieren“ und PDF sind nicht dort', async () => {
     render(<App />);
-    const einstellungen = await screen.findByRole('button', {
-      name: 'Was das Organigramm für alle zeigt',
-    });
+    const einstellungen = await screen.findByRole('button', { name: 'Einstellungen' });
+    const leiste = within(einstellungen.closest('nav')!);
+    const namen = leiste.getAllByRole('button').map((b) => b.textContent);
+    expect(namen[namen.length - 1]).toBe('Einstellungen');
     const kopf = within(einstellungen.closest('header')!);
     expect(kopf.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
     expect(kopf.queryByRole('button', { name: /PDF/ })).toBeNull();
+    // Der Reiter öffnet das Fenster; die Seite dahinter bleibt auf ihrem Reiter.
+    fireEvent.click(einstellungen);
+    expect(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeTruthy();
+  });
+
+  it('„Hallo …“ steht nur auf dem Organigramm (Start), nicht auf den anderen Reitern (R8)', async () => {
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: /^Hallo/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Personen' }));
+    await vi.waitFor(() => expect(screen.queryByRole('heading', { name: /^Hallo/ })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Personen' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 });
 
@@ -2145,9 +2153,7 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
       }),
     );
     render(<App />);
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Einstellungen' }));
     const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
     expect(d.getByText('Das ist nur eine Anzeige-Regel.')).toBeTruthy();
     expect(d.queryByText(/Die Regel greift nur bei Personen/)).toBeNull();

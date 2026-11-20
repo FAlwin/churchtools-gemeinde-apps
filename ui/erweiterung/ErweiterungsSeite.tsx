@@ -4,11 +4,16 @@ import { SchwebeFlaeche } from '../bedienung/SchwebeFlaeche';
 import type { Fehlermeldung } from '../ct/fehlerMeldung';
 import styles from './ErweiterungsSeite.module.scss';
 
+/** Die Kennung des letzten Reiters „Einstellungen“ (E24) – nur hier vergeben, die Apps kennen sie nicht. */
+const EINSTELLUNGEN = 'einstellungen';
+
 /** Was die Seite gerade zeigt – geladen wird in der App, der Rahmen zeigt nur an. */
 export type SeitenZustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
-  | { art: 'fertig'; vorname: string; gemeinde: string | null };
+  // `gemeinde` zeigt der Kopf seit B8b nicht mehr (steht in der ChurchTools-Leiste); das Feld bleibt, damit die Apps
+  // nichts umbauen müssen.
+  | { art: 'fertig'; vorname: string; gemeinde?: string | null };
 
 /**
  * **Der äußere Rahmen jeder Erweiterungsseite** (Dienstplaner E2, Anmeldungen): Breite, Abstände und die
@@ -89,6 +94,17 @@ interface Props<T extends string> {
   /** Name der App im Kopf, z. B. „Dienstplaner“. */
   app: string;
   zustand: SeitenZustand;
+  /**
+   * **Einstellungen als letzter Reiter** (E24, „Ruhige Bedienung“ B8b): jede App, deren Einstellungen jemand
+   * öffnen darf, gibt nur diese Funktion – Name, Symbol und Platz (ganz rechts, am Handy ganz unten rechts) kommen von
+   * hier, damit jede App sie an derselben Stelle hat. Der Reiter öffnet das Fenster der App (E18: Fenster nicht stark
+   * verändern); `offen` hebt ihn hervor, solange es offen ist. Wer sie nicht öffnen darf, bekommt keinen Reiter (die App
+   * gibt dann nichts) – die Rechte bleiben bei der App. Hat die App sonst keine Reiter, entsteht ein einzelner
+   * Start-Reiter davor (`startName`).
+   */
+  einstellungen?: { onOeffnen: () => void; offen?: boolean };
+  /** Name des einzigen Reiters vor „Einstellungen“, wenn die App sonst keine Reiter hat. Vorgabe „Start“. */
+  startName?: string;
   /** Kleiner Text neben dem Gruß (z. B. das Datum). */
   nebenGruss?: string;
   /** Rechts neben dem Gruß, z. B. „Neue Veranstaltung“ – nur bei `fertig`. */
@@ -104,7 +120,11 @@ interface Props<T extends string> {
    * App-Namen. Eine Stelle, damit jede App mit Suche sie am selben Platz hat.
    */
   lupe?: ReactNode;
-  /** „Hallo …“ zeigen? Mit Reitern nur auf der Startseite (Entwurf v17). Vorgabe: ja. */
+  /**
+   * „Hallo …“ nur auf der Startseite (R8/E24): Mit Reitern steht es nur, wenn der **erste** Reiter aktiv ist – das ist
+   * überall die Startseite; die Apps müssen das nicht selbst wissen. `gruss={false}` sperrt es zusätzlich (z. B. in
+   * einer geöffneten Termin-Ansicht oder in der Suche). Vorgabe: ja.
+   */
   gruss?: boolean;
   /** „Erneut versuchen“ – erscheint nur, wenn der Fehler vorübergehend ist (`fehlerMeldung`). */
   onNochmal: () => void;
@@ -123,27 +143,44 @@ export function ErweiterungsSeite<T extends string = string>({
   kopfAktion,
   hinweis,
   bereiche,
+  einstellungen,
+  startName = 'Start',
   handy = false,
   lupe,
   gruss = true,
   onNochmal,
   children,
 }: Props<T>) {
-  const appName = (
-    <p className={styles.app}>
-      {app}
-      {zustand.art === 'fertig' && zustand.gemeinde && ` · ${zustand.gemeinde}`}
-    </p>
-  );
-  const leiste = bereiche && (
+  // Nur der App-Name, klein oben (E24) – der Gemeindename steht schon in der ChurchTools-Leiste darüber.
+  const appName = <p className={styles.app}>{app}</p>;
+  // Einstellungen: letzter Reiter, öffnet das Fenster der App. Ohne eigene Reiter steht davor ein einzelner Start-Reiter.
+  const reiter: Reiter<string>[] = [
+    ...(bereiche?.reiter ??
+      (einstellungen ? [{ id: 'start', label: startName, icon: 'home' }] : [])),
+    ...(einstellungen
+      ? [{ id: EINSTELLUNGEN, label: 'Einstellungen', icon: 'zahnrad' } satisfies Reiter<string>]
+      : []),
+  ];
+  const aktiv = einstellungen?.offen ? EINSTELLUNGEN : (bereiche?.aktiv ?? reiter[0]?.id);
+  const leiste = reiter.length > 0 && (
     <ReiterLeiste
       oben={!handy}
       flach={!handy}
-      reiter={bereiche.reiter}
-      aktiv={bereiche.aktiv}
-      onWechsel={bereiche.onWechsel}
+      reiter={reiter}
+      aktiv={aktiv}
+      onWechsel={(id) => {
+        if (id === EINSTELLUNGEN) einstellungen?.onOeffnen();
+        else bereiche?.onWechsel(id as T);
+      }}
+      // Tipp auf den schon gewählten Reiter: wie vorher mit dem Kasten-Umschalter (vor B2) noch einmal „wechseln“ – das
+      // führt im Dienstplaner aus der Termin-Ansicht zurück und setzt in den Protokolle Auswahl und Suche zurück.
+      onErneut={() => {
+        if (bereiche && aktiv !== EINSTELLUNGEN) bereiche.onWechsel(bereiche.aktiv);
+      }}
     />
   );
+  // Begrüßung nur auf Start = der erste Reiter ist aktiv (R8).
+  const aufStart = !bereiche || bereiche.aktiv === bereiche.reiter[0]?.id;
   // Reiterzeile nur am Rechner; die Lupe steht dann rechts daneben, sonst bei App-Namen.
   const reiterzeile = leiste && !handy;
   return (
@@ -163,7 +200,7 @@ export function ErweiterungsSeite<T extends string = string>({
             {lupe}
           </div>
         )}
-        {zustand.art === 'fertig' && gruss && (
+        {zustand.art === 'fertig' && gruss && aufStart && (
           <div className={styles.kopfzeile}>
             <div className={styles.gruss}>
               <h1>{zustand.vorname ? `Hallo ${zustand.vorname}` : 'Hallo'}</h1>

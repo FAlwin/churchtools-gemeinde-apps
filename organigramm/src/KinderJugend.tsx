@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { Segment } from '@ui/bedienung/Segment';
 import { PersonBild } from '@ui/bedienung/PersonBild';
@@ -337,27 +338,27 @@ function Jahresband({ jahr, phase }: { jahr: Wechseljahr; phase: Phase }) {
 }
 
 function Chips({ kind, neuVon }: { kind?: KindZeile; neuVon?: string }) {
-  const chips: { text: string; art: 'blau' | 'gruen' | 'rot' | 'grau' | 'gelb' }[] = [];
-  if (neuVon) chips.push({ text: `kommt aus ${kurz(neuVon)}`, art: 'gruen' });
+  const chips: { text: string; ton: EtikettTon }[] = [];
+  if (neuVon) chips.push({ text: `kommt aus ${kurz(neuVon)}`, ton: 'gruen' });
   if (kind) {
     const w = kind.wechsel;
-    if (w.art === 'wechselt') chips.push({ text: `wechselt → ${kurz(w.nach.name)}`, art: 'blau' });
+    if (w.art === 'wechselt') chips.push({ text: `wechselt → ${kurz(w.nach.name)}`, ton: 'blau' });
     if (w.art === 'ausnahme')
       chips.push(
         w.vomVorjahr
-          ? { text: 'Ausnahme vom letzten Jahr', art: 'gelb' }
-          : { text: 'bleibt noch ein Jahr', art: 'grau' },
+          ? { text: 'Ausnahme vom letzten Jahr', ton: 'blau' }
+          : { text: 'bleibt noch ein Jahr', ton: 'neutral' },
       );
-    if (w.art === 'ohneGeburtstag') chips.push({ text: 'Geburtstag fehlt', art: 'rot' });
-    if (w.art === 'unbekannt') chips.push({ text: 'nicht lesbar', art: 'grau' });
-    if (kind.wird18) chips.push({ text: 'wird 18', art: 'blau' });
+    if (w.art === 'ohneGeburtstag') chips.push({ text: 'Geburtstag fehlt', ton: 'rot' });
+    if (w.art === 'unbekannt') chips.push({ text: 'nicht lesbar', ton: 'neutral' });
+    if (kind.wird18) chips.push({ text: 'wird 18', ton: 'blau' });
   }
   return (
     <span className={styles.chips}>
       {chips.map((c) => (
-        <span key={c.text} className={`${styles.chip} ${styles[c.art]}`}>
+        <Etikett key={c.text} ton={c.ton}>
           {c.text}
-        </span>
+        </Etikett>
       ))}
     </span>
   );
@@ -608,15 +609,11 @@ function Uebersicht({
                 <small>Kinder</small>
               </span>
               <span className={styles.chips}>
-                {w > 0 && <span className={`${styles.chip} ${styles.blau}`}>{w} wechseln</span>}
-                {a > 0 && <span className={`${styles.chip} ${styles.grau}`}>{a} bleiben</span>}
-                {o > 0 && (
-                  <span className={`${styles.chip} ${styles.rot}`}>{o} ohne Geburtstag</span>
-                )}
-                {e > 0 && <span className={`${styles.chip} ${styles.blau}`}>{e} wird 18</span>}
-                {s.stand !== 'sichtbar' && (
-                  <span className={`${styles.chip} ${styles.grau}`}>nicht lesbar</span>
-                )}
+                {w > 0 && <Etikett ton="blau">{w} wechseln</Etikett>}
+                {a > 0 && <Etikett>{a} bleiben</Etikett>}
+                {o > 0 && <Etikett ton="rot">{o} ohne Geburtstag</Etikett>}
+                {e > 0 && <Etikett ton="blau">{e} wird 18</Etikett>}
+                {s.stand !== 'sichtbar' && <Etikett>nicht lesbar</Etikett>}
               </span>
               {s.leitung.length > 0 && (
                 <span className={styles.leise}>Leitung: {s.leitung.join(', ')}</span>

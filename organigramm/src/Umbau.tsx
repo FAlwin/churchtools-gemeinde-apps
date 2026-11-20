@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
@@ -289,7 +290,7 @@ export function Umbau({
                           Im Plan übernehmen
                         </button>
                       ) : s.erledigt ? (
-                        <span className={`${styles.marke} ${styles.mNeu}`}>erledigt</span>
+                        <Etikett ton="gruen">erledigt</Etikett>
                       ) : (
                         <button
                           type="button"

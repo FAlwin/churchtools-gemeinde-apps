@@ -96,7 +96,7 @@ richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erla
   oben, Von links, Mindmap), in der Mitte **Bereich: Ganze Gemeinde** (vorher „Anfangen bei“), rechts **Filter**,
   **Präsentieren** und **⋯** (Alle aufklappen, Alle zuklappen, PDF / Drucken). Am Handy zweizeilig: oben Ansicht, Filter,
   Präsentieren (nur Symbol) und ⋯ – alle mit Rahmen –, darunter **Bereich**. In den Karten fehlen Filter und Auf-/Zuklappen,
-  weil es dort nichts davon gibt. **Einstellungen** (nur Gruppen-Admins) steht weiter rechts neben „Hallo …“.
+  weil es dort nichts davon gibt. **Einstellungen** (nur Gruppen-Admins) ist seit B8b der **letzte Reiter** ganz rechts (öffnet das Fenster wie vorher der Knopf neben „Hallo …“).
 - **Bereich** (früher „Anfangen bei“): die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
   dann zeigen alle Ansichten nur sie. Die Auswahl klappt eine Liste auf, nach Ebene eingerückt wie im Baum, oben ein
   **Suchfeld**: Beim Tippen stehen nur die Treffer da, darunter klein ihre Obergruppen (gleichnamige Gruppen bleiben
@@ -110,7 +110,7 @@ richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erla
 
 ## Was das Organigramm für alle zeigt (ab O7b-7)
 
-Gruppen-Admins sehen oben rechts **„Einstellungen“**. Das Fenster **„Was das Organigramm zeigt“** blendet für **alle**
+Gruppen-Admins sehen als letzten Reiter **„Einstellungen“** (seit B8b; vorher ein Knopf oben rechts). Das Fenster **„Was das Organigramm zeigt“** blendet für **alle**
 aus, die das Organigramm öffnen – im Reiter, in der Präsentation und in der PDF:
 
 - **Gruppentypen** (z. B. Merkmale oder Verteiler) – ein ausgeblendeter Typ verschwindet samt allem, was darunter hängt.

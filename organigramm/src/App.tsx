@@ -3,8 +3,6 @@ import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/Erweiteru
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ApiError } from '@ui/ct/fehler';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { Icon } from '@ui/icons/icons';
 import { SuchLupe } from '@ui/bedienung/SuchLupe';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
@@ -514,23 +512,13 @@ export function App() {
       zustand={zustand}
       bereiche={bereiche}
       handy={handy}
-      kopfAktion={
-        // Rechts neben „Hallo …“ wie „+ Gruppe erstellen“ in ChurchTools (Alwin, 28.10.2026: Variante B). Seit B5
-        // („Ruhige Bedienung“) steht hier nur noch „Einstellungen“: „Präsentieren“ und „PDF / Drucken“ sind in die
-        // Werkzeugzeile des Reiters gezogen. „Einstellungen“ wird in B8b der letzte Reiter (E24).
-        start && ansicht === 'organigramm' ? (
-          <>
-            {start.rechte.gruppenVerwalten && (
-              <KopfKnopf
-                label="Einstellungen"
-                title="Was das Organigramm für alle zeigt"
-                symbol={<Icon name="zahnrad" size={16} />}
-                onClick={() => setEinstellungenOffen(true)}
-              />
-            )}
-          </>
-        ) : undefined
+      // „Einstellungen“ ist der letzte Reiter (E24, B8b) – vorher ein Knopf im Kopf neben „Hallo …“, nur im Organigramm.
+      einstellungen={
+        start?.rechte.gruppenVerwalten
+          ? { onOeffnen: () => setEinstellungenOffen(true), offen: einstellungenOffen }
+          : undefined
       }
+      startName="Organigramm"
       lupe={lupe}
       onNochmal={laden}
     >

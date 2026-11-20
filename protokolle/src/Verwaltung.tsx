@@ -6,7 +6,7 @@ import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { ladeVerwaltung, type Verwaltung as Daten, type VerwaltungsGruppe } from './einrichten';
 import { GruppeEinrichten } from './GruppeEinrichten';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { VorlagenKarte } from './VorlagenKarte';
 import { TodoHinweisKarte } from './TodoHinweisKarte';
 import type { Vorlauf } from '@shared/protokolle/hinweis';
@@ -70,10 +70,10 @@ export function Verwaltung({
               <button type="button" className={styles.zeile} onClick={() => setOffen(g)}>
                 <span className={styles.name}>
                   {g.name}
-                  {g.versteckt && <Marke art="leise">versteckt</Marke>}
+                  {g.versteckt && <Etikett ton="neutral">versteckt</Etikett>}
                 </span>
                 {g.eingerichtet ? (
-                  <Marke art="gut">eingerichtet</Marke>
+                  <Etikett ton="gruen">eingerichtet</Etikett>
                 ) : (
                   <span className={styles.einrichten}>Einrichten</span>
                 )}

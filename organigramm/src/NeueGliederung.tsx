@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
@@ -36,11 +37,11 @@ type Stand =
   | { art: 'fehler'; text: string }
   | { art: 'da'; plan: Versioniert<PlanAenderungen> | null };
 
-const MARKE_STIL: Record<PlanMarke, string> = {
-  neu: styles.mNeu,
-  umgehängt: styles.mUm,
-  umbenannt: styles.mName,
-  'wird archiviert': styles.mArch,
+const MARKE_TON: Record<PlanMarke, EtikettTon> = {
+  neu: 'gruen',
+  umgehängt: 'blau',
+  umbenannt: 'neutral',
+  'wird archiviert': 'rot',
 };
 
 /**
@@ -212,9 +213,9 @@ export function NeueGliederung({
         </span>
         <span className={styles.marken}>
           {u.marken.map((m) => (
-            <span key={m} className={`${styles.marke} ${MARKE_STIL[m]}`}>
+            <Etikett key={m} ton={MARKE_TON[m]}>
               {m}
-            </span>
+            </Etikett>
           ))}
         </span>
       </>

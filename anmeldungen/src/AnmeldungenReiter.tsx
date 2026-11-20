@@ -38,7 +38,7 @@ import { leseZeilenOben, zeileUmschalten } from './zeilenOben';
 import { aendereEinstellungen } from './einrichten';
 import { fehlerMeldung } from './zustand';
 import { anzahlText } from './anzeige';
-import { Etikett } from './Etikett';
+import { Etikett } from '@ui/bedienung/Etikett';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { VonHandFenster } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
@@ -65,12 +65,12 @@ function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
   if (!kostet || x.betragCent === null || x.betragCent <= 0) return null;
   if (x.bezahlt)
     return (
-      <span className={`${a.pille} ${a.pilleOk}`}>
+      <Etikett ton="gruen">
         ✓ {x.zahlart ?? 'bezahlt'}
         {x.bezahltAm ? ` ${kurz(x.bezahltAm)}` : ''}
-      </span>
+      </Etikett>
     );
-  return x.zahlungOffen ? <span className={`${a.pille} ${a.pilleOffen}`}>offen</span> : null;
+  return x.zahlungOffen ? <Etikett ton="rot">offen</Etikett> : null;
 }
 
 /**
@@ -322,9 +322,7 @@ export function AnmeldungenReiter({
                 {p.vor}
                 {p.alter !== null && ` ${p.alter}`}
                 {p.status === 'wartet' && (
-                  <span className={`${a.pille} ${a.pilleWarte}`}>
-                    Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}
-                  </span>
+                  <Etikett ton="blau">Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}</Etikett>
                 )}
               </span>
             ))}
@@ -357,9 +355,7 @@ export function AnmeldungenReiter({
     switch (k) {
       case 'status':
         return y.p.status === 'wartet' ? (
-          <span className={`${a.pille} ${a.pilleWarte}`}>
-            Warteliste{y.p.warteplatz ? ` ${y.p.warteplatz}` : ''}
-          </span>
+          <Etikett ton="blau">Warteliste{y.p.warteplatz ? ` ${y.p.warteplatz}` : ''}</Etikett>
         ) : (
           'Platz'
         );

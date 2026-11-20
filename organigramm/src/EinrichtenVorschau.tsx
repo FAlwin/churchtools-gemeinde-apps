@@ -1,4 +1,5 @@
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
+import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { tagPunkt } from '@shared/ct/datum';
 import type { EinrichtungsPlan, FremdStand, PlanArt } from '@shared/organigramm/einrichtungPlan';
 import {
@@ -16,7 +17,7 @@ import styles from './Einrichten.module.scss';
 export type { Teil } from './WerTabelle';
 
 const ART_TEXT: Record<PlanArt, string> = { neu: 'neu', vorhanden: 'vorhanden', aendern: 'ändern' };
-const ART_KLASSE: Record<PlanArt, string> = { neu: kj.blau, vorhanden: kj.gruen, aendern: kj.gelb };
+const ART_TON: Record<PlanArt, EtikettTon> = { neu: 'blau', vorhanden: 'gruen', aendern: 'blau' };
 
 /**
  * **Schritt „Vorschau“** (Entwurf `o9-5-einrichten-v1`): wer wann wohin wechselt, was die Erweiterung in ChurchTools
@@ -68,16 +69,14 @@ export function EinrichtenVorschau({
           <ul className={`${styles.anlage} ${kj.karte}`} aria-label="Das legt die Erweiterung an">
             {plan.daten.zeilen.map((z) => (
               <li key={z.id}>
-                <span className={`${kj.chip} ${ART_KLASSE[z.art]}`}>{ART_TEXT[z.art]}</span>
+                <Etikett ton={ART_TON[z.art]}>{ART_TEXT[z.art]}</Etikett>
                 <span className={styles.anlageMitte}>
                   <b>{z.titel}</b>
                   <span>{z.text}</span>
                   {z.rechte && (
                     <span className={styles.chips}>
                       {z.rechte.map((r) => (
-                        <span key={r} className={`${kj.chip} ${kj.grau}`}>
-                          {r}
-                        </span>
+                        <Etikett key={r}>{r}</Etikett>
                       ))}
                     </span>
                   )}

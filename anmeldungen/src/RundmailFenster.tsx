@@ -364,7 +364,7 @@ export function RundmailFenster({
             <button
               key={p}
               type="button"
-              className={`${a.pille} ${a.platzhalterKnopf}`}
+              className={a.platzhalterKnopf}
               onClick={() => einfuegen(p)}
             >
               {p}

@@ -114,29 +114,6 @@
   }
 }
 
-.pille {
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.pilleWarte {
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-}
-
-.pilleOk {
-  background: color-mix(in srgb, var(--green) 14%, transparent);
-  color: var(--green);
-}
-
-.pilleOffen {
-  background: color-mix(in srgb, var(--red) 12%, transparent);
-  color: var(--red);
-}
-
 .leise {
   margin: 0;
   color: var(--text2);
@@ -457,7 +434,12 @@
 
 .platzhalterKnopf {
   margin: 2px 4px 2px 0;
+  padding: 1px 7px;
   border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
   background: var(--surface3);
   color: var(--text);
   cursor: pointer;

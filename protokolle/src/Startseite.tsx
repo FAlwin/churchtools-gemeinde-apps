@@ -27,14 +27,14 @@ import { Haken } from './Haken';
 import type { AufgabenStand } from './useFaellige';
 import type { Faellige, Vorlauf } from '@shared/protokolle/hinweis';
 import { kachelVon, uhrzeit } from './anzeige';
-import { Marke } from './Marke';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { ProtokollNeu } from './ProtokollNeu';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import styles from './Startseite.module.scss';
 
-const LAGE: Record<ProtokollGruppe['lage'], { text: string; art: 'gut' | 'problem' }> = {
-  eingerichtet: { text: 'eingerichtet', art: 'gut' },
-  unvollstaendig: { text: 'unvollständig eingerichtet', art: 'problem' },
+const LAGE: Record<ProtokollGruppe['lage'], { text: string; ton: 'gruen' | 'rot' }> = {
+  eingerichtet: { text: 'eingerichtet', ton: 'gruen' },
+  unvollstaendig: { text: 'unvollständig eingerichtet', ton: 'rot' },
 };
 
 const ANTWORT_TEXT: Record<Antwort, string> = {
@@ -316,7 +316,7 @@ export function Startseite({
                                 {zahl === 1 ? '1 offenes To-Do' : `${zahl} offene To-Dos`}
                               </small>
                             )}
-                            <Marke art={LAGE[g.lage].art}>{LAGE[g.lage].text}</Marke>
+                            <Etikett ton={LAGE[g.lage].ton}>{LAGE[g.lage].text}</Etikett>
                           </span>
                         </span>
                         <Icon name="chev-right" size={18} />

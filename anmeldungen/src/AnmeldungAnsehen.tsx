@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
   absagePlan,
@@ -72,11 +73,9 @@ function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
 
 function PersonPille({ p }: { p: ListenPerson }) {
   return p.status === 'wartet' ? (
-    <span className={`${a.pille} ${a.pilleWarte}`}>
-      Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}
-    </span>
+    <Etikett ton="blau">Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}</Etikett>
   ) : (
-    <span className={`${a.pille} ${a.pilleOk}`}>hat einen Platz</span>
+    <Etikett ton="gruen">hat einen Platz</Etikett>
   );
 }
 

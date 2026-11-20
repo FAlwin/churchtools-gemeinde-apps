@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
@@ -493,7 +494,7 @@ export function NachweisArtFenster({
                       <b>{person.name}</b>
                       {p.email && <small>{p.email}</small>}
                     </span>
-                    {schonDa && <em className={a.pille}>schon dabei</em>}
+                    {schonDa && <Etikett>schon dabei</Etikett>}
                   </button>
                 </li>
               );

@@ -867,7 +867,7 @@ liegt einen Klick tiefer.
 
 1. Reiter **Organigramm**: Links der Auswahlknopf **Von oben ⌄**, in der Mitte **Bereich: Ganze Gemeinde**, rechts **Filter**,
    **Präsentieren** und **⋯**. Es gibt keinen Umschalter-Kasten mehr und kein „Anfangen bei“. Rechts neben „Hallo …“ steht
-   nur **Einstellungen** (Admins).
+   kein Knopf mehr: **Einstellungen** ist (für Gruppen-Admins) der letzte Reiter ganz rechts (TF-EXT-13).
 2. Auf **Von oben ⌄** klicken: Karten, Liste, Von oben, Von links, Mindmap; die gewählte ist fett. Jede Ansicht einmal wählen:
    Das Bild wechselt, nach dem Neuladen bleibt die Wahl.
 3. **⋯**: in Liste und Diagrammen **Alle aufklappen**, **Alle zuklappen**, **PDF / Drucken** – jeden einmal klicken: Die Gruppen

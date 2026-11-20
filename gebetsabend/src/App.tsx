@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { Icon } from '@ui/icons/icons';
 import { einrichtungsStand } from '@shared/gebetsabend/einrichten';
 import { ladeStart, type Start } from './start';
 import { Einrichtung } from './Einrichtung';
@@ -25,7 +24,7 @@ import styles from './App.module.scss';
  * eine von ChurchTools aus“ – Aufbau B): Die Technik bekommt am Computer zwei Spalten, links „Übertragung“ mit dem Bild,
  * rechts „Wer hört zu?“ und den Gebetsabend. Alle anderen haben nur die eine Karte – über die volle Breite wie
  * in allen Erweiterungen (Alwin 16.11.2026: „sollte schon einheitlich sein“; vorher schmal in der Mitte).
- * „Einstellungen“ steht als Knopf neben „Hallo …“ wie in Anmeldungen und Organigramm.
+ * „Einstellungen“ ist der letzte Reiter wie in allen Erweiterungen (E24, „Ruhige Bedienung“ B8b) – nur mit dem Recht dazu.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
@@ -35,6 +34,7 @@ export function App() {
   const [zugangNeu, setZugangNeu] = useState(0);
   const [einstellungenNeu, setEinstellungenNeu] = useState(0);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  const handy = useMedienAbfrage(HANDY_BREITE);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -65,17 +65,14 @@ export function App() {
   return (
     <ErweiterungsSeite
       app="Gebetsabend"
+      handy={handy}
       zustand={zustand}
       onNochmal={laden}
-      kopfAktion={
-        einstellungen && (
-          <KopfKnopf
-            label="Einstellungen"
-            title="Kalender und Termin des Gebetsabends"
-            symbol={<Icon name="zahnrad" size={16} />}
-            onClick={() => setEinstellungenOffen(true)}
-          />
-        )
+      // „Einstellungen“ ist der letzte Reiter (E24, B8b) – vorher ein Knopf im Kopf neben „Hallo …“.
+      einstellungen={
+        einstellungen
+          ? { onOeffnen: () => setEinstellungenOffen(true), offen: einstellungenOffen }
+          : undefined
       }
     >
       {start && !fertig && <Einrichtung start={start} onEingerichtet={laden} />}

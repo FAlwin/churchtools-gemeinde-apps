@@ -5,8 +5,13 @@ import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
-import { Segment } from '@ui/bedienung/Segment';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import { eineWahl, type FilterAbschnitt } from '@ui/bedienung/filterAbschnitt';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import {
   gruppenLeitung,
@@ -22,8 +27,7 @@ import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import { SpitzenAuswahl } from './SpitzenAuswahl';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { personenInhalt, type RollenFilter } from './kastenPersonen';
-import { RollenAuswahl } from './RollenAuswahl';
+import { nurLeitungAus, personenInhalt, type RollenFilter } from './kastenPersonen';
 import { stufeBand } from './stufeTexte';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
@@ -67,6 +71,13 @@ interface Props {
   onAlleZu: () => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
+  /** Handy-Breite? Dann ist die Werkzeugzeile zweizeilig, Menü und Ansichtswahl kommen als Blatt von unten. */
+  handy: boolean;
+  /** „Präsentieren“ (Seitenkopf-Knopf von früher, E13: bleibt sichtbar) – bis die Mitglieder geladen sind gesperrt. */
+  onPraesentieren: () => void;
+  praesentierenGesperrt: boolean;
+  /** „PDF / Drucken“ im „⋯“-Menü. */
+  onPdf: () => void;
 }
 
 /**
@@ -97,6 +108,10 @@ export function Organigramm({
   onAlleZu,
   onNachladen,
   onGruppe,
+  handy,
+  onPraesentieren,
+  praesentierenGesperrt,
+  onPdf,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const farbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
@@ -186,67 +201,106 @@ export function Organigramm({
     </li>
   );
 
+  // Personen und Rollen gibt es nur in Diagramm und Liste (O7b-6) – in den Karten stehen sie ohnehin nicht.
+  const filter: FilterAbschnitt[] =
+    ansicht === 'karten'
+      ? []
+      : [
+          // Vorher „Personen: Aus | Rollen | Alle“ als Umschalter in einer eigenen Zeile (B5/E13) – jetzt Anzeige im Filter.
+          eineWahl(
+            'Personen',
+            PERSONEN_WAHL.map((w) => ({
+              wert: w.value,
+              text: w.value === 'rollen' ? 'Nur Rollen' : w.label,
+            })),
+            personen,
+            (w) => onPersonen(w as PersonenWahl),
+          ),
+          // „Welche Rollen“ (#915): Häkchen je Rolle statt eigenem Aufklapp-Feld, nur bei gezeigten Personen.
+          ...(personen !== 'aus' && rollenFilter.rollen.length > 0
+            ? [
+                {
+                  titel: 'Welche Rollen',
+                  optionen: rollenFilter.rollen.map((r) => ({ wert: r.name, text: r.name })),
+                  aus: [...rollenFilter.aus],
+                  onAus: (aus: string[]) => rollenFilter.onAus(new Set(aus)),
+                  kurz: [
+                    { text: 'Alle', onClick: () => rollenFilter.onAus(new Set()) },
+                    ...(rollenFilter.rollen.some((r) => r.leitung)
+                      ? [
+                          {
+                            text: 'Nur Leitung',
+                            onClick: () => rollenFilter.onAus(nurLeitungAus(rollenFilter.rollen)),
+                          },
+                        ]
+                      : []),
+                  ],
+                },
+              ]
+            : []),
+        ];
+
+  // Das „⋯“-Menü (R6): was selten ist – Auf- und Zuklappen nur dort, wo es etwas aufzuklappen gibt (nicht in den Karten).
+  const mehr: Option[] = [
+    ...(ansicht !== 'karten'
+      ? [
+          {
+            label: 'Alle aufklappen',
+            symbol: <Icon name="chev-down" size={16} />,
+            onClick: onAlleAuf,
+          },
+          {
+            label: 'Alle zuklappen',
+            symbol: <Icon name="chev-right" size={16} />,
+            onClick: onAlleZu,
+          },
+        ]
+      : []),
+    {
+      label: 'PDF / Drucken',
+      symbol: <Icon name="dokument" size={16} />,
+      trenner: ansicht !== 'karten',
+      onClick: onPdf,
+    },
+  ];
+
   return (
     <div className={styles.seite}>
-      <div className={styles.oben}>
-        <Segment
-          value={ansicht}
-          options={ANSICHTEN}
-          onChange={onAnsicht}
-          ariaLabel="Ansicht"
-          className={styles.ansicht}
-          verbunden
-        />
-        {/* Kein <label> um die Auswahl: Darin stehen Knopf und Suchfeld – ein Label leitete Klicks weiter. */}
-        <span className={styles.anfangen}>
-          <span aria-hidden="true">Anfangen bei</span>
+      <Werkzeugzeile
+        handy={handy}
+        links={
+          <AnsichtWahl
+            value={ansicht}
+            options={ANSICHTEN}
+            onChange={onAnsicht}
+            handy={handy}
+            alsKnopf
+          />
+        }
+        // Vorher „Anfangen bei“ – jetzt „Bereich: …“ (E13: Alwin verstand nicht, was sich dahinter verbirgt).
+        mitte={
           <SpitzenAuswahl
-            label="Anfangen bei"
+            label="Bereich"
+            vorsatz="Bereich"
             baum={baum}
             wert={spitze}
             onWahl={onSpitze}
-            feldKlasse={styles.feld}
+            feldKlasse={styles.bereichFeld}
           />
-        </span>
-        {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst
-            (Alwin, 28.10.2026: Variante B). */}
-        {ansicht !== 'karten' && (
-          <span className={styles.rechts}>
+        }
+        rechts={
+          <>
+            <FilterKnopf still abschnitte={filter} />
             <KopfKnopf
-              label="Alle aufklappen"
-              symbol={<Icon name="chev-down" size={16} />}
-              onClick={onAlleAuf}
+              label="Präsentieren"
+              symbol={<Icon name="play" size={16} />}
+              disabled={praesentierenGesperrt}
+              onClick={onPraesentieren}
             />
-            <KopfKnopf
-              label="Alle zuklappen"
-              symbol={<Icon name="chev-right" size={16} />}
-              onClick={onAlleZu}
-            />
-          </span>
-        )}
-      </div>
-      {/* In Diagramm und Liste: die Personen (O7b-6). In der Leiste oben hätte „Personen“ die Zeile bei 1280 px
-          gesprengt. */}
-      {ansicht !== 'karten' && (
-        <div className={styles.wasZeigen}>
-          <span className={`${styles.anfangen} ${styles.personen}`}>
-            Personen
-            <Segment
-              value={personen}
-              options={PERSONEN_WAHL}
-              onChange={onPersonen}
-              ariaLabel="Personen"
-              verbunden
-            />
-          </span>
-          {personen !== 'aus' && (
-            <span className={styles.anfangen}>
-              Welche Rollen
-              <RollenAuswahl {...rollenFilter} feldKlasse={styles.feld} />
-            </span>
-          )}
-        </div>
-      )}
+            <MehrMenue optionen={mehr} handy={handy} />
+          </>
+        }
+      />
 
       {fuerAlleText && (
         <div className={styles.band} role="note">

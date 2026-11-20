@@ -12,9 +12,17 @@ const OPTIONEN = [
   { value: 'wer', label: 'Wer wie oft?' },
 ] as const;
 
-function Halter({ handy }: { handy: boolean }) {
+function Halter({ handy, alsKnopf = false }: { handy: boolean; alsKnopf?: boolean }) {
   const [v, setV] = useState<(typeof OPTIONEN)[number]['value']>('matrix');
-  return <AnsichtWahl value={v} options={[...OPTIONEN]} onChange={setV} handy={handy} />;
+  return (
+    <AnsichtWahl
+      value={v}
+      options={[...OPTIONEN]}
+      onChange={setV}
+      handy={handy}
+      alsKnopf={alsKnopf}
+    />
+  );
 }
 
 describe('AnsichtWahl (R4/E9, B3)', () => {
@@ -45,6 +53,33 @@ describe('AnsichtWahl (R4/E9, B3)', () => {
     fireEvent.click(within(blatt).getByRole('button', { name: 'Wer wie oft?' }));
     expect(screen.queryByRole('dialog', { name: 'Ansicht' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Ansicht: Wer wie oft?' })).toBeTruthy();
+  });
+
+  it('alsKnopf am Rechner: ein Auswahlknopf, kein Umschalter; das Menü zeigt alle Ansichten, die Wahl schließt es', () => {
+    render(<Halter handy={false} alsKnopf />);
+    expect(screen.queryByRole('group', { name: 'Ansicht' })).toBeNull();
+    const knopf = screen.getByRole('button', { name: 'Ansicht: Matrix' });
+    expect(knopf.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(knopf);
+    const menue = within(screen.getByRole('menu', { name: 'Ansicht' }));
+    expect(menue.getAllByRole('menuitem').map((b) => b.textContent)).toEqual([
+      'Matrix',
+      'Personen',
+      'Wer wie oft?',
+    ]);
+    expect(menue.getByRole('menuitem', { name: 'Matrix' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    fireEvent.click(menue.getByRole('menuitem', { name: 'Personen' }));
+    expect(screen.queryByRole('menu', { name: 'Ansicht' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ansicht: Personen' })).toBeTruthy();
+  });
+
+  it('alsKnopf am Handy: wie sonst das Blatt von unten', () => {
+    render(<Halter handy alsKnopf />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ansicht: Matrix' }));
+    expect(screen.getByRole('dialog', { name: 'Ansicht' })).toBeTruthy();
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 });
 

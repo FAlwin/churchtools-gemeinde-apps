@@ -46,6 +46,27 @@ export interface FilterAbschnitt {
    * der Abschnitt gilt auch mit einer einzigen Möglichkeit als Wahl.
    */
   anzeige?: boolean;
+  /**
+   * **Genau eine Möglichkeit** statt Häkchen (Punkte statt Kästchen; Organigramm „Personen: Aus · Nur Rollen · Alle“, B5/E13):
+   * `wert` ist die gewählte, `onWahl` bekommt die neue. Es ist eine Anzeige und zählt nicht in die Zahl am Knopf. Mit
+   * `eineWahl` bauen – dort stehen `aus`/`onAus` richtig leer.
+   */
+  eine?: { wert: string; onWahl: (wert: string) => void };
+  /**
+   * **Abkürzungen** unter den Häkchen („Alle“, „Nur Leitung“ bei den Rollen des Organigramms) – schalten mehrere Häkchen auf
+   * einmal um, über dieselbe Liste `aus` wie die Häkchen selbst.
+   */
+  kurz?: { text: string; onClick: () => void }[];
+}
+
+/** Ein Abschnitt, in dem genau eine Möglichkeit gilt (Punkte); zählt nicht als Filter. */
+export function eineWahl(
+  titel: string,
+  optionen: { wert: string; text: string }[],
+  wert: string,
+  onWahl: (wert: string) => void,
+): FilterAbschnitt {
+  return { titel, optionen, aus: [], onAus: () => undefined, eine: { wert, onWahl } };
 }
 
 /**

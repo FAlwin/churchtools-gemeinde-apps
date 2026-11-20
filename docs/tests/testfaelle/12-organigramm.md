@@ -14,7 +14,7 @@ Leisten des Browsers. Blättern geht mit der Maus und mit der Tastatur (wie mit 
 Bereiche, die man nicht ganz sehen darf, heißen „Mitglieder nicht sichtbar“, nie „gesucht“.
 
 1. In ChurchTools im Menü auf **Organigramm**, warten, bis die Personen im Baum stehen.
-2. Oben rechts auf **Präsentieren**: Es erscheint „Unsere Bereiche“ mit einer Kachel je Bereich.
+2. In der Werkzeugzeile auf **Präsentieren**: Es erscheint „Unsere Bereiche“ mit einer Kachel je Bereich.
 3. Oben auf **Vollbild**: Das Bild füllt den ganzen Bildschirm, ohne Adresszeile.
 4. Mit **Pfeil rechts** (oder **Bild ab**, **Leertaste**) durch die Bereiche blättern; unten steht „1 von …“.
 5. In einer Spalte auf **… Untergruppen** klicken: Die Untergruppen klappen mit ihren Personen auf.
@@ -185,27 +185,27 @@ angelegten, leeren Gruppe bei „Rückgängig“. Niemand bekommt eine Mail.
 
 </details>
 
-### TF-ORG-07 · Ansichten: Liste, „Anfangen bei“, „Hier anfangen“
+### TF-ORG-07 · Ansichten: Liste, „Bereich“, „Hier anfangen“
 
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung, ein Konto, das den Baum sieht; Laptop und Handy.
 
-**Das muss passieren:** Karten und Liste zeigen dieselben Gruppen wie ChurchTools; „Anfangen bei“ zeigt nur den
+**Das muss passieren:** Karten und Liste zeigen dieselben Gruppen wie ChurchTools; „Bereich“ zeigt nur den
 gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 
-1. **Organigramm** → **Liste**: oben der Name der Gemeinde, darunter die Bereiche offen, tiefere Gruppen zu („2
+1. **Organigramm** → Auswahlknopf **Ansicht** (links in der Werkzeugzeile) → **Liste**: oben der Name der Gemeinde, darunter die Bereiche offen, tiefere Gruppen zu („2
    Untergruppen“). Gruppen und Namen mit ChurchTools vergleichen.
-2. Eine Gruppe mit dem Pfeil aufklappen, **Alle zuklappen**, **Alle aufklappen** – nur unter der Spitze ändert sich
+2. Eine Gruppe mit dem Pfeil aufklappen, im **⋯**-Menü **Alle zuklappen**, **Alle aufklappen** – nur unter der Spitze ändert sich
    etwas.
 3. Seite neu laden: Die Liste ist wieder da. Am Handy (ohne vorher etwas gewählt zu haben) beginnt die Erweiterung mit
    der Liste.
-4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Dann eine **tiefere Gruppe** (z. B. ein Café-Team):
+4. **Bereich** (Mitte der Werkzeugzeile, „Bereich: Ganze Gemeinde“) → ein Bereich: Karten und Liste zeigen nur ihn. Dann eine **tiefere Gruppe** (z. B. ein Café-Team):
    Nur sie und ihre Untergruppen sind zu sehen. In der aufgeklappten Liste sind die Gruppen nach Ebene eingerückt.
    **Suchen:** ein Stück eines Namens tippen – nur Treffer, darunter klein die Obergruppen; mit Pfeiltasten und Enter
    wählen (Laptop). Ein Name, den es nicht gibt → „Keine Gruppe gefunden“. **Am Handy:** Beim Aufklappen geht die
    Tastatur nicht von selbst auf, die Liste ist ganz zu sehen (ragt nicht über den rechten Rand), lässt sich
    scrollen, und die Seite rückt beim Aufklappen nicht zur Seite. Zurück auf **Ganze Gemeinde**.
 5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
-   und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
+   und offen, sie steht in „Bereich“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
 6. Als Gruppen-Admin über **Einstellungen** den Gruppentyp der Spitze für alle ausblenden und speichern (nur in der
    Test-Instanz): wieder die ganze Gemeinde, keine Fehlermeldung. Wieder einblenden und speichern: Es bleibt bei der
    ganzen Gemeinde.
@@ -240,7 +240,7 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 5. Mausrad und **−** / **+** zoomen um die Mitte bzw. den Mauszeiger, **Ganz zeigen** passt alles ein – kein Kästchen
    liegt unter den Knöpfen unten rechts. Am Handy mit zwei Fingern zoomen und mit einem ziehen.
 6. Mit Tab durch die Kästchen: Ein Kästchen außerhalb des Bildes wird in die Mitte geschoben; Enter öffnet es.
-7. **Anfangen bei** einem Bereich: Das Diagramm fängt dort neu an.
+7. **Bereich** wählen: Das Diagramm fängt dort neu an.
 
 <details><summary>Technisches</summary>
 
@@ -261,7 +261,7 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in der PDF-Schrift (Gemeinde Sans, sieht aus wie Lato), auf dem gewählten Papier. Quer bleibt beim
 Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
 
-1. **Organigramm** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch
+1. **Organigramm** → **⋯** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch
    und die Schriftgröße.
 2. Ansicht **Von oben**, Ausschnitt **Ganze Gemeinde** → **PDF öffnen**: Die PDF öffnet sich in einem neuen Tab und
    sieht aus wie die Vorschau (eine Seite, nichts abgeschnitten, Namen mittig in den Kästchen, Linien bis an die
@@ -328,17 +328,17 @@ Mitarbeitern (z. B. ein Dienst-Team) und – wenn möglich – eine Gruppe, dere
 **Das muss passieren:** Unter dem Namen stehen die Rollen und Personen genau so, wie ChurchTools sie für die Gruppe
 führt – niemand fehlt, nichts ist dazu erfunden.
 
-1. Reiter Organigramm, Ansicht **Von oben**: In der Zeile unter der Ansicht steht rechts **Personen: Aus · Rollen ·
-   Alle**, gewählt ist **Aus** (oder die zuletzt gewählte). In **Karten** gibt es den Umschalter nicht.
-2. **Rollen**: In den Kästchen steht unter dem Namen klein **LEITER**, **CO-LEITER** … mit den Namen; die Standardrolle
+1. Reiter Organigramm, Ansicht **Von oben**: **Filter** aufklappen: unter **Personen** stehen **Aus · Nur Rollen ·
+   Alle**, gewählt ist **Aus** (oder die zuletzt gewählte). In **Karten** gibt es den Filter nicht.
+2. **Nur Rollen**: In den Kästchen steht unter dem Namen klein **LEITER**, **CO-LEITER** … mit den Namen; die Standardrolle
    (Mitarbeiter bzw. Teilnehmer) steht zuletzt als Zahl („6 Mitarbeiter“). Mit der Gruppe in ChurchTools vergleichen:
    gleiche Rollen, gleiche Personen.
 3. **Alle**: Statt der Zahl stehen die Namen. Lange Namenslisten brechen nach einem Komma um, kein Name ist geteilt.
 4. Kein Kästchen liegt über einem anderen, das runde **+/−** verdeckt keine Zeile; **Ganz zeigen** zeigt alles.
 5. Dasselbe in **Von links**, **Mindmap** und **Liste** (dort eingerückt unter dem Gruppennamen).
 6. Eine Gruppe ohne Leserecht zeigt „Mitglieder nicht sichtbar“.
-7. Seite neu laden: Die Wahl ist wieder da. Bei 1280 px Breite stehen Ansicht, **Anfangen bei** und Auf-/Zuklappen in
-   einer Zeile, **Personen** und **Welche Rollen** darunter.
+7. Seite neu laden: Die Wahl ist wieder da. Bei 1280 px Breite steht alles in **einer** Werkzeugzeile: Ansicht links,
+   **Bereich** in der Mitte, **Filter**, **Präsentieren** und **⋯** rechts. Am Handy (390 px) zweizeilig, jedes Element mit Rahmen.
 8. Am Handy (375 px), Ansicht **Liste**, mit einer zugeklappten Gruppe mit langem Namen (z. B. „Lobpreisteam“):
    „13 Untergruppen“ steht unter dem Namen, nichts überlappt, die Seite rutscht nicht zur Seite.
 
@@ -364,14 +364,14 @@ Safari oder Chrome. Eine Gruppe mit Leiter und mehreren Mitarbeitern.
 
 **Das muss passieren:** Präsentation und PDF zeigen die Personen genau wie der Reiter – und das PDF bleibt sauber.
 
-1. Im Reiter **Personen: Rollen** wählen, dann **Präsentieren** und **Von oben**: Oben steht **Personen: Aus · Rollen ·
+1. Im Reiter über **Filter** **Personen: Nur Rollen** wählen, dann **Präsentieren** und **Von oben**: Oben steht **Personen: Aus · Rollen ·
    Alle**, gewählt ist **Rollen**; die Kästchen zeigen die Rollen. In **Kacheln** gibt es den Umschalter nicht.
 2. In der Präsentation **Alle** wählen, einen Bereich öffnen: Auch die Untergruppen zeigen ihre Personen. Präsentation
    schließen – im Reiter steht jetzt ebenfalls **Alle**.
 3. Die Kopfleiste hat zwei Zeilen: oben der Name der Gemeinde mit **Vollbild** und **Schließen**, darunter die
    Bedienung. Bei 1280 px steht der Name ganz da; am iPad quer und schmaler bricht nur die Bedienung um, nichts ragt
    über den Rand (seit #945, 16.11.2026 – vorher kürzte die einzeilige Leiste den Namen bis auf „Evange…“).
-4. **PDF / Drucken**: Das Häkchen **Personen** ist gesetzt; die Vorschau zeigt die Personen wie im Reiter. Häkchen weg →
+4. **⋯** → **PDF / Drucken**: Das Häkchen **Personen** ist gesetzt; die Vorschau zeigt die Personen wie im Reiter. Häkchen weg →
    nur die Namen der Gruppen.
 5. Im Reiter **Aus** wählen und das PDF-Fenster neu öffnen: Häkchen aus. Anhaken → die Rollen, Mitarbeiter als Zahl.
 6. Ansicht **Liste**: Unter jeder Gruppe ihre Rollen, etwas eingerückt, vor den Untergruppen. Bei mehreren Seiten steht
@@ -459,12 +459,12 @@ mehreren Mitarbeitern; ein Bereich mit Untergruppen, deren Leitung nicht die des
 **Das muss passieren:** Abgewählte Rollen fehlen überall, wo Personen stehen – und es steht ehrlich da, was fehlt.
 Niemand erscheint, der die Rolle nicht hat.
 
-1. Reiter Organigramm, Ansicht **Liste**, **Personen: Aus**: Es gibt kein **Welche Rollen**. **Personen: Alle** →
-   daneben **Welche Rollen: Alle**.
-2. Aufklappen: ein Häkchen je Rolle, wie in ChurchTools benannt, Leitung zuerst; „Leiter“ steht nur einmal. Eine Rolle,
+1. Reiter Organigramm, Ansicht **Liste**, **Filter** → **Personen: Aus**: Es gibt kein **Welche Rollen**. **Alle** →
+   darunter erscheint **Welche Rollen** mit allen Häkchen.
+2. Im Filter: ein Häkchen je Rolle, wie in ChurchTools benannt, Leitung zuerst; „Leiter“ steht nur einmal. Eine Rolle,
    die niemand hat, steht nicht da. Darunter **Alle** und **Nur Leitung**.
-3. **Mitarbeiter** abwählen: Die Mitarbeiter fehlen, darunter steht klein „Mitarbeiter (6) ausgeblendet“. Der Knopf
-   zeigt „3 von 4“ o. ä. Eine Gruppe, in der es nur Mitarbeiter gibt, zeigt nur den Hinweis.
+3. **Mitarbeiter** abwählen: Die Mitarbeiter fehlen, darunter steht klein „Mitarbeiter (6) ausgeblendet“. Der **Filter**
+   zeigt die Zahl der abgewählten Rollen. Eine Gruppe, in der es nur Mitarbeiter gibt, zeigt nur den Hinweis.
 4. **Nur Leitung**: nur Leiter und Co-Leiter. Dasselbe in **Von oben**, **Von links** und **Mindmap** – kein Kästchen
    liegt über einem anderen.
 5. Seite neu laden: Die Wahl ist wieder da.
@@ -854,5 +854,39 @@ Es gibt keine Leiste mit einem Knopf je Stufe und den Namen nicht doppelt.
 - **Betrifft:** `ui/bedienung/TitelWahl.tsx`, `organigramm/src/KinderJugend.tsx`
 - **Automatisiert:** größtenteils – `ui/bedienung/TitelWahl.test.tsx`, `organigramm/src/KinderJugend.test.tsx` (zwei Stufen: Überschrift als Knopf, Wechsel, Name nicht doppelt; eine Stufe: keine Schaltfläche); Aussehen am Handy nur am Gerät
 - **Historie:** 18.11.2026 (Anlass: dieselbe Gruppen-Leiste wie in Protokolle lief am Handy über; Alwin wollte dort dasselbe)
+
+</details>
+
+### TF-ORG-24 · Werkzeugzeile des Reiters Organigramm („Ruhige Bedienung“ B5)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; ein Konto mit eigenem Bereich (sieht auch den Reiter
+**Personen**); Rechner (1280 px) und Handy (390 px).
+
+**Das muss passieren:** Über dem Bild steht **eine** Zeile statt vier. Keine Funktion von früher fehlt – was selten ist,
+liegt einen Klick tiefer.
+
+1. Reiter **Organigramm**: Links der Auswahlknopf **Von oben ⌄**, in der Mitte **Bereich: Ganze Gemeinde**, rechts **Filter**,
+   **Präsentieren** und **⋯**. Es gibt keinen Umschalter-Kasten mehr und kein „Anfangen bei“. Rechts neben „Hallo …“ steht
+   nur **Einstellungen** (Admins).
+2. Auf **Von oben ⌄** klicken: Karten, Liste, Von oben, Von links, Mindmap; die gewählte ist fett. Jede Ansicht einmal wählen:
+   Das Bild wechselt, nach dem Neuladen bleibt die Wahl.
+3. **⋯**: in Liste und Diagrammen **Alle aufklappen**, **Alle zuklappen**, **PDF / Drucken** – jeden einmal klicken: Die Gruppen
+   klappen auf bzw. zu, das PDF-Fenster öffnet sich mit Ansicht und Bereich der Zeile. In **Karten** steht nur **PDF / Drucken**.
+4. **Filter** (nicht in Karten): **Personen** mit **Aus · Nur Rollen · Alle**; bei „Nur Rollen“ oder „Alle“ erscheint **Welche
+   Rollen** mit einem Häkchen je Rolle, darunter **Alle** und **Nur Leitung**. Eine Rolle abwählen: Die Zahl am Filter wird 1.
+5. **Bereich** anklicken, eine Gruppe wählen (auch über die Suche): Alle Ansichten zeigen nur sie; die Zeile zeigt „Bereich: …“.
+6. **Präsentieren**: Die Präsentation öffnet sich; **Schließen** bringt zur Zeile zurück.
+7. Reiter **Personen**: Neben den Reitern steht eine **Lupe**; ein Klick klappt das Suchfeld auf, ein Name filtert die Tabelle,
+   ✕ leert und schließt. Über der Tabelle gibt es kein festes Suchfeld mehr. In den Reitern Organigramm und Hinweise gibt es
+   die Lupe nicht.
+8. Am Handy: Oben Ansicht (blau, mit Pfeil – öffnet ein Blatt von unten), Filter, Präsentieren (nur Symbol) und ⋯ – alle mit
+   Rahmen; darunter **Bereich** über die ganze Breite. ⋯ öffnet ein Blatt mit denselben Einträgen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/App.tsx`, `organigramm/src/Personen.tsx`, `organigramm/src/SpitzenAuswahl.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/OptionWaehlen.tsx`
+- **Automatisiert:** größtenteils – `App.test.tsx` (B5: Werkzeugzeile, Ansichtsmenü, jeder ⋯-Punkt einzeln, Handy, Filter, Lupe), `AnsichtWahl.test.tsx`, `FilterKnopf.test.tsx` (eine Wahl, Abkürzungen), `SpitzenAuswahl.test.tsx` (Vorsatz); Aussehen am Handy nur am Gerät
+- **Historie:** 20.11.2026, Entwurf `organigramm-protokolle-ruhiger-v2` (E13/E15)
 
 </details>

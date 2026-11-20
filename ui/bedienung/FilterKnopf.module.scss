@@ -145,3 +145,26 @@
   line-height: 1.4;
   color: var(--text2);
 }
+
+// Abkürzungen unter den Häkchen („Alle“, „Nur Leitung“) – leise Textknöpfe in der Farbe der Links.
+.kurz {
+  display: flex;
+  gap: 14px;
+  padding-top: 4px;
+
+  button {
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: var(--blue-ink);
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}

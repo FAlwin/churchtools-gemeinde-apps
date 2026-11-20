@@ -36,7 +36,7 @@ export function FilterKnopf({
   const sichtbar = abschnitte.filter(abschnittMitWahl);
   const ausgeblendet = sichtbar.reduce(
     (n, a) =>
-      a.anzeige
+      a.anzeige || a.eine
         ? n
         : n +
           a.optionen.reduce(
@@ -71,52 +71,77 @@ export function FilterKnopf({
           {sichtbar.map((a) => (
             <fieldset key={a.titel} className={styles.abschnitt}>
               <legend>{a.titel}</legend>
-              {a.optionen.map((o) => {
-                const an = !a.aus.includes(o.wert);
-                return (
-                  <Fragment key={o.wert || '–'}>
-                    <label className={styles.zeile}>
-                      <input
-                        type="checkbox"
-                        checked={an}
-                        ref={(el) => {
-                          if (el) el.indeterminate = an && !!o.unter?.teilweise;
-                        }}
-                        onChange={() =>
-                          o.unter
-                            ? o.unter.onAlle()
-                            : a.onAus(an ? [...a.aus, o.wert] : a.aus.filter((x) => x !== o.wert))
-                        }
-                      />
-                      {o.text}
-                    </label>
-                    {o.unter?.punkte.map((p, nr) => (
-                      <label key={`${p.text}-${nr}`} className={`${styles.zeile} ${styles.zusatz}`}>
+              {a.eine &&
+                a.optionen.map((o) => (
+                  <label key={o.wert} className={styles.zeile}>
+                    <input
+                      type="radio"
+                      name={`${id}-${a.titel}`}
+                      checked={a.eine?.wert === o.wert}
+                      onChange={() => a.eine?.onWahl(o.wert)}
+                    />
+                    {o.text}
+                  </label>
+                ))}
+              {!a.eine &&
+                a.optionen.map((o) => {
+                  const an = !a.aus.includes(o.wert);
+                  return (
+                    <Fragment key={o.wert || '–'}>
+                      <label className={styles.zeile}>
                         <input
                           type="checkbox"
-                          checked={p.an}
-                          aria-label={`${o.text}: ${p.text}`}
-                          onChange={p.onUmschalten}
+                          checked={an}
+                          ref={(el) => {
+                            if (el) el.indeterminate = an && !!o.unter?.teilweise;
+                          }}
+                          onChange={() =>
+                            o.unter
+                              ? o.unter.onAlle()
+                              : a.onAus(an ? [...a.aus, o.wert] : a.aus.filter((x) => x !== o.wert))
+                          }
                         />
-                        {p.text}
+                        {o.text}
                       </label>
-                    ))}
-                    {o.zusatz && (
-                      <label className={`${styles.zeile} ${styles.zusatz}`}>
-                        <input
-                          type="checkbox"
-                          checked={an && o.zusatz.an}
-                          disabled={!an}
-                          // Der Text steht unter jeder Möglichkeit gleich – vorgelesen wird, wozu er gehört.
-                          aria-label={`${o.text}: ${o.zusatz.text}`}
-                          onChange={o.zusatz.onUmschalten}
-                        />
-                        {o.zusatz.text}
-                      </label>
-                    )}
-                  </Fragment>
-                );
-              })}
+                      {o.unter?.punkte.map((p, nr) => (
+                        <label
+                          key={`${p.text}-${nr}`}
+                          className={`${styles.zeile} ${styles.zusatz}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={p.an}
+                            aria-label={`${o.text}: ${p.text}`}
+                            onChange={p.onUmschalten}
+                          />
+                          {p.text}
+                        </label>
+                      ))}
+                      {o.zusatz && (
+                        <label className={`${styles.zeile} ${styles.zusatz}`}>
+                          <input
+                            type="checkbox"
+                            checked={an && o.zusatz.an}
+                            disabled={!an}
+                            // Der Text steht unter jeder Möglichkeit gleich – vorgelesen wird, wozu er gehört.
+                            aria-label={`${o.text}: ${o.zusatz.text}`}
+                            onChange={o.zusatz.onUmschalten}
+                          />
+                          {o.zusatz.text}
+                        </label>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              {a.kurz && (
+                <div className={styles.kurz}>
+                  {a.kurz.map((k) => (
+                    <button key={k.text} type="button" onClick={k.onClick}>
+                      {k.text}
+                    </button>
+                  ))}
+                </div>
+              )}
               {a.hinweis && <p className={styles.hinweis}>{a.hinweis}</p>}
             </fieldset>
           ))}

@@ -3,7 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { useAufklapp } from '@ui/bedienung/useAufklapp';
 import { useMenueImBild } from '@ui/bedienung/useMenueImBild';
 import type { RollenWahl } from '@shared/organigramm/personen';
-import { rollenKnopfText } from './kastenPersonen';
+import { nurLeitungAus, rollenKnopfText } from './kastenPersonen';
 import styles from './SpitzenAuswahl.module.scss';
 
 /**
@@ -79,7 +79,7 @@ export function RollenAuswahl({
               <button
                 type="button"
                 className={styles.kurz}
-                onClick={() => onAus(new Set(rollen.filter((r) => !r.leitung).map((r) => r.name)))}
+                onClick={() => onAus(nurLeitungAus(rollen))}
               >
                 Nur Leitung
               </button>

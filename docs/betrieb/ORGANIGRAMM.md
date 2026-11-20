@@ -74,7 +74,8 @@ richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erla
   Personen). Jede Gruppe
   mit Untergruppen klappt mit dem Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht
   „3 Untergruppen“. Gut am Handy.
-- **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts über dem Baum) – was unter dem
+- **Personen: Aus · Nur Rollen · Alle** (Diagramme und Liste, seit O7b-6; seit „Ruhige Bedienung“ B5 im **Filter**
+  unter „Personen“, nicht mehr als Umschalter über dem Baum) – was unter dem
   Namen einer Gruppe steht. **Aus** (vorgegeben): nur der Name. **Rollen**: die Rollen der Gruppe genau wie in
   ChurchTools, darunter die Namen – die Leitung zuerst (Leiter, Co-Leiter), dann die übrigen Rollen in der Reihenfolge
   von ChurchTools (z. B. Coach, Organisator), die Standardrolle des Gruppentyps (Mitarbeiter bzw. Teilnehmer) zuletzt
@@ -83,14 +84,20 @@ richtig – in ChurchTools selbst sieht jede Person weiter, was ihre Rechte erla
   „Mitglieder nicht sichtbar“; eine Gruppe ohne eigene Mitglieder (oft eine Obergruppe) zeigt nur den Namen. Die
   Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät; sie gilt auch für die Diagramme
   der Präsentation (dort oben derselbe Umschalter) und gibt im PDF vor, ob das Häkchen **Personen** gesetzt ist.
-- **Welche Rollen** (seit #915, neben **Personen**, sobald Personen gezeigt werden) – ein Häkchen je Rolle, so benannt
+- **Welche Rollen** (seit #915; seit B5 im **Filter** unter „Welche Rollen“, sobald Personen gezeigt werden) – ein Häkchen je Rolle, so benannt
   wie in ChurchTools; „Leiter“ steht einmal, auch wenn es die Rolle bei mehreren Gruppentypen gibt. Angeboten wird nur,
-  was bei den sichtbaren Mitgliedern vorkommt. Dazu **Alle** und **Nur Leitung**. Abgewählte Rollen fehlen in den
+  was bei den sichtbaren Mitgliedern vorkommt. Darunter **Alle** und **Nur Leitung**. Abgewählte Rollen fehlen in den
   Kästchen und Zeilen; darunter steht klein, was fehlt („Mitarbeiter (6) ausgeblendet“) – ist alles abgewählt, nur
-  dieser Hinweis. Der Knopf zeigt „Alle“ oder „3 von 5“. Das Gerät merkt sich die abgewählten Rollen; eine neue Rolle
+  dieser Hinweis. Die Zahl am **Filter** sagt, wie viele Rollen abgewählt sind. Das Gerät merkt sich die abgewählten Rollen; eine neue Rolle
   in ChurchTools ist so von selbst zu sehen. Gilt auch in der Präsentation und gibt den Filter im PDF vor.
-- **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
-- **Anfangen bei:** die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
+- **Personen (Reiter):** die Suche ist eine **Lupe** rechts neben den Reitern (seit B5; vorher ein festes Feld über der Tabelle) – ein Klick klappt das Feld auf, ✕ oder Esc schließt und leert es.
+- **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme; seit B5 im **⋯**-Menü) wirken nur unter der Spitze.
+- **Die Werkzeugzeile** (seit B5): links die **Ansicht** als Auswahlknopf („Von oben ⌄“ – ein Klick zeigt Karten, Liste, Von
+  oben, Von links, Mindmap), in der Mitte **Bereich: Ganze Gemeinde** (vorher „Anfangen bei“), rechts **Filter**,
+  **Präsentieren** und **⋯** (Alle aufklappen, Alle zuklappen, PDF / Drucken). Am Handy zweizeilig: oben Ansicht, Filter,
+  Präsentieren (nur Symbol) und ⋯ – alle mit Rahmen –, darunter **Bereich**. In den Karten fehlen Filter und Auf-/Zuklappen,
+  weil es dort nichts davon gibt. **Einstellungen** (nur Gruppen-Admins) steht weiter rechts neben „Hallo …“.
+- **Bereich** (früher „Anfangen bei“): die ganze Gemeinde oder **jede Gruppe** (seit #915, z. B. nur das Café-Team samt Untergruppen) –
   dann zeigen alle Ansichten nur sie. Die Auswahl klappt eine Liste auf, nach Ebene eingerückt wie im Baum, oben ein
   **Suchfeld**: Beim Tippen stehen nur die Treffer da, darunter klein ihre Obergruppen (gleichnamige Gruppen bleiben
   unterscheidbar). Mit der Maus springt man gleich ins Suchfeld (Pfeiltasten, Enter); am Handy nicht, sonst verdeckte
@@ -145,11 +152,11 @@ und im Gruppenfenster:
 
 ## Als PDF speichern und drucken (ab O7b-4)
 
-Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symbol). Das Fenster übernimmt Ansicht,
-„Anfangen bei“ und was aufgeklappt ist, und zeigt das Blatt als **Vorschau** – genau diese Seiten werden zur PDF:
+Im Reiter Organigramm im **⋯**-Menü der Werkzeugzeile **„PDF / Drucken“**. Das Fenster übernimmt Ansicht,
+„Bereich“ und was aufgeklappt ist, und zeigt das Blatt als **Vorschau** – genau diese Seiten werden zur PDF:
 
 - **Ansicht:** von oben, von links, Mindmap oder Liste (Karten gibt es auf Papier nicht – dann von oben).
-- **Ausschnitt:** ganze Gemeinde oder jede Gruppe – dieselbe Auswahl mit Suche wie „Anfangen bei“ (#915).
+- **Ausschnitt:** ganze Gemeinde oder jede Gruppe – dieselbe Auswahl mit Suche wie „Bereich“ (#915).
 - **Papier:** **Passend** (vorgegeben: das A4, quer oder hoch, auf dem das Diagramm am größten wird; eine Liste steht
   hoch), A4 quer, A4 hoch, A3 quer oder A3 hoch. Ein Diagramm steht auf **einer Seite**, die Schrift wird höchstens
   11 pt groß; unter 6 pt rät das Fenster zu A3, einem Ausschnitt oder „Alles aufgeklappt“ aus. Eine Liste läuft über
@@ -175,7 +182,7 @@ druckte Adresse und Datum an den Rand (Test 28.10.2026, `organigramm-planung/doc
 
 ## Präsentation (ab O4)
 
-Im Reiter Organigramm steht oben rechts neben „Hallo …“ **„Präsentieren“** (am Handy nur das Symbol) – für alle, die
+Im Reiter Organigramm steht in der Werkzeugzeile **„Präsentieren“** (am Handy nur das Symbol) – für alle, die
 die Erweiterung sehen. Die Präsentation legt sich über
 ChurchTools:
 
@@ -406,7 +413,7 @@ sich das Fenster nicht schließen.
 **Schritt „Stufen“** – vorbelegt mit der gespeicherten Einrichtung (Ändern) bzw. den Grundwerten und zwei leeren Zeilen
 (Einrichten):
 
-- **Wechsel-Gruppen anlegen unter:** die Bereichsgruppe (wählt man wie „Anfangen bei“ mit Suche; `SpitzenAuswahl`). Sie darf
+- **Wechsel-Gruppen anlegen unter:** die Bereichsgruppe (wählt man wie „Bereich“ mit Suche; `SpitzenAuswahl`). Sie darf
   keine Stufe sein. **Beim Ändern ist sie gesperrt** (O9-F11): nur Anzeige mit dem Satz „Lässt sich hier nicht
   ändern. Zum Wechseln in ChurchTools die Wechsel-Gruppen unter die neue Gruppe hängen.“ – die Wechsel-Gruppen hängen schon darunter, und „Einrichten“ hängt
   nichts um.

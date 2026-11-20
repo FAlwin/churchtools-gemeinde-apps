@@ -238,6 +238,44 @@ async function typFuerAlleUmschalten(typ: RegExp) {
   );
 }
 
+/**
+ * Die Werkzeugzeile des Reiters Organigramm (B5): Ansicht wählen = Auswahlknopf → Menü; „⋯“ → Eintrag; Filter öffnen →
+ * „Personen“ und „Welche Rollen“. Jeder Griff ist ein Klick auf das, was ein Mensch anklickt – nicht auf den Zustand.
+ */
+const ansichtWaehlen = (name: string) => {
+  fireEvent.click(screen.getByRole('button', { name: /^Ansicht: / }));
+  fireEvent.click(
+    within(screen.getByRole('menu', { name: 'Ansicht' })).getByRole('menuitem', { name }),
+  );
+};
+const ansichtName = () =>
+  screen
+    .getByRole('button', { name: /^Ansicht: / })
+    .getAttribute('aria-label')
+    ?.slice('Ansicht: '.length);
+const mehrKlick = (name: string) => {
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  fireEvent.click(
+    within(screen.getByRole('menu', { name: 'Mehr' })).getByRole('menuitem', { name }),
+  );
+};
+const mehrEintraege = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  const namen = within(screen.getByRole('menu', { name: 'Mehr' }))
+    .getAllByRole('menuitem')
+    .map((m) => m.textContent);
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  return namen;
+};
+/** Den Filter aufklappen, falls er zu ist – und die Gruppe darin zurückgeben. */
+const filterGruppe = (titel: string) => {
+  if (!screen.queryByRole('dialog', { name: 'Filter' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Filter/ }));
+  return within(screen.getByRole('group', { name: titel }));
+};
+const personenWahl = (name: 'Aus' | 'Nur Rollen' | 'Alle') =>
+  fireEvent.click(filterGruppe('Personen').getByRole('radio', { name }));
+
 /** Rechte ohne alles – Tests setzen nur, was sie brauchen (EINE Stelle, wenn ein Recht dazukommt). */
 const rechte = (x: Partial<OrgRechte> = {}): OrgRechte => ({
   gruppenVerwalten: false,
@@ -773,16 +811,11 @@ describe('O4: Präsentation', () => {
         'Mitglieder nicht sichtbar',
       );
       fireEvent.click(within(d).getByRole('button', { name: 'Schließen' }));
-      fireEvent.click(
-        within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', {
-          name: 'Liste',
-        }),
-      );
+      ansichtWaehlen('Liste');
       expect(
-        within(screen.getByRole('group', { name: 'Personen' }))
-          .getByRole('button', { name: 'Rollen' })
-          .getAttribute('aria-pressed'),
-      ).toBe('true');
+        filterGruppe('Personen').getByRole<HTMLInputElement>('radio', { name: 'Nur Rollen' })
+          .checked,
+      ).toBe(true);
     });
   });
 
@@ -1322,7 +1355,7 @@ describe('O6: Leitung und Mitglieder', () => {
   });
 });
 
-describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
+describe('O7b-2: Ansichten, Liste, „Bereich“', () => {
   /** Die Gemeinde und jede Gruppe des Test-Baums, wie im Baum (#915) – nicht mehr nur die Bereiche. */
   const OPTIONEN_ANFANGEN = [
     'Ganze Gemeinde',
@@ -1332,14 +1365,13 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     'Café',
     'Infos',
   ];
-  const ansicht = (name: string) =>
-    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const ansicht = ansichtWaehlen;
   const bereiche = () => screen.queryAllByRole('region').map((r) => r.getAttribute('aria-label'));
 
   it('Liste: Gemeinde oben, Bereiche offen, darunter zu – Wahl im Gerät gemerkt', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    fireEvent.click(ansicht('Liste'));
+    ansicht('Liste');
     expect(bereiche()).toEqual([]);
     expect(screen.getByText('ECG')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
@@ -1350,19 +1382,20 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     expect(screen.getByRole('region', { name: 'Leiter' })).toBeTruthy();
   });
 
-  it('auf- und zuklappen, „Alle aufklappen“ und „Alle zuklappen“ (nur in der Liste)', async () => {
+  it('auf- und zuklappen, „Alle aufklappen“ und „Alle zuklappen“ (im „⋯“-Menü, nur in Liste und Diagrammen)', async () => {
     localStorage.setItem('organigramm-ansicht', '"liste"');
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Technik aufklappen' }));
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle zuklappen' }));
+    mehrKlick('Alle zuklappen');
     // Die Gemeinde bleibt offen, alles darunter ist zu.
     expect(screen.queryByRole('button', { name: 'Technik' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Gottesdienst aufklappen' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    mehrKlick('Alle aufklappen');
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
-    fireEvent.click(ansicht('Karten'));
-    expect(screen.queryByRole('button', { name: 'Alle aufklappen' })).toBeNull();
+    ansicht('Karten');
+    // In den Karten gibt es nichts auf- oder zuzuklappen: das Menü hat nur noch das PDF.
+    expect(mehrEintraege()).toEqual(['PDF / Drucken']);
   });
 
   it('am Handy ohne Wahl die Liste; eine gewählte Ansicht gilt auch dort', async () => {
@@ -1385,38 +1418,38 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     }
   });
 
-  it('„Anfangen bei“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
+  it('„Bereich“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    expect(spitzenOptionen('Anfangen bei')).toEqual(OPTIONEN_ANFANGEN);
-    waehleSpitze('Anfangen bei', 'Gottesdienst');
+    expect(spitzenOptionen('Bereich')).toEqual(OPTIONEN_ANFANGEN);
+    waehleSpitze('Bereich', 'Gottesdienst');
     expect(bereiche()).toEqual(['Gottesdienst']);
-    fireEvent.click(ansicht('Liste'));
+    ansicht('Liste');
     expect(screen.queryByText('ECG')).toBeNull();
     expect(screen.getByRole('button', { name: 'Gottesdienst zuklappen' })).toBeTruthy();
-    waehleSpitze('Anfangen bei', 'Ganze Gemeinde');
+    waehleSpitze('Bereich', 'Ganze Gemeinde');
     expect(screen.getByText('ECG')).toBeTruthy();
   });
 
-  it('„Anfangen bei“ eine tiefere Gruppe direkt aus der Auswahl – auch per Suche und Enter (#915)', async () => {
+  it('„Bereich“ eine tiefere Gruppe direkt aus der Auswahl – auch per Suche und Enter (#915)', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    waehleSpitze('Anfangen bei', 'Technik');
+    waehleSpitze('Bereich', 'Technik');
     expect(bereiche()).toEqual(['Technik']);
-    expect(spitzenWert('Anfangen bei')).toBe('10/7');
+    expect(spitzenWert('Bereich')).toBe('10/7');
     // Suchen: nur Treffer, mit ihren Obergruppen darunter; Enter nimmt den ersten.
-    fireEvent.click(spitzenKnopf('Anfangen bei'));
+    fireEvent.click(spitzenKnopf('Bereich'));
     const suche = screen.getByRole('combobox', { name: 'Gruppe suchen' });
     fireEvent.change(suche, { target: { value: 'stre' } });
     expect(
-      within(screen.getByRole('listbox', { name: 'Anfangen bei' }))
+      within(screen.getByRole('listbox', { name: 'Bereich' }))
         .getAllByRole('option')
         .map((o) => o.textContent),
     ).toEqual(['StreamGottesdienst › Technik']);
     fireEvent.keyDown(suche, { key: 'Enter' });
     expect(screen.queryByRole('listbox')).toBeNull();
-    expect(spitzenName('Anfangen bei')).toBe('Stream');
-    expect(spitzenWert('Anfangen bei')).toBe('10/7/12');
+    expect(spitzenName('Bereich')).toBe('Stream');
+    expect(spitzenWert('Bereich')).toBe('10/7/12');
   });
 
   it('„Im Organigramm hier anfangen“ im Gruppenfenster: Gruppe wird Spitze, offen, steht in der Auswahl', async () => {
@@ -1426,9 +1459,9 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
     expect(screen.queryByRole('region', { name: 'Leiter' })).toBeNull();
     expect(bereiche()).toEqual(['Technik']);
-    expect(spitzenWert('Anfangen bei')).toBe('10/7');
-    expect(spitzenName('Anfangen bei')).toBe('Technik');
-    fireEvent.click(ansicht('Liste'));
+    expect(spitzenWert('Bereich')).toBe('10/7');
+    expect(spitzenName('Bereich')).toBe('Technik');
+    ansicht('Liste');
     // Technik war zu – als Spitze steht sie offen da.
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
   });
@@ -1453,14 +1486,14 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   it('Spitze für alle ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    waehleSpitze('Anfangen bei', 'Infos');
+    waehleSpitze('Bereich', 'Infos');
     expect(bereiche()).toEqual(['Infos']);
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(spitzenWert('Anfangen bei')).toBe('');
+    expect(spitzenWert('Bereich')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
     // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
     await typFuerAlleUmschalten(/^Verteiler/);
-    expect(spitzenWert('Anfangen bei')).toBe('');
+    expect(spitzenWert('Bereich')).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
   });
 
@@ -1469,7 +1502,7 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     // verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
-    waehleSpitze('Anfangen bei', 'Infos');
+    waehleSpitze('Bereich', 'Infos');
     baumReiter.length = 0;
     await typFuerAlleUmschalten(/^Verteiler/);
     expect(baumReiter.length).toBeGreaterThan(0);
@@ -1481,8 +1514,7 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
 });
 
 describe('O7b-3: Diagramme', () => {
-  const ansicht = (name: string) =>
-    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const ansicht = ansichtWaehlen;
   const diagramm = () => screen.getByRole('group', { name: 'Organigramm' });
 
   it('am Laptop ohne Wahl: von oben – mit der Gemeinde an der Spitze', async () => {
@@ -1491,27 +1523,27 @@ describe('O7b-3: Diagramme', () => {
     expect((await screen.findByRole('group', { name: 'Organigramm' })).textContent).toContain(
       'ECG',
     );
-    expect(ansicht('Von oben').getAttribute('aria-pressed')).toBe('true');
+    expect(ansichtName()).toBe('Von oben');
     expect(screen.queryByRole('region', { name: 'Gottesdienst' })).toBeNull();
   });
 
   it('Mindmap wählen: gemerkt; Klick auf ein Kästchen öffnet die Gruppe; „Alle aufklappen“ wirkt auch hier', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    fireEvent.click(ansicht('Mindmap'));
+    ansicht('Mindmap');
     expect(localStorage.getItem('organigramm-ansicht')).toBe('"mindmap"');
     expect(within(diagramm()).queryByRole('button', { name: 'Stream' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    mehrKlick('Alle aufklappen');
     expect(within(diagramm()).getByRole('button', { name: 'Stream' })).toBeTruthy();
     fireEvent.click(within(diagramm()).getByRole('button', { name: 'Technik' }));
     expect(screen.getByRole('region', { name: 'Leiter' })).toBeTruthy();
   });
 
-  it('„Anfangen bei“ gilt auch für die Diagramme', async () => {
+  it('„Bereich“ gilt auch für die Diagramme', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    fireEvent.click(ansicht('Von links'));
-    waehleSpitze('Anfangen bei', 'Gottesdienst');
+    ansicht('Von links');
+    waehleSpitze('Bereich', 'Gottesdienst');
     expect(diagramm().textContent).not.toContain('ECG');
     expect(within(diagramm()).getByRole('button', { name: 'Technik' })).toBeTruthy();
     expect(within(diagramm()).queryByRole('button', { name: 'Café' })).toBeNull();
@@ -1519,10 +1551,7 @@ describe('O7b-3: Diagramme', () => {
 });
 
 describe('O7b-6: Personen in Diagramm und Liste', () => {
-  const ansicht = (name: string) =>
-    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
-  const personen = (name: string) =>
-    within(screen.getByRole('group', { name: 'Personen' })).getByRole('button', { name });
+  const ansicht = ansichtWaehlen;
   const listenZeile = (name: string) =>
     screen.getByRole('button', { name }).closest('li')?.textContent ?? '';
 
@@ -1530,9 +1559,11 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     localStorage.setItem('organigramm-ansicht', '"liste"');
     render(<App />);
     await screen.findByRole('button', { name: 'Technik aufklappen' });
-    expect(personen('Aus').getAttribute('aria-pressed')).toBe('true');
+    expect(
+      filterGruppe('Personen').getByRole<HTMLInputElement>('radio', { name: 'Aus' }).checked,
+    ).toBe(true);
     expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
-    fireEvent.click(personen('Rollen'));
+    personenWahl('Nur Rollen');
     expect(localStorage.getItem('organigramm-personen')).toBe('"rollen"');
     const technik = listenZeile('Technik');
     const stellen = [
@@ -1550,24 +1581,27 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     localStorage.setItem('organigramm-personen', '"alle"');
     render(<App />);
     await screen.findByRole('button', { name: 'Technik aufklappen' });
-    expect(personen('Alle').getAttribute('aria-pressed')).toBe('true');
+    expect(
+      filterGruppe('Personen').getByRole<HTMLInputElement>('radio', { name: 'Alle' }).checked,
+    ).toBe(true);
     expect(listenZeile('Technik')).toContain('Mitarbeiter Carl Clau');
     expect(listenZeile('Café')).toContain('Mitglieder gerade nicht ladbar');
-    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    mehrKlick('Alle aufklappen');
     expect(listenZeile('Stream')).toContain('Mitglieder nicht sichtbar');
   });
 
   it('im Diagramm: die Kästchen werden höher und zeigen die Rollen; in den Karten gibt es den Umschalter nicht', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
-    expect(screen.queryByRole('group', { name: 'Personen' })).toBeNull();
-    fireEvent.click(ansicht('Von oben'));
+    // In den Karten gibt es keine Personen-Wahl – der Filter fehlt dort ganz.
+    expect(screen.queryByRole('button', { name: /^Filter/ })).toBeNull();
+    ansicht('Von oben');
     const kasten = () =>
       within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
         name: 'Gottesdienst',
       });
     expect(kasten().querySelector('rect')?.getAttribute('height')).toBe('36');
-    fireEvent.click(personen('Rollen'));
+    personenWahl('Nur Rollen');
     expect(Number(kasten().querySelector('rect')?.getAttribute('height'))).toBeGreaterThan(36);
     expect(kasten().textContent).toContain('LEITER');
     expect(kasten().textContent).toContain('Alwin Friesen');
@@ -1578,10 +1612,12 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     localStorage.setItem('organigramm-ansicht', '"liste"');
     render(<App />);
     await screen.findByRole('button', { name: 'Technik aufklappen' });
-    expect(screen.queryByRole('button', { name: /Welche Rollen/ })).toBeNull();
-    fireEvent.click(personen('Alle'));
-    fireEvent.click(screen.getByRole('button', { name: 'Welche Rollen: Alle' }));
-    const haken = within(screen.getByRole('group', { name: 'Welche Rollen' }));
+    // Ohne Personen gibt es keine Rollen-Wahl: der Filter hat nur „Personen“.
+    expect(screen.queryByRole('group', { name: 'Welche Rollen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(screen.queryByRole('group', { name: 'Welche Rollen' })).toBeNull();
+    personenWahl('Alle');
+    const haken = filterGruppe('Welche Rollen');
     // Die Rollen wie in den Kästchen: Leitung zuerst, die Standardrolle zuletzt.
     expect(haken.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)).toEqual([
       'Leiter',
@@ -1593,7 +1629,8 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(listenZeile('Technik')).toContain('Leiter Alwin Friesen');
     expect(listenZeile('Technik')).toContain('Mitarbeiter (1) ausgeblendet');
     expect(localStorage.getItem('organigramm-rollen-aus')).toBe('["Mitarbeiter"]');
-    expect(screen.getByRole('button', { name: 'Welche Rollen: 2 von 3' })).toBeTruthy();
+    // Die abgewählte Rolle steht als Zahl am Knopf: der Filter hat etwas ausgeblendet.
+    expect(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
 
     fireEvent.click(haken.getByRole('button', { name: 'Alle' }));
     expect(listenZeile('Technik')).toContain('Carl Clau');
@@ -1603,7 +1640,7 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(listenZeile('Technik')).toContain('Co-Leiter Dora Dorn');
 
     // Im Diagramm dieselbe Regel – der Hinweis steht im Kästchen (gemessen wie „Mitglieder nicht sichtbar“).
-    fireEvent.click(ansicht('Von oben'));
+    ansicht('Von oben');
     const technik = within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
       name: 'Technik',
     });
@@ -1620,12 +1657,13 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     await screen.findByRole('button', { name: 'Technik aufklappen' });
     expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
     expect(listenZeile('Technik')).toContain('Leiter (1) ausgeblendet');
+    expect(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
     unmount();
     localStorage.setItem('organigramm-rollen-aus', '{kaputt');
     render(<App />);
     await screen.findByRole('button', { name: 'Technik aufklappen' });
     expect(listenZeile('Technik')).toContain('Alwin Friesen');
-    expect(screen.getByRole('button', { name: 'Welche Rollen: Alle' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
   });
 });
 
@@ -1650,7 +1688,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
       'Für alle ausgeblendet: 1 Gruppentyp (Verteiler) und 1 Gruppe – eingestellt von Gruppen-Admins über „Einstellungen“.',
     );
     // PDF
-    fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
+    mehrKlick('PDF / Drucken');
     const vorschau = screen.getByRole('figure', { name: 'Vorschau' });
     expect(vorschau.textContent).toContain('Gottesdienst');
     expect(vorschau.textContent).not.toContain('Technik');
@@ -1765,25 +1803,188 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
   });
 });
 
-describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
-  it('steht rechts neben „Hallo …“, nicht in der Leiste – und nur im Reiter Organigramm', async () => {
+describe('B5: „Präsentieren“ in der Werkzeugzeile', () => {
+  it('steht in der Werkzeugzeile (E13: bleibt sichtbar), nicht mehr im Seitenkopf – und nur im Reiter Organigramm', async () => {
     render(<App />);
     const knopf = await screen.findByRole('button', { name: 'Präsentieren' });
-    expect(knopf.closest('header')).not.toBeNull();
-    expect(knopf.closest('header')!.textContent).toContain('Hallo Alwin');
+    expect(knopf.closest('header')).toBeNull();
+    expect(knopf.closest('[role="toolbar"]')).toBe(
+      screen.getByRole('toolbar', { name: 'Werkzeuge' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Personen' }));
     expect(screen.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
+    expect(screen.queryByRole('toolbar', { name: 'Werkzeuge' })).toBeNull();
+  });
+
+  it('im Seitenkopf bleibt „Einstellungen“ (wird in B8b der letzte Reiter); „Präsentieren“ und PDF sind nicht mehr dort', async () => {
+    render(<App />);
+    const einstellungen = await screen.findByRole('button', {
+      name: 'Was das Organigramm für alle zeigt',
+    });
+    const kopf = within(einstellungen.closest('header')!);
+    expect(kopf.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
+    expect(kopf.queryByRole('button', { name: /PDF/ })).toBeNull();
+  });
+});
+
+describe('B5: die Werkzeugzeile', () => {
+  it('Rechner: Ansicht als Auswahlknopf links, „Bereich: …“ in der Mitte, rechts Filter · Präsentieren · „⋯“', async () => {
+    localStorage.removeItem('organigramm-ansicht');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Präsentieren' });
+    const zeile = screen.getByRole('toolbar', { name: 'Werkzeuge' });
+    expect(
+      within(zeile)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['Ansicht: Von oben', 'Bereich: Ganze Gemeinde', 'Filter', 'Präsentieren', 'Mehr']);
+    // Kein Umschalter-Kasten mehr in der Zeile (R4: höchstens einer – und der nur am Handy-freien Rechner bei wenigen Ansichten).
+    expect(within(zeile).queryByRole('group', { name: 'Ansicht' })).toBeNull();
+    expect(within(zeile).queryByRole('group', { name: 'Personen' })).toBeNull();
+    // „Anfangen bei“ heißt „Bereich“ (E13).
+    expect(screen.queryByRole('button', { name: /^Anfangen bei/ })).toBeNull();
+  });
+
+  it('Ansichtsmenü: alle fünf, die gewählte markiert – jede Wahl wirkt und bleibt gemerkt', async () => {
+    localStorage.removeItem('organigramm-ansicht');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Präsentieren' });
+    fireEvent.click(screen.getByRole('button', { name: /^Ansicht: / }));
+    const menue = within(screen.getByRole('menu', { name: 'Ansicht' }));
+    expect(menue.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Karten',
+      'Liste',
+      'Von oben',
+      'Von links',
+      'Mindmap',
+    ]);
+    expect(menue.getByRole('menuitem', { name: 'Von oben' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    fireEvent.click(menue.getByRole('menuitem', { name: 'Karten' }));
+    expect(screen.queryByRole('menu', { name: 'Ansicht' })).toBeNull();
+    expect(await screen.findByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
+    expect(localStorage.getItem('organigramm-ansicht')).toBe('"karten"');
+    for (const [name, wert] of [
+      ['Liste', 'liste'],
+      ['Von links', 'links'],
+      ['Mindmap', 'mindmap'],
+    ]) {
+      ansichtWaehlen(name);
+      expect(ansichtName()).toBe(name);
+      expect(localStorage.getItem('organigramm-ansicht')).toBe(`"${wert}"`);
+    }
+  });
+
+  it('„⋯“-Menü: in Diagrammen Auf-/Zuklappen und PDF, in den Karten nur das PDF', async () => {
+    localStorage.removeItem('organigramm-ansicht');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Präsentieren' });
+    expect(mehrEintraege()).toEqual(['Alle aufklappen', 'Alle zuklappen', 'PDF / Drucken']);
+    ansichtWaehlen('Karten');
+    expect(mehrEintraege()).toEqual(['PDF / Drucken']);
+  });
+
+  it('jeder Menüpunkt einzeln: die Aktion bleibt bestehen – das Schließen setzt sie nicht zurück (Lehre 05.08.2026)', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    mehrKlick('Alle zuklappen');
+    expect(screen.queryByRole('button', { name: 'Technik' })).toBeNull();
+    mehrKlick('Alle aufklappen');
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+    mehrKlick('PDF / Drucken');
+    expect(screen.getByRole('dialog', { name: 'Organigramm als PDF' })).toBeTruthy();
+    expect(screen.queryByRole('menu', { name: 'Mehr' })).toBeNull();
+  });
+
+  it('Handy: Ansicht als Knopf mit Blatt, „⋯“ als Blatt – jede Aktion läuft', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('max-width'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      render(<App />);
+      await screen.findByRole('button', { name: 'Technik aufklappen' });
+      fireEvent.click(screen.getByRole('button', { name: /^Ansicht: / }));
+      const blatt = within(screen.getByRole('dialog', { name: 'Ansicht' }));
+      expect(
+        blatt
+          .getAllByRole('button')
+          .filter((b) => b.textContent)
+          .map((b) => b.textContent),
+      ).toEqual(['Karten', 'Liste', 'Von oben', 'Von links', 'Mindmap']);
+      fireEvent.click(blatt.getByRole('button', { name: 'Von oben' }));
+      expect(ansichtName()).toBe('Von oben');
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+      fireEvent.click(
+        within(screen.getByRole('dialog', { name: 'Mehr' })).getByRole('button', {
+          name: 'PDF / Drucken',
+        }),
+      );
+      expect(screen.getByRole('dialog', { name: 'Organigramm als PDF' })).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('Filter: „Personen“ (Aus · Nur Rollen · Alle) gibt es nur in Liste und Diagrammen – die Wahl wirkt und bleibt gemerkt', async () => {
+    localStorage.setItem('organigramm-ansicht', '"karten"');
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('button', { name: /^Filter/ })).toBeNull();
+    ansichtWaehlen('Liste');
+    const personen = filterGruppe('Personen');
+    expect(personen.getAllByRole('radio').map((r) => r.parentElement?.textContent)).toEqual([
+      'Aus',
+      'Nur Rollen',
+      'Alle',
+    ]);
+    personenWahl('Alle');
+    expect(localStorage.getItem('organigramm-personen')).toBe('"alle"');
+    // Eine Anzeige, kein Filter: die Zahl am Knopf zählt sie nicht.
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+  });
+});
+
+describe('B5: Reiter Personen – die Lupe', () => {
+  const lupe = () => screen.getByRole('button', { name: 'Person suchen' });
+
+  it('die Suche ist eine Lupe neben den Reitern (R7/E11); aufgeklappt filtert sie die Liste, ✕ leert und schließt', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Personen' }));
+    await screen.findByText('Alwin Friesen');
+    // Kein festes Suchfeld mehr über der Tabelle.
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(lupe().closest('header')).not.toBeNull();
+    fireEvent.click(lupe());
+    const feld = screen.getByRole('searchbox', { name: 'Person suchen' });
+    fireEvent.change(feld, { target: { value: 'dora' } });
+    expect(screen.queryByText('Alwin Friesen')).toBeNull();
+    expect(screen.getByText('Dora Dorn')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Suche schließen' }));
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.getByText('Alwin Friesen')).toBeTruthy();
+  });
+
+  it('die Lupe gibt es nur im Reiter Personen', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'Präsentieren' });
+    expect(screen.queryByRole('button', { name: 'Person suchen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hinweise' }));
+    expect(screen.queryByRole('button', { name: 'Person suchen' })).toBeNull();
   });
 });
 
 describe('O7b-4: Organigramm als PDF', () => {
-  it('„PDF / Drucken“ im Seitenkopf öffnet das Fenster mit Ansicht und Spitze des Reiters', async () => {
+  it('„PDF / Drucken“ im „⋯“-Menü öffnet das Fenster mit Ansicht und Spitze des Reiters', async () => {
     localStorage.setItem('organigramm-ansicht', '"links"');
     render(<App />);
-    const knopf = await screen.findByRole('button', { name: 'Als PDF speichern oder drucken' });
-    expect(knopf.closest('header')).not.toBeNull();
-    waehleSpitze('Anfangen bei', 'Gottesdienst');
-    fireEvent.click(knopf);
+    await screen.findByRole('button', { name: 'Präsentieren' });
+    waehleSpitze('Bereich', 'Gottesdienst');
+    mehrKlick('PDF / Drucken');
     const fenster = within(screen.getByRole('dialog', { name: 'Organigramm als PDF' }));
     expect(fenster.getByLabelText<HTMLSelectElement>('Ansicht').value).toBe('links');
     expect(spitzenWert('Ausschnitt', fenster)).toBe('10');
@@ -1896,7 +2097,7 @@ describe('#915 C: Personen für alle ohne Leitung', () => {
     ohneLeitung();
     render(<App />);
     await screen.findByText('3 Personen · Leitung: 1 Leiter, 1 Co-Leiter');
-    fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
+    mehrKlick('PDF / Drucken');
     const vorschau = screen.getByRole('figure', { name: 'Vorschau' });
     expect(vorschau.textContent).toContain('1 Mitarbeiter');
     expect(vorschau.textContent).not.toContain('Carl Clau');

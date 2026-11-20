@@ -75,6 +75,10 @@ export function rollenKnopfText(rollen: readonly RollenWahl[], aus: ReadonlySet<
   return gezeigt === rollen.length ? 'Alle' : `${gezeigt} von ${rollen.length}`;
 }
 
+/** „Nur Leitung“ bei „Welche Rollen“: abgewählt sind alle Rollen, die nicht leiten – EINE Regel für Filter und Auswahl. */
+export const nurLeitungAus = (rollen: readonly RollenWahl[]): Set<string> =>
+  new Set(rollen.filter((r) => !r.leitung).map((r) => r.name));
+
 /** „Welche Rollen“ (#915) – was Reiter, Präsentation und PDF dafür brauchen. */
 export interface RollenFilter {
   /** Die Rollen zum Anhaken (`rollenZurWahl`). */

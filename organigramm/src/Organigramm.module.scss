@@ -7,57 +7,22 @@
   gap: 14px;
 }
 
-.oben {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-// Der Umschalter der Ansicht schrumpft nicht (sonst brechen „Von oben“ und „Von links“ um) – lieber rutscht der Rest
-// der Leiste in die nächste Zeile. Ist er breiter als der Platz (Handy), kommen ganze Knöpfe in eine zweite Reihe.
-.ansicht {
-  flex: none;
-  flex-wrap: wrap;
-  max-width: 100%;
-}
-
-// „Anfangen bei“ (O7b-2): ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
-.anfangen {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text2);
+// „Bereich: Ganze Gemeinde“ (E13) in der Mitte der Werkzeugzeile: ein gerahmtes Feld wie der Zeitraum in „Planen“.
+// Lange Gruppennamen werden gekürzt, die Zeile bleibt eine Zeile; am Handy füllt das Feld die ganze Breite.
+.bereichFeld {
+  @include m.eingabefeld;
+  flex: 1;
+  height: var(--knopf-hoehe);
+  min-width: 0;
+  max-width: 280px;
+  padding: 0 10px;
   font-size: 14px;
   font-weight: 700;
-}
 
-.feld {
-  @include m.eingabefeld;
-  height: var(--knopf-hoehe);
-  max-width: 260px; // lange Gruppennamen in „Anfangen bei“ werden gekürzt, die Leiste bleibt eine Zeile
-  padding: 0 8px;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.rechts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-
-// „Personen“ rechts (O7b-6), wie früher neben den Typ-Schildchen.
-.wasZeigen {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.personen {
-  margin-left: auto;
+  // Handy (`HANDY_BREITE`): über die ganze Breite, wie der Zeitraum in „Planen“.
+  @media (max-width: 759px) {
+    max-width: none;
+  }
 }
 
 // „Für alle ausgeblendet: …“ (O7b-7) – ruhig, als Information, wie die blassblauen Hinweise in ChurchTools.

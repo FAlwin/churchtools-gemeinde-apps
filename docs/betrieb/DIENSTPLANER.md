@@ -134,8 +134,10 @@ Planer –, ohne etwas zu senden; in ChurchTools ändert sich nichts. Was ein an
 - **Welche Dienste „Planen“ zeigt** (Fund 20.11.2026: „Abendmahl“ war nirgends vorgesehen und deshalb weder im Filter noch
   als Zeile zu finden): **Jeder Dienst, den man planen darf, steht in Matrix und „Personen“ – auch ohne einen einzigen Platz
   im Zeitraum** (Zeilen „–“ bzw. Plätze „aus“; `planAus` mit `immerZeigen`, `rasterDienste`). Wer einen Dienst nur sehen darf,
-  bekommt keine leeren Zeilen. Gilt nur für den Zeitraum, nicht für die Termin-Ansicht, Teilen/PDF und das Handy-Blatt je
-  Termin (die zeigen weiter nur, was es dort gibt). „Erinnern“ fragt nur dort nach Antworten, wo Dienste vorgesehen sind.
+  bekommt keine leeren Zeilen. Gilt nur für den Zeitraum, nicht für die Termin-Ansicht und Teilen/PDF (die zeigen weiter
+  nur, was es dort gibt). **Am Handy** listet die Karte je Termin weiter nur die Dienste dieses Termins; eine Gruppe ohne
+  Dienst dort behält aber ihren **Kopf mit dem Plätze-Knopf**, wenn man sie an diesem Termin einschalten darf (dieselbe
+  Regel wie der Knopf, `onPlaetze`) – sonst fällt sie weg. „Erinnern“ fragt nur dort nach Antworten, wo Dienste vorgesehen sind.
 - **Plätze-Regler in der Gruppenzeile** (Plätze-Fach, jede Änderung gilt sofort, ChurchTools verschickt dabei nichts):
   Das Fach zeigt **jeden Dienst der Dienstgruppe**, den man an diesem Termin planen darf – auch Dienste, die im
   gezeigten Zeitraum noch nirgends einen Platz haben (dann „nicht vorgesehen“, 0): „+“ schaltet den Dienst für diesen

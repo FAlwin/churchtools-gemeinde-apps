@@ -397,7 +397,10 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
         {sicht.ablauf && <HandyAblauf ma={sicht.ablauf} s={s} />}
         {gruppen.map((g) => {
           const dienste = g.zeilen.filter((z) => z.zellen[i] !== null);
-          if (dienste.length === 0) return null;
+          const plaetze = sicht.onPlaetze(i, g);
+          // Ohne einen Dienst an diesem Termin fällt die Gruppe weg – außer man kann sie hier einschalten: Dann bleibt
+          // ihr Kopf mit dem Plätze-Knopf stehen, wie am PC (Fund 20.11.2026, „Abendmahl“). Dieselbe Regel wie der Knopf.
+          if (dienste.length === 0 && !plaetze) return null;
           const gk = schluessel(g);
           const offen = !zugeklappt.has(gk);
           return (
@@ -415,7 +418,7 @@ export function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void
                   text={`Automatische Planung ${gruppenName(g)} am ${tagKurz(s.tag)}`}
                 />
                 <ReglerKnopf
-                  onKlick={sicht.onPlaetze(i, g)}
+                  onKlick={plaetze}
                   text={`Plätze ${gruppenName(g)} am ${tagKurz(s.tag)} ändern`}
                 />
               </div>

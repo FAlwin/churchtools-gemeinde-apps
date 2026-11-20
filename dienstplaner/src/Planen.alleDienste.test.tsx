@@ -66,14 +66,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const zeige = (plan: Plan, anzahl = vi.fn()) => {
+const zeige = (plan: Plan, anzahl = vi.fn(), handy = false) => {
   anzahl.mockImplementation((_e: number, _s: number, _g: number, neu: number) =>
     Promise.resolve({ ok: true as const, anzahl: neu }),
   );
   render(
     <Planen
       zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
-      handy={false}
+      handy={handy}
       onNochmal={() => {}}
       onMehr={() => {}}
       mehrMoeglich={false}
@@ -96,6 +96,18 @@ describe('Planen – Dienste ohne Platz', () => {
     // Über den Regler der Gruppe einschalten.
     fireEvent.click(
       screen.getByRole('button', { name: 'Plätze Moderation & Predigt am So, 08.11. ändern' }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Abendmahl: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 24, 0, 1));
+  });
+
+  it('am Handy bleibt der Kopf der Gruppe mit dem Plätze-Knopf stehen, auch ohne Dienst an diesem Termin', async () => {
+    const { plan } = await ladeZeitraum(START, '2026-11-01', '2026-11-30', 'Europe/Berlin');
+    const anzahl = zeige(plan, vi.fn(), true);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Plätze Moderation & Predigt am So, 08.11. ändern',
+      }),
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Abendmahl: ein Platz mehr' }));
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 24, 0, 1));

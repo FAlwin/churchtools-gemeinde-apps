@@ -3,7 +3,7 @@ import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { KopfKnopf, KopfZurueck } from '@ui/bedienung/KopfKnopf';
 import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
@@ -46,7 +46,7 @@ const MARKE_TON: Record<PlanMarke, EtikettTon> = {
 };
 
 /**
- * **Reiter „Neue Gliederung“** (Bauplan O7-2, Entwurf `o7-plan-v1` abgenommen 24.10.2026) – nur für Gruppen-Admins.
+ * **Seite „Neue Gliederung“** (Bauplan O7-2, Entwurf `o7-plan-v1` abgenommen 24.10.2026) – nur für Gruppen-Admins.
  * Der Plan ist eine Kopie von heute plus Änderungen; jede Änderung wird sofort gespeichert (mit Version, Konflikt und
  * Nachlesen) und gilt dann für alle Gruppen-Admins. ChurchTools selbst ändert sich hier nicht – das macht der Umbau
  * (O7-3).
@@ -57,8 +57,11 @@ const MARKE_TON: Record<PlanMarke, EtikettTon> = {
 export function NeueGliederung({
   start,
   onStruktur,
+  onZurueck,
 }: {
   start: Start;
+  /** „‹ Organigramm“ – die Seite liegt im „⋯“ des Reiters Organigramm (R13), von dort geht es hierher und wieder zurück. */
+  onZurueck?: () => void;
   /** Nach einem Umbau-Schritt: Gruppen und Hierarchie der Seite neu lesen (wie nach O5). */
   onStruktur: () => Promise<boolean>;
 }) {
@@ -254,6 +257,12 @@ export function NeueGliederung({
 
   return (
     <div className={baum.seite}>
+      {onZurueck && (
+        <div className={styles.kopf}>
+          <KopfZurueck onClick={onZurueck} ziel="Organigramm" />
+          <h2>Neue Gliederung</h2>
+        </div>
+      )}
       <p className={styles.einleitung}>
         Nur für Gruppen-Admins. Hier entsteht der Plan, wie die Gemeinde künftig gegliedert ist –
         ChurchTools ändert sich erst, wenn ihr einen Schritt im Umbau ausführt.

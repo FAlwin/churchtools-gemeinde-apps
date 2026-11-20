@@ -127,16 +127,18 @@ privaten Fenster) angemeldet, und ein Konto, das eine Gruppe nur **leitet**. Nie
 **Das muss passieren:** Der Plan gilt für alle Gruppen-Admins; gleichzeitiges Speichern überschreibt nichts.
 ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
 
-1. Admin A: Reiter **Neue Gliederung** → **Plan anlegen**. Der Baum sieht aus wie heute. Danach gibt Alwin in
+1. Admin A: Reiter **Organigramm** → **⋯** → **Neue Gliederung** → **Plan anlegen**. Oben steht **‹ Organigramm**
+   (zurück). Der Baum sieht aus wie heute. Am Handy zeigt die Reiterleiste unten kein „Neue Gliederung“ mehr, und
+   „Kinder“ steht ohne Umbruch statt „Kinder & Jugend“. Danach gibt Alwin in
    ChurchTools Admin B die Rechte auf die Kategorie „Plan“ (**Daten sehen**, **Daten anlegen, ändern, löschen**).
 2. Admin A: **＋ Neuer Bereich** (am Handy der schwebende grüne Kreis mit **+**) „Übung Plan“, eine Gruppe dort **einhängen**, eine andere **umbenennen**, eine dritte
    **im Plan archivieren**. Jede zeigt ihre Marke und „vorher …“.
-3. Admin B: Seite neu laden, Reiter **Neue Gliederung** – derselbe Plan, „Gespeichert von A“.
+3. Admin B: Seite neu laden, **⋯** → **Neue Gliederung** (oder die Adresse `#gliederung`) – derselbe Plan, „Gespeichert von A“.
 4. Beide öffnen den Reiter. Erst A benennt eine Gruppe um, danach B (ohne neu zu laden) eine andere: Bei B steht
    „A hat den Plan inzwischen geändert …“, A's Änderung ist zu sehen. **Nochmal auf dem neuen Stand** → beide
    Änderungen sind im Plan.
 5. In ChurchTools nachsehen: Gruppen, Namen, Obergruppen und Status sind unverändert.
-6. Mit dem Konto, das nur eine Gruppe **leitet**: kein Reiter „Neue Gliederung“, auch nicht über `#gliederung` in der
+6. Mit dem Konto, das nur eine Gruppe **leitet**: kein Eintrag „Neue Gliederung“ im **⋯**, auch nicht über `#gliederung` in der
    Adresse.
 7. Admin A: Reiter **Organigramm** → **Präsentieren**: Sie beginnt mit „Neue Gliederung · …“ – „Übung Plan“ ist ein
    Bereich, die umbenannte Gruppe trägt den neuen Namen, die archivierte fehlt. Oben **Heute**: der Stand aus
@@ -162,7 +164,7 @@ Mitglieder (z. B. „Übung A“, „Übung B“ mit „Übung B1“ darunter). 
 **Das muss passieren:** Jeder Schritt steht danach genau so in ChurchTools; nichts wird gelöscht außer einer gerade
 angelegten, leeren Gruppe bei „Rückgängig“. Niemand bekommt eine Mail.
 
-1. **Neue Gliederung** → Plan: **＋ Neuer Bereich** „Übung Neu“, „Übung A“ dort einhängen, „Übung B“ umbenennen in
+1. **⋯** → **Neue Gliederung** → Plan: **＋ Neuer Bereich** „Übung Neu“, „Übung A“ dort einhängen, „Übung B“ umbenennen in
    „Übung B2“, „Übung B“ und „Übung B1“ im Plan archivieren.
 2. **Umbau**: „Übung A umhängen“ wartet auf „Übung Neu“; „Übung B archivieren“ wartet, bis „Übung B1“ woanders hängt
    (hier: archiviert ist – dann ist sie aus dem Baum).

@@ -49,7 +49,7 @@ export function Verwaltung({
   if (!daten.darf)
     return (
       <p className={styles.ruhig}>
-        Die Verwaltung ist nur für Admins – wer in ChurchTools Rechte vergeben darf.
+        Die Einstellungen sind nur für Admins – wer in ChurchTools Rechte vergeben darf.
       </p>
     );
 

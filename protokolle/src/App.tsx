@@ -15,7 +15,7 @@ import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } f
 import { useFaellige } from './useFaellige';
 
 /**
- * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Verwaltung. Am
+ * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Einstellungen. Am
  * Computer stehen die Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner).
  * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite. Ein Tipp auf der Startseite
  * (S3-3) öffnet den Reiter „Sitzungen“ mit der Gruppe – und, wenn gewählt, gleich der Sitzung. Die Lupe im Kopf
@@ -69,7 +69,7 @@ export function App() {
 
   const reiter = sichtbareReiter(start?.darfVerwalten ?? false);
   const aktiv = reiterAusAdresse<ReiterId>(hash, reiter, 'start');
-  // Hinweis auf fällige To-Dos: Zähler am Reiter „To-Dos“ und Band auf der Startseite (Einstellung: Verwaltung).
+  // Hinweis auf fällige To-Dos: Zähler am Reiter „To-Dos“ und Band auf der Startseite (Einstellung: Reiter „Einstellungen“).
   const faellig = useFaellige({
     modul: start?.modul ?? null,
     person: start?.id ?? null,

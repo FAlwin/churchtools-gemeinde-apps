@@ -2,12 +2,12 @@
  * **Nur zum Entwickeln** (`npm run dev -w protokolle`, dann `…/ccm/protokolle/?demo`): spielt die
  * ChurchTools-Antworten nach, in der Form, die an der Test-Instanz gemessen wurde (16.10. und 22.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. Fälle: `?demo` (Admin; versteckte, eingerichtete Gruppe + nicht
- * eingerichtete), `?demo=mitglied` (kein Admin, also keine Verwaltung), `?demo=leer` (in keiner Gruppe),
+ * eingerichtete), `?demo=mitglied` (kein Admin, also keine Einstellungen), `?demo=leer` (in keiner Gruppe),
  * `?demo=ohne-modul` (Erweiterung nicht installiert), `?demo=fehler` (ChurchTools antwortet nicht),
  * `?demo=einrichten-fehler` (Rechte setzen scheitert vorübergehend), `?demo=gesperrt` (am Entwurf schreibt gerade
  * Johann – Mitlesen und Übernehmen, S4-1). Wird nie mitgebaut (siehe `main.tsx`).
  *
- * Die Verwaltung (S2-2) schreibt hier in einen Speicher im Browser: Kategorien, Werte und Rechte bleiben bis
+ * Die Einstellungen (S2-2) schreiben hier in einen Speicher im Browser: Kategorien, Werte und Rechte bleiben bis
  * zum Neuladen – so lässt sich „Gruppe einrichten“ durchklicken.
  */
 import { kategorieName } from '@shared/protokolle/gruppen';

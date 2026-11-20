@@ -1,13 +1,13 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: v1.2.0 (20.11.2026 „Ruhige Bedienung“ B6: To-Dos mit **einer Werkzeugzeile** – „Gruppieren“, „Sortieren“ und „Alle | Meine“ liegen im **Filter**, in „Sitzungen“ **ein grüner Knopf „Neu ⌄“** für Neues Protokoll, Neue Sitzung, Punkt vorschlagen und Protokoll nachtragen; 20.11.2026: To-Dos „Gemeinsam“ oder „Jeder für sich“, Haken statt Weiterschalten mit „Rückgängig“ an der Karte, Karte mit Fußzeile wie Planner, Tabelle am PC, „Alle | Meine“, „Nach Fälligkeit“, „Erledigt von …“; Vorschläge in Kurzform, einklappbar, Übernommene weg, Abgelehnte 7 Tage; v1.1.0 19.11.2026: Hinweis auf fällige To-Dos – Band auf der Startseite, roter Zähler am Reiter „To-Dos“, in der Verwaltung einstellbar; v1.0.9 18.11.2026: Seite springt nach dem Antippen eines Feldes am iPhone sofort zurück statt langsam zu ruckeln; v1.0.8 Gruppe über die Überschrift wählen statt Reiterleiste, Fenster ruckeln bei offener iPhone-Tastatur nicht mehr; v1.0.7 To-Dos am Handy – Kopfzeile aufgeräumt, Sortieren und Filter bleiben im Bild; v1.0.6 im Text weder „+“ noch Griff, außer an Tabellen; v1.0.5 Punkte ordnen im eigenen Fenster statt Ziehen im Text; v1.0.4 Protokoll löschen, To-Dos „Alle“ und gekürzte Zuständige, ein Termin gehört der Gruppe mit dem Gruppentreffen; v1.0.3 „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
+> **Stand: v1.2.0 (20.11.2026 „Ruhige Bedienung“ B6: To-Dos mit **einer Werkzeugzeile** – „Gruppieren“, „Sortieren“ und „Alle | Meine“ liegen im **Filter**, in „Sitzungen“ **ein grüner Knopf „Neu ⌄“** für Neues Protokoll, Neue Sitzung, Punkt vorschlagen und Protokoll nachtragen; 20.11.2026: To-Dos „Gemeinsam“ oder „Jeder für sich“, Haken statt Weiterschalten mit „Rückgängig“ an der Karte, Karte mit Fußzeile wie Planner, Tabelle am PC, „Alle | Meine“, „Nach Fälligkeit“, „Erledigt von …“; Vorschläge in Kurzform, einklappbar, Übernommene weg, Abgelehnte 7 Tage; v1.1.0 19.11.2026: Hinweis auf fällige To-Dos – Band auf der Startseite, roter Zähler am Reiter „To-Dos“, in den Einstellungen einstellbar; v1.0.9 18.11.2026: Seite springt nach dem Antippen eines Feldes am iPhone sofort zurück statt langsam zu ruckeln; v1.0.8 Gruppe über die Überschrift wählen statt Reiterleiste, Fenster ruckeln bei offener iPhone-Tastatur nicht mehr; v1.0.7 To-Dos am Handy – Kopfzeile aufgeräumt, Sortieren und Filter bleiben im Bild; v1.0.6 im Text weder „+“ noch Griff, außer an Tabellen; v1.0.5 Punkte ordnen im eigenen Fenster statt Ziehen im Text; v1.0.4 Protokoll löschen, To-Dos „Alle“ und gekürzte Zuständige, ein Termin gehört der Gruppe mit dem Gruppentreffen; v1.0.3 „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
 > Rechte ein. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste Sitzungen“ und „Deine Gruppen“; der
 > Reiter **„Sitzungen“** zeigt je Gruppe Kommend, Vorschläge und Protokolle; der Reiter **„To-Dos“** zeigt alle To-Dos der
 > eigenen Gruppen als Liste oder Board; die **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse).
 > Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor – mit Aufgaben (= To-Dos), Beschlüssen, Terminen,
 > Anwesenheit und festen Punkten –, beginnt Protokolle zu Terminen und Treffen (auch zu vergangenen – „Noch ohne Protokoll“, „Protokoll nachtragen“), legt die nächste Sitzung fest, füllt
 > auf Wunsch mit **KI-Vorschlägen** aus einem Transkript und gibt Protokolle frei (mit Beitrag in der Gruppe); Mitglieder
-> schlagen Punkte vor. Jedes Protokoll lässt sich als **PDF teilen**. Admins richten im Reiter **„Verwaltung“** Gruppen
+> schlagen Punkte vor. Jedes Protokoll lässt sich als **PDF teilen**. Admins richten im Reiter **„Einstellungen“** Gruppen
 > ein und pflegen die Vorlagen.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -32,7 +32,7 @@ keine Push-Mitteilungen und keine eigenen Mails.
    - **ZIP-Datei:** die heruntergeladene Datei.
 4. **Speichern.**
 
-**Danach:** Ein Admin richtet jede Gruppe einmal im Reiter „Verwaltung“ ein (siehe „Rechte“) – vorher sehen
+**Danach:** Ein Admin richtet jede Gruppe einmal im Reiter „Einstellungen“ ein (siehe „Rechte“) – vorher sehen
 Mitglieder die Gruppe nicht.
 
 **Aktualisieren:** beim Eintrag auf den Stift und die neue ZIP hochladen, sonst nichts ändern.
@@ -48,17 +48,17 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   Vorschläge). Dazu gemeinsam **„Vorlagen“** (`vorlagen`).
 - Die Rechte hängen an **„Rolle X in Gruppe Y“** und folgen einem Rollenwechsel sofort. Setzen kann sie nur ein
   **Admin** (ChurchTools-Recht „Personen administrieren“) – deshalb wird jede Gruppe einmal von einem Admin
-  eingerichtet: Reiter **„Verwaltung“** (nur für Admins sichtbar) → Gruppe antippen → je Rolle „Kein Zugriff“,
+  eingerichtet: Reiter **„Einstellungen“** (nur für Admins sichtbar) → Gruppe antippen → je Rolle „Kein Zugriff“,
   „Lesen + eigene To-Dos“ oder „Leitung“, dazu „Vorschlagen“/„Direkt eintragen“ und der Kalender → **Einrichten**.
   Das dauert einige Sekunden (jeder Schritt wird nachgelesen); scheitert es, bleibt das Fenster offen und sagt warum.
 - Beim Einrichten bekommt jede Rolle mit Zugriff: „Modul sehen“, Lesen in allen drei Kategorien, Schreiben in
   „Mitarbeit“; die **Leitung** zusätzlich Schreiben und Löschen in „Protokolle“ und „Termine bearbeiten“ im gewählten
   Kalender (alle anderen: „ansehen“). Gelöscht wird in „Mitarbeit“ nie – ein To-Do wird nur als gelöscht markiert.
 - Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
-  Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Verwaltung sie **selbst gesetzt** hat
+  Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Einstellungen sie **selbst gesetzt** haben
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
   Diese Merkliste steht in der Kategorie „Protokolle“, die die Leitung beschreiben darf. Darum zählt beim Einrichten
-  nur, was die Verwaltung dort selbst eingetragen haben kann – Zusatzrechte an Rollen **dieser** Gruppe (frisch aus
+  nur, was die Einstellungen dort selbst eingetragen haben können – Zusatzrechte an Rollen **dieser** Gruppe (frisch aus
   ChurchTools gelesen), Kalenderrechte nur am alten oder neuen Kalender der Gruppe (Security-Review 16.11.2026,
   `vergebenPruefen`). Ein untergeschobener Eintrag führt so nie dazu, dass ein Admin Rechte anderer Gruppen entzieht.
 - **Versteckte Gruppen** bleiben versteckt; ihre Mitglieder bekommen beim Einrichten zusätzlich „versteckte Gruppe
@@ -68,13 +68,13 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   die Rolle braucht das gruppeninterne Recht **„Beitrag gruppenintern erstellen“**. Das Einrichten vergibt es **nicht**
   (Entscheidung 11.11.2026) – ein Admin setzt es in ChurchTools selbst, wo es gewünscht ist.
 
-**Vorlagen** (Reiter „Verwaltung“, Karte „Vorlagen“): gelten für alle Gruppen. Beim ersten Einrichten einer Gruppe
+**Vorlagen** (Reiter „Einstellungen“, Karte „Vorlagen“): gelten für alle Gruppen. Beim ersten Einrichten einer Gruppe
 entstehen drei zum Anpassen (Leitungssitzung, Teamtreffen, Klausur). Je Vorlage: Name, Tagesordnungspunkte mit
 vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – füllen sich selbst) und feste
 Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
 ändern nur Admins.
 
-**Hinweis auf fällige To-Dos** (Reiter „Verwaltung“, Karte „Hinweis auf fällige To-Dos“, nur Admins, gilt für die ganze
+**Hinweis auf fällige To-Dos** (Reiter „Einstellungen“, Karte „Hinweis auf fällige To-Dos“, nur Admins, gilt für die ganze
 Erweiterung): ChurchTools kann keine zeitgesteuerten Erinnerungen schicken, die Erweiterung läuft nur im Browser – darum
 weist sie **beim Öffnen** hin (siehe unten, Startseite). Der Admin wählt, was „bald fällig“ heißt: **Aus** (kein Band, kein
 Zähler) · **Nur Überfällige** · **Überfällige und 1 / 3 / 7 / 14 Tage vorher**. **Standard: 3 Tage**, solange nichts eingestellt
@@ -92,14 +92,14 @@ Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
 „Alle anzeigen“ an „Meine offenen To-Dos“ öffnet den Reiter „To-Dos“.
 
 **Hinweis auf fällige To-Dos:** Hat man **eigene** offene To-Dos (mir zugewiesen, nicht erledigt, aus allen Gruppen – dieselbe
-Menge wie „Meine offenen To-Dos“), die überfällig oder bald fällig sind (Einstellung der Verwaltung, siehe oben), steht unter der
+Menge wie „Meine offenen To-Dos“), die überfällig oder bald fällig sind (Einstellung im Reiter „Einstellungen“, siehe oben), steht unter der
 Begrüßung ein **Band**: „**2 To-Dos überfällig**, 1 bis Sa, 21.11. fällig“ – rot, solange etwas überfällig ist; sind nur bald
 fällige da, ruhig blau („**3 To-Dos** in den nächsten 7 Tagen fällig“). „Zu meinen To-Dos“ öffnet den Reiter „To-Dos“. Dazu zeigt
 der Reiter „To-Dos“ auf **jeder Seite** eine **rote Zahl** (überfällig + bald fällig; unten in der Leiste am Handy, oben im
 Umschalter am Computer; für Vorleser „To-Dos, 3 fällig“). Nichts fällig oder „Aus“: weder Band noch Zahl. **Woher die Zahlen
 kommen:** Start und Reiter „To-Dos“ lesen die To-Dos ohnehin und geben sie weiter – es kostet keinen zusätzlichen Abruf, und die
 Zahl stimmt nach jedem Neuladen und jeder Änderung dort (Abhaken, Ziehen, Speichern im Fenster). Nur wer die Erweiterung gleich
-im Reiter „Sitzungen“ oder „Verwaltung“ öffnet, löst einmal beim Start einen leichten Abruf aus (je Gruppe die „Mitarbeit“-Werte);
+im Reiter „Sitzungen“ oder „Einstellungen“ öffnet, löst einmal beim Start einen leichten Abruf aus (je Gruppe die „Mitarbeit“-Werte);
 scheitert er, gibt es keine Zahl. Ändert man To-Dos direkt im Protokoll (Reiter „Sitzungen“), zieht die Zahl beim nächsten Besuch
 von Start oder „To-Dos“ nach.
 
@@ -468,7 +468,7 @@ Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text komm
 Protokollen, To-Dos aus allen. Ein Treffer öffnet die Sitzung am Tagesordnungspunkt.
 
 Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
-eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung.
+eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in den Einstellungen.
 
 | Stand auf der Startseite   | Bedeutung                                                         |
 | -------------------------- | ----------------------------------------------------------------- |

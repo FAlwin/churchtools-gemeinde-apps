@@ -2,17 +2,17 @@ import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { reiterName } from '@shared/protokolle/hinweis';
 import { erweiterungsLink } from '@ui/erweiterung/kuerzel';
 
-/** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1) und – nur für Admins – Verwaltung (S2-2). */
+/** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1) und – nur für Admins – Einstellungen (S2-2, früher „Verwaltung“; R13: der letzte Reiter, nur Einstellungen). */
 export type ReiterId = 'start' | 'sitzungen' | 'todos' | 'verwaltung';
 
 export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
   { id: 'sitzungen', label: 'Sitzungen', icon: 'calendar' },
   { id: 'todos', label: 'To-Dos', icon: 'todo-liste' },
-  { id: 'verwaltung', label: 'Verwaltung', icon: 'regler' },
+  { id: 'verwaltung', label: 'Einstellungen', icon: 'zahnrad' },
 ];
 
-/** „Verwaltung“ nur, wer in ChurchTools Rechte vergeben darf (`darfVerwalten`). */
+/** „Einstellungen“ (id `verwaltung`, bleibt – Adresse `#/verwaltung`) nur, wer in ChurchTools Rechte vergeben darf (`darfVerwalten`). */
 export function sichtbareReiter(darfVerwalten: boolean): Reiter<ReiterId>[] {
   return ALLE_REITER.filter((r) => r.id !== 'verwaltung' || darfVerwalten);
 }

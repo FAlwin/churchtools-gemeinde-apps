@@ -22,7 +22,7 @@ export interface Start {
   gemeinde: string | null;
   modul: number;
   gruppen: ProtokollGruppe[];
-  /** Darf Rechte vergeben → sieht den Reiter „Verwaltung“ (S2-2). */
+  /** Darf Rechte vergeben → sieht den Reiter „Einstellungen“ (S2-2). */
   darfVerwalten: boolean;
   /**
    * Kategorien, in denen man anlegen, ändern und löschen darf – bei „Protokolle“ heißt das: Protokolle schreiben

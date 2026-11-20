@@ -81,6 +81,21 @@
   margin-left: auto;
 }
 
+// „Das mache ich“ (W9a): bei einem To-Do ohne Zuständigen statt der Gesichter – ein `TextKnopf` (blaues Wort); seine 40 px
+// Treffläche macht Karte und Zeile nicht höher.
+.mache {
+  display: inline-flex;
+  margin: -10px 0;
+}
+
+// Ohne Zuständigen gibt es keinen Haken – der Platz bleibt, damit der Titel bündig steht (wie die 44 px des Hakens).
+.hakenPlatz {
+  display: block;
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
 .rueck {
   display: flex;
   align-items: center;

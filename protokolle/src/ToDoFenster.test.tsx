@@ -63,7 +63,14 @@ const EINTRAG: ToDoEintrag = { aufgabe: BEAMER, gruppe: LT };
 const FREI: Herkunft = { titel: 'Leitungssitzung', schluessel: 'p:s1', entwurf: false };
 
 const zeige = (
-  q: { eintrag?: ToDoEintrag | null; herkunft?: Herkunft | null; leitung?: boolean } = {},
+  q: {
+    eintrag?: ToDoEintrag | null;
+    herkunft?: Herkunft | null;
+    leitung?: boolean;
+    /** Leitung je Gruppe (statt für alle gleich). */
+    leitungIn?: (g: ProtokollGruppe) => boolean;
+    vorlage?: { status?: 'offen' | 'arbeit'; wer?: number[] };
+  } = {},
 ) => {
   const props = {
     onFertig: vi.fn(),
@@ -78,7 +85,8 @@ const zeige = (
       mitglieder={MITGLIEDER}
       eintrag={q.eintrag === undefined ? EINTRAG : q.eintrag}
       herkunft={q.herkunft === undefined ? FREI : q.herkunft}
-      leitungIn={() => q.leitung ?? true}
+      leitungIn={q.leitungIn ?? (() => q.leitung ?? true)}
+      vorlage={q.vorlage}
       {...props}
     />,
   );
@@ -207,7 +215,8 @@ describe('ToDoFenster', () => {
       'b',
       { bis: '2026-11-20' },
       { person: 1, name: 'Alwin' },
-      expect.any(Boolean),
+      true,
+      false,
     ]);
   });
 
@@ -381,10 +390,13 @@ describe('ToDoFenster', () => {
     expect(W.toDoLoeschen).not.toHaveBeenCalled();
     fireEvent.click(screen.getAllByRole('button', { name: 'Löschen' }).at(-1)!);
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
-    expect(W.toDoLoeschen).toHaveBeenCalledWith({ modul: 24, kategorie: 61 }, 'b', {
-      person: 1,
-      name: 'Alwin',
-    });
+    expect(W.toDoLoeschen).toHaveBeenCalledWith(
+      { modul: 24, kategorie: 61 },
+      'b',
+      { person: 1, name: 'Alwin' },
+      true,
+      false,
+    );
   });
 
   it('Gruppe wechseln: verschieben – Zuständige, die dort kein Mitglied sind, fallen weg', async () => {
@@ -418,10 +430,13 @@ describe('ToDoFenster', () => {
   });
 
   it('Mitglied ohne sich selbst: Hinweis, dass es das To-Do danach nicht mehr sieht (Frage 3)', () => {
-    zeige({ leitung: false });
-    expect(screen.queryByRole('note')).toBeNull();
+    // Leitung im Leitungsteam, in der Jugend nur Mitglied: zieht das To-Do dorthin um und ist man nicht dabei, sagt es das Fenster.
+    zeige({ leitungIn: (g) => g.id === 11 });
+    expect(screen.queryByText(/siehst du dieses To-Do nicht mehr/)).toBeNull();
+    fireEvent.change(screen.getByLabelText('Gruppe'), { target: { value: '194' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Spike/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Alwin/ }));
-    expect(screen.getByRole('note').textContent).toMatch(/siehst du dieses To-Do nicht mehr/);
+    expect(screen.getByText(/siehst du dieses To-Do nicht mehr/)).toBeTruthy();
   });
 
   const verborgen = (eintrag: ToDoEintrag) =>
@@ -433,14 +448,14 @@ describe('ToDoFenster', () => {
         mitglieder={new Map([[11, 'verborgen']])}
         eintrag={eintrag}
         herkunft={null}
-        leitungIn={() => false}
+        leitungIn={() => true}
         onFertig={vi.fn()}
         onSitzung={vi.fn()}
         onClose={vi.fn()}
       />,
     );
 
-  it('Mitgliederliste verborgen, Name im Verlauf gestempelt: „Johann“ statt „Person 23“ (S7-2a, Test-Instanz)', () => {
+  it('Leitung, Mitgliederliste verborgen, Name im Verlauf gestempelt: „Johann“ statt „Person 23“ (S7-2a, Test-Instanz)', () => {
     const mitName = {
       ...BEAMER,
       verlauf: BEAMER.verlauf.map((v) => (v.von === 23 ? { ...v, name: 'Johann' } : v)),
@@ -451,7 +466,7 @@ describe('ToDoFenster', () => {
     expect(screen.queryByText(/Person 23/)).toBeNull();
   });
 
-  it('Mitgliederliste verborgen: ich selbst bin wählbar, andere Zuständige bleiben und werden genannt', () => {
+  it('Leitung, Mitgliederliste verborgen: ich selbst bin wählbar, andere Zuständige bleiben und werden genannt', () => {
     render(
       <ToDoFenster
         ich={{ person: 1, name: 'Alwin' }}
@@ -460,7 +475,7 @@ describe('ToDoFenster', () => {
         mitglieder={new Map([[11, 'verborgen']])}
         eintrag={EINTRAG}
         herkunft={null}
-        leitungIn={() => false}
+        leitungIn={() => true}
         onFertig={vi.fn()}
         onSitzung={vi.fn()}
         onClose={vi.fn()}
@@ -519,5 +534,119 @@ describe('ToDoFenster: Reihenfolge und „Erledigt von“ (W8b, Entwurf v2)', ()
     zeige({ eintrag: { aufgabe: statusSetzen(BEAMER, 'erledigt', 23, AM), gruppe: LT } });
     fireEvent.click(knopf('Offen'));
     expect(screen.queryByText(/^Erledigt von/)).toBeNull();
+  });
+});
+
+describe('ToDoFenster: Mitarbeiter-Sicht (W9a)', () => {
+  const GETEILT: ToDoEintrag = { aufgabe: BEAMER, gruppe: LT }; // Alwin (ich) und Johann
+  const EIGEN: ToDoEintrag = { aufgabe: { ...BEAMER, wer: [1] }, gruppe: LT };
+  const OHNE: ToDoEintrag = { aufgabe: { ...BEAMER, wer: [] }, gruppe: LT };
+  const mitarbeiter = { leitung: false } as const;
+  const kein = (name: string) => expect(screen.queryByRole('button', { name })).toBeNull();
+
+  it('geteilt: Text, Gruppe, Frist und Zuständige stehen als Text, nicht als Feld – abhaken und Notiz gehen', () => {
+    zeige({ eintrag: GETEILT, ...mitarbeiter });
+    expect(screen.queryByLabelText('Was ist zu tun?')).toBeNull();
+    expect(screen.queryByLabelText('Bis')).toBeNull();
+    expect(screen.queryByLabelText('Gruppe')).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull(); // keine Zuständigen-Liste
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Beamer')).toBeTruthy();
+    expect(within(dialog).getByText('Leitungsteam')).toBeTruthy();
+    expect(within(dialog).getByText('Alwin (du), Johann')).toBeTruthy();
+    expect(screen.getByLabelText('Neue Notiz')).toBeTruthy();
+    expect(knopf('Erledigt')).toBeTruthy(); // Gemeinsam: der ganze Status, auch „in Arbeit“
+    expect(knopf('In Arbeit')).toBeTruthy();
+    kein('Löschen');
+    expect(screen.queryByRole('button', { name: /Auf Karte anzeigen/ })).toBeNull();
+    expect(screen.getByRole('note').textContent).toMatch(/ändert die Leitung/);
+  });
+
+  it('geteilt: Notiz und Status gehen als Änderung an den Schreibweg – mit „Mitarbeiter“', async () => {
+    const { onFertig } = zeige({ eintrag: GETEILT, ...mitarbeiter });
+    fireEvent.change(screen.getByLabelText('Neue Notiz'), { target: { value: 'Läuft' } });
+    fireEvent.click(knopf('Erledigt'));
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0].slice(2)).toEqual([
+      { status: 'erledigt', notiz: 'Läuft' },
+      { person: 1, name: 'Alwin' },
+      false,
+      false,
+    ]);
+  });
+
+  it('eigen: alles Bearbeitbare ist da, dazu Löschen und „Abgeben an“; Gruppe und Zuständige stehen als Text', () => {
+    zeige({ eintrag: EIGEN, ...mitarbeiter });
+    expect(screen.getByLabelText('Was ist zu tun?')).toBeTruthy();
+    expect(screen.getByLabelText('Bis')).toBeTruthy();
+    expect(knopf('Löschen')).toBeTruthy();
+    expect(screen.queryByLabelText('Gruppe')).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.getByLabelText('Abgeben an')).toBeTruthy();
+    expect(within(screen.getByRole('dialog')).getByText('Alwin (du)')).toBeTruthy();
+    expect(screen.queryByRole('note')).toBeNull(); // kein Schloss-Satz: hier darf er fast alles
+  });
+
+  it('eigen: abgeben an genau ein anderes Mitglied – sagt, dass es danach weg ist, und schickt nur die Zuständigen', async () => {
+    const { onFertig } = zeige({ eintrag: EIGEN, ...mitarbeiter });
+    fireEvent.change(screen.getByLabelText('Abgeben an'), { target: { value: '23' } });
+    expect(
+      screen.getByText(/Nach dem Speichern ist Johann zuständig und du siehst es nicht mehr/),
+    ).toBeTruthy();
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ wer: [23] });
+  });
+
+  it('eigen im Protokoll-Entwurf: Text steht als Text, kein Löschen – Satz sagt warum; Frist bleibt änderbar', () => {
+    zeige({
+      eintrag: EIGEN,
+      herkunft: { titel: 'Leitungssitzung', schluessel: 'p:s1', entwurf: true },
+      ...mitarbeiter,
+    });
+    expect(screen.queryByLabelText('Was ist zu tun?')).toBeNull();
+    kein('Löschen');
+    expect(screen.getByLabelText('Bis')).toBeTruthy();
+    expect(screen.getByRole('note').textContent).toMatch(
+      /Protokoll-Entwurf „Leitungssitzung“.*Leitung/,
+    );
+  });
+
+  it('ohne Zuständigen: „Das mache ich“ statt Speichern, keine Notiz, Status nur als Text', async () => {
+    const { onFertig } = zeige({ eintrag: OHNE, ...mitarbeiter });
+    kein('Speichern');
+    expect(screen.queryByLabelText('Neue Notiz')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Erledigt' })).toBeNull();
+    expect(screen.getByText('noch niemand')).toBeTruthy();
+    expect(screen.getByRole('note').textContent).toMatch(/Das mache ich/);
+    fireEvent.click(knopf('Das mache ich'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0].slice(2)).toEqual([
+      { wer: [1] },
+      { person: 1, name: 'Alwin' },
+      false,
+      false,
+    ]);
+  });
+
+  it('neues To-Do: nur für mich – Zuständig steht fest, ohne Liste; angelegt wird mit mir als Einzigem', async () => {
+    const { onFertig } = zeige({ eintrag: null, ...mitarbeiter, vorlage: { wer: [] } });
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByLabelText('Außerhalb der Gruppe (nur Name)')).toBeNull();
+    expect(within(screen.getByRole('dialog')).getByText('Alwin (du)')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Was ist zu tun?'), { target: { value: 'Plakat' } });
+    fireEvent.click(knopf('Anlegen'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAnlegen).mock.calls[0][1]).toMatchObject({ wer: [1], extern: '' });
+    expect(vi.mocked(W.toDoAnlegen).mock.calls[0][3]).toBe(false);
+  });
+
+  it('Leitung: alles wie bisher – Felder, Löschen, Zuständigen-Liste, kein Schloss-Satz', () => {
+    zeige({ eintrag: GETEILT, leitung: true });
+    expect(screen.getByLabelText('Was ist zu tun?')).toBeTruthy();
+    expect(knopf('Löschen')).toBeTruthy();
+    expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('note')).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { Haken } from './Haken';
 import { Etikett } from '@ui/bedienung/Etikett';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { FristKaestchen } from './FristKaestchen';
 import { ErledigtVon, FertigListe, Gesichter, Symbole } from './ToDoBausteine';
 import type { Herkunft } from './ToDoFenster';
@@ -12,6 +13,7 @@ import {
   teilText,
   type Aufgabe,
   type HakenSchritt,
+  type ToDoRechte,
 } from '@shared/protokolle/aufgaben';
 import { eintragSchluessel, type Spalte, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import styles from './ToDoKarte.module.scss';
@@ -35,6 +37,8 @@ export interface KartenKontext {
   onFertig: (schluessel: string) => void;
   onOeffnen: (e: ToDoEintrag) => void;
   onHaken: (e: ToDoEintrag, s: HakenSchritt) => void;
+  /** „Das mache ich“ (W9a): mich als Zuständigen eintragen – bei einem To-Do ohne Zuständigen. */
+  onMache: (e: ToDoEintrag) => void;
   onRueckgaengig: (e: ToDoEintrag) => void;
   onSitzung: (gruppe: number, schluessel: string) => void;
 }
@@ -45,6 +49,8 @@ export interface KartenEintrag {
   /** Der Stand, der angezeigt wird (nach dem Abhaken schon der neue, die Karte bleibt aber 5 s am Platz). */
   a: Aufgabe;
   herkunft: Herkunft | null;
+  /** Was ich hier darf (`toDoRechte`) – die einzige Quelle für Haken und „Das mache ich“. */
+  rechte: ToDoRechte;
   /** Eben abgehakt: „Rückgängig“ steht an der Karte. */
   gehalten: boolean;
   /** Darf ich hier abhaken (Gruppe mit Mitarbeit, nicht gehalten)? */
@@ -54,7 +60,21 @@ export interface KartenEintrag {
   gruppeGroesse?: number;
 }
 
+/** „Das mache ich“ – statt der Gesichter bei einem To-Do ohne Zuständigen (W9a, nur für Mitglieder, `rechte.mache`). */
+function MacheKnopf({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
+  return (
+    // Die 40 px Treffläche des `TextKnopf` macht die Karte nicht höher (wie beim Haken).
+    <span className={styles.mache}>
+      <TextKnopf disabled={k.beschaeftigt} onClick={() => kx.onMache(k.e)}>
+        Das mache ich
+      </TextKnopf>
+    </span>
+  );
+}
+
 function HakenKnopf({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
+  // Ohne Zuständigen kein Haken – nur Platz, damit der Titel bündig bleibt.
+  if (k.rechte.mache) return <span className={styles.hakenPlatz} aria-hidden="true" />;
   return (
     <Haken
       a={k.a}
@@ -117,7 +137,7 @@ export function ToDoKarte({
         onSitzung={() => k.herkunft && kx.onSitzung(e.gruppe.id, k.herkunft.schluessel)}
       />
       <span className={styles.rechts}>
-        <Gesichter a={a} personen={kx.personen} />
+        {k.rechte.mache ? <MacheKnopf k={k} kx={kx} /> : <Gesichter a={a} personen={kx.personen} />}
       </span>
     </div>
   );
@@ -229,7 +249,11 @@ export function ToDoZeile({
               {!a.bis && <span className={styles.leise}>–</span>}
             </span>
             <span className={styles.zelle}>
-              <Gesichter a={a} personen={kx.personen} mitName gruppeGroesse={k.gruppeGroesse} />
+              {k.rechte.mache ? (
+                <MacheKnopf k={k} kx={kx} />
+              ) : (
+                <Gesichter a={a} personen={kx.personen} mitName gruppeGroesse={k.gruppeGroesse} />
+              )}
             </span>
             <span className={styles.zelle}>
               <Stand k={k} kx={kx} />

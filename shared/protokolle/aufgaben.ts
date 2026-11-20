@@ -191,6 +191,169 @@ export function darfTeilSetzen(person: number, ich: number, leitung: boolean): b
   return person === ich || leitung;
 }
 
+/** **Ohne Zuständigen** – weder jemand aus der Gruppe noch eine Person außerhalb. Die eine Stelle dafür (Sichtbarkeit, Rechte). */
+export function ohneZustaendige(a: Pick<Aufgabe, 'wer' | 'extern'>): boolean {
+  return a.wer.length === 0 && !a.extern.trim();
+}
+
+/**
+ * **Wer darf was an einem To-Do?** (W9a, Alwin 20.11.2026) – **die eine Regel** für Fenster, Haken an Karte und Zeile,
+ * Ziehen im Board, „Neues To-Do“, Abgeben, „Das mache ich“ und den Schreibweg (`aenderungVerboten`). Keine Stelle rechnet
+ * das nach. `leitung` = wer in der Gruppe Protokolle schreiben darf; sie darf alles. Für Mitarbeiter hängt es am Fall:
+ * - `eigen`: genau ich bin zuständig (kein Externer) – abhaken, Status, Notiz, Frist, abgeben, Text, löschen;
+ * - `geteilt`: ich und andere (oder jemand außerhalb) – abhaken und Notiz, sonst nichts;
+ * - `ohne`: niemand zuständig – nur „Das mache ich“ (`mache`);
+ * - `fremd`: andere zuständig, ich nicht – nichts (die Übersicht zeigt es auch nicht: `sichtbarFuer`).
+ * Steht das To-Do noch in einem **Protokoll-Entwurf** (`imEntwurf`), führt dort das Protokoll: Text und Löschen bleiben bei
+ * der Leitung. ChurchTools kennt dafür kein Recht – die Prüfung liegt in der Erweiterung.
+ */
+export type ToDoFall = 'leitung' | 'eigen' | 'geteilt' | 'ohne' | 'fremd';
+
+export interface ToDoRechte {
+  fall: ToDoFall;
+  sehen: boolean;
+  /** Abhaken (bei „Jeder für sich“ den eigenen Teil – für andere gilt zusätzlich `darfTeilSetzen`). */
+  haken: boolean;
+  /** Den Status setzen (auch „in Arbeit“). Bei „Jeder für sich“ gibt es ihn nicht – dort zählen die Teile. */
+  status: boolean;
+  notiz: boolean;
+  text: boolean;
+  frist: boolean;
+  /** „Auf Karte anzeigen“ – gilt für alle, darum nur bei eigenen To-Dos. */
+  karte: boolean;
+  /** Zuständige frei ändern. */
+  zustaendig: boolean;
+  /** Gemeinsam ↔ Jeder für sich. */
+  modus: boolean;
+  /** In eine andere Gruppe verschieben. */
+  gruppe: boolean;
+  /** An genau ein anderes Gruppenmitglied abgeben. */
+  abgeben: boolean;
+  loeschen: boolean;
+  /** „Das mache ich“ – mich selbst eintragen. */
+  mache: boolean;
+}
+
+const NICHTS: Omit<ToDoRechte, 'fall' | 'sehen'> = {
+  haken: false,
+  status: false,
+  notiz: false,
+  text: false,
+  frist: false,
+  karte: false,
+  zustaendig: false,
+  modus: false,
+  gruppe: false,
+  abgeben: false,
+  loeschen: false,
+  mache: false,
+};
+
+export function toDoRechte(
+  a: Pick<Aufgabe, 'wer' | 'extern' | 'jeder'>,
+  q: { ich: number; leitung: boolean; imEntwurf?: boolean },
+): ToDoRechte {
+  if (q.leitung)
+    return {
+      fall: 'leitung',
+      sehen: true,
+      haken: true,
+      status: true,
+      notiz: true,
+      text: true,
+      frist: true,
+      karte: true,
+      zustaendig: true,
+      modus: true,
+      gruppe: true,
+      abgeben: false,
+      loeschen: true,
+      mache: false,
+    };
+  if (ohneZustaendige(a)) return { ...NICHTS, fall: 'ohne', sehen: true, mache: true };
+  if (!a.wer.includes(q.ich)) return { ...NICHTS, fall: 'fremd', sehen: false };
+  if (a.wer.length === 1 && !a.extern.trim())
+    return {
+      ...NICHTS,
+      fall: 'eigen',
+      sehen: true,
+      haken: true,
+      status: true,
+      notiz: true,
+      frist: true,
+      karte: true,
+      abgeben: true,
+      text: !q.imEntwurf,
+      loeschen: !q.imEntwurf,
+    };
+  return {
+    ...NICHTS,
+    fall: 'geteilt',
+    sehen: true,
+    haken: true,
+    status: !istJeder({ jeder: a.jeder, wer: a.wer }),
+    notiz: true,
+  };
+}
+
+/**
+ * **Darf `x` an diesem (frisch gelesenen) To-Do geschrieben werden?** – `null` ja, sonst der Satz, warum nicht. Die Regel
+ * für den Schreibweg (`toDoAendern`) **und** für die Oberfläche, die vorher fragt (Ziehen im Board). Nur Felder, die sich
+ * wirklich ändern, zählen. Abgeben (`x.wer` = genau ein anderer) und „Das mache ich“ (`x.wer` = nur ich) sind die einzigen
+ * Zuständigen-Änderungen eines Mitarbeiters.
+ */
+export function aenderungVerboten(
+  a: Aufgabe,
+  x: ToDoAenderung,
+  q: { ich: number; leitung: boolean; imEntwurf?: boolean },
+): string | null {
+  const r = toDoRechte(a, q);
+  if (r.fall === 'leitung') return null;
+  if (r.fall === 'fremd') return 'Dieses To-Do gehört jemand anderem.';
+  const nur = 'Das darf nur die Leitung.';
+  if (x.text !== undefined && x.text.trim() && x.text.trim() !== a.text && !r.text)
+    return r.fall === 'eigen'
+      ? 'Der Text steht noch im Protokoll-Entwurf – ihn ändert die Leitung dort.'
+      : 'Den Text ändert nur die Leitung.';
+  if (x.bis !== undefined && (x.bis || null) !== a.bis && !r.frist)
+    return 'Die Frist ändert nur die Leitung.';
+  if (x.extern !== undefined && x.extern.trim() !== a.extern.trim() && !r.zustaendig)
+    return 'Die Zuständigen ändert nur die Leitung.';
+  if (x.karte !== undefined && !r.karte) return nur;
+  if (x.jeder !== undefined && x.jeder !== istJeder(a) && !r.modus) return nur;
+  if (x.wer !== undefined) {
+    const gleich = x.wer.length === a.wer.length && x.wer.every((p) => a.wer.includes(p));
+    const abgeben = r.abgeben && x.wer.length === 1 && x.wer[0] !== q.ich;
+    const mache = r.mache && x.wer.length === 1 && x.wer[0] === q.ich;
+    if (!gleich && !abgeben && !mache && !r.zustaendig)
+      return r.fall === 'ohne'
+        ? 'Hier kannst du dich nur selbst eintragen.'
+        : r.fall === 'eigen'
+          ? 'Du kannst es nur an ein anderes Mitglied abgeben.'
+          : 'Die Zuständigen ändert nur die Leitung.';
+  }
+  if (x.status !== undefined && x.status !== a.status && !r.status)
+    return 'Den Status kannst du hier nicht ändern.';
+  if (x.teile?.length) {
+    if (!r.haken) return 'Hier kannst du nichts abhaken.';
+    if (x.teile.some((t) => !darfTeilSetzen(t.person, q.ich, false)))
+      return 'Du kannst nur deinen eigenen Teil abhaken – die anderen nur die Leitung.';
+  }
+  if (x.notiz?.trim() && !r.notiz) return 'Hier kannst du keine Notiz schreiben.';
+  return null;
+}
+
+/** **Darf ein neues To-Do so angelegt werden?** Ein Mitarbeiter legt nur eines für sich selbst an – `null` ja, sonst der Satz. */
+export function anlegenVerboten(
+  q: { wer: readonly number[]; extern: string },
+  w: { ich: number; leitung: boolean },
+): string | null {
+  if (w.leitung) return null;
+  return q.wer.length === 1 && q.wer[0] === w.ich && !q.extern.trim()
+    ? null
+    : 'Als Mitglied legst du To-Dos nur für dich selbst an.';
+}
+
 /**
  * **Modus wechseln** (Gemeinsam ↔ Jeder für sich) – mit Verlaufseintrag `modus`. Wird aus „gemeinsam / erledigt“ zu „Jeder für
  * sich“ gewechselt, gelten alle Zuständigen als fertig (sonst fiele ein erledigtes To-Do auf „offen“ zurück). Danach rechnet

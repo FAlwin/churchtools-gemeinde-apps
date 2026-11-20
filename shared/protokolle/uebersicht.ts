@@ -10,7 +10,14 @@
  * - **Erledigte:** die der letzten 30 Tage; ältere nur auf Wunsch (Filter).
  */
 import { plusTage } from '../ct/datum';
-import { erledigtAm, gruppieren, istJeder, type Aufgabe, type ToDoAenderung } from './aufgaben';
+import {
+  erledigtAm,
+  gruppieren,
+  istJeder,
+  ohneZustaendige,
+  type Aufgabe,
+  type ToDoAenderung,
+} from './aufgaben';
 import { faelligkeit } from './frist';
 
 /** Wie die Liste eingeteilt wird. Das Board kennt nur Status und Person (`spalten`) – bei „frist“ zeigt es Status. */
@@ -46,8 +53,6 @@ export interface Bereich {
 
 /** Wie lange Erledigte ohne Filter zu sehen sind. */
 export const ERLEDIGT_TAGE = 30;
-
-const ohneZustaendige = (a: Aufgabe): boolean => a.wer.length === 0 && !a.extern.trim();
 
 /** **Sieht diese Person das To-Do?** Gelöschte nie; die Leitung alle; Mitglieder eigene und solche ohne Zuständigen. */
 export function sichtbarFuer(a: Aufgabe, q: { ich: number; leitung: boolean }): boolean {

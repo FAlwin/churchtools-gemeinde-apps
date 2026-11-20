@@ -468,6 +468,27 @@ const W8B_TECHNIK = [
     1,
     jetztTag(-2),
   ),
+  // W9a (Rechte im To-Do): zum Zeigen der Mitglieder-Sicht (`?demo=mitglied`) – eins ohne Zuständigen („Das mache ich“)
+  // und eins mit mir und Peter („geteilt“: nur abhaken und Notiz).
+  neueAufgabe({
+    id: 'demo-t3',
+    gruppe: 19,
+    sitzung: null,
+    text: 'Ersatzkabel für den Beamer besorgen',
+    bis: plusTage(heuteImKalender(), 5),
+    von: 1,
+    am: '2026-10-21T19:00:00Z',
+  }),
+  neueAufgabe({
+    id: 'demo-t4',
+    gruppe: 19,
+    sitzung: null,
+    text: 'Tonanlage vor Weihnachten durchchecken',
+    wer: [1, 19],
+    bis: plusTage(heuteImKalender(), 9),
+    von: 19,
+    am: '2026-10-21T19:00:00Z',
+  }),
 ];
 
 /**

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
@@ -8,7 +8,7 @@ import { Segment } from '@ui/bedienung/Segment';
 import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
-import { tagKurz } from '@shared/ct/datum';
+import { datumText, tagKurz } from '@shared/ct/datum';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Nachziehen } from '@shared/protokolle/nachziehen';
@@ -17,7 +17,10 @@ import {
   bearbeiten,
   nameFuer,
   statusText,
+  darfTeilSetzen,
+  ohneZustaendige,
   teilFertig,
+  toDoRechte,
   weitereZustaendige,
   type Aufgabe,
   type AufgabenStatus,
@@ -80,6 +83,24 @@ function SchalterKnopf({
   );
 }
 
+/** Was man nicht ändern darf, steht als normaler Text – Beschriftung und Wert, kein ausgegrautes Feld (W9a). */
+function Lesen({
+  titel,
+  gross = false,
+  children,
+}: {
+  titel: string;
+  gross?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={felder.feld}>
+      <span>{titel}</span>
+      <p className={gross ? `${styles.wert} ${styles.wertGross}` : styles.wert}>{children}</p>
+    </div>
+  );
+}
+
 /**
  * **Fenster „To-Do“ / „Neues To-Do“** (Bauplan S7-2a, Entwurf `s7-todos-v2.html`): Text, Gruppe, Bis, Status, Zuständige
  * (auch niemand, auch jemand außerhalb der Gruppe), Notiz, Verlauf, Löschen (nur vermerkt) – und je Abschnitt „Auf Karte
@@ -130,10 +151,12 @@ export function ToDoFenster({
   // den der Modus ergäbe – `vorschau`).
   const [jederWahl, setJederWahl] = useState(a?.jeder === true);
   const [umgeschaltet, setUmgeschaltet] = useState<ReadonlySet<number>>(new Set());
-  const [wer, setWer] = useState<ReadonlySet<number>>(
+  const [werWahl, setWer] = useState<ReadonlySet<number>>(
     () => new Set(a ? a.wer : (vorlage?.wer ?? [])),
   );
-  const [extern, setExtern] = useState(a?.extern ?? '');
+  const [externWahl, setExtern] = useState(a?.extern ?? '');
+  // Abgeben (W9a, eigenes To-Do eines Mitglieds): an wen – `null` = nicht abgeben.
+  const [abgebenAn, setAbgebenAn] = useState<number | null>(null);
   const [notiz, setNotiz] = useState('');
   const [karteNotiz, setKarteNotiz] = useState(!!a?.karte?.notiz);
   const [laeuft, setLaeuft] = useState(false);
@@ -142,6 +165,24 @@ export function ToDoFenster({
 
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0];
   const imEntwurf = !!herkunft?.entwurf;
+  // **Was ich hier darf** (W9a) – `toDoRechte`, die eine Regel (dieselbe prüft der Schreibweg). Ein bestehendes To-Do richtet
+  // sich nach seiner Gruppe, ein neues nach der gewählten. Ein Mitglied legt nur To-Dos für sich selbst an.
+  const urspruenglich = eintrag ? gruppen.find((g) => g.id === eintrag.gruppe.id) : gruppe;
+  const leitungOrig = !!urspruenglich && leitungIn(urspruenglich);
+  const r = a ? toDoRechte(a, { ich: ich.person, leitung: leitungOrig, imEntwurf }) : null;
+  const neuMitglied = !a && !leitungOrig;
+  const wer: ReadonlySet<number> = neuMitglied ? new Set([ich.person]) : werWahl;
+  const extern = neuMitglied ? '' : externWahl;
+  const darf = {
+    text: r ? r.text : true,
+    frist: r ? r.frist : true,
+    gruppe: r ? r.gruppe : true,
+    zustaendig: r ? r.zustaendig : leitungOrig,
+    notiz: r ? r.notiz : true,
+    status: r ? r.status : true,
+    karte: r ? r.karte : true,
+    modus: r ? r.modus : leitungOrig,
+  };
   const liste = mitglieder.get(gruppeId);
   const bekannt: Person[] =
     Array.isArray(liste) && liste.length
@@ -156,7 +197,11 @@ export function ToDoFenster({
 
   // Frage 3: Mitglieder sehen nur eigene und solche ohne Zuständigen.
   const ohneMich =
-    !!gruppe && !leitungIn(gruppe) && !wer.has(ich.person) && (wer.size > 0 || !!extern.trim());
+    darf.zustaendig &&
+    !!gruppe &&
+    !leitungIn(gruppe) &&
+    !wer.has(ich.person) &&
+    (wer.size > 0 || !!extern.trim());
 
   const gleicheMenge = (x: ReadonlySet<number>, y: readonly number[]) =>
     x.size === y.length && y.every((p) => x.has(p));
@@ -179,6 +224,7 @@ export function ToDoFenster({
     const x: ToDoAenderung = {};
     if (text.trim() !== a.text) x.text = text;
     if (!gleicheMenge(wer, a.wer)) x.wer = [...wer];
+    if (abgebenAn !== null && r?.abgeben) x.wer = [abgebenAn];
     if (extern.trim() !== a.extern) x.extern = extern;
     if ((bis || null) !== a.bis) x.bis = bis || null;
     if (jederAn !== (a.jeder === true && a.wer.length >= 2) && (jederAn || a.jeder === true))
@@ -280,8 +326,9 @@ export function ToDoFenster({
           x,
           wer: [...wer],
           ich,
-          leitung: leitungIn(gruppe),
-        }).then((r) => r.hinweis);
+          // Aus der Gruppe, in der das To-Do jetzt liegt: Wer dort Mitarbeiter ist, verschiebt nichts (`toDoRechte.gruppe`).
+          leitung: leitungOrig,
+        }).then((res) => res.hinweis);
       // Im Entwurf: erst in der neuen Gruppe anlegen (unter der Sperre), dann wird die Aufgabe ein Absatz mit Hinweis.
       return ausfuehren(() =>
         mitEntwurf({ art: 'abgegeben', text, gruppe: gruppe.name }, verschieben, {
@@ -290,13 +337,12 @@ export function ToDoFenster({
       );
     }
     const x = aenderung();
-    const leitung = leitungIn(gruppe);
-    const aendern = () => toDoAendern(ort, a.id, x, ich, leitung).then(() => null);
+    const aendern = () => toDoAendern(ort, a.id, x, ich, leitungOrig, imEntwurf).then(() => null);
     // Text im Entwurf: erst das Protokoll (der Abgleich zieht den Text ins To-Do), dann der Rest – falls es einen gibt.
     if (x.text !== undefined) {
       const { text: _text, ...rest } = x;
       const danach = Object.keys(rest).length
-        ? () => toDoAendern(ort, a.id, rest, ich, leitung).then(() => null)
+        ? () => toDoAendern(ort, a.id, rest, ich, leitungOrig, imEntwurf).then(() => null)
         : undefined;
       return ausfuehren(() => mitEntwurf({ art: 'text', text }, aendern, { danach }));
     }
@@ -307,9 +353,47 @@ export function ToDoFenster({
     if (!a || !gruppe || gruppe.mitarbeit === null) return;
     const ort = { modul, kategorie: gruppe.mitarbeit };
     setLoeschenFragen(false);
-    const nurToDo = () => toDoLoeschen(ort, a.id, ich).then(() => null);
+    const nurToDo = () => toDoLoeschen(ort, a.id, ich, leitungOrig, imEntwurf).then(() => null);
     ausfuehren(() => mitEntwurf({ art: 'raus' }, nurToDo));
   };
+
+  /** „Das mache ich“ (W9a): mich als Zuständigen eintragen – danach ist es mein eigenes To-Do. */
+  const mache = () => {
+    if (!a || !gruppe || gruppe.mitarbeit === null) return;
+    const ort = { modul, kategorie: gruppe.mitarbeit };
+    ausfuehren(() =>
+      toDoAendern(ort, a.id, { wer: [ich.person] }, ich, leitungOrig, imEntwurf).then(() => null),
+    );
+  };
+
+  // Die Zuständigen als Text (Mitglied ohne Zuständigen-Recht): Namen aus der Liste oder dem Verlauf, sonst gezählt.
+  const unbekannteIds: number[] = [];
+  const zustaendigNamen =
+    a?.wer.flatMap((p) => {
+      const n = p === ich.person ? `${ich.name} (du)` : nameFuer(a, p, listeNamen);
+      if (n === null) unbekannteIds.push(p);
+      return n ?? [];
+    }) ?? [];
+  const zustaendigText = a
+    ? [
+        ...zustaendigNamen,
+        ...(unbekannteIds.length ? weitereZustaendige(a, unbekannteIds) : []),
+        ...(a.extern.trim() ? [`${a.extern.trim()} (extern)`] : []),
+      ].join(', ')
+    : '';
+  // Abgeben geht nur an ein anderes Mitglied, das das Fenster kennt (Mitgliederliste sichtbar).
+  const abgebenKandidaten = bekannt.filter((m) => m.id !== ich.person);
+  // Ein Satz, wer den Rest ändert – die Leitung hat nichts zu erklären. Namen der Leitung stehen hier nicht zur Hand.
+  const satz =
+    !a || !r || r.fall === 'leitung'
+      ? null
+      : r.fall === 'eigen' && imEntwurf
+        ? `Steht noch im Protokoll-Entwurf „${herkunft?.titel ?? ''}“ – Text ändern und Löschen macht die Leitung dort.`
+        : r.fall === 'geteilt'
+          ? 'Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.'
+          : r.fall === 'ohne'
+            ? 'Mit „Das mache ich“ wirst du zuständig und kannst es danach bearbeiten.'
+            : null;
 
   if (loeschenFragen)
     return (
@@ -332,68 +416,89 @@ export function ToDoFenster({
       title={a ? 'To-Do' : 'Neues To-Do'}
       onClose={onClose}
       beschaeftigt={laeuft}
+      cancelLabel={r?.mache ? 'Schließen' : undefined}
       links={
-        a ? (
+        a && r?.loeschen ? (
           <FensterKnopf art="loeschen" disabled={laeuft} onClick={() => setLoeschenFragen(true)}>
             Löschen
           </FensterKnopf>
         ) : undefined
       }
       knoepfe={
-        <FensterKnopf disabled={!bereit} onClick={speichern}>
-          {laeuft ? 'Wird gespeichert …' : a ? 'Speichern' : 'Anlegen'}
-        </FensterKnopf>
+        r?.mache ? (
+          <FensterKnopf disabled={laeuft} onClick={mache}>
+            {laeuft ? 'Wird gespeichert …' : 'Das mache ich'}
+          </FensterKnopf>
+        ) : (
+          <FensterKnopf disabled={!bereit} onClick={speichern}>
+            {laeuft ? 'Wird gespeichert …' : a ? 'Speichern' : 'Anlegen'}
+          </FensterKnopf>
+        )
       }
     >
-      {imEntwurf && herkunft && (
+      {imEntwurf && herkunft && r?.fall === 'leitung' && (
         <p className={felder.hinweis}>
           Steht im Protokoll-Entwurf „{herkunft.titel}“ – Text, Gruppe und Löschen werden dort mit
           geändert.
         </p>
       )}
-      <label className={felder.feld}>
-        <span>Was ist zu tun?</span>
-        <textarea
-          className={`${felder.eingabe} ${styles.text}`}
-          value={text}
-          rows={2}
-          disabled={laeuft}
-          onChange={(e) => setText(e.target.value)}
-        />
-      </label>
-      <div className={felder.zeile}>
+      {darf.text ? (
         <label className={felder.feld}>
-          <span>Gruppe</span>
-          <select
-            className={felder.eingabe}
-            value={gruppeId}
-            disabled={laeuft || gruppen.length < 2}
-            onChange={(e) => {
-              const g = Number(e.target.value);
-              setGruppeId(g);
-              // Zuständig sein können nur Mitglieder der Gruppe – wer dort nicht ist, fällt weg.
-              const neu = mitglieder.get(g);
-              if (Array.isArray(neu))
-                setWer(new Set([...wer].filter((p) => neu.some((x) => x.id === p))));
-            }}
-          >
-            {gruppen.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={felder.feld}>
-          <span>Bis</span>
-          <input
-            type="date"
-            className={felder.eingabe}
-            value={bis}
+          <span>Was ist zu tun?</span>
+          <textarea
+            className={`${felder.eingabe} ${styles.text}`}
+            value={text}
+            rows={2}
             disabled={laeuft}
-            onChange={(e) => setBis(e.target.value)}
+            onChange={(e) => setText(e.target.value)}
           />
         </label>
+      ) : (
+        <Lesen titel="Was ist zu tun?" gross>
+          {a?.text}
+        </Lesen>
+      )}
+      <div className={felder.zeile}>
+        {a && !darf.gruppe ? (
+          <Lesen titel="Gruppe">{eintrag?.gruppe.name}</Lesen>
+        ) : (
+          <label className={felder.feld}>
+            <span>Gruppe</span>
+            <select
+              className={felder.eingabe}
+              value={gruppeId}
+              disabled={laeuft || gruppen.length < 2}
+              onChange={(e) => {
+                const g = Number(e.target.value);
+                setGruppeId(g);
+                // Zuständig sein können nur Mitglieder der Gruppe – wer dort nicht ist, fällt weg.
+                const neu = mitglieder.get(g);
+                if (Array.isArray(neu))
+                  setWer(new Set([...wer].filter((p) => neu.some((x) => x.id === p))));
+              }}
+            >
+              {gruppen.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {darf.frist ? (
+          <label className={felder.feld}>
+            <span>Bis</span>
+            <input
+              type="date"
+              className={felder.eingabe}
+              value={bis}
+              disabled={laeuft}
+              onChange={(e) => setBis(e.target.value)}
+            />
+          </label>
+        ) : (
+          <Lesen titel="Bis">{a?.bis ? datumText(a.bis) : 'ohne Frist'}</Lesen>
+        )}
       </div>
       {verschoben && (
         <p className={felder.leise}>
@@ -401,40 +506,78 @@ export function ToDoFenster({
           Verlauf zieht mit.
         </p>
       )}
-      <div className={felder.feld}>
-        <span>Zuständig</span>
-        <Einladeliste
-          liste={bekannt}
-          gewaehlt={wer}
-          onChange={setWer}
-          gesperrt={laeuft}
-          ich={ich.person}
-          mitAlle
-          zusatz={(id) => (id === ich.person ? 'du' : null)}
-        />
-        {weitere.length > 0 && (
+      {darf.zustaendig ? (
+        <div className={felder.feld}>
+          <span>Zuständig</span>
+          <Einladeliste
+            liste={bekannt}
+            gewaehlt={wer}
+            onChange={setWer}
+            gesperrt={laeuft}
+            ich={ich.person}
+            mitAlle
+            zusatz={(id) => (id === ich.person ? 'du' : null)}
+          />
+          {weitere.length > 0 && (
+            <p className={felder.leise}>
+              Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} –
+              das bleibt so.
+            </p>
+          )}
+          <input
+            className={felder.eingabe}
+            value={extern}
+            disabled={laeuft}
+            placeholder="Außerhalb der Gruppe (nur Name)"
+            aria-label="Außerhalb der Gruppe (nur Name)"
+            onChange={(e) => setExtern(e.target.value)}
+          />
           <p className={felder.leise}>
-            Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} – das
-            bleibt so.
+            Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.
           </p>
-        )}
-        <input
-          className={felder.eingabe}
-          value={extern}
-          disabled={laeuft}
-          placeholder="Außerhalb der Gruppe (nur Name)"
-          aria-label="Außerhalb der Gruppe (nur Name)"
-          onChange={(e) => setExtern(e.target.value)}
-        />
-        <p className={felder.leise}>Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.</p>
-      </div>
+        </div>
+      ) : (
+        <Lesen titel="Zuständig">
+          {neuMitglied || r?.fall === 'eigen' ? (
+            `${ich.name} (du)`
+          ) : a && !ohneZustaendige(a) ? (
+            zustaendigText
+          ) : (
+            <span className={styles.leiseText}>noch niemand</span>
+          )}
+        </Lesen>
+      )}
+      {r?.abgeben && abgebenKandidaten.length > 0 && (
+        <label className={felder.feld}>
+          <span>Abgeben an</span>
+          <select
+            className={felder.eingabe}
+            value={abgebenAn ?? ''}
+            disabled={laeuft}
+            onChange={(e) => setAbgebenAn(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Nicht abgeben</option>
+            {abgebenKandidaten.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          {abgebenAn !== null && (
+            <small className={felder.leise}>
+              Nach dem Speichern ist {listeNamen.get(abgebenAn)?.split(' ')[0]} zuständig und du
+              siehst es nicht mehr.
+            </small>
+          )}
+        </label>
+      )}
       {ohneMich && (
         <p className={felder.hinweis} role="note">
           Du bist nicht dabei – nach dem Speichern siehst du dieses To-Do nicht mehr (Mitglieder
           sehen nur ihre eigenen).
         </p>
       )}
-      {wer.size >= 2 && (
+      {darf.modus && wer.size >= 2 && (
         <div className={felder.feld}>
           <span>So wird es erledigt</span>
           <Segment
@@ -470,16 +613,16 @@ export function ToDoFenster({
           <span>Wer ist fertig?</span>
           <ul className={styles.fertigListe}>
             {[...wer].map((p) => {
-              const darf = p === ich.person || leitungIn(gruppe ?? gruppen[0]);
+              const darfTeil = r ? r.haken && darfTeilSetzen(p, ich.person, leitungOrig) : true;
               const fertig = teilJetzt(p);
               const am = vorschau?.fertig?.[String(p)];
               return (
                 <li key={p}>
-                  <label className={styles.fertigZeile} aria-disabled={!darf || laeuft}>
+                  <label className={styles.fertigZeile} aria-disabled={!darfTeil || laeuft}>
                     <input
                       type="checkbox"
                       checked={fertig}
-                      disabled={!darf || laeuft}
+                      disabled={!darfTeil || laeuft}
                       onChange={() =>
                         setUmgeschaltet((u) => {
                           const n = new Set(u);
@@ -503,12 +646,14 @@ export function ToDoFenster({
             })}
           </ul>
           <p className={felder.leise}>
-            {leitungIn(gruppe ?? gruppen[0])
+            {leitungOrig
               ? 'Als Leitung kannst du auch für andere abhaken (z. B. wenn jemand Bescheid sagt).'
               : 'Du hakst nur deinen eigenen Teil ab.'}{' '}
             Fertig ist das To-Do, wenn alle fertig sind.
           </p>
         </div>
+      ) : !darf.status ? (
+        <Lesen titel="Status">{a ? statusText(a.status) : 'offen'}</Lesen>
       ) : (
         <div className={felder.feld}>
           <span>Status</span>
@@ -536,23 +681,33 @@ export function ToDoFenster({
           )}
         </div>
       )}
-      <div className={felder.feld}>
-        <span className={styles.kopf}>
-          Notizen
-          <SchalterKnopf an={karteNotiz} onClick={() => setKarteNotiz(!karteNotiz)}>
-            Auf Karte anzeigen
-          </SchalterKnopf>
-        </span>
-        <textarea
-          className={`${felder.eingabe} ${styles.text}`}
-          value={notiz}
-          rows={2}
-          disabled={laeuft}
-          placeholder="Neue Notiz – was ist der Stand? (kommt in den Verlauf)"
-          aria-label="Neue Notiz"
-          onChange={(e) => setNotiz(e.target.value)}
-        />
-      </div>
+      {darf.notiz && (
+        <div className={felder.feld}>
+          <span className={styles.kopf}>
+            Notizen
+            {darf.karte && (
+              <SchalterKnopf an={karteNotiz} onClick={() => setKarteNotiz(!karteNotiz)}>
+                Auf Karte anzeigen
+              </SchalterKnopf>
+            )}
+          </span>
+          <textarea
+            className={`${felder.eingabe} ${styles.text}`}
+            value={notiz}
+            rows={2}
+            disabled={laeuft}
+            placeholder="Neue Notiz – was ist der Stand? (kommt in den Verlauf)"
+            aria-label="Neue Notiz"
+            onChange={(e) => setNotiz(e.target.value)}
+          />
+        </div>
+      )}
+      {satz && (
+        <div className={styles.leitungSatz} role="note">
+          <Icon name="lock" size={16} />
+          <span>{satz}</span>
+        </div>
+      )}
       {a && (
         <div className={felder.feld}>
           <span className={styles.kopf}>Aus welcher Sitzung</span>

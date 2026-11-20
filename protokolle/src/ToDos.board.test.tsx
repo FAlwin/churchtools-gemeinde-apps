@@ -126,7 +126,13 @@ beforeEach(() => {
     ),
   );
   vi.mocked(S.aufgabeAendern).mockImplementation((_o, id, f) =>
-    Promise.resolve(f([ZEBRA, BEAMER, ARBEIT].find((x) => x.id === id)!)),
+    Promise.resolve(
+      f(
+        [ZEBRA, BEAMER, ARBEIT, a('Gemeinsam', { wer: [1, 23] }), a('Plakate', { wer: [] })].find(
+          (x) => x.id === id,
+        )!,
+      ),
+    ),
   );
 });
 
@@ -207,13 +213,71 @@ describe('Board (S7-3)', () => {
     await waitFor(() => expect(S.aufgabeAendern).toHaveBeenCalledTimes(1));
   });
 
-  it('Mitglied legt sein To-Do zu „Noch niemand“: bleibt sichtbar – keine Rückfrage', async () => {
+  it('Leitung legt ein To-Do zu „Noch niemand“: bleibt sichtbar – keine Rückfrage', async () => {
     merke({ ansicht: 'board', nach: 'person', aus: { gruppen: ['194'], zustaendig: [] } });
-    zeige([]);
+    zeige();
     await screen.findByRole('region', { name: 'To-Dos als Board' });
     zieh.ablegen!('11:Beamer', 'p1', 'ohne');
     await waitFor(() => expect(S.aufgabeAendern).toHaveBeenCalled());
     expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  describe('Mitglied (W9a): im Board nur, was die Rechte erlauben', () => {
+    const GETEILT = a('Gemeinsam', { wer: [1, 23] });
+    const OHNE = a('Plakate', { wer: [] });
+    const vorbereiten = (nach: 'status' | 'person') => {
+      merke({ ansicht: 'board', nach, aus: { gruppen: ['194'], zustaendig: [] } });
+      vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([BEAMER, GETEILT, OHNE]));
+      zeige([]); // nirgends Leitung
+    };
+
+    it('eigenes To-Do in „In Arbeit“ ziehen: geht', async () => {
+      vorbereiten('status');
+      await screen.findByRole('region', { name: 'To-Dos als Board' });
+      zieh.ablegen!('11:Beamer', 'offen', 'arbeit');
+      await waitFor(() => expect(S.aufgabeAendern).toHaveBeenCalled());
+      expect(vi.mocked(S.aufgabeAendern).mock.calls[0][2](BEAMER)).toMatchObject({
+        status: 'arbeit',
+      });
+    });
+
+    it('geteiltes To-Do einer anderen Person zuordnen (Spalte „Person“): Hinweis, nichts geschrieben', async () => {
+      vorbereiten('person');
+      await screen.findByRole('region', { name: 'To-Dos als Board' });
+      zieh.ablegen!('11:Gemeinsam', 'p1', 'ohne');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(screen.getByRole('alert').textContent).toMatch(/Zuständigen ändert nur die Leitung/);
+      expect(S.aufgabeAendern).not.toHaveBeenCalled();
+    });
+
+    it('eigenes To-Do zu „Noch niemand“ ziehen: Hinweis (nur abgeben an ein Mitglied), nichts geschrieben', async () => {
+      vorbereiten('person');
+      await screen.findByRole('region', { name: 'To-Dos als Board' });
+      zieh.ablegen!('11:Beamer', 'p1', 'ohne');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(screen.getByRole('alert').textContent).toMatch(/nur an ein anderes Mitglied abgeben/);
+      expect(S.aufgabeAendern).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('ein To-Do ohne Zuständigen in die Spalte einer anderen Person: Hinweis; in die eigene Spalte: eingetragen', async () => {
+      vorbereiten('person');
+      await screen.findByRole('region', { name: 'To-Dos als Board' });
+      zieh.ablegen!('11:Plakate', 'ohne', 'p23');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(S.aufgabeAendern).not.toHaveBeenCalled();
+      zieh.ablegen!('11:Plakate', 'ohne', 'p1');
+      await waitFor(() => expect(S.aufgabeAendern).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(S.aufgabeAendern).mock.calls[0][2](OHNE)).toMatchObject({ wer: [1] });
+    });
+
+    it('ein To-Do ohne Zuständigen in „In Arbeit“ ziehen: Hinweis – ohne „Das mache ich“ kein Status', async () => {
+      vorbereiten('status');
+      await screen.findByRole('region', { name: 'To-Dos als Board' });
+      zieh.ablegen!('11:Plakate', 'offen', 'arbeit');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(S.aufgabeAendern).not.toHaveBeenCalled();
+    });
   });
 
   it('Sortieren: Wahl gemerkt; „Manuell“ ordnet nach meiner Reihenfolge, Umordnen merkt sie', async () => {

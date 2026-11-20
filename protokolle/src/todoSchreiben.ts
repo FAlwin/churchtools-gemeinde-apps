@@ -7,10 +7,12 @@
  * noch einmal gespeichert, findet `aufgabeAendern` es vor und legt kein zweites an. Dasselbe beim Verschieben.
  */
 import {
+  aenderungVerboten,
   alsGeloescht,
+  anlegenVerboten,
   bearbeiten,
-  darfTeilSetzen,
   neueAufgabe,
+  toDoRechte,
   verschieben,
   type Aufgabe,
   type AufgabenStatus,
@@ -29,19 +31,19 @@ const WEG = 'Dieses To-Do gibt es nicht mehr – bitte neu laden.';
 const fehlt = (): never => {
   throw new ApiError(409, WEG);
 };
-const NUR_EIGENER_TEIL = 'Du kannst nur deinen eigenen Teil abhaken – die anderen nur die Leitung.';
 const jetzt = () => new Date().toISOString();
 
-/** Wer einen Teil setzt, der nicht seiner ist, ohne Leitung zu sein, scheitert mit einer Meldung (`darfTeilSetzen`). */
-function teileErlaubt(x: ToDoAenderung, ich: Schreibend, leitung: boolean): void {
-  if (x.teile?.some((t) => !darfTeilSetzen(t.person, ich.person, leitung)))
-    throw new ApiError(409, NUR_EIGENER_TEIL);
-}
+/** Verweigerung als 409 mit dem Satz – `fehlerMeldung` zeigt ihn, statt „ChurchTools antwortet gerade nicht“. */
+const verweigern = (grund: string | null): void => {
+  if (grund) throw new ApiError(409, grund);
+};
 
 /**
- * Ändern – `x` enthält nur, was im Fenster angefasst wurde; angewendet auf den frisch gelesenen Stand. Bei „Jeder für sich“
- * (W8a) darf ein Mitglied nur den **eigenen** Teil setzen, die Leitung (`leitung`) alle – geprüft hier im Schreibweg, nicht
- * nur in der Oberfläche (`darfTeilSetzen`). ChurchTools selbst kennt dafür kein Recht.
+ * Ändern – `x` enthält nur, was im Fenster angefasst wurde; angewendet auf den frisch gelesenen Stand. **Die Rechte gelten
+ * hier im Schreibweg, nicht nur in der Oberfläche** (W8a: eigener Teil bei „Jeder für sich“, W9a: Mitarbeiter ändern nur,
+ * was `toDoRechte` ihnen gibt – `aenderungVerboten`, geprüft am frisch gelesenen Stand). `leitung` = schreibt Protokolle in
+ * dieser Gruppe; ohne Angabe gilt: Mitarbeiter. `imEntwurf`: das To-Do steht noch in einem Protokoll-Entwurf. ChurchTools
+ * selbst kennt dafür kein Recht.
  */
 export function toDoAendern(
   ort: MitarbeitOrt,
@@ -49,12 +51,13 @@ export function toDoAendern(
   x: ToDoAenderung,
   ich: Schreibend,
   leitung = false,
+  imEntwurf = false,
 ): Promise<Aufgabe> {
   return aufgabeAendern(
     ort,
     id,
     (a) => {
-      teileErlaubt(x, ich, leitung);
+      verweigern(aenderungVerboten(a, x, { ich: ich.person, leitung, imEntwurf }));
       return bearbeiten(a, x, ich.person, jetzt());
     },
     fehlt,
@@ -82,7 +85,7 @@ export async function toDoAnlegen(
   ich: Schreibend,
   leitung = false,
 ): Promise<Aufgabe> {
-  teileErlaubt({ teile: q.teile }, ich, leitung);
+  verweigern(anlegenVerboten(q, { ich: ich.person, leitung }));
   const am = jetzt();
   const neu = bearbeiten(
     neueAufgabe({
@@ -109,9 +112,28 @@ export async function toDoAnlegen(
   );
 }
 
-/** Als gelöscht vermerken – nie hart gelöscht (wer in „Mitarbeit“ schreibt, dürfte sonst jeden Wert löschen). */
-export async function toDoLoeschen(ort: MitarbeitOrt, id: string, ich: Schreibend): Promise<void> {
-  await aufgabeAendern(ort, id, (a) => alsGeloescht(a, ich.person, jetzt()), fehlt, ich);
+/**
+ * Als gelöscht vermerken – nie hart gelöscht (wer in „Mitarbeit“ schreibt, dürfte sonst jeden Wert löschen). Ein Mitarbeiter
+ * löscht nur eigene To-Dos, die nicht mehr im Protokoll-Entwurf stehen (`toDoRechte`); `leitung` ohne Angabe = Mitarbeiter.
+ */
+export async function toDoLoeschen(
+  ort: MitarbeitOrt,
+  id: string,
+  ich: Schreibend,
+  leitung = false,
+  imEntwurf = false,
+): Promise<void> {
+  await aufgabeAendern(
+    ort,
+    id,
+    (a) => {
+      if (!toDoRechte(a, { ich: ich.person, leitung, imEntwurf }).loeschen)
+        throw new ApiError(409, 'Dieses To-Do löscht nur die Leitung.');
+      return alsGeloescht(a, ich.person, jetzt());
+    },
+    fehlt,
+    ich,
+  );
 }
 
 /**
@@ -127,9 +149,10 @@ export async function toDoVerschieben(q: {
   x: ToDoAenderung;
   wer: number[];
   ich: Schreibend;
+  /** Leitung der Gruppe, **aus der** das To-Do kommt – in eine andere Gruppe verschiebt nur sie (`toDoRechte.gruppe`). */
   leitung?: boolean;
 }): Promise<{ hinweis: string | null }> {
-  teileErlaubt(q.x, q.ich, q.leitung ?? false);
+  if (!q.leitung) throw new ApiError(409, 'In eine andere Gruppe verschiebt nur die Leitung.');
   const am = jetzt();
   const wohin = {
     gruppe: q.nach.gruppe,

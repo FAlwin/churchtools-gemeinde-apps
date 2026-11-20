@@ -157,7 +157,8 @@ export async function protokollLoeschen(q: LoeschPlan): Promise<LoeschErgebnis> 
         (await aufgabenWerte(mitarbeit)).map((x) => x.aufgabe),
         q.ort.sitzung,
       ).map((a) => a.id);
-      for (const id of ids) await toDoLoeschen(mitarbeit, id, q.ich);
+      // Ein Protokoll löscht, wer Protokolle schreibt – das ist die Leitung (`leitungIn`); sie darf jedes To-Do löschen.
+      for (const id of ids) await toDoLoeschen(mitarbeit, id, q.ich, true);
     });
 
   // 3. Termin, dann Gruppentreffen.

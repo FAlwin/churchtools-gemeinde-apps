@@ -16,7 +16,9 @@ const WEGE: Record<
 > = {
   anmeldungen: {
     start: 'Neue Veranstaltung',
-    gehe: (p) => p.getByText('Lobpreisabend', { exact: true }).first().click(),
+    // Seit B7 ist jede Veranstaltung eine ganze Zeile als Knopf; die Zeile oben unter „Braucht deine Aufmerksamkeit“
+    // ist ein Link nach ChurchTools (Nachrücken) – deshalb der Knopf, nicht der erste Text.
+    gehe: (p) => p.getByRole('button', { name: /Lobpreisabend/ }).first().click(),
     ziel: /#\/v\/40$/,
     da: 'Anmeldeschluss',
   },

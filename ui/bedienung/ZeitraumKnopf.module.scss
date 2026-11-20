@@ -239,3 +239,24 @@
     cursor: default;
   }
 }
+
+// „＋ Früheren / Späteren Termin dazunehmen“ im Fenster (B3, E6): zwei leise Zeilen unter „Ab heute“.
+.dazu {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--hair);
+
+  .option {
+    justify-content: flex-start;
+
+    svg {
+      flex: none;
+      color: var(--text2);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+}

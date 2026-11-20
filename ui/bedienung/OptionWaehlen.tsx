@@ -9,6 +9,12 @@ import styles from './OptionWaehlen.module.scss';
 export interface Option {
   label: string;
   onClick: () => void;
+  /** Ein Symbol vor dem Wort (Menü „⋯“ der Werkzeugzeile, R6: jeder Eintrag mit Symbol und Wort). */
+  symbol?: ReactNode;
+  /** Diese Möglichkeit gilt gerade (Ansichtswahl am Handy) – fett und blau. */
+  gewaehlt?: boolean;
+  /** Ausgegraut und nicht tippbar (z. B. „Teilen“, solange nichts zu teilen da ist). */
+  gesperrt?: boolean;
   /** Eine Linie davor – trennt „… dahinter“ von „… davor einfügen“ wie in ChurchTools (Alwin, 30.10.2026). */
   trenner?: boolean;
 }
@@ -22,9 +28,12 @@ export function MenueListe({
   optionen,
   schliessen,
   nachOben = false,
+  titel = 'Option wählen',
 }: {
   optionen: Option[];
   schliessen: () => void;
+  /** Name des Menüs für Screenreader – „Mehr“ beim „⋯“-Menü der Werkzeugzeile. */
+  titel?: string;
   /** Über dem Knopf statt darunter – für einen Knopf in der Fußzeile eines Fensters („Darunter einfügen“). */
   nachOben?: boolean;
 }) {
@@ -32,7 +41,7 @@ export function MenueListe({
     <div
       className={`${styles.menue}${nachOben ? ` ${styles.nachOben}` : ''}`}
       role="menu"
-      aria-label="Option wählen"
+      aria-label={titel}
     >
       {optionen.map((o) => (
         <button
@@ -40,11 +49,13 @@ export function MenueListe({
           type="button"
           role="menuitem"
           className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
+          disabled={o.gesperrt}
           onClick={() => {
             schliessen();
             o.onClick();
           }}
         >
+          {o.symbol}
           {o.label}
         </button>
       ))}
@@ -88,8 +99,11 @@ export function AuswahlBlatt({
               key={o.label}
               type="button"
               className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
+              disabled={o.gesperrt}
+              aria-current={o.gewaehlt || undefined}
               onClick={o.onClick}
             >
+              {o.symbol}
               {o.label}
             </button>
           ))}
@@ -148,17 +162,24 @@ export function KnopfMitMenue({
   optionen,
   knopf,
   nachOben = false,
+  titel,
 }: {
   optionen: Option[];
   knopf: (a: { offen: boolean; umschalten: () => void }) => ReactNode;
   nachOben?: boolean;
+  titel?: string;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
   return (
     <div className={styles.huelle} ref={rahmen}>
       {knopf({ offen, umschalten: () => setOffen((o) => !o) })}
       {offen && (
-        <MenueListe optionen={optionen} schliessen={() => setOffen(false)} nachOben={nachOben} />
+        <MenueListe
+          optionen={optionen}
+          schliessen={() => setOffen(false)}
+          nachOben={nachOben}
+          titel={titel}
+        />
       )}
     </div>
   );

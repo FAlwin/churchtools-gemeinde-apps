@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mehrEintrag, mehrEintragOder } from './mehrMenue.testutil';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { planAus } from '@shared/dienstplan/plan';
@@ -252,9 +253,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(screen.queryAllByRole('button', { name: 'Verschieben' })).toHaveLength(0);
     expect(screen.queryByRole('button', { name: /Ablauf anlegen/ })).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     // Termin 10 (Kalender 2): Griffe, und das grüne Plus steht oben neben „3 Punkte“ – nicht mehr als „+ Punkt“ unter
     // dem Ablauf (E6-6c).
     expect(within(ablaufZelle(0)).getAllByRole('button', { name: 'Verschieben' })).toHaveLength(3);
@@ -285,48 +284,43 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(screen.queryAllByRole('button', { name: 'Verschieben' })).toHaveLength(0);
   });
 
-  it('„Ablauf bearbeiten“ steht mit Wort oben in der Leiste (E6-6c), nicht in der Tabelle; im Bearbeiten „Fertig“', async () => {
+  it('„Ablauf bearbeiten“ liegt im „⋯“-Menü (R6, B3), nicht in der Tabelle; im Bearbeiten steht „Fertig“ als blauer Knopf in der Zeile', async () => {
     ct();
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    const knopf = screen.getByRole('button', {
-      name: 'Ablauf bearbeiten – alle gezeigten Termine',
-    });
-    expect(knopf.textContent).toBe('Ablauf bearbeiten');
-    expect(knopf.closest('table')).toBeNull();
-    fireEvent.click(knopf);
+    // Kein eigener Knopf mehr in der Zeile – und „Fertig“ gibt es erst im Bearbeiten.
+    expect(screen.queryByRole('button', { name: /Ablauf bearbeiten/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Fertig' })).toBeNull();
+    const eintrag = mehrEintragOder('Ablauf bearbeiten')!;
+    expect(eintrag.closest('table')).toBeNull();
+    mehrEintrag('Ablauf bearbeiten');
+    // Das Menü ist zu, die Aktion lief (nicht vom Schließen zurückgesetzt): es wird bearbeitet.
+    expect(screen.queryByRole('menu', { name: 'Mehr' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Fertig' }).textContent).toBe('Fertig');
+    expect(within(ablaufZelle(0)).getAllByRole('button', { name: 'Verschieben' })).toHaveLength(3);
+    // Im Bearbeiten ist „Ablauf bearbeiten“ nicht noch einmal im Menü.
+    expect(mehrEintragOder('Ablauf bearbeiten')).toBeNull();
   });
 
-  it('„Vorlagen“ (E10-V3a) steht links neben „Ablauf bearbeiten“ und öffnet die Seite; ohne Anschluss kein Knopf', async () => {
+  it('„Vorlagen“ (E10-V3a) liegt im „⋯“-Menü und öffnet die Seite; ohne Anschluss kein Eintrag', async () => {
     ct();
     const onVorlagen = vi.fn();
     zeige({ onVorlagen });
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    const vorlagen = screen.getByRole('button', { name: 'Ablaufvorlagen ansehen und bearbeiten' });
-    const bearbeiten = screen.getByRole('button', {
-      name: 'Ablauf bearbeiten – alle gezeigten Termine',
-    });
-    expect(vorlagen.textContent).toBe('Vorlagen');
-    // links neben dem anderen: davor im Dokument, im selben Kasten
-    expect(vorlagen.parentElement).toBe(bearbeiten.parentElement);
-    expect(
-      vorlagen.compareDocumentPosition(bearbeiten) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    fireEvent.click(vorlagen);
+    expect(screen.queryByRole('button', { name: /Ablaufvorlagen/ })).toBeNull();
+    mehrEintrag('Vorlagen');
     expect(onVorlagen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu', { name: 'Mehr' })).toBeNull();
     cleanup();
     zeige();
-    expect(screen.queryByRole('button', { name: /Ablaufvorlagen/ })).toBeNull();
+    expect(mehrEintragOder('Vorlagen')).toBeNull();
   });
 
   it('das Plus neben „N Punkte“ klappt das kleine Menü auf – kein Blatt von unten – und öffnet das Punkt-Fenster', async () => {
     ct();
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     const plus = within(gruppenZeile()[0]).getByRole('button', {
       name: 'Eintrag hinzufügen – Gottesdienst, So, 18.10.',
     });
@@ -342,9 +336,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     ct({ gesperrt10: true });
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     expect(within(gruppenZeile()[0]).getByLabelText('Abgeschlossen – nur ansehen')).toBeTruthy();
     expect(
       within(gruppenZeile()[0]).queryByRole('button', { name: /Eintrag hinzufügen/ }),
@@ -355,16 +347,16 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     ct();
     zeige({ start: startFuer() });
     await waitFor(() => expect(gruppenZeile()[0].textContent).toBe('3 Punkte'));
-    expect(screen.queryByRole('button', { name: /Ablauf bearbeiten/ })).toBeNull();
+    // Das Menü gibt es (Teilen, Hilfe) – nur „Ablauf bearbeiten“ steht nicht darin.
+    expect(mehrEintragOder('Teilen')).not.toBeNull();
+    expect(mehrEintragOder('Ablauf bearbeiten')).toBeNull();
   });
 
   it('bearbeiten: Punkt antippen → Punkt-Fenster, ein PUT, danach neu gelesen – auch im StrictMode', async () => {
     const c = ct();
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     fireEvent.click(within(ablaufZelle(0)).getAllByRole('button', { name: 'Bearbeiten' })[0]);
     fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
     const vorher = c.gelesen.filter((id) => id === '10').length;
@@ -382,9 +374,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     const c = ct({ erstesNeuLesenHalten: true });
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     const speichere = async (titel: string, nr: number) => {
       fireEvent.click(within(ablaufZelle(0)).getAllByRole('button', { name: 'Bearbeiten' })[0]);
       fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: titel } });
@@ -424,9 +414,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
       'false',
     );
     await waitFor(() => expect(gruppenZeile()[0].textContent).toBe('3 Punkte'));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-    );
+    mehrEintrag('Ablauf bearbeiten');
     expect(screen.getByRole('button', { name: /^Ablauf$/ }).getAttribute('aria-expanded')).toBe(
       'true',
     );

@@ -199,3 +199,43 @@ describe('ZeitraumKnopf (14.10.2026)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
+
+describe('ZeitraumKnopf – „＋ früherer / späterer Termin“ im Fenster (B3)', () => {
+  function mit(dazu?: Parameters<typeof ZeitraumKnopf>[0]['dazu']) {
+    render(
+      <ZeitraumKnopf
+        zeitraum={{ art: 'abHeute' }}
+        zeile1="18.10. – 08.11.2026"
+        zeile2="4 Termine"
+        heute="2026-12-14"
+        abHeuteZusatz="passend zur Fensterbreite"
+        dazu={dazu}
+        onWahl={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+  }
+
+  it('ohne Angabe gibt es die Zeilen nicht (Abwesenheiten)', () => {
+    mit();
+    expect(screen.queryByRole('button', { name: /dazunehmen/ })).toBeNull();
+    cleanup();
+  });
+
+  it('beide Zeilen rufen ihre Aktion; das Fenster bleibt offen; gesperrt, wo nichts mehr kommt', () => {
+    const frueher = vi.fn();
+    const spaeter = vi.fn();
+    mit({
+      frueher: { aktiv: true, onClick: frueher },
+      spaeter: { aktiv: false, onClick: spaeter },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Früheren Termin dazunehmen' }));
+    expect(frueher).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog', { name: 'Zeitraum wählen' })).toBeTruthy();
+    const nach = screen.getByRole('button', { name: 'Späteren Termin dazunehmen' });
+    expect((nach as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(nach);
+    expect(spaeter).not.toHaveBeenCalled();
+    cleanup();
+  });
+});

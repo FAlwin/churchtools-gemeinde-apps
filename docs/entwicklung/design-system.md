@@ -90,12 +90,24 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
     (nur Maus) hellblau hinterlegt; in Werkzeugzeilen der Normalfall (R2). `still` und `haupt`/`neu`/`gefahr`
     schließen sich im Typ aus; `offen`/`aktiv` behalten ihre hellblaue Fläche. **Am Handy** (Grenze `HANDY_BREITE`)
     bekommt der stille Knopf von selbst Rand und Fläche zurück (R12 – „kein Knopf ohne Rahmen“); dafür gibt es keine
-    eigene Angabe. Noch nutzt keine App die Stufe (ab B3).
+    eigene Angabe. Seit B3 nutzen sie die Werkzeugzeilen (`MehrMenue`, `FilterKnopf still`).
   - **`SuchLupe`** (`ui/bedienung`, aus der `SuchLeiste` der Protokolle gehoben; R7): Lupe rechts neben den Reitern,
     ein Tipp klappt das Feld auf und setzt den Cursor hinein; ✕ oder Esc (`useEscape`) klappt zu. Die App hält
     `offen` und `begriff` selbst. Feste Suchfelder auf Seiten (nicht in Fenstern) wechseln später darauf: Organigramm
     `Personen`, Dienstplaner `Fokus`/`WerKann`, Anmeldungen `AnmeldungenReiter`/`BaukastenLeiste`, Musik-App
     `LiedSucheKopf`.
+  - **`Werkzeugzeile`** (`ui/bedienung`, B3; R5/R12/E6/E9): die eine Zeile über dem Inhalt einer Arbeitsansicht – `links` (Ansicht),
+    `mitte` (Zeitraum, bleibt in der Fenstermitte: Raster `1fr auto 1fr`), `rechts` (Filter, „⋯“). Am Handy zweizeilig (oben
+    Ansicht und Werkzeuge, darunter der Zeitraum über die ganze Breite) und mit Rahmen um jedes Element der rechten Seite. Dazu
+    **`AnsichtWahl`** (Rechner: `Segment verbunden`; Handy: blauer Knopf in Wortbreite mit Pfeil, klappt ein `AuswahlBlatt` auf) und
+    **`FilterKnopf still`** (ohne Rand; Abschnitt `anzeige` für Schalter wie „Breite Spalten“ – zählt nicht in die Zahl am Knopf).
+    Der Zeitraum ist ein gerahmtes Element ‹ Zeitraum ›; „＋ früherer / späterer Termin“ liegen im Fenster des `ZeitraumKnopf`
+    (`dazu`). Wer eine Werkzeugzeile braucht, nimmt diese Bausteine (B4–B8) und hängt nichts Eigenes an.
+  - **`MehrMenue`** (`ui/bedienung`, B3; R6/E3): das „⋯“-Menü für Seltenes. Rechner: kleines Menü (`KnopfMitMenue`), Handy: Blatt
+    von unten (`AuswahlBlatt`). Jeder Eintrag (`Option`) mit `symbol` und Wort, `gesperrt` für „gerade nicht möglich“; Linien
+    zwischen Gruppen über `trenner`. **Erst schließt das Menü, dann läuft die Aktion** – eine Aktion, die ein Fenster öffnet, wird
+    sonst vom Schließen zurückgesetzt (Lehre 05.08.2026); jeder Eintrag bekommt einen eigenen Test (`MehrMenue.test.tsx`).
+    Fenster, die ein Eintrag öffnet, gehören der Seite (eigener Zustand), nicht dem Menü (`HilfeFenster`).
   - **Wächter `ui/design/bedienKnoepfe.test.ts`:** zählt je App rohe `<button>` und feste Pixelhöhen in Knopf-Regeln
     und hält den Stand als Obergrenze fest. Steigt eine Zahl, nimm einen Baustein aus `ui/bedienung`; fällt sie,
     verlangt der Test die niedrigere Obergrenze – **Obergrenzen nie erhöhen**.

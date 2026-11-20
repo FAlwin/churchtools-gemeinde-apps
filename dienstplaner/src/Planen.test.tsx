@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  breiteSpaltenUmschalten,
+  mehrEintrag,
+  oeffneFilter,
+  zeitraumDazu,
+} from './mehrMenue.testutil';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { diensteAus } from '@shared/ct/dienste';
@@ -92,7 +98,7 @@ describe('Planen – Tabelle (E3-4)', () => {
     zeige();
     // Der lange Erklär-Absatz steht nicht mehr unter der Tabelle (Alwin, 17.11.2026).
     expect(screen.queryByText(/Welche Dienste du siehst, entscheidet ChurchTools/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Hilfe zu Planen' }));
+    mehrEintrag('Hilfe');
     expect(screen.getByRole('dialog', { name: 'Hilfe · Planen' })).toBeTruthy();
     expect(
       screen.getByText(/Deine eigenen Dienste findest du immer unter Start und Dienste\./),
@@ -359,11 +365,11 @@ describe('Planen – Terminleiste (E3-5)', () => {
     schmal();
     zeige2();
     const leiste = within(screen.getByRole('group', { name: 'Zeitraum' }));
-    fireEvent.click(leiste.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    zeitraumDazu('Späteren Termin dazunehmen');
     expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gebetsabend']);
     const knopf = leiste.getByRole('button', { name: /^Zeitraum:/ });
     expect(knopf.textContent).toBe('18.10. – 21.10.20262 Termine');
-    fireEvent.click(knopf);
+    // Das Fenster ist nach ＋ noch offen.
     fireEvent.click(screen.getByRole('button', { name: /^Ab heute/ }));
     expect(spaltenNamen()).toEqual(['Gottesdienst']);
     expect(knopf.textContent).toBe('18.10.20261 Termin · passend zur Fensterbreite');
@@ -438,7 +444,7 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
       within(screen.getByRole('dialog', { name: 'Filter' }))
         .getAllByRole('group')
         .map((g) => g.querySelector('legend')?.textContent),
-    ).toEqual(['Kalender', 'Veranstaltungen', 'Gruppen']);
+    ).toEqual(['Kalender', 'Veranstaltungen', 'Gruppen', 'Anzeige']);
     const kalender = within(screen.getByRole('group', { name: 'Kalender' }));
     fireEvent.click(kalender.getByRole('checkbox', { name: 'Gemeindeveranstaltungen' }));
     expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gottesdienst', 'Gottesdienst']);
@@ -462,18 +468,23 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
     expect(screen.getByText(/Nichts eingeblendet – über „Filter“/)).toBeTruthy();
   });
 
-  it('Spaltenbreite schmal/breit als Symbole – mit Namen, gemerkt (29.10.2026)', () => {
+  it('Spaltenbreite: kein Umschalter mehr in der Zeile, sondern „Breite Spalten“ im Filter unter „Anzeige“ – gemerkt, und ohne die Zahl am Knopf zu ändern (B3)', () => {
     zeige2();
-    const gruppe = within(screen.getByRole('group', { name: 'Spaltenbreite' }));
-    // Nur zwei, und S/M/L stehen nicht mehr da.
-    expect(gruppe.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Schmale Spalten',
-      'Breite Spalten',
-    ]);
-    expect(gruppe.getByRole('button', { name: 'Schmale Spalten' }).textContent).toBe('');
-    fireEvent.click(gruppe.getByRole('button', { name: 'Breite Spalten' }));
+    expect(screen.queryByRole('group', { name: 'Spaltenbreite' })).toBeNull();
+    const filter = within(oeffneFilter());
+    const haken = filter.getByRole<HTMLInputElement>('checkbox', { name: 'Breite Spalten' });
+    expect(haken.checked).toBe(false);
+    expect(filter.getByText('Anzeige')).toBeTruthy();
+    fireEvent.click(haken);
     expect(JSON.parse(localStorage.getItem('dienstplaner.planen.ansicht')!)).toMatchObject({
       breite: 'breit',
+    });
+    expect(haken.checked).toBe(true);
+    // Eine Anzeige blendet nichts aus: der Knopf zählt sie nicht.
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+    fireEvent.click(haken);
+    expect(JSON.parse(localStorage.getItem('dienstplaner.planen.ansicht')!)).toMatchObject({
+      breite: 'schmal',
     });
   });
 });
@@ -801,7 +812,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     expect(
       await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' }),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    zeitraumDazu('Späteren Termin dazunehmen');
     // Neun Wochen Vorlauf – darin liegen der 01.11. und der 08.11.; gezeigt wird nur der erste.
     expect(laden).toHaveBeenLastCalledWith('2026-10-01', '2027-01-02');
     expect(
@@ -816,7 +827,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
       monat: '2026-10',
       dazu: { davor: 0, danach: 1 },
     });
-    fireEvent.click(knopf());
+    // Das Fenster blieb nach ＋ offen (man holt mehrere hintereinander).
     expect(screen.getByRole('button', { name: 'Oktober 2026' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
@@ -851,7 +862,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     zeigeZ(laden);
     waehle('Oktober 2026');
     await screen.findByRole('button', { name: /^Zeitraum: Oktober 2026/ });
-    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    zeitraumDazu('Späteren Termin dazunehmen');
     expect(
       await screen.findByRole('button', { name: /^Zeitraum: 01\.10\. – 08\.11\.2026/ }),
     ).toBeTruthy();
@@ -866,7 +877,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     zeigeZ(laden);
     waehle('Oktober 2026');
     await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
-    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    zeitraumDazu('Späteren Termin dazunehmen');
     expect(screen.queryByText('Termine werden geladen …')).toBeNull();
     expect(spaltenNamen()).toHaveLength(3);
     await act(async () => fertig(await wieCt('2026-10-01', '2027-01-02')));
@@ -883,7 +894,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     zeigeZ(laden);
     waehle('Oktober 2026');
     await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
-    fireEvent.click(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    zeitraumDazu('Späteren Termin dazunehmen');
     expect(await screen.findByText(/antwortet gerade nicht/)).toBeTruthy();
     expect(spaltenNamen()).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
@@ -897,7 +908,7 @@ describe('Planen – Zeitraum-Knopf (14.10.2026)', () => {
     zeigeZ(laden);
     waehle('Oktober 2026');
     await screen.findByRole('button', { name: 'Zeitraum: Oktober 2026, 3 Termine' });
-    fireEvent.click(screen.getByRole('button', { name: 'Früheren Termin dazunehmen' }));
+    zeitraumDazu('Früheren Termin dazunehmen');
     expect(laden).toHaveBeenLastCalledWith('2026-07-30', '2026-10-31');
     await waitFor(() =>
       expect(knopf().getAttribute('aria-label')).toBe('Zeitraum: Oktober 2026, 3 Termine'),
@@ -2507,7 +2518,7 @@ describe('Planen – von der Startseite: eine Gruppe, nächste 6 Wochen (Wunsch 
     );
     zeigeF();
     await hinweis();
-    fireEvent.click(screen.getByRole('button', { name: 'Breite Spalten' }));
+    breiteSpaltenUmschalten();
     const g = JSON.parse(localStorage.getItem(ANSICHT)!);
     expect(g.breite).toBe('breit');
     expect(g.zeitraum).toEqual({ art: 'monat', monat: '2026-12' });

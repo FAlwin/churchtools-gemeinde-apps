@@ -207,3 +207,64 @@ describe('FilterKnopf – Unterliste unter einer Möglichkeit (Wunsch 10)', () =
     expect(screen.getByRole('button', { name: 'Filter, 2 ausgeblendet' })).toBeTruthy();
   });
 });
+
+describe('FilterKnopf – Abschnitt „Anzeige“ (R6, B3)', () => {
+  function Anzeige() {
+    const [aus, setAus] = useState<string[]>(['breit']);
+    const [gruppen, setGruppen] = useState<string[]>([]);
+    return (
+      <FilterKnopf
+        abschnitte={[
+          {
+            titel: 'Gruppen',
+            optionen: ['Programm', 'Technik'].map((t) => ({ wert: t, text: t })),
+            aus: gruppen,
+            onAus: setGruppen,
+          },
+          {
+            titel: 'Anzeige',
+            anzeige: true,
+            optionen: [{ wert: 'breit', text: 'Breite Spalten' }],
+            aus,
+            onAus: setAus,
+          },
+        ]}
+      />
+    );
+  }
+
+  it('der Abschnitt gilt mit einer einzigen Möglichkeit als Wahl und schaltet um', () => {
+    render(<Anzeige />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    const haken = screen.getByRole('checkbox', { name: 'Breite Spalten' });
+    expect(angehakt(haken)).toBe(false);
+    fireEvent.click(haken);
+    expect(angehakt(haken)).toBe(true);
+  });
+
+  it('blendet nichts aus – die Zahl am Knopf zählt die Anzeige nicht, wohl aber einen Filter', () => {
+    render(<Anzeige />);
+    // „Breite Spalten“ ist aus (`aus: ['breit']`), trotzdem steht keine Zahl am Knopf.
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Technik' }));
+    expect(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' })).toBeTruthy();
+  });
+
+  it('allein (ohne Filter) gibt es den Knopf trotzdem', () => {
+    render(
+      <FilterKnopf
+        abschnitte={[
+          {
+            titel: 'Anzeige',
+            anzeige: true,
+            optionen: [{ wert: 'breit', text: 'Breite Spalten' }],
+            aus: [],
+            onAus: () => {},
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+  });
+});

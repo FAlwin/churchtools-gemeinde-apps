@@ -17,6 +17,11 @@
 >   planen darf, **teilt hier ein** wie in „Planen“ (freier Platz → „Wer kann?“, Entwurf, Zauberstab je Gruppe) und
 >   sendet mit **Ansehen und senden** nur die Entwürfe dieses Termins.
 > - **Planen** (nur Planer): Termine als Spalten, Dienstgruppen und Dienste als Zeilen, der Ablauf als Gruppe oben.
+>   **Die Werkzeugzeile** (seit „Ruhige Bedienung“ B3, 20.11.2026): links die Ansicht (Matrix · Personen · Wer wie oft?), in der
+>   Fenstermitte der Zeitraum mit ‹ ›, rechts **Filter** und **⋯**; die Lupe „Person hervorheben“ steht rechts neben den Reitern.
+>   Im **⋯-Menü** liegen Ablauf bearbeiten, Vorlagen, Erinnern, Teilen und Hilfe; „Breite Spalten“ steht im Filter unter „Anzeige“,
+>   „＋ früherer / späterer Termin“ im Fenster des Zeitraums. Am Handy zweizeilig (Ansichtswahl als blauer Knopf, Lupe, Filter, ⋯
+>   mit Rahmen; darunter der Zeitraum). Freie Plätze sind ein graues, gestricheltes „＋ frei“, rot ist nur die Zahl am Termin.
 >   Freien Platz antippen → „Wer kann?“ (Abschnitte nach den Antworten: Ja, Vielleicht, keine Antwort, kann nicht) → **Entwurf**;
 >   Zauberstab (erst Ja, dann Vielleicht, dann ohne Antwort – je Stufe nach der ChurchTools-Rangfolge),
 >   Vorlieben je Person (Stift), Platzzahl (Regler: auch Dienste ein- und ausschalten, Terminvorlage übernehmen), „Infos & Dateien“ je Termin, **„Personen“** (Raster: Zeile je Person und Dienst; Klick in eine leere Zelle = Entwurf als Anfrage, nochmal = direkt, nochmal = weg; Klick auf eine bestehende Einteilung = dasselbe Fenster wie in der Matrix, zurückgezogene stehen rot durchgestrichen; Zauberstab je Dienst im Block-Kopf; Antworten als Fläche: Ja grün, Vielleicht gelb, Nein/abwesend rot schraffiert), Vorgabe **„Anfrage oder direkt“** je Dienst (Symbol am Dienstnamen, je Gerät), „Wer wie oft?“, Filter nach Kalender,
@@ -31,7 +36,7 @@
 >   dazu eine Notiz und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
 > - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
->   „?“ ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
+>   „?“ (in Planen der Eintrag „Hilfe“ im ⋯-Menü) ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
 >   Kurze Hinweise in Fenstern, Status-, Fehler- und Leer-Texte und Warnungen bleiben dort, wo sie stehen.
 >
 > Hell oder dunkel wie in ChurchTools gewählt. Diese Anleitung wächst mit.
@@ -365,8 +370,8 @@ verbergen“ sind nie fokussierbar.
   und der Knopf **„im Plan zeigen“**: Fenster zu, Fokus auf die Person; die Leiste zeigt zusätzlich **„‹ Zurück zu ‚Wer kann?‘
   für Ton · So, 20.12.“** (dasselbe Fenster für denselben Platz, auch nach „Andere Person wählen“) und **„Hier eintragen“**
   (legt den Entwurf mit derselben Funktion an wie die Wahl im Fenster – `useEinteilen.trageEin` → `eintragenFuer.onWahl`;
-  fehlt, wo man dort nicht eintragen darf). (3) **Suchfeld „Person hervorheben“** in der Werkzeugleiste (am Handy hinter einem
-  Such-Symbol): Treffer am Anfang des Namens oder eines Wortes, Vorschläge mit Kreis, Name und Diensten – aus den im
+  fehlt, wo man dort nicht eintragen darf). (3) **Lupe „Person hervorheben“** (seit B3 rechts neben den Reitern, am Handy in der Werkzeugzeile; ein Tipp klappt das Feld auf,
+  Esc oder ✕ klappt zu): Treffer am Anfang des Namens oder eines Wortes, Vorschläge mit Kreis, Name und Diensten – aus den im
   geladenen Plan Eingeteilten. (4) In **„Personen“** das Antippen des Namens (zweites Antippen: „Fokus aus“).
 - **Dauer:** bleibt beim Wechsel Matrix ↔ Personen ↔ Wer wie oft? und beim Blättern; endet mit „Fokus aus“ oder beim
   Verlassen von Planen; wird **nicht** gemerkt. Eine andere Wahl löst die Person ab (immer nur eine).
@@ -375,9 +380,8 @@ verbergen“ sind nie fokussierbar.
   Mini-Zeile rechnen alle daraus. Farben: `--fokus`, `--fokus-grund`, `--fokus-text` in `ui/design/_farben.scss` (Dunkel:
   nur die Schrift in `_variables.scss`).
 
-**Erinnern** (E5c-5, 19.11.2026; Entwurf `e5c-5-erinnern.html`, Variante B „Alles in einem“): In **Planen** steht neben „Teilen“ der
-Knopf **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planbaren Dienstgruppe im gezeigten Plan, am Handy nur das
-Symbol). Er schickt **eine Mail an jede Person, der noch eine Antwort aus „Wann kann ich?“ fehlt** – Absender ist der Planer
+**Erinnern** (E5c-5, 19.11.2026; Entwurf `e5c-5-erinnern.html`, Variante B „Alles in einem“): In **Planen** liegt im **⋯-Menü** (zusammen mit „Teilen“, seit B3) der
+Eintrag **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planbaren Dienstgruppe im gezeigten Plan). Er schickt **eine Mail an jede Person, der noch eine Antwort aus „Wann kann ich?“ fehlt** – Absender ist der Planer
 (ChurchTools verschickt, `POST /events/send`). **Es wird wirklich verschickt** – auf der Test-Instanz nur an eigene Konten ausprobieren.
 
 - **Das Fenster:** oben die **Dienstgruppen** als Knöpfe mit der Zahl der Fehlenden („Musik · 3“; vorgewählt ist die erste Gruppe mit
@@ -406,8 +410,8 @@ Symbol). Er schickt **eine Mail an jede Person, der noch eine Antwort aus „Wan
 - **Offen/ungemessen:** Dürfen Planer ohne Admin-Recht `POST /events/send` aufrufen? (Gemessen nur mit einem Konto mit allen
   Rechten.) Fehlt das Recht, steht „ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.“
 
-**Ablaufvorlagen ansehen und bearbeiten** (E10-V3a, 17.11.2026; Entwurf `e10-vorlagen.html`): In **Planen** steht in der
-Werkzeugleiste links neben „Ablauf bearbeiten“ der Knopf **„Vorlagen“** – kein eigener Reiter, „Planen“ bleibt markiert,
+**Ablaufvorlagen ansehen und bearbeiten** (E10-V3a, 17.11.2026; Entwurf `e10-vorlagen.html`): In **Planen** liegt im
+**⋯-Menü** (seit B3, vorher ein Knopf links neben „Ablauf bearbeiten“) der Eintrag **„Vorlagen“** – kein eigener Reiter, „Planen“ bleibt markiert,
 **„‹ Planen“** führt zurück. Die Seite hat die Adresse `#/vorlagen`, eine geöffnete Vorlage `#/vorlage/<ID>` (Zurück im Browser
 und Neuladen gehen).
 

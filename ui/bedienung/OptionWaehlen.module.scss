@@ -69,6 +69,21 @@
   &:last-child {
     border-bottom: none;
   }
+  // Mit Symbol (Menü „⋯“): Symbol und Wort in einer Zeile.
+  svg {
+    flex: none;
+    margin-right: 12px;
+    vertical-align: -3px;
+    color: var(--text2);
+  }
+  &[aria-current] {
+    color: var(--blue-ink);
+    font-weight: 700;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
   @media (hover: hover) {
     &:hover {
       background: var(--blue-soft);

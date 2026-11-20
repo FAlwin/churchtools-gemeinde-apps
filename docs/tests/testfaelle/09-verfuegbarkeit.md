@@ -470,10 +470,10 @@ anderen Personen vor dem Senden **abwählen**.
 Musik“ mit dem Recht „sehen“, mehrere kommende Termine mit Musik-Diensten und ein Mitglied der Gruppe (du oder ein Test-Konto mit Mail-Adresse), das
 für mindestens einen Termin **weder Ja/Vielleicht noch Nein** (Abwesenheit) eingetragen hat und dort nicht eingeteilt ist.
 
-**Das muss passieren:** In Planen steht neben „Teilen“ der Knopf „Erinnern“. Das Fenster nennt die Fehlenden mit ihren offenen Terminen, zeigt vorher
+**Das muss passieren:** In Planen liegt „Erinnern“ im **⋯**-Menü (mit „Teilen“; seit B3, vorher ein Knopf in der Zeile). Das Fenster nennt die Fehlenden mit ihren offenen Terminen, zeigt vorher
 die Mail und verschickt je Person eine eigene.
 
-1. In Planen auf „Erinnern“ tippen: Die Unterzeile nennt den gezeigten Zeitraum, die Dienstgruppen stehen als Knöpfe mit der Zahl der Fehlenden da;
+1. In Planen **⋯ → Erinnern** tippen: Die Unterzeile nennt den gezeigten Zeitraum, die Dienstgruppen stehen als Knöpfe mit der Zahl der Fehlenden da;
    die erste Gruppe mit Fehlenden ist gewählt. Eine Gruppe, deren Antworten du nicht sehen darfst, ist gesperrt – mit Grund darunter.
 2. Alle Personen außer dir abwählen („An 1 Person senden“). Bei dir „Vorschau“ antippen: Betreff, „Hallo <Vorname>,“, deine offenen Termine und der Knopf
    „Im Dienstplaner eintragen“.
@@ -489,7 +489,7 @@ die Mail und verschickt je Person eine eigene.
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/dienstplan/erinnern.ts`, `dienstplaner/src/erinnernSenden.ts`, `dienstplaner/src/ErinnernFenster.tsx`, `dienstplaner/src/ErinnernErgebnis.tsx`, `dienstplaner/src/ladeErinnern.ts`, `dienstplaner/src/Planen.tsx`, `ui/erweiterung/kuerzel.ts`
-- **Automatisiert:** weitgehend – `shared/dienstplan/erinnern.test.ts` (Regel „wer fehlt“, gesperrte Lage, Empfänger über Gruppen, Mail-Text mit Maskierung), `dienstplaner/src/erinnernSenden.test.ts` (alle Zweige: Erfolg, abgelehnt, 422, 401, 403, 429/5xx/Netz = unklar, Kopie nur einmal, nur die übrigen), `dienstplaner/src/Planen.erinnern.test.tsx` (Knopf, Fenster, Vorschau = Versand, Ergebnis, Esc), `dienstplaner/src/ladeErinnern.test.ts`; von Hand bleibt, dass die Mail wirklich ankommt (Absender, Knopf, Termin-Knöpfe, Kopie) und ob Planer ohne Admin-Recht `POST /events/send` dürfen
+- **Automatisiert:** weitgehend – `shared/dienstplan/erinnern.test.ts` (Regel „wer fehlt“, gesperrte Lage, Empfänger über Gruppen, Mail-Text mit Maskierung), `dienstplaner/src/erinnernSenden.test.ts` (alle Zweige: Erfolg, abgelehnt, 422, 401, 403, 429/5xx/Netz = unklar, Kopie nur einmal, nur die übrigen), `dienstplaner/src/Planen.erinnern.test.tsx` (Menüeintrag, Fenster, Vorschau = Versand, Ergebnis, Esc), `dienstplaner/src/ladeErinnern.test.ts`; von Hand bleibt, dass die Mail wirklich ankommt (Absender, Knopf, Termin-Knöpfe, Kopie) und ob Planer ohne Admin-Recht `POST /events/send` dürfen
 - **Historie:** Dienstplaner E5c-5 (19.11.2026), Entwurf `e5c-5-erinnern.html`, Variante B
 
 </details>

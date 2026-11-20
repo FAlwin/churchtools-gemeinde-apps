@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mehrEintrag } from './mehrMenue.testutil';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { Bereich, type Ablegen, type ZiehSpalte } from '@ui/ablauf/ablaufZiehen';
@@ -149,9 +150,7 @@ async function bearbeiten() {
     />,
   );
   await waitFor(() => expect(screen.getAllByText('3 Punkte').length).toBe(2));
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
-  );
+  mehrEintrag('Ablauf bearbeiten');
   await waitFor(() => expect(bereich.spalten.get(13)?.().items.length).toBe(2));
   return c;
 }

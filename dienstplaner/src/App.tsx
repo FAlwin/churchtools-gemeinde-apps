@@ -55,6 +55,8 @@ import { entwurfAnschluss } from './ladeEntwuerfe';
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
+  // Der Platz der Lupe im Seitenkopf (R7) – Planen hängt „Person hervorheben“ dort ein.
+  const [lupeOrt, setLupeOrt] = useState<HTMLElement | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage(HANDY_BREITE);
   // Termine erst laden, wenn jemand den Reiter öffnet; beim Wechseln bleiben sie erhalten.
@@ -215,6 +217,13 @@ export function App() {
           zustand={zustand}
           bereiche={bereiche}
           handy={handy}
+          // Die Lupe „Person hervorheben“ (R7/E5) sitzt rechts neben den Reitern – nur in Planen. Planen hängt sie in diesen
+          // Platz (`createPortal`); `display: contents`, damit der Platz selbst keine Fläche einnimmt.
+          lupe={
+            !handy && aktiv === 'planen' && terminId === null && vorlagenAdresse === null ? (
+              <span ref={setLupeOrt} style={{ display: 'contents' }} />
+            ) : undefined
+          }
           gruss={terminId === null && aktiv === 'start'}
           onNochmal={laden}
         >
@@ -315,6 +324,7 @@ export function App() {
               onVorlagen={() => {
                 window.location.hash = ADRESSE_VORLAGEN;
               }}
+              lupeOrt={lupeOrt}
             />
           )}
           {hauptSicht && aktiv === 'abwesenheiten' && start && (

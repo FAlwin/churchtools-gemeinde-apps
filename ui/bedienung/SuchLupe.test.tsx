@@ -90,4 +90,27 @@ describe('SuchLupe (R7, vorher SuchLeiste S3-4b)', () => {
     );
     cleanup();
   });
+
+  it('die Namen kommen von der App („Person hervorheben“), Zusätze am Feld und darunter erscheinen', () => {
+    const taste = vi.fn();
+    render(
+      <SuchLupe
+        offen
+        begriff="da"
+        {...knoepfe()}
+        feldName="Person hervorheben"
+        feldAria={{ role: 'combobox' }}
+        onTaste={taste}
+        unter={<ul aria-label="Vorschläge" />}
+      />,
+    );
+    const feld = screen.getByRole('combobox', { name: 'Person hervorheben' });
+    fireEvent.keyDown(feld, { key: 'ArrowDown' });
+    expect(taste).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('list', { name: 'Vorschläge' })).toBeTruthy();
+    cleanup();
+    render(<SuchLupe offen={false} begriff="" {...knoepfe()} knopfName="Person hervorheben" />);
+    expect(screen.getByRole('button', { name: 'Person hervorheben' })).toBeTruthy();
+    cleanup();
+  });
 });

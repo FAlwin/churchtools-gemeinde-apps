@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mehrEintrag } from './mehrMenue.testutil';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { diensteAus } from '@shared/ct/dienste';
 import { planAus } from '@shared/dienstplan/plan';
@@ -81,7 +82,7 @@ function zeige() {
 }
 const letztesBlatt = () => blaetter.at(-1) as PlanBlatt;
 const oeffnen = async () => {
-  fireEvent.click(screen.getByRole('button', { name: 'Plan als PDF teilen' }));
+  mehrEintrag('Teilen');
   return screen.findByRole('dialog', { name: 'Plan teilen' });
 };
 

@@ -19,6 +19,14 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     ],
   },
   {
+    titel: 'Werkzeugzeile',
+    punkte: [
+      'Links die Ansicht, in der Mitte der Zeitraum (dort auch „früheren / späteren Termin dazunehmen“), rechts Filter und „Mehr“ (drei Punkte).',
+      'Im Menü „Mehr“: Ablauf bearbeiten, Vorlagen, Erinnern, Teilen und diese Hilfe. „Breite Spalten“ steht im Filter unter „Anzeige“.',
+      'Die Lupe neben den Reitern hebt eine Person im ganzen Plan hervor.',
+    ],
+  },
+  {
     titel: 'Eintragen',
     punkte: [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',

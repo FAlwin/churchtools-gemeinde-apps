@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { mehrEintrag, mehrEintragOder } from './mehrMenue.testutil';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { planAus } from '@shared/dienstplan/plan';
@@ -143,10 +144,10 @@ function zeige(o: Aufbau = {}) {
   );
   return { senden, ...r };
 }
-const knopf = () => screen.queryByRole('button', { name: /^Erinnern:/ });
+const knopf = () => mehrEintragOder('Erinnern');
 const oeffnen = async (o: Aufbau = {}) => {
   const z = zeige(o);
-  fireEvent.click(screen.getByRole('button', { name: /^Erinnern:/ }));
+  mehrEintrag('Erinnern');
   const fenster = await screen.findByRole('dialog', { name: 'Erinnern' });
   return { ...z, fenster };
 };
@@ -221,7 +222,7 @@ describe('Dienste ohne Platz (20.11.2026: „Planen“ führt jeden planbaren Di
         erinnern={{ senden: vi.fn<MailSender>(() => Promise.resolve({})), link: () => LINK }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Erinnern:/ }));
+    mehrEintrag('Erinnern');
     const fenster = await screen.findByRole('dialog', { name: 'Erinnern' });
     await geladen(fenster);
     expect(lader).toHaveBeenCalled();

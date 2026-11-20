@@ -29,6 +29,7 @@ export function ZeitraumKnopf({
   spaetestens,
   fruehestens,
   vergangenheit = false,
+  dazu,
   onWahl,
 }: {
   zeitraum: Zeitraum;
@@ -55,6 +56,15 @@ export function ZeitraumKnopf({
   fruehestens?: string;
   /** „Wer wie oft?“ (E9-3): oben die letzten 3, 6 und 12 Monate bis heute statt „Ab heute“. */
   vergangenheit?: boolean;
+  /**
+   * „＋ früherer / ＋ späterer Termin“ im Fenster statt als zwei Knöpfe neben dem Zeitraum (R5/E6, „Ruhige Bedienung“ B3):
+   * einen einzelnen Termin davor bzw. danach dazunehmen. Das Fenster bleibt dabei offen, damit man mehrere hintereinander
+   * holen kann. Ohne Angabe gibt es den Bereich nicht (Abwesenheiten).
+   */
+  dazu?: {
+    frueher: { aktiv: boolean; onClick: () => void };
+    spaeter: { aktiv: boolean; onClick: () => void };
+  };
   onWahl: (z: Zeitraum) => void;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
@@ -114,6 +124,26 @@ export function ZeitraumKnopf({
                 </Fragment>
               ))
             : option({ art: 'abHeute' }, 'Ab heute', abHeuteZusatz)}
+          {dazu && (
+            <div className={styles.dazu}>
+              <button
+                type="button"
+                className={styles.option}
+                disabled={!dazu.frueher.aktiv}
+                onClick={dazu.frueher.onClick}
+              >
+                <Icon name="plus" size={14} stroke={2.4} /> Früheren Termin dazunehmen
+              </button>
+              <button
+                type="button"
+                className={styles.option}
+                disabled={!dazu.spaeter.aktiv}
+                onClick={dazu.spaeter.onClick}
+              >
+                <Icon name="plus" size={14} stroke={2.4} /> Späteren Termin dazunehmen
+              </button>
+            </div>
+          )}
           <fieldset className={styles.eigen}>
             <legend>Monat</legend>
             <div className={styles.jahr}>

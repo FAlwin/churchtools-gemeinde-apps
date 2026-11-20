@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { Profiler } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { zeitraumDazu } from './mehrMenue.testutil';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
@@ -277,7 +278,8 @@ describe('Termine im Reiter (E3-2)', () => {
         <App />
       </Profiler>,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    await screen.findByRole('button', { name: /^Zeitraum:/ });
+    zeitraumDazu('Späteren Termin dazunehmen');
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     expect(imFehlerBild).toHaveLength(1);
     expect(imFehlerBild[0].gesperrt).toBe(false);

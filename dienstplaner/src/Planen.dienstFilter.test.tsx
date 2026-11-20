@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { breiteSpaltenUmschalten } from './mehrMenue.testutil';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { diensteAus } from '@shared/ct/dienste';
 import { planAus } from '@shared/dienstplan/plan';
@@ -248,7 +249,7 @@ describe('Besuch von der Startseite (Gruppe Technik)', () => {
     expect((await hinweis()).textContent).toMatch(/^Nur Technik/);
     expect(hatZeile('Bild')).toBe(true);
     // Eine andere Einstellung wird gemerkt, der Dienstfilter bleibt, wie er war.
-    fireEvent.click(screen.getByRole('button', { name: 'Breite Spalten' }));
+    breiteSpaltenUmschalten();
     expect(gemerkt().breite).toBe('breit');
     expect(gemerkt().ausgeblendeteDienste).toEqual([7]);
     expect(hatZeile('Bild')).toBe(true);

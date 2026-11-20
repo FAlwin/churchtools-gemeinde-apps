@@ -16,8 +16,14 @@ export type { FilterAbschnitt, FilterOption, FilterUnter, FilterZusatz } from '.
 export function FilterKnopf({
   abschnitte,
   className,
+  still = false,
 }: {
   abschnitte: FilterAbschnitt[];
+  /**
+   * **Still** (R2, „Ruhige Bedienung“ B3): ohne Rand und Fläche, wie die stillen Knöpfe daneben – der Normalfall in
+   * Werkzeugzeilen. Gibt es aktive Filter, bleibt der Knopf blau getönt. Am Handy rahmt ihn die Werkzeugzeile (R12).
+   */
+  still?: boolean;
   /** Für die Lage in der Leiste (z. B. rechtsbündig). */
   className?: string;
 }) {
@@ -27,12 +33,14 @@ export function FilterKnopf({
   const sichtbar = abschnitte.filter(abschnittMitWahl);
   const ausgeblendet = sichtbar.reduce(
     (n, a) =>
-      n +
-      a.optionen.reduce(
-        (m, o) =>
-          m + (a.aus.includes(o.wert) ? 1 : (o.unter?.punkte.filter((p) => !p.an).length ?? 0)),
-        0,
-      ),
+      a.anzeige
+        ? n
+        : n +
+          a.optionen.reduce(
+            (m, o) =>
+              m + (a.aus.includes(o.wert) ? 1 : (o.unter?.punkte.filter((p) => !p.an).length ?? 0)),
+            0,
+          ),
     0,
   );
 
@@ -41,7 +49,7 @@ export function FilterKnopf({
     <div className={`${styles.rahmen}${className ? ' ' + className : ''}`} ref={rahmen}>
       <button
         type="button"
-        className={`${styles.knopf}${ausgeblendet ? ' ' + styles.aktiv + ' ' + styles.mitZahl : ''}`}
+        className={`${styles.knopf}${still ? ' ' + styles.still : ''}${ausgeblendet ? ' ' + styles.aktiv + ' ' + styles.mitZahl : ''}`}
         aria-expanded={offen}
         aria-controls={id}
         aria-label={ausgeblendet ? `Filter, ${ausgeblendet} ausgeblendet` : 'Filter'}

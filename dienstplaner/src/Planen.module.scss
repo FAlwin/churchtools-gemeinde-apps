@@ -268,6 +268,28 @@
   margin-left: auto;
 }
 
+// **Zeilen-Werkzeuge erst bei Bedarf** (R11, „Ruhige Bedienung“ B3, Entwurf „Stift und Regler je Zelle“): Zauberstab und
+// Regler der Gruppenzeile erscheinen am Rechner erst, wenn die Maus auf der Zeile steht (oder ein Knopf darin den Fokus hat –
+// Tastatur). Nur für Mäuse (`hover: hover`, Wächter `hoverNurMaus.test.ts`): Am Handy gibt es kein Darüberfahren, dort
+// bleiben sie sichtbar.
+@media (hover: hover) {
+  .gruppe {
+    .gruppenKnoepfe,
+    .gruppenKopfZeile > .zauber {
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    &:hover,
+    &:focus-within {
+      .gruppenKnoepfe,
+      .gruppenKopfZeile > .zauber {
+        opacity: 1;
+      }
+    }
+  }
+}
+
 // Gruppenkopf in der Tabelle: Name (aufklappen) und daneben der Zauberstab für alle gezeigten Termine.
 .gruppenKopfZeile {
   display: flex;
@@ -451,13 +473,15 @@
   color: var(--text2);
 }
 
+// **Freie Plätze leise** (R10/E2, „Ruhige Bedienung“ B3): ein gestricheltes graues Feld statt der roten Fläche – sonst leuchtet
+// die halbe Tabelle rot. Rot trägt nur noch die Zahl „N frei“ am Termin (Spaltenkopf) und in der Gruppenzeile.
 .frei {
   justify-content: center;
   width: 100%;
-  font-weight: 700;
-  color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, var(--surface2));
-  border: 1.5px solid color-mix(in srgb, var(--red) 55%, transparent);
+  font-weight: 600;
+  color: var(--text2);
+  background: transparent;
+  border: 1.5px dashed var(--border);
 }
 
 .ich {
@@ -926,12 +950,22 @@
 // Freier Platz, den man planen darf: antippbar (E4-2 „Wer kann?“).
 .freiKnopf {
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+
+  // „+“ vor dem Wort: Hier lässt sich etwas eintragen (R10).
+  &::before {
+    content: '+';
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1;
+  }
 
   @media (hover: hover) {
     &:hover {
-      background: color-mix(in srgb, var(--red) 16%, var(--surface2));
+      background: var(--blue-soft);
+      border-color: var(--blue);
+      color: var(--blue-ink);
     }
   }
 
@@ -948,31 +982,31 @@
   gap: 10px;
 }
 
-.werkzeug {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-}
-
-// Rechts in der Leiste: Spaltenbreite (Computer) und der Filter-Knopf.
-.rechts {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-// „Wer wie oft?“ brach bei mittlerer Breite zweizeilig um (Prüfung mit drei Rollen, 13.10.2026). Nur hier –
-// der gemeinsame Baustein darf anderswo umbrechen.
-.ansicht button {
-  white-space: nowrap;
-}
-
 .leiste {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+  // Ein gerahmtes Element mit seinen Pfeilen (R5, B3): ‹ Zeitraum ›. Pfeile und Zeitraum-Knopf haben darin keinen eigenen Rand.
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+
+  > button,
+  > div > button:first-child {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  > button:first-child {
+    border-right: 1px solid var(--hair);
+    border-radius: calc(var(--r-ctrl) - 1px) 0 0 calc(var(--r-ctrl) - 1px);
+  }
+
+  > button:last-child {
+    border-left: 1px solid var(--hair);
+    border-radius: 0 calc(var(--r-ctrl) - 1px) calc(var(--r-ctrl) - 1px) 0;
+  }
 }
 
 .leistenKnopf {

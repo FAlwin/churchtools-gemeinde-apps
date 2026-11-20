@@ -129,7 +129,7 @@ ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
 
 1. Admin A: Reiter **Neue Gliederung** → **Plan anlegen**. Der Baum sieht aus wie heute. Danach gibt Alwin in
    ChurchTools Admin B die Rechte auf die Kategorie „Plan“ (**Daten sehen**, **Daten anlegen, ändern, löschen**).
-2. Admin A: **＋ Neuer Bereich** „Übung Plan“, eine Gruppe dort **einhängen**, eine andere **umbenennen**, eine dritte
+2. Admin A: **＋ Neuer Bereich** (am Handy der schwebende grüne Kreis mit **+**) „Übung Plan“, eine Gruppe dort **einhängen**, eine andere **umbenennen**, eine dritte
    **im Plan archivieren**. Jede zeigt ihre Marke und „vorher …“.
 3. Admin B: Seite neu laden, Reiter **Neue Gliederung** – derselbe Plan, „Gespeichert von A“.
 4. Beide öffnen den Reiter. Erst A benennt eine Gruppe um, danach B (ohne neu zu laden) eine andere: Bei B steht

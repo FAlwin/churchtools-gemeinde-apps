@@ -365,6 +365,34 @@ describe('Seite „Nachweise“: Stand je Person', () => {
   });
 });
 
+describe('„Neue Nachweis-Art“ (R3)', () => {
+  it('Rechner/iPad: grüner Knopf im Kopf', async () => {
+    seite();
+    oeffnen();
+    const knopf = await screen.findByRole('button', { name: 'Neue Nachweis-Art' });
+    expect(knopf.className).toMatch(/(^|[\s_])neu([\s_]|$)/);
+  });
+
+  it('Handy: das schwebende Plus statt des grünen Quadrats – es öffnet dasselbe Fenster', async () => {
+    handyAn();
+    seite();
+    oeffnen();
+    const plus = await screen.findByRole('button', { name: 'Neue Nachweis-Art' });
+    expect(plus.className).toMatch(/plus/);
+    expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+    fireEvent.click(plus);
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+  });
+
+  it('ohne Recht: weder Knopf noch Plus – auch am Handy', async () => {
+    handyAn();
+    seite(grundlage(false));
+    oeffnen();
+    await screen.findByText('Führungszeugnis');
+    expect(screen.queryByRole('button', { name: 'Neue Nachweis-Art' })).toBeNull();
+  });
+});
+
 describe('Fenster „Nachweis-Art“', () => {
   const neueArt = async () => {
     seite(grundlage(true), []);

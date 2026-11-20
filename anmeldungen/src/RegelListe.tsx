@@ -3,6 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import type { Feld, Formular } from '@shared/anmeldung/formular';
 import {
   bedingungAufbereiten,
@@ -47,25 +48,24 @@ export function RegelListe({
   /** `null` = neue Regel. */
   onBearbeiten: (g: RegelGruppe | null) => void;
 }) {
+  // „Neue Regel“ (R3): am Rechner/iPad grün über der Liste, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neue Regel',
+    onClick: () => onBearbeiten(null),
+    sichtbar: darf,
+    disabled: gemeinsameQuellen(formular, []).length === 0,
+  });
   const gruppen = regelGruppen(formular);
   const kaputt = kaputteStellen(formular);
-  const keineQuelle = gemeinsameQuellen(formular, []).length === 0;
   return (
     <div className={k.regelListe}>
+      {neuKnopf.schwebend}
       <div className={k.regelKopf}>
         <p className={k.regelHilfe}>
           Alle Bedingungen dieses Formulars auf einen Blick. Gleiche Bedingungen sind zu einer Regel
           zusammengefasst.
         </p>
-        {darf && (
-          <KopfKnopf
-            neu
-            label="Neue Regel"
-            symbol={<Icon name="plus" size={18} />}
-            disabled={keineQuelle}
-            onClick={() => onBearbeiten(null)}
-          />
-        )}
+        {neuKnopf.kopf}
       </div>
       {gruppen.length === 0 ? (
         <p className={k.regelLeer}>

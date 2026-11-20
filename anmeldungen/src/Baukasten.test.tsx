@@ -1615,6 +1615,30 @@ describe('Baukasten (F1d): Reiter „Bedingungen“', () => {
     expect(speichern().disabled).toBe(false);
   });
 
+  it('„Neue Regel“ am Handy (R3): das schwebende Plus statt des grünen Quadrats – am Rechner der grüne Knopf', () => {
+    const fo = { anmeldung: [], person: [] };
+    const auf = vi.fn();
+    const r = render(<RegelListe formular={fo} darf onBearbeiten={auf} />);
+    expect(screen.getByRole('button', { name: 'Neue Regel' }).className).toMatch(
+      /(^|[\s_])neu([\s_]|$)/,
+    );
+    r.unmount();
+    try {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q.includes('max-width'),
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      render(<RegelListe formular={fo} darf onBearbeiten={auf} />);
+      const plus = screen.getByRole('button', { name: 'Neue Regel' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('ohne mögliche Quelle lässt sich keine neue Regel anlegen', () => {
     const fo = { anmeldung: [], person: [] };
     render(<RegelListe formular={fo} darf onBearbeiten={vi.fn()} />);

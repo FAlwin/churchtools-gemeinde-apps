@@ -104,7 +104,7 @@ Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) 
 Schritt wandert** (Termin wählen → Anmeldung einstellen → Bezahlung eintragen → Freigeben; B7). **„Freigeben“** steht erst
 dort, wenn es dran ist – vorher liegt es im **⋯**-Menü oben rechts, zusammen mit **„Verwalten“**; „In ChurchTools“ steht
 daneben. „Bearbeiten“ an den Karten ist blauer Text. Danach (freigegeben) gibt es oben keinen blauen Knopf mehr; im Bereich
-„Anmeldungen“ ist **„Von Hand“** grün, **Spalten**, **Druckliste** und **Rundmail** liegen im **⋯**-Menü der Liste. Danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
+„Anmeldungen“ ist **„Von Hand“** grün (am Handy der schwebende grüne Kreis mit „+“), **Spalten**, **Druckliste** und **Rundmail** liegen im **⋯**-Menü der Liste. Danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
 die passende Ansicht der Liste. Hervorgehoben (blau) ist nur die Warteliste, wenn trotz freiem Platz jemand wartet –
 offene Zahlungen sind kurz nach der Anmeldung der Normalfall. **„Zahlung offen“ heißt überall dasselbe** (Startseite,
 Kachel, Reiter, Rundmail, Druckliste): eine Anmeldung mit Betrag über 0, ohne Haken „bezahlt“, mit Platz. Eine Anmeldung

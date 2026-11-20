@@ -318,6 +318,60 @@ describe('Startseite (S3-3)', () => {
   });
 });
 
+/** Handy-Breite vortäuschen (`useMedienAbfrage(HANDY_BREITE)`). */
+const geraet = (handy: boolean) =>
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: handy && q.includes('max-width'),
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+
+describe('Startseite: „Neues Protokoll“ (R3)', () => {
+  const zeigenMitRecht = (gruppen = GRUPPEN, schreibbar: number[] = [60]) =>
+    render(
+      <Startseite
+        modul={24}
+        ich={{ person: ICH, name: 'Alwin' }}
+        gruppen={gruppen}
+        schreibbar={schreibbar}
+        onSitzung={onSitzung}
+        onGruppe={onGruppe}
+      />,
+    );
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Rechner/iPad: grüner Knopf in der Karte „Nächste Sitzungen“, kein schwebendes Plus', async () => {
+    geraet(false);
+    zeigenMitRecht();
+    const karte = await screen.findByRole('region', { name: 'Nächste Sitzungen' });
+    const knopf = within(karte).getByRole('button', { name: /Neues Protokoll/ });
+    expect(knopf.className).toMatch(/(^|[\s_])neu([\s_]|$)/);
+    expect(document.querySelector('button[class*="plus"]')).toBeNull();
+  });
+
+  it('Handy: das schwebende Plus statt des grünen Quadrats in der Karte', async () => {
+    geraet(true);
+    zeigenMitRecht();
+    const karte = await screen.findByRole('region', { name: 'Nächste Sitzungen' });
+    expect(within(karte).queryByRole('button', { name: /Neues Protokoll/ })).toBeNull();
+    const plus = screen.getByRole('button', { name: 'Neues Protokoll' });
+    expect(plus.className).toMatch(/plus/);
+    fireEvent.click(plus);
+    expect(screen.getByRole('dialog', { name: /Neues Protokoll/ })).toBeTruthy();
+  });
+
+  it('ohne Schreibrecht in einer Gruppe: weder Knopf noch Plus', async () => {
+    for (const handy of [false, true]) {
+      geraet(handy);
+      const { unmount } = zeigenMitRecht([GRUPPEN[1]], []);
+      await screen.findByRole('region', { name: 'Nächste Sitzungen' });
+      expect(screen.queryByRole('button', { name: /Neues Protokoll/ })).toBeNull();
+      unmount();
+    }
+  });
+});
+
 describe('Startseite: Hinweisband auf fällige To-Dos', () => {
   // Heute: Fr, 23.10.2026. Meine To-Dos aus UEBERSICHT: `UEBERFAELLIG` (bis 20.10.), `IN_ARBEIT` (bis 01.11., 9 Tage).
   const bandFuer = (vorlauf: Vorlauf) =>

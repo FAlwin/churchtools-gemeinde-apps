@@ -4,6 +4,7 @@ import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
 import { Etikett } from '@ui/bedienung/Etikett';
 import { KlickZeile } from '@ui/bedienung/KlickZeile';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
@@ -79,6 +80,13 @@ export function NachweisSeite({
     null,
   );
 
+  // „Neue Nachweis-Art“ (R3): am Rechner/iPad grün im Kopf, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neue Nachweis-Art',
+    onClick: () => setFenster('neu'),
+    sichtbar: stand.art === 'fertig' && stand.daten.grundlage.darfEinrichten,
+  });
+
   const zurueck = (
     <button type="button" className={v.zurueck} onClick={onZurueck}>
       <Icon name="chev-left" size={18} />
@@ -120,14 +128,7 @@ export function NachweisSeite({
         <div>
           <h1>Nachweise</h1>
         </div>
-        {darf && (
-          <KopfKnopf
-            neu
-            label="Neue Nachweis-Art"
-            symbol={<Icon name="plus" size={18} />}
-            onClick={() => setFenster('neu')}
-          />
-        )}
+        {neuKnopf.kopf}
       </header>
       <p className={v.hinweis}>
         Eine Nachweis-Art ist zum Beispiel das Führungszeugnis: Wer dafür eingetragen ist, bekommt
@@ -271,6 +272,7 @@ export function NachweisSeite({
           }}
         />
       )}
+      {neuKnopf.schwebend}
       {fenster && (
         <NachweisArtFenster
           // Eine andere Art oder „neu“ beginnt mit frischen Eingaben.

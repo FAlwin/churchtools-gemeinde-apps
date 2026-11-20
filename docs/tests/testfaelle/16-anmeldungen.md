@@ -31,7 +31,7 @@ offen“). Führt eine Zeile nach ChurchTools, steht klein „in ChurchTools“ 
 
 ### TF-ANM-02 · Veranstaltung: ein wandernder blauer Knopf
 
-**Das brauchst du:** Ein Entwurf ohne Termin (zum Beispiel über **Neue Veranstaltung**) und Recht zum Einrichten.
+**Das brauchst du:** Ein Entwurf ohne Termin (zum Beispiel über **Neue Veranstaltung** – am Rechner der grüne Knopf im Kopf, am Handy der schwebende grüne Kreis mit **+**) und Recht zum Einrichten.
 
 **Das muss passieren:** Im Band **Nächster Schritt** steht genau **ein** blauer Knopf – immer der nächste fällige Schritt.
 Er wandert: Termin wählen → Anmeldung einstellen → (Bezahlung eintragen, wenn etwas kostet) → Freigeben. **Freigeben** steht
@@ -66,7 +66,7 @@ Eintrag schließt das Menü und öffnet sein Fenster. Ohne Anmeldungen gibt es d
 
 1. **⋯** öffnen: **Spalten**, **Druckliste**, **Rundmail** – jeweils anklicken, das Fenster öffnet sich, das Menü ist zu.
 2. **Von Hand** öffnet das Fenster „Anmeldung von Hand“.
-3. Am Handy kommt das Menü als Blatt von unten („Mehr zur Liste“).
+3. Am Handy kommt das Menü als Blatt von unten („Mehr zur Liste“); **Von Hand** ist dort der schwebende grüne Kreis mit **+** unten rechts statt eines grünen Quadrats in der Leiste.
 
 <details><summary>Technisches</summary>
 

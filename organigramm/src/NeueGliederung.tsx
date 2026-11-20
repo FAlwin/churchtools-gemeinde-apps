@@ -4,6 +4,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { gemeindeZeitzone, wannText } from '@shared/ct/zeit';
@@ -243,6 +244,14 @@ export function NeueGliederung({
 
   const offeneGruppe = offen === null ? undefined : plan.find((g) => g.ref === offen);
 
+  // „Neuer Bereich“ (R3): am Rechner/iPad grün in der Leiste, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neuer Bereich',
+    onClick: () => setNeuerBereich(true),
+    sichtbar: stand.art === 'da' && !!stand.plan && ansicht === 'plan',
+    disabled: arbeitet,
+  });
+
   return (
     <div className={baum.seite}>
       <p className={styles.einleitung}>
@@ -299,15 +308,7 @@ export function NeueGliederung({
             <span className={styles.rechts}>
               {/* Die Knöpfe des Seitenkopfs: so hoch wie der Umschalter daneben (vorher 31 px, und „Neuer Bereich“ hatte
                   seit O7b-3 gar keinen Stil mehr – Test-Instanz 29.10.2026). Grün wie „+ Gruppe erstellen“ in CT. */}
-              {ansicht === 'plan' && (
-                <KopfKnopf
-                  label="Neuer Bereich"
-                  symbol={<Icon name="plus" size={16} />}
-                  neu
-                  disabled={arbeitet}
-                  onClick={() => setNeuerBereich(true)}
-                />
-              )}
+              {neuKnopf.kopf}
               <KopfKnopf
                 label="Plan verwerfen"
                 symbol={<Icon name="trash" size={16} />}
@@ -357,6 +358,7 @@ export function NeueGliederung({
         </>
       )}
 
+      {neuKnopf.schwebend}
       {neuerBereich && (
         <NeuerBereichFenster
           start={start}

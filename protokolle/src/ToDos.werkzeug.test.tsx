@@ -197,12 +197,16 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
       expect(screen.getByRole('button', { name: 'Ansicht: Board' })).toBeTruthy();
     });
 
-    it('Filter und „Neues To-Do“ stehen in der Zeile; „Neues To-Do“ öffnet sein Fenster', async () => {
+    it('Filter steht in der Zeile; „Neues To-Do“ ist das schwebende Plus (R3), kein Knopf in der Zeile – und öffnet sein Fenster', async () => {
       zeige();
       await screen.findByText('Eins');
       const zeile = screen.getByRole('toolbar', { name: 'To-Dos' });
       expect(within(zeile).getByRole('button', { name: 'Filter' })).toBeTruthy();
-      fireEvent.click(within(zeile).getByRole('button', { name: /Neues To-Do/ }));
+      expect(within(zeile).queryByRole('button', { name: /Neues To-Do/ })).toBeNull();
+      const plus = screen.getByRole('button', { name: 'Neues To-Do' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+      fireEvent.click(plus);
       expect(screen.getByRole('dialog', { name: 'Neues To-Do' })).toBeTruthy();
     });
   });

@@ -152,6 +152,8 @@ export function demoStarten(fall: string): void {
     const aussehen: Einstellungen = {
       ...vorlaeufigeEinstellungen('Demo-Gemeinde'),
       noindex: false,
+      // Für das Fenster „Einstellungen“ (W3a-3b): ein Fußzeilen-Link auf die Impressum-Seite.
+      fusszeile: [{ titel: 'Impressum', ziel: { art: 'seite', seiteId: impressum.id } }],
       farben: {
         haupt: '#00434c',
         akzent: '#e3aa1d',

@@ -7,6 +7,7 @@ import {
   neueLeereSeite,
   neueStartseite,
   pfadAusTitel,
+  seitenAuswahlText,
   seitenFuerListe,
   vorlaeufigeEinstellungen,
 } from './seitenListe';
@@ -180,5 +181,22 @@ describe('vorlaeufigeEinstellungen', () => {
     });
     expect(vorlaeufigeEinstellungen(null).name).toBe('Deine Gemeinde');
     expect(vorlaeufigeEinstellungen('   ').name).toBe('Deine Gemeinde');
+  });
+});
+
+describe('seitenAuswahlText', () => {
+  it('die Startseite bekommt den Zusatz, eine andere Seite nicht', () => {
+    expect(seitenAuswahlText({ titel: 'Willkommen', startseite: true })).toBe(
+      'Willkommen (Startseite)',
+    );
+    expect(seitenAuswahlText({ titel: 'Impressum' })).toBe('Impressum');
+    expect(seitenAuswahlText({ titel: 'Impressum', startseite: false })).toBe('Impressum');
+  });
+
+  it('heißt die Startseite schon so, steht es nicht doppelt da', () => {
+    expect(seitenAuswahlText({ titel: 'Startseite', startseite: true })).toBe('Startseite');
+    expect(seitenAuswahlText({ titel: 'Unsere startseite', startseite: true })).toBe(
+      'Unsere startseite',
+    );
   });
 });

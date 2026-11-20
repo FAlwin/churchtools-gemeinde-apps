@@ -13,6 +13,15 @@ vi.mock('./Seiten', () => ({ Seiten: () => <p>SEITEN-INHALT</p> }));
 vi.mock('./Einrichtung', () => ({ Einrichtung: () => <p>EINRICHTUNG</p> }));
 // … ebenso das Aussehen (`Aussehen.test.tsx`).
 vi.mock('./Aussehen', () => ({ Aussehen: () => <p>AUSSEHEN-INHALT</p> }));
+// Fenster und gemeinsamer Zustand der Einstellungen: eigene Tests (`EinstellungenFenster.test.tsx`).
+vi.mock('./EinstellungenFenster', () => ({
+  EinstellungenFenster: ({ onSchliessen }: { onSchliessen: () => void }) => (
+    <button onClick={onSchliessen}>EINSTELLUNGEN-FENSTER</button>
+  ),
+}));
+vi.mock('./EinstellungenQuelle', () => ({
+  EinstellungenProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 const ladeStart = vi.mocked(S.ladeStart);
 
 const einrichtung = einrichtungAus(
@@ -95,5 +104,28 @@ describe('Rahmen und Zugang', () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     expect(await screen.findByText('SEITEN-INHALT')).toBeTruthy();
+  });
+});
+
+describe('Reiter „Einstellungen“ (W3a-3b)', () => {
+  it('ist der letzte Reiter, öffnet das Fenster und ist dabei hervorgehoben', async () => {
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    const reiter = screen.getByRole('button', { name: 'Einstellungen' });
+    expect(screen.queryByText('EINSTELLUNGEN-FENSTER')).toBeNull();
+    fireEvent.click(reiter);
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Einstellungen' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(screen.getByText('EINSTELLUNGEN-FENSTER'));
+    expect(screen.queryByText('EINSTELLUNGEN-FENSTER')).toBeNull();
+  });
+
+  it('wer die Website nicht bearbeiten darf, bekommt keinen Reiter', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: null }));
+    render(<App />);
+    await screen.findByText(/dürfen die Admins und die Leitung der Gruppe/);
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
   });
 });

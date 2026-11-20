@@ -16,6 +16,7 @@ import {
   AUFTEILUNGEN,
   BAUSTEIN_TYPEN,
   bausteinSchema,
+  datenschutzFehlt,
   einstellungenAlsText,
   einstellungenAusText,
   gestaltungSchema,
@@ -617,5 +618,30 @@ describe('pruefeWebsite: Abschnitte, Spalten, Anker', () => {
     expect(art([mitStream], menue(), tot)).toEqual(['link']);
     // ohne Livestream braucht niemand den Link
     expect(pruefeWebsite([seite()], menue(), einstellungen())).toEqual([]);
+  });
+});
+
+describe('datenschutzFehlt – die eine Regel für die Gesamtprüfung und das Fenster „Einstellungen“', () => {
+  const mitStream = seiteMit([baustein('livestream')]);
+  const ds = einstellungen({ datenschutz: { art: 'extern', url: 'https://a.de/ds' } });
+
+  it('nur ein Livestream-Baustein ohne Datenschutz-Link gilt als „fehlt“', () => {
+    expect(datenschutzFehlt([mitStream], einstellungen())).toBe(true);
+    expect(datenschutzFehlt([mitStream], ds)).toBe(false);
+    expect(datenschutzFehlt([seite()], einstellungen())).toBe(false);
+    expect(datenschutzFehlt([], einstellungen())).toBe(false);
+  });
+
+  it('pruefeWebsite meldet genau dann, wenn datenschutzFehlt gilt (keine zweite Rechnung)', () => {
+    for (const [seiten, e] of [
+      [[mitStream], einstellungen()],
+      [[mitStream], ds],
+      [[seite()], einstellungen()],
+    ] as const) {
+      const meldet = pruefeWebsite([...seiten], menue(), e).some((h) =>
+        h.meldung.includes('Datenschutz-Link'),
+      );
+      expect(meldet).toBe(datenschutzFehlt(seiten, e));
+    }
   });
 });

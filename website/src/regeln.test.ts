@@ -7,6 +7,7 @@ import {
   pfadEingabe,
   sichtbareVorlagen,
   waehlbareTypen,
+  zielAusWert,
   zielWert,
 } from './regeln';
 
@@ -60,5 +61,27 @@ describe('lebenszeichenAlter: „vor 3 Minuten“ für die Rückfrage beim Über
   });
   it('kaputte Zeit: kein „NaN“', () => {
     expect(lebenszeichenAlter('kaputt', jetzt)).toBe('vor weniger als einer Minute');
+  });
+});
+
+describe('zielAusWert', () => {
+  it('Seite und Sprungmarke aus dem Wert; „extern“ behält eine schon getippte Adresse', () => {
+    expect(zielAusWert('seite:abc', null, '')).toEqual({ art: 'seite', seiteId: 'abc' });
+    expect(zielAusWert('anker:a:b', null, '')).toEqual({ art: 'anker', anker: 'a:b' });
+    const alt = { art: 'extern' as const, url: 'https://x.example' };
+    expect(zielAusWert('extern', alt, '')).toBe(alt);
+    expect(zielAusWert('extern', { art: 'seite', seiteId: 's' }, 'https://neu.example')).toEqual({
+      art: 'extern',
+      url: 'https://neu.example',
+    });
+    expect(zielAusWert('extern', null, '')).toEqual({ art: 'extern', url: '' });
+  });
+
+  it('ist die Umkehrung von zielWert', () => {
+    for (const z of [
+      { art: 'seite' as const, seiteId: 's1' },
+      { art: 'anker' as const, anker: 'termine' },
+    ])
+      expect(zielAusWert(zielWert(z), null, '')).toEqual(z);
   });
 });

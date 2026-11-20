@@ -536,6 +536,17 @@ function doppelte(werte: string[]): string[] {
 }
 
 /**
+ * Fehlt der Datenschutz-Link, obwohl ihn etwas braucht? Ein **Livestream-Baustein** zeigt Banner und Video-Sperre – beide
+ * verweisen darauf. EINE Regel für die Gesamtprüfung (`pruefeWebsite`) und den Hinweis im Fenster „Einstellungen“.
+ */
+export function datenschutzFehlt(seiten: readonly Seite[], einstellungen: Einstellungen): boolean {
+  return (
+    !einstellungen.datenschutz &&
+    seiten.some((s) => bausteineDerSeite(s).some((b) => b.typ === 'livestream'))
+  );
+}
+
+/**
  * **Hängt das alles zusammen?** Genau eine Startseite, keine doppelten Pfade, IDs und Anker, jeder Link trifft ein
  * Ziel, das es gibt. Liefert verständliche Hinweise (leer = alles in Ordnung); gebaut werden darf nur ohne Hinweise.
  */
@@ -617,10 +628,7 @@ export function pruefeWebsite(
     }
   }
 
-  const hatLivestream = seiten.some((s) =>
-    bausteineDerSeite(s).some((b) => b.typ === 'livestream'),
-  );
-  if (hatLivestream && !einstellungen.datenschutz) {
+  if (datenschutzFehlt(seiten, einstellungen)) {
     hinweise.push({
       art: 'link',
       meldung:

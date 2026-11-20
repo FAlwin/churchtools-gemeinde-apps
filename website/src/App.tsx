@@ -5,6 +5,8 @@ import { darfEigenesHtml } from '@shared/website/zugang';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Aussehen } from './Aussehen';
+import { EinstellungenFenster } from './EinstellungenFenster';
+import { EinstellungenProvider } from './EinstellungenQuelle';
 import { Einrichtung } from './Einrichtung';
 import { Hinweis, Leise } from './Hinweis';
 import { Seiten } from './Seiten';
@@ -23,7 +25,8 @@ const REITER: Reiter<ReiterId>[] = [
  * **Die Website in ChurchTools** (Bauplan Website W3a-1). Je nach Stand der Einrichtung und je nach Person:
  * - nicht eingerichtet, Admin → Einrichten (Gruppe wählen); sonst ein freundlicher Hinweis;
  * - eingerichtet, aber weder Admin noch Leitung der Gruppe → Hinweis, wer die Website bearbeiten darf;
- * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** (Freigaben kommt in einem späteren Schritt).
+ * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** (Freigaben kommt in einem späteren Schritt) und ganz rechts
+ * **Einstellungen** (W3a-3b, ein Fenster).
  *
  * Reiter oben am Computer, unten am Handy – wie im Dienstplaner. Scheitert das Laden vorübergehend, gibt es „Erneut
  * versuchen“ statt einer halben Seite.
@@ -32,6 +35,7 @@ export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
   const [aktiv, setAktiv] = useState<ReiterId>('seiten');
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   const handy = useMedienAbfrage(HANDY_BREITE);
   /** Dieses Fenster – zwei Fenster derselben Person sperren sich gegenseitig (`shared/ct/sperre.ts`). */
   const fenster = useRef(neueId());
@@ -70,6 +74,12 @@ export function App() {
       bereiche={bereiche}
       handy={handy}
       gruss={!editor}
+      // „Einstellungen“ ist der letzte Reiter (E24) und öffnet ein Fenster – nur, wer die Website bearbeiten darf.
+      einstellungen={
+        editor && entwuerfe !== null
+          ? { onOeffnen: () => setEinstellungenOffen(true), offen: einstellungenOffen }
+          : undefined
+      }
     >
       {start && !editor && <Zugangsseite start={start} onEingerichtet={laden} />}
       {editor && entwuerfe !== null && aktiv === 'seiten' && (
@@ -80,12 +90,19 @@ export function App() {
           rechte={{ html: darfEigenesHtml(editor.zugang) }}
         />
       )}
-      {editor && entwuerfe !== null && aktiv === 'aussehen' && (
-        <Aussehen
+      {/* EIN Zustand für die Einheit „einstellungen“: Aussehen und das Fenster teilen ihn (`EinstellungenQuelle`). Er steht
+          nur, solange einer von beiden offen ist – danach ist die Sperre frei. */}
+      {editor && entwuerfe !== null && (aktiv === 'aussehen' || einstellungenOffen) && (
+        <EinstellungenProvider
           ort={{ modul: editor.modul, kategorie: entwuerfe }}
           gemeinde={editor.gemeinde}
           ich={ich}
-        />
+        >
+          {aktiv === 'aussehen' && <Aussehen />}
+          {einstellungenOffen && (
+            <EinstellungenFenster onSchliessen={() => setEinstellungenOffen(false)} />
+          )}
+        </EinstellungenProvider>
       )}
       {editor && aktiv === 'freigaben' && (
         <Hinweis titel="Freigaben">

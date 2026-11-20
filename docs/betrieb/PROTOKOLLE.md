@@ -152,6 +152,19 @@ einer Spalte per Ziehen (auch in der Liste); die Reihenfolge gilt nur für einen
 `protokolle_einstellungen.json` am eigenen ChurchTools-Konto (andere können die Datei lesen – drin stehen nur Ansicht und
 To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen Start; ohne Netz bleibt alles dort und wird nachgeholt.
 
+**Wer darf was am To-Do? (W9a, 20.11.2026)** – **Leitung** ist, wer in der Gruppe Protokolle schreiben darf; sie darf an jedem To-Do alles. **Mitglieder** (ohne
+Leitung) hängt es am Fall: **Eigenes** To-Do (nur ich bin zuständig, kein Externer) – abhaken, „in Arbeit“, Notiz, Frist, **abgeben** (an genau ein anderes
+Mitglied; „Abgeben an“ im Fenster, im Board per Ziehen mit der Rückfrage „To-Do abgeben?“), Text ändern, löschen. **Geteiltes** To-Do (mehrere Zuständige,
+auch mit einer Person außerhalb, oder „Alle“) – nur abhaken (bei „Jeder für sich“ den eigenen Teil, bei „Gemeinsam“ das ganze, auch „in Arbeit“) und Notiz.
+**Ohne Zuständigen** – kein Haken, dafür der Knopf **„Das mache ich“** (Karte, Tabellenzeile, Fenster): trägt nur mich ein, danach gilt „eigen“. **Fremde**
+To-Dos (andere zuständig, ich nicht) sieht ein Mitglied nicht. Nie für Mitglieder: Gruppe wechseln, weitere Zuständige hinzufügen oder wegnehmen, „Gemeinsam |
+Jeder für sich“ umstellen. Steht ein To-Do noch in einem **Protokoll-Entwurf**, bleiben Text und Löschen bei der Leitung (dort führt das Protokoll). **Neues To-Do**
+als Mitglied: vorerst nur für sich selbst. Im **Fenster** steht, was man nicht ändern darf, als **normaler Text** (kein ausgegrautes Feld), dazu ein Satz mit
+Schloss („Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.“); ohne Recht gibt es keinen „Löschen“-Knopf. **Im Board** lässt sich nur
+ziehen, was das Fenster auch erlaubte; sonst steht ein Hinweis da. Die Regel ist **eine Funktion** (`toDoRechte` in `shared/protokolle/aufgaben.ts`) – Fenster, Karte,
+Zeile, Board und der Schreibweg (`toDoAendern`, `toDoAnlegen`, `toDoLoeschen`, `toDoVerschieben`, geprüft am frisch gelesenen Stand) fragen nur sie. ChurchTools kennt dafür kein
+Recht; wer in „Mitarbeit“ schreiben darf, kann an der Erweiterung vorbei alles ändern – die Sperre schützt vor Versehen, nicht vor Absicht.
+
 **Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und
 „Löschen“ (nur vermerkt, mit Rückfrage). Bei den Zuständigen steht oben **„Alle (N)“**: das wirkt, als hätte man alle

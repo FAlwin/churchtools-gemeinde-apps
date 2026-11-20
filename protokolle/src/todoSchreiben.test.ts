@@ -102,7 +102,7 @@ describe('„Jeder für sich“ schreiben (W8a)', () => {
     });
   });
 
-  it('anlegen: Modus „jeder“ mit Teilen; fremder Teil ohne Leitung scheitert', async () => {
+  it('anlegen: Modus „jeder“ mit Teilen (Leitung); ein Mitglied legt es so gar nicht erst an', async () => {
     const q = {
       neueId: 'n1',
       gruppe: 11,
@@ -115,7 +115,12 @@ describe('„Jeder für sich“ schreiben (W8a)', () => {
       notiz: '',
       karte: {},
     };
-    const n = await toDoAnlegen(ort(LT), { ...q, teile: [{ person: 1, fertig: true }] }, ALWIN);
+    const n = await toDoAnlegen(
+      ort(LT),
+      { ...q, teile: [{ person: 1, fertig: true }] },
+      ALWIN,
+      true,
+    );
     expect(n).toMatchObject({ jeder: true, status: 'arbeit' });
     expect(Object.keys(n.fertig ?? {})).toEqual(['1']);
     const e: unknown = await toDoAnlegen(
@@ -123,7 +128,7 @@ describe('„Jeder für sich“ schreiben (W8a)', () => {
       { ...q, neueId: 'n2', teile: [{ person: 19, fertig: true }] },
       ALWIN,
     ).catch((x: unknown) => x);
-    expect(fehlerMeldung(e).text).toMatch(/nur deinen eigenen Teil/);
+    expect(fehlerMeldung(e).text).toMatch(/nur für dich selbst/);
   });
 });
 
@@ -140,7 +145,7 @@ describe('toDoAnlegen', () => {
     karte: { notiz: true },
   };
   it('ohne Sitzung, ohne Zuständige, mit Status, Notiz und Karte', async () => {
-    const n = await toDoAnlegen(ort(LT), q, SPIKE);
+    const n = await toDoAnlegen(ort(LT), q, SPIKE, true);
     expect(n).toMatchObject({
       id: 'n1',
       sitzung: null,
@@ -153,8 +158,8 @@ describe('toDoAnlegen', () => {
     expect(lies(LT)).toHaveLength(1);
   });
   it('zweiter Versuch mit derselben ID (unklare Antwort): kein zweites To-Do', async () => {
-    await toDoAnlegen(ort(LT), q, SPIKE);
-    await toDoAnlegen(ort(LT), q, SPIKE);
+    await toDoAnlegen(ort(LT), q, SPIKE, true);
+    await toDoAnlegen(ort(LT), q, SPIKE, true);
     expect(lies(LT)).toHaveLength(1);
   });
 });
@@ -178,6 +183,7 @@ describe('toDoVerschieben', () => {
       x,
       wer: [19],
       ich: ALWIN,
+      leitung: true,
     });
 
   it('neu in der anderen Gruppe (ohne Sitzung, Verlauf zieht mit), altes als gelöscht vermerkt', async () => {
@@ -229,6 +235,152 @@ describe('toDoVerschieben', () => {
 
   it('das alte gibt es nicht mehr: nichts angelegt', async () => {
     await expect(verschiebe()).rejects.toThrow(/gibt es nicht mehr/);
+    expect(lies(JG)).toEqual([]);
+  });
+});
+
+describe('Rechte im To-Do (W9a): der Schreibweg lässt Mitarbeiter nur, was `toDoRechte` erlaubt', () => {
+  const GETEILT = { ...BEAMER, wer: [1, 19] };
+  const OHNE = { ...BEAMER, wer: [] };
+  /** Scheitert mit 409 und der Meldung – und es wurde nichts geschrieben. */
+  const verweigert = async (arbeit: () => Promise<unknown>, meldung: RegExp) => {
+    const vorher = ct.aufrufe.length;
+    const e: unknown = await arbeit().catch((x: unknown) => x);
+    expect(fehlerMeldung(e).text).toMatch(meldung);
+    expect(ct.aufrufe.slice(vorher).filter((x) => !x.startsWith('GET'))).toEqual([]);
+  };
+  const mitFrage = {
+    neueId: 'n1',
+    gruppe: 11,
+    text: 'Plakat',
+    extern: '',
+    bis: null,
+    status: 'offen' as const,
+    notiz: '',
+    karte: {},
+  };
+
+  it('Text an einem geteilten To-Do ändern: 409', async () => {
+    ablegen(LT, GETEILT);
+    await verweigert(
+      () => toDoAendern(ort(LT), 'b', { text: 'Neu' }, ALWIN),
+      /Text ändert nur die Leitung/,
+    );
+    expect(lies(LT)[0].text).toBe('Beamer');
+  });
+
+  it('Frist und Zuständige an einem geteilten To-Do: 409', async () => {
+    ablegen(LT, GETEILT);
+    await verweigert(() => toDoAendern(ort(LT), 'b', { bis: '2027-01-01' }, ALWIN), /Frist/);
+    await verweigert(() => toDoAendern(ort(LT), 'b', { wer: [1] }, ALWIN), /Zuständigen/);
+  });
+
+  it('Geteilt: abhaken und Notiz gehen', async () => {
+    ablegen(LT, GETEILT);
+    const n = await toDoAendern(ort(LT), 'b', { status: 'erledigt', notiz: 'fertig' }, ALWIN);
+    expect(n.status).toBe('erledigt');
+  });
+
+  it('Eigenes To-Do: Text, Frist, Status „in Arbeit“, Notiz und Abgeben gehen', async () => {
+    ablegen(LT, BEAMER);
+    const n = await toDoAendern(
+      ort(LT),
+      'b',
+      { text: 'Beamer prüfen', bis: '2026-12-24', status: 'arbeit', notiz: 'läuft' },
+      ALWIN,
+    );
+    expect(n).toMatchObject({ text: 'Beamer prüfen', bis: '2026-12-24', status: 'arbeit' });
+    const ab = await toDoAendern(ort(LT), 'b', { wer: [19] }, ALWIN);
+    expect(ab.wer).toEqual([19]);
+  });
+
+  it('Eigenes To-Do an mehrere abgeben oder weitere dazunehmen: 409', async () => {
+    ablegen(LT, BEAMER);
+    await verweigert(
+      () => toDoAendern(ort(LT), 'b', { wer: [1, 19] }, ALWIN),
+      /nur an ein anderes Mitglied/,
+    );
+  });
+
+  it('Eigenes To-Do im Protokoll-Entwurf: Text scheitert, Frist geht', async () => {
+    ablegen(LT, BEAMER);
+    await verweigert(
+      () => toDoAendern(ort(LT), 'b', { text: 'Neu' }, ALWIN, false, true),
+      /Protokoll-Entwurf/,
+    );
+    const n = await toDoAendern(ort(LT), 'b', { bis: '2026-12-24' }, ALWIN, false, true);
+    expect(n.bis).toBe('2026-12-24');
+  });
+
+  it('Modus umstellen: 409 für Mitarbeiter, Leitung darf', async () => {
+    ablegen(LT, GETEILT);
+    await verweigert(() => toDoAendern(ort(LT), 'b', { jeder: true }, ALWIN), /nur die Leitung/);
+    const n = await toDoAendern(ort(LT), 'b', { jeder: true }, ALWIN, true);
+    expect(n.jeder).toBe(true);
+  });
+
+  it('Ohne Zuständigen: „Das mache ich“ geht, jemand anderen eintragen nicht, abhaken nicht', async () => {
+    ablegen(LT, OHNE);
+    await verweigert(() => toDoAendern(ort(LT), 'b', { wer: [19] }, ALWIN), /selbst eintragen/);
+    await verweigert(() => toDoAendern(ort(LT), 'b', { status: 'erledigt' }, ALWIN), /Status/);
+    const n = await toDoAendern(ort(LT), 'b', { wer: [1] }, ALWIN);
+    expect(n.wer).toEqual([1]);
+  });
+
+  it('Gegen den frisch gelesenen Stand: hat inzwischen jemand anderes es übernommen, scheitert „Das mache ich“', async () => {
+    ablegen(LT, { ...BEAMER, wer: [19] }); // Spike war schneller; auf dem Bildschirm stand es noch „ohne“
+    await verweigert(() => toDoAendern(ort(LT), 'b', { wer: [1] }, ALWIN), /gehört jemand anderem/);
+  });
+
+  it('Löschen: ein eigenes To-Do ja – geteilt, ohne Zuständigen und im Entwurf nicht', async () => {
+    ablegen(LT, GETEILT);
+    await verweigert(() => toDoLoeschen(ort(LT), 'b', ALWIN), /löscht nur die Leitung/);
+    await toDoLoeschen(ort(LT), 'b', ALWIN, true); // Leitung
+    expect(lies(LT)[0].geloescht).toBe(true);
+  });
+
+  it('Löschen eines eigenen To-Dos: Mitarbeiter ja, aber nicht im Entwurf', async () => {
+    ablegen(LT, BEAMER);
+    await verweigert(
+      () => toDoLoeschen(ort(LT), 'b', ALWIN, false, true),
+      /löscht nur die Leitung/,
+    );
+    await toDoLoeschen(ort(LT), 'b', ALWIN);
+    expect(lies(LT)[0].geloescht).toBe(true);
+  });
+
+  it('Anlegen: ein Mitarbeiter nur für sich – für andere, mehrere oder niemanden: 409', async () => {
+    await verweigert(
+      () => toDoAnlegen(ort(LT), { ...mitFrage, wer: [19] }, ALWIN),
+      /nur für dich selbst/,
+    );
+    await verweigert(
+      () => toDoAnlegen(ort(LT), { ...mitFrage, wer: [] }, ALWIN),
+      /nur für dich selbst/,
+    );
+    await verweigert(
+      () => toDoAnlegen(ort(LT), { ...mitFrage, wer: [1, 19] }, ALWIN),
+      /nur für dich selbst/,
+    );
+    const n = await toDoAnlegen(ort(LT), { ...mitFrage, wer: [1] }, ALWIN);
+    expect(n.wer).toEqual([1]);
+  });
+
+  it('Verschieben in eine andere Gruppe: nur die Leitung', async () => {
+    ablegen(LT, BEAMER);
+    await verweigert(
+      () =>
+        toDoVerschieben({
+          von: { ort: ort(LT), name: 'Leitungsteam' },
+          nach: { ort: ort(JG), gruppe: 194, name: 'Jugend' },
+          id: 'b',
+          neueId: 'n2',
+          x: {},
+          wer: [1],
+          ich: ALWIN,
+        }),
+      /nur die Leitung/,
+    );
     expect(lies(JG)).toEqual([]);
   });
 });

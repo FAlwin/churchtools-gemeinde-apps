@@ -869,3 +869,42 @@ beginnt mit „TEST“ und wird danach aufgeräumt.
 - **Historie:** 20.11.2026 (B6 „Ruhige Bedienung“, Entwurf Organigramm/Protokolle v2, E14: „Immer wenn was Grünes kommt, ist es etwas hinzufügen“)
 
 </details>
+
+### TF-PROT-25 · Rechte im To-Do: Mitarbeiter-Sicht
+
+**Das brauchst du:** In der Test-Instanz eine eingerichtete Gruppe mit mindestens **drei Mitgliedern**, dazu zwei Konten: du als **Leitung** und ein
+**Mitglied** (ohne Protokoll-Schreibrecht; z. B. „Benutzer simulieren“ – danach wieder beenden und in `/api/logs` nach „simulates“ sehen, dass nichts hängen blieb).
+Lege als Leitung vier Test-To-Dos an: „TEST Eigen“ (nur das Mitglied zuständig), „TEST Geteilt“ (Mitglied und eine weitere Person), „TEST Niemand“ (niemand
+zuständig) und „TEST Fremd“ (nur eine andere Person). Dazu ein Rechner und ein Handy (oder das Browserfenster auf 390 px Breite). In der Entwicklung zeigt
+`?demo=mitglied` dieselbe Sicht.
+
+**Das muss passieren:** Das Mitglied ändert nur, was zu seinem To-Do passt. Was es nicht ändern darf, steht als **normaler Text** im Fenster (kein ausgegrautes Feld),
+ein Satz mit Schloss sagt, wer es ändert.
+
+1. Als **Mitglied** in **To-Dos**: „TEST Fremd“ ist **nicht** zu sehen; „TEST Niemand“ hat vorn **keinen Haken** und rechts den Knopf **„Das mache ich“**
+   (am Rechner in der Spalte „Zuständig“, am Handy unten rechts in der Karte).
+2. „TEST Eigen“ öffnen: Text, Bis und Notiz sind **Felder**, unten links steht **Löschen**, bei „Zuständig“ steht der eigene Name als Text und darunter
+   **„Abgeben an“**. Ändere Frist und Status auf **In Arbeit**, speichere: Es klappt. Wähle bei „Abgeben an“ ein anderes Mitglied: Es steht da, dass es danach nicht
+   mehr zu sehen ist; speichere – das To-Do ist weg. (Als Leitung ist es jetzt bei dem anderen Mitglied zuständig; stelle es für die nächsten Schritte zurück.)
+3. „TEST Geteilt“ öffnen: **Was ist zu tun?**, **Gruppe**, **Bis** und **Zuständig** stehen als **Text**, es gibt **kein** Löschen und keine Zuständigen-Liste. Unten
+   ein Satz mit Schloss: „Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.“ Notiz schreiben und **Erledigt** wählen, speichern: Es klappt.
+4. „TEST Niemand“ öffnen: Unten steht **„Das mache ich“** statt „Speichern“, Status steht als Text, es gibt keine Notiz. Tippe darauf: Das Fenster geht zu, das
+   To-Do ist **deins** (Haken wieder da, dein Gesicht statt des Knopfes). Öffne es noch einmal: Jetzt sind Text, Frist und Notiz Felder, **Löschen** ist da.
+5. **Board** (nach Person): Ziehe „TEST Geteilt“ in die Spalte einer anderen Person: Es passiert nichts außer dem Hinweis **„Die Zuständigen ändert nur die Leitung.“**
+   Ziehe „TEST Eigen“ nach **Noch niemand zuständig**: Hinweis „Du kannst es nur an ein anderes Mitglied abgeben.“ Ziehe ein To-Do ohne Zuständigen in **deine** Spalte:
+   Du bist eingetragen.
+6. **Neues To-Do** als Mitglied: Bei „Zuständig“ steht fest dein Name (keine Liste, kein Feld für Externe); „Anlegen“ legt es für dich an.
+7. Als **Leitung**: Alle vier To-Dos zeigen alle Felder, „Löschen“, die Zuständigen-Liste und „So wird es erledigt“ – kein Schloss-Satz.
+8. **Entwurf:** Hat „TEST Eigen“ eine Aufgabe in einem Protokoll-**Entwurf**, steht beim Mitglied dort **Text als Text**, **kein Löschen** und ein Satz, dass die Leitung
+   das im Entwurf macht; die Frist bleibt änderbar.
+9. **Schreibweg:** Öffne als Mitglied „TEST Niemand“ und lass in der Leitungs-Sitzung „TEST Niemand“ inzwischen jemand anderem zuweisen; tippe dann „Das mache ich“: Eine
+   Meldung sagt, dass das To-Do jemand anderem gehört – nichts wird überschrieben.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/aufgaben.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/todoSchreiben.ts`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/ToDoKarte.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/loeschen.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/aufgaben.rechte.test.ts` (`toDoRechte`, `aenderungVerboten`, `anlegenVerboten`: jeder Fall, jedes Feld), `protokolle/src/todoSchreiben.test.ts` (Schreibweg: 409 für Text, Frist, Zuständige, Modus, Löschen, Anlegen, Verschieben; frisch gelesener Stand), `protokolle/src/ToDoFenster.test.tsx` (Mitarbeiter-Sicht: Text statt Feld, kein Löschen, „Abgeben an“, „Das mache ich“, neues To-Do für mich), `protokolle/src/ToDos.rechte.test.tsx` (Karte/Zeile: „Das mache ich“, Haken), `protokolle/src/ToDos.board.test.tsx` (Ziehen nur mit Recht); **nur von Hand:** Aussehen am Handy, echtes Zweikonto-Rennen
+- **Historie:** 20.11.2026 (W9a, Alwin simulierte Manuel als Mitarbeiter und durfte in v1.2.0 alles ändern)
+
+</details>

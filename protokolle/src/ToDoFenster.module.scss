@@ -131,3 +131,41 @@
   color: var(--green);
   font-weight: 600;
 }
+
+// Was man nicht ändern darf (W9a): normaler Text unter der Beschriftung – kein ausgegrautes Feld.
+.wert {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.wertGross {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.leiseText {
+  color: var(--text2);
+}
+
+// Der Satz mit Schloss: wer den Rest ändert.
+.leitungSatz {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 13.5px;
+  line-height: 1.4;
+
+  svg {
+    flex: none;
+    margin-top: 2px;
+  }
+}

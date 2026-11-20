@@ -14,8 +14,10 @@ import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
+  aenderungVerboten,
   bearbeiten,
   nameImVerlauf,
+  toDoRechte,
   type Aufgabe,
   type AufgabenStatus,
   type HakenSchritt,
@@ -312,9 +314,18 @@ export function ToDos({
     if (!u || u.gruppe.mitarbeit === null) return;
     const id = e.aufgabe.id;
     setHinweis(null);
+    // Die Rechte (`toDoRechte`) – dieselbe Regel prüft auch der Schreibweg; hier vorher, damit nichts erst gezeigt wird.
+    const imEntwurf = herkunftVon(e)?.entwurf ?? false;
+    const leitung = leitungIn(u.gruppe);
+    const grund = aenderungVerboten(e.aufgabe, x, { ich: ich.person, leitung, imEntwurf });
+    if (grund) {
+      setHinweis(grund);
+      beiFehler?.();
+      return;
+    }
     setLaeuft((s) => new Set(s).add(id));
     ersetzen(u.gruppe.id, bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString()));
-    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich)
+    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, x, ich, leitung, imEntwurf)
       .then(
         (gespeichert) => ersetzen(u.gruppe.id, gespeichert),
         (f: unknown) => {
@@ -383,6 +394,13 @@ export function ToDos({
     const danach = bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString());
     const g = ue.find((u) => u.gruppe.id === e.gruppe.id)?.gruppe;
     const leitung = !!g && leitungIn(g);
+    // Was ein Mitglied hier ablegen darf, sagt `toDoRechte` (nur Status eigener/geteilter, sich eintragen, abgeben).
+    const grund = aenderungVerboten(e.aufgabe, x, {
+      ich: ich.person,
+      leitung,
+      imEntwurf: herkunftVon(e)?.entwurf ?? false,
+    });
+    if (grund) return setHinweis(grund);
     if (!sichtbarFuer(danach, { ich: ich.person, leitung })) return setFrage({ e, x, an: n.titel });
     aendern(e, x);
   };
@@ -417,12 +435,19 @@ export function ToDos({
     const a = (g && sichtbarGezeigt.find((x) => eintragSchluessel(x) === k)?.aufgabe) || e.aufgabe;
     const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
     const liste = mitglieder.get(e.gruppe.id);
+    const herkunft = herkunftVon(e);
+    const rechte = toDoRechte(a, {
+      ich: ich.person,
+      leitung: !!u && leitungIn(u.gruppe),
+      imEntwurf: herkunft?.entwurf ?? false,
+    });
     return {
       e,
       a,
-      herkunft: herkunftVon(e),
+      herkunft,
+      rechte,
       gehalten: !!g,
-      darfHaken: !!u && u.gruppe.mitarbeit !== null && !g,
+      darfHaken: !!u && u.gruppe.mitarbeit !== null && !g && rechte.haken,
       beschaeftigt: laeuft.has(a.id),
       gruppeGroesse: Array.isArray(liste) ? liste.length : undefined,
     };
@@ -444,6 +469,7 @@ export function ToDos({
       }),
     onOeffnen: (e) => setFenster({ eintrag: e }),
     onHaken: haken,
+    onMache: (e) => aendern(e, { wer: [ich.person] }),
     onRueckgaengig: (e) => {
       const k = eintragSchluessel(e);
       const g = gehalten.get(k);

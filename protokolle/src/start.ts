@@ -11,7 +11,7 @@ import { modulId, modulPort } from '@ui/ct/modulPort';
 import { kategorienLesen } from '@shared/ct/modulDaten';
 import { modulRechteAus } from '@shared/ct/modulRechte';
 import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { darfVerwalten } from '@shared/protokolle/einrichten';
+import { darfVerwalten } from '@shared/ct/rollenRechte';
 import { ctDaten } from '@ui/ct/verbindung';
 
 export interface Start {

@@ -1,21 +1,26 @@
 /**
- * **Wer darf die Website bearbeiten?** (Bauplan Website W3a-1, §3.3) – in dieser Scheibe nur **Admins** und die
- * **Leitung der gewählten Gruppe „Website“**. Redakteure, Untergruppen und die Freigabe kommen mit W3b.
+ * **Wer darf die Website bearbeiten – und was?** (Bauplan Website W3a-1 §3.3, W3b-1 E-W19/E-W21/E-W22)
+ *
+ * - **Admin** = Recht „Gruppen verwalten“ (`administer groups` in `GET /permissions/global` → `churchdb`) – dieselbe Regel
+ *   wie im Anmelde-Tool (`verwaltetGruppen`).
+ * - **Leitung** und **Redakteur** ergeben sich aus den **eigenen Rechten** der Person am Modul (`GET /permissions/global` →
+ *   Block `website`, z. B. `create custom data: [104, 107]`) – nicht mehr daraus, ob sie die Gruppe leitet. Der Grund: Wer die
+ *   Gruppe leitet, aber keine Rechte hat, bekam den Editor gezeigt, und Speichern scheiterte. Jetzt gilt: Wer in
+ *   „Entwürfe“ **und** in „Veröffentlicht“ schreiben darf → `leitung`; nur in „Entwürfe“ → `redakteur`; sonst keiner.
+ *   „Schreiben“ heißt wie überall (`modulRechteAus`): anlegen, ändern **und** löschen – Speichern legt Teile an, ändert den
+ *   Kopf und löscht alte Teile; mit einem davon allein scheiterte es mittendrin. Fremde Kategorien zählen nicht.
+ *   Wer nur in „Veröffentlicht“ schreiben darf (kein Recht an „Entwürfe“), hat keinen Zugang – der Editor arbeitet in „Entwürfe“.
+ * - Die Stufen vergibt der Admin beim Einrichten und später unter Einstellungen → „Wer darf was“ (`./rechte`).
  *
  * **Das ist die Regel der Oberfläche, nicht der Schutz der Daten.** Den Schutz bilden die Rechte an den Kategorien in
- * ChurchTools (W3b setzt sie an die Gruppenrollen). Bis dahin vergibt die Verwaltung sie von Hand
- * (`docs/betrieb/WEBSITE.md`); die Oberfläche zeigt den Editor zusätzlich nur diesen beiden Gruppen von Personen.
- *
- * - **Admin** = Recht „Gruppen verwalten“ (`administer groups` in `GET /permissions/global` → `churchdb`) – dieselbe
- *   Regel wie im Anmelde-Tool (`verwaltetGruppen`).
- * - **Leitung** = aktive Mitgliedschaft in der Gruppe mit einer Rolle, die in ChurchTools als Leitung gilt (`isLeader`,
- *   `meineGruppen`). Die Rechteabfrage `GET /permissions/internal/groups/{id}` taugt dafür nicht: Sie meldet einzelne
- *   Rechte (`+create group` …), die auch Organisatoren haben, die keine Leitung sind.
+ * ChurchTools; die Oberfläche zeigt nur, was die Person auch tun darf.
  */
 import { verwaltetGruppen } from '../anmeldung/rechte';
 import { meineGruppen, type RohMitgliedschaft } from '../ct/gruppen';
+import { modulRechteAus } from '../ct/modulRechte';
+import { MODUL_KUERZEL } from './rechte';
 
-export type Zugang = 'admin' | 'leitung';
+export type Zugang = 'admin' | 'leitung' | 'redakteur';
 
 /** Ist die Person Admin? Aus `GET /permissions/global` (ausgepackt). */
 export function istAdmin(global: unknown): boolean {
@@ -23,7 +28,16 @@ export function istAdmin(global: unknown): boolean {
   return verwaltetGruppen(churchdb);
 }
 
-/** Leitet die Person diese Gruppe? */
+/**
+ * **In welchen Kategorien darf die Person schreiben?** (anlegen + ändern + löschen) – die IDs aus dem Block des Moduls in
+ * `GET /permissions/global`. Fehlt der Block, sind es keine.
+ */
+export function schreibtIn(global: unknown): number[] {
+  const block = (global as Record<string, unknown> | null | undefined)?.[MODUL_KUERZEL];
+  return modulRechteAus(block).aendern;
+}
+
+/** Leitet die Person diese Gruppe? (Nur noch für den Hinweis „Rechte fehlen“ – den Zugang bestimmen die Rechte.) */
 export function leitetGruppe(
   mitgliedschaften: readonly RohMitgliedschaft[] | null | undefined,
   rollen: readonly { id?: unknown; isLeader?: unknown }[] | null | undefined,
@@ -35,20 +49,37 @@ export function leitetGruppe(
   ).some((g) => g.id === gruppe && g.leitung);
 }
 
-/** Der Zugang der Person zur Website – `null`: keiner. Vor der Einrichtung gibt es keine Gruppe, also nur den Admin. */
-export function zugangFuer(admin: boolean, leitung: boolean): Zugang | null {
+/**
+ * Der Zugang der Person zur Website – `null`: keiner. `schreibt` = `schreibtIn(...)`. Vor der Einrichtung gibt es keine
+ * Kategorien (`null`), also nur den Admin. Der Admin hat Vorrang.
+ */
+export function zugangFuer(
+  admin: boolean,
+  schreibt: readonly number[],
+  kategorien: { entwuerfe: number | null; veroeffentlicht: number | null } | null,
+): Zugang | null {
   if (admin) return 'admin';
-  return leitung ? 'leitung' : null;
+  if (!kategorien || kategorien.entwuerfe === null || !schreibt.includes(kategorien.entwuerfe))
+    return null;
+  return kategorien.veroeffentlicht !== null && schreibt.includes(kategorien.veroeffentlicht)
+    ? 'leitung'
+    : 'redakteur';
 }
 
 /**
  * Darf die Person den Baustein „Eigenes HTML“ einfügen und ändern? **Eigenes HTML wird unverändert auf die Website
- * übernommen** (E-W12) – darum nur die Leitung. In W3a haben ohnehin nur Admins und die Leitung der Gruppe Zugang, also
- * gilt es für alle, die den Editor sehen; die Abfrage steht trotzdem schon hier, damit W3b (Redakteure) nur die Rolle
- * einspeist und nicht jede Stelle der Oberfläche sucht.
+ * übernommen** (E-W12) – darum nur Leitung und Admin, nie ein Redakteur.
  *
- * **Auch das ist die Regel der Oberfläche, nicht der Schutz der Daten** – den bilden die Rechte an den Kategorien (W3b).
+ * **Auch das ist die Regel der Oberfläche, nicht der Schutz der Daten.**
  */
 export function darfEigenesHtml(zugang: Zugang | null): boolean {
+  return zugang === 'admin' || zugang === 'leitung';
+}
+
+/**
+ * Darf die Person **Aussehen** (Farben, Schriften, eigenes CSS), das Fenster **Einstellungen** und das **Menü** ändern?
+ * (E-W22) – nur Leitung und Admin. Das eigene CSS wird unverändert übernommen, die Einstellungen gelten für die ganze Website.
+ */
+export function darfAussehenUndMenue(zugang: Zugang | null): boolean {
   return zugang === 'admin' || zugang === 'leitung';
 }

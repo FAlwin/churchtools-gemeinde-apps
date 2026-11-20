@@ -388,6 +388,7 @@ export function Seitenarbeit({
             menue={arbeitMenue}
             andereSeiten={andereSeiten}
             meldungen={meldungen}
+            menueAendern={rechte.menue}
             onClose={schliessen}
             onFertig={(neu, menue) => {
               const p = uebernehmen(neu, menue);

@@ -7,7 +7,7 @@ nie in der Live-Instanz der Gemeinde. Das Paket baut `npm run build -w website` 
 ### TF-WEBSITE-01 · Einrichten legt beide Kategorien für die gewählte Gruppe an, ohne Admin gibt es nur den Hinweis
 
 **Das brauchst du:** Die Erweiterung frisch installiert (noch nicht eingerichtet), ein Admin-Konto, in ChurchTools eine Gruppe
-„Website“ und eine Person ohne Admin-Recht (z. B. über „Person simulieren“).
+„Website“ und eine Person ohne Admin-Recht (ein zweites Konto in einem zweiten Browser).
 
 **Das muss passieren:** Der Admin sieht „Website einrichten“ mit der vorgewählten Gruppe „Website“ und dem Knopf
 **Einrichten**. Danach steht der Hinweis „Diese Website hat noch keine Startseite“, und unter Administration → Berechtigungen
@@ -15,40 +15,46 @@ stehen bei der Erweiterung die Kategorien „Website: Entwürfe · Website“ un
 einmal. Eine Person ohne Admin-Recht sieht keinen Einrichten-Knopf, sondern einen Hinweis.
 
 1. Als Admin im Menü auf **Website**: „Website einrichten“, die Gruppe „Website“ ist gewählt.
-2. **Einrichten** tippen: „Wird eingerichtet …“, danach der Rahmen mit den Reitern Seiten · Aussehen · Freigaben.
+2. Hat dein Konto in ChurchTools „Personen administrieren“, steht über dem Knopf **Einrichten** die Liste der Rollen mit je einer Stufe
+   (siehe TF-WEBSITE-12). **Einrichten** tippen: „Wird eingerichtet …“, danach der Rahmen mit den Reitern Seiten · Aussehen · Freigaben.
 3. Die Seite neu laden: kein „Einrichten“ mehr.
 4. Unter **Administration → Berechtigungen** bei „Website“: beide Kategorien, keine doppelt.
-5. Eine Person ohne Admin-Recht simulieren und die Seite öffnen: Hinweis, kein Knopf. Simulation beenden.
+5. Mit dem Konto ohne Admin-Recht (zweiter Browser) die Seite öffnen: Hinweis, kein Knopf.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Einrichtung.tsx`, `website/src/einrichten.ts`, `website/src/start.ts`, `shared/website/einrichten.ts`
-- **Automatisiert:** teilweise – `website/src/Einrichtung.test.tsx`, `website/src/start.test.ts`, `shared/website/einrichten.test.ts` (Regeln, Laden, Auswahl); das echte Anlegen und die Rechte-Seite von ChurchTools nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
+- **Automatisiert:** teilweise – `website/src/Einrichtung.test.tsx` (seit W3b-1 auch die Rechte je Rolle), `website/src/start.test.ts`, `shared/website/einrichten.test.ts` (Regeln, Laden, Auswahl); das echte Anlegen und die Rechte-Seite von ChurchTools nur in der Test-Instanz
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026); W3b-1 (20.11.2026): Stufen je Rolle beim Einrichten
 
 </details>
 
-### TF-WEBSITE-02 · Zugang: nur Admins und die Leitung der Gruppe – Mitarbeiter bekommen einen Hinweis
+### TF-WEBSITE-02 · Zugang: aus den eigenen Rechten – Leitung, Redakteur, sonst nur ein Hinweis
 
-**Das brauchst du:** Eingerichtete Website, die Gruppe „Website“ mit einer Leitung und einem Mitarbeiter, dazu die Rechte an
-„Entwürfe“ für die Leiter-Rolle (siehe Anleitung, „Wer darf was“). Zum Probieren „Person simulieren“.
+**Das brauchst du:** Eingerichtete Website mit gesetzten Rechten (TF-WEBSITE-12), die Gruppe „Website“ mit einem Leiter, einem
+Mitarbeiter und einer Person ohne Rolle; zum Wechseln die Rollen per ChurchTools-Gruppenverwaltung ändern (nicht „Person simulieren“).
 
-**Das muss passieren:** Admin und Leitung sehen den Rahmen mit den Reitern und die Seitenliste. Der Mitarbeiter (und jede andere
-Person) sieht nur: „Die Website bearbeiten dürfen die Admins und die Leitung der Gruppe ‚Website‘.“ – keinen Editor. Hat die
-Leitung die Rechte an den Kategorien noch nicht, steht „noch nicht eingerichtet, oder dir fehlt das Recht“.
+**Das muss passieren:** Der Zugang folgt den **Rechten**, nicht der Rolle in der Gruppe: Admin und Leitung (Rechte an Entwürfe **und**
+Veröffentlicht) sehen den Rahmen mit allen Reitern, der Redakteur (nur Entwürfe) nur Seiten und Freigaben. Wer keine Rechte hat, sieht
+nur den Hinweis „Die Website bearbeiten dürfen die Admins und alle, die in der Gruppe … eine Rolle mit Zugriff auf die Website haben“ –
+keinen Editor. Leitet jemand die Gruppe, hat aber keine Rechte, steht „Die Rechte für die Website sind noch nicht eingerichtet“ mit
+dem Weg über einen Admin.
 
 1. Als Admin die Erweiterung öffnen: Reiter und Seitenliste.
-2. Als **Leiter** der Gruppe simulieren: dasselbe.
-3. Als **Mitarbeiter** der Gruppe simulieren: nur der Hinweis.
-4. Als Person ohne Verbindung zur Gruppe simulieren: Hinweis („dir fehlt das Recht“ bzw. wer es darf).
+2. Als **Leiter** der Gruppe (Stufe „Leitung“): dasselbe, dazu „Einstellungen“ ganz rechts.
+3. Als **Mitarbeiter** (Stufe „Redakteur“): Seiten und Freigaben, kein Aussehen, kein „Einstellungen“.
+4. Dem Mitarbeiter in „Wer darf was“ „Kein Zugriff“ geben, neu laden: nur der Hinweis.
+5. Dem Leiter alle Rechte an der Website entziehen (Stufe „Kein Zugriff“), neu laden: „Die Rechte für die Website sind noch nicht
+   eingerichtet“.
+6. Eine Person ohne Verbindung zur Gruppe: Hinweis („dir fehlt das Recht“ bzw. wer es darf).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `website/src/App.tsx`, `website/src/start.ts`, `shared/website/zugang.ts`
 - **Automatisiert:** teilweise – `website/src/App.test.tsx`, `website/src/start.test.ts`, `shared/website/zugang.test.ts`; das echte Verhalten von Gruppenrollen und Kategorie-Rechten nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026); W3b-1 (20.11.2026): Zugang aus den eigenen Rechten statt aus der Rolle, Redakteur
 
 </details>
 
@@ -323,5 +329,45 @@ dort einträgst, wird mit **Speichern** gespeichert und gilt für die ganze Webs
 - **Betrifft:** `website/src/EinstellungenFenster.tsx`, `website/src/EinstellungenQuelle.tsx`, `website/src/Aussehen.tsx`, `website/src/App.tsx`, `website/src/Seiten.tsx`, `shared/website/einstellungen.ts`, `shared/website/modell.ts`
 - **Automatisiert:** teilweise – `website/src/EinstellungenFenster.test.tsx` (Speichern, Fußzeile, Grenze, ungültige Adresse, Datenschutz-Hinweis, Aussehen + Fenster nacheinander, Fremdsperre), `shared/website/einstellungen.test.ts`, `website/src/App.test.tsx` (Reiter), `website/src/EinstellungenInSeiten.test.tsx` (Fenster über „Seiten“: Vorschau sofort aktuell, Nachlesen scheitert, offene Bearbeitung bleibt); das Zusammenspiel zweier Browser und das Aussehen im echten ChurchTools nur von Hand
 - **Historie:** neu mit W3a-3b (20.11.2026); W3a-3c (20.11.2026): Vorschau in „Seiten“ zieht nach dem Speichern im Fenster nach
+
+</details>
+
+### TF-WEBSITE-12 · Rechte: Stufen je Rolle beim Einrichten, „Wer darf was“, Redakteur und Leitung
+
+**Das brauchst du:** Die Website in der Test-Instanz; ein Konto mit „Personen administrieren“ und „Gruppen verwalten“ (Admin); in der
+Gruppe „Website“ ein **Leiter**, ein **Mitarbeiter** (beide Konten in zwei weiteren Browsern oder zeitversetzt) und die Untergruppe
+nicht nötig. Die Rechte an den Kategorien der Website dürfen vorher von Hand gesetzt sein (dann siehst du Schritt 4).
+
+**Das muss passieren:** Beim Einrichten und später unter **Einstellungen → Wer darf was** wählst du je Rolle **Kein Zugriff · Redakteur ·
+Leitung**; **Rechte setzen** setzt die Rechte in ChurchTools und liest nach. Ein **Redakteur** bearbeitet Seiten (Entwürfe), sieht
+aber weder **Aussehen** noch **Einstellungen**, kein Menü in „Seite einstellen“ und keinen Baustein „Eigenes HTML“. Die **Leitung**
+sieht alles. Wer nicht „Personen administrieren“ hat, sieht „Wer darf was“ nicht.
+
+1. **Einrichten (frisch):** Die Gruppe wählen: Die Rollen stehen mit Stufen da – Leiter und Co-Leiter = Leitung, Mitarbeiter, Coach,
+   Organisator = Redakteur. Eine Rolle auf „Kein Zugriff“ stellen, **Einrichten**. Unter Administration → Berechtigungen bei der
+   Erweiterung „Website“: Leiter-Rolle hat Modul sehen sowie an „Entwürfe“ **und** „Veröffentlicht“ Kategorie/Daten sehen, anlegen,
+   ändern, löschen; die Mitarbeiter-Rolle an „Entwürfe“ alles, an „Veröffentlicht“ **nur** Kategorie sehen und Daten sehen; die Rolle
+   mit „Kein Zugriff“ nichts.
+2. **Wer darf was:** **Einstellungen** öffnen, nach unten: dieselbe Liste, die Stufen stimmen mit Schritt 1 überein. Dem Mitarbeiter
+   „Leitung“ geben, **Rechte setzen**: „Die Rechte sind gesetzt und nachgelesen“; in ChurchTools stehen die Veröffentlicht-Schreibrechte
+   jetzt auch bei der Mitarbeiter-Rolle. Wieder auf „Redakteur“ und **Rechte setzen**: Die Schreibrechte an „Veröffentlicht“ sind weg
+   (zusätzliche Rechte an **anderen** Kategorien oder Zusatzrechte bleiben).
+3. **Als Mitarbeiter (Redakteur):** Reiter nur **Seiten** und **Freigaben**; kein „Einstellungen“. Eine Seite bearbeiten und speichern
+   klappt. **Seite einstellen** zeigt Titel, Adresse, Beschreibung – **ohne** „Im Menü zeigen“ und Reihenfolge. Beim Einfügen steht
+   „Eigenes HTML“ nicht zur Wahl.
+4. **Von Hand verändert:** In ChurchTools der Mitarbeiter-Rolle das Recht „Daten anlegen“ an „Veröffentlicht“ geben. Die Erweiterung als
+   Admin neu öffnen: Oben steht ein Hinweis, dass bei „Mitarbeiter“ die Rechte nicht mit der Stufe übereinstimmen; **Wer darf was**
+   zeigt „Weicht ab“. **Rechte setzen** richtet es, der Hinweis verschwindet nach dem Schließen des Fensters.
+5. **Als Leiter:** Alle Reiter, „Einstellungen“ ohne den Bereich „Wer darf was“, „Eigenes HTML“ und Menü sind da.
+6. **Leitung ohne Rechte:** Dem Leiter die Stufe „Kein Zugriff“ geben, als Leiter neu laden: „Die Rechte für die Website sind noch
+   nicht eingerichtet“ (kein Editor).
+7. **Fehler:** Netz aus, **Rechte setzen**: „Noch nicht gesetzt – …“, die Wahl bleibt stehen. Netz an, **Rechte setzen**: klappt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/rollenRechte.ts`, `shared/website/rechte.ts`, `shared/website/zugang.ts`, `website/src/rechte.ts`, `website/src/WerDarfWas.tsx`, `website/src/RollenStufen.tsx`, `website/src/RechteHinweis.tsx`, `website/src/Einrichtung.tsx`, `website/src/App.tsx`, `website/src/start.ts`, `website/src/SeiteEinstellen.tsx`, `website/src/EinstellungenFenster.tsx`
+- **Automatisiert:** teilweise – `shared/ct/rollenRechte.test.ts` (Ablauf Ist → setzen → entziehen → nachschieben → nachlesen, Fehlerzweige), `shared/website/rechte.test.ts` (Soll je Stufe, Stufe aus Rechten inkl. Mischzustand, Vorbelegung, Hinweis), `shared/website/zugang.test.ts`, `website/src/rechte.test.ts`, `website/src/WerDarfWas.test.tsx`, `website/src/Einrichtung.test.tsx`, `website/src/App.test.tsx` (Redakteur/Leitung/Admin), `website/src/Seitenarbeit.test.tsx` (Menü), `website/src/demo.test.ts`; die echten Rechte in ChurchTools und das Zusammenspiel mehrerer Konten nur in der Test-Instanz
+- **Historie:** neu mit W3b-1 (20.11.2026)
 
 </details>

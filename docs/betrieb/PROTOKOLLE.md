@@ -509,7 +509,7 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
 ## Für Entwickler
 
 - Regeln (ohne Oberfläche, getestet): `shared/protokolle/` – Dokument und Ableitung (`dokument.ts`), Speicher mit
-  Kopf und gepackten Teilen (`speicher.ts`), To-Dos (`aufgaben.ts`), Einrichten (`einrichten.ts`), Vorlagen
+  Kopf und gepackten Teilen (`speicher.ts`), To-Dos (`aufgaben.ts`), Einrichten (`einrichten.ts` – Stufen, Soll und Zusatzrechte; die Mechanik „Rechte an Gruppenrollen“ – Lesen, Soll gegen Ist, Entziehen, Nachschieben, Nachlesen – liegt seit 20.11.2026 gemeinsam mit der Website in `shared/ct/rollenRechte.ts`), Vorlagen
   (`vorlagen.ts`), Namen für die KI (`platzhalter.ts`), Meine Gruppen (`gruppen.ts`), Sitzungen (`sitzungen.ts`; darin `fremdeTermineAus`, die Regel „das Gruppentreffen entscheidet“ – angewandt in
   `protokolle/src/lesen.ts` für `ladeSitzungen` und `sitzungenOhneProtokoll`, nur dort),
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,

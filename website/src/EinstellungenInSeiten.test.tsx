@@ -124,6 +124,8 @@ beforeEach(() => {
     stand: 'fertig',
     admin: false,
     zugang: 'leitung',
+    darfRechteSetzen: false,
+    leitungOhneRechte: false,
   } satisfies Start);
   d.ladeWebsite.mockImplementation(async () => {
     if (leseFehler) throw new ApiError(503, 'weg');

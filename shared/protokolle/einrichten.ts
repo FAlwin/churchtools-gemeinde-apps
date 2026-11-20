@@ -2,16 +2,9 @@
  * **Welche Rechte eine eingerichtete Gruppe braucht** (Bauplan Protokolle S1/S2) – die eine Stelle für die
  * Verwaltung („Gruppe einrichten“) und für die Prüfung beim Start.
  *
- * Gemessen (16.10. und S0 am 22.10.2026):
- * - Rechte hängen an „Rolle X in Gruppe Y“ (`group_role`, ID aus `GET /groups/{id}/roles` → `id`) und folgen
- *   Rollenwechseln sofort. **Setzen darf nur ein Admin.**
- * - Die Nummern der Rechte sind **je Modul verschieden** → aus `GET /permissions/definitions` nach Schlüssel.
- * - `PUT` **ergänzt nur**; entzogen wird per `DELETE {authId, dataId}`. Ein entzogenes Recht wirkt weiter,
- *   **bis irgendein `PUT` folgt** → nach dem Entziehen ein vorhandenes Recht erneut setzen (`nachschieben`).
- *   Der Zwischenspeicher gilt für alle Rollen: ein `PUT` an einer **anderen** Rolle leert ihn ebenso sofort,
- *   auch wenn die Rolle mit dem Entzug danach gar kein Recht mehr hat (gemessen S2-1, 22.10.2026).
- * - Setzen darf nur, wer „Personen administrieren“ hat (`churchcore: administer persons`); ein Mitglied bekommt
- *   403 (gemessen S2-1).
+ * **Die Mechanik** (Recht, Nummern, Soll gegen Ist, Entziehen, Nachschieben, Nachlesen, `darfVerwalten`) steht seit
+ * 20.11.2026 in `shared/ct/rollenRechte.ts` – hier nur, was die Protokolle ausmacht: Stufen, Soll je Stufe und die
+ * Zusatzrechte. Gemessen (16.10. und S0 am 22.10.2026; Messwerte zur Mechanik dort):
  * - Versteckte Gruppen: ihre Mitglieder sehen die Gruppe nur mit „versteckte Gruppe sehen“ (10119) an der Rolle.
  * - Anwesenheit (S5-3, gemessen 05.11.2026): gruppenintern „Gruppentreffen pflegen“ = 10124, „Gruppentreffen
  *   durchführen“ = 10111 – beide an die Leitung (Dienst- und Kleingruppen-Leiter haben sie schon über den Gruppentyp,
@@ -23,6 +16,16 @@
  * das merkt sich die Einstellung der Gruppe (`vergeben`, Alwin 22.10.2026). Was vorher schon von Hand da war,
  * wird nie gemerkt und darum nie entzogen.
  */
+
+import { modulRechtAus } from '../ct/gruppenart';
+import {
+  datenRechteNummernAus,
+  istDatenRechtAn,
+  rechtSchluessel,
+  rechteVergleichen,
+  type DatenRechteNummern,
+  type Recht,
+} from '../ct/rollenRechte';
 
 export type Stufe = 'keine' | 'mitglied' | 'leitung';
 
@@ -39,20 +42,10 @@ export const VERSTECKTE_GRUPPE_SEHEN = 10119;
 export const GRUPPENTREFFEN_PFLEGEN = 10124;
 export const GRUPPENTREFFEN_DURCHFUEHREN = 10111;
 
-export interface RechteNummern {
-  /** Das Modul überhaupt sehen (Menüpunkt) – ohne Daten. */
-  modulSehen: number;
-  kategorieSehen: number;
-  datenSehen: number;
-  datenAnlegen: number;
-  datenAendern: number;
-  datenLoeschen: number;
+/** Die Nummern der Protokolle: die Daten-Rechte des Moduls und die Kalender-Rechte (`churchcal`, je Instanz anders). */
+export interface RechteNummern extends DatenRechteNummern {
   kalenderSehen: number;
   kalenderBearbeiten: number;
-}
-
-interface Definitionen {
-  modules?: { key?: unknown; permissions?: { authId?: unknown; key?: unknown }[] }[];
 }
 
 /**
@@ -63,31 +56,11 @@ export function rechteNummernAus(
   definitionen: unknown,
   modulKuerzel: string,
 ): RechteNummern | null {
-  const module = (definitionen as Definitionen | null)?.modules ?? [];
-  const nummer = (modul: string, schluessel: string): number | null => {
-    const m = module.find((x) => x.key === modul);
-    const r = m?.permissions?.find((p) => p.key === schluessel);
-    return typeof r?.authId === 'number' ? r.authId : null;
-  };
-  const n = {
-    modulSehen: nummer(modulKuerzel, 'view'),
-    kategorieSehen: nummer(modulKuerzel, 'view custom category'),
-    datenSehen: nummer(modulKuerzel, 'view custom data'),
-    datenAnlegen: nummer(modulKuerzel, 'create custom data'),
-    datenAendern: nummer(modulKuerzel, 'edit custom data'),
-    datenLoeschen: nummer(modulKuerzel, 'delete custom data'),
-    kalenderSehen: nummer('churchcal', 'view category'),
-    kalenderBearbeiten: nummer('churchcal', 'edit category'),
-  };
-  return Object.values(n).every((v) => v !== null) ? (n as RechteNummern) : null;
-}
-
-export interface Recht {
-  /** `group_role`-ID (Rolle in genau dieser Gruppe). */
-  rolle: number;
-  authId: number;
-  /** Kategorie- bzw. Kalender-ID; `null` bei Rechten ohne Daten (10119). */
-  dataId: number | null;
+  const daten = datenRechteNummernAus(definitionen, modulKuerzel);
+  const kalenderSehen = modulRechtAus(definitionen, 'churchcal', 'view category');
+  const kalenderBearbeiten = modulRechtAus(definitionen, 'churchcal', 'edit category');
+  if (!daten || kalenderSehen === null || kalenderBearbeiten === null) return null;
+  return { ...daten, kalenderSehen, kalenderBearbeiten };
 }
 
 export interface Einrichtung {
@@ -132,16 +105,24 @@ export function sollRechte(e: Einrichtung, n: RechteNummern): Recht[] {
   return out;
 }
 
-const schluessel = (r: Recht): string => `${r.rolle}:${r.authId}:${r.dataId ?? '-'}`;
+/**
+ * **Was die Protokolle verwalten (und darum entziehen dürfen):** Daten-Rechte an UNSEREN Kategorien, dazu die
+ * Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (`vergeben`). Das `verwaltet` für `rechteAusrichten`.
+ */
+export function verwaltetVon(
+  e: Pick<Einrichtung, 'kategorien'>,
+  n: RechteNummern,
+  vergeben: readonly Recht[] = [],
+): (r: Recht) => boolean {
+  const unsere = new Set([e.kategorien.protokolle, e.kategorien.mitarbeit, e.kategorien.vorlagen]);
+  const selbstGesetzt = new Set(vergeben.map(rechtSchluessel));
+  return (r) => istDatenRechtAn(r, n, unsere) || selbstGesetzt.has(rechtSchluessel(r));
+}
 
 /**
  * **Soll gegen Ist** für die Rollen der Gruppe. `ist` = alle Rechte, die diese Rollen heute haben
- * (`GET /permissions/group_role/{rolle}`). Entzogen wird nur, was auf UNSERE Kategorien zeigt.
- *
- * `nachschieben`: ein Recht, das nach dem Entziehen erneut gesetzt wird, damit ChurchTools seinen
- * Zwischenspeicher leert (S0; welche Rolle, ist gleich – S2-1). `null`, wenn nichts entzogen wird. Bleibt nach
- * dem Entziehen gar kein Recht übrig (alle Rollen „Kein Zugriff“), wird „Modul sehen“ an die erste betroffene
- * Rolle gesetzt: Das schadet nicht – ohne Kategorie-Rechte sieht sie nichts – und wird nie entzogen.
+ * (`GET /permissions/group_role/{rolle}`). Entzogen wird nur, was auf UNSERE Kategorien zeigt (`verwaltetVon`).
+ * Die Rechnung selbst (Setzen, Entziehen, Nachschieben) steht in `rechteVergleichen`.
  */
 export function ausrichten(
   soll: readonly Recht[],
@@ -151,30 +132,7 @@ export function ausrichten(
   /** Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (aus der Einstellung). */
   vergeben: readonly Recht[] = [],
 ): { setzen: Recht[]; entziehen: Recht[]; nachschieben: Recht | null } {
-  const unsere = new Set([e.kategorien.protokolle, e.kategorien.mitarbeit, e.kategorien.vorlagen]);
-  const datenRechte = new Set([
-    n.kategorieSehen,
-    n.datenSehen,
-    n.datenAnlegen,
-    n.datenAendern,
-    n.datenLoeschen,
-  ]);
-  const selbstGesetzt = new Set(vergeben.map(schluessel));
-  const verwaltet = (r: Recht): boolean =>
-    (datenRechte.has(r.authId) && r.dataId !== null && unsere.has(r.dataId)) ||
-    selbstGesetzt.has(schluessel(r));
-
-  const sollSet = new Set(soll.map(schluessel));
-  const istSet = new Set(ist.map(schluessel));
-  const setzen = soll.filter((r) => !istSet.has(schluessel(r)));
-  const entziehen = ist.filter((r) => verwaltet(r) && !sollSet.has(schluessel(r)));
-  const bleibt = [
-    ...soll,
-    ...ist.filter((r) => !entziehen.some((x) => schluessel(x) === schluessel(r))),
-  ];
-  if (!entziehen.length) return { setzen, entziehen, nachschieben: null };
-  const ersatz: Recht = { rolle: entziehen[0].rolle, authId: n.modulSehen, dataId: null };
-  return { setzen, entziehen, nachschieben: bleibt[0] ?? ersatz };
+  return rechteVergleichen(soll, ist, verwaltetVon(e, n, vergeben), n.modulSehen);
 }
 
 /**
@@ -229,33 +187,8 @@ export function vergebenNachher(
   vergeben: readonly Recht[],
   n: RechteNummern,
 ): Recht[] {
-  const gesetzt = new Set([...setzen, ...vergeben].map(schluessel));
-  return soll.filter((r) => istZusatzrecht(r, n) && gesetzt.has(schluessel(r)));
-}
-
-/**
- * Rechte einer Rolle aus `GET /permissions/group_role/{rolle}` (ausgepackt). Mehrere `dataId` zu einem Recht
- * kommen als eigene Zeilen (gemessen 16.10.2026); fehlt `dataId`, gilt es ohne Daten.
- */
-export function rechteAus(rolle: number, zeilen: unknown): Recht[] {
-  if (!Array.isArray(zeilen)) return [];
-  const out: Recht[] = [];
-  for (const z of zeilen as { authId?: unknown; dataId?: unknown; type?: unknown }[]) {
-    if (typeof z.authId !== 'number' || (z.type !== undefined && z.type !== 'grant')) continue;
-    out.push({ rolle, authId: z.authId, dataId: typeof z.dataId === 'number' ? z.dataId : null });
-  }
-  return out;
-}
-
-/** Der Rumpf für `PUT`/`DELETE /permissions/group_role/{rolle}`. */
-export function rechtRumpf(r: Recht): { authId: number; dataId?: number[] } {
-  return r.dataId === null ? { authId: r.authId } : { authId: r.authId, dataId: [r.dataId] };
-}
-
-/** **Wer die Verwaltung sieht**: wer in ChurchTools Rechte setzen darf (`churchcore: administer persons`). */
-export function darfVerwalten(globaleRechte: unknown): boolean {
-  const cc = (globaleRechte as { churchcore?: Record<string, unknown> } | null)?.churchcore;
-  return cc?.['administer persons'] === true;
+  const gesetzt = new Set([...setzen, ...vergeben].map(rechtSchluessel));
+  return soll.filter((r) => istZusatzrecht(r, n) && gesetzt.has(rechtSchluessel(r)));
 }
 
 export type PunkteVonMitgliedern = 'vorschlagen' | 'direkt';
@@ -299,21 +232,4 @@ export function istEinstellung(x: unknown): x is GruppenEinstellung {
             (r.dataId === null || typeof r.dataId === 'number'),
         )))
   );
-}
-
-/**
- * **Hat ChurchTools übernommen, was ausgerichtet werden sollte?** `nachher` = frisch gelesene Rechte der Rollen.
- * Geprüft wird das ganze Soll (nicht nur das gerade Gesetzte) und jeder Entzug. Leer heißt: übernommen – ein
- * 204 allein ist kein Beleg (Lehre vom 11.08.2026).
- */
-export function abweichungen(
-  soll: readonly Recht[],
-  entzogen: readonly Recht[],
-  nachher: readonly Recht[],
-): { fehlt: Recht[]; nochDa: Recht[] } {
-  const da = new Set(nachher.map(schluessel));
-  return {
-    fehlt: soll.filter((r) => !da.has(schluessel(r))),
-    nochDa: entzogen.filter((r) => da.has(schluessel(r))),
-  };
 }

@@ -6,6 +6,11 @@ import styles from './ReiterLeiste.module.scss';
 export interface Reiter<T extends string> {
   id: T;
   label: string;
+  /**
+   * **Kurze Beschriftung für die Leiste unten (Handy)**: Dort ist für jeden Reiter nur etwa ein Sechstel der Breite da – ein
+   * langer Name bricht um („Kinder & Jugend“). Am Rechner (`oben`) steht immer `label`. Der Name für Vorleser bleibt `label`.
+   */
+  kurz?: string;
   icon: IconName;
   /** Eine Anzahl hinter dem Text, leiser gesetzt (Bereich „Anmeldungen“: „Warteliste 2“, U2-1). */
   zahl?: number;
@@ -89,18 +94,19 @@ export function ReiterLeiste<T extends string>({
       {reiter.map((r) => {
         const an = aktiv === r.id;
         const aus = gedimmt.includes(r.id);
+        const kurzGezeigt = !oben && !!r.kurz;
         return (
           <button
             key={r.id}
             type="button"
             aria-pressed={an}
             className={`${styles.tab}${an ? ' ' + styles.on : ''}${aus ? ' ' + styles.off : ''}`}
-            aria-label={r.zaehler ? r.zaehlerName : undefined}
+            aria-label={r.zaehler ? r.zaehlerName : kurzGezeigt ? r.label : undefined}
             onClick={() => (an ? onErneut?.() : onWechsel(r.id))}
           >
             {!oben && <Icon name={r.icon} size={24} stroke={1.9} />}
             <span>
-              {r.label}
+              {kurzGezeigt ? r.kurz : r.label}
               {r.zahl !== undefined && <span className={styles.zahl}> {r.zahl}</span>}
               {r.zaehler ? (
                 <>

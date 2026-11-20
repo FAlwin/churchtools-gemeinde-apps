@@ -33,7 +33,8 @@ const WEGE: Record<
     da: 'Wer wie oft?',
   },
   organigramm: {
-    start: 'Neue Gliederung',
+    // Seit 20.11.2026 steht „Neue Gliederung“ im ⋯ statt als Reiter – „Präsentieren“ steht fest in der Werkzeugzeile.
+    start: 'Präsentieren',
     gehe: (p) => p.getByRole('button', { name: 'Personen', exact: true }).first().click(),
     ziel: /#personen$/,
     da: 'Einsätze (6 Monate)',

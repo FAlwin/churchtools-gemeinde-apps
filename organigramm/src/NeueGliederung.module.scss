@@ -1,5 +1,17 @@
 // Neue Gliederung (O7-2) – Baum und Knöpfe aus Organigramm.module.scss, hier nur das Eigene; Werte aus ui/design.
 
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
 .einleitung {
   margin: 0;
   color: var(--text2);

@@ -2,8 +2,8 @@
 
 > **Stand: v0.3.3 (19.11.2026: Stufe über die Überschrift wählen, Fenster am iPhone ruckeln nicht mehr, Esc schließt Fenster; Gruppenwechsel O9 seit v0.3.0–v0.3.2)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
-> **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
-> und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
+> **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und die Seite **Neue Gliederung** (Plan
+> und Umbau, im „⋯“ des Reiters Organigramm) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
 > und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen; Gruppen-Admins stellen ein, was
 > das Organigramm für alle zeigt (O7b-7). Seit O9-2 der Reiter **Kinder & Jugend** (Gruppenwechsel der Kinder), seit O9-3 mit **Ausnahme setzen**. Diese Anleitung wächst mit.
@@ -265,8 +265,12 @@ eigene Rolle dort erlaubt; Gruppen-Admins dürfen alles. In der Test-Instanz dü
 
 ## Neue Gliederung (ab O7-2)
 
-Nur für **Gruppen-Admins**: Im Reiter **Neue Gliederung** entsteht der Plan, wie die Gemeinde künftig gegliedert ist.
+Nur für **Gruppen-Admins**: Auf der Seite **Neue Gliederung** entsteht der Plan, wie die Gemeinde künftig gegliedert ist.
 **ChurchTools ändert sich dabei nicht** – das geschieht erst im **Umbau** (siehe unten).
+
+**Wo du sie findest:** im Reiter **Organigramm** das **⋯** → **Neue Gliederung** (kein eigener Reiter mehr, seit 20.11.2026).
+Oben auf der Seite bringt **‹ Organigramm** dich zurück; auch ein Tipp auf den Reiter Organigramm führt zurück. Die Adresse
+`#gliederung` öffnet die Seite weiter direkt (Lesezeichen gelten).
 
 - **Plan anlegen** kopiert die heutige Gliederung. Es gibt **einen** Plan für alle Gruppen-Admins; oben steht, wer
   zuletzt gespeichert hat.
@@ -303,7 +307,7 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 
 ## Kinder & Jugend: Gruppenwechsel (ab O9-2, Ausnahme ab O9-3)
 
-Der Reiter **Kinder & Jugend** zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Ausnahmen
+Der Reiter **Kinder & Jugend** (am Handy kurz „Kinder“) zeigt, welche Kinder zum neuen Schuljahr in die nächste Gruppe wechseln. Ausnahmen
 („bleibt noch ein Jahr“) setzt man seit O9-3 hier, im Fenster des Kindes (siehe „Ausnahme setzen“ unten).
 
 - **Wer ihn sieht:** Leitungen der Kindergruppen (**Meine Gruppe**), die Leitung der Bereichsgruppe und Admins

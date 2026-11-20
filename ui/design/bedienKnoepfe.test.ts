@@ -36,7 +36,7 @@ const OBERGRENZE: Record<App, { knoepfe: number; hoehen: number }> = {
   client: { knoepfe: 109, hoehen: 21 },
   anmeldungen: { knoepfe: 102, hoehen: 6 },
   protokolle: { knoepfe: 81, hoehen: 27 },
-  dienstplaner: { knoepfe: 78, hoehen: 21 },
+  dienstplaner: { knoepfe: 76, hoehen: 19 },
   organigramm: { knoepfe: 62, hoehen: 2 },
   website: { knoepfe: 12, hoehen: 3 },
   gebetsabend: { knoepfe: 0, hoehen: 0 },

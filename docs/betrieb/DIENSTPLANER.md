@@ -378,7 +378,22 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   Personenliste“ statt „Oben: frei und selten dran“; wer pausiert, steht unter „Kann nicht / abwesend“ bzw. am Ende der einen Liste, blass,
   mit „Pause bis …“; Kürzel grau hinter dem Namen. **PDF „Personen“:** bei „Eine Gruppe“ in der Reihenfolge der Liste, beim ganzen Plan
   alphabetisch; die Tags mit vollem Namen grau hinter dem Namen, gilt einer nur für einen Teil der gezeigten Dienste der Person, steht der Dienst
-  dahinter; „Je Person“ unverändert. Anlegen und Ändern der Liste kommen mit PL-2, „Pause wirkt“ (Erinnern, Zauberstab) mit PL-3.
+  dahinter; „Je Person“ unverändert. „Pause wirkt“ (Erinnern, Zauberstab) kommt mit PL-3.
+- **Die Personenliste bearbeiten (PL-2, 20.11.2026, Entwurf `personenliste.html`, Variante B):** **⋯ → „Liste bearbeiten“** (nur, wo man die Liste
+  mindestens einer gezeigten Dienstgruppe ändern darf: `schubladenStand === 'bereit'`, dieselben Rechte wie bei den Entwürfen; wechselt nach
+  „Personen“). Im Modus (`useListeBearbeiten`, `Sicht.liste`) steht ein blaues Band mit „Tags verwalten …“ und „Fertig“; jede **obere** Zeile einer
+  änderbaren Dienstgruppe hat einen Griff (dnd-kit wie die Ablauf-Liste: `ZiehZeile`, `useZiehSensoren`; ein `SortableContext` je Block), blasse
+  Zeilen (Pause, ganz abwesend) haben keinen. **Ziehen** speichert die neue Reihenfolge der **Dienstgruppe** (`reiheNachZiehen`: die Plätze der
+  Block-Personen in der gespeicherten Reihenfolge werden neu belegt, wer noch nicht in der Liste stand, kommt hinten dazu, alle anderen behalten
+  ihre Stelle – so bleiben andere Blöcke derselben Gruppe unberührt). Der **Klick auf den Namen** öffnet im Modus das **Personen-Fenster**
+  (`PersonFenster`: Tags bei diesem Dienst als Häkchen, Pause Keine · Bis Datum · Ohne Ende, Speichern setzt beides in einem Schreiben), sonst
+  bleibt er der Fokus. **„Tags verwalten“** (`TagsVerwaltenFenster`): Name + Kürzel (1–2 Zeichen, großgeschrieben; leer → Anfang des Namens),
+  „+ Tag“, Löschen nimmt den Tag allen Personen weg (`tagListeSetzen`); IDs `t1`, `t2` … sind stabil. **Speichern**
+  (`shared/dienstplan/personenlisteSpeichern.ts`): frisch lesen → Version vergleichen (`konflikt` mit dem Stand des anderen Planers, nichts
+  überschrieben) → POST (noch keine Liste) oder PUT auf den gewinnenden Wert, Doppelte vorher löschen → **nachlesen** (`nachleseUrteil` in `shared/ct/modulDaten.ts`, dieselbe
+  Regel wie bei Entwürfen und `versionierterWert`) → erst dann gilt es und wird ins Raster übernommen. **Nie automatisch wiederholt**; vorübergehende Fehler
+  (Netz, 429, 5xx, Zeitüberschreitung) → „vorübergehend“, das Fenster bleibt mit der Eingabe offen. Die Änderungen setzen absolute Werte, ein
+  Versuch, der doch angekommen ist, wird als „schon gespeichert“ erkannt. Ein Wechsel der Ansicht beendet den Modus. Die Demo kann schreiben.
 - **Der gemerkte Wert `personen`** (bis 16.11.2026 der Name von „Wer wie oft?“) wird beim Lesen zu `werWieOft`; das neue
   Raster heißt intern `raster`. Wer „Wer wie oft?“ gemerkt hatte, sieht es weiter.
 

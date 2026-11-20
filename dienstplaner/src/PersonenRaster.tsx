@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { closestCenter, DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Icon } from '@ui/icons/icons';
 import { modusWort } from '@shared/dienstplan/modusVorgabe';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { useZiehSensoren } from '@ui/bedienung/useZiehSensoren';
+import { innerScrollOnly, resetViewportAfterDrag } from '@ui/bedienung/dndAutoScroll';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { tagKurz } from '@shared/ct/datum';
 import type { PlanZeile } from '@shared/dienstplan/plan';
@@ -27,6 +31,7 @@ import {
   type RasterZelle,
 } from '@shared/dienstplan/personenRaster';
 import { GastFenster } from './GastFenster';
+import { ZiehZeile } from './ZiehZeile';
 import type { PersonenLader } from './ladePersonen';
 import type { AntwortenLader } from './ladeAntworten';
 import { VorgabeKnopf, ZauberKnopf } from './PlanAnsicht';
@@ -268,6 +273,7 @@ export function PersonenRaster({
 }) {
   const { plan, spalten, gruppen, zugeklappt, onUmschalten } = sicht;
   const bisUnten = useBisUnten();
+  const sensoren = useZiehSensoren();
   // Hervorheben mit der Maus über dem Namen (nur echte Maus – am Handy erzeugt Antippen sonst Eintreten UND Klick):
   // schwach, nur solange man darüber ist. Das **Festhalten** ist seit Wunsch 11 der Fokus-Modus (`sicht.fokusId`):
   // Antippen des Namens nimmt die Person in den Fokus – kräftig gelb, in allen ihren Zeilen, über die Ansichten hinweg.
@@ -468,56 +474,130 @@ export function PersonenRaster({
     }
   };
 
-  const zeile = (b: RasterBlock, r: RasterZeile, nr: number) => (
-    <tr
-      key={r.schluessel}
-      className={`${nr % 2 === 1 ? styles.z2 : ''}${r.ruhend ? ' ' + styles.ruhend : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}${fokusId === r.personId ? ' ' + styles.fokus : ''}`}
-      data-person={r.personId}
-    >
-      <th scope="row" className={styles.name}>
-        <button
-          type="button"
-          className={styles.namenKnopf}
-          aria-pressed={fokusId === r.personId}
-          title={
-            fokusId === r.personId
-              ? 'Fokus aus'
-              : 'Im Plan hervorheben – alle Zeilen dieser Person, auch in der Matrix'
-          }
-          onPointerEnter={(e) => e.pointerType === 'mouse' && setUeber(r.personId)}
-          onPointerLeave={(e) => e.pointerType === 'mouse' && setUeber(null)}
-          onClick={() =>
-            fokusId === r.personId ? sicht.onFokusAus?.() : sicht.onFokus?.(r.personId, r.name)
-          }
+  /**
+   * Eine Zeile wurde losgelassen (PL-2): Die neue Stelle gilt im Block – gerechnet und gespeichert wird in der Liste der
+   * Dienstgruppe (`sicht.liste.verschieben`, für alle Blöcke dieser Gruppe). Gezogen wird nur unter den oberen Zeilen.
+   */
+  const beiZiehEnde = (e: DragEndEvent) => {
+    resetViewportAfterDrag();
+    if (!sicht.liste || !e.over || e.active.id === e.over.id) return;
+    const b = raster.blocks.find((x) => x.zeilen.some((r) => r.schluessel === e.active.id));
+    const gruppeId = b?.dienst.dienstgruppeId ?? null;
+    if (!b || gruppeId === null || !sicht.liste.darf(gruppeId)) return;
+    const oben = b.zeilen.slice(0, b.zeilen.length - b.ruhend);
+    const von = oben.findIndex((r) => r.schluessel === e.active.id);
+    const nach = oben.findIndex((r) => r.schluessel === e.over?.id);
+    if (von < 0 || nach < 0) return;
+    sicht.liste.verschieben(
+      gruppeId,
+      oben.map((r) => r.personId),
+      von,
+      nach,
+    );
+  };
+
+  /**
+   * Darf in diesem Block die Liste bearbeitet werden (PL-2)? Der Modus muss an sein, und man muss die Personenliste der
+   * Dienstgruppe ändern dürfen – sonst bleibt alles wie in der Ansicht (Name = Fokus, keine Griffe).
+   */
+  const bearbeitbar = (b: RasterBlock): boolean =>
+    !!sicht.liste?.an && sicht.liste.darf(b.dienst.dienstgruppeId);
+
+  /** Eine Zeile: `zeilenInhalt` gibt die Zellen, der Griff (nur zum Ziehen) kommt von `ZiehZeile`. */
+  const zeile = (b: RasterBlock, r: RasterZeile, nr: number) => {
+    const klasse = `${nr % 2 === 1 ? styles.z2 : ''}${r.ruhend ? ' ' + styles.ruhend : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}${fokusId === r.personId ? ' ' + styles.fokus : ''}`;
+    const aendern = bearbeitbar(b);
+    // Ziehen: nur die oberen Zeilen – wer blass unten steht (Pause, ganz abwesend), hat keinen Griff, ihr Name öffnet aber das Fenster.
+    if (aendern && !r.ruhend && sicht.liste)
+      return (
+        <ZiehZeile
+          key={r.schluessel}
+          id={r.schluessel}
+          name={r.name}
+          aktiv={!sicht.liste.laeuft}
+          className={klasse}
+          personId={r.personId}
         >
-          <span className={styles.avatar} aria-hidden="true">
-            {r.initialen}
-            {/* Die Tags dieses Dienstes als Kürzel unten rechts am Bild (PL-1); der volle Name steht im Titel und in der Legende. */}
-            {r.tags.length > 0 && (
-              <span className={styles.kuerzel} title={r.tags.map((t) => t.name).join(', ')}>
-                {r.tags.map((t) => t.kuerzel).join('')}
-              </span>
-            )}
-          </span>
-          <span className={styles.personName}>{r.name}</span>
-          {r.tags.length > 0 && (
-            <span className={styles.vorleser}>, {r.tags.map((t) => t.name).join(', ')}</span>
-          )}
-          {r.pause ? (
-            // „Pause bis …“ statt „auch …“ (PL-1).
-            <span className={styles.auch} title={pauseText(r.pause)}>
-              {pauseText(r.pause)}
-            </span>
-          ) : (
-            r.auch.length > 0 && (
-              <span className={styles.auch} title={`auch ${r.auch.join(', ')}`}>
-                auch {r.auch.join(', ')}
-              </span>
-            )
-          )}
-          {!r.mitglied && <span className={styles.keinMitglied}>nicht in der Gruppe</span>}
-        </button>
+          {(griff) => zeilenInhalt(b, r, aendern, griff)}
+        </ZiehZeile>
+      );
+    return (
+      <tr key={r.schluessel} className={klasse} data-person={r.personId}>
+        {zeilenInhalt(b, r, aendern, null)}
+      </tr>
+    );
+  };
+
+  const zeilenInhalt = (b: RasterBlock, r: RasterZeile, aendern: boolean, griff: ReactNode) => (
+    <>
+      <th scope="row" className={styles.name}>
+        {griff ? (
+          <div className={styles.nameInnen}>
+            {griff}
+            {namenKnopf(b, r, aendern)}
+          </div>
+        ) : (
+          namenKnopf(b, r, aendern)
+        )}
       </th>
+      {zellen(b, r)}
+    </>
+  );
+
+  const namenKnopf = (b: RasterBlock, r: RasterZeile, aendern: boolean) => (
+    <button
+      type="button"
+      className={styles.namenKnopf}
+      // Im Modus „Liste bearbeiten“ (PL-2) öffnet der Name das Personen-Fenster – sonst setzt er den Fokus.
+      aria-pressed={aendern ? undefined : fokusId === r.personId}
+      title={
+        aendern
+          ? 'Tags und Pause'
+          : fokusId === r.personId
+            ? 'Fokus aus'
+            : 'Im Plan hervorheben – alle Zeilen dieser Person, auch in der Matrix'
+      }
+      onPointerEnter={(e) => e.pointerType === 'mouse' && setUeber(r.personId)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && setUeber(null)}
+      onClick={() =>
+        aendern
+          ? sicht.liste?.person(b.dienst, r.personId, r.name)
+          : fokusId === r.personId
+            ? sicht.onFokusAus?.()
+            : sicht.onFokus?.(r.personId, r.name)
+      }
+    >
+      <span className={styles.avatar} aria-hidden="true">
+        {r.initialen}
+        {/* Die Tags dieses Dienstes als Kürzel unten rechts am Bild (PL-1); der volle Name steht im Titel und in der Legende. */}
+        {r.tags.length > 0 && (
+          <span className={styles.kuerzel} title={r.tags.map((t) => t.name).join(', ')}>
+            {r.tags.map((t) => t.kuerzel).join('')}
+          </span>
+        )}
+      </span>
+      <span className={styles.personName}>{r.name}</span>
+      {r.tags.length > 0 && (
+        <span className={styles.vorleser}>, {r.tags.map((t) => t.name).join(', ')}</span>
+      )}
+      {r.pause ? (
+        // „Pause bis …“ statt „auch …“ (PL-1).
+        <span className={styles.auch} title={pauseText(r.pause)}>
+          {pauseText(r.pause)}
+        </span>
+      ) : (
+        r.auch.length > 0 && (
+          <span className={styles.auch} title={`auch ${r.auch.join(', ')}`}>
+            auch {r.auch.join(', ')}
+          </span>
+        )
+      )}
+      {!r.mitglied && <span className={styles.keinMitglied}>nicht in der Gruppe</span>}
+    </button>
+  );
+
+  const zellen = (b: RasterBlock, r: RasterZeile) => (
+    <>
       <td className={styles.einsaetze}>{r.einsaetze}</td>
       {r.zellen.map((z, pos) => {
         const a = aktionFuer(b, r, pos);
@@ -581,7 +661,7 @@ export function PersonenRaster({
           </td>
         );
       })}
-    </tr>
+    </>
   );
 
   /**
@@ -591,7 +671,15 @@ export function PersonenRaster({
   const zeilenVon = (b: RasterBlock) => {
     const oben = b.zeilen.length - b.ruhend;
     return [
-      ...b.zeilen.slice(0, oben).map((r, nr) => zeile(b, r, nr)),
+      // Eine Sortier-Gruppe je Block (die Zeilen eines Dienstes ordnen sich nur untereinander um); ohne den Modus ein bloßer Rahmen.
+      <SortableContext
+        key={`sortier-${b.dienst.id}`}
+        items={b.zeilen.slice(0, oben).map((r) => r.schluessel)}
+        strategy={verticalListSortingStrategy}
+        disabled={!bearbeitbar(b)}
+      >
+        {b.zeilen.slice(0, oben).map((r, nr) => zeile(b, r, nr))}
+      </SortableContext>,
       ...(b.ruhend > 0
         ? [
             <tr key={`ruhend-${b.dienst.id}`} className={styles.ruhendKopf}>
@@ -822,86 +910,97 @@ export function PersonenRaster({
           mitFarben={raster.antwortZahlen.some((z) => z !== null)}
         />
       )}
-      <div className={planen.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
-        <table
-          className={styles.raster}
-          style={{
-            ['--n' as string]: termine.length,
-            width: 'calc(var(--namew) + var(--einw) + var(--n) * var(--cw))',
-          }}
-          aria-label="Personen und ihre Einsätze"
-        >
-          <thead>
-            <tr>
-              <th scope="col" className={styles.name}>
-                Name
-              </th>
-              <th scope="col" className={styles.einsaetze}>
-                Einsätze
-              </th>
-              {termine.map((s, pos) => (
-                <th
-                  key={s.id}
-                  scope="col"
-                  className={`${styles.termin}${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}`}
-                >
-                  <b>{tagKurz(s.tag)}</b>
-                  {s.name}
-                  <i>{s.abgesagt ? 'abgesagt' : `${s.uhrzeit} Uhr`}</i>
-                  {raster.antwortZahlen[pos] && (
-                    <b className={styles.antwortZahl}>{zahlenText(raster.antwortZahlen[pos])}</b>
-                  )}
+      {/* Ziehen (PL-2): nur im Modus „Liste bearbeiten“ tragen die Zeilen einen Griff; ohne ihn bleibt der Rahmen leer. */}
+      <DndContext
+        sensors={sensoren}
+        collisionDetection={closestCenter}
+        onDragEnd={beiZiehEnde}
+        onDragCancel={resetViewportAfterDrag}
+        autoScroll={innerScrollOnly}
+        // Der versteckte Text für Screenreader gehört nicht in die Tabelle (ein `div` in `tbody`).
+        accessibility={{ container: document.body }}
+      >
+        <div className={planen.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
+          <table
+            className={styles.raster}
+            style={{
+              ['--n' as string]: termine.length,
+              width: 'calc(var(--namew) + var(--einw) + var(--n) * var(--cw))',
+            }}
+            aria-label="Personen und ihre Einsätze"
+          >
+            <thead>
+              <tr>
+                <th scope="col" className={styles.name}>
+                  Name
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {raster.blocks.flatMap((b) => [
-              blockKopf(b),
-              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : zeilenVon(b)),
-              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : gaesteZeile(b)),
-              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : [plaetzeZeile(b)]),
-            ])}
-            <tr className={styles.fuss}>
-              <th scope="row" className={styles.name}>
-                Noch offen
-              </th>
-              <td className={styles.einsaetze} />
-              {raster.offen.map((o, pos) => (
-                <td key={termine[pos].id}>
-                  <div className={styles.offenTags}>
-                    {o.abgesagt ? (
-                      <span className={styles.blockHinweis}>abgesagt</span>
-                    ) : (
-                      o.dienste.map((d) => {
-                        // Der rote Tag öffnet den Regler dieses Dienstes an diesem Termin (P2c) – wo man ihn bedienen darf.
-                        const zl = zeileJe.get(d.serviceId);
-                        const oeffnen = zl ? sicht.onPlatz?.(spalten[pos], zl) : undefined;
-                        return oeffnen ? (
-                          <button
-                            key={d.dienst}
-                            type="button"
-                            className={`${styles.tag} ${styles.offenTag} ${styles.tagKnopf}`}
-                            aria-label={`Plätze ${d.dienst} am ${tagKurz(termine[pos].tag)} ändern`}
-                            title={`Plätze ${d.dienst} ändern`}
-                            onClick={oeffnen}
-                          >
-                            <span className={styles.tagText}>{offenText(d)}</span>
-                          </button>
-                        ) : (
-                          <span key={d.dienst} className={`${styles.tag} ${styles.offenTag}`}>
-                            <span className={styles.tagText}>{offenText(d)}</span>
-                          </span>
-                        );
-                      })
+                <th scope="col" className={styles.einsaetze}>
+                  Einsätze
+                </th>
+                {termine.map((s, pos) => (
+                  <th
+                    key={s.id}
+                    scope="col"
+                    className={`${styles.termin}${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}`}
+                  >
+                    <b>{tagKurz(s.tag)}</b>
+                    {s.name}
+                    <i>{s.abgesagt ? 'abgesagt' : `${s.uhrzeit} Uhr`}</i>
+                    {raster.antwortZahlen[pos] && (
+                      <b className={styles.antwortZahl}>{zahlenText(raster.antwortZahlen[pos])}</b>
                     )}
-                  </div>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {raster.blocks.flatMap((b) => [
+                blockKopf(b),
+                ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : zeilenVon(b)),
+                ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : gaesteZeile(b)),
+                ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : [plaetzeZeile(b)]),
+              ])}
+              <tr className={styles.fuss}>
+                <th scope="row" className={styles.name}>
+                  Noch offen
+                </th>
+                <td className={styles.einsaetze} />
+                {raster.offen.map((o, pos) => (
+                  <td key={termine[pos].id}>
+                    <div className={styles.offenTags}>
+                      {o.abgesagt ? (
+                        <span className={styles.blockHinweis}>abgesagt</span>
+                      ) : (
+                        o.dienste.map((d) => {
+                          // Der rote Tag öffnet den Regler dieses Dienstes an diesem Termin (P2c) – wo man ihn bedienen darf.
+                          const zl = zeileJe.get(d.serviceId);
+                          const oeffnen = zl ? sicht.onPlatz?.(spalten[pos], zl) : undefined;
+                          return oeffnen ? (
+                            <button
+                              key={d.dienst}
+                              type="button"
+                              className={`${styles.tag} ${styles.offenTag} ${styles.tagKnopf}`}
+                              aria-label={`Plätze ${d.dienst} am ${tagKurz(termine[pos].tag)} ändern`}
+                              title={`Plätze ${d.dienst} ändern`}
+                              onClick={oeffnen}
+                            >
+                              <span className={styles.tagText}>{offenText(d)}</span>
+                            </button>
+                          ) : (
+                            <span key={d.dienst} className={`${styles.tag} ${styles.offenTag}`}>
+                              <span className={styles.tagText}>{offenText(d)}</span>
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </DndContext>
       {fenster?.art === 'warnung' && (
         <ConfirmDialog
           title={fenster.titel}

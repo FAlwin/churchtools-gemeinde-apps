@@ -3,6 +3,7 @@ import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared
 import type { Besetzung, Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { Personenliste } from '@shared/dienstplan/personenliste';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
+import type { Dienst } from '@shared/ct/dienste';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import type { RasterGast, RasterZelle } from '@shared/dienstplan/personenRaster';
 import type { FreierPlatz } from './WerKann';
@@ -68,6 +69,32 @@ export interface PersonenEintragen {
   dazunehmen?: (spalte: number, zeile: PlanZeile, wer: Besetzung) => Promise<void>;
 }
 
+/**
+ * **„Liste bearbeiten“ in „Personen“** (PL-2, Entwurf `personenliste.html` Variante B). Im Modus bekommt jede obere Zeile
+ * einer Dienstgruppe, deren Liste man ändern darf, einen Griff zum Ziehen, und der Klick auf den Namen öffnet das
+ * Personen-Fenster (Tags und Pause) statt des Fokus. Gespeichert wird in der Personenliste der Dienstgruppe – für alle Planer.
+ */
+export interface ListeBearbeiten {
+  /** Der Modus ist an. */
+  an: boolean;
+  /** Es wird gerade gespeichert – bis dahin sind die Griffe gesperrt. */
+  laeuft: boolean;
+  /** Darf man die Liste dieser Dienstgruppe ändern? `null`: Dienst ohne Dienstgruppe – nein. */
+  darf: (dienstgruppeId: number | null) => boolean;
+  /**
+   * Eine Person im Block verschieben: `block` sind die Personen **oben** im Block (ohne die blassen), `von` und `nach` Stellen
+   * darin. Speichert die neue Reihenfolge der Dienstgruppe und meldet selbst einen Fehler.
+   */
+  verschieben: (
+    dienstgruppeId: number,
+    block: readonly number[],
+    von: number,
+    nach: number,
+  ) => void;
+  /** Der Name wurde angetippt: das Personen-Fenster dieser Person bei diesem Dienst. */
+  person: (dienst: Dienst, personId: number, name: string) => void;
+}
+
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */
 export interface Sicht {
   plan: Plan;
@@ -127,6 +154,8 @@ export interface Sicht {
   infos: MatrixInfos | null;
   /** Eintragen per Klick in „Personen“ (P2a) – fehlt, wo es das nicht gibt (Termin-Ansicht, ohne Anschluss). */
   personen?: PersonenEintragen;
+  /** „Liste bearbeiten“ (PL-2) – fehlt, wo es das nicht gibt (Termin-Ansicht, ohne Anschluss). */
+  liste?: ListeBearbeiten;
   /**
    * Die Vorgabe „Anfrage | direkt“ je Dienst (P2m, nur Matrix): womit ein neuer Entwurf beginnt, und das Fenster dazu.
    * Fehlt, wo man keine Entwürfe anlegen kann – dann steht am Dienstnamen auch kein Symbol.

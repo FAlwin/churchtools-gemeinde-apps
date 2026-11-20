@@ -502,7 +502,7 @@ die Mail und verschickt je Person eine eigene.
 ### TF-VERF-16 · Personenliste: Reihenfolge, Tags und Pause in „Personen“, „Wer kann?“ und im PDF
 
 **Das brauchst du:** Den Dienstplaner im Demo-Modus (`?demo` an der Adresse). Dort haben **Musik** und **Technik** eine Personenliste
-(Anlegen und Ändern gibt es erst mit dem nächsten Schritt, PL-2 – bis dahin nur Ansehen).
+(Ändern: TF-VERF-17).
 
 **Das muss passieren:** Wo eine Liste da ist, folgt die Anzeige ihr; wo keine ist, bleibt alles wie vorher.
 
@@ -528,7 +528,41 @@ die Mail und verschickt je Person eine eigene.
 
 </details>
 
-### TF-VERF-17 · Fenster liegen immer ganz oben – über dem schwebenden Plus, der Reiterleiste und den Leisten
+### TF-VERF-17 · Personenliste bearbeiten: Reihenfolge ziehen, Tags und Pause setzen, Tags verwalten
+
+**Das brauchst du:** Den Dienstplaner im Demo-Modus (`?demo`) am Rechner und am Handy (375 px). Planen → **Personen**. In der Demo darfst du die
+Listen von **Musik** und **Technik** ändern, **Predigt** (Programm) hat keine Schublade.
+
+**Das muss passieren:** Alles, was du änderst, steht danach in der Liste – und nur, was wirklich gespeichert ist.
+
+1. **⋯ → Liste bearbeiten** (auch aus der Matrix: es wechselt nach „Personen“). Unter der Werkzeugzeile steht ein blaues Band mit „Tags verwalten …“ und
+   „Fertig“. In den Blöcken **Kamera**, **Licht**, **Ton** und **Gesang** hat jede Zeile vor dem Bild einen Griff (⠿ als Symbol); in **Predigt** nicht.
+   Wer blass unten steht (Ben, Pause ohne Ende), hat keinen Griff.
+2. **Ziehen:** In **Kamera** eine Person am Griff über eine andere ziehen (Maus; am Handy mit dem Finger). Die Zeile bleibt dort stehen. Die Reihenfolge gilt für die
+   ganze Dienstgruppe: Dieselben Personen stehen in **Licht** und **Ton** (auch Technik) in derselben Reihenfolge, **Gesang** (Musik) bleibt, wie es war.
+3. **Person antippen** (Name): Es öffnet sich ein Fenster **in der Mitte** (auch am Handy, kein Blatt von unten) mit dem Namen als Titel,
+   „Tags bei <Dienst>“ als Häkchen mit grauem Kürzel und „Pause in <Dienstgruppe>“ (Keine · Bis Datum · Ohne Ende). Tag ankreuzen, **Speichern**:
+   Am Personenbild sitzt das Kürzel, in der Legende „Tags:“ steht der Tag.
+4. **Pause:** „Bis Datum“ ohne Datum lässt „Speichern“ grau. Mit Datum: „Pause bis …“ steht bei der Person (die Pause gilt nur, wenn sie alle gezeigten
+   Termine deckt: dann steht sie unten, blass). „Ohne Ende“: unten, blass. „Keine“: zurück an ihrer Stelle.
+5. **Tags verwalten …:** Dienstgruppe oben wählen; „+ Tag“, Name „Chef“, Kürzel „abc“ → es steht „AB“. Speichern. Einen Tag **umbenennen**: die Häkchen bei den
+   Personen bleiben. Einen Tag **löschen**: er verschwindet bei allen Personen (Kürzel am Bild weg).
+6. **Ohne Recht** (mit einem Konto ohne Recht auf die Entwürfe einer Gruppe): dort keine Griffe, der Name setzt den Fokus, „Liste bearbeiten“ fehlt im
+   Menü, wenn gar keine Gruppe änderbar ist.
+7. **Zwei Planer:** Im zweiten Browser dieselbe Liste öffnen, im ersten ein Tag setzen und speichern, im zweiten ebenfalls speichern: Es erscheint „Ein anderer
+   Planer hat die Liste inzwischen geändert“, das Fenster bleibt mit deiner Eingabe offen, die Anzeige zeigt den neuen Stand; ein zweites „Speichern“ geht durch.
+8. **Fertig** beendet den Modus (Griffe und Band weg); ein Wechsel nach „Matrix“ ebenfalls.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/personenlisteSpeichern.ts`, `shared/dienstplan/personenliste.ts`, `shared/dienstplan/entwuerfe.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/PersonenRaster.tsx`, `dienstplaner/src/PersonFenster.tsx`, `dienstplaner/src/TagsVerwaltenFenster.tsx`, `dienstplaner/src/ZiehZeile.tsx`, `dienstplaner/src/useListeBearbeiten.ts`, `dienstplaner/src/ladeEntwuerfe.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenlisteSpeichern.test.ts` (alle Zweige: neu, ändern, Konflikt, Doppelte, nicht angekommen, vorübergehend, abgemeldet, kein Recht, zu groß), `shared/dienstplan/personenliste.test.ts` (reine Änderungen), `dienstplaner/src/Planen.personen.bearbeiten.test.tsx` (Menü, Modus, Rechte, Ziehen → Reihenfolge, Personen-Fenster, Tags verwalten, Konflikt, Fehler), `dienstplaner/src/ladeEntwuerfe.test.ts`; von Hand bleibt das echte Ziehen mit Maus und Finger (die Tests lösen „losgelassen“ selbst aus), Lage und Größe des Griffs, das Fenster am Handy und zwei echte Planer
+- **Historie:** Dienstplaner PL-2 (20.11.2026), Entwurf `personenliste.html` (Variante B, „Kürzel am Bild“)
+
+</details>
+
+### TF-VERF-18 · Fenster liegen immer ganz oben – über dem schwebenden Plus, der Reiterleiste und den Leisten
 
 **Das brauchst du:** Den Dienstplaner im Demo-Modus (`?demo`) am Handy (oder das Fenster schmal ziehen) – und zum Gegenprüfen die
 Musik-App und die Protokolle.

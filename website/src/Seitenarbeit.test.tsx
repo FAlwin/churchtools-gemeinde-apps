@@ -70,7 +70,7 @@ const props = (o: Partial<Parameters<typeof Seitenarbeit>[0]> = {}) => ({
   gemeinde: 'ECG',
   ansicht: 'computer' as const,
   onAnsicht: vi.fn(),
-  rechte: { html: true },
+  rechte: { html: true, menue: true },
   onGespeichert: vi.fn(),
   onOffen: vi.fn(),
   onLoeschen: vi.fn(),
@@ -226,7 +226,7 @@ describe('Abschnitt einfügen', () => {
   });
 
   it('„Eigenes HTML“ gibt es nur mit dem Recht dafür', async () => {
-    render(<Seitenarbeit {...props({ rechte: { html: false } })} />);
+    render(<Seitenarbeit {...props({ rechte: { html: false, menue: true } })} />);
     await aus({ was: 'einfuegen', i: 0 });
     const fenster = await screen.findByRole('dialog');
     expect(within(fenster).queryByText('Eigenes HTML')).toBeNull();
@@ -488,7 +488,7 @@ describe('Baustein bearbeiten, hinzufügen, entfernen', () => {
         {...props({
           seite: mitHtml,
           stand: stand({ seiten: [mitHtml, IMPRESSUM] }),
-          rechte: { html: false },
+          rechte: { html: false, menue: true },
         })}
       />,
     );
@@ -538,6 +538,32 @@ describe('Seite einstellen', () => {
       'Impressum',
       'Willkommen!',
     ]);
+  });
+
+  it('Redakteur (kein Menü-Recht): weder „Im Menü zeigen“ noch die Reihenfolge – Titel und Beschreibung gehen weiter', async () => {
+    const zwei = menue([
+      { titel: 'A', ziel: { art: 'seite', seiteId: 'i' } },
+      { titel: 'B', ziel: { art: 'seite', seiteId: 's' } },
+    ]);
+    server.menue = zwei;
+    render(
+      <Seitenarbeit
+        {...props({
+          rechte: { html: false, menue: false },
+          stand: stand({ menue: zwei }),
+        })}
+      />,
+    );
+    const f = await oeffnen();
+    expect(within(f).queryByRole('checkbox', { name: 'Im Menü zeigen' })).toBeNull();
+    expect(within(f).queryByText('Reihenfolge im Menü')).toBeNull();
+    expect(within(f).queryByRole('button', { name: /nach oben/ })).toBeNull();
+    fireEvent.change(within(f).getByLabelText(/Beschreibung/), { target: { value: 'Neu' } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Fertig' }));
+    await waitFor(() => expect(d.speichereSeite).toHaveBeenCalledTimes(1));
+    expect(speicherte()[0]).toMatchObject({ beschreibung: 'Neu' });
+    // Das Menü bleibt, wie es war.
+    expect(d.speichereMenue).not.toHaveBeenCalled();
   });
 
   it('Reihenfolge im Menü: hoch/runter – gespeichert wird das Menü, die Seite bleibt unberührt (nicht neu geschrieben)', async () => {

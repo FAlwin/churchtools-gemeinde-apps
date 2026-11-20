@@ -1,22 +1,39 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { einrichtungAus } from '@shared/website/einrichten';
 import { kategorienFuer } from '@shared/website/einrichten';
 import { App } from './App';
 import type { Start } from './start';
 import * as S from './start';
+import { pruefeRechte } from './rechte';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // Die Seiten selbst sind in `Seiten.test.tsx` geprüft – hier geht es um den Rahmen und wer hineindarf.
-vi.mock('./Seiten', () => ({ Seiten: () => <p>SEITEN-INHALT</p> }));
+vi.mock('./Seiten', () => ({
+  // Die Rechte, mit denen die Seiten gezeigt werden, stehen als Attribut da – daran sieht der Test, was der Zugang erlaubt.
+  Seiten: ({ rechte }: { rechte: unknown }) => (
+    <p data-rechte={JSON.stringify(rechte)}>SEITEN-INHALT</p>
+  ),
+}));
+// Die Prüfung der Rechte beim Start liest bei ChurchTools – hier steht ihr Ergebnis fest (`rechte.test.ts` prüft sie selbst).
+vi.mock('./rechte', () => ({ pruefeRechte: vi.fn() }));
+const pruefung = vi.mocked(pruefeRechte);
 vi.mock('./Einrichtung', () => ({ Einrichtung: () => <p>EINRICHTUNG</p> }));
 // … ebenso das Aussehen (`Aussehen.test.tsx`).
 vi.mock('./Aussehen', () => ({ Aussehen: () => <p>AUSSEHEN-INHALT</p> }));
 // Fenster und gemeinsamer Zustand der Einstellungen: eigene Tests (`EinstellungenFenster.test.tsx`).
 vi.mock('./EinstellungenFenster', () => ({
-  EinstellungenFenster: ({ onSchliessen }: { onSchliessen: () => void }) => (
-    <button onClick={onSchliessen}>EINSTELLUNGEN-FENSTER</button>
+  EinstellungenFenster: ({
+    onSchliessen,
+    werDarfWas,
+  }: {
+    onSchliessen: () => void;
+    werDarfWas?: unknown;
+  }) => (
+    <button onClick={onSchliessen} data-wer-darf-was={werDarfWas ? 'ja' : 'nein'}>
+      EINSTELLUNGEN-FENSTER
+    </button>
   ),
 }));
 vi.mock('./EinstellungenQuelle', () => ({
@@ -37,12 +54,21 @@ const start = (o: Partial<Start> = {}): Start => ({
   stand: 'fertig',
   admin: false,
   zugang: 'leitung',
+  darfRechteSetzen: false,
+  leitungOhneRechte: false,
   ...o,
 });
 
 beforeEach(() => {
   ladeStart.mockResolvedValue(start());
+  pruefung.mockResolvedValue(null);
 });
+
+const rechteDerSeiten = () =>
+  JSON.parse(screen.getByText('SEITEN-INHALT').getAttribute('data-rechte') ?? '{}') as {
+    html: boolean;
+    menue: boolean;
+  };
 
 describe('Rahmen und Zugang', () => {
   it('Leitung der Gruppe: Reiter „Seiten | Aussehen | Freigaben“, Seiten zuerst', async () => {
@@ -69,7 +95,7 @@ describe('Rahmen und Zugang', () => {
   it('Mitglied ohne Leitung: freundlicher Hinweis, KEIN Editor, keine Reiter', async () => {
     ladeStart.mockResolvedValue(start({ zugang: null }));
     render(<App />);
-    expect(await screen.findByText(/dürfen die Admins und die Leitung der Gruppe/)).toBeTruthy();
+    expect(await screen.findByText(/Die Website bearbeiten dürfen die Admins/)).toBeTruthy();
     expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
   });
@@ -125,7 +151,103 @@ describe('Reiter „Einstellungen“ (W3a-3b)', () => {
   it('wer die Website nicht bearbeiten darf, bekommt keinen Reiter', async () => {
     ladeStart.mockResolvedValue(start({ zugang: null }));
     render(<App />);
-    await screen.findByText(/dürfen die Admins und die Leitung der Gruppe/);
+    await screen.findByText(/Die Website bearbeiten dürfen die Admins/);
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
+  });
+});
+
+describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
+  it('Redakteur: nur „Seiten“ und „Freigaben“ – kein Aussehen, kein Reiter Einstellungen', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'redakteur' }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    expect(screen.getByRole('button', { name: 'Seiten' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Freigaben' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
+  });
+
+  it('Redakteur: weder Menü noch Eigenes HTML; Freigaben zeigt weiter den Hinweis', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'redakteur' }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    expect(rechteDerSeiten()).toEqual({ html: false, menue: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Freigaben' }));
+    expect(screen.getByText(/Das kommt in einem der nächsten Schritte/)).toBeTruthy();
+  });
+
+  it('Leitung und Admin: Menü und Eigenes HTML, Aussehen und Einstellungen', async () => {
+    for (const zugang of ['leitung', 'admin'] as const) {
+      ladeStart.mockResolvedValue(start({ zugang, admin: zugang === 'admin' }));
+      const { unmount } = render(<App />);
+      await screen.findByText('SEITEN-INHALT');
+      expect(rechteDerSeiten()).toEqual({ html: true, menue: true });
+      expect(screen.getByRole('button', { name: 'Aussehen' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Einstellungen' })).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it('„Wer darf was“ gibt es nur, wenn die Person Rechte setzen darf', async () => {
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER').getAttribute('data-wer-darf-was')).toBe(
+      'nein',
+    );
+    expect(pruefung).not.toHaveBeenCalled();
+  });
+
+  it('wer Rechte setzen darf, bekommt „Wer darf was“ im Fenster', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER').getAttribute('data-wer-darf-was')).toBe('ja');
+  });
+
+  it('Start-Prüfung (nur Admin): weichen Rechte ab, steht ein ruhiger Hinweis mit Weg zum Fenster', async () => {
+    pruefung.mockResolvedValue({ art: 'abweicht', rollen: ['Mitarbeiter'] });
+    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    render(<App />);
+    expect(await screen.findByText(/stimmen die Rechte in ChurchTools nicht/)).toBeTruthy();
+    expect(screen.getByText(/Mitarbeiter/)).toBeTruthy();
+    expect(pruefung).toHaveBeenCalledWith(7, { entwuerfe: 20, veroeffentlicht: 21 });
+    fireEvent.click(screen.getByRole('button', { name: 'Wer darf was' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER')).toBeTruthy();
+  });
+
+  it('Start-Prüfung: noch keine Rechte vergeben → Hinweis; alles in Ordnung → keiner', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    pruefung.mockResolvedValue({ art: 'nichts' });
+    const { unmount } = render(<App />);
+    expect(await screen.findByText(/noch keine Rechte an der Website/)).toBeTruthy();
+    unmount();
+    pruefung.mockResolvedValue(null);
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    await waitFor(() => expect(pruefung).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('region', { name: 'Rechte der Website' })).toBeNull();
+  });
+
+  it('nach dem Schließen des Fensters „Einstellungen“ wird die Prüfung neu gelesen (Rechte können gesetzt sein)', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    pruefung.mockResolvedValueOnce({ art: 'nichts' }).mockResolvedValue(null);
+    render(<App />);
+    await screen.findByText(/noch keine Rechte an der Website/);
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
+    fireEvent.click(screen.getByText('EINSTELLUNGEN-FENSTER'));
+    await waitFor(() => expect(pruefung).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText(/noch keine Rechte an der Website/)).toBeNull());
+  });
+
+  it('Leitung ohne Rechte: Hinweis, dass ein Admin die Rechte unter „Wer darf was“ einrichtet', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: null, leitungOhneRechte: true }));
+    render(<App />);
+    expect(
+      await screen.findByText(/Die Rechte für die Website sind noch nicht eingerichtet/),
+    ).toBeTruthy();
+    expect(screen.getByText(/Einstellungen → „Wer darf was“/)).toBeTruthy();
+    expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
   });
 });

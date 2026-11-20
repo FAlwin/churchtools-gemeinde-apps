@@ -15,12 +15,14 @@ import {
   type EinstellungenFormular,
 } from '@shared/website/einstellungen';
 import { datenschutzFehlt, type Link, type Seite } from '@shared/website/modell';
+import type { Kategorien } from '@shared/website/rechte';
 import { BANNER_STANDARDTEXT } from '@shared/website/render';
 import { seitenAuswahlText } from '@shared/website/seitenListe';
 import { Feld } from './Felder';
 import { useEinstellungen, type EinstellungenBereit } from './einstellungenKontext';
 import { zielAusWert, zielWert } from './regeln';
 import { AUSSEHEN_TEXTE, einstellungenFremdText } from './sperrTexte';
+import { WerDarfWas } from './WerDarfWas';
 import styles from './Fenster.module.scss';
 
 const KEIN_LINK = '';
@@ -37,7 +39,17 @@ const KEIN_LINK = '';
  * und Banner-Text** auf den neuesten Stand (Farben, Schriften, CSS bleiben, wie sie dort gerade sind). Ist die Einheit
  * fremd gesperrt, ist das Fenster nur zum Lesen.
  */
-export function EinstellungenFenster({ onSchliessen }: { onSchliessen: () => void }) {
+export function EinstellungenFenster({
+  onSchliessen,
+  werDarfWas,
+}: {
+  onSchliessen: () => void;
+  /**
+   * „Wer darf was“ (W3b-1): nur setzen, wenn die Person in ChurchTools Rechte setzen darf (`darfVerwalten`) – sonst fehlt der
+   * Bereich ganz. Die Rechte gehören nicht zu den Einstellungen im Speicher und haben darum ihren eigenen Knopf.
+   */
+  werDarfWas?: { gruppe: number; kategorien: Kategorien };
+}) {
   const q = useEinstellungen();
   if (q.art !== 'bereit')
     return (
@@ -61,10 +73,18 @@ export function EinstellungenFenster({ onSchliessen }: { onSchliessen: () => voi
         )}
       </Sheet>
     );
-  return <Bereit q={q} onSchliessen={onSchliessen} />;
+  return <Bereit q={q} onSchliessen={onSchliessen} werDarfWas={werDarfWas} />;
 }
 
-function Bereit({ q, onSchliessen }: { q: EinstellungenBereit; onSchliessen: () => void }) {
+function Bereit({
+  q,
+  onSchliessen,
+  werDarfWas,
+}: {
+  q: EinstellungenBereit;
+  onSchliessen: () => void;
+  werDarfWas?: { gruppe: number; kategorien: Kategorien };
+}) {
   const { arbeit, stand, sperre, ich } = q;
   const [form, setForm] = useState<EinstellungenFormular>(() => formularAus(arbeit));
   const [wartet, setWartet] = useState(false);
@@ -280,6 +300,8 @@ function Bereit({ q, onSchliessen }: { q: EinstellungenBereit; onSchliessen: () 
           </>
         )}
       </div>
+
+      {werDarfWas && <WerDarfWas gruppe={werDarfWas.gruppe} kategorien={werDarfWas.kategorien} />}
     </Sheet>
   );
 }

@@ -2,10 +2,17 @@
  * **Nur zum Entwickeln** (`npm run dev -w website`, dann `…/ccm/website/?demo`): spielt die ChurchTools-Antworten nach,
  * in der Form, die an der Test-Instanz gemessen wurde (Messung W0, 19.11.2026), damit die Seite ohne Instanz zu sehen
  * ist. Wird nie mitgebaut (`main.tsx`). Gespeichert wird nur im Browser-Speicher. Fälle:
- *  - `?demo` – Admin, noch nicht eingerichtet; „Einrichten“ legt die Kategorien im Speicher an.
+ *  - `?demo` – Admin, noch nicht eingerichtet; „Einrichten“ legt die Kategorien im Speicher an und setzt die Rechte je Rolle.
  *  - `?demo=leer` – Admin, eingerichtet, noch keine Seite (Hinweis „Startseite anlegen“).
  *  - `?demo=seiten` – Admin, eingerichtet, Startseite plus zwei Seiten, eine im Menü.
- *  - `?demo=leitung` – Leitung der Gruppe (kein Admin), sonst wie `seiten`.
+ *  - `?demo=leitung` – Leitung der Gruppe (kein Admin; Rechte an Entwürfe UND Veröffentlicht), sonst wie `seiten`.
+ *  - `?demo=redakteur` (W3b-1) – Redakteur (kein Admin; Rechte nur an Entwürfe): Reiter „Seiten“ und „Freigaben“, kein
+ *    Aussehen, kein Fenster „Einstellungen“, kein Menü in „Seite einstellen“, kein Baustein „Eigenes HTML“.
+ *  - `?demo=leitung-ohne-rechte` (W3b-1) – leitet die Gruppe, hat aber keine Rechte: Hinweis „noch nicht eingerichtet“.
+ *  - `?demo=rechte-leer` (W3b-1) – Admin, eingerichtet, aber noch keine Rechte an den Rollen: Hinweis oben, „Wer darf was“ im
+ *    Fenster „Einstellungen“ (letzter Reiter) setzt sie.
+ *  - `?demo=rechte-abweicht` (W3b-1) – wie `seiten`, aber die Rolle „Mitarbeiter“ darf zusätzlich in „Veröffentlicht“ schreiben
+ *    (von Hand verändert): Hinweis „stimmt nicht überein“, „Rechte setzen“ nimmt es zurück.
  *  - `?demo=mitglied` – Mitglied der Gruppe, sieht den Editor nicht.
  *  - `?demo=kaputt` – wie `seiten`, aber ein Wert in „Entwürfe“ ist beschädigt (Hinweis „stimmt etwas nicht“).
  *  - `?demo=gesperrt` – wie `seiten`, aber die Startseite bearbeitet gerade jemand anderes („Gerade bearbeitet von …“,
@@ -42,6 +49,8 @@ import {
   type WebsiteTeil,
 } from '@shared/website/speicher';
 import { neueStartseite, vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
+import { sollRechte as sollRechteWebsite } from '@shared/website/rechte';
+import { rechteAus, type DatenRechteNummern, type Recht } from '@shared/ct/rollenRechte';
 import type { WebsiteSperre } from '@shared/website/sperre';
 
 const MODUL = 40;
@@ -57,6 +66,10 @@ export function demoStarten(fall: string): void {
     'leer',
     'seiten',
     'leitung',
+    'redakteur',
+    'leitung-ohne-rechte',
+    'rechte-leer',
+    'rechte-abweicht',
     'mitglied',
     'kaputt',
     'gesperrt',
@@ -67,6 +80,8 @@ export function demoStarten(fall: string): void {
   const admin = [
     '',
     'leer',
+    'rechte-leer',
+    'rechte-abweicht',
     'seiten',
     'kaputt',
     'gesperrt',
@@ -121,6 +136,10 @@ export function demoStarten(fall: string): void {
     [
       'seiten',
       'leitung',
+      'redakteur',
+      'leitung-ohne-rechte',
+      'rechte-leer',
+      'rechte-abweicht',
       'mitglied',
       'kaputt',
       'gesperrt',
@@ -207,17 +226,73 @@ export function demoStarten(fall: string): void {
         .push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: 'kein JSON' });
   }
 
+  /** In welchen Kategorien die Person schreiben darf – so liest die Oberfläche ihren Zugang (`schreibtIn`). */
+  const schreibt = admin
+    ? [ENTWUERFE, VEROEFFENTLICHT]
+    : fall === 'leitung'
+      ? [ENTWUERFE, VEROEFFENTLICHT]
+      : fall === 'redakteur'
+        ? [ENTWUERFE]
+        : [];
   const rechte = () => ({
     churchdb: { 'administer groups': admin },
+    churchcore: { 'administer persons': admin },
     website: {
       view: true,
       'create custom category': admin,
       'view custom data': kategorien.map((k) => k.id),
-      'create custom data': [ENTWUERFE],
-      'edit custom data': [ENTWUERFE],
-      'delete custom data': [ENTWUERFE],
+      'create custom data': schreibt,
+      'edit custom data': schreibt,
+      'delete custom data': schreibt,
     },
   });
+
+  // ── Rechte an den Rollen der Gruppe (W3b-1): so, wie `GET /permissions/definitions` und `/permissions/group_role/{rolle}` sie
+  // liefern. Nummern wie auf der Test-Instanz (Messung W3b-0). Die Anfangsrechte kommen aus der Regel (`sollRechte`), nicht
+  // aus abgeschriebenen Zahlen.
+  const NUMMERN: DatenRechteNummern = {
+    modulSehen: 2080,
+    kategorieSehen: 2081,
+    datenSehen: 2085,
+    datenAnlegen: 2086,
+    datenAendern: 2087,
+    datenLoeschen: 2088,
+  };
+  const definitionen = {
+    modules: [
+      {
+        key: 'website',
+        permissions: [
+          { authId: NUMMERN.modulSehen, key: 'view' },
+          { authId: NUMMERN.kategorieSehen, key: 'view custom category' },
+          { authId: 2082, key: 'create custom category' },
+          { authId: NUMMERN.datenSehen, key: 'view custom data' },
+          { authId: NUMMERN.datenAnlegen, key: 'create custom data' },
+          { authId: NUMMERN.datenAendern, key: 'edit custom data' },
+          { authId: NUMMERN.datenLoeschen, key: 'delete custom data' },
+        ],
+      },
+    ],
+  };
+  const ROLLEN = [
+    { id: 2, name: 'Leiter', isLeader: true, isActive: true },
+    { id: 3, name: 'Mitarbeiter', isLeader: false, isActive: true },
+    { id: 4, name: 'Coach', isLeader: false, isActive: true },
+  ];
+  const rollenRechte: Recht[] =
+    fall === 'rechte-leer' || !eingerichtet
+      ? []
+      : sollRechteWebsite(
+          [
+            { rolle: 2, stufe: 'leitung' },
+            { rolle: 3, stufe: 'redakteur' },
+          ],
+          { entwuerfe: ENTWUERFE, veroeffentlicht: VEROEFFENTLICHT },
+          NUMMERN,
+        );
+  // Von Hand verändert: Mitarbeiter dürfen in „Veröffentlicht“ schreiben (statt nur lesen).
+  if (fall === 'rechte-abweicht')
+    rollenRechte.push({ rolle: 3, authId: NUMMERN.datenAnlegen, dataId: VEROEFFENTLICHT });
 
   const antwort = (daten: unknown, status = 200) =>
     Promise.resolve(
@@ -241,11 +316,11 @@ export function demoStarten(fall: string): void {
     if (pfad === '/whoami') return antwort({ id: 1, firstName: 'Helene', lastName: 'Wiebe' });
     if (pfad === '/persons/1/groups')
       return antwort(
-        fall === 'leitung' || fall === 'mitglied'
+        ['leitung', 'leitung-ohne-rechte', 'redakteur', 'mitglied'].includes(fall)
           ? [
               {
                 group: { domainIdentifier: String(GRUPPE), title: 'Website' },
-                groupTypeRoleId: fall === 'leitung' ? 2 : 3,
+                groupTypeRoleId: fall === 'leitung' || fall === 'leitung-ohne-rechte' ? 2 : 3,
                 groupMemberStatus: 'active',
                 memberEndDate: null,
               },
@@ -260,6 +335,29 @@ export function demoStarten(fall: string): void {
     if (pfad === '/info') return antwort({ shortName: 'Demo-Gemeinde' });
     if (pfad === '/config') return antwort({});
     if (pfad === '/permissions/global') return antwort(rechte());
+    if (pfad === '/permissions/definitions') return antwort(definitionen);
+    if (/^\/groups\/\d+\/roles$/.test(pfad)) return antwort(ROLLEN);
+    const rollenRechtePfad = /^\/permissions\/group_role\/(\d+)$/.exec(pfad);
+    if (rollenRechtePfad) {
+      const rolle = Number(rollenRechtePfad[1]);
+      if (method === 'GET')
+        return antwort(
+          rollenRechte
+            .filter((r) => r.rolle === rolle)
+            .map((r) => ({ authId: r.authId, dataId: r.dataId, type: 'grant' })),
+        );
+      const rumpf = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as {
+        authId: number;
+        dataId?: number[];
+      };
+      const [neu] = rechteAus(rolle, [{ authId: rumpf.authId, dataId: rumpf.dataId?.[0] }]);
+      const i = rollenRechte.findIndex(
+        (r) => r.rolle === rolle && r.authId === neu.authId && r.dataId === neu.dataId,
+      );
+      if (method === 'PUT' && i < 0) rollenRechte.push(neu);
+      if (method === 'DELETE' && i >= 0) rollenRechte.splice(i, 1);
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     if (pfad === '/groups')
       return antwort([
         { id: 3, name: 'Gottesdienstteam' },

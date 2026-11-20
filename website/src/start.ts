@@ -1,7 +1,8 @@
 /**
  * **Was die Website beim Öffnen braucht** (Bauplan Website W3a-1): wer angemeldet ist, welche Website eingerichtet ist
  * (Kategorien) und was die Person darf. Die Regeln stehen in `@shared/website/` (`einrichten`, `zugang`); hier wird nur
- * gelesen.
+ * gelesen. **Der Zugang kommt aus den eigenen Rechten** der Person am Modul (`/permissions/global`, W3b-1), nicht mehr daraus,
+ * ob sie die Gruppe leitet.
  *
  * Ein Fehler beim Lesen wird **geworfen**, nicht zu „nicht eingerichtet“ gemacht – vorübergehend ist nicht leer (die Seite
  * zeigt dann „Erneut versuchen“).
@@ -16,7 +17,14 @@ import {
   type Einrichtung,
   type EinrichtungsStand,
 } from '@shared/website/einrichten';
-import { istAdmin, leitetGruppe, zugangFuer, type Zugang } from '@shared/website/zugang';
+import { darfVerwalten } from '@shared/ct/rollenRechte';
+import {
+  istAdmin,
+  leitetGruppe,
+  schreibtIn,
+  zugangFuer,
+  type Zugang,
+} from '@shared/website/zugang';
 
 export interface Start {
   ichId: number;
@@ -30,8 +38,15 @@ export interface Start {
   stand: EinrichtungsStand;
   /** Gruppen verwalten dürfen (ChurchTools „Admin“) → sieht „Einrichten“. */
   admin: boolean;
-  /** Warum man hineindarf – `null`: nicht (Hinweis statt Editor). */
+  /** Warum man hineindarf (Admin, Leitung, Redakteur – aus den eigenen Rechten) – `null`: nicht (Hinweis statt Editor). */
   zugang: Zugang | null;
+  /** Rechte an Rollen setzen dürfen (ChurchTools „Personen administrieren“) – nur dann gibt es „Wer darf was“. */
+  darfRechteSetzen: boolean;
+  /**
+   * Leitet die Gruppe, hat aber keine Rechte an der Website (noch nicht eingerichtet) – der Hinweis nennt den Weg:
+   * Ein Admin setzt sie unter Einstellungen → „Wer darf was“.
+   */
+  leitungOhneRechte: boolean;
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -42,7 +57,8 @@ export async function ladeStart(): Promise<Start> {
   ]);
   const einrichtung = einrichtungAus(await kategorienLesen(modulPort, modul));
   const admin = istAdmin(rechte);
-  const leitung = einrichtung
+  const zugang = zugangFuer(admin, schreibtIn(rechte), einrichtung);
+  const leitetSieDieGruppe = einrichtung
     ? leitetGruppe(ich.mitgliedschaften, ich.rollen, einrichtung.gruppe)
     : false;
   return {
@@ -54,6 +70,8 @@ export async function ladeStart(): Promise<Start> {
     einrichtung,
     stand: einrichtungsStand(einrichtung, admin),
     admin,
-    zugang: zugangFuer(admin, leitung),
+    zugang,
+    darfRechteSetzen: darfVerwalten(rechte),
+    leitungOhneRechte: zugang === null && leitetSieDieGruppe,
   };
 }

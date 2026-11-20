@@ -13,15 +13,15 @@ import {
 
 describe('Rechte: „Eigenes HTML“ nur für die Leitung', () => {
   it('Vorlagen: ohne Recht fehlt genau „html“, mit Recht sind alle da', () => {
-    expect(sichtbareVorlagen({ html: true })).toHaveLength(VORLAGEN.length);
-    const ohne = sichtbareVorlagen({ html: false }).map((v) => v.name);
+    expect(sichtbareVorlagen({ html: true, menue: true })).toHaveLength(VORLAGEN.length);
+    const ohne = sichtbareVorlagen({ html: false, menue: true }).map((v) => v.name);
     expect(ohne).not.toContain('html');
     expect(ohne).toHaveLength(VORLAGEN.length - 1);
   });
 
   it('Bausteintypen: ohne Recht fehlt genau „html“', () => {
-    expect(waehlbareTypen({ html: true })).toEqual(BAUSTEIN_TYPEN);
-    const ohne = waehlbareTypen({ html: false });
+    expect(waehlbareTypen({ html: true, menue: true })).toEqual(BAUSTEIN_TYPEN);
+    const ohne = waehlbareTypen({ html: false, menue: true });
     expect(ohne).not.toContain('html');
     expect(ohne).toHaveLength(BAUSTEIN_TYPEN.length - 1);
   });

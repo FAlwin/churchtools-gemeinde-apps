@@ -24,6 +24,7 @@ export function SeiteEinstellen({
   menue,
   andereSeiten,
   meldungen,
+  menueAendern,
   onFertig,
   onLoeschen,
   onClose,
@@ -32,6 +33,11 @@ export function SeiteEinstellen({
   menue: Menue | null;
   andereSeiten: readonly Seite[];
   meldungen: readonly string[];
+  /**
+   * Darf die Person das Menü ändern („Im Menü zeigen“, Reihenfolge)? Nur Leitung und Admin (E-W22) – ein Redakteur sieht beides
+   * nicht. Der Menütitel zieht dem Seitentitel trotzdem nach (sonst stünde dort der alte Name).
+   */
+  menueAendern: boolean;
   /** `menue` ist `null`, wenn sich am Menü nichts ändert. */
   onFertig: (seite: Seite, menue: Menue | null) => void;
   onLoeschen: () => void;
@@ -128,14 +134,16 @@ export function SeiteEinstellen({
           />
         )}
       </Feld>
-      <Haken
-        an={imMenue}
-        onChange={(an) => setEntwurf(menueFuerSeite(entwurf, { ...seite, titel }, an) ?? entwurf)}
-      >
-        Im Menü zeigen
-      </Haken>
+      {menueAendern && (
+        <Haken
+          an={imMenue}
+          onChange={(an) => setEntwurf(menueFuerSeite(entwurf, { ...seite, titel }, an) ?? entwurf)}
+        >
+          Im Menü zeigen
+        </Haken>
+      )}
 
-      {entwurf.eintraege.length > 0 && (
+      {menueAendern && entwurf.eintraege.length > 0 && (
         <>
           <h4 className={styles.gruppe}>Reihenfolge im Menü</h4>
           {entwurf.eintraege.map((e, n) => (

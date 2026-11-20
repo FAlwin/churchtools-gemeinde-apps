@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { abweichungen, darfVerwalten, rechteAus, rechtRumpf } from '../ct/rollenRechte';
 import {
-  abweichungen,
   ausrichten,
-  darfVerwalten,
   istEinstellung,
   vergebenNachher,
   vergebenPruefen,
-  rechteAus,
   rechteNummernAus,
-  rechtRumpf,
   sollRechte,
   VERSTECKTE_GRUPPE_SEHEN,
   GRUPPENTREFFEN_DURCHFUEHREN,

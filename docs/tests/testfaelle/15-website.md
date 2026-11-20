@@ -304,6 +304,9 @@ dort einträgst, wird mit **Speichern** gespeichert und gilt für die ganze Webs
 3. Bei einer Adresse `javascript:x` eintragen und **Speichern**: Eine Meldung nennt den Link („Fußzeile, Link 2: Erlaubt sind nur
    Adressen …“), nichts wird gespeichert, das Fenster bleibt offen und die Eingabe stehen. Die Adresse berichtigen, **Speichern**: Das
    Fenster schließt; im Reiter **Seiten** steht die Fußzeile mit den neuen Links in der Vorschau.
+   **Fenster über „Seiten“ speichern → Vorschau sofort aktuell:** Bleib dabei im Reiter **Seiten** (nicht wechseln, nicht neu laden),
+   öffne **Einstellungen**, ändere den Namen, **Speichern**: Die Vorschau zeigt den neuen Namen (und die neue Fußzeile) sofort. Eine
+   Änderung an einer Seite, die gerade bearbeitet wird, bleibt dabei erhalten.
 4. Mit einem Livestream-Baustein auf einer Seite und **ohne** Datenschutz-Link steht im Fenster ein Hinweis; nach dem Eintragen eines
    Links (Seite oder Adresse) verschwindet er. Den Banner-Text ändern und wieder leeren (dann gilt der Standardtext).
 5. **Zusammen mit Aussehen:** Im Reiter **Aussehen** eine Farbe ändern und sofort (ohne zu warten) **Einstellungen** öffnen, den Namen
@@ -317,8 +320,8 @@ dort einträgst, wird mit **Speichern** gespeichert und gilt für die ganze Webs
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `website/src/EinstellungenFenster.tsx`, `website/src/EinstellungenQuelle.tsx`, `website/src/Aussehen.tsx`, `website/src/App.tsx`, `shared/website/einstellungen.ts`, `shared/website/modell.ts`
-- **Automatisiert:** teilweise – `website/src/EinstellungenFenster.test.tsx` (Speichern, Fußzeile, Grenze, ungültige Adresse, Datenschutz-Hinweis, Aussehen + Fenster nacheinander, Fremdsperre), `shared/website/einstellungen.test.ts`, `website/src/App.test.tsx` (Reiter); das Zusammenspiel zweier Browser und das Aussehen im echten ChurchTools nur von Hand
-- **Historie:** neu mit W3a-3b (20.11.2026)
+- **Betrifft:** `website/src/EinstellungenFenster.tsx`, `website/src/EinstellungenQuelle.tsx`, `website/src/Aussehen.tsx`, `website/src/App.tsx`, `website/src/Seiten.tsx`, `shared/website/einstellungen.ts`, `shared/website/modell.ts`
+- **Automatisiert:** teilweise – `website/src/EinstellungenFenster.test.tsx` (Speichern, Fußzeile, Grenze, ungültige Adresse, Datenschutz-Hinweis, Aussehen + Fenster nacheinander, Fremdsperre), `shared/website/einstellungen.test.ts`, `website/src/App.test.tsx` (Reiter), `website/src/EinstellungenInSeiten.test.tsx` (Fenster über „Seiten“: Vorschau sofort aktuell, Nachlesen scheitert, offene Bearbeitung bleibt); das Zusammenspiel zweier Browser und das Aussehen im echten ChurchTools nur von Hand
+- **Historie:** neu mit W3a-3b (20.11.2026); W3a-3c (20.11.2026): Vorschau in „Seiten“ zieht nach dem Speichern im Fenster nach
 
 </details>

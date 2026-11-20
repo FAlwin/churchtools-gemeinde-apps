@@ -43,12 +43,18 @@ export function EinstellungenProvider({
   ort,
   gemeinde,
   ich,
+  onGespeichert,
   children,
 }: {
   ort: EntwurfsOrt;
   gemeinde: string | null;
   /** Wer bearbeitet – für die Sperre. */
   ich: Schreiber;
+  /**
+   * Die Einstellungen sind **erfolgreich** gespeichert (nicht bei Fehler, Sperre oder „inzwischen geändert“). Wer eine
+   * eigene Anzeige davon hält (der Reiter „Seiten“ mit seiner Vorschau), liest dann neu – der Speicher bleibt die einzige Quelle.
+   */
+  onGespeichert?: () => void;
   children: ReactNode;
 }) {
   const { modul, kategorie } = ort;
@@ -65,6 +71,7 @@ export function EinstellungenProvider({
         ort={ort}
         gemeinde={gemeinde}
         ich={ich}
+        onGespeichert={onGespeichert}
         neuFehler={geladen.stand.art === 'fertig' ? geladen.stand.neuFehler : undefined}
         neu={geladen.neu}
       >
@@ -90,6 +97,7 @@ function Arbeit({
   ort,
   gemeinde,
   ich,
+  onGespeichert,
   neuFehler,
   neu,
   children,
@@ -98,6 +106,7 @@ function Arbeit({
   ort: EntwurfsOrt;
   gemeinde: string | null;
   ich: Schreiber;
+  onGespeichert: (() => void) | undefined;
   neuFehler: Fehlermeldung | undefined;
   neu: () => void;
   children: ReactNode;
@@ -107,8 +116,8 @@ function Arbeit({
   const arbeitRef = useRef(arbeit);
   const [meldung, setMeldung] = useState<string | null>(null);
 
-  const aktuell = useRef({ ort, ich });
-  aktuell.current = { ort, ich };
+  const aktuell = useRef({ ort, ich, onGespeichert });
+  aktuell.current = { ort, ich, onGespeichert };
 
   // Was zu speichern ansteht, aber noch wartet (Verzögerung) – und wie es abgeschickt wird.
   const ausstehend = useRef<Einstellungen | null>(null);
@@ -148,7 +157,8 @@ function Arbeit({
       if (timer.current) clearTimeout(timer.current);
       setMeldung(null);
     },
-    nachSpeichern: () => {},
+    // Erst nach einem gelungenen Schreiben (die Schlange ruft das nur dann) – Fehler und Abweisung melden nichts.
+    nachSpeichern: () => aktuell.current.onGespeichert?.(),
     onOffen: () => {},
   });
   const { schlange, sicherstellen, setHinweis } = sperre;

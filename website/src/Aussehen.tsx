@@ -286,7 +286,13 @@ function FarbZeile({
       />
       <label htmlFor={hexId} className={styles.farbname}>
         {label}
-        <small>{hinweis}</small>
+        <small>
+          {hinweis}
+          {/* Der Platzhalter zeigt nur die Farbe (das schmale Feld schnitte mehr ab) – dass sie abgeleitet ist, steht hier. */}
+          {schluessel === 'hauptTief' && gesetzt === undefined && (
+            <> · wird aus der Hauptfarbe abgeleitet</>
+          )}
+        </small>
       </label>
       <input
         id={hexId}
@@ -296,7 +302,7 @@ function FarbZeile({
         spellCheck={false}
         autoComplete="off"
         // Die geltende Farbe als Platzhalter: sichtbar, ohne dass dadurch etwas gespeichert wird.
-        placeholder={schluessel === 'hauptTief' ? `${gilt} (abgeleitet)` : gilt}
+        placeholder={gilt}
         onChange={(e) => {
           const t = e.target.value;
           setText(t);

@@ -36,6 +36,8 @@ export function App() {
   const [start, setStart] = useState<Start | null>(null);
   const [aktiv, setAktiv] = useState<ReiterId>('seiten');
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  /** Zählt gelungene Speicherungen der Einstellungen – „Seiten“ liest daraufhin die Einstellungen neu (W3a-3c). */
+  const [einstellungenStand, setEinstellungenStand] = useState(0);
   const handy = useMedienAbfrage(HANDY_BREITE);
   /** Dieses Fenster – zwei Fenster derselben Person sperren sich gegenseitig (`shared/ct/sperre.ts`). */
   const fenster = useRef(neueId());
@@ -88,6 +90,7 @@ export function App() {
           gemeinde={editor.gemeinde}
           ich={ich}
           rechte={{ html: darfEigenesHtml(editor.zugang) }}
+          einstellungenStand={einstellungenStand}
         />
       )}
       {/* EIN Zustand für die Einheit „einstellungen“: Aussehen und das Fenster teilen ihn (`EinstellungenQuelle`). Er steht
@@ -97,6 +100,7 @@ export function App() {
           ort={{ modul: editor.modul, kategorie: entwuerfe }}
           gemeinde={editor.gemeinde}
           ich={ich}
+          onGespeichert={() => setEinstellungenStand((n) => n + 1)}
         >
           {aktiv === 'aussehen' && <Aussehen />}
           {einstellungenOffen && (

@@ -27,6 +27,7 @@ export const APPS = [
   'organigramm',
   'website',
   'gebetsabend',
+  'formular',
 ] as const;
 type App = (typeof APPS)[number];
 
@@ -39,6 +40,7 @@ const OBERGRENZE: Record<App, { knoepfe: number; hoehen: number }> = {
   organigramm: { knoepfe: 62, hoehen: 2 },
   website: { knoepfe: 12, hoehen: 3 },
   gebetsabend: { knoepfe: 0, hoehen: 0 },
+  formular: { knoepfe: 2, hoehen: 0 },
 };
 
 /** Rohe `<button` in einem Quelltext (ohne `<ButtonX`, ohne `<buttonGroup`-artige Namen). */

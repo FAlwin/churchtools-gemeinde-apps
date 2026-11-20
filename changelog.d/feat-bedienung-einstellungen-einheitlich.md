@@ -11,6 +11,11 @@
 - **Einführung zum Ablauf startet einmal neu** (Ablauf ansehen und Ablauf bearbeiten), weil der Ablauf zuletzt umgebaut
   wurde. Die Termine-Einführung erwähnt die Ablaufvorlagen im „⋯“ und bleibt sonst, wie sie ist.
 
+### Behoben (Musik-App)
+
+- Am Handy lag das Blatt von unten (das „⋯“-Menü und die Auswahl „Kommende ⌄“ in den Terminen) hinter der Reiterleiste
+  und war halb verdeckt. Es liegt jetzt wieder darüber.
+
 ### Intern
 
 - Neuer Quelltext-Wächter `ui/design/einstellungenReiter.test.ts` (R13): kein Reiter heißt „Mehr“ oder „Verwaltung“,

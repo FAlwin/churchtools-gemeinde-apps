@@ -67,7 +67,7 @@ describe('SuchLupe (R7, vorher SuchLeiste S3-4b)', () => {
     expect(screen.getByRole('searchbox')).toBe(feld);
     fireEvent.change(feld, { target: { value: 'beamer' } });
     fireEvent.blur(feld);
-    expect(screen.getByRole('searchbox').value).toBe('beamer');
+    expect(screen.getByRole<HTMLInputElement>('searchbox').value).toBe('beamer');
     cleanup();
   });
 
@@ -78,7 +78,7 @@ describe('SuchLupe (R7, vorher SuchLeiste S3-4b)', () => {
     fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' });
     expect(screen.queryByRole('searchbox')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
-    expect(screen.getByRole('searchbox').value).toBe('');
+    expect(screen.getByRole<HTMLInputElement>('searchbox').value).toBe('');
     cleanup();
   });
 

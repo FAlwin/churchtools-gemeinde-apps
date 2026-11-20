@@ -116,11 +116,17 @@ describe('KopfKnopf – stille Stufe (R2, B1)', () => {
   });
 
   it('Widerspruch: `still` mit `haupt`/`neu`/`gefahr` – der Typ verbietet es, zur Laufzeit gewinnt die lautere Stufe', () => {
+    // Der Typ verbietet die Mischung – diese Zeilen kompilieren nur, solange er es tut (`tsc -p ui` im Build).
+    // @ts-expect-error – `still` und `haupt` schließen sich im Typ aus
+    void (<KopfKnopf onClick={vi.fn()} label="X" still haupt symbol={<b>X</b>} />);
+    // @ts-expect-error – `still` und `neu` schließen sich im Typ aus
+    void (<KopfKnopf onClick={vi.fn()} label="X" still neu symbol={<b>X</b>} />);
+    // @ts-expect-error – `still` und `gefahr` schließen sich im Typ aus
+    void (<KopfKnopf onClick={vi.fn()} label="X" still gefahr symbol={<b>X</b>} />);
     for (const stufe of ['haupt', 'neu', 'gefahr'] as const) {
-      render(
-        // @ts-expect-error – `still` und `${stufe}` schließen sich im Typ aus
-        <KopfKnopf onClick={vi.fn()} label="X" still {...{ [stufe]: true }} symbol={<b>X</b>} />,
-      );
+      // Zur Laufzeit trotzdem gesetzt (über einen Cast): die lautere Stufe gewinnt.
+      const props = { still: true, [stufe]: true } as unknown as { still: true };
+      render(<KopfKnopf onClick={vi.fn()} label="X" {...props} symbol={<b>X</b>} />);
       const knopf = screen.getByRole('button', { name: 'X' });
       expect(knopf.className).toMatch(new RegExp(stufe));
       expect(knopf.className).not.toMatch(/still/);

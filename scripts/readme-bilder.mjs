@@ -325,7 +325,8 @@ async function aufnehmen(browser) {
     await p(1800);
     await knopf('Abbrechen').click();
     await p(500);
-    await knopf('To-Dos').click();
+    // Der Reiter trägt seit v1.1.0 den Zähler im Namen („To-Dos, 4 fällig“).
+    await page.getByRole('button', { name: REITER_TODOS }).first().click();
     await p(900);
     await page.getByText('Board', { exact: true }).first().click();
     await p(1800);
@@ -476,13 +477,16 @@ const STANDBILDER = [
     '',
     QUER,
     async (p) => {
-      await knopfIn(p, 'To-Dos').click();
+      await p.getByRole('button', { name: REITER_TODOS }).first().click();
       await p.getByText('Board', { exact: true }).first().click();
     },
   ],
   ['gebetsabend-zuhoeren', 'gebetsabend', 'zuhoerer', QUER],
   ['gebetsabend-technik', 'gebetsabend', 'technik', QUER],
 ];
+
+/** Reiter „To-Dos“ der Protokolle – mit oder ohne Zähler im Namen („To-Dos, 4 fällig“, seit v1.1.0). */
+const REITER_TODOS = /^To-Dos(, \d+ fällig)?$/;
 
 /** @param {import('@playwright/test').Page} page @param {string} name */
 function knopfIn(page, name) {

@@ -174,6 +174,7 @@ export function useEinteilen({
     daten,
     neu: ewNeu,
     setzen: ewSetzen,
+    setzeListe: ewSetzeListe,
     speichern: entwurfSpeichern,
     lage,
   } = useEntwuerfe(entwuerfe, plan, heute, nachfragen);
@@ -738,6 +739,7 @@ export function useEinteilen({
     ew,
     daten,
     ewNeu,
+    ewSetzeListe,
     lage,
     showToast,
     amPlatz,

@@ -29,7 +29,11 @@ import {
   type SchubladenStand,
 } from '@shared/dienstplan/entwuerfe';
 import type { PlatzOrt } from '@shared/dienstplan/einteilen';
-import type { Personenliste } from '@shared/dienstplan/personenliste';
+import type { ListeInhalt, Personenliste } from '@shared/dienstplan/personenliste';
+import {
+  personenlisteSpeichern,
+  type PersonenlisteErgebnis,
+} from '@shared/dienstplan/personenlisteSpeichern';
 import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
 import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
@@ -129,6 +133,21 @@ export function speichereEntwurf(
   const kategorie = daten.schubladen.get(gruppeId)?.kategorie;
   if (kategorie == null) return Promise.resolve({ ok: false, grund: 'kein-recht' });
   return entwurfSpeichern(port, daten.modul, kategorie, eingabe, erwartet);
+}
+
+/**
+ * Die Personenliste einer Dienstgruppe ändern (PL-2): frisch lesen, Version vergleichen, schreiben, nachlesen – im Kern
+ * (`personenlisteSpeichern`). Ohne sichtbare Schublade gibt es hier nichts zu schreiben (`kein-recht`).
+ */
+export function speicherePersonenliste(
+  daten: EntwuerfeDaten,
+  gruppeId: number,
+  aendern: (alt: Personenliste | null) => ListeInhalt,
+  erwartet: number | null,
+): Promise<PersonenlisteErgebnis> {
+  const kategorie = daten.schubladen.get(gruppeId)?.kategorie;
+  if (kategorie == null) return Promise.resolve({ ok: false, grund: 'kein-recht' });
+  return personenlisteSpeichern(port, daten.modul, kategorie, aendern, erwartet);
 }
 
 /** Einen Entwurf entfernen – nur, wenn noch die gesehene Version dasteht (im Kern). */
@@ -232,6 +251,16 @@ export interface EntwurfAnschluss {
     erwartet: number,
   ): Promise<EntwurfErgebnis>;
   einrichten(gruppe: Dienstgruppe): Promise<void>;
+  /**
+   * Die Personenliste einer Dienstgruppe ändern (PL-2: Reihenfolge, Tags, Pause) – im Kern `personenlisteSpeichern`; `erwartet`
+   * ist die Version, die der Planer gesehen hat (`null`: es gab keine Liste).
+   */
+  personenliste(
+    daten: EntwuerfeDaten,
+    gruppeId: number,
+    aendern: (alt: Personenliste | null) => ListeInhalt,
+    erwartet: number | null,
+  ): Promise<PersonenlisteErgebnis>;
   senden(
     daten: EntwuerfeDaten,
     eintraege: readonly SendeEintrag[],
@@ -268,6 +297,7 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     laden: () => ladeEntwuerfe(gruppen()),
     speichern: speichereEntwurf,
     entfernen: entferneEntwurf,
+    personenliste: speicherePersonenliste,
     senden: sendeEntwuerfe,
     hinweise: ladeSendeHinweise,
     termine: (ids) => ladeTerminStaende(ids),
@@ -286,6 +316,27 @@ export function entwurfAm(
   ort: { eventId: number; serviceId: number; index: number | null },
 ): Entwurf | null {
   return daten?.entwuerfe.get(ortSchluessel(ort)) ?? null;
+}
+
+/**
+ * Für die Anzeige: Was ein `EntwurfGrund` beim Ändern der **Personenliste** für den Planer heißt (PL-2). Wie `grundText`,
+ * nur über die Liste statt über einen Platz – und mit dem Satz, was mit der Eingabe ist.
+ */
+export function listeGrundText(grund: EntwurfGrund): string {
+  switch (grund) {
+    case 'abgemeldet':
+      return 'Du bist bei ChurchTools nicht mehr angemeldet. Bitte die Seite neu laden.';
+    case 'kein-recht':
+      return 'ChurchTools erlaubt dir nicht, die Personenliste dieser Dienstgruppe zu ändern.';
+    case 'voruebergehend':
+      return 'ChurchTools antwortet gerade nicht. Nichts verloren – bitte gleich noch einmal versuchen.';
+    case 'nicht-angekommen':
+      return 'ChurchTools hat die Änderung nicht übernommen. Bitte noch einmal versuchen.';
+    case 'zu-gross':
+      return 'Die Liste wäre zu lang. Bitte ein paar Tags weniger oder kürzere Namen.';
+    case 'konflikt':
+      return 'Ein anderer Planer hat die Liste inzwischen geändert. Sie ist neu geladen – bitte prüfen und noch einmal versuchen.';
+  }
 }
 
 /** Für die Anzeige: Was ein `EntwurfGrund` für den Planer heißt. */

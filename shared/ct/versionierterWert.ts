@@ -15,6 +15,7 @@
 import {
   inhaltAus,
   MAX_ZEICHEN,
+  nachleseUrteil,
   werteLesen,
   wertAendern,
   wertAnlegen,
@@ -104,9 +105,6 @@ export async function dokumentLesen<T>(
   }
 }
 
-const gleich = <T>(a: Versioniert<T>, b: Versioniert<T>) =>
-  a.version === b.version && a.zeit === b.zeit && a.von.personId === b.von.personId;
-
 /**
  * **Speichern.** `erwartet` ist die Version, die man gesehen hat (`null` = es gab keins). Steht inzwischen eine andere
  * da, wird **nicht** überschrieben (`konflikt`, mit `jetzt`).
@@ -161,10 +159,9 @@ async function nachlesen<T>(
   const l = await dokumentLesen<T>(p, modul, kategorie, d);
   if (!l.ok) return { ok: false, grund: l.grund };
   const jetzt = l.daten;
-  if (jetzt && gleich(jetzt, neu)) return { ok: true, daten: jetzt };
-  // Steht ein anderes Dokument auf mindestens unserem Stand, war ein anderer gleichzeitig dran.
-  if (jetzt && jetzt.version >= neu.version) return { ok: false, grund: 'konflikt', jetzt };
-  return { ok: false, grund: sonst, jetzt };
+  const urteil = nachleseUrteil(jetzt, neu, jetzt?.von.personId === neu.von.personId, sonst);
+  if (urteil === 'ok' && jetzt) return { ok: true, daten: jetzt };
+  return { ok: false, grund: urteil === 'ok' ? sonst : urteil, jetzt };
 }
 
 /** **Entfernen** – nur, wenn noch die gesehene Version dasteht; auch Doppelte gehen. „Schon weg“ ist ein Erfolg. */

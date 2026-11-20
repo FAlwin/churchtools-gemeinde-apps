@@ -186,3 +186,20 @@ export function inhaltAus<T>(wert: Wert, art: string, fassung: number): T | null
 export function istDauerhaftLeer(p: ModulPort, e: unknown): boolean {
   return p.istKeinRecht(e) || p.istNichtGefunden(e);
 }
+
+/**
+ * **Das Urteil nach dem Nachlesen** eines versionierten Werts – eine Regel für alle, die mit „Version im Wert“ schreiben
+ * (Dienstplaner-Entwürfe, Personenliste, `versionierterWert`): Steht dort genau unser Stand (gleiche Version UND Zeit, `gleich`
+ * = die Sonderbedingung der Art, bei Entwürfen „dieselbe Person“), ist es angekommen (`ok`). Steht dort etwas auf mindestens
+ * unserer Version, war ein anderer gleichzeitig dran (`konflikt`). Sonst gilt `sonst` (nicht angekommen, vorübergehend …).
+ */
+export function nachleseUrteil<G extends string>(
+  jetzt: { version: number; zeit: string } | null,
+  neu: { version: number; zeit: string },
+  gleich: boolean,
+  sonst: G,
+): 'ok' | 'konflikt' | G {
+  if (jetzt && jetzt.version === neu.version && jetzt.zeit === neu.zeit && gleich) return 'ok';
+  if (jetzt && jetzt.version >= neu.version) return 'konflikt';
+  return sonst;
+}

@@ -4,6 +4,7 @@ import { Icon } from '@ui/icons/icons';
 import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
 import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { HilfeFenster } from '@ui/bedienung/HilfeKnopf';
 import { HILFE_PLANEN } from './hilfeTexte';
@@ -38,7 +39,18 @@ import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
 import { usePlatzDazu } from './usePlatzDazu';
 import { usePlaetzeFrisch } from './usePlaetzeFrisch';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
-import type { EntwurfAnschluss } from './ladeEntwuerfe';
+import { listeGrundText, type EntwurfAnschluss } from './ladeEntwuerfe';
+import { useListeBearbeiten } from './useListeBearbeiten';
+import { PersonFenster } from './PersonFenster';
+import { TagsVerwaltenFenster } from './TagsVerwaltenFenster';
+import {
+  pauseSetzen,
+  reiheNachZiehen,
+  reiheSetzen,
+  tagListeSetzen,
+  tagsSetzen,
+  tagsSchluessel,
+} from '@shared/dienstplan/personenliste';
 import { AblaufFertigKnopf } from './MatrixAblauf';
 import { ablaufBearbeitenMoeglich, ablaufBearbeitenStart } from './ablaufBearbeiten';
 import { useMatrixAblauf } from './useMatrixAblauf';
@@ -290,6 +302,7 @@ export function Planen({
     ew,
     daten,
     ewNeu,
+    ewSetzeListe,
     lage,
     showToast,
     amPlatz,
@@ -313,6 +326,14 @@ export function Planen({
       zeigen: (person, zurueck) => setFokusPerson({ person, zurueck }),
     },
   });
+  // „Liste bearbeiten“ (PL-2): der Modus und das Speichern der Personenliste je Dienstgruppe.
+  const liste = useListeBearbeiten({ entwuerfe, daten, setzeListe: ewSetzeListe });
+  // Die offenen Fenster dazu: das Personen-Fenster (Tags und Pause bei diesem Dienst) und „Tags verwalten“.
+  const [listeFenster, setListeFenster] = useState<
+    | { art: 'person'; dienst: Dienst; personId: number; name: string }
+    | { art: 'tags'; gruppeId: number }
+    | null
+  >(null);
   // Nach einer Platzänderung Plan und Entwürfe gemeinsam neu – bis beide da sind, sperren die Plätze-Fenster.
   const plaetzeFrisch = usePlaetzeFrisch({
     plan,
@@ -367,6 +388,15 @@ export function Planen({
           .filter((g) => g.planbar && g.gruppe !== null)
           .map((g) => plan.gruppen.find((x) => schluessel(x) === schluessel(g)) ?? g)
       : [];
+
+  // Die gezeigten Dienstgruppen, deren Personenliste man ändern darf – ohne sie gibt es „Liste bearbeiten“ nicht. Der Modus
+  // gehört zur Ansicht „Personen“: in einer anderen Ansicht ist er aus.
+  const listeGruppen = plan
+    ? gezeigteGruppen(plan, gruppenAus(ansicht)).filter(
+        (g) => g.gruppe !== null && liste.darf(g.gruppe.id),
+      )
+    : [];
+  const listeAn = liste.an && ansicht.unteransicht === 'raster';
 
   const knopf = (
     <ZeitraumKnopf
@@ -436,6 +466,20 @@ export function Planen({
             },
           ]
         : []),
+      // „Liste bearbeiten“ (PL-2): nur, wo man die Liste mindestens einer gezeigten Dienstgruppe ändern darf; das Menü
+      // schließt zuerst, dann wechselt die Ansicht nach „Personen“ und der Modus geht an.
+      ...(listeGruppen.length > 0 && !listeAn
+        ? [
+            {
+              label: 'Liste bearbeiten',
+              symbol: <Icon name="liste" size={16} stroke={2.2} />,
+              onClick: () => {
+                setAnsicht({ ...ansicht, unteransicht: 'raster' });
+                liste.setAn(true);
+              },
+            },
+          ]
+        : []),
     ],
     [
       ...(erinnernGruppen.length > 0
@@ -491,7 +535,10 @@ export function Planen({
               { value: 'raster', label: 'Personen' },
               { value: 'werWieOft', label: 'Wer wie oft?' },
             ]}
-            onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
+            onChange={(v) => {
+              liste.setAn(false);
+              setAnsicht({ ...ansicht, unteransicht: v });
+            }}
             handy={handy}
           />
         }
@@ -543,6 +590,34 @@ export function Planen({
         }
       />
       {lupeImKopf}
+      {listeAn && (
+        <div className={styles.besuchHinweis} role="status" aria-label="Liste bearbeiten">
+          <span>
+            {handy
+              ? 'Am Griff ziehen, Person antippen für Tags und Pause.'
+              : 'Zeilen am Griff ziehen, Person anklicken für Tags und Pause.'}{' '}
+            Gilt für alle Planer der Dienstgruppe.
+          </span>
+          <span className={styles.listeKnoepfe}>
+            <KopfKnopf
+              label="Tags verwalten …"
+              title="Tags verwalten"
+              symbol={<Icon name="regler" size={16} stroke={2.2} />}
+              disabled={listeGruppen.length === 0}
+              onClick={() =>
+                listeGruppen[0]?.gruppe &&
+                setListeFenster({ art: 'tags', gruppeId: listeGruppen[0].gruppe.id })
+              }
+            />
+            <KopfKnopf
+              haupt
+              label="Fertig"
+              symbol={<Icon name="check" size={16} stroke={2.2} />}
+              onClick={() => liste.setAn(false)}
+            />
+          </span>
+        </div>
+      )}
       {hilfeOffen && (
         <HilfeFenster
           seite="Planen"
@@ -638,6 +713,23 @@ export function Planen({
       ablauf: matrixAblauf,
       infos: matrixInfos,
       personen: { ...amPersonen, dazunehmen },
+      liste: {
+        an: listeAn,
+        laeuft: liste.laeuft,
+        darf: liste.darf,
+        verschieben: (gruppeId, block, von, nach) => {
+          // Absolut gesetzt (die ganze neue Reihenfolge, gerechnet aus dem Stand, den der Planer sieht): `personenlisteSpeichern`
+          // vergleicht dessen Version – hat ein anderer Planer inzwischen geändert, wird nichts überschrieben.
+          const neu = reiheNachZiehen(liste.aktuell(gruppeId), block, von, nach);
+          void liste
+            .aendern(gruppeId, (alt) => reiheSetzen(alt, neu))
+            .then((r) => {
+              if (!r.ok) showToast(listeGrundText(r.grund));
+            });
+        },
+        person: (dienst, personId, name) =>
+          setListeFenster({ art: 'person', dienst, personId, name }),
+      },
       vorgabe: entwuerfe
         ? {
             modus: (dienstId) => modusFuerDienst(ansicht.direktDienste, dienstId),
@@ -806,6 +898,69 @@ export function Planen({
           onClose={() => setVorgabeFach(null)}
         />
       )}
+      {listeFenster?.art === 'person' &&
+        plan &&
+        (() => {
+          const f = listeFenster;
+          const gruppeId = f.dienst.dienstgruppeId;
+          const gruppe = plan.gruppen.find((g) => g.gruppe?.id === gruppeId)?.gruppe;
+          if (gruppeId === null || !gruppe || !liste.darf(gruppeId)) return null;
+          const l = liste.aktuell(gruppeId);
+          const schluessel = tagsSchluessel(f.dienst.id, f.personId);
+          return (
+            <PersonFenster
+              // Kein Schlüssel mit der Version: Nach einem Konflikt lädt Planen den Stand des anderen Planers nach, das Fenster
+              // bleibt aber offen und behält die Eingabe des Planers (er speichert sie dann auf dem neuen Stand).
+              key={`${f.dienst.id}|${f.personId}`}
+              name={f.name}
+              dienst={f.dienst.name}
+              gruppe={gruppe.name}
+              tags={l?.tags ?? []}
+              gewaehlt={l?.tagsVon[schluessel] ?? []}
+              pause={l?.pause[String(f.personId)] ?? null}
+              onTagsVerwalten={() => setListeFenster({ art: 'tags', gruppeId })}
+              onClose={() => setListeFenster(null)}
+              speichern={async (tagIds, pause) => {
+                // Absolut: genau die Wahl im Fenster, nicht „weiterrechnen“ auf einem alten Stand.
+                const r = await liste.aendern(gruppeId, (alt) =>
+                  pauseSetzen(tagsSetzen(alt, f.dienst.id, f.personId, tagIds), f.personId, pause),
+                );
+                if (r.ok) {
+                  setListeFenster(null);
+                  return null;
+                }
+                return listeGrundText(r.grund);
+              }}
+            />
+          );
+        })()}
+      {listeFenster?.art === 'tags' &&
+        (() => {
+          // Die Dienstgruppen, deren Liste man ändern darf – aus allen Gruppen des Plans (auch den ausgeblendeten).
+          const gruppen = (plan?.gruppen ?? []).flatMap((g) =>
+            g.gruppe && liste.darf(g.gruppe.id)
+              ? [
+                  {
+                    id: g.gruppe.id,
+                    name: g.gruppe.name,
+                    tags: liste.aktuell(g.gruppe.id)?.tags ?? [],
+                  },
+                ]
+              : [],
+          );
+          if (gruppen.length === 0) return null;
+          return (
+            <TagsVerwaltenFenster
+              gruppen={gruppen}
+              start={listeFenster.gruppeId}
+              onClose={() => setListeFenster(null)}
+              speichern={async (gruppeId, tags) => {
+                const r = await liste.aendern(gruppeId, (alt) => tagListeSetzen(alt, tags));
+                return r.ok ? null : listeGrundText(r.grund);
+              }}
+            />
+          );
+        })()}
       {alteListe && entwuerfe && ew.art === 'fertig' && (
         <AlteEntwuerfeFach
           zeilen={alteListe}

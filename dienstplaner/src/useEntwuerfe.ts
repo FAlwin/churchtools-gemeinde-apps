@@ -8,6 +8,7 @@ import {
   type EntwurfZiel,
 } from '@shared/dienstplan/entwuerfe';
 import type { Belegung, PlatzOrt } from '@shared/dienstplan/einteilen';
+import type { Personenliste } from '@shared/dienstplan/personenliste';
 import type { EntwuerfeDaten, EntwurfAnschluss } from './ladeEntwuerfe';
 import type { TerminStand } from './terminStand';
 import { entwurfsLage } from './planEntwuerfe';
@@ -91,6 +92,18 @@ export function useEntwuerfe(
     return r;
   };
 
+  /**
+   * Die Personenliste einer Dienstgruppe in die geladenen Daten übernehmen (PL-2) – **nur, was nachgelesen bestätigt ist**
+   * (`personenlisteSpeichern` liefert nach `ok` und bei einem Konflikt, was jetzt dasteht). `null`: es gibt keine Liste.
+   */
+  const setzeListe = (gruppeId: number, liste: Personenliste | null) =>
+    setze((alt) => {
+      const listen = new Map(alt.personenlisten);
+      if (liste) listen.set(gruppeId, liste);
+      else listen.delete(gruppeId);
+      return { ...alt, personenlisten: listen };
+    });
+
   const [staende, setStaende] = useState<Map<number, TerminStand>>(new Map());
   const lage = entwurfsLage(plan, daten, staende, heute);
   const fremdSchluessel = nachfragen ? lage.fremd.join(',') : '';
@@ -107,5 +120,5 @@ export function useEntwuerfe(
     if (nachgefragt.art === 'fertig') setStaende((alt) => new Map([...alt, ...nachgefragt.daten]));
   }, [nachgefragt]);
 
-  return { ew, daten, neu, setzen, speichern, lage };
+  return { ew, daten, neu, setzen, setzeListe, speichern, lage };
 }

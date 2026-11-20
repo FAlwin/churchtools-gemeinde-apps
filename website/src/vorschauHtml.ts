@@ -19,7 +19,7 @@ import css from '@shared/website/website.css?raw';
 import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import { renderSeite, type RenderKontext } from '@shared/website/render';
 import { vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
-import { mitEbene } from './ebene';
+import { mitEbene, type EbeneOptionen } from './ebene';
 import { KEINE_SCHRIFT } from './schriftLader';
 
 /** Was das iframe darf: Skripte (Eigenes HTML), aber **nie** `allow-same-origin`. Test: `Vorschau.test.tsx`. */
@@ -65,7 +65,7 @@ export function vorschauKontext(
 
 /**
  * Die Seite als vollständiges HTML-Dokument für `srcdoc`. Mit `bearbeiten` hängt die **Bearbeiten-Ebene** daran (W3a-2:
- * Leisten, „Abschnitt einfügen“, Klick auf Bausteine; `ebene.ts`) – **nur hier, in der Vorschau**. Der Renderer selbst
+ * Leisten, „Abschnitt einfügen“, Text direkt tippen; `ebene.ts`) – **nur hier, in der Vorschau**. Der Renderer selbst
  * bekommt dafür keinen Sonderweg: Die Ebene findet Abschnitte, Spalten und Bausteine an der Reihenfolge im Dokument.
  */
 export function vorschauHtml(
@@ -73,12 +73,12 @@ export function vorschauHtml(
   stand: VorschauStand,
   gemeinde: string | null,
   zeitzone: string,
-  bearbeiten?: { scroll: number; nonce?: string | null },
+  bearbeiten?: { scroll: number; nonce?: string | null } & EbeneOptionen,
   schriftAdresse?: (datei: string) => string,
 ): string {
   try {
     const html = renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone, schriftAdresse));
-    return bearbeiten ? mitEbene(html, bearbeiten.scroll, bearbeiten.nonce) : html;
+    return bearbeiten ? mitEbene(html, bearbeiten.scroll, bearbeiten.nonce, bearbeiten) : html;
   } catch {
     // Mitten im Bearbeiten kann etwas Unfertiges stehen, das der Renderer nicht mag – die Erweiterung soll deshalb nicht
     // abstürzen. Gespeichert wird so etwas nie (`seitePruefen`).

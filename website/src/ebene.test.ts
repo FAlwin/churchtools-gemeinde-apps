@@ -6,12 +6,14 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Icon, type IconName } from '@ui/icons/icons';
 import { ebeneHtml, ebeneSymbole, mitEbene, nonceGueltig, seitenNonce, svgZuText } from './ebene';
+import kern from './ebene.kern.txt?raw';
 import skript from './ebene.skript.txt?raw';
+import { aufraeumen, gesendet, starten } from './ebene.testutil';
 import { vorschauHtml } from './vorschauHtml';
 
 const SEITE = seite({
   abschnitte: [
-    abschnitt([baustein('ueberschrift', { id: 'u1' }), baustein('text', { id: 't1' })], {
+    abschnitt([baustein('ueberschrift', { id: 'u1' }), baustein('trenner', { id: 't1' })], {
       id: 'a0',
     }),
     abschnitt([], {
@@ -25,80 +27,80 @@ const SEITE = seite({
   ],
 });
 
-const SYMBOLE = {
-  plus: '<svg>+</svg>',
-  stift: '<svg>s</svg>',
-  hoch: '<svg>^</svg>',
-  runter: '<svg>v</svg>',
-  kopie: '<svg>k</svg>',
-  muell: '<svg>m</svg>',
+const M = (rest: Record<string, unknown>) => ({ websiteEditor: true, ...rest });
+const letzte = (spy: ReturnType<typeof starten>) => gesendet(spy).at(-1);
+const hoverAuf = (el: Element) => {
+  el.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 5, clientY: 5 }));
+  vi.advanceTimersByTime(500); // Rahmen und Wartezeiten der Anzeige
 };
-
-/** Die Seite in das Dokument legen (nur den Körper – Skripte in `innerHTML` laufen nicht) und die Ebene darüber starten. */
-function starten(s = SEITE, scroll = 0) {
-  const html = renderSeite(s, kontext({ seiten: [s] }));
-  document.body.innerHTML = /<body>([\s\S]*)<\/body>/
-    .exec(html)![1]
-    .replace(/<script[^>]*><\/script>/g, '');
-  const senden = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- das Skript, das im iframe läuft, wird hier im Dokument nachgespielt
-  (new Function(`return (${skript}\n)`)() as (c: unknown) => void)({ scroll, symbole: SYMBOLE });
-  return senden;
-}
-
-const letzte = (spy: ReturnType<typeof starten>) => spy.mock.calls.at(-1)?.[0];
 
 beforeEach(() => {
   window.scrollTo = vi.fn() as never;
+  vi.useFakeTimers();
 });
 afterEach(() => {
-  vi.restoreAllMocks();
-  document.body.innerHTML = '';
+  vi.useRealTimers();
+  aufraeumen();
 });
 
-describe('Bearbeiten-Ebene im iframe (läuft hier im Dokument nach)', () => {
+describe('Bedien-Schicht im iframe (läuft hier im Dokument nach)', () => {
   it('meldet sich nach dem Start als „bereit“ (sonst weiß die Erweiterung nicht, ob ChurchTools das Skript blockiert hat)', () => {
-    const senden = starten();
-    expect(senden.mock.calls.map((c) => c[0])).toContainEqual({
-      websiteEditor: true,
-      was: 'bereit',
-    });
+    const senden = starten(SEITE);
+    expect(gesendet(senden)).toContainEqual(M({ was: 'bereit' }));
   });
 
-  it('„Abschnitt einfügen“ steht vor, zwischen und nach den Abschnitten – und meldet die Stelle', () => {
-    const senden = starten();
-    const knoepfe = [...document.querySelectorAll<HTMLButtonElement>('.b-einfuegen button')];
-    expect(knoepfe).toHaveLength(3);
-    knoepfe.forEach((k, i) => {
-      k.click();
-      expect(letzte(senden)).toEqual({ websiteEditor: true, was: 'einfuegen', i });
-    });
+  it('es gibt EINE Abschnitt-Leiste und EINE Baustein-Leiste – sie wandern, statt an jedem Abschnitt zu hängen', () => {
+    starten(SEITE);
+    expect(document.querySelectorAll('.b-werk')).toHaveLength(1);
+    expect(document.querySelectorAll('.b-blockleiste')).toHaveLength(1);
+    expect(document.querySelectorAll('.b-ueber .b-abstand')).toHaveLength(1);
   });
 
-  it('jeder Abschnitt hat eine Leiste: Gestalten, nach oben, nach unten, kopieren, löschen – mit dem richtigen Abschnitt', () => {
-    const senden = starten();
-    const leisten = [...document.querySelectorAll('.b-werk')];
-    expect(leisten).toHaveLength(2);
-    leisten.forEach((leiste, i) => {
+  it('die Abschnitt-Leiste: Griff, nach oben, nach unten, Gestalten, kopieren, löschen – mit dem Abschnitt unter der Maus', () => {
+    const senden = starten(SEITE);
+    const abschnitte = [...document.querySelectorAll('section.w-abschnitt')];
+    abschnitte.forEach((sec, i) => {
+      hoverAuf(sec);
       for (const was of ['gestalten', 'hoch', 'runter', 'kopieren', 'loeschen']) {
-        leiste.querySelector<HTMLButtonElement>(`[data-w="${was}"]`)!.click();
-        expect(letzte(senden), `${was} ${i}`).toEqual({ websiteEditor: true, was, i });
+        document.querySelector<HTMLButtonElement>(`.b-werk [data-w="${was}"]`)!.click();
+        expect(letzte(senden), `${was} ${i}`).toEqual(M({ was, i }));
       }
     });
   });
 
+  it('der Griff verschiebt vorerst mit den Pfeiltasten (Ziehen kommt in W3c-2)', () => {
+    const senden = starten(SEITE);
+    hoverAuf(document.querySelectorAll('section.w-abschnitt')[1]);
+    const griff = document.querySelector('.b-werk [data-w="griff"]')!;
+    griff.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(letzte(senden)).toEqual(M({ was: 'hoch', i: 1 }));
+    griff.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(letzte(senden)).toEqual(M({ was: 'runter', i: 1 }));
+    // ein Klick auf den Griff tut nichts
+    const n = gesendet(senden).length;
+    (griff as HTMLButtonElement).click();
+    expect(gesendet(senden)).toHaveLength(n);
+  });
+
   it('die Knöpfe tragen die Symbole des gemeinsamen Satzes und einen Namen für Screenreader', () => {
-    starten();
+    starten(SEITE);
     const knopf = document.querySelector('.b-werk [data-w="loeschen"]')!;
-    expect(knopf.innerHTML).toContain(SYMBOLE.muell);
+    expect(knopf.innerHTML).toContain('<svg>m</svg>');
     expect(knopf.getAttribute('aria-label')).toBe('Abschnitt löschen');
     expect(document.querySelector('.b-werk [data-w="gestalten"]')!.textContent).toContain(
       'Gestalten',
     );
   });
 
-  it('ein Klick auf einen Baustein meldet Abschnitt, Spalte UND Baustein – auch in der zweiten Spalte', () => {
-    const senden = starten();
+  it('„+ Abschnitt einfügen“ meldet die Grenze, an der die Maus steht', () => {
+    const senden = starten(SEITE);
+    hoverAuf(document.querySelectorAll('section.w-abschnitt')[0]);
+    document.querySelector<HTMLButtonElement>('.b-ueber .b-einfuegen')!.click();
+    expect(letzte(senden)).toMatchObject({ was: 'einfuegen' });
+  });
+
+  it('die Baustein-Leiste: der Stift öffnet das Fenster des Bausteins unter der Maus (Abschnitt, Spalte UND Baustein)', () => {
+    const senden = starten(SEITE);
     const bausteine = [...document.querySelectorAll<HTMLElement>('.w-baustein')];
     expect(bausteine).toHaveLength(5);
     const erwartet = [
@@ -109,22 +111,50 @@ describe('Bearbeiten-Ebene im iframe (läuft hier im Dokument nach)', () => {
       [1, 1, 1],
     ];
     bausteine.forEach((b, n) => {
-      b.click();
+      hoverAuf(b);
+      document.querySelector<HTMLButtonElement>('.b-blockleiste [data-w="fenster"]')!.click();
       const [i, j, k] = erwartet[n];
-      expect(letzte(senden), String(n)).toEqual({ websiteEditor: true, was: 'baustein', i, j, k });
+      expect(letzte(senden), String(n)).toEqual(M({ was: 'baustein', i, j, k }));
     });
   });
 
-  it('„+ Baustein“ steht in jeder Spalte und meldet Abschnitt und Spalte', () => {
-    const senden = starten();
-    const neue = [...document.querySelectorAll<HTMLButtonElement>('.b-neu-baustein')];
-    expect(neue).toHaveLength(3);
-    neue[2].click();
-    expect(letzte(senden)).toEqual({ websiteEditor: true, was: 'baustein-neu', i: 1, j: 1 });
-    // und der Klick auf den Knopf zählt nicht als Klick auf einen Baustein
-    expect(
-      senden.mock.calls.filter(([m]) => (m as { was: string }).was === 'baustein'),
-    ).toHaveLength(0);
+  it('ein Klick auf einen Baustein ohne Text (Trenner) öffnet das Fenster – auf einen Text-Baustein beginnt das Tippen', () => {
+    const senden = starten(SEITE);
+    const trenner = document.querySelectorAll<HTMLElement>('.w-b-trenner')[0];
+    trenner.click();
+    expect(letzte(senden)).toEqual(M({ was: 'baustein', i: 0, j: 0, k: 1 }));
+    document.querySelector<HTMLElement>('.w-b-ueberschrift h2')!.click();
+    expect(letzte(senden)).toMatchObject({ was: 'tippen', i: 0, j: 0, k: 0, feld: 'text' });
+  });
+
+  it('eine leere Spalte hat einen Knopf „Baustein hinzufügen“; er meldet Abschnitt und Spalte (nicht als Klick auf einen Baustein)', () => {
+    const s = seite({
+      abschnitte: [
+        abschnitt([], {
+          id: 'a0',
+          aufteilung: '1-1',
+          spalten: [spalte([baustein('trenner')], { id: 's0' }), spalte([], { id: 's1' })],
+        }),
+      ],
+    });
+    const senden = starten(s);
+    const knoepfe = [...document.querySelectorAll<HTMLButtonElement>('.b-leerspalte')];
+    expect(knoepfe).toHaveLength(1);
+    knoepfe[0].click();
+    expect(letzte(senden)).toEqual(M({ was: 'baustein-neu', i: 0, j: 1 }));
+    expect(gesendet(senden).filter((m) => m.was === 'baustein')).toHaveLength(0);
+  });
+
+  it('das „+“ in einer Lücke öffnet das Hinzufügen an dieser Spalte', () => {
+    const s = seite({
+      abschnitte: [abschnitt([baustein('trenner', { id: 'x' }), baustein('trenner', { id: 'y' })])],
+    });
+    const senden = starten(s);
+    const plus = document.querySelector<HTMLButtonElement>('.b-ueber .b-plus')!;
+    expect(plus.getAttribute('aria-label')).toBe('Baustein hier hinzufügen');
+    // ohne gemessene Lücke (hier hat das Testdokument keine Maße) wird es nicht angezeigt – es meldet nichts
+    plus.click();
+    expect(gesendet(senden).filter((m) => m.was === 'baustein-neu')).toHaveLength(0);
   });
 
   it('eine leere Seite: ein sichtbarer Knopf „Abschnitt einfügen“ an Stelle 0', () => {
@@ -132,12 +162,11 @@ describe('Bearbeiten-Ebene im iframe (läuft hier im Dokument nach)', () => {
     const leer = document.querySelector<HTMLElement>('.b-leer')!;
     expect(leer.textContent).toContain('Diese Seite ist noch leer');
     leer.querySelector('button')!.click();
-    expect(letzte(senden)).toEqual({ websiteEditor: true, was: 'einfuegen', i: 0 });
-    expect(document.querySelectorAll('.b-werk')).toHaveLength(0);
+    expect(letzte(senden)).toEqual(M({ was: 'einfuegen', i: 0 }));
   });
 
   it('Links tun nichts, Formulare werden nicht abgeschickt', () => {
-    starten();
+    starten(SEITE);
     const a = document.createElement('a');
     a.href = 'https://beispiel.de/';
     document.body.append(a);
@@ -152,23 +181,72 @@ describe('Bearbeiten-Ebene im iframe (läuft hier im Dokument nach)', () => {
   });
 
   it('die Scrollposition: wird gemeldet und – beim Neuzeichnen – wieder eingestellt', () => {
-    const senden = starten(SEITE, 340);
+    const senden = starten(SEITE, { scroll: 340 });
     expect(window.scrollTo).toHaveBeenCalledWith(0, 340);
     window.dispatchEvent(new Event('scroll'));
     expect(letzte(senden)).toMatchObject({ was: 'scroll' });
-    window.scrollTo = vi.fn() as never;
-    starten(SEITE, 0);
-    expect(window.scrollTo).not.toHaveBeenCalled();
   });
 
-  it('am Handy zeigt der zuletzt angetippte Abschnitt seine Leiste (`b-aktiv`), immer nur einer', () => {
-    starten();
-    const [a0, a1] = [...document.querySelectorAll('section.w-abschnitt')];
-    a0.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    expect(a0.classList.contains('b-aktiv')).toBe(true);
-    a1.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    expect(a0.classList.contains('b-aktiv')).toBe(false);
-    expect(a1.classList.contains('b-aktiv')).toBe(true);
+  it('keine Scrollposition: es wird nicht gescrollt', () => {
+    starten(SEITE, { scroll: 0 });
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('Handy: alles wie bisher – Fenster statt Tippen', () => {
+  it('keine Baustein-Leiste, keine Abstand-Pille, kein „+“ in Lücken', () => {
+    starten(SEITE, { modus: 'handy' });
+    expect(document.querySelector('.b-blockleiste')).toBeNull();
+    expect(document.querySelector('.b-abstand')).toBeNull();
+    expect(document.querySelector('.b-ueber .b-plus')).not.toBeNull(); // da, aber …
+    hoverAuf(document.querySelectorAll('section.w-abschnitt')[1]);
+    expect((document.querySelector('.b-ueber .b-plus') as HTMLElement).hidden).toBe(true);
+  });
+
+  it('Tippen auf einen Baustein – auch auf Text – öffnet das Fenster; es beginnt kein Tippen', () => {
+    const senden = starten(SEITE, { modus: 'handy' });
+    document.querySelector<HTMLElement>('.w-b-ueberschrift h2')!.click();
+    expect(letzte(senden)).toEqual(M({ was: 'baustein', i: 0, j: 0, k: 0 }));
+    expect(gesendet(senden).filter((m) => m.was === 'tippen')).toHaveLength(0);
+    expect(document.querySelector('[contenteditable]')).toBeNull();
+  });
+
+  it('die Abschnitt-Leiste bleibt (mit hoch/runter)', () => {
+    const senden = starten(SEITE, { modus: 'handy' });
+    document
+      .querySelectorAll('section.w-abschnitt')[0]
+      .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(100);
+    document.querySelector<HTMLButtonElement>('.b-werk [data-w="runter"]')!.click();
+    expect(letzte(senden)).toMatchObject({ was: 'runter' });
+  });
+});
+
+describe('Rollen: „Eigenes HTML“ ist nie tippbar', () => {
+  const MIT_HTML = seite({
+    abschnitte: [abschnitt([baustein('html', { id: 'h' }), baustein('text', { id: 't' })])],
+  });
+
+  it('auch mit dem Recht beginnt dort kein Tippen – ein Klick öffnet das Fenster', () => {
+    const senden = starten(MIT_HTML, { darfHtml: true });
+    document.querySelector<HTMLElement>('.w-b-html .beispiel')!.click();
+    expect(gesendet(senden).filter((m) => m.was === 'tippen')).toHaveLength(0);
+    expect(letzte(senden)).toEqual(M({ was: 'baustein', i: 0, j: 0, k: 0 }));
+    expect(document.querySelector('.w-b-html [contenteditable]')).toBeNull();
+  });
+
+  it('ohne das Recht gibt es dafür weder Fenster noch Baustein-Leiste', () => {
+    const senden = starten(MIT_HTML, { darfHtml: false });
+    const html = document.querySelector<HTMLElement>('.w-b-html')!;
+    html.querySelector<HTMLElement>('.beispiel')!.click();
+    expect(gesendet(senden).filter((m) => m.was === 'baustein' || m.was === 'tippen')).toHaveLength(
+      0,
+    );
+    hoverAuf(html);
+    expect((document.querySelector('.b-blockleiste') as HTMLElement).hidden).toBe(true);
+    // Ein Text-Baustein derselben Seite bleibt bedienbar
+    hoverAuf(document.querySelector('.w-b-text')!);
+    expect((document.querySelector('.b-blockleiste') as HTMLElement).hidden).toBe(false);
   });
 });
 
@@ -263,7 +341,7 @@ describe('Die Ebene gehört NUR in die Vorschau', () => {
   it('der Bau (renderSeite) kennt weder Ebene noch Stile noch Kennungen für den Editor', () => {
     const html = renderSeite(SEITE, kontext({ seiten: [SEITE] }));
     expect(html).not.toMatch(
-      /b-werk|b-einfuegen|b-neu-baustein|websiteEditor|postMessage|data-w-id|b-leer/,
+      /b-werk|b-einfuegen|b-blockleiste|b-leerspalte|websiteEditor|postMessage|data-w-id|b-leer/,
     );
   });
 
@@ -284,18 +362,35 @@ describe('Die Ebene gehört NUR in die Vorschau', () => {
     expect(mitEbene('<p>kein Körper</p>', 0)).toBe('<p>kein Körper</p>');
   });
 
-  it('das Skript kann seinen Block nicht beenden: kein `</script` im Text, `<` in den Einstellungen ist entschärft', () => {
-    expect(skript).not.toMatch(/<\/script/i);
-    expect(skript).not.toMatch(/<!--/);
+  it('Skript und Kern können ihren Block nicht beenden: kein `</script` im Text, `<` in den Einstellungen ist entschärft', () => {
+    for (const text of [skript, kern]) {
+      expect(text).not.toMatch(/<\/script/i);
+      expect(text).not.toMatch(/<!--/);
+    }
     const html = ebeneHtml(5);
     const innen = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
+    const mitWeiter = ebeneHtml(5, null, { weiter: { i: 0, j: 0, k: 0, feld: 'text', n: 0 } });
+    expect(
+      mitWeiter.slice(mitWeiter.indexOf('<script>') + 8, mitWeiter.lastIndexOf('</script>')),
+    ).not.toMatch(/<\/script/i);
     expect(innen).not.toMatch(/<\/script/i);
     expect(innen).not.toMatch(/<!--/);
   });
 
-  it('die Symbole kommen aus dem gemeinsamen Satz (SVG, 15 px) – alle sechs, keine Behelfszeichen', () => {
+  it('die Symbole kommen aus dem gemeinsamen Satz (SVG, 15 px) – alle, keine Behelfszeichen', () => {
     const s = ebeneSymbole();
-    expect(Object.keys(s).sort()).toEqual(['hoch', 'kopie', 'muell', 'plus', 'runter', 'stift']);
+    expect(Object.keys(s).sort()).toEqual([
+      'griff',
+      'hoch',
+      'kopie',
+      'link',
+      'liste',
+      'muell',
+      'plus',
+      'regler',
+      'runter',
+      'stift',
+    ]);
     for (const svg of Object.values(s)) expect(svg).toMatch(/^<svg[^>]*width="15"/);
   });
 });

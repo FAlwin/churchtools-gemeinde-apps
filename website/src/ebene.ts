@@ -1,7 +1,8 @@
 /**
- * **Die Bearbeiten-Ebene für die Vorschau** (Bauplan Website W3a-2): Stil (`ebene.css`) und Skript (`ebene.skript.txt` – reiner
- * Browser-Text für das iframe, darum keine `.js`-Datei: Die Prüfung des Repos (`eslint .`) liest TypeScript, kein Fremdskript),
- * die in das `srcdoc` der Vorschau gehängt werden – **nur dort, nie in den Bau** (`renderSeite` weiß nichts davon).
+ * **Die Bedien-Schicht für die Vorschau** (Bauplan Website W3a-2, neu in W3c-1): Stil (`ebene.css`), Kern (`ebene.kern.txt` –
+ * Kollisionsregel und Textmodell, ohne Seite prüfbar) und Skript (`ebene.skript.txt`) – reiner Browser-Text für das iframe,
+ * darum keine `.js`-Dateien: Die Prüfung des Repos (`eslint .`) liest TypeScript, kein Fremdskript. Sie werden in das `srcdoc`
+ * der Vorschau gehängt – **nur dort, nie in den Bau** (`renderSeite` weiß nichts davon).
  *
  * Die Ebene läuft im abgeschotteten iframe (`allow-scripts` ohne `allow-same-origin`, `vorschauHtml.ts`) und meldet nur per
  * `postMessage` (Form: `nachricht.ts`). Die Symbole kommen aus dem gemeinsamen Satz (`ui/icons`) als fertiges SVG – das
@@ -10,6 +11,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { Icon, type IconName } from '@ui/icons/icons';
 import css from './ebene.css?raw';
+import kern from './ebene.kern.txt?raw';
 import skript from './ebene.skript.txt?raw';
 
 const SYMBOLE: Record<string, IconName> = {
@@ -19,7 +21,33 @@ const SYMBOLE: Record<string, IconName> = {
   runter: 'chev-down',
   kopie: 'kopieren',
   muell: 'trash',
+  griff: 'grip',
+  link: 'link',
+  liste: 'liste',
+  regler: 'regler',
 };
+
+/** Die Abstand-Stufen des Abschnitts (Klassen `w-abschnitt--abstand-…`, außer `normal`) und ihre Namen für die Pille. */
+export const ABSTAENDE = ['kein', 'klein', 'normal', 'gross'] as const;
+const ABSTAND_NAMEN = { kein: 'Kein', klein: 'Klein', normal: 'Normal', gross: 'Groß' };
+
+/** Eine Stelle, an der man direkt weitertippt (nach einem Klick in ein anderes Textfeld). */
+export interface WeiterStelle {
+  i: number;
+  j: number;
+  k: number;
+  feld: 'text' | 'markdown' | 'knopf';
+  n: number;
+}
+
+/** Was die Schicht außer der Scrollstelle wissen muss. */
+export interface EbeneOptionen {
+  /** `handy`: kein Ziehen und kein Tippen im Text, Tippen auf einen Baustein öffnet das Fenster (wie bisher). */
+  modus?: 'computer' | 'handy';
+  /** Darf der Mensch „Eigenes HTML“ ändern? Sonst gibt es dafür keine Leiste und keinen Stift. */
+  darfHtml?: boolean;
+  weiter?: WeiterStelle | null;
+}
 
 const maskiere = (t: string): string =>
   t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -81,20 +109,34 @@ export function seitenNonce(doc: Document = document): string | null {
   return nonceGueltig(doc.querySelector<HTMLScriptElement>('script[nonce]')?.nonce);
 }
 
-/** Stil und Skript als Text zum Einhängen vor `</body>`. `scroll`: wohin das Neuzeichnen die Seite wieder scrollt. */
-export function ebeneHtml(scroll: number, nonce?: string | null): string {
+/** Stil, Kern und Skript als Text zum Einhängen vor `</body>`. `scroll`: wohin das Neuzeichnen die Seite wieder scrollt. */
+export function ebeneHtml(
+  scroll: number,
+  nonce?: string | null,
+  optionen: EbeneOptionen = {},
+): string {
   const config = {
     scroll: Number.isFinite(scroll) ? Math.max(0, Math.round(scroll)) : 0,
     symbole: ebeneSymbole(),
+    modus: optionen.modus === 'handy' ? 'handy' : 'computer',
+    darfHtml: optionen.darfHtml === true,
+    abstaende: ABSTAENDE,
+    abstandNamen: ABSTAND_NAMEN,
+    weiter: optionen.weiter ?? null,
   };
   const n = nonceGueltig(nonce);
   const attr = n ? ` nonce="${maskiere(n)}"` : '';
-  return `<style${attr}>${css}</style><script${attr}>(${skript}\n)(${jsonFuerSkript(config)});</script>`;
+  return `<style${attr}>${css}</style><script${attr}>(${skript}\n)(${jsonFuerSkript(config)}, ${kern}\n);</script>`;
 }
 
-/** Die Seite mit der Ebene – vor dem letzten `</body>`. Ohne `</body>` bleibt die Seite, wie sie ist. */
-export function mitEbene(html: string, scroll: number, nonce?: string | null): string {
+/** Die Seite mit der Schicht – vor dem letzten `</body>`. Ohne `</body>` bleibt die Seite, wie sie ist. */
+export function mitEbene(
+  html: string,
+  scroll: number,
+  nonce?: string | null,
+  optionen?: EbeneOptionen,
+): string {
   const stelle = html.lastIndexOf('</body>');
   if (stelle < 0) return html;
-  return html.slice(0, stelle) + ebeneHtml(scroll, nonce) + html.slice(stelle);
+  return html.slice(0, stelle) + ebeneHtml(scroll, nonce, optionen) + html.slice(stelle);
 }

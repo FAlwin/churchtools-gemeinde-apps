@@ -29,7 +29,12 @@ describe('Status schreiben, lesen, entfernen', () => {
     const s = await mitSeite();
     const kopfVorher = s.werte.filter((w) => w.value.includes('"website-kopf"'));
     const st = await statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2);
-    expect(st).toEqual({ zustand: 'eingereicht', von: 5, name: 'Rita Redakteurin', zeit: T2.toISOString() });
+    expect(st).toEqual({
+      zustand: 'eingereicht',
+      von: 5,
+      name: 'Rita Redakteurin',
+      zeit: T2.toISOString(),
+    });
     expect(s.werte.filter((w) => w.value.includes('"website-kopf"'))).toEqual(kopfVorher);
     const stand = await websiteLesen(s.port, 7, 1);
     expect(stand.status.a).toEqual(st);
@@ -42,7 +47,11 @@ describe('Status schreiben, lesen, entfernen', () => {
     const st = await statusSetzen(
       s.ort,
       'a',
-      { zustand: 'zurueck', anmerkung: 'Bitte das Foto tauschen.', einreicher: { von: 5, name: ICH.name } },
+      {
+        zustand: 'zurueck',
+        anmerkung: 'Bitte das Foto tauschen.',
+        einreicher: { von: 5, name: ICH.name },
+      },
       LEITUNG,
       T2,
     );
@@ -70,14 +79,22 @@ describe('Status schreiben, lesen, entfernen', () => {
       statusSetzen(s.ort, 'a', { zustand: 'zurueck', anmerkung: '   ' }, LEITUNG, T2),
     ).rejects.toMatchObject({ status: 422 });
     await expect(
-      statusSetzen(s.ort, 'a', { zustand: 'zurueck', anmerkung: 'x'.repeat(ANMERKUNG_MAX + 1) }, LEITUNG, T2),
+      statusSetzen(
+        s.ort,
+        'a',
+        { zustand: 'zurueck', anmerkung: 'x'.repeat(ANMERKUNG_MAX + 1) },
+        LEITUNG,
+        T2,
+      ),
     ).rejects.toMatchObject({ status: 422 });
     expect(s.schreibzugriffe()).toEqual([]);
   });
 
   it('für eine Seite, die es nicht gibt, wird nichts geschrieben', async () => {
     const s = await mitSeite();
-    await expect(statusSetzen(s.ort, 'weg', { zustand: 'eingereicht' }, ICH, T2)).rejects.toMatchObject({
+    await expect(
+      statusSetzen(s.ort, 'weg', { zustand: 'eingereicht' }, ICH, T2),
+    ).rejects.toMatchObject({
       status: 404,
     });
     expect(s.schreibzugriffe()).toEqual([]);
@@ -88,10 +105,13 @@ describe('Status schreiben, lesen, entfernen', () => {
     // Der Speicher „schluckt“ den Wert still (Zusage ohne Ergebnis).
     const echt = s.port.schreibe;
     s.port.schreibe = (pfad, a) => {
-      if ((a.json as { value?: string } | undefined)?.value?.includes('website-status')) return Promise.resolve();
+      if ((a.json as { value?: string } | undefined)?.value?.includes('website-status'))
+        return Promise.resolve();
       return echt(pfad, a);
     };
-    await expect(statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2)).rejects.toMatchObject({
+    await expect(
+      statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2),
+    ).rejects.toMatchObject({
       status: 502,
     });
   });
@@ -152,24 +172,54 @@ describe('Status beim Lesen', () => {
   it('das Aufräumen darf scheitern – das Setzen gilt trotzdem', async () => {
     const s = await mitSeite();
     s.lege(
-      JSON.stringify({ art: 'website-status', fassung: 1, id: 'weg', zustand: 'eingereicht', von: 1, name: 'X', zeit: T1.toISOString() }),
+      JSON.stringify({
+        art: 'website-status',
+        fassung: 1,
+        id: 'weg',
+        zustand: 'eingereicht',
+        von: 1,
+        name: 'X',
+        zeit: T1.toISOString(),
+      }),
     );
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     s.steuerung.ausfall = (z) => (z.art === 'DELETE' ? fehlerMit(503) : undefined);
-    await expect(statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2)).resolves.toBeTruthy();
+    await expect(
+      statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2),
+    ).resolves.toBeTruthy();
   });
 
   it('bei mehreren Werten für dieselbe Seite gilt der mit der kleinsten ID', () => {
     const w = (id: number, zustand: string) => ({
       id,
       dataCategoryId: 1,
-      value: JSON.stringify({ art: 'website-status', fassung: 1, id: 'a', zustand, von: 1, name: 'X', zeit: T1.toISOString() }),
+      value: JSON.stringify({
+        art: 'website-status',
+        fassung: 1,
+        id: 'a',
+        zustand,
+        von: 1,
+        name: 'X',
+        zeit: T1.toISOString(),
+      }),
     });
     expect(statusAusWerten([w(9, 'zurueck'), w(3, 'eingereicht')]).a.zustand).toBe('eingereicht');
   });
 
   it('ein beschädigter Status-Wert gilt nicht als Status (und wird als „gehört nicht dazu“ gemeldet, nicht gelöscht)', () => {
-    const kaputt = { id: 1, dataCategoryId: 1, value: JSON.stringify({ art: 'website-status', fassung: 1, id: 'a', zustand: 'frei', von: 1, name: 'X', zeit: 'jetzt' }) };
+    const kaputt = {
+      id: 1,
+      dataCategoryId: 1,
+      value: JSON.stringify({
+        art: 'website-status',
+        fassung: 1,
+        id: 'a',
+        zustand: 'frei',
+        von: 1,
+        name: 'X',
+        zeit: 'jetzt',
+      }),
+    };
     expect(istStatusWert(kaputt)).toBe(false);
     expect(websiteAusWerten([kaputt]).probleme).toHaveLength(1);
   });
@@ -178,7 +228,11 @@ describe('Status beim Lesen', () => {
 describe('Seite löschen räumt den Status mit auf', () => {
   it('einheitLoeschen entfernt den Status der Seite – und nur ihren', async () => {
     const s = await mitSeite();
-    await seiteSpeichern(s.ort, seiteMit([baustein('text')], { id: 'b', pfad: 'b', titel: 'B' }), T1);
+    await seiteSpeichern(
+      s.ort,
+      seiteMit([baustein('text')], { id: 'b', pfad: 'b', titel: 'B' }),
+      T1,
+    );
     await statusSetzen(s.ort, 'a', { zustand: 'eingereicht' }, ICH, T2);
     await statusSetzen(s.ort, 'b', { zustand: 'eingereicht' }, ICH, T2);
     await einheitLoeschen(s.ort, 'seite', 'a');

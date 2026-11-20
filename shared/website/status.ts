@@ -19,7 +19,14 @@
  * freigeben darf (`freigabe.ts`, `darfFreigeben`) – der Wert selbst bleibt, wie er ist.
  */
 import { z } from 'zod';
-import { inhaltAus, werteLesen, wertAendern, wertAnlegen, wertLoeschen, type Wert } from '../ct/modulDaten';
+import {
+  inhaltAus,
+  werteLesen,
+  wertAendern,
+  wertAnlegen,
+  wertLoeschen,
+  type Wert,
+} from '../ct/modulDaten';
 import type { Schreiber } from '../ct/sperre';
 import type { SpeicherOrt } from './speicher';
 
@@ -91,7 +98,10 @@ export function statusAusWerten(werte: readonly Wert[]): Record<string, SeitenSt
   return aus;
 }
 
-function statusWerte(werte: readonly Wert[], seiteId: string): { wert: number; status: WebsiteStatus }[] {
+function statusWerte(
+  werte: readonly Wert[],
+  seiteId: string,
+): { wert: number; status: WebsiteStatus }[] {
   const liste: { wert: number; status: WebsiteStatus }[] = [];
   for (const w of [...werte].sort((a, b) => a.id - b.id)) {
     const s = statusWert(w);

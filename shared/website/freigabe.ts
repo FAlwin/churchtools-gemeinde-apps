@@ -338,7 +338,11 @@ function textPruefen(einheit: Einheit, text: string): string | null {
 
 /** Wie eine Einheit heißt, für Meldungen. */
 function nennung(einheit: Einheit, id: string): string {
-  return einheit === 'seite' ? `die Seite „${id}“` : einheit === 'menue' ? 'das Menü' : 'die Einstellungen';
+  return einheit === 'seite'
+    ? `die Seite „${id}“`
+    : einheit === 'menue'
+      ? 'das Menü'
+      : 'die Einstellungen';
 }
 
 export interface Freigegeben {

@@ -56,6 +56,8 @@ const stand = (o: Partial<WebsiteStand> = {}): WebsiteStand => ({
   verwaist: 0,
   sperren: {},
   einstellungenSperre: null,
+  status: {},
+  staende: [],
   ...o,
 });
 

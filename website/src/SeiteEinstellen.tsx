@@ -27,6 +27,7 @@ export function SeiteEinstellen({
   menueAendern,
   onFertig,
   onLoeschen,
+  loeschen = 'loeschen',
   onClose,
 }: {
   seite: Seite;
@@ -41,6 +42,11 @@ export function SeiteEinstellen({
   /** `menue` ist `null`, wenn sich am Menü nichts ändert. */
   onFertig: (seite: Seite, menue: Menue | null) => void;
   onLoeschen: () => void;
+  /**
+   * Was der Knopf links unten tut (W3b-2, E-W23): `loeschen` (Leitung/Admin: die Seite löschen), `anfragen` (Redakteur: die
+   * Leitung bitten – die Seite bleibt, wie sie ist) oder `angefragt` (die Bitte läuft schon, der Knopf ist aus).
+   */
+  loeschen?: 'loeschen' | 'anfragen' | 'angefragt';
   onClose: () => void;
 }) {
   const [titel, setTitel] = useState(seite.titel);
@@ -77,8 +83,12 @@ export function SeiteEinstellen({
       onClose={onClose}
       onAbbrechen={onClose}
       links={
-        <FensterKnopf art="loeschen" onClick={onLoeschen}>
-          Seite löschen
+        <FensterKnopf art="loeschen" disabled={loeschen === 'angefragt'} onClick={onLoeschen}>
+          {loeschen === 'loeschen'
+            ? 'Seite löschen'
+            : loeschen === 'anfragen'
+              ? 'Löschen anfragen'
+              : 'Löschen angefragt'}
         </FensterKnopf>
       }
       knoepfe={

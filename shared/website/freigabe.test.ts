@@ -31,8 +31,18 @@ const SPAETER = new Date('2026-11-20T11:00:00Z');
 const RITA = { person: 5, name: 'Rita Redakteurin', fenster: 'f1' };
 const HELENE = { person: 1, name: 'Helene Wiebe', fenster: 'f2' };
 
-const seiteA = () => seiteMit([baustein('text', { id: 'ta', markdown: 'Hallo A' })], { id: 'a', pfad: 'a', titel: 'A' });
-const seiteB = () => seiteMit([baustein('text', { id: 'tb', markdown: 'Hallo B' })], { id: 'b', pfad: 'b', titel: 'B' });
+const seiteA = () =>
+  seiteMit([baustein('text', { id: 'ta', markdown: 'Hallo A' })], {
+    id: 'a',
+    pfad: 'a',
+    titel: 'A',
+  });
+const seiteB = () =>
+  seiteMit([baustein('text', { id: 'tb', markdown: 'Hallo B' })], {
+    id: 'b',
+    pfad: 'b',
+    titel: 'B',
+  });
 
 async function lage() {
   const s = fakeFreigabeSpeicher();
@@ -46,14 +56,26 @@ async function lage() {
 describe('Online-Vergleich: die vier Zustände', () => {
   it('nie veröffentlicht · online, unverändert · geändert seit der Freigabe · online, aber Entwurf gelöscht', async () => {
     const { s, lesen } = await lage();
-    await seiteSpeichern(s.entwurfsOrt, seiteMit([baustein('text')], { id: 'c', pfad: 'c', titel: 'C' }), JETZT);
+    await seiteSpeichern(
+      s.entwurfsOrt,
+      seiteMit([baustein('text')], { id: 'c', pfad: 'c', titel: 'C' }),
+      JETZT,
+    );
     // a und c gehen online; danach ändert sich a im Entwurf, b war nie online; d war online, der Entwurf ist weg.
     await gibFrei(s.freigabeOrt, 'seite', 'a');
     await gibFrei(s.freigabeOrt, 'seite', 'c');
-    await seiteSpeichern(s.onlineOrt, seiteMit([baustein('text')], { id: 'd', pfad: 'd', titel: 'D' }), JETZT);
+    await seiteSpeichern(
+      s.onlineOrt,
+      seiteMit([baustein('text')], { id: 'd', pfad: 'd', titel: 'D' }),
+      JETZT,
+    );
     await seiteSpeichern(
       s.entwurfsOrt,
-      seiteMit([baustein('text', { id: 'ta', markdown: 'Hallo A, neu' })], { id: 'a', pfad: 'a', titel: 'A' }),
+      seiteMit([baustein('text', { id: 'ta', markdown: 'Hallo A, neu' })], {
+        id: 'a',
+        pfad: 'a',
+        titel: 'A',
+      }),
       SPAETER,
     );
     const v = onlineVergleich(lesen(ENTWUERFE).staende, lesen(ONLINE).staende);
@@ -97,7 +119,11 @@ describe('gibFrei: schreibt exakt den Entwurf nach „Veröffentlicht“', () =>
 
   it('Menü und Einstellungen sind eigene Einheiten und gehen ebenso', async () => {
     const { s } = await lage();
-    await menueSpeichern(s.entwurfsOrt, menue([{ titel: 'A', ziel: { art: 'seite', seiteId: 'a' } }]), JETZT);
+    await menueSpeichern(
+      s.entwurfsOrt,
+      menue([{ titel: 'A', ziel: { art: 'seite', seiteId: 'a' } }]),
+      JETZT,
+    );
     await einstellungenSpeichern(s.entwurfsOrt, einstellungen({ name: 'Meine Gemeinde' }), JETZT);
     await gibFrei(s.freigabeOrt, 'menue', MENUE_ID);
     await gibFrei(s.freigabeOrt, 'einstellungen', EINSTELLUNGEN_ID);
@@ -114,7 +140,10 @@ describe('gibFrei: schreibt exakt den Entwurf nach „Veröffentlicht“', () =>
     expect(r.statusEntfernt).toBe(true);
     expect(websiteAusWerten(s.werte[ENTWUERFE]).status).toEqual({});
     // Reihenfolge der Zugriffe: das Löschen des Status (Entwürfe) kommt nach dem letzten LESEN von „Veröffentlicht“.
-    const iNachlesen = s.log.map((z, i) => (z.kategorie === ONLINE && z.art === 'LESEN' ? i : -1)).filter((i) => i >= 0).at(-1)!;
+    const iNachlesen = s.log
+      .map((z, i) => (z.kategorie === ONLINE && z.art === 'LESEN' ? i : -1))
+      .filter((i) => i >= 0)
+      .at(-1)!;
     const iStatusWeg = s.log.findIndex((z) => z.kategorie === ENTWUERFE && z.art === 'DELETE');
     expect(iStatusWeg).toBeGreaterThan(iNachlesen);
   });
@@ -142,7 +171,11 @@ describe('gibFrei: schreibt exakt den Entwurf nach „Veröffentlicht“', () =>
         ersetzt = true;
         await seiteSpeichern(
           s.entwurfsOrt,
-          seiteMit([baustein('text', { id: 'ta', markdown: 'Nachträglich geändert' })], { id: 'a', pfad: 'a', titel: 'A' }),
+          seiteMit([baustein('text', { id: 'ta', markdown: 'Nachträglich geändert' })], {
+            id: 'a',
+            pfad: 'a',
+            titel: 'A',
+          }),
           SPAETER,
         );
       }
@@ -157,7 +190,9 @@ describe('gibFrei: schreibt exakt den Entwurf nach „Veröffentlicht“', () =>
     const ungueltig = fakeFreigabeSpeicher();
     const { einheitSpeichern } = await import('./speicher');
     await einheitSpeichern(ungueltig.entwurfsOrt, 'seite', 'x', 'kein gültiger Seitentext', JETZT);
-    await expect(gibFrei(ungueltig.freigabeOrt, 'seite', 'x')).rejects.toMatchObject({ status: 422 });
+    await expect(gibFrei(ungueltig.freigabeOrt, 'seite', 'x')).rejects.toMatchObject({
+      status: 422,
+    });
     expect(ungueltig.schreibzugriffe(ONLINE)).toEqual([]);
   });
 });
@@ -166,23 +201,30 @@ describe('gibFrei: Fehlerzweige einzeln', () => {
   it('vorübergehend (503) beim Schreiben: nichts ist online, der Status bleibt, ein neuer Versuch klappt', async () => {
     const { s } = await lage();
     await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, JETZT);
-    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE && z.art === 'POST' ? fehlerMit(503) : undefined);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'POST' ? fehlerMit(503) : undefined;
     await expect(gibFrei(s.freigabeOrt, 'seite', 'a')).rejects.toMatchObject({ status: 503 });
     expect(websiteAusWerten(s.werte[ONLINE]).seiten).toEqual([]);
     expect(websiteAusWerten(s.werte[ENTWUERFE]).status.a?.zustand).toBe('eingereicht');
     s.steuerung.ausfall = () => undefined;
-    await expect(gibFrei(s.freigabeOrt, 'seite', 'a')).resolves.toMatchObject({ statusEntfernt: true });
+    await expect(gibFrei(s.freigabeOrt, 'seite', 'a')).resolves.toMatchObject({
+      statusEntfernt: true,
+    });
     expect(websiteAusWerten(s.werte[ONLINE]).seiten.map((x) => x.id)).toEqual(['a']);
   });
 
-  it.each([401, 403])('%i beim Schreiben nach „Veröffentlicht“: klare Meldung „dafür fehlt das Recht“, nichts verändert', async (status) => {
-    const { s } = await lage();
-    await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, JETZT);
-    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE && z.art === 'POST' ? fehlerMit(status) : undefined);
-    const e = await gibFrei(s.freigabeOrt, 'seite', 'a').catch((x: Error) => x);
-    expect((e as Error).message).toMatch(/fehlt dir das Recht/);
-    expect(websiteAusWerten(s.werte[ENTWUERFE]).status.a?.zustand).toBe('eingereicht');
-  });
+  it.each([401, 403])(
+    '%i beim Schreiben nach „Veröffentlicht“: klare Meldung „dafür fehlt das Recht“, nichts verändert',
+    async (status) => {
+      const { s } = await lage();
+      await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, JETZT);
+      s.steuerung.ausfall = (z) =>
+        z.kategorie === ONLINE && z.art === 'POST' ? fehlerMit(status) : undefined;
+      const e = await gibFrei(s.freigabeOrt, 'seite', 'a').catch((x: Error) => x);
+      expect((e as Error).message).toMatch(/fehlt dir das Recht/);
+      expect(websiteAusWerten(s.werte[ENTWUERFE]).status.a?.zustand).toBe('eingereicht');
+    },
+  );
 
   it('halb geschafft (Teile geschrieben, Kopf nicht): der alte Online-Stand bleibt gültig; der nächste Versuch räumt auf', async () => {
     const { s } = await lage();
@@ -190,27 +232,42 @@ describe('gibFrei: Fehlerzweige einzeln', () => {
     const alt = einheitText(s.werte[ONLINE], 'seite', 'a')!;
     await seiteSpeichern(
       s.entwurfsOrt,
-      seiteMit([baustein('text', { id: 'ta', markdown: 'Version 2' })], { id: 'a', pfad: 'a', titel: 'A' }),
+      seiteMit([baustein('text', { id: 'ta', markdown: 'Version 2' })], {
+        id: 'a',
+        pfad: 'a',
+        titel: 'A',
+      }),
       SPAETER,
     );
     // Der Kopf (PUT in „Veröffentlicht“) scheitert.
-    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE && z.art === 'PUT' ? fehlerMit(503) : undefined);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'PUT' ? fehlerMit(503) : undefined;
     await expect(gibFrei(s.freigabeOrt, 'seite', 'a')).rejects.toMatchObject({ status: 503 });
-    expect(einheitText(s.werte[ONLINE], 'seite', 'a')).toMatchObject({ text: alt.text, stand: alt.stand });
-    expect(websiteAusWerten(s.werte[ONLINE]).seiten[0].abschnitte[0].spalten[0].bausteine[0]).toMatchObject({ markdown: 'Hallo A' });
+    expect(einheitText(s.werte[ONLINE], 'seite', 'a')).toMatchObject({
+      text: alt.text,
+      stand: alt.stand,
+    });
+    expect(
+      websiteAusWerten(s.werte[ONLINE]).seiten[0].abschnitte[0].spalten[0].bausteine[0],
+    ).toMatchObject({ markdown: 'Hallo A' });
     s.steuerung.ausfall = () => undefined;
     await gibFrei(s.freigabeOrt, 'seite', 'a');
     const neu = einheitText(s.werte[ONLINE], 'seite', 'a')!;
     expect(neu.text).toBe(einheitText(s.werte[ENTWUERFE], 'seite', 'a')!.text);
     // keine liegengebliebenen Teile des alten Stands
-    expect(s.werte[ONLINE].filter((w) => w.value.includes('"website-teil"')).every((w) => w.value.includes(neu.stand))).toBe(true);
+    expect(
+      s.werte[ONLINE].filter((w) => w.value.includes('"website-teil"')).every((w) =>
+        w.value.includes(neu.stand),
+      ),
+    ).toBe(true);
   });
 
   it('kann der Status nach der Freigabe nicht entfernt werden, ist die Seite trotzdem online – gemeldet, nicht verschwiegen', async () => {
     const { s } = await lage();
     await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, JETZT);
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    s.steuerung.ausfall = (z) => (z.kategorie === ENTWUERFE && z.art === 'DELETE' ? fehlerMit(503) : undefined);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ENTWUERFE && z.art === 'DELETE' ? fehlerMit(503) : undefined;
     const r = await gibFrei(s.freigabeOrt, 'seite', 'a');
     expect(r).toMatchObject({ statusEntfernt: false, grund: 'fehler' });
     expect(websiteAusWerten(s.werte[ONLINE]).seiten.map((x) => x.id)).toEqual(['a']);
@@ -237,7 +294,8 @@ describe('seiteEntfernen (offline nehmen)', () => {
     const { s } = await lage();
     await gibFrei(s.freigabeOrt, 'seite', 'a');
     await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'loeschenAngefragt' }, RITA, JETZT);
-    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(503) : undefined);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(503) : undefined;
     await expect(seiteEntfernen(s.freigabeOrt, 'a')).rejects.toMatchObject({ status: 503 });
     const e = websiteAusWerten(s.werte[ENTWUERFE]);
     expect(e.seiten.map((x) => x.id).sort()).toEqual(['a', 'b']);
@@ -246,7 +304,11 @@ describe('seiteEntfernen (offline nehmen)', () => {
 
   it('„online, aber Entwurf gelöscht“: nur online entfernen', async () => {
     const { s } = await lage();
-    await seiteSpeichern(s.onlineOrt, seiteMit([baustein('text')], { id: 'z', pfad: 'z', titel: 'Z' }), JETZT);
+    await seiteSpeichern(
+      s.onlineOrt,
+      seiteMit([baustein('text')], { id: 'z', pfad: 'z', titel: 'Z' }),
+      JETZT,
+    );
     await seiteEntfernen(s.freigabeOrt, 'z');
     expect(websiteAusWerten(s.werte[ONLINE]).seiten).toEqual([]);
   });
@@ -254,7 +316,8 @@ describe('seiteEntfernen (offline nehmen)', () => {
   it('401 beim Löschen in „Veröffentlicht“: klare Meldung, der Entwurf bleibt', async () => {
     const { s } = await lage();
     await gibFrei(s.freigabeOrt, 'seite', 'a');
-    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(401) : undefined);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(401) : undefined;
     await expect(seiteEntfernen(s.freigabeOrt, 'a')).rejects.toThrow(/fehlt dir das Recht/);
     expect(websiteAusWerten(s.werte[ENTWUERFE]).seiten.map((x) => x.id)).toContain('a');
   });
@@ -263,7 +326,11 @@ describe('seiteEntfernen (offline nehmen)', () => {
 describe('alleFreigeben', () => {
   it('Seiten zuerst, dann Menü, dann Einstellungen – das Menü zeigt nie auf eine Seite, die noch nicht online ist', async () => {
     const { s } = await lage();
-    await menueSpeichern(s.entwurfsOrt, menue([{ titel: 'A', ziel: { art: 'seite', seiteId: 'a' } }]), JETZT);
+    await menueSpeichern(
+      s.entwurfsOrt,
+      menue([{ titel: 'A', ziel: { art: 'seite', seiteId: 'a' } }]),
+      JETZT,
+    );
     await einstellungenSpeichern(s.entwurfsOrt, einstellungen(), JETZT);
     s.neuesLog();
     const r = await alleFreigeben(s.freigabeOrt, [
@@ -279,7 +346,9 @@ describe('alleFreigeben', () => {
     const { s } = await lage();
     // b scheitert (Teile von b enthalten „Hallo B“ nicht lesbar – wir lassen jeden Schreibzugriff mit b scheitern)
     s.steuerung.ausfall = (z) =>
-      z.kategorie === ONLINE && z.art === 'POST' && z.wert?.includes('"id":"b"') ? fehlerMit(503) : undefined;
+      z.kategorie === ONLINE && z.art === 'POST' && z.wert?.includes('"id":"b"')
+        ? fehlerMit(503)
+        : undefined;
     const r = await alleFreigeben(s.freigabeOrt, [
       { einheit: 'seite', id: 'a' },
       { einheit: 'seite', id: 'b' },
@@ -295,15 +364,43 @@ describe('alleFreigeben', () => {
 describe('Liste und Zähler je Rolle', () => {
   async function szenario() {
     const { s, lesen } = await lage();
-    await menueSpeichern(s.entwurfsOrt, menue([{ titel: 'B', ziel: { art: 'seite', seiteId: 'b' } }]), JETZT);
+    await menueSpeichern(
+      s.entwurfsOrt,
+      menue([{ titel: 'B', ziel: { art: 'seite', seiteId: 'b' } }]),
+      JETZT,
+    );
     await einstellungenSpeichern(s.entwurfsOrt, einstellungen(), JETZT);
-    await seiteSpeichern(s.entwurfsOrt, seiteMit([baustein('text')], { id: 'c', pfad: 'c', titel: 'C' }), JETZT);
-    await seiteSpeichern(s.entwurfsOrt, seiteMit([baustein('text')], { id: 'd', pfad: 'd', titel: 'D' }), JETZT);
-    await seiteSpeichern(s.onlineOrt, seiteMit([baustein('text')], { id: 'weg', pfad: 'weg', titel: 'Weg' }), JETZT);
+    await seiteSpeichern(
+      s.entwurfsOrt,
+      seiteMit([baustein('text')], { id: 'c', pfad: 'c', titel: 'C' }),
+      JETZT,
+    );
+    await seiteSpeichern(
+      s.entwurfsOrt,
+      seiteMit([baustein('text')], { id: 'd', pfad: 'd', titel: 'D' }),
+      JETZT,
+    );
+    await seiteSpeichern(
+      s.onlineOrt,
+      seiteMit([baustein('text')], { id: 'weg', pfad: 'weg', titel: 'Weg' }),
+      JETZT,
+    );
     await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, SPAETER);
-    await statusSetzen(s.entwurfsOrt, 'b', { zustand: 'zurueck', anmerkung: 'Bitte ändern', einreicher: { von: 5, name: RITA.name } }, HELENE, SPAETER);
+    await statusSetzen(
+      s.entwurfsOrt,
+      'b',
+      { zustand: 'zurueck', anmerkung: 'Bitte ändern', einreicher: { von: 5, name: RITA.name } },
+      HELENE,
+      SPAETER,
+    );
     await statusSetzen(s.entwurfsOrt, 'c', { zustand: 'loeschenAngefragt' }, RITA, SPAETER);
-    await statusSetzen(s.entwurfsOrt, 'd', { zustand: 'eingereicht' }, { person: 9, name: 'Anderer', fenster: 'f9' }, JETZT);
+    await statusSetzen(
+      s.entwurfsOrt,
+      'd',
+      { zustand: 'eingereicht' },
+      { person: 9, name: 'Anderer', fenster: 'f9' },
+      JETZT,
+    );
     return { e: lesen(ENTWUERFE), o: lesen(ONLINE) };
   }
 
@@ -325,7 +422,15 @@ describe('Liste und Zähler je Rolle', () => {
   it('Leitung sieht auch eigene Änderungen ohne Status: geändert und neu', async () => {
     const { s, lesen } = await lage();
     await gibFrei(s.freigabeOrt, 'seite', 'a');
-    await seiteSpeichern(s.entwurfsOrt, seiteMit([baustein('text', { id: 'ta', markdown: 'neu' })], { id: 'a', pfad: 'a', titel: 'A' }), SPAETER);
+    await seiteSpeichern(
+      s.entwurfsOrt,
+      seiteMit([baustein('text', { id: 'ta', markdown: 'neu' })], {
+        id: 'a',
+        pfad: 'a',
+        titel: 'A',
+      }),
+      SPAETER,
+    );
     const l = freigabeListe(lesen(ENTWUERFE), lesen(ONLINE), 'admin', 1);
     expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['geaendert:a', 'neu:b']);
     expect(freigabeZaehler(l, 'admin')).toBe(0);
@@ -334,7 +439,11 @@ describe('Liste und Zähler je Rolle', () => {
   it('Redakteur: nur die eigenen eingereichten, zurückgegebenen und angefragten Seiten – kein Menü, keine Einstellungen, kein Fremdes', async () => {
     const { e, o } = await szenario();
     const l = freigabeListe(e, o, 'redakteur', 5);
-    expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['eingereicht:a', 'loeschenAngefragt:c', 'zurueck:b']);
+    expect(l.map((x) => `${x.art}:${x.id}`)).toEqual([
+      'eingereicht:a',
+      'loeschenAngefragt:c',
+      'zurueck:b',
+    ]);
     expect(l.some((x) => x.einheit !== 'seite')).toBe(false);
     expect(freigabeZaehler(l, 'redakteur')).toBe(1);
     // Eine andere Redakteurin sieht davon nichts und hat keinen Zähler.
@@ -354,14 +463,30 @@ describe('Liste und Zähler je Rolle', () => {
 
   it('ein Status ohne Seite taucht in keiner Liste auf', async () => {
     const { s, lesen } = await lage();
-    s.lege(ENTWUERFE, JSON.stringify({ art: 'website-status', fassung: 1, id: 'geloescht', zustand: 'eingereicht', von: 5, name: 'X', zeit: JETZT.toISOString() }));
+    s.lege(
+      ENTWUERFE,
+      JSON.stringify({
+        art: 'website-status',
+        fassung: 1,
+        id: 'geloescht',
+        zustand: 'eingereicht',
+        von: 5,
+        name: 'X',
+        zeit: JETZT.toISOString(),
+      }),
+    );
     const l = freigabeListe(lesen(ENTWUERFE), lesen(ONLINE), 'leitung', 1);
     expect(l.some((x) => x.id === 'geloescht')).toBe(false);
   });
 });
 
 describe('Einreichen nur, wenn es etwas einzureichen gibt', () => {
-  const st = (zustand: 'eingereicht' | 'zurueck' | 'loeschenAngefragt') => ({ zustand, von: 5, name: 'R', zeit: JETZT.toISOString() });
+  const st = (zustand: 'eingereicht' | 'zurueck' | 'loeschenAngefragt') => ({
+    zustand,
+    von: 5,
+    name: 'R',
+    zeit: JETZT.toISOString(),
+  });
   it('nie online oder geändert: ja; unverändert online: nein', () => {
     expect(kannEinreichen('nie', null)).toBe(true);
     expect(kannEinreichen('geaendert', null)).toBe(true);

@@ -1,8 +1,9 @@
 /**
  * **Die Website im Speicher der Erweiterung** – die dünne Hülle der Oberfläche um `@shared/website/speicher` (dort stehen
  * Aufbau, Lesen und die Reihenfolge beim Schreiben) und `@shared/website/sperre` (wer bearbeitet gerade). Hier nur: der
- * Anschluss dieser Erweiterung (`modulPort`) und die Kategorie „Entwürfe“. Gelesen und geschrieben wird bis W3b nur dort;
- * „Veröffentlicht“ folgt mit der Freigabe.
+ * Anschluss dieser Erweiterung (`modulPort`) und die Kategorie „Entwürfe“. **Seit W3b-2** kommt „Veröffentlicht“ dazu: Gelesen
+ * wird es von allen Rollen (Online-Stand), geschrieben nur von der Leitung (Freigeben, Offline nehmen) – die Regeln dafür
+ * stehen in `@shared/website/freigabe` und `status`.
  */
 import { modulPort } from '@ui/ct/modulPort';
 import type { Schreiber, Sperre } from '@shared/ct/sperre';
@@ -24,6 +25,20 @@ import {
 } from '@shared/website/sperre';
 import type { BeginnErgebnis } from '@shared/website/sperre';
 import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
+import {
+  alleFreigeben,
+  gibFrei,
+  seiteEntfernen,
+  type AlleErgebnis,
+  type Freigegeben,
+  type Ziel,
+} from '@shared/website/freigabe';
+import {
+  statusEntfernen,
+  statusSetzen,
+  type SeitenStatus,
+  type StatusEingabe,
+} from '@shared/website/status';
 
 export interface EntwurfsOrt {
   modul: number;
@@ -113,3 +128,56 @@ export async function uebernimmEinstellungen(
 
 export const beendeEinstellungen = (o: EntwurfsOrt, ich: Schreiber) =>
   bearbeitungBeenden(ort(o), EINSTELLUNGEN_ZIEL, ich);
+
+// ── Freigabe (W3b-2) ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Beide Kategorien der Website – für alles, was Entwurf und Online-Stand zusammen braucht. */
+export interface FreigabeKategorien {
+  modul: number;
+  entwuerfe: number;
+  veroeffentlicht: number;
+}
+
+const freigabeOrt = (o: FreigabeKategorien) => ({ p: modulPort, ...o });
+const entwurfsOrtVon = (o: FreigabeKategorien): SpeicherOrt => ({
+  p: modulPort,
+  modul: o.modul,
+  kategorie: o.entwuerfe,
+});
+
+/** Der Online-Stand: die Kategorie „Veröffentlicht“, gelesen wie jede andere (alle Rollen dürfen sie lesen). */
+export const ladeOnline = (o: FreigabeKategorien): Promise<WebsiteStand> =>
+  websiteLesen(modulPort, o.modul, o.veroeffentlicht);
+
+/** Entwurf und Online-Stand zusammen – für den Reiter „Freigaben“ und den Zähler. Scheitert eines, scheitert das Ganze. */
+export async function ladeFreigaben(
+  o: FreigabeKategorien,
+): Promise<{ entwurf: WebsiteStand; online: WebsiteStand }> {
+  const [entwurf, online] = await Promise.all([
+    websiteLesen(modulPort, o.modul, o.entwuerfe),
+    ladeOnline(o),
+  ]);
+  return { entwurf, online };
+}
+
+export const setzeStatus = (
+  o: FreigabeKategorien,
+  seiteId: string,
+  eingabe: StatusEingabe,
+  ich: Schreiber,
+): Promise<SeitenStatus> => statusSetzen(entwurfsOrtVon(o), seiteId, eingabe, ich);
+
+export const entferneStatus = (o: FreigabeKategorien, seiteId: string) =>
+  statusEntfernen(entwurfsOrtVon(o), seiteId);
+
+export const gebeFrei = (o: FreigabeKategorien, ziel: Ziel): Promise<Freigegeben> =>
+  gibFrei(freigabeOrt(o), ziel.einheit, ziel.id);
+
+export const entferneSeiteUndOnline = (o: FreigabeKategorien, seiteId: string) =>
+  seiteEntfernen(freigabeOrt(o), seiteId);
+
+export const gebeAllesFrei = (
+  o: FreigabeKategorien,
+  ziele: readonly Ziel[],
+  beiFortschritt?: (geschafft: number, von: number) => void,
+): Promise<AlleErgebnis> => alleFreigeben(freigabeOrt(o), ziele, beiFortschritt);

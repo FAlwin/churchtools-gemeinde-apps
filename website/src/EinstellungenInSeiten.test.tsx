@@ -137,6 +137,8 @@ beforeEach(() => {
       verwaist: 0,
       sperren: {},
       einstellungenSperre: null,
+      status: {},
+      staende: [],
     };
   });
   d.beginneBearbeiten.mockImplementation(async () => ({

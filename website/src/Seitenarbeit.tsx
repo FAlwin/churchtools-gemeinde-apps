@@ -36,6 +36,7 @@ import {
 } from './daten';
 import { neueId } from './ids';
 import type { EditorAktion } from './nachricht';
+import { textUebernehmen } from './textAenderung';
 import type { Rechte } from './regeln';
 import { SperrBaender, SpeicherZustand } from './SperrBaender';
 import { SEITEN_TEXTE } from './sperrTexte';
@@ -123,6 +124,8 @@ export function Seitenarbeit({
   const menueRef = useRef(arbeitMenue);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [meldungen, setMeldungen] = useState<string[]>([]);
+  /** Zählt hoch, wenn die Vorschau neu gezeichnet werden muss, obwohl sich die Seite nicht (so) geändert hat – der getippte Text steht dort sonst falsch. */
+  const [zeichneNeu, setZeichneNeu] = useState(0);
   const aktuell = useRef({ stand, ort, ich, onGespeichert, onOffen });
   aktuell.current = { stand, ort, ich, onGespeichert, onOffen };
 
@@ -217,7 +220,11 @@ export function Seitenarbeit({
 
   const aktion = async (a: EditorAktion) => {
     setHinweis(null);
-    if (!(await sicherstellen())) return;
+    if (!(await sicherstellen())) {
+      // Der getippte Text wurde nicht übernommen: Die Vorschau zeigt wieder den gespeicherten Stand.
+      if (a.was === 'text') setZeichneNeu((n) => n + 1);
+      return;
+    }
     const s = arbeitRef.current;
     const leistenAktion = (neu: Seite) => {
       const p = uebernehmen(neu);
@@ -246,12 +253,31 @@ export function Seitenarbeit({
         });
       case 'baustein-neu':
         return setDialog({ art: 'baustein-neu', i: a.i, j: a.j });
+      case 'text': {
+        // Direkt in der Vorschau getippt: erst die Änderung bauen (nur tippbare Felder, Gegenprobe des Markdowns), dann wie
+        // jede Änderung durch Schema und Schlange. Die Vorschau wird danach immer neu gezeichnet: Was dort steht, ist sonst
+        // nur das Getippte, nicht das, was gespeichert wird.
+        const r = textUebernehmen(s, a);
+        setZeichneNeu((n) => n + 1);
+        if (!r.ok) return setHinweis(r.meldung);
+        const p = uebernehmen(r.seite);
+        if (p.length > 0) setHinweis(`Das geht so nicht: ${p.join(' ')}`);
+        return;
+      }
     }
   };
   const aktionRef = useRef(aktion);
   aktionRef.current = aktion;
   const beiAktion = useCallback((a: EditorAktion) => void aktionRef.current(a), []);
-  const bearbeiten = useMemo(() => ({ onAktion: beiAktion }), [beiAktion]);
+  // Wer anfängt zu tippen, nimmt die Sperre schon jetzt – nicht erst beim Übernehmen (dann wäre der Text verloren, wenn sie fehlt).
+  const sicherstellenRef = useRef(sicherstellen);
+  sicherstellenRef.current = sicherstellen;
+  const beiTippen = useCallback(() => void sicherstellenRef.current(), []);
+  const darfHtml = rechte.html;
+  const bearbeiten = useMemo(
+    () => ({ onAktion: beiAktion, onTippen: beiTippen, darfHtml }),
+    [beiAktion, beiTippen, darfHtml],
+  );
 
   const einstellen = async () => {
     setHinweis(null);
@@ -452,6 +478,7 @@ export function Seitenarbeit({
         gemeinde={gemeinde}
         ansicht={ansicht}
         bearbeiten={fremd ? undefined : bearbeiten}
+        version={zeichneNeu}
       />
       {fenster}
     </section>

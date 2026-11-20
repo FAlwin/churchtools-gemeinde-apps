@@ -4,7 +4,8 @@
  * ist. Wird nie mitgebaut (`main.tsx`). Gespeichert wird nur im Browser-Speicher. Fälle:
  *  - `?demo` – Admin, noch nicht eingerichtet; „Einrichten“ legt die Kategorien im Speicher an und setzt die Rechte je Rolle.
  *  - `?demo=leer` – Admin, eingerichtet, noch keine Seite (Hinweis „Startseite anlegen“).
- *  - `?demo=seiten` – Admin, eingerichtet, Startseite plus zwei Seiten, eine im Menü.
+ *  - `?demo=seiten` – Admin, eingerichtet, Startseite plus zwei Seiten, eine im Menü. „Unsere Gruppen“ hat Beispiel-Inhalt für die neue
+ *    Bedienung in der Vorschau (W3c-1): Text mit Fett, Link und Liste, einen dunklen Abschnitt, drei Spalten, „Eigenes HTML“.
  *  - `?demo=leitung` – Leitung der Gruppe (kein Admin; Rechte an Entwürfe UND Veröffentlicht), sonst wie `seiten` – **mit
  *    Eingereichtem** (W3b-2): „Impressum“ (Jonas Peters) und die neue Seite „Jugend“ (Lena Kraft) sind eingereicht, „Alte Seite“
  *    ist zum Löschen angefragt, „Unsere Gruppen“ ist seit der Freigabe geändert; der Reiter „Freigaben“ zeigt die Zahl 3.
@@ -41,6 +42,7 @@ import {
   einstellungenAlsText,
   seiteAlsText,
   menueAlsText,
+  type Abschnitt,
   type Einstellungen,
   type Menue,
   type Seite,
@@ -53,6 +55,7 @@ import {
   type WebsiteTeil,
 } from '@shared/website/speicher';
 import { neueStartseite, vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
+import { findeVorlage } from '@shared/website/vorlagen';
 import { sollRechte as sollRechteWebsite } from '@shared/website/rechte';
 import { rechteAus, type DatenRechteNummern, type Recht } from '@shared/ct/rollenRechte';
 import type { WebsiteSperre } from '@shared/website/sperre';
@@ -156,11 +159,39 @@ export function demoStarten(fall: string): void {
     let n = 0;
     const id = () => `demo-${++n}`;
     const start = neueStartseite([], id);
+    // „Unsere Gruppen“ zum Ausprobieren der Bedienung in der Vorschau (W3c-1): Text direkt tippen, Leisten auf hellem UND
+    // dunklem Abschnitt, zwei Spalten, Knöpfe, ein Text mit Fett, Link und Liste, „Eigenes HTML“.
+    const gruppenAbschnitte = ['start-schriftzug', 'bild-text', 'drei-spalten'].map((name) => {
+      const v = findeVorlage(name);
+      if (!v) throw new Error(`Die Vorlage „${name}“ gibt es nicht.`);
+      return v.erzeugen(id);
+    });
+    const fuerText = gruppenAbschnitte[1].spalten
+      .flatMap((sp) => sp.bausteine)
+      .find((b) => b.typ === 'text' || b.typ === 'bildText');
+    if (fuerText?.typ === 'text' || fuerText?.typ === 'bildText')
+      fuerText.markdown =
+        'Hier treffen sich **Jung und Alt** – mehr dazu auf der [Startseite](/).\n\n- Mittwoch: Hauskreis\n- Freitag: Jugend\n\nSternchen * und eckige Klammern [so] bleiben Text.';
+    const dunkel = gruppenAbschnitte[2];
+    dunkel.gestaltung = { ...dunkel.gestaltung, hintergrund: { art: 'haupt' }, text: 'auto' };
+    const html: Abschnitt = {
+      id: id(),
+      gestaltung: gruppenAbschnitte[0].gestaltung,
+      aufteilung: '1',
+      spalten: [
+        {
+          id: id(),
+          bausteine: [
+            { typ: 'html', id: id(), html: '<p>Eigenes HTML – nur für die Leitung.</p>' },
+          ],
+        },
+      ],
+    };
     const gruppen: Seite = {
       id: 'demo-gruppen',
       titel: 'Unsere Gruppen',
       pfad: 'unsere-gruppen',
-      abschnitte: [],
+      abschnitte: [...gruppenAbschnitte, html],
     };
     const impressum: Seite = {
       id: 'demo-impressum',

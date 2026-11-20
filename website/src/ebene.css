@@ -1,171 +1,87 @@
-/* Die Bearbeiten-Ebene in der Vorschau (W3a-2) – wird NUR in die Vorschau gehängt, nie in den Bau. Alle Namen beginnen mit
-   `b-`, damit sie nichts der Website treffen. Farben fest: Die Ebene sieht immer gleich aus, egal wie die Website aussieht. */
-.b-werk {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 20;
-  display: none;
-  gap: 2px;
-  background: #0f172a;
-  border-radius: 6px;
-  padding: 3px;
-  font: 700 12px/1 system-ui, sans-serif;
-}
-.b-werk button {
-  border: 0;
-  background: none;
-  color: #fff;
-  padding: 6px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
-  font: inherit;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.b-werk button:focus-visible {
-  background: #334155;
-}
+/* Bedien-Schicht in der Vorschau (W3c-1, Vorlage: Entwurf w3c-v2) – wird NUR in die Vorschau gehängt, nie in den Bau. Alle Namen beginnen mit `b-`.
+   Farben fest: Die Ebene sieht immer gleich aus, egal wie die Website aussieht.
+   Grundsatz: Alle Bedienelemente sind HELL (weiß, Rand, Schatten) mit DUNKLEN Symbolen – so lesen sie sich auf Weiß, Sage
+   und Petrol gleich gut. Sie liegen in einer eigenen Schicht (.b-ueber); wohin sie kommen, entscheidet das Skript (Kollisionsprüfung). */
+[class^='b-'][hidden], [class*=' b-'][hidden] { display: none !important; }
+:root { --b-blau: #155dfc; --b-blau-hell: rgba(21, 93, 252, .14); --b-dunkel: #0f172a; --b-dunkel2: #334155; --b-rand: #94a3b8; --b-hover: #e5ebf5; }
+.w-abschnitt-innen { position: relative; }
+.w-baustein { position: relative; border-radius: 4px; }
+.w-spalte { min-height: 1px; }
+.w-baustein { cursor: pointer; }
+.w-b-ueberschrift, .w-b-akzentzeile, .w-b-text, .w-b-bildText { cursor: text; }
+
+/* ── Die Schicht ─ liegt über der Seite (unter dem festen Seitenkopf), fängt selbst keine Mausereignisse ── */
+.b-ueber { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 4; pointer-events: none; font: 700 12px/1 system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
+.b-ueber > * { position: absolute; margin: 0; }
+.b-ueber button { font: inherit; letter-spacing: 0; text-transform: none; }
+body.b-tippt .b-ueber { display: none; }
+
+/* Gemeinsames Aussehen aller Leisten und Griffe: hell, Rand, weicher Schatten, dunkle Symbole */
+.b-werk, .b-blockleiste, .b-abstand, .b-einfuegen, .b-plus { background: #fff; color: var(--b-dunkel); border: 1px solid var(--b-rand); box-shadow: 0 1px 2px rgba(15,23,42,.22), 0 4px 12px rgba(15,23,42,.16); pointer-events: auto; }
+.b-werk, .b-blockleiste { display: flex; gap: 1px; padding: 2px; border-radius: 8px; cursor: default; }
+.b-werk { z-index: 8; }
+.b-blockleiste { z-index: 9; }
+.b-blockleiste.b-senkrecht { flex-direction: column; }
+.b-werk button, .b-blockleiste button { border: 0; background: none; color: var(--b-dunkel); height: 26px; min-width: 28px; padding: 0 7px; border-radius: 6px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; justify-content: center; font-weight: 700; }
+.b-blockleiste button { width: 26px; min-width: 26px; padding: 0; }
+.b-werk button:focus-visible, .b-blockleiste button:focus-visible { background: var(--b-hover); outline: 0; }
 @media (hover: hover) {
-  .b-werk button:hover {
-    background: #334155;
-  }
+  .b-werk button:hover, .b-blockleiste button:hover { background: var(--b-hover); }
+  .b-werk button.b-gefahr:hover { background: #fee2e2; color: #b91c1c; }
+  .b-einfuegen:hover { background: var(--b-hover); box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+  .b-plus:hover { background: var(--b-blau); color: #fff; }
+  .b-abstand:hover { background: var(--b-hover); box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+  .b-fz button:hover { background: var(--b-dunkel2); }
 }
-.b-werk svg,
-.b-einfuegen svg {
-  width: 15px;
-  height: 15px;
-}
-/* Mit der Maus zeigt das Darüberfahren den Abschnitt; am Handy (kein Hover) gilt der zuletzt angetippte (`b-aktiv`). */
-section.w-abschnitt.b-aktiv {
-  outline: 2px solid #155dfc;
-  outline-offset: -2px;
-}
-section.w-abschnitt.b-aktiv > .b-werk,
-section.w-abschnitt:focus-within > .b-werk {
-  display: flex;
-}
-@media (hover: hover) {
-  section.w-abschnitt:hover {
-    outline: 2px solid #155dfc;
-    outline-offset: -2px;
-  }
-  section.w-abschnitt:hover > .b-werk {
-    display: flex;
-  }
-  .w-baustein:hover {
-    outline: 2px dashed #155dfc;
-  }
-}
-.w-baustein {
-  cursor: pointer;
-  border-radius: 4px;
-  outline-offset: 3px;
-}
-.b-einfuegen {
-  position: relative;
-  height: 0;
-  z-index: 25;
-  display: flex;
-  justify-content: center;
-  padding: 14px 0;
-  margin: -14px 0;
-}
-.b-einfuegen button {
-  position: absolute;
-  top: -15px;
-  border: 0;
-  background: #155dfc;
-  color: #fff;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font: 700 12px/1 system-ui, sans-serif;
-  letter-spacing: 0;
-  text-transform: none;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-  display: inline-flex;
-  white-space: nowrap;
-  gap: 4px;
-  align-items: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-.b-einfuegen button:focus-visible,
-section.w-abschnitt.b-aktiv + .b-einfuegen button {
-  opacity: 1;
-}
-/* Der Knopf VOR dem aktiven Abschnitt (`:has` einzeln, damit ein Browser ohne `:has` die Regel darüber behält). */
-.b-einfuegen:has(+ section.w-abschnitt.b-aktiv) button {
-  opacity: 1;
-}
-@media (hover: hover) {
-  .b-einfuegen:hover button {
-    opacity: 1;
-  }
-}
-/* Am Handy gibt es kein Darüberfahren: Die Knöpfe stehen immer da. */
-@media (hover: none) {
-  .b-einfuegen button {
-    opacity: 1;
-  }
-}
-/* Eine leere Seite: der Knopf steht sichtbar mitten im Platz. */
-.b-leer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 72px 16px;
-  color: #475569;
-  font: 600 15px/1.4 system-ui, sans-serif;
-  text-align: center;
-}
-.b-leer button {
-  border: 0;
-  background: #155dfc;
-  color: #fff;
-  border-radius: 999px;
-  padding: 10px 16px;
-  font: 700 14px/1 system-ui, sans-serif;
-  cursor: pointer;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-}
-.b-leer svg {
-  width: 16px;
-  height: 16px;
-}
-.w-spalte {
-  position: relative;
-}
-.b-neu-baustein {
-  display: none;
-  margin-top: 12px;
-  border: 1px dashed currentColor;
-  background: none;
-  color: inherit;
-  opacity: 0.6;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font: 700 12px/1 system-ui, sans-serif;
-  letter-spacing: 0;
-  text-transform: none;
-  cursor: pointer;
-}
-section.w-abschnitt.b-aktiv .b-neu-baustein,
-section.w-abschnitt:focus-within .b-neu-baustein {
-  display: inline-flex;
-}
-@media (hover: hover) {
-  section.w-abschnitt:hover .b-neu-baustein {
-    display: inline-flex;
-  }
-  .b-neu-baustein:hover {
-    opacity: 1;
-  }
-}
+.b-werk button:focus-visible, .b-blockleiste button:focus-visible { box-shadow: inset 0 0 0 2px var(--b-blau); }
+.b-werk button.b-gefahr:focus-visible { background: #fee2e2; color: #b91c1c; }
+.b-werk svg, .b-blockleiste svg, .b-einfuegen svg, .b-plus svg, .b-leerspalte svg, .b-format svg, .b-abstand svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Rahmen um den Abschnitt / Baustein unter der Maus – blau mit hellem Saum, damit er auf Weiß UND auf Petrol zu sehen ist */
+.b-rahmen { pointer-events: none; box-sizing: border-box; z-index: 1; }
+.b-rahmen--abschnitt { border: 2px solid var(--b-blau); box-shadow: inset 0 0 0 2px rgba(255,255,255,.95); }
+.b-rahmen--baustein { border: 2px dashed var(--b-blau); border-radius: 4px; box-shadow: 0 0 0 2px rgba(255,255,255,.95); z-index: 2; }
+
+/* „+ Abschnitt einfügen“ an der Grenze zwischen Abschnitten */
+.b-einfuegen { z-index: 7; height: 28px; padding: 0 12px 0 9px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; font-weight: 700; }
+.b-einfuegen svg { color: var(--b-blau); stroke-width: 2.5; }
+.b-einfuegen:focus-visible { background: var(--b-hover); outline: 0; box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+.b-leer { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 72px 16px; color: #475569; font: 600 15px/1.4 system-ui, sans-serif; text-align: center; }
+.b-leer button { border: 0; background: var(--b-blau); color: #fff; border-radius: 999px; padding: 10px 16px; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.b-leer svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Text zum Tippen: blauer Ring mit hellem Ring darum */
+.b-edit { outline: 2px solid #fff !important; outline-offset: 4px; box-shadow: 0 0 0 4px var(--b-blau); border-radius: 3px; cursor: text !important; min-width: 1ch; caret-color: var(--b-blau); }
+.w-knopf.b-edit { cursor: text !important; }
+
+/* „+“ in der Lücke zwischen zwei Bausteinen */
+.b-plus { z-index: 6; width: 22px; height: 22px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--b-blau); }
+.b-plus svg { width: 14px; height: 14px; stroke-width: 2.6; }
+.b-plus:focus-visible { background: var(--b-blau); color: #fff; outline: 0; }
+.b-pluslinie { z-index: 5; height: 2px; background: var(--b-blau); box-shadow: 0 0 0 1px rgba(255,255,255,.9); pointer-events: none; }
+.b-leerspalte { display: flex; gap: 6px; align-items: center; justify-content: center; width: 100%; min-height: 56px; border: 2px dashed var(--b-blau); background: #fff; color: var(--b-blau); border-radius: 6px; font: 700 13px/1 system-ui, sans-serif; cursor: pointer; }
+
+/* Einfügelinie und Geist beim Ziehen */
+
+/* Spaltenbreite: Griff mittig in der Lücke zwischen zwei Spalten */
+
+/* Abstand: eine beschriftete Pille mittig an der unteren Kante (ein Wert für oben UND unten) */
+.b-abstand { z-index: 4; height: 26px; padding: 0 11px 0 8px; border-radius: 999px; cursor: ns-resize; touch-action: none; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; font-weight: 700; }
+.b-abstand:focus-visible { background: var(--b-hover); outline: 0; box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+/* Bänder in der Abstandshöhe (oben und unten), nur beim Ziehen – gestreift mit hellem Saum, auch auf Petrol sichtbar */
+
+/* Schwebende Format-Leiste beim Markieren (dunkel, aber mit hellem Saum – auf Petrol sichtbar) */
+.b-format { position: absolute; z-index: 60; background: var(--b-dunkel); border-radius: 8px; padding: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.75), 0 4px 14px rgba(0,0,0,.35); font: 700 13px/1 system-ui, sans-serif; color: #fff; }
+.b-format svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.b-fz { display: flex; gap: 1px; }
+.b-fz button { border: 0; background: none; color: #fff; width: 32px; height: 30px; border-radius: 5px; cursor: pointer; display: grid; place-items: center; font: inherit; }
+.b-fz button:focus-visible { background: var(--b-dunkel2); outline: 0; }
+.b-fz button.b-an { background: var(--b-blau); }
+.b-fz .b-h { font-weight: 800; font-size: 13px; }
+.b-lf { display: flex; align-items: center; gap: 4px; padding: 2px; flex-wrap: wrap; max-width: 330px; }
+.b-lf input { width: 200px; border: 1px solid #475569; background: #1e293b; color: #fff; border-radius: 5px; padding: 6px 8px; font: 600 13px/1 system-ui, sans-serif; }
+.b-lf button { border: 0; border-radius: 5px; padding: 6px 10px; font: 700 12px/1 system-ui, sans-serif; cursor: pointer; background: var(--b-blau); color: #fff; }
+.b-lf button[data-f=abbr] { background: none; padding: 6px 8px; font-size: 16px; }
+.b-lf-fehler { flex-basis: 100%; color: #fecaca; font: 600 11px/1.3 system-ui, sans-serif; padding: 2px 4px 4px; }
+/* Der Griff der Abschnitt-Leiste: vorerst nur mit den Pfeiltasten (Ziehen kommt mit W3c-2) */
+.b-griff-abschnitt { cursor: default; }

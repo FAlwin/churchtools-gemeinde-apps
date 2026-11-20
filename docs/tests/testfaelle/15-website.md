@@ -90,7 +90,7 @@ löschen** fragt erst nach. Nach dem Neuladen der Seite steht alles unverändert
 
 **Das muss passieren:** Das Vorschau-Fenster ist ein `iframe` mit `sandbox="allow-scripts"` (kein `allow-same-origin`). Die Vorschau
 sieht gestaltet aus (Stylesheet greift als `<style>`), Bilder sind graue Platzhalter, es werden keine Schriftdateien und keine
-Bilder von ChurchTools geladen. Beim Bearbeiten erscheinen in ChurchTools die Leisten über den Abschnitten (die Ebene läuft mit der
+Bilder von ChurchTools geladen. Beim Bearbeiten erscheinen in ChurchTools die Leisten an den Abschnitten (die Schicht läuft mit der
 Nonce der Seite).
 
 1. Die Startseite in der Vorschau ansehen: gestaltet, mit grauen Platzhalter-Bildern.
@@ -115,12 +115,12 @@ Nonce der Seite).
 **Das brauchst du:** Die eingerichtete Website (Admin oder Leitung) mit Startseite. Zuerst am Computer, dann am Handy (oder
 schmales Fenster).
 
-**Das muss passieren:** Fährt man mit der Maus über einen Abschnitt, erscheint oben rechts seine Leiste (Gestalten · hoch ·
-runter · kopieren · löschen), und zwischen den Abschnitten steht **Abschnitt einfügen**. Am Handy genügt ein Tipp auf den
-Abschnitt. Jede Aktion steht gleich in der Vorschau und oben steht „Gespeichert“. **Löschen fragt erst nach.** Nach dem Neuladen
-der Seite steht alles so da.
+**Das muss passieren:** Fährt man mit der Maus über einen Abschnitt, steht auf seiner Oberkante seine Leiste (Griff · hoch · runter ·
+Gestalten · kopieren · löschen), und an der Grenze zwischen den Abschnitten erscheint **Abschnitt einfügen** (die neue Bedien-Schicht
+ist in TF-WEBSITE-14 beschrieben). Am Handy genügt ein Tipp auf den Abschnitt. Jede Aktion steht gleich in der Vorschau und oben steht
+„Gespeichert“. **Löschen fragt erst nach.** Nach dem Neuladen der Seite steht alles so da.
 
-1. Die Startseite öffnen, mit der Maus über den ersten Abschnitt fahren: Leiste und „+ Baustein“ erscheinen.
+1. Die Startseite öffnen, mit der Maus über den ersten Abschnitt fahren: die Leiste steht auf der Oberkante, unten mittig die Pille „Abstand: …“.
 2. **Abschnitt einfügen** unter dem ersten Abschnitt: Fenster mit den Vorlagen als Kacheln. „Drei Spalten“ wählen – er steht
    dort, oben „Speichert … → Gespeichert“.
 3. Den neuen Abschnitt mit dem Pfeil **nach oben** vor den ersten schieben, dann **kopieren**: die Kopie steht darunter.
@@ -133,9 +133,9 @@ der Seite steht alles so da.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `website/src/Seitenarbeit.tsx`, `website/src/Vorschau.tsx`, `website/src/ebene.skript.txt`, `website/src/ebene.css`, `website/src/AbschnittEinfuegen.tsx`, `shared/website/bearbeiten.ts`
+- **Betrifft:** `website/src/Seitenarbeit.tsx`, `website/src/Vorschau.tsx`, `website/src/ebene.skript.txt`, `website/src/ebene.kern.txt`, `website/src/ebene.css`, `website/src/AbschnittEinfuegen.tsx`, `shared/website/bearbeiten.ts`
 - **Automatisiert:** teilweise – `website/src/Seitenarbeit.test.tsx`, `website/src/ebene.test.ts`, `shared/website/bearbeiten.test.ts`; wie sich Fahren/Tippen im echten iframe anfühlt nur von Hand
-- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“); Leiste und Einfügen-Knopf an die neue Bedien-Schicht angepasst mit W3c-1 (21.11.2026)
 
 </details>
 
@@ -162,7 +162,7 @@ sein; sonst steht die Meldung im Fenster und **Fertig** ist gesperrt.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/AbschnittGestalten.tsx`, `website/src/regeln.ts`, `shared/website/bearbeiten.ts`
 - **Automatisiert:** `website/src/Seitenarbeit.test.tsx` (sofort sichtbar, Abbrechen, weniger Spalten, Sprungmarke), `shared/website/bearbeiten.test.ts` (jede Aufteilung in jede andere ohne Verlust), `website/src/regeln.test.ts`
-- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“); Leiste und Einfügen-Knopf an die neue Bedien-Schicht angepasst mit W3c-1 (21.11.2026)
 
 </details>
 
@@ -191,7 +191,7 @@ Text) wird nicht gespeichert; die Meldung steht im Fenster.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/BausteinBearbeiten.tsx`, `website/src/BausteinFelder.tsx`, `website/src/BausteinHinzufuegen.tsx`, `website/src/markdownLeiste.ts`, `shared/website/vorlagen.ts`
 - **Automatisiert:** `website/src/BausteinFelder.test.tsx` (je Art, die Liste deckt alle Typen des Modells ab), `website/src/Seitenarbeit.test.tsx`, `website/src/markdownLeiste.test.ts`, `shared/website/vorlagen.test.ts` (`neuerBaustein`); die Kalenderliste aus ChurchTools (ob nur öffentliche kommen) nur in der Test-Instanz
-- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“); Leiste und Einfügen-Knopf an die neue Bedien-Schicht angepasst mit W3c-1 (21.11.2026)
 
 </details>
 
@@ -216,7 +216,7 @@ abgewiesen; die Startseite hat immer „/“. **Seite löschen** steht hier und 
 - **Priorität:** normal
 - **Betrifft:** `website/src/SeiteEinstellen.tsx`, `website/src/Seiten.tsx`, `shared/website/bearbeiten.ts`, `shared/website/seitenListe.ts`
 - **Automatisiert:** `website/src/Seitenarbeit.test.tsx`, `website/src/Seiten.test.tsx`, `shared/website/bearbeiten.test.ts` (Menü)
-- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“); Leiste und Einfügen-Knopf an die neue Bedien-Schicht angepasst mit W3c-1 (21.11.2026)
 
 </details>
 
@@ -252,7 +252,7 @@ Lebenszeichen oder wenn A die Seite verlässt, geht es für B.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Seitenarbeit.tsx`, `shared/website/schlange.ts`, `shared/website/sperre.ts`, `shared/ct/sperre.ts`
 - **Automatisiert:** teilweise – `shared/website/schlange.test.ts` (nie zwei gleichzeitig, Fehler zerstört nichts), `shared/website/sperre.test.ts` (Nehmen, Erneuern, Freigeben, Nachlesen), `shared/ct/sperre.test.ts`, `website/src/Seitenarbeit.test.tsx` (Fehler, Sperre, Lebenszeichen, „geändert“, Übernehmen), `website/src/demo.test.ts` (Fall `?demo=eigene` für 7 von Hand); das Zusammenspiel zweier echter Browser und des echten Speichers nur von Hand
-- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“); Leiste und Einfügen-Knopf an die neue Bedien-Schicht angepasst mit W3c-1 (21.11.2026)
 
 </details>
 
@@ -420,5 +420,54 @@ Zurückgegebenes.
 - **Betrifft:** `shared/website/status.ts`, `shared/website/freigabe.ts`, `shared/website/speicher.ts`, `shared/website/zugang.ts`, `website/src/Freigaben.tsx`, `website/src/FreigabeLeiste.tsx`, `website/src/freigabeAnzeige.ts`, `website/src/Seiten.tsx`, `website/src/Seitenarbeit.tsx`, `website/src/SeiteEinstellen.tsx`, `website/src/App.tsx`, `website/src/daten.ts`
 - **Automatisiert:** teilweise – `shared/website/status.test.ts` (Status schreiben, lesen, nachlesen, Waisen), `shared/website/freigabe.test.ts` (Online-Vergleich in allen vier Zuständen, Freigeben schreibt den Entwurfstext unverändert, Status erst nach dem Nachlesen und nur bei unverändertem Entwurf, vorübergehende Fehler, `401`/`403`, halb geschriebene Freigabe, Offline nehmen, „Alles freigeben“, Liste und Zähler je Rolle), `website/src/Freigaben.test.tsx`, `website/src/FreigabeLeiste.test.tsx`, `website/src/Seiten.freigabe.test.tsx`, `website/src/Seiten.freigabe-offen.test.tsx`, `website/src/App.test.tsx` (Zähler), `website/src/demo.test.ts`; die echten Rechte in ChurchTools („Veröffentlicht“ lesen/schreiben je Rolle), das Zusammenspiel zweier Konten und der Rollenwechsel nur in der Test-Instanz
 - **Historie:** neu mit W3b-2 (20.11.2026)
+
+</details>
+
+### TF-WEBSITE-14 · Neue Bedien-Schicht und Text direkt tippen (Überschrift, Text, Knopf, Link, Escape)
+
+**Das brauchst du:** Die eingerichtete Website (Admin oder Leitung) mit einer Seite, die mindestens hat: eine Überschrift, eine Akzentzeile, einen Text, eine
+Knopfreihe, einen **dunklen** Abschnitt (Hauptfarbe) und zwei Spalten. Zuerst am Computer (breites Fenster), danach am Handy. Dazu ein zweites Konto
+(Redakteur ohne „Eigenes HTML“) und ein zweites Browserfenster für die Sperre.
+
+**Das muss passieren:** Alles Bedienbare steht **nie über Text und nie übereinander**, auf hellem wie auf dunklem Abschnitt gut lesbar. Ein Klick auf einen
+Text schreibt direkt in der Seite; **fett · kursiv · Link · Liste · Zwischenüberschrift** gibt es beim Markieren. Was man tippt, erscheint danach
+**genau so**, auch Sonderzeichen. Gespeichert wird erst beim Übernehmen („Gespeichert“ oben), ein Fehler bleibt sichtbar.
+
+1. **Leisten:** Mit der Maus über den ersten Abschnitt: die Abschnitt-Leiste steht auf der Oberkante (Griff · ↑ · ↓ · Gestalten · kopieren · löschen), unten
+   mittig die Pille „Abstand: …“. Über eine Überschrift fahren: **eine** helle Leiste mit dem Stift. Dasselbe auf dem **dunklen** Abschnitt – nichts liegt über
+   dem Text, alles ist lesbar. Der Stift öffnet das Fenster des Bausteins, die Pille das Fenster „Gestalten“. An der Grenze zweier Abschnitte steht **Abschnitt
+   einfügen**, in einer Lücke zwischen Bausteinen ein **+**. Der Griff verschiebt mit den Pfeiltasten (hoch/runter) – Ziehen gibt es noch nicht.
+2. **Überschrift tippen:** Auf die Überschrift klicken, Text ändern, **Eingabetaste**: „Gespeichert“, die Überschrift steht neu da (auch der Punkt dahinter).
+   Noch einmal klicken, etwas ändern, **Esc**: der alte Text steht wieder da, es wird nichts gespeichert. Die Überschrift ganz leeren und übernehmen:
+   Hinweis „Das geht so nicht“, der alte Text bleibt.
+3. **Text tippen:** In den Text klicken, ein Wort **doppelklicken**: die kleine Leiste erscheint. **F** macht es fett, nochmal **F** nimmt es zurück; **K** kursiv;
+   **Liste** macht aus der Zeile einen Punkt, **H** eine Zwischenüberschrift. **Eingabe** macht einen neuen Absatz, **Umschalt+Eingabe** einen Zeilenumbruch.
+   **Strg/Cmd+Z** nimmt zurück, **Umschalt+Strg/Cmd+Z** (oder Strg+Y) stellt wieder her – auch nach Fett. Klick daneben: übernommen, gespeichert.
+4. **Link:** Wort markieren, **Link**, im Feld `javascript:alert(1)` eintragen, OK: der Hinweis „Erlaubt: https://, http://, mailto:, tel: oder /seite –
+   ohne Leerzeichen“, **kein** Link. Dann `https://example.org` – das Wort ist ein Link. Wort im Link markieren, **Link** noch einmal: der Link ist weg.
+5. **Sonderzeichen:** In einem Text die Zeile `2 * 3 und [x]` tippen, in einer neuen Zeile `- kein Punkt`, in der nächsten `1. keine Nummer`, in der nächsten
+   `### kein Titel`, dazu `\a_b`. Übernehmen: **alles erscheint genau so**, kein Punkt, keine Liste, kein Titel, kein Kursiv. Das Fenster „Baustein bearbeiten“
+   zeigt im Text `2 \* 3 und \[x\]`, `\- kein Punkt` usw. (der Backslash macht ein Zeichen zum Zeichen).
+6. **Einfügen:** Text mit HTML (`<b>x</b> *y*`) aus der Zwischenablage in ein Textfeld einfügen: er erscheint als Text, nicht fett. In eine Überschrift einen
+   Text mit Zeilenumbrüchen einfügen: eine Zeile.
+7. **Mehrere Felder:** Während man in der Überschrift tippt, in den Text klicken: die Überschrift ist übernommen und im Text geht es gleich weiter. Es wird
+   **nicht** neu gezeichnet, solange man tippt.
+8. **Nicht übernommen:** Im Text ein Wort kursiv und das nächste **ohne Leerzeichen dazwischen** fett machen, übernehmen: Hinweis „… lassen sich im Text nicht
+   speichern“, der Text bleibt, wie er war.
+9. **Eigenes HTML:** Auf einem Baustein „Eigenes HTML“ lässt sich nicht tippen; ein Klick öffnet das Fenster (Leitung). Als **Redakteur**: auf dem
+   Baustein weder Stift noch Fenster; Überschrift und Text lassen sich tippen.
+10. **Fremd gesperrt:** Im zweiten Browserfenster dieselbe Seite öffnen und etwas ändern; im ersten Fenster (neu geladen): Hinweis „Gerade bearbeitet von …“,
+    **keine** Leisten, kein Tippen.
+11. **Fehler beim Speichern:** Das Netz trennen, einen Text ändern und übernehmen: „Nicht gespeichert“ mit **Erneut versuchen**, der Text steht weiter da. Netz an,
+    **Erneut versuchen**: „Gespeichert“.
+12. **Handy:** Ansicht „Handy“: Hinweis über der Vorschau, nur die Abschnitt-Leiste und Abschnitt einfügen; ein Tipp auf einen Baustein – auch auf Text – öffnet
+    das Fenster, kein Tippen im Text.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `website/src/ebene.skript.txt`, `website/src/ebene.kern.txt`, `website/src/ebene.css`, `website/src/ebene.ts`, `website/src/nachricht.ts`, `website/src/textAenderung.ts`, `website/src/Vorschau.tsx`, `website/src/Seitenarbeit.tsx`, `website/src/markdownLeiste.ts`, `shared/website/markdown.ts`
+- **Automatisiert:** teilweise – `shared/website/markdown.test.ts` (Escape jedes Zeichens, Zeilenanfang, Hin und Zurück, Vergleich mit dem Stand vor dem Escape), `website/src/ebene.kern.test.ts` (Kollisionsregel, Textmodell, Lesen/Zeichnen), `website/src/ebene.test.ts` + `website/src/ebene.tippen.test.ts` (die Schicht im Dokument nachgespielt), `website/src/nachricht.test.ts`, `website/src/textAenderung.test.ts`, `website/src/Vorschau.test.tsx`, `website/src/Seitenarbeit.text.test.tsx` (Speichern, Fehler, Fremdsperre, Rollen); wie sich Maus, Leisten und Cursor im echten iframe anfühlen, und dass ChurchTools das Skript mit der Nonce zulässt, nur von Hand
+- **Historie:** neu mit W3c-1 (21.11.2026); im Browser gemessen: ein `<form>` im abgeschotteten iframe schickt nie ab (Link-Feld ohne Formular), und der Browser meldet „Wiederholen“ nur, wenn in seinem eigenen Verlauf etwas liegt (eigener Verlauf mit Tasten)
 
 </details>

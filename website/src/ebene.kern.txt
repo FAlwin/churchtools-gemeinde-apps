@@ -1,0 +1,596 @@
+(function () {
+  'use strict';
+  // Der Kern der Bedien-Schicht in der Vorschau (W3c-1) – läuft IM abgeschotteten iframe, neben `ebene.skript.txt` (das alles
+  // Sichtbare und alle Ereignisse macht). Hier steht, was sich ohne Seite rechnen und prüfen lässt:
+  //  1. die Kollisionsregel (Rangordnung, Ausweichen, Ausblenden) – reine Funktionen auf Rechtecken { l, t, r, b },
+  //  2. das Textmodell der Bearbeitung an Ort und Stelle (Blöcke aus Läufen, Auswahl als Block + Zeichenstelle) samt den
+  //     Rechenschritten Fett, Kursiv, Link, Liste, Zwischenüberschrift, Einfügen, Absatz teilen – ohne `execCommand`,
+  //  3. das Lesen des bearbeiteten DOM in dieses Modell und das Zeichnen des Modells ins DOM.
+  // Das Modell ist zugleich die Nachricht an die Erweiterung (`bloecke`): Dort macht `markdownAusBloecken` Markdown daraus –
+  // die Regel für Zeichen, die sonst Auszeichnung wären (Escape), steht nur dort.
+  //
+  // Block: { art: 'p' | 'h' | 'ul' | 'ol', laeufe: [{ t, fett?, kursiv?, link? }] } – `ul`/`ol` = EIN Listenpunkt, `\n` = Umbruch.
+  // Stelle: { b, o } (Block, Zeichen im Block). Auswahl: { von: Stelle, bis: Stelle }.
+
+  // ── 1. Kollision ──────────────────────────────────────────────────────────────────────────────────────────────
+  const flaeche = (a, b) => {
+    const w = Math.min(a.r, b.r) - Math.max(a.l, b.l);
+    const h = Math.min(a.b, b.b) - Math.max(a.t, b.t);
+    return w > 0 && h > 0 ? w * h : 0;
+  };
+  const aufblasen = (r, d) => ({ l: r.l - d, t: r.t - d, r: r.r + d, b: r.b + d });
+  /** Wie viel eines Rechtecks liegt über Text/Bildern (`hind`) oder schon platzierten Bedienelementen (`belegt`, vierfach). */
+  const ueberdeckung = (r, hind, belegt) => {
+    let s = 0;
+    hind.forEach((h) => { s += flaeche(r, h); });
+    belegt.forEach((h) => { s += flaeche(r, h) * 4; });
+    return s;
+  };
+  /**
+   * Der erste Wunschplatz, der nichts berührt. `kand`: [{ l, t, r, b, sk? }] in der Reihenfolge der Wünsche.
+   * opt: `breite` (Seitenbreite: außerhalb gilt nicht), `pflicht` (kein Platz frei → der mit der geringsten Überdeckung, das
+   * Element erscheint immer), `erzwinge` (der erste, ohne zu prüfen). Ohne `pflicht` und ohne freien Platz: `null` (ausblenden).
+   * Rückgabe: { rect, sk, index, ue }.
+   */
+  const waehle = (kand, hind, belegt, opt) => {
+    opt = opt || {};
+    let best = null;
+    for (let n = 0; n < kand.length; n++) {
+      const c = kand[n];
+      const dy = c.t < 2 ? 2 - c.t : 0; // nie über den Seitenrand hinaus nach oben
+      const r = { l: c.l, t: c.t + dy, r: c.r, b: c.b + dy };
+      const aussen = r.l < 2 || (opt.breite != null && r.r > opt.breite - 2);
+      const ue = aussen ? 1e9 : ueberdeckung(r, hind, belegt);
+      if (!best || ue < best.ue) best = { rect: r, sk: c.sk, index: n, ue: ue };
+      if (ue === 0 || opt.erzwinge) break;
+    }
+    if (!best) return null;
+    if (best.ue > 0 && !opt.pflicht && !opt.erzwinge) return null;
+    return best;
+  };
+  /** Die Rangordnung: kleinere Zahl wird zuerst platziert und hat Vorrang (Baustein-Leiste 1 … Abstand-Pille 6). */
+  const RANG = { blockleiste: 1, werk: 2, einfuegen: 4, plus: 5, abstand: 6 };
+  /**
+   * Alle Bedienelemente einer Anzeige platzieren. `elemente`: [{ name, rang, pflicht?, kand }]; `belegt`: Rechtecke, die schon
+   * besetzt sind (der feste Seitenkopf). Liefert { name: Platz | null } – `null` = ausgeblendet. Ein platziertes Element
+   * besetzt seinen Platz (3 px Rand) für alle mit größerer Rangzahl.
+   */
+  const ordne = (elemente, hind, breite, belegtVorab) => {
+    const belegt = (belegtVorab || []).slice();
+    const aus = {};
+    elemente
+      .slice()
+      .sort((a, b) => a.rang - b.rang)
+      .forEach((e) => {
+        const p = waehle(e.kand, hind, belegt, { pflicht: !!e.pflicht, breite: breite });
+        aus[e.name] = p;
+        if (p) belegt.push(aufblasen(p.rect, 3));
+      });
+    return aus;
+  };
+
+  // ── 2. Textmodell ─────────────────────────────────────────────────────────────────────────────────────────────
+  const klonen = (x) => JSON.parse(JSON.stringify(x));
+  const gleichFormat = (a, b) => !!a.fett === !!b.fett && !!a.kursiv === !!b.kursiv && a.link === b.link;
+  const lauf = (t, f) => {
+    const l = { t: t };
+    if (f && f.fett) l.fett = true;
+    if (f && f.kursiv) l.kursiv = true;
+    if (f && f.link !== undefined && f.link !== null) l.link = f.link;
+    return l;
+  };
+  /** Leere Läufe weg, benachbarte mit gleicher Auszeichnung eins. */
+  const zusammen = (laeufe) => {
+    const aus = [];
+    laeufe.forEach((l) => {
+      if (!l.t) return;
+      const n = lauf(l.t, l);
+      const v = aus[aus.length - 1];
+      if (v && gleichFormat(v, n)) v.t += n.t;
+      else aus.push(n);
+    });
+    return aus;
+  };
+  const laenge = (b) => b.laeufe.reduce((s, l) => s + l.t.length, 0);
+  const textVon = (b) => b.laeufe.map((l) => l.t).join('');
+  /** Die Läufe zwischen zwei Zeichenstellen. */
+  const teil = (laeufe, von, bis) => {
+    const aus = [];
+    let p = 0;
+    laeufe.forEach((l) => {
+      const a = Math.max(von, p);
+      const z = Math.min(bis, p + l.t.length);
+      if (z > a) aus.push(Object.assign({}, l, { t: l.t.slice(a - p, z - p) }));
+      p += l.t.length;
+    });
+    return aus;
+  };
+  const vor = (a, b) => a.b < b.b || (a.b === b.b && a.o <= b.o);
+  const ordnen = (auswahl) => (vor(auswahl.von, auswahl.bis) ? auswahl : { von: auswahl.bis, bis: auswahl.von });
+  const zusammengefallen = (a) => a.von.b === a.bis.b && a.von.o === a.bis.o;
+  /** Je betroffenem Block der Bereich der Auswahl: [{ b, von, bis }] (nur nicht leere). */
+  const bereiche = (bloecke, auswahl) => {
+    const a = ordnen(auswahl);
+    const aus = [];
+    for (let b = a.von.b; b <= a.bis.b && b < bloecke.length; b++) {
+      const von = b === a.von.b ? a.von.o : 0;
+      const bis = b === a.bis.b ? a.bis.o : laenge(bloecke[b]);
+      if (bis > von) aus.push({ b: b, von: von, bis: bis });
+    }
+    return aus;
+  };
+  /** Das Gleiche mit dem Lauf am Cursor, wenn nichts markiert ist (Stelle am Anfang zählt zum Lauf davor, sonst dahinter). */
+  const laufAmCursor = (bloecke, stelle) => {
+    const b = bloecke[stelle.b];
+    if (!b) return null;
+    let p = 0;
+    for (let n = 0; n < b.laeufe.length; n++) {
+      const l = b.laeufe[n];
+      if (stelle.o > p && stelle.o <= p + l.t.length) return l;
+      p += l.t.length;
+    }
+    return b.laeufe[0] || null;
+  };
+
+  /** Fett oder Kursiv umschalten: Ist schon alles Markierte so, wird es weggenommen, sonst gesetzt. Cursor allein: nichts. */
+  const formatUmschalten = (bloecke, auswahl, art) => {
+    const schluessel = art === 'fett' ? 'fett' : 'kursiv';
+    const neu = klonen(bloecke);
+    const rs = bereiche(neu, auswahl);
+    let alle = true;
+    let irgend = false;
+    rs.forEach((r) => {
+      teil(neu[r.b].laeufe, r.von, r.bis).forEach((l) => {
+        if (!l.t.trim()) return;
+        irgend = true;
+        if (!l[schluessel]) alle = false;
+      });
+    });
+    const setzen = !(irgend && alle);
+    rs.forEach((r) => {
+      const b = neu[r.b];
+      const mitte = teil(b.laeufe, r.von, r.bis).map((l) => {
+        const c = Object.assign({}, l);
+        if (setzen) c[schluessel] = true;
+        else delete c[schluessel];
+        return c;
+      });
+      b.laeufe = zusammen(teil(b.laeufe, 0, r.von).concat(mitte, teil(b.laeufe, r.bis, Infinity)));
+    });
+    return { bloecke: neu, auswahl: auswahl };
+  };
+  /** Das Markierte zum Link auf `adresse` machen. */
+  const linkSetzen = (bloecke, auswahl, adresse) => {
+    const neu = klonen(bloecke);
+    bereiche(neu, auswahl).forEach((r) => {
+      const b = neu[r.b];
+      const mitte = teil(b.laeufe, r.von, r.bis).map((l) => Object.assign({}, l, { link: adresse }));
+      b.laeufe = zusammen(teil(b.laeufe, 0, r.von).concat(mitte, teil(b.laeufe, r.bis, Infinity)));
+    });
+    return { bloecke: neu, auswahl: auswahl };
+  };
+  /** Den Link unter Markierung/Cursor entfernen – immer als Ganzes (alle zusammenhängenden Stücke mit dieser Adresse). */
+  const linkEntfernen = (bloecke, auswahl) => {
+    const neu = klonen(bloecke);
+    const a = ordnen(auswahl);
+    for (let bi = a.von.b; bi <= a.bis.b && bi < neu.length; bi++) {
+      const b = neu[bi];
+      const von = bi === a.von.b ? a.von.o : 0;
+      const bis = bi === a.bis.b ? a.bis.o : laenge(b);
+      const beruehrt = [];
+      let p = 0;
+      b.laeufe.forEach((l, n) => {
+        const ende = p + l.t.length;
+        const innen = von === bis ? von > p && von <= ende : ende > von && p < bis;
+        if (innen && l.link !== undefined) beruehrt.push(n);
+        p = ende;
+      });
+      beruehrt.forEach((n) => {
+        const adresse = b.laeufe[n].link;
+        for (let k = n; k >= 0 && b.laeufe[k].link === adresse; k--) delete b.laeufe[k].link;
+        for (let k = n + 1; k < b.laeufe.length && b.laeufe[k].link === adresse; k++) delete b.laeufe[k].link;
+      });
+      b.laeufe = zusammen(b.laeufe);
+    }
+    return { bloecke: neu, auswahl: auswahl };
+  };
+  const einzeilig = (b) => {
+    b.laeufe = zusammen(b.laeufe.map((l) => Object.assign({}, l, { t: l.t.replace(/\s*\n\s*/g, ' ') })));
+  };
+  /** Die Blöcke der Auswahl zur Liste machen – oder, wenn schon alle Listenpunkte sind, wieder zu Absätzen. */
+  const listeUmschalten = (bloecke, auswahl) => {
+    const neu = klonen(bloecke);
+    const a = ordnen(auswahl);
+    const betroffen = neu.slice(a.von.b, a.bis.b + 1);
+    const schonListe = betroffen.length > 0 && betroffen.every((b) => b.art === 'ul');
+    betroffen.forEach((b) => {
+      if (schonListe) b.art = 'p';
+      else { b.art = 'ul'; einzeilig(b); }
+    });
+    return { bloecke: neu, auswahl: auswahl };
+  };
+  /** Die Blöcke der Auswahl zur Zwischenüberschrift machen – oder zurück zu Absätzen. */
+  const ueberschriftUmschalten = (bloecke, auswahl) => {
+    const neu = klonen(bloecke);
+    const a = ordnen(auswahl);
+    const betroffen = neu.slice(a.von.b, a.bis.b + 1);
+    const schonUeberschrift = betroffen.length > 0 && betroffen.every((b) => b.art === 'h');
+    betroffen.forEach((b) => {
+      if (schonUeberschrift) b.art = 'p';
+      else { b.art = 'h'; einzeilig(b); }
+    });
+    return { bloecke: neu, auswahl: auswahl };
+  };
+  /** Was an der Auswahl gerade gilt – für die Knöpfe der Leiste. */
+  const formatZustand = (bloecke, auswahl) => {
+    const a = ordnen(auswahl);
+    const rs = bereiche(bloecke, a);
+    const z = { fett: false, kursiv: false, link: null, liste: false, ueberschrift: false };
+    let laeufe = [];
+    if (rs.length) rs.forEach((r) => { laeufe = laeufe.concat(teil(bloecke[r.b].laeufe, r.von, r.bis)); });
+    else { const l = laufAmCursor(bloecke, a.von); if (l) laeufe = [l]; }
+    const sichtbar = laeufe.filter((l) => l.t.trim());
+    const pruef = sichtbar.length ? sichtbar : laeufe;
+    z.fett = pruef.length > 0 && pruef.every((l) => l.fett);
+    z.kursiv = pruef.length > 0 && pruef.every((l) => l.kursiv);
+    const mitLink = laeufe.filter((l) => l.link !== undefined);
+    z.link = mitLink.length ? mitLink[0].link : null;
+    const bl = bloecke.slice(a.von.b, a.bis.b + 1);
+    z.liste = bl.length > 0 && bl.every((b) => b.art === 'ul');
+    z.ueberschrift = bl.length > 0 && bl.every((b) => b.art === 'h');
+    return z;
+  };
+
+  /** Das Markierte löschen (Blöcke wachsen zusammen). Der Cursor steht danach an der Stelle `von`. */
+  const loeschen = (bloecke, auswahl) => {
+    const a = ordnen(auswahl);
+    if (zusammengefallen(a)) return { bloecke: klonen(bloecke), auswahl: a };
+    const neu = klonen(bloecke);
+    const erster = neu[a.von.b];
+    const letzter = neu[a.bis.b];
+    erster.laeufe = zusammen(teil(erster.laeufe, 0, a.von.o).concat(teil(letzter.laeufe, a.bis.o, Infinity)));
+    neu.splice(a.von.b + 1, a.bis.b - a.von.b);
+    return { bloecke: neu, auswahl: { von: a.von, bis: a.von } };
+  };
+  /**
+   * Reinen Text an die Stelle setzen (ersetzt die Markierung). Einzeilige Blöcke (Überschrift, Listenpunkt) bekommen ihn in
+   * einer Zeile; sonst: Leerzeile = neuer Absatz, einfacher Umbruch = Zeilenumbruch. Der Text erbt die Auszeichnung am Cursor.
+   */
+  const einfuegen = (bloecke, auswahl, text) => {
+    const r = loeschen(bloecke, auswahl);
+    const neu = r.bloecke;
+    const pos = r.auswahl.von;
+    const blk = neu[pos.b];
+    let t = String(text).replace(/\r\n?/g, '\n');
+    if (!t) return r;
+    const einzeln = blk.art !== 'p';
+    let stuecke;
+    if (einzeln) stuecke = [t.replace(/\s*\n\s*/g, ' ')];
+    else stuecke = t.replace(/^\n+|\n+$/g, '').split(/\n{2,}/);
+    if (!stuecke.join('')) return r;
+    const davor = teil(blk.laeufe, 0, pos.o);
+    const danach = teil(blk.laeufe, pos.o, Infinity);
+    const f = davor.length ? davor[davor.length - 1] : danach[0] || {};
+    const mk = (s) => (s ? [lauf(s, f)] : []);
+    if (stuecke.length === 1) {
+      blk.laeufe = zusammen(davor.concat(mk(stuecke[0]), danach));
+      const stelle = { b: pos.b, o: pos.o + stuecke[0].length };
+      return { bloecke: neu, auswahl: { von: stelle, bis: stelle } };
+    }
+    const mitte = stuecke.slice(1, -1).map((s) => ({ art: 'p', laeufe: zusammen(mk(s)) }));
+    const letzter = stuecke[stuecke.length - 1];
+    const ersterBlock = { art: blk.art, laeufe: zusammen(davor.concat(mk(stuecke[0]))) };
+    const letzterBlock = { art: 'p', laeufe: zusammen(mk(letzter).concat(danach)) };
+    neu.splice(pos.b, 1, ersterBlock, ...mitte, letzterBlock);
+    const stelle = { b: pos.b + 1 + mitte.length, o: letzter.length };
+    return { bloecke: neu, auswahl: { von: stelle, bis: stelle } };
+  };
+  /** Umschalt+Eingabe: ein Zeilenumbruch im Absatz (in Überschrift und Listenpunkt, die nur eine Zeile haben: wie Eingabe). */
+  const umbruch = (bloecke, auswahl) => {
+    const r = loeschen(bloecke, auswahl);
+    const pos = r.auswahl.von;
+    const blk = r.bloecke[pos.b];
+    if (blk.art !== 'p') return teilen(bloecke, auswahl);
+    const davor = teil(blk.laeufe, 0, pos.o);
+    const danach = teil(blk.laeufe, pos.o, Infinity);
+    const f = davor.length ? davor[davor.length - 1] : danach[0] || {};
+    blk.laeufe = zusammen(davor.concat([lauf('\n', f)], danach));
+    const stelle = { b: pos.b, o: pos.o + 1 };
+    return { bloecke: r.bloecke, auswahl: { von: stelle, bis: stelle } };
+  };
+  /** Eingabetaste: den Block an der Stelle teilen. Ein leerer Listenpunkt beendet die Liste; nach einer Überschrift folgt ein Absatz. */
+  const teilen = (bloecke, auswahl) => {
+    const r = loeschen(bloecke, auswahl);
+    const neu = r.bloecke;
+    const pos = r.auswahl.von;
+    const blk = neu[pos.b];
+    if ((blk.art === 'ul' || blk.art === 'ol') && laenge(blk) === 0) {
+      blk.art = 'p';
+      return { bloecke: neu, auswahl: r.auswahl };
+    }
+    const davor = teil(blk.laeufe, 0, pos.o);
+    const danach = teil(blk.laeufe, pos.o, Infinity);
+    const erster = { art: blk.art, laeufe: zusammen(davor) };
+    const zweiter = { art: blk.art === 'h' ? 'p' : blk.art, laeufe: zusammen(danach) };
+    neu.splice(pos.b, 1, erster, zweiter);
+    const stelle = { b: pos.b + 1, o: 0 };
+    return { bloecke: neu, auswahl: { von: stelle, bis: stelle } };
+  };
+  /** Das, was als Text bleibt, wenn man speichert: leere Blöcke weg, Umbrüche am Rand weg, Läufe zusammen. */
+  const fuerSpeichern = (bloecke) => {
+    const aus = [];
+    klonen(bloecke).forEach((b) => {
+      b.laeufe = zusammen(b.laeufe);
+      if (b.art === 'p') {
+        const t = textVon(b);
+        if (!t.replace(/\s+/g, '')) return;
+        // Umbrüche am Anfang und Ende gehören nicht zum Text
+        let vorn = 0;
+        while (t[vorn] === '\n' || t[vorn] === ' ') vorn++;
+        let hinten = t.length;
+        while (hinten > vorn && (t[hinten - 1] === '\n' || t[hinten - 1] === ' ')) hinten--;
+        b.laeufe = zusammen(teil(b.laeufe, vorn, hinten));
+      } else if (!textVon(b).trim()) return;
+      aus.push(b);
+    });
+    return aus;
+  };
+
+  // ── 3. DOM ⇄ Modell ───────────────────────────────────────────────────────────────────────────────────────────
+  const BLOCKISCH = /^(P|DIV|UL|OL|LI|H[1-6]|BLOCKQUOTE|PRE)$/;
+  const INNEN = 'p,div,ul,ol,li,h1,h2,h3,h4,h5,h6,blockquote,pre';
+  const arr = (x) => Array.prototype.slice.call(x);
+
+  /**
+   * Das bearbeitete DOM als Blöcke lesen – tolerant gegen das, was ein Browser beim Tippen daraus macht (`div` statt `p`,
+   * `b`/`i`, Stil-`span`, Umbrüche am Ende). `sel` ({ anchorNode, anchorOffset, focusNode, focusOffset }): wo die Auswahl
+   * steht, in Modellstellen übersetzt (`auswahl`, sonst `null`).
+   */
+  const lesen = (wurzel, sel) => {
+    const bloecke = [];
+    let akt = null;
+    const marken = [];
+    let wartende = [];
+    if (sel) {
+      [['anchorNode', 'anchorOffset'], ['focusNode', 'focusOffset']].forEach((p) => {
+        const n = sel[p[0]];
+        if (n && wurzel.contains(n)) marken.push({ node: n, offset: sel[p[1]], pos: null });
+      });
+    }
+    const hier = (extra) => ({ b: bloecke.length - 1, o: (akt ? akt.len : 0) + (extra || 0) });
+    const marke = (node, idx) => {
+      marken.forEach((m) => { if (!m.pos && m.node === node && m.offset === idx) m.pos = akt ? hier() : null; if (!m.pos && m.node === node && m.offset === idx) wartende.push(m); });
+    };
+    const starte = (art) => {
+      akt = { art: art, laeufe: [], len: 0 };
+      bloecke.push(akt);
+      wartende.forEach((m) => { if (!m.pos) m.pos = { b: bloecke.length - 1, o: 0 }; });
+      wartende = [];
+      return akt;
+    };
+    const hinzu = (t, f) => {
+      if (!t) return;
+      akt.laeufe.push(lauf(t, f));
+      akt.len += t.length;
+    };
+    const letzteImBlock = (br, block) => {
+      let n = br;
+      while (n && n !== block) {
+        let s = n.nextSibling;
+        while (s && s.nodeType === 3 && !s.nodeValue) s = s.nextSibling;
+        if (s) return false;
+        n = n.parentNode;
+      }
+      return true;
+    };
+    let geheListe;
+    const inlineKnoten = (n, f, block) => {
+      if (n.nodeType === 3) {
+        const t = n.nodeValue.replace(/ /g, ' ').replace(/[\r\n]+/g, ' ').replace(/​/g, '');
+        marken.forEach((m) => { if (!m.pos && m.node === n) m.pos = hier(Math.min(m.offset, t.length)); });
+        hinzu(t, f);
+        return;
+      }
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName;
+      if (tag === 'BR') {
+        if (!letzteImBlock(n, block)) hinzu('\n', f);
+        return;
+      }
+      if (/^(SCRIPT|STYLE)$/.test(tag)) return;
+      const f2 = Object.assign({}, f);
+      if (tag === 'STRONG' || tag === 'B') f2.fett = true;
+      else if (tag === 'EM' || tag === 'I') f2.kursiv = true;
+      else if (tag === 'A') {
+        const h = n.getAttribute('href');
+        if (h) f2.link = h;
+      }
+      const st = n.style;
+      if (st) {
+        if (st.fontWeight === 'bold' || parseInt(st.fontWeight, 10) >= 600) f2.fett = true;
+        else if (st.fontWeight === 'normal' || (st.fontWeight && parseInt(st.fontWeight, 10) < 600)) delete f2.fett;
+        if (st.fontStyle === 'italic') f2.kursiv = true;
+        else if (st.fontStyle === 'normal') delete f2.kursiv;
+      }
+      if (BLOCKISCH.test(tag) && akt && akt.len > 0) hinzu(' ', f2); // ein Block mitten im Text: wie ein Leerzeichen
+      return geheInline(n, f2, block);
+    };
+    const geheInline = (el, f, block) => {
+      const nested = [];
+      arr(el.childNodes).forEach((c, i) => {
+        marke(el, i);
+        if (c.nodeType === 1 && (c.tagName === 'UL' || c.tagName === 'OL') && el.tagName === 'LI') { nested.push(c); return; }
+        inlineKnoten(c, f, block);
+      });
+      marke(el, el.childNodes.length);
+      return nested;
+    };
+    geheListe = (el, art) => {
+      arr(el.childNodes).forEach((c, i) => {
+        marke(el, i);
+        if (c.nodeType === 1 && c.tagName === 'LI') {
+          starte(art);
+          const nested = geheInline(c, {}, c);
+          akt = null;
+          nested.forEach((l) => geheListe(l, l.tagName === 'OL' ? 'ol' : 'ul'));
+        } else if (c.nodeType === 1 && (c.tagName === 'UL' || c.tagName === 'OL')) {
+          geheListe(c, c.tagName === 'OL' ? 'ol' : 'ul');
+        } else if (c.nodeType === 3 && !/\S/.test(c.nodeValue)) {
+          // Leerraum zwischen Punkten
+        } else {
+          if (!akt) starte(art);
+          inlineKnoten(c, {}, el);
+        }
+      });
+      marke(el, el.childNodes.length);
+      akt = null;
+    };
+    const artVon = (el) => (/^H[1-6]$/.test(el.tagName) ? 'h' : 'p');
+    const geheBehaelter = (el) => {
+      arr(el.childNodes).forEach((c, i) => {
+        marke(el, i);
+        if (c.nodeType === 1 && BLOCKISCH.test(c.tagName)) {
+          akt = null;
+          const tag = c.tagName;
+          if (tag === 'UL' || tag === 'OL') geheListe(c, tag === 'OL' ? 'ol' : 'ul');
+          else if (tag === 'LI') { starte('ul'); geheInline(c, {}, c); akt = null; }
+          else if (c.querySelector(INNEN)) geheBehaelter(c);
+          else { starte(artVon(c)); geheInline(c, {}, c); akt = null; }
+        } else if (c.nodeType === 3 && !/\S/.test(c.nodeValue) && !akt) {
+          marken.forEach((m) => { if (!m.pos && m.node === c) wartende.push(m); });
+        } else {
+          if (!akt) starte('p');
+          inlineKnoten(c, {}, el);
+        }
+      });
+      marke(el, el.childNodes.length);
+    };
+    geheBehaelter(wurzel);
+    if (!bloecke.length) { bloecke.push({ art: 'p', laeufe: [], len: 0 }); wartende.forEach((m) => { m.pos = { b: 0, o: 0 }; }); }
+    marken.forEach((m) => { if (!m.pos) m.pos = { b: bloecke.length - 1, o: bloecke[bloecke.length - 1].len }; });
+    bloecke.forEach((b) => { b.laeufe = zusammen(b.laeufe); delete b.len; });
+    const auswahl = marken.length === 2 ? { von: marken[0].pos, bis: marken[1].pos } : null;
+    return { bloecke: bloecke, auswahl: auswahl ? ordnen(auswahl) : null };
+  };
+
+  /** Ein Block als DOM: Läufe mit Fett/Kursiv/Link, `\n` als Umbruch, leer = ein Platzhalter-Umbruch (damit der Cursor hinein kann). */
+  const fuelle = (el, laeufe) => {
+    const doc = el.ownerDocument;
+    let linkEl = null;
+    let linkAdresse;
+    laeufe.forEach((l) => {
+      let ziel = el;
+      if (l.link !== undefined) {
+        if (!linkEl || linkAdresse !== l.link) {
+          linkEl = doc.createElement('a');
+          linkEl.setAttribute('href', l.link);
+          el.appendChild(linkEl);
+          linkAdresse = l.link;
+        }
+        ziel = linkEl;
+      } else { linkEl = null; linkAdresse = undefined; }
+      let blatt = ziel;
+      if (l.fett) { const s = doc.createElement('strong'); blatt.appendChild(s); blatt = s; }
+      if (l.kursiv) { const e = doc.createElement('em'); blatt.appendChild(e); blatt = e; }
+      l.t.split('\n').forEach((teilText, n) => {
+        if (n > 0) blatt.appendChild(doc.createElement('br'));
+        if (teilText) blatt.appendChild(doc.createTextNode(teilText));
+      });
+    });
+    const gesamt = laeufe.map((l) => l.t).join('');
+    if (!gesamt || gesamt.slice(-1) === '\n') el.appendChild(doc.createElement('br'));
+  };
+  /** Die Blöcke als `p`, `h3`, `ul > li`, `ol > li` in die Wurzel zeichnen (ersetzt deren Inhalt). */
+  const rendern = (wurzel, bloecke) => {
+    const doc = wurzel.ownerDocument;
+    wurzel.textContent = '';
+    let liste = null;
+    let listeArt = null;
+    bloecke.forEach((b) => {
+      let el;
+      if (b.art === 'ul' || b.art === 'ol') {
+        if (listeArt !== b.art) { liste = doc.createElement(b.art); wurzel.appendChild(liste); listeArt = b.art; }
+        el = doc.createElement('li');
+        liste.appendChild(el);
+      } else {
+        liste = null;
+        listeArt = null;
+        el = doc.createElement(b.art === 'h' ? 'h3' : 'p');
+        wurzel.appendChild(el);
+      }
+      fuelle(el, b.laeufe);
+    });
+  };
+  const blockElemente = (wurzel) => arr(wurzel.querySelectorAll('p, h3, li'));
+  /** Die DOM-Stelle (Knoten, Versatz) zu einer Zeichenstelle im Block-Element `el` – Gegenstück zu `lesen`. */
+  const domStelle = (el, o) => {
+    let acc = 0;
+    let letzter = null;
+    const doc = el.ownerDocument;
+    const w = doc.createTreeWalker(el, 1 | 4);
+    let n;
+    while ((n = w.nextNode())) {
+      if (n.nodeType === 3) {
+        const l = n.nodeValue.length;
+        if (o <= acc + l) return [n, o - acc];
+        acc += l;
+        letzter = n;
+      } else if (n.tagName === 'BR') {
+        const par = n.parentNode;
+        const idx = arr(par.childNodes).indexOf(n);
+        if (o === acc) return [par, idx];
+        if (!letzteImBlockFuerStelle(n, el)) acc += 1;
+      }
+    }
+    return letzter ? [letzter, letzter.nodeValue.length] : [el, el.childNodes.length];
+  };
+  const letzteImBlockFuerStelle = (br, block) => {
+    let n = br;
+    while (n && n !== block) {
+      let s = n.nextSibling;
+      while (s && s.nodeType === 3 && !s.nodeValue) s = s.nextSibling;
+      if (s) return false;
+      n = n.parentNode;
+    }
+    return true;
+  };
+  /** Die Auswahl (Modellstellen) im gezeichneten DOM einstellen. */
+  const auswahlSetzen = (wurzel, auswahl) => {
+    const els = blockElemente(wurzel);
+    const doc = wurzel.ownerDocument;
+    const punkt = (s) => (els[s.b] ? domStelle(els[s.b], s.o) : [wurzel, wurzel.childNodes.length]);
+    const von = punkt(auswahl.von);
+    const bis = punkt(auswahl.bis);
+    const r = doc.createRange();
+    r.setStart(von[0], von[1]);
+    r.setEnd(bis[0], bis[1]);
+    const s = doc.defaultView.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  };
+
+  return {
+    flaeche: flaeche,
+    aufblasen: aufblasen,
+    ueberdeckung: ueberdeckung,
+    waehle: waehle,
+    ordne: ordne,
+    RANG: RANG,
+    formatUmschalten: formatUmschalten,
+    linkSetzen: linkSetzen,
+    linkEntfernen: linkEntfernen,
+    listeUmschalten: listeUmschalten,
+    ueberschriftUmschalten: ueberschriftUmschalten,
+    formatZustand: formatZustand,
+    loeschen: loeschen,
+    einfuegen: einfuegen,
+    teilen: teilen,
+    umbruch: umbruch,
+    fuerSpeichern: fuerSpeichern,
+    lesen: lesen,
+    rendern: rendern,
+    auswahlSetzen: auswahlSetzen,
+    zusammengefallen: zusammengefallen,
+    laenge: laenge
+  };
+})()

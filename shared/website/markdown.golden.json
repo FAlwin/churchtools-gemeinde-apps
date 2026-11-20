@@ -1,0 +1,44 @@
+[
+  ["Hier steht dein Leitsatz.", "<p>Hier steht dein Leitsatz.</p>"],
+  ["Hier steht dein Text.", "<p>Hier steht dein Text.</p>"],
+  [
+    "Ein **Absatz** mit [Link](https://beispiel.de).",
+    "<p>Ein <strong>Absatz</strong> mit <a href=\"https://beispiel.de\" rel=\"noopener\">Link</a>.</p>"
+  ],
+  ["Text neben dem Bild", "<p>Text neben dem Bild</p>"],
+  [
+    "Eins\nzwei\n\nDrei **fett** und *kursiv*",
+    "<p>Eins<br>zwei</p>\n<p>Drei <strong>fett</strong> und <em>kursiv</em></p>"
+  ],
+  [
+    "### Titel\n- a\n- b\n\n1. eins\n2. zwei",
+    "<h3>Titel</h3>\n<ul><li>a</li><li>b</li></ul>\n<ol><li>eins</li><li>zwei</li></ol>"
+  ],
+  ["2 * 3 * 4", "<p>2 * 3 * 4</p>"],
+  ["[Hier](https://a.de/x)", "<p><a href=\"https://a.de/x\" rel=\"noopener\">Hier</a></p>"],
+  ["[Intern](/gruppen/)", "<p><a href=\"/gruppen/\">Intern</a></p>"],
+  ["[Mail](mailto:a@b.de)", "<p><a href=\"mailto:a@b.de\" rel=\"noopener\">Mail</a></p>"],
+  ["[Klick](javascript:alert(1))", "<p>[Klick](javascript:alert(1))</p>"],
+  ["<script>alert(1)</script>", "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>"],
+  [
+    "**a** und *b* und **c *d* e**",
+    "<p><strong>a</strong> und <em>b</em> und <strong>c <em>d</em> e</strong></p>"
+  ],
+  ["Pfad C:\\temp\\neu und ein Rest", "<p>Pfad C:\\temp\\neu und ein Rest</p>"],
+  ["a_b_c und #hash und (Klammer) und [eckig]", "<p>a_b_c und #hash und (Klammer) und [eckig]</p>"],
+  [
+    "- eins\n- zwei\n\nText\n1. a\n2. b",
+    "<ul><li>eins</li><li>zwei</li></ul>\n<p>Text</p>\n<ol><li>a</li><li>b</li></ol>"
+  ],
+  ["  eingerückt\n- x", "<p>eingerückt</p>\n<ul><li>x</li></ul>"],
+  ["### \n###x\n-x\n1.x", "<p>###<br>###x<br>-x<br>1.x</p>"],
+  ["*a*b*", "<p><em>a</em>b*</p>"],
+  ["**fett *kursiv* fett**", "<p><strong>fett <em>kursiv</em> fett</strong></p>"],
+  [
+    "[**fett** Link](/x) danach *kursiv*",
+    "<p><a href=\"/x\"><strong>fett</strong> Link</a> danach <em>kursiv</em></p>"
+  ],
+  ["Zeile eins  \nZeile zwei", "<p>Zeile eins<br>Zeile zwei</p>"],
+  ["1) nichts", "<p>1) nichts</p>"],
+  ["- [Link](https://x.de)", "<ul><li><a href=\"https://x.de\" rel=\"noopener\">Link</a></li></ul>"]
+]

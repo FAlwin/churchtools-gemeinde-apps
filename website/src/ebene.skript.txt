@@ -1,140 +1,739 @@
-// Die Bearbeiten-Ebene in der Vorschau (W3a-2) – läuft IM abgeschotteten iframe (sandbox="allow-scripts", kein
-// allow-same-origin) und nirgends sonst. Sie meldet der Erweiterung nur per postMessage, was angeklickt wurde, und nur als
-// Zahlen: welcher Abschnitt (i), welche Spalte (j), welcher Baustein (k) – in der Reihenfolge der Seite. Mehr braucht die
-// Erweiterung nicht, und sie nimmt auch nicht mehr an (`nachricht.ts`).
+// Die Bedien-Schicht in der Vorschau (W3c-1; Vorlage: Entwurf w3c-v2) – läuft IM abgeschotteten iframe (sandbox="allow-scripts",
+// kein allow-same-origin) und nirgends sonst. Sie meldet der Erweiterung nur per postMessage, was passiert ist: Zahlen für die
+// Stelle (Abschnitt i, Spalte j, Baustein k in der Reihenfolge der Seite) und – nur beim Text direkt tippen – den getippten
+// Text. Mehr nimmt die Erweiterung nicht an (`nachricht.ts`), und Links prüft sie mit der echten Regel.
 //
-// `config` kommt von der Erweiterung: { scroll: Zahl, symbole: { plus, stift, hoch, runter, kopie, muell } } – die Symbole
-// sind fertige SVG-Zeichen aus dem gemeinsamen Satz (`ui/icons`), nichts wird hier gezeichnet.
-(function (config) {
-  var senden = function (m) {
-    parent.postMessage(Object.assign({ websiteEditor: true }, m), '*');
+// `config` kommt von der Erweiterung: { scroll, symbole, modus: 'computer' | 'handy', darfHtml, abstaende, abstandNamen, weiter }.
+// `K` ist der Kern (`ebene.kern.txt`): Kollisionsregel und Textmodell – das, was sich ohne Seite prüfen lässt.
+(function (config, K) {
+  'use strict';
+  const S = config.symbole;
+  const senden = (m) => { parent.postMessage(Object.assign({ websiteEditor: true }, m), '*'); };
+  const haupt = document.getElementById('inhalt');
+  // Am Handy gibt es kein Ziehen und kein Tippen im Text: nur Abschnitt-Leiste, „Abschnitt einfügen“ und Tippen auf einen
+  // Baustein öffnet das Fenster (wie bisher).
+  const voll = config.modus !== 'handy';
+  const arr = (x) => Array.prototype.slice.call(x);
+  const icon = (p) => S[p] || '';
+
+  const abschnitte = () => (haupt ? arr(haupt.children).filter((e) => e.matches('section.w-abschnitt')) : []);
+  const innenVon = (sec) => sec.querySelector(':scope > .w-abschnitt-innen');
+  const spaltenVon = (sec) => { const i = innenVon(sec); return i ? arr(i.children).filter((e) => e.classList.contains('w-spalte')) : []; };
+  const bausteineVon = (sp) => arr(sp.children).filter((e) => e.classList.contains('w-baustein'));
+  const ortVon = (block) => {
+    const sp = block.parentElement;
+    const sec = sp.closest('section.w-abschnitt');
+    return { i: abschnitte().indexOf(sec), j: spaltenVon(sec).indexOf(sp), k: bausteineVon(sp).indexOf(block) };
   };
-  var S = config.symbole;
-  var knopf = function (was, symbol, text, titel) {
-    var b = document.createElement('button');
+  const seiteX = () => window.scrollX;
+  const seiteY = () => window.scrollY;
+  const artVon = (b) => (b.className.match(/w-b-([a-zA-Z]+)/) || [])[1];
+
+  // ── Bausteine ──────────────────────────────────────────────────────────────────────────────────────────────
+  const knopf = (was, symbol, text, titel) => {
+    const b = document.createElement('button');
     b.type = 'button';
     b.dataset.w = was;
-    if (titel) {
-      b.title = titel;
-      b.setAttribute('aria-label', titel);
-    }
-    b.innerHTML = symbol + (text ? '<span>' + text + '</span>' : '');
+    if (titel) { b.title = titel; b.setAttribute('aria-label', titel); }
+    b.innerHTML = icon(symbol) + (text ? '<span>' + text + '</span>' : '');
     return b;
   };
-  var einfuegen = function (i) {
-    var d = document.createElement('div');
-    d.className = 'b-einfuegen';
-    var b = knopf('einfuegen', S.plus, 'Abschnitt einfügen');
-    b.onclick = function () {
-      senden({ was: 'einfuegen', i: i });
-    };
-    d.appendChild(b);
-    return d;
+  const abstandVon = (sec) => {
+    for (let n = 0; n < config.abstaende.length; n++) if (sec.classList.contains('w-abschnitt--abstand-' + config.abstaende[n])) return config.abstaende[n];
+    return 'normal';
   };
 
-  var haupt = document.getElementById('inhalt');
-  var abschnitte = haupt ? Array.prototype.slice.call(haupt.children).filter(function (e) {
-    return e.matches('section.w-abschnitt');
-  }) : [];
+  // ── Die Schicht ────────────────────────────────────────────────────────────────────────────────────────────
+  // ALLE Bedienelemente (Leisten, Griff, „+“, Rahmen) liegen in EINER Schicht über der Seite und werden nur bei Bedarf gezeigt –
+  // immer an einer Stelle, an der sie weder Text noch ein anderes Bedienelement berühren (`K.ordne`, siehe `layout`).
+  const ueber = document.createElement('div');
+  ueber.className = 'b-ueber';
+  document.body.appendChild(ueber);
+  const neu = (tag, klasse) => { const d = document.createElement(tag); d.className = klasse; d.hidden = true; ueber.appendChild(d); return d; };
+  const rahmenSec = neu('div', 'b-rahmen b-rahmen--abschnitt');
+  const rahmenBlock = neu('div', 'b-rahmen b-rahmen--baustein');
 
-  abschnitte.forEach(function (s, i) {
-    var w = document.createElement('div');
-    w.className = 'b-werk';
-    [
-      ['gestalten', S.stift, 'Gestalten', 'Abschnitt gestalten'],
-      ['hoch', S.hoch, '', 'Nach oben'],
-      ['runter', S.runter, '', 'Nach unten'],
-      ['kopieren', S.kopie, '', 'Abschnitt kopieren'],
-      ['loeschen', S.muell, '', 'Abschnitt löschen'],
-    ].forEach(function (a) {
-      w.appendChild(knopf(a[0], a[1], a[2], a[3]));
-    });
-    w.addEventListener('click', function (e) {
-      var k = e.target.closest('button');
-      if (!k) return;
-      e.stopPropagation();
-      senden({ was: k.dataset.w, i: i });
-    });
-    s.insertBefore(w, s.firstChild);
-    // Am Handy gibt es kein Darüberfahren: Der zuletzt angetippte Abschnitt zeigt seine Leiste.
-    s.addEventListener('pointerdown', function () {
-      abschnitte.forEach(function (x) {
-        x.classList.toggle('b-aktiv', x === s);
-      });
-    });
-    if (i === 0) s.parentNode.insertBefore(einfuegen(0), s);
-    s.parentNode.insertBefore(einfuegen(i + 1), s.nextSibling);
-
-    var innen = s.querySelector(':scope > .w-abschnitt-innen');
-    var spalten = innen
-      ? Array.prototype.slice.call(innen.children).filter(function (e) {
-          return e.classList.contains('w-spalte');
-        })
-      : [];
-    spalten.forEach(function (spalte, j) {
-      var bausteine = Array.prototype.slice.call(spalte.children).filter(function (e) {
-        return e.classList.contains('w-baustein');
-      });
-      var neu = document.createElement('button');
-      neu.type = 'button';
-      neu.className = 'b-neu-baustein';
-      neu.textContent = '+ Baustein';
-      neu.onclick = function (e) {
-        e.stopPropagation();
-        senden({ was: 'baustein-neu', i: i, j: j });
-      };
-      spalte.appendChild(neu);
-      bausteine.forEach(function (b, k) {
-        b.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          senden({ was: 'baustein', i: i, j: j, k: k });
-        });
-      });
-    });
+  // Abschnitt-Leiste: Griff (vorerst nur mit Pfeiltasten – Ziehen folgt), nach oben/unten, Gestalten, Kopieren, Löschen
+  const werk = neu('div', 'b-werk');
+  let werkFuer = null;
+  const griff = knopf('griff', 'griff', '', 'Abschnitt verschieben: Pfeil hoch oder runter (Ziehen kommt bald)');
+  griff.classList.add('b-griff-abschnitt');
+  werk.appendChild(griff);
+  [['hoch', 'hoch', '', 'Abschnitt nach oben'], ['runter', 'runter', '', 'Abschnitt nach unten'], ['gestalten', 'stift', 'Gestalten', 'Abschnitt gestalten'], ['kopieren', 'kopie', '', 'Abschnitt kopieren'], ['loeschen', 'muell', '', 'Abschnitt löschen']].forEach((a) => {
+    const k = knopf(a[0], a[1], a[2], a[3]);
+    if (a[0] === 'loeschen') k.classList.add('b-gefahr');
+    werk.appendChild(k);
+  });
+  werk.addEventListener('click', (e) => {
+    const k = e.target.closest('button');
+    if (!k || k.dataset.w === 'griff' || !werkFuer) return;
+    e.stopPropagation();
+    senden({ was: k.dataset.w, i: abschnitte().indexOf(werkFuer) });
+  });
+  griff.addEventListener('keydown', (e) => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !werkFuer) return;
+    e.preventDefault();
+    senden({ was: e.key === 'ArrowUp' ? 'hoch' : 'runter', i: abschnitte().indexOf(werkFuer) });
   });
 
-  if (haupt && abschnitte.length === 0) {
-    var leer = document.createElement('div');
+  // Baustein-Leiste (EINE helle Leiste: Stift = das Fenster des Bausteins) – wandert zum Baustein unter der Maus
+  let blockleiste = null;
+  let blockFuer = null;
+  if (voll) {
+    blockleiste = neu('div', 'b-blockleiste');
+    blockleiste.appendChild(knopf('fenster', 'stift', '', 'Baustein im Fenster bearbeiten'));
+    blockleiste.addEventListener('click', (e) => {
+      const k = e.target.closest('button');
+      if (!k || !blockFuer) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const o = ortVon(blockFuer);
+      senden({ was: 'baustein', i: o.i, j: o.j, k: o.k });
+    });
+  }
+
+  // „+ Abschnitt einfügen“ an der Grenze zwischen zwei Abschnitten (nur wenn die Maus dicht an der Grenze ist)
+  const einfBtn = knopf('einfuegen', 'plus', 'Abschnitt einfügen');
+  einfBtn.classList.add('b-einfuegen');
+  einfBtn.hidden = true;
+  ueber.appendChild(einfBtn);
+  let einfAn = 0;
+  einfBtn.onclick = (e) => { e.stopPropagation(); senden({ was: 'einfuegen', i: einfAn }); };
+
+  // Abstand-Pille unten mittig – vorerst ein Knopf, der das Fenster „Gestalten“ öffnet (Ziehen folgt in W3c-3)
+  let abstandBtn = null;
+  let abstandFuer = null;
+  if (voll) {
+    abstandBtn = document.createElement('button');
+    abstandBtn.type = 'button';
+    abstandBtn.className = 'b-abstand';
+    abstandBtn.hidden = true;
+    abstandBtn.title = 'Abstand des Abschnitts im Fenster „Gestalten“ ändern';
+    abstandBtn.innerHTML = icon('regler') + '<span></span>';
+    ueber.appendChild(abstandBtn);
+    abstandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (abstandFuer) senden({ was: 'gestalten', i: abschnitte().indexOf(abstandFuer) });
+    });
+  }
+
+  // „+“ in der Lücke zwischen zwei Bausteinen (öffnet das Hinzufügen)
+  const plus = neu('button', 'b-plus');
+  plus.type = 'button';
+  plus.innerHTML = icon('plus');
+  plus.title = 'Baustein hier hinzufügen';
+  plus.setAttribute('aria-label', 'Baustein hier hinzufügen');
+  const plusLinie = neu('div', 'b-pluslinie');
+  let plusOrt = null;
+  plus.addEventListener('click', (e) => { e.stopPropagation(); if (plusOrt) senden({ was: 'baustein-neu', i: plusOrt.i, j: plusOrt.j }); });
+
+  // Leere Spalten: ein Knopf in der Spalte
+  abschnitte().forEach((sec) => {
+    spaltenVon(sec).forEach((sp) => {
+      const bl = bausteineVon(sp);
+      bl.forEach((b) => {
+        if (!voll) { // Handy: Tippen öffnet das Fenster
+          b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const o = ortVon(b); senden({ was: 'baustein', i: o.i, j: o.j, k: o.k }); });
+          return;
+        }
+        // Klick auf den Baustein selbst: Text → direkt tippen (siehe unten), alles andere das Fenster
+        b.addEventListener('click', (e) => {
+          if (e.target.closest('.b-ueber')) return;
+          e.preventDefault();
+          if (!textBaustein(b) && !(artVon(b) === 'html' && !config.darfHtml)) { e.stopPropagation(); const o = ortVon(b); senden({ was: 'baustein', i: o.i, j: o.j, k: o.k }); }
+        });
+      });
+      if (bl.length === 0) {
+        const n = document.createElement('button');
+        n.type = 'button';
+        n.className = 'b-leerspalte';
+        n.innerHTML = icon('plus') + '<span>Baustein hinzufügen</span>';
+        n.onclick = (e) => { e.stopPropagation(); senden({ was: 'baustein-neu', i: abschnitte().indexOf(sec), j: spaltenVon(sec).indexOf(sp) }); };
+        sp.appendChild(n);
+      }
+    });
+  });
+  if (haupt && abschnitte().length === 0) {
+    const leer = document.createElement('div');
     leer.className = 'b-leer';
-    var p = document.createElement('p');
+    const p = document.createElement('p');
     p.textContent = 'Diese Seite ist noch leer.';
-    var b = knopf('einfuegen', S.plus, 'Abschnitt einfügen');
-    b.onclick = function () {
-      senden({ was: 'einfuegen', i: 0 });
-    };
+    const b0 = knopf('einfuegen', 'plus', 'Abschnitt einfügen');
+    b0.onclick = () => { senden({ was: 'einfuegen', i: 0 }); };
     leer.appendChild(p);
-    leer.appendChild(b);
+    leer.appendChild(b0);
     haupt.appendChild(leer);
   }
 
   // In der Vorschau führt nichts weg und nichts wird abgeschickt.
-  document.addEventListener(
-    'click',
-    function (e) {
-      var a = e.target.closest && e.target.closest('a');
-      if (a) e.preventDefault();
-    },
-    true,
-  );
-  document.addEventListener(
-    'submit',
-    function (e) {
-      e.preventDefault();
-    },
-    true,
-  );
+  document.addEventListener('click', (e) => { const a = e.target.closest && e.target.closest('a'); if (a) e.preventDefault(); }, true);
+  document.addEventListener('submit', (e) => { e.preventDefault(); }, true);
 
-  // Die Scrollposition bleibt beim Neuzeichnen stehen: gemerkt in der Erweiterung, hier wieder eingestellt.
-  addEventListener(
-    'scroll',
-    function () {
-      senden({ was: 'scroll', y: Math.round(window.scrollY) });
-    },
-    { passive: true },
-  );
+  // ── Text direkt tippen ─────────────────────────────────────────────────────────────────────────────────────
+  // Welche Felder sich tippen lassen: 'plain' = ein Feld mit reinem Text (Überschrift, Akzentzeile, Knopf), 'md' = Text mit
+  // Auszeichnung (Text, Text neben dem Bild). „Eigenes HTML“ und alles andere nie.
+  const FELD_WAHL = 'h1,h2,h3,.w-akzent,.w-text,.w-knopf';
+  const feldDaten = (el) => {
+    const block = el.closest('.w-baustein');
+    if (!block) return null;
+    const typ = artVon(block);
+    if (typ === 'ueberschrift' && el.matches('h1,h2,h3') && el.parentElement === block) return { block: block, feld: 'text', art: 'plain' };
+    if (typ === 'akzentzeile' && el.matches('.w-akzent')) return { block: block, feld: 'text', art: 'plain' };
+    if ((typ === 'text' || typ === 'bildText') && el.matches('.w-text')) return { block: block, feld: 'markdown', art: 'md' };
+    if (typ === 'knoepfe' && el.matches('.w-knopf')) return { block: block, feld: 'knopf', art: 'plain', n: arr(block.querySelectorAll('.w-knopf')).indexOf(el) };
+    return null;
+  };
+  const textBaustein = (b) => voll && /w-b-(ueberschrift|akzentzeile|text|bildText|knoepfe)\b/.test(b.className) && !!b.querySelector(FELD_WAHL);
+  // Das Feld unter einem Klickziel (auch ein Zeichen in einem Link im Text; eine Zwischenüberschrift IM Text gehört zum Textfeld)
+  const feldUnter = (ziel) => {
+    let el = ziel && ziel.closest && ziel.closest(FELD_WAHL);
+    while (el) {
+      const d = feldDaten(el);
+      if (d) return { el: el, d: d };
+      el = el.parentElement && el.parentElement.closest(FELD_WAHL);
+    }
+    return null;
+  };
+
+  let aktiv = null; // { el, d, original, verlauf }
+  let letzterDruck = { ziel: null, zeit: 0 };
+  const sel = () => getSelection();
+  const reinText = (el) => (el.textContent || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Eigener Rückgängig-Verlauf für Text mit Auszeichnung (Änderungen am DOM durch die Leiste zerstören den des Browsers).
+  // Ein Stand ist der Text (Blöcke) mit der Auswahl dazu; ob sich etwas geändert hat, entscheidet NUR der Text – sonst
+  // zerstörte schon eine andere Auswahl den Weg zum Wiederholen.
+  const momentaufnahme = () => {
+    const r = K.lesen(aktiv.el, sel());
+    return { b: r.bloecke, a: r.auswahl, j: JSON.stringify(r.bloecke) };
+  };
+  const merke = (hart) => {
+    const v = aktiv && aktiv.verlauf;
+    if (!v) return;
+    const s = momentaufnahme();
+    const jetzt = Date.now();
+    if (v.stapel[v.pos].j === s.j) { v.stapel[v.pos].a = s.a; return; }
+    if (!hart && v.pos > 0 && jetzt - v.zeit < 800) v.stapel[v.pos] = s;
+    else { v.stapel.length = v.pos + 1; v.stapel.push(s); v.pos++; }
+    v.zeit = jetzt;
+  };
+  const zeige = (s) => {
+    K.rendern(aktiv.el, s.b);
+    if (s.a) K.auswahlSetzen(aktiv.el, s.a);
+    formatLeiste.aktualisieren();
+  };
+  const rueckgaengig = (wiederholen) => {
+    const v = aktiv && aktiv.verlauf;
+    if (!v) return;
+    merke(true); // was seit dem letzten Stand getippt wurde, nicht verlieren (gleicher Text → es ändert sich nichts)
+    const n = v.pos + (wiederholen ? 1 : -1);
+    if (n < 0 || n >= v.stapel.length) return;
+    v.pos = n;
+    zeige(v.stapel[n]);
+  };
+  /** Einen Rechenschritt des Kerns auf den Text im Feld anwenden (`auswahl` aus dem DOM, wenn nicht gegeben). */
+  const anwenden = (schritt, auswahlGemerkt) => {
+    if (!aktiv || aktiv.d.art !== 'md') return;
+    merke(true);
+    const r = K.lesen(aktiv.el, auswahlGemerkt ? null : sel());
+    const a = auswahlGemerkt || r.auswahl;
+    if (!a) return;
+    const neu2 = schritt(r.bloecke, a);
+    K.rendern(aktiv.el, neu2.bloecke);
+    aktiv.el.focus();
+    K.auswahlSetzen(aktiv.el, neu2.auswahl);
+    merke(true);
+    formatLeiste.aktualisieren();
+  };
+
+  const vorbereiten = (el, d) => {
+    if (d.art === 'plain') {
+      const punkt = el.querySelector('.w-punkt'); // der Punkt hinter der Überschrift gehört nicht zum Text
+      if (punkt) punkt.remove();
+      el.contentEditable = 'plaintext-only';
+      if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+    } else {
+      const r = K.lesen(el, null); // gleiche Gestalt wie später beim Lesen: p, h3, ul/ol – und ein leerer Text bekommt einen Absatz
+      K.rendern(el, r.bloecke);
+      el.contentEditable = 'true';
+    }
+    el.spellcheck = true;
+    el.classList.add('b-edit');
+  };
+  const caretAn = (el, x, y) => {
+    let r = null;
+    if (x != null) {
+      if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(x, y);
+      else if (document.caretPositionFromPoint) { const cp = document.caretPositionFromPoint(x, y); if (cp) { r = document.createRange(); r.setStart(cp.offsetNode, cp.offset); r.collapse(true); } }
+    }
+    if (!r || !el.contains(r.startContainer)) { r = document.createRange(); r.selectNodeContents(el); r.collapse(false); }
+    const s = sel();
+    s.removeAllRanges();
+    s.addRange(r);
+  };
+  const stelleDes = (d) => { const o = ortVon(d.block); return { i: o.i, j: o.j, k: o.k, feld: d.feld, n: d.n == null ? 0 : d.n }; };
+
+  const bearbeiten = (feld, x, y) => {
+    if (aktiv) beenden('uebernehmen', null);
+    const el = feld.el;
+    const d = feld.d;
+    aktiv = { el: el, d: d, original: el.innerHTML, verlauf: null };
+    vorbereiten(el, d);
+    el.focus();
+    caretAn(el, x, y);
+    if (d.art === 'md') aktiv.verlauf = { stapel: [momentaufnahme()], pos: 0, zeit: 0 };
+    document.body.classList.add('b-tippt');
+    senden(Object.assign({ was: 'tippen' }, stelleDes(d)));
+  };
+
+  // Eine Bearbeitung beenden. art: 'uebernehmen' | 'abbrechen'. weiter: das nächste Feld (Klick auf ein anderes Textfeld)
+  const beenden = (art, weiter) => {
+    if (!aktiv) return;
+    const a = aktiv;
+    aktiv = null;
+    const el = a.el;
+    const d = a.d;
+    document.body.classList.remove('b-tippt');
+    formatLeiste.zu();
+    el.removeAttribute('contenteditable');
+    el.classList.remove('b-edit');
+    sel().removeAllRanges();
+    planeLayout();
+    const fertig = () => { senden({ was: 'tippen-ende' }); if (weiter) bearbeiten(weiter, weiter.x, weiter.y); };
+    if (art === 'abbrechen') { el.innerHTML = a.original; senden({ was: 'tippen-ende' }); return; }
+    const probe = document.createElement(el.tagName);
+    probe.innerHTML = a.original;
+    const punktProbe = probe.querySelector('.w-punkt');
+    if (punktProbe) punktProbe.remove();
+    const wert = d.art === 'md' ? K.fuerSpeichern(K.lesen(el, null).bloecke) : reinText(el);
+    const alt = d.art === 'md' ? K.fuerSpeichern(K.lesen(probe, null).bloecke) : reinText(probe);
+    if (JSON.stringify(wert) === JSON.stringify(alt)) { el.innerHTML = a.original; fertig(); return; } // unverändert: alles wie vorher
+    const msg = Object.assign({ was: 'text' }, stelleDes(d));
+    if (d.art === 'md') msg.bloecke = wert; else msg.wert = wert;
+    if (weiter) { const w = stelleDes(weiter.d); msg.weiter = { i: w.i, j: w.j, k: w.k, feld: w.feld, n: w.n }; }
+    senden(msg);
+    senden({ was: 'tippen-ende' });
+  };
+
+  // Klick auf ein Textfeld → tippen. Läuft in der Aufnahmephase, damit Links im Text nicht springen.
+  document.addEventListener('pointerdown', (e) => { letzterDruck = { ziel: e.target, zeit: Date.now(), x: e.clientX, y: e.clientY }; }, true);
+  document.addEventListener('click', (e) => {
+    if (!voll) return;
+    if (e.target.closest('.b-format, .b-ueber, .b-leerspalte')) return;
+    const f = feldUnter(e.target);
+    if (!f) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (aktiv && aktiv.el === f.el) return; // schon dabei: den Cursor setzt der Browser
+    bearbeiten(f, e.clientX, e.clientY);
+  }, true);
+  // Klick daneben übernimmt (auch Klick in ein anderes Textfeld: dann dort gleich weiter)
+  document.addEventListener('focusout', (e) => {
+    if (!aktiv || e.target !== aktiv.el) return;
+    setTimeout(() => {
+      if (!aktiv) return;
+      const im = document.activeElement;
+      if (im && im.closest && im.closest('.b-format')) return; // die Leiste (Link-Feld) – nicht beenden
+      if (im === aktiv.el) return;
+      let weiter = null;
+      if (letzterDruck.ziel && Date.now() - letzterDruck.zeit < 400) {
+        const f = feldUnter(letzterDruck.ziel);
+        if (f && f.el !== aktiv.el && !letzterDruck.ziel.closest('.b-ueber')) weiter = { el: f.el, d: f.d, x: letzterDruck.x, y: letzterDruck.y };
+      }
+      beenden('uebernehmen', weiter);
+    }, 0);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!aktiv) return;
+    if (e.key === 'Escape') { e.preventDefault(); beenden('abbrechen'); return; }
+    if (e.key === 'Enter' && aktiv.d.art === 'plain') { e.preventDefault(); beenden('uebernehmen'); return; }
+    if (e.key === 'Enter' && aktiv.d.art === 'md' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); beenden('uebernehmen'); return; }
+    // Rückgängig/Wiederholen im Text mit Auszeichnung über den EIGENEN Verlauf. Über die Tasten, nicht nur über `beforeinput`:
+    // Der Browser meldet „Wiederholen“ nur, wenn in SEINEM Verlauf etwas zum Wiederholen liegt – tut es nach unserem
+    // Rückgängig nie (gemessen 21.11.2026).
+    if (aktiv.d.art === 'md' && (e.metaKey || e.ctrlKey) && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'z' || (k === 'y' && !e.metaKey)) { e.preventDefault(); rueckgaengig(k === 'y' || e.shiftKey); }
+    }
+  });
+  // Eigene Wege für das, was der Browser sonst mit `execCommand`-artigen Änderungen am DOM löst: Eingabe, Umbruch, Fett/Kursiv
+  // per Tastenkürzel, Rückgängig. Das Tippen selbst bleibt beim Browser; danach wird nur der Verlauf nachgeführt.
+  document.addEventListener('beforeinput', (e) => {
+    if (!aktiv || e.target !== aktiv.el) return;
+    const t = e.inputType;
+    if (t === 'insertFromDrop' || t === 'insertFromYank') { e.preventDefault(); return; }
+    if (aktiv.d.art !== 'md') return;
+    if (t === 'historyUndo' || t === 'historyRedo') { e.preventDefault(); rueckgaengig(t === 'historyRedo'); return; }
+    if (t === 'insertParagraph') { e.preventDefault(); anwenden(K.teilen); return; }
+    if (t === 'insertLineBreak') { e.preventDefault(); anwenden(K.umbruch); return; }
+    if (t === 'formatBold') { e.preventDefault(); anwenden((b, a) => K.formatUmschalten(b, a, 'fett')); return; }
+    if (t === 'formatItalic') { e.preventDefault(); anwenden((b, a) => K.formatUmschalten(b, a, 'kursiv')); }
+  });
+  document.addEventListener('input', (e) => { if (aktiv && e.target === aktiv.el) { merke(false); formatLeiste.aktualisieren(); } });
+  // Eingefügtes immer als reiner Text
+  document.addEventListener('paste', (e) => {
+    if (!aktiv) return;
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+    if (aktiv.d.art === 'md') { anwenden((b, a) => K.einfuegen(b, a, t)); return; }
+    const r = sel().rangeCount ? sel().getRangeAt(0) : null;
+    if (!r || !aktiv.el.contains(r.startContainer)) return;
+    const einzeln = t.replace(/\s*\n\s*/g, ' ');
+    r.deleteContents();
+    const tn = document.createTextNode(einzeln);
+    r.insertNode(tn);
+    r.setStartAfter(tn);
+    r.collapse(true);
+    sel().removeAllRanges();
+    sel().addRange(r);
+  }, true);
+  document.addEventListener('dragover', (e) => { if (aktiv) e.preventDefault(); }, true);
+  document.addEventListener('drop', (e) => { if (aktiv) e.preventDefault(); }, true);
+  document.addEventListener('dragstart', (e) => { if (!aktiv && e.target.closest && e.target.closest('img,a')) e.preventDefault(); }, true);
+
+  // Die kleine Leiste beim Markieren (nur im Text mit Auszeichnung)
+  const formatLeiste = (function () {
+    const el = document.createElement('div');
+    el.className = 'b-format';
+    el.hidden = true;
+    const tasten = [['fett', '<b>F</b>', 'Fett'], ['kursiv', '<i>K</i>', 'Kursiv'], ['link', icon('link'), 'Link'], ['liste', icon('liste'), 'Liste'], ['zwischen', '<span class="b-h">H</span>', 'Zwischenüberschrift']];
+    el.innerHTML = '<div class="b-fz">' + tasten.map((t) => '<button type="button" data-f="' + t[0] + '" title="' + t[2] + '" aria-label="' + t[2] + '">' + t[1] + '</button>').join('') + '</div>' +
+      '<div class="b-lf" hidden><input type="text" placeholder="https://…" aria-label="Adresse des Links" spellcheck="false"><button type="button" data-f="ok">OK</button><button type="button" data-f="abbr" title="Abbrechen">×</button><span class="b-lf-fehler" hidden></span></div>';
+    document.body.appendChild(el);
+    const fz = el.querySelector('.b-fz');
+    const lf = el.querySelector('.b-lf');
+    const eingabe = lf.querySelector('input');
+    const fehler = lf.querySelector('.b-lf-fehler');
+    let gemerkt = null;
+    let linkId = 0;
+    let zustand = null;
+    el.addEventListener('mousedown', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); }); // die Auswahl im Text behalten
+    const imText = () => { const s = sel(); return aktiv && aktiv.d.art === 'md' && s.rangeCount > 0 && aktiv.el.contains(s.anchorNode) && aktiv.el.contains(s.focusNode); };
+    const zustandLesen = () => { const r = K.lesen(aktiv.el, sel()); return r.auswahl ? K.formatZustand(r.bloecke, r.auswahl) : null; };
+    const anzeigen = () => {
+      zustand = zustandLesen();
+      if (!zustand) return;
+      const an = (f, v) => fz.querySelector('[data-f=' + f + ']').classList.toggle('b-an', !!v);
+      an('fett', zustand.fett); an('kursiv', zustand.kursiv); an('link', zustand.link !== null); an('liste', zustand.liste); an('zwischen', zustand.ueberschrift);
+      const l = fz.querySelector('[data-f=link]');
+      l.title = zustand.link !== null ? 'Link entfernen' : 'Link';
+      l.setAttribute('aria-label', l.title);
+    };
+    const platzieren = () => {
+      const s = sel();
+      if (!s.rangeCount) return;
+      const r = s.getRangeAt(0).getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      el.hidden = false;
+      const b = el.getBoundingClientRect();
+      const x = Math.max(8, Math.min(r.left + r.width / 2 - b.width / 2, document.documentElement.clientWidth - b.width - 8));
+      let y = r.top - b.height - 8;
+      if (y < 8) y = r.bottom + 8;
+      el.style.left = (x + seiteX()) + 'px';
+      el.style.top = (y + seiteY()) + 'px';
+    };
+    const aktualisieren = () => {
+      if (!lf.hidden) return; // das Link-Feld ist offen: die Leiste bleibt stehen
+      const s = sel();
+      if (imText() && !s.isCollapsed) { fz.hidden = false; anzeigen(); platzieren(); } else el.hidden = true;
+    };
+    document.addEventListener('selectionchange', aktualisieren);
+    window.addEventListener('scroll', () => { if (!el.hidden && lf.hidden) platzieren(); }, { passive: true });
+    const zeigeFehler = (t) => { fehler.textContent = t; fehler.hidden = !t; };
+    const linkZu = () => { lf.hidden = true; fz.hidden = false; zeigeFehler(''); };
+    const tun = (f) => {
+      if (!aktiv) return;
+      aktiv.el.focus();
+      if (f === 'fett' || f === 'kursiv') anwenden((b, a) => K.formatUmschalten(b, a, f));
+      else if (f === 'liste') anwenden(K.listeUmschalten);
+      else if (f === 'zwischen') anwenden(K.ueberschriftUmschalten);
+      else if (f === 'link') {
+        if (zustand && zustand.link !== null) anwenden(K.linkEntfernen);
+        else {
+          const r = K.lesen(aktiv.el, sel());
+          if (!r.auswahl || K.zusammengefallen(r.auswahl)) return;
+          gemerkt = r.auswahl;
+          fz.hidden = true; lf.hidden = false;
+          eingabe.value = 'https://';
+          eingabe.focus();
+          eingabe.setSelectionRange(8, 8);
+          platzieren();
+          return;
+        }
+      }
+      anzeigen();
+      platzieren();
+    };
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-f]');
+      if (!b) return;
+      if (b.dataset.f === 'abbr') { linkZu(); if (aktiv) aktiv.el.focus(); aktualisieren(); return; }
+      if (b.dataset.f === 'ok') { pruefen(); return; }
+      tun(b.dataset.f);
+    });
+    // Die Adresse prüft die ERWEITERUNG (echte Regel aus dem Markdown) – die Antwort kommt per postMessage zurück.
+    // Kein <form>: Im abgeschotteten iframe (ohne `allow-forms`) wird ein Formular gar nicht erst abgeschickt – Knopf und
+    // Eingabetaste lösen die Prüfung selbst aus.
+    const pruefen = () => {
+      linkId++;
+      senden({ was: 'link-pruefen', id: linkId, url: eingabe.value.trim() });
+      lf.dataset.warte = String(linkId);
+    };
+    window.addEventListener('message', (e) => {
+      if (e.source !== parent) return;
+      const m = e.data;
+      if (!m || !m.websiteParent || m.was !== 'link-ergebnis') return;
+      if (String(m.id) !== lf.dataset.warte) return;
+      if (!m.ok) { zeigeFehler('Erlaubt: https://, http://, mailto:, tel: oder /seite – ohne Leerzeichen.'); return; }
+      const url = eingabe.value.trim();
+      linkZu();
+      if (aktiv && gemerkt) anwenden((b, a) => K.linkSetzen(b, a, url), gemerkt);
+      gemerkt = null;
+      anzeigen();
+      platzieren();
+    });
+    eingabe.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); pruefen(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); linkZu(); if (aktiv) aktiv.el.focus(); aktualisieren(); }
+    });
+    return { zu: () => { el.hidden = true; lf.hidden = true; fz.hidden = false; zeigeFehler(''); }, aktualisieren: aktualisieren };
+  })();
+
+  // ── Anzeigen, Rangordnung und Kollisionsprüfung ────────────────────────────────────────────────────────────
+  // Regel: Kein Bedienelement liegt über Text oder über einem anderen Bedienelement. Die Rechnung steht im Kern (`K.ordne`):
+  // Rangordnung 1 Baustein-Leiste · 2 Abschnitt-Leiste · 4 „+ Abschnitt“ · 5 „+“ zwischen Bausteinen · 6 Abstand-Pille. Jedes
+  // Element nennt Wunschplätze; genommen wird der erste, der weder eine Textzeile noch ein höher eingestuftes Element berührt.
+  // Geht keiner, weicht ein niedrigeres Element aus oder wird ausgeblendet; die beiden Leisten nehmen als Notlösung den Platz
+  // mit der geringsten Überdeckung, damit man sie immer erreicht.
+  const hov = { sec: null, block: null, grenze: -1, luecke: null, wartet: null };
+  let zeiger = { x: 0, y: 0, ziel: null };
+  let hindernisse = null;
+  let ursprung = { x: 0, y: 0 };
+  const browserBreite = () => document.documentElement.clientWidth;
+  const seitenRechteck = (el) => { const r = el.getBoundingClientRect(); return { l: r.left + seiteX(), t: r.top + seiteY(), r: r.right + seiteX(), b: r.bottom + seiteY() }; };
+  const rk = (x, y, w, h, sk) => ({ l: x, t: y, r: x + w, b: y + h, sk: sk });
+
+  // Alles, was nicht verdeckt werden darf: jede Textzeile einzeln (nur minimal schmaler als der Zeilenkasten), Bilder, Knöpfe, Felder
+  const hindernisseSammeln = () => {
+    const out = [];
+    const sx = seiteX();
+    const sy = seiteY();
+    const rg = document.createRange();
+    const tw = document.createTreeWalker(haupt, NodeFilter.SHOW_TEXT, null);
+    let n;
+    while ((n = tw.nextNode())) {
+      if (!/\S/.test(n.nodeValue)) continue;
+      const pe = n.parentElement;
+      if (!pe || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(pe.tagName) || pe.closest('.b-ueber')) continue;
+      rg.selectNodeContents(n);
+      arr(rg.getClientRects()).forEach((r) => { if (r.width < 1 || r.height < 1) return; const s = r.height * 0.06; out.push({ l: r.left + sx, t: r.top + sy + s, r: r.right + sx, b: r.bottom + sy - s }); });
+    }
+    arr(haupt.querySelectorAll('img:not(.w-hintergrund), input, textarea, select, .w-knopf, iframe, video, .b-leerspalte')).forEach((e) => {
+      const r = e.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return;
+      out.push({ l: r.left + sx, t: r.top + sy, r: r.right + sx, b: r.bottom + sy });
+    });
+    return out;
+  };
+  const setzePos = (e, r) => { e.style.left = (r.l - ursprung.x) + 'px'; e.style.top = (r.t - ursprung.y) + 'px'; };
+  /** Größe eines Bedienelements, auch für die senkrechte Form der Baustein-Leiste. */
+  const groesse = (e, sk) => {
+    e.hidden = false;
+    e.style.visibility = 'hidden';
+    if (sk != null) e.classList.toggle('b-senkrecht', sk);
+    const g = { w: e.offsetWidth, h: e.offsetHeight };
+    e.style.visibility = '';
+    return g;
+  };
+  const alleAus = () => { arr(ueber.children).forEach((c) => { c.hidden = true; }); };
+
+  const luecken = (sp) => { // die echten Lücken einer Spalte als Streifen { k, t, b }
+    const bl = bausteineVon(sp);
+    const rs = bl.map(seitenRechteck);
+    const out = [];
+    const sr = seitenRechteck(sp);
+    if (!bl.length) return out;
+    out.push({ k: 0, t: Math.max(sr.t - 40, rs[0].t - 26), b: rs[0].t });
+    for (let k = 1; k < bl.length; k++) if (rs[k].t - rs[k - 1].b >= 6) out.push({ k: k, t: rs[k - 1].b, b: rs[k].t });
+    out.push({ k: bl.length, t: rs[bl.length - 1].b, b: rs[bl.length - 1].b + 28 });
+    return out;
+  };
+
+  const layout = () => {
+    if (aktiv) return;
+    alleAus();
+    const sec = hov.sec;
+    if (!sec || !sec.isConnected) return;
+    const o = ueber.getBoundingClientRect();
+    ursprung = { x: o.left + seiteX(), y: o.top + seiteY() };
+    if (!hindernisse) hindernisse = hindernisseSammeln();
+    const kopf = document.querySelector('.w-kopf'); // der feste Seitenkopf deckt beim Scrollen zu, was darunter liegt: wie ein Hindernis
+    const kopfDa = !!(kopf && kopf.getBoundingClientRect().height);
+    const belegt = kopfDa ? [seitenRechteck(kopf)] : [];
+    const B = browserBreite();
+    const s = seitenRechteck(sec);
+    const inn = seitenRechteck(innenVon(sec));
+    const blk = voll && hov.block && hov.block.isConnected && !(artVon(hov.block) === 'html' && !config.darfHtml) ? hov.block : null;
+
+    // Rahmen (reine Anzeige, zählen nicht als Hindernis)
+    rahmenSec.hidden = false; setzePos(rahmenSec, s); rahmenSec.style.width = (s.r - s.l) + 'px'; rahmenSec.style.height = (s.b - s.t) + 'px';
+    if (hov.block && hov.block.isConnected && voll) {
+      const br = K.aufblasen(seitenRechteck(hov.block), 4);
+      rahmenBlock.hidden = false; setzePos(rahmenBlock, br); rahmenBlock.style.width = (br.r - br.l) + 'px'; rahmenBlock.style.height = (br.b - br.t) + 'px';
+    }
+
+    const elemente = [];
+    // 1 Baustein-Leiste: oben links mit Abstand, sonst unten links, sonst seitlich neben dem Baustein
+    if (blk && blockleiste) {
+      const b = seitenRechteck(blk);
+      blockFuer = blk;
+      const wh = groesse(blockleiste, false);
+      const sk = groesse(blockleiste, true);
+      elemente.push({ name: 'blockleiste', rang: K.RANG.blockleiste, pflicht: true, kand: [
+        rk(b.l, b.t - wh.h - 5, wh.w, wh.h, false), rk(b.l, b.b + 5, wh.w, wh.h, false),
+        rk(b.l - sk.w - 6, b.t, sk.w, sk.h, true), rk(b.r + 6, b.t, sk.w, sk.h, true),
+        rk(b.r - wh.w, b.t - wh.h - 5, wh.w, wh.h, false), rk(b.r - wh.w, b.b + 5, wh.w, wh.h, false)] });
+    }
+    // 2 Abschnitt-Leiste: „reitet“ auf der oberen Kante (rechts am Inhaltsrand), sonst darüber, sonst im oberen Rand
+    werkFuer = sec;
+    const wg = groesse(werk, null);
+    const kopfUnten = kopfDa ? seitenRechteck(kopf).b : 0; // ist der Abschnitt oben unter dem Kopf verschwunden, bleibt die Leiste „kleben“
+    const xs = [inn.r - wg.w, inn.l, B - wg.w - 8];
+    const ys = [s.t - wg.h / 2, s.t - wg.h - 2, s.t + 4, Math.min(s.b - 40, Math.max(s.t + 4, kopfUnten + 6)), Math.min(s.b - 40, Math.max(s.t + 4, kopfUnten + 6) + 44)];
+    const kw = [];
+    xs.forEach((x) => { ys.forEach((y) => { kw.push(rk(x, y, wg.w, wg.h)); }); });
+    elemente.push({ name: 'werk', rang: K.RANG.werk, pflicht: true, kand: kw });
+    // 4 „+ Abschnitt einfügen“ an der Grenze, wenn die Maus dicht daran ist
+    if (hov.grenze >= 0) {
+      const secs = abschnitte();
+      const gy = hov.grenze === 0 ? seitenRechteck(secs[0]).t : seitenRechteck(secs[hov.grenze - 1]).b;
+      einfAn = hov.grenze;
+      const eg = groesse(einfBtn, null);
+      elemente.push({ name: 'einfuegen', rang: K.RANG.einfuegen, kand: [0, -260, 260, -520, 520].map((d) => rk(B / 2 - eg.w / 2 + d, gy - eg.h / 2, eg.w, eg.h)) });
+    }
+    // 5 „+“ in der Lücke zwischen zwei Bausteinen
+    let linieRect = null;
+    if (voll && hov.luecke && hov.luecke.sp.isConnected) {
+      const L = hov.luecke;
+      const sr = seitenRechteck(L.sp);
+      const g = luecken(L.sp).filter((x) => x.k === L.k)[0];
+      if (g) {
+        const my = (g.t + g.b) / 2;
+        plusOrt = { i: abschnitte().indexOf(sec), j: spaltenVon(sec).indexOf(L.sp), k: L.k };
+        const pg = groesse(plus, null);
+        elemente.push({ name: 'plus', rang: K.RANG.plus, kand: [rk((sr.l + sr.r) / 2 - pg.w / 2, my - pg.h / 2, pg.w, pg.h), rk(sr.l - pg.w - 4, my - pg.h / 2, pg.w, pg.h)] });
+        linieRect = { l: sr.l, t: my - 1, r: sr.r, b: my + 1 };
+      }
+    }
+    // 6 Abstand-Pille: mittig an der unteren Kante (innen darüber, sonst darunter, sonst seitlich versetzt)
+    if (abstandBtn) {
+      abstandFuer = sec;
+      abstandBtn.querySelector('span').textContent = 'Abstand: ' + (config.abstandNamen[abstandVon(sec)] || '');
+      const ag = groesse(abstandBtn, null);
+      const cx = (s.l + s.r) / 2;
+      elemente.push({ name: 'abstand', rang: K.RANG.abstand, kand: [
+        rk(cx - ag.w / 2, s.b - ag.h - 10, ag.w, ag.h), rk(cx - ag.w / 2, s.b + 10, ag.w, ag.h),
+        rk(cx - ag.w / 2 - ag.w - 24, s.b - ag.h - 10, ag.w, ag.h), rk(cx - ag.w / 2 + ag.w + 24, s.b - ag.h - 10, ag.w, ag.h)] });
+    }
+
+    const platz = K.ordne(elemente, hindernisse, B, belegt);
+    const el = { blockleiste: blockleiste, werk: werk, einfuegen: einfBtn, plus: plus, abstand: abstandBtn };
+    elemente.forEach((e) => {
+      const p = platz[e.name];
+      const dom = el[e.name];
+      if (!p) { dom.hidden = true; return; }
+      dom.hidden = false;
+      if (p.sk != null) dom.classList.toggle('b-senkrecht', p.sk);
+      setzePos(dom, p.rect);
+    });
+    if (platz.plus && linieRect && hindernisse.every((h) => !K.flaeche(linieRect, h)) && Object.keys(platz).every((n) => n === 'plus' || !platz[n] || !K.flaeche(linieRect, platz[n].rect))) {
+      plusLinie.hidden = false; setzePos(plusLinie, linieRect); plusLinie.style.width = (linieRect.r - linieRect.l) + 'px';
+    }
+  };
+  let layoutRaf = 0;
+  const planeLayout = () => { if (layoutRaf) return; layoutRaf = requestAnimationFrame(() => { layoutRaf = 0; layout(); }); };
+  const ungueltig = () => { hindernisse = null; planeLayout(); };
+
+  // ── Was liegt unter der Maus? ──────────────────────────────────────────────────────────────────────────────
+  let aufTimer = 0;
+  let blockTimer = 0;
+  let lueckeTimer = 0;
+  const gleicheLuecke = (a, b) => (!a && !b) || (a && b && a.sp === b.sp && a.k === b.k);
+  const hoverAktualisieren = () => {
+    const z = zeiger.ziel;
+    if (!z || !z.closest || aktiv) return;
+    if (z.closest('.b-ueber, .b-format')) { clearTimeout(aufTimer); clearTimeout(blockTimer); blockTimer = 0; return; } // die Maus ist auf einem Bedienelement: alles bleibt
+    clearTimeout(aufTimer);
+    const px = zeiger.x + seiteX();
+    const py = zeiger.y + seiteY();
+    let geaendert = false;
+    let sec = z.closest('section.w-abschnitt');
+    const block = z.closest('.w-baustein');
+    if (sec && !haupt.contains(sec)) sec = null;
+    if (!sec) { aufTimer = setTimeout(() => { if (hov.sec) { hov.sec = null; hov.block = null; hov.grenze = -1; hov.luecke = null; layout(); } }, 250); return; }
+    if (sec !== hov.sec) { hov.sec = sec; hov.block = block && sec.contains(block) ? block : null; hov.luecke = null; geaendert = true; clearTimeout(blockTimer); blockTimer = 0; }
+    else if (block) { clearTimeout(blockTimer); blockTimer = 0; if (hov.block !== block) { hov.block = block; geaendert = true; } }
+    else if (hov.block && !blockTimer) { // kurz stehen lassen: Der Weg vom Baustein zur Leiste führt über die Lücke
+      blockTimer = setTimeout(() => { blockTimer = 0; hov.block = null; planeLayout(); }, 350);
+    }
+    // Grenze zwischen zwei Abschnitten
+    const secs = abschnitte();
+    let g = -1;
+    for (let n = 0; n <= secs.length; n++) { const gy = n === 0 ? seitenRechteck(secs[0]).t : seitenRechteck(secs[n - 1]).b; if (Math.abs(py - gy) <= 7) { g = n; break; } }
+    if (g !== hov.grenze) { hov.grenze = g; geaendert = true; }
+    // Lücke zwischen Bausteinen: die Maus steht in einer echten Lücke einer Spalte
+    let nl = null;
+    if (voll && !block) {
+      spaltenVon(sec).forEach((sp) => {
+        const sr = seitenRechteck(sp);
+        if (px < sr.l || px > sr.r) return;
+        luecken(sp).forEach((l) => { if (py >= l.t && py <= l.b && py >= seitenRechteck(sec).t) nl = { sp: sp, k: l.k }; });
+      });
+    }
+    if (!gleicheLuecke(nl, hov.wartet)) {
+      clearTimeout(lueckeTimer);
+      hov.wartet = nl;
+      if (hov.luecke) { hov.luecke = null; geaendert = true; }
+      if (nl) lueckeTimer = setTimeout(() => { hov.luecke = nl; planeLayout(); }, 110);
+    }
+    if (geaendert) planeLayout();
+  };
+  document.addEventListener('pointermove', (e) => { zeiger = { x: e.clientX, y: e.clientY, ziel: e.target }; hoverAktualisieren(); });
+  document.addEventListener('pointerdown', (e) => { // Tippen: der angetippte Abschnitt zeigt seine Leiste
+    zeiger = { x: e.clientX, y: e.clientY, ziel: e.target };
+    if (e.pointerType === 'touch' || !voll) hoverAktualisieren();
+  }, true);
+  document.documentElement.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch') return;
+    clearTimeout(aufTimer);
+    aufTimer = setTimeout(() => { if (document.activeElement && document.activeElement.closest && document.activeElement.closest('.b-ueber')) return; hov.sec = null; hov.block = null; hov.grenze = -1; hov.luecke = null; hov.wartet = null; layout(); }, 200);
+  });
+  addEventListener('scroll', () => { // Maus bleibt stehen, der Inhalt wandert darunter weg
+    planeLayout(); // der feste Kopf wandert über den Inhalt: Plätze neu prüfen
+    if (!zeiger.ziel) return;
+    requestAnimationFrame(() => { const z = document.elementFromPoint(zeiger.x, zeiger.y); if (z) { zeiger.ziel = z; hoverAktualisieren(); } });
+  }, { passive: true });
+  addEventListener('resize', ungueltig);
+  if (window.ResizeObserver && haupt) new ResizeObserver(ungueltig).observe(haupt);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ungueltig);
+
+  // ── Scroll merken, Start ───────────────────────────────────────────────────────────────────────────────────
+  addEventListener('scroll', () => { senden({ was: 'scroll', y: Math.round(window.scrollY) }); }, { passive: true });
   if (config.scroll > 0) window.scrollTo(0, config.scroll);
 
-  // „Ich laufe“: Bleibt das aus, hat ChurchTools das Skript blockiert, und die Erweiterung sagt es.
+  if (config.weiter && voll) { // direkt im nächsten Feld weitertippen (Klick während der Bearbeitung eines anderen Feldes)
+    const w = config.weiter;
+    const sec = abschnitte()[w.i];
+    const col = sec && spaltenVon(sec)[w.j];
+    const blk = col && bausteineVon(col)[w.k];
+    let el = null;
+    if (blk) {
+      if (w.feld === 'knopf') el = blk.querySelectorAll('.w-knopf')[w.n];
+      else if (w.feld === 'markdown') el = blk.querySelector('.w-text');
+      else el = blk.querySelector('h1,h2,h3,.w-akzent');
+    }
+    const f = el && feldUnter(el);
+    if (f) bearbeiten(f, null, null);
+  }
   senden({ was: 'bereit' });
 })

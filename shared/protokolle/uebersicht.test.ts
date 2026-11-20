@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
+import {
+  alsGeloescht,
+  modusSetzen,
+  neueAufgabe,
+  standFuer,
+  statusSetzen,
+  teilSetzen,
+  type Aufgabe,
+} from './aufgaben';
 import {
   ablegen,
   einteilen,
   eintragSchluessel,
+  eintragSicht,
   langeErledigt,
   schnellfilterAus,
   schnellfilterVon,
@@ -25,6 +34,7 @@ const erledigt = (id: string, am: string, t: Partial<Aufgabe> = {}) =>
   statusSetzen(aufgabe(id, t), 'erledigt', 1, am);
 const LT = { id: 11, name: 'Leitungsteam' };
 const ein = (a: Aufgabe): ToDoEintrag => ({ aufgabe: a, gruppe: LT });
+const LEITUNG = { ich: 1, leitung: true };
 
 describe('sichtbarFuer', () => {
   const meins = aufgabe('m', { wer: [19] });
@@ -170,17 +180,17 @@ describe('S7-3: Board', () => {
     const s = (k: string) => sp.find((x) => x.schluessel === k)!;
     const st = spalten(liste, { nach: 'status', heute: HEUTE, ich: 1, namen });
     const a = liste[2].aufgabe; // wer [1, 19], in Arbeit
-    expect(ablegen(a, st[1], st[2])).toEqual({ status: 'erledigt' });
-    expect(ablegen(a, st[1], st[1])).toBeNull();
-    expect(ablegen(a, s('p1'), s('p23'))).toEqual({ wer: [19, 23] });
-    expect(ablegen(a, s('p1'), s('p19'))).toEqual({ wer: [19] }); // Spike war schon da – Alwin fällt weg
-    expect(ablegen(a, s('p19'), s('ohne'))).toEqual({ wer: [1] });
-    expect(ablegen(liste[3].aufgabe, s('ohne'), s('p23'))).toEqual({ wer: [23] });
-    expect(ablegen(a, s('p1'), s('extern'))).toBeNull();
+    expect(ablegen(a, st[1], st[2], LEITUNG)).toEqual({ status: 'erledigt' });
+    expect(ablegen(a, st[1], st[1], LEITUNG)).toBeNull();
+    expect(ablegen(a, s('p1'), s('p23'), LEITUNG)).toEqual({ wer: [19, 23] });
+    expect(ablegen(a, s('p1'), s('p19'), LEITUNG)).toEqual({ wer: [19] }); // Spike war schon da – Alwin fällt weg
+    expect(ablegen(a, s('p19'), s('ohne'), LEITUNG)).toEqual({ wer: [1] });
+    expect(ablegen(liste[3].aufgabe, s('ohne'), s('p23'), LEITUNG)).toEqual({ wer: [23] });
+    expect(ablegen(a, s('p1'), s('extern'), LEITUNG)).toBeNull();
     // „Jeder für sich“ (W8a): der Gesamtstand ist abgeleitet – ziehen in eine Status-Spalte ändert nichts.
     const jeder = { ...a, jeder: true } as Aufgabe;
-    expect(ablegen(jeder, st[1], st[2])).toBeNull();
-    expect(ablegen(jeder, s('p1'), s('p23'))).toEqual({ wer: [19, 23] }); // Personen ziehen geht weiter
+    expect(ablegen(jeder, st[1], st[2], LEITUNG)).toBeNull();
+    expect(ablegen(jeder, s('p1'), s('p23'), LEITUNG)).toEqual({ wer: [19, 23] }); // Personen ziehen geht weiter
   });
 
   it('sortieren: Dringlichkeit bleibt, Bis (Erledigte nach erledigt am), Alphabetisch, Manuell (Neue ans Ende)', () => {
@@ -192,28 +202,24 @@ describe('S7-3: Board', () => {
       erledigt('Erl-neu', '2026-10-20T10:00:00Z'),
     ].map(ein);
     const ids = (x: ToDoEintrag[]) => x.map((e) => e.aufgabe.id);
-    expect(ids(sortieren(l, { art: 'dringlichkeit' }))).toEqual(ids(l));
-    expect(ids(sortieren(l, { art: 'bis' }))).toEqual([
+    expect(ids(sortieren(l, { art: 'dringlichkeit', ich: 1 }))).toEqual(ids(l));
+    expect(ids(sortieren(l, { art: 'bis', ich: 1 }))).toEqual([
       'Birne',
       'Zebra',
       'apfel',
       'Erl-neu',
       'Erl-alt',
     ]);
-    expect(ids(sortieren(l, { art: 'alpha' }))).toEqual([
+    expect(ids(sortieren(l, { art: 'alpha', ich: 1 }))).toEqual([
       'apfel',
       'Birne',
       'Erl-alt',
       'Erl-neu',
       'Zebra',
     ]);
-    expect(ids(sortieren(l, { art: 'manuell', reihenfolge: ['11:Birne', '11:Zebra'] }))).toEqual([
-      'Birne',
-      'Zebra',
-      'apfel',
-      'Erl-alt',
-      'Erl-neu',
-    ]);
+    expect(
+      ids(sortieren(l, { art: 'manuell', reihenfolge: ['11:Birne', '11:Zebra'], ich: 1 })),
+    ).toEqual(['Birne', 'Zebra', 'apfel', 'Erl-alt', 'Erl-neu']);
     expect(eintragSchluessel(l[0])).toBe('11:Zebra');
   });
 
@@ -289,5 +295,94 @@ describe('W8b: Schnellfilter „Alle | Meine“ = Kurzweg auf den Filter „Zust
     expect(schnellfilterVon(['niemand'])).toBeNull();
     expect(schnellfilterVon(['ich'])).toBeNull();
     expect(schnellfilterVon(['andere', 'niemand', 'ich'])).toBeNull();
+  });
+});
+
+describe('W10: „Jeder für sich“ – ein Mitarbeiter sieht nur seinen Teil', () => {
+  // 14-Mann-Gruppe im Kleinen: ich (Person 1, Mitarbeiter) und 19, 23. Erzeugt mit den echten Funktionen, kein Literal.
+  const AM = '2026-10-28T08:00:00Z';
+  const jeder = modusSetzen(aufgabe('abw', { wer: [1, 19, 23], bis: '2026-11-29' }), true, 1, AM);
+  const meinsFertig = teilSetzen(jeder, 1, true, 1, '2026-10-29T08:00:00Z'); // Gesamt: in Arbeit
+  const nurAndereFertig = teilSetzen(jeder, 19, true, 19, '2026-10-29T09:00:00Z'); // Gesamt: in Arbeit
+  const alsMitarbeiter = (a: Aufgabe): ToDoEintrag => ({ aufgabe: a, gruppe: LT, leitung: false });
+  const namen = new Map<number, string>();
+  const q = { heute: HEUTE, ich: 1, namen };
+  const idsIn = (b: { eintraege: ToDoEintrag[] }[], art: string) =>
+    b.find((x) => (x as { art?: string }).art === art)?.eintraege.map((e) => e.aufgabe.id) ?? [];
+
+  it('Voraussetzung: Gesamtstand „in Arbeit“, mein Stand „erledigt“ bzw. „offen“ – beides aus `standFuer`', () => {
+    expect(meinsFertig.status).toBe('arbeit');
+    expect(standFuer(meinsFertig, { ich: 1, leitung: false })).toBe('erledigt');
+    expect(standFuer(nurAndereFertig, { ich: 1, leitung: false })).toBe('offen');
+  });
+
+  it('einteilen nach Status: mein Teil fertig → „Erledigt“, nicht „In Arbeit“; mein Teil offen → „Offen“', () => {
+    const b = einteilen([alsMitarbeiter(meinsFertig), alsMitarbeiter(nurAndereFertig)], {
+      nach: 'status',
+      ...q,
+    });
+    expect(idsIn(b, 'erledigt')).toEqual(['abw']);
+    expect(idsIn(b, 'arbeit')).toEqual([]);
+    expect(idsIn(b, 'offen')).toEqual(['abw']);
+    expect(b.flatMap((x) => x.eintraege)).toHaveLength(2);
+  });
+
+  it('die Leitung sieht denselben Stand als „In Arbeit“ (Gesamtstand)', () => {
+    const b = einteilen([ein(meinsFertig)], { nach: 'status', ...q });
+    expect(idsIn(b, 'arbeit')).toEqual(['abw']);
+    expect(idsIn(b, 'erledigt')).toEqual([]);
+  });
+
+  it('nach Fälligkeit: mein erledigter Teil steht unter „Erledigt“, nicht unter „Diese Woche/Später“', () => {
+    const b = einteilen([alsMitarbeiter(meinsFertig)], { nach: 'frist', ...q });
+    expect(b.map((x) => x.schluessel)).toEqual(['erledigt']);
+    const l = einteilen([ein(meinsFertig)], { nach: 'frist', ...q });
+    expect(l.map((x) => x.schluessel)).toEqual(['spaeter']);
+  });
+
+  it('Board nach Status: Spalten „Offen“ und „Erledigt“ nach meinem Teil, „In Arbeit“ bleibt leer', () => {
+    const sp = spalten([alsMitarbeiter(meinsFertig), alsMitarbeiter(nurAndereFertig)], {
+      nach: 'status',
+      ...q,
+    });
+    const ids = (k: string) => sp.find((x) => x.schluessel === k)!.eintraege.length;
+    expect([ids('offen'), ids('arbeit'), ids('erledigt')]).toEqual([1, 0, 1]);
+    const sl = spalten([ein(meinsFertig)], { nach: 'status', ...q });
+    expect(sl.find((x) => x.schluessel === 'arbeit')!.eintraege).toHaveLength(1);
+  });
+
+  it('eintragSicht: Leitung-Angabe des Eintrags entscheidet; ohne Angabe gilt die Sicht der Leitung', () => {
+    expect(eintragSicht(alsMitarbeiter(meinsFertig), 1).status).toBe('erledigt');
+    expect(eintragSicht(ein(meinsFertig), 1)).toBe(meinsFertig);
+  });
+
+  it('„länger erledigt“ nach MEINEM Erledigt-Zeitpunkt, nicht nach dem des Gesamtstands', () => {
+    const alt = teilSetzen(jeder, 1, true, 1, '2026-08-01T08:00:00Z');
+    expect(langeErledigt(eintragSicht(alsMitarbeiter(alt), 1), HEUTE)).toBe(true);
+    expect(langeErledigt(eintragSicht(alsMitarbeiter(meinsFertig), 1), HEUTE)).toBe(false);
+  });
+
+  it('sortieren nach „Bis“: mein erledigter Teil sortiert wie ein Erledigter (neueste zuerst), nicht nach Frist', () => {
+    const offen = aufgabe('offen', { wer: [1], bis: '2026-11-01' });
+    const l = [alsMitarbeiter(meinsFertig), alsMitarbeiter(offen)];
+    const ids = sortieren(l, { art: 'bis', ich: 1 }).map((e) => e.aufgabe.id);
+    expect(ids).toEqual(['offen', 'abw']);
+  });
+
+  it('ablegen als Mitarbeiter: Ziehen nach „Erledigt“/„Offen“ setzt NUR meinen Teil; „In Arbeit“ gibt es nicht', () => {
+    const sp = spalten([alsMitarbeiter(jeder)], { nach: 'status', ...q });
+    const s = (k: string) => sp.find((x) => x.schluessel === k)!;
+    const mitarbeiter = { ich: 1, leitung: false };
+    expect(ablegen(jeder, s('offen'), s('erledigt'), mitarbeiter)).toEqual({
+      teile: [{ person: 1, fertig: true }],
+    });
+    expect(ablegen(meinsFertig, s('erledigt'), s('offen'), mitarbeiter)).toEqual({
+      teile: [{ person: 1, fertig: false }],
+    });
+    expect(ablegen(jeder, s('offen'), s('arbeit'), mitarbeiter)).toBeNull();
+    // Schon so: nichts zu tun.
+    expect(ablegen(meinsFertig, s('offen'), s('erledigt'), mitarbeiter)).toBeNull();
+    // Die Leitung zieht keinen Gesamtstand.
+    expect(ablegen(jeder, s('offen'), s('erledigt'), LEITUNG)).toBeNull();
   });
 });

@@ -120,6 +120,8 @@ export function App() {
           modul={start.modul}
           gruppen={start.gruppen}
           begriff={suche.begriff}
+          ich={start.id}
+          schreibbar={start.schreibbar}
           onTreffer={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
         />
       )}

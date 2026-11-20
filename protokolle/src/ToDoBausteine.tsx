@@ -196,6 +196,7 @@ export function ErledigtVon({
   personen,
   namen,
   kurz = false,
+  nurMein = false,
 }: {
   a: Aufgabe;
   ich: number;
@@ -203,9 +204,11 @@ export function ErledigtVon({
   namen: ReadonlyMap<number, string>;
   /** Nur Gesicht und Datum (Spalte „Stand“ der Tabelle); der Satz steht im Tooltip. */
   kurz?: boolean;
+  /** „Jeder für sich“ als Mitarbeiter (W10): „Von dir erledigt am …“ – `a` ist dann die Sicht (`sichtFuer`). */
+  nurMein?: boolean;
 }) {
   const e = erledigtVon(a);
-  const satz = erledigtSatz(a, ich, (p) => nameFuer(a, p, namen));
+  const satz = erledigtSatz(a, ich, (p) => nameFuer(a, p, namen), nurMein);
   const von = e && teilStand(a) === null ? e.von[0] : undefined;
   const x = von === undefined ? null : bekannt(a, von, personen);
   return (

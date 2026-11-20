@@ -5,7 +5,7 @@ import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Icon } from '@ui/icons/icons';
 import { tagKurz, tagPunkt } from '@shared/ct/datum';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { statusText } from '@shared/protokolle/aufgaben';
+import { standFuer, statusText, type AufgabenStatus } from '@shared/protokolle/aufgaben';
 import { punktBeschriftung } from '@shared/protokolle/dokument';
 import {
   begriffe,
@@ -59,13 +59,13 @@ function Markiert({ text, woerter }: { text: string; woerter: readonly string[] 
   return <>{teile}</>;
 }
 
-/** Die zweite Zeile: Gruppe · Sitzung · Punkt (und beim To-Do der Stand). */
-function wo(e: SuchEintrag): string {
+/** Die zweite Zeile: Gruppe · Sitzung · Punkt (und beim To-Do der Stand – so, wie er für mich steht, W10). */
+function wo(e: SuchEintrag, stand: AufgabenStatus | null): string {
   const teile = [e.gruppe.name];
   if (e.sitzung) teile.push(e.sitzung.titel);
   if (e.punkt) teile.push(punktBeschriftung(e.punkt));
   if (e.aufgabe) {
-    teile.push(statusText(e.aufgabe.status));
+    teile.push(statusText(stand ?? e.aufgabe.status));
     if (e.aufgabe.bis) teile.push(`bis ${tagKurz(e.aufgabe.bis)}`);
   }
   return teile.join(' · ');
@@ -75,6 +75,9 @@ export interface SucheProps {
   modul: number;
   gruppen: ProtokollGruppe[];
   begriff: string;
+  /** Wer sucht – und wo er Leitung ist (`schreibbar`): Danach richtet sich der Stand eines To-Dos („Jeder für sich“, W10). */
+  ich: number;
+  schreibbar: readonly number[];
   /** Ein Treffer öffnet seine Sitzung – und springt zum Tagesordnungspunkt, wenn er einen hat. */
   onTreffer: (gruppe: number, sitzung: string, punkt: string | null) => void;
 }
@@ -85,7 +88,7 @@ export interface SucheProps {
  * man keine Art selbst wählt. Gesucht wird im gelesenen Stand (derselbe wie für die Startseite); was gilt, steht in
  * `shared/protokolle/suche.ts`.
  */
-export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
+export function Suche({ modul, gruppen, begriff, ich, schreibbar, onTreffer }: SucheProps) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [gewaehlt, setGewaehlt] = useState<SuchArt | 'alles' | null>(null);
   const [gruppe, setGruppe] = useState<number | null>(null);
@@ -105,6 +108,13 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
     () => (zustand.art === 'fertig' ? suchIndex(zustand.uebersicht) : []),
     [zustand],
   );
+  // Wie ein To-Do für mich steht (`standFuer`): als Mitarbeiter bei „Jeder für sich“ nur mein Teil.
+  const standVon = (e: SuchEintrag): AufgabenStatus | null => {
+    const kategorie = gruppen.find((g) => g.id === e.gruppe.id)?.protokolle ?? null;
+    return e.aufgabe
+      ? standFuer(e.aufgabe, { ich, leitung: kategorie !== null && schreibbar.includes(kategorie) })
+      : null;
+  };
   const woerter = begriffe(begriff);
   const art = gewaehlt ?? (woerter.length ? 'alles' : 'beschluss');
   const treffer = suchen(index, { begriff, art, gruppe });
@@ -180,7 +190,7 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
                     {e.sitzung ? (
                       <DatumKachel
                         {...kachelVon(e.sitzung.beginn, gemeindeZeitzone())}
-                        gedimmt={e.art === 'aufgabe' && e.aufgabe?.status === 'erledigt'}
+                        gedimmt={e.art === 'aufgabe' && standVon(e) === 'erledigt'}
                       />
                     ) : (
                       <span className={styles.ohneKachel} aria-hidden>
@@ -196,7 +206,7 @@ export function Suche({ modul, gruppen, begriff, onTreffer }: SucheProps) {
                       <span className={styles.unter}>
                         <Etikett ton={MARKE[e.art].ton}>{MARKE[e.art].text}</Etikett>
                         <small>
-                          <Markiert text={wo(e)} woerter={woerter} />
+                          <Markiert text={wo(e, standVon(e))} woerter={woerter} />
                         </small>
                       </span>
                     </span>

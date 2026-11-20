@@ -96,6 +96,7 @@ export function Einladeliste({
   ich,
   zusatz,
   mitAlle = false,
+  zweispaltig = false,
 }: {
   liste: readonly Person[];
   gewaehlt: ReadonlySet<number>;
@@ -111,12 +112,17 @@ export function Einladeliste({
    * Person nichts zu wählen – dann ohne.
    */
   mitAlle?: boolean;
+  /** Die Personen in zwei Spalten (W10, To-Do-Fenster); wo es zu schmal ist, eine – „Alle (N)“ steht oben über beiden. */
+  zweispaltig?: boolean;
 }) {
   const ids = liste.map((x) => x.id);
   return (
-    <ul className={felder.personen} aria-label="Einladen">
+    <ul
+      className={zweispaltig ? `${felder.personen} ${felder.zweispaltig}` : felder.personen}
+      aria-label="Einladen"
+    >
       {mitAlle && liste.length > 1 && (
-        <li>
+        <li className={felder.alle}>
           <label className={felder.person}>
             <input
               type="checkbox"

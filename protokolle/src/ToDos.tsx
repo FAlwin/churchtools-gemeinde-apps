@@ -18,6 +18,7 @@ import {
   aenderungVerboten,
   bearbeiten,
   nameImVerlauf,
+  sichtFuer,
   toDoRechte,
   type Aufgabe,
   type AufgabenStatus,
@@ -28,6 +29,7 @@ import {
   ablegen,
   einteilen,
   eintragSchluessel,
+  eintragSicht,
   langeErledigt,
   schnellfilterAus,
   sichtbarFuer,
@@ -220,17 +222,17 @@ export function ToDos({
   const sichtbar: ToDoEintrag[] = ue.flatMap((u) =>
     u.aufgaben
       .filter((a) => sichtbarFuer(a, { ich: ich.person, leitung: leitungIn(u.gruppe) }))
-      .map((a) => ({ aufgabe: a, gruppe: u.gruppe })),
+      .map((a) => ({ aufgabe: a, gruppe: u.gruppe, leitung: leitungIn(u.gruppe) })),
   );
   const gefiltert = sichtbar.filter(
     (e) =>
       !aus.gruppen.includes(String(e.gruppe.id)) &&
       !aus.zustaendig.includes(zustaendigFuer(e.aufgabe, ich.person)),
   );
-  const alteErledigte = gefiltert.filter((e) => langeErledigt(e.aufgabe, heute)).length;
-  const sichtbarGezeigt = aeltere
-    ? gefiltert
-    : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
+  // „Länger erledigt“ nach dem Stand, den ich sehe (W10) – bei „Jeder für sich“ als Mitarbeiter nach meinem Teil.
+  const lange = (e: ToDoEintrag) => langeErledigt(eintragSicht(e, ich.person), heute);
+  const alteErledigte = gefiltert.filter(lange).length;
+  const sichtbarGezeigt = aeltere ? gefiltert : gefiltert.filter((e) => !lange(e));
   // Eine gehaltene Karte steht mit ihrem alten Stand in der Einteilung – so bleibt sie an ihrem Platz.
   const gezeigt = sichtbarGezeigt.map((e) => {
     const g = gehalten.get(eintragSchluessel(e));
@@ -245,7 +247,7 @@ export function ToDos({
     }
   const sortiert = <T extends { eintraege: ToDoEintrag[] }>(b: T): T => ({
     ...b,
-    eintraege: sortieren(b.eintraege, { art: sortierung, reihenfolge }),
+    eintraege: sortieren(b.eintraege, { art: sortierung, reihenfolge, ich: ich.person }),
   });
   const bereiche = einteilen(gezeigt, { nach, heute, ich: ich.person, namen }).map(sortiert);
   // Nach Person mit genau einer Gruppe im Blick: auch deren Mitglieder ohne To-Do als Spalte (man will ihnen eins geben).
@@ -398,11 +400,11 @@ export function ToDos({
     const v = boardSpalten.find((s) => s.schluessel === von);
     const n = boardSpalten.find((s) => s.schluessel === nach_);
     if (!e || !v || !n) return;
-    const x = ablegen(e.aufgabe, v, n);
-    if (!x) return;
-    const danach = bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString());
     const g = ue.find((u) => u.gruppe.id === e.gruppe.id)?.gruppe;
     const leitung = !!g && leitungIn(g);
+    const x = ablegen(e.aufgabe, v, n, { ich: ich.person, leitung });
+    if (!x) return;
+    const danach = bearbeiten(e.aufgabe, x, ich.person, new Date().toISOString());
     // Was ein Mitglied hier ablegen darf, sagt `toDoRechte` (nur Status eigener/geteilter, sich eintragen, abgeben).
     const grund = aenderungVerboten(e.aufgabe, x, {
       ich: ich.person,
@@ -456,8 +458,8 @@ export function ToDos({
     const u = ue.find((x) => x.gruppe.id === a.gruppe);
     if (!u || u.gruppe.mitarbeit === null) return {};
     const ort = { modul, kategorie: u.gruppe.mitarbeit };
-    const e: ToDoEintrag = { aufgabe: a, gruppe: u.gruppe };
     const leitung = leitungIn(u.gruppe);
+    const e: ToDoEintrag = { aufgabe: a, gruppe: u.gruppe, leitung };
     return {
       aendern: () => setFenster({ eintrag: e, modus: 'aendern' }),
       zurueckziehen: async () => {
@@ -490,14 +492,17 @@ export function ToDos({
     const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
     const liste = mitglieder.get(e.gruppe.id);
     const herkunft = herkunftVon(e);
+    const leitung = !!u && leitungIn(u.gruppe);
     const rechte = toDoRechte(a, {
       ich: ich.person,
-      leitung: !!u && leitungIn(u.gruppe),
+      leitung,
       imEntwurf: herkunft?.entwurf ?? false,
     });
     return {
       e,
       a,
+      // Wie das To-Do für mich steht (W10) – die Karte zeichnet damit, geschrieben wird mit `a`.
+      s: sichtFuer(a, { ich: ich.person, leitung }),
       herkunft,
       rechte,
       gehalten: !!g,

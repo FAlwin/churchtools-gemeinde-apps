@@ -48,6 +48,11 @@ export interface KartenEintrag {
   e: ToDoEintrag;
   /** Der Stand, der angezeigt wird (nach dem Abhaken schon der neue, die Karte bleibt aber 5 s am Platz). */
   a: Aufgabe;
+  /**
+   * **Wie das To-Do für mich steht** (W10, `sichtFuer`): Stand, Frist, Notizen und „erledigt“ zeichnet die Karte damit – ein
+   * Mitarbeiter sieht bei „Jeder für sich“ nur seinen Teil. Geschrieben und abgehakt wird mit `a`.
+   */
+  s: Aufgabe;
   herkunft: Herkunft | null;
   /** Was ich hier darf (`toDoRechte`) – die einzige Quelle für Haken und „Das mache ich“. */
   rechte: ToDoRechte;
@@ -59,6 +64,9 @@ export interface KartenEintrag {
   /** Wie viele Mitglieder die Gruppe hat (für „Alle (5)“); unbekannt, wenn die Liste verborgen ist. */
   gruppeGroesse?: number;
 }
+
+/** Steht dieses To-Do für mich als meine eigene Aufgabe da („Jeder für sich“ als Mitarbeiter, W10)? Dann sagt es „Von dir erledigt“. */
+const nurMein = (k: KartenEintrag): boolean => istJeder(k.a) && !k.rechte.teile;
 
 /** „Das mache ich“ – statt der Gesichter bei einem To-Do ohne Zuständigen (W9a, nur für Mitglieder, `rechte.mache`). */
 function MacheKnopf({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
@@ -79,6 +87,7 @@ function HakenKnopf({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
     <Haken
       a={k.a}
       ich={kx.ich.person}
+      teile={k.rechte.teile}
       art="karte"
       beschaeftigt={k.beschaeftigt}
       onSchritt={k.darfHaken ? (s) => kx.onHaken(k.e, s) : undefined}
@@ -90,7 +99,7 @@ function Rueckgaengig({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
   const t = teilText(k.a);
   return (
     <span className={styles.rueck} role="status">
-      {istJeder(k.a) ? `Dein Teil ist erledigt · ${t ?? ''}` : 'Erledigt'}
+      {istJeder(k.a) && k.rechte.teile ? `Dein Teil ist erledigt · ${t ?? ''}` : 'Erledigt'}
       <button type="button" className={styles.link} onClick={() => kx.onRueckgaengig(k.e)}>
         Rückgängig
       </button>
@@ -112,10 +121,11 @@ export function ToDoKarte({
 }) {
   const { e, a } = k;
   const schluessel = eintragSchluessel(e);
-  const erledigt = a.status === 'erledigt';
+  const erledigt = k.s.status === 'erledigt';
   const notiz = a.karte?.notiz && !erledigt && !k.gehalten ? letzteNotiz(a) : null;
-  const fertigOffen = kx.fertigOffen.has(schluessel) && !k.gehalten && teilStand(a) !== null;
-  const schild = a.status === 'arbeit' && !istJeder(a) && !(imBoard && spalteArt === 'arbeit');
+  const fertigOffen =
+    kx.fertigOffen.has(schluessel) && !k.gehalten && k.rechte.teile && teilStand(a) !== null;
+  const schild = k.s.status === 'arbeit' && !istJeder(k.s) && !(imBoard && spalteArt === 'arbeit');
 
   const fuss = k.gehalten ? (
     <div className={styles.fuss}>
@@ -123,21 +133,31 @@ export function ToDoKarte({
     </div>
   ) : erledigt ? (
     <div className={styles.fuss}>
-      <ErledigtVon a={a} ich={kx.ich.person} personen={kx.personen} namen={kx.namen} />
+      <ErledigtVon
+        a={k.s}
+        ich={kx.ich.person}
+        personen={kx.personen}
+        namen={kx.namen}
+        nurMein={nurMein(k)}
+      />
     </div>
   ) : (
     <div className={styles.fuss}>
-      <FristKaestchen a={a} heute={kx.heute} />
+      <FristKaestchen a={k.s} heute={kx.heute} />
       {schild && <Etikett ton="blau">in Arbeit</Etikett>}
       <Symbole
-        a={a}
+        a={k.s}
         herkunft={k.herkunft}
         fertigOffen={fertigOffen}
         onFertig={() => kx.onFertig(schluessel)}
         onSitzung={() => k.herkunft && kx.onSitzung(e.gruppe.id, k.herkunft.schluessel)}
       />
       <span className={styles.rechts}>
-        {k.rechte.mache ? <MacheKnopf k={k} kx={kx} /> : <Gesichter a={a} personen={kx.personen} />}
+        {k.rechte.mache ? (
+          <MacheKnopf k={k} kx={kx} />
+        ) : (
+          k.rechte.teile && <Gesichter a={a} personen={kx.personen} />
+        )}
       </span>
     </div>
   );
@@ -149,7 +169,7 @@ export function ToDoKarte({
         {kx.mehrereGruppen && <span className={styles.gruppe}>{e.gruppe.name}</span>}
         <button
           type="button"
-          className={`${styles.titel}${erledigt || (k.gehalten && !istJeder(a)) ? ' ' + styles.durch : ''}`}
+          className={`${styles.titel}${erledigt || (k.gehalten && !istJeder(k.s)) ? ' ' + styles.durch : ''}`}
           title="To-Do öffnen"
           onClick={() => kx.onOeffnen(e)}
         >
@@ -192,11 +212,20 @@ export function TabellenKopf({ mitGruppe }: { mitGruppe: boolean }) {
 
 /** „Stand“ in Worten: offen grau, „in Arbeit“ blau, „2 von 5 fertig“, erledigt mit Gesicht und Datum. */
 function Stand({ k, kx }: { k: KartenEintrag; kx: KartenKontext }) {
-  const { a } = k;
+  const a = k.s;
   const t = teilText(a);
   if (t) return <Etikett ton={a.status === 'erledigt' ? 'gruen' : 'neutral'}>{t}</Etikett>;
   if (a.status === 'erledigt')
-    return <ErledigtVon a={a} ich={kx.ich.person} personen={kx.personen} namen={kx.namen} kurz />;
+    return (
+      <ErledigtVon
+        a={a}
+        ich={kx.ich.person}
+        personen={kx.personen}
+        namen={kx.namen}
+        nurMein={nurMein(k)}
+        kurz
+      />
+    );
   if (a.status === 'arbeit') return <Etikett ton="blau">in Arbeit</Etikett>;
   return <span className={styles.leise}>offen</span>;
 }
@@ -213,8 +242,9 @@ export function ToDoZeile({
 }) {
   const { e, a } = k;
   const schluessel = eintragSchluessel(e);
-  const erledigt = a.status === 'erledigt';
-  const fertigOffen = kx.fertigOffen.has(schluessel) && !k.gehalten && teilStand(a) !== null;
+  const erledigt = k.s.status === 'erledigt';
+  const fertigOffen =
+    kx.fertigOffen.has(schluessel) && !k.gehalten && k.rechte.teile && teilStand(a) !== null;
   return (
     <>
       <div className={`${styles.zeile} ${mitGruppe ? styles.mitGruppe : styles.ohneGruppe}`}>
@@ -223,7 +253,7 @@ export function ToDoZeile({
           <div className={styles.zeileRueck}>
             <button
               type="button"
-              className={`${styles.titel}${erledigt || !istJeder(a) ? ' ' + styles.durch : ''}`}
+              className={`${styles.titel}${erledigt || !istJeder(k.s) ? ' ' + styles.durch : ''}`}
               title="To-Do öffnen"
               onClick={() => kx.onOeffnen(e)}
             >
@@ -245,14 +275,22 @@ export function ToDoZeile({
               <span className={`${styles.zelle} ${styles.gruppe}`}>{e.gruppe.name}</span>
             )}
             <span className={styles.zelle}>
-              <FristKaestchen a={a} heute={kx.heute} />
+              <FristKaestchen a={k.s} heute={kx.heute} />
               {!a.bis && <span className={styles.leise}>–</span>}
             </span>
             <span className={styles.zelle}>
               {k.rechte.mache ? (
                 <MacheKnopf k={k} kx={kx} />
-              ) : (
+              ) : k.rechte.teile ? (
                 <Gesichter a={a} personen={kx.personen} mitName gruppeGroesse={k.gruppeGroesse} />
+              ) : (
+                // Nur ich (W10): Von den anderen Zuständigen steht hier nichts.
+                <Gesichter
+                  a={{ ...a, wer: [kx.ich.person] }}
+                  personen={kx.personen}
+                  mitName
+                  gruppeGroesse={1}
+                />
               )}
             </span>
             <span className={styles.zelle}>
@@ -260,7 +298,7 @@ export function ToDoZeile({
             </span>
             <span className={`${styles.zelle} ${styles.ueber}`}>
               <Symbole
-                a={a}
+                a={k.s}
                 herkunft={k.herkunft}
                 fertigOffen={fertigOffen}
                 onFertig={() => kx.onFertig(schluessel)}

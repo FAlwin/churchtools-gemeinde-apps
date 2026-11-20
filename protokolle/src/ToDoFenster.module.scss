@@ -95,10 +95,12 @@
 
 // „Wer ist fertig?“ (W8a): Name links, rechts „✓ am …“ bzw. „offen“.
 .fertigListe {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
+  // Zwei Spalten, wo die Breite reicht, am Handy eine (W10).
+  display: grid;
+  // 150 px: Das Fenster ist 440 px breit – mit 210 px gab es dort nie zwei Spalten (W10-Prüfung).
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0 16px;
+  margin: 0 0 8px;
   padding: 0;
   list-style: none;
 }
@@ -118,6 +120,14 @@
   input {
     flex: none;
   }
+}
+
+.fertigName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fertigRechts {
@@ -173,4 +183,96 @@
 /* Hinweis über dem ersten Feld („Vorschlag von …“, „Steht im Protokoll-Entwurf …“) – derselbe Abstand wie zwischen den Feldern. */
 .vorFeld {
   margin-bottom: 14px;
+}
+
+// Die Kurzzeile „Wer ist fertig?“ (W10): ein kleiner Balken mit dem Anteil der Fertigen (`--anteil`).
+.balken {
+  flex: none;
+  width: 56px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface3);
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    display: block;
+    width: var(--anteil, 0%);
+    height: 100%;
+    background: var(--green);
+  }
+}
+
+// Bisherige Notizen (W10): Text, wer, wann – über dem Notizfeld, für alle sichtbar.
+.notizen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+// Der große Haken „Ich habe es erledigt“ (W10, Mitarbeiter bei „Jeder für sich“): ein großes Kästchen und zwei Zeilen, ganze Breite.
+.meinHaken {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.meinHakenAn {
+  border-color: var(--green);
+}
+
+.meinKasten {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.meinText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  b {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 400;
+  }
 }

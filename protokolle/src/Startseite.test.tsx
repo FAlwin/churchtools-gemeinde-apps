@@ -160,12 +160,13 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
 
 const onSitzung = vi.fn();
 const onGruppe = vi.fn();
-const zeigen = (gruppen = GRUPPEN) =>
+const zeigen = (gruppen = GRUPPEN, schreibbar: number[] = []) =>
   render(
     <Startseite
       modul={24}
       ich={{ person: ICH, name: 'Alwin' }}
       gruppen={gruppen}
+      schreibbar={schreibbar}
       onSitzung={onSitzung}
       onGruppe={onGruppe}
     />,
@@ -231,10 +232,18 @@ describe('Startseite (S3-3)', () => {
     );
     const einer = teilSetzen(jeder, 19, true, 19, '2026-10-22T09:00:00Z');
     m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [einer] }]);
-    zeigen();
+    // Als Leitung (Protokolle der Gruppe schreibbar) sehe ich den Fortschritt.
+    zeigen(GRUPPEN, [60]);
     await screen.findByText('Abwesenheiten eintragen');
     expect(zeilen('Meine offenen To-Dos')[0]).toMatch(/Leitungsteam · 1 von 3 fertig/);
     expect(screen.queryByText(/in Arbeit/)).toBeNull();
+    cleanup();
+    // Als Mitarbeiter (W10): für mich ist es nur meine Aufgabe – kein Zähler, keine anderen Zuständigen.
+    zeigen();
+    await screen.findByText('Abwesenheiten eintragen');
+    const zeile = zeilen('Meine offenen To-Dos')[0] ?? '';
+    expect(zeile).toMatch(/Leitungsteam/);
+    expect(zeile).not.toMatch(/fertig|in Arbeit/);
     cleanup();
     m.ladeUebersicht.mockResolvedValue([
       {
@@ -247,6 +256,24 @@ describe('Startseite (S3-3)', () => {
     await screen.findByText('Beamer-Angebote');
     // Der Gesamtstand ist „in Arbeit“ (2 von 3), mein Teil aber erledigt – für mich ist es nicht mehr offen.
     expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
+  });
+
+  it('Deine Gruppen (W10): „Jeder für sich“ zählt als Mitarbeiter nach meinem Teil, als Leitung nach dem Gesamtstand', async () => {
+    const jeder = modusSetzen(
+      aufgabe({ id: 'j2', text: 'Abwesenheiten', wer: [ICH, 19, 23] }),
+      true,
+      1,
+      '2026-10-22T08:00:00Z',
+    );
+    const meinsFertig = teilSetzen(jeder, ICH, true, ICH, '2026-10-22T09:00:00Z'); // Gesamt: in Arbeit
+    m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [meinsFertig] }]);
+    zeigen();
+    await screen.findByText('Nichts offen. Schön!');
+    expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam0 offene To-Dos/);
+    cleanup();
+    zeigen(GRUPPEN, [60]);
+    await screen.findByText('Nichts offen. Schön!');
+    expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam1 offenes To-Do/);
   });
 
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {

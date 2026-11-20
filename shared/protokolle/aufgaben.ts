@@ -241,6 +241,63 @@ export function darfTeilSetzen(person: number, ich: number, leitung: boolean): b
   return person === ich || leitung;
 }
 
+/**
+ * **Ist es für diesen Betrachter nur SEINE Aufgabe?** (W10, Alwin 20.11.2026) – bei „Jeder für sich“ gilt das für jeden
+ * zuständigen **Mitarbeiter**: Er sieht keine anderen Zuständigen, keinen Zähler, kein „Wer ist fertig?“. Die Leitung sieht
+ * immer das ganze To-Do. Die eine Stelle dafür – `standFuer`, `sichtFuer` und `toDoRechte` (`teile`) richten sich danach.
+ */
+export function nurMeinTeil(
+  a: Pick<Aufgabe, 'jeder' | 'wer'>,
+  q: { ich: number; leitung: boolean },
+): boolean {
+  return !q.leitung && istJeder(a) && a.wer.includes(q.ich);
+}
+
+/**
+ * **Wie steht das To-Do FÜR MICH?** (W10) – die eine Regel für „Offen / In Arbeit / Erledigt“ in Board, Liste, Tabelle,
+ * Startseite, Filter und Suche. Die Leitung sieht den Gesamtstand (`a.status`); ein Mitarbeiter bei „Jeder für sich“ nur sein
+ * Teil: fertig = erledigt, sonst offen – auch wenn der Gesamtstand „in Arbeit“ ist. Das **gespeicherte** `status` ändert sich
+ * dadurch nie (es bleibt der Gesamtstand).
+ */
+export function standFuer(
+  a: Pick<Aufgabe, 'status' | 'jeder' | 'wer' | 'fertig'>,
+  q: { ich: number; leitung: boolean },
+): AufgabenStatus {
+  if (!nurMeinTeil(a, q)) return a.status;
+  return teilFertig(a, q.ich) ? 'erledigt' : 'offen';
+}
+
+/**
+ * **Das To-Do, wie ein Betrachter es sieht** (W10) – für alles, was nur anzeigt, einteilt, sortiert oder zählt
+ * (`gruppieren`, Frist, Karte, Tabelle): Es hat `standFuer` als Stand, bei „nur mein Teil“ kein „Jeder für sich“ mehr (kein
+ * Zähler), als Verlauf nur die Notizen und – ist mein Teil fertig – einen Erledigt-Eintrag mit **meiner** Zeit (so findet
+ * `erledigtAm` ihn). Alle anderen sehen das To-Do unverändert (dieselbe Instanz zurück). **Nie zum Schreiben benutzen** –
+ * dort gilt das echte To-Do.
+ */
+export function sichtFuer(a: Aufgabe, q: { ich: number; leitung: boolean }): Aufgabe {
+  if (!nurMeinTeil(a, q)) return a;
+  const status = standFuer(a, q);
+  const am = a.fertig?.[String(q.ich)];
+  const { jeder: _jeder, fertig: _fertig, ...rest } = a;
+  const notizen = notizenVon(a);
+  return {
+    ...rest,
+    status,
+    verlauf:
+      status === 'erledigt' && am
+        ? [...notizen, { am, von: q.ich, art: 'status', status }]
+        : notizen,
+  };
+}
+
+/**
+ * **Die Notizen eines To-Dos** (Verlaufseinträge `notiz`, in der Reihenfolge des Schreibens) – die eine Stelle dafür: Karte
+ * („Notizen“-Zahl, letzte Notiz) und Fenster (Liste über dem Notizfeld). Sie sehen alle, auch wo der Verlauf verborgen ist.
+ */
+export function notizenVon(a: Pick<Aufgabe, 'verlauf'>): VerlaufEintrag[] {
+  return a.verlauf.filter((v) => v.art === 'notiz');
+}
+
 /** **Ohne Zuständigen** – weder jemand aus der Gruppe noch eine Person außerhalb. Die eine Stelle dafür (Sichtbarkeit, Rechte). */
 export function ohneZustaendige(a: Pick<Aufgabe, 'wer' | 'extern'>): boolean {
   return a.wer.length === 0 && !a.extern.trim();
@@ -288,6 +345,17 @@ export interface ToDoRechte {
   /** Nur bei einem Vorschlag: wer vorschlug, ändert ihn oder zieht ihn zurück – nur solange er offen ist. */
   vorschlagAendern: boolean;
   zurueckziehen: boolean;
+  /**
+   * **Den Verlauf sehen** (W10, Alwin 20.11.2026): nur die Leitung – ein Mitarbeiter nie, in keinem Fall. Seine Notizen sieht er
+   * trotzdem (`notizenVon`).
+   */
+  verlauf: boolean;
+  /**
+   * **Die Teile sehen** (W10): bei „Jeder für sich“ den Fortschritt („2 von 14 fertig“), die Liste „Wer ist fertig?“ und die
+   * anderen Zuständigen. Die Leitung immer; ein Mitarbeiter nur, wo es nichts zu verbergen gibt – bei „Jeder für sich“ ist es
+   * für ihn nur SEINE Aufgabe (`nurMeinTeil`).
+   */
+  teile: boolean;
 }
 
 const NICHTS: Omit<ToDoRechte, 'fall' | 'sehen'> = {
@@ -307,6 +375,8 @@ const NICHTS: Omit<ToDoRechte, 'fall' | 'sehen'> = {
   ablehnen: false,
   vorschlagAendern: false,
   zurueckziehen: false,
+  verlauf: false,
+  teile: false,
 };
 
 export function toDoRechte(
@@ -348,6 +418,8 @@ export function toDoRechte(
       ablehnen: false,
       vorschlagAendern: false,
       zurueckziehen: false,
+      verlauf: true,
+      teile: true,
     };
   if (ohneZustaendige(a)) return { ...NICHTS, fall: 'ohne', sehen: true, mache: true };
   if (!a.wer.includes(q.ich)) return { ...NICHTS, fall: 'fremd', sehen: false };
@@ -364,6 +436,7 @@ export function toDoRechte(
       abgeben: true,
       text: !q.imEntwurf,
       loeschen: !q.imEntwurf,
+      teile: true,
     };
   return {
     ...NICHTS,
@@ -372,6 +445,8 @@ export function toDoRechte(
     haken: true,
     status: !istJeder({ jeder: a.jeder, wer: a.wer }),
     notiz: true,
+    // „Jeder für sich“: für den Mitarbeiter nur seine eigene Aufgabe – keine Teile, keine anderen Zuständigen (W10).
+    teile: !istJeder({ jeder: a.jeder, wer: a.wer }),
   };
 }
 
@@ -510,9 +585,7 @@ export function alsWiederhergestellt(a: Aufgabe, von: number, am: string): Aufga
 
 /** **Die letzte Notiz** aus dem Verlauf – für die Karte („Auf Karte anzeigen“). */
 export function letzteNotiz(a: Aufgabe): VerlaufEintrag | null {
-  for (let i = a.verlauf.length - 1; i >= 0; i--)
-    if (a.verlauf[i].art === 'notiz') return a.verlauf[i];
-  return null;
+  return notizenVon(a).at(-1) ?? null;
 }
 
 /**

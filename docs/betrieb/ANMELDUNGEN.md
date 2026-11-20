@@ -100,8 +100,11 @@ hinten an. Das zeigen seit U2-1 die blaue Kachel „Warteliste“ und der Reiter
 an?“, Formular, Preise, Bezahlung, Mails, Datenschutz, nach der Freigabe oben der Anmeldelink) und **„Anmeldungen“**
 (was danach reinkommt). Ohne Angabe in der Adresse öffnet ein Entwurf „Vorbereiten“, eine freigegebene Veranstaltung
 „Anmeldungen“ (`#/v/91/vorbereiten`, `…/formular`, `…/anmeldungen` öffnen gezielt). Darüber der **Einstieg**: vor der
-Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) mit einem Knopf für den nächsten
-Schritt; danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
+Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) mit **einem blauen Knopf, der mit dem
+Schritt wandert** (Termin wählen → Anmeldung einstellen → Bezahlung eintragen → Freigeben; B7). **„Freigeben“** steht erst
+dort, wenn es dran ist – vorher liegt es im **⋯**-Menü oben rechts, zusammen mit **„Verwalten“**; „In ChurchTools“ steht
+daneben. „Bearbeiten“ an den Karten ist blauer Text. Danach (freigegeben) gibt es oben keinen blauen Knopf mehr; im Bereich
+„Anmeldungen“ ist **„Von Hand“** grün, **Spalten**, **Druckliste** und **Rundmail** liegen im **⋯**-Menü der Liste. Danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
 die passende Ansicht der Liste. Hervorgehoben (blau) ist nur die Warteliste, wenn trotz freiem Platz jemand wartet –
 offene Zahlungen sind kurz nach der Anmeldung der Normalfall. **„Zahlung offen“ heißt überall dasselbe** (Startseite,
 Kachel, Reiter, Rundmail, Druckliste): eine Anmeldung mit Betrag über 0, ohne Haken „bezahlt“, mit Platz. Eine Anmeldung
@@ -247,7 +250,8 @@ nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erwei
 **Ältere Veranstaltungen** (A9-5): Wer vor A9 freigegeben hat, hat keine Abläufe – ChurchTools schickt seine
 Standard-Mail und **löscht die Anmeldungen nie**. Die Karte „Mails“ sagt das und bietet **„Jetzt einrichten“**; die
 Startseite zeigt allen in der Gruppe „…: Mails und Löschen einrichten“ (vergangene nur, solange noch jemand angemeldet
-ist; ab drei stehen sie zusammen in einer Zeile, „Anzeigen“ klappt sie auf). Den Knopf hat, wer Routinen verwalten darf; alle anderen lesen, wer es kann. Die Rückfrage nennt die Veranstaltung und, was sich
+ist; ab drei stehen sie zusammen in einer Zeile, ein Klick darauf klappt sie auf; jede Zeile der Startseite ist selbst der Knopf
+mit „›“ und einem Etikett, B7). Den Knopf hat, wer Routinen verwalten darf; alle anderen lesen, wer es kann. Die Rückfrage nennt die Veranstaltung und, was sich
 ändert: Ab jetzt kommt die Bestätigung mit Betrag, Bankdaten und Link; **die schon Angemeldeten bekommen keine neue
 Mail**, für sie gelten aber Erinnerung und Löschdatum. Absender ist, wer einrichtet (wenn Leitung), sonst die erste
 Leitung. Ist das Löschdatum schon vorbei und noch jemand da, fragt erst „Sofort löschen?“. Dasselbe gilt für jede
@@ -489,7 +493,7 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 
 ## Umbenennen, verschieben, löschen
 
-- **„Verwalten“** oben auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein
+- **„Verwalten“** im **⋯**-Menü oben rechts auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein
   anderes Team verschieben, löschen. Nach jeder Änderung – auch nach dem Speichern eines Fensters – steht
   oben **„Rückgängig“**. Steht der Name im Verwendungszweck, zieht er beim Umbenennen und bei „wie eine
   frühere“ mit; der Titel des Kalendertermins bleibt, wie er ist.

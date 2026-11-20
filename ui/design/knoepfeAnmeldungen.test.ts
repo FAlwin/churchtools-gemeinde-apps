@@ -16,7 +16,6 @@ import { dateien } from './quelltexte.testutil';
 const ERLAUBT: Record<string, string> = {
   // Auswahl – wählt etwas aus (wie Chips, Optionen, Schalter), statt etwas zu tun.
   's.filterChip': 'Filter-Chip',
-  'styles.filterChip': 'Filter-Chip der Startseite',
   'f.option': 'Option im Fenster (eine von mehreren)',
   'f.aktion': 'Zeile zum Auswählen im Fenster (Von Hand, Verwalten)',
   'k.vorlage': 'Vorlage im Baukasten',

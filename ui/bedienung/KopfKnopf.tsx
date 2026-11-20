@@ -153,14 +153,22 @@ export function KopfLink({
   label,
   title,
   symbol,
+  still,
 }: {
   href: string;
   label: string;
   title?: string;
   symbol: ReactNode;
+  /** Still (R2, wie `KopfKnopf still`): ohne Rand und Fläche, am Handy mit Rahmen – „In ChurchTools ↗“ neben dem „⋯“ (B7). */
+  still?: boolean;
 }) {
   return (
-    <a className={styles.knopf} href={href} title={title ?? label} aria-label={title ?? label}>
+    <a
+      className={`${styles.knopf}${still ? ' ' + styles.still : ''}`}
+      href={href}
+      title={title ?? label}
+      aria-label={title ?? label}
+    >
       {symbol}
       <span className={styles.text}>{label}</span>
     </a>

@@ -176,6 +176,18 @@ function zeigen(
   );
 }
 
+/**
+ * „Freigeben“ klicken, wo es gerade steht (E24, B7): als blauer Knopf im Band, sobald es dran ist – sonst im „⋯“-Menü.
+ * Der Test fragt nicht, WO (das tut `Wandernder blauer Knopf` unten), sondern führt nur das Freigeben aus.
+ */
+async function freigebenKlicken() {
+  await screen.findByRole('heading', { level: 1 });
+  const direkt = screen.queryByRole('button', { name: 'Freigeben' });
+  if (direkt) return void fireEvent.click(direkt);
+  fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Freigeben' }));
+}
+
 const STAMM = {
   status: [{ id: 2, name: 'status.potential', nameTranslated: 'Interessent', isMember: false }],
   standorte: [{ id: 0, name: 'Zentrale' }],
@@ -272,7 +284,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     m.freigeben.mockResolvedValue();
     ab.ablaeufeEinrichten.mockRejectedValueOnce(new AB.LoeschdatumVorbei('2026-10-01', 12));
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     const frage = await screen.findByRole('dialog', { name: 'Sofort löschen?' });
@@ -290,7 +302,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     stelle(true);
     m.freigeben.mockResolvedValue();
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     // Wer freigibt, ist als Leitung vorgewählt; die Vorgaben stehen in Worten da.
     expect(
       (await screen.findByRole('button', { name: 'Alwin Friesen' })).getAttribute('aria-pressed'),
@@ -350,7 +362,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         onGeaendert={gemeldet}
       />,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
@@ -597,7 +609,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       'Der Anmeldezeitraum hat noch nicht begonnen oder ist vorbei.',
     ]);
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     expect(await screen.findByText('Freigegeben – aber noch nicht offen')).toBeTruthy();
@@ -608,7 +620,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     stelle(true);
     gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2 });
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     expect(
       await screen.findByText(/legt ein Gruppen-Admin einmal für die Gemeinde fest/),
     ).toBeTruthy();
@@ -621,7 +633,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
   it('ohne Adresse der Formular-Seite: Hinweis, Freigeben gesperrt', async () => {
     stelle(true);
     zeigen(null);
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     expect(screen.getByText(/keine Adresse für das Anmeldeformular/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
@@ -633,7 +645,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
   it('ohne gewählte Leitung lässt sich nicht freigeben', async () => {
     stelle(true);
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     fireEvent.click(await screen.findByRole('button', { name: 'Alwin Friesen' }));
     expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
       'disabled',
@@ -645,7 +657,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     stelle(true);
     m.freigeben.mockRejectedValue(new E.NichtUebernommen('die Freigabe'));
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     expect(await screen.findByText(/ChurchTools hat die Freigabe nicht übernommen/)).toBeTruthy();
@@ -958,7 +970,7 @@ describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
     zeigen();
     const karte = await screen.findByRole('region', { name: 'Bezahlung' });
     expect(within(karte).getByText('fehlt noch')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     expect(screen.getByText(/Es gibt Preise, aber noch keine Bankverbindung/)).toBeTruthy();
   });
 
@@ -967,7 +979,7 @@ describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
     zeigen();
     const karte = await screen.findByRole('region', { name: 'Bezahlung' });
     expect(within(karte).getByText('keine (kostenlos)')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     expect(screen.queryByText(/noch keine Bankverbindung/)).toBeNull();
   });
 
@@ -1208,7 +1220,7 @@ describe('Laden in den Fenstern (#845, Scheibe 3d)', () => {
       { personId: 2, name: 'Bea Team', leitung: true },
     ]);
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     const bea = await screen.findByRole('button', { name: 'Bea Team' });
     expect(bea.getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Alwin Friesen' }).getAttribute('aria-pressed')).toBe(
@@ -1220,7 +1232,7 @@ describe('Laden in den Fenstern (#845, Scheibe 3d)', () => {
     stelle(true);
     m.leitungsKandidaten.mockRejectedValue(new TypeError('Failed to fetch'));
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     expect((await within(fenster()).findByRole('alert')).textContent).toMatch(
       /antwortet gerade nicht/,
     );
@@ -1457,7 +1469,7 @@ describe('Fenster der Veranstaltung im ChurchTools-Aufbau', () => {
     m.freigeben.mockResolvedValue();
     m.anmeldeBedingungen.mockResolvedValue(['Der Anmeldezeitraum hat noch nicht begonnen.']);
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Jetzt freigeben']);
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
@@ -1469,7 +1481,7 @@ describe('Fenster der Veranstaltung im ChurchTools-Aufbau', () => {
     stelle(true);
     m.freigeben.mockReturnValue(new Promise(() => {}));
     zeigen();
-    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await freigebenKlicken();
     await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     await screen.findByRole('button', { name: 'Wird freigegeben …' });
@@ -1993,5 +2005,113 @@ describe('Nachprüfung: Bedingungen (F1e)', () => {
     zeigen(undefined, 'anmeldungen');
     expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Bedingungen' })).toBeNull();
+  });
+});
+
+describe('Wandernder blauer Knopf (E24, B7)', () => {
+  const TERMIN = { beginn: '2026-11-15T10:00', ende: null, ort: '', terminId: 1 };
+  const AB = '2026-10-01T22:00:00Z';
+  const kostet = (iban: string) => {
+    const x = neueEinstellungen('einfach');
+    return {
+      termin: TERMIN,
+      preis: { ...x.preis, grundpreis: { ...x.preis.grundpreis, betragCent: 1000 } },
+      bezahlung: { ...x.bezahlung, iban },
+    };
+  };
+  /** Gefüllte blaue Knöpfe der ganzen Seite – die Stufe „Haupt“ aus `FensterKnopf`. */
+  const blaue = () =>
+    [...document.querySelectorAll<HTMLElement>('button, a')]
+      .filter((x) => /haupt/.test(x.className))
+      .map((x) => x.textContent);
+  const menue = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    const namen = screen.getAllByRole('menuitem').map((x) => x.textContent);
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    return namen;
+  };
+  async function oeffne(
+    darf: boolean,
+    status: number,
+    einstellungen: Partial<OeffentlicheEinstellungen>,
+    ab: string | null,
+  ) {
+    stelle(darf, status, einstellungen);
+    m.anmeldungVon.mockResolvedValue({ maxPlaetze: null, warteliste: false, ab, bis: null });
+    zeigen(undefined, 'vorbereiten');
+    await screen.findByRole('heading', { level: 1 });
+  }
+
+  // Jeder Stand vor der Freigabe: genau EIN blauer Knopf, der den nächsten Schritt trägt; „Freigeben“ erst, wenn es dran ist.
+  const ENTWURF = [
+    ['ohne Termin', {}, null, 'Termin wählen', true],
+    ['Termin, kein Anmeldebeginn', { termin: TERMIN }, null, 'Anmeldung einstellen', true],
+    ['Termin und Beginn, kostenlos', { termin: TERMIN }, AB, 'Freigeben', false],
+    ['kostet, Bankverbindung fehlt', kostet(''), AB, 'Bezahlung eintragen', true],
+    ['kostet, Bankverbindung da', kostet('DE02120300000000202051'), AB, 'Freigeben', false],
+  ] as const;
+  for (const [name, einstellungen, ab, blau, freigebenImMenue] of ENTWURF)
+    it(`Entwurf, ${name}: blau ist „${blau}“, „Freigeben“ ${freigebenImMenue ? 'im ⋯-Menü' : 'im Band'}`, async () => {
+      await oeffne(true, 2, einstellungen, ab);
+      expect(blaue()).toEqual([blau]);
+      expect(
+        within(screen.getByRole('region', { name: 'Nächster Schritt' })).getByRole('button', {
+          name: blau,
+        }),
+      ).toBeTruthy();
+      expect(menue()).toEqual(freigebenImMenue ? ['Freigeben', 'Verwalten'] : ['Verwalten']);
+    });
+
+  it('der blaue Knopf wandert: nach „Termin wählen“ ist der Anmeldebeginn dran', async () => {
+    await oeffne(true, 2, {}, null);
+    expect(blaue()).toEqual(['Termin wählen']);
+    cleanup();
+    await oeffne(true, 2, { termin: TERMIN }, null);
+    expect(blaue()).toEqual(['Anmeldung einstellen']);
+  });
+
+  it('der blaue Knopf öffnet den Schritt; „Freigeben“ aus dem Menü öffnet das Fenster, ohne dass das Schließen es zurücksetzt', async () => {
+    await oeffne(true, 2, {}, null);
+    fireEvent.click(screen.getByRole('button', { name: 'Termin wählen' }));
+    expect(await screen.findByRole('dialog', { name: /Termin/ })).toBeTruthy();
+    cleanup();
+    await oeffne(true, 2, {}, null);
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Freigeben' }));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('dialog', { name: /Freigeben/ })).toBeTruthy();
+  });
+
+  it('„Verwalten“ im Menü öffnet sein Fenster und schließt das Menü', async () => {
+    await oeffne(true, 2, {}, null);
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Verwalten' }));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('dialog', { name: /verwalten/i })).toBeTruthy();
+  });
+
+  it('freigegeben: kein blauer Knopf, kein „Freigeben“, nur „Verwalten“ im Menü', async () => {
+    m.istGruppenAdmin.mockResolvedValue(false);
+    await oeffne(true, 1, { termin: TERMIN }, AB);
+    expect(blaue()).toEqual([]);
+    expect(screen.queryByRole('region', { name: 'Nächster Schritt' })).toBeNull();
+    expect(menue()).toEqual(['Verwalten']);
+  });
+
+  it('ohne Recht: kein blauer Knopf, kein Menü; „In ChurchTools“ bleibt, still', async () => {
+    await oeffne(false, 2, {}, null);
+    expect(blaue()).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'Mehr' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'In ChurchTools' }).getAttribute('href')).toMatch(
+      /\/groups\/91$/,
+    );
+  });
+
+  it('„Bearbeiten“ an den Karten ist stiller Text, kein Knopf mit Rahmen', async () => {
+    await oeffne(true, 2, {}, null);
+    const bearbeiten = screen.getAllByRole('button', { name: 'Bearbeiten' });
+    expect(bearbeiten.length).toBeGreaterThan(3);
+    for (const b of bearbeiten) expect(b.className).toMatch(/knopf/);
+    for (const b of bearbeiten) expect(b.className).not.toMatch(/zweit|haupt/);
   });
 });

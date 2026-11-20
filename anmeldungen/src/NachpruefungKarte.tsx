@@ -5,6 +5,7 @@ import { euroText } from '@shared/anmeldung/preis';
 import type { Betragsbefund, Nachpruefung } from '@shared/anmeldung/nachpruefung';
 import { bedingungsText, type Bedingungsbefund } from '@shared/anmeldung/antwortenAusListe';
 import { datumText } from './anzeige';
+import { Etikett } from './Etikett';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 
@@ -118,9 +119,9 @@ export function NachpruefungKarte({
     </FensterKnopf>
   );
   const chip = !n ? null : n.hinweise > 0 ? (
-    <span className={s.chip}>{n.hinweise === 1 ? '1 Hinweis' : `${n.hinweise} Hinweise`}</span>
+    <Etikett>{n.hinweise === 1 ? '1 Hinweis' : `${n.hinweise} Hinweise`}</Etikett>
   ) : (
-    <span className={`${s.chip} ${s.chipGruen}`}>Alles stimmt ✓</span>
+    <Etikett ton="gruen">Alles stimmt ✓</Etikett>
   );
 
   return (

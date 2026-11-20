@@ -128,4 +128,28 @@ describe('AnsichtWahl: Merker (B4/E24)', () => {
       }),
     ).toBeTruthy();
   });
+
+  it('Anzahl (B7): grau hinter dem Wort, der Name nennt sie, kein blauer Merker; im Blatt in Klammern', () => {
+    const optionen = [
+      { value: 'a', label: 'Anstehend', anzahl: 12 },
+      { value: 'e', label: 'Entwürfe' },
+    ];
+    const { unmount } = render(
+      <AnsichtWahl value="a" options={optionen} onChange={() => {}} handy={false} />,
+    );
+    const knopf = screen.getByRole('button', { name: 'Anstehend, 12' });
+    expect(knopf.textContent).toBe('Anstehend12');
+    expect(knopf.querySelector('[data-zaehler]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Entwürfe' })).toBeTruthy();
+    unmount();
+    render(<AnsichtWahl value="e" options={optionen} onChange={() => {}} handy />);
+    const handyKnopf = screen.getByRole('button', { name: 'Ansicht: Entwürfe' });
+    expect(handyKnopf.querySelector('[data-zaehler]')).toBeNull();
+    fireEvent.click(handyKnopf);
+    expect(
+      within(screen.getByRole('dialog', { name: 'Ansicht' })).getByRole('button', {
+        name: 'Anstehend (12)',
+      }),
+    ).toBeTruthy();
+  });
 });

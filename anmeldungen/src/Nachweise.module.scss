@@ -359,3 +359,105 @@
 .leer {
   padding: 12px 14px;
 }
+
+// ── Einsicht festhalten (N2b) ────────────────────────────────────────────────────────────────────────────────────
+
+// Die Zeile unter dem Titel: Name · Art · Stand.
+.einsichtKopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 12px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+// Ein Hinweiskasten im Fenster: grau (Bisher), rot (Antrag unvollständig), blau (was passiert).
+.kasten {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-card);
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.kastenRot {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
+
+.kastenBlau {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.kastenLink {
+  align-self: flex-start;
+  font-weight: 700;
+}
+
+// Zwei Datumsfelder nebeneinander, am Handy untereinander.
+.datumReihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ergebnisWahl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  label {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  input {
+    margin-top: 3px;
+  }
+}
+
+// Eine anklickbare Zeile der Tabelle (Tastatur: Tab, dann Eingabe).
+.klickbar {
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+
+.ergebnisSatz {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    padding: 0;
+    margin-bottom: 6px;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}

@@ -644,13 +644,29 @@ export function demoStarten(fall: string): void {
     ],
   ]);
   // Folgeaufgaben wie aus dem Ablauf (N2a): offen = `doneDate` null; „angefordert am“ = Tag der Anlage.
-  const aufgabe = (personId: number, title: string, angelegt: number, erledigt: number | null) => ({
+  let naechsteAufgabe = 700;
+  interface DemoAufgabe {
+    id: number;
+    personId: number;
+    title: string;
+    doneDate: string | null;
+    dueDate?: string | null;
+    effectiveDueDate?: string | null;
+    meta: { createdDate: string };
+  }
+  const aufgabe = (
+    personId: number,
+    title: string,
+    angelegt: number,
+    erledigt: number | null,
+  ): DemoAufgabe => ({
+    id: naechsteAufgabe++,
     personId,
     title,
     doneDate: erledigt === null ? null : `${isoTag(erledigt)}T10:00:00Z`,
     meta: { createdDate: `${isoTag(angelegt)}T10:00:00Z` },
   });
-  const nachweisAufgaben = new Map<number, ReturnType<typeof aufgabe>[]>([
+  const nachweisAufgaben = new Map<number, DemoAufgabe[]>([
     [
       61,
       [
@@ -893,10 +909,27 @@ export function demoStarten(fall: string): void {
         return antwort({ data: {} });
       }
       if (!da) return antwort({}, 404);
+      if (m === 'GET')
+        return antwort({
+          data: {
+            personId: da.personId,
+            fields: Object.entries(da.fields ?? {}).map(([id, value]) => ({
+              id: Number(id),
+              value,
+            })),
+          },
+        });
       if (m === 'PATCH') {
         if (typeof body.groupTypeRoleId === 'number') da.groupTypeRoleId = body.groupTypeRoleId;
         if (typeof body.groupMemberStatus === 'string')
           da.groupMemberStatus = body.groupMemberStatus;
+        // Gruppenfelder (N2b: „Einsicht festhalten“): `{<Nummer>: Wert}`, `null` leert.
+        for (const [nr, wert] of Object.entries((body.fields ?? {}) as Record<string, unknown>)) {
+          const fields = (da.fields ?? {}) as Record<string, string>;
+          if (wert === null) delete fields[nr];
+          else fields[nr] = typeof wert === 'string' ? wert : JSON.stringify(wert);
+          da.fields = fields;
+        }
         return antwort({ data: {} });
       }
       if (m === 'DELETE') {
@@ -929,13 +962,37 @@ export function demoStarten(fall: string): void {
     r = /^\/groups\/(\d+)\/followups$/.exec(pfad);
     if (r && gruppen.get(Number(r[1]))?.typ === NACHWEIS_TYP)
       return antwort({
-        data: (nachweisAufgaben.get(Number(r[1])) ?? []).map((a, i) => ({
-          id: 700 + i,
+        data: (nachweisAufgaben.get(Number(r[1])) ?? []).map((a) => ({
           groupId: Number(r![1]),
           ...a,
+          effectiveDueDate: a.effectiveDueDate ?? a.dueDate ?? null,
         })),
         meta: { pagination: { lastPage: 1 } },
       });
+    // N2b: Folgeaufgabe erledigen (der Ablauf legt nach „Einsicht nehmen“ gleich „Erneut einsehen“ an) und verschieben.
+    r = /^\/followups\/(\d+)\/(complete|postpone)$/.exec(pfad);
+    if (r && m === 'POST') {
+      for (const [gid, liste] of nachweisAufgaben) {
+        const a = liste.find((x) => x.id === Number(r![1]));
+        if (!a) continue;
+        if (r[2] === 'postpone') {
+          // Wie ChurchTools: nur auf ein Datum nach heute.
+          if (String(body.dueDate) <= isoTag(0))
+            return antwort({ message: 'Ungültiges Datum' }, 400);
+          a.effectiveDueDate = String(body.dueDate);
+        } else {
+          a.doneDate = new Date().toISOString();
+          if (a.title === 'Einsicht nehmen') {
+            const jahre = nachweisEinstellungenLesen(gruppen.get(gid)?.note)?.gueltigJahre ?? 3;
+            const neu = aufgabe(a.personId, 'Erneut einsehen', 0, null);
+            neu.dueDate = isoTag(0, jahre);
+            liste.push(neu);
+          }
+        }
+        return antwort({ data: {} });
+      }
+      return antwort({}, 404);
+    }
     r = /^\/permissions\/internal\/groups\/(\d+)$/.exec(pfad);
     if (r) {
       const id = Number(r[1]);

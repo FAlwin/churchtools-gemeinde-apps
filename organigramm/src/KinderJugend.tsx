@@ -7,7 +7,7 @@ import { Schalter } from '@ui/bedienung/Schalter';
 import { TitelWahl } from '@ui/bedienung/TitelWahl';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
-import { ctBasis } from '@ui/ct/basis';
+import { personLink } from '@ui/ct/links';
 import { useLaden } from '@ui/ct/useLaden';
 import { ApiError } from '@ui/ct/fehler';
 import { tagPunkt } from '@shared/ct/datum';
@@ -846,11 +846,7 @@ function KindFenster({
           )}
         </>
       )}
-      <a
-        className={styles.oeffnen}
-        href={`${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${kind.personId}/`}
-        target="_top"
-      >
+      <a className={styles.oeffnen} href={personLink(kind.personId)} target="_top">
         In ChurchTools öffnen
       </a>
     </Sheet>

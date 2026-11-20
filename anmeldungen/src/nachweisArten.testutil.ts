@@ -37,6 +37,9 @@ export interface AufgabeStand {
   title: string;
   doneDate: string | null;
   createdDate: string | null;
+  /** Ursprüngliche Fälligkeit und die, die nach einem Verschieben gilt (`effectiveDueDate`). */
+  dueDate?: string | null;
+  effectiveDueDate?: string | null;
 }
 
 /** Eine Person, soweit `GET /persons?ids[]=` sie für die Nachweise liefert. */
@@ -120,6 +123,21 @@ export class FalschesNachweisCt {
   /** Folgeaufgaben je Gruppe und Personen (N2a, nur lesen). */
   aufgaben = new Map<number, AufgabeStand[]>();
   personen = new Map<number, PersonRohStand>();
+  /**
+   * Der Ablauf nach dem Erledigen von „Einsicht nehmen“ (gemessen 20.11.2026: nach ca. 3 s): Die neue „Erneut einsehen“
+   * erscheint erst nach so vielen Lesezugriffen auf die Aufgaben der Gruppe (0 = sofort beim nächsten Lesen).
+   */
+  erneutNachLesen = 0;
+  /** … sie erscheint gar nicht (der Ablauf lief nicht). */
+  erneutNie = false;
+  /** Lesezugriffe auf `GET /groups/{g}/followups` seit dem Start – für Tests, die „beim 3. Lesen“ prüfen. */
+  aufgabenGelesen = 0;
+  /** `GET /groups/{g}/followups` scheitert mit diesem Status (vorübergehend, z. B. 503). */
+  aufgabenLesenScheitert: number | null = null;
+  /** „Heute“ des Servers – `postpone` verlangt ein Datum strikt danach (OpenAPI der Test-Instanz). */
+  serverHeute = '2026-11-20';
+  /** Wartende neue Aufgaben (noch nicht sichtbar): `bei` = Lesezählerstand, ab dem sie erscheinen. */
+  private wartend: { gruppe: number; bei: number; a: AufgabeStand }[] = [];
   /** Die angemeldete Person (`/whoami`). */
   ichId = 7;
   ignoriere: string[] = [];
@@ -274,13 +292,21 @@ export class FalschesNachweisCt {
     let m: RegExpExecArray | null;
     if ((m = /^\/groups\/(\d+)\/followups$/.exec(pfad))) {
       if (this.ohneAufgabenRecht.has(Number(m[1]))) throw new ApiError(403, 'Kein Recht');
+      if (this.aufgabenLesenScheitert !== null)
+        throw new ApiError(this.aufgabenLesenScheitert, 'ChurchTools antwortet nicht');
+      this.aufgabenGelesen++;
+      for (const w of this.wartend.filter((x) => x.gruppe === Number(m![1]))) {
+        if (this.aufgabenGelesen < w.bei) continue;
+        this.aufgaben.set(w.gruppe, [...(this.aufgaben.get(w.gruppe) ?? []), w.a]);
+        this.wartend = this.wartend.filter((x) => x !== w);
+      }
       return (this.aufgaben.get(Number(m[1])) ?? []).map((a) => ({
         id: a.id,
         personId: a.personId,
         groupId: Number(m![1]),
         title: a.title,
-        dueDate: null,
-        effectiveDueDate: null,
+        dueDate: a.dueDate ?? null,
+        effectiveDueDate: a.effectiveDueDate ?? a.dueDate ?? null,
         doneDate: a.doneDate,
         meta: { createdDate: a.createdDate },
       })) as T;
@@ -289,6 +315,12 @@ export class FalschesNachweisCt {
       if (this.ohnePersonenRecht) throw new ApiError(403, 'Kein Recht');
       const ids = [...pfad.matchAll(/ids\[\]=(\d+)/g)].map((x) => Number(x[1]));
       return ids.flatMap((id) => (this.personen.has(id) ? [this.personen.get(id)!] : [])) as T;
+    }
+    if ((m = /^\/groups\/(\d+)\/members\/(\d+)$/.exec(pfad))) {
+      // Ein Mitglied lesen (zum Nachlesen nach dem Schreiben der Felder).
+      const x = (this.mitglieder.get(Number(m[1])) ?? []).find((y) => y.personId === Number(m![2]));
+      if (!x) throw new ApiError(404, 'nicht in der Gruppe');
+      return this.rohMitglied(x, Number(m[1])) as T;
     }
     if ((m = /^\/groups\/(\d+)$/.exec(pfad))) {
       const g = this.gruppen.get(Number(m[1]));
@@ -430,6 +462,11 @@ export class FalschesNachweisCt {
         if (!ignorieren) {
           if (typeof k.groupTypeRoleId === 'number') da.groupTypeRoleId = k.groupTypeRoleId;
           if (typeof k.groupMemberStatus === 'string') da.groupMemberStatus = k.groupMemberStatus;
+          // Gruppenfelder (N2b): `{<Nummer>: Wert}`, `null` leert.
+          for (const [nr, wert] of Object.entries((k.fields ?? {}) as Record<string, unknown>)) {
+            da.fields = da.fields.filter((x) => x.id !== Number(nr));
+            if (wert !== null) da.fields.push({ id: Number(nr), value: wert });
+          }
         }
         return { data: {} };
       }
@@ -441,6 +478,36 @@ export class FalschesNachweisCt {
           );
         return { data: {} };
       }
+    }
+    // ── Folgeaufgaben (N2b) ──
+    if ((m = /^\/followups\/(\d+)\/(complete|postpone)$/.exec(pfad)) && methode === 'POST') {
+      const [gruppe, a] = [...this.aufgaben.entries()].flatMap(([g, l]) =>
+        l.filter((x) => x.id === Number(m![1])).map((x) => [g, x] as const),
+      )[0] ?? [0, undefined];
+      if (!a) throw new ApiError(404, 'Aufgabe nicht gefunden');
+      if (m[2] === 'postpone') {
+        const tag = String(k.dueDate);
+        if (tag <= this.serverHeute) throw new ApiError(400, 'dueDate muss nach heute liegen');
+        if (!ignorieren) a.effectiveDueDate = tag;
+        return { data: {} };
+      }
+      if (!ignorieren) {
+        a.doneDate = this.serverHeute;
+        if (a.title === 'Einsicht nehmen' && !this.erneutNie)
+          this.wartend.push({
+            gruppe,
+            bei: this.aufgabenGelesen + this.erneutNachLesen + 1,
+            a: {
+              id: this.naechste++,
+              personId: a.personId,
+              title: 'Erneut einsehen',
+              doneDate: null,
+              createdDate: `${this.serverHeute}T10:00:00Z`,
+              dueDate: null,
+            },
+          });
+      }
+      return { data: {} };
     }
     // ── Bescheinigungen (N1c) ──
     if (pfad === '/htmltemplates' && methode === 'POST') {
@@ -541,4 +608,14 @@ export class FalschesNachweisCt {
   ): Promise<{ data: unknown }> {
     return { data: await this.basis.schicken(pfad, methode as 'POST' | 'PUT' | 'PATCH', json) };
   }
+}
+
+/** Eine offene Aufgabe einer Person, wie die Seite sie liest (für Tests der Anzeige; `seit` = Anlagetag). */
+export function offeneAufgabe(
+  seit: string | null,
+  titel = 'Einsicht nehmen',
+  faellig: string | null = null,
+  id = 1,
+) {
+  return { id, titel, angelegt: seit, faellig, seit };
 }

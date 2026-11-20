@@ -7,10 +7,12 @@ import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { NACHWEIS_FELDER, type NachweisEinstellungen } from '@shared/anmeldung/nachweise';
 import { antragVorgabe } from '@shared/anmeldung/nachweisAntrag';
-import { plusJahre, type PersonAngaben } from '@shared/anmeldung/nachweisStand';
+import { plusJahre } from '@shared/anmeldung/nachweisStand';
 import { NACHWEIS_SCHRITTE, type NachweisErgebnis } from './nachweisArten';
 import * as Arten from './nachweisArten';
+import * as Einsicht from './nachweisEinsicht';
 import type { NachweisArtMitPersonen, NachweisPerson } from './nachweisPersonen';
+import { offeneAufgabe } from './nachweisArten.testutil';
 import { NachweisSeite, type NachweisFilter } from './NachweisSeite';
 
 /**
@@ -25,6 +27,11 @@ vi.mock('./nachweisArten', async (original) => ({
   gemeindeLogoLaden: vi.fn(),
   antragLaden: vi.fn(),
 }));
+vi.mock('./nachweisEinsicht', async (original) => ({
+  ...(await original<typeof import('./nachweisEinsicht')>()),
+  einsichtFesthalten: vi.fn(),
+}));
+const einsichtSchreiben = vi.mocked(Einsicht.einsichtFesthalten);
 const arten = vi.mocked(Arten);
 
 const E: NachweisEinstellungen = {
@@ -165,7 +172,7 @@ const bearbeiten = async () => {
 // ── Stand je Person (N2a) ────────────────────────────────────────────────────────────────────────────────────────
 
 const HEUTE = heuteImKalender();
-const P = (personId: number, name: string, p: Partial<PersonAngaben> = {}): NachweisPerson => ({
+const P = (personId: number, name: string, p: Partial<NachweisPerson> = {}): NachweisPerson => ({
   personId,
   name,
   eingesehenAm: null,
@@ -176,7 +183,7 @@ const P = (personId: number, name: string, p: Partial<PersonAngaben> = {}): Nach
   ...p,
 });
 /** Eingesehen; „Gültig bis“ liegt `tage` Tage nach heute (3 Jahre ab Ausstellung). */
-const eingesehen = (tage: number, p: Partial<PersonAngaben> = {}): Partial<PersonAngaben> => ({
+const eingesehen = (tage: number, p: Partial<NachweisPerson> = {}): Partial<NachweisPerson> => ({
   eingesehenAm: plusTage(HEUTE, -5),
   ausgestelltAm: plusJahre(plusTage(HEUTE, tage), -3),
   ...p,
@@ -185,13 +192,13 @@ const LUECKE_PROFIL = { geburtstag: null, strasse: 'Hauptstr. 4', plz: '53797', 
 const MIT_ANTRAG: NachweisEinstellungen = { ...E, antrag: antragVorgabe('ECG Donrath') };
 
 const LENA = P(1, 'Lena Probst', {
-  aufgabe: { seit: plusTage(HEUTE, -35) },
+  aufgabe: offeneAufgabe(plusTage(HEUTE, -35)),
   profil: LUECKE_PROFIL,
 });
 const JONAS = P(2, 'Jonas Beispiel', eingesehen(900, { ergebnis: 'eintrag' }));
 const MIA = P(3, 'Mia Muster', eingesehen(30));
 const TOM = P(4, 'Tom Klein', eingesehen(900));
-const PAULA = P(5, 'Paula Messnull', { aufgabe: { seit: plusTage(HEUTE, -1) } });
+const PAULA = P(5, 'Paula Messnull', { aufgabe: offeneAufgabe(plusTage(HEUTE, -1)) });
 const FZ_STAND: NachweisArtMitPersonen = {
   ...FZ,
   einstellungen: MIT_ANTRAG,
@@ -483,5 +490,78 @@ describe('Fenster „Nachweis-Art“', () => {
     const fenster = await neueArt();
     fireEvent.keyDown(fenster, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});
+
+describe('Seite „Nachweise“: Einsicht festhalten öffnen (N2b)', () => {
+  it('Rechner: ein Klick oder Eingabe auf der Zeile öffnet das Fenster dieser Person; der Hinweis steht unter der Tabelle', async () => {
+    seite(grundlage(false), [FZ_STAND]);
+    oeffnen();
+    await screen.findByRole('table');
+    expect(
+      screen.getByText('Ein Klick auf eine Person öffnet „Einsicht festhalten“.'),
+    ).toBeTruthy();
+    // Die Zeile ist anklickbar und mit der Tastatur erreichbar (Tab, Eingabe) …
+    const tom = screen.getByText('Tom Klein').closest('tr')!;
+    expect(tom.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(tom, { key: 'Enter' });
+    expect(await screen.findByRole('dialog', { name: /Einsicht festhalten/ })).toBeTruthy();
+    expect(screen.getByRole('dialog').textContent).toContain('Tom Klein');
+    fireEvent.click(screen.getByRole('button', { name: /Abbrechen/ }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // … ebenso ein Klick in eine Zelle – genau ein Fenster.
+    fireEvent.click(
+      within(screen.getByText('Paula Messnull').closest('tr')!).getAllByRole('cell')[1],
+    );
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog').textContent).toContain('Paula Messnull');
+  });
+
+  it('Handy: die Zeile der Liste öffnet das Fenster', async () => {
+    handyAn();
+    seite(grundlage(false), [FZ_STAND]);
+    oeffnen();
+    fireEvent.click(await screen.findByRole('button', { name: /Lena Probst/ }));
+    expect(await screen.findByRole('dialog', { name: /Einsicht festhalten/ })).toBeTruthy();
+  });
+
+  it('eine Art, die nicht fertig eingerichtet ist, und eine nicht sichtbare Art haben keine anklickbaren Zeilen', async () => {
+    seite(grundlage(true), [
+      { ...FZ_STAND, einstellungen: null },
+      { ...JULEICA, personen: null },
+    ]);
+    oeffnen();
+    await screen.findByRole('table');
+    expect(screen.getByText('Tom Klein').closest('tr')!.getAttribute('tabindex')).toBeNull();
+    expect(screen.queryByText(/Ein Klick auf eine Person/)).toBeNull();
+    fireEvent.click(screen.getByText('Tom Klein'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('Festhalten: die Seite lädt neu und zeigt die Meldung', async () => {
+    einsichtSchreiben.mockResolvedValue({
+      neu: true,
+      gueltigBis: null,
+      erledigt: null,
+      verschoben: false,
+      nachziehen: false,
+      text: 'Einsicht bei Tom Klein festgehalten – gültig bis 01.01.2030.',
+    });
+    seite(grundlage(false), [FZ_STAND]);
+    const gemeldet = vi.fn();
+    render(<NachweisSeite onZurueck={() => {}} onGeaendert={gemeldet} />);
+    fireEvent.click((await screen.findByText('Tom Klein')).closest('tr')!);
+    const aus = screen.getByLabelText(/Ausgestellt am/);
+    fireEvent.change(aus, { target: { value: plusTage(HEUTE, -10) } });
+    fireEvent.click(screen.getByLabelText(/Keine Eintragung/));
+    fireEvent.click(screen.getByRole('button', { name: 'Festhalten' }));
+    await waitFor(() =>
+      expect(gemeldet).toHaveBeenCalledWith({
+        text: 'Einsicht bei Tom Klein festgehalten – gültig bis 01.01.2030.',
+        rueckgaengig: null,
+      }),
+    );
+    expect(arten.nachweiseSeiteLaden.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

@@ -17,8 +17,15 @@
  * | noch keine Aufg.| weder Einsicht noch offene Aufgabe                                                | grau   | nein           |
  * | unvollständig   | eingesehen, aber das Datum für „Gültig bis“ fehlt                                 | grau   | nein           |
  */
-import { tageBis, tagMonat } from '../ct/datum';
-import type { NachweisEinstellungen } from './nachweise';
+import { tageBis, tagMonat, tagPunkt } from '../ct/datum';
+import {
+  NACHWEIS_AUFGABE_ERNEUT,
+  NACHWEIS_AUFGABE_ERSTE,
+  gleicherGruppenName,
+  nachweisGueltigText,
+  type NachweisAb,
+  type NachweisEinstellungen,
+} from './nachweise';
 
 /** Ab wie vielen Tagen ohne Einsicht eine offene Aufgabe als „fehlt“ gilt (vier Wochen). */
 export const FEHLT_NACH_TAGEN = 28;
@@ -301,3 +308,145 @@ export function brauchenDichText(n: number): string {
     ? '1 Person braucht dich als Vertrauensperson.'
     : `${n} Personen brauchen dich als Vertrauensperson.`;
 }
+
+// ── Einsicht festhalten (N2b) ────────────────────────────────────────────────────────────────────────────────────
+
+/** Die offene Folgeaufgabe, soweit die Regeln sie brauchen. `angelegt`: Tag der Anlage (Ortszeit), `null` = unbekannt. */
+export interface AufgabeKern {
+  titel: string;
+  angelegt: string | null;
+}
+
+/**
+ * **Erledigt diese Einsicht die offene Aufgabe?** Ja, wenn sie am Tag der Anlage oder später war. Begründung: „Einsicht
+ * nehmen“ entsteht bei der Anforderung, „Erneut einsehen“ beim Erledigen der vorigen Einsicht – eine spätere Einsicht
+ * erledigt sie, eine Berichtigung der alten Angaben nicht. Unbekannter Anlagetag: nicht erledigen (lieber eine Aufgabe zu
+ * viel offen als eine zu Unrecht abgehakt). DIE Stelle für „neue Einsicht oder nur berichtigen“ – Fenster und Schreiben
+ * nutzen nur sie.
+ */
+export function aufgabeErledigtDurch(
+  aufgabe: Pick<AufgabeKern, 'angelegt'> | null,
+  eingesehenAm: string | null,
+): boolean {
+  return Boolean(aufgabe?.angelegt && eingesehenAm && eingesehenAm >= aufgabe.angelegt);
+}
+
+export type NachweisVerschieben = 'vorhandene' | 'naechste' | null;
+
+/** Was beim Festhalten mit der Aufgabe geschieht. */
+export interface EinsichtPlan {
+  /** Neue Einsicht (erledigt die offene Aufgabe) – sonst nur berichtigt. */
+  neu: boolean;
+  gueltigBis: string | null;
+  /** Titel der Aufgabe, die erledigt wird. */
+  erledigt: string | null;
+  /**
+   * Das Datum, auf das „Erneut einsehen“ gelegt wird: `gueltigBis`, aber nur wenn es **nach heute** liegt – ChurchTools
+   * verschiebt nur auf ein Datum strikt nach heute (OpenAPI, 20.11.2026). Sonst `null`: auslassen, kein Fehler.
+   */
+  verschiebenAuf: string | null;
+  /**
+   * `vorhandene`: die offene „Erneut einsehen“ wird verschoben (Berichtigung); `naechste`: die nach dem Erledigen neu
+   * angelegte „Erneut einsehen“ (bei „Einsicht nehmen“ sofort, bei „Erneut einsehen“ erst morgen); `null`: nichts.
+   */
+  verschieben: NachweisVerschieben;
+}
+
+export function einsichtPlan(a: {
+  einstellungen: Pick<NachweisEinstellungen, 'gueltigJahre' | 'ab'>;
+  eingesehenAm: string;
+  ausgestelltAm: string | null;
+  aufgabe: AufgabeKern | null;
+  heute: string;
+}): EinsichtPlan {
+  const gueltigBis = nachweisGueltigBis(a.einstellungen, a);
+  const neu = aufgabeErledigtDurch(a.aufgabe, a.eingesehenAm);
+  const erneut = a.aufgabe ? gleicherGruppenName(a.aufgabe.titel, NACHWEIS_AUFGABE_ERNEUT) : false;
+  const verschiebenAuf = gueltigBis && gueltigBis > a.heute ? gueltigBis : null;
+  return {
+    neu,
+    gueltigBis,
+    erledigt: neu && a.aufgabe ? a.aufgabe.titel : null,
+    verschiebenAuf,
+    verschieben: !verschiebenAuf ? null : neu ? 'naechste' : erneut ? 'vorhandene' : null,
+  };
+}
+
+export interface EinsichtWerte {
+  eingesehenAm: string;
+  ausgestelltAm: string;
+  ergebnis: 'ohne' | 'eintrag' | '';
+}
+
+/**
+ * **Die Vorbelegung des Fensters.** Keine Einsicht oder „läuft ab“/„abgelaufen“ → neue Einsicht: heute, Ausgestellt leer,
+ * Ergebnis leer (bei „läuft ab/abgelaufen“ das bisherige). Sonst die gespeicherten Werte (berichtigen).
+ */
+export function einsichtVorbelegung(
+  p: Pick<PersonAngaben, 'eingesehenAm' | 'ausgestelltAm' | 'ergebnis'>,
+  stand: NachweisStand,
+  heute: string,
+): EinsichtWerte {
+  const neu = !p.eingesehenAm || stand.art === 'laeuftAb' || stand.art === 'abgelaufen';
+  if (neu)
+    return {
+      eingesehenAm: heute,
+      ausgestelltAm: '',
+      ergebnis: p.eingesehenAm ? (p.ergebnis ?? '') : '',
+    };
+  return {
+    eingesehenAm: p.eingesehenAm ?? '',
+    ausgestelltAm: p.ausgestelltAm ?? '',
+    ergebnis: p.ergebnis ?? '',
+  };
+}
+
+/** **Was fehlt oder passt nicht?** Der erste Prüftext oder `null`. */
+export function einsichtFehler(w: EinsichtWerte, ab: NachweisAb, heute: string): string | null {
+  if (!w.eingesehenAm) return 'Bitte eintragen, wann du das Zeugnis gesehen hast.';
+  if (w.eingesehenAm > heute) return '„Eingesehen am“ liegt in der Zukunft.';
+  if (ab === 'ausstellung' && !w.ausgestelltAm) return 'Bitte das Datum auf dem Zeugnis eintragen.';
+  if (w.ausgestelltAm && w.ausgestelltAm > w.eingesehenAm)
+    return 'Das Zeugnis kann nicht nach der Einsicht ausgestellt sein.';
+  if (!w.ergebnis) return 'Bitte ein Ergebnis wählen.';
+  return null;
+}
+
+/** Die Zeilen des blauen Kastens, abgeleitet aus dem Plan. */
+export function einsichtFolgeTexte(
+  plan: EinsichtPlan,
+  einstellungen: Pick<NachweisEinstellungen, 'gueltigJahre' | 'ab'>,
+  ergebnis: 'ohne' | 'eintrag',
+  bisherErgebnis: NachweisErgebnisWert,
+): string[] {
+  const zeilen: string[] = [];
+  const bis = plan.gueltigBis ? tagPunkt(plan.gueltigBis) : null;
+  zeilen.push(
+    `${plan.neu ? 'Neue Einsicht' : 'Nur die Angaben werden berichtigt'}${bis ? ` · gültig bis ${bis} (${nachweisGueltigText(einstellungen)})` : ''}.`,
+  );
+  if (plan.erledigt) {
+    const wird = `Die Aufgabe „${plan.erledigt}“ wird erledigt.`;
+    zeilen.push(
+      plan.verschiebenAuf
+        ? `${wird} Die nächste „${NACHWEIS_AUFGABE_ERNEUT}“ bekommt den ${tagPunkt(plan.verschiebenAuf)}.`
+        : wird,
+    );
+  } else if (plan.verschieben === 'vorhandene' && plan.verschiebenAuf) {
+    zeilen.push(
+      `Keine Aufgabe wird erledigt; „${NACHWEIS_AUFGABE_ERNEUT}“ bleibt offen, Datum ${tagPunkt(plan.verschiebenAuf)}.`,
+    );
+  } else {
+    zeilen.push('Keine Aufgabe wird erledigt.');
+  }
+  if (ergebnis === 'eintrag')
+    zeilen.push(
+      'Stand bleibt „Rücksprache“ (rot), bis jemand das Ergebnis nach dem Gespräch ändert.',
+    );
+  else if (bisherErgebnis === 'eintrag')
+    zeilen.push('Danach ist der Stand wieder grün, die Rücksprache ist erledigt.');
+  return zeilen;
+}
+
+/** Ist es die erste Aufgabe des Ablaufs („Einsicht nehmen“)? */
+export const istErsteAufgabe = (titel: string) =>
+  gleicherGruppenName(titel, NACHWEIS_AUFGABE_ERSTE);

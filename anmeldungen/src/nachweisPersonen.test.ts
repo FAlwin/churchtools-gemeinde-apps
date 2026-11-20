@@ -154,12 +154,7 @@ describe('Personen einer Nachweis-Art lesen', () => {
       createdDate: '2026-11-02T10:00:00Z',
     });
     const l = (await nachweisPersonenLesen({ id: g.id, einstellungen: E }, TEILNEHMER))!;
-    expect(l.map((p) => p.aufgabe)).toEqual([
-      { seit: '2026-11-20' },
-      null,
-      null,
-      { seit: '2026-11-02' },
-    ]);
+    expect(l.map((p) => p.aufgabe?.seit ?? null)).toEqual(['2026-11-20', null, null, '2026-11-02']);
   });
 
   it('Aufgabe ohne Anlagedatum: der Beginn der Mitgliedschaft; mehrere offene: die älteste – in jeder Reihenfolge', async () => {
@@ -182,9 +177,9 @@ describe('Personen einer Nachweis-Art lesen', () => {
       createdDate: '2026-11-10T10:00:00Z',
     });
     const l = (await nachweisPersonenLesen({ id: g.id, einstellungen: E }, TEILNEHMER))!;
-    expect(l[0].aufgabe).toEqual({ seit: '2026-10-05' });
-    expect(l[1].aufgabe).toEqual({ seit: '2026-11-01' });
-    expect(l[2].aufgabe).toEqual({ seit: '2026-11-01' });
+    expect(l[0].aufgabe).toMatchObject({ seit: '2026-10-05' });
+    expect(l[1].aufgabe).toMatchObject({ seit: '2026-11-01' });
+    expect(l[2].aufgabe).toMatchObject({ seit: '2026-11-01' });
   });
 
   it('die Felder werden nach ihrem NAMEN gefunden, nicht nach einer Nummer (ChurchTools nummeriert je Gruppe)', async () => {

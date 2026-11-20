@@ -1,6 +1,6 @@
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
-import { ctBasis } from '@ui/ct/basis';
+import { personLink } from '@ui/ct/links';
 import { euroText } from '@shared/anmeldung/preis';
 import type { Betragsbefund, Nachpruefung } from '@shared/anmeldung/nachpruefung';
 import { bedingungsText, type Bedingungsbefund } from '@shared/anmeldung/antwortenAusListe';
@@ -43,10 +43,7 @@ function BetragsZeile({ b }: { b: Betragsbefund }) {
         <span>
           <b>{b.name}</b> <span className={v.nr}>{b.nr}</span>
         </span>
-        <a
-          className={s.link}
-          href={`${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${b.personId}/`}
-        >
+        <a className={s.link} href={personLink(b.personId)}>
           In ChurchTools
           <Icon name="external" size={13} />
         </a>

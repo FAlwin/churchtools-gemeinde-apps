@@ -86,7 +86,7 @@ export function istLinkAdresse(adresse: string): boolean {
   return istErlaubteAdresse(adresse) || istRelativ(adresse);
 }
 
-/** Am Zeilenanfang eines Absatzes: `\-` und `1\.` sind Zeichen, keine Liste. */
+/** Am Anfang einer Zeile (Absatz, Listenpunkt, Zwischenüberschrift): `\-` und `1\.` sind Zeichen, keine Liste. */
 function zeilenanfang(zeile: string): string {
   return zeile.replace(/^\\(?=-)/, '').replace(/^(\d+)\\\./, '$1.');
 }

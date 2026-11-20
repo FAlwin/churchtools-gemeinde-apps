@@ -191,6 +191,21 @@ describe('Fenster „Einstellungen“ – Speichern', () => {
   });
 });
 
+describe('Jemand hat inzwischen geändert', () => {
+  it('„Speichern“ schreibt NICHT darüber: der neue Stand ersetzt den Entwurf, ein Hinweis erklärt es', async () => {
+    await zeige();
+    // während das Fenster offen ist, speichert jemand anderes einen anderen Namen
+    server.einstellungen = einstellungen({ name: 'Von jemand anderem' });
+    await tippe(feld('Name der Gemeinde'), 'Mein Name');
+    await speichern();
+    await warte(0);
+    expect(d.speichereEinstellungen).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/von jemand anderem geändert/);
+    expect(feld('Name der Gemeinde').value).toBe('Von jemand anderem');
+    expect(schliessen).not.toHaveBeenCalled();
+  });
+});
+
 describe('Datenschutz-Hinweis', () => {
   it('Livestream da, Link fehlt: Hinweis – mit Link (Seite oder Adresse) verschwindet er', async () => {
     await zeige(stand({ seiten: [START, STREAM] }));

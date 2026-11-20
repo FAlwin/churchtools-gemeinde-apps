@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { SCHRIFT_LADER } from '../../website/src/schriftLader';
 import { SCHRIFTEN } from './schriften';
 
 /**
@@ -11,7 +10,9 @@ import { SCHRIFTEN } from './schriften';
  *  - jede Schrift der Liste hat ihre Datei, und keine Datei steht ohne Eintrag da;
  *  - jede Datei ist wirklich WOFF2 (Kennung `wOF2`) und bleibt unter der Größengrenze;
  *  - jede Datei hat ihre Zeile in `QUELLEN.md` und ihren Lizenztext (der mitgeliefert werden muss);
- *  - die Lade-Tabelle der Vorschau deckt genau die Liste ab.
+ *
+ * Dass die Lade-Tabelle der Vorschau genau diese Liste abdeckt, prüft `website/src/schriftLader.test.ts` – sie braucht Vites
+ * `import.meta.glob`, und eine Datei in `shared/` darf nichts importieren, das nur mit den Typen von Vite übersetzt.
  */
 const ORDNER = join(__dirname, 'schriften');
 /** Eine Datei über dieser Größe wäre ein Versehen (etwa der volle Zeichensatz statt Latin) – sie landet in jedem Bündel. */
@@ -57,17 +58,20 @@ describe('Schriftdateien (Wächter)', () => {
     expect(genannt).toEqual(dateien);
   });
 
-  it.each(dateien)('%s hat ihren Lizenztext daneben – und der passt zur Angabe in QUELLEN.md', (datei) => {
-    const lizenz = join(ORDNER, `${paketVon(datei)}.LICENSE.txt`);
-    expect(existsSync(lizenz), `${paketVon(datei)}.LICENSE.txt fehlt`).toBe(true);
-    const text = readFileSync(lizenz, 'utf8');
-    const zeile = quellen.split('\n').find((z) => z.startsWith(`| ${datei} `)) ?? '';
-    if (zeile.includes('Apache 2.0')) expect(text).toMatch(/Apache License/);
-    else {
-      expect(zeile).toContain('SIL OFL 1.1');
-      expect(text).toMatch(/SIL OPEN FONT LICENSE Version 1\.1/i);
-    }
-  });
+  it.each(dateien)(
+    '%s hat ihren Lizenztext daneben – und der passt zur Angabe in QUELLEN.md',
+    (datei) => {
+      const lizenz = join(ORDNER, `${paketVon(datei)}.LICENSE.txt`);
+      expect(existsSync(lizenz), `${paketVon(datei)}.LICENSE.txt fehlt`).toBe(true);
+      const text = readFileSync(lizenz, 'utf8');
+      const zeile = quellen.split('\n').find((z) => z.startsWith(`| ${datei} `)) ?? '';
+      if (zeile.includes('Apache 2.0')) expect(text).toMatch(/Apache License/);
+      else {
+        expect(zeile).toContain('SIL OFL 1.1');
+        expect(text).toMatch(/SIL OPEN FONT LICENSE Version 1\.1/i);
+      }
+    },
+  );
 
   it('jeder Lizenztext gehört zu einer Schrift der Liste (keine übrig gebliebene Lizenz)', () => {
     const lizenzen = readdirSync(ORDNER)
@@ -75,11 +79,5 @@ describe('Schriftdateien (Wächter)', () => {
       .map((d) => d.replace('.LICENSE.txt', ''))
       .sort();
     expect(lizenzen).toEqual([...new Set(SCHRIFTEN.map((s) => paketVon(s.datei)))].sort());
-  });
-});
-
-describe('Lade-Tabelle der Vorschau (website/src/schriftLader.ts)', () => {
-  it('deckt genau die Liste ab – keine Schrift ohne Lader, kein Lader ohne Schrift', () => {
-    expect(Object.keys(SCHRIFT_LADER).sort()).toEqual(SCHRIFTEN.map((s) => s.datei).sort());
   });
 });

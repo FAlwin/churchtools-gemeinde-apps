@@ -10,7 +10,10 @@ import { KEINE_SCHRIFT, schriftspeicher, type Schriftspeicher } from './schriftL
  * `fehler`: Eine der gebrauchten Schriften ließ sich nicht laden – leiser Hinweis; `nochmal()` versucht es erneut. Der
  * Versuch wiederholt sich auch von selbst, sobald sich die Wahl ändert oder die Vorschau neu erscheint.
  */
-export function useSchriften(dateien: readonly string[], speicher: Schriftspeicher = schriftspeicher) {
+export function useSchriften(
+  dateien: readonly string[],
+  speicher: Schriftspeicher = schriftspeicher,
+) {
   const schluessel = dateien.join('|');
   const [versuch, setVersuch] = useState(0);
   const stand = useSyncExternalStore(speicher.abonnieren, speicher.schnappschuss);

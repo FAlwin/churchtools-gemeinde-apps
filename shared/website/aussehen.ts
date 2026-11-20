@@ -29,6 +29,11 @@ export function hexAusEingabe(text: string): string | null {
   return HEX_MUSTER.test(mit) ? mit.toLowerCase() : null;
 }
 
+/** `#abc` → `#aabbcc` – der Farbwähler des Browsers kennt nur die lange Schreibweise. */
+export function hexVoll(hex: string): string {
+  return hex.length === 4 ? '#' + [...hex.slice(1)].map((z) => z + z).join('') : hex;
+}
+
 /** Die dunkle Variante, wenn keine gesetzt ist – dasselbe wie `color-mix(in srgb, haupt 70%, #000)` im Theme. */
 export function hauptTiefAbgeleitet(haupt: string): string {
   const roh = haupt.slice(1);
@@ -127,4 +132,22 @@ export function kontrastHinweise(e: Einstellungen): KontrastHinweis[] {
 /** „3,1 : 1“ – das Verhältnis für die Anzeige, auf eine Stelle abgerundet (aufgerundet könnte 4,46 als „4,5“ erscheinen). */
 export function verhaeltnisText(v: number): string {
   return `${(Math.floor(v * 10) / 10).toFixed(1).replace('.', ',')} : 1`;
+}
+
+/** JSON mit sortierten Schlüsseln – damit zwei gleiche Inhalte gleich aussehen, auch wenn ihre Felder anders geordnet sind. */
+function stabil(x: unknown): string {
+  return JSON.stringify(x, (_k, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  );
+}
+
+/**
+ * Sind das dieselben gespeicherten Einstellungen? **Unabhängig von der Reihenfolge der Felder**: Was gelesen wird, kommt in
+ * der Reihenfolge des Schemas zurück, was der Reiter baut, in der des Bauens – ein Vergleich per `JSON.stringify` hielte
+ * dieselben Einstellungen für „von jemand anderem geändert“. `null` = nichts gespeichert.
+ */
+export function einstellungenGleich(a: Einstellungen | null, b: Einstellungen | null): boolean {
+  return stabil(a) === stabil(b);
 }

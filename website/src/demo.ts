@@ -14,7 +14,11 @@
  *    aus, wenn die Freigabe beim Verlassen nicht durchkam): „Hier weiterbearbeiten“ nimmt sie.
  *  - `?demo=wackelt` – wie `seiten`, aber das erste Speichern einer Seite scheitert vorübergehend (503): „Nicht gespeichert“,
  *    die Änderung bleibt stehen, „Erneut versuchen“ klappt.
+ *  - `?demo=aussehen-gesperrt` – wie `seiten`, aber das Aussehen (die Einstellungen) bearbeitet gerade jemand anderes.
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
+ *
+ * Alle Fälle mit Seiten haben gespeicherte Einstellungen (Farben, Schriften Quicksand und Caveat Brush) – der Reiter „Aussehen“
+ * zeigt damit etwas. Die Schriften werden im Entwicklungsmodus wie im Bau als `data:`-Adresse nachgeladen.
  *
  * **Im Demo-Modus geht keine Anfrage ins Netz:** `fetch` wird vor dem ersten Zeichnen ersetzt und beantwortet jeden Pfad
  * selbst – was nicht bekannt ist, bekommt 404 und wird in der Konsole genannt, statt an einen Server zu gehen.
@@ -22,14 +26,22 @@
 import { teileBauen } from '@shared/ct/teile';
 import { sperreVon } from '@shared/ct/sperre';
 import { kategorienFuer } from '@shared/website/einrichten';
-import { seiteAlsText, menueAlsText, type Menue, type Seite } from '@shared/website/modell';
 import {
+  einstellungenAlsText,
+  seiteAlsText,
+  menueAlsText,
+  type Einstellungen,
+  type Menue,
+  type Seite,
+} from '@shared/website/modell';
+import {
+  EINSTELLUNGEN_ID,
   MENUE_ID,
   type Einheit,
   type WebsiteKopf,
   type WebsiteTeil,
 } from '@shared/website/speicher';
-import { neueStartseite } from '@shared/website/seitenListe';
+import { neueStartseite, vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
 import type { WebsiteSperre } from '@shared/website/sperre';
 
 const MODUL = 40;
@@ -50,8 +62,18 @@ export function demoStarten(fall: string): void {
     'gesperrt',
     'eigene',
     'wackelt',
+    'aussehen-gesperrt',
   ].includes(fall);
-  const admin = ['', 'leer', 'seiten', 'kaputt', 'gesperrt', 'eigene', 'wackelt'].includes(fall);
+  const admin = [
+    '',
+    'leer',
+    'seiten',
+    'kaputt',
+    'gesperrt',
+    'eigene',
+    'wackelt',
+    'aussehen-gesperrt',
+  ].includes(fall);
   const kategorien: { id: number; shorty: string; name: string }[] = [];
   const [e, v] = kategorienFuer(GRUPPE, 'Website');
   if (eingerichtet)
@@ -95,7 +117,18 @@ export function demoStarten(fall: string): void {
     liste.push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(kopf) });
   };
 
-  if (['seiten', 'leitung', 'mitglied', 'kaputt', 'gesperrt', 'eigene', 'wackelt'].includes(fall)) {
+  if (
+    [
+      'seiten',
+      'leitung',
+      'mitglied',
+      'kaputt',
+      'gesperrt',
+      'eigene',
+      'wackelt',
+      'aussehen-gesperrt',
+    ].includes(fall)
+  ) {
     let n = 0;
     const id = () => `demo-${++n}`;
     const start = neueStartseite([], id);
@@ -116,6 +149,38 @@ export function demoStarten(fall: string): void {
       eintraege: [{ titel: 'Unsere Gruppen', ziel: { art: 'seite', seiteId: gruppen.id } }],
     };
     lege('menue', MENUE_ID, menueAlsText(menue));
+    const aussehen: Einstellungen = {
+      ...vorlaeufigeEinstellungen('Demo-Gemeinde'),
+      noindex: false,
+      farben: {
+        haupt: '#00434c',
+        akzent: '#e3aa1d',
+        grund: '#ffffff',
+        sanft: '#eef3f3',
+        text: '#1e2a2b',
+      },
+      schriften: {
+        text: { art: 'auswahl', name: 'Quicksand' },
+        ueberschrift: { art: 'auswahl', name: 'Quicksand' },
+        akzent: { art: 'auswahl', name: 'Caveat Brush' },
+      },
+    };
+    lege('einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(aussehen));
+    if (fall === 'aussehen-gesperrt') {
+      const sperre: WebsiteSperre = {
+        art: 'website-sperre',
+        fassung: 1,
+        einheit: 'einstellungen',
+        id: EINSTELLUNGEN_ID,
+        sperre: sperreVon(
+          { person: 2, name: 'Jonas Peters', fenster: 'anderes-fenster' },
+          new Date(),
+        ),
+      };
+      werte
+        .get(ENTWUERFE)!
+        .push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(sperre) });
+    }
     if (fall === 'gesperrt' || fall === 'eigene') {
       // Jemand anderes (oder `eigene`: dieselbe Person 1 in einem anderen Fenster) hat die Startseite gerade offen.
       const sperre: WebsiteSperre = {

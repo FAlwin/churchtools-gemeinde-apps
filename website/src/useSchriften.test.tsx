@@ -40,7 +40,8 @@ describe('useSchriften', () => {
   it('LADEFEHLER: `fehler` ist an, die Adresse bleibt die Ersatzschrift – „nochmal“ versucht es erneut und der Hinweis verschwindet', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     let n = 0;
-    const lader: Lader = () => (++n === 1 ? Promise.reject(new Error('x')) : Promise.resolve('data:a'));
+    const lader: Lader = () =>
+      ++n === 1 ? Promise.reject(new Error('x')) : Promise.resolve('data:a');
     const speicher = new Schriftspeicher({ 'a.woff2': lader });
     const { result } = renderHook(() => useSchriften(['a.woff2'], speicher));
     await waitFor(() => expect(result.current.fehler).toBe(true));

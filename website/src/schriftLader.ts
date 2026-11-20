@@ -20,9 +20,7 @@
 export type Lader = () => Promise<string>;
 
 /** Die Lade-Tabelle: Dateiname (wie `datei` in `schriften.ts`) → Lader. Aus dem Ordner der Schriftdateien. */
-export function ladeTabelle(
-  glob: Record<string, () => Promise<unknown>>,
-): Record<string, Lader> {
+export function ladeTabelle(glob: Record<string, () => Promise<unknown>>): Record<string, Lader> {
   const tabelle: Record<string, Lader> = {};
   for (const [pfad, laden] of Object.entries(glob)) {
     const datei = pfad.split('/').pop() ?? pfad;

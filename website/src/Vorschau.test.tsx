@@ -311,7 +311,8 @@ describe('Schriften in der Vorschau (W3a-3)', () => {
 
   it('die gewählte Schrift kommt als data:-Adresse ins Dokument – nur sie, und erst, wenn sie geladen ist', async () => {
     render(<Vorschau seite={SEITE} stand={MIT_LORA} gemeinde="ECG" ansicht="computer" />);
-    const srcdoc = () => screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc') ?? '';
+    const srcdoc = () =>
+      screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc') ?? '';
     await waitFor(() => expect(srcdoc()).toContain('url("data:font/woff2;base64,'));
     expect(srcdoc()).toContain("font-family:'Lora'");
     // Nur diese Datei wurde geladen – die anderen 13 nicht
@@ -322,9 +323,9 @@ describe('Schriften in der Vorschau (W3a-3)', () => {
 
   it('ohne gewählte Schrift (Systemschrift) steht keine @font-face-Regel im Dokument', () => {
     render(<Vorschau seite={SEITE} stand={STAND} gemeinde="ECG" ansicht="computer" />);
-    expect(screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc')).not.toContain(
-      '@font-face',
-    );
+    expect(
+      screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc'),
+    ).not.toContain('@font-face');
   });
 
   it('eine eigene Schrift bekommt bis W4 keine Adresse: Ersatzschrift, kein Fehlerhinweis', () => {
@@ -340,8 +341,8 @@ describe('Schriften in der Vorschau (W3a-3)', () => {
     };
     render(<Vorschau seite={SEITE} stand={eigene} gemeinde="ECG" ansicht="computer" />);
     expect(screen.queryByText(/Schrift ließ sich gerade nicht laden/)).toBeNull();
-    expect(screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc')).toContain(
-      'url("data:,")',
-    );
+    expect(
+      screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc'),
+    ).toContain('url("data:,")');
   });
 });

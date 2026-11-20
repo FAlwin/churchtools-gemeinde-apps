@@ -248,7 +248,9 @@ describe('Schutz: Schriftnamen, Gewichte, Adressen, Farben', () => {
 
     it('die eine erlaubte Form bleibt unverändert – mit ihrem `;`, sonst wäre es keine Base64-Adresse mehr', () => {
       expect(cssAdresse(OK)).toBe(OK);
-      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), { schriftAdresse: () => OK });
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), {
+        schriftAdresse: () => OK,
+      });
       expect(css).toContain(`url("${OK}")`);
     });
 
@@ -267,7 +269,9 @@ describe('Schutz: Schriftnamen, Gewichte, Adressen, Farben', () => {
       ['mit Großschreibung der Art', 'DATA:font/woff2;base64,AAAA'],
     ])('jede andere Form wird wie vorher entschärft: %s', (_name, boese) => {
       expect(cssAdresse(boese)).not.toMatch(/["'\\(){};<>\s]/);
-      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), { schriftAdresse: () => boese });
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), {
+        schriftAdresse: () => boese,
+      });
       expect(css).not.toContain('</style');
       expect(css.match(/url\(/g)).toHaveLength(2);
     });

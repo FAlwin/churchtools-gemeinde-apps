@@ -64,6 +64,20 @@ describe('Speicherschlange: nie zwei Speicherungen gleichzeitig', () => {
   });
 });
 
+describe('Speicherschlange: aktiv (läuft gerade etwas?)', () => {
+  it('aktiv gilt nur, solange eine Speicherung läuft – ein gescheiterter, wartender Stand ist offen, aber nicht aktiv', async () => {
+    const { schlange, wartende } = aufbau();
+    expect(schlange.aktiv).toBe(false);
+    schlange.anfordern('A');
+    expect(schlange.aktiv).toBe(true);
+    await tick();
+    wartende[0].ende.nein(new Error('503'));
+    await tick();
+    expect(schlange.offen).toBe(true);
+    expect(schlange.aktiv).toBe(false);
+  });
+});
+
 describe('Speicherschlange: ein Fehler zerstört nichts', () => {
   it('scheitert die Speicherung (503), bleibt der Stand erhalten – „Erneut versuchen“ schickt DENSELBEN Stand noch einmal', async () => {
     const { schlange, wartende, stand, zaehler } = aufbau();

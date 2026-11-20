@@ -1,0 +1,199 @@
+// Der Reiter „Aussehen“ (Bauplan Website W3a-3a): links das Formular in Karten, rechts die Vorschau; am Handy untereinander.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.raster {
+  display: grid;
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// Ein `fieldset` nur, damit „fremd gesperrt“ alle Felder auf einmal abschaltet – ohne Rand und Innenabstand.
+.formular {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.karte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.unter {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text2);
+}
+
+// Eine Farbe: Farbwähler, Name mit Wofür, Hex-Feld.
+.farbzeile {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.waehler {
+  width: 40px;
+  height: var(--knopf-hoehe);
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.farbname {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14.5px;
+  color: var(--text);
+
+  small {
+    font-size: 12.5px;
+    color: var(--text3);
+  }
+}
+
+.hex {
+  @include m.eingabefeld;
+  width: 100%;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+// Der ruhige Kontrast-Hinweis unter der Farbe: keine Fehlerfarbe – gespeichert wird trotzdem.
+.kontrast {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.auswahl {
+  @include m.eingabefeld;
+  width: 100%;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font-size: 14.5px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.code {
+  @include m.eingabefeld;
+  width: 100%;
+  min-height: 160px;
+  padding: 10px 12px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.zaehler {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text3);
+}
+
+.rechts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.werkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.seitenwahl {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  select {
+    @include m.eingabefeld;
+    flex: 1;
+    min-width: 0;
+    height: var(--knopf-hoehe);
+    padding: 0 10px;
+    font-size: 14.5px;
+  }
+}
+
+.probleme {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--text);
+}

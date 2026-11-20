@@ -118,8 +118,8 @@ export function Vorschau({
       )}
       {schriften.fehler && (
         <div className={styles.hinweis} role="status">
-          Eine Schrift ließ sich gerade nicht laden – die Vorschau zeigt vorerst eine Ersatzschrift. Deine
-          Einstellungen bleiben unverändert.{' '}
+          Eine Schrift ließ sich gerade nicht laden – die Vorschau zeigt vorerst eine Ersatzschrift.
+          Deine Einstellungen bleiben unverändert.{' '}
           <TextKnopf onClick={schriften.nochmal}>Erneut laden</TextKnopf>
         </div>
       )}

@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { _vergissModul } from '@ui/ct/modulPort';
 import { neueLeereSeite } from '@shared/website/seitenListe';
-import { beginneBearbeiten, ladeWebsite, speichereSeite } from './daten';
+import {
+  beginneBearbeiten,
+  beginneEinstellungen,
+  ladeWebsite,
+  speichereEinstellungen,
+  speichereSeite,
+} from './daten';
 import { demoStarten } from './demo';
 import { ladeStart } from './start';
 
@@ -112,5 +118,41 @@ describe('Demo: Speichern scheitert vorübergehend', () => {
     const { ort: o } = await ort('seiten');
     const start = (await ladeWebsite(o)).seiten.find((s) => s.startseite)!;
     await expect(speichereSeite(o, { ...start, titel: 'Gleich klar' })).resolves.toBeUndefined();
+  });
+});
+
+describe('Demo: Aussehen', () => {
+  it('die Fälle mit Seiten haben gespeicherte Einstellungen (Farben, Schriften) – der Reiter zeigt etwas', async () => {
+    const { ort: o } = await ort('seiten');
+    const stand = await ladeWebsite(o);
+    expect(stand.probleme).toEqual([]);
+    expect(stand.einstellungen?.farben?.haupt).toBe('#00434c');
+    expect(stand.einstellungen?.schriften?.akzent).toEqual({
+      art: 'auswahl',
+      name: 'Caveat Brush',
+    });
+    expect(stand.einstellungenSperre).toBeNull();
+  });
+
+  it('der Demo-Speicher behält neue Einstellungen für die Sitzung', async () => {
+    const { ort: o } = await ort('seiten');
+    const e = (await ladeWebsite(o)).einstellungen!;
+    await speichereEinstellungen(o, { ...e, name: 'Neu benannt' });
+    expect((await ladeWebsite(o)).einstellungen?.name).toBe('Neu benannt');
+  });
+
+  it('`aussehen-gesperrt`: Jonas Peters bearbeitet das Aussehen – beim Lesen und beim Nehmen; die Seiten sind frei', async () => {
+    const { ort: o } = await ort('aussehen-gesperrt');
+    const stand = await ladeWebsite(o);
+    expect(stand.einstellungenSperre).toMatchObject({ von: 2, name: 'Jonas Peters' });
+    expect(stand.sperren).toEqual({});
+    expect(await beginneEinstellungen(o, ICH)).toMatchObject({ art: 'gesperrt' });
+    const start = stand.seiten.find((s) => s.startseite)!;
+    expect((await beginneBearbeiten(o, start.id, ICH)).art).toBe('ok');
+  });
+
+  it('in den anderen Fällen ist das Aussehen frei', async () => {
+    const { ort: o } = await ort('seiten');
+    expect((await beginneEinstellungen(o, ICH)).art).toBe('ok');
   });
 });

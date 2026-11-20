@@ -36,6 +36,11 @@ export class Speicherschlange<T> {
     return this.laeuft || this.ausstehend !== null;
   }
 
+  /** Läuft gerade eine Speicherung? (Anders als `offen`: ein gescheiterter, wartender Stand zählt nicht.) */
+  get aktiv(): boolean {
+    return this.laeuft;
+  }
+
   /** Dieser Stand soll gespeichert werden. Ein früherer, noch wartender Stand ist damit überholt. */
   anfordern(wert: T): void {
     this.ausstehend = { wert };

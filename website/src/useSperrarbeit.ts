@@ -73,30 +73,47 @@ export function useSperrarbeit<W>(cfg: SperrArbeit<W>) {
   /** Alles, was ein (vielleicht halb gelungener) Speicherversuch geschrieben haben kann. */
   const versucht = useRef<W[]>([]);
   const lauf = useRef<Promise<boolean> | null>(null);
+  /** Die Oberfläche ist weg, ein Speichern lief aber noch – dann wird die Sperre erst danach freigegeben. */
+  const abgemeldet = useRef(false);
+  /** Die Sperre freigeben – nur wenn sie uns gehört; Fehler fängt der Aufrufer nicht, sie verfällt dann von selbst. */
+  const frei = useRef(() => {});
+  frei.current = () => {
+    if (!halte.current) return;
+    halte.current = false;
+    c.current.beende().catch(() => {});
+  };
 
   const schlange = useRef<Speicherschlange<W> | null>(null);
-  schlange.current ??= new Speicherschlange<W>(async (wert) => {
-    // Unmittelbar vor dem Schreiben: Gehört die Sperre noch uns? Und hat niemand etwas inzwischen geändert?
-    const b = await c.current.beginne();
-    if (b.art === 'gesperrt') {
-      setVerdraengt(halte.current);
-      halte.current = false;
-      setFremd(b.sperre);
-      return { art: 'gesperrt' };
-    }
-    halte.current = true;
-    setFremd(null);
-    const gespeichert = letzte.current;
-    const { gleich } = c.current;
-    const kennt = (w: W) => gleich(w, gespeichert) || versucht.current.some((v) => gleich(w, v));
-    if (!b.frisch || !kennt(b.frisch.wert)) return { art: 'veraendert' };
-    versucht.current.push(wert);
-    await c.current.schreibe(wert, gespeichert);
-    letzte.current = wert;
-    versucht.current = [];
-    c.current.nachSpeichern(wert);
-    return { art: 'ok' };
-  }, setSpeicher);
+  schlange.current ??= new Speicherschlange<W>(
+    async (wert) => {
+      // Unmittelbar vor dem Schreiben: Gehört die Sperre noch uns? Und hat niemand etwas inzwischen geändert?
+      const b = await c.current.beginne();
+      if (b.art === 'gesperrt') {
+        setVerdraengt(halte.current);
+        halte.current = false;
+        setFremd(b.sperre);
+        return { art: 'gesperrt' };
+      }
+      halte.current = true;
+      setFremd(null);
+      const gespeichert = letzte.current;
+      const { gleich } = c.current;
+      const kennt = (w: W) => gleich(w, gespeichert) || versucht.current.some((v) => gleich(w, v));
+      if (!b.frisch || !kennt(b.frisch.wert)) return { art: 'veraendert' };
+      versucht.current.push(wert);
+      await c.current.schreibe(wert, gespeichert);
+      letzte.current = wert;
+      versucht.current = [];
+      c.current.nachSpeichern(wert);
+      return { art: 'ok' };
+    },
+    (stand) => {
+      setSpeicher(stand);
+      // Hat die Oberfläche beim Verlassen noch etwas zu speichern gehabt, ist hier das Ende (gespeichert, Fehler oder
+      // abgewiesen): erst jetzt die Sperre freigeben – früher würde sie das laufende Speichern überholen und wieder nehmen.
+      if (abgemeldet.current && stand.art !== 'speichert') frei.current();
+    },
+  );
 
   const offen = speicher.art !== 'gespeichert';
   useEffect(() => {
@@ -177,15 +194,15 @@ export function useSperrarbeit<W>(cfg: SperrArbeit<W>) {
 
   // Beim Verlassen freigeben – so gut es geht (sonst verfällt die Sperre nach zehn Minuten von selbst).
   useEffect(() => {
-    const frei = () => {
-      if (!halte.current) return;
-      halte.current = false;
-      c.current.beende().catch(() => {});
-    };
-    window.addEventListener('pagehide', frei);
+    abgemeldet.current = false;
+    const beiPagehide = () => frei.current();
+    window.addEventListener('pagehide', beiPagehide);
     return () => {
-      window.removeEventListener('pagehide', frei);
-      frei();
+      window.removeEventListener('pagehide', beiPagehide);
+      abgemeldet.current = true;
+      // Läuft noch ein Speichern (z. B. das letzte, kurz vor dem Reiterwechsel angestoßene), gibt dessen Ende die
+      // Sperre frei (`beiStand` oben) – sonst sofort.
+      if (!schlange.current!.aktiv) frei.current();
     };
   }, []);
 

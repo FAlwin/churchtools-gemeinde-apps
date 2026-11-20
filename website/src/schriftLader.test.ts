@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { KEINE_SCHRIFT, Schriftspeicher, ladeTabelle, SCHRIFT_LADER, type Lader } from './schriftLader';
+import { SCHRIFTEN } from '@shared/website/schriften';
+import {
+  KEINE_SCHRIFT,
+  Schriftspeicher,
+  ladeTabelle,
+  SCHRIFT_LADER,
+  type Lader,
+} from './schriftLader';
 
 /** Ein Lader, den der Test von Hand auflöst oder scheitern lässt – so lässt sich „lädt gerade“ festhalten. */
 function steuerbar() {
@@ -33,6 +40,12 @@ describe('ladeTabelle: aus dem Ordner wird die Tabelle', () => {
     expect(adresse.startsWith('data:font/woff2;base64,')).toBe(true);
     // das ist wirklich eine WOFF2-Datei: Base64 von „wOF2“
     expect(adresse.slice('data:font/woff2;base64,'.length)).toMatch(/^d09GMg/);
+  });
+});
+
+describe('Lade-Tabelle (Wächter)', () => {
+  it('deckt genau die Schriftliste ab – keine Schrift ohne Lader, kein Lader ohne Schrift', () => {
+    expect(Object.keys(SCHRIFT_LADER).sort()).toEqual(SCHRIFTEN.map((s) => s.datei).sort());
   });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
@@ -70,8 +70,23 @@ function Bereit({ q, onSchliessen }: { q: EinstellungenBereit; onSchliessen: () 
   const [wartet, setWartet] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [abgelehnt, setAbgelehnt] = useState(false);
+  /** Zählt die Klicks auf „Speichern“ – nach jedem gescheiterten Versuch wird die Meldung einmal ins Bild gerollt. */
+  const [versuch, setVersuch] = useState(0);
+  const gezeigt = useRef(0);
+  const meldungen = useRef<HTMLDivElement>(null);
   const gesperrt = sperre.fremd !== null;
   const speicherArt = sperre.speicher.art;
+
+  // Die Meldungen stehen unter dem letzten Feld; wer oben „Speichern“ drückt, sähe sonst nur, dass das Fenster offen bleibt
+  // (Test-Instanz/Dev 20.11.2026). Einmal je Versuch, sobald das Ergebnis da ist. Rumpf in { }: `scrollIntoView` liefert in
+  // neuen Browsern ein Promise – als Rückgabe eines Effekts gäbe das beim Abbauen eine weiße Seite (Chrome 152).
+  useEffect(() => {
+    if (wartet || versuch === gezeigt.current) return;
+    const block = meldungen.current;
+    if (!block || block.childElementCount === 0) return;
+    gezeigt.current = versuch;
+    block.scrollIntoView?.({ block: 'nearest' });
+  }, [versuch, wartet, meldung, abgelehnt, speicherArt]);
 
   // Ändert sich die Arbeitskopie von außen (neu geladen, Bearbeitung übernommen), zeigt das Fenster den neuen Stand –
   // sonst überschriebe „Speichern“ mit dem alten Entwurf, was ein anderer inzwischen eingetragen hat.
@@ -89,6 +104,7 @@ function Bereit({ q, onSchliessen }: { q: EinstellungenBereit; onSchliessen: () 
   const speichern = async () => {
     setMeldung(null);
     setAbgelehnt(false);
+    setVersuch((v) => v + 1);
     const r = await q.speichereJetzt((e) => formularAnwenden(e, form));
     if (r.art === 'ungueltig') return setMeldung(r.meldung);
     if (r.art === 'abgelehnt') return setAbgelehnt(true);
@@ -236,32 +252,34 @@ function Bereit({ q, onSchliessen }: { q: EinstellungenBereit; onSchliessen: () 
         </Feld>
       </fieldset>
 
-      {meldung && (
-        <p className={styles.fehler} role="alert">
-          Noch nicht gespeichert: {meldung}
-        </p>
-      )}
-      {abgelehnt && !gesperrt && sperre.hinweis && (
-        <p className={styles.fehler} role="alert">
-          {sperre.hinweis}
-        </p>
-      )}
-      {!wartet && speicherArt === 'fehler' && (
-        <p className={styles.fehler} role="alert">
-          Nicht gespeichert – {fehlerMeldung(sperre.speicher.fehler).text} Deine Eingaben bleiben
-          hier stehen; „Speichern“ versucht es noch einmal.
-        </p>
-      )}
-      {!wartet && (speicherArt === 'veraendert' || speicherArt === 'gesperrt') && (
-        <>
+      <div ref={meldungen}>
+        {meldung && (
           <p className={styles.fehler} role="alert">
-            {AUSSEHEN_TEXTE.veraendert}
+            Noch nicht gespeichert: {meldung}
           </p>
-          <FensterKnopf art="zweit" onClick={() => void sperre.neuLaden()}>
-            Neu laden
-          </FensterKnopf>
-        </>
-      )}
+        )}
+        {abgelehnt && !gesperrt && sperre.hinweis && (
+          <p className={styles.fehler} role="alert">
+            {sperre.hinweis}
+          </p>
+        )}
+        {!wartet && speicherArt === 'fehler' && (
+          <p className={styles.fehler} role="alert">
+            Nicht gespeichert – {fehlerMeldung(sperre.speicher.fehler).text} Deine Eingaben bleiben
+            hier stehen; „Speichern“ versucht es noch einmal.
+          </p>
+        )}
+        {!wartet && (speicherArt === 'veraendert' || speicherArt === 'gesperrt') && (
+          <>
+            <p className={styles.fehler} role="alert">
+              {AUSSEHEN_TEXTE.veraendert}
+            </p>
+            <FensterKnopf art="zweit" onClick={() => void sperre.neuLaden()}>
+              Neu laden
+            </FensterKnopf>
+          </>
+        )}
+      </div>
     </Sheet>
   );
 }

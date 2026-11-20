@@ -175,6 +175,74 @@ describe('Fenster „Einstellungen“ – Speichern', () => {
     expect(feld('Adresse von Link 1').value).toBe('javascript:alert(1)');
   });
 
+  it('scheitert „Speichern“, rollt das Fenster die Meldung ins Bild – einmal je Versuch, nicht beim Weitertippen', async () => {
+    const rollen = vi.fn();
+    const vorher = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = rollen;
+    try {
+      await zeige(stand({ einstellungen: einstellungen({ name: 'ECG', fusszeile: [] }) }));
+      await klick('Link');
+      await tippe(feld('Titel von Link 1'), 'Böse');
+      await tippe(feld('Ziel von Link 1'), 'extern');
+      await tippe(feld('Adresse von Link 1'), 'javascript:alert(1)');
+      expect(rollen).not.toHaveBeenCalled();
+      await speichern();
+      await warte(0);
+      expect(rollen).toHaveBeenCalledTimes(1);
+      expect((rollen.mock.contexts[0] as HTMLElement).textContent).toMatch(
+        /Noch nicht gespeichert/,
+      );
+      await tippe(feld('Titel von Link 1'), 'Immer noch böse');
+      expect(rollen).toHaveBeenCalledTimes(1);
+      await speichern();
+      await warte(0);
+      expect(rollen).toHaveBeenCalledTimes(2);
+    } finally {
+      Element.prototype.scrollIntoView = vorher;
+    }
+  });
+
+  it('die Meldung steht, im Hintergrund speichert „Aussehen“: das Fenster rollt NICHT noch einmal', async () => {
+    const rollen = vi.fn();
+    const vorher = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = rollen;
+    try {
+      await zeige(stand({ einstellungen: einstellungen({ name: 'ECG', fusszeile: [] }) }), true);
+      await klick('Link');
+      await tippe(feld('Titel von Link 1'), 'Böse');
+      await tippe(feld('Ziel von Link 1'), 'extern');
+      await tippe(feld('Adresse von Link 1'), 'javascript:alert(1)');
+      await speichern();
+      await warte(0);
+      expect(rollen).toHaveBeenCalledTimes(1);
+      // Farbe in „Aussehen“ ändern – die Meldung im Fenster bleibt stehen, der Speicherstand wechselt
+      await tippe(screen.getByRole('textbox', { name: /^Akzent/ }), '#ff0000');
+      await warte(SPEICHER_VERZOEGERUNG_MS);
+      await warte(0);
+      expect(gespeichert().at(-1)?.farben?.akzent).toBe('#ff0000');
+      expect(screen.getByText(/Noch nicht gespeichert/)).toBeTruthy();
+      expect(rollen).toHaveBeenCalledTimes(1);
+    } finally {
+      Element.prototype.scrollIntoView = vorher;
+    }
+  });
+
+  it('gespeichert ohne Fehler: nichts wird gerollt', async () => {
+    const rollen = vi.fn();
+    const vorher = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = rollen;
+    try {
+      await zeige();
+      await tippe(feld('Name der Gemeinde'), 'Neu');
+      await speichern();
+      await warte(0);
+      expect(schliessen).toHaveBeenCalledTimes(1);
+      expect(rollen).not.toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = vorher;
+    }
+  });
+
   it('ohne Änderung im Fenster: nichts Neues – und Speichern scheitert vorübergehend: Fenster bleibt, erneut klappt', async () => {
     await zeige();
     d.speichereEinstellungen.mockRejectedValueOnce(new ApiError(503, 'Dienst nicht erreichbar'));

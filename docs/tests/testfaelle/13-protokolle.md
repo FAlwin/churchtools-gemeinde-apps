@@ -222,7 +222,7 @@ Begründung. Bei „Direkt eintragen“ steht der Punkt beim Öffnen schon drin,
 5. Einen zweiten Vorschlag als Mitglied machen; als Leitung im Protokoll **Ablehnen** mit einem Satz. Als Mitglied:
    in der Karte unter „Abgelehnt · verschwindet nach 7 Tagen“ steht „Grund: …“ und „noch 7 Tage sichtbar“, aufgeklappt
    die ganze Begründung, kein Ändern mehr. Ein anderes Mitglied sieht ihn nicht. Das **×** blendet ihn aus.
-6. In der Verwaltung die Gruppe auf **Direkt eintragen** stellen, als Mitglied einen dritten Vorschlag machen, als
+6. In den Einstellungen die Gruppe auf **Direkt eintragen** stellen, als Mitglied einen dritten Vorschlag machen, als
    Leitung das Protokoll öffnen: Der Punkt steht schon drin, oben „Ein Vorschlag wurde … eingefügt“. Zurück und noch
    einmal öffnen: nicht doppelt. Die Gruppe danach wieder auf **Vorschlagen** stellen.
 
@@ -721,15 +721,15 @@ Leiste mit einem Knopf je Gruppe mehr, die Seite lässt sich am Handy nicht seit
 
 </details>
 
-### TF-PROT-21 · Hinweis auf fällige To-Dos: Band, roter Zähler und die Einstellung der Verwaltung
+### TF-PROT-21 · Hinweis auf fällige To-Dos: Band, roter Zähler und die Einstellung im Reiter „Einstellungen“
 
-**Das brauchst du:** In der Test-Instanz ein **Admin-Konto** (für die Verwaltung) und eine eingerichtete Gruppe, in der du
+**Das brauchst du:** In der Test-Instanz ein **Admin-Konto** (für die Einstellungen) und eine eingerichtete Gruppe, in der du
 Mitglied bist. Lege dir als Test-To-Dos an (Text beginnt mit „TEST“, du bist zuständig): „TEST Überfällig“ (Bis **gestern**),
 „TEST Bald“ (Bis **übermorgen**), „TEST Später“ (Bis in **zehn Tagen**) und „TEST Erledigt“ (Bis gestern, auf **Erledigt**). Dazu ein
 Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
 
 **Das muss passieren:** Beim Öffnen steht auf der Startseite ein Band, am Reiter „To-Dos“ eine rote Zahl – beides zählt nur
-**deine** offenen To-Dos. Die Verwaltung stellt ein, ab wann ein To-Do „bald fällig“ ist; ohne Einstellung gelten **3 Tage**.
+**deine** offenen To-Dos. Die Einstellungen stellen ein, ab wann ein To-Do „bald fällig“ ist; ohne Einstellung gelten **3 Tage**.
 
 1. **Protokolle** öffnen (ohne Einstellung gespeichert zu haben, falls möglich): Unter der Begrüßung steht ein **rotes Band**
    „**1 To-Do überfällig**, 1 bis … fällig“ mit „Zu meinen To-Dos“. Am Reiter **To-Dos** steht eine **rote 2**.
@@ -738,7 +738,7 @@ Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
    bleibt auf jeder Seite. Ein Screenreader liest „To-Dos, 2 fällig“.
 3. „Zu meinen To-Dos“ antippen: Der Reiter **To-Dos** öffnet sich. Setze dort „TEST Überfällig“ auf **Erledigt**: Die Zahl am
    Reiter wird **1**. Gehe zurück auf **Start**: Das Band sagt jetzt nur noch „**1 To-Do** bis … fällig“ und ist **blau**, nicht rot.
-4. Als Admin: **Verwaltung → Hinweis auf fällige To-Dos**: Das Feld zeigt „Überfällige und 3 Tage vorher“. Wähle **„Nur Überfällige“**
+4. Als Admin: **Einstellungen → Hinweis auf fällige To-Dos**: Das Feld zeigt „Überfällige und 3 Tage vorher“. Wähle **„Nur Überfällige“**
    → „Hinweis gespeichert“. Zurück auf **Start**: Kein Band mehr (nichts überfällig), die Zahl am Reiter ist weg. Wähle
    **„Überfällige und 14 Tage vorher“**: Jetzt zählt auch „TEST Später“ (Zahl 2).
 5. Wähle **„Aus (kein Hinweis, kein Zähler)“**: Weder Band noch Zahl – auch nicht nach dem Neuladen und nicht bei einem anderen
@@ -750,7 +750,7 @@ Rechner und ein Handy (oder das Browserfenster auf 390 px Breite).
 
 - **Priorität:** normal
 - **Betrifft:** `shared/protokolle/hinweis.ts`, `protokolle/src/todoHinweis.ts`, `protokolle/src/useFaellige.ts`, `protokolle/src/FaelligBand.tsx`, `protokolle/src/TodoHinweisKarte.tsx`, `protokolle/src/App.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/reiter.ts`, `ui/bedienung/ReiterLeiste.tsx`, `ui/bedienung/ReiterZaehler.tsx`
-- **Automatisiert:** größtenteils – `shared/protokolle/hinweis.test.ts` (Grenzen heute/heute+N, erledigt, fremd, „Aus“, „Nur überfällig“, Band-Texte, Wächter, Standard bei kaputtem Wert), `protokolle/src/todoHinweis.test.ts` (lesen/speichern gegen den ChurchTools-Nachbau, Lesefehler → Standard, verschlucktes Speichern), `protokolle/src/TodoHinweisKarte.test.tsx`, `protokolle/src/FaelligBand.test.tsx`, `protokolle/src/App.test.tsx` (Zähler am Computer und Handy, Ladeaufwand, Folge der Verwaltung), `ui/bedienung/ReiterLeiste.test.tsx`; **nur von Hand:** Aussehen (rotes Band, Zähler in beiden Leisten, Dunkelmodus), echter Wechsel der Einstellung zwischen zwei Konten
+- **Automatisiert:** größtenteils – `shared/protokolle/hinweis.test.ts` (Grenzen heute/heute+N, erledigt, fremd, „Aus“, „Nur überfällig“, Band-Texte, Wächter, Standard bei kaputtem Wert), `protokolle/src/todoHinweis.test.ts` (lesen/speichern gegen den ChurchTools-Nachbau, Lesefehler → Standard, verschlucktes Speichern), `protokolle/src/TodoHinweisKarte.test.tsx`, `protokolle/src/FaelligBand.test.tsx`, `protokolle/src/App.test.tsx` (Zähler am Computer und Handy, Ladeaufwand, Folge der Einstellungen), `ui/bedienung/ReiterLeiste.test.tsx`; **nur von Hand:** Aussehen (rotes Band, Zähler in beiden Leisten, Dunkelmodus), echter Wechsel der Einstellung zwischen zwei Konten
 - **Historie:** 19.11.2026 (Alwin: ChurchTools hat keine zeitgesteuerten Erinnerungen, darum ein Hinweis beim Öffnen; Einstellung für die ganze Erweiterung, Standard 3 Tage)
 
 </details>

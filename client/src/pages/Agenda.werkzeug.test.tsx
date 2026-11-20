@@ -56,7 +56,7 @@ function geraet(handy: boolean) {
     removeEventListener: () => {},
   }));
 }
-function zeige() {
+function zeige(onVorlagen?: () => void) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -65,6 +65,7 @@ function zeige() {
         onSelect={vi.fn()}
         onOpenSongs={vi.fn()}
         darfAblaufImKalender={() => true}
+        onVorlagen={onVorlagen}
       />
     </QueryClientProvider>,
   );
@@ -137,5 +138,41 @@ describe('Termine: Werkzeugzeile (B8)', () => {
     const mehr = screen.getByRole('button', { name: 'Mehr laden' });
     fireEvent.click(mehr);
     expect(api.getServices.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe('Termine: „⋯“ mit den Ablaufvorlagen (R13, früher eine Zeile unter „Mehr“)', () => {
+  it('Rechner: Menü unter dem „⋯“ in der Werkzeugzeile; der Eintrag öffnet die Vorlagen – genau einmal', async () => {
+    geraet(false);
+    const onVorlagen = vi.fn();
+    zeige(onVorlagen);
+    const zeile = within(await screen.findByRole('toolbar', { name: 'Termine' }));
+    const mehr = zeile.getByRole('button', { name: 'Mehr' });
+    // Das Ziel der Einführung sitzt am „⋯“ (an der Hülle des Knopfs).
+    expect(mehr.closest('[data-tour="ablaufvorlagen"]')).not.toBeNull();
+    fireEvent.click(mehr);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ablaufvorlagen' }));
+    expect(onVorlagen).toHaveBeenCalledTimes(1);
+    // Das Menü ist danach zu – die Aktion läuft nicht gegen ein offenes Menü (Lehre 05.08.2026).
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('Handy: das Blatt von unten, der Eintrag öffnet die Vorlagen und schließt das Blatt', async () => {
+    geraet(true);
+    const onVorlagen = vi.fn();
+    zeige(onVorlagen);
+    const zeile = within(await screen.findByRole('toolbar', { name: 'Termine' }));
+    fireEvent.click(zeile.getByRole('button', { name: 'Mehr' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablaufvorlagen' }));
+    expect(onVorlagen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Ablaufvorlagen' })).toBeNull();
+  });
+
+  it('ohne Angebot der App (kein Recht, Abläufe zu sehen) gibt es kein „⋯“ – und der Filter bleibt', async () => {
+    geraet(false);
+    zeige();
+    const zeile = within(await screen.findByRole('toolbar', { name: 'Termine' }));
+    expect(zeile.queryByRole('button', { name: 'Mehr' })).toBeNull();
+    expect(zeile.getByRole('button', { name: /^Filter/ })).toBeTruthy();
   });
 });

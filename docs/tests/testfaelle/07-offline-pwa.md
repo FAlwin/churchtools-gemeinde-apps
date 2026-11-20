@@ -10,7 +10,7 @@ verfügbar.
 
 1. Mit Internet unten auf **Termine** tippen.
 2. Beim nächsten Gottesdienst auf das Wolken-Symbol **„Für offline speichern"** tippen und warten, bis es
-   sich ändert. (Ist unter **Mehr** „Kommende Gottesdienste offline halten" an, speichert die App den
+   sich ändert. (Ist unter **Einstellungen** „Kommende Gottesdienste offline halten" an, speichert die App den
    nächsten Gottesdienst ohnehin von selbst – Öffnen und Blättern allein speichert nichts.)
 3. Auf das Symbol beim Termin schauen.
 

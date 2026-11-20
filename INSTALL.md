@@ -43,7 +43,7 @@ Im Skript die **ChurchTools-URL** eingeben (z. B. `https://eure-gemeinde.church.
 
 ### 4. App öffnen
 
-Browser: **http://localhost:3001** → mit ChurchTools-Zugangsdaten anmelden → im „Mehr"-Tab den
+Browser: **http://localhost:3001** → mit ChurchTools-Zugangsdaten anmelden → im „Einstellungen“-Reiter den
 Gemeindenamen setzen.
 
 > **Aktualisieren** geht später genauso per Doppelklick: `update.command` (macOS) bzw. `update.bat`
@@ -110,7 +110,7 @@ docker compose up -d
 ### 5. App öffnen
 
 Browser: **http://localhost:3001**  
-Mit ChurchTools-Zugangsdaten anmelden → im „Mehr"-Tab den Gemeindenamen setzen.
+Mit ChurchTools-Zugangsdaten anmelden → im „Einstellungen“-Reiter den Gemeindenamen setzen.
 
 ---
 
@@ -232,7 +232,7 @@ Die App ist nun unter `https://musik.eure-domain.de` erreichbar.
 ## Erster Start in der App
 
 1. Mit euren **ChurchTools-Zugangsdaten** anmelden (Person mit Admin-Recht in ChurchTools)
-2. „Mehr"-Tab → **Gemeindename** eintragen
+2. „Einstellungen“-Reiter → **Gemeindename** eintragen
 3. Optional: unter „Links verwalten" eigene Links anlegen
 
 ---

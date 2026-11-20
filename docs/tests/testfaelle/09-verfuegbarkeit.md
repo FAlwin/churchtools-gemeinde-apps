@@ -7,7 +7,7 @@ wie im Dienstplaner, vorher eine Monatsleiste), ein Abhakfeld je Termin, **Speic
 
 ### TF-VERF-01 · Bei Terminen abhaken, speichern, zurücknehmen
 
-**Das brauchst du:** Ein Konto, das aktives Mitglied einer unter „Mehr → Verwaltung → Anmerkungen →
+**Das brauchst du:** Ein Konto, das aktives Mitglied einer unter „Einstellungen → Verwaltung → Anmerkungen →
 Gruppen-Zuweisung" gewählten Gruppe ist (ECG: Musikteam). Zugriff auf ChurchTools, um nachzusehen.
 
 **Das muss passieren:** Der Tab **Abwesenheiten** ist da (Person mit Schrägstrich). Ein Haken bei einem
@@ -80,7 +80,7 @@ bekommt **keinen** Marker.
 **Das brauchst du:** Ein Konto, das in **keiner** der gewählten Gruppen aktives Mitglied ist (oder:
 Admin leert die Gruppen-Zuweisung).
 
-**Das muss passieren:** Unten gibt es **keinen** Tab „Abwesenheiten" – nur Termine, Lieder, Mehr. War
+**Das muss passieren:** Unten gibt es **keinen** Tab „Abwesenheiten" – nur Termine, Lieder, Einstellungen. War
 der Tab vorher geöffnet, landet man nach dem Neuladen auf „Termine", nicht auf einer leeren Seite.
 
 1. Mit diesem Konto anmelden, Tab-Leiste ansehen.
@@ -172,7 +172,7 @@ Termine mit verschiedenen Namen liegen (z. B. „Gottesdienst", „Gebetsabend",
 seit 28.10.2026) steht je Art ein Häkchen, Liste und Zahl folgen den Häkchen, und beim nächsten Öffnen steht der
 Filter noch so.
 
-1. **Als Admin:** Mehr → Verwaltung → **„Abwesenheiten: Termin-Arten"**. Zwei Arten anlegen:
+1. **Als Admin:** Einstellungen → Verwaltung → **„Abwesenheiten: Termin-Arten"**. Zwei Arten anlegen:
    Name „Gottesdienst", Suchwort „Gottesdienst"; Name „Gebetsabend", Suchwort „Gebet". Speichern.
    Die Reihe zeigt „2 Arten".
 2. Tab „Abwesenheiten" → „Termine". Rechts steht der Knopf **„Filter“**. Antippen → Menü „Veranstaltungen“ mit

@@ -16,7 +16,10 @@ const TAB_META: Record<TabId, { label: string; icon: IconName }> = {
   // Tab-ID bleibt `verfuegbarkeit` (gespeicherter Tab, Rechte-Name); die Beschriftung heißt seit dem
   // 19.09.2026 „Abwesenheiten" mit dem Symbol, das ChurchTools selbst dafür nutzt.
   verfuegbarkeit: { label: 'Abwesenheiten', icon: 'user-slash' },
-  mehr: { label: 'Mehr', icon: 'cog-fill' },
+  // „Einstellungen“ statt „Mehr“ (R13, 20.11.2026): höchstens ein Reiter dieses Namens, immer der letzte – wie in allen
+  // Erweiterungen (`ErweiterungsSeite`), mit demselben Symbol. Die ID `mehr` bleibt: Sie steht in gespeicherten Zuständen
+  // (`useAppNav`) und in den Tests, der Nutzer sieht sie nie.
+  mehr: { label: 'Einstellungen', icon: 'zahnrad' },
 };
 
 interface TabBarProps {
@@ -26,6 +29,11 @@ interface TabBarProps {
   /** Ausgegraute Tabs (z. B. Liedersammlung ohne Netz) – bleiben tippbar, der Aufrufer erklärt warum. */
   dimmed?: TabId[];
   onChange: (tab: TabId) => void;
+  /**
+   * Der schon aktive Reiter wurde noch einmal getippt (`onChange` kommt dann NICHT): Eine Unterseite des Reiters (die
+   * Ablaufvorlagen bei „Termine“) geht damit zu – wie das Tippen auf den Reiter in iOS-Apps. Das Hochscrollen bleibt.
+   */
+  onErneut?: (tab: TabId) => void;
   /** Reiter oben als Text (iPad/Rechner) statt unten mit Symbolen (Handy) – Scheibe S. */
   oben?: boolean;
   /** Ganz rechts in der oberen Zeile: der Vollbild-Knopf (B8). Am Handy (unten) nicht gezeigt. */
@@ -37,14 +45,25 @@ interface TabBarProps {
  * auch im Dienstplaner). Tippt man den schon aktiven Reiter, geht es nach oben – wie in iOS-Apps. Der
  * Tipp auf die Statusleiste erreicht eine Web-App nicht (siehe `Screen.tsx`), dies ist der Ersatz dafür.
  */
-export function TabBar({ active, tabs, dimmed = [], onChange, oben, rechts }: TabBarProps) {
+export function TabBar({
+  active,
+  tabs,
+  dimmed = [],
+  onChange,
+  onErneut,
+  oben,
+  rechts,
+}: TabBarProps) {
   return (
     <ReiterLeiste
       reiter={tabs.map((id) => ({ id, ...TAB_META[id] }))}
       aktiv={active}
       gedimmt={dimmed}
       onWechsel={onChange}
-      onErneut={scrolleZumAnfang}
+      onErneut={() => {
+        onErneut?.(active);
+        scrolleZumAnfang();
+      }}
       tour="tabbar"
       oben={oben}
       // Die Reiter der Musik-App stehen oben immer am Bildschirmrand (Platz für die Statusleiste, 12.11.2026).

@@ -8,10 +8,10 @@ das merkt man meistens fünf Minuten vor dem Gottesdienst.
 **Das muss passieren:** Nach dem Anmelden bist du direkt bei den Terminen. Nach dem Abmelden
 kommt wieder die Anmeldemaske, und du kannst dich sofort neu anmelden – ohne die App zu schließen.
 
-1. Falls du angemeldet bist: unten auf **Mehr** tippen, ganz nach unten scrollen, **Abmelden**.
+1. Falls du angemeldet bist: unten auf **Einstellungen** tippen, ganz nach unten scrollen, **Abmelden**.
 2. E-Mail und Passwort eingeben, **Anmelden** tippen.
 3. Warten, bis die Liste der Gottesdienste erscheint.
-4. Unten auf **Mehr**, dann **Abmelden**.
+4. Unten auf **Einstellungen**, dann **Abmelden**.
 5. Noch einmal anmelden.
 
 <details><summary>Technisches</summary>
@@ -37,7 +37,7 @@ kommt wieder die Anmeldemaske, und du kannst dich sofort neu anmelden – ohne d
 NICHT „Sitzung abgelaufen". Bei Schritt 6 sind die Lieder trotzdem noch da. Ein Tippfehler darf die
 Offline-Lieder nicht löschen.
 
-1. Unten auf **Mehr**, dann **Abmelden**.
+1. Unten auf **Einstellungen**, dann **Abmelden**.
 2. Deine E-Mail eintragen, aber ein **falsches** Passwort.
 3. **Anmelden** tippen und die Fehlermeldung lesen.
 4. Jetzt mit dem richtigen Passwort anmelden.
@@ -100,7 +100,7 @@ seit #381 tut sie das in `whoami()`. Kommt dagegen ein 401, gilt noch das alte V
 **Das muss passieren:** Auf Gerät B sind die Notiz und die Tonart da. Früher blieb nach einem
 Neu-Anmelden alles nur auf dem Gerät liegen – ohne jeden Hinweis, dass nichts mehr ankommt.
 
-1. Auf **Gerät A**: unten **Mehr** → **Abmelden**, dann sofort wieder anmelden. Die App dabei
+1. Auf **Gerät A**: unten **Einstellungen** → **Abmelden**, dann sofort wieder anmelden. Die App dabei
    **nicht** schließen.
 2. Auf Gerät A ein Lied öffnen, oben rechts **Werkzeuge → Anmerken** tippen und etwas malen.
 3. Auf den Liedtitel oben tippen und die **Tonart** ändern.
@@ -151,7 +151,7 @@ persönlichen Anmelde-Schlüssel still eine neue.
    gilt das alte Verhalten (dann den Admin fragen).
 2. Die App **mehr als 24 Stunden** nicht öffnen – oder auf Staging ein, zwei Updates abwarten.
 3. App öffnen: **kein** Login, die Termine erscheinen direkt.
-4. Gegenprobe Abmelden: In der App **Mehr → Abmelden** → Login erscheint. Wieder anmelden geht.
+4. Gegenprobe Abmelden: In der App **Einstellungen → Abmelden** → Login erscheint. Wieder anmelden geht.
 5. Gegenprobe Schlüssel: In ChurchTools beim Konto den Anmelde-Schlüssel **neu erzeugen** (macht
    jeden alten ungültig). Beim nächsten Öffnen nach Ablauf der ChurchTools-Sitzung kommt der Login.
 
@@ -198,7 +198,7 @@ außen 50-mal ein falsches Passwort, ist nur sein Anschluss gesperrt – nicht d
 irgendwo liegt. Das andere Gerät bleibt angemeldet.
 
 1. Auf beiden Geräten anmelden.
-2. Auf dem Handy **Mehr → Abmelden**.
+2. Auf dem Handy **Einstellungen → Abmelden**.
 3. Auf dem iPad die App neu laden: Die Termine erscheinen, **kein** Login.
 4. Auf dem Handy wieder anmelden: geht wie gewohnt.
 

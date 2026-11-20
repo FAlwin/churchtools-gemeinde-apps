@@ -3,7 +3,7 @@ import { lokalSchreiben } from './lokalSpeicher';
 
 /**
  * Merker + Schrittdefinitionen der geführten Einführung (#Onboarding). Der „gesehen"-Zustand liegt
- * in localStorage (pro Gerät); „Einführung nochmal ansehen" im Mehr-Tab setzt ihn zurück.
+ * in localStorage (pro Gerät); „Einführung nochmal ansehen" im Reiter „Einstellungen“ setzt ihn zurück.
  */
 const PREFIX = 'worship:onboard-';
 //
@@ -24,7 +24,7 @@ const PREFIX = 'worship:onboard-';
 // Verhalten beschreibt („durchsuchst du alle Lieder"); der Umschalter-Text war nie draußen. Für
 // Bestandsnutzer hat sich am Liederheft nichts geändert – ein erneutes Zeigen wäre Lärm.
 // termine-v4 (05.11.2026): neuer Schritt „Filter“ – Kalender ausblenden und „auch ohne Ablauf“ direkt in der
-// Terminliste (vorher Mehr → Verwaltung, nur Admin). Neue Bedienung → Versionssprung, damit alle ihn einmal sehen.
+// Terminliste (vorher Mehr → Verwaltung, nur Admin; der Reiter „Mehr“ heißt seit 20.11.2026 „Einstellungen“). Neue Bedienung → Versionssprung, damit alle ihn einmal sehen.
 // Scheibe B8a (20.11.2026, „Ruhige Bedienung“): Filter und Kommende/Vergangene in einer Werkzeugzeile, Vollbild neben den
 // Reitern, „+ Ablauf anlegen“ als gestricheltes Feld, „Neues Lied“ am Handy als grüner Kreis – Texte der Schritte „Filter“
 // und „Die Bereiche“ nachgezogen. Version BEWUSST NICHT erhöht (wie am 28.10.2026): nichts davon ist eine neue Funktion, nur
@@ -81,7 +81,9 @@ export const HINT_VOLLBILD_KNOPF = 'hinweis-vollbild-knopf';
 // ChurchTools mit – der Schritt „Als PDF teilen" sagt es, und Bestandsnutzer sollen ihn einmal sehen.
 // v2.30.0 (08.10.2026): Text um Vorschau und Herunterladen ergänzt – bewusst OHNE neue Version: v2 ging
 // erst am Vorabend raus, die Tour noch einmal zu zeigen wäre lästiger als der fehlende Halbsatz.
-export const TOUR_SETLIST = 'setlist-v2';
+// setlist-v3 (20.11.2026, auf Alwins Wunsch): Die Ablauf-Ansicht wurde in „Ruhige Bedienung“ B8 umgebaut (Kopfkarte, ⋯-Menü,
+// Reiterleiste) – die Einführung zum Ablauf startet einmal neu. v2 ist der Wert des Releases v2.40.1.
+export const TOUR_SETLIST = 'setlist-v3';
 // setlist-edit-v2: „Hinzufügen" kann jetzt auch ein Lied ANLEGEN (#322) – bisher konnte man nur
 // vorhandene wählen. Version erhöht, damit Bestandsnutzer den geänderten Schritt sehen.
 // #378 (14.08.2026): Der Schritt sprach von „bei SongSelect gesucht oder selbst eingetippt" – das
@@ -100,7 +102,9 @@ export const TOUR_SETLIST = 'setlist-v2';
 // v7 (17.11.2026, E10-V5): neuer Schritt „Als Vorlage …“ – den Link sehen nur, die im Kalender des Termins Ablaufvorlagen
 // bearbeiten dürfen; für alle anderen überspringt `Coachmarks` den Schritt (kein Ziel). Version erhöht, damit auch
 // Bestandsnutzer ihn zu sehen bekommen.
-export const TOUR_SETLIST_EDIT = 'setlist-edit-v7';
+// v8 (20.11.2026, auf Alwins Wunsch): wie `TOUR_SETLIST` – das Bearbeiten des Ablaufs wurde in B8 umgebaut, die Einführung
+// dazu startet einmal neu. v7 ist der Wert des Releases v2.40.1.
+export const TOUR_SETLIST_EDIT = 'setlist-edit-v8';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
 // eigene Einträge per Tipp auf die Zeile änderbar – jeder Schritt zeigt jetzt etwas anderes.
@@ -176,7 +180,7 @@ export const TERMINE_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="tabbar"]',
     title: 'Die Bereiche',
-    body: 'Unter „Lieder" durchsuchst du alle Lieder; findet der Titel nichts, kannst du darunter auch in den Liedtexten suchen. Über „Neues Lied" – am Rechner der grüne Knopf oben rechts, am Handy das grüne Plus unten – legst du eines an, wenn du in ChurchTools Lieder bearbeiten darfst. Unter „Mehr" findest du Einstellungen und kannst diese Einführung erneut starten.',
+    body: 'Unter „Lieder" durchsuchst du alle Lieder; findet der Titel nichts, kannst du darunter auch in den Liedtexten suchen. Über „Neues Lied" – am Rechner der grüne Knopf oben rechts, am Handy das grüne Plus unten – legst du eines an, wenn du in ChurchTools Lieder bearbeiten darfst. Unter „Einstellungen“ stellst du die App ein und kannst diese Einführung erneut starten. Die Ablaufvorlagen findest du hier bei den Terminen im Menü „Mehr“ (drei Punkte).',
   },
 ];
 
@@ -206,7 +210,7 @@ export const CHART_STEPS: CoachStep[] = [
 export const CHART_SCHRITT_SCROLLEN: CoachStep = {
   selector: '[data-tour="chart-blaettern"]',
   title: 'Scrollen',
-  body: 'Die Lieder stehen untereinander – wische nach oben und unten. Ein Pedal oder die Pfeiltasten holen den nächsten Teil des Lieds nach oben – lange Teile in Stücken. Ein Tipp aufs Blatt blendet die Leisten aus – dann hat das Blatt die ganze Fläche. Zum Blättern zurück: unter „Mehr" bei „Liedansicht".',
+  body: 'Die Lieder stehen untereinander – wische nach oben und unten. Ein Pedal oder die Pfeiltasten holen den nächsten Teil des Lieds nach oben – lange Teile in Stücken. Ein Tipp aufs Blatt blendet die Leisten aus – dann hat das Blatt die ganze Fläche. Zum Blättern zurück: unter „Einstellungen“ bei „Liedansicht“.',
 };
 
 /** Die Einführung der Chart-Ansicht passend zur Liedansicht dieses Geräts. */
@@ -272,8 +276,8 @@ export const LIED_STAMMDATEN_STEPS: CoachStep[] = [
 ];
 
 /**
- * Gruppe 7 – die Seite **„Ablaufvorlagen“** hinter „Mehr“ (E10-V3b), beim ersten Öffnen der Liste. Neu, weil man die
- * Seite nur findet, wenn man in „Mehr“ nachsieht – und weil „Neue Vorlage“ nur der sieht, der in ChurchTools Vorlagen
+ * Gruppe 7 – die Seite **„Ablaufvorlagen“** im „⋯“ der Termine (E10-V3b; bis 20.11.2026 eine Zeile in „Mehr“), beim ersten Öffnen der Liste. Neu, weil man die
+ * Seite nur findet, wenn man im „⋯“ nachsieht – und weil „Neue Vorlage“ nur der sieht, der in ChurchTools Vorlagen
  * anlegen darf. Eigene Gruppe statt eines Schritts in `TERMINE_STEPS`: Die Termine-Einführung hätte allen erneut
  * gezeigt werden müssen, auch denen, die gar keine Vorlagen anfassen.
  */

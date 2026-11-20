@@ -10,7 +10,7 @@ import { markTourDone } from '../utils/onboarding';
 /**
  * Die Seite „Ablaufvorlagen“ in der Musik-App (E10-V3b): Der Baustein ist der aus `ui` (dort ausführlich getestet) –
  * hier geprüft, was die Musik-App dazugibt: Rechte aus den Capabilities (kein „Neue Vorlage“, „nur ansehen“, kein
- * „Bearbeiten“), der Weg „‹ Mehr“ und dass gelesen wird, was die Weiche liefert.
+ * „Bearbeiten“), der Weg „‹ Termine“ und dass gelesen wird, was die Weiche liefert.
  */
 const api = vi.hoisted(() => ({
   getVorlagenStand: vi.fn(),
@@ -86,11 +86,11 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Liste', () => {
-  it('zeigt die Vorlagen nach Kalender und führt mit „‹ Mehr“ zurück', async () => {
+  it('zeigt die Vorlagen nach Kalender und führt mit „‹ Termine“ zurück', async () => {
     const { zurueck } = zeige(caps());
     expect(await screen.findByText('Jugendabend')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Ablaufvorlagen' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Mehr/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Termine/ }));
     expect(zurueck).toHaveBeenCalledTimes(1);
   });
 
@@ -172,7 +172,7 @@ describe('Eine offene Vorlage', () => {
     expect(screen.queryByText(/Du siehst nicht alle Dienstgruppen/)).toBeNull();
   });
 
-  it('„‹ Vorlagen“ führt zurück zur Liste (nicht aus „Mehr“ heraus)', async () => {
+  it('„‹ Vorlagen“ führt zurück zur Liste (nicht aus den Terminen heraus)', async () => {
     const { onOeffnen, zurueck } = zeige(caps(), 5);
     await screen.findByText('Begrüßung');
     fireEvent.click(screen.getByRole('button', { name: /Vorlagen/ }));

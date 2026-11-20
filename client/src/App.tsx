@@ -25,7 +25,7 @@ import { useSettings } from './hooks/useSettings';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { useAuth } from './hooks/useAuth';
 import { useSiteConfig } from './hooks/useSiteConfig';
-import { useMehrSeite } from './hooks/useMehrSeite';
+import { useVorlagenSeite } from './hooks/useVorlagenSeite';
 import { useAppNav } from './hooks/useAppNav';
 import { useDirektLink } from './hooks/useDirektLink';
 import { useOfflineAutoSync } from './hooks/useOfflineAutoSync';
@@ -154,7 +154,7 @@ const Availability = (props: ComponentProps<typeof AvailabilityLazy>) => (
   </Suspense>
 );
 
-/** Wurzel-Komponente: Auth + Tab-Navigation (Termine/Lieder/Mehr) mit echten ChurchTools-Daten. */
+/** Wurzel-Komponente: Auth + Tab-Navigation (Termine/Lieder/Einstellungen) mit echten ChurchTools-Daten. */
 export default function App() {
   const settings = useSettings();
   useWakeLock(settings.wakePref);
@@ -209,10 +209,10 @@ export default function App() {
 
   // Geführte Einführung (#Onboarding): startet automatisch beim ersten Mal, sobald die Termine
   // geladen sind (dann existieren die hervorzuhebenden Elemente). „Einführung nochmal ansehen"
-  // im Mehr-Tab setzt zurück und startet sie erneut.
+  // im Reiter „Einstellungen“ setzt zurück und startet sie erneut.
   const [tourActive, setTourActive] = useState(false);
-  // „Mehr“ → „Ablaufvorlagen“ (E10-V3b): welche Unterseite offen ist und warum sie hier und nicht in `useAppNav` liegt – siehe `useMehrSeite`.
-  const mehrSeite = useMehrSeite();
+  // Termine → ⋯ → „Ablaufvorlagen“ (E10-V3b, R13): welche Unterseite offen ist und warum sie hier und nicht in `useAppNav` liegt – siehe `useVorlagenSeite`.
+  const vorlagenSeite = useVorlagenSeite();
   // Reiter am iPad/Rechner oben (wie ChurchTools „Events“), am Handy unten (Scheibe S, 26.10.2026).
   const handy = useMedienAbfrage(HANDY_BREITE);
 
@@ -638,9 +638,11 @@ export default function App() {
           showToast('Liedersammlung ist offline nicht verfügbar.');
           return;
         }
-        mehrSeite.reiterGewechselt();
+        vorlagenSeite.reiterGewechselt();
         setTab(t);
       }}
+      // Der aktive Reiter noch einmal: auch das schließt die Vorlagen (bei „Termine“ der einzige Weg zurück außer „‹ Termine“).
+      onErneut={vorlagenSeite.reiterGewechselt}
     />
   );
 
@@ -661,8 +663,19 @@ export default function App() {
               : ({ '--inhalt-pad-top': 'var(--inhalt-pad-unter-reiter)' } as CSSProperties)),
           }}
         >
-          {tab === 'termine' && canViewAgendas && (
+          {tab === 'termine' && vorlagenSeite.offen && canViewAgendas && (
+            <Vorlagen
+              caps={caps}
+              offeneId={vorlagenSeite.vorlage}
+              onOeffnen={vorlagenSeite.vorlageOeffnen}
+              zurueck={vorlagenSeite.zurueck}
+            />
+          )}
+
+          {tab === 'termine' && !vorlagenSeite.offen && canViewAgendas && (
             <Agenda
+              // Wer Abläufe sehen darf (diese Seite gibt es nur dann), sieht auch die Vorlagen; bearbeiten entscheidet die Seite je Kalender.
+              onVorlagen={vorlagenSeite.vorlagenOeffnen}
               services={servicesQuery.data ?? []}
               isLoading={servicesQuery.isLoading}
               isError={servicesQuery.isError}
@@ -719,16 +732,7 @@ export default function App() {
             <Availability online={online} onToast={showToast} />
           )}
 
-          {tab === 'mehr' && mehrSeite.offen && canViewAgendas && (
-            <Vorlagen
-              caps={caps}
-              offeneId={mehrSeite.vorlage}
-              onOeffnen={mehrSeite.vorlageOeffnen}
-              zurueck={mehrSeite.zurueck}
-            />
-          )}
-
-          {tab === 'mehr' && !(mehrSeite.offen && canViewAgendas) && (
+          {tab === 'mehr' && (
             <Settings
               site={site}
               siteGeladen={siteQuery.dataUpdatedAt > 0}
@@ -748,8 +752,6 @@ export default function App() {
                 setTab('termine');
                 setTourActive(true);
               }}
-              // Wer Abläufe sehen darf, sieht auch die Vorlagen; bearbeiten entscheidet die Seite je Kalender.
-              onVorlagen={canViewAgendas ? mehrSeite.vorlagenOeffnen : undefined}
             />
           )}
         </div>

@@ -503,12 +503,13 @@ die am Ende wieder gelöscht wird. Bestehende Vorlagen nicht anfassen.
 **ohne** dieses Recht, beide dürfen Abläufe sehen. **Zweimal durchführen:** in der **ChurchTools-Erweiterung** und in der
 **Server-Variante** (eigene Adresse der Musik-App) – dieselbe Seite, ein anderer Weg zu ChurchTools.
 
-**Das muss passieren:** Dieselbe Seite wie im Dienstplaner (TF-EDIT-17), erreichbar über **Mehr → Abläufe → Ablaufvorlagen**.
-Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Mehr“ bleibt markiert.
+**Das muss passieren:** Dieselbe Seite wie im Dienstplaner (TF-EDIT-17), erreichbar über **Termine → ⋯ → Ablaufvorlagen** (bis 20.11.2026: Einstellungen → Abläufe).
+Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Termine“ bleibt markiert.
 
-1. **Mehr**: Zwischen „Darstellung“ und „Während des Spielens“ steht der Abschnitt **Abläufe** mit der Zeile **Ablaufvorlagen**
-   („Vorlagen ansehen, anlegen und bearbeiten“, Pfeil). Ein Konto, das **keine Abläufe sehen** darf, sieht die Zeile nicht.
-2. Die Zeile antippen: Die Seite zeigt die Vorlagen **nach Kalender**; oben **‹ Mehr**. Beim ersten Mal erscheint die Einführung
+1. **Termine**: Rechts in der Werkzeugzeile (neben dem Filter) steht das **⋯**; am Handy öffnet es ein Blatt von unten. Darin der
+   Eintrag **Ablaufvorlagen**. Unter **Einstellungen** gibt es keinen Abschnitt „Abläufe“ mehr. Ein Konto, das **keine Abläufe sehen** darf,
+   sieht den Reiter Termine nicht.
+2. **⋯ → Ablaufvorlagen**: Das Menü schließt sich, die Seite zeigt die Vorlagen **nach Kalender**; oben **‹ Termine**. Beim ersten Mal erscheint die Einführung
    (Liste, „Neue Vorlage“) – danach nicht mehr.
 3. Am Kalender **ohne** das Recht steht **nur ansehen**; eine Vorlage dort öffnen: kein **Bearbeiten**. (Beim ersten Öffnen einer
    Vorlage mit Recht erscheint ein Hinweis auf „Bearbeiten“.)
@@ -516,8 +517,8 @@ Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Mehr“ 
    Die leere Vorlage geht gleich im Bearbeiten-Modus auf. Punkte hinzufügen (Programmpunkt, Überschrift, **Lied**), umsortieren,
    löschen mit **Rückgängig**, einen Punkt **vor dem Beginn**; in ChurchTools nachsehen: Punkte, Reihenfolge und Grenze stimmen.
 5. **Umbenennen …** → neuer Name in Kopf, Liste und ChurchTools.
-6. **‹ Vorlagen**: zurück in die Liste; **‹ Mehr**: zurück in „Mehr“. Den **Reiter wechseln** und wieder auf **Mehr** tippen: Man
-   landet in „Mehr“, nicht in der Vorlage. **Zurück im Browser** wirft die App nicht hinaus (sie legt für ihre Ansichten keinen Verlauf an).
+6. **‹ Vorlagen**: zurück in die Liste; **‹ Termine**: zurück zur Terminliste. Den **Reiter wechseln** und wieder auf **Termine** tippen: Man
+   landet in der Terminliste, nicht in der Vorlage. **Zurück im Browser** wirft die App nicht hinaus (sie legt für ihre Ansichten keinen Verlauf an).
 7. **Termine** → ein Termin ohne Ablauf → **Ablauf anlegen** → die eben geänderte Vorlage steht mit **neuem Namen** und **neuer Punktzahl**
    in der Auswahl (nicht der Stand von vor fünf Minuten).
 8. Probe-Vorlage → **Bearbeiten → Löschen …** → Nachfrage → **Löschen**: weg in der Liste, in ChurchTools und in der Auswahl „Ablauf anlegen“.
@@ -527,8 +528,8 @@ Bearbeiten darf nur, wer das Recht für den Kalender hat; der Reiter „Mehr“ 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/Settings.tsx`, `client/src/pages/Vorlagen.tsx`, `client/src/hooks/useMehrSeite.ts`, `client/src/hooks/useVorlagenZugriff.ts`, `client/src/hooks/useTourSobaldDa.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctSchreiben.ts`, `client/src/utils/onboarding.ts`, `client/src/App.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `ui/ablauf/VorlagenBereich.tsx`, `server/src/routes/setlist.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `server/src/services/ctRead.ts`, `shared/ct/ablaufVorlagenListe.ts`
-- **Automatisiert:** teilweise – `client/src/pages/Vorlagen.test.tsx` (Rechte, „‹ Mehr“, Vorlage öffnen), `client/src/pages/Settings.test.tsx` (Zeile nur mit Angebot), `client/src/hooks/useMehrSeite.test.tsx` (Navigation), `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts` (Weiche Erweiterung/Server je Vorgang), `client/src/hooks/useTourSobaldDa.test.tsx` (Einführung), `server/src/controllers/setlistController.vorlagen.test.ts` (Ziel Termin/Vorlage, Routen, durchgereichte Fehler), `server/src/services/ctWrite.test.ts` (Token-Wächter); von Hand bleiben das Schreiben gegen echtes ChurchTools und beide Auslieferungen
+- **Betrifft:** `client/src/pages/Agenda.tsx`, `client/src/pages/Vorlagen.tsx`, `client/src/hooks/useVorlagenSeite.ts`, `client/src/hooks/useVorlagenZugriff.ts`, `client/src/hooks/useTourSobaldDa.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctSchreiben.ts`, `client/src/utils/onboarding.ts`, `client/src/App.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `ui/ablauf/VorlagenBereich.tsx`, `server/src/routes/setlist.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `server/src/services/ctRead.ts`, `shared/ct/ablaufVorlagenListe.ts`
+- **Automatisiert:** teilweise – `client/src/pages/Vorlagen.test.tsx` (Rechte, „‹ Termine“, Vorlage öffnen), `client/src/pages/Agenda.werkzeug.test.tsx` (⋯ nur mit Angebot, Menü schließt, Handy-Blatt), `client/src/pages/Settings.test.tsx` (kein Abschnitt „Abläufe“ mehr), `client/src/hooks/useVorlagenSeite.test.tsx` (Navigation), `client/src/hooks/useVorlagenZugriff.test.ts`, `client/src/services/churchtoolsApi.vorlagen.test.ts` (Weiche Erweiterung/Server je Vorgang), `client/src/hooks/useTourSobaldDa.test.tsx` (Einführung), `server/src/controllers/setlistController.vorlagen.test.ts` (Ziel Termin/Vorlage, Routen, durchgereichte Fehler), `server/src/services/ctWrite.test.ts` (Token-Wächter); von Hand bleiben das Schreiben gegen echtes ChurchTools und beide Auslieferungen
 - **Historie:** 17.11.2026 (E10-V3b; Baustein aus V3a)
 
 </details>

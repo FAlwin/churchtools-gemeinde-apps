@@ -39,7 +39,7 @@ const WEGE: Record<
     da: 'Einsätze (6 Monate)',
   },
   protokolle: {
-    start: 'Verwaltung',
+    start: 'Einstellungen',
     gehe: (p) => p.getByRole('button', { name: 'Sitzungen', exact: true }).click(),
     ziel: /#\/sitzungen$/,
     da: 'Kommend',

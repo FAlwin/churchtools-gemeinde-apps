@@ -476,7 +476,7 @@ einer Gemeinde ohne SongSelect Premium (07.10.2026).
 2. Das Lied **mit ChordPro und PDF** öffnen → die Akkorde erscheinen (Standard).
 3. Bei diesem Lied über den **Titel** auf das PDF umstellen, Lied verlassen, wieder öffnen → das PDF
    bleibt. Zurück auf **Akkorde & Text** stellen.
-4. Als Admin: **Mehr → Verwaltung → Liedblatt: Standard-Ansicht** → **PDF zuerst** → Speichern. Die
+4. Als Admin: **Einstellungen → Verwaltung → Liedblatt: Standard-Ansicht** → **PDF zuerst** → Speichern. Die
    Zeile zeigt „PDF zuerst".
 5. Ein anderes Lied mit ChordPro **und** PDF öffnen → jetzt erscheint das PDF. Das Lied aus Schritt 3
    zeigt weiter die **Akkorde** (eigene Wahl geht vor).
@@ -500,7 +500,7 @@ einer Gemeinde ohne SongSelect Premium (07.10.2026).
 **Das brauchst du:** Ein iPad und ein iPhone (oder eins von beiden), einen Gottesdienst mit mehreren
 Liedern, davon eins mit Anmerkungen. Wenn vorhanden: ein Bluetooth-Pedal (AirTurn, PageFlip …).
 
-**Das muss passieren:** Mit **Mehr → Liedansicht: Scrollen** stehen die Lieder untereinander, jedes Lied
+**Das muss passieren:** Mit **Einstellungen → Liedansicht: Scrollen** stehen die Lieder untereinander, jedes Lied
 als **eine lange Seite** so breit wie der Bildschirm – quer am iPad **eine**, nicht zwei. Keine Lücken: weder
 am Ende einer früheren A4-Seite noch zwischen Outro und CCLI-Angabe (#607). Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt holt **den nächsten Teil** an
 den oberen Rand – bzw. die nächste Stelle mit `----` (#609). Ist ein Teil länger als der Bildschirm, geht es erst
@@ -509,7 +509,7 @@ aktuellen bzw. vorigen Teils. Eine blaue gestrichelte Linie zeigt kurz, wo der B
 halten löst keinen Dauerlauf aus. Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein. Die
 Einstellung gilt nur auf diesem Gerät.
 
-1. **Mehr → Während des Spielens → Liedansicht: Scrollen** wählen.
+1. **Einstellungen → Während des Spielens → Liedansicht: Scrollen** wählen.
 2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
    immer das Lied in der Bildmitte, die Ablauf-Leiste oben folgt und scrollt mit. Ganz nach unten wischen: das
    **letzte** Lied ist gewählt, auch wenn es kurz ist; ganz nach oben: das erste (B4, 30.10.2026).
@@ -597,7 +597,7 @@ für die ganze Gemeinde.
 nicht in der Anzeige, nicht im geteilten PDF, nicht im Liederheft und nicht in der Editor-Vorschau. Der Liedtext
 rückt oben etwas nach oben. Wieder an → überall wieder da.
 
-1. **Mehr → Verwaltung → „Liedblatt: Logo zeigen“** ausschalten.
+1. **Einstellungen → Verwaltung → „Liedblatt: Logo zeigen“** ausschalten.
 2. Ein Lied öffnen: oben rechts kein Logo.
 3. Im Lied **Als PDF teilen** → im PDF kein Logo.
 4. Im Ablauf **Als PDF teilen** (Liederheft) → auf keiner Seite ein Logo.
@@ -618,7 +618,7 @@ rückt oben etwas nach oben. Wieder an → überall wieder da.
 
 ### TF-CHART-20 · Einführung im Liedblatt
 
-**Das brauchst du:** Ein Gerät, auf dem die Einführung noch nicht lief – oder unter **Mehr** die Einführung erneut
+**Das brauchst du:** Ein Gerät, auf dem die Einführung noch nicht lief – oder unter **Einstellungen** die Einführung erneut
 starten; iPad und Handy, einmal mit **Liedansicht: Scrollen**.
 
 **Das muss passieren:** Beim ersten Öffnen eines Lieds erklärt die Einführung drei Dinge und zeigt dabei jeweils auf

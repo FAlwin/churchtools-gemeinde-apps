@@ -692,7 +692,7 @@ export function Sitzungen({
             {zustand.daten.kalender === null && (
               <p className={styles.fuss}>
                 Für diese Gruppe ist noch kein Kalender gewählt – Termine erscheinen, sobald ein
-                Admin ihn in der Verwaltung festlegt.
+                Admin ihn in den Einstellungen festlegt.
               </p>
             )}
             {zustand.daten.treffenNichtFreigegeben && (

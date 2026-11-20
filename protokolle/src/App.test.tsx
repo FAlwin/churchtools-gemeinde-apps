@@ -143,19 +143,19 @@ describe('App (S1)', () => {
     expect(screen.queryByText(/keiner Gruppe/)).toBeNull();
   });
 
-  it('kein Admin: Reiter Start · Sitzungen, kein „Verwaltung“ – und #/verwaltung führt zum Start', async () => {
+  it('kein Admin: Reiter Start · Sitzungen, kein „Einstellungen“ – und #/verwaltung führt zum Start', async () => {
     window.location.hash = '#/verwaltung';
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sitzungen' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Verwaltung' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
     expect(screen.queryByText('VERWALTUNG')).toBeNull();
   });
 
-  it('Admin: Reiter Start · Verwaltung; „Verwaltung“ zeigt die Verwaltung ohne Gruß', async () => {
+  it('Admin: Reiter Start · Einstellungen; „Einstellungen“ zeigt die Verwaltung ohne Gruß', async () => {
     laden.mockResolvedValue({ ...START, darfVerwalten: true });
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Verwaltung' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Einstellungen' }));
     expect(await screen.findByText('VERWALTUNG')).toBeTruthy();
     expect(window.location.hash).toBe('#/verwaltung');
     expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
@@ -405,11 +405,11 @@ describe('Hinweis auf fällige To-Dos: Zähler am Reiter und Band', () => {
     await screen.findByRole('button', { name: 'To-Dos, 1 fällig' });
   });
 
-  it('Admin ändert den Vorlauf in der Verwaltung: Zähler und Band richten sich sofort danach', async () => {
+  it('Admin ändert den Vorlauf in den Einstellungen: Zähler und Band richten sich sofort danach', async () => {
     laden.mockResolvedValue({ ...START, darfVerwalten: true });
     render(<App />);
     await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
-    fireEvent.click(screen.getByRole('button', { name: 'Verwaltung' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'VORLAUF AUS' }));
     await waitFor(() =>
       expect(

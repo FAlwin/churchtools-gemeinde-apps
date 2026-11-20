@@ -174,3 +174,22 @@ describe('Scroll mit onRefresh – wo der Anzeiger sitzt', () => {
     expect((scroller.firstElementChild as HTMLElement).style.transform).toBe('translateY(80px)');
   });
 });
+
+describe('Scroll – in Ruhe ohne Verschiebung', () => {
+  /**
+   * 20.11.2026: Ein `transform` – auch `translateY(0px)` – macht den Inhalt zum Bezugsrahmen für `position: fixed`.
+   * Das Blatt von unten (⋯ in Termine, „Kommende ⌄“) lag dadurch am Handy hinter der Reiterleiste.
+   */
+  it('setzt in Ruhe kein transform, beim Ziehen schon', () => {
+    const { container } = render(
+      <Scroll onRefresh={() => Promise.resolve()}>
+        <div>Inhalt</div>
+      </Scroll>,
+    );
+    const scroller = scrollBereich(container);
+    const inhalt = scroller.firstElementChild as HTMLElement;
+    expect(inhalt.style.transform).toBe('none');
+    ziehen(scroller, 80);
+    expect(inhalt.style.transform).toMatch(/translateY\(\d/);
+  });
+});

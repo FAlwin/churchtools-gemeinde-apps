@@ -60,11 +60,17 @@ const ZEILEN: AblaufZeile[] = [
   }),
 ];
 
-function Seite({ onLied }: { onLied?: (i: number, p: AblaufZeile) => void }) {
-  const a = usePunktAnsicht({ zeilen: ZEILEN, infoGruppen: GRUPPEN, onLied });
+function Seite({
+  onLied,
+  zeilen = ZEILEN,
+}: {
+  onLied?: (i: number, p: AblaufZeile) => void;
+  zeilen?: AblaufZeile[];
+}) {
+  const a = usePunktAnsicht({ zeilen, infoGruppen: GRUPPEN, onLied });
   return (
     <>
-      <AblaufListe zeilen={ZEILEN} onLied={onLied} onPunkt={a.oeffnen} />
+      <AblaufListe zeilen={zeilen} onLied={onLied} onPunkt={a.oeffnen} />
       {a.ueberlagerung}
     </>
   );
@@ -138,6 +144,29 @@ describe('Einzelansicht – iPad/Rechner: ein Fenster', () => {
     oeffne('„Begrüßung“ ansehen');
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('verschwindet der offene Punkt aus dem Stand, ist die Ansicht zu – kein Geisterfenster, kein Absturz', () => {
+    handy(false);
+    const { rerender } = render(<Seite />);
+    oeffne('„Begrüßung“ ansehen');
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' })).toBeTruthy();
+    rerender(<Seite zeilen={ZEILEN.filter((z) => z.id !== 4)} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: '„Begrüßung“ ansehen' })).toBeNull();
+  });
+
+  it('bleibt der Punkt, aber ein Punkt davor fällt weg: die Ansicht zeigt weiter denselben Punkt, Position zählt neu', () => {
+    handy(false);
+    const { rerender } = render(<Seite />);
+    oeffne('„Begrüßung“ ansehen');
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' }).textContent).toContain(
+      'Position 3 von 3',
+    );
+    rerender(<Seite zeilen={ZEILEN.filter((z) => z.id !== 1)} />);
+    const f = screen.getByRole('dialog', { name: 'Begrüßung' });
+    expect(f.textContent).toContain('Position 2 von 2');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 });
 
@@ -223,5 +252,29 @@ describe('Tipp-Ziele in der Liste (E20)', () => {
     // Auch die Uhrzeit gehört zum Knopf – wie vorher.
     fireEvent.click(screen.getByText('10:00'));
     expect(onLied).toHaveBeenCalledWith(0, expect.anything());
+  });
+
+  it('Lied ohne Ton, Tempo und Autor, Punkt heißt wie das Lied: die Karte ist der Weg zum Liedblatt, die Fläche der Punkt', () => {
+    handy(false);
+    const onLied = vi.fn();
+    const onPunkt = vi.fn();
+    const nurLied = [
+      z({
+        id: 5,
+        title: 'Halleluja',
+        type: 'song',
+        song: { title: 'Halleluja', songId: 9, arrangementId: 8 } as never,
+        start: '2026-11-08T09:00:00Z',
+        duration: 240,
+      }),
+    ];
+    render(<AblaufListe zeilen={nurLied} onLied={onLied} onPunkt={onPunkt} />);
+    // Die Karte ist der einzige Knopf mit dem Liednamen – ohne sie gäbe es keinen Weg zum Liedblatt.
+    fireEvent.click(screen.getByRole('button', { name: 'Halleluja' }));
+    expect(onLied).toHaveBeenCalledWith(0, expect.objectContaining({ id: 5 }));
+    expect(onPunkt).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '„Halleluja“ ansehen' }));
+    expect(onPunkt).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
+    expect(onLied).toHaveBeenCalledTimes(1);
   });
 });

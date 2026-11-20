@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import type { WebsiteStand } from '@shared/website/speicher';
@@ -129,6 +129,37 @@ describe('Startseite anlegen (nie von selbst)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Startseite anlegen' }));
     expect(await screen.findByText(/antwortet gerade nicht/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Startseite anlegen' })).toBeTruthy();
+  });
+});
+
+describe('Neue Seite ist grün (R3)', () => {
+  /** Am Rechner der grüne Knopf unter der Liste, am Handy das runde Plus – wie „Neues Lied“ (`useNeuAnlegen`). */
+  function geraet(handy: boolean) {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: handy,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Rechner: grüner Knopf (Stufe „neu“), öffnet das Fenster', async () => {
+    geraet(false);
+    zeigen();
+    const knopf = await screen.findByRole('button', { name: 'Neue Seite' });
+    expect(knopf.className).toMatch(/neu/);
+    fireEvent.click(knopf);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('Handy: das runde Plus statt des Knopfs, öffnet das Fenster', async () => {
+    geraet(true);
+    zeigen();
+    const plus = await screen.findByRole('button', { name: 'Neue Seite' });
+    expect(plus.className).toMatch(/plus/);
+    expect(plus.className).not.toMatch(/neu/);
+    fireEvent.click(plus);
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 });
 

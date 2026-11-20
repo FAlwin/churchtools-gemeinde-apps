@@ -109,7 +109,16 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
 
 const onTreffer = vi.fn();
 const zeigen = (begriff = '', gruppen = GRUPPEN) =>
-  render(<Suche modul={24} gruppen={gruppen} begriff={begriff} onTreffer={onTreffer} />);
+  render(
+    <Suche
+      modul={24}
+      gruppen={gruppen}
+      begriff={begriff}
+      ich={1}
+      schreibbar={[]}
+      onTreffer={onTreffer}
+    />,
+  );
 const liste = () =>
   within(screen.getByRole('region'))
     .queryAllByRole('listitem')
@@ -167,9 +176,27 @@ describe('Suche (S3-4b)', () => {
     await geladen('Treffer');
     fireEvent.click(screen.getByRole('button', { name: 'Beschlüsse' }));
     expect(liste()).toHaveLength(1);
-    rerender(<Suche modul={24} gruppen={GRUPPEN} begriff="" onTreffer={onTreffer} />);
+    rerender(
+      <Suche
+        modul={24}
+        gruppen={GRUPPEN}
+        begriff=""
+        ich={1}
+        schreibbar={[]}
+        onTreffer={onTreffer}
+      />,
+    );
     expect(gedrueckt('Art')).toEqual(['Beschlüsse']);
-    rerender(<Suche modul={24} gruppen={GRUPPEN} begriff="hunsrück" onTreffer={onTreffer} />);
+    rerender(
+      <Suche
+        modul={24}
+        gruppen={GRUPPEN}
+        begriff="hunsrück"
+        ich={1}
+        schreibbar={[]}
+        onTreffer={onTreffer}
+      />,
+    );
     expect(gedrueckt('Art')).toEqual(['Beschlüsse']);
   });
 

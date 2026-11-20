@@ -159,8 +159,8 @@ describe('Bereich „Vorgeschlagen“: die Leitung', () => {
       'Kabel neu ordnen',
     );
     expect(within(d).getByLabelText<HTMLInputElement>('Bis').value).toBe('2026-12-03');
-    // Die Notiz „Warum?“ bleibt im Verlauf; Löschen gibt es hier nicht.
-    expect(within(d).getByText(/Notiz: Wir suchen jedes Mal\./)).toBeTruthy();
+    // Die Notiz „Warum?“ steht bei den Notizen (und im Verlauf); Löschen gibt es hier nicht.
+    expect(within(d).getByText('Wir suchen jedes Mal.')).toBeTruthy();
     expect(within(d).queryByRole('button', { name: 'Löschen' })).toBeNull();
     fireEvent.click(within(d).getByRole('checkbox', { name: /Johann Becker/ }));
     fireEvent.click(within(d).getByRole('button', { name: 'Übernehmen' }));

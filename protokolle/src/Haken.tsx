@@ -27,11 +27,14 @@ export function Haken({
   a,
   ich,
   art = 'kreis',
+  teile = true,
   onSchritt,
   beschaeftigt = false,
 }: {
   a: Aufgabe;
   ich: number;
+  /** Darf ich den Fortschritt („2 von 14 fertig“) sehen? Ohne (W10, `ToDoRechte.teile`) nennt auch die Beschriftung ihn nicht. */
+  teile?: boolean;
   art?: 'kreis' | 'karte';
   onSchritt?: (s: HakenSchritt) => void;
   beschaeftigt?: boolean;
@@ -43,7 +46,7 @@ export function Haken({
   // Mein Zeichen: bei „Jeder für sich“ mein Teil, sonst der Status (in Arbeit bleibt als halber Kreis sichtbar).
   const zeichenStatus: AufgabenStatus =
     jeder && schritt?.art === 'teil' ? (gesetzt ? 'erledigt' : 'offen') : a.status;
-  const fortschritt = stand ? `${stand.fertig}/${stand.gesamt}` : null;
+  const fortschritt = teile && stand ? `${stand.fertig}/${stand.gesamt}` : null;
   const aktiv = !!onSchritt && !!schritt && !beschaeftigt;
 
   const hinweis = !schritt
@@ -56,7 +59,9 @@ export function Haken({
         ? ' – antippen zum Abhaken'
         : ' – antippen zum Wiedereröffnen';
   const label = jeder
-    ? `${stand ? `${stand.fertig} von ${stand.gesamt} fertig` : ''}${schritt ? `, mein Teil: ${gesetzt ? 'erledigt' : 'offen'}` : ''}${onSchritt ? hinweis : ''}`
+    ? teile
+      ? `${stand ? `${stand.fertig} von ${stand.gesamt} fertig` : ''}${schritt ? `, mein Teil: ${gesetzt ? 'erledigt' : 'offen'}` : ''}${onSchritt ? hinweis : ''}`
+      : `Mein Teil: ${gesetzt ? 'erledigt' : 'offen'}${onSchritt ? hinweis : ''}`
     : `Status: ${statusText(a.status)}${onSchritt ? hinweis : ''}`;
 
   const zeigeFortschritt = fortschritt && (

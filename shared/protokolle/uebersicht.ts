@@ -14,7 +14,10 @@ import {
   erledigtAm,
   gruppieren,
   istJeder,
+  nurMeinTeil,
   ohneZustaendige,
+  sichtFuer,
+  teilFertig,
   type Aufgabe,
   type ToDoAenderung,
 } from './aufgaben';
@@ -31,6 +34,19 @@ export type Sortierung = 'dringlichkeit' | 'bis' | 'alpha' | 'manuell';
 export interface ToDoEintrag {
   aufgabe: Aufgabe;
   gruppe: { id: number; name: string };
+  /**
+   * Bin ich in dieser Gruppe Leitung (W10)? Danach richtet sich, **wie das To-Do für mich steht** (`eintragSicht`): Die Leitung
+   * sieht den Gesamtstand, ein Mitarbeiter bei „Jeder für sich“ nur seinen Teil. Fehlt es, gilt die Sicht der Leitung.
+   */
+  leitung?: boolean;
+}
+
+/**
+ * **Das To-Do, wie `ich` es sieht** (W10) – `sichtFuer` mit der Leitungs-Angabe des Eintrags. Einteilen, Spalten, Sortieren
+ * und das Filtern nach „länger erledigt“ rechnen damit, nie mit dem rohen `status`. Geschrieben wird mit `e.aufgabe`.
+ */
+export function eintragSicht(e: ToDoEintrag, ich: number): Aufgabe {
+  return sichtFuer(e.aufgabe, { ich, leitung: e.leitung !== false });
 }
 
 export interface Bereich {
@@ -113,17 +129,16 @@ export function einteilen(
   liste: readonly ToDoEintrag[],
   q: { nach: Einteilung; heute: string; ich: number; namen: ReadonlyMap<number, string> },
 ): Bereich[] {
-  const zu = new Map(liste.map((e) => [e.aufgabe, e]));
-  const g = gruppieren(
-    liste.map((e) => e.aufgabe),
-    q.heute,
-  );
+  // Eingeteilt wird nach dem Stand, den `ich` sieht (W10) – ein Mitarbeiter bei „Jeder für sich“ nach seinem Teil.
+  const sichten = liste.map((e) => eintragSicht(e, q.ich));
+  const zu = new Map(sichten.map((a, i) => [a, liste[i]]));
+  const g = gruppieren(sichten, q.heute);
   const rein = (x: Aufgabe[]) => x.map((a) => zu.get(a)!);
   if (q.nach === 'frist') {
     // Eine Regel für Kästchen und Fach (`faelligkeit`); die Reihenfolge darin bleibt die von `gruppieren`.
     const reihe = rein([...g.ueberfaellig, ...g.arbeit, ...g.offen, ...g.erledigt]);
     const fach = (f: ReturnType<typeof faelligkeit>) =>
-      reihe.filter((e) => faelligkeit(e.aufgabe, q.heute) === f);
+      reihe.filter((e) => faelligkeit(eintragSicht(e, q.ich), q.heute) === f);
     return (
       [
         {
@@ -215,11 +230,9 @@ export function spalten(
     mitglieder?: readonly number[];
   },
 ): Spalte[] {
-  const zu = new Map(liste.map((e) => [e.aufgabe, e]));
-  const g = gruppieren(
-    liste.map((e) => e.aufgabe),
-    q.heute,
-  );
+  const sichten = liste.map((e) => eintragSicht(e, q.ich));
+  const zu = new Map(sichten.map((a, i) => [a, liste[i]]));
+  const g = gruppieren(sichten, q.heute);
   const reihe = [...g.ueberfaellig, ...g.arbeit, ...g.offen, ...g.erledigt].map((a) => zu.get(a)!);
   // Das Board hat Spalten, in die man ablegt – „nach Fälligkeit“ gäbe es dort nichts abzulegen: es zeigt dann Status.
   if (q.nach !== 'person')
@@ -228,7 +241,7 @@ export function spalten(
       titel: st === 'offen' ? 'Offen' : st === 'arbeit' ? 'In Arbeit' : 'Erledigt',
       art: st,
       nimmtAn: true,
-      eintraege: reihe.filter((e) => e.aufgabe.status === st),
+      eintraege: reihe.filter((e) => eintragSicht(e, q.ich).status === st),
     }));
   const name = (p: number) => q.namen.get(p) ?? `Person ${p}`;
   const personen = [
@@ -272,11 +285,24 @@ export function spalten(
  * Person tauschen (Alwin) – aus „Noch niemand“ kommt jemand dazu, nach „Noch niemand“ fällt die gezogene weg. `null`:
  * nichts zu tun (gleiche Spalte, nimmt nichts an, schon so).
  */
-export function ablegen(a: Aufgabe, von: Spalte, nach: Spalte): ToDoAenderung | null {
+export function ablegen(
+  a: Aufgabe,
+  von: Spalte,
+  nach: Spalte,
+  q: { ich: number; leitung: boolean },
+): ToDoAenderung | null {
   if (von.schluessel === nach.schluessel || !nach.nimmtAn) return null;
-  if (nach.art === 'offen' || nach.art === 'arbeit' || nach.art === 'erledigt')
-    // „Jeder für sich“: der Status ist der Gesamtstand aus den Teilen – man kann ihn nicht ziehen (W8a).
+  if (nach.art === 'offen' || nach.art === 'arbeit' || nach.art === 'erledigt') {
+    // „Jeder für sich“: der Status ist der Gesamtstand aus den Teilen – man kann ihn nicht ziehen (W8a). Einem **Mitarbeiter**
+    // steht das To-Do aber nach seinem Teil in „Offen“ oder „Erledigt“ (W10): Ziehen setzt dann **seinen** Teil (nie den eines
+    // anderen – `darfTeilSetzen` prüft es im Schreibweg), „In Arbeit“ gibt es für ihn dort nicht.
+    if (nurMeinTeil(a, q)) {
+      if (nach.art === 'arbeit') return null;
+      const fertig = nach.art === 'erledigt';
+      return teilFertig(a, q.ich) === fertig ? null : { teile: [{ person: q.ich, fertig }] };
+    }
     return a.status === nach.art || istJeder(a) ? null : { status: nach.art };
+  }
   const ohne = von.person === undefined ? a.wer : a.wer.filter((p) => p !== von.person);
   const wer =
     nach.person === undefined || ohne.includes(nach.person) ? ohne : [...ohne, nach.person];
@@ -291,7 +317,7 @@ export function ablegen(a: Aufgabe, von: Spalte, nach: Spalte): ToDoAenderung | 
  */
 export function sortieren(
   liste: readonly ToDoEintrag[],
-  q: { art: Sortierung; reihenfolge?: readonly string[] },
+  q: { art: Sortierung; reihenfolge?: readonly string[]; ich: number },
 ): ToDoEintrag[] {
   const dringlich = new Map(liste.map((e, i) => [e, i]));
   const nachDringlichkeit = (x: ToDoEintrag, y: ToDoEintrag) =>
@@ -305,14 +331,15 @@ export function sortieren(
     );
   if (q.art === 'bis') {
     const wann = (e: ToDoEintrag) =>
-      e.aufgabe.status === 'erledigt' ? null : (e.aufgabe.bis ?? '9999-99-99');
+      eintragSicht(e, q.ich).status === 'erledigt' ? null : (e.aufgabe.bis ?? '9999-99-99');
     return kopie.sort((x, y) => {
       const a = wann(x);
       const b = wann(y);
       if (a === null && b === null)
         return (
-          (erledigtAm(y.aufgabe) ?? '').localeCompare(erledigtAm(x.aufgabe) ?? '') ||
-          nachDringlichkeit(x, y)
+          (erledigtAm(eintragSicht(y, q.ich)) ?? '').localeCompare(
+            erledigtAm(eintragSicht(x, q.ich)) ?? '',
+          ) || nachDringlichkeit(x, y)
         );
       if (a === null) return 1;
       if (b === null) return -1;

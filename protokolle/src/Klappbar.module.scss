@@ -1,0 +1,38 @@
+// Klappbarer Abschnitt im To-Do-Fenster (W10): Kopfzeile mit Pfeil, Titel und Kurzzeile; darunter der Inhalt.
+
+.klapp {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+}
+
+.kopf {
+  min-height: var(--knopf-hoehe);
+  padding: 0 12px;
+}
+
+.titel {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+// Die Kurzzeile: eine Zeile, was nicht passt, wird abgeschnitten (der Inhalt steht ja darunter).
+.kurz {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.innen {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border);
+}

@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
@@ -16,12 +17,14 @@ import type { Sperre } from '@shared/protokolle/speicher';
 import {
   bearbeiten,
   nameFuer,
+  notizenVon,
   statusText,
   darfTeilSetzen,
   ohneZustaendige,
   teilFertig,
   toDoRechte,
   weitereZustaendige,
+  zustaendigKurz,
   type Aufgabe,
   type AufgabenStatus,
   type ToDoAenderung,
@@ -30,6 +33,8 @@ import {
 import { warumVon } from '@shared/protokolle/todoVorschlag';
 import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
+import { Klappbar } from './Klappbar';
+import { Gesichter } from './ToDoBausteine';
 import { erledigtSatz } from './todoText';
 import { imEntwurfNachziehen } from './nachziehen';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
@@ -200,6 +205,9 @@ export function ToDoFenster({
         imEntwurf,
       })
     : null;
+  // „Jeder für sich“ als Mitarbeiter (W10): Es ist nur meine Aufgabe – keine anderen Zuständigen, kein „Wer ist fertig?“, ein
+  // großer Haken. Was ich sehen darf, sagt `toDoRechte` (`teile`, `verlauf`).
+  const nurMein = !!a && !!r && r.fall === 'geteilt' && !r.teile;
   const neuMitglied = !a && !leitungOrig;
   const vorschlagNeu = neuMitglied && ziel === 'gruppe';
   const vorschlagForm = vorschlagNeu || vorschlagAendernRecht;
@@ -449,10 +457,102 @@ export function ToDoFenster({
       : r.fall === 'eigen' && imEntwurf
         ? `Steht noch im Protokoll-Entwurf „${herkunft?.titel ?? ''}“ – Text ändern und Löschen macht die Leitung dort.`
         : r.fall === 'geteilt'
-          ? 'Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.'
+          ? nurMein
+            ? 'Text und Frist legt die Leitung fest.'
+            : 'Hier hängen auch andere dran – Text, Frist und Zuständige ändert die Leitung.'
           : r.fall === 'ohne'
             ? 'Mit „Das mache ich“ wirst du zuständig und kannst es danach bearbeiten.'
             : null;
+
+  // **Die Kurzzeile „Zuständig“** (W10, Leitung): Gesichter und Namen – bei allen der Gruppe „Alle (N)“ – und das Schild, wie es
+  // erledigt wird. So steht, was unter dem zugeklappten Abschnitt ist, schon in der Zeile.
+  const personenKarte = new Map(bekannt.map((p) => [p.id, p]));
+  const alleDerGruppe =
+    Array.isArray(liste) && liste.length >= 2 && liste.every((p) => wer.has(p.id));
+  const zustaendigKurzzeile =
+    wer.size === 0 && !extern.trim() ? (
+      <span className={styles.leiseText}>noch niemand</span>
+    ) : (
+      <>
+        <Gesichter
+          a={{ wer: [...wer], extern: '', verlauf: a?.verlauf ?? [] }}
+          personen={personenKarte}
+        />
+        <span>
+          {alleDerGruppe
+            ? `Alle (${wer.size})`
+            : zustaendigKurz(
+                [
+                  ...[...wer].map((p) => (p === ich.person ? ich.name : name(p)).split(' ')[0]),
+                  ...(extern.trim() ? [`${extern.trim()} (extern)`] : []),
+                ],
+                4,
+              ).text}
+        </span>
+        {wer.size >= 2 && (
+          <Etikett ton="neutral">{jederWahl ? 'Jeder für sich' : 'Gemeinsam'}</Etikett>
+        )}
+      </>
+    );
+  // **Die Kurzzeile „Wer ist fertig?“**: kleiner Balken und „2 von 14 fertig“ – gezählt wie die Liste darunter (`teilJetzt`).
+  const fertigZahl = [...wer].filter(teilJetzt).length;
+  const fertigKurzzeile = (
+    <>
+      <span
+        className={styles.balken}
+        style={
+          {
+            '--anteil': `${wer.size ? Math.round((fertigZahl / wer.size) * 100) : 0}%`,
+          } as CSSProperties
+        }
+        aria-hidden="true"
+      />
+      <span>
+        <b>
+          {fertigZahl} von {wer.size}
+        </b>{' '}
+        fertig
+      </span>
+    </>
+  );
+  // **Der große Haken** des Mitarbeiters bei „Jeder für sich“ (W10): ein Tipp setzt, ein zweiter nimmt zurück; gespeichert wird
+  // mit „Speichern“ – wie die Haken der Leitung in „Wer ist fertig?“.
+  const meinFertig = teilJetzt(ich.person);
+  const meinAm = vorschau?.fertig?.[String(ich.person)];
+  const meinHaken = (
+    <label className={`${styles.meinHaken}${meinFertig ? ' ' + styles.meinHakenAn : ''}`}>
+      <input
+        type="checkbox"
+        className={styles.meinKasten}
+        checked={meinFertig}
+        disabled={laeuft || !r?.haken}
+        onChange={() =>
+          setUmgeschaltet((u) => {
+            const n = new Set(u);
+            if (n.has(ich.person)) n.delete(ich.person);
+            else n.add(ich.person);
+            return n;
+          })
+        }
+      />
+      <span className={styles.meinText}>
+        <b>{meinFertig ? 'Erledigt' : 'Ich habe es erledigt'}</b>
+        <small>
+          {meinFertig
+            ? `${meinAm && !umgeschaltet.has(ich.person) ? `am ${tagKurz(tagAusIso(meinAm, gemeindeZeitzone()))} – ` : ''}nochmal tippen, um es zurückzunehmen`
+            : 'Antippen, wenn du es gemacht hast'}
+        </small>
+      </span>
+    </label>
+  );
+  const notizen = a ? notizenVon(a) : [];
+  const verlaufKurz = a
+    ? `${a.verlauf.length} ${a.verlauf.length === 1 ? 'Eintrag' : 'Einträge'}${
+        a.verlauf.length
+          ? ` · zuletzt ${tagKurz(tagAusIso(a.verlauf[a.verlauf.length - 1].am, gemeindeZeitzone()))}`
+          : ''
+      }`
+    : '';
 
   /** „Wofür?“ – nur beim neuen To-Do eines Mitarbeiters (W9b): für mich anlegen oder der Gruppe vorschlagen. */
   const wofuer = neuMitglied && (
@@ -680,36 +780,78 @@ export function ToDoFenster({
         </p>
       )}
       {darf.zustaendig ? (
-        <div className={felder.feld}>
-          <span>Zuständig</span>
-          <Einladeliste
-            liste={bekannt}
-            gewaehlt={wer}
-            onChange={setWer}
-            gesperrt={laeuft}
-            ich={ich.person}
-            mitAlle
-            zusatz={(id) => (id === ich.person ? 'du' : null)}
-          />
-          {weitere.length > 0 && (
+        // Zugeklappt mit Kurzzeile (W10) – bei einem neuen To-Do und beim Übernehmen eines Vorschlags ist das Wählen der
+        // Zuständigen das Ziel, dort steht der Abschnitt offen. „Außerhalb der Gruppe“ und der Umschalter „So wird es
+        // erledigt“ gehören dazu.
+        <Klappbar titel="Zuständig" kurz={zustaendigKurzzeile} startOffen={!a || uebernehmen}>
+          <div className={felder.feld}>
+            <Einladeliste
+              liste={bekannt}
+              gewaehlt={wer}
+              onChange={setWer}
+              gesperrt={laeuft}
+              ich={ich.person}
+              mitAlle
+              zweispaltig
+              zusatz={(id) => (id === ich.person ? 'du' : null)}
+            />
+            {weitere.length > 0 && (
+              <p className={felder.leise}>
+                Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} –
+                das bleibt so.
+              </p>
+            )}
+            <input
+              className={felder.eingabe}
+              value={extern}
+              disabled={laeuft}
+              placeholder="Außerhalb der Gruppe (nur Name)"
+              aria-label="Außerhalb der Gruppe (nur Name)"
+              onChange={(e) => setExtern(e.target.value)}
+            />
             <p className={felder.leise}>
-              Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} –
-              das bleibt so.
+              Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.
+            </p>
+          </div>
+          {ohneMich && (
+            <p className={felder.hinweis} role="note">
+              Du bist nicht dabei – nach dem Speichern siehst du dieses To-Do nicht mehr (Mitglieder
+              sehen nur ihre eigenen).
             </p>
           )}
-          <input
-            className={felder.eingabe}
-            value={extern}
-            disabled={laeuft}
-            placeholder="Außerhalb der Gruppe (nur Name)"
-            aria-label="Außerhalb der Gruppe (nur Name)"
-            onChange={(e) => setExtern(e.target.value)}
-          />
-          <p className={felder.leise}>
-            Niemand angehakt = To-Do der Gruppe, noch ohne Zuständigen.
-          </p>
-        </div>
-      ) : (
+          {darf.modus && wer.size >= 2 && (
+            <div className={felder.feld}>
+              <span>So wird es erledigt</span>
+              <Segment
+                value={jederWahl ? 'jeder' : 'gemeinsam'}
+                options={[
+                  {
+                    value: 'gemeinsam',
+                    name: 'Gemeinsam',
+                    label: (
+                      <span className={styles.modus}>
+                        Gemeinsam<small>einer erledigt es für alle</small>
+                      </span>
+                    ),
+                  },
+                  {
+                    value: 'jeder',
+                    name: 'Jeder für sich',
+                    label: (
+                      <span className={styles.modus}>
+                        Jeder für sich<small>jeder hakt selbst ab</small>
+                      </span>
+                    ),
+                  },
+                ]}
+                onChange={(m) => setJederWahl(m === 'jeder')}
+                ariaLabel="So wird es erledigt"
+                verbunden
+              />
+            </div>
+          )}
+        </Klappbar>
+      ) : nurMein ? null : (
         <Lesen titel="Zuständig">
           {neuMitglied || r?.fall === 'eigen' ? (
             `${ich.name} (du)`
@@ -744,46 +886,10 @@ export function ToDoFenster({
           )}
         </label>
       )}
-      {ohneMich && (
-        <p className={felder.hinweis} role="note">
-          Du bist nicht dabei – nach dem Speichern siehst du dieses To-Do nicht mehr (Mitglieder
-          sehen nur ihre eigenen).
-        </p>
-      )}
-      {darf.modus && wer.size >= 2 && (
-        <div className={felder.feld}>
-          <span>So wird es erledigt</span>
-          <Segment
-            value={jederWahl ? 'jeder' : 'gemeinsam'}
-            options={[
-              {
-                value: 'gemeinsam',
-                name: 'Gemeinsam',
-                label: (
-                  <span className={styles.modus}>
-                    Gemeinsam<small>einer erledigt es für alle</small>
-                  </span>
-                ),
-              },
-              {
-                value: 'jeder',
-                name: 'Jeder für sich',
-                label: (
-                  <span className={styles.modus}>
-                    Jeder für sich<small>jeder hakt selbst ab</small>
-                  </span>
-                ),
-              },
-            ]}
-            onChange={(m) => setJederWahl(m === 'jeder')}
-            ariaLabel="So wird es erledigt"
-            verbunden
-          />
-        </div>
-      )}
-      {jederAn ? (
-        <div className={felder.feld}>
-          <span>Wer ist fertig?</span>
+      {nurMein ? (
+        meinHaken
+      ) : jederAn ? (
+        <Klappbar titel="Wer ist fertig?" kurz={fertigKurzzeile}>
           <ul className={styles.fertigListe}>
             {[...wer].map((p) => {
               const darfTeil = r ? r.haken && darfTeilSetzen(p, ich.person, leitungOrig) : true;
@@ -824,7 +930,7 @@ export function ToDoFenster({
               : 'Du hakst nur deinen eigenen Teil ab.'}{' '}
             Fertig ist das To-Do, wenn alle fertig sind.
           </p>
-        </div>
+        </Klappbar>
       ) : !darf.status ? (
         <Lesen titel="Status">{a ? statusText(a.status) : 'offen'}</Lesen>
       ) : (
@@ -854,25 +960,45 @@ export function ToDoFenster({
           )}
         </div>
       )}
-      {darf.notiz && (
+      {(darf.notiz || notizen.length > 0) && (
         <div className={felder.feld}>
           <span className={styles.kopf}>
             Notizen
-            {darf.karte && (
+            {darf.notiz && darf.karte && (
               <SchalterKnopf an={karteNotiz} onClick={() => setKarteNotiz(!karteNotiz)}>
                 Auf Karte anzeigen
               </SchalterKnopf>
             )}
           </span>
-          <textarea
-            className={`${felder.eingabe} ${styles.text}`}
-            value={notiz}
-            rows={2}
-            disabled={laeuft}
-            placeholder="Neue Notiz – was ist der Stand? (kommt in den Verlauf)"
-            aria-label="Neue Notiz"
-            onChange={(e) => setNotiz(e.target.value)}
-          />
+          {/* Die Notizen sehen alle, die das To-Do sehen (W10) – auch wo der Verlauf verborgen ist. */}
+          {notizen.length > 0 && (
+            <ul className={styles.notizen} aria-label="Bisherige Notizen">
+              {notizen.map((v, i) => (
+                <li key={i}>
+                  {v.text}
+                  <small>
+                    {v.von === ich.person ? ich.name : name(v.von)} ·{' '}
+                    {tagKurz(tagAusIso(v.am, gemeindeZeitzone()))}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          )}
+          {darf.notiz && (
+            <textarea
+              className={`${felder.eingabe} ${styles.text}`}
+              value={notiz}
+              rows={2}
+              disabled={laeuft}
+              placeholder={
+                r?.verlauf
+                  ? 'Neue Notiz – was ist der Stand? (kommt in den Verlauf)'
+                  : 'Neue Notiz – was ist der Stand?'
+              }
+              aria-label="Neue Notiz"
+              onChange={(e) => setNotiz(e.target.value)}
+            />
+          )}
         </div>
       )}
       {satz && (
@@ -897,9 +1023,9 @@ export function ToDoFenster({
           )}
         </div>
       )}
-      {a && (
-        <div className={felder.feld}>
-          <span>Verlauf</span>
+      {/* Den Verlauf sieht nur die Leitung (W10, `ToDoRechte.verlauf`) – zugeklappt mit Kurzzeile. */}
+      {a && r?.verlauf && (
+        <Klappbar titel="Verlauf" kurz={<span className={styles.leiseText}>{verlaufKurz}</span>}>
           <ul className={styles.verlauf}>
             {[...a.verlauf].reverse().map((v, i) => (
               <li key={i}>
@@ -911,7 +1037,7 @@ export function ToDoFenster({
               </li>
             ))}
           </ul>
-        </div>
+        </Klappbar>
       )}
       {fehler && (
         <p className={felder.fehler} role="alert">

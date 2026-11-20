@@ -160,12 +160,13 @@ const UEBERSICHT: L.GruppenUebersicht[] = [
 
 const onSitzung = vi.fn();
 const onGruppe = vi.fn();
-const zeigen = (gruppen = GRUPPEN) =>
+const zeigen = (gruppen = GRUPPEN, schreibbar: number[] = []) =>
   render(
     <Startseite
       modul={24}
       ich={{ person: ICH, name: 'Alwin' }}
       gruppen={gruppen}
+      schreibbar={schreibbar}
       onSitzung={onSitzung}
       onGruppe={onGruppe}
     />,
@@ -231,10 +232,18 @@ describe('Startseite (S3-3)', () => {
     );
     const einer = teilSetzen(jeder, 19, true, 19, '2026-10-22T09:00:00Z');
     m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [einer] }]);
-    zeigen();
+    // Als Leitung (Protokolle der Gruppe schreibbar) sehe ich den Fortschritt.
+    zeigen(GRUPPEN, [60]);
     await screen.findByText('Abwesenheiten eintragen');
     expect(zeilen('Meine offenen To-Dos')[0]).toMatch(/Leitungsteam · 1 von 3 fertig/);
     expect(screen.queryByText(/in Arbeit/)).toBeNull();
+    cleanup();
+    // Als Mitarbeiter (W10): für mich ist es nur meine Aufgabe – kein Zähler, keine anderen Zuständigen.
+    zeigen();
+    await screen.findByText('Abwesenheiten eintragen');
+    const zeile = zeilen('Meine offenen To-Dos')[0] ?? '';
+    expect(zeile).toMatch(/Leitungsteam/);
+    expect(zeile).not.toMatch(/fertig|in Arbeit/);
     cleanup();
     m.ladeUebersicht.mockResolvedValue([
       {

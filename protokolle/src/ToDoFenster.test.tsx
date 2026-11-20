@@ -93,6 +93,11 @@ const zeige = (
   return props;
 };
 const knopf = (name: RegExp | string) => screen.getByRole<HTMLButtonElement>('button', { name });
+/** Klappt einen Abschnitt auf („Zuständig“, „Wer ist fertig?“, „Verlauf“ – W10: beim Öffnen des Fensters sind sie zu). */
+const aufklappen = (titel: string) => {
+  const k = screen.getByRole<HTMLButtonElement>('button', { name: new RegExp(`^${titel}`) });
+  if (k.getAttribute('aria-expanded') !== 'true') fireEvent.click(k);
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,15 +109,17 @@ beforeEach(() => {
 });
 
 describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
-  const modus = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
+  const modus = (name: string) => {
+    aufklappen('Zuständig'); // der Umschalter steht im Abschnitt „Zuständig“ (W10)
+    return screen.getByRole<HTMLButtonElement>('button', { name });
+  };
   /** Das Kästchen in der Liste „Wer ist fertig?“ (nicht das bei „Zuständig“). */
-  const fertigBox = (name: RegExp) =>
-    within(screen.getByText('Wer ist fertig?').parentElement!).getByRole<HTMLInputElement>(
-      'checkbox',
-      {
-        name,
-      },
-    );
+  const fertigBox = (name: RegExp) => {
+    aufklappen('Wer ist fertig?');
+    return within(
+      screen.getByRole('button', { name: /^Wer ist fertig\?/ }).parentElement!,
+    ).getByRole<HTMLInputElement>('checkbox', { name });
+  };
   const JEDER = teilSetzen(modusSetzen(BEAMER, true, 1, AM), 23, true, 23, AM);
   const EINTRAG_JEDER: ToDoEintrag = { aufgabe: JEDER, gruppe: LT };
 
@@ -122,6 +129,7 @@ describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
     expect(modus('Jeder für sich')).toBeTruthy();
     cleanup();
     zeige({ eintrag: { aufgabe: { ...BEAMER, wer: [1] }, gruppe: LT } });
+    aufklappen('Zuständig');
     expect(screen.queryByRole('button', { name: 'Jeder für sich' })).toBeNull();
   });
 
@@ -130,7 +138,8 @@ describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
     expect(screen.getByRole('group', { name: 'Status' })).toBeTruthy();
     fireEvent.click(modus('Jeder für sich'));
     expect(screen.queryByRole('group', { name: 'Status' })).toBeNull();
-    expect(screen.getByText('Wer ist fertig?')).toBeTruthy();
+    aufklappen('Wer ist fertig?');
+    expect(screen.getAllByText('Wer ist fertig?').length).toBeGreaterThan(0);
     expect(screen.getAllByText('offen')).toHaveLength(2);
     fireEvent.click(knopf('Speichern'));
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
@@ -146,20 +155,68 @@ describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
     expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ jeder: true });
   });
 
-  it('wer schon fertig ist, steht mit Datum da; Leitung hakt für andere, ein Mitglied nur sich selbst', async () => {
-    const { onFertig } = zeige({ eintrag: EINTRAG_JEDER, leitung: false });
-    expect(screen.getByText(/✓ am/)).toBeTruthy();
-    const johann = fertigBox(/Johann/);
-    const ich = fertigBox(/Alwin/);
-    expect(johann.disabled).toBe(true); // nicht meiner, ich bin keine Leitung
-    expect(ich.disabled).toBe(false);
-    fireEvent.click(ich);
+  it('Mitarbeiter (W10): nur SEINE Aufgabe – ein großer Haken, keine Fertig-Liste, keine anderen Zuständigen, kein Verlauf, aber Notizen', async () => {
+    const mitNotiz = {
+      ...JEDER,
+      verlauf: [
+        ...JEDER.verlauf,
+        { am: AM, von: 23, art: 'notiz' as const, text: 'Gebetswoche fehlt' },
+      ],
+    };
+    const { onFertig } = zeige({ eintrag: { aufgabe: mitNotiz, gruppe: LT }, leitung: false });
+    expect(screen.queryByRole('button', { name: /^Wer ist fertig/ })).toBeNull();
+    expect(screen.queryByText(/von 2 fertig|✓ am/)).toBeNull();
+    expect(screen.queryByText('Zuständig')).toBeNull();
+    // Johann steht nur als Schreiber der Notiz da – nicht als Zuständiger.
+    expect(screen.getAllByText(/Johann/)).toHaveLength(1);
+    expect(
+      screen
+        .getByText(/Johann/)
+        .closest('ul')
+        ?.getAttribute('aria-label'),
+    ).toBe('Bisherige Notizen');
+    expect(screen.queryByRole('button', { name: /^Verlauf/ })).toBeNull();
+    expect(screen.queryByText(/Teil erledigt|Status:/)).toBeNull();
+    expect(screen.getByRole('list', { name: 'Bisherige Notizen' }).textContent).toMatch(
+      /Gebetswoche fehlt/,
+    );
+    const haken = screen.getByRole<HTMLInputElement>('checkbox', { name: /Ich habe es erledigt/ });
+    expect(haken.checked).toBe(false);
+    fireEvent.click(haken);
+    expect(screen.getByRole<HTMLInputElement>('checkbox', { name: /Erledigt/ }).checked).toBe(true);
     fireEvent.click(knopf('Speichern'));
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
     expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({
       teile: [{ person: 1, fertig: true }],
     });
     expect(vi.mocked(W.toDoAendern).mock.calls[0][4]).toBe(false);
+  });
+
+  it('Mitarbeiter (W10): ist mein Teil fertig, steht „Erledigt“ mit Datum; nochmal tippen nimmt zurück', async () => {
+    const meins = teilSetzen(JEDER, 1, true, 1, AM);
+    const { onFertig } = zeige({ eintrag: { aufgabe: meins, gruppe: LT }, leitung: false });
+    const haken = screen.getByRole<HTMLInputElement>('checkbox', { name: /Erledigt/ });
+    expect(haken.closest('label')?.textContent).toMatch(/am .*nochmal tippen/);
+    fireEvent.click(haken);
+    fireEvent.click(knopf('Speichern'));
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({
+      teile: [{ person: 1, fertig: false }],
+    });
+  });
+
+  it('Leitung (W10): Zuständig, Wer ist fertig? und Verlauf sind zu – mit Kurzzeile', () => {
+    zeige({ eintrag: EINTRAG_JEDER, leitung: true });
+    for (const t of ['Zuständig', 'Wer ist fertig?', 'Verlauf'])
+      expect(
+        screen.getByRole('button', { name: new RegExp(`^${t}`) }).getAttribute('aria-expanded'),
+      ).toBe('false');
+    expect(
+      screen.getByRole('button', { name: /^Zuständig.*Alle \(2\).*Jeder für sich/ }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Wer ist fertig\?.*1 von 2 fertig/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Verlauf.*\d+ Einträge · zuletzt/ })).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 
   it('als Leitung: auch der Teil eines anderen lässt sich zurücknehmen', async () => {
@@ -188,6 +245,7 @@ describe('ToDoFenster: „Jeder für sich“ (W8a)', () => {
   it('ein neues To-Do mit „Jeder für sich“: Modus und mein Teil gehen ans Anlegen', async () => {
     const { onFertig } = zeige({ eintrag: null });
     fireEvent.change(screen.getByLabelText('Was ist zu tun?'), { target: { value: 'Neu' } });
+    // Beim neuen To-Do steht „Zuständig“ offen – dort ist das Wählen das Ziel (W10).
     fireEvent.click(screen.getByRole('checkbox', { name: /Alwin/ })); // zuständig: ich
     fireEvent.click(screen.getByRole('checkbox', { name: /Johann/ })); // und Johann
     fireEvent.click(modus('Jeder für sich'));
@@ -205,6 +263,7 @@ describe('ToDoFenster', () => {
   it('zeigt das To-Do; Speichern erst nach einer Änderung – und dann nur das Geänderte', async () => {
     const { onFertig } = zeige();
     expect(screen.getByLabelText<HTMLTextAreaElement>('Was ist zu tun?').value).toBe('Beamer');
+    aufklappen('Zuständig');
     expect(screen.getByRole<HTMLInputElement>('checkbox', { name: /Johann/ }).checked).toBe(true);
     expect(knopf('Speichern').disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Bis'), { target: { value: '2026-11-20' } });
@@ -332,8 +391,10 @@ describe('ToDoFenster', () => {
   });
 
   describe('Schalter „Alle“ (W5)', () => {
-    const haken = (name: RegExp | string) =>
-      screen.getByRole<HTMLInputElement>('checkbox', { name });
+    const haken = (name: RegExp | string) => {
+      aufklappen('Zuständig');
+      return screen.getByRole<HTMLInputElement>('checkbox', { name });
+    };
 
     it('Alle an → alle Mitglieder gewählt und gespeichert; einen abwählen → Schalter aus; Alle aus → leer', async () => {
       const { onFertig } = zeige({ eintrag: { aufgabe: { ...BEAMER, wer: [] }, gruppe: LT } });
@@ -374,6 +435,7 @@ describe('ToDoFenster', () => {
       ],
     };
     zeige({ eintrag: { aufgabe: mitWechsel, gruppe: LT } });
+    aufklappen('Verlauf');
     expect(screen.getByText(/Zuständig: Johann → niemand/)).toBeTruthy();
     expect(screen.getByText('geändert')).toBeTruthy();
   });
@@ -434,6 +496,7 @@ describe('ToDoFenster', () => {
     zeige({ leitungIn: (g) => g.id === 11 });
     expect(screen.queryByText(/siehst du dieses To-Do nicht mehr/)).toBeNull();
     fireEvent.change(screen.getByLabelText('Gruppe'), { target: { value: '194' } });
+    aufklappen('Zuständig');
     fireEvent.click(screen.getByRole('checkbox', { name: /Spike/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Alwin/ }));
     expect(screen.getByText(/siehst du dieses To-Do nicht mehr/)).toBeTruthy();
@@ -461,7 +524,9 @@ describe('ToDoFenster', () => {
       verlauf: BEAMER.verlauf.map((v) => (v.von === 23 ? { ...v, name: 'Johann' } : v)),
     };
     verborgen({ aufgabe: mitName, gruppe: LT });
+    aufklappen('Zuständig');
     expect(screen.getByText(/Außerdem zuständig: Johann – das bleibt so/)).toBeTruthy();
+    aufklappen('Verlauf');
     expect(screen.getByText('Johann').closest('li')!.textContent).toMatch(/Status: in Arbeit/);
     expect(screen.queryByText(/Person 23/)).toBeNull();
   });
@@ -481,11 +546,13 @@ describe('ToDoFenster', () => {
         onClose={vi.fn()}
       />,
     );
+    aufklappen('Zuständig');
     expect(screen.getByRole('checkbox', { name: /Alwin/ })).toBeTruthy();
     expect(
       screen.getByText(/Außerdem zuständig: eine weitere Person – das bleibt so/),
     ).toBeTruthy();
     // Schrieb er nie mit Namen, steht im Verlauf „jemand“ – nie eine Personennummer.
+    aufklappen('Verlauf');
     expect(screen.queryByText(/Person 23/)).toBeNull();
     expect(screen.getByText('jemand')).toBeTruthy();
   });
@@ -504,6 +571,7 @@ describe('ToDoFenster: Reihenfolge und „Erledigt von“ (W8b, Entwurf v2)', ()
 
   it('Was · Bis · Zuständig · So wird es erledigt · Status · Notizen – das Wichtige vorn', () => {
     zeige();
+    aufklappen('Zuständig'); // „So wird es erledigt“ steht im Abschnitt „Zuständig“ (W10)
     const soll = [
       'Was ist zu tun?',
       'Bis',
@@ -517,6 +585,7 @@ describe('ToDoFenster: Reihenfolge und „Erledigt von“ (W8b, Entwurf v2)', ()
 
   it('Jeder für sich: „Wer ist fertig?“ steht ebenfalls nach „Zuständig“', () => {
     zeige({ eintrag: { aufgabe: modusSetzen(BEAMER, true, 1, AM), gruppe: LT } });
+    aufklappen('Zuständig');
     const soll = ['Zuständig', 'So wird es erledigt', 'Wer ist fertig?', 'Notizen'];
     expect(reihenfolge([...soll].reverse())).toEqual(soll);
   });
@@ -646,6 +715,7 @@ describe('ToDoFenster: Mitarbeiter-Sicht (W9a)', () => {
     zeige({ eintrag: GETEILT, leitung: true });
     expect(screen.getByLabelText('Was ist zu tun?')).toBeTruthy();
     expect(knopf('Löschen')).toBeTruthy();
+    aufklappen('Zuständig');
     expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
     expect(screen.queryByRole('note')).toBeNull();
   });

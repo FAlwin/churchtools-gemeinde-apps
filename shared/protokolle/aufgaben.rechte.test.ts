@@ -3,9 +3,20 @@ import {
   aenderungVerboten,
   anlegenVerboten,
   bearbeiten,
+  erledigtAm,
+  istJeder,
+  letzteNotiz,
   modusSetzen,
   neueAufgabe,
+  notizenVon,
+  notizHinzufuegen,
+  nurMeinTeil,
   ohneZustaendige,
+  sichtFuer,
+  standFuer,
+  statusSetzen,
+  teilSetzen,
+  teilStand,
   toDoRechte,
   type Aufgabe,
   type ToDoAenderung,
@@ -87,6 +98,8 @@ describe('toDoRechte: was ein Mitarbeiter darf', () => {
       abgeben: true,
       loeschen: true,
       mache: false,
+      verlauf: false,
+      teile: true,
       ...KEIN_VORSCHLAG,
     });
   });
@@ -118,6 +131,8 @@ describe('toDoRechte: was ein Mitarbeiter darf', () => {
       abgeben: false,
       loeschen: false,
       mache: false,
+      verlauf: false,
+      teile: true,
       ...KEIN_VORSCHLAG,
     });
   });
@@ -160,8 +175,104 @@ describe('toDoRechte: was ein Mitarbeiter darf', () => {
         loeschen: true,
         abgeben: false,
         mache: false,
+        verlauf: true,
+        teile: true,
       });
     }
+  });
+});
+
+describe('toDoRechte: Verlauf und Teile (W10, 20.11.2026)', () => {
+  it('den Verlauf sieht nur die Leitung – ein Mitarbeiter in KEINEM Fall', () => {
+    for (const a of [EIGEN, GETEILT, GETEILT_JEDER, MIT_EXTERN, OHNE, FREMD])
+      expect(toDoRechte(a, mitarbeiter).verlauf).toBe(false);
+    for (const a of [EIGEN, GETEILT, GETEILT_JEDER, OHNE, FREMD])
+      expect(toDoRechte(a, leitung).verlauf).toBe(true);
+  });
+
+  it('die Teile („Wer ist fertig?“, Zähler, andere Zuständige): die Leitung immer, ein Mitarbeiter nur ohne „Jeder für sich“', () => {
+    expect(toDoRechte(GETEILT_JEDER, mitarbeiter).teile).toBe(false);
+    expect(toDoRechte(GETEILT_JEDER, leitung).teile).toBe(true);
+    // Gemeinsam hängen auch andere dran – das sieht der Mitarbeiter wie bisher.
+    expect(toDoRechte(GETEILT, mitarbeiter).teile).toBe(true);
+    expect(toDoRechte(MIT_EXTERN, mitarbeiter).teile).toBe(true);
+  });
+
+  it('nurMeinTeil: „Jeder für sich“ ist für den zuständigen Mitarbeiter nur seine Aufgabe – für die Leitung nie; dieselbe Regel wie `teile`', () => {
+    expect(nurMeinTeil(GETEILT_JEDER, mitarbeiter)).toBe(true);
+    expect(nurMeinTeil(GETEILT_JEDER, leitung)).toBe(false);
+    expect(nurMeinTeil(GETEILT, mitarbeiter)).toBe(false);
+    expect(nurMeinTeil(EIGEN, mitarbeiter)).toBe(false);
+    // Nicht zuständig: es ist nicht „meine“ Aufgabe.
+    expect(nurMeinTeil(GETEILT_JEDER, { ich: 77, leitung: false })).toBe(false);
+    // Gegen den Erzeuger: wo `teile` verboten ist, gilt `nurMeinTeil` – und umgekehrt (nur Fall „geteilt“).
+    for (const a of [EIGEN, GETEILT, GETEILT_JEDER, MIT_EXTERN]) {
+      const r = toDoRechte(a, mitarbeiter);
+      expect(nurMeinTeil(a, mitarbeiter)).toBe(r.fall === 'geteilt' && !r.teile);
+    }
+  });
+});
+
+describe('standFuer / sichtFuer: wie ein To-Do für mich steht (W10)', () => {
+  const MEIN_TEIL = teilSetzen(GETEILT_JEDER, ICH, true, ICH, '2026-11-18T08:00:00Z');
+  const NUR_DER_ANDERE = teilSetzen(GETEILT_JEDER, 19, true, 19, '2026-11-19T08:00:00Z');
+  const ALLE = teilSetzen(MEIN_TEIL, 19, true, 19, '2026-11-19T08:00:00Z');
+
+  it('Mitarbeiter bei „Jeder für sich“: mein Teil – auch wenn der Gesamtstand „in Arbeit“ ist', () => {
+    expect(MEIN_TEIL.status).toBe('arbeit'); // Gesamtstand
+    expect(standFuer(MEIN_TEIL, mitarbeiter)).toBe('erledigt');
+    expect(NUR_DER_ANDERE.status).toBe('arbeit');
+    expect(standFuer(NUR_DER_ANDERE, mitarbeiter)).toBe('offen');
+    expect(standFuer(GETEILT_JEDER, mitarbeiter)).toBe('offen');
+    expect(standFuer(ALLE, mitarbeiter)).toBe('erledigt');
+  });
+
+  it('die Leitung und alle anderen Fälle: der Gesamtstand, wie er gespeichert ist', () => {
+    for (const a of [MEIN_TEIL, NUR_DER_ANDERE, GETEILT_JEDER, ALLE])
+      expect(standFuer(a, leitung)).toBe(a.status);
+    const arbeit = statusSetzen(EIGEN, 'arbeit', ICH, AM);
+    expect(standFuer(arbeit, mitarbeiter)).toBe('arbeit');
+    expect(standFuer(statusSetzen(GETEILT, 'arbeit', ICH, AM), mitarbeiter)).toBe('arbeit');
+  });
+
+  it('sichtFuer: Mitarbeiter-Sicht hat meinen Stand, kein „Jeder für sich“, nur Notizen im Verlauf und MEINE Erledigt-Zeit', () => {
+    const mitNotiz = notizHinzufuegen(
+      MEIN_TEIL,
+      'Gebetswoche fehlt noch',
+      19,
+      '2026-11-19T09:00:00Z',
+    );
+    const s = sichtFuer(mitNotiz, mitarbeiter);
+    expect(s.status).toBe('erledigt');
+    expect(istJeder(s)).toBe(false);
+    expect(teilStand(s)).toBeNull();
+    expect(s.verlauf.filter((v) => v.art === 'notiz').map((v) => v.text)).toEqual([
+      'Gebetswoche fehlt noch',
+    ]);
+    expect(s.verlauf.some((v) => v.art === 'teil' || v.art === 'angelegt')).toBe(false);
+    expect(erledigtAm(s)).toBe('2026-11-18T08:00:00Z');
+    // Das gespeicherte To-Do bleibt unberührt.
+    expect(mitNotiz.status).toBe('arbeit');
+    expect(istJeder(mitNotiz)).toBe(true);
+  });
+
+  it('sichtFuer: für die Leitung und alle anderen Fälle dieselbe Instanz zurück', () => {
+    expect(sichtFuer(MEIN_TEIL, leitung)).toBe(MEIN_TEIL);
+    expect(sichtFuer(GETEILT, mitarbeiter)).toBe(GETEILT);
+    expect(sichtFuer(EIGEN, mitarbeiter)).toBe(EIGEN);
+  });
+
+  it('sichtFuer: ist mein Teil offen, ist die Sicht „offen“ – ohne Erledigt-Eintrag', () => {
+    const s = sichtFuer(NUR_DER_ANDERE, mitarbeiter);
+    expect(s.status).toBe('offen');
+    expect(erledigtAm(s)).toBeNull();
+  });
+
+  it('notizenVon: nur die Notizen, in der Reihenfolge des Schreibens', () => {
+    let a = notizHinzufuegen(GETEILT_JEDER, 'eins', ICH, AM);
+    a = notizHinzufuegen(a, 'zwei', 19, AM);
+    expect(notizenVon(a).map((v) => v.text)).toEqual(['eins', 'zwei']);
+    expect(letzteNotiz(a)?.text).toBe('zwei');
   });
 });
 

@@ -8,6 +8,8 @@ import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   meineOffenen,
+  nurMeinTeil,
+  sichtFuer,
   teilText,
   offene,
   type Aufgabe,
@@ -109,6 +111,9 @@ export function Startseite({
     (g) => g.protokolle !== null && schreibbar.includes(g.protokolle),
   );
   const heute = heuteImKalender();
+  // Bin ich in dieser Gruppe Leitung? Danach richtet sich, wie ein To-Do für mich steht (W10, `sichtFuer`).
+  const leitungIn = (g: ProtokollGruppe) =>
+    g.protokolle !== null && schreibbar.includes(g.protokolle);
 
   const laden = useCallback(() => {
     if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
@@ -204,13 +209,17 @@ export function Startseite({
                 <ul className={styles.liste}>
                   {meine.map(({ a, u }) => {
                     const s = herkunft(a, u);
+                    const q = { ich: ich.person, leitung: leitungIn(u.gruppe) };
+                    // Wie das To-Do für mich steht (W10): als Mitarbeiter bei „Jeder für sich“ nur mein Teil.
+                    const sicht = sichtFuer(a, q);
                     // „Jeder für sich“: statt „in Arbeit“ der Fortschritt – mein Teil fehlt noch, sonst stünde es nicht hier.
-                    const teil = teilText(a);
+                    // Ein Mitarbeiter sieht ihn nicht (`sicht` hat kein „Jeder für sich“ mehr).
+                    const teil = teilText(sicht);
                     const inhalt = (
                       <>
                         {/* Derselbe Haken wie in der Übersicht, hier nur Anzeige: die Zeile ist selbst ein Knopf. */}
                         <span className={styles.haken}>
-                          <Haken a={a} ich={ich.person} art="karte" />
+                          <Haken a={a} ich={ich.person} teile={!nurMeinTeil(a, q)} art="karte" />
                         </span>
                         <span className={styles.text}>
                           <b>{a.text}</b>
@@ -218,13 +227,13 @@ export function Startseite({
                             {u.gruppe.name}
                             {teil
                               ? ` · ${teil}`
-                              : a.status === 'arbeit'
-                                ? ` · ${statusText(a.status)}`
+                              : sicht.status === 'arbeit'
+                                ? ` · ${statusText(sicht.status)}`
                                 : ''}
                             {s ? ` · aus „${s.titel}“` : ''}
                           </small>
                         </span>
-                        <FristKaestchen a={a} heute={heute} />
+                        <FristKaestchen a={sicht} heute={heute} />
                       </>
                     );
                     return (
@@ -303,7 +312,16 @@ export function Startseite({
               <ul className={styles.liste}>
                 {gruppen.map((g) => {
                   const u = ue.find((x) => x.gruppe.id === g.id);
-                  const zahl = u ? offene(u.aufgaben, heute).length : null;
+                  // Die ganze Gruppe wird gezählt – aber jedes To-Do so, wie es für mich steht (W10, `sichtFuer`): Bei „Jeder für
+                  // sich“ zählt als Mitarbeiter nur mein Teil.
+                  const zahl = u
+                    ? offene(
+                        u.aufgaben.map((a) =>
+                          sichtFuer(a, { ich: ich.person, leitung: leitungIn(g) }),
+                        ),
+                        heute,
+                      ).length
+                    : null;
                   return (
                     <li key={g.id}>
                       <button type="button" className={styles.zeile} onClick={() => onGruppe(g.id)}>

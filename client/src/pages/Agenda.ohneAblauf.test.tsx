@@ -115,6 +115,16 @@ describe('Terminliste: Termine ohne Ablauf', () => {
     expect(anlegen()).toBeNull();
   });
 
+  it('am Handy rückt das Feld unter den Titel: die Zeile trägt `cardOhne` – nur mit dem Feld (Abnahme 20.11.2026)', async () => {
+    zeige(true);
+    const feld = await screen.findByRole('button', { name: 'Ablauf anlegen' });
+    expect(feld.closest('[class*="cardOhne"]')).not.toBeNull();
+    cleanup();
+    zeige(false);
+    const ohne = await screen.findByText('Kein Ablauf');
+    expect(ohne.closest('[class*="cardOhne"]')).toBeNull();
+  });
+
   it('ohne Recht: kein „Ablauf anlegen", und ein Tipp öffnet kein Fenster', async () => {
     zeige(false);
     expect(await screen.findByText('Kein Ablauf')).toBeTruthy();

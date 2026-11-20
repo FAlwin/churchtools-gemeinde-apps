@@ -249,7 +249,7 @@ der festen Liste `shared/website/schriften.ts`), das **Logo** (nur Anzeige – �
 in `shared/website/aussehen.ts`.
 
 - **Kontrast (E-W18):** `kontrast(a, b)` in `shared/website/theme.ts` (WCAG). Text auf Hintergrund und Text auf „Sanft“ unter
-  **4,5 : 1** → ein ruhiger Hinweis an den beteiligten Farben. **Es wird nichts gesperrt.**
+  **4,5 : 1** → ein ruhiger Hinweis, je Problem genau einer, gesammelt unter „Text“. **Es wird nichts gesperrt.**
 - **Speichern:** Die Einstellungen sind eine Einheit (`einstellungen`) mit eigener Sperre (`website-sperre` mit `einheit:
 einstellungen`, gelesen als `WebsiteStand.einstellungenSperre`). Der Ablauf ist derselbe wie bei den Seiten
   (`website/src/useSperrarbeit.ts`): erst die Sperre, dann prüfen (`einstellungenSchema`) und nach 0,7 s speichern – Ungültiges

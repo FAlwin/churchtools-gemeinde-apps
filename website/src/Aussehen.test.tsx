@@ -194,13 +194,23 @@ describe('Kontrast-Hinweis (E-W18)', () => {
     expect(screen.queryByRole('note')).toBeNull();
   });
 
-  it('der Hinweis hängt an den beteiligten Farben: nur „Sanft“ zu dunkel → unter „Sanft“ und „Text“, nicht unter „Hintergrund“', async () => {
+  it('jeder Hinweis steht genau einmal, gesammelt unter „Text“ – nicht zusätzlich an der Fläche', async () => {
     await zeige();
     await tippe(hexFeld(/^Sanft/), '#333333');
     const zeile = (name: RegExp) => hexFeld(name).parentElement as HTMLElement;
-    expect(within(zeile(/^Sanft/)).getAllByRole('note')).toHaveLength(1);
+    expect(screen.getAllByRole('note')).toHaveLength(1);
     expect(within(zeile(TEXT_FARBE)).getAllByRole('note')).toHaveLength(1);
+    expect(within(zeile(TEXT_FARBE)).getByRole('note').textContent).toMatch(/Text auf Sanft/);
+    expect(within(zeile(/^Sanft/)).queryByRole('note')).toBeNull();
     expect(within(zeile(/^Hintergrund/)).queryByRole('note')).toBeNull();
+  });
+
+  it('zwei Probleme → zwei Hinweise, beide unter „Text“', async () => {
+    await zeige();
+    await tippe(hexFeld(TEXT_FARBE), '#dddddd');
+    const zeile = (name: RegExp) => hexFeld(name).parentElement as HTMLElement;
+    expect(screen.getAllByRole('note')).toHaveLength(2);
+    expect(within(zeile(TEXT_FARBE)).getAllByRole('note')).toHaveLength(2);
   });
 });
 

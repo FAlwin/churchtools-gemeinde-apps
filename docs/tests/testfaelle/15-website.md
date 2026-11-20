@@ -265,8 +265,8 @@ Handy steht die Vorschau unter dem Formular.
 2. In „Hauptfarbe“ eine neue Farbe tippen (`#7a1f3d`) und mit dem Farbwähler eine andere wählen: Die Vorschau färbt Knöpfe und
    Flächen um. Etwas Ungültiges tippen (`rot`, `#12`) und das Feld verlassen: Es springt auf die geltende Farbe zurück, nichts
    wird gespeichert.
-3. Bei „Text“ eine sehr helle Farbe (`#dddddd`) wählen: Unter der Farbe erscheint ein ruhiger Hinweis zum Kontrast (bei „Text“,
-   „Hintergrund“ und „Sanft“). **Gespeichert wird trotzdem.** Wieder eine dunkle Farbe: Der Hinweis verschwindet.
+3. Bei „Text“ eine sehr helle Farbe (`#dddddd`) wählen: Unter „Text“ erscheinen ruhige Hinweise zum Kontrast – je Problem
+   genau einer („Text auf Hintergrund“, „Text auf Sanft“), nicht zusätzlich an den Flächen. **Gespeichert wird trotzdem.** Wieder eine dunkle Farbe: Der Hinweis verschwindet.
 4. Bei „Überschriften“ eine andere Schrift wählen (z. B. „Playfair Display“): Die Vorschau zeigt sie nach einem kurzen Moment, die
    Schrift „Text“ bleibt. Die Auswahl ist nach Art gruppiert; „Eigene Schrift …“ zeigt nur den Hinweis zum Hochladen der Bilder.
 5. Bei „Eigenes CSS“ etwas eintragen (`.w-fuss { font-size: 0.9rem; }`): Die Vorschau folgt verzögert. Mehr als 20.000 Zeichen:

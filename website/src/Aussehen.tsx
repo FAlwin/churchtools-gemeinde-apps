@@ -260,9 +260,9 @@ function AussehenArbeit({
                 hinweis={f.hinweis}
                 gilt={farbeGilt(arbeit, f.schluessel)}
                 gesetzt={farbeGesetzt(arbeit, f.schluessel)}
-                kontrast={hinweise
-                  .filter((h) => f.schluessel === 'text' || f.schluessel === h.auf)
-                  .map((h) => ({ auf: h.auf, verhaeltnis: h.verhaeltnis }))}
+                // Jeder Hinweis genau EINMAL, gesammelt unter „Text“ (Ruhige Bedienung): an beiden beteiligten Farben
+                // stand derselbe Satz doppelt – bei zwei Problemen vier Kästen. „Text“ ist die Farbe, an der man es behebt.
+                kontrast={f.schluessel === 'text' ? hinweise : []}
                 onAendern={(hex) => void aendern((e) => farbeSetzen(e, f.schluessel, hex))}
                 onFertig={() => abschickenRef.current()}
               />

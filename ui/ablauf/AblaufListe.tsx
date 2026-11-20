@@ -57,6 +57,7 @@ export function ZeilenInhalt({
   infoZeilen = [],
   vorlage = false,
   onLiedKarte,
+  liedKarteTour,
 }: {
   item: AblaufZeile;
   tag?: ReactNode;
@@ -65,6 +66,8 @@ export function ZeilenInhalt({
    * Einzelansicht des Punkts. Ohne: die Karte ist nur Anzeige (Bearbeiten-Liste, Matrix).
    */
   onLiedKarte?: () => void;
+  /** Ziel der Einführung an der Lied-Karte (`setlist-song`: „Tippe die Lied-Karte …“) – nicht an der ganzen Zeile. */
+  liedKarteTour?: string;
   schmal?: boolean;
   /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral statt rot – `ResponsibleLine`. */
   vorlage?: boolean;
@@ -105,7 +108,12 @@ export function ZeilenInhalt({
       })}
       {item.song &&
         (onLiedKarte ? (
-          <button type="button" className={styles.liedKnopf} onClick={onLiedKarte}>
+          <button
+            type="button"
+            className={styles.liedKnopf}
+            data-tour={liedKarteTour}
+            onClick={onLiedKarte}
+          >
             <LiedKarte song={item.song} ohneTitel={liedImTitel && !karteAlsTitel} />
           </button>
         ) : (
@@ -225,7 +233,6 @@ export function AblaufListe({
             type="button"
             className={styles.punktFlaeche}
             aria-label={`„${itemLabel(item)}“ ansehen`}
-            data-tour={item.song && idx === 0 ? 'setlist-song' : undefined}
             onClick={() => onPunkt(item)}
           />
           <ZeitSpalte item={item} />
@@ -236,6 +243,7 @@ export function AblaufListe({
               infoZeilen={alsSpalten ? [] : infos}
               vorlage={vorlage}
               onLiedKarte={karte}
+              liedKarteTour={karte && idx === 0 ? 'setlist-song' : undefined}
             />
           </div>
         </div>

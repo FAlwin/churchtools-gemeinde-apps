@@ -203,6 +203,14 @@ describe('Tipp-Ziele in der Liste (E20)', () => {
     expect(onPunkt).toHaveBeenLastCalledWith(expect.objectContaining({ id: 1 }));
   });
 
+  it('die Einführung („Tippe die Lied-Karte …“) zeigt auf die Lied-Karte, nicht auf die ganze Zeile', () => {
+    handy(false);
+    const { container } = render(<AblaufListe zeilen={ZEILEN} onLied={vi.fn()} onPunkt={vi.fn()} />);
+    const ziele = container.querySelectorAll('[data-tour="setlist-song"]');
+    expect(ziele).toHaveLength(1);
+    expect(ziele[0]).toBe(screen.getByText('Halleluja').closest('button'));
+  });
+
   it('ohne `onPunkt` bleibt es wie vorher: bei Liedern ist der ganze Punkt der Knopf zum Lied', () => {
     handy(false);
     const onLied = vi.fn();

@@ -7,7 +7,7 @@ const SUPPORT_AMOUNTS = [1, 3, 5];
 
 /**
  * Dezenter „Kaffee spendieren"-Bereich (PayPal). Bewusst zurückhaltend –
- * wird im Mehr-Tab und auf der Login-Seite ganz unten eingeblendet.
+ * wird im Reiter „Einstellungen“ und auf der Login-Seite ganz unten eingeblendet.
  */
 export function SupportBox() {
   return (

@@ -46,7 +46,7 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
   const [rolesDraft, setRolesDraft] = useState<NoteRolePerm[]>([]);
   const [orgDraft, setOrgDraft] = useState(site.orgName);
   const update = useUpdateSiteConfig();
-  // Gruppen nur laden, wenn ein Admin im Mehr-Tab ist (für Anzeige + Auswahl der Gruppen-Zuweisung).
+  // Gruppen nur laden, wenn ein Admin im Reiter „Einstellungen“ ist (für Anzeige + Auswahl der Gruppen-Zuweisung).
   const groupsQuery = useGroups(isAdmin);
 
   function openOrg() {

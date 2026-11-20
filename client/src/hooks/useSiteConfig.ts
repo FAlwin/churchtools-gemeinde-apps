@@ -35,7 +35,7 @@ export function useSiteConfig() {
   return query;
 }
 
-/** Lädt die ChurchTools-Gruppen (nur wenn `enabled`, z. B. Admin im Mehr-Tab) für das Dropdown. */
+/** Lädt die ChurchTools-Gruppen (nur wenn `enabled`, z. B. Admin im Reiter „Einstellungen“) für das Dropdown. */
 export function useGroups(enabled: boolean) {
   return useQuery({
     queryKey: ['ct-groups'],

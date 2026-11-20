@@ -36,7 +36,7 @@ const WEGE: Record<
     start: 'Verwaltung',
     gehe: (p) => p.getByRole('button', { name: 'Sitzungen', exact: true }).click(),
     ziel: /#\/sitzungen$/,
-    da: 'Neue Sitzung',
+    da: 'Kommend',
   },
   // Ohne Fall ist der Gebetsabend noch nicht eingerichtet; „Einrichten“ legt in der Demo nur im Speicher an.
   // Nicht „zuhören“: das lädt VDO.Ninja aus dem Netz.

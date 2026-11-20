@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { KopfKnopf } from './KopfKnopf';
 import { useAufklapp } from './useAufklapp';
@@ -122,6 +122,10 @@ export function AuswahlBlatt({
  * Möglichkeiten als kleines Menü darunter aufklappt. `gesperrt` statt Menü, wenn nichts hinzugefügt werden darf (z. B.
  * abgeschlossener Ablauf – dann der Hinweis des Aufrufers). `klein` für die Gruppenzeile der Matrix (E6-6c): nur das
  * Symbol, 26 px – dann sagt `title`, wofür das Plus ist.
+ *
+ * **„Neu ⌄“** (R3/E14, Protokolle B6): `pfeil` setzt den Pfeil hinter das Wort, `handy` lässt die Möglichkeiten dort als Blatt von
+ * unten kommen (`AuswahlBlatt`, wie beim „⋯“-Menü) statt als Menü am Rand. `titel` ist der Name von Menü und Blatt.
+ * Ohne Möglichkeiten (und ohne `gesperrt`) gibt es auch den Knopf nicht.
  */
 export function HinzufuegenMenue({
   label,
@@ -130,6 +134,9 @@ export function HinzufuegenMenue({
   gesperrt,
   klein,
   dataTour,
+  pfeil,
+  handy,
+  titel,
 }: {
   label: string;
   title?: string;
@@ -137,10 +144,47 @@ export function HinzufuegenMenue({
   gesperrt?: () => void;
   klein?: boolean;
   dataTour?: string;
+  pfeil?: boolean;
+  handy?: boolean;
+  titel?: string;
 }) {
+  const [blatt, setBlatt] = useState(false);
+  if (optionen.length === 0 && !gesperrt) return null;
+  const symbol = <Icon name="plus" size={16} stroke={2.4} />;
+  if (handy)
+    return (
+      <>
+        <KopfKnopf
+          onClick={gesperrt ?? (() => setBlatt(true))}
+          label={label}
+          title={title}
+          neu
+          klein={klein}
+          pfeil={pfeil}
+          menuOffen={gesperrt ? undefined : blatt}
+          dataTour={dataTour}
+          symbol={symbol}
+        />
+        {blatt && (
+          <AuswahlBlatt
+            titel={titel ?? label}
+            optionen={optionen.map((o) => ({
+              ...o,
+              // Erst geht das Blatt zu, dann läuft die Aktion – eine Aktion, die ein Fenster öffnet, wird nicht vom Schließen zurückgesetzt.
+              onClick: () => {
+                setBlatt(false);
+                o.onClick();
+              },
+            }))}
+            onClose={() => setBlatt(false)}
+          />
+        )}
+      </>
+    );
   return (
     <KnopfMitMenue
       optionen={optionen}
+      titel={titel}
       knopf={({ offen, umschalten }) => (
         <KopfKnopf
           onClick={gesperrt ?? umschalten}
@@ -148,9 +192,10 @@ export function HinzufuegenMenue({
           title={title}
           neu
           klein={klein}
+          pfeil={pfeil}
           menuOffen={gesperrt ? undefined : offen}
           dataTour={dataTour}
-          symbol={<Icon name="plus" size={16} stroke={2.4} />}
+          symbol={symbol}
         />
       )}
     />

@@ -10,6 +10,7 @@ import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
 import { ToDos } from './ToDos';
 import { Startseite } from './Startseite';
+import { gruppiereNach } from './todosFilter.testutil';
 import { abgleich } from './ohneAbgleich.testutil';
 
 /** Reiter „To-Dos“ (S7-1) – Lesen und Schreiben sind Attrappen; was sie tun, prüfen `lesen.test.ts` und Co. */
@@ -119,11 +120,6 @@ const zeige = (schreibbar = [60], onSitzung = vi.fn()) => {
   return onSitzung;
 };
 const texte = () => screen.queryAllByRole('listitem').map((li) => li.textContent ?? '');
-/** „Gruppieren“ ist ein Auswahlmenü (Status · Fälligkeit · Person) – `name` wie im Menü. */
-const gruppiereNach = (name: string) => {
-  fireEvent.click(screen.getByRole('button', { name: /^Gruppieren:/ }));
-  fireEvent.click(within(screen.getByRole('dialog', { name: 'Gruppieren' })).getByLabelText(name));
-};
 const bereiche = () =>
   within(screen.getByRole('region', { name: 'To-Dos' }))
     .queryAllByRole('group')
@@ -201,7 +197,7 @@ describe('ToDos', () => {
     );
     zeige();
     await screen.findByText('Alle ran');
-    gruppiereNach('Nach Person');
+    gruppiereNach('Person');
     await waitFor(() => expect(bereiche()).toEqual(['Alwin Friesen (du)', 'Johann Becker']));
     for (const name of ['Alwin Friesen (du)', 'Johann Becker']) {
       const spalte = screen
@@ -234,7 +230,7 @@ describe('ToDos', () => {
   it('nach Person: ich zuerst, Namen aus den Mitgliedern, „Noch niemand zuständig“ zuletzt – und gemerkt', async () => {
     zeige();
     await screen.findByText('Raum prüfen');
-    gruppiereNach('Nach Person');
+    gruppiereNach('Person');
     await waitFor(() =>
       expect(bereiche()).toEqual(['Alwin Friesen (du)', 'Johann Becker', 'Noch niemand zuständig']),
     );
@@ -439,7 +435,7 @@ describe('ToDos', () => {
     const zeile = screen.getByText('Zu zweit').closest('li')!;
     expect(within(zeile).getByRole('img', { name: 'Zuständig: Alwin, Johann' })).toBeTruthy();
     expect(zeile.textContent).toMatch(/„Angebot da“ – Maria/);
-    gruppiereNach('Nach Person');
+    gruppiereNach('Person');
     expect(screen.getByRole('heading', { name: /^Johann/ })).toBeTruthy();
     expect(screen.queryByText(/Person 23/)).toBeNull();
   });

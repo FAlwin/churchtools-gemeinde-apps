@@ -115,6 +115,17 @@ describe('KopfKnopf – stille Stufe (R2, B1)', () => {
     cleanup();
   });
 
+  it('`pfeil`: ein Pfeil nach unten hinter dem Wort – „Neu ⌄“ (B6); ohne `pfeil` kein zweites Symbol', () => {
+    render(<KopfKnopf onClick={vi.fn()} label="Neu" neu pfeil symbol={<i data-testid="plus" />} />);
+    const knopf = screen.getByRole('button', { name: 'Neu' });
+    expect(knopf.querySelector('svg')).toBeTruthy();
+    // Reihenfolge: Symbol, Wort, Pfeil.
+    expect([...knopf.children].map((c) => c.tagName)).toEqual(['I', 'SPAN', 'svg']);
+    cleanup();
+    render(<KopfKnopf onClick={vi.fn()} label="Neu" neu symbol={<i />} />);
+    expect(screen.getByRole('button', { name: 'Neu' }).querySelector('svg')).toBeNull();
+  });
+
   it('Widerspruch: `still` mit `haupt`/`neu`/`gefahr` – der Typ verbietet es, zur Laufzeit gewinnt die lautere Stufe', () => {
     // Der Typ verbietet die Mischung – diese Zeilen kompilieren nur, solange er es tut (`tsc -p ui` im Build).
     // @ts-expect-error – `still` und `haupt` schließen sich im Typ aus

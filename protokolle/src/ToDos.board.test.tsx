@@ -8,6 +8,7 @@ import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
 import { merkSchluessel } from './useToDoEinstellungen';
 import { ToDos } from './ToDos';
+import { imFilter, ordneNach } from './todosFilter.testutil';
 import { abgleich } from './ohneAbgleich.testutil';
 
 /**
@@ -219,12 +220,9 @@ describe('Board (S7-3)', () => {
     merke({ ansicht: 'board' });
     zeige();
     await screen.findByRole('region', { name: 'To-Dos als Board' });
-    fireEvent.click(screen.getByRole('button', { name: /Sortieren/ }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Manuell' }));
+    ordneNach('Manuell');
     expect(gemerkt().sortierung.w).toBe('manuell');
-    expect(screen.getByRole('button', { name: 'Sortieren: Manuell' }).textContent).toMatch(
-      /Manuell/,
-    );
+    expect(imFilter().getByRole('radio', { name: 'Manuell' })).toHaveProperty('checked', true);
     zieh.umordnen!('offen', '11:Zebra', '11:Beamer');
     await waitFor(() => expect(karten('Offen')).toEqual(['Zebra', 'Beamer']));
     expect(gemerkt().reihenfolge.w).toEqual(['11:Zebra', '11:Beamer']);

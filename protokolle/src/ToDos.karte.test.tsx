@@ -13,6 +13,7 @@ import * as L from './lesen';
 import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
 import { ToDos } from './ToDos';
+import { gruppiereNach, imFilter, offenesFilter, zustaendigKurz } from './todosFilter.testutil';
 
 /**
  * Karte, Tabelle und Kopfzeile der To-Do-Übersicht (W8b, Entwurf `todos-vorschlaege-v2`). Die Regeln dahinter (Frist in Worten,
@@ -96,10 +97,6 @@ const zeige = () =>
     />,
   );
 const zeile = (t: string) => screen.getByText(t).closest('li')!;
-const gruppiereNach = (name: string) => {
-  fireEvent.click(screen.getByRole('button', { name: /^Gruppieren:/ }));
-  fireEvent.click(within(screen.getByRole('dialog', { name: 'Gruppieren' })).getByLabelText(name));
-};
 const bereiche = () =>
   within(screen.getByRole('region', { name: 'To-Dos' }))
     .queryAllByRole('group')
@@ -167,7 +164,7 @@ describe('Karte (W8b)', () => {
     expect(within(zeile('Wird gemacht')).getByText('in Arbeit')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Board' }));
     expect(within(zeile('Wird gemacht')).queryByText('in Arbeit')).toBeNull();
-    gruppiereNach('Nach Person');
+    gruppiereNach('Person');
     expect(within(zeile('Wird gemacht')).getByText('in Arbeit')).toBeTruthy();
   });
 
@@ -340,11 +337,8 @@ describe('Tabelle am PC (W8b)', () => {
   });
 });
 
-describe('Kopfzeile (W8b)', () => {
-  const pille = (n: 'Alle' | 'Meine') => screen.getByRole('button', { name: n });
-  const filterDialog = () => screen.getByRole('dialog', { name: 'Filter' });
-
-  it('„Meine“ ist ein Kurzweg auf den Filter „Zuständig“: blendet „Andere“ und „Noch niemand“ aus, „Ich“ bleibt', async () => {
+describe('Werkzeugzeile und Filter (W8b, B6)', () => {
+  it('„Nur meine“ ist ein Kurzweg auf den Filter „Zuständig“: blendet „Andere“ und „Noch niemand“ aus, „Ich“ bleibt', async () => {
     aufgaben(
       [
         aufgabe('Meins', 11),
@@ -355,31 +349,30 @@ describe('Kopfzeile (W8b)', () => {
     );
     zeige();
     await screen.findByText('Fremd');
-    expect(pille('Alle').getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(pille('Meine'));
+    // Die Pillen „Alle | Meine“ stehen nicht mehr über der Liste – der Kurzweg liegt im Filter.
+    expect(screen.queryByRole('group', { name: 'Zuständigkeit' })).toBeNull();
+    zustaendigKurz('Nur meine');
     expect(screen.queryByText('Fremd')).toBeNull();
     expect(screen.queryByText('Niemand')).toBeNull();
     expect(screen.getByText('Meins')).toBeTruthy();
-    expect(pille('Meine').getAttribute('aria-pressed')).toBe('true');
-    expect(pille('Alle').getAttribute('aria-pressed')).toBe('false');
     // Derselbe Zustand im Filter – nicht eine zweite Logik daneben.
-    fireEvent.click(screen.getByRole('button', { name: /^Filter/ }));
-    const d = within(filterDialog());
+    const d = imFilter();
     expect(d.getByLabelText<HTMLInputElement>('Ich').checked).toBe(true);
     expect(d.getByLabelText<HTMLInputElement>('Andere').checked).toBe(false);
     expect(d.getByLabelText<HTMLInputElement>('Noch niemand').checked).toBe(false);
-    // Im Filter „Andere“ wieder dazunehmen: weder „Alle“ noch „Meine“ ist dann an.
+    // Die Zahl am Knopf sagt, dass etwas ausgeblendet ist.
+    expect(screen.getByRole('button', { name: /Filter, 2 ausgeblendet/ })).toBeTruthy();
+    // Im Filter „Andere“ wieder dazunehmen.
     fireEvent.click(d.getByLabelText('Andere'));
     expect(screen.getByText('Fremd')).toBeTruthy();
-    expect(pille('Alle').getAttribute('aria-pressed')).toBe('false');
-    expect(pille('Meine').getAttribute('aria-pressed')).toBe('false');
     // „Alle“ räumt den Filter „Zuständig“ wieder.
-    fireEvent.click(pille('Alle'));
+    zustaendigKurz('Alle');
     expect(screen.getByText('Niemand')).toBeTruthy();
-    expect(pille('Alle').getAttribute('aria-pressed')).toBe('true');
+    expect(d.getByLabelText<HTMLInputElement>('Noch niemand').checked).toBe(true);
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
   });
 
-  it('Gruppieren „Nach Fälligkeit“: Überfällig · Diese Woche · Später · Ohne Frist · Erledigt', async () => {
+  it('Einteilen „Fälligkeit“: Überfällig · Diese Woche · Später · Ohne Frist · Erledigt', async () => {
     aufgaben([
       aufgabe('A', 11, { bis: '2026-10-20' }),
       aufgabe('B', 11, { bis: '2026-11-21' }),
@@ -389,7 +382,7 @@ describe('Kopfzeile (W8b)', () => {
     ]);
     zeige();
     await screen.findByText('A');
-    gruppiereNach('Nach Fälligkeit');
+    gruppiereNach('Fälligkeit');
     expect(bereiche()).toEqual(['Überfällig', 'Diese Woche', 'Später', 'Ohne Frist', 'Erledigt']);
     expect(within(screen.getByRole('group', { name: 'Diese Woche' })).getByText('B')).toBeTruthy();
     // Gemerkt wie die anderen Einstellungen.
@@ -399,22 +392,21 @@ describe('Kopfzeile (W8b)', () => {
     expect(bereiche()[0]).toBe('Überfällig');
   });
 
-  it('im Board gibt es kein „Nach Fälligkeit“ – es zeigt dann die Statusspalten', async () => {
+  it('im Board gibt es kein „Fälligkeit“ – es zeigt dann die Statusspalten', async () => {
     aufgaben([aufgabe('A', 11, { bis: '2026-10-20' })]);
     zeige();
     await screen.findByText('A');
-    gruppiereNach('Nach Fälligkeit');
+    gruppiereNach('Fälligkeit');
     fireEvent.click(screen.getByRole('button', { name: 'Board' }));
     expect(
       within(screen.getByRole('region', { name: 'To-Dos als Board' }))
         .getAllByRole('group')
         .map((g) => g.getAttribute('aria-label')),
     ).toEqual(['Offen', 'In Arbeit', 'Erledigt']);
-    fireEvent.click(screen.getByRole('button', { name: /^Gruppieren:/ }));
-    expect(
-      within(screen.getByRole('dialog', { name: 'Gruppieren' })).queryByLabelText(
-        'Nach Fälligkeit',
-      ),
-    ).toBeNull();
+    // Die Wahl heißt im Board „Spalten nach“ und hat keine Fälligkeit – Status ist gewählt.
+    const d = offenesFilter();
+    expect(d.getByRole('group', { name: 'Spalten nach' })).toBeTruthy();
+    expect(d.queryByRole('radio', { name: 'Fälligkeit' })).toBeNull();
+    expect(d.getByRole('radio', { name: 'Status' })).toHaveProperty('checked', true);
   });
 });

@@ -67,6 +67,11 @@ type KopfKnopfProps = Stufe & {
    * 02.11.2026). Der Knopf wird dafür so breit wie nötig.
    */
   zahl?: number;
+  /**
+   * Ein Pfeil nach unten hinter der Beschriftung – „Neu ⌄“ (R3, Protokolle B6): Der Knopf klappt ein Menü auf. Auch am Handy
+   * zu sehen (dort steht nur das Symbol, der Pfeil sagt, dass noch etwas aufgeht).
+   */
+  pfeil?: boolean;
 };
 
 /**
@@ -94,6 +99,7 @@ export function KopfKnopf({
   dataTour,
   symbolHinten,
   zahl,
+  pfeil,
 }: KopfKnopfProps) {
   return (
     <button
@@ -132,6 +138,7 @@ export function KopfKnopf({
         <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>
       )}
       {symbolHinten && symbol}
+      {pfeil && <Icon name="chev-down" size={14} stroke={2.4} />}
     </button>
   );
 }

@@ -43,7 +43,8 @@ import { SitzungFestlegen } from './SitzungFestlegen';
 import { SitzungBearbeiten } from './SitzungBearbeiten';
 import { NaechsteSitzung } from './NaechsteSitzung';
 import { ProtokollNeu } from './ProtokollNeu';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HinzufuegenMenue, type Option } from '@ui/bedienung/OptionWaehlen';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import styles from './Sitzungen.module.scss';
 
 // Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
@@ -188,6 +189,8 @@ export function Sitzungen({
   // „Löschen“ (W6): die Rückfrage – und danach ein Hinweis in der Liste.
   const [loeschen, setLoeschen] = useState(false);
   const { toast, showToast } = useToast();
+  // Handy-Breite: „Neu ⌄“ klappt dort als Blatt von unten auf (`HinzufuegenMenue`).
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -492,6 +495,42 @@ export function Sitzungen({
     );
 
   const darfSchreiben = darfSchreibenIn(gruppe);
+  /**
+   * **Alles, was etwas hinzufügt, in EINEM grünen Knopf „Neu ⌄“** (B6, R3/E14) – vorher vier Knöpfe in der Kopfzeile von
+   * „Kommend“, zwei davon grün. „Protokoll nachtragen“ ist seltener und steht hinter einer Linie. „Neue Sitzung“ braucht
+   * einen Kalender – wer sie darf, darf also immer auch schreiben. Ohne Recht bleibt „Punkt vorschlagen“ allein.
+   */
+  const neuOptionen: Option[] = [
+    ...(darfSchreiben
+      ? [{ label: 'Neues Protokoll', onClick: () => setNeu(true) } satisfies Option]
+      : []),
+    ...(darfFestlegen
+      ? [
+          {
+            label: 'Neue Sitzung',
+            onClick: () => setFestlegen({ art: 'neu', bis: null }),
+          } satisfies Option,
+        ]
+      : []),
+    ...(mOrt
+      ? [
+          {
+            label: 'Punkt vorschlagen',
+            onClick: () => setVorschlagFenster({ art: 'neu', id: crypto.randomUUID() }),
+          } satisfies Option,
+        ]
+      : []),
+    ...(darfSchreiben
+      ? [
+          {
+            label: 'Protokoll nachtragen',
+            // Die Linie trennt das Seltenere vom Übrigen („Neues Protokoll“ steht für jeden, der nachtragen darf, davor).
+            trenner: true,
+            onClick: () => setNachtragen(true),
+          } satisfies Option,
+        ]
+      : []),
+  ];
   // „Protokoll beginnen“ – aus der geöffneten Sitzung, aus „Noch ohne Protokoll“ und aus „Protokoll nachtragen“.
   const beginnenFenster = () =>
     beginnt &&
@@ -612,6 +651,10 @@ export function Sitzungen({
           wert={String(gruppe.id)}
           onWahl={(v) => setGruppeId(Number(v))}
         />
+        {/* Ein grüner Knopf für alles, was etwas hinzufügt (R3/E14: „Immer wenn was Grünes kommt, ist es etwas hinzufügen“). */}
+        {zustand.art === 'fertig' && (
+          <HinzufuegenMenue label="Neu" titel="Neu" pfeil handy={handy} optionen={neuOptionen} />
+        )}
       </div>
       {zustand.art === 'laedt' && <p className={styles.ruhig}>Wird geladen …</p>}
       {zustand.art === 'fehler' && <FehlerKasten fehler={zustand.fehler} onNochmal={laden} />}
@@ -630,43 +673,6 @@ export function Sitzungen({
             <div className={styles.kartenkopf}>
               <h3 id="kommend">Kommend</h3>
               <span className={styles.anzahl}>{zustand.daten.kommend.length}</span>
-              {/* „Neue Sitzung“ braucht dazu einen Kalender – wer sie darf, darf also immer auch schreiben. */}
-              <span className={styles.aktionen}>
-                {mOrt && (
-                  <KopfKnopf
-                    label="Punkt vorschlagen"
-                    title="Einen Punkt für eine Sitzung vorschlagen"
-                    symbol={<Icon name="idee" size={16} />}
-                    onClick={() => setVorschlagFenster({ art: 'neu', id: crypto.randomUUID() })}
-                  />
-                )}
-                {darfSchreiben && (
-                  <>
-                    <KopfKnopf
-                      neu
-                      label="Neues Protokoll"
-                      title="Neues Protokoll ohne Termin"
-                      symbol={<Icon name="plus" size={16} />}
-                      onClick={() => setNeu(true)}
-                    />
-                    <KopfKnopf
-                      label="Protokoll nachtragen"
-                      title="Protokoll zu einem früheren Treffen beginnen"
-                      symbol={<Icon name="verlauf" size={16} />}
-                      onClick={() => setNachtragen(true)}
-                    />
-                    {darfFestlegen && (
-                      <KopfKnopf
-                        neu
-                        label="Neue Sitzung"
-                        title="Neue Sitzung mit Termin und Einladung"
-                        symbol={<Icon name="calendar" size={16} />}
-                        onClick={() => setFestlegen({ art: 'neu', bis: null })}
-                      />
-                    )}
-                  </>
-                )}
-              </span>
             </div>
             {zustand.daten.kommend.length ? (
               <ul className={styles.liste}>

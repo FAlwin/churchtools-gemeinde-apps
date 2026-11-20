@@ -11,6 +11,7 @@ import * as M from './mitglieder';
 import * as P from './planen';
 import { SitzungFestlegen } from './SitzungFestlegen';
 import { Sitzungen } from './Sitzungen';
+import { neuAngebot, neuWaehlen } from './neuMenue.testutil';
 
 /** Fenster „Nächste Sitzung festlegen“ / „Neue Sitzung“ und seine Einstiege (S5-2) – Schreiben und Lesen sind Attrappen. */
 vi.mock('./planen', async (orig) => ({
@@ -292,19 +293,77 @@ describe('Einstiege (S5-2)', () => {
     vi.mocked(L.ladeMitarbeit).mockResolvedValue({ aufgaben: [], vorschlaege: [] });
   });
 
+  it('„Neu ⌄“ (B6): die Leitung hat alles Anlegbare in EINEM grünen Knopf, „nachtragen“ hinter einer Linie', async () => {
+    liste();
+    await screen.findByRole('region', { name: 'Kommend' });
+    expect(await neuAngebot()).toEqual([
+      'Neues Protokoll',
+      'Neue Sitzung',
+      'Punkt vorschlagen',
+      'Protokoll nachtragen',
+    ]);
+    // Die alten Knöpfe der Kopfzeile von „Kommend“ gibt es nicht mehr; grün gefüllt ist nur noch „Neu“.
+    for (const alt of [
+      /^Neues Protokoll/,
+      /^Neue Sitzung/,
+      /früheren Treffen/,
+      /Punkt für eine Sitzung/,
+    ])
+      expect(screen.queryByRole('button', { name: alt })).toBeNull();
+    const gruen = screen
+      .getAllByRole('button')
+      .filter((k) => /(^|[\s_])neu([\s_]|$)/.test(k.className));
+    expect(gruen.map((k) => k.getAttribute('aria-label'))).toEqual(['Neu']);
+    expect(gruen[0].getAttribute('aria-haspopup')).toBe('menu');
+    // Der Knopf steht neben der Gruppen-Überschrift, nicht mehr in der Kopfzeile der Karte „Kommend“.
+    expect(
+      within(screen.getByRole('region', { name: 'Kommend' })).queryByRole('button', {
+        name: 'Neu',
+      }),
+    ).toBeNull();
+    fireEvent.click(gruen[0]);
+    const menue = within(screen.getByRole('menu', { name: 'Neu' }));
+    expect(menue.getByRole('menuitem', { name: 'Protokoll nachtragen' }).className).toMatch(
+      /trenner/,
+    );
+    expect(menue.getByRole('menuitem', { name: 'Neue Sitzung' }).className).not.toMatch(/trenner/);
+  });
+
+  it('Handy: „Neu ⌄“ öffnet ein Blatt; „Neue Sitzung“ gewählt – das Blatt geht zu, das Fenster bleibt auf', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('max-width'),
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      liste();
+      await screen.findByRole('region', { name: 'Kommend' });
+      fireEvent.click(await screen.findByRole('button', { name: 'Neu' }));
+      const blatt = screen.getByRole('dialog', { name: 'Neu' });
+      fireEvent.click(within(blatt).getByRole('button', { name: 'Neue Sitzung' }));
+      expect(screen.queryByRole('dialog', { name: 'Neu' })).toBeNull();
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Leitungsteam · außerordentlich')).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('„Neue Sitzung“ nur für die Leitung und nur mit Kalender', async () => {
     const { unmount } = liste();
-    expect(await screen.findByRole('button', { name: /^Neue Sitzung/ })).toBeTruthy();
+    await screen.findByRole('region', { name: 'Kommend' });
+    expect(await neuAngebot()).toContain('Neue Sitzung');
     unmount();
     liste([]);
     await screen.findByText('Keine kommenden Sitzungen.');
-    expect(screen.queryByRole('button', { name: /^Neue Sitzung/ })).toBeNull();
+    expect(await neuAngebot()).not.toContain('Neue Sitzung');
   });
 
   it('„Neues Protokoll“ für die Leitung auch ohne Kalender; angelegt öffnet es die neue Sitzung (K2a)', async () => {
     vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([], null));
     liste();
-    fireEvent.click(await screen.findByRole('button', { name: /^Neues Protokoll/ }));
+    await neuWaehlen('Neues Protokoll');
     expect(screen.getByText('Gruppe 11')).toBeTruthy();
     const neu = sitzung(
       kopf({ sitzung: 'neu', status: 'geplant', beginn: '2026-11-11T18:30:00Z', freigabe: null }),
@@ -319,14 +378,15 @@ describe('Einstiege (S5-2)', () => {
   it('Mitglieder sehen weder „Neues Protokoll“ noch „Neue Sitzung“', async () => {
     liste([]);
     await screen.findByText('Keine kommenden Sitzungen.');
-    expect(screen.queryByRole('button', { name: /^Neues Protokoll/ })).toBeNull();
+    // „Punkt vorschlagen“ darf jedes Mitglied – Protokoll und Sitzung anlegt nur die Leitung.
+    expect(await neuAngebot()).toEqual(['Punkt vorschlagen']);
   });
 
   it('ohne Kalender kein „Neue Sitzung“', async () => {
     vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([], null));
     liste();
     await screen.findByText(/noch kein Kalender gewählt/);
-    expect(screen.queryByRole('button', { name: /^Neue Sitzung/ })).toBeNull();
+    expect(await neuAngebot()).not.toContain('Neue Sitzung');
   });
 
   it('„Neue Sitzung“ festgelegt: Liste lädt neu und öffnet die neue Sitzung', async () => {
@@ -341,7 +401,7 @@ describe('Einstiege (S5-2)', () => {
       hinweise: [],
     });
     liste();
-    fireEvent.click(await screen.findByRole('button', { name: /^Neue Sitzung/ }));
+    await neuWaehlen('Neue Sitzung');
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Leitungsteam · außerordentlich')).toBeTruthy();
     await within(dialog).findByRole('list', { name: 'Einladen' });

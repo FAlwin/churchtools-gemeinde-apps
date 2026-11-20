@@ -1,6 +1,6 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: v1.2.0 (20.11.2026: To-Dos „Gemeinsam“ oder „Jeder für sich“, Haken statt Weiterschalten mit „Rückgängig“ an der Karte, Karte mit Fußzeile wie Planner, Tabelle am PC, „Alle | Meine“, „Nach Fälligkeit“, „Erledigt von …“; Vorschläge in Kurzform, einklappbar, Übernommene weg, Abgelehnte 7 Tage; v1.1.0 19.11.2026: Hinweis auf fällige To-Dos – Band auf der Startseite, roter Zähler am Reiter „To-Dos“, in der Verwaltung einstellbar; v1.0.9 18.11.2026: Seite springt nach dem Antippen eines Feldes am iPhone sofort zurück statt langsam zu ruckeln; v1.0.8 Gruppe über die Überschrift wählen statt Reiterleiste, Fenster ruckeln bei offener iPhone-Tastatur nicht mehr; v1.0.7 To-Dos am Handy – Kopfzeile aufgeräumt, Sortieren und Filter bleiben im Bild; v1.0.6 im Text weder „+“ noch Griff, außer an Tabellen; v1.0.5 Punkte ordnen im eigenen Fenster statt Ziehen im Text; v1.0.4 Protokoll löschen, To-Dos „Alle“ und gekürzte Zuständige, ein Termin gehört der Gruppe mit dem Gruppentreffen; v1.0.3 „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
+> **Stand: v1.2.0 (20.11.2026 „Ruhige Bedienung“ B6: To-Dos mit **einer Werkzeugzeile** – „Gruppieren“, „Sortieren“ und „Alle | Meine“ liegen im **Filter**, in „Sitzungen“ **ein grüner Knopf „Neu ⌄“** für Neues Protokoll, Neue Sitzung, Punkt vorschlagen und Protokoll nachtragen; 20.11.2026: To-Dos „Gemeinsam“ oder „Jeder für sich“, Haken statt Weiterschalten mit „Rückgängig“ an der Karte, Karte mit Fußzeile wie Planner, Tabelle am PC, „Alle | Meine“, „Nach Fälligkeit“, „Erledigt von …“; Vorschläge in Kurzform, einklappbar, Übernommene weg, Abgelehnte 7 Tage; v1.1.0 19.11.2026: Hinweis auf fällige To-Dos – Band auf der Startseite, roter Zähler am Reiter „To-Dos“, in der Verwaltung einstellbar; v1.0.9 18.11.2026: Seite springt nach dem Antippen eines Feldes am iPhone sofort zurück statt langsam zu ruckeln; v1.0.8 Gruppe über die Überschrift wählen statt Reiterleiste, Fenster ruckeln bei offener iPhone-Tastatur nicht mehr; v1.0.7 To-Dos am Handy – Kopfzeile aufgeräumt, Sortieren und Filter bleiben im Bild; v1.0.6 im Text weder „+“ noch Griff, außer an Tabellen; v1.0.5 Punkte ordnen im eigenen Fenster statt Ziehen im Text; v1.0.4 Protokoll löschen, To-Dos „Alle“ und gekürzte Zuständige, ein Termin gehört der Gruppe mit dem Gruppentreffen; v1.0.3 „Mit KI füllen“ legt neue Punkte mit Beschlüssen, To-Dos und Terminen an; v1.0.2 Person aus der Anwesenheit nehmen, „Mit KI füllen“ direkt zur Antwort; v1.0.1 Protokoll zu früheren Treffen nachtragen; erste Version v1.0.0 vom selben Tag).** Die Erweiterung lässt sich installieren; ein Admin richtet je Gruppe die
 > Rechte ein. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste Sitzungen“ und „Deine Gruppen“; der
 > Reiter **„Sitzungen“** zeigt je Gruppe Kommend, Vorschläge und Protokolle; der Reiter **„To-Dos“** zeigt alle To-Dos der
 > eigenen Gruppen als Liste oder Board; die **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse).
@@ -103,7 +103,7 @@ im Reiter „Sitzungen“ oder „Verwaltung“ öffnet, löst einmal beim Start
 scheitert er, gibt es keine Zahl. Ändert man To-Dos direkt im Protokoll (Reiter „Sitzungen“), zieht die Zahl beim nächsten Besuch
 von Start oder „To-Dos“ nach.
 
-**Reiter „To-Dos“ (S7-1, W8b):** alle To-Dos der eigenen Gruppen in einer Liste – **gruppiert** (Knopf „Gruppieren“)
+**Reiter „To-Dos“ (S7-1, W8b):** alle To-Dos der eigenen Gruppen in einer Liste – **gruppiert** (im Filter unter „Gruppieren nach“ – im Board „Spalten nach“)
 **nach Status** (Überfällig · In Arbeit · Offen · Erledigt), **nach Fälligkeit** (Überfällig · Diese Woche · Später · Ohne Frist ·
 Erledigt; „Diese Woche“ = heute bis in 6 Tagen, dieselbe Grenze wie der Wochentag im Frist-Kästchen) oder **nach Person** (ich zuerst,
 dann nach Namen; „Außerhalb der Gruppe“, „Noch niemand zuständig“). Im Board gibt es nur Status und Person – dort gilt „Nach
@@ -130,19 +130,22 @@ im Protokoll dorthin). Ist im Fenster bei „Notizen“ **„Auf Karte anzeigen�
 Erweiterung läuft in ChurchTools mit unbekannter Breite): ab 720 px Tabelle ohne Gruppe, ab 860 px mit der Spalte „Gruppe“ (nur wenn mehrere Gruppen zu
 sehen sind), darunter Karten (`listenForm`). Das Board bleibt Karten.
 
-**Kopfzeile (W8b):** Unter „Liste | Board“ stehen die Schnellfilter **„Alle | Meine“** und rechts **Gruppieren**. „Meine“ ist nur ein **Kurzweg auf den Filter
-„Zuständig“** – derselbe Zustand, keine zweite Filterlogik: es blendet „Andere“ und „Noch niemand“ aus (Ich bleibt), „Alle“ blendet nichts
-aus; wählt man im Filter etwas anderes, ist keine der beiden Pillen an (`schnellfilterVon`/`schnellfilterAus`). Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
+**Werkzeugzeile (W8b, B6):** Über der Liste steht **eine Zeile**: links die Ansicht **Liste | Board** (am Handy ein blauer Knopf „Liste ⌄“ mit Blatt), rechts der **Filter**
+und der grüne Knopf **Neues To-Do**. Der Titel „To-Dos“ entfällt – er steht schon im Reiter. Im **Filter-Fenster** stehen **Gruppieren nach** (im Board **Spalten nach**:
+Status · Fälligkeit · Person, im Board ohne Fälligkeit), **Reihenfolge** (Dringlichkeit · Bis-Datum · Alphabetisch · Manuell), **Zuständig** und **Gruppen**. Die ersten zwei
+sind Anzeige, sie zählen nicht in die Zahl am Knopf. Unter „Zuständig“ stehen die Kurzwege **„Alle“** und **„Nur meine“** (vorher die Pillen „Alle | Meine“ über der Liste): „Nur meine“ ist
+ein **Kurzweg auf den Filter „Zuständig“** – derselbe Zustand, keine zweite Filterlogik: es blendet „Andere“ und „Noch niemand“ aus (Ich bleibt, die Zahl am Knopf ist dann 2),
+„Alle“ blendet nichts aus (`schnellfilterAus`). Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
 Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste.
 
-**Board und Sortieren (S7-3):** „Liste | Board“ oben. Das Board zeigt **nach Status** die Spalten Offen · In Arbeit ·
+**Board und Sortieren (S7-3):** „Liste | Board“ links in der Werkzeugzeile. Das Board zeigt **nach Status** die Spalten Offen · In Arbeit ·
 Erledigt (Überfällige rot in ihrer Spalte), **nach Person** je Person (bei genau einer Gruppe im Filter auch deren
 Mitglieder ohne To-Do), „Außerhalb der Gruppe“ und „Noch niemand zuständig“; je Spalte „+ Neues To-Do“ mit
 vorbelegtem Status bzw. Zuständigen. **Ziehen:** mit der Maus die ganze Karte, mit dem Finger **lange drücken** (~0,4 s)
 – vorher blättert ein Wischen. Nach Status ändert Ziehen den Status (bei „Jeder für sich“ nicht – der Gesamtstand ergibt sich aus den Teilen), nach Person **tauscht es nur die gezogene Person**
 („Außerhalb“ nimmt nichts an). Gibt ein Mitglied sein eigenes To-Do ab (danach sieht es es nicht mehr), fragt die Seite
 vorher. Jeder Wechsel der Zuständigen steht im **Verlauf** („Zuständig: Spike → Johann“) – im Board, im Fenster, im
-Editor und beim Verschieben in eine andere Gruppe. **Sortieren** (ein Knopf, gilt für alle Spalten und Abschnitte):
+Editor und beim Verschieben in eine andere Gruppe. **Reihenfolge** (im Filter, gilt für alle Spalten und Abschnitte):
 Dringlichkeit (Vorgabe) · Bis-Datum (Erledigte nach „erledigt am“) · Alphabetisch · **Manuell** – dann ordnet man innerhalb
 einer Spalte per Ziehen (auch in der Liste); die Reihenfolge gilt nur für einen selbst, neue To-Dos kommen ans Ende.
 **Gemerkt je Benutzer, auf allen Geräten:** Ansicht, Einteilung, Filter, Sortierung und die eigene Reihenfolge liegen in
@@ -188,7 +191,7 @@ vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nich
   steht schon in „Kommend“, so erscheint keine Sitzung doppelt oder gar nicht. Je Zeile „Protokoll beginnen“ (dasselbe
   Fenster wie bei kommenden Sitzungen). Leer → kein Block. Wird für sich geladen: Scheitert es, steht im Block ein
   Hinweis, der Rest bleibt nutzbar. Gerechnet wird in der Zeitzone der Gemeinde.
-- **„Protokoll nachtragen“** (Kopfzeile von „Kommend“): Fenster mit ‹ Monat ›, Start im laufenden Monat, vorwärts nicht
+- **„Protokoll nachtragen“** (Menü „Neu ⌄“, unter einer Linie): Fenster mit ‹ Monat ›, Start im laufenden Monat, vorwärts nicht
   darüber hinaus, **liest nur den gezeigten Monat** (bis gestern). Eine Zeile → „Protokoll beginnen“ im selben Fenster
   („‹“ zurück). „Wie letztes Mal“ nimmt das letzte freigegebene Protokoll **vor** diesem Treffen. Die Zeile zeigt Art
   (Einladung / Gruppentreffen / beides), Zusagen und Absagen und einen Hinweis zur Anwesenheit: aus den Antworten
@@ -203,13 +206,17 @@ vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nich
 **Gruppe wählen (Reiter „Sitzungen“):** Die Überschrift mit dem Gruppennamen ist der Auswahlknopf („Bildtechnik ▾“) – ein Tipp klappt
 die Liste aller Gruppen auf, die aktuelle trägt ein Häkchen. Wer nur eine Gruppe sieht, sieht eine einfache Überschrift.
 
-**Neues Protokoll (Leitung, K2a):** „Neues Protokoll“ auf der Startseite und im Reiter „Sitzungen“ legt ein Protokoll
+**Neu ⌄ (B6):** Im Reiter „Sitzungen“ steht rechts neben der Gruppen-Überschrift **ein grüner Knopf „Neu ⌄“** für alles, was etwas hinzufügt (Grün heißt immer hinzufügen): **Neues Protokoll · Neue Sitzung · Punkt vorschlagen**
+und, hinter einer Linie, **Protokoll nachtragen**. Die Leitung sieht alle vier, ein Mitglied nur „Punkt vorschlagen“, „Neue Sitzung“ gibt es nur mit Kalender; ohne Eintrag gibt es den Knopf nicht. Am Handy klappt
+das Menü als Blatt von unten auf. Vorher standen die vier als Knöpfe in der Kopfzeile von „Kommend“, zwei davon grün.
+
+**Neues Protokoll (Leitung, K2a):** „Neues Protokoll“ auf der Startseite und im Menü „Neu ⌄“ des Reiters „Sitzungen“ legt ein Protokoll
 **ohne Termin** an – Gruppe wählen, Titel, Datum/Uhrzeit (auch nachträglich), Vorlage / „Wie letztes Mal“ / leer, auf
 Wunsch mit Gruppentreffen für die Anwesenheit. Keine Mail; der Editor öffnet sich gleich.
 
 **Nächste Sitzung festlegen (Leitung, S5-2):** Oben im Bereich „Termine“ eines Protokolls steht die nächste Sitzung
 (mit Einladungen und Zusagen); ist keine festgelegt, hat die Leitung dort „Nächste Sitzung festlegen“. Außerordentlich
-geht dasselbe über **„Neue Sitzung“** im Reiter „Sitzungen“ – beides nur, wenn für die Gruppe ein Kalender gewählt
+geht dasselbe über **„Neu ⌄ → Neue Sitzung“** im Reiter „Sitzungen“ – beides nur, wenn für die Gruppe ein Kalender gewählt
 ist. Das Fenster ist vorbelegt wie die letzte Sitzung (Titel, Uhrzeit, Dauer; Datum im Abstand der letzten beiden,
 sonst vier Wochen; bei „Neue Sitzung“ zählt nur, was schon stattgefunden hat). Eingeladen sind alle aktiven Mitglieder,
 abwählbar. **Die Einladungen gehen sofort per Mail raus**
@@ -324,7 +331,7 @@ zählen beim Freigeben nicht als „noch offen“ und werden von der automatisch
 geht auch, wenn das Gruppentreffen schon abgeschlossen ist (das Tippen von Anwesend/Abwesend dann nicht mehr). Ein neues
 Protokoll über „Wie letztes Mal“ übernimmt die ausgeblendeten Personen **nicht** – dort steht wieder die ganze Gruppe.
 
-**Punkte vorschlagen (S5-4):** Im Reiter „Sitzungen“ steht bei „Kommend“ **„Punkt vorschlagen“** – für alle, die die
+**Punkte vorschlagen (S5-4):** Im Reiter „Sitzungen“ steht im Menü **„Neu ⌄“** der Eintrag **„Punkt vorschlagen“** – für alle, die die
 Gruppe sehen. Man wählt die Sitzung (vorbelegt die nächste; ohne festgelegte heißt sie „Nächste Sitzung“, der
 Vorschlag rutscht dann von selbst dorthin), ein Thema und freiwillig ein, zwei Sätze. Die Karte **„Vorschläge“** unter
 „Kommend“ zeigt die **offenen** Vorschläge der Gruppe in der Kurzform (W8c): Titel, darunter höchstens eine Zeile Text

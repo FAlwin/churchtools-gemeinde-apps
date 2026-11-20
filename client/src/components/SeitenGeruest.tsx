@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { Screen, Scroll } from './Screen';
 import { SeitenKopf } from './SeitenKopf';
 import { VollbildKnopf } from './VollbildKnopf';
+import { VollbildImReiter } from './VollbildOrt';
 
 interface SeitenGeruestProps {
   /** Die große Überschrift am Anfang des Inhalts – mit `stattTitel` nur für Screenreader. */
@@ -67,7 +68,9 @@ export function SeitenGeruest({
   ueberlagerung,
 }: SeitenGeruestProps) {
   // Der Vollbild-Knopf (nur Erweiterung) steht auf JEDER Seite ganz rechts im Kopf – an einer Stelle, damit man ihn
-  // zum Ein- und Ausschalten immer am selben Ort findet (Entwurf mit Alwin, 08.10.2026).
+  // zum Ein- und Ausschalten immer am selben Ort findet (Entwurf mit Alwin, 08.10.2026). Seit B8 steht er auf den Reiter-Seiten
+  // am iPad/Rechner neben den Reitern (`VollbildImReiter`) – dann nicht auch noch hier.
+  const imReiter = useContext(VollbildImReiter);
   return (
     <Screen>
       <Scroll onRefresh={onNeuLaden}>
@@ -80,7 +83,7 @@ export function SeitenGeruest({
           aktionen={
             <>
               {aktionen}
-              <VollbildKnopf />
+              {!imReiter && <VollbildKnopf />}
             </>
           }
         />

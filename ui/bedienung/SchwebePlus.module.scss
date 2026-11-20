@@ -10,11 +10,12 @@
   height: 54px;
   border: none;
   border-radius: 50%;
-  background: var(--blue);
+  // Grün heißt „hinzufügen“ (R3, E10) – dieselbe Farbe wie `KopfKnopf neu` am Rechner.
+  background: var(--green);
   color: #fff;
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--blue) 38%, transparent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--green) 38%, transparent);
   cursor: pointer;
   z-index: 3;
   &:disabled {

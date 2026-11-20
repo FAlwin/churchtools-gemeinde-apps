@@ -113,4 +113,29 @@ describe('ReiterLeiste', () => {
         .textContent,
     ).toBe('99+');
   });
+
+  it('rechts (Vollbild der Musik-App, B8): nur oben, am Ende der Zeile – unten (Handy) nicht', () => {
+    const { container, rerender } = render(
+      <ReiterLeiste
+        reiter={REITER}
+        aktiv="a"
+        onWechsel={() => {}}
+        oben
+        rechts={<button>Vollbild</button>}
+      />,
+    );
+    const nav = container.querySelector('nav')!;
+    expect(nav.lastElementChild?.contains(screen.getByRole('button', { name: 'Vollbild' }))).toBe(
+      true,
+    );
+    rerender(
+      <ReiterLeiste
+        reiter={REITER}
+        aktiv="a"
+        onWechsel={() => {}}
+        rechts={<button>Vollbild</button>}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Vollbild' })).toBeNull();
+  });
 });

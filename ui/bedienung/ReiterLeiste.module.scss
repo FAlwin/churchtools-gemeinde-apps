@@ -102,6 +102,15 @@
   }
 }
 
+// Etwas ganz rechts in der Zeile (`rechts`).
+.oben .rechts {
+  display: flex;
+  align-items: center;
+  flex: none;
+  align-self: center;
+  margin-left: auto;
+}
+
 // **Flach** (`flach`): die Zeile darum zeichnet den Rand – hier nur die Reiter, links bündig, ohne Kasten.
 .oben.flach {
   padding: 0;

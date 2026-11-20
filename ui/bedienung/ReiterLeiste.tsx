@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/icons';
 import { ReiterZaehler } from './ReiterZaehler';
 import styles from './ReiterLeiste.module.scss';
@@ -41,6 +42,11 @@ interface Props<T extends string> {
    * (Reiterzeile im Seitenkopf der Erweiterungen, `ErweiterungsSeite`, R4/E4 „Ruhige Bedienung“ B2).
    */
   flach?: boolean;
+  /**
+   * Etwas ganz rechts in der Zeile (nur mit `oben`): der Vollbild-Knopf der Musik-App („Vollbild rückt neben die Reiter“,
+   * Entwurf B8). Die Lupe der Erweiterungen steht dagegen in der Reiterzeile der Seite (`ErweiterungsSeite`).
+   */
+  rechts?: ReactNode;
   /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */
   name?: string;
 }
@@ -59,6 +65,7 @@ export function ReiterLeiste<T extends string>({
   oben = false,
   amRand = false,
   flach = false,
+  rechts,
   name = 'Bereiche',
 }: Props<T>) {
   return (
@@ -97,6 +104,7 @@ export function ReiterLeiste<T extends string>({
           </button>
         );
       })}
+      {oben && rechts ? <div className={styles.rechts}>{rechts}</div> : null}
     </nav>
   );
 }

@@ -92,29 +92,33 @@ beforeEach(() => {
   api.getAblaufVorlagen.mockResolvedValue([]);
 });
 
+/** Das leise „+ Ablauf anlegen“ einer Zeile (B8) – nur mit dem Recht; ohne steht dort das Etikett „Kein Ablauf“. */
+const anlegen = () => screen.queryByRole('button', { name: 'Ablauf anlegen' });
+
 describe('Terminliste: Termine ohne Ablauf', () => {
-  it('stehen mit „Kein Ablauf" in der Liste; mit Recht öffnet ein Tipp „Ablauf anlegen"', async () => {
+  it('stehen mit dem leisen „+ Ablauf anlegen“ in der Liste (ohne Etikett); ein Tipp öffnet das Fenster', async () => {
     zeige(true);
-    expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Ablauf anlegen'));
+    expect(await screen.findByRole('button', { name: 'Ablauf anlegen' })).toBeTruthy();
+    expect(screen.queryByText('Kein Ablauf')).toBeNull();
+    fireEvent.click(anlegen()!);
     expect(await screen.findByRole('button', { name: 'Anlegen' })).toBeTruthy();
   });
 
   it('das Recht gilt je Termin (#635): gefragt wird mit genau diesem Termin', async () => {
     const kann = vi.fn((s: Service) => s.id === OHNE.id);
     zeige(kann);
-    expect(await screen.findByLabelText('Ablauf anlegen')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Ablauf anlegen' })).toBeTruthy();
     expect(kann.mock.calls.map(([s]) => s.id)).toContain(OHNE.id);
     cleanup();
     zeige((s) => s.id !== OHNE.id);
     expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
-    expect(screen.queryByLabelText('Ablauf anlegen')).toBeNull();
+    expect(anlegen()).toBeNull();
   });
 
   it('ohne Recht: kein „Ablauf anlegen", und ein Tipp öffnet kein Fenster', async () => {
     zeige(false);
     expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
-    expect(screen.queryByLabelText('Ablauf anlegen')).toBeNull();
+    expect(anlegen()).toBeNull();
     fireEvent.click(screen.getByText('Kein Ablauf'));
     expect(screen.queryByRole('button', { name: 'Anlegen' })).toBeNull();
   });
@@ -144,7 +148,7 @@ describe('Terminliste: Filter (05.11.2026)', () => {
 
   it('Startwert = frühere Einstellung der Gemeinde: gefragt wird genau mit diesen Kalendern', async () => {
     zeige(true);
-    await screen.findByText('Kein Ablauf');
+    await screen.findByRole('button', { name: 'Ablauf anlegen' });
     expect(api.getServicesOhneAblauf).toHaveBeenCalledWith([2]);
   });
 
@@ -154,6 +158,7 @@ describe('Terminliste: Filter (05.11.2026)', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(api.getServicesOhneAblauf).not.toHaveBeenCalled();
     expect(screen.queryByText('Kein Ablauf')).toBeNull();
+    expect(anlegen()).toBeNull();
   });
 
   it('„auch ohne Ablauf“ einschalten holt die Termine – und das Gerät merkt es sich', async () => {
@@ -163,7 +168,7 @@ describe('Terminliste: Filter (05.11.2026)', () => {
     fireEvent.click(
       await screen.findByRole('checkbox', { name: 'Gottesdienste: auch ohne Ablauf' }),
     );
-    expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Ablauf anlegen' })).toBeTruthy();
     expect(api.getServicesOhneAblauf).toHaveBeenCalledWith([2]);
     expect(JSON.parse(localStorage.getItem('worship:termine-filter') ?? 'null')).toEqual({
       aus: [],
@@ -203,10 +208,10 @@ describe('Terminliste: Filter (05.11.2026)', () => {
 
   it('ein ausgeblendeter Kalender liefert auch keine Termine ohne Ablauf mehr', async () => {
     zeige(true);
-    expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Ablauf anlegen' })).toBeTruthy();
     await filterOeffnen();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Gottesdienste' }));
-    await waitFor(() => expect(screen.queryByText('Kein Ablauf')).toBeNull());
+    await waitFor(() => expect(anlegen()).toBeNull());
     expect(screen.queryByText('Gottesdienst')).toBeNull();
     expect(screen.getByText(/Der Filter blendet Kalender aus/)).toBeTruthy();
   });

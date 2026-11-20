@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { type Service, type SongLibraryEntry } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
@@ -63,6 +64,7 @@ export function AllSongs({
   onOpenSong,
   onToast,
 }: AllSongsProps) {
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const [addSong, setAddSong] = useState<SongLibraryEntry | null>(null);
   /**
    * „Neues Lied" öffnet zuerst die **Suche** – dieselbe wie im Ablauf (Entscheidung Alwin, 04.09.2026):
@@ -199,7 +201,7 @@ export function AllSongs({
       aktionen={neu.kopf}
     >
       <div className={styles.searchWrap}>
-        {showStats && <SongStatsBar {...f} />}
+        {showStats && <SongStatsBar {...f} werkzeug={{ handy }} />}
 
         {/**
          * Listenkopf: die Anzahl. „Neues Lied“ stand hier bis zum 29.10.2026 rechts daneben (Wunsch Alwin, 13.08.2026);

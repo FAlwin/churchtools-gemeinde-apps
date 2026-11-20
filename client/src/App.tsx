@@ -50,6 +50,8 @@ import { useSetlistLiveSync, useMarkSeenAfterShown } from './hooks/useSetlistLiv
 import { Screen } from './components/Screen';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { TabBar, type TabId } from './components/TabBar';
+import { VollbildKnopf } from './components/VollbildKnopf';
+import { VollbildImReiter } from './components/VollbildOrt';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
@@ -626,6 +628,8 @@ export default function App() {
   const reiter = (
     <TabBar
       oben={!handy}
+      // Am iPad/Rechner steht der Vollbild-Knopf neben den Reitern, nicht in jedem Seitenkopf (B8).
+      rechts={!handy ? <VollbildKnopf still /> : undefined}
       active={tab}
       tabs={tabs}
       dimmed={online ? [] : ['lieder']}
@@ -643,109 +647,113 @@ export default function App() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {!handy && reiter}
-      <div
-        style={{
-          flex: 1,
-          position: 'relative',
-          overflow: 'hidden',
-          // Am Handy liegt die Reiterleiste darunter: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
-          // Sonst liegt sie darüber und hält schon den Platz für die Statusleiste frei – die Köpfe darunter beginnen
-          // wie unter einer Leiste, nicht noch einmal mit der Safe-Area (12.11.2026).
-          ...(handy
-            ? ({ '--plus-boden': '0px' } as CSSProperties)
-            : ({ '--inhalt-pad-top': 'var(--inhalt-pad-unter-reiter)' } as CSSProperties)),
-        }}
-      >
-        {tab === 'termine' && canViewAgendas && (
-          <Agenda
-            services={servicesQuery.data ?? []}
-            isLoading={servicesQuery.isLoading}
-            isError={servicesQuery.isError}
-            onRetry={() => servicesQuery.refetch()}
-            kannAblaufAnlegen={darfAblauf}
-            darfAblaufImKalender={(id) => darfAblaufImKalender(ablaufRechte, id)}
-            onSelect={(s) => {
-              setService(s);
-              setView({ type: 'setlist' });
-              // „Gesehen" wird gemerkt, NACHDEM der frische Stand angezeigt wurde (Effekt oben,
-              // 12.10.2026) – nicht hier, sonst kämen die Markierungen gar nicht erst an.
-              // Ablauf frisch holen: Der Cache wird sofort angezeigt, aber nur ein frischer
-              // Abruf bringt die aktuellen „geändert"-Markierungen mit (sonst blinkt beim
-              // schnellen Wieder-Öffnen nichts, weil der 30-s-Cache noch als frisch gilt).
-              void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
-            }}
-            onOpenSongs={(s) => {
-              setService(s);
-              setSongIndex(0);
-              setView({ type: 'chart', source: 'setlist' });
-              void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
-            }}
-          />
-        )}
+      <VollbildImReiter.Provider value={!handy}>
+        <div
+          style={{
+            flex: 1,
+            position: 'relative',
+            overflow: 'hidden',
+            // Am Handy liegt die Reiterleiste darunter: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
+            // Sonst liegt sie darüber und hält schon den Platz für die Statusleiste frei – die Köpfe darunter beginnen
+            // wie unter einer Leiste, nicht noch einmal mit der Safe-Area (12.11.2026).
+            ...(handy
+              ? ({ '--plus-boden': '0px' } as CSSProperties)
+              : ({ '--inhalt-pad-top': 'var(--inhalt-pad-unter-reiter)' } as CSSProperties)),
+          }}
+        >
+          {tab === 'termine' && canViewAgendas && (
+            <Agenda
+              services={servicesQuery.data ?? []}
+              isLoading={servicesQuery.isLoading}
+              isError={servicesQuery.isError}
+              onRetry={() => servicesQuery.refetch()}
+              kannAblaufAnlegen={darfAblauf}
+              darfAblaufImKalender={(id) => darfAblaufImKalender(ablaufRechte, id)}
+              onSelect={(s) => {
+                setService(s);
+                setView({ type: 'setlist' });
+                // „Gesehen" wird gemerkt, NACHDEM der frische Stand angezeigt wurde (Effekt oben,
+                // 12.10.2026) – nicht hier, sonst kämen die Markierungen gar nicht erst an.
+                // Ablauf frisch holen: Der Cache wird sofort angezeigt, aber nur ein frischer
+                // Abruf bringt die aktuellen „geändert"-Markierungen mit (sonst blinkt beim
+                // schnellen Wieder-Öffnen nichts, weil der 30-s-Cache noch als frisch gilt).
+                void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
+              }}
+              onOpenSongs={(s) => {
+                setService(s);
+                setSongIndex(0);
+                setView({ type: 'chart', source: 'setlist' });
+                void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
+              }}
+            />
+          )}
 
-        {tab === 'lieder' && canViewSongs && (
-          <AllSongs
-            songs={songLibrary.data ?? []}
-            usage={songUsage.data}
-            usageLoading={songUsage.isLoading}
-            usageError={songUsage.isError}
-            showStats={canViewStats}
-            isLoading={songLibrary.isLoading}
-            isError={songLibrary.isError}
-            onRetry={() => songLibrary.refetch()}
-            onSelect={(e) => {
-              if (!online) {
-                showToast('Liedersammlung ist offline nicht verfügbar.');
-                return;
+          {tab === 'lieder' && canViewSongs && (
+            <AllSongs
+              songs={songLibrary.data ?? []}
+              usage={songUsage.data}
+              usageLoading={songUsage.isLoading}
+              usageError={songUsage.isError}
+              showStats={canViewStats}
+              isLoading={songLibrary.isLoading}
+              isError={songLibrary.isError}
+              onRetry={() => songLibrary.refetch()}
+              onSelect={(e) => {
+                if (!online) {
+                  showToast('Liedersammlung ist offline nicht verfügbar.');
+                  return;
+                }
+                openLibrarySong(e.songId, e.arrangementId);
+              }}
+              /* Nur Termine, deren Ablauf man bearbeiten darf (#635) – sonst endete das Hinzufügen mit 403. */
+              canAddToAgenda={bearbeitbareTermine.length > 0}
+              services={bearbeitbareTermine}
+              /* Anlegen braucht Netz: Es schreibt in ChurchTools (#322). */
+              canCreateSong={canEditSongs && online}
+              onOpenSong={openLibrarySong}
+              onToast={showToast}
+            />
+          )}
+
+          {tab === 'verfuegbarkeit' && canUseAvailability && (
+            <Availability online={online} onToast={showToast} />
+          )}
+
+          {tab === 'mehr' && mehrSeite.offen && canViewAgendas && (
+            <Vorlagen
+              caps={caps}
+              offeneId={mehrSeite.vorlage}
+              onOeffnen={mehrSeite.vorlageOeffnen}
+              zurueck={mehrSeite.zurueck}
+            />
+          )}
+
+          {tab === 'mehr' && !(mehrSeite.offen && canViewAgendas) && (
+            <Settings
+              site={site}
+              siteGeladen={siteQuery.dataUpdatedAt > 0}
+              theme={settings.theme}
+              themePref={settings.themePref}
+              setThemePref={settings.setThemePref}
+              wakePref={settings.wakePref}
+              onToggleWake={settings.toggleWake}
+              isAdmin={isAdmin}
+              canUseGlobalNotes={caps.canUseGlobalNotes}
+              userName={
+                auth.user ? `${auth.user.firstName} ${auth.user.lastName}`.trim() : undefined
               }
-              openLibrarySong(e.songId, e.arrangementId);
-            }}
-            /* Nur Termine, deren Ablauf man bearbeiten darf (#635) – sonst endete das Hinzufügen mit 403. */
-            canAddToAgenda={bearbeitbareTermine.length > 0}
-            services={bearbeitbareTermine}
-            /* Anlegen braucht Netz: Es schreibt in ChurchTools (#322). */
-            canCreateSong={canEditSongs && online}
-            onOpenSong={openLibrarySong}
-            onToast={showToast}
-          />
-        )}
-
-        {tab === 'verfuegbarkeit' && canUseAvailability && (
-          <Availability online={online} onToast={showToast} />
-        )}
-
-        {tab === 'mehr' && mehrSeite.offen && canViewAgendas && (
-          <Vorlagen
-            caps={caps}
-            offeneId={mehrSeite.vorlage}
-            onOeffnen={mehrSeite.vorlageOeffnen}
-            zurueck={mehrSeite.zurueck}
-          />
-        )}
-
-        {tab === 'mehr' && !(mehrSeite.offen && canViewAgendas) && (
-          <Settings
-            site={site}
-            siteGeladen={siteQuery.dataUpdatedAt > 0}
-            theme={settings.theme}
-            themePref={settings.themePref}
-            setThemePref={settings.setThemePref}
-            wakePref={settings.wakePref}
-            onToggleWake={settings.toggleWake}
-            isAdmin={isAdmin}
-            canUseGlobalNotes={caps.canUseGlobalNotes}
-            userName={auth.user ? `${auth.user.firstName} ${auth.user.lastName}`.trim() : undefined}
-            onLogout={() => auth.logout()}
-            onReplayIntro={() => {
-              resetTours();
-              setTab('termine');
-              setTourActive(true);
-            }}
-            // Wer Abläufe sehen darf, sieht auch die Vorlagen; bearbeiten entscheidet die Seite je Kalender.
-            onVorlagen={canViewAgendas ? mehrSeite.vorlagenOeffnen : undefined}
-          />
-        )}
-      </div>
+              onLogout={() => auth.logout()}
+              onReplayIntro={() => {
+                resetTours();
+                setTab('termine');
+                setTourActive(true);
+              }}
+              // Wer Abläufe sehen darf, sieht auch die Vorlagen; bearbeiten entscheidet die Seite je Kalender.
+              onVorlagen={canViewAgendas ? mehrSeite.vorlagenOeffnen : undefined}
+            />
+          )}
+        </div>
+      </VollbildImReiter.Provider>
       {handy && reiter}
       <Toast message={toast} />
       {tab === 'termine' && tourActive && (

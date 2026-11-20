@@ -118,22 +118,11 @@
   margin-left: -2px;
 }
 
+// „Mehr laden“ unter den vergangenen Terminen: ein stilles Wort (`TextKnopf`, B8), mittig unter der Liste.
 .loadMore {
+  display: flex;
+  justify-content: center;
   margin: 14px 16px 0;
-  width: calc(100% - 32px);
-  padding: 12px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: none;
-  color: var(--blue-ink);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 }
 
 // Offline nicht verfügbar (kein Netz + nicht gespeichert): ausgegraut, Tipp zeigt Hinweis (#32).
@@ -162,17 +151,10 @@
   color: var(--text2);
   font-size: 11.5px;
 }
-// „+ Anlegen“ (Scheibe S2): eckig mit Rahmen wie die übrigen Aktionsknöpfe – vorher eine hellblaue Pille. Bleibt ein
-// `span` in der Zeile (die ganze Zeile ist der Knopf), deshalb nur das Aussehen von `aktionKnopf`.
-.ablaufAnlegen {
-  @include m.aktionKnopf;
-  display: inline-flex;
+// Das leise „+ Ablauf anlegen“ (R10, B8) sitzt rechts in der Zeile, neben dem klickbaren Hauptbereich.
+.leisesPlus {
+  display: flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: var(--r-ctrl);
-  font-size: 13px;
-  white-space: nowrap;
+  padding-right: 12px;
 }

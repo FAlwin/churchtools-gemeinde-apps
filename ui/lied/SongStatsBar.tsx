@@ -1,4 +1,6 @@
+import { AnsichtWahl } from '../bedienung/AnsichtWahl';
 import { Segment } from '../bedienung/Segment';
+import { Werkzeugzeile } from '../bedienung/Werkzeugzeile';
 import type { SongSort } from './songFilter';
 import styles from './SongStatsBar.module.scss';
 
@@ -13,6 +15,13 @@ interface SongStatsBarProps {
   /** Zeitfilter nur bei Häufigkeit/Zuletzt zeigen. */
   statMode: boolean;
   className?: string;
+  /**
+   * **Als Werkzeugzeile der Seite** (Liederheft, B8): Mit dieser Angabe steht die Sortierung links in der Werkzeugzeile
+   * (`AnsichtWahl` – am Rechner verbunden wie überall, am Handy ein Auswahlknopf in Wortbreite). `handy` sagt, welches
+   * von beiden. **Ohne die Angabe bleibt der Kasten-Umschalter** – so wie ihn die Fenster „Lied hinzufügen“ und „Lied
+   * verknüpfen“ haben (Fenster werden nicht umgebaut, E18).
+   */
+  werkzeug?: { handy: boolean };
 }
 
 const SORTS: { id: SongSort; label: string }[] = [
@@ -35,15 +44,34 @@ export function SongStatsBar({
   allRange,
   statMode,
   className,
+  werkzeug,
 }: SongStatsBarProps) {
   return (
     <div className={className}>
-      <Segment
-        className={styles.segWrap}
-        value={sort}
-        options={SORTS.map((s) => ({ value: s.id, label: s.label }))}
-        onChange={setSort}
-      />
+      {werkzeug ? (
+        <div className={styles.segWrap}>
+          <Werkzeugzeile
+            handy={werkzeug.handy}
+            ariaLabel="Sortierung"
+            links={
+              <AnsichtWahl
+                ariaLabel="Sortierung"
+                value={sort}
+                options={SORTS.map((s) => ({ value: s.id, label: s.label }))}
+                onChange={setSort}
+                handy={werkzeug.handy}
+              />
+            }
+          />
+        </div>
+      ) : (
+        <Segment
+          className={styles.segWrap}
+          value={sort}
+          options={SORTS.map((s) => ({ value: s.id, label: s.label }))}
+          onChange={setSort}
+        />
+      )}
       {statMode && (
         <div className={styles.rangeBar}>
           {/**

@@ -31,6 +31,7 @@ export function AnsichtWahl<T extends string>({
   onChange,
   handy,
   alsKnopf = false,
+  gedimmt = [],
   ariaLabel = 'Ansicht',
 }: {
   value: T;
@@ -39,18 +40,26 @@ export function AnsichtWahl<T extends string>({
   handy: boolean;
   /** Auch am Rechner als Auswahlknopf mit Menü statt als Umschalter – ab etwa vier Ansichten. */
   alsKnopf?: boolean;
+  /**
+   * Ausgegraute Ansichten („Vergangene“ ohne Netz, Termine der Musik-App) – bleiben antippbar, der Aufrufer erklärt in
+   * `onChange`, warum es nicht geht. Am Handy trägt der Name im Blatt den Zusatz „(nicht verfügbar)“.
+   */
+  gedimmt?: T[];
   ariaLabel?: string;
 }) {
   const [offen, setOffen] = useState(false);
   const jetzt = options.find((o) => o.value === value)?.label ?? ariaLabel;
   const merker = options.find((o) => o.zahl)?.zahl ?? 0;
+  /** Der Name in Menü und Blatt: mit Zahl in Klammern, ausgegraut mit Zusatz (dort gibt es keine graue Schrift zu sehen). */
+  const listenName = (o: { value: T; label: string; zahl?: number; anzahl?: number }) =>
+    `${blattText(o)}${gedimmt.includes(o.value) ? ' (nicht verfügbar)' : ''}`;
   if (!handy && alsKnopf)
     return (
       <KnopfMitMenue
         links
         titel={ariaLabel}
         optionen={options.map((o) => ({
-          label: blattText(o),
+          label: listenName(o),
           gewaehlt: o.value === value,
           onClick: () => onChange(o.value),
         }))}
@@ -90,6 +99,7 @@ export function AnsichtWahl<T extends string>({
           name: o.zahl || o.anzahl ? `${o.label}, ${o.zahl ?? o.anzahl}` : undefined,
         }))}
         onChange={onChange}
+        dimmed={gedimmt}
         ariaLabel={ariaLabel}
         className={styles.segment}
         verbunden
@@ -113,7 +123,7 @@ export function AnsichtWahl<T extends string>({
         <AuswahlBlatt
           titel={ariaLabel}
           optionen={options.map((o) => ({
-            label: blattText(o),
+            label: listenName(o),
             gewaehlt: o.value === value,
             onClick: () => {
               setOffen(false);

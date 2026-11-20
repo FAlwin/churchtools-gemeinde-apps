@@ -239,8 +239,8 @@ Gottesdienstes **nicht** in den Vorlauf (der Balken „Beginn" bleibt, wo er hin
 (Erweiterung oder lokaler Server): Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
 
 **Das muss passieren:** Mit „auch ohne Ablauf“ im Filter stehen die Veranstaltungen ohne Ablauf aus diesem Kalender
-mit grauer Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen" – alle, ein Suchwort gibt es
-nicht mehr. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen Kalenders zuerst). Nach „Anlegen" öffnet
+mit grauer Datumskachel in der Terminliste, rechts das leise gestrichelte Feld „+ Ablauf anlegen" (seit B8; ohne das Recht
+steht dort statt dessen das Etikett „Kein Ablauf") – alle, ein Suchwort gibt es nicht mehr. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen Kalenders zuerst). Nach „Anlegen" öffnet
 sich der neue Ablauf mit den Punkten der Vorlage; in der Liste steht der Termin danach als normaler Termin – nur
 einmal.
 

@@ -152,4 +152,38 @@ describe('AnsichtWahl: Merker (B4/E24)', () => {
       }),
     ).toBeTruthy();
   });
+
+  /** B8: „Vergangene“ ohne Netz (Termine der Musik-App) – ausgegraut, aber antippbar; der Aufrufer erklärt, warum es nicht geht. */
+  it('gedimmt: ausgegraut und trotzdem antippbar, am Handy mit Zusatz im Blatt', () => {
+    const gewaehlt: string[] = [];
+    const optionen = [
+      { value: 'upcoming', label: 'Kommende' },
+      { value: 'past', label: 'Vergangene' },
+    ];
+    const { rerender } = render(
+      <AnsichtWahl
+        value="upcoming"
+        options={optionen}
+        onChange={(v) => gewaehlt.push(v)}
+        handy={false}
+        gedimmt={['past']}
+      />,
+    );
+    const vergangene = screen.getByRole('button', { name: 'Vergangene' });
+    expect(vergangene.className).toMatch(/off/);
+    fireEvent.click(vergangene);
+    expect(gewaehlt).toEqual(['past']);
+    rerender(
+      <AnsichtWahl
+        value="upcoming"
+        options={optionen}
+        onChange={(v) => gewaehlt.push(v)}
+        handy
+        gedimmt={['past']}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ansicht: Kommende' }));
+    expect(screen.getByRole('button', { name: 'Vergangene (nicht verfügbar)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Kommende' })).toBeTruthy();
+  });
 });

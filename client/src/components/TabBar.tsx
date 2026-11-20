@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { IconName } from '@ui/icons/icons';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { scrolleZumAnfang } from '../hooks/useZumAnfang';
@@ -24,6 +25,8 @@ interface TabBarProps {
   onChange: (tab: TabId) => void;
   /** Reiter oben als Text (iPad/Rechner) statt unten mit Symbolen (Handy) – Scheibe S. */
   oben?: boolean;
+  /** Ganz rechts in der oberen Zeile: der Vollbild-Knopf (B8). Am Handy (unten) nicht gezeigt. */
+  rechts?: ReactNode;
 }
 
 /**
@@ -31,7 +34,7 @@ interface TabBarProps {
  * auch im Dienstplaner). Tippt man den schon aktiven Reiter, geht es nach oben – wie in iOS-Apps. Der
  * Tipp auf die Statusleiste erreicht eine Web-App nicht (siehe `Screen.tsx`), dies ist der Ersatz dafür.
  */
-export function TabBar({ active, tabs, dimmed = [], onChange, oben }: TabBarProps) {
+export function TabBar({ active, tabs, dimmed = [], onChange, oben, rechts }: TabBarProps) {
   return (
     <ReiterLeiste
       reiter={tabs.map((id) => ({ id, ...TAB_META[id] }))}
@@ -43,6 +46,7 @@ export function TabBar({ active, tabs, dimmed = [], onChange, oben }: TabBarProp
       oben={oben}
       // Die Reiter der Musik-App stehen oben immer am Bildschirmrand (Platz für die Statusleiste, 12.11.2026).
       amRand={oben}
+      rechts={rechts}
     />
   );
 }

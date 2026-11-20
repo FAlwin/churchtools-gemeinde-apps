@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SeitenGeruest } from './SeitenGeruest';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { VollbildImReiter } from './VollbildOrt';
 
 const schalter = vi.hoisted(() => ({ vollbildKnopf: false }));
 vi.mock('../services/funktionen', async (original) => ({
@@ -181,6 +182,28 @@ describe('SeitenGeruest – Vollbild-Knopf', () => {
     );
     const knoepfe = screen.getAllByRole('button').map((b) => b.getAttribute('title'));
     expect(knoepfe.at(-1)).toBe('Vollbild');
+    schalter.vollbildKnopf = false;
+  });
+
+  /**
+   * B8 („Ruhige Bedienung“): Am iPad/Rechner steht der Knopf auf den Reiter-Seiten NEBEN den Reitern (`App.tsx`), nicht mehr
+   * in jedem Seitenkopf – sonst gäbe es ihn zweimal. Am Handy und auf Seiten ohne Reiterzeile bleibt er im Kopf.
+   */
+  it('Reiterzeile trägt ihn (VollbildImReiter): der Seitenkopf zeigt ihn nicht noch einmal', () => {
+    schalter.vollbildKnopf = true;
+    const { unmount } = render(
+      <VollbildImReiter.Provider value={true}>
+        <SeitenGeruest titel="Termine">Inhalt</SeitenGeruest>
+      </VollbildImReiter.Provider>,
+    );
+    expect(screen.queryByTitle('Vollbild')).toBeNull();
+    unmount();
+    render(
+      <VollbildImReiter.Provider value={false}>
+        <SeitenGeruest titel="Termine">Inhalt</SeitenGeruest>
+      </VollbildImReiter.Provider>,
+    );
+    expect(screen.getByTitle('Vollbild')).toBeTruthy();
     schalter.vollbildKnopf = false;
   });
 });

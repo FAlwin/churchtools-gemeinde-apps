@@ -152,7 +152,7 @@ gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas 
    **eine** `<Titel>.chordpro` – ersetzt, nicht danebengelegt.
 6. In ChurchTools nachsehen: Kategorie, Autor, CCLI, Copyright, Arrangement, Notenblatt.
 7. Jetzt der Weg für **eigene** Lieder: unten auf **Lieder**, dann am iPad/Rechner oben rechts der grüne Knopf
-   **„+ Neues Lied"**, am Handy das runde **Plus** unten rechts (seit 29.10.2026).
+   **„+ Neues Lied"**, am Handy das runde **grüne Plus** unten rechts (seit 29.10.2026, grün seit B8).
    Es öffnet sich **dieselbe Suche** wie im Ablauf (04.09.2026). Einen Titel tippen, den es bei euch
    gibt: Ein Tipp auf die Zeile **öffnet das Blatt** – kein Plus, keine Vorschau (nichts anzulegen).
    Einen Titel tippen, den es nirgends gibt, dann oben rechts **„Selbst eintippen"**: Das leere Formular

@@ -185,6 +185,26 @@ describe('gibFrei: schreibt exakt den Entwurf nach „Veröffentlicht“', () =>
     expect(websiteAusWerten(s.werte[ENTWUERFE]).status.a?.zustand).toBe('eingereicht');
   });
 
+  it('hat zwischen Schreiben und Nachlesen jemand anderes online etwas anderes hingelegt, wird das gemeldet – der Status bleibt, es gilt nichts als erledigt', async () => {
+    const { s } = await lage();
+    await statusSetzen(s.entwurfsOrt, 'a', { zustand: 'eingereicht' }, RITA, JETZT);
+    // Der erste Online-Lesezugriff NACH `einheitSpeichern` (dessen vier Lesezugriffe: vorher, nach Teilen, nach Kopf) ist das Nachlesen
+    // der Freigabe: Genau davor legt jemand anderes einen anderen Stand ab.
+    let lesen = 0;
+    let gestoert = false;
+    s.steuerung.ausfall = (z) => {
+      if (z.kategorie === ONLINE && z.art === 'LESEN' && ++lesen === 4) {
+        gestoert = true;
+        const kopf = s.werte[ONLINE].find((w) => w.value.includes('"website-kopf"'))!;
+        kopf.value = kopf.value.replace(/"stand":"[0-9a-f]+"/, '"stand":"fremd000"');
+      }
+      return undefined;
+    };
+    await expect(gibFrei(s.freigabeOrt, 'seite', 'a')).rejects.toMatchObject({ status: 502 });
+    expect(gestoert).toBe(true);
+    expect(websiteAusWerten(s.werte[ENTWUERFE]).status.a?.zustand).toBe('eingereicht');
+  });
+
   it('ein Entwurf, der nicht gültig ist, geht nie nach „Veröffentlicht“', async () => {
     // Ein Stand, dessen Text kein gültiges Format hat (vollständig gespeichert, aber keine Seite).
     const ungueltig = fakeFreigabeSpeicher();

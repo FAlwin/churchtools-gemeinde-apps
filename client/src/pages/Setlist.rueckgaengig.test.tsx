@@ -88,7 +88,7 @@ function zeige(zettel: GeloeschterPunkt | null) {
 
 async function loeschen(): Promise<void> {
   fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
-  fireEvent.click(screen.getAllByLabelText('Bearbeiten')[0]);
+  fireEvent.click(document.querySelector<HTMLElement>('[data-tour="edit-item"]')!);
   fireEvent.click(await screen.findByText('Eintrag löschen'));
   fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
 }

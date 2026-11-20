@@ -14,6 +14,7 @@ import { Icon } from '../icons/icons';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { useAufklapp } from '../bedienung/useAufklapp';
 import { ZustaendigeListe } from './ZustaendigeListe';
+import { liedMeta } from './liedMeta';
 import styles from './AblaufTeile.module.scss';
 
 /**
@@ -52,9 +53,7 @@ export function LiedKarte({
   /** Ohne Rahmen – in einer Zeile der Feldliste im Punkt-Fenster (E6-O O3, wie im Entwurf B). */
   flach?: boolean;
 }) {
-  const meta = [song.originalKey, song.bpm ? `${song.bpm} bpm` : null, song.author]
-    .filter((t): t is string => !!t && t.trim() !== '')
-    .join(' · ');
+  const meta = liedMeta(song);
   if (ohneTitel && !meta) return null;
   return (
     <span className={flach ? `${styles.liedKarte} ${styles.liedFlach}` : styles.liedKarte}>
@@ -76,7 +75,7 @@ const KREISE = 2;
  * Ein Kreis: das Foto – oder das Kürzel, wenn es keins gibt, Fotos aus sind oder das Foto nicht lädt. Ein leerer Kreis
  * (geblocktes Foto) stand vorher in der Musik-App auf dem eigenen Server (02.11.2026).
  */
-function Kreis({ person, fotos }: { person: ResponsibleEntry; fotos: boolean }) {
+export function Kreis({ person, fotos }: { person: ResponsibleEntry; fotos: boolean }) {
   const [kaputt, setKaputt] = useState(false);
   return (
     <span className={styles.kreis}>

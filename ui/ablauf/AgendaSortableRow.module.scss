@@ -123,6 +123,11 @@
     visibility: hidden;
   }
 
+  // Ohne Stift (Musik-App B8) rücken sie an den Rand, wo der Stift stand.
+  .zeilenKnoepfe.ohneStift {
+    right: 8px;
+  }
+
   // Überschriften sind einzeilige Bänder: dort mittig.
   .editBand .zeilenKnoepfe {
     top: 50%;

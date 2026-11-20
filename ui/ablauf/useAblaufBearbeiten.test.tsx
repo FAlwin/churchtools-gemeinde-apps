@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ablaufZeileAus, punktStand, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { ReactNode } from 'react';
-import { useAblaufBearbeiten, verlangtNeuLaden, type AblaufAktionen } from './useAblaufBearbeiten';
+import {
+  useAblaufBearbeiten,
+  verlangtNeuLaden,
+  type AblaufAktionen,
+  type HinweisLink,
+} from './useAblaufBearbeiten';
 import type { LiedWahlArgs } from './PunktFenster';
 
 /**
@@ -32,7 +37,13 @@ function Harness({
   schmal,
   plusName,
   infoSpalten,
+  linksImMenue,
+  ohneStift,
+  hinweisLinks,
 }: {
+  linksImMenue?: boolean;
+  ohneStift?: boolean;
+  hinweisLinks?: HinweisLink[];
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
   gruppenVerborgen?: boolean;
@@ -45,6 +56,9 @@ function Harness({
   infoSpalten?: { id: number; name: string }[];
 }) {
   const b = useAblaufBearbeiten({
+    linksImMenue,
+    ohneStift,
+    hinweisLinks,
     infoSpalten,
     plusName,
     gruppenVerborgen,
@@ -64,6 +78,13 @@ function Harness({
   return (
     <>
       <div data-testid="kopf">{b.kopfKnopf}</div>
+      <div data-testid="mehr">
+        {b.mehrOptionen.map((o) => (
+          <button key={o.label} type="button" onClick={o.onClick}>
+            {`mehr: ${o.label}`}
+          </button>
+        ))}
+      </div>
       <div data-testid="liste">{b.liste}</div>
       {b.ueberlagerung}
     </>
@@ -112,6 +133,60 @@ describe('useAblaufBearbeiten – Infos der gewählten Spalten (02.11.2026)', ()
       />,
     );
     expect(screen.getByTestId('liste').textContent).not.toContain('Video abspielen');
+  });
+});
+
+describe('useAblaufBearbeiten – „⋯“-Menü und ohne Stift (Musik-App, B8)', () => {
+  const vorlage: HinweisLink = {
+    label: 'Als Vorlage …',
+    icon: 'grid',
+    onClick: vi.fn(),
+    davor: true,
+  };
+
+  it('mit `linksImMenue`: „Als Vorlage …“ und „Neu aufsetzen …“ sind Einträge fürs Menü, nicht mehr in der Hinweiszeile', () => {
+    const neu = vi.fn();
+    render(
+      <Harness aktionen={aktionen()} linksImMenue neuAufsetzen={neu} hinweisLinks={[vorlage]} />,
+    );
+    expect(screen.getByTestId('liste').textContent).not.toContain('Neu aufsetzen');
+    expect(screen.getByTestId('liste').textContent).not.toContain('Als Vorlage');
+    // Die Anleitung bleibt.
+    expect(screen.getByTestId('liste').textContent).toContain('zum Sortieren');
+    expect(
+      within(screen.getByTestId('mehr'))
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['mehr: Als Vorlage …', 'mehr: Neu aufsetzen …']);
+    fireEvent.click(screen.getByRole('button', { name: 'mehr: Neu aufsetzen …' }));
+    expect(neu).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'mehr: Als Vorlage …' }));
+    expect(vorlage.onClick).toHaveBeenCalledOnce();
+  });
+
+  it('abgeschlossen: „Neu aufsetzen …“ aus dem Menü zeigt den Sperr-Hinweis statt zu öffnen', () => {
+    const neu = vi.fn();
+    render(<Harness aktionen={aktionen()} linksImMenue neuAufsetzen={neu} abgeschlossen />);
+    fireEvent.click(screen.getByRole('button', { name: 'mehr: Neu aufsetzen …' }));
+    expect(neu).not.toHaveBeenCalled();
+    expect(screen.getByText('gesperrt')).toBeTruthy();
+  });
+
+  it('ohne `linksImMenue` (Dienstplaner): wie bisher in der Hinweiszeile, keine Menü-Einträge', () => {
+    render(<Harness aktionen={aktionen()} neuAufsetzen={() => {}} hinweisLinks={[vorlage]} />);
+    expect(screen.getByTestId('liste').textContent).toContain('Neu aufsetzen');
+    expect(screen.getByTestId('liste').textContent).toContain('Als Vorlage');
+    expect(screen.getByTestId('mehr').textContent).toBe('');
+  });
+
+  it('`ohneStift`: kein Stift an der Zeile – die Zeile selbst öffnet das Punkt-Fenster; ohne die Angabe bleibt der Stift', async () => {
+    render(<Harness aktionen={aktionen()} ohneStift />);
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+    fireEvent.click(document.querySelector<HTMLElement>('[data-tour="edit-item"]')!);
+    expect(await screen.findByText('Eintrag löschen')).toBeTruthy();
+    cleanup();
+    render(<Harness aktionen={aktionen()} />);
+    expect(screen.getAllByRole('button', { name: 'Bearbeiten' })).toHaveLength(1);
   });
 });
 

@@ -447,7 +447,7 @@ steht im Scroll-Inhalt und scrollt mit weg. Grund: iOS 26/27 legt über die ober
 Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Screenshot Alwin,
 02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
 iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
-„← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau – im Ablauf nur „Fertig“, „Bearbeiten“ grau seit 28.10.2026 –, am Handy nur Symbol
+„← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau – im Ablauf nur „Fertig“, „Bearbeiten“ grau seit 28.10.2026; seit B8 (21.11.2026) liegen „Spalten“, „Teilen“, „Als Vorlage …“, „Neu aufsetzen …“ und „Ablauf abschließen“ im ⋯-Menü (`MehrMenue`), abgeschlossen steht „Öffnen“ sichtbar; ein Tipp auf einen Ablaufpunkt öffnet die Einzelansicht `ui/ablauf/PunktAnsicht` (Handy Seite, sonst Fenster), die Lied-Karte das Liedblatt –, am Handy nur Symbol
 per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts – die Seiten hinter einem Reiter (Termine, Lieder, Abwesenheiten, Mehr) seit
 28.10.2026 OHNE sichtbare Überschrift: an ihrer Stelle der Wähler (`stattTitel`: Kommende/Vergangene, Suche, Termine/Einträge,
 Gemeinde-Karte), wie „Kalender“/„Beiträge“ in der ChurchTools-App; der Titel bleibt für Screenreader. Die Kopfkarte

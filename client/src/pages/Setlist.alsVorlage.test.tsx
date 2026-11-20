@@ -109,12 +109,20 @@ beforeEach(() => {
   api.vorlageMitTerminErsetzen.mockResolvedValue(undefined);
 });
 
-const link = () => screen.queryByRole('button', { name: /Als Vorlage/ });
+/** Das „⋯“-Menü des Kopfs ist offen (B8, R6: „Als Vorlage …“ und „Neu aufsetzen …“ liegen darin, nicht mehr in der Hinweiszeile). */
+const menue = () => {
+  if (!screen.queryByRole('menu')) fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+};
+const link = () => {
+  menue();
+  return screen.queryByRole('menuitem', { name: /Als Vorlage/ });
+};
 
 describe('Link', () => {
-  it('mit Recht im Kalender des Termins: im Bearbeiten-Modus, links neben „Neu aufsetzen …“', () => {
+  it('mit Recht im Kalender des Termins: im Bearbeiten-Modus, im „⋯“-Menü direkt vor „Neu aufsetzen …“', () => {
     zeige([2]);
-    const namen = screen.getAllByRole('button').map((b) => b.textContent?.trim());
+    menue();
+    const namen = screen.getAllByRole('menuitem').map((b) => b.textContent?.trim());
     expect(namen.indexOf('Als Vorlage …')).toBe(namen.indexOf('Neu aufsetzen …') - 1);
   });
 
@@ -130,7 +138,7 @@ describe('Link', () => {
   ])('%s: kein Link', (_n, rechte) => {
     zeige(rechte);
     expect(link()).toBeNull();
-    expect(screen.getByRole('button', { name: /Neu aufsetzen/ })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /Neu aufsetzen/ })).toBeTruthy();
   });
 
   it('in der Ansicht (ohne Bearbeiten) steht er nicht', () => {
@@ -141,11 +149,15 @@ describe('Link', () => {
 });
 
 describe('Einführung', () => {
-  it('der Schritt der Bearbeiten-Tour zeigt auf genau den Link, und die Version wurde erhöht', () => {
+  it('der Schritt „Mehr“ der Bearbeiten-Tour zeigt auf das „⋯“, das den Link enthält – und nennt ihn (B8)', () => {
     zeige([2]);
-    const schritt = SETLIST_EDIT_STEPS.find((s) => s.title === 'Als Vorlage');
+    const schritt = SETLIST_EDIT_STEPS.find((s) => s.title.startsWith('Mehr'));
     expect(schritt).toBeTruthy();
-    expect(document.querySelector(schritt!.selector)).toBe(link());
+    expect(document.querySelector(schritt!.selector)).toBe(
+      screen.getByRole('button', { name: 'Mehr' }),
+    );
+    expect(schritt!.body).toContain('Als Vorlage');
+    expect(link()).toBeTruthy();
     expect(TOUR_SETLIST_EDIT).not.toBe('setlist-edit-v6');
   });
 });

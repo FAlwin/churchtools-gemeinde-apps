@@ -3,6 +3,7 @@ import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
+import { usePunktAnsicht } from '@ui/ablauf/usePunktAnsicht';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
@@ -203,6 +204,15 @@ export function TerminAblauf({
     [start.rechte, start.dienstgruppen],
   );
   const spalten = useInfoSpalten('dienstplaner.ablauf.infoSpalten', gruppen);
+  // Der Punkt zum Ansehen (B8, E16/E20): Tipp auf den Punkt – am Handy eine Seite, sonst ein Fenster; die Lied-Karte öffnet
+  // weiter die Lied-Ansicht. In der Matrix (schmal) gibt es sie nicht.
+  const punktAnsicht = usePunktAnsicht({
+    zeilen,
+    infoGruppen: gruppen,
+    fotos: true,
+    onLied: (_, p) => setLiedOffen(p),
+    zurueckLabel: 'Ablauf',
+  });
 
   /** Die Lied-Ansicht zu einem Punkt (E6-O O4) – eine Stelle für die Ablauf-Ansicht und das Punkt-Fenster. */
   const liedAnsicht = (p: AblaufZeile, schliessen: () => void, zurueck?: () => void) =>
@@ -401,6 +411,7 @@ export function TerminAblauf({
           zeilen={zeilen}
           beginn={termin.uhrzeit}
           onLied={(_, p) => setLiedOffen(p)}
+          onPunkt={schmal ? undefined : punktAnsicht.oeffnen}
           schmal={schmal}
           // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
           mitEnde={schmal}
@@ -415,6 +426,7 @@ export function TerminAblauf({
     <>
       {liste.ueberlagerung}
       {alsVorlage.ueberlagerung}
+      {!schmal && punktAnsicht.ueberlagerung}
       {liedOffen && liedAnsicht(liedOffen, () => setLiedOffen(null))}
       {zeigen && (
         <AblaufAnzeige

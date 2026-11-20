@@ -2,19 +2,41 @@ import type { ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import styles from './KopfKnopf.module.scss';
 
-interface KopfKnopfProps {
+/**
+ * Die Stufe eines Knopfs (R2): Haupt (`haupt`, gefüllt blau), Neu (`neu`, gefüllt grün), Gefahr (`gefahr`, roter Rand),
+ * Neben (ohne Angabe, weiß mit Rand) und **Still** (`still`). Still und die gefüllten Stufen schließen sich aus – das
+ * sagt der Typ, damit es gar nicht erst im Code steht (ein stiller Knopf mit gefülltem Rahmen wäre ein Widerspruch).
+ * Setzt man es trotzdem (über einen Cast), gewinnt die lautere Stufe: `still` wird dann ignoriert.
+ */
+type Stufe =
+  | {
+      /** Blau: die Hauptaktion der Seite („Fertig“ im Bearbeiten des Ablaufs) – höchstens eine je Kopf. */
+      haupt?: boolean;
+      /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
+      neu?: boolean;
+      /** Rot: etwas geht verloren („Löschen“ am Protokoll, W6) – roter Rand und rote Schrift, ohne Fläche wie der Hauptknopf. */
+      gefahr?: boolean;
+      still?: never;
+    }
+  | {
+      /**
+       * **Still** (R2, „Ruhige Bedienung“ B1): ohne Rand und ohne Fläche, Schrift in der normalen Knopffarbe, erst beim
+       * Darüberfahren (nur Maus) hellblau hinterlegt – der Normalfall in Werkzeugzeilen. Am Handy bekommt er einen Rahmen
+       * (R12/E8: „kein Knopf ohne Rahmen“), das macht das CSS von selbst. `aktiv`/`offen` bleiben hellblau hinterlegt.
+       */
+      still?: boolean;
+      haupt?: never;
+      neu?: never;
+      gefahr?: never;
+    };
+
+type KopfKnopfProps = Stufe & {
   onClick: () => void;
   /** Sichtbare Beschriftung („Teilen“, „Bearbeiten“). Am Handy nur das Symbol (CSS) – der Name bleibt für Screenreader. */
   label: string;
   /** Ausführlicherer Name für Screenreader und Tooltip („Alle Lieder als PDF teilen“); sonst die Beschriftung. */
   title?: string;
   symbol: ReactNode;
-  /** Blau: die Hauptaktion der Seite („Fertig“ im Bearbeiten des Ablaufs) – höchstens eine je Kopf. */
-  haupt?: boolean;
-  /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
-  neu?: boolean;
-  /** Rot: etwas geht verloren („Löschen“ am Protokoll, W6) – roter Rand und rote Schrift, ohne Fläche wie der Hauptknopf. */
-  gefahr?: boolean;
   disabled?: boolean;
   /** Öffnet der Knopf ein Menü? Dann `aria-expanded` mit dessen Zustand. */
   menuOffen?: boolean;
@@ -45,7 +67,7 @@ interface KopfKnopfProps {
    * 02.11.2026). Der Knopf wird dafür so breit wie nötig.
    */
   zahl?: number;
-}
+};
 
 /**
  * **Ein Knopf im Seitenkopf** im ChurchTools-Stil (Scheibe S, 26.10.2026 – Alwin: die runden Knöpfe „sehen eher wie
@@ -60,6 +82,7 @@ export function KopfKnopf({
   haupt,
   neu,
   gefahr,
+  still,
   disabled,
   menuOffen,
   aktiv,
@@ -87,7 +110,7 @@ export function KopfKnopf({
                 : offen
                   ? ' ' + styles.offen
                   : ''
-      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${
+      }${still && !haupt && !neu && !gefahr ? ' ' + styles.still : ''}${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${
         zahl !== undefined ? ' ' + styles.mitZahl : ''
       }`}
       onClick={onClick}

@@ -49,6 +49,7 @@ export const nachgebaut = (a: Partial<EntwurfAnschluss> = {}): EntwurfAnschluss 
   speichern: vi.fn(),
   entfernen: vi.fn(),
   einrichten: vi.fn(() => Promise.resolve()),
+  personenliste: vi.fn(),
   senden: vi.fn(),
   hinweise: vi.fn(() => Promise.resolve(new Map())),
   anzahl: vi.fn(),

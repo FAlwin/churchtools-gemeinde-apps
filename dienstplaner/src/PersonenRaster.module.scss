@@ -770,3 +770,44 @@ $anzahl-farben: 8;
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+// ── Liste bearbeiten (PL-2) ────────────────────────────────────────────────────────────────────────────────────────────
+// Der Griff steht vor dem Bild in der Namenszelle; gezogen wird nur an ihm (Finger: `touch-action: none`), nie am Namen.
+.nameInnen {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.griff {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  margin-right: 2px;
+  color: var(--text3);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+  &:active {
+    cursor: grabbing;
+  }
+}
+.griffGesperrt {
+  opacity: 0.4;
+  cursor: default;
+}
+// Die gezogene Zeile hebt sich ab (hellblau wie ein Treffer) und liegt über den anderen.
+.raster tr.zieht {
+  position: relative;
+  z-index: 4;
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--text) 18%, transparent);
+
+  > * {
+    background: var(--blue-soft) !important;
+  }
+}

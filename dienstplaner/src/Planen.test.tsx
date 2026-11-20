@@ -747,6 +747,7 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
           speichern: vi.fn(),
           entfernen: vi.fn(),
           einrichten: vi.fn(),
+          personenliste: vi.fn(),
           senden: vi.fn(),
           hinweise: vi.fn(),
           anzahl: vi.fn(),

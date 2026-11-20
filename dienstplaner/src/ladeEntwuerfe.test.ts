@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { listeWert } from '@shared/dienstplan/personenliste.testutil';
+import { reiheSetzen } from '@shared/dienstplan/personenliste';
 import { startFuer } from './start.testutil';
 import {
   _vergissModul,
@@ -213,6 +214,42 @@ describe('entferneEntwurf', () => {
     expect(spy.mock.calls.some((c) => c[1]?.method === 'DELETE')).toBe(true);
     spy.mockClear();
     expect(await entferneEntwurf(d, 1, ort, 1)).toEqual({ ok: false, grund: 'kein-recht' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Personenliste speichern (PL-2, Durchstich über den Anschluss)', () => {
+  it('liest frisch, schreibt in die Schublade der Gruppe, liest nach – ohne Schublade „kein Recht“ ohne Anfrage', async () => {
+    let werte = [wert(100, 20)];
+    const spy = ct({
+      ...GRUND,
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: werte }),
+      'POST /api/custommodules/16/customdatacategories/30/customdatavalues': (init) => {
+        werte = [
+          ...werte,
+          {
+            id: 101,
+            dataCategoryId: 30,
+            value: (JSON.parse(String(init?.body)) as { value: string }).value,
+          },
+        ];
+        return json(201, { data: werte[1] });
+      },
+    });
+    const anschluss = entwurfAnschluss(startFuer(), () => [TECHNIK, PROGRAMM]);
+    const d = await ladeEntwuerfe([TECHNIK, PROGRAMM]);
+    const r = await anschluss.personenliste(d, 3, (alt) => reiheSetzen(alt, [46, 1]), null);
+    expect(r).toMatchObject({ ok: true, liste: { version: 1, reihe: [46, 1] } });
+    // Der Wert liegt neben dem Entwurf, der Entwurf bleibt unberührt.
+    expect(werte.map((w) => w.id)).toEqual([100, 101]);
+    expect(spy.mock.calls.filter((c) => c[1]?.method === 'POST')).toHaveLength(1);
+    spy.mockClear();
+    expect(await anschluss.personenliste(d, 1, (alt) => reiheSetzen(alt, [1]), null)).toEqual({
+      ok: false,
+      grund: 'kein-recht',
+    });
     expect(spy).not.toHaveBeenCalled();
   });
 });

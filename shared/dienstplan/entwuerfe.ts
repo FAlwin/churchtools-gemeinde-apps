@@ -22,6 +22,7 @@
 import {
   inhaltAus,
   MAX_ZEICHEN,
+  nachleseUrteil,
   wertAendern,
   wertAnlegen,
   werteLesen,
@@ -217,17 +218,29 @@ export interface Schubladeninhalt {
    * nicht). Bei zwei gleichzeitigen `POST` gewinnt dieselbe Regel wie bei Entwürfen (`gewinnt`).
    */
   personenliste: Personenliste | null;
+  /** Der Wert, in dem die gültige Personenliste liegt (PL-2: den ändert das Schreiben) – `null` ohne Liste. */
+  listeWert: Wert | null;
+  /**
+   * Weitere Werte mit einer Personenliste (zwei gleichzeitige `POST`) – nicht gültig. PL-2 löscht sie beim Schreiben der
+   * Liste mit, damit sie nicht für immer dort liegen (wie `doppelt` bei Entwürfen).
+   */
+  listeDoppelt: Wert[];
 }
 
 export function inhaltAusWerten(werte: Wert[]): Schubladeninhalt {
   const je = new Map<string, { wert: Wert; entwurf: Entwurf }>();
   const doppelt = new Map<string, Wert[]>();
   let liste: { wert: Wert; liste: Personenliste } | null = null;
+  const listeDoppelt: Wert[] = [];
   for (const wert of werte) {
     const pl = personenlisteAus(wert);
     if (pl) {
       const neu = { wert, liste: pl };
-      if (!liste || gewinnt({ wert, ...pl }, { wert: liste.wert, ...liste.liste })) liste = neu;
+      if (!liste) liste = neu;
+      else if (gewinnt({ wert, ...pl }, { wert: liste.wert, ...liste.liste })) {
+        listeDoppelt.push(liste.wert);
+        liste = neu;
+      } else listeDoppelt.push(wert);
       continue;
     }
     const entwurf = entwurfAus(wert);
@@ -243,7 +256,13 @@ export function inhaltAusWerten(werte: Wert[]): Schubladeninhalt {
     } else verlierer = wert;
     if (verlierer) doppelt.set(k, [...(doppelt.get(k) ?? []), verlierer]);
   }
-  return { je, doppelt, personenliste: liste?.liste ?? null };
+  return {
+    je,
+    doppelt,
+    personenliste: liste?.liste ?? null,
+    listeWert: liste?.wert ?? null,
+    listeDoppelt,
+  };
 }
 
 type Lesen = { ok: true; inhalt: Schubladeninhalt } | { ok: false; grund: EntwurfGrund };
@@ -359,17 +378,9 @@ async function nachlesen(
   // Nicht lesbar: Ob es angekommen ist, weiß niemand – der Aufrufer behält die Eingabe.
   if (!l.ok) return { ok: false, grund: l.grund };
   const jetzt = l.inhalt.je.get(ortSchluessel(neu.ort))?.entwurf ?? null;
-  if (
-    jetzt &&
-    jetzt.version === neu.version &&
-    jetzt.zeit === neu.zeit &&
-    jetzt.von.personId === neu.von.personId
-  ) {
-    return { ok: true, entwurf: jetzt };
-  }
-  // Steht dort ein anderer Entwurf auf mindestens unserem Stand, war ein anderer Planer gleichzeitig dran.
-  if (jetzt && jetzt.version >= neu.version) return { ok: false, grund: 'konflikt', jetzt };
-  return { ok: false, grund: sonst, jetzt };
+  const urteil = nachleseUrteil(jetzt, neu, jetzt?.von.personId === neu.von.personId, sonst);
+  if (urteil === 'ok' && jetzt) return { ok: true, entwurf: jetzt };
+  return { ok: false, grund: urteil === 'ok' ? sonst : urteil, jetzt };
 }
 
 /**

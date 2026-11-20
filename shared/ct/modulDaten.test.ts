@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kategorieSuchen, modulSuchen, type ModulPort } from './modulDaten';
+import { kategorieSuchen, modulSuchen, nachleseUrteil, type ModulPort } from './modulDaten';
 
 function port(antworten: Record<string, unknown>): ModulPort {
   return {
@@ -42,5 +42,34 @@ describe('modulSuchen', () => {
     });
     const q = port({ '/custommodules': [{ id: 16, shorty: 'dienstplaner' }] });
     expect(await modulSuchen(q, 'Der Dienstplaner')).toBe(16);
+  });
+});
+
+describe('nachleseUrteil – das Urteil nach dem Nachlesen (eine Regel für alle versionierten Werte)', () => {
+  const neu = { version: 3, zeit: '2026-11-20T10:00:00.000Z' };
+
+  it('genau unser Stand (Version UND Zeit) → angekommen', () => {
+    expect(nachleseUrteil({ ...neu }, neu, true, 'nicht-angekommen')).toBe('ok');
+  });
+
+  it('die Sonderbedingung der Art entscheidet mit: gleicher Stand, aber nicht „gleich“ → Konflikt, nicht angekommen', () => {
+    expect(nachleseUrteil({ ...neu }, neu, false, 'nicht-angekommen')).toBe('konflikt');
+  });
+
+  it('gleiche Version, andere Zeit (ein anderer war gleichzeitig dran) → Konflikt', () => {
+    expect(nachleseUrteil({ version: 3, zeit: '2026-11-20T11:00:00.000Z' }, neu, true, 'x')).toBe(
+      'konflikt',
+    );
+  });
+
+  it('höhere Version → Konflikt', () => {
+    expect(nachleseUrteil({ version: 4, zeit: neu.zeit }, neu, true, 'x')).toBe('konflikt');
+  });
+
+  it('niedrigere Version oder nichts → der Grund, den der Aufrufer für „nicht da“ nennt', () => {
+    expect(nachleseUrteil({ version: 2, zeit: neu.zeit }, neu, true, 'nicht-angekommen')).toBe(
+      'nicht-angekommen',
+    );
+    expect(nachleseUrteil(null, neu, true, 'voruebergehend')).toBe('voruebergehend');
   });
 });

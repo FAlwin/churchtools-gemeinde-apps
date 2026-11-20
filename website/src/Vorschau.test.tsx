@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { htmlAttr } from '@shared/website/html';
 import { cssFuerStyleTag } from '@shared/website/theme';
 import { renderSeite } from '@shared/website/render';
-import { baustein, seiteMit } from '@shared/website/website.testdaten';
+import { baustein, einstellungen, seiteMit } from '@shared/website/website.testdaten';
+import { schriftspeicher } from './schriftLader';
 import { EBENE_WARTEZEIT_MS, Vorschau } from './Vorschau';
 import {
   PLATZHALTER_ADRESSE,
@@ -293,5 +294,54 @@ describe('Bearbeiten-Ebene: Nachrichten nur aus dem eigenen iframe', () => {
       return { rahmen: screen.getByTitle('Vorschau: Start') };
     })();
     expect(rahmen.getAttribute('srcdoc')).toContain('gerade nicht zeichnen');
+  });
+});
+
+describe('Schriften in der Vorschau (W3a-3)', () => {
+  const MIT_LORA = {
+    seiten: [],
+    menue: null,
+    einstellungen: einstellungen({
+      schriften: {
+        text: { art: 'auswahl', name: 'Lora' },
+        ueberschrift: { art: 'auswahl', name: 'Lora' },
+      },
+    }),
+  };
+
+  it('die gewählte Schrift kommt als data:-Adresse ins Dokument – nur sie, und erst, wenn sie geladen ist', async () => {
+    render(<Vorschau seite={SEITE} stand={MIT_LORA} gemeinde="ECG" ansicht="computer" />);
+    const srcdoc = () => screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc') ?? '';
+    await waitFor(() => expect(srcdoc()).toContain('url("data:font/woff2;base64,'));
+    expect(srcdoc()).toContain("font-family:'Lora'");
+    // Nur diese Datei wurde geladen – die anderen 13 nicht
+    expect(schriftspeicher.adresse('lora-var.woff2')).toBeDefined();
+    for (const andere of ['quicksand-var.woff2', 'inter-var.woff2', 'caveat-brush.woff2'])
+      expect(schriftspeicher.adresse(andere)).toBeUndefined();
+  });
+
+  it('ohne gewählte Schrift (Systemschrift) steht keine @font-face-Regel im Dokument', () => {
+    render(<Vorschau seite={SEITE} stand={STAND} gemeinde="ECG" ansicht="computer" />);
+    expect(screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc')).not.toContain(
+      '@font-face',
+    );
+  });
+
+  it('eine eigene Schrift bekommt bis W4 keine Adresse: Ersatzschrift, kein Fehlerhinweis', () => {
+    const eigene = {
+      seiten: [],
+      menue: null,
+      einstellungen: einstellungen({
+        schriften: {
+          text: { art: 'eigene', name: 'Meine Schrift', datei: 'x.woff2' },
+          ueberschrift: { art: 'eigene', name: 'Meine Schrift', datei: 'x.woff2' },
+        },
+      }),
+    };
+    render(<Vorschau seite={SEITE} stand={eigene} gemeinde="ECG" ansicht="computer" />);
+    expect(screen.queryByText(/Schrift ließ sich gerade nicht laden/)).toBeNull();
+    expect(screen.getByTitle<HTMLIFrameElement>('Vorschau: Start').getAttribute('srcdoc')).toContain(
+      'url("data:,")',
+    );
   });
 });

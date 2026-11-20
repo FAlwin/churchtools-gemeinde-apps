@@ -96,12 +96,19 @@ export function wirksameFarben(e: Einstellungen): Required<Omit<Farben, 'hauptTi
 
 // ── CSS-Bausteine ────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Eine eingebettete WOFF2-Schrift: genau diese Form, danach nur Base64-Zeichen. */
+const DATEN_SCHRIFT = /^data:font\/woff2;base64,[A-Za-z0-9+/]*={0,2}$/;
+
 /**
  * Eine Adresse als Inhalt einer CSS-Zeichenkette in doppelten Anführungszeichen (`url("…")`). `"`, `'`, `\`, Klammern,
  * Leerraum, Steuerzeichen, `;`, `{`, `}`, `<` und `>` werden prozentkodiert – so bleibt die Adresse in der Zeichenkette
  * und im `<style>`.
  */
 export function cssAdresse(adresse: string): string {
+  // Eine eingebettete Schrift (`data:font/woff2;base64,…`, Vorschau in ChurchTools, W3a-3) braucht ihr `;` – prozentkodiert
+  // wäre es keine Base64-Adresse mehr und die Schrift bliebe unsichtbar. Erlaubt ist **nur diese eine Form**, mit
+  // Base64-Zeichen und sonst nichts: Darin steckt kein Zeichen, das aus der Zeichenkette oder dem `<style>` ausbrechen könnte.
+  if (DATEN_SCHRIFT.test(adresse)) return adresse;
   // eslint-disable-next-line no-control-regex -- gerade die Steuerzeichen sollen kodiert werden
   return adresse.replace(/["'\\(){};<>\s\u0000-\u001f\u007f]/g, (z) => {
     const code = z.charCodeAt(0);

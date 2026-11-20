@@ -243,6 +243,36 @@ describe('Schutz: Schriftnamen, Gewichte, Adressen, Farben', () => {
     expect(cssAdresse('/a b')).toBe('/a%20b');
   });
 
+  describe('eingebettete Schrift (data:font/woff2;base64, Vorschau W3a-3)', () => {
+    const OK = 'data:font/woff2;base64,d09GMgABAAAAAB+/Zz==';
+
+    it('die eine erlaubte Form bleibt unverändert – mit ihrem `;`, sonst wäre es keine Base64-Adresse mehr', () => {
+      expect(cssAdresse(OK)).toBe(OK);
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), { schriftAdresse: () => OK });
+      expect(css).toContain(`url("${OK}")`);
+    });
+
+    it.each([
+      ['mit Anführungszeichen dahinter', `${OK}"`],
+      ['mit Klammer und Semikolon', `${OK});x{`],
+      ['mit Leerraum', `${OK} x`],
+      ['mit Zeilenumbruch', `${OK}\n`],
+      ['mit spitzer Klammer (</style>)', `${OK}</style>`],
+      ['mit Backslash', `${OK}\\`],
+      ['andere Art (font/ttf)', 'data:font/ttf;base64,AAAA'],
+      ['Bild statt Schrift', 'data:image/svg+xml;base64,AAAA'],
+      ['Skript', 'data:text/javascript;base64,AAAA'],
+      ['ohne base64', 'data:font/woff2;charset=utf-8,AAAA'],
+      ['Base64 mit Sonderzeichen mittendrin', 'data:font/woff2;base64,AA"AA'],
+      ['mit Großschreibung der Art', 'DATA:font/woff2;base64,AAAA'],
+    ])('jede andere Form wird wie vorher entschärft: %s', (_name, boese) => {
+      expect(cssAdresse(boese)).not.toMatch(/["'\\(){};<>\s]/);
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), { schriftAdresse: () => boese });
+      expect(css).not.toContain('</style');
+      expect(css.match(/url\(/g)).toHaveLength(2);
+    });
+  });
+
   it('eine unbekannte Schrift aus der „Auswahl“ (am Schema vorbei) wird ignoriert', () => {
     const css = themeCss(
       einstellungen({

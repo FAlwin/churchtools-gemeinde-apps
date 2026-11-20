@@ -9,7 +9,8 @@
  * dort blockiert, ein `<style>` im Dokument nicht. Deshalb
  * - das **Stylesheet** als `<style>` im Dokument (Text aus `website.css`, per `?raw`; `stylesheetText` im Renderer),
  * - **kein Seiten-Skript** (die Vorschau braucht keins; die Bearbeiten-Ebene trägt die Nonce der ChurchTools-Seite),
- * - **keine Schriftdateien** (die kommen mit W3a-3; die Seite fällt auf die Ersatzschrift zurück),
+ * - **Schriften als `data:`-Adresse** (`schriftLader.ts`; ChurchTools erlaubt `font-src data:`) – bis eine Datei da ist (und für
+ *   eigene Schriften bis W4) fällt die Seite auf die Ersatzschrift zurück,
  * - **Bilder als neutrales Platzhalter-Bild** (`data:`), echte Bilder kommen mit W4.
  * Dynamische Daten (Termine, Beiträge, Slider, Livestream, Gruppen) bleiben leer – der Renderer zeigt dann seine
  * Leer-Hinweise.
@@ -19,6 +20,7 @@ import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import { renderSeite, type RenderKontext } from '@shared/website/render';
 import { vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
 import { mitEbene } from './ebene';
+import { KEINE_SCHRIFT } from './schriftLader';
 
 /** Was das iframe darf: Skripte (Eigenes HTML), aber **nie** `allow-same-origin`. Test: `Vorschau.test.tsx`. */
 export const VORSCHAU_SANDBOX = 'allow-scripts';
@@ -44,6 +46,7 @@ export function vorschauKontext(
   stand: VorschauStand,
   gemeinde: string | null,
   zeitzone: string,
+  schriftAdresse: (datei: string) => string = () => KEINE_SCHRIFT,
 ): RenderKontext {
   return {
     einstellungen: stand.einstellungen ?? vorlaeufigeEinstellungen(gemeinde),
@@ -55,7 +58,7 @@ export function vorschauKontext(
     stylesheet: '',
     stylesheetText: STYLESHEET_TEXT,
     // Das Seiten-Skript (Handy-Menü, Einwilligung) liefert der Bau-Dienst – in der Vorschau läuft keins (`skriptAdresse` fehlt).
-    schriftAdresse: () => 'data:,',
+    schriftAdresse,
     zeitzone,
   };
 }
@@ -71,9 +74,10 @@ export function vorschauHtml(
   gemeinde: string | null,
   zeitzone: string,
   bearbeiten?: { scroll: number; nonce?: string | null },
+  schriftAdresse?: (datei: string) => string,
 ): string {
   try {
-    const html = renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone));
+    const html = renderSeite(seite, vorschauKontext(stand, gemeinde, zeitzone, schriftAdresse));
     return bearbeiten ? mitEbene(html, bearbeiten.scroll, bearbeiten.nonce) : html;
   } catch {
     // Mitten im Bearbeiten kann etwas Unfertiges stehen, das der Renderer nicht mag – die Erweiterung soll deshalb nicht

@@ -3,6 +3,9 @@ import { seitenNonce } from './ebene';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 import type { Seite } from '@shared/website/modell';
 import { nachrichtLesen, type EditorAktion } from './nachricht';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
+import { schriftDateien } from '@shared/website/schriften';
+import { useSchriften } from './useSchriften';
 import { vorschauHtml, VORSCHAU_SANDBOX, type VorschauStand } from './vorschauHtml';
 import styles from './Vorschau.module.scss';
 
@@ -52,6 +55,13 @@ export function Vorschau({
     scroll.current = 0;
   }
 
+  // Die Schriften, die diese Einstellungen brauchen – nur diese werden geladen (nie alle 14).
+  const dateien = useMemo(
+    () => schriftDateien(stand.einstellungen?.schriften),
+    [stand.einstellungen?.schriften],
+  );
+  const schriften = useSchriften(dateien);
+
   const html = useMemo(
     () =>
       vorschauHtml(
@@ -60,8 +70,9 @@ export function Vorschau({
         gemeinde,
         gemeindeZeitzone(),
         mitEbene ? { scroll: scroll.current, nonce: seitenNonce() } : undefined,
+        schriften.adresse,
       ),
-    [seite, stand, gemeinde, mitEbene],
+    [seite, stand, gemeinde, mitEbene, schriften.adresse],
   );
 
   useEffect(() => {
@@ -103,6 +114,13 @@ export function Vorschau({
         <div className={styles.hinweis} role="status">
           Bearbeiten in der Vorschau ist gerade nicht möglich – ChurchTools hat das
           Bearbeiten-Skript blockiert. Bitte Seite neu laden.
+        </div>
+      )}
+      {schriften.fehler && (
+        <div className={styles.hinweis} role="status">
+          Eine Schrift ließ sich gerade nicht laden – die Vorschau zeigt vorerst eine Ersatzschrift. Deine
+          Einstellungen bleiben unverändert.{' '}
+          <TextKnopf onClick={schriften.nochmal}>Erneut laden</TextKnopf>
         </div>
       )}
       <div className={`${styles.buehne}${ansicht === 'handy' ? ' ' + styles.handy : ''}`}>

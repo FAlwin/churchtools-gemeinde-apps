@@ -15,5 +15,5 @@
 
 ### Behoben (alle Apps)
 
-- **Datumsfelder in Safari und am iPhone:** Das Datum klebte im Feld oben statt mittig (zuerst im To-Do-Fenster bei „Bis“ aufgefallen). Der gemeinsame Baustein
+- **Datumsfelder in Safari:** Das Datum klebte im Feld oben statt mittig (zuerst im To-Do-Fenster bei „Bis“ aufgefallen). Der gemeinsame Baustein
   `datumsfeld` zentriert es jetzt bei jeder Feldhöhe; die Höhen bleiben gleich. Das gilt für alle Datumsfelder in allen Apps.

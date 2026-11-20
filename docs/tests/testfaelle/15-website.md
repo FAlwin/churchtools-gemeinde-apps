@@ -63,7 +63,7 @@ löschen** fragt erst nach. Nach dem Neuladen der Seite steht alles unverändert
 
 1. Die Erweiterung öffnen: „Diese Website hat noch keine Startseite“. **Startseite anlegen**.
 2. Die Vorschau zeigt die Startseite; **Handy** tippen, dann **Computer**.
-3. **Neue Seite**, Titel „Über uns“: darunter steht die Adresse `/ueber-uns/`; **Anlegen**. Die Seite steht unter „Weitere Seiten“.
+3. **Neue Seite** (grün unter der Liste; am Handy das runde grüne Plus), Titel „Über uns“: darunter steht die Adresse `/ueber-uns/`; **Anlegen**. Die Seite steht unter „Weitere Seiten“.
 4. Noch eine Seite „Über uns“ anlegen: ihre Adresse ist `/ueber-uns-2/`.
 5. Die zweite Seite wählen, **Seite löschen**, erst **Abbrechen** (nichts passiert), dann noch einmal und **Löschen**.
 6. Die Seite neu laden: die Startseite und „Über uns“ stehen da, die gelöschte nicht.

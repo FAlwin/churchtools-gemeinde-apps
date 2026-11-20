@@ -138,7 +138,7 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
   „kommt“.
 - **Seiten:** links die Liste („Im Menü“ in der Reihenfolge des Menüs, „Weitere Seiten“; die Startseite ist markiert), rechts
   die **Vorschau** mit dem Umschalter **Computer | Handy** (390 px).
-- **Neue Seite:** Titel eingeben; der Pfad (die Adresse) entsteht daraus (Umlaute ausgeschrieben, bei Streit `-2`). Die Seite
+- **Neue Seite** (grüner Knopf unter der Seitenliste, am Handy das runde grüne Plus unten rechts): Titel eingeben; der Pfad (die Adresse) entsteht daraus (Umlaute ausgeschrieben, bei Streit `-2`). Die Seite
   ist leer.
 - **Seite löschen:** steht im Fenster „Seite einstellen“; mit Rückfrage, steht sie im Menü, wird der Menüpunkt mit entfernt.
 - **Startseite anlegen:** Hat die Website keine Startseite, steht ein Hinweis mit dem Knopf „Startseite anlegen“ (Vorlage

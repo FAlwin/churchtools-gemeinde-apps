@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Etikett } from '@ui/bedienung/Etikett';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
@@ -120,6 +121,15 @@ export function Seiten({
       menue: neuesMenue ?? alt.menue,
     }));
 
+  // „Neu anlegen“ ist grün (R3): am Rechner der grüne Knopf unter der Seitenliste, am Handy das runde Plus unten rechts.
+  // Bis 20.11.2026 ein heller Fensterknopf – der einzige „Neu“-Knopf der Erweiterungen, der nicht grün war.
+  const neueSeiteKnopf = useNeuAnlegen({
+    label: 'Neue Seite',
+    onClick: () => setNeu(true),
+    sichtbar: listen !== null,
+    disabled: ungespeichert,
+  });
+
   const startseiteAnlegen = async () => {
     if (!stand) return;
     setLaeuft(true);
@@ -206,12 +216,9 @@ export function Seiten({
                 onWahl={(s) => setGewaehlt(s.id)}
                 gesperrt={ungespeichert}
               />
-              <div className={styles.listenFuss}>
-                <FensterKnopf art="hell" disabled={ungespeichert} onClick={() => setNeu(true)}>
-                  <Icon name="plus" size={16} />
-                  Neue Seite
-                </FensterKnopf>
-              </div>
+              {neueSeiteKnopf.kopf && (
+                <div className={styles.listenFuss}>{neueSeiteKnopf.kopf}</div>
+              )}
             </aside>
 
             {aktuell ? (
@@ -235,6 +242,7 @@ export function Seiten({
               </section>
             )}
           </div>
+          {neueSeiteKnopf.schwebend}
         </>
       )}
 

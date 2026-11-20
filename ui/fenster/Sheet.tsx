@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { useEscape } from '../bedienung/useEscape';
+import { FensterEbene } from './FensterEbene';
 import { FensterKnopf } from './FensterKnopf';
 import { useKnopfZeile } from './useKnopfZeile';
 import { useOverlayKeyboardInset } from './useOverlayKeyboardInset';
@@ -102,71 +103,75 @@ export function Sheet({
   if (knoepfe !== undefined) {
     // Kopf und Fußzeile bleiben stehen, dazwischen scrollt der Inhalt – das ist die eine Scrollfläche des Fensters.
     return (
-      <div
-        ref={overlayRef}
-        className={`${styles.overlay}${einblenden ? '' : ` ${styles.still}`}${handyVoll ? ` ${styles.overlayVoll}` : ''}`}
-        onClick={beschaeftigt ? undefined : onHintergrund}
-      >
+      <FensterEbene>
         <div
-          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}${mittel ? ` ${styles.mittel}` : ''}${handyVoll ? ` ${styles.handyVoll}` : ''}`}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titelId}
-          onClick={(e) => e.stopPropagation()}
+          ref={overlayRef}
+          className={`${styles.overlay}${einblenden ? '' : ` ${styles.still}`}${handyVoll ? ` ${styles.overlayVoll}` : ''}`}
+          onClick={beschaeftigt ? undefined : onHintergrund}
         >
-          <div className={styles.kopf}>
-            {zurueck && (
+          <div
+            className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}${mittel ? ` ${styles.mittel}` : ''}${handyVoll ? ` ${styles.handyVoll}` : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titelId}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.kopf}>
+              {zurueck && (
+                <button
+                  className={styles.zurueck}
+                  aria-label="Zurück"
+                  onClick={zurueck}
+                  disabled={beschaeftigt}
+                >
+                  <Icon name="chev-left" size={20} />
+                </button>
+              )}
+              <div id={titelId} className={styles.kopfTitel}>
+                {title}
+              </div>
               <button
-                className={styles.zurueck}
-                aria-label="Zurück"
-                onClick={zurueck}
+                className={styles.x}
+                aria-label="Fenster schließen"
+                onClick={onClose}
                 disabled={beschaeftigt}
               >
-                <Icon name="chev-left" size={20} />
+                <Icon name="x" size={20} />
               </button>
+            </div>
+            <div className={styles.inhalt}>{children}</div>
+            {knoepfe !== null && (
+              <div
+                ref={knopfZeile.ref}
+                className={styles.fuss}
+                data-stapel={knopfZeile.stapel || undefined}
+              >
+                {links}
+                {cancelLabel !== null && (
+                  <FensterKnopf art="zweit" onClick={onAbbrechen} disabled={beschaeftigt}>
+                    {cancelLabel}
+                  </FensterKnopf>
+                )}
+                {knoepfe}
+              </div>
             )}
-            <div id={titelId} className={styles.kopfTitel}>
-              {title}
-            </div>
-            <button
-              className={styles.x}
-              aria-label="Fenster schließen"
-              onClick={onClose}
-              disabled={beschaeftigt}
-            >
-              <Icon name="x" size={20} />
-            </button>
           </div>
-          <div className={styles.inhalt}>{children}</div>
-          {knoepfe !== null && (
-            <div
-              ref={knopfZeile.ref}
-              className={styles.fuss}
-              data-stapel={knopfZeile.stapel || undefined}
-            >
-              {links}
-              {cancelLabel !== null && (
-                <FensterKnopf art="zweit" onClick={onAbbrechen} disabled={beschaeftigt}>
-                  {cancelLabel}
-                </FensterKnopf>
-              )}
-              {knoepfe}
-            </div>
-          )}
         </div>
-      </div>
+      </FensterEbene>
     );
   }
 
   return (
-    <div ref={overlayRef} className={styles.overlay} onClick={onClose}>
-      <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>{title}</div>
-        {children}
-        <button className={styles.cancel} onClick={onClose}>
-          {cancelLabel ?? 'Abbrechen'}
-        </button>
+    <FensterEbene>
+      <div ref={overlayRef} className={styles.overlay} onClick={onClose}>
+        <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.title}>{title}</div>
+          {children}
+          <button className={styles.cancel} onClick={onClose}>
+            {cancelLabel ?? 'Abbrechen'}
+          </button>
+        </div>
       </div>
-    </div>
+    </FensterEbene>
   );
 }

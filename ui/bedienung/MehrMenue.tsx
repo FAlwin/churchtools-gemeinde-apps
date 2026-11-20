@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Icon } from '../icons/icons';
 import { KopfKnopf } from './KopfKnopf';
-import { AuswahlBlatt, KnopfMitMenue, type Option } from './OptionWaehlen';
+import { AuswahlFenster, KnopfMitMenue, type Option } from './OptionWaehlen';
 
 /**
  * **Das „⋯“-Menü der Werkzeugzeile** (R6/E3, „Ruhige Bedienung“ B3): Seltenes liegt einen Klick tiefer, jeder Eintrag mit
  * Symbol und Wort (`Option.symbol`). Ein stiller Knopf mit drei Punkten – am Rechner klappt ein kleines Menü darunter auf
- * (`KnopfMitMenue`), am Handy kommt das Blatt von unten (`AuswahlBlatt`, wie nach dem „+“ in der ChurchTools-App).
+ * (`KnopfMitMenue`), am Handy kommt ein Fenster (`AuswahlFenster`, wie jedes andere Modal).
  *
  * **Reihenfolge „Aktion“ / „Menü schließen“:** Erst geht das Menü zu, dann läuft die Aktion – eine Aktion, die selbst ein
  * Fenster öffnet, wird so nicht vom Schließen zurückgesetzt (Lehre 05.08.2026). Jeder Eintrag hat dafür einen eigenen Test.
@@ -26,7 +26,7 @@ export function MehrMenue({
   /** Ziel der geführten Einführung (`utils/onboarding.ts`) – der „⋯“-Knopf selbst. */
   dataTour?: string;
 }) {
-  const [blatt, setBlatt] = useState(false);
+  const [fenster, setFenster] = useState(false);
   if (optionen.length === 0) return null;
   const symbol = <Icon name="mehr" size={18} />;
   if (!handy)
@@ -56,21 +56,21 @@ export function MehrMenue({
         label={titel}
         symbol={symbol}
         dataTour={dataTour}
-        menuOffen={blatt}
-        offen={blatt}
-        onClick={() => setBlatt(true)}
+        menuOffen={fenster}
+        offen={fenster}
+        onClick={() => setFenster(true)}
       />
-      {blatt && (
-        <AuswahlBlatt
+      {fenster && (
+        <AuswahlFenster
           titel={titel}
           optionen={optionen.map((o) => ({
             ...o,
             onClick: () => {
-              setBlatt(false);
+              setFenster(false);
               o.onClick();
             },
           }))}
-          onClose={() => setBlatt(false)}
+          onClose={() => setFenster(false)}
         />
       )}
     </>

@@ -561,3 +561,29 @@ Listen von **Musik** und **Technik** ändern, **Predigt** (Programm) hat keine S
 - **Historie:** Dienstplaner PL-2 (20.11.2026), Entwurf `personenliste.html` (Variante B, „Kürzel am Bild“)
 
 </details>
+
+### TF-VERF-18 · Fenster liegen immer ganz oben – über dem schwebenden Plus, der Reiterleiste und den Leisten
+
+**Das brauchst du:** Den Dienstplaner im Demo-Modus (`?demo`) am Handy (oder das Fenster schmal ziehen) – und zum Gegenprüfen die
+Musik-App und die Protokolle.
+
+**Das muss passieren:** Jedes Fenster liegt vor allem anderen; dahinter ist alles abgedunkelt, auch das grüne Plus und die Reiterleiste.
+Es gibt kein Blatt von unten mehr – auch Auswahlen („⋯“, „Matrix ⌄“, „Neu ⌄“) sind ein Fenster mit Titel und ✕.
+
+1. **Wann kann ich?** → das grüne **+** → „Zeitraum eintragen“ geht auf. Das Plus unten rechts ist **abgedunkelt unter dem Fenster**
+   (vorher lag es hell darüber, rechts unten neben „Abbrechen“). Auch die Reiterleiste ganz unten ist abgedunkelt.
+2. **Planen** (mit Entwürfen): **Matrix ⌄** öffnet das Fenster „Ansicht“ mit den Ansichten – die Leiste „3 Entwürfe … Ansehen & senden“ und die
+   Reiterleiste liegen dahinter. Eine Ansicht tippen: das Fenster geht zu, die Ansicht wechselt. **⋯** öffnet „Mehr“; **Erinnern** und
+   **Teilen** öffnen ihr eigenes Fenster (es bleibt offen, geht nicht gleich wieder zu).
+3. **Protokolle → Sitzungen:** das grüne **+** öffnet „Neu“ als Fenster; jeder Eintrag öffnet sein Fenster.
+4. Ein Fenster mit einer Rückfrage (z. B. etwas löschen): Die Rückfrage liegt **über** dem Fenster darunter.
+5. ✕, Escape und ein Tipp neben das Fenster schließen jedes dieser Fenster. **Am Rechner** bleiben „⋯“, die Ansicht und „Neu“ kleine Menüs am Knopf.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/fenster/FensterEbene.tsx`, `ui/fenster/Sheet.tsx`, `ui/fenster/ConfirmDialog.tsx`, `ui/design/_variables.scss`, `ui/bedienung/OptionWaehlen.tsx`, `ui/bedienung/MehrMenue.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/SchwebePlus.tsx`
+- **Automatisiert:** weitgehend – `ui/fenster/FensterEbene.test.tsx` (jedes Fenster hängt unter `#root`, nie im Kasten mit eigenem Stapel), `ui/design/ebeneFenster.test.ts` (Reihenfolge der Ebenen, Sheet/ConfirmDialog nur über `FensterEbene`), `ui/bedienung/AuswahlFenster.test.tsx`, `ui/bedienung/MehrMenue.test.tsx` und `HinzufuegenMenue.test.tsx` (Handy: Fenster, jeder Eintrag einzeln); **nur von Hand:** die wirkliche Stapelreihenfolge auf dem Gerät (jsdom rechnet keine Stapel)
+- **Historie:** Abnahme am iPhone 20.11.2026 („alles mit Modalen machen und nicht mit Drawer“, „das Modal soll ganz oben liegen“)
+
+</details>

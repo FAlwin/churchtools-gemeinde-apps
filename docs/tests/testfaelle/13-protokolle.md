@@ -393,7 +393,7 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
    Absage“). Der Untertitel nennt das letzte freigegebene Protokoll (gibt es keins: „In den letzten 28 Tagen …“). Das
    Treffen im Vormonat steht dort nicht, wenn es vor dem letzten freigegebenen Protokoll liegt oder älter als 28 Tage ist.
 2. Oben rechts neben der Gruppen-Überschrift steht der grüne Knopf **Neu ⌄**; unter einer Linie am Ende seines Menüs steht
-   **Protokoll nachtragen** (am Handy öffnet der schwebende grüne Kreis ein Blatt von unten).
+   **Protokoll nachtragen** (am Handy öffnet der schwebende grüne Kreis ein Fenster „Neu“, das über dem Kreis und der Reiterleiste liegt).
 3. **Neu ⌄ → Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
    steht das abgeschlossene Treffen mit der Marke „Gruppentreffen abgeschlossen“ und „Anwesenheit steht in ChurchTools
    fest“. Ein Monat ohne Treffen: „Im … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
@@ -852,7 +852,7 @@ beginnt mit „TEST“ und wird danach aufgeräumt.
    (Dringlichkeit · Bis-Datum · Alphabetisch · Manuell), dann **Zuständig** (mit den Kurzwegen **Alle** und **Nur meine**) und **Gruppen**. Wähle jede Möglichkeit einmal: Die Liste ändert sich
    sofort, das Fenster bleibt offen, nach dem Neuladen gilt die Wahl noch. Am Knopf steht **keine** Zahl, solange nichts ausgeblendet ist; nach **Nur meine** steht dort **2**.
 3. **Handy**: Links steht ein blau hinterlegter Knopf **Liste ⌄**, rechts der **Filter** mit Rahmen; **Neues To-Do** ist dort der schwebende grüne Kreis mit **+** unten rechts über der Reiterleiste (kein grünes Quadrat in der Zeile) und öffnet das Fenster „Neues To-Do“. **Liste ⌄**
-   antippen: Ein Blatt von unten bietet Liste und Board an; **Board** wählen: Das Blatt geht zu, das Board steht da.
+   antippen: Ein Fenster bietet Liste und Board an; **Board** wählen: Das Fenster geht zu, das Board steht da.
 4. **Sitzungen** als Leitung am Rechner: Rechts neben dem Gruppennamen steht der grüne Knopf **Neu ⌄**, sonst **kein** grüner Knopf auf der Seite; in der Karte „Kommend“ stehen keine
    Knöpfe mehr. Das Menü zeigt **Neues Protokoll · Neue Sitzung · Punkt vorschlagen** und, hinter einer Linie, **Protokoll nachtragen**. Jeder Eintrag öffnet sein
    Fenster (Neues Protokoll, Neue Sitzung mit Einladen, Punkt vorschlagen, Protokoll nachtragen) und das Menü ist dabei zu.
@@ -865,7 +865,7 @@ beginnt mit „TEST“ und wird danach aufgeräumt.
 
 - **Priorität:** normal
 - **Betrifft:** `protokolle/src/ToDos.tsx`, `protokolle/src/ToDos.module.scss`, `protokolle/src/Sitzungen.tsx`, `ui/bedienung/OptionWaehlen.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/Werkzeugzeile.tsx`, `ui/bedienung/FilterKnopf.tsx`
-- **Automatisiert:** größtenteils – `protokolle/src/ToDos.werkzeug.test.tsx` (eine Zeile, jede Wahl im Filter einzeln und gemerkt, Zähler, Handy-Blatt), `protokolle/src/ToDos.karte.test.tsx` und `ToDos.board.test.tsx` (Nur meine als Kurzweg, Reihenfolge Manuell), `protokolle/src/SitzungFestlegen.test.tsx` (ein grüner Knopf, Reihenfolge der Einträge, Handy-Blatt), `protokolle/src/FruehereTreffen.test.tsx` und `Sitzungen.test.tsx` (nachtragen, Vorschlagen, nur mit Recht), `ui/bedienung/HinzufuegenMenue.test.tsx` (jeder Eintrag einzeln, Aktion bleibt nach dem Schließen), `ui/bedienung/KopfKnopf.test.tsx` (Pfeil); **nur von Hand:** Aussehen am Handy und Abstände
+- **Automatisiert:** größtenteils – `protokolle/src/ToDos.werkzeug.test.tsx` (eine Zeile, jede Wahl im Filter einzeln und gemerkt, Zähler, Handy-Fenster), `protokolle/src/ToDos.karte.test.tsx` und `ToDos.board.test.tsx` (Nur meine als Kurzweg, Reihenfolge Manuell), `protokolle/src/SitzungFestlegen.test.tsx` (ein grüner Knopf, Reihenfolge der Einträge, Handy-Fenster), `protokolle/src/FruehereTreffen.test.tsx` und `Sitzungen.test.tsx` (nachtragen, Vorschlagen, nur mit Recht), `ui/bedienung/HinzufuegenMenue.test.tsx` (jeder Eintrag einzeln, Aktion bleibt nach dem Schließen), `ui/bedienung/KopfKnopf.test.tsx` (Pfeil); **nur von Hand:** Aussehen am Handy und Abstände
 - **Historie:** 20.11.2026 (B6 „Ruhige Bedienung“, Entwurf Organigramm/Protokolle v2, E14: „Immer wenn was Grünes kommt, ist es etwas hinzufügen“)
 
 </details>

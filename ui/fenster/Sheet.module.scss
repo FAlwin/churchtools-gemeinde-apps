@@ -5,7 +5,8 @@
   // Fokussieren eines Feldes die Seite hochschiebt (#207).
   position: fixed;
   inset: 0;
-  z-index: 100;
+  // Über allem, was die App zeichnet (Plus, Reiterleiste, Leisten, Vollbild) – `FensterEbene` hängt das Fenster dafür unter `#root`.
+  z-index: var(--ebene-fenster);
   background: var(--scrim);
   backdrop-filter: blur(3px);
   display: flex;

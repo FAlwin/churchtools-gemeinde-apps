@@ -49,7 +49,7 @@ describe('ConfirmDialog', () => {
 
   it('`cancelLabel={null}` ohne Abbrechen und ohne X; `beschaeftigt` sperrt alles, auch X und Wegklicken', () => {
     const onCancel = vi.fn();
-    const { container, rerender } = render(
+    const { rerender } = render(
       <ConfirmDialog {...grund} cancelLabel={null} onConfirm={vi.fn()} onCancel={onCancel} />,
     );
     expect(knopfTexte()).toEqual(['Löschen']);
@@ -58,7 +58,7 @@ describe('ConfirmDialog', () => {
     expect(screen.getAllByRole('button').every((b) => (b as HTMLButtonElement).disabled)).toBe(
       true,
     );
-    fireEvent.click(container.firstElementChild as Element);
+    fireEvent.click(screen.getByRole('alertdialog').parentElement as Element);
     expect(onCancel).not.toHaveBeenCalled();
   });
 

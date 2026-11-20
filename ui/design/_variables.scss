@@ -104,6 +104,13 @@ html[data-theme='dark'] {
   // (`Coachmarks`, 3000). Bis zum 30.10. stand die Zahl an jeder Stelle selbst; „Ablauf zeigen“ lag mit 1000 darunter
   // und die Leiste schnitt die Uhr ab.
   --ebene-vollflaeche: 2500;
+  // **Fenster liegen immer ganz oben** (Alwin, 20.11.2026): über allem, was die App selbst zeichnet – auch über dem Vollbild
+  // –, aber unter der Einführung (3000). `FensterEbene` hängt `Sheet`, `ConfirmDialog` und das Auswahl-Fenster unter `#root`,
+  // damit kein Stapel darüber sie einsperrt; die Bestätigung liegt über dem Fenster, aus dem sie kommt.
+  --ebene-fenster: 2600;
+  --ebene-bestaetigung: 2700;
+  // Der kleine Hinweis unten (`Toast`, hängt an `body`) bleibt über dem Fenster, das ihn auslöst.
+  --ebene-hinweis: 2800;
 }
 
 // ── Abstand oben: Leisten und Inhalt ohne Leiste ────────────────────

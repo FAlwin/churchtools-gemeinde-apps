@@ -1,29 +1,29 @@
 import { useState } from 'react';
 import { Icon } from '../icons/icons';
 import { Segment } from './Segment';
-import { AuswahlBlatt, KnopfMitMenue } from './OptionWaehlen';
+import { AuswahlFenster, KnopfMitMenue } from './OptionWaehlen';
 import { ReiterZaehler } from './ReiterZaehler';
 import styles from './AnsichtWahl.module.scss';
 
-/** Die Zeile einer Ansicht im Menü oder Blatt: die Zahl in Klammern („Einträge (3)“, „Anstehend (12)“). */
+/** Die Zeile einer Ansicht im Menü oder Fenster: die Zahl in Klammern („Einträge (3)“, „Anstehend (12)“). */
 const blattText = (o: { label: string; zahl?: number; anzahl?: number }) =>
   o.zahl || o.anzahl ? `${o.label} (${o.zahl ?? o.anzahl})` : o.label;
 
 /**
  * **Die Ansichtswahl der Werkzeugzeile** (R4/E9, „Ruhige Bedienung“ B3): am Rechner der Umschalter (`Segment`, verbunden –
  * der eine Kasten-Umschalter je Zeile), am Handy ein blau hinterlegter Knopf in Wortbreite mit Pfeil („Matrix ⌄“), der
- * beim Antippen die Ansichten als Blatt von unten aufklappt (`AuswahlBlatt`). Beides sieht aus wie der gewählte Umschalter
+ * beim Antippen die Ansichten als Fenster öffnet (`AuswahlFenster`). Beides sieht aus wie der gewählte Umschalter
  * am Rechner – nur nimmt der Knopf am Handy so wenig Platz wie sein Wort.
  *
  * Eine Ansicht kann einen **Merker** tragen (`zahl`, B4/E24: „Einträge“ in „Wann kann ich?“): ein blau gefüllter Kreis direkt
  * hinter dem Wort, in derselben Zeile. Am Handy steht der Merker einer anderen Ansicht hinter dem Pfeil, damit man ihn
- * nicht erst im Blatt findet; im Blatt selbst steht die Zahl in Klammern.
+ * nicht erst im Fenster findet; im Fenster selbst steht die Zahl in Klammern.
  *
  * Eine Ansicht kann auch eine **Anzahl** tragen (`anzahl`, Anmelde-Tool B7: „Anstehend 12 | Entwürfe 2 | Vorbei 40“): grau und
- * leise hinter dem Wort – sie zählt, was in der Ansicht steht, und ist kein Merker. Im Menü und im Blatt in Klammern.
+ * leise hinter dem Wort – sie zählt, was in der Ansicht steht, und ist kein Merker. Im Menü und im Fenster in Klammern.
  *
  * **Viele Ansichten** (`alsKnopf`, Organigramm B5/E13: fünf sind zu viele für einen Kasten): auch am Rechner der Auswahlknopf –
- * dort klappt ein kleines Menü darunter auf (`KnopfMitMenue`, die gewählte Ansicht fett), am Handy wie sonst das Blatt.
+ * dort klappt ein kleines Menü darunter auf (`KnopfMitMenue`, die gewählte Ansicht fett), am Handy wie sonst das Fenster.
  */
 export function AnsichtWahl<T extends string>({
   value,
@@ -42,7 +42,7 @@ export function AnsichtWahl<T extends string>({
   alsKnopf?: boolean;
   /**
    * Ausgegraute Ansichten („Vergangene“ ohne Netz, Termine der Musik-App) – bleiben antippbar, der Aufrufer erklärt in
-   * `onChange`, warum es nicht geht. Am Handy trägt der Name im Blatt den Zusatz „(nicht verfügbar)“.
+   * `onChange`, warum es nicht geht. Am Handy trägt der Name im Fenster den Zusatz „(nicht verfügbar)“.
    */
   gedimmt?: T[];
   ariaLabel?: string;
@@ -50,7 +50,7 @@ export function AnsichtWahl<T extends string>({
   const [offen, setOffen] = useState(false);
   const jetzt = options.find((o) => o.value === value)?.label ?? ariaLabel;
   const merker = options.find((o) => o.zahl)?.zahl ?? 0;
-  /** Der Name in Menü und Blatt: mit Zahl in Klammern, ausgegraut mit Zusatz (dort gibt es keine graue Schrift zu sehen). */
+  /** Der Name in Menü und Fenster: mit Zahl in Klammern, ausgegraut mit Zusatz (dort gibt es keine graue Schrift zu sehen). */
   const listenName = (o: { value: T; label: string; zahl?: number; anzahl?: number }) =>
     `${blattText(o)}${gedimmt.includes(o.value) ? ' (nicht verfügbar)' : ''}`;
   if (!handy && alsKnopf)
@@ -120,7 +120,7 @@ export function AnsichtWahl<T extends string>({
         <ReiterZaehler zahl={merker} ton="blau" />
       </button>
       {offen && (
-        <AuswahlBlatt
+        <AuswahlFenster
           titel={ariaLabel}
           optionen={options.map((o) => ({
             label: listenName(o),

@@ -68,7 +68,7 @@ describe('Sheet', () => {
 
   it('`beschaeftigt` sperrt X, Abbrechen und den Klick daneben – die Knöpfe des Fensters bleiben dessen Sache', () => {
     const onClose = vi.fn();
-    const { container } = render(
+    render(
       <Sheet
         title="T"
         onClose={onClose}
@@ -84,7 +84,8 @@ describe('Sheet', () => {
     expect(abbrechen).toHaveProperty('disabled', true);
     fireEvent.click(x);
     fireEvent.click(abbrechen);
-    fireEvent.click(container.firstElementChild as Element);
+    // Der Schleier ist der Elternteil des Dialogs (das Fenster hängt in der Fenster-Ebene, nicht im `container`).
+    fireEvent.click(screen.getByRole('dialog').parentElement as Element);
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Wird gespeichert …' })).toHaveProperty(
       'disabled',

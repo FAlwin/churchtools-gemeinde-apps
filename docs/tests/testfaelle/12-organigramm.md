@@ -881,8 +881,8 @@ liegt einen Klick tiefer.
 7. Reiter **Personen**: Neben den Reitern steht eine **Lupe**; ein Klick klappt das Suchfeld auf, ein Name filtert die Tabelle,
    ✕ leert und schließt. Über der Tabelle gibt es kein festes Suchfeld mehr. In den Reitern Organigramm und Hinweise gibt es
    die Lupe nicht.
-8. Am Handy: Oben Ansicht (blau, mit Pfeil – öffnet ein Blatt von unten), Filter, Präsentieren (nur Symbol) und ⋯ – alle mit
-   Rahmen; darunter **Bereich** über die ganze Breite. ⋯ öffnet ein Blatt mit denselben Einträgen.
+8. Am Handy: Oben Ansicht (blau, mit Pfeil – öffnet ein Fenster), Filter, Präsentieren (nur Symbol) und ⋯ – alle mit
+   Rahmen; darunter **Bereich** über die ganze Breite. ⋯ öffnet ein Fenster mit denselben Einträgen.
 
 <details><summary>Technisches</summary>
 

@@ -29,7 +29,7 @@ import { Toast } from '../fenster/Toast';
 import { useToast } from '../fenster/useToast';
 import { Icon, type IconName } from '../icons/icons';
 import { SchwebePlus } from '../bedienung/SchwebePlus';
-import { AuswahlBlatt, HinzufuegenMenue, type Option } from '../bedienung/OptionWaehlen';
+import { AuswahlFenster, HinzufuegenMenue, type Option } from '../bedienung/OptionWaehlen';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
@@ -172,7 +172,7 @@ interface BearbeitenBasis<T extends AblaufZeile> {
    * Schmale Form für eine Matrix-Spalte (Dienstplaner, E6-6a): Zeilen wie `AblaufListe schmal`, keine Anleitungszeilen,
    * kein schwebendes Plus – in einer Matrix stehen mehrere Listen nebeneinander. Mit `plusImKopf` ist `kopfKnopf` dann
    * nur das grüne Plus; die Matrix stellt es neben „N Punkte“ (E6-6c, Alwin 29.10.2026 – vorher „+ Punkt“ unter der
-   * Liste, das auch am Rechner das Blatt von unten öffnete).
+   * Liste, das auch am Rechner das Auswahl-Fenster öffnete).
    */
   schmal?: boolean;
   /**
@@ -214,7 +214,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026); womit er anfängt, sagt „Option wählen“ (S2), wohin er
   // kommt das Plus an einer Zeile oder „Darunter einfügen“ (Alwin, 30.10.2026).
   const [neuStart, setNeuStart] = useState<(Wohin & { art: PunktArt; lied: boolean }) | null>(null);
-  // „Option wählen“ als Blatt – offen mit der Stelle, für die es gilt (`{}` = am Ende).
+  // „Option wählen“ als Fenster – offen mit der Stelle, für die es gilt (`{}` = am Ende).
   const [auswahl, setAuswahl] = useState<Wohin | null>(null);
   const handy = useMedienAbfrage(HANDY_BREITE);
   const imKopf = !!o.plusImKopf && !handy;
@@ -610,7 +610,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       )}
 
       {auswahl && (
-        <AuswahlBlatt
+        <AuswahlFenster
           titel={auswahl.titel}
           optionen={optionenFuer(auswahl)}
           onClose={() => setAuswahl(null)}
@@ -666,8 +666,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               titel: `Nach „${itemLabel(actionItem)}“ einfügen`,
             });
           }}
-          // Am Rechner/iPad ein Menü am Knopf statt des Blatts von unten (Fund F2, Alwin 07.11.2026). Gewählt: erst das
-          // Punkt-Fenster zu, dann das neue auf – dieselbe Reihenfolge wie über das Blatt.
+          // Am Rechner/iPad ein Menü am Knopf statt des Auswahl-Fensters (Fund F2, Alwin 07.11.2026). Gewählt: erst das
+          // Punkt-Fenster zu, dann das neue auf – dieselbe Reihenfolge wie über das Fenster.
           darunterOptionen={
             handy
               ? undefined

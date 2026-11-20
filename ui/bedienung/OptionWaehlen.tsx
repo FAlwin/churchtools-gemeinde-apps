@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
+import { Sheet } from '../fenster/Sheet';
 import { KopfKnopf } from './KopfKnopf';
 import { SchwebePlus } from './SchwebePlus';
 import { useAufklapp } from './useAufklapp';
-import { useEscape } from './useEscape';
 import styles from './OptionWaehlen.module.scss';
 
 /** Eine Möglichkeit in „Option wählen“ („Programmpunkt hinzufügen“). */
@@ -69,10 +69,16 @@ export function MenueListe({
 }
 
 /**
- * **„Option wählen“ als Blatt von unten** – wie in der ChurchTools-App nach dem Plus (Scheibe S2, Screenshots Alwin
- * 26.10.2026): Griff, Titel, ✕ und die Möglichkeiten als Liste. Am Handy; am iPad/Rechner `HinzufuegenMenue`.
+ * **„Option wählen“ als Fenster** – am Handy öffnen „⋯“, „Matrix ⌄“ und „Neu ⌄“ ihre Möglichkeiten hier, **nicht mehr als
+ * Blatt von unten** (Alwin am iPhone, 20.11.2026: „alles mit Modalen machen und nicht mit Drawer“ – Fenster sind immer
+ * Modale). Dasselbe `Sheet` wie jedes andere Fenster: Titel, ✕, darunter die Möglichkeiten als Liste; ✕, Escape und ein
+ * Tipp daneben schließen. Es liegt wie jedes Fenster ganz oben (`FensterEbene`). Am iPad/Rechner bleibt das kleine Menü
+ * am Knopf (`KnopfMitMenue`).
+ *
+ * Ein Tipp auf einen Eintrag ruft nur `onClick` – **das Schließen ist Sache des Aufrufers** (erst zu, dann die Aktion:
+ * eine Aktion, die ein Fenster öffnet, darf nicht vom Schließen zurückgesetzt werden, Lehre 05.08.2026).
  */
-export function AuswahlBlatt({
+export function AuswahlFenster({
   titel = 'Option wählen',
   optionen,
   onClose,
@@ -81,40 +87,24 @@ export function AuswahlBlatt({
   optionen: Option[];
   onClose: () => void;
 }) {
-  useEscape(true, onClose);
   return (
-    <div className={styles.hintergrund} onClick={onClose}>
-      <div
-        className={styles.blatt}
-        role="dialog"
-        aria-modal="true"
-        aria-label={titel}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span className={styles.griff} aria-hidden="true" />
-        <div className={styles.kopf}>
-          <h2 className={styles.titel}>{titel}</h2>
-          <button type="button" className={styles.zu} aria-label="Schließen" onClick={onClose}>
-            <Icon name="x" size={16} stroke={2.2} />
+    <Sheet title={titel} onClose={onClose} knoepfe={null}>
+      <div className={styles.liste}>
+        {optionen.map((o) => (
+          <button
+            key={o.label}
+            type="button"
+            className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
+            disabled={o.gesperrt}
+            aria-current={o.gewaehlt || undefined}
+            onClick={o.onClick}
+          >
+            {o.symbol}
+            {o.label}
           </button>
-        </div>
-        <div className={styles.liste}>
-          {optionen.map((o) => (
-            <button
-              key={o.label}
-              type="button"
-              className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
-              disabled={o.gesperrt}
-              aria-current={o.gewaehlt || undefined}
-              onClick={o.onClick}
-            >
-              {o.symbol}
-              {o.label}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
-    </div>
+    </Sheet>
   );
 }
 
@@ -124,9 +114,9 @@ export function AuswahlBlatt({
  * abgeschlossener Ablauf – dann der Hinweis des Aufrufers). `klein` für die Gruppenzeile der Matrix (E6-6c): nur das
  * Symbol, 26 px – dann sagt `title`, wofür das Plus ist.
  *
- * **„Neu ⌄“** (R3/E14, Protokolle B6): `pfeil` setzt den Pfeil hinter das Wort, `handy` lässt die Möglichkeiten dort als Blatt von
- * unten kommen (`AuswahlBlatt`, wie beim „⋯“-Menü) statt als Menü am Rand – und der grüne Knopf wird am Handy zum **schwebenden
- * Plus** (`SchwebePlus`, R3: „Neu anlegen“ ist dort immer der grüne Kreis unten rechts, nie ein Quadrat im Kopf). `titel` ist der Name von Menü und Blatt.
+ * **„Neu ⌄“** (R3/E14, Protokolle B6): `pfeil` setzt den Pfeil hinter das Wort, `handy` lässt die Möglichkeiten dort als Fenster
+ * kommen (`AuswahlFenster`, wie beim „⋯“-Menü) statt als Menü am Rand – und der grüne Knopf wird am Handy zum **schwebenden
+ * Plus** (`SchwebePlus`, R3: „Neu anlegen“ ist dort immer der grüne Kreis unten rechts, nie ein Quadrat im Kopf). `titel` ist der Name von Menü und Fenster.
  * Ohne Möglichkeiten (und ohne `gesperrt`) gibt es auch den Knopf nicht.
  */
 export function HinzufuegenMenue({
@@ -150,7 +140,7 @@ export function HinzufuegenMenue({
   handy?: boolean;
   titel?: string;
 }) {
-  const [blatt, setBlatt] = useState(false);
+  const [fenster, setFenster] = useState(false);
   if (optionen.length === 0 && !gesperrt) return null;
   const symbol = <Icon name="plus" size={16} stroke={2.4} />;
   if (handy)
@@ -158,21 +148,21 @@ export function HinzufuegenMenue({
       <>
         <SchwebePlus
           label={label}
-          onClick={gesperrt ?? (() => setBlatt(true))}
+          onClick={gesperrt ?? (() => setFenster(true))}
           dataTour={dataTour}
         />
-        {blatt && (
-          <AuswahlBlatt
+        {fenster && (
+          <AuswahlFenster
             titel={titel ?? label}
             optionen={optionen.map((o) => ({
               ...o,
-              // Erst geht das Blatt zu, dann läuft die Aktion – eine Aktion, die ein Fenster öffnet, wird nicht vom Schließen zurückgesetzt.
+              // Erst geht das Fenster zu, dann läuft die Aktion – eine Aktion, die ein Fenster öffnet, wird nicht vom Schließen zurückgesetzt.
               onClick: () => {
-                setBlatt(false);
+                setFenster(false);
                 o.onClick();
               },
             }))}
-            onClose={() => setBlatt(false)}
+            onClose={() => setFenster(false)}
           />
         )}
       </>

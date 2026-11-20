@@ -18,7 +18,7 @@ offen“). Führt eine Zeile nach ChurchTools, steht klein „in ChurchTools“ 
 3. Unter **Veranstaltungen** auf eine Zeile klicken: Die Veranstaltung öffnet sich; „In ChurchTools“ steht dort oben rechts.
 4. **Anstehend · Entwürfe · Vorbei** umschalten: Die Zahlen hinter den Wörtern stimmen mit den Zeilen überein.
 5. **Filter** öffnen, eine Gruppe abwählen: Ihre Veranstaltungen verschwinden, am Filter steht „1“.
-6. Am Handy (schmal): **Anstehend ⌄** klappt die Auswahl von unten auf; alle Zeilen bleiben antippbar.
+6. Am Handy (schmal): **Anstehend ⌄** öffnet die Auswahl in einem Fenster; alle Zeilen bleiben antippbar.
 
 <details><summary>Technisches</summary>
 
@@ -66,7 +66,7 @@ Eintrag schließt das Menü und öffnet sein Fenster. Ohne Anmeldungen gibt es d
 
 1. **⋯** öffnen: **Spalten**, **Druckliste**, **Rundmail** – jeweils anklicken, das Fenster öffnet sich, das Menü ist zu.
 2. **Von Hand** öffnet das Fenster „Anmeldung von Hand“.
-3. Am Handy kommt das Menü als Blatt von unten („Mehr zur Liste“); **Von Hand** ist dort der schwebende grüne Kreis mit **+** unten rechts statt eines grünen Quadrats in der Leiste.
+3. Am Handy kommt das Menü als Fenster („Mehr zur Liste“); **Von Hand** ist dort der schwebende grüne Kreis mit **+** unten rechts statt eines grünen Quadrats in der Leiste.
 
 <details><summary>Technisches</summary>
 

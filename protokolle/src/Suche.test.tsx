@@ -6,7 +6,7 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Block } from '@shared/protokolle/dokument';
 import { teileBauen, type ProtokollKopf, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { neueAufgabe } from '@shared/protokolle/aufgaben';
+import { modusSetzen, neueAufgabe, teilSetzen } from '@shared/protokolle/aufgaben';
 import * as L from './lesen';
 import { HOECHSTENS, Suche } from './Suche';
 
@@ -265,6 +265,57 @@ describe('Suche (S3-4b)', () => {
     expect(
       screen.getByText(`Die ersten ${HOECHSTENS} von ${HOECHSTENS + 5}`, { exact: false }),
     ).toBeTruthy();
+  });
+
+  it('„Jeder für sich“ (W10): als Mitarbeiter steht mein Teil als Stand da – als Leitung der Gesamtstand', async () => {
+    const jeder = teilSetzen(
+      modusSetzen(
+        neueAufgabe({
+          id: 'j1',
+          gruppe: 11,
+          sitzung: 'weg',
+          text: 'Abwesenheiten eintragen',
+          wer: [1, 19, 23],
+          von: 1,
+          am: '2026-10-14T18:00:00Z',
+        }),
+        true,
+        1,
+        '2026-10-14T18:00:00Z',
+      ),
+      19,
+      true,
+      19,
+      '2026-10-15T18:00:00Z',
+    ); // Gesamtstand: in Arbeit – mein Teil (Person 1) fehlt
+    m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [jeder] }]);
+    const wo = () => liste().find((z) => z?.includes('Abwesenheiten eintragen')) ?? '';
+    const { unmount } = render(
+      <Suche
+        modul={24}
+        gruppen={GRUPPEN}
+        begriff="abwesenheiten"
+        ich={1}
+        schreibbar={[]}
+        onTreffer={onTreffer}
+      />,
+    );
+    await geladen('Treffer');
+    expect(wo()).toMatch(/offen/);
+    expect(wo()).not.toMatch(/in Arbeit/);
+    unmount();
+    render(
+      <Suche
+        modul={24}
+        gruppen={GRUPPEN}
+        begriff="abwesenheiten"
+        ich={1}
+        schreibbar={[60]}
+        onTreffer={onTreffer}
+      />,
+    );
+    await geladen('Treffer');
+    expect(wo()).toMatch(/in Arbeit/);
   });
 
   it('vorübergehender Fehler: „Erneut versuchen“ – nicht „Noch keine Beschlüsse“', async () => {

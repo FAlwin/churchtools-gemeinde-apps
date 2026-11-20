@@ -106,6 +106,18 @@ describe('To-Do-Übersicht: „Jeder für sich“ (W10)', () => {
     expect(screen.queryByRole('img', { name: /Zuständig/ })).toBeNull();
   });
 
+  it('die Einteilung folgt meinem Stand: Mitarbeiter – kein Bereich „In Arbeit“; Leitung – „In Arbeit“', async () => {
+    zeige(MEIN_TEIL_FERTIG, []);
+    await screen.findByText('Abwesenheiten eintragen');
+    expect(screen.queryByText(/^in arbeit$/i)).toBeNull();
+    expect(screen.getByText(/^erledigt$/i)).toBeTruthy();
+    cleanup();
+    zeige(MEIN_TEIL_FERTIG, [60]);
+    await screen.findByText('Abwesenheiten eintragen');
+    expect(screen.getByText(/^in arbeit$/i)).toBeTruthy();
+    expect(screen.queryByText(/^erledigt$/i)).toBeNull();
+  });
+
   it('Leitung: derselbe Stand ist „In Arbeit“, mit Zähler und Zuständigen', async () => {
     zeige(MEIN_TEIL_FERTIG, [60]);
     await screen.findByText('Abwesenheiten eintragen');

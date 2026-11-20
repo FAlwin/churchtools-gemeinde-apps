@@ -258,6 +258,24 @@ describe('Startseite (S3-3)', () => {
     expect(screen.queryByText('Abwesenheiten eintragen')).toBeNull();
   });
 
+  it('Deine Gruppen (W10): „Jeder für sich“ zählt als Mitarbeiter nach meinem Teil, als Leitung nach dem Gesamtstand', async () => {
+    const jeder = modusSetzen(
+      aufgabe({ id: 'j2', text: 'Abwesenheiten', wer: [ICH, 19, 23] }),
+      true,
+      1,
+      '2026-10-22T08:00:00Z',
+    );
+    const meinsFertig = teilSetzen(jeder, ICH, true, ICH, '2026-10-22T09:00:00Z'); // Gesamt: in Arbeit
+    m.ladeUebersicht.mockResolvedValue([{ ...UEBERSICHT[0], aufgaben: [meinsFertig] }]);
+    zeigen();
+    await screen.findByText('Nichts offen. Schön!');
+    expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam0 offene To-Dos/);
+    cleanup();
+    zeigen(GRUPPEN, [60]);
+    await screen.findByText('Nichts offen. Schön!');
+    expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam1 offenes To-Do/);
+  });
+
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: /Farbe besorgen/ }));

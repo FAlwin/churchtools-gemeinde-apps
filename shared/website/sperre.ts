@@ -119,6 +119,17 @@ export async function bearbeitungBeginnen(
   if (sperreLage(da?.sperre ?? null, ich, jetzt) === 'fremd')
     return { art: 'gesperrt', sperre: da!.sperre! };
 
+  return sperreSchreiben({ p, modul, kategorie }, seiteId, ich, da, jetzt);
+}
+
+/** Die eigene Sperre schreiben (ändern oder anlegen) und **nachlesen**: Nur was danach bei uns steht, gehört uns. */
+async function sperreSchreiben(
+  { p, modul, kategorie }: SpeicherOrt,
+  seiteId: string,
+  ich: Schreiber,
+  da: { wert: number } | null,
+  jetzt: Date,
+): Promise<BeginnErgebnis> {
   const text = inhaltText(seiteId, sperreVon(ich, jetzt));
   if (da) await wertAendern(p, modul, kategorie, da.wert, text, VERWEIGERT);
   else await wertAnlegen(p, modul, kategorie, text, VERWEIGERT);
@@ -129,6 +140,26 @@ export async function bearbeitungBeginnen(
     return { art: 'ok', werte: nachher };
   if (jetztDa?.sperre) return { art: 'gesperrt', sperre: jetztDa.sperre };
   throw p.fehler(502, 'ChurchTools hat die Sperre der Seite nicht übernommen.');
+}
+
+/**
+ * **Die Bearbeitung übernehmen** – die Sperre eines anderen (oder eines anderen eigenen Fensters, etwa nach dem Neuladen,
+ * wenn die Freigabe beim Verlassen nicht mehr durchkam) **bewusst** wegnehmen. Wie `schreibenUebernehmen` der Protokolle
+ * (24.10.2026: sofort, mit Rückfrage in der Oberfläche – die Rückfrage stellt der Aufrufer): frisch lesen, **ohne**
+ * `sperreLage`-Prüfung schreiben, nachlesen. Liegt die Sperre danach nicht bei uns (jemand war schneller), kommt
+ * `gesperrt` zurück; scheitert das Schreiben, wird geworfen – die Ansicht bleibt dann gesperrt.
+ *
+ * Das verdrängte Fenster merkt es am nächsten Lebenszeichen oder Speichern (`bearbeitungBeginnen` → `gesperrt`) und
+ * schreibt nichts mehr; was dort noch ungespeichert steht, bleibt dort sichtbar.
+ */
+export async function bearbeitungUebernehmen(
+  ort: SpeicherOrt,
+  seiteId: string,
+  ich: Schreiber,
+  jetzt: Date = new Date(),
+): Promise<BeginnErgebnis> {
+  const vorher = await werteLesen(ort.p, ort.modul, ort.kategorie);
+  return sperreSchreiben(ort, seiteId, ich, sperreAusWerten(vorher, 'seite', seiteId), jetzt);
 }
 
 /**

@@ -14,6 +14,13 @@ import { VORLAGEN, type Vorlage } from '@shared/website/vorlagen';
 /** Wie oft die eigene Sperre erneuert wird (Lebenszeichen) – weit unter `SPERRE_MINUTEN`. */
 export const LEBENSZEICHEN_MS = 60_000;
 
+/** „vor 3 Minuten“ – wie lange das letzte Lebenszeichen einer Sperre her ist (für die Rückfrage beim Übernehmen). */
+export function lebenszeichenAlter(seit: string, jetzt: Date): string {
+  const min = Math.floor((jetzt.getTime() - new Date(seit).getTime()) / 60_000);
+  if (!Number.isFinite(min) || min < 1) return 'vor weniger als einer Minute';
+  return min === 1 ? 'vor einer Minute' : `vor ${min} Minuten`;
+}
+
 /** Wer darf „Eigenes HTML“ einfügen und ändern? In W3a die Leitung und die Admins – W3b speist hier die Rolle ein. */
 export type Rechte = { html: boolean };
 

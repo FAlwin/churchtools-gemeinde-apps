@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BAUSTEIN_TYPEN } from '@shared/website/modell';
 import { VORLAGEN } from '@shared/website/vorlagen';
-import { ankerMeldung, pfadEingabe, sichtbareVorlagen, waehlbareTypen, zielWert } from './regeln';
+import {
+  ankerMeldung,
+  lebenszeichenAlter,
+  pfadEingabe,
+  sichtbareVorlagen,
+  waehlbareTypen,
+  zielWert,
+} from './regeln';
 
 describe('Rechte: „Eigenes HTML“ nur für die Leitung', () => {
   it('Vorlagen: ohne Recht fehlt genau „html“, mit Recht sind alle da', () => {
@@ -40,5 +47,18 @@ describe('Sprungmarke und Adresse', () => {
     expect(zielWert({ art: 'seite', seiteId: 'x' })).toBe('seite:x');
     expect(zielWert({ art: 'anker', anker: 'oben' })).toBe('anker:oben');
     expect(zielWert({ art: 'extern', url: 'https://a.de' })).toBe('extern');
+  });
+});
+
+describe('lebenszeichenAlter: „vor 3 Minuten“ für die Rückfrage beim Übernehmen', () => {
+  const jetzt = new Date('2026-11-20T10:00:00Z');
+  const vor = (s: number) => new Date(jetzt.getTime() - s * 1000).toISOString();
+  it('Minuten, eine Minute, weniger als eine', () => {
+    expect(lebenszeichenAlter(vor(5), jetzt)).toBe('vor weniger als einer Minute');
+    expect(lebenszeichenAlter(vor(60), jetzt)).toBe('vor einer Minute');
+    expect(lebenszeichenAlter(vor(3 * 60 + 20), jetzt)).toBe('vor 3 Minuten');
+  });
+  it('kaputte Zeit: kein „NaN“', () => {
+    expect(lebenszeichenAlter('kaputt', jetzt)).toBe('vor weniger als einer Minute');
   });
 });

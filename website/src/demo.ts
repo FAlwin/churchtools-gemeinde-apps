@@ -10,6 +10,8 @@
  *  - `?demo=kaputt` – wie `seiten`, aber ein Wert in „Entwürfe“ ist beschädigt (Hinweis „stimmt etwas nicht“).
  *  - `?demo=gesperrt` – wie `seiten`, aber die Startseite bearbeitet gerade jemand anderes („Gerade bearbeitet von …“,
  *    nur ansehen). Die Sperre gilt zehn Minuten ab dem Laden der Seite.
+ *  - `?demo=eigene` – wie `gesperrt`, aber die Sperre ist die eigene aus einem anderen Fenster (so sieht es nach dem Neuladen
+ *    aus, wenn die Freigabe beim Verlassen nicht durchkam): „Hier weiterbearbeiten“ nimmt sie.
  *  - `?demo=wackelt` – wie `seiten`, aber das erste Speichern einer Seite scheitert vorübergehend (503): „Nicht gespeichert“,
  *    die Änderung bleibt stehen, „Erneut versuchen“ klappt.
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
@@ -46,9 +48,10 @@ export function demoStarten(fall: string): void {
     'mitglied',
     'kaputt',
     'gesperrt',
+    'eigene',
     'wackelt',
   ].includes(fall);
-  const admin = ['', 'leer', 'seiten', 'kaputt', 'gesperrt', 'wackelt'].includes(fall);
+  const admin = ['', 'leer', 'seiten', 'kaputt', 'gesperrt', 'eigene', 'wackelt'].includes(fall);
   const kategorien: { id: number; shorty: string; name: string }[] = [];
   const [e, v] = kategorienFuer(GRUPPE, 'Website');
   if (eingerichtet)
@@ -92,7 +95,7 @@ export function demoStarten(fall: string): void {
     liste.push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(kopf) });
   };
 
-  if (['seiten', 'leitung', 'mitglied', 'kaputt', 'gesperrt', 'wackelt'].includes(fall)) {
+  if (['seiten', 'leitung', 'mitglied', 'kaputt', 'gesperrt', 'eigene', 'wackelt'].includes(fall)) {
     let n = 0;
     const id = () => `demo-${++n}`;
     const start = neueStartseite([], id);
@@ -113,15 +116,17 @@ export function demoStarten(fall: string): void {
       eintraege: [{ titel: 'Unsere Gruppen', ziel: { art: 'seite', seiteId: gruppen.id } }],
     };
     lege('menue', MENUE_ID, menueAlsText(menue));
-    if (fall === 'gesperrt') {
-      // Jemand anderes hat die Startseite gerade offen (Person 2, Lebenszeichen jetzt).
+    if (fall === 'gesperrt' || fall === 'eigene') {
+      // Jemand anderes (oder `eigene`: dieselbe Person 1 in einem anderen Fenster) hat die Startseite gerade offen.
       const sperre: WebsiteSperre = {
         art: 'website-sperre',
         fassung: 1,
         einheit: 'seite',
         id: start.id,
         sperre: sperreVon(
-          { person: 2, name: 'Jonas Peters', fenster: 'anderes-fenster' },
+          fall === 'eigene'
+            ? { person: 1, name: 'Helene Wiebe', fenster: 'anderes-fenster' }
+            : { person: 2, name: 'Jonas Peters', fenster: 'anderes-fenster' },
           new Date(),
         ),
       };

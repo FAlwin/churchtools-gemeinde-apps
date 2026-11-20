@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sperreVon } from '../ct/sperre';
 import { einheitLoeschen, seiteSpeichern, websiteAusWerten } from './speicher';
-import { bearbeitungBeenden, bearbeitungBeginnen, istSperrWert, sperreAusWerten } from './sperre';
+import {
+  bearbeitungBeenden,
+  bearbeitungBeginnen,
+  bearbeitungUebernehmen,
+  istSperrWert,
+  sperreAusWerten,
+} from './sperre';
 import { fakeSpeicher, fehlerMit } from './speicher.testutil';
 import { seite } from './website.testdaten';
 
@@ -104,6 +110,68 @@ describe('Sperre nehmen', () => {
       status: 503,
     });
     expect(s.schreibzugriffe()).toEqual([]);
+  });
+});
+
+describe('Bearbeitung übernehmen', () => {
+  it('eine fremde, frische Sperre wird bewusst überschrieben – der Wert wird geändert, es entsteht kein zweiter', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    const r = await bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT);
+    expect(r.art).toBe('ok');
+    expect(sperreAusWerten(s.werte, 'seite', 'a')?.sperre).toMatchObject({ von: 1, fenster: 'f1' });
+    expect(s.werte).toHaveLength(1);
+    expect(s.schreibzugriffe()).toEqual(['PUT 1']);
+  });
+
+  it('die eigene Sperre aus einem anderen Fenster (Neuladen) wird genommen', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', { ...ICH, fenster: 'altes-fenster' }, vor(1)));
+    expect((await bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT)).art).toBe('ok');
+    expect(sperreAusWerten(s.werte, 'seite', 'a')?.sperre?.fenster).toBe('f1');
+  });
+
+  it('das verdrängte Fenster ist danach gesperrt und schreibt nichts mehr', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    await bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT);
+    s.schreibzugriffe().length = 0;
+    const alt = await bearbeitungBeginnen(s.ort, 'a', ANDERER, JETZT);
+    expect(alt).toMatchObject({ art: 'gesperrt', sperre: { von: 1 } });
+    expect(sperreAusWerten(s.werte, 'seite', 'a')?.sperre).toMatchObject({ von: 1 });
+  });
+
+  it('war jemand schneller (nach unserem Schreiben steht seine Sperre da): gesperrt, nicht „ok“', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    s.steuerung.ausfall = (z, nr) => {
+      if (z.art === 'LESEN' && nr === 2) s.werte[0].value = sperrWert('a', ANDERER, JETZT);
+      return undefined;
+    };
+    const r = await bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT);
+    expect(r).toMatchObject({ art: 'gesperrt', sperre: { von: 2 } });
+  });
+
+  it('scheitert das Schreiben, wird geworfen – die fremde Sperre bleibt, nichts gilt als übernommen', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    s.steuerung.ausfall = (z) => (z.art === 'LESEN' ? undefined : fehlerMit(503));
+    await expect(bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(sperreAusWerten(s.werte, 'seite', 'a')?.sperre).toMatchObject({ von: 2 });
+  });
+
+  it('ein „Erfolg“ ohne Wirkung ist keiner: liegt die Sperre nach dem Schreiben nicht da, wird geworfen', async () => {
+    const s = fakeSpeicher();
+    s.lege(sperrWert('a', ANDERER, vor(1)));
+    s.steuerung.ausfall = (z, nr) => {
+      if (z.art === 'LESEN' && nr === 2) s.werte.length = 0;
+      return undefined;
+    };
+    await expect(bearbeitungUebernehmen(s.ort, 'a', ICH, JETZT)).rejects.toThrow(
+      /nicht übernommen/,
+    );
   });
 });
 

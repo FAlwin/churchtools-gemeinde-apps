@@ -129,7 +129,7 @@ der Seite steht alles so da.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Seitenarbeit.tsx`, `website/src/Vorschau.tsx`, `website/src/ebene.skript.txt`, `website/src/ebene.css`, `website/src/AbschnittEinfuegen.tsx`, `shared/website/bearbeiten.ts`
 - **Automatisiert:** teilweise – `website/src/Seitenarbeit.test.tsx`, `website/src/ebene.test.ts`, `shared/website/bearbeiten.test.ts`; wie sich Fahren/Tippen im echten iframe anfühlt nur von Hand
-- **Historie:** neu mit W3a-2 (20.11.2026)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>
 
@@ -156,7 +156,7 @@ sein; sonst steht die Meldung im Fenster und **Fertig** ist gesperrt.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/AbschnittGestalten.tsx`, `website/src/regeln.ts`, `shared/website/bearbeiten.ts`
 - **Automatisiert:** `website/src/Seitenarbeit.test.tsx` (sofort sichtbar, Abbrechen, weniger Spalten, Sprungmarke), `shared/website/bearbeiten.test.ts` (jede Aufteilung in jede andere ohne Verlust), `website/src/regeln.test.ts`
-- **Historie:** neu mit W3a-2 (20.11.2026)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>
 
@@ -185,7 +185,7 @@ Text) wird nicht gespeichert; die Meldung steht im Fenster.
 - **Priorität:** hoch
 - **Betrifft:** `website/src/BausteinBearbeiten.tsx`, `website/src/BausteinFelder.tsx`, `website/src/BausteinHinzufuegen.tsx`, `website/src/markdownLeiste.ts`, `shared/website/vorlagen.ts`
 - **Automatisiert:** `website/src/BausteinFelder.test.tsx` (je Art, die Liste deckt alle Typen des Modells ab), `website/src/Seitenarbeit.test.tsx`, `website/src/markdownLeiste.test.ts`, `shared/website/vorlagen.test.ts` (`neuerBaustein`); die Kalenderliste aus ChurchTools (ob nur öffentliche kommen) nur in der Test-Instanz
-- **Historie:** neu mit W3a-2 (20.11.2026)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>
 
@@ -210,7 +210,7 @@ abgewiesen; die Startseite hat immer „/“. **Seite löschen** steht hier und 
 - **Priorität:** normal
 - **Betrifft:** `website/src/SeiteEinstellen.tsx`, `website/src/Seiten.tsx`, `shared/website/bearbeiten.ts`, `shared/website/seitenListe.ts`
 - **Automatisiert:** `website/src/Seitenarbeit.test.tsx`, `website/src/Seiten.test.tsx`, `shared/website/bearbeiten.test.ts` (Menü)
-- **Historie:** neu mit W3a-2 (20.11.2026)
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>
 
@@ -233,12 +233,19 @@ Lebenszeichen oder wenn A die Seite verlässt, geht es für B.
 5. A lässt die Seite offen, ohne etwas zu tun, und schließt den Laptop für über zehn Minuten; B kann die Seite dann übernehmen. Hat B
    etwas gespeichert, zeigt A beim nächsten Handgriff „von jemand anderem geändert – Neu laden“ und überschreibt nichts.
 6. Dieselbe Seite in zwei Fenstern desselben Kontos: das zweite zeigt „in einem anderen Fenster von dir geöffnet“.
+7. **Neu laden nach dem Bearbeiten:** A ändert etwas („Gespeichert“) und lädt die Browserseite neu. Es steht „in einem anderen Fenster
+   von dir geöffnet“ (die eigene Sperre vom alten Fenster) – **Hier weiterbearbeiten**, Rückfrage mit **Übernehmen**: die Leisten
+   sind da, Änderungen werden wieder gespeichert.
+8. B tippt bei „Gerade bearbeitet von A“ auf **Bearbeitung übernehmen**: Die Rückfrage nennt A und wie lange das letzte
+   Lebenszeichen her ist und sagt, dass die ungespeicherten Änderungen verloren gehen. Nach **Übernehmen** kann B bearbeiten; A zeigt
+   spätestens nach einer Minute „Ein anderes Fenster hat die Bearbeitung übernommen“, speichert nichts mehr, und seine letzten
+   Änderungen bleiben dort sichtbar. **Abbrechen** ändert nichts.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Seitenarbeit.tsx`, `shared/website/schlange.ts`, `shared/website/sperre.ts`, `shared/ct/sperre.ts`
-- **Automatisiert:** teilweise – `shared/website/schlange.test.ts` (nie zwei gleichzeitig, Fehler zerstört nichts), `shared/website/sperre.test.ts` (Nehmen, Erneuern, Freigeben, Nachlesen), `shared/ct/sperre.test.ts`, `website/src/Seitenarbeit.test.tsx` (Fehler, Sperre, Lebenszeichen, „geändert“), `website/src/demo.test.ts`; das Zusammenspiel zweier echter Browser und des echten Speichers nur von Hand
-- **Historie:** neu mit W3a-2 (20.11.2026)
+- **Automatisiert:** teilweise – `shared/website/schlange.test.ts` (nie zwei gleichzeitig, Fehler zerstört nichts), `shared/website/sperre.test.ts` (Nehmen, Erneuern, Freigeben, Nachlesen), `shared/ct/sperre.test.ts`, `website/src/Seitenarbeit.test.tsx` (Fehler, Sperre, Lebenszeichen, „geändert“, Übernehmen), `website/src/demo.test.ts` (Fall `?demo=eigene` für 7 von Hand); das Zusammenspiel zweier echter Browser und des echten Speichers nur von Hand
+- **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>

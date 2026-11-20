@@ -628,14 +628,17 @@ describe('Lesen', () => {
 describe('Einstieg auf der Startseite', () => {
   it('„Berechtigungen verwalten“: sichtbar, darf einrichten', async () => {
     falsch.mitArt();
-    expect(await nachweisEinstieg(new Set())).toEqual({ darfEinrichten: true });
+    expect(await nachweisEinstieg(new Set())).toEqual({ darfEinrichten: true, arten: [] });
   });
 
   it('Leitung einer Nachweis-Gruppe ohne Admin-Recht: sichtbar, darf nicht einrichten', async () => {
     falsch.mitArt();
     falsch.global = OHNE_ADMIN;
     const g = falsch.gruppeAnlegen('Nachweis: X', nachweisNotiz(E));
-    expect(await nachweisEinstieg(new Set([g.id]))).toEqual({ darfEinrichten: false });
+    expect(await nachweisEinstieg(new Set([g.id]))).toMatchObject({
+      darfEinrichten: false,
+      arten: [{ id: g.id, personen: [] }],
+    });
   });
 
   it('Leitung einer anderen Gruppe, kein Admin: nicht sichtbar', async () => {

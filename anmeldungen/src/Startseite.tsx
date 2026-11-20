@@ -8,6 +8,12 @@ import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import type { Hinweis, Veranstaltung } from '@shared/anmeldung/uebersicht';
+import {
+  aufmerksamkeitEtiketten,
+  aufmerksamkeitZaehlen,
+  brauchenDichText,
+  zaehlText,
+} from '@shared/anmeldung/nachweisStand';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
 import type { Aenderung } from './Rueckgaengig';
@@ -16,6 +22,9 @@ import { EndgueltigLoeschenFenster } from './EndgueltigLoeschenFenster';
 import { insArchiv } from './archiv';
 import { STATUS } from './einrichten';
 import { fehlerMeldung } from './zustand';
+import type { NachweisEinstiegDaten } from './nachweisArten';
+import { personenMitStand } from './nachweisPersonen';
+import type { NachweisFilter } from './NachweisSeite';
 import { Etikett } from '@ui/bedienung/Etikett';
 import { STAND_TEXT, anzahlText, datumText, kachel, monatTitel, schlussText } from './anzeige';
 import styles from './Startseite.module.scss';
@@ -38,8 +47,10 @@ interface Props {
   onOeffnen: (id: number) => void;
   /** Zum Archiv der gelöschten Veranstaltungen (A4-Nachtrag); fehlt, wenn es die Gruppenart nicht gibt. */
   onArchiv?: () => void;
-  /** Zur Seite „Nachweise“ (N1b); fehlt, wenn die Person sie nicht sehen darf – dann gibt es die Karte nicht. */
-  onNachweise?: () => void;
+  /** Zur Seite „Nachweise“ (N1b), mit der Ansicht (N2a: „Braucht Aufmerksamkeit“); fehlt, wenn die Person sie nicht sehen darf. */
+  onNachweise?: (filter: NachweisFilter) => void;
+  /** Der Stand der Nachweise (N2a): ohne ihn (nicht lesbar) bleibt die Karte wie in N1b, ohne Zahlen. */
+  nachweise?: NachweisEinstiegDaten;
   /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5). */
   admin?: boolean;
   /** Nach einer Änderung von hier aus (A9-4: endgültig gelöscht, ins Archiv) – meldet sie und lädt neu. */
@@ -331,6 +342,7 @@ export function Startseite({
   onOeffnen,
   onArchiv,
   onNachweise,
+  nachweise,
   admin = false,
   onGeaendert = () => {},
 }: Props) {
@@ -372,6 +384,16 @@ export function Startseite({
   // Gruppen im Filter („Gruppen“): ausgeschaltet sind die, die nicht in der Auswahl stehen.
   const gruppenAus = start.gruppen.filter((g) => !auswahl.has(g.id)).map((g) => String(g.id));
 
+  // Nachweise (N2a): je Art, die ich sehen darf, mit dem Stand für heute.
+  const nachweisArten = (nachweise?.arten ?? []).flatMap((a) => {
+    const personen = personenMitStand(a, heute);
+    return personen ? [{ art: a, staende: personen.map((p) => p.stand) }] : [];
+  });
+  const nachweisFaelle = nachweisArten
+    .map((k) => ({ ...k, auf: aufmerksamkeitZaehlen(k.staende) }))
+    .filter((k) => k.auf.summe > 0);
+  const zahlAufmerksam = hinweise.length + nachweisFaelle.length;
+
   const zahlEinrichten = hinweise.filter((h) => h.art === 'einrichten').length;
   const sammeln = zahlEinrichten >= EINRICHTEN_ZUSAMMEN;
   const zeile = (h: Hinweis) => (
@@ -391,11 +413,11 @@ export function Startseite({
   return (
     <div className={styles.raster}>
       <div className={styles.spalte}>
-        {hinweise.length > 0 && (
+        {zahlAufmerksam > 0 && (
           <section className={styles.karte} aria-labelledby="aufmerksamkeit">
             <div className={styles.kopf}>
               <h2 id="aufmerksamkeit">Braucht deine Aufmerksamkeit</h2>
-              <span className={styles.leise}>{hinweise.length}</span>
+              <span className={styles.leise}>{zahlAufmerksam}</span>
             </div>
             <div className={styles.liste}>
               {hinweise.map((h, i) => {
@@ -414,6 +436,29 @@ export function Startseite({
                   </Fragment>
                 );
               })}
+              {onNachweise &&
+                nachweisFaelle.map((k) => (
+                  <KlickZeile
+                    key={`nachweis-${k.art.id}`}
+                    className={styles.zeile}
+                    onClick={() => onNachweise('aufmerksam')}
+                  >
+                    <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
+                      <Icon name="kreis-haken" size={18} />
+                    </span>
+                    <div className={styles.mitte}>
+                      <b>{k.art.name}</b>
+                      <span className={styles.chips}>
+                        {aufmerksamkeitEtiketten(k.auf).map((e) => (
+                          <Etikett key={e.text} ton={e.ton}>
+                            {e.text}
+                          </Etikett>
+                        ))}
+                      </span>
+                      <small>{brauchenDichText(k.auf.summe)}</small>
+                    </div>
+                  </KlickZeile>
+                ))}
             </div>
             {hinweisFehler && (
               <p className={f.fehler} role="alert">
@@ -566,17 +611,33 @@ export function Startseite({
               <h2 id="nachweise-karte">Nachweise</h2>
             </div>
             <ul className={styles.liste}>
-              <li>
-                <KlickZeile className={styles.zeile} onClick={onNachweise}>
-                  <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
-                    <Icon name="kreis-haken" size={18} />
-                  </span>
-                  <div className={styles.mitte}>
-                    <b>Führungszeugnis &amp; Co.</b>
-                    <small>Nachweis-Arten ansehen und einrichten</small>
-                  </div>
-                </KlickZeile>
-              </li>
+              {nachweisArten.length === 0 ? (
+                <li>
+                  <KlickZeile className={styles.zeile} onClick={() => onNachweise('alle')}>
+                    <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
+                      <Icon name="kreis-haken" size={18} />
+                    </span>
+                    <div className={styles.mitte}>
+                      <b>Führungszeugnis &amp; Co.</b>
+                      <small>Nachweis-Arten ansehen und einrichten</small>
+                    </div>
+                  </KlickZeile>
+                </li>
+              ) : (
+                nachweisArten.map((k) => (
+                  <li key={k.art.id}>
+                    <KlickZeile className={styles.zeile} onClick={() => onNachweise('alle')}>
+                      <span className={`${styles.kachel} ${styles.kachelGrau}`} aria-hidden="true">
+                        <Icon name="kreis-haken" size={18} />
+                      </span>
+                      <div className={styles.mitte}>
+                        <b>{k.art.name}</b>
+                        <small>{zaehlText(k.staende)}</small>
+                      </div>
+                    </KlickZeile>
+                  </li>
+                ))
+              )}
             </ul>
           </section>
         )}

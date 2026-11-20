@@ -262,6 +262,10 @@ export function nachweisGueltigText(e: Pick<NachweisEinstellungen, 'gueltigJahre
 /** So heißt der Ablauf in ChurchTools – daran erkennt die Erweiterung ihren eigenen (und lässt fremde stehen). */
 export const NACHWEIS_ABLAUF_NAME = 'Nachweise: Aufforderung und Einsicht';
 
+/** Die Titel der beiden Folgeaufgaben des Ablaufs – daran erkennt die Seite die offene Aufgabe einer Person (N2a). */
+export const NACHWEIS_AUFGABE_ERSTE = 'Einsicht nehmen';
+export const NACHWEIS_AUFGABE_ERNEUT = 'Erneut einsehen';
+
 /** Wie lange die erste Folgeaufgabe offen bleibt, bevor sie fällig ist (gemessen N0: 14 Tage). */
 const EINSICHT_TAGE = 14;
 
@@ -382,14 +386,14 @@ export function nachweisSchritte(
       },
     },
     { ...nummern(alt[1]), actionKey: 'invite-member', isEnabled: true, actionData: null },
-    folge(alt[2], 'Einsicht nehmen', { numDays: EINSICHT_TAGE }),
+    folge(alt[2], NACHWEIS_AUFGABE_ERSTE, { numDays: EINSICHT_TAGE }),
     {
       ...nummern(alt[3]),
       actionKey: 'special:repeat',
       isEnabled: true,
       actionData: null,
       children: [
-        folge(altKinder[0], 'Erneut einsehen', { numYears: art.gueltigJahre }),
+        folge(altKinder[0], NACHWEIS_AUFGABE_ERNEUT, { numYears: art.gueltigJahre }),
         {
           ...nummern(altKinder[1]),
           actionKey: 'special:wait',

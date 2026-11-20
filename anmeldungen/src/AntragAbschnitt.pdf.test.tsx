@@ -80,7 +80,7 @@ const alles: NachweisErgebnis = {
 const seite = (liste: NachweisArt[]) =>
   arten.nachweiseSeiteLaden.mockResolvedValue({
     grundlage: { typId: 11, rechtFehlt: false, darfEinrichten: true },
-    arten: liste,
+    arten: liste.map((a) => ({ ...a, personen: [] })),
   });
 const oeffnen = () =>
   render(
@@ -102,7 +102,9 @@ const neueArt = async () => {
 const bearbeiten = async (a: NachweisArt) => {
   seite([a]);
   oeffnen();
-  fireEvent.click(await screen.findByRole('button', { name: `${a.name} bearbeiten` }));
+  // „Nachweis-Art bearbeiten“ liegt im ⋯-Menü der Karte (N2a, R6).
+  fireEvent.click(await screen.findByRole('button', { name: `${a.name}: Mehr` }));
+  fireEvent.click(screen.getByText('Nachweis-Art bearbeiten'));
   return await screen.findByRole('dialog');
 };
 const aufruf = () => arten.nachweisArtSichern.mock.calls[0][0];

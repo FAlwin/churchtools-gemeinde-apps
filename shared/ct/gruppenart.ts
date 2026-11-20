@@ -117,6 +117,54 @@ export async function gruppenartRollen(
   return { leiter: waehle(true), teilnehmer: waehle(false) };
 }
 
+// ── Modulrechte ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Was `GET /permissions/definitions` liefert (nur was hier zählt): Module mit ihren Rechten. */
+export interface RechtDefinitionenRoh {
+  modules?: unknown;
+}
+
+/**
+ * Die `authId` eines Rechts **per Modul- und Recht-Schlüssel** aus den Definitionen – nie als feste Nummer: Bei Rechten
+ * von Erweiterungen ist sie je Instanz eine andere (Test-Instanz 20.11.2026: „anmeldungen“/„view“ = 2020). `null`: Modul
+ * oder Recht gibt es nicht (oder die Antwort hat eine unbekannte Gestalt).
+ */
+export function modulRechtAus(definitionen: unknown, modul: string, recht: string): number | null {
+  const module = (definitionen as RechtDefinitionenRoh | null)?.modules;
+  if (!Array.isArray(module)) return null;
+  for (const m of module as { key?: unknown; permissions?: unknown }[]) {
+    if (m?.key !== modul || !Array.isArray(m.permissions)) continue;
+    for (const p of m.permissions as { key?: unknown; authId?: unknown }[])
+      if (p?.key === recht) return ctId(p.authId);
+  }
+  return null;
+}
+
+/**
+ * Das Modulrecht als `SollRecht` (ohne Einschränkung, `dataId` null) – gelesen aus `GET /permissions/definitions`.
+ * Gibt es das Recht nicht, wirft sie `anders` mit klarem Text; nicht lesbar (Antwort keine Gestalt) = `unlesbar`.
+ */
+export async function modulRechtHolen(
+  port: CtPort,
+  modul: string,
+  recht: string,
+  name: string,
+): Promise<SollRecht> {
+  const roh = await port.holen<unknown>('/permissions/definitions');
+  if (roh === null || typeof roh !== 'object')
+    throw new GruppenartFehler(
+      'unlesbar',
+      'Die Rechte-Definitionen ließen sich nicht nachlesen.',
+      'Die Rechte-Definitionen',
+    );
+  const authId = modulRechtAus(roh, modul, recht);
+  if (authId === null)
+    throw anders(
+      `ChurchTools kennt das Recht „${name}“ nicht (Modul „${modul}“, Recht „${recht}“). Ist die Erweiterung in ChurchTools angelegt und das Modul „${modul}“ freigeschaltet?`,
+    );
+  return { authId, name, dataId: null };
+}
+
 // ── Anlegen ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**

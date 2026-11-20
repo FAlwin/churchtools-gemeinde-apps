@@ -4,6 +4,7 @@ import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import {
   NACHWEIS_ART,
   NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_MODULRECHT,
   NACHWEIS_TEILNEHMER_RECHTE,
 } from '@shared/anmeldung/nachweise';
 import { FalschesCt } from '@shared/ct/gruppenart.testutil';
@@ -25,6 +26,12 @@ let gelesen: string[];
 
 const ADMIN = { churchcore: { 'administer persons': true } };
 const OHNE_ADMIN = { churchcore: { 'view birthdays': true }, churchdb: { 'view alldata': true } };
+
+/** Das Modulrecht, so wie `FalschesCt.definitionen` es kennt (Test-Instanz: 2020) – gelesen, nicht abgeschrieben. */
+const MODULRECHT_ID = 2020;
+const MODULRECHT = { authId: MODULRECHT_ID, dataId: null };
+/** Alle Rechte, die die Leiter-Rolle haben soll: die Gruppenrechte plus das Modulrecht. */
+const LEITER_ALLE = () => [...alsRechte(NACHWEIS_LEITER_RECHTE), MODULRECHT];
 
 const alsRechte = (l: readonly { authId: number; dataId: number | null }[]) =>
   l.map(({ authId, dataId }) => ({ authId, dataId }));
@@ -64,7 +71,7 @@ beforeEach(() => {
 
 describe('nachweisGrundlageLesen', () => {
   it('Admin, Art und Rechte da: nichts fehlt', async () => {
-    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
     expect(await nachweisGrundlageLesen()).toEqual({
       typId: 11,
       rechtFehlt: false,
@@ -84,9 +91,41 @@ describe('nachweisGrundlageLesen', () => {
   });
 
   it('(i) Leiter-Rechte da, aber das der Teilnehmer-Rolle fehlt: rechtFehlt true, nichts geschrieben', async () => {
-    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE));
+    mitNachweisArt(LEITER_ALLE());
     expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
     expect(falsch.aufrufe).toEqual([]);
+  });
+
+  it('nur das Modulrecht fehlt (die fünf Gruppenrechte stehen): rechtFehlt true, nichts geschrieben', async () => {
+    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
+    expect(falsch.aufrufe).toEqual([]);
+  });
+
+  it('ChurchTools kennt das Modulrecht nicht (Definitionen ohne Modul) oder liest sie nicht: null, kein Fehler', async () => {
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    falsch.definitionen = { modules: [] };
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBeNull();
+    ct.ctDaten.mockImplementation(async (pfad: string) => {
+      if (pfad === '/permissions/global') return global;
+      if (pfad === '/permissions/definitions') throw new ApiError(403, 'kein Recht');
+      return await falsch.holen(pfad);
+    });
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBeNull();
+  });
+
+  it('das Modulrecht hat in dieser Instanz eine andere Nummer: gefunden wird es per Schlüssel', async () => {
+    falsch.definitionen = {
+      modules: [{ key: 'anmeldungen', permissions: [{ authId: 3131, key: 'view' }] }],
+    };
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    // 2020 steht an der Rolle, gebraucht wird aber 3131
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
+    mitNachweisArt(
+      [...alsRechte(NACHWEIS_LEITER_RECHTE), { authId: 3131, dataId: null }],
+      alsRechte(NACHWEIS_TEILNEHMER_RECHTE),
+    );
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(false);
   });
 
   it('keine Art: typId null, rechtFehlt null (es gibt nichts zu lesen)', async () => {
@@ -145,13 +184,16 @@ describe('nachweisGrundlageSichern', () => {
     expect(r).toEqual({ typId: 11, teilnehmerRolle: 53, leiterRolle: 54 });
     const post = falsch.aufrufe.find((a) => a.pfad === '/group/grouptypes');
     expect(post?.json).toMatchObject({ name: NACHWEIS_ART.name, shorty: NACHWEIS_ART.shorty });
-    expect(falsch.rechte.get(54)).toEqual(alsRechte(NACHWEIS_LEITER_RECHTE));
+    expect(falsch.rechte.get(54)).toEqual(LEITER_ALLE());
+    // Das Modulrecht steht genau einmal an der Leiter-Rolle und gar nicht an der Teilnehmer-Rolle
+    expect(falsch.rechte.get(54)?.filter((r) => r.authId === MODULRECHT_ID)).toHaveLength(1);
+    expect(falsch.rechte.get(53)?.some((r) => r.authId === MODULRECHT_ID)).toBe(false);
     // M6: die Teilnehmer-Rolle bekommt genau „Gruppeninfos sehen“ (Stufe 1) – sonst nichts
     expect(falsch.rechte.get(53)).toEqual(alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
   });
 
   it('Art und Rechte schon da: nichts geschrieben; zweiter Lauf ändert nichts', async () => {
-    mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
     expect(await nachweisGrundlageSichern()).toEqual({
       typId: 11,
       leiterRolle: 56,
@@ -163,10 +205,7 @@ describe('nachweisGrundlageSichern', () => {
   it('fremde Rechte an der Leiter-Rolle bleiben', async () => {
     mitNachweisArt([{ authId: 777, dataId: 2 }]);
     await nachweisGrundlageSichern();
-    expect(falsch.rechte.get(56)).toEqual([
-      { authId: 777, dataId: 2 },
-      ...NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
-    ]);
+    expect(falsch.rechte.get(56)).toEqual([{ authId: 777, dataId: 2 }, ...LEITER_ALLE()]);
   });
 
   it('ChurchTools schluckt das Recht (200, nichts übernommen): NichtUebernommen', async () => {
@@ -176,8 +215,20 @@ describe('nachweisGrundlageSichern', () => {
     expect(e).toBeInstanceOf(NichtUebernommen);
     // Die Namen kommen aus den Rechten, nicht aus einem abgeschriebenen Satz.
     expect((e as Error).message).toBe(
-      `ChurchTools hat ${NACHWEIS_LEITER_RECHTE.map((r) => `„${r.name}“`).join(', ')} nicht übernommen. Bitte noch einmal versuchen.`,
+      `ChurchTools hat ${[...NACHWEIS_LEITER_RECHTE.map((r) => r.name), NACHWEIS_MODULRECHT.name].map((n) => `„${n}“`).join(', ')} nicht übernommen. Bitte noch einmal versuchen.`,
     );
+  });
+
+  it('ChurchTools kennt das Modulrecht nicht: klarer Fehler (422), nichts an der Rolle geschrieben', async () => {
+    mitNachweisArt();
+    falsch.definitionen = {
+      modules: [{ key: 'anmeldungen', permissions: [{ authId: 5, key: 'edit' }] }],
+    };
+    const e = await nachweisGrundlageSichern().catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ApiError);
+    expect((e as ApiError).status).toBe(422);
+    expect((e as Error).message).toContain(NACHWEIS_MODULRECHT.name);
+    expect(falsch.schreibende('PUT')).toEqual([]);
   });
 
   it('Rollen fehlen: ApiError mit verständlichem Text – 422, nicht 502 (sonst liest die Anzeige „ChurchTools antwortet nicht“)', async () => {

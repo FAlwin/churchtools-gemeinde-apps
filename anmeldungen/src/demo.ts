@@ -790,6 +790,21 @@ export function demoStarten(fall: string): void {
       return antwort({ data: { churchcore, churchdb, churchcal: { 'edit category': [1] } } });
     }
     // ── Nachweise (N1b) ──
+    // Rechte-Definitionen: nur das Modulrecht „Anmeldungen sehen“ (Nummer je Instanz anders – hier eine Demo-Nummer).
+    if (pfad === '/permissions/definitions')
+      return antwort({
+        data: {
+          modules: [
+            {
+              key: 'anmeldungen',
+              name: 'Anmeldungen',
+              permissions: [
+                { authId: 2020, key: 'view', name: 'Anmeldungen sehen', valueType: 'boolean' },
+              ],
+            },
+          ],
+        },
+      });
     let r = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad);
     if (r && [LEITER_ROLLE, TEILNEHMER_ROLLE].includes(Number(r[1]))) {
       const liste = nachweisRechte.get(Number(r[1])) ?? [];

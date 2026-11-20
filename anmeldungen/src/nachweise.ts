@@ -1,6 +1,6 @@
 /**
  * **Die Grundlage für Nachweise in ChurchTools** (Etappe F, N1a; Oberfläche folgt in N1b): die Gruppenart „Nachweis“ samt
- * Recht „Follow-ups durchführen“ an ihrer Leiter-Rolle. Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
+ * Rechte an ihrer Leiter-Rolle (fünf in der Gruppe, dazu das Modulrecht „‚Anmeldungen‘ sehen“). Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
  *
  * - `nachweisGrundlageLesen` schreibt nie. Die Rechte der Rolle liest sie nur, wenn man „Berechtigungen verwalten“ hat
  *   (`churchcore: administer persons`, über `rechteAus` wie überall) – sonst `rechtFehlt: null`. **Nicht lesbar ist nicht
@@ -20,26 +20,39 @@ import {
   gruppenartAnlegen,
   gruppenartRollen,
   gruppenartSuchen,
+  modulRechtHolen,
   listeHolen,
   rechteErgaenzen,
   type CtPort,
   type RechtRoh,
+  type SollRecht,
 } from '@shared/ct/gruppenart';
 import {
   istNachweisArt,
   NACHWEIS_ART,
   NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_MODULRECHT,
   NACHWEIS_TEILNEHMER_RECHTE,
 } from '@shared/anmeldung/nachweise';
 
 const port = (): CtPort =>
   ctPortMit('Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).');
 
+/**
+ * Die Soll-Rechte der Leiter-Rolle – **die eine Stelle**, an der sie entstehen (Lesen und Sichern nutzen beide sie): die
+ * gruppeninternen aus `NACHWEIS_LEITER_RECHTE` plus das Modulrecht „‚Anmeldungen‘ sehen“, dessen Nummer aus den
+ * Definitionen kommt. Wirft, wenn ChurchTools das Recht nicht kennt.
+ */
+async function leiterSoll(p: CtPort): Promise<SollRecht[]> {
+  const { modul, recht, name } = NACHWEIS_MODULRECHT;
+  return [...NACHWEIS_LEITER_RECHTE, await modulRechtHolen(p, modul, recht, name)];
+}
+
 export interface NachweisGrundlage {
   /** Nummer der Gruppenart „Nachweis“ – `null`: gibt es noch nicht. */
   typId: number | null;
   /**
-   * Fehlt das Recht „Follow-ups durchführen“ an der Leiter-Rolle? `null` = nicht lesbar: kein Recht dafür
+   * Fehlt ein Recht an der Leiter- oder Teilnehmer-Rolle (auch das Modulrecht „‚Anmeldungen‘ sehen“)? `null` = nicht lesbar: kein Recht dafür
    * (`darfEinrichten` false), es gibt die Art noch nicht, die Rolle fehlt oder ChurchTools antwortet nicht.
    */
   rechtFehlt: boolean | null;
@@ -85,7 +98,7 @@ export async function nachweisGrundlageLesen(): Promise<NachweisGrundlage> {
           );
         // Fehlt bei einer der beiden Rollen ein Recht, fehlt es.
         rechtFehlt =
-          fehlendeRechte(await lesen(leiter, 'Leiter'), NACHWEIS_LEITER_RECHTE).length > 0 ||
+          fehlendeRechte(await lesen(leiter, 'Leiter'), await leiterSoll(p)).length > 0 ||
           fehlendeRechte(await lesen(teilnehmer, 'Teilnehmer'), NACHWEIS_TEILNEHMER_RECHTE).length >
             0;
       }
@@ -107,7 +120,7 @@ export async function nachweisGrundlageSichern(): Promise<{
   try {
     const p = port();
     const { typId, leiter, teilnehmer } = await gruppenartAnlegen(p, NACHWEIS_ART, istNachweisArt);
-    await rechteErgaenzen(p, leiter, NACHWEIS_LEITER_RECHTE);
+    await rechteErgaenzen(p, leiter, await leiterSoll(p));
     await rechteErgaenzen(p, teilnehmer, NACHWEIS_TEILNEHMER_RECHTE, 'Teilnehmer');
     return { typId, leiterRolle: leiter, teilnehmerRolle: teilnehmer };
   } catch (e) {

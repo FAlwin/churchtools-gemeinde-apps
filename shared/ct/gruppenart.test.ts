@@ -7,6 +7,8 @@ import {
   gruppenartAnlegen,
   gruppenartRollen,
   gruppenartSuchen,
+  modulRechtAus,
+  modulRechtHolen,
   rechteErgaenzen,
 } from './gruppenart';
 import { FalschesCt } from './gruppenart.testutil';
@@ -191,5 +193,53 @@ describe('rechteErgaenzen', () => {
     expect((e as Error).message).toBe(
       'ChurchTools hat „Follow-ups durchführen“ nicht übernommen. Bitte noch einmal versuchen.',
     );
+  });
+});
+
+describe('modulRechtAus / modulRechtHolen', () => {
+  const def = (authId: number) => ({
+    modules: [
+      { key: 'churchcore', permissions: [{ authId: 1, key: 'view' }] },
+      { key: 'anmeldungen', permissions: [{ authId, key: 'view' }] },
+    ],
+  });
+
+  it('sucht per Modul- und Recht-Schlüssel – die Nummer ist je Instanz anders', () => {
+    expect(modulRechtAus(def(2020), 'anmeldungen', 'view')).toBe(2020);
+    expect(modulRechtAus(def(77), 'anmeldungen', 'view')).toBe(77);
+  });
+
+  it('Modul fehlt, Recht fehlt, Antwort ohne Gestalt: null', () => {
+    expect(modulRechtAus(def(2020), 'dienstplan', 'view')).toBeNull();
+    expect(modulRechtAus(def(2020), 'anmeldungen', 'edit')).toBeNull();
+    expect(modulRechtAus(null, 'anmeldungen', 'view')).toBeNull();
+    expect(modulRechtAus({ modules: 'x' }, 'anmeldungen', 'view')).toBeNull();
+  });
+
+  it('modulRechtHolen: liefert ein SollRecht ohne Einschränkung; nicht gefunden = klarer Fehler „anders“', async () => {
+    const ct = new FalschesCt();
+    ct.definitionen = def(2020);
+    expect(await modulRechtHolen(ct.port, 'anmeldungen', 'view', 'Anmeldungen sehen')).toEqual({
+      authId: 2020,
+      name: 'Anmeldungen sehen',
+      dataId: null,
+    });
+    ct.definitionen = { modules: [] };
+    await expect(
+      modulRechtHolen(ct.port, 'anmeldungen', 'view', 'Anmeldungen sehen'),
+    ).rejects.toMatchObject({
+      art: 'anders',
+      message: expect.stringContaining('Anmeldungen sehen'),
+    });
+  });
+
+  it('modulRechtHolen: Antwort keine Gestalt = „unlesbar“ (vorübergehend), nicht „gibt es nicht“', async () => {
+    const kaputt = {
+      holen: () => Promise.resolve(null),
+      schicken: () => Promise.resolve({}),
+    } as never;
+    await expect(modulRechtHolen(kaputt, 'anmeldungen', 'view', 'x')).rejects.toMatchObject({
+      art: 'unlesbar',
+    });
   });
 });

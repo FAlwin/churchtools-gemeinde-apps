@@ -37,8 +37,9 @@ const STUFE_SEHEN = 1;
 
 /**
  * Die gruppeninternen Rechte der Leiter-Rolle (Alwin, 19.11.2026): die Vertrauenspersonen sehen die Gruppe und ihre
- * Mitglieder, sehen und ändern die Angaben (Stufe `STUFE_NACHWEIS`) und führen Follow-ups durch. Die Teilnehmer-Rolle
- * bekommt keins. Churchauth-Nummern: 10101 Gruppenmitglieder sehen, 10102 Gruppeninfos sehen, 10126 Gruppenmitgliedsfelder
+ * Mitglieder, sehen und ändern die Angaben (Stufe `STUFE_NACHWEIS`) und führen Follow-ups durch. Dazu kommt als sechstes
+ * das Modulrecht `NACHWEIS_MODULRECHT` (Nummer je Instanz anders, darum nicht in dieser Liste). Die Teilnehmer-Rolle
+ * bekommt keins davon. Churchauth-Nummern: 10101 Gruppenmitglieder sehen, 10102 Gruppeninfos sehen, 10126 Gruppenmitgliedsfelder
  * sehen, 10133 Gruppenmitgliedsfelder bearbeiten, 10110 Follow-ups durchführen. Die Stufe steht in `dataId`; der PUT schickt
  * `dataId: [stufe]` (`rechteErgaenzen`).
  */
@@ -49,6 +50,17 @@ export const NACHWEIS_LEITER_RECHTE: readonly SollRecht[] = [
   { authId: 10133, name: 'Gruppenmitgliedsfelder bearbeiten', dataId: STUFE_NACHWEIS },
   { authId: 10110, name: 'Follow-ups durchführen', dataId: null },
 ];
+
+/**
+ * Das **Modulrecht „‚Anmeldungen‘ sehen“** (Alwin, 20.11.2026): Ohne es kommt eine Vertrauensperson ohne Admin gar nicht in
+ * die Erweiterung. Es hängt – wie die fünf oben – an der Leiter-Rolle, **nicht** an den Teilnehmern. Die `authId` steht
+ * nicht fest (je Instanz anders): Sie wird per Schlüssel aus `/permissions/definitions` gelesen (`modulRechtHolen`).
+ */
+export const NACHWEIS_MODULRECHT = {
+  modul: 'anmeldungen',
+  recht: 'view',
+  name: '„Anmeldungen“ sehen',
+} as const;
 
 /**
  * Das eine Recht der **Teilnehmer-Rolle** (Alwin nach Messung M6, 19.11.2026): „Gruppeninfos sehen“ (10102, Stufe 1). Ohne

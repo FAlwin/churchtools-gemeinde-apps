@@ -1,9 +1,10 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3a-2 (20.11.2026) – noch kein Release.** Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
+> **Stand: W3a-3a (20.11.2026) – noch kein Release.** Neu seit W3a-2: der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
+> eigenes CSS) und die Schriften in der Vorschau – siehe „Aussehen“ unten. Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
 > anlegen und löschen – W3a-1) und das **Bearbeiten direkt in der Vorschau**: Abschnitte einfügen, gestalten, verschieben,
 > kopieren, löschen, Bausteine bearbeiten, hinzufügen, entfernen, Seite einstellen mit Menü, dazu die **Sperre** (eine Person
-> bearbeitet) und das **Speichern von selbst**. Noch **nicht** da: Aussehen – Farben, Schriften, Logo (W3a-3), Bilder (W4),
+> bearbeitet) und das **Speichern von selbst**. Noch **nicht** da: der Reiter „Einstellungen“ (W3a-3b), Bilder und Logo ändern (W4),
 > Freigabe und Rechte für Redakteure (W3b), Veröffentlichen (W5). Das Bild der ganzen Website: Bauplan „Neue Website“
 > (Second Brain, `ecg-donrath/website/bauplan-neue-website.md`).
 
@@ -133,8 +134,8 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
 
 ## Die Oberfläche
 
-- **Reiter:** Seiten | Aussehen | Freigaben (am Computer oben, am Handy unten). „Aussehen“ und „Freigaben“ zeigen bisher
-  nur einen Hinweis „kommt“.
+- **Reiter:** Seiten | Aussehen | Freigaben (am Computer oben, am Handy unten). „Freigaben“ zeigt bisher nur einen Hinweis
+  „kommt“.
 - **Seiten:** links die Liste („Im Menü“ in der Reihenfolge des Menüs, „Weitere Seiten“; die Startseite ist markiert), rechts
   die **Vorschau** mit dem Umschalter **Computer | Handy** (390 px).
 - **Neue Seite:** Titel eingeben; der Pfad (die Adresse) entsteht daraus (Umlaute ausgeschrieben, bei Streit `-2`). Die Seite
@@ -188,7 +189,8 @@ ChurchTools noch an die Sitzung noch an die Erweiterung (`website/src/Vorschau.t
 - Das **Stylesheet** (`shared/website/website.css`) steht als `<style>` im Dokument (`stylesheetText` im Renderer; der Bau
   gibt weiter ein `<link>` aus). Ein `<link>` auf eine `data:`-Adresse blockiert ChurchTools (siehe unten).
 - Die Vorschau bekommt **kein Seiten-Skript** (`skriptAdresse` fehlt, es steht kein `<script src>` im Dokument).
-- **Keine Schriftdateien** in der Vorschau – die Seite fällt auf die Ersatzschrift zurück (Schriften kommen mit W3a-3).
+- **Schriften** kommen als `data:`-Adresse ins Dokument (s. „Aussehen“); bis eine Datei geladen ist – und für eigene Schriften
+  bis W4 – gilt die Ersatzschrift.
 - **Bilder** sind ein neutrales Platzhalter-Bild (echte Bilder: W4).
 - Termine, Beiträge, Slider, Livestream und Gruppen sind in der Vorschau leer – der Renderer zeigt seine Leer-Hinweise.
 - Links auf andere Seiten führen in der Vorschau nirgendwohin; mit der Bearbeiten-Ebene tut auch ein Klick auf einen Link und das
@@ -220,7 +222,8 @@ Folgen:
   Erweiterung über der Vorschau „Bearbeiten in der Vorschau ist gerade nicht möglich …“ und schreibt eine `console.warn`-Zeile.
 - **„Eigenes HTML“:** Skripte darin laufen in der Vorschau in ChurchTools **nicht** (sie haben keine Nonce) – auf der echten
   Website schon. Das Baustein-Fenster sagt es dazu.
-- **Schriften (W3a-3):** als `data:`-Adresse einbinden – `font-src` erlaubt `data:`. **Bilder:** `img-src *` erlaubt `data:`,
+- **Schriften (W3a-3):** als `data:`-Adresse einbinden – `font-src` erlaubt `data:` (am 20.11.2026 gemessen, umgesetzt in
+  W3a-3a). **Bilder:** `img-src *` erlaubt `data:`,
   `blob:` und Adressen im ganzen Netz – unkritisch.
 
 **Nachrichten aus der Vorschau (W3a-2).** Die Bearbeiten-Ebene (`website/src/ebene.css`, `ebene.skript.txt`) läuft im selben
@@ -236,6 +239,35 @@ Die Ebene wird **nur** in die Vorschau gehängt (`vorschauHtml(…, { scroll })`
 Sonderweg (kein `data-w-id`: die Ebene findet Abschnitte, Spalten und Bausteine an der Reihenfolge im Dokument). Das Skript liegt
 als Textdatei (`.txt`), weil die Prüfung des Repos (`eslint .`) TypeScript liest und kein Fremdskript für das `iframe`.
 
+## Aussehen (W3a-3a)
+
+Der Reiter **Aussehen** (`website/src/Aussehen.tsx`) stellt die Einstellungen ein, die für die ganze Website gelten: **Farben**
+(Hauptfarbe, Hauptfarbe dunkel, Akzent, Hintergrund, Sanft, Text – Farbwähler und Hex-Feld; nur gültige Werte werden übernommen;
+ist „Hauptfarbe dunkel“ leer, wird sie aus der Hauptfarbe abgeleitet), **Schriften** (Text, Überschriften, Handschrift-Zeile aus
+der festen Liste `shared/website/schriften.ts`), das **Logo** (nur Anzeige – ändern geht mit den Bildern, W4) und **Eigenes CSS**
+(bis 20.000 Zeichen). Rechts die Vorschau der Startseite, eine andere Seite ist wählbar. Die Regeln dazu stehen rein und getestet
+in `shared/website/aussehen.ts`.
+
+- **Kontrast (E-W18):** `kontrast(a, b)` in `shared/website/theme.ts` (WCAG). Text auf Hintergrund und Text auf „Sanft“ unter
+  **4,5 : 1** → ein ruhiger Hinweis, je Problem genau einer, gesammelt unter „Text“. **Es wird nichts gesperrt.**
+- **Speichern:** Die Einstellungen sind eine Einheit (`einstellungen`) mit eigener Sperre (`website-sperre` mit `einheit:
+einstellungen`, gelesen als `WebsiteStand.einstellungenSperre`). Der Ablauf ist derselbe wie bei den Seiten
+  (`website/src/useSperrarbeit.ts`): erst die Sperre, dann prüfen (`einstellungenSchema`) und nach 0,7 s speichern – Ungültiges
+  nie; „Erneut versuchen“; hat jemand inzwischen etwas geändert, wird nicht darüber geschrieben. Verlässt man den Reiter mit
+  wartender Änderung, wird sie noch abgeschickt und die Sperre erst danach freigegeben. Lassen sich gespeicherte Einstellungen
+  nicht lesen, bietet der Reiter nichts zum Ändern an (nichts wird überschrieben). Wer das eigene CSS ändern darf, regelt W3b –
+  in W3a sieht ohnehin nur die Leitung den Editor.
+- **Schriften laden (nur die gewählten):** Die 14 Dateien liegen in `shared/website/schriften/` (WOFF2, nur Latin, je Paket mit
+  Lizenztext, Herkunft in `QUELLEN.md`; **Roboto Slab: Apache 2.0**, alle anderen SIL OFL 1.1; Wächter
+  `shared/website/schriftdateien.test.ts`). Die Vorschau bekommt jede Schrift als **eigenen, nachgeladenen Teil** des Bündels
+  (`website/src/schriftLader.ts`: `import.meta.glob(…, { query: '?inline' })` – Vite macht daraus `data:font/woff2;base64,…`),
+  geladen wird erst, wenn die Schrift gewählt ist. Nach `npm run build -w website` liegen 14 Schrift-Teile in
+  `dist-extension/assets/`, das Haupt-Bündel enthält keine Schrift. **Ein Ladefehler ist vorübergehend:** Ersatzschrift, leiser
+  Hinweis mit „Erneut laden“, der nächste Bedarf versucht es wieder; nichts wird deswegen gespeichert oder verworfen.
+- **`data:`-Adressen im Stylesheet:** `cssAdresse` (`theme.ts`) entschärft jede Schriftadresse und kodiert dabei `;`. Für
+  `data:font/woff2;base64,…` wäre das fatal (die Schrift bliebe unsichtbar); genau diese **eine** Form, mit Base64-Zeichen und
+  sonst nichts, bleibt unverändert.
+
 ## Das Stylesheet
 
 `shared/website/website.css` ist das **eine** Stylesheet für alle Gemeinden (aus dem abgenommenen Entwurf). Farben und
@@ -247,7 +279,7 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3a-3 Aussehen (Farben, Schriften, Logo) · W3b Redakteure,
+W3a-3b Reiter „Einstellungen“ (Name, Fußzeile, Datenschutz-Link, Banner-Text) · W3b Redakteure,
 Untergruppen, Freigabe, Rechte an den Gruppenrollen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 

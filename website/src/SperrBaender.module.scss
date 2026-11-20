@@ -1,0 +1,34 @@
+// Speicherzustand und Hinweisbänder des Bearbeitens mit Sperre (Seiten und Aussehen) – Bauplan Website W3a-2/W3a-3.
+
+// „Speichert … / Gespeichert / Nicht gespeichert“ – immer da, damit man weiß, woran man ist.
+.zustand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+
+  &.fehler {
+    color: var(--red);
+  }
+}
+
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+
+  p {
+    flex: 1 1 260px;
+    margin: 0;
+  }
+}

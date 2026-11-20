@@ -54,6 +54,20 @@ export function luminanz(hex: string): number | null {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** Ab diesem Verhältnis gilt Text als gut lesbar (WCAG 2.x, Stufe AA, normaler Text). */
+export const KONTRAST_MINDEST = 4.5;
+
+/**
+ * Kontrastverhältnis zweier Farben nach WCAG (1 : 1 bis 21 : 1) – die hellere Luminanz plus 0,05 geteilt durch die
+ * dunklere plus 0,05. Die Reihenfolge der Farben ist egal. `null`, wenn eine der beiden keine Hex-Farbe ist.
+ */
+export function kontrast(a: string, b: string): number | null {
+  const la = luminanz(a);
+  const lb = luminanz(b);
+  if (la === null || lb === null) return null;
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
 /**
  * Soll Text auf dieser Farbe hell sein? Ab einer Luminanz unter 0,179 hat Weiß mehr Kontrast als Schwarz – genau dort
  * kreuzen sich beide Kontrastwerte. Eine ungültige Farbe zählt als hell nicht (dunkler Text, wie auf dem Grund).
@@ -82,12 +96,19 @@ export function wirksameFarben(e: Einstellungen): Required<Omit<Farben, 'hauptTi
 
 // ── CSS-Bausteine ────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Eine eingebettete WOFF2-Schrift: genau diese Form, danach nur Base64-Zeichen. */
+const DATEN_SCHRIFT = /^data:font\/woff2;base64,[A-Za-z0-9+/]*={0,2}$/;
+
 /**
  * Eine Adresse als Inhalt einer CSS-Zeichenkette in doppelten Anführungszeichen (`url("…")`). `"`, `'`, `\`, Klammern,
  * Leerraum, Steuerzeichen, `;`, `{`, `}`, `<` und `>` werden prozentkodiert – so bleibt die Adresse in der Zeichenkette
  * und im `<style>`.
  */
 export function cssAdresse(adresse: string): string {
+  // Eine eingebettete Schrift (`data:font/woff2;base64,…`, Vorschau in ChurchTools, W3a-3) braucht ihr `;` – prozentkodiert
+  // wäre es keine Base64-Adresse mehr und die Schrift bliebe unsichtbar. Erlaubt ist **nur diese eine Form**, mit
+  // Base64-Zeichen und sonst nichts: Darin steckt kein Zeichen, das aus der Zeichenkette oder dem `<style>` ausbrechen könnte.
+  if (DATEN_SCHRIFT.test(adresse)) return adresse;
   // eslint-disable-next-line no-control-regex -- gerade die Steuerzeichen sollen kodiert werden
   return adresse.replace(/["'\\(){};<>\s\u0000-\u001f\u007f]/g, (z) => {
     const code = z.charCodeAt(0);

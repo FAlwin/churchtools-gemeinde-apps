@@ -10,6 +10,8 @@ import {
   brauchtHellenText,
   cssAdresse,
   cssFuerStyleTag,
+  KONTRAST_MINDEST,
+  kontrast,
   luminanz,
   themeCss,
   wirksameFarben,
@@ -241,6 +243,40 @@ describe('Schutz: Schriftnamen, Gewichte, Adressen, Farben', () => {
     expect(cssAdresse('/a b')).toBe('/a%20b');
   });
 
+  describe('eingebettete Schrift (data:font/woff2;base64, Vorschau W3a-3)', () => {
+    const OK = 'data:font/woff2;base64,d09GMgABAAAAAB+/Zz==';
+
+    it('die eine erlaubte Form bleibt unverändert – mit ihrem `;`, sonst wäre es keine Base64-Adresse mehr', () => {
+      expect(cssAdresse(OK)).toBe(OK);
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), {
+        schriftAdresse: () => OK,
+      });
+      expect(css).toContain(`url("${OK}")`);
+    });
+
+    it.each([
+      ['mit Anführungszeichen dahinter', `${OK}"`],
+      ['mit Klammer und Semikolon', `${OK});x{`],
+      ['mit Leerraum', `${OK} x`],
+      ['mit Zeilenumbruch', `${OK}\n`],
+      ['mit spitzer Klammer (</style>)', `${OK}</style>`],
+      ['mit Backslash', `${OK}\\`],
+      ['andere Art (font/ttf)', 'data:font/ttf;base64,AAAA'],
+      ['Bild statt Schrift', 'data:image/svg+xml;base64,AAAA'],
+      ['Skript', 'data:text/javascript;base64,AAAA'],
+      ['ohne base64', 'data:font/woff2;charset=utf-8,AAAA'],
+      ['Base64 mit Sonderzeichen mittendrin', 'data:font/woff2;base64,AA"AA'],
+      ['mit Großschreibung der Art', 'DATA:font/woff2;base64,AAAA'],
+    ])('jede andere Form wird wie vorher entschärft: %s', (_name, boese) => {
+      expect(cssAdresse(boese)).not.toMatch(/["'\\(){};<>\s]/);
+      const css = themeCss(einstellungen({ schriften: ECG_SCHRIFTEN }), {
+        schriftAdresse: () => boese,
+      });
+      expect(css).not.toContain('</style');
+      expect(css.match(/url\(/g)).toHaveLength(2);
+    });
+  });
+
   it('eine unbekannte Schrift aus der „Auswahl“ (am Schema vorbei) wird ignoriert', () => {
     const css = themeCss(
       einstellungen({
@@ -353,5 +389,32 @@ describe('Theme auf allen Seiten, nicht nur der ersten', () => {
     expect(stil(renderSeite(seite(), k))).toBe(
       stil(renderSeite(seiteMit([baustein('text')], { id: 'z', pfad: 'z', startseite: false }), k)),
     );
+  });
+});
+
+describe('kontrast (WCAG)', () => {
+  it('schwarz auf weiß ist 21 : 1, gleiche Farben 1 : 1, die Reihenfolge ist egal', () => {
+    expect(kontrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(kontrast('#ffffff', '#000')).toBeCloseTo(21, 5);
+    expect(kontrast('#336699', '#336699')).toBeCloseTo(1, 5);
+  });
+
+  it('bekannte Werte: #767676 auf Weiß ist knapp über 4,5 (die bekannte AA-Grenze), #777 knapp darunter', () => {
+    expect(kontrast('#767676', '#fff')).toBeGreaterThanOrEqual(KONTRAST_MINDEST);
+    expect(kontrast('#777777', '#fff')).toBeLessThan(KONTRAST_MINDEST);
+  });
+
+  it('die Kurzform #rgb zählt wie die lange', () => {
+    expect(kontrast('#f80', '#000')).toBe(kontrast('#ff8800', '#000000'));
+  });
+
+  it('keine Hex-Farbe: null – nie eine Zahl aus einem Fehler', () => {
+    expect(kontrast('red', '#fff')).toBeNull();
+    expect(kontrast('#fff', 'rgb(0,0,0)')).toBeNull();
+  });
+
+  it('die neutralen Farben der Vorgabe sind gut lesbar (sonst warnte schon der Anfang)', () => {
+    expect(kontrast(NEUTRALE_FARBEN.text, NEUTRALE_FARBEN.grund)).toBeGreaterThan(KONTRAST_MINDEST);
+    expect(kontrast(NEUTRALE_FARBEN.text, NEUTRALE_FARBEN.sanft)).toBeGreaterThan(KONTRAST_MINDEST);
   });
 });

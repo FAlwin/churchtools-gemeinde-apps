@@ -472,3 +472,23 @@ describe('Eine ungültige Seite wird nicht gespeichert (Schema vor dem Schreiben
     expect((await websiteLesen(s.port, 7, 1)).seiten).toHaveLength(1);
   });
 });
+
+describe('Einstellungen speichern prüft vorher mit dem Schema (W3a-3)', () => {
+  it('Ungültiges wird nicht geschrieben – 422, kein einziger Schreibzugriff', async () => {
+    const s = fakeSpeicher();
+    const kaputt = einstellungen({ eigenesCss: 'x'.repeat(20_001) });
+    await expect(einstellungenSpeichern(s.ort, kaputt, JETZT)).rejects.toMatchObject({
+      status: 422,
+    });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('Gültiges mit 20.000 Zeichen eigenem CSS passt (mehrere Teile) und kommt unverändert zurück', async () => {
+    const s = fakeSpeicher();
+    const css = Array.from({ length: 2000 }, (_, i) => `.a${i}{b:${i}}`)
+      .join('')
+      .slice(0, 20_000);
+    await einstellungenSpeichern(s.ort, einstellungen({ eigenesCss: css }), JETZT);
+    expect((await websiteLesen(s.port, 7, 1)).einstellungen?.eigenesCss).toBe(css);
+  });
+});

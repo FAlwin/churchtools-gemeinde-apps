@@ -249,3 +249,41 @@ Lebenszeichen oder wenn A die Seite verlässt, geht es für B.
 - **Historie:** neu mit W3a-2 (20.11.2026); 7 + 8 mit W3a-2c (20.11.2026, nach dem Befund „sperrt sich nach dem Neuladen selbst aus“)
 
 </details>
+
+### TF-WEBSITE-10 · Aussehen: Farben, Schriften, Kontrast-Hinweis, eigenes CSS – mit Vorschau und Speichern
+
+**Das brauchst du:** Die Website in der Test-Instanz, ein Konto mit Admin- oder Leitungsrecht, eine Startseite; für die Sperre ein
+zweites Konto (B) in einem zweiten Browser.
+
+**Das muss passieren:** Im Reiter **Aussehen** steht links das Formular (Farben, Schriften, Logo, Eigenes CSS), rechts die
+Vorschau der Startseite. Jede Änderung ist sofort in der Vorschau zu sehen (das eigene CSS nach einem kurzen Moment) und wird
+nach etwa einer Sekunde gespeichert („Speichert … / Gespeichert“). Nach einem Neuladen der Seite stehen die Werte wieder da. Am
+Handy steht die Vorschau unter dem Formular.
+
+1. Reiter **Aussehen**: Die Farben und die gewählten Schriften stehen so da wie auf der Website; „Hauptfarbe dunkel“ zeigt
+   „abgeleitet“, wenn nichts gesetzt ist.
+2. In „Hauptfarbe“ eine neue Farbe tippen (`#7a1f3d`) und mit dem Farbwähler eine andere wählen: Die Vorschau färbt Knöpfe und
+   Flächen um. Etwas Ungültiges tippen (`rot`, `#12`) und das Feld verlassen: Es springt auf die geltende Farbe zurück, nichts
+   wird gespeichert.
+3. Bei „Text“ eine sehr helle Farbe (`#dddddd`) wählen: Unter „Text“ erscheinen ruhige Hinweise zum Kontrast – je Problem
+   genau einer („Text auf Hintergrund“, „Text auf Sanft“), nicht zusätzlich an den Flächen. **Gespeichert wird trotzdem.** Wieder eine dunkle Farbe: Der Hinweis verschwindet.
+4. Bei „Überschriften“ eine andere Schrift wählen (z. B. „Playfair Display“): Die Vorschau zeigt sie nach einem kurzen Moment, die
+   Schrift „Text“ bleibt. Die Auswahl ist nach Art gruppiert; „Eigene Schrift …“ zeigt nur den Hinweis zum Hochladen der Bilder.
+5. Bei „Eigenes CSS“ etwas eintragen (`.w-fuss { font-size: 0.9rem; }`): Die Vorschau folgt verzögert. Mehr als 20.000 Zeichen:
+   „Noch nicht gespeichert“ mit Grund, nichts wird geschrieben.
+6. Seite neu laden: Farben, Schriften und CSS sind gespeichert; im Reiter **Seiten** zeigt die Vorschau dieselben Schriften.
+7. Netz aus, eine Farbe ändern: „Nicht gespeichert“ mit **Erneut versuchen**, die Vorschau zeigt die Änderung weiter. Netz an,
+   **Erneut versuchen**: „Gespeichert“.
+8. **Sperre:** A ändert eine Farbe. B öffnet **Aussehen**: Hinweis „Das Aussehen bearbeitet gerade A“, alle Felder abgeschaltet.
+   **Bearbeitung übernehmen** (mit Rückfrage) schaltet sie für B frei; bei A erscheint spätestens nach einer Minute der Hinweis, dass
+   ein anderes Fenster übernommen hat.
+9. Reiter wechseln, kurz nachdem eine Farbe geändert wurde: Die Änderung ist gespeichert (Neuladen zeigt sie).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `website/src/Aussehen.tsx`, `website/src/useSperrarbeit.ts`, `website/src/schriftLader.ts`, `shared/website/aussehen.ts`, `shared/website/theme.ts`
+- **Automatisiert:** teilweise – `website/src/Aussehen.test.tsx` (Farben, ungültiger Hex, Kontrast-Hinweis, Schriften, CSS, Sperre, Speichern scheitert, Verlassen), `shared/website/aussehen.test.ts`, `shared/website/theme.test.ts` (Kontrast, data:-Schrift), `website/src/schriftLader.test.ts` und `useSchriften.test.tsx` (nur gewählte laden, Ladefehler), `shared/website/schriftdateien.test.ts`; die Schriften im echten `iframe` von ChurchTools und das Zusammenspiel zweier Browser nur von Hand
+- **Historie:** neu mit W3a-3a (20.11.2026)
+
+</details>

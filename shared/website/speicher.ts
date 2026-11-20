@@ -33,6 +33,7 @@ import { istSperrWert, sperreAusWerten, sperreWert } from './sperre';
 import {
   einstellungenAlsText,
   einstellungenAusText,
+  einstellungenSchema,
   menueAlsText,
   menueAusText,
   seiteAlsText,
@@ -144,6 +145,12 @@ export interface WebsiteStand {
    * (Zeit!). Nur, was die Oberfläche beim Öffnen einer Seite wissen will; genommen und erneuert wird in `sperre.ts`.
    */
   sperren: Record<string, Sperre>;
+  /**
+   * Wer bearbeitet gerade die **Einstellungen** (Aussehen, W3a-3) – `null`: niemand. Eigene Sperre (`einheit:
+   * 'einstellungen'`), nicht in `sperren`: Das ist nach Seiten-IDs geschlüsselt und eine Seite hieße sonst vielleicht
+   * wie die Einstellungen.
+   */
+  einstellungenSperre: Sperre | null;
 }
 
 /**
@@ -156,6 +163,8 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
   const teile = new Map<string, WebsiteTeil[]>();
   const sperren: Record<string, Sperre> = {};
   const sperrSeiten = new Set<string>();
+  let einstellungenSperre: Sperre | null = null;
+  let einstellungenSperreGesehen = false;
 
   for (const w of [...werte].sort((a, b) => a.id - b.id)) {
     const x = inhalt(w);
@@ -190,6 +199,15 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
       if (sw && sw.einheit === 'seite' && !sperrSeiten.has(sw.id)) {
         sperrSeiten.add(sw.id);
         if (sw.sperre) sperren[sw.id] = sw.sperre;
+      } else if (
+        sw &&
+        sw.einheit === 'einstellungen' &&
+        sw.id === EINSTELLUNGEN_ID &&
+        !einstellungenSperreGesehen
+      ) {
+        // Wie bei den Seiten gilt der Wert mit der kleinsten ID (die Schleife läuft danach sortiert).
+        einstellungenSperreGesehen = true;
+        einstellungenSperre = sw.sperre;
       }
     } else {
       probleme.push({
@@ -237,7 +255,7 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
 
   let verwaist = 0;
   for (const [s, liste] of teile) if (!koepfe.has(s)) verwaist += liste.length;
-  return { seiten, menue, einstellungen, probleme, verwaist, sperren };
+  return { seiten, menue, einstellungen, probleme, verwaist, sperren, einstellungenSperre };
 }
 
 /** **Die ganze Kategorie lesen** und zusammensetzen. Wirft bei jedem Fehler (vorübergehend ist nicht leer). */
@@ -408,8 +426,23 @@ export async function seiteSpeichern(o: Ort, seite: Seite, jetzt?: Date): Promis
 }
 export const menueSpeichern = (o: Ort, menue: Menue, jetzt?: Date) =>
   einheitSpeichern(o, 'menue', MENUE_ID, menueAlsText(menue), jetzt);
-export const einstellungenSpeichern = (o: Ort, e: Einstellungen, jetzt?: Date) =>
-  einheitSpeichern(o, 'einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(e), jetzt);
+/**
+ * Die Einstellungen speichern. **Wie bei den Seiten wird vorher mit dem Schema geprüft** (W3a-3: Der Reiter „Aussehen“ prüft
+ * selbst und zeigt die Meldung – das hier ist die letzte Sicherung, damit nie etwas Unlesbares im Speicher landet).
+ */
+export async function einstellungenSpeichern(
+  o: Ort,
+  e: Einstellungen,
+  jetzt?: Date,
+): Promise<void> {
+  const r = einstellungenSchema.safeParse(e);
+  if (!r.success)
+    throw o.p.fehler(
+      422,
+      `Diese Einstellungen sind nicht gültig und wurden nicht gespeichert: ${r.error.issues[0]?.message ?? 'unbekannter Fehler'}`,
+    );
+  await einheitSpeichern(o, 'einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(e), jetzt);
+}
 export const seiteLoeschen = (o: Ort, id: string) => einheitLoeschen(o, 'seite', id);
 
 export type { Ort as SpeicherOrt };

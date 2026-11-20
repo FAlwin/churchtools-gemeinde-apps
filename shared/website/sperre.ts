@@ -85,17 +85,28 @@ export function sperreAusWerten(
   return null;
 }
 
+/**
+ * Was gesperrt wird: eine Seite (nur die ID – so rufen es die Seiten seit W3a-2 auf) oder eine andere Einheit mit fester
+ * Kennung (die Einstellungen, W3a-3: `{ einheit: 'einstellungen', id: EINSTELLUNGEN_ID }`). **Eine Regel für alle** –
+ * nur der Schlüssel (`einheit` + `id`) unterscheidet, nicht der Ablauf.
+ */
+export type SperrZiel = string | { einheit: Einheit; id: string };
+
+function zielVon(z: SperrZiel): { einheit: Einheit; id: string } {
+  return typeof z === 'string' ? { einheit: 'seite', id: z } : z;
+}
+
 /** `ok`: die Sperre liegt bei diesem Fenster; `werte` ist der frisch gelesene Stand der Kategorie. */
 export type BeginnErgebnis = { art: 'ok'; werte: Wert[] } | { art: 'gesperrt'; sperre: Sperre };
 
 const VERWEIGERT = 'Du darfst die Website nicht bearbeiten.';
 
-function inhaltText(id: string, sperre: Sperre | null): string {
+function inhaltText(ziel: { einheit: Einheit; id: string }, sperre: Sperre | null): string {
   return JSON.stringify({
     art: ART,
     fassung: 1,
-    einheit: 'seite',
-    id,
+    einheit: ziel.einheit,
+    id: ziel.id,
     sperre,
   } satisfies WebsiteSperre);
 }
@@ -110,32 +121,33 @@ function inhaltText(id: string, sperre: Sperre | null): string {
  */
 export async function bearbeitungBeginnen(
   { p, modul, kategorie }: SpeicherOrt,
-  seiteId: string,
+  seiteId: SperrZiel,
   ich: Schreiber,
   jetzt: Date = new Date(),
 ): Promise<BeginnErgebnis> {
+  const ziel = zielVon(seiteId);
   const vorher = await werteLesen(p, modul, kategorie);
-  const da = sperreAusWerten(vorher, 'seite', seiteId);
+  const da = sperreAusWerten(vorher, ziel.einheit, ziel.id);
   if (sperreLage(da?.sperre ?? null, ich, jetzt) === 'fremd')
     return { art: 'gesperrt', sperre: da!.sperre! };
 
-  return sperreSchreiben({ p, modul, kategorie }, seiteId, ich, da, jetzt);
+  return sperreSchreiben({ p, modul, kategorie }, ziel, ich, da, jetzt);
 }
 
 /** Die eigene Sperre schreiben (ändern oder anlegen) und **nachlesen**: Nur was danach bei uns steht, gehört uns. */
 async function sperreSchreiben(
   { p, modul, kategorie }: SpeicherOrt,
-  seiteId: string,
+  ziel: { einheit: Einheit; id: string },
   ich: Schreiber,
   da: { wert: number } | null,
   jetzt: Date,
 ): Promise<BeginnErgebnis> {
-  const text = inhaltText(seiteId, sperreVon(ich, jetzt));
+  const text = inhaltText(ziel, sperreVon(ich, jetzt));
   if (da) await wertAendern(p, modul, kategorie, da.wert, text, VERWEIGERT);
   else await wertAnlegen(p, modul, kategorie, text, VERWEIGERT);
 
   const nachher = await werteLesen(p, modul, kategorie);
-  const jetztDa = sperreAusWerten(nachher, 'seite', seiteId);
+  const jetztDa = sperreAusWerten(nachher, ziel.einheit, ziel.id);
   if (jetztDa?.sperre && sperreLage(jetztDa.sperre, ich, jetzt) === 'meine')
     return { art: 'ok', werte: nachher };
   if (jetztDa?.sperre) return { art: 'gesperrt', sperre: jetztDa.sperre };
@@ -154,12 +166,13 @@ async function sperreSchreiben(
  */
 export async function bearbeitungUebernehmen(
   ort: SpeicherOrt,
-  seiteId: string,
+  seiteId: SperrZiel,
   ich: Schreiber,
   jetzt: Date = new Date(),
 ): Promise<BeginnErgebnis> {
+  const ziel = zielVon(seiteId);
   const vorher = await werteLesen(ort.p, ort.modul, ort.kategorie);
-  return sperreSchreiben(ort, seiteId, ich, sperreAusWerten(vorher, 'seite', seiteId), jetzt);
+  return sperreSchreiben(ort, ziel, ich, sperreAusWerten(vorher, ziel.einheit, ziel.id), jetzt);
 }
 
 /**
@@ -168,11 +181,12 @@ export async function bearbeitungUebernehmen(
  */
 export async function bearbeitungBeenden(
   { p, modul, kategorie }: SpeicherOrt,
-  seiteId: string,
+  seiteId: SperrZiel,
   ich: Schreiber,
   jetzt: Date = new Date(),
 ): Promise<void> {
-  const da = sperreAusWerten(await werteLesen(p, modul, kategorie), 'seite', seiteId);
+  const ziel = zielVon(seiteId);
+  const da = sperreAusWerten(await werteLesen(p, modul, kategorie), ziel.einheit, ziel.id);
   if (!da?.sperre || sperreLage(da.sperre, ich, jetzt) !== 'meine') return;
-  await wertAendern(p, modul, kategorie, da.wert, inhaltText(seiteId, null), VERWEIGERT);
+  await wertAendern(p, modul, kategorie, da.wert, inhaltText(ziel, null), VERWEIGERT);
 }

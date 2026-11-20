@@ -4,6 +4,7 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { darfEigenesHtml } from '@shared/website/zugang';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { Aussehen } from './Aussehen';
 import { Einrichtung } from './Einrichtung';
 import { Hinweis, Leise } from './Hinweis';
 import { Seiten } from './Seiten';
@@ -22,7 +23,7 @@ const REITER: Reiter<ReiterId>[] = [
  * **Die Website in ChurchTools** (Bauplan Website W3a-1). Je nach Stand der Einrichtung und je nach Person:
  * - nicht eingerichtet, Admin → Einrichten (Gruppe wählen); sonst ein freundlicher Hinweis;
  * - eingerichtet, aber weder Admin noch Leitung der Gruppe → Hinweis, wer die Website bearbeiten darf;
- * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** (die beiden letzten kommen in späteren Schritten).
+ * - sonst der Rahmen mit den Reitern **Seiten | Aussehen | Freigaben** (Freigaben kommt in einem späteren Schritt).
  *
  * Reiter oben am Computer, unten am Handy – wie im Dienstplaner. Scheitert das Laden vorübergehend, gibt es „Erneut
  * versuchen“ statt einer halben Seite.
@@ -79,13 +80,12 @@ export function App() {
           rechte={{ html: darfEigenesHtml(editor.zugang) }}
         />
       )}
-      {editor && aktiv === 'aussehen' && (
-        <Hinweis titel="Aussehen">
-          <Leise>
-            Hier stellst du später Farben, Schriften und das Logo der Website ein. Das kommt in
-            einem der nächsten Schritte.
-          </Leise>
-        </Hinweis>
+      {editor && entwuerfe !== null && aktiv === 'aussehen' && (
+        <Aussehen
+          ort={{ modul: editor.modul, kategorie: entwuerfe }}
+          gemeinde={editor.gemeinde}
+          ich={ich}
+        />
       )}
       {editor && aktiv === 'freigaben' && (
         <Hinweis titel="Freigaben">

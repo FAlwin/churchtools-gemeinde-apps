@@ -7,6 +7,8 @@
 import { modulPort } from '@ui/ct/modulPort';
 import type { Schreiber, Sperre } from '@shared/ct/sperre';
 import {
+  EINSTELLUNGEN_ID,
+  einstellungenSpeichern,
   menueSpeichern,
   seiteLoeschen,
   seiteSpeichern,
@@ -21,7 +23,7 @@ import {
   bearbeitungUebernehmen,
 } from '@shared/website/sperre';
 import type { BeginnErgebnis } from '@shared/website/sperre';
-import type { Menue, Seite } from '@shared/website/modell';
+import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 
 export interface EntwurfsOrt {
   modul: number;
@@ -76,3 +78,38 @@ function beginnAus(r: BeginnErgebnis, seiteId: string): Beginn {
 /** Die eigene Sperre freigeben – „so gut es geht“: der Aufrufer fängt Fehler ab (die Sperre verfällt dann von selbst). */
 export const beendeBearbeiten = (o: EntwurfsOrt, seiteId: string, ich: Schreiber) =>
   bearbeitungBeenden(ort(o), seiteId, ich);
+
+// ── Einstellungen (Aussehen, W3a-3) ──────────────────────────────────────────────────────────────────────────────────────
+
+/** Die Sperre der Einstellungen: derselbe Ablauf wie bei den Seiten (`sperre.ts`), nur mit festem Ziel. */
+const EINSTELLUNGEN_ZIEL = { einheit: 'einstellungen', id: EINSTELLUNGEN_ID } as const;
+
+export const speichereEinstellungen = (o: EntwurfsOrt, e: Einstellungen) =>
+  einstellungenSpeichern(ort(o), e);
+
+/** Wie `Beginn`, nur für die Einstellungen: `null` heißt „noch nichts gespeichert“ (dann gilt der Anfang). */
+export type EinstellungenBeginn =
+  | { art: 'ok'; einstellungen: Einstellungen | null }
+  | { art: 'gesperrt'; sperre: Sperre };
+
+function einstellungenBeginn(r: BeginnErgebnis): EinstellungenBeginn {
+  if (r.art === 'gesperrt') return r;
+  return { art: 'ok', einstellungen: websiteAusWerten(r.werte).einstellungen };
+}
+
+export async function beginneEinstellungen(
+  o: EntwurfsOrt,
+  ich: Schreiber,
+): Promise<EinstellungenBeginn> {
+  return einstellungenBeginn(await bearbeitungBeginnen(ort(o), EINSTELLUNGEN_ZIEL, ich));
+}
+
+export async function uebernimmEinstellungen(
+  o: EntwurfsOrt,
+  ich: Schreiber,
+): Promise<EinstellungenBeginn> {
+  return einstellungenBeginn(await bearbeitungUebernehmen(ort(o), EINSTELLUNGEN_ZIEL, ich));
+}
+
+export const beendeEinstellungen = (o: EntwurfsOrt, ich: Schreiber) =>
+  bearbeitungBeenden(ort(o), EINSTELLUNGEN_ZIEL, ich);

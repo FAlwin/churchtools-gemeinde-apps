@@ -11,6 +11,8 @@ vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // Die Seiten selbst sind in `Seiten.test.tsx` geprüft – hier geht es um den Rahmen und wer hineindarf.
 vi.mock('./Seiten', () => ({ Seiten: () => <p>SEITEN-INHALT</p> }));
 vi.mock('./Einrichtung', () => ({ Einrichtung: () => <p>EINRICHTUNG</p> }));
+// … ebenso das Aussehen (`Aussehen.test.tsx`).
+vi.mock('./Aussehen', () => ({ Aussehen: () => <p>AUSSEHEN-INHALT</p> }));
 const ladeStart = vi.mocked(S.ladeStart);
 
 const einrichtung = einrichtungAus(
@@ -44,14 +46,15 @@ describe('Rahmen und Zugang', () => {
     );
   });
 
-  it('„Aussehen“ und „Freigaben“ zeigen in dieser Scheibe nur einen ruhigen Hinweis', async () => {
+  it('„Aussehen“ zeigt den Reiter Aussehen, „Freigaben“ noch einen ruhigen Hinweis', async () => {
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     fireEvent.click(screen.getByRole('button', { name: 'Aussehen' }));
-    expect(screen.getByText(/Das kommt in einem der nächsten Schritte/)).toBeTruthy();
+    expect(screen.getByText('AUSSEHEN-INHALT')).toBeTruthy();
     expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Freigaben' }));
     expect(screen.getByText(/Das kommt in einem der nächsten Schritte/)).toBeTruthy();
+    expect(screen.queryByText('AUSSEHEN-INHALT')).toBeNull();
   });
 
   it('Mitglied ohne Leitung: freundlicher Hinweis, KEIN Editor, keine Reiter', async () => {

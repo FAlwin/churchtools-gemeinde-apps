@@ -111,22 +111,22 @@ Fälligkeit“ als Status. Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mi
 für die noch niemand zuständig ist. Der **Haken** vorne an der Karte (Kreis, 44 px zum Antippen; grün gefüllt = erledigt) hakt mit
 einem Tipp ab (offen oder in Arbeit → erledigt) und nimmt zurück (erledigt → offen) – **nie** weiter auf „in Arbeit“; das stellt man
 im Fenster ein oder zieht im Board. „In Arbeit“ zeigt die Karte als **Schild** in der Fußzeile (im Board nicht in der Spalte „In
-Arbeit“, bei „Jeder für sich“ gar nicht – dort sagt „2/4“ den Stand). Nach dem Abhaken
+Arbeit“, bei „Jeder für sich“ gar nicht – dort sagt „2/4“ der Leitung den Stand; ein Mitarbeiter sieht nur seinen Teil, W10). Nach dem Abhaken
 bleibt die Karte **5 Sekunden an ihrem Platz** (durchgestrichen) mit **„Rückgängig“ direkt an der Karte** (in der Tabelle in der Zeile), dann rutscht sie zu „Erledigt“.
 Das geht ohne ins Protokoll zu springen, auch wenn es schon freigegeben ist. Bei **„Jeder für sich“** (siehe Fenster „To-Do“) ist der
-Haken **mein Teil**; wer nicht zuständig ist, sieht nur den Fortschritt.
+Haken **mein Teil**; wer nicht zuständig ist (die Leitung), sieht nur den Fortschritt.
 
 **Karte und Tabelle (W8b, Entwurf `todos-vorschlaege-v2`):** Die **Karte** (Liste am Handy, Board überall) hat zwei Teile: oben der Haken,
 klein und blau die Gruppe (nur wenn mehrere Gruppen zu sehen sind) und der Titel (öffnet das Fenster), darunter eine **Fußzeile** –
 links das **Frist-Kästchen**, das Schild „in Arbeit“ und die **Symbole**, rechts die **Gesichter** der Zuständigen (höchstens 3, bei mehr 2 und „+N“; der
 Tooltip nennt alle Namen, Externe stehen als Text). **Frist in Worten:** „seit 20.10.“ (rot umrandet), „heute“ und „morgen“ (orange), innerhalb der
 nächsten 7 Tage der Wochentag („Samstag“), sonst „29.11.“; der Tooltip nennt das volle Datum; erledigt: nur das Datum, neutral (`fristAnzeige`
-in `shared/protokolle/frist.ts`). **Symbole:** bei „Jeder für sich“ ☑ 2/5 – ein Tipp klappt auf, wer fertig ist (Name, „✓ 17.11.“ oder „offen“; in
+in `shared/protokolle/frist.ts`). **Symbole:** bei „Jeder für sich“ ☑ 2/5 (nur die Leitung, W10) – ein Tipp klappt auf, wer fertig ist (Name, „✓ 17.11.“ oder „offen“; in
 Liste, Tabelle und Board); Sprechblase mit der Zahl der **Notizen**; Dokument-Symbol **„aus einer Sitzung“** (Tooltip „Aus …“, ein Tipp führt
 im Protokoll dorthin). Ist im Fenster bei „Notizen“ **„Auf Karte anzeigen“** an, steht die letzte Notiz zusätzlich als leise Zeile unter dem Titel.
 **Erledigte** Karten zeigen statt der Fußzeile „Erledigt von Peter am 12.11.“ (mit Gesicht; bei „Jeder für sich“ „Alle fertig am …“) – `erledigtSatz`.
 **Am Computer** wird die Liste eine **Tabelle** mit festen Spalten: Haken · Aufgabe (eine Zeile) · Gruppe · Fällig · Zuständig · Stand (offen · in Arbeit ·
-„2 von 5 fertig“ · erledigt mit Gesicht und Datum) · Überblick (Symbole). Die Form richtet sich nach der **Breite des Kastens**, nicht des Fensters (die
+„2 von 5 fertig“ – nur die Leitung · erledigt mit Gesicht und Datum) · Überblick (Symbole). Die Form richtet sich nach der **Breite des Kastens**, nicht des Fensters (die
 Erweiterung läuft in ChurchTools mit unbekannter Breite): ab 720 px Tabelle ohne Gruppe, ab 860 px mit der Spalte „Gruppe“ (nur wenn mehrere Gruppen zu
 sehen sind), darunter Karten (`listenForm`). Das Board bleibt Karten.
 
@@ -142,7 +142,7 @@ Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere 
 Erledigt (Überfällige rot in ihrer Spalte), **nach Person** je Person (bei genau einer Gruppe im Filter auch deren
 Mitglieder ohne To-Do), „Außerhalb der Gruppe“ und „Noch niemand zuständig“; je Spalte „+ Neues To-Do“ mit
 vorbelegtem Status bzw. Zuständigen. **Ziehen:** mit der Maus die ganze Karte, mit dem Finger **lange drücken** (~0,4 s)
-– vorher blättert ein Wischen. Nach Status ändert Ziehen den Status (bei „Jeder für sich“ nicht – der Gesamtstand ergibt sich aus den Teilen), nach Person **tauscht es nur die gezogene Person**
+– vorher blättert ein Wischen. Nach Status ändert Ziehen den Status (bei „Jeder für sich“ nicht – der Gesamtstand ergibt sich aus den Teilen; ein Mitarbeiter setzt mit Ziehen nach „Erledigt“/„Offen“ seinen eigenen Teil, nach „In Arbeit“ geht es nicht, W10), nach Person **tauscht es nur die gezogene Person**
 („Außerhalb“ nimmt nichts an). Gibt ein Mitglied sein eigenes To-Do ab (danach sieht es es nicht mehr), fragt die Seite
 vorher. Jeder Wechsel der Zuständigen steht im **Verlauf** („Zuständig: Spike → Johann“) – im Board, im Fenster, im
 Editor und beim Verschieben in eine andere Gruppe. **Reihenfolge** (im Filter, gilt für alle Spalten und Abschnitte):
@@ -191,8 +191,8 @@ und im To-Do-Hinweis steht ein solches To-Do nur, **solange mein Teil fehlt**. I
 – ChurchTools kennt dafür kein eigenes Recht. Karten, feste Punkte und das Schildchen zeigen bei vielen Zuständigen **höchstens drei Namen und „+N“** (die
 volle Liste im Tooltip); im Lesen und im PDF steht immer die ganze Liste. Bei „Notizen“ ein Schalter **„Auf Karte
 anzeigen“** (die letzte Notiz als Zeile auf der Karte) – für alle gespeichert; „Aus welcher Sitzung“ hat seit W8b keinen Schalter mehr, das
-Dokument-Symbol steht immer da. **Reihenfolge im Fenster** (W8b): Was · Gruppe + Bis · Zuständig · So wird es erledigt · Status bzw. „Wer ist fertig?“ · Notizen ·
-Sitzung · Verlauf; ist ein gemeinsames To-Do erledigt, steht unter dem Status „Erledigt von … am …“. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
+Dokument-Symbol steht immer da. **Reihenfolge im Fenster** (W8b, W10): Was · Gruppe + Bis · Zuständig (klappbar, darin „So wird es erledigt“) · Status bzw. „Wer ist fertig?“ (klappbar) ·
+Notizen · Sitzung · Verlauf (klappbar, nur Leitung); ein Mitarbeiter bei „Jeder für sich“ sieht statt Zuständig und Fertig-Liste nur den großen Haken; ist ein gemeinsames To-Do erledigt, steht unter dem Status „Erledigt von … am …“. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
 Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
 zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf** (dort führt das Protokoll), werden Text,
 Gruppe und Löschen im Entwurf **nachgezogen** (S7-2b): Text ändert sich mit, Löschen nimmt die Aufgabe heraus, eine

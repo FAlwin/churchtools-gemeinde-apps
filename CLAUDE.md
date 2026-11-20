@@ -954,6 +954,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.4.0` (21.11.2026) = W10 „Jeder für sich“ nachgeschärft** (#1103): Ein Mitarbeiter sieht nur seinen Teil
+  (`standFuer`/`sichtFuer` in `shared/protokolle/aufgaben.ts`), den Verlauf nur die Leitung, im Fenster klappbare Abschnitte
+  (`protokolle/src/Klappbar.tsx`). Live, lesend geprüft, iPhone und Zwei-Konten-Abnahme (TF-PROT-27) bestanden. **Das
+  Datumsfeld-Mixin `datumsfeld` (Datum in Safari mittig) gilt für alle Apps** – ausgeliefert ist es bisher nur in den
+  Protokollen; Musik-App, Dienstplaner, Anmeldungen bekommen es mit ihrem nächsten Release.
 - **v2.41.0 (20.11.2026) = „Ruhige Bedienung“ (Bauplan `bedienung-planung`, Scheiben B1–B9, Ablauf, R13, Abnahme-Funde
   #1064–#1094).** Weniger und leisere Knöpfe in allen Apps: Werkzeugzeilen mit ⋯-Menü, Reiter unterstrichen, ein Seitenkopf,
   ein Status-Etikett, „Einstellungen“ als letzter Reiter (Musik-App: „Mehr“ → „Einstellungen“, Ablaufvorlagen unter

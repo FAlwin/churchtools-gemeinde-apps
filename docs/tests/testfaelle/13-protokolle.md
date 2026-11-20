@@ -895,7 +895,7 @@ ein Satz mit Schloss sagt, wer es ändert.
    Du bist eingetragen.
 6. **Neues To-Do** als Mitglied: Oben steht **„Wofür? Für mich | Vorschlag an die Gruppe“**; bei „Für mich“ steht bei „Zuständig“ fest dein Name (keine Liste, kein
    Feld für Externe) und „Anlegen“ legt es für dich an. („Vorschlag an die Gruppe“: siehe TF-PROT-26.)
-7. Als **Leitung**: Alle vier To-Dos zeigen alle Felder, „Löschen“, die Zuständigen-Liste und „So wird es erledigt“ – kein Schloss-Satz.
+7. Als **Leitung**: Alle vier To-Dos zeigen alle Felder und „Löschen“ – kein Schloss-Satz. Die Zuständigen-Liste und „So wird es erledigt“ stehen im **zugeklappten Abschnitt „Zuständig“** (antippen), der **Verlauf** ebenso (TF-PROT-27).
 8. **Entwurf:** Hat „TEST Eigen“ eine Aufgabe in einem Protokoll-**Entwurf**, steht beim Mitglied dort **Text als Text**, **kein Löschen** und ein Satz, dass die Leitung
    das im Entwurf macht; die Frist bleibt änderbar.
 9. **Schreibweg:** Öffne als Mitglied „TEST Niemand“ und lass in der Leitungs-Sitzung „TEST Niemand“ inzwischen jemand anderem zuweisen; tippe dann „Das mache ich“: Eine
@@ -946,5 +946,37 @@ Spalte. Aus demselben Eintrag wird beim Übernehmen ein gewöhnliches To-Do.
 - **Betrifft:** `shared/protokolle/todoVorschlag.ts`, `shared/protokolle/aufgaben.ts`, `protokolle/src/todoVorschlagSchreiben.ts`, `protokolle/src/aufgabenSchreiben.ts`, `protokolle/src/lesen.ts`, `protokolle/src/mitarbeitWerte.ts`, `protokolle/src/ToDoVorschlaege.tsx`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/ToDos.tsx`
 - **Automatisiert:** größtenteils – `shared/protokolle/todoVorschlag.test.ts` (Regeln, Rechte, Sichtbarkeit), `protokolle/src/todoVorschlagSchreiben.test.ts` (Schreibweg und Leser gegen die nachgestellte ChurchTools-Instanz: 409, Übernehmen, Nachlesen), `protokolle/src/todoVorschlagLeser.test.tsx` (Reiter To-Dos, Startseite, Zähler), `protokolle/src/ToDos.vorschlaege.test.tsx` (Bereich, Fenster, Wahl), `protokolle/src/ProtokollSchreiben.test.tsx` (feste Punkte); **nur von Hand:** Aussehen am Handy, echtes Zweikonto-Rennen
 - **Historie:** 20.11.2026 (W9b, Entwurf `todos-rechte-w9-v1`)
+
+</details>
+
+### TF-PROT-27 · „Jeder für sich“: Mitarbeiter sieht nur seinen Teil, Leitung klappt auf
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe mit mindestens **vier Mitgliedern**, dazu zwei Konten: du als **Leitung** und ein **Mitglied** (ohne
+Protokoll-Schreibrecht; „Benutzer simulieren“, danach beenden und in `/api/logs` nach „simulates“ sehen, dass nichts hängen blieb). Lege als Leitung das To-Do
+„TEST Jeder“ an: das Mitglied und mindestens drei weitere zuständig, **Jeder für sich**, mit einer Notiz („TEST Notiz“). Ein Rechner und ein Handy (oder 390 px
+Breite), dazu Safari (Mac oder iPhone) für das Datumsfeld. In der Entwicklung zeigt `?demo=mitglied` die Mitglieder-Sicht.
+
+**Das muss passieren:** Für das Mitglied ist es **nur seine Aufgabe**: kein Zähler, keine anderen Zuständigen, kein Verlauf. Sein Haken ist sein Stand. Die Leitung
+sieht alles, aber zugeklappt.
+
+1. Als **Mitglied** in **To-Dos**: „TEST Jeder“ steht unter **Offen** (Board und Liste), **ohne** „0/4“, ohne Gesichter der anderen und ohne „in Arbeit“.
+2. Öffnen: Es gibt **kein** „Zuständig“, **kein** „Wer ist fertig?“ und **keinen Verlauf**. Unter **Notizen** steht „TEST Notiz“ (mit Name und Datum) über dem Notizfeld.
+   Ein großer Haken **„Ich habe es erledigt“** ist da. Antippen: er steht auf **„Erledigt“**; speichern.
+3. Das To-Do steht jetzt bei dir unter **Erledigt** (Board-Spalte, Liste), auf der Startseite ist es aus „Meine offenen To-Dos“ verschwunden – obwohl ein anderes
+   Mitglied noch nicht fertig ist. Die Karte ist durchgestrichen und sagt **„Von dir erledigt am …“**. Öffne es und tippe den Haken noch einmal: Er nimmt zurück.
+4. **Board:** Ziehe „TEST Jeder“ von Offen nach **Erledigt**: Es setzt nur deinen Teil. Nach **In Arbeit** geht es nicht.
+5. Als **Leitung**: dasselbe To-Do steht (nach dem Schritt 2) unter **In Arbeit**, mit Zähler „1/4“. Im Fenster sind **Zuständig**, **Wer ist fertig?** und **Verlauf**
+   **zu**, jeweils mit Kurzzeile („Alle (4) · Jeder für sich“ bzw. Namen, Balken und „1 von 4 fertig“, „N Einträge · zuletzt …“). Aufklappen: Die Personen stehen in
+   **zwei Spalten** (am Handy in einer); „Außerhalb der Gruppe“ und der Umschalter Gemeinsam / Jeder für sich stehen unter „Zuständig“. Ein **neues** To-Do öffnet
+   „Zuständig“ von selbst.
+6. **Datumsfeld:** In Safari sitzt im Fenster das Datum bei „Bis“ **mittig** im Feld (nicht oben), gleich hoch wie „Gruppe“. Prüfe auch ein Datumsfeld in einer anderen
+   App (z. B. Abwesenheiten, Zeitraum in der Musik-App): Auch dort mittig, Höhe unverändert.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/aufgaben.ts`, `shared/protokolle/uebersicht.ts`, `protokolle/src/ToDoFenster.tsx`, `protokolle/src/Klappbar.tsx`, `protokolle/src/ToDoKarte.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/Suche.tsx`, `ui/design/_mixins.scss`
+- **Automatisiert:** größtenteils – `shared/protokolle/aufgaben.rechte.test.ts` (Regeln), `shared/protokolle/uebersicht.test.ts` (Einteilen, Board, Sortieren, Ziehen nach Sicht), `protokolle/src/ToDoFenster.test.tsx` (Mitarbeiter-Haken, Abschnitte), `protokolle/src/ToDos.jeder.test.tsx` (Karte), `protokolle/src/Startseite.test.tsx`; **nur von Hand:** Aussehen am Handy, Datumsfeld in Safari
+- **Historie:** 20.11.2026 (W10, Live-Test v1.3.0 als Mitarbeiter)
 
 </details>

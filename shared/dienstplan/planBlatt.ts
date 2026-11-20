@@ -13,6 +13,7 @@ import { datumText, MONATE, tagKurz, tagMonat, tagPunkt } from '../ct/datum';
 import type { Lauf, Zelle } from '../ct/terminBlatt';
 import { zaehleFrei } from './platzNachEntwurf';
 import { gruppenName, type Plan, type PlanGruppe, type PlanPlatz, type PlanSpalte } from './plan';
+import { hatReihenfolge, sortiereNachListe, tagsFuer, type Personenliste } from './personenliste';
 import { werWieOft, type Einsatz, type PersonEinsaetze } from './werWieOft';
 
 /** Die Ansichten des Blatts: „Termine“ (Termine × Dienste), „Personen“ (Personen × Termine) und „Je Person“ (E8-4c). */
@@ -74,6 +75,11 @@ export interface PlanBlattQuelle {
   gemeinde: string | null;
   app: string;
   stand: string;
+  /**
+   * Die Personenlisten je Dienstgruppe (ID, PL-1): „Personen“ druckt Tags hinter dem Namen; bei „Eine Gruppe“ gilt die
+   * gespeicherte Reihenfolge. Ohne Angabe oder ohne Liste der Gruppe ist alles wie bisher.
+   */
+  personenlisten?: ReadonlyMap<number, Personenliste>;
 }
 
 export interface PlanBlattAbschnitt {
@@ -205,22 +211,68 @@ function personenZelle(p: PersonEinsaetze, spalte: PlanSpalte): Zelle {
   return { absaetze: [{ laeufe }] };
 }
 
-/** Eine Personen-Tabelle für höchstens acht Termine; `null`, wenn in ihnen niemand eingeteilt ist. */
+/**
+ * **Die Tags einer Person im PDF** („Begleitung, Leitung“): die Tags, die sie in den **gezeigten** Diensten (denen ihrer
+ * Einsätze in dieser Tabelle) hat – mit dem Namen ausgeschrieben. Gilt ein Tag nur für einen Teil dieser Dienste, steht der
+ * Dienst dahinter („Einweisung (Ton)“). Tags verschiedener Dienstgruppen mit demselben Namen zählen als einer. Leer ohne Tags.
+ */
+function tagsText(
+  p: PersonEinsaetze,
+  listen: ReadonlyMap<number, Personenliste> | undefined,
+): string {
+  if (p.personId === null || !listen) return '';
+  const dienste = new Map<number, { name: string; gruppeId: number | null }>();
+  for (const e of p.einsaetze)
+    if (!dienste.has(e.dienstId)) dienste.set(e.dienstId, { name: e.dienst, gruppeId: e.gruppeId });
+  const gelten = new Map<string, Set<number>>(); // Tag-Name → Dienste, in denen er gilt
+  for (const [dienstId, d] of dienste) {
+    const liste = d.gruppeId === null ? undefined : listen.get(d.gruppeId);
+    for (const t of tagsFuer(liste, dienstId, p.personId)) {
+      const da = gelten.get(t.name) ?? new Set<number>();
+      da.add(dienstId);
+      gelten.set(t.name, da);
+    }
+  }
+  return [...gelten]
+    .map(([name, ids]) =>
+      ids.size === dienste.size
+        ? name
+        : `${name} (${[...ids].map((id) => dienste.get(id)?.name ?? '').join(', ')})`,
+    )
+    .join(', ');
+}
+
+/** Der Name in der ersten Spalte: fett, dahinter grau die Tags (`tagsText`) – wie „Clara Dyck · Begleitung, Leitung“. */
+function personenNameZelle(
+  p: PersonEinsaetze,
+  listen: ReadonlyMap<number, Personenliste> | undefined,
+): Zelle {
+  const tags = tagsText(p, listen);
+  const laeufe: Lauf[] = [{ text: p.name, stil: 'fett' }];
+  if (tags !== '') laeufe.push({ text: ` · ${tags}`, stil: 'grau' });
+  return { absaetze: [{ laeufe }] };
+}
+
+/**
+ * Eine Personen-Tabelle für höchstens acht Termine; `null`, wenn in ihnen niemand eingeteilt ist. `ordnung`: die
+ * Personenliste, nach der die Zeilen stehen (nur „Eine Gruppe“) – sonst alphabetisch.
+ */
 function personenAbschnitt(
   plan: Plan,
   spalten: readonly number[],
   gruppen: readonly PlanGruppe[],
   titel: string | null,
+  q: { listen?: ReadonlyMap<number, Personenliste>; ordnung?: Personenliste },
 ): PlanBlattAbschnitt | null {
   // Die Zählung ist die von „Wer wie oft?“ – hier nur auf die Termine dieser Tabelle begrenzt.
-  const personen = eingeteilte(plan, spalten, gruppen);
+  const personen = eingeteilte(plan, spalten, gruppen, q.ordnung);
   if (personen.length === 0) return null;
   return {
     titel,
     personen: true,
     kopf: ['Person', ...personenKoepfe(plan, spalten), 'Dienste'],
     zeilen: personen.map((p) => [
-      { absaetze: [{ laeufe: [{ text: p.name, stil: 'fett' }] }] },
+      personenNameZelle(p, q.listen),
       ...spalten.map((i) => personenZelle(p, plan.spalten[i])),
       { absaetze: [{ laeufe: [{ text: String(p.einsaetze.length) }] }] },
     ]),
@@ -235,14 +287,18 @@ function personenTermine(q: PlanBlattQuelle): number[] {
   return q.spalten.filter((i) => !q.plan.spalten[i].abgesagt);
 }
 
-/** Die Eingeteilten in den gegebenen Terminen und Gruppen – gezählt von `werWieOft`, alphabetisch („deutsch“ sortiert). */
+/**
+ * Die Eingeteilten in den gegebenen Terminen und Gruppen – gezählt von `werWieOft`, alphabetisch („deutsch“ sortiert) –
+ * oder in der Reihenfolge der Personenliste (`ordnung`, `sortiereNachListe`: wer dort fehlt, danach alphabetisch).
+ */
 function eingeteilte(
   plan: Plan,
   spalten: readonly number[],
   gruppen: readonly PlanGruppe[],
+  ordnung?: Personenliste,
 ): PersonEinsaetze[] {
   const { personen } = werWieOft(plan, { spalten: [...spalten], gruppen });
-  return personen.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return sortiereNachListe(ordnung, personen);
 }
 
 /** „Je Person“: ein Abschnitt mit den Terminen einer Person – ein Termin eine Zeile, mehrere Dienste darin untereinander. */
@@ -307,6 +363,14 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
   if (wahl.ansicht === 'personen') {
     // Abgesagte Termine gibt es in dieser Ansicht nicht.
     const termine = personenTermine(q);
+    // Die Reihenfolge der Personenliste nur bei „Eine Gruppe“ – beim ganzen Plan gehören die Personen mehreren Listen an,
+    // dort bleibt es alphabetisch (die Tags stehen trotzdem dahinter).
+    const ordnung =
+      wahl.was === 'gruppe' &&
+      wahl.gruppe !== null &&
+      hatReihenfolge(q.personenlisten?.get(wahl.gruppe))
+        ? q.personenlisten?.get(wahl.gruppe)
+        : undefined;
     const bloecke: number[][] = [];
     for (let k = 0; k < termine.length; k += PERSONEN_TERMINE_MAX)
       bloecke.push(termine.slice(k, k + PERSONEN_TERMINE_MAX));
@@ -317,6 +381,7 @@ export function planBlatt(q: PlanBlattQuelle, wahl: PlanBlattWahl): PlanBlatt {
         b,
         gruppen,
         bloecke.length > 1 ? spanneLang(tage[0], tage[tage.length - 1]) : null,
+        { listen: q.personenlisten, ordnung },
       );
       return a ? [a] : [];
     });

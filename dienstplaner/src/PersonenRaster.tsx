@@ -7,6 +7,7 @@ import { tagKurz } from '@shared/ct/datum';
 import type { PlanZeile } from '@shared/dienstplan/plan';
 import type { Besetzung } from '@shared/dienstplan/entwuerfe';
 import { gruppenDerDienste } from '@shared/dienstplan/personenDaten';
+import { pauseText } from '@shared/dienstplan/personenliste';
 import { zahlenText, zellenText } from '@shared/dienstplan/personenAntworten';
 import {
   eintragenWarnung,
@@ -126,11 +127,47 @@ function GastTag({ g, onKlick }: { g: RasterGast; onKlick?: () => void }) {
 
 /**
  * Die Legende über dem Raster (E5c-3): was die Farbe einer Zelle heißt. Farbe allein trägt die Bedeutung nicht – darum
- * steht sie hier, und jede Zelle mit Antwort sagt sie auch im Tooltip.
+ * steht sie hier, und jede Zelle mit Antwort sagt sie auch im Tooltip. Mit Personenliste (PL-1) folgt eine eigene Zeile „Tags:“
+ * mit den Kürzeln der gezeigten Dienste – auch ohne sichtbare Antworten.
  */
-function Legende() {
+function Legende({
+  tags,
+  mitFarben,
+}: {
+  tags: { name: string; kuerzel: string }[];
+  mitFarben: boolean;
+}) {
   return (
-    <div className={styles.legende} role="group" aria-label="Legende zu den Farben">
+    <div
+      className={styles.legende}
+      role="group"
+      aria-label={
+        tags.length === 0
+          ? 'Legende zu den Farben'
+          : mitFarben
+            ? 'Legende zu den Farben und Tags'
+            : 'Legende zu den Tags'
+      }
+    >
+      {mitFarben && <FarbLegende />}
+      {tags.length > 0 && (
+        <span className={styles.legendeZeile}>
+          <span className={styles.legendeTitel}>Tags:</span>
+          {tags.map((t) => (
+            <span key={`${t.kuerzel}|${t.name}`} className={styles.legendeEintrag}>
+              <b className={styles.legendeKuerzel}>{t.kuerzel}</b>
+              {t.name}
+            </span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function FarbLegende() {
+  return (
+    <>
       <span className={styles.legendeTitel}>Antwort der Person:</span>
       <span className={styles.legendeEintrag}>
         <span className={`${styles.muster} ${styles.musterJa}`} aria-hidden="true" />
@@ -152,7 +189,7 @@ function Legende() {
         <span className={`${styles.muster} ${styles.musterEntwurf}`} aria-hidden="true" />
         Entwurf
       </span>
-    </div>
+    </>
   );
 }
 
@@ -303,6 +340,7 @@ export function PersonenRaster({
     daten,
     antworten: antw.antworten,
     entwurf: sicht.entwurf,
+    personenlisten: sicht.personenlisten,
   });
   if (raster.blocks.length === 0) {
     return (
@@ -433,7 +471,7 @@ export function PersonenRaster({
   const zeile = (b: RasterBlock, r: RasterZeile, nr: number) => (
     <tr
       key={r.schluessel}
-      className={`${nr % 2 === 1 ? styles.z2 : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}${fokusId === r.personId ? ' ' + styles.fokus : ''}`}
+      className={`${nr % 2 === 1 ? styles.z2 : ''}${r.ruhend ? ' ' + styles.ruhend : ''}${hervor === r.personId ? ' ' + styles.hervor : ''}${fokusId === r.personId ? ' ' + styles.fokus : ''}`}
       data-person={r.personId}
     >
       <th scope="row" className={styles.name}>
@@ -454,12 +492,28 @@ export function PersonenRaster({
         >
           <span className={styles.avatar} aria-hidden="true">
             {r.initialen}
+            {/* Die Tags dieses Dienstes als Kürzel unten rechts am Bild (PL-1); der volle Name steht im Titel und in der Legende. */}
+            {r.tags.length > 0 && (
+              <span className={styles.kuerzel} title={r.tags.map((t) => t.name).join(', ')}>
+                {r.tags.map((t) => t.kuerzel).join('')}
+              </span>
+            )}
           </span>
           <span className={styles.personName}>{r.name}</span>
-          {r.auch.length > 0 && (
-            <span className={styles.auch} title={`auch ${r.auch.join(', ')}`}>
-              auch {r.auch.join(', ')}
+          {r.tags.length > 0 && (
+            <span className={styles.vorleser}>, {r.tags.map((t) => t.name).join(', ')}</span>
+          )}
+          {r.pause ? (
+            // „Pause bis …“ statt „auch …“ (PL-1).
+            <span className={styles.auch} title={pauseText(r.pause)}>
+              {pauseText(r.pause)}
             </span>
+          ) : (
+            r.auch.length > 0 && (
+              <span className={styles.auch} title={`auch ${r.auch.join(', ')}`}>
+                auch {r.auch.join(', ')}
+              </span>
+            )
           )}
           {!r.mitglied && <span className={styles.keinMitglied}>nicht in der Gruppe</span>}
         </button>
@@ -529,6 +583,27 @@ export function PersonenRaster({
       })}
     </tr>
   );
+
+  /**
+   * Die Zeilen eines Blocks. Wer pausiert oder ganz abwesend ist (`ruhend`, PL-1), steht unten unter der Zwischenzeile „In
+   * Pause oder ganz abwesend · N“ – blass, aber unverändert einteilbar (die Zellen sind dieselben).
+   */
+  const zeilenVon = (b: RasterBlock) => {
+    const oben = b.zeilen.length - b.ruhend;
+    return [
+      ...b.zeilen.slice(0, oben).map((r, nr) => zeile(b, r, nr)),
+      ...(b.ruhend > 0
+        ? [
+            <tr key={`ruhend-${b.dienst.id}`} className={styles.ruhendKopf}>
+              <td colSpan={termine.length + 2}>
+                <span className={styles.ruhendText}>In Pause oder ganz abwesend · {b.ruhend}</span>
+              </td>
+            </tr>,
+          ]
+        : []),
+      ...b.zeilen.slice(oben).map((r, nr) => zeile(b, r, oben + nr)),
+    ];
+  };
 
   const blockKopf = (b: RasterBlock) => {
     const n = b.zeilen.length;
@@ -741,7 +816,12 @@ export function PersonenRaster({
       {neuFehler && <FehlerKasten fehler={neuFehler} onNochmal={neuLaden} />}
       {antw.fehler && <FehlerKasten fehler={antw.fehler} onNochmal={antw.neuLaden} />}
       {antw.neuFehler && <FehlerKasten fehler={antw.neuFehler} onNochmal={antw.neuLaden} />}
-      {raster.antwortZahlen.some((z) => z !== null) && <Legende />}
+      {(raster.antwortZahlen.some((z) => z !== null) || raster.tagLegende.length > 0) && (
+        <Legende
+          tags={raster.tagLegende}
+          mitFarben={raster.antwortZahlen.some((z) => z !== null)}
+        />
+      )}
       <div className={planen.rahmen} ref={bisUnten.ref} style={bisUnten.style}>
         <table
           className={styles.raster}
@@ -778,9 +858,7 @@ export function PersonenRaster({
           <tbody>
             {raster.blocks.flatMap((b) => [
               blockKopf(b),
-              ...(zugeklappt.has(blockSchluessel(b.dienst.id))
-                ? []
-                : b.zeilen.map((r, nr) => zeile(b, r, nr))),
+              ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : zeilenVon(b)),
               ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : gaesteZeile(b)),
               ...(zugeklappt.has(blockSchluessel(b.dienst.id)) ? [] : [plaetzeZeile(b)]),
             ])}

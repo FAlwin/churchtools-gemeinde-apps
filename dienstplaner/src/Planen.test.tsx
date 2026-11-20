@@ -614,6 +614,44 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     ).toBeTruthy();
   });
 
+  // PL-1: Die Personenliste der Dienstgruppe (aus den geladenen Entwurfs-Daten) geht bis in „Wer kann?“.
+  it('mit einer Personenliste der Dienstgruppe: Überschrift, Reihenfolge und Kürzel in „Wer kann?“', async () => {
+    const { BEGLEITUNG, liste } = await import('@shared/dienstplan/personenliste.testutil');
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '6', title: 'Ben Test' }, score: -2 },
+      { person: { domainIdentifier: '8', title: 'Carla Test' }, score: 0 },
+    ]);
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN3, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={nachgebaut({
+          laden: vi.fn(() =>
+            Promise.resolve(
+              daten([], {}, [
+                [3, liste({ reihe: [6, 8], tags: [BEGLEITUNG], tagsVon: { '7|6': ['b'] } })],
+              ]),
+            ),
+          ),
+        })}
+      />,
+    );
+    fireEvent.click(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    );
+    const liste3 = await screen.findByRole('list', { name: 'Wer kann?' });
+    await screen.findByRole('heading', { name: 'Wer kann? In der Reihenfolge der Personenliste' });
+    expect(
+      within(liste3)
+        .getAllByRole('listitem')
+        .map((li) => li.querySelector('b')?.textContent),
+    ).toEqual(['Ben Test', 'Carla Test']);
+    expect(screen.getByTitle('Begleitung').textContent).toBe('B');
+  });
+
   it('Antippen öffnet das Fach für genau diesen Platz; wer schon dort ist, steht nicht zur Wahl', async () => {
     laden.mockResolvedValue([
       { person: { domainIdentifier: '5', title: 'Anna Test' }, score: 0 },

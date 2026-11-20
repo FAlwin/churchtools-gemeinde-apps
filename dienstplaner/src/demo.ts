@@ -798,13 +798,15 @@ function ablaufDemo(
 /**
  * Der Speicher der Erweiterung (Entwürfe, E4-3) – wie gemessen: Kategorien je Modul, Werte als Text, wer
  * eine Kategorie anlegt, bekommt sofort alle Rechte darauf. Musik hat schon eine Schublade mit einem
- * Entwurf von Spike; für Technik zeigt „Einrichten“, wie es beim ersten Mal aussieht.
+ * Entwurf von Spike. Beide Schubladen (Musik, Technik) tragen außerdem eine Personenliste (PL-1).
  */
 function speicherDemo(fall: string) {
   const kategorien = [
     { id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' },
-    // „Wann kann ich?“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Schublade, wäre aber „Einrichten“.
+    // „Wann kann ich?“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Antworten-Schublade.
     { id: 41, shorty: 'dienstplaner-antworten-4', name: 'Antworten Musik' },
+    // Personenliste (PL-1): Technik hat dafür eine Schublade – ohne Entwürfe, nur mit der Liste.
+    { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },
   ];
   const meineAntworten = {
     art: 'dienstplaner-verfuegbarkeit',
@@ -886,6 +888,37 @@ function speicherDemo(fall: string) {
     gesehen: { art: 'zusage', personId: 19 },
     von: { personId: 1, name: 'Alwin' },
   };
+  // Die Personenlisten (PL-1) – ein Wert je Dienstgruppe in der Entwurfs-Schublade, erkennbar an `art`.
+  // Musik: Reihenfolge Clara · Anna · Spike · Alwin · Ben; Tags Begleitung (B) und Leitung (L) für Gesang; Anna (46) macht
+  // bis in 10 Tagen Pause (gilt nicht für den ganzen Zeitraum: bleibt an ihrer Stelle, nur mit „Pause bis …“).
+  const personenlisteMusik = {
+    art: 'dienstplaner-personenliste',
+    fassung: 1,
+    version: 1,
+    zeit: zeit(0, '07:00'),
+    reihe: [52, 46, 19, 1, 49],
+    tags: [
+      { id: 'b', name: 'Begleitung', kuerzel: 'B' },
+      { id: 'l', name: 'Leitung', kuerzel: 'L' },
+    ],
+    tagsVon: { '9|52': ['b', 'l'], '9|19': ['b'] },
+    pause: { '46': { bis: tagVon(10) } },
+  };
+  // Technik: Reihenfolge Anna · Alwin · Spike · David · Ben; Tags Einweisung (E) und Springer (S) – Anna ist nur im Ton
+  // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass.
+  const personenlisteTechnik = {
+    art: 'dienstplaner-personenliste',
+    fassung: 1,
+    version: 1,
+    zeit: zeit(0, '07:00'),
+    reihe: [46, 1, 19, 55, 49],
+    tags: [
+      { id: 'e', name: 'Einweisung', kuerzel: 'E' },
+      { id: 's', name: 'Springer', kuerzel: 'S' },
+    ],
+    tagsVon: { '6|46': ['e'], '6|19': ['s'], '7|19': ['s'] },
+    pause: { '49': {} },
+  };
   const alt = (eventId: number, index: number | null, name: string, personId: number) => ({
     ...spike,
     ort: { eventId, serviceId: 9, index },
@@ -916,8 +949,10 @@ function speicherDemo(fall: string) {
         { id: 405, dataCategoryId: 40, value: JSON.stringify(alt(102, null, 'Clara Dyck', 52)) },
         { id: 406, dataCategoryId: 40, value: JSON.stringify(alt(90, null, 'Anna Klassen', 46)) },
         { id: 407, dataCategoryId: 40, value: JSON.stringify(alt(91, null, 'David Penner', 55)) },
+        { id: 408, dataCategoryId: 40, value: JSON.stringify(personenlisteMusik) },
       ],
     ],
+    [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
   ]);
   let naechste = 500;
   const ids = () => kategorien.map((k) => k.id);

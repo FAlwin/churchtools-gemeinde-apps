@@ -503,6 +503,7 @@ export function useEinteilen({
         <WerKann
           platz={frei}
           antworten={antworten}
+          personenliste={daten?.personenlisten.get(frei.gruppeId) ?? null}
           onClose={() => {
             setFrei(null);
             setErsetzt(null);

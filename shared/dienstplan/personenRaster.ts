@@ -19,6 +19,15 @@
  * ausgeblendeter Dienst einer gezeigten Gruppe „+ Bild“ (beide blass) – dafür zählen die Einteilungen aller geladenen
  * Dienste, nicht nur der gezeigten.
  *
+ * **Personenliste (PL-1):** Die Zeilen stehen in der gespeicherten Reihenfolge der Dienstgruppe (`sortiereNachListe`, wer
+ * dort fehlt, danach alphabetisch). Wer **an allen gezeigten Terminen pausiert** (`pausiertAnAllen`) oder **abwesend** ist,
+ * steht unten im Block (`RasterZeile.ruhend`) – es sei denn, die Person ist in diesen Terminen eingeteilt: Dann bleibt sie
+ * oben, damit der Warnfall sichtbar bleibt. Pause UND „ganz abwesend“ gelten nur für **alle** gezeigten Termine (nicht nur
+ * für den ersten): Ein „bis 31.01.“ bei einem Zeitraum bis Ende Februar macht die Person nicht für den ganzen Zeitraum
+ * unwichtig; der Hinweis „Pause bis …“ (`pause`) steht trotzdem, sobald die Pause am ersten gezeigten Termin gilt. Tags
+ * (`tagsFuer`) je Zeile und Dienst, dazu die Legende (`tagLegende`). **Ohne Liste der Dienstgruppe bleibt alles wie vorher**
+ * (alphabetisch, nichts unten) – auch „ganz abwesend“ rückt erst nach unten, wenn es eine Liste gibt.
+ *
  * **Antworten aus „Wann kann ich?“ (E5c-3):** Ja/Vielleicht färben die Zelle, Abwesenheit schlägt sie (Regeln in
  * `personenAntworten.ts`); der Spaltenkopf zählt verschiedene Personen je Antwort.
  */
@@ -37,6 +46,15 @@ import {
   type PlanZeile,
 } from './plan';
 import type { GruppenAbwesenheit, PersonenDaten } from './personenDaten';
+import {
+  pauseAm,
+  pausiertAnAllen,
+  sortiereNachListe,
+  tagsFuer,
+  type Pause,
+  type Personenliste,
+  type PersonenTag,
+} from './personenliste';
 import {
   flaecheAus,
   antwortFuer,
@@ -98,6 +116,15 @@ export interface RasterZeile {
   einsaetze: number;
   /** Je gezeigte Spalte (Reihenfolge von `spalten`). */
   zellen: RasterZelle[];
+  /** Die Tags dieser Person in **diesem Dienst** (Personenliste, PL-1) – leer ohne Liste. */
+  tags: PersonenTag[];
+  /** Pause, die am ersten gezeigten Termin gilt (dann steht „Pause bis …“ statt „auch …“); sonst `null`. */
+  pause: Pause | null;
+  /**
+   * Steht unten im Block, blass: pausiert an allen gezeigten Terminen (`pause`) oder ganz abwesend (`abwesend`) – und nicht
+   * eingeteilt. `null`: steht an ihrer Stelle in der Reihenfolge. Nur mit Personenliste der Dienstgruppe.
+   */
+  ruhend: 'pause' | 'abwesend' | null;
 }
 
 export interface RasterGast {
@@ -131,6 +158,8 @@ export interface RasterBlock {
   antworten: 'ok' | 'nichtSichtbar';
   /** Vorübergehend gescheiterte Gruppen – „Nochmal versuchen“. */
   fehler: { gruppenIds: number[]; text: string; nochmal: boolean } | null;
+  /** Wie viele Zeilen unten stehen (`RasterZeile.ruhend`) – sie bilden das Ende von `zeilen`; die Zwischenzeile zählt sie. */
+  ruhend: number;
   /**
    * Die Zeile „Plätze“ (P2c) – je gezeigte Spalte, wie viele Plätze der Dienst dort hat und wie viele davon **belegt** sind.
    * Gezählt wie „Noch offen“ (`plaetzeStand` → `zaehleFrei`, Entwürfe zählen mit); 0 Plätze: der Dienst ist dort aus.
@@ -161,6 +190,11 @@ export interface Raster {
   antwortZahlen: (AntwortZahlen | null)[];
   /** Je gezeigte Spalte die Fußzeile „Noch offen“. */
   offen: RasterOffen[];
+  /**
+   * Die Legende „Tags:“ (PL-1): die Tags, die in den gezeigten Diensten bei irgendeiner Person vorkommen – ohne Doppelte
+   * (gleicher Name und Kürzel in zwei Dienstgruppen: einer). Leer ohne Tags – dann gibt es keine Zeile.
+   */
+  tagLegende: { name: string; kuerzel: string }[];
 }
 
 interface Einteilung {
@@ -209,8 +243,11 @@ export function personenRaster(o: {
   /** Die Antworten aus „Wann kann ich?“ – ohne sieht keine Gruppe welche (kein Fehler, nur keine Farbe). */
   antworten?: PersonenAntworten;
   entwurf?: EntwurfSuche;
+  /** Die Personenliste je Dienstgruppe (ID, PL-1) – ohne Angabe oder ohne Liste der Gruppe ist alles wie vorher. */
+  personenlisten?: ReadonlyMap<number, Personenliste>;
 }): Raster {
   const { plan, spalten, gruppen, daten } = o;
+  const tage = spalten.map((i) => plan.spalten[i].tag);
   const antwortSicht = (d: Dienst): boolean => antwortenSichtbar(o.antworten, d.dienstgruppeId);
   const dienstNamen = new Map(
     plan.gruppen.flatMap((g) => g.zeilen.map((z) => [z.dienst.id, z.dienst.name] as const)),
@@ -277,6 +314,8 @@ export function personenRaster(o: {
   const blocks: RasterBlock[] = diensteZeilen.map(({ zeile: z }) => {
     const dienst = z.dienst;
     const mitglieder = mitgliederJeDienst.get(dienst.id)!;
+    const liste =
+      dienst.dienstgruppeId === null ? undefined : o.personenlisten?.get(dienst.dienstgruppeId);
 
     // Wer eine Zeile bekommt: Mitglieder + im Zeitraum Eingeteilte + Entwürfe auf Personen.
     const personen = new Map<number, { name: string; initialen: string }>(mitglieder);
@@ -324,87 +363,101 @@ export function personenRaster(o: {
       }
     });
 
-    const zeilen: RasterZeile[] = [...personen.entries()]
-      .map(([personId, person]) => {
-        const auch = diensteZeilen
-          .filter(
-            (x) =>
-              x.zeile.dienst.id !== dienst.id &&
-              mitgliederJeDienst.get(x.zeile.dienst.id)!.has(personId),
-          )
-          .map((x) => x.zeile.dienst.name);
-        const eigene = einteilungen.get(personId);
-        const zellen: RasterZelle[] = spalten.map((i, pos) => {
-          const hier = z.zellen[i] ?? [];
-          const platz = hier.filter((p) => besetzt(p) && p.personId === personId);
-          // Wird die Person an JEDEM ihrer Plätze hier von einem gültigen Entwurf weggenommen (zurückziehen oder durch
-          // jemand anderen ersetzen), zeigt die Zelle es wie die Matrix. Ein eigener Entwurf auf sie geht vor.
-          const weggenommen =
-            platz.length > 0 &&
-            platz.every((p) => {
-              const e = o.entwurf?.(i, z, p) ?? null;
-              if (!e || e.veraltet) return false;
-              const ziel = e.entwurf.ziel;
-              return !(ziel.art === 'person' && ziel.personId === personId);
-            });
-          const eigenerEntwurf = entwurfZelle.get(personId)?.has(pos) ?? false;
-          const zustand: ZellenZustand | null =
-            weggenommen && !eigenerEntwurf
-              ? 'zurueck'
-              : platz.some((p) => p.art === 'zugesagt')
-                ? 'zugesagt'
-                : platz.length > 0
-                  ? 'angefragt'
-                  : eigenerEntwurf
-                    ? 'entwurf'
-                    : null;
-          const weitere: WeitererDienst[] = (eigene?.[pos] ?? [])
-            .filter((x) => x.dienst.id !== dienst.id)
-            .map((x) => {
-              const fremd = !gezeigteDienste.has(x.dienst.id);
-              // Der Gruppenname nur, wenn die ganze Gruppe fehlt – ein einzeln ausgeblendeter Dienst einer gezeigten
-              // Gruppe steht ohne („+ Bild“).
-              const gruppeFehlt = !gezeigteGruppen.has(x.gruppe.gruppe?.id ?? null);
-              return {
-                dienst: x.dienst.name,
-                fremd,
-                gruppe: fremd && gruppeFehlt ? gruppenName(x.gruppe) : null,
-              };
-            });
-          const abwesend = abwesendAm(personId, plan.spalten[i]);
-          // Termin-ID als Text – derselbe Schlüssel, unter dem „Wann kann ich?“ die Antwort speichert.
-          const antwort = antwortFuer(o.antworten, {
-            gruppeId: dienst.dienstgruppeId,
-            personId,
-            terminId: plan.spalten[i].id,
-            dienstId: dienst.id,
-            dienstName: (id) => dienstNamen.get(id),
+    const zeilen: RasterZeile[] = [...personen.entries()].map(([personId, person]) => {
+      const auch = diensteZeilen
+        .filter(
+          (x) =>
+            x.zeile.dienst.id !== dienst.id &&
+            mitgliederJeDienst.get(x.zeile.dienst.id)!.has(personId),
+        )
+        .map((x) => x.zeile.dienst.name);
+      const eigene = einteilungen.get(personId);
+      const zellen: RasterZelle[] = spalten.map((i, pos) => {
+        const hier = z.zellen[i] ?? [];
+        const platz = hier.filter((p) => besetzt(p) && p.personId === personId);
+        // Wird die Person an JEDEM ihrer Plätze hier von einem gültigen Entwurf weggenommen (zurückziehen oder durch
+        // jemand anderen ersetzen), zeigt die Zelle es wie die Matrix. Ein eigener Entwurf auf sie geht vor.
+        const weggenommen =
+          platz.length > 0 &&
+          platz.every((p) => {
+            const e = o.entwurf?.(i, z, p) ?? null;
+            if (!e || e.veraltet) return false;
+            const ziel = e.entwurf.ziel;
+            return !(ziel.art === 'person' && ziel.personId === personId);
           });
-          const modus =
-            zustand === 'entwurf' ? (entwurfZelle.get(personId)?.get(pos) ?? null) : null;
-          return {
-            zustand,
-            modus,
-            weitere,
-            abwesend,
-            // Wird sie ohnehin weggenommen, ist die Abwesenheit kein Warnfall mehr.
-            warnung: abwesend !== null && zustand !== null && zustand !== 'zurueck',
-            antwort,
-            flaeche: flaecheAus(abwesend !== null, antwort),
-          };
-        });
-        return {
-          schluessel: `${dienst.id}|${personId}`,
+        const eigenerEntwurf = entwurfZelle.get(personId)?.has(pos) ?? false;
+        const zustand: ZellenZustand | null =
+          weggenommen && !eigenerEntwurf
+            ? 'zurueck'
+            : platz.some((p) => p.art === 'zugesagt')
+              ? 'zugesagt'
+              : platz.length > 0
+                ? 'angefragt'
+                : eigenerEntwurf
+                  ? 'entwurf'
+                  : null;
+        const weitere: WeitererDienst[] = (eigene?.[pos] ?? [])
+          .filter((x) => x.dienst.id !== dienst.id)
+          .map((x) => {
+            const fremd = !gezeigteDienste.has(x.dienst.id);
+            // Der Gruppenname nur, wenn die ganze Gruppe fehlt – ein einzeln ausgeblendeter Dienst einer gezeigten
+            // Gruppe steht ohne („+ Bild“).
+            const gruppeFehlt = !gezeigteGruppen.has(x.gruppe.gruppe?.id ?? null);
+            return {
+              dienst: x.dienst.name,
+              fremd,
+              gruppe: fremd && gruppeFehlt ? gruppenName(x.gruppe) : null,
+            };
+          });
+        const abwesend = abwesendAm(personId, plan.spalten[i]);
+        // Termin-ID als Text – derselbe Schlüssel, unter dem „Wann kann ich?“ die Antwort speichert.
+        const antwort = antwortFuer(o.antworten, {
+          gruppeId: dienst.dienstgruppeId,
           personId,
-          name: person.name,
-          initialen: person.initialen,
-          mitglied: mitglieder.has(personId),
-          auch,
-          einsaetze: einsaetze.get(personId) ?? 0,
-          zellen,
+          terminId: plan.spalten[i].id,
+          dienstId: dienst.id,
+          dienstName: (id) => dienstNamen.get(id),
+        });
+        const modus = zustand === 'entwurf' ? (entwurfZelle.get(personId)?.get(pos) ?? null) : null;
+        return {
+          zustand,
+          modus,
+          weitere,
+          abwesend,
+          // Wird sie ohnehin weggenommen, ist die Abwesenheit kein Warnfall mehr.
+          warnung: abwesend !== null && zustand !== null && zustand !== 'zurueck',
+          antwort,
+          flaeche: flaecheAus(abwesend !== null, antwort),
         };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
+      });
+      return {
+        schluessel: `${dienst.id}|${personId}`,
+        personId,
+        name: person.name,
+        initialen: person.initialen,
+        mitglied: mitglieder.has(personId),
+        auch,
+        einsaetze: einsaetze.get(personId) ?? 0,
+        zellen,
+        tags: tagsFuer(liste, dienst.id, personId),
+        pause: pauseAm(liste, personId, tage[0]),
+        ruhend:
+          // Wer eingeteilt ist, bleibt oben – ein Warnfall (abwesend/pausiert und eingeteilt) soll sichtbar bleiben.
+          !liste || zellen.some((c) => c.zustand !== null)
+            ? null
+            : pausiertAnAllen(liste, personId, tage)
+              ? ('pause' as const)
+              : zellen.length > 0 && zellen.every((c) => c.abwesend !== null)
+                ? ('abwesend' as const)
+                : null,
+      };
+    });
+    // Reihenfolge der Personenliste (ohne Liste: alphabetisch wie vorher); wer ruht, steht danach unten – in derselben Reihenfolge.
+    const geordnet = sortiereNachListe(liste, zeilen);
+    const zeilenGeordnet = [
+      ...geordnet.filter((r) => !r.ruhend),
+      ...geordnet.filter((r) => r.ruhend),
+    ];
 
     // Stand der CT-Gruppen dieses Dienstes.
     const staende = dienst.gruppenIds.map((id) => ({ id, stand: daten.get(id) }));
@@ -414,7 +467,8 @@ export function personenRaster(o: {
     const fehlerStand = fehlerGruppen[0]?.stand;
     return {
       dienst,
-      zeilen,
+      zeilen: zeilenGeordnet,
+      ruhend: zeilenGeordnet.filter((r) => r.ruhend).length,
       gaeste,
       plaetze: spalten.map((i) =>
         plaetzeStand(z.zellen[i] ?? null, (p) => o.entwurf?.(i, z, p) ?? null),
@@ -461,7 +515,13 @@ export function personenRaster(o: {
     }
     return sichtbar ? { ja: ja.size, vielleicht: vielleicht.size } : null;
   });
-  return { blocks, antwortZahlen, offen };
+  // ── Legende „Tags:“: nur Tags, die in den gezeigten Diensten bei jemandem stehen. ──
+  const legende = new Map<string, { name: string; kuerzel: string }>();
+  for (const b of blocks)
+    for (const r of b.zeilen)
+      for (const t of r.tags)
+        legende.set(`${t.kuerzel}|${t.name}`, { name: t.name, kuerzel: t.kuerzel });
+  return { blocks, antwortZahlen, offen, tagLegende: [...legende.values()] };
 }
 
 /**

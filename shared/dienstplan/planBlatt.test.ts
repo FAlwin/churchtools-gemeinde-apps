@@ -3,6 +3,7 @@ import { datumText, tagKurz } from '../ct/datum';
 import { diensteAus } from '../ct/dienste';
 import type { Zelle } from '../ct/terminBlatt';
 import { planAus } from './plan';
+import { BEGLEITUNG, EINWEISUNG, LEITUNG, liste } from './personenliste.testutil';
 import {
   PERSONEN_TERMINE_MAX,
   PLAN_BLATT_STANDARD,
@@ -440,6 +441,84 @@ describe('Plan-Blatt: Personen × Termine (E8-4b)', () => {
         .map((z) => z[0])
         .join('|'),
     ).toContain('(abgesagt)');
+  });
+
+  describe('Personenliste (PL-1)', () => {
+    // Technik (Gruppe 3): Tobias (11 ist Wilhelm, 12 Tobias) – Ton 6 und Licht 7. Programm (Gruppe 1): Wilhelm in Predigt (1).
+    const LISTEN = new Map([
+      [
+        3,
+        liste({
+          reihe: [11, 12],
+          tags: [BEGLEITUNG, LEITUNG, EINWEISUNG],
+          tagsVon: { '6|12': ['b', 'l'], '7|11': ['e'] },
+        }),
+      ],
+    ]);
+    const mitListen = { ...QP, personenlisten: LISTEN };
+    const namenSpalte = (b: ReturnType<typeof planBlatt>) => zeilen(b).map((z) => z[0]);
+    const TECHNIK: PlanBlattWahl = {
+      was: 'gruppe',
+      gruppe: 3,
+      ansicht: 'personen',
+      seiten: 'seite',
+    };
+
+    it('„Eine Gruppe“: Reihenfolge der gespeicherten Liste (wer fehlt, danach alphabetisch)', () => {
+      expect(namenSpalte(planBlatt(mitListen, TECHNIK))).toEqual([
+        'Wilhelm Brandt · Einweisung',
+        'Tobias Hahn · Begleitung, Leitung',
+      ]);
+      // Ohne Liste und ohne Reihenfolge: alphabetisch wie bisher.
+      expect(namenSpalte(planBlatt(QP, TECHNIK))).toEqual(['Tobias Hahn', 'Wilhelm Brandt']);
+      const nurTags = new Map([[3, liste({ tags: [BEGLEITUNG], tagsVon: {} })]]);
+      expect(namenSpalte(planBlatt({ ...QP, personenlisten: nurTags }, TECHNIK))).toEqual([
+        'Tobias Hahn',
+        'Wilhelm Brandt',
+      ]);
+      // Die Liste einer anderen Gruppe ordnet diese nicht.
+      const fremd = new Map([[4, liste({ reihe: [11, 12] })]]);
+      expect(namenSpalte(planBlatt({ ...QP, personenlisten: fremd }, TECHNIK))).toEqual([
+        'Tobias Hahn',
+        'Wilhelm Brandt',
+      ]);
+    });
+
+    it('„Ganzer Plan“: bleibt alphabetisch, die Tags stehen trotzdem dahinter', () => {
+      const b = planBlatt(mitListen, PERSONEN_WAHL);
+      expect(namenSpalte(b)).toEqual([
+        'Irene Lang',
+        'Ömer Kaya',
+        'Tobias Hahn · Begleitung, Leitung',
+        // Der Tag gilt nur im Licht, Wilhelm steht auch in der Predigt (Programm): Dienst dahinter.
+        'Wilhelm Brandt · Einweisung (Licht)',
+        'Zoe Gast',
+      ]);
+    });
+
+    it('Tags: voller Name grau hinter dem Namen, der Name bleibt fett', () => {
+      const b = planBlatt(mitListen, TECHNIK);
+      const zelle = b.abschnitte[0].zeilen[1][0].absaetze[0].laeufe;
+      expect(zelle).toEqual([
+        { text: 'Tobias Hahn', stil: 'fett' },
+        { text: ' · Begleitung, Leitung', stil: 'grau' },
+      ]);
+    });
+
+    it('Tags: ein Tag, der für alle ihre gezeigten Dienste gilt, steht ohne Dienst', () => {
+      const alle = new Map([
+        [3, liste({ tags: [EINWEISUNG], tagsVon: { '6|12': ['e'], '7|11': ['e'] } })],
+      ]);
+      const b = planBlatt({ ...QP, personenlisten: alle }, TECHNIK);
+      expect(namenSpalte(b)).toEqual(['Tobias Hahn · Einweisung', 'Wilhelm Brandt · Einweisung']);
+    });
+
+    it('„Je Person“ bleibt unverändert: alphabetisch, ohne Tags', () => {
+      const wahlJe = { was: 'plan', ansicht: 'person', seiten: 'seite' } as const;
+      const mit = planBlatt(mitListen, wahlJe);
+      expect(mit.abschnitte).toEqual(planBlatt(QP, wahlJe).abschnitte);
+      expect(JSON.stringify(mit)).not.toContain('Begleitung');
+    });
   });
 });
 

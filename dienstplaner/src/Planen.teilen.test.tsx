@@ -367,3 +367,38 @@ describe('Plan teilen (E8-2)', () => {
     );
   });
 });
+
+describe('Plan teilen mit Personenliste (PL-1)', () => {
+  it('die Tags der Personenliste (aus den geladenen Entwurfs-Daten) stehen im PDF „Personen“', async () => {
+    const { BEGLEITUNG, liste } = await import('@shared/dienstplan/personenliste.testutil');
+    const { daten, nachgebaut } = await import('./entwurfAnschluss.testutil');
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        mehrMoeglich={false}
+        ladeZeitraum={() => new Promise<never>(() => {})}
+        heute="2026-10-14"
+        entwuerfe={nachgebaut({
+          laden: vi.fn(() =>
+            Promise.resolve(
+              daten([], {}, [[3, liste({ tags: [BEGLEITUNG], tagsVon: { '6|5': ['b'] } })]]),
+            ),
+          ),
+        })}
+      />,
+    );
+    await oeffnen();
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Plan teilen' })).getByRole('button', {
+        name: 'Personen',
+      }),
+    );
+    await waitFor(() => {
+      const zeile = JSON.stringify(letztesBlatt().abschnitte);
+      expect(zeile).toContain(' · Begleitung');
+    });
+  });
+});

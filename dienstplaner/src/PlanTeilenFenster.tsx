@@ -61,7 +61,7 @@ export function PlanTeilenFenster({
   const blatt = useMemo(
     () => planBlatt({ ...quelle, stand }, wahl),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- die Listen stecken vollständig in den Texten
-    [quelle.plan, spaltenText, gruppenText, wahlText, stand],
+    [quelle.plan, quelle.personenlisten, spaltenText, gruppenText, wahlText, stand],
   );
   const { stand: pdf, geladen, setGeladen } = useGebautesPdf(blatt, planBlattPdf);
 

@@ -11,12 +11,18 @@ import { gruppenName, type Plan, type PlanGruppe, type PlanSpalte } from './plan
 export interface Einsatz {
   spalte: PlanSpalte;
   dienst: string;
+  /** ID des Dienstes – für die Tags der Personenliste (`tagsFuer`). */
+  dienstId: number;
+  /** ID der Dienstgruppe (`null` = „Weitere Dienste“) – in ihr liegt die Personenliste. */
+  gruppeId: number | null;
   /** Name der Dienstgruppe (`gruppenName`) – „Je Person“ im Plan-Blatt zeigt ihn beim ganzen Plan. */
   gruppe: string;
   zugesagt: boolean;
 }
 
 export interface PersonEinsaetze {
+  /** `null` bei einem Gast (nur ein Name). */
+  personId: number | null;
   name: string;
   gast: boolean;
   einsaetze: Einsatz[];
@@ -42,12 +48,20 @@ export function werWieOft(
           const schluessel = p.personId !== null ? `p${p.personId}` : `g${p.name}`;
           let eintrag = nachSchluessel.get(schluessel);
           if (!eintrag) {
-            eintrag = { name: p.name, gast: p.gast, einsaetze: [], dienste: [] };
+            eintrag = {
+              personId: p.personId,
+              name: p.name,
+              gast: p.gast,
+              einsaetze: [],
+              dienste: [],
+            };
             nachSchluessel.set(schluessel, eintrag);
           }
           eintrag.einsaetze.push({
             spalte: plan.spalten[i],
             dienst: z.dienst.name,
+            dienstId: z.dienst.id,
+            gruppeId: g.gruppe?.id ?? null,
             gruppe: gruppenName(g),
             zugesagt: p.art === 'zugesagt',
           });

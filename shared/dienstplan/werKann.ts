@@ -19,6 +19,14 @@
  */
 
 import { antwortStufe, STUFEN, type AntwortStufe, type ZellenAntwort } from './personenAntworten';
+import {
+  hatReihenfolge,
+  pauseAm,
+  pauseText,
+  sortiereNachListe,
+  type Pause,
+  type Personenliste,
+} from './personenliste';
 
 export interface Kandidat {
   personId: number;
@@ -151,12 +159,50 @@ export function kandidatenAus(
   return out.sort((a, b) => b.punkte - a.punkte || a.name.localeCompare(b.name, 'de'));
 }
 
-/** Kurz, warum jemand oben oder unten steht – wie im Entwurf („frei“, „abwesend: …“, „am Tag schon: …“). */
-export function kandidatHinweis(k: Kandidat): { text: string; warnung: boolean } {
+/**
+ * Kurz, warum jemand oben oder unten steht – wie im Entwurf („frei“, „abwesend: …“, „am Tag schon: …“). Wer in Pause ist
+ * (`pause`, PL-1), bekommt „Pause bis …“ – nach der Abwesenheit, vor „am Tag schon“.
+ */
+export function kandidatHinweis(
+  k: Kandidat,
+  pause?: Pause | null,
+): { text: string; warnung: boolean } {
   if (k.abwesend) return { text: `abwesend: ${k.abwesend}`, warnung: true };
+  if (pause) return { text: pauseText(pause), warnung: false };
   if (k.amTag.length) return { text: `am Tag schon: ${k.amTag.join(', ')}`, warnung: true };
   return { text: 'frei', warnung: false };
 }
+
+/**
+ * **Die Personenliste der Dienstgruppe bei „Wer kann?“** (PL-1): `liste` (kann fehlen – dann ist alles wie bisher) und der
+ * Tag des Termins (`YYYY-MM-DD`) für die Pause. Die Regeln selbst stehen in `personenliste.ts`.
+ */
+export interface ListenBezug {
+  liste: Personenliste | null | undefined;
+  tag: string | undefined;
+}
+
+/** Die Pause dieser Person an diesem Tag – `null` ohne Liste oder ohne Pause. */
+export const pauseDerPerson = (bezug: ListenBezug | undefined, personId: number): Pause | null =>
+  bezug ? pauseAm(bezug.liste, personId, bezug.tag) : null;
+
+/**
+ * Die Kandidaten in der Reihenfolge der **Personenliste** – hat die Dienstgruppe eine (`hatReihenfolge`); sonst bleibt die
+ * Reihenfolge „frei und selten dran“ (`kandidatenAus`). Wer pausiert, steht in beiden Fällen **hinten**. Eine neue Liste.
+ */
+export function nachListe(liste: readonly Kandidat[], bezug: ListenBezug | undefined): Kandidat[] {
+  const geordnet = hatReihenfolge(bezug?.liste)
+    ? sortiereNachListe(bezug?.liste, liste)
+    : [...liste];
+  const pausiert = (k: Kandidat) => pauseDerPerson(bezug, k.personId) !== null;
+  return [...geordnet.filter((k) => !pausiert(k)), ...geordnet.filter(pausiert)];
+}
+
+/** Die Überschrift über der Liste – sie sagt, **wonach** sortiert ist. Eine Stelle für alle Fälle der Liste. */
+export const werKannTitel = (liste: Personenliste | null | undefined): string =>
+  hatReihenfolge(liste)
+    ? 'Wer kann? In der Reihenfolge der Personenliste'
+    : 'Wer kann? Oben: frei und selten dran';
 
 /** Ein Abschnitt der Liste (Variante A): die Stufe, die Personen darin und deren Antwort. */
 export interface WerKannAbschnitt {
@@ -180,12 +226,18 @@ export const ABSCHNITT_TITEL: Record<AntwortStufe, string> = {
 export function abschnitteAus(
   liste: readonly Kandidat[],
   antworten: ReadonlyMap<number, ZellenAntwort> | null,
+  bezug?: ListenBezug,
 ): WerKannAbschnitt[] | null {
   if (!antworten) return null;
   const abschnitte: WerKannAbschnitt[] = STUFEN.map((stufe) => ({ stufe, personen: [] }));
-  for (const kandidat of liste) {
+  // Reihenfolge der Personenliste (PL-1), Pausierte hinten; ohne Liste unverändert.
+  for (const kandidat of nachListe(liste, bezug)) {
     const antwort = antworten.get(kandidat.personId) ?? null;
-    const stufe = antwortStufe(kandidat.abwesend !== null, antwort);
+    // Wer pausiert, gehört unter „Kann nicht“ – wie die Abwesenden (und der Zauberstab nimmt sie folglich auch nicht).
+    const stufe = antwortStufe(
+      kandidat.abwesend !== null || pauseDerPerson(bezug, kandidat.personId) !== null,
+      antwort,
+    );
     abschnitte.find((a) => a.stufe === stufe)?.personen.push({ kandidat, antwort });
   }
   return abschnitte;

@@ -1,6 +1,7 @@
 import { monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import type { Besetzung, Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Personenliste } from '@shared/dienstplan/personenliste';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import type { RasterGast, RasterZelle } from '@shared/dienstplan/personenRaster';
@@ -73,6 +74,8 @@ export interface Sicht {
   /** Indizes der sichtbaren Spalten in `plan.spalten`. */
   spalten: number[];
   gruppen: PlanGruppe[];
+  /** Die Personenliste je Dienstgruppe (ID, PL-1) – Reihenfolge, Tags und Pause in „Personen“; fehlt ohne Schublade/Liste. */
+  personenlisten?: ReadonlyMap<number, Personenliste>;
   zugeklappt: Set<string>;
   /** Spalten einer anderen Veranstaltung als der häufigsten – abgesetzt (Entwurf: Gebetsabende). */
   neben: (s: PlanSpalte) => boolean;

@@ -66,6 +66,21 @@
   }
 }
 
+// Name und Kürzel der Tags (PL-1) in einer Zeile.
+.nameZeile {
+  display: flex;
+  align-items: baseline;
+}
+// Das Kürzel der Tags (PL-1) hinter dem Namen: grau, klein – kein Etikett, nur ein Hinweis.
+.kuerzel {
+  margin-left: 6px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text2);
+}
+
 .warnung {
   color: var(--red) !important;
 }

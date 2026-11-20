@@ -1,6 +1,6 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3a-3b (20.11.2026) – noch kein Release.** Neu seit W3a-3a: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
+> **Stand: W3a-3c (20.11.2026) – noch kein Release.** W3a-3c: die Seiten-Vorschau zieht nach dem Speichern im Fenster „Einstellungen“ sofort nach (siehe dort). Davor (W3a-3b) neu: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
 > eigenes CSS) und die Schriften in der Vorschau – siehe „Aussehen“ unten. Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
 > anlegen und löschen – W3a-1) und das **Bearbeiten direkt in der Vorschau**: Abschnitte einfügen, gestalten, verschieben,
 > kopieren, löschen, Bausteine bearbeiten, hinzufügen, entfernen, Seite einstellen mit Menü, dazu die **Sperre** (eine Person
@@ -286,6 +286,14 @@ Regel wie die Gesamtprüfung `pruefeWebsite`). Kontaktformular-Adresse und `noin
   Banner-Text auf den **neuesten** Stand (`formularAnwenden` in `shared/website/einstellungen.ts`) – Farben, Schriften und CSS bleiben,
   auch eine Änderung im Aussehen, die noch auf ihre Verzögerung wartet. Zwei getrennte Zustände überschrieben einander („die spätere
   gewinnt“).
+- **Der Reiter „Seiten“ zieht nach (W3a-3c):** „Seiten“ liest die Website einmal beim Öffnen und hält die Einstellungen nur für die
+  Vorschau. Der Server bleibt die **einzige Quelle**, „Seiten“ schreibt Einstellungen nie. Meldet der Provider ein **gelungenes**
+  Speichern (`onGespeichert`, aus `nachSpeichern` der Schlange – nicht bei Fehler, Sperre oder „inzwischen geändert“), zählt `App`
+  `einstellungenStand` hoch; `Seiten` liest daraufhin mit `ladeWebsite` neu und ersetzt im gelesenen Stand **ausschließlich**
+  `einstellungen` (Seiten, Menü, Sperren und die offene Bearbeitung in `Seitenarbeit` bleiben). Der Zähler beim Öffnen löst nichts aus.
+  Scheitert das Nachlesen, bleibt die alte Vorschau stehen, ein leiser Hinweis erscheint; die nächste gelungene Speicherung oder ein
+  Reiterwechsel versucht es wieder. Test: `website/src/EinstellungenInSeiten.test.tsx`. Weitere Kopien der Einstellungen gibt es
+  nicht (`Seitenarbeit`, `Vorschau`, `AbschnittGestalten` bekommen sie als Eigenschaft von `Seiten`).
 - **Fremd gesperrt:** Das Fenster ist nur zum Lesen (Felder und „Speichern“ aus, Hinweis mit Namen).
 - **Regeln** (rein, getestet): `shared/website/einstellungen.ts` – Formular-Entwurf, Fußzeile hinzufügen/entfernen/verschieben,
   Grenze `FUSSZEILE_MAX`, `einstellungenMeldung` (Schema-Fehler in Worten; auch für „Aussehen“).

@@ -176,6 +176,17 @@ describe('Farben', () => {
     await warte(SPEICHER_VERZOEGERUNG_MS);
     expect(gespeichert()[0].farben?.hauptTief).toBeUndefined();
     expect(srcdoc()).toContain('color-mix(');
+    expect(screen.getByText(/wird aus der Hauptfarbe abgeleitet/)).toBeTruthy();
+  });
+
+  it('ist die dunkle Hauptfarbe eigens gesetzt, steht der Ableitungs-Hinweis nicht mehr da', async () => {
+    await zeige(
+      stand({
+        einstellungen: einstellungen({ farben: { ...NEUTRALE_FARBEN, hauptTief: '#001122' } }),
+      }),
+    );
+    expect(screen.queryByText(/wird aus der Hauptfarbe abgeleitet/)).toBeNull();
+    expect(hexFeld(/^Hauptfarbe dunkel/).value).toBe('#001122');
   });
 });
 
@@ -187,7 +198,9 @@ describe('Platzhalter der Hex-Felder (Abnahme W3a-3a)', () => {
     expect(hexFeld(/^Hintergrund/).placeholder).toBe(NEUTRALE_FARBEN.grund);
     expect(hexFeld(/^Sanft/).placeholder).toBe(NEUTRALE_FARBEN.sanft);
     expect(hexFeld(TEXT_FARBE).placeholder).toBe(NEUTRALE_FARBEN.text);
-    expect(hexFeld(/^Hauptfarbe dunkel/).placeholder).toMatch(/^#[0-9a-f]{6} \(abgeleitet\)$/);
+    // Nur die Farbe als Platzhalter (im schmalen Feld würde mehr abgeschnitten); „abgeleitet“ steht in der Unterzeile.
+    expect(hexFeld(/^Hauptfarbe dunkel/).placeholder).toMatch(/^#[0-9a-f]{6}$/);
+    expect(screen.getByText(/wird aus der Hauptfarbe abgeleitet/)).toBeTruthy();
     for (const f of [HAUPT, /^Akzent/, TEXT_FARBE]) expect(hexFeld(f).value).toBe('');
     await warte(SPEICHER_VERZOEGERUNG_MS * 2);
     expect(d.speichereEinstellungen).not.toHaveBeenCalled();

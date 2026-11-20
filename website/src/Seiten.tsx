@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Etikett } from '@ui/bedienung/Etikett';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -47,12 +47,19 @@ export function Seiten({
   gemeinde,
   ich,
   rechte,
+  einstellungenStand = 0,
 }: {
   ort: EntwurfsOrt;
   gemeinde: string | null;
   /** Wer bearbeitet – für die Sperre je Seite (W3a-2). */
   ich: Schreiber;
   rechte: Rechte;
+  /**
+   * Zählt gelungene Speicherungen der Einstellungen (Fenster „Einstellungen“, Reiter „Aussehen“ – beide in `App`). Ändert
+   * er sich, liest dieser Reiter **nur die Einstellungen** neu (W3a-3c). Der Wert beim Öffnen zählt nicht: Da hat das
+   * Lesen ohnehin den neuesten Stand geholt.
+   */
+  einstellungenStand?: number;
 }) {
   const { modul, kategorie } = ort;
   const geladen = useLaden(() => ladeWebsite({ modul, kategorie }), [modul, kategorie], {
@@ -66,6 +73,30 @@ export function Seiten({
   const [laeuft, setLaeuft] = useState(false);
   /** Ist an der gezeigten Seite etwas noch nicht gespeichert? Dann bleibt man auf ihr. */
   const [ungespeichert, setUngespeichert] = useState(false);
+
+  /** Das Nachlesen der Einstellungen ist gescheitert – die Vorschau zeigt die bisherigen. */
+  const [einstellungenAlt, setEinstellungenAlt] = useState(false);
+  const zaehlerBeimOeffnen = useRef(einstellungenStand);
+  const { setze } = geladen;
+  // **Der Server bleibt die einzige Quelle**: Hier wird nichts Eigenes gehalten, nur nachgelesen und – ausschließlich – die
+  // Einstellungen im gelesenen Stand ersetzt. Seiten, Menü, Sperren und die offene Bearbeitung (`Seitenarbeit` hält ihre
+  // eigene Arbeitskopie) bleiben unberührt. Scheitert das Lesen, bleibt die bisherige Vorschau stehen (vorübergehend ist
+  // nicht ungültig); der nächste gelungene Speicherstand versucht es wieder.
+  useEffect(() => {
+    if (einstellungenStand === zaehlerBeimOeffnen.current) return;
+    let aktuell = true;
+    ladeWebsite({ modul, kategorie }).then(
+      (neu) => {
+        if (!aktuell) return;
+        setEinstellungenAlt(false);
+        setze((alt) => ({ ...alt, einstellungen: neu.einstellungen }));
+      },
+      () => aktuell && setEinstellungenAlt(true),
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [einstellungenStand, modul, kategorie, setze]);
 
   const stand = geladen.stand.art === 'fertig' ? geladen.stand.daten : null;
   const listen = useMemo(
@@ -117,6 +148,15 @@ export function Seiten({
         <FehlerKasten fehler={geladen.stand.neuFehler} onNochmal={geladen.neu} />
       )}
       {fehler && <FehlerKasten fehler={fehler} onNochmal={() => setFehler(null)} />}
+      {einstellungenAlt && (
+        <div role="status">
+          <Leise>
+            Die Vorschau zeigt noch die alten Einstellungen (Name, Fußzeile …) – sie ließen sich
+            gerade nicht neu lesen. Beim Wechsel des Reiters oder bei der nächsten Speicherung wird
+            es erneut versucht.
+          </Leise>
+        </div>
+      )}
 
       {stand && listen && (
         <>

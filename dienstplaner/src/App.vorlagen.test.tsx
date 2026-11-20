@@ -82,7 +82,7 @@ afterEach(() => {
 });
 
 const reiterAn = (name: string) =>
-  within(screen.getByRole('group', { name: 'Bereiche' }))
+  within(screen.getByRole('navigation', { name: 'Bereiche' }))
     .getByRole('button', { name })
     .getAttribute('aria-pressed');
 

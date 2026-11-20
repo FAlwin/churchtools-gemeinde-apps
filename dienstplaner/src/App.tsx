@@ -4,8 +4,6 @@ import { LiedZugriffKontext } from '@ui/lied/liedZugriff';
 import { dienstplanerLiedZugriff, liedAbfragen } from './liedZugriff';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
-import { Segment } from '@ui/bedienung/Segment';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import {
   eigeneDienste,
@@ -207,20 +205,7 @@ export function App() {
 
   // Die Reiter erst zeigen, wenn klar ist, wer was darf – sonst taucht „Planen“ nachträglich auf.
   const fertig = zustand.art === 'fertig';
-  const oben =
-    fertig && !handy ? (
-      <Segment
-        value={aktiv}
-        options={reiter.map((r) => ({ value: r.id, label: r.label }))}
-        onChange={wechseln}
-        ariaLabel="Bereiche"
-        verbunden
-      />
-    ) : undefined;
-  const unten =
-    fertig && handy ? (
-      <ReiterLeiste reiter={reiter} aktiv={aktiv} onWechsel={wechseln} />
-    ) : undefined;
+  const bereiche = fertig ? { reiter, aktiv, onWechsel: wechseln } : undefined;
 
   return (
     <QueryClientProvider client={liedAbfragen}>
@@ -228,8 +213,8 @@ export function App() {
         <ErweiterungsSeite
           app="Dienstplaner"
           zustand={zustand}
-          reiter={oben}
-          unten={unten}
+          bereiche={bereiche}
+          handy={handy}
           gruss={terminId === null && aktiv === 'start'}
           onNochmal={laden}
         >

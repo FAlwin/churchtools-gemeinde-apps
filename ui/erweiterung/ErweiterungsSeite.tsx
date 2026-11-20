@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ReiterLeiste, type Reiter } from '../bedienung/ReiterLeiste';
 import type { Fehlermeldung } from '../ct/fehlerMeldung';
 import styles from './ErweiterungsSeite.module.scss';
 
@@ -68,7 +69,18 @@ export function FehlerKasten({
   );
 }
 
-interface Props {
+/**
+ * **Die Bereiche einer Erweiterung** (Reiter): am Rechner unterstrichen unter dem App-Namen, am Handy unten in der
+ * Leiste – EINE Stelle für alle Apps (R4/E4 „Ruhige Bedienung“ B2; vorher zeichnete jede App am Rechner ihren eigenen
+ * Kasten-Umschalter). Einstellungen stehen als letzter Reiter (E24).
+ */
+export interface Bereiche<T extends string> {
+  reiter: Reiter<T>[];
+  aktiv: T;
+  onWechsel: (id: T) => void;
+}
+
+interface Props<T extends string> {
   /** Name der App im Kopf, z. B. „Dienstplaner“. */
   app: string;
   zustand: SeitenZustand;
@@ -78,12 +90,17 @@ interface Props {
   kopfAktion?: ReactNode;
   /** Ein Hinweis unter dem Kopf in ruhiger Schrift (z. B. „Gruppenart fehlt“) – nur bei `fertig`. */
   hinweis?: ReactNode;
-  /** Neben dem App-Namen, z. B. die Reiter am Computer (Dienstplaner E3). */
-  reiter?: ReactNode;
+  /** Die Reiter der App – am Rechner unter dem App-Namen, am Handy unten (`handy`). Erst geben, wenn klar ist, wer was darf. */
+  bereiche?: Bereiche<T>;
+  /** Handy-Breite? Dann stehen die `bereiche` unten statt im Kopf. */
+  handy?: boolean;
+  /**
+   * Die Lupe (`SuchLupe`, R7/E11): am Rechner rechts neben den Reitern, sonst (Handy, keine Reiter) neben dem
+   * App-Namen. Eine Stelle, damit jede App mit Suche sie am selben Platz hat.
+   */
+  lupe?: ReactNode;
   /** „Hallo …“ zeigen? Mit Reitern nur auf der Startseite (Entwurf v17). Vorgabe: ja. */
   gruss?: boolean;
-  /** Unter dem Rollbereich, z. B. die Reiterleiste am Handy (siehe `ErweiterungsRahmen`). */
-  unten?: ReactNode;
   /** „Erneut versuchen“ – erscheint nur, wenn der Fehler vorübergehend ist (`fehlerMeldung`). */
   onNochmal: () => void;
   /** Der Inhalt – nur bei `fertig`. */
@@ -94,34 +111,52 @@ interface Props {
  * **Die Startseite einer Erweiterung dieses Repos** (Dienstplaner E2, Anmeldungen): Kopf mit App- und
  * Gemeindename, „Hallo …“, „Wird geladen …“, der Fehlerkasten und die Version im Fuß.
  */
-export function ErweiterungsSeite({
+export function ErweiterungsSeite<T extends string = string>({
   app,
   zustand,
   nebenGruss,
   kopfAktion,
   hinweis,
-  reiter,
+  bereiche,
+  handy = false,
+  lupe,
   gruss = true,
-  unten,
   onNochmal,
   children,
-}: Props) {
+}: Props<T>) {
   const appName = (
     <p className={styles.app}>
       {app}
       {zustand.art === 'fertig' && zustand.gemeinde && ` · ${zustand.gemeinde}`}
     </p>
   );
+  const leiste = bereiche && (
+    <ReiterLeiste
+      oben={!handy}
+      flach={!handy}
+      reiter={bereiche.reiter}
+      aktiv={bereiche.aktiv}
+      onWechsel={bereiche.onWechsel}
+    />
+  );
+  // Reiterzeile nur am Rechner; die Lupe steht dann rechts daneben, sonst bei App-Namen.
+  const reiterzeile = leiste && !handy;
   return (
-    <ErweiterungsRahmen unten={unten}>
+    <ErweiterungsRahmen unten={handy ? leiste : undefined}>
       <header className={styles.kopf}>
-        {reiter ? (
+        {lupe && !reiterzeile ? (
           <div className={styles.appzeile}>
             {appName}
-            {reiter}
+            {lupe}
           </div>
         ) : (
           appName
+        )}
+        {reiterzeile && (
+          <div className={styles.reiterzeile}>
+            {leiste}
+            {lupe}
+          </div>
         )}
         {zustand.art === 'fertig' && gruss && (
           <div className={styles.kopfzeile}>

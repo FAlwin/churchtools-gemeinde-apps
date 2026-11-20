@@ -36,6 +36,11 @@ interface Props<T extends string> {
    * Statusleiste samt Unschärfe-Band (`--reiter-oben-polster`). Reiter in einer Seite oder Karte (Anmeldungen) brauchen das nicht.
    */
   amRand?: boolean;
+  /**
+   * **Flach** (nur mit `oben`): ohne eigenen Hintergrund, Rand und Seitenabstand – die Zeile darum liefert den Rand
+   * (Reiterzeile im Seitenkopf der Erweiterungen, `ErweiterungsSeite`, R4/E4 „Ruhige Bedienung“ B2).
+   */
+  flach?: boolean;
   /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */
   name?: string;
 }
@@ -53,11 +58,16 @@ export function ReiterLeiste<T extends string>({
   tour,
   oben = false,
   amRand = false,
+  flach = false,
   name = 'Bereiche',
 }: Props<T>) {
   return (
     <nav
-      className={oben ? `${styles.oben}${amRand ? ' ' + styles.rand : ''}` : styles.tabbar}
+      className={
+        oben
+          ? `${styles.oben}${amRand ? ' ' + styles.rand : ''}${flach ? ' ' + styles.flach : ''}`
+          : styles.tabbar
+      }
       data-tour={tour}
       aria-label={name}
     >

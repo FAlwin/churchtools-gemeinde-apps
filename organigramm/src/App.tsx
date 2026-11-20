@@ -3,10 +3,9 @@ import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/Erweiteru
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { CenterMessage } from '@ui/bedienung/CenterMessage';
 import { ApiError } from '@ui/ct/fehler';
-import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Icon } from '@ui/icons/icons';
-import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
+import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { baumOhneTypen, knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
 import { bereicheSortiert, praesentationAus } from '@shared/organigramm/praesentation';
@@ -436,20 +435,8 @@ export function App() {
     setHash(window.location.hash);
   };
   const fertig = zustand.art === 'fertig';
-  const oben =
-    fertig && zeigtReiter && !handy ? (
-      <Segment
-        value={ansicht}
-        options={reiter.map((r) => ({ value: r.id, label: r.label }))}
-        onChange={wechseln}
-        ariaLabel="Bereiche"
-        verbunden
-      />
-    ) : undefined;
-  const unten =
-    fertig && zeigtReiter && handy ? (
-      <ReiterLeiste reiter={reiter} aktiv={ansicht} onWechsel={wechseln} />
-    ) : undefined;
+  const bereiche =
+    fertig && zeigtReiter ? { reiter, aktiv: ansicht, onWechsel: wechseln } : undefined;
 
   const offenerKnoten = offeneGruppe === null ? undefined : knoten.get(offeneGruppe);
   // „Hier anfangen“ (O7b-2): nur für eine Gruppe mit Untergruppen, die im gefilterten Baum steht.
@@ -507,7 +494,8 @@ export function App() {
     <ErweiterungsSeite
       app="Organigramm"
       zustand={zustand}
-      reiter={oben}
+      bereiche={bereiche}
+      handy={handy}
       kopfAktion={
         // Rechts neben „Hallo …“ wie „+ Gruppe erstellen“ in ChurchTools (Alwin, 28.10.2026: Variante B). Bis die
         // Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation.
@@ -536,7 +524,6 @@ export function App() {
           </>
         ) : undefined
       }
-      unten={unten}
       onNochmal={laden}
     >
       {start && ansicht === 'organigramm' && (

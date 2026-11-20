@@ -55,7 +55,21 @@
   gap: 4px;
 }
 
-// Reiter direkt neben dem App-Namen, wie im Entwurf des Dienstplaners (v17).
+// Reiterzeile unter dem App-Namen (E4/R4, Entwurf „Ruhige Bedienung“ v5): links die unterstrichenen Reiter, rechts die
+// Lupe (R7); die Linie darunter zeichnet die Zeile, nicht die Reiter.
+.reiterzeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--hair);
+
+  > nav {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// App-Name mit der Lupe daneben, wenn es keine Reiterzeile gibt (Handy).
 .appzeile {
   display: flex;
   align-items: center;

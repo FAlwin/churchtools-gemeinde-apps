@@ -409,8 +409,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (Gruppen-Admins) und im **Gebetsabend** (wer die Einstellungen ändern darf) steht „Einstellungen“ ganz rechts in der Reiterleiste,
   am Handy ganz rechts unten, statt als Knopf neben „Hallo …“. Der Reiter öffnet dasselbe Fenster wie vorher der Knopf; wer die
   Einstellungen nicht öffnen darf, sieht den Reiter nicht. In den Anmeldungen und im Gebetsabend gibt es dafür nun die Reiter
-  „Start“ und „Einstellungen“. „Neue Veranstaltung“ bleibt in den Anmeldungen neben „Hallo …“. Dienstplaner, Website und Protokolle
-  haben keine Einstellungen als Fenster – in den Protokollen bleibt „Verwaltung“ der letzte Reiter.
+  „Start“ und „Einstellungen“. „Neue Veranstaltung“ bleibt in den Anmeldungen neben „Hallo …“. Die Website hat ebenfalls
+  „Einstellungen“ als letzten Reiter; in den Protokollen heißt der letzte Reiter jetzt auch „Einstellungen“ (vorher „Verwaltung“,
+  er zeigt eine Seite). Der Dienstplaner hat keine Einstellungen.
 - **Ein Status-Etikett.** „Leitung“/„Mitglied“, „eingerichtet“, „Entwurf“, „Warteliste 2“, „offen“, „nur ansehen“, „wechselt“,
   „neu“ und alle ähnlichen Hinweise haben jetzt dieselbe Form in vier Farben: grau (leise Auskunft), blau (deine Rolle, wartet auf
   dich), grün (in Ordnung), rot (braucht Aufmerksamkeit). Zwei Hinweise, die bisher gelb waren („Ausnahme vom letzten Jahr“,

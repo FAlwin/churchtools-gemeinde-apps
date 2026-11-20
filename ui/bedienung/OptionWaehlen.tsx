@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { KopfKnopf } from './KopfKnopf';
+import { SchwebePlus } from './SchwebePlus';
 import { useAufklapp } from './useAufklapp';
 import { useEscape } from './useEscape';
 import styles from './OptionWaehlen.module.scss';
@@ -124,7 +125,8 @@ export function AuswahlBlatt({
  * Symbol, 26 px – dann sagt `title`, wofür das Plus ist.
  *
  * **„Neu ⌄“** (R3/E14, Protokolle B6): `pfeil` setzt den Pfeil hinter das Wort, `handy` lässt die Möglichkeiten dort als Blatt von
- * unten kommen (`AuswahlBlatt`, wie beim „⋯“-Menü) statt als Menü am Rand. `titel` ist der Name von Menü und Blatt.
+ * unten kommen (`AuswahlBlatt`, wie beim „⋯“-Menü) statt als Menü am Rand – und der grüne Knopf wird am Handy zum **schwebenden
+ * Plus** (`SchwebePlus`, R3: „Neu anlegen“ ist dort immer der grüne Kreis unten rechts, nie ein Quadrat im Kopf). `titel` ist der Name von Menü und Blatt.
  * Ohne Möglichkeiten (und ohne `gesperrt`) gibt es auch den Knopf nicht.
  */
 export function HinzufuegenMenue({
@@ -154,16 +156,10 @@ export function HinzufuegenMenue({
   if (handy)
     return (
       <>
-        <KopfKnopf
-          onClick={gesperrt ?? (() => setBlatt(true))}
+        <SchwebePlus
           label={label}
-          title={title}
-          neu
-          klein={klein}
-          pfeil={pfeil}
-          menuOffen={gesperrt ? undefined : blatt}
+          onClick={gesperrt ?? (() => setBlatt(true))}
           dataTour={dataTour}
-          symbol={symbol}
         />
         {blatt && (
           <AuswahlBlatt

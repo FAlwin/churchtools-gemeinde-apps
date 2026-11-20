@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
@@ -179,6 +179,18 @@ export function AnmeldungenReiter({
     startRundmail,
     startOffen,
     onGespeichert,
+  });
+
+  // „Von Hand“ (R3): am Rechner/iPad grün in der Werkzeugzeile, am Handy das schwebende Plus (`useNeuAnlegen`).
+  // Sichtbar nur dort, wo die Liste steht (nicht beim Laden ohne Stand, nicht bei Fehler/verboten) – wie bisher.
+  const neuKnopf = useNeuAnlegen({
+    label: 'Von Hand',
+    onClick: () => setVonHand({ dazu: null }),
+    sichtbar:
+      darf &&
+      !entwurf &&
+      !!zustand &&
+      (zustand.art === 'fertig' || (zustand.art === 'laedt' && !!stand)),
   });
 
   if (entwurf || !zustand)
@@ -466,14 +478,7 @@ export function AnmeldungenReiter({
             />
           )}
           <span className={a.rechts}>
-            {darf && (
-              <KopfKnopf
-                neu
-                label="Von Hand"
-                symbol={<Icon name="plus" size={18} />}
-                onClick={() => setVonHand({ dazu: null })}
-              />
-            )}
+            {neuKnopf.kopf}
             <MehrMenue optionen={mehr} handy={handy} titel="Mehr zur Liste" />
           </span>
         </div>
@@ -557,6 +562,7 @@ export function AnmeldungenReiter({
         </p>
       </section>
 
+      {neuKnopf.schwebend}
       {vonHand && (
         <VonHandFenster
           mitBestaetigung={mitBestaetigung}

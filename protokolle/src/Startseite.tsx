@@ -30,6 +30,7 @@ import { kachelVon, uhrzeit } from './anzeige';
 import { Etikett } from '@ui/bedienung/Etikett';
 import { ProtokollNeu } from './ProtokollNeu';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import styles from './Startseite.module.scss';
 
 const LAGE: Record<ProtokollGruppe['lage'], { text: string; ton: 'gruen' | 'rot' }> = {
@@ -147,6 +148,12 @@ export function Startseite({
       </div>
     ) : null;
 
+  // „Neues Protokoll“ (R3): am Rechner/iPad grün in der Karte, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neues Protokoll',
+    onClick: () => setNeu(true),
+    sichtbar: schreibGruppen.length > 0,
+  });
   return (
     <>
       <FaelligBand faellige={faellige} vorlauf={vorlauf} heute={heute} onZuToDos={onAlleToDos} />
@@ -246,15 +253,7 @@ export function Startseite({
           <section className={styles.karte} aria-labelledby="naechste">
             <div className={styles.kopf}>
               <h2 id="naechste">Nächste Sitzungen</h2>
-              {schreibGruppen.length > 0 && (
-                <KopfKnopf
-                  neu
-                  label="Neues Protokoll"
-                  title="Neues Protokoll ohne Termin"
-                  symbol={<Icon name="plus" size={16} />}
-                  onClick={() => setNeu(true)}
-                />
-              )}
+              {neuKnopf.kopf}
             </div>
             {ladeTeil}
             {zustand.art === 'fertig' &&
@@ -332,6 +331,7 @@ export function Startseite({
             </p>
           </section>
         </div>
+        {neuKnopf.schwebend}
         {neu && (
           <ProtokollNeu
             modul={modul}

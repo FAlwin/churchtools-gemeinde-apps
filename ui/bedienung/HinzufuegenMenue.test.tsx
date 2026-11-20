@@ -50,6 +50,23 @@ describe('HinzufuegenMenue als „Neu ⌄“', () => {
     expect(knopf.querySelectorAll('svg')).toHaveLength(2); // Plus vorn, Pfeil hinten
   });
 
+  it('Handy: statt des grünen Knopfs im Kopf das schwebende Plus (R3) – ohne Pfeil, mit Tour-Ziel', () => {
+    render(
+      <HinzufuegenMenue
+        label="Neu"
+        pfeil
+        handy
+        dataTour="neu"
+        optionen={[{ label: 'Neue Sitzung', onClick: vi.fn() }]}
+      />,
+    );
+    const plus = screen.getByRole('button', { name: 'Neu' });
+    expect(plus.className).toMatch(/plus/);
+    expect(plus.className).not.toMatch(/neu/);
+    expect(plus.getAttribute('data-tour')).toBe('neu');
+    expect(plus.querySelectorAll('svg')).toHaveLength(1);
+  });
+
   describe.each([
     ['Rechner', false, 'menu', 'menuitem'],
     ['Handy', true, 'dialog', 'button'],

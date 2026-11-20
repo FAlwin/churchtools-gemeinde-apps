@@ -95,7 +95,7 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
     const knoepfe = within(zeile)
       .getAllByRole('button')
       .map((k) => k.getAttribute('aria-label') ?? k.textContent);
-    expect(knoepfe).toEqual(['Liste', 'Board', 'Filter', 'Neues To-Do – auch ohne Protokoll']);
+    expect(knoepfe).toEqual(['Liste', 'Board', 'Filter', 'Neues To-Do']);
     expect(screen.queryByRole('heading', { name: 'To-Dos' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Zuständigkeit' })).toBeNull();
     expect(screen.queryByRole('button', { name: /^(Sortieren|Gruppieren)/ })).toBeNull();
@@ -103,9 +103,7 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
     const gruen = screen
       .getAllByRole('button')
       .filter((k) => /(^|[\s_])neu([\s_]|$)/.test(k.className));
-    expect(gruen.map((k) => k.getAttribute('aria-label'))).toEqual([
-      'Neues To-Do – auch ohne Protokoll',
-    ]);
+    expect(gruen.map((k) => k.getAttribute('aria-label'))).toEqual(['Neues To-Do']);
   });
 
   it('Mitglied ohne Mitarbeit: kein grüner Knopf, der Rest der Zeile bleibt', async () => {
@@ -197,12 +195,16 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
       expect(screen.getByRole('button', { name: 'Ansicht: Board' })).toBeTruthy();
     });
 
-    it('Filter und „Neues To-Do“ stehen in der Zeile; „Neues To-Do“ öffnet sein Fenster', async () => {
+    it('Filter steht in der Zeile; „Neues To-Do“ ist das schwebende Plus (R3), kein Knopf in der Zeile – und öffnet sein Fenster', async () => {
       zeige();
       await screen.findByText('Eins');
       const zeile = screen.getByRole('toolbar', { name: 'To-Dos' });
       expect(within(zeile).getByRole('button', { name: 'Filter' })).toBeTruthy();
-      fireEvent.click(within(zeile).getByRole('button', { name: /Neues To-Do/ }));
+      expect(within(zeile).queryByRole('button', { name: /Neues To-Do/ })).toBeNull();
+      const plus = screen.getByRole('button', { name: 'Neues To-Do' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+      fireEvent.click(plus);
       expect(screen.getByRole('dialog', { name: 'Neues To-Do' })).toBeTruthy();
     });
   });

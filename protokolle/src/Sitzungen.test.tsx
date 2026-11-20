@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { StrictMode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
@@ -694,5 +694,37 @@ describe('Teilen / PDF (S6-3b)', () => {
     fireEvent.click(await screen.findByText('Klausur'));
     expect(await screen.findByText(/Für diese Sitzung gibt es noch kein Protokoll/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Teilen \/ PDF/ })).toBeNull();
+  });
+});
+
+describe('„Neu“ am Handy (R3)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const geraet = (handy: boolean) =>
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: handy && q.includes('max-width'),
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+  it('Handy: das schwebende Plus (kein Quadrat im Kopf), und es öffnet dasselbe Menü als Blatt', async () => {
+    geraet(true);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    await screen.findByRole('region', { name: 'Kommend' });
+    const plus = screen.getByRole('button', { name: 'Neu' });
+    expect(plus.className).toMatch(/plus/);
+    expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+    fireEvent.click(plus);
+    const blatt = within(screen.getByRole('dialog', { name: 'Neu' }));
+    expect(blatt.getByRole('button', { name: 'Punkt vorschlagen' })).toBeTruthy();
+  });
+
+  it('Rechner/iPad: bleibt der grüne Knopf „Neu ⌄“ mit Menü', async () => {
+    geraet(false);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    await screen.findByRole('region', { name: 'Kommend' });
+    const knopf = screen.getByRole('button', { name: 'Neu' });
+    expect(knopf.className).toMatch(/(^|[\s_])neu([\s_]|$)/);
+    expect(knopf.className).not.toMatch(/plus/);
   });
 });

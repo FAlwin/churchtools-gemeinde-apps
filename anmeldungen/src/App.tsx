@@ -1,7 +1,6 @@
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useCallback, useEffect, useState } from 'react';
-import { Icon } from '@ui/icons/icons';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht } from './veranstaltungen';
@@ -129,6 +128,17 @@ export function App() {
 
   const fertig = zustand.art === 'fertig' ? zustand : null;
 
+  const anlegeTeams = fertig
+    ? fertig.start.gruppen.filter((g) => fertig.anlegen.teamIds.includes(g.id))
+    : [];
+
+  // „Neue Veranstaltung“ (R3): am Rechner/iPad grün im Kopf, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neue Veranstaltung',
+    onClick: () => setNeu(true),
+    sichtbar: anlegeTeams.length > 0 && !!fertig?.formular,
+  });
+
   const leiste = aenderung && (
     <RueckgaengigLeiste
       key={aenderung.nr}
@@ -204,10 +214,6 @@ export function App() {
     );
   }
 
-  const anlegeTeams = fertig
-    ? fertig.start.gruppen.filter((g) => fertig.anlegen.teamIds.includes(g.id))
-    : [];
-
   // Der Rahmen (Kopf, Laden, Fehlerkasten, Fuß) ist für alle Erweiterungen derselbe (`ui/erweiterung`).
   const seite: SeitenZustand =
     zustand.art === 'fertig'
@@ -229,21 +235,13 @@ export function App() {
           ? { onOeffnen: () => setEinstellungen(true), offen: einstellungen }
           : undefined
       }
-      kopfAktion={
-        anlegeTeams.length > 0 && fertig?.formular ? (
-          <KopfKnopf
-            neu
-            label="Neue Veranstaltung"
-            symbol={<Icon name="plus" size={18} />}
-            onClick={() => setNeu(true)}
-          />
-        ) : undefined
-      }
+      kopfAktion={neuKnopf.kopf ?? undefined}
       hinweis={
         fertig?.anlegen.artId === null &&
         'In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.'
       }
     >
+      {neuKnopf.schwebend}
       {leiste}
       {fertig && !fertig.formular && (
         <ErstEinrichten admin={fertig.admin} onEinstellungen={() => setEinstellungen(true)} />

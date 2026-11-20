@@ -5,7 +5,7 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { eineWahl, type FilterAbschnitt } from '@ui/bedienung/filterAbschnitt';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
 import { Icon } from '@ui/icons/icons';
@@ -435,6 +435,12 @@ export function ToDos({
       : null;
   };
   const mitMitarbeit = gruppen.filter((g) => g.mitarbeit !== null);
+  // „Neues To-Do“ (R3): am Rechner/iPad grün in der Werkzeugzeile, am Handy das schwebende Plus (`useNeuAnlegen`).
+  const neuKnopf = useNeuAnlegen({
+    label: 'Neues To-Do',
+    onClick: () => setFenster({ eintrag: null }),
+    sichtbar: mitMitarbeit.length > 0,
+  });
 
   /**
    * **Die To-Do-Vorschläge** im Bereich „Vorgeschlagen“ (W9b) – getrennt von den To-Dos (`GruppenUebersicht.todoVorschlaege`),
@@ -586,21 +592,11 @@ export function ToDos({
         rechts={
           <>
             <FilterKnopf still abschnitte={filter} />
-            {mitMitarbeit.length > 0 && (
-              // Die Hülle hält den grünen Knopf aus dem Rahmen heraus, den die Werkzeugzeile am Handy um stille Knöpfe legt (R12).
-              <span className={styles.neu}>
-                <KopfKnopf
-                  neu
-                  label="Neues To-Do"
-                  title="Neues To-Do – auch ohne Protokoll"
-                  symbol={<Icon name="plus" size={16} />}
-                  onClick={() => setFenster({ eintrag: null })}
-                />
-              </span>
-            )}
+            {neuKnopf.kopf}
           </>
         }
       />
+      {neuKnopf.schwebend}
       {fenster && (
         <ToDoFenster
           ich={ich}

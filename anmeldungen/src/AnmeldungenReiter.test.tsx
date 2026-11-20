@@ -260,6 +260,40 @@ describe('„⋯“-Menü der Liste (B7, E24)', () => {
     expect(screen.getByRole('button', { name: 'Von Hand' })).toBeTruthy();
   });
 
+  it('„Von Hand“ am Handy (R3): das schwebende Plus statt des grünen Quadrats', () => {
+    try {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q.includes('max-width'),
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      zeigen(fertig());
+      const plus = screen.getByRole('button', { name: 'Von Hand' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+      fireEvent.click(plus);
+      expect(screen.getByRole('dialog')).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('„Von Hand“ am Handy ohne Recht: auch kein Plus', () => {
+    try {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q.includes('max-width'),
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      zeigen(fertig(), 10, false, false);
+      expect(screen.queryByRole('button', { name: 'Von Hand' })).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('ohne Recht: kein „Von Hand“, kein „Rundmail“ – Spalten und Druckliste bleiben', () => {
     zeigen(fertig(), 10, false, false);
     expect(screen.queryByRole('button', { name: 'Von Hand' })).toBeNull();

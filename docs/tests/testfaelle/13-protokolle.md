@@ -393,7 +393,7 @@ einem abgeschlossenen Gruppentreffen steht sie fest; ein Mitglied sieht nichts d
    Absage“). Der Untertitel nennt das letzte freigegebene Protokoll (gibt es keins: „In den letzten 28 Tagen …“). Das
    Treffen im Vormonat steht dort nicht, wenn es vor dem letzten freigegebenen Protokoll liegt oder älter als 28 Tage ist.
 2. Oben rechts neben der Gruppen-Überschrift steht der grüne Knopf **Neu ⌄**; unter einer Linie am Ende seines Menüs steht
-   **Protokoll nachtragen** (am Handy öffnet der Knopf ein Blatt von unten).
+   **Protokoll nachtragen** (am Handy öffnet der schwebende grüne Kreis ein Blatt von unten).
 3. **Neu ⌄ → Protokoll nachtragen**: Das Fenster zeigt den laufenden Monat; **›** ist gesperrt. Mit **‹** in den Vormonat: Dort
    steht das abgeschlossene Treffen mit der Marke „Gruppentreffen abgeschlossen“ und „Anwesenheit steht in ChurchTools
    fest“. Ein Monat ohne Treffen: „Im … gibt es nichts nachzutragen – kein Treffen ohne Protokoll.“ Treffen mit Protokoll
@@ -851,13 +851,13 @@ beginnt mit „TEST“ und wird danach aufgeräumt.
 2. **Filter** öffnen: Oben stehen **Gruppieren nach** (Status · Fälligkeit · Person; im Board **Spalten nach** mit Status und Person) und **Reihenfolge**
    (Dringlichkeit · Bis-Datum · Alphabetisch · Manuell), dann **Zuständig** (mit den Kurzwegen **Alle** und **Nur meine**) und **Gruppen**. Wähle jede Möglichkeit einmal: Die Liste ändert sich
    sofort, das Fenster bleibt offen, nach dem Neuladen gilt die Wahl noch. Am Knopf steht **keine** Zahl, solange nichts ausgeblendet ist; nach **Nur meine** steht dort **2**.
-3. **Handy**: Links steht ein blau hinterlegter Knopf **Liste ⌄**, rechts der **Filter** mit Rahmen und das grüne **+**. **Liste ⌄**
+3. **Handy**: Links steht ein blau hinterlegter Knopf **Liste ⌄**, rechts der **Filter** mit Rahmen; **Neues To-Do** ist dort der schwebende grüne Kreis mit **+** unten rechts über der Reiterleiste (kein grünes Quadrat in der Zeile) und öffnet das Fenster „Neues To-Do“. **Liste ⌄**
    antippen: Ein Blatt von unten bietet Liste und Board an; **Board** wählen: Das Blatt geht zu, das Board steht da.
 4. **Sitzungen** als Leitung am Rechner: Rechts neben dem Gruppennamen steht der grüne Knopf **Neu ⌄**, sonst **kein** grüner Knopf auf der Seite; in der Karte „Kommend“ stehen keine
    Knöpfe mehr. Das Menü zeigt **Neues Protokoll · Neue Sitzung · Punkt vorschlagen** und, hinter einer Linie, **Protokoll nachtragen**. Jeder Eintrag öffnet sein
    Fenster (Neues Protokoll, Neue Sitzung mit Einladen, Punkt vorschlagen, Protokoll nachtragen) und das Menü ist dabei zu.
-5. Am Handy dieselben Einträge im Blatt **Neu**; der Knopf zeigt dort Plus und Pfeil. **Hinweis:** Der schwebende Kreis unten rechts kommt in den Protokollen noch nicht vor
-   (er folgt mit der Musik-App-Scheibe).
+5. Am Handy dieselben Einträge im Blatt **Neu**; geöffnet wird es vom schwebenden grünen Kreis mit **+** unten rechts über der Reiterleiste (kein grünes Quadrat
+   mit Pfeil im Kopf). Auf der **Startseite** ist **Neues Protokoll** am Handy ebenso der schwebende Kreis, am Rechner der grüne Knopf in der Karte „Nächste Sitzungen“.
 6. Als **Mitglied** (ohne Leitung): **Neu ⌄** bietet nur **Punkt vorschlagen**; fehlt die Mitarbeit-Kategorie der Gruppe, gibt es den Knopf gar nicht. In den To-Dos sieht das Mitglied
    dieselbe Zeile.
 

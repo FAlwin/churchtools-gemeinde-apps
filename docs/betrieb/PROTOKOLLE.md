@@ -131,7 +131,7 @@ Erweiterung läuft in ChurchTools mit unbekannter Breite): ab 720 px Tabelle ohn
 sehen sind), darunter Karten (`listenForm`). Das Board bleibt Karten.
 
 **Werkzeugzeile (W8b, B6):** Über der Liste steht **eine Zeile**: links die Ansicht **Liste | Board** (am Handy ein blauer Knopf „Liste ⌄“ mit Blatt), rechts der **Filter**
-und der grüne Knopf **Neues To-Do**. Der Titel „To-Dos“ entfällt – er steht schon im Reiter. Im **Filter-Fenster** stehen **Gruppieren nach** (im Board **Spalten nach**:
+und der grüne Knopf **Neues To-Do** (am Handy statt dessen der schwebende grüne Kreis mit „+“ unten rechts). Der Titel „To-Dos“ entfällt – er steht schon im Reiter. Im **Filter-Fenster** stehen **Gruppieren nach** (im Board **Spalten nach**:
 Status · Fälligkeit · Person, im Board ohne Fälligkeit), **Reihenfolge** (Dringlichkeit · Bis-Datum · Alphabetisch · Manuell), **Zuständig** und **Gruppen**. Die ersten zwei
 sind Anzeige, sie zählen nicht in die Zahl am Knopf. Unter „Zuständig“ stehen die Kurzwege **„Alle“** und **„Nur meine“** (vorher die Pillen „Alle | Meine“ über der Liste): „Nur meine“ ist
 ein **Kurzweg auf den Filter „Zuständig“** – derselbe Zustand, keine zweite Filterlogik: es blendet „Andere“ und „Noch niemand“ aus (Ich bleibt, die Zahl am Knopf ist dann 2),

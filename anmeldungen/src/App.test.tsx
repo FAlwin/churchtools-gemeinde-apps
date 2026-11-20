@@ -222,6 +222,27 @@ describe('Anlegen auf der Startseite (A3, #486)', () => {
     expect([...auswahl.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Technik']);
     expect(anlegen).toHaveBeenCalledWith([9, 7]);
   });
+  it('am Handy (R3): „Neue Veranstaltung“ ist das schwebende Plus, kein grünes Quadrat im Kopf', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('max-width'),
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      laden.mockResolvedValue(START);
+      ladenUebersicht.mockResolvedValue(LEER);
+      anlegen.mockResolvedValue({ artId: 5, teamIds: [7] });
+      render(<App />);
+      const plus = await screen.findByRole('button', { name: 'Neue Veranstaltung' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+      fireEvent.click(plus);
+      expect(await screen.findByRole('combobox', { name: 'Gehört zur Gruppe' })).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it('ohne Anlege-Recht kein Knopf; fehlt die Gruppenart, sagt die Seite es', async () => {
     laden.mockResolvedValue(START);
     ladenUebersicht.mockResolvedValue(LEER);

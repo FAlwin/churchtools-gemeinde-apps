@@ -8,12 +8,6 @@
   gap: 16px;
 }
 
-// Der grüne „Neues To-Do“ in der Werkzeugzeile – eine Hülle, damit ihn der Rahmen der Werkzeugzeile am Handy (R12) nicht
-// grau überdeckt; er ist als gefüllter Knopf ohnehin gerahmt.
-.neu {
-  display: inline-flex;
-}
-
 .karte {
   @include m.card-list;
 }

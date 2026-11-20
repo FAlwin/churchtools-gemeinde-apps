@@ -123,6 +123,32 @@ describe('Reiter „Neue Gliederung“ (O7-2)', () => {
     expect(gespeichert()).toMatchObject({ version: 2, inhalt: { namen: { '7': 'Medien' } } });
   });
 
+  it('neuer Bereich am Rechner: der grüne Knopf in der Leiste', async () => {
+    await mitPlan();
+    expect(screen.getByRole('button', { name: 'Neuer Bereich' }).className).toMatch(
+      /(^|[\s_])neu([\s_]|$)/,
+    );
+  });
+
+  it('neuer Bereich am Handy (R3): das schwebende Plus statt des grünen Quadrats, dasselbe Fenster', async () => {
+    try {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q.includes('max-width'),
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      await mitPlan();
+      const plus = screen.getByRole('button', { name: 'Neuer Bereich' });
+      expect(plus.className).toMatch(/plus/);
+      expect(plus.className).not.toMatch(/(^|[\s_])neu([\s_]|$)/);
+      fireEvent.click(plus);
+      expect(fenster().getByPlaceholderText('Name der neuen Gruppe')).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('neuer Bereich, Café hinein (Ziel mit Suche); „Wie heute“ nimmt es zurück', async () => {
     await mitPlan();
     fireEvent.click(screen.getByRole('button', { name: 'Neuer Bereich' }));

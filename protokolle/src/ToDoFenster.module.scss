@@ -97,7 +97,8 @@
 .fertigListe {
   // Zwei Spalten, wo die Breite reicht, am Handy eine (W10).
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  // 150 px: Das Fenster ist 440 px breit – mit 210 px gab es dort nie zwei Spalten (W10-Prüfung).
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0 16px;
   margin: 0 0 8px;
   padding: 0;
@@ -119,6 +120,14 @@
   input {
     flex: none;
   }
+}
+
+.fertigName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fertigRechts {

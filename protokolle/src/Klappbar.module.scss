@@ -30,6 +30,12 @@
   font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
+
+  // Nichts darf schrumpfen: Am Handy lag sonst die Gesichtergruppe über „Alle (N)“ (W10-Prüfung, 375 px). Was nicht
+  // passt, schneidet der Rahmen ab.
+  > * {
+    flex-shrink: 0;
+  }
 }
 
 .innen {

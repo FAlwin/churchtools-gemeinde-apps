@@ -115,7 +115,8 @@
 // Zwei Spalten (W10): wo die Breite für zwei reicht, sonst eine; „Alle (N)“ steht oben über beiden.
 .zweispaltig {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  // 150 px: Das To-Do-Fenster ist 440 px breit – mit 210 px gab es dort nie zwei Spalten (W10-Prüfung).
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   border: 0;
   border-radius: 0;
 

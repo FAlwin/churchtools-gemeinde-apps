@@ -9,7 +9,7 @@ import { Etikett } from '@ui/bedienung/Etikett';
 import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
-import { datumText, tagKurz } from '@shared/ct/datum';
+import { datumText, tagKurz, tagMonat } from '@shared/ct/datum';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Nachziehen } from '@shared/protokolle/nachziehen';
@@ -911,11 +911,13 @@ export function ToDoFenster({
                         })
                       }
                     />
-                    {p === ich.person ? `${ich.name} (du)` : name(p)}
+                    <span className={styles.fertigName}>
+                      {p === ich.person ? `${ich.name} (du)` : name(p)}
+                    </span>
                     <span className={`${styles.fertigRechts} ${fertig ? styles.fertigOk : ''}`}>
                       {fertig
                         ? am && !umgeschaltet.has(p)
-                          ? `✓ am ${tagKurz(tagAusIso(am, gemeindeZeitzone()))}`
+                          ? `✓ ${tagMonat(tagAusIso(am, gemeindeZeitzone()))}`
                           : '✓'
                         : 'offen'}
                     </span>

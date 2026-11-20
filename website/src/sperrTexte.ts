@@ -44,3 +44,10 @@ export const AUSSEHEN_TEXTE: SperrTexte = {
   veraendert:
     'Das Aussehen wurde inzwischen von jemand anderem geändert. Deine Änderungen sind noch nicht gespeichert – sonst gingen seine verloren.',
 };
+
+/** Das Fenster „Einstellungen“ schreibt dieselbe Einheit wie „Aussehen“ – darum hier dieselbe Sperre, nur mit eigenen Worten. */
+export function einstellungenFremdText(s: Sperre, ichPerson: number): string {
+  return s.von === ichPerson
+    ? 'Die Einstellungen sind gerade in einem anderen Fenster von dir geöffnet und werden dort bearbeitet. Du kannst sie hier ansehen – speichern kannst du erst, wenn du dort fertig bist.'
+    : `Das Aussehen und die Einstellungen bearbeitet gerade ${s.name}. Du kannst sie hier ansehen – ändern kannst du sie, sobald ${s.name} fertig ist.`;
+}

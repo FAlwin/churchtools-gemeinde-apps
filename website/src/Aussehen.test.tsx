@@ -8,7 +8,9 @@ import type { WebsiteStand } from '@shared/website/speicher';
 import { NEUTRALE_FARBEN } from '@shared/website/theme';
 import { abschnitt, baustein, einstellungen, seite } from '@shared/website/website.testdaten';
 import * as D from './daten';
-import { Aussehen, CSS_VORSCHAU_MS, SPEICHER_VERZOEGERUNG_MS } from './Aussehen';
+import { Aussehen, CSS_VORSCHAU_MS } from './Aussehen';
+import { EinstellungenProvider } from './EinstellungenQuelle';
+import { SPEICHER_VERZOEGERUNG_MS } from './einstellungenKontext';
 
 vi.mock('./daten', () => ({
   ladeWebsite: vi.fn(),
@@ -52,7 +54,11 @@ let log: string[];
 const zeige = async (s: WebsiteStand = stand()) => {
   server = { einstellungen: s.einstellungen };
   d.ladeWebsite.mockResolvedValue(s);
-  render(<Aussehen ort={ORT} gemeinde="ECG" ich={ICH} />);
+  render(
+    <EinstellungenProvider ort={ORT} gemeinde="ECG" ich={ICH}>
+      <Aussehen />
+    </EinstellungenProvider>,
+  );
   await act(async () => {});
 };
 
@@ -170,6 +176,40 @@ describe('Farben', () => {
     await warte(SPEICHER_VERZOEGERUNG_MS);
     expect(gespeichert()[0].farben?.hauptTief).toBeUndefined();
     expect(srcdoc()).toContain('color-mix(');
+  });
+});
+
+describe('Platzhalter der Hex-Felder (Abnahme W3a-3a)', () => {
+  it('ohne gespeicherte Farben zeigen die Felder die geltenden neutralen Werte – ohne dass etwas gespeichert wird', async () => {
+    await zeige();
+    expect(hexFeld(HAUPT).placeholder).toBe(NEUTRALE_FARBEN.haupt);
+    expect(hexFeld(/^Akzent/).placeholder).toBe(NEUTRALE_FARBEN.akzent);
+    expect(hexFeld(/^Hintergrund/).placeholder).toBe(NEUTRALE_FARBEN.grund);
+    expect(hexFeld(/^Sanft/).placeholder).toBe(NEUTRALE_FARBEN.sanft);
+    expect(hexFeld(TEXT_FARBE).placeholder).toBe(NEUTRALE_FARBEN.text);
+    expect(hexFeld(/^Hauptfarbe dunkel/).placeholder).toMatch(/^#[0-9a-f]{6} \(abgeleitet\)$/);
+    for (const f of [HAUPT, /^Akzent/, TEXT_FARBE]) expect(hexFeld(f).value).toBe('');
+    await warte(SPEICHER_VERZOEGERUNG_MS * 2);
+    expect(d.speichereEinstellungen).not.toHaveBeenCalled();
+    expect(d.beginneEinstellungen).not.toHaveBeenCalled();
+  });
+});
+
+describe('Seitenwahl der Vorschau', () => {
+  it('heißt die Startseite „Startseite“, steht es nicht doppelt da', async () => {
+    await zeige(
+      stand({ seiten: [seite({ id: 's', titel: 'Startseite', pfad: 'start' }), IMPRESSUM] }),
+    );
+    const optionen = [...auswahl('Seite in der Vorschau').options].map((o) => o.textContent);
+    expect(optionen).toEqual(['Startseite', 'Impressum']);
+  });
+
+  it('heißt sie anders, bekommt sie den Zusatz', async () => {
+    await zeige(
+      stand({ seiten: [seite({ id: 's', titel: 'Willkommen', pfad: 'start' }), IMPRESSUM] }),
+    );
+    const optionen = [...auswahl('Seite in der Vorschau').options].map((o) => o.textContent);
+    expect(optionen).toEqual(['Willkommen (Startseite)', 'Impressum']);
   });
 });
 

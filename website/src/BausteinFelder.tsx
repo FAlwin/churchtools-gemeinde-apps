@@ -10,7 +10,7 @@ import { istErlaubteAdresse, type Baustein, type Seite } from '@shared/website/m
 import { PLATZHALTER_BILD, PLATZHALTER_LINK } from '@shared/website/vorlagen';
 import { Feld, Gruppe, Haken, ZahlenListe, ZahlFeld } from './Felder';
 import { markdownAnwenden, type MarkdownArt } from './markdownLeiste';
-import { ohneFeld, zielWert } from './regeln';
+import { ohneFeld, zielAusWert, zielWert } from './regeln';
 import { PLATZHALTER_ADRESSE } from './vorschauHtml';
 import styles from './Fenster.module.scss';
 
@@ -523,20 +523,9 @@ function KnopfFelder({
               className={styles.eingabe}
               aria-label={`Ziel von Knopf ${n + 1}`}
               value={wert}
-              onChange={(e) => {
-                const [art, ...rest] = e.target.value.split(':');
-                const v = rest.join(':');
-                setze(n, {
-                  ziel:
-                    art === 'seite'
-                      ? { art: 'seite', seiteId: v }
-                      : art === 'anker'
-                        ? { art: 'anker', anker: v }
-                        : k.ziel.art === 'extern'
-                          ? k.ziel
-                          : { art: 'extern', url: PLATZHALTER_LINK.url },
-                });
-              }}
+              onChange={(e) =>
+                setze(n, { ziel: zielAusWert(e.target.value, k.ziel, PLATZHALTER_LINK.url) })
+              }
             >
               {!bekannt && <option value={wert}>(Ziel gibt es nicht mehr)</option>}
               {kontext.seiten.map((s) => (

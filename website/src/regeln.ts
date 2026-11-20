@@ -58,6 +58,18 @@ export function zielWert(z: Link): string {
       : 'extern';
 }
 
+/**
+ * Das Ziel zu einem gewählten `zielWert`. Wer „Andere Adresse“ wählt, behält eine schon eingetippte Adresse; sonst beginnt sie
+ * mit `neueUrl` (bei Knöpfen die Beispieladresse, in der Fußzeile leer – dort muss sie eingetragen werden).
+ */
+export function zielAusWert(wert: string, alt: Link | null, neueUrl: string): Link {
+  const [art, ...rest] = wert.split(':');
+  const v = rest.join(':');
+  if (art === 'seite') return { art: 'seite', seiteId: v };
+  if (art === 'anker') return { art: 'anker', anker: v };
+  return alt?.art === 'extern' ? alt : { art: 'extern', url: neueUrl };
+}
+
 /** Das Objekt ohne dieses (optionale) Feld – damit ein leeres Feld gar nicht erst im Baustein steht. */
 export function ohneFeld<T extends object, K extends keyof T>(o: T, feld: K): Omit<T, K> {
   const kopie = { ...o };

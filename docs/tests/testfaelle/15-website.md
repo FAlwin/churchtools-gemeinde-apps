@@ -260,8 +260,9 @@ Vorschau der Startseite. Jede Änderung ist sofort in der Vorschau zu sehen (das
 nach etwa einer Sekunde gespeichert („Speichert … / Gespeichert“). Nach einem Neuladen der Seite stehen die Werte wieder da. Am
 Handy steht die Vorschau unter dem Formular.
 
-1. Reiter **Aussehen**: Die Farben und die gewählten Schriften stehen so da wie auf der Website; „Hauptfarbe dunkel“ zeigt
-   „abgeleitet“, wenn nichts gesetzt ist.
+1. Reiter **Aussehen**: Die Farben und die gewählten Schriften stehen so da wie auf der Website; sind noch keine Farben gespeichert, zeigen
+   die Hex-Felder die geltenden neutralen Werte grau als Platzhalter („Hauptfarbe dunkel“ mit „(abgeleitet)“); die Seitenwahl der Vorschau
+   zeigt „Startseite“ nicht doppelt.
 2. In „Hauptfarbe“ eine neue Farbe tippen (`#7a1f3d`) und mit dem Farbwähler eine andere wählen: Die Vorschau färbt Knöpfe und
    Flächen um. Etwas Ungültiges tippen (`rot`, `#12`) und das Feld verlassen: Es springt auf die geltende Farbe zurück, nichts
    wird gespeichert.
@@ -285,5 +286,39 @@ Handy steht die Vorschau unter dem Formular.
 - **Betrifft:** `website/src/Aussehen.tsx`, `website/src/useSperrarbeit.ts`, `website/src/schriftLader.ts`, `shared/website/aussehen.ts`, `shared/website/theme.ts`
 - **Automatisiert:** teilweise – `website/src/Aussehen.test.tsx` (Farben, ungültiger Hex, Kontrast-Hinweis, Schriften, CSS, Sperre, Speichern scheitert, Verlassen), `shared/website/aussehen.test.ts`, `shared/website/theme.test.ts` (Kontrast, data:-Schrift), `website/src/schriftLader.test.ts` und `useSchriften.test.tsx` (nur gewählte laden, Ladefehler), `shared/website/schriftdateien.test.ts`; die Schriften im echten `iframe` von ChurchTools und das Zusammenspiel zweier Browser nur von Hand
 - **Historie:** neu mit W3a-3a (20.11.2026)
+
+</details>
+
+### TF-WEBSITE-11 · Einstellungen: Name, Fußzeile, Datenschutz-Link, YouTube-Text – zusammen mit Aussehen
+
+**Das brauchst du:** Die Website in der Test-Instanz, ein Konto mit Admin- oder Leitungsrecht, mindestens zwei Seiten (am besten eine
+mit einem Livestream-Baustein); für die Sperre ein zweites Konto (B) in einem zweiten Browser.
+
+**Das muss passieren:** Ganz rechts in der Reiterleiste steht **Einstellungen** (am Handy unten rechts) und öffnet ein Fenster. Was du
+dort einträgst, wird mit **Speichern** gespeichert und gilt für die ganze Website.
+
+1. **Einstellungen** öffnen: Name der Gemeinde, die Fußzeilen-Links, der Datenschutz-Link und der Banner-Text stehen so da, wie sie
+   gespeichert sind. Der Banner-Text zeigt, solange er leer ist, den Standardtext grau als Platzhalter.
+2. Den Namen ändern, **Link** drücken: Titel „Impressum“, Ziel „Seite: …“ wählen; einen zweiten Link mit „Andere Adresse …“ und
+   `https://…`. Mit den Pfeilen die Reihenfolge ändern, mit ✕ einen Link entfernen. Beim zehnten Link ist **Link** abgeschaltet.
+3. Bei einer Adresse `javascript:x` eintragen und **Speichern**: Eine Meldung nennt den Link („Fußzeile, Link 2: Erlaubt sind nur
+   Adressen …“), nichts wird gespeichert, das Fenster bleibt offen und die Eingabe stehen. Die Adresse berichtigen, **Speichern**: Das
+   Fenster schließt; im Reiter **Seiten** steht die Fußzeile mit den neuen Links in der Vorschau.
+4. Mit einem Livestream-Baustein auf einer Seite und **ohne** Datenschutz-Link steht im Fenster ein Hinweis; nach dem Eintragen eines
+   Links (Seite oder Adresse) verschwindet er. Den Banner-Text ändern und wieder leeren (dann gilt der Standardtext).
+5. **Zusammen mit Aussehen:** Im Reiter **Aussehen** eine Farbe ändern und sofort (ohne zu warten) **Einstellungen** öffnen, den Namen
+   ändern, **Speichern**. Seite neu laden: **Beide** Änderungen sind da (Farbe und Name). Dasselbe andersherum: erst Einstellungen,
+   dann Aussehen.
+6. **Sperre:** A ändert eine Farbe in Aussehen. B öffnet **Einstellungen**: Hinweis, dass A bearbeitet; Felder und **Speichern**
+   abgeschaltet. Nach „Bearbeitung übernehmen“ im Reiter Aussehen kann B im Fenster speichern.
+7. Netz aus, im Fenster **Speichern**: „Nicht gespeichert …“, das Fenster bleibt mit der Eingabe offen. Netz an, **Speichern**: es
+   schließt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `website/src/EinstellungenFenster.tsx`, `website/src/EinstellungenQuelle.tsx`, `website/src/Aussehen.tsx`, `website/src/App.tsx`, `shared/website/einstellungen.ts`, `shared/website/modell.ts`
+- **Automatisiert:** teilweise – `website/src/EinstellungenFenster.test.tsx` (Speichern, Fußzeile, Grenze, ungültige Adresse, Datenschutz-Hinweis, Aussehen + Fenster nacheinander, Fremdsperre), `shared/website/einstellungen.test.ts`, `website/src/App.test.tsx` (Reiter); das Zusammenspiel zweier Browser und das Aussehen im echten ChurchTools nur von Hand
+- **Historie:** neu mit W3a-3b (20.11.2026)
 
 </details>

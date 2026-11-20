@@ -334,3 +334,29 @@
 .fett {
   font-weight: 700;
 }
+
+// ── Fenster „Einstellungen“ (W3a-3b): Fußzeilen-Links ───────────────────────────────────────────────────────────────────
+
+.fussKnoepfe {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.hinweisband {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+// Ein `fieldset` nur, damit „fremd gesperrt“ alle Felder auf einmal abschaltet – ohne Rand und Innenabstand.
+.formularFeld {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

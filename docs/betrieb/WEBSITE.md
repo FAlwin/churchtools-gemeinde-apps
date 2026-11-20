@@ -1,10 +1,10 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3a-3a (20.11.2026) – noch kein Release.** Neu seit W3a-2: der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
+> **Stand: W3a-3b (20.11.2026) – noch kein Release.** Neu seit W3a-3a: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
 > eigenes CSS) und die Schriften in der Vorschau – siehe „Aussehen“ unten. Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
 > anlegen und löschen – W3a-1) und das **Bearbeiten direkt in der Vorschau**: Abschnitte einfügen, gestalten, verschieben,
 > kopieren, löschen, Bausteine bearbeiten, hinzufügen, entfernen, Seite einstellen mit Menü, dazu die **Sperre** (eine Person
-> bearbeitet) und das **Speichern von selbst**. Noch **nicht** da: der Reiter „Einstellungen“ (W3a-3b), Bilder und Logo ändern (W4),
+> bearbeitet) und das **Speichern von selbst**. Noch **nicht** da: Bilder und Logo ändern (W4),
 > Freigabe und Rechte für Redakteure (W3b), Veröffentlichen (W5). Das Bild der ganzen Website: Bauplan „Neue Website“
 > (Second Brain, `ecg-donrath/website/bauplan-neue-website.md`).
 
@@ -242,7 +242,7 @@ als Textdatei (`.txt`), weil die Prüfung des Repos (`eslint .`) TypeScript lies
 ## Aussehen (W3a-3a)
 
 Der Reiter **Aussehen** (`website/src/Aussehen.tsx`) stellt die Einstellungen ein, die für die ganze Website gelten: **Farben**
-(Hauptfarbe, Hauptfarbe dunkel, Akzent, Hintergrund, Sanft, Text – Farbwähler und Hex-Feld; nur gültige Werte werden übernommen;
+(Hauptfarbe, Hauptfarbe dunkel, Akzent, Hintergrund, Sanft, Text – Farbwähler und Hex-Feld, in dem die geltende Farbe als Platzhalter steht, solange nichts gesetzt ist; nur gültige Werte werden übernommen;
 ist „Hauptfarbe dunkel“ leer, wird sie aus der Hauptfarbe abgeleitet), **Schriften** (Text, Überschriften, Handschrift-Zeile aus
 der festen Liste `shared/website/schriften.ts`), das **Logo** (nur Anzeige – ändern geht mit den Bildern, W4) und **Eigenes CSS**
 (bis 20.000 Zeichen). Rechts die Vorschau der Startseite, eine andere Seite ist wählbar. Die Regeln dazu stehen rein und getestet
@@ -267,6 +267,28 @@ einstellungen`, gelesen als `WebsiteStand.einstellungenSperre`). Der Ablauf ist 
 - **`data:`-Adressen im Stylesheet:** `cssAdresse` (`theme.ts`) entschärft jede Schriftadresse und kodiert dabei `;`. Für
   `data:font/woff2;base64,…` wäre das fatal (die Schrift bliebe unsichtbar); genau diese **eine** Form, mit Base64-Zeichen und
   sonst nichts, bleibt unverändert.
+
+## Einstellungen (W3a-3b)
+
+Der letzte Reiter **Einstellungen** (`ErweiterungsSeite`, `einstellungen={{ onOeffnen, offen }}` – wie in allen Erweiterungen)
+öffnet das Fenster `website/src/EinstellungenFenster.tsx`: **Name der Gemeinde**, **Links in der Fußzeile** (Titel + Ziel: eine
+Seite der Website oder eine Adresse; hinzufügen, entfernen, nach oben/unten; höchstens 10), **Datenschutz-Link** (Seite, Adresse
+oder keiner) und **Text des YouTube-Banners** (leer = Standardtext, der als Platzhalter zu sehen ist). Gibt es einen
+Livestream-Baustein, aber keinen Datenschutz-Link, steht ein Hinweis da (`datenschutzFehlt` in `shared/website/modell.ts` – dieselbe
+Regel wie die Gesamtprüfung `pruefeWebsite`). Kontaktformular-Adresse und `noindex` kommen mit W5/W6.
+
+- **Gespeichert wird mit „Speichern“** (wie in den Fenstern von Gebetsabend, Organigramm, Anmeldungen), nicht bei jeder Eingabe –
+  darum kein „Rückgängig“; Abbrechen/X verwirft. Ungültiges (leerer Name oder Titel, unerlaubte Adresse) wird nicht gespeichert, die
+  Meldung nennt den Link („Fußzeile, Link 2: …“); das Fenster bleibt offen. Scheitert das Speichern, bleibt die Eingabe stehen.
+- **Ein Zustand, ein Schreiber:** „Aussehen“ und das Fenster schreiben **dieselbe** Einheit `einstellungen`. Den Arbeitsstand, die
+  Sperre und die Schlange hält darum der `EinstellungenProvider` (`website/src/EinstellungenQuelle.tsx`) über beiden; er steht, solange
+  eines von beiden offen ist (danach ist die Sperre frei). Das Fenster legt beim Speichern nur Name, Fußzeile, Datenschutz-Link und
+  Banner-Text auf den **neuesten** Stand (`formularAnwenden` in `shared/website/einstellungen.ts`) – Farben, Schriften und CSS bleiben,
+  auch eine Änderung im Aussehen, die noch auf ihre Verzögerung wartet. Zwei getrennte Zustände überschrieben einander („die spätere
+  gewinnt“).
+- **Fremd gesperrt:** Das Fenster ist nur zum Lesen (Felder und „Speichern“ aus, Hinweis mit Namen).
+- **Regeln** (rein, getestet): `shared/website/einstellungen.ts` – Formular-Entwurf, Fußzeile hinzufügen/entfernen/verschieben,
+  Grenze `FUSSZEILE_MAX`, `einstellungenMeldung` (Schema-Fehler in Worten; auch für „Aussehen“).
 
 ## Das Stylesheet
 

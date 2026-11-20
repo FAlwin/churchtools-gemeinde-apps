@@ -107,6 +107,15 @@ export function seitenFuerListe(
 }
 
 /**
+ * Wie eine Seite in einer Auswahl heißt: der Titel, bei der Startseite mit dem Zusatz „(Startseite)“ – **außer ihr Titel
+ * sagt es schon** („Startseite“ ergäbe „Startseite (Startseite)“).
+ */
+export function seitenAuswahlText(s: Pick<Seite, 'titel' | 'startseite'>): string {
+  if (!s.startseite || s.titel.toLowerCase().includes('startseite')) return s.titel;
+  return `${s.titel} (Startseite)`;
+}
+
+/**
  * Das Menü ohne die Einträge, die auf diese Seite zeigen (auch unter einem Eintrag). Ein Eintrag, der selbst auf die
  * Seite zeigt, fällt mit seinen Unterpunkten weg; ein Unterpunkt fällt allein weg. `null`, wenn sich nichts ändert – dann
  * muss das Menü nicht neu gespeichert werden.

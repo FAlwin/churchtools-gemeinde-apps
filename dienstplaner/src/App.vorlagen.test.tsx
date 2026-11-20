@@ -2,6 +2,7 @@
 // Die Seite „Ablaufvorlagen“ im Dienstplaner (E10-V3a): Adressen, Reiter, Zurück – mit der echten Seite (`VorlagenBereich`),
 // nur ChurchTools (Start, Termine, Vorlagen-Zugriff) ist ersetzt.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { mehrEintrag } from './mehrMenue.testutil';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { vorlagenStandAus } from '@shared/ct/ablaufVorlagenListe';
 import type { CtAblaufVorlage } from '@shared/ct/typen';
@@ -90,9 +91,8 @@ it('„Planen“ → „Vorlagen“: Adresse #/vorlagen, die Liste steht da, „
   vi.mocked(ladeStart).mockResolvedValue(planer());
   window.location.hash = '#/planen';
   render(<App />);
-  fireEvent.click(
-    await screen.findByRole('button', { name: 'Ablaufvorlagen ansehen und bearbeiten' }),
-  );
+  await screen.findByRole('button', { name: 'Mehr' });
+  mehrEintrag('Vorlagen');
   expect(window.location.hash).toBe('#/vorlagen');
   expect(await screen.findByRole('heading', { name: 'Ablaufvorlagen' })).toBeTruthy();
   expect(await screen.findByRole('region', { name: 'Gottesdienst' })).toBeTruthy();

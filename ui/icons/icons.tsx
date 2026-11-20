@@ -44,6 +44,8 @@ export type IconName =
   | 'trash'
   | 'heading'
   | 'plus'
+  | 'mehr'
+  | 'hilfe'
   | 'minus'
   | 'metronome'
   | 'tap'
@@ -639,6 +641,23 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M12 5v14M5 12h14" />
+        </svg>
+      );
+    // „⋯“-Menü der Werkzeugzeile (R6, B3): drei Punkte nebeneinander.
+    case 'mehr':
+      return (
+        <svg {...f}>
+          <circle cx="5.5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="18.5" cy="12" r="1.8" />
+        </svg>
+      );
+    // „Hilfe“ als Menüpunkt: Kreis mit Fragezeichen (der Knopf „?“ der Seitenköpfe bleibt Text).
+    case 'hilfe':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5M12 16.6v.2" />
         </svg>
       );
     case 'minus':

@@ -1,4 +1,10 @@
-import { useEffect, useRef } from 'react';
+import {
+  useEffect,
+  useRef,
+  type InputHTMLAttributes,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { Icon } from '../icons/icons';
 import { useEscape } from './useEscape';
 import styles from './SuchLupe.module.scss';
@@ -20,6 +26,11 @@ export function SuchLupe({
   onBegriff,
   onSchliessen,
   platzhalter = 'Suchen …',
+  knopfName = 'Suchen',
+  feldName = 'Suchbegriff',
+  feldAria,
+  onTaste,
+  unter,
 }: {
   offen: boolean;
   begriff: string;
@@ -28,6 +39,16 @@ export function SuchLupe({
   onSchliessen: () => void;
   /** Was gesucht wird („Beschlüsse, To-Dos, Protokolle …“) – das Feld sagt es, die Lupe allein nicht. */
   platzhalter?: string;
+  /** Name der Lupe für Screenreader – „Person hervorheben“ im Dienstplaner, wo sie keine Liste filtert. */
+  knopfName?: string;
+  /** Name des aufgeklappten Feldes. */
+  feldName?: string;
+  /** Zusätzliche Angaben am Feld – `role="combobox"` und Verwandte, wo unter dem Feld Vorschläge aufklappen. */
+  feldAria?: InputHTMLAttributes<HTMLInputElement>;
+  /** Tasten im Feld (Pfeile, Enter in einer Vorschlagsliste); Esc schließt wie immer über `onSchliessen`. */
+  onTaste?: (e: KeyboardEvent<HTMLInputElement>) => void;
+  /** Etwas unter dem Feld, in der Leiste verankert – die Vorschlagsliste. */
+  unter?: ReactNode;
 }) {
   useEscape(offen, onSchliessen);
   const feld = useRef<HTMLInputElement>(null);
@@ -39,7 +60,7 @@ export function SuchLupe({
 
   if (!offen)
     return (
-      <button type="button" className={styles.lupe} aria-label="Suchen" onClick={onOeffnen}>
+      <button type="button" className={styles.lupe} aria-label={knopfName} onClick={onOeffnen}>
         <Icon name="search" size={18} />
       </button>
     );
@@ -50,14 +71,17 @@ export function SuchLupe({
       <input
         ref={feld}
         type="search"
-        aria-label="Suchbegriff"
+        aria-label={feldName}
         placeholder={platzhalter}
         value={begriff}
         onChange={(e) => onBegriff(e.target.value)}
+        onKeyDown={onTaste}
+        {...feldAria}
       />
       <button type="button" aria-label="Suche schließen" onClick={onSchliessen}>
         <Icon name="x" size={16} />
       </button>
+      {unter}
     </div>
   );
 }

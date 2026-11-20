@@ -20,7 +20,7 @@ import {
 } from '@shared/ct/punktUebertragen';
 import type { Plan, PlanSpalte } from '@shared/dienstplan/plan';
 import { GESPERRT } from './ablaufAktionen';
-import { ablaufBearbeitbar } from './start';
+import { darfBearbeiten, umschalten } from './ablaufBearbeiten';
 import { punkteText } from '@ui/ablauf/vorlagenMeta';
 import { TerminAblauf } from './TerminAblauf';
 import type { AblaufZustand, MatrixAblauf } from './useMatrixAblauf';
@@ -30,8 +30,8 @@ import styles from './MatrixAblauf.module.scss';
 /**
  * **Der Ablauf in der Matrix** (Bauplan E6-6a, Entwurf `e6-6-entwurf-2.html`, abgenommen 28.10.2026): die Gruppe
  * „Ablauf“ **oben**, über den Dienstgruppen, mit „N Punkte“ je Termin; darunter je Spalte der Ablauf in der schmalen
- * Form (`TerminAblauf schmal` – dieselbe Stelle wie die Termin-Ansicht). **Ein „Ablauf bearbeiten“** oben in der Leiste
- * (`AblaufBearbeitenKnopf`) öffnet alle Termine, die man bearbeiten darf (Variante A); zugeklappt merkt sich das Gerät
+ * Form (`TerminAblauf schmal` – dieselbe Stelle wie die Termin-Ansicht). **Ein „Ablauf bearbeiten“** im „⋯“-Menü der Werkzeugzeile
+ * (Menü „⋯“, `ablaufBearbeitenStart`) öffnet alle Termine, die man bearbeiten darf (Variante A); zugeklappt merkt sich das Gerät
  * (`PlanenAnsicht.ablaufZu`). Im Bearbeiten steht neben „N Punkte“ je Termin das grüne Plus mit seinem kleinen Menü
  * (E6-6c, Entwurf `e6-6-neuer-punkt.html` A, Alwin 29.10.2026 – vorher ein Stift links in der Gruppenzeile und
  * „+ Punkt“ unter dem Ablauf, das auch am Rechner das Blatt von unten öffnete). Am Handy steht der Ablauf des gewählten
@@ -50,20 +50,6 @@ function anzahlText(z: AblaufZustand | undefined): string {
   if (z.ablauf === null) return 'kein Ablauf';
   const n = z.ablauf.items.length;
   return punkteText(n);
-}
-
-/** Darf man den Ablauf dieses Termins bearbeiten? Abgesagte Termine stehen nur zum Ansehen da (Entwurf E6-6). */
-const darfBearbeiten = (ma: MatrixAblauf, s: PlanSpalte) =>
-  !s.abgesagt && ablaufBearbeitbar(ma.start, s.ablaufTermin);
-
-/** Bearbeiten an bzw. aus – eine Stelle für den Knopf in der Leiste und den Stift am Handy. */
-function umschalten(ma: MatrixAblauf): void {
-  if (ma.bearbeiten) {
-    ma.setBearbeiten(false);
-    return;
-  }
-  ma.setBearbeiten(true);
-  ma.setZu(false); // zugeklappt sähe man nicht, was sich öffnet
 }
 
 /** Am Handy: Stift (bearbeiten) bzw. „Fertig“ – wie in der Termin-Ansicht. */
@@ -89,28 +75,19 @@ function StiftKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
 }
 
 /**
- * Am Rechner: **„Ablauf bearbeiten“ oben in der Leiste** neben Spaltenbreite und Filter, mit Wort wie in der Musik-App – grau,
- * blau erst „Fertig“ (E6-6c; der Stift allein war zu unscheinbar, Alwin 29.10.2026). Neben „Ablauf“ in der Gruppenzeile
- * passte der Knopf nicht: Die erste Spalte ist 178 px breit (Alwin: lieber in die Leiste als die Spalte breiter). Gilt
- * für alle gezeigten Termine; nur, wo man mindestens einen davon bearbeiten darf.
+ * **„Fertig“ in der Werkzeugzeile**, solange der Ablauf bearbeitet wird (R1/R3: die Hauptaktion dieses Zustands, blau).
+ * „Ablauf bearbeiten“ selbst liegt seit B3 im „⋯“-Menü (vorher ein Knopf in der Leiste neben Spaltenbreite und Filter; E6-6c,
+ * Alwin 29.10.2026: der Stift allein war zu unscheinbar). Außerhalb des Bearbeitens steht hier nichts.
  */
-export function AblaufBearbeitenKnopf({
-  ma,
-  plan,
-  spalten,
-}: {
-  ma: MatrixAblauf;
-  plan: Plan;
-  spalten: number[];
-}) {
-  if (!spalten.some((i) => darfBearbeiten(ma, plan.spalten[i]))) return null;
+export function AblaufFertigKnopf({ ma }: { ma: MatrixAblauf }) {
+  if (!ma.bearbeiten) return null;
   return (
     <KopfKnopf
       onClick={() => umschalten(ma)}
-      label={ma.bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
-      title={ma.bearbeiten ? 'Fertig' : 'Ablauf bearbeiten – alle gezeigten Termine'}
-      haupt={ma.bearbeiten}
-      symbol={<Icon name={ma.bearbeiten ? 'check' : 'pencil'} size={16} stroke={2.2} />}
+      label="Fertig"
+      title="Fertig"
+      haupt
+      symbol={<Icon name="check" size={16} stroke={2.2} />}
     />
   );
 }

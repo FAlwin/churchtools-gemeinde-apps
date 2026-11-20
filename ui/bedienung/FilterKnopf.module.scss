@@ -17,6 +17,20 @@
   white-space: nowrap;
 }
 
+// Still (R2, B3): ohne Rand und Fläche, erst beim Darüberfahren (nur Maus) hellblau – steht vor `.aktiv`, damit der Knopf mit
+// aktiven Filtern blau getönt bleibt.
+.still {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text);
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
+  }
+}
+
 // Etwas ist ausgeblendet: Knopf blau getönt, damit man es nicht übersieht.
 .aktiv {
   background: var(--blue-soft);

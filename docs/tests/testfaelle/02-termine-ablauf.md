@@ -608,7 +608,7 @@ Plätze; als Gegenprobe eine Gruppe im Filter ausgeblendet.
 **Das muss passieren:** Aus „Planen“ lässt sich teilen, was dort gerade zu sehen ist – als ganzer Plan, oder eine Gruppe,
 in der Ansicht „Termine“, „Personen“ oder „Je Person“. „Wir suchen noch …“ gibt es nicht mehr.
 
-1. Planen → in der Werkzeugleiste **Teilen** (am Handy nur das Symbol) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
+1. Planen → rechts in der Werkzeugzeile **⋯** → **Teilen** (seit B3 im Menü; am Handy als Blatt von unten) → „Plan teilen“ mit der Reihe **Was**: **Ganzer
    Plan** · **Eine Gruppe** (kein „Wir suchen noch …“); darunter Zeitraum und Zahl der Termine – dieselben wie
    im Zeitraum-Knopf.
 2. **Ganzer Plan** → Vorschau: je Gruppe ein graues Band und eine Tabelle (Termin, dann die Dienste); Namen, angefragte
@@ -680,10 +680,10 @@ oft?“ hat einen eigenen Zeitraum für die Vergangenheit. Dass die Matrix seitl
 1. Zeitraum-Knopf → Menü: **Ab heute**, darunter **Monat** mit Jahr ‹ › und zwölf Monatsfeldern (Punkt = laufender
    Monat), darunter **Eigener Zeitraum**. **Dez** → das Menü schließt, die Matrix zeigt alle Dezember-Termine. Mit ‹ beim
    Jahr gehen auch vergangene Monate.
-2. Neben dem Knopf **＋** rechts → ein einzelner Termin nach dem Dezember kommt dazu (nicht der ganze Januar); der Knopf
+2. Zeitraum-Knopf antippen → im Fenster unter „Ab heute“ **＋ Späteren Termin dazunehmen** (seit B3 dort statt neben dem Knopf; das Fenster bleibt offen) → ein einzelner Termin nach dem Dezember kommt dazu (nicht der ganze Januar); der Knopf
    zeigt die Spanne und darunter „Dezember 2026 + 1 Termin · n Termine“. Die Matrix bleibt dabei stehen (kein „wird
-   geladen“). **＋** links nimmt einen Termin davor dazu. Ausgeblendete Veranstaltungen (Filter) zählen nicht.
-3. Im Menü ist der Dezember weiter blau. **›** springt zum Januar – das ＋ fällt weg.
+   geladen“). **＋ Früheren Termin dazunehmen** nimmt einen Termin davor dazu. Ausgeblendete Veranstaltungen (Filter) zählen nicht.
+3. Im Menü ist der Dezember weiter blau. **›** (rechts im Rahmen des Zeitraums) springt zum Januar – das ＋ fällt weg.
 4. **Wer wie oft?** → der Knopf zeigt „Letzte 3 Monate · n Termine“ mit der Spanne bis heute; gezählt wird dort. Im
    Menü oben **Letzte 3/6/12 Monate** statt „Ab heute“, darunter Monatsfelder und eigener Zeitraum.
 5. Zurück auf **Matrix** → die Matrix hat ihren eigenen Zeitraum behalten. Seite neu laden → beide Zeiträume sind noch da.
@@ -886,7 +886,7 @@ steht (am besten einmal zugesagt, einmal angefragt, einmal als Entwurf), ein fre
 4. **Personen** und **Wer wie oft?** wählen: Der Fokus **bleibt**. In „Personen“ sind **alle Zeilen** der Person (in jedem
    Dienst) gelb hinterlegt und umrandet, der Name fett. Einen anderen Namen antippen: Der Fokus wechselt (immer nur eine
    Person); denselben noch einmal antippen: Fokus aus.
-5. **Suchfeld „Person hervorheben“** (Handy: Such-Symbol in der Leiste): „da“ tippen → Vorschläge mit Kreis, Name und Diensten
+5. **Lupe „Person hervorheben“** (Rechner: rechts neben den Reitern; Handy: in der Werkzeugzeile; ein Tipp klappt das Feld auf, Esc oder ✕ klappt zu): „da“ tippen → Vorschläge mit Kreis, Name und Diensten
    (nur Eingeteilte, nur Treffer am Namensanfang); wählen → Fokus. Pfeiltasten und Enter gehen auch.
 6. Im **Filter** einen Dienst ausblenden, in dem die fokussierte Person steht: Sie wird dort nicht umrandet (die Zeile fehlt),
    die Leiste zählt den Einsatz aber mit und sagt „· 1 ausgeblendet“. Ein **abgesagter** Termin zählt nicht mit.
@@ -1057,9 +1057,9 @@ Gerät – nie ein Klick aus Versehen.
 **Das muss passieren:** Unter den Seiten „Planen“, „Dienste“ und in der Termin-Ansicht steht kein langer Erklär-Absatz mehr.
 Die Erklärung steht in einem Fenster hinter dem Knopf **„?“**, in kurzen Abschnitten mit zwei, drei Stichpunkten.
 
-1. **Planen:** Unter der Tabelle steht kein Absatz. Rechts in der Werkzeugleiste, neben **Teilen**, steht der Knopf **„?“**
-   (Tooltip „Hilfe zu Planen“) – gleich hoch wie die Knöpfe daneben, auch am Handy erreichbar.
-2. Antippen → Fenster **„Hilfe · Planen“** mit den Abschnitten „Was du siehst“, „Eintragen“, „Anfrage oder direkt“,
+1. **Planen:** Unter der Tabelle steht kein Absatz. Rechts in der Werkzeugzeile liegt **Hilfe** seit B3 im **⋯**-Menü (ganz unten,
+   mit Symbol) – auch am Handy erreichbar.
+2. **⋯ → Hilfe** → Fenster **„Hilfe · Planen“** mit den Abschnitten „Was du siehst“, „Werkzeugzeile“, „Eintragen“, „Anfrage oder direkt“,
    „Plätze und Zauberstab“, „Senden“, „Filter und Fokus“. Es scrollt, wenn es länger ist als der Bildschirm.
 3. Schließen mit dem **X** oben rechts und mit **Esc**; ein Tipp daneben schließt ebenfalls.
 4. **Dienste:** Rechts in der Kopfzeile (nach „Teilen“, falls „Meine“ gewählt ist) steht **„?“** → „Hilfe · Dienste“. Die Fußnote
@@ -1213,4 +1213,39 @@ herauszunehmen. In ChurchTools ändert sich dabei nichts.
 - **Betrifft:** `dienstplaner/src/useEinteilen.tsx`, `dienstplaner/src/useEntwuerfe.ts`, `dienstplaner/src/Planen.module.scss`, `dienstplaner/src/planEntwuerfe.ts`, `dienstplaner/src/ladeEntwuerfe.ts`
 - **Automatisiert:** ja – `dienstplaner/src/Planen.test.tsx` (Rückfrage, alle gezählten entfernt samt fremden, mit Version, neu geladen, Bescheid; Abbrechen; Konflikt lässt die anderen weiterlaufen; frisch angelegter Entwurf; Gruppe aus der Zeile), `dienstplaner/src/useEntwuerfe.test.tsx` (`gruppeJe` wird mitgeführt), Leisten-Texte in `Planen.test.tsx` und `TerminAnsicht.test.tsx`; Gegenproben einzeln rot; von Hand bleibt das Aussehen und der echte ChurchTools-Ablauf
 - **Historie:** Wunsch Alwin 18.11.2026 („komplett zurücksetzen, nicht alle Personen einzeln“), Knopf in der Leiste, auch fremde Entwürfe; Fund bei der Abnahme auf der Test-Instanz (18.11.2026): frisch angelegte Entwürfe fehlten in `gruppeJe` und wurden übersprungen
+</details>
+
+### TF-ABLAUF-41 · Planen: ruhige Werkzeugzeile – Ansicht, Zeitraum, Filter, „⋯“
+
+**Das brauchst du:** Dienstplaner als Planer in der Test-Instanz (Termine, mindestens zwei Dienstgruppen, einige freie Plätze),
+einmal am Rechner (1280 px) und einmal am Handy (390 px).
+
+**Das muss passieren:** Über der Tabelle steht **eine** Zeile mit drei Bereichen und nur einem gefüllten Knopf (unten
+„Ansehen und senden“). Alles Seltene liegt einen Klick tiefer; keine Funktion ist weg.
+
+1. **Rechner:** links der Umschalter **Matrix · Personen · Wer wie oft?**, **in der Fenstermitte** der Zeitraum als **ein gerahmtes
+   Element** mit ‹ und › (auch dann in der Mitte, wenn rechts nur „Filter“ und „⋯“ stehen), rechts **Filter** und **⋯** – ohne Rahmen,
+   erst beim Darüberfahren hinterlegt. Die **Lupe** steht rechts neben den Reitern (Start · Dienste · Planen …).
+2. **⋯** antippen: **Ablauf bearbeiten** (nur Matrix, nur wo man Abläufe bearbeiten darf) · **Vorlagen** | **Erinnern** (nur mit
+   Recht) · **Teilen** | **Hilfe** – jeder Eintrag mit Symbol. Jeden einmal antippen: das Menü geht zu, und die Sache öffnet sich
+   (Ablauf bearbeiten: oben erscheint ein blauer **Fertig**-Knopf, im Menü fehlt dann der Eintrag; Vorlagen: die Seite
+   „Ablaufvorlagen“; Erinnern, Teilen, Hilfe: ihr Fenster).
+3. **Filter**: die Zahl am Knopf zählt ausgeblendete Einträge. Ganz unten der Abschnitt **Anzeige** mit **Breite Spalten** (früher
+   zwei Symbole in der Zeile; gemerkt) – dieser Haken ändert die Zahl **nicht**.
+4. **Zeitraum** antippen: unter „Ab heute“ **＋ Früheren / Späteren Termin dazunehmen**; das Fenster bleibt dabei offen.
+5. **Lupe** antippen → Feld klappt auf; „da“ tippen → Vorschläge; wählen → Fokus. Esc oder ✕ klappt zu.
+6. **Freie Plätze** sind ein graues, gestricheltes Feld mit „＋ frei“; rot ist nur die Zahl „N frei“ am Termin (und in der Gruppenzeile).
+7. **Gruppenzeile** (z. B. „Technik“): Zauberstab und Regler erscheinen am Rechner erst, wenn die Maus auf der Zeile steht.
+8. **Personen** und **Wer wie oft?** wählen: dieselbe Zeile und dasselbe ⋯-Menü; der Abschnitt „Anzeige“ fehlt im Filter.
+9. **Handy:** oben ein **blauer Knopf mit dem Wort der Ansicht und Pfeil** (tippen → die drei Ansichten als Blatt), rechts daneben
+   **Lupe, Filter, ⋯ – jeder mit Rahmen**; darunter der Zeitraum **gerahmt über die ganze Breite**. **⋯** öffnet ein Blatt von unten
+   mit denselben Einträgen (ohne „Ablauf bearbeiten“ – dort der Stift am Termin). Die Lupe legt sich beim Aufklappen über die obere
+   Reihe. Zauberstab und Regler in den Gruppenköpfen sind immer sichtbar.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/bedienung/Werkzeugzeile.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/MehrMenue.tsx`, `ui/bedienung/FilterKnopf.tsx`, `ui/bedienung/ZeitraumKnopf.tsx`, `ui/bedienung/SuchLupe.tsx`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/Terminleiste.tsx`, `dienstplaner/src/Fokus.tsx`, `dienstplaner/src/App.tsx`, `dienstplaner/src/ablaufBearbeiten.ts`, `dienstplaner/src/Planen.module.scss`
+- **Automatisiert:** ja – `ui/bedienung/Werkzeugzeile.test.tsx`, `ui/bedienung/AnsichtWahl.test.tsx`, `ui/bedienung/MehrMenue.test.tsx` (jeder Eintrag einzeln, Rechner und Handy), `ui/bedienung/FilterKnopf.test.tsx` (Anzeige zählt nicht), `ui/bedienung/ZeitraumKnopf.test.tsx` (＋ im Fenster), `dienstplaner/src/Planen.werkzeug.test.tsx` (Reihenfolge, Menüeinträge, Handy), `dienstplaner/src/Planen.test.tsx`, `dienstplaner/src/MatrixAblauf.test.tsx`; von Hand bleibt der Eindruck (Mitte, Rahmen, Hover) im Browser und am Handy
+- **Historie:** „Ruhige Bedienung“ B3 (20.11.2026, Entwurf `planen-ruhiger-v5.html`, Entscheidungen E2/E3/E5/E6/E9)
 </details>

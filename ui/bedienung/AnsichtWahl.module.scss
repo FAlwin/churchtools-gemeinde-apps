@@ -1,0 +1,26 @@
+@use '../design/mixins' as m;
+
+// Die Beschriftung bricht nicht um („Wer wie oft?“ stand in zwei Zeilen, Prüfung 13.10.2026).
+.segment button {
+  white-space: nowrap;
+}
+
+// Handy (E9): der gewählte Umschalter als einzelner Knopf – blau hinterlegt, nur so breit wie sein Wort, mit Pfeil.
+.knopf {
+  @include m.auswahlKnopf;
+  @include m.auswahlKnopfAn;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: var(--knopf-hoehe);
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}

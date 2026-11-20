@@ -28,9 +28,6 @@ export function HilfeKnopf({
 }) {
   const [offen, setOffen] = useState(false);
 
-  // Das Fenster schließt auch mit Esc (das gemeinsame `Sheet` kann das selbst nicht) – über den gemeinsamen Baustein.
-  useEscape(offen, () => setOffen(false));
-
   return (
     <>
       <KopfKnopf
@@ -45,21 +42,40 @@ export function HilfeKnopf({
         nurSymbol
       />
       {offen && (
-        <Sheet title={`Hilfe · ${seite}`} onClose={() => setOffen(false)} knoepfe={null}>
-          <div className={styles.hilfe}>
-            {abschnitte.map((a) => (
-              <section key={a.titel} className={styles.abschnitt}>
-                <h3>{a.titel}</h3>
-                <ul>
-                  {a.punkte.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </Sheet>
+        <HilfeFenster seite={seite} abschnitte={abschnitte} onClose={() => setOffen(false)} />
       )}
     </>
+  );
+}
+
+/**
+ * **Das Hilfe-Fenster allein** – für Seiten, in denen „Hilfe“ ein Eintrag im „⋯“-Menü der Werkzeugzeile ist (B3, R6) statt
+ * ein eigener Knopf. Schließt auch mit Esc (das gemeinsame `Sheet` kann das selbst nicht).
+ */
+export function HilfeFenster({
+  seite,
+  abschnitte,
+  onClose,
+}: {
+  seite: string;
+  abschnitte: readonly HilfeAbschnitt[];
+  onClose: () => void;
+}) {
+  useEscape(true, onClose);
+  return (
+    <Sheet title={`Hilfe · ${seite}`} onClose={onClose} knoepfe={null}>
+      <div className={styles.hilfe}>
+        {abschnitte.map((a) => (
+          <section key={a.titel} className={styles.abschnitt}>
+            <h3>{a.titel}</h3>
+            <ul>
+              {a.punkte.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </Sheet>
   );
 }

@@ -1,8 +1,11 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@ui/icons/icons';
-import { Segment } from '@ui/bedienung/Segment';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { HilfeKnopf } from '@ui/bedienung/HilfeKnopf';
+import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
+import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import type { Option } from '@ui/bedienung/OptionWaehlen';
+import { HilfeFenster } from '@ui/bedienung/HilfeKnopf';
 import { HILFE_PLANEN } from './hilfeTexte';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { tagKurz } from '@shared/ct/datum';
@@ -12,7 +15,6 @@ import type { Dienst } from '@shared/ct/dienste';
 import { gezeigteGruppen } from '@shared/dienstplan/planFilter';
 import { fokusKandidaten, fokusTexte, fokusZahlen } from '@shared/dienstplan/fokus';
 import { terminFilter, WEITERE } from '@shared/dienstplan/termine';
-import type { Breite } from '@shared/dienstplan/fenster';
 import { zeitraumText, zeitraumVerschieben, type Zeitraum } from '@shared/ct/zeitraum';
 import { planenZeitraum } from '@shared/dienstplan/start';
 import type { TermineZustand } from './Termine';
@@ -37,7 +39,8 @@ import { usePlatzDazu } from './usePlatzDazu';
 import { usePlaetzeFrisch } from './usePlaetzeFrisch';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
-import { AblaufBearbeitenKnopf } from './MatrixAblauf';
+import { AblaufFertigKnopf } from './MatrixAblauf';
+import { ablaufBearbeitenMoeglich, ablaufBearbeitenStart } from './ablaufBearbeiten';
 import { useMatrixAblauf } from './useMatrixAblauf';
 import { useMatrixInfos } from './useMatrixInfos';
 import type { Start } from './start';
@@ -122,6 +125,11 @@ interface Props {
    * nicht da (Tests ohne die Seite).
    */
   onVorlagen?: () => void;
+  /**
+   * Wohin die Lupe „Person hervorheben“ kommt (R7/E5): der Platz rechts neben den Reitern, den die App im Seitenkopf frei
+   * hält. Am Handy sitzt die Lupe in der Werkzeugzeile; ohne Platz (Tests ohne Seitenkopf) steht sie am Rechner dort auch.
+   */
+  lupeOrt?: HTMLElement | null;
 }
 
 /**
@@ -162,6 +170,7 @@ export function Planen({
   fokusGruppe = null,
   onFokusEnde,
   onVorlagen,
+  lupeOrt = null,
 }: Props) {
   const [gemerkt, setGemerkt] = useState<PlanenAnsicht>(leseAnsicht);
   // Ein Besuch von der Startseite (Wunsch 7): Zeitraum, Gruppen und Dienste gelten nur hier – `aus: null` heißt „alle
@@ -350,6 +359,8 @@ export function Planen({
   // „Erinnern“ (E5c-5): die planbaren Dienstgruppen, die der Plan zeigt – als ganze Gruppen (mit allen Diensten, auch den
   // ausgeblendeten: wer dort eingeteilt ist, ist eingeteilt). Ohne planbare Gruppe gibt es den Knopf nicht.
   const [erinnernOffen, setErinnernOffen] = useState(false);
+  // „Hilfe“ liegt im „⋯“-Menü (R6) – das Fenster gehört der Seite, nicht dem Menü.
+  const [hilfeOffen, setHilfeOffen] = useState(false);
   const erinnernGruppen: PlanGruppe[] =
     plan && erinnern && ladePersonen && ladeAntworten
       ? gezeigteGruppen(plan, gruppenAus(ansicht))
@@ -365,6 +376,21 @@ export function Planen({
       heute={heute}
       abHeuteZusatz={handy ? 'die nächsten Termine' : 'passend zur Fensterbreite'}
       vergangenheit={werWieOft}
+      // „＋ früherer / späterer Termin“ liegen im Fenster des Zeitraums (E6, B3) – am Handy blättert die Datumsleiste.
+      dazu={
+        handy
+          ? undefined
+          : {
+              frueher: {
+                aktiv: bereich ? true : f.davor,
+                onClick: () => (bereich ? nimmDazu(-1) : gehe('frueherDazu')),
+              },
+              spaeter: {
+                aktiv: bereich ? true : f.danach || kannNachladen,
+                onClick: () => (bereich ? nimmDazu(1) : gehe('spaeterDazu')),
+              },
+            }
+      }
       onWahl={waehleZeitraum}
     />
   );
@@ -377,119 +403,168 @@ export function Planen({
       danach={bereich ? true : f.danach || kannNachladen}
       onSchritt={gehe}
       onVerschieben={(r) => setzeZeitraum(zeitraumVerschieben(z, r, heute))}
-      onDazu={nimmDazu}
     />
   );
 
   const angebot = terminFilter(plan?.spalten ?? [], ansichtAus(ansicht));
   const arten = angebot.arten;
+
+  // Das „⋯“-Menü (R6/E3): was selten gebraucht wird, einen Klick tiefer – Ablauf bearbeiten und Vorlagen, dann Erinnern und
+  // Teilen, dann Hilfe; die Linien trennen nur Gruppen, die es gibt.
+  const mehrGruppen: Option[][] = [
+    [
+      ...(!handy &&
+      ansicht.unteransicht === 'matrix' &&
+      matrixAblauf &&
+      plan &&
+      !matrixAblauf.bearbeiten &&
+      ablaufBearbeitenMoeglich(matrixAblauf, plan, imFenster)
+        ? [
+            {
+              label: 'Ablauf bearbeiten',
+              symbol: <Icon name="pencil" size={16} stroke={2.2} />,
+              onClick: () => ablaufBearbeitenStart(matrixAblauf),
+            },
+          ]
+        : []),
+      ...(onVorlagen
+        ? [
+            {
+              label: 'Vorlagen',
+              symbol: <Icon name="grid" size={16} stroke={2.2} />,
+              onClick: onVorlagen,
+            },
+          ]
+        : []),
+    ],
+    [
+      ...(erinnernGruppen.length > 0
+        ? [
+            {
+              label: 'Erinnern',
+              symbol: <Icon name="brief" size={16} />,
+              onClick: () => setErinnernOffen(true),
+            },
+          ]
+        : []),
+      {
+        label: 'Teilen',
+        symbol: <Icon name="share" size={16} />,
+        gesperrt: !plan || teilenSpalten.length === 0,
+        onClick: () => setTeilenOffen(true),
+      },
+    ],
+    [
+      {
+        label: 'Hilfe',
+        symbol: <Icon name="hilfe" size={16} />,
+        onClick: () => setHilfeOffen(true),
+      },
+    ],
+  ];
+  const mehr: Option[] = mehrGruppen.flatMap((g, i) =>
+    g.map((o, j) => ({
+      ...o,
+      trenner: j === 0 && mehrGruppen.slice(0, i).some((x) => x.length > 0),
+    })),
+  );
+
+  // Die Lupe „Person hervorheben“ (R7/E5): am Rechner neben den Reitern (Platz im Seitenkopf), am Handy in der Werkzeugzeile.
+  const lupe = plan ? (
+    <FokusSuche
+      kandidaten={fokusKandidaten(plan, amPlatz.entwurf)}
+      onWahl={(person) => setFokusPerson({ person, zurueck: null })}
+    />
+  ) : null;
+  const lupeImKopf = lupe && !handy && lupeOrt ? createPortal(lupe, lupeOrt) : null;
+  const lupeInZeile = lupe && !lupeImKopf ? lupe : null;
+
   const werkzeug = (
-    <div className={styles.werkzeug}>
-      <Segment
-        value={ansicht.unteransicht}
-        options={[
-          { value: 'matrix', label: 'Matrix' },
-          { value: 'raster', label: 'Personen' },
-          { value: 'werWieOft', label: 'Wer wie oft?' },
-        ]}
-        onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
-        ariaLabel="Ansicht"
-        className={styles.ansicht}
-        verbunden
-      />
-      {!handy && leiste}
-      <div className={styles.rechts}>
-        {onVorlagen && (
-          <KopfKnopf
-            onClick={onVorlagen}
-            label="Vorlagen"
-            title="Ablaufvorlagen ansehen und bearbeiten"
-            symbol={<Icon name="grid" size={16} stroke={2.2} />}
-          />
-        )}
-        {/* „Ablauf bearbeiten“ hier statt neben „Ablauf“ – dort passte er nicht in die Dienst-Spalte (E6-6c). */}
-        {!handy && ansicht.unteransicht === 'matrix' && matrixAblauf && plan && (
-          <AblaufBearbeitenKnopf ma={matrixAblauf} plan={plan} spalten={imFenster} />
-        )}
-        {!handy && ansicht.unteransicht === 'matrix' && (
-          <Segment<Breite>
-            value={ansicht.breite}
-            // Zwei Breiten als Symbole statt S/M/L (Alwin, 29.10.2026, Entwurf `e6-6-breiten-plus.html`).
+    <>
+      <Werkzeugzeile
+        handy={handy}
+        links={
+          <AnsichtWahl
+            value={ansicht.unteransicht}
             options={[
-              {
-                value: 'schmal',
-                label: <Icon name="spalten-schmal" size={18} />,
-                name: 'Schmale Spalten',
-              },
-              {
-                value: 'breit',
-                label: <Icon name="spalten-breit" size={18} />,
-                name: 'Breite Spalten',
-              },
+              { value: 'matrix', label: 'Matrix' },
+              { value: 'raster', label: 'Personen' },
+              { value: 'werWieOft', label: 'Wer wie oft?' },
             ]}
-            onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
-            ariaLabel="Spaltenbreite"
-            verbunden
-          />
-        )}
-        {plan && (
-          <FokusSuche
-            kandidaten={fokusKandidaten(plan, amPlatz.entwurf)}
-            onWahl={(person) => setFokusPerson({ person, zurueck: null })}
+            onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
             handy={handy}
           />
-        )}
-        <FilterKnopf
-          abschnitte={[
-            ...terminAbschnitte(angebot, ansichtAus(ansicht), (a) =>
-              setAnsicht({
-                ...ansicht,
-                ausgeblendeteKalender: a.kalender,
-                ausgeblendeteArten: a.arten,
-              }),
-            ),
-            gruppenAbschnitt(plan, gruppenAus(ansicht), (a) =>
-              setAnsicht({
-                ...ansicht,
-                ausgeblendeteGruppen: [...a.gruppen],
-                ausgeblendeteDienste: [...a.dienste],
-              }),
-            ),
-          ]}
-        />
-        {erinnernGruppen.length > 0 && (
-          <KopfKnopf
-            onClick={() => setErinnernOffen(true)}
-            label="Erinnern"
-            title="Erinnern: Mail an alle, die noch nicht geantwortet haben"
-            symbol={<Icon name="brief" size={16} />}
-          />
-        )}
-        <KopfKnopf
-          onClick={() => setTeilenOffen(true)}
-          label="Teilen"
-          title="Plan als PDF teilen"
-          symbol={<Icon name="share" size={16} />}
-          disabled={!plan || teilenSpalten.length === 0}
-        />
-        <HilfeKnopf seite="Planen" abschnitte={HILFE_PLANEN} />
-        {teilenOffen && plan && (
-          <Suspense fallback={null}>
-            <PlanTeilenFenster
-              quelle={{
-                plan,
-                spalten: teilenSpalten,
-                gruppen: gezeigteGruppen(plan, gruppenAus(ansicht)),
-                gemeinde: ablauf?.start.gemeinde ?? null,
-                app: 'Dienstplaner',
-              }}
-              onClose={() => setTeilenOffen(false)}
+        }
+        mitte={leiste}
+        rechts={
+          <>
+            {/* „Fertig“ nur, solange der Ablauf bearbeitet wird – die Hauptaktion dieses Zustands (R1). */}
+            {!handy && ansicht.unteransicht === 'matrix' && matrixAblauf && (
+              <AblaufFertigKnopf ma={matrixAblauf} />
+            )}
+            {lupeInZeile}
+            <FilterKnopf
+              still
+              abschnitte={[
+                ...terminAbschnitte(angebot, ansichtAus(ansicht), (a) =>
+                  setAnsicht({
+                    ...ansicht,
+                    ausgeblendeteKalender: a.kalender,
+                    ausgeblendeteArten: a.arten,
+                  }),
+                ),
+                gruppenAbschnitt(plan, gruppenAus(ansicht), (a) =>
+                  setAnsicht({
+                    ...ansicht,
+                    ausgeblendeteGruppen: [...a.gruppen],
+                    ausgeblendeteDienste: [...a.dienste],
+                  }),
+                ),
+                // Anzeige statt Filter (R6): die Spaltenbreite der Matrix – zwei Breiten, vorher ein Umschalter in der Zeile.
+                ...(!handy && ansicht.unteransicht === 'matrix'
+                  ? [
+                      {
+                        titel: 'Anzeige',
+                        anzeige: true,
+                        optionen: [{ wert: 'breit', text: 'Breite Spalten' }],
+                        aus: ansicht.breite === 'breit' ? [] : ['breit'],
+                        onAus: (aus: string[]) =>
+                          setAnsicht({
+                            ...ansicht,
+                            breite: aus.includes('breit') ? 'schmal' : 'breit',
+                          }),
+                      },
+                    ]
+                  : []),
+              ]}
             />
-          </Suspense>
-        )}
-      </div>
-      {handy && leiste}
-    </div>
+            <MehrMenue optionen={mehr} handy={handy} />
+          </>
+        }
+      />
+      {lupeImKopf}
+      {hilfeOffen && (
+        <HilfeFenster
+          seite="Planen"
+          abschnitte={HILFE_PLANEN}
+          onClose={() => setHilfeOffen(false)}
+        />
+      )}
+      {teilenOffen && plan && (
+        <Suspense fallback={null}>
+          <PlanTeilenFenster
+            quelle={{
+              plan,
+              spalten: teilenSpalten,
+              gruppen: gezeigteGruppen(plan, gruppenAus(ansicht)),
+              gemeinde: ablauf?.start.gemeinde ?? null,
+              app: 'Dienstplaner',
+            }}
+            onClose={() => setTeilenOffen(false)}
+          />
+        </Suspense>
+      )}
+    </>
   );
 
   const hinweis = (text: string) => (

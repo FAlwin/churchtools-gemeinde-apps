@@ -40,6 +40,12 @@ export interface FilterAbschnitt {
   onAus: (aus: string[]) => void;
   /** Ein kurzer Satz unter den Häkchen, z. B. wofür das Zusatz-Häkchen gilt. */
   hinweis?: string;
+  /**
+   * **Anzeige statt Filter** (R6, „Ruhige Bedienung“ B3): Schalter, die nur das Aussehen ändern (Spaltenbreite der Matrix),
+   * stehen im Filter-Fenster unter „Anzeige“. Sie blenden nichts aus – deshalb zählen sie nicht in die Zahl am Knopf, und
+   * der Abschnitt gilt auch mit einer einzigen Möglichkeit als Wahl.
+   */
+  anzeige?: boolean;
 }
 
 /**
@@ -47,5 +53,5 @@ export interface FilterAbschnitt {
  * Aufrufer, die um den Knopf etwas legen (Einführungs-Ziel) – der Knopf selbst fehlt ohne Wahl.
  */
 export function abschnittMitWahl(a: FilterAbschnitt): boolean {
-  return a.optionen.length > 1 || a.optionen.some((o) => o.zusatz);
+  return a.anzeige === true || a.optionen.length > 1 || a.optionen.some((o) => o.zusatz);
 }

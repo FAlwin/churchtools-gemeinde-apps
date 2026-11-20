@@ -384,7 +384,12 @@ describe('Fokus – bleibt über die Ansichten', () => {
 });
 
 describe('Fokus – Suchfeld „Person hervorheben“', () => {
-  const feld = () => screen.getByRole('combobox', { name: 'Person hervorheben' });
+  /** Seit B3 eine Lupe (R7): erst antippen, dann steht das Feld da. */
+  const feld = () => {
+    if (!screen.queryByRole('combobox', { name: 'Person hervorheben' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Person hervorheben' }));
+    return screen.getByRole('combobox', { name: 'Person hervorheben' });
+  };
 
   it('tippen → Vorschläge mit Name und Diensten, nur Treffer am Namensanfang; wählen → Fokus', () => {
     zeige();
@@ -398,9 +403,22 @@ describe('Fokus – Suchfeld „Person hervorheben“', () => {
     fireEvent.click(within(liste).getByRole('option'));
     expect(leiste()?.textContent).toContain('Fokus: Daniel Test · 3 Einsätze');
     expect(namen(umrandet())).toEqual(['Daniel Test', 'Daniel Test', 'Daniel Test']);
-    // Das Feld ist wieder leer, die Liste zu.
-    expect((feld() as HTMLInputElement).value).toBe('');
+    // Die Lupe ist wieder zu, die Liste auch; ein neuer Tipp zeigt ein leeres Feld.
+    expect(screen.queryByRole('combobox')).toBeNull();
     expect(screen.queryByRole('listbox')).toBeNull();
+    expect((feld() as HTMLInputElement).value).toBe('');
+  });
+
+  it('die Lupe klappt das Feld erst beim Tipp auf; Esc und ✕ klappen zu und leeren es (B3, R7)', () => {
+    zeige();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    fireEvent.change(feld(), { target: { value: 'da' } });
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect((feld() as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Suche schließen' }));
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
   it('auch Wörter hinter dem Vornamen; Gast und verborgener Name tauchen nicht auf', () => {
@@ -427,7 +445,7 @@ describe('Fokus – Suchfeld „Person hervorheben“', () => {
     expect(leiste()?.textContent).toContain('Fokus: Daniel Test');
   });
 
-  it('am Handy steckt das Feld hinter einem Such-Symbol', () => {
+  it('am Handy steckt das Feld hinter derselben Lupe, in der Werkzeugzeile', () => {
     zeige({}, true);
     expect(screen.queryByRole('combobox')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Person hervorheben' }));

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { useAufklapp } from '@ui/bedienung/useAufklapp';
+import { SuchLupe } from '@ui/bedienung/SuchLupe';
 import { initialenAus } from '@shared/organigramm/mitglieder';
 import { passtZuName, type FokusKandidat, type FokusTexte } from '@shared/dienstplan/fokus';
 import styles from './Fokus.module.scss';
@@ -97,109 +97,94 @@ export function FokusLeiste({
 const MAX_VORSCHLAEGE = 8;
 
 /**
- * **Das Suchfeld „Person hervorheben“** (Wunsch 11) in der Werkzeugleiste von Planen: tippen → Vorschläge mit Kreis,
- * Name und Diensten (nur wer im geladenen Plan eingeteilt ist) → wählen → Fokus. Es filtert nichts – deshalb der Name.
- * Am Handy steckt das Feld hinter einem Such-Symbol.
+ * **„Person hervorheben“ als Lupe** (Wunsch 11; R7/E5 „Ruhige Bedienung“ B3 – vorher ein eigenes Feld in der Werkzeugleiste,
+ * am Handy hinter einem Symbol): die Lupe (`SuchLupe`) rechts neben den Reitern, ein Tipp klappt das Feld auf. Tippen →
+ * Vorschläge mit Kreis, Name und Diensten (nur wer im geladenen Plan eingeteilt ist) → wählen → Fokus. Es filtert nichts –
+ * deshalb der Name „Person hervorheben“. Pfeile und Enter wählen wie bisher; Esc oder ✕ klappt zu und leert das Feld.
  */
 export function FokusSuche({
   kandidaten,
   onWahl,
-  handy,
 }: {
   kandidaten: FokusKandidat[];
   onWahl: (p: FokusPerson) => void;
-  handy: boolean;
 }) {
-  const { offen, setOffen, rahmen } = useAufklapp();
+  const [offen, setOffen] = useState(false);
   const [eingabe, setEingabe] = useState('');
   const [aktiv, setAktiv] = useState(0);
   const id = useId();
   const treffer = kandidaten.filter((k) => passtZuName(k.name, eingabe)).slice(0, MAX_VORSCHLAEGE);
-  const zeigeListe = (!handy || offen) && eingabe.trim() !== '';
+  const zeigeListe = eingabe.trim() !== '';
 
-  const waehle = (k: FokusKandidat) => {
-    onWahl({ personId: k.personId, name: k.name });
+  const zu = () => {
+    setOffen(false);
     setEingabe('');
     setAktiv(0);
-    setOffen(false);
   };
-  const feld = (
-    <div className={styles.suche}>
-      <span className={styles.lupe} aria-hidden="true">
-        <Icon name="search" size={15} />
-      </span>
-      <input
-        className={styles.feld}
-        type="search"
-        role="combobox"
-        placeholder="Person hervorheben"
-        aria-label="Person hervorheben"
-        aria-expanded={zeigeListe && treffer.length > 0}
-        aria-controls={id}
-        aria-activedescendant={zeigeListe && treffer[aktiv] ? `${id}-${aktiv}` : undefined}
-        autoComplete="off"
-        autoFocus={handy}
-        value={eingabe}
-        onChange={(e) => {
-          setEingabe(e.target.value);
-          setAktiv(0);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setAktiv((a) => Math.min(a + 1, treffer.length - 1));
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setAktiv((a) => Math.max(a - 1, 0));
-          } else if (e.key === 'Enter' && treffer[aktiv]) {
-            e.preventDefault();
-            waehle(treffer[aktiv]);
-          } else if (e.key === 'Escape') {
-            setEingabe('');
-          }
-        }}
-      />
-      {zeigeListe && (
-        <ul className={styles.menue} id={id} role="listbox" aria-label="Vorschläge">
-          {treffer.length === 0 && (
-            <li className={styles.leer}>Niemand im Plan mit diesem Namen.</li>
-          )}
-          {treffer.map((k, i) => (
-            <li
-              key={k.personId}
-              id={`${id}-${i}`}
-              role="option"
-              aria-selected={i === aktiv}
-              className={styles.vorschlag}
-              onMouseEnter={() => setAktiv(i)}
-              onClick={() => waehle(k)}
-            >
-              <span className={styles.avatar} aria-hidden="true">
-                {initialenAus(k.name)}
-              </span>
-              <span>
-                {k.name}
-                <small>{k.dienste.join(' · ')}</small>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-  if (!handy) return <div ref={rahmen}>{feld}</div>;
+  const waehle = (k: FokusKandidat) => {
+    onWahl({ personId: k.personId, name: k.name });
+    zu();
+  };
   return (
-    <div ref={rahmen} className={styles.suche}>
-      <button
-        type="button"
-        className={styles.lupenKnopf}
-        aria-label="Person hervorheben"
-        aria-expanded={offen}
-        onClick={() => setOffen(!offen)}
-      >
-        <Icon name="search" size={16} />
-      </button>
-      {offen && <div className={styles.handyMenue}>{feld}</div>}
-    </div>
+    <SuchLupe
+      offen={offen}
+      begriff={eingabe}
+      onOeffnen={() => setOffen(true)}
+      onBegriff={(b) => {
+        setEingabe(b);
+        setAktiv(0);
+      }}
+      onSchliessen={zu}
+      platzhalter="Person hervorheben"
+      knopfName="Person hervorheben"
+      feldName="Person hervorheben"
+      feldAria={{
+        role: 'combobox',
+        'aria-expanded': zeigeListe && treffer.length > 0,
+        'aria-controls': id,
+        'aria-activedescendant': zeigeListe && treffer[aktiv] ? `${id}-${aktiv}` : undefined,
+        autoComplete: 'off',
+      }}
+      onTaste={(e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setAktiv((a) => Math.min(a + 1, treffer.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setAktiv((a) => Math.max(a - 1, 0));
+        } else if (e.key === 'Enter' && treffer[aktiv]) {
+          e.preventDefault();
+          waehle(treffer[aktiv]);
+        }
+      }}
+      unter={
+        zeigeListe && (
+          <ul className={styles.menue} id={id} role="listbox" aria-label="Vorschläge">
+            {treffer.length === 0 && (
+              <li className={styles.leer}>Niemand im Plan mit diesem Namen.</li>
+            )}
+            {treffer.map((k, i) => (
+              <li
+                key={k.personId}
+                id={`${id}-${i}`}
+                role="option"
+                aria-selected={i === aktiv}
+                className={styles.vorschlag}
+                onMouseEnter={() => setAktiv(i)}
+                onClick={() => waehle(k)}
+              >
+                <span className={styles.avatar} aria-hidden="true">
+                  {initialenAus(k.name)}
+                </span>
+                <span>
+                  {k.name}
+                  <small>{k.dienste.join(' · ')}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
   );
 }

@@ -4,9 +4,10 @@ import type { FensterSchritt } from '@shared/dienstplan/fenster';
 import styles from './Planen.module.scss';
 
 /**
- * Die Terminleiste: ‹ ＋ [Zeitraum] ＋ › – bei „ab heute“ blättern ‹ › und ＋ im Fenster, bei gewähltem Bereich springen
- * ‹ › um den ganzen Bereich und ＋ nimmt eine einzelne Veranstaltung davor/danach dazu (E9-3, Alwin 05.11.2026). Am
- * Handy nur Knopf und ‹ › für einen gewählten Bereich – geblättert wird dort in der Datumsleiste.
+ * **Die Zeitraum-Leiste** (R5/E6, B3): ein gerahmtes Element ‹ [Zeitraum] › – bei „ab heute“ blättern ‹ › im Fenster, bei
+ * gewähltem Bereich springen ‹ › um den ganzen Bereich. „＋ früherer / späterer Termin“ (E9-3, Alwin 05.11.2026) stehen
+ * nicht mehr daneben, sondern im Fenster des Zeitraum-Knopfs (`dazu`, s. `Planen.tsx`). Am Handy nur Knopf und ‹ › für einen
+ * gewählten Bereich – geblättert wird dort in der Datumsleiste.
  */
 export function Terminleiste({
   knopf,
@@ -16,7 +17,6 @@ export function Terminleiste({
   danach,
   onSchritt,
   onVerschieben,
-  onDazu,
 }: {
   knopf: ReactNode;
   bereich: boolean;
@@ -25,8 +25,6 @@ export function Terminleiste({
   danach: boolean;
   onSchritt: (was: FensterSchritt) => void;
   onVerschieben: (richtung: 1 | -1) => void;
-  /** ＋ bei gewähltem Zeitraum (E9-3): eine Veranstaltung davor (`-1`) bzw. danach (`1`) dazunehmen. */
-  onDazu: (richtung: 1 | -1) => void;
 }) {
   const pfeil = (richtung: 1 | -1, aktiv: boolean) => (
     <button
@@ -49,19 +47,6 @@ export function Terminleiste({
       <Icon name={richtung < 0 ? 'chev-left' : 'chev-right'} size={16} />
     </button>
   );
-  const dazu = (was: 'frueherDazu' | 'spaeterDazu', aktiv: boolean) => (
-    <button
-      type="button"
-      className={styles.leistenKnopf}
-      disabled={!aktiv}
-      aria-label={
-        was === 'frueherDazu' ? 'Früheren Termin dazunehmen' : 'Späteren Termin dazunehmen'
-      }
-      onClick={() => (bereich ? onDazu(was === 'frueherDazu' ? -1 : 1) : onSchritt(was))}
-    >
-      <Icon name="plus" size={16} />
-    </button>
-  );
   const blaettern = !handy || bereich;
   return (
     <div
@@ -70,9 +55,7 @@ export function Terminleiste({
       aria-label="Zeitraum"
     >
       {blaettern && pfeil(-1, davor)}
-      {!handy && dazu('frueherDazu', davor)}
       {knopf}
-      {!handy && dazu('spaeterDazu', danach)}
       {blaettern && pfeil(1, danach)}
     </div>
   );

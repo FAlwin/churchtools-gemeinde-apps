@@ -1,0 +1,74 @@
+// Werkzeugzeile (R5, B3): links · Mitte · rechts. Am Rechner ein Raster, dessen Mitte in der Fenstermitte bleibt.
+.zeile {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px 14px;
+  position: relative;
+}
+
+.links,
+.mitte,
+.rechts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rechts {
+  justify-content: flex-end;
+}
+
+// Schmaler als Rechner: Mitte in eine eigene Reihe, damit nichts überläuft (Tablet).
+@media (max-width: 1019px) {
+  .zeile:not(.handy) {
+    grid-template-columns: 1fr auto;
+
+    .mitte {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      justify-content: center;
+    }
+  }
+}
+
+// Handy (E9): oben Ansichtswahl links und Werkzeuge rechts, darunter der Zeitraum über die ganze Breite.
+.handy {
+  grid-template-columns: auto 1fr;
+
+  .mitte {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-content: stretch;
+
+    > * {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  // R12: jedes Bedienelement mit Rahmen – auch die stillen Knöpfe und die Knopf-Hüllen (Filter, Menü).
+  // (Die Ansichtswahl links hat ihren blauen Rahmen schon.)
+  .rechts {
+    > button,
+    > div > button:first-child {
+      border: 1px solid var(--border);
+      background: var(--surface3);
+      border-radius: var(--r-ctrl);
+      height: 40px;
+      min-width: 40px;
+    }
+  }
+}
+
+// Handy: die aufgeklappte Lupe (`SuchLupe`) legt sich über die obere Reihe, statt neben den Knöpfen zu quetschen.
+.handy [role='search'] {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  width: auto;
+  height: 40px;
+  margin: 0;
+  background: var(--surface2);
+}

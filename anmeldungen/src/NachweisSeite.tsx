@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
 import { Etikett } from '@ui/bedienung/Etikett';
+import { KlickZeile } from '@ui/bedienung/KlickZeile';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
@@ -20,6 +21,7 @@ import {
 import { nachweiseSeiteLaden, type NachweisArt } from './nachweisArten';
 import { personenMitStand, type PersonMitStand } from './nachweisPersonen';
 import { NachweisArtFenster } from './NachweisArtFenster';
+import { EinsichtFenster } from './EinsichtFenster';
 import type { Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
@@ -38,7 +40,7 @@ const datumOderStrich = (tag: string | null) => (tag ? tagPunkt(tag) : '–');
  * **Die Seite „Nachweise“** (N1b; N2a Entwurf `n2-stand-v1`, Ansicht 2 und 5) – je **Nachweis-Art eine Karte**: im Kopf
  * Gültigkeit, Antrag und Vertrauenspersonen (die frühere Liste „Nachweis-Arten“), „Nachweis-Art bearbeiten“ im „⋯“-Menü,
  * darunter ihre Personen mit dem Stand (am Handy als Liste, am Rechner als Tabelle). Der Stand wird **nur gelesen**; die Regeln
- * stehen in `shared/anmeldung/nachweisStand.ts`. Einsicht festhalten und Anschreiben kommen mit N2b/N2c.
+ * stehen in `shared/anmeldung/nachweisStand.ts`. Einsicht festhalten (N2b): ein Klick auf eine Person; Anschreiben kommt mit N2c.
  *
  * Sehen darf die Seite, wer „Berechtigungen verwalten“ hat oder eine Nachweis-Gruppe leitet (die Startseite entscheidet).
  * Neu anlegen und Bearbeiten nur mit „Berechtigungen verwalten“ – sonst steht da, wer das darf.
@@ -66,6 +68,10 @@ export function NachweisSeite({
   const heute = heuteImKalender();
   /** Welche Art im Fenster offen ist: `null` = keins, `'neu'` = neue Art. */
   const [fenster, setFenster] = useState<NachweisArt | 'neu' | null>(null);
+  /** Die Person, deren Einsicht gerade festgehalten wird. */
+  const [einsicht, setEinsicht] = useState<{ art: NachweisArt; person: PersonMitStand } | null>(
+    null,
+  );
 
   const zurueck = (
     <button type="button" className={v.zurueck} onClick={onZurueck}>
@@ -199,7 +205,14 @@ export function NachweisSeite({
                     />
                   )}
                 </div>
-                <PersonenBereich personen={zeilen} handy={handy} />
+                <PersonenBereich
+                  personen={zeilen}
+                  handy={handy}
+                  // Festhalten kann, wer die Art sieht (Admin oder Vertrauensperson) – und nur eine fertig eingerichtete Art.
+                  onWaehlen={
+                    a.einstellungen ? (p) => setEinsicht({ art: a, person: p }) : undefined
+                  }
+                />
               </section>
             );
           })}
@@ -207,6 +220,24 @@ export function NachweisSeite({
       )}
       {!darf && <p className={v.hinweis}>{WER_DARF}</p>}
 
+      {einsicht && einsicht.art.einstellungen && (
+        <EinsichtFenster
+          // Eine andere Person beginnt mit frischen Eingaben.
+          key={`${einsicht.art.id}-${einsicht.person.personId}`}
+          art={einsicht.art}
+          person={einsicht.person}
+          heute={heute}
+          onClose={(geaendert) => {
+            setEinsicht(null);
+            if (geaendert) neu();
+          }}
+          onFertig={(text) => {
+            setEinsicht(null);
+            onGeaendert({ text, rueckgaengig: null });
+            neu();
+          }}
+        />
+      )}
       {fenster && (
         <NachweisArtFenster
           // Eine andere Art oder „neu“ beginnt mit frischen Eingaben.
@@ -230,16 +261,32 @@ export function NachweisSeite({
 function PersonenBereich({
   personen,
   handy,
+  onWaehlen,
 }: {
   /** `null`: für dich nicht sichtbar. */
   personen: PersonMitStand[] | null;
   handy: boolean;
+  /** Ein Klick auf eine Person (Einsicht festhalten); fehlt es, sind die Zeilen nur zum Ansehen. */
+  onWaehlen?: (p: PersonMitStand) => void;
 }) {
   if (personen === null)
     return <p className={`${s.leise} ${n.leer}`}>Die Personen sind für dich nicht sichtbar.</p>;
   if (personen.length === 0)
     return <p className={`${s.leise} ${n.leer}`}>Noch niemand eingetragen.</p>;
-  return handy ? <PersonenListe personen={personen} /> : <PersonenTabelle personen={personen} />;
+  return (
+    <>
+      {handy ? (
+        <PersonenListe personen={personen} onWaehlen={onWaehlen} />
+      ) : (
+        <PersonenTabelle personen={personen} onWaehlen={onWaehlen} />
+      )}
+      {onWaehlen && (
+        <small className={`${n.personen} ${n.leer}`}>
+          Ein Klick auf eine Person öffnet „Einsicht festhalten“.
+        </small>
+      )}
+    </>
+  );
 }
 
 /** Name, darunter rot die Lücke im Antrag. */
@@ -257,7 +304,13 @@ function StandEtikett({ p }: { p: PersonMitStand }) {
 }
 
 /** Rechner: Name | Stand | Eingesehen am | Ausgestellt am | Gültig bis. */
-function PersonenTabelle({ personen }: { personen: PersonMitStand[] }) {
+function PersonenTabelle({
+  personen,
+  onWaehlen,
+}: {
+  personen: PersonMitStand[];
+  onWaehlen?: (p: PersonMitStand) => void;
+}) {
   return (
     <div className={n.tabelleRahmen}>
       <table className={n.tabelle}>
@@ -282,7 +335,22 @@ function PersonenTabelle({ personen }: { personen: PersonMitStand[] }) {
         </thead>
         <tbody>
           {personen.map((p) => (
-            <tr key={p.personId}>
+            <tr
+              key={p.personId}
+              className={onWaehlen ? n.klickbar : undefined}
+              // Die Zeile ist der Knopf: Maus, Tab und Eingabe/Leertaste (kein eigener Knopf in der Zelle).
+              tabIndex={onWaehlen ? 0 : undefined}
+              onClick={onWaehlen ? () => onWaehlen(p) : undefined}
+              onKeyDown={
+                onWaehlen
+                  ? (e) => {
+                      if (e.key !== 'Enter' && e.key !== ' ') return;
+                      e.preventDefault();
+                      onWaehlen(p);
+                    }
+                  : undefined
+              }
+            >
               <td className={n.tZelle}>
                 <NameMitLuecke p={p} />
               </td>
@@ -301,22 +369,41 @@ function PersonenTabelle({ personen }: { personen: PersonMitStand[] }) {
 }
 
 /** Handy: Name, Etikett und EIN Datum (gültig bis, sonst eingesehen am), dazu die Lücke im Antrag. */
-function PersonenListe({ personen }: { personen: PersonMitStand[] }) {
+function PersonenListe({
+  personen,
+  onWaehlen,
+}: {
+  personen: PersonMitStand[];
+  onWaehlen?: (p: PersonMitStand) => void;
+}) {
   return (
     <ul className={s.liste}>
-      {personen.map((p) => (
-        <li key={p.personId} className={n.person}>
-          <NameMitLuecke p={p} />
-          <span className={n.personRechts}>
-            <StandEtikett p={p} />
-            {p.gueltigBis ? (
-              <small className={n.personen}>Gültig bis {tagPunkt(p.gueltigBis)}</small>
-            ) : p.eingesehenAm ? (
-              <small className={n.personen}>Eingesehen am {tagPunkt(p.eingesehenAm)}</small>
-            ) : null}
-          </span>
-        </li>
-      ))}
+      {personen.map((p) => {
+        const inhalt = (
+          <>
+            <NameMitLuecke p={p} />
+            <span className={n.personRechts}>
+              <StandEtikett p={p} />
+              {p.gueltigBis ? (
+                <small className={n.personen}>Gültig bis {tagPunkt(p.gueltigBis)}</small>
+              ) : p.eingesehenAm ? (
+                <small className={n.personen}>Eingesehen am {tagPunkt(p.eingesehenAm)}</small>
+              ) : null}
+            </span>
+          </>
+        );
+        return onWaehlen ? (
+          <li key={p.personId}>
+            <KlickZeile className={n.person} onClick={() => onWaehlen(p)}>
+              {inhalt}
+            </KlickZeile>
+          </li>
+        ) : (
+          <li key={p.personId} className={n.person}>
+            {inhalt}
+          </li>
+        );
+      })}
     </ul>
   );
 }

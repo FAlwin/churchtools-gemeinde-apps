@@ -1,7 +1,7 @@
 import { Sheet } from '@ui/fenster/Sheet';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
-import { ctBasis } from '@ui/ct/basis';
+import { personLink } from '@ui/ct/links';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import type { PersonImBereich } from '@shared/organigramm/sichtbereich';
@@ -101,11 +101,7 @@ export function PersonFenster({
         </section>
       )}
 
-      <a
-        className={styles.oeffnen}
-        href={`${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${person.personId}/`}
-        target="_top"
-      >
+      <a className={styles.oeffnen} href={personLink(person.personId)} target="_top">
         In ChurchTools öffnen
       </a>
     </Sheet>

@@ -14,9 +14,10 @@ import type { MeineGruppe } from '@shared/ct/gruppen';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { plusTage } from '@shared/ct/datum';
 import type { NachweisEinstellungen } from '@shared/anmeldung/nachweise';
-import { plusJahre, type PersonAngaben } from '@shared/anmeldung/nachweisStand';
+import { plusJahre } from '@shared/anmeldung/nachweisStand';
 import type { NachweisEinstiegDaten } from './nachweisArten';
 import type { NachweisArtMitPersonen, NachweisPerson } from './nachweisPersonen';
+import { offeneAufgabe } from './nachweisArten.testutil';
 import { Startseite } from './Startseite';
 import * as E from './einrichten';
 import * as A from './archiv';
@@ -619,7 +620,7 @@ describe('Nachweise auf der Startseite (N2a)', () => {
     betreff: 'B',
     text: 'T [Vorname]',
   };
-  const P = (id: number, p: Partial<PersonAngaben> = {}): NachweisPerson => ({
+  const P = (id: number, p: Partial<NachweisPerson> = {}): NachweisPerson => ({
     personId: id,
     name: `Person ${id}`,
     eingesehenAm: null,
@@ -629,7 +630,7 @@ describe('Nachweise auf der Startseite (N2a)', () => {
     profil: null,
     ...p,
   });
-  const eingesehen = (tage: number, p: Partial<PersonAngaben> = {}): Partial<PersonAngaben> => ({
+  const eingesehen = (tage: number, p: Partial<NachweisPerson> = {}): Partial<NachweisPerson> => ({
     eingesehenAm: plusTage(HEUTE, -5),
     ausgestelltAm: plusJahre(plusTage(HEUTE, tage), -3),
     ...p,
@@ -650,8 +651,8 @@ describe('Nachweise auf der Startseite (N2a)', () => {
   const FZ = art(61, 'Führungszeugnis', [
     P(1, eingesehen(900)),
     P(2, eingesehen(900)),
-    P(3, { aufgabe: { seit: plusTage(HEUTE, -3) } }),
-    P(4, { aufgabe: { seit: plusTage(HEUTE, -40) } }),
+    P(3, { aufgabe: offeneAufgabe(plusTage(HEUTE, -3)) }),
+    P(4, { aufgabe: offeneAufgabe(plusTage(HEUTE, -40)) }),
     P(5, eingesehen(20)),
     P(6, eingesehen(-20)),
     P(7, eingesehen(900, { ergebnis: 'eintrag' })),

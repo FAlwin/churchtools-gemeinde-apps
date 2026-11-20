@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { plusTage } from '../ct/datum';
-import type { NachweisEinstellungen } from './nachweise';
+import {
+  NACHWEIS_AUFGABE_ERNEUT,
+  NACHWEIS_AUFGABE_ERSTE,
+  type NachweisEinstellungen,
+} from './nachweise';
+import { tagPunkt } from '../ct/datum';
 import { antragVorgabe } from './nachweisAntrag';
 import {
   FEHLT_NACH_TAGEN,
   LAEUFT_AB_TAGE,
+  aufgabeErledigtDurch,
   aufmerksamkeitEtiketten,
   aufmerksamkeitZaehlen,
   brauchenDichText,
   brauchtAufmerksamkeit,
+  einsichtFehler,
+  einsichtFolgeTexte,
+  einsichtPlan,
+  einsichtVorbelegung,
   nachStand,
   nachweisGueltigBis,
   personStand,
@@ -354,5 +364,190 @@ describe('Zählung und Texte für die Startseite', () => {
   it('„N Personen brauchen dich als Vertrauensperson.“ – Einzahl richtig', () => {
     expect(brauchenDichText(4)).toBe('4 Personen brauchen dich als Vertrauensperson.');
     expect(brauchenDichText(1)).toBe('1 Person braucht dich als Vertrauensperson.');
+  });
+});
+
+// ── Einsicht festhalten (N2b) ────────────────────────────────────────────────────────────────────────────────────
+
+describe('aufgabeErledigtDurch: neue Einsicht oder nur berichtigen', () => {
+  const erste = (angelegt: string | null) => ({ titel: NACHWEIS_AUFGABE_ERSTE, angelegt });
+  const erneut = (angelegt: string | null) => ({ titel: NACHWEIS_AUFGABE_ERNEUT, angelegt });
+  it('„Einsicht nehmen“: jede Einsicht erledigt sie – auch eine vor der Anforderung oder ohne Anlagetag', () => {
+    expect(aufgabeErledigtDurch(erste(HEUTE), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(plusTage(HEUTE, -3)), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(plusTage(HEUTE, 30)), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(null), HEUTE)).toBe(true);
+  });
+  it('„Erneut einsehen“: nur eine Einsicht NACH dem Anlagetag erledigt sie', () => {
+    expect(aufgabeErledigtDurch(erneut(plusTage(HEUTE, -1)), HEUTE)).toBe(true);
+  });
+  it('„Erneut einsehen“ am selben Tag angelegt wie die Einsicht: nur berichtigen (Demo-Fund 20.11.2026, Rücksprache → keine Eintragung)', () => {
+    expect(aufgabeErledigtDurch(erneut(HEUTE), HEUTE)).toBe(false);
+    expect(aufgabeErledigtDurch(erneut(HEUTE), plusTage(HEUTE, -1))).toBe(false);
+  });
+  it('keine Aufgabe, keine Einsicht oder „Erneut einsehen“ ohne Anlagetag: nicht erledigt', () => {
+    expect(aufgabeErledigtDurch(null, HEUTE)).toBe(false);
+    expect(aufgabeErledigtDurch(erneut(null), HEUTE)).toBe(false);
+    expect(aufgabeErledigtDurch(erste(HEUTE), null)).toBe(false);
+  });
+});
+
+describe('einsichtPlan', () => {
+  const eingabe = (a: Partial<Parameters<typeof einsichtPlan>[0]> = {}) => ({
+    einstellungen: E,
+    eingesehenAm: HEUTE,
+    ausgestelltAm: plusTage(HEUTE, -5),
+    aufgabe: { titel: NACHWEIS_AUFGABE_ERSTE, angelegt: plusTage(HEUTE, -10) },
+    heute: HEUTE,
+    ...a,
+  });
+  it('neue Einsicht bei „Einsicht nehmen“: Aufgabe erledigen, die nächste kommt gleich und wird verschoben', () => {
+    const p = einsichtPlan(eingabe());
+    expect(p).toEqual({
+      neu: true,
+      gueltigBis: nachweisGueltigBis(E, {
+        eingesehenAm: HEUTE,
+        ausgestelltAm: plusTage(HEUTE, -5),
+      }),
+      erledigt: NACHWEIS_AUFGABE_ERSTE,
+      verschiebenAuf: plusJahre(plusTage(HEUTE, -5), 3),
+      verschieben: 'naechste',
+    });
+  });
+  it('Berichtigung bei „Erneut einsehen“: nichts erledigt, die vorhandene wird verschoben', () => {
+    const p = einsichtPlan(
+      eingabe({
+        eingesehenAm: plusTage(HEUTE, -20),
+        aufgabe: { titel: NACHWEIS_AUFGABE_ERNEUT, angelegt: plusTage(HEUTE, -10) },
+      }),
+    );
+    expect(p).toMatchObject({ neu: false, erledigt: null, verschieben: 'vorhandene' });
+  });
+  it('Einsicht vor der Anforderung bei offener „Einsicht nehmen“: erledigt sie, die nächste wird verschoben', () => {
+    const p = einsichtPlan(eingabe({ eingesehenAm: plusTage(HEUTE, -20) }));
+    expect(p).toMatchObject({
+      neu: true,
+      erledigt: NACHWEIS_AUFGABE_ERSTE,
+      verschieben: 'naechste',
+    });
+  });
+  it('Gültig bis heute oder früher: nie verschieben (ChurchTools will ein Datum nach heute)', () => {
+    // Ausgestellt vor 3 Jahren und einem Tag → Gültig bis gestern; vor genau 3 Jahren → heute.
+    for (const tage of [1, 0]) {
+      const p = einsichtPlan(eingabe({ ausgestelltAm: plusJahre(plusTage(HEUTE, -tage), -3) }));
+      expect(p.gueltigBis).toBe(plusTage(HEUTE, -tage));
+      expect(p.verschiebenAuf).toBeNull();
+      expect(p.verschieben).toBeNull();
+    }
+    // Morgen ist erlaubt.
+    expect(
+      einsichtPlan(eingabe({ ausgestelltAm: plusJahre(plusTage(HEUTE, 1), -3) })).verschiebenAuf,
+    ).toBe(plusTage(HEUTE, 1));
+  });
+});
+
+describe('einsichtVorbelegung', () => {
+  const alt = {
+    eingesehenAm: '2024-01-05',
+    ausgestelltAm: '2023-12-28',
+    ergebnis: 'ohne' as const,
+  };
+  const stand = (art: NachweisStand['art']) => ({ art, bis: HEUTE }) as NachweisStand;
+  it('keine Einsicht: heute, Ausgestellt und Ergebnis leer', () => {
+    const leer = { eingesehenAm: null, ausgestelltAm: null, ergebnis: null };
+    expect(einsichtVorbelegung(leer, { art: 'angefordert', seit: HEUTE }, HEUTE)).toEqual({
+      eingesehenAm: HEUTE,
+      ausgestelltAm: '',
+      ergebnis: '',
+    });
+  });
+  it('läuft ab / abgelaufen: neue Einsicht mit dem bisherigen Ergebnis', () => {
+    for (const art of ['laeuftAb', 'abgelaufen'] as const)
+      expect(einsichtVorbelegung(alt, stand(art), HEUTE)).toEqual({
+        eingesehenAm: HEUTE,
+        ausgestelltAm: '',
+        ergebnis: 'ohne',
+      });
+  });
+  it('gültig, Rücksprache, unvollständig: die gespeicherten Werte', () => {
+    for (const art of ['gueltig', 'ruecksprache', 'unvollstaendig'] as const)
+      expect(einsichtVorbelegung(alt, stand(art), HEUTE)).toEqual({
+        eingesehenAm: '2024-01-05',
+        ausgestelltAm: '2023-12-28',
+        ergebnis: 'ohne',
+      });
+  });
+});
+
+describe('einsichtFehler', () => {
+  const ok = { eingesehenAm: HEUTE, ausgestelltAm: plusTage(HEUTE, -2), ergebnis: 'ohne' as const };
+  it('jeder Prüftext einzeln', () => {
+    expect(einsichtFehler(ok, 'ausstellung', HEUTE)).toBeNull();
+    expect(einsichtFehler({ ...ok, eingesehenAm: '' }, 'ausstellung', HEUTE)).toBe(
+      'Bitte eintragen, wann du das Zeugnis gesehen hast.',
+    );
+    expect(einsichtFehler({ ...ok, eingesehenAm: plusTage(HEUTE, 1) }, 'ausstellung', HEUTE)).toBe(
+      '„Eingesehen am“ liegt in der Zukunft.',
+    );
+    expect(einsichtFehler({ ...ok, ausgestelltAm: '' }, 'ausstellung', HEUTE)).toBe(
+      'Bitte das Datum auf dem Zeugnis eintragen.',
+    );
+    expect(einsichtFehler({ ...ok, ausgestelltAm: plusTage(HEUTE, 1) }, 'ausstellung', HEUTE)).toBe(
+      'Das Zeugnis kann nicht nach der Einsicht ausgestellt sein.',
+    );
+    expect(einsichtFehler({ ...ok, ergebnis: '' }, 'ausstellung', HEUTE)).toBe(
+      'Bitte ein Ergebnis wählen.',
+    );
+  });
+  it('ab Einsicht ist „Ausgestellt am“ freiwillig, aber nie nach der Einsicht', () => {
+    expect(einsichtFehler({ ...ok, ausgestelltAm: '' }, 'einsicht', HEUTE)).toBeNull();
+    expect(
+      einsichtFehler({ ...ok, ausgestelltAm: plusTage(HEUTE, 1) }, 'einsicht', HEUTE),
+    ).not.toBeNull();
+  });
+});
+
+describe('einsichtFolgeTexte', () => {
+  const plan = (a: Partial<Parameters<typeof einsichtPlan>[0]> = {}) =>
+    einsichtPlan({
+      einstellungen: E,
+      eingesehenAm: HEUTE,
+      ausgestelltAm: plusTage(HEUTE, -5),
+      aufgabe: { titel: NACHWEIS_AUFGABE_ERSTE, angelegt: plusTage(HEUTE, -10) },
+      heute: HEUTE,
+      ...a,
+    });
+  const bis = (p: ReturnType<typeof plan>) => tagPunkt(p.gueltigBis!);
+  it('neue Einsicht: erledigt die Aufgabe, die nächste bekommt das Datum', () => {
+    const p = plan();
+    expect(einsichtFolgeTexte(p, E, 'ohne', null)).toEqual([
+      `Neue Einsicht · gültig bis ${bis(p)} (3 Jahre ab Ausstellung).`,
+      `Die Aufgabe „Einsicht nehmen“ wird erledigt. Die nächste „Erneut einsehen“ bekommt den ${bis(p)}.`,
+    ]);
+  });
+  it('Berichtigung bei „Erneut einsehen“: keine Aufgabe erledigt, die offene behält das neue Datum', () => {
+    const p = plan({
+      eingesehenAm: plusTage(HEUTE, -20),
+      aufgabe: { titel: NACHWEIS_AUFGABE_ERNEUT, angelegt: plusTage(HEUTE, -10) },
+    });
+    expect(einsichtFolgeTexte(p, E, 'ohne', null)).toEqual([
+      `Nur die Angaben werden berichtigt · gültig bis ${bis(p)} (3 Jahre ab Ausstellung).`,
+      `Keine Aufgabe wird erledigt; „Erneut einsehen“ bleibt offen, Datum ${bis(p)}.`,
+    ]);
+  });
+  it('Eintragung: Stand bleibt Rücksprache; von Eintragung zu ohne: wieder grün', () => {
+    expect(einsichtFolgeTexte(plan(), E, 'eintrag', null).at(-1)).toBe(
+      'Stand bleibt „Rücksprache“ (rot), bis jemand das Ergebnis nach dem Gespräch ändert.',
+    );
+    expect(einsichtFolgeTexte(plan(), E, 'ohne', 'eintrag').at(-1)).toBe(
+      'Danach ist der Stand wieder grün, die Rücksprache ist erledigt.',
+    );
+    expect(einsichtFolgeTexte(plan(), E, 'ohne', 'ohne')).toHaveLength(2);
+  });
+  it('Gültig bis nicht nach heute: kein Satz über ein Datum für die nächste Aufgabe', () => {
+    const p = plan({ ausgestelltAm: plusJahre(HEUTE, -3) });
+    expect(einsichtFolgeTexte(p, E, 'ohne', null)[1]).toBe(
+      'Die Aufgabe „Einsicht nehmen“ wird erledigt.',
+    );
   });
 });

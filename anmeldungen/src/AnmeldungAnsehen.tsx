@@ -10,7 +10,7 @@ import {
   type NachrueckPlan,
 } from '@shared/anmeldung/bewegung';
 import { Icon } from '@ui/icons/icons';
-import { ctBasis } from '@ui/ct/basis';
+import { personLink } from '@ui/ct/links';
 import { Sheet } from '@ui/fenster/Sheet';
 import { UnterschriftBild } from '@ui/anmeldeformular/Bausteine';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -44,8 +44,6 @@ import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import { absageText, ganzerName } from './anmeldungText';
-
-const personLink = (id: number) => `${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${id}/`;
 
 function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
   if (zeilen.length === 0) return null;

@@ -23,6 +23,7 @@ import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { angemeldeteId } from '@ui/ct/ich';
 import { mitgliedAendern, mitgliedAnlegen, mitgliedEntfernen } from '@ui/ct/mitglieder';
 import { ctId } from '@shared/ct/ctId';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { gruppenartRollen, gruppenartSuchen, type CtPort } from '@shared/ct/gruppenart';
 import {
   NACHWEIS_ABLAUF_NAME,
@@ -58,6 +59,7 @@ import { absenderAus } from './ablaeufe';
 import { gemeindeLogo, personName, type MitgliedRoh } from './einrichten';
 import { optionenVon, spalteSpeichern, type CtFeld } from './formularFelder';
 import { nachweisGrundlageLesen, nachweisGrundlageSichern } from './nachweise';
+import { einsichtNachziehen } from './nachweisEinsicht';
 import { nachweisPersonenLesen, type NachweisArtMitPersonen } from './nachweisPersonen';
 
 /** Sichtbarkeit der Nachweis-Gruppen: „eingeschränkt“ wie beim Gruppenwechsel – nicht öffentlich, nicht versteckt. */
@@ -196,10 +198,15 @@ export async function nachweiseSeiteLaden(): Promise<NachweiseSeite> {
   const ich = grundlage.darfEinrichten ? null : (await ichLaden()).personId;
   const meine = (a: NachweisArt) =>
     grundlage.darfEinrichten || a.vertrauen?.some((p) => p.personId === ich) === true;
-  return {
-    grundlage,
-    arten: (await artenMitPersonen(grundlage.typId, meine)).filter(meine),
-  };
+  let arten = (await artenMitPersonen(grundlage.typId, meine)).filter(meine);
+  // Nachziehen (N2b): „Erneut einsehen“ auf „Gültig bis“ legen, wo es abweicht – nur verschieben, Fehler stören nicht.
+  // Höchstens einmal neu lesen, und nur, wenn etwas verschoben wurde.
+  const heute = heuteImKalender();
+  let geaendert = 0;
+  for (const a of arten)
+    if (a.personen) geaendert += await einsichtNachziehen(a, a.personen, heute);
+  if (geaendert > 0) arten = (await artenMitPersonen(grundlage.typId, meine)).filter(meine);
+  return { grundlage, arten };
 }
 
 /** Was die Startseite von den Nachweisen braucht (N2a). */

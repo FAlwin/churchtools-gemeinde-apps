@@ -35,10 +35,23 @@ import { personName } from './einrichten';
 import { gruppenfelderLaden } from './mitglieder';
 import type { NachweisArt } from './nachweisArten';
 
+/** Die offene Folgeaufgabe einer Person (N2b: mit Nummer, Titel, Anlagetag und Fälligkeit – zum Erledigen und Verschieben). */
+export interface OffeneAufgabe {
+  id: number;
+  titel: string;
+  /** Tag der Anlage (Ortszeit der Gemeinde) – `null`, wenn ChurchTools keinen nennt. */
+  angelegt: string | null;
+  /** Der Tag, an dem sie fällig ist (`effectiveDueDate`, also nach einem Verschieben der neue) – `null`, wenn unbekannt. */
+  faellig: string | null;
+  /** „Angefordert am“: der Anlagetag, sonst der Beginn der Mitgliedschaft. */
+  seit: string | null;
+}
+
 /** Eine Person der Art, wie ChurchTools sie liefert – ohne Stand (der hängt an „heute“). */
 export interface NachweisPerson extends PersonAngaben {
   personId: number;
   name: string;
+  aufgabe: OffeneAufgabe | null;
 }
 
 /** Eine Person mit ihrem Stand für einen Tag. */
@@ -58,8 +71,11 @@ interface MitgliedMitFeldern {
   fields?: { id?: number; name?: string; value?: unknown }[];
 }
 
-interface AufgabeRoh {
+export interface AufgabeRoh {
+  id?: number;
   personId?: number;
+  dueDate?: string | null;
+  effectiveDueDate?: string | null;
   title?: string;
   doneDate?: string | null;
   meta?: { createdDate?: string | null };
@@ -97,25 +113,40 @@ function ergebnisAus(wert: unknown, def: CtGruppenfeld | undefined): NachweisErg
 }
 
 /**
- * Die **offenen Aufgaben** je Person: der Tag, an dem die älteste angelegt wurde (Ortszeit der Gemeinde). Nur die beiden
- * Aufgaben des Ablaufs zählen (`NACHWEIS_AUFGABE_*`) – eine von Hand angelegte andere Folgeaufgabe macht niemanden „angefordert“.
+ * Die **offenen Aufgaben** je Person: die älteste (nach Anlagetag; ein bekannter Tag schlägt einen unbekannten). Nur die
+ * beiden Aufgaben des Ablaufs zählen (`NACHWEIS_AUFGABE_*`) – eine von Hand angelegte andere Folgeaufgabe macht niemanden
+ * „angefordert“. `seit` (ohne Anlagetag: Beginn der Mitgliedschaft) setzt der Aufrufer.
  */
-function offeneAufgaben(liste: readonly AufgabeRoh[]): Map<number, string | null> {
+export function offeneAufgaben(liste: readonly AufgabeRoh[]): Map<number, OffeneAufgabe> {
   const titel = [NACHWEIS_AUFGABE_ERSTE, NACHWEIS_AUFGABE_ERNEUT];
-  const offen = new Map<number, string | null>();
+  const offen = new Map<number, OffeneAufgabe>();
   const zone = gemeindeZeitzone();
   for (const a of liste) {
-    if (typeof a.personId !== 'number' || a.doneDate) continue;
+    if (typeof a.personId !== 'number' || typeof a.id !== 'number' || a.doneDate) continue;
     if (typeof a.title !== 'string' || !titel.some((t) => gleicherGruppenName(t, a.title!)))
       continue;
     const roh = a.meta?.createdDate;
-    const tag = typeof roh === 'string' && roh ? tagAus(tagAusIso(roh, zone)) : null;
-    // Mehrere offene: die älteste zählt; ein bekannter Tag schlägt einen unbekannten.
+    const angelegt = typeof roh === 'string' && roh ? tagAus(tagAusIso(roh, zone)) : null;
+    const neu: OffeneAufgabe = {
+      id: a.id,
+      titel: a.title,
+      angelegt,
+      faellig: tagAus(a.effectiveDueDate) ?? tagAus(a.dueDate),
+      seit: angelegt,
+    };
     const alt = offen.get(a.personId);
-    offen.set(a.personId, alt && (!tag || alt < tag) ? alt : (tag ?? alt ?? null));
+    const aelter =
+      !alt ||
+      (angelegt && (!alt.angelegt || angelegt < alt.angelegt)) ||
+      (angelegt === alt.angelegt && neu.id < alt.id);
+    if (aelter) offen.set(a.personId, neu);
   }
   return offen;
 }
+
+/** Alle Folgeaufgaben einer Gruppe (seitenweise, auch erledigte). */
+export const aufgabenLesen = (gruppe: number): Promise<AufgabeRoh[]> =>
+  ctAlleSeiten<AufgabeRoh>(`/groups/${gruppe}/followups`);
 
 /**
  * **Die Personen einer Art.** `null`, wenn man Mitglieder oder Aufgaben nicht sehen darf (403). Profildaten sind eine
@@ -129,7 +160,7 @@ export async function nachweisPersonenLesen(
     oder403(ctAlleSeiten<MitgliedMitFeldern>(`/groups/${art.id}/members`, 200)),
     oder403(gruppenfelderLaden(art.id)),
     // Seitenweise: `limit`/`page` greifen hier (gemessen 20.11.2026); mit jeder Erneuerung kommen erledigte Aufgaben dazu.
-    oder403(ctAlleSeiten<AufgabeRoh>(`/groups/${art.id}/followups`)),
+    oder403(aufgabenLesen(art.id)),
   ]);
   if (mitglieder === null || felder === null || aufgaben === null) return null;
 
@@ -170,7 +201,10 @@ export async function nachweisPersonenLesen(
     ergebnis: ergebnisAus(feldWert(m, NACHWEIS_FELDER[2].name, ergebnis), ergebnis),
     aufgabe: offen.has(m.personId)
       ? // „Angefordert am“: der Tag der Aufgabe, sonst der Beginn der Mitgliedschaft.
-        { seit: offen.get(m.personId) ?? tagAus(m.memberStartDate) }
+        {
+          ...offen.get(m.personId)!,
+          seit: offen.get(m.personId)!.angelegt ?? tagAus(m.memberStartDate),
+        }
       : null,
     // Ohne Antrag oder ohne Recht: `null` (nicht gelesen). Gelesen, aber die Person fehlt in der Antwort: alles leer.
     profil: profile

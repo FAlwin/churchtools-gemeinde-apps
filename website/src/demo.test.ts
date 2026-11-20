@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { _vergissModul } from '@ui/ct/modulPort';
 import { neueLeereSeite } from '@shared/website/seitenListe';
+import { freigabeListe, freigabeZaehler } from '@shared/website/freigabe';
 import {
   beginneBearbeiten,
   beginneEinstellungen,
+  ladeFreigaben,
   ladeWebsite,
   speichereEinstellungen,
   speichereSeite,
@@ -225,5 +227,39 @@ describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
     expect((await ladeRollen(9)).map((r) => r.name)).toEqual(['Leiter', 'Mitarbeiter', 'Coach']);
     expect(warn).not.toHaveBeenCalled();
     expect(echtesFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('Demo: Freigabe (W3b-2)', () => {
+  it('`leitung`: drei Dinge warten (Impressum und Jugend eingereicht, „Alte Seite“ Löschen angefragt), „Unsere Gruppen“ ist geändert', async () => {
+    const { start, ort: o } = await ort('leitung');
+    const kat = {
+      modul: start.modul,
+      entwuerfe: o.kategorie,
+      veroeffentlicht: start.einrichtung!.veroeffentlicht!,
+    };
+    const { entwurf, online } = await ladeFreigaben(kat);
+    const liste = freigabeListe(entwurf, online, 'leitung', start.ichId);
+    expect(liste.map((e) => `${e.art}:${e.titel}`)).toEqual([
+      'eingereicht:Jugend',
+      'eingereicht:Impressum',
+      'loeschenAngefragt:Alte Seite',
+      'geaendert:Unsere Gruppen',
+    ]);
+    expect(freigabeZaehler(liste, 'leitung')).toBe(3);
+  });
+
+  it('`redakteur`: eine zurückgegebene Seite mit Anmerkung, Zähler 1; kein Menü, keine Einstellungen', async () => {
+    const { start, ort: o } = await ort('redakteur');
+    const kat = {
+      modul: start.modul,
+      entwuerfe: o.kategorie,
+      veroeffentlicht: start.einrichtung!.veroeffentlicht!,
+    };
+    const { entwurf, online } = await ladeFreigaben(kat);
+    const liste = freigabeListe(entwurf, online, 'redakteur', start.ichId);
+    expect(liste.map((e) => `${e.art}:${e.titel}`)).toEqual(['zurueck:Impressum']);
+    expect(liste[0].status?.anmerkung).toMatch(/Hausnummer/);
+    expect(freigabeZaehler(liste, 'redakteur')).toBe(1);
   });
 });

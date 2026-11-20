@@ -1,10 +1,6 @@
 @use '@ui/design/mixins' as m;
 
 // Freigabe (Bauplan Website W3b-2): Band unter der Werkzeugleiste, Liste und Arbeitsfläche des Reiters „Freigaben“.
-.band {
-  composes: band from './SperrBaender.module.scss';
-}
-
 .freigaben {
   display: flex;
   flex-direction: column;
@@ -62,10 +58,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-
-.warnung {
-  composes: band from './SperrBaender.module.scss';
 }
 
 .anmerkung {

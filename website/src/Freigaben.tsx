@@ -28,6 +28,7 @@ import {
 } from './daten';
 import { Feld } from './Felder';
 import fenster from './Fenster.module.scss';
+import baender from './SperrBaender.module.scss';
 import seitenStyles from './Seiten.module.scss';
 import styles from './Freigabe.module.scss';
 
@@ -275,7 +276,7 @@ export function Freigaben({
 
                 <FreigabeBand status={aktuell.status} darfFreigeben={leitung} />
                 {aktuell.warnung && (
-                  <div className={styles.warnung} role="status">
+                  <div className={baender.band} role="status">
                     <p>{aktuell.warnung}</p>
                   </div>
                 )}

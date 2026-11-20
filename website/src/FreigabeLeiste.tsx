@@ -7,7 +7,8 @@ import { datumUhrText } from '@shared/ct/zeit';
 import { kannEinreichen, type OnlineLage } from '@shared/website/freigabe';
 import type { SeitenStatus } from '@shared/website/status';
 import { seitenEtikett, werUndWann } from './freigabeAnzeige';
-import styles from './Freigabe.module.scss';
+// Dasselbe Band wie bei der Sperre (`SperrBaender`) – eine Gestalt für alle Hinweise unter der Werkzeugleiste.
+import styles from './SperrBaender.module.scss';
 
 /**
  * **Freigabe in der Werkzeugleiste einer Seite** (Bauplan Website W3b-2): das Etikett – wo steht die Seite? – und der eine

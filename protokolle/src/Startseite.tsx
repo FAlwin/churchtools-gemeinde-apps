@@ -153,6 +153,7 @@ export function Startseite({
     label: 'Neues Protokoll',
     onClick: () => setNeu(true),
     sichtbar: schreibGruppen.length > 0,
+    title: 'Neues Protokoll ohne Termin',
   });
   return (
     <>

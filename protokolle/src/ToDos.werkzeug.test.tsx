@@ -95,7 +95,7 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
     const knoepfe = within(zeile)
       .getAllByRole('button')
       .map((k) => k.getAttribute('aria-label') ?? k.textContent);
-    expect(knoepfe).toEqual(['Liste', 'Board', 'Filter', 'Neues To-Do']);
+    expect(knoepfe).toEqual(['Liste', 'Board', 'Filter', 'Neues To-Do – auch ohne Protokoll']);
     expect(screen.queryByRole('heading', { name: 'To-Dos' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Zuständigkeit' })).toBeNull();
     expect(screen.queryByRole('button', { name: /^(Sortieren|Gruppieren)/ })).toBeNull();
@@ -103,7 +103,9 @@ describe('Werkzeugzeile der To-Dos (B6)', () => {
     const gruen = screen
       .getAllByRole('button')
       .filter((k) => /(^|[\s_])neu([\s_]|$)/.test(k.className));
-    expect(gruen.map((k) => k.getAttribute('aria-label'))).toEqual(['Neues To-Do']);
+    expect(gruen.map((k) => k.getAttribute('aria-label'))).toEqual([
+      'Neues To-Do – auch ohne Protokoll',
+    ]);
   });
 
   it('Mitglied ohne Mitarbeit: kein grüner Knopf, der Rest der Zeile bleibt', async () => {

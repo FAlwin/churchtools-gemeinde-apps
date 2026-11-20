@@ -18,6 +18,7 @@ export function useNeuAnlegen({
   sichtbar = true,
   disabled,
   dataTour,
+  title,
 }: {
   /** Was der Knopf tut („Zeitraum eintragen“, „Neues Lied“) – Beschriftung am iPad, Name des Plus am Handy. */
   label: string;
@@ -26,6 +27,8 @@ export function useNeuAnlegen({
   sichtbar?: boolean;
   disabled?: boolean;
   dataTour?: string;
+  /** Tooltip am iPad/Rechner, wenn er mehr sagen soll als die Beschriftung („Neues To-Do – auch ohne Protokoll“). */
+  title?: string;
 }): { kopf: ReactNode; schwebend: ReactNode } {
   const handy = useMedienAbfrage(HANDY_BREITE);
   if (!sichtbar) return { kopf: null, schwebend: null };
@@ -45,6 +48,7 @@ export function useNeuAnlegen({
         neu
         disabled={disabled}
         dataTour={dataTour}
+        title={title}
         symbol={<Icon name="plus" size={16} stroke={2.4} />}
       />
     ),

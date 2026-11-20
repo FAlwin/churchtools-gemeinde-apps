@@ -440,6 +440,7 @@ export function ToDos({
     label: 'Neues To-Do',
     onClick: () => setFenster({ eintrag: null }),
     sichtbar: mitMitarbeit.length > 0,
+    title: 'Neues To-Do – auch ohne Protokoll',
   });
 
   /**

@@ -29,6 +29,21 @@ describe('useNeuAnlegen', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it('iPad/Rechner: `title` steht als Tooltip am Knopf', () => {
+    geraet(false);
+    const { result } = renderHook(() =>
+      useNeuAnlegen({
+        label: 'Neues To-Do',
+        onClick: () => {},
+        title: 'Neues To-Do – auch ohne Protokoll',
+      }),
+    );
+    render(<>{result.current.kopf}</>);
+    expect(screen.getByRole('button', { name: /Neues To-Do/ }).getAttribute('title')).toBe(
+      'Neues To-Do – auch ohne Protokoll',
+    );
+  });
+
   it('Handy: das runde Plus, nichts im Kopf', () => {
     geraet(true);
     const onClick = vi.fn();

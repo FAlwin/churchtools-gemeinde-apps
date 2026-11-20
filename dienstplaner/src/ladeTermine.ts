@@ -68,7 +68,7 @@ async function ladeVonBis(
   if (!Array.isArray(termine)) {
     throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
   }
-  return datenAus(start, termine as RohTermin[], zeitzone);
+  return datenAus(start, termine as RohTermin[], zeitzone, true);
 }
 
 /**
@@ -90,11 +90,20 @@ export async function ladeTermin(start: Start, id: number, zeitzone: string): Pr
   ) {
     throw new ApiError(502, 'ChurchTools hat den Termin nicht vollständig geliefert.');
   }
-  return datenAus(start, [termin as RohTermin], zeitzone);
+  return datenAus(start, [termin as RohTermin], zeitzone, false);
 }
 
-/** Liste und Matrix aus den rohen Terminen – eine Stelle für den Zeitraum und den einzelnen Termin. */
-function datenAus(start: Start, roh: RohTermin[], zeitzone: string): TermineDaten {
+/**
+ * Liste und Matrix aus den rohen Terminen – eine Stelle für den Zeitraum und den einzelnen Termin.
+ * `alleDienste`: jeder planbare Dienst bekommt in der Matrix eine Zeile, auch ohne Platz (nur im Zeitraum – die
+ * Termin-Ansicht zeigt nur, was es an dem Termin gibt; dort gäbe es sonst eine Liste leerer Dienste).
+ */
+function datenAus(
+  start: Start,
+  roh: RohTermin[],
+  zeitzone: string,
+  alleDienste: boolean,
+): TermineDaten {
   return {
     zeilen: termineAus(roh, {
       ichId: start.ichId,
@@ -109,6 +118,10 @@ function datenAus(start: Start, roh: RohTermin[], zeitzone: string): TermineDate
       zeitzone,
       planbar: (dienst) => planbar(start, dienst),
       ganzSichtbar: (dienst) => ganzSichtbar(start, dienst),
+      // Jeder Dienst, den man planen darf, bekommt eine Zeile – auch wenn ihn niemand vorgesehen hat (Fund 20.11.2026).
+      immerZeigen: alleDienste
+        ? (dienst) => planbar(start, dienst) && ganzSichtbar(start, dienst)
+        : undefined,
     }),
   };
 }

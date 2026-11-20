@@ -173,6 +173,12 @@ export function planAus(
     planbar: (dienst: Dienst) => boolean;
     /** Liefert ChurchTools alle Plätze dieses Dienstes (`siehtDienstGanz`)? Sonst bleibt er draußen. */
     ganzSichtbar: (dienst: Dienst) => boolean;
+    /**
+     * Dienste, die **immer eine Zeile** bekommen – auch ohne einen einzigen Platz im Zeitraum (alle Zellen `null` =
+     * „aus“). So lässt sich ein Dienst einschalten, den bisher niemand vorgesehen hat (Fund 20.11.2026: „Abendmahl“).
+     * Ohne die Option stehen nur Dienste da, die irgendwo vorkommen.
+     */
+    immerZeigen?: (dienst: Dienst) => boolean;
   },
 ): Plan {
   const termine = [...roh].sort(
@@ -202,7 +208,7 @@ export function planAus(
     };
   });
 
-  // Je Dienst und Spalte die Plätze; Dienste, die nirgends vorkommen, bleiben draußen.
+  // Je Dienst und Spalte die Plätze; Dienste, die nirgends vorkommen, bleiben draußen – außer `immerZeigen`.
   const zellen = new Map<number, (PlanPlatz[] | null)[]>();
   termine.forEach((t, i) => {
     for (const p of t.eventServices ?? []) {
@@ -232,14 +238,16 @@ export function planAus(
   };
   // In der Reihenfolge der Gemeinde: erst die Dienstgruppen, darin die Dienste (Map ist sortiert).
   const reihenfolge = [...o.dienstgruppen.map((g) => g.id), null];
-  const bekannte = [...o.dienste.values()].filter((d) => zellen.has(d.id));
+  const bekannte = [...o.dienste.values()].filter(
+    (d) => zellen.has(d.id) || (o.immerZeigen?.(d) === true && o.ganzSichtbar(d)),
+  );
   for (const gid of reihenfolge) {
     const g = gid === null ? null : (o.dienstgruppen.find((x) => x.id === gid) ?? null);
     const imGruppe = diensteDerGruppe(bekannte, o.dienstgruppen, gid);
     if (imGruppe.length === 0) continue;
     const pg = gruppeFuer(g);
     for (const dienst of imGruppe) {
-      const reihe = zellen.get(dienst.id)!;
+      const reihe = zellen.get(dienst.id) ?? termine.map(() => null);
       const planbar = o.planbar(dienst);
       pg.zeilen.push({ dienst, planbar, zellen: reihe });
       if (planbar) pg.planbar = true;

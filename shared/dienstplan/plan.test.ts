@@ -337,6 +337,66 @@ describe('planAus – nur Dienste, die ChurchTools ganz liefert', () => {
   });
 });
 
+describe('planAus – immerZeigen (Fund 20.11.2026: „Abendmahl“ war nirgends vorgesehen)', () => {
+  // Nur Ton hat einen Platz. Licht (Technik), Gesang (Musik) und Predigt (Programm) kommen nirgends vor.
+  const roh = [termin(11, '2026-10-25T09:00:00Z', [{ serviceId: 6, personId: null, name: null }])];
+  const mit = (immerZeigen?: (d: { id: number; dienstgruppeId: number | null }) => boolean) =>
+    planAus(roh, {
+      ichId: ICH,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: (d) => d.dienstgruppeId === 3 || d.dienstgruppeId === 1,
+      ganzSichtbar: () => true,
+      immerZeigen,
+    });
+  const namen = (p: ReturnType<typeof mit>) =>
+    p.gruppen.map((g) => [g.gruppe?.name, g.zeilen.map((z) => z.dienst.name)]);
+
+  it('ohne die Option stehen nur Dienste da, die irgendwo vorkommen (wie bisher)', () => {
+    expect(namen(mit())).toEqual([['Technik', ['Ton']]]);
+  });
+
+  it('ein Dienst ohne Platz bekommt eine Zeile aus lauter „aus“ – und seine Gruppe entsteht', () => {
+    const p = mit((d) => d.dienstgruppeId === 3 || d.dienstgruppeId === 1);
+    // Reihenfolge der Gemeinde: Programm (1), Technik (3); darin sortKey, dann Name (Licht vor Ton).
+    expect(namen(p)).toEqual([
+      ['Programm', ['Predigt']],
+      ['Technik', ['Licht', 'Ton']],
+    ]);
+    const predigt = p.gruppen[0];
+    expect(predigt.zeilen[0].zellen).toEqual([null]);
+    expect(predigt.zeilen[0].planbar).toBe(true);
+    expect(predigt.planbar).toBe(true);
+    expect(predigt.frei).toEqual([null]);
+    // Licht: leer, Ton: ein freier Platz – die Gruppe zählt nur den echten Platz.
+    expect(p.gruppen[1].zeilen[0].zellen).toEqual([null]);
+    expect(p.gruppen[1].frei).toEqual([1]);
+    expect(terminStand(p.gruppen, 0)).toEqual({ plaetze: 1, frei: 1 });
+  });
+
+  it('nur wo die Option „ja“ sagt – Gesang (nicht freigegeben) bleibt draußen', () => {
+    const p = mit((d) => d.dienstgruppeId === 1);
+    expect(namen(p)).toEqual([
+      ['Programm', ['Predigt']],
+      ['Technik', ['Ton']],
+    ]);
+  });
+
+  it('ein nur teilweise gelieferter Dienst wird auch mit der Option nicht gezeigt', () => {
+    const p = planAus(roh, {
+      ichId: ICH,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => true,
+      ganzSichtbar: (d) => d.dienstgruppeId === 3,
+      immerZeigen: () => true,
+    });
+    expect(namen(p)).toEqual([['Technik', ['Licht', 'Ton']]]);
+  });
+});
+
 describe('planAus – was der Ablauf je Spalte braucht (E6-6a)', () => {
   it('Beginn wie von ChurchTools, Kalender und Admins mit derselben Regel wie die Termin-Ansicht (`ablaufTerminVon`)', () => {
     const p = plan([

@@ -338,13 +338,38 @@ describe('Einsicht festhalten: „Erneut einsehen“ nachziehen', () => {
     expect(erg.text).toBe('Angaben bei Mia Muster berichtigt.');
   });
 
-  it('Berichtigung bei offener „Einsicht nehmen“: weder erledigt noch verschoben', async () => {
+  it('Einsicht vor der Anforderung bei offener „Einsicht nehmen“: erledigt sie (Zeugnis schon früher gesehen)', async () => {
     const { g, person } = await ersteEinsicht();
-    // Die Aufgabe wurde vor 10 Tagen angelegt; eine Einsicht vor 20 Tagen erledigt sie nicht.
-    await einsichtFesthalten(eingabe(g, person, { eingesehenAm: plusTage(HEUTE, -20) }), {
+    // Die Aufgabe wurde vor 10 Tagen angelegt; auch eine Einsicht vor 20 Tagen erledigt sie.
+    const erg = await einsichtFesthalten(
+      eingabe(g, person, { eingesehenAm: plusTage(HEUTE, -20) }),
+      {
+        warte: sofort(),
+      },
+    );
+    expect(reihe().filter((r) => r.includes('/complete'))).toHaveLength(1);
+    expect(erg).toMatchObject({ neu: true, erledigt: NACHWEIS_AUFGABE_ERSTE });
+  });
+
+  it('Berichtigung am Tag der Einsicht („Erneut einsehen“ am selben Tag angelegt): nichts wird erledigt (Demo-Fund 20.11.2026)', async () => {
+    const g = art();
+    dabei(g.id, 10, 'Jonas Weber');
+    // Wie in ChurchTools: Einsicht festgehalten vor 17 Tagen, „Erneut einsehen“ am selben Tag angelegt; jetzt nur das
+    // Ergebnis ändern (Rücksprache → keine Eintragung).
+    falsch.feldSetzen(g.id, 10, NACHWEIS_FELDER[0].name, plusTage(HEUTE, -17));
+    falsch.aufgabeSetzen(g.id, {
+      personId: 10,
+      title: NACHWEIS_AUFGABE_ERNEUT,
+      createdDate: `${plusTage(HEUTE, -17)}T10:00:00Z`,
+      dueDate: plusTage(HEUTE, 500),
+    });
+    const [p] = await lesen(g.id);
+    const erg = await einsichtFesthalten(eingabe(g, p, { eingesehenAm: plusTage(HEUTE, -17) }), {
       warte: sofort(),
     });
-    expect(reihe()).toEqual([`PATCH /groups/${g.id}/members/10`]);
+    expect(reihe().some((r) => r.includes('/complete'))).toBe(false);
+    expect(aufgaben(g.id)[0].doneDate).toBeNull();
+    expect(erg).toMatchObject({ neu: false, erledigt: null });
   });
 
   it('Gültig bis heute oder früher: nie verschieben – auslassen ist kein Fehler', async () => {

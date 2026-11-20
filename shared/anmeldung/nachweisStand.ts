@@ -318,17 +318,24 @@ export interface AufgabeKern {
 }
 
 /**
- * **Erledigt diese Einsicht die offene Aufgabe?** Ja, wenn sie am Tag der Anlage oder später war. Begründung: „Einsicht
- * nehmen“ entsteht bei der Anforderung, „Erneut einsehen“ beim Erledigen der vorigen Einsicht – eine spätere Einsicht
- * erledigt sie, eine Berichtigung der alten Angaben nicht. Unbekannter Anlagetag: nicht erledigen (lieber eine Aufgabe zu
- * viel offen als eine zu Unrecht abgehakt). DIE Stelle für „neue Einsicht oder nur berichtigen“ – Fenster und Schreiben
- * nutzen nur sie.
+ * **Erledigt diese Einsicht die offene Aufgabe?** DIE Stelle für „neue Einsicht oder nur berichtigen“ – Fenster, Schreiben
+ * und Nachziehen nutzen nur sie.
+ *
+ * - **„Einsicht nehmen“** (die erste Anforderung): jede festgehaltene Einsicht erledigt sie – auch eine, die vor der
+ *   Anforderung lag (z. B. ein Zeugnis, das schon gesehen wurde, bevor die Person in der Gruppe stand).
+ * - **„Erneut einsehen“** entsteht am Tag, an dem die vorige Einsicht festgehalten wurde – meist derselbe Tag wie
+ *   „Eingesehen am“. Erledigt wird sie darum nur durch eine Einsicht **nach** diesem Tag; eine Berichtigung der alten
+ *   Angaben (gleicher Tag oder früher) lässt sie offen. Gefunden in der Demo-Abnahme N2b (20.11.2026): Mit „am Tag der
+ *   Anlage oder später“ hätte jede Berichtigung (z. B. Rücksprache → keine Eintragung) die Aufgabe abgehakt.
+ *   Unbekannter Anlagetag: nicht erledigen (lieber eine Aufgabe zu viel offen als eine zu Unrecht abgehakt).
  */
 export function aufgabeErledigtDurch(
-  aufgabe: Pick<AufgabeKern, 'angelegt'> | null,
+  aufgabe: Pick<AufgabeKern, 'titel' | 'angelegt'> | null,
   eingesehenAm: string | null,
 ): boolean {
-  return Boolean(aufgabe?.angelegt && eingesehenAm && eingesehenAm >= aufgabe.angelegt);
+  if (!aufgabe || !eingesehenAm) return false;
+  if (istErsteAufgabe(aufgabe.titel)) return true;
+  return Boolean(aufgabe.angelegt && eingesehenAm > aufgabe.angelegt);
 }
 
 export type NachweisVerschieben = 'vorhandene' | 'naechste' | null;

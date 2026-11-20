@@ -370,19 +370,25 @@ describe('Zählung und Texte für die Startseite', () => {
 // ── Einsicht festhalten (N2b) ────────────────────────────────────────────────────────────────────────────────────
 
 describe('aufgabeErledigtDurch: neue Einsicht oder nur berichtigen', () => {
-  const aufgabe = (angelegt: string | null) => ({ titel: NACHWEIS_AUFGABE_ERSTE, angelegt });
-  it('am Tag der Anlage und später: erledigt', () => {
-    expect(aufgabeErledigtDurch(aufgabe(HEUTE), HEUTE)).toBe(true);
-    expect(aufgabeErledigtDurch(aufgabe(plusTage(HEUTE, -3)), HEUTE)).toBe(true);
+  const erste = (angelegt: string | null) => ({ titel: NACHWEIS_AUFGABE_ERSTE, angelegt });
+  const erneut = (angelegt: string | null) => ({ titel: NACHWEIS_AUFGABE_ERNEUT, angelegt });
+  it('„Einsicht nehmen“: jede Einsicht erledigt sie – auch eine vor der Anforderung oder ohne Anlagetag', () => {
+    expect(aufgabeErledigtDurch(erste(HEUTE), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(plusTage(HEUTE, -3)), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(plusTage(HEUTE, 30)), HEUTE)).toBe(true);
+    expect(aufgabeErledigtDurch(erste(null), HEUTE)).toBe(true);
   });
-  it('einen Tag davor: eine Berichtigung der alten Angaben erledigt nichts', () => {
-    expect(aufgabeErledigtDurch(aufgabe(plusTage(HEUTE, 1)), HEUTE)).toBe(false);
-    expect(aufgabeErledigtDurch(aufgabe(HEUTE), plusTage(HEUTE, -1))).toBe(false);
+  it('„Erneut einsehen“: nur eine Einsicht NACH dem Anlagetag erledigt sie', () => {
+    expect(aufgabeErledigtDurch(erneut(plusTage(HEUTE, -1)), HEUTE)).toBe(true);
   });
-  it('keine Aufgabe, kein Anlagetag oder keine Einsicht: nicht erledigt', () => {
+  it('„Erneut einsehen“ am selben Tag angelegt wie die Einsicht: nur berichtigen (Demo-Fund 20.11.2026, Rücksprache → keine Eintragung)', () => {
+    expect(aufgabeErledigtDurch(erneut(HEUTE), HEUTE)).toBe(false);
+    expect(aufgabeErledigtDurch(erneut(HEUTE), plusTage(HEUTE, -1))).toBe(false);
+  });
+  it('keine Aufgabe, keine Einsicht oder „Erneut einsehen“ ohne Anlagetag: nicht erledigt', () => {
     expect(aufgabeErledigtDurch(null, HEUTE)).toBe(false);
-    expect(aufgabeErledigtDurch(aufgabe(null), HEUTE)).toBe(false);
-    expect(aufgabeErledigtDurch(aufgabe(HEUTE), null)).toBe(false);
+    expect(aufgabeErledigtDurch(erneut(null), HEUTE)).toBe(false);
+    expect(aufgabeErledigtDurch(erste(HEUTE), null)).toBe(false);
   });
 });
 
@@ -417,9 +423,13 @@ describe('einsichtPlan', () => {
     );
     expect(p).toMatchObject({ neu: false, erledigt: null, verschieben: 'vorhandene' });
   });
-  it('Berichtigung bei offener „Einsicht nehmen“: nichts wird verschoben', () => {
+  it('Einsicht vor der Anforderung bei offener „Einsicht nehmen“: erledigt sie, die nächste wird verschoben', () => {
     const p = einsichtPlan(eingabe({ eingesehenAm: plusTage(HEUTE, -20) }));
-    expect(p).toMatchObject({ neu: false, erledigt: null, verschieben: null });
+    expect(p).toMatchObject({
+      neu: true,
+      erledigt: NACHWEIS_AUFGABE_ERSTE,
+      verschieben: 'naechste',
+    });
   });
   it('Gültig bis heute oder früher: nie verschieben (ChurchTools will ein Datum nach heute)', () => {
     // Ausgestellt vor 3 Jahren und einem Tag → Gültig bis gestern; vor genau 3 Jahren → heute.

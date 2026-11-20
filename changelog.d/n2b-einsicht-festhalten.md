@@ -7,9 +7,10 @@
     oder „läuft ab“/„abgelaufen“ → neue Einsicht (heute), sonst die gespeicherten Werte. Fünf Prüftexte, „Festhalten“ bleibt
     gesperrt, solange etwas fehlt. Ein blauer Kasten sagt vorher, was in ChurchTools geschieht („Neue Einsicht“ / „Nur die
     Angaben werden berichtigt“, welche Aufgabe erledigt wird, Rücksprache). Fehler stehen im Fenster, es bleibt offen.
-  - **Neue Einsicht oder berichtigen** entscheidet EINE Regel (`aufgabeErledigtDurch`): Eine offene Aufgabe gilt als erledigt,
-    wenn die Einsicht am Tag ihrer Anlage oder später war. Sie gilt auch nach Abbruch und Neuladen, weil sie nicht an „anders
-    als vorher“ hängt.
+  - **Neue Einsicht oder berichtigen** entscheidet EINE Regel (`aufgabeErledigtDurch`): „Einsicht nehmen“ erledigt jede festgehaltene
+    Einsicht (auch eine vor der Anforderung); „Erneut einsehen“ – angelegt am Tag, an dem die vorige Einsicht festgehalten
+    wurde – nur eine Einsicht nach diesem Tag, sodass eine Berichtigung (z. B. Rücksprache → keine Eintragung) sie offen
+    lässt. Die Regel gilt auch nach Abbruch und Neuladen, weil sie nicht an „anders als vorher“ hängt.
   - **Geschrieben** wird in fester Reihenfolge und jeder Schritt nachgelesen: Gruppenfelder (nach Namen, das Ergebnis als
     Options-Nummer) → Aufgabe erledigen (`doneDate` gesetzt, sonst „nicht übernommen“) → „Erneut einsehen“ auf „Gültig bis“
     verschieben (nach „Einsicht nehmen“ legt der Ablauf sie binnen Sekunden an: bis zu fünfmal kurz nachsehen; nach „Erneut

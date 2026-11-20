@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
 
 /**
- * **„Mehr" in der ChurchTools-Erweiterung** (#336): Was es dort nicht gibt, erscheint nicht – kein
+ * **„Einstellungen" (früher „Mehr") in der ChurchTools-Erweiterung** (#336): Was es dort nicht gibt, erscheint nicht – kein
  * toter Knopf –, und an genau einer Stelle steht der Hinweis auf die Musik App mit eigenem Server.
  * Die Server-Variante prüft `Settings.test.tsx` (dort ist alles da). Aufbau der Attrappen von dort.
  */
@@ -74,7 +74,7 @@ function zeige(): void {
   );
 }
 
-describe('„Mehr" in der ChurchTools-Erweiterung', () => {
+describe('„Einstellungen" in der ChurchTools-Erweiterung', () => {
   it('kein Abmelden, kein Offline, kein Installieren', () => {
     zeige();
     expect(screen.queryByText('Abmelden')).toBeNull();

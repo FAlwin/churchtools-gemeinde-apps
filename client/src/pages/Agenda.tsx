@@ -6,6 +6,7 @@ import { AnsichtWahl } from '@ui/bedienung/AnsichtWahl';
 import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { Werkzeugzeile } from '@ui/bedienung/Werkzeugzeile';
+import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from '@ui/bedienung/Spinner';
@@ -53,6 +54,12 @@ interface AgendaProps {
    * (05.11.2026).
    */
   darfAblaufImKalender?: (kalenderId: number) => boolean;
+  /**
+   * Öffnet die Seite „Ablaufvorlagen“ (E10-V3b) – der Eintrag im „⋯“ der Werkzeugzeile (R13: Arbeitsseiten gehören in ihren
+   * Reiter, nicht in die Einstellungen). Die App reicht es nur, wo man Abläufe sehen darf (`canViewAgendas`); ohne gibt es
+   * den Eintrag – und, da er der einzige ist, das „⋯“ – nicht.
+   */
+  onVorlagen?: () => void;
 }
 
 const OFFLINE_HINT = 'Offline nicht verfügbar – einmal online öffnen oder vorher speichern.';
@@ -82,6 +89,7 @@ export function Agenda({
   onOpenSongs,
   kannAblaufAnlegen = () => false,
   darfAblaufImKalender = () => false,
+  onVorlagen,
 }: AgendaProps) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -302,10 +310,27 @@ export function Agenda({
             />
           }
           rechts={
-            // Nur mit etwas zu wählen – sonst zeigte die Einführung auf einen leeren Rahmen.
-            abschnittMitWahl(filter.abschnitt) ? (
-              <FilterKnopf still dataTour="termine-filter" abschnitte={[filter.abschnitt]} />
-            ) : undefined
+            <>
+              {/* Nur mit etwas zu wählen – sonst zeigte die Einführung auf einen leeren Rahmen. */}
+              {abschnittMitWahl(filter.abschnitt) && (
+                <FilterKnopf still dataTour="termine-filter" abschnitte={[filter.abschnitt]} />
+              )}
+              <MehrMenue
+                handy={handy}
+                dataTour="ablaufvorlagen"
+                optionen={
+                  onVorlagen
+                    ? [
+                        {
+                          label: 'Ablaufvorlagen',
+                          symbol: <Icon name="grid" size={16} stroke={2.2} />,
+                          onClick: onVorlagen,
+                        },
+                      ]
+                    : []
+                }
+              />
+            </>
           }
         />
       }

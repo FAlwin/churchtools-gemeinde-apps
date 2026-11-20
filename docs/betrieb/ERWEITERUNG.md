@@ -54,7 +54,7 @@ eine neue Funktion ein Recht, kommt es hier dazu (eine Prüfung in der CI achtet
 **Reihenfolge:**
 
 1. Erweiterung hochladen, Kürzel genau `musik-app` (siehe oben).
-2. Als Admin in der App unter **Mehr → Verwaltung** eine Einstellung ändern (z. B. „Liedblatt:
+2. Als Admin in der App unter **Einstellungen → Verwaltung** eine Einstellung ändern (z. B. „Liedblatt:
    Standard-Ansicht") und bei **„Anmerkungen"** die Musikteam-Gruppe wählen. Dabei legt die App ihre zwei
    Kategorien an: „Einstellungen der Musik App" und „Team-Notizen der Musik App".
 3. Erst jetzt die Rechte vergeben – vorher stehen die beiden Kategorien nicht zur Auswahl.
@@ -89,19 +89,19 @@ gelten für beide Spalten gleich.
 Wer was sehen und bearbeiten darf, entscheidet jede Gemeinde selbst. Die App zeigt nur, was ChurchTools
 der Person erlaubt.
 
-| Funktion in der App                                | Recht in ChurchTools                                                                                                                                                             | Vorschlag                                   |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Lieder sehen                                       | Veranstaltungen: „Veranstaltungen" sehen (`view`) und Einzelne Song-Kategorien sehen (`view songcategory`), je Kategorie                                                         | Musiker; wer will, auch alle als Liederbuch |
-| Anmerkungen, Tonart, Zoom speichern                | Personen: Eigene Personendaten bearbeiten                                                                                                                                        | alle Nutzer                                 |
-| Abwesenheiten                                      | kein eigenes Recht – die eigenen pflegt jede Person selbst (fremde → 403, gemessen)                                                                                              | –                                           |
-| Termine und Abläufe                                | Events: Abläufe sehen (`view agenda`)                                                                                                                                            | Musiker                                     |
-| Info-Spalten im Ablauf (z. B. Technik)             | Events: Dienstgruppe sehen (`view servicegroup`) bzw. bearbeiten (`edit servicegroup`), je Dienstgruppe                                                                          | Musiker, für die passenden Dienstgruppen    |
-| Lied-Statistik („Häufigkeit", „Zuletzt")           | Events: Song-Statistik sehen (`view song statistics`) – ohne gibt es die Reiter nicht                                                                                            | Musiker                                     |
-| Ablauf bearbeiten                                  | Events: Abläufe bearbeiten (`edit agenda`), je Kalender – Admins eines Termins dürfen dessen Ablauf auch ohne (#635)                                                             | wer Abläufe plant                           |
-| Ablaufvorlagen bearbeiten                          | Events: Ablaufvorlagen bearbeiten (`edit agenda templates`), je Kalender – ohne das nur ansehen (gemessen 17.11.2026); die Seite steht unter **Mehr → Abläufe → Ablaufvorlagen** | wer Abläufe plant                           |
-| Lieder, Arrangements, Notenblätter, Dateien, Tempo | Events: Lieder bearbeiten (`edit songcategory`), je Kategorie                                                                                                                    | wer Lieder pflegt                           |
-| CCLI SongSelect                                    | Events: SongSelect nutzen (`use ccli`) – nur mit SongSelect-Abo der Gemeinde; was aufs Kontingent zählt: [songselect-kontingent.md](songselect-kontingent.md)                    | wer Lieder pflegt                           |
-| Verwaltung in der App (unter **Mehr**)             | Personen: Personen administrieren (`administer persons`)                                                                                                                         | Admins                                      |
+| Funktion in der App                                | Recht in ChurchTools                                                                                                                                                          | Vorschlag                                   |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Lieder sehen                                       | Veranstaltungen: „Veranstaltungen" sehen (`view`) und Einzelne Song-Kategorien sehen (`view songcategory`), je Kategorie                                                      | Musiker; wer will, auch alle als Liederbuch |
+| Anmerkungen, Tonart, Zoom speichern                | Personen: Eigene Personendaten bearbeiten                                                                                                                                     | alle Nutzer                                 |
+| Abwesenheiten                                      | kein eigenes Recht – die eigenen pflegt jede Person selbst (fremde → 403, gemessen)                                                                                           | –                                           |
+| Termine und Abläufe                                | Events: Abläufe sehen (`view agenda`)                                                                                                                                         | Musiker                                     |
+| Info-Spalten im Ablauf (z. B. Technik)             | Events: Dienstgruppe sehen (`view servicegroup`) bzw. bearbeiten (`edit servicegroup`), je Dienstgruppe                                                                       | Musiker, für die passenden Dienstgruppen    |
+| Lied-Statistik („Häufigkeit", „Zuletzt")           | Events: Song-Statistik sehen (`view song statistics`) – ohne gibt es die Reiter nicht                                                                                         | Musiker                                     |
+| Ablauf bearbeiten                                  | Events: Abläufe bearbeiten (`edit agenda`), je Kalender – Admins eines Termins dürfen dessen Ablauf auch ohne (#635)                                                          | wer Abläufe plant                           |
+| Ablaufvorlagen bearbeiten                          | Events: Ablaufvorlagen bearbeiten (`edit agenda templates`), je Kalender – ohne das nur ansehen (gemessen 17.11.2026); die Seite steht unter **Termine → ⋯ → Ablaufvorlagen** | wer Abläufe plant                           |
+| Lieder, Arrangements, Notenblätter, Dateien, Tempo | Events: Lieder bearbeiten (`edit songcategory`), je Kategorie                                                                                                                 | wer Lieder pflegt                           |
+| CCLI SongSelect                                    | Events: SongSelect nutzen (`use ccli`) – nur mit SongSelect-Abo der Gemeinde; was aufs Kontingent zählt: [songselect-kontingent.md](songselect-kontingent.md)                 | wer Lieder pflegt                           |
+| Verwaltung in der App (unter **Einstellungen**)    | Personen: Personen administrieren (`administer persons`)                                                                                                                      | Admins                                      |
 
 Info-Spalten: Man sieht nur die Spalten der Dienstgruppen, die man sehen darf. Wer nicht alle sieht,
 bekommt beim Bearbeiten eines Ablaufs einen Hinweis – ChurchTools löscht beim Speichern die Infos der
@@ -122,7 +122,7 @@ Gruppe zusätzlich Abläufe, Info-Spalten, „Song-Statistik sehen", die Team-No
   teilen" nicht einschalten (die App meldet, dass es nicht geklappt hat).
 - **Anmerkungen speichern:** Die App sagt es; die Anmerkungen bleiben dann nur auf dem Gerät.
 
-**Wie Team-Notizen funktionieren:** Wer unter **Mehr** „Meine Anmerkungen teilen" einschaltet, trägt
+**Wie Team-Notizen funktionieren:** Wer unter **Einstellungen** „Meine Anmerkungen teilen" einschaltet, trägt
 sich in „Team-Notizen der Musik App" ein (und beim Ausschalten wieder aus). Ob jemand wirklich teilt,
 steht aber in seiner eigenen Datei `musikapp_daten.json` – die kann nur er selbst ändern; ein Eintrag,
 den jemand von Hand macht, bewirkt also nichts.
@@ -146,7 +146,7 @@ den jemand von Hand macht, bewirkt also nichts.
 
 ## Aktualisieren
 
-Gibt es eine neue Version, steht in der Erweiterung unter **Mehr** ganz unten „Neue Version …
+Gibt es eine neue Version, steht in der Erweiterung unter **Einstellungen** ganz unten „Neue Version …
 verfügbar“ – der Link führt zur Release-Seite mit der ZIP. Aktualisiert wird von Hand:
 
 Neue ZIP herunterladen → **Administration → Erweiterungen** → beim Eintrag „Musik App" auf den

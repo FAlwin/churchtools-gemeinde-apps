@@ -20,7 +20,7 @@ ChordPro-Datei.
 3. Ein Lied im Ablauf antippen – das Liedblatt erscheint.
 4. Unten auf **Lieder**: Die Liste zeigt die Lieder der Gemeinde. Beim Stift an einem Lied öffnet sich
    ein Fenster – es beginnt unter der ChurchTools-Leiste, die nicht abgedunkelt wird.
-5. Unten auf **Mehr**: Oben steht der Name der Gemeinde aus ChurchTools.
+5. Unten auf **Einstellungen**: Oben steht der Name der Gemeinde aus ChurchTools.
 
 <details><summary>Technisches</summary>
 
@@ -62,7 +62,7 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 
 **Das brauchst du:** TF-EXT-01, mit einem Admin-Konto (dann sähe man am meisten).
 
-**Das muss passieren:** Kein Knopf führt ins Leere. Unter **Mehr** gibt es kein „Als App
+**Das muss passieren:** Kein Knopf führt ins Leere. Unter **Einstellungen** gibt es kein „Als App
 installieren", keinen Bereich „Offline" und kein „Abmelden" – dafür unten den Hinweis „Erweiterung für
 ChurchTools" mit **Mehr erfahren**. In der **Verwaltung** fehlen „Organisation / Name" und
 „Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06, TF-EXT-07). Bei **Lieder** bietet ein langer Suchbegriff
@@ -70,7 +70,7 @@ keine Suche im Liedtext an (die Reiter „Häufigkeit/Zuletzt" gibt es seit v2.3
 fehlt das Wolken-Symbol „Für offline speichern". (Ablauf und Tempo gibt es seit 3b-1 – TF-EXT-04; Lieder
 verwalten seit 3b-2 – TF-EXT-05.)
 
-1. Unten auf **Mehr**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
+1. Unten auf **Einstellungen**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
    Projektseite beim Abschnitt „Für andere Gemeinden".
 2. Unten auf **Lieder**, in die Suche einen Satz aus einem Lied tippen.
 3. Unten auf **Termine**: kein Wolken-Symbol an den Gottesdiensten.
@@ -152,11 +152,11 @@ Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein 
 **Das brauchst du:** TF-EXT-01 mit einem Admin-Konto, dazu ein zweites Konto **ohne** Admin-Rechte
 (ein Musiker) und ein Lied mit PDF und ChordPro in ChurchTools.
 
-**Das muss passieren:** Was der Admin unter **Mehr → Verwaltung** einstellt, steht danach in ChurchTools
+**Das muss passieren:** Was der Admin unter **Einstellungen → Verwaltung** einstellt, steht danach in ChurchTools
 und gilt auf jedem Gerät – auch für den Musiker, sobald seine Gruppe die Kategorie sehen darf. Ohne
 dieses Recht bekommt der Musiker „Akkorde", aber keine Fehlermeldung.
 
-1. Als Admin unter **Mehr → Verwaltung → Liedblatt: Standard-Ansicht** auf **PDF zuerst** stellen →
+1. Als Admin unter **Einstellungen → Verwaltung → Liedblatt: Standard-Ansicht** auf **PDF zuerst** stellen →
    **Speichern**. Unter **Links verwalten** einen Link anlegen → **Speichern**.
 2. Seite neu laden: Der Link steht unter **Weitere Angebote**, die Standard-Ansicht zeigt „PDF zuerst".
 3. Als Musiker die Erweiterung öffnen, das Lied öffnen → es zeigt die **Akkorde** (Recht fehlt noch).
@@ -186,15 +186,15 @@ Mitglieder** einer Gruppe mit einer Rolle; der Musiker mit Rechten für Lieder (
 **Das muss passieren:** Wer teilt, dessen Anmerkungen sieht der andere im Lied unter „Notizen von …" –
 an derselben Stelle, in der Ansicht der teilenden Person. Wer nicht (mehr) teilt, taucht dort nicht auf.
 
-1. Als Admin unter **Mehr → Verwaltung → Anmerkungen** die Gruppe wählen und die Rolle freigeben →
-   **Speichern**. Unter **Mehr** erscheint „Team-Notizen" mit „Meine Anmerkungen teilen".
+1. Als Admin unter **Einstellungen → Verwaltung → Anmerkungen** die Gruppe wählen und die Rolle freigeben →
+   **Speichern**. Unter **Einstellungen** erscheint „Team-Notizen" mit „Meine Anmerkungen teilen".
 2. Als Musiker die Erweiterung öffnen, **Meine Anmerkungen teilen** einschalten, das Lied öffnen und
    etwas zeichnen.
 3. Als Admin dasselbe Lied öffnen → Knopf **Notizen von …** → den Musiker antippen: Seine Striche stehen
    auf dem Blatt.
 4. Als Musiker das Teilen ausschalten. Als Admin das Lied neu öffnen → der Musiker steht nicht mehr unter
    „Notizen von …".
-5. Eine Person ohne Mitgliedschaft (oder mit nicht freigegebener Rolle) sieht unter **Mehr** keine
+5. Eine Person ohne Mitgliedschaft (oder mit nicht freigegebener Rolle) sieht unter **Einstellungen** keine
    „Team-Notizen".
 
 <details><summary>Technisches</summary>
@@ -317,7 +317,7 @@ Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und L
 3. In die Mitte des Blatts tippen → wie immer verschwinden zusätzlich unsere Leisten; nochmal tippen
    holt sie zurück. Kein Flackern.
 4. Zurück zur Liste → weiter ohne ChurchTools-Leiste. Knopf antippen → die Leiste ist wieder da.
-5. **Termine**, **Mehr**, ein Ablauf: Der Knopf steht jeweils ganz rechts oben (im Ablauf rechts neben
+5. **Termine**, **Einstellungen**, ein Ablauf: Der Knopf steht jeweils ganz rechts oben (im Ablauf rechts neben
    Teilen/Bearbeiten).
 6. Am iPhone (oder schmalem Fenster): Im Liedblatt steht der Vollbild-Knopf als Symbol rechts neben der
    Lied-Leiste (Kopfkarte kompakt, Scheibe B1) – nicht zwischen den Werkzeug-Knöpfen.
@@ -386,8 +386,9 @@ vier Farben (grau, blau, grün, rot).
    **Einstellungen**. Anklicken öffnet dasselbe Fenster wie früher der Knopf neben „Hallo …“ (der ist weg); schließen – die
    Seite dahinter ist unverändert. In den Anmeldungen steht **Neue Veranstaltung** weiterhin rechts neben „Hallo …“.
 3. Als Person ohne das Recht: kein Reiter **Einstellungen** (Anmeldungen und Gebetsabend dann ganz ohne Reiterleiste).
-4. **Dienstplaner**, **Website** und **Protokolle** haben keine Einstellungen als Fenster: Dort ist nichts verschwunden;
-   **Verwaltung** (Protokolle, nur Admins) bleibt der letzte Reiter.
+4. **Dienstplaner** und **Website** haben keine Einstellungen als Fenster: Dort ist nichts verschwunden. In den
+   **Protokollen** heißt der letzte Reiter (nur Admins) seit „Ruhige Bedienung“ R13 **Einstellungen** – vorher
+   „Verwaltung“; er zeigt eine Seite statt eines Fensters.
 5. Am Handy (schmal): die Reiter stehen unten; **Einstellungen** ist der letzte, in den Anmeldungen und im Gebetsabend gibt
    es nur **Start** und **Einstellungen**.
 6. Status-Etiketten ansehen: Anmeldungen (Startseite „Leitung“/„Mitglied“, „Warteliste 2“, Zahlung „offen“), Protokolle

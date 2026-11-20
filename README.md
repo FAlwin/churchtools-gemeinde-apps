@@ -82,7 +82,7 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
 - **Ablauf bearbeiten** (mit dem ChurchTools-Recht dafür): Punkte und Lieder anlegen, ändern, löschen und
   per Ziehen sortieren, Vorlauf vor dem Beginn festlegen, Ablauf abschließen und wieder öffnen;
   Löschen und Verschieben lassen sich kurz danach **rückgängig** machen
-- **Ablaufvorlagen** (unter **Mehr → Abläufe**): Vorlagen nach Kalender ansehen; mit dem ChurchTools-Recht „Ablaufvorlagen
+- **Ablaufvorlagen** (unter **Termine → ⋯**): Vorlagen nach Kalender ansehen; mit dem ChurchTools-Recht „Ablaufvorlagen
   bearbeiten“ (je Kalender) anlegen, füllen, umbenennen und löschen – dieselbe Seite wie im Dienstplaner; im Bearbeiten-Modus eines
   Termin-Ablaufs speichert **„Als Vorlage …“** den Ablauf als neue Vorlage oder ersetzt eine vorhandene
 - **Chord Charts als PDF** (SongSelect-Look) mit automatischer Transponierung, Kapo, Spalten- und
@@ -127,7 +127,7 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
   Musikteam-Gruppen
 - **Rechtebewusste Oberfläche** – jede Person sieht nur, wozu ihre ChurchTools-Rechte passen
 - **Geführte Einführung** (Onboarding-Touren) beim ersten Öffnen
-- **Frei konfigurierbare Links** (z. B. zu weiteren Gemeinde-Angeboten) im „Mehr"-Tab und optional
+- **Frei konfigurierbare Links** (z. B. zu weiteren Gemeinde-Angeboten) im „Einstellungen“-Reiter und optional
   auf der Login-Seite
 
 </details>
@@ -205,11 +205,11 @@ mit ihren **eigenen ChurchTools-Zugangsdaten** an.
 
 Anpassbar sind nur:
 
-| Was                                          | Wo                              |
-| -------------------------------------------- | ------------------------------- |
-| ChurchTools-URL, Session-Secret, Admin-Recht | `.env` auf eurem Server         |
-| Gemeindename + eigene Links                  | in der App (Admin → „Mehr"-Tab) |
-| Liedblatt zuerst als Akkorde oder PDF        | in der App (Admin → „Mehr"-Tab) |
+| Was                                          | Wo                                          |
+| -------------------------------------------- | ------------------------------------------- |
+| ChurchTools-URL, Session-Secret, Admin-Recht | `.env` auf eurem Server                     |
+| Gemeindename + eigene Links                  | in der App (Admin → „Einstellungen“-Reiter) |
+| Liedblatt zuerst als Akkorde oder PDF        | in der App (Admin → „Einstellungen“-Reiter) |
 
 Optik und Funktionen sind für alle identisch (eine gemeinsame Codebasis).
 

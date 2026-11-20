@@ -3,7 +3,7 @@
 ### TF-TEAM-01 · Notizen von anderen ansehen und übernehmen
 
 **Das brauchst du:** Zwei Konten. Das zweite hat bei einem Lied seine Notizen geteilt (unter
-**Mehr → Team-Notizen**). Dein Konto braucht das Recht, Team-Notizen zu sehen.
+**Einstellungen → Team-Notizen**). Dein Konto braucht das Recht, Team-Notizen zu sehen.
 
 **Das muss passieren:** In Schritt 3 siehst du **deren** Notizen, deine eigenen sind ausgeblendet.
 In Schritt 4 liegen beide übereinander. Nach Schritt 5 ist deren Version aktiv und deren Spalten
@@ -348,9 +348,9 @@ Lied in ChurchTools trägt. Das ist so gewollt und kein Fehler – die Liste ken
 **Das muss passieren:** Die Verwaltungs-Einstellungen erscheinen **nur** beim Admin. Beim normalen
 Konto sind sie gar nicht sichtbar – nicht ausgegraut, sondern weg.
 
-1. Mit dem normalen Konto anmelden, unten auf **Mehr** tippen, ganz durchscrollen.
+1. Mit dem normalen Konto anmelden, unten auf **Einstellungen** tippen, ganz durchscrollen.
 2. Abmelden, mit dem Admin-Konto anmelden.
-3. Wieder **Mehr** öffnen und vergleichen.
+3. Wieder **Einstellungen** öffnen und vergleichen.
 
 <details><summary>Technisches</summary>
 
@@ -363,12 +363,12 @@ Konto sind sie gar nicht sichtbar – nicht ausgegraut, sondern weg.
 
 ### TF-ADMIN-02 · Hinweis auf eine neue Version
 
-**Das muss passieren:** Der Hinweis erscheint unten über der Tab-Leiste; **Jetzt laden** lädt neu. Danach steht unter **Mehr** die
+**Das muss passieren:** Der Hinweis erscheint unten über der Tab-Leiste; **Jetzt laden** lädt neu. Danach steht unter **Einstellungen** die
 neue Versionsnummer.
 
 1. Nach einem Release die App öffnen (oder offen lassen).
 2. Im Hinweis unten auf **Jetzt laden** tippen.
-3. Unten auf **Mehr** und ganz unten die Versionsnummer ansehen.
+3. Unten auf **Einstellungen** und ganz unten die Versionsnummer ansehen.
 
 <details><summary>Technisches</summary>
 

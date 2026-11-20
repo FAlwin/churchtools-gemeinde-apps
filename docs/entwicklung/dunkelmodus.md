@@ -39,7 +39,7 @@ dieses eine.
      `folgeChurchToolsThema()` setzt `data-theme` auf `<html>` passend zur Klasse an `<body>` und zieht mit,
      wenn ChurchTools umschaltet (MutationObserver). Außerhalb von ChurchTools (Entwickeln mit `?demo`) gilt
      das Gerät.
-   - **Musik-App (App und Erweiterung):** ihr eigener Schalter unter Mehr → Hell / Dunkel / Auto
+   - **Musik-App (App und Erweiterung):** ihr eigener Schalter unter Einstellungen → Hell / Dunkel / Auto
      (`client/src/hooks/useSettings.ts`); „Auto“ folgt dem Gerät, auch in der Erweiterung (Alwin, 14.10.2026).
      Die `theme-color` für iOS liest `useSettings` aus `--nav-bg` – sie ist im Dunkeln `#27272a`.
 3. **Erweiterungs-Bau:** `ui/erweiterung/cssBereich.ts` schreibt `html[…]` auf `html[…] <App-Bereich>` um. Die

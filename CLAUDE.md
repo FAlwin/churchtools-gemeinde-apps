@@ -433,11 +433,11 @@ leichtem Schatten, Knöpfe 4 px, Schrift Lato; untere Tab-Bar, Light/Dark). Alle
 `icon-192/512.png`, `favicon.svg`); PWA-Manifest ist **statisch** (`public/manifest.webmanifest`).
 
 **Einziger anpassbarer Wert:** der **Gemeinde-Name** (`orgName`) – ein ChurchTools-**Admin** ändert ihn
-im Mehr-Tab (`pages/Settings.tsx` → Verwaltung: `hooks/useVerwaltung.ts`, `components/VerwaltungFenster.tsx`; `PUT /api/site-config`); persistiert in `site.json` (Volume,
+im Reiter „Einstellungen“ (früher „Mehr“; `pages/Settings.tsx` → Verwaltung: `hooks/useVerwaltung.ts`, `components/VerwaltungFenster.tsx`; `PUT /api/site-config`); persistiert in `site.json` (Volume,
 `SITE_CONFIG_PATH`). Admin-Recht über `ADMIN_PERMISSION` (Default `churchcore:administer persons`).
 `SiteConfig` (`shared/types`) hat zehn Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?`, `terminArten?` (#400), `standardAnsicht?` (07.10.2026, Akkorde/PDF zuerst; Regel in `client/src/utils/standardAnsicht.ts`, auf dem Gerät gemerkt in `devicePrefs`), `liedblattLogo?` (19.10.2026, Logo aufs Liedblatt; Regel `logoZeigen` in `client/src/utils/logoAsset.ts`, gelesen NUR über `hooks/useAppLogo` – Liedblatt, Teilen, Liederheft, Editor-Vorschau) und `ablaufAnlegen?` (13.10.2026; **seit 05.11.2026 nicht mehr einstellbar, nur noch Startwert** des Filters der Terminliste – `client/src/utils/kalenderFilter.ts`, auf dem Gerät gemerkt). Nur die ersten drei und `standardAnsicht` sind reine Anzeige-Werte. **Ein neues Feld muss mit:** Typ + `DEFAULT_SITE_CONFIG` (`shared/types`), Schema + `EinstellbareWerte` + `einstellungenZusammensetzen` (`shared/ct/einstellungen.ts` – Server und Erweiterung lesen und speichern beide darüber), und, falls öffentlich, die beschnittene Antwort in `getSiteConfigCtrl`.
 
-**Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Mehr` (`components/TabBar.tsx` – füllt die
+**Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Einstellungen` (früher „Mehr“ – R13, 20.11.2026; die interne ID bleibt `mehr`, weil `useAppNav` sie gespeichert hat; `components/TabBar.tsx` – füllt die
 gemeinsame `ui/bedienung/ReiterLeiste`, die auch der Dienstplaner am Handy nutzt; der
 Abwesenheiten-Tab trägt die ID `verfuegbarkeit` und erscheint nur für Mitglieder der `musicianGroupIds`), Detailseiten
 (Setlist, Chart) als Vollbild-Push.
@@ -448,7 +448,7 @@ Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Scr
 02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
 iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
 „← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau – im Ablauf nur „Fertig“, „Bearbeiten“ grau seit 28.10.2026; seit B8 (21.11.2026) liegen „Spalten“, „Teilen“, „Als Vorlage …“, „Neu aufsetzen …“ und „Ablauf abschließen“ im ⋯-Menü (`MehrMenue`), abgeschlossen steht „Öffnen“ sichtbar; ein Tipp auf einen Ablaufpunkt öffnet die Einzelansicht `ui/ablauf/PunktAnsicht` (Handy Seite, sonst Fenster), die Lied-Karte das Liedblatt –, am Handy nur Symbol
-per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts – die Seiten hinter einem Reiter (Termine, Lieder, Abwesenheiten, Mehr) seit
+per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts – die Seiten hinter einem Reiter (Termine, Lieder, Abwesenheiten, Einstellungen) seit
 28.10.2026 OHNE sichtbare Überschrift: an ihrer Stelle der Wähler (`stattTitel`: Kommende/Vergangene, Suche, Termine/Einträge,
 Gemeinde-Karte), wie „Kalender“/„Beiträge“ in der ChurchTools-App; der Titel bleibt für Screenreader. Die Kopfkarte
 schneidet nicht ab (`overflow: visible`), damit ein Menü unter einem Kopfknopf hinausragen kann. Knöpfe in
@@ -550,7 +550,7 @@ speichern + `restoreVisibleZoom`), `useKeyboardInsets` (iOS-Tastatur-Hub), `useS
 (Blätter-Animation) und `usePointerStrokes` (Zeichen-Engine Stift/Marker/Radierer inkl. aller
 Touch-Regeln); `composePane` bleibt bewusst in PageDeck.
 
-**Scroll-Modus (#551, 14.10.2026):** Mehr → Liedansicht: **Blättern / Scrollen**, je Gerät
+**Scroll-Modus (#551, 14.10.2026):** Einstellungen → Liedansicht: **Blättern / Scrollen**, je Gerät
 (`devicePrefs.getLiedansicht`, `worship:liedansicht`). Scrollen zeigt die Seiten untereinander, jede in voller
 Breite, nahtlos (`components/ScrollDeck.tsx`). **Seit #607 ist jedes Lied dort EINE lange Seite** („Rolle“:
 `generateChordPdf(…, { rolle: true })`, eine Spalte, kein Umbruch, CCLI direkt unter dem letzten Teil; Höhe per
@@ -699,7 +699,7 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Liedtext-Suche …), Bearbeiten
   hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-2 nur
   noch SongSelect, `canUseCcli`). Lieder/Notenblätter: Regeln in `shared/ct/liedVerwaltung.ts`,
-  `notenblaetter.ts`, `stammdaten.ts`, `altSchnittstelle.ts`; Server-Anschluss `ctVerwalter.ts`. Ein Hinweis in „Mehr"
+  `notenblaetter.ts`, `stammdaten.ts`, `altSchnittstelle.ts`; Server-Anschluss `ctVerwalter.ts`. Ein Hinweis in „Einstellungen“
   (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 05. **Anzeige-Einstellungen (Spalten `cols`,
   Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
   bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
@@ -847,7 +847,7 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   fixiert den Volume-Präfix unabhängig vom CM-Projektnamen (Lehre aus dem Volume-Vorfall, s. u.).
 - **Frontend-Update auf den Geräten (Service Worker, seit v2.5.0):** Nach dem Server-Update holt sich
   jedes Gerät den neuen Frontend-Build selbst – zuverlässig beim **Kaltstart/kompletten Neu-Öffnen**
-  (bzw. Neuladen) und auf Knopfdruck über **„Nach Updates suchen"** im Mehr-Tab (lädt eine gefundene
+  (bzw. Neuladen) und auf Knopfdruck über **„Nach Updates suchen"** im Reiter „Einstellungen“ (lädt eine gefundene
   Version direkt). Der schwebende **„Neue Version verfügbar"-Balken** ist der passive Bonus-Weg (auf
   iOS unzuverlässig). Davon getrennt: der ältere Hinweis **„Neue Version X verfügbar – Was ist neu"**
   (`useUpdateCheck`) verlinkt nur die GitHub-Release-Notes. `registerType: 'prompt'` lädt nie
@@ -949,7 +949,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   `scroll-behavior: smooth`, #1026), Menüs im Bild, Esc. Kein neues Bedienelement → Touren unverändert. Mit demselben
   Stand: `organigramm-v0.3.3` (Stufenwahl `TitelWahl`, #1022) und `gebetsabend-v0.1.1`. README-Bilder: offen ist nur #1031
   (Dienstplaner E5c, unveröffentlicht) → mit dem nächsten Dienstplaner-Release aufnehmen.
-- **v2.40.0 (17.11.2026) = Ablaufvorlagen (E10).** Musik-App: **Mehr → Abläufe → Ablaufvorlagen** (ansehen, mit Recht
+- **v2.40.0 (17.11.2026) = Ablaufvorlagen (E10).** Musik-App: **Mehr → Abläufe → Ablaufvorlagen** (seit 20.11.2026: **Termine → ⋯ → Ablaufvorlagen**) (ansehen, mit Recht
   `edit agenda templates` je Kalender anlegen/bearbeiten/umbenennen/löschen, #991) und **„Als Vorlage …“** im
   Bearbeiten-Modus des Ablaufs (neue Vorlage oder vorhandene ersetzen, nichts vorausgewählt, #999); Kern #979, gemeinsamer
   Baustein mit dem Dienstplaner (#986, dort seit `dienstplan-v0.8.0`). Beide Betriebsarten; neue Server-Routen
@@ -1675,7 +1675,7 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   (`PUT /api/site-config`, `GET /api/groups`, `GET /api/groups/:id/roles`). Fachliche Schreibrechte
   setzt ChurchTools selbst durch (die App reicht das Nutzer-Cookie durch und gibt 403 weiter).
 - **Musiker-Gruppen (v2.8.0, Fundament für #124):** `canUseGlobalNotes` = aktives Mitglied **einer** der
-  in `site.json` konfigurierten **`musicianGroupIds`** (Admin wählt sie im Mehr-Tab per Mehrfachauswahl,
+  in `site.json` konfigurierten **`musicianGroupIds`** (Admin wählt sie im Reiter „Einstellungen“ per Mehrfachauswahl,
   Dropdown aus `GET /api/groups`). Check: `getActiveGroupIds(cookie,userId)` → `/api/persons/{id}/groups`
   (Filter `groupMemberStatus==="active"` + kein `memberEndDate`; Gruppen-ID steckt in
   `group.domainIdentifier`). ECG-Musikteam = Gruppe 9. **Kein Admin-Bypass** („nur Musiker"). Die

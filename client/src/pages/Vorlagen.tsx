@@ -10,7 +10,7 @@ import { TOUR_VORLAGE, TOUR_VORLAGEN, VORLAGE_STEPS, VORLAGEN_STEPS } from '../u
 import styles from './Vorlagen.module.scss';
 
 /**
- * Die Seite „Ablaufvorlagen“ hinter der Zeile in „Mehr“ (E10-V3b, Entwurf `e10-vorlagen.html` Abschnitt 5). Der Baustein
+ * Die Seite „Ablaufvorlagen“ im „⋯“ der Termine (E10-V3b, seit R13 nicht mehr eine Zeile in den Einstellungen; Entwurf `e10-vorlagen.html` Abschnitt 5). Der Baustein
  * ist derselbe wie im Dienstplaner (`@ui/ablauf/VorlagenBereich`); hier kommen nur die Dinge der Musik-App dazu: der
  * Zugriff über die Weiche (`useVorlagenZugriff`), die Rechte aus den Capabilities und die Infos je Dienstgruppe wie am
  * Termin (`Setlist`). Welche Vorlage offen ist, hält `App` – wie beim Termin, ohne Adresse.
@@ -25,7 +25,7 @@ export function Vorlagen({
   /** Die offene Vorlage – `null`: die Liste. */
   offeneId: number | null;
   onOeffnen: (vorlageId: number | null) => void;
-  /** „‹ Mehr“ – von der Liste aus zurück. */
+  /** „‹ Termine“ – von der Liste aus zurück. */
   zurueck: () => void;
 }) {
   const zugriff = useVorlagenZugriff();
@@ -53,7 +53,7 @@ export function Vorlagen({
             infoSpaltenSchluessel="musikapp.vorlage.infoSpalten"
             offeneId={offeneId}
             onOeffnen={onOeffnen}
-            zurueck={{ label: 'Mehr', onClick: zurueck }}
+            zurueck={{ label: 'Termine', onClick: zurueck }}
           />
         </div>
       </Scroll>

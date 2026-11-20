@@ -44,8 +44,8 @@ des Bandes.
    „Termine“). Alles **scharf**; beim Hochschieben scrollt die Karte mit (wie in ChurchTools). Im Bearbeiten heißt
    der blaue Knopf „Fertig“, daneben „Abschließen“ bzw. hellblau „Öffnen“ (Scheibe S, 26.10.2026).
    4a. **Reiter:** Am iPad/Rechner steht ganz oben klein der App-Name **„Musik-App“** (seit B8c, wie „Dienstplaner“ in den
-   anderen Erweiterungen), darunter Termine · Lieder · Abwesenheiten · **Mehr** als Text, der gewählte blau unterstrichen
-   („Mehr“ bleibt der letzte Reiter: dort liegen die Einstellungen **und** Ablaufvorlagen, Links, Team-Notizen); am Handy unten
+   anderen Erweiterungen), darunter Termine · Lieder · Abwesenheiten · **Einstellungen** als Text, der gewählte blau unterstrichen
+   („Einstellungen“ – bis 20.11.2026 „Mehr“ – bleibt der letzte Reiter: dort liegen Darstellung, Links, Team-Notizen, Hilfe; die Ablaufvorlagen liegen im **⋯** der Termine); am Handy unten
    mit Symbolen, der gewählte mit blauer Linie oben, **ohne App-Namen** – die Seite beginnt gleich mit ihrem Kopf.
    4b. **Knöpfe in Listen (Scheibe S2):** In **Lieder** stehen rechts in jeder Zeile **Plus** und **Stift** als
    eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs. Bei einem Termin ohne Ablauf steht
@@ -80,7 +80,7 @@ des Bandes.
 6. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)
-7. **Ganz nach unten (#408):** In Termine, Lieder, Abwesenheiten, Mehr und im Ablauf bis ans Ende
+7. **Ganz nach unten (#408):** In Termine, Lieder, Abwesenheiten, Einstellungen und im Ablauf bis ans Ende
    scrollen. Der letzte Eintrag steht überall mit **derselben** Luft über der Tab-Leiste bzw. dem
    Home-Strich; bei den Abwesenheiten verdeckt das Plus ihn nicht.
 
@@ -122,7 +122,7 @@ nicht bloß auf. Der Hinweistext erscheint nur, solange man zieht.
 
 </details>
 
-### TF-KOPF-03 · Schalter im Tab „Mehr" schalten mit einem Tipp
+### TF-KOPF-03 · Schalter im Reiter „Einstellungen“ schalten mit einem Tipp
 
 **Das brauchst du:** Ein Gerät mit der App; für den dritten Schalter ein Konto mit Team-Notizen.
 
@@ -130,7 +130,7 @@ nicht bloß auf. Der Hinweistext erscheint nur, solange man zieht.
 oder auf den Schalter selbst. Die Zeilen sehen aus wie vorher (Umbau #407, 23.09.2026: die Seite ist
 in Bausteine geteilt, die Schalter sind jetzt je ein einziger Knopf).
 
-1. Tab **Mehr**. Auf den **Text** „Display aktiv halten" tippen → der Schalter springt um. Noch einmal
+1. Reiter **Einstellungen**. Auf den **Text** „Display aktiv halten" tippen → der Schalter springt um. Noch einmal
    auf den **Schalter** tippen → er springt zurück.
 2. Dasselbe mit „Kommende Gottesdienste offline halten".
 3. Mit Team-Notizen-Recht: dasselbe mit „Meine Anmerkungen teilen".
@@ -156,7 +156,7 @@ in Bausteine geteilt, die Schalter sind jetzt je ein einziger Knopf).
 ChurchTools, Anmeldungen und Dienstplaner. Die Statusleiste oben hat dieselbe Farbe wie die Leiste darunter (keine
 Kante). Die Notenseite bleibt weiß.
 
-1. Tab **Mehr** → **Dunkel**. Das Logo oben hat einen grauen Kreis, keinen blauen.
+1. Reiter **Einstellungen** → **Dunkel**. Das Logo oben hat einen grauen Kreis, keinen blauen.
 2. **Termine**, einen Ablauf und ein Lied öffnen: überall grau-schwarz, Datumskacheln dunkelblau wie in ChurchTools.
 3. In der installierten App: oben unter der Uhr kein farbiger Streifen, der sich von der Leiste abhebt.
 4. **Auto** wählen und das Gerät auf hell/dunkel umstellen → die App folgt.

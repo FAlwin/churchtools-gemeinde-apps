@@ -256,7 +256,7 @@ einmal.
    sich trotzdem bearbeiten (#635).
 7. **Filter** → beim Kalender das Häkchen selbst wegnehmen: Alle Termine des Kalenders verschwinden, auch die mit
    Ablauf; am Knopf steht „1“. App neu laden: Die Wahl ist noch da (auf dem Gerät gemerkt).
-8. **Mehr**: Die Zeile „Termine ohne Ablauf“ gibt es in der Verwaltung nicht mehr.
+8. **Einstellungen**: Die Zeile „Termine ohne Ablauf“ gibt es in der Verwaltung nicht mehr.
 
 <details><summary>Technisches</summary>
 

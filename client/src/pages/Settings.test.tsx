@@ -5,7 +5,7 @@ import { DEFAULT_SITE_CONFIG, type SiteConfig } from '@shared/types/index';
 import { speicherFehler } from '../utils/speicherFehler';
 
 /**
- * **„Mehr" – was die Seite tut, festgehalten VOR dem Aufteilen** (#407, 23.09.2026).
+ * **„Einstellungen" (früher „Mehr") – was die Seite tut, festgehalten VOR dem Aufteilen** (#407, 23.09.2026).
  *
  * `Settings.tsx` hatte 623 Zeilen und keinen einzigen Test. Diese Tests wurden gegen den alten Stand
  * geschrieben und dort grün gesehen; danach wurde die Seite in Bereiche geschnitten. Sie halten fest,
@@ -62,7 +62,8 @@ function zeige(
     isAdmin?: boolean;
     canUseGlobalNotes?: boolean;
     siteGeladen?: boolean;
-    onVorlagen?: () => void;
+    /** Zusätzliche Eigenschaften, die die Seite NICHT mehr kennt (alte Aufrufer) – sie müssen wirkungslos bleiben. */
+    alt?: object;
   } = {},
 ) {
   const onToggleWake = vi.fn();
@@ -82,7 +83,7 @@ function zeige(
       userName="Alwin Friesen"
       onLogout={onLogout}
       onReplayIntro={onReplayIntro}
-      onVorlagen={p.onVorlagen}
+      {...p.alt}
     />,
   );
   return { onToggleWake, onLogout, onReplayIntro };
@@ -90,10 +91,10 @@ function zeige(
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('Mehr – Aufbau', () => {
+describe('Einstellungen – Aufbau', () => {
   it('zeigt Überschrift, Gemeinde, Konto und die Links für alle', () => {
     zeige();
-    expect(screen.getByRole('heading', { name: 'Mehr' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Einstellungen' })).toBeTruthy();
     expect(screen.getByText('ECG Donrath')).toBeTruthy();
     expect(screen.getByText('Angemeldet als Alwin Friesen')).toBeTruthy();
     expect(screen.getByText('Liederliste')).toBeTruthy();
@@ -120,29 +121,17 @@ describe('Mehr – Aufbau', () => {
   });
 });
 
-describe('Mehr – Ablaufvorlagen (E10-V3b)', () => {
-  it('ohne Angebot der App (kein Recht, Abläufe zu sehen) gibt es die Zeile und den Abschnitt nicht', () => {
-    zeige();
+describe('Einstellungen – keine Arbeitsseiten (R13)', () => {
+  it('die Ablaufvorlagen sind nicht mehr hier, sondern im „⋯“ der Termine – weder Abschnitt noch Zeile', () => {
+    // Auch wenn die App noch `onVorlagen` reichte (alter Aufruf): Die Seite hat dafür nichts mehr – sonst käme die Zeile zurück.
+    zeige({ isAdmin: true, canUseGlobalNotes: true, alt: { onVorlagen: vi.fn() } });
     expect(screen.queryByText('Abläufe')).toBeNull();
     expect(screen.queryByText('Ablaufvorlagen')).toBeNull();
-  });
-
-  it('mit Angebot: Abschnitt „Abläufe“, Zeile samt Untertitel, ein Tipp öffnet die Seite – genau einmal', () => {
-    const onVorlagen = vi.fn();
-    zeige({ onVorlagen });
-    expect(screen.getByText('Abläufe')).toBeTruthy();
-    expect(screen.getByText('Vorlagen ansehen, anlegen und bearbeiten')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Ablaufvorlagen/ }));
-    expect(onVorlagen).toHaveBeenCalledTimes(1);
-  });
-
-  it('die Zeile trägt das Ziel der Einführung', () => {
-    zeige({ onVorlagen: vi.fn() });
-    expect(document.querySelector('[data-tour="ablaufvorlagen"]')).toBeTruthy();
+    expect(document.querySelector('[data-tour="ablaufvorlagen"]')).toBeNull();
   });
 });
 
-describe('Mehr – Schalter-Zeilen schalten genau einmal, über Zeile ODER Schalter', () => {
+describe('Einstellungen – Schalter-Zeilen schalten genau einmal, über Zeile ODER Schalter', () => {
   it('sagt den Zustand an – ein Knopf mit aria-pressed, kein Knopf im Knopf', () => {
     zeige();
     const schalter = screen.getByRole('button', { name: 'Display aktiv halten' });
@@ -172,7 +161,7 @@ describe('Mehr – Schalter-Zeilen schalten genau einmal, über Zeile ODER Schal
   });
 });
 
-describe('Mehr – Liedansicht (#551)', () => {
+describe('Einstellungen – Liedansicht (#551)', () => {
   beforeEach(() => localStorage.removeItem('worship:liedansicht'));
 
   it('zeigt „Blättern" gewählt und merkt sich „Scrollen" auf diesem Gerät', () => {
@@ -188,7 +177,7 @@ describe('Mehr – Liedansicht (#551)', () => {
   });
 });
 
-describe('Mehr – Hilfe und Konto', () => {
+describe('Einstellungen – Hilfe und Konto', () => {
   it('Einführung und Abmelden rufen ihre Aktion', () => {
     const { onReplayIntro, onLogout } = zeige();
     fireEvent.click(screen.getByText('Einführung nochmal ansehen'));
@@ -198,7 +187,7 @@ describe('Mehr – Hilfe und Konto', () => {
   });
 });
 
-describe('Mehr – Verwaltung', () => {
+describe('Einstellungen – Verwaltung', () => {
   it('„Organisation / Name" öffnet mit dem gespeicherten Namen und speichert den neuen', () => {
     zeige({ isAdmin: true });
     fireEvent.click(screen.getByText('Organisation / Name'));

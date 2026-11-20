@@ -1,7 +1,7 @@
 /**
  * **Filter der Terminliste** (Alwin, 05.11.2026, Entwurf A1) – die Regeln, ohne React.
  *
- * Anlass: Für einen spontanen Ablauf zum Frauentreff musste Alwin unter Mehr → Verwaltung die Einstellung „Termine
+ * Anlass: Für einen spontanen Ablauf zum Frauentreff musste Alwin unter Einstellungen → Verwaltung (damals „Mehr“) die Einstellung „Termine
  * ohne Ablauf“ umstellen – für die ganze Gemeinde. Jetzt wählt jede Person in der Terminliste selbst, je Kalender:
  * - **zeigen** (Häkchen): Termine aus diesem Kalender stehen in der Liste – ohne Häkchen auch die mit Ablauf nicht;
  * - **auch ohne Ablauf** (eingerückt): dazu die Termine, die noch keinen Ablauf haben, mit „Anlegen“. Nur in

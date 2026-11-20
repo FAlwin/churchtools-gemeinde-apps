@@ -43,7 +43,7 @@
 - **Alle schreibenden Aufrufe** (`POST`/`PUT`/`PATCH`/`DELETE` unter `/api`) → **403** „Diese Anfrage kommt nicht aus der App.“, wenn der Browser `Sec-Fetch-Site` mit etwas anderem als `same-origin` schickt (#849) – also von einer anderen Seite, auch derselben Domain. Ohne den Kopf (alte Browser, Werkzeuge) wie bisher.
 - `GET  /api/site-config` → öffentlich `{ zeitzone, appName, description, orgName, links, standardAnsicht }` plus leere `musicianGroupIds`/`noteRoles` (`zeitzone` = `ZEITZONE`, nur gelesen – die App rechnet „heute“ und alle Uhrzeiten damit, #847); **angemeldet die vollständige Konfiguration** (die internen Gruppen-/Rollen-IDs gelangen so nicht unauthentifiziert nach außen)
 - `PUT  /api/site-config` → Gemeinde-Name/Anmerkungs-Zuweisungen speichern (nur Admin, Zod-validiert) Seit #400 auch `terminArten` –
-  `{id, name, suchwort}[]` für den Filter im Tab „Abwesenheiten" (Admin: Mehr → Verwaltung →
+  `{id, name, suchwort}[]` für den Filter im Tab „Abwesenheiten" (Admin: Einstellungen → Verwaltung →
   „Abwesenheiten: Termin-Arten"); Name/Suchwort getrimmt, Längen aus `SITE_CONFIG_GRENZEN`
   (`@shared/types`, seit v2.25.1 eine Quelle für Formular und Schema – vorher vierfach von Hand),
   IDs eindeutig. Seit 07.10.2026 auch `standardAnsicht` (`'akkorde'` | `'dokument'`, Standard

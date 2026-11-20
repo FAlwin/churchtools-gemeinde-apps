@@ -16,6 +16,7 @@ vi.mock('./daten', () => ({
   speichereMenue: vi.fn(),
   beginneBearbeiten: vi.fn(),
   beendeBearbeiten: vi.fn(),
+  uebernimmBearbeitung: vi.fn(),
 }));
 const d = vi.mocked(D);
 
@@ -731,6 +732,81 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
     expect(screen.getByText(/in einem anderen Fenster von dir/)).toBeTruthy();
   });
 
+  describe('Übernehmen', () => {
+    const eigeneAlte = () => sperreVon({ ...ICH, fenster: 'altes' }, new Date(Date.now() - 60_000));
+    const frisch = () => ({ art: 'ok' as const, seite: server.seite, menue: server.menue });
+
+    it('(a) eigene Sperre aus anderem Fenster: „Hier weiterbearbeiten“ – erst nach Rückfrage, dann geht es weiter', async () => {
+      d.uebernimmBearbeitung.mockResolvedValue(frisch());
+      render(<Seitenarbeit {...props({ stand: stand({ sperren: { s: eigeneAlte() } }) })} />);
+      expect(doc()).not.toMatch(/websiteEditor/);
+      fireEvent.click(screen.getByRole('button', { name: 'Hier weiterbearbeiten' }));
+      expect(d.uebernimmBearbeitung).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(/Das andere Fenster von dir kann dann nicht mehr speichern/),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+      await waitFor(() => expect(doc()).toMatch(/websiteEditor/));
+      expect(d.uebernimmBearbeitung).toHaveBeenCalledWith(ORT, 's', ICH);
+      expect(screen.queryByText(/in einem anderen Fenster von dir/)).toBeNull();
+      // und es wird wieder gespeichert (die Sperre liegt bei uns, kein erneutes Nehmen nötig)
+      await aus({ was: 'runter', i: 0 });
+      await waitFor(() => expect(d.speichereSeite).toHaveBeenCalled());
+    });
+
+    it('(b) fremde Sperre: „Bearbeitung übernehmen“ nur nach Rückfrage mit Namen und Alter; „Abbrechen“ ändert nichts', async () => {
+      d.uebernimmBearbeitung.mockResolvedValue(frisch());
+      render(<Seitenarbeit {...props({ stand: stand({ sperren: { s: fremdeSperre(3) } }) })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Bearbeitung übernehmen' }));
+      expect(screen.getByText(/Jonas Peters kann dann nicht mehr speichern/)).toBeTruthy();
+      expect(screen.getByText(/vor 3 Minuten/)).toBeTruthy();
+      expect(screen.getByText(/geht verloren/)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+      expect(d.uebernimmBearbeitung).not.toHaveBeenCalled();
+      expect(screen.getByText(/Gerade bearbeitet von Jonas Peters/)).toBeTruthy();
+    });
+
+    it('(c) das verdrängte Fenster: nächstes Lebenszeichen zeigt „hat die Bearbeitung übernommen“, speichert nichts, die Änderung bleibt sichtbar', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      render(<Seitenarbeit {...props()} />);
+      await aus({ was: 'runter', i: 0 });
+      await vi.waitFor(() => expect(screen.getByText('Gespeichert')).toBeTruthy());
+      d.beginneBearbeiten.mockResolvedValue({
+        art: 'gesperrt',
+        sperre: sperreVon({ ...ICH, fenster: 'neu' }, new Date()),
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(LEBENSZEICHEN_MS);
+      });
+      expect(screen.getByText(/hat die Bearbeitung übernommen/)).toBeTruthy();
+      d.speichereSeite.mockClear();
+      await aus({ was: 'kopieren', i: 0 });
+      expect(d.speichereSeite).not.toHaveBeenCalled();
+      // die eigene Änderung (Reihenfolge getauscht) bleibt sichtbar, nichts wird zurückgesetzt
+      expect(pos('zweiter Block')).toBeLessThan(pos('Willkommen'));
+    });
+
+    it('(d) scheitert das Schreiben beim Übernehmen: Ansicht bleibt gesperrt, Fehler im Hinweis', async () => {
+      d.uebernimmBearbeitung.mockRejectedValue(new ApiError(503, 'x'));
+      render(<Seitenarbeit {...props({ stand: stand({ sperren: { s: fremdeSperre() } }) })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Bearbeitung übernehmen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull());
+      expect(screen.getByText(/Gerade bearbeitet von Jonas Peters/)).toBeTruthy();
+      expect(doc()).not.toMatch(/websiteEditor/);
+      expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
+    });
+
+    it('(d2) war jemand schneller: gesperrt bleibt, Hinweis „bitte noch einmal“', async () => {
+      d.uebernimmBearbeitung.mockResolvedValue({ art: 'gesperrt', sperre: fremdeSperre() });
+      render(<Seitenarbeit {...props({ stand: stand({ sperren: { s: fremdeSperre() } }) })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Bearbeitung übernehmen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+      expect(await screen.findByText(/hat gerade wieder gespeichert/)).toBeTruthy();
+      expect(doc()).not.toMatch(/websiteEditor/);
+    });
+  });
+
   it('die Sperre wird erst beim Handgriff geprüft: fremd gesperrt → Hinweis, es wird NICHT gespeichert', async () => {
     d.beginneBearbeiten.mockResolvedValue({ art: 'gesperrt', sperre: fremdeSperre() });
     render(<Seitenarbeit {...props()} />);
@@ -757,7 +833,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
     // inzwischen hat jemand die Sperre übernommen
     d.beginneBearbeiten.mockResolvedValue({ art: 'gesperrt', sperre: fremdeSperre() });
     await aus({ was: 'kopieren', i: 0 });
-    expect(await screen.findByText(/Gerade bearbeitet von Jonas Peters/)).toBeTruthy();
+    expect(await screen.findByText(/hat die Bearbeitung übernommen/)).toBeTruthy();
     expect(d.speichereSeite).not.toHaveBeenCalled();
   });
 
@@ -824,7 +900,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LEBENSZEICHEN_MS);
     });
-    expect(screen.getByText(/Gerade bearbeitet von Jonas Peters/)).toBeTruthy();
+    expect(screen.getByText(/hat die Bearbeitung übernommen/)).toBeTruthy();
   });
 
   it('es gibt kein Lebenszeichen, solange nichts bearbeitet wurde (nichts gesperrt)', async () => {

@@ -1,0 +1,4 @@
+### Behoben (Website)
+
+- **Nach dem Neuladen sperrt man sich nicht mehr selbst aus.** Wer eine Seite bearbeitet hatte und die Browserseite neu lud, sah „Diese Seite ist gerade in einem anderen Fenster von dir geöffnet“ – die eigene Sperre vom alten Fenster, die beim Verlassen nicht mehr freigegeben werden konnte, hielt bis zu zehn Minuten. Jetzt steht neben dem Hinweis **„Hier weiterbearbeiten“** (mit Rückfrage).
+- Ist die Seite von jemand anderem gesperrt, gibt es **„Bearbeitung übernehmen“**: Die Rückfrage nennt die Person und wie lange ihr letztes Lebenszeichen her ist und sagt deutlich, dass ihre ungespeicherten Änderungen verloren gehen. Das verdrängte Fenster zeigt „Ein anderes Fenster hat die Bearbeitung übernommen“ und speichert nichts mehr; seine letzten Änderungen bleiben dort sichtbar. Wie „Schreiben übernehmen“ in den Protokollen.

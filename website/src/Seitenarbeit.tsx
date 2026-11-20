@@ -32,11 +32,12 @@ import {
   beginneBearbeiten,
   speichereMenue,
   speichereSeite,
+  uebernimmBearbeitung,
   type EntwurfsOrt,
 } from './daten';
 import { neueId } from './ids';
 import type { EditorAktion } from './nachricht';
-import { LEBENSZEICHEN_MS, type Rechte } from './regeln';
+import { LEBENSZEICHEN_MS, lebenszeichenAlter, type Rechte } from './regeln';
 import styles from './Seitenarbeit.module.scss';
 
 /** Alle Fenster, die der Editor öffnet – genau eins ist offen (oder keins). */
@@ -55,9 +56,11 @@ interface Gespeichert {
 }
 
 /** Das Bild der Sperre für die Anzeige: Wer, und ist es dieselbe Person in einem anderen Fenster? */
-function fremdText(s: Sperre, ichPerson: number): string {
+function fremdText(s: Sperre, ichPerson: number, verdraengt: boolean): string {
+  if (verdraengt)
+    return `Ein anderes Fenster${s.von === ichPerson ? ' von dir' : ` (${s.name})`} hat die Bearbeitung übernommen. Hier wird nichts mehr gespeichert; was du hier noch getippt hast, bleibt nur hier sichtbar.`;
   return s.von === ichPerson
-    ? 'Diese Seite ist gerade in einem anderen Fenster von dir geöffnet und wird dort bearbeitet. Du kannst sie hier ansehen.'
+    ? 'Diese Seite ist gerade in einem anderen Fenster von dir geöffnet und wird dort bearbeitet (oder war es beim Neuladen). Du kannst sie hier ansehen.'
     : `Gerade bearbeitet von ${s.name}. Du kannst die Seite ansehen – ändern kannst du sie, sobald ${s.name} fertig ist.`;
 }
 
@@ -119,6 +122,11 @@ export function Seitenarbeit({
     const s = stand.sperren[seite.id] ?? null;
     return s && sperreLage(s, ich, new Date()) === 'fremd' ? s : null;
   });
+  /** Hat uns ein anderes Fenster die Sperre abgenommen, die wir hielten? (Dann steht das im Hinweis.) */
+  const [verdraengt, setVerdraengt] = useState(false);
+  /** Die Rückfrage „Bearbeitung übernehmen?“ ist offen. */
+  const [frageUebernehmen, setFrageUebernehmen] = useState(false);
+  const [uebernimmt, setUebernimmt] = useState(false);
   /** Gehört die Sperre diesem Fenster? */
   const halte = useRef(false);
   /** Was zuletzt gespeichert oder geladen ist – die Grundlage für „hat jemand anderes etwas geändert?“. */
@@ -153,6 +161,7 @@ export function Seitenarbeit({
     // Unmittelbar vor dem Schreiben: Gehört die Sperre noch uns? Und hat niemand die Seite inzwischen geändert?
     const b = await beginneBearbeiten(o, wert.seite.id, i);
     if (b.art === 'gesperrt') {
+      setVerdraengt(halte.current);
       halte.current = false;
       setFremd(b.sperre);
       return { art: 'gesperrt' };
@@ -243,6 +252,7 @@ export function Seitenarbeit({
         }
         halte.current = true;
         setFremd(null);
+        setVerdraengt(false);
         if (!b.seite) {
           setHinweis('Diese Seite gibt es nicht mehr. Bitte lade die Seitenliste neu.');
           return false;
@@ -274,6 +284,7 @@ export function Seitenarbeit({
       beginneBearbeiten(o, arbeitRef.current.id, i).then(
         (b) => {
           if (b.art === 'gesperrt') {
+            setVerdraengt(true);
             halte.current = false;
             setFremd(b.sperre);
           }
@@ -351,6 +362,39 @@ export function Seitenarbeit({
     if (await sicherstellen()) setDialog({ art: 'einstellen' });
   };
 
+  /**
+   * „Hier weiterbearbeiten“ / „Bearbeitung übernehmen“ (nach der Rückfrage): die Sperre bewusst nehmen – wie „Schreiben
+   * übernehmen“ der Protokolle. Es geht mit dem **gespeicherten** Stand weiter (`uebernimmFrisch`); ungespeicherte Änderungen
+   * dieses Fensters entfallen. Klappt das Schreiben nicht, bleibt alles gesperrt und der Grund steht im Hinweis.
+   */
+  const bearbeitungUebernehmen = async () => {
+    setUebernimmt(true);
+    setHinweis(null);
+    try {
+      const { ort: o, ich: i } = aktuell.current;
+      const b = await uebernimmBearbeitung(o, arbeitRef.current.id, i);
+      if (b.art === 'gesperrt') {
+        setFremd(b.sperre);
+        setHinweis(
+          `Das hat nicht geklappt – ${b.sperre.name} hat gerade wieder gespeichert. Bitte noch einmal versuchen.`,
+        );
+        return;
+      }
+      schlange.current!.verwerfen();
+      setSpeicher({ art: 'gespeichert' });
+      halte.current = true;
+      setFremd(null);
+      setVerdraengt(false);
+      if (b.seite) uebernimmFrisch(b.seite, b.menue);
+      else setHinweis('Diese Seite gibt es nicht mehr. Bitte lade die Seitenliste neu.');
+    } catch (e) {
+      setHinweis(fehlerMeldung(e).text);
+    } finally {
+      setUebernimmt(false);
+      setFrageUebernehmen(false);
+    }
+  };
+
   /** „Neu laden“ nach einer Abweisung: der gespeicherte Stand ersetzt die Arbeitskopie – bewusst, mit Folge. */
   const neuLaden = async () => {
     schlange.current!.verwerfen();
@@ -362,6 +406,7 @@ export function Seitenarbeit({
       if (b.art === 'gesperrt') return setFremd(b.sperre);
       halte.current = true;
       setFremd(null);
+      setVerdraengt(false);
       if (b.seite) uebernimmFrisch(b.seite, b.menue);
       else setHinweis('Diese Seite gibt es nicht mehr. Bitte lade die Seitenliste neu.');
     } catch (e) {
@@ -567,11 +612,16 @@ export function Seitenarbeit({
       )}
       {fremd && (
         <div className={styles.band} role="status">
-          <p>{fremdText(fremd, ich.person)}</p>
+          <p>{fremdText(fremd, ich.person, verdraengt)}</p>
           <KopfKnopf
             label="Erneut prüfen"
             symbol={<Icon name="refresh" size={16} />}
             onClick={() => void sicherstellen()}
+          />
+          <KopfKnopf
+            label={fremd.von === ich.person ? 'Hier weiterbearbeiten' : 'Bearbeitung übernehmen'}
+            symbol={<Icon name="lock" size={16} />}
+            onClick={() => setFrageUebernehmen(true)}
           />
         </div>
       )}
@@ -612,6 +662,24 @@ export function Seitenarbeit({
         bearbeiten={fremd ? undefined : bearbeiten}
       />
       {fenster}
+      {frageUebernehmen && fremd && (
+        <ConfirmDialog
+          title={fremd.von === ich.person ? 'Hier weiterbearbeiten?' : 'Bearbeitung übernehmen?'}
+          message={
+            (fremd.von === ich.person
+              ? 'Das andere Fenster von dir kann dann nicht mehr speichern. Was dort seit dem letzten Speichern getippt wurde, bleibt nur dort sichtbar.'
+              : `${fremd.name} kann dann nicht mehr speichern – das letzte Lebenszeichen war ${lebenszeichenAlter(fremd.seit, new Date())}. Alles, was ${fremd.name} seit dem letzten Speichern geändert hat, geht verloren.`) +
+            (speicher.art !== 'gespeichert'
+              ? ' Auch deine ungespeicherten Änderungen hier entfallen: Du machst mit dem gespeicherten Stand weiter.'
+              : '')
+          }
+          confirmLabel="Übernehmen"
+          harmlos
+          beschaeftigt={uebernimmt}
+          onConfirm={() => void bearbeitungUebernehmen()}
+          onCancel={() => setFrageUebernehmen(false)}
+        />
+      )}
     </section>
   );
 }

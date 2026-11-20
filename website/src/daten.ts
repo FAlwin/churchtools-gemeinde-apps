@@ -15,7 +15,12 @@ import {
   type SpeicherOrt,
   type WebsiteStand,
 } from '@shared/website/speicher';
-import { bearbeitungBeenden, bearbeitungBeginnen } from '@shared/website/sperre';
+import {
+  bearbeitungBeenden,
+  bearbeitungBeginnen,
+  bearbeitungUebernehmen,
+} from '@shared/website/sperre';
+import type { BeginnErgebnis } from '@shared/website/sperre';
 import type { Menue, Seite } from '@shared/website/modell';
 
 export interface EntwurfsOrt {
@@ -46,7 +51,19 @@ export async function beginneBearbeiten(
   seiteId: string,
   ich: Schreiber,
 ): Promise<Beginn> {
-  const r = await bearbeitungBeginnen(ort(o), seiteId, ich);
+  return beginnAus(await bearbeitungBeginnen(ort(o), seiteId, ich), seiteId);
+}
+
+/** „Hier weiterbearbeiten“ / „Bearbeitung übernehmen“: die Sperre bewusst wegnehmen – sonst wie `beginneBearbeiten`. */
+export async function uebernimmBearbeitung(
+  o: EntwurfsOrt,
+  seiteId: string,
+  ich: Schreiber,
+): Promise<Beginn> {
+  return beginnAus(await bearbeitungUebernehmen(ort(o), seiteId, ich), seiteId);
+}
+
+function beginnAus(r: BeginnErgebnis, seiteId: string): Beginn {
   if (r.art === 'gesperrt') return r;
   const frisch = websiteAusWerten(r.werte);
   return {

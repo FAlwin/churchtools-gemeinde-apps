@@ -172,6 +172,11 @@ export function ErweiterungsSeite<T extends string = string>({
         if (id === EINSTELLUNGEN) einstellungen?.onOeffnen();
         else bereiche?.onWechsel(id as T);
       }}
+      // Tipp auf den schon gewählten Reiter: wie vorher mit dem Kasten-Umschalter (vor B2) noch einmal „wechseln“ – das
+      // führt im Dienstplaner aus der Termin-Ansicht zurück und setzt in den Protokolle Auswahl und Suche zurück.
+      onErneut={() => {
+        if (bereiche && aktiv !== EINSTELLUNGEN) bereiche.onWechsel(bereiche.aktiv);
+      }}
     />
   );
   // Begrüßung nur auf Start = der erste Reiter ist aktiv (R8).

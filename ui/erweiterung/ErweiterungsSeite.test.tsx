@@ -114,6 +114,24 @@ describe('ErweiterungsSeite: Kopf (R8/E24, „Ruhige Bedienung“ B8b)', () => {
     expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
   });
 
+  it('Tipp auf den schon gewählten Reiter wechselt noch einmal dorthin (Rückweg aus Unterseiten, wie vor B2)', () => {
+    const wechsel = vi.fn();
+    const oeffnen = vi.fn();
+    render(
+      <ErweiterungsSeite
+        zustand={zustand}
+        app="Test"
+        bereiche={bereiche(wechsel)}
+        einstellungen={{ onOeffnen: oeffnen, offen: false }}
+        onNochmal={() => {}}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Start' }));
+    expect(wechsel).toHaveBeenCalledWith('start');
+    expect(oeffnen).not.toHaveBeenCalled();
+  });
+
   it('Einstellungen: letzter Reiter, öffnet das Fenster der App und wechselt keinen Bereich', () => {
     const wechsel = vi.fn();
     const oeffnen = vi.fn();

@@ -193,8 +193,7 @@ describe('Termine im Reiter (E3-2)', () => {
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     await screen.findByRole('button', { name: 'Weitere Wochen laden' });
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
-    // Die Reiterleiste ignoriert einen Tipp auf den schon gewählten Reiter – erst warten, bis „Start“ gewählt ist
-    // (die Adresse wechselt über `hashchange`, nicht gleichzeitig).
+    // Erst warten, bis „Start“ gewählt ist (die Adresse wechselt über `hashchange`, nicht gleichzeitig).
     await waitFor(() =>
       expect(
         within(bereiche).getByRole('button', { name: 'Start' }).getAttribute('aria-pressed'),

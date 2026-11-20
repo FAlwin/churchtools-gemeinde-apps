@@ -1,6 +1,6 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3a-3c (20.11.2026) – noch kein Release.** W3a-3c: die Seiten-Vorschau zieht nach dem Speichern im Fenster „Einstellungen“ sofort nach (siehe dort). Davor (W3a-3b) neu: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
+> **Stand: W3b-1 (20.11.2026) – noch kein Release.** W3b-1: Rechte beim Einrichten (Stufen je Rolle), „Wer darf was“ im Fenster „Einstellungen“, Zugang aus den eigenen Rechten, Redakteure in der Oberfläche – siehe „Wer darf was – Stand W3b-1“. Davor W3a-3c: die Seiten-Vorschau zieht nach dem Speichern im Fenster „Einstellungen“ sofort nach (siehe dort). Davor (W3a-3b) neu: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
 > eigenes CSS) und die Schriften in der Vorschau – siehe „Aussehen“ unten. Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
 > anlegen und löschen – W3a-1) und das **Bearbeiten direkt in der Vorschau**: Abschnitte einfügen, gestalten, verschieben,
 > kopieren, löschen, Bausteine bearbeiten, hinzufügen, entfernen, Seite einstellen mit Menü, dazu die **Sperre** (eine Person
@@ -37,46 +37,75 @@ später der Bau-Dienst benutzt – so sieht die Vorschau aus wie die Website.
 
 Einmal, von einem **Admin** (Recht „Gruppen verwalten“, dazu bei der Erweiterung „Kategorien erstellen“):
 
-1. In ChurchTools eine **Gruppe „Website“** anlegen (oder eine vorhandene wählen) – dort arbeitet das Website-Team. Die
-   **Leitung** dieser Gruppe darf die Website bearbeiten.
+1. In ChurchTools eine **Gruppe „Website“** anlegen (oder eine vorhandene wählen) – dort arbeitet das Website-Team. Wer dort
+   eine Rolle mit Stufe „Redakteur“ oder „Leitung“ hat (Schritt 3), darf die Website bearbeiten.
 2. Die Erweiterung öffnen. Sie zeigt „Website einrichten“ mit einer Auswahl der Gruppen (eine Gruppe namens „Website“ ist
    vorgewählt) und dem Knopf **Einrichten**.
 3. **Einrichten** legt zwei Kategorien im Speicher der Erweiterung an – nacheinander, jede erst nach Nachsehen und danach
    nachgelesen:
    - **„Website: Entwürfe · <Gruppe>“** (Kürzel `entwuerfe-g<ID>`) – die Arbeitsfassung.
-   - **„Website: Veröffentlicht · <Gruppe>“** (Kürzel `veroeffentlicht-g<ID>`) – die freigegebene Fassung; in W3a-1 noch leer.
+   - **„Website: Veröffentlicht · <Gruppe>“** (Kürzel `veroeffentlicht-g<ID>`) – die freigegebene Fassung; noch leer, bis W3b-2
+     das Freigeben bringt.
 
    Die **Gruppe steckt im Kürzel**: So erfährt die Erweiterung, welche Gruppe gewählt wurde, ohne etwas Zusätzliches zu
    speichern. Gibt es mehrere solcher Kategorien, gilt die mit der kleinsten Kategorie-ID.
 
 4. Ist nur eine der beiden Kategorien da (ein früherer Versuch ist abgebrochen), ergänzt **Einrichten** die fehlende – die
    Gruppe steht dann fest.
+5. **Rechte (W3b-1):** Wer in ChurchTools **„Personen administrieren“** hat, sieht vor dem Knopf **Einrichten** die Rollen der
+   Gruppe mit einer Stufe je Rolle: **Kein Zugriff · Redakteur · Leitung** (vorbelegt: Rollen mit Leiter-Kennzeichen = Leitung, alle
+   anderen = Redakteur; der Gruppentyp „Dienst“ hat Leiter, Co-Leiter, Mitarbeiter, Coach, Organisator). **Einrichten** legt die
+   Kategorien an und **setzt danach die Rechte** – jeder Schritt nachgelesen. Scheitert das Setzen, stehen die Kategorien schon;
+   „Erneut versuchen“ wiederholt beides gefahrlos. Wer das Recht nicht hat, richtet nur die Kategorien ein; die Rechte setzt später ein
+   Admin mit diesem Recht (siehe „Wer darf was“).
 
-## Wer darf was – Stand W3a-2
+## Wer darf was – Stand W3b-1
 
-| Wer                                                    | sieht / darf                                                                                             |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| **Admin** („Gruppen verwalten“)                        | einrichten, alle Seiten sehen, anlegen, bearbeiten (auch „Eigenes HTML“), löschen                        |
-| **Leitung der gewählten Gruppe** (Rolle mit „Leitung“) | alle Seiten sehen, anlegen, bearbeiten, löschen – **sobald ChurchTools ihr die Kategorie zeigt** (s. u.) |
-| Mitarbeiter der Gruppe, alle anderen                   | freundlicher Hinweis, wer die Website bearbeiten darf; kein Editor                                       |
+**Die Stufen** (je Rolle der Gruppe, vergibt ein Admin beim Einrichten und später unter Einstellungen → „Wer darf was“):
 
-**Wichtig – zwei getrennte Schichten:**
+| Stufe                           | ChurchTools-Rechte der Rolle                                                                                                      | In der Oberfläche                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Kein Zugriff**                | nichts an den Kategorien der Website                                                                                              | Hinweis statt Editor                                                                                        |
+| **Redakteur**                   | Modul sehen · **Entwürfe:** Kategorie sehen, Daten sehen/anlegen/ändern/löschen · **Veröffentlicht:** nur Kategorie + Daten sehen | Reiter „Seiten“ und „Freigaben“; **kein** Aussehen, **keine** Einstellungen, kein Menü, kein „Eigenes HTML“ |
+| **Leitung**                     | wie Redakteur, dazu **Veröffentlicht** anlegen/ändern/löschen                                                                     | alles, auch Aussehen, Einstellungen, Menü, „Eigenes HTML“                                                   |
+| **Admin** („Gruppen verwalten“) | unabhängig von der Rolle                                                                                                          | alles, dazu Einrichten                                                                                      |
 
-1. Die **Oberfläche** zeigt den Editor nur Admins und der Leitung der Gruppe (`shared/website/zugang.ts`). Leitung ist, wer
-   eine **aktive** Mitgliedschaft mit einer Rolle hat, die ChurchTools als Leitung führt (`isLeader`). Die Rechteabfrage
-   `GET /permissions/internal/groups/{id}` taugt dafür nicht: Sie meldet einzelne Rechte (z. B. `+create group`), die auch
-   Organisatoren haben, die keine Leitung sind.
-2. Der **Schutz der Daten** sind allein die **Rechte an den Kategorien** in ChurchTools. Die setzt in W3a-1 **die Verwaltung von
-   Hand**: unter _Administration → Berechtigungen_ bei der Erweiterung „Website“ für die **Leiter-Rolle der Gruppe**
-   „Modul sehen“ und für die Kategorie „Entwürfe“ „Daten sehen“, „anlegen“, „ändern“, „löschen“. Ohne diese Rechte sieht die
-   Leitung die Kategorien nicht – die Erweiterung zeigt ihr dann „noch nicht eingerichtet, oder dir fehlt das Recht“. Das
-   Setzen an den Rollen übernimmt mit **W3b** die Erweiterung selbst (wie beim Organigramm).
+**Online geht technisch nur, was eine Leitung in „Veröffentlicht“ schreibt** (der spätere Bau-Dienst liest nur diese Kategorie).
+Redakteure lesen „Veröffentlicht“, damit die Oberfläche später „online / geändert seit der Freigabe“ zeigen kann (gemessen W3b-0:
+lesen `200`, schreiben `401`).
 
-„Eigenes HTML“ (wird unverändert auf die Website übernommen) darf nur die Leitung einfügen und ändern: Die Oberfläche fragt dafür
-`darfEigenesHtml` (`shared/website/zugang.ts`); in W3a haben ohnehin nur Admins und die Leitung Zugang, W3b speist dort die Rolle
-der Redakteure ein. Auch das ist die Regel der Oberfläche, nicht der Schutz der Daten.
+**Wie die Oberfläche den Zugang bestimmt** (`shared/website/zugang.ts`, `website/src/start.ts`): aus den **eigenen Rechten** der
+Person, `GET /permissions/global` → Block `website`. Wer in „Entwürfe“ **und** „Veröffentlicht“ schreiben darf (anlegen, ändern **und**
+löschen – Speichern braucht alle drei), ist **Leitung**; nur in „Entwürfe“ = **Redakteur**; sonst hat sie keinen Zugang. Rechte an
+fremden Kategorien zählen nicht. Die Gruppenrolle (Leiter-Kennzeichen) spielt dabei **keine** Rolle mehr; sie bestimmt nur die
+Vorbelegung beim Einrichten und den Hinweis „Die Rechte für die Website sind noch nicht eingerichtet“, wenn jemand die Gruppe leitet,
+aber keine Rechte hat. Auch das ist die Regel der Oberfläche; **den Schutz der Daten bilden die Rechte in ChurchTools**.
 
-Die Kategorie „Veröffentlicht“ bekommt in W3a keine Schreibrechte außer für Admins.
+**„Wer darf was“ im Fenster „Einstellungen“** (nur sichtbar, wenn die Person „Personen administrieren“ hat):
+`website/src/WerDarfWas.tsx` zeigt je aktiver Rolle die Stufe, **abgeleitet aus den Rechten in ChurchTools** (`stufeAus`) – die Stufe
+wird nirgends zusätzlich gespeichert. Entspricht eine Rolle keiner Stufe genau (von Hand verändert, ein früherer Versuch ist
+abgebrochen), steht dort „Weicht ab“; gewählt ist dann der Vorschlag der Rolle. **Rechte setzen** wirkt sofort (unabhängig vom
+„Speichern“ der Einstellungen), richtet Soll gegen Ist aus (setzen, entziehen, ein Recht nachschieben, nachlesen) und meldet erst
+nach dem Nachlesen „gesetzt“. **Entzogen wird nur, was auf die beiden Kategorien der Website zeigt**; Rechte an anderen Kategorien
+oder Zusatzrechte bleiben. Berührt werden nur Rollen, die die Wahl nennt und die zur Gruppe gehören.
+
+**Prüfung beim Start** (nur für diese Admins, `website/src/RechteHinweis.tsx`): Haben die Rollen keine Rechte an der Website oder
+weicht eine von ihrer Stufe ab, steht oben ein ruhiger Hinweis mit dem Knopf „Wer darf was“. Lässt sich das nicht lesen, erscheint
+kein Hinweis.
+
+**Die Mechanik** (Rechte an Rollen lesen, Nummern aus `/permissions/definitions`, Soll gegen Ist, `nachschieben`, Nachlesen) steht in
+`shared/ct/rollenRechte.ts` – gemeinsam mit den Protokollen (`shared/protokolle/einrichten.ts` hat nur noch deren Stufen und
+Zusatzrechte). Die Website-Regeln (Stufen, Soll, Stufe aus Rechten, Hinweis) stehen in `shared/website/rechte.ts`, der Schreibteil in
+`website/src/rechte.ts`. Bewusst getrennt bleibt `shared/ct/gruppenart.ts` (Rechte an **Gruppenart**-Rollen, `group_type_role`): Dort
+wird nur ergänzt, nie entzogen; die Nummern-Suche (`modulRechtAus`) und der Schlüssel werden von dort benutzt.
+
+„Eigenes HTML“ (wird unverändert auf die Website übernommen) und **Aussehen, Einstellungen, Menü** (eigenes CSS gilt für die ganze
+Website) dürfen nur Leitung und Admin: `darfEigenesHtml` und `darfAussehenUndMenue` (`shared/website/zugang.ts`). Auch das ist die
+Regel der Oberfläche, nicht der Schutz der Daten.
+
+**Von Hand gesetzte Rechte (frühere Einrichtungen, z. B. die Test-Instanz):** Sie genügen weiter. Wer sie auf die neue Einrichtung
+überführen will, öffnet „Wer darf was“, prüft die Stufen und drückt **Rechte setzen**. Stehen bei einer Rolle zusätzlich Rechte an
+den beiden Kategorien, die zu keiner Stufe gehören, zeigt „Weicht ab“ das; „Rechte setzen“ entzieht sie.
 
 ## Wie die Daten im Speicher liegen
 
@@ -135,7 +164,7 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
 ## Die Oberfläche
 
 - **Reiter:** Seiten | Aussehen | Freigaben (am Computer oben, am Handy unten). „Freigaben“ zeigt bisher nur einen Hinweis
-  „kommt“.
+  „kommt“. **Redakteure** sehen nur Seiten und Freigaben (kein Aussehen, kein Reiter „Einstellungen“).
 - **Seiten:** links die Liste („Im Menü“ in der Reihenfolge des Menüs, „Weitere Seiten“; die Startseite ist markiert), rechts
   die **Vorschau** mit dem Umschalter **Computer | Handy** (390 px).
 - **Neue Seite** (grüner Knopf unter der Seitenliste, am Handy das runde grüne Plus unten rechts): Titel eingeben; der Pfad (die Adresse) entsteht daraus (Umlaute ausgeschrieben, bei Streit `-2`). Die Seite
@@ -145,7 +174,8 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
   `start-schriftzug`). Angelegt wird **nie von selbst**.
 - Demo ohne ChurchTools (nur beim Entwickeln): `npm run dev -w website`, dann `…/ccm/website/?demo` (Fälle: siehe
   `website/src/demo.ts`; u. a. `?demo=seiten` zum Durchspielen des Bearbeitens, `?demo=gesperrt` – jemand anderes bearbeitet die
-  Startseite –, `?demo=wackelt` – das erste Speichern scheitert vorübergehend). Im Demo-Modus geht **keine** Anfrage ins Netz:
+  Startseite –, `?demo=wackelt` – das erste Speichern scheitert vorübergehend; Rollen seit W3b-1: `?demo=redakteur`, `?demo=leitung`,
+  `?demo=leitung-ohne-rechte`, `?demo=rechte-leer`, `?demo=rechte-abweicht` – die Admin-Ansicht zeigt `?demo=seiten`). Im Demo-Modus geht **keine** Anfrage ins Netz:
   `fetch` wird ersetzt, was unbekannt ist, bekommt 404 und eine Warnung (`website/src/demo.test.ts`).
 
 ### Bearbeiten in der Vorschau (W3a-2)
@@ -295,6 +325,9 @@ Regel wie die Gesamtprüfung `pruefeWebsite`). Kontaktformular-Adresse und `noin
   Reiterwechsel versucht es wieder. Test: `website/src/EinstellungenInSeiten.test.tsx`. Weitere Kopien der Einstellungen gibt es
   nicht (`Seitenarbeit`, `Vorschau`, `AbschnittGestalten` bekommen sie als Eigenschaft von `Seiten`).
 - **Fremd gesperrt:** Das Fenster ist nur zum Lesen (Felder und „Speichern“ aus, Hinweis mit Namen).
+- **„Wer darf was“ (W3b-1)** steht unter den Einstellungen im selben Fenster, nur für Admins mit „Personen administrieren“; es hat
+  einen eigenen Knopf („Rechte setzen“, wirkt sofort) und ist von der Sperre der Einstellungen unabhängig (siehe „Wer darf was – Stand
+  W3b-1“). Leitung sieht das Fenster ohne diesen Bereich; Redakteure sehen es gar nicht.
 - **Regeln** (rein, getestet): `shared/website/einstellungen.ts` – Formular-Entwurf, Fußzeile hinzufügen/entfernen/verschieben,
   Grenze `FUSSZEILE_MAX`, `einstellungenMeldung` (Schema-Fehler in Worten; auch für „Aussehen“).
 
@@ -309,8 +342,7 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3a-3b Reiter „Einstellungen“ (Name, Fußzeile, Datenschutz-Link, Banner-Text) · W3b Redakteure,
-Untergruppen, Freigabe, Rechte an den Gruppenrollen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
+W3b-2 Freigabe (einreichen, freigeben, Reiter „Freigaben“) · W3b-3 Mail · W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 
 ## Release

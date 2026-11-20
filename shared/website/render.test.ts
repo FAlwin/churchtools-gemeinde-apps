@@ -434,6 +434,24 @@ describe('renderSeite', () => {
     },
   ]);
 
+  it('mit `stylesheetText` steht ein `<style>` statt des `<link>`; `</style>` im Text bricht nicht aus', () => {
+    const k = kontext({
+      seiten: [seite()],
+      stylesheetText: 'a{color:red}</style><script>x()</script><style>',
+    });
+    const doc = renderSeite(seite(), k);
+    expect(doc).not.toContain('<link rel="stylesheet"');
+    expect(doc).toContain('<style>a{color:red}<\\/style>');
+    expect(doc).not.toContain('</style><script>');
+  });
+
+  it('ohne `skriptAdresse` (oder leer) steht kein Seiten-Skript im Dokument', () => {
+    for (const skriptAdresse of [undefined, '']) {
+      const doc = renderSeite(seite(), kontext({ seiten: [seite()], skriptAdresse }));
+      expect(doc).not.toMatch(/<script\b/);
+    }
+  });
+
   it('vollständiges Dokument mit Titel, Sprache, Beschreibung, Stylesheet', () => {
     const k = kontext({ seiten: [seite(), zweite], menue: m });
     const doc = renderSeite(seite({ beschreibung: 'Kurz und gut' }), k);
@@ -441,6 +459,7 @@ describe('renderSeite', () => {
     expect(doc).toContain('<title>Startseite – Beispielgemeinde</title>');
     expect(doc).toContain('<meta name="description" content="Kurz und gut">');
     expect(doc).toContain('<link rel="stylesheet" href="/website.css">');
+    expect(doc).toContain('<script src="/website.js" defer></script>');
     expect(doc).toContain('<main id="inhalt"');
     expect(doc).toContain('<footer');
     expect(renderSeite(seite(), k)).not.toContain('name="description"');

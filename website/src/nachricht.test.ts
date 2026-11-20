@@ -32,6 +32,7 @@ describe('Nachrichten aus der Vorschau: nur bekannte Form, nur Zahlen', () => {
     expect(nachrichtLesen(M({ was: 'scroll', y: 120.4 }), SEITE)).toEqual(
       M({ was: 'scroll', y: 120 }),
     );
+    expect(nachrichtLesen(M({ was: 'bereit' }), SEITE)).toEqual(M({ was: 'bereit' }));
   });
 
   it('Stellen außerhalb des Bereichs werden ignoriert (null) – für jede Art', () => {

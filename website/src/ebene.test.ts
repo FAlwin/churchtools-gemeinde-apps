@@ -5,7 +5,7 @@ import { abschnitt, baustein, kontext, seite, spalte } from '@shared/website/web
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Icon, type IconName } from '@ui/icons/icons';
-import { ebeneHtml, ebeneSymbole, mitEbene, svgZuText } from './ebene';
+import { ebeneHtml, ebeneSymbole, mitEbene, nonceGueltig, seitenNonce, svgZuText } from './ebene';
 import skript from './ebene.skript.txt?raw';
 import { vorschauHtml } from './vorschauHtml';
 
@@ -57,6 +57,14 @@ afterEach(() => {
 });
 
 describe('Bearbeiten-Ebene im iframe (läuft hier im Dokument nach)', () => {
+  it('meldet sich nach dem Start als „bereit“ (sonst weiß die Erweiterung nicht, ob ChurchTools das Skript blockiert hat)', () => {
+    const senden = starten();
+    expect(senden.mock.calls.map((c) => c[0])).toContainEqual({
+      websiteEditor: true,
+      was: 'bereit',
+    });
+  });
+
   it('„Abschnitt einfügen“ steht vor, zwischen und nach den Abschnitten – und meldet die Stelle', () => {
     const senden = starten();
     const knoepfe = [...document.querySelectorAll<HTMLButtonElement>('.b-einfuegen button')];
@@ -192,6 +200,62 @@ describe('Symbole als Text, ohne react-dom/server', () => {
     ).toBe('<text x="1">a&lt;b</text>');
     expect(() => svgZuText(createElement(Icon, { name: 'plus' }))).toThrow();
     expect(svgZuText(null)).toBe('');
+  });
+});
+
+describe('Nonce (ChurchTools erlaubt Skripte nur mit ihr)', () => {
+  const NONCE = 'abcDEF0123456789+/=_-xyz';
+
+  it('eine gültige Nonce steht auf Skript UND Stil der Ebene', () => {
+    const html = ebeneHtml(0, NONCE);
+    expect(html).toContain(`<style nonce="${NONCE}">`);
+    expect(html).toContain(`<script nonce="${NONCE}">`);
+    expect(mitEbene('<body></body>', 0, NONCE)).toContain(`<script nonce="${NONCE}">`);
+    expect(
+      vorschauHtml(SEITE, { seiten: [], menue: null, einstellungen: null }, 'E', 'UTC', {
+        scroll: 0,
+        nonce: NONCE,
+      }),
+    ).toContain(`<script nonce="${NONCE}">`);
+  });
+
+  it('ohne Nonce (Demo, Entwicklung) bleiben Skript und Stil ohne Attribut', () => {
+    for (const n of [undefined, null, '']) {
+      const html = ebeneHtml(0, n);
+      expect(html).toContain('<script>');
+      expect(html).toContain('<style>');
+      expect(html).not.toContain('nonce');
+    }
+  });
+
+  it('eine ungültige Nonce wird nicht übernommen – nichts kann aus dem Attribut ausbrechen', () => {
+    for (const boese of [
+      'x" onload="alert(1)',
+      'kurz',
+      'a'.repeat(201),
+      '<b>aaaaaaaa',
+      'abcdefgh\n',
+    ]) {
+      expect(nonceGueltig(boese), boese).toBeNull();
+      const html = ebeneHtml(0, boese);
+      expect(html).not.toContain('nonce');
+      expect(html).not.toContain('onload');
+    }
+    expect(nonceGueltig(42)).toBeNull();
+    expect(nonceGueltig(NONCE)).toBe(NONCE);
+  });
+
+  it('seitenNonce liest die Eigenschaft `.nonce` (das Attribut ist im DOM leer) und prüft sie', () => {
+    document.head.innerHTML = '';
+    expect(seitenNonce()).toBeNull();
+    const s = document.createElement('script');
+    s.nonce = NONCE;
+    document.head.append(s);
+    // jsdom spiegelt `nonce` ins Attribut; hier zählt nur, dass die Eigenschaft gelesen wird.
+    expect(seitenNonce()).toBe(NONCE);
+    s.nonce = 'x" y';
+    expect(seitenNonce()).toBeNull();
+    document.head.innerHTML = '';
   });
 });
 

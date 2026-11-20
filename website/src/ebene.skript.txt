@@ -134,4 +134,7 @@
     { passive: true },
   );
   if (config.scroll > 0) window.scrollTo(0, config.scroll);
+
+  // „Ich laufe“: Bleibt das aus, hat ChurchTools das Skript blockiert, und die Erweiterung sagt es.
+  senden({ was: 'bereit' });
 })

@@ -264,7 +264,7 @@ export function BausteinFelder({
       return (
         <Feld
           label="HTML-Code"
-          hilfe="Wird unverändert auf die Website übernommen. Die Vorschau zeigt es abgeschottet."
+          hilfe="Wird unverändert auf die Website übernommen. Die Vorschau zeigt es abgeschottet – Skripte darin laufen dort in ChurchTools nicht (Sicherheitsregel von ChurchTools), auf der Website schon."
         >
           {(id) => (
             <textarea

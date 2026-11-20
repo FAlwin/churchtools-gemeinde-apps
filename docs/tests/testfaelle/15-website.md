@@ -25,7 +25,7 @@ einmal. Eine Person ohne Admin-Recht sieht keinen Einrichten-Knopf, sondern eine
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Einrichtung.tsx`, `website/src/einrichten.ts`, `website/src/start.ts`, `shared/website/einrichten.ts`
 - **Automatisiert:** teilweise – `website/src/Einrichtung.test.tsx`, `website/src/start.test.ts`, `shared/website/einrichten.test.ts` (Regeln, Laden, Auswahl); das echte Anlegen und die Rechte-Seite von ChurchTools nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026)
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
 
 </details>
 
@@ -48,7 +48,7 @@ Leitung die Rechte an den Kategorien noch nicht, steht „noch nicht eingerichte
 - **Priorität:** hoch
 - **Betrifft:** `website/src/App.tsx`, `website/src/start.ts`, `shared/website/zugang.ts`
 - **Automatisiert:** teilweise – `website/src/App.test.tsx`, `website/src/start.test.ts`, `shared/website/zugang.test.ts`; das echte Verhalten von Gruppenrollen und Kategorie-Rechten nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026)
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
 
 </details>
 
@@ -74,7 +74,7 @@ löschen** fragt erst nach. Nach dem Neuladen der Seite steht alles unverändert
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Seiten.tsx`, `website/src/NeueSeite.tsx`, `website/src/Vorschau.tsx`, `shared/website/speicher.ts`, `shared/website/seitenListe.ts`
 - **Automatisiert:** teilweise – `website/src/Seiten.test.tsx`, `shared/website/speicher.test.ts`, `shared/website/seitenListe.test.ts`; das echte Speichern in ChurchTools nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026)
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
 
 </details>
 
@@ -83,21 +83,24 @@ löschen** fragt erst nach. Nach dem Neuladen der Seite steht alles unverändert
 **Das brauchst du:** Eine Website mit Startseite (Test-Instanz), die Entwicklerwerkzeuge des Browsers.
 
 **Das muss passieren:** Das Vorschau-Fenster ist ein `iframe` mit `sandbox="allow-scripts"` (kein `allow-same-origin`). Die Vorschau
-sieht gestaltet aus (Stylesheet greift), Bilder sind graue Platzhalter, es werden keine Schriftdateien und keine Bilder von
-ChurchTools geladen.
+sieht gestaltet aus (Stylesheet greift als `<style>`), Bilder sind graue Platzhalter, es werden keine Schriftdateien und keine
+Bilder von ChurchTools geladen. Beim Bearbeiten erscheinen in ChurchTools die Leisten über den Abschnitten (die Ebene läuft mit der
+Nonce der Seite).
 
 1. Die Startseite in der Vorschau ansehen: gestaltet, mit grauen Platzhalter-Bildern.
 2. In den Entwicklerwerkzeugen das `iframe` prüfen: Attribut `sandbox` ist genau `allow-scripts`.
 3. Reiter „Netzwerk“: beim Wechsel zwischen Seiten entstehen keine Anfragen für Schrift- oder Bilddateien.
-4. Zeigt die Vorschau gar nichts oder ungestaltet: das ist der Hinweis, dass die Content-Security-Policy von ChurchTools
-   `data:`-Adressen für Stylesheets sperrt – dann bitte melden (Ausweichlösung ist vorbereitet, `website/src/vorschauHtml.ts`).
+4. Beim Überfahren eines Abschnitts erscheint die Bearbeiten-Leiste. Erscheint stattdessen nach etwa 2 Sekunden der Hinweis „Bearbeiten
+   in der Vorschau ist gerade nicht möglich – ChurchTools hat das Bearbeiten-Skript blockiert“: Seite neu laden; bleibt es, bitte
+   melden (Content-Security-Policy, siehe `docs/betrieb/WEBSITE.md`). Skripte im Baustein „Eigenes HTML“ laufen in der Vorschau
+   bewusst nicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `website/src/Vorschau.tsx`, `website/src/vorschauHtml.ts`, `shared/website/website.css`
-- **Automatisiert:** teilweise – `website/src/Vorschau.test.tsx` (Attribut, `srcdoc`, `data:`-Adressen), `shared/website/stylesheet.test.ts`; wie ChurchTools das eingebettete Dokument behandelt (CSP) nur in der Test-Instanz
-- **Historie:** neu mit W3a-1 (20.11.2026)
+- **Automatisiert:** teilweise – `website/src/Vorschau.test.tsx` (Attribut, `srcdoc`, `<style>`, Nonce, Hinweis bei fehlender „bereit“-Meldung), `website/src/ebene.test.ts`, `shared/website/stylesheet.test.ts`; wie ChurchTools das eingebettete Dokument behandelt (CSP) nur in der Test-Instanz
+- **Historie:** neu mit W3a-1 (20.11.2026); angepasst an die gemessene Content-Security-Policy mit W3a-2b (20.11.2026)
 
 </details>
 

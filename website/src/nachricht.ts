@@ -29,10 +29,12 @@ const schema = z.discriminatedUnion('was', [
   z.object({ ...kopf, was: z.literal('baustein'), i: zahl, j: zahl, k: zahl }),
   z.object({ ...kopf, was: z.literal('baustein-neu'), i: zahl, j: zahl }),
   z.object({ ...kopf, was: z.literal('scroll'), y: z.number().finite() }),
+  // „Die Ebene läuft“ – ohne Inhalt. Bleibt sie aus, blockiert ChurchTools das Skript (`Vorschau.tsx` zeigt dann einen Hinweis).
+  z.object({ ...kopf, was: z.literal('bereit') }),
 ]);
 
 export type EditorNachricht = z.infer<typeof schema>;
-export type EditorAktion = Exclude<EditorNachricht, { was: 'scroll' }>;
+export type EditorAktion = Exclude<EditorNachricht, { was: 'scroll' | 'bereit' }>;
 
 /**
  * Eine Nachricht der Vorschau lesen – `null`, wenn sie keine gültige ist (falsche Form, oder die Stelle gibt es auf dieser
@@ -43,6 +45,8 @@ export function nachrichtLesen(daten: unknown, seite: Seite): EditorNachricht | 
   if (!r.success) return null;
   const m = r.data;
   switch (m.was) {
+    case 'bereit':
+      return m;
     case 'scroll':
       return { ...m, y: Math.min(1_000_000, Math.max(0, Math.round(m.y))) };
     case 'einfuegen':

@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
-import { Segment } from '@ui/bedienung/Segment';
 import { SuchLupe } from '@ui/bedienung/SuchLupe';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
@@ -15,8 +13,6 @@ import { Suche } from './Suche';
 import { protokollSchluessel } from '@shared/protokolle/sitzungen';
 import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
 import { useFaellige } from './useFaellige';
-import { ReiterZaehler } from '@ui/bedienung/ReiterZaehler';
-import { reiterName } from '@shared/protokolle/hinweis';
 
 /**
  * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Verwaltung. Am
@@ -106,41 +102,15 @@ export function App() {
         onSchliessen={zu}
       />
     ) : undefined;
-  const oben = (
-    <>
-      {mitReitern && !handy && (
-        <Segment
-          value={aktiv}
-          options={mitZaehler.map((r) => ({
-            value: r.id,
-            label: r.zaehler ? (
-              <>
-                {r.label} <ReiterZaehler zahl={r.zaehler} />
-              </>
-            ) : (
-              r.label
-            ),
-            name: r.zaehler ? reiterName(r.zaehler) : undefined,
-          }))}
-          onChange={wechseln}
-          ariaLabel="Bereiche"
-          verbunden
-        />
-      )}
-      {lupe}
-    </>
-  );
-  const unten =
-    mitReitern && handy ? (
-      <ReiterLeiste reiter={mitZaehler} aktiv={aktiv} onWechsel={wechseln} />
-    ) : undefined;
+  const bereiche = mitReitern ? { reiter: mitZaehler, aktiv, onWechsel: wechseln } : undefined;
 
   return (
     <ErweiterungsSeite
       app="Protokolle"
       zustand={zustand}
-      reiter={oben}
-      unten={unten}
+      bereiche={bereiche}
+      handy={handy}
+      lupe={lupe}
       gruss={aktiv === 'start' && !suche.offen}
       onNochmal={laden}
     >

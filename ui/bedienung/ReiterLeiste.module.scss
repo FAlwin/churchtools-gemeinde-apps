@@ -101,3 +101,11 @@
     font-weight: 400;
   }
 }
+
+// **Flach** (`flach`): die Zeile darum zeichnet den Rand – hier nur die Reiter, links bündig, ohne Kasten.
+.oben.flach {
+  padding: 0;
+  background: none;
+  border-bottom: 0;
+  gap: 22px;
+}

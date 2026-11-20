@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { darfEigenesHtml } from '@shared/website/zugang';
-import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
-import { Segment } from '@ui/bedienung/Segment';
+import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Einrichtung } from './Einrichtung';
 import { Hinweis, Leise } from './Hinweis';
@@ -60,28 +59,15 @@ export function App() {
   const editor = start?.stand === 'fertig' && start.zugang !== null ? start : null;
   const entwuerfe = editor?.einrichtung?.entwuerfe ?? null;
 
-  const oben =
-    editor && !handy ? (
-      <Segment
-        value={aktiv}
-        options={REITER.map((r) => ({ value: r.id, label: r.label }))}
-        onChange={setAktiv}
-        ariaLabel="Bereiche"
-        verbunden
-      />
-    ) : undefined;
-  const unten =
-    editor && handy ? (
-      <ReiterLeiste reiter={REITER} aktiv={aktiv} onWechsel={setAktiv} />
-    ) : undefined;
+  const bereiche = editor ? { reiter: REITER, aktiv, onWechsel: setAktiv } : undefined;
 
   return (
     <ErweiterungsSeite
       app="Website"
       zustand={zustand}
       onNochmal={laden}
-      reiter={oben}
-      unten={unten}
+      bereiche={bereiche}
+      handy={handy}
       gruss={!editor}
     >
       {start && !editor && <Zugangsseite start={start} onEingerichtet={laden} />}

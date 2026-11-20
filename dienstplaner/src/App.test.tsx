@@ -114,16 +114,18 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     window.location.hash = '';
   });
 
-  it('Computer: Reiter oben als Umschalter, Planen nur mit Recht; Gruß nur auf Start', async () => {
+  it('Computer: Reiter oben (unterstrichen), Planen nur mit Recht; Gruß nur auf Start', async () => {
     breite(false);
     laden.mockResolvedValue(start([3]));
     render(<App />);
-    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
     expect(
       within(bereiche)
         .getAllByRole('button')
         .map((b) => b.textContent),
     ).toEqual(['Start', 'Dienste', 'Planen', 'Wann kann ich?']);
+    // Im Kopf der Seite, eine Reiterzeile unter dem App-Namen – am Rechner (R4/E4).
+    expect(bereiche.closest('header')).not.toBeNull();
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     expect(window.location.hash).toBe('#/termine');
@@ -136,7 +138,7 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     window.location.hash = '#/planen';
     laden.mockResolvedValue(start([]));
     render(<App />);
-    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
     expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();
   });
@@ -147,7 +149,8 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     render(<App />);
     const leiste = await screen.findByRole('navigation', { name: 'Bereiche' });
     expect(within(leiste).getAllByRole('button')).toHaveLength(4);
-    expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
+    // Nicht im Kopf der Seite – dort stehen die Reiter nur am Rechner.
+    expect(leiste.closest('header')).toBeNull();
   });
 
   it('beim Laden und im Fehlerfall noch keine Reiter', async () => {
@@ -155,7 +158,7 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     laden.mockRejectedValue(new ApiError(502, 'x'));
     render(<App />);
     await screen.findByRole('button', { name: 'Erneut versuchen' });
-    expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Bereiche' })).toBeNull();
   });
 });
 
@@ -170,12 +173,19 @@ describe('Termine im Reiter (E3-2)', () => {
     laden.mockResolvedValue(start([3]));
     termineLaden.mockResolvedValue(KEINE_TERMINE);
     render(<App />);
-    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
     // Schon die Startseite braucht die Termine („Als Nächstes“, deine Dienste).
     await waitFor(() => expect(termineLaden).toHaveBeenCalledTimes(1));
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
+    // Die Reiterleiste ignoriert einen Tipp auf den schon gewählten Reiter – erst warten, bis „Start“ gewählt ist
+    // (die Adresse wechselt über `hashchange`, nicht gleichzeitig).
+    await waitFor(() =>
+      expect(
+        within(bereiche).getByRole('button', { name: 'Start' }).getAttribute('aria-pressed'),
+      ).toBe('true'),
+    );
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
     expect(termineLaden).toHaveBeenCalledTimes(1);
@@ -336,7 +346,7 @@ describe('Planen für Gruppenleiter (E3-4)', () => {
     breite(false);
     laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: true }]));
     render(<App />);
-    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Planen' }));
     expect(window.location.hash).toBe('#/planen');
     expect(
@@ -348,7 +358,7 @@ describe('Planen für Gruppenleiter (E3-4)', () => {
     breite(false);
     laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: false }]));
     render(<App />);
-    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
     expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
   });
 });
@@ -402,7 +412,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
     // Statt der Liste, nicht daneben. (Über die Kennung – im Termin heißt die Karte der Dienste ebenfalls „Dienste“.)
     expect(document.getElementById('termine-titel')).toBeNull();
-    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    const bereiche = screen.getByRole('navigation', { name: 'Bereiche' });
     expect(
       within(bereiche).getByRole('button', { name: 'Dienste' }).getAttribute('aria-pressed'),
     ).toBe('true');
@@ -443,7 +453,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     expect((await screen.findByRole('status', { name: 'Von der Startseite' })).textContent).toMatch(
       /^Nur Technik/,
     );
-    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    const bereiche = screen.getByRole('navigation', { name: 'Bereiche' });
     expect(
       within(bereiche).getByRole('button', { name: 'Planen' }).getAttribute('aria-pressed'),
     ).toBe('true');
@@ -467,7 +477,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
     expect(vi.mocked(ladeTermin).mock.calls[0][1]).toBe(7);
     expect(screen.queryByText('Hallo Alwin')).toBeNull();
-    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    const bereiche = screen.getByRole('navigation', { name: 'Bereiche' });
     fireEvent.click(
       screen.getAllByRole('button', { name: 'Start' }).find((b) => !bereiche.contains(b))!,
     );

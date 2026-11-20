@@ -175,6 +175,21 @@ describe('App (S1)', () => {
     expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
   });
 
+  it('B2: Rechner – die Lupe sitzt rechts neben den unterstrichenen Reitern; Handy – neben dem App-Namen, Reiter unten', async () => {
+    breite(false);
+    const { unmount } = render(<App />);
+    const lupe = await screen.findByRole('button', { name: 'Suchen' });
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' });
+    expect(nav.nextElementSibling).toBe(lupe);
+    expect(nav.closest('header')).not.toBeNull();
+    unmount();
+    breite(true);
+    render(<App />);
+    const handyLupe = await screen.findByRole('button', { name: 'Suchen' });
+    expect(handyLupe.closest('header')).not.toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Bereiche' }).closest('header')).toBeNull();
+  });
+
   it('S3-4b: die Lupe klappt die Suche auf – sie ersetzt den Inhalt, der Gruß verschwindet', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Suchen' }));

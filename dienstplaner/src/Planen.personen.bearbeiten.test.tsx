@@ -431,16 +431,16 @@ describe('„Tags verwalten“ (PL-2)', () => {
 
   it('die Dienstgruppe wählt man nur unter denen, die man ändern darf', async () => {
     const { f } = await tagsFenster({ stand: { 3: 'bereit', 4: 'bereit' } });
-    const wahl = within(f).getByRole('group', { name: 'Dienstgruppe' });
+    const wahl = within(f).getByRole('combobox', { name: 'Dienstgruppe' });
     expect(
       within(wahl)
-        .getAllByRole('button')
-        .map((b) => b.textContent),
+        .getAllByRole('option')
+        .map((o) => o.textContent),
     ).toEqual(['Technik', 'Musik']);
     cleanup();
     const { f: f2 } = await tagsFenster({ stand: { 3: 'nur-lesen', 4: 'bereit' } });
     // Nur eine bearbeitbare Gruppe: keine Wahl, sondern ihr Name.
-    expect(within(f2).queryByRole('group', { name: 'Dienstgruppe' })).toBeNull();
+    expect(within(f2).queryByRole('combobox', { name: 'Dienstgruppe' })).toBeNull();
     expect(within(f2).getByText('Musik')).toBeTruthy();
   });
 

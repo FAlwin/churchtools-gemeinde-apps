@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
-import { Segment } from '@ui/bedienung/Segment';
 import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import {
@@ -106,15 +105,18 @@ export function TagsVerwaltenFenster({
       }
     >
       {gruppen.length > 1 ? (
-        <div className={styles.gruppenWahl}>
-          <Segment<string>
-            value={String(gruppe.id)}
-            options={gruppen.map((g) => ({ value: String(g.id), label: g.name }))}
-            onChange={(v) => setGruppeId(Number(v))}
-            ariaLabel="Dienstgruppe"
-            verbunden
-          />
-        </div>
+        // Auswahlfeld statt Umschalter: der Kasten-Umschalter ist nur für die Ansichtswahl da (R4), und bei bis zu sieben
+        // Dienstgruppen wäre er am Handy zu eng.
+        <label className={styles.gruppenWahl}>
+          <span>Dienstgruppe</span>
+          <select value={gruppe.id} onChange={(e) => setGruppeId(Number(e.target.value))}>
+            {gruppen.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </label>
       ) : (
         <p className={werKann.unter}>{gruppe.name}</p>
       )}

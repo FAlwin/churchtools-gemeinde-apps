@@ -380,7 +380,7 @@ function MarkdownFeld({
   return (
     <Feld
       label={label}
-      hilfe="Ein Absatz beginnt nach einer leeren Zeile. Die Knöpfe setzen die Zeichen für dich."
+      hilfe="Ein Absatz beginnt nach einer leeren Zeile. Die Knöpfe setzen die Zeichen für dich. Ein \ davor macht ein Sonderzeichen (* [ ] #) zum normalen Zeichen."
     >
       {(id) => (
         <>

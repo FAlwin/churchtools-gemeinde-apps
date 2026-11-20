@@ -118,7 +118,7 @@ export function markdownZuHtml(text: string): string {
     const ueberschrift = /^###[ \t]+(.+)$/.exec(zeile);
     if (ueberschrift) {
       schliessen();
-      aus.push(`<h3>${inline(ueberschrift[1].trim())}</h3>`);
+      aus.push(`<h3>${inline(zeilenanfang(ueberschrift[1].trim()))}</h3>`);
       continue;
     }
     const punkt = /^-[ \t]+(.*)$/.exec(zeile);
@@ -129,7 +129,7 @@ export function markdownZuHtml(text: string): string {
         schliessen();
         offen = { art: liste, zeilen: [] };
       }
-      offen.zeilen.push((punkt ?? nummer)![1]);
+      offen.zeilen.push(zeilenanfang((punkt ?? nummer)![1]));
       continue;
     }
     if (offen?.art !== 'p') {
@@ -245,6 +245,27 @@ export function markdownAusBloecken(bloecke: readonly TextBlock[]): string {
     }
   }
   return stuecke.join('\n\n');
+}
+
+/**
+ * Lässt sich diese Formatierung eindeutig als Markdown schreiben? **Nicht**, wenn zwei ausgezeichnete Stücke ohne Leerzeichen
+ * aneinanderstoßen (`*a*` direkt vor `**b**` = `*a***b**`): Dort liest `markdownZuHtml` die Sternchen anders, als sie gemeint
+ * waren, und der Text stimmte nur noch zufällig. Ein Link dazwischen (`](`…`)`) oder ein Leerzeichen trennt sauber.
+ */
+export function formatierungEindeutig(bloecke: readonly TextBlock[]): boolean {
+  const ausgezeichnet = (l: TextLauf) => l.fett === true || l.kursiv === true;
+  for (const b of bloecke) {
+    for (const z of zeilen(b.laeufe)) {
+      for (let n = 1; n < z.length; n++) {
+        const a = z[n - 1];
+        const c = z[n];
+        if (a.link !== c.link || !ausgezeichnet(a) || !ausgezeichnet(c)) continue;
+        if (/\s$/.test(a.t) || /^\s/.test(c.t)) continue;
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /**

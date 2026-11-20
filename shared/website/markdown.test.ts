@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
+  formatierungEindeutig,
   istLinkAdresse,
   markdownAusBloecken,
   markdownSichtbarerText,
@@ -112,6 +113,9 @@ describe('Escape: ein Backslash macht das Zeichen zum Zeichen (W3c-1)', () => {
     expect(markdownZuHtml('\\### kein Titel')).toBe('<p>### kein Titel</p>');
     // in der zweiten Zeile eines Absatzes genauso
     expect(markdownZuHtml('Text\n\\- kein Punkt')).toBe('<p>Text<br>- kein Punkt</p>');
+    // Listenpunkt und Zwischenüberschrift: am Anfang ihres Textes genauso
+    expect(markdownZuHtml('- \\- Strich')).toBe('<ul><li>- Strich</li></ul>');
+    expect(markdownZuHtml('### \\- Strich')).toBe('<h3>- Strich</h3>');
     // …aber nur dort: mitten in der Zeile bleibt `\-` wie es steht
     expect(markdownZuHtml('a \\- b')).toBe('<p>a \\- b</p>');
   });
@@ -257,5 +261,25 @@ describe('Rückweg: getippter Text → Markdown → HTML zeigt exakt den getippt
       expect(istLinkAdresse(ok), ok).toBe(true);
     for (const nein of ['javascript:x', '//evil.de', 'a b', '', 'data:text/html,x', '/\\x'])
       expect(istLinkAdresse(nein), nein).toBe(false);
+  });
+
+  it('formatierungEindeutig: ausgezeichnete Stücke ohne Leerzeichen dazwischen sind unklar – mit Leerzeichen oder Link nicht', () => {
+    const lauf = (t: string, o: object = {}) => ({ t, ...o });
+    const ok = (laeufe: TextBlock['laeufe']) => formatierungEindeutig([{ art: 'p', laeufe }]);
+    expect(ok([lauf('a', { kursiv: true }), lauf('b', { fett: true })])).toBe(false);
+    expect(ok([lauf('a', { fett: true }), lauf('b', { fett: true, kursiv: true })])).toBe(false);
+    expect(ok([lauf('a', { kursiv: true }), lauf(' b', { fett: true })])).toBe(true);
+    expect(ok([lauf('a ', { kursiv: true }), lauf('b', { fett: true })])).toBe(true);
+    expect(ok([lauf('a', { kursiv: true }), lauf('x'), lauf('b', { fett: true })])).toBe(true);
+    expect(
+      ok([lauf('a', { kursiv: true, link: '/a' }), lauf('b', { fett: true, link: '/b' })]),
+    ).toBe(true);
+    // Zeilenumbruch trennt
+    expect(ok([lauf('a\n', { kursiv: true }), lauf('b', { fett: true })])).toBe(true);
+    // und was als „unklar“ gilt, ist es wirklich: ohne die Probe stimmte das Ergebnis nicht
+    const md = markdownAusBloecken([
+      { art: 'p', laeufe: [lauf('a', { kursiv: true }), lauf('b', { fett: true })] },
+    ]);
+    expect(markdownZuHtml(md)).not.toBe('<p><em>a</em><strong>b</strong></p>');
   });
 });

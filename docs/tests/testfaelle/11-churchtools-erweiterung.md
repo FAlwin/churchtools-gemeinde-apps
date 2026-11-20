@@ -386,8 +386,8 @@ vier Farben (grau, blau, grün, rot).
    **Einstellungen**. Anklicken öffnet dasselbe Fenster wie früher der Knopf neben „Hallo …“ (der ist weg); schließen – die
    Seite dahinter ist unverändert. In den Anmeldungen steht **Neue Veranstaltung** weiterhin rechts neben „Hallo …“.
 3. Als Person ohne das Recht: kein Reiter **Einstellungen** (Anmeldungen und Gebetsabend dann ganz ohne Reiterleiste).
-4. **Dienstplaner** und **Website** haben keine Einstellungen als Fenster: Dort ist nichts verschwunden. In den
-   **Protokollen** heißt der letzte Reiter (nur Admins) seit „Ruhige Bedienung“ R13 **Einstellungen** – vorher
+4. Der **Dienstplaner** hat keine Einstellungen: Dort ist nichts verschwunden. Die **Website** hat ebenfalls den letzten
+   Reiter **Einstellungen** (Fenster). In den **Protokollen** heißt der letzte Reiter (nur Admins) seit „Ruhige Bedienung“ R13 **Einstellungen** – vorher
    „Verwaltung“; er zeigt eine Seite statt eines Fensters.
 5. Am Handy (schmal): die Reiter stehen unten; **Einstellungen** ist der letzte, in den Anmeldungen und im Gebetsabend gibt
    es nur **Start** und **Einstellungen**.

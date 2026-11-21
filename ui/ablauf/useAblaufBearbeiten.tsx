@@ -36,6 +36,9 @@ import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
 import { SortableRow, type ZeilenAktionen } from './AgendaSortableRow';
 import { BeginnLinie, EndeLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
+import { InfoTabelle } from './InfoTabelle';
+import type { InfoZellen } from './InfoZelle';
+import { infosErsetzt } from './infoTabellenRegeln';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
 import { AblageStelle } from './AblaufZiehBereich';
 import { punktDaten, useZiehBereich, ziehId, type ZiehSpalte } from './ablaufZiehen';
@@ -127,8 +130,10 @@ interface BearbeitenBasis<T extends AblaufZeile> {
    */
   gruppenVerborgen?: boolean;
   /**
-   * Die als Spalten gewählten Gruppen (Knopf „Spalten“): Beim Bearbeiten stehen ihre Infos als Zeile unter dem Punkt
-   * (Alwin, 02.11.2026: „sonst sieht man ja gar nicht, was schon eingetragen wurde“; Entwurf Bild 3).
+   * Die als Spalten gewählten Gruppen (Knopf „Spalten“): Beim Bearbeiten stehen ihre Infos am Rechner/iPad weiter als
+   * **Spalten** wie in der Ansicht und sind **direkt in der Zelle bearbeitbar** (`InfoZelle`, Alwin 21.11.2026, Entwurf
+   * `ablauf-infos-bearbeiten.html` Variante B); am Handy als Zeile unter dem Punkt (Alwin, 02.11.2026: „sonst sieht man ja
+   * gar nicht, was schon eingetragen wurde“), in der Matrix (`schmal`) gar nicht.
    */
   infoSpalten?: readonly InfoGruppe[];
   /** Die Dienstgruppen, deren Infos man sieht – je eine Zeile im Punkt-Fenster (E6-4). */
@@ -324,6 +329,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               ...(fields.durationMin !== undefined
                 ? { durationMin: fields.durationMin > 0 ? fields.durationMin : null }
                 : {}),
+              ...(fields.infos !== undefined ? { infos: infosErsetzt(i.infos, fields.infos) } : {}),
             }
           : i,
       ),
@@ -382,6 +388,18 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   ];
   const optionen = optionenFuer({});
   const gesperrt = abgeschlossen ? () => zeigeSperrHinweis(o.sperrHinweis) : undefined;
+  // Die Infos als Tabelle: breit, nicht in der Matrix und mit gewählten Gruppen – sonst Zeile darunter bzw. keine Infos.
+  const infoZellenAn = !handy && !o.schmal && (o.infoSpalten?.length ?? 0) > 0;
+  const infoZellenFuer = (item: T): InfoZellen | undefined =>
+    infoZellenAn
+      ? {
+          gruppen: o.infoSpalten ?? [],
+          // Wirft bei Fehler – die Zelle zeigt die Meldung und behält den Text.
+          onSpeichern: (gruppeId, text, gesehen) =>
+            handleUpdate(item.id, { infos: { [gruppeId]: text } }, gesehen),
+          gesperrt,
+        }
+      : undefined;
 
   /**
    * Plus und Papierkorb an einer Zeile (nur mit Maus, Alwin 30.10.2026 – wie in ChurchTools): „… dahinter einfügen“
@@ -422,7 +440,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   ) : (
     <>
       Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren · Eintrag
-      antippen zum Bearbeiten.
+      antippen zum Bearbeiten{infoZellenAn ? ' · Zelle anklicken für Infos.' : '.'}
     </>
   );
 
@@ -430,52 +448,67 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   // wenn der Punkt in den Vorlauf kommt, sonst dahinter.
   const stelleVor = (i: number, vorLinie: boolean) =>
     platz?.index === i && platz.vorBeginn === vorLinie ? <AblageStelle /> : null;
+  const zeilen = (
+    <>
+      {localItems.map((item, i) => (
+        <Fragment key={item.id}>
+          {i === beginnBeiBearbeiten && (
+            <>
+              {stelleVor(i, true)}
+              <BeginnLinie zeit={o.beginn} />
+              {stelleVor(i, false)}
+            </>
+          )}
+          {i !== beginnBeiBearbeiten && platz?.index === i && <AblageStelle />}
+          <SortableRow
+            schmal={o.schmal}
+            item={item}
+            infoZeilen={infoZellenAn ? undefined : o.infoSpalten}
+            infoZellen={infoZellenFuer(item)}
+            vorlage={vorlage}
+            ohneStift={o.ohneStift}
+            aktionen={zeilenAktionen(item, i)}
+            {...(spalte !== undefined
+              ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
+              : {})}
+            onOpenActions={(it) => {
+              if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
+              setGeblaettert(false);
+              setActionItem(it);
+            }}
+          />
+        </Fragment>
+      ))}
+      {beginnBeiBearbeiten === localItems.length ? (
+        <>
+          {stelleVor(localItems.length, true)}
+          <BeginnLinie zeit={o.beginn} />
+          {stelleVor(localItems.length, false)}
+        </>
+      ) : (
+        platz?.index === localItems.length && <AblageStelle />
+      )}
+      {/* „Ende“ wie in der Ansicht (Matrix) – sonst spränge die Spalte beim Umschalten. */}
+      {o.schmal && ende && <EndeLinie zeit={ende} />}
+    </>
+  );
   const sortierbar = (
     <SortableContext
       items={localItems.map((i) => (spalte !== undefined ? ziehId(spalte, i.id) : i.id))}
       strategy={verticalListSortingStrategy}
     >
-      <div className={o.schmal ? `${zeile.flowList} ${zeile.schmal}` : styles.list}>
-        {localItems.map((item, i) => (
-          <Fragment key={item.id}>
-            {i === beginnBeiBearbeiten && (
-              <>
-                {stelleVor(i, true)}
-                <BeginnLinie zeit={o.beginn} />
-                {stelleVor(i, false)}
-              </>
-            )}
-            {i !== beginnBeiBearbeiten && platz?.index === i && <AblageStelle />}
-            <SortableRow
-              schmal={o.schmal}
-              item={item}
-              infoZeilen={o.infoSpalten}
-              vorlage={vorlage}
-              ohneStift={o.ohneStift}
-              aktionen={zeilenAktionen(item, i)}
-              {...(spalte !== undefined
-                ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
-                : {})}
-              onOpenActions={(it) => {
-                if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
-                setGeblaettert(false);
-                setActionItem(it);
-              }}
-            />
-          </Fragment>
-        ))}
-        {beginnBeiBearbeiten === localItems.length ? (
-          <>
-            {stelleVor(localItems.length, true)}
-            <BeginnLinie zeit={o.beginn} />
-            {stelleVor(localItems.length, false)}
-          </>
-        ) : (
-          platz?.index === localItems.length && <AblageStelle />
-        )}
-        {/* „Ende“ wie in der Ansicht (Matrix) – sonst spränge die Spalte beim Umschalten. */}
-        {o.schmal && ende && <EndeLinie zeit={ende} />}
-      </div>
+      {infoZellenAn ? (
+        // Dieselbe Tabelle wie die Ansicht (`InfoTabelle`): Zeilen, Bänder und Linien sind direkte Kinder des Rasters.
+        <InfoTabelle
+          infos={o.infoSpalten ?? []}
+          zeilen={localItems}
+          rahmenKlasse={styles.tabellenListe}
+        >
+          {() => zeilen}
+        </InfoTabelle>
+      ) : (
+        <div className={o.schmal ? `${zeile.flowList} ${zeile.schmal}` : styles.list}>{zeilen}</div>
+      )}
     </SortableContext>
   );
 

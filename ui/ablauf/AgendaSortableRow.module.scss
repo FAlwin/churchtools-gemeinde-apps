@@ -34,6 +34,15 @@
   font: inherit;
   color: inherit;
 }
+// Mit Info-Zellen (Info-Tabelle): Griff, Zeit, Inhalt, Zeilenknöpfe und Stift in der stehenden Punkt-Zelle – wie sonst in der
+// Zeile selbst. Die Zelle (`.punktZelle`) ist ein zweispaltiges Raster; der Inhalt nimmt beide Spalten.
+.punktInnen {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
 // „Bearbeiten"-Stift am rechten Rand – Akzentfarbe verdeutlicht, dass die Zeile antippbar ist.
 .rowEdit {
   flex-shrink: 0;

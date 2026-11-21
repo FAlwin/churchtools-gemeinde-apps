@@ -1363,12 +1363,15 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     expect(within(ablauf).getByText('Mikro 1')).toBeTruthy();
     // In ChurchTools selbst: das Foto im Kreis (die Musik-App auf dem eigenen Server zeigt nur Kürzel).
     expect(ablauf.querySelector('img')?.getAttribute('src')).toBe('https://ct.test/anna.jpg');
-    // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster; die gewählte Info steht unter dem Punkt (02.11.2026).
+    // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster; die gewählte Info bleibt am Rechner als Spalte stehen
+    // und ist direkt in der Zelle bearbeitbar (21.11.2026, vorher eine Zeile unter dem Punkt).
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
     expect(mehrEintragOder('Spalten wählen')).toBeNull();
-    expect(
-      within(screen.getByRole('region', { name: 'Ablauf' })).getByText(/Mikro 1/).textContent,
-    ).toBe('Technik: Mikro 1');
+    const zelle = within(screen.getByRole('region', { name: 'Ablauf' })).getByText(/Mikro 1/);
+    expect(zelle.textContent).toBe('Mikro 1');
+    expect(zelle.closest('button')?.getAttribute('aria-label')).toMatch(
+      /^Info für Technik bei „.*“ bearbeiten$/,
+    );
   });
 
   it('im Punkt-Fenster geändert: schreibt NUR diese Gruppe, der Punkt selbst bleibt', async () => {

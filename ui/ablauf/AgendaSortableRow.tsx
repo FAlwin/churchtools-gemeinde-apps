@@ -17,6 +17,7 @@ import { useAufklapp } from '../bedienung/useAufklapp';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { WeggelassenHinweis } from './AblaufTeile';
 import { ZeilenInhalt, ZeitSpalte } from './AblaufListe';
+import { InfoZelle, type InfoZellen } from './InfoZelle';
 import styles from './AgendaSortableRow.module.scss';
 import zeile from './AblaufListe.module.scss';
 
@@ -116,6 +117,7 @@ export function SortableRow<T extends AblaufZeile>({
   ziehId,
   daten,
   infoZeilen,
+  infoZellen,
   vorlage = false,
   ohneStift = false,
 }: {
@@ -124,8 +126,14 @@ export function SortableRow<T extends AblaufZeile>({
   ohneStift?: boolean;
   /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral – `ZeilenInhalt`. */
   vorlage?: boolean;
-  /** Die Infos der als Spalten gewählten Gruppen – als Zeile unter dem Punkt (02.11.2026). */
+  /** Am Handy: die Infos der gewählten Gruppen als Zeile unter dem Punkt (02.11.2026). */
   infoZeilen?: readonly InfoGruppe[];
+  /**
+   * Am Rechner/iPad: die gewählten Gruppen als **Zellen** rechts vom Punkt, direkt bearbeitbar (`InfoZelle`) – die Zeile
+   * ist dann eine Zeile der Info-Tabelle (`InfoTabelle`) und zeigt die Infos nicht noch einmal darunter. Überschriften
+   * bekommen keine Zellen (ein Band über alle Spalten wie in der Ansicht).
+   */
+  infoZellen?: InfoZellen;
   onOpenActions: (item: T) => void;
   /** Plus und Papierkorb beim Drüberfahren – ohne: keine. */
   aktionen?: ZeilenAktionen;
@@ -188,12 +196,8 @@ export function SortableRow<T extends AblaufZeile>({
   // Normale Zeile (E6-O1, Entwurf Variante 1 / B): Griff links, dann dieselbe Zeitspalte und derselbe Inhalt wie die
   // Ansicht – damit beim Umschalten nichts springt –, rechts nur der Stift (keine Kreise). Antippen öffnet das
   // Punkt-Fenster statt zu den Charts zu führen.
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`${zeile.flowRow} ${styles.mitKnoepfen}${item.song ? ' ' + zeile.songRow : ''}${weg}${schmal ? ' ' + styles.schmalZeile : ''}`}
-    >
+  const punkt = (
+    <>
       <button
         className={styles.dragCol}
         data-tour="edit-drag"
@@ -218,6 +222,33 @@ export function SortableRow<T extends AblaufZeile>({
         >
           <Icon name="pencil" size={15} stroke={2} />
         </button>
+      )}
+    </>
+  );
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${zeile.flowRow} ${styles.mitKnoepfen}${item.song ? ' ' + zeile.songRow : ''}${weg}${schmal ? ' ' + styles.schmalZeile : ''}`}
+    >
+      {infoZellen ? (
+        <>
+          {/* Die erste Rasterspalte: derselbe Aufbau wie ohne Zellen – nur in der stehenden Punkt-Zelle der Tabelle. */}
+          <div className={zeile.punktZelle}>
+            <div className={styles.punktInnen}>{punkt}</div>
+          </div>
+          {infoZellen.gruppen.map((g) => (
+            <InfoZelle
+              key={g.id}
+              item={item}
+              gruppe={g}
+              onSpeichern={infoZellen.onSpeichern}
+              gesperrt={infoZellen.gesperrt}
+            />
+          ))}
+        </>
+      ) : (
+        punkt
       )}
     </div>
   );

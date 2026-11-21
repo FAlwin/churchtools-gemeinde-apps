@@ -102,7 +102,7 @@ const aktionen = (over: Partial<AblaufAktionen> = {}): AblaufAktionen => ({
   ...over,
 });
 
-describe('useAblaufBearbeiten – Infos der gewählten Spalten (02.11.2026)', () => {
+describe('useAblaufBearbeiten – Infos der gewählten Spalten', () => {
   const mitInfo = [
     ablaufZeileAus(
       {
@@ -115,24 +115,124 @@ describe('useAblaufBearbeiten – Infos der gewählten Spalten (02.11.2026)', ()
       'Europe/Berlin',
     ),
   ];
+  const TECHNIK = [{ id: 3, name: 'Technik' }];
+  const handy = () =>
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  afterEach(() => vi.unstubAllGlobals());
+  const zelle = (name: string) => screen.getByRole('button', { name });
+  const ZELLE_TECHNIK = 'Info für Technik bei „Rückblickvideo“ bearbeiten';
 
-  it('stehen beim Bearbeiten als Zeile unter dem Punkt – sonst sähe man nicht, was schon drinsteht', () => {
-    render(
-      <Harness aktionen={aktionen()} items={mitInfo} infoSpalten={[{ id: 3, name: 'Technik' }]} />,
+  it('am Rechner: dieselbe Tabelle wie die Ansicht – Kopfzeile und Zellen, keine Zeile „Technik: …“ darunter', () => {
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={TECHNIK} />);
+    const liste = screen.getByTestId('liste');
+    expect(within(liste).getByText('Eintrag')).toBeTruthy();
+    expect(within(liste).getByText('Technik').textContent).toBe('Technik · 1');
+    expect(zelle(ZELLE_TECHNIK).textContent).toBe('Video abspielen');
+    expect(liste.textContent).not.toContain('Technik: Video abspielen');
+    // Zeile und Kopf stehen im selben Raster – Zeilen sind direkte Kinder, Punkt + je Gruppe eine Spalte.
+    const zeileEl = screen.getByText('Rückblickvideo').closest('div[class*="flowRow"]')!;
+    expect(zeileEl.children).toHaveLength(1 + TECHNIK.length);
+    expect(zeileEl.parentElement).toBe(
+      within(liste).getByText('Eintrag').parentElement!.parentElement,
     );
-    expect(screen.getByTestId('liste').textContent).toContain('Technik: Video abspielen');
+    expect(liste.textContent).toContain('Zelle anklicken für Infos.');
   });
 
-  it('nicht in der schmalen Form (Matrix)', () => {
-    render(
-      <Harness
-        aktionen={aktionen()}
-        items={mitInfo}
-        infoSpalten={[{ id: 3, name: 'Technik' }]}
-        schmal
-      />,
+  it('Überschriften bekommen keine Zellen (Band über alle Spalten)', () => {
+    const ueberschrift = ablaufZeileAus(
+      { id: 8, title: 'Anbetung', type: 'header' },
+      7,
+      'Europe/Berlin',
     );
+    render(
+      <Harness aktionen={aktionen()} items={[ueberschrift, ...mitInfo]} infoSpalten={TECHNIK} />,
+    );
+    expect(screen.queryByRole('button', { name: /Info für Technik bei „Anbetung“/ })).toBeNull();
+    expect(zelle(ZELLE_TECHNIK)).toBeTruthy();
+  });
+
+  it('Speichern in der Zelle: aktionen.update(id, { infos: { gruppe: text } }, gesehen) und der Text steht sofort da', async () => {
+    let fertig!: () => void;
+    const update = vi.fn(() => new Promise<void>((res) => (fertig = res)));
+    render(<Harness aktionen={aktionen({ update })} items={mitInfo} infoSpalten={TECHNIK} />);
+    fireEvent.click(zelle(ZELLE_TECHNIK));
+    const feld = screen.getByRole('textbox');
+    fireEvent.change(feld, { target: { value: 'Video, Ton an' } });
+    fireEvent.blur(feld);
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith(
+      5,
+      { infos: { 3: 'Video, Ton an' } },
+      punktStand(mitInfo[0]),
+    );
+    // Der Server hat noch nicht geantwortet – die Zelle zeigt den neuen Text schon.
+    expect(zelle(ZELLE_TECHNIK).textContent).toBe('Video, Ton an');
+    fertig();
+    await waitFor(() => expect(zelle(ZELLE_TECHNIK).textContent).toBe('Video, Ton an'));
+  });
+
+  it('Leeren der Zelle: Info weg (leerer Text geht an den Server, die Zelle zeigt „–“)', async () => {
+    const update = vi.fn(() => Promise.resolve());
+    render(<Harness aktionen={aktionen({ update })} items={mitInfo} infoSpalten={TECHNIK} />);
+    fireEvent.click(zelle(ZELLE_TECHNIK));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '' } });
+    fireEvent.blur(screen.getByRole('textbox'));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(5, { infos: { 3: '' } }, expect.anything()),
+    );
+    expect(screen.getByTestId('liste').textContent).toContain('–');
+    expect(within(screen.getByTestId('liste')).getByText('Technik').textContent).toBe('Technik');
+  });
+
+  it('Speichern scheitert: die Zelle zeigt wieder den alten Stand, öffnet sich mit dem Text und nennt den Fehler', async () => {
+    const update = vi.fn(() => Promise.reject(new Error('Ablauf ist abgeschlossen.')));
+    render(<Harness aktionen={aktionen({ update })} items={mitInfo} infoSpalten={TECHNIK} />);
+    fireEvent.click(zelle(ZELLE_TECHNIK));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Mein Text' } });
+    fireEvent.blur(screen.getByRole('textbox'));
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe('Ablauf ist abgeschlossen.'),
+    );
+    expect(screen.getByRole<HTMLTextAreaElement>('textbox').value).toBe('Mein Text');
+  });
+
+  it('abgeschlossen: ein Klick in die Zelle zeigt den Sperr-Hinweis statt eines Felds', async () => {
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={TECHNIK} abgeschlossen />);
+    fireEvent.click(zelle(ZELLE_TECHNIK));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(await screen.findByText('gesperrt')).toBeTruthy();
+  });
+
+  it('ein Klick in die Zelle öffnet kein Punkt-Fenster', () => {
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={TECHNIK} />);
+    fireEvent.click(zelle(ZELLE_TECHNIK));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByText('Infos je Gruppe')).toBeNull();
+  });
+
+  it('am Handy: weiter eine Zeile unter dem Punkt, keine Zellen, kein Hinweis auf Zellen', () => {
+    handy();
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={TECHNIK} />);
+    const liste = screen.getByTestId('liste');
+    expect(liste.textContent).toContain('Technik: Video abspielen');
+    expect(screen.queryByRole('button', { name: ZELLE_TECHNIK })).toBeNull();
+    expect(within(liste).queryByText('Eintrag')).toBeNull();
+    expect(liste.textContent).not.toContain('Zelle anklicken');
+  });
+
+  it('nicht in der schmalen Form (Matrix): weder Zellen noch Zeile', () => {
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={TECHNIK} schmal />);
     expect(screen.getByTestId('liste').textContent).not.toContain('Video abspielen');
+    expect(screen.queryByRole('button', { name: ZELLE_TECHNIK })).toBeNull();
+  });
+
+  it('ohne gewählte Spalten: keine Tabelle', () => {
+    render(<Harness aktionen={aktionen()} items={mitInfo} infoSpalten={[]} />);
+    expect(within(screen.getByTestId('liste')).queryByText('Eintrag')).toBeNull();
   });
 });
 

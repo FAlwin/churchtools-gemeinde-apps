@@ -159,8 +159,8 @@
 
 // ── Infos je Dienstgruppe (E6-4, Entwurf `e6-infos-spalten.html`) ──
 // Am Handy eine Zeile unter dem Punkt; am Rechner Spalten in einer Tabelle (02.11.2026, Entwurf „Ablauf mit
-// Info-Spalten“): EIN Raster, jede Zeile übernimmt es (`subgrid`), die Breiten setzt `AblaufListe` (Punkt mindestens
-// 300 px, Spalten nach Inhalt bis 280 px). Reicht der Platz nicht, scrollt alles waagerecht – der Punkt bleibt stehen.
+// Info-Spalten“): EIN Raster, jede Zeile übernimmt es (`subgrid`), die Breiten setzt `InfoTabelle` (Regeln in
+// `infoTabellenRegeln.ts`; Ansicht UND Bearbeiten-Liste nutzen sie). Reicht der Platz nicht, scrollt alles waagerecht – der Punkt bleibt stehen.
 .tabelleRahmen {
   position: relative;
 }

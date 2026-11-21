@@ -360,8 +360,8 @@ für diesen Termin, wenn man das wählt.
 **Vorbereitung:** Ein Test-Termin mit Ablauf; an einem Punkt in ChurchTools eine Info für Technik eintragen (Spalte
 „Technik“ im Ablaufplan).
 
-**Das muss passieren:** Die Info steht in der App – am Rechner als Spalte, am Handy als Zeile – und lässt sich im
-Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
+**Das muss passieren:** Die Info steht in der App – am Rechner als Spalte, am Handy als Zeile – und lässt sich am
+Rechner direkt in der Zelle, am Handy im Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 
 1. Ablauf öffnen → in der **Musik-App** oben **⋯ → „Spalten wählen“** (ein kleines Fenster mit Häkchen; im Dienstplaner seit 21.11.2026 ebenso, vorher ein Knopf **„Spalten“**) → die Liste nennt nur Gruppen, die man in ChurchTools sieht, mit „N Punkte“.
 2. **Technik** anhaken → rechts eine Spalte „Technik“ mit der Info; leere Zellen zeigen „–“, der Kopf „Technik · 1“.
@@ -371,7 +371,21 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
    der Punkt bleibt stehen, rechts steht „›“. Steht in einer verdeckten Spalte etwas, zeigt der Punkt „Technik ›“ –
    antippen scrollt dorthin.
 4. Am Handy: dieselbe Info steht als Zeile „Technik: …“ unter dem Punkt.
-5. **Bearbeiten**: Die Infos der gewählten Spalten stehen als Zeile „Technik: …“ unter dem Punkt (seit 02.11.2026).
+5. **Bearbeiten** (seit 21.11.2026):
+   - **Rechner/iPad:** Die gewählten Spalten **bleiben stehen** wie in der Ansicht (Kopf „Eintrag | Technik · 1“, gleiche
+     Breiten, der Punkt bleibt beim Scrollen stehen). Überschriften sind weiter ein Band über alle Spalten. Die Zeile
+     darunter „Technik: …“ gibt es dort nicht mehr; die Anleitung endet mit „· Zelle anklicken für Infos.“
+   - Mit der Maus über einer **leeren** Zelle erscheint ein leises „+ Info“ und ein feiner gestrichelter Rahmen.
+   - **Zelle anklicken** → ein Textfeld in der Zelle (Cursor am Ende, wächst mit, darunter „Speichert beim Verlassen ·
+     Esc verwirft“); weder das Punkt-Fenster geht auf noch beginnt ein Ziehen. Text ändern, **daneben klicken** (oder
+     Tab) → die Info steht sofort in der Zelle und in ChurchTools. Dieselbe Zelle leeren → in ChurchTools ist die Info weg.
+   - **Esc** → der alte Text steht wieder da, nichts wird gespeichert. Anklicken und ohne Änderung verlassen → es
+     wird nichts geschrieben.
+   - Ablauf in ChurchTools **abgeschlossen**: Klick in die Zelle öffnet kein Feld, sondern zeigt den Sperr-Hinweis.
+   - Schlägt das Speichern fehl (z. B. jemand hat dieselbe Info inzwischen geändert): die Zelle geht wieder auf – mit dem
+     eigenen Text und einer roten Meldung; nichts geht verloren.
+   - **Handy:** wie bisher eine Zeile „Technik: …“ unter dem Punkt, geändert wird im Punkt-Fenster (Schritt 6). In einer
+     Ablaufvorlage (Musik-App) gilt dasselbe wie am Termin.
 6. **Bearbeiten** → Punkt antippen → Abschnitt **„Infos je Gruppe“** → Technik ändern, bei Musik etwas eintragen →
    **Speichern** → beide Infos stehen in der App und in ChurchTools.
 7. Musik leeren → **Speichern** → in ChurchTools ist die Musik-Info weg, Technik bleibt.
@@ -380,9 +394,9 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `shared/ct/schreibKern.ts`, `shared/ct/dienstRechte.ts`, `ui/ablauf/InfoSpalten.tsx`, `ui/ablauf/infoSpaltenWahl.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/services/ctLesen.ts`, `server/src/services/ctCapabilities.ts`, `server/src/controllers/setlistController.ts`, `dienstplaner/src/TerminAblauf.tsx`
-- **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx` (ein Raster, Kopf-Zahl, verdeckte Spalten und „›“ mit nachgestellten Maßen), `ui/ablauf/useAblaufBearbeiten.test.tsx` (Infos beim Bearbeiten), `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
-- **Historie:** E6-4 (30.10.2026, gemessen E6-4-0, Entwurf `e6-infos-spalten.html` abgenommen)
+- **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `shared/ct/schreibKern.ts`, `shared/ct/dienstRechte.ts`, `ui/ablauf/InfoSpalten.tsx`, `ui/ablauf/infoSpaltenWahl.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/InfoTabelle.tsx`, `ui/ablauf/infoTabellenRegeln.ts`, `ui/ablauf/InfoZelle.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/services/ctLesen.ts`, `server/src/services/ctCapabilities.ts`, `server/src/controllers/setlistController.ts`, `dienstplaner/src/TerminAblauf.tsx`
+- **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx` (ein Raster, Kopf-Zahl, verdeckte Spalten und „›“ mit nachgestellten Maßen), `ui/ablauf/InfoZelle.test.tsx` (Zelle: Klick, Speichern nur bei Änderung, Esc, Fehler behält den Text, gesperrt), `ui/ablauf/useAblaufBearbeiten.test.tsx` (Tabelle beim Bearbeiten, Speichern über `aktionen.update`, Handy/Matrix), `ui/ablauf/vorlagenModus.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
+- **Historie:** E6-4 (30.10.2026, gemessen E6-4-0, Entwurf `e6-infos-spalten.html` abgenommen); 21.11.2026 Infos direkt in der Zelle bearbeiten (Entwurf `ablauf-infos-bearbeiten.html`, Variante B)
 
 </details>
 

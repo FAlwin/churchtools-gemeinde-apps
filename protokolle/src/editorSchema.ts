@@ -11,6 +11,7 @@ import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
 import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
 import { einrueckenTasten } from './einruecken';
 import { punktNummern } from './punktNummern';
+import { tabellenZeile } from './tabellenZeile';
 import { zellenListe } from './zellenListe';
 
 /**
@@ -82,7 +83,13 @@ const ueberschrift = createHeadingBlockSpec({
 });
 const heading = {
   ...ueberschrift,
-  extensions: [...(ueberschrift.extensions ?? []), einrueckenTasten, punktNummern, zellenListe],
+  extensions: [
+    ...(ueberschrift.extensions ?? []),
+    einrueckenTasten,
+    punktNummern,
+    zellenListe,
+    tabellenZeile,
+  ],
 };
 
 export const schema = BlockNoteSchema.create({

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
 import type { Block } from '@shared/protokolle/dokument';
 import { farbWert } from './farben';
+import { INFO_LEGENDE, praefix } from '@shared/protokolle/tabellenZeile';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 
 const text = (t: string, styles = {}) => ({ type: 'text', text: t, styles });
@@ -301,5 +302,89 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
   it('leeres Dokument: ein Satz', () => {
     render(<ProtokollAnsicht dokument={[]} />);
     expect(screen.getByText('Das Protokoll ist noch leer.')).toBeTruthy();
+  });
+});
+
+describe('ProtokollAnsicht – Unterzeile und Info-Zeile in Tabellen (W13)', () => {
+  const tabelle = (id: string, ...erste: string[]): Block => ({
+    id,
+    type: 'table',
+    content: {
+      type: 'tableContent',
+      rows: erste.map((e) => ({ cells: [[text(e)], [text('Was')]] })),
+    },
+    children: [],
+  });
+  // Die Präfixe kommen vom Erzeuger, nicht aus Literalen.
+  const info = (t: string) => `${praefix({ unter: false, info: true })}${t}`;
+  const unter = (t: string) => `${praefix({ unter: true, info: false })}${t}`;
+  const beides = (t: string) => `${praefix({ unter: true, info: true })}${t}`;
+
+  it('Unterzeile: erste Zelle ohne Präfix im Text, mit „↳“-Zeichen und eigener Klasse', () => {
+    const { container } = render(
+      <ProtokollAnsicht dokument={[tabelle('t', '17.04.', unter('18.04.'))]} />,
+    );
+    const zeilen = container.querySelectorAll('tr');
+    expect(zeilen[0].className).toBe('');
+    expect(zeilen[1].className).toContain('unterzeile');
+    expect(zeilen[1].querySelector('td')?.textContent).toBe('↳18.04.');
+    expect(zeilen[1].querySelector('[aria-label="Unterzeile"]')).toBeTruthy();
+    // Das rohe Präfix („↳ “) steht nirgends als Text.
+    expect(container.textContent).not.toContain('↳ 18');
+  });
+
+  it('Info-Zeile: Kreis statt Text, Legende unter der Tabelle; ohne Info-Zeile weder Legende noch Schalter', () => {
+    const { container } = render(
+      <ProtokollAnsicht dokument={[tabelle('t', '17.04.', info('18.04.'))]} />,
+    );
+    expect(container.querySelectorAll('[role="img"][aria-label="nur zur Info"]').length).toBe(2); // Zeile + Legende
+    expect(screen.getByText(new RegExp(INFO_LEGENDE))).toBeTruthy();
+    expect(container.querySelectorAll('tr')[1].textContent).toBe('i18.04.Was');
+    expect(screen.getByRole('checkbox', { name: 'Nur Themen dieses Treffens' })).toBeTruthy();
+  });
+
+  it('ohne Info-Zeile: keine Legende, kein Schalter (Unterzeile allein reicht nicht)', () => {
+    render(<ProtokollAnsicht dokument={[tabelle('t', '17.04.', unter('18.04.'))]} />);
+    expect(screen.queryByText(new RegExp(INFO_LEGENDE))).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('„Nur Themen dieses Treffens“ blendet Info-Zeilen samt ihren Unterzeilen aus, zählt sie, nimmt die Legende weg', () => {
+    const { container } = render(
+      <ProtokollAnsicht
+        dokument={[tabelle('t', 'a', info('b'), unter('c'), beides('d'), 'e', unter('f'))]}
+      />,
+    );
+    expect(container.querySelectorAll('tr').length).toBe(6);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Nur Themen dieses Treffens' }));
+    const zeilen = [...container.querySelectorAll('tr')].map((r) => r.textContent);
+    // „c“ und „d“ hängen als Unterzeilen an der Info-Zeile „b“ – sie gehen mit; „f“ hängt an „e“ und bleibt.
+    expect(zeilen).toEqual(['aWas', 'eWas', '↳fWas', '3 Info-Zeilen ausgeblendet']);
+    expect(screen.queryByText(new RegExp(INFO_LEGENDE))).toBeNull();
+    // Nur Anzeige: wieder abgewählt ist alles da, die Daten sind unberührt.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Nur Themen dieses Treffens' }));
+    expect(container.querySelectorAll('tr').length).toBe(6);
+    expect(screen.getByText(new RegExp(INFO_LEGENDE))).toBeTruthy();
+  });
+
+  it('eine einzelne Info-Zeile heißt „1 Info-Zeile ausgeblendet“; der Schalter gilt für alle Tabellen, auch verschachtelte', () => {
+    const innen = tabelle('i', 'x', info('y'));
+    const aussen: Block = {
+      id: 'p',
+      type: 'paragraph',
+      content: [text('Absatz')],
+      children: [innen],
+    };
+    const { container } = render(
+      <ProtokollAnsicht dokument={[tabelle('t', 'a', info('b')), aussen]} />,
+    );
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getAllByText('1 Info-Zeile ausgeblendet').length).toBe(2);
+    expect(container.querySelectorAll('table').length).toBe(2);
+  });
+
+  it('der Schalter steht nur einmal über dem Protokoll, auch bei mehreren Tabellen mit Info', () => {
+    render(<ProtokollAnsicht dokument={[tabelle('a', info('x')), tabelle('b', info('y'))]} />);
+    expect(screen.getAllByRole('checkbox').length).toBe(1);
   });
 });

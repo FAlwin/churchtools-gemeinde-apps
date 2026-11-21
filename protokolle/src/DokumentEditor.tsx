@@ -19,6 +19,7 @@ import {
   SideMenuController,
   SuggestionMenuController,
   TableColumnHeaderItem,
+  TableHandlesController,
   TableRowHeaderItem,
   useBlockNoteEditor,
   useCreateBlockNote,
@@ -37,6 +38,7 @@ import { blockInhalt, griffVersatz } from './griffLage';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { festeImMenue } from './festeImMenue';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
+import { TabellenGriff } from './TabellenZeilenMenue';
 import { hatGriff, nurDieseZeile } from './zeilenGriff';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
@@ -255,6 +257,7 @@ export function DokumentEditor({
           formattingToolbar={false}
           slashMenu={false}
           sideMenu={false}
+          tableHandles={false}
           emojiPicker={false}
           onChange={(e) => {
             if (stumm.current) return;
@@ -303,6 +306,7 @@ export function DokumentEditor({
             }
           />
           {bearbeitbar && <SideMenuController sideMenu={Griff} floatingUIOptions={GRIFF_LAGE} />}
+          {bearbeitbar && <TableHandlesController tableHandle={TabellenGriff} />}
         </BlockNoteView>
       </div>
     </>

@@ -85,19 +85,20 @@ export function naturBreite(kopf: string, zellen: readonly Zelle[], messen: Mess
   return (
     Math.max(
       messen(kopf.toUpperCase(), 'fett', KOPF),
-      ...zellen.map((c) =>
-        Math.max(
-          0,
-          ...c.absaetze.map((p) =>
-            p.laeufe.reduce(
-              (s, l) =>
-                s +
-                messen(l.text, l.stil, p.klein ? KLEIN : GROSS) +
-                (l.stil === 'schild' ? 3.2 : 0),
-              0,
+      ...zellen.map(
+        (c) =>
+          Math.max(
+            0,
+            ...c.absaetze.map((p) =>
+              p.laeufe.reduce(
+                (s, l) =>
+                  s +
+                  messen(l.text, l.stil, p.klein ? KLEIN : GROSS) +
+                  (l.stil === 'schild' ? 3.2 : 0),
+                0,
+              ),
             ),
-          ),
-        ),
+          ) + (c.einzug ?? 0),
       ),
     ) +
     2 * POLSTER_X

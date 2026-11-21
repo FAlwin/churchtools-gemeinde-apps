@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProtokollBlatt, BlattTeil, Zeichen } from '@shared/protokolle/protokollBlatt';
+import { INFO_LEGENDE } from '@shared/protokolle/tabellenZeile';
 import { protokollPdf } from './protokollPdf';
 
 /** Das Protokoll als PDF (S6-3a): gezeichnet, was das Blatt festlegt – auf dem gemeinsamen Satz. */
@@ -132,6 +133,7 @@ describe('Protokoll als PDF', () => {
         {
           art: 'tabelle',
           einzug: 0,
+          legende: false,
           zeilen: [
             [
               {
@@ -298,5 +300,80 @@ describe('Protokoll als PDF', () => {
     );
     const fonts = doc.getFontList() as Record<string, string[]>;
     expect(fonts.GemeindeSans?.sort()).toEqual(['bold', 'bolditalic', 'italic', 'normal']);
+  });
+
+  describe('Unterzeile und Info-Zeile in der Tabelle (W13)', () => {
+    const zelle = (t: string, marke?: { unter: boolean; info: boolean }) => ({
+      absaetze: [[{ text: t }]],
+      kopf: false,
+      spalten: 1,
+      zeilen: 1,
+      hintergrund: null,
+      ...(marke ? { marke } : {}),
+    });
+    const tab = (
+      marken: ({ unter: boolean; info: boolean } | undefined)[],
+      legende: boolean,
+    ): BlattTeil => ({
+      art: 'tabelle',
+      einzug: 0,
+      legende,
+      zeilen: marken.map((m, i) => [zelle(`Datum${i}`, m), zelle('Was')]),
+    });
+    const kurven = (r: string) => (r.match(/ c\n/g) ?? []).length;
+    const linien = (r: string) => (r.match(/ l\n/g) ?? []).length;
+    const ohne = tab([undefined, undefined], false);
+
+    it('Info-Zeile: ⓘ-Kreis gezeichnet (Kurven), Legende darunter – das Zeichen selbst steht nicht im Text', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: false, info: true }], true)]));
+      expect(kurven(r)).toBeGreaterThan(kurven(await roh(blatt([ohne]))));
+      expect(r).toContain('(Datum1)');
+      // Das PDF setzt Wort für Wort – jedes Wort der Legende (aus der EINEN Quelle) steht darin.
+      for (const wort of INFO_LEGENDE.split(' ').filter((w) => /^\p{L}+$/u.test(w)))
+        expect(r, wort).toContain(`(${wort})`);
+      expect(r).not.toContain('ⓘ');
+    });
+
+    it('ohne Info-Zeile keine Legende', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      expect(r).not.toContain('(Thema)');
+    });
+
+    it('Unterzeile: „↳“ aus Linien gezeichnet, Text eingerückt (Spalte wird breiter, kein Zeichen im Text)', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      expect(linien(r)).toBeGreaterThan(linien(await roh(blatt([ohne]))));
+      expect(r).not.toContain('↳');
+    });
+
+    /** Die x-Lage (pt) des Textes `wort` im PDF – die Zahl vor dem `Td`, das dem Text vorausgeht. */
+    const xVon = (r: string, wort: string): number => {
+      const i = r.indexOf(`(${wort}) Tj`);
+      const m = [...r.slice(0, i).matchAll(/([\d.]+) [\d.]+ Td/g)].pop();
+      return Number(m?.[1]);
+    };
+
+    it('der Text der Unterzeile steht rechts vom „↳“ – eingerückt gegenüber einer normalen Zeile', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      // 4,4 mm Platz für das Zeichen (UNTER_B in protokollPdf.ts) = gut 12 pt
+      expect(xVon(r, 'Datum1') - xVon(r, 'Datum0')).toBeGreaterThan(10);
+    });
+
+    it('der Info-Kreis nimmt Platz vor dem Text', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: false, info: true }], true)]));
+      expect(xVon(r, 'Datum1') - xVon(r, 'Datum0')).toBeGreaterThan(10);
+    });
+
+    it('die erste Spalte wird für das Zeichen breiter (die zweite rückt nach rechts)', async () => {
+      const mit = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      const ohneZeichen = await roh(blatt([tab([undefined, undefined], false)]));
+      expect(xVon(mit, 'Was')).toBeGreaterThan(xVon(ohneZeichen, 'Was'));
+    });
+
+    it('der Einzug verbreitert die Spalte (naturBreite zählt `einzug`)', async () => {
+      const { naturBreite } = await import('./pdfSatz');
+      const z = { absaetze: [{ laeufe: [{ text: 'abc' }] }] };
+      const messen = (t: string) => t.length;
+      expect(naturBreite('', [{ ...z, einzug: 5 }], messen)).toBe(naturBreite('', [z], messen) + 5);
+    });
   });
 });

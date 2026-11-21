@@ -1,6 +1,7 @@
 import type { jsPDF } from 'jspdf';
 import type { Absatz, Zelle } from '@shared/ct/terminBlatt';
 import { aufzaehlungsZeichen } from '@shared/protokolle/aufzaehlung';
+import { INFO_LEGENDE, type ZeilenArt } from '@shared/protokolle/tabellenZeile';
 import {
   BAUSTEIN_BLAU,
   BAUSTEIN_GRUEN,
@@ -65,6 +66,12 @@ const GRUEN: Farbe = [...BAUSTEIN_GRUEN];
 const BLAU: Farbe = [...BAUSTEIN_BLAU];
 /** Wie `--text3` im Browser. */
 const TEXT3: Farbe = [144, 161, 185];
+/** Platz für „↳“ und den ⓘ-Kreis vor dem Text der ersten Zelle (W13, mm). */
+const UNTER_B = 4.4;
+const INFO_B = 4.6;
+const markeBreite = (m: ZeilenArt | undefined): number =>
+  (m?.unter ? UNTER_B : 0) + (m?.info ? INFO_B : 0);
+
 const KASTEN: Farbe = [246, 248, 250];
 /** Banner und Wasserzeichen im Entwurf (Entwurf S6 v1: #c2410c). */
 const ENTWURF: Farbe = [194, 65, 12];
@@ -299,7 +306,7 @@ class ProtokollZeichner extends PdfSatz {
         this.text(t.absaetze, x, breite, t.zeichen, t.rand);
         return;
       case 'tabelle':
-        this.tabelle(t.zeilen, x, breite);
+        this.tabelle(t.zeilen, x, breite, t.legende);
         return;
       case 'linie':
         if (this.y + 4 > this.unten) this.neueSeite();
@@ -362,7 +369,12 @@ class ProtokollZeichner extends PdfSatz {
    * Eine Tabelle (K3a): verbundene Zellen über ihre Spalten und Zeilen, Kopfzellen fett und hinterlegt, Zellfarben wie im
    * Editor. Zeilen, die eine verbundene Zelle zusammenhält, wechseln nur gemeinsam die Seite.
    */
-  private tabelle(zeilen: readonly (readonly TabellenZelleBlatt[])[], x: number, breite: number) {
+  private tabelle(
+    zeilen: readonly (readonly TabellenZelleBlatt[])[],
+    x: number,
+    breite: number,
+    legende: boolean,
+  ) {
     // Wo jede Zelle steht – eine Zelle, die über Zeilen reicht, belegt die Plätze darunter.
     const belegt: boolean[][] = zeilen.map(() => []);
     const lagen: { c: TabellenZelleBlatt; z: number; s: number }[] = [];
@@ -383,6 +395,7 @@ class ProtokollZeichner extends PdfSatz {
       absaetze: (c.absaetze.length ? c.absaetze : [[]]).map((a) => ({
         laeufe: c.kopf ? alsFett(a) : a,
       })),
+      einzug: markeBreite(c.marke),
     });
     // Breiten nach Bedarf aus den einfachen Zellen; der Rest verteilt sich auf alle Spalten.
     const raster: Zelle[][] = zeilen.map(() =>
@@ -402,7 +415,8 @@ class ProtokollZeichner extends PdfSatz {
     // Zeilenhöhen: einzeilige Zellen bestimmen sie; reicht eine verbundene Zelle weiter, wird ihre letzte Zeile höher.
     const hoehen = zeilen.map(() => zeilenHoehe(GROSS) + 2 * POLSTER_Y);
     const innenHoehe = (l: { c: TabellenZelleBlatt; s: number }) =>
-      this.zelleHoehe(zelle(l.c), zellBreite(l) - 2 * POLSTER_X) + 2 * POLSTER_Y;
+      this.zelleHoehe(zelle(l.c), zellBreite(l) - 2 * POLSTER_X - markeBreite(l.c.marke)) +
+      2 * POLSTER_Y;
     for (const l of lagen) if (l.c.zeilen === 1) hoehen[l.z] = Math.max(hoehen[l.z], innenHoehe(l));
     for (const l of lagen) {
       if (l.c.zeilen === 1) continue;
@@ -440,12 +454,64 @@ class ProtokollZeichner extends PdfSatz {
         this.d.setDrawColor(...LINIE);
         this.d.setLineWidth(0.2);
         this.d.rect(xs[l.s], top, w, h, 'S');
-        this.zelle(zelle(l.c), xs[l.s] + POLSTER_X, top + POLSTER_Y, w - 2 * POLSTER_X);
+        const ein = markeBreite(l.c.marke);
+        this.zelle(zelle(l.c), xs[l.s] + POLSTER_X + ein, top + POLSTER_Y, w - 2 * POLSTER_X - ein);
+        if (l.c.marke) this.marken(l.c.marke, xs[l.s] + POLSTER_X, top + POLSTER_Y);
       }
       this.y += block;
       z = bis + 1;
     }
+    if (legende) this.infoLegende(x, breite);
     this.y += ABSTAND + 0.6;
+  }
+
+  /**
+   * Die Zeichen der Zeile (W13) vor dem Text der ersten Zelle: „↳“ (Unterzeile) und der ⓘ-Kreis (nur zur Info). Die Schrift
+   * der PDFs hat beide Zeichen nicht (wie „◦“, W11) – sie werden gezeichnet.
+   */
+  private marken(m: ZeilenArt, x: number, oben: number) {
+    const grund = oben + GROSS * PT * 0.95;
+    let cx = x;
+    if (m.unter) {
+      const hoch = GROSS * PT * 0.7;
+      this.d.setDrawColor(...GRAU);
+      this.d.setLineWidth(0.25);
+      this.d.line(cx + 0.4, grund - hoch, cx + 0.4, grund - 0.5);
+      this.d.line(cx + 0.4, grund - 0.5, cx + UNTER_B - 1.2, grund - 0.5);
+      this.d.line(cx + UNTER_B - 2.1, grund - 1.3, cx + UNTER_B - 1.2, grund - 0.5);
+      this.d.line(cx + UNTER_B - 2.1, grund + 0.3, cx + UNTER_B - 1.2, grund - 0.5);
+      cx += UNTER_B;
+    }
+    if (m.info) this.infoKreis(cx, grund, GROSS);
+  }
+
+  /** Der ⓘ-Kreis mit linker Kante bei `x`, Grundlinie `grund`: Kreislinie, darin Punkt und Strich. */
+  private infoKreis(x: number, grund: number, pt: number) {
+    const r = pt * PT * 0.36;
+    const mx = x + 0.3 + r;
+    const my = grund - r - 0.05;
+    this.d.setDrawColor(...GRAU);
+    this.d.setFillColor(...GRAU);
+    this.d.setLineWidth(0.25);
+    this.d.circle(mx, my, r, 'S');
+    this.d.circle(mx, my - r * 0.45, 0.17, 'F');
+    this.d.line(mx, my - r * 0.1, mx, my + r * 0.5);
+  }
+
+  /** Unter einer Tabelle mit Info-Zeilen: der Kreis und was er heißt. */
+  private infoLegende(x: number, breite: number) {
+    const zeilen = this.absatzZeilen(
+      [[{ text: INFO_LEGENDE, stil: 'grau' }]],
+      x + INFO_B,
+      breite - INFO_B,
+      GROSS,
+      0,
+      0,
+    );
+    this.y += 1.2;
+    if (this.y + zeilenHoehe(GROSS) > this.unten) this.neueSeite();
+    this.infoKreis(x, this.y + GROSS * PT * 0.95, GROSS);
+    this.fliessen(zeilen);
   }
 
   // ── Übersicht ──────────────────────────────────────────────────────────────

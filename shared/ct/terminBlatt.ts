@@ -140,6 +140,8 @@ export type Absatz = Lauf[];
 /** Eine Zelle – Absätze untereinander. `klein` = kleinere Schrift (Zuständige, Notiz, Infos unter dem Eintrag). */
 export interface Zelle {
   absaetze: { laeufe: Absatz; klein?: boolean }[];
+  /** Platz links vor dem Text in mm (Protokoll W13: Zeichen „↳“ / „ⓘ“) – zählt bei der Spaltenbreite mit. */
+  einzug?: number;
 }
 
 export type SpaltenArt = 'zeit' | 'dauer' | 'eintrag' | 'zustaendig' | 'info';

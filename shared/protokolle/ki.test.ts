@@ -178,6 +178,7 @@ describe('auftragBauen', () => {
         '1. Andacht & Gebet',
         '2. Rückblick (fester Punkt – nichts zuordnen)',
         '3. Gemeindeessen am 13.12.',
+        '  Z1 Rückmeldungen bisher 64.',
         '3.1 Küche',
         '3.2 Kinderbetreuung',
         '4. Verschiedenes',
@@ -210,7 +211,9 @@ describe('auftragBauen', () => {
     expect(auftrag).not.toContain('keine Tagesordnung');
   });
 
-  it('der übrige Text ist gegenüber dem bisherigen Auftrag unverändert (nur Beispiel und Zeile bei leerer Tagesordnung neu)', () => {
+  it('ohne vorhandenen Text ist der übrige Auftrag gegenüber dem bisherigen unverändert (nur Beispiel und Zeile bei leerer Tagesordnung neu) – keine Kennungen, keine neuen Sätze', () => {
+    // Ohne Zeilen unter den Punkten (W12): dasselbe Dokument ohne den Absatz.
+    const ohneText = (): Block[] => dokument().filter((b) => b.id !== 'a3');
     // Der bisherige Auftrag (Stand vor 17.11.2026), aus dem Quelltext von damals übernommen.
     const bisher = (gruppe: string, datum: string, zeilen: string[], transkript: string): string =>
       `Du bekommst das Transkript einer Sitzung der Gruppe „${gruppe}“ vom ${datum}.
@@ -230,13 +233,13 @@ ${transkript}`;
     const neuesBeispiel =
       '"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]';
     const altesBeispiel = '"neue_punkte":[{"titel":"…","stichpunkte":["…"]}]';
-    const zeilen = tagesordnung(dokument()).map(
+    const zeilen = tagesordnung(ohneText()).map(
       (p) => `${p.nummer} ${p.titel}${p.fest ? ' (fester Punkt – nichts zuordnen)' : ''}`,
     );
     const mit = auftragBauen({
       gruppe: 'G',
       datum: '2026-11-18',
-      dokument: dokument(),
+      dokument: ohneText(),
       transkript: 'x',
     });
     expect(mit.replace(neuesBeispiel, altesBeispiel)).toBe(

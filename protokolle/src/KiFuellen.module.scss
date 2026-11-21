@@ -235,6 +235,10 @@
   border-radius: var(--r-ctrl);
 }
 
+.eintrag + .eintrag {
+  border-top: 1px solid var(--hair);
+}
+
 .wahl {
   display: flex;
   gap: 10px;
@@ -243,10 +247,6 @@
   font-size: 14px;
   cursor: pointer;
   overflow-wrap: anywhere;
-
-  + .wahl {
-    border-top: 1px solid var(--hair);
-  }
 
   > input {
     flex: none;
@@ -266,6 +266,48 @@
 .aus {
   opacity: 0.55;
   cursor: default;
+}
+
+// „Steht schon da“ (W12): der vorgeschlagene Stichpunkt durchgestrichen, damit klar ist, dass er nicht mitkommt.
+.doppelt {
+  color: var(--text3);
+
+  s {
+    text-decoration: line-through;
+  }
+}
+
+// Wohin ein Eintrag zu den vorhandenen Zeilen gehört (W12): „ersetzt „…““ mit eigenem Haken, „kommt unter „…““,
+// „steht schon da“ + die Zeile. Eingerückt unter den Text des Eintrags (Haken 18 px + Abstand 10 px + Polster).
+.lage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: -2px 10px 8px 38px;
+  color: var(--text2);
+  font-size: 12.5px;
+
+  q {
+    font-style: italic;
+  }
+}
+
+.ersetzt {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  padding: 4px 8px;
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  cursor: pointer;
+
+  > input {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 1px 0 0;
+    accent-color: var(--blue);
+  }
 }
 
 .punkte {

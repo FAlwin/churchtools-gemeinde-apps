@@ -212,8 +212,22 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
     case BLOCK.aufgabe: {
       const a = typeof b.props?.aufgabe === 'string' ? k.aufgaben.get(b.props.aufgabe) : undefined;
       return (
-        <div className={`${styles.marke} ${styles.aufgabe}`}>
-          <Icon name={a?.status === 'erledigt' ? 'check' : 'clock'} size={16} />
+        <div
+          className={`${styles.marke} ${styles.aufgabe} ${a?.status === 'arbeit' ? styles.arbeit : a?.status === 'erledigt' ? styles.erledigtKreis : ''}`}
+        >
+          {/* Der Kreis wie der Haken im Editor (`Haken.tsx`): offen leer, in Arbeit halb, erledigt mit Haken. */}
+          <span className={styles.kreis}>
+            <Icon
+              name={
+                a?.status === 'erledigt'
+                  ? 'kreis-haken'
+                  : a?.status === 'arbeit'
+                    ? 'kreis-halb'
+                    : 'kreis'
+              }
+              size={18}
+            />
+          </span>
           <span className={styles.markeText}>
             <Inhalt content={b.content} />
             {a && (
@@ -240,7 +254,6 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
     case BLOCK.termin:
       return (
         <div className={`${styles.marke} ${styles.termin}`}>
-          <Icon name="calendar" size={16} />
           <span className={styles.markeText}>
             {terminDatum(b.props) && <b>{tagPunkt(terminDatum(b.props)!)} </b>}
             <Inhalt content={b.content} />

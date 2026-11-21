@@ -14,12 +14,28 @@
  *    Regeln wie die Einträge mit `nr` (17.11.2026: ein leeres Protokoll ließ sich sonst nicht füllen).
  * 4. `uebernahmePlanen` – aus den angehakten Einträgen eine Liste `{ vor, bloecke }` für `EditorGriff.einfuegen`.
  *
+ * **Vorhandener Text (W12, 21.11.2026):** Hat jemand in der Sitzung schon geschrieben, bekommt die KI diese Zeilen mit einer
+ * Kennung (`Z1`, `Z2` …, `vorhandeneZeilen`). Sie wiederholt sie nicht als Stichpunkt und nennt bei einem Beschluss, To-Do
+ * oder Termin die Zeile(n), die er ersetzt (`ersetzt`), oder unter welche er gehört (`nach`). `antwortLesen` macht daraus
+ * `ZeilenBezug` (mit Block-ID und dem Text von damals), `uebernahmePlanen` setzt den Baustein an die Stelle der Zeile –
+ * und ändert nie etwas, was inzwischen anders dasteht. Stichpunkte, die schon dastehen, trägt `doppelt` (Regel:
+ * `doppelt.ts`).
+ *
  * Wohin etwas kommt: hinter den eigenen Text seines Punkts, also **vor den nächsten Punkt** – hat „3.“ Unterpunkte, vor
  * 3.1 (Alwin 16.11.2026, Fund aus TF-PROT-12: hinter 3.2 zählte es zu 3.2); beim letzten Punkt ans Dokumentende
  * (`vor: null`, im Editor vor die leere Schlusszeile). Gerechnet wird mit der Punktliste aus `ableiten` – derselben wie die
  * Nummern.
  */
-import { ableiten, BLOCK, punktNummer, terminDatum, type Block, type Punkt } from './dokument';
+import {
+  ableiten,
+  BLOCK,
+  punktNummer,
+  terminDatum,
+  textAus,
+  type Block,
+  type Punkt,
+} from './dokument';
+import { aehnlicheZeile } from './doppelt';
 import {
   istPlatzhalter,
   platzhalterAnwenden,
@@ -60,6 +76,67 @@ export function tagesordnung(dokument: readonly Block[]): TagesordnungPunkt[] {
   }));
 }
 
+/** Blockarten, die als „vorhandener Text“ zählen: Absatz, Aufzählung, Nummerierung (Bausteine, Tabellen, Überschriften nicht). */
+const ZEILEN_ARTEN: ReadonlySet<string> = new Set([
+  'paragraph',
+  'bulletListItem',
+  'numberedListItem',
+]);
+
+/** Eine Zeile, die schon im Protokoll steht – mit der Kennung, unter der die KI sie nennen kann. */
+export interface Zeile {
+  /** `Z1`, `Z2` … – eindeutig im ganzen Dokument, in der Reihenfolge des Dokuments. */
+  kennung: string;
+  blockId: string;
+  /** Der Text der Zeile (getrimmt, Zeilenumbrüche als Leerzeichen). */
+  text: string;
+  /** Wie tief sie eingerückt ist (0 = oberste Ebene). */
+  ebene: number;
+  /** Block-ID des Punkts, unter dem sie steht. */
+  punktId: string;
+  /** Hat sie Unterblöcke? (Dann wird sie nie entfernt.) */
+  kinder: boolean;
+}
+
+/** Die ID als Kennung: `3`, `z3`, `Z 3`, ` Z3 ` → `Z3`; nichts Brauchbares → `''`. */
+export function kennungNormal(x: unknown): string {
+  const s = typeof x === 'number' ? String(x) : typeof x === 'string' ? x : '';
+  const m = /^\s*z?\s*(\d+)\s*$/i.exec(s);
+  return m ? `Z${Number(m[1])}` : '';
+}
+
+/**
+ * **Die Zeilen, die schon im Protokoll stehen** – je Punkt und Unterpunkt (ohne feste Punkte, ohne Text vor dem ersten
+ * Punkt), Absätze und Aufzählungen auch eingerückt, in der Reihenfolge des Dokuments. Leere Zeilen zählen nicht. Die EINE
+ * Quelle der Kennungen: `auftragBauen` schreibt sie in den Auftrag, `antwortLesen` und `uebernahmePlanen` lösen sie damit
+ * wieder auf.
+ */
+export function vorhandeneZeilen(dokument: readonly Block[]): Zeile[] {
+  const punkte = tagesordnung(dokument);
+  const ids = new Set(punkte.map((p) => p.blockId));
+  const fest = new Set(punkte.filter((p) => p.fest).map((p) => p.blockId));
+  const aus: Zeile[] = [];
+  let punktId: string | null = null;
+  const besuche = (b: Block, ebene: number, punkt: string): void => {
+    const t = textAus(b.content).replace(/\s+/g, ' ').trim();
+    if (ZEILEN_ARTEN.has(b.type) && t)
+      aus.push({
+        kennung: `Z${aus.length + 1}`,
+        blockId: b.id,
+        text: t,
+        ebene,
+        punktId: punkt,
+        kinder: (b.children ?? []).length > 0,
+      });
+    for (const k of b.children ?? []) besuche(k, ebene + 1, punkt);
+  };
+  for (const b of dokument) {
+    if (ids.has(b.id)) punktId = b.id;
+    else if (punktId && !fest.has(punktId)) besuche(b, 0, punktId);
+  }
+  return aus;
+}
+
 const WOCHENTAGE = [
   'Sonntag',
   'Montag',
@@ -79,8 +156,29 @@ export function datumMitWochentag(iso: string): string {
 }
 
 /**
+ * **Der Text, in dem nach Namen gesucht wird** (`namenFinden`): Transkript, Titel der Tagesordnung, Gruppenname UND die
+ * vorhandenen Zeilen (W12) – alles, was `auftragBauen` an die KI schickt. Eine Stelle, damit nichts ungeprüft hinausgeht
+ * und die Platzhalter überall dieselben sind.
+ */
+export function namenSuchtext(a: {
+  gruppe: string;
+  transkript: string;
+  dokument: readonly Block[];
+}): string {
+  return [
+    a.transkript,
+    ...tagesordnung(a.dokument).map((p) => p.titel),
+    ...vorhandeneZeilen(a.dokument).map((z) => z.text),
+    a.gruppe,
+  ].join('\n');
+}
+
+/**
  * **Der Auftrag an die KI.** `transkript` ist schon ersetzt (Platzhalter statt Namen). Mit `funde` werden zusätzlich die
  * Titel der Tagesordnung ersetzt – ein Punkt heißt manchmal „Andacht Peter“, und `namenFinden` sieht nur das Transkript.
+ * Dasselbe gilt für die **vorhandenen Zeilen** (W12): Auch dort kann ein Name stehen. Der Aufrufer sucht darum in
+ * Transkript, Titeln UND vorhandenen Zeilen (`vorhandeneZeilen`) nach Namen – mit denselben Funden, damit ein Platzhalter
+ * überall derselbe ist und beim Lesen der Antwort zurückgesetzt wird.
  */
 export function auftragBauen(a: {
   gruppe: string;
@@ -93,14 +191,28 @@ export function auftragBauen(a: {
   const datum = datumMitWochentag(a.datum);
   const ersetzt = (t: string): string => (a.funde ? platzhalterAnwenden(t, a.funde).text : t);
   const punkte = tagesordnung(a.dokument);
+  const vorhanden = vorhandeneZeilen(a.dokument);
+  // Die Zeilen, die schon dastehen, gehen durch denselben Namensschutz wie Titel und Transkript.
+  const textZeilen = (punktId: string): string[] =>
+    vorhanden
+      .filter((z) => z.punktId === punktId)
+      .map((z) => `${'  '.repeat(z.ebene + 1)}${z.kennung} ${ersetzt(z.text)}`);
   const zeilen = punkte.length
-    ? punkte.map(
-        (p) =>
-          `${p.nummer} ${ersetzt(p.titel) || '(ohne Titel)'}${p.fest ? ' (fester Punkt – nichts zuordnen)' : ''}`,
-      )
+    ? punkte.flatMap((p) => [
+        `${p.nummer} ${ersetzt(p.titel) || '(ohne Titel)'}${p.fest ? ' (fester Punkt – nichts zuordnen)' : ''}`,
+        ...textZeilen(p.blockId),
+      ])
     : [
         '(keine Tagesordnung – gliedere den Inhalt selbst in sinnvolle Punkte unter „neue_punkte“, Beschlüsse, To-Dos und Termine dort beim jeweiligen Punkt)',
       ];
+  const mitText = vorhanden.length > 0;
+  const regelVorhanden = mitText
+    ? `
+Unter manchen Punkten steht schon Text, den jemand in der Sitzung geschrieben hat – jede Zeile trägt eine Kennung (Z1, Z2 …). Wiederhole diese Zeilen nicht als Stichpunkt. Wird aus einer vorhandenen Zeile ein Beschluss, To-Do oder Termin, nenne ihre Kennung(en) in "ersetzt" (z. B. "ersetzt":["Z3"]) – die Zeile wird dann durch den Baustein ersetzt. Gehört ein neuer Stichpunkt oder Baustein direkt unter eine vorhandene Zeile, schreibe "nach":"Z2". Nenne nur Kennungen, die unter demselben Punkt stehen wie der Eintrag.`
+    : '';
+  const beispiel = mitText
+    ? `{"punkte":[{"nr":"3.1","stichpunkte":["…"],"nach":"Z2"}],"beschluesse":[{"nr":"3","text":"…","ersetzt":["Z3"]}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT","ersetzt":["Z4","Z5"]}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…","nach":"Z6"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]}`
+    : `{"punkte":[{"nr":"3.1","stichpunkte":["…"]}],"beschluesse":[{"nr":"3","text":"…"}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]}`;
   return `Du bekommst das Transkript einer Sitzung der Gruppe „${ersetzt(a.gruppe)}“ vom ${datum}.
 Personen und vertrauliche Angaben sind durch Platzhalter wie [Person 1] oder [Vertraulich 1] ersetzt. Verwende genau diese Platzhalter und erfinde keine Namen.
 
@@ -109,9 +221,9 @@ ${zeilen.join('\n')}
 
 Ordne den Inhalt diesen Punkten zu – so fein wie möglich, also auch den Unterpunkten – und schreibe zu jedem Punkt knappe Stichpunkte auf Deutsch. Nimm nur auf, was im Transkript steht, und erfinde nichts – keine Namen, Zahlen oder Termine.
 Rechne Angaben wie „bis nächsten Freitag“ vom Sitzungsdatum (${datum}) in ein Datum um.
-Passt ein Thema zu keinem Punkt, schlage unter „neue_punkte“ einen neuen Punkt mit Titel vor.
+Passt ein Thema zu keinem Punkt, schlage unter „neue_punkte“ einen neuen Punkt mit Titel vor.${regelVorhanden}
 Antworte ausschließlich mit JSON in genau diesem Aufbau:
-{"punkte":[{"nr":"3.1","stichpunkte":["…"]}],"beschluesse":[{"nr":"3","text":"…"}],"todos":[{"nr":"3.2","text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"nr":"4","datum":"JJJJ-MM-TT","text":"…"}],"neue_punkte":[{"titel":"…","stichpunkte":["…"],"beschluesse":["…"],"todos":[{"text":"…","wer":["[Person 2]"],"bis":"JJJJ-MM-TT"}],"termine":[{"datum":"JJJJ-MM-TT","text":"…"}]}]}
+${beispiel}
 
 Transkript:
 ${a.transkript}`;
@@ -163,11 +275,34 @@ export interface TerminTeil {
   datum: string | null;
 }
 
+/** Eine vorhandene Zeile, auf die sich ein Eintrag bezieht – mit dem Text von damals (zum Wiedererkennen beim Übernehmen). */
+export interface ZeilenBezug {
+  kennung: string;
+  blockId: string;
+  text: string;
+}
+
+/** Wohin ein Eintrag zu den vorhandenen Zeilen gehört (W12) – nur gesetzt, wenn die KI es gesagt hat und es stimmt. */
+interface Lage {
+  /** Zeilen, die dieser Baustein ersetzt (nur Beschluss, To-Do, Termin). Fehlt, wenn keine. */
+  ersetzt?: ZeilenBezug[];
+  /** Die Zeile, unter die er gehört. */
+  nach?: ZeilenBezug;
+}
+
 export type Eintrag =
-  | (Basis & { art: 'stichpunkt'; ziel: Ziel; text: string })
-  | (Basis & { art: 'beschluss'; ziel: Ziel } & BeschlussTeil)
-  | (Basis & { art: 'todo'; ziel: Ziel } & TodoTeil)
-  | (Basis & { art: 'termin'; ziel: Ziel } & TerminTeil)
+  | (Basis & {
+      art: 'stichpunkt';
+      ziel: Ziel;
+      text: string;
+      /** Gehört unter diese Zeile. */
+      nach?: ZeilenBezug;
+      /** Steht schon da: die Zeile des Punkts, der dieser Stichpunkt entspricht (`doppelt.ts`). */
+      doppelt?: ZeilenBezug;
+    })
+  | (Basis & { art: 'beschluss'; ziel: Ziel } & BeschlussTeil & Lage)
+  | (Basis & { art: 'todo'; ziel: Ziel } & TodoTeil & Lage)
+  | (Basis & { art: 'termin'; ziel: Ziel } & TerminTeil & Lage)
   | (Basis & {
       art: 'neuerPunkt';
       titel: string;
@@ -260,6 +395,34 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
   };
   const zurueck = (s: string): string => zuruecksetzen(s, k.zuordnung);
 
+  // Vorhandene Zeilen (W12): Kennung → Zeile. Eine Kennung gilt nur für einen Eintrag desselben Punkts; eine ersetzte
+  // Zeile ersetzt nur der ERSTE Eintrag, der sie nennt (`vergeben`).
+  const zeilen = vorhandeneZeilen(k.dokument);
+  const vergeben = new Set<string>();
+  const bezug = (z: Zeile): ZeilenBezug => ({
+    kennung: z.kennung,
+    blockId: z.blockId,
+    text: z.text,
+  });
+  const zeileIn = (z: Ziel, roh: unknown): Zeile | null => {
+    const kennung = kennungNormal(roh);
+    if (!kennung || z.art !== 'punkt') return null;
+    return zeilen.find((x) => x.kennung === kennung && x.punktId === z.blockId) ?? null;
+  };
+  const lage = (z: Ziel, d: Record<string, unknown>): Lage => {
+    if (z.art !== 'punkt' || !zeilen.length) return {};
+    const ersetzt: ZeilenBezug[] = [];
+    for (const roh of liste(d.ersetzt)) {
+      const zeile = zeileIn(z, roh);
+      if (!zeile || vergeben.has(zeile.kennung) || ersetzt.some((e) => e.kennung === zeile.kennung))
+        continue;
+      ersetzt.push(bezug(zeile));
+    }
+    for (const e of ersetzt) vergeben.add(e.kennung);
+    const nach = zeileIn(z, d.nach);
+    return { ...(ersetzt.length ? { ersetzt } : {}), ...(nach ? { nach: bezug(nach) } : {}) };
+  };
+
   const gruppeIds = new Set(k.gruppe.map((p) => p.id));
   const vollerName = (p: Person): string => `${p.vorname.trim()} ${p.nachname.trim()}`.trim();
   const zustaendig = (wRoh: string): Zustaendig => {
@@ -307,26 +470,51 @@ export function antwortLesen(roh: string, k: AntwortKontext): AntwortErgebnis {
 
   for (const p of eintraegeVon(o.punkte))
     for (const s of liste(p.stichpunkte)) {
-      const t = typeof s === 'string' ? ohneAufzaehlung(s) : '';
-      if (t)
-        eintraege.push({
-          id: id('stichpunkt'),
-          art: 'stichpunkt',
-          ziel: ziel(p.nr),
-          text: zurueck(t),
-        });
+      // Ein Stichpunkt ist Text – oder, tolerant, `{"text":"…","nach":"Z2"}`; `nach` an der Gruppe gilt für alle darin.
+      const einzeln = istObjekt(s) ? s : null;
+      const t =
+        typeof s === 'string'
+          ? ohneAufzaehlung(s)
+          : einzeln
+            ? ohneAufzaehlung(text(einzeln.text))
+            : '';
+      if (!t) continue;
+      const z = ziel(p.nr);
+      const nach = zeileIn(z, einzeln?.nach ?? p.nach);
+      const klar = zurueck(t);
+      const gleich =
+        z.art === 'punkt'
+          ? aehnlicheZeile(
+              klar,
+              zeilen.filter((x) => x.punktId === z.blockId),
+            )
+          : null;
+      eintraege.push({
+        id: id('stichpunkt'),
+        art: 'stichpunkt',
+        ziel: z,
+        text: klar,
+        ...(nach ? { nach: bezug(nach) } : {}),
+        ...(gleich ? { doppelt: bezug(gleich) } : {}),
+      });
     }
   for (const b of eintraegeVon(o.beschluesse)) {
     const t = beschlussTeil(text(b.text));
-    if (t) eintraege.push({ id: id('beschluss'), art: 'beschluss', ziel: ziel(b.nr), ...t });
+    if (!t) continue;
+    const z = ziel(b.nr);
+    eintraege.push({ id: id('beschluss'), art: 'beschluss', ziel: z, ...t, ...lage(z, b) });
   }
   for (const d of eintraegeVon(o.todos)) {
     const t = todoTeil(d);
-    if (t) eintraege.push({ id: id('todo'), art: 'todo', ziel: ziel(d.nr), ...t });
+    if (!t) continue;
+    const z = ziel(d.nr);
+    eintraege.push({ id: id('todo'), art: 'todo', ziel: z, ...t, ...lage(z, d) });
   }
   for (const m of eintraegeVon(o.termine)) {
     const t = terminTeil(m);
-    if (t) eintraege.push({ id: id('termin'), art: 'termin', ziel: ziel(m.nr), ...t });
+    if (!t) continue;
+    const z = ziel(m.nr);
+    eintraege.push({ id: id('termin'), art: 'termin', ziel: z, ...t, ...lage(z, m) });
   }
   for (const q of eintraegeVon(o.neue_punkte)) {
     const titel = text(q.titel);
@@ -383,11 +571,21 @@ export function offenePlatzhalter(eintraege: readonly Eintrag[]): string[] {
   return platzhalterIn(texte.join('\n'));
 }
 
-/** Ein Aufruf von `EditorGriff.einfuegen(bloecke, vor)`. */
+/**
+ * Eine Einfügung für `EditorGriff.einfuegungen` – alle zusammen in EINER Transaktion (ein „Rückgängig“ macht alles zurück).
+ *
+ * - `vor` – vor diesen Block (oberste Ebene **oder** eingerückt, gleiche Ebene wie er); `null` = ans Ende (vor die leere
+ *   Schlusszeile). Mit `entfernen` (W12) ist das die Stelle der ersten ersetzten Zeile.
+ * - `nach` (W12) – direkt hinter diesen Block, als Geschwister (hat Vorrang vor `vor`).
+ * - `entfernen` (W12) – diese Blöcke nach dem Einfügen entfernen (die ersetzten Zeilen; nie eine mit Unterblöcken).
+ *
+ * Gibt es den Block nicht mehr, kommt der Inhalt wie früher ans Ende – und `entfernen` fasst dann nichts an.
+ */
 export interface Einfuegung {
-  /** Block-ID, vor die eingefügt wird (oberste Ebene); `null` = ans Ende. */
   vor: string | null;
   bloecke: Block[];
+  nach?: string;
+  entfernen?: string[];
 }
 
 const inhalt = (t: string): unknown[] => [{ type: 'text', text: t, styles: {} }];
@@ -404,13 +602,36 @@ export function einfuegeStelleKI(punkte: readonly Punkt[], blockId: string): str
   return punkte[i + 1]?.blockId ?? null;
 }
 
+/** Der Block mit dieser ID, auch eingerückt. */
+function blockFinden(dokument: readonly Block[], id: string): Block | null {
+  for (const b of dokument) {
+    if (b.id === id) return b;
+    const k = blockFinden(b.children ?? [], id);
+    if (k) return k;
+  }
+  return null;
+}
+
+/** Was `uebernahmePlanen` zusätzlich wissen kann. */
+export interface UebernahmeOptionen {
+  /** Einträge (`Eintrag.id`), bei denen der Haken „Zeile ersetzen“ weg ist: Die Zeile bleibt, der Baustein kommt darunter. */
+  ersetzenAus?: ReadonlySet<string>;
+}
+
 /**
  * **Übernahme planen.** `gewaehlt` sind die angehakten Einträge (der Aufrufer filtert). Rückgabe:
- * - `einfuegungen` – in der Reihenfolge, in der `einfuegen` aufzurufen ist. Je Ziel-Punkt ein Aufruf mit
- *   Stichpunkten (Aufzählung), Beschlüssen, To-Dos und Terminen in dieser Reihenfolge, vor den nächsten Punkt
- *   (`einfuegeStelleKI`). Später im Dokument zuerst – gehen der letzte Punkt und die neuen Punkte beide ans Ende, steht
- *   der Punkt so vor den neuen. Die neuen Punkte kommen zuletzt (`vor: null`, Tagesordnungspunkt mit Stichpunkten);
- *   „Ende“ heißt im Editor: vor die leere Schlusszeile (`vorSchlusszeilen`).
+ * - `einfuegungen` – in der Reihenfolge, in der sie auszuführen sind (alle in einer Transaktion, `Einfuegung`):
+ *   1. **An einer Zeile verankert (W12):** Ein Baustein mit `ersetzt` kommt **an die Stelle der ersten ersetzten Zeile**
+ *      (gleiche Ebene) und die ersetzten Zeilen fallen weg; eine Zeile **mit Unterblöcken wird nie entfernt** (der Baustein
+ *      kommt dann darunter), ebenso bleibt die Zeile, wenn der Haken fehlt (`ersetzenAus`). Mit `nach` – oder wenn nichts zu
+ *      ersetzen ist – hinter die genannte Zeile. **Nie Text verlieren:** Eine Zeile, die inzwischen anders dasteht (anderer
+ *      Text) oder weg ist, wird nicht angefasst; der Baustein kommt dann wie früher ans Ende seines Punkts.
+ *      Was hinter eine Zeile gehört, die ein anderer Baustein ersetzt, folgt diesem Baustein.
+ *   2. **Ans Ende des Punkts, wie bisher:** je Ziel-Punkt ein Aufruf mit Stichpunkten (Aufzählung), Beschlüssen, To-Dos und
+ *      Terminen in dieser Reihenfolge, vor den nächsten Punkt (`einfuegeStelleKI`). Später im Dokument zuerst – gehen der
+ *      letzte Punkt und die neuen Punkte beide ans Ende, steht der Punkt so vor den neuen.
+ *   3. Die neuen Punkte zuletzt (`vor: null`, Tagesordnungspunkt mit Stichpunkten); „Ende“ heißt im Editor: vor die leere
+ *      Schlusszeile (`vorSchlusszeilen`).
  * - `uebersprungen` – Einträge ohne gültiges Ziel (unbekannter/fester Punkt, oder der Punkt ist seit dem Lesen der
  *   Antwort aus dem Dokument verschwunden).
  *
@@ -420,6 +641,7 @@ export function uebernahmePlanen(
   gewaehlt: readonly Eintrag[],
   dokument: readonly Block[],
   neueId: () => string,
+  optionen: UebernahmeOptionen = {},
 ): { einfuegungen: Einfuegung[]; uebersprungen: Eintrag[] } {
   const punkte = ableiten(dokument).punkte;
   const uebersprungen: Eintrag[] = [];
@@ -446,6 +668,65 @@ export function uebernahmePlanen(
   };
   const terminBlock = (t: TerminTeil): Block =>
     block(BLOCK.termin, t.text, { datum: t.datum ?? '' });
+  const bausteinVon = (e: Exclude<Eintrag, { art: 'neuerPunkt' }>): Block =>
+    e.art === 'stichpunkt'
+      ? stichpunkt(e.text)
+      : e.art === 'beschluss'
+        ? beschlussBlock(e)
+        : e.art === 'todo'
+          ? todoBlock(e)
+          : terminBlock(e);
+
+  // ── Zeilen: was gilt noch? ─────────────────────────────────────────────────
+  // Eine ersetzte Zeile zählt nur, wenn sie noch da ist und noch denselben Text hat – sonst bliebe nur zu raten, ob es
+  // dieselbe Zeile ist, und geraten wird nicht mit Text, der verloren gehen kann.
+  const nochDa = (z: ZeilenBezug): Block | null => {
+    const b = blockFinden(dokument, z.blockId);
+    return b && textAus(b.content).replace(/\s+/g, ' ').trim() === z.text ? b : null;
+  };
+  /** Reihenfolge der Blöcke im Dokument – für „die erste“ und „die letzte“ ersetzte Zeile. */
+  const lage = new Map<string, number>();
+  const nummeriere = (bs: readonly Block[]): void => {
+    for (const b of bs) {
+      lage.set(b.id, lage.size);
+      nummeriere(b.children ?? []);
+    }
+  };
+  nummeriere(dokument);
+  const nachDokument = (a: ZeilenBezug, b: ZeilenBezug): number =>
+    (lage.get(a.blockId) ?? 0) - (lage.get(b.blockId) ?? 0);
+
+  type Baustein = Exclude<Eintrag, { art: 'neuerPunkt' }>;
+  interface Anker {
+    /** Ort: `vor` der Block, vor den eingefügt wird (ersetzen) – oder `nach` der Block, hinter den. */
+    ort: { vor: string } | { nach: string };
+    entfernen: string[];
+    bloecke: Block[];
+  }
+  const anker = new Map<string, Anker>(); // Schlüssel `vor:<id>` / `nach:<id>`
+  const reihenfolge: string[] = [];
+  /** Block-ID einer ersetzten Zeile → Schlüssel des Ankers, der sie ersetzt (dorthin folgt, was „nach“ ihr gehört). */
+  const ersetztVon = new Map<string, string>();
+  const nachFolger: { e: Baustein; nach: ZeilenBezug }[] = [];
+
+  const ankerHolen = (schluessel: string, ort: Anker['ort']): Anker => {
+    let a = anker.get(schluessel);
+    if (!a) {
+      a = { ort, entfernen: [], bloecke: [] };
+      anker.set(schluessel, a);
+      reihenfolge.push(schluessel);
+    }
+    return a;
+  };
+  const amEnde = (e: Baustein, punktId: string): void => {
+    const gruppen = jePunkt.get(punktId) ?? [[], [], [], []];
+    jePunkt.set(punktId, gruppen);
+    const b = bausteinVon(e);
+    if (e.art === 'stichpunkt') gruppen[0].push(b);
+    else if (e.art === 'beschluss') gruppen[1].push(b);
+    else if (e.art === 'todo') gruppen[2].push(b);
+    else gruppen[3].push(b);
+  };
 
   for (const e of gewaehlt) {
     if (e.art === 'neuerPunkt') {
@@ -465,21 +746,60 @@ export function uebernahmePlanen(
       uebersprungen.push(e);
       continue;
     }
-    const gruppen = jePunkt.get(ziel.blockId) ?? [[], [], [], []];
-    jePunkt.set(ziel.blockId, gruppen);
-    if (e.art === 'stichpunkt') gruppen[0].push(stichpunkt(e.text));
-    else if (e.art === 'beschluss') gruppen[1].push(beschlussBlock(e));
-    else if (e.art === 'todo') gruppen[2].push(todoBlock(e));
-    else gruppen[3].push(terminBlock(e));
+
+    // Verankert an einer Zeile? Erst `ersetzt`, dann `nach`.
+    const ersetzt = e.art === 'stichpunkt' ? [] : (e.ersetzt ?? []);
+    const gueltig = ersetzt.filter((z) => nochDa(z)).sort(nachDokument);
+    if (gueltig.length) {
+      const entfernbar =
+        optionen.ersetzenAus?.has(e.id) === true
+          ? []
+          : gueltig.filter((z) => (nochDa(z)?.children ?? []).length === 0);
+      const b = bausteinVon(e);
+      if (entfernbar.length) {
+        const a = ankerHolen(`vor:${entfernbar[0].blockId}`, { vor: entfernbar[0].blockId });
+        a.bloecke.push(b);
+        a.entfernen.push(...entfernbar.map((z) => z.blockId));
+        for (const z of entfernbar) ersetztVon.set(z.blockId, `vor:${entfernbar[0].blockId}`);
+      } else {
+        // Die Zeile bleibt (Haken weg oder Unterblöcke): der Baustein kommt darunter.
+        const letzte = gueltig[gueltig.length - 1];
+        ankerHolen(`nach:${letzte.blockId}`, { nach: letzte.blockId }).bloecke.push(b);
+      }
+      continue;
+    }
+    if (e.nach && blockFinden(dokument, e.nach.blockId)) {
+      nachFolger.push({ e, nach: e.nach });
+      continue;
+    }
+    amEnde(e, ziel.blockId);
   }
 
-  const einfuegungen: Einfuegung[] = [...punkte]
-    .reverse()
-    .filter((p) => jePunkt.has(p.blockId))
-    .map((p) => ({
-      vor: einfuegeStelleKI(punkte, p.blockId),
-      bloecke: jePunkt.get(p.blockId)!.flat(),
-    }));
+  // „Nach einer Zeile“ – steht die Zeile nicht mehr (ein anderer Baustein hat sie ersetzt), folgt der Eintrag diesem Baustein.
+  for (const { e, nach } of nachFolger) {
+    const schluessel = ersetztVon.get(nach.blockId);
+    const a = schluessel
+      ? anker.get(schluessel)!
+      : ankerHolen(`nach:${nach.blockId}`, { nach: nach.blockId });
+    a.bloecke.push(bausteinVon(e));
+  }
+
+  const verankert: Einfuegung[] = reihenfolge.map((k) => {
+    const a = anker.get(k)!;
+    return 'vor' in a.ort
+      ? { vor: a.ort.vor, bloecke: a.bloecke, entfernen: [...new Set(a.entfernen)] }
+      : { vor: null, nach: a.ort.nach, bloecke: a.bloecke };
+  });
+  const einfuegungen: Einfuegung[] = [
+    ...verankert,
+    ...[...punkte]
+      .reverse()
+      .filter((p) => jePunkt.has(p.blockId))
+      .map((p) => ({
+        vor: einfuegeStelleKI(punkte, p.blockId),
+        bloecke: jePunkt.get(p.blockId)!.flat(),
+      })),
+  ];
   if (neue.length) einfuegungen.push({ vor: null, bloecke: neue });
   return { einfuegungen, uebersprungen };
 }

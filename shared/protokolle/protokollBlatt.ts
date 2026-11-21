@@ -84,10 +84,24 @@ export interface ProtokollQuelle {
 /** Was vor einer Zeile steht: Aufzählungspunkt, Nummer, Kästchen (Checkliste, To-Do). */
 export type Zeichen =
   /** `ebene`: wie tief die Aufzählung steckt (0 = oberste; fehlt = oberste) – Zeichen siehe `aufzaehlungsZeichen`. */
-  { art: 'punkt'; ebene?: number } | { art: 'nummer'; nr: number } | { art: 'kasten'; an: boolean };
+  | { art: 'punkt'; ebene?: number }
+  | { art: 'nummer'; nr: number }
+  | { art: 'kasten'; an: boolean }
+  /** Der Kreis eines To-Dos (W12, wie der Haken im Editor und in der Lese-Ansicht). */
+  | { art: 'kreis'; an: boolean };
 
-/** Ein Text mit Auszeichnung am linken Rand: Zitat (grau), Beschluss (grün), Termin (blau). */
-export type Rand = 'zitat' | 'beschluss' | 'termin';
+/**
+ * Ein Text mit Auszeichnung am linken Rand: Zitat (grau), Beschluss (grün), Termin (blau), To-Do (grau).
+ * Seit W12 (Stil A, „ruhig“) ohne Fläche – nur ein Farbrand links, wie in Editor und Lese-Ansicht.
+ */
+export type Rand = 'zitat' | 'beschluss' | 'termin' | 'aufgabe';
+
+/**
+ * Die Farben der Bausteine (W12) – für Etikett und Datum im Blatt UND den Farbrand im PDF (`protokollPdf.ts` liest sie hier,
+ * damit es nur EINE Stelle gibt; im Browser stehen dieselben als `--green` / `--blue`).
+ */
+export const BAUSTEIN_GRUEN: Rgb = [22, 163, 74];
+export const BAUSTEIN_BLAU: Rgb = [21, 93, 252];
 
 export interface TabellenZelleBlatt {
   absaetze: Absatz[];
@@ -427,14 +441,19 @@ function teilAus(
         art: 'text',
         absaetze: zeilenAus([...laeufe, zusatz]),
         einzug,
-        zeichen: { art: 'kasten', an: false },
+        zeichen: { art: 'kreis', an: false },
+        rand: 'aufgabe',
       };
     }
     case BLOCK.beschluss:
       return hatText
         ? {
             art: 'text',
-            absaetze: zeilenAus([fett('Beschluss: '), ...laeufe]),
+            // Etikett wie im Editor: „BESCHLUSS“ klein, grün, Großbuchstaben (W12).
+            absaetze: zeilenAus([
+              { text: 'BESCHLUSS ', stil: 'kleinFett', farbe: BAUSTEIN_GRUEN },
+              ...laeufe,
+            ]),
             einzug,
             rand: 'beschluss',
           }
@@ -442,7 +461,9 @@ function teilAus(
     case BLOCK.termin: {
       if (!hatText) return null;
       const d = terminDatum(b.props);
-      const datum = d ? [fett(tagPunkt(d)), { text: ' – ' }] : [];
+      const datum = d
+        ? [{ text: tagPunkt(d), stil: 'fett' as const, farbe: BAUSTEIN_BLAU }, { text: ' – ' }]
+        : [];
       return { art: 'text', absaetze: zeilenAus([...datum, ...laeufe]), einzug, rand: 'termin' };
     }
     case 'table': {

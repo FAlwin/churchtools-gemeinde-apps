@@ -1009,3 +1009,35 @@ Lese-Ansicht und im PDF dieselben Zeichen.
 - **Historie:** 21.11.2026 (W11, nach der ersten echten Sitzung)
 
 </details>
+
+### TF-PROT-29 · „Mit KI füllen“ ersetzt statt doppelt – und ruhige Bausteine
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe, in der du die Leitung bist, und ein Protokoll im Entwurf mit **selbst geschriebenem Text** unter einem Punkt (zum Beispiel
+unter „Feste 2027“: „Eishalle Troisdorf anfragen, sonst Wiehl.“, „Danach Essen im Gemeindehaus mit Peter Wiens.“ und eine eingerückte Zeile darunter). Dazu ein kurzes
+Transkript und eine KI. Ein Rechner und ein Handy (oder 375 px). In der Entwicklung zeigt `?demo` einen Entwurf (Sitzungen → Mi, 21.10.2026), in den du Text tippst.
+
+**Das muss passieren:** Was du geschrieben hast, steht nach „Mit KI füllen“ nicht doppelt da: Beschlüsse, To-Dos und Termine ersetzen die Zeile, aus der sie entstehen. Die
+Bausteine sehen im Editor, beim Lesen und im PDF gleich ruhig aus.
+
+1. Öffne **Mit KI füllen**, füge ein Transkript ein und öffne **„So geht es an die KI“**: Unter dem Punkt stehen deine Zeilen mit **Z1, Z2 …** (eingerückte eingerückt), der Name aus
+   deinem Text ist ein Platzhalter (`[Person 1]`). Kopiere den Auftrag, lass die KI antworten und füge die Antwort ein.
+2. **Vorschau ansehen:** Bei einem Beschluss, To-Do oder Termin steht **„ersetzt „…““** mit kleinem Haken und dem Text deiner Zeile (mit dem echten Namen). Ein Stichpunkt, der
+   schon dasteht, ist **durchgestrichen**, trägt **„steht schon da“** und ist **abgewählt**; mit dem Haken lässt er sich wieder wählen. Ein Eintrag mit „kommt unter „…““ gehört unter diese Zeile.
+3. Nimm bei einem Beschluss den **kleinen Haken „ersetzt“** weg: Es steht jetzt „ersetzt nicht, kommt darunter“. Wähle den Beschluss ab: Der kleine Haken ist gesperrt.
+4. **Ausgewählte übernehmen:** Der Baustein steht **an der Stelle deiner Zeile**, die Zeile ist weg; wo der Haken fehlte, stehen Zeile **und** Baustein darunter. Eine Zeile mit
+   eingerückten Unterzeilen bleibt stehen (der Baustein kommt darunter). Es steht nichts mehr doppelt am Ende des Punkts.
+5. Drücke **einmal Strg+Z** (Mac: Cmd+Z), solange du noch nichts anderes getan hast: Die ganze Übernahme ist zurück, deine Zeilen stehen wieder da.
+6. Schalte auf **Lesen**, hell und dunkel: **Beschluss** hat einen grünen Rand und das kleine grüne Etikett „BESCHLUSS“, **Termin** einen blauen Rand mit blauem, fettem Datum
+   (Datum und Text in einer Zeile), **To-Do** einen grauen Rand mit Kreis und leiser Angabe „offen · bis …“ – keine getönten Kästen. Im Editor sieht es genauso aus; Wer und Bis
+   stehen leise ohne Rahmen. Am Handy (375 px) läuft nichts über den Rand.
+7. **Teilen / PDF:** Im PDF dieselben Ränder (grün, blau, grau), „BESCHLUSS“ klein und grün, das Datum blau, bei To-Dos ein Kreis – keine farbigen Flächen.
+8. Ein Protokoll **ohne** selbst geschriebenen Text: Der Auftrag hat keine Zeilen mit Z und keine neuen Sätze, alles läuft wie früher (Stichpunkte, Bausteine ans Ende des Punkts).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/ki.ts`, `shared/protokolle/doppelt.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.module.scss`, `protokolle/src/bloeckeEinfuegen.ts`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/EditorBloecke.module.scss`, `protokolle/src/ProtokollAnsicht.module.scss`, `protokolle/src/ProtokollAnsicht.tsx`, `shared/protokolle/protokollBlatt.ts`, `ui/teilen/protokollPdf.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/ki.vorhanden.test.ts` (ganzer Weg Auftrag → Antwort → Lesen → Übernehmen mit eingerückter Zeile, Zeile mit Kindern, unbekannter und fremder Kennung, doppelt ersetzter Kennung, abgewähltem Ersetzen, geänderter und gelöschter Zeile, Namensschutz), `shared/protokolle/doppelt.test.ts` (Schwelle), `shared/protokolle/ki.test.ts` (Auftrag ohne Text unverändert), `protokolle/src/KiFuellenFenster.test.tsx` (Vorschau, Haken, abgewählter Doppelter), `protokolle/src/bloeckeEinfuegen.test.ts` (echter Editor: Ersetzen, Unterzeilen, eine Transaktion, ein Rückgängig), `shared/protokolle/protokollBlatt.test.ts` und `ui/teilen/protokollPdf.test.ts` (Rand, Etikett, Kreis, keine Fläche); **nur von Hand:** Aussehen hell/dunkel und am Handy, die echte KI-Antwort, PDF-Seite ansehen
+- **Historie:** 21.11.2026 (W12, nach dem Festplanung-Protokoll)
+
+</details>

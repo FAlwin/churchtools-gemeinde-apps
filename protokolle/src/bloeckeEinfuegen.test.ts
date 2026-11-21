@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
 import type { Block } from '@shared/protokolle/dokument';
 import { schema, type ProtokollEditor } from './editorSchema';
-import { bloeckeEinfuegen } from './bloeckeEinfuegen';
+import { bloeckeEinfuegen, einfuegungenAusfuehren } from './bloeckeEinfuegen';
 import { einhaengen } from './editorTest.testutil';
 
 /** Einfügen ins Protokoll (Vorschläge, „Mit KI füllen“) – gegen den echten BlockNote-Editor mit unserem Schema. */
@@ -48,5 +48,75 @@ describe('bloeckeEinfuegen', () => {
     const e = editorMit([A, B, leer('L')]);
     bloeckeEinfuegen(e, [neu], 'weg');
     expect(ids(e)).toEqual(['A', 'B', 'N', 'L']);
+  });
+});
+
+describe('einfuegungenAusfuehren (W12 – Ersetzen in EINER Transaktion)', () => {
+  const li = (id: string, t: string, children: Block[] = []): Block => ({
+    id,
+    type: 'bulletListItem',
+    content: [{ type: 'text', text: t, styles: {} }],
+    children,
+  });
+  const baustein = (id: string, t: string): Block => ({
+    id,
+    type: 'beschluss',
+    content: [{ type: 'text', text: t, styles: {} }],
+    children: [],
+  });
+  // Gliederung als Text: Einrückung durch „>“.
+  const form = (bs: readonly { id: string; children: readonly unknown[] }[], tiefe = 0): string[] =>
+    bs.flatMap((b) => [
+      `${'>'.repeat(tiefe)}${b.id}`,
+      ...form(b.children as { id: string; children: unknown[] }[], tiefe + 1),
+    ]);
+  const dok = (): Block[] => [
+    A,
+    li('z1', 'Eins'),
+    li('z2', 'Zwei', [li('z3', 'Drei')]),
+    B,
+    leer('L'),
+  ];
+
+  it('ersetzen: Baustein an der Stelle der Zeile, Zeile weg – auch eingerückt, auf gleicher Ebene', () => {
+    const e = editorMit(dok());
+    einfuegungenAusfuehren(e, [{ vor: 'z3', bloecke: [baustein('n1', 'Neu')], entfernen: ['z3'] }]);
+    expect(form(e.document)).toEqual(['A', 'z1', 'z2', '>n1', 'B', 'L']);
+  });
+
+  it('ersetzen oberste Ebene und nach einer Zeile', () => {
+    const e = editorMit(dok());
+    einfuegungenAusfuehren(e, [
+      { vor: 'z1', bloecke: [baustein('n1', 'Neu')], entfernen: ['z1'] },
+      { vor: null, nach: 'z3', bloecke: [baustein('n2', 'Danach')] },
+    ]);
+    expect(form(e.document)).toEqual(['A', 'n1', 'z2', '>z3', '>n2', 'B', 'L']);
+  });
+
+  it('eine Zeile mit Unterblöcken wird nie entfernt – auch wenn der Plan es verlangt', () => {
+    const e = editorMit(dok());
+    einfuegungenAusfuehren(e, [{ vor: 'z2', bloecke: [baustein('n1', 'Neu')], entfernen: ['z2'] }]);
+    expect(form(e.document)).toEqual(['A', 'z1', 'n1', 'z2', '>z3', 'B', 'L']);
+  });
+
+  it('Block für „nach“ oder „entfernen“ fehlt: ans Ende (vor die Schlusszeile), nichts wird angefasst', () => {
+    const e = editorMit(dok());
+    einfuegungenAusfuehren(e, [
+      { vor: null, nach: 'weg', bloecke: [baustein('n1', 'Neu')], entfernen: ['auch-weg'] },
+    ]);
+    expect(form(e.document)).toEqual(['A', 'z1', 'z2', '>z3', 'B', 'n1', 'L']);
+  });
+
+  it('ein einziges Rückgängig macht die ganze Übernahme rückgängig', () => {
+    const e = editorMit(dok());
+    const vorher = JSON.stringify(e.document);
+    einfuegungenAusfuehren(e, [
+      { vor: 'z1', bloecke: [baustein('n1', 'Neu')], entfernen: ['z1'] },
+      { vor: null, nach: 'z3', bloecke: [baustein('n2', 'Danach')] },
+      { vor: null, bloecke: [baustein('n3', 'Ende')] },
+    ]);
+    expect(JSON.stringify(e.document)).not.toBe(vorher);
+    e.undo();
+    expect(JSON.stringify(e.document)).toBe(vorher);
   });
 });

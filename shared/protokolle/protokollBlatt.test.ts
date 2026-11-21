@@ -3,7 +3,14 @@ import type { Absatz, Rgb } from '../ct/terminBlatt';
 import { neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
 import { ohneWert } from './anwesenheit';
 import type { Block } from './dokument';
-import { protokollBlatt, zeilenAus, type BlattTeil, type ProtokollQuelle } from './protokollBlatt';
+import {
+  BAUSTEIN_BLAU,
+  BAUSTEIN_GRUEN,
+  protokollBlatt,
+  zeilenAus,
+  type BlattTeil,
+  type ProtokollQuelle,
+} from './protokollBlatt';
 import type { ProtokollKopf } from './speicher';
 import type { Sitzung } from './sitzungen';
 
@@ -278,7 +285,9 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
       'Kinder – noch niemand',
       'Beamer – Alwin Friesen',
     ]);
-    for (const t of ts) expect(t).toMatchObject({ zeichen: { art: 'kasten', an: false } });
+    // W12 (Stil A): Kreis statt Kästchen, grauer Rand links – wie der Haken im Editor.
+    for (const t of ts)
+      expect(t).toMatchObject({ zeichen: { art: 'kreis', an: false }, rand: 'aufgabe' });
     expect(JSON.stringify(ts)).not.toMatch(/erledigt|offen|Arbeit/);
   });
 
@@ -322,12 +331,17 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
       ]),
     );
     expect(texte(ts)).toEqual([
-      'Beschluss: Essen um 12:30',
+      'BESCHLUSS Essen um 12:30',
       '14.12.2026 – Arbeitseinsatz',
       'ohne Datum',
       'Psalm 23',
       'linie',
     ]);
+    // Etikett und Datum tragen die Farbe der Bausteine (Quelle `BAUSTEIN_*`) – dieselbe wie `--green` / `--blue` im Browser.
+    const laeufe = (i: number) =>
+      ts[i].art === 'text' ? (ts[i] as { absaetze: Absatz[] }).absaetze[0] : [];
+    expect(laeufe(0)[0]).toEqual({ text: 'BESCHLUSS ', stil: 'kleinFett', farbe: BAUSTEIN_GRUEN });
+    expect(laeufe(1)[0]).toEqual({ text: '14.12.2026', stil: 'fett', farbe: BAUSTEIN_BLAU });
     expect(ts.map((t) => (t.art === 'text' ? t.rand : null))).toEqual([
       'beschluss',
       'termin',

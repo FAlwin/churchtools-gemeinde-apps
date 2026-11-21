@@ -138,6 +138,12 @@ vi.mock('./DokumentEditor', async () => {
           E.einfuegen(b, vor);
           E.zusatz.push(...b);
         },
+        einfuegungen: (liste: { bloecke: unknown[]; vor: string | null }[]) => {
+          for (const f of liste) {
+            E.einfuegen(f.bloecke, f.vor);
+            E.zusatz.push(...f.bloecke);
+          }
+        },
       }));
       return (
         <div>

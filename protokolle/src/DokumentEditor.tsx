@@ -28,7 +28,8 @@ import {
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
-import { bloeckeEinfuegen } from './bloeckeEinfuegen';
+import type { Einfuegung } from '@shared/protokolle/ki';
+import { bloeckeEinfuegen, einfuegungenAusfuehren } from './bloeckeEinfuegen';
 import { Icon } from '@ui/icons/icons';
 import { useThema } from '@ui/design/useThema';
 import { aufgabenIdsSetzen, schema, TABELLEN, type ProtokollEditor } from './editorSchema';
@@ -174,6 +175,11 @@ export interface EditorGriff {
    * übernommene Vorschläge (S5-4).
    */
   einfuegen(bloecke: readonly Block[], vor: string | null): void;
+  /**
+   * Mehrere Einfügungen samt Ersetzen (W12, „Mit KI füllen“) in EINER Transaktion – ein Rückgängig macht alles zurück.
+   * Zählt als Änderung (wird gespeichert).
+   */
+  einfuegungen(liste: readonly Einfuegung[]): void;
 }
 
 export function DokumentEditor({
@@ -229,6 +235,7 @@ export function DokumentEditor({
         ersetzt.current = JSON.stringify(editor.document);
       },
       einfuegen: (bloecke, vor) => bloeckeEinfuegen(editor, bloecke, vor),
+      einfuegungen: (liste) => einfuegungenAusfuehren(editor, liste),
     }),
     [editor],
   );

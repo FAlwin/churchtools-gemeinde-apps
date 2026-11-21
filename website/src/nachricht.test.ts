@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AUFTEILUNGEN, gestaltungSchema, spaltenAnzahl } from '@shared/website/modell';
 import { baustein, abschnitt, seite, spalte } from '@shared/website/website.testdaten';
 import { nachrichtLesen } from './nachricht';
 
@@ -287,5 +288,73 @@ describe('Text direkt tippen: nur tippbare Felder, nur die feste Form, nur echte
       M({ was: 'link-pruefen', id: 1 }),
     ])
       expect(nachrichtLesen(m, SEITE), JSON.stringify(m)).toBeNull();
+  });
+});
+
+describe('Nachrichten „aufteilung“ und „abstand“ (W3c-3): eine Zahl und ein Name aus den Listen des Modells', () => {
+  // SEITE: Abschnitt 0 hat eine Spalte, Abschnitt 1 hat zwei Spalten.
+  const AUF = (i: unknown, aufteilung: unknown) => M({ was: 'aufteilung', i, aufteilung });
+  const ABS = (i: unknown, abstand: unknown) => M({ was: 'abstand', i, abstand });
+
+  it('jede Aufteilung aus AUFTEILUNGEN mit der Spaltenzahl des Abschnitts kommt durch', () => {
+    for (const a of AUFTEILUNGEN) {
+      const soll = spaltenAnzahl(a) === 2;
+      expect(nachrichtLesen(AUF(1, a), SEITE) !== null, a).toBe(soll);
+    }
+    expect(nachrichtLesen(AUF(1, '2-1'), SEITE)).toEqual(AUF(1, '2-1'));
+    expect(nachrichtLesen(AUF(0, '1'), SEITE)).toEqual(AUF(0, '1')); // eine Spalte: nur '1' (ändert nichts, aber ist gültig)
+  });
+
+  it('eine andere Spaltenzahl wird abgelehnt – das ginge nur im Fenster „Gestalten“', () => {
+    expect(nachrichtLesen(AUF(1, '1-1-1'), SEITE)).toBeNull();
+    expect(nachrichtLesen(AUF(1, '1'), SEITE)).toBeNull();
+    expect(nachrichtLesen(AUF(0, '1-1'), SEITE)).toBeNull();
+  });
+
+  it('keine Aufteilung aus der Liste, falsche Form, falsche Zahl: abgelehnt', () => {
+    for (const m of [
+      AUF(1, '3-1'),
+      AUF(1, '2:1'),
+      AUF(1, ''),
+      AUF(1, 21),
+      AUF(1, null),
+      M({ was: 'aufteilung', i: 1 }),
+      M({ was: 'aufteilung', aufteilung: '1-1' }),
+      AUF(1.5, '1-1'),
+      AUF(-1, '1-1'),
+      AUF('1', '1-1'),
+      M({ was: 'aufteilung', i: 1, aufteilung: '1-1', html: '<b>' }),
+    ])
+      expect(nachrichtLesen(m, SEITE), JSON.stringify(m)).toBeNull();
+  });
+
+  it('ein Abschnitt, den es nicht gibt, ist keine Nachricht', () => {
+    expect(nachrichtLesen(AUF(2, '1-1'), SEITE)).toBeNull();
+    expect(nachrichtLesen(AUF(99, '1-1'), SEITE)).toBeNull();
+    expect(nachrichtLesen(ABS(2, 'klein'), SEITE)).toBeNull();
+    expect(nachrichtLesen(ABS(99, 'klein'), SEITE)).toBeNull();
+  });
+
+  it('jede Abstand-Stufe des Schemas kommt durch, jede andere nicht', () => {
+    for (const st of gestaltungSchema.shape.abstand.options)
+      expect(nachrichtLesen(ABS(0, st), SEITE), st).toEqual(ABS(0, st));
+    for (const m of [
+      ABS(0, 'riesig'),
+      ABS(0, 'Klein'),
+      ABS(0, ''),
+      ABS(0, 12),
+      ABS(0, null),
+      M({ was: 'abstand', i: 0 }),
+      M({ was: 'abstand', abstand: 'klein' }),
+      ABS(0.5, 'klein'),
+      ABS(-1, 'klein'),
+      M({ was: 'abstand', i: 0, abstand: 'klein', css: 'x' }),
+    ])
+      expect(nachrichtLesen(m, SEITE), JSON.stringify(m)).toBeNull();
+  });
+
+  it('ohne das Kennzeichen des Editors ist es keine Nachricht', () => {
+    expect(nachrichtLesen({ was: 'aufteilung', i: 1, aufteilung: '2-1' }, SEITE)).toBeNull();
+    expect(nachrichtLesen({ was: 'abstand', i: 0, abstand: 'klein' }, SEITE)).toBeNull();
   });
 });

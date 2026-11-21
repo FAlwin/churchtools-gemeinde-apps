@@ -17,6 +17,7 @@ import {
   type Aufteilung,
   type Baustein,
   type Einstellungen,
+  type Gestaltung,
   type Menue,
   type Seite,
 } from './modell';
@@ -143,6 +144,33 @@ export function aufteilungAendern(
     spalten[spalten.length - 1].bausteine.push(...weg.bausteine);
   }
   return { ...abschnitt, aufteilung, spalten };
+}
+
+/**
+ * **Aufteilung per Ziehen an der Trennlinie (W3c-3): nur eine mit DERSELBEN Spaltenzahl.** Die Spaltenzahl ändert sich dabei nie,
+ * also geht kein Baustein verloren (anders als im Fenster „Gestalten“, wo `aufteilungAendern` Spalten zusammenlegen darf). Die
+ * Zahl der Spalten kommt aus dem Namen der Aufteilung (`spaltenAnzahl`), es gibt keine zweite Liste.
+ */
+export function aufteilungGleicheSpalten(abschnitt: Abschnitt, aufteilung: Aufteilung): boolean {
+  return spaltenAnzahl(aufteilung) === abschnitt.spalten.length;
+}
+
+/** Die Aufteilung des Abschnitts `i` ändern, ohne die Spaltenzahl zu ändern. Sonst (oder wenn es den Abschnitt nicht gibt) `null` – dann ändert der Aufrufer nichts. */
+export function aufteilungZiehen(
+  seite: Seite,
+  i: number,
+  aufteilung: Aufteilung,
+  neueId: () => string,
+): Seite | null {
+  if (!abschnittDa(seite, i)) return null;
+  const a = seite.abschnitte[i];
+  if (!aufteilungGleicheSpalten(a, aufteilung)) return null;
+  return abschnittErsetzen(seite, i, aufteilungAendern(a, aufteilung, neueId));
+}
+
+/** Die Gestaltung eines Abschnitts teilweise ändern – EINE Stelle für das Fenster „Gestalten“ und das Ziehen des Abstands. */
+export function gestaltungAendern(abschnitt: Abschnitt, teil: Partial<Gestaltung>): Abschnitt {
+  return { ...abschnitt, gestaltung: { ...abschnitt.gestaltung, ...teil } };
 }
 
 // ── Bausteine ────────────────────────────────────────────────────────────────────────────────────────────────

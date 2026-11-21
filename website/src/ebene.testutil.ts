@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 import { renderSeite } from '@shared/website/render';
 import { kontext } from '@shared/website/website.testdaten';
 import type { Seite } from '@shared/website/modell';
+import { ABSTAENDE, aufteilungenJeSpalten } from './ebene';
 import kernText from './ebene.kern.txt?raw';
 import skriptText from './ebene.skript.txt?raw';
 
@@ -26,6 +27,26 @@ export type Kern = {
     belegt?: Rechteck[],
   ) => Record<string, Platz | null>;
   RANG: Record<string, number>;
+  anteile: (name: string) => number[];
+  teilerAnteil: (name: string, j: number) => number;
+  aufteilungRasten: (namen: string[], j: number, s: number) => string | null;
+  aufteilungFrei: (namen: string[]) => boolean;
+  aufteilungText: (name: string) => string;
+  aufteilungNachbar: (
+    namen: string[],
+    j: number,
+    aktuell: string,
+    richtung: 'links' | 'rechts',
+  ) => string | null;
+  spaltenLage: (links: number, rechts: number, n: number, gap: number) => Lage;
+  teilerX: (lage: Lage, name: string, j: number) => number;
+  zeigerAnteil: (lage: Lage, x: number, j: number) => number;
+  abstandRasten: (
+    stufen: readonly string[],
+    px: Record<string, number>,
+    ziel: number,
+  ) => string | null;
+  stufenMessen: (wurzel: Element, stufen: readonly string[]) => Record<string, number>;
   formatUmschalten: Schritt3<'fett' | 'kursiv'>;
   linkSetzen: Schritt3<string>;
   linkEntfernen: Schritt;
@@ -52,6 +73,7 @@ export type Kern = {
   zusammengefallen: (a: Auswahl) => boolean;
   laenge: (b: Block) => number;
 };
+export type Lage = { links: number; n: number; gap: number; nutz: number };
 export type Rechteck = { l: number; t: number; r: number; b: number };
 export type Kandidat = Rechteck & { sk?: boolean };
 export type Platz = { rect: Rechteck; sk?: boolean; index: number; ue: number };
@@ -125,7 +147,8 @@ export function starten(s: Seite, opt: Start = {}) {
       symbole: SYMBOLE,
       modus: opt.modus ?? 'computer',
       darfHtml: opt.darfHtml ?? false,
-      abstaende: ['kein', 'klein', 'normal', 'gross'],
+      abstaende: ABSTAENDE,
+      aufteilungen: aufteilungenJeSpalten(),
       abstandNamen: { kein: 'Kein', klein: 'Klein', normal: 'Normal', gross: 'Groß' },
       weiter: opt.weiter ?? null,
     },

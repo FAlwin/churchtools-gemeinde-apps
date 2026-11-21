@@ -55,7 +55,7 @@ import {
   type WebsiteTeil,
 } from '@shared/website/speicher';
 import { neueStartseite, vorlaeufigeEinstellungen } from '@shared/website/seitenListe';
-import { findeVorlage } from '@shared/website/vorlagen';
+import { findeVorlage, neuerBaustein } from '@shared/website/vorlagen';
 import { sollRechte as sollRechteWebsite } from '@shared/website/rechte';
 import { rechteAus, type DatenRechteNummern, type Recht } from '@shared/ct/rollenRechte';
 import type { WebsiteSperre } from '@shared/website/sperre';
@@ -198,11 +198,22 @@ export function demoStarten(fall: string): void {
         { id: id(), bausteine: [] },
       ],
     };
+    // Zum Maße ziehen (W3c-3): zwei Spalten ungleich breit auf DUNKLER Fläche – Spaltenbreite und Abstand (die Bänder müssen auf Petrol
+    // zu sehen sein); dazu der helle zweispaltige Abschnitt von oben (`bild-text`) und der dreispaltige dunkle (Griff gedämpft).
+    const dunkelZwei: Abschnitt = {
+      id: id(),
+      gestaltung: { ...dunkel.gestaltung, abstand: 'normal' },
+      aufteilung: '2-1',
+      spalten: [
+        { id: id(), bausteine: [neuerBaustein('ueberschrift', id), neuerBaustein('text', id)] },
+        { id: id(), bausteine: [neuerBaustein('text', id)] },
+      ],
+    };
     const gruppen: Seite = {
       id: 'demo-gruppen',
       titel: 'Unsere Gruppen',
       pfad: 'unsere-gruppen',
-      abschnitte: [...gruppenAbschnitte, leereSpalte, html],
+      abschnitte: [...gruppenAbschnitte, dunkelZwei, leereSpalte, html],
     };
     const impressum: Seite = {
       id: 'demo-impressum',

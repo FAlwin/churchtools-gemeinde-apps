@@ -7,12 +7,15 @@ import {
   abschnittVerschieben,
   abschnittVerschiebenNach,
   aufteilungAendern,
+  aufteilungGleicheSpalten,
+  aufteilungZiehen,
   bausteinDa,
   bausteinEntfernen,
   bausteinErsetzen,
   bausteinHinzufuegen,
   bausteinVerschieben,
   einfuegeStelleDa,
+  gestaltungAendern,
   imMenueZeigen,
   menueFuerSeite,
   menueTitelNachziehen,
@@ -21,7 +24,14 @@ import {
   seitePruefen,
   spalteDa,
 } from './bearbeiten';
-import { AUFTEILUNGEN, bausteinSchema, seiteSchema, type Abschnitt, type Seite } from './modell';
+import {
+  AUFTEILUNGEN,
+  bausteinSchema,
+  seiteSchema,
+  spaltenAnzahl,
+  type Abschnitt,
+  type Seite,
+} from './modell';
 import { findeVorlage, VORLAGEN } from './vorlagen';
 import {
   abschnitt,
@@ -445,5 +455,64 @@ describe('Verschieben nach Stelle (Ziehen, W3c-2)', () => {
       { i: 0, j: 1, k: NaN },
     ])
       expect(bausteinVerschieben(zwei, gut, nach)).toBe(zwei);
+  });
+});
+
+describe('Maße ziehen (W3c-3): Aufteilung nur mit derselben Spaltenzahl, Gestaltung teilweise ändern', () => {
+  const zweiSp = (): Seite =>
+    mit(
+      abschnitt([], {
+        id: 'z',
+        aufteilung: '1-1',
+        spalten: [
+          spalte([baustein('text', { id: 'l' })], { id: 'sl' }),
+          spalte([baustein('trenner', { id: 'r' })], { id: 'sr' }),
+        ],
+      }),
+      A('a2'),
+    );
+
+  it('jede Aufteilung mit zwei Spalten ist erlaubt – genau die aus AUFTEILUNGEN, die zwei Spalten haben', () => {
+    const s = zweiSp();
+    const gleich = AUFTEILUNGEN.filter((a) => spaltenAnzahl(a) === 2);
+    expect(gleich).toEqual(['1-1', '2-1', '1-2']);
+    for (const a of AUFTEILUNGEN) {
+      const n = aufteilungZiehen(s, 0, a, idZaehler());
+      expect(aufteilungGleicheSpalten(s.abschnitte[0], a), a).toBe(gleich.includes(a));
+      expect(n === null, a).toBe(!gleich.includes(a));
+    }
+  });
+
+  it('ändert nur diesen Abschnitt, nur die Aufteilung – alle Bausteine bleiben an ihrer Stelle', () => {
+    const s = zweiSp();
+    const n = aufteilungZiehen(s, 0, '2-1', idZaehler())!;
+    expect(n.abschnitte[0].aufteilung).toBe('2-1');
+    expect(n.abschnitte[1]).toBe(s.abschnitte[1]);
+    expect(n.abschnitte[0].spalten.map((sp) => sp.bausteine.map((b) => b.id))).toEqual([
+      ['l'],
+      ['r'],
+    ]);
+    expect(n.abschnitte[0].spalten.map((sp) => sp.id)).toEqual(['sl', 'sr']);
+    expect(seiteSchema.safeParse(n).success).toBe(true);
+    expect(s.abschnitte[0].aufteilung).toBe('1-1'); // die alte Seite bleibt, wie sie war
+  });
+
+  it('andere Spaltenzahl oder Abschnitt, den es nicht gibt: null', () => {
+    const s = zweiSp();
+    expect(aufteilungZiehen(s, 0, '1', idZaehler())).toBeNull();
+    expect(aufteilungZiehen(s, 0, '1-1-1', idZaehler())).toBeNull();
+    expect(aufteilungZiehen(s, 7, '2-1', idZaehler())).toBeNull();
+    expect(aufteilungZiehen(s, -1, '2-1', idZaehler())).toBeNull();
+  });
+
+  it('gestaltungAendern setzt nur das Genannte, der Rest der Gestaltung bleibt', () => {
+    const a = abschnitt([], {
+      id: 'x',
+      gestaltung: gestaltung({ abstand: 'klein', text: 'hell' }),
+    });
+    const n = gestaltungAendern(a, { abstand: 'gross' });
+    expect(n.gestaltung).toEqual({ ...a.gestaltung, abstand: 'gross' });
+    expect(n.spalten).toBe(a.spalten);
+    expect(a.gestaltung.abstand).toBe('klein');
   });
 });

@@ -3,7 +3,8 @@
 // Stelle (Abschnitt i, Spalte j, Baustein k in der Reihenfolge der Seite; beim Ziehen die Stelle, VOR der etwas landet) und – nur beim Text direkt tippen – den getippten
 // Text. Mehr nimmt die Erweiterung nicht an (`nachricht.ts`), und Links prüft sie mit der echten Regel.
 //
-// `config` kommt von der Erweiterung: { scroll, symbole, modus: 'computer' | 'handy', darfHtml, abstaende, abstandNamen, weiter }.
+// `config` kommt von der Erweiterung: { scroll, symbole, modus: 'computer' | 'handy', darfHtml, abstaende, abstandNamen, aufteilungen, weiter }.
+// Maße ziehen (W3c-3): Spaltenbreite (`aufteilung`) und Abstand (`abstand`) – auch hier nur Zahlen bzw. ein Name aus den Listen der Erweiterung.
 // `K` ist der Kern (`ebene.kern.txt`): Kollisionsregel und Textmodell – das, was sich ohne Seite prüfen lässt.
 (function (config, K) {
   'use strict';
@@ -42,6 +43,8 @@
     for (let n = 0; n < config.abstaende.length; n++) if (sec.classList.contains('w-abschnitt--abstand-' + config.abstaende[n])) return config.abstaende[n];
     return 'normal';
   };
+
+  const abstandText = (sec) => 'Abstand oben & unten: ' + (config.abstandNamen[abstandVon(sec)] || '');
 
   // ── Die Schicht ────────────────────────────────────────────────────────────────────────────────────────────
   // ALLE Bedienelemente (Leisten, Griff, „+“, Rahmen) liegen in EINER Schicht über der Seite und werden nur bei Bedarf gezeigt –
@@ -115,21 +118,21 @@
   let einfAn = 0;
   einfBtn.onclick = (e) => { e.stopPropagation(); senden({ was: 'einfuegen', i: einfAn }); };
 
-  // Abstand-Pille unten mittig – vorerst ein Knopf, der das Fenster „Gestalten“ öffnet (Ziehen folgt in W3c-3)
+  // Abstand-Pille unten mittig (W3c-3): senkrecht ziehen rastet auf die Stufen ein, ein Klick ohne Ziehen öffnet „Gestalten“.
+  // Das Modell hat EINEN Abstand für oben und unten – die Pille und der Chip sagen das. Pfeil hoch/runter = eine Stufe.
   let abstandBtn = null;
   let abstandFuer = null;
+  const baender = [];
   if (voll) {
     abstandBtn = document.createElement('button');
     abstandBtn.type = 'button';
     abstandBtn.className = 'b-abstand';
     abstandBtn.hidden = true;
-    abstandBtn.title = 'Abstand des Abschnitts im Fenster „Gestalten“ ändern';
+    abstandBtn.title = 'Abstand oben und unten: ziehen. Ein Klick öffnet „Gestalten“.';
+    abstandBtn.setAttribute('aria-label', 'Abstand oben und unten ändern: ziehen, Pfeil hoch oder runter, oder Enter für „Gestalten“');
     abstandBtn.innerHTML = icon('regler') + '<span></span>';
     ueber.appendChild(abstandBtn);
-    abstandBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (abstandFuer) senden({ was: 'gestalten', i: abschnitte().indexOf(abstandFuer) });
-    });
+    ['oben', 'unten'].forEach((seite) => { const d = neu('div', 'b-band b-band--' + seite); baender.push(d); });
   }
 
   // „+“ in der Lücke zwischen zwei Bausteinen (öffnet das Hinzufügen)
@@ -141,6 +144,34 @@
   const plusLinie = neu('div', 'b-pluslinie');
   let plusOrt = null;
   plus.addEventListener('click', (e) => { e.stopPropagation(); if (plusOrt) senden({ was: 'baustein-neu', i: plusOrt.i, j: plusOrt.j }); });
+
+  // Spalten-Griffe (W3c-3): einer je Lücke zwischen zwei Spalten, mittig, sichtbar am Abschnitt unter der Maus (`layout`). Ziehen geht,
+  // wenn es für die Spaltenzahl mindestens zwei Aufteilungen gibt (heute: zwei Spalten) – sonst ist der Griff gedämpft und sagt, warum.
+  const aufteilungVon = (sec) => { const m = innenVon(sec).className.match(/w-spalten--(\d(?:-\d)*)/); return m ? m[1] : '1'; };
+  const teilerListe = [];
+  if (voll) {
+    abschnitte().forEach((sec) => {
+      const n = spaltenVon(sec).length;
+      if (n < 2) return;
+      const namen = config.aufteilungen[String(n)] || [];
+      const frei = K.aufteilungFrei(namen);
+      for (let j = 0; j < n - 1; j++) {
+        const t = neu('button', 'b-teiler');
+        t.type = 'button';
+        t.innerHTML = '<i></i>';
+        if (frei) {
+          t.title = 'Spaltenbreite ziehen (oder Pfeil links/rechts)';
+          t.setAttribute('aria-label', 'Spaltenbreite ändern: ziehen oder Pfeil links und rechts');
+        } else {
+          t.classList.add('b-fest');
+          t.title = 'Bei ' + n + ' Spalten gibt es nur eine Aufteilung – die Spaltenzahl änderst du über „Gestalten“.';
+          t.setAttribute('aria-label', t.title);
+          t.setAttribute('aria-disabled', 'true');
+        }
+        teilerListe.push({ el: t, sec: sec, j: j, n: n, namen: namen, frei: frei });
+      }
+    });
+  }
 
   // Leere Spalten: ein Knopf in der Spalte
   abschnitte().forEach((sec) => {
@@ -516,7 +547,7 @@
 
   // ── Anzeigen, Rangordnung und Kollisionsprüfung ────────────────────────────────────────────────────────────
   // Regel: Kein Bedienelement liegt über Text oder über einem anderen Bedienelement. Die Rechnung steht im Kern (`K.ordne`):
-  // Rangordnung 1 Baustein-Leiste · 2 Abschnitt-Leiste · 4 „+ Abschnitt“ · 5 „+“ zwischen Bausteinen · 6 Abstand-Pille. Jedes
+  // Rangordnung 1 Baustein-Leiste · 2 Abschnitt-Leiste · 3 Spalten-Griff · 4 „+ Abschnitt“ · 5 „+“ zwischen Bausteinen · 6 Abstand-Pille. Jedes
   // Element nennt Wunschplätze; genommen wird der erste, der weder eine Textzeile noch ein höher eingestuftes Element berührt.
   // Geht keiner, weicht ein niedrigeres Element aus oder wird ausgeblendet; die beiden Leisten nehmen als Notlösung den Platz
   // mit der geringsten Überdeckung, damit man sie immer erreicht.
@@ -575,7 +606,7 @@
   };
 
   const layout = () => {
-    if (aktiv || zieh) return;
+    if (aktiv || zieh || masse) return;
     alleAus();
     const sec = hov.sec;
     if (!sec || !sec.isConnected) return;
@@ -618,6 +649,23 @@
     const kw = [];
     xs.forEach((x) => { ys.forEach((y) => { kw.push(rk(x, y, wg.w, wg.h)); }); });
     elemente.push({ name: 'werk', rang: K.RANG.werk, pflicht: true, kand: kw });
+    // 3 Spalten-Griffe: mittig in der Lücke zwischen den Spalten, in der Höhe so verschoben, dass nichts berührt wird
+    const andere = {};
+    teilerListe.forEach((t, n) => {
+      if (t.sec !== sec) return;
+      const cols = spaltenVon(sec);
+      const a = seitenRechteck(cols[t.j]);
+      const c = seitenRechteck(cols[t.j + 1]);
+      if (c.l < a.r - 1) return; // untereinander (schmale Seite): kein Griff
+      const tg = groesse(t.el, null);
+      const cx = (a.r + c.l) / 2;
+      const kand = [0, -70, 70, -140, 140, -210, 210, -280, 280].map((d) => {
+        const y = Math.max(inn.t + 4, Math.min(inn.b - tg.h - 4, inn.t + (inn.b - inn.t - tg.h) / 2 + d));
+        return rk(cx - tg.w / 2, y, tg.w, tg.h);
+      });
+      elemente.push({ name: 'teiler' + n, rang: K.RANG.teiler, kand: kand });
+      andere['teiler' + n] = t.el;
+    });
     // 4 „+ Abschnitt einfügen“ an der Grenze, wenn die Maus dicht daran ist
     if (hov.grenze >= 0) {
       const secs = abschnitte();
@@ -643,7 +691,7 @@
     // 6 Abstand-Pille: mittig an der unteren Kante (innen darüber, sonst darunter, sonst seitlich versetzt)
     if (abstandBtn) {
       abstandFuer = sec;
-      abstandBtn.querySelector('span').textContent = 'Abstand: ' + (config.abstandNamen[abstandVon(sec)] || '');
+      abstandBtn.querySelector('span').textContent = abstandText(sec);
       const ag = groesse(abstandBtn, null);
       const cx = (s.l + s.r) / 2;
       elemente.push({ name: 'abstand', rang: K.RANG.abstand, kand: [
@@ -652,7 +700,7 @@
     }
 
     const platz = K.ordne(elemente, hindernisse, B, belegt);
-    const el = { blockleiste: blockleiste, werk: werk, einfuegen: einfBtn, plus: plus, abstand: abstandBtn };
+    const el = Object.assign({ blockleiste: blockleiste, werk: werk, einfuegen: einfBtn, plus: plus, abstand: abstandBtn }, andere);
     elemente.forEach((e) => {
       const p = platz[e.name];
       const dom = el[e.name];
@@ -665,6 +713,7 @@
       plusLinie.hidden = false; setzePos(plusLinie, linieRect); plusLinie.style.width = (linieRect.r - linieRect.l) + 'px';
     }
   };
+  let masse = null; // beim Ziehen der Maße (Spaltenbreite, Abstand): { art, ... } – solange gilt das Layout der Leisten nicht
   let zieh = null; // beim Ziehen: { art, quelle, el, griff, startX, startY, aktiv, ziel, lx, ly, raf }
   let layoutRaf = 0;
   const planeLayout = () => { if (layoutRaf) return; layoutRaf = requestAnimationFrame(() => { layoutRaf = 0; layout(); }); };
@@ -677,7 +726,7 @@
   const gleicheLuecke = (a, b) => (!a && !b) || (a && b && a.sp === b.sp && a.k === b.k);
   const hoverAktualisieren = () => {
     const z = zeiger.ziel;
-    if (!z || !z.closest || aktiv || zieh) return;
+    if (!z || !z.closest || aktiv || zieh || masse) return;
     if (z.closest('.b-ueber, .b-format')) { clearTimeout(aufTimer); clearTimeout(blockTimer); blockTimer = 0; return; } // die Maus ist auf einem Bedienelement: alles bleibt
     clearTimeout(aufTimer);
     const px = zeiger.x + seiteX();
@@ -880,6 +929,202 @@
     });
     griff.addEventListener('pointerdown', (e) => { if (werkFuer) ziehStart(e, 'abschnitt', werkFuer, { i: abschnitte().indexOf(werkFuer) }); });
   }
+  // ── Maße ziehen (W3c-3; Vorlage: Entwurf w3c-v2) ────────────────────────────────────────────────────────────
+  // Spaltenbreite: der Griff in der Lücke rastet NUR auf Aufteilungen mit derselben Spaltenzahl ein (`config.aufteilungen`, aus
+  // `AUFTEILUNGEN`; die Anteile stehen im Namen, `K.anteile`). Abstand: die Pille rastet auf die Stufen ein; deren Pixelhöhe misst
+  // `K.stufenMessen` am echten Stylesheet. Beide zeigen beim Ziehen live, was passiert; Esc bricht ab; losgelassen geht EINE Nachricht
+  // raus (`aufteilung` bzw. `abstand`). Die Vorschau bleibt bis zum Neuzeichnen, wie sie ist – kommt keins (die Erweiterung hat die
+  // Änderung nicht übernommen), stellt `zuruecknehmen` nach 2,5 s den Stand davor wieder her.
+  const MASSE_WARTEZEIT = 2500;
+  const chipNeu = () => { const c = document.createElement('div'); c.className = 'b-chip'; document.body.appendChild(c); return c; };
+  const chipSetzen = (c, text, e) => { c.textContent = text; c.style.left = (e.clientX + seiteX() + 14) + 'px'; c.style.top = (e.clientY + seiteY() - 36) + 'px'; };
+  const masseEnde = () => { document.body.classList.remove('b-zieht', 'b-zieht-spalten', 'b-zieht-hoehe'); masse = null; ungueltig(); };
+  const zuruecknehmen = (fn) => { setTimeout(() => { try { fn(); } catch (x) { /* Seite schon neu gezeichnet */ } ungueltig(); }, MASSE_WARTEZEIT); };
+  const hinweisChip = (t, text) => { // kurzer Hinweis neben einem gedämpften Griff
+    const c = chipNeu();
+    const r = seitenRechteck(t.el);
+    c.textContent = text;
+    c.style.left = (r.r + 8) + 'px';
+    c.style.top = (r.t + (r.b - r.t) / 2 - 14) + 'px';
+    setTimeout(() => c.remove(), 3000);
+  };
+
+  teilerListe.forEach((t) => {
+    const el = t.el;
+    const sec = t.sec;
+    const innen = innenVon(sec);
+    if (!t.frei) { // gedämpft: kein Ziehen, nur der Hinweis
+      el.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        hinweisChip(t, 'Bei ' + t.n + ' Spalten gibt es nur eine Aufteilung – änderbar über „Gestalten“.');
+      });
+      return;
+    }
+    const folgen = (m) => { // der Griff wandert mit der Lücke (nur seitlich)
+      const cols = spaltenVon(sec);
+      const a = seitenRechteck(cols[t.j]);
+      const c = seitenRechteck(cols[t.j + 1]);
+      el.style.left = ((a.r + c.l) / 2 - el.offsetWidth / 2 - ursprung.x) + 'px';
+    };
+    const aufraeumen = () => {
+      ticks.forEach((d) => d.remove());
+      ticks = [];
+      if (chip) chip.remove();
+      chip = null;
+      el.classList.remove('b-an');
+      masseEnde();
+    };
+    let ticks = [];
+    let chip = null;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || zieh || masse) return;
+      e.preventDefault();
+      if (aktiv) beenden('uebernehmen', null);
+      try { el.focus({ preventScroll: true }); } catch (x) { /* nicht fokussierbar */ }
+      try { el.setPointerCapture(e.pointerId); } catch (x) { /* kein echter Zeiger */ }
+      const cols = spaltenVon(sec);
+      const a = seitenRechteck(cols[0]);
+      const z = seitenRechteck(cols[cols.length - 1]);
+      const b = seitenRechteck(cols[1]);
+      const lage = K.spaltenLage(a.l, z.r, cols.length, b.l - a.r);
+      const o = ueber.getBoundingClientRect();
+      ursprung = { x: o.left + seiteX(), y: o.top + seiteY() };
+      masse = { art: 'spalten', lage: lage, aktuell: aufteilungVon(sec), gewaehlt: null, abbrechen: () => ende(true) };
+      document.body.classList.add('b-zieht', 'b-zieht-spalten');
+      const ir = seitenRechteck(innen);
+      ticks = t.namen.map((name) => { // Rastlinien: gestrichelt, wo das Modell einrasten lässt
+        const d = document.createElement('div');
+        d.className = 'b-rast';
+        d.dataset.name = name;
+        d.style.left = (K.teilerX(lage, name, t.j) - ir.l) + 'px';
+        d.innerHTML = '<span>' + K.aufteilungText(name) + '</span>';
+        innen.appendChild(d);
+        return d;
+      });
+      chip = chipNeu();
+      el.classList.add('b-an');
+      chipSetzen(chip, 'Aufteilung ' + K.aufteilungText(masse.aktuell), e);
+      masse.gewaehlt = masse.aktuell;
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!masse || masse.art !== 'spalten') return;
+      const best = K.aufteilungRasten(t.namen, t.j, K.zeigerAnteil(masse.lage, e.clientX + seiteX(), t.j));
+      masse.gewaehlt = best;
+      innen.style.gridTemplateColumns = best.split('-').map((n) => n + 'fr').join(' ');
+      ticks.forEach((d) => d.classList.toggle('b-an', d.dataset.name === best));
+      folgen();
+      const gleich = K.anteile(best).every((x) => Math.abs(x - K.anteile(best)[0]) < 1e-9);
+      chipSetzen(chip, 'Aufteilung ' + K.aufteilungText(best) + (gleich ? ' (gleich breit)' : ''), e);
+    });
+    const ende = (abbruch) => {
+      if (!masse || masse.art !== 'spalten') return;
+      const g = masse.gewaehlt;
+      const alt = masse.aktuell;
+      aufraeumen();
+      if (abbruch || !g || g === alt) { innen.style.gridTemplateColumns = ''; return; }
+      senden({ was: 'aufteilung', i: abschnitte().indexOf(sec), aufteilung: g });
+      zuruecknehmen(() => { innen.style.gridTemplateColumns = ''; });
+    };
+    el.addEventListener('pointerup', () => ende(false));
+    el.addEventListener('pointercancel', () => ende(true));
+    el.addEventListener('keydown', (e) => {
+      if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || masse) return;
+      e.preventDefault();
+      const nach = K.aufteilungNachbar(t.namen, t.j, aufteilungVon(sec), e.key === 'ArrowRight' ? 'rechts' : 'links');
+      if (nach) senden({ was: 'aufteilung', i: abschnitte().indexOf(sec), aufteilung: nach });
+    });
+  });
+
+  if (abstandBtn) {
+    const g = abstandBtn;
+    const klasse = (l) => 'w-abschnitt--abstand-' + l;
+    let zog = false; // ein Zug hat stattgefunden: der Klick danach öffnet NICHT das Fenster
+    const stufeSetzen = (sec, lvl) => {
+      config.abstaende.forEach((l) => { sec.classList.remove(klasse(l)); });
+      if (lvl !== 'normal') sec.classList.add(klasse(lvl));
+    };
+    // Während des Ziehens: Pille bleibt an der (wandernden) unteren Kante, beide Bänder zeigen die Abstandshöhe
+    const zeigen = () => {
+      const sec = masse.sec;
+      const o = ueber.getBoundingClientRect();
+      ursprung = { x: o.left + seiteX(), y: o.top + seiteY() };
+      const s = seitenRechteck(sec);
+      const pad = masse.px[masse.gewaehlt];
+      g.querySelector('span').textContent = abstandText(sec);
+      g.hidden = false;
+      setzePos(g, rk((s.l + s.r) / 2 - g.offsetWidth / 2, s.b - g.offsetHeight - 10, g.offsetWidth, g.offsetHeight));
+      [[baender[0], s.t], [baender[1], s.b - pad]].forEach((x) => {
+        x[0].hidden = false;
+        x[0].classList.add('b-an');
+        setzePos(x[0], { l: s.l, t: x[1] });
+        x[0].style.width = (s.r - s.l) + 'px';
+        x[0].style.height = pad + 'px';
+      });
+    };
+    const baenderAus = () => baender.forEach((b) => { b.hidden = true; b.classList.remove('b-an'); });
+    const abbauen = () => {
+      if (masse && masse.chip) masse.chip.remove();
+      baenderAus();
+      g.classList.remove('b-an');
+      masseEnde();
+    };
+    g.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !abstandFuer || zieh || masse) return;
+      e.preventDefault();
+      zog = false;
+      if (aktiv) beenden('uebernehmen', null);
+      try { g.focus({ preventScroll: true }); } catch (x) { /* nicht fokussierbar */ } // sonst kommt Esc im iframe nie an
+      try { g.setPointerCapture(e.pointerId); } catch (x) { /* kein echter Zeiger */ }
+      const px = K.stufenMessen(haupt, config.abstaende);
+      const start = abstandVon(abstandFuer);
+      masse = { art: 'abstand', sec: abstandFuer, px: px, start: start, startPad: px[start], gewaehlt: start, y: e.clientY + seiteY(), aktiv: false, chip: null, abbrechen: () => ende(true) };
+    });
+    g.addEventListener('pointermove', (e) => {
+      if (!masse || masse.art !== 'abstand') return;
+      const y = e.clientY + seiteY();
+      if (!masse.aktiv) {
+        if (Math.abs(y - masse.y) <= 4) return; // erst ab 4 px ist es ein Zug (sonst bleibt es ein Klick)
+        masse.aktiv = true;
+        zog = true;
+        document.body.classList.add('b-zieht', 'b-zieht-hoehe');
+        g.classList.add('b-an');
+        masse.chip = chipNeu();
+      }
+      const best = K.abstandRasten(config.abstaende, masse.px, masse.startPad + (y - masse.y)); // nach unten = mehr Abstand (oben wie unten)
+      if (best !== masse.gewaehlt) { masse.gewaehlt = best; stufeSetzen(masse.sec, best); }
+      zeigen();
+      chipSetzen(masse.chip, 'Abstand oben und unten: ' + config.abstandNamen[best], e);
+    });
+    const ende = (abbruch) => {
+      if (!masse || masse.art !== 'abstand') return;
+      const m = masse;
+      const bewegt = m.aktiv;
+      abbauen();
+      if (!bewegt) return; // ein Klick: das `click`-Ereignis öffnet das Fenster
+      if (abbruch || m.gewaehlt === m.start) { stufeSetzen(m.sec, m.start); return; }
+      senden({ was: 'abstand', i: abschnitte().indexOf(m.sec), abstand: m.gewaehlt });
+      zuruecknehmen(() => { stufeSetzen(m.sec, m.start); });
+    };
+    g.addEventListener('pointerup', () => ende(false));
+    g.addEventListener('pointercancel', () => ende(true));
+    g.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (zog) { zog = false; return; }
+      if (abstandFuer) senden({ was: 'gestalten', i: abschnitte().indexOf(abstandFuer) });
+    });
+    g.addEventListener('keydown', (e) => {
+      if (masse) return;
+      if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !abstandFuer) return;
+      e.preventDefault();
+      const l = config.abstaende;
+      const n = l.indexOf(abstandVon(abstandFuer)) + (e.key === 'ArrowDown' ? 1 : -1);
+      if (n >= 0 && n < l.length) senden({ was: 'abstand', i: abschnitte().indexOf(abstandFuer), abstand: l[n] });
+    });
+  }
+  // Esc bricht ab (der Zeiger ist am Griff festgehalten, der Fokus liegt im iframe – auch dann kommt Esc hier an)
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && masse) { e.preventDefault(); masse.abbrechen(); } }, true);
+
   // Strg/Cmd+Z und Umschalt+Strg/Cmd+Z: Rückgängig/Wiederholen der Seite – nur, wenn hier kein Text offen ist (dort gilt der Verlauf
   // des Feldes). Die Tasten kommen beim Rahmen sonst nicht an, solange der Fokus im iframe liegt.
   document.addEventListener('keydown', (e) => {

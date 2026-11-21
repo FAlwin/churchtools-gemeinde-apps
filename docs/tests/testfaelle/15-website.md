@@ -513,3 +513,41 @@ Kopieren, Löschen, getippten Text) zurück. Am Handy bleibt alles wie bisher.
 - **Historie:** neu mit W3c-2 (21.11.2026); im Browser gemessen: Esc kam im iframe nicht an, solange der Griff keinen Fokus nahm (Fokus beim Greifen)
 
 </details>
+
+### TF-WEBSITE-16 · Maße ziehen: Spaltenbreite und Abstand
+
+**Das brauchst du:** Die eingerichtete Website (Admin oder Leitung) mit einer Seite, die einen **zweispaltigen** Abschnitt, einen mit **drei** oder **vier Spalten** und
+einen Abschnitt auf **dunkler Fläche** (Hauptfarbe oder Bild) hat – die Demo (`?demo=…`) hat beides. Breites Fenster (Computer). Dazu ein Redakteur-Konto und ein zweites Browserfenster.
+
+**Das muss passieren:** Spaltenbreite und Abstand lassen sich direkt in der Vorschau ziehen; sie rasten ein, die Seite folgt live, ein Chip sagt, wohin es rastet. Das Ergebnis
+steht nach dem Loslassen in der Vorschau, oben „Gespeichert“, und lässt sich mit ↶ ↷ zurücknehmen. Am Handy bleibt alles beim Fenster „Gestalten“.
+
+1. **Spaltenbreite ziehen:** Mit der Maus in den zweispaltigen Abschnitt. In der Lücke zwischen den Spalten erscheint ein heller **Griff** (drei Punktreihen), er liegt nie über Text.
+   Festhalten und nach rechts ziehen: **gestrichelte Linien** zeigen die Aufteilungen (1 : 2, 1 : 1, 2 : 1), die nächste ist durchgezogen, ein **Chip „Aufteilung 2 : 1“** folgt dem
+   Zeiger, die Spalten ändern ihre Breite sofort. Loslassen: die Breite bleibt, „Gespeichert“. Nach links ziehen: 1 : 2. In die Mitte: „1 : 1 (gleich breit)“.
+2. **Abbrechen:** Während des Ziehens **Esc**: Linien und Chip verschwinden, die Spalten sind wieder wie vorher, nichts wird gespeichert. Loslassen auf der Aufteilung, die schon
+   galt: ebenfalls nichts.
+3. **Drei und vier Spalten:** Im Abschnitt mit drei Spalten sind die Griffe **blass**, der Zeiger zeigt „nicht erlaubt“; ein Klick darauf zeigt kurz den Hinweis „Bei 3 Spalten
+   gibt es nur eine Aufteilung – änderbar über Gestalten“. Es lässt sich nichts ziehen. Die Spaltenzahl ändert man weiter im Fenster „Gestalten“.
+4. **Abstand ziehen:** Über einem Abschnitt unten mittig steht die Pille **„Abstand oben & unten: Normal“**. Festhalten und nach unten ziehen: zwei **gestreifte Bänder** (oben und
+   unten, gleich hoch, hell gesäumt) zeigen die Abstandshöhe, der Chip sagt „Abstand oben und unten: Groß“, der Abschnitt wächst live. Nach oben bis „Kein“: die Bänder sind weg,
+   der Abschnitt liegt eng an den Nachbarn. Loslassen: die Stufe bleibt, „Gespeichert“. Dasselbe auf dem Abschnitt mit **dunkler Fläche**: die Bänder sind gut zu sehen.
+5. **Klick ohne Ziehen:** Ein einfacher Klick auf die Pille öffnet das Fenster „Gestalten“ (Abstand dort unverändert). Nach einem Zug öffnet sich **kein** Fenster.
+6. **Abbrechen beim Abstand:** Ziehen, dann **Esc**: Stufe wie vorher, nichts gespeichert.
+7. **Tastatur:** Die Pille mit Tab fokussieren, **Pfeil runter/hoch**: eine Stufe mehr/weniger; am Spalten-Griff **Pfeil rechts/links**: die nächste Aufteilung. **Enter** an der Pille
+   öffnet „Gestalten“.
+8. **Rückgängig:** Nach jedem Zug ↶: Breite bzw. Abstand sind wie vorher, ↷ stellt sie wieder her; mit **Strg/Cmd+Z** genauso. Beides nacheinander sind zwei Schritte.
+9. **Nichts geht verloren:** Nach dem Ändern der Breite stehen alle Bausteine wie zuvor in ihren Spalten.
+10. **Redakteur:** Als Redakteur (ohne „Eigenes HTML“) lassen sich Breite und Abstand ebenfalls ziehen.
+11. **Fremd gesperrt:** Ist die Seite von jemand anderem gesperrt, gibt es keine Griffe und keine Pille.
+12. **Keine Überlagerung:** Mit der Maus über den ganzen Abschnitt fahren: Spalten-Griff, Pille, Leisten und „+“ liegen nie über Text und nie übereinander.
+13. **Handy:** Ansicht „Handy“: keine Griffe, keine Pille; Abstand und Spalten ändert man im Fenster „Gestalten“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/website/bearbeiten.ts`, `website/src/ebene.kern.txt`, `website/src/ebene.skript.txt`, `website/src/ebene.css`, `website/src/ebene.ts`, `website/src/nachricht.ts`, `website/src/Seitenarbeit.tsx`, `website/src/demo.ts`
+- **Automatisiert:** teilweise – `shared/website/bearbeiten.test.ts` (Aufteilung nur mit gleicher Spaltenzahl, Gestaltung), `website/src/ebene.kern.test.ts` (Rastung, Messung der Stufen), `website/src/nachricht.test.ts` (Nachrichten `aufteilung`/`abstand`), `website/src/ebene.masse.test.ts` (Griff, Pille, Rastlinien, Chip, Bänder, Esc, Klick im nachgespielten Dokument mit festgelegten Maßen), `website/src/Seitenarbeit.masse.test.tsx` (Weg bis zum Speichern, Rückgängig, Rechte, Sperre); wie es sich im echten iframe anfühlt (Zeiger festhalten, Bänder auf dunkler Fläche) nur von Hand
+- **Historie:** neu mit W3c-3 (21.11.2026)
+
+</details>

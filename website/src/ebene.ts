@@ -10,6 +10,12 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 import { Icon, type IconName } from '@ui/icons/icons';
+import {
+  AUFTEILUNGEN,
+  gestaltungSchema,
+  spaltenAnzahl,
+  type Aufteilung,
+} from '@shared/website/modell';
 import css from './ebene.css?raw';
 import kern from './ebene.kern.txt?raw';
 import skript from './ebene.skript.txt?raw';
@@ -27,9 +33,20 @@ const SYMBOLE: Record<string, IconName> = {
   regler: 'regler',
 };
 
-/** Die Abstand-Stufen des Abschnitts (Klassen `w-abschnitt--abstand-…`, außer `normal`) und ihre Namen für die Pille. */
-export const ABSTAENDE = ['kein', 'klein', 'normal', 'gross'] as const;
+/** Die Abstand-Stufen des Abschnitts (Klassen `w-abschnitt--abstand-…`, außer `normal`) – aus dem Schema, es gibt keine zweite Liste. */
+export const ABSTAENDE = gestaltungSchema.shape.abstand.options;
+/** Ihre Namen für die Pille und den Chip. */
 const ABSTAND_NAMEN = { kein: 'Kein', klein: 'Klein', normal: 'Normal', gross: 'Groß' };
+
+/**
+ * Die Aufteilungen je Spaltenzahl, als Text-Schlüssel (`'2'` → `['1-1', '2-1', '1-2']`) – aus `AUFTEILUNGEN`, die Spaltenzahl
+ * aus dem Namen (`spaltenAnzahl`). Die Ebene rastet beim Ziehen **nur** auf Aufteilungen mit der Spaltenzahl des Abschnitts ein.
+ */
+export function aufteilungenJeSpalten(): Record<string, Aufteilung[]> {
+  const aus: Record<string, Aufteilung[]> = {};
+  for (const a of AUFTEILUNGEN) (aus[String(spaltenAnzahl(a))] ??= []).push(a);
+  return aus;
+}
 
 /** Eine Stelle, an der man direkt weitertippt (nach einem Klick in ein anderes Textfeld). */
 export interface WeiterStelle {
@@ -122,6 +139,7 @@ export function ebeneHtml(
     darfHtml: optionen.darfHtml === true,
     abstaende: ABSTAENDE,
     abstandNamen: ABSTAND_NAMEN,
+    aufteilungen: aufteilungenJeSpalten(),
     weiter: optionen.weiter ?? null,
   };
   const n = nonceGueltig(nonce);

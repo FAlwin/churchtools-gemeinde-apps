@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import {
@@ -39,7 +39,17 @@ interface LinkStueck {
 
 function textStueck(t: TextStueck, key: number, thema: Thema): ReactNode {
   const s = t.styles ?? {};
-  let el: ReactNode = t.text;
+  // Umschalt+Enter (und die Aufzählung in Tabellenzellen, W11) speichert den Zeilenumbruch als `\n` im Text.
+  const zeilen = t.text.split('\n');
+  let el: ReactNode =
+    zeilen.length > 1
+      ? zeilen.map((z, i) => (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            {z}
+          </Fragment>
+        ))
+      : t.text;
   if (s.code) el = <code>{el}</code>;
   if (s.strike) el = <s>{el}</s>;
   if (s.underline) el = <u>{el}</u>;
@@ -96,8 +106,20 @@ interface Kontext {
 const istListe = (b: Block): boolean =>
   b.type === 'bulletListItem' || b.type === 'numberedListItem' || b.type === 'checkListItem';
 
-/** Aufeinanderfolgende Listenpunkte derselben Art zu einer Liste bündeln. */
-function Bloecke({ bloecke, k }: { bloecke: readonly Block[]; k: Kontext }) {
+/**
+ * Aufeinanderfolgende Listenpunkte derselben Art zu einer Liste bündeln. `ebene`: wie viele Aufzählungen übereinander
+ * stecken – wie im Editor zählen nur Aufzählungen; unter einem Absatz oder einer Nummerierung fängt es oben wieder an.
+ * Das Zeichen je Ebene steht in `ProtokollAnsicht.module.scss` (`aufzaehlung.ts` ist die Quelle, ein Test vergleicht).
+ */
+function Bloecke({
+  bloecke,
+  k,
+  ebene = 0,
+}: {
+  bloecke: readonly Block[];
+  k: Kontext;
+  ebene?: number;
+}) {
   const teile: ReactNode[] = [];
   for (let i = 0; i < bloecke.length; i++) {
     const b = bloecke[i];
@@ -114,14 +136,23 @@ function Bloecke({ bloecke, k }: { bloecke: readonly Block[]; k: Kontext }) {
             </span>
           )}
           <Inhalt content={x.content} />
-          {!!x.children?.length && <Bloecke bloecke={x.children} k={k} />}
+          {!!x.children?.length && (
+            <Bloecke bloecke={x.children} k={k} ebene={art === 'bulletListItem' ? ebene + 1 : 0} />
+          )}
         </li>
       ));
       teile.push(
         art === 'numberedListItem' ? (
           <ol key={b.id}>{punkte}</ol>
         ) : (
-          <ul key={b.id} className={art === 'checkListItem' ? styles.ohnePunkt : undefined}>
+          <ul
+            key={b.id}
+            className={
+              art === 'checkListItem'
+                ? styles.ohnePunkt
+                : styles[`aufzaehlung${Math.min(ebene, 2)}`]
+            }
+          >
             {punkte}
           </ul>
         ),

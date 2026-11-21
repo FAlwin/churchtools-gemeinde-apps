@@ -35,6 +35,20 @@
     margin: 2px 0;
   }
 
+  // Aufzählungszeichen (W11): • ◦ – wie im Editor und im PDF (Quelle `shared/protokolle/aufzaehlung.ts`; der Wächter
+  // `ui/design/aufzaehlungsZeichen.test.ts` vergleicht). Nach der Mixin-Regel oben, mit mehr Gewicht als deren `ul ul`.
+  ul.aufzaehlung0 {
+    list-style-type: '• ';
+  }
+
+  ul.aufzaehlung1 {
+    list-style-type: '◦ ';
+  }
+
+  ul.aufzaehlung2 {
+    list-style-type: '– ';
+  }
+
   // Unterpunkte direkt unter dem Punkt, nicht mit Abstand
   li > ul,
   li > ol {

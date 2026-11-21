@@ -11,6 +11,7 @@ import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
 import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
 import { einrueckenTasten } from './einruecken';
 import { punktNummern } from './punktNummern';
+import { zellenListe } from './zellenListe';
 
 /**
  * **Was im Protokoll-Editor stehen kann** (Bauplan S4-1, BlockNote 0.56): Text, Überschrift 1–6 (Stufe 1 = Tagesordnungs-
@@ -81,7 +82,7 @@ const ueberschrift = createHeadingBlockSpec({
 });
 const heading = {
   ...ueberschrift,
-  extensions: [...(ueberschrift.extensions ?? []), einrueckenTasten, punktNummern],
+  extensions: [...(ueberschrift.extensions ?? []), einrueckenTasten, punktNummern, zellenListe],
 };
 
 export const schema = BlockNoteSchema.create({
@@ -102,10 +103,12 @@ export const schema = BlockNoteSchema.create({
 });
 
 /**
- * Tabellen (K3a): Kopfzeile und -spalte umschaltbar; verbundene Zellen und Zellfarben bewusst nicht – einfach halten.
+ * Tabellen (K3a): Kopfzeile und -spalte umschaltbar; seit W11 auch **Zellen farbig füllen** (nur der Hintergrund – das
+ * Menü an Zelle, Zeile und Spalte bietet „Farben“). Die **Schriftfarbe je Zelle** bleibt aus: das PDF kennt sie nicht,
+ * markierter Text hat seine eigene Schriftfarbe. Verbundene Zellen bewusst nicht – einfach halten.
  * Eine Stelle für den Editor und die Tests, die ihn nachbauen.
  */
-export const TABELLEN = { headers: true } as const;
+export const TABELLEN = { headers: true, cellBackgroundColor: true } as const;
 
 export type ProtokollEditor = BlockNoteEditor<
   typeof schema.blockSchema,

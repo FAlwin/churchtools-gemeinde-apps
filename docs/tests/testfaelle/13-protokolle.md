@@ -980,3 +980,32 @@ sieht alles, aber zugeklappt.
 - **Historie:** 20.11.2026 (W10, Live-Test v1.3.0 als Mitarbeiter)
 
 </details>
+
+### TF-PROT-28 · Tabelle: Zellen färben, Aufzählung in der Zelle, Aufzählungszeichen • ◦ –
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe, in der du schreiben darfst, und ein Protokoll im Entwurf (zum Beispiel „TEST Tabelle“). Ein Rechner und ein Handy
+(oder 375 px Breite). In der Entwicklung zeigt `?demo` ein Protokoll mit „Protokoll beginnen → Ohne Vorlage“.
+
+**Das muss passieren:** In einer Tabelle lassen sich Zellen farbig hinterlegen, eine Aufzählung in der Zelle läuft mit Enter weiter, und Aufzählungen haben im Editor, in der
+Lese-Ansicht und im PDF dieselben Zeichen.
+
+1. **Einfügen → Tabelle**. Klicke in eine Zelle der zweiten Zeile, dann auf das kleine Dreieck oben rechts in der Zelle: Das Menü hat **„Farben“** – dahinter nur
+   **„Hintergrund“** mit den Farben, **keine** Schriftfarbe. Wähle **Gelb**: Die Zelle ist gelb. Färbe über das Menü an Zeilen- oder Spaltengriff eine ganze Zeile in **Grün**.
+2. Klicke in eine leere Zelle und tippe **-** und **Leertaste**, dann „Brot“: Die Zelle zeigt **„• Brot“**. **Enter**: Die Zelle bleibt dieselbe, eine neue Zeile
+   beginnt mit „• “. Tippe „Käse“, **Enter**, **Enter** noch einmal: Das „• “ der leeren Zeile ist weg. Tippe „danach normal“ – die Aufzählung ist zu Ende.
+3. In einer anderen Zelle: **1.** und **Leertaste**, „eins“, **Enter**: Die nächste Zeile beginnt mit **„2. “**, danach „3. “. Mit **\*** und Leertaste wird es ebenfalls ein „• “.
+4. **Enter** in einer Zelle **ohne** Aufzählung springt wie bisher in die Zelle darunter; **Umschalt+Enter** macht nur einen Zeilenumbruch, ohne „• “.
+5. Schreibe darunter eine Aufzählung (**-** und Leertaste), drücke **Enter** und **Tab**, noch einmal **Enter** und **Tab**, noch einmal: Die Ebenen zeigen **•**, **◦**
+   und danach **–** (auch auf der vierten Ebene).
+6. Schalte auf **Lesen**: Dieselben Zeichen (• ◦ – –), die Zellen haben ihre Farbe (hell und dunkel), die Zeilen der Zelle stehen untereinander. Am Handy (375 px) läuft nichts
+   über den Rand.
+7. **Teilen / PDF**: Im PDF stehen dieselben Zeichen (• ◦ – –, das ◦ als kleiner Kreis), die Zellfarben und die Zeilen der Zellen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `protokolle/src/editorSchema.ts`, `protokolle/src/zellenListe.ts`, `shared/protokolle/zellenListe.ts`, `shared/protokolle/aufzaehlung.ts`, `shared/protokolle/protokollBlatt.ts`, `ui/teilen/protokollPdf.ts`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/ProtokollAnsicht.module.scss`, `protokolle/src/DokumentEditor.scss`
+- **Automatisiert:** größtenteils – `shared/protokolle/zellenListe.test.ts` (Regel: Marken, Enter, Zählen), `protokolle/src/zellenListe.test.ts` (echter Editor: Tippen, Enter, Beenden, Umschalt+Enter, Schema), `shared/protokolle/aufzaehlung.test.ts` und `ui/design/aufzaehlungsZeichen.test.ts` (Zeichen je Ebene, Editor- und Ansicht-Stil gegen die Funktion), `shared/protokolle/protokollBlatt.test.ts` (Ebene im Blatt, Zeilen der Zelle, Zellfarbe), `ui/teilen/protokollPdf.test.ts` (Zeichen je Ebene), `protokolle/src/ProtokollAnsicht.test.tsx` (Klassen je Ebene, Umbrüche, Zellfarbe hell/dunkel); **nur von Hand:** das Zellenmenü „Farben“ mit der Maus, Aussehen am Handy, PDF-Seite ansehen
+- **Historie:** 21.11.2026 (W11, nach der ersten echten Sitzung)
+
+</details>

@@ -223,6 +223,30 @@ describe('Protokoll als PDF', () => {
       expect(r).toContain(t);
   });
 
+  it('Aufzählungszeichen je Ebene: • ◦ – (◦ als Kreislinie, die Schrift hat es nicht) – W11', async () => {
+    const eintrag = (ebene: number | undefined): BlattTeil => ({
+      art: 'text',
+      einzug: 0,
+      absaetze: [[{ text: 'Eintrag' }]],
+      zeichen: { art: 'punkt', ...(ebene === undefined ? {} : { ebene }) },
+    });
+    const [e0, e1, e2, e3, ohne] = await Promise.all(
+      [0, 1, 2, 3, undefined].map(async (e) =>
+        (await roh(blatt([eintrag(e)]))).replace(/\/ID \[[^\]]*\]/, ''),
+      ),
+    );
+    // ohne Angabe = oberste Ebene
+    expect(ohne).toBe(e0);
+    // jede Ebene sieht anders aus: Punkt, Kreis, Strich
+    expect(new Set([e0, e1, e2]).size).toBe(3);
+    // ab der dritten bleibt es beim Strich
+    expect(e3).toBe(e2);
+    // der Kreis ist eine Linie (Kurvenstücke `c` + Strich `S`), Punkt und Strich sind Text
+    const kurven = (r: string) => (r.match(/ c\n/g) ?? []).length;
+    expect(kurven(e1)).toBeGreaterThan(kurven(e0));
+    expect(kurven(e2)).toBe(kurven(e0));
+  });
+
   it('Entwurf: Banner auf Seite 1, blasses „ENTWURF“ auf jeder Seite', async () => {
     const lang = Array.from({ length: 60 }, (_, i) => text(`Absatz${i} ${'Wort '.repeat(40)}`));
     const doc = await protokollPdf(

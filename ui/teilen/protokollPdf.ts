@@ -1,5 +1,6 @@
 import type { jsPDF } from 'jspdf';
 import type { Absatz, Zelle } from '@shared/ct/terminBlatt';
+import { aufzaehlungsZeichen } from '@shared/protokolle/aufzaehlung';
 import {
   LEER_TEXT,
   type BlattTeil,
@@ -221,7 +222,14 @@ class ProtokollZeichner extends PdfSatz {
     const grund = oben + pt * PT * 0.95;
     this.stil(undefined, pt);
     if (z.art === 'punkt') {
-      this.d.text('•', x + 1, grund);
+      const zeichen = aufzaehlungsZeichen(z.ebene ?? 0);
+      // „◦“ hat die Schrift der PDFs nicht (Gemeinde Sans, gekürzt) – als Kreislinie gezeichnet, so groß wie „•“ etwa ist.
+      if (zeichen === aufzaehlungsZeichen(1)) {
+        const r = pt * PT * 0.2;
+        this.d.setDrawColor(...TINTE);
+        this.d.setLineWidth(0.2);
+        this.d.circle(x + 1 + r * 1.6, grund - pt * PT * 0.3, r, 'S');
+      } else this.d.text(zeichen, x + 1, grund);
       return;
     }
     if (z.art === 'nummer') {

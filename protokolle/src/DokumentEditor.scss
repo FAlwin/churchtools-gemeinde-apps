@@ -67,3 +67,23 @@
   flex: 1;
   margin: 0;
 }
+
+// Aufzählungszeichen (W11): • ◦ – wie in der Lese-Ansicht und im PDF (Quelle `shared/protokolle/aufzaehlung.ts`; der Wächter
+// `ui/design/aufzaehlungsZeichen.test.ts` vergleicht). BlockNote selbst nimmt • ◦ ▪; die dritte Ebene und alle tieferen
+// bekommen den Strich. Alle drei Ebenen stehen hier, damit die Regel an EINER Stelle lesbar ist (mit `.bn-container`
+// gewinnt sie gegen BlockNotes eigene Selektoren).
+.bn-container .bn-block-group {
+  --bn-bullet-marker: '•';
+}
+
+.bn-container [data-content-type='bulletListItem'] ~ .bn-block-group {
+  --bn-bullet-marker: '◦';
+}
+
+.bn-container
+  [data-content-type='bulletListItem']
+  ~ .bn-block-group
+  [data-content-type='bulletListItem']
+  ~ .bn-block-group {
+  --bn-bullet-marker: '–';
+}

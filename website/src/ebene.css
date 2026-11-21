@@ -17,7 +17,7 @@
 body.b-tippt .b-ueber { display: none; }
 
 /* Gemeinsames Aussehen aller Leisten und Griffe: hell, Rand, weicher Schatten, dunkle Symbole */
-.b-werk, .b-blockleiste, .b-abstand, .b-einfuegen, .b-plus { background: #fff; color: var(--b-dunkel); border: 1px solid var(--b-rand); box-shadow: 0 1px 2px rgba(15,23,42,.22), 0 4px 12px rgba(15,23,42,.16); pointer-events: auto; }
+.b-werk, .b-blockleiste, .b-abstand, .b-einfuegen, .b-plus, .b-teiler { background: #fff; color: var(--b-dunkel); border: 1px solid var(--b-rand); box-shadow: 0 1px 2px rgba(15,23,42,.22), 0 4px 12px rgba(15,23,42,.16); pointer-events: auto; }
 .b-werk, .b-blockleiste { display: flex; gap: 1px; padding: 2px; border-radius: 8px; cursor: default; }
 .b-werk { z-index: 8; }
 .b-blockleiste { z-index: 9; }
@@ -31,6 +31,7 @@ body.b-tippt .b-ueber { display: none; }
   .b-einfuegen:hover { background: var(--b-hover); box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
   .b-plus:hover { background: var(--b-blau); color: #fff; }
   .b-abstand:hover { background: var(--b-hover); box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+  .b-teiler:not(.b-fest):hover { background: var(--b-hover); box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
   .b-fz button:hover { background: var(--b-dunkel2); }
 }
 .b-werk button:focus-visible, .b-blockleiste button:focus-visible { box-shadow: inset 0 0 0 2px var(--b-blau); }
@@ -66,18 +67,36 @@ body.b-tippt .b-ueber { display: none; }
 .b-geist { position: absolute; z-index: 41; pointer-events: none; background: #fff; color: var(--b-dunkel); border: 1px solid var(--b-rand); border-radius: 6px; padding: 6px 10px; font: 700 12px/1.2 system-ui, sans-serif; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 12px rgba(15,23,42,.3); }
 body.b-zieht, body.b-zieht * { user-select: none !important; -webkit-user-select: none !important; }
 body.b-zieht, body.b-zieht * { cursor: grabbing !important; }
-body.b-zieht .b-ueber { opacity: 0; }
+body.b-zieht-spalten, body.b-zieht-spalten * { cursor: col-resize !important; }
+body.b-zieht-hoehe, body.b-zieht-hoehe * { cursor: ns-resize !important; }
+/* Beim Ziehen verschwindet die Schicht – bis auf das, was gerade gezogen wird (`.b-an`: Griff, Pille, Bänder) */
+body.b-zieht .b-ueber > :not(.b-an) { opacity: 0; }
 section.w-abschnitt.b-quelle { opacity: .35; }
 .w-baustein.b-quelle { opacity: .3; }
 /* Die Spalte, in die der Baustein fallen würde: gestrichelt umrandet und leicht eingefärbt (auch eine leere Spalte) */
 .b-ziel { outline: 2px dashed var(--b-blau); outline-offset: 6px; box-shadow: 0 0 0 9px rgba(255,255,255,.6); background: var(--b-blau-hell); }
 
 /* Spaltenbreite: Griff mittig in der Lücke zwischen zwei Spalten */
+.b-teiler { z-index: 5; width: 20px; height: 46px; padding: 0; border-radius: 10px; cursor: col-resize; touch-action: none; }
+.b-teiler i { display: block; width: 100%; height: 100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 46'%3E%3Cg fill='%230f172a'%3E%3Ccircle cx='7' cy='15' r='1.4'/%3E%3Ccircle cx='13' cy='15' r='1.4'/%3E%3Ccircle cx='7' cy='23' r='1.4'/%3E%3Ccircle cx='13' cy='23' r='1.4'/%3E%3Ccircle cx='7' cy='31' r='1.4'/%3E%3Ccircle cx='13' cy='31' r='1.4'/%3E%3C/g%3E%3C/svg%3E") center/20px 46px no-repeat; }
+.b-teiler:focus-visible, .b-teiler.b-an { background: var(--b-hover); outline: 0; box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+/* Gedämpft: bei drei oder vier Spalten gibt es nur eine Aufteilung – kein Ziehen, nur ein Hinweis */
+.b-teiler.b-fest { cursor: not-allowed; opacity: .75; }
+.b-teiler.b-fest i { opacity: .45; }
+/* Beim Ziehen: gestrichelte Rastlinien an den Aufteilungen, die es gibt, die gewählte durchgezogen */
+.b-rast { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed rgba(21,93,252,.55); z-index: 17; pointer-events: none; }
+.b-rast span { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); background: #fff; color: var(--b-blau); border: 1px solid var(--b-blau); border-radius: 4px; padding: 2px 6px; font: 700 11px/1 system-ui, sans-serif; white-space: nowrap; }
+.b-rast.b-an { border-left-style: solid; border-left-color: var(--b-blau); }
+.b-rast.b-an span { background: var(--b-blau); color: #fff; }
+/* Der Chip beim Ziehen (Aufteilung, Abstand) und beim gedämpften Griff */
+.b-chip { position: absolute; z-index: 42; pointer-events: none; background: #fff; color: var(--b-dunkel); border: 1px solid var(--b-rand); border-radius: 6px; padding: 6px 10px; font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(15,23,42,.3); }
 
 /* Abstand: eine beschriftete Pille mittig an der unteren Kante (ein Wert für oben UND unten) */
 .b-abstand { z-index: 4; height: 26px; padding: 0 11px 0 8px; border-radius: 999px; cursor: ns-resize; touch-action: none; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; font-weight: 700; }
 .b-abstand:focus-visible { background: var(--b-hover); outline: 0; box-shadow: 0 0 0 2px var(--b-blau), 0 4px 12px rgba(15,23,42,.16); }
+.b-abstand.b-an { background: var(--b-blau); color: #fff; border-color: #fff; }
 /* Bänder in der Abstandshöhe (oben und unten), nur beim Ziehen – gestreift mit hellem Saum, auch auf Petrol sichtbar */
+.b-band { z-index: 3; pointer-events: none; box-sizing: border-box; outline: 2px dashed #fff; outline-offset: -2px; background: repeating-linear-gradient(135deg, rgba(21,93,252,.55) 0 8px, rgba(21,93,252,.35) 8px 16px); box-shadow: inset 0 0 0 3px rgba(21,93,252,.9); }
 
 /* Schwebende Format-Leiste beim Markieren (dunkel, aber mit hellem Saum – auf Petrol sichtbar) */
 .b-format { position: absolute; z-index: 60; background: var(--b-dunkel); border-radius: 8px; padding: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.75), 0 4px 14px rgba(0,0,0,.35); font: 700 13px/1 system-ui, sans-serif; color: #fff; }

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   markdownAusBloecken,
   markdownSichtbarerText,
   markdownZuHtml,
 } from '@shared/website/markdown';
+import { spaltenAnzahl, AUFTEILUNGEN } from '@shared/website/modell';
+import { ABSTAENDE, aufteilungenJeSpalten } from './ebene';
 import { ladeKern, type Auswahl, type Block, type Kandidat, type Rechteck } from './ebene.testutil';
 
 const K = ladeKern();
@@ -444,5 +446,130 @@ describe('DOM lesen und zeichnen – Hin und Rück mit dem echten Markdown', () 
     const r = K.einfuegen([P()], A(0, 0, 0), '<b>fett?</b> *nein* [x](y)');
     const md = markdownAusBloecken(K.fuerSpeichern(r.bloecke));
     expect(markdownSichtbarerText(md)).toBe('<b>fett?</b> *nein* [x](y)');
+  });
+});
+
+describe('Maße ziehen (W3c-3): Rastung – reine Rechnung', () => {
+  // Die Namen kommen aus dem Modell (`aufteilungenJeSpalten`, aus AUFTEILUNGEN) – kein handgeschriebenes Literal.
+  const NAMEN = aufteilungenJeSpalten();
+  const zwei = NAMEN['2'];
+  const lage = K.spaltenLage(100, 900, 2, 40); // zwei Spalten von x=100 bis 900, 40 Lücke → 760 zum Aufteilen
+
+  it('die Anteile stehen im Namen – keine zweite Liste', () => {
+    expect(K.anteile('1-1')).toEqual([0.5, 0.5]);
+    expect(K.anteile('2-1')[0]).toBeCloseTo(2 / 3);
+    expect(K.anteile('1-2')[0]).toBeCloseTo(1 / 3);
+    expect(K.anteile('1-1-1')).toHaveLength(3);
+    expect(K.anteile('1-1-1-1')[3]).toBeCloseTo(0.25);
+    for (const n of Object.values(NAMEN).flat())
+      expect(
+        K.anteile(n).reduce((a, b) => a + b, 0),
+        n,
+      ).toBeCloseTo(1);
+  });
+
+  it('die Aufteilungen je Spaltenzahl sind genau die aus AUFTEILUNGEN – nur zwei Spalten haben eine Auswahl', () => {
+    expect(NAMEN['1']).toEqual(['1']);
+    expect(NAMEN['2']).toEqual(['1-1', '2-1', '1-2']);
+    expect(NAMEN['3']).toEqual(['1-1-1']);
+    expect(NAMEN['4']).toEqual(['1-1-1-1']);
+    expect(Object.values(NAMEN).flat().sort()).toEqual([...AUFTEILUNGEN].sort());
+    for (const [n, namen] of Object.entries(NAMEN))
+      for (const a of namen) expect(spaltenAnzahl(a), a).toBe(Number(n));
+    expect(K.aufteilungFrei(NAMEN['2'])).toBe(true);
+    for (const n of ['1', '3', '4']) expect(K.aufteilungFrei(NAMEN[n]), n).toBe(false);
+  });
+
+  it('die nächste Aufteilung je Zieh-Position: ganz links, Mitte, ganz rechts, genau dazwischen', () => {
+    const rast = (x: number) => K.aufteilungRasten(zwei, 0, K.zeigerAnteil(lage, x, 0));
+    expect(rast(0)).toBe('1-2'); // weit links: die linke Spalte ist am schmalsten
+    expect(rast(100)).toBe('1-2');
+    expect(rast(500)).toBe('1-1'); // Mitte
+    expect(rast(900)).toBe('2-1');
+    expect(rast(5000)).toBe('2-1'); // weit außerhalb: geklemmt
+    // Genau dazwischen (Mitte zwischen 1/3 und 1/2 = 5/12): die frühere der Liste gewinnt – '1-1' vor '1-2'
+    const x = lage.links + lage.nutz * (5 / 12) + lage.gap / 2;
+    expect(K.aufteilungRasten(zwei, 0, K.zeigerAnteil(lage, x, 0))).toBe('1-1');
+    expect(K.aufteilungRasten(zwei, 0, K.zeigerAnteil(lage, x - 20, 0))).toBe('1-2');
+    expect(K.aufteilungRasten(zwei, 0, K.zeigerAnteil(lage, x + 20, 0))).toBe('1-1');
+  });
+
+  it('der Griff steht dort, wo die Spalten wirklich enden (Lücke eingerechnet) – und die Umkehrung stimmt', () => {
+    for (const name of zwei) {
+      const x = K.teilerX(lage, name, 0);
+      expect(K.zeigerAnteil(lage, x, 0), name).toBeCloseTo(K.anteile(name)[0]);
+    }
+    // 1-1 bei 800 breit und 40 Lücke: links 380, Lücke 40 → Mitte der Lücke bei 100 + 380 + 20 = 500
+    expect(K.teilerX(lage, '1-1', 0)).toBeCloseTo(500);
+    // drei Spalten: zweite Lücke
+    const drei = K.spaltenLage(0, 1000, 3, 20);
+    expect(K.teilerX(drei, '1-1-1', 0)).toBeCloseTo((1000 - 40) / 3 + 10);
+    expect(K.teilerX(drei, '1-1-1', 1)).toBeCloseTo(((1000 - 40) * 2) / 3 + 20 + 10);
+  });
+
+  it('Rastung ohne Namen: null; Text und Pfeiltasten-Nachbarn', () => {
+    expect(K.aufteilungRasten([], 0, 0.5)).toBeNull();
+    expect(K.aufteilungText('2-1')).toBe('2 : 1');
+    expect(K.aufteilungNachbar(zwei, 0, '1-1', 'rechts')).toBe('2-1');
+    expect(K.aufteilungNachbar(zwei, 0, '1-1', 'links')).toBe('1-2');
+    expect(K.aufteilungNachbar(zwei, 0, '2-1', 'rechts')).toBeNull(); // am Rand
+    expect(K.aufteilungNachbar(zwei, 0, '1-2', 'links')).toBeNull();
+    expect(K.aufteilungNachbar(zwei, 0, 'quatsch', 'rechts')).toBeNull();
+  });
+
+  it('Abstand rastet auf die nächste gemessene Stufe – reine Funktion mit Pixelwerten als Eingabe', () => {
+    const px = { kein: 0, klein: 36, normal: 80, gross: 136 }; // so gemessen, die Zahlen sind hier nur Eingabe
+    const r = (ziel: number) => K.abstandRasten(ABSTAENDE, px, ziel);
+    expect(r(-50)).toBe('kein');
+    expect(r(0)).toBe('kein');
+    expect(r(17)).toBe('kein');
+    expect(r(19)).toBe('klein');
+    expect(r(36)).toBe('klein');
+    expect(r(57)).toBe('klein');
+    expect(r(59)).toBe('normal');
+    expect(r(107)).toBe('normal');
+    expect(r(109)).toBe('gross');
+    expect(r(9999)).toBe('gross');
+    expect(r(18)).toBe('kein'); // genau dazwischen: die kleinere Stufe
+    // andere Pixelwerte (anderes Stylesheet, anderes Fenster) → andere Rastung, ohne dass sich der Code ändert
+    expect(K.abstandRasten(ABSTAENDE, { kein: 0, klein: 10, normal: 20, gross: 30 }, 26)).toBe(
+      'gross',
+    );
+  });
+
+  it('die Stufen werden am echten Stylesheet gemessen: je Stufe ein Probe-Abschnitt mit den echten Klassen, danach weg', () => {
+    const wurzel = document.createElement('main');
+    document.body.appendChild(wurzel);
+    const gemessen: string[] = [];
+    const orig = window.getComputedStyle.bind(window);
+    // So tut das „Stylesheet“: Der obere Innenabstand hängt an der Klasse – wie `--abstand` in website.css.
+    const pad: Record<string, string> = {
+      'w-abschnitt w-abschnitt--abstand-kein': '0px',
+      'w-abschnitt w-abschnitt--abstand-klein': '24px',
+      'w-abschnitt': '56px',
+      'w-abschnitt w-abschnitt--abstand-gross': '120px',
+    };
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element, p?: string | null) => {
+      if (el.tagName === 'SECTION') {
+        gemessen.push(el.className);
+        expect(el.parentElement).toBe(wurzel); // in die Wurzel gehängt, damit auch Regeln mit Vorfahren gelten
+        return { paddingTop: pad[el.className] ?? 'FEHLT' } as CSSStyleDeclaration;
+      }
+      return orig(el, p);
+    });
+    expect(K.stufenMessen(wurzel, ABSTAENDE)).toEqual({
+      kein: 0,
+      klein: 24,
+      normal: 56,
+      gross: 120,
+    });
+    expect(gemessen).toEqual([
+      'w-abschnitt w-abschnitt--abstand-kein',
+      'w-abschnitt w-abschnitt--abstand-klein',
+      'w-abschnitt',
+      'w-abschnitt w-abschnitt--abstand-gross',
+    ]);
+    expect(wurzel.children).toHaveLength(0); // aufgeräumt
+    vi.restoreAllMocks();
   });
 });

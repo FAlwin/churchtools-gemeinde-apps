@@ -48,8 +48,8 @@
     if (best.ue > 0 && !opt.pflicht && !opt.erzwinge) return null;
     return best;
   };
-  /** Die Rangordnung: kleinere Zahl wird zuerst platziert und hat Vorrang (Baustein-Leiste 1 … Abstand-Pille 6). */
-  const RANG = { blockleiste: 1, werk: 2, einfuegen: 4, plus: 5, abstand: 6 };
+  /** Die Rangordnung: kleinere Zahl wird zuerst platziert und hat Vorrang (Baustein-Leiste 1 … Abstand-Pille 6; 3 = Spalten-Griff). */
+  const RANG = { blockleiste: 1, werk: 2, teiler: 3, einfuegen: 4, plus: 5, abstand: 6 };
   /**
    * Alle Bedienelemente einer Anzeige platzieren. `elemente`: [{ name, rang, pflicht?, kand }]; `belegt`: Rechtecke, die schon
    * besetzt sind (der feste Seitenkopf). Liefert { name: Platz | null } – `null` = ausgeblendet. Ein platziertes Element
@@ -67,6 +67,83 @@
         if (p) belegt.push(aufblasen(p.rect, 3));
       });
     return aus;
+  };
+
+  // ── 1b. Maße ziehen (W3c-3): Rastung ───────────────────────────────────────────────────────────────────────
+  // Reine Rechnung. Was einrastet, bestimmt das Modell: die Namen der Aufteilungen (`config.aufteilungen`, aus `AUFTEILUNGEN`) und die
+  // Stufen des Abstands (`config.abstaende`, aus dem Schema) kommen von der Erweiterung; hier steht nichts davon als Liste.
+  /** Die Anteile der Spalten einer Aufteilung – aus dem Namen: `'2-1'` → [2/3, 1/3]. */
+  const anteile = (name) => {
+    const t = String(name).split('-').map(Number);
+    const sum = t.reduce((a, b) => a + b, 0);
+    return t.map((x) => x / sum);
+  };
+  /** Wo die Lücke `j` (zwischen Spalte `j` und `j + 1`) bei dieser Aufteilung liegt, als Anteil der Gesamtbreite (0…1). */
+  const teilerAnteil = (name, j) => anteile(name).slice(0, j + 1).reduce((a, b) => a + b, 0);
+  /**
+   * Auf welche Aufteilung rastet die Lücke `j` ein, wenn der Zeiger bei `s` (0…1, Anteil der Gesamtbreite von links) steht?
+   * Die nächste von `namen` (nur Aufteilungen mit der Spaltenzahl des Abschnitts – das reicht der Aufrufer herein); bei Gleichstand
+   * die frühere in der Liste. Ohne Namen: `null`.
+   */
+  const aufteilungRasten = (namen, j, s) => {
+    let best = null;
+    let bd = Infinity;
+    namen.forEach((n) => {
+      const d = Math.abs(teilerAnteil(n, j) - s);
+      if (d < bd) { bd = d; best = n; }
+    });
+    return best;
+  };
+  /**
+   * Wo die Spalten stehen: `links`/`rechts` = linker Rand der ersten, rechter Rand der letzten Spalte, `n` Spalten, `gap` = Lücke
+   * dazwischen (gleich breit). Die Spalten teilen sich `nutz` = Gesamtbreite ohne Lücken (so rechnet `grid` mit `fr`).
+   */
+  const spaltenLage = (links, rechts, n, gap) => ({ links: links, n: n, gap: gap, nutz: Math.max(1, rechts - links - (n - 1) * gap) });
+  /** Die Mitte der Lücke `j`, wenn die Spalten nach `name` aufgeteilt sind. */
+  const teilerX = (lage, name, j) => lage.links + lage.nutz * teilerAnteil(name, j) + j * lage.gap + lage.gap / 2;
+  /** Der Anteil (0…1), bei dem die Lücke `j` steht, wenn der Zeiger bei `x` ist – die Umkehrung von `teilerX`. */
+  const zeigerAnteil = (lage, x, j) => Math.max(0, Math.min(1, (x - lage.links - j * lage.gap - lage.gap / 2) / lage.nutz));
+  /** Die Aufteilung links bzw. rechts neben `aktuell`, nach der Lage der Lücke `j` geordnet (Pfeiltasten) – am Rand `null`. */
+  const aufteilungNachbar = (namen, j, aktuell, richtung) => {
+    const geordnet = namen.slice().sort((a, b) => teilerAnteil(a, j) - teilerAnteil(b, j));
+    const n = geordnet.indexOf(aktuell) + (richtung === 'rechts' ? 1 : -1);
+    return n >= 0 && n < geordnet.length && geordnet.indexOf(aktuell) >= 0 ? geordnet[n] : null;
+  };
+  /** Kann man hier ziehen? Nur wenn es mindestens zwei Aufteilungen mit dieser Spaltenzahl gibt. */
+  const aufteilungFrei = (namen) => namen.length > 1;
+  /** Die Beschriftung für Chip und Rastlinie: `'2-1'` → `'2 : 1'`. */
+  const aufteilungText = (name) => String(name).replace(/-/g, ' : ');
+  /**
+   * Auf welche Stufe rastet der Abstand ein? `px`: gemessene Pixelwerte je Stufe (`{ kein: 0, klein: 36, … }`), `ziel`: die
+   * gezogene Abstandshöhe in Pixeln. Die nächste Stufe; bei Gleichstand die frühere in `stufen` (die kleinere).
+   */
+  const abstandRasten = (stufen, px, ziel) => {
+    let best = null;
+    let bd = Infinity;
+    stufen.forEach((l) => {
+      const d = Math.abs(px[l] - ziel);
+      if (d < bd) { bd = d; best = l; }
+    });
+    return best;
+  };
+  /**
+   * Die Pixelhöhe der Stufen am ECHTEN Stylesheet messen: je Stufe ein unsichtbarer Probe-Abschnitt mit denselben Klassen wie
+   * ein echter (`w-abschnitt` + `w-abschnitt--abstand-…`, außer bei `normal`), gelesen wird sein oberer Innenabstand. Nichts davon
+   * ist nachgebaut – ändert sich das Stylesheet, ändert sich die Messung. Gemessen wird bei jedem Ziehen neu (die Werte hängen an
+   * der Fensterbreite). `wurzel`: dort hängen die Proben ein (der Hauptbereich der Seite, damit auch Regeln mit Vorfahren gelten).
+   */
+  const stufenMessen = (wurzel, stufen) => {
+    const doc = wurzel.ownerDocument;
+    const out = {};
+    stufen.forEach((lvl) => {
+      const p = doc.createElement('section');
+      p.className = 'w-abschnitt' + (lvl === 'normal' ? '' : ' w-abschnitt--abstand-' + lvl);
+      p.style.cssText = 'position:absolute;visibility:hidden;left:0;right:0;top:0;pointer-events:none';
+      wurzel.appendChild(p);
+      out[lvl] = parseFloat(doc.defaultView.getComputedStyle(p).paddingTop) || 0;
+      p.remove();
+    });
+    return out;
   };
 
   // ── 2. Textmodell ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -576,6 +653,17 @@
     waehle: waehle,
     ordne: ordne,
     RANG: RANG,
+    anteile: anteile,
+    teilerAnteil: teilerAnteil,
+    aufteilungRasten: aufteilungRasten,
+    spaltenLage: spaltenLage,
+    teilerX: teilerX,
+    zeigerAnteil: zeigerAnteil,
+    aufteilungNachbar: aufteilungNachbar,
+    aufteilungFrei: aufteilungFrei,
+    aufteilungText: aufteilungText,
+    abstandRasten: abstandRasten,
+    stufenMessen: stufenMessen,
     formatUmschalten: formatUmschalten,
     linkSetzen: linkSetzen,
     linkEntfernen: linkEntfernen,

@@ -23,4 +23,4 @@
 - Neuer optionaler Teil im eigenen Wert der Ablage „Antworten <Dienstgruppe>“ (`vertretungen`, `fassung` bleibt 1; alte Werte gelten weiter). **„Wann kann ich?“ erhält
   ihn beim Speichern** (`eigeneAntwortenSchreiben` ohne Angabe = was frisch gelesen dasteht); vergangene Termine fallen heraus. Neu in `shared/dienstplan/`:
   `vertretung.ts` (Vorschläge, „gilt nur bei freiem Platz“, Mail-Texte, `uebernehmen`), `absagenNachZusage` (`antworten.ts`), `vertretungMarkieren` (`verfuegbarkeit.ts`),
-  `TerminZeile.freieDienste`. `ladePersonen` kann auf Wunsch die Leitung je Gruppe liefern (`rollen`). Neues Flaggen-Symbol (`flag`).
+  `TerminZeile.freiePlaetze` (Dienst + `index` je freiem Platz). `ladePersonen` kann auf Wunsch die Leitung je Gruppe liefern (`rollen`). Neues Flaggen-Symbol (`flag`).

@@ -14,37 +14,24 @@
 import { werteLesen, wertAnlegen } from '@shared/ct/modulDaten';
 import { plusTage } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
-import { terminPfad, type TerminRoh } from '@shared/ct/kalenderTermine';
 import { geplanterKopf } from '@shared/protokolle/planen';
 import { minute } from '@shared/protokolle/sitzungen';
 import { sitzungAusWerten } from '@shared/protokolle/speicher';
-import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
+import { NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
-import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
+import { ctAnfrage, KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { treffenLesen } from './lesen';
+import { abgelehnt, terminAnlegen, UNKLAR } from './terminAnlegen';
 import { anfragenLesen, terminLaden } from './termin';
 
 const json = (body: unknown) => JSON.stringify(body);
 
-/**
- * ChurchTools hat ausdrücklich abgelehnt – dann ist nichts angelegt: fehlendes Recht (`KeinSpeicherRecht`) oder ein
- * anderes 4xx. Ein 403 ohne ChurchTools-Rumpf (Proxy) und eine Zeitgrenze sind dagegen unklar (`fehlerAus`). Die eine
- * Stelle dafür – auch für „Sitzung bearbeiten“ (K2b, `bearbeiten.ts`).
- */
-export const abgelehnt = (e: unknown): boolean =>
-  e instanceof KeinSpeicherRecht ||
-  (e instanceof ApiError &&
-    e.status >= 400 &&
-    e.status < 500 &&
-    e.status !== 403 &&
-    e.status !== 408);
+// Der Kern „Termin anlegen“ steht seit W14 in `terminAnlegen.ts` (auch für den Reiter „Termine“).
+export { abgelehnt, UNKLAR };
 
 /** Der Termin ist da, aber nicht sauber nachgelesen – dann nicht noch einmal festlegen (doppelte Einladung). */
 export const NACHSEHEN =
   'Der Termin wurde angelegt, ließ sich aber nicht nachlesen. Bitte im Kalender nachsehen, statt ihn noch einmal festzulegen – sonst bekommen alle die Einladung doppelt.';
-
-export const UNKLAR =
-  'ChurchTools hat nicht geantwortet – ob der Termin angelegt wurde, ist unklar. Bitte erst im Kalender nachsehen, bevor du es noch einmal versuchst, sonst bekommen alle die Einladung doppelt.';
 
 export interface Festgelegt {
   /** ID der geplanten Sitzung (Kopf) – `null`, wenn der Kopf nicht gespeichert werden konnte (dann gibt es einen Hinweis). */
@@ -55,65 +42,6 @@ export interface Festgelegt {
   fehlend: number[];
   /** Was nicht geklappt hat – der Termin steht trotzdem. */
   hinweise: string[];
-}
-
-/** Termin im Kalender an diesem Tag mit diesem Titel und Beginn – nach einer unklaren Antwort. */
-async function terminSuchen(
-  kalender: number,
-  titel: string,
-  beginn: string,
-  zeitzone: string,
-): Promise<number | null> {
-  const tag = tagAusIso(beginn, zeitzone);
-  const roh = (await ctDaten<TerminRoh[]>(terminPfad(kalender, tag, tag))) ?? [];
-  const t = roh.find(
-    (r) =>
-      r.base?.title === titel &&
-      r.calculated?.startDate !== undefined &&
-      minute(r.calculated.startDate) === minute(beginn),
-  );
-  return t?.base?.id ?? null;
-}
-
-/** 1. Termin mit Besprechungsanfrage anlegen – oder nach unklarer Antwort finden. */
-async function terminAnlegen(q: {
-  kalender: number;
-  titel: string;
-  beginn: string;
-  ende: string;
-  eingeladen: readonly number[];
-  zeitzone: string;
-}): Promise<number> {
-  let id: number | null = null;
-  try {
-    const neu = await ctAnfrage<{ data?: { id?: unknown } }>(
-      `/calendars/${q.kalender}/appointments`,
-      {
-        method: 'POST',
-        body: json({
-          calendarId: q.kalender,
-          title: q.titel,
-          startDate: q.beginn,
-          endDate: q.ende,
-          isInternal: false,
-          meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })),
-        }),
-        verweigert: 'Du darfst in diesem Kalender keine Termine anlegen.',
-      },
-    );
-    if (typeof neu?.data?.id === 'number') id = neu.data.id;
-  } catch (e) {
-    if (abgelehnt(e)) throw e;
-  }
-  if (id === null) {
-    try {
-      id = await terminSuchen(q.kalender, q.titel, q.beginn, q.zeitzone);
-    } catch {
-      throw new Unklar(UNKLAR);
-    }
-    if (id === null) throw new Unklar(UNKLAR);
-  }
-  return id;
 }
 
 /**

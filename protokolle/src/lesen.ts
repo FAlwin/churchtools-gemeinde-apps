@@ -26,6 +26,7 @@ import {
 } from '@shared/protokolle/speicher';
 import { zeitAusTermin } from '@shared/protokolle/bearbeiten';
 import { ohneProtokoll, ohneProtokollZeitraum, type Zeitraum } from '@shared/protokolle/fruehere';
+import { istTerminStand, type TerminStand } from '@shared/protokolle/terminStand';
 import {
   fremdeTermineAus,
   minute,
@@ -385,6 +386,8 @@ export interface Mitarbeit {
   todoVorschlaege: Aufgabe[];
   /** Vorschläge für Tagesordnungspunkte (S5-4). */
   vorschlaege: Vorschlag[];
+  /** Was aus den Termin-Bausteinen der Protokolle geworden ist (W14, Reiter „Termine“). */
+  termine?: TerminStand[];
 }
 
 /**
@@ -395,13 +398,15 @@ export async function ladeMitarbeit(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
 ): Promise<Mitarbeit> {
-  if (gruppe.mitarbeit === null) return { aufgaben: [], todoVorschlaege: [], vorschlaege: [] };
+  if (gruppe.mitarbeit === null)
+    return { aufgaben: [], todoVorschlaege: [], vorschlaege: [], termine: [] };
   const roh = await mitarbeitRoh({ modul, kategorie: gruppe.mitarbeit });
   const { aufgaben, vorschlaege } = aufgabenAusRoh(roh);
   return {
     aufgaben: aufgaben.map((w) => w.x).filter((a) => !a.geloescht),
     todoVorschlaege: vorschlaege.map((w) => w.x).filter((a) => !a.geloescht),
     vorschlaege: derArt(roh, istVorschlag).map((w) => w.x),
+    termine: derArt(roh, istTerminStand).map((w) => w.x),
   };
 }
 
@@ -419,6 +424,8 @@ export interface GruppenUebersicht {
   aufgaben: Aufgabe[];
   /** To-Do-Vorschläge (W9b) – nicht in `aufgaben`; nur der Bereich „Vorgeschlagen“ im Reiter To-Dos liest sie. */
   todoVorschlaege: Aufgabe[];
+  /** Stand der Termin-Bausteine (W14) – nur der Reiter „Termine“ liest ihn. Fehlt nur in älteren Testdaten. */
+  termine?: TerminStand[];
 }
 
 /**
@@ -442,6 +449,7 @@ export async function ladeUebersicht(
       sitzungen,
       aufgaben: mitarbeit.aufgaben,
       todoVorschlaege: mitarbeit.todoVorschlaege,
+      termine: mitarbeit.termine,
     });
   });
   return gruppen.map((g) => ergebnis.get(g.id)!);

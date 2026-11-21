@@ -93,6 +93,83 @@
       background: var(--section);
       font-weight: 700;
     }
+
+    // Unterzeile (W13): die erste Zelle ist eingerückt und trägt „↳“, die Linie darüber ist gestrichelt – sie gehört zur
+    // Zeile darüber. Dieselbe Optik hat der Editor (`DokumentEditor.scss`).
+    .unterzeile {
+      td,
+      th {
+        border-top-style: dashed;
+      }
+
+      > :first-child {
+        padding-left: 26px;
+      }
+    }
+
+    tr > :first-child {
+      position: relative;
+    }
+
+    .unterZeichen {
+      position: absolute;
+      left: 9px;
+      color: var(--text3);
+    }
+
+    // „nur zur Info“ hat im Text „ⓘ“ – hier als kleiner Kreis mit „i“ (die Schrift in ChurchTools hat das Zeichen nicht überall).
+    .info {
+      display: inline-grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      border: 1.5px solid var(--text3);
+      border-radius: 50%;
+      color: var(--text2);
+      font-family: Georgia, serif;
+      font-size: 10.5px;
+      font-weight: 800;
+      font-style: normal;
+      line-height: 1;
+      vertical-align: -2px;
+    }
+
+    .ausgeblendet td {
+      height: auto;
+      padding: 4px 8px;
+      border-style: dashed;
+      color: var(--text3);
+      font-size: 12.5px;
+      text-align: center;
+    }
+
+    .legende {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 6px 0 0;
+      color: var(--text2);
+      font-size: 12.5px;
+    }
+  }
+
+  // Schalter über dem Protokoll, wenn irgendwo eine Info-Zeile steht (W13).
+  .nurThemen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: var(--text2);
+    font-size: 13.5px;
+    cursor: pointer;
+
+    input {
+      width: 17px;
+      height: 17px;
+      margin: 0;
+      accent-color: var(--blue);
+    }
   }
 
   code {

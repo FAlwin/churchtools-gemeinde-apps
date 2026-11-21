@@ -8,6 +8,8 @@
  * („↳ ⓘ 17.04.“).
  */
 
+import { tabellenZeilen, type Block } from './dokument';
+
 export const UNTER_ZEICHEN = '↳';
 export const INFO_ZEICHEN = 'ⓘ';
 
@@ -111,3 +113,11 @@ export function zeilenArten(zeilen: readonly (readonly { inhalt: unknown }[])[])
 /** Wie viele Zeilen sind „nur zur Info“? */
 export const anzahlInfo = (arten: readonly ZeilenArt[]): number =>
   arten.filter((a) => a.info).length;
+
+/** Hat irgendeine Tabelle im Dokument (auch unter Unterblöcken) eine Info-Zeile? Dann zeigt die Lese-Ansicht den Schalter. */
+export function dokumentHatInfo(bloecke: readonly Block[]): boolean {
+  return bloecke.some((b) => {
+    const zeilen = b.type === 'table' ? tabellenZeilen(b.content) : null;
+    return (zeilen && anzahlInfo(zeilenArten(zeilen)) > 0) || dokumentHatInfo(b.children ?? []);
+  });
+}

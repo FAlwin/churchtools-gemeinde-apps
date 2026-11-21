@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import {
@@ -12,6 +12,14 @@ import {
   type Punkt,
 } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  anzahlInfo,
+  dokumentHatInfo,
+  INFO_LEGENDE,
+  ohneKennzeichen,
+  zeilenArten,
+  type ZeilenArt,
+} from '@shared/protokolle/tabellenZeile';
 import type { Thema } from '@ui/design/thema';
 import { useThema } from '@ui/design/useThema';
 import { farbWert } from './farben';
@@ -101,6 +109,8 @@ interface Kontext {
   /** Der Punkt, zu dem die Suche gesprungen ist – kurz hervorgehoben. */
   markiert: string | null;
   aufgaben: ReadonlyMap<string, Aufgabe>;
+  /** „Nur Themen dieses Treffens“ (W13): Info-Zeilen der Tabellen ausblenden – nur Anzeige, nichts wird gespeichert. */
+  nurThemen: boolean;
 }
 
 const istListe = (b: Block): boolean =>
@@ -262,7 +272,7 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
         </div>
       );
     case 'table':
-      return <Tabelle content={b.content} />;
+      return <Tabelle content={b.content} nurThemen={k.nurThemen} />;
     case 'divider':
       // Trennlinie aus der Werkzeugleiste (S4-1) – ohne Text, bis dahin fiel sie hier still weg.
       return <hr className={styles.linie} />;
@@ -294,37 +304,76 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
   }
 }
 
-/** Eine Tabelle (K3a) – Kopfzeilen als `th`, verbundene Zellen und Zellfarben wie im Editor. */
-function Tabelle({ content }: { content: unknown }) {
+/** Der kleine Kreis mit „i“ (W13) – „nur zur Info“; als Symbol gezeichnet, nicht als Buchstabe (die Schrift hat „ⓘ“ nicht überall). */
+function InfoKreis() {
+  return (
+    <span className={styles.info} role="img" aria-label="nur zur Info">
+      i
+    </span>
+  );
+}
+
+/**
+ * Eine Tabelle (K3a) – Kopfzeilen als `th`, verbundene Zellen und Zellfarben wie im Editor. Seit W13 trägt die erste Zelle
+ * einer Zeile ggf. „↳ “ (Unterzeile: eingerückt, gestrichelte Linie) und „ⓘ “ (nur zur Info: Kreis-Symbol, Legende
+ * darunter); `nurThemen` blendet die Info-Zeilen aus.
+ */
+function Tabelle({ content, nurThemen }: { content: unknown; nurThemen: boolean }) {
   const thema = useThema();
   const zeilen = tabellenZeilen(content);
   if (!zeilen?.length) return null;
+  const arten: ZeilenArt[] = zeilenArten(zeilen);
+  const info = anzahlInfo(arten);
+  const weg = nurThemen ? info : 0;
+  const spalten = Math.max(1, ...zeilen.map((z) => z.length));
   return (
     <div className={styles.tabelle}>
       <table>
         <tbody>
-          {zeilen.map((zellen, z) => (
-            <tr key={z}>
-              {zellen.map((c, s) => {
-                const Zelle = c.kopf ? 'th' : 'td';
-                return (
-                  <Zelle
-                    key={s}
-                    colSpan={c.spalten > 1 ? c.spalten : undefined}
-                    rowSpan={c.zeilen > 1 ? c.zeilen : undefined}
-                    style={{
-                      backgroundColor: farbWert(c.hintergrund, 'hintergrund', thema),
-                      color: farbWert(c.schrift, 'schrift', thema),
-                    }}
-                  >
-                    <Inhalt content={c.inhalt} />
-                  </Zelle>
-                );
-              })}
+          {zeilen.map((zellen, z) => {
+            if (nurThemen && arten[z].info) return null;
+            return (
+              <tr key={z} className={arten[z].unter ? styles.unterzeile : undefined}>
+                {zellen.map((c, s) => {
+                  const Zelle = c.kopf ? 'th' : 'td';
+                  const erste = s === 0 ? ohneKennzeichen(c.inhalt) : null;
+                  return (
+                    <Zelle
+                      key={s}
+                      colSpan={c.spalten > 1 ? c.spalten : undefined}
+                      rowSpan={c.zeilen > 1 ? c.zeilen : undefined}
+                      style={{
+                        backgroundColor: farbWert(c.hintergrund, 'hintergrund', thema),
+                        color: farbWert(c.schrift, 'schrift', thema),
+                      }}
+                    >
+                      {erste?.art.unter && (
+                        <span className={styles.unterZeichen} aria-label="Unterzeile">
+                          ↳
+                        </span>
+                      )}
+                      {erste?.art.info && <InfoKreis />}
+                      <Inhalt content={erste ? erste.inhalt : c.inhalt} />
+                    </Zelle>
+                  );
+                })}
+              </tr>
+            );
+          })}
+          {weg > 0 && (
+            <tr className={styles.ausgeblendet}>
+              <td colSpan={spalten}>
+                {weg === 1 ? '1 Info-Zeile ausgeblendet' : `${weg} Info-Zeilen ausgeblendet`}
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
+      {info > 0 && !nurThemen && (
+        <p className={styles.legende}>
+          <InfoKreis /> {INFO_LEGENDE}
+        </p>
+      )}
     </div>
   );
 }
@@ -339,7 +388,10 @@ export function ProtokollAnsicht({
   markiert?: string | null;
 }) {
   const a = ableiten(dokument);
+  const [nurThemen, setNurThemen] = useState(false);
+  const hatInfo = dokumentHatInfo(dokument);
   const k: Kontext = {
+    nurThemen: hatInfo && nurThemen,
     punkte: new Map(a.punkte.map((p) => [p.blockId, p])),
     aufgaben: new Map(aufgaben.map((x) => [x.id, x])),
     markiert,
@@ -347,6 +399,16 @@ export function ProtokollAnsicht({
   if (!dokument.length) return <p className={styles.leer}>Das Protokoll ist noch leer.</p>;
   return (
     <article className={styles.blatt}>
+      {hatInfo && (
+        <label className={styles.nurThemen}>
+          <input
+            type="checkbox"
+            checked={nurThemen}
+            onChange={(e) => setNurThemen(e.target.checked)}
+          />
+          Nur Themen dieses Treffens
+        </label>
+      )}
       <Bloecke bloecke={dokument} k={k} />
     </article>
   );

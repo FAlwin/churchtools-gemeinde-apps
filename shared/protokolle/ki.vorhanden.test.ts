@@ -61,7 +61,8 @@ function dokument(): Block[] {
   ];
 }
 
-const TRANSKRIPT = 'Peter: Wir laufen Eis. Maria kümmert sich um die Halle.';
+// Absichtlich ohne „Peter“: Er steht nur im vorhandenen Text (Namensschutz-Test).
+const TRANSKRIPT = 'Maria: Wir laufen Eis. Maria kümmert sich um die Halle.';
 const funde = namenFinden(
   namenSuchtext({ gruppe: 'Festplanung', transkript: TRANSKRIPT, dokument: dokument() }),
   { alle: GRUPPE, gruppe: GRUPPE },

@@ -866,7 +866,8 @@ describe('W12: vorhandener Text – ersetzen statt doppeln', () => {
     heading('h2', 1, 'Ostern'),
     zeile('a3', 'Ab 18 Uhr Stehimbiss.'),
   ];
-  const TX = 'Peter Wiens plant das Eislaufen. Alles klar.';
+  // Ohne den Namen aus dem vorhandenen Text: Er soll NUR dort gefunden werden.
+  const TX = 'Das Eislaufen ist geplant. Alles klar.';
 
   const bisVorschau = async () => {
     const r = zeige({ dokument: dok });

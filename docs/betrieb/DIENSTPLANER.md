@@ -45,6 +45,12 @@
 >   in der Mitte der Zeitraum mit ‹ ›, rechts **Filter** und der grüne Knopf **+ Zeitraum eintragen** (am Handy das runde Plus).
 >   Unter „Einträge“ gibt es weder Zeitraum noch Filter. Dieselbe Seite nutzt die Musik-App (Abwesenheiten). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
+> - **Vertretung suchen** (E5c-6, 21.11.2026, noch nicht released): An einem **zugesagten** eigenen Dienst (Start, Dienste, Termin-Ansicht) steht neben
+>   „Tauschen“ der leise Knopf **„Vertretung suchen“**. Das Fenster zeigt, wer im Team den Dienst an **diesem Termin** machen kann (**Hat Ja gesagt** ·
+>   **Vielleicht** · **Ohne Antwort**), mit einem Haken je Person („Ja“ vorab) und einer freiwilligen Nachricht. **„Absagen und fragen“** speichert die
+>   Markierung, sagt den Dienst ab und schickt den Gefragten je eine Mail (die Leitung eine Kopie). Wer im Team auf **Start** unter **„Für dich offen“**
+>   zuerst **„Übernehmen“** drückt, hat den Dienst; übernimmt niemand, trägt der freie Platz in **Planen** das Schild **„Vertretung gesucht“**. Rechte
+>   und Ablauf: Abschnitt „Vertretung suchen“ weiter unten.
 > - **Hilfe „?“** (Planen, Dienste, Termin-Ansicht für Planer): Statt langer Erklär-Absätze unter der Seite öffnet der Knopf
 >   „?“ (in Planen und Dienste der Eintrag „Hilfe“ im ⋯-Menü) ein Fenster mit kurzen Abschnitten (Texte in `dienstplaner/src/hilfeTexte.ts`, Baustein `ui/bedienung/HilfeKnopf.tsx`).
 >   Kurze Hinweise in Fenstern, Status-, Fehler- und Leer-Texte und Warnungen bleiben dort, wo sie stehen.
@@ -336,7 +342,7 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
   über dem Raster, sobald Antworten sichtbar sind. Der Schlüssel der Antwort ist die **Termin-ID als Text** (wie in „Wann kann ich?“).
   - **Laden** (`ladeAntworten.ts`, `usePersonenAntworten.ts`): je **Dienstgruppe** der gezeigten Dienste eine Kategorie
     `dienstplaner-antworten-<Dienstgruppe>`, alle Personen einer Kategorie (`alleAntwortenLesen`), höchstens drei gleichzeitig.
-    Es werden nur Dienstgruppen gelesen, die man **planen** darf (Sichtbarkeit für Mitglieder: E5c-6); nötig ist nur das Recht
+    Es werden nur Dienstgruppen gelesen, die man **planen** darf (Mitglieder lesen aus ihren eigenen Dienstgruppen nur die Markierungen „Vertretung gesucht“, E5c-6); nötig ist nur das Recht
     **„sehen“** auf die Kategorie, nicht „bereit“. Über mehrere Kategorien gilt je Person der **neueste `stand`** (bei Gleichstand
     die kleinere Kategorie-ID) – **dieselbe Funktion** (`neuesterStand`) wie bei den eigenen Antworten.
   - **Zweige:** Kategorie fehlt oder kein Recht (auch 403 beim Lesen) = „Antworten nicht sichtbar“ im Block, dauerhaft, keine Farbe.
@@ -466,6 +472,44 @@ Eintrag **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planb
   anhaken). Während es läuft, schließt Esc das Fenster nicht.
 - **Offen/ungemessen:** Dürfen Planer ohne Admin-Recht `POST /events/send` aufrufen? (Gemessen nur mit einem Konto mit allen
   Rechten.) Fehlt das Recht, steht „ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.“
+
+**Vertretung suchen** (E5c-6, 21.11.2026; Entwurf `e5c-6-vertretung.html` v1, gemessen in `messung-e5c.md` § E5c-6): Wer seinen Dienst nicht machen kann, fragt
+mit einem Klick die Leute aus dem Team – **ohne Planer**. ChurchTools erlaubt einem Mitarbeiter nicht, **andere einzutragen** (403); er darf aber **seinen
+eigenen Dienst absagen** (auch nach der Zusage), einer Person **eine Mail zum Termin schicken** (`POST /events/send`) und – mit dem Gruppenrecht
+**`+entry free`** – einen **freien** Platz seines Teams **selbst übernehmen**. Deshalb der Ablauf: **absagen → die Gefragten übernehmen den freien Platz selbst.**
+
+- **Knopf und Fenster:** „Vertretung suchen“ steht nur an **zugesagten** Diensten (für eine offene Anfrage gibt es „Absagen“). Das Fenster nennt den Dienst, den Termin
+  und den Tag und zeigt **nur Personen aus den Teams des Dienstes**, die an diesem Tag **nicht schon eingeteilt** sind und nicht Nein gesagt haben (= in ChurchTools
+  abwesend, soweit lesbar). Es zählen nur Antworten **zu diesem Termin**, die für diesen Dienst gelten (eine „nur bestimmte Dienste“-Antwort ohne ihn zählt als
+  „kann nicht“). Dieselbe Einordnung wie „Wer kann?“ und der Zauberstab (`antwortStufe`). Sind die Antworten der Dienstgruppe **nicht lesbar**, steht nur das Team
+  da, ohne Einordnung („ohne Antwort“ wäre geraten); lädt etwas **vorübergehend** nicht, sagt das Fenster es mit „Erneut versuchen“. Der gefüllte Knopf heißt **„Absagen und fragen“** –
+  ist niemand angehakt, **„Absagen“** (dann gibt es keine Mails, das Schild erscheint trotzdem).
+- **Der Ablauf** (`dienstplaner/src/vertretungAblauf.ts`, jeder Schritt geprüft, bevor der nächste kommt): **1.** die **Markierung** in Annas **eigenen Wert** der Ablage
+  „Antworten <Dienstgruppe>“ schreiben (optionales Feld `vertretungen`, abwärtskompatibel; die Ablage liest das Team – der Absage-Kommentar am Platz ist für Mitarbeitende
+  ohne `+see reason` **nicht** lesbar) und nachlesen; **2.** den Dienst **absagen** (Kommentar „Vertretung gesucht – gefragt: Ben, Finn“, frisch gelesen, nachgelesen);
+  **3.** die **Mails**: je gefragter Person eine eigene, danach eine Kopie je Leitungsperson (Betreff „Kopie: …“; Bausteine von „Erinnern“, `erinnernSenden`). **Scheitert 1 oder 2,
+  ist nichts abgesagt und nichts verschickt.** Scheitern nur Mails, **ist abgesagt**: das Fenster sagt, an wen die Mail nicht ging, und bietet „Erneut senden“ nur für diese –
+  **auf Klick**, nie von allein; wer „unklar“ ist (ChurchTools antwortete nicht, die Mail kann angekommen sein), steht mit diesem Hinweis da. Wer keine Mail-Adresse hat, wird
+  genannt, nicht wiederholt.
+- **„Für dich offen“ und „Übernehmen“:** Auf **Start** steht für **jeden aus dem Team** des Dienstes (auch wenn er nicht gefragt wurde, nicht für Anna selbst) eine Zeile
+  „<Name> sucht eine Vertretung“ mit „Übernehmen“ – **aber nur, solange am Termin ein Platz dieses Dienstes frei ist** (`gesuchtGilt`, abgeleitet aus dem geladenen
+  Termin; die Markierung allein reicht nie – sie bleibt im Wert stehen, bis der Termin vorbei ist). „Übernehmen“ liest den Termin frisch, nimmt einen **freien Platz des Dienstes**
+  (`PUT /persons/{ich}/servicerequests/{platz}` mit `isAccepted: true`) und liest nach. Ausgänge: **schon übernommen** („Schon übernommen – danke!“, nichts wird überschrieben),
+  **kein Recht** („Du darfst dich hier nicht selbst eintragen – frag die Leitung.“, wenn der Platz `enterSelfIfFree: false` nennt oder ChurchTools mit 403 antwortet),
+  vorübergehender Fehler („nicht bestätigt“, nichts wird wiederholt). Die Antworten der **eigenen** Dienstgruppen lädt der Start dafür (bisher nur die planbaren).
+- **Planen:** Am **freien** Platz eines Dienstes, für den eine Markierung zu diesem Termin besteht, steht das kleine Schild **„Vertretung gesucht“** (Hinweis beim Darüberfahren:
+  „Anna hat abgesagt · gefragt: Ben, Finn“). Der Platz bleibt, was er war – Planen geht dort normal weiter.
+- **„Wann kann ich?“ erhält die Markierung:** Annas Antworten und die Markierung stehen im **selben Wert**. Speichert sie in „Wann kann ich?“, bleibt die Markierung, wie sie
+  **frisch gelesen** dasteht (nicht, wie die Seite sie beim Öffnen sah); vergangene Termine fallen heraus. Darum auch der geänderte Hinweistext am Notizfeld:
+  „Sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht.“
+- **Rechte – was freizuschalten ist:** (1) **Selbst übernehmen** braucht das Gruppenrecht **`+entry free`** am Gruppentyp Dienstbereich für die Rolle Mitarbeiter
+  (gelesen 21.11.2026: live haben es Mitarbeitende **nicht** – entschieden: Alwin setzt es für alle Rollen). **Wirkung in ChurchTools:** Dann darf jeder aus dem Team dort auch
+  selbst **jeden freien Platz seines Teams** nehmen, nicht nur Vertretungen. Die App prüft trotzdem je Platz `enterSelfIfFree` und sagt ohne Recht ehrlich „frag die Leitung“.
+  (2) Der Speicher **„Antworten <Dienstgruppe>“** muss für die Mitglieder lesbar **und** (für die eigene Antwort) änderbar sein – wie schon für „Wann kann ich?“. Fehlt er, sagt das
+  Fenster, dass nichts abgesagt wurde. (3) Mails zum Termin (`/events/send`) und Absagen darf der Mitarbeiter bereits. Der Knopf in den Mails führt auf die **Startseite** des
+  Dienstplaners (dort steht „Übernehmen“).
+- **Ungemessen / offen:** Ob die Mail aus dem Postfach des Absenders (Anna) mit `appendAgendaButton: false` den Termin-Knopf von ChurchTools zeigt, prüft man am Gerät (Testfall TF-VERF-19). Bekannte
+  Grenze: Wer am Tag schon eingeteilt ist, wird nur an den **Terminen dieses Tages** erkannt, die ChurchTools mit Namen liefert („Namen verbergen“ und Gäste fallen weg).
 
 **Ablaufvorlagen ansehen und bearbeiten** (E10-V3a, 17.11.2026; Entwurf `e10-vorlagen.html`): In **Planen** liegt im
 **⋯-Menü** (seit B3, vorher ein Knopf links neben „Ablauf bearbeiten“) der Eintrag **„Vorlagen“** – kein eigener Reiter, „Planen“ bleibt markiert,

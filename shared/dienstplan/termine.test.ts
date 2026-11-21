@@ -78,6 +78,11 @@ describe('termineAus', () => {
       geplant: 2,
       frei: 1,
       freiNachGruppe: { 3: 1 },
+      // Plätze von Gesang (9) und Licht/…(7): beide haben einen freien Platz – auch für Nicht-Planer (E5c-6).
+      freiePlaetze: [
+        { serviceId: 7, index: null },
+        { serviceId: 9, index: null },
+      ],
       team: [],
     });
   });
@@ -88,6 +93,23 @@ describe('termineAus', () => {
     ]);
     expect(z.meine).toEqual([]);
     expect([z.geplant, z.frei]).toEqual([0, 0]);
+  });
+
+  it('freiePlaetze (E5c-6): jeder freie Platz mit Dienst und index – auch für Nicht-Planer; besetzte und ungültige Plätze zählen nicht', () => {
+    const [z] = zeilen([
+      termin(1, 'X', '2026-10-18T08:00:00Z', [
+        { serviceId: 9, personId: null, name: null }, // frei
+        { serviceId: 9, personId: 5, name: 'Anna', isAccepted: true },
+        { serviceId: 6, personId: 5, name: 'Anna', isAccepted: true }, // besetzt
+        { serviceId: 7, personId: null, name: null, isValid: false }, // ungültiger Platz
+        { serviceId: 3, personId: null, name: '  ' }, // Name nur Leerzeichen = frei
+      ]),
+    ]);
+    expect(z.freiePlaetze).toEqual([
+      { serviceId: 9, index: null },
+      { serviceId: 3, index: null },
+    ]);
+    expect([z.geplant, z.frei]).toEqual([0, 0]); // geplant wird weiter nur für Planer gezählt
   });
 
   it('sortiert nach Zeit; abgesagt kommt mit; Termin um 0:30 Uhr liegt auf dem Ortstag', () => {

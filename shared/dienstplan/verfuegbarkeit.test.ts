@@ -10,10 +10,15 @@ import {
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
   gleicheAntworten,
+  gleicheVertretungen,
   MAX_NOTIZ,
   neuesterStand,
   personenWertAus,
+  vertretungenZusammen,
+  vertretungMarkieren,
+  vertretungsSchluessel,
   type Antworten,
+  type Vertretung,
 } from './verfuegbarkeit';
 
 const MODUL = 16;
@@ -351,6 +356,7 @@ describe('Lesen', () => {
       ok: true,
       wert: {
         antworten: antw({ '2': ['vielleicht', '2026-12-13'] }),
+        vertretungen: {},
         stand: '2026-11-05T10:00:00.000Z',
       },
     });
@@ -398,7 +404,7 @@ describe('Lesen', () => {
     const { port } = speicher();
     expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toEqual({
       ok: true,
-      wert: { antworten: {}, stand: null },
+      wert: { antworten: {}, vertretungen: {}, stand: null },
     });
   });
 
@@ -725,3 +731,320 @@ describe('Mehrere Kategorien – eine Regel für „eigene“ und „alle“ (E5
     expect(alle.get(BERT)).toEqual(antw({ '3': ['ja', '2026-12-20'] }));
   });
 });
+
+// ── „Vertretung gesucht“ im eigenen Wert (E5c-6) ───────────────────────────────────────────────────────────────────────
+
+const TERMIN = 246;
+const TAG = '2026-12-13';
+const SCHLUESSEL = vertretungsSchluessel(TERMIN, 9);
+const markierung = (extra: Partial<Vertretung> = {}): Vertretung => ({
+  dienst: 9,
+  gefragt: [BERT, 48],
+  seit: '2026-11-18T19:00:00.000Z',
+  tag: TAG,
+  name: 'Anna Test',
+  gefragtNamen: ['Bert Test', 'Finn Test'],
+  ...extra,
+});
+
+/** Die Markierungen, die für die Person in der Kategorie stehen – gelesen wie das Team sie liest. */
+async function markierungen(port: EntwurfPort, kategorien: number[], person = ANNA) {
+  const r = await eigeneAntwortenLesen(port, MODUL, kategorien, person);
+  return r.ok ? r.wert.vertretungen : null;
+}
+
+describe('Vertretung gesucht – Markierung im eigenen Wert', () => {
+  it('wird geschrieben und nachgelesen, die Antworten bleiben, wie sie waren (Erzeuger gegen Leser)', async () => {
+    const { port } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
+    const r = await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1, K2],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    expect(r).toEqual({
+      ok: true,
+      ergebnisse: [
+        { kategorie: K1, ok: true },
+        { kategorie: K2, ok: true },
+      ],
+    });
+    expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toMatchObject({
+      ok: true,
+      wert: { antworten: A1, vertretungen: { [SCHLUESSEL]: markierung() } },
+    });
+    // Das Team liest dieselbe Markierung über „alle Antworten“ und den Zusammenführer.
+    const alle = await alleAntwortenLesen(port, MODUL, K1);
+    expect(alle.ok && vertretungenZusammen(new Map([[K1, alle.wert]])).get(ANNA)).toEqual({
+      [SCHLUESSEL]: markierung(),
+    });
+  });
+
+  it('Erhalt: Speichern in „Wann kann ich?“ (nur die Antworten) löscht die Markierung NICHT – in keiner Kategorie', async () => {
+    const { port } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1, K2],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    // So speichert „Wann kann ich?“: nur Antworten – ohne Wissen von der Markierung (die Seite wurde davor geladen).
+    const neu = antw({ '1': ['vielleicht', '2026-12-06'] });
+    const r = await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, neu, HEUTE);
+    expect(r.every((x) => x.ok)).toBe(true);
+    for (const kat of [K1, K2]) {
+      expect(await markierungen(port, [kat])).toEqual({ [SCHLUESSEL]: markierung() });
+    }
+    expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toMatchObject({
+      wert: { antworten: neu },
+    });
+  });
+
+  it('Erhalt auch, wenn „Wann kann ich?“ alle Antworten entfernt: der Wert bleibt wegen der Markierung stehen', async () => {
+    const { port, eigene } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    expect(await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, {}, HEUTE)).toEqual([
+      { kategorie: K1, ok: true },
+    ]);
+    expect(eigene(K1, ANNA)).toHaveLength(1);
+    expect(await markierungen(port, [K1])).toEqual({ [SCHLUESSEL]: markierung() });
+  });
+
+  it('ohne Antworten UND ohne Markierung wird der Wert gelöscht wie bisher', async () => {
+    const { port, eigene } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, {}, HEUTE);
+    expect(eigene(K1, ANNA)).toHaveLength(0);
+  });
+
+  it('Vergangenes fällt aus den Markierungen heraus – beim Speichern der Antworten und beim ausdrücklichen Schreiben', async () => {
+    const { port, s } = speicher();
+    s.werte.push(
+      wertMitMarkierung(1, K1, ANNA, A1, {
+        '1:9': markierung({ tag: '2026-11-17' }),
+        '2:9': markierung({ tag: HEUTE }),
+        [SCHLUESSEL]: markierung(),
+      }),
+    );
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    expect(Object.keys((await markierungen(port, [K1])) ?? {}).sort()).toEqual(
+      ['2:9', SCHLUESSEL].sort(),
+    );
+    // Ausdrücklich: eine vergangene Markierung kommt gar nicht erst hinein.
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE, {
+      '7:9': markierung({ tag: '2026-01-01' }),
+    });
+    expect(await markierungen(port, [K1])).toEqual({});
+  });
+
+  it('abwärtskompatibel: alter Wert ohne Feld gilt; ohne Markierung schreibt der Erzeuger kein Feld', async () => {
+    const { port, s } = speicher();
+    s.werte.push(wertMit(1, K1, ANNA, A1, '2026-11-02T10:00:00.000Z'));
+    expect(await markierungen(port, [K1])).toEqual({});
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    expect(s.werte[0].value).not.toContain('vertretungen');
+  });
+
+  it('kaputte Markierungen fallen beim Lesen weg, die übrigen und die Antworten bleiben', async () => {
+    const { port, s } = speicher();
+    s.werte.push(
+      wertMitMarkierung(1, K1, ANNA, A1, {
+        gut: markierung(),
+        keinDienst: { ...markierung(), dienst: 'neun' },
+        schlechterTag: { ...markierung(), tag: 'morgen' },
+        ohneZeit: { ...markierung(), seit: '' },
+        leer: null,
+      } as unknown as Record<string, Vertretung>),
+    );
+    expect(await markierungen(port, [K1])).toEqual({ gut: markierung() });
+    expect(await eigeneAntwortenLesen(port, MODUL, [K1], ANNA)).toMatchObject({
+      wert: { antworten: A1 },
+    });
+  });
+
+  it('dieselbe Suche (Termin und Dienst) ersetzt die frühere; eine zu einem anderen Dienst bleibt', async () => {
+    const { port } = speicher();
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung({ dienst: 6 }) },
+      HEUTE,
+    );
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung({ gefragt: [], gefragtNamen: [] }) },
+      HEUTE,
+    );
+    const m = await markierungen(port, [K1]);
+    expect(Object.keys(m ?? {}).sort()).toEqual([`${TERMIN}:6`, SCHLUESSEL]);
+    expect(m?.[SCHLUESSEL].gefragt).toEqual([]);
+  });
+
+  it('Lesen scheitert: NICHTS wird geschrieben (ein unbekannter Stand würde die Antworten überschreiben)', async () => {
+    const { port, s } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
+    s.auftraege.length = 0;
+    s.lesenWirft.set(K1, new Fehler(503));
+    s.lesenWirft.set(K2, new Fehler(503));
+    expect(
+      await vertretungMarkieren(
+        port,
+        MODUL,
+        [K1, K2],
+        ANNA,
+        { terminId: TERMIN, vertretung: markierung() },
+        HEUTE,
+      ),
+    ).toEqual({ ok: false, grund: 'voruebergehend' });
+    expect(s.auftraege).toEqual([]);
+  });
+
+  it('eine Kategorie lässt sich nicht schreiben: ihr Ergebnis nennt den Grund, die andere gelingt', async () => {
+    const { port, s } = speicher();
+    s.schreibenWirft.set(K1, new Fehler(403));
+    const r = await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1, K2],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    expect(r).toEqual({
+      ok: true,
+      ergebnisse: [
+        { kategorie: K1, ok: false, grund: 'kein-recht' },
+        { kategorie: K2, ok: true },
+      ],
+    });
+  });
+
+  it('Markierung verschluckt (200, aber nichts gespeichert): nicht-angekommen – kein Erfolg', async () => {
+    const { port, s } = speicher();
+    s.verschlucken.add(K1);
+    const r = await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung() },
+      HEUTE,
+    );
+    expect(r).toEqual({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }],
+    });
+  });
+
+  it('vertretungenZusammen: je Person gilt derselbe Wert wie bei den Antworten (neuester stand)', () => {
+    const alt = {
+      antworten: {},
+      stand: '2026-11-01T10:00:00.000Z',
+      vertretungen: { a: markierung() },
+    };
+    const neu = { antworten: {}, stand: '2026-11-02T10:00:00.000Z', vertretungen: {} };
+    const z = vertretungenZusammen(
+      new Map([
+        [K1, new Map([[ANNA, alt]])],
+        [K2, new Map([[ANNA, neu]])],
+      ]),
+    );
+    expect(z.has(ANNA)).toBe(false); // der neuere Wert hat keine Markierung – sie gilt nicht mehr
+    expect(vertretungenZusammen(new Map([[K1, new Map([[ANNA, alt]])]])).get(ANNA)).toEqual({
+      a: markierung(),
+    });
+  });
+
+  it('der index des abgesagten Platzes: hin und zurück (auch null), fehlt er, fehlt das Feld; Unbrauchbares fällt weg', async () => {
+    const { port, s } = speicher();
+    for (const index of [1, null]) {
+      await vertretungMarkieren(
+        port,
+        MODUL,
+        [K1],
+        ANNA,
+        { terminId: TERMIN, vertretung: markierung({ index }) },
+        HEUTE,
+      );
+      expect((await markierungen(port, [K1]))?.[SCHLUESSEL].index).toBe(index);
+    }
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung({ index: undefined }) },
+      HEUTE,
+    );
+    const alt = (await markierungen(port, [K1]))?.[SCHLUESSEL];
+    expect(alt).not.toHaveProperty('index'); // alte Regel: kein gemerkter Platz
+    expect(s.werte[0].value).not.toContain('"index"');
+    s.werte[0].value = JSON.stringify({
+      ...JSON.parse(s.werte[0].value),
+      vertretungen: { [SCHLUESSEL]: { ...markierung(), index: 'eins' } },
+    });
+    expect(await markierungen(port, [K1])).toEqual({
+      [SCHLUESSEL]: expect.not.objectContaining({ index: expect.anything() }),
+    });
+  });
+
+  it('gleicheVertretungen vergleicht alle Felder, nicht die Reihenfolge der Schlüssel', () => {
+    const x = { a: markierung(), b: markierung({ dienst: 6 }) };
+    expect(gleicheVertretungen(x, { b: x.b, a: x.a })).toBe(true);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ name: 'Anne' }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ gefragt: [BERT] }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ gefragtNamen: ['x'] }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ index: 2 }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ index: 1 }) })).toBe(false); // mit und ohne index sind verschieden
+    expect(gleicheVertretungen(x, { a: x.a })).toBe(false);
+  });
+});
+
+/** Ein Wert mit Markierungen, wie der Schreiber ihn erzeugt – für Fälle, die er nicht erzeugen würde (vergangen, kaputt). */
+function wertMitMarkierung(
+  id: number,
+  kat: number,
+  person: number,
+  antworten: Antworten,
+  vertretungen: Record<string, Vertretung>,
+): Wert {
+  return {
+    id,
+    dataCategoryId: kat,
+    value: JSON.stringify({
+      art: 'dienstplaner-verfuegbarkeit',
+      fassung: 1,
+      person,
+      antworten,
+      vertretungen,
+      stand: '2026-11-02T10:00:00.000Z',
+    }),
+  };
+}

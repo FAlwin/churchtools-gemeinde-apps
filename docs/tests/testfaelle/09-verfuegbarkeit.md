@@ -373,7 +373,7 @@ ein Fenster **Notiz** mit dem Termin darüber. Eine Notiz ist – wie jede Wahl 
 Leiste zählt mit), bis unten **Speichern** gedrückt ist. Termine ohne Antwort haben keinen Link.
 
 1. Bei einem Termin **Ja** wählen, **Notiz** öffnen: Feld **Kommentar** (Platzhalter „z. B. nur bis 12 Uhr“, höchstens 140
-   Zeichen), darunter „Kann deine Dienstgruppe sehen.“ und **Nur bestimmte Dienste** mit einem Schalter je eigenem Dienst, alle an.
+   Zeichen), darunter „Sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht.“ und **Nur bestimmte Dienste** mit einem Schalter je eigenem Dienst, alle an.
 2. „nur bis 12 Uhr“ eintragen, **Ton** ausschalten, **Übernehmen** → Link heißt „Notiz: nur bis 12 Uhr“, die Leiste zählt 1.
    **Verwerfen** → Notiz weg. Nochmal, dann **Speichern**; neu laden (F5): Notiz und die Dienste stehen noch da.
 3. Alle Dienste ausschalten → „Mindestens ein Dienst muss an bleiben.“, **Übernehmen** ist gesperrt. **Esc** oder **Abbrechen**
@@ -590,5 +590,60 @@ Es gibt kein Blatt von unten mehr – auch Auswahlen („⋯“, „Matrix ⌄�
 - **Betrifft:** `ui/fenster/FensterEbene.tsx`, `ui/fenster/Sheet.tsx`, `ui/fenster/ConfirmDialog.tsx`, `ui/design/_variables.scss`, `ui/bedienung/OptionWaehlen.tsx`, `ui/bedienung/MehrMenue.tsx`, `ui/bedienung/AnsichtWahl.tsx`, `ui/bedienung/SchwebePlus.tsx`
 - **Automatisiert:** weitgehend – `ui/fenster/FensterEbene.test.tsx` (jedes Fenster hängt unter `#root`, nie im Kasten mit eigenem Stapel), `ui/design/ebeneFenster.test.ts` (Reihenfolge der Ebenen, Sheet/ConfirmDialog nur über `FensterEbene`), `ui/bedienung/AuswahlFenster.test.tsx`, `ui/bedienung/MehrMenue.test.tsx` und `HinzufuegenMenue.test.tsx` (Handy: Fenster, jeder Eintrag einzeln); **nur von Hand:** die wirkliche Stapelreihenfolge auf dem Gerät (jsdom rechnet keine Stapel)
 - **Historie:** Abnahme am iPhone 20.11.2026 („alles mit Modalen machen und nicht mit Drawer“, „das Modal soll ganz oben liegen“)
+
+</details>
+
+### TF-VERF-19 · Vertretung suchen: absagen und fragen, übernehmen, Schild in „Planen“
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz** mit **drei Konten ohne Admin-Recht** im selben Team eines Dienstes
+(zum Beispiel Gesang): **Anna** (am Termin für den Dienst zugesagt), **Ben** und **Finn** (Mitglieder des Teams, ohne Einteilung am
+Termin), dazu eine Person mit **Planer-Recht** für die Dienstgruppe. Für die Dienstgruppe den Speicher „Antworten …" mit Rechten
+(sehen, anlegen, ändern, löschen) für alle Mitglieder; Ben hat zu diesem Termin **Ja**, Finn **Vielleicht** in „Wann kann ich?"
+gesagt, ein vierter hat **Nein** (Abwesenheit). Für das Übernehmen braucht das Team in ChurchTools das Gruppenrecht **`+entry free`**
+(„freie Plätze selbst eintragen") – zum Gegenprüfen ein Konto ohne dieses Recht. Mail-Postfach von Ben, Finn und der Leitung.
+
+**Das muss passieren:** Anna sagt mit **einem** Klick ab und fragt; die Gefragten bekommen eine Mail; **wer zuerst „Übernehmen"
+drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, sieht der Planer den freien Platz mit dem Schild
+„Vertretung gesucht".
+
+1. **Anna:** Start (unter „Deine nächsten Dienste"), Dienste → Meine und die Termin-Ansicht zeigen am zugesagten Dienst neben
+   „Tauschen" den zweiten leisen Knopf **„Vertretung suchen"**. An einer **offenen Anfrage** (noch nicht zugesagt) gibt es ihn nicht.
+2. **„Vertretung suchen"** öffnet ein Fenster: oben „<Dienst> · <Termin> · <Tag>", darunter die Abschnitte **Hat Ja gesagt** (Ben),
+   **Vielleicht** (Finn, mit seinem Kommentar) und **Ohne Antwort**. Anna selbst, wer am Tag schon eingeteilt ist und wer Nein gesagt
+   hat, stehen **nicht** da. **Ja ist vorab angehakt.** Unter „Nachricht (freiwillig)" steht, wer eine Mail bekommt und dass die Leitung
+   eine Kopie bekommt. Der einzige gefüllte Knopf heißt **„Absagen und fragen"**; nimmt man alle Haken heraus, heißt er **„Absagen"**.
+   Am Handy stehen die Knöpfe untereinander.
+3. **„Absagen und fragen"** drücken (Nachricht „Bin krank"): das Fenster sagt **„Abgesagt."** und an wen die Mail ging. In
+   ChurchTools ist Annas Platz **frei**, der Kommentar am Platz lautet „Vertretung gesucht – gefragt: Ben …" (der Planer sieht ihn).
+   Ben und Finn haben je **eine eigene Mail** von Anna („Vertretung gesucht: <Dienst> am <Tag>", mit der Nachricht und dem Knopf
+   „Im Dienstplaner übernehmen"); die Leitung eine **Kopie** (Betreff „Kopie: …"). Beim Schließen lädt die Seite neu, der Dienst ist
+   aus Annas Listen weg.
+4. **Ben** (und jede andere Person aus dem Team, auch **ohne** gefragt worden zu sein – zum Beispiel ein Teammitglied, das nicht
+   angehakt war): Start → **„Für dich offen"** zeigt eine Zeile mit Datum, „<Dienst>", „<Termin> · <Tag> · <Uhrzeit>" und dem Band
+   „Anna sucht eine Vertretung" mit **einem** gefüllten Knopf **„Übernehmen"** (am Handy volle Breite). Anna selbst sieht die Zeile nicht.
+5. Ben drückt **„Übernehmen"**: Hinweis „Übernommen – du hast jetzt …", der Dienst steht unter „Deine nächsten Dienste" und in
+   ChurchTools zugesagt; die Zeile ist weg. Ein zweites Teammitglied, das die Seite noch offen hatte und jetzt drückt, liest
+   **„Schon übernommen – danke!"**, nichts wird überschrieben.
+6. **Planer:** „Planen" zeigt, solange niemand übernommen hat, am **freien Platz, den Anna abgesagt hat** (nicht an einem anderen freien Platz desselben Dienstes), das kleine Schild **„Vertretung gesucht"**; beim
+   Darüberfahren (Handy: Antippen) steht „Anna hat abgesagt · gefragt: Ben, Finn". Der Platz lässt sich ganz normal planen
+   („frei – Wer kann?"). Sobald jemand übernommen hat oder der Planer den Platz besetzt, ist das Schild weg.
+   **Zwei Plätze:** Hat der Dienst zwei Plätze und war der zweite schon vorher frei, bleibt das Schild nur am abgesagten Platz; übernimmt Ben ihn, verschwinden Schild **und** Zeile (auch bei Ben selbst), obwohl der andere Platz frei ist. Wer am Termin in diesem Dienst schon eingeteilt ist, sieht „Übernehmen“ nie.
+7. **Ohne das Recht `+entry free`:** „Übernehmen" sagt **„Du darfst dich hier nicht selbst eintragen – frag die Leitung."**, der Platz
+   bleibt frei, die Zeile bleibt stehen.
+8. **Die Markierung bleibt:** Anna speichert nach der Suche in „Wann kann ich?" etwas Neues → das Schild in „Planen" und die Zeile
+   bei Ben stehen weiter (die Markierung steckt im selben Wert wie ihre Antworten und darf beim Speichern nicht verloren gehen).
+9. **Teil-Fehlschläge (nur mit Test-Aufbau):** eine gefragte Person **ohne Mail-Adresse** → das Fenster sagt, für wen ChurchTools keine
+   Adresse hat, und bietet kein „Erneut senden" dafür an. Fällt der Mailversand aus (ChurchTools antwortet nicht), steht „Abgesagt.
+   Mail an … nicht verschickt." – „Erneut senden" schickt **nur** an die ohne Mail, und nur auf Klick. Fehlt der Speicher „Antworten …"
+   der Dienstgruppe, sagt das Fenster, dass **nichts abgesagt** wurde.
+10. Aufräumen: den Dienst wieder zusagen lassen, die Antworten und Markierungen entfernen (Termin vergangen, oder in „Wann kann ich?" speichern
+    nach Ablauf).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/vertretung.ts`, `shared/dienstplan/verfuegbarkeit.ts`, `shared/dienstplan/antworten.ts`, `dienstplaner/src/VertretungFenster.tsx`, `dienstplaner/src/VertretungTeile.tsx`, `dienstplaner/src/vertretungAblauf.ts`, `dienstplaner/src/ladeVertretung.ts`, `dienstplaner/src/useVertretung.ts`, `dienstplaner/src/TauschTeile.tsx`, `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/PlanPlaetze.tsx`, `dienstplaner/src/Planen.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/vertretung.test.ts` (wen man fragen kann, gilt-nur-bei-freiem-Platz, „Für dich offen", Schilder, Mail-Texte, Übernehmen mit allen Zweigen), `shared/dienstplan/verfuegbarkeit.test.ts` (Markierung im eigenen Wert, Erhalt beim Speichern aus „Wann kann ich?"), `shared/dienstplan/antworten.test.ts` (Absagen nach der Zusage), `dienstplaner/src/vertretungAblauf.test.ts` (Reihenfolge Markierung → Absage → Mails, Teil-Fehlschläge, „Erneut senden"), `dienstplaner/src/Vertretung.test.tsx` (Fenster, Knopf neben „Tauschen", Startseite), `dienstplaner/src/useVertretung.test.tsx` (Übernehmen), `dienstplaner/src/Planen.vertretung.test.tsx` (Schild), `dienstplaner/src/ladeVertretung.test.ts`; **nur von Hand:** dass die Mails wirklich ankommen (Absender, Knopf, Kopie), die Rechte (`+entry free`, Speicher „Antworten …") an der Instanz und die Bedienung am Handy
+- **Historie:** Dienstplaner E5c-6 (21.11.2026), Entwurf `e5c-6-vertretung.html` v1; Messung `messung-e5c.md` § E5c-6
 
 </details>

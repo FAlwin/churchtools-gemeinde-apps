@@ -73,6 +73,34 @@ export function absagen(
 }
 
 /**
+ * **Einen zugesagten Dienst absagen, weil eine Vertretung gesucht wird** (E5c-6): wie `absagen`, aber der Platz muss
+ * **zugesagt** von mir besetzt sein (nicht nur angefragt – dafür gibt es `absagen`). Gemessen 20./21.11.2026
+ * (`docs/messung-e5c.md`): Der Eingeteilte darf auch **nach der Zusage** absagen (`POST …/decline`, 200, neuer **leerer** Platz
+ * mit neuer ID, der Kommentar hängt daran). **Fertig ist es nur, wenn der Platz FREI ist** (oder ich ihn ohne Recht auf den
+ * Dienst nicht mehr sehe) – anders als bei `absagen`: „Vertretung suchen“ lebt davon, dass ein freier Platz da ist, den jemand
+ * übernehmen kann. Steht dort schon jemand anderes (die Leitung hat mich ersetzt) oder nur eine Anfrage an mich, ist das ein
+ * `konflikt`, und nichts wird geschrieben.
+ */
+export function absagenNachZusage(
+  port: DienstPort,
+  ort: PlatzOrt,
+  ichId: number,
+  kommentar: string,
+): Promise<AntwortErgebnis> {
+  return platzAendern(port, ort, {
+    vorher: (ist) => gleicherStand(ist, zusage(ichId)),
+    fertig: (ist) => ist.art === 'frei',
+    auftrag: (id) => ({
+      pfad: pfad(ort, id, 'decline'),
+      method: 'POST',
+      json: { comment: kommentar.trim() || null },
+    }),
+    // Ohne Recht auf den Dienst ist der freie Platz danach unsichtbar – dann steht man auch nicht mehr dort.
+    unsichtbarFertig: true,
+  });
+}
+
+/**
  * Was sich nach einer Antwort zurücknehmen lässt – `null`, wenn nichts geschrieben wurde (die Antwort stand schon da,
  * etwa aus der ChurchTools-App): Dann gibt es auch nichts zurückzunehmen.
  */

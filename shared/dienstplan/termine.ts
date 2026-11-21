@@ -36,6 +36,11 @@ export interface RohPlatz {
   isValid?: unknown;
   /** Kommentar – nach einer Absage steht dort der Grund, am neuen leeren Platz (E4-0, E7 gemessen). */
   comment?: unknown;
+  /**
+   * Was man an diesem Platz darf – **nur in der Einzel-Abfrage** eines Termins (`GET /events/{id}?include=eventServices`),
+   * nicht in der Liste (gemessen 20.11.2026, E5c-6): `enterSelfIfFree` = einen **freien** Platz selbst übernehmen.
+   */
+  permissions?: { enterSelfIfFree?: unknown } | null;
 }
 
 export interface RohTermin extends CtEvent {
@@ -93,6 +98,12 @@ export interface TerminZeile {
   /** Freie Plätze je geplanter Dienstgruppe (Schlüssel: Dienstgruppen-ID). */
   freiNachGruppe: Record<number, number>;
   /**
+   * Die **freien Plätze** (Dienst und `index`), die ChurchTools zeigt – für jeden, nicht nur Planer (E5c-6: „Vertretung gesucht“ gilt nur,
+   * solange **genau der gesuchte Platz** frei ist, `gesuchtGilt`). Ohne Recht auf den Dienst liefert ChurchTools freie Plätze gar nicht mit
+   * (E7, gemessen) – dann fehlt der Dienst hier, und „Übernehmen“ erscheint nicht.
+   */
+  freiePlaetze: { serviceId: number; index: number | null }[];
+  /**
    * Die besetzten Plätze der anderen (ohne einen selbst). Plätze mit „Namen verbergen“ (`personId: -2`)
    * fehlen ganz: ChurchTools schickt dort den echten Namen trotzdem mit (E0 §2) – er wird nie gezeigt.
    */
@@ -138,6 +149,7 @@ export function termineAus(
       const meine: MeinDienst[] = [];
       const team: TeamPlatz[] = [];
       const freiNachGruppe: Record<number, number> = {};
+      const freiePlaetze: TerminZeile['freiePlaetze'] = [];
       let geplant = 0;
       let frei = 0;
       for (const p of t.eventServices ?? []) {
@@ -160,6 +172,12 @@ export function termineAus(
             zugesagt: p.isAccepted === true,
           });
         }
+        // Ein ungültiger Platz (Dienst nicht mehr am Termin) zählt nirgends.
+        if (istFrei(p) && typeof p.serviceId === 'number' && p.isValid !== false)
+          freiePlaetze.push({
+            serviceId: p.serviceId,
+            index: typeof p.index === 'number' ? p.index : null,
+          });
         if (dienst?.dienstgruppeId != null && o.planbar(dienst, admin)) {
           geplant++;
           if (istFrei(p)) {
@@ -185,6 +203,7 @@ export function termineAus(
         geplant,
         frei,
         freiNachGruppe,
+        freiePlaetze,
         team,
       };
     })

@@ -7,6 +7,7 @@ import { modulRechteAus, type EntwurfPort } from '@shared/dienstplan/entwuerfe';
 import {
   antwortenSchublade,
   eigeneAntwortenSchreiben,
+  vertretungMarkieren,
   type Antworten,
 } from '@shared/dienstplan/verfuegbarkeit';
 import {
@@ -283,6 +284,37 @@ describe('verfuegbarkeitSpeichern – ehrlich je Dienstgruppe', () => {
     const v = await lage(port);
     expect(await verfuegbarkeitSpeichern(port, v, ICH, A, HEUTE)).toEqual({ ok: true });
     expect((await lage(port)).antworten).toEqual(A);
+  });
+
+  it('E5c-6: Speichern aus „Wann kann ich?“ behält die Markierung „Vertretung gesucht“ – auch wenn sie erst NACH dem Laden der Seite entstand', async () => {
+    const { port } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [30, 31], ICH, A, HEUTE);
+    // Die Seite lädt ihren Stand (ohne Markierung) …
+    const v = await lage(port);
+    expect(v.vertretungen).toEqual({});
+    // … dann sucht die Person in einem anderen Fenster eine Vertretung …
+    const gesucht = {
+      dienst: 9,
+      gefragt: [47],
+      seit: '2026-11-18T19:00:00.000Z',
+      tag: '2026-12-13',
+      name: 'Spike',
+      gefragtNamen: ['Ben'],
+    };
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [30, 31],
+      ICH,
+      { terminId: 246, vertretung: gesucht },
+      HEUTE,
+    );
+    // … und speichert dann in „Wann kann ich?“ (die Seite weiß nichts von der Markierung).
+    const neu = antw({ '2': ['vielleicht', '2026-12-13'] });
+    expect(await verfuegbarkeitSpeichern(port, v, ICH, neu, HEUTE)).toEqual({ ok: true });
+    const danach = await lage(port);
+    expect(danach.antworten).toEqual(neu);
+    expect(danach.vertretungen).toEqual({ '246:9': gesucht });
   });
 
   it('nur eine Gruppe scheitert → die andere steht, die Meldung nennt die gescheiterte und den Grund', async () => {

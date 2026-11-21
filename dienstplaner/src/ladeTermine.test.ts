@@ -84,6 +84,7 @@ describe('ladeTermine', () => {
         geplant: 2,
         frei: 1,
         freiNachGruppe: { 3: 1 },
+        freiePlaetze: [{ serviceId: 7, index: null }],
         team: [],
       },
     ]);

@@ -39,6 +39,11 @@ export type GruppenStand =
       art: 'da';
       mitglieder: Person[] | 'verborgen';
       abwesenheiten: GruppenAbwesenheit[] | 'nichtSichtbar';
+      /**
+       * Die Mitglieder mit einer Leitungs-Rolle (`Rolle.leitung`, E5c-6 „Vertretung suchen“: die Kopie geht an die Leitung) –
+       * nur gesetzt, wenn der Lader die Rollen kannte (`ladePersonen` mit `rollen`); sonst fehlt es (nicht „keine Leitung“).
+       */
+      leitung?: number[];
     }
   | { art: 'fehler'; text: string; nochmal: boolean };
 

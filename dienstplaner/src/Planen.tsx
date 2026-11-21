@@ -63,6 +63,8 @@ import { WerWieOft } from './WerWieOft';
 import { PersonenRaster } from './PersonenRaster';
 import type { PersonenLader } from './ladePersonen';
 import type { AntwortenLader } from './ladeAntworten';
+import { schilder } from '@shared/dienstplan/vertretung';
+import { usePersonenAntworten } from './usePersonenAntworten';
 import { dienstFarben } from './personenFarben';
 import { fehlerHinweis, useEinteilen, type WerKannZurueck } from './useEinteilen';
 import { VorgabeFach } from './VorgabeFach';
@@ -121,6 +123,12 @@ interface Props {
    */
   ladeAntworten?: AntwortenLader;
   /**
+   * Die gesuchten Vertretungen für die Schilder „Vertretung gesucht“ an freien Plätzen (E5c-6) – derselbe Speicher wie
+   * `ladeAntworten`, aber ein **eigener** Aufruf, damit die Schilder und die Ansicht „Personen“ einander nicht in die Quere
+   * kommen (jeder lädt und scheitert für sich). Ohne gibt es keine Schilder.
+   */
+  ladeMarkierungen?: AntwortenLader;
+  /**
    * „Erinnern“ (E5c-5): wie die Mail verschickt wird und wohin ihr Knopf führt. Ohne – oder ohne `ladePersonen` und
    * `ladeAntworten`, aus denen sich „fehlt noch“ rechnet – gibt es den Knopf nicht.
    */
@@ -178,6 +186,7 @@ export function Planen({
   ladeVorlagen,
   ladePersonen,
   ladeAntworten,
+  ladeMarkierungen,
   erinnern,
   fokusGruppe = null,
   onFokusEnde,
@@ -296,6 +305,14 @@ export function Planen({
         (plan?.gruppen ?? []).map(schluessel).filter((k) => k !== String(besuch.gruppe)),
     };
   }
+
+  // „Vertretung gesucht“ (E5c-6): Die Schilder an freien Plätzen brauchen die Markierungen aus den Antworten der planbaren
+  // Dienstgruppen (`ladeAntworten`, derselbe Speicher wie „Personen“). Scheitert das Laden, fehlen die Schilder – kein Fehler
+  // in der Matrix (Beiwerk). Ein Schild zählt nur, solange am Termin ein Platz des Dienstes frei ist (`schilder`).
+  const schildGruppen = plan
+    ? plan.gruppen.flatMap((g) => (g.planbar && g.gruppe ? [g.gruppe.id] : []))
+    : [];
+  const markierungen = usePersonenAntworten(ladeMarkierungen, schildGruppen).antworten.vertretungen;
 
   // Einteilen über Entwürfe (E4/E5) – Fenster, Leiste und was die Plätze bekommen; dieselben in der Termin-Ansicht (F1).
   const {
@@ -696,6 +713,16 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       ...amPlatz,
+      vertretung: (i, zl) =>
+        schilder({
+          vertretungen: markierungen,
+          terminId: plan.spalten[i].id,
+          dienstId: zl.dienst.id,
+          tag: plan.spalten[i].tag,
+          heute,
+          abgesagt: plan.spalten[i].abgesagt,
+          freieIndizes: (zl.zellen[i] ?? []).filter((p) => p.art === 'frei').map((p) => p.index),
+        }),
       fokusId: fokusPerson?.person.personId ?? null,
       onFokus: (personId, name) => setFokusPerson({ person: { personId, name }, zurueck: null }),
       onFokusAus: () => setFokusPerson(null),

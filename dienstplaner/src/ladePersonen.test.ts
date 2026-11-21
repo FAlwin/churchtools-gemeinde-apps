@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { rollenAus } from '@shared/organigramm/mitglieder';
 import { ApiError } from '@ui/ct/fehler';
 import { ChurchToolsBremst } from '@ui/ct/verbindung';
 import type { GruppenStand } from '@shared/dienstplan/personenDaten';
@@ -279,5 +280,55 @@ describe('CT_QUELLE – wie die Listen wirklich geholt werden', () => {
     expect(await q.rechte()).toEqual({ '18': {} });
     expect(daten).toHaveBeenCalledWith('/permissions/internal/groups');
     vi.doUnmock('@ui/ct/verbindung');
+  });
+});
+
+describe('ladePersonen – die Leitung (E5c-6, „Vertretung suchen“: Kopie an die Leitung)', () => {
+  const rollen = rollenAus([
+    { id: 15, name: 'Mitarbeiter', isLeader: false },
+    { id: 16, name: 'Leiter', isLeader: true },
+    { id: 17, name: 'Co-Leiter', nameTranslated: 'Co-Leiter', isLeader: true },
+  ]);
+  const mitRolle = (personId: number, rolle: number, extra: Record<string, unknown> = {}) => ({
+    ...mitglied(personId),
+    groupTypeRoleId: rolle,
+    ...extra,
+  });
+  const MIT = [
+    mitRolle(5, 15),
+    mitRolle(6, 16),
+    mitRolle(7, 17),
+    mitRolle(8, 16, { memberEndDate: '2026-01-01' }), // war Leiter, ist beendet
+    mitRolle(9, 16, { groupMemberStatus: 'requested' }), // nur angefragt
+    mitRolle(6, 16), // dieselbe Person doppelt
+  ];
+
+  it('mit Rollen: die aktiven Mitglieder mit Leitungsrolle, einmal', async () => {
+    const q = quelle({ '/groups/18/members': MIT });
+    const stand = await ladePersonen([18], {
+      ...ZEIT,
+      abwesenheitenAller: true,
+      quelle: q,
+      rollen,
+    });
+    expect(da(stand.get(18)).leitung).toEqual([6, 7]);
+  });
+
+  it('ohne Rollen fehlt das Feld ganz – „keine Leitung“ wäre gelogen (die Ansicht „Personen“ braucht sie nicht)', async () => {
+    const q = quelle({ '/groups/18/members': MIT });
+    const stand = await ladePersonen([18], { ...ZEIT, abwesenheitenAller: true, quelle: q });
+    expect(da(stand.get(18))).not.toHaveProperty('leitung');
+  });
+
+  it('Mitglieder nicht sichtbar (403): keine Leitung angegeben', async () => {
+    const q = quelle({ '/groups/18/members': new ApiError(403, 'nein') });
+    const stand = await ladePersonen([18], {
+      ...ZEIT,
+      abwesenheitenAller: true,
+      quelle: q,
+      rollen,
+    });
+    expect(da(stand.get(18)).mitglieder).toBe('verborgen');
+    expect(da(stand.get(18))).not.toHaveProperty('leitung');
   });
 });

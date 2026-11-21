@@ -306,6 +306,11 @@ const KNOPF_STIL = [
   'text-decoration:none',
 ].join(';');
 
+/** Der Knopf in einer Mail (HTML): `link` ist die volle Adresse – eine Stelle für „Erinnern“ und „Vertretung suchen“. */
+export function mailKnopf(link: string, text: string): string {
+  return `<a href="${htmlText(link)}" style="${KNOPF_STIL}">${htmlText(text)}</a>`;
+}
+
 /**
  * **Der Inhalt der Mail an eine Person** (HTML für `body` von `/events/send`): „Hallo <Vorname>,“, die Einleitung des
  * Planers (Zeilenumbrüche bleiben, HTML ist maskiert), ihre offenen Termine als Liste und der **eigene Knopf**
@@ -327,7 +332,7 @@ export function mailInhalt(o: {
     `<p>Hallo ${htmlText(vorname(o.name))},</p>`,
     einleitung ? `<p>${einleitung}</p>` : '',
     `<ul>${o.termine.map((t) => `<li>${htmlText(terminZeile(t))}</li>`).join('')}</ul>`,
-    `<p><a href="${htmlText(o.link)}" style="${KNOPF_STIL}">Im Dienstplaner eintragen</a></p>`,
+    `<p>${mailKnopf(o.link, 'Im Dienstplaner eintragen')}</p>`,
   ].join('');
 }
 

@@ -1,6 +1,11 @@
 // Dienste tauschen (E7-3, Entwurf `e7-3-tausch.html`): Knopf am Dienst, Band für offene/abgelehnte Anfragen, Fenster.
 
-.knopf {
+// „Tauschen“ und (E5c-6) „Vertretung suchen“ nebeneinander, am Handy umbrechend.
+.reihe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
   align-self: flex-start;
   margin-top: 4px;
 }

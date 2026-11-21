@@ -74,6 +74,7 @@ const bereit = (antworten: Antworten = {}): Verfuegbarkeit => ({
   gruppen: [{ gruppe: TECHNIK, kategorie: 30, stand: 'bereit' }],
   bereit: [30],
   antworten,
+  vertretungen: {},
   lesefehler: null,
 });
 
@@ -186,7 +187,11 @@ describe('Ja/Vielleicht: Kommentar und „Nur bestimmte Dienste“', () => {
     const f = await oeffneNotiz('Gottesdienst', GD1);
     expect(within(f).getByText(/So, 08\.11\./)).not.toBeNull();
     expect(within(f).getByPlaceholderText('z. B. nur bis 12 Uhr')).not.toBeNull();
-    expect(within(f).getByText('Kann deine Dienstgruppe sehen.')).not.toBeNull();
+    expect(
+      within(f).getByText(
+        'Sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht.',
+      ),
+    ).not.toBeNull();
     expect(within(f).getByText('Nur bestimmte Dienste')).not.toBeNull();
     for (const d of DIENSTE) expect(schalter(f, d.name).checked).toBe(true);
     expect(within(f).getByLabelText('Kommentar').getAttribute('maxlength')).toBe('140');
@@ -368,7 +373,11 @@ describe('Nein: der Kommentar gehört der ChurchTools-Abwesenheit', () => {
     expect(
       within(f).getByText('Steht als Kommentar der Abwesenheit in ChurchTools.'),
     ).not.toBeNull();
-    expect(within(f).queryByText('Kann deine Dienstgruppe sehen.')).toBeNull();
+    expect(
+      within(f).queryByText(
+        'Sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht.',
+      ),
+    ).toBeNull();
     expect(within(f).queryByText('Nur bestimmte Dienste')).toBeNull();
     expect(within(f).queryAllByRole('checkbox')).toHaveLength(0);
   });

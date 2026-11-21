@@ -90,7 +90,7 @@ export function NotizFenster({
         />
         <span className={styles.notizHinweis}>
           {art === 'zusage'
-            ? 'Kann deine Dienstgruppe sehen.'
+            ? 'Sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht.'
             : 'Steht als Kommentar der Abwesenheit in ChurchTools.'}
         </span>
       </div>

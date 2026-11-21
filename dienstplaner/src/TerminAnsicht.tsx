@@ -31,6 +31,7 @@ import { DateienFenster } from './DateienFenster';
 import { blattGruppenAus } from '@shared/dienstplan/terminBlattDienste';
 import { TerminAblauf } from './TerminAblauf';
 import { TauschAmDienst } from './TauschTeile';
+import type { VertretungZugriff } from './useVertretung';
 import type { Tausch } from './useTausch';
 import styles from './TerminAnsicht.module.scss';
 
@@ -89,6 +90,7 @@ export function TerminAnsicht({
   onZurueck,
   onGeaendert,
   tausch,
+  vertretung,
   entwuerfe,
   ladeAntworten,
   heute,
@@ -108,6 +110,8 @@ export function TerminAnsicht({
   onGeaendert?: () => void;
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
   tausch?: Tausch;
+  /** Vertretung suchen (E5c-6) – ohne: kein „Vertretung suchen“ neben „Tauschen“. */
+  vertretung?: VertretungZugriff;
   /** Einteilen als Entwurf (F1) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
   entwuerfe?: EntwurfAnschluss;
   /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
@@ -383,11 +387,14 @@ export function TerminAnsicht({
                                     terminId: s.id,
                                     termin: s.name,
                                     tag: s.tag,
+                                    uhrzeit: s.uhrzeit,
                                     dienst: d.dienst,
                                     ort: d.ort!,
                                   }}
                                   tausch={tausch}
                                   zeitzone={zeitzone}
+                                  vertretung={vertretung}
+                                  zugesagt={d.zugesagt}
                                 />
                               </div>
                             ))}

@@ -26,6 +26,7 @@ import { Toast } from '@ui/fenster/Toast';
 import type { Antworten } from './useAntworten';
 import type { Tausch } from './useTausch';
 import { TauschAmDienst } from './TauschTeile';
+import type { VertretungZugriff } from './useVertretung';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { HilfeFenster } from '@ui/bedienung/HilfeKnopf';
 import { HILFE_DIENSTE } from './hilfeTexte';
@@ -62,6 +63,8 @@ interface Props {
   antworten?: Antworten;
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“. */
   tausch?: Tausch;
+  /** Vertretung suchen (E5c-6) – ohne: kein „Vertretung suchen“ neben „Tauschen“. */
+  vertretung?: VertretungZugriff;
   zeitzone?: string;
   /** Wer man ist – für „Meine Dienste teilen“ (E8-3); ohne: kein „Teilen“. */
   ich?: { id: number; name: string; gemeinde: string | null };
@@ -87,6 +90,7 @@ export function Termine({
   onTermin,
   antworten,
   tausch,
+  vertretung,
   zeitzone = gemeindeZeitzone(),
   ich,
   handy = false,
@@ -215,6 +219,7 @@ export function Termine({
                   onTermin={onTermin}
                   antworten={antworten}
                   tausch={tausch}
+                  vertretung={vertretung}
                   zeitzone={zeitzone}
                 />
               ))}
@@ -235,7 +240,7 @@ export function Termine({
           </TextKnopf>
         </div>
       )}
-      <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
+      <Toast message={antworten?.meldung ?? tausch?.meldung ?? vertretung?.meldung ?? null} />
     </div>
   );
 }
@@ -246,6 +251,7 @@ function TerminReihe({
   onTermin,
   antworten,
   tausch,
+  vertretung,
   zeitzone,
 }: {
   z: TerminZeile;
@@ -253,6 +259,7 @@ function TerminReihe({
   onTermin?: (id: number) => void;
   antworten?: Antworten;
   tausch?: Tausch;
+  vertretung?: VertretungZugriff;
   zeitzone: string;
 }) {
   const k = kachel(z.tag);
@@ -302,9 +309,18 @@ function TerminReihe({
         tauschbar.map((d, i) => (
           <TauschAmDienst
             key={`t${i}`}
-            d={{ terminId: z.id, termin: z.name, tag: z.tag, dienst: d.dienst, ort: d.ort! }}
+            d={{
+              terminId: z.id,
+              termin: z.name,
+              tag: z.tag,
+              uhrzeit: z.uhrzeit,
+              dienst: d.dienst,
+              ort: d.ort!,
+            }}
             tausch={tausch}
             zeitzone={zeitzone}
+            vertretung={vertretung}
+            zugesagt={d.zugesagt}
           />
         ))}
     </div>

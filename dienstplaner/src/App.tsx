@@ -42,10 +42,15 @@ import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { TerminAnsicht } from './TerminAnsicht';
 import { useAntworten } from './useAntworten';
 import { useTausch } from './useTausch';
+import { useVertretung } from './useVertretung';
 import { mitAntworten } from '@shared/dienstplan/antworten';
+import type { TerminZeile } from '@shared/dienstplan/termine';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
+
+/** Solange keine Termine da sind – ein fester Wert, damit `useVertretung` nicht bei jedem Zeichnen neu rechnet. */
+const KEINE_ZEILEN: TerminZeile[] = [];
 
 /**
  * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Wann kann ich? Am Computer
@@ -151,8 +156,9 @@ export function App() {
     [start],
   );
 
-  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf (Mitglieder
-  // sehen sie erst mit E5c-6). Stabil, solange der Start gleich bleibt.
+  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf: Fremde Antworten
+  // zeigt die App sonst nur Planern. Mitglieder lesen nur die Markierungen „Vertretung gesucht“ ihrer eigenen Dienstgruppen
+  // (E5c-6, `useVertretung`). Stabil, solange der Start gleich bleibt.
   const antwortenLaden = useCallback(
     (ids: readonly number[]) =>
       start
@@ -201,6 +207,18 @@ export function App() {
     return { ...termine, zeilen: mitAntworten(termine.zeilen, antworten.karte, antworten.jetzt) };
   }, [termine, antworten.karte, antworten.jetzt]);
 
+  // Vertretung suchen (E5c-6): „Für dich offen“ lädt die Antworten der eigenen Dienstgruppen, solange die Startseite offen ist;
+  // nach einer Suche oder einem Übernehmen die Termine leise neu.
+  const vertretung = useVertretung({
+    start,
+    zeilen: termineSicht?.art === 'fertig' ? termineSicht.zeilen : KEINE_ZEILEN,
+    heute: heuteImKalender(),
+    aktiv: aktiv === 'start' && terminId === null,
+    onGeaendert: () => {
+      if (start) termineLaden(start, geladen, true);
+    },
+  });
+
   // ‹ › in der Termin-Ansicht: die geladenen Termine in ihrer Reihenfolge (wie in Liste und Matrix).
   const reihe = termine?.art === 'fertig' ? termine.plan.spalten.map((sp) => sp.id) : [];
   const stelle = terminId === null ? -1 : reihe.indexOf(terminId);
@@ -245,6 +263,7 @@ export function App() {
               // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
               onGeaendert={() => termineLaden(start, geladen, true)}
               tausch={tausch}
+              vertretung={vertretung}
               entwuerfe={entwuerfe}
               ladeAntworten={antwortenLaden}
               heute={heuteImKalender()}
@@ -273,6 +292,7 @@ export function App() {
               termine={termineSicht}
               antworten={antworten}
               tausch={tausch}
+              vertretung={vertretung}
               zeitzone={zeitzone}
               heute={heuteImKalender()}
               onNochmal={() => termineLaden(start, wochen)}
@@ -289,6 +309,7 @@ export function App() {
               zustand={termineSicht ?? termine}
               antworten={antworten}
               tausch={tausch}
+              vertretung={vertretung}
               zeitzone={zeitzone}
               ich={{
                 id: start.ichId,
@@ -322,6 +343,7 @@ export function App() {
               ladeVorlagen={ladeTerminVorlagen}
               ladePersonen={personenLaden}
               ladeAntworten={antwortenLaden}
+              ladeMarkierungen={antwortenLaden}
               erinnern={ERINNERN}
               onVorlagen={() => {
                 window.location.hash = ADRESSE_VORLAGEN;

@@ -13,7 +13,7 @@
  * (gilt die Antwort für diesen Dienst, ist die Gruppe sichtbar?) und `antwortStufe` (Ja / Vielleicht / keine Antwort / kann
  * nicht). Nirgends sonst wird entschieden, was eine Antwort bedeutet.
  */
-import type { Antwort, Antworten, Zusage } from './verfuegbarkeit';
+import type { Antwort, Antworten, Vertretungen, Zusage } from './verfuegbarkeit';
 
 /**
  * Was geladen ist. `sichtbar` = die Dienstgruppen (`Dienst.dienstgruppeId`), deren Antworten gelesen werden konnten. Jede
@@ -24,6 +24,11 @@ export interface PersonenAntworten {
   /** Je Person ihre zusammengeführten Antworten (`antwortenZusammen`), Schlüssel = Termin-ID als Text. */
   jePerson: ReadonlyMap<number, Antworten>;
   sichtbar: ReadonlySet<number>;
+  /**
+   * Je Person die **gesuchten Vertretungen** (E5c-6, `vertretungenZusammen` – derselbe Wert wie `jePerson`); fehlt = keine.
+   * Nur Personen mit mindestens einer Suche stehen darin.
+   */
+  vertretungen?: ReadonlyMap<number, Vertretungen>;
 }
 
 /** Noch nichts geladen – nichts ist sichtbar. */

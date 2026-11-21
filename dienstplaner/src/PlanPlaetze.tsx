@@ -7,6 +7,7 @@ import {
   type PlanZeile,
 } from '@shared/dienstplan/plan';
 import { zielText, type Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Schild } from '@shared/dienstplan/vertretung';
 import { platzPerson } from '@shared/dienstplan/fokus';
 import { darfPlanen, type EntwurfAmPlatz, type Sicht } from './planSicht';
 import { useLangDruck } from './useLangDruck';
@@ -19,6 +20,7 @@ export type AmPlatz = Pick<
   | 'entwurf'
   | 'ohnePlatz'
   | 'onOhnePlatz'
+  | 'vertretung'
   | 'onBelegt'
   | 'onEntwurf'
   | 'darfAendern'
@@ -53,6 +55,7 @@ export function EinteilPlaetze({
       // Ein abgesagter Termin nimmt keine Einträge an (P2a-2) – der freie Platz ist dort kein Knopf.
       onFrei={planen && nimmtEintraegeAn(s) ? (nr) => am.onFrei(i, z, nr) : undefined}
       entwurf={(p) => am.entwurf(i, z, p)}
+      schilder={am.vertretung?.(i, z)}
       ohnePlatz={am.ohnePlatz(i, z)}
       onOhnePlatz={aendern ? (e) => am.onOhnePlatz(i, z, e) : undefined}
       onBelegt={planen ? (nr) => am.onBelegt(i, z, nr) : undefined}
@@ -73,6 +76,7 @@ export function Plaetze({
   onBelegt,
   ohnePlatz = [],
   onOhnePlatz,
+  schilder = [],
   ichId = null,
   fokusId = null,
   onFokus,
@@ -81,6 +85,11 @@ export function Plaetze({
   /** Entwürfe dieses Dienstes am Termin, deren Platz es nicht mehr gibt (#582) – als Schild darunter. */
   ohnePlatz?: Entwurf[];
   onOhnePlatz?: (e: Entwurf) => void;
+  /**
+   * „⚑ Vertretung gesucht“ (E5c-6): je Schild eines, am **freien** Platz in der Reihenfolge der freien Plätze (das erste Schild
+   * am ersten freien). Der Platz bleibt, was er war – Planen geht dort normal weiter.
+   */
+  schilder?: Schild[];
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
   /** Nur wo man planen darf: ein belegter Platz (ohne Entwurf, Name sichtbar) wird ein Knopf (E4-5). */
@@ -95,21 +104,40 @@ export function Plaetze({
   /** Eine Person in den Fokus nehmen – Symbol am Namen und langes Drücken; ohne bleibt der Platz, wie er war. */
   onFokus?: (personId: number, name: string) => void;
 }) {
+  // Ein Schild gehört an den Platz mit seinem `index` (die Suche gilt genau für ihn). Schilder alter Markierungen ohne `index`
+  // nehmen der Reihe nach die freien Plätze, die kein gezieltes Schild tragen.
+  const gezielt = schilder.filter((s) => s.index !== undefined);
+  const alt = schilder.filter((s) => s.index === undefined);
+  const ohneZiel = plaetze.flatMap((p, i) =>
+    p.art === 'frei' && !gezielt.some((s) => s.index === p.index) ? [i] : [],
+  );
+  const schildAn = (i: number): Schild | null =>
+    gezielt.find((s) => s.index === plaetze[i].index) ?? alt[ohneZiel.indexOf(i)] ?? null;
   return (
     <div className={styles.plaetze}>
       {plaetze.map((p, i) => {
         const a = entwurf?.(p) ?? null;
         const oeffnen = onEntwurf ? () => onEntwurf(i + 1) : undefined;
+        // Das Schild gehört zum Platz in ChurchTools, der frei ist – auch wenn ein Entwurf ihn gerade füllen soll (der Planer
+        // soll wissen, woher die Lücke kommt).
+        const schild = p.art === 'frei' ? schildAn(i) : null;
+        const schildZeile = schild && (
+          <span className={styles.gesucht} title={schild.hinweis}>
+            <Icon name="flag" size={10} /> Vertretung gesucht
+          </span>
+        );
         if (a && !a.veraltet) {
           return (
-            <EntwurfPlatz
-              key={i}
-              e={a.entwurf}
-              bisher={p.art === 'frei' || p.verborgen ? null : p.name}
-              eigener={a.entwurf.von.personId === ichId}
-              onOeffnen={oeffnen}
-              fokus={fokusId !== null && platzPerson(p, a)?.personId === fokusId}
-            />
+            <Fragment key={i}>
+              <EntwurfPlatz
+                e={a.entwurf}
+                bisher={p.art === 'frei' || p.verborgen ? null : p.name}
+                eigener={a.entwurf.von.personId === ichId}
+                onOeffnen={oeffnen}
+                fokus={fokusId !== null && platzPerson(p, a)?.personId === fokusId}
+              />
+              {schildZeile}
+            </Fragment>
           );
         }
         const platz =
@@ -127,12 +155,19 @@ export function Plaetze({
           ) : (
             <Platz p={p} fokusId={fokusId} onFokus={onFokus} />
           );
-        if (!a) return <Fragment key={i}>{platz}</Fragment>;
+        if (!a)
+          return (
+            <Fragment key={i}>
+              {platz}
+              {schildZeile}
+            </Fragment>
+          );
         // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
         const text = `Entwurf veraltet: „${zielText(a.entwurf.ziel)}“ von ${a.entwurf.von.name}`;
         return (
           <Fragment key={i}>
             {platz}
+            {schildZeile}
             {oeffnen ? (
               <button
                 type="button"

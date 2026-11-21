@@ -263,6 +263,21 @@ function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
     }
     return { data: null };
   }
+  // Einen FREIEN Platz selbst übernehmen (E5c-6, „Übernehmen“) wie gemessen: `PUT /persons/{ich}/servicerequests/{platz}`
+  // mit `{isAccepted:true}` → neuer Eintrag (neue ID), zugesagt. Besetzte Plätze übernimmt ChurchTools nicht (403).
+  const selbst = /^\/api\/persons\/(\d+)\/servicerequests\/(\d+)$/.exec(pfad);
+  if (selbst && methode === 'PUT') {
+    const platzDa = TERMINE.flatMap((t) => t.eventServices).find((q) => q.id === Number(selbst[2]));
+    if (!platzDa || platzDa.name) return undefined;
+    const person = Number(selbst[1]);
+    Object.assign(platzDa, {
+      id: naechstePlatzId++,
+      personId: person,
+      name: NAMEN[person] ?? `Person ${person}`,
+      isAccepted: true,
+    });
+    return { data: null };
+  }
   const m = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)(\/decline)?$/.exec(pfad);
   if (!m) return undefined;
   const p = TERMINE.find((x) => x.id === Number(m[1]))?.eventServices.find(
@@ -824,21 +839,42 @@ function speicherDemo(fall: string) {
   // kann?“ alle Abschnitte (Anna Ja, Clara Vielleicht mit Notiz, Spike „Ja nur für Ton“ + David im Urlaub = Kann nicht, Ben und
   // Alwin ohne Antwort); am freien Gesang-Platz des 105 nimmt der Zauberstab Spike (Ja) vor Anna (mehr Punkte, keine Antwort).
   const tagVon = (tage: number) => zeit(tage, '00:00').slice(0, 10);
-  const antwortenVon = (personId: number, antworten: Record<string, object>) => ({
+  const antwortenVon = (
+    personId: number,
+    antworten: Record<string, object>,
+    vertretungen?: Record<string, object>,
+  ) => ({
     art: 'dienstplaner-verfuegbarkeit',
     fassung: 1,
     person: personId,
     antworten,
+    ...(vertretungen ? { vertretungen } : {}),
     stand: zeit(0, '07:00'),
   });
   const andereAntworten = [
     // Anna: Ja · Vielleicht mit Notiz · Ja nur für Ton (gilt im Gesang nicht) · Ja am 106 – aber da ist sie abwesend.
-    antwortenVon(46, {
-      '101': { a: 'ja', tag: tagVon(4) },
-      '102': { a: 'vielleicht', tag: tagVon(7), notiz: 'nur nach dem Gottesdienst' },
-      '103': { a: 'ja', tag: tagVon(11), dienste: [6] },
-      '106': { a: 'ja', tag: tagVon(39) },
-    }),
+    antwortenVon(
+      46,
+      {
+        '101': { a: 'ja', tag: tagVon(4) },
+        '102': { a: 'vielleicht', tag: tagVon(7), notiz: 'nur nach dem Gottesdienst' },
+        '103': { a: 'ja', tag: tagVon(11), dienste: [6] },
+        '106': { a: 'ja', tag: tagVon(39) },
+      },
+      // E5c-6: Anna sucht eine Vertretung für Gesang am 106 (den freien Gesang-Platz dort) und hat Spike gefragt – auf der Startseite
+      // steht für Alwin (Lobpreisteam) unter „Für dich offen“ „Anna Klassen sucht eine Vertretung“ mit „Übernehmen“; in „Planen“
+      // trägt der freie Platz das Schild „Vertretung gesucht“.
+      {
+        '106:9': {
+          dienst: 9,
+          gefragt: [19],
+          seit: zeit(0, '06:30'),
+          tag: tagVon(39),
+          name: 'Anna Klassen',
+          gefragtNamen: ['Spike'],
+        },
+      },
+    ),
     // Clara: Vielleicht · Ja am 103, aber im Urlaub (Abwesenheit schlägt) · Ja am 104.
     antwortenVon(52, {
       '101': { a: 'vielleicht', tag: tagVon(4) },

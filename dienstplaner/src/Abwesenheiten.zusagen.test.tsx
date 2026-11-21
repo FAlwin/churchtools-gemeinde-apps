@@ -80,6 +80,7 @@ const bereit = (antworten: Antworten = {}): Verfuegbarkeit => ({
   gruppen: [{ gruppe: TECHNIK, kategorie: 30, stand: 'bereit' }],
   bereit: [30],
   antworten,
+  vertretungen: {},
   lesefehler: null,
 });
 
@@ -422,6 +423,7 @@ describe('Gesperrt, wenn Ja/Vielleicht nicht gespeichert werden kann', () => {
       gruppen: [{ gruppe: TECHNIK, kategorie: null, stand: 'einrichtbar' }],
       bereit: [],
       antworten: {},
+      vertretungen: {},
       lesefehler: null,
     };
     zeige();
@@ -444,6 +446,7 @@ describe('Gesperrt, wenn Ja/Vielleicht nicht gespeichert werden kann', () => {
       gruppen: [{ gruppe: TECHNIK, kategorie: null, stand: 'einrichtbar' }],
       bereit: [],
       antworten: {},
+      vertretungen: {},
       lesefehler: null,
     };
     einrichten.mockRejectedValue(new Error('ChurchTools erlaubt dir nicht, Kategorien anzulegen.'));

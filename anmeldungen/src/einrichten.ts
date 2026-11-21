@@ -10,6 +10,7 @@
 import { ZodError } from 'zod';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { terminPfad } from '@shared/ct/kalenderTermine';
+import { schreibbareKalender } from '@shared/ct/kalenderRechte';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { angemeldeteId } from '@ui/ct/ich';
@@ -1075,8 +1076,7 @@ export async function kalenderListe(): Promise<Kalender[]> {
     ctDaten<{ id: number; name: string }[]>('/calendars'),
     globaleRechte(),
   ]);
-  const schreibbar = global.churchcal?.['edit category'];
-  const ids = new Set(Array.isArray(schreibbar) ? schreibbar.map(Number) : []);
+  const ids = schreibbareKalender(global);
   return liste
     .map((k) => ({ id: k.id, name: k.name, schreiben: ids.has(k.id) }))
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));

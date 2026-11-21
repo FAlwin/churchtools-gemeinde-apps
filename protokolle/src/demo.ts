@@ -22,6 +22,7 @@ import {
   statusSetzen,
   teilSetzen,
 } from '@shared/protokolle/aufgaben';
+import { neuerTerminStand } from '@shared/protokolle/terminStand';
 import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
 import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -61,6 +62,33 @@ function protokollWerte(
       content: [{ type: 'text', text: 'Arbeitseinsatz', styles: {} }],
       children: [],
     },
+    // W14 (Reiter „Termine“): eine Festplanung mit Terminen – mit Uhrzeit, ganztägig, schon im Kalender (Stand unten bei
+    // „Mitarbeit“), mit ähnlichem Termin im Kalender (Heiligabend 2027) und einer „Nächsten Sitzung“, die nicht eingetragen wird.
+    {
+      id: 'd-f',
+      type: 'heading',
+      props: { level: 1 },
+      content: [{ type: 'text', text: 'Feste 2027', styles: {} }],
+      children: [],
+    },
+    ...(
+      [
+        ['d-t1', '2026-12-24', 'Heiligabend 2026, 15 Uhr'],
+        ['d-t2', '2027-01-06', 'Gemeinde-Eislaufen'],
+        ['d-t3', '2027-03-25', 'Gründonnerstag mit Abendmahl, 19 Uhr'],
+        [DEMO_TERMIN_DRIN.block, '2027-04-24', 'Bibel-Action-Tag'],
+        ['d-t5', '2027-12-24', 'Heiligabend, 16 Uhr'],
+        ['d-t6', '2026-12-09', 'Nächste Sitzung'],
+      ] as const
+    ).map(
+      ([id, datum, text]): Block => ({
+        id,
+        type: 'termin',
+        props: { datum },
+        content: [{ type: 'text', text, styles: {} }],
+        children: [],
+      }),
+    ),
   ];
   const t = (text: string) => [{ type: 'text', text, styles: {} }];
   const september: Block[] = [
@@ -596,6 +624,25 @@ const DEMO_VORSCHLAEGE = [
   },
 ];
 
+/** Der Termin-Baustein, der in der Demo schon im Kalender steht (Reiter „Termine“, W14) – Gemeindeleitung, ganztägig. */
+const DEMO_TERMIN_DRIN = { sitzung: 'demo-entwurf', block: 'd-t4', kalenderTermin: 160 };
+
+/** Im Kalender 4, am Tag der Entwurfs-Zeile „Heiligabend, 16 Uhr“: der Doppelt-Fall. Nur bei einer Abfrage genau dieses Tags. */
+const KALENDER_AM_TAG = [
+  {
+    tag: '2027-12-24',
+    id: 161,
+    titel: 'Heiligabend – Familiengottesdienst',
+    beginn: '2027-12-24T09:00:00Z',
+  },
+  {
+    tag: '2027-04-24',
+    id: DEMO_TERMIN_DRIN.kalenderTermin,
+    titel: 'Bibel-Action-Tag',
+    beginn: '2027-04-24',
+  },
+];
+
 const MODUL = 20;
 /** Schlüssel der Rechte wie gemessen (Modul 24, S2-1); die Nummern sind nur für die Demo. */
 const RECHTE = ['view', 'view custom category', 'create custom category', 'edit custom category'];
@@ -666,6 +713,19 @@ function speicherAnlegen(fall: string): Speicher {
                 JEDER_AUFGABE,
                 ...W8B_LEITUNG,
                 ...DEMO_VORSCHLAEGE,
+                // W14: „Bibel-Action-Tag“ steht schon im Gemeindeleitung-Kalender (ganztägig).
+                neuerTerminStand(
+                  { gruppe: 11, sitzung: DEMO_TERMIN_DRIN.sitzung, block: DEMO_TERMIN_DRIN.block },
+                  'imKalender',
+                  {
+                    kalender: 4,
+                    id: DEMO_TERMIN_DRIN.kalenderTermin,
+                    name: 'Gemeindeleitung',
+                    zeit: 'ganztägig',
+                  },
+                  1,
+                  '2026-11-21T08:00:00Z',
+                ),
               ].map((x, i) => ({
                 id: 700 + i,
                 dataCategoryId: 61,
@@ -755,6 +815,7 @@ function antwort(
   methode: string,
   pfad: string,
   rumpf: Record<string, unknown>,
+  abfrage = new URLSearchParams(),
 ): Antwort {
   if (fall === 'fehler' && pfad.endsWith('/customdatacategories')) return { status: 502 };
   if (pfad === '/api/csrftoken') return { status: 200, data: 'demo' };
@@ -767,6 +828,8 @@ function antwort(
       status: 200,
       data: {
         churchcore: { 'administer persons': fall !== 'mitglied' },
+        // Kalender, in die man Termine anlegen darf (W14, Reiter „Termine“): die Leitung ja, ein Mitglied in keinen.
+        churchcal: { 'edit category': fall === 'mitglied' ? [] : [4, 2] },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
           'view custom data': [60, 61, 70, 80, 81, 5],
@@ -827,10 +890,16 @@ function antwort(
     };
   // Kalender 4: Termine mit Besprechungsanfrage (Sitzungen; einer heute für „Heute“ auf der Startseite) und einer
   // ohne (fällt weg); Treffen zur selben Minute wie 114.
-  if (pfad === '/api/calendars/appointments')
+  if (pfad === '/api/calendars/appointments') {
+    // W14: Termine genau dieses Tages (Abfrage `from`=`to`) – für „steht schon da?“; ganztägig kommt nur der Tag.
+    const tag = abfrage.get('from') === abfrage.get('to') ? abfrage.get('from') : null;
     return {
       status: 200,
       data: [
+        ...KALENDER_AM_TAG.filter((t) => t.tag === tag).map((t) => ({
+          base: { id: t.id, title: t.titel, calendar: { id: 4 } },
+          calculated: { startDate: t.beginn },
+        })),
         ...s.termine.map((t) => ({
           base: { id: t.id, title: t.title, calendar: { id: 4 } },
           calculated: { startDate: t.startDate, endDate: t.endDate },
@@ -858,8 +927,9 @@ function antwort(
         },
       ],
     };
+  }
   // Nächste Sitzung festlegen (S5-2): wer anlegt, hat sofort zugesagt; die anderen sind offen (gemessen 28.10.2026).
-  if (pfad === '/api/calendars/4/appointments' && methode === 'POST') {
+  if (/^\/api\/calendars\/\d+\/appointments$/.test(pfad) && methode === 'POST') {
     const id = s.naechste++;
     s.termine.push({
       id,
@@ -873,7 +943,7 @@ function antwort(
     });
     return { status: 201, data: { id } };
   }
-  const termin = /^\/api\/calendars\/4\/appointments\/(\d+)$/.exec(pfad);
+  const termin = /^\/api\/calendars\/\d+\/appointments\/(\d+)$/.exec(pfad);
   const neuerTermin = termin && s.termine.find((t) => t.id === Number(termin[1]));
   // Termin löschen (W6): in der Demo nur die hier festgelegten – die festen Beispieltermine kennt der Einzelabruf nicht.
   if (neuerTermin && methode === 'DELETE') {
@@ -1100,7 +1170,7 @@ export function demoStarten(fall: string): void {
       typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
     // Schreiben dauert in ChurchTools spürbar (Einrichten ~10 s) – etwas davon, damit „Wird eingerichtet …“ zu sehen ist.
     if (methode !== 'GET') await new Promise((r) => setTimeout(r, 40));
-    const a = antwort(fall, speicher, methode, url.pathname, rumpf);
+    const a = antwort(fall, speicher, methode, url.pathname, rumpf, url.searchParams);
     if (!a) return new Response('{"message":"Nicht im Demo"}', { status: 404 });
     // `/info` kommt von ChurchTools ohne die Hülle `{ data: … }` (gemessen, `shared/ct/info.ts`).
     // Fehler kommen von ChurchTools ohne Hülle (`messageKey` oben – daran erkennt `fehlerAus` ein Verbot).

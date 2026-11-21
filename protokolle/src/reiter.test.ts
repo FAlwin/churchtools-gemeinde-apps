@@ -40,6 +40,7 @@ describe('Zähler am Reiter „To-Dos“', () => {
       ['start', undefined, undefined],
       ['sitzungen', undefined, undefined],
       ['todos', 3, 'To-Dos, 3 fällig'],
+      ['termine', undefined, undefined],
       ['verwaltung', undefined, undefined],
     ]);
   });
@@ -48,5 +49,23 @@ describe('Zähler am Reiter „To-Dos“', () => {
     const basis = sichtbareReiter(false);
     expect(reiterMitZaehler(basis, 0)).toBe(basis);
     expect(reiterMitZaehler(basis, null)).toBe(basis);
+  });
+});
+
+describe('Reiter „Termine“ (W14)', () => {
+  it('steht zwischen „To-Dos“ und „Einstellungen“ – auch ohne Recht für die Einstellungen', () => {
+    expect(sichtbareReiter(true).map((r) => r.id)).toEqual([
+      'start',
+      'sitzungen',
+      'todos',
+      'termine',
+      'verwaltung',
+    ]);
+    expect(sichtbareReiter(false).map((r) => r.id)).toEqual([
+      'start',
+      'sitzungen',
+      'todos',
+      'termine',
+    ]);
   });
 });

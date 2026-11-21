@@ -954,6 +954,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.5.1` (21.11.2026):** Live-Fund – der Protokoll-Kasten (`card-list`, `overflow: hidden`) schnitt die
+  Aufklapp-Felder der Bausteine am Protokollende ab; `.blatt` jetzt `overflow: visible`, Wächter
+  `ui/design/protokollBlattUeberlauf.test.ts` (#1119).
 - **`protokolle-v1.5.0` (21.11.2026) = Funde aus der ersten echten Sitzung** (W11–W14, #1110/#1114/#1115/#1116): Tabellen
   (Zellfarbe, Text-Aufzählung in Zellen, Unterzeile „↳“ und „Nur zur Info“ „ⓘ“ als Präfix der ersten Zelle,
   `shared/protokolle/tabellenZeile.ts`), Aufzählungszeichen • ◦ – aus `shared/protokolle/aufzaehlung.ts` (SCSS bewacht ein

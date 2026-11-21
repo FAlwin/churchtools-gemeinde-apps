@@ -5,11 +5,13 @@ import {
   abschnittKopieren,
   abschnittLoeschen,
   abschnittVerschieben,
+  abschnittVerschiebenNach,
   aufteilungAendern,
   bausteinDa,
   bausteinEntfernen,
   bausteinErsetzen,
   bausteinHinzufuegen,
+  bausteinVerschieben,
   einfuegeStelleDa,
   imMenueZeigen,
   menueFuerSeite,
@@ -306,5 +308,125 @@ describe('Menü', () => {
     expect(menueTitelNachziehen(m, 'x', 'Gleich', 'Gleich')).toBeNull();
     expect(menueTitelNachziehen(m, 'y', 'Alt', 'Neu')).toBeNull();
     expect(menueTitelNachziehen(null, 'x', 'Alt', 'Neu')).toBeNull();
+  });
+});
+
+describe('Verschieben nach Stelle (Ziehen, W3c-2)', () => {
+  const drei = mit(A('a1'), A('a2'), A('a3'));
+
+  it('Abschnitt: jede Stelle vor dem Herausnehmen gezählt – nach unten rückt die Stelle um eins', () => {
+    expect(ids(abschnittVerschiebenNach(drei, 0, 3))).toEqual(['a2', 'a3', 'a1']); // ganz nach unten
+    expect(ids(abschnittVerschiebenNach(drei, 0, 2))).toEqual(['a2', 'a1', 'a3']);
+    expect(ids(abschnittVerschiebenNach(drei, 2, 0))).toEqual(['a3', 'a1', 'a2']); // ganz nach oben
+    expect(ids(abschnittVerschiebenNach(drei, 2, 1))).toEqual(['a1', 'a3', 'a2']);
+  });
+
+  it('Abschnitt: die Stelle direkt über und direkt unter ihm lässt ihn, wo er ist (dieselbe Seite)', () => {
+    expect(abschnittVerschiebenNach(drei, 1, 1)).toBe(drei);
+    expect(abschnittVerschiebenNach(drei, 1, 2)).toBe(drei);
+  });
+
+  it('Abschnitt: ungültige Stellen lassen die Seite unverändert', () => {
+    for (const [von, nach] of [[-1, 0], [3, 0], [0, -1], [0, 4], [0, 1.5], [NaN, 0], [0, NaN]])
+      expect(abschnittVerschiebenNach(drei, von, nach)).toBe(drei);
+  });
+
+  it('hoch/runter ist dieselbe Rechnung wie „nach Stelle“ – an jeder Stelle und am Rand', () => {
+    for (let i = 0; i < 3; i++) {
+      expect(abschnittVerschieben(drei, i, 'hoch')).toEqual(abschnittVerschiebenNach(drei, i, i - 1));
+      expect(abschnittVerschieben(drei, i, 'runter')).toEqual(
+        abschnittVerschiebenNach(drei, i, i + 2),
+      );
+    }
+  });
+
+  const zwei = mit(
+    abschnitt([], {
+      id: 'a',
+      aufteilung: '1-1',
+      spalten: [
+        spalte([baustein('text', { id: 'x1' }), baustein('text', { id: 'x2' }), baustein('text', { id: 'x3' })], {
+          id: 's1',
+        }),
+        spalte([baustein('trenner', { id: 'y1' })], { id: 's2' }),
+      ],
+    }),
+    abschnitt([], {
+      id: 'b',
+      aufteilung: '1',
+      spalten: [spalte([], { id: 's3' })],
+    }),
+  );
+  const spaltenIds = (s: Seite, i: number, j: number) =>
+    s.abschnitte[i].spalten[j].bausteine.map((b) => b.id);
+
+  it('Baustein, gleiche Spalte nach hinten: die Stelle rückt beim Herausnehmen um eins', () => {
+    const n = bausteinVerschieben(zwei, { i: 0, j: 0, k: 0 }, { i: 0, j: 0, k: 3 });
+    expect(spaltenIds(n, 0, 0)).toEqual(['x2', 'x3', 'x1']);
+    const m = bausteinVerschieben(zwei, { i: 0, j: 0, k: 0 }, { i: 0, j: 0, k: 2 });
+    expect(spaltenIds(m, 0, 0)).toEqual(['x2', 'x1', 'x3']);
+  });
+
+  it('Baustein, gleiche Spalte nach vorn: die Stelle bleibt', () => {
+    const n = bausteinVerschieben(zwei, { i: 0, j: 0, k: 2 }, { i: 0, j: 0, k: 0 });
+    expect(spaltenIds(n, 0, 0)).toEqual(['x3', 'x1', 'x2']);
+    const m = bausteinVerschieben(zwei, { i: 0, j: 0, k: 2 }, { i: 0, j: 0, k: 1 });
+    expect(spaltenIds(m, 0, 0)).toEqual(['x1', 'x3', 'x2']);
+  });
+
+  it('Baustein, gleiche Spalte: über und unter ihm bleibt er (dieselbe Seite)', () => {
+    expect(bausteinVerschieben(zwei, { i: 0, j: 0, k: 1 }, { i: 0, j: 0, k: 1 })).toBe(zwei);
+    expect(bausteinVerschieben(zwei, { i: 0, j: 0, k: 1 }, { i: 0, j: 0, k: 2 })).toBe(zwei);
+  });
+
+  it('Baustein in eine andere Spalte – an den Anfang, in die Mitte, ans Ende (hier gibt es nichts zu verschieben)', () => {
+    const a = bausteinVerschieben(zwei, { i: 0, j: 0, k: 1 }, { i: 0, j: 1, k: 0 });
+    expect(spaltenIds(a, 0, 0)).toEqual(['x1', 'x3']);
+    expect(spaltenIds(a, 0, 1)).toEqual(['x2', 'y1']);
+    const b = bausteinVerschieben(zwei, { i: 0, j: 0, k: 1 }, { i: 0, j: 1, k: 1 });
+    expect(spaltenIds(b, 0, 1)).toEqual(['y1', 'x2']);
+    const c = bausteinVerschieben(zwei, { i: 0, j: 1, k: 0 }, { i: 0, j: 0, k: 3 });
+    expect(spaltenIds(c, 0, 0)).toEqual(['x1', 'x2', 'x3', 'y1']);
+    expect(spaltenIds(c, 0, 1)).toEqual([]);
+  });
+
+  it('Baustein in einen anderen Abschnitt, auch in eine leere Spalte', () => {
+    const n = bausteinVerschieben(zwei, { i: 0, j: 0, k: 2 }, { i: 1, j: 0, k: 0 });
+    expect(spaltenIds(n, 1, 0)).toEqual(['x3']);
+    expect(spaltenIds(n, 0, 0)).toEqual(['x1', 'x2']);
+    const zurueck = bausteinVerschieben(n, { i: 1, j: 0, k: 0 }, { i: 0, j: 1, k: 1 });
+    expect(spaltenIds(zurueck, 0, 1)).toEqual(['y1', 'x3']);
+    expect(spaltenIds(zurueck, 1, 0)).toEqual([]);
+  });
+
+  it('nichts geht verloren, nichts kommt dazu, die alte Seite bleibt unberührt', () => {
+    const alle = (s: Seite) =>
+      s.abschnitte.flatMap((a) => a.spalten.flatMap((sp) => sp.bausteine.map((b) => b.id))).sort();
+    const vorher = JSON.stringify(zwei);
+    const n = bausteinVerschieben(zwei, { i: 0, j: 0, k: 0 }, { i: 1, j: 0, k: 0 });
+    expect(alle(n)).toEqual(alle(zwei));
+    expect(JSON.stringify(zwei)).toBe(vorher);
+  });
+
+  it('Baustein: ungültige Stellen lassen die Seite unverändert', () => {
+    const gut = { i: 0, j: 0, k: 0 };
+    for (const von of [
+      { i: 9, j: 0, k: 0 },
+      { i: 0, j: 9, k: 0 },
+      { i: 0, j: 0, k: 3 },
+      { i: 0, j: 0, k: -1 },
+      { i: 0, j: 0, k: 0.5 },
+    ])
+      expect(bausteinVerschieben(zwei, von, { i: 0, j: 1, k: 0 })).toBe(zwei);
+    for (const nach of [
+      { i: 9, j: 0, k: 0 },
+      { i: 0, j: 9, k: 0 },
+      { i: 0, j: 1, k: 2 }, // Spalte 2 hat einen Baustein: Stellen 0 und 1
+      { i: 0, j: 1, k: -1 },
+      { i: 1, j: 0, k: 1 }, // leere Spalte: nur Stelle 0
+      { i: 0, j: 1, k: 0.5 },
+      { i: 0, j: 1, k: NaN },
+    ])
+      expect(bausteinVerschieben(zwei, gut, nach)).toBe(zwei);
   });
 });

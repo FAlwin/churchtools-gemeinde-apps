@@ -23,6 +23,68 @@ const SEITE = seite({
   ],
 });
 
+describe('Nachricht „verschieben“ (W3c-2): nur Zahlen, beide Stellen müssen es geben', () => {
+  // SEITE: Abschnitt 0 hat eine Spalte mit Bausteinen (siehe oben), Abschnitt 1 hat zwei Spalten, die zweite ist leer.
+  const spalten = SEITE.abschnitte.map((a) => a.spalten.map((sp) => sp.bausteine.length));
+  const AB = (von: unknown, nach: unknown) =>
+    M({ was: 'verschieben', art: 'abschnitt', von, nach });
+  const BA = (von: unknown, nach: unknown) => M({ was: 'verschieben', art: 'baustein', von, nach });
+  const st = (i: number, j: number, k: number) => ({ i, j, k });
+
+  it('ein gültiger Abschnitt und ein gültiger Baustein kommen durch – auch in die leere Spalte und ganz nach unten', () => {
+    expect(spalten[1]).toEqual([1, 0]); // Annahme der Tests unten
+    expect(nachrichtLesen(AB(0, 2), SEITE)).toMatchObject({
+      was: 'verschieben',
+      art: 'abschnitt',
+      von: 0,
+      nach: 2,
+    });
+    expect(nachrichtLesen(BA(st(1, 0, 0), st(1, 1, 0)), SEITE)).toMatchObject({ art: 'baustein' }); // leere Spalte
+    expect(nachrichtLesen(BA(st(1, 0, 0), st(1, 0, 1)), SEITE)).not.toBeNull(); // hinter den letzten
+  });
+
+  it('Stellen, die es nicht gibt, sind keine Nachricht', () => {
+    for (const m of [
+      AB(2, 0), // Abschnitt gibt es nicht
+      AB(0, 3), // Stelle hinter dem Ende
+      BA(st(5, 0, 0), st(0, 0, 0)),
+      BA(st(1, 0, 4), st(0, 0, 0)), // Baustein gibt es nicht
+      BA(st(1, 0, 0), st(1, 1, 1)), // leere Spalte: nur Stelle 0
+      BA(st(1, 0, 0), st(1, 5, 0)), // Spalte gibt es nicht
+      BA(st(1, 0, 0), st(9, 0, 0)),
+    ])
+      expect(nachrichtLesen(m, SEITE), JSON.stringify(m)).toBeNull();
+  });
+
+  it('falsche Form: Text statt Zahl, fremde Felder, falsche Art, Zahlen statt Stelle – nichts davon kommt an', () => {
+    for (const m of [
+      AB('0', 1),
+      AB(0, -1),
+      AB(0.5, 1),
+      AB({ i: 0 }, 1),
+      M({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 1, html: '<b>' }),
+      M({ was: 'verschieben', art: 'seite', von: 0, nach: 1 }),
+      M({ was: 'verschieben', von: 0, nach: 1 }),
+      BA(0, st(0, 0, 0)),
+      BA(st(1, 0, 0), 1),
+      BA({ i: 1, j: 0, k: 0, extra: 1 }, st(0, 0, 0)),
+      BA({ i: 1, j: 0 }, st(0, 0, 0)),
+      BA(st(1, 0, 0), { i: 0, j: 0, k: 1.5 }),
+    ])
+      expect(nachrichtLesen(m, SEITE), JSON.stringify(m)).toBeNull();
+  });
+
+  it('„hoch“ und „runter“ gibt es als Nachricht nicht mehr – der Griff und die Pfeiltasten sagen „verschieben“', () => {
+    expect(nachrichtLesen(M({ was: 'hoch', i: 1 }), SEITE)).toBeNull();
+    expect(nachrichtLesen(M({ was: 'runter', i: 0 }), SEITE)).toBeNull();
+  });
+
+  it('Rückgängig und Wiederholen sind Nachrichten ohne Inhalt', () => {
+    expect(nachrichtLesen(M({ was: 'rueckgaengig' }), SEITE)).toEqual(M({ was: 'rueckgaengig' }));
+    expect(nachrichtLesen(M({ was: 'wiederholen' }), SEITE)).toEqual(M({ was: 'wiederholen' }));
+  });
+});
+
 describe('Nachrichten aus der Vorschau: nur bekannte Form, nur Zahlen', () => {
   it('jede Art mit gültigen Stellen kommt durch', () => {
     expect(nachrichtLesen(M({ was: 'einfuegen', i: 0 }), SEITE)).toMatchObject({
@@ -30,7 +92,7 @@ describe('Nachrichten aus der Vorschau: nur bekannte Form, nur Zahlen', () => {
       i: 0,
     });
     expect(nachrichtLesen(M({ was: 'einfuegen', i: 2 }), SEITE)).toMatchObject({ i: 2 }); // ganz unten
-    for (const was of ['gestalten', 'hoch', 'runter', 'kopieren', 'loeschen'])
+    for (const was of ['gestalten', 'kopieren', 'loeschen'])
       expect(nachrichtLesen(M({ was, i: 1 }), SEITE)).toMatchObject({ was, i: 1 });
     expect(nachrichtLesen(M({ was: 'baustein', i: 1, j: 0, k: 0 }), SEITE)).toMatchObject({
       was: 'baustein',
@@ -48,8 +110,6 @@ describe('Nachrichten aus der Vorschau: nur bekannte Form, nur Zahlen', () => {
     const falsch = [
       M({ was: 'einfuegen', i: 3 }),
       M({ was: 'gestalten', i: 2 }),
-      M({ was: 'hoch', i: 5 }),
-      M({ was: 'runter', i: 99 }),
       M({ was: 'kopieren', i: 2 }),
       M({ was: 'loeschen', i: 2 }),
       M({ was: 'baustein', i: 0, j: 0, k: 5 }),

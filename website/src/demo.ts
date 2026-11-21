@@ -160,7 +160,8 @@ export function demoStarten(fall: string): void {
     const id = () => `demo-${++n}`;
     const start = neueStartseite([], id);
     // „Unsere Gruppen“ zum Ausprobieren der Bedienung in der Vorschau (W3c-1): Text direkt tippen, Leisten auf hellem UND
-    // dunklem Abschnitt, zwei Spalten, Knöpfe, ein Text mit Fett, Link und Liste, „Eigenes HTML“.
+    // dunklem Abschnitt, zwei Spalten, Knöpfe, ein Text mit Fett, Link und Liste, „Eigenes HTML“; für das Ziehen (W3c-2) mehrere Abschnitte, Spalten
+    // und eine leere Spalte.
     const gruppenAbschnitte = ['start-schriftzug', 'bild-text', 'drei-spalten'].map((name) => {
       const v = findeVorlage(name);
       if (!v) throw new Error(`Die Vorlage „${name}“ gibt es nicht.`);
@@ -187,11 +188,21 @@ export function demoStarten(fall: string): void {
         },
       ],
     };
+    // Zum Ziehen (W3c-2): zwei Spalten, die rechte ist leer – ein Baustein lässt sich dort hineinziehen.
+    const leereSpalte: Abschnitt = {
+      id: id(),
+      gestaltung: gruppenAbschnitte[0].gestaltung,
+      aufteilung: '1-1',
+      spalten: [
+        { id: id(), bausteine: [{ typ: 'trenner', id: id(), art: 'linie' }] },
+        { id: id(), bausteine: [] },
+      ],
+    };
     const gruppen: Seite = {
       id: 'demo-gruppen',
       titel: 'Unsere Gruppen',
       pfad: 'unsere-gruppen',
-      abschnitte: [...gruppenAbschnitte, html],
+      abschnitte: [...gruppenAbschnitte, leereSpalte, html],
     };
     const impressum: Seite = {
       id: 'demo-impressum',

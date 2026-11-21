@@ -115,7 +115,7 @@ Nonce der Seite).
 **Das brauchst du:** Die eingerichtete Website (Admin oder Leitung) mit Startseite. Zuerst am Computer, dann am Handy (oder
 schmales Fenster).
 
-**Das muss passieren:** Fährt man mit der Maus über einen Abschnitt, steht auf seiner Oberkante seine Leiste (Griff · hoch · runter ·
+**Das muss passieren:** Fährt man mit der Maus über einen Abschnitt, steht auf seiner Oberkante seine Leiste (Griff ·
 Gestalten · kopieren · löschen), und an der Grenze zwischen den Abschnitten erscheint **Abschnitt einfügen** (die neue Bedien-Schicht
 ist in TF-WEBSITE-14 beschrieben). Am Handy genügt ein Tipp auf den Abschnitt. Jede Aktion steht gleich in der Vorschau und oben steht
 „Gespeichert“. **Löschen fragt erst nach.** Nach dem Neuladen der Seite steht alles so da.
@@ -123,12 +123,12 @@ ist in TF-WEBSITE-14 beschrieben). Am Handy genügt ein Tipp auf den Abschnitt. 
 1. Die Startseite öffnen, mit der Maus über den ersten Abschnitt fahren: die Leiste steht auf der Oberkante, unten mittig die Pille „Abstand: …“.
 2. **Abschnitt einfügen** unter dem ersten Abschnitt: Fenster mit den Vorlagen als Kacheln. „Drei Spalten“ wählen – er steht
    dort, oben „Speichert … → Gespeichert“.
-3. Den neuen Abschnitt mit dem Pfeil **nach oben** vor den ersten schieben, dann **kopieren**: die Kopie steht darunter.
+3. Den neuen Abschnitt am Griff vor den ersten ziehen (das Ziehen selbst: TF-WEBSITE-15), dann **kopieren**: die Kopie steht darunter.
 4. **Löschen** tippen: Rückfrage „Abschnitt löschen?“. **Abbrechen** – nichts passiert. Noch einmal, **Löschen** – er ist weg.
 5. Auf einer leeren Seite (neue Seite anlegen): in der Vorschau steht „Diese Seite ist noch leer“ mit dem Knopf **Abschnitt
    einfügen**.
 6. Die Seite neu laden: alle Änderungen sind noch da.
-7. Dasselbe am Handy: tippen statt fahren; die Fenster passen auf den Bildschirm.
+7. Dasselbe am Handy: tippen statt fahren; die Fenster passen auf den Bildschirm; die Leiste hat dort noch **nach oben/unten**.
 
 <details><summary>Technisches</summary>
 
@@ -433,10 +433,10 @@ Knopfreihe, einen **dunklen** Abschnitt (Hauptfarbe) und zwei Spalten. Zuerst am
 Text schreibt direkt in der Seite; **fett · kursiv · Link · Liste · Zwischenüberschrift** gibt es beim Markieren. Was man tippt, erscheint danach
 **genau so**, auch Sonderzeichen. Gespeichert wird erst beim Übernehmen („Gespeichert“ oben), ein Fehler bleibt sichtbar.
 
-1. **Leisten:** Mit der Maus über den ersten Abschnitt: die Abschnitt-Leiste steht auf der Oberkante (Griff · ↑ · ↓ · Gestalten · kopieren · löschen), unten
+1. **Leisten:** Mit der Maus über den ersten Abschnitt: die Abschnitt-Leiste steht auf der Oberkante (Griff · Gestalten · kopieren · löschen), unten
    mittig die Pille „Abstand: …“. Über eine Überschrift fahren: **eine** helle Leiste mit dem Stift. Dasselbe auf dem **dunklen** Abschnitt – nichts liegt über
    dem Text, alles ist lesbar. Der Stift öffnet das Fenster des Bausteins, die Pille das Fenster „Gestalten“. An der Grenze zweier Abschnitte steht **Abschnitt
-   einfügen**, in einer Lücke zwischen Bausteinen ein **+**. Der Griff verschiebt mit den Pfeiltasten (hoch/runter) – Ziehen gibt es noch nicht.
+   einfügen**, in einer Lücke zwischen Bausteinen ein **+**. Der Griff verschiebt den Abschnitt (Ziehen: TF-WEBSITE-15).
 2. **Überschrift tippen:** Auf die Überschrift klicken, Text ändern, **Eingabetaste**: „Gespeichert“, die Überschrift steht neu da (auch der Punkt dahinter).
    Noch einmal klicken, etwas ändern, **Esc**: der alte Text steht wieder da, es wird nichts gespeichert. Die Überschrift ganz leeren und übernehmen:
    Hinweis „Das geht so nicht“, der alte Text bleibt.
@@ -469,5 +469,47 @@ Text schreibt direkt in der Seite; **fett · kursiv · Link · Liste · Zwischen
 - **Betrifft:** `website/src/ebene.skript.txt`, `website/src/ebene.kern.txt`, `website/src/ebene.css`, `website/src/ebene.ts`, `website/src/nachricht.ts`, `website/src/textAenderung.ts`, `website/src/Vorschau.tsx`, `website/src/Seitenarbeit.tsx`, `website/src/markdownLeiste.ts`, `shared/website/markdown.ts`
 - **Automatisiert:** teilweise – `shared/website/markdown.test.ts` (Escape jedes Zeichens, Zeilenanfang, Hin und Zurück, Vergleich mit dem Stand vor dem Escape), `website/src/ebene.kern.test.ts` (Kollisionsregel, Textmodell, Lesen/Zeichnen), `website/src/ebene.test.ts` + `website/src/ebene.tippen.test.ts` (die Schicht im Dokument nachgespielt), `website/src/nachricht.test.ts`, `website/src/textAenderung.test.ts`, `website/src/Vorschau.test.tsx`, `website/src/Seitenarbeit.text.test.tsx` (Speichern, Fehler, Fremdsperre, Rollen); wie sich Maus, Leisten und Cursor im echten iframe anfühlen, und dass ChurchTools das Skript mit der Nonce zulässt, nur von Hand
 - **Historie:** neu mit W3c-1 (21.11.2026); im Browser gemessen: ein `<form>` im abgeschotteten iframe schickt nie ab (Link-Feld ohne Formular), und der Browser meldet „Wiederholen“ nur, wenn in seinem eigenen Verlauf etwas liegt (eigener Verlauf mit Tasten)
+
+</details>
+
+### TF-WEBSITE-15 · Ziehen (Abschnitt, Baustein) und Rückgängig/Wiederholen
+
+**Das brauchst du:** Die eingerichtete Website (Admin oder Leitung) mit einer Seite, die mindestens **drei Abschnitte** hat, darunter einen mit **zwei
+oder drei Spalten**, einen mit einer **leeren Spalte** und einen mit „Eigenes HTML“. Breites Fenster (Computer). Dazu ein Redakteur-Konto (ohne „Eigenes
+HTML“) und ein zweites Browserfenster.
+
+**Das muss passieren:** Abschnitte und Bausteine lassen sich am **Griff** ziehen; eine Linie zeigt, wo sie landen, beim Baustein ist die Zielspalte
+gestrichelt. Das Ergebnis steht sofort in der Vorschau, oben „Gespeichert“. **Rückgängig** und **Wiederholen** nehmen jeden dieser Schritte (und Einfügen,
+Kopieren, Löschen, getippten Text) zurück. Am Handy bleibt alles wie bisher.
+
+1. **Baustein ziehen:** Mit der Maus über einen Baustein, am Griff (links in der kleinen Leiste) festhalten und ziehen. Erst nach ein paar Pixeln beginnt das
+   Ziehen; ein **Geist** nennt „Typ: Anfang des Texts“, die Quelle ist blass. Zwischen zwei Bausteine einer **anderen Spalte** loslassen: er steht dort, die
+   Linie war an der richtigen Stelle, „Gespeichert“.
+2. **In einen anderen Abschnitt** und **in die leere Spalte** ziehen: die leere Spalte wird beim Darüberfahren gestrichelt, der Baustein landet darin. Der
+   Knopf „Baustein hinzufügen“ dort ist weg, sobald etwas drin ist.
+3. **Abschnitt ziehen:** Am Griff der Abschnitt-Leiste einen Abschnitt nach unten und nach oben ziehen; die Linie läuft über die ganze Breite. Beim Ziehen
+   über den **Rand** des Fensters scrollt die Seite von selbst. Es gibt **keine** Knöpfe „nach oben/unten“ mehr.
+4. **Abbrechen:** Während des Ziehens **Esc**: nichts ändert sich, die Markierungen verschwinden. Loslassen **an derselben Stelle** oder direkt über/unter
+   dem Element: nichts ändert sich, nichts wird gespeichert.
+5. **Pfeiltasten:** Den Griff mit Tab oder Klick fokussieren, **Pfeil hoch/runter**: eine Stelle weiter. (Nach dem Neuzeichnen muss der Griff neu fokussiert
+   werden.)
+6. **Rückgängig:** Oben in der Kopfzeile ↶ klicken: der letzte Schritt ist weg, ↷ ist jetzt aktiv. ↷ stellt ihn wieder her. Dasselbe mit **Strg/Cmd+Z** und
+   **Umschalt+Strg/Cmd+Z** – auch dann, wenn der Mauszeiger in der Vorschau war. Mehrere Schritte nacheinander zurück, ein neuer Schritt danach: ↷ ist aus.
+   Auch **Abschnitt kopieren**, **löschen**, **einfügen**, ein Fenster mit **Fertig** und ein getippter Text lassen sich zurücknehmen.
+7. **Im Textfeld:** In einem Text tippen und **Strg/Cmd+Z**: es gilt der Verlauf des Feldes (die Seite springt nicht zurück).
+8. **Seite wechseln:** Zu einer anderen Seite und zurück: ↶ und ↷ sind aus (Verlauf leer). Nach „Seite einstellen“ → Fertig sind sie ebenfalls aus.
+9. **Fremde Änderung:** Im zweiten Fenster dieselbe Seite öffnen und etwas ändern; im ersten ↶ klicken: es wird **nicht** darüber geschrieben (Band „Neu
+   laden“ oder Hinweis), die Änderung aus dem zweiten Fenster bleibt.
+10. **Eigenes HTML:** Als Redakteur hat „Eigenes HTML“ keinen Griff (keine Leiste); andere Bausteine daneben lassen sich ziehen. Als Leitung lässt es sich
+    ziehen.
+11. **Fremd gesperrt:** Ist die Seite von jemand anderem gesperrt, gibt es keine Leisten, kein Ziehen, ↶ ↷ sind aus.
+12. **Handy:** Ansicht „Handy“: kein Ziehen, keine Baustein-Leiste, die Abschnitt-Leiste hat noch nach oben/unten; ↶ ↷ stehen nicht in der Kopfzeile.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/website/bearbeiten.ts`, `website/src/ebene.skript.txt`, `website/src/ebene.css`, `website/src/nachricht.ts`, `website/src/Seitenarbeit.tsx`, `website/src/seitenVerlauf.ts`, `website/src/demo.ts`
+- **Automatisiert:** teilweise – `shared/website/bearbeiten.test.ts` (Regeln, Index-Verschiebung, ungültige Stellen), `website/src/nachricht.test.ts` (Nachricht `verschieben`), `website/src/ebene.ziehen.test.ts` (Ziehen im nachgespielten Dokument mit festgelegten Maßen), `website/src/Seitenarbeit.ziehen.test.tsx` (Weg bis zum Speichern, Verlauf, Tasten, Rollen), `website/src/seitenVerlauf.test.ts`; wie sich Ziehen, Esc und Auto-Scroll im echten iframe anfühlen nur von Hand (am 21.11.2026 mit Playwright geprüft: Ziehen, Esc, Strg+Z mit Fokus im iframe)
+- **Historie:** neu mit W3c-2 (21.11.2026); im Browser gemessen: Esc kam im iframe nicht an, solange der Griff keinen Fokus nahm (Fokus beim Greifen)
 
 </details>

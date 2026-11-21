@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
@@ -9,10 +9,12 @@ import {
   abschnittErsetzen,
   abschnittKopieren,
   abschnittLoeschen,
-  abschnittVerschieben,
+  abschnittVerschiebenNach,
+  bausteinDa,
   bausteinEntfernen,
   bausteinErsetzen,
   bausteinHinzufuegen,
+  bausteinVerschieben,
   seiteGleich,
   seitePruefen,
 } from '@shared/website/bearbeiten';
@@ -37,6 +39,13 @@ import {
 import { neueId } from './ids';
 import type { EditorAktion } from './nachricht';
 import { textUebernehmen } from './textAenderung';
+import {
+  LEERER_VERLAUF,
+  verlaufMerken,
+  verlaufVor,
+  verlaufZurueck,
+  type Verlauf,
+} from './seitenVerlauf';
 import type { Rechte } from './regeln';
 import { SperrBaender, SpeicherZustand } from './SperrBaender';
 import { SEITEN_TEXTE } from './sperrTexte';
@@ -126,6 +135,13 @@ export function Seitenarbeit({
   const [meldungen, setMeldungen] = useState<string[]>([]);
   /** Zählt hoch, wenn die Vorschau neu gezeichnet werden muss, obwohl sich die Seite nicht (so) geändert hat – der getippte Text steht dort sonst falsch. */
   const [zeichneNeu, setZeichneNeu] = useState(0);
+  /** Rückgängig/Wiederholen dieser Seite (`seitenVerlauf.ts`): gilt nur für diese Sitzung; die Seite entsteht je Seite neu. */
+  const [verlauf, setVerlaufState] = useState<Verlauf>(LEERER_VERLAUF);
+  const verlaufRef = useRef(verlauf);
+  const setVerlauf = useCallback((v: Verlauf) => {
+    verlaufRef.current = v;
+    setVerlaufState(v);
+  }, []);
   const aktuell = useRef({ stand, ort, ich, onGespeichert, onOffen });
   aktuell.current = { stand, ort, ich, onGespeichert, onOffen };
 
@@ -171,6 +187,9 @@ export function Seitenarbeit({
         await speichereMenue(o, wert.menue);
     },
     anwenden: ({ seite: s, menue }) => {
+      // Der gespeicherte Stand ersetzt die Arbeitskopie (jemand anderes hat gespeichert, neu geladen): Die Schritte davor
+      // gehören zu einer Seite, die es so nicht mehr gibt.
+      setVerlauf(LEERER_VERLAUF);
       arbeitRef.current = s;
       setArbeit(s);
       menueRef.current = menue;
@@ -211,6 +230,16 @@ export function Seitenarbeit({
     setArbeit(neu);
   }, []);
 
+  /** Eine Änderung übernehmen **und** als Schritt merken (Rückgängig). `vorher` ist die Seite vor der Änderung. */
+  const uebernehmenMitVerlauf = useCallback(
+    (neu: Seite, vorher: Seite): string[] => {
+      const p = uebernehmen(neu);
+      if (p.length === 0) setVerlauf(verlaufMerken(verlaufRef.current, vorher, neu));
+      return p;
+    },
+    [uebernehmen, setVerlauf],
+  );
+
   // ── Aktionen aus der Vorschau ──────────────────────────────────────────────────────────────────────────────
 
   const schliessen = () => {
@@ -218,7 +247,56 @@ export function Seitenarbeit({
     setMeldungen([]);
   };
 
+  /**
+   * **Ein Schritt zurück oder vor** (Knöpfe, Strg/Cmd+Z, Nachricht der Vorschau). Wie jede Änderung: erst die Sperre, dann durch
+   * Schema und Schlange. Passt die Seite nicht mehr zum Schritt, wird **nichts** überschrieben – der Verlauf ist dann weg.
+   * Scheitert nur das Sperre-Nehmen (kein Netz), bleibt der Verlauf erhalten: vorübergehend ist nicht ungültig.
+   */
+  const gehe = async (zurueck: boolean) => {
+    if (dialog) return;
+    const v = verlaufRef.current;
+    if ((zurueck ? v.zurueck : v.vor).length === 0) return;
+    setHinweis(null);
+    if (!(await sicherstellen())) return;
+    const g = (zurueck ? verlaufZurueck : verlaufVor)(verlaufRef.current, arbeitRef.current);
+    if (g.art === 'leer') return;
+    if (g.art === 'fremd') {
+      setVerlauf(g.verlauf);
+      return setHinweis(
+        'Die Seite hat sich inzwischen geändert – Rückgängig geht hier nicht mehr, damit nichts Fremdes überschrieben wird.',
+      );
+    }
+    const p = uebernehmen(g.seite);
+    if (p.length > 0) return setHinweis(`Das geht so nicht: ${p.join(' ')}`);
+    setVerlauf(g.verlauf);
+  };
+  const geheRef = useRef(gehe);
+  geheRef.current = gehe;
+
+  // Strg/Cmd+Z und Umschalt+Strg/Cmd+Z (auch Strg+Y), wenn kein Textfeld offen ist – im offenen Feld gilt dessen eigener Verlauf.
+  // Was im iframe gedrückt wird, meldet die Ebene selbst (`rueckgaengig`/`wiederholen`): Tasten dort kommen hier nicht an.
+  useEffect(() => {
+    const an = (e: KeyboardEvent) => {
+      if ((!e.metaKey && !e.ctrlKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      const wieder = (k === 'z' && e.shiftKey) || (k === 'y' && !e.metaKey);
+      if (k !== 'z' && !wieder) return;
+      const ziel = e.target;
+      if (
+        ziel instanceof HTMLElement &&
+        (ziel.isContentEditable ||
+          ziel.closest('input, textarea, select, [contenteditable="true"]'))
+      )
+        return;
+      e.preventDefault();
+      void geheRef.current(!wieder);
+    };
+    window.addEventListener('keydown', an);
+    return () => window.removeEventListener('keydown', an);
+  }, []);
+
   const aktion = async (a: EditorAktion) => {
+    if (a.was === 'rueckgaengig' || a.was === 'wiederholen') return gehe(a.was === 'rueckgaengig');
     setHinweis(null);
     if (!(await sicherstellen())) {
       // Der getippte Text wurde nicht übernommen: Die Vorschau zeigt wieder den gespeicherten Stand.
@@ -227,7 +305,7 @@ export function Seitenarbeit({
     }
     const s = arbeitRef.current;
     const leistenAktion = (neu: Seite) => {
-      const p = uebernehmen(neu);
+      const p = uebernehmenMitVerlauf(neu, s);
       if (p.length > 0) setHinweis(`Das geht so nicht: ${p.join(' ')}`);
     };
     switch (a.was) {
@@ -235,9 +313,21 @@ export function Seitenarbeit({
         return setDialog({ art: 'einfuegen', i: a.i });
       case 'gestalten':
         return setDialog({ art: 'gestalten', i: a.i, sicherung: s.abschnitte[a.i] });
-      case 'hoch':
-      case 'runter':
-        return leistenAktion(abschnittVerschieben(s, a.i, a.was));
+      case 'verschieben': {
+        // Ziehen und Pfeiltasten: beide Stellen sind schon gegen die Seite geprüft (`nachricht.ts`) – hier noch einmal, denn
+        // die Seite kann sich während des Wartens auf die Sperre geändert haben. „Bleibt, wo er ist“: nichts speichern.
+        if (a.art === 'abschnitt') {
+          const neu = abschnittVerschiebenNach(s, a.von, a.nach);
+          return neu === s ? undefined : leistenAktion(neu);
+        }
+        if (!bausteinDa(s, a.von.i, a.von.j, a.von.k)) return;
+        // „Eigenes HTML“ ändert nur die Leitung – auch das Verschieben (die Ebene zeigt dafür keinen Griff; das hier gilt auch
+        // gegen eine gefälschte Nachricht).
+        if (s.abschnitte[a.von.i].spalten[a.von.j].bausteine[a.von.k].typ === 'html' && !darfHtml)
+          return setHinweis('Eigenes HTML kann nur die Leitung verschieben.');
+        const neu = bausteinVerschieben(s, a.von, a.nach);
+        return neu === s ? undefined : leistenAktion(neu);
+      }
       case 'kopieren':
         return leistenAktion(abschnittKopieren(s, a.i, neueId));
       case 'loeschen':
@@ -260,12 +350,13 @@ export function Seitenarbeit({
         const r = textUebernehmen(s, a);
         setZeichneNeu((n) => n + 1);
         if (!r.ok) return setHinweis(r.meldung);
-        const p = uebernehmen(r.seite);
+        const p = uebernehmenMitVerlauf(r.seite, s);
         if (p.length > 0) setHinweis(`Das geht so nicht: ${p.join(' ')}`);
         return;
       }
     }
   };
+  const darfHtml = rechte.html;
   const aktionRef = useRef(aktion);
   aktionRef.current = aktion;
   const beiAktion = useCallback((a: EditorAktion) => void aktionRef.current(a), []);
@@ -273,7 +364,6 @@ export function Seitenarbeit({
   const sicherstellenRef = useRef(sicherstellen);
   sicherstellenRef.current = sicherstellen;
   const beiTippen = useCallback(() => void sicherstellenRef.current(), []);
-  const darfHtml = rechte.html;
   const bearbeiten = useMemo(
     () => ({ onAktion: beiAktion, onTippen: beiTippen, darfHtml }),
     [beiAktion, beiTippen, darfHtml],
@@ -286,8 +376,9 @@ export function Seitenarbeit({
 
   // ── Fenster ────────────────────────────────────────────────────────────────────────────────────────────────
 
-  const fensterFertig = () => {
-    const p = uebernehmen(arbeitRef.current);
+  /** „Fertig“ im Fenster: speichern, und als Schritt merken – `vorher` ist die Seite vor dem Öffnen (die Sicherung). */
+  const fensterFertig = (vorher: Seite) => {
+    const p = uebernehmenMitVerlauf(arbeitRef.current, vorher);
     if (p.length > 0) return setMeldungen(p);
     schliessen();
   };
@@ -302,8 +393,9 @@ export function Seitenarbeit({
             rechte={rechte}
             onClose={schliessen}
             onWahl={(v: Vorlage) => {
-              const p = uebernehmen(
+              const p = uebernehmenMitVerlauf(
                 abschnittEinfuegen(arbeitRef.current, dialog.i, v.erzeugen(neueId)),
+                arbeitRef.current,
               );
               if (p.length > 0) setMeldungen(p);
               else schliessen();
@@ -326,7 +418,9 @@ export function Seitenarbeit({
             einstellungen={stand.einstellungen}
             meldungen={meldungen}
             onAendern={(neu) => vorschauen(abschnittErsetzen(arbeitRef.current, dialog.i, neu))}
-            onFertig={fensterFertig}
+            onFertig={() =>
+              fensterFertig(abschnittErsetzen(arbeitRef.current, dialog.i, dialog.sicherung))
+            }
             onAbbrechen={abbrechen}
           />
         );
@@ -349,7 +443,11 @@ export function Seitenarbeit({
               vorschauen(bausteinErsetzen(arbeitRef.current, dialog.i, dialog.j, dialog.k, neu))
             }
             onEntfernen={() => setDialog({ ...dialog, art: 'baustein-entfernen' })}
-            onFertig={fensterFertig}
+            onFertig={() =>
+              fensterFertig(
+                bausteinErsetzen(arbeitRef.current, dialog.i, dialog.j, dialog.k, dialog.sicherung),
+              )
+            }
             onAbbrechen={abbrechen}
           />
         );
@@ -365,19 +463,16 @@ export function Seitenarbeit({
             onCancel={() => setDialog({ ...dialog, art: 'baustein' })}
             onConfirm={() => {
               // Die Sicherung zuerst zurück: Entfernt wird der Baustein, wie er VOR dem Bearbeiten war – nie ein halber.
-              const p = uebernehmen(
-                bausteinEntfernen(
-                  bausteinErsetzen(
-                    arbeitRef.current,
-                    dialog.i,
-                    dialog.j,
-                    dialog.k,
-                    dialog.sicherung,
-                  ),
-                  dialog.i,
-                  dialog.j,
-                  dialog.k,
-                ),
+              const vorher = bausteinErsetzen(
+                arbeitRef.current,
+                dialog.i,
+                dialog.j,
+                dialog.k,
+                dialog.sicherung,
+              );
+              const p = uebernehmenMitVerlauf(
+                bausteinEntfernen(vorher, dialog.i, dialog.j, dialog.k),
+                vorher,
               );
               if (p.length > 0) setHinweis(`Das geht so nicht: ${p.join(' ')}`);
               schliessen();
@@ -393,7 +488,7 @@ export function Seitenarbeit({
             onWahl={(typ: BausteinTyp) => {
               const neu = neuerBaustein(typ, neueId);
               const naechste = bausteinHinzufuegen(arbeitRef.current, dialog.i, dialog.j, neu);
-              const p = uebernehmen(naechste);
+              const p = uebernehmenMitVerlauf(naechste, arbeitRef.current);
               if (p.length > 0) return setMeldungen(p);
               // Gleich zum Bearbeiten öffnen – der neue steht ganz unten in der Spalte.
               const k = naechste.abschnitte[dialog.i].spalten[dialog.j].bausteine.length - 1;
@@ -410,7 +505,10 @@ export function Seitenarbeit({
             confirmLabel="Löschen"
             onCancel={schliessen}
             onConfirm={() => {
-              const p = uebernehmen(abschnittLoeschen(arbeitRef.current, dialog.i));
+              const p = uebernehmenMitVerlauf(
+                abschnittLoeschen(arbeitRef.current, dialog.i),
+                arbeitRef.current,
+              );
               if (p.length > 0) setHinweis(`Das geht so nicht: ${p.join(' ')}`);
               schliessen();
             }}
@@ -427,8 +525,10 @@ export function Seitenarbeit({
             onClose={schliessen}
             onFertig={(neu, menue) => {
               const p = uebernehmen(neu, menue);
-              if (p.length > 0) setMeldungen(p);
-              else schliessen();
+              if (p.length > 0) return setMeldungen(p);
+              // Titel, Adresse und Menü lassen sich hier nicht zurücknehmen – die Schritte davor passen danach nicht mehr.
+              setVerlauf(LEERER_VERLAUF);
+              schliessen();
             }}
             loeschen={loeschen}
             onLoeschen={() => {
@@ -451,6 +551,28 @@ export function Seitenarbeit({
         </div>
         {freigabeLeiste}
         <SpeicherZustand stand={sperre.speicher} />
+        {ansicht === 'computer' && (
+          <div className={styles.verlauf} role="group" aria-label="Rückgängig und Wiederholen">
+            <KopfKnopf
+              still
+              nurSymbol
+              label="Rückgängig"
+              title="Letzte Änderung rückgängig machen (Strg+Z)"
+              symbol={<Icon name="undo" size={16} />}
+              disabled={fremd !== null || verlauf.zurueck.length === 0}
+              onClick={() => void gehe(true)}
+            />
+            <KopfKnopf
+              still
+              nurSymbol
+              label="Wiederholen"
+              title="Rückgängig gemachte Änderung wiederholen (Umschalt+Strg+Z)"
+              symbol={<Icon name="redo" size={16} />}
+              disabled={fremd !== null || verlauf.vor.length === 0}
+              onClick={() => void gehe(false)}
+            />
+          </div>
+        )}
         <Segment
           value={ansicht}
           options={[

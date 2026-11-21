@@ -118,10 +118,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('Leistenaktionen: nach oben, unten, kopieren – sofort gespeichert', () => {
-  it('„nach unten“ tauscht die Abschnitte, speichert die ganze Seite und zeigt „Gespeichert“', async () => {
+describe('Leistenaktionen: verschieben, kopieren – sofort gespeichert', () => {
+  it('Verschieben nach unten setzt den Abschnitt hinter den nächsten, speichert die ganze Seite und zeigt „Gespeichert“', async () => {
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await waitFor(() => expect(d.speichereSeite).toHaveBeenCalledTimes(1));
     expect(speicherte()[0].abschnitte.map((a) => a.id)).toEqual(['a1', 'a0']);
     await screen.findByText('Gespeichert');
@@ -150,17 +150,17 @@ describe('Leistenaktionen: nach oben, unten, kopieren – sofort gespeichert', (
       server.seite = s;
     });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
     expect(reihenfolge).toEqual(['sperre', 'sperre', 'speichern']);
   });
 
-  it('am Rand passiert nichts Schlimmes: „nach oben“ beim ersten Abschnitt speichert dieselbe Reihenfolge', async () => {
+  it('„bleibt, wo er ist“ (die Stelle direkt über dem Abschnitt): nichts wird gespeichert', async () => {
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'hoch', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 0 });
     await waitFor(() => expect(d.beginneBearbeiten).toHaveBeenCalled());
-    await screen.findByText('Gespeichert');
-    expect(speicherte().every((s) => s.abschnitte.map((a) => a.id).join() === 'a0,a1')).toBe(true);
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 1 });
+    expect(d.speichereSeite).not.toHaveBeenCalled();
   });
 });
 
@@ -663,7 +663,7 @@ describe('Speichern eins nach dem anderen', () => {
       server.seite = s;
     });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await waitFor(() => expect(tore).toHaveLength(1));
     await aus({ was: 'kopieren', i: 0 }); // die zweite Änderung, während die erste noch läuft
     await aus({ was: 'kopieren', i: 0 });
@@ -681,7 +681,7 @@ describe('Ein vorübergehender Fehler zerstört nichts', () => {
   it('503 beim Speichern: „Nicht gespeichert“, die Änderung bleibt in der Vorschau – „Erneut versuchen“ speichert denselben Stand', async () => {
     d.speichereSeite.mockRejectedValueOnce(new ApiError(503, 'x'));
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     const meldung = await screen.findByRole('alert');
     expect(meldung.textContent).toMatch(/Nicht gespeichert/);
     expect(meldung.textContent).toMatch(/antwortet gerade nicht/);
@@ -699,7 +699,7 @@ describe('Ein vorübergehender Fehler zerstört nichts', () => {
     d.speichereSeite.mockRejectedValueOnce(new ApiError(504, 'x'));
     const onOffen = vi.fn();
     render(<Seitenarbeit {...props({ onOffen })} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     expect(onOffen.mock.calls.at(-1)).toEqual([true]);
     fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
@@ -710,12 +710,12 @@ describe('Ein vorübergehender Fehler zerstört nichts', () => {
   it('ein Fehler beim Nehmen der Sperre (ChurchTools antwortet nicht): nichts ändert sich, Hinweis mit der Meldung', async () => {
     d.beginneBearbeiten.mockRejectedValueOnce(new ApiError(503, 'x'));
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     expect(await screen.findByText(/antwortet gerade nicht/)).toBeTruthy();
     expect(d.speichereSeite).not.toHaveBeenCalled();
     expect(pos('Willkommen')).toBeLessThan(pos('zweiter Block')); // alte Reihenfolge
     // Der nächste Versuch klappt
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
   });
 
@@ -725,7 +725,7 @@ describe('Ein vorübergehender Fehler zerstört nichts', () => {
       throw new ApiError(502, 'x'); // … aber das Nachlesen scheiterte
     });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
     await screen.findByText('Gespeichert');
@@ -744,7 +744,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
       'disabled',
       true,
     );
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     expect(d.beginneBearbeiten).not.toHaveBeenCalled();
     expect(d.speichereSeite).not.toHaveBeenCalled();
   });
@@ -779,7 +779,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
       expect(d.uebernimmBearbeitung).toHaveBeenCalledWith(ORT, 's', ICH);
       expect(screen.queryByText(/in einem anderen Fenster von dir/)).toBeNull();
       // und es wird wieder gespeichert (die Sperre liegt bei uns, kein erneutes Nehmen nötig)
-      await aus({ was: 'runter', i: 0 });
+      await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
       await waitFor(() => expect(d.speichereSeite).toHaveBeenCalled());
     });
 
@@ -798,7 +798,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
     it('(c) das verdrängte Fenster: nächstes Lebenszeichen zeigt „hat die Bearbeitung übernommen“, speichert nichts, die Änderung bleibt sichtbar', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       render(<Seitenarbeit {...props()} />);
-      await aus({ was: 'runter', i: 0 });
+      await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
       await vi.waitFor(() => expect(screen.getByText('Gespeichert')).toBeTruthy());
       d.beginneBearbeiten.mockResolvedValue({
         art: 'gesperrt',
@@ -839,7 +839,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('die Sperre wird erst beim Handgriff geprüft: fremd gesperrt → Hinweis, es wird NICHT gespeichert', async () => {
     d.beginneBearbeiten.mockResolvedValue({ art: 'gesperrt', sperre: fremdeSperre() });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     expect(await screen.findByText(/Gerade bearbeitet von Jonas Peters/)).toBeTruthy();
     expect(d.speichereSeite).not.toHaveBeenCalled();
     expect(pos('Willkommen')).toBeLessThan(pos('zweiter Block'));
@@ -848,7 +848,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('„Erneut prüfen“: ist die Sperre frei geworden, geht es weiter', async () => {
     d.beginneBearbeiten.mockResolvedValueOnce({ art: 'gesperrt', sperre: fremdeSperre() });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut prüfen' }));
     await waitFor(() => expect(screen.queryByText(/Gerade bearbeitet von/)).toBeNull());
     expect(doc()).toMatch(/websiteEditor/);
@@ -856,7 +856,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
 
   it('wird die Sperre WÄHREND des Bearbeitens übernommen, wird das Speichern abgewiesen: nichts geschrieben, Änderung bleibt sichtbar, „Neu laden“ bietet den gespeicherten Stand an', async () => {
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
     d.speichereSeite.mockClear();
     // inzwischen hat jemand die Sperre übernommen
@@ -876,7 +876,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
       return { art: 'gesperrt', sperre: fremdeSperre() };
     });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await waitFor(() => expect(nr).toBe(2));
     await act(async () => tor.ja(undefined));
     await screen.findByText(/Nicht gespeichert/);
@@ -887,7 +887,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('hat jemand die Seite inzwischen GEÄNDERT, wird nicht darüber geschrieben – Hinweis, „Neu laden“ übernimmt seinen Stand', async () => {
     const seinStand = { ...START, titel: 'Seine Fassung' };
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
     d.speichereSeite.mockClear();
     server.seite = seinStand; // der andere hat gespeichert (unsere Sperre war verfallen)
@@ -902,7 +902,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('beim ersten Handgriff: die Seite war schon geändert → neu geladen, die Aktion wird NICHT auf dem alten Bild ausgeführt', async () => {
     server.seite = { ...START, titel: 'Seine Fassung' };
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     expect(await screen.findByText(/ist neu geladen/)).toBeTruthy();
     expect(screen.getByTitle('Vorschau: Seine Fassung')).toBeTruthy();
     expect(d.speichereSeite).not.toHaveBeenCalled();
@@ -911,7 +911,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('Lebenszeichen: solange die Seite offen ist, wird die Sperre erneuert; ein Aussetzer macht nichts kaputt', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await vi.waitFor(() => expect(screen.getByText('Gespeichert')).toBeTruthy());
     const vorher = d.beginneBearbeiten.mock.calls.length;
     d.beginneBearbeiten.mockRejectedValueOnce(new ApiError(503, 'x'));
@@ -946,7 +946,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
     a.unmount();
     expect(d.beendeBearbeiten).not.toHaveBeenCalled();
     const b = render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
     b.unmount();
     expect(d.beendeBearbeiten).toHaveBeenCalledTimes(1);
@@ -956,7 +956,7 @@ describe('Gleichzeitiges Bearbeiten: die Sperre', () => {
   it('schlägt das Freigeben fehl, merkt man nichts davon (die Sperre verfällt von selbst)', async () => {
     d.beendeBearbeiten.mockRejectedValue(new ApiError(503, 'x'));
     const b = render(<Seitenarbeit {...props()} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await screen.findByText('Gespeichert');
     expect(() => b.unmount()).not.toThrow();
   });
@@ -966,7 +966,7 @@ describe('Gespeichert wird an die Seitenliste gemeldet', () => {
   it('nach dem Speichern bekommt die Liste Seite und Menü – ohne neu zu lesen', async () => {
     const onGespeichert = vi.fn();
     render(<Seitenarbeit {...props({ onGespeichert })} />);
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await waitFor(() => expect(onGespeichert).toHaveBeenCalledTimes(1));
     expect(onGespeichert.mock.calls[0][0].abschnitte.map((a: { id: string }) => a.id)).toEqual([
       'a1',

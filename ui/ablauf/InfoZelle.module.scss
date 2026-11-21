@@ -1,0 +1,99 @@
+// Eine Info-Zelle im Bearbeiten-Modus (Entwurf `ablauf-infos-bearbeiten.html`, Variante B): sieht aus wie die Zelle im
+// Lesemodus (`.infoZelle` in `AblaufListe.module.scss`), ist aber ein Knopf; offen ein Textfeld in der Zelle.
+
+.zelle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--hair);
+}
+
+.knopf {
+  position: relative;
+  flex: 1;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+.text {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.leer {
+  color: var(--text3);
+}
+// „+ Info“ erscheint nur, wenn die Maus über einer leeren Zelle steht – am Touch-Gerät gäbe es kein Drüberfahren.
+.plus {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--blue);
+}
+@media (hover: hover) and (pointer: fine) {
+  .knopf:hover {
+    outline: 1px dashed var(--blue);
+    outline-offset: -3px;
+  }
+  // „+ Info“ ersetzt das „–“ – in schmalen Spalten standen beide übereinander (Abnahme 21.11.2026).
+  .leer:hover .plus {
+    display: block;
+  }
+  .leer:hover .text {
+    visibility: hidden;
+  }
+}
+
+// Offen: blauer Rahmen und Fokus-Ring, das Feld füllt die Zelle.
+.zelleOffen {
+  position: relative;
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.feld {
+  display: block;
+  width: 100%;
+  min-height: 3.2em;
+  padding: 10px 10px 4px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+
+  &:focus {
+    outline: none;
+  }
+}
+.hinweis,
+.fehler {
+  padding: 0 10px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.hinweis {
+  color: var(--text3);
+}
+.fehler {
+  color: var(--red);
+  font-weight: 600;
+}

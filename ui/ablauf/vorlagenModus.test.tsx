@@ -16,7 +16,10 @@ import {
  * Daten wie bisher – damit der Modus nichts am Termin-Verhalten verschiebt. Die Zeilen kommen aus den Erzeugern
  * (`ablaufZeileAus` für den Termin, `vorlageZeilenAus` für die Vorlage), nicht aus handgeschriebenen Zeilen.
  */
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 /** Ein Ablauf, wie ChurchTools ihn aus einer Vorlage liefert: Platzhalter `[Moderation]`, ein Punkt vor dem Beginn. */
 const ROH: CtAgendaItem[] = [
@@ -222,7 +225,25 @@ describe('Zeilen in der Vorlage', () => {
     expect(screen.getByTestId('liste').textContent).toMatch(/\d\d:\d\d/);
   });
 
-  it('Infos der gewählten Spalten als Zeile unter dem Punkt – wie am Termin „Technik: Folie 1“', () => {
+  it('Infos der gewählten Spalten als Zelle (breit, 21.11.2026) – in der Vorlage wie am Termin', () => {
+    const zelle = () =>
+      within(screen.getByTestId('liste')).getByRole('button', {
+        name: 'Info für Technik bei „Begrüßung“ bearbeiten',
+      });
+    render(<Vorlage aktionen={vorlagenAktionen()} />);
+    expect(zelle().textContent).toBe('Folie 1');
+    expect(screen.getByTestId('liste').textContent).not.toContain('Technik: Folie 1');
+    cleanup();
+    render(<Termin aktionen={terminAktionen()} />);
+    expect(zelle().textContent).toBe('Folie 1');
+  });
+
+  it('Infos der gewählten Spalten am Handy als Zeile unter dem Punkt – wie am Termin „Technik: Folie 1“', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
     render(<Vorlage aktionen={vorlagenAktionen()} />);
     expect(screen.getByTestId('liste').textContent).toContain('Technik: Folie 1');
     cleanup();

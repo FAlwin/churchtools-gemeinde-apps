@@ -10,6 +10,12 @@
   background: var(--surface2);
 }
 
+// Mit Info-Spalten (`InfoTabelle`): dieselbe Tabelle wie die Ansicht, der Rahmen trägt den Platz unten fürs Plus.
+.tabellenListe {
+  padding: 0 0 calc(var(--plus-boden) + 78px);
+  background: var(--surface2);
+}
+
 // ── Bearbeiten-Modus ──
 .editHint {
   font-size: 12.5px;

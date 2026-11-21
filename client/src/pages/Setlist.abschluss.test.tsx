@@ -228,9 +228,16 @@ describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.getByText('Mikro 1')).toBeTruthy();
-    // Beim Bearbeiten steht sie als Zeile unter dem Punkt (Alwin, 02.11.2026: sonst sieht man nicht, was drinsteht).
+    // Beim Bearbeiten bleibt sie am Rechner als Spalte stehen und ist direkt in der Zelle bearbeitbar (Alwin, 21.11.2026;
+    // vorher eine Zeile unter dem Punkt: sonst sieht man nicht, was drinsteht).
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
-    expect(screen.getByText(/Mikro 1/).textContent).toBe('Technik: Mikro 1');
+    expect(screen.getByText(/Mikro 1/).textContent).toBe('Mikro 1');
+    expect(
+      screen
+        .getByText(/Mikro 1/)
+        .closest('button')
+        ?.getAttribute('aria-label'),
+    ).toMatch(/^Info für Technik bei „.*“ bearbeiten$/);
   });
 
   it('im Punkt-Fenster ein Feld je sichtbarer Gruppe', async () => {

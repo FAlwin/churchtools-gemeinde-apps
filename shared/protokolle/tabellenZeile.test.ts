@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   anzahlInfo,
   artDesTextes,
+  ausgeblendet,
   dokumentHatInfo,
   INFO_ZEICHEN,
   mitArt,
@@ -101,5 +102,32 @@ describe('Kennzeichen einer Tabellenzeile (W13)', () => {
     expect(dokumentHatInfo([tab('a', 'ⓘ b')])).toBe(true);
     expect(dokumentHatInfo([absatz(absatz(tab('ⓘ x')))])).toBe(true);
     expect(dokumentHatInfo([absatz(tab('x'))])).toBe(false);
+  });
+});
+
+describe('ausgeblendet – „Nur Themen dieses Treffens“', () => {
+  const z = (info: boolean, unter: boolean) => ({ info, unter });
+  it('Info-Zeilen und ihre Unterzeilen gehen weg, Unterzeilen anderer Zeilen bleiben', () => {
+    expect(
+      ausgeblendet([
+        z(false, false),
+        z(true, false),
+        z(false, true),
+        z(true, true),
+        z(false, false),
+        z(false, true),
+      ]),
+    ).toEqual([false, true, true, true, false, false]);
+  });
+  it('eine Unterzeile mit ⓘ unter einer normalen Zeile geht allein weg; ihre Nachbarn bleiben', () => {
+    expect(ausgeblendet([z(false, false), z(false, true), z(true, true), z(false, true)])).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
+  });
+  it('ohne Info nichts', () => {
+    expect(ausgeblendet([z(false, false), z(false, true)])).toEqual([false, false]);
   });
 });

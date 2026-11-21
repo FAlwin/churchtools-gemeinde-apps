@@ -349,18 +349,21 @@ describe('ProtokollAnsicht – Unterzeile und Info-Zeile in Tabellen (W13)', () 
     expect(screen.queryByRole('checkbox')).toBeNull();
   });
 
-  it('„Nur Themen dieses Treffens“ blendet Info-Zeilen aus (auch Info mit Unterzeile), zählt sie, nimmt die Legende weg', () => {
+  it('„Nur Themen dieses Treffens“ blendet Info-Zeilen samt ihren Unterzeilen aus, zählt sie, nimmt die Legende weg', () => {
     const { container } = render(
-      <ProtokollAnsicht dokument={[tabelle('t', 'a', info('b'), unter('c'), beides('d'))]} />,
+      <ProtokollAnsicht
+        dokument={[tabelle('t', 'a', info('b'), unter('c'), beides('d'), 'e', unter('f'))]}
+      />,
     );
-    expect(container.querySelectorAll('tr').length).toBe(4);
+    expect(container.querySelectorAll('tr').length).toBe(6);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Nur Themen dieses Treffens' }));
     const zeilen = [...container.querySelectorAll('tr')].map((r) => r.textContent);
-    expect(zeilen).toEqual(['aWas', '↳cWas', '2 Info-Zeilen ausgeblendet']);
+    // „c“ und „d“ hängen als Unterzeilen an der Info-Zeile „b“ – sie gehen mit; „f“ hängt an „e“ und bleibt.
+    expect(zeilen).toEqual(['aWas', 'eWas', '↳fWas', '3 Info-Zeilen ausgeblendet']);
     expect(screen.queryByText(new RegExp(INFO_LEGENDE))).toBeNull();
     // Nur Anzeige: wieder abgewählt ist alles da, die Daten sind unberührt.
     fireEvent.click(screen.getByRole('checkbox', { name: 'Nur Themen dieses Treffens' }));
-    expect(container.querySelectorAll('tr').length).toBe(4);
+    expect(container.querySelectorAll('tr').length).toBe(6);
     expect(screen.getByText(new RegExp(INFO_LEGENDE))).toBeTruthy();
   });
 

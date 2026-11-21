@@ -1059,7 +1059,7 @@ Info-Zeilen aus.
    du mit Tab wie bisher.
 4. Schalte auf **Lesen** (hell und dunkel): Die Unterzeile ist eingerückt mit **↳** und gestrichelter Linie, die Info-Zeile trägt einen **kleinen Kreis mit i**, die Zeile steht an ihrem
    Platz. **Unter der Tabelle** steht die Legende „nur zur Info – nicht Thema dieses Treffens“. Über dem Protokoll steht **„Nur Themen dieses Treffens“** (nur wenn es eine Info-Zeile gibt).
-5. Hake den Schalter an: Die Info-Zeilen sind **weg**, unten in der Tabelle steht **„N Info-Zeilen ausgeblendet“**, die Legende fehlt. Hake ab: alles wieder da. Wechsle den Reiter und
+5. Hake den Schalter an: Die Info-Zeilen sind **weg** – samt Unterzeilen direkt unter einer Info-Zeile –, unten in der Tabelle steht **„N Info-Zeilen ausgeblendet“**, die Legende fehlt. Hake ab: alles wieder da. Wechsle den Reiter und
    zurück: nichts wurde gespeichert (der Schalter steht wieder aus).
 6. **Teilen / PDF:** Im PDF stehen **alle** Zeilen: die Unterzeile mit gezeichnetem **↳** eingerückt, die Info-Zeile mit **ⓘ-Kreis**, darunter die Legende.
 7. Am Handy (375 px) läuft nichts über den Rand; die Menüeinträge sind gut zu treffen.

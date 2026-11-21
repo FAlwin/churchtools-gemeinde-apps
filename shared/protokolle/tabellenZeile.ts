@@ -114,6 +114,18 @@ export function zeilenArten(zeilen: readonly (readonly { inhalt: unknown }[])[])
 export const anzahlInfo = (arten: readonly ZeilenArt[]): number =>
   arten.filter((a) => a.info).length;
 
+/**
+ * **Welche Zeilen blendet „Nur Themen dieses Treffens“ aus?** (Alwin 21.11.2026) Jede Info-Zeile – und die Unterzeilen
+ * („↳“) direkt unter ihr: Sie gehören zu ihrer Zeile. Eine Unterzeile gehört zur nächsten Zeile darüber ohne „↳“.
+ */
+export function ausgeblendet(arten: readonly ZeilenArt[]): boolean[] {
+  let elternWeg = false;
+  return arten.map((a) => {
+    if (!a.unter) elternWeg = a.info;
+    return a.info || (a.unter && elternWeg);
+  });
+}
+
 /** Hat irgendeine Tabelle im Dokument (auch unter Unterblöcken) eine Info-Zeile? Dann zeigt die Lese-Ansicht den Schalter. */
 export function dokumentHatInfo(bloecke: readonly Block[]): boolean {
   return bloecke.some((b) => {

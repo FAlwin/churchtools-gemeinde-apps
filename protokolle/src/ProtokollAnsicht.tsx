@@ -14,6 +14,7 @@ import {
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
 import {
   anzahlInfo,
+  ausgeblendet,
   dokumentHatInfo,
   INFO_LEGENDE,
   ohneKennzeichen,
@@ -316,7 +317,7 @@ function InfoKreis() {
 /**
  * Eine Tabelle (K3a) – Kopfzeilen als `th`, verbundene Zellen und Zellfarben wie im Editor. Seit W13 trägt die erste Zelle
  * einer Zeile ggf. „↳ “ (Unterzeile: eingerückt, gestrichelte Linie) und „ⓘ “ (nur zur Info: Kreis-Symbol, Legende
- * darunter); `nurThemen` blendet die Info-Zeilen aus.
+ * darunter); `nurThemen` blendet die Info-Zeilen samt ihren Unterzeilen aus (`ausgeblendet`).
  */
 function Tabelle({ content, nurThemen }: { content: unknown; nurThemen: boolean }) {
   const thema = useThema();
@@ -324,14 +325,15 @@ function Tabelle({ content, nurThemen }: { content: unknown; nurThemen: boolean 
   if (!zeilen?.length) return null;
   const arten: ZeilenArt[] = zeilenArten(zeilen);
   const info = anzahlInfo(arten);
-  const weg = nurThemen ? info : 0;
+  const weglassen = nurThemen ? ausgeblendet(arten) : arten.map(() => false);
+  const weg = weglassen.filter(Boolean).length;
   const spalten = Math.max(1, ...zeilen.map((z) => z.length));
   return (
     <div className={styles.tabelle}>
       <table>
         <tbody>
           {zeilen.map((zellen, z) => {
-            if (nurThemen && arten[z].info) return null;
+            if (weglassen[z]) return null;
             return (
               <tr key={z} className={arten[z].unter ? styles.unterzeile : undefined}>
                 {zellen.map((c, s) => {

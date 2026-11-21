@@ -352,8 +352,8 @@ wie in BlockNote). Nicht betroffen: Nummerierungen, Checklisten, die Listen der 
 Zeichen eine Klasse (Dekoration; Einrückung, gestrichelte Linie in `DokumentEditor.scss`). **Lese-Ansicht:** erste Zelle ohne Präfix, davor „↳“ bzw. der Kreis mit „i“ (Klassen `unterzeile`,
 `unterZeichen`, `info`), Legende unter der Tabelle (`INFO_LEGENDE`), und **ein** Schalter „Nur Themen dieses Treffens“ oben im Protokoll, sobald irgendeine Tabelle eine Info-Zeile hat
 (`dokumentHatInfo`; Alwins Entwurf zeigte ihn über der Tabelle – einmal oben ist ruhiger als einer je Tabelle und gilt für das ganze Protokoll). Er blendet Info-Zeilen aus („N Info-Zeilen
-ausgeblendet“ am Tabellenende, Legende weg), ist nur Anzeige und steht bei jedem Öffnen wieder aus. Eine Unterzeile unter einer ausgeblendeten Info-Zeile bleibt sichtbar (nur Zeilen mit ⓘ
-verschwinden). **PDF:** immer alle Zeilen; das Blatt trägt `marke` an der ersten Zelle und `legende` je Tabelle (`protokollBlatt.ts`), das PDF zeichnet „↳“ aus Linien und den ⓘ-Kreis (die Schrift hat
+ausgeblendet“ am Tabellenende, Legende weg), ist nur Anzeige und steht bei jedem Öffnen wieder aus. Unterzeilen einer ausgeblendeten Info-Zeile gehen mit (Alwin 21.11.2026,
+`ausgeblendet`). **PDF:** immer alle Zeilen; das Blatt trägt `marke` an der ersten Zelle und `legende` je Tabelle (`protokollBlatt.ts`), das PDF zeichnet „↳“ aus Linien und den ⓘ-Kreis (die Schrift hat
 beide Zeichen nicht, wie „◦“) und rückt den Text ein (`Zelle.einzug`, zählt in `naturBreite` mit). „Mit KI füllen“ schickt keine Tabellen (`vorhandeneZeilen` nur Absatz/Aufzählung/Nummerierung).
 Handtest: TF-PROT-30.
 

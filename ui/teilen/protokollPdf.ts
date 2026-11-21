@@ -487,9 +487,9 @@ class ProtokollZeichner extends PdfSatz {
 
   /** Der ⓘ-Kreis mit linker Kante bei `x`, Grundlinie `grund`: Kreislinie, darin Punkt und Strich. */
   private infoKreis(x: number, grund: number, pt: number) {
-    const r = pt * PT * 0.3;
+    const r = pt * PT * 0.36;
     const mx = x + 0.3 + r;
-    const my = grund - r - 0.2;
+    const my = grund - r - 0.05;
     this.d.setDrawColor(...GRAU);
     this.d.setFillColor(...GRAU);
     this.d.setLineWidth(0.25);

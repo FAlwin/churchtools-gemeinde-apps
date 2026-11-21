@@ -87,3 +87,34 @@
   ~ .bn-block-group {
   --bn-bullet-marker: '–';
 }
+
+// Unterzeile und „nur zur Info“ in Tabellen (W13, Alwin 21.11.2026). Die Kennzeichen sind Text am Anfang der ersten Zelle
+// („↳ “ / „ⓘ “, `shared/protokolle/tabellenZeile.ts`); das Plugin `tabellenZeile.ts` gibt der Zeile und dem Zeichen eine
+// Klasse. Das Zeichen bleibt sichtbar und bearbeitbar; die Lese-Ansicht zeichnet sie als Symbol (`ProtokollAnsicht.module.scss`).
+.bn-container .bn-editor tr.protokoll-zeile-unter {
+  > td,
+  > th {
+    border-top-style: dashed;
+  }
+
+  > :first-child {
+    padding-inline-start: 20px; // eingerückt: „gehört zur Zeile darüber“
+  }
+}
+
+// Bei zusammenfallenden Rändern gewinnt Durchgezogen gegen Gestrichelt – darum auch die Unterkante der Zeile darüber.
+.bn-container .bn-editor tr:has(+ .protokoll-zeile-unter) > td,
+.bn-container .bn-editor tr:has(+ .protokoll-zeile-unter) > th {
+  border-bottom-style: dashed;
+}
+
+.bn-container .bn-editor .protokoll-zeichen-unter {
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.bn-container .bn-editor .protokoll-zeichen-info {
+  color: var(--text2);
+  font-weight: 700;
+  white-space: nowrap;
+}

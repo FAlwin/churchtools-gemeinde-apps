@@ -107,6 +107,12 @@
       }
     }
 
+    // Bei zusammenfallenden Rändern gewinnt Durchgezogen gegen Gestrichelt – darum auch die Unterkante der Zeile darüber.
+    tr:has(+ .unterzeile) > td,
+    tr:has(+ .unterzeile) > th {
+      border-bottom-style: dashed;
+    }
+
     tr > :first-child {
       position: relative;
     }

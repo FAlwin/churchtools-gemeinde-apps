@@ -23,6 +23,7 @@ import {
   teilSetzen,
 } from '@shared/protokolle/aufgaben';
 import { neuerTerminStand } from '@shared/protokolle/terminStand';
+import { praefix } from '@shared/protokolle/tabellenZeile';
 import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
 import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -89,6 +90,24 @@ function protokollWerte(
         children: [],
       }),
     ),
+    {
+      // Eine Terminliste mit einer Info-Zeile und einer Unterzeile (W13).
+      id: 'd-tab',
+      type: 'table',
+      content: {
+        type: 'tableContent',
+        rows: [
+          ['Datum', 'Was', 'Wer'],
+          ['06.01.2027', 'Gemeinde Eislaufen', 'Alwin'],
+          [`${praefix({ unter: false, info: true })}21.03.2027`, 'Ostern – Ferien', 'alle'],
+          [`${praefix({ unter: true, info: false })}22.03.2027`, 'Osterfrühstück', 'Willi'],
+          ['17.04.2027', 'Gemeindeputztag', 'Technik'],
+        ].map((zeile) => ({
+          cells: zeile.map((text) => [{ type: 'text', text, styles: {} }]),
+        })),
+      },
+      children: [],
+    },
   ];
   const t = (text: string) => [{ type: 'text', text, styles: {} }];
   const september: Block[] = [

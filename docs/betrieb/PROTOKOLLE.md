@@ -459,7 +459,15 @@ Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kom
    zuordnen“**: je Platzhalter ein Feld für einen Namen, mit den Gruppenmitgliedern als Vorschlag. Leer lassen = der
    Platzhalter bleibt stehen. Ein gewähltes Mitglied wird bei To-Dos zur zuständigen Person, jeder andere Name zum externen.
    Ohne Transkript kennt das Fenster gar keine Platzhalter-Nummern, dann ist jeder Platzhalter der Antwort Handarbeit.
-3. **Vorschau:** Jede Zeile hat ein Häkchen (an) und zeigt klein, wohin sie kommt („→ 3.1 Küche“). Was zu keinem Punkt
+   **Schon geschriebener Text (W12):** Steht unter einem Punkt schon Text (Absätze, Aufzählungen, auch eingerückt), bekommt die KI
+   ihn mit einer Kennung (`Z1`, `Z2` …) mit – Namen darin werden wie im Transkript durch Platzhalter ersetzt. Die KI wiederholt ihn nicht
+   als Stichpunkt und nennt bei einem Beschluss, To-Do oder Termin, **welche Zeile er ersetzt** (`ersetzt`) oder unter welche er gehört
+   (`nach`). Ohne vorhandenen Text ist der Auftrag wie früher.
+3. **Vorschau:** Jede Zeile hat ein Häkchen (an) und zeigt klein, wohin sie kommt („→ 3.1 Küche“). **Neu (W12):** Bei Beschluss, To-Do und
+   Termin steht **„ersetzt „…““** mit eigenem kleinen Haken (weg = die Zeile bleibt, der Baustein kommt darunter), bei `nach` „kommt unter „…““.
+   Ein Stichpunkt, der inhaltlich schon dasteht, ist durchgestrichen, trägt **„steht schon da“** und ist abgewählt (wieder wählbar).
+   „Ausgewählte übernehmen“ setzt einen ersetzenden Baustein **an die Stelle der Zeile** und entfernt sie – nie eine Zeile mit eingerückten
+   Unterzeilen und nie eine, die sich seit dem Lesen geändert hat; alles in **einem** Schritt (ein „Rückgängig“ macht es zurück). Was zu keinem Punkt
    passt oder zu einem festen Punkt gehört, ist ausgegraut und wird nicht übernommen. Die echten Namen sind wieder
    eingesetzt (grün). **„Ausgewählte übernehmen“** fügt die Stichpunkte, Beschlüsse, To-Dos und Termine **hinter den Text
    ihres Punkts** ein (hat er Unterpunkte: vor den ersten, damit sie zu diesem Punkt zählen), neue Punkte ans Ende der
@@ -525,6 +533,17 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
   gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a; Fenster `ProtokollTeilenFenster.tsx`,
   nachgeladen über `ProtokollTeilen.tsx`, S6-3b).
+- Bausteine (W12, Stil A „ruhig“): Beschluss, To-Do und Termin haben **keine Fläche**, nur einen 3-px-Farbrand links (grün, grau, blau; Etikett
+  „BESCHLUSS“, Termin-Datum blau fett, To-Do mit Kreis). EINE Stelle für Editor und Lese-Ansicht: `ProtokollAnsicht.module.scss` (`.marke`,
+  `.aufgabe`, `.beschluss`, `.termin`; `EditorBloecke.tsx` nimmt dieselben Klassen, `EditorBloecke.module.scss` macht Wer/Bis leise); PDF:
+  `Rand` (`beschluss`, `termin`, `aufgabe`, `zitat`) und `Zeichen` `kreis` in `shared/protokolle/protokollBlatt.ts`, gezeichnet in
+  `ui/teilen/protokollPdf.ts`, die Farben `BAUSTEIN_GRUEN`/`BAUSTEIN_BLAU` stehen nur im Blatt. Bewusst nicht umgestellt: die To-Do-Zeilen im
+  festen Punkt „Offene To-Dos“ (eigener grauer Kasten, im PDF Kästchen) und die Übersicht am Ende des PDFs.
+- Mit KI füllen – vorhandener Text (W12): `vorhandeneZeilen` (Kennungen `Z1` … je Punkt, nur Absatz/Aufzählung/Nummerierung, keine festen Punkte),
+  `namenSuchtext` (Transkript + Titel + vorhandene Zeilen + Gruppenname – dort sucht `namenFinden`), `Eintrag.ersetzt`/`nach`/`doppelt`
+  (`ZeilenBezug` mit Block-ID und Text von damals), `uebernahmePlanen(…, { ersetzenAus })` → `Einfuegung { vor, nach?, entfernen? }`, ausgeführt von
+  `einfuegungenAusfuehren` (`bloeckeEinfuegen.ts`, eine `editor.transact`). Doppelte Stichpunkte: `shared/protokolle/doppelt.ts` (Wortmengen
+  ohne Füllwörter, Stamm 6 Zeichen; Treffer ab 2 gemeinsamen Wörtern und 75 % des kürzeren Textes).
 - Mit KI füllen (S8-1 Regeln, S8-2 Fenster): `shared/protokolle/ki.ts` – `tagesordnung`
   (Punkte und Unterpunkte mit Nummer wie im Protokoll, feste Punkte = „nichts zuordnen“), `auftragBauen` (bekommt das schon
   mit `platzhalter.ts` ersetzte Transkript), `antwortLesen` (tolerant bei Codeblock/Drumherum/`nr` als Zahl, streng bei

@@ -235,6 +235,11 @@
 .termin {
   border-left-color: var(--blue);
 
+  // Datum und Text stehen in einer Zeile, wie im Editor.
+  .markeText {
+    display: block;
+  }
+
   b {
     color: var(--blue);
     font-weight: 700;

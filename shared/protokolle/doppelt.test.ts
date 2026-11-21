@@ -35,7 +35,9 @@ describe('aehnlich – Schwelle und Mindestzahl', () => {
     expect(aehnlich('Alpha Bravo Charlie Delta', 'Alpha Bravo Charlie Echo Foxtrot')).toBe(true);
     expect(aehnlich('Alpha Bravo Charlie Delta', 'Alpha Bravo Golf Hotel India')).toBe(false);
     // knapp darunter: 3 von 5
-    expect(aehnlich('Alpha Bravo Charlie Delta Echo', 'Alpha Bravo Charlie Golf Hotel')).toBe(false);
+    expect(aehnlich('Alpha Bravo Charlie Delta Echo', 'Alpha Bravo Charlie Golf Hotel')).toBe(
+      false,
+    );
   });
   it('mindestens zwei gemeinsame Wörter: „Uhr“ allein macht noch keinen Doppelten', () => {
     expect(MIN_GEMEINSAM).toBe(2);

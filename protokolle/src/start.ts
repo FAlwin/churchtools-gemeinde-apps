@@ -12,6 +12,7 @@ import { kategorienLesen } from '@shared/ct/modulDaten';
 import { modulRechteAus } from '@shared/ct/modulRechte';
 import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { darfVerwalten } from '@shared/ct/rollenRechte';
+import { schreibbareKalender } from '@shared/ct/kalenderRechte';
 import { ctDaten } from '@ui/ct/verbindung';
 
 export interface Start {
@@ -29,6 +30,8 @@ export interface Start {
    * (die Leitung, S4-1). Die Schnittstelle prüft es ohnehin; hier entscheidet es nur, ob der Editor aufgeht.
    */
   schreibbar: number[];
+  /** Kalender, in denen man Termine anlegen darf (`churchcal` „edit category“) – Reiter „Termine“ (W14): ohne keiner „Eintragen“. */
+  kalenderSchreiben: number[];
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -49,5 +52,6 @@ export async function ladeStart(): Promise<Start> {
     schreibbar: modulRechteAus(
       (rechte as Record<string, unknown> | null)?.[modulPort.kuerzel() ?? 'protokolle'],
     ).aendern,
+    kalenderSchreiben: [...schreibbareKalender(rechte)],
   };
 }

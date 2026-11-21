@@ -1,6 +1,6 @@
 // Die Bedien-Schicht in der Vorschau (W3c-1; Vorlage: Entwurf w3c-v2) – läuft IM abgeschotteten iframe (sandbox="allow-scripts",
 // kein allow-same-origin) und nirgends sonst. Sie meldet der Erweiterung nur per postMessage, was passiert ist: Zahlen für die
-// Stelle (Abschnitt i, Spalte j, Baustein k in der Reihenfolge der Seite) und – nur beim Text direkt tippen – den getippten
+// Stelle (Abschnitt i, Spalte j, Baustein k in der Reihenfolge der Seite; beim Ziehen die Stelle, VOR der etwas landet) und – nur beim Text direkt tippen – den getippten
 // Text. Mehr nimmt die Erweiterung nicht an (`nachricht.ts`), und Links prüft sie mit der echten Regel.
 //
 // `config` kommt von der Erweiterung: { scroll, symbole, modus: 'computer' | 'handy', darfHtml, abstaende, abstandNamen, weiter }.
@@ -53,13 +53,14 @@
   const rahmenSec = neu('div', 'b-rahmen b-rahmen--abschnitt');
   const rahmenBlock = neu('div', 'b-rahmen b-rahmen--baustein');
 
-  // Abschnitt-Leiste: Griff (vorerst nur mit Pfeiltasten – Ziehen folgt), nach oben/unten, Gestalten, Kopieren, Löschen
+  // Abschnitt-Leiste: Griff (ziehen oder Pfeiltasten), Gestalten, Kopieren, Löschen
   const werk = neu('div', 'b-werk');
   let werkFuer = null;
-  const griff = knopf('griff', 'griff', '', 'Abschnitt verschieben: Pfeil hoch oder runter (Ziehen kommt bald)');
+  const griff = knopf('griff', 'griff', '', voll ? 'Abschnitt verschieben: ziehen oder Pfeil hoch/runter' : 'Abschnitt verschieben: Pfeil hoch/runter');
   griff.classList.add('b-griff-abschnitt');
   werk.appendChild(griff);
-  [['hoch', 'hoch', '', 'Abschnitt nach oben'], ['runter', 'runter', '', 'Abschnitt nach unten'], ['gestalten', 'stift', 'Gestalten', 'Abschnitt gestalten'], ['kopieren', 'kopie', '', 'Abschnitt kopieren'], ['loeschen', 'muell', '', 'Abschnitt löschen']].forEach((a) => {
+  // Am Handy gibt es kein Ziehen: dort bleiben „nach oben“ und „nach unten“ (am Computer ersetzt der Griff sie).
+  (voll ? [] : [['hoch', 'hoch', '', 'Abschnitt nach oben'], ['runter', 'runter', '', 'Abschnitt nach unten']]).concat([['gestalten', 'stift', 'Gestalten', 'Abschnitt gestalten'], ['kopieren', 'kopie', '', 'Abschnitt kopieren'], ['loeschen', 'muell', '', 'Abschnitt löschen']]).forEach((a) => {
     const k = knopf(a[0], a[1], a[2], a[3]);
     if (a[0] === 'loeschen') k.classList.add('b-gefahr');
     werk.appendChild(k);
@@ -68,23 +69,37 @@
     const k = e.target.closest('button');
     if (!k || k.dataset.w === 'griff' || !werkFuer) return;
     e.stopPropagation();
-    senden({ was: k.dataset.w, i: abschnitte().indexOf(werkFuer) });
+    const i = abschnitte().indexOf(werkFuer);
+    if (k.dataset.w === 'hoch' || k.dataset.w === 'runter') { // eine Stelle weiter; am Rand nichts
+      const nach = k.dataset.w === 'hoch' ? i - 1 : i + 2;
+      if (nach >= 0 && nach <= abschnitte().length) senden({ was: 'verschieben', art: 'abschnitt', von: i, nach: nach });
+      return;
+    }
+    senden({ was: k.dataset.w, i: i });
   });
+  // Pfeiltasten am Griff: eine Stelle weiter. „Stelle“ heißt: vor welchem Abschnitt (0 = ganz oben, Anzahl = ganz unten).
   griff.addEventListener('keydown', (e) => {
     if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !werkFuer) return;
     e.preventDefault();
-    senden({ was: e.key === 'ArrowUp' ? 'hoch' : 'runter', i: abschnitte().indexOf(werkFuer) });
+    const i = abschnitte().indexOf(werkFuer);
+    const nach = e.key === 'ArrowUp' ? i - 1 : i + 2;
+    if (nach < 0 || nach > abschnitte().length) return;
+    senden({ was: 'verschieben', art: 'abschnitt', von: i, nach: nach });
   });
 
   // Baustein-Leiste (EINE helle Leiste: Stift = das Fenster des Bausteins) – wandert zum Baustein unter der Maus
   let blockleiste = null;
   let blockFuer = null;
+  let griffBaustein = null;
   if (voll) {
     blockleiste = neu('div', 'b-blockleiste');
+    griffBaustein = knopf('griff', 'griff', '', 'Baustein verschieben: ziehen oder Pfeil hoch/runter');
+    griffBaustein.classList.add('b-griff-baustein');
+    blockleiste.appendChild(griffBaustein);
     blockleiste.appendChild(knopf('fenster', 'stift', '', 'Baustein im Fenster bearbeiten'));
     blockleiste.addEventListener('click', (e) => {
       const k = e.target.closest('button');
-      if (!k || !blockFuer) return;
+      if (!k || k.dataset.w === 'griff' || !blockFuer) return;
       e.preventDefault();
       e.stopPropagation();
       const o = ortVon(blockFuer);
@@ -560,7 +575,7 @@
   };
 
   const layout = () => {
-    if (aktiv) return;
+    if (aktiv || zieh) return;
     alleAus();
     const sec = hov.sec;
     if (!sec || !sec.isConnected) return;
@@ -650,6 +665,7 @@
       plusLinie.hidden = false; setzePos(plusLinie, linieRect); plusLinie.style.width = (linieRect.r - linieRect.l) + 'px';
     }
   };
+  let zieh = null; // beim Ziehen: { art, quelle, el, griff, startX, startY, aktiv, ziel, lx, ly, raf }
   let layoutRaf = 0;
   const planeLayout = () => { if (layoutRaf) return; layoutRaf = requestAnimationFrame(() => { layoutRaf = 0; layout(); }); };
   const ungueltig = () => { hindernisse = null; planeLayout(); };
@@ -661,7 +677,7 @@
   const gleicheLuecke = (a, b) => (!a && !b) || (a && b && a.sp === b.sp && a.k === b.k);
   const hoverAktualisieren = () => {
     const z = zeiger.ziel;
-    if (!z || !z.closest || aktiv) return;
+    if (!z || !z.closest || aktiv || zieh) return;
     if (z.closest('.b-ueber, .b-format')) { clearTimeout(aufTimer); clearTimeout(blockTimer); blockTimer = 0; return; } // die Maus ist auf einem Bedienelement: alles bleibt
     clearTimeout(aufTimer);
     const px = zeiger.x + seiteX();
@@ -716,6 +732,164 @@
   addEventListener('resize', ungueltig);
   if (window.ResizeObserver && haupt) new ResizeObserver(ungueltig).observe(haupt);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(ungueltig);
+
+  // ── Ziehen (Pointer-Events, W3c-2; Vorlage: Entwurf w3c-v2) ─────────────────────────────────────────────────
+  // Abschnitt oder Baustein am Griff greifen. Erst ab 4 px Bewegung wird gezogen (ein Klick auf den Griff bleibt ein Klick). Die Stelle,
+  // vor der etwas landet, zeigt eine Linie; beim Baustein ist die Zielspalte gestrichelt (auch eine leere). Am oberen und unteren Rand
+  // scrollt die Seite von selbst. Esc bricht ab. Losgelassen geht EINE Nachricht `verschieben` raus – nur Zahlen.
+  const linie = document.createElement('div');
+  linie.className = 'b-linie';
+  linie.hidden = true;
+  document.body.appendChild(linie);
+  const geist = document.createElement('div');
+  geist.className = 'b-geist';
+  geist.hidden = true;
+  document.body.appendChild(geist);
+  const BAUSTEIN_NAME = { ueberschrift: 'Überschrift', akzentzeile: 'Handschrift-Zeile', text: 'Text', bild: 'Bild', bildText: 'Bild und Text', galerie: 'Galerie', knoepfe: 'Knöpfe', beitraege: 'Beiträge', termine: 'Termine', slider: 'Slider', livestream: 'Livestream', kontaktformular: 'Kontaktformular', gruppenliste: 'Gruppen', trenner: 'Trenner', html: 'Eigenes HTML' };
+  const blockName = (b) => BAUSTEIN_NAME[artVon(b)] || artVon(b) || 'Baustein';
+  const kurz = (el) => {
+    const t = el.querySelector('h1,h2,h3,.w-akzent,.w-text,.w-knopf,figcaption,img') || el;
+    const s = t.tagName === 'IMG' ? '[Bild]' : (t.textContent || '').replace(/\s+/g, ' ').trim();
+    return s ? (s.length > 38 ? s.slice(0, 36) + '…' : s) : '[leer]';
+  };
+  // Die Stelle zwischen zwei Abschnitten, die der Höhe y am nächsten liegt (0 = ganz oben … Anzahl = ganz unten).
+  const abschnittZiel = (y) => {
+    const rs = abschnitte().map((s) => { const r = s.getBoundingClientRect(); return { t: r.top + seiteY(), b: r.bottom + seiteY() }; });
+    if (!rs.length) return null;
+    let idx = 0;
+    for (let n = 0; n < rs.length; n++) if (y > (rs[n].t + rs[n].b) / 2) idx = n + 1;
+    const ly = idx === 0 ? rs[0].t : idx === rs.length ? rs[rs.length - 1].b : (rs[idx - 1].b + rs[idx].t) / 2;
+    return { nach: idx, ly: ly, lx: 0, lw: document.documentElement.clientWidth };
+  };
+  // Die Stelle in einer Spalte: der nächste Abschnitt, darin die nächste Spalte (auch eine leere), darin vor welchem Baustein.
+  const bausteinZiel = (x, y) => {
+    const secs = abschnitte();
+    if (!secs.length) return null;
+    let best = 0;
+    let bd = Infinity;
+    secs.forEach((s, n) => { const r = s.getBoundingClientRect(); const t = r.top + seiteY(); const b = r.bottom + seiteY(); const d = y < t ? t - y : y > b ? y - b : 0; if (d < bd) { bd = d; best = n; } });
+    const cols = spaltenVon(secs[best]);
+    if (!cols.length) return null;
+    let cj = 0;
+    let cd = Infinity;
+    cols.forEach((c, n) => { const r = c.getBoundingClientRect(); const l = r.left + seiteX(); const rr = r.right + seiteX(); const d = x < l ? l - x : x > rr ? x - rr : 0; if (d < cd) { cd = d; cj = n; } });
+    const col = cols[cj];
+    const bl = bausteineVon(col);
+    const cr = col.getBoundingClientRect();
+    let k = bl.length;
+    for (let n = 0; n < bl.length; n++) { const r = bl[n].getBoundingClientRect(); if (y < r.top + seiteY() + r.height / 2) { k = n; break; } }
+    let ly;
+    if (!bl.length) ly = cr.top + seiteY() + 24;
+    else if (k === 0) ly = bl[0].getBoundingClientRect().top + seiteY() - 6;
+    else if (k === bl.length) ly = bl[k - 1].getBoundingClientRect().bottom + seiteY() + 6;
+    else ly = (bl[k - 1].getBoundingClientRect().bottom + bl[k].getBoundingClientRect().top) / 2 + seiteY();
+    return { i: best, j: cj, k: k, col: col, ly: ly, lx: cr.left + seiteX(), lw: cr.width };
+  };
+  const zeigeLinie = (z) => {
+    if (!z) { linie.hidden = true; return; }
+    linie.hidden = false;
+    linie.style.left = z.lx + 'px';
+    linie.style.width = z.lw + 'px';
+    linie.style.top = (z.ly - 1.5) + 'px';
+  };
+  const markiereSpalte = (col) => {
+    arr(document.querySelectorAll('.b-ziel')).forEach((e) => { if (e !== col) e.classList.remove('b-ziel'); });
+    if (col) col.classList.add('b-ziel');
+  };
+  const zielAktualisieren = () => {
+    if (!zieh || !zieh.aktiv) return;
+    const x = zieh.lx + seiteX();
+    const y = zieh.ly + seiteY();
+    geist.style.left = (x + 14) + 'px';
+    geist.style.top = (y + 14) + 'px';
+    if (zieh.art === 'baustein') { zieh.ziel = bausteinZiel(x, y); zeigeLinie(zieh.ziel); markiereSpalte(zieh.ziel && zieh.ziel.col); }
+    else { zieh.ziel = abschnittZiel(y); zeigeLinie(zieh.ziel); }
+  };
+  const ziehAnfangen = () => {
+    zieh.aktiv = true;
+    document.body.classList.add('b-zieht');
+    zieh.el.classList.add('b-quelle');
+    geist.hidden = false;
+    geist.textContent = zieh.art === 'baustein' ? blockName(zieh.el) + ': ' + kurz(zieh.el) : 'Abschnitt: ' + kurz(zieh.el);
+    const tick = () => { // am Rand scrollt die Seite von selbst, je näher am Rand, desto schneller
+      if (!zieh || !zieh.aktiv) return;
+      const h = window.innerHeight;
+      const y = zieh.ly;
+      let v = 0;
+      if (y < 70) v = -Math.ceil((70 - y) / 5); else if (y > h - 70) v = Math.ceil((y - (h - 70)) / 5);
+      if (v) { window.scrollBy(0, v); zielAktualisieren(); }
+      zieh.raf = requestAnimationFrame(tick);
+    };
+    zieh.raf = requestAnimationFrame(tick);
+  };
+  const ziehBewegt = (e) => {
+    if (!zieh) return;
+    zieh.lx = e.clientX;
+    zieh.ly = e.clientY;
+    if (!zieh.aktiv && Math.hypot(e.clientX - zieh.startX, e.clientY - zieh.startY) > 4) ziehAnfangen();
+    zielAktualisieren();
+  };
+  const ziehAufraeumen = () => {
+    if (!zieh) return;
+    cancelAnimationFrame(zieh.raf);
+    const g = zieh.griff;
+    g.removeEventListener('pointermove', ziehBewegt);
+    g.removeEventListener('pointerup', ziehEnde);
+    g.removeEventListener('pointercancel', ziehAbbruch);
+    try { g.releasePointerCapture(zieh.pointerId); } catch (x) { /* schon frei */ }
+    zieh.el.classList.remove('b-quelle');
+    document.body.classList.remove('b-zieht');
+    geist.hidden = true;
+    linie.hidden = true;
+    markiereSpalte(null);
+    zieh = null;
+    planeLayout();
+  };
+  const ziehEnde = (e) => {
+    if (!zieh) return;
+    ziehBewegt(e);
+    const z = zieh;
+    ziehAufraeumen();
+    if (!z.aktiv || !z.ziel) return;
+    if (z.art === 'baustein') senden({ was: 'verschieben', art: 'baustein', von: z.quelle, nach: { i: z.ziel.i, j: z.ziel.j, k: z.ziel.k } });
+    else senden({ was: 'verschieben', art: 'abschnitt', von: z.quelle.i, nach: z.ziel.nach });
+  };
+  function ziehAbbruch() { ziehAufraeumen(); }
+  const ziehStart = (e, art, el, quelle) => {
+    if (e.button !== 0 || !voll) return;
+    e.preventDefault();
+    if (aktiv) beenden('uebernehmen', null);
+    zieh = { art: art, el: el, quelle: quelle, griff: e.currentTarget, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, aktiv: false, ziel: null, lx: e.clientX, ly: e.clientY };
+    // Der Fokus muss im iframe liegen, sonst kommt Esc hier nie an (er ginge an die Erweiterung darum herum).
+    try { e.currentTarget.focus({ preventScroll: true }); } catch (x) { /* nicht fokussierbar */ }
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) { /* kein echter Zeiger */ }
+    e.currentTarget.addEventListener('pointermove', ziehBewegt);
+    e.currentTarget.addEventListener('pointerup', ziehEnde);
+    e.currentTarget.addEventListener('pointercancel', ziehAbbruch);
+  };
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && zieh) { e.preventDefault(); ziehAbbruch(); } }, true);
+  if (voll) {
+    griffBaustein.addEventListener('pointerdown', (e) => { if (blockFuer) ziehStart(e, 'baustein', blockFuer, ortVon(blockFuer)); });
+    griffBaustein.addEventListener('keydown', (e) => { // Pfeiltasten: eine Stelle weiter in derselben Spalte
+      if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !blockFuer) return;
+      e.preventDefault();
+      const o = ortVon(blockFuer);
+      const nach = e.key === 'ArrowUp' ? o.k - 1 : o.k + 2;
+      if (nach < 0 || nach > bausteineVon(blockFuer.parentElement).length) return;
+      senden({ was: 'verschieben', art: 'baustein', von: o, nach: { i: o.i, j: o.j, k: nach } });
+    });
+    griff.addEventListener('pointerdown', (e) => { if (werkFuer) ziehStart(e, 'abschnitt', werkFuer, { i: abschnitte().indexOf(werkFuer) }); });
+  }
+  // Strg/Cmd+Z und Umschalt+Strg/Cmd+Z: Rückgängig/Wiederholen der Seite – nur, wenn hier kein Text offen ist (dort gilt der Verlauf
+  // des Feldes). Die Tasten kommen beim Rahmen sonst nicht an, solange der Fokus im iframe liegt.
+  document.addEventListener('keydown', (e) => {
+    if (aktiv || zieh || (!e.metaKey && !e.ctrlKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    const wieder = (k === 'z' && e.shiftKey) || (k === 'y' && !e.metaKey);
+    if (k !== 'z' && !wieder) return;
+    e.preventDefault();
+    senden({ was: wieder ? 'wiederholen' : 'rueckgaengig' });
+  });
 
   // ── Scroll merken, Start ───────────────────────────────────────────────────────────────────────────────────
   addEventListener('scroll', () => { senden({ was: 'scroll', y: Math.round(window.scrollY) }); }, { passive: true });

@@ -222,7 +222,7 @@ describe('Fenster „Einstellungen“ über dem Reiter „Seiten“', () => {
     // Das Speichern der Seite hängt – die Änderung ist also nur in der Arbeitskopie.
     d.speichereSeite.mockImplementation(() => new Promise(() => {}));
     await zeige();
-    await aus({ was: 'runter', i: 0 });
+    await aus({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 });
     await warte(0);
     expect(pos('zweiter Block')).toBeLessThan(pos('Willkommen'));
     const begonnen = d.beginneBearbeiten.mock.calls.length;

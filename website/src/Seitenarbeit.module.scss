@@ -32,6 +32,11 @@
   }
 }
 
+.verlauf {
+  display: flex;
+  gap: 2px;
+}
+
 .nochmal {
   @include m.textKnopf;
   font-size: 13px;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   absagen,
+  absagenNachZusage,
   antwortSchluessel,
   letzteAus,
   mitAntworten,
@@ -259,5 +260,83 @@ describe('mitAntworten – zehn Minuten lang sichtbar, mit „Rückgängig“', 
       ['Gesang', true, true],
     ]);
     expect(r[1]).toBe(z[1]);
+  });
+});
+
+describe('absagenNachZusage (E5c-6: Dienst abgeben, weil eine Vertretung gesucht wird)', () => {
+  const zugesagt = (id: number, extra: Partial<RohPlatz> = {}) =>
+    platz(id, { isAccepted: true, ...extra });
+
+  it('sagt einen ZUGESAGTEN Platz ab: decline auf die frisch gelesene ID, der Kommentar hängt am neuen leeren Platz', async () => {
+    const { ct, port } = nachbau([zugesagt(753)]);
+    const r = await absagenNachZusage(port, GESANG, ICH, '  Vertretung gesucht – gefragt: Ben  ');
+    expect(r).toEqual({ ok: true, platzId: 900, geschriebenAuf: 753 });
+    expect(ct.geschrieben).toEqual([
+      {
+        pfad: '/events/166/servicerequests/753/decline',
+        method: 'POST',
+        json: { comment: 'Vertretung gesucht – gefragt: Ben' },
+      },
+    ]);
+    expect(ct.plaetze[0]).toMatchObject({
+      personId: null,
+      name: null,
+      comment: 'Vertretung gesucht – gefragt: Ben',
+    });
+  });
+
+  it('nur angefragt (nicht zugesagt) → Konflikt, nichts geschrieben – dafür gibt es „absagen“', async () => {
+    const { ct, port } = nachbau([platz(753)]);
+    expect(await absagenNachZusage(port, GESANG, ICH, 'x')).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+    });
+    expect(ct.geschrieben).toEqual([]);
+  });
+
+  it('inzwischen steht dort jemand anderes → Konflikt (kein freier Platz für eine Vertretung); der Platz ist schon frei → Erfolg ohne Schreiben', async () => {
+    const a = nachbau([zugesagt(753, { personId: 46, name: 'Anna' })]);
+    expect(await absagenNachZusage(a.port, GESANG, ICH, 'x')).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+    });
+    expect(a.ct.geschrieben).toEqual([]);
+    const b = nachbau([leer(753)]);
+    expect(await absagenNachZusage(b.port, GESANG, ICH, 'x')).toEqual({ ok: true, platzId: 753 });
+    expect(b.ct.geschrieben).toEqual([]);
+  });
+
+  it('ohne Recht auf den Dienst ist der freie Platz danach unsichtbar – das heißt: ich stehe nicht mehr dort', async () => {
+    const { ct, port } = nachbau([zugesagt(753)]);
+    ct.nurSichtbarFuer = ICH;
+    const r = await absagenNachZusage(port, GESANG, ICH, 'x');
+    expect(r).toEqual({ ok: true, platzId: 753, geschriebenAuf: 753 });
+    expect(ct.geschrieben).toHaveLength(1);
+  });
+
+  it('403 → kein-recht; 401 → abgemeldet; Antwort verloren: nachgelesen (angekommen → Erfolg, sonst vorübergehend)', async () => {
+    const a = nachbau([zugesagt(753)]);
+    a.ct.schreibenFehler = 403;
+    expect(await absagenNachZusage(a.port, GESANG, ICH, 'x')).toEqual({
+      ok: false,
+      grund: 'kein-recht',
+    });
+    const b = nachbau([zugesagt(753)]);
+    b.ct.schreibenFehler = 401;
+    expect(await absagenNachZusage(b.port, GESANG, ICH, 'x')).toEqual({
+      ok: false,
+      grund: 'abgemeldet',
+    });
+    const c = nachbau([zugesagt(753)]);
+    c.ct.schreibenFehler = null;
+    c.ct.trotzdemSchreiben = true;
+    expect(await absagenNachZusage(c.port, GESANG, ICH, 'x')).toMatchObject({ ok: true });
+    const d = nachbau([zugesagt(753)]);
+    d.ct.schreibenFehler = 503;
+    expect(await absagenNachZusage(d.port, GESANG, ICH, 'x')).toMatchObject({
+      ok: false,
+      grund: 'voruebergehend',
+    });
+    expect(d.ct.geschrieben).toHaveLength(1); // nie wiederholt
   });
 });

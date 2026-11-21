@@ -36,6 +36,9 @@ const TAG = /^\d{4}-\d{2}-\d{2}$/;
 
 export type Zusage = 'ja' | 'vielleicht';
 
+/** So lang darf ein Name in einer gesuchten Vertretung sein (länger wird gekürzt). */
+const MAX_NAME = 80;
+
 /** So lang darf die Notiz zu einer Antwort sein (E5c-2) – länger wird beim Lesen und Schreiben gekürzt. */
 export const MAX_NOTIZ = 140;
 
@@ -55,11 +58,40 @@ export interface Antwort {
 /** Je Termin (ID als Text) die Antwort. */
 export type Antworten = Record<string, Antwort>;
 
+/**
+ * **„Vertretung gesucht“** (Bauplan E5c-6): Wer seinen zugesagten Dienst abgibt und eine Vertretung sucht, merkt es sich hier –
+ * im **eigenen** Wert der Ablage (das Team darf sie lesen, der Absage-Kommentar am Platz ist für Mitarbeitende unlesbar).
+ * Optional und abwärtskompatibel wie `notiz`/`dienste` (`fassung` bleibt 1; alte Werte ohne das Feld gelten weiter).
+ * - `dienst`: der Dienst (ChurchTools-Dienst-ID), für den eine Vertretung gesucht wird,
+ * - `gefragt`: die Personen, die gefragt wurden (IDs in der Reihenfolge der Auswahl; leer = niemand gefragt, nur das Schild),
+ * - `seit`: ISO-Zeitpunkt der Suche,
+ * - `tag`: Tag des Termins (daran erkennt man Vergangenes – es fällt beim Schreiben heraus, wie bei den Antworten),
+ * - `name`: Name der Person, die eine Vertretung sucht – damit das Team ihn ohne weitere Abfrage zeigen kann („Anna sucht …“),
+ * - `gefragtNamen`: die Namen der Gefragten (parallel zu `gefragt`) – fürs Schild in „Planen“ („gefragt: Ben, Finn“).
+ */
+export interface Vertretung {
+  dienst: number;
+  gefragt: number[];
+  seit: string;
+  tag: string;
+  name: string;
+  gefragtNamen: string[];
+}
+
+/** Je Termin **und Dienst** (`vertretungsSchluessel`) die gesuchte Vertretung. */
+export type Vertretungen = Record<string, Vertretung>;
+
+/** Der Schlüssel in `Vertretungen`: Termin und Dienst (an einem Termin kann man zwei Dienste haben). */
+export const vertretungsSchluessel = (terminId: number, dienstId: number): string =>
+  `${terminId}:${dienstId}`;
+
 interface Ablage {
   art: typeof ART;
   fassung: typeof FASSUNG;
   person: number;
   antworten: Antworten;
+  /** Nur, wenn eine Vertretung gesucht wird (E5c-6) – sonst fehlt das Feld ganz. */
+  vertretungen?: Vertretungen;
   /** ISO-Zeitpunkt des Speicherns. */
   stand: string;
 }
@@ -69,6 +101,7 @@ export interface PersonenWert {
   wert: Wert;
   person: number;
   antworten: Antworten;
+  vertretungen: Vertretungen;
   stand: string;
 }
 
@@ -139,6 +172,32 @@ export function antwortBereinigt(e: {
   return aus;
 }
 
+/**
+ * **Die eine Stelle, die eine gesuchte Vertretung in ihre Form bringt** – beim Lesen UND beim Schreiben: `dienst` ganze Zahl,
+ * `gefragt` nur ganze Zahlen ohne Doppel aufsteigend, `seit` Text, `tag` ein Tag. Unbrauchbar → `null` (der Eintrag fällt weg).
+ */
+export function vertretungBereinigt(
+  v: Partial<Record<keyof Vertretung, unknown>> | null,
+): Vertretung | null {
+  if (!v || !istGanzeZahl(v.dienst) || typeof v.tag !== 'string' || !TAG.test(v.tag)) return null;
+  if (!istText(v.seit)) return null;
+  const gefragt = Array.isArray(v.gefragt)
+    ? [...new Set((v.gefragt as unknown[]).filter(istGanzeZahl))]
+    : [];
+  const text = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, MAX_NAME) : '');
+  const gefragtNamen = Array.isArray(v.gefragtNamen)
+    ? (v.gefragtNamen as unknown[]).map(text).filter((n) => n !== '')
+    : [];
+  return {
+    dienst: v.dienst,
+    gefragt,
+    seit: v.seit,
+    tag: v.tag,
+    name: text(v.name) || 'Jemand',
+    gefragtNamen,
+  };
+}
+
 /** Ein Wert → Antworten einer Person, wenn er von uns ist und vollständig; sonst `null`. Einzelne kaputte Einträge fallen weg. */
 export function personenWertAus(w: Wert): PersonenWert | null {
   const a = inhaltAus<Partial<Ablage>>(w, ART, FASSUNG);
@@ -155,7 +214,14 @@ export function personenWertAus(w: Wert): PersonenWert | null {
         dienste: v.dienste,
       });
   }
-  return { wert: w, person: a.person, antworten, stand: a.stand };
+  const vertretungen: Vertretungen = {};
+  if (a.vertretungen && typeof a.vertretungen === 'object' && !Array.isArray(a.vertretungen)) {
+    for (const [schluessel, e] of Object.entries(a.vertretungen)) {
+      const v = vertretungBereinigt(e);
+      if (v) vertretungen[schluessel] = v;
+    }
+  }
+  return { wert: w, person: a.person, antworten, vertretungen, stand: a.stand };
 }
 
 /** Neuer als: späterer `stand`, bei Gleichstand die höhere Wert-ID. */
@@ -191,6 +257,8 @@ export type LesenErgebnis<T> = { ok: true; wert: T } | { ok: false; grund: Verfu
 /** Die Antworten einer Person samt dem Zeitpunkt, an dem sie geschrieben wurden (`stand`). */
 export interface StandAntworten {
   antworten: Antworten;
+  /** Gesuchte Vertretungen (E5c-6); fehlt = keine. */
+  vertretungen?: Vertretungen;
   stand: string;
 }
 
@@ -230,6 +298,26 @@ export function antwortenZusammen(
   return zusammen;
 }
 
+/**
+ * Die gesuchten Vertretungen aller Personen aus mehreren Kategorien: je Person gilt **derselbe** Wert wie bei den Antworten
+ * (`neuesterStand`) – eine Regel, damit beides aus demselben Schreibvorgang stammt.
+ */
+export function vertretungenZusammen(
+  jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
+): Map<number, Vertretungen> {
+  const kandidaten = new Map<number, { kategorie: number; wert: StandAntworten }[]>();
+  for (const [kategorie, personen] of jeKategorie)
+    for (const [person, wert] of personen)
+      kandidaten.set(person, [...(kandidaten.get(person) ?? []), { kategorie, wert }]);
+  const zusammen = new Map<number, Vertretungen>();
+  for (const [person, liste] of kandidaten) {
+    const beste = neuesterStand(liste);
+    if (beste?.vertretungen && Object.keys(beste.vertretungen).length > 0)
+      zusammen.set(person, beste.vertretungen);
+  }
+  return zusammen;
+}
+
 /** Alle Antworten einer Kategorie, je Person der neueste Wert (mit `stand`) – **frisch**, nie aus einem Cache. */
 export async function alleAntwortenLesen(
   p: EntwurfPort,
@@ -241,7 +329,10 @@ export async function alleAntwortenLesen(
     return {
       ok: true,
       wert: new Map(
-        [...je].map(([person, v]) => [person, { antworten: v.antworten, stand: v.stand }]),
+        [...je].map(([person, v]) => [
+          person,
+          { antworten: v.antworten, vertretungen: v.vertretungen, stand: v.stand },
+        ]),
       ),
     };
   } catch (e) {
@@ -260,7 +351,9 @@ export async function eigeneAntwortenLesen(
   modul: number,
   kategorien: number[],
   person: number,
-): Promise<LesenErgebnis<{ antworten: Antworten; stand: string | null }>> {
+): Promise<
+  LesenErgebnis<{ antworten: Antworten; vertretungen: Vertretungen; stand: string | null }>
+> {
   const kandidaten: { kategorie: number; wert: PersonenWert }[] = [];
   let gelesen = 0;
   let fehler: VerfuegbarkeitGrund | null = null;
@@ -275,7 +368,14 @@ export async function eigeneAntwortenLesen(
   }
   if (gelesen === 0 && fehler) return { ok: false, grund: fehler };
   const beste = neuesterStand(kandidaten);
-  return { ok: true, wert: { antworten: beste?.antworten ?? {}, stand: beste?.stand ?? null } };
+  return {
+    ok: true,
+    wert: {
+      antworten: beste?.antworten ?? {},
+      vertretungen: beste?.vertretungen ?? {},
+      stand: beste?.stand ?? null,
+    },
+  };
 }
 
 // ── Schreiben ────────────────────────────────────────────────────────────────
@@ -302,6 +402,42 @@ export function gleicheAntworten(a: Antworten, b: Antworten): boolean {
   return ka.length === kb.length && ka.every((k, i) => k === kb[i] && gleicheAntwort(a[k], b[k]));
 }
 
+/** Gleiche gesuchte Vertretungen – unabhängig von der Reihenfolge der Schlüssel, nach der Bereinigung verglichen. */
+export function gleicheVertretungen(x: Vertretungen, y: Vertretungen): boolean {
+  const ka = Object.keys(x).sort();
+  const kb = Object.keys(y).sort();
+  return (
+    ka.length === kb.length &&
+    ka.every((k, i) => {
+      if (k !== kb[i]) return false;
+      const a = vertretungBereinigt(x[k]);
+      const b = vertretungBereinigt(y[k]);
+      return (
+        !!a &&
+        !!b &&
+        a.dienst === b.dienst &&
+        a.tag === b.tag &&
+        a.seit === b.seit &&
+        a.name === b.name &&
+        a.gefragt.length === b.gefragt.length &&
+        a.gefragt.every((id, j) => id === b.gefragt[j]) &&
+        a.gefragtNamen.length === b.gefragtNamen.length &&
+        a.gefragtNamen.every((n, j) => n === b.gefragtNamen[j])
+      );
+    })
+  );
+}
+
+/** Nur die Vertretungen, deren Termin nicht vergangen ist (`tag >= heute`), bereinigt wie beim Lesen. */
+function vertretungenAb(v: Vertretungen, heute: string): Vertretungen {
+  const aus: Vertretungen = {};
+  for (const [k, e] of Object.entries(v)) {
+    const b = vertretungBereinigt(e);
+    if (b && b.tag >= heute) aus[k] = b;
+  }
+  return aus;
+}
+
 /** Die eigenen Werte einer Kategorie, neueste zuerst. */
 function eigeneWerte(werte: Wert[], person: number): PersonenWert[] {
   return werte
@@ -316,22 +452,15 @@ async function eineKategorieSchreiben(
   kategorie: number,
   person: number,
   antworten: Antworten,
+  vertretungen: Vertretungen | undefined,
+  heute: string,
 ): Promise<KategorieErgebnis> {
   const fehl = (grund: VerfuegbarkeitGrund): KategorieErgebnis => ({
     kategorie,
     ok: false,
     grund,
   });
-  const leer = Object.keys(antworten).length === 0;
   const stand = p.jetzt();
-  const text = JSON.stringify({
-    art: ART,
-    fassung: FASSUNG,
-    person,
-    antworten,
-    stand,
-  } satisfies Ablage);
-  if (!leer && text.length > MAX_ZEICHEN) return fehl('zu-gross');
 
   // 1. Frisch lesen.
   let eigene: PersonenWert[];
@@ -340,6 +469,23 @@ async function eineKategorieSchreiben(
   } catch (e) {
     return fehl(grundAus(p, e));
   }
+
+  // Die gesuchten Vertretungen (E5c-6) gehören zum Wert der Person: Wer nur die Antworten speichert („Wann kann ich?“),
+  // gibt `undefined` mit – dann bleibt, was FRISCH gelesen dasteht (nicht, was die Seite beim Öffnen sah). Sonst löschte
+  // jedes Speichern in „Wann kann ich?“ die Markierung. Vergangenes fällt auch hier heraus.
+  const vertretungenZiel = vertretungenAb(vertretungen ?? eigene[0]?.vertretungen ?? {}, heute);
+  const hatVertretung = Object.keys(vertretungenZiel).length > 0;
+  const leer = Object.keys(antworten).length === 0 && !hatVertretung;
+  const text = JSON.stringify({
+    art: ART,
+    fassung: FASSUNG,
+    person,
+    antworten,
+    // Ohne Vertretung fehlt das Feld ganz (alte Leser kennen es nicht, der Wert bleibt wie vor E5c-6).
+    ...(hatVertretung ? { vertretungen: vertretungenZiel } : {}),
+    stand,
+  } satisfies Ablage);
+  if (!leer && text.length > MAX_ZEICHEN) return fehl('zu-gross');
 
   // 2. Schreiben – nie wiederholt. Den neuesten eigenen Wert ändern, die Doppel löschen.
   let abgebrochen = false;
@@ -368,7 +514,10 @@ async function eineKategorieSchreiben(
   const da = jetzt[0];
   const angekommen = leer
     ? !da
-    : !!da && da.stand === stand && gleicheAntworten(da.antworten, antworten);
+    : !!da &&
+      da.stand === stand &&
+      gleicheAntworten(da.antworten, antworten) &&
+      gleicheVertretungen(da.vertretungen, vertretungenZiel);
   if (angekommen) return { kategorie, ok: true };
   return fehl(abgebrochen ? 'voruebergehend' : 'nicht-angekommen');
 }
@@ -378,6 +527,10 @@ async function eineKategorieSchreiben(
  * drosselt). Einträge mit `tag < heute` fallen raus; bleibt nichts übrig, wird der eigene Wert gelöscht statt
  * ein leerer geschrieben. Je Kategorie ein Ergebnis; eine gescheiterte bricht die anderen nicht ab, und nichts
  * wird wiederholt.
+ *
+ * **`vertretungen` (E5c-6):** `undefined` = **erhalten, was in der Kategorie frisch gelesen dasteht** (der Weg von „Wann kann
+ * ich?“ – sonst löschte das Speichern die Markierung „Vertretung gesucht“); ein Wert = genau diese (der Weg von „Vertretung
+ * suchen“). Vergangene Termine fallen in beiden Fällen heraus. Ein Wert ohne Antworten **und** ohne Vertretung wird gelöscht.
  */
 export async function eigeneAntwortenSchreiben(
   p: EntwurfPort,
@@ -386,6 +539,7 @@ export async function eigeneAntwortenSchreiben(
   person: number,
   antworten: Antworten,
   heute: string,
+  vertretungen?: Vertretungen,
 ): Promise<KategorieErgebnis[]> {
   const bleibt: Antworten = {};
   // Bereinigt wie beim Lesen: Was hier geschrieben wird, ist genau das, was das Nachlesen zurückgibt.
@@ -393,6 +547,46 @@ export async function eigeneAntwortenSchreiben(
     if (e.tag >= heute) bleibt[termin] = antwortBereinigt(e);
   const ergebnisse: KategorieErgebnis[] = [];
   for (const kat of kategorien)
-    ergebnisse.push(await eineKategorieSchreiben(p, modul, kat, person, bleibt));
+    ergebnisse.push(
+      await eineKategorieSchreiben(p, modul, kat, person, bleibt, vertretungen, heute),
+    );
   return ergebnisse;
+}
+
+/**
+ * **„Vertretung gesucht“ in den eigenen Wert schreiben** (E5c-6, Schritt a des Ablaufs): erst die eigenen Werte **frisch** aus
+ * allen Kategorien lesen (die Antworten und bisherigen Markierungen bleiben, wie sie sind – nicht, was die Seite einmal sah),
+ * die Markierung dazutun und überall hineinschreiben, **nacheinander**, nachgelesen. Ist das Lesen nicht möglich, wird
+ * **nichts** geschrieben (ein unbekannter Stand würde die Antworten überschreiben). Nichts wird wiederholt.
+ *
+ * Eine bestehende Markierung zu **demselben Termin und Dienst** wird ersetzt (die neue Suche gilt).
+ */
+export async function vertretungMarkieren(
+  p: EntwurfPort,
+  modul: number,
+  kategorien: number[],
+  person: number,
+  neu: { terminId: number; vertretung: Vertretung },
+  heute: string,
+): Promise<
+  { ok: true; ergebnisse: KategorieErgebnis[] } | { ok: false; grund: VerfuegbarkeitGrund }
+> {
+  const gelesen = await eigeneAntwortenLesen(p, modul, kategorien, person);
+  if (!gelesen.ok) return { ok: false, grund: gelesen.grund };
+  const bereinigt = vertretungBereinigt(neu.vertretung);
+  if (!bereinigt) return { ok: false, grund: 'nicht-angekommen' };
+  const vertretungen: Vertretungen = {
+    ...gelesen.wert.vertretungen,
+    [vertretungsSchluessel(neu.terminId, bereinigt.dienst)]: bereinigt,
+  };
+  const ergebnisse = await eigeneAntwortenSchreiben(
+    p,
+    modul,
+    kategorien,
+    person,
+    gelesen.wert.antworten,
+    heute,
+    vertretungen,
+  );
+  return { ok: true, ergebnisse };
 }

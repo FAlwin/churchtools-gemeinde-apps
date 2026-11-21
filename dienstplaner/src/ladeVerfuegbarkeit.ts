@@ -23,6 +23,7 @@ import {
   eigeneAntwortenSchreiben,
   type Antworten,
   type VerfuegbarkeitGrund,
+  type Vertretungen,
 } from '@shared/dienstplan/verfuegbarkeit';
 import type { ModulRechte } from '@shared/ct/modulRechte';
 import { modulId, port } from './ladeEntwuerfe';
@@ -43,6 +44,8 @@ export interface Verfuegbarkeit {
   bereit: number[];
   /** Die eigenen gespeicherten Antworten; leer, wenn nichts da ist oder nichts gelesen werden konnte. */
   antworten: Antworten;
+  /** Die eigenen gesuchten Vertretungen (E5c-6); leer, wenn keine da ist oder nichts gelesen werden konnte. */
+  vertretungen: Vertretungen;
   /** Lesen ging schief – dann steht `antworten` für nichts, und es wird nicht geschrieben. */
   lesefehler: VerfuegbarkeitGrund | null;
 }
@@ -53,6 +56,7 @@ export const KEINE_VERFUEGBARKEIT: Verfuegbarkeit = {
   gruppen: [],
   bereit: [],
   antworten: {},
+  vertretungen: {},
   lesefehler: null,
 };
 
@@ -76,11 +80,19 @@ export async function verfuegbarkeitLesen(
     .filter((z) => z.stand === 'bereit' && z.kategorie !== null)
     .map((z) => z.kategorie as number);
   if (bereit.length === 0) {
-    return { modul, gruppen: zeilen, bereit, antworten: {}, lesefehler: null };
+    return { modul, gruppen: zeilen, bereit, antworten: {}, vertretungen: {}, lesefehler: null };
   }
   const r = await eigeneAntwortenLesen(p, modul, bereit, person);
-  if (!r.ok) return { modul, gruppen: zeilen, bereit, antworten: {}, lesefehler: r.grund };
-  return { modul, gruppen: zeilen, bereit, antworten: r.wert.antworten, lesefehler: null };
+  if (!r.ok)
+    return { modul, gruppen: zeilen, bereit, antworten: {}, vertretungen: {}, lesefehler: r.grund };
+  return {
+    modul,
+    gruppen: zeilen,
+    bereit,
+    antworten: r.wert.antworten,
+    vertretungen: r.wert.vertretungen,
+    lesefehler: null,
+  };
 }
 
 /**
@@ -118,7 +130,8 @@ export function einrichtbareGruppen(v: Verfuegbarkeit): Dienstgruppe[] {
   return v.gruppen.filter((z) => z.stand === 'einrichtbar').map((z) => z.gruppe);
 }
 
-function grundSatz(g: VerfuegbarkeitGrund): string {
+/** Warum Speichern oder Lesen nicht ging – in Worten (auch für „Vertretung suchen“, E5c-6). */
+export function grundSatz(g: VerfuegbarkeitGrund): string {
   switch (g) {
     case 'abgemeldet':
       return 'Du bist bei ChurchTools nicht mehr angemeldet. Bitte die Seite neu laden.';

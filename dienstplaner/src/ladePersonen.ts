@@ -21,7 +21,12 @@ import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { plusTage } from '@shared/ct/datum';
-import { mitgliederAus, type RohMitglied } from '@shared/organigramm/mitglieder';
+import {
+  istLeitung,
+  mitgliederAus,
+  type Rolle,
+  type RohMitglied,
+} from '@shared/organigramm/mitglieder';
 import {
   abwesenheitenAus,
   gruppenMitAbwesenheitsRecht,
@@ -82,6 +87,11 @@ export async function ladePersonen(
     /** Global `churchservice['manage absent']` (`DienstRechte.abwesenheitenAller`) – dann sieht man alle Gruppen. */
     abwesenheitenAller: boolean;
     quelle?: PersonenQuelle;
+    /**
+     * Die Rollen (`/group/roles`, `rollenAus`) – nur wenn die Leitung gebraucht wird („Vertretung suchen“, E5c-6): dann steht
+     * sie im Stand der Gruppe (`leitung`). Ohne: kein Feld, die Ansicht „Personen“ braucht sie nicht.
+     */
+    rollen?: ReadonlyMap<number, Rolle>;
   },
 ): Promise<Map<number, GruppenStand>> {
   const quelle = o.quelle ?? CT_QUELLE;
@@ -134,6 +144,9 @@ export async function ladePersonen(
     }
     stand.set(id, {
       art: 'da',
+      ...(o.rollen && mitglieder.status === 'fulfilled'
+        ? { leitung: leitungIds(mitglieder.value as RohMitglied[], o.rollen) }
+        : {}),
       mitglieder:
         mitglieder.status === 'fulfilled'
           ? aktivePersonen(mitglieder.value as RohMitglied[])
@@ -146,6 +159,14 @@ export async function ladePersonen(
   });
   if (abgemeldet.fehler) throw abgemeldet.fehler;
   return stand;
+}
+
+/** Die aktiven Mitglieder einer Gruppe, deren Rolle Leitung ist (`istLeitung`, wie im Organigramm), ohne Doppelte. */
+function leitungIds(roh: RohMitglied[], rollen: ReadonlyMap<number, Rolle>): number[] {
+  const { mitglieder } = mitgliederAus(roh);
+  return [
+    ...new Set(mitglieder.filter((m) => istLeitung(rollen, m.rolleId)).map((m) => m.personId)),
+  ];
 }
 
 /** Die aktiven Mitglieder einer Gruppe als Personen (wie im Organigramm: `mitgliederAus`), ohne Doppelte. */

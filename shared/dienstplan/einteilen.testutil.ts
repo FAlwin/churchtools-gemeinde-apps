@@ -39,6 +39,8 @@ export function nachbau(plaetze: RohPlatz[]) {
      * Platz nach der eigenen Absage fehlt dann ganz. `null` = alles sichtbar (Admin, Planer).
      */
     nurSichtbarFuer: null as number | null,
+    /** Selbst eintragen verweigert ChurchTools (403) – ohne Gruppenrecht `+entry free`, gemessen 20./21.11.2026 (E5c-6). */
+    selbstEintragenVerboten: false,
   };
   const ersetze = (alteId: number, neu: Partial<RohPlatz>) => {
     const i = ct.plaetze.findIndex((p) => p.id === alteId);
@@ -90,7 +92,18 @@ export function nachbau(plaetze: RohPlatz[]) {
           }
         : () => {
             const id = Number(/servicerequests\/(\d+)/.exec(pfad)![1]);
-            if (pfad.endsWith('/accept')) ersetze(id, { isAccepted: true });
+            // Selbst übernehmen (E5c-6, gemessen 21.11.2026): `PUT /persons/{ich}/servicerequests/{platz} {isAccepted:true}` –
+            // nur ein FREIER Platz, neue ID, die Person steht zugesagt dort; ein besetzter Platz → 403.
+            const selbst = /^\/persons\/(\d+)\/servicerequests\//.exec(pfad);
+            if (selbst && auftrag.method === 'PUT') {
+              const p = ct.plaetze.find((q) => q.id === id);
+              if (ct.selbstEintragenVerboten || (p && p.name)) throw new Fehler(403);
+              ersetze(id, {
+                personId: Number(selbst[1]),
+                name: `Person ${selbst[1]}`,
+                isAccepted: true,
+              });
+            } else if (pfad.endsWith('/accept')) ersetze(id, { isAccepted: true });
             else if (pfad.endsWith('/undo')) {
               const jetzt = ct.plaetze.findIndex((p) => p.id === id);
               const alt = ct.abgesagt.get(id);

@@ -5,8 +5,9 @@
  * über die Kategorien zusammengeführt – mit derselben Regel wie bei den eigenen Antworten (`antwortenZusammen`, neuester
  * `stand`).
  *
- * Gelesen werden nur die Dienstgruppen, die der Aufrufer nennt (die planbaren, deren Dienste im Raster stehen – die
- * Sichtbarkeit für Mitglieder kommt erst mit E5c-6). Zum Lesen genügt das Recht **„sehen“** auf die Kategorie (nicht „bereit“).
+ * Gelesen werden nur die Dienstgruppen, die der Aufrufer nennt (die planbaren, deren Dienste im Raster stehen – und
+ * für „Vertretung suchen“ (E5c-6) die **eigenen**; fremde Antworten zeigt die App sonst nur Planern). Mit den Antworten kommen
+ * die gesuchten Vertretungen (`vertretungen`, aus demselben Wert). Zum Lesen genügt das Recht **„sehen“** auf die Kategorie (nicht „bereit“).
  *
  * **Die Zweige einzeln – vorübergehend ist nicht ungültig:**
  * - **Kategorie fehlt oder kein Recht „sehen“ / ChurchTools verweigert das Lesen** = die Dienstgruppe ist **nicht sichtbar**
@@ -27,6 +28,7 @@ import {
   alleAntwortenLesen,
   antwortenSchublade,
   antwortenZusammen,
+  vertretungenZusammen,
   type StandAntworten,
   type VerfuegbarkeitGrund,
 } from '@shared/dienstplan/verfuegbarkeit';
@@ -71,7 +73,11 @@ export async function antwortenLesen(
   if (gescheitert.includes('abgemeldet'))
     throw p.fehler(401, 'Du bist bei ChurchTools nicht mehr angemeldet.');
   if (gescheitert.length > 0) throw p.fehler(503, 'ChurchTools antwortet gerade nicht.');
-  return { jePerson: antwortenZusammen(jeKategorie), sichtbar };
+  return {
+    jePerson: antwortenZusammen(jeKategorie),
+    sichtbar,
+    vertretungen: vertretungenZusammen(jeKategorie),
+  };
 }
 
 /**

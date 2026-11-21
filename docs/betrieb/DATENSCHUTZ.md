@@ -196,6 +196,7 @@ eingetragenen Formular-Adresse ohne Daten (`fetch(..., { mode: 'no-cors' })`, `a
   Gruppentreffen.
 - Schreiben:
   - Termine mit Einladungen (ChurchTools verschickt dazu selbst Mails, `protokolle/src/bearbeiten.ts:6-10`).
+  - Termine **ohne Einladung** aus dem Reiter „Termine“ (Titel, Datum, Uhrzeit, optional Ort; `protokolle/src/terminAnlegen.ts`, `terminEintragen.ts`); gelesen werden dafür die Kalender (nur die mit dem Recht „Termine anlegen“) und die Termine des gewählten Tages.
   - Gruppentreffen, Anwesenheit und Check-in.
   - Optional ein **Beitrag in der Gruppe** (`group_intern`, `protokolle/src/beitragSchreiben.ts`).
   - Rechte je Gruppenrolle beim Einrichten (`protokolle/src/einrichten.ts:181-204`).
@@ -204,7 +205,7 @@ eingetragenen Formular-Adresse ohne Daten (`fetch(..., { mode: 'no-cors' })`, `a
 - Erweiterungs-Speicher (`shared/protokolle/speicher.ts`):
   - `protokolle-g<Gruppe>`: Protokolle mit Freitext (kann Namen enthalten), Status, Freigabe und Sperre mit
     Personen-ID und Name.
-  - `mitarbeit-g<Gruppe>`: To-Dos mit Zuständigen (IDs, bei Externen nur Name) sowie Vorschläge.
+  - `mitarbeit-g<Gruppe>`: To-Dos mit Zuständigen (IDs, bei Externen nur Name), Vorschläge sowie je Termin-Baustein ein Vermerk „im Kalender / nicht eintragen“ (Person-ID, Zeit, Kalender- und Termin-Nummer; `shared/protokolle/terminStand.ts`).
   - `vorlagen`: Protokoll-Vorlagen.
 
 **KI („Mit KI füllen“):** Die Erweiterung ruft **keine** KI auf (`protokolle/src/KiFuellenFenster.tsx:141-155`).

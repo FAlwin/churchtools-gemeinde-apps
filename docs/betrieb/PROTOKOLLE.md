@@ -44,8 +44,8 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Protokolle sind vertraulic
 geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
 
 - Je Gruppe gibt es zwei Kategorien im Speicher der Erweiterung: **„Protokolle · <Gruppe>“** (Kürzel
-  `protokolle-g<ID>`, nur die Leitung schreibt) und **„Mitarbeit · <Gruppe>“** (`mitarbeit-g<ID>`, To-Dos und
-  Vorschläge). Dazu gemeinsam **„Vorlagen“** (`vorlagen`).
+  `protokolle-g<ID>`, nur die Leitung schreibt) und **„Mitarbeit · <Gruppe>“** (`mitarbeit-g<ID>`, To-Dos, Vorschläge und der
+  Vermerk je Termin im Reiter „Termine“). Dazu gemeinsam **„Vorlagen“** (`vorlagen`).
 - Die Rechte hängen an **„Rolle X in Gruppe Y“** und folgen einem Rollenwechsel sofort. Setzen kann sie nur ein
   **Admin** (ChurchTools-Recht „Personen administrieren“) – deshalb wird jede Gruppe einmal von einem Admin
   eingerichtet: Reiter **„Einstellungen“** (nur für Admins sichtbar) → Gruppe antippen → je Rolle „Kein Zugriff“,
@@ -511,6 +511,20 @@ auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen.
 Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text kommen nur aus **freigegebenen**
 Protokollen, To-Dos aus allen. Ein Treffer öffnet die Sitzung am Tagesordnungspunkt.
 
+**Reiter „Termine“ (W14, 21.11.2026):** zwischen „To-Dos“ und „Einstellungen“. Er sammelt die **Termin-Bausteine aller Sitzungen** der eigenen Gruppen (**Entwurf und freigegeben** –
+anders als die Suche, die nur Freigegebenes zeigt) nach Datum: oben **„Noch nicht im Kalender“**, darunter einklappbar **„Im Kalender“** (Kalender, Zeit, Link „In ChurchTools öffnen“ – führt zum
+Kalender der Instanz) und **„Nicht eintragen“** („Wieder anzeigen“). Ein Baustein ohne gültiges Datum fehlt. Im Protokoll ändert sich nichts. Bei mehreren Gruppen: Filter „Gruppe“.
+**Eintragen** (Textknopf) öffnet das Fenster „In Kalender eintragen“: Kalender (nur mit dem Recht „Termine anlegen“ im Kalender, `churchcal` „edit category“ – die Leitung hat es für den Kalender
+der Gruppe, Mitglieder nicht; vorausgewählt der Kalender der Gruppe), Titel, Datum, **Ganztägig** oder Von–Bis, Ort. Titel und Uhrzeit liest `titelUndUhrzeit` aus dem Text („Heiligabend, 16 Uhr“ →
+„Heiligabend“, 16:00 bis 17:00; ohne Uhrzeit ganztägig). **Ganztägig geht als `YYYY-MM-DD` für Beginn und Ende** an `POST /calendars/{id}/appointments` (so liest und schreibt ChurchTools
+ganztägige Termine, `allDay` gibt es dort nicht als Feld), mit Uhrzeit als UTC aus der Ortszeit der Gemeinde. **Es gehen keine Einladungen raus** (kein `meetingrequests`).
+**Doppelt vermeiden:** Vor dem Eintragen liest das Fenster die Termine des Tages im gewählten Kalender; ein ähnlicher Titel (Wortvergleich aus W12, `doppelt.ts`; im Kalender genügt, dass alle Wörter
+des kürzeren Titels im längeren stehen) bietet **„Nur verknüpfen – nichts Neues anlegen“** (vorgewählt) oder „Trotzdem neu anlegen“. Lässt sich der Kalender nicht lesen, bleibt „Eintragen“ gesperrt.
+**Sicher bei Aussetzern:** angelegt wird mit `terminAnlegen` (derselbe Kern wie beim Festlegen einer Sitzung; unklare Antwort → im Kalender nachsehen), danach **nachgelesen**; erst dann gilt der Termin als
+eingetragen. **Wo der Stand steht:** je Baustein ein Wert `termin-stand` in **„Mitarbeit · <Gruppe>“** (Schlüssel `termin-<Sitzung>-<Block-ID>`, Stand `offen`/`nichtEintragen`/`imKalender` mit
+Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene bleiben unangetastet, keine Schreibsperre nötig); wie To-Dos und Vorschläge schreiben dort alle mit Schreibrecht in
+„Mitarbeit“, nie wird hart gelöscht, und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
+
 Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
 eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in den Einstellungen.
 
@@ -533,6 +547,10 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   Suche (`suche.ts`), Beitrag nach der Freigabe (`beitrag.ts`), das Protokoll als Blatt fürs PDF (`protokollBlatt.ts`,
   gezeichnet in `ui/teilen/protokollPdf.ts` auf dem gemeinsamen `PdfSatz`; S6-3a; Fenster `ProtokollTeilenFenster.tsx`,
   nachgeladen über `ProtokollTeilen.tsx`, S6-3b).
+- Reiter „Termine“ (W14): Regeln `shared/protokolle/termine.ts` (`termineSammeln` aus der `ladeUebersicht`-Übersicht über `ableiten`, `titelUndUhrzeit`, `eintragVorbelegung`/`eintragFehler`/`eintragZeitraum`,
+  `aehnlicherTermin`) und `terminStand.ts` (Stand je Baustein, `wennNochOffen`); Kern „Termin anlegen“ `protokolle/src/terminAnlegen.ts` (`terminAnlegen`, `terminRumpf`, `kalenderTermineAmTag`; `planen.ts` nutzt ihn mit
+  `eingeladen`), Eintragen `terminEintragen.ts` (`terminLegen`), Vermerk `terminStandSchreiben.ts` (`terminVermerken`, `terminMarkieren` über `wertNachgelesen`), Kalender mit Recht `kalenderListe.ts` +
+  `shared/ct/kalenderRechte.ts` (`schreibbareKalender`, auch Anmeldungen); Oberfläche `Termine.tsx`, `TerminFenster.tsx`. `ladeMitarbeit`/`ladeUebersicht` liefern `termine`.
 - Bausteine (W12, Stil A „ruhig“): Beschluss, To-Do und Termin haben **keine Fläche**, nur einen 3-px-Farbrand links (grün, grau, blau; Etikett
   „BESCHLUSS“, Termin-Datum blau fett, To-Do mit Kreis). EINE Stelle für Editor und Lese-Ansicht: `ProtokollAnsicht.module.scss` (`.marke`,
   `.aufgabe`, `.beschluss`, `.termin`; `EditorBloecke.tsx` nimmt dieselben Klassen, `EditorBloecke.module.scss` macht Wer/Bis leise); PDF:

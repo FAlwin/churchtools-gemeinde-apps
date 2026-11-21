@@ -1041,3 +1041,42 @@ Bausteine sehen im Editor, beim Lesen und im PDF gleich ruhig aus.
 - **Historie:** 21.11.2026 (W12, nach dem Festplanung-Protokoll)
 
 </details>
+
+### TF-PROT-31 · Reiter „Termine“: Termine aus den Protokollen in den Kalender eintragen
+
+**Achtung Test-Instanz:** ChurchTools verschickt dort **echte Mails**. Dieser Test darf **keine Einladungen** auslösen – die Erweiterung schickt auch keine
+(kein `meetingrequests`); trotzdem im neuen Termin nachsehen, dass **niemand eingeladen** ist. Nur eigene Test-Termine anlegen (Titel mit „TEST“) und danach in ChurchTools löschen.
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe mit Protokollen, in der du die **Leitung** bist (und im Kalender der Gruppe Termine anlegen darfst), ein zweites Konto als
+**Mitglied** derselben Gruppe, und ein Protokoll (Entwurf oder freigegeben) mit Termin-Bausteinen: „TEST Heiligabend, 16 Uhr“ (Datum 24.12.2027), „TEST Bibeltag“ (ohne Uhrzeit),
+„TEST Nächste Sitzung“. Im Kalender der Gruppe am 24.12.2027 ein Termin „TEST Heiligabend – Familiengottesdienst“. Ein Rechner und ein Handy (oder 375 px).
+In der Entwicklung zeigt `?demo` den Reiter fertig gefüllt (Mitglied: `?demo=mitglied`).
+
+**Das muss passieren:** Der Reiter „Termine“ sammelt alle Termine der Protokolle; „Eintragen“ legt den Termin im Kalender an (ohne Einladung) oder verknüpft einen vorhandenen,
+und merkt sich das. Wer nicht in den Kalender darf, sieht nur die Liste.
+
+1. In ChurchTools **Protokolle** öffnen: Der Reiter **Termine** steht zwischen „To-Dos“ und „Einstellungen“ (am Handy in der Leiste unten). Er zeigt „Noch nicht im Kalender“ mit allen
+   Terminen, nach Datum, je mit Datumskachel, Text und „aus <Sitzung> · <Punkt>“. Bei mehreren Gruppen steht oben der **Filter → Gruppe**.
+2. Bei **„TEST Bibeltag“** auf **Eintragen**: Das Fenster zeigt den richtigen Kalender, den Titel, das Datum und **Ganztägig** angehakt. **Eintragen** → das Fenster geht zu, der Termin steht
+   unter **„Im Kalender“** (aufklappen) mit Kalendername, „ganztägig“ und „In ChurchTools öffnen“. In ChurchTools: der Termin ist **ganztägig**, **niemand eingeladen**.
+3. Bei **„TEST Heiligabend, 16 Uhr“** auf **Eintragen**: Titel „TEST Heiligabend“ (ohne „, 16 Uhr“), **Von 16:00 · Bis 17:00**, nicht ganztägig. Darunter steht, dass am 24.12.2027 schon
+   „TEST Heiligabend – Familiengottesdienst“ im Kalender steht, **„Nur verknüpfen“ ist vorgewählt**, der Knopf heißt **Verknüpfen**. Verknüpfen → im Kalender ist **nichts Neues** angelegt,
+   unter „Im Kalender“ steht der Termin mit der Zeit des vorhandenen. Wiederhole mit **„Trotzdem neu anlegen“** (anderer Termin, z. B. „TEST Zweiter Heiligabend“): Jetzt entsteht ein neuer
+   Termin mit 16:00–17:00 Uhr (Ortszeit!).
+4. **⋯ → „Nicht eintragen“** bei „TEST Nächste Sitzung“: Er verschwindet aus der Liste und steht unter **„Nicht eintragen“**; nach **Neuladen** noch immer dort. **„Wieder anzeigen“** holt ihn zurück.
+5. **⋯ → „Im Protokoll zeigen“**: Die Sitzung öffnet sich am Tagesordnungspunkt des Termins.
+6. Als **Mitglied** (zweites Konto): Der Reiter zeigt dieselbe Liste, aber **kein „Eintragen“**, im ⋯-Menü nur „Im Protokoll zeigen“, darunter den Satz „Eintragen kann, wer im Kalender
+   Termine anlegen darf – meist die Leitung.“ Was die Leitung eingetragen hat, steht beim Mitglied unter „Im Kalender“.
+7. **Aussetzer** (nur wenn gerade möglich, z. B. Flugmodus nach dem Antippen): Kommt keine Antwort, steht im Fenster „ChurchTools hat nicht geantwortet – ob der Termin angelegt wurde, ist
+   unklar. Bitte erst im Kalender nachsehen …“, **nichts** steht danach unter „Im Kalender“ oder „Nicht eintragen“. Ist der Termin doch da: erneut **Eintragen** → das Fenster bietet „Nur verknüpfen“ an.
+8. Hell und dunkel, PC und 375 px: nichts läuft über den Rand, am Handy stehen „Eintragen“ und ⋯ unter dem Text.
+9. **Link:** „In ChurchTools öffnen“ führt zum **Kalender** der Instanz (nicht zu genau diesem Termin – eine Adresse dafür ist nicht gemessen; wenn sie bekannt ist, steht sie in `terminLink`).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `protokolle/src/Termine.tsx`, `protokolle/src/TerminFenster.tsx`, `protokolle/src/terminEintragen.ts`, `protokolle/src/terminAnlegen.ts`, `protokolle/src/terminStandSchreiben.ts`, `protokolle/src/kalenderListe.ts`, `protokolle/src/planen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/start.ts`, `protokolle/src/reiter.ts`, `shared/protokolle/termine.ts`, `shared/protokolle/terminStand.ts`, `shared/ct/kalenderRechte.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/termine.test.ts` (Sammeln aus echten Dokumenten, Uhrzeit/Titel, Vorbelegung, Zeitraum ganztägig/UTC, Doppelt), `shared/protokolle/terminStand.test.ts`, `protokolle/src/terminAnlegen.test.ts` (Kern: Rumpf, abgelehnt, unklar, ganztägig), `protokolle/src/terminEintragen.test.ts` (verknüpfen, nachlesen), `protokolle/src/terminStandSchreiben.test.ts` (Vermerk, nicht überschreiben, Fehler), `protokolle/src/Termine.test.tsx` (ganzer Weg gegen den Nachbau), `protokolle/src/TerminFenster.test.tsx`, `protokolle/src/planen.test.ts` (Sitzung festlegen unverändert); **nur von Hand:** dass ChurchTools einen ganztägigen Termin aus dem reinen Tag wirklich als ganztägig anlegt, keine Mails, das Aussehen hell/dunkel/Handy, „Im Protokoll zeigen“ am Gerät
+- **Historie:** 21.11.2026 (W14, nach der Festplanung)
+
+</details>

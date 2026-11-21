@@ -90,7 +90,7 @@ export function VertretungFenster({
 
   const auftrag = (): VertretungsAuftrag => ({
     termin: { id: d.terminId, name: d.termin, tag: d.tag, uhrzeit: d.uhrzeit },
-    dienst: { id: d.ort.serviceId, name: d.dienst },
+    dienst: { id: d.ort.serviceId, name: d.dienst, index: d.ort.index },
     ich: vertretung.ich,
     gefragt: gewaehlt,
     leitung: lage?.art === 'da' ? lage.leitung : [],

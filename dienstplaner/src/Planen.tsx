@@ -721,7 +721,7 @@ export function Planen({
           tag: plan.spalten[i].tag,
           heute,
           abgesagt: plan.spalten[i].abgesagt,
-          freiePlaetze: (zl.zellen[i] ?? []).filter((p) => p.art === 'frei').length,
+          freieIndizes: (zl.zellen[i] ?? []).filter((p) => p.art === 'frei').map((p) => p.index),
         }),
       fokusId: fokusPerson?.person.personId ?? null,
       onFokus: (personId, name) => setFokusPerson({ person: { personId, name }, zurueck: null }),

@@ -25,6 +25,7 @@ const MARKIERUNG: Vertretung = {
   gefragt: [47],
   seit: '2026-11-21T10:00:00.000Z',
   tag: TAG,
+  index: 1,
   name: 'Anna Test',
   gefragtNamen: ['Ben Test'],
 };
@@ -40,7 +41,7 @@ const BEN = startFuer({
   nachname: 'Test',
   gruppen: [{ id: 9, name: 'Lobpreisteam', leitung: false }],
 });
-const ZEILEN = [zeile(246, 'Gottesdienst', TAG, { freieDienste: [9] })];
+const ZEILEN = [zeile(246, 'Gottesdienst', TAG, { freiePlaetze: [{ serviceId: 9, index: 1 }] })];
 const frei = (extra: Partial<RohPlatz> = {}): RohPlatz => ({
   id: 700,
   serviceId: 9,
@@ -131,6 +132,23 @@ describe('useVertretung – „Für dich offen“ und Übernehmen', () => {
     expect(ct.ct.geschrieben).toEqual([]);
     expect(result.current?.meldung).toBe('Schon übernommen – danke!');
     expect(onGeaendert).toHaveBeenCalledTimes(1);
+  });
+
+  it('es wird genau der Platz der Suche genommen: Platz 1 inzwischen besetzt, Platz 2 frei → „Schon übernommen“, Platz 2 bleibt frei', async () => {
+    lade.mockResolvedValue(ANTWORTEN);
+    const { result, ct } = hook({
+      platz: [
+        frei({ personId: 48, name: 'Finn Test', isAccepted: true }),
+        frei({ id: 701, index: 2 }),
+      ],
+    });
+    await waitFor(() => expect(result.current?.offen).toHaveLength(1)); // die Liste kennt den neuen Stand noch nicht
+    await act(async () => {
+      await result.current!.uebernehmen(result.current!.offen[0]);
+    });
+    expect(ct.ct.geschrieben).toEqual([]);
+    expect(ct.ct.plaetze[1].personId).toBeNull();
+    expect(result.current?.meldung).toBe('Schon übernommen – danke!');
   });
 
   it('ohne Recht (enterSelfIfFree false oder 403): ehrlicher Satz an der Zeile, nichts neu geladen, nichts als „übernommen“ gemeldet', async () => {

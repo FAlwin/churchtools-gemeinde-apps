@@ -624,9 +624,10 @@ drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, s
 5. Ben drückt **„Übernehmen"**: Hinweis „Übernommen – du hast jetzt …", der Dienst steht unter „Deine nächsten Dienste" und in
    ChurchTools zugesagt; die Zeile ist weg. Ein zweites Teammitglied, das die Seite noch offen hatte und jetzt drückt, liest
    **„Schon übernommen – danke!"**, nichts wird überschrieben.
-6. **Planer:** „Planen" zeigt, solange niemand übernommen hat, am **freien** Platz das kleine Schild **„Vertretung gesucht"**; beim
+6. **Planer:** „Planen" zeigt, solange niemand übernommen hat, am **freien Platz, den Anna abgesagt hat** (nicht an einem anderen freien Platz desselben Dienstes), das kleine Schild **„Vertretung gesucht"**; beim
    Darüberfahren (Handy: Antippen) steht „Anna hat abgesagt · gefragt: Ben, Finn". Der Platz lässt sich ganz normal planen
    („frei – Wer kann?"). Sobald jemand übernommen hat oder der Planer den Platz besetzt, ist das Schild weg.
+   **Zwei Plätze:** Hat der Dienst zwei Plätze und war der zweite schon vorher frei, bleibt das Schild nur am abgesagten Platz; übernimmt Ben ihn, verschwinden Schild **und** Zeile (auch bei Ben selbst), obwohl der andere Platz frei ist. Wer am Termin in diesem Dienst schon eingeteilt ist, sieht „Übernehmen“ nie.
 7. **Ohne das Recht `+entry free`:** „Übernehmen" sagt **„Du darfst dich hier nicht selbst eintragen – frag die Leitung."**, der Platz
    bleibt frei, die Zeile bleibt stehen.
 8. **Die Markierung bleibt:** Anna speichert nach der Suche in „Wann kann ich?" etwas Neues → das Schild in „Planen" und die Zeile

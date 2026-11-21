@@ -982,12 +982,47 @@ describe('Vertretung gesucht – Markierung im eigenen Wert', () => {
     });
   });
 
+  it('der index des abgesagten Platzes: hin und zurück (auch null), fehlt er, fehlt das Feld; Unbrauchbares fällt weg', async () => {
+    const { port, s } = speicher();
+    for (const index of [1, null]) {
+      await vertretungMarkieren(
+        port,
+        MODUL,
+        [K1],
+        ANNA,
+        { terminId: TERMIN, vertretung: markierung({ index }) },
+        HEUTE,
+      );
+      expect((await markierungen(port, [K1]))?.[SCHLUESSEL].index).toBe(index);
+    }
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      { terminId: TERMIN, vertretung: markierung({ index: undefined }) },
+      HEUTE,
+    );
+    const alt = (await markierungen(port, [K1]))?.[SCHLUESSEL];
+    expect(alt).not.toHaveProperty('index'); // alte Regel: kein gemerkter Platz
+    expect(s.werte[0].value).not.toContain('"index"');
+    s.werte[0].value = JSON.stringify({
+      ...JSON.parse(s.werte[0].value),
+      vertretungen: { [SCHLUESSEL]: { ...markierung(), index: 'eins' } },
+    });
+    expect(await markierungen(port, [K1])).toEqual({
+      [SCHLUESSEL]: expect.not.objectContaining({ index: expect.anything() }),
+    });
+  });
+
   it('gleicheVertretungen vergleicht alle Felder, nicht die Reihenfolge der Schlüssel', () => {
     const x = { a: markierung(), b: markierung({ dienst: 6 }) };
     expect(gleicheVertretungen(x, { b: x.b, a: x.a })).toBe(true);
     expect(gleicheVertretungen(x, { ...x, a: markierung({ name: 'Anne' }) })).toBe(false);
     expect(gleicheVertretungen(x, { ...x, a: markierung({ gefragt: [BERT] }) })).toBe(false);
     expect(gleicheVertretungen(x, { ...x, a: markierung({ gefragtNamen: ['x'] }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ index: 2 }) })).toBe(false);
+    expect(gleicheVertretungen(x, { ...x, a: markierung({ index: 1 }) })).toBe(false); // mit und ohne index sind verschieden
     expect(gleicheVertretungen(x, { a: x.a })).toBe(false);
   });
 });

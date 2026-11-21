@@ -66,6 +66,9 @@ export type Antworten = Record<string, Antwort>;
  * - `gefragt`: die Personen, die gefragt wurden (IDs in der Reihenfolge der Auswahl; leer = niemand gefragt, nur das Schild),
  * - `seit`: ISO-Zeitpunkt der Suche,
  * - `tag`: Tag des Termins (daran erkennt man Vergangenes – es fällt beim Schreiben heraus, wie bei den Antworten),
+ * - `index` (optional, später ergänzt): der `index` des abgesagten Platzes (`null` bei einem Dienst mit nur einem Platz). Er bleibt über alle
+ *   Ersetzungen gleich (gemessen 21.11.2026: Dienst 1224 → 1227 → 1230, immer `index: 1`) – die Suche gilt für **genau diesen** Platz. **Fehlt er**
+ *   (alte Werte), gilt die alte Regel „irgendein Platz des Dienstes“.
  * - `name`: Name der Person, die eine Vertretung sucht – damit das Team ihn ohne weitere Abfrage zeigen kann („Anna sucht …“),
  * - `gefragtNamen`: die Namen der Gefragten (parallel zu `gefragt`) – fürs Schild in „Planen“ („gefragt: Ben, Finn“).
  */
@@ -74,6 +77,7 @@ export interface Vertretung {
   gefragt: number[];
   seit: string;
   tag: string;
+  index?: number | null;
   name: string;
   gefragtNamen: string[];
 }
@@ -188,11 +192,14 @@ export function vertretungBereinigt(
   const gefragtNamen = Array.isArray(v.gefragtNamen)
     ? (v.gefragtNamen as unknown[]).map(text).filter((n) => n !== '')
     : [];
+  const index = v.index === null ? null : istGanzeZahl(v.index) ? v.index : undefined;
   return {
     dienst: v.dienst,
     gefragt,
     seit: v.seit,
     tag: v.tag,
+    // Fehlt der Platz-Index, bleibt das Feld weg (alte Regel) – `null` heißt „Dienst mit nur einem Platz“.
+    ...(index !== undefined ? { index } : {}),
     name: text(v.name) || 'Jemand',
     gefragtNamen,
   };
@@ -417,6 +424,7 @@ export function gleicheVertretungen(x: Vertretungen, y: Vertretungen): boolean {
         !!b &&
         a.dienst === b.dienst &&
         a.tag === b.tag &&
+        a.index === b.index &&
         a.seit === b.seit &&
         a.name === b.name &&
         a.gefragt.length === b.gefragt.length &&

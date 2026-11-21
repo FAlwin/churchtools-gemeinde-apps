@@ -125,6 +125,7 @@ export function useVertretung(o: {
         eventId: g.terminId,
         serviceId: g.dienstId,
         ichId: start.ichId,
+        index: g.index,
       });
       setLaeuft((s) => {
         const n = new Set(s);

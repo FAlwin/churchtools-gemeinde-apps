@@ -23,6 +23,7 @@ import {
   leitungMail,
   offeneVertretungen,
   schilder,
+  suchPlatzFrei,
   uebernehmen,
   vertretungBetreff,
   vertretungMail,
@@ -191,14 +192,20 @@ describe('abwesendAm, eingeteiltAus, leitungAus', () => {
     // Nicht sichtbar / nicht geladen / Fehler: man WEISS es nicht – nie als „niemand abwesend“ ausgeben.
     for (const s of [
       new Map([[9, stand({ abwesenheiten: 'nichtSichtbar' })]]),
-      new Map([[9, { art: 'fehler', text: 'x', nochmal: true }]]),
+      new Map<number, GruppenStand>([[9, { art: 'fehler', text: 'x', nochmal: true }]]),
       new Map<number, GruppenStand>(),
     ])
       expect(abwesendAm(s, [9], termin).bekannt).toBe(false);
   });
 
   it('eingeteilt: zugesagt und angefragt zählen; frei, Gast, „Namen verbergen“ nicht', () => {
-    const t = (platz: RohPlatz[]): RohTermin => ({ id: 1, startDate: '', eventServices: platz });
+    const t = (platz: RohPlatz[]): RohTermin => ({
+      id: 1,
+      name: 'x',
+      startDate: '',
+      endDate: '',
+      eventServices: platz,
+    });
     expect(
       eingeteiltAus([
         t([
@@ -292,28 +299,42 @@ describe('Texte', () => {
   });
 });
 
+/** Eine Suche für Platz 1 (`index: 1`) des Gesangs – so schreibt sie „Absagen und fragen“. */
 const markierung = (extra: Partial<Vertretung> = {}): Vertretung => ({
   dienst: GESANG,
   gefragt: [BEN, FINN],
   seit: '2026-11-21T10:00:00.000Z',
   tag: TAG,
+  index: 1,
   name: 'Anna Test',
   gefragtNamen: ['Ben Test', 'Finn Test'],
   ...extra,
 });
+const frei = (...indizes: (number | null)[]) =>
+  indizes.map((index) => ({ serviceId: GESANG, index }));
 
 describe('gilt „Vertretung gesucht“ noch?', () => {
-  const ok = { tag: TAG, heute: HEUTE, abgesagt: false, freiePlaetze: 1 };
+  const ok = { tag: TAG, heute: HEUTE, abgesagt: false, frei: true };
 
   it('nur mit freiem Platz, nicht vergangen, nicht abgesagt – die Markierung allein reicht nie', () => {
     expect(gesuchtGilt(ok)).toBe(true);
-    expect(gesuchtGilt({ ...ok, freiePlaetze: 0 })).toBe(false); // jemand hat übernommen
+    expect(gesuchtGilt({ ...ok, frei: false })).toBe(false); // jemand hat übernommen
     expect(gesuchtGilt({ ...ok, tag: '2026-11-20' })).toBe(false);
     expect(gesuchtGilt({ ...ok, tag: HEUTE })).toBe(true); // heute zählt noch
     expect(gesuchtGilt({ ...ok, abgesagt: true })).toBe(false);
   });
 
-  it('Schilder in Planen: Hinweis mit Namen; höchstens so viele wie freie Plätze; ohne Gefragte nur „hat abgesagt“', async () => {
+  it('suchPlatzFrei: genau der gemerkte Platz zählt; ohne index (alte Markierung) irgendein freier; null = Dienst mit einem Platz', () => {
+    expect(suchPlatzFrei({ index: 1 }, [1, 2])).toBe(true);
+    expect(suchPlatzFrei({ index: 1 }, [2])).toBe(false); // Platz 2 war schon vorher frei – das ist nicht Annas Platz
+    expect(suchPlatzFrei({ index: 1 }, [])).toBe(false);
+    expect(suchPlatzFrei({ index: null }, [null])).toBe(true);
+    expect(suchPlatzFrei({ index: null }, [1])).toBe(false);
+    expect(suchPlatzFrei({}, [2])).toBe(true); // alte Markierung: irgendein freier Platz
+    expect(suchPlatzFrei({}, [])).toBe(false);
+  });
+
+  it('Schilder in Planen: Hinweis mit Namen; am Platz mit dem index; ohne Gefragte nur „hat abgesagt“', async () => {
     const m = await gelesen([], [{ person: ANNA, vertretung: markierung() }]);
     const o = {
       vertretungen: m.vertretungen,
@@ -322,44 +343,57 @@ describe('gilt „Vertretung gesucht“ noch?', () => {
       tag: TAG,
       heute: HEUTE,
       abgesagt: false,
-      freiePlaetze: 1,
+      freieIndizes: [1] as (number | null)[],
     };
     expect(schilder(o)).toEqual([
-      { hinweis: 'Anna Test hat abgesagt · gefragt: Ben Test, Finn Test' },
+      { hinweis: 'Anna Test hat abgesagt · gefragt: Ben Test, Finn Test', index: 1 },
     ]);
-    expect(schilder({ ...o, freiePlaetze: 0 })).toEqual([]);
+    expect(schilder({ ...o, freieIndizes: [] })).toEqual([]);
+    // Platz 1 ist besetzt (übernommen), Platz 2 war schon vorher frei: kein Schild – an Platz 2 sucht niemand.
+    expect(schilder({ ...o, freieIndizes: [2] })).toEqual([]);
+    expect(schilder({ ...o, freieIndizes: [1, 2] })).toHaveLength(1);
     expect(schilder({ ...o, dienstId: TON })).toEqual([]);
     expect(schilder({ ...o, terminId: 1 })).toEqual([]);
-    // Zwei suchen, ein Platz ist frei: nur ein Schild (das erste, nach Zeitpunkt der Suche) – nicht zwei Schilder an einem Platz.
-    const zwei = await gelesen(
+    // Alte Markierungen ohne index: höchstens so viele Schilder wie freie Plätze, das erste nach Zeitpunkt der Suche.
+    const alt = await gelesen(
       [],
       [
-        { person: ANNA, vertretung: markierung() },
+        { person: ANNA, vertretung: markierung({ index: undefined }) },
         {
           person: BEN,
-          vertretung: markierung({ name: 'Ben Test', seit: '2026-11-21T11:00:00.000Z' }),
+          vertretung: markierung({
+            index: undefined,
+            name: 'Ben Test',
+            seit: '2026-11-21T11:00:00.000Z',
+          }),
         },
       ],
     );
-    expect(schilder({ ...o, vertretungen: zwei.vertretungen })).toHaveLength(1);
-    expect(schilder({ ...o, vertretungen: zwei.vertretungen, freiePlaetze: 2 })).toHaveLength(2);
-    expect(schilder({ ...o, vertretungen: zwei.vertretungen })[0].hinweis).toMatch(/^Anna Test/);
+    expect(schilder({ ...o, vertretungen: alt.vertretungen })).toHaveLength(1);
+    expect(schilder({ ...o, vertretungen: alt.vertretungen })[0]).toMatchObject({
+      index: undefined,
+    });
+    expect(schilder({ ...o, vertretungen: alt.vertretungen, freieIndizes: [1, 2] })).toHaveLength(
+      2,
+    );
+    expect(schilder({ ...o, vertretungen: alt.vertretungen })[0].hinweis).toMatch(/^Anna Test/);
     const ohne = await gelesen(
       [],
       [{ person: ANNA, vertretung: markierung({ gefragt: [], gefragtNamen: [] }) }],
     );
     expect(schilder({ ...o, vertretungen: ohne.vertretungen })).toEqual([
-      { hinweis: 'Anna Test hat abgesagt' },
+      { hinweis: 'Anna Test hat abgesagt', index: 1 },
     ]);
   });
 });
 
 describe('offeneVertretungen – „Für dich offen“ auf der Startseite', () => {
   const zeilen = [
-    zeile(TERMIN, 'Gottesdienst', TAG, { freieDienste: [GESANG] }),
-    zeile(300, 'Gebetsabend', '2026-12-20', { freieDienste: [] }),
+    zeile(TERMIN, 'Gottesdienst', TAG, { freiePlaetze: frei(1) }),
+    zeile(300, 'Gebetsabend', '2026-12-20', { freiePlaetze: [] }),
   ];
-  const o = (extra: Record<string, unknown> = {}) => ({
+  const o = (extra: Partial<Parameters<typeof offeneVertretungen>[0]> = {}) => ({
+    vertretungen: undefined,
     zeilen,
     eigeneDienste: new Set([GESANG]),
     ichId: BEN,
@@ -368,13 +402,13 @@ describe('offeneVertretungen – „Für dich offen“ auf der Startseite', () =
     ...extra,
   });
 
-  it('jeder aus dem Team sieht sie – auch wer nicht gefragt wurde –, mit Name und Dienst', async () => {
+  it('jeder aus dem Team sieht sie – auch wer nicht gefragt wurde –, mit Name, Dienst und Platz', async () => {
     const m = await gelesen([], [{ person: ANNA, vertretung: markierung() }]);
     // Clara wurde NICHT gefragt (gefragt: Ben, Finn) und sieht sie trotzdem.
     for (const ich of [BEN, CLARA]) {
       const r = offeneVertretungen(o({ vertretungen: m.vertretungen, ichId: ich }));
-      expect(r.map((g) => [g.name, g.dienst, g.terminId, g.gefragt])).toEqual([
-        ['Anna Test', 'Gesang', TERMIN, [BEN, FINN]],
+      expect(r.map((g) => [g.name, g.dienst, g.terminId, g.gefragt, g.index])).toEqual([
+        ['Anna Test', 'Gesang', TERMIN, [BEN, FINN], 1],
       ]);
     }
   });
@@ -387,14 +421,14 @@ describe('offeneVertretungen – „Für dich offen“ auf der Startseite', () =
     // Übernommen: am Termin ist kein Platz des Dienstes mehr frei – die Markierung allein reicht nicht.
     expect(
       offeneVertretungen(
-        o({ vertretungen: v, zeilen: [zeile(TERMIN, 'Gottesdienst', TAG, { freieDienste: [] })] }),
+        o({ vertretungen: v, zeilen: [zeile(TERMIN, 'Gottesdienst', TAG, { freiePlaetze: [] })] }),
       ),
     ).toEqual([]);
     expect(
       offeneVertretungen(
         o({
           vertretungen: v,
-          zeilen: [zeile(TERMIN, 'Gottesdienst', TAG, { freieDienste: [GESANG], abgesagt: true })],
+          zeilen: [zeile(TERMIN, 'Gottesdienst', TAG, { freiePlaetze: frei(1), abgesagt: true })],
         }),
       ),
     ).toEqual([]);
@@ -402,6 +436,63 @@ describe('offeneVertretungen – „Für dich offen“ auf der Startseite', () =
     // Termin nicht geladen.
     expect(offeneVertretungen(o({ vertretungen: v, zeilen: [] }))).toEqual([]);
     expect(offeneVertretungen(o({ vertretungen: undefined }))).toEqual([]);
+  });
+
+  it('Gesang hat zwei Plätze: Annas Platz 1 ist besetzt (übernommen), Platz 2 war schon vorher frei → die Zeile verschwindet', async () => {
+    const m = await gelesen([], [{ person: ANNA, vertretung: markierung() }]);
+    const z = (freiePlaetze: ReturnType<typeof frei>, meine = false) => [
+      zeile(TERMIN, 'Gottesdienst', TAG, {
+        freiePlaetze,
+        meine: meine
+          ? [
+              {
+                dienst: 'Gesang',
+                zugesagt: true,
+                ort: { serviceId: GESANG, index: 1 },
+                absagen: true,
+              },
+            ]
+          : [],
+      }),
+    ];
+    expect(
+      offeneVertretungen(o({ vertretungen: m.vertretungen, zeilen: z(frei(1, 2)) })),
+    ).toHaveLength(1);
+    expect(offeneVertretungen(o({ vertretungen: m.vertretungen, zeilen: z(frei(2)) }))).toEqual([]);
+    // Eine ältere Markierung ohne index kennt den Platz nicht: Es gilt die alte Regel (irgendein freier Platz).
+    const alt = await gelesen([], [{ person: ANNA, vertretung: markierung({ index: undefined }) }]);
+    expect(
+      offeneVertretungen(o({ vertretungen: alt.vertretungen, zeilen: z(frei(2)) })),
+    ).toHaveLength(1);
+  });
+
+  it('wer an diesem Termin in diesem Dienst schon eingeteilt ist (angefragt oder zugesagt), bekommt „Übernehmen“ nie', async () => {
+    const m = await gelesen([], [{ person: ANNA, vertretung: markierung() }]);
+    const meine = (zugesagt: boolean, serviceId = GESANG) => [
+      { dienst: 'x', zugesagt, ort: { serviceId, index: 2 }, absagen: true },
+    ];
+    for (const zugesagt of [true, false])
+      expect(
+        offeneVertretungen(
+          o({
+            vertretungen: m.vertretungen,
+            zeilen: [
+              zeile(TERMIN, 'Gottesdienst', TAG, { freiePlaetze: frei(1), meine: meine(zugesagt) }),
+            ],
+          }),
+        ),
+      ).toEqual([]);
+    // Ein anderer Dienst am selben Termin ändert nichts.
+    expect(
+      offeneVertretungen(
+        o({
+          vertretungen: m.vertretungen,
+          zeilen: [
+            zeile(TERMIN, 'Gottesdienst', TAG, { freiePlaetze: frei(1), meine: meine(true, TON) }),
+          ],
+        }),
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -442,6 +533,66 @@ describe('uebernehmen – einen freien Platz selbst übernehmen', () => {
     ]);
     expect(await uebernehmen(port, ziel)).toEqual({ ok: true });
     expect(ct.geschrieben.map((g) => g.pfad)).toEqual([`/persons/${ICH}/servicerequests/702`]);
+  });
+
+  describe('mit gemerktem Platz (index): genau dieser, nie ein anderer', () => {
+    const zwei = (eins: RohPlatz, zweiter: Partial<RohPlatz> = {}) => [
+      eins,
+      platz(701, { index: 2, ...zweiter }),
+    ];
+
+    it('Platz 1 frei: genommen – auch wenn davor/danach noch ein anderer frei ist', async () => {
+      const { ct, port } = nachbau(zwei(platz(700)));
+      expect(await uebernehmen(port, { ...ziel, index: 1 })).toEqual({ ok: true });
+      expect(ct.geschrieben.map((g) => g.pfad)).toEqual([`/persons/${ICH}/servicerequests/700`]);
+      expect(ct.plaetze[1].personId).toBeNull(); // Platz 2 bleibt Sache der Planer
+    });
+
+    it('Platz 1 besetzt (übernommen), Platz 2 war schon vorher frei: „besetzt“ – es wird NICHT auf Platz 2 ausgewichen', async () => {
+      const { ct, port } = nachbau(zwei(besetzt(700, { personId: FINN, name: 'Finn Test' })));
+      expect(await uebernehmen(port, { ...ziel, index: 1 })).toEqual({
+        ok: false,
+        grund: 'besetzt',
+      });
+      expect(ct.geschrieben).toEqual([]);
+      expect(ct.plaetze[1].personId).toBeNull();
+    });
+
+    it('der Platz mit diesem index ist inzwischen weg (Platzzahl verkleinert): „besetzt“', async () => {
+      const { ct, port } = nachbau([platz(701, { index: 2 })]);
+      expect(await uebernehmen(port, { ...ziel, index: 1 })).toEqual({
+        ok: false,
+        grund: 'besetzt',
+      });
+      expect(ct.geschrieben).toEqual([]);
+    });
+
+    it('Dienst mit nur einem Platz (index null) geht', async () => {
+      const { ct, port } = nachbau([platz(700, { index: null })]);
+      expect(await uebernehmen(port, { ...ziel, index: null })).toEqual({ ok: true });
+      expect(ct.plaetze[0].personId).toBe(ICH);
+    });
+
+    it('enterSelfIfFree false am gesuchten Platz: kein-recht, auch wenn Platz 2 erlaubt wäre', async () => {
+      const { ct, port } = nachbau(zwei(platz(700, { permissions: { enterSelfIfFree: false } })));
+      expect(await uebernehmen(port, { ...ziel, index: 1 })).toEqual({
+        ok: false,
+        grund: 'kein-recht',
+      });
+      expect(ct.geschrieben).toEqual([]);
+    });
+
+    it('ich stehe schon dort: Erfolg ohne Schreiben; an einem ANDEREN Platz des Dienstes: besetzt, nicht doppelt einteilen', async () => {
+      const a = nachbau(zwei(besetzt(700, { personId: ICH, name: 'Ben Test' })));
+      expect(await uebernehmen(a.port, { ...ziel, index: 1 })).toEqual({ ok: true });
+      expect(a.ct.geschrieben).toEqual([]);
+      const b = nachbau(zwei(platz(700), { personId: ICH, name: 'Ben Test', isAccepted: false }));
+      expect(await uebernehmen(b.port, { ...ziel, index: 1 })).toEqual({
+        ok: false,
+        grund: 'besetzt',
+      });
+      expect(b.ct.geschrieben).toEqual([]);
+    });
   });
 
   it('kein Platz des Dienstes mehr frei: „besetzt“ (schon übernommen), nichts geschrieben', async () => {

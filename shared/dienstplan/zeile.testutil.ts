@@ -24,7 +24,7 @@ export function zeile(
     geplant: 0,
     frei: 0,
     freiNachGruppe: {},
-    freieDienste: [],
+    freiePlaetze: [],
     team: [],
     ...extra,
   };

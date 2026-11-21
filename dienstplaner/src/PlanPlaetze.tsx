@@ -104,9 +104,15 @@ export function Plaetze({
   /** Eine Person in den Fokus nehmen – Symbol am Namen und langes Drücken; ohne bleibt der Platz, wie er war. */
   onFokus?: (personId: number, name: string) => void;
 }) {
-  // Das n-te freie Platz trägt das n-te Schild.
-  const freie = plaetze.flatMap((p, i) => (p.art === 'frei' ? [i] : []));
-  const schildAn = (i: number): Schild | null => schilder[freie.indexOf(i)] ?? null;
+  // Ein Schild gehört an den Platz mit seinem `index` (die Suche gilt genau für ihn). Schilder alter Markierungen ohne `index`
+  // nehmen der Reihe nach die freien Plätze, die kein gezieltes Schild tragen.
+  const gezielt = schilder.filter((s) => s.index !== undefined);
+  const alt = schilder.filter((s) => s.index === undefined);
+  const ohneZiel = plaetze.flatMap((p, i) =>
+    p.art === 'frei' && !gezielt.some((s) => s.index === p.index) ? [i] : [],
+  );
+  const schildAn = (i: number): Schild | null =>
+    gezielt.find((s) => s.index === plaetze[i].index) ?? alt[ohneZiel.indexOf(i)] ?? null;
   return (
     <div className={styles.plaetze}>
       {plaetze.map((p, i) => {

@@ -107,7 +107,7 @@ describe('Fenster „Vertretung suchen“', () => {
     expect(a.nachricht).toBe('Bin krank');
     expect(a.leitung.map((l) => l.name)).toEqual(['Alwin Friesen']);
     expect(a.termin).toEqual({ id: 246, name: 'Gottesdienst', tag: TAG, uhrzeit: '10:00' });
-    expect(a.dienst).toEqual({ id: 9, name: 'Gesang' });
+    expect(a.dienst).toEqual({ id: 9, name: 'Gesang', index: 1 }); // der abgesagte Platz
     expect(a.ich).toEqual({ id: 46, name: 'Anna Test' });
     expect(dienst).toBe(D);
   });
@@ -353,7 +353,10 @@ describe('„Vertretung suchen“ neben „Tauschen“', () => {
 
 describe('Startseite – „Für dich offen“ bei einer gesuchten Vertretung', () => {
   const tag = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-  const termin = zeile(3, 'Gottesdienst', tag(10), { uhrzeit: '10:00', freieDienste: [9] });
+  const termin = zeile(3, 'Gottesdienst', tag(10), {
+    uhrzeit: '10:00',
+    freiePlaetze: [{ serviceId: 9, index: 1 }],
+  });
   const zeigeStart = (v = vertretungAttrappe()) => {
     render(
       <Startseite

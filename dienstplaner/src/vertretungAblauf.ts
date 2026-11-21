@@ -36,7 +36,8 @@ import { erinnernSenden, type MailErgebnis, type MailSender } from './erinnernSe
 /** Was die Person im Fenster gewählt hat. */
 export interface VertretungsAuftrag {
   termin: MailTermin & { id: number };
-  dienst: { id: number; name: string };
+  /** `index`: der abgesagte Platz (`null` bei einem Dienst mit nur einem Platz) – die Suche gilt genau für ihn. */
+  dienst: { id: number; name: string; index: number | null };
   /** Wer sucht (Name für Mail und Markierung). */
   ich: { id: number; name: string };
   /** Die Angehakten, in der Reihenfolge der Liste. Leer = niemand wird gefragt, nur abgesagt. */
@@ -213,6 +214,7 @@ export async function vertretungSuchen(
     gefragt: a.gefragt.map((g) => g.personId),
     seit: s.jetzt(),
     tag: a.termin.tag,
+    index: a.dienst.index,
     name: a.ich.name,
     gefragtNamen,
   });

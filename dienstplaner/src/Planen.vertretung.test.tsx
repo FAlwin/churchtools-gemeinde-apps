@@ -48,6 +48,7 @@ const MARKIERUNG: Vertretung = {
   gefragt: [47, 48],
   seit: '2026-11-16T07:00:00.000Z',
   tag: '2026-11-20',
+  index: 2,
   name: 'Anna Test',
   gefragtNamen: ['Ben Test', 'Finn Test'],
 };
@@ -117,6 +118,28 @@ describe('Planen – Schild „Vertretung gesucht“ (E5c-6)', () => {
     await screen.findByText('Gesang');
     await new Promise((r) => setTimeout(r, 30)); // die Antworten sind da – dennoch kein Schild
     expect(schild()).toEqual([]);
+  });
+
+  it('Annas Platz 1 ist übernommen, Platz 2 war schon vorher frei: kein Schild – an Platz 2 sucht niemand', async () => {
+    const lader = vi.fn<AntwortenLader>(() =>
+      Promise.resolve(antworten('20:9', { ...MARKIERUNG, index: 1 })),
+    );
+    zeige([termin(20, [p(9, 7, 'Finn Test', 1), p(9, null, null, 2)])], lader);
+    await waitFor(() => expect(lader).toHaveBeenCalled());
+    await screen.findByText('Gesang');
+    await new Promise((r) => setTimeout(r, 30));
+    expect(schild()).toEqual([]);
+  });
+
+  it('zwei freie Plätze: das Schild steht nur an dem Platz mit dem gemerkten index (hier 2), nicht am ersten freien', async () => {
+    zeige([termin(20, [p(9, null, null, 1), p(9, null, null, 2)])], () =>
+      Promise.resolve(antworten()),
+    );
+    await waitFor(() => expect(schild()).toHaveLength(1));
+    const platz2 = screen.getByRole('button', { name: /frei – Wer kann\? \(Platz 2 von 2\)/ });
+    expect(platz2.nextElementSibling).toBe(schild()[0].closest('span'));
+    const platz1 = screen.getByRole('button', { name: /frei – Wer kann\? \(Platz 1 von 2\)/ });
+    expect(platz1.nextElementSibling).toBe(platz2);
   });
 
   it('nur zu diesem Termin und diesem Dienst: andere Termine und Dienste tragen es nicht', async () => {

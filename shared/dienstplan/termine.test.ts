@@ -79,7 +79,10 @@ describe('termineAus', () => {
       frei: 1,
       freiNachGruppe: { 3: 1 },
       // Plätze von Gesang (9) und Licht/…(7): beide haben einen freien Platz – auch für Nicht-Planer (E5c-6).
-      freieDienste: [7, 9],
+      freiePlaetze: [
+        { serviceId: 7, index: null },
+        { serviceId: 9, index: null },
+      ],
       team: [],
     });
   });
@@ -92,7 +95,7 @@ describe('termineAus', () => {
     expect([z.geplant, z.frei]).toEqual([0, 0]);
   });
 
-  it('freieDienste (E5c-6): jeder Dienst mit einem freien Platz – auch für Nicht-Planer; besetzte und ungültige Plätze zählen nicht', () => {
+  it('freiePlaetze (E5c-6): jeder freie Platz mit Dienst und index – auch für Nicht-Planer; besetzte und ungültige Plätze zählen nicht', () => {
     const [z] = zeilen([
       termin(1, 'X', '2026-10-18T08:00:00Z', [
         { serviceId: 9, personId: null, name: null }, // frei
@@ -102,7 +105,10 @@ describe('termineAus', () => {
         { serviceId: 3, personId: null, name: '  ' }, // Name nur Leerzeichen = frei
       ]),
     ]);
-    expect(z.freieDienste).toEqual([3, 9]);
+    expect(z.freiePlaetze).toEqual([
+      { serviceId: 9, index: null },
+      { serviceId: 3, index: null },
+    ]);
     expect([z.geplant, z.frei]).toEqual([0, 0]); // geplant wird weiter nur für Planer gezählt
   });
 

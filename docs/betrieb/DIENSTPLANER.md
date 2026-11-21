@@ -529,12 +529,15 @@ eigenen Dienst absagen** (auch nach der Zusage), einer Person **eine Mail zum Te
   **auf Klick**, nie von allein; wer „unklar“ ist (ChurchTools antwortete nicht, die Mail kann angekommen sein), steht mit diesem Hinweis da. Wer keine Mail-Adresse hat, wird
   genannt, nicht wiederholt.
 - **„Für dich offen“ und „Übernehmen“:** Auf **Start** steht für **jeden aus dem Team** des Dienstes (auch wenn er nicht gefragt wurde, nicht für Anna selbst) eine Zeile
-  „<Name> sucht eine Vertretung“ mit „Übernehmen“ – **aber nur, solange am Termin ein Platz dieses Dienstes frei ist** (`gesuchtGilt`, abgeleitet aus dem geladenen
-  Termin; die Markierung allein reicht nie – sie bleibt im Wert stehen, bis der Termin vorbei ist). „Übernehmen“ liest den Termin frisch, nimmt einen **freien Platz des Dienstes**
+  „<Name> sucht eine Vertretung“ mit „Übernehmen“ – **aber nur, solange genau der abgesagte Platz frei ist** (`gesuchtGilt` mit `suchPlatzFrei`, abgeleitet aus dem geladenen
+  Termin: `TerminZeile.freiePlaetze`; die Markierung allein reicht nie – sie bleibt im Wert stehen, bis der Termin vorbei ist). Die Markierung merkt sich dafür den **`index` des abgesagten Platzes**
+  (der bleibt über alle Ersetzungen gleich, gemessen 21.11.2026: Dienst 1224 → 1227 → 1230, immer `index: 1`); ein anderer Platz des Dienstes, der schon vorher frei war, ist Sache der Planer
+  und macht die Zeile nicht wieder gültig. Alte Markierungen ohne `index` gelten nach der alten Regel (irgendein freier Platz des Dienstes). Wer am Termin in diesem Dienst **schon eingeteilt**
+  ist (angefragt oder zugesagt), sieht „Übernehmen“ nie. „Übernehmen“ liest den Termin frisch, nimmt **genau diesen Platz** – ist er besetzt, heißt es „Schon übernommen“, es wird **nicht** auf einen anderen freien Platz ausgewichen –
   (`PUT /persons/{ich}/servicerequests/{platz}` mit `isAccepted: true`) und liest nach. Ausgänge: **schon übernommen** („Schon übernommen – danke!“, nichts wird überschrieben),
   **kein Recht** („Du darfst dich hier nicht selbst eintragen – frag die Leitung.“, wenn der Platz `enterSelfIfFree: false` nennt oder ChurchTools mit 403 antwortet),
   vorübergehender Fehler („nicht bestätigt“, nichts wird wiederholt). Die Antworten der **eigenen** Dienstgruppen lädt der Start dafür (bisher nur die planbaren).
-- **Planen:** Am **freien** Platz eines Dienstes, für den eine Markierung zu diesem Termin besteht, steht das kleine Schild **„Vertretung gesucht“** (Hinweis beim Darüberfahren:
+- **Planen:** Am **freien** Platz mit dem gemerkten `index` (nicht an einem anderen freien Platz desselben Dienstes), für den eine Markierung zu diesem Termin besteht, steht das kleine Schild **„Vertretung gesucht“** (Hinweis beim Darüberfahren:
   „Anna hat abgesagt · gefragt: Ben, Finn“). Der Platz bleibt, was er war – Planen geht dort normal weiter.
 - **„Wann kann ich?“ erhält die Markierung:** Annas Antworten und die Markierung stehen im **selben Wert**. Speichert sie in „Wann kann ich?“, bleibt die Markierung, wie sie
   **frisch gelesen** dasteht (nicht, wie die Seite sie beim Öffnen sah); vergangene Termine fallen heraus. Darum auch der geänderte Hinweistext am Notizfeld:

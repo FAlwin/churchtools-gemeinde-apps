@@ -272,17 +272,30 @@ export function leitungMail(o: {
 // ── Gesuchte Vertretungen: wann sie noch gelten ──────────────────────────────
 
 /**
+ * **Ist der Platz frei, für den die Vertretung gesucht wird?** `freie` sind die `index` der freien Plätze **dieses Dienstes** am Termin.
+ * Die Markierung kennt den `index` des abgesagten Platzes (er bleibt über alle Ersetzungen gleich, gemessen) – gilt dann **genau
+ * dieser** Platz; ein anderer freier Platz des Dienstes (schon vorher frei) ist Sache der Planer. Ohne `index` (alte Markierung)
+ * gilt die alte Regel „irgendein Platz des Dienstes ist frei“.
+ */
+export function suchPlatzFrei(
+  v: Pick<Vertretung, 'index'>,
+  freie: readonly (number | null)[],
+): boolean {
+  return v.index === undefined ? freie.length > 0 : freie.includes(v.index);
+}
+
+/**
  * **Gilt „Vertretung gesucht“ noch?** Eine Regel für Start und Planen: der Termin ist nicht vergangen (`tag >= heute`), nicht
- * abgesagt, und **mindestens ein Platz des Dienstes ist frei** (`freiePlaetze`). Ohne freien Platz hat jemand übernommen oder
- * der Planer hat anders besetzt – die Markierung allein beweist nichts.
+ * abgesagt, und **der gesuchte Platz ist frei** (`frei`, aus `suchPlatzFrei`). Ist er besetzt, hat jemand übernommen oder der
+ * Planer hat anders besetzt – die Markierung allein beweist nichts.
  */
 export function gesuchtGilt(o: {
   tag: string;
   heute: string;
   abgesagt: boolean;
-  freiePlaetze: number;
+  frei: boolean;
 }): boolean {
-  return o.tag >= o.heute && !o.abgesagt && o.freiePlaetze > 0;
+  return o.tag >= o.heute && !o.abgesagt && o.frei;
 }
 
 /** Eine gesuchte Vertretung, wie Start und Planen sie zeigen. */
@@ -296,6 +309,8 @@ export interface Gesuchte {
   gefragt: number[];
   gefragtNamen: string[];
   seit: string;
+  /** Der Platz, für den eine Vertretung gesucht wird (`Vertretung.index`); `undefined` bei alten Markierungen. */
+  index: number | null | undefined;
 }
 
 /** Termin und Dienst aus dem Schlüssel (`vertretungsSchluessel`) – `null` bei einem fremden Schlüssel. */
@@ -306,7 +321,7 @@ export function schluesselAus(k: string): { terminId: number; dienstId: number }
 
 /**
  * **„Für dich offen“ auf der Startseite** (Entwurf Abschnitt 4): je gesuchter Vertretung, die noch gilt (`gesuchtGilt` am
- * geladenen Termin: `TerminZeile.freieDienste`), für **jeden aus dem Team des Dienstes** (`eigeneDienste`) – nicht nur die
+ * geladenen Termin: `TerminZeile.freiePlaetze`), für **jeden aus dem Team des Dienstes** (`eigeneDienste`) – nicht nur die
  * Gefragten, **nicht** für die suchende Person selbst. Nach Tag und Uhrzeit sortiert.
  */
 export function offeneVertretungen(o: {
@@ -326,13 +341,15 @@ export function offeneVertretungen(o: {
       if (!s || s.dienstId !== v.dienst || !o.eigeneDienste.has(v.dienst)) continue;
       const termin = o.zeilen.find((z) => z.id === s.terminId);
       if (!termin) continue;
-      const frei = termin.freieDienste.includes(v.dienst) ? 1 : 0;
+      // Wer an diesem Termin in diesem Dienst schon eingeteilt ist (angefragt oder zugesagt), bekommt „Übernehmen“ nie gezeigt.
+      if (termin.meine.some((m) => m.ort?.serviceId === v.dienst)) continue;
+      const freie = termin.freiePlaetze.filter((p) => p.serviceId === v.dienst).map((p) => p.index);
       if (
         !gesuchtGilt({
           tag: termin.tag,
           heute: o.heute,
           abgesagt: termin.abgesagt,
-          freiePlaetze: frei,
+          frei: suchPlatzFrei(v, freie),
         })
       )
         continue;
@@ -345,6 +362,7 @@ export function offeneVertretungen(o: {
         gefragt: v.gefragt,
         gefragtNamen: v.gefragtNamen,
         seit: v.seit,
+        index: v.index,
         termin,
       });
     }
@@ -361,12 +379,15 @@ export function offeneVertretungen(o: {
 export interface Schild {
   /** „⚑ Vertretung gesucht“ ist fest; hier der Hinweistext („Anna hat abgesagt · gefragt: Ben, Finn“). */
   hinweis: string;
+  /** Der Platz, an dem das Schild steht (`index`); `undefined` bei alten Markierungen (dann am ersten freien Platz). */
+  index: number | null | undefined;
 }
 
 /**
  * **Die Schilder in einer Zelle von „Planen“** (Entwurf Abschnitt 5): je gesuchter Vertretung zu diesem Termin und Dienst, die
- * noch gilt, ein Schild – höchstens so viele wie freie Plätze (`gesuchtGilt`, dieselbe Regel wie auf der Startseite). Nach
- * Zeitpunkt der Suche.
+ * noch gilt (`gesuchtGilt` mit `suchPlatzFrei` – dieselbe Regel wie auf der Startseite), ein Schild **an dem Platz mit dem
+ * gemerkten `index`**. `freieIndizes` sind die `index` der freien Plätze dieses Dienstes in der Zelle. Alte Markierungen ohne `index`
+ * bekommen höchstens so viele Schilder, wie freie Plätze übrig sind. Nach Zeitpunkt der Suche.
  */
 export function schilder(o: {
   vertretungen: ReadonlyMap<number, Vertretungen> | undefined;
@@ -375,20 +396,31 @@ export function schilder(o: {
   tag: string;
   heute: string;
   abgesagt: boolean;
-  freiePlaetze: number;
+  freieIndizes: readonly (number | null)[];
 }): Schild[] {
-  if (!gesuchtGilt(o)) return [];
   const treffer: Vertretung[] = [];
   for (const je of o.vertretungen?.values() ?? []) {
     const v = je[vertretungsSchluessel(o.terminId, o.dienstId)];
     if (v && v.dienst === o.dienstId) treffer.push(v);
   }
-  return treffer
+  const gilt = treffer
     .sort((a, b) => a.seit.localeCompare(b.seit))
-    .slice(0, o.freiePlaetze)
-    .map((v) => ({
-      hinweis: `${v.name} hat abgesagt${v.gefragtNamen.length > 0 ? ` · gefragt: ${v.gefragtNamen.join(', ')}` : ''}`,
-    }));
+    .filter((v) =>
+      gesuchtGilt({
+        tag: o.tag,
+        heute: o.heute,
+        abgesagt: o.abgesagt,
+        frei: suchPlatzFrei(v, o.freieIndizes),
+      }),
+    );
+  const gezielt = gilt.filter((v) => v.index !== undefined);
+  const alt = gilt
+    .filter((v) => v.index === undefined)
+    .slice(0, Math.max(0, o.freieIndizes.length - gezielt.length));
+  return [...gezielt, ...alt].map((v) => ({
+    hinweis: `${v.name} hat abgesagt${v.gefragtNamen.length > 0 ? ` · gefragt: ${v.gefragtNamen.join(', ')}` : ''}`,
+    index: v.index,
+  }));
 }
 
 // ── Übernehmen ───────────────────────────────────────────────────────────────
@@ -429,7 +461,13 @@ const meinPlatz = (p: RohPlatz, ich: number) =>
  */
 export async function uebernehmen(
   port: DienstPort,
-  o: { eventId: number; serviceId: number; ichId: number },
+  o: {
+    eventId: number;
+    serviceId: number;
+    ichId: number;
+    /** Der Platz der Suche (`Vertretung.index`): **genau dieser** wird genommen, nie ein anderer freier. `undefined` = alte Markierung. */
+    index?: number | null;
+  },
 ): Promise<UebernehmenErgebnis> {
   let termin: RohTermin;
   try {
@@ -441,10 +479,18 @@ export async function uebernehmen(
       grund: g === 'konflikt' || g === 'nicht-angekommen' ? 'voruebergehend' : g,
     };
   }
-  const plaetze = (termin.eventServices ?? []).filter(
+  const imDienst = (termin.eventServices ?? []).filter(
     (p) => p.serviceId === o.serviceId && p.isValid !== false,
   );
+  const indexVon = (p: RohPlatz) => (typeof p.index === 'number' ? p.index : null);
+  // Mit gemerktem Platz zählt nur dieser – ein anderer freier Platz des Dienstes ist Sache der Planer. Gibt es ihn nicht mehr
+  // (Platzzahl geändert) oder ist er besetzt, heißt das „besetzt“.
+  const plaetze =
+    o.index === undefined ? imDienst : imDienst.filter((p) => indexVon(p) === o.index);
   if (plaetze.some((p) => meinPlatz(p, o.ichId))) return { ok: true };
+  // Ich stehe schon an einem ANDEREN Platz dieses Dienstes: nicht doppelt einteilen.
+  if (o.index !== undefined && imDienst.some((p) => !istFrei(p) && p.personId === o.ichId))
+    return { ok: false, grund: 'besetzt' };
   const frei = plaetze
     .filter((p) => istFrei(p) && typeof p.id === 'number')
     .sort((a, b) => ((a.index as number | null) ?? 0) - ((b.index as number | null) ?? 0));

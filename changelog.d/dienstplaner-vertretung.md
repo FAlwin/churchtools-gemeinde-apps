@@ -8,9 +8,9 @@
   - **Der Ablauf:** erst die Markierung „Vertretung gesucht“ speichern, dann den Dienst absagen, dann je gefragter Person eine eigene Mail (mit Knopf zum Dienstplaner,
     die Leitung bekommt eine Kopie). Scheitert eine der ersten beiden Stufen, ist nichts abgesagt und nichts verschickt. Scheitern nur Mails, ist abgesagt – das Fenster
     sagt, an wen nicht, und „Erneut senden“ schickt nur an diese, nur auf Klick.
-  - **„Für dich offen“:** Jeder aus dem Team sieht auf Start „Anna sucht eine Vertretung“ mit **„Übernehmen“** – solange am Termin ein Platz dieses Dienstes frei ist.
+  - **„Für dich offen“:** Jeder aus dem Team sieht auf Start „Anna sucht eine Vertretung“ mit **„Übernehmen“** – solange **der abgesagte Platz** frei ist (die Markierung merkt sich dessen `index`; ein anderer, schon vorher freier Platz zählt nicht, und „Übernehmen“ nimmt nie einen anderen). Wer in dem Dienst schon eingeteilt ist, sieht die Zeile nicht.
     Wer zuerst drückt, hat den Dienst; zu spät heißt „Schon übernommen – danke!“; ohne das ChurchTools-Recht „freie Plätze selbst eintragen“ steht „frag die Leitung“.
-  - **Planen:** Der freie Platz trägt das Schild **„Vertretung gesucht“** („Anna hat abgesagt · gefragt: Ben, Finn“), bis jemand übernimmt.
+  - **Planen:** Der freie Platz trägt das Schild **„Vertretung gesucht“** („Anna hat abgesagt · gefragt: Ben, Finn“), bis jemand übernimmt – nur an dem Platz, den sie abgesagt hat.
   - **Voraussetzung in ChurchTools:** Für „Übernehmen“ braucht das Team das Gruppenrecht `+entry free` (siehe `docs/betrieb/DIENSTPLANER.md`).
 
 ### Geändert (Dienstplaner)

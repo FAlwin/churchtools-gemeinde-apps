@@ -32,7 +32,7 @@ const vorschlag = (personId: number, name: string, a: Vorschlag['a'] = 'ja'): Vo
 });
 const auftrag = (extra: Partial<VertretungsAuftrag> = {}): VertretungsAuftrag => ({
   termin: { id: TERMIN, name: 'Gottesdienst', tag: '2026-12-13', uhrzeit: '10:00' },
-  dienst: { id: 9, name: 'Gesang' },
+  dienst: { id: 9, name: 'Gesang', index: 1 },
   ich: { id: ANNA, name: 'Anna Test' },
   gefragt: [vorschlag(BEN, 'Ben Test'), vorschlag(FINN, 'Finn Test', 'vielleicht')],
   leitung: [person(LEITUNG, 'Alwin Friesen')],
@@ -118,6 +118,7 @@ describe('vertretungSuchen – der Ablauf von „Absagen und fragen“', () => {
         gefragt: [BEN, FINN],
         seit: '2026-11-21T10:00:00.000Z',
         tag: '2026-12-13',
+        index: 1,
         name: 'Anna Test',
         gefragtNamen: ['Ben Test', 'Finn Test'],
       },

@@ -93,6 +93,7 @@ export function offeneVertretung(
     gefragt: [47],
     gefragtNamen: ['Ben Test'],
     seit: '2026-11-21T10:00:00.000Z',
+    index: 1,
     termin,
     ...extra,
   };

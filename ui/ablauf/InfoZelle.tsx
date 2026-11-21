@@ -19,8 +19,10 @@ import styles from './InfoZelle.module.scss';
 /** Was `SortableRow` für die Zellen braucht – alle Gruppen und der gemeinsame Schreibweg. */
 export interface InfoZellen {
   gruppen: readonly InfoGruppe[];
-  /** Schreibt die Info; wirft bei Fehler (die Zelle zeigt die Meldung). */
-  /** `gesehen` fehlt = „Trotzdem speichern“ nach einem Konflikt (412) – wie im Punkt-Fenster (E6-3c). */
+  /**
+   * Schreibt die Info; wirft bei Fehler (die Zelle zeigt die Meldung). `gesehen` fehlt = „Trotzdem speichern“ nach einem
+   * Konflikt (412) – wie im Punkt-Fenster (E6-3c).
+   */
   onSpeichern: (gruppeId: number, text: string, gesehen: PunktStand | undefined) => Promise<void>;
   /** Ablauf abgeschlossen: Ein Klick öffnet kein Feld, sondern zeigt den Sperr-Hinweis. */
   gesperrt?: () => void;

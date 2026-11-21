@@ -1,11 +1,10 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3b-1 (20.11.2026) – noch kein Release.** W3b-1: Rechte beim Einrichten (Stufen je Rolle), „Wer darf was“ im Fenster „Einstellungen“, Zugang aus den eigenen Rechten, Redakteure in der Oberfläche – siehe „Wer darf was – Stand W3b-1“. Davor W3a-3c: die Seiten-Vorschau zieht nach dem Speichern im Fenster „Einstellungen“ sofort nach (siehe dort). Davor (W3a-3b) neu: der letzte Reiter **Einstellungen** (Fenster) – siehe „Einstellungen (W3a-3b)“ unten. Davor (W3a-3a): der Reiter **Aussehen** (Farben, Schriften, Logo-Hinweis,
-> eigenes CSS) und die Schriften in der Vorschau – siehe „Aussehen“ unten. Gebaut sind das Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten
-> anlegen und löschen – W3a-1) und das **Bearbeiten direkt in der Vorschau**: Abschnitte einfügen, gestalten, verschieben,
-> kopieren, löschen, Bausteine bearbeiten, hinzufügen, entfernen, Seite einstellen mit Menü, dazu die **Sperre** (eine Person
-> bearbeitet) und das **Speichern von selbst**. Noch **nicht** da: Bilder und Logo ändern (W4),
-> Freigabe und Rechte für Redakteure (W3b), Veröffentlichen (W5). Das Bild der ganzen Website: Bauplan „Neue Website“
+> **Stand: W3c-3 (21.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
+> löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2) und
+> der neue **Designer in der Vorschau** (W3c): Text direkt tippen, Bausteine und Abschnitte ziehen, Spaltenbreite und Abstand ziehen,
+> Rückgängig/Wiederholen für die Seite – Abschnitte „Wer darf was“, „Freigabe“ und „Bearbeiten in der Vorschau“ unten. Noch **nicht**
+> da: siehe „Was noch fehlt“. Das Bild der ganzen Website: Bauplan „Neue Website“
 > (Second Brain, `ecg-donrath/website/bauplan-neue-website.md`).
 
 Die Website einer Gemeinde wird in ChurchTools gepflegt – ohne Code. Die Erweiterung speichert Seiten, Menü und

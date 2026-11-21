@@ -267,7 +267,9 @@ und erscheint nur, wo die Maus ist – nie über Text und nie übereinander:
 - **Baustein-Leiste** (nur eine, hell): der **Griff** verschiebt den Baustein, der **Stift** öffnet das bisherige Fenster des Bausteins. Für
   „Eigenes HTML“ gibt es die Leiste – und damit den Griff – nur für die Leitung. Text-Bausteine tippt man direkt (siehe unten);
   alle anderen öffnen mit einem Klick auf den Baustein das Fenster.
-- **Abstand-Pille** unten mittig („Abstand: Normal“): öffnet vorerst das Fenster „Gestalten“ (Ziehen kommt mit W3c-3).
+- **Abstand-Pille** unten mittig („Abstand oben & unten: Normal“): **senkrecht ziehen** rastet auf Kein · Klein · Normal · Groß ein (siehe „Maße ziehen“),
+  ein **Klick** ohne Ziehen öffnet das Fenster „Gestalten“.
+- **Spalten-Griff** mittig in der Lücke zwischen zwei Spalten (nur am Abschnitt unter der Maus, nur wenn die Spalten nebeneinander stehen): siehe „Maße ziehen“.
 - **Abschnitt einfügen** an der Grenze zwischen zwei Abschnitten (und auf einer leeren Seite), **+** in einer Lücke zwischen Bausteinen und
   **Baustein hinzufügen** in einer leeren Spalte öffnen das bisherige Hinzufügen.
 - **Ziehen (W3c-2).** Den Griff greifen und ziehen (erst ab 4 px, sonst ist es ein Klick). Eine **Einfügelinie** zeigt die Stelle, vor der
@@ -279,6 +281,20 @@ und erscheint nur, wo die Maus ist – nie über Text und nie übereinander:
   Zielspalte, bei einer leeren Spalte 0). Die Stelle direkt über und unter dem Element lässt es, wo es ist; ungültige Stellen ändern nichts.
   `abschnittVerschieben(hoch/runter)` rechnet darüber (`nach = i − 1` / `i + 2`). Nach dem Verschieben zeichnet die Vorschau neu – der Fokus am
   Griff geht dabei verloren; für die nächste Pfeiltaste muss man den Griff neu fokussieren.
+- **Maße ziehen (W3c-3).** _Spaltenbreite:_ Der Griff rastet **nur** auf Aufteilungen mit **derselben Spaltenzahl** ein – die Liste `AUFTEILUNGEN`, gruppiert
+  nach `spaltenAnzahl` (heute bei zwei Spalten `1-1`, `2-1`, `1-2`; bei drei und vier Spalten gibt es je nur eine, dort ist der Griff **gedämpft**, ohne Ziehen, mit
+  kurzem Hinweis „nur eine Aufteilung – die Spaltenzahl änderst du über Gestalten“). Die **Anteile stehen im Namen** (`2-1` → 2/3 : 1/3); es gibt keine zweite Liste.
+  Beim Ziehen zeigen **gestrichelte Rastlinien** die Aufteilungen (die gewählte durchgezogen), ein **Chip** „Aufteilung 2 : 1“ folgt dem Zeiger, die Spalten folgen live
+  (`grid-template-columns`). **Esc** bricht ab; beim Loslassen geht **eine** Nachricht `aufteilung` raus – nichts, wenn es dieselbe Aufteilung bleibt. Da die Spaltenzahl gleich
+  bleibt, geht kein Baustein verloren. _Abstand:_ Die Pille rastet beim senkrechten Ziehen (nach unten = mehr) auf die Stufen `kein/klein/normal/gross` des Schemas ein. Die
+  **Pixelhöhe jeder Stufe wird am echten Stylesheet gemessen** (`K.stufenMessen`: je Stufe ein unsichtbarer Probe-Abschnitt mit den echten Klassen, gelesen wird der obere
+  Innenabstand; bei jedem Ziehen neu, denn die Werte hängen an der Fensterbreite). Zwei **gestreifte Bänder** oben und unten zeigen die Abstandshöhe (hell gesäumt, auch auf Petrol
+  und anderen dunklen Flächen sichtbar), der Chip nennt „Abstand oben und unten: Groß“ – **das Modell hat einen Abstand für oben und unten**. Erst ab 4 px ist es ein Zug; ein Klick
+  öffnet „Gestalten“. Pfeil links/rechts am Spalten-Griff (nächste Aufteilung) und Pfeil hoch/runter an der Pille (eine Stufe) tun dasselbe mit der Tastatur. Die Rastung rechnet im
+  Kern (`ebene.kern.txt`: `aufteilungRasten`, `abstandRasten`, `spaltenLage`, `teilerX`, `zeigerAnteil` – mit Tests); das Skript zeigt und sendet nur. Die Vorschau bleibt nach dem
+  Loslassen stehen, bis sie neu gezeichnet wird; kommt keine neue Zeichnung (die Erweiterung hat die Änderung nicht übernommen), stellt die Ebene nach 2,5 s den Stand davor her.
+  Beide Änderungen sind ein Schritt für Rückgängig/Wiederholen. **Redakteure dürfen beides** (Seiten-Maße, kein Aussehen der ganzen Website); fremd gesperrt gibt es keine Ebene und
+  damit keine Griffe; am Handy bleibt es beim Fenster „Gestalten“. Der Spalten-Griff steht in der Rangordnung der Kollisionsregel an Stelle 3.
 - **Rückgängig und Wiederholen (W3c-2).** Zwei stille Knöpfe ↶ ↷ in der Kopfzeile der Seite (nur Computer-Ansicht) und **Strg/Cmd+Z**,
   **Umschalt+Strg/Cmd+Z** (auch Strg+Y), solange **kein Textfeld offen ist** (im offenen Feld gilt der Verlauf des Feldes, siehe unten). Ein Schritt
   ist „Seite vorher, Seite nachher“ (`website/src/seitenVerlauf.ts`, rein): Verschieben, Einfügen, Kopieren, Löschen, übernommener getippter Text
@@ -288,7 +304,7 @@ und erscheint nur, wo die Maus ist – nie über Text und nie übereinander:
   **Nichts Fremdes überschreiben:** Rückgängig geht nur, wenn die Seite genau so aussieht wie nach dem Schritt; sonst Hinweis, Verlauf weg. Hat
   jemand anderes inzwischen gespeichert, weist das Speichern selbst ab (Band „Neu laden“) – es wird nicht darüber geschrieben. Tasten im `iframe`
   meldet die Ebene als `rueckgaengig` / `wiederholen`.
-- **Kollisionsregel** (`website/src/ebene.kern.txt`, `K.ordne`, mit Tests): Rangordnung Baustein-Leiste > Abschnitt-Leiste > „+ Abschnitt“ >
+- **Kollisionsregel** (`website/src/ebene.kern.txt`, `K.ordne`, mit Tests): Rangordnung Baustein-Leiste > Abschnitt-Leiste > Spalten-Griff > „+ Abschnitt“ >
   „+“ zwischen Bausteinen > Abstand-Pille. Jedes Element nennt Wunschplätze; genommen wird der erste, der weder eine Textzeile noch ein Bild
   noch einen Knopf noch ein höher eingestuftes Element berührt (und nicht unter dem festen Seitenkopf liegt). Geht keiner, weicht ein
   niedrigeres Element aus oder wird ausgeblendet; die beiden Leisten nehmen als Notlösung den Platz mit der geringsten Überdeckung, damit man
@@ -416,6 +432,9 @@ der Seite); nur beim Text direkt tippen kommt auch der getippte Text mit (Punkt 
    (keine fremden Felder). Beide Stellen müssen es auf der Seite geben (`abschnittDa`, `bausteinDa`, `einfuegeStelleDa`, `bausteinStelleDa`), sonst ist
    es keine Nachricht. Die Seitenarbeit verweigert zusätzlich das Verschieben von „Eigenes HTML“ ohne das Recht (auch bei einer gefälschten
    Nachricht). `hoch` und `runter` gibt es nicht mehr. `rueckgaengig` / `wiederholen` tragen nichts.
+   **`aufteilung`** und **`abstand`** (W3c-3) tragen eine Zahl (Abschnitt) und einen **Namen aus den Listen des Modells** (`AUFTEILUNGEN`, die Stufen aus `gestaltungSchema`; keine
+   fremden Felder). Der Abschnitt muss es geben, und eine Aufteilung muss **dieselbe Spaltenzahl** haben wie der Abschnitt (`aufteilungGleicheSpalten`) – sonst ist es keine
+   Nachricht. Die Seitenarbeit prüft es nach dem Warten auf die Sperre noch einmal (`aufteilungZiehen`) und ändert den Abstand über `gestaltungAendern`, dieselbe Regel wie das Fenster „Gestalten“.
 5. **Die eine Ausnahme: der getippte Text** (`text`). Er kommt nur an, wenn (a) die Stelle ein tippbares Feld ist (`textFeldGueltig`: Überschrift,
    Akzentzeile, Text, Bild+Text, Knopf-Beschriftung – nie „Eigenes HTML“), (b) die Form stimmt (feste Läufe aus Text, Fett, Kursiv, Link, nichts
    sonst, Längen begrenzt), (c) **jede Link-Adresse die echte Regel besteht** (sonst ist die ganze Nachricht ungültig) und (d) dasselbe Feld

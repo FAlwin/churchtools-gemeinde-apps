@@ -83,7 +83,8 @@ export interface ProtokollQuelle {
 
 /** Was vor einer Zeile steht: Aufzählungspunkt, Nummer, Kästchen (Checkliste, To-Do). */
 export type Zeichen =
-  | { art: 'punkt' }
+  /** `ebene`: wie tief die Aufzählung steckt (0 = oberste; fehlt = oberste) – Zeichen siehe `aufzaehlungsZeichen`. */
+  | { art: 'punkt'; ebene?: number }
   | { art: 'nummer'; nr: number }
   | { art: 'kasten'; an: boolean };
 
@@ -378,7 +379,13 @@ function tabelle(content: unknown, q: ProtokollQuelle): TabellenZelleBlatt[][] |
 }
 
 /** Ein Block (ohne seine Kinder) – `null`, wenn er nichts zeigt (leerer Absatz, leere Aufgabe …). */
-function teilAus(b: Block, einzug: number, k: Kontext, nr: number): BlattTeil | null {
+function teilAus(
+  b: Block,
+  einzug: number,
+  k: Kontext,
+  nr: number,
+  ebene: number,
+): BlattTeil | null {
   const { q } = k;
   const laeufe = laeufeAus(b.content, q);
   const absaetze = zeilenAus(laeufe);
@@ -399,7 +406,7 @@ function teilAus(b: Block, einzug: number, k: Kontext, nr: number): BlattTeil | 
       if (!hatText) return null;
       const zeichen: Zeichen =
         b.type === 'bulletListItem'
-          ? { art: 'punkt' }
+          ? { art: 'punkt', ebene }
           : b.type === 'numberedListItem'
             ? { art: 'nummer', nr }
             : { art: 'kasten', an: !!b.props?.checked };
@@ -450,7 +457,11 @@ function teilAus(b: Block, einzug: number, k: Kontext, nr: number): BlattTeil | 
   }
 }
 
-function teileAus(bloecke: readonly Block[], einzug: number, k: Kontext): BlattTeil[] {
+/**
+ * `ebene`: wie viele Aufzählungspunkte übereinander diese Blöcke einrücken – wie im Editor (BlockNote zählt nur
+ * Aufzählungen: unter einem Absatz oder einer Nummerierung fängt eine Aufzählung wieder oben an).
+ */
+function teileAus(bloecke: readonly Block[], einzug: number, k: Kontext, ebene = 0): BlattTeil[] {
   const aus: BlattTeil[] = [];
   let nr = 0;
   let vorher = '';
@@ -458,9 +469,12 @@ function teileAus(bloecke: readonly Block[], einzug: number, k: Kontext): BlattT
     // Nummern zählen wie eine Liste in der Lese-Ansicht: aufeinanderfolgende nummerierte Punkte derselben Ebene.
     nr = b.type === 'numberedListItem' && vorher === 'numberedListItem' ? nr + 1 : 1;
     vorher = b.type;
-    const t = teilAus(b, einzug, k, nr);
+    const t = teilAus(b, einzug, k, nr, ebene);
     if (t) aus.push(t);
-    if (b.children?.length) aus.push(...teileAus(b.children, einzug + 1, k));
+    if (b.children?.length)
+      aus.push(
+        ...teileAus(b.children, einzug + 1, k, b.type === 'bulletListItem' ? ebene + 1 : 0),
+      );
   }
   return aus;
 }

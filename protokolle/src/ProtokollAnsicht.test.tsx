@@ -37,6 +37,98 @@ describe('ProtokollAnsicht (S3-2) – das echte BlockNote-Dokument', () => {
   });
 });
 
+describe('ProtokollAnsicht – Aufzählungsebenen und Zeilenumbrüche (W11)', () => {
+  const li = (id: string, children: Block[] = [], type = 'bulletListItem'): Block => ({
+    id,
+    type,
+    content: [text(id)],
+    children,
+  });
+
+  it('jede Aufzählung trägt ihre Ebene (0, 1, ab 2 gleich) – Absatz und Nummerierung setzen zurück', () => {
+    const { container } = render(
+      <ProtokollAnsicht
+        dokument={[
+          li('a', [li('b', [li('c', [li('d')])]), li('n', [li('u')], 'numberedListItem')]),
+        ]}
+      />,
+    );
+    const ebene = (t: string) =>
+      [...(screen.getByText(t).closest('ul')?.classList ?? [])].find((k) => k.includes('aufzaehlung'));
+    expect(ebene('a')).toContain('aufzaehlung0');
+    expect(ebene('b')).toContain('aufzaehlung1');
+    expect(ebene('c')).toContain('aufzaehlung2');
+    expect(ebene('d')).toContain('aufzaehlung2');
+    // unter der Nummerierung fängt eine Aufzählung wieder oben an
+    expect(ebene('u')).toContain('aufzaehlung0');
+    expect(container.querySelectorAll('ul').length).toBe(5);
+  });
+
+  it('eine Checkliste bekommt kein Aufzählungszeichen', () => {
+    render(<ProtokollAnsicht dokument={[li('k', [], 'checkListItem')]} />);
+    expect(screen.getByText('k').closest('ul')?.className).not.toContain('aufzaehlung');
+  });
+
+  it('Zeilenumbrüche (Umschalt+Enter, Zelle mit Aufzählung) erscheinen als Umbruch – auch in Tabellenzellen', () => {
+    const zelle = (t: string) => [text(t)];
+    const { container } = render(
+      <ProtokollAnsicht
+        dokument={[
+          { id: 'p', type: 'paragraph', content: [text('eins\nzwei')] },
+          {
+            id: 't',
+            type: 'table',
+            content: {
+              type: 'tableContent',
+              rows: [{ cells: [zelle('• Brot\n• Käse')] }],
+            },
+          },
+        ]}
+      />,
+    );
+    expect(container.querySelectorAll('p br').length).toBe(1);
+    const td = container.querySelector('td');
+    expect(td?.querySelectorAll('br').length).toBe(1);
+    expect(td?.textContent).toBe('• Brot• Käse');
+  });
+
+  it('eine Zelle mit Hintergrund: hell und dunkel in den Farben des Editors', () => {
+    const dok: Block[] = [
+      {
+        id: 't',
+        type: 'table',
+        content: {
+          type: 'tableContent',
+          rows: [
+            {
+              cells: [
+                { type: 'tableCell', props: { backgroundColor: 'green' }, content: [text('grün')] },
+              ],
+            },
+          ],
+        },
+      },
+    ];
+    const { unmount } = render(<ProtokollAnsicht dokument={dok} />);
+    expect(screen.getByText('grün').closest('td')?.getAttribute('style')).toContain(
+      hexAlsRgb(farbWert('green', 'hintergrund', 'light')!),
+    );
+    unmount();
+    document.documentElement.dataset.theme = 'dark';
+    try {
+      render(<ProtokollAnsicht dokument={dok} />);
+      expect(screen.getByText('grün').closest('td')?.getAttribute('style')).toContain(
+        hexAlsRgb(farbWert('green', 'hintergrund', 'dark')!),
+      );
+      expect(farbWert('green', 'hintergrund', 'dark')).not.toBe(
+        farbWert('green', 'hintergrund', 'light'),
+      );
+    } finally {
+      delete document.documentElement.dataset.theme;
+    }
+  });
+});
+
 describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
   const dok: Block[] = [
     { id: 'p1', type: 'heading', props: { level: 1 }, content: [text('Finanzen')], children: [] },

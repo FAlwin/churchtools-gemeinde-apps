@@ -220,11 +220,31 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
     ).toEqual([
       ['a', 0, { art: 'nummer', nr: 1 }],
       ['b', 0, { art: 'nummer', nr: 2 }],
-      ['b1', 1, { art: 'punkt' }],
+      ['b1', 1, { art: 'punkt', ebene: 0 }],
       ['dazwischen', 0, undefined],
       ['c', 0, { art: 'nummer', nr: 1 }],
       ['d', 0, { art: 'kasten', an: true }],
     ]);
+  });
+
+  it('Aufzählungen tragen ihre Ebene: nur Aufzählungen zählen mit, unter Absatz oder Nummer fängt es oben an (W11)', () => {
+    const punkt3 = block('bulletListItem', 'c3');
+    const ts = teile(
+      quelle([
+        block('bulletListItem', 'a1', {
+          children: [
+            block('bulletListItem', 'b2', { children: [punkt3] }),
+            block('numberedListItem', 'n', { children: [block('bulletListItem', 'u', {})] }),
+          ],
+        }),
+        absatz('Absatz'),
+      ]),
+    );
+    expect(
+      ts.map((t) => (t.art === 'text' && t.zeichen?.art === 'punkt' ? [text(t.absaetze[0]), t.zeichen.ebene] : null)),
+    ).toEqual([['a1', 0], ['b2', 1], ['c3', 2], null, ['u', 0], null]);
+    // Die Ebene zählt Aufzählungen übereinander, nicht die Einrückung: „u“ steht eingerückt, aber oben.
+    expect(ts.find((t) => t.art === 'text' && text(t.absaetze[0]) === 'u')).toMatchObject({ einzug: 2 });
   });
 
   it('To-Do mit Wer und Bis, ohne Status – auch ein erledigtes; vor dem Speichern die Wahl im Block', () => {
@@ -349,6 +369,30 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
       zeilen: 1,
       hintergrund: GELB,
     });
+  });
+});
+
+describe('Aufzählung in einer Tabellenzelle (W11)', () => {
+  it('jede Zeile der Zelle ist ein eigener Absatz – „• “ und „1. “ bleiben als Text stehen', () => {
+    const tabelle = block('table', '', {
+      content: {
+        type: 'tableContent',
+        rows: [
+          {
+            cells: [
+              [{ type: 'text', text: '• Brot\n• Käse' }],
+              [{ type: 'text', text: '1. eins\n2. zwei' }],
+            ],
+          },
+        ],
+      },
+    });
+    const [t] = teile(quelle([tabelle]));
+    if (t.art !== 'tabelle') throw new Error('keine Tabelle');
+    expect(t.zeilen[0].map((z) => z.absaetze.map(text))).toEqual([
+      ['• Brot', '• Käse'],
+      ['1. eins', '2. zwei'],
+    ]);
   });
 });
 

@@ -47,6 +47,17 @@ export function bausteinDa(seite: Seite, i: unknown, j: unknown, k: unknown): bo
   );
 }
 
+/** Die Stelle, an die ein Baustein in der Spalte `j` des Abschnitts `i` kommt: 0 (ganz oben) bis Anzahl der Bausteine dort (ganz unten; eine leere Spalte hat nur die 0). */
+export function bausteinStelleDa(seite: Seite, i: unknown, j: unknown, k: unknown): boolean {
+  return (
+    spalteDa(seite, i, j) &&
+    typeof k === 'number' &&
+    Number.isInteger(k) &&
+    k >= 0 &&
+    k <= seite.abschnitte[i as number].spalten[j as number].bausteine.length
+  );
+}
+
 /** Die Stelle, an die ein neuer Abschnitt kommt: 0 (ganz oben) bis `abschnitte.length` (ganz unten). */
 export function einfuegeStelleDa(seite: Seite, i: unknown): i is number {
   return typeof i === 'number' && Number.isInteger(i) && i >= 0 && i <= seite.abschnitte.length;
@@ -174,10 +185,13 @@ export interface BausteinStelle {
  * beim Herausnehmen um eins nach vorn (nur hier gerechnet). Die Stelle direkt über und direkt unter dem Baustein lassen ihn, wo er
  * ist. Ungültige Stellen und „bleibt, wo er ist“: dieselbe Seite zurück (`===`).
  */
-export function bausteinVerschieben(seite: Seite, von: BausteinStelle, nach: BausteinStelle): Seite {
-  if (!bausteinDa(seite, von.i, von.j, von.k) || !spalteDa(seite, nach.i, nach.j)) return seite;
-  const ziel = seite.abschnitte[nach.i].spalten[nach.j].bausteine;
-  if (!Number.isInteger(nach.k) || nach.k < 0 || nach.k > ziel.length) return seite;
+export function bausteinVerschieben(
+  seite: Seite,
+  von: BausteinStelle,
+  nach: BausteinStelle,
+): Seite {
+  if (!bausteinDa(seite, von.i, von.j, von.k) || !bausteinStelleDa(seite, nach.i, nach.j, nach.k))
+    return seite;
   const gleicheSpalte = von.i === nach.i && von.j === nach.j;
   if (gleicheSpalte && (nach.k === von.k || nach.k === von.k + 1)) return seite;
   const baustein = seite.abschnitte[von.i].spalten[von.j].bausteine[von.k];

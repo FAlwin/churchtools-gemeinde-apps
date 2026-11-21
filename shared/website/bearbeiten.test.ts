@@ -327,13 +327,23 @@ describe('Verschieben nach Stelle (Ziehen, W3c-2)', () => {
   });
 
   it('Abschnitt: ungültige Stellen lassen die Seite unverändert', () => {
-    for (const [von, nach] of [[-1, 0], [3, 0], [0, -1], [0, 4], [0, 1.5], [NaN, 0], [0, NaN]])
+    for (const [von, nach] of [
+      [-1, 0],
+      [3, 0],
+      [0, -1],
+      [0, 4],
+      [0, 1.5],
+      [NaN, 0],
+      [0, NaN],
+    ])
       expect(abschnittVerschiebenNach(drei, von, nach)).toBe(drei);
   });
 
   it('hoch/runter ist dieselbe Rechnung wie „nach Stelle“ – an jeder Stelle und am Rand', () => {
     for (let i = 0; i < 3; i++) {
-      expect(abschnittVerschieben(drei, i, 'hoch')).toEqual(abschnittVerschiebenNach(drei, i, i - 1));
+      expect(abschnittVerschieben(drei, i, 'hoch')).toEqual(
+        abschnittVerschiebenNach(drei, i, i - 1),
+      );
       expect(abschnittVerschieben(drei, i, 'runter')).toEqual(
         abschnittVerschiebenNach(drei, i, i + 2),
       );
@@ -345,9 +355,16 @@ describe('Verschieben nach Stelle (Ziehen, W3c-2)', () => {
       id: 'a',
       aufteilung: '1-1',
       spalten: [
-        spalte([baustein('text', { id: 'x1' }), baustein('text', { id: 'x2' }), baustein('text', { id: 'x3' })], {
-          id: 's1',
-        }),
+        spalte(
+          [
+            baustein('text', { id: 'x1' }),
+            baustein('text', { id: 'x2' }),
+            baustein('text', { id: 'x3' }),
+          ],
+          {
+            id: 's1',
+          },
+        ),
         spalte([baustein('trenner', { id: 'y1' })], { id: 's2' }),
       ],
     }),

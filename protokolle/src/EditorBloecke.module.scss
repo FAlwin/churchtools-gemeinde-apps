@@ -23,9 +23,27 @@
   margin-left: auto;
 }
 
-// Beim Termin steht das Datum vor dem Text (wie in der Lese-Ansicht), nicht rechts.
+// Beim Termin steht das Datum vor dem Text (wie in der Lese-Ansicht), nicht rechts – blau und fett, ohne Symbol (W12).
 .vorneSchild {
   margin-left: 0;
+
+  .schild {
+    padding: 0;
+    color: var(--blue);
+    font-size: 14.5px;
+    font-weight: 700;
+
+    svg {
+      display: none;
+    }
+
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        color: var(--blue);
+        text-decoration: underline;
+      }
+    }
+  }
 }
 
 // Fester Punkt (S4-3a): über die ganze Breite wie in der Lese-Ansicht.
@@ -48,11 +66,11 @@
   overflow: hidden;
   border: 0;
   border-radius: var(--r-ctrl);
-  background: var(--surface2);
+  background: none; // Stil A (W12): leise Angabe, kein Rahmen, keine Fläche
   color: var(--text2);
   font: inherit;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   text-overflow: ellipsis;
   cursor: pointer;

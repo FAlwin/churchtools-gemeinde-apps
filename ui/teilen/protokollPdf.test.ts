@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ProtokollBlatt, BlattTeil } from '@shared/protokolle/protokollBlatt';
+import type { ProtokollBlatt, BlattTeil, Zeichen } from '@shared/protokolle/protokollBlatt';
 import { protokollPdf } from './protokollPdf';
 
 /** Das Protokoll als PDF (S6-3a): gezeichnet, was das Blatt festlegt – auf dem gemeinsamen Satz. */
@@ -245,6 +245,31 @@ describe('Protokoll als PDF', () => {
     const kurven = (r: string) => (r.match(/ c\n/g) ?? []).length;
     expect(kurven(e1)).toBeGreaterThan(kurven(e0));
     expect(kurven(e2)).toBe(kurven(e0));
+  });
+
+  it('Beschluss, Termin und To-Do: nur ein Farbrand links, keine Fläche (Stil A, W12); To-Do mit Kreis statt Kästchen', async () => {
+    const einzeln = (rand: 'beschluss' | 'termin' | 'aufgabe' | 'zitat', zeichen?: Zeichen) =>
+      roh(
+        blatt([
+          {
+            art: 'text',
+            einzug: 0,
+            absaetze: [[{ text: 'Baustein' }]],
+            rand,
+            ...(zeichen ? { zeichen } : {}),
+          },
+        ]),
+      );
+    // gefüllte Rechtecke: früher Fläche + Balken (2), jetzt nur der Balken (1) – wie beim Zitat, das nie eine Fläche hatte
+    const gefuellt = (r: string) => (r.match(/ re\nf\n/g) ?? []).length;
+    const zitat = gefuellt(await einzeln('zitat'));
+    for (const rand of ['beschluss', 'termin', 'aufgabe'] as const)
+      expect(gefuellt(await einzeln(rand)), rand).toBe(zitat);
+    // Kreis: Kurvenstücke, Kästchen nicht
+    const kurven = (r: string) => (r.match(/ c\n/g) ?? []).length;
+    expect(kurven(await einzeln('aufgabe', { art: 'kreis', an: false }))).toBeGreaterThan(
+      kurven(await einzeln('aufgabe', { art: 'kasten', an: false })),
+    );
   });
 
   it('Entwurf: Banner auf Seite 1, blasses „ENTWURF“ auf jeder Seite', async () => {

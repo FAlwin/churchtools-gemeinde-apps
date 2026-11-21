@@ -2,6 +2,8 @@ import type { jsPDF } from 'jspdf';
 import type { Absatz, Zelle } from '@shared/ct/terminBlatt';
 import { aufzaehlungsZeichen } from '@shared/protokolle/aufzaehlung';
 import {
+  BAUSTEIN_BLAU,
+  BAUSTEIN_GRUEN,
   LEER_TEXT,
   type BlattTeil,
   type KastenZeile,
@@ -57,10 +59,12 @@ const UNTERPUNKT_PT = 10.5;
 const UEBERSCHRIFT_PT = 10;
 const KLEINE_UEBERSCHRIFT_PT = 9.5;
 
-const GRUEN: Farbe = [22, 163, 74];
-const GRUEN_HELL: Farbe = [240, 253, 244];
-const BLAU: Farbe = [21, 93, 252];
-const BLAU_HELL: Farbe = [239, 246, 255];
+// Die Farben der Bausteine kommen aus dem Blatt (`BAUSTEIN_*`, eine Stelle); Beschluss, Termin und To-Do haben seit W12 keine
+// Fläche mehr – nur den Farbrand links (Stil A).
+const GRUEN: Farbe = [...BAUSTEIN_GRUEN];
+const BLAU: Farbe = [...BAUSTEIN_BLAU];
+/** Wie `--text3` im Browser. */
+const TEXT3: Farbe = [144, 161, 185];
 const KASTEN: Farbe = [246, 248, 250];
 /** Banner und Wasserzeichen im Entwurf (Entwurf S6 v1: #c2410c). */
 const ENTWURF: Farbe = [194, 65, 12];
@@ -89,8 +93,9 @@ interface Hinterlegung {
 
 const RAENDER: Record<Rand, { farbe: Farbe | null; balken: Farbe }> = {
   zitat: { farbe: null, balken: LINIE },
-  beschluss: { farbe: GRUEN_HELL, balken: GRUEN },
-  termin: { farbe: BLAU_HELL, balken: BLAU },
+  beschluss: { farbe: null, balken: GRUEN },
+  termin: { farbe: null, balken: BLAU },
+  aufgabe: { farbe: null, balken: TEXT3 },
 };
 
 /** Überschriften sind fett – Kursiv, Farben und Links bleiben. */
@@ -240,7 +245,9 @@ class ProtokollZeichner extends PdfSatz {
     const top = grund - s + 0.1;
     this.d.setDrawColor(...GRAU);
     this.d.setLineWidth(0.25);
-    this.d.rect(x + 0.4, top, s, s, 'S');
+    // Kästchen (Checkliste) oder Kreis (To-Do, W12) – dasselbe Maß, dasselbe Häkchen.
+    if (z.art === 'kreis') this.d.circle(x + 0.4 + s / 2, top + s / 2, s / 2, 'S');
+    else this.d.rect(x + 0.4, top, s, s, 'S');
     if (z.an) {
       this.d.setDrawColor(...TINTE);
       this.d.setLineWidth(0.35);

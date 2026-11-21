@@ -167,13 +167,16 @@
   color: var(--text2);
 }
 
+// Beschluss, To-Do, Termin – „ruhig“ (W12, Stil A, abgenommen 21.11.2026): keine Fläche, nur ein schmaler Farbrand links.
+// EINE Stelle für Lese-Ansicht UND Editor (`EditorBloecke.tsx` nimmt diese Klassen); das PDF zeichnet dasselbe
+// (`protokollPdf.ts`: Rand + Etikett), und `shared/protokolle/protokollBlatt.ts` hält die Farben dafür.
 .marke {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0 0 8px;
-  padding: 7px 10px;
-  border-radius: var(--r-ctrl);
+  margin: 3px 0; // aufeinanderfolgende Bausteine rücken zusammen
+  padding: 3px 0 3px 10px;
+  border-left: 3px solid var(--border);
   font-size: 14.5px;
 
   svg {
@@ -194,24 +197,47 @@
   }
 }
 
+// To-Do: Rand grau, vorne der Kreis (Status), Wer/Bis leise grau darunter bzw. daneben – ohne Rahmen.
 .aufgabe {
-  background: var(--surface3);
+  border-left-color: var(--text3);
 }
 
+// Der Kreis der Lese-Ansicht (im Editor ist es `Haken.tsx` mit denselben Farben).
+.kreis {
+  display: inline-flex;
+  flex: none;
+  color: var(--text3);
+}
+
+.arbeit .kreis {
+  color: var(--blue);
+}
+
+.erledigtKreis .kreis {
+  color: var(--green);
+}
+
+// Beschluss: Rand grün, kleines Etikett in Großbuchstaben (der Text bleibt „Beschluss“ – nur die Darstellung).
 .beschluss {
-  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border-left-color: var(--green);
 
   b {
     flex: none;
+    margin-top: 1px;
     color: var(--green);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
+// Termin: Rand blau, Datum blau und fett.
 .termin {
-  background: var(--blue-soft);
+  border-left-color: var(--blue);
 
-  svg {
+  b {
     color: var(--blue);
+    font-weight: 700;
   }
 }
 

@@ -8,7 +8,8 @@
  * 2. **Form prüfen** (`schema` unten): bekannte Art, nur ganze Zahlen. Alles Unbekannte wird ignoriert; **nichts** aus der
  *    Nachricht außer diesen Zahlen wird übernommen (kein Text, kein HTML, keine Kennung).
  * 3. **Zahlen gegen die Seite prüfen** (`nachrichtLesen`): ein Abschnitt, den es nicht gibt, ist keine Nachricht.
- * 4. Eine Nachricht löst **nie mehr aus als ein Klick**: ein Fenster öffnen, einen Abschnitt verschieben oder kopieren.
+ * 4. Eine Nachricht löst **nie mehr aus als ein Klick**: ein Fenster öffnen, einen Abschnitt oder Baustein verschieben (`verschieben`,
+ *    W3c-2: nur Zahlen, beide Stellen müssen existieren), einen Abschnitt kopieren, einen eigenen Schritt rückgängig machen.
  *    **Löschen fragt immer erst nach** (Bestätigungsfenster) – eine gefälschte „löschen“-Nachricht kann also nichts
  *    wegnehmen, was der Mensch nicht bestätigt.
  * 5. **Die eine Ausnahme: der getippte Text** (`text`, W3c-1). Er ist die einzige Nachricht mit Inhalt – und der kommt nur an,
@@ -20,7 +21,13 @@
  *    Textfeld ändern, und das kann die Leitung, die ihn gebaut hat, ohnehin.
  */
 import { z } from 'zod';
-import { abschnittDa, bausteinDa, einfuegeStelleDa, spalteDa } from '@shared/website/bearbeiten';
+import {
+  abschnittDa,
+  bausteinDa,
+  bausteinStelleDa,
+  einfuegeStelleDa,
+  spalteDa,
+} from '@shared/website/bearbeiten';
 import { istLinkAdresse } from '@shared/website/markdown';
 import type { Seite } from '@shared/website/modell';
 import { textFeldGueltig, type TextFeld } from './textAenderung';
@@ -45,11 +52,30 @@ const block = z
   .object({ art: z.enum(['p', 'h', 'ul', 'ol']), laeufe: z.array(lauf).max(500) })
   .strict();
 
-const schema = z.discriminatedUnion('was', [
+// Ziehen (W3c-2): nur Zahlen. `nach` ist eine **Stelle** (vor welchem Abschnitt / Baustein), keine Kennung.
+const stelleStreng = z.object(stelle).strict();
+const verschiebenAbschnitt = z
+  .object({
+    ...kopf,
+    was: z.literal('verschieben'),
+    art: z.literal('abschnitt'),
+    von: zahl,
+    nach: zahl,
+  })
+  .strict();
+const verschiebenBaustein = z
+  .object({
+    ...kopf,
+    was: z.literal('verschieben'),
+    art: z.literal('baustein'),
+    von: stelleStreng,
+    nach: stelleStreng,
+  })
+  .strict();
+
+const einfach = z.discriminatedUnion('was', [
   z.object({ ...kopf, was: z.literal('einfuegen'), i: zahl }),
   z.object({ ...kopf, was: z.literal('gestalten'), i: zahl }),
-  z.object({ ...kopf, was: z.literal('hoch'), i: zahl }),
-  z.object({ ...kopf, was: z.literal('runter'), i: zahl }),
   z.object({ ...kopf, was: z.literal('kopieren'), i: zahl }),
   z.object({ ...kopf, was: z.literal('loeschen'), i: zahl }),
   z.object({ ...kopf, was: z.literal('baustein'), i: zahl, j: zahl, k: zahl }),
@@ -72,9 +98,14 @@ const schema = z.discriminatedUnion('was', [
     bloecke: z.array(block).max(500).optional(),
     weiter: z.object(feldStelle).strict().optional(),
   }),
+  // Strg/Cmd+Z in der Vorschau (W3c-2), wenn dort kein Text offen ist – ohne Inhalt.
+  z.object({ ...kopf, was: z.literal('rueckgaengig') }),
+  z.object({ ...kopf, was: z.literal('wiederholen') }),
   // „Die Ebene läuft“ – ohne Inhalt. Bleibt sie aus, blockiert ChurchTools das Skript (`Vorschau.tsx` zeigt dann einen Hinweis).
   z.object({ ...kopf, was: z.literal('bereit') }),
 ]);
+
+const schema = z.union([einfach, verschiebenAbschnitt, verschiebenBaustein]);
 
 export type EditorNachricht = z.infer<typeof schema>;
 /** Was die Seitenarbeit zu tun bekommt: die Klicks der Leisten und der getippte Text. */
@@ -131,6 +162,17 @@ export function nachrichtLesen(daten: unknown, seite: Seite): EditorNachricht | 
     }
     case 'scroll':
       return { ...m, y: Math.min(1_000_000, Math.max(0, Math.round(m.y))) };
+    case 'rueckgaengig':
+    case 'wiederholen':
+      return m;
+    case 'verschieben':
+      // Nur Zahlen, und beide Stellen müssen es auf dieser Seite geben (`bearbeiten.ts`, dieselben Prüfungen wie beim Verschieben).
+      if (m.art === 'abschnitt')
+        return abschnittDa(seite, m.von) && einfuegeStelleDa(seite, m.nach) ? m : null;
+      return bausteinDa(seite, m.von.i, m.von.j, m.von.k) &&
+        bausteinStelleDa(seite, m.nach.i, m.nach.j, m.nach.k)
+        ? m
+        : null;
     case 'einfuegen':
       return einfuegeStelleDa(seite, m.i) ? m : null;
     case 'baustein':

@@ -56,30 +56,41 @@ describe('Bedien-Schicht im iframe (läuft hier im Dokument nach)', () => {
     expect(document.querySelectorAll('.b-ueber .b-abstand')).toHaveLength(1);
   });
 
-  it('die Abschnitt-Leiste: Griff, nach oben, nach unten, Gestalten, kopieren, löschen – mit dem Abschnitt unter der Maus', () => {
+  it('die Abschnitt-Leiste: Griff, Gestalten, kopieren, löschen – ohne „nach oben/unten“ (der Griff ersetzt sie)', () => {
     const senden = starten(SEITE);
     const abschnitte = [...document.querySelectorAll('section.w-abschnitt')];
     abschnitte.forEach((sec, i) => {
       hoverAuf(sec);
-      for (const was of ['gestalten', 'hoch', 'runter', 'kopieren', 'loeschen']) {
+      expect(
+        document.querySelector('.b-werk [data-w="hoch"], .b-werk [data-w="runter"]'),
+      ).toBeNull();
+      for (const was of ['gestalten', 'kopieren', 'loeschen']) {
         document.querySelector<HTMLButtonElement>(`.b-werk [data-w="${was}"]`)!.click();
         expect(letzte(senden), `${was} ${i}`).toEqual(M({ was, i }));
       }
     });
   });
 
-  it('der Griff verschiebt vorerst mit den Pfeiltasten (Ziehen kommt in W3c-2)', () => {
+  it('die Pfeiltasten am Griff verschieben um eine Stelle („nach“ = vor welchem Abschnitt); am Rand passiert nichts', () => {
     const senden = starten(SEITE);
+    const taste = (griff: Element, key: string) =>
+      griff.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
     hoverAuf(document.querySelectorAll('section.w-abschnitt')[1]);
     const griff = document.querySelector('.b-werk [data-w="griff"]')!;
-    griff.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-    expect(letzte(senden)).toEqual(M({ was: 'hoch', i: 1 }));
-    griff.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-    expect(letzte(senden)).toEqual(M({ was: 'runter', i: 1 }));
-    // ein Klick auf den Griff tut nichts
+    taste(griff, 'ArrowUp');
+    expect(letzte(senden)).toEqual(M({ was: 'verschieben', art: 'abschnitt', von: 1, nach: 0 }));
     const n = gesendet(senden).length;
-    (griff as HTMLButtonElement).click();
+    taste(griff, 'ArrowDown'); // letzter Abschnitt: nach unten gibt es nichts
     expect(gesendet(senden)).toHaveLength(n);
+    hoverAuf(document.querySelectorAll('section.w-abschnitt')[0]);
+    taste(document.querySelector('.b-werk [data-w="griff"]')!, 'ArrowDown');
+    expect(letzte(senden)).toEqual(M({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 }));
+    taste(document.querySelector('.b-werk [data-w="griff"]')!, 'ArrowUp'); // erster: nach oben gibt es nichts
+    expect(gesendet(senden)).toHaveLength(n + 1);
+    // ein Klick auf den Griff tut nichts
+    const m = gesendet(senden).length;
+    (document.querySelector('.b-werk [data-w="griff"]') as HTMLButtonElement).click();
+    expect(gesendet(senden)).toHaveLength(m);
   });
 
   it('die Knöpfe tragen die Symbole des gemeinsamen Satzes und einen Namen für Screenreader', () => {
@@ -211,14 +222,15 @@ describe('Handy: alles wie bisher – Fenster statt Tippen', () => {
     expect(document.querySelector('[contenteditable]')).toBeNull();
   });
 
-  it('die Abschnitt-Leiste bleibt (mit hoch/runter)', () => {
+  it('die Abschnitt-Leiste bleibt – am Handy mit „nach oben/unten“ (kein Ziehen), das jetzt „verschieben“ meldet', () => {
     const senden = starten(SEITE, { modus: 'handy' });
     document
       .querySelectorAll('section.w-abschnitt')[0]
       .dispatchEvent(new Event('pointerdown', { bubbles: true }));
     vi.advanceTimersByTime(100);
     document.querySelector<HTMLButtonElement>('.b-werk [data-w="runter"]')!.click();
-    expect(letzte(senden)).toMatchObject({ was: 'runter' });
+    expect(letzte(senden)).toEqual(M({ was: 'verschieben', art: 'abschnitt', von: 0, nach: 2 }));
+    expect(document.querySelector('.b-griff-baustein')).toBeNull(); // am Handy keine Baustein-Leiste mit Griff
   });
 });
 

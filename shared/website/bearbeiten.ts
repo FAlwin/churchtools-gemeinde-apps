@@ -47,6 +47,17 @@ export function bausteinDa(seite: Seite, i: unknown, j: unknown, k: unknown): bo
   );
 }
 
+/** Die Stelle, an die ein Baustein in der Spalte `j` des Abschnitts `i` kommt: 0 (ganz oben) bis Anzahl der Bausteine dort (ganz unten; eine leere Spalte hat nur die 0). */
+export function bausteinStelleDa(seite: Seite, i: unknown, j: unknown, k: unknown): boolean {
+  return (
+    spalteDa(seite, i, j) &&
+    typeof k === 'number' &&
+    Number.isInteger(k) &&
+    k >= 0 &&
+    k <= seite.abschnitte[i as number].spalten[j as number].bausteine.length
+  );
+}
+
 /** Die Stelle, an die ein neuer Abschnitt kommt: 0 (ganz oben) bis `abschnitte.length` (ganz unten). */
 export function einfuegeStelleDa(seite: Seite, i: unknown): i is number {
   return typeof i === 'number' && Number.isInteger(i) && i >= 0 && i <= seite.abschnitte.length;
@@ -62,14 +73,25 @@ export function abschnittEinfuegen(seite: Seite, i: number, abschnitt: Abschnitt
   return { ...seite, abschnitte };
 }
 
+/**
+ * **Den Abschnitt `von` vor die Einfügestelle `nach` setzen** (Ziehen und Pfeiltasten, W3c-2). `nach` ist eine **Stelle** wie bei
+ * `abschnittEinfuegen`: 0 (ganz oben) bis `abschnitte.length` (ganz unten), gezählt **vor** dem Herausnehmen – die Stelle
+ * direkt über dem Abschnitt (`von`) und die direkt darunter (`von + 1`) lassen ihn, wo er ist. Die Verschiebung der Zahl, die
+ * das Herausnehmen auslöst, rechnet nur diese Funktion. Ungültige Stellen und „bleibt, wo er ist“: dieselbe Seite zurück
+ * (`===`), damit der Aufrufer nichts speichert.
+ */
+export function abschnittVerschiebenNach(seite: Seite, von: number, nach: number): Seite {
+  if (!abschnittDa(seite, von) || !einfuegeStelleDa(seite, nach)) return seite;
+  if (nach === von || nach === von + 1) return seite;
+  const abschnitte = [...seite.abschnitte];
+  const [a] = abschnitte.splice(von, 1);
+  abschnitte.splice(nach > von ? nach - 1 : nach, 0, a);
+  return { ...seite, abschnitte };
+}
+
 /** Den Abschnitt `i` eine Stelle nach oben oder unten; am Rand: unverändert. */
 export function abschnittVerschieben(seite: Seite, i: number, richtung: Richtung): Seite {
-  if (!abschnittDa(seite, i)) return seite;
-  const ziel = richtung === 'hoch' ? i - 1 : i + 1;
-  if (!abschnittDa(seite, ziel)) return seite;
-  const abschnitte = [...seite.abschnitte];
-  [abschnitte[i], abschnitte[ziel]] = [abschnitte[ziel], abschnitte[i]];
-  return { ...seite, abschnitte };
+  return abschnittVerschiebenNach(seite, i, richtung === 'hoch' ? i - 1 : i + 2);
 }
 
 /**
@@ -147,6 +169,39 @@ export function bausteinErsetzen(
 export function bausteinEntfernen(seite: Seite, i: number, j: number, k: number): Seite {
   if (!bausteinDa(seite, i, j, k)) return seite;
   return mitSpalte(seite, i, j, (bs) => bs.filter((_, n) => n !== k));
+}
+
+/** Wo ein Baustein steht – oder, als Ziel, **vor welcher Stelle** (`k`: 0 = ganz oben in der Spalte … Länge = ganz unten). */
+export interface BausteinStelle {
+  i: number;
+  j: number;
+  k: number;
+}
+
+/**
+ * **Den Baustein `von` an die Stelle `nach` setzen** (Ziehen und Pfeiltasten, W3c-2): in dieselbe Spalte, in eine andere Spalte
+ * oder in einen anderen Abschnitt. `nach.k` ist eine **Stelle** in der Zielspalte (0 … Anzahl der Bausteine dort, auch bei einer
+ * leeren Spalte 0), gezählt **vor** dem Herausnehmen – steht das Ziel in derselben Spalte hinter dem Baustein, rückt die Stelle
+ * beim Herausnehmen um eins nach vorn (nur hier gerechnet). Die Stelle direkt über und direkt unter dem Baustein lassen ihn, wo er
+ * ist. Ungültige Stellen und „bleibt, wo er ist“: dieselbe Seite zurück (`===`).
+ */
+export function bausteinVerschieben(
+  seite: Seite,
+  von: BausteinStelle,
+  nach: BausteinStelle,
+): Seite {
+  if (!bausteinDa(seite, von.i, von.j, von.k) || !bausteinStelleDa(seite, nach.i, nach.j, nach.k))
+    return seite;
+  const gleicheSpalte = von.i === nach.i && von.j === nach.j;
+  if (gleicheSpalte && (nach.k === von.k || nach.k === von.k + 1)) return seite;
+  const baustein = seite.abschnitte[von.i].spalten[von.j].bausteine[von.k];
+  const stelle = gleicheSpalte && nach.k > von.k ? nach.k - 1 : nach.k;
+  const ohne = bausteinEntfernen(seite, von.i, von.j, von.k);
+  return mitSpalte(ohne, nach.i, nach.j, (bs) => {
+    const neu = [...bs];
+    neu.splice(stelle, 0, baustein);
+    return neu;
+  });
 }
 
 function mitSpalte(

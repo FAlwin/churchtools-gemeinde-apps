@@ -261,13 +261,33 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
 Die Vorschau ist zugleich die Arbeitsfläche. **Am Computer** (W3c-1) liegt alles Bedienbare in **einer Schicht über der Seite**
 und erscheint nur, wo die Maus ist – nie über Text und nie übereinander:
 
-- **Abschnitt-Leiste** auf der Oberkante des Abschnitts (rechts am Inhaltsrand): Griff · nach oben · nach unten · Gestalten · kopieren ·
-  löschen. Der **Griff** verschiebt vorerst nur mit den Pfeiltasten (hoch/runter) – Ziehen kommt mit W3c-2.
-- **Baustein-Leiste** (nur eine, hell): der **Stift** öffnet das bisherige Fenster des Bausteins. Text-Bausteine tippt man direkt (siehe unten);
+- **Abschnitt-Leiste** auf der Oberkante des Abschnitts (rechts am Inhaltsrand): Griff · Gestalten · kopieren · löschen. Der **Griff**
+  verschiebt den Abschnitt durch **Ziehen** (siehe „Ziehen“), mit den **Pfeiltasten hoch/runter** am fokussierten Griff eine Stelle weiter.
+  (Die Knöpfe „nach oben/unten“ gibt es am Computer nicht mehr; am **Handy** bleiben sie, dort gibt es kein Ziehen.)
+- **Baustein-Leiste** (nur eine, hell): der **Griff** verschiebt den Baustein, der **Stift** öffnet das bisherige Fenster des Bausteins. Für
+  „Eigenes HTML“ gibt es die Leiste – und damit den Griff – nur für die Leitung. Text-Bausteine tippt man direkt (siehe unten);
   alle anderen öffnen mit einem Klick auf den Baustein das Fenster.
 - **Abstand-Pille** unten mittig („Abstand: Normal“): öffnet vorerst das Fenster „Gestalten“ (Ziehen kommt mit W3c-3).
 - **Abschnitt einfügen** an der Grenze zwischen zwei Abschnitten (und auf einer leeren Seite), **+** in einer Lücke zwischen Bausteinen und
   **Baustein hinzufügen** in einer leeren Spalte öffnen das bisherige Hinzufügen.
+- **Ziehen (W3c-2).** Den Griff greifen und ziehen (erst ab 4 px, sonst ist es ein Klick). Eine **Einfügelinie** zeigt die Stelle, vor der
+  etwas landet; ein **Geist** neben dem Zeiger nennt „Typ: Anfang des Texts“; beim Baustein ist die **Zielspalte gestrichelt** markiert (auch
+  eine leere Spalte ist ein Ziel), die Quelle ist abgeblendet. Am oberen und unteren Rand scrollt die Seite von selbst. **Esc** bricht ab
+  (der Griff nimmt dazu den Fokus ins `iframe`). Beim Loslassen geht **eine** Nachricht `verschieben` raus. Die Rechnung dahinter steht
+  an **einer** Stelle, `shared/website/bearbeiten.ts`: `abschnittVerschiebenNach(seite, von, nach)` und `bausteinVerschieben(seite, von, nach)`
+  (`von` = wo er steht, `nach` = eine **Stelle** vor dem Herausnehmen gezählt: 0 … Anzahl; Baustein: `{ i, j, k }`, `k` = vor welchem Baustein der
+  Zielspalte, bei einer leeren Spalte 0). Die Stelle direkt über und unter dem Element lässt es, wo es ist; ungültige Stellen ändern nichts.
+  `abschnittVerschieben(hoch/runter)` rechnet darüber (`nach = i − 1` / `i + 2`). Nach dem Verschieben zeichnet die Vorschau neu – der Fokus am
+  Griff geht dabei verloren; für die nächste Pfeiltaste muss man den Griff neu fokussieren.
+- **Rückgängig und Wiederholen (W3c-2).** Zwei stille Knöpfe ↶ ↷ in der Kopfzeile der Seite (nur Computer-Ansicht) und **Strg/Cmd+Z**,
+  **Umschalt+Strg/Cmd+Z** (auch Strg+Y), solange **kein Textfeld offen ist** (im offenen Feld gilt der Verlauf des Feldes, siehe unten). Ein Schritt
+  ist „Seite vorher, Seite nachher“ (`website/src/seitenVerlauf.ts`, rein): Verschieben, Einfügen, Kopieren, Löschen, übernommener getippter Text
+  und ein Fenster mit „Fertig“. Rückgängig/Wiederholen laufen wie jede Änderung durch Sperre, Schema und Speicherschlange. Der Verlauf gilt **nur
+  für die offene Seite und diese Sitzung** (beim Seitenwechsel leer), hält höchstens 100 Schritte und wird **geleert**, wenn der gespeicherte Stand
+  ersetzt wird (Neu laden, „Bearbeitung übernehmen“) oder man mit „Seite einstellen“ Titel/Adresse/Menü ändert (die gehen nicht zurück).
+  **Nichts Fremdes überschreiben:** Rückgängig geht nur, wenn die Seite genau so aussieht wie nach dem Schritt; sonst Hinweis, Verlauf weg. Hat
+  jemand anderes inzwischen gespeichert, weist das Speichern selbst ab (Band „Neu laden“) – es wird nicht darüber geschrieben. Tasten im `iframe`
+  meldet die Ebene als `rueckgaengig` / `wiederholen`.
 - **Kollisionsregel** (`website/src/ebene.kern.txt`, `K.ordne`, mit Tests): Rangordnung Baustein-Leiste > Abschnitt-Leiste > „+ Abschnitt“ >
   „+“ zwischen Bausteinen > Abstand-Pille. Jedes Element nennt Wunschplätze; genommen wird der erste, der weder eine Textzeile noch ein Bild
   noch einen Knopf noch ein höher eingestuftes Element berührt (und nicht unter dem festen Seitenkopf liegt). Geht keiner, weicht ein
@@ -391,7 +411,11 @@ der Seite); nur beim Text direkt tippen kommt auch der getippte Text mit (Punkt 
 1. Die Erweiterung nimmt **nur** Nachrichten an, deren `event.source` genau dieses `iframe` ist (`Vorschau.tsx`).
 2. Die Form wird geprüft (`nachricht.ts`, zod): bekannte Art, nur ganze Zahlen; **nichts** außer diesen Zahlen wird übernommen.
 3. Die Zahlen werden gegen die Seite geprüft: Einen Abschnitt, den es nicht gibt, gibt es nicht.
-4. Eine Nachricht löst nie mehr aus als ein Klick: ein Fenster öffnen, verschieben, kopieren. **Löschen fragt immer erst nach.**
+4. Eine Nachricht löst nie mehr aus als ein Klick: ein Fenster öffnen, verschieben, kopieren, einen Schritt zurück. **Löschen fragt immer erst nach.**
+   **`verschieben`** (W3c-2) trägt nur Zahlen: `art: 'abschnitt'` mit `von`/`nach` als Zahl, oder `art: 'baustein'` mit `von`/`nach` als `{ i, j, k }`
+   (keine fremden Felder). Beide Stellen müssen es auf der Seite geben (`abschnittDa`, `bausteinDa`, `einfuegeStelleDa`, `bausteinStelleDa`), sonst ist
+   es keine Nachricht. Die Seitenarbeit verweigert zusätzlich das Verschieben von „Eigenes HTML“ ohne das Recht (auch bei einer gefälschten
+   Nachricht). `hoch` und `runter` gibt es nicht mehr. `rueckgaengig` / `wiederholen` tragen nichts.
 5. **Die eine Ausnahme: der getippte Text** (`text`). Er kommt nur an, wenn (a) die Stelle ein tippbares Feld ist (`textFeldGueltig`: Überschrift,
    Akzentzeile, Text, Bild+Text, Knopf-Beschriftung – nie „Eigenes HTML“), (b) die Form stimmt (feste Läufe aus Text, Fett, Kursiv, Link, nichts
    sonst, Längen begrenzt), (c) **jede Link-Adresse die echte Regel besteht** (sonst ist die ganze Nachricht ungültig) und (d) dasselbe Feld

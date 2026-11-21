@@ -1,0 +1,42 @@
+// „Vertretung suchen“ am Dienst und „Für dich offen“ (E5c-6, Entwurf Abschnitt 4) – nur Tokens aus ui/design.
+
+// Das Band unter dem Dienst: „⚑ Anna sucht eine Vertretung“ und rechts der eine gefüllte Knopf.
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 6px;
+  padding: 6px 6px 6px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+
+  strong {
+    font-weight: 700;
+  }
+}
+
+.text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  min-width: 0;
+}
+
+.uebernehmen {
+  flex: none;
+
+  // Am Handy volle Breite – ein großer Daumen-Knopf.
+  @media (max-width: 759px) {
+    flex: 1 1 100%;
+  }
+}
+
+.fehler {
+  margin: 4px 0 0;
+  color: var(--red);
+  font-size: 12.5px;
+}

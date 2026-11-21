@@ -20,6 +20,8 @@ import { Toast } from '@ui/fenster/Toast';
 import type { Antworten } from './useAntworten';
 import type { Tausch } from './useTausch';
 import { TauschAmDienst, TauschEingang, TauschGetauscht, type EigenerDienst } from './TauschTeile';
+import type { VertretungZugriff } from './useVertretung';
+import { VertretungEingang } from './VertretungTeile';
 import { adresseFuer, adresseFuerPlanenGruppe, type ReiterId } from './reiter';
 import styles from './Startseite.module.scss';
 
@@ -38,6 +40,8 @@ interface Props {
   antworten?: Antworten;
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“, keine Tausch-Anfragen. */
   tausch?: Tausch;
+  /** Vertretung suchen (E5c-6) – ohne: kein „Vertretung suchen“, kein „Übernehmen“. */
+  vertretung?: VertretungZugriff;
   /** Zeitzone der Gemeinde – für die Tage der Tausch-Anfragen. */
   zeitzone?: string;
 }
@@ -49,6 +53,7 @@ function eigener(d: DienstAmTermin): EigenerDienst | null {
         terminId: d.termin.id,
         termin: d.termin.name,
         tag: d.termin.tag,
+        uhrzeit: d.termin.uhrzeit,
         dienst: d.dienst,
         ort: d.mein.ort,
       }
@@ -73,6 +78,7 @@ export function Startseite({
   onTermin,
   antworten,
   tausch,
+  vertretung,
   zeitzone = gemeindeZeitzone(),
 }: Props) {
   const planbar = planbareDienstgruppen(start);
@@ -117,7 +123,10 @@ export function Startseite({
             </section>
           ))}
 
-        {(u.offen.length > 0 || !!tausch?.eingang.length || !!tausch?.getauscht.length) && (
+        {(u.offen.length > 0 ||
+          !!tausch?.eingang.length ||
+          !!tausch?.getauscht.length ||
+          !!vertretung?.offen.length) && (
           <section className={styles.karte} aria-labelledby="offen">
             <div className={styles.kopf}>
               <h2 id="offen">Für dich offen</h2>
@@ -142,9 +151,22 @@ export function Startseite({
                     <AntwortKnoepfe termin={d.termin} d={d.mein} antworten={antworten} />
                   )}
                   {tausch && eigener(d) && d.mein.antwort?.art !== 'abgesagt' && (
-                    <TauschAmDienst d={eigener(d)!} tausch={tausch} zeitzone={zeitzone} />
+                    <TauschAmDienst
+                      d={eigener(d)!}
+                      tausch={tausch}
+                      zeitzone={zeitzone}
+                      vertretung={vertretung}
+                      zugesagt={d.mein.zugesagt}
+                    />
                   )}
                 </DienstZeile>
+              ))}
+              {vertretung?.offen.map((g) => (
+                <VertretungEingang
+                  key={`v${g.personId}-${g.terminId}-${g.dienstId}`}
+                  g={g}
+                  vertretung={vertretung}
+                />
               ))}
               {tausch?.getauscht.map((g) => (
                 <TauschGetauscht key={`g${g.id}`} text={g.text} />
@@ -169,7 +191,13 @@ export function Startseite({
             {u.naechsteDienste.map((d, i) => (
               <DienstZeile key={i} d={d} onTermin={onTermin}>
                 {tausch && eigener(d) && (
-                  <TauschAmDienst d={eigener(d)!} tausch={tausch} zeitzone={zeitzone} />
+                  <TauschAmDienst
+                    d={eigener(d)!}
+                    tausch={tausch}
+                    zeitzone={zeitzone}
+                    vertretung={vertretung}
+                    zugesagt
+                  />
                 )}
               </DienstZeile>
             ))}
@@ -218,7 +246,7 @@ export function Startseite({
           </section>
         )}
       </div>
-      <Toast message={antworten?.meldung ?? tausch?.meldung ?? null} />
+      <Toast message={antworten?.meldung ?? tausch?.meldung ?? vertretung?.meldung ?? null} />
     </div>
   );
 }

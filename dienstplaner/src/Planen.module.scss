@@ -666,6 +666,22 @@
   font-weight: 600;
 }
 
+// „⚑ Vertretung gesucht“ (E5c-6) – kleines Schild am freien Platz, blau wie die Hinweise auf die Planung; kein Knopf: der Platz
+// darüber bleibt, was er war. Der Hinweistext steht im `title` („Anna hat abgesagt · gefragt: Ben, Finn“).
+.gesucht {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px solid var(--blue);
+  border-radius: var(--r-card);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 // Als Knopf (wo man ändern darf). Eigene Klasse statt `button.veraltet`: Im Erweiterungs-Bau muss jede Regel mit
 // einer Klasse beginnen, sonst greift sie in ChurchTools (Paketprüfung).
 .veraltetKnopf {

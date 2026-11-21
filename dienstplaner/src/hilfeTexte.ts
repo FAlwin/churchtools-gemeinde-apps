@@ -31,6 +31,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     punkte: [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
       '„Wer kann?“ sortiert nach den Antworten aus „Wann kann ich?“: erst Ja, dann Vielleicht, dann keine Antwort; „Kann nicht / abwesend“ ist eingeklappt.',
+      'Kleines Schild „Vertretung gesucht“ an einem freien Platz: Jemand hat abgesagt und im Team nach einer Vertretung gefragt (Hinweis: Wer abgesagt hat, wer gefragt wurde). Der Platz lässt sich ganz normal planen.',
       '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
       'Belegten Platz antippen (auch in „Personen“): zurückziehen oder ersetzen.',
       '„Personen“, Zeile „Gäste“: Name eintragen – ohne ChurchTools-Konto, keine Anfrage.',

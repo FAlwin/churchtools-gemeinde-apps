@@ -956,7 +956,7 @@ export function AbwesenheitenSeite({
       <p className={styles.hinweis}>
         Alle Termine aus ChurchTools – wer eingeteilt ist, spielt hier keine Rolle.{' '}
         {zusagen
-          ? 'Deine Antwort wird erst mit „Speichern“ übernommen – Ja und Vielleicht kann deine Dienstgruppe sehen, Nein steht als Abwesenheit in ChurchTools.'
+          ? 'Deine Antwort wird erst mit „Speichern“ übernommen – Ja und Vielleicht sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht; Nein steht als Abwesenheit in ChurchTools.'
           : 'Ein Haken wird erst mit „Speichern" eingetragen.'}
       </p>
     </>

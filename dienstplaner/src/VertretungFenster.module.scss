@@ -1,0 +1,156 @@
+// Fenster „Vertretung suchen“ (E5c-6, Entwurf e5c-6-vertretung.html v1) – nur Tokens aus ui/design (hell und dunkel).
+@use '@ui/design/mixins' as m;
+
+.abschnitt {
+  margin-top: 14px;
+
+  &:first-of-type {
+    margin-top: 4px;
+  }
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+// Die kleine Plakette am Abschnitt – dieselben Tönungen wie „Wer kann?“ und das Raster (`--antwort-*`).
+.plakette {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--antwort-ja);
+  border: 1px solid var(--green);
+}
+
+.vielleicht {
+  background: var(--antwort-vielleicht);
+  border-color: var(--fokus);
+}
+
+.ohne {
+  background: var(--surface3);
+  border-color: var(--border);
+}
+
+.zahl {
+  margin-left: 2px;
+  font-weight: 500;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zeile {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  cursor: pointer;
+
+  &:has(:focus-visible) {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--blue);
+}
+
+.wer {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  b {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  small {
+    font-size: 12.5px;
+    color: var(--text2);
+    font-style: italic;
+  }
+}
+
+.hinweis {
+  margin: 8px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.feldName {
+  display: block;
+  margin: 14px 0 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.fehler {
+  margin: 12px 0 0;
+  color: var(--red);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+// ── Nach dem Absagen: was verschickt ist und was nicht ──────────────────────
+.stand {
+  margin: 0 0 8px;
+  padding: 12px;
+  border-radius: var(--r-card);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+
+  p {
+    margin: 0;
+  }
+
+  p + p {
+    margin-top: 6px;
+  }
+}
+
+.gut {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.halb {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}

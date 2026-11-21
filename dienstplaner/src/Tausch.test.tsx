@@ -16,6 +16,7 @@ const SPIKE_GESANG: EigenerDienst = {
   terminId: 166,
   termin: 'Messung',
   tag: '2027-01-10',
+  uhrzeit: '10:00',
   dienst: 'Gesang',
   ort: { serviceId: GESANG, index: 1 },
 };

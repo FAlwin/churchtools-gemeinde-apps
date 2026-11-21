@@ -4,6 +4,7 @@ import type { Besetzung, Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { Personenliste } from '@shared/dienstplan/personenliste';
 import type { Modus } from '@shared/dienstplan/modusVorgabe';
 import type { Dienst } from '@shared/ct/dienste';
+import type { Schild } from '@shared/dienstplan/vertretung';
 import type { ZellenAktion } from '@shared/dienstplan/personenEintragen';
 import type { RasterGast, RasterZelle } from '@shared/dienstplan/personenRaster';
 import type { FreierPlatz } from './WerKann';
@@ -115,6 +116,11 @@ export interface Sicht {
   onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
   /** Einen belegten Platz antippen → zurückziehen oder ersetzen (E4-5; nur wo man den Dienst planen darf). */
   onBelegt: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /**
+   * „Vertretung gesucht“ (E5c-6): die Schilder an den freien Plätzen dieses Dienstes an diesem Termin – nur, solange ein Platz
+   * frei ist (`schilder`). Fehlt, wo es das nicht gibt (Termin-Ansicht, ohne Anschluss): dann gibt es keine Schilder.
+   */
+  vertretung?: (spalte: number, zeile: PlanZeile) => Schild[];
   /** Entwürfe ohne Platz an diesem Termin und Dienst (#582) – Schild darunter. */
   ohnePlatz: (spalte: number, zeile: PlanZeile) => Entwurf[];
   /** Schild antippen → Entwurfs-Fach mit „Entwurf verwerfen“ (nur wo man planen und ändern darf). */

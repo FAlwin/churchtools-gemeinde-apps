@@ -76,6 +76,7 @@ export type IconName =
   | 'cloud-check'
   | 'cloud-download'
   | 'user-slash'
+  | 'flag'
   | 'regler'
   | 'zauberstab'
   | 'zahnrad'
@@ -421,6 +422,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <circle cx="12" cy="8" r="3.4" />
           <path d="M5 20a7 7 0 0 1 14 0" />
           <path d="M4.5 4.5l15 15" />
+        </svg>
+      );
+    // Fähnchen – „Vertretung suchen“ / „Vertretung gesucht“ im Dienstplaner (E5c-6, im Entwurf das Zeichen ⚑).
+    case 'flag':
+      return (
+        <svg {...p}>
+          <path d="M6 21V4" />
+          <path d="M6 5h11l-2.5 3.5L17 12H6" />
         </svg>
       );
     // Fokus-Modus des Dienstplaners (Wunsch 11): Fadenkreuz – eine Person im Plan anleuchten.

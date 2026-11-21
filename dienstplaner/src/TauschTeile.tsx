@@ -11,6 +11,8 @@ import { CtSymbol } from './CtSymbol';
 import { eingangSchluessel, type Tausch } from './useTausch';
 import infos from './InfosFenster.module.scss';
 import start from './Startseite.module.scss';
+import type { VertretungZugriff } from './useVertretung';
+import { VertretungKnopf } from './VertretungTeile';
 import styles from './TauschTeile.module.scss';
 
 /** Was ein Tausch über den eigenen Dienst wissen muss. */
@@ -19,6 +21,8 @@ export interface EigenerDienst {
   termin: string;
   /** `YYYY-MM-DD` in der Gemeinde. */
   tag: string;
+  /** `HH:MM` in der Gemeinde – „Vertretung suchen“ nennt sie in der Mail. */
+  uhrzeit: string;
   dienst: string;
   ort: { serviceId: number; index: number | null };
 }
@@ -33,10 +37,16 @@ export function TauschAmDienst({
   d,
   tausch,
   zeitzone,
+  vertretung,
+  zugesagt = false,
 }: {
   d: EigenerDienst;
   tausch: Tausch;
   zeitzone: string;
+  /** „Vertretung suchen“ (E5c-6) – ohne gibt es den zweiten Knopf nicht. */
+  vertretung?: VertretungZugriff;
+  /** Ist der Dienst zugesagt? Nur dann steht „Vertretung suchen“ daneben (für offene Anfragen gibt es „Absagen“). */
+  zugesagt?: boolean;
 }) {
   const [offen, setOffen] = useState(false);
   const k = einteilungSchluessel({ eventId: d.terminId, ...d.ort });
@@ -44,6 +54,8 @@ export function TauschAmDienst({
   const vorgang = tausch.laeuft(k);
   const fehler = tausch.fehler(k);
   const wann = (iso: string | null) => (iso ? ` (${tagKurz(tagVon(iso, zeitzone))})` : '');
+  const vertretungKnopf =
+    vertretung && zugesagt ? <VertretungKnopf d={d} vertretung={vertretung} /> : null;
 
   return (
     <>
@@ -73,10 +85,16 @@ export function TauschAmDienst({
           </FensterKnopf>
         </div>
       ) : (
-        <FensterKnopf art="link" className={styles.knopf} onClick={() => setOffen(true)}>
-          <CtSymbol name="exchange-alt" size={13} />
-          Tauschen
-        </FensterKnopf>
+        <div className={styles.reihe}>
+          <FensterKnopf art="link" onClick={() => setOffen(true)}>
+            <CtSymbol name="exchange-alt" size={13} />
+            Tauschen
+          </FensterKnopf>
+          {vertretungKnopf}
+        </div>
+      )}
+      {(stand?.art === 'offen' || stand?.art === 'abgelehnt') && vertretungKnopf && (
+        <div className={styles.reihe}>{vertretungKnopf}</div>
       )}
       {fehler && !offen && (
         <p className={styles.fehler} role="alert">

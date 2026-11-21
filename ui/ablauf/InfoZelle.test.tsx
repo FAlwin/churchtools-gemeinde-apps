@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ablaufZeileAus, punktStand, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { PUNKT_GEAENDERT } from '@shared/ct/schreibKern';
 import { InfoZelle } from './InfoZelle';
 
 /**
@@ -114,6 +115,47 @@ describe('InfoZelle', () => {
     await waitFor(() => expect(onSpeichern).toHaveBeenCalledTimes(2));
     expect(onSpeichern.mock.calls[1]).toEqual(onSpeichern.mock.calls[0]);
     await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
+  });
+
+  it('Konflikt (412): Meldung mit „speichert trotzdem“; der nächste Versuch schreibt ohne Vergleich, wie im Punkt-Fenster', async () => {
+    const konflikt = Object.assign(new Error(PUNKT_GEAENDERT), { status: 412 });
+    const onSpeichern = vi
+      .fn<(g: number, t: string, s: unknown) => Promise<void>>()
+      .mockRejectedValueOnce(konflikt)
+      .mockResolvedValueOnce(undefined);
+    render(<InfoZelle item={mitInfo} gruppe={GRUPPE} onSpeichern={onSpeichern} />);
+    fireEvent.click(knopf(mitInfo));
+    fireEvent.change(feld(), { target: { value: 'Mein Text' } });
+    fireEvent.blur(feld());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(
+        `${PUNKT_GEAENDERT} Verlassen speichert trotzdem · Esc verwirft.`,
+      ),
+    );
+    expect(feld().value).toBe('Mein Text');
+    expect(onSpeichern.mock.calls[0][2]).toEqual(punktStand(mitInfo));
+    fireEvent.blur(feld());
+    await waitFor(() => expect(onSpeichern).toHaveBeenCalledTimes(2));
+    expect(onSpeichern.mock.calls[1]).toEqual([GRUPPE.id, 'Mein Text', undefined]);
+  });
+
+  it('nach einem Konflikt neu geöffnet: wieder mit Vergleich (das „trotzdem“ gilt nur für den einen Versuch)', async () => {
+    const konflikt = Object.assign(new Error(PUNKT_GEAENDERT), { status: 412 });
+    const onSpeichern = vi
+      .fn<(g: number, t: string, s: unknown) => Promise<void>>()
+      .mockRejectedValueOnce(konflikt)
+      .mockResolvedValue(undefined);
+    render(<InfoZelle item={mitInfo} gruppe={GRUPPE} onSpeichern={onSpeichern} />);
+    fireEvent.click(knopf(mitInfo));
+    fireEvent.change(feld(), { target: { value: 'Mein Text' } });
+    fireEvent.blur(feld());
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    fireEvent.keyDown(feld(), { key: 'Escape' });
+    fireEvent.click(knopf(mitInfo));
+    fireEvent.change(feld(), { target: { value: 'Anderer Text' } });
+    fireEvent.blur(feld());
+    await waitFor(() => expect(onSpeichern).toHaveBeenCalledTimes(2));
+    expect(onSpeichern.mock.calls[1][2]).toEqual(punktStand(mitInfo));
   });
 
   it('verglichen wird mit dem Stand beim ÖFFNEN – auch wenn der Punkt inzwischen neu geladen wurde (sonst kein 412)', async () => {

@@ -20,7 +20,8 @@ import styles from './InfoZelle.module.scss';
 export interface InfoZellen {
   gruppen: readonly InfoGruppe[];
   /** Schreibt die Info; wirft bei Fehler (die Zelle zeigt die Meldung). */
-  onSpeichern: (gruppeId: number, text: string, gesehen: PunktStand) => Promise<void>;
+  /** `gesehen` fehlt = „Trotzdem speichern“ nach einem Konflikt (412) – wie im Punkt-Fenster (E6-3c). */
+  onSpeichern: (gruppeId: number, text: string, gesehen: PunktStand | undefined) => Promise<void>;
   /** Ablauf abgeschlossen: Ein Klick öffnet kein Feld, sondern zeigt den Sperr-Hinweis. */
   gesperrt?: () => void;
 }
@@ -45,6 +46,9 @@ export function InfoZelle({
   const gesehen = useRef<PunktStand | null>(null);
   // Esc hat verworfen: das Blur, das darauf folgt, speichert nicht.
   const verworfen = useRef(false);
+  // Nach einem Konflikt (412) speichert das nächste Verlassen ohne Vergleich – „Trotzdem speichern“ wie im Punkt-Fenster.
+  // Ohne das scheiterte jeder weitere Versuch am alten Stand, und der Text ließe sich nur noch verwerfen.
+  const trotzdem = useRef(false);
   const lebt = useRef(true);
   useEffect(() => {
     lebt.current = true;
@@ -74,6 +78,7 @@ export function InfoZelle({
       return;
     }
     verworfen.current = false;
+    trotzdem.current = false;
     gesehen.current = punktStand(item);
     setEntwurf(text);
     setFehler(null);
@@ -88,12 +93,14 @@ export function InfoZelle({
     setOffen(false);
     const neu = entwurf.trim();
     if (neu === text.trim()) return;
-    const stand = gesehen.current ?? punktStand(item);
+    const stand = trotzdem.current ? undefined : (gesehen.current ?? punktStand(item));
     onSpeichern(gruppe.id, neu, stand).catch((e: unknown) => {
       if (!lebt.current) return;
-      setFehler(
-        e instanceof Error && e.message ? e.message : 'Info konnte nicht gespeichert werden.',
-      );
+      const meldung =
+        e instanceof Error && e.message ? e.message : 'Info konnte nicht gespeichert werden.';
+      const konflikt = (e as { status?: unknown } | null)?.status === 412;
+      trotzdem.current = konflikt;
+      setFehler(konflikt ? `${meldung} Verlassen speichert trotzdem · Esc verwirft.` : meldung);
       setOffen(true);
     });
   }

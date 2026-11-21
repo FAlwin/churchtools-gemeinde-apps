@@ -342,6 +342,21 @@ die PDF-Schrift nicht und wird als Kreis gezeichnet), Editor (`DokumentEditor.sc
 die Zeichen in SCSS – `ui/design/aufzaehlungsZeichen.test.ts` vergleicht. Die Ebene zählt nur Aufzählungen übereinander (unter Absatz oder Nummerierung fängt es oben an,
 wie in BlockNote). Nicht betroffen: Nummerierungen, Checklisten, die Listen der festen Punkte und Fenster (eigene Listen ohne Zeichen). Handtest: TF-PROT-28.
 
+**Unterzeile und „nur zur Info“ in Tabellen (W13, 21.11.2026):** BlockNote-Tabellenzeilen haben keine eigenen Eigenschaften – die Kennzeichen sind darum **Text am Anfang der ersten Zelle**
+(„↳ “ = Unterzeile, „ⓘ “ = nur zur Info, kombinierbar in der festen Reihenfolge „↳ ⓘ “; `praefix` in `shared/protokolle/tabellenZeile.ts` ist die EINE Stelle dafür, dort auch Lesen, Umschalten und
+`ohneKennzeichen`). Vorteil: übersteht Verschieben/Einfügen/Löschen von Zeilen, kein neues Speicherformat; die Suche findet das Zeichen als Text. **Editor:** das **Zeilenmenü** der Tabelle
+(`TabellenGriff` → `ZeilenMenue` in `TabellenZeilenMenue.tsx`, über `<TableHandlesController tableHandle>`; `tableHandles={false}` an `BlockNoteView`) behält BlockNotes Einträge und hängt
+„Nur zur Info“ und „Als Unterzeile“ mit Haken an – nur am Zeilengriff; sie rufen `zeileUmschalten` (`protokolle/src/tabellenZeile.ts`, ersetzt nur das Präfix, ein Rückgängig-Schritt).
+**Tab** am Anfang der ersten Zelle (Cursor vor dem Zelltext) setzt „↳ “, **Umschalt+Tab** nimmt es weg; Tab bei bereits gesetztem „↳“, mitten im Text, in einer anderen Zelle oder in einer
+**leeren** ersten Zelle bleibt, was BlockNote tut (nächste Zelle; BlockNote antwortet auf Tab in Tabellen immer mit `true`). Dasselbe Plugin gibt `tableRow` (`protokoll-zeile-unter`/`-info`) und dem
+Zeichen eine Klasse (Dekoration; Einrückung, gestrichelte Linie in `DokumentEditor.scss`). **Lese-Ansicht:** erste Zelle ohne Präfix, davor „↳“ bzw. der Kreis mit „i“ (Klassen `unterzeile`,
+`unterZeichen`, `info`), Legende unter der Tabelle (`INFO_LEGENDE`), und **ein** Schalter „Nur Themen dieses Treffens“ oben im Protokoll, sobald irgendeine Tabelle eine Info-Zeile hat
+(`dokumentHatInfo`; Alwins Entwurf zeigte ihn über der Tabelle – einmal oben ist ruhiger als einer je Tabelle und gilt für das ganze Protokoll). Er blendet Info-Zeilen aus („N Info-Zeilen
+ausgeblendet“ am Tabellenende, Legende weg), ist nur Anzeige und steht bei jedem Öffnen wieder aus. Eine Unterzeile unter einer ausgeblendeten Info-Zeile bleibt sichtbar (nur Zeilen mit ⓘ
+verschwinden). **PDF:** immer alle Zeilen; das Blatt trägt `marke` an der ersten Zelle und `legende` je Tabelle (`protokollBlatt.ts`), das PDF zeichnet „↳“ aus Linien und den ⓘ-Kreis (die Schrift hat
+beide Zeichen nicht, wie „◦“) und rückt den Text ein (`Zelle.einzug`, zählt in `naturBreite` mit). „Mit KI füllen“ schickt keine Tabellen (`vorhandeneZeilen` nur Absatz/Aufzählung/Nummerierung).
+Handtest: TF-PROT-30.
+
 **Unterpunkte und Einrücken (K3b-1):** **Tab** (oder „Absatz → Einrücken“) macht aus einem Tagesordnungspunkt einen
 **Unterpunkt** (4.1), nochmal Tab eine Ebene tiefer (4.1.1) – bis 4.1.1.1.1. **Umschalt+Tab** („Ausrücken“) geht zurück
 bis zum Tagesordnungspunkt. Ein Unterpunkt steht höchstens eine Ebene unter dem Punkt davor, und der erste Punkt bleibt

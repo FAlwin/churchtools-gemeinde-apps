@@ -23,6 +23,15 @@ describe('Tab und Umschalt+Tab in der ersten Zelle einer Zeile (W13)', () => {
     expect(zelleMit(e)).toBe(unter('17.04.'));
   });
 
+  it('steht der Cursor im Präfix („ⓘ| “), landet er nach Tab hinter dem neuen Präfix', () => {
+    const e = editorMit([tabelle([info('17.04.'), 'Was'])]);
+    cursorIn(e, info('17.04.'), 1);
+    taste(e, 'Tab');
+    const neu = praefix({ unter: true, info: true });
+    expect(zellen(e)[0][0]).toBe(`${neu}17.04.`);
+    expect(e.prosemirrorState.selection.$head.parentOffset).toBe(neu.length);
+  });
+
   it('Umschalt+Tab dort nimmt es wieder weg – gleich nach dem Tab und auch am Zellanfang', () => {
     const e = editorMit([tabelle(['17.04.', 'Was'])]);
     cursorIn(e, '17.04.', 0);

@@ -1042,6 +1042,36 @@ Bausteine sehen im Editor, beim Lesen und im PDF gleich ruhig aus.
 
 </details>
 
+### TF-PROT-30 · Tabelle: „Nur zur Info“, Unterzeile und der Schalter „Nur Themen dieses Treffens“
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe, in der du schreiben darfst, und ein Protokoll im Entwurf mit einer **Tabelle** (Einfügen → Tabelle, drei Spalten, vier bis fünf Zeilen
+mit Datum in der ersten Spalte). Ein Rechner und ein Handy (oder 375 px). In der Entwicklung zeigt `?demo` einen Entwurf (Sitzungen → Mi, 21.10.2026) mit so einer Tabelle am Ende.
+
+**Das muss passieren:** Zeilen lassen sich als „nur zur Info“ oder als Unterzeile kennzeichnen; Editor, Lese-Ansicht und PDF zeigen es gleich, und beim Lesen blendet ein Schalter die
+Info-Zeilen aus.
+
+1. Fahre mit der Maus über eine Zeile und klicke auf den **Griff links an der Zeile**: Das Menü hat die bekannten Einträge (Zeile löschen, oberhalb/unterhalb hinzufügen, Farben) und
+   unten **„Nur zur Info“** und **„Als Unterzeile“**. Wähle **„Nur zur Info“**: Die erste Zelle der Zeile beginnt mit **ⓘ**. Öffne das Menü noch einmal: Hinter „Nur zur Info“ steht ein **Haken**;
+   Klick nimmt es wieder weg. Das Menü am **Spaltengriff** (oben) hat die beiden Einträge **nicht**.
+2. Wähle bei einer anderen Zeile **„Als Unterzeile“**: Die erste Zelle ist **eingerückt**, trägt **↳**, die Linie darüber ist **gestrichelt**. Beides geht auch zusammen (**↳ ⓘ**).
+3. Setze den Cursor an den **Anfang** der ersten Zelle einer Zeile (vor das Datum) und drücke **Tab**: Die Zeile wird zur Unterzeile (↳), der Cursor steht dahinter. **Umschalt+Tab**
+   nimmt es wieder weg. Tab **mitten oder am Ende** der Zelle springt wie bisher in die nächste Zelle; Tab am Anfang einer **zweiten** Zelle ebenso. Durch eine **neue, leere Zeile** kommst
+   du mit Tab wie bisher.
+4. Schalte auf **Lesen** (hell und dunkel): Die Unterzeile ist eingerückt mit **↳** und gestrichelter Linie, die Info-Zeile trägt einen **kleinen Kreis mit i**, die Zeile steht an ihrem
+   Platz. **Unter der Tabelle** steht die Legende „nur zur Info – nicht Thema dieses Treffens“. Über dem Protokoll steht **„Nur Themen dieses Treffens“** (nur wenn es eine Info-Zeile gibt).
+5. Hake den Schalter an: Die Info-Zeilen sind **weg**, unten in der Tabelle steht **„N Info-Zeilen ausgeblendet“**, die Legende fehlt. Hake ab: alles wieder da. Wechsle den Reiter und
+   zurück: nichts wurde gespeichert (der Schalter steht wieder aus).
+6. **Teilen / PDF:** Im PDF stehen **alle** Zeilen: die Unterzeile mit gezeichnetem **↳** eingerückt, die Info-Zeile mit **ⓘ-Kreis**, darunter die Legende.
+7. Am Handy (375 px) läuft nichts über den Rand; die Menüeinträge sind gut zu treffen.
+8. Eine Tabelle **ohne** Kennzeichen sieht aus wie vorher, ohne Legende und ohne Schalter.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/tabellenZeile.ts`, `shared/protokolle/protokollBlatt.ts`, `shared/ct/terminBlatt.ts`, `ui/teilen/protokollPdf.ts`, `ui/teilen/pdfSatz.ts`, `protokolle/src/tabellenZeile.ts`, `protokolle/src/TabellenZeilenMenue.tsx`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/DokumentEditor.scss`, `protokolle/src/editorSchema.ts`, `protokolle/src/ProtokollAnsicht.tsx`, `protokolle/src/ProtokollAnsicht.module.scss`
+- **Automatisiert:** größtenteils – `shared/protokolle/tabellenZeile.test.ts` (Regel: Reihenfolge, Lesen, Umschalten, Präfix aus dem Inhalt schneiden, Info im Dokument), `shared/protokolle/protokollBlatt.test.ts` (Marke, Legende, nichts wird ausgelassen), `ui/teilen/protokollPdf.test.ts` (Kreis und Pfeil gezeichnet, Einzug, Spaltenbreite, Legende), `protokolle/src/ProtokollAnsicht.test.tsx` (Zeichen, Klassen, Schalter, Zähler, Legende), `protokolle/src/tabellenZeile.test.ts` (echter Editor: Tab/Umschalt+Tab am Zeilenanfang und sonst, Zeile umschalten, Rückgängig, Dekoration); **nur von Hand:** das Zeilenmenü mit der Maus (jsdom kann das Mantine-Menü nicht öffnen), Aussehen hell/dunkel und am Handy, PDF-Seite ansehen
+- **Historie:** 21.11.2026 (W13, nach der Terminliste der Festplanung)
+
 ### TF-PROT-31 · Reiter „Termine“: Termine aus den Protokollen in den Kalender eintragen
 
 **Achtung Test-Instanz:** ChurchTools verschickt dort **echte Mails**. Dieser Test darf **keine Einladungen** auslösen – die Erweiterung schickt auch keine

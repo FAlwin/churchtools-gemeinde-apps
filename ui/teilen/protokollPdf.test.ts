@@ -345,6 +345,30 @@ describe('Protokoll als PDF', () => {
       expect(r).not.toContain('↳');
     });
 
+    /** Die x-Lage (pt) des Textes `wort` im PDF – die Zahl vor dem `Td`, das dem Text vorausgeht. */
+    const xVon = (r: string, wort: string): number => {
+      const i = r.indexOf(`(${wort}) Tj`);
+      const m = [...r.slice(0, i).matchAll(/([\d.]+) [\d.]+ Td/g)].pop();
+      return Number(m?.[1]);
+    };
+
+    it('der Text der Unterzeile steht rechts vom „↳“ – eingerückt gegenüber einer normalen Zeile', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      // 4,4 mm Platz für das Zeichen (UNTER_B in protokollPdf.ts) = gut 12 pt
+      expect(xVon(r, 'Datum1') - xVon(r, 'Datum0')).toBeGreaterThan(10);
+    });
+
+    it('der Info-Kreis nimmt Platz vor dem Text', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: false, info: true }], true)]));
+      expect(xVon(r, 'Datum1') - xVon(r, 'Datum0')).toBeGreaterThan(10);
+    });
+
+    it('die erste Spalte wird für das Zeichen breiter (die zweite rückt nach rechts)', async () => {
+      const mit = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      const ohneZeichen = await roh(blatt([tab([undefined, undefined], false)]));
+      expect(xVon(mit, 'Was')).toBeGreaterThan(xVon(ohneZeichen, 'Was'));
+    });
+
     it('der Einzug verbreitert die Spalte (naturBreite zählt `einzug`)', async () => {
       const { naturBreite } = await import('./pdfSatz');
       const z = { absaetze: [{ laeufe: [{ text: 'abc' }] }] };

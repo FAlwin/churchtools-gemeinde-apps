@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   anzahlInfo,
   artDesTextes,
+  dokumentHatInfo,
   INFO_ZEICHEN,
   mitArt,
   ohneKennzeichen,
@@ -10,6 +11,7 @@ import {
   umschalten,
   zeilenArten,
 } from './tabellenZeile';
+import type { Block } from './dokument';
 
 describe('Kennzeichen einer Tabellenzeile (W13)', () => {
   it('die Reihenfolge steht an einer Stelle: erst ↳, dann ⓘ', () => {
@@ -76,5 +78,28 @@ describe('Kennzeichen einer Tabellenzeile (W13)', () => {
     ]);
     expect(anzahlInfo(arten)).toBe(2);
     expect(zeilenArten([[]])).toEqual([{ unter: false, info: false }]);
+  });
+
+  it('dokumentHatInfo findet Info-Zeilen auch in einer Tabelle unter einem Absatz – und sonst nichts', () => {
+    const tab = (...erste: string[]): Block => ({
+      id: 't',
+      type: 'table',
+      content: {
+        type: 'tableContent',
+        rows: erste.map((e) => ({ cells: [[{ type: 'text', text: e, styles: {} }]] })),
+      },
+      children: [],
+    });
+    const absatz = (...kinder: Block[]): Block => ({
+      id: 'p',
+      type: 'paragraph',
+      content: [],
+      children: kinder,
+    });
+    expect(dokumentHatInfo([])).toBe(false);
+    expect(dokumentHatInfo([tab('a', '↳ b')])).toBe(false);
+    expect(dokumentHatInfo([tab('a', 'ⓘ b')])).toBe(true);
+    expect(dokumentHatInfo([absatz(absatz(tab('ⓘ x')))])).toBe(true);
+    expect(dokumentHatInfo([absatz(tab('x'))])).toBe(false);
   });
 });

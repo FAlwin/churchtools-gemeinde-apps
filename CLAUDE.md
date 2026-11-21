@@ -954,6 +954,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.5.0` (21.11.2026) = Funde aus der ersten echten Sitzung** (W11–W14, #1110/#1114/#1115/#1116): Tabellen
+  (Zellfarbe, Text-Aufzählung in Zellen, Unterzeile „↳“ und „Nur zur Info“ „ⓘ“ als Präfix der ersten Zelle,
+  `shared/protokolle/tabellenZeile.ts`), Aufzählungszeichen • ◦ – aus `shared/protokolle/aufzaehlung.ts` (SCSS bewacht ein
+  Wächter), „Mit KI füllen“ mit vorhandenem Text (Z-Kennungen, `ersetzt`/`nach`, `doppelt.ts`), Bausteine Stil A, Reiter
+  „Termine“ (Kern `protokolle/src/terminAnlegen.ts` mit `planen.ts` geteilt; ganztägig = Tag + `allDay`). Handtests
+  TF-PROT-28 bis 31 offen.
 - **`protokolle-v1.4.0` (21.11.2026) = W10 „Jeder für sich“ nachgeschärft** (#1103): Ein Mitarbeiter sieht nur seinen Teil
   (`standFuer`/`sichtFuer` in `shared/protokolle/aufgaben.ts`), den Verlauf nur die Leitung, im Fenster klappbare Abschnitte
   (`protokolle/src/Klappbar.tsx`). Live, lesend geprüft, iPhone und Zwei-Konten-Abnahme (TF-PROT-27) bestanden. **Das

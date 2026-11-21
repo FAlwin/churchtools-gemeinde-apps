@@ -50,3 +50,11 @@
   flex-direction: column;
   gap: 10px;
 }
+
+// „Ganztägig“ neben dem Datum: auf der Höhe des Eingabefelds (unter der Beschriftung), nicht der Beschriftung.
+.ganz {
+  align-self: flex-end;
+  align-items: center;
+  min-height: 42px;
+  margin-bottom: 14px;
+}

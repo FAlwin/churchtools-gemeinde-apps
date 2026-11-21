@@ -215,7 +215,7 @@ export function TerminFenster({
                 }}
               />
             </label>
-            <label className={felder.schalter}>
+            <label className={`${felder.schalter} ${styles.ganz}`}>
               <input
                 type="checkbox"
                 className={felder.haken}

@@ -86,6 +86,12 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+
+  a {
+    color: var(--blue);
+    font-weight: 600;
+    text-decoration: none;
+  }
 }
 
 .aktionen {
@@ -93,6 +99,21 @@
   flex: none;
   align-items: center;
   gap: 4px;
+}
+
+// Am Handy ist neben dem Text kein Platz für „Eintragen“ und „⋯“: sie rücken unter den Text (Kachel 50 px + Abstand 12 px).
+@media (max-width: 600px) {
+  .zeile {
+    flex-wrap: wrap;
+  }
+
+  .inhalt {
+    flex-basis: calc(100% - 62px);
+  }
+
+  .aktionen {
+    margin-left: 62px;
+  }
 }
 
 .leer {

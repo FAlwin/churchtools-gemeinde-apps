@@ -812,7 +812,7 @@ export function ProtokollSchreiben({
           datum={tagAusIso(sitzung.beginn, zeitzone)}
           dokument={kiDokument}
           mitglieder={mitglieder}
-          einfuegen={(bloecke, vor) => editor.current?.einfuegen(bloecke, vor)}
+          einfuegen={(liste) => editor.current?.einfuegungen(liste)}
           onUebernommen={kiUebernommen}
           onClose={() => setKiOffen(false)}
         />

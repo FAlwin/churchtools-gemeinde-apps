@@ -8,6 +8,7 @@ import { docxText } from '@shared/protokolle/docxText';
 import {
   antwortLesen,
   auftragBauen,
+  namenSuchtext,
   uebernahmePlanen,
   uebernehmbar,
   type Eintrag,
@@ -78,16 +79,15 @@ const dokument = (): Block[] => [
   heading('h5', 1, 'Verschiedenes'),
 ];
 
-/** Dieselbe Suche wie im Fenster: Transkript, Titel, Gruppenname – mit `namenFinden`, nicht nachgebaut. */
-const fundeFuer = (tx: string, eigene: string[] = [], gruppe = GRUPPE_PERSONEN): Fund[] =>
+/** Dieselbe Suche wie im Fenster: Transkript, Titel, vorhandene Zeilen, Gruppenname – über `namenSuchtext`, nicht nachgebaut. */
+const fundeFuer = (
+  tx: string,
+  eigene: string[] = [],
+  gruppe = GRUPPE_PERSONEN,
+  dok: readonly Block[] = dokument(),
+): Fund[] =>
   namenFinden(
-    [
-      tx,
-      ...dokument().map((b) =>
-        b.type === 'heading' ? (b.content as { text: string }[])[0].text : '',
-      ),
-      GRUPPE,
-    ].join('\n'),
+    namenSuchtext({ gruppe: GRUPPE, transkript: tx, dokument: dok }),
     { alle: ALLE, gruppe },
     eigene,
   );
@@ -572,7 +572,7 @@ describe('Direkt zur Antwort (ohne Transkript)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Ausgewählte übernehmen/ }));
     const plan = uebernahmePlanen(r.eintraege.filter(uebernehmbar), dokument(), neueIdFabrik());
-    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(einfuegen.mock.calls).toEqual([[plan.einfuegungen]]);
     // Die Aufgabe trägt das Mitglied als Zuständigen (vorab.wer), nicht als externen Namen.
     expect(JSON.stringify(einfuegen.mock.calls)).toContain('\\"wer\\":[4]');
   });
@@ -686,7 +686,7 @@ describe('Schritt 3: Vorschau und Übernahme', () => {
     expect(plan.einfuegungen.length).toBeGreaterThan(2); // sonst prüft die Reihenfolge nichts
     const anzahl = eintraege.filter(uebernehmbar).length;
     fireEvent.click(screen.getByRole('button', { name: `Ausgewählte übernehmen (${anzahl})` }));
-    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(einfuegen.mock.calls).toEqual([[plan.einfuegungen]]);
     expect(onUebernommen).toHaveBeenCalledWith({ anzahl, uebersprungen: 0 });
   });
 
@@ -704,7 +704,7 @@ describe('Schritt 3: Vorschau und Übernahme', () => {
     fireEvent.click(
       screen.getByRole('button', { name: `Ausgewählte übernehmen (${gewaehlt.length})` }),
     );
-    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(einfuegen.mock.calls).toEqual([[plan.einfuegungen]]);
     expect(JSON.stringify(einfuegen.mock.calls)).not.toContain('beginnt um 12:30');
     expect(onUebernommen).toHaveBeenCalledWith({ anzahl: gewaehlt.length, uebersprungen: 0 });
   });
@@ -828,7 +828,9 @@ describe('Neue Punkte mit Beschluss, To-Do und Termin (leeres Protokoll)', () =>
     await screen.findByRole('heading', { name: /Neue Punkte/ });
     fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (2)' }));
     expect(einfuegen).toHaveBeenCalledTimes(1);
-    const [bloecke, vor] = einfuegen.mock.calls[0] as [Block[], string | null];
+    const [liste] = einfuegen.mock.calls[0] as [{ bloecke: Block[]; vor: string | null }[]];
+    expect(liste).toHaveLength(1);
+    const { bloecke, vor } = liste[0];
     expect(vor).toBeNull();
     expect(
       bloecke.slice(0, 5).map((b) => [b.type, (b.content as { text: string }[])[0].text]),
@@ -845,7 +847,108 @@ describe('Neue Punkte mit Beschluss, To-Do und Termin (leeres Protokoll)', () =>
     expect(bloecke[4].props).toEqual({ datum: '2026-12-12' });
     // Genau das, was die Regeln planen.
     const plan = uebernahmePlanen(erwartet(), leer(), neueIdFabrik());
-    expect(einfuegen.mock.calls).toEqual(plan.einfuegungen.map((f) => [f.bloecke, f.vor]));
+    expect(einfuegen.mock.calls).toEqual([[plan.einfuegungen]]);
     expect(onUebernommen).toHaveBeenCalledWith({ anzahl: 2, uebersprungen: 0 });
+  });
+});
+
+describe('W12: vorhandener Text – ersetzen statt doppeln', () => {
+  const zeile = (id: string, t: string, type = 'bulletListItem'): Block => ({
+    id,
+    type,
+    content: text(t),
+    children: [],
+  });
+  const dok = (): Block[] => [
+    heading('h1', 1, 'Feste'),
+    zeile('a1', 'Eishalle Troisdorf anfragen, sonst Wiehl.', 'paragraph'),
+    zeile('a2', 'Danach Essen im Gemeindehaus mit Peter Wiens.'),
+    heading('h2', 1, 'Ostern'),
+    zeile('a3', 'Ab 18 Uhr Stehimbiss.'),
+  ];
+  const TX = 'Peter Wiens plant das Eislaufen. Alles klar.';
+
+  const bisVorschau = async () => {
+    const r = zeige({ dokument: dok });
+    tippeTranskript(TX);
+    const auftrag = await kopieren();
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter: Antwort einfügen' }));
+    await screen.findByLabelText('Antwort der KI');
+    const funde = fundeFuer(TX, [], GRUPPE_PERSONEN, dok());
+    const peter = phVon(funde, 'Peter Wiens');
+    antworten({
+      punkte: [{ nr: '2', stichpunkte: ['Stehimbiss ab 18 Uhr', 'Kinderchor singt am Sonntag'] }],
+      beschluesse: [
+        { nr: '1', text: `${peter} organisiert das Essen.`, ersetzt: ['Z2'] },
+        { nr: '2', text: 'Imbiss ab 18 Uhr', nach: 'Z3' },
+      ],
+      todos: [{ nr: '1', text: 'Eishalle anfragen', ersetzt: ['Z1'] }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau ansehen' }));
+    await screen.findByText('Stichpunkte');
+    return { ...r, auftrag, peter };
+  };
+
+  it('der kopierte Auftrag trägt die Kennungen – und keinen Namen aus dem vorhandenen Text', async () => {
+    const { auftrag, peter } = await bisVorschau();
+    expect(auftrag).toContain('Z1 Eishalle Troisdorf anfragen, sonst Wiehl.');
+    expect(auftrag).toContain(`Z2 Danach Essen im Gemeindehaus mit ${peter}.`);
+    expect(auftrag).not.toContain('Peter Wiens');
+  });
+
+  it('Vorschau: „ersetzt …“ mit eigenem Haken, „kommt unter …“, doppelter Stichpunkt abgewählt mit „steht schon da“', async () => {
+    await bisVorschau();
+    // ersetzt – mit dem echten Text der Zeile, Namen wieder da
+    const ersetzt = screen.getAllByRole('checkbox', { name: 'Zeile ersetzen' });
+    expect(ersetzt).toHaveLength(2);
+    expect(document.body.textContent).toContain('Danach Essen im Gemeindehaus mit Peter Wiens.');
+    expect(document.body.textContent).toMatch(/kommt unter\s*Ab 18 Uhr Stehimbiss\./);
+    // doppelt: abgewählt, durchgestrichen, Etikett
+    const doppelt = screen.getByText('Stehimbiss ab 18 Uhr').closest('label')!;
+    expect(within(doppelt).getByRole('checkbox')).toHaveProperty('checked', false);
+    expect(doppelt.querySelector('s')).toBeTruthy();
+    expect(screen.getByText('steht schon da')).toBeTruthy();
+    // der neue Stichpunkt ist gewählt: 2 Bausteine + 1 Stichpunkt + Beschluss mit nach = 4 − doppelt
+    expect(
+      within(screen.getByText('Kinderchor singt am Sonntag').closest('label')!).getByRole(
+        'checkbox',
+      ),
+    ).toHaveProperty('checked', true);
+    expect(screen.getByRole('button', { name: 'Ausgewählte übernehmen (4)' })).toBeTruthy();
+  });
+
+  it('übernehmen: ein Aufruf mit allem, ersetzte Zeilen werden entfernt – genau das, was uebernahmePlanen liefert', async () => {
+    const { einfuegen, peter } = await bisVorschau();
+    fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (4)' }));
+    expect(einfuegen).toHaveBeenCalledTimes(1);
+    const liste = (einfuegen.mock.calls[0] as [{ entfernen?: string[] }[]])[0];
+    expect(liste.flatMap((x) => x.entfernen ?? []).sort()).toEqual(['a1', 'a2']);
+    const funde = fundeFuer(TX, [], GRUPPE_PERSONEN, dok());
+    expect(peter).toBe(phVon(funde, 'Peter Wiens'));
+  });
+
+  it('Haken „Zeile ersetzen“ weg: die Zeile bleibt (nicht in „entfernen“)', async () => {
+    const { einfuegen } = await bisVorschau();
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'Zeile ersetzen' })[0]);
+    expect(document.body.textContent).toContain('ersetzt nicht, kommt darunter:');
+    fireEvent.click(screen.getByRole('button', { name: 'Ausgewählte übernehmen (4)' }));
+    const liste = (einfuegen.mock.calls[0] as [{ entfernen?: string[] }[]])[0];
+    expect(liste.flatMap((x) => x.entfernen ?? [])).toEqual(['a1']);
+  });
+
+  it('Eintrag abgewählt: sein Ersetzen-Haken ist gesperrt', async () => {
+    await bisVorschau();
+    const beschluss = screen.getByText(/organisiert das Essen/).closest('label')!;
+    fireEvent.click(within(beschluss).getByRole('checkbox'));
+    const haken = screen.getAllByRole('checkbox', { name: 'Zeile ersetzen' });
+    expect(haken.filter((h) => (h as HTMLInputElement).disabled)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Ausgewählte übernehmen (3)' })).toBeTruthy();
+  });
+
+  it('der doppelte Stichpunkt lässt sich wieder wählen', async () => {
+    await bisVorschau();
+    const doppelt = screen.getByText('Stehimbiss ab 18 Uhr').closest('label')!;
+    fireEvent.click(within(doppelt).getByRole('checkbox'));
+    expect(screen.getByRole('button', { name: 'Ausgewählte übernehmen (5)' })).toBeTruthy();
   });
 });

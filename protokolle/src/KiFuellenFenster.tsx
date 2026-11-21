@@ -10,12 +10,14 @@ import { docxText } from '@shared/protokolle/docxText';
 import {
   antwortLesen,
   auftragBauen,
+  namenSuchtext,
   offenePlatzhalter,
-  tagesordnung,
   uebernahmePlanen,
   uebernehmbar,
   type Eintrag,
+  type Einfuegung,
   type TodoTeil,
+  type ZeilenBezug,
 } from '@shared/protokolle/ki';
 import {
   namenFinden,
@@ -46,8 +48,11 @@ export interface KiFuellenProps {
   dokument: () => Block[];
   /** Die Gruppenmitglieder (Editor): nur deren Vornamen werden allein gesucht und sie werden Zuständige. */
   mitglieder: readonly Mitglied[] | 'verborgen' | null;
-  /** `EditorGriff.einfuegen` – zählt als Änderung, das Protokoll speichert dann von selbst. */
-  einfuegen: (bloecke: readonly Block[], vor: string | null) => void;
+  /**
+   * `EditorGriff.einfuegungen` – alles in EINER Transaktion (ein Rückgängig macht es zurück), ersetzte Zeilen inklusive;
+   * zählt als Änderung, das Protokoll speichert dann von selbst.
+   */
+  einfuegen: (liste: readonly Einfuegung[]) => void;
   onUebernommen: (r: KiUebernommen) => void;
   onClose: () => void;
   /** Austauschbar für Tests. */
@@ -179,6 +184,8 @@ export function KiFuellenFenster({
   const [antwortFehler, setAntwortFehler] = useState<string | null>(null);
   const [eintraege, setEintraege] = useState<readonly Eintrag[]>([]);
   const [abgewaehlt, setAbgewaehlt] = useState<ReadonlySet<string>>(new Set());
+  // W12: Einträge, bei denen der kleine Haken „ersetzt …“ weg ist – die Zeile bleibt, der Baustein kommt darunter.
+  const [ersetzenAus, setErsetzenAus] = useState<ReadonlySet<string>>(new Set());
   const [fehler, setFehler] = useState<string | null>(null);
   const [personen, setPersonen] = useState<Personenstand>({ art: 'laedt' });
   const dateiFeld = useRef<HTMLInputElement>(null);
@@ -215,11 +222,11 @@ export function KiFuellenFenster({
   // Vorher nichts kopieren: Es fehlten Namen im Auftrag.
   const bereit = personen.art !== 'laedt' && mitglieder !== null;
 
-  // Gesucht wird im Transkript UND in den Titeln der Tagesordnung und im Gruppennamen – auch dort steht manchmal ein
-  // Name („Andacht Peter“); `auftragBauen` ersetzt sie mit denselben Funden.
+  // Gesucht wird in allem, was an die KI geht: Transkript, Titel der Tagesordnung, Gruppenname und die schon vorhandenen
+  // Zeilen (W12, `namenSuchtext`) – auch dort steht manchmal ein Name („Andacht Peter“); `auftragBauen` ersetzt sie mit
+  // denselben Funden.
   const funde = useMemo<Fund[]>(() => {
-    const titel = tagesordnung(dokument()).map((p) => p.titel);
-    const text = [tx, ...titel, gruppe].join('\n');
+    const text = namenSuchtext({ gruppe, transkript: tx, dokument: dokument() });
     return namenFinden(text, { alle, gruppe: gruppePersonen }, eigene).map((f) => ({
       ...f,
       ersetzen: !aus.has(f.text),
@@ -335,7 +342,11 @@ export function KiFuellenFenster({
     }
     setAntwortFehler(null);
     setEintraege(r.eintraege);
-    setAbgewaehlt(new Set());
+    // Was schon dasteht (W12), ist von Anfang an abgewählt – mit einem Haken wieder zu wählen.
+    setAbgewaehlt(
+      new Set(r.eintraege.filter((e) => e.art === 'stichpunkt' && e.doppelt).map((e) => e.id)),
+    );
+    setErsetzenAus(new Set());
     setSchritt(3);
   };
 
@@ -345,8 +356,8 @@ export function KiFuellenFenster({
     setFehler(null);
     try {
       // Frisch gelesen: Der Plan rechnet mit dem Dokument von jetzt, nicht mit dem beim Lesen der Antwort.
-      const plan = uebernahmePlanen(gewaehlt, dokument(), neueId);
-      for (const f of plan.einfuegungen) einfuegen(f.bloecke, f.vor);
+      const plan = uebernahmePlanen(gewaehlt, dokument(), neueId, { ersetzenAus });
+      einfuegen(plan.einfuegungen);
       onUebernommen({
         anzahl: gewaehlt.length - plan.uebersprungen.length,
         uebersprungen: plan.uebersprungen.length,
@@ -359,28 +370,82 @@ export function KiFuellenFenster({
     }
   };
 
-  const wahl = (e: Eintrag, haupt: ReactNode, unten: ReactNode) => {
+  const wahl = (e: Eintrag, haupt: ReactNode, unten: ReactNode, lage?: ReactNode) => {
     const w = wohin(e);
     const an = w.ok && !abgewaehlt.has(e.id);
+    const doppelt = e.art === 'stichpunkt' && e.doppelt;
     return (
-      <label key={e.id} className={`${styles.wahl}${w.ok ? '' : ` ${styles.aus}`}`}>
-        <input
-          type="checkbox"
-          checked={an}
-          disabled={!w.ok}
-          onChange={(ev) => {
-            const neu = new Set(abgewaehlt);
-            if (ev.target.checked) neu.delete(e.id);
-            else neu.add(e.id);
-            setAbgewaehlt(neu);
-          }}
-        />
-        <span>
-          {haupt}
-          <small>{unten}</small>
-        </span>
-      </label>
+      <div key={e.id} className={styles.eintrag}>
+        <label className={`${styles.wahl}${w.ok ? '' : ` ${styles.aus}`}`}>
+          <input
+            type="checkbox"
+            checked={an}
+            disabled={!w.ok}
+            onChange={(ev) => {
+              const neu = new Set(abgewaehlt);
+              if (ev.target.checked) neu.delete(e.id);
+              else neu.add(e.id);
+              setAbgewaehlt(neu);
+            }}
+          />
+          <span className={doppelt ? styles.doppelt : undefined}>
+            {doppelt ? <s>{haupt}</s> : haupt}
+            <small>{unten}</small>
+          </span>
+        </label>
+        {lage}
+      </div>
     );
+  };
+  /** Die Zeilen, die ein Baustein ersetzt, mit eigenem Haken – und wohin er sonst gehört (W12). */
+  const zeilenLage = (e: Eintrag): ReactNode => {
+    if (e.art === 'neuerPunkt' || e.art === 'stichpunkt') {
+      if (e.art === 'stichpunkt' && e.doppelt)
+        return (
+          <p className={styles.lage}>
+            <Etikett ton="neutral">steht schon da</Etikett>
+            <q>{txt(e.doppelt.text)}</q>
+          </p>
+        );
+      return e.art === 'stichpunkt' && e.nach ? (
+        <p className={styles.lage}>
+          kommt unter <q>{txt(e.nach.text)}</q>
+        </p>
+      ) : null;
+    }
+    const ersetzt: readonly ZeilenBezug[] = e.ersetzt ?? [];
+    const an = !abgewaehlt.has(e.id);
+    if (ersetzt.length)
+      return (
+        <label className={`${styles.lage} ${styles.ersetzt}`}>
+          <input
+            type="checkbox"
+            checked={!ersetzenAus.has(e.id)}
+            disabled={!an}
+            aria-label="Zeile ersetzen"
+            onChange={(ev) => {
+              const neu = new Set(ersetzenAus);
+              if (ev.target.checked) neu.delete(e.id);
+              else neu.add(e.id);
+              setErsetzenAus(neu);
+            }}
+          />
+          <span>
+            {ersetzenAus.has(e.id) ? 'ersetzt nicht, kommt darunter:' : 'ersetzt'}{' '}
+            {ersetzt.map((z, i) => (
+              <span key={z.kennung}>
+                {i > 0 && ' · '}
+                <q>{txt(z.text)}</q>
+              </span>
+            ))}
+          </span>
+        </label>
+      );
+    return e.nach ? (
+      <p className={styles.lage}>
+        kommt unter <q>{txt(e.nach.text)}</q>
+      </p>
+    ) : null;
   };
   const txt = (t: string) => <NamenText text={t} namen={zurueckNamen} />;
   /** Zuständige und Datum eines To-Dos – im einzelnen To-Do und im neuen Punkt gleich. */
@@ -775,13 +840,13 @@ export function KiFuellenFenster({
           {bereich(
             'Stichpunkte',
             von('stichpunkt').map(
-              (e) => e.art === 'stichpunkt' && wahl(e, txt(e.text), wohin(e).text),
+              (e) => e.art === 'stichpunkt' && wahl(e, txt(e.text), wohin(e).text, zeilenLage(e)),
             ),
           )}
           {bereich(
             'Beschlüsse',
             von('beschluss').map(
-              (e) => e.art === 'beschluss' && wahl(e, txt(e.text), wohin(e).text),
+              (e) => e.art === 'beschluss' && wahl(e, txt(e.text), wohin(e).text, zeilenLage(e)),
             ),
           )}
           {bereich(
@@ -797,6 +862,7 @@ export function KiFuellenFenster({
                     {' · '}
                     {wohin(e).text}
                   </>,
+                  zeilenLage(e),
                 ),
             ),
           )}
@@ -814,6 +880,7 @@ export function KiFuellenFenster({
                     {e.datum ? '' : 'Datum fehlt – bitte nach dem Übernehmen setzen · '}
                     {wohin(e).text}
                   </>,
+                  zeilenLage(e),
                 ),
             ),
           )}

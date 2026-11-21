@@ -241,10 +241,16 @@ describe('Das Protokoll wie in der Lese-Ansicht', () => {
       ]),
     );
     expect(
-      ts.map((t) => (t.art === 'text' && t.zeichen?.art === 'punkt' ? [text(t.absaetze[0]), t.zeichen.ebene] : null)),
+      ts.map((t) =>
+        t.art === 'text' && t.zeichen?.art === 'punkt'
+          ? [text(t.absaetze[0]), t.zeichen.ebene]
+          : null,
+      ),
     ).toEqual([['a1', 0], ['b2', 1], ['c3', 2], null, ['u', 0], null]);
     // Die Ebene zählt Aufzählungen übereinander, nicht die Einrückung: „u“ steht eingerückt, aber oben.
-    expect(ts.find((t) => t.art === 'text' && text(t.absaetze[0]) === 'u')).toMatchObject({ einzug: 2 });
+    expect(ts.find((t) => t.art === 'text' && text(t.absaetze[0]) === 'u')).toMatchObject({
+      einzug: 2,
+    });
   });
 
   it('To-Do mit Wer und Bis, ohne Status – auch ein erledigtes; vor dem Speichern die Wahl im Block', () => {
@@ -392,6 +398,28 @@ describe('Aufzählung in einer Tabellenzelle (W11)', () => {
     expect(t.zeilen[0].map((z) => z.absaetze.map(text))).toEqual([
       ['• Brot', '• Käse'],
       ['1. eins', '2. zwei'],
+    ]);
+  });
+});
+
+describe('Zelle mit beendeter Aufzählung (W11)', () => {
+  it('die leere letzte Zeile nach „• Käse\\n“ fällt weg; mittendrin bleibt eine Leerzeile', () => {
+    const zelle = (t: string) => [{ type: 'text', text: t }];
+    const [t] = teile(
+      quelle([
+        block('table', '', {
+          content: {
+            type: 'tableContent',
+            rows: [{ cells: [zelle('• Brot\n• Käse\n'), zelle('a\n\nb'), zelle('')] }],
+          },
+        }),
+      ]),
+    );
+    if (t.art !== 'tabelle') throw new Error('keine Tabelle');
+    expect(t.zeilen[0].map((z) => z.absaetze.map(text))).toEqual([
+      ['• Brot', '• Käse'],
+      ['a', '', 'b'],
+      [''],
     ]);
   });
 });

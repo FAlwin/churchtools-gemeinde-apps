@@ -148,7 +148,9 @@ function Bloecke({
           <ul
             key={b.id}
             className={
-              art === 'checkListItem' ? styles.ohnePunkt : styles[`aufzaehlung${Math.min(ebene, 2)}`]
+              art === 'checkListItem'
+                ? styles.ohnePunkt
+                : styles[`aufzaehlung${Math.min(ebene, 2)}`]
             }
           >
             {punkte}

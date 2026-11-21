@@ -1,6 +1,11 @@
 import { createExtension } from '@blocknote/core';
 import { Plugin, TextSelection, type EditorState } from 'prosemirror-state';
-import { enterInZelle, wirdZuPunkt, zeileVorCursor, ZELLEN_PUNKT } from '@shared/protokolle/zellenListe';
+import {
+  enterInZelle,
+  wirdZuPunkt,
+  zeileVorCursor,
+  ZELLEN_PUNKT,
+} from '@shared/protokolle/zellenListe';
 import type { ProtokollEditor } from './editorSchema';
 
 /**

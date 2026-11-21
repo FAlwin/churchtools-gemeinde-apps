@@ -231,7 +231,9 @@ describe('Protokoll als PDF', () => {
       zeichen: { art: 'punkt', ...(ebene === undefined ? {} : { ebene }) },
     });
     const [e0, e1, e2, e3, ohne] = await Promise.all(
-      [0, 1, 2, 3, undefined].map(async (e) => (await roh(blatt([eintrag(e)]))).replace(/\/ID \[[^\]]*\]/, '')),
+      [0, 1, 2, 3, undefined].map(async (e) =>
+        (await roh(blatt([eintrag(e)]))).replace(/\/ID \[[^\]]*\]/, ''),
+      ),
     );
     // ohne Angabe = oberste Ebene
     expect(ohne).toBe(e0);

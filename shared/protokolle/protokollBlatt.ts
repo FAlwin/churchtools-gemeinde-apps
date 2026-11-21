@@ -84,9 +84,7 @@ export interface ProtokollQuelle {
 /** Was vor einer Zeile steht: Aufzählungspunkt, Nummer, Kästchen (Checkliste, To-Do). */
 export type Zeichen =
   /** `ebene`: wie tief die Aufzählung steckt (0 = oberste; fehlt = oberste) – Zeichen siehe `aufzaehlungsZeichen`. */
-  | { art: 'punkt'; ebene?: number }
-  | { art: 'nummer'; nr: number }
-  | { art: 'kasten'; an: boolean };
+  { art: 'punkt'; ebene?: number } | { art: 'nummer'; nr: number } | { art: 'kasten'; an: boolean };
 
 /** Ein Text mit Auszeichnung am linken Rand: Zitat (grau), Beschluss (grün), Termin (blau). */
 export type Rand = 'zitat' | 'beschluss' | 'termin';
@@ -367,8 +365,12 @@ function tabelle(content: unknown, q: ProtokollQuelle): TabellenZelleBlatt[][] |
       const laeufe = laeufeAus(c.inhalt, q).map((l) =>
         schrift && !l.farbe ? { ...l, farbe: schrift } : l,
       );
+      const absaetze = zeilenAus(laeufe);
+      // Wer eine Aufzählung in der Zelle mit Enter beendet (W11), lässt eine leere letzte Zeile zurück – sie wäre auf dem
+      // Papier eine Leerzeile unter der Zelle.
+      while (absaetze.length > 1 && !absaetze[absaetze.length - 1].length) absaetze.pop();
       return {
-        absaetze: zeilenAus(laeufe),
+        absaetze,
         kopf: c.kopf,
         spalten: c.spalten,
         zeilen: c.zeilen,
@@ -472,9 +474,7 @@ function teileAus(bloecke: readonly Block[], einzug: number, k: Kontext, ebene =
     const t = teilAus(b, einzug, k, nr, ebene);
     if (t) aus.push(t);
     if (b.children?.length)
-      aus.push(
-        ...teileAus(b.children, einzug + 1, k, b.type === 'bulletListItem' ? ebene + 1 : 0),
-      );
+      aus.push(...teileAus(b.children, einzug + 1, k, b.type === 'bulletListItem' ? ebene + 1 : 0));
   }
   return aus;
 }

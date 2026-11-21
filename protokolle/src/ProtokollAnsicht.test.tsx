@@ -54,7 +54,9 @@ describe('ProtokollAnsicht – Aufzählungsebenen und Zeilenumbrüche (W11)', ()
       />,
     );
     const ebene = (t: string) =>
-      [...(screen.getByText(t).closest('ul')?.classList ?? [])].find((k) => k.includes('aufzaehlung'));
+      [...(screen.getByText(t).closest('ul')?.classList ?? [])].find((k) =>
+        k.includes('aufzaehlung'),
+      );
     expect(ebene('a')).toContain('aufzaehlung0');
     expect(ebene('b')).toContain('aufzaehlung1');
     expect(ebene('c')).toContain('aufzaehlung2');

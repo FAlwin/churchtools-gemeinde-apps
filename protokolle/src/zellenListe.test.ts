@@ -18,7 +18,7 @@ const tabelle = (...zellen: string[][]): Teil => ({
     type: 'tableContent',
     rows: zellen.map((z) => ({ cells: z })),
   },
-} as Teil);
+});
 
 function editorMit(dok: Teil[]): ProtokollEditor {
   return einhaengen(BlockNoteEditor.create({ schema, tables: TABELLEN, initialContent: dok }));
@@ -45,7 +45,12 @@ function tippen(e: ProtokollEditor, text: string): void {
   const v = e._tiptapEditor.view;
   for (const z of text) {
     const { from, to } = v.state.selection;
-    if (!v.someProp('handleTextInput', (f) => f(v, from, to, z))) v.dispatch(v.state.tr.insertText(z, from, to));
+    if (
+      !v.someProp('handleTextInput', (f) =>
+        f(v, from, to, z, () => v.state.tr.insertText(z, from, to)),
+      )
+    )
+      v.dispatch(v.state.tr.insertText(z, from, to));
   }
 }
 

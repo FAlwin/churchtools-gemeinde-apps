@@ -36,12 +36,13 @@ describe('Aufzählungszeichen der Protokolle (W11)', () => {
   });
 
   it('die Erkennung greift (Gegenprobe) – sonst wäre der Vergleich leer gegen leer', () => {
-    expect(editorZeichen(".a { --bn-bullet-marker: '•'; }\n.b { --bn-bullet-marker: '▪'; }")).toEqual([
-      '•',
-      '▪',
-    ]);
     expect(
-      ansichtZeichen("ul.aufzaehlung1 { list-style-type: '◦ '; } ul.aufzaehlung0 { list-style-type: '• '; }"),
+      editorZeichen(".a { --bn-bullet-marker: '•'; }\n.b { --bn-bullet-marker: '▪'; }"),
+    ).toEqual(['•', '▪']);
+    expect(
+      ansichtZeichen(
+        "ul.aufzaehlung1 { list-style-type: '◦ '; } ul.aufzaehlung0 { list-style-type: '• '; }",
+      ),
     ).toEqual(['•', '◦']);
     expect(editorZeichen('')).toEqual([]);
     expect(ansichtZeichen('')).toEqual([]);

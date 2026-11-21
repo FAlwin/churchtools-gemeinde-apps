@@ -332,6 +332,16 @@ als Erstes, dann Fett und „Aa“ (Textart, Kursiv & Co.), die drei Menüs nur 
 bleiben lesbar und lassen sich über die Textart in Text verwandeln. Eine **Tabelle** hat eine Kopfzeile; Zeilen und
 Spalten kommen über die Griffe an der Tabelle dazu, „Kopfzeile“/„Kopfspalte“ schaltet man im Griff-Menü links.
 
+**Tabellen und Aufzählungen (W11, 21.11.2026):** Im Menü an Zelle, Zeile und Spalte steht **„Farben“** – nur der **Hintergrund** (`TABELLEN.cellBackgroundColor` in
+`editorSchema.ts`; die Schriftfarbe je Zelle bleibt aus, das PDF kennt sie nicht). Lese-Ansicht und PDF zeigen ihn (`tabellenZeilen` → `hintergrund`). **Aufzählung
+in einer Zelle:** BlockNote-Zellen nehmen nur Text, darum ist sie Text: „- “ oder „\* “ am Zeilenanfang wird „• “, „1. “ zählt mit; Enter auf einer solchen Zeile
+setzt sie in derselben Zelle fort (Zeilenumbruch = `\n` im Text), auf einer leeren beendet er sie. Sonst springt Enter in der Tabelle in die Zelle darunter (BlockNote,
+`TableExtension`), Umschalt+Enter macht einen Zeilenumbruch. Regel `shared/protokolle/zellenListe.ts`, Tasten `protokolle/src/zellenListe.ts`. **Aufzählungszeichen
+überall • ◦ –** (Ebene 1, 2, ab 3): EINE Quelle `aufzaehlungsZeichen` in `shared/protokolle/aufzaehlung.ts`; das PDF ruft sie (das Blatt trägt `Zeichen.ebene`; „◦“ hat
+die PDF-Schrift nicht und wird als Kreis gezeichnet), Editor (`DokumentEditor.scss`, `--bn-bullet-marker`) und Lese-Ansicht (`ProtokollAnsicht.module.scss`, `list-style-type`) tragen
+die Zeichen in SCSS – `ui/design/aufzaehlungsZeichen.test.ts` vergleicht. Die Ebene zählt nur Aufzählungen übereinander (unter Absatz oder Nummerierung fängt es oben an,
+wie in BlockNote). Nicht betroffen: Nummerierungen, Checklisten, die Listen der festen Punkte und Fenster (eigene Listen ohne Zeichen). Handtest: TF-PROT-28.
+
 **Unterpunkte und Einrücken (K3b-1):** **Tab** (oder „Absatz → Einrücken“) macht aus einem Tagesordnungspunkt einen
 **Unterpunkt** (4.1), nochmal Tab eine Ebene tiefer (4.1.1) – bis 4.1.1.1.1. **Umschalt+Tab** („Ausrücken“) geht zurück
 bis zum Tagesordnungspunkt. Ein Unterpunkt steht höchstens eine Ebene unter dem Punkt davor, und der erste Punkt bleibt

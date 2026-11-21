@@ -225,7 +225,7 @@ class ProtokollZeichner extends PdfSatz {
       const zeichen = aufzaehlungsZeichen(z.ebene ?? 0);
       // „◦“ hat die Schrift der PDFs nicht (Gemeinde Sans, gekürzt) – als Kreislinie gezeichnet, so groß wie „•“ etwa ist.
       if (zeichen === aufzaehlungsZeichen(1)) {
-        const r = pt * PT * 0.17;
+        const r = pt * PT * 0.2;
         this.d.setDrawColor(...TINTE);
         this.d.setLineWidth(0.2);
         this.d.circle(x + 1 + r * 1.6, grund - pt * PT * 0.3, r, 'S');

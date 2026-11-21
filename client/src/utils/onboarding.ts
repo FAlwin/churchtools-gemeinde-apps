@@ -104,7 +104,10 @@ export const TOUR_SETLIST = 'setlist-v3';
 // Bestandsnutzer ihn zu sehen bekommen.
 // v8 (20.11.2026, auf Alwins Wunsch): wie `TOUR_SETLIST` – das Bearbeiten des Ablaufs wurde in B8 umgebaut, die Einführung
 // dazu startet einmal neu. v7 ist der Wert des Releases v2.40.1.
-export const TOUR_SETLIST_EDIT = 'setlist-edit-v8';
+// v9 (21.11.2026): neuer Schritt „Infos je Gruppe“ – am Rechner/iPad bleiben die gewählten Spalten beim Bearbeiten stehen,
+// eine Zelle anklicken trägt die Info ein (Entwurf `ablauf-infos-bearbeiten.html`, Variante B). Ohne gewählte Spalten
+// (oder am Handy) gibt es kein Ziel – `Coachmarks` überspringt den Schritt. Version erhöht, damit Bestandsnutzer ihn sehen.
+export const TOUR_SETLIST_EDIT = 'setlist-edit-v9';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
 // eigene Einträge per Tipp auf die Zeile änderbar – jeder Schritt zeigt jetzt etwas anderes.
@@ -248,6 +251,11 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
     selector: '[data-tour="edit-item"]',
     title: 'Punkt bearbeiten',
     body: 'Tippe einen Eintrag an, um Titel, Dauer, Zuständige zu ändern oder ein Lied zu verknüpfen – auch eines, das ihr dort gerade erst anlegt. Läuft etwas vor dem Gottesdienst, etwa der Soundcheck, schalte „Vor Gottesdienstbeginn“ ein.',
+  },
+  {
+    selector: '[data-tour="edit-info"]',
+    title: 'Infos je Gruppe',
+    body: 'Die gewählten Spalten (Technik, Musik …) bleiben beim Bearbeiten stehen. Klicke eine Zelle an, um die Info dieser Gruppe einzutragen – gespeichert wird, sobald du die Zelle verlässt; Esc verwirft.',
   },
   {
     selector: '[data-tour="edit-add"]',

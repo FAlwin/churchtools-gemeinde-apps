@@ -145,6 +145,7 @@ export function InfoZelle({
         <button
           type="button"
           className={`${styles.knopf}${text ? '' : ` ${styles.leer}`}`}
+          data-tour="edit-info"
           aria-label={`Info für ${gruppe.name} bei „${itemLabel(item)}“ bearbeiten`}
           onClick={oeffnen}
         >

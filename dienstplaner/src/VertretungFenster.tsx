@@ -140,7 +140,17 @@ export function VertretungFenster({
     const offen = offeneMails(ergebnis.mails);
     const unklar = unklareMails(ergebnis.mails);
     const ohneAdresse = ohneMailAdresse(ergebnis.mails);
-    const alleRaus = offen.length === 0;
+    // Wiederholen lohnt nur für `offen`; wer keine Adresse hat, bleibt auch beim zweiten Mal ohne Mail.
+    const nichtsMehrOffen = offen.length === 0;
+    const alleVersorgt = nichtsMehrOffen && ohneAdresse.length === 0;
+    // Nur wer WIRKLICH eine Mail bekommen hat – wer keine Adresse hat oder nicht erreicht wurde, steht nicht in diesem Satz.
+    const ergebnisArt = (id: number) => ergebnis.mails.ergebnisse.get(id)?.art;
+    const verschickt = ergebnis.mails.ziele.filter(
+      (z) => z.rolle === 'gefragt' && ergebnisArt(z.personId) === 'verschickt',
+    );
+    const leitungKopie = ergebnis.mails.ziele.some(
+      (z) => z.rolle === 'leitung' && ergebnisArt(z.personId) === 'verschickt',
+    );
     return (
       <Sheet
         title="Vertretung suchen"
@@ -149,7 +159,7 @@ export function VertretungFenster({
         beschaeftigt={laeuft}
         knoepfe={
           <>
-            {!alleRaus && (
+            {!nichtsMehrOffen && (
               <FensterKnopf art="zweit" disabled={laeuft} onClick={() => void erneut()}>
                 {laeuft ? 'Wird gesendet …' : 'Erneut senden'}
               </FensterKnopf>
@@ -160,21 +170,19 @@ export function VertretungFenster({
           </>
         }
       >
-        <div className={`${styles.stand} ${alleRaus ? styles.gut : styles.halb}`} role="status">
+        <div className={`${styles.stand} ${alleVersorgt ? styles.gut : styles.halb}`} role="status">
           <p>
             <b>Abgesagt.</b> Dein Dienst „{d.dienst}“ am {tagLang(d.tag)} ist frei – dein Team sieht
             „{vertretung.ich.name} sucht eine Vertretung“.
           </p>
-          {ergebnis.auftrag.gefragt.length === 0 ? (
-            <p>Es wurde niemand direkt gefragt.</p>
-          ) : alleRaus ? (
+          {ergebnis.auftrag.gefragt.length === 0 && <p>Es wurde niemand direkt gefragt.</p>}
+          {verschickt.length > 0 && (
             <p>
-              Mail verschickt an {namenText(ergebnis.auftrag.gefragt)}
-              {ergebnis.mails.ziele.some((z) => z.rolle === 'leitung')
-                ? ' – die Leitung hat eine Kopie.'
-                : '.'}
+              Mail verschickt an {namenText(verschickt)}
+              {leitungKopie ? ' – die Leitung hat eine Kopie.' : '.'}
             </p>
-          ) : (
+          )}
+          {offen.length > 0 && (
             <p>
               <b>Mail an {namenText(offen)} nicht verschickt.</b>{' '}
               {ergebnis.mails.angehalten ?? 'ChurchTools hat sie nicht genommen.'}
@@ -182,7 +190,7 @@ export function VertretungFenster({
           )}
           {ohneAdresse.length > 0 && (
             <p>
-              Für {namenText(ohneAdresse)} hat ChurchTools keine Mail-Adresse – sag es persönlich
+              Für {namenText(ohneAdresse)} hat ChurchTools keine Mail-Adresse – sag persönlich
               Bescheid.
             </p>
           )}

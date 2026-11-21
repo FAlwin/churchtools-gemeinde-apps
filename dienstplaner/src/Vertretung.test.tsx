@@ -210,7 +210,41 @@ describe('Fenster „Vertretung suchen“', () => {
     await act(async () => {
       fireEvent.click(knopf('Absagen und fragen'));
     });
-    expect((await screen.findByRole('status')).textContent).toMatch(/keine Mail-Adresse/);
+    const stand = (await screen.findByRole('status')).textContent ?? '';
+    expect(stand).toMatch(/keine Mail-Adresse/);
+    expect(stand).not.toMatch(/Mail verschickt/); // niemand hat eine bekommen
+    expect(screen.queryByRole('button', { name: 'Erneut senden' })).toBeNull();
+  });
+
+  it('teils verschickt, teils ohne Adresse: der Satz „Mail verschickt“ nennt NUR die, die sie wirklich bekamen (nie beides widersprüchlich)', async () => {
+    const b: MailBericht = {
+      ziele: [
+        { personId: 47, name: 'Ben Test', rolle: 'gefragt', antwort: null },
+        { personId: 48, name: 'Finn Test', rolle: 'gefragt', antwort: null },
+        { personId: 1, name: 'Alwin Friesen', rolle: 'leitung', antwort: null },
+      ],
+      ergebnisse: new Map([
+        [47, { art: 'verschickt' as const }],
+        [48, { art: 'ohneMail' as const }],
+        [1, { art: 'verschickt' as const }],
+      ]),
+      angehalten: null,
+    };
+    oeffne(
+      vertretungAttrappe({
+        anschluss: anschlussAttrappe({
+          suchen: vi.fn(() => Promise.resolve({ art: 'abgesagt' as const, mails: b })),
+        }),
+      }),
+    );
+    await screen.findByText('Hat Ja gesagt');
+    await act(async () => {
+      fireEvent.click(knopf('Absagen und fragen'));
+    });
+    const text = (await screen.findByRole('status')).textContent ?? '';
+    expect(text).toMatch(/Mail verschickt an Ben Test – die Leitung hat eine Kopie\./);
+    expect(text).not.toMatch(/Mail verschickt an Ben Test und Finn/);
+    expect(text).toMatch(/Für Finn Test hat ChurchTools keine Mail-Adresse/);
     expect(screen.queryByRole('button', { name: 'Erneut senden' })).toBeNull();
   });
 

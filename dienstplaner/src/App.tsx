@@ -156,8 +156,9 @@ export function App() {
     [start],
   );
 
-  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf (Mitglieder
-  // sehen sie erst mit E5c-6). Stabil, solange der Start gleich bleibt.
+  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf: Fremde Antworten
+  // zeigt die App sonst nur Planern. Mitglieder lesen nur die Markierungen „Vertretung gesucht“ ihrer eigenen Dienstgruppen
+  // (E5c-6, `useVertretung`). Stabil, solange der Start gleich bleibt.
   const antwortenLaden = useCallback(
     (ids: readonly number[]) =>
       start

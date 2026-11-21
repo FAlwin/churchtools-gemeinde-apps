@@ -112,16 +112,26 @@ export function Plaetze({
       {plaetze.map((p, i) => {
         const a = entwurf?.(p) ?? null;
         const oeffnen = onEntwurf ? () => onEntwurf(i + 1) : undefined;
+        // Das Schild gehört zum Platz in ChurchTools, der frei ist – auch wenn ein Entwurf ihn gerade füllen soll (der Planer
+        // soll wissen, woher die Lücke kommt).
+        const schild = p.art === 'frei' ? schildAn(i) : null;
+        const schildZeile = schild && (
+          <span className={styles.gesucht} title={schild.hinweis}>
+            <Icon name="flag" size={10} /> Vertretung gesucht
+          </span>
+        );
         if (a && !a.veraltet) {
           return (
-            <EntwurfPlatz
-              key={i}
-              e={a.entwurf}
-              bisher={p.art === 'frei' || p.verborgen ? null : p.name}
-              eigener={a.entwurf.von.personId === ichId}
-              onOeffnen={oeffnen}
-              fokus={fokusId !== null && platzPerson(p, a)?.personId === fokusId}
-            />
+            <Fragment key={i}>
+              <EntwurfPlatz
+                e={a.entwurf}
+                bisher={p.art === 'frei' || p.verborgen ? null : p.name}
+                eigener={a.entwurf.von.personId === ichId}
+                onOeffnen={oeffnen}
+                fokus={fokusId !== null && platzPerson(p, a)?.personId === fokusId}
+              />
+              {schildZeile}
+            </Fragment>
           );
         }
         const platz =
@@ -139,12 +149,6 @@ export function Plaetze({
           ) : (
             <Platz p={p} fokusId={fokusId} onFokus={onFokus} />
           );
-        const schild = p.art === 'frei' ? schildAn(i) : null;
-        const schildZeile = schild && (
-          <span className={styles.gesucht} title={schild.hinweis}>
-            <Icon name="flag" size={10} /> Vertretung gesucht
-          </span>
-        );
         if (!a)
           return (
             <Fragment key={i}>

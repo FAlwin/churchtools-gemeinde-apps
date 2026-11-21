@@ -330,6 +330,20 @@ describe('gilt „Vertretung gesucht“ noch?', () => {
     expect(schilder({ ...o, freiePlaetze: 0 })).toEqual([]);
     expect(schilder({ ...o, dienstId: TON })).toEqual([]);
     expect(schilder({ ...o, terminId: 1 })).toEqual([]);
+    // Zwei suchen, ein Platz ist frei: nur ein Schild (das erste, nach Zeitpunkt der Suche) – nicht zwei Schilder an einem Platz.
+    const zwei = await gelesen(
+      [],
+      [
+        { person: ANNA, vertretung: markierung() },
+        {
+          person: BEN,
+          vertretung: markierung({ name: 'Ben Test', seit: '2026-11-21T11:00:00.000Z' }),
+        },
+      ],
+    );
+    expect(schilder({ ...o, vertretungen: zwei.vertretungen })).toHaveLength(1);
+    expect(schilder({ ...o, vertretungen: zwei.vertretungen, freiePlaetze: 2 })).toHaveLength(2);
+    expect(schilder({ ...o, vertretungen: zwei.vertretungen })[0].hinweis).toMatch(/^Anna Test/);
     const ohne = await gelesen(
       [],
       [{ person: ANNA, vertretung: markierung({ gefragt: [], gefragtNamen: [] }) }],

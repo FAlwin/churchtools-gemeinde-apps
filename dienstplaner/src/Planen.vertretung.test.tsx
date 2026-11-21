@@ -8,7 +8,7 @@ import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Vertretung } from '@shared/dienstplan/verfuegbarkeit';
 import { ApiError } from '@ui/ct/fehler';
 import type { AntwortenLader } from './ladeAntworten';
-import { nachgebaut } from './entwurfAnschluss.testutil';
+import { daten, entwurf, nachgebaut } from './entwurfAnschluss.testutil';
 import { Planen } from './Planen';
 import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
@@ -99,6 +99,15 @@ describe('Planen – Schild „Vertretung gesucht“ (E5c-6)', () => {
     expect(
       screen.getByRole('button', { name: /frei – Wer kann\? \(Platz 2 von 2\)/ }),
     ).toBeTruthy();
+  });
+
+  it('füllt schon ein Entwurf den freien Platz, bleibt das Schild trotzdem stehen – ChurchTools hat dort noch niemanden', async () => {
+    const e = entwurf({ ort: { eventId: 20, serviceId: 9, index: 2 } });
+    zeige([termin(20, FREI)], () => Promise.resolve(antworten()), {
+      entwuerfe: nachgebaut({ laden: () => Promise.resolve(daten([e])) }),
+    });
+    await waitFor(() => expect(schild()).toHaveLength(1));
+    expect(screen.queryByRole('button', { name: /frei – Wer kann\?/ })).toBeNull(); // der Platz zeigt den Entwurf
   });
 
   it('gilt nur, solange ein Platz frei ist: übernommen (kein freier Platz) → kein Schild, obwohl die Markierung noch steht', async () => {

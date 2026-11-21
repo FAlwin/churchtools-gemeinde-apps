@@ -9,8 +9,9 @@
  * - **Antwort unklar** (Netz, Zeitgrenze, 5xx, Proxy-403, 201 ohne ID) → im Kalender nachsehen, ob der Termin doch da
  *   ist (`terminSuchen`). Nur wenn auch das scheitert oder nichts findet, ist es `Unklar` – ein zweiter Versuch könnte
  *   sonst doppelt anlegen (beim Festlegen einer Sitzung zusätzlich: doppelt einladen).
- * - **Ganztägig** (`ganztaegig`): `beginn`/`ende` sind `JJJJ-MM-TT` ohne Uhrzeit – so liest und schreibt ChurchTools
- *   ganztägige Termine (K2b schickt `startDate` unverändert zurück, `allDay` steht nicht unter den Feldern).
+ * - **Ganztägig** (`ganztaegig`): `beginn`/`ende` sind `JJJJ-MM-TT` ohne Uhrzeit und `allDay: true` – so liefert
+ *   ChurchTools ganztägige Termine (gemessen in den Anmeldungen, `shared/anmeldung/termin.ts`). Am echten Anlegen
+ *   bestätigt erst der Handtest TF-PROT-31.
  */
 import { tagAusIso } from '@shared/ct/zeit';
 import { terminPfad, type TerminRoh } from '@shared/ct/kalenderTermine';
@@ -86,6 +87,9 @@ export function terminRumpf(q: TerminAnlegenFrage): Record<string, unknown> {
     startDate: q.beginn,
     endDate: q.ende,
     isInternal: false,
+    // Ganztägig: reiner Tag UND `allDay` – die Anmeldungen haben `allDay` am gelesenen Termin gemessen
+    // (`shared/anmeldung/termin.ts`); ohne das Feld könnte ChurchTools 0:00 Uhr annehmen.
+    ...(q.ganztaegig ? { allDay: true } : {}),
     ...(q.ort?.trim() ? { address: { meetingAt: q.ort.trim() } } : {}),
     ...(q.eingeladen ? { meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })) } : {}),
   };

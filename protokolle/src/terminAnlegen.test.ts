@@ -55,10 +55,11 @@ describe('terminRumpf', () => {
     expect(terminRumpf({ ...MIT_UHR, eingeladen: [] }).meetingrequests).toEqual([]);
   });
 
-  it('ganztägig: Beginn und Ende sind nur der Tag, kein `allDay`-Feld', () => {
+  it('ganztägig: Beginn und Ende sind nur der Tag, dazu `allDay` (wie ChurchTools ganztägige Termine liefert)', () => {
     const r = terminRumpf(GANZTAEGIG);
     expect([r.startDate, r.endDate]).toEqual(['2027-04-24', '2027-04-24']);
-    expect(r).not.toHaveProperty('allDay');
+    expect(r.allDay).toBe(true);
+    expect(terminRumpf(MIT_UHR)).not.toHaveProperty('allDay');
   });
 
   it('Ort nur, wenn einer da ist – als `address.meetingAt`, ohne Leerzeichen am Rand', () => {

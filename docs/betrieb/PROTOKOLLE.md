@@ -516,8 +516,8 @@ anders als die Suche, die nur Freigegebenes zeigt) nach Datum: oben **„Noch ni
 Kalender der Instanz) und **„Nicht eintragen“** („Wieder anzeigen“). Ein Baustein ohne gültiges Datum fehlt. Im Protokoll ändert sich nichts. Bei mehreren Gruppen: Filter „Gruppe“.
 **Eintragen** (Textknopf) öffnet das Fenster „In Kalender eintragen“: Kalender (nur mit dem Recht „Termine anlegen“ im Kalender, `churchcal` „edit category“ – die Leitung hat es für den Kalender
 der Gruppe, Mitglieder nicht; vorausgewählt der Kalender der Gruppe), Titel, Datum, **Ganztägig** oder Von–Bis, Ort. Titel und Uhrzeit liest `titelUndUhrzeit` aus dem Text („Heiligabend, 16 Uhr“ →
-„Heiligabend“, 16:00 bis 17:00; ohne Uhrzeit ganztägig). **Ganztägig geht als `YYYY-MM-DD` für Beginn und Ende** an `POST /calendars/{id}/appointments` (so liest und schreibt ChurchTools
-ganztägige Termine, `allDay` gibt es dort nicht als Feld), mit Uhrzeit als UTC aus der Ortszeit der Gemeinde. **Es gehen keine Einladungen raus** (kein `meetingrequests`).
+„Heiligabend“, 16:00 bis 17:00; ohne Uhrzeit ganztägig). **Ganztägig geht als `YYYY-MM-DD` für Beginn und Ende** an `POST /calendars/{id}/appointments` mit `allDay: true` (so liefert ChurchTools
+ganztägige Termine, gemessen in den Anmeldungen; am echten Anlegen bestätigt TF-PROT-31), mit Uhrzeit als UTC aus der Ortszeit der Gemeinde. **Es gehen keine Einladungen raus** (kein `meetingrequests`).
 **Doppelt vermeiden:** Vor dem Eintragen liest das Fenster die Termine des Tages im gewählten Kalender; ein ähnlicher Titel (Wortvergleich aus W12, `doppelt.ts`; im Kalender genügt, dass alle Wörter
 des kürzeren Titels im längeren stehen) bietet **„Nur verknüpfen – nichts Neues anlegen“** (vorgewählt) oder „Trotzdem neu anlegen“. Lässt sich der Kalender nicht lesen, bleibt „Eintragen“ gesperrt.
 **Sicher bei Aussetzern:** angelegt wird mit `terminAnlegen` (derselbe Kern wie beim Festlegen einer Sitzung; unklare Antwort → im Kalender nachsehen), danach **nachgelesen**; erst dann gilt der Termin als

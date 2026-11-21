@@ -10,7 +10,7 @@ import {
   type Gestaltung,
   type Hintergrund,
 } from '@shared/website/modell';
-import { aufteilungAendern } from '@shared/website/bearbeiten';
+import { aufteilungAendern, gestaltungAendern } from '@shared/website/bearbeiten';
 import { wirksameFarben } from '@shared/website/theme';
 import { PLATZHALTER_BILD } from '@shared/website/vorlagen';
 import { Feld, Gruppe } from './Felder';
@@ -55,8 +55,7 @@ export function AbschnittGestalten({
   const [ankerText, setAnkerText] = useState(g.anker ?? '');
   const ankerProblem = ankerMeldung(ankerText, andereAnker);
 
-  const aendere = (teil: Partial<Gestaltung>) =>
-    onAendern({ ...abschnitt, gestaltung: { ...g, ...teil } });
+  const aendere = (teil: Partial<Gestaltung>) => onAendern(gestaltungAendern(abschnitt, teil));
   const hintergrund = (h: Hintergrund) => aendere({ hintergrund: h });
 
   const farbKachel = (art: 'grund' | 'sanft' | 'haupt' | 'akzent', titel: string, wert: string) => (

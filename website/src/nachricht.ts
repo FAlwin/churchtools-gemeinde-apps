@@ -9,7 +9,9 @@
  *    Nachricht außer diesen Zahlen wird übernommen (kein Text, kein HTML, keine Kennung).
  * 3. **Zahlen gegen die Seite prüfen** (`nachrichtLesen`): ein Abschnitt, den es nicht gibt, ist keine Nachricht.
  * 4. Eine Nachricht löst **nie mehr aus als ein Klick**: ein Fenster öffnen, einen Abschnitt oder Baustein verschieben (`verschieben`,
- *    W3c-2: nur Zahlen, beide Stellen müssen existieren), einen Abschnitt kopieren, einen eigenen Schritt rückgängig machen.
+ *    W3c-2: nur Zahlen, beide Stellen müssen existieren), die Spaltenbreite oder den Abstand eines Abschnitts ändern (`aufteilung`/
+ *    `abstand`, W3c-3: eine Zahl und ein Name aus den Listen des Modells – eine Aufteilung nur mit der Spaltenzahl des Abschnitts),
+ *    einen Abschnitt kopieren, einen eigenen Schritt rückgängig machen.
  *    **Löschen fragt immer erst nach** (Bestätigungsfenster) – eine gefälschte „löschen“-Nachricht kann also nichts
  *    wegnehmen, was der Mensch nicht bestätigt.
  * 5. **Die eine Ausnahme: der getippte Text** (`text`, W3c-1). Er ist die einzige Nachricht mit Inhalt – und der kommt nur an,
@@ -23,13 +25,14 @@
 import { z } from 'zod';
 import {
   abschnittDa,
+  aufteilungGleicheSpalten,
   bausteinDa,
   bausteinStelleDa,
   einfuegeStelleDa,
   spalteDa,
 } from '@shared/website/bearbeiten';
 import { istLinkAdresse } from '@shared/website/markdown';
-import type { Seite } from '@shared/website/modell';
+import { aufteilungSchema, gestaltungSchema, type Seite } from '@shared/website/modell';
 import { textFeldGueltig, type TextFeld } from './textAenderung';
 
 const zahl = z.number().int().min(0).max(100_000);
@@ -73,6 +76,15 @@ const verschiebenBaustein = z
   })
   .strict();
 
+// Maße ziehen (W3c-3): eine Zahl und ein Name aus den Listen des Modells (`AUFTEILUNGEN`, die Stufen des Abstands) – sonst nichts.
+const abstandSchema = gestaltungSchema.shape.abstand;
+const aufteilung = z
+  .object({ ...kopf, was: z.literal('aufteilung'), i: zahl, aufteilung: aufteilungSchema })
+  .strict();
+const abstand = z
+  .object({ ...kopf, was: z.literal('abstand'), i: zahl, abstand: abstandSchema })
+  .strict();
+
 const einfach = z.discriminatedUnion('was', [
   z.object({ ...kopf, was: z.literal('einfuegen'), i: zahl }),
   z.object({ ...kopf, was: z.literal('gestalten'), i: zahl }),
@@ -105,7 +117,7 @@ const einfach = z.discriminatedUnion('was', [
   z.object({ ...kopf, was: z.literal('bereit') }),
 ]);
 
-const schema = z.union([einfach, verschiebenAbschnitt, verschiebenBaustein]);
+const schema = z.union([einfach, verschiebenAbschnitt, verschiebenBaustein, aufteilung, abstand]);
 
 export type EditorNachricht = z.infer<typeof schema>;
 /** Was die Seitenarbeit zu tun bekommt: die Klicks der Leisten und der getippte Text. */
@@ -173,6 +185,14 @@ export function nachrichtLesen(daten: unknown, seite: Seite): EditorNachricht | 
         bausteinStelleDa(seite, m.nach.i, m.nach.j, m.nach.k)
         ? m
         : null;
+    case 'aufteilung':
+      // Nur eine Aufteilung mit der Spaltenzahl des Abschnitts (`aufteilungGleicheSpalten`, dieselbe Regel wie bei der Übernahme).
+      return abschnittDa(seite, m.i) &&
+        aufteilungGleicheSpalten(seite.abschnitte[m.i], m.aufteilung)
+        ? m
+        : null;
+    case 'abstand':
+      return abschnittDa(seite, m.i) ? m : null;
     case 'einfuegen':
       return einfuegeStelleDa(seite, m.i) ? m : null;
     case 'baustein':

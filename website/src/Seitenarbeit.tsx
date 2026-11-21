@@ -5,16 +5,19 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Icon } from '@ui/icons/icons';
 import type { Schreiber } from '@shared/ct/sperre';
 import {
+  abschnittDa,
   abschnittEinfuegen,
   abschnittErsetzen,
   abschnittKopieren,
   abschnittLoeschen,
   abschnittVerschiebenNach,
+  aufteilungZiehen,
   bausteinDa,
   bausteinEntfernen,
   bausteinErsetzen,
   bausteinHinzufuegen,
   bausteinVerschieben,
+  gestaltungAendern,
   seiteGleich,
   seitePruefen,
 } from '@shared/website/bearbeiten';
@@ -300,7 +303,8 @@ export function Seitenarbeit({
     setHinweis(null);
     if (!(await sicherstellen())) {
       // Der getippte Text wurde nicht übernommen: Die Vorschau zeigt wieder den gespeicherten Stand.
-      if (a.was === 'text') setZeichneNeu((n) => n + 1);
+      if (a.was === 'text' || a.was === 'aufteilung' || a.was === 'abstand')
+        setZeichneNeu((n) => n + 1);
       return;
     }
     const s = arbeitRef.current;
@@ -327,6 +331,24 @@ export function Seitenarbeit({
           return setHinweis('Eigenes HTML kann nur die Leitung verschieben.');
         const neu = bausteinVerschieben(s, a.von, a.nach);
         return neu === s ? undefined : leistenAktion(neu);
+      }
+      case 'aufteilung': {
+        // Spaltenbreite ziehen (W3c-3): nur eine Aufteilung mit derselben Spaltenzahl – dann geht kein Baustein verloren. Die
+        // Seite kann sich beim Warten auf die Sperre geändert haben, darum hier noch einmal (`aufteilungZiehen` prüft es).
+        const neu = aufteilungZiehen(s, a.i, a.aufteilung, neueId);
+        setZeichneNeu((n) => n + 1); // die Vorschau zeigt sonst die gezogene Breite, auch wenn nichts übernommen wird
+        if (!neu)
+          return setHinweis('Die Spaltenzahl lässt sich nur im Fenster „Gestalten“ ändern.');
+        return s.abschnitte[a.i].aufteilung === a.aufteilung ? undefined : leistenAktion(neu);
+      }
+      case 'abstand': {
+        // Abstand ziehen (W3c-3): ein Wert für oben und unten, wie im Fenster „Gestalten“ (`gestaltungAendern`).
+        if (!abschnittDa(s, a.i)) return;
+        setZeichneNeu((n) => n + 1);
+        if (s.abschnitte[a.i].gestaltung.abstand === a.abstand) return;
+        return leistenAktion(
+          abschnittErsetzen(s, a.i, gestaltungAendern(s.abschnitte[a.i], { abstand: a.abstand })),
+        );
       }
       case 'kopieren':
         return leistenAktion(abschnittKopieren(s, a.i, neueId));

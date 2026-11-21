@@ -40,6 +40,7 @@ import {
 import { festeAufgabenAus, festesProtokollAus, offeneVonFrueher } from './festePunkte';
 import { freigabeVermerk, zurueckText, type KopfMitVerlauf } from './freigabe';
 import type { Sitzung } from './sitzungen';
+import { hatArt, OHNE_ART, ohneKennzeichen, type ZeilenArt } from './tabellenZeile';
 
 // ── Eingang ──────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,8 @@ export interface TabellenZelleBlatt {
   spalten: number;
   zeilen: number;
   hintergrund: Rgb | null;
+  /** Nur an der ersten Zelle einer Zeile mit Kennzeichen (W13: Unterzeile, nur zur Info) – der Text davor ist schon abgeschnitten. */
+  marke?: ZeilenArt;
 }
 
 /** Eine Zeile in einem festen Punkt. */
@@ -125,7 +128,8 @@ export type BlattTeil =
   /** Überschrift ohne Nummer; `klein` = Stufe 3 („Überschrift“). */
   | { art: 'ueberschrift'; klein: boolean; absaetze: Absatz[]; einzug: number }
   | { art: 'text'; absaetze: Absatz[]; einzug: number; zeichen?: Zeichen; rand?: Rand }
-  | { art: 'tabelle'; zeilen: TabellenZelleBlatt[][]; einzug: number }
+  /** `legende`: mindestens eine Zeile ist „nur zur Info“ (W13) – darunter steht die Legende. */
+  | { art: 'tabelle'; zeilen: TabellenZelleBlatt[][]; einzug: number; legende: boolean }
   | { art: 'linie'; einzug: number }
   /** Ein fester Punkt (Anwesenheit, Offene To-Dos, Früheres Protokoll) – grau hinterlegt. */
   | { art: 'kasten'; zeilen: KastenZeile[]; einzug: number };
@@ -374,9 +378,12 @@ function tabelle(content: unknown, q: ProtokollQuelle): TabellenZelleBlatt[][] |
   const zeilen = tabellenZeilen(content);
   if (!zeilen?.length) return null;
   return zeilen.map((zellen) =>
-    zellen.map((c) => {
+    zellen.map((c, spalte) => {
       const schrift = q.farbe(c.schrift, 'schrift');
-      const laeufe = laeufeAus(c.inhalt, q).map((l) =>
+      // Kennzeichen der Zeile (W13) stehen als Text in der ersten Zelle – das PDF zeichnet sie als Zeichen, nicht als Text.
+      const { art, inhalt } =
+        spalte === 0 ? ohneKennzeichen(c.inhalt) : { art: OHNE_ART, inhalt: c.inhalt };
+      const laeufe = laeufeAus(inhalt, q).map((l) =>
         schrift && !l.farbe ? { ...l, farbe: schrift } : l,
       );
       const absaetze = zeilenAus(laeufe);
@@ -389,6 +396,7 @@ function tabelle(content: unknown, q: ProtokollQuelle): TabellenZelleBlatt[][] |
         spalten: c.spalten,
         zeilen: c.zeilen,
         hintergrund: q.farbe(c.hintergrund, 'hintergrund'),
+        ...(hatArt(art) ? { marke: art } : {}),
       };
     }),
   );
@@ -468,7 +476,9 @@ function teilAus(
     }
     case 'table': {
       const zeilen = tabelle(b.content, q);
-      return zeilen ? { art: 'tabelle', zeilen, einzug } : null;
+      return zeilen
+        ? { art: 'tabelle', zeilen, einzug, legende: zeilen.some((z) => z[0]?.marke?.info) }
+        : null;
     }
     case 'divider':
       return { art: 'linie', einzug };

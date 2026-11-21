@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProtokollBlatt, BlattTeil, Zeichen } from '@shared/protokolle/protokollBlatt';
+import { INFO_LEGENDE } from '@shared/protokolle/tabellenZeile';
 import { protokollPdf } from './protokollPdf';
 
 /** Das Protokoll als PDF (S6-3a): gezeichnet, was das Blatt festlegt – auf dem gemeinsamen Satz. */
@@ -132,6 +133,7 @@ describe('Protokoll als PDF', () => {
         {
           art: 'tabelle',
           einzug: 0,
+          legende: false,
           zeilen: [
             [
               {
@@ -298,5 +300,56 @@ describe('Protokoll als PDF', () => {
     );
     const fonts = doc.getFontList() as Record<string, string[]>;
     expect(fonts.GemeindeSans?.sort()).toEqual(['bold', 'bolditalic', 'italic', 'normal']);
+  });
+
+  describe('Unterzeile und Info-Zeile in der Tabelle (W13)', () => {
+    const zelle = (t: string, marke?: { unter: boolean; info: boolean }) => ({
+      absaetze: [[{ text: t }]],
+      kopf: false,
+      spalten: 1,
+      zeilen: 1,
+      hintergrund: null,
+      ...(marke ? { marke } : {}),
+    });
+    const tab = (
+      marken: ({ unter: boolean; info: boolean } | undefined)[],
+      legende: boolean,
+    ): BlattTeil => ({
+      art: 'tabelle',
+      einzug: 0,
+      legende,
+      zeilen: marken.map((m, i) => [zelle(`Datum${i}`, m), zelle('Was')]),
+    });
+    const kurven = (r: string) => (r.match(/ c\n/g) ?? []).length;
+    const linien = (r: string) => (r.match(/ l\n/g) ?? []).length;
+    const ohne = tab([undefined, undefined], false);
+
+    it('Info-Zeile: ⓘ-Kreis gezeichnet (Kurven), Legende darunter – das Zeichen selbst steht nicht im Text', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: false, info: true }], true)]));
+      expect(kurven(r)).toBeGreaterThan(kurven(await roh(blatt([ohne]))));
+      expect(r).toContain('(Datum1)');
+      // Das PDF setzt Wort für Wort – jedes Wort der Legende (aus der EINEN Quelle) steht darin.
+      for (const wort of INFO_LEGENDE.split(' ').filter((w) => /^\p{L}+$/u.test(w)))
+        expect(r, wort).toContain(`(${wort})`);
+      expect(r).not.toContain('ⓘ');
+    });
+
+    it('ohne Info-Zeile keine Legende', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      expect(r).not.toContain('(Thema)');
+    });
+
+    it('Unterzeile: „↳“ aus Linien gezeichnet, Text eingerückt (Spalte wird breiter, kein Zeichen im Text)', async () => {
+      const r = await roh(blatt([tab([undefined, { unter: true, info: false }], false)]));
+      expect(linien(r)).toBeGreaterThan(linien(await roh(blatt([ohne]))));
+      expect(r).not.toContain('↳');
+    });
+
+    it('der Einzug verbreitert die Spalte (naturBreite zählt `einzug`)', async () => {
+      const { naturBreite } = await import('./pdfSatz');
+      const z = { absaetze: [{ laeufe: [{ text: 'abc' }] }] };
+      const messen = (t: string) => t.length;
+      expect(naturBreite('', [{ ...z, einzug: 5 }], messen)).toBe(naturBreite('', [z], messen) + 5);
+    });
   });
 });

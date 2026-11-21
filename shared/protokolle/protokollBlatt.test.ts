@@ -13,6 +13,7 @@ import {
 } from './protokollBlatt';
 import type { ProtokollKopf } from './speicher';
 import type { Sitzung } from './sitzungen';
+import { praefix } from './tabellenZeile';
 
 /** Das Protokoll als Blatt (S6-3a): was aufs PDF kommt – gegen dieselben Regeln wie die Lese-Ansicht. */
 
@@ -435,6 +436,64 @@ describe('Zelle mit beendeter Aufzählung (W11)', () => {
       ['a', '', 'b'],
       [''],
     ]);
+  });
+});
+
+describe('Unterzeile und Info-Zeile in einer Tabelle (W13)', () => {
+  const zelle = (t: string) => [{ type: 'text', text: t }];
+  const tabelle = (...erste: string[]) =>
+    block('table', '', {
+      content: {
+        type: 'tableContent',
+        rows: erste.map((e) => ({ cells: [zelle(e), zelle('Was')] })),
+      },
+    });
+
+  it('das Kennzeichen steht am Blatt als Marke, der Text der Zelle ohne Präfix', () => {
+    // Das Präfix kommt vom Erzeuger (`praefix`), nicht aus einem handgeschriebenen Literal.
+    const [t] = teile(
+      quelle([
+        tabelle(
+          '17.04.',
+          `${praefix({ unter: true, info: false })}18.04.`,
+          `${praefix({ unter: false, info: true })}19.04.`,
+          `${praefix({ unter: true, info: true })}20.04.`,
+        ),
+      ]),
+    );
+    if (t.art !== 'tabelle') throw new Error('keine Tabelle');
+    expect(t.zeilen.map((z) => z[0].absaetze.map(text))).toEqual([
+      ['17.04.'],
+      ['18.04.'],
+      ['19.04.'],
+      ['20.04.'],
+    ]);
+    expect(t.zeilen.map((z) => z[0].marke ?? null)).toEqual([
+      null,
+      { unter: true, info: false },
+      { unter: false, info: true },
+      { unter: true, info: true },
+    ]);
+    // Nur die erste Zelle trägt die Marke.
+    expect(t.zeilen.every((z) => z[1].marke === undefined)).toBe(true);
+  });
+
+  it('Legende nur, wenn es eine Info-Zeile gibt – eine Unterzeile allein braucht keine', () => {
+    const legende = (...e: string[]) => {
+      const [t] = teile(quelle([tabelle(...e)]));
+      if (t.art !== 'tabelle') throw new Error('keine Tabelle');
+      return t.legende;
+    };
+    expect(legende('a', 'b')).toBe(false);
+    expect(legende('a', '↳ b')).toBe(false);
+    expect(legende('a', 'ⓘ b')).toBe(true);
+    expect(legende('↳ ⓘ b')).toBe(true);
+  });
+
+  it('eine Zeile mit Präfix wird nie ausgelassen – das PDF zeigt immer alles', () => {
+    const [t] = teile(quelle([tabelle('ⓘ a', '↳ b', 'c')]));
+    if (t.art !== 'tabelle') throw new Error('keine Tabelle');
+    expect(t.zeilen).toHaveLength(3);
   });
 });
 

@@ -10,6 +10,10 @@
  * 2. `terminVermerken` (`terminStandSchreiben.ts`) – **in unserem Speicher**: „im Kalender: Kalender + Nummer“.
  *    Scheitert das, ist der Termin trotzdem angelegt; das Fenster bietet „Nochmal vermerken“ an (nur dieser Schritt).
  *
+ * **Buchungen** (W15-2): Ein `201` sagt nichts darüber, ob ChurchTools die Ressourcen gebucht hat – die Antwort enthält sie
+ * nicht. Nach dem Anlegen wird je Ressource nachgelesen (`buchungenNachlesen`); das Ergebnis steht in `buchungen` und
+ * bricht **nichts** ab: Der Termin steht, der Vermerk entsteht trotzdem, das Fenster sagt, was nachzubuchen ist.
+ *
  * Zeitgrenzen und Netzfehler markieren nie etwas als „im Kalender“ oder „nicht eintragen“.
  */
 import {
@@ -20,7 +24,9 @@ import {
 } from '@shared/protokolle/termine';
 import { minute } from '@shared/protokolle/sitzungen';
 import { eintragZusatz } from '@shared/protokolle/terminFelder';
+import { plusTage } from '@shared/ct/datum';
 import { Unklar } from '@ui/ct/fehler';
+import { buchungenNachlesen } from './buchungenLesen';
 import { kalenderTermineAmTag, terminAnlegen, UNKLAR_OHNE_EINLADUNG } from './terminAnlegen';
 import { terminLaden } from './termin';
 
@@ -46,7 +52,12 @@ export async function terminLegen(q: {
   verknuepfen?: KalenderTermin | null;
   /** Darf die Person neue Tags anlegen (`admin appointment tags`)? Sonst gehen Tags nur mit Nummer mit. */
   neueTagsErlaubt?: boolean;
-}): Promise<{ art: 'angelegt' | 'verknuepft'; id: number }> {
+}): Promise<{
+  art: 'angelegt' | 'verknuepft';
+  id: number;
+  /** Nur nach dem Anlegen mit Buchungen: was das Nachlesen ergab (`fehlend` = nicht gebucht, `unklar` = nicht lesbar). */
+  buchungen?: { fehlend: number[]; unklar: boolean };
+}> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
   const titel = e.titel.trim();
@@ -72,5 +83,13 @@ export async function terminLegen(q: {
   } catch {
     throw new Unklar(NICHT_NACHGELESEN);
   }
-  return { art: 'angelegt', id };
+  if (!e.buchungen.length) return { art: 'angelegt', id };
+  // Eine Buchung mit Vorlauf/Nachlauf kann über Mitternacht reichen – ein Tag Luft auf beiden Seiten.
+  const buchungen = await buchungenNachlesen({
+    termin: id,
+    ressourcen: e.buchungen.map((b) => b.ressource),
+    von: plusTage(e.tag, -1),
+    bis: plusTage(e.endTag || e.tag, 1),
+  });
+  return { art: 'angelegt', id, buchungen };
 }

@@ -73,6 +73,8 @@ const START: Start = {
   kalenderSchreiben: [],
   vorlagenSchreiben: [],
   tagsVerwalten: false,
+  ressourcenBuchen: [],
+  ressourcenVerwalten: [],
   schreibbar: [],
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },

@@ -1,0 +1,190 @@
+// Reiter „Ressourcen“ im Fenster „In Kalender eintragen“ (W15-2) – Felder und Beschriftungen kommen aus
+// `TerminFormular.module.scss`; hier nur Vorlauf/Nachlauf, die Tabelle der Buchungen und die Statuszeichen.
+
+.ressourcen {
+  min-width: 0;
+}
+
+.lauf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.minuten {
+  width: 80px;
+  flex: none;
+  text-align: center;
+}
+
+.einheit {
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Nur der Pfeil – der Text der Vorschläge steht in der aufgeklappten Liste.
+.vorschlag {
+  width: 40px;
+  flex: none;
+  padding-right: 0;
+  padding-left: 6px;
+}
+
+.zeit {
+  color: var(--text2);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.titel {
+  margin: 18px 0 8px;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.leise {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.nurVorleser {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  // Am Handy wird jede Zeile zur Karte: Beschriftung links, Feld rechts – nichts läuft seitlich über.
+  @media (max-width: 559px) {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      display: grid;
+      grid-template-columns: 84px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 0;
+      border: 0;
+
+      &::before {
+        content: attr(data-label);
+        color: var(--text2);
+        font-size: 13px;
+        font-weight: 700;
+      }
+    }
+
+    td.weg {
+      display: flex;
+      justify-content: flex-end;
+
+      &::before {
+        content: none;
+      }
+    }
+  }
+}
+
+.name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+
+  > span {
+    display: block;
+  }
+}
+
+.menge {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.mengeFeld {
+  width: 72px;
+  flex: none;
+  text-align: center;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.statusWahl {
+  min-width: 0;
+  max-width: 220px;
+}
+
+.symbol {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.wartet {
+  color: var(--amber);
+}
+
+.ok {
+  color: var(--green);
+}
+
+.nein {
+  color: var(--red);
+}
+
+.weg {
+  text-align: right;
+}

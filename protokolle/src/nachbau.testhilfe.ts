@@ -29,6 +29,11 @@
  * Fehler – `angelegt` heißt: trotzdem gespeichert, `vorlagenLesenFehler` lässt das Lesen mit 500 scheitern); `GET /tags/appointment`
  * liefert `tags`. `terminRumpf` ist der zuletzt gesendete Rumpf des `POST …/appointments`.
  *
+ * Ressourcen und Buchungen (W15-2, gemessen 23.11.2026): `GET /resources` und `GET /resourcetypes` liefern `ressourcen` und
+ * `ressourcenTypen`; `POST …/appointments` mit `bookings` legt je Eintrag eine Buchung an – **die Antwort enthält sie nicht**,
+ * erst `GET /bookings?resource_ids[]=…&from&to` zeigt sie (`booking.base.appointment.id`). `buchungenSchlucken` nennt Ressourcen, bei
+ * denen ChurchTools „201“ sagt und nichts bucht; `buchungenLesenFehler` lässt `GET /bookings` mit 500 scheitern.
+ *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
  * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
  * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
@@ -111,6 +116,19 @@ export interface Nachbau {
   vorlagenLesenFehler: boolean;
   /** Vorhandene Termin-Tags. */
   tags: { id: number; name: string }[];
+  /** Ressourcen und Typen wie `GET /resources`, `GET /resourcetypes` (W15-2). */
+  ressourcen: Record<string, unknown>[];
+  ressourcenTypen: Record<string, unknown>[];
+  /** Angelegte Buchungen (je Ressource und Termin). */
+  buchungen: { resourceId: number; appointmentId: number; statusId: unknown; quantity: unknown }[];
+  /** Für diese Ressourcen bucht ChurchTools trotz „201“ nichts. */
+  buchungenSchlucken: Set<number>;
+  /** `GET /bookings` liefert nur die veraltete Form `base` statt `booking.base`. */
+  buchungenAlteForm?: boolean;
+  /** `GET /bookings` scheitert (500). */
+  buchungenLesenFehler: boolean;
+  /** Der Suchtext der letzten Anfrage an `GET /bookings`. */
+  buchungenAnfrage: string | null;
   /** Diese Personen nimmt ChurchTools beim Anlegen nicht als eingeladen an. */
   anfrageVerschluckt: Set<number>;
   treffenFehler: AnlegeFehler | null;
@@ -194,6 +212,12 @@ export function nachbauStarten(): Nachbau {
     terminFehler: null,
     terminLesenFehler: false,
     terminRumpf: null,
+    ressourcen: [],
+    ressourcenTypen: [],
+    buchungen: [],
+    buchungenSchlucken: new Set(),
+    buchungenLesenFehler: false,
+    buchungenAnfrage: null,
     vorlagen: [],
     vorlagenFehler: null,
     vorlagenSchlucken: false,
@@ -354,11 +378,41 @@ export function nachbauStarten(): Nachbau {
       }
     }
     if (pfad === '/tags/appointment') return json(200, { data: s.tags });
+    if (pfad === '/resources') return json(200, { data: s.ressourcen });
+    if (pfad === '/resourcetypes') return json(200, { data: s.ressourcenTypen });
+    if (pfad === '/bookings') {
+      s.buchungenAnfrage = decodeURIComponent(adresse.search);
+      if (s.buchungenLesenFehler) return json(500, { message: 'weg' });
+      const ress = adresse.searchParams.getAll('resource_ids[]').map(Number);
+      return json(200, {
+        data: s.buchungen
+          .filter((b) => ress.includes(b.resourceId))
+          .map((b) => {
+            const base = {
+              id: b.appointmentId * 10,
+              appointment: { id: b.appointmentId },
+              statusId: b.statusId,
+            };
+            // Gemessen 23.11.2026: `booking.base` (neu) – `base` nur noch als veralteter Doppelgänger, den es irgendwann
+            // nicht mehr gibt. Der Nachbau liefert das Neue; `buchungenAlteForm` nur das Alte.
+            return s.buchungenAlteForm ? { base } : { booking: { base } };
+          }),
+      });
+    }
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (neuT && m === 'POST') {
       s.terminRumpf = body;
       const id = s.naechste++;
       const f = s.terminFehler;
+      if (!f || f.angelegt)
+        for (const b of (body.bookings as Record<string, unknown>[] | undefined) ?? [])
+          if (!s.buchungenSchlucken.has(Number(b.resourceId)))
+            s.buchungen.push({
+              resourceId: Number(b.resourceId),
+              appointmentId: id,
+              statusId: b.statusId,
+              quantity: b.quantity,
+            });
       if (!f || f.angelegt)
         s.termine.push({
           kalender: Number(neuT[1]),

@@ -30,6 +30,9 @@ interface Reihe {
   stand: TerminStand | null;
 }
 
+/** Dieselbe leere Liste bei jedem Render – ein neues `[]` ließe das Fenster die Ressourcen endlos neu laden. */
+const KEINE_RESSOURCEN: readonly number[] = [];
+
 /**
  * **Reiter „Termine“** (W14, entschieden 21.11.2026; Entwurf `termine-reiter-w14-v1`): die Termin-Bausteine **aller Sitzungen**
  * der Gruppen (Entwurf und freigegeben) – oben „Noch nicht im Kalender“, darunter einklappbar „Im Kalender“ und „Nicht
@@ -47,6 +50,8 @@ export function Termine({
   kalenderSchreiben,
   vorlagenSchreiben = [],
   tagsVerwalten = false,
+  ressourcenBuchen = KEINE_RESSOURCEN,
+  ressourcenVerwalten = KEINE_RESSOURCEN,
   onZeigen,
 }: {
   modul: number;
@@ -57,6 +62,9 @@ export function Termine({
   vorlagenSchreiben?: readonly number[];
   /** Darf neue Tags anlegen (W15-1). */
   tagsVerwalten?: boolean;
+  /** Ressourcen, die man buchen bzw. verwalten darf (W15-2) – Reiter „Ressourcen“ im Fenster. */
+  ressourcenBuchen?: readonly number[];
+  ressourcenVerwalten?: readonly number[];
   /** „Im Protokoll zeigen“: die Sitzung öffnen und zum Tagesordnungspunkt springen. */
   onZeigen: (gruppe: number, sitzung: string, punkt: string | null) => void;
 }) {
@@ -280,6 +288,8 @@ export function Termine({
           schreibbar={kalenderSchreiben}
           vorlagenSchreiben={vorlagenSchreiben}
           tagsVerwalten={tagsVerwalten}
+          ressourcenBuchen={ressourcenBuchen}
+          ressourcenVerwalten={ressourcenVerwalten}
           ort={{ modul, kategorie: mitMitarbeit.gruppe.mitarbeit }}
           ich={ich.person}
           zeitzone={zeitzone}

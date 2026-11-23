@@ -17,6 +17,7 @@ import {
   schreibbareKalender,
   vorlagenKalender,
 } from '@shared/ct/kalenderRechte';
+import { buchbareRessourcen, verwaltbareRessourcen } from '@shared/ct/ressourcenRechte';
 import { ctDaten } from '@ui/ct/verbindung';
 
 export interface Start {
@@ -40,6 +41,10 @@ export interface Start {
   vorlagenSchreiben: number[];
   /** Darf neue Termin-Tags anlegen (`admin appointment tags`, W15-1). */
   tagsVerwalten: boolean;
+  /** Ressourcen, die man buchen darf (`churchresource` „create bookings“, W15-2) – ohne keine gibt es den Reiter „Ressourcen“. */
+  ressourcenBuchen: number[];
+  /** Ressourcen, bei denen man den Status einer Buchung setzen darf („administer bookings“). */
+  ressourcenVerwalten: number[];
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -63,5 +68,7 @@ export async function ladeStart(): Promise<Start> {
     kalenderSchreiben: [...schreibbareKalender(rechte)],
     vorlagenSchreiben: [...vorlagenKalender(rechte)],
     tagsVerwalten: darfTagsVerwalten(rechte),
+    ressourcenBuchen: [...buchbareRessourcen(rechte)],
+    ressourcenVerwalten: [...verwaltbareRessourcen(rechte)],
   };
 }

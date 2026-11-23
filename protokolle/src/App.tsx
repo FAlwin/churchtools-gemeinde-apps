@@ -158,6 +158,8 @@ export function App() {
           kalenderSchreiben={start.kalenderSchreiben}
           vorlagenSchreiben={start.vorlagenSchreiben}
           tagsVerwalten={start.tagsVerwalten}
+          ressourcenBuchen={start.ressourcenBuchen}
+          ressourcenVerwalten={start.ressourcenVerwalten}
           onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
         />
       )}

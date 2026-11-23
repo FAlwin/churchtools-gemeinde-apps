@@ -5,6 +5,7 @@
  * `protokolle/src/terminAnlegen.ts` daraus, die Termin-Vorlage (`terminVorlagen.ts`) benutzt dieselbe Adresse.
  */
 import type { Eintrag } from './termine';
+import type { Buchung } from './terminRessourcen';
 import { istAutomatisch, WIEDERHOLUNG } from './terminWiederholung';
 
 /** Die Adresse eines Termins, wie ChurchTools sie annimmt (`address`) – nur die gefüllten Felder. */
@@ -35,6 +36,8 @@ export interface TerminZusatz {
   tags?: readonly (number | string)[];
   informieren?: boolean;
   adresse?: TerminAdresse;
+  /** Ressourcen-Buchungen (W15-2) – leer lässt `bookings` weg. */
+  buchungen?: readonly Buchung[];
 }
 
 /** Die Adresse aus den Feldern des Fensters – ohne Leerzeichen am Rand, `null` ohne jede Angabe. */
@@ -70,6 +73,7 @@ export function eintragZusatz(e: Eintrag, neueTagsErlaubt: boolean): TerminZusat
   if (tags.length) z.tags = tags;
   const adresse = eintragAdresse(e);
   if (adresse) z.adresse = adresse;
+  if (e.buchungen.length) z.buchungen = e.buchungen;
   if (e.art !== WIEDERHOLUNG.keine) {
     z.wiederholung = { art: e.art };
     if (istAutomatisch(e.art)) {

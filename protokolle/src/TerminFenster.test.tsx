@@ -48,6 +48,7 @@ const vorlage = (id: number, kalender: number, titel: string, extra = {}) => ({
   adresse: null,
   tags: [],
   imAuftrag: null,
+  buchungen: [],
   ...extra,
 });
 const ZEILE: TerminZeile = {

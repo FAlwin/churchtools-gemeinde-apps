@@ -14,6 +14,7 @@ import { aehnlich, woerter } from './doppelt';
 import { ableiten, type Punkt } from './dokument';
 import { terminStandId } from './terminStand';
 import { dokumentDerSitzung, type ProtokollTeil } from './speicher';
+import { laufVorgabe, type Buchung } from './terminRessourcen';
 import type { Sitzung } from './sitzungen';
 import {
   istAutomatisch,
@@ -156,6 +157,11 @@ export interface Eintrag extends Wiederholung {
   tags: (number | string)[];
   /** „Ersteller über Änderungen informieren“ (`informOwner`). */
   informieren: boolean;
+  /** Reiter „Ressourcen“ (W15-2): Vorlauf und Nachlauf in Minuten – die Vorgabe für neue Buchungen. */
+  vorlauf: number;
+  nachlauf: number;
+  /** Die Buchungen (nur Ressourcen, die die Person buchen darf). */
+  buchungen: Buchung[];
 }
 
 /** Eine Stunde später, am selben Tag (nach 23:00 bleibt es 23:59 – ChurchTools-Termine hier enden nie am Folgetag). */
@@ -200,6 +206,9 @@ export function eintragVorbelegung(
     tags: [],
     // ChurchTools hakt es vor.
     informieren: true,
+    vorlauf: laufVorgabe(uhrzeit === null),
+    nachlauf: laufVorgabe(uhrzeit === null),
+    buchungen: [],
   };
 }
 
@@ -300,3 +309,20 @@ export function terminZeitText(beginn: string, zeitzone: string): string {
  * Eine Adresse für genau diesen Termin ist nicht gemessen; hier der eine Ort, falls sie bekannt wird.
  */
 export const terminLink = (basis: string): string => `${basis.replace(/\/+$/, '')}/?q=churchcal`;
+
+/**
+ * **„Ganztägig“ umschalten** (W15-2). Wie in ChurchTools wechselt die Vorgabe für Vorlauf/Nachlauf mit (Uhrzeit 15/15,
+ * ganztägig 0/0) – aber nur, solange dort noch die alte Vorgabe steht: Selbst Eingetipptes bleibt. Die Zeilen der Tabelle
+ * „Vorhandene Buchungen“ behalten ihre eigenen Werte.
+ */
+export function ganztaegigWechseln(e: Eintrag, an: boolean): Eintrag {
+  if (e.ganztaegig === an) return e;
+  const alt = laufVorgabe(e.ganztaegig);
+  const neu = laufVorgabe(an);
+  return {
+    ...e,
+    ganztaegig: an,
+    vorlauf: e.vorlauf === alt ? neu : e.vorlauf,
+    nachlauf: e.nachlauf === alt ? neu : e.nachlauf,
+  };
+}

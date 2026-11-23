@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { Eintrag } from '@shared/protokolle/termine';
+import { ganztaegigWechseln, type Eintrag } from '@shared/protokolle/termine';
 import { hatOrt } from '@shared/protokolle/terminFelder';
 import {
   artWechseln,
@@ -21,7 +21,7 @@ const STUNDEN = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const MINUTEN = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
 
 /** Eine Zeile „Beschriftung links, Feld rechts“ – wie im ChurchTools-Dialog. Mit `fuer` wird die Beschriftung zum Label. */
-function Reihe({
+export function Reihe({
   label,
   children,
   gruppe,
@@ -177,7 +177,7 @@ export function TerminFormular(p: Props) {
               type="checkbox"
               checked={e.ganztaegig}
               disabled={aus}
-              onChange={(ev) => set('ganztaegig', ev.target.checked)}
+              onChange={(ev) => p.onAendern(ganztaegigWechseln(e, ev.target.checked))}
             />
             <span>Ganztägig</span>
           </label>

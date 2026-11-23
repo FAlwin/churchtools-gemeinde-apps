@@ -238,6 +238,27 @@ describe('terminRumpf aus dem Fenster (W15-1)', () => {
     });
   });
 
+  describe('Ressourcen (W15-2)', () => {
+    const saal = { ressource: 1, vorlauf: 30, nachlauf: 15, status: 1 as const, menge: 1 };
+    const stuehle = { ressource: 5, vorlauf: 0, nachlauf: 0, status: 2 as const, menge: 40 };
+
+    it('ohne Buchungen kein `bookings`', () => {
+      expect(rumpf(eintrag())).not.toHaveProperty('bookings');
+    });
+
+    it('je Buchung Ressource, Vorlauf, Nachlauf, Status; `quantity` nur bei mehr als einem Stück', () => {
+      expect(rumpf(eintrag({ buchungen: [saal, stuehle] })).bookings).toEqual([
+        { resourceId: 1, leadTimeMinutes: 30, afterwardMinutes: 15, statusId: 1 },
+        { resourceId: 5, leadTimeMinutes: 0, afterwardMinutes: 0, statusId: 2, quantity: 40 },
+      ]);
+    });
+
+    it('die Vorgabe oben (Vorlauf/Nachlauf) geht nicht selbst mit – nur die Buchungen', () => {
+      const r = rumpf(eintrag({ vorlauf: 99, nachlauf: 88 }));
+      expect(JSON.stringify(r)).not.toMatch(/99|88/);
+    });
+  });
+
   it('keine `meetingrequests` – das ist W15-4 (Besprechungsanfragen)', () => {
     expect(rumpf(eintrag())).not.toHaveProperty('meetingrequests');
   });

@@ -156,6 +156,8 @@ export function App() {
           ich={{ person: start.id, name: start.vorname }}
           gruppen={start.gruppen}
           kalenderSchreiben={start.kalenderSchreiben}
+          vorlagenSchreiben={start.vorlagenSchreiben}
+          tagsVerwalten={start.tagsVerwalten}
           onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
         />
       )}

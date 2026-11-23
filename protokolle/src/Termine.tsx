@@ -45,12 +45,18 @@ export function Termine({
   ich,
   gruppen,
   kalenderSchreiben,
+  vorlagenSchreiben = [],
+  tagsVerwalten = false,
   onZeigen,
 }: {
   modul: number;
   ich: { person: number; name: string };
   gruppen: ProtokollGruppe[];
   kalenderSchreiben: readonly number[];
+  /** Kalender, in die man Termin-Vorlagen speichern darf (W15-1). */
+  vorlagenSchreiben?: readonly number[];
+  /** Darf neue Tags anlegen (W15-1). */
+  tagsVerwalten?: boolean;
   /** „Im Protokoll zeigen“: die Sitzung öffnen und zum Tagesordnungspunkt springen. */
   onZeigen: (gruppe: number, sitzung: string, punkt: string | null) => void;
 }) {
@@ -272,6 +278,8 @@ export function Termine({
           zeile={fenster}
           gruppenKalender={mitMitarbeit.sitzungen.kalender}
           schreibbar={kalenderSchreiben}
+          vorlagenSchreiben={vorlagenSchreiben}
+          tagsVerwalten={tagsVerwalten}
           ort={{ modul, kategorie: mitMitarbeit.gruppe.mitarbeit }}
           ich={ich.person}
           zeitzone={zeitzone}

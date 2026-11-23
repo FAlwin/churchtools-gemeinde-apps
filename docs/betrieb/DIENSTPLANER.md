@@ -193,10 +193,10 @@ misslungenes Lesen lädt nichts hoch (die Ablage wirft), und hochgeladen wird nu
 Protokolle (`ui/ct/useAblageSpiegel.ts`). Die Demo (`?demo`) hält die Personen-Datei im Speicher (`demo.ts`), zusätzlich merkt sich das Gerät die Wahl.
 
 **Live-Ansicht von der Startseite** (L4-5, Alwin 23.11.2026): In „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf
-**„Live-Ansicht“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende
+**„Live“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende
 bis 24 Uhr) und nur, wenn der Termin einen Ablauf hat. Ein Klick geht auf `#/termin/<id>/live`: dieselbe Termin-Ansicht, die Live-Ansicht gleich
 offen (kein zweiter Weg); „Schließen“ führt zum Termin. Läuft die Live-Agenda gerade, trägt der Knopf den roten Punkt wie „Live“ im Termin
-(`ladeLiveLaeuft`, einmal beim Öffnen der Seite, kein Takt; scheitert es, fehlt nur der Punkt). Am Handy zeigt er nur das Symbol. Jeder, der die
+(`ladeLiveLaeuft`, einmal beim Öffnen der Seite, kein Takt; scheitert es, fehlt nur der Punkt). Am Handy steht das Wort „Live“ neben „Ablauf & Dienste“ (derselbe stille Knopf). Jeder, der die
 Karte sieht, bekommt den Knopf; steuern darf in der Live-Ansicht weiterhin nur, wer am Dienst „Live-Agenda steuern“ hat.
 
 **Mails** („Erinnern“, „Vertretung suchen“) brauchen kein eigenes Recht: ChurchTools lässt jeden Personen zu einem

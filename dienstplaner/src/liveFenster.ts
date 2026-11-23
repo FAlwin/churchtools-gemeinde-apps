@@ -1,7 +1,7 @@
 import { utcAus } from '@shared/ct/zeit';
 
 /**
- * **Wann steht auf der Startseite der Knopf „Live-Ansicht“?** (Alwin 23.11.2026): am **Tag des Termins ab 0 Uhr** – in der Ortszeit
+ * **Wann steht auf der Startseite der Knopf „Live“?** (Alwin 23.11.2026): am **Tag des Termins ab 0 Uhr** – in der Ortszeit
  * der Gemeinde (`utcAus`, nicht die Zeitzone des Browsers) – **bis zum Ende des Termins** (`endDate`, einschließlich). Davor und
  * danach nicht. Ein Termin über Mitternacht (Beginn 23 Uhr, Ende 1 Uhr) bleibt bis zu seinem Ende da; hat ein Termin kein eigenes Ende
  * (`ende` nicht nach `beginn`), gilt der Tag bis 24 Uhr.

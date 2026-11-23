@@ -331,24 +331,34 @@ function AlsNaechstes({
       {(musikApp || onTermin || live) && (
         <div className={styles.knoepfe}>
           {musikApp && (
-            <a className={styles.knopf} href={musikApp}>
-              <Icon name="music" size={18} /> Musik-App
-            </a>
+            // Eigene Zeile am Handy, damit „Ablauf & Dienste“ und „Live“ daneben in einer Reihe stehen (`musikZeile`).
+            <div className={styles.musikZeile}>
+              <a className={styles.knopf} href={musikApp}>
+                <Icon name="music" size={18} /> Musik-App
+              </a>
+            </div>
           )}
           {onTermin && (
-            <button type="button" className={styles.knopfLeise} onClick={() => onTermin(z.id)}>
-              Ablauf &amp; Dienste <Icon name="chev-right" size={16} />
-            </button>
+            <KopfKnopf
+              onClick={() => onTermin(z.id)}
+              label="Ablauf & Dienste"
+              symbol={<Icon name="chev-right" size={16} />}
+              symbolHinten
+              wortAmHandy
+            />
           )}
           {live && onLive && (
-            // Der KopfKnopf zeigt am Handy nur das Symbol (mit Rahmen) – drei Knöpfe in einer Reihe passen so in 375 px.
+            // Wie „Live“ im Termin: dasselbe Symbol, der rote Punkt bei laufender Live-Agenda – am Handy mit dem Wort (`wortAmHandy`).
             <KopfKnopf
               onClick={() => onLive(z.id)}
-              label="Live-Ansicht"
+              label="Live"
               title={
-                live.laeuft ? 'Live-Ansicht – läuft gerade in ChurchTools' : 'Live-Ansicht öffnen'
+                live.laeuft
+                  ? 'Live – läuft gerade in ChurchTools'
+                  : 'Live-Agenda von ChurchTools folgen'
               }
               symbol={live.laeuft ? <LivePunkt /> : <Icon name="clock" size={16} stroke={2.2} />}
+              wortAmHandy
             />
           )}
         </div>

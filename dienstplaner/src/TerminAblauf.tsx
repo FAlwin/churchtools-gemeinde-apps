@@ -153,7 +153,7 @@ export function TerminAblauf({
   schnittText?: (zeile: AblaufZeile) => string | null;
   /** „Live“ wurde geschlossen (L4-4): Der Verlauf hat sich vermutlich geändert, der Rückblick liest neu. */
   onLiveGeschlossen?: () => void;
-  /** „Live“ gleich offen (Adresse `#/termin/ID/live`, Knopf „Live-Ansicht“ auf der Startseite). Gilt nur beim ersten Zeigen. */
+  /** „Live“ gleich offen (Adresse `#/termin/ID/live`, Knopf „Live“ auf der Startseite). Gilt nur beim ersten Zeigen. */
   liveStart?: boolean;
   children: (teile: AblaufTeile) => ReactNode;
 }) {

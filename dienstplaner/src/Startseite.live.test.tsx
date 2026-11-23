@@ -9,7 +9,7 @@ import { ladeAbwesenheiten, ladeAblauf, ladeLieder, ladeMusikApp } from './ladeB
 import { ladeLiveLaeuft } from './ladeLive';
 
 /**
- * **Knopf „Live-Ansicht“ in „Als Nächstes“** (Alwin 23.11.2026): am Tag des Termins ab 0 Uhr Ortszeit bis zum Ende, nur mit
+ * **Knopf „Live“ in „Als Nächstes“** (Alwin 23.11.2026): am Tag des Termins ab 0 Uhr Ortszeit bis zum Ende, nur mit
  * Ablauf; ein Klick ruft `onLive` mit dem Termin. Feste Uhr (`Date`), die Zeitpunkte aus der Ortszeit (`utcAus`).
  * Gegenstück zur Zeitrechnung: `liveFenster.test.ts`; die Regel „läuft“: `ladeLive.test.ts`.
  */
@@ -55,7 +55,7 @@ function zeige(termin = GOTTESDIENST, mitLive = true) {
   );
   return { onLive };
 }
-const knopf = () => screen.queryByRole('button', { name: /Live-Ansicht/ });
+const knopf = () => screen.queryByRole('button', { name: /^Live(-Agenda| –)/ });
 
 beforeEach(() => {
   vi.mocked(ladeLieder).mockResolvedValue([]);
@@ -69,7 +69,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('Startseite: Knopf „Live-Ansicht“', () => {
+describe('Startseite: Knopf „Live“', () => {
   it('am Vortag 23:59 nicht – und es wird auch nichts nachgesehen', async () => {
     uhr('2026-11-28T23:59');
     zeige();
@@ -81,9 +81,21 @@ describe('Startseite: Knopf „Live-Ansicht“', () => {
   it('am Tag um 00:00 ja – ein Klick öffnet genau diesen Termin', async () => {
     uhr('2026-11-29T00:00');
     const { onLive } = zeige();
-    fireEvent.click(await screen.findByRole('button', { name: 'Live-Ansicht öffnen' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
+    );
     expect(onLive).toHaveBeenCalledWith(7);
     expect(ablauf).toHaveBeenCalledWith(7);
+  });
+
+  it('„Live“ und „Ablauf & Dienste“ behalten ihr Wort auch am Handy (`wortAmHandy`), Beschriftung „Live“', async () => {
+    uhr('2026-11-29T09:00');
+    zeige();
+    const live = await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' });
+    expect(live.textContent).toBe('Live');
+    expect(live.className).toMatch(/wortAmHandy/);
+    const ablauf = screen.getByRole('button', { name: 'Ablauf & Dienste' });
+    expect(ablauf.className).toMatch(/wortAmHandy/);
   });
 
   it('läuft die Live-Agenda gerade, trägt der Knopf den roten Punkt und sagt es im Namen', async () => {
@@ -91,7 +103,7 @@ describe('Startseite: Knopf „Live-Ansicht“', () => {
     laeuft.mockResolvedValue(true);
     zeige();
     const k = await screen.findByRole('button', {
-      name: 'Live-Ansicht – läuft gerade in ChurchTools',
+      name: 'Live – läuft gerade in ChurchTools',
     });
     expect(within(k).getByTestId('live-punkt')).toBeTruthy();
     expect(laeuft).toHaveBeenCalledWith(7, 31, []);
@@ -100,12 +112,12 @@ describe('Startseite: Knopf „Live-Ansicht“', () => {
   it('läuft sie nicht, oder ist das Nachsehen gescheitert: Knopf ohne Punkt', async () => {
     uhr('2026-11-29T09:00');
     zeige();
-    const k = await screen.findByRole('button', { name: 'Live-Ansicht öffnen' });
+    const k = await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' });
     expect(within(k).queryByTestId('live-punkt')).toBeNull();
     cleanup();
     laeuft.mockRejectedValue(new Error('Netz'));
     zeige();
-    const k2 = await screen.findByRole('button', { name: 'Live-Ansicht öffnen' });
+    const k2 = await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' });
     expect(within(k2).queryByTestId('live-punkt')).toBeNull();
   });
 
@@ -119,7 +131,9 @@ describe('Startseite: Knopf „Live-Ansicht“', () => {
   it('Termin über Mitternacht: um 00:30 am Folgetag noch da, um 01:01 nicht mehr', async () => {
     uhr('2026-11-29T00:30');
     zeige(NACHT);
-    expect(await screen.findByRole('button', { name: 'Live-Ansicht öffnen' })).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
+    ).toBeTruthy();
     cleanup();
     uhr('2026-11-29T01:01');
     zeige(NACHT);

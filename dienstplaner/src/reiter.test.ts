@@ -50,7 +50,7 @@ describe('Adresse der Termin-Ansicht (E6-1b)', () => {
     }
   });
 
-  it('#/termin/<id>/live: derselbe Termin, mit gleich geöffneter Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite)', () => {
+  it('#/termin/<id>/live: derselbe Termin, mit gleich geöffneter Live-Ansicht (Knopf „Live“ auf der Startseite)', () => {
     expect(terminAusAdresse(adresseFuerLive(148))).toBe(148);
     expect(liveAusAdresse(adresseFuerLive(148))).toBe(true);
     expect(liveAusAdresse(adresseFuerTermin(148))).toBe(false);

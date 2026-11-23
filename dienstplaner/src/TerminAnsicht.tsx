@@ -122,7 +122,7 @@ export function TerminAnsicht({
   entwuerfe?: EntwurfAnschluss;
   /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
   ladeAntworten?: AntwortenLader;
-  /** Die Live-Ansicht gleich öffnen (Adresse `#/termin/ID/live`, Knopf „Live-Ansicht“ auf der Startseite) – nur beim ersten Zeigen. */
+  /** Die Live-Ansicht gleich öffnen (Adresse `#/termin/ID/live`, Knopf „Live“ auf der Startseite) – nur beim ersten Zeigen. */
   liveStart?: boolean;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde) – für den Zauberstab. */
   heute: string;

@@ -63,7 +63,7 @@ export function terminAusAdresse(hash: string): number | null {
   return id ? Number(id) : null;
 }
 
-/** `#/termin/148/live`: die Termin-Ansicht mit gleich geöffneter Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite). */
+/** `#/termin/148/live`: die Termin-Ansicht mit gleich geöffneter Live-Ansicht (Knopf „Live“ auf der Startseite). */
 export function liveAusAdresse(hash: string): boolean {
   return /^#\/termin\/\d+\/live$/.test(hash);
 }

@@ -1472,7 +1472,7 @@ describe('„Live“ (E6b-2 L2)', () => {
     expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
   });
 
-  it('Start mit offener Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite): sie ist gleich da, „Schließen“ führt zum Termin und räumt die Adresse auf', async () => {
+  it('Start mit offener Live-Ansicht (Knopf „Live“ auf der Startseite): sie ist gleich da, „Schließen“ führt zum Termin und räumt die Adresse auf', async () => {
     heute('2026-10-18T08:10:00Z');
     ctLive('2');
     window.history.replaceState(null, '', '#/termin/7/live');

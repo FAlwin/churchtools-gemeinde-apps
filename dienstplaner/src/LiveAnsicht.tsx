@@ -310,9 +310,11 @@ export function LiveAnsicht({
     return () => window.clearTimeout(id);
   }, [fehlklick]);
   const standSeit = live.stand?.seit ?? null;
+  const standStelle = live.stand?.stelle ?? null;
   useEffect(() => {
-    if (fehlklick && standSeit !== null && standSeit !== fehlklick.zeit) setFehlklick(null);
-  }, [fehlklick, standSeit]);
+    if (!fehlklick || standSeit === null) return;
+    if (standSeit !== fehlklick.zeit || standStelle !== fehlklick.stelle) setFehlklick(null);
+  }, [fehlklick, standSeit, standStelle]);
 
   function schliessen(): void {
     vollbild.beenden();

@@ -306,6 +306,19 @@ describe('Verlauf festhalten und nachtragen (T4)', () => {
     expect(v.schreiben).not.toHaveBeenCalled();
   });
 
+  it('ein Gerät ohne Steuer-Recht schreibt auch dann nichts, wenn der Speicher kurz weniger liefert als es kennt', async () => {
+    const verlauf = [wechselAus(LISTE, 1, T0), wechselAus(LISTE, 2, T0 + 250_000, 0)];
+    vi.setSystemTime(T0 + 260_000);
+    const { v } = zeige({ stelle: 2, seit: ISO(T0 + 250_000) }, { steuern: false, verlauf });
+    await fertig();
+    expect(screen.getByLabelText('Plus/Minus +0:50')).toBeTruthy();
+    // Ein hinterherhinkender Speicher (alter Stand) – ein schreibendes Gerät würde das Fehlende nachschreiben, dieses nicht.
+    v.s.wechsel = [verlauf[0]];
+    await spulen(VERLAUF_TAKT_MS * 2);
+    expect(v.schreiben).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Plus/Minus +0:50')).toBeTruthy();
+  });
+
   it('fehlendes Recht an der Ablage (403): einmal versucht, danach Ruhe – die Anzeige läuft mit dem lokalen Verlauf weiter', async () => {
     const { v } = zeige({ stelle: 1, seit: ISO(T0) });
     v.s.schreibenGrund = 'kein-recht';
@@ -475,6 +488,32 @@ describe('Fehlklick zählt nicht (A19, T9)', () => {
     await klick('Zum vorigen Punkt');
     expect(screen.queryByRole('alert')).toBeNull();
     expect(restzeit()).toBe('3:15noch, von 5 Min');
+  });
+
+  it('der Klick liest den Verlauf frisch: auch wenn das Gerät ihn beim Öffnen nicht lesen konnte, gilt die Regel', async () => {
+    const vorher = [wechselAus(LISTE, 2, T0 + 300_000), wechselAus(LISTE, 3, T0 + 400_000, 0)];
+    vi.setSystemTime(T0 + 400_000);
+    const { v } = zeige(
+      { stelle: 3, seit: ISO(T0 + 400_000) },
+      { verlauf: vorher, lesenGrund: 'voruebergehend' },
+    );
+    await fertig();
+    await spulen(5_000);
+    // Das Lesen klappt wieder – aber erst der Klick holt den Verlauf (der Takt ist 15 s).
+    v.s.lesenGrund = null;
+    await klick('Zum vorigen Punkt');
+    expect(hinweis()).toBeTruthy();
+    expect(restzeit()).toBe('3:15noch, von 5 Min');
+  });
+
+  it('der Hinweis verschwindet, sobald ein anderes Gerät weiterschaltet', async () => {
+    const { ct } = await fehlklick();
+    expect(hinweis()).toBeTruthy();
+    ct.stelle = 4;
+    ct.seit = ISO(Date.now());
+    ct.zusatz = 0;
+    await spulenInSchritten(3_000);
+    expect(hinweis()).toBeNull();
   });
 
   it('ohne Steuer-Recht gibt es weder Hinweis noch „Neu starten“', async () => {

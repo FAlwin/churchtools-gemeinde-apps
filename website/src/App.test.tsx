@@ -19,14 +19,18 @@ vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // über `ladeFreigaben` – sein Ergebnis steht in den Tests fest (aus dem echten Schreiben, nicht aus Literalen).
 vi.mock('./daten', () => ({ ladeFreigaben: vi.fn() }));
 vi.mock('./Freigaben', () => ({
-  Freigaben: ({ zugang }: { zugang: string }) => <p>FREIGABEN-INHALT {zugang}</p>,
+  Freigaben: ({ zugang, gruppe }: { zugang: string; gruppe: number }) => (
+    <p data-gruppe={gruppe}>FREIGABEN-INHALT {zugang}</p>
+  ),
 }));
 const freigaben = vi.mocked(ladeFreigaben);
 // Die Seiten selbst sind in `Seiten.test.tsx` geprüft – hier geht es um den Rahmen und wer hineindarf.
 vi.mock('./Seiten', () => ({
   // Die Rechte, mit denen die Seiten gezeigt werden, stehen als Attribut da – daran sieht der Test, was der Zugang erlaubt.
-  Seiten: ({ rechte }: { rechte: unknown }) => (
-    <p data-rechte={JSON.stringify(rechte)}>SEITEN-INHALT</p>
+  Seiten: ({ rechte, freigabe }: { rechte: unknown; freigabe?: { gruppe: number } }) => (
+    <p data-rechte={JSON.stringify(rechte)} data-gruppe={freigabe?.gruppe}>
+      SEITEN-INHALT
+    </p>
   ),
 }));
 // Die Prüfung der Rechte beim Start liest bei ChurchTools – hier steht ihr Ergebnis fest (`rechte.test.ts` prüft sie selbst).
@@ -40,11 +44,17 @@ vi.mock('./EinstellungenFenster', () => ({
   EinstellungenFenster: ({
     onSchliessen,
     werDarfWas,
+    mail,
   }: {
     onSchliessen: () => void;
     werDarfWas?: unknown;
+    mail?: { modul: number; kategorie: number };
   }) => (
-    <button onClick={onSchliessen} data-wer-darf-was={werDarfWas ? 'ja' : 'nein'}>
+    <button
+      onClick={onSchliessen}
+      data-wer-darf-was={werDarfWas ? 'ja' : 'nein'}
+      data-mail={mail ? `${mail.modul}/${mail.kategorie}` : 'nein'}
+    >
       EINSTELLUNGEN-FENSTER
     </button>
   ),
@@ -112,6 +122,24 @@ const rechteDerSeiten = () =>
     html: boolean;
     menue: boolean;
   };
+
+describe('Mails im Freigabe-Weg: der Rahmen reicht Gruppe und Ort weiter (W3b-3)', () => {
+  it('Seiten und Freigaben bekommen die Website-Gruppe – an ihre Leitung gehen die Mails', async () => {
+    render(<App />);
+    expect((await screen.findByText('SEITEN-INHALT')).getAttribute('data-gruppe')).toBe('7');
+    fireEvent.click(screen.getByRole('button', { name: 'Freigaben' }));
+    expect((await screen.findByText(/FREIGABEN-INHALT/)).getAttribute('data-gruppe')).toBe('7');
+  });
+
+  it('das Fenster „Einstellungen“ bekommt den Ort des Schalters (Modul / Kategorie „Entwürfe“)', async () => {
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER').getAttribute('data-mail')).toBe(
+      `7/${einrichtung?.entwuerfe}`,
+    );
+  });
+});
 
 describe('Rahmen und Zugang', () => {
   it('Leitung der Gruppe: Reiter „Seiten | Aussehen | Freigaben“, Seiten zuerst', async () => {

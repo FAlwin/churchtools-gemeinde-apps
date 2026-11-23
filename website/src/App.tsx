@@ -87,6 +87,8 @@ export function App() {
       ? { entwuerfe, veroeffentlicht: editor.einrichtung.veroeffentlicht }
       : null;
   const freigabeKategorien = editor && kategorien ? { modul: editor.modul, ...kategorien } : null;
+  /** Die Website-Gruppe – an ihre Leitung gehen die Mails im Freigabe-Weg (W3b-3). Mit `kategorien` immer da. */
+  const gruppe = editor?.einrichtung?.gruppe ?? null;
   // Entwurf und Online-Stand zusammen: für die Liste „Freigaben“ **und** den Zähler am Reiter. Neu gelesen wird beim Wechsel des
   // Reiters (so sieht man, was andere inzwischen eingereicht haben) und nach jeder Handlung (`freigabeStand`); die bisherigen
   // Daten bleiben stehen, bis neue da sind (vorübergehend ist nicht leer).
@@ -165,10 +167,11 @@ export function App() {
           rechte={{ html: darfEigenesHtml(editor.zugang), menue: leitungsebene }}
           einstellungenStand={einstellungenStand}
           freigabe={
-            editor.zugang && kategorien
+            editor.zugang && kategorien && gruppe !== null
               ? {
                   zugang: editor.zugang,
                   veroeffentlicht: kategorien.veroeffentlicht,
+                  gruppe,
                   onGeaendert: () => setFreigabeStand((n) => n + 1),
                 }
               : undefined
@@ -189,7 +192,11 @@ export function App() {
           >
             {reiterAktiv === 'aussehen' && <Aussehen />}
             {einstellungenOffen && (
-              <EinstellungenFenster onSchliessen={schliesseEinstellungen} werDarfWas={werDarfWas} />
+              <EinstellungenFenster
+                onSchliessen={schliesseEinstellungen}
+                werDarfWas={werDarfWas}
+                mail={{ modul: editor.modul, kategorie: entwuerfe }}
+              />
             )}
           </EinstellungenProvider>
         )}
@@ -202,13 +209,14 @@ export function App() {
           {freigaben.stand.art === 'fertig' && freigaben.stand.neuFehler && (
             <FehlerKasten fehler={freigaben.stand.neuFehler} onNochmal={freigaben.neu} />
           )}
-          {freigabeKategorien && freigabeDaten && (
+          {freigabeKategorien && freigabeDaten && gruppe !== null && (
             <Freigaben
               kategorien={freigabeKategorien}
               daten={freigabeDaten}
               zugang={editor.zugang}
               ich={ich}
               gemeinde={editor.gemeinde}
+              gruppe={gruppe}
               onGeaendert={() => setFreigabeStand((n) => n + 1)}
             />
           )}

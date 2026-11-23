@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
+import { _vergissModul } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';
+import { leitungAusWerten } from '@shared/website/mailWerte';
+import type { Wert } from '@shared/ct/modulDaten';
 import { sollRechte, type Kategorien } from '@shared/website/rechte';
 import { datenRechteNummernAus, type Recht } from '@shared/ct/rollenRechte';
+import { LeitungNichtFestgehalten } from './leitungFehler';
 import { ladeRollen, ladeWerDarfWas, pruefeRechte, rechteSetzen } from './rechte';
 
 vi.mock('@ui/ct/verbindung', async (original) => ({
@@ -44,6 +48,15 @@ let scheitereBei: number | null;
 let ignoriere: 'PUT' | 'DELETE' | null;
 let leseFehler: boolean;
 let schreibAufrufe: number;
+/** Die Werte der Kategorie „Entwürfe“ (dort liegt `website-leitung`) und die Schreibaufrufe darauf – getrennt von den Rechten. */
+let werte: Wert[];
+let wertAufrufe: string[];
+/** Optionen: Der Schreibaufruf auf die Werte scheitert (503) / gilt als abgemeldet (401). */
+let wertFehler: 503 | 401 | null;
+/** Was von den Rechten gesetzt war, als der Leitungs-Wert geschrieben wurde. */
+let rechteBeimWertSchreiben: Recht[] | null;
+const MODUL = 7;
+const WERTE_PFAD = `/custommodules/${MODUL}/customdatacategories/${KAT.entwuerfe}/customdatavalues`;
 
 const r = (rolle: number, authId: number, dataId: number | null = null): Recht => ({
   rolle,
@@ -52,6 +65,12 @@ const r = (rolle: number, authId: number, dataId: number | null = null): Recht =
 });
 
 beforeEach(() => {
+  vi.stubEnv('BASE_URL', '/ccm/website/');
+  _vergissModul();
+  werte = [];
+  wertAufrufe = [];
+  wertFehler = null;
+  rechteBeimWertSchreiben = null;
   rechte = [];
   aufrufe = [];
   scheitereBei = null;
@@ -62,6 +81,9 @@ beforeEach(() => {
     aufrufe.push(`GET ${pfad}`);
     if (leseFehler) return Promise.reject(new ApiError(504, 'weg'));
     if (pfad === '/permissions/definitions') return Promise.resolve(DEFINITIONEN as never);
+    if (pfad === '/custommodules')
+      return Promise.resolve([{ id: MODUL, shorty: 'website' }] as never);
+    if (pfad === WERTE_PFAD) return Promise.resolve(werte.map((w) => ({ ...w })) as never);
     if (pfad === `/groups/${GRUPPE}/roles`) return Promise.resolve(ROLLEN as never);
     const rolle = Number(/group_role\/(\d+)$/.exec(pfad)?.[1]);
     return Promise.resolve(
@@ -71,6 +93,18 @@ beforeEach(() => {
     );
   });
   vi.mocked(ctAnfrage).mockImplementation((pfad: string, init) => {
+    if (pfad.startsWith(WERTE_PFAD)) {
+      const methode = init?.method ?? 'GET';
+      wertAufrufe.push(methode);
+      if (wertFehler === 503) return Promise.reject(new ApiError(503, 'kurz weg'));
+      if (wertFehler === 401) return Promise.reject(new ApiError(401, 'abgemeldet'));
+      rechteBeimWertSchreiben = rechte.map((x) => ({ ...x }));
+      const j = JSON.parse(String(init?.body)) as { id?: number; value: string };
+      if (methode === 'POST')
+        werte.push({ id: 900 + werte.length, dataCategoryId: KAT.entwuerfe, value: j.value });
+      else werte = werte.map((w) => (w.id === j.id ? { ...w, value: j.value } : w));
+      return Promise.resolve(null as never);
+    }
     schreibAufrufe += 1;
     if (scheitereBei === schreibAufrufe) return Promise.reject(new ApiError(503, 'kurz weg'));
     const rolle = Number(/group_role\/(\d+)$/.exec(pfad)?.[1]);
@@ -204,6 +238,71 @@ describe('rechteSetzen', () => {
     await rechteSetzen(GRUPPE, KAT, [{ rolle: 3290, stufe: 'leitung' }]);
     const init = vi.mocked(ctAnfrage).mock.calls[0][1];
     expect(init?.verweigert).toMatch(/Personen administrieren/);
+  });
+});
+
+describe('rechteSetzen – wer die Leitung ist, wird festgehalten (W3b-3)', () => {
+  const WAHL = [
+    { rolle: 3290, stufe: 'leitung' as const },
+    { rolle: 3287, stufe: 'redakteur' as const },
+    { rolle: 3296, stufe: 'keine' as const },
+  ];
+
+  it('schreibt `website-leitung` in „Entwürfe“: genau die Rollen mit Stufe Leitung', async () => {
+    await rechteSetzen(GRUPPE, KAT, [...WAHL, { rolle: 3296, stufe: 'leitung' }]);
+    expect(leitungAusWerten(werte)).toEqual([3290, 3296]);
+    expect(werte).toHaveLength(1);
+  });
+
+  it('erst NACH dem Setzen der Rechte – zu dem Zeitpunkt stehen sie schon so da', async () => {
+    await rechteSetzen(GRUPPE, KAT, WAHL);
+    expect(sortiert(rechteBeimWertSchreiben ?? [])).toEqual(
+      sortiert(soll([3290, 'leitung'], [3287, 'redakteur'])),
+    );
+  });
+
+  it('übernimmt ChurchTools die Rechte nicht (NichtUebernommen), wird die Leitung NICHT festgehalten', async () => {
+    ignoriere = 'PUT';
+    await expect(rechteSetzen(GRUPPE, KAT, WAHL)).rejects.toThrow(NichtUebernommen);
+    expect(wertAufrufe).toEqual([]);
+    expect(werte).toEqual([]);
+  });
+
+  it('Rollen fremder Gruppen kommen nicht in die Leitung', async () => {
+    await rechteSetzen(GRUPPE, KAT, [...WAHL, { rolle: 4711, stufe: 'leitung' }]);
+    expect(leitungAusWerten(werte)).toEqual([3290]);
+  });
+
+  it('erneut mit derselben Wahl: nichts wird noch einmal geschrieben', async () => {
+    await rechteSetzen(GRUPPE, KAT, WAHL);
+    wertAufrufe = [];
+    await rechteSetzen(GRUPPE, KAT, WAHL);
+    expect(wertAufrufe).toEqual([]);
+  });
+
+  it('ändert sich die Leitung, wird der vorhandene Wert geändert – kein zweiter angelegt', async () => {
+    await rechteSetzen(GRUPPE, KAT, WAHL);
+    await rechteSetzen(GRUPPE, KAT, [{ rolle: 3287, stufe: 'leitung' }]);
+    expect(leitungAusWerten(werte)).toEqual([3287]);
+    expect(werte).toHaveLength(1);
+    expect(wertAufrufe).toEqual(['POST', 'PUT']);
+  });
+
+  it('scheitert das Festhalten (503): eigene Meldung – die Rechte STEHEN –, der nächste Versuch holt es nach', async () => {
+    wertFehler = 503;
+    const e = await rechteSetzen(GRUPPE, KAT, WAHL).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(LeitungNichtFestgehalten);
+    expect((e as Error).message).toMatch(/Die Rechte sind gesetzt/);
+    expect(sortiert(rechte)).toEqual(sortiert(soll([3290, 'leitung'], [3287, 'redakteur'])));
+    expect(werte).toEqual([]);
+    wertFehler = null;
+    await rechteSetzen(GRUPPE, KAT, WAHL);
+    expect(leitungAusWerten(werte)).toEqual([3290]);
+  });
+
+  it('abgemeldet (401) beim Festhalten kommt unverändert an – nicht als „Leitung nicht festgehalten“', async () => {
+    wertFehler = 401;
+    await expect(rechteSetzen(GRUPPE, KAT, WAHL)).rejects.toMatchObject({ status: 401 });
   });
 });
 

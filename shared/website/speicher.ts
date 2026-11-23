@@ -31,6 +31,7 @@ import { teileBauen, textAusTeilen } from '../ct/teile';
 import type { Sperre } from '../ct/sperre';
 import { istSperrWert, sperreAusWerten, sperreWert } from './sperre';
 import { istStatusWert, statusAusWerten, statusWertIds, type SeitenStatus } from './status';
+import { istLeitungsWert, istMailWert } from './mailWerte';
 import {
   einstellungenAlsText,
   einstellungenAusText,
@@ -215,6 +216,9 @@ export function websiteAusWerten(werte: readonly Wert[]): WebsiteStand {
     } else if (istStatusWert(w)) {
       // Wo steht die Seite im Freigabe-Weg? (`status.ts`) – gehört zur Website, ist aber kein Inhalt und kein Problem.
       // Gelesen wird unten gesammelt (`statusAusWerten`).
+    } else if (istLeitungsWert(w) || istMailWert(w)) {
+      // Wer die Leitung ist und ob Mails gehen (`mailWerte.ts`, W3b-3) – gehört zur Website, ist aber kein Inhalt und kein
+      // Problem. Gelesen wird beim Aufrufer (`leitungAusWerten`, `mailAnAusWerten`).
     } else if (istSperrWert(w)) {
       // Wer bearbeitet gerade? (`sperre.ts`) – gehört zur Website, ist aber kein Inhalt und kein Problem.
       const sw = sperreWert(w);

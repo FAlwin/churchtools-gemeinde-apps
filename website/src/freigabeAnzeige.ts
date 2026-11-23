@@ -7,6 +7,7 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { datumUhrText } from '@shared/ct/zeit';
 import type { Eintrag, OnlineLage } from '@shared/website/freigabe';
 import type { SeitenStatus } from '@shared/website/status';
+import type { MailErgebnis } from './mailVersand';
 
 export interface EtikettAngabe {
   text: string;
@@ -91,4 +92,54 @@ export function eintragEtikett(e: Eintrag): EtikettAngabe {
 export function misserfolg(e: unknown, nichtGeschehen: string): string {
   const m = fehlerMeldung(e);
   return `${nichtGeschehen} ${m.text}${m.nochmal ? ' Du kannst es noch einmal versuchen.' : ''}`;
+}
+
+/** Wozu die Mail gehörte – bestimmt, wer benachrichtigt wurde und was bei „unklar“ nicht noch einmal getan werden soll. */
+export type MailZweck = 'einreichen' | 'loeschen' | 'zurueck' | 'freigeben';
+
+const MAIL_TEXTE: Record<
+  MailZweck,
+  { gesendet: string; wem: string; unklar: string; trotzdem: string }
+> = {
+  einreichen: {
+    gesendet: 'Die Leitung ist per Mail benachrichtigt.',
+    wem: 'die Leitung',
+    unklar:
+      'Ob die Mail an die Leitung rausging, ist unklar. Bitte nicht noch einmal einreichen – die Leitung sieht die Seite auch im Reiter „Freigaben“.',
+    trotzdem: 'Die Seite ist trotzdem eingereicht und steht für die Leitung unter „Freigaben“.',
+  },
+  loeschen: {
+    gesendet: 'Die Leitung ist per Mail benachrichtigt.',
+    wem: 'die Leitung',
+    unklar:
+      'Ob die Mail an die Leitung rausging, ist unklar. Bitte nicht noch einmal anfragen – die Leitung sieht die Anfrage auch im Reiter „Freigaben“.',
+    trotzdem: 'Die Anfrage gilt trotzdem und steht für die Leitung unter „Freigaben“.',
+  },
+  zurueck: {
+    gesendet: 'Wer eingereicht hatte, ist per Mail benachrichtigt.',
+    wem: 'den Einreichenden',
+    unklar:
+      'Ob die Mail rausging, ist unklar. Bitte nicht noch einmal zurückgeben – die Anmerkung steht an der Seite.',
+    trotzdem: 'Die Seite ist trotzdem zurückgegeben, die Anmerkung steht an der Seite.',
+  },
+  freigeben: {
+    gesendet: 'Wer eingereicht hatte, ist per Mail benachrichtigt.',
+    wem: 'die Einreichenden',
+    unklar: 'Ob die Mail rausging, ist unklar. Bitte nicht noch einmal freigeben – es ist online.',
+    trotzdem: 'Es ist trotzdem online.',
+  },
+};
+
+/**
+ * **Der kurze Hinweis zur Mail** (W3b-3) – drei Ausgänge, die der Mensch unterscheiden muss: gesendet · nicht verschickt (mit
+ * Grund) · unklar. Schalter aus und „niemand zu benachrichtigen“ sagen **nichts** (`null`). Die Handlung selbst gilt in jedem
+ * Fall – das sagt der Hinweis bei „nicht verschickt“ ausdrücklich dazu.
+ */
+export function mailHinweis(e: MailErgebnis, zweck: MailZweck): string | null {
+  const t = MAIL_TEXTE[zweck];
+  if (e.art === 'gesendet') return t.gesendet;
+  if (e.art === 'unklar') return t.unklar;
+  if (e.art === 'nichtVerschickt')
+    return `Die Mail an ${t.wem} ging nicht raus: ${e.grund.trim()} ${t.trotzdem}`;
+  return null;
 }

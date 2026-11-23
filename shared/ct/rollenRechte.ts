@@ -236,6 +236,8 @@ export interface RolleRoh {
   nameTranslated?: unknown;
   isLeader?: unknown;
   isActive?: unknown;
+  /** Die Rolle als Rolle der Gruppenart – so steht sie an den Mitgliedern (`GET /groups/{id}/members`). */
+  groupTypeRoleId?: unknown;
 }
 
 /** Eine Rolle der Gruppe, wie die Oberfläche sie braucht. */

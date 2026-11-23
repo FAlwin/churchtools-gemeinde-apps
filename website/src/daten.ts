@@ -6,6 +6,7 @@
  * stehen in `@shared/website/freigabe` und `status`.
  */
 import { modulPort } from '@ui/ct/modulPort';
+import { werteLesen } from '@shared/ct/modulDaten';
 import type { Schreiber, Sperre } from '@shared/ct/sperre';
 import {
   EINSTELLUNGEN_ID,
@@ -24,6 +25,7 @@ import {
   bearbeitungUebernehmen,
 } from '@shared/website/sperre';
 import type { BeginnErgebnis } from '@shared/website/sperre';
+import { mailAnAusWerten, mailSchalterSetzen } from '@shared/website/mailWerte';
 import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import {
   alleFreigeben,
@@ -181,3 +183,12 @@ export const gebeAllesFrei = (
   ziele: readonly Ziel[],
   beiFortschritt?: (geschafft: number, von: number) => void,
 ): Promise<AlleErgebnis> => alleFreigeben(freigabeOrt(o), ziele, beiFortschritt);
+
+// ── Mails im Freigabe-Weg (W3b-3) ────────────────────────────────────────────────────────────────────────────────────────
+
+/** Sind die Mails im Freigabe-Weg an? Kein Wert = an (`mailWerte.ts`). Wirft bei jedem Lesefehler – nie „an“ aus einem Aussetzer. */
+export const ladeMailAn = async (o: EntwurfsOrt): Promise<boolean> =>
+  mailAnAusWerten(await werteLesen(modulPort, o.modul, o.kategorie));
+
+/** Den Schalter setzen: sofort, als eigener Wert in „Entwürfe“ (nicht in der Einheit „Einstellungen“), nachgelesen. */
+export const setzeMailAn = (o: EntwurfsOrt, an: boolean) => mailSchalterSetzen(ort(o), an);

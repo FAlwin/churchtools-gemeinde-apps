@@ -1,7 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
+import {
+  dokumentDerSitzung,
+  type ProtokollKopf,
+  type ProtokollTeil,
+} from '@shared/protokolle/speicher';
+import type { Block } from '@shared/protokolle/dokument';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { loeschbar } from '@shared/protokolle/loeschen';
@@ -12,6 +17,8 @@ import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
+import { protokollLesen } from './schreiben';
+import { useMitlesen } from './useMitlesen';
 import styles from './SitzungAnsicht.module.scss';
 
 /**
@@ -20,6 +27,11 @@ import styles from './SitzungAnsicht.module.scss';
  * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1), dazu „Bearbeiten“ (K2b) und „Löschen“ (W6). Kommt man aus der Suche (S3-4b),
  * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor. „Teilen / PDF“ (S6-3b) gibt es für
  * alle, die das Protokoll lesen – im Entwurf mit „ENTWURF“ auf dem PDF.
+ *
+ * **Mitlesen** (W16): Ein Entwurf liest sich alle `MITLESEN_MS` selbst nach (`useMitlesen`, Pause bei verdecktem Fenster) –
+ * wer zusieht, während jemand schreibt, sieht den neuen Text von selbst. Freigegebene Protokolle nicht. Nachgeladen wird
+ * nur der Text, nichts baut sich neu auf – die Seite bleibt, wo sie ist. Ist der neue Stand gerade nicht vollständig
+ * lesbar (mitten im Speichern) oder scheitert das Lesen, bleibt der bisherige stehen.
  */
 export function SitzungAnsicht({
   sitzung,
@@ -38,6 +50,7 @@ export function SitzungAnsicht({
   onLoeschen,
   onZurueck,
   onZuSitzung,
+  mitlesen,
 }: {
   sitzung: Sitzung;
   gruppe: string;
@@ -53,7 +66,7 @@ export function SitzungAnsicht({
   naechste?: ReactNode;
   /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. */
   teilen?: TeilenRahmen;
-  /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
+  /** Wer schreiben darf (S5-1, seit W16 auch „Schreibt mit“): Protokoll zu dieser Sitzung beginnen – fehlt sonst. */
   onBeginnen?: () => void;
   /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
   onBearbeiten?: () => void;
@@ -64,9 +77,33 @@ export function SitzungAnsicht({
   onZurueck: () => void;
   /** „Öffnen“ im Fenster eines früheren Protokolls: zu dieser Sitzung springen (K3b-2). */
   onZuSitzung?: (s: Sitzung) => void;
+  /** Mitlesen (W16): wo das Protokoll liegt – fehlt es, wird nichts nachgeladen. */
+  mitlesen?: { modul: number; kategorie: number };
 }) {
-  const kopf = sitzung.kopf;
-  const dokument = dokumentDerSitzung(kopf, teile);
+  // Der zuletzt mitgelesene Stand – gilt nur für diese Sitzung und solange die Liste dahinter keinen neueren Kopf bringt.
+  const [frisch, setFrisch] = useState<{
+    fuer: string;
+    basis: string | undefined;
+    kopf: ProtokollKopf;
+    dokument: Block[];
+  } | null>(null);
+  const gilt = frisch?.fuer === sitzung.schluessel && frisch.basis === sitzung.kopf?.stand;
+  const kopf = gilt ? frisch.kopf : sitzung.kopf;
+  const dokument = gilt ? frisch.dokument : dokumentDerSitzung(kopf, teile);
+  useMitlesen(!!mitlesen && kopf?.status === 'entwurf', async () => {
+    const vorher = sitzung.kopf;
+    if (!mitlesen || !vorher) return;
+    const r = await protokollLesen({ ...mitlesen, sitzung: vorher.sitzung }).catch(() => null);
+    // Weg, gerade nicht vollständig lesbar oder nicht lesbar: Das Bisherige bleibt stehen.
+    if (!r?.kopf || !r.dokument) return;
+    if (r.kopf.stand === kopf?.stand && r.kopf.status === kopf.status) return;
+    setFrisch({
+      fuer: sitzung.schluessel,
+      basis: vorher.stand,
+      kopf: r.kopf,
+      dokument: r.dokument,
+    });
+  });
   const [teilenOffen, setTeilenOffen] = useState(false);
   const darfTeilen = !!teilen && !!dokument && kopf?.status !== 'geplant';
 

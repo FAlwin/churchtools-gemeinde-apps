@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import {
   sperreVon,
@@ -29,10 +29,19 @@ import * as BS from './beitragSchreiben';
 import { Unklar } from '@ui/ct/fehler';
 import * as LO from './loeschen';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
+import type { FestePunkteWert } from './festePunkteKontext';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
 // Was der Editor über `einfuegen` bekam (S5-4) – es steht danach in seinem Dokument.
-const E = vi.hoisted(() => ({ einfuegen: vi.fn(), zusatz: [] as unknown[] }));
+const E = vi.hoisted(() => ({
+  einfuegen: vi.fn(),
+  zusatz: [] as unknown[],
+  ersetzt: [] as unknown[],
+  // Der Kontext der festen Punkte, wie die Blöcke ihn sehen (W16: `darfHaken`).
+  feste: null as FestePunkteWert | null,
+  // Was der Knopf „melden“ als Änderung meldet (W16: nur ein Schnappschuss).
+  meldung: [] as unknown[],
+}));
 // Vorschläge in „Mitarbeit“: die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
 const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
 vi.mock('./vorschlaegeSchreiben', () => ({
@@ -131,9 +140,10 @@ vi.mock('./DokumentEditor', async () => {
     }) => {
       const k = useContext(AufgabenKontext);
       const feste = useContext(FestePunkteKontext);
+      E.feste = feste;
       useImperativeHandle(griff, () => ({
         dokument: () => [...MIT_AUFGABE, ...E.zusatz],
-        ersetzen: () => undefined,
+        ersetzen: (d: unknown) => E.ersetzt.push(d),
         einfuegen: (b: unknown[], vor: string | null) => {
           E.einfuegen(b, vor);
           E.zusatz.push(...b);
@@ -150,6 +160,9 @@ vi.mock('./DokumentEditor', async () => {
           <span data-testid="editor">{bearbeitbar ? 'bearbeitbar' : 'nur lesen'}</span>
           <button type="button" onClick={() => onAenderung(MIT_AUFGABE)}>
             tippen
+          </button>
+          <button type="button" onClick={() => onAenderung(E.meldung)}>
+            melden
           </button>
           <button
             type="button"
@@ -221,16 +234,17 @@ const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void, onGeloescht?: () 
     zeitzone: 'Europe/Berlin',
     onZurueck,
   };
-  const r = render(<ProtokollSchreiben {...props} ich={{ person: 1, name: 'Alwin' }} />);
+  const r = render(<ProtokollSchreiben leitung {...props} ich={{ person: 1, name: 'Alwin' }} />);
   // Die Liste dahinter zeichnet neu und reicht dabei neue Objekte herein – das darf den Editor nicht neu laden.
   const neuZeichnen = () =>
-    r.rerender(<ProtokollSchreiben {...props} ich={{ person: 1, name: 'Alwin' }} />);
+    r.rerender(<ProtokollSchreiben leitung {...props} ich={{ person: 1, name: 'Alwin' }} />);
   return { ...r, neuZeichnen };
 };
 
 beforeEach(() => {
   lesen.mockResolvedValue({ kopf: KOPF, dokument: DOK });
   E.zusatz.length = 0;
+  E.ersetzt.length = 0;
   VS.stand.clear();
 });
 
@@ -390,6 +404,7 @@ describe('ProtokollSchreiben', () => {
     const onZuSitzung = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -447,6 +462,7 @@ describe('ProtokollSchreiben', () => {
     const onZuSitzung = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -615,6 +631,7 @@ describe('Vorschläge beim Schreiben (S5-4)', () => {
   const zeigeMit = (direkt: boolean) =>
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZ}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -723,6 +740,7 @@ describe('Freigeben (S6-1)', () => {
   const zeigeFrei = (onFreigegeben = vi.fn()) => {
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={{ ...SITZUNG, kopf: MIT_TREFFEN }}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -773,6 +791,26 @@ describe('Freigeben (S6-1)', () => {
     expect(ort).toEqual({ modul: 24, kategorie: 62, sitzung: 's1' });
     expect(wer).toEqual({ person: 1, name: 'Alwin Friesen' });
     expect(AW.treffenAbschliessen).toHaveBeenCalledWith(194, 15);
+  });
+
+  it('Freigeben schreibt die frisch gelesene Anwesenheit als Schnappschuss ins Protokoll (W16)', async () => {
+    vi.mocked(S.freigeben).mockResolvedValue({
+      art: 'ok',
+      kopf: { ...MIT_TREFFEN, status: 'frei' },
+    });
+    E.zusatz.push({ id: 'anw', type: 'verweis', props: { art: 'anwesenheit' }, children: [] });
+    const fertig = zeigeFrei();
+    const d = await oeffnen();
+    await within(d).findByText('Anwesenheit: 1 noch offen – geprüft?');
+    await freigabeKlick();
+    await waitFor(() => expect(fertig).toHaveBeenCalled());
+    const anw = vi.mocked(S.freigeben).mock.calls[0][3].find((b) => b.id === 'anw');
+    expect(JSON.parse(String(anw?.props?.schnappschuss))).toEqual({
+      personen: [
+        { person: 1, name: 'Alwin Friesen', status: 'da' },
+        { person: 19, name: 'Spike Musiker', status: 'offen' },
+      ],
+    });
   });
 
   it('Treffen lässt sich nicht abschließen: „freigegeben“ mit „Nochmal versuchen“ – klappt es dann, weiter', async () => {
@@ -953,6 +991,7 @@ describe('Teilen / PDF im Editor (S6-3b)', () => {
     vi.mocked(M.ladeGruppenMitglieder).mockClear();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -996,6 +1035,7 @@ describe('Mit KI füllen (S8-2)', () => {
   const zeigeKi = () =>
     render(
       <ProtokollSchreiben
+        leitung
         onBearbeiten={vi.fn()}
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
@@ -1021,6 +1061,7 @@ describe('Mit KI füllen (S8-2)', () => {
     const onBearbeiten = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         onBearbeiten={onBearbeiten}
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
@@ -1198,5 +1239,212 @@ describe('Protokoll löschen im Editor (W6)', () => {
     await new Promise((x) => setTimeout(x, 30));
     expect(S.sperreFreigeben).not.toHaveBeenCalled();
     expect(S.speichern).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **Mitlesen im Editor** (W16): alle 10 s, solange jemand anderes schreibt oder niemand schreibt und man selbst nichts
+ * geändert hat – nie, solange man selbst schreibt; Pause bei verdecktem Fenster. Fake-Timer: Mit echten Timern bewiese
+ * ein Test nichts über den Takt.
+ */
+describe('ProtokollSchreiben – Mitlesen (W16)', () => {
+  let verdeckt = false;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    verdeckt = false;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => verdeckt });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  // Die Attrappen antworten sofort – es reicht, die anstehenden Versprechen abzuarbeiten.
+  const warten = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
+  const johann = () => sperreVon({ person: 7, name: 'Johann', fenster: 'j' }, new Date());
+  const DOK2 = [{ id: 'h2', type: 'heading', props: { level: 1 }, content: 'Neu', children: [] }];
+
+  it('jemand anderes schreibt: alle 10 s frisch gelesen, der neue Text kommt in denselben Editor', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    const editor = screen.getByTestId('editor');
+    expect(editor.textContent).toBe('nur lesen');
+    expect(lesen).toHaveBeenCalledTimes(1);
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(9_999);
+    expect(lesen).toHaveBeenCalledTimes(1);
+    await warten(1);
+    expect(lesen).toHaveBeenCalledTimes(2);
+    expect(E.ersetzt).toEqual([DOK2]);
+    // Derselbe Editor (nicht neu aufgebaut, kein „Wird geladen“) – sonst spränge die Seite nach oben.
+    expect(screen.getByTestId('editor')).toBe(editor);
+    expect(screen.getByText('Johann schreibt gerade.')).toBeTruthy();
+    expect(screen.getByText(/aktualisiert sich alle 10 Sekunden/)).toBeTruthy();
+    // Gleicher Stand beim nächsten Mal: nichts ersetzt.
+    await warten(10_000);
+    expect(lesen).toHaveBeenCalledTimes(3);
+    expect(E.ersetzt).toHaveLength(1);
+  });
+
+  it('Fenster verdeckt: kein Lesen – beim Zurückkommen sofort', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    verdeckt = true;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await warten(60_000);
+    expect(lesen).toHaveBeenCalledTimes(1);
+    verdeckt = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await warten();
+    expect(lesen).toHaveBeenCalledTimes(2);
+  });
+
+  it('niemand schreibt, man selbst hat nichts geändert: fängt jemand an, sieht man es von selbst', async () => {
+    zeige();
+    await warten();
+    expect(screen.getByTestId('editor').textContent).toBe('bearbeitbar');
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(10_000);
+    expect(lesen).toHaveBeenCalledTimes(2);
+    expect(E.ersetzt).toEqual([DOK2]);
+    expect(screen.getByText('Johann schreibt gerade.')).toBeTruthy();
+    expect(screen.getByTestId('editor').textContent).toBe('nur lesen');
+  });
+
+  it('man schreibt selbst: kein Mitlesen', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'x' } });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'y' } });
+    zeige();
+    await warten();
+    fireEvent.click(screen.getByText('tippen'));
+    await warten(5_000); // Sperre genommen und gespeichert
+    const bisher = lesen.mock.calls.length;
+    await warten(60_000);
+    expect(lesen).toHaveBeenCalledTimes(bisher);
+    expect(E.ersetzt).toHaveLength(0);
+  });
+
+  it('neuer Stand, aber gerade nicht vollständig lesbar: nichts übernommen – beim nächsten Mal schon', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: null });
+    await warten(10_000);
+    expect(E.ersetzt).toHaveLength(0);
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(10_000);
+    // Hätte der erste Abruf den Stand „b“ schon übernommen, gälte der Text jetzt als bekannt und käme nie an.
+    expect(E.ersetzt).toEqual([DOK2]);
+  });
+});
+
+/**
+ * **„Schreibt mit“ im Editor** (W16): schreibt den Entwurf, füllt mit KI, übernimmt Vorschläge – aber kein Freigeben, kein
+ * Löschen, kein Ablehnen, und in „Offene To-Dos“ nur die Haken eines Mitarbeiters (W9). Jeweils mit der Leitung als Gegenstück.
+ */
+describe('Schreibt mit (W16)', () => {
+  const SITZ: Sitzung = { ...SITZUNG, termin: null, treffen: null, anfragen: [] };
+  const zeigeAls = (leitung: boolean) => {
+    const v = neuerVorschlag({
+      id: 'v1',
+      gruppe: 194,
+      titel: 'Thema v1',
+      text: '',
+      ziel: zielVon(SITZ),
+      ich: { person: 19, name: 'Peter Wiens' },
+      am: '2026-10-20T10:00:00Z',
+    });
+    VS.stand.set('v1', v);
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce([{ wert: 1, x: v }]);
+    return render(
+      <ProtokollSchreiben
+        leitung={leitung}
+        sitzung={SITZ}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        kommend={[SITZ]}
+        onGeloescht={vi.fn()}
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+  };
+
+  it('kein Freigeben und kein Löschen – „Mit KI füllen“ schon', async () => {
+    const r = zeigeAls(false);
+    expect(await screen.findByRole('button', { name: /Mit KI füllen/ })).toBeTruthy();
+    expect(screen.getByTestId('editor').textContent).toBe('bearbeitbar');
+    expect(screen.queryByRole('button', { name: 'Protokoll freigeben' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Protokoll löschen' })).toBeNull();
+    r.unmount();
+    zeigeAls(true);
+    expect(await screen.findByRole('button', { name: 'Protokoll freigeben' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Protokoll löschen' })).toBeTruthy();
+  });
+
+  it('Vorschläge: übernehmen und aufs nächste Mal ja, ablehnen nur die Leitung', async () => {
+    const aufklappen = async () =>
+      fireEvent.click(await screen.findByRole('button', { name: /Thema v1/ }));
+    const r = zeigeAls(false);
+    await aufklappen();
+    expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nächstes Mal' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+    r.unmount();
+    zeigeAls(true);
+    await aufklappen();
+    expect(screen.getByRole('button', { name: 'Ablehnen' })).toBeTruthy();
+  });
+
+  it('„Offene To-Dos“: abhaken nur, was ein Mitarbeiter darf – die Leitung alles', async () => {
+    const fremd = neueAufgabe({
+      id: 'f',
+      gruppe: 194,
+      sitzung: 'alt',
+      text: 'Fremd',
+      von: 7,
+      am: '2026-10-01T10:00:00Z',
+    });
+    const eigen = { ...fremd, id: 'e', wer: [1] };
+    const anderer = { ...fremd, id: 'a', wer: [7] };
+    const darf = () => E.feste?.darfHaken;
+    const r = zeigeAls(false);
+    await screen.findByTestId('editor');
+    expect(darf()?.(eigen)).toBe(true);
+    expect(darf()?.(anderer)).toBe(false);
+    r.unmount();
+    zeigeAls(true);
+    await screen.findByTestId('editor');
+    expect(darf()).toBeUndefined(); // Leitung: alle
+  });
+});
+
+describe('Schnappschuss der Anwesenheit im Editor (W16)', () => {
+  const MIT_ANW = [
+    ...DOK,
+    { id: 'anw', type: 'verweis', props: { art: 'anwesenheit' }, children: [] },
+  ] as typeof DOK;
+  const schnapp = (wert: string) =>
+    MIT_ANW.map((b) => (b.id === 'anw' ? { ...b, props: { ...b.props, schnappschuss: wert } } : b));
+
+  it('nur ein neuer Schnappschuss ist keine Eingabe: kein Speichern, keine Sperre – eine echte Eingabe schon', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    lesen.mockResolvedValue({ kopf: KOPF, dokument: MIT_ANW });
+    zeige();
+    await screen.findByText('bearbeitbar');
+    E.meldung = schnapp('{"personen":[]}');
+    fireEvent.click(screen.getByText('melden'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(S.sperreNehmen).not.toHaveBeenCalled();
+    expect(S.speichern).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('tippen'));
+    await waitFor(() => expect(S.sperreNehmen).toHaveBeenCalled());
   });
 });

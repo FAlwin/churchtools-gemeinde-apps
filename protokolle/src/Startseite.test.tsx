@@ -274,6 +274,26 @@ describe('Startseite (S3-3)', () => {
     zeigen(GRUPPEN, [60]);
     await screen.findByText('Nichts offen. Schön!');
     expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam1 offenes To-Do/);
+    // „Schreibt mit“ (W16): schreibt in „Protokolle“, zählt aber wie ein Mitarbeiter nach meinem Teil.
+    cleanup();
+    const ALS_MITSCHREIBEN = [{ ...GRUPPEN[0], rolle: 8 }, ...GRUPPEN.slice(1)];
+    m.ladeUebersicht.mockResolvedValue([
+      {
+        ...UEBERSICHT[0],
+        gruppe: ALS_MITSCHREIBEN[0],
+        sitzungen: {
+          ...UEBERSICHT[0].sitzungen,
+          stufen: [
+            { rolle: 1101, stufe: 'leitung' as const, typ: 9 },
+            { rolle: 1102, stufe: 'schreibtMit' as const, typ: 8 },
+          ],
+        },
+        aufgaben: [meinsFertig],
+      },
+    ]);
+    zeigen(ALS_MITSCHREIBEN, [60]);
+    await screen.findByText('Nichts offen. Schön!');
+    expect(zeilen('Deine Gruppen')[0]).toMatch(/^Leitungsteam0 offene To-Dos/);
   });
 
   it('ein To-Do öffnet seine Sitzung; ohne bekannte Sitzung ist es kein Knopf', async () => {

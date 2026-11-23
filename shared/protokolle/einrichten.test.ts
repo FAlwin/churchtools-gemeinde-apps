@@ -6,7 +6,10 @@ import {
   vergebenNachher,
   vergebenPruefen,
   rechteNummernAus,
+  rollenMitTyp,
   sollRechte,
+  STUFEN,
+  stufeSchreibt,
   VERSTECKTE_GRUPPE_SEHEN,
   GRUPPENTREFFEN_DURCHFUEHREN,
   GRUPPENTREFFEN_PFLEGEN,
@@ -53,6 +56,7 @@ const EINRICHTUNG: Einrichtung = {
     { rolle: 72, stufe: 'leitung' },
     { rolle: 71, stufe: 'mitglied' },
     { rolle: 75, stufe: 'keine' },
+    { rolle: 73, stufe: 'schreibtMit' },
   ],
   kategorien: { protokolle: 60, mitarbeit: 61, vorlagen: 5 },
   kalender: 15,
@@ -121,6 +125,39 @@ describe('sollRechte', () => {
   });
   it('Kein Zugriff: gar nichts', () => {
     expect(von(75)).toEqual([]);
+  });
+  it('Schreibt mit (W16): wie die Leitung in Protokolle (anlegen, ändern, löschen) und Gruppentreffen durchführen – nicht pflegen, kein Kalender bearbeiten', () => {
+    expect(von(73).sort()).toEqual(
+      [
+        '2090:null',
+        '2091:60',
+        '2095:60',
+        '2091:61',
+        '2095:61',
+        '2091:5',
+        '2095:5',
+        '2096:61',
+        '2097:61',
+        '2096:60',
+        '2097:60',
+        '2098:60',
+        '403:15',
+        `${VERSTECKTE_GRUPPE_SEHEN}:null`,
+        `${GRUPPENTREFFEN_DURCHFUEHREN}:null`,
+      ].sort(),
+    );
+  });
+  it('Stufen in der Reihenfolge der Tabelle: „Schreibt mit“ zwischen Mitglied und Leitung', () => {
+    expect(STUFEN.map((x) => x.text)).toEqual([
+      'Kein Zugriff',
+      'Lesen + eigene To-Dos',
+      'Schreibt mit',
+      'Leitung',
+    ]);
+    expect(STUFEN.filter((x) => stufeSchreibt(x.wert)).map((x) => x.wert)).toEqual([
+      'schreibtMit',
+      'leitung',
+    ]);
   });
   it('ohne Kalender und nicht versteckt: keine Kalender- und keine 10119-Rechte', () => {
     const s = sollRechte({ ...EINRICHTUNG, kalender: null, versteckt: false }, N);
@@ -232,7 +269,7 @@ describe('Zusatzrechte (Kalender, 10119): nur selbst gesetzte werden entzogen', 
 });
 
 describe('vergebenPruefen (Security-Review 16.11.2026: Merkliste aus einer Kategorie der Leitung)', () => {
-  const ROLLEN = [72, 71, 75];
+  const ROLLEN = [72, 71, 75, 73];
   // Was das Einrichten selbst gemerkt haben kann – vom Erzeuger, nicht von Hand.
   const echt = vergebenNachher(sollRechte(EINRICHTUNG, N), sollRechte(EINRICHTUNG, N), [], N);
 
@@ -313,6 +350,13 @@ describe('istEinstellung', () => {
   };
   it('erkennt die eigene Einstellung', () => {
     expect(istEinstellung(gut)).toBe(true);
+    // W16: „Schreibt mit“ und die Rolle an der Mitgliedschaft (`typ`).
+    expect(
+      istEinstellung({ ...gut, rollen: [{ rolle: 2127, stufe: 'schreibtMit', typ: 8 }] }),
+    ).toBe(true);
+    expect(istEinstellung({ ...gut, rollen: [{ rolle: 2127, stufe: 'leitung', typ: '8' }] })).toBe(
+      false,
+    );
     expect(istEinstellung({ ...gut, kalender: 4, punkte: 'direkt' })).toBe(true);
     expect(istEinstellung({ ...gut, vergeben: [{ rolle: 1, authId: 403, dataId: 4 }] })).toBe(true);
   });
@@ -345,5 +389,28 @@ describe('rechteAus / rechtRumpf', () => {
       dataId: [42],
     });
     expect(rechtRumpf({ rolle: 1, authId: 10119, dataId: null })).toEqual({ authId: 10119 });
+  });
+});
+
+describe('rollenMitTyp (W16)', () => {
+  it('schreibt zu jeder Rolle die Rolle an der Mitgliedschaft – frisch aus ChurchTools, nicht aus der Wahl', () => {
+    expect(
+      rollenMitTyp(
+        [
+          { rolle: 1101, stufe: 'leitung' },
+          { rolle: 1102, stufe: 'schreibtMit' },
+          { rolle: 1103, stufe: 'mitglied' },
+        ],
+        [{ id: 1101, groupTypeRoleId: 9 }, { id: '1102', groupTypeRoleId: '8' }, { id: 1103 }],
+      ),
+    ).toEqual([
+      { rolle: 1101, stufe: 'leitung', typ: 9 },
+      { rolle: 1102, stufe: 'schreibtMit', typ: 8 },
+      { rolle: 1103, stufe: 'mitglied' },
+    ]);
+  });
+  it('ein alter `typ` in der Wahl zählt nicht; ohne lesbare Rollen bleibt er weg', () => {
+    const alt = [{ rolle: 1, stufe: 'leitung' as const, typ: 99 }];
+    expect(rollenMitTyp(alt, null)).toEqual([{ rolle: 1, stufe: 'leitung' }]);
   });
 });

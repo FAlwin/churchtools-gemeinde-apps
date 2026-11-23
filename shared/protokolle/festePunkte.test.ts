@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
 import { BLOCK, textAus, type Block } from './dokument';
+import { schnappschussAus } from './anwesenheit';
 import {
+  anwesenheitFesthalten,
   festeAufgabenAus,
+  festhaltenFuerFreigabe,
   festePunkteFesthalten,
   festesProtokollAus,
   festesProtokollWert,
@@ -243,5 +246,45 @@ describe('Festhalten bei der Freigabe: je Art (S5-3)', () => {
     expect(anw.props).toEqual({ art: 'anwesenheit', gaeste: '["Hans"]' });
     expect(festeAufgabenAus(offen.props?.fest)).toEqual({ offen: [], erledigt: [], seit: null });
     expect(festesProtokollAus(letztes.props?.fest)).toEqual({ sitzung: 'okt' });
+  });
+});
+
+describe('Festhalten bei der Freigabe: Anwesenheit als Schnappschuss (W16)', () => {
+  const stand = {
+    abgeschlossen: false,
+    begonnen: true,
+    personen: [{ person: 1, name: 'Alwin Friesen', status: 'da' as const }],
+  };
+  const dok: Block[] = [
+    { id: 'p', type: 'paragraph', content: 'Text' },
+    {
+      id: 'a',
+      type: BLOCK.verweis,
+      props: { art: 'anwesenheit', gaeste: '["Hans"]', schnappschuss: 'alt' },
+    },
+  ];
+
+  it('jeder Punkt „Anwesenheit“ bekommt den gelesenen Stand – auch über einen älteren Schnappschuss', () => {
+    const [p, a] = anwesenheitFesthalten(dok, stand);
+    expect(p).toEqual(dok[0]);
+    expect(a.props?.gaeste).toBe('["Hans"]');
+    expect(schnappschussAus(a.props?.schnappschuss)?.personen).toEqual(stand.personen);
+  });
+
+  it('ohne gelesenen Stand bleibt der bisherige Schnappschuss stehen', () => {
+    expect(anwesenheitFesthalten(dok, null)).toEqual(dok);
+    expect(anwesenheitFesthalten(dok, undefined)).toEqual(dok);
+  });
+
+  it('festhaltenFuerFreigabe reicht die Anwesenheit durch', () => {
+    const d = festhaltenFuerFreigabe(dok, {
+      aufgaben: [],
+      gruppe: 11,
+      sitzung: { beginn: '2026-11-23T18:00:00Z', kopf: { sitzung: 'neu', status: 'entwurf' } },
+      protokolle: [],
+      heute: '2026-11-23',
+      anwesenheit: stand,
+    });
+    expect(schnappschussAus(d[1].props?.schnappschuss)?.personen).toEqual(stand.personen);
   });
 });

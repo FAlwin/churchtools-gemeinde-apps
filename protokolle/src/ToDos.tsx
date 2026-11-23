@@ -61,6 +61,7 @@ import { ToDoZiehBereich, ZiehKarte, ZiehSpalte } from './ToDoZiehen';
 import { listenForm, useKastenBreite } from './useKastenBreite';
 import { useToDoEinstellungen } from './useToDoEinstellungen';
 import type { AufgabenStand } from './useFaellige';
+import { istLeitungIn } from '@shared/protokolle/zugang';
 import styles from './ToDos.module.scss';
 
 type Zustand =
@@ -125,7 +126,10 @@ export function ToDos({
   modul: number;
   ich: { person: number; name: string };
   gruppen: ProtokollGruppe[];
-  /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – wer „Protokolle“ schreibt, ist Leitung. */
+  /**
+   * Kategorien, in denen man schreiben darf (`Start.schreibbar`). Leitung ist, wer dort schreibt – außer die eigene Rolle
+   * steht in der Einstellung auf „Schreibt mit“ (W16, `istLeitungIn`).
+   */
   schreibbar: readonly number[];
   onSitzung: (gruppe: number, sitzung: string) => void;
   /** Gelesene To-Dos je Gruppe nach oben geben (Zähler am Reiter) – auch nach jeder Änderung hier. */
@@ -217,8 +221,9 @@ export function ToDos({
           { id: ich.person, name: ich.name, bild: null, initialen: initialenAus(ich.name) },
         ],
       ]);
+  // Leitungsrechte bei To-Dos (W9/W10) – „Schreibt mit“ hat sie nicht (W16).
   const leitungIn = (g: ProtokollGruppe) =>
-    g.protokolle !== null && schreibbar.includes(g.protokolle);
+    istLeitungIn(g, schreibbar, ue.find((u) => u.gruppe.id === g.id)?.sitzungen.stufen);
   const sichtbar: ToDoEintrag[] = ue.flatMap((u) =>
     u.aufgaben
       .filter((a) => sichtbarFuer(a, { ich: ich.person, leitung: leitungIn(u.gruppe) }))

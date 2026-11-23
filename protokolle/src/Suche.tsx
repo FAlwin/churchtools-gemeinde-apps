@@ -18,6 +18,7 @@ import {
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { kachelVon } from './anzeige';
 import { Etikett } from '@ui/bedienung/Etikett';
+import { istLeitungIn } from '@shared/protokolle/zugang';
 import styles from './Suche.module.scss';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
 
@@ -108,11 +109,16 @@ export function Suche({ modul, gruppen, begriff, ich, schreibbar, onTreffer }: S
     () => (zustand.art === 'fertig' ? suchIndex(zustand.uebersicht) : []),
     [zustand],
   );
-  // Wie ein To-Do für mich steht (`standFuer`): als Mitarbeiter bei „Jeder für sich“ nur mein Teil.
+  // Wie ein To-Do für mich steht (`standFuer`): als Mitarbeiter bei „Jeder für sich“ nur mein Teil. Leitung wie überall
+  // (`istLeitungIn`, W16) – „Schreibt mit“ sieht es wie ein Mitarbeiter.
   const standVon = (e: SuchEintrag): AufgabenStatus | null => {
-    const kategorie = gruppen.find((g) => g.id === e.gruppe.id)?.protokolle ?? null;
+    const g = gruppen.find((x) => x.id === e.gruppe.id);
+    const stufen =
+      zustand.art === 'fertig'
+        ? zustand.uebersicht.find((u) => u.gruppe.id === e.gruppe.id)?.sitzungen.stufen
+        : undefined;
     return e.aufgabe
-      ? standFuer(e.aufgabe, { ich, leitung: kategorie !== null && schreibbar.includes(kategorie) })
+      ? standFuer(e.aufgabe, { ich, leitung: !!g && istLeitungIn(g, schreibbar, stufen) })
       : null;
   };
   const woerter = begriffe(begriff);

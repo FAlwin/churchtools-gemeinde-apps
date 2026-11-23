@@ -42,6 +42,8 @@ export function FesterPunkt({
   gaesteSetzen,
   ohne: ausgeblendet,
   ohneSetzen,
+  schnappschuss,
+  schnappschussSetzen,
 }: {
   art: unknown;
   fest: unknown;
@@ -56,6 +58,10 @@ export function FesterPunkt({
   ohne?: unknown;
   /** „Anwesenheit“ beim Schreiben: Personen aus dem Protokoll nehmen/zurückholen. */
   ohneSetzen?: (ohne: number[]) => void;
+  /** „Anwesenheit“: `props.schnappschuss` des Blocks (W16) – gilt, wenn ChurchTools sie nicht zeigt. */
+  schnappschuss?: unknown;
+  /** „Anwesenheit“ beim Schreiben: den Schnappschuss in den Block schreiben (am Rückgängig-Verlauf vorbei). */
+  schnappschussSetzen?: (wert: string) => void;
 }) {
   const w = useContext(FestePunkteKontext);
   const ohne = istVerweisArt(art) ? VERWEIS_TEXT[art] : 'Fester Punkt';
@@ -72,6 +78,8 @@ export function FesterPunkt({
         gaesteSetzen={gaesteSetzen}
         ohne={ausgeblendet}
         ohneSetzen={ohneSetzen}
+        schnappschuss={schnappschuss}
+        schnappschussSetzen={schnappschussSetzen}
       />
     );
   return <p className={ansicht.verweis}>{ohne}</p>;
@@ -133,7 +141,7 @@ function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boo
   const wer = zustaendigeNamen(a, w.name ?? null);
   const kurz = zustaendigKurz(wer);
   const ueber = istUeberfaellig(a, w.heute);
-  const aendern = abhaken ? w.status : undefined;
+  const aendern = abhaken && (w.darfHaken?.(a) ?? true) ? w.status : undefined;
   return (
     <li className={styles.zeile}>
       <Haken a={a} ich={w.ich ?? 0} onSchritt={aendern ? (s) => aendern(a, s) : undefined} />

@@ -365,13 +365,19 @@ export function VerweisBlock({
   block,
   editor,
 }: {
-  block: { id: string; props: { art: string; fest: string; gaeste?: string; ohne?: string } };
+  block: {
+    id: string;
+    props: { art: string; fest: string; gaeste?: string; ohne?: string; schnappschuss?: string };
+  };
   // Schmal wie bei den anderen Blöcken: Der volle `ProtokollEditor` entsteht erst aus dem Schema mit diesem Block –
   // in der Signatur wäre das ein Typ-Kreis. Zur Laufzeit ist es derselbe Editor.
   editor: {
     isEditable: boolean;
-    updateBlock: (b: string, u: { props: { gaeste: string } | { ohne: string } }) => unknown;
-  };
+    updateBlock: (
+      b: string,
+      u: { props: { gaeste: string } | { ohne: string } | { schnappschuss: string } },
+    ) => unknown;
+  } & VerlaufsfreierEditor;
 }) {
   const w = useContext(FestePunkteKontext);
   const kasten = useRef<HTMLDivElement>(null);
@@ -409,6 +415,18 @@ export function VerweisBlock({
         ohneSetzen={
           editor.isEditable && block.props.art === 'anwesenheit'
             ? (o) => editor.updateBlock(block.id, { props: { ohne: ohneWert(o) } })
+            : undefined
+        }
+        schnappschuss={block.props.schnappschuss}
+        // Der Schnappschuss der Anwesenheit (W16) schreibt der Kasten von selbst – darum NICHT in den Rückgängig-Verlauf:
+        // Rückgängig nähme ihn zurück, der Kasten setzte ihn sofort wieder, und Rückgängig käme nie weiter (Lehre aus
+        // TF-PROT-29, PR #1125 – `ohneVerlauf`).
+        schnappschussSetzen={
+          editor.isEditable && block.props.art === 'anwesenheit'
+            ? (wert) =>
+                ohneVerlauf(editor, () =>
+                  editor.updateBlock(block.id, { props: { schnappschuss: wert } }),
+                )
             : undefined
         }
       />

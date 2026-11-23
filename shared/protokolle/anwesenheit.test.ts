@@ -7,11 +7,15 @@ import {
   nachTipp,
   ohneAus,
   ohneAusgeblendete,
+  nurSchnappschussAnders,
   ohneWert,
   personenAus,
+  schnappschussAus,
+  schnappschussWert,
   statusAus,
   treffenStandAus,
   vorbelegung,
+  zumLesen,
   type TreffenStand,
 } from './anwesenheit';
 
@@ -214,5 +218,77 @@ describe('Gäste (nur im Protokoll)', () => {
     expect(gaesteWert([])).toBe('');
     expect(gaesteWert([' Hans', 'Hans', ''])).toBe('["Hans"]');
     expect(gaesteAus(gaesteWert(['Erika', 'Hans']))).toEqual(['Erika', 'Hans']);
+  });
+});
+
+describe('Schnappschuss im Protokoll (W16)', () => {
+  const live: TreffenStand = {
+    abgeschlossen: true,
+    begonnen: true,
+    personen: [
+      { person: 1, name: 'Alwin Friesen', status: 'da' },
+      { person: 19, name: 'Spike Musiker', status: 'offen' },
+    ],
+  };
+
+  it('schreiben und lesen: Person, Name, Status – nichts sonst', () => {
+    const wert = schnappschussWert(live);
+    expect(JSON.parse(wert)).toEqual({ personen: live.personen });
+    expect(schnappschussAus(wert)).toEqual({
+      abgeschlossen: false,
+      begonnen: true,
+      personen: live.personen,
+    });
+  });
+
+  it('ohne Personen leer; Leeres, Kaputtes und Fremdes ergibt keinen Schnappschuss', () => {
+    expect(schnappschussWert({ personen: [] })).toBe('');
+    for (const x of ['', 'kaputt{', '[]', '{"personen":3}', 42, null, undefined])
+      expect(schnappschussAus(x)).toBeNull();
+  });
+
+  it('Einträge ohne Person oder Name fallen weg, unbekannter Status gilt als offen', () => {
+    const roh = JSON.stringify({
+      personen: [
+        { person: 1, name: ' Alwin ', status: 'da' },
+        { person: 'x', name: 'Kaputt', status: 'da' },
+        { person: 2, name: '', status: 'da' },
+        { person: 3, name: 'Peter', status: 'irgendwas' },
+      ],
+    });
+    expect(schnappschussAus(roh)?.personen).toEqual([
+      { person: 1, name: 'Alwin', status: 'da' },
+      { person: 3, name: 'Peter', status: 'offen' },
+    ]);
+  });
+
+  it('zumLesen: live, wo lesbar; nicht lesbar → Schnappschuss; ohne Schnappschuss → unbekannt; kein Treffen bleibt null', () => {
+    const wert = schnappschussWert(live);
+    expect(zumLesen(live, wert)).toBe(live);
+    expect(zumLesen('unbekannt', wert)).toEqual(schnappschussAus(wert));
+    expect(zumLesen('unbekannt', '')).toBe('unbekannt');
+    expect(zumLesen(null, wert)).toBeNull();
+  });
+});
+
+describe('nurSchnappschussAnders (W16)', () => {
+  const anw = (schnappschuss?: string) => ({
+    id: 'v',
+    type: 'verweis',
+    props: { art: 'anwesenheit', ...(schnappschuss === undefined ? {} : { schnappschuss }) },
+  });
+  const text = (t: string) => ({ id: 'p', type: 'paragraph', content: t });
+
+  it('nur der Schnappschuss neu oder anders: ja – auch tief in Unterpunkten', () => {
+    expect(nurSchnappschussAnders([text('a'), anw('')], [text('a'), anw('{"x":1}')])).toBe(true);
+    expect(nurSchnappschussAnders([anw()], [anw('{"x":1}')])).toBe(true);
+    const tief = (s: string) => [{ ...text('a'), children: [anw(s)] }];
+    expect(nurSchnappschussAnders(tief('1'), tief('2'))).toBe(true);
+  });
+
+  it('gar nichts anders oder auch etwas anderes: nein', () => {
+    expect(nurSchnappschussAnders([anw('1')], [anw('1')])).toBe(false);
+    expect(nurSchnappschussAnders([text('a'), anw('1')], [text('b'), anw('2')])).toBe(false);
+    expect(nurSchnappschussAnders([anw('1')], [anw('1'), text('neu')])).toBe(false);
   });
 });

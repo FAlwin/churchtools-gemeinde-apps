@@ -12,7 +12,11 @@ import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { terminPfad } from '@shared/ct/kalenderTermine';
-import { istEinstellung, type PunkteVonMitgliedern } from '@shared/protokolle/einrichten';
+import {
+  istEinstellung,
+  type PunkteVonMitgliedern,
+  type RollenStufe,
+} from '@shared/protokolle/einrichten';
 import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { type Aufgabe } from '@shared/protokolle/aufgaben';
 import { istVorschlag, type Vorschlag } from '@shared/protokolle/vorschlaege';
@@ -59,6 +63,11 @@ export interface GruppenSitzungen {
   punkte: PunkteVonMitgliedern;
   /** ChurchTools zeigt dieser Person die Gruppentreffen nicht (403) – „Kommend“ ist dann nur der Kalender. */
   treffenNichtFreigegeben: boolean;
+  /**
+   * Die Stufen je Rolle aus der Einstellung (W16) – daraus `istLeitungIn` (`@shared/protokolle/zugang`). `null`: keine
+   * Einstellung gelesen. Fehlt nur in älteren Testdaten.
+   */
+  stufen?: RollenStufe[] | null;
 }
 
 interface TerminRoh {
@@ -271,6 +280,7 @@ export async function ladeSitzungen(
   const teile: ProtokollTeil[] = [];
   let kalender: number | null = null;
   let punkte: PunkteVonMitgliedern = 'vorschlagen';
+  let stufen: RollenStufe[] | null = null;
   if (gruppe.protokolle !== null) {
     for (const w of await werteLesen(modulPort, modul, gruppe.protokolle)) {
       const x = wertInhalt(w);
@@ -279,6 +289,7 @@ export async function ladeSitzungen(
       else if (istEinstellung(x) && x.gruppe === gruppe.id) {
         kalender = x.kalender;
         punkte = x.punkte;
+        stufen = x.rollen;
       }
     }
   }
@@ -303,6 +314,7 @@ export async function ladeSitzungen(
     teile,
     kalender,
     punkte,
+    stufen,
     treffenNichtFreigegeben: treffen === null,
   };
 }

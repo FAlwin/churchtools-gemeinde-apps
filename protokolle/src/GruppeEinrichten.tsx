@@ -35,7 +35,7 @@ function wahlAus({ rollen, einstellung }: Awaited<ReturnType<typeof ladeGruppe>>
 
 /**
  * **Fenster „Gruppe einrichten“** (Bauplan S2-2, Entwurf 7): je Rolle Kein Zugriff · Lesen + eigene To-Dos ·
- * Leitung, wie Mitglieder Tagesordnungspunkte einbringen, und der Kalender für die Sitzungstermine. Speichern
+ * Schreibt mit (W16) · Leitung, wie Mitglieder Tagesordnungspunkte einbringen, und der Kalender für die Sitzungstermine. Speichern
  * dauert einige Sekunden (jeder Schritt wird nachgelesen) – solange ist der Knopf gesperrt; scheitert es, bleibt
  * das Fenster offen und sagt warum.
  */
@@ -163,8 +163,9 @@ export function GruppeEinrichten({
               </table>
             )}
             <small className={styles.klein}>
-              Leitung = Protokoll schreiben, freigeben, Anwesenheit, nächste Sitzung festlegen. Wer
-              keinen Zugriff hat, sieht die Protokolle nicht – auch nicht über die Schnittstelle.
+              Schreibt mit = Entwürfe schreiben, Anwesenheit eintragen, Mit KI füllen. Leitung =
+              zusätzlich freigeben, löschen, Sitzungen festlegen, To-Dos anderer ändern. Wer keinen
+              Zugriff hat, sieht die Protokolle nicht – auch nicht über die Schnittstelle.
             </small>
           </div>
 

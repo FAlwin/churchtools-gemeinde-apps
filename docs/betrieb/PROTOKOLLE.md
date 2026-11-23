@@ -6,8 +6,9 @@
 > eigenen Gruppen als Liste oder Board; die **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse).
 > Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor – mit Aufgaben (= To-Dos), Beschlüssen, Terminen,
 > Anwesenheit und festen Punkten –, beginnt Protokolle zu Terminen und Treffen (auch zu vergangenen – „Noch ohne Protokoll“, „Protokoll nachtragen“), legt die nächste Sitzung fest, füllt
-> auf Wunsch mit **KI-Vorschlägen** aus einem Transkript und gibt Protokolle frei (mit Beitrag in der Gruppe); Mitglieder
-> schlagen Punkte vor. Jedes Protokoll lässt sich als **PDF teilen**. Admins richten im Reiter **„Einstellungen“** Gruppen
+> auf Wunsch mit **KI-Vorschlägen** aus einem Transkript und gibt Protokolle frei (mit Beitrag in der Gruppe); wer die Stufe
+> **„Schreibt mit“** hat, schreibt Entwürfe wie die Leitung, gibt aber nicht frei (W16). Mitglieder schlagen Punkte vor und
+> **lesen mit**: Ein offener Entwurf zeigt neuen Text nach wenigen Sekunden von selbst. Jedes Protokoll lässt sich als **PDF teilen**. Admins richten im Reiter **„Einstellungen“** Gruppen
 > ein und pflegen die Vorlagen.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -44,16 +45,28 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Protokolle sind vertraulic
 geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
 
 - Je Gruppe gibt es zwei Kategorien im Speicher der Erweiterung: **„Protokolle · <Gruppe>“** (Kürzel
-  `protokolle-g<ID>`, nur die Leitung schreibt) und **„Mitarbeit · <Gruppe>“** (`mitarbeit-g<ID>`, To-Dos, Vorschläge und der
+  `protokolle-g<ID>`, nur Leitung und „Schreibt mit“ schreiben) und **„Mitarbeit · <Gruppe>“** (`mitarbeit-g<ID>`, To-Dos, Vorschläge und der
   Vermerk je Termin im Reiter „Termine“). Dazu gemeinsam **„Vorlagen“** (`vorlagen`).
 - Die Rechte hängen an **„Rolle X in Gruppe Y“** und folgen einem Rollenwechsel sofort. Setzen kann sie nur ein
   **Admin** (ChurchTools-Recht „Personen administrieren“) – deshalb wird jede Gruppe einmal von einem Admin
   eingerichtet: Reiter **„Einstellungen“** (nur für Admins sichtbar) → Gruppe antippen → je Rolle „Kein Zugriff“,
-  „Lesen + eigene To-Dos“ oder „Leitung“, dazu „Vorschlagen“/„Direkt eintragen“ und der Kalender → **Einrichten**.
+  „Lesen + eigene To-Dos“, „Schreibt mit“ (W16) oder „Leitung“, dazu „Vorschlagen“/„Direkt eintragen“ und der Kalender → **Einrichten**.
   Das dauert einige Sekunden (jeder Schritt wird nachgelesen); scheitert es, bleibt das Fenster offen und sagt warum.
 - Beim Einrichten bekommt jede Rolle mit Zugriff: „Modul sehen“, Lesen in allen drei Kategorien, Schreiben in
-  „Mitarbeit“; die **Leitung** zusätzlich Schreiben und Löschen in „Protokolle“ und „Termine bearbeiten“ im gewählten
-  Kalender (alle anderen: „ansehen“). Gelöscht wird in „Mitarbeit“ nie – ein To-Do wird nur als gelöscht markiert.
+  „Mitarbeit“; die **Leitung** zusätzlich Schreiben und Löschen in „Protokolle“, gruppenintern „Gruppentreffen pflegen“
+  und „… durchführen“ (Anwesenheit) und „Termine bearbeiten“ im gewählten Kalender (alle anderen: „ansehen“). Gelöscht wird
+  in „Mitarbeit“ nie – ein To-Do wird nur als gelöscht markiert.
+- **„Schreibt mit“ (W16, 23.11.2026)** – für „schreib du bitte mit“: Schreiben und Löschen in „Protokolle“ (Speichern legt
+  Teile neu an und räumt alte weg) und gruppenintern **„Gruppentreffen durchführen“** (10111, sonst ließe sich die
+  Anwesenheit nicht eintragen) – **kein** „Gruppentreffen pflegen“, **kein** „Termine bearbeiten“. Wer „Schreibt mit“ hat,
+  schreibt Entwürfe (Editor, Anwesenheit, Mit KI füllen, Bausteine), beginnt Protokolle (auch „Protokoll nachtragen“ und
+  „Neues Protokoll“) und übernimmt Vorschläge oder schiebt sie aufs nächste Mal. **Nur die Leitung** gibt frei (und nimmt
+  die Freigabe zurück), löscht, legt Sitzungen fest oder bearbeitet sie, lehnt Vorschläge ab und hat die Leitungsrechte
+  bei To-Dos (W9/W10) – „Schreibt mit“ sieht und ändert To-Dos wie ein Mitglied. In ChurchTools sehen die Datenrechte aus
+  wie bei der Leitung; den Unterschied macht die Erweiterung über die Stufe der eigenen Rolle aus der Einstellung der
+  Gruppe. Der Vorschlag beim Einrichten bleibt: Leiter-Rollen „Leitung“, alle anderen „Lesen + eigene To-Dos“ – jede
+  Gemeinde stellt „Schreibt mit“ je Gruppe selbst ein. Einstellungen von vor W16 kennen die Stufe nicht; dort gilt
+  weiter: wer schreibt, ist Leitung.
 - Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
   Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Einstellungen sie **selbst gesetzt** haben
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
@@ -152,7 +165,7 @@ einer Spalte per Ziehen (auch in der Liste); die Reihenfolge gilt nur für einen
 `protokolle_einstellungen.json` am eigenen ChurchTools-Konto (andere können die Datei lesen – drin stehen nur Ansicht und
 To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen Start; ohne Netz bleibt alles dort und wird nachgeholt.
 
-**Wer darf was am To-Do? (W9a, 20.11.2026)** – **Leitung** ist, wer in der Gruppe Protokolle schreiben darf; sie darf an jedem To-Do alles. **Mitglieder** (ohne
+**Wer darf was am To-Do? (W9a, 20.11.2026)** – **Leitung** ist, wer in der Gruppe Protokolle schreiben darf und nicht auf „Schreibt mit“ steht (W16); sie darf an jedem To-Do alles. „Schreibt mit“ zählt hier wie ein Mitglied – auch beim Abhaken in „Offene To-Dos von früher“ im Editor. **Mitglieder** (ohne
 Leitung) hängt es am Fall: **Eigenes** To-Do (nur ich bin zuständig, kein Externer) – abhaken, „in Arbeit“, Notiz, Frist, **abgeben** (an genau ein anderes
 Mitglied; „Abgeben an“ im Fenster, im Board per Ziehen mit der Rückfrage „To-Do abgeben?“), Text ändern, löschen. **Geteiltes** To-Do (mehrere Zuständige,
 auch mit einer Person außerhalb, oder „Alle“) – nur abhaken (bei „Jeder für sich“ den eigenen Teil, bei „Gemeinsam“ das ganze, auch „in Arbeit“) und Notiz.
@@ -233,10 +246,10 @@ vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nich
 die Liste aller Gruppen auf, die aktuelle trägt ein Häkchen. Wer nur eine Gruppe sieht, sieht eine einfache Überschrift.
 
 **Neu ⌄ (B6):** Im Reiter „Sitzungen“ steht rechts neben der Gruppen-Überschrift **ein grüner Knopf „Neu ⌄“** für alles, was etwas hinzufügt (Grün heißt immer hinzufügen): **Neues Protokoll · Neue Sitzung · Punkt vorschlagen**
-und, hinter einer Linie, **Protokoll nachtragen**. Die Leitung sieht alle vier, ein Mitglied nur „Punkt vorschlagen“, „Neue Sitzung“ gibt es nur mit Kalender; ohne Eintrag gibt es den Knopf nicht. Am Handy klappt
+und, hinter einer Linie, **Protokoll nachtragen**. Die Leitung sieht alle vier, „Schreibt mit“ alle außer „Neue Sitzung“ (W16), ein Mitglied nur „Punkt vorschlagen“, „Neue Sitzung“ gibt es nur mit Kalender; ohne Eintrag gibt es den Knopf nicht. Am Handy klappt
 das Menü als Blatt von unten auf. Vorher standen die vier als Knöpfe in der Kopfzeile von „Kommend“, zwei davon grün.
 
-**Neues Protokoll (Leitung, K2a):** „Neues Protokoll“ auf der Startseite und im Menü „Neu ⌄“ des Reiters „Sitzungen“ legt ein Protokoll
+**Neues Protokoll (Leitung und „Schreibt mit“, K2a/W16):** „Neues Protokoll“ auf der Startseite und im Menü „Neu ⌄“ des Reiters „Sitzungen“ legt ein Protokoll
 **ohne Termin** an – Gruppe wählen, Titel, Datum/Uhrzeit (auch nachträglich), Vorlage / „Wie letztes Mal“ / leer, auf
 Wunsch mit Gruppentreffen für die Anwesenheit. Keine Mail; der Editor öffnet sich gleich.
 
@@ -268,7 +281,7 @@ gelöscht“ (auch vergangene Termine verschwinden aus dem Kalender; freigegeben
 **Protokoll löschen (Leitung, W6):** Etwas anderes als „Sitzung absagen“: Dort bleibt ein begonnenes Protokoll als Entwurf
 stehen – hier **verschwindet das Protokoll selbst**, Entwurf oder freigegeben, ohne Umweg über „Freigabe zurücknehmen“.
 Der Knopf **„Löschen“** (rot) steht im Kopf der Sitzung neben „Bearbeiten“ und „Teilen / PDF“, in der Ansicht und im
-Editor; nur für die Leitung (wer hier schreiben darf) und nur bei einem Protokoll im Entwurf oder freigegeben – ein bloß
+Editor; nur für die Leitung (nicht „Schreibt mit“, W16) und nur bei einem Protokoll im Entwurf oder freigegeben – ein bloß
 geplantes hat keinen Text und verschwindet mit „Sitzung absagen“. Die Rückfrage „Protokoll löschen?“ zeigt Titel, Datum
 und Status und sagt: **Das lässt sich nicht rückgängig machen.** Darin:
 
@@ -317,7 +330,7 @@ eins hat. Gruppentreffen und Protokolle ohne Termin sind nie betroffen.
 direkt im Editor – Mitglieder sehen es weiter nur zum Lesen. Gespeichert wird **automatisch** drei Sekunden nach der
 letzten Eingabe; oben steht „gespeichert 19:42 Uhr“ oder „nicht gespeichert – wird erneut versucht“ (der Text bleibt
 dabei im Editor). Mit der ersten Änderung entsteht eine **Schreibsperre**: Wer das Protokoll währenddessen öffnet,
-sieht „Johann schreibt gerade“, liest den gespeicherten Stand mit (alle 30 Sekunden) und kann mit Rückfrage
+sieht „Johann schreibt gerade“, liest den gespeicherten Stand mit (alle 10 Sekunden, von selbst) und kann mit Rückfrage
 **„Schreiben übernehmen“**. Das gilt auch für dieselbe Person in einem zweiten Fenster oder auf einem zweiten Gerät.
 Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte Listen und Tabellen bleiben Listen und
 Tabellen. Der Umschalter **„Schreiben | Lesen“** zeigt dasselbe Protokoll als Lese-Ansicht – ohne Sperre; was noch
@@ -371,7 +384,26 @@ ChurchTools-**Gruppentreffen** mit ihrer Antwort auf die Einladung; beim Schreib
 vorbelegt** (Zusage = anwesend, Absage = abwesend), solange am Treffen noch niemand etwas eingetragen hat. **Gäste**
 trägt man als freien Namen ein; sie stehen nur im Protokoll. Zugeklappt (beim Lesen von selbst) steht die Kurzform
 „Anwesend (n): … · Abwesend: …“. Gibt es zur Sitzung kein Gruppentreffen, legt „Gruppentreffen anlegen“ eins an (ohne
-Mail). Eintragen darf, wer in der Gruppe „Gruppentreffen pflegen“ hat – das gibt „Gruppe einrichten“ der Leitung.
+Mail). Eintragen darf, wer in der Gruppe „Gruppentreffen durchführen“ oder „… pflegen“ hat – „Gruppe einrichten“ gibt
+beides der Leitung und „durchführen“ der Stufe „Schreibt mit“; anlegen braucht „pflegen“.
+
+**Das Protokoll merkt sich die Anwesenheit (W16, 23.11.2026):** ChurchTools zeigt die Anwesenheit eines Gruppentreffens nur
+Rollen mit „Gruppentreffen durchführen/pflegen“ – Mitglieder sahen beim Lesen „ChurchTools erlaubt dir das nicht“. Darum
+steht beim Schreiben ein **Schnappschuss** im festen Punkt (Person, Name, Status; `props.schnappschuss`): nach jedem
+eigenen Tipp und, solange man schreibt, nach dem Lesen; beim **Freigeben** kommt der frisch gelesene Stand hinein. Er geht
+am Rückgängig-Verlauf vorbei und zählt allein nicht als Eingabe (ein bloßes Öffnen nimmt also keine Sperre; er fährt mit
+dem nächsten Speichern mit). **Beim Lesen** gilt die Anwesenheit live aus ChurchTools, wo man sie sehen darf; sonst – kein
+Recht **oder** ein vorübergehender Fehler – der Schnappschuss, ohne Fehlermeldung. Lese-Ansicht und PDF verhalten sich
+gleich. Ältere Protokolle ohne Schnappschuss zeigen wie bisher die Meldung, bis sie jemand mit Recht öffnet und schreibt
+oder freigibt.
+
+**Mitlesen (W16, 23.11.2026):** Wer einen Entwurf offen hat und nicht selbst schreibt – in der Lese-Ansicht oder im Editor,
+während jemand anderes schreibt (oder niemand schreibt und man selbst nichts geändert hat) –, sieht neuen Text **von
+selbst**: Die Seite liest den gespeicherten Stand alle **10 Sekunden** nach. Echtes Live-Tippen geht nicht, weil
+ChurchTools Erweiterungen nichts zuschickt; wer schreibt, speichert 3 Sekunden nach dem Tippen – Mitlesende sehen es nach
+höchstens etwa 13 Sekunden. Nur solange das Fenster sichtbar ist (verdeckt: Pause; beim Zurückkommen sofort einmal) und
+nicht bei freigegebenen Protokollen. Die Seite springt dabei nicht. Ist ein neuer Stand gerade nicht vollständig lesbar
+(mitten im Speichern), bleibt der bisherige stehen.
 
 **Person aus der Anwesenheit nehmen:** Beim Schreiben hat jede Personenzeile einen kleinen Knopf **„… aus dem Protokoll
 nehmen“** – gedacht für Gemeinschaftskonten oder Mitglieder, die nie dabei sind, aber als Gruppenmitglied in jedem
@@ -396,9 +428,9 @@ mehr in der Liste. **Abgelehnte** stehen **7 Tage** in einer kleinen Gruppe „A
 früher aus (nur auf diesem Gerät). Gespeichert bleibt alles, nichts wird gelöscht. Was nach dem Vorschlagen passiert,
 stellt „Gruppe einrichten“ ein:
 
-- **Vorschlagen:** Die Leitung sieht beim Schreiben oben „Vorschläge · n“ – **Übernehmen** setzt einen Punkt vor
+- **Vorschlagen:** Wer schreibt (Leitung und „Schreibt mit“), sieht beim Schreiben oben „Vorschläge · n“ – **Übernehmen** setzt einen Punkt vor
   „Verschiedenes“ (sonst ans Ende), **Nächstes Mal** schiebt ihn zur Sitzung danach, **Ablehnen** fragt nach einer
-  freiwilligen Begründung, die der Vorschlagende sieht. Übernehmen geht auch in der Karte; eingefügt wird dann beim
+  freiwilligen Begründung, die der Vorschlagende sieht (**Ablehnen** nur die Leitung, W16). Übernehmen geht auch in der Karte; eingefügt wird dann beim
   nächsten Öffnen des Protokolls.
 - **Direkt eintragen:** Beim Öffnen des Protokolls stehen die Vorschläge schon als Punkte vor „Verschiedenes“.
 
@@ -455,8 +487,8 @@ trägt „ENTWURF – NOCH NICHT FREIGEGEBEN“ im Kasten, ein blasses „ENTWUR
 (`Protokoll <Gruppe> <JJJJ-MM-TT> ENTWURF.pdf`). Im Editor kommt auch noch nicht Gespeichertes mit. Wer die
 Mitgliederliste nicht sieht, bekommt bei To-Dos die Namen aus dem Verlauf oder „eine weitere Person“.
 
-**Mit KI füllen (Leitung, S8-2):** Im Editor eines Entwurfs steht neben „Freigeben“ der Knopf **„Mit KI füllen“** (nur
-die Leitung, nur solange man schreiben darf, nicht beim Lesen). Aus der Aufnahme einer Sitzung entstehen so Stichpunkte,
+**Mit KI füllen (Leitung und „Schreibt mit“, S8-2/W16):** Im Editor eines Entwurfs steht neben „Freigeben“ der Knopf **„Mit KI füllen“** (für alle,
+die im Editor schreiben – seit W16 auch „Schreibt mit“ –, nur solange man schreiben darf, nicht beim Lesen). Aus der Aufnahme einer Sitzung entstehen so Stichpunkte,
 Beschlüsse, To-Dos und Termine – du prüfst alles, bevor es ins Protokoll kommt. In drei Schritten:
 
 1. **Auftrag:** Transkript einfügen oder eine Datei (`.txt` oder Word `.docx`) wählen. Die Erweiterung sucht Namen
@@ -617,7 +649,7 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `shared/protokolle/docxText.ts` – Text einer `.docx` (`docxText(bytes)` → `{ ok, text } | { ok: false, meldung }`, mit
   `fflate`, ohne DOM).
   Das Fenster (S8-2): `protokolle/src/KiFuellenFenster.tsx`, nachgeladen über `KiFuellen.tsx` (Knopf `KiKnopf` im Kopf
-  von `ProtokollSchreiben.tsx`, Bedingung `darfKi` = Freigeben-Bedingung und nicht in der Lese-Ansicht des Editors).
+  von `ProtokollSchreiben.tsx`, Bedingung `darfKi` = man kann gerade schreiben (`schreibtJetzt`, auch „Schreibt mit“) und nicht in der Lese-Ansicht des Editors).
   Es verbindet nur: Personen `kiPersonen.ts` (`ladePersonen`, `ctAlleSeiten('/persons', 200)`), `gruppe` = die Personen
   der Liste, die Mitglied sind (verborgen/`null` → keine; solange `null` oder die Liste lädt, ist Kopieren gesperrt),
   `namenFinden` über Transkript + Tagesordnungstitel + Gruppenname, `auftragBauen`/`antwortLesen`/`uebernahmePlanen` mit
@@ -627,6 +659,17 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `zuordnungErgaenzen` (führt die gewählten Namen mit der Zuordnung zusammen) in `platzhalter.ts`, `offenePlatzhalter`
   (was in der Vorschau offen bleibt) in `ki.ts`; ein Platzhalter ohne Namen steht bei einem To-Do in `Eintrag.offen`, nie in
   `wer`. Ohne Transkript rechnet das Fenster mit leerer Zuordnung und ohne Funde.
+- **Wer darf was (W16):** `shared/protokolle/zugang.ts` – `darfSchreibenIn` (eigene Rechte: anlegen, ändern, löschen in
+  „Protokolle“) und `istLeitungIn` (zusätzlich: die eigene Rolle `ProtokollGruppe.rolle` steht in der Einstellung
+  `GruppenSitzungen.stufen` nicht auf „schreibtMit“; unbekannt → wie vor W16). Die EINE Stelle für `Sitzungen.tsx`,
+  `ProtokollSchreiben.tsx` (Eigenschaft `leitung`), `ToDos.tsx`, `Startseite.tsx`, `Suche.tsx`; `schreibbar.includes(…)`
+  steht sonst nirgends mehr. Die Einstellung speichert je Rolle `typ` (= `groupTypeRoleId`, `rollenMitTyp` beim Einrichten).
+- **Mitlesen (W16):** `protokolle/src/useMitlesen.ts` (`MITLESEN_MS` = 10 s, Pause bei `document.hidden`, nie zwei
+  Abrufe gleichzeitig) – benutzt von `SitzungAnsicht.tsx` (Eigenschaft `mitlesen`) und `ProtokollSchreiben.tsx`.
+- **Anwesenheit als Schnappschuss (W16):** `schnappschussWert`/`schnappschussAus`/`zumLesen`/`nurSchnappschussAnders` in
+  `shared/protokolle/anwesenheit.ts`; `zumLesen` ist die EINE Regel „live, sonst Schnappschuss“ für `Anwesenheit.tsx` und
+  `protokollBlatt.ts`; Festhalten bei der Freigabe in `anwesenheitFesthalten` (`festePunkte.ts`). Geschrieben wird mit
+  `ohneVerlauf` (`EditorBloecke.tsx`), gespeichert nach einem Tipp über `FestePunkteWert.speichern`.
 - Anwesenheit ohne bestimmte Personen (17.11.2026): `props.ohne` am Verweis-Block „anwesenheit“ (JSON-Liste von
   Personen-IDs, `ohneAus`/`ohneWert` in `shared/protokolle/anwesenheit.ts`). `ohneAusgeblendete` nimmt sie aus dem
   `TreffenStand` und ist die einzige Stelle dafür – benutzt von `Anwesenheit.tsx`, `protokollBlatt.ts` (Lesen, PDF,

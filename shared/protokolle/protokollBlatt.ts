@@ -16,7 +16,14 @@ import { tagPunkt } from '../ct/datum';
 import { sichererLink } from '../ct/sichereAdresse';
 import type { Absatz, Lauf, Rgb } from '../ct/terminBlatt';
 import { tagAusIso, wannLang } from '../ct/zeit';
-import { gaesteAus, kurzform, ohneAus, ohneAusgeblendete, type TreffenStand } from './anwesenheit';
+import {
+  gaesteAus,
+  kurzform,
+  ohneAus,
+  ohneAusgeblendete,
+  zumLesen,
+  type TreffenStand,
+} from './anwesenheit';
 import {
   istUeberfaellig,
   nameImVerlauf,
@@ -69,7 +76,10 @@ export interface ProtokollQuelle {
   /** Die freigegebenen Protokolle der Gruppe und das letzte vor dieser Sitzung (wie `FestePunkteWert`). */
   protokolle: readonly Sitzung[];
   letztes: Sitzung | null;
-  /** Das Gruppentreffen: `null` = keins, `'unbekannt'` = ließ sich nicht lesen. */
+  /**
+   * Das Gruppentreffen: `null` = keins, `'unbekannt'` = ließ sich nicht lesen (kein Recht oder vorübergehend) – dann gilt
+   * der Schnappschuss im Block, falls es einen gibt (W16, `zumLesen`).
+   */
   anwesenheit: TreffenStand | null | 'unbekannt';
   /** Beginn der nächsten Sitzung (ISO) – `null`, wenn keine festgelegt ist. */
   naechste: string | null;
@@ -292,12 +302,13 @@ function fruehereZeile(a: Aufgabe, q: ProtokollQuelle): Absatz {
 const tagVon = (iso: string, zeitzone: string) => tagPunkt(tagAusIso(iso, zeitzone));
 
 function anwesenheitKasten(b: Block, q: ProtokollQuelle): KastenZeile[] {
-  if (q.anwesenheit === 'unbekannt')
+  // Live, wo ChurchTools es zeigt – sonst der Schnappschuss im Block (W16, dieselbe Regel wie die Lese-Ansicht).
+  const stand = zumLesen(q.anwesenheit, b.props?.schnappschuss);
+  if (stand === 'unbekannt')
     return [{ absaetze: [[grau('Die Anwesenheit ließ sich nicht laden.')]] }];
-  if (!q.anwesenheit)
-    return [{ absaetze: [[grau('Zu dieser Sitzung gibt es kein Gruppentreffen.')]] }];
+  if (!stand) return [{ absaetze: [[grau('Zu dieser Sitzung gibt es kein Gruppentreffen.')]] }];
   // Aus dem Protokoll genommene Personen (`props.ohne`) erscheinen gar nicht.
-  const sichtbar = ohneAusgeblendete(q.anwesenheit, ohneAus(b.props?.ohne));
+  const sichtbar = ohneAusgeblendete(stand, ohneAus(b.props?.ohne));
   const k = kurzform(sichtbar.personen, gaesteAus(b.props?.gaeste));
   const absatz: Absatz = [
     fett(`Anwesend (${k.anwesend.length}): `),

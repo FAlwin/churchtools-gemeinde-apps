@@ -22,6 +22,7 @@ import {
   nameAusListe,
   hakenAnwenden,
   neueAufgabe,
+  toDoRechte,
   type Aufgabe,
   type HakenSchritt,
 } from '@shared/protokolle/aufgaben';
@@ -84,13 +85,11 @@ import { ctBasis } from '@ui/ct/verbindung';
 import { modulPort } from '@ui/ct/modulPort';
 import { beitragMoeglich, beitragSchritt } from './beitragSchreiben';
 import { sitzungsLink } from './reiter';
-import type { TreffenStand } from '@shared/protokolle/anwesenheit';
+import { nurSchnappschussAnders, type TreffenStand } from '@shared/protokolle/anwesenheit';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
+import { MITLESEN_MS, useMitlesen } from './useMitlesen';
 import ansicht from './SitzungAnsicht.module.scss';
 import styles from './ProtokollSchreiben.module.scss';
-
-/** So oft liest mit, wer gerade nicht schreiben kann. */
-export const MITLESEN_MS = 30_000;
 
 type Laden =
   | { art: 'laedt' }
@@ -100,7 +99,7 @@ type Laden =
   | { art: 'bereit'; kopf: ProtokollKopf; dokument: Block[] };
 
 /**
- * **Ein Protokoll schreiben** (Bauplan S4-1, Entwurf 7) – für die Leitung bei einem Protokoll im Entwurf. Oben Titel und
+ * **Ein Protokoll schreiben** (Bauplan S4-1, Entwurf 7) – für Leitung und „Schreibt mit“ (W16) bei einem Protokoll im Entwurf. Oben Titel und
  * Speicherstand, darunter Werkzeugleiste, Blatt und die Bereiche (live aus dem Text).
  *
  * Entschieden 24.10.2026 (Alwin): automatisch speichern; die Sperre entsteht mit der ersten Änderung (wer nur
@@ -128,6 +127,7 @@ export function ProtokollSchreiben({
   kommend = [],
   direkt = false,
   vollerName = ich.name,
+  leitung,
   teilen,
   onVorschlag,
   onBearbeiten,
@@ -157,6 +157,12 @@ export function ProtokollSchreiben({
   direkt?: boolean;
   /** Vor- und Nachname für den Verlauf der Vorschläge. */
   vollerName?: string;
+  /**
+   * Leitung der Gruppe (W16, `istLeitungIn`) – sonst schreibt man als „Schreibt mit“: Entwurf, Anwesenheit, Mit KI füllen,
+   * Bausteine, Vorschläge übernehmen. Nur die Leitung gibt frei, löscht, lehnt Vorschläge ab und hakt in „Offene To-Dos“
+   * die To-Dos anderer ab (W9).
+   */
+  leitung: boolean;
   /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. Geteilt wird, was im Editor steht. */
   teilen?: TeilenRahmen;
   /** Ein Vorschlag hat sich hier geändert – die Liste dahinter zieht mit. */
@@ -364,6 +370,13 @@ export function ProtokollSchreiben({
       ),
     [todoAendern, schreiber.person],
   );
+  // Nach einem eigenen Tipp in der Anwesenheit (W16) – der Schnappschuss allein ist keine Eingabe.
+  const speichernAnstossen = useCallback(() => steuerung.current?.geaendert(), []);
+  // „Schreibt mit“ (W16): in „Offene To-Dos“ nur abhaken, was auch ein Mitarbeiter darf (W9) – die Leitungsrechte bleiben.
+  const darfHakenMitarbeit = useCallback(
+    (a: Aufgabe) => toDoRechte(a, { ich: schreiber.person, leitung: false }).haken,
+    [schreiber.person],
+  );
   // Sich selbst kennt man auch, wenn die Mitgliederliste verborgen ist (S7-2a).
   const nameVon = useMemo(() => nameAusListe(mitglieder, schreiber), [mitglieder, schreiber]);
 
@@ -392,31 +405,42 @@ export function ProtokollSchreiben({
     return () => window.removeEventListener('beforeunload', warnen);
   }, [z?.offen, z?.speichert]);
 
-  // Mitlesen, solange jemand anderes schreibt.
-  useEffect(() => {
-    if (z?.lage !== 'gesperrt') return;
-    const t = setInterval(() => {
-      const s = steuerung.current;
-      if (!s) return;
-      protokollLesen(ort).then(
-        ({ kopf, dokument }) => {
-          if (!kopf || kopf.status !== 'entwurf') return oeffnen();
-          // Eigene ungespeicherte Änderungen nicht überschreiben – die Person soll sie noch kopieren können; weiter geht
-          // es dann bewusst mit „Schreiben übernehmen“.
-          if (s.zustand.offen) return;
-          if (dokument && kopf.stand !== s.basisStand) {
-            editor.current?.ersetzen(dokument);
-            setDok(dokument);
-          }
-          const frei = sperreLage(kopf.sperre, schreiber, new Date()) !== 'fremd';
-          s.neuAufsetzen(kopf, frei ? 'frei' : 'gesperrt', frei ? null : kopf.sperre);
-          if (frei) setHinweis('Niemand schreibt mehr – du kannst jetzt schreiben.');
-        },
-        () => undefined,
-      ); // Mitlesen ist Beiwerk: beim nächsten Mal wieder
-    }, MITLESEN_MS);
-    return () => clearInterval(t);
-  }, [z?.lage, ort, schreiber, oeffnen]);
+  // Mitlesen (W16): alle `MITLESEN_MS`, solange jemand anderes schreibt – und auch, solange niemand schreibt und man selbst
+  // nichts geändert hat (sonst sähe man erst beim ersten Tippen, dass inzwischen jemand anderes angefangen hat). Wer selbst
+  // schreibt, liest nicht mit. Freigegeben oder weg: neu öffnen (dann nur lesen, kein Takt mehr).
+  const mitlesend =
+    laden.art === 'bereit' && (z?.lage === 'gesperrt' || (z?.lage === 'frei' && !z.offen));
+  useMitlesen(mitlesend, async () => {
+    const s = steuerung.current;
+    if (!s) return;
+    let frisch: Awaited<ReturnType<typeof protokollLesen>>;
+    try {
+      frisch = await protokollLesen(ort);
+    } catch {
+      return; // Mitlesen ist Beiwerk: beim nächsten Mal wieder
+    }
+    const { kopf, dokument } = frisch;
+    if (!kopf || kopf.status !== 'entwurf') return oeffnen();
+    const vorher = s.zustand.lage;
+    // Inzwischen schreibt man selbst – oder hat Ungespeichertes: Das nicht überschreiben (die Person soll es noch kopieren
+    // können; weiter geht es dann bewusst mit „Schreiben übernehmen“).
+    if ((vorher !== 'gesperrt' && vorher !== 'frei') || s.zustand.offen || s.zustand.speichert)
+      return;
+    const neuerStand = kopf.stand !== s.basisStand;
+    // Neuer Stand, aber der Text gerade nicht vollständig lesbar (mitten im Speichern): Nichts übernehmen – sonst stünde der
+    // neue Stand über dem alten Text, und ein eigenes Speichern danach überschriebe den fremden Text.
+    if (neuerStand && !dokument) return;
+    const frei = sperreLage(kopf.sperre, schreiber, new Date()) !== 'fremd';
+    if (vorher === 'frei' && frei && !neuerStand) return; // nichts Neues
+    if (neuerStand && dokument) {
+      // Ersetzen zählt nicht als Änderung und baut den Editor nicht neu auf – die Seite bleibt, wo sie ist.
+      editor.current?.ersetzen(dokument);
+      setDok(dokument);
+    }
+    s.neuAufsetzen(kopf, frei ? 'frei' : 'gesperrt', frei ? null : kopf.sperre);
+    if (frei && vorher === 'gesperrt')
+      setHinweis('Niemand schreibt mehr – du kannst jetzt schreiben.');
+  });
 
   const uebernehmen = () => {
     setBeschaeftigt(true);
@@ -586,6 +610,8 @@ export function ProtokollSchreiben({
     zusammenfassung: string;
     treffen: number | null;
     beitrag: Beitrag | null;
+    /** Die frisch gelesene Anwesenheit – kommt beim Freigeben als Schnappschuss ins Protokoll (W16). */
+    anwesenheit: TreffenStand | null;
   } | null>(null);
   const freigabeOeffnen = () => {
     const d = editor.current?.dokument() ?? dok;
@@ -605,11 +631,13 @@ export function ProtokollSchreiben({
       laedtBeitrag: true,
       treffen,
       beitrag: null,
+      anwesenheit: null,
       ...mit(null),
     });
     if (treffen !== null)
       anwesenheitLesen(gruppeId, treffen).then(
-        (a) => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false, ...mit(a) }),
+        (a) =>
+          setFreigabe((f) => f && { ...f, laedtAnwesenheit: false, anwesenheit: a, ...mit(a) }),
         // Lesen gescheitert: ohne Anwesenheits-Hinweis weiter – Freigeben bleibt möglich.
         () => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false }),
       );
@@ -638,6 +666,7 @@ export function ProtokollSchreiben({
       sitzung: { beginn: sitzung.beginn, kopf: { sitzung: ort.sitzung, status: 'entwurf' } },
       protokolle,
       heute: heuteImKalender(new Date(), zone),
+      anwesenheit: freigabe?.anwesenheit,
     });
     const r = await freigeben(ort, schreiber, st.basisStand, d, ichV, new Date(), abgleich(d));
     if (r.art !== 'ok')
@@ -683,8 +712,11 @@ export function ProtokollSchreiben({
       zeitzone={zeitzone}
       name={nameVon}
       status={mOrt ? statusFest : undefined}
+      darfHaken={leitung ? undefined : darfHakenMitarbeit}
       ich={schreiber.person}
       onTreffenAnlegen={neuesTreffen}
+      schreibt={z?.lage === 'schreibe'}
+      onSpeichern={speichernAnstossen}
       onZuSitzung={
         onZuSitzung
           ? (s) => {
@@ -698,17 +730,19 @@ export function ProtokollSchreiben({
     </FestePunkteRahmen>
   );
 
-  // Freigeben darf, wer hier gerade schreiben kann (niemand sonst schreibt) – im Editor ist das immer die Leitung.
-  const darfFreigeben = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+  // Hier gerade schreiben kann, wer im Editor ist und niemand sonst schreibt.
+  const schreibtJetzt = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+  // Freigeben nur die Leitung (W16 – im Editor kann auch „Schreibt mit“ sein).
+  const darfFreigeben = leitung && schreibtJetzt;
   // Teilen (S6-3b): was im Editor steht, auch noch nicht Gespeichertes – beim Nur-Lesen das gelesene Protokoll.
   const teilenDokument =
     laden.art === 'bereit' ? dok : laden.art === 'lesen' ? laden.dokument : null;
   const darfTeilen = !!teilen && !!teilenDokument;
-  // Löschen (W6): wer das Protokoll hier schreibt, ist die Leitung; ob gerade jemand anderes schreibt, prüft das Löschen selbst.
-  const darfLoeschen = !!onGeloescht && loeschbar(sitzung.kopf?.status);
-  // Mit KI füllen (S8-2): wie Freigeben nur im Editor eines Entwurfs, wo man schreiben darf – und nicht in der Lese-Ansicht
-  // des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
-  const darfKi = darfFreigeben && !lesen;
+  // Löschen (W6): nur die Leitung; ob gerade jemand anderes schreibt, prüft das Löschen selbst.
+  const darfLoeschen = leitung && !!onGeloescht && loeschbar(sitzung.kopf?.status);
+  // Mit KI füllen (S8-2): nur im Editor eines Entwurfs, wo man gerade schreiben kann – auch „Schreibt mit“ (W16) – und
+  // nicht in der Lese-Ansicht des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
+  const darfKi = schreibtJetzt && !lesen;
   const kiDokument = useCallback(() => editor.current?.dokument() ?? dok, [dok]);
   const kiUebernommen = useCallback(
     ({ anzahl, uebersprungen }: { anzahl: number; uebersprungen: number }) => {
@@ -749,7 +783,7 @@ export function ProtokollSchreiben({
           <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || darfFreigeben || darfTeilen || darfLoeschen) && (
+        {(onBearbeiten || darfFreigeben || darfKi || darfTeilen || darfLoeschen) && (
           <div className={ansicht.aktionen}>
             {darfFreigeben && (
               <KopfKnopf
@@ -982,7 +1016,8 @@ export function ProtokollSchreiben({
                   ),
                 ),
               )(),
-            ablehnen: setAblehnenFuer,
+            // Ablehnen nur die Leitung (W16) – übernehmen und aufs nächste Mal gehört zum Schreiben.
+            ...(leitung ? { ablehnen: setAblehnenFuer } : {}),
           }}
         />
       )}
@@ -1004,7 +1039,7 @@ export function ProtokollSchreiben({
           onClose={() => setFreigabe(null)}
         />
       )}
-      {ablehnenFuer && mOrt && (
+      {ablehnenFuer && mOrt && leitung && (
         <VorschlagAblehnen
           vorschlag={ablehnenFuer}
           onAblehnen={async (grund) => {
@@ -1031,7 +1066,11 @@ export function ProtokollSchreiben({
                 griff={editor}
                 fremdeAufgabe={fremdeAufgabe}
                 onAenderung={(d) => {
+                  // Nur ein Schnappschuss der Anwesenheit (W16): keine Eingabe – kein Speichern, keine Sperre. Er fährt mit
+                  // dem nächsten Speichern mit.
+                  const nurSchnappschuss = nurSchnappschussAnders(dok, d);
                   setDok(d);
+                  if (nurSchnappschuss) return;
                   setHinweis(null);
                   steuerung.current?.geaendert();
                 }}

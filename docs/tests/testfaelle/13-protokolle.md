@@ -1167,3 +1167,44 @@ Vorlagen-Recht. Ein Rechner und ein Handy (oder 375 px). Daneben den ChurchTools
 - **Historie:** 23.11.2026 (W15-1, nach der Messung W15-0), 23.11.2026 (W15-2 Ressourcen)
 
 </details>
+
+### TF-PROT-33 · Mitlesen, Anwesenheit für alle und „Schreibt mit“
+
+**Achtung Test-Instanz:** ChurchTools verschickt dort **echte Mails**. Dieser Test verschickt nichts (kein Freigeben mit Beitrag, keine Einladung); Rechte nur an
+der eigenen Testgruppe ändern. Live-ChurchTools nur lesen.
+
+**Das brauchst du:** In der Test-Instanz eine eingerichtete Testgruppe mit Gruppentreffen und drei Konten: **A** = Leitung, **B** = Rolle, die du in „Gruppe
+einrichten“ auf **„Schreibt mit“** stellst, **C** = Mitglied („Lesen + eigene To-Dos“, ohne „Gruppentreffen durchführen/pflegen“). Ein Protokoll im **Entwurf**
+mit dem festen Punkt „Anwesenheit“ und einem offenen Vorschlag. Zwei Geräte oder zwei Browser (A schreibt, C liest). In der Entwicklung: `?demo=mitschreiben`
+(B) und `?demo=mitglied` (C, Anwesenheit aus dem Schnappschuss).
+
+**Das muss passieren:** C sieht neuen Text von selbst und die Anwesenheit ohne Fehlermeldung; B schreibt Entwürfe, aber ohne Freigeben, Löschen, Sitzung
+festlegen und ohne Leitungsrechte bei To-Dos.
+
+1. Als **Admin**: Einstellungen → Testgruppe → die Spalte **„Schreibt mit“** steht zwischen „Lesen + eigene To-Dos“ und „Leitung“ (auch am Handy ohne
+   Querscrollen). Rolle von B auf „Schreibt mit“ → Einrichten. In ChurchTools hat die Rolle danach Schreiben/Löschen in „Protokolle · <Gruppe>“ und
+   gruppenintern „Gruppentreffen durchführen“, **nicht** „Gruppentreffen pflegen“ und **kein** „Termine bearbeiten“ im Kalender.
+2. **C** öffnet den Entwurf (Lese-Ansicht) und scrollt etwas nach unten. **A** tippt im Editor einen neuen Satz. Nach höchstens ~15 Sekunden steht der
+   Satz bei C – ohne Antippen, und C's Seite springt nicht nach oben.
+3. C wechselt in einen anderen Tab oder sperrt das Handy für eine Minute, A tippt weiter. Zurück bei C erscheint der neue Text sofort.
+4. **C** sieht in der Anwesenheit Namen und anwesend/abwesend/offen – **nicht** „ChurchTools erlaubt dir das nicht“. Ändert A einen Status, sieht C ihn
+   nach dem nächsten Speichern von A ebenso. Teilen / PDF bei C zeigt dieselbe Anwesenheit.
+5. Als **B** (Schreibt mit): „Neu ⌄“ bietet „Neues Protokoll“, „Punkt vorschlagen“, „Protokoll nachtragen“ – **kein** „Neue Sitzung“. Eine Sitzung ohne
+   Protokoll bietet „Protokoll beginnen“, aber kein „Bearbeiten“.
+6. B öffnet den Entwurf: Editor bearbeitbar, **„Mit KI füllen“** und „Teilen / PDF“ da; **kein „Freigeben“, kein „Löschen“, kein „Bearbeiten“**. Anwesend/
+   Abwesend tippen geht und steht im ChurchTools-Gruppentreffen. Im Vorschlag (aufklappen) **„Übernehmen“** und **„Nächstes Mal“**, aber **kein „Ablehnen“**.
+   „Rückgängig“ nach einem Tipp in der Anwesenheit nimmt das zuletzt Getippte im Text zurück und bleibt nicht hängen.
+7. B in „Offene To-Dos von früher“: Nur To-Dos, für die B zuständig ist, lassen sich abhaken. Im Reiter **To-Dos** sieht B die To-Dos wie ein Mitglied (keine
+   fremden, bei To-Dos ohne Zuständigen „Das mache ich“).
+8. Ein freigegebenes Protokoll als B: weder „Freigabe zurücknehmen“ noch „Löschen“. Als A dagegen beides.
+9. A gibt das Protokoll frei, ohne vorher die Anwesenheit anzutippen. C öffnet das freigegebene Protokoll: Die Anwesenheit steht da (gemerkt bei der Freigabe).
+10. Hell und dunkel, PC und 375 px: nichts läuft über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `protokolle/src/useMitlesen.ts`, `protokolle/src/SitzungAnsicht.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/Anwesenheit.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/Suche.tsx`, `protokolle/src/einrichten.ts`, `protokolle/src/lesen.ts`, `shared/protokolle/zugang.ts`, `shared/protokolle/einrichten.ts`, `shared/protokolle/anwesenheit.ts`, `shared/protokolle/festePunkte.ts`, `shared/protokolle/protokollBlatt.ts`, `shared/protokolle/gruppen.ts`
+- **Automatisiert:** größtenteils – `useMitlesen.test.ts` (Takt, Pause, kein Doppelabruf, Fake-Timer), `ProtokollSchreiben.test.tsx` (Mitlesen im Editor, nur-Schnappschuss ist keine Eingabe, „Schreibt mit“ ohne Freigeben/Löschen/Ablehnen, Haken nach W9, Schnappschuss bei der Freigabe), `SitzungAnsicht.test.tsx` (Mitlesen in der Lese-Ansicht, kein Neuaufbau), `Anwesenheit.test.tsx` (403/503 → Schnappschuss, live gewinnt, Tipp schreibt und speichert, am Rückgängig-Verlauf vorbei), `shared/protokolle/anwesenheit.test.ts`, `protokollBlatt.test.ts`, `festePunkte.test.ts`, `zugang.test.ts`, `einrichten.test.ts` (beide), `lesen.test.ts`, `Sitzungen.test.tsx`, `ToDos.rechte.test.tsx`, `Startseite.test.tsx`, `Suche.test.tsx`, `FesterPunkt.test.tsx`; **nur von Hand:** echte Rechte in ChurchTools (10111 ohne 10124 reicht zum Eintragen), Mitlesen über zwei Geräte, Scrollposition am iPhone, Aussehen
+- **Historie:** 23.11.2026 (W16)
+
+</details>

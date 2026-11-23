@@ -16,7 +16,7 @@ import { ProtokollBeginnen } from './ProtokollBeginnen';
 import styles from './Fruehere.module.scss';
 
 /**
- * **Fenster „Protokoll nachtragen“** (v1.0.1, Entwurf `fruehere-treffen-v1`) – nur für die Leitung: Monat für Monat
+ * **Fenster „Protokoll nachtragen“** (v1.0.1, Entwurf `fruehere-treffen-v1`) – für alle, die schreiben dürfen (Leitung, „Schreibt mit“ – W16): Monat für Monat
  * (‹ ›, vorwärts nicht über den laufenden Monat hinaus) alle Treffen und Termine **ohne Protokoll**, beliebig weit
  * zurück. Gelesen wird **nur der gezeigte Monat** (bis gestern). Eine Zeile wählen → derselbe Schritt wie „Protokoll
  * beginnen“ (`ProtokollBeginnen`: Vorlage / „Wie letztes Mal“ / leer), im selben Fenster, mit „‹“ zurück zur Auswahl.

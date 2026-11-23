@@ -13,8 +13,14 @@
  *   Protokolls ausblenden – etwa ein Gemeinschaftskonto, das als Gruppenmitglied in jedem Gruppentreffen steht. Das
  *   steht **nur im Protokoll**; im Gruppentreffen bleibt die Person unverändert. `ohneAusgeblendete` ist die EINE
  *   Stelle, die sie aus dem Stand nimmt – Anzeige, Zahlen, PDF, Freigabe-Hinweis und Vorbelegung gehen alle darüber.
+ * - **Das Protokoll merkt sich die Anwesenheit** (W16, Alwin 23.11.2026): ChurchTools zeigt sie nur Rollen mit
+ *   „Gruppentreffen durchführen/pflegen“ (10111/10124) – Mitarbeitende sahen beim Lesen „ChurchTools erlaubt dir das
+ *   nicht“. Beim Schreiben steht darum ein **Schnappschuss** (Person, Name, Status) im Block (`props.schnappschuss`).
+ *   Gelesen wird live, wo ChurchTools es erlaubt; sonst – kein Recht **oder** ein vorübergehender Fehler – der
+ *   Schnappschuss, ohne Fehlermeldung (`zumLesen`, die EINE Stelle für Ansicht und PDF).
  */
 import type { Anfrage } from './sitzungen';
+import type { Block } from './dokument';
 
 export type AnwesenheitsStatus = 'offen' | 'da' | 'weg';
 
@@ -172,4 +178,72 @@ export function ohneWert(ohne: readonly number[]): string {
 export function ohneAusgeblendete(stand: TreffenStand, ohne: readonly number[]): TreffenStand {
   if (!ohne.length) return stand;
   return { ...stand, personen: stand.personen.filter((p) => !ohne.includes(p.person)) };
+}
+
+/**
+ * **`props.schnappschuss` schreiben** (W16) – Person, Name und Status je Person, wie das Gruppentreffen sie liefert (auch
+ * Ausgeblendete: `props.ohne` gilt beim Anzeigen, wie beim Live-Stand). Keine Personen: leer.
+ */
+export function schnappschussWert(stand: Pick<TreffenStand, 'personen'>): string {
+  const personen = stand.personen.map(({ person, name, status }) => ({ person, name, status }));
+  return personen.length ? JSON.stringify({ personen }) : '';
+}
+
+/** `props.schnappschuss` lesen – `null`, wenn keiner da ist oder er kaputt ist. Einträge ohne Person/Name fallen weg. */
+export function schnappschussAus(x: unknown): TreffenStand | null {
+  if (typeof x !== 'string' || !x) return null;
+  try {
+    const v = JSON.parse(x) as { personen?: unknown };
+    if (!Array.isArray(v?.personen)) return null;
+    const personen: TeilnahmePerson[] = [];
+    for (const p of v.personen as { person?: unknown; name?: unknown; status?: unknown }[]) {
+      const name = text(p?.name);
+      if (typeof p?.person !== 'number' || !Number.isInteger(p.person) || !name) continue;
+      const status: AnwesenheitsStatus =
+        p.status === 'da' || p.status === 'weg' ? p.status : 'offen';
+      personen.push({ person: p.person, name, status });
+    }
+    // Ein Schnappschuss ist kein Treffen: Er wird nie vorbelegt und nie angetippt.
+    return { abgeschlossen: false, begonnen: true, personen };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * **Was gelesen wird** (W16) – Lese-Ansicht und PDF gleich: der Live-Stand, wo ChurchTools ihn zeigt; scheitert das Lesen
+ * (kein Recht **oder** vorübergehend: `'unbekannt'`), der Schnappschuss aus dem Block – gibt es keinen, bleibt es beim
+ * `'unbekannt'`. `null` (kein Gruppentreffen) bleibt `null`.
+ */
+export function zumLesen(
+  live: TreffenStand | null | 'unbekannt',
+  schnappschuss: unknown,
+): TreffenStand | null | 'unbekannt' {
+  if (live !== 'unbekannt') return live;
+  return schnappschussAus(schnappschuss) ?? 'unbekannt';
+}
+
+const ohneSchnappschuss = (b: Block): unknown => {
+  const { schnappschuss: _weg, ...props } = b.props ?? {};
+  return {
+    ...b,
+    ...(b.props ? { props } : {}),
+    ...(b.children ? { children: b.children.map(ohneSchnappschuss) } : {}),
+  };
+};
+
+/**
+ * **Hat sich nur ein Schnappschuss geändert?** (W16) – dann ist es keine Eingabe: Der Editor speichert deswegen nicht und
+ * nimmt keine Sperre (ein bloßes Öffnen soll niemandem die Sperre wegnehmen, und ein zusätzliches Speichern stieß sich
+ * beim Durchklicken mit dem Einfügen übernommener Vorschläge). Der Schnappschuss fährt mit dem nächsten Speichern mit; nach
+ * einem eigenen Tipp stößt die Anwesenheit das Speichern selbst an.
+ */
+export function nurSchnappschussAnders(
+  vorher: readonly Block[],
+  nachher: readonly Block[],
+): boolean {
+  if (JSON.stringify(vorher) === JSON.stringify(nachher)) return false;
+  return (
+    JSON.stringify(vorher.map(ohneSchnappschuss)) === JSON.stringify(nachher.map(ohneSchnappschuss))
+  );
 }

@@ -26,6 +26,11 @@ export interface FestePunkteWert {
   ich?: number;
   /** Den Haken eines To-Dos setzen (`hakenSchritt`) – nur im Editor; fehlt er, zeigt der Kreis nur an. */
   status?: (a: Aufgabe, schritt: HakenSchritt) => void;
+  /**
+   * Darf ich bei diesem To-Do den Haken setzen? (W16) Fehlt: ja (Leitung). Wer als „Schreibt mit“ im Editor ist, hakt nur ab,
+   * was auch ein Mitarbeiter darf (`toDoRechte`, W9) – die To-Dos anderer bleiben der Leitung.
+   */
+  darfHaken?: (a: Aufgabe) => boolean;
   /** Ein Protokoll im Fenster öffnen – fehlt im Fenster selbst (kein Fenster im Fenster). */
   oeffnen?: (s: Sitzung) => void;
   /** Die früheren Protokolle zur Wahl (`fruehereProtokolle`, K3b-2) – neueste zuerst. */
@@ -44,6 +49,13 @@ export interface FestePunkteWert {
   anfragen: readonly Anfrage[];
   /** „Gruppentreffen anlegen“ (S5-3) – nur beim Schreiben; legt an und verknüpft es mit dem Protokoll. */
   treffenAnlegen?: () => Promise<void>;
+  /**
+   * Dieses Fenster schreibt gerade (hält die Sperre, W16). Nur dann merkt sich die Anwesenheit ihren gelesenen Stand von
+   * selbst im Block – ein bloßes Öffnen soll niemandem die Sperre wegnehmen. Nach einem eigenen Tipp schreibt sie ihn immer.
+   */
+  schreibt?: boolean;
+  /** Speichern anstoßen (W16): nach einem eigenen Tipp in der Anwesenheit – der Schnappschuss allein ist keine Eingabe. */
+  speichern?: () => void;
 }
 
 export const FestePunkteKontext = createContext<FestePunkteWert | null>(null);

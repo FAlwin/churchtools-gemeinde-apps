@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
-import { ohneWert } from '@shared/protokolle/anwesenheit';
+import { ohneWert, schnappschussAus, schnappschussWert } from '@shared/protokolle/anwesenheit';
 import type { Block } from '@shared/protokolle/dokument';
 import type { ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
@@ -58,7 +58,12 @@ const SITZUNG: Sitzung = {
 
 function zeige(
   punkt: React.ReactNode,
-  q: { sitzung?: Sitzung; onTreffenAnlegen?: () => Promise<number> } = {},
+  q: {
+    sitzung?: Sitzung;
+    onTreffenAnlegen?: () => Promise<number>;
+    schreibt?: boolean;
+    onSpeichern?: () => void;
+  } = {},
 ) {
   return render(
     <FestePunkteRahmen
@@ -69,6 +74,8 @@ function zeige(
       aufgaben={[]}
       zeitzone="Europe/Berlin"
       onTreffenAnlegen={q.onTreffenAnlegen}
+      schreibt={q.schreibt}
+      onSpeichern={q.onSpeichern}
     >
       {punkt}
     </FestePunkteRahmen>,
@@ -406,5 +413,155 @@ describe('Fester Punkt: je Art ausdrücklich (S5-3)', () => {
     zeige(<FesterPunkt art="aus-der-zukunft" abhaken={false} fest="" />);
     expect(screen.getByText('Fester Punkt')).toBeTruthy();
     expect(screen.queryByText(/Offene To-Dos/)).toBeNull();
+  });
+});
+
+/**
+ * **Das Protokoll merkt sich die Anwesenheit** (W16): Schnappschuss beim Schreiben (am Rückgängig-Verlauf vorbei), beim
+ * Lesen live – und bei 403 oder einem vorübergehenden Fehler der Schnappschuss, ohne Fehlermeldung.
+ */
+describe('Schnappschuss der Anwesenheit (W16)', () => {
+  const GEMERKT = schnappschussWert({
+    personen: [
+      { person: 1, name: 'Alwin Friesen', status: 'da' },
+      { person: 19, name: 'Spike Musiker', status: 'weg' },
+    ],
+  });
+
+  it('Lesen ohne Recht am Gruppentreffen (403): der Schnappschuss, ohne Fehlermeldung', async () => {
+    ct.treffenVerboten = true;
+    zeige(<FesterPunkt art="anwesenheit" abhaken={false} fest="" schnappschuss={GEMERKT} />);
+    expect(await screen.findByText(/Alwin Friesen/)).toBeTruthy();
+    expect(screen.getByText(/Anwesend \(1\):/)).toBeTruthy();
+    expect(screen.getByText('Spike Musiker')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('Lesen bei vorübergehendem Fehler (503): ebenso der Schnappschuss', async () => {
+    ct.fehlerBei = { methode: 'GET', status: 503 };
+    zeige(<FesterPunkt art="anwesenheit" abhaken={false} fest="" schnappschuss={GEMERKT} />);
+    expect(await screen.findByText(/Anwesend \(1\):/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('ohne Schnappschuss bleibt es bei der Meldung wie bisher', async () => {
+    ct.treffenVerboten = true;
+    zeige(<FesterPunkt art="anwesenheit" abhaken={false} fest="" />);
+    expect(await screen.findByRole('alert')).toBeTruthy();
+  });
+
+  it('wo ChurchTools die Anwesenheit zeigt, gilt sie live – nicht der Schnappschuss', async () => {
+    ct.teilnahme.set(15, new Map([[19, 'present']]));
+    ct.treffen.get(G)![0].hasEditingStarted = true;
+    zeige(<FesterPunkt art="anwesenheit" abhaken={false} fest="" schnappschuss={GEMERKT} />);
+    expect(await screen.findByText(/Anwesend \(1\):/)).toBeTruthy();
+    expect(screen.getByText('Spike Musiker')).toBeTruthy();
+    expect(screen.getByText(/Offen:/)).toBeTruthy(); // Alwin ist live offen, im Schnappschuss anwesend
+  });
+
+  it('Lese-Ansicht (ProtokollAnsicht) liest den Schnappschuss aus dem Block', async () => {
+    ct.treffenVerboten = true;
+    const dok: Block[] = [
+      {
+        id: 'v',
+        type: 'verweis',
+        props: { art: 'anwesenheit', schnappschuss: GEMERKT },
+        children: [],
+      },
+    ];
+    zeige(<ProtokollAnsicht dokument={dok} aufgaben={[]} />);
+    expect(await screen.findByText(/Anwesend \(1\):/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('beim Schreiben: ein eigener Tipp schreibt den Schnappschuss gleich mit – und stößt das Speichern an', async () => {
+    ct.treffen.get(G)![0].hasEditingStarted = true;
+    const merken = vi.fn();
+    const speichern = vi.fn();
+    zeige(
+      <FesterPunkt
+        art="anwesenheit"
+        abhaken
+        gaeste=""
+        gaesteSetzen={() => {}}
+        fest=""
+        schnappschussSetzen={merken}
+      />,
+      { onSpeichern: speichern },
+    );
+    const spike = await screen.findByRole('group', { name: 'Spike Musiker' });
+    expect(merken).not.toHaveBeenCalled(); // bloßes Öffnen schreibt nichts (sonst nähme es die Sperre)
+    fireEvent.click(within(spike).getByRole('button', { name: 'Anwesend' }));
+    await waitFor(() => expect(merken).toHaveBeenCalledTimes(1));
+    expect(speichern).toHaveBeenCalledTimes(1);
+    expect(schnappschussAus(merken.mock.calls[0][0])?.personen).toEqual([
+      { person: 1, name: 'Alwin Friesen', status: 'offen' },
+      { person: 19, name: 'Spike Musiker', status: 'da' },
+    ]);
+  });
+
+  it('solange das Fenster schreibt: der gelesene Stand kommt von selbst hinein – einmal, nicht bei jedem Zeichnen', async () => {
+    const merken = vi.fn();
+    const punkt = (gemerkt: string) => (
+      <FesterPunkt
+        art="anwesenheit"
+        abhaken
+        gaeste=""
+        gaesteSetzen={() => {}}
+        fest=""
+        schnappschuss={gemerkt}
+        schnappschussSetzen={merken}
+      />
+    );
+    const speichern = vi.fn();
+    const { rerender } = zeige(punkt(''), { schreibt: true, onSpeichern: speichern });
+    await waitFor(() => expect(merken).toHaveBeenCalledTimes(1));
+    // Von selbst nachgezogen ist keine Eingabe: kein eigenes Speichern – er fährt mit dem nächsten mit.
+    expect(speichern).not.toHaveBeenCalled();
+    const wert = merken.mock.calls[0][0] as string;
+    // Nach der Vorbelegung: Alwin hat zugesagt, Spike abgesagt.
+    expect(wert).toBe(GEMERKT);
+    act(() =>
+      rerender(
+        <FestePunkteRahmen
+          sitzung={SITZUNG}
+          gruppe={G}
+          protokolle={[]}
+          teile={[]}
+          aufgaben={[]}
+          zeitzone="Europe/Berlin"
+          schreibt
+        >
+          {punkt(wert)}
+        </FestePunkteRahmen>,
+      ),
+    );
+    await act(() => Promise.resolve());
+    expect(merken).toHaveBeenCalledTimes(1);
+  });
+
+  it('im Editor: der Schnappschuss steht im Block – und Rückgängig nimmt ihn nicht zurück (ohneVerlauf)', async () => {
+    const e = einhaengen(
+      BlockNoteEditor.create({
+        schema,
+        tables: TABELLEN,
+        initialContent: [
+          { id: 'p', type: 'paragraph', content: 'Vorher' },
+          { id: 'v', type: 'verweis', props: { art: 'anwesenheit' } },
+        ] as never,
+      }),
+    );
+    e.updateBlock('p', { content: 'Vorher getippt' });
+    const block = () => {
+      const b = e.getBlock('v')!;
+      return { id: 'v', props: b.props as { art: string; fest: string; schnappschuss?: string } };
+    };
+    zeige(<VerweisBlock block={block()} editor={e} />, { schreibt: true });
+    await waitFor(() => expect(e.getBlock('v')!.props).toMatchObject({ schnappschuss: GEMERKT }));
+    // Rückgängig trifft das Getippte, nicht den Schnappschuss – sonst schriebe der Kasten ihn sofort wieder, und
+    // Rückgängig drehte sich im Kreis (TF-PROT-29).
+    expect(e.undo()).toBe(true);
+    expect(JSON.stringify(e.getBlock('p')?.content)).not.toContain('getippt');
+    expect(e.getBlock('v')!.props).toMatchObject({ schnappschuss: GEMERKT });
   });
 });

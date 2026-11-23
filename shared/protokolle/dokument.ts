@@ -15,7 +15,8 @@
  * - `termin` – Text = was stattfindet, `props.datum` = `JJJJ-MM-TT`;
  * - `verweis` – fester Punkt ohne eigenen Text: `props.art` = `offene-aufgaben` | `letztes-protokoll` | `anwesenheit`
  *   (S5-3; `props.gaeste` = freie Namen als JSON-Liste, `props.ohne` = aus dem Protokoll genommene Personen-IDs als
- *   JSON-Liste; die Anwesenheit selbst steht im ChurchTools-Gruppentreffen).
+ *   JSON-Liste; die Anwesenheit selbst steht im ChurchTools-Gruppentreffen, `props.schnappschuss` = ihr Stand beim
+ *   Schreiben für alle, die das Treffen nicht sehen dürfen – W16).
  *
  * Ein **Tagesordnungspunkt** ist eine Überschrift der Stufe 1 auf oberster Ebene; alles bis zur nächsten
  * gehört zu ihm (auch in Unterpunkten). Ein **Unterpunkt** (K3b, 4.1 bis 4.1.1.1.1) ist eine Überschrift der Stufe

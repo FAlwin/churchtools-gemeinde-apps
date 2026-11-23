@@ -285,6 +285,7 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           fest={b.props?.fest}
           gaeste={b.props?.gaeste}
           ohne={b.props?.ohne}
+          schnappschuss={b.props?.schnappschuss}
           abhaken={false}
         />
       );

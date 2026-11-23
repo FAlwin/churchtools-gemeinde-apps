@@ -9,6 +9,8 @@ import {
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
+  adresseFuerLive,
+  liveAusAdresse,
   vorlagenAusAdresse,
 } from './reiter';
 
@@ -45,6 +47,15 @@ describe('Adresse der Termin-Ansicht (E6-1b)', () => {
     expect(terminAusAdresse(adresseFuerTermin(7))).toBe(7);
     for (const h of ['', '#/termine', '#/termin/', '#/termin/abc', '#/termin/148/x']) {
       expect(terminAusAdresse(h)).toBeNull();
+    }
+  });
+
+  it('#/termin/<id>/live: derselbe Termin, mit gleich geöffneter Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite)', () => {
+    expect(terminAusAdresse(adresseFuerLive(148))).toBe(148);
+    expect(liveAusAdresse(adresseFuerLive(148))).toBe(true);
+    expect(liveAusAdresse(adresseFuerTermin(148))).toBe(false);
+    for (const h of ['', '#/termin/148/lives', '#/termin//live', '#/termine/148/live']) {
+      expect(liveAusAdresse(h)).toBe(false);
     }
   });
 });

@@ -37,6 +37,7 @@ import { verlaufCacheLeeren, verlaufImCacheErsetzen } from './ladeVerlauf';
 import { TauschAmDienst } from './TauschTeile';
 import type { VertretungZugriff } from './useVertretung';
 import type { Tausch } from './useTausch';
+import { adresseFuerTermin, liveAusAdresse } from './reiter';
 import styles from './TerminAnsicht.module.scss';
 
 /**
@@ -99,6 +100,7 @@ export function TerminAnsicht({
   ladeAntworten,
   heute,
   handy,
+  liveStart = false,
 }: {
   start: Start;
   terminId: number;
@@ -120,6 +122,8 @@ export function TerminAnsicht({
   entwuerfe?: EntwurfAnschluss;
   /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
   ladeAntworten?: AntwortenLader;
+  /** Die Live-Ansicht gleich öffnen (Adresse `#/termin/ID/live`, Knopf „Live-Ansicht“ auf der Startseite) – nur beim ersten Zeigen. */
+  liveStart?: boolean;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde) – für den Zauberstab. */
   heute: string;
   /** Schmaler Bildschirm: die Leiste kürzer („Ansehen & senden“). */
@@ -286,7 +290,11 @@ export function TerminAnsicht({
           : undefined
       }
       // Nach „Live“ ist der Verlauf neu: frisch lesen, damit der Rückblick des Termins gleich da ist.
+      liveStart={liveStart}
       onLiveGeschlossen={() => {
+        // Wer über `#/termin/ID/live` kam: Die Adresse zeigt jetzt wieder nur den Termin (Neuladen öffnet Live nicht noch einmal).
+        if (liveAusAdresse(window.location.hash))
+          window.history.replaceState(null, '', adresseFuerTermin(terminId));
         verlaufCacheLeeren();
         verlaeufe.neuLesen();
       }}

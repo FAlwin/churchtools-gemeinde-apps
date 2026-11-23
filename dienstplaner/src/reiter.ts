@@ -59,8 +59,17 @@ export function adresseFuer(id: ReiterId): string {
 
 /** Die Termin-Ansicht (E6-1b) hat eine eigene Adresse (`#/termin/148`) – Neuladen und Zurück funktionieren. */
 export function terminAusAdresse(hash: string): number | null {
-  const id = /^#\/termin\/(\d+)$/.exec(hash)?.[1];
+  const id = /^#\/termin\/(\d+)(?:\/live)?$/.exec(hash)?.[1];
   return id ? Number(id) : null;
+}
+
+/** `#/termin/148/live`: die Termin-Ansicht mit gleich geöffneter Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite). */
+export function liveAusAdresse(hash: string): boolean {
+  return /^#\/termin\/\d+\/live$/.test(hash);
+}
+
+export function adresseFuerLive(id: number): string {
+  return `#/termin/${id}/live`;
 }
 
 export function adresseFuerTermin(id: number): string {

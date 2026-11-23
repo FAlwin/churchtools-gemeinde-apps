@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { KachelLink, TitelLink } from './TerminLink';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { kachel, plusTage, tagKurz } from '@shared/ct/datum';
@@ -11,7 +12,10 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import { bisDahin, startUebersicht, type DienstAmTermin } from '@shared/dienstplan/start';
 import { planbareDienstgruppen, type Start } from './start';
 import type { TermineZustand } from './Termine';
-import { ladeAbwesenheiten, ladeLieder } from './ladeBeiwerk';
+import { ladeAbwesenheiten, ladeAblauf, ladeLieder } from './ladeBeiwerk';
+import { ladeLiveLaeuft } from './ladeLive';
+import { liveKnopfOffen } from './liveFenster';
+import { LivePunkt } from './LivePunkt';
 import { useMusikApp } from './useMusikApp';
 import { Plakette } from './Plakette';
 import { plaketteArt } from './plaketteArt';
@@ -36,6 +40,8 @@ interface Props {
   onMeineTermine: () => void;
   /** „Ablauf & Dienste“ → Termin-Ansicht (E6-1b). */
   onTermin?: (id: number) => void;
+  /** „Live-Ansicht“ → Termin-Ansicht mit gleich geöffneter Live-Ansicht – ohne: kein Knopf. */
+  onLive?: (id: number) => void;
   /** Anfragen beantworten (E7-1) – ohne: nur ansehen. */
   antworten?: Antworten;
   /** Dienste tauschen (E7-3) – ohne: kein „Tauschen“, keine Tausch-Anfragen. */
@@ -76,6 +82,7 @@ export function Startseite({
   onNochmal,
   onMeineTermine,
   onTermin,
+  onLive,
   antworten,
   tausch,
   vertretung,
@@ -114,7 +121,13 @@ export function Startseite({
         )}
         {termine?.art === 'fertig' &&
           (u.naechster ? (
-            <AlsNaechstes termin={u.naechster} heute={heute} onTermin={onTermin} />
+            <AlsNaechstes
+              termin={u.naechster}
+              heute={heute}
+              zeitzone={zeitzone}
+              onTermin={onTermin}
+              onLive={onLive}
+            />
           ) : (
             <section className={styles.karte}>
               <p className={styles.hinweis}>
@@ -254,11 +267,15 @@ export function Startseite({
 function AlsNaechstes({
   termin: z,
   heute,
+  zeitzone,
   onTermin,
+  onLive,
 }: {
   termin: TerminZeile;
   heute: string;
+  zeitzone: string;
   onTermin?: (id: number) => void;
+  onLive?: (id: number) => void;
 }) {
   const k = kachel(z.tag);
   // Datum und Titel führen in die Termin-Ansicht (Wunsch 8) – wie „Ablauf & Dienste“.
@@ -268,6 +285,18 @@ function AlsNaechstes({
   const lieder: string[] | null | undefined =
     liederStand.art === 'fertig' ? liederStand.daten : undefined;
   const musikApp = useMusikApp();
+  // „Live-Ansicht“ (Alwin 23.11.2026): am Tag des Termins ab 0 Uhr bis zu seinem Ende – und nur, wenn es einen Ablauf gibt (ohne
+  // ihn hat die Live-Ansicht nichts zu zeigen). Dann einmal nachsehen, ob die Live-Agenda gerade läuft (roter Punkt, wie im Termin):
+  // beim Öffnen der Seite, kein Takt; scheitert es, fehlt nur der Punkt.
+  const liveOffen = !!onLive && liveKnopfOffen(z, new Date(), zeitzone);
+  const liveStand = useLaden(async () => {
+    if (!liveOffen) return null;
+    const ablauf = await ladeAblauf(z.id);
+    if (!ablauf || ablauf.id === undefined) return null;
+    const laeuft = await ladeLiveLaeuft(z.id, ablauf.id, ablauf.items).catch(() => false);
+    return { laeuft };
+  }, [z.id, liveOffen]).stand;
+  const live = liveStand.art === 'fertig' ? liveStand.daten : null;
 
   const team = z.team.slice(0, TEAM_ZEIGEN).map((t) => `${t.name} (${t.dienst})`);
   const mehr = z.team.length - team.length;
@@ -299,7 +328,7 @@ function AlsNaechstes({
           <span className={styles.leise}>Du hast an diesem Termin keinen Dienst.</span>
         )}
       </div>
-      {(musikApp || onTermin) && (
+      {(musikApp || onTermin || live) && (
         <div className={styles.knoepfe}>
           {musikApp && (
             <a className={styles.knopf} href={musikApp}>
@@ -310,6 +339,17 @@ function AlsNaechstes({
             <button type="button" className={styles.knopfLeise} onClick={() => onTermin(z.id)}>
               Ablauf &amp; Dienste <Icon name="chev-right" size={16} />
             </button>
+          )}
+          {live && onLive && (
+            // Der KopfKnopf zeigt am Handy nur das Symbol (mit Rahmen) – drei Knöpfe in einer Reihe passen so in 375 px.
+            <KopfKnopf
+              onClick={() => onLive(z.id)}
+              label="Live-Ansicht"
+              title={
+                live.laeuft ? 'Live-Ansicht – läuft gerade in ChurchTools' : 'Live-Ansicht öffnen'
+              }
+              symbol={live.laeuft ? <LivePunkt /> : <Icon name="clock" size={16} stroke={2.2} />}
+            />
           )}
         </div>
       )}

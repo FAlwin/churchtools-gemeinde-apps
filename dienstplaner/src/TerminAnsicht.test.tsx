@@ -107,6 +107,7 @@ function zeige(
     tausch?: Tausch;
     entwuerfe?: EntwurfAnschluss;
     handy?: boolean;
+    liveStart?: boolean;
   } = {},
 ) {
   const onTermin = vi.fn();
@@ -127,6 +128,7 @@ function zeige(
       entwuerfe={p.entwuerfe}
       heute="2026-10-01"
       handy={p.handy ?? false}
+      liveStart={p.liveStart}
     />
   );
   const { rerender } = render(ansicht(7));
@@ -1467,6 +1469,22 @@ describe('„Live“ (E6b-2 L2)', () => {
     const jetzt = within(ansicht).getByRole('region', { name: 'Jetzt' });
     expect((await within(jetzt).findByRole('heading')).textContent).toBe('Lied – Du großer Gott');
     fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
+  });
+
+  it('Start mit offener Live-Ansicht (Knopf „Live-Ansicht“ auf der Startseite): sie ist gleich da, „Schließen“ führt zum Termin und räumt die Adresse auf', async () => {
+    heute('2026-10-18T08:10:00Z');
+    ctLive('2');
+    window.history.replaceState(null, '', '#/termin/7/live');
+    zeige({ liveStart: true });
+    const ansicht = await screen.findByRole('dialog', { name: 'Live: Gottesdienst' });
+    fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
+    expect(window.location.hash).toBe('#/termin/7');
+    // Ohne den Start bleibt sie zu.
+    cleanup();
+    zeige();
+    await screen.findByRole('button', { name: 'Live – läuft gerade in ChurchTools' });
     expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
   });
 

@@ -660,6 +660,29 @@ seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zähl
 
 </details>
 
+### TF-ABLAUF-54 · Startseite: Knopf „Live-Ansicht“
+
+**Das brauchst du:** Einen Termin mit Ablauf, der bald stattfindet (Rechner und Handy), dazu am besten einen am Vortag und einen schon vorbei.
+
+**Das muss passieren:** In der Karte „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf **„Live-Ansicht“** – nur **am Tag des Termins ab 0 Uhr** (Ortszeit der Gemeinde) **bis zum Ende des Termins**. Ein Klick öffnet direkt die Live-Ansicht dieses Termins.
+
+1. Am Vortag steht der Knopf **nicht** da, am Tag des Termins schon, auch am frühen Morgen. Nach dem Ende des Termins ist die Karte beim nächsten Termin – ohne Knopf, wenn der nicht heute ist.
+2. Ein Termin, der über Mitternacht geht (z. B. 23 bis 1 Uhr): Der Knopf bleibt bis zum Ende.
+3. Ohne Ablauf am Termin gibt es **keinen** Knopf.
+4. Knopf mit Rahmen, nicht gefüllt – „Musik-App“ bleibt der einzige gefüllte Knopf. Läuft die Live-Agenda gerade in ChurchTools, steht darin der rote Punkt wie bei „Live“ im Termin; sonst ein kleines Uhr-Symbol.
+5. Klick: Die Live-Ansicht öffnet sich über dem Termin (Adresse `…#/termin/<id>/live`). „Schließen“ führt in die Termin-Ansicht; Neuladen öffnet Live danach nicht noch einmal. Steuern darf nur, wer am Dienst „Live-Agenda steuern“ hat.
+6. **Handy (375 px):** Alle drei Knöpfe stehen in einer Reihe; „Live-Ansicht“ zeigt nur das Symbol (mit Rahmen) – nichts ist abgeschnitten.
+7. **Demo** (`…/?demo`): Der Termin „Gottesdienst (Live-Probe)“ ist heute – der Knopf ist zu sehen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/liveFenster.ts`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/ladeLive.ts`
+- **Automatisiert:** ja – `dienstplaner/src/liveFenster.test.ts` (Vortag 23:59, Tag 0:00, Ende, über Mitternacht, ohne Ende, Zeitzone), `dienstplaner/src/Startseite.live.test.tsx` (Knopf, Punkt, Klick, ohne Ablauf), `dienstplaner/src/ladeLive.test.ts`, `dienstplaner/src/reiter.test.ts`, `dienstplaner/src/TerminAnsicht.test.tsx` (Live gleich offen); von Hand bleibt das Aussehen am Handy
+- **Historie:** Live-Ansicht 2, L4-5 (23.11.2026)
+
+</details>
+
 ### TF-ABLAUF-16 · „Weitere Infos“ am Termin
 
 **Das brauchst du:** Einen Test-Termin, an dem in ChurchTools unter „i“ (Weitere Infos) zwei Zeilen stehen; eine

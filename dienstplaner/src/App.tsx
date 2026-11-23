@@ -34,6 +34,8 @@ import {
   reiterAusAdresse,
   sichtbareReiter,
   terminAusAdresse,
+  liveAusAdresse,
+  adresseFuerLive,
   vorlagenAusAdresse,
   type ReiterId,
 } from './reiter';
@@ -194,6 +196,10 @@ export function App() {
   const terminZeigen = (id: number) => {
     window.location.hash = adresseFuerTermin(id);
   };
+  // „Live-Ansicht“ auf der Startseite: dieselbe Termin-Ansicht, die Live-Ansicht gleich offen – kein zweiter Weg.
+  const liveZeigen = (id: number) => {
+    window.location.hash = adresseFuerLive(id);
+  };
   // Anfragen beantworten (E7-1): Startseite und „Dienste“ teilen einen Zustand; nach jeder Antwort leise neu laden.
   // Dienste tauschen (E7-3): nach einem Tausch die Termine neu; nach jeder Antwort auch den Tausch-Stand – die
   // Einteilung hat dann eine neue ID, und ein Ausgang hängt an ihr.
@@ -280,6 +286,7 @@ export function App() {
                   ladeAntworten={antwortenLaden}
                   heute={heuteImKalender()}
                   handy={handy}
+                  liveStart={liveAusAdresse(hash)}
                 />
               )}
               {start && vorlagenAdresse !== null && (
@@ -309,6 +316,7 @@ export function App() {
                   heute={heuteImKalender()}
                   onNochmal={() => termineLaden(start, wochen)}
                   onTermin={terminZeigen}
+                  onLive={liveZeigen}
                   onMeineTermine={() => {
                     merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
                     wechseln('termine');

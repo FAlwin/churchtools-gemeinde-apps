@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { eintragVorbelegung, type Eintrag } from '@shared/protokolle/termine';
+import { eintragAdresse, eintragZusatz } from '@shared/protokolle/terminFelder';
+import { artWechseln, WIEDERHOLUNG } from '@shared/protokolle/terminWiederholung';
 import { Unklar } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { nachbauEnde, nachbauStarten, type Nachbau } from './nachbau.testhilfe';
@@ -62,12 +65,181 @@ describe('terminRumpf', () => {
     expect(terminRumpf(MIT_UHR)).not.toHaveProperty('allDay');
   });
 
-  it('Ort nur, wenn einer da ist – als `address.meetingAt`, ohne Leerzeichen am Rand', () => {
-    expect(terminRumpf({ ...MIT_UHR, ort: ' Gemeindehaus ' }).address).toEqual({
-      meetingAt: 'Gemeindehaus',
+  it('Ort nur, wenn einer da ist – als `address.name` (nicht das veraltete `meetingAt`), ohne Leerzeichen am Rand', () => {
+    const r = terminRumpf({
+      ...MIT_UHR,
+      adresse: eintragAdresse({ ...eintrag(), ort: ' Gemeindehaus ' }) ?? undefined,
     });
-    expect(terminRumpf({ ...MIT_UHR, ort: '  ' })).not.toHaveProperty('address');
+    expect(r.address).toEqual({ name: 'Gemeindehaus' });
+    expect(JSON.stringify(r)).not.toContain('meetingAt');
     expect(terminRumpf(MIT_UHR)).not.toHaveProperty('address');
+    expect(eintragAdresse({ ...eintrag(), ort: '  ' })).toBeNull();
+  });
+});
+
+/** Der Rumpf aus dem Fenster: `Eintrag` → `eintragZusatz` → `terminRumpf` – die Erzeuger, nicht handgeschriebene Rümpfe. */
+const eintrag = (extra: Partial<Eintrag> = {}): Eintrag => ({
+  ...eintragVorbelegung({ text: 'Heiligabend, 16 Uhr', datum: '2027-12-24' }, 4),
+  ...extra,
+});
+const rumpf = (e: Eintrag, neueTags = false) =>
+  terminRumpf({ ...MIT_UHR, ...eintragZusatz(e, neueTags) });
+
+describe('terminRumpf aus dem Fenster (W15-1)', () => {
+  it('ein schlichter Eintrag: nur Grundfelder, `isInternal: false` und `informOwner: true` (CT hakt vor)', () => {
+    expect(rumpf(eintrag())).toEqual({
+      calendarId: 4,
+      title: 'Heiligabend',
+      startDate: '2027-12-24T15:00:00Z',
+      endDate: '2027-12-24T16:00:00Z',
+      isInternal: false,
+      informOwner: true,
+    });
+  });
+
+  it('Untertitel, Beschreibung, Link, intern – ohne Leerzeichen am Rand; Leeres fehlt', () => {
+    const r = rumpf(
+      eintrag({
+        untertitel: ' Familie ',
+        beschreibung: 'Mit Krippenspiel\n',
+        link: ' https://x.de ',
+        intern: true,
+      }),
+    );
+    expect(r).toMatchObject({
+      subtitle: 'Familie',
+      description: 'Mit Krippenspiel',
+      link: 'https://x.de',
+      isInternal: true,
+    });
+    const leer = rumpf(eintrag({ untertitel: ' ', beschreibung: '', link: '' }));
+    for (const k of ['subtitle', 'description', 'link']) expect(leer).not.toHaveProperty(k);
+  });
+
+  it('„Ersteller informieren“ aus: `informOwner: false`', () => {
+    expect(rumpf(eintrag({ informieren: false })).informOwner).toBe(false);
+  });
+
+  it('Ort: alle Felder der Adresse, Zusatz als `addition`', () => {
+    const r = rumpf(
+      eintrag({
+        ort: 'Saal',
+        ortStrasse: 'Hauptstr. 1',
+        ortPlz: '53797',
+        ortStadt: 'Lohmar',
+        ortZusatz: 'EG',
+      }),
+    );
+    expect(r.address).toEqual({
+      name: 'Saal',
+      street: 'Hauptstr. 1',
+      zip: '53797',
+      city: 'Lohmar',
+      addition: 'EG',
+    });
+    expect(rumpf(eintrag({ ortPlz: '53797' })).address).toEqual({ zip: '53797' });
+  });
+
+  it('Im Auftrag von: `onBehalfOfPid`', () => {
+    expect(rumpf(eintrag({ imAuftrag: 19 })).onBehalfOfPid).toBe(19);
+    expect(rumpf(eintrag())).not.toHaveProperty('onBehalfOfPid');
+  });
+
+  it('mehrtägig: Beginn und Ende in UTC bzw. als Tage', () => {
+    const mehr = terminRumpf({
+      ...GANZTAEGIG,
+      ende: '2027-04-26',
+      ...eintragZusatz(eintrag(), false),
+    });
+    expect([mehr.startDate, mehr.endDate, mehr.allDay]).toEqual(['2027-04-24', '2027-04-26', true]);
+  });
+
+  describe('Wiederholung', () => {
+    const wo = (art: number, extra: Partial<Eintrag> = {}) =>
+      rumpf({ ...artWechseln(eintrag(), art), ...extra });
+
+    it('keine: kein einziges Wiederholungsfeld, auch keine Weiteren Termine und Ausnahmen', () => {
+      const r = rumpf(eintrag({ weitere: ['2027-12-30'], ausnahmen: ['2027-12-31'] }));
+      for (const k of [
+        'repeatId',
+        'repeatFrequency',
+        'repeatOption',
+        'repeatUntil',
+        'additionals',
+        'exceptions',
+      ])
+        expect(r).not.toHaveProperty(k);
+    });
+
+    it.each([
+      [WIEDERHOLUNG.taeglich],
+      [WIEDERHOLUNG.woechentlich],
+      [WIEDERHOLUNG.monatlichDatum],
+      [WIEDERHOLUNG.jaehrlich],
+    ])('automatisch (repeatId %s): Art, „Alle x“ und „Bis“ – kein repeatOption', (art) => {
+      const r = wo(art, { frequenz: 2 });
+      expect(r).toMatchObject({
+        repeatId: art,
+        repeatFrequency: 2,
+        repeatUntil: artWechseln(eintrag(), art).wiederBis,
+      });
+      expect(r).not.toHaveProperty('repeatOption');
+    });
+
+    it('monatlich nach Wochentag: `repeatOption` aus dem Datum – 24.12.2027 ist der 4. Freitag', () => {
+      expect(wo(WIEDERHOLUNG.monatlichWochentag)).toMatchObject({ repeatId: 32, repeatOption: 4 });
+    });
+
+    it('monatlich nach Wochentag: der 5. nur, wenn das Datum der 5. ist (31.12.2027, Freitag); 6 = letzter', () => {
+      const fuenfter = rumpf(
+        artWechseln(
+          eintragVorbelegung({ text: 'Silvester, 20 Uhr', datum: '2027-12-31' }, 4),
+          WIEDERHOLUNG.monatlichWochentag,
+        ),
+      );
+      expect(fuenfter.repeatOption).toBe(5);
+      expect(wo(WIEDERHOLUNG.monatlichWochentag, { option: 6 }).repeatOption).toBe(6);
+    });
+
+    it('manuell: repeatId 999, kein „Bis“, kein „Alle x“ – nur Weitere Termine und Ausnahmen', () => {
+      const r = wo(WIEDERHOLUNG.manuell, { weitere: ['2027-12-30'], ausnahmen: ['2027-12-31'] });
+      expect(r).toMatchObject({
+        repeatId: 999,
+        additionals: [{ date: '2027-12-30', isRepeated: false }],
+        exceptions: [{ date: '2027-12-31' }],
+      });
+      for (const k of ['repeatUntil', 'repeatFrequency', 'repeatOption'])
+        expect(r).not.toHaveProperty(k);
+    });
+
+    it('Weitere Termine und Ausnahmen bei einer automatischen Art', () => {
+      const r = wo(WIEDERHOLUNG.woechentlich, {
+        weitere: ['2028-02-01', '2028-02-08'],
+        ausnahmen: ['2028-01-07'],
+      });
+      expect(r.additionals).toEqual([
+        { date: '2028-02-01', isRepeated: false },
+        { date: '2028-02-08', isRepeated: false },
+      ]);
+      expect(r.exceptions).toEqual([{ date: '2028-01-07' }]);
+    });
+  });
+
+  describe('Tags', () => {
+    it('Nummern gehen immer mit', () => {
+      expect(rumpf(eintrag({ tags: [3, 5] })).tags).toEqual([3, 5]);
+    });
+
+    it('neue Tags (Texte) nur mit „Tags verwalten“ – sonst bleiben nur die Nummern', () => {
+      const e = eintrag({ tags: [3, 'Neu', '  '] });
+      expect(rumpf(e, true).tags).toEqual([3, 'Neu']);
+      expect(rumpf(e, false).tags).toEqual([3]);
+      expect(rumpf(eintrag({ tags: ['Neu'] }), false)).not.toHaveProperty('tags');
+    });
+  });
+
+  it('keine `meetingrequests` – das ist W15-4 (Besprechungsanfragen)', () => {
+    expect(rumpf(eintrag())).not.toHaveProperty('meetingrequests');
   });
 });
 

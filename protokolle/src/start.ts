@@ -12,7 +12,11 @@ import { kategorienLesen } from '@shared/ct/modulDaten';
 import { modulRechteAus } from '@shared/ct/modulRechte';
 import { protokollGruppen, type ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { darfVerwalten } from '@shared/ct/rollenRechte';
-import { schreibbareKalender } from '@shared/ct/kalenderRechte';
+import {
+  darfTagsVerwalten,
+  schreibbareKalender,
+  vorlagenKalender,
+} from '@shared/ct/kalenderRechte';
 import { ctDaten } from '@ui/ct/verbindung';
 
 export interface Start {
@@ -32,6 +36,10 @@ export interface Start {
   schreibbar: number[];
   /** Kalender, in denen man Termine anlegen darf (`churchcal` „edit category“) – Reiter „Termine“ (W14): ohne keiner „Eintragen“. */
   kalenderSchreiben: number[];
+  /** Kalender, in die man Termin-Vorlagen speichern darf (`edit calendar entry template`) – „Als Vorlage speichern“ (W15-1). */
+  vorlagenSchreiben: number[];
+  /** Darf neue Termin-Tags anlegen (`admin appointment tags`, W15-1). */
+  tagsVerwalten: boolean;
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -53,5 +61,7 @@ export async function ladeStart(): Promise<Start> {
       (rechte as Record<string, unknown> | null)?.[modulPort.kuerzel() ?? 'protokolle'],
     ).aendern,
     kalenderSchreiben: [...schreibbareKalender(rechte)],
+    vorlagenSchreiben: [...vorlagenKalender(rechte)],
+    tagsVerwalten: darfTagsVerwalten(rechte),
   };
 }

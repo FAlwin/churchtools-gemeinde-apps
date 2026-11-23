@@ -6,7 +6,7 @@
  * - `buchungenNachlesen`: **Ein Erfolgssignal ist kein Beleg** (Lehre 11.08.2026). Die Antwort auf das Anlegen eines Termins
  *   enthält die Buchungen nicht (gemessen 23.11.2026, W15-0) – erst `GET /bookings?resource_ids[]=…&from&to` zeigt, ob sie
  *   da sind. Je gewünschter Ressource wird einzeln gelesen (jede Zeile gehört dann zu dieser Ressource) und gesucht, ob eine
- *   Buchung zu diesem Termin (`base.appointment.id`) existiert. Scheitert das Lesen, ist die Ressource **unklar**, nicht
+ *   Buchung zu diesem Termin (`booking.base.appointment.id`) existiert. Scheitert das Lesen, ist die Ressource **unklar**, nicht
  *   „fehlt“ (vorübergehend ist nicht ungültig).
  */
 import { ressourcenAus, type Ressource } from '@shared/protokolle/terminRessourcen';
@@ -21,10 +21,19 @@ export async function ladeRessourcen(buchbar: ReadonlySet<number>): Promise<Ress
   return ressourcenAus(ressourcen, typen, buchbar);
 }
 
-/** Eine Zeile aus `GET /bookings`, nur die gelesenen Felder. */
+/**
+ * Eine Zeile aus `GET /bookings`, nur die gelesenen Felder. Gemessen 23.11.2026 (Test-Instanz): Die Zeile trägt `booking.base`
+ * **und** noch `base` – `@deprecated: { base: 'booking.base' }`. Gelesen wird das neue Feld, das alte nur als Ersatz; sonst
+ * meldete das Fenster „nicht gebucht“, sobald ChurchTools `base` streicht.
+ */
 interface BuchungRoh {
+  booking?: { base?: { appointment?: { id?: number } } };
   base?: { appointment?: { id?: number } };
 }
+
+/** Zu welchem Termin gehört die Buchung? */
+const terminDer = (b: BuchungRoh): number | undefined =>
+  (b.booking?.base ?? b.base)?.appointment?.id;
 
 /** Der Pfad, der die Buchungen einer Ressource in einem Zeitraum (Tage `JJJJ-MM-TT`) liest. */
 export const buchungenPfad = (ressource: number, von: string, bis: string): string =>
@@ -46,7 +55,7 @@ export async function buchungenNachlesen(q: {
       try {
         const liste = (await ctDaten<BuchungRoh[] | null>(buchungenPfad(r, q.von, q.bis))) ?? [];
         if (!Array.isArray(liste)) return 'unklar';
-        return liste.some((b) => b.base?.appointment?.id === q.termin) ? 'da' : 'fehlt';
+        return liste.some((b) => terminDer(b) === q.termin) ? 'da' : 'fehlt';
       } catch {
         return 'unklar';
       }

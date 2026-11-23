@@ -47,6 +47,15 @@ describe('buchungenNachlesen', () => {
     expect(await buchungenNachlesen(frage)).toEqual({ fehlend: [], unklar: false });
   });
 
+  it('veraltete Form `base` (ohne `booking`) wird noch erkannt', async () => {
+    ct.buchungenAlteForm = true;
+    ct.buchungen = [
+      { resourceId: 1, appointmentId: 700, statusId: 1, quantity: undefined },
+      { resourceId: 5, appointmentId: 700, statusId: 1, quantity: undefined },
+    ];
+    expect(await buchungenNachlesen(frage)).toEqual({ fehlend: [], unklar: false });
+  });
+
   it('Lesefehler: unklar – wirft nicht und behauptet nicht, es fehle etwas', async () => {
     ct.buchungenLesenFehler = true;
     expect(await buchungenNachlesen(frage)).toEqual({ fehlend: [], unklar: true });

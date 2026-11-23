@@ -996,7 +996,9 @@ function antwort(
       status: 200,
       data: s.buchungen
         .filter((b) => ress.includes(b.resourceId))
-        .map((b) => ({ base: { id: b.appointmentId * 10, appointment: { id: b.appointmentId } } })),
+        .map((b) => ({
+          booking: { base: { id: b.appointmentId * 10, appointment: { id: b.appointmentId } } },
+        })),
     };
   }
   if (pfad === '/api/tags/appointment')

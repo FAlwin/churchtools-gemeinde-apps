@@ -31,7 +31,7 @@
  *
  * Ressourcen und Buchungen (W15-2, gemessen 23.11.2026): `GET /resources` und `GET /resourcetypes` liefern `ressourcen` und
  * `ressourcenTypen`; `POST …/appointments` mit `bookings` legt je Eintrag eine Buchung an – **die Antwort enthält sie nicht**,
- * erst `GET /bookings?resource_ids[]=…&from&to` zeigt sie (`base.appointment.id`). `buchungenSchlucken` nennt Ressourcen, bei
+ * erst `GET /bookings?resource_ids[]=…&from&to` zeigt sie (`booking.base.appointment.id`). `buchungenSchlucken` nennt Ressourcen, bei
  * denen ChurchTools „201“ sagt und nichts bucht; `buchungenLesenFehler` lässt `GET /bookings` mit 500 scheitern.
  *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
@@ -123,6 +123,8 @@ export interface Nachbau {
   buchungen: { resourceId: number; appointmentId: number; statusId: unknown; quantity: unknown }[];
   /** Für diese Ressourcen bucht ChurchTools trotz „201“ nichts. */
   buchungenSchlucken: Set<number>;
+  /** `GET /bookings` liefert nur die veraltete Form `base` statt `booking.base`. */
+  buchungenAlteForm?: boolean;
   /** `GET /bookings` scheitert (500). */
   buchungenLesenFehler: boolean;
   /** Der Suchtext der letzten Anfrage an `GET /bookings`. */
@@ -385,13 +387,16 @@ export function nachbauStarten(): Nachbau {
       return json(200, {
         data: s.buchungen
           .filter((b) => ress.includes(b.resourceId))
-          .map((b) => ({
-            base: {
+          .map((b) => {
+            const base = {
               id: b.appointmentId * 10,
               appointment: { id: b.appointmentId },
               statusId: b.statusId,
-            },
-          })),
+            };
+            // Gemessen 23.11.2026: `booking.base` (neu) – `base` nur noch als veralteter Doppelgänger, den es irgendwann
+            // nicht mehr gibt. Der Nachbau liefert das Neue; `buchungenAlteForm` nur das Alte.
+            return s.buchungenAlteForm ? { base } : { booking: { base } };
+          }),
       });
     }
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);

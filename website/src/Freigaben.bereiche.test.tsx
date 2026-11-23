@@ -85,13 +85,13 @@ async function daten(): Promise<FreigabeDaten> {
   };
 }
 
-async function zeigen(zugang: Zugang) {
+async function zeigen(zugang: Zugang, person = 1) {
   render(
     <Freigaben
       kategorien={KAT}
       daten={await daten()}
       zugang={zugang}
-      ich={{ person: 1, name: 'Helene', fenster: 'f1' }}
+      ich={{ person, name: 'Helene', fenster: 'f1' }}
       gemeinde="ECG"
       gruppe={344}
       bereiche={NAMEN}
@@ -136,10 +136,13 @@ describe('Leitung der Untergruppe', () => {
     expect(d.gebeAllesFrei.mock.calls[0][1]).toEqual([{ einheit: 'seite', id: 'j' }]);
   });
 
-  it('Leitung der Untergruppe, die alle sieht: an der Website-Seite keine Knöpfe, „Alles freigeben“ ohne sie', async () => {
-    await zeigen({ sieht: 'alle', leitet: [JUGEND] });
-    // Rita hat A eingereicht – die Person (1) ist nicht Rita: A steht nicht da (Redakteur-Sicht für Website-Seiten).
-    expect(within(liste()).queryByText('Aktuelles')).toBeNull();
+  it('Leitung der Untergruppe, die alle sieht: ihre eigene eingereichte Website-Seite ohne Knöpfe, „Alles freigeben“ ohne sie', async () => {
+    // Rita (5) leitet Jugend und ist Mitglied der Website: Sie sieht A (selbst eingereicht) wie ein Redakteur.
+    await zeigen({ sieht: 'alle', leitet: [JUGEND] }, RITA.person);
+    fireEvent.click(within(liste()).getByText('Aktuelles'));
+    await screen.findByText(/Eingereicht von Rita/);
+    expect(screen.queryByRole('button', { name: 'Freigeben' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mit Anmerkung zurück' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Alles freigeben' }));
     fireEvent.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {

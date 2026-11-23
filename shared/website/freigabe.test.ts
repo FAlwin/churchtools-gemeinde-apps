@@ -835,6 +835,16 @@ describe('Online-Vergleich und Liste je Bereich (W3b-4b)', () => {
     expect(freigabeListe(e, sicht, WEBSITE_REDAKTEUR, 9).map((x) => x.id)).toEqual(['a']);
   });
 
+  it('wer nur Jugend sieht, bekommt auch seine EIGENEN Einträge an Website-Seiten nicht (E-W31: nur Seiten seines Bereichs)', async () => {
+    const s = await bereiche();
+    const { e, sicht } = sichtAus(s);
+    // Person 9 hat A (Website) eingereicht – ist heute aber nur noch in Jugend.
+    expect(freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [] }, 9)).toEqual([]);
+    expect(
+      freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [JUGEND] }, 9).map((x) => x.id),
+    ).toEqual(['j']);
+  });
+
   it('„nur noch online“ im Bereich Jugend: sieht und nimmt die Leitung von Jugend offline, nicht ein Redakteur', async () => {
     const s = await bereiche();
     await seiteSpeichern(s.jugendOrt, jugendSeite('weg', 'Weg'), JETZT);

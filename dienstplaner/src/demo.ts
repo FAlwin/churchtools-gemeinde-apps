@@ -4,7 +4,8 @@
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Planer-Recht,
  * `?demo=fehler` den Fehlerfall, `?demo=personenfehler` eine Gruppe, deren Mitglieder in der Ansicht „Personen“
  * beim ersten Mal scheitern. Der Termin „Gottesdienst (Live-Probe)“ (107) beginnt immer in 2–3 Minuten nach dem Laden der
- * Seite – an ihm lassen sich in „Live“ die drei Betriebsarten (Reiter „Einstellungen“) und das Zeitkonto ausprobieren;
+ * Seite – an ihm lassen sich in „Live“ die drei Betriebsarten (Reiter „Einstellungen“), das Zeitkonto sowie (L4-3) ±,
+ * „Ende voraussichtlich“, „Warum“ und der Fehlklick-Hinweis ausprobieren (Weiter, gleich wieder Zurück);
  * die Seite neu laden setzt ihn zurück. Wird nie mitgebaut (siehe `main.tsx`).
  */
 const PLANER = {
@@ -883,6 +884,9 @@ function speicherDemo(fall: string) {
     { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },
     // „Einstellungen“ (L4-2): die Betriebsart der Live-Ansicht – leer, es gilt der Standard „bis Beginn“.
     { id: 43, shorty: 'dienstplaner-einstellungen', name: 'Einstellungen' },
+    // „Live-Verlauf“ (L4-3): die Wechsel der Live-Ansicht – leer; die Live-Probe (107) füllt ihn beim Klicken im Speicher, damit ±,
+    // „Ende voraussichtlich“, „Warum“ und der Fehlklick-Hinweis (Weiter, gleich wieder Zurück) zu sehen sind.
+    { id: 44, shorty: 'dienstplaner-live-verlauf', name: 'Live-Verlauf' },
   ];
   const meineAntworten = {
     art: 'dienstplaner-verfuegbarkeit',
@@ -1054,6 +1058,7 @@ function speicherDemo(fall: string) {
     ],
     [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
     [43, []],
+    [44, []],
   ]);
   let naechste = 500;
   const ids = () => kategorien.map((k) => k.id);

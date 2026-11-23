@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
@@ -9,8 +9,10 @@ import {
   type LiveGrund,
   type LiveStand,
 } from '@shared/ct/liveAgenda';
+import { zusammenfuehren, type Wechsel } from '@shared/ct/liveVerlauf';
 import type { CtAgendaItem } from '@shared/ct/typen';
 import type { EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
+import type { VerlaufLesen, VerlaufSchreiben } from '@shared/dienstplan/liveVerlaufSpeicher';
 import { LiveAnsicht as LiveAnsichtEcht } from './LiveAnsicht';
 import { TAKT_MS } from './useLive';
 import { BETRIEBSART_NOCHMAL_MS, BETRIEBSART_TAKT_MS } from './useBetriebsart';
@@ -26,7 +28,31 @@ const betriebsartMit =
  * unten prüfen genau das. Die neuen Betriebsarten haben einen eigenen Block (`betriebsartLesen` überschreibt die Vorgabe).
  */
 function LiveAnsicht(p: ComponentProps<typeof LiveAnsichtEcht>) {
-  return <LiveAnsichtEcht betriebsartLesen={betriebsartMit('immer-uhr')} {...p} />;
+  const [verlauf] = useState(verlaufImSpeicher);
+  return (
+    <LiveAnsichtEcht
+      betriebsartLesen={betriebsartMit('immer-uhr')}
+      verlaufLesen={verlauf.lesen}
+      verlaufSchreiben={verlauf.schreiben}
+      {...p}
+    />
+  );
+}
+
+/**
+ * Der Live-Verlauf (L4-3) ist hier nicht das Thema: ein Speicher im Arbeitsspeicher, der sich wie der echte verhält (Schreiben
+ * führt zusammen, Lesen liefert alles). Er hat einen eigenen Testblock (`LiveAnsicht.verlauf.test.tsx`).
+ */
+function verlaufImSpeicher() {
+  let wechsel: Wechsel[] = [];
+  return {
+    lesen: (): Promise<VerlaufLesen> =>
+      Promise.resolve({ ok: true, wechsel: [...wechsel], vorhanden: wechsel.length > 0 }),
+    schreiben: (_t: number, neue: readonly Wechsel[]): Promise<VerlaufSchreiben> => {
+      wechsel = zusammenfuehren(wechsel, neue);
+      return Promise.resolve({ ok: true, wechsel: [...wechsel] });
+    },
+  };
 }
 
 /**

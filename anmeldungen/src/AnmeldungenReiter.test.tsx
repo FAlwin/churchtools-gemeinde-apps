@@ -1476,17 +1476,213 @@ describe('Filter über die Spaltenüberschrift (R2)', () => {
     expect(within(g).getByText(/3 Mails/)).toBeTruthy();
   });
 
+  it('⋯ zählt je Person die Personen der Druckliste, die Rundmail Anmeldungen (eine Mail je Anmeldung)', () => {
+    zeigen(drei());
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    filtern('Bezahlt', 'offen');
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+    const punkte = screen.getAllByRole('menuitem').map((m) => m.textContent);
+    expect(punkte).toContain('Druckliste (nur diese 4)');
+    expect(punkte).toContain('Rundmail an diese 2');
+  });
+
   it('Druckliste nimmt das Gefilterte – mit Filter je Person nur die passenden Personen', async () => {
     zeigen(drei());
     filtern('Telefon', 'ist ausgefüllt');
     fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
     filtern('Allergien oder Unverträglichkeiten', 'ist ausgefüllt');
+    // Je Person zählt der Menüpunkt die Personen – wie die Tabelle.
     menuPunkt('Druckliste (nur diese 2)');
     const f = screen.getByRole('dialog', { name: /Druckliste/ });
     expect(within(f).getByText(/Nur, wer zu den Filtern der Tabelle passt/)).toBeTruthy();
     const vorschau = within(f).getByLabelText('Vorschau');
     expect(within(vorschau).getAllByText('Beispiel, Jonas')).toHaveLength(2);
     expect(within(vorschau).queryByText('Beispiel, Lena')).toBeNull();
+  });
+
+  describe('Eigene Ansichten (U3)', () => {
+    beforeEach(() => {
+      em.aendereEinstellungen.mockReset();
+      em.aendereEinstellungen.mockResolvedValue(e());
+    });
+    /** Was gespeichert würde – die Änderung, angewandt auf die frisch gelesenen Einstellungen. */
+    const gespeichert = (x = e(), nr = 0) =>
+      em.aendereEinstellungen.mock.calls[nr][1](x).ansichten ?? [];
+    const mitAnsichten = () => ({
+      ...e(),
+      ansichten: [
+        { id: 'offen', name: 'Noch offen', filter: [{ spalte: 'bezahlt', werte: ['offen'] }] },
+        {
+          id: 'allerg',
+          name: 'Allergien',
+          filter: [{ spalte: 'frage:allergy', text: 'ausgefuellt' as const }],
+          jePerson: true,
+        },
+      ],
+    });
+    const zeigenMit = (darf = true) =>
+      zeigen(drei(), 10, false, darf, false, false, mitAnsichten());
+    const reiter = (name: RegExp) => screen.getByRole('button', { name });
+
+    it('„Als Ansicht speichern“: Name, was mitkommt, fürs Team – danach eigener Reiter mit Punkt', () => {
+      zeigen(drei());
+      // Ohne Filter gibt es nichts zu speichern.
+      expect(screen.queryByRole('button', { name: 'Als Ansicht speichern' })).toBeNull();
+      filtern('Bezahlt', 'offen');
+      fireEvent.click(screen.getByRole('button', { name: 'Als Ansicht speichern' }));
+      const f = screen.getByRole('dialog', { name: 'Als Ansicht speichern' });
+      expect(within(f).getByText('Bezahlt: offen')).toBeTruthy();
+      expect(within(f).getByText(/ganze Team/)).toBeTruthy();
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(within(f).getByRole('alert').textContent).toBe('Bitte einen Namen eingeben.');
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), { target: { value: 'alle' } });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(within(f).getByRole('alert').textContent).toBe('„alle“ gibt es schon.');
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), {
+        target: { value: 'Noch offen' },
+      });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      const neu = reiter(/^Noch offen 2/);
+      expect(neu.getAttribute('aria-pressed')).toBe('true');
+      expect(neu.getAttribute('title')).toBe('Eigene Ansicht des Teams');
+      expect(chips()).toEqual(['Bezahlt: offen']);
+      const [a] = gespeichert();
+      expect(a).toMatchObject({
+        name: 'Noch offen',
+        filter: [{ spalte: 'bezahlt', werte: ['offen'] }],
+      });
+      expect(a.id).toMatch(/^[a-z0-9]+$/);
+      // Zurück in „Alle“: dort gilt der Filter nicht – in der Ansicht schon.
+      fireEvent.click(reiter(/^Alle \d/));
+      expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+      fireEvent.click(reiter(/^Noch offen/));
+      expect(nummern()).toEqual(['BBBBBB', 'CCCCCC']);
+    });
+
+    it('Ansicht öffnen bringt Filter und „je Person“ mit; ändern → „Verwerfen“ / „Änderungen speichern“', () => {
+      zeigenMit();
+      expect(reiter(/^Noch offen 2/)).toBeTruthy();
+      expect(reiter(/^Allergien 2/)).toBeTruthy();
+      fireEvent.click(reiter(/^Allergien/));
+      expect(screen.getByRole('table', { name: 'Personen' })).toBeTruthy();
+      expect(chips()).toEqual(['Allergien oder Unverträglichk…: ausgefüllt']);
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+      expect(screen.getByText('Diese Ansicht hat keinen Filter.')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+      expect(chips()).toEqual(['Allergien oder Unverträglichk…: ausgefüllt']);
+      fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Änderungen speichern' }));
+      expect(gespeichert(mitAnsichten())[1]).toEqual({
+        id: 'allerg',
+        name: 'Allergien',
+        filter: [{ spalte: 'frage:allergy', text: 'ausgefuellt' }],
+      });
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+    });
+
+    it('⋯ → Diese Ansicht: umbenennen, nach rechts, löschen mit „Rückgängig“ direkt darunter', () => {
+      zeigenMit();
+      fireEvent.click(reiter(/^Noch offen/));
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      const punkte = screen.getAllByRole('menuitem').map((m) => m.textContent);
+      expect(punkte.slice(0, 5)).toEqual([
+        'Ansicht umbenennen',
+        'Spalten dieser Ansicht',
+        'Ansicht nach links',
+        'Ansicht nach rechts',
+        'Ansicht löschen',
+      ]);
+      expect(
+        screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Ansicht nach links' }).disabled,
+      ).toBe(true);
+      expect(punkte).not.toContain('Spalten');
+      expect(punkte).toContain('Rundmail an diese 2');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Ansicht nach rechts' }));
+      expect(gespeichert(mitAnsichten()).map((x: { id: string }) => x.id)).toEqual([
+        'allerg',
+        'offen',
+      ]);
+      menuPunkt('Ansicht umbenennen');
+      const f = screen.getByRole('dialog', { name: 'Ansicht umbenennen' });
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), {
+        target: { value: 'Offen' },
+      });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(reiter(/^Offen 2/)).toBeTruthy();
+      menuPunkt('Ansicht löschen');
+      expect(screen.queryByRole('button', { name: /^Offen/ })).toBeNull();
+      expect(reiter(/^Alle \d/).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByRole('status').textContent).toMatch(/^Ansicht „Offen“ gelöscht\./);
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      expect(reiter(/^Offen 2/).getAttribute('aria-pressed')).toBe('true');
+      expect(chips()).toEqual(['Bezahlt: offen']);
+      expect(em.aendereEinstellungen).toHaveBeenCalledTimes(4);
+    });
+
+    it('„Spalten dieser Ansicht“ merkt die Spalten in der Ansicht – die des Teams bleiben', () => {
+      zeigenMit();
+      fireEvent.click(reiter(/^Noch offen/));
+      menuPunkt('Spalten dieser Ansicht');
+      const f = screen.getByRole('dialog');
+      fireEvent.click(within(f).getByRole('checkbox', { name: 'Angemeldet am' }));
+      fireEvent.click(within(f).getByRole('button', { name: 'Übernehmen' }));
+      expect(spaltenKoepfe().map((k) => k.textContent)).not.toContain('Angemeldet am');
+      const [offen] = gespeichert(mitAnsichten());
+      expect(offen.tabelle?.anmeldung?.aus).toContain('am');
+      expect(em.aendereEinstellungen.mock.calls[0][1](mitAnsichten()).tabelle).toBeUndefined();
+      // In „Alle“ steht die Spalte weiter.
+      fireEvent.click(reiter(/^Alle \d/));
+      expect(spaltenKoepfe().map((k) => k.textContent)).toContain('Angemeldet am');
+    });
+
+    it('„＋ Ansicht“ legt eine leere Ansicht an; höchstens 12', () => {
+      zeigen(drei());
+      fireEvent.click(screen.getByRole('button', { name: '＋ Ansicht' }));
+      const f = screen.getByRole('dialog', { name: 'Neue Ansicht' });
+      expect(within(f).getByText(/keiner – du kannst ihn danach/)).toBeTruthy();
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), { target: { value: 'Leer' } });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(reiter(/^Leer 3/).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByText('Diese Ansicht hat keinen Filter.')).toBeTruthy();
+      cleanup();
+      const voll = {
+        ...e(),
+        ansichten: Array.from({ length: 12 }, (_, i) => ({
+          id: `v${i}`,
+          name: `V${i}`,
+          filter: [],
+        })),
+      };
+      zeigen(drei(), 10, false, true, false, false, voll);
+      fireEvent.click(screen.getByRole('button', { name: '＋ Ansicht' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.getByRole('alert').textContent).toMatch(/Höchstens 12 eigene Ansichten/);
+    });
+
+    it('ohne Recht: Ansichten nutzen und filtern ja – anlegen, ändern, löschen nein', () => {
+      zeigenMit(false);
+      expect(screen.queryByRole('button', { name: '＋ Ansicht' })).toBeNull();
+      filtern('Bezahlt', 'offen');
+      expect(screen.queryByRole('button', { name: 'Als Ansicht speichern' })).toBeNull();
+      fireEvent.click(reiter(/^Noch offen/));
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+      expect(screen.getByRole('button', { name: 'Verwerfen' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+        'Spalten dieser Ansicht',
+        'Druckliste (nur diese 3)',
+      ]);
+      // Spalten umstellen geht – nur hier, bis die Seite neu lädt.
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Spalten dieser Ansicht' }));
+      const f = screen.getByRole('dialog');
+      fireEvent.click(within(f).getByRole('checkbox', { name: 'Angemeldet am' }));
+      fireEvent.click(within(f).getByRole('button', { name: 'Übernehmen' }));
+      expect(spaltenKoepfe().map((k) => k.textContent)).not.toContain('Angemeldet am');
+      expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+    });
   });
 });
 

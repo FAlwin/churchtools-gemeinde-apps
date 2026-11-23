@@ -20,6 +20,12 @@ export interface Reiter<T extends string> {
    */
   zaehler?: number;
   zaehlerName?: string;
+  /**
+   * **Blauer Punkt vor dem Namen** (Anmeldungen U3): ein Reiter, den das Team selbst angelegt hat („eigene Ansicht“) –
+   * so unterscheidet er sich von den festen. Mit `punktName` als Tooltip.
+   */
+  punkt?: boolean;
+  punktName?: string;
 }
 
 interface Props<T extends string> {
@@ -103,9 +109,11 @@ export function ReiterLeiste<T extends string>({
             className={`${styles.tab}${an ? ' ' + styles.on : ''}${aus ? ' ' + styles.off : ''}`}
             aria-label={r.zaehler ? r.zaehlerName : kurzGezeigt ? r.label : undefined}
             onClick={() => (an ? onErneut?.() : onWechsel(r.id))}
+            title={r.punkt ? r.punktName : undefined}
           >
             {!oben && <Icon name={r.icon} size={24} stroke={1.9} />}
             <span>
+              {r.punkt && <span className={styles.punkt} aria-hidden />}
               {kurzGezeigt ? r.kurz : r.label}
               {r.zahl !== undefined && <span className={styles.zahl}> {r.zahl}</span>}
               {r.zaehler ? (

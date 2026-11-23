@@ -106,3 +106,33 @@ Anmeldungen“; die Summen zählen nur das Gefilterte. Rundmail und Druckliste n
 - **Historie:** R2 (23.11.2026, Entwurf `r2-u3-filter-ansichten-v1`, abgenommen in Klick-Runde 23.11.)
 
 </details>
+
+### TF-ANM-05 · Anmeldungen: eigene Ansichten
+
+**Das brauchst du:** Eine freigegebene Veranstaltung mit mehreren Anmeldungen und Recht zum Bearbeiten; für Schritt 6 ein
+zweites Konto ohne dieses Recht.
+
+**Das muss passieren:** Ein Filter wird mit **Als Ansicht speichern** zum Reiter mit blauem Punkt hinter „Abgesagt“ – fürs
+ganze Team, auch nach dem Neuladen. In der Ansicht erscheinen nach einer Änderung **Verwerfen** und
+**Änderungen speichern**. Über **⋯ → Diese Ansicht** lässt sie sich umbenennen, ihre Spalten wählen, verschieben und
+löschen (mit **Rückgängig**).
+
+1. In **Alle** nach einer Antwort filtern, **Als Ansicht speichern**, Name „Küche“ → Reiter **• Küche** mit Zahl, gewählt.
+2. Seite neu laden: Der Reiter ist noch da, Antippen zeigt die gefilterten Anmeldungen und den Chip.
+3. In der Ansicht einen zweiten Filter setzen: **Verwerfen** stellt den alten Stand her; erneut setzen und
+   **Änderungen speichern** – nach dem Neuladen gilt der neue Stand.
+4. **⋯ → Ansicht umbenennen**, **Spalten dieser Ansicht** (eine Spalte aus – in „Alle“ bleibt sie), **Ansicht nach links**.
+5. **⋯ → Ansicht löschen**: Unter den Reitern steht „Ansicht … gelöscht. Rückgängig“; **Rückgängig** holt sie an ihre Stelle.
+6. Ohne Recht: Die Ansichten sind da und filtern; es gibt kein **＋ Ansicht**, kein **Als Ansicht speichern**, im **⋯** nur
+   **Spalten dieser Ansicht**, Druckliste und Rundmail.
+7. **Wie eine frühere Veranstaltung** von dieser anlegen: Die Kopie hat dieselben Ansichten.
+8. Am Handy (375 px): Reiter wischbar, das Fenster „Als Ansicht speichern“ passt, nichts ragt über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `anmeldungen/src/AnmeldungenReiter.tsx`, `anmeldungen/src/AnsichtFenster.tsx`, `shared/anmeldung/ansichten.ts`, `shared/anmeldung/formular.ts`, `ui/bedienung/ReiterLeiste.tsx`
+- **Automatisiert:** ja – `ansichten.test.ts` (anlegen, Namen, höchstens 12, ändern, Spalten, verschieben, löschen/Rückgängig, Bereinigen, Speichern/Lesen), `einrichten.test.ts` (Kopie) und `AnmeldungenReiter.test.tsx` („Eigene Ansichten (U3)“); von Hand bleiben Neuladen, zweites Konto und Handy
+- **Historie:** U3 (23.11.2026, Entwurf `r2-u3-filter-ansichten-v1`)
+
+</details>

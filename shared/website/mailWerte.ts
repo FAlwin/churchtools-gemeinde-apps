@@ -6,7 +6,9 @@
  *   steht sonst nur in den ChurchTools-Rechten, die nur ein Admin lesen kann; ein Redakteur, der einreicht, muss aber wissen,
  *   wen er benachrichtigt. **Einziger Schreiber: der Admin, wo er die Stufen festlegt** (Einrichten, „Wer darf was“), nach
  *   erfolgreichem Setzen der Rechte. Fehlt der Wert (bestehende Installationen), gilt die Vorbelegung (`vorschlag` in
- *   `rechte.ts`, siehe `mail.ts`).
+ *   `rechte.ts`, siehe `mail.ts`). **Je Gruppe ein Wert (W3b-4a):** Der Wert der Gruppe „Website“ trägt **kein** `gruppe` (so
+ *   war er seit W3b-3 und so bleibt er – abwärtskompatibel); der Wert einer Untergruppe trägt `gruppe` = deren Gruppen-ID.
+ *   Die Rollen sind `group_role`-IDs der jeweiligen Gruppe (nicht `groupTypeRoleId`).
  * - **`website-mail`** – der Schalter „Mails im Freigabe-Weg“. **Kein Wert = an.** In „Entwürfe“ und nicht in der Einheit
  *   „Einstellungen“, weil die erst über „Freigeben“ online geht – der Schalter soll **sofort** wirken. Einziger Schreiber: die
  *   Leitung im Fenster „Einstellungen“.
@@ -27,6 +29,8 @@ export const leitungSchema = z.object({
   art: z.literal(LEITUNG_ART),
   fassung: z.literal(1),
   rollen: z.array(z.number().int()).max(200),
+  /** Die Untergruppe, zu der die Rollen gehören (W3b-4a) – fehlt: die Gruppe „Website“ selbst. */
+  gruppe: z.number().int().positive().optional(),
 });
 export type WebsiteLeitung = z.infer<typeof leitungSchema>;
 
@@ -54,11 +58,19 @@ export const istLeitungsWert = (w: Wert): boolean =>
 /** Ist das ein gültiger Schalter-Wert? Das Lesen der Website überspringt ihn. */
 export const istMailWert = (w: Wert): boolean => gueltig(w, MAIL_ART, mailSchema) !== null;
 
-/** Der Wert dieser Art mit der kleinsten Wert-ID – auch wenn er beschädigt ist (dann gilt „fehlt“, aber er wird überschrieben). */
-function ersterDerArt(werte: readonly Wert[], art: string): Wert | null {
+/**
+ * Der Wert dieser Art mit der kleinsten Wert-ID – auch wenn er beschädigt ist (dann gilt „fehlt“, aber er wird überschrieben).
+ * `gruppe` (nur `website-leitung`): `null` = der Wert der Gruppe „Website“ (ohne Feld `gruppe`), sonst der dieser Untergruppe.
+ */
+function ersterDerArt(
+  werte: readonly Wert[],
+  art: string,
+  gruppe: number | null = null,
+): Wert | null {
   for (const w of [...werte].sort((a, b) => a.id - b.id)) {
     try {
-      if ((JSON.parse(w.value) as { art?: unknown } | null)?.art === art) return w;
+      const roh = JSON.parse(w.value) as { art?: unknown; gruppe?: unknown } | null;
+      if (roh?.art === art && (roh.gruppe ?? null) === gruppe) return w;
     } catch {
       // kein JSON – nicht unser Wert
     }
@@ -66,9 +78,16 @@ function ersterDerArt(werte: readonly Wert[], art: string): Wert | null {
   return null;
 }
 
-/** Die Rollen-IDs der Leitung, wie der Admin sie gesetzt hat – `null`, wenn es keinen (gültigen) Wert gibt: dann gilt die Vorbelegung. */
-export function leitungAusWerten(werte: readonly Wert[]): number[] | null {
-  const w = ersterDerArt(werte, LEITUNG_ART);
+/**
+ * Die Rollen-IDs der Leitung, wie der Admin sie gesetzt hat – `null`, wenn es keinen (gültigen) Wert gibt: dann gilt die
+ * Vorbelegung. `gruppe`: `null` (Vorgabe) = die Gruppe „Website“; sonst die Untergruppe (W3b-4a). Ein Wert einer Untergruppe
+ * gilt nie für die Website und umgekehrt.
+ */
+export function leitungAusWerten(
+  werte: readonly Wert[],
+  gruppe: number | null = null,
+): number[] | null {
+  const w = ersterDerArt(werte, LEITUNG_ART, gruppe);
   return w ? (gueltig(w, LEITUNG_ART, leitungSchema)?.rollen ?? null) : null;
 }
 
@@ -90,10 +109,12 @@ async function schreiben(
   scheitert: string,
   /** Steht es schon genau so da, wird nichts geschrieben (Rechte erneut setzen ändert dann nichts). */
   nurWennAnders = false,
+  /** Welcher Wert dieser Art gemeint ist (nur `website-leitung`, W3b-4a) – `null`: der der Gruppe „Website“. */
+  gruppe: number | null = null,
 ): Promise<void> {
   const vorher = await werteLesen(o.p, o.modul, o.kategorie);
   if (nurWennAnders && steht(vorher)) return;
-  const da = ersterDerArt(vorher, art);
+  const da = ersterDerArt(vorher, art, gruppe);
   if (da) await wertAendern(o.p, o.modul, o.kategorie, da.id, text, VERWEIGERT);
   else await wertAnlegen(o.p, o.modul, o.kategorie, text, VERWEIGERT);
   const nachher = await werteLesen(o.p, o.modul, o.kategorie);
@@ -102,25 +123,33 @@ async function schreiben(
 
 /**
  * **Die Leitung festhalten** (nur der Admin, nach dem Setzen der Rechte): die Rollen-IDs mit Stufe Leitung. Steht es schon so
- * da, wird nichts geschrieben.
+ * da, wird nichts geschrieben. `gruppe`: `null` (Vorgabe) = die Gruppe „Website“ – ihr Wert bleibt ohne Feld `gruppe`; sonst
+ * die Untergruppe (W3b-4a), je Gruppe ein eigener Wert.
  */
-export async function leitungSetzen(o: SpeicherOrt, rollen: readonly number[]): Promise<void> {
+export async function leitungSetzen(
+  o: SpeicherOrt,
+  rollen: readonly number[],
+  gruppe: number | null = null,
+): Promise<void> {
   const soll = [...new Set(rollen)].sort((a, b) => a - b);
-  const text = JSON.stringify(
-    leitungSchema.parse({ art: LEITUNG_ART, fassung: 1, rollen: soll }) satisfies WebsiteLeitung,
-  );
+  const inhalt: WebsiteLeitung =
+    gruppe === null
+      ? { art: LEITUNG_ART, fassung: 1, rollen: soll }
+      : { art: LEITUNG_ART, fassung: 1, rollen: soll, gruppe };
+  const text = JSON.stringify(leitungSchema.parse(inhalt) satisfies WebsiteLeitung);
   await schreiben(
     o,
     LEITUNG_ART,
     text,
     (w) => {
-      const jetzt = leitungAusWerten(w);
+      const jetzt = leitungAusWerten(w, gruppe);
       return (
         jetzt !== null && JSON.stringify([...jetzt].sort((a, b) => a - b)) === JSON.stringify(soll)
       );
     },
     'ChurchTools hat nicht übernommen, wer die Leitung ist.',
     true,
+    gruppe,
   );
 }
 

@@ -301,6 +301,28 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
     expect(screen.queryByRole('region', { name: 'Rechte der Website' })).toBeNull();
   });
 
+  it('Start-Prüfung (W3b-4a): nicht eingerichtete und abweichende Untergruppen stehen im Hinweis – auch wenn die Website stimmt', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    pruefung.mockResolvedValue({
+      art: 'untergruppen',
+      untergruppen: [
+        { name: 'Website – Technik', art: 'nicht-eingerichtet' },
+        { name: 'Website – Jugend', art: 'abweicht', rollen: ['Mitarbeiter'] },
+      ],
+    });
+    render(<App />);
+    expect(
+      await screen.findByText(/Die Untergruppe „Website – Technik“ ist noch nicht eingerichtet/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/In der Untergruppe „Website – Jugend“ weichen die Rechte ab: Mitarbeiter/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/noch keine Rechte an der Website/)).toBeNull();
+    expect(screen.queryByText(/stimmen die Rechte in ChurchTools nicht/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Wer darf was' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER')).toBeTruthy();
+  });
+
   it('nach dem Schließen des Fensters „Einstellungen“ wird die Prüfung neu gelesen (Rechte können gesetzt sein)', async () => {
     ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
     pruefung.mockResolvedValueOnce({ art: 'nichts' }).mockResolvedValue(null);

@@ -6,6 +6,9 @@ import {
   kuerzelEntwuerfe,
   kuerzelLesen,
   kuerzelVeroeffentlicht,
+  untergruppenAus,
+  untergruppenKategorie,
+  untergruppenKategorienAus,
 } from './einrichten';
 
 const kategorien = (gruppe: number, name = 'Website', ab = 10) =>
@@ -92,5 +95,74 @@ describe('einrichtungsStand', () => {
   it('eine fehlt → Admin repariert, die anderen sehen „unvollständig“', () => {
     expect(einrichtungsStand(halb, true)).toBe('einrichten');
     expect(einrichtungsStand(halb, false)).toBe('unvollstaendig');
+  });
+});
+
+describe('Untergruppen (W3b-4a)', () => {
+  /** Hierarchie wie auf der Test-Instanz: Website 344 → Jugend 347 (nur von unten bekannt) und 350 (nur von oben), Enkel 360. */
+  const HIER = [
+    { groupId: 344, parents: [], children: [350] },
+    { groupId: 347, parents: [344], children: [360] },
+    { groupId: 360, parents: [347] },
+  ];
+
+  it('untergruppenAus: direkte Kinder aus parents UND children, Enkel nicht', () => {
+    expect(untergruppenAus(HIER, 344)).toEqual([347, 350]);
+  });
+
+  it('untergruppenAus: eine Website ohne Kinder (oder keine Hierarchie) hat keine', () => {
+    expect(untergruppenAus([{ groupId: 344, parents: [1] }], 344)).toEqual([]);
+    expect(untergruppenAus(null, 344)).toEqual([]);
+  });
+
+  it('untergruppenKategorie: Kürzel und Name wie die Veröffentlicht-Kategorie (so findet sich die aus der Messung wieder)', () => {
+    const k = untergruppenKategorie(347, 'Website – Jugend');
+    expect(k.kuerzel).toBe('veroeffentlicht-g347');
+    expect(k.name).toBe('Website: Veröffentlicht · Website – Jugend');
+    expect(k.name).toBe(kategorienFuer(347, 'Website – Jugend')[1].name);
+  });
+
+  it('untergruppenKategorienAus: nur Kinder der Website, bei gleichem Kürzel die kleinste ID, ohne Kategorie = nicht eingerichtet', () => {
+    const liste = [
+      ...kategorien(344, 'Website', 104),
+      { id: 117, shorty: kuerzelVeroeffentlicht(347) },
+      { id: 90, shorty: kuerzelVeroeffentlicht(347) },
+      { id: 120, shorty: kuerzelVeroeffentlicht(999) }, // keine Untergruppe der Website
+    ];
+    expect(untergruppenKategorienAus(liste, [347, 350])).toEqual([{ gruppe: 347, kategorie: 90 }]);
+  });
+});
+
+describe('einrichtungAus erkennt die Website NUR über entwuerfe-g (W3b-4a)', () => {
+  const jugend = (id: number) => ({
+    id,
+    shorty: kuerzelVeroeffentlicht(347),
+    name: 'Website: Veröffentlicht · Website – Jugend',
+  });
+
+  it('eine Untergruppen-Kategorie mit KLEINERER ID wird nicht als Website gewählt', () => {
+    const liste = [jugend(5), ...kategorien(344, 'Website', 104)];
+    expect(einrichtungAus(liste)).toEqual({
+      gruppe: 344,
+      name: 'Website',
+      entwuerfe: 104,
+      veroeffentlicht: 105,
+    });
+    expect(einrichtungAus([...liste].reverse())?.gruppe).toBe(344);
+  });
+
+  it('wer NUR die Untergruppen-Kategorie sieht, sieht keine Website (null) – nie die Untergruppe als Website', () => {
+    expect(einrichtungAus([jugend(117)])).toBeNull();
+    expect(einrichtungsStand(einrichtungAus([jugend(117)]), false)).toBe('fehlt');
+  });
+
+  it('Redakteur einer Untergruppe (sieht Entwürfe der Website und die eigene Kategorie): Website = die Gruppe aus entwuerfe-g', () => {
+    const liste = [kategorien(344, 'Website', 104)[0], jugend(117)];
+    expect(einrichtungAus(liste)).toEqual({
+      gruppe: 344,
+      name: 'Website',
+      entwuerfe: 104,
+      veroeffentlicht: null,
+    });
   });
 });

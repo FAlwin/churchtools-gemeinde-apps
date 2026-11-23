@@ -14,7 +14,13 @@ import {
 } from './daten';
 import { demoStarten } from './demo';
 import { ladeStart } from './start';
-import { ladeRollen, ladeWerDarfWas, pruefeRechte, rechteSetzen } from './rechte';
+import {
+  ladeRollen,
+  ladeWerDarfWas,
+  pruefeRechte,
+  rechteSetzen,
+  untergruppeRechteSetzen,
+} from './rechte';
 
 /**
  * `?demo` spielt ChurchTools nach – ohne dass eine Anfrage ins Netz geht (W3a-2). Die Tests laufen über dieselben Wege wie die
@@ -197,7 +203,11 @@ describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
       ['Coach', false],
     ]);
     expect(w.ist.map((r) => r.stufe)).toEqual(['leitung', 'redakteur', 'keine']);
-    expect(await pruefeRechte(start.einrichtung!.gruppe, kat)).toBeNull();
+    // W3b-4a: „Website – Technik“ ist noch nicht eingerichtet – das ist der einzige Hinweis.
+    expect(await pruefeRechte(start.einrichtung!.gruppe, kat)).toEqual({
+      art: 'untergruppen',
+      untergruppen: [{ name: 'Website – Technik', art: 'nicht-eingerichtet' }],
+    });
   });
 
   it('`rechte-leer` → Hinweis „nichts“; Rechte setzen → alles stimmt; `rechte-abweicht` → Hinweis, setzen nimmt es zurück', async () => {
@@ -207,18 +217,52 @@ describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
       entwuerfe: leer.start.einrichtung!.entwuerfe!,
       veroeffentlicht: leer.start.einrichtung!.veroeffentlicht!,
     };
-    expect(await pruefeRechte(g, kat)).toEqual({ art: 'nichts' });
+    // W3b-4a: „Website – Technik“ (nicht eingerichtet) steht in jedem Fall dabei.
+    const technik = { untergruppen: [{ name: 'Website – Technik', art: 'nicht-eingerichtet' }] };
+    expect(await pruefeRechte(g, kat)).toEqual({ art: 'nichts', ...technik });
     await rechteSetzen(g, kat, [
       { rolle: 2, stufe: 'leitung' },
       { rolle: 3, stufe: 'redakteur' },
     ]);
-    expect(await pruefeRechte(g, kat)).toBeNull();
+    expect(await pruefeRechte(g, kat)).toEqual({ art: 'untergruppen', ...technik });
 
     const ab = await ort('rechte-abweicht');
-    expect(await pruefeRechte(g, kat)).toEqual({ art: 'abweicht', rollen: ['Mitarbeiter'] });
+    expect(await pruefeRechte(g, kat)).toEqual({
+      art: 'abweicht',
+      rollen: ['Mitarbeiter'],
+      ...technik,
+    });
     await rechteSetzen(g, kat, [{ rolle: 3, stufe: 'redakteur' }]);
-    expect(await pruefeRechte(g, kat)).toBeNull();
+    expect(await pruefeRechte(g, kat)).toEqual({ art: 'untergruppen', ...technik });
     expect(ab.start.zugang).toBe('admin');
+  });
+
+  it('W3b-4a: „Website – Technik“ einrichten → Kategorie, Rechte, Website-Rollen nachgezogen, kein Hinweis mehr; nichts geht ins Netz', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { start } = await ort('seiten');
+    const g = start.einrichtung!.gruppe;
+    const kat = {
+      entwuerfe: start.einrichtung!.entwuerfe!,
+      veroeffentlicht: start.einrichtung!.veroeffentlicht!,
+    };
+    const vorher = await ladeWerDarfWas(g, kat);
+    expect(vorher.untergruppen.map((u) => [u.name, u.kategorie !== null])).toEqual([
+      ['Website – Jugend', true],
+      ['Website – Technik', false],
+    ]);
+    await untergruppeRechteSetzen(g, kat, { id: 22, name: 'Website – Technik' }, [
+      { rolle: 2201, stufe: 'leitung' },
+      { rolle: 2202, stufe: 'redakteur' },
+    ]);
+    expect(await pruefeRechte(g, kat)).toBeNull();
+    const nachher = await ladeWerDarfWas(g, kat);
+    expect(nachher.ist.map((r) => r.stufe)).toEqual(['leitung', 'redakteur', 'keine']);
+    expect(nachher.untergruppen.map((u) => u.ist.map((r) => r.stufe))).toEqual([
+      ['leitung', 'redakteur'],
+      ['leitung', 'redakteur'],
+    ]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(echtesFetch).not.toHaveBeenCalled();
   });
 
   it('nicht eingerichtet: Rollen jeder Gruppe lesbar, nichts geht ins Netz', async () => {

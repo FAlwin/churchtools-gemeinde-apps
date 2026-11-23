@@ -89,6 +89,11 @@ export function darfAussehenUndMenue(zugang: Zugang | null): boolean {
  * angefragt“ bestätigen und Seiten **löschen**? (W3b-2, E-W23) – nur Leitung und Admin; ein Redakteur reicht ein und fragt das
  * Löschen an. Das spiegelt die Rechte an den Kategorien (nur die Leitung schreibt in „Veröffentlicht“); **geschützt sind die
  * Daten allein durch diese Rechte**, nicht durch die Oberfläche. W3b-4 ergänzt hier den Bereich (Untergruppe).
+ *
+ * **Zwischenstand W3b-4a (bis W3b-4b):** Rollen einer eingerichteten Untergruppe schreiben in „Entwürfe“, aber nicht in
+ * „Veröffentlicht“ der Website – `zugangFuer` macht sie deshalb zu **„redakteur“ für die ganze Website** (sie sehen alle
+ * Seiten, reichen ein, geben nicht frei). Auch die Leitung einer Untergruppe ist hier Redakteur, obwohl sie in ihre eigene
+ * Kategorie schreiben darf. Erst W3b-4b bringt den Bereich je Seite, gefilterte Listen und Freigeben je Bereich.
  */
 export function darfFreigeben(zugang: Zugang | null): boolean {
   return zugang === 'admin' || zugang === 'leitung';

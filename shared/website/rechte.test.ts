@@ -11,10 +11,14 @@ import {
   sollRechte,
   stufeAus,
   stufenAus,
+  stufenZumNachziehen,
+  untergruppenHinweise,
   verwaltetVon,
   vorschlag,
   wahlAus,
+  websiteHinweis,
   type Kategorien,
+  type UntergruppeStand,
 } from './rechte';
 
 /** Aufbau wie `GET /permissions/definitions` (Test-Instanz, Modul `website`; Nummern aus Messung W3b-0). */
@@ -266,5 +270,196 @@ describe('rechteHinweis (Prüfung beim Start)', () => {
         { rolle: 2, stufe: 'keine' },
       ]),
     ).toEqual({ art: 'nichts' });
+  });
+});
+
+describe('Untergruppen (W3b-4a): Soll, verwaltetVon, Stufe', () => {
+  /** Wie auf der Test-Instanz: 117 = `veroeffentlicht-g347` (Jugend), 118 = eine zweite Untergruppe 350. */
+  const JUGEND = { gruppe: 347, kategorie: 117 };
+  const ZWEITE = { gruppe: 350, kategorie: 118 };
+  const VOLL: Kategorien = { ...KAT, untergruppen: [JUGEND, ZWEITE] };
+  const SCHREIBEN = [N.datenAnlegen, N.datenAendern, N.datenLoeschen];
+  const LESEN = [N.kategorieSehen, N.datenSehen];
+  const an = (rechte: Recht[], kat: number) =>
+    rechte
+      .filter((x) => x.dataId === kat)
+      .map((x) => x.authId)
+      .sort();
+  const sortiert = (l: number[]) => [...l].sort();
+
+  it('Website-Rollen ohne Untergruppen: dasselbe Soll wie bisher (Feld fehlt oder leer)', () => {
+    expect(sollRechte([{ rolle: 1, stufe: 'leitung' }], { ...KAT, untergruppen: [] }, N)).toEqual(
+      soll('leitung'),
+    );
+  });
+
+  it('Website-Redakteur liest ALLE Untergruppen-Kategorien, schreibt in keine', () => {
+    const s = sollRechte([{ rolle: 1, stufe: 'redakteur' }], VOLL, N);
+    expect(an(s, 117)).toEqual(sortiert(LESEN));
+    expect(an(s, 118)).toEqual(sortiert(LESEN));
+  });
+
+  it('Website-Leitung schreibt in ALLE Untergruppen-Kategorien', () => {
+    const s = sollRechte([{ rolle: 1, stufe: 'leitung' }], VOLL, N);
+    expect(an(s, 117)).toEqual(sortiert([...LESEN, ...SCHREIBEN]));
+    expect(an(s, 118)).toEqual(sortiert([...LESEN, ...SCHREIBEN]));
+  });
+
+  it('Untergruppen-Redakteur: Modul, Entwürfe schreiben, Veröffentlicht der Website LESEN, eigene Kategorie lesen – sonst nichts', () => {
+    const s = sollRechte([{ rolle: 3320, stufe: 'redakteur' }], VOLL, N, JUGEND);
+    expect(hat(s, N.modulSehen, null)).toBe(true);
+    expect(an(s, E)).toEqual(sortiert([...LESEN, ...SCHREIBEN]));
+    expect(an(s, V)).toEqual(sortiert(LESEN));
+    expect(an(s, 117)).toEqual(sortiert(LESEN));
+    expect(an(s, 118)).toEqual([]);
+  });
+
+  it('Untergruppen-Leitung schreibt NUR in die eigene Kategorie – nie in Veröffentlicht der Website oder einer anderen Untergruppe', () => {
+    const s = sollRechte([{ rolle: 3323, stufe: 'leitung' }], VOLL, N, JUGEND);
+    expect(an(s, 117)).toEqual(sortiert([...LESEN, ...SCHREIBEN]));
+    expect(an(s, V)).toEqual(sortiert(LESEN));
+    expect(an(s, 118)).toEqual([]);
+  });
+
+  it('Untergruppe „Kein Zugriff“: nichts', () => {
+    expect(sollRechte([{ rolle: 3320, stufe: 'keine' }], VOLL, N, JUGEND)).toEqual([]);
+  });
+
+  it('verwaltetVon: auch die Kategorien ALLER eingerichteten Untergruppen gehören uns – Fremdes nicht', () => {
+    const v = verwaltetVon(VOLL, N);
+    expect(v(r(1, N.datenSehen, 117))).toBe(true);
+    expect(v(r(1, N.datenAnlegen, 118))).toBe(true);
+    expect(v(r(1, N.datenSehen, 999))).toBe(false);
+    expect(verwaltetVon(KAT, N)(r(1, N.datenSehen, 117))).toBe(false);
+  });
+
+  it('Herabstufen einer Website-Leitung entzieht auch das Schreiben in den Untergruppen-Kategorien', () => {
+    const ist = sollRechte([{ rolle: 1, stufe: 'leitung' }], VOLL, N);
+    const p = rechteVergleichen(
+      sollRechte([{ rolle: 1, stufe: 'redakteur' }], VOLL, N),
+      ist,
+      verwaltetVon(VOLL, N),
+      N.modulSehen,
+    );
+    expect(
+      p.entziehen
+        .filter((x) => x.dataId === 117)
+        .map((x) => x.authId)
+        .sort(),
+    ).toEqual(sortiert(SCHREIBEN));
+  });
+
+  it('stufeAus einer Untergruppen-Rolle: Schreiben in die EIGENE Kategorie = Leitung', () => {
+    const ist = [
+      ...sollRechte([{ rolle: 3323, stufe: 'leitung' }], VOLL, N, JUGEND),
+      ...sollRechte([{ rolle: 3320, stufe: 'redakteur' }], VOLL, N, JUGEND),
+    ];
+    expect(stufenAus([3323, 3320], ist, VOLL, N, JUGEND)).toEqual([
+      { rolle: 3323, stufe: 'leitung' },
+      { rolle: 3320, stufe: 'redakteur' },
+    ]);
+  });
+
+  it('stufeAus einer Untergruppen-Rolle: ohne Lesen in Veröffentlicht der Website (Stand der Messung) → weicht ab', () => {
+    const ist = sollRechte([{ rolle: 3320, stufe: 'redakteur' }], VOLL, N, JUGEND).filter(
+      (x) => x.dataId !== V,
+    );
+    expect(stufeAus(3320, ist, VOLL, N, JUGEND)).toBe('abweicht');
+  });
+
+  it('stufeAus einer Untergruppen-Rolle, die in Veröffentlicht der Website schreibt → weicht ab', () => {
+    const ist = [
+      ...sollRechte([{ rolle: 3320, stufe: 'leitung' }], VOLL, N, JUGEND),
+      r(3320, N.datenAnlegen, V),
+    ];
+    expect(stufeAus(3320, ist, VOLL, N, JUGEND)).toBe('abweicht');
+  });
+
+  it('stufeAus einer Website-Rolle, der die Rechte an einer Untergruppe fehlen → weicht ab', () => {
+    expect(stufeAus(1, soll('leitung'), VOLL, N)).toBe('abweicht');
+  });
+});
+
+describe('stufenZumNachziehen (W3b-4a): die heutigen Stufen der Website-Rollen', () => {
+  const VOLL: Kategorien = { ...KAT, untergruppen: [{ gruppe: 347, kategorie: 117 }] };
+
+  it('Stufen kommen aus Entwürfe/Veröffentlicht der Website – fehlende Untergruppen-Rechte machen sie NICHT zu „weicht ab“', () => {
+    const ist = [...soll('leitung', 3290), ...soll('redakteur', 3287)];
+    expect(stufenZumNachziehen([3290, 3287, 3296], ist, VOLL, N)).toEqual([
+      { rolle: 3290, stufe: 'leitung' },
+      { rolle: 3287, stufe: 'redakteur' },
+      { rolle: 3296, stufe: 'keine' },
+    ]);
+  });
+
+  it('nicht neu vorbelegt: eine Leiter-Rolle, die heute Redakteur ist, bleibt Redakteur', () => {
+    expect(stufenZumNachziehen([3290], soll('redakteur', 3290), VOLL, N)).toEqual([
+      { rolle: 3290, stufe: 'redakteur' },
+    ]);
+  });
+
+  it('eine Rolle, die schon an der Website abweicht, wird nicht angefasst', () => {
+    const ist = [...soll('redakteur', 3287), r(3287, N.datenAnlegen, V)];
+    expect(stufenZumNachziehen([3287], ist, VOLL, N)).toEqual([]);
+  });
+});
+
+describe('Hinweise beim Start mit Untergruppen (W3b-4a)', () => {
+  const rollen = [
+    { id: 3323, name: 'Leiter', leitung: true },
+    { id: 3320, name: 'Mitarbeiter', leitung: false },
+  ];
+  const stand = (o: Partial<UntergruppeStand>): UntergruppeStand => ({
+    gruppe: 347,
+    name: 'Website – Jugend',
+    kategorie: 117,
+    rollen,
+    ist: [
+      { rolle: 3323, stufe: 'leitung' },
+      { rolle: 3320, stufe: 'redakteur' },
+    ],
+    ...o,
+  });
+
+  it('nicht eingerichtet → Hinweis; eingerichtet und stimmig → keiner; abweichend → mit den Rollen', () => {
+    expect(untergruppenHinweise([stand({ kategorie: null, ist: [] })])).toEqual([
+      { name: 'Website – Jugend', art: 'nicht-eingerichtet' },
+    ]);
+    expect(untergruppenHinweise([stand({})])).toEqual([]);
+    expect(
+      untergruppenHinweise([
+        stand({
+          ist: [
+            { rolle: 3323, stufe: 'leitung' },
+            { rolle: 3320, stufe: 'abweicht' },
+          ],
+        }),
+      ]),
+    ).toEqual([{ name: 'Website – Jugend', art: 'abweicht', rollen: ['Mitarbeiter'] }]);
+  });
+
+  it('eingerichtet, alle Rollen „Kein Zugriff“: Entscheidung des Admins, kein Hinweis', () => {
+    expect(
+      untergruppenHinweise([
+        stand({
+          ist: [
+            { rolle: 3323, stufe: 'keine' },
+            { rolle: 3320, stufe: 'keine' },
+          ],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('websiteHinweis: ohne Untergruppen-Hinweise unverändert der Hinweis der Website; sonst zusammen', () => {
+    const u = [{ name: 'X', art: 'nicht-eingerichtet' as const }];
+    expect(websiteHinweis(null, [])).toBeNull();
+    expect(websiteHinweis({ art: 'nichts' }, [])).toEqual({ art: 'nichts' });
+    expect(websiteHinweis(null, u)).toEqual({ art: 'untergruppen', untergruppen: u });
+    expect(websiteHinweis({ art: 'abweicht', rollen: ['A'] }, u)).toEqual({
+      art: 'abweicht',
+      rollen: ['A'],
+      untergruppen: u,
+    });
   });
 });

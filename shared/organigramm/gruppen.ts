@@ -78,6 +78,20 @@ export function elternAus(
   return new Map([...eltern].map(([k, s]) => [k, [...s].sort((a, b) => a - b)]));
 }
 
+/**
+ * **Die direkten Untergruppen einer Gruppe** – aus `elternAus` (also aus `parents` UND `children`), Enkel nicht. Aufsteigend
+ * nach ID. Auch die Website nutzt das (W3b-4a: Untergruppen der Gruppe „Website“) – die Auswertung der Hierarchie steht
+ * damit an EINER Stelle.
+ */
+export function kinderVon(
+  eltern: ReadonlyMap<number, readonly number[]>,
+  gruppe: number,
+): number[] {
+  const kinder: number[] = [];
+  for (const [kind, vaeter] of eltern) if (vaeter.includes(gruppe)) kinder.push(kind);
+  return kinder.sort((a, b) => a - b);
+}
+
 export interface Knoten {
   gruppe: OrgGruppe;
   kinder: Knoten[];

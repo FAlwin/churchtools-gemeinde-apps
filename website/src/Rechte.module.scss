@@ -63,3 +63,17 @@
   gap: 8px;
   margin-top: 10px;
 }
+
+// Untergruppen (W3b-4a): je Untergruppe ein Abschnitt unter der Gruppe „Website“, mit einer feinen Linie getrennt.
+.untergruppe {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+}
+
+.untergruppenTitel {
+  margin: 0 0 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+}

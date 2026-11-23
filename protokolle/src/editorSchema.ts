@@ -9,6 +9,7 @@ import { createReactBlockSpec } from '@blocknote/react';
 import { BLOCK } from '@shared/protokolle/dokument';
 import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
 import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
+import { ohneVerlauf } from './ohneVerlauf';
 import { einrueckenTasten } from './einruecken';
 import { punktNummern } from './punktNummern';
 import { tabellenZeile } from './tabellenZeile';
@@ -129,7 +130,7 @@ export const EDITOR_TYPEN: ReadonlySet<string> = new Set(Object.keys(schema.bloc
 /**
  * **Aufgaben-IDs im Editor setzen** (S4-2, Regel `aufgabenIdsVergeben`): neue, kopierte oder aus einer anderen Sitzung
  * eingefügte Aufgaben bekommen eine eigene ID – so gibt es das To-Do schon, wenn jemand gleich „Wer?“ wählt.
- * **Nicht im Rückgängig-Verlauf** (beim Durchklicken 24.10.2026 gefunden): sonst nähme „Rückgängig“ die ID wieder weg,
+ * **Nicht im Rückgängig-Verlauf** (`ohneVerlauf`, beim Durchklicken 24.10.2026 gefunden): sonst nähme „Rückgängig“ die ID wieder weg,
  * die Aufgabe bekäme eine neue, und ihr To-Do (mit Wer/Bis/Status) wäre als gelöscht vermerkt. `true`, wenn gesetzt wurde.
  */
 export function aufgabenIdsSetzen(
@@ -139,8 +140,7 @@ export function aufgabenIdsSetzen(
 ): boolean {
   const ids = aufgabenIdsVergeben(editor.document, fremd, neueId);
   if (!ids.length) return false;
-  editor.transact((tr) => {
-    tr.setMeta('addToHistory', false);
+  ohneVerlauf(editor, () => {
     for (const x of ids) editor.updateBlock(x.blockId, { props: { aufgabe: x.aufgabe } });
   });
   return true;

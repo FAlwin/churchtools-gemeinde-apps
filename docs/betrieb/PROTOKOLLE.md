@@ -527,8 +527,8 @@ Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text komm
 Protokollen, To-Dos aus allen. Ein Treffer öffnet die Sitzung am Tagesordnungspunkt.
 
 **Reiter „Termine“ (W14, 21.11.2026):** zwischen „To-Dos“ und „Einstellungen“. Er sammelt die **Termin-Bausteine aller Sitzungen** der eigenen Gruppen (**Entwurf und freigegeben** –
-anders als die Suche, die nur Freigegebenes zeigt) nach Datum: oben **„Noch nicht im Kalender“**, darunter einklappbar **„Im Kalender“** (Kalender, Zeit, Link „In ChurchTools öffnen“ – führt zum
-Kalender der Instanz) und **„Nicht eintragen“** („Wieder anzeigen“). Ein Baustein ohne gültiges Datum fehlt. Im Protokoll ändert sich nichts. Bei mehreren Gruppen: Filter „Gruppe“.
+anders als die Suche, die nur Freigegebenes zeigt) nach Datum: oben **„Noch nicht im Kalender“**, darunter einklappbar **„Im Kalender“** (Kalender, Zeit, Link „In ChurchTools öffnen“ – führt zur
+Kalender-Seite der Instanz, `/?q=churchcal`) und **„Nicht eintragen“** („Wieder anzeigen“). Ein Baustein ohne gültiges Datum fehlt. Im Protokoll ändert sich nichts. Bei mehreren Gruppen: Filter „Gruppe“.
 **Eintragen** (Textknopf) öffnet das Fenster „In Kalender eintragen“: Kalender (nur mit dem Recht „Termine anlegen“ im Kalender, `churchcal` „edit category“ – die Leitung hat es für den Kalender
 der Gruppe, Mitglieder nicht; vorausgewählt der Kalender der Gruppe), Titel, Datum, **Ganztägig** oder Von–Bis, Ort. Titel und Uhrzeit liest `titelUndUhrzeit` aus dem Text („Heiligabend, 16 Uhr“ →
 „Heiligabend“, 16:00 bis 17:00; ohne Uhrzeit ganztägig). **Ganztägig geht als `YYYY-MM-DD` für Beginn und Ende** an `POST /calendars/{id}/appointments` mit `allDay: true` (so liefert ChurchTools

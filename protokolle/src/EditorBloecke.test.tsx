@@ -33,10 +33,23 @@ function zeige(q: {
   mitglieder?: AufgabenKontextWert['mitglieder'];
 }) {
   const props = { aufgabe: 't1', vorab: q.vorab ?? '' };
+  // Merkt sich je Änderung, ob sie am Rückgängig-Verlauf vorbeiging (`ohneVerlauf`: `addToHistory: false`).
+  const verlauf: { vorab: string; imVerlauf: boolean }[] = [];
+  let ohne = false;
   const editor = {
     isEditable: true,
+    transact: vi.fn((f: (tr: { setMeta(k: string, w: unknown): unknown }) => void) => {
+      const vorher = ohne;
+      f({
+        setMeta: (k, w) => {
+          if (k === 'addToHistory' && w === false) ohne = true;
+        },
+      });
+      ohne = vorher;
+    }),
     updateBlock: vi.fn((_id: string, u: { props: { vorab: string } }) => {
       props.vorab = u.props.vorab;
+      verlauf.push({ vorab: u.props.vorab, imVerlauf: !ohne });
     }),
   };
   const k: AufgabenKontextWert = {
@@ -60,7 +73,7 @@ function zeige(q: {
       />
     </AufgabenKontext.Provider>,
   );
-  return { editor, k, props };
+  return { editor, k, props, verlauf };
 }
 
 const todo = (teil: Partial<Aufgabe> = {}): Aufgabe => ({
@@ -210,13 +223,16 @@ describe('Wer und Bis vor dem Text', () => {
   });
 
   it('mit To-Do: alles geht ins To-Do; die übernommene Vorab-Wahl verschwindet aus dem Block', () => {
-    const { editor, k, props } = zeige({
+    const { editor, k, props, verlauf } = zeige({
       text: 'Beamer',
       vorab: JSON.stringify({ wer: [7], extern: '', bis: null }),
       todo: todo({ wer: [19] }),
     });
     expect(props.vorab).toBe('');
     expect(editor.updateBlock).toHaveBeenCalledWith('b1', { props: { vorab: '' } });
+    // … und zwar am Rückgängig-Verlauf vorbei – sonst holte „Rückgängig“ sie zurück, der Block nähme sie gleich wieder
+    // heraus, und Rückgängig drehte sich im Kreis (TF-PROT-29, 23.11.2026).
+    expect(verlauf).toEqual([{ vorab: '', imVerlauf: false }]);
     expect(screen.getByRole('button', { name: 'Wer kümmert sich?' }).textContent).toContain(
       'Spike Musiker',
     );

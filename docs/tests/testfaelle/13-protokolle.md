@@ -1110,3 +1110,49 @@ und merkt sich das. Wer nicht in den Kalender darf, sieht nur die Liste.
 - **Historie:** 21.11.2026 (W14, nach der Festplanung)
 
 </details>
+
+### TF-PROT-32 · Fenster „In Kalender eintragen“ wie der ChurchTools-Kalender: Felder, Wiederholung, Vorlagen
+
+**Achtung Test-Instanz:** ChurchTools verschickt dort **echte Mails**. Dieser Test löst **keine Einladungen** aus (kein `meetingrequests`). Mit **„Ersteller über Änderungen informieren“**
+bekommt nur der Ersteller (du) Mails, wenn jemand einen Termin ändert – beim Testen den Haken ruhig lassen und nichts ändern lassen. Nur Termine und Vorlagen mit „TEST“ im Titel anlegen und danach
+in ChurchTools löschen (Termine im Kalender, Vorlagen im Kalender-Dialog „Termin-Vorlagen“).
+
+**Das brauchst du:** Wie TF-PROT-31 (Gruppe mit Protokollen, du bist Leitung und darfst im Kalender der Gruppe Termine anlegen, Protokoll mit „TEST Heiligabend, 16 Uhr“ am 24.12.2027).
+Dazu als **Admin** (oder mit den Rechten „Termin-Vorlagen bearbeiten“ und „Termin-Tags verwalten“ im Kalender) und ein zweites Konto als **Mitglied** mit Recht „Termine anlegen“, aber **ohne**
+Vorlagen-Recht. Ein Rechner und ein Handy (oder 375 px). Daneben den ChurchTools-Dialog **„Termin erstellen“** im Kalender offen, zum Vergleichen. `?demo` zeigt das Fenster mit zwei Vorlagen
+(„Gottesdienst“, „Monatliches Treffen“) und zwei Tags.
+
+**Das muss passieren:** Das Fenster sieht und verhält sich wie der Reiter „Kalender“ in ChurchTools; was du einstellst, steht danach im Termin in ChurchTools.
+
+1. **Aufbau:** Reiter **Termine** → bei „TEST Heiligabend, 16 Uhr“ **Eintragen**. Links die Spalte **„TERMIN-VORLAGEN <Kalender>“** mit dem grünen Hinweis „Mit Vorlagen stellst du einheitliche
+   Bezeichnungen sicher …“ und „Ohne Vorlage“ (blauer Strich links). Rechts, wie in ChurchTools: Kalender · Titel \* · Untertitel · Nur für eingeloggte Personen sichtbar · Ganztägig · Beginn ·
+   Ende · Wiederholungen · Beschreibung · Link · Ort (+ Hinzufügen) · Tags (+ Hinzufügen). Unten **„Ersteller über Änderungen informieren“** (vorgehakt), **Abbrechen**, **Speichern** – nur
+   **Speichern** ist gefüllt; **„Als Vorlage speichern“** (leise, links unten) steht nur als Admin da, beim Mitglied fehlt er. Es gibt **keine Reiterleiste** (die weiteren Reiter kommen später).
+2. **Zeiten:** Beginn 24.12.2027, **Stunde 16, Minute 00**, Ende 17:00 am selben Tag. **Ganztägig** anhaken → Stunde und Minute verschwinden; wieder abhaken → sie sind zurück. Das **Ende**
+   auf einen späteren Tag setzen (mehrtägig). Das Beginn-Datum nach hinten schieben → das Ende zieht mit.
+3. **Wiederholung „Wöchentlich“:** Nach der Wahl steht **Bis = Beginn + 7 Tage** (wie in ChurchTools); daneben **„Alle 1 Woche(n)“**. Von „Wöchentlich“ auf „Täglich“ wechseln: **Bis bleibt
+   stehen**. Zurück auf „Keine Wiederholung“: Bis, Weitere Termine und Ausnahmen verschwinden. **Monatlich nach Wochentag:** zweite Auswahl **„Vierter Freitag im Monat“** (24.12.2027), dazu
+   „Fünfter Freitag im Monat (wenn vorhanden)“ und „Letzter Freitag im Monat“. **Manuell:** kein Bis, kein „Alle x“ – nur **Weitere Termine** und **Ausnahmen**.
+4. **Weitere Termine / Ausnahmen:** Mit **„+“** ein Datum wählen → es steht als Marke „07.01.2028 ✕“ da; ✕ entfernt sie. Eine Wiederholung **„Wöchentlich“ bis Februar 2028** mit **Ausnahme** 07.01.2028 und
+   **Weiterem Termin** 05.02.2028 speichern, in ChurchTools ansehen: Der 07.01. fehlt, der 05.02. ist dabei.
+5. **Felder:** Titel „TEST Alles“, Untertitel, **Nur für eingeloggte Personen sichtbar** (`isInternal`), Beschreibung, Link, **Ort** (Name, Straße, PLZ, Ort, **Zusatz**) und einen vorhandenen
+   **Tag** – **Speichern**. In ChurchTools hat der Termin alles davon (**prüfen: nimmt ChurchTools den „Zusatz“ der Adresse an – Feld `addition` ist nicht gemessen**). Als Admin zusätzlich einen **neuen
+   Tag** tippen (Enter) und speichern: er entsteht. Als Mitglied gibt es das Feld „Neuer Tag“ nicht.
+6. **Vorlage anwenden:** In ChurchTools im Kalender eine Termin-Vorlage „TEST Gottesdienst“ anlegen (Sonntag 10:30, 90 Min, wöchentlich, 8 Wochen, Ort). Im Fenster erscheint sie in der Spalte; **antippen**
+   → Titel, Uhrzeit 10:30, Ende 12:00, Wochentag-Wiederholung, **Bis = Beginn + Dauer der Serie**, Ort sind gefüllt, das **Datum bleibt**. **„Ohne Vorlage“** → wieder der Vorschlag aus dem
+   Protokoll („TEST Heiligabend“, 16:00–17:00). Ein anderer Kalender im Fenster zeigt **nur dessen Vorlagen**.
+7. **Als Vorlage speichern (Admin):** Fenster füllen („TEST Meine Vorlage“, z. B. 19:30, 2 Stunden, monatlich nach Wochentag) → **„Als Vorlage speichern“**: Meldung „Die Vorlage „TEST Meine Vorlage“ ist
+   gespeichert.“, sie steht links in der Liste, in ChurchTools im Dialog „Termin-Vorlagen“ mit denselben Werten – und im Kalender ist **kein Termin** entstanden, im Reiter **kein Vermerk**. Mit der
+   Vorlage in ChurchTools einen Termin anlegen: Uhrzeit, Dauer und Serie stimmen.
+8. **Weiter wie TF-PROT-31:** „Nur verknüpfen“ bei einem ähnlichen Termin, „Nochmal vermerken“ nach einem Fehler, Aussetzer – unverändert. In ChurchTools: **niemand ist eingeladen**.
+9. **Handy (375 px), hell und dunkel:** Die Spalte ist eine **Auswahl „Termin-Vorlage“ oben**, die Zeilen stehen untereinander (Beschriftung über dem Feld), nichts läuft seitlich über; die
+   Datumsfelder sind nicht breiter als die anderen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `protokolle/src/TerminFenster.tsx`, `protokolle/src/TerminFormular.tsx`, `protokolle/src/TerminVorlagenWahl.tsx`, `protokolle/src/DatumMarken.tsx`, `protokolle/src/terminAnlegen.ts`, `protokolle/src/terminEintragen.ts`, `protokolle/src/terminVorlagenLesen.ts`, `protokolle/src/start.ts`, `protokolle/src/Termine.tsx`, `shared/protokolle/termine.ts`, `shared/protokolle/terminWiederholung.ts`, `shared/protokolle/terminFelder.ts`, `shared/protokolle/terminVorlagen.ts`, `shared/ct/kalenderRechte.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/terminWiederholung.test.ts` („Bis“-Vorgabe gemessen, Manuell, Wochentag-Ordinal), `terminVorlagen.test.ts` (lesen, anwenden, speichern, Rundreise), `termine.test.ts` (Vorbelegung, Prüfung, mehrtägig, Beginn ändern), `shared/ct/kalenderRechte.test.ts`; `protokolle/src/terminAnlegen.test.ts` (Rumpf je Feld, Wiederholung, Tags), `terminEintragen.test.ts`, `terminVorlagenLesen.test.ts` (Speichern mit Nachlesen, „201 ohne Folge“), `TerminFenster.test.tsx` (Felder erscheinen/verschwinden, Vorlagen), `Termine.test.tsx` (ganzer Weg gegen den Nachbau); **nur von Hand:** dass ChurchTools alle Felder (besonders Adress-„Zusatz“ `addition`, `repeatOption`, `informOwner`, `additionals`/`exceptions`) so annimmt und die Vorlage mit Serie richtig anlegt, das Aussehen gegenüber ChurchTools, Handy
+- **Historie:** 23.11.2026 (W15-1, nach der Messung W15-0)
+
+</details>

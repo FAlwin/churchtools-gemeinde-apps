@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -8,6 +10,7 @@ import { datumText } from '@shared/ct/datum';
 import { punktBeschriftung } from '@shared/protokolle/dokument';
 import {
   aehnlicherTermin,
+  beginnTagWechseln,
   eintragFehler,
   eintragVorbelegung,
   terminZeitText,
@@ -15,19 +18,26 @@ import {
   type TerminZeile,
 } from '@shared/protokolle/termine';
 import type { TerminStand } from '@shared/protokolle/terminStand';
+import { vorlageAnwenden, type TerminVorlage } from '@shared/protokolle/terminVorlagen';
 import { kalenderTermineAmTag } from './terminAnlegen';
 import { terminLegen } from './terminEintragen';
 import { terminVermerken } from './terminStandSchreiben';
 import { ladeSchreibKalender } from './kalenderListe';
+import { ladeTags, ladeVorlagen, vorlageSpeichern } from './terminVorlagenLesen';
+import { TerminFormular } from './TerminFormular';
+import { TerminVorlagenWahl } from './TerminVorlagenWahl';
 import type { MitarbeitOrt } from './mitarbeitWerte';
 import felder from './Fensterfelder.module.scss';
 import styles from './TerminFenster.module.scss';
 
 /**
- * **Fenster „In Kalender eintragen“** (W14, Entwurf `termine-reiter-w14-v1`): Kalender (nur die, in die man Termine
- * anlegen darf; vorausgewählt der Kalender der Gruppe), Titel ohne Uhrzeit, Datum, „Ganztägig“ oder Von–Bis (aus dem Text
- * gelesen), Ort. Steht am Tag im gewählten Kalender schon ein ähnlicher Termin, ist **„Nur verknüpfen – nichts Neues
- * anlegen“** vorgewählt. Es geht keine Einladung raus.
+ * **Fenster „In Kalender eintragen“** (W14, Entwurf `termine-reiter-w14-v1`; seit W15-1 der Reiter „Kalender“ des
+ * ChurchTools-Dialogs „Termin erstellen“): links die **Termin-Vorlagen** des gewählten Kalenders, rechts das Formular
+ * (`TerminFormular`) – Kalender (nur die, in die man Termine anlegen darf; vorausgewählt der Kalender der Gruppe), Titel
+ * ohne Uhrzeit, Beginn und Ende, Wiederholung, Beschreibung, Ort, Tags … Steht am Tag im gewählten Kalender schon ein
+ * ähnlicher Termin, ist **„Nur verknüpfen – nichts Neues anlegen“** vorgewählt. Es geht keine Einladung raus. Die übrigen
+ * Reiter von ChurchTools (Besprechungsanfragen, Anmeldung, Events, Ressourcen) kommen mit W15-2…5; die Leiste zeigt sich erst,
+ * wenn es mehr als einen gibt.
  *
  * Nach dem Anlegen kommt der Vermerk „im Kalender“. Scheitert nur der Vermerk, steht der Termin trotzdem – dann bleibt
  * das Fenster mit „Nochmal vermerken“ offen (wiederholt nur den Vermerk, legt nichts doppelt an).
@@ -37,6 +47,8 @@ export function TerminFenster({
   gruppenKalender,
   schreibbar,
   ort,
+  vorlagenSchreiben = [],
+  tagsVerwalten = false,
   ich,
   zeitzone,
   onFertig,
@@ -47,6 +59,10 @@ export function TerminFenster({
   gruppenKalender: number | null;
   /** Kalender mit dem Recht „Termine anlegen“. */
   schreibbar: readonly number[];
+  /** Kalender, in die man Termin-Vorlagen speichern darf – nur dort steht „Als Vorlage speichern“. */
+  vorlagenSchreiben?: readonly number[];
+  /** Darf neue Tags anlegen (sonst nur vorhandene wählen). */
+  tagsVerwalten?: boolean;
   /** Wo der Vermerk gespeichert wird („Mitarbeit“ der Gruppe). */
   ort: MitarbeitOrt;
   ich: number;
@@ -55,8 +71,11 @@ export function TerminFenster({
   onFertig: (stand: TerminStand) => void;
   onClose: () => void;
 }) {
+  const handy = useMedienAbfrage(HANDY_BREITE);
   const kalender = useLaden(() => ladeSchreibKalender(schreibbar), [schreibbar]);
   const liste = kalender.stand.art === 'fertig' ? kalender.stand.daten : [];
+  const vorlagen = useLaden(() => ladeVorlagen(), []);
+  const tags = useLaden(() => ladeTags(), []);
   const [e, setE] = useState<Eintrag>(() =>
     eintragVorbelegung(
       zeile,
@@ -67,6 +86,21 @@ export function TerminFenster({
   const kalenderId = e.kalender ?? liste[0]?.id ?? null;
   const eintrag: Eintrag = { ...e, kalender: kalenderId };
   const kalenderName = liste.find((k) => k.id === kalenderId)?.name ?? '';
+
+  // Reiter wie im ChurchTools-Dialog: heute nur „Kalender“, die übrigen kommen mit W15-2…5.
+  const reiter: Reiter<'kalender'>[] = [{ id: 'kalender', label: 'Kalender', icon: 'calendar' }];
+  const [aktiverReiter, setAktiverReiter] = useState<'kalender'>('kalender');
+
+  // Termin-Vorlagen: nur die des gewählten Kalenders.
+  const vorlagenDaten = vorlagen.stand.art === 'fertig' ? vorlagen.stand.daten : null;
+  const alleVorlagen = useMemo(() => vorlagenDaten ?? [], [vorlagenDaten]);
+  const kalenderVorlagen = useMemo(
+    () => alleVorlagen.filter((v) => v.kalender === kalenderId),
+    [alleVorlagen, kalenderId],
+  );
+  const [vorlageId, setVorlageId] = useState<number | null>(null);
+  const [vorlageMeldung, setVorlageMeldung] = useState<string | null>(null);
+  const [vorlageLaeuft, setVorlageLaeuft] = useState(false);
 
   // Was am Tag im gewählten Kalender schon steht – für „Nur verknüpfen“.
   const tagTermine = useLaden(
@@ -86,10 +120,40 @@ export function TerminFenster({
   // Der Termin steht in ChurchTools, der Vermerk fehlt noch.
   const [offen, setOffen] = useState<{ id: number; zeit: string } | null>(null);
 
-  const setze = <K extends keyof Eintrag>(k: K, v: Eintrag[K]) => setE({ ...e, [k]: v });
   const problem = eintragFehler(eintrag);
   const prueft = kalenderId !== null && tagTermine.stand.art === 'laedt';
   const bereit = !problem && !prueft && tagTermine.stand.art === 'fertig' && !laeuft;
+  const darfVorlage = kalenderId !== null && vorlagenSchreiben.includes(kalenderId);
+
+  const waehleVorlage = (v: TerminVorlage | null) => {
+    setTrotzdem(false);
+    setVorlageMeldung(null);
+    setVorlageId(v?.id ?? null);
+    // „Ohne Vorlage“ stellt die Vorbelegung aus dem Protokoll wieder her.
+    setE(
+      v
+        ? vorlageAnwenden(eintrag, v)
+        : { ...eintragVorbelegung(zeile, kalenderId), informieren: e.informieren },
+    );
+  };
+
+  const vorlageMerken = async () => {
+    if (!darfVorlage || kalenderId === null || problem) return;
+    setVorlageLaeuft(true);
+    setVorlageMeldung(null);
+    setFehler(null);
+    try {
+      const neu = await vorlageSpeichern(
+        { ...eintrag, kalender: kalenderId },
+        alleVorlagen.map((v) => v.id),
+      );
+      vorlagen.setze(neu);
+      setVorlageMeldung(`Die Vorlage „${eintrag.titel.trim()}“ ist gespeichert.`);
+    } catch (x) {
+      setFehler(fehlerMeldung(x));
+    }
+    setVorlageLaeuft(false);
+  };
 
   const vermerken = async (r: { id: number; zeit: string }) => {
     if (kalenderId === null) return;
@@ -119,6 +183,7 @@ export function TerminFenster({
         eintrag: { ...eintrag, kalender: kalenderId },
         zeitzone,
         verknuepfen,
+        neueTagsErlaubt: tagsVerwalten,
       });
     } catch (x) {
       setFehler(fehlerMeldung(x));
@@ -137,12 +202,39 @@ export function TerminFenster({
     fehler ??
     (kalender.stand.art === 'fehler' ? kalender.stand.fehler : null) ??
     (tagTermine.stand.art === 'fehler' ? tagTermine.stand.fehler : null);
+  const beschaeftigt = laeuft || vorlageLaeuft;
+
+  const vorlagenWahl = (
+    <TerminVorlagenWahl
+      handy={handy}
+      kalenderName={kalenderName}
+      vorlagen={kalenderVorlagen}
+      gewaehlt={vorlageId}
+      onWaehlen={waehleVorlage}
+      laedt={vorlagen.stand.art === 'laedt'}
+      fehler={vorlagen.stand.art === 'fehler' ? vorlagen.stand.fehler : null}
+      onNeu={vorlagen.neu}
+      deaktiviert={beschaeftigt}
+    />
+  );
 
   return (
     <Sheet
       title="In Kalender eintragen"
       onClose={onClose}
-      beschaeftigt={laeuft}
+      beschaeftigt={beschaeftigt}
+      breit
+      links={
+        !offen && darfVorlage ? (
+          <FensterKnopf
+            art="link"
+            disabled={beschaeftigt || !!problem}
+            onClick={() => void vorlageMerken()}
+          >
+            {vorlageLaeuft ? 'Wird gespeichert …' : 'Als Vorlage speichern'}
+          </FensterKnopf>
+        ) : undefined
+      }
       knoepfe={
         offen ? (
           <FensterKnopf
@@ -156,12 +248,15 @@ export function TerminFenster({
             {laeuft ? 'Wird vermerkt …' : 'Nochmal vermerken'}
           </FensterKnopf>
         ) : (
-          <FensterKnopf disabled={!bereit} onClick={() => void eintragen()}>
-            {laeuft ? 'Wird eingetragen …' : verknuepfen ? 'Verknüpfen' : 'Eintragen'}
+          <FensterKnopf disabled={!bereit || vorlageLaeuft} onClick={() => void eintragen()}>
+            {laeuft ? 'Wird eingetragen …' : verknuepfen ? 'Verknüpfen' : 'Speichern'}
           </FensterKnopf>
         )
       }
     >
+      {reiter.length > 1 && (
+        <ReiterLeiste reiter={reiter} aktiv={aktiverReiter} onWechsel={setAktiverReiter} oben />
+      )}
       <p className={styles.quelle}>
         Aus {zeile.sitzung.titel}
         {zeile.punkt ? ` · ${punktBeschriftung(zeile.punkt)}` : ''}: „{zeile.text}“
@@ -173,93 +268,6 @@ export function TerminFenster({
         </p>
       ) : (
         <>
-          <label className={felder.feld}>
-            <span>Kalender</span>
-            <select
-              className={felder.eingabe}
-              value={kalenderId ?? ''}
-              disabled={laeuft || !liste.length}
-              onChange={(ev) => {
-                setTrotzdem(false);
-                setze('kalender', Number(ev.target.value));
-              }}
-            >
-              {kalender.stand.art === 'laedt' && <option value="">wird geladen …</option>}
-              {liste.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={felder.feld}>
-            <span>Titel</span>
-            <input
-              className={felder.eingabe}
-              value={e.titel}
-              disabled={laeuft}
-              onChange={(ev) => setze('titel', ev.target.value)}
-            />
-          </label>
-          <div className={felder.zeile}>
-            <label className={felder.feld}>
-              <span>Datum</span>
-              <input
-                type="date"
-                className={felder.eingabe}
-                value={e.tag}
-                disabled={laeuft}
-                onChange={(ev) => {
-                  setTrotzdem(false);
-                  setze('tag', ev.target.value);
-                }}
-              />
-            </label>
-            <label className={`${felder.schalter} ${styles.ganz}`}>
-              <input
-                type="checkbox"
-                className={felder.haken}
-                checked={e.ganztaegig}
-                disabled={laeuft}
-                onChange={(ev) => setze('ganztaegig', ev.target.checked)}
-              />
-              <span>Ganztägig</span>
-            </label>
-          </div>
-          {!e.ganztaegig && (
-            <div className={felder.zeile}>
-              <label className={felder.feld}>
-                <span>Von</span>
-                <input
-                  type="time"
-                  className={felder.eingabe}
-                  value={e.von}
-                  disabled={laeuft}
-                  onChange={(ev) => setze('von', ev.target.value)}
-                />
-              </label>
-              <label className={felder.feld}>
-                <span>Bis</span>
-                <input
-                  type="time"
-                  className={felder.eingabe}
-                  value={e.bis}
-                  disabled={laeuft}
-                  onChange={(ev) => setze('bis', ev.target.value)}
-                />
-              </label>
-            </div>
-          )}
-          <label className={felder.feld}>
-            <span>Ort (optional)</span>
-            <input
-              className={felder.eingabe}
-              value={e.ort}
-              placeholder="z. B. Gemeindehaus"
-              disabled={laeuft || !!verknuepfen}
-              onChange={(ev) => setze('ort', ev.target.value)}
-            />
-          </label>
           {treffer && (
             <div className={styles.gibts} role="group" aria-label="Termin schon vorhanden">
               <b>
@@ -270,7 +278,7 @@ export function TerminFenster({
                   type="radio"
                   name="gibts"
                   checked={!trotzdem}
-                  disabled={laeuft}
+                  disabled={beschaeftigt}
                   onChange={() => setTrotzdem(false)}
                 />
                 Nur verknüpfen – nichts Neues anlegen
@@ -280,14 +288,54 @@ export function TerminFenster({
                   type="radio"
                   name="gibts"
                   checked={trotzdem}
-                  disabled={laeuft}
+                  disabled={beschaeftigt}
                   onChange={() => setTrotzdem(true)}
                 />
                 Trotzdem neu anlegen
               </label>
             </div>
           )}
-          <p className={styles.gebucht}>Es werden keine Einladungen verschickt.</p>
+          <div className={handy ? styles.rumpfHandy : styles.rumpf}>
+            {vorlagenWahl}
+            <TerminFormular
+              e={eintrag}
+              kalenderId={kalenderId}
+              kalender={liste}
+              kalenderLaedt={kalender.stand.art === 'laedt'}
+              tags={tags.stand.art === 'fertig' ? tags.stand.daten : []}
+              tagsVerwalten={tagsVerwalten}
+              deaktiviert={beschaeftigt}
+              onAendern={setE}
+              onKalender={(id) => {
+                setTrotzdem(false);
+                setE({ ...eintrag, kalender: id });
+              }}
+              onTag={(tag) => {
+                setTrotzdem(false);
+                setE(beginnTagWechseln(eintrag, tag));
+              }}
+            />
+          </div>
+          <label className={styles.informieren}>
+            <input
+              type="checkbox"
+              checked={e.informieren}
+              disabled={beschaeftigt}
+              onChange={(ev) => setE({ ...e, informieren: ev.target.checked })}
+            />
+            <span>Ersteller über Änderungen informieren</span>
+          </label>
+          <p className={styles.gebucht}>
+            Es werden keine Einladungen verschickt.
+            {e.informieren
+              ? ' Du bekommst als Ersteller eine Mail von ChurchTools, wenn jemand den Termin ändert.'
+              : ''}
+          </p>
+          {vorlageMeldung && (
+            <p className={styles.gespeichert} role="status">
+              {vorlageMeldung}
+            </p>
+          )}
           {problem && kalender.stand.art !== 'laedt' && <p className={felder.leise}>{problem}</p>}
           {kalender.stand.art === 'fertig' && !liste.length && (
             <p className={felder.leise}>Du darfst in keinem Kalender Termine anlegen.</p>

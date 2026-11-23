@@ -10,8 +10,14 @@
  * **Die Gruppe steckt im Kürzel** (wie bei den Protokollen: `protokolle-g<ID>`): Die Erweiterung erfährt so, welche
  * Gruppe „Website“ gewählt wurde, ohne etwas zusätzlich zu speichern, und – wichtig – das Kürzel ist auch für den sichtbar,
  * der die Kategorie sehen darf, ohne die Gruppe selbst zu sehen. Der Name trägt den Gruppennamen für die Anzeige.
+ *
+ * **Untergruppen (W3b-4a, E-W28):** Jede direkte Untergruppe der Gruppe „Website“ bekommt beim Einrichten eine eigene
+ * `veroeffentlicht-g<Untergruppe>` – aber **keine** eigene Entwürfe-Kategorie (E-W19: eine gemeinsame). Darum bestimmt nur
+ * `entwuerfe-g<ID>`, welche Website man sieht; eine Veröffentlicht-Kategorie allein sagt nicht, ob sie zur Website oder zu
+ * einer ihrer Untergruppen gehört.
  */
 import { kategorieAusListe, type KategorieAngabe } from '../ct/modulDaten';
+import { elternAus, kinderVon, type RohHierarchie } from '../organigramm/gruppen';
 
 export const KUERZEL_ENTWUERFE = 'entwuerfe';
 export const KUERZEL_VEROEFFENTLICHT = 'veroeffentlicht';
@@ -35,6 +41,10 @@ export function kuerzelLesen(
   return m ? { art: m[1] as 'entwuerfe' | 'veroeffentlicht', gruppe: Number(m[2]) } : null;
 }
 
+/** Der Name einer Veröffentlicht-Kategorie – für die Website und für jede Untergruppe derselbe Aufbau. */
+const veroeffentlichtName = (gruppenName: string): string =>
+  `Website: Veröffentlicht${NAMENS_TRENNER}${gruppenName}`;
+
 /** Die beiden Kategorien, wie sie beim Einrichten angelegt werden. */
 export function kategorienFuer(gruppe: number, gruppenName: string): KategorieAngabe[] {
   return [
@@ -46,11 +56,55 @@ export function kategorienFuer(gruppe: number, gruppenName: string): KategorieAn
     },
     {
       kuerzel: kuerzelVeroeffentlicht(gruppe),
-      name: `Website: Veröffentlicht${NAMENS_TRENNER}${gruppenName}`,
+      name: veroeffentlichtName(gruppenName),
       beschreibung:
         'Freigegebene Fassung der Website. Schreiben: nur die Leitung. Lesen: der Bau-Dienst.',
     },
   ];
+}
+
+/**
+ * **Die Kategorie einer Untergruppe** (W3b-4a): nur „Veröffentlicht“ – Entwürfe teilen sich alle (E-W19). Gleicher Aufbau wie
+ * die Veröffentlicht-Kategorie der Website, damit eine schon angelegte (Messung W3b-4-0: `veroeffentlicht-g347`) gefunden wird.
+ */
+export function untergruppenKategorie(gruppe: number, gruppenName: string): KategorieAngabe {
+  return {
+    kuerzel: kuerzelVeroeffentlicht(gruppe),
+    name: veroeffentlichtName(gruppenName),
+    beschreibung:
+      'Freigegebene Seiten einer Untergruppe der Website. Schreiben: die Leitung der Untergruppe und der Website. Lesen: der Bau-Dienst.',
+  };
+}
+
+/**
+ * **Die Untergruppen der Website:** alle **direkten** Kinder der Gruppe in `GET /groups/hierarchies` (E-W28) – Enkel nicht. Die
+ * Auswertung der Hierarchie ist die des Organigramms (`elternAus`/`kinderVon`), nicht nachgebaut.
+ */
+export function untergruppenAus(
+  hierarchie: readonly RohHierarchie[] | null | undefined,
+  website: number,
+): number[] {
+  return kinderVon(elternAus(hierarchie), website);
+}
+
+/** Eine eingerichtete Untergruppe: ihre Gruppe und ihre Veröffentlicht-Kategorie. */
+export interface UntergruppenKategorie {
+  gruppe: number;
+  kategorie: number;
+}
+
+/**
+ * **Welche Untergruppen eingerichtet sind:** die, deren `veroeffentlicht-g<Untergruppe>` in der Liste steht (bei gleichem
+ * Kürzel die kleinste ID, wie überall). Nur Kinder der Website zählen – eine fremde `veroeffentlicht-g…` nie.
+ */
+export function untergruppenKategorienAus(
+  liste: readonly { id: number; shorty: string }[],
+  untergruppen: readonly number[],
+): UntergruppenKategorie[] {
+  return untergruppen.flatMap((gruppe) => {
+    const kategorie = kategorieAusListe(liste, kuerzelVeroeffentlicht(gruppe));
+    return kategorie === null ? [] : [{ gruppe, kategorie }];
+  });
 }
 
 export interface Einrichtung {
@@ -71,23 +125,24 @@ function gruppenNameAus(kategorieName: string | undefined): string | null {
 }
 
 /**
- * Welche Website man sieht – aus der Liste der Kategorien von ChurchTools. Gibt es mehrere (`…-g<ID>` zu
- * verschiedenen Gruppen), gilt die mit der **kleinsten Kategorie-ID** (die älteste), damit alle Geräte dieselbe nehmen –
- * wie bei gleichem Kürzel. `null`: keine sichtbar. „Nicht sichtbar“ und „nicht angelegt“ sehen gleich aus (ohne Recht
- * kommt eine leere Liste, gemessen); was davon gilt, entscheidet erst das Recht zum Anlegen.
+ * Welche Website man sieht – aus der Liste der Kategorien von ChurchTools. **Die Gruppe kommt allein aus `entwuerfe-g<ID>`**
+ * (W3b-4a): Seit es Untergruppen gibt, steht neben `veroeffentlicht-g344` (Website) auch `veroeffentlicht-g347` (Untergruppe)
+ * – eine Veröffentlicht-Kategorie wird darum nie als Website gewählt, auch nicht, wenn ihre ID kleiner ist oder jemand nur sie
+ * sieht (dann: `null`). Gibt es mehrere `entwuerfe-g<ID>` zu verschiedenen Gruppen, gilt die mit der **kleinsten Kategorie-ID**
+ * (die älteste), damit alle Geräte dieselbe nehmen – wie bei gleichem Kürzel. `null`: keine sichtbar. „Nicht sichtbar“ und
+ * „nicht angelegt“ sehen gleich aus (ohne Recht kommt eine leere Liste, gemessen); was davon gilt, entscheidet erst das Recht
+ * zum Anlegen.
  */
 export function einrichtungAus(
   liste: readonly { id: number; shorty: string; name?: string }[],
 ): Einrichtung | null {
-  const eigene = [...liste]
-    .sort((a, b) => a.id - b.id)
-    .filter((k) => kuerzelLesen(k.shorty) !== null);
-  const erste = eigene[0];
+  const sortiert = [...liste].sort((a, b) => a.id - b.id);
+  const erste = sortiert.find((k) => kuerzelLesen(k.shorty)?.art === KUERZEL_ENTWUERFE);
   if (!erste) return null;
   const gruppe = kuerzelLesen(erste.shorty)!.gruppe;
   return {
     gruppe,
-    name: gruppenNameAus(eigene.find((k) => kuerzelLesen(k.shorty)?.gruppe === gruppe)?.name),
+    name: gruppenNameAus(sortiert.find((k) => kuerzelLesen(k.shorty)?.gruppe === gruppe)?.name),
     entwuerfe: kategorieAusListe(liste, kuerzelEntwuerfe(gruppe)),
     veroeffentlicht: kategorieAusListe(liste, kuerzelVeroeffentlicht(gruppe)),
   };

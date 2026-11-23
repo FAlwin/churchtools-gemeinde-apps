@@ -134,13 +134,19 @@ afterEach(() => {
   nachbauEnde();
 });
 
-const zeigen = (gruppen = [gruppe()], kalender: number[] = [4]) =>
+const zeigen = (
+  gruppen = [gruppe()],
+  kalender: number[] = [4],
+  mehr: { vorlagen?: number[]; tags?: boolean } = {},
+) =>
   render(
     <Termine
       modul={MODUL}
       ich={ICH}
       gruppen={gruppen}
       kalenderSchreiben={kalender}
+      vorlagenSchreiben={mehr.vorlagen}
+      tagsVerwalten={mehr.tags}
       onZeigen={onZeigen}
     />,
   );
@@ -220,14 +226,20 @@ describe('Eintragen', () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
-    expect(within(f).getByLabelText<HTMLInputElement>('Titel').value).toBe('Heiligabend');
-    expect(within(f).getByLabelText<HTMLInputElement>('Datum').value).toBe('2027-12-24');
-    expect(within(f).getByLabelText<HTMLInputElement>('Von').value).toBe('16:00');
-    expect(within(f).getByLabelText<HTMLInputElement>('Bis').value).toBe('17:00');
+    expect(within(f).getByLabelText<HTMLInputElement>(/^Titel/).value).toBe('Heiligabend');
+    expect(within(f).getByLabelText<HTMLInputElement>('Beginn Datum').value).toBe('2027-12-24');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Beginn Stunde').value).toBe('16');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Beginn Minute').value).toBe('00');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Ende Stunde').value).toBe('17');
     expect(within(f).getByLabelText<HTMLInputElement>('Ganztägig').checked).toBe(false);
-    expect(within(f).getByText('Es werden keine Einladungen verschickt.')).toBeTruthy();
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    expect(within(f).getByText(/^Es werden keine Einladungen verschickt\./)).toBeTruthy();
+    // „Ersteller informieren“ ist wie in ChurchTools vorgehakt – dann steht dort, dass er bei Änderungen eine Mail bekommt.
+    expect(
+      within(f).getByLabelText<HTMLInputElement>('Ersteller über Änderungen informieren').checked,
+    ).toBe(true);
+    expect(within(f).getByText(/Mail von ChurchTools/)).toBeTruthy();
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     expect(ct.termine).toHaveLength(1);
@@ -261,9 +273,9 @@ describe('Eintragen', () => {
     await karte();
     const f = await fensterOeffnen('Bibel-Action-Tag');
     expect(within(f).getByLabelText<HTMLInputElement>('Ganztägig').checked).toBe(true);
-    expect(within(f).queryByLabelText('Von')).toBeNull();
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    expect(within(f).queryByLabelText('Beginn Stunde')).toBeNull();
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(ct.termine[0]).toMatchObject({ beginn: '2027-04-24', ende: '2027-04-24' });
     expect(staende()[0].kalender?.zeit).toBe('ganztägig');
@@ -273,15 +285,22 @@ describe('Eintragen', () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Gemeinde-Eislaufen');
-    fireEvent.change(within(f).getByLabelText('Titel'), {
+    fireEvent.change(within(f).getByLabelText(/^Titel/), {
       target: { value: 'Eislaufen mit allen' },
     });
-    fireEvent.change(within(f).getByLabelText('Datum'), { target: { value: '2027-01-07' } });
-    fireEvent.change(within(f).getByLabelText('Ort (optional)'), { target: { value: 'Eishalle' } });
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    fireEvent.change(within(f).getByLabelText('Beginn Datum'), { target: { value: '2027-01-07' } });
+    fireEvent.click(
+      within(within(f).getByRole('group', { name: 'Ort' })).getByRole('button', {
+        name: '+ Hinzufügen',
+      }),
+    );
+    fireEvent.change(within(f).getByLabelText('Ort Name'), { target: { value: 'Eishalle' } });
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(ct.termine[0]).toMatchObject({ titel: 'Eislaufen mit allen', beginn: '2027-01-07' });
+    // Der Ort heißt in ChurchTools `address.name` (nicht mehr `meetingAt`).
+    expect(ct.terminRumpf?.address).toEqual({ name: 'Eishalle' });
   });
 
   it('steht am Tag schon ein ähnlicher Termin: „Nur verknüpfen“ ist vorgewählt – nichts wird angelegt', async () => {
@@ -320,7 +339,7 @@ describe('Eintragen', () => {
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
     await within(f).findByText(/schon „Heiligabend/);
     fireEvent.click(within(f).getByLabelText(/Trotzdem neu anlegen/));
-    fireEvent.click(await within(f).findByRole('button', { name: 'Eintragen' }));
+    fireEvent.click(await within(f).findByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(ct.termine).toHaveLength(2);
     expect(staende()[0].kalender?.id).not.toBe(161);
@@ -331,8 +350,8 @@ describe('Eintragen', () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     expect(await within(f).findByRole('alert')).toHaveProperty(
       'textContent',
       expect.stringMatching(/keine Termine anlegen/),
@@ -346,8 +365,8 @@ describe('Eintragen', () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     expect((await within(f).findByRole('alert')).textContent).toMatch(/unklar/);
     expect(staende()).toEqual([]);
     // Die Zeile steht noch unter „Noch nicht im Kalender“.
@@ -359,10 +378,10 @@ describe('Eintragen', () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
-    await bereit(f, 'Eintragen');
+    await bereit(f, 'Speichern');
     // Ab jetzt nimmt ChurchTools keine Werte mehr an – nur der Vermerk scheitert.
     ct.schluckeWert = () => true;
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     expect((await within(f).findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
     expect(within(f).getByText(/Es fehlt nur noch der Vermerk/)).toBeTruthy();
     expect(ct.termine).toHaveLength(1);
@@ -382,22 +401,22 @@ describe('Eintragen', () => {
     ct.fehlerBei = { methode: 'GET', status: 503 };
     const f = await fensterOeffnen('Heiligabend, 16 Uhr');
     expect(await within(f).findByRole('alert')).toBeTruthy();
-    expect(within(f).getByRole<HTMLButtonElement>('button', { name: 'Eintragen' }).disabled).toBe(
+    expect(within(f).getByRole<HTMLButtonElement>('button', { name: 'Speichern' }).disabled).toBe(
       true,
     );
     expect(posts()).toEqual([]);
     // Wieder erreichbar: „Noch einmal versuchen“ holt es nach, dann geht es.
     ct.fehlerBei = null;
     fireEvent.click(within(f).getByRole('button', { name: 'Noch einmal versuchen' }));
-    await bereit(f, 'Eintragen');
+    await bereit(f, 'Speichern');
   });
 
   it('der Stand überlebt das Neuladen: ein zweites Öffnen des Reiters zeigt „Im Kalender“', async () => {
     zeigen();
     await karte();
     const f = await fensterOeffnen('Bibel-Action-Tag');
-    await bereit(f, 'Eintragen');
-    fireEvent.click(within(f).getByRole('button', { name: 'Eintragen' }));
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     cleanup();
     zeigen();
@@ -474,5 +493,259 @@ describe('Fehler beim Laden', () => {
     zeigen();
     expect(await screen.findByRole('button', { name: /erneut|nochmal/i })).toBeTruthy();
     expect(screen.queryByText(/noch keine Termine/)).toBeNull();
+  });
+});
+
+describe('Reiter „Kalender“ wie in ChurchTools (W15-1)', () => {
+  const gottesdienst = {
+    id: 7,
+    calendarId: 4,
+    title: 'Gottesdienst',
+    subtitle: 'Sonntag',
+    description: 'Wir feiern.',
+    startTime: '10:30',
+    duration: 5400,
+    repeatId: 7,
+    repeatFrequency: 1,
+    repeatDuration: 86_400 * 28,
+    address: { name: 'Saal', city: 'Lohmar' },
+  };
+  const speichern = async (f: HTMLElement) => {
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  };
+
+  it('Vorlage wählen füllt das Formular – nur die Vorlagen des gewählten Kalenders – und Speichern sendet sie', async () => {
+    ct.vorlagen.push(gottesdienst, {
+      ...gottesdienst,
+      id: 8,
+      calendarId: 99,
+      title: 'Fremder Kalender',
+    });
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    const spalte = await within(f).findByRole('complementary', { name: 'Termin-Vorlagen' });
+    expect(within(spalte).getByText(/Gemeindeleitung/)).toBeTruthy();
+    expect(
+      within(spalte).getByText(/Mit Vorlagen stellst du einheitliche Bezeichnungen/),
+    ).toBeTruthy();
+    await within(spalte).findByLabelText('Gottesdienst');
+    expect(within(spalte).queryByLabelText('Fremder Kalender')).toBeNull();
+    expect(within(spalte).getByLabelText<HTMLInputElement>('Ohne Vorlage').checked).toBe(true);
+
+    fireEvent.click(within(spalte).getByLabelText('Gottesdienst'));
+    expect(within(f).getByLabelText<HTMLInputElement>(/^Titel/).value).toBe('Gottesdienst');
+    expect(within(f).getByLabelText<HTMLInputElement>('Untertitel').value).toBe('Sonntag');
+    expect(within(f).getByLabelText<HTMLInputElement>('Beginn Datum').value).toBe('2027-12-24');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Beginn Stunde').value).toBe('10');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Beginn Minute').value).toBe('30');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Ende Stunde').value).toBe('12');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Ende Minute').value).toBe('00');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Wiederholungen').value).toBe('7');
+    expect(within(f).getByLabelText<HTMLInputElement>('Wiederholen bis').value).toBe('2028-01-21');
+    expect(within(f).getByLabelText<HTMLInputElement>('Ort Name').value).toBe('Saal');
+
+    await speichern(f);
+    expect(ct.terminRumpf).toMatchObject({
+      calendarId: 4,
+      title: 'Gottesdienst',
+      subtitle: 'Sonntag',
+      description: 'Wir feiern.',
+      startDate: '2027-12-24T09:30:00Z',
+      endDate: '2027-12-24T11:00:00Z',
+      repeatId: 7,
+      repeatFrequency: 1,
+      repeatUntil: '2028-01-21',
+      address: { name: 'Saal', city: 'Lohmar' },
+      informOwner: true,
+    });
+    expect(ct.terminRumpf).not.toHaveProperty('meetingrequests');
+  });
+
+  it('„Ohne Vorlage“ stellt die Vorbelegung aus dem Protokoll wieder her', async () => {
+    ct.vorlagen.push(gottesdienst);
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    fireEvent.click(await within(f).findByLabelText('Gottesdienst'));
+    fireEvent.click(within(f).getByLabelText('Ohne Vorlage'));
+    expect(within(f).getByLabelText<HTMLInputElement>(/^Titel/).value).toBe('Heiligabend');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Wiederholungen').value).toBe('0');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Beginn Stunde').value).toBe('16');
+  });
+
+  it('Wiederholung selbst gewählt: „Bis“ aus der Vorgabe, „Alle x“, Weitere Termine, Ausnahmen, Ende an einem anderen Tag', async () => {
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    fireEvent.change(within(f).getByLabelText('Wiederholungen'), { target: { value: '7' } });
+    // 24.12.2027 + 7 Tage (gemessen: Bis = Beginn + repeatId Tage).
+    expect(within(f).getByLabelText<HTMLInputElement>('Wiederholen bis').value).toBe('2027-12-31');
+    fireEvent.change(within(f).getByLabelText('Wiederholen bis'), {
+      target: { value: '2028-02-04' },
+    });
+    fireEvent.change(within(f).getByLabelText('Alle x'), { target: { value: '2' } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Weitere Termine: Datum hinzufügen' }));
+    fireEvent.change(within(f).getByLabelText('Weitere Termine: Datum wählen'), {
+      target: { value: '2028-02-05' },
+    });
+    fireEvent.click(within(f).getByRole('button', { name: 'Ausnahmen: Datum hinzufügen' }));
+    fireEvent.change(within(f).getByLabelText('Ausnahmen: Datum wählen'), {
+      target: { value: '2028-01-07' },
+    });
+    expect(within(f).getByText('05.02.2028')).toBeTruthy();
+    fireEvent.change(within(f).getByLabelText('Ende Datum'), { target: { value: '2027-12-25' } });
+    fireEvent.change(within(f).getByLabelText('Ende Stunde'), { target: { value: '01' } });
+    await speichern(f);
+    expect(ct.terminRumpf).toMatchObject({
+      startDate: '2027-12-24T15:00:00Z',
+      endDate: '2027-12-25T00:00:00Z',
+      repeatId: 7,
+      repeatFrequency: 2,
+      repeatUntil: '2028-02-04',
+      additionals: [{ date: '2028-02-05', isRepeated: false }],
+      exceptions: [{ date: '2028-01-07' }],
+    });
+  });
+
+  it('eine Marke lässt sich wieder entfernen', async () => {
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    fireEvent.change(within(f).getByLabelText('Wiederholungen'), { target: { value: '999' } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Ausnahmen: Datum hinzufügen' }));
+    fireEvent.change(within(f).getByLabelText('Ausnahmen: Datum wählen'), {
+      target: { value: '2028-01-07' },
+    });
+    fireEvent.click(within(f).getByRole('button', { name: 'Ausnahmen: 07.01.2028 entfernen' }));
+    expect(within(f).queryByText('07.01.2028')).toBeNull();
+    await speichern(f);
+    expect(ct.terminRumpf).toMatchObject({ repeatId: 999 });
+    expect(ct.terminRumpf).not.toHaveProperty('exceptions');
+  });
+
+  it('nur gefüllt und wie gewählt: intern, Untertitel, Link, Ort-Felder, „Ersteller informieren“ aus', async () => {
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Bibel-Action-Tag');
+    fireEvent.change(within(f).getByLabelText('Untertitel'), { target: { value: 'Für alle' } });
+    fireEvent.click(within(f).getByLabelText('Nur für eingeloggte Personen sichtbar'));
+    fireEvent.change(within(f).getByLabelText('Link'), { target: { value: 'https://bat.de' } });
+    fireEvent.change(within(f).getByLabelText('Ende Datum'), { target: { value: '2027-04-25' } });
+    fireEvent.click(
+      within(within(f).getByRole('group', { name: 'Ort' })).getByRole('button', {
+        name: '+ Hinzufügen',
+      }),
+    );
+    fireEvent.change(within(f).getByLabelText('Ort Straße'), { target: { value: 'Hauptstr. 1' } });
+    fireEvent.change(within(f).getByLabelText('Ort PLZ'), { target: { value: '53797' } });
+    fireEvent.change(within(f).getByLabelText('Ort Zusatz'), { target: { value: 'EG' } });
+    fireEvent.click(within(f).getByLabelText('Ersteller über Änderungen informieren'));
+    await speichern(f);
+    expect(ct.terminRumpf).toMatchObject({
+      subtitle: 'Für alle',
+      isInternal: true,
+      link: 'https://bat.de',
+      allDay: true,
+      startDate: '2027-04-24',
+      endDate: '2027-04-25',
+      address: { street: 'Hauptstr. 1', zip: '53797', addition: 'EG' },
+      informOwner: false,
+    });
+    expect(ct.terminRumpf).not.toHaveProperty('repeatId');
+  });
+
+  it('Tags: vorhandene wählen; neue nur mit „Tags verwalten“', async () => {
+    ct.tags.push({ id: 3, name: 'Jugend' }, { id: 4, name: 'Gemeinde' });
+    zeigen(undefined, undefined, { tags: true });
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    const tagsReihe = within(f).getByRole('group', { name: 'Tags' });
+    fireEvent.click(within(tagsReihe).getByRole('button', { name: '+ Hinzufügen' }));
+    fireEvent.change(await within(tagsReihe).findByLabelText('Tag hinzufügen'), {
+      target: { value: '3' },
+    });
+    fireEvent.change(within(tagsReihe).getByLabelText('Neuer Tag'), {
+      target: { value: 'Weihnachten' },
+    });
+    fireEvent.keyDown(within(tagsReihe).getByLabelText('Neuer Tag'), { key: 'Enter' });
+    expect(within(tagsReihe).getByText('Jugend')).toBeTruthy();
+    expect(within(tagsReihe).getByText('Weihnachten')).toBeTruthy();
+    await speichern(f);
+    expect(ct.terminRumpf?.tags).toEqual([3, 'Weihnachten']);
+  });
+
+  it('ohne „Tags verwalten“ gibt es kein Feld für neue Tags', async () => {
+    ct.tags.push({ id: 3, name: 'Jugend' });
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    const tagsReihe = within(f).getByRole('group', { name: 'Tags' });
+    fireEvent.click(within(tagsReihe).getByRole('button', { name: '+ Hinzufügen' }));
+    await within(tagsReihe).findByLabelText('Tag hinzufügen');
+    expect(within(tagsReihe).queryByLabelText('Neuer Tag')).toBeNull();
+  });
+
+  describe('Als Vorlage speichern', () => {
+    it('nur mit dem Recht für den Kalender – sonst steht der Knopf nicht da', async () => {
+      zeigen();
+      await karte();
+      const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+      await bereit(f, 'Speichern');
+      expect(within(f).queryByRole('button', { name: 'Als Vorlage speichern' })).toBeNull();
+    });
+
+    it('speichert NUR die Vorlage (kein Termin, kein Vermerk), liest die Liste neu und zeigt sie an', async () => {
+      zeigen(undefined, undefined, { vorlagen: [4] });
+      await karte();
+      const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+      await bereit(f, 'Speichern');
+      fireEvent.click(within(f).getByRole('button', { name: 'Als Vorlage speichern' }));
+      expect(await within(f).findByRole('status')).toHaveProperty(
+        'textContent',
+        'Die Vorlage „Heiligabend“ ist gespeichert.',
+      );
+      expect(ct.vorlagen).toEqual([
+        expect.objectContaining({
+          calendarId: 4,
+          title: 'Heiligabend',
+          startTime: '16:00',
+          duration: 3600,
+        }),
+      ]);
+      expect(ct.termine).toEqual([]);
+      expect(posts()).toEqual([]);
+      expect(staende()).toEqual([]);
+      // Die Vorlage steht jetzt links in der Liste.
+      expect(await within(f).findByLabelText('Heiligabend')).toBeTruthy();
+    });
+
+    it('ChurchTools sagt „gespeichert“, ist es aber nicht: keine Erfolgsmeldung', async () => {
+      ct.vorlagenSchlucken = true;
+      zeigen(undefined, undefined, { vorlagen: [4] });
+      await karte();
+      const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+      await bereit(f, 'Speichern');
+      fireEvent.click(within(f).getByRole('button', { name: 'Als Vorlage speichern' }));
+      expect((await within(f).findByRole('alert')).textContent).toMatch(
+        /ob die Vorlage gespeichert wurde/,
+      );
+      expect(within(f).queryByRole('status')).toBeNull();
+    });
+  });
+
+  it('Ein gefüllter Knopf (R1): nur „Speichern“ – „Als Vorlage speichern“ und „Abbrechen“ sind leiser', async () => {
+    zeigen(undefined, undefined, { vorlagen: [4] });
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    await bereit(f, 'Speichern');
+    const gefuellt = [...f.querySelectorAll('button')].filter((b) =>
+      /haupt|neu|gefahr/.test(b.className),
+    );
+    expect(gefuellt.map((b) => b.textContent)).toEqual(['Speichern']);
+    // Die Reiterleiste erscheint erst, wenn es mehr als einen Reiter gibt (W15-2…5).
+    expect(within(f).queryByRole('tablist')).toBeNull();
   });
 });

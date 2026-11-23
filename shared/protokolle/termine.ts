@@ -15,6 +15,12 @@ import { ableiten, type Punkt } from './dokument';
 import { terminStandId } from './terminStand';
 import { dokumentDerSitzung, type ProtokollTeil } from './speicher';
 import type { Sitzung } from './sitzungen';
+import {
+  istAutomatisch,
+  ordinalAusDatum,
+  WIEDERHOLUNG,
+  type Wiederholung,
+} from './terminWiederholung';
 
 /** Eine Gruppe, wie `ladeUebersicht` sie liefert (nur, was hier zählt). */
 export interface TerminQuelle {
@@ -119,16 +125,37 @@ export function titelUndUhrzeit(text: string): { titel: string; uhrzeit: string 
   };
 }
 
-/** Was im Fenster „In Kalender eintragen“ steht (Zeiten in Ortszeit der Gemeinde, `HH:MM`). */
-export interface Eintrag {
+/**
+ * Was im Fenster „In Kalender eintragen“ steht (Zeiten in Ortszeit der Gemeinde, `HH:MM`) – der Reiter „Kalender“ des
+ * ChurchTools-Dialogs „Termin erstellen“ (W15-1). `tag`/`von` sind der Beginn, `endTag`/`bis` das Ende.
+ */
+export interface Eintrag extends Wiederholung {
   kalender: number | null;
   titel: string;
-  /** `JJJJ-MM-TT`. */
+  untertitel: string;
+  /** „Nur für eingeloggte Personen sichtbar“ (`isInternal`). */
+  intern: boolean;
+  /** Beginn: `JJJJ-MM-TT`. */
   tag: string;
   ganztaegig: boolean;
   von: string;
+  /** Ende: `JJJJ-MM-TT` – bei ganztägigen Terminen der letzte Tag einschließlich. */
+  endTag: string;
   bis: string;
+  beschreibung: string;
+  link: string;
+  /** „Im Auftrag von“ (`onBehalfOfPid`) – kommt heute nur aus einer Termin-Vorlage. */
+  imAuftrag: number | null;
+  /** Ort: der Name (`address.name`) und die übrigen Felder der Adresse. */
   ort: string;
+  ortStrasse: string;
+  ortPlz: string;
+  ortStadt: string;
+  ortZusatz: string;
+  /** Nummern vorhandener Tags; ein Text ist ein neuer Tag (nur mit „Tags verwalten“). */
+  tags: (number | string)[];
+  /** „Ersteller über Änderungen informieren“ (`informOwner`). */
+  informieren: boolean;
 }
 
 /** Eine Stunde später, am selben Tag (nach 23:00 bleibt es 23:59 – ChurchTools-Termine hier enden nie am Folgetag). */
@@ -149,23 +176,65 @@ export function eintragVorbelegung(
   return {
     kalender,
     titel,
+    untertitel: '',
+    intern: false,
     tag: z.datum,
     ganztaegig: uhrzeit === null,
     von: uhrzeit ?? '10:00',
+    endTag: z.datum,
     bis: plusStunde(uhrzeit ?? '10:00'),
+    art: WIEDERHOLUNG.keine,
+    frequenz: 1,
+    option: ordinalAusDatum(z.datum),
+    wiederBis: '',
+    weitere: [],
+    ausnahmen: [],
+    beschreibung: '',
+    link: '',
+    imAuftrag: null,
     ort: '',
+    ortStrasse: '',
+    ortPlz: '',
+    ortStadt: '',
+    ortZusatz: '',
+    tags: [],
+    // ChurchTools hakt es vor.
+    informieren: true,
   };
+}
+
+const TAG = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * **Den Beginn-Tag ändern.** Das Ende zieht mit, wenn es am selben Tag lag (oder davor läge) – wie im ChurchTools-Dialog;
+ * ein späteres Ende bleibt. „Monatlich nach Wochentag“ rechnet das Ordinal neu aus dem Datum.
+ */
+export function beginnTagWechseln(e: Eintrag, tag: string): Eintrag {
+  const endTag = e.endTag === e.tag || (TAG.test(tag) && e.endTag < tag) ? tag : e.endTag;
+  const neuesOrdinal = e.art === WIEDERHOLUNG.monatlichWochentag && TAG.test(tag);
+  return { ...e, tag, endTag, option: neuesOrdinal ? ordinalAusDatum(tag) : e.option };
 }
 
 /** Was am Fenster noch fehlt – `null`, wenn eingetragen werden kann. */
 export function eintragFehler(e: Eintrag): string | null {
   if (e.kalender === null) return 'Bitte einen Kalender wählen.';
   if (!e.titel.trim()) return 'Bitte einen Titel angeben.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.tag)) return 'Bitte ein Datum angeben.';
-  if (e.ganztaegig) return null;
-  if (!/^\d{2}:\d{2}$/.test(e.von) || !/^\d{2}:\d{2}$/.test(e.bis))
-    return 'Bitte Beginn und Ende angeben.';
-  if (e.bis <= e.von) return 'Das Ende muss nach dem Beginn liegen.';
+  if (!TAG.test(e.tag)) return 'Bitte ein Datum angeben.';
+  const endTag = e.endTag || e.tag;
+  if (!TAG.test(endTag)) return 'Bitte ein Enddatum angeben.';
+  if (endTag < e.tag) return 'Das Ende darf nicht vor dem Beginn liegen.';
+  if (!e.ganztaegig) {
+    if (!/^\d{2}:\d{2}$/.test(e.von) || !/^\d{2}:\d{2}$/.test(e.bis))
+      return 'Bitte Beginn und Ende angeben.';
+    if (endTag === e.tag && e.bis <= e.von) return 'Das Ende muss nach dem Beginn liegen.';
+  }
+  if (istAutomatisch(e.art)) {
+    if (!TAG.test(e.wiederBis))
+      return 'Bitte angeben, bis wann sich der Termin wiederholt („Bis“).';
+    if (e.wiederBis < e.tag) return 'Das „Bis“ darf nicht vor dem Beginn liegen.';
+    if (!Number.isInteger(e.frequenz) || e.frequenz < 1)
+      return 'Bitte bei „Alle …“ eine Zahl ab 1 angeben.';
+  }
   return null;
 }
 
@@ -175,13 +244,14 @@ export function eintragFehler(e: Eintrag): string | null {
  * 11./12.11.2026). Mit Uhrzeit: UTC aus der Ortszeit der Gemeinde (`utcAus`, auch über die Zeitumstellung).
  */
 export function eintragZeitraum(
-  e: Pick<Eintrag, 'tag' | 'ganztaegig' | 'von' | 'bis'>,
+  e: Pick<Eintrag, 'tag' | 'ganztaegig' | 'von' | 'bis'> & { endTag?: string },
   zeitzone: string,
 ): { beginn: string; ende: string } {
-  if (e.ganztaegig) return { beginn: e.tag, ende: e.tag };
+  const endTag = e.endTag || e.tag;
+  if (e.ganztaegig) return { beginn: e.tag, ende: endTag };
   return {
     beginn: utcAus(`${e.tag}T${e.von}`, zeitzone),
-    ende: utcAus(`${e.tag}T${e.bis}`, zeitzone),
+    ende: utcAus(`${endTag}T${e.bis}`, zeitzone),
   };
 }
 

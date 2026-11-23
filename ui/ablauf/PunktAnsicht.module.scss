@@ -1,48 +1,8 @@
-// Ein Ablaufpunkt zum Ansehen (B8, E19): dieselbe Feldliste im Fenster (iPad/Rechner) und auf der Handy-Seite. Aussehen wie
-// das Punkt-Fenster (`PunktFenster.module.scss`: „Position n von m“ mit ‹ ›, umrandete Fläche, eine feine Linie je Zeile).
+// Ein Ablaufpunkt zum Ansehen (B8, E19, P1): die Feldliste auf einer eigenen Seite, in allen Breiten. Aussehen wie das
+// Punkt-Fenster (`PunktFenster.module.scss`: umrandete Fläche, eine feine Linie je Zeile).
 // Farben, Rundungen und Ebenen nur aus Tokens (`festeWerte`, `ebeneVollflaeche`).
 
-// ── Fenster: „Position 3 von 10 · 10:04 – 10:07“ und ‹ › ──
-.position {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: -2px 0 10px;
-}
-.positionText {
-  flex: 1;
-  min-width: 0;
-  color: var(--text2);
-  font-size: 13px;
-}
-.blaettern {
-  display: flex;
-  gap: 6px;
-
-  button {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-ctrl);
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-
-    @media (hover: hover) {
-      &:hover:not(:disabled) {
-        background: var(--surface3);
-      }
-    }
-    &:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-  }
-}
-
-// ── Die Feldliste (beide Hüllen) ──
+// ── Die Feldliste ──
 .liste {
   border: 1px solid var(--border);
   border-radius: var(--r-dialog);
@@ -142,7 +102,7 @@
   color: var(--text2);
 }
 
-// ── Handy: eine eigene Seite wie in der ChurchTools-App ──
+// ── Die Seite wie in der ChurchTools-App (alle Breiten) ──
 .seite {
   position: fixed;
   inset: 0;
@@ -189,6 +149,11 @@
   min-height: 0;
   overflow-y: auto;
   padding: 16px 14px;
+}
+// Breit: der Inhalt in Lesebreite, mittig – Kopf und Davor/Danach bleiben über die volle Breite.
+.lesebreite {
+  max-width: 720px; // bewusst fest: Lesebreite der Punkt-Seite (Alwin 22.11.2026, A12) – schmaler als die Seitenbreite
+  margin: 0 auto;
 }
 .seitenTitel {
   margin: 0 0 14px;

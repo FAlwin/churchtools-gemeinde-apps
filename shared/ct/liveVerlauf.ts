@@ -11,6 +11,10 @@
  *  - `wirksamerStand`: der Live-Stand von ChurchTools mit dem **wirksamen** Beginn und der **wirksamen** Zusatzzeit.
  *  - `abweichungen`, `warumPunkte`, `prognose`: ± je Punkt, die drei größten Abweichungen, „Ende voraussichtlich“.
  *  - `wechselBeiKlick`, `nachzutragen`: die Wechsel, die ein Klick bzw. ein offenes Gerät festhält.
+ *  - `gelaufenJePunkt`: die gelaufene Dauer je Punkt – die EINE Rechnung hinter ± (`abweichungen`), Rückblick und Ø
+ *    (`liveRueckblick.ts`, L4-4).
+ *  - `Ausnahme`, `ausnahmenZusammenfuehren`, `ausnahmeSetzen`, `ausgenommen`: **Aus dem Schnitt nehmen** (A9, L4-4) – Markierungen
+ *    am Verlauf eines Termins, die zwei Geräte sich nicht wegschreiben.
  *
  * **Fehlklick und ChurchTools:** CT setzt `switchdate` bei jedem Wechsel neu, zurückschreiben geht nicht. Damit CT-App und
  * CT-Web dieselbe Restzeit zeigen, gleicht das klickende Gerät sie über `addseconds` aus (gemessen L4-0: nimmt Sekunden;
@@ -37,6 +41,8 @@ export interface Wechsel {
   ausgleich?: number;
   /** „Neu starten“: der Wechsel zählt als normaler Wechsel, auch wenn die Fehlklick-Regel zuträfe. */
   neu?: true;
+  /** Der Punkt ist ein Lied – für den Schnitt im Rückblick (alle Lieder zählen zusammen als „Lied“, T5). */
+  lied?: true;
 }
 
 const schluessel = (w: Pick<Wechsel, 'zeit' | 'stelle'>) => `${w.zeit}:${w.stelle}`;
@@ -64,6 +70,7 @@ export function zusammenfuehren(a: readonly Wechsel[], b: readonly Wechsel[]): W
     if (w.zusatzDavor !== undefined) neu.zusatzDavor = w.zusatzDavor;
     if (w.ausgleich !== undefined) neu.ausgleich = w.ausgleich;
     if (w.neu === true) neu.neu = true;
+    if (w.lied === true) neu.lied = true;
     karte.set(schluessel(w), neu);
   }
   return [...karte.values()].sort((x, y) => x.zeit - y.zeit || x.stelle - y.stelle);
@@ -76,6 +83,7 @@ export function enthaelt(verlauf: readonly Wechsel[], neue: readonly Wechsel[]):
     if (!w) return false;
     if (n.zusatzDavor !== undefined && w.zusatzDavor !== n.zusatzDavor) return false;
     if (n.ausgleich !== undefined && w.ausgleich !== n.ausgleich) return false;
+    if (n.lied === true && w.lied !== true) return false;
     return n.neu !== true || w.neu === true;
   });
 }
@@ -101,6 +109,8 @@ export interface Lauf {
   ausgleich: number;
   /** Alle Wechsel, die diesen Lauf geöffnet oder fortgesetzt haben. */
   wechsel: Wechsel[];
+  /** Der Punkt ist ein Lied (für den Schnitt, T5). */
+  lied: boolean;
 }
 
 export interface Laeufe {
@@ -120,6 +130,7 @@ const neuerLauf = (w: Wechsel): Lauf => ({
   zusatzSek: 0,
   ausgleich: 0,
   wechsel: [w],
+  lied: w.lied === true,
 });
 
 const dauerMs = (l: Lauf) => (l.bis ?? l.seit) - l.seit;
@@ -164,6 +175,7 @@ export function laeufeAus(verlauf: readonly Wechsel[]): Laeufe {
         l.fortgesetzt = true;
         l.ausgleich = w.ausgleich ?? 0;
         l.wechsel.push(w);
+        if (w.lied === true) l.lied = true;
       } else {
         // „Neu starten“: Der frühere Lauf bleibt, wie er war (er endete mit dem ersten kurzen Stopp); der Punkt bekommt
         // einen neuen Lauf ab dem Rückkehr-Wechsel.
@@ -192,6 +204,28 @@ export function wirksamerStand(stand: LiveStand | null, laeufe: readonly Lauf[])
 
 // ── Plus/Minus, Prognose, „Warum“ ────────────────────────────────────────────
 
+/**
+ * **Wie lange ein Punkt gelaufen ist** – die EINE Rechnung hinter ± (`abweichungen`), Rückblick und Ø (L4-4): die Summe aller
+ * wirksamen Läufe dieses Punkts (Schlüssel: Punkt-ID). Ein Fehlklick-Lauf zählt vom ersten Beginn an, die kurzen Stopps
+ * dazwischen gar nicht (`laeufeAus`). `laeuft`: Ein Lauf des Punkts ist noch offen und zählt bis `jetzt`.
+ */
+export function gelaufenJePunkt(
+  laeufe: readonly Lauf[],
+  jetzt: number,
+): Map<number, { ms: number; laeuft: boolean }> {
+  const gelaufen = new Map<number, { ms: number; laeuft: boolean }>();
+  for (const l of laeufe) {
+    if (l.punktId === null) continue;
+    const bis = l.bis ?? jetzt;
+    const alt = gelaufen.get(l.punktId) ?? { ms: 0, laeuft: false };
+    gelaufen.set(l.punktId, {
+      ms: alt.ms + Math.max(0, bis - l.seit),
+      laeuft: alt.laeuft || l.bis === null,
+    });
+  }
+  return gelaufen;
+}
+
 /** Plus/Minus eines Punkts: geplante minus gelaufene Dauer (Sekunden; + gespart, − überzogen). */
 export interface Abweichung {
   sek: number;
@@ -213,16 +247,7 @@ export function abweichungen(
   jetzt: number,
   stelle: number | null,
 ): Map<number, Abweichung> {
-  const gelaufen = new Map<number, { ms: number; laeuft: boolean }>();
-  for (const l of laeufe) {
-    if (l.punktId === null) continue;
-    const bis = l.bis ?? jetzt;
-    const alt = gelaufen.get(l.punktId) ?? { ms: 0, laeuft: false };
-    gelaufen.set(l.punktId, {
-      ms: alt.ms + Math.max(0, bis - l.seit),
-      laeuft: alt.laeuft || l.bis === null,
-    });
-  }
+  const gelaufen = gelaufenJePunkt(laeufe, jetzt);
   const aus = new Map<number, Abweichung>();
   for (const [i, p] of liste.entries()) {
     if (stelle === null || i + 1 > stelle) continue;
@@ -282,6 +307,7 @@ export function wechselAus(
     titel: p?.title ?? '',
     zeit,
     ...(zusatzDavor === undefined ? {} : { zusatzDavor }),
+    ...(p?.lied === true ? { lied: true as const } : {}),
   };
 }
 
@@ -348,4 +374,78 @@ export function nachzutragen(
   if (!stand || stand.stelle === null || stand.seit === null) return null;
   if (hatWechsel(verlauf, stand.seit, stand.stelle)) return null;
   return wechselAus(liste, stand.stelle, stand.seit, davorZusatz);
+}
+
+// ── Aus dem Schnitt nehmen (A9, L4-4) ────────────────────────────────────────
+
+/**
+ * **Eine Markierung „nicht im Schnitt“** am Verlauf eines Termins (A9): `punkt` = ein Punkt (ID), `null` = der ganze Termin.
+ * `aus: true` nimmt heraus, `aus: false` ist die **Rücknahme** – sie bleibt als Eintrag stehen und trägt einen neueren
+ * Zeitpunkt: So kommt sie auch gegen ein Gerät durch, das noch die alte Markierung kennt (ein Löschen käme nicht durch, die
+ * alte Markierung wöge es beim Zusammenführen wieder auf). Je Schlüssel gilt die **neueste** Markierung.
+ */
+export interface Ausnahme {
+  punkt: number | null;
+  /** Wann markiert wurde (ms, Uhr des Geräts) – bestimmt, welche von zwei Markierungen gilt. */
+  zeit: number;
+  aus: boolean;
+}
+
+const ausnahmeSchluessel = (a: Pick<Ausnahme, 'punkt'>) =>
+  a.punkt === null ? 'termin' : String(a.punkt);
+
+/**
+ * **Zwei Stände der Markierungen zu einem**: je Punkt (bzw. Termin) die neuere; bei gleichem Zeitpunkt gewinnt „heraus“ –
+ * nie geht eine Markierung verloren, nur weil zwei Geräte im selben Augenblick schrieben.
+ */
+export function ausnahmenZusammenfuehren(
+  a: readonly Ausnahme[],
+  b: readonly Ausnahme[],
+): Ausnahme[] {
+  const karte = new Map<string, Ausnahme>();
+  for (const x of [...a, ...b]) {
+    const da = karte.get(ausnahmeSchluessel(x));
+    if (!da || x.zeit > da.zeit || (x.zeit === da.zeit && x.aus && !da.aus)) {
+      karte.set(ausnahmeSchluessel(x), { ...x });
+    }
+  }
+  return [...karte.values()].sort((x, y) => (x.punkt ?? -1) - (y.punkt ?? -1) || x.zeit - y.zeit);
+}
+
+/**
+ * **Eine Markierung setzen** (`aus`) – sie bekommt einen Zeitpunkt, der **sicher neuer** ist als die bisherige (auch wenn die
+ * Uhr dieses Geräts nachgeht), damit die Rücknahme gegen die Markierung immer gewinnt.
+ */
+export function ausnahmeSetzen(
+  bisher: readonly Ausnahme[],
+  punkt: number | null,
+  aus: boolean,
+  jetzt: number,
+): Ausnahme[] {
+  const alt = bisher.find((x) => ausnahmeSchluessel(x) === ausnahmeSchluessel({ punkt }));
+  const zeit = alt ? Math.max(jetzt, alt.zeit + 1) : jetzt;
+  return ausnahmenZusammenfuehren(bisher, [{ punkt, zeit, aus }]);
+}
+
+/** Was gilt: ist der ganze Termin heraus, und welche Punkte (IDs). */
+export function ausgenommen(ausnahmen: readonly Ausnahme[]): {
+  termin: boolean;
+  punkte: ReadonlySet<number>;
+} {
+  return {
+    termin: ausnahmen.some((x) => x.punkt === null && x.aus),
+    punkte: new Set(ausnahmen.flatMap((x) => (x.punkt !== null && x.aus ? [x.punkt] : []))),
+  };
+}
+
+/** Steckt jede Markierung aus `neue` in `verlauf` – oder steht dort schon eine neuere für denselben Schlüssel? */
+export function ausnahmenEnthalten(
+  verlauf: readonly Ausnahme[],
+  neue: readonly Ausnahme[],
+): boolean {
+  return neue.every((n) => {
+    const w = verlauf.find((x) => ausnahmeSchluessel(x) === ausnahmeSchluessel(n));
+    // Bei gleichem Zeitpunkt gilt „heraus“ (`ausnahmenZusammenfuehren`) – dann ist auch eine gleichzeitige Rücknahme „drin“.
+    return !!w && (w.zeit > n.zeit || (w.zeit === n.zeit && (w.aus === n.aus || w.aus)));
+  });
 }

@@ -30,6 +30,10 @@ import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
 import { blattGruppenAus } from '@shared/dienstplan/terminBlattDienste';
 import { TerminAblauf } from './TerminAblauf';
+import { Rueckblick } from './Rueckblick';
+import { useMeineAnzeige } from './meineAnzeige';
+import { schnittKurz, useVerlaufDaten } from './useVerlaufDaten';
+import { verlaufCacheLeeren, verlaufImCacheErsetzen } from './ladeVerlauf';
 import { TauschAmDienst } from './TauschTeile';
 import type { VertretungZugriff } from './useVertretung';
 import type { Tausch } from './useTausch';
@@ -133,6 +137,9 @@ export function TerminAnsicht({
     [start, terminId, zeitzone],
   );
   const zustand = alsZustand(stand);
+  // Rückblick und Schnitt (L4-4): alle Live-Verläufe, einmal je Seitenaufruf gelesen; nach „Live“ neu (`neuLesen`).
+  const anzeige = useMeineAnzeige();
+  const verlaeufe = useVerlaufDaten(anzeige.rueckblick || anzeige.schnittBeimPlanen);
   // Einteilen wie in „Planen“ (F1) – mit dem Plan dieses einen Termins; gesendet wird damit nur, was hier steht.
   const einteilen = useEinteilen({
     plan: zustand.art === 'fertig' ? zustand.daten.plan : null,
@@ -272,6 +279,17 @@ export function TerminAnsicht({
       bearbeiten={bearbeiten}
       onBearbeiten={setBearbeiten}
       musikApp={musikApp}
+      // „Ø 8:10“ leise unter der Dauer beim Bearbeiten (L4-4, A8) – wer es nicht will, schaltet es unter „Meine Anzeige“ aus.
+      schnittText={
+        anzeige.schnittBeimPlanen
+          ? (z) => schnittKurz(verlaeufe.schnitt, z.title, z.song !== null)
+          : undefined
+      }
+      // Nach „Live“ ist der Verlauf neu: frisch lesen, damit der Rückblick des Termins gleich da ist.
+      onLiveGeschlossen={() => {
+        verlaufCacheLeeren();
+        verlaeufe.neuLesen();
+      }}
     >
       {(teile) => (
         <div className={styles.seite}>
@@ -348,6 +366,25 @@ export function TerminAnsicht({
             </div>
             {teile.inhalt}
           </section>
+
+          {/* Der Rückblick (L4-4): nur, wenn Live zu Ende war – die Karte prüft das selbst und fehlt sonst. */}
+          {ablauf !== null && verlaeufe.termine?.get(terminId) && (
+            <Rueckblick
+              terminId={terminId}
+              tag={s.tag}
+              items={ablauf.items}
+              zeitzone={zeitzone}
+              verlauf={verlaeufe.termine.get(terminId)!}
+              schnitt={verlaeufe.schnitt}
+              darfAusnehmen={planer}
+              anzeige={anzeige}
+              onAusnahmen={(ausnahmen) => {
+                const neu = { wechsel: verlaeufe.termine?.get(terminId)?.wechsel ?? [], ausnahmen };
+                verlaeufe.setzeTermin(terminId, neu);
+                void verlaufImCacheErsetzen(terminId, neu);
+              }}
+            />
+          )}
 
           <section className={styles.karte} aria-label="Dienste">
             <div className={styles.kartenKopf}>

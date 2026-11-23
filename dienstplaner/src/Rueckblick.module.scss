@@ -1,0 +1,248 @@
+// Der Rückblick im Termin (L4-4, Entwurf live-2.html Abschnitt 6) – Karte wie „Ablauf“ und „Dienste“.
+@use '@ui/design/mixins' as m;
+@use './terminTexte' as t;
+
+.karte {
+  @include m.card-list;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.fehler {
+  @include t.hinweis;
+  border-bottom: 1px solid var(--hair);
+  color: var(--red);
+}
+
+// Beginn, Ende, am meisten eingeholt/überzogen – vier kleine Kacheln, die bei wenig Platz umbrechen.
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.chip {
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+
+  b {
+    display: block;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.plus {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.minus {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.leise {
+  color: var(--text3);
+}
+
+// Die Tabelle als Raster aus Zeilen – am Handy rutschen Plan, Gelaufen und Ø in eine zweite Zeile unter den Titel.
+.tabelle {
+  --spalten: minmax(0, 1fr) 64px 72px 72px minmax(120px, auto) 40px;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.ohnePm {
+  --spalten: minmax(0, 1fr) 64px 72px minmax(120px, auto) 40px;
+}
+
+.ohneSchnitt {
+  --spalten: minmax(0, 1fr) 64px 72px 72px 40px;
+}
+
+.ohnePm.ohneSchnitt {
+  --spalten: minmax(0, 1fr) 64px 72px 40px;
+}
+
+.zeile {
+  display: grid;
+  grid-template-columns: var(--spalten);
+  align-items: center;
+  gap: 0 10px;
+  padding: 2px 8px 2px 14px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.tabellenKopf {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: var(--text3);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.titel {
+  order: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.zahl {
+  text-align: right;
+}
+
+// Plan, Gelaufen und Ø liegen am Rechner als eigene Spalten im Raster (`display: contents`), am Handy in einer Zeile unter dem Titel.
+// Die Reihenfolge der Spalten setzt `order` – ± steht im Markup hinter ihnen, damit es am Handy neben den Titel rücken kann.
+.meta {
+  display: contents;
+}
+
+.plan {
+  order: 1;
+}
+
+.gelaufen {
+  order: 2;
+}
+
+.pm {
+  order: 3;
+}
+
+.schnitt {
+  order: 4;
+}
+
+.menue {
+  order: 5;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.beschriftung {
+  display: none;
+  color: var(--text3);
+}
+
+// Aus dem Schnitt genommen: grau, der Name durchgestrichen – die Zahlen bleiben lesbar.
+.raus {
+  color: var(--text3);
+
+  .name {
+    text-decoration: line-through;
+  }
+}
+
+.schnitt {
+  color: var(--text3);
+}
+
+.band {
+  padding: 8px 14px 4px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--section);
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.unterschrift {
+  margin: 0;
+  padding: 10px 14px;
+  color: var(--text3);
+  font-size: 12.5px;
+}
+
+@media (max-width: 759px) {
+  .tabelle,
+  .ohnePm,
+  .ohneSchnitt,
+  .ohnePm.ohneSchnitt {
+    --spalten: minmax(0, 1fr) auto auto;
+  }
+
+  .tabellenKopf {
+    display: none;
+  }
+
+  .zeile {
+    grid-template-areas:
+      'titel pm menue'
+      'meta meta meta';
+    gap: 2px 10px;
+    padding: 6px 8px 8px 14px;
+  }
+
+  .titel {
+    grid-area: titel;
+  }
+
+  .pm {
+    grid-area: pm;
+    text-align: right;
+  }
+
+  .menue {
+    grid-area: menue;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 14px;
+    grid-area: meta;
+  }
+
+  .plan,
+  .gelaufen {
+    white-space: nowrap;
+  }
+
+  .zahl {
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .beschriftung {
+    display: inline;
+  }
+}

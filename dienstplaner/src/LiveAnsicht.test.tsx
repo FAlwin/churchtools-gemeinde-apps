@@ -47,10 +47,15 @@ function verlaufImSpeicher() {
   let wechsel: Wechsel[] = [];
   return {
     lesen: (): Promise<VerlaufLesen> =>
-      Promise.resolve({ ok: true, wechsel: [...wechsel], vorhanden: wechsel.length > 0 }),
+      Promise.resolve({
+        ok: true,
+        wechsel: [...wechsel],
+        ausnahmen: [],
+        vorhanden: wechsel.length > 0,
+      }),
     schreiben: (_t: number, neue: readonly Wechsel[]): Promise<VerlaufSchreiben> => {
       wechsel = zusammenfuehren(wechsel, neue);
-      return Promise.resolve({ ok: true, wechsel: [...wechsel] });
+      return Promise.resolve({ ok: true, wechsel: [...wechsel], ausnahmen: [] });
     },
   };
 }

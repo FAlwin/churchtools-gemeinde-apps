@@ -120,8 +120,11 @@ export function SortableRow<T extends AblaufZeile>({
   infoZellen,
   vorlage = false,
   ohneStift = false,
+  schnitt = null,
 }: {
   item: T;
+  /** „Ø 8:10“ leise unter der Dauer (Dienstplaner L4-4) – `null` = nichts zu zeigen. */
+  schnitt?: string | null;
   /** Ohne den blauen Stift rechts (Musik-App B8): Antippen der Zeile öffnet das Punkt-Fenster auch so. */
   ohneStift?: boolean;
   /** Eine Zeile in einer Ablaufvorlage (E10-V3a): Platzhalter neutral – `ZeilenInhalt`. */
@@ -207,7 +210,7 @@ export function SortableRow<T extends AblaufZeile>({
       >
         <Icon name="grip" size={16} />
       </button>
-      <ZeitSpalte item={item} />
+      <ZeitSpalte item={item} schnitt={schnitt} />
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
         <ZeilenInhalt item={item} schmal={schmal} infoZeilen={infoZeilen} vorlage={vorlage} />
       </button>

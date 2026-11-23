@@ -136,6 +136,13 @@
   color: var(--text3);
   white-space: nowrap;
 }
+// „Ø 8:10“ (Dienstplaner L4-4): noch leiser als die Dauer, nur beim Bearbeiten.
+.zeitSchnitt {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text3);
+  white-space: nowrap;
+}
 // Vorlauf-Punkte: Uhrzeit gedämpft – sie laufen vor dem Beginn, nicht im Gottesdienst.
 .vorlauf .flowTime {
   color: var(--text2);
@@ -312,6 +319,9 @@
   }
   .zeitDauer {
     font-size: 11px;
+  }
+  .zeitSchnitt {
+    font-size: 10.5px;
   }
   .sectionBand {
     padding: 6px 8px;

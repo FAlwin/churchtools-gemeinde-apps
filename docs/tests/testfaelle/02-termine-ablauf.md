@@ -550,6 +550,71 @@ seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zähl
 
 </details>
 
+### TF-ABLAUF-49 · Rückblick nach „Live“
+
+**Das brauchst du:** Einen Test-Termin, in dessen „Live“ du einmal den ganzen Ablauf bis „Ende“ durchgeklickt hast (Recht, die Live-Agenda zu steuern, und die Ablage „Live-Verlauf“); eine zweite Person, die den Ablauf nur sehen darf.
+
+**Das muss passieren:** Unter dem Ablauf steht die Karte **„Rückblick · Live am TT.MM.“** – Beginn und Ende mit ± gegen den Plan, „Am meisten eingeholt“, „Am meisten überzogen“ und die Tabelle **Punkt / Plan / Gelaufen / ± / Ø bisher**, nach den Abschnitten des Ablaufs gegliedert.
+
+1. Live bis **Ende** durchklicken, „Live“ schließen → die Karte erscheint sofort (ohne die Seite neu zu laden). **Vor „Ende“** (Live läuft noch) und ohne jeden Verlauf gibt es **keine** Karte.
+2. **Weiter, dann gleich Zurück** (Fehlklick) während des Durchgangs → in „Gelaufen“ steht für den Punkt die volle Zeit, der kurz berührte Punkt steht entweder gar nicht da oder ohne die Sekunden des Fehlklicks.
+3. Beginn: ± gegen den **geplanten Beginn des Termins** (Plus = früher, Minus = später); Ende ± gegen das geplante Ende. „Eingeholt“ nennt den Punkt mit dem größten **+**, „Überzogen“ den mit dem größten **−**; steht kein Plus (oder Minus) da, fehlt der Kasten.
+4. **Zweite Person (nur ansehen):** sieht dieselbe Karte, aber **kein „⋯“**. **Ohne Leserecht** an der Ablage: keine Karte, keine Fehlermeldung, der Termin ist sonst ganz da.
+5. **Handy (375 px):** nichts ist abgeschnitten; je Punkt steht oben Titel, ± und „⋯“, darunter „Plan … Gelaufen … Ø bisher …“; kein seitliches Wischen.
+6. **Demo** (`npm run dev -w dienstplaner`, `…/?demo#/termin/108`): Rückblick mit eingeholt/überzogen und einer Zeile „nicht im Schnitt“ (Gebetsgemeinschaft).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liveRueckblick.ts`, `shared/ct/liveVerlauf.ts`, `shared/dienstplan/liveVerlaufSpeicher.ts`, `dienstplaner/src/Rueckblick.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/demo.ts`
+- **Automatisiert:** ja – `shared/ct/liveRueckblick.test.ts` (Ende, Beginn/Ende ±, eingeholt/überzogen, Fehlklick), `dienstplaner/src/Rueckblick.test.tsx` (Karte, Abschnitte, Handy, Spalten), `dienstplaner/src/TerminAnsicht.rueckblick.test.tsx` (unter dem Ablauf, ohne Ende/ohne Verlauf/Lesefehler keine Karte, neu lesen nach „Live“); von Hand bleiben die Rechte an der Ablage in ChurchTools, zwei Geräte und das Aussehen
+- **Historie:** Live-Ansicht 2, L4-4 (23.11.2026, Entwurf `entwurf/live-2.html` Abschnitt 6, A6/A18)
+
+</details>
+
+### TF-ABLAUF-50 · Aus dem Schnitt nehmen
+
+**Das brauchst du:** Wie TF-ABLAUF-49; eine Person, die einen Dienst am Termin planen darf (oder Admin), und eine, die es nicht darf; die Ablage „Live-Verlauf“ muss für die Planerin **änderbar** sein.
+
+**Das muss passieren:** Planer nehmen einen Ausreißer (z. B. vergessenes Weiterklicken) aus dem Schnitt – eine Zeile oder den ganzen Termin – und wieder hinein. Die Markierung hält auf allen Geräten.
+
+1. Im Rückblick bei einem Punkt **„⋯“ → „Aus dem Schnitt nehmen“** → die Zeile wird grau und bekommt das Etikett **„nicht im Schnitt“**, sie zählt nicht mehr bei „Am meisten überzogen/eingeholt“ und das „Ø bisher“ der anderen Zeilen/Termine ändert sich. **Neu laden** → die Markierung ist noch da.
+2. **„⋯“ → „Wieder in den Schnitt nehmen“** → alles wie vorher (auch nach Neuladen).
+3. Im **Kartenkopf „⋯“ → „Termin aus dem Schnitt nehmen“** → Etikett „nicht im Schnitt“ neben der Überschrift; dieser Termin fehlt in jedem „Ø“ (auch beim Ablauf bearbeiten). Dasselbe zurück.
+4. **Zwei Geräte:** auf Gerät A einen Punkt herausnehmen, auf Gerät B (Karte schon offen) einen anderen, dann beide neu laden → **beide** sind herausgenommen. Auf A zurücknehmen, auf B (alter Stand offen) einen weiteren Punkt herausnehmen → die Rücknahme von A **bleibt** erhalten.
+5. **Ohne Schreibrecht** an der Ablage (oder Netz weg): Hinweis „… ließ sich nicht speichern“ bzw. der Rechte-Satz, die Zeile bleibt, wie sie war. Wer **nicht planen darf**, sieht **kein „⋯“**.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liveVerlauf.ts`, `shared/dienstplan/liveVerlaufSpeicher.ts`, `dienstplaner/src/Rueckblick.tsx`, `dienstplaner/src/ladeVerlauf.ts`
+- **Automatisiert:** ja – `shared/ct/liveVerlauf.test.ts` (Markierungen setzen/zusammenführen/Rücknahme), `shared/dienstplan/liveVerlaufSpeicher.test.ts` (Ablage, zwei Geräte, Rücknahme gegen veraltete Markierung, 403/504), `dienstplaner/src/Rueckblick.test.tsx` (Menü, Etikett, Fehler, Rechte); von Hand bleiben echte zwei Geräte und die Rechte in ChurchTools
+- **Historie:** Live-Ansicht 2, L4-4 (23.11.2026, A9)
+
+</details>
+
+### TF-ABLAUF-51 · „Ø bisher“ und leises „Ø“ beim Planen
+
+**Das brauchst du:** Mindestens zwei Termine mit Rückblick (Live bis „Ende“ durchgeklickt), am besten mit denselben Punkt-Titeln und einigen Liedern; einen Termin mit Ablauf zum Bearbeiten.
+
+**Das muss passieren:** „Ø bisher“ zählt gleichnamige Punkte aller Termine mit Rückblick, **alle Lieder zusammen als „Lied“**. Beim **Ablauf bearbeiten** steht dasselbe Ø leise unter der Dauer.
+
+1. Im Rückblick: „Ø bisher“ zeigt **m:ss · N×** (bei Liedern **„Lied Ø m:ss · N×“**); ein Punkt ohne Vorgänger zeigt **„–“** bzw. N = 1.
+2. Zwei verschiedene Lieder in einem Termin zählen **beide** in „Lied“ (N wächst um 2).
+3. Termine **ohne „Ende“** und **herausgenommene** Punkte/Termine (TF-ABLAUF-50) zählen nicht mit.
+4. **Ablauf bearbeiten** („Bearbeiten“ im Ablauf): unter der Dauer jedes Punkts steht **„Ø 7:30“** in leiser Schrift – in der **Ansicht** (nicht beim Bearbeiten) und in der **Matrix** steht nichts.
+5. Ein Punkt, den es sonst nirgends gab, hat kein Ø. Nach einem neuen Live-Durchgang (Live schließen) sind die Zahlen frisch.
+6. **Demo** (`…/?demo#/termin/101`, „Bearbeiten“): unter Soundcheck, Liedern und Predigt steht ein Ø aus den drei Demo-Gottesdiensten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/liveRueckblick.ts`, `dienstplaner/src/useVerlaufDaten.ts`, `dienstplaner/src/ladeVerlauf.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`
+- **Automatisiert:** ja – `shared/ct/liveRueckblick.test.ts` (Schlüssel Titel/Lied, nur beendete, ohne Titel, Ausnahmen), `dienstplaner/src/ladeVerlauf.test.ts` (ein Lesen je Seitenaufruf, Fehler nicht gehalten), `dienstplaner/src/useVerlaufDaten.test.tsx`, `dienstplaner/src/TerminAnsicht.rueckblick.test.tsx` (Ø beim Bearbeiten), `ui/ablauf/AblaufListe.test.tsx` (Zeile); von Hand bleibt das Aussehen
+- **Historie:** Live-Ansicht 2, L4-4 (23.11.2026, A8, T5)
+
+</details>
+
 ### TF-ABLAUF-16 · „Weitere Infos“ am Termin
 
 **Das brauchst du:** Einen Test-Termin, an dem in ChurchTools unter „i“ (Weitere Infos) zwei Zeilen stehen; eine

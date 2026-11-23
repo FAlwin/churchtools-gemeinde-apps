@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { CtAgendaItem } from '@shared/ct/typen';
-import { AblaufListe } from './AblaufListe';
+import { AblaufListe, ZeitSpalte } from './AblaufListe';
 
 /**
  * Der Ablauf als Liste – ein Baustein für Musik-App und Dienstplaner (E6-1b). Die Zeilen kommen aus dem echten
@@ -306,5 +306,26 @@ describe('Balken „Ende“ (Matrix, 29.10.2026)', () => {
   it('ohne `mitEnde` keiner – Termin-Ansicht und Musik-App bleiben, wie sie sind', () => {
     render(<AblaufListe zeilen={ZEILEN} schmal />);
     expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
+  });
+});
+
+describe('„Ø“ unter der Dauer (Dienstplaner L4-4)', () => {
+  it('zeigt den Durchschnitt leise unter der Dauer – nur, wenn er angegeben ist', () => {
+    render(<ZeitSpalte item={ZEILEN[2]} schnitt="Ø 4:30" />);
+    const t = screen.getByText('Ø 4:30');
+    expect(t.className).not.toBe('');
+    expect(screen.getByText('5 Min')).toBeTruthy();
+  });
+
+  it('ohne Angabe (oder null) steht dort nichts – die Ansicht bleibt, wie sie war', () => {
+    const { container, rerender } = render(<ZeitSpalte item={ZEILEN[2]} />);
+    expect(container.textContent).not.toContain('Ø');
+    rerender(<ZeitSpalte item={ZEILEN[2]} schnitt={null} />);
+    expect(container.textContent).not.toContain('Ø');
+  });
+
+  it('die Ansicht der Liste zeigt nie ein Ø (nur das Bearbeiten bekommt es)', () => {
+    const { container } = render(<AblaufListe zeilen={ZEILEN} beginn="09:00" onLied={vi.fn()} />);
+    expect(container.textContent).not.toContain('Ø');
   });
 });

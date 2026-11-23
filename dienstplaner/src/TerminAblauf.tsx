@@ -124,6 +124,8 @@ export function TerminAblauf({
   musikApp,
   schmal = false,
   mitNeuAufsetzen = true,
+  schnittText,
+  onLiveGeschlossen,
   children,
 }: {
   start: Start;
@@ -145,6 +147,10 @@ export function TerminAblauf({
    * Nachfrage (Entwurf E6-6 Bild 2). Die Matrix lässt es weg, auch am Handy.
    */
   mitNeuAufsetzen?: boolean;
+  /** „Ø 8:10“ je Punkt beim Bearbeiten (L4-4, A8) – ohne: nichts davon. */
+  schnittText?: (zeile: AblaufZeile) => string | null;
+  /** „Live“ wurde geschlossen (L4-4): Der Verlauf hat sich vermutlich geändert, der Rückblick liest neu. */
+  onLiveGeschlossen?: () => void;
   children: (teile: AblaufTeile) => ReactNode;
 }) {
   const terminId = termin.id;
@@ -289,6 +295,7 @@ export function TerminAblauf({
     // Im Punkt-Fenster die Liedauswahl wie in der Musik-App (LW2b, Alwin 06.11.2026): anderes Lied, Verknüpfung
     // aufheben, „Neues Lied“. Die Lied-Ansicht bleibt über das Lied im Ablauf erreichbar. Ohne das Recht, Lieder zu
     // sehen, gibt es keine Liedauswahl – dann öffnet die Zeile „Lied“ weiter die Lied-Ansicht (Alwin, 28.10.2026).
+    schnittText,
     liedWahl: start.lieder?.sehen ? (args) => <LiedWahl {...args} /> : undefined,
     liedAnsehen: (p, zurueck, schliessen) => liedAnsicht(p, schliessen, zurueck),
   });
@@ -468,7 +475,10 @@ export function TerminAblauf({
           zeilen={zeilen}
           infoGruppen={liveInfoGruppen(termin.eigeneGruppen ?? [], gruppen, spalten.gewaehlt)}
           zeitzone={zeitzone}
-          onSchliessen={() => setLive(false)}
+          onSchliessen={() => {
+            setLive(false);
+            onLiveGeschlossen?.();
+          }}
           steuern={termin.liveSteuern === true}
           onAblauf={onAblauf}
         />

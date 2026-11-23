@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { liveListe } from '../ct/liveAgenda';
-import { wechselAus, zusammenfuehren, type Wechsel } from '../ct/liveVerlauf';
+import {
+  ausgenommen,
+  ausnahmeSetzen,
+  wechselAus,
+  zusammenfuehren,
+  type Ausnahme,
+  type Wechsel,
+} from '../ct/liveVerlauf';
+import { schnittAus } from '../ct/liveRueckblick';
 import type { Wert } from '../ct/modulDaten';
 import type { VersionPort } from '../ct/versionierterWert';
 import type { CtAgendaItem } from '../ct/typen';
@@ -9,6 +17,7 @@ import { KAT, MODUL, speicher } from './entwuerfe.testutil';
 import {
   VERLAUF_KATEGORIE,
   VERLAUF_VERSUCHE,
+  verlaufAlleLesen,
   verlaufLesen,
   verlaufSchreiben,
   verlaufText,
@@ -153,6 +162,7 @@ describe('verlaufLesen', () => {
     expect(await verlaufLesen(p, modul, TERMIN)).toEqual({
       ok: true,
       wechsel: [],
+      ausnahmen: [],
       vorhanden: false,
     });
   });
@@ -162,6 +172,7 @@ describe('verlaufLesen', () => {
     expect(await verlaufLesen(p, modul, TERMIN)).toEqual({
       ok: true,
       wechsel: [],
+      ausnahmen: [],
       vorhanden: false,
     });
   });
@@ -171,6 +182,7 @@ describe('verlaufLesen', () => {
     expect(await verlaufLesen(p, modul, TERMIN)).toEqual({
       ok: true,
       wechsel: [w(1, 0), w(2, 300)],
+      ausnahmen: [],
       vorhanden: true,
     });
   });
@@ -206,7 +218,7 @@ describe('verlaufSchreiben', () => {
   it('legt Kategorie und Wert an, wenn es beides noch nicht gibt – und liest nach', async () => {
     const { s, k, p } = aufbau(false);
     const r = await verlaufSchreiben(p, modul, TERMIN, [w(1, 0)]);
-    expect(r).toEqual({ ok: true, wechsel: [w(1, 0)] });
+    expect(r).toEqual({ ok: true, wechsel: [w(1, 0)], ausnahmen: [] });
     expect(k.angelegt).toBe(1);
     expect(gespeichert(s.werte)).toEqual([w(1, 0)]);
   });
@@ -356,5 +368,222 @@ describe('verlaufSchreiben', () => {
     const r = await verlaufSchreiben(p, modul, TERMIN, [w(1, 0)]);
     expect(r.ok).toBe(false);
     expect(s.werte).toEqual([]);
+  });
+});
+
+/** Was in den Werten des Termins an Markierungen steht (alle Werte zusammengeführt) – über den Leser, nicht von Hand. */
+async function ausnahmenIm(p: VersionPort, termin = TERMIN): Promise<Ausnahme[]> {
+  const r = await verlaufLesen(p, modul, termin);
+  if (!r.ok) throw new Error(r.grund);
+  return r.ausnahmen;
+}
+
+describe('Markierungen „nicht im Schnitt“ im Wert (A9)', () => {
+  it('werden mit dem Verlauf abgelegt und wieder gelesen (über den Erzeuger)', async () => {
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0), w(2, 300)])]);
+    const aus = ausnahmeSetzen([], liste[1].id, true, T0);
+    const r = await verlaufSchreiben(p, modul, TERMIN, [], aus);
+    expect(r).toMatchObject({ ok: true, ausnahmen: aus });
+    expect(await ausnahmenIm(p)).toEqual(aus);
+    // Die Wechsel sind dabei unangetastet
+    expect(gespeichert(s.werte)).toEqual([w(1, 0), w(2, 300)]);
+  });
+
+  it('ein Wechsel, der danach geschrieben wird, verliert die Markierung nicht', async () => {
+    const { p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    const aus = ausnahmeSetzen([], liste[0].id, true, T0);
+    await verlaufSchreiben(p, modul, TERMIN, [], aus);
+    await verlaufSchreiben(p, modul, TERMIN, [w(2, 300)]);
+    expect(await ausnahmenIm(p)).toEqual(aus);
+    const r = await verlaufLesen(p, modul, TERMIN);
+    expect(r.ok && r.wechsel.map((x) => x.stelle)).toEqual([1, 2]);
+  });
+
+  it('zwei Geräte markieren verschiedene Punkte nacheinander: beide Markierungen bleiben', async () => {
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    const a = ausnahmeSetzen([], liste[0].id, true, T0);
+    const b = ausnahmeSetzen([], liste[1].id, true, T0 + 5);
+    // Das andere Gerät hat seine Markierung schon abgelegt, unser Gerät weiß davon nichts (frisch gelesen wird beim Schreiben).
+    s.werte[0] = { ...s.werte[0], value: verlaufText(TERMIN, [w(1, 0)], b) as string };
+    expect((await verlaufSchreiben(p, modul, TERMIN, [], a)).ok).toBe(true);
+    expect(ausgenommen(await ausnahmenIm(p)).punkte).toEqual(new Set([liste[0].id, liste[1].id]));
+  });
+
+  it('überschreibt ein anderes Gerät den Wert gleich nach unserem Schreiben, führen wir noch einmal zusammen', async () => {
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    const a = ausnahmeSetzen([], liste[0].id, true, T0);
+    const b = ausnahmeSetzen([], liste[1].id, true, T0 + 5);
+    let einmal = true;
+    s.vorher = (x) => {
+      if (x.method === 'PUT' && einmal) {
+        einmal = false;
+        queueMicrotask(() => {
+          s.werte[0] = { ...s.werte[0], value: verlaufText(TERMIN, [w(1, 0)], b) as string };
+        });
+      }
+    };
+    const r = await verlaufSchreiben(p, modul, TERMIN, [], a);
+    expect(r.ok).toBe(true);
+    expect(ausgenommen(await ausnahmenIm(p)).punkte).toEqual(new Set([liste[0].id, liste[1].id]));
+  });
+
+  it('die Rücknahme kommt durch – auch gegen ein Gerät, das noch die alte Markierung hat', async () => {
+    const aus = ausnahmeSetzen([], liste[0].id, true, T0);
+    const { p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    await verlaufSchreiben(p, modul, TERMIN, [], aus);
+    const zurueck = ausnahmeSetzen(aus, liste[0].id, false, T0 + 1000);
+    expect((await verlaufSchreiben(p, modul, TERMIN, [], zurueck)).ok).toBe(true);
+    expect(ausgenommen(await ausnahmenIm(p)).punkte.size).toBe(0);
+    // Das alte Gerät schreibt seine veraltete Markierung erneut – die Rücknahme bleibt neuer.
+    await verlaufSchreiben(p, modul, TERMIN, [], aus);
+    expect(ausgenommen(await ausnahmenIm(p)).punkte.size).toBe(0);
+  });
+
+  it('ist die Markierung schon da, wird nichts geschrieben', async () => {
+    const aus = ausnahmeSetzen([], liste[0].id, true, T0);
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    await verlaufSchreiben(p, modul, TERMIN, [], aus);
+    const n = s.schreibvorgaenge.length;
+    expect((await verlaufSchreiben(p, modul, TERMIN, [], aus)).ok).toBe(true);
+    expect(s.schreibvorgaenge).toHaveLength(n);
+  });
+
+  it('vorübergehender Fehler beim Markieren: nichts geht kaputt, später wiederholbar', async () => {
+    const aus = ausnahmeSetzen([], liste[0].id, true, T0);
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0), w(2, 300)])]);
+    s.schreibenWirft = new Fehler(504);
+    expect(await verlaufSchreiben(p, modul, TERMIN, [], aus)).toEqual({
+      ok: false,
+      grund: 'voruebergehend',
+    });
+    expect(await ausnahmenIm(p)).toEqual([]);
+    expect(gespeichert(s.werte).map((x) => x.stelle)).toEqual([1, 2]);
+    s.schreibenWirft = null;
+    expect((await verlaufSchreiben(p, modul, TERMIN, [], aus)).ok).toBe(true);
+  });
+
+  it('ohne Recht (403) meldet es das – und lässt den Wert, wie er war', async () => {
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    s.schreibenWirft = new Fehler(403);
+    expect(
+      await verlaufSchreiben(p, modul, TERMIN, [], ausnahmeSetzen([], liste[0].id, true, T0)),
+    ).toEqual({ ok: false, grund: 'kein-recht' });
+    expect(gespeichert(s.werte)).toEqual([w(1, 0)]);
+  });
+
+  it('Werte von vor L4-4 (ohne Markierungen) bleiben lesbar', async () => {
+    const { p } = aufbau(true, [
+      {
+        id: 100,
+        dataCategoryId: KAT,
+        value: JSON.stringify({
+          art: 'dienstplaner-live-verlauf',
+          fassung: 1,
+          terminId: TERMIN,
+          wechsel: [{ s: 1, p: 100, t: 'A', z: T0 }],
+        }),
+      },
+    ]);
+    const r = await verlaufLesen(p, modul, TERMIN);
+    expect(r).toMatchObject({ ok: true, ausnahmen: [], vorhanden: true });
+  });
+
+  it('eine beschädigte Markierung wird übersprungen, die anderen bleiben', async () => {
+    const { p } = aufbau(true, [
+      {
+        id: 100,
+        dataCategoryId: KAT,
+        value: JSON.stringify({
+          art: 'dienstplaner-live-verlauf',
+          fassung: 1,
+          terminId: TERMIN,
+          wechsel: [],
+          x: [{ p: 'x' }, { p: 101, z: 5, a: true }],
+        }),
+      },
+    ]);
+    expect(await ausnahmenIm(p)).toEqual([{ punkt: 101, zeit: 5, aus: true }]);
+  });
+});
+
+describe('Lied-Merkmal im Wert', () => {
+  const MIT_LIED = liveListe(
+    [
+      {
+        id: 1,
+        title: 'Halleluja',
+        type: 'song',
+        duration: 300,
+        song: { title: 'Halleluja', songId: 7, arrangementId: 8 },
+      },
+    ] as CtAgendaItem[],
+    TERMIN,
+  );
+
+  it('wird abgelegt und gelesen (über den Erzeuger)', async () => {
+    const wechsel = [wechselAus(MIT_LIED, 1, T0), wechselAus(MIT_LIED, 2, T0 + 300_000)];
+    expect(wechselAus(MIT_LIED, 1, T0).lied).toBe(true);
+    expect(wechselAusWert(wertMit(1, wechsel), TERMIN)).toEqual(wechsel);
+  });
+
+  it('übersteht auch das Weglassen der Titel bei Überlänge', () => {
+    const viele = Array.from({ length: 200 }, (_, i) => ({
+      ...wechselAus(MIT_LIED, 1, T0 + i * 1000),
+      titel: 'x'.repeat(60),
+    }));
+    const text = verlaufText(TERMIN, viele) as string;
+    const gelesen = wechselAusWert({ id: 1, dataCategoryId: KAT, value: text }, TERMIN)!;
+    expect(gelesen.every((x) => x.lied === true && x.titel === '')).toBe(true);
+  });
+});
+
+describe('verlaufAlleLesen – für den Schnitt', () => {
+  it('liest alle Termine der Kategorie mit einem Lesen und führt je Termin zusammen', async () => {
+    const { s, p } = aufbau(true, [
+      wertMit(100, [w(1, 0)]),
+      wertMit(101, [w(1, 0), w(2, 300)]),
+      wertMit(102, [w(1, 5)], 999),
+    ]);
+    const r = await verlaufAlleLesen(p, modul);
+    expect(r.ok && [...r.termine.keys()].sort()).toEqual([TERMIN, 999]);
+    expect(r.ok && r.termine.get(TERMIN)?.wechsel.map((x) => x.stelle)).toEqual([1, 2]);
+    expect(s.schreibvorgaenge).toEqual([]);
+  });
+
+  it('bringt die Markierungen mit', async () => {
+    const aus = ausnahmeSetzen([], liste[0].id, true, T0);
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    s.werte[0] = { ...s.werte[0], value: verlaufText(TERMIN, [w(1, 0)], aus) as string };
+    const r = await verlaufAlleLesen(p, modul);
+    expect(r.ok && r.termine.get(TERMIN)?.ausnahmen).toEqual(aus);
+  });
+
+  it('keine Kategorie / kein Recht: leer, kein Fehler', async () => {
+    const { p } = aufbau(false);
+    expect(await verlaufAlleLesen(p, modul)).toEqual({ ok: true, termine: new Map() });
+  });
+
+  it.each([
+    [new Fehler(401), 'abgemeldet'],
+    [new Fehler(403), 'kein-recht'],
+    [new Fehler(504), 'voruebergehend'],
+  ] as const)('Lesefehler %j ist ein Fehler und kein „leer“', async (fehler, grund) => {
+    const { s, p } = aufbau(true, [wertMit(100, [w(1, 0)])]);
+    s.lesenWirft = fehler;
+    expect(await verlaufAlleLesen(p, modul)).toEqual({ ok: false, grund });
+  });
+
+  it('der Schnitt aus dem Gelesenen entspricht dem aus den Erzeugern', async () => {
+    const l = liste;
+    const wechsel = [
+      wechselAus(l, 1, T0),
+      wechselAus(l, 2, T0 + 300_000),
+      wechselAus(l, 4, T0 + 900_000),
+    ];
+    const { p } = aufbau(true, [wertMit(100, wechsel)]);
+    const r = await verlaufAlleLesen(p, modul);
+    expect(r.ok && schnittAus(r.termine.values())).toEqual(
+      schnittAus([{ wechsel, ausnahmen: [] }]),
+    );
   });
 });

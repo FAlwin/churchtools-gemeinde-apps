@@ -31,11 +31,16 @@ import { infoText, type SpaltenSicht } from './infoTabellenRegeln';
 import { liedKarteLeer } from './liedMeta';
 import styles from './AblaufListe.module.scss';
 
-/** Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. */
+/**
+ * Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. `schnitt` („Ø 8:10“,
+ * Dienstplaner L4-4, A8): noch leiser darunter – nur beim Bearbeiten, wo man realistisch plant.
+ */
 export function ZeitSpalte({
   item,
+  schnitt = null,
 }: {
   item: Pick<AblaufZeile, 'time' | 'weggelassen' | 'durationMin'>;
+  schnitt?: string | null;
 }) {
   return (
     <div className={styles.flowTime}>
@@ -43,6 +48,11 @@ export function ZeitSpalte({
         <ZeitText item={item} />
       </span>
       {item.durationMin ? <span className={styles.zeitDauer}>{item.durationMin} Min</span> : null}
+      {schnitt ? (
+        <span className={styles.zeitSchnitt} title="Durchschnitt aus den bisherigen Terminen">
+          {schnitt}
+        </span>
+      ) : null}
     </div>
   );
 }

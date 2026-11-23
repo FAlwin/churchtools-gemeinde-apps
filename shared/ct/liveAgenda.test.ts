@@ -4,7 +4,9 @@ import { diensteAus } from './dienste';
 import {
   abweichungText,
   darfLiveSteuern,
+  eigeneDienstgruppen,
   endeStelle,
+  liveInfoGruppen,
   liveLage,
   liveLesen,
   liveListe,
@@ -277,7 +279,8 @@ describe('liveLage', () => {
   it('Zusatzzeit verlängert, überzogen wird negativ', () => {
     const plus = liveLage(liste, stand(1, '2027-03-07T09:00:00Z', 60), ms('2027-03-07T09:06:45Z'));
     expect(plus).toMatchObject({ art: 'laeuft', dauerSek: 360, restSek: -45 });
-    expect(restText(-45)).toBe('+0:45');
+    // A5: „−0:45“ (echtes Minus), nicht „+0:45“ – dasselbe Vorzeichen wie beim Zeitkonto: Minus = Rückstand.
+    expect(restText(-45)).toBe('−0:45');
     expect(restText(132)).toBe('2:12');
   });
 
@@ -508,5 +511,64 @@ describe('liveLesen / liveSchreiben', () => {
     };
     await liveLesen(p, 148, 31);
     expect(felder).toEqual([{ func: 'loadAgendaLivePosition', event_id: '148', agenda_id: '31' }]);
+  });
+});
+
+describe('eigeneDienstgruppen und liveInfoGruppen – Infos nur der eigenen Gruppen (A16)', () => {
+  // Die Dienste kommen aus dem Erzeuger (`diensteAus`), nicht als handgeschriebene Literale.
+  const dienste = diensteAus([
+    { id: 6, name: 'Ton', serviceGroupId: 3 },
+    { id: 7, name: 'Licht', serviceGroupId: 3 },
+    { id: 9, name: 'Gesang', serviceGroupId: 4 },
+    { id: 12, name: 'Ohne Gruppe' },
+  ]);
+
+  it('Gruppen der Plätze, an denen ich gültig eingeteilt bin – ohne Doppelte', () => {
+    const t = {
+      eventServices: [
+        { serviceId: 6, personId: 1 },
+        { serviceId: 7, personId: 1 },
+        { serviceId: '9', personId: '1' },
+      ],
+    };
+    expect(eigeneDienstgruppen(t, dienste, 1).sort()).toEqual([3, 4]);
+  });
+
+  it('nicht: ungültiger Platz, andere Person, Dienst ohne Gruppe, niemand angemeldet, keine Plätze', () => {
+    expect(
+      eigeneDienstgruppen(
+        {
+          eventServices: [
+            { serviceId: 6, personId: 1, isValid: false },
+            { serviceId: 9, personId: 2 },
+            { serviceId: 12, personId: 1 },
+          ],
+        },
+        dienste,
+        1,
+      ),
+    ).toEqual([]);
+    expect(
+      eigeneDienstgruppen({ eventServices: [{ serviceId: 6, personId: 1 }] }, dienste, null),
+    ).toEqual([]);
+    expect(eigeneDienstgruppen({}, dienste, 1)).toEqual([]);
+  });
+
+  const sichtbar = [
+    { id: 3, name: 'Technik' },
+    { id: 4, name: 'Musik' },
+    { id: 5, name: 'Kinder' },
+  ];
+  const gewaehlt = [{ id: 5, name: 'Kinder' }];
+
+  it('eingeteilt: nur die eigenen Gruppen (soweit sichtbar), die „Spalten“-Wahl zählt nicht', () => {
+    expect(liveInfoGruppen([3], sichtbar, gewaehlt)).toEqual([{ id: 3, name: 'Technik' }]);
+    expect(liveInfoGruppen([4, 3], sichtbar, gewaehlt).map((g) => g.id)).toEqual([3, 4]);
+    // Eingeteilt, aber ohne Recht, die Gruppe zu sehen: nichts – nicht die Wahl der Spalten.
+    expect(liveInfoGruppen([99], sichtbar, gewaehlt)).toEqual([]);
+  });
+
+  it('nirgends eingeteilt: wie bisher die Wahl unter „Spalten“', () => {
+    expect(liveInfoGruppen([], sichtbar, gewaehlt)).toBe(gewaehlt);
   });
 });

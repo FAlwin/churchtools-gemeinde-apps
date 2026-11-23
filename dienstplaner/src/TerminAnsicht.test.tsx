@@ -1418,7 +1418,10 @@ describe('„Live“ (E6b-2 L2)', () => {
   const MIT_ID = { ...ABLAUF, id: 31 };
 
   /** ChurchTools mit Live-Agenda: `stelle` wie `pos_id` (gemessen: Zeichenkette oder `null`). */
-  function ctLive(stelle: string | null) {
+  function ctLive(
+    stelle: string | null,
+    { ablauf = MIT_ID, termin = TERMIN }: { ablauf?: typeof MIT_ID; termin?: typeof TERMIN } = {},
+  ) {
     const live: string[] = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       const url = String(input);
@@ -1438,8 +1441,8 @@ describe('„Live“ (E6b-2 L2)', () => {
           }),
         );
       }
-      if (url.includes('/agenda')) return Promise.resolve(json(200, { data: MIT_ID }));
-      if (url.includes('/events/')) return Promise.resolve(json(200, { data: TERMIN }));
+      if (url.includes('/agenda')) return Promise.resolve(json(200, { data: ablauf }));
+      if (url.includes('/events/')) return Promise.resolve(json(200, { data: termin }));
       return Promise.resolve(json(200, { data: [] }));
     });
     return live;
@@ -1489,6 +1492,48 @@ describe('„Live“ (E6b-2 L2)', () => {
       await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
     );
     expect(screen.queryByRole('group', { name: 'Live-Agenda steuern' })).toBeNull();
+  });
+
+  it('Infos in „Live“ (L4-1, A16): an diesem Termin eingeteilt → nur die Infos der eigenen Dienstgruppe; sonst die „Spalten“-Wahl', async () => {
+    heute('2026-10-18T08:10:00Z');
+    const lied = ABLAUF.items[2];
+    const mitInfos = {
+      ...MIT_ID,
+      items: [
+        ...ABLAUF.items.slice(0, 2),
+        {
+          ...lied,
+          serviceGroupNotes: [
+            { serviceGroupId: 3, note: 'Mikro für den Chor' },
+            { serviceGroupId: 4, note: 'Band leise' },
+          ],
+        },
+      ],
+    };
+    // „Spalten“ steht auf Musik – für „Live“ zählt das nicht, wenn man eingeteilt ist.
+    localStorage.setItem('dienstplaner.ablauf.infoSpalten', JSON.stringify([4]));
+    // Alwin ist „Ton“ (Technik, Gruppe 3) – er sieht Technik und Musik, ist aber nur in Technik eingeteilt.
+    ctLive('2', { ablauf: mitInfos });
+    zeige();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Live – läuft gerade in ChurchTools' }),
+    );
+    const ansicht = screen.getByRole('dialog', { name: 'Live: Gottesdienst' });
+    const jetzt = within(ansicht).getByRole('region', { name: 'Jetzt' });
+    await within(jetzt).findByText(/Mikro für den Chor/);
+    expect(within(ansicht).queryByText(/Band leise/)).toBeNull();
+    fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
+    cleanup();
+    // Nirgends eingeteilt: wie bisher die Wahl unter „Spalten“ (hier Musik).
+    ctLive('2', { ablauf: mitInfos, termin: { ...TERMIN, eventServices: [] } });
+    zeige();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Live – läuft gerade in ChurchTools' }),
+    );
+    const ansicht2 = screen.getByRole('dialog', { name: 'Live: Gottesdienst' });
+    const jetzt2 = within(ansicht2).getByRole('region', { name: 'Jetzt' });
+    await within(jetzt2).findByText(/Band leise/);
+    expect(within(ansicht2).queryByText(/Mikro für den Chor/)).toBeNull();
   });
 
   it('am Tag, aber nicht gestartet: Knopf ohne Punkt', async () => {

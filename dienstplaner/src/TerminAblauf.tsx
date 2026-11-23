@@ -23,7 +23,7 @@ import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
-import { liveListe } from '@shared/ct/liveAgenda';
+import { liveInfoGruppen, liveListe } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage, InfoGruppe } from '@shared/types/index';
@@ -54,6 +54,8 @@ export interface AblaufFuerTermin {
   ablaufTermin: AblaufTermin;
   /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, aus `planAus`)? */
   liveSteuern?: boolean;
+  /** Die Dienstgruppen, in denen ich an diesem Termin eingeteilt bin (`eigeneDienstgruppen`) – Infos in „Live“ (A16). */
+  eigeneGruppen?: readonly number[];
 }
 
 /** Was `TerminAblauf` an seinen Aufrufer gibt – der stellt die Teile an ihre Orte. */
@@ -464,7 +466,7 @@ export function TerminAblauf({
           agendaId={agendaId}
           items={items ?? []}
           zeilen={zeilen}
-          infoGruppen={spalten.gewaehlt}
+          infoGruppen={liveInfoGruppen(termin.eigeneGruppen ?? [], gruppen, spalten.gewaehlt)}
           zeitzone={zeitzone}
           onSchliessen={() => setLive(false)}
           steuern={termin.liveSteuern === true}

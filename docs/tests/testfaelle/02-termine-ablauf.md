@@ -339,10 +339,10 @@ Dann, Restzeit, Abweichung – und folgt jedem Weiterschalten nach spätestens 2
    Punkt, der laut Uhr dran ist, mit „Noch nicht gestartet – „Jetzt“ folgt der Uhr.“
 2. In ChurchTools **›** → nach spätestens 2,5 s steht derselbe Punkt unter „Jetzt“, der Kreis zählt die Restzeit herunter,
    in der Liste ist er hervorgehoben, die Punkte davor haben einen Haken. Im Kopf leuchtet „Live“ rot.
-3. Die Notiz des Punkts steht unter „Jetzt“ wie in ChurchTools. Unter „Spalten“ Technik angehakt → „Technik: …“.
+3. Die Notiz des Punkts steht unter „Jetzt“ wie in ChurchTools. Infos: siehe TF-ABLAUF-44 (nur die der eigenen Dienstgruppen).
    Am Handy steht „Musik-App“ im Kopf des Ablaufs nur als Symbol.
 4. In ChurchTools **+** → die Restzeit springt eine Minute höher; **−** eine niedriger.
-5. Zeit ablaufen lassen → der Kreis wird rot, „+0:…“ und „über der Zeit“.
+5. Zeit ablaufen lassen → der Kreis wird rot, „−0:…“ (Minus, wie beim Zeitkonto) und „über der Zeit“.
 6. „Gesamt“ zeigt die Abweichung wie ChurchTools, aber in Worten („2 Min. später“ statt „−2 Minuten“). Ausnahme: Steht
    vor dem Punkt ein weggelassener, rechnet ChurchTools dessen Dauer mit – der Dienstplaner nimmt die Zeit aus dem Ablauf.
 7. Der weggelassene Punkt steht durchgestrichen in der Liste.
@@ -370,13 +370,13 @@ darf, sieht keine Knöpfe.
 1. Dienstplaner → Termin → **„Live“**. Noch nicht gestartet: nur **„Starten“**. Antippen → der erste Punkt steht sofort
    unter „Jetzt“; die Live-Agenda von ChurchTools zeigt ihn nach spätestens 2,5 s.
 2. **Weiter** → nächster Punkt; Lieder ohne Dauer und weggelassene Punkte werden übersprungen. **Zurück** → voriger.
-3. **+ 1 Min** / **− 1 Min** → die Restzeit ändert sich um eine Minute, der Punkt bleibt.
+3. **+ 1 Min** / **− 1 Min** (Mitte der Leiste unten) → die Restzeit ändert sich um eine Minute, der Punkt bleibt.
 4. In ChurchTools **›** → der Dienstplaner folgt. Beide Seiten können abwechselnd schalten.
 5. Nach dem letzten Punkt: „Ablauf vorbei“, **Weiter** gesperrt, **Zurück** geht.
 6. Ablauf in ChurchTools wieder öffnen, einen Punkt **vor** dem aktuellen löschen, dann im Dienstplaner **+ 1 Min** →
    derselbe Punkt bleibt „Jetzt“ (die Stelle wird nachgezogen).
 7. Mit der zweiten Person: „Live“ zeigt keine Knöpfe.
-8. Am Handy: vier Symbolknöpfe ‹ › − + unter dem Kreis.
+8. Die Knöpfe stehen als **Leiste unten** (siehe TF-ABLAUF-44), nicht mehr unter dem Kreis; am Handy dieselbe Leiste über dem Home-Strich.
 
 <details><summary>Technisches</summary>
 
@@ -384,6 +384,40 @@ darf, sieht keine Knöpfe.
 - **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/useLive.ts`, `dienstplaner/src/TerminAblauf.tsx`, `shared/dienstplan/plan.ts`, `shared/ct/liveAgenda.ts`
 - **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.test.tsx` (Starten, Weiter/Zurück, ±1, Ende, Nachziehen, Fehler, Sperren, alte Abfrage verworfen), `dienstplaner/src/TerminAnsicht.test.tsx` (Recht kommt an), `shared/dienstplan/plan.test.ts` (Recht je Termin); von Hand bleibt das Schalten gegen die echte Live-Agenda
 - **Historie:** E6b-2 L3 (02.11.2026)
+
+</details>
+
+### TF-ABLAUF-44 · „Live“: Liste, Leiste unten und eigene Infos
+
+**Das brauchst du:** Einen Test-Termin mit Ablauf, der Soundcheck/Countdown **vor Beginn**, eine Überschrift, einen Punkt mit
+langem Liedtitel und mehrere Zuständige mit langen Namen enthält; Infos für zwei Dienstgruppen (z. B. Technik und Musik) an
+verschiedenen Punkten. Du bist am Termin nur in **einem** der beiden Dienste eingeteilt (und darfst dort steuern). Eine zweite
+Person, die an dem Termin **nirgends** eingeteilt ist.
+
+**Das muss passieren:** Die Liste überlappt nie (Titel hat Vorrang, Namen brechen um); Überschriften und „Beginn“ sind zu
+sehen; Weiter/Zurück stehen unten; du siehst nur die Infos deiner Dienstgruppe.
+
+1. **„Live“** öffnen, bei Breite 1280, 900 und am Handy: lange Titel und Namen stehen **neben- bzw. untereinander, nie
+   übereinander**; nichts läuft aus dem Bild. Am Handy stehen die Namen unter dem Titel.
+2. Die **Überschriften** des Ablaufs stehen als leise Bänder in der Liste; zwischen dem letzten Punkt vor Beginn und dem ersten
+   danach steht eine **blaue Linie „Beginn 10:00“**. Die Stelle (nach „Starten“ und „Weiter“) stimmt weiter mit der
+   Live-Agenda von ChurchTools überein.
+3. Unten steht die Leiste: links **‹ ZURÜCK** mit dem Titel des vorigen Punkts, in der Mitte **− 1 Min / + 1 Min** (nur wenn
+   Live läuft), rechts **WEITER ›** blau gefüllt mit dem Titel des nächsten Punkts (am letzten Punkt „Ende“). Vor dem Start nur
+   **Starten**. Am Handy: dieselbe Leiste über dem Home-Strich, lange Titel enden mit „…“. Rechts neben der Liste bleiben nur
+   Kreis und „Gesamt“.
+4. **Infos:** Unter „Jetzt“ stehen nur die Infos der Dienstgruppe, in der du eingeteilt bist, und klein unter jedem Punkt mit
+   Info – auch unter dem laufenden, nicht unter erledigten. Die Infos der anderen Gruppe stehen nirgends.
+5. Mit der zweiten Person (nirgends eingeteilt): es gilt wie bisher die Auswahl unter „Spalten“.
+6. Die Restzeit im Kreis zeigt bei überzogener Zeit „−0:45“ (Minus), nicht „+0:45“.
+7. Ohne Steuer-Recht: keine Leiste unten, die Liste sonst wie oben.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/LiveAnsicht.module.scss`, `dienstplaner/src/TerminAblauf.tsx`, `shared/ct/liveAgenda.ts`, `shared/dienstplan/plan.ts`, `ui/ablauf/NachbarKnopf.tsx`
+- **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.test.tsx` (Bänder, Beginn-Linie, Zählung, Leiste, Infos), `dienstplaner/src/TerminAnsicht.test.tsx` (Infos der eigenen Dienstgruppe), `shared/ct/liveAgenda.test.ts` (`eigeneDienstgruppen`, `liveInfoGruppen`, `restText`), `shared/dienstplan/plan.test.ts`, `ui/design/liveListeUeberlauf.test.ts` (Raster/Umbruch/Leiste als Quelltext); von Hand bleiben das Aussehen bei 1280/900/Handy und der Vergleich mit der echten Live-Agenda
+- **Historie:** Live-Ansicht 2, L4-1 (23.11.2026, Entwurf `entwurf/live-2.html`, Bauplan Dienstplaner „Wunsch 22.11.2026“)
 
 </details>
 

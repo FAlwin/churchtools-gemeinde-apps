@@ -12,7 +12,7 @@
 import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { ablaufTerminVon, type AblaufTermin } from '../ct/ablaufRecht';
-import { darfLiveSteuern } from '../ct/liveAgenda';
+import { darfLiveSteuern, eigeneDienstgruppen } from '../ct/liveAgenda';
 import { terminKalenderAus, type TerminKalender } from '../ct/kalenderFilter';
 import { infosAus } from '../ct/terminInfos';
 import { dateienAus, type TerminDatei } from '../ct/terminDateien';
@@ -67,6 +67,8 @@ export interface PlanSpalte {
   ablaufTermin: AblaufTermin;
   /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, E6b-2 L3)? */
   liveSteuern: boolean;
+  /** Die Dienstgruppen, in denen ich an diesem Termin eingeteilt bin (`eigeneDienstgruppen`) – Infos in „Live“ (A16). */
+  eigeneGruppen: number[];
   /** „Weitere Infos“ am Termin (`infosAus`), leer ohne. */
   infos: string;
   /** Die Dateien am Termin (`dateienAus`, T2a) – ohne Größe, die steht erst im Dateien-Fenster. */
@@ -202,6 +204,7 @@ export function planAus(
       ende: terminEnde(t),
       ablaufTermin: ablaufTerminVon(t),
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
+      eigeneGruppen: eigeneDienstgruppen(t, o.dienste, o.ichId),
       infos: infosAus(t),
       dateien: dateienAus(t),
       kalender: terminKalenderAus(t),

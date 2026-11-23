@@ -18,6 +18,7 @@ import { Icon } from '../icons/icons';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { useEscape } from '../bedienung/useEscape';
 import { Etikett } from '../bedienung/Etikett';
+import { NachbarKnopf } from './NachbarKnopf';
 import { Kreis, LiedKarte, WeggelassenHinweis } from './AblaufTeile';
 import styles from './PunktAnsicht.module.scss';
 
@@ -171,7 +172,7 @@ function imEingabefeld(ziel: EventTarget | null): boolean {
 }
 
 /** Der Knopf „Davor“ / „Danach“ unten auf der Seite – mit Zeit und Titel des Nachbarn. */
-function NachbarKnopf({
+function Nachbar({
   art,
   nachbar,
   onClick,
@@ -182,25 +183,14 @@ function NachbarKnopf({
 }) {
   const z = nachbar ? nachbarZeile(nachbar) : null;
   return (
-    <button
-      type="button"
-      className={`${styles.nachbar} ${art === 'danach' ? styles.danach : ''}`}
-      disabled={!onClick}
+    <NachbarKnopf
+      richtung={art}
+      label={art === 'davor' ? 'DAVOR' : 'DANACH'}
+      zeit={z?.zeit}
+      titel={z?.titel}
       onClick={onClick}
-      aria-label={art === 'davor' ? 'Davor' : 'Danach'}
-    >
-      <span className={styles.nachbarArt}>
-        {art === 'davor' && <Icon name="chev-left" size={14} stroke={2.6} />}
-        {art === 'davor' ? 'DAVOR' : 'DANACH'}
-        {art === 'danach' && <Icon name="chev-right" size={14} stroke={2.6} />}
-      </span>
-      {z && (
-        <>
-          {z.zeit && <span className={styles.nachbarZeit}>{z.zeit}</span>}
-          <span className={styles.nachbarTitel}>{z.titel}</span>
-        </>
-      )}
-    </button>
+      ariaLabel={art === 'davor' ? 'Davor' : 'Danach'}
+    />
   );
 }
 
@@ -251,8 +241,8 @@ export function PunktSeite({
           </div>
         </div>
         <div className={styles.nachbarn}>
-          <NachbarKnopf art="davor" nachbar={davor} onClick={position.onVorher} />
-          <NachbarKnopf art="danach" nachbar={danach} onClick={position.onNachher} />
+          <Nachbar art="davor" nachbar={davor} onClick={position.onVorher} />
+          <Nachbar art="danach" nachbar={danach} onClick={position.onNachher} />
         </div>
       </div>
     </BodyPortal>

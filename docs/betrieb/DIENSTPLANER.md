@@ -128,6 +128,14 @@ mit einem eigenen Server.
 | 8       | globale Rechte (Bereich Termine) je Kalender                                                           | wer Termin-Infos/Dateien pflegt                                   | „Termine bearbeiten“ (`edit events`)                                                                                                                       | „Infos & Dateien“ am Termin.                                                                                                                                                                                                                                                                                                                                                 |
 | 9       | globale Rechte (Bereich Dienste)                                                                       | wer alle Abwesenheiten pflegt                                     | Abwesenheiten aller (`manage absent`)                                                                                                                      | Abwesenheiten anderer sehen und eintragen.                                                                                                                                                                                                                                                                                                                                   |
 
+**Einstellungen für alle** (Live-Ansicht 2, L4-2, seit Alwin 23.11.2026): Der letzte Reiter **„Einstellungen“** öffnet ein Fenster mit
+der **Betriebsart der Live-Ansicht** (bis Beginn nach der Uhr, ab Beginn klicken = Standard · immer nach der Uhr · von Anfang an klicken).
+Gespeichert ist sie als **ein Wert** in der Ablage **„Einstellungen“** (Kürzel `dienstplaner-einstellungen`, Modul Dienstplaner; die
+App legt sie beim ersten Speichern an, wenn jemand Kategorien anlegen darf). **Ändern dürfen Planer** (prüft die App) – damit ChurchTools
+es auch durchlässt, braucht die Ablage für die Planer **Daten anlegen, ändern** und für **alle, die den Dienstplaner nutzen, Daten
+sehen** (sonst gilt für sie der Standard). Ohne Wert oder bei einem Lesefehler gilt immer der Standard; ein vorübergehender Fehler
+ändert nichts. Wer weiterklicken darf, steht weiter am Dienst („Erlaubt, die Live-Agenda zu steuern“).
+
 **Mails** („Erinnern“, „Vertretung suchen“) brauchen kein eigenes Recht: ChurchTools lässt jeden Personen zu einem
 Termin anschreiben, die er dort sehen darf; Absender ist die Person selbst.
 
@@ -618,7 +626,15 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
   `shared/ct/schreibKern.ts` über `ui/ct/schreiber.ts` (derselbe Schreiber wie die Musik-App); nach jedem Schreiben
   wird nur der Ablauf neu gelesen.
 - Ansehen ohne ChurchTools: `npm run dev -w dienstplaner`, dann
-  `http://localhost:5178/ccm/dienstplaner/?demo` (`?demo=mitglied`, `?demo=fehler` für die Sonderfälle).
+  `http://localhost:5178/ccm/dienstplaner/?demo` (`?demo=mitglied`, `?demo=fehler` für die Sonderfälle). Der Termin **„Gottesdienst
+  (Live-Probe)“** beginnt immer 2–3 Minuten nach dem Laden der Seite (Vorlauf Soundcheck/Countdown) – darin lassen sich unter „Live“
+  die Betriebsarten (Reiter „Einstellungen“) und das Zeitkonto ausprobieren; neu laden setzt ihn zurück.
+- **Live-Ansicht, Betriebsart und Zeitkonto** (L4-2): **eine** Rechnung in `shared/ct/liveAgenda.ts` (`liveLage`: `betriebsart`,
+  `konto`, `kontoSek`); die Anzeige `dienstplaner/src/LiveAnsicht.tsx` rechnet nichts nach. Die Betriebsart liest `useBetriebsart` (alle 30 s,
+  nach Fehler alle 5 s; ein Lesefehler ändert eine gelesene Art nie), Lesen/Speichern der Einstellung `shared/dienstplan/liveEinstellungen.ts`
+  (Dokument mit Version wie „Was das Organigramm zeigt“), Fenster `dienstplaner/src/EinstellungenFenster.tsx` (über `ErweiterungsSeite`,
+  Prop `einstellungen`, R13). **Zeitkonto** = Plan-Ende des Punkts minus voraussichtliches Ende (sekundengenau, laufend, gegen den
+  ursprünglichen Plan; „−1 / +1 Min“ ändert nur den Kreis).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage
   `erweiterung-release.yml` (**nie „latest"** – sonst sähen die Musik-Apps keinen Update-Hinweis mehr).
 - Bauplan und Entwurf: `~/ecg-donrath/gemeinde-apps/dienstplaner-planung/docs/bauplan.md` (außerhalb des Repos).

@@ -3,7 +3,9 @@
  * ChurchTools-Antworten nach, in der Form, die an der Test-Instanz gemessen wurde (12. und 13.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Planer-Recht,
  * `?demo=fehler` den Fehlerfall, `?demo=personenfehler` eine Gruppe, deren Mitglieder in der Ansicht „Personen“
- * beim ersten Mal scheitern. Wird nie mitgebaut (siehe `main.tsx`).
+ * beim ersten Mal scheitern. Der Termin „Gottesdienst (Live-Probe)“ (107) beginnt immer in 2–3 Minuten nach dem Laden der
+ * Seite – an ihm lassen sich in „Live“ die drei Betriebsarten (Reiter „Einstellungen“) und das Zeitkonto ausprobieren;
+ * die Seite neu laden setzt ihn zurück. Wird nie mitgebaut (siehe `main.tsx`).
  */
 const PLANER = {
   view: true,
@@ -79,6 +81,12 @@ const eventFiles = (eventId: number) =>
     frontendUrl: f.fileUrl,
   }));
 
+/**
+ * Beginn der Live-Probe (Termin 107): die nächste volle Minute in 2–3 Minuten – beim Laden der Demo festgelegt, damit der
+ * Termin in der Liste und die Zeiten im Ablauf (`ablaufDemo`) dasselbe sagen.
+ */
+const LIVE_BEGINN = Math.floor(Date.now() / 60_000) * 60_000 + 3 * 60_000;
+
 const TERMINE = [
   {
     id: 101,
@@ -95,6 +103,15 @@ const TERMINE = [
       platz(9, 1, 'Alwin'),
       platz(9, 19, 'Spike', true),
     ],
+  },
+  {
+    // Die Live-Probe (L4-2): beginnt in 2–3 Minuten und hat Vorlauf – so zeigt die Live-Ansicht die Betriebsarten und das
+    // Zeitkonto (ein Termin in vier Tagen ergäbe beim „Starten“ ein Konto von +5689 Minuten). Alwin steuert (Ton).
+    id: 107,
+    name: 'Gottesdienst (Live-Probe)',
+    startDate: new Date(LIVE_BEGINN).toISOString(),
+    endDate: new Date(LIVE_BEGINN + 90 * 60_000).toISOString(),
+    eventServices: [platz(6, 1, 'Alwin', true), platz(9, 19, 'Spike', true)],
   },
   {
     id: 102,
@@ -620,6 +637,30 @@ const ABLAUF_103: DemoPunkt[] = [
 ];
 
 /**
+ * **Der Ablauf der Live-Probe** (107): Soundcheck und Countdown vor Beginn, danach ein kurzer Gottesdienst – damit die
+ * Betriebsarten der Live-Ansicht und das Zeitkonto in der Demo zu sehen sind (`LIVE_BEGINN`).
+ */
+const ABLAUF_107: DemoPunkt[] = [
+  {
+    id: 31,
+    type: 'normal',
+    title: 'Soundcheck',
+    duration: 1800,
+    responsible: {
+      text: '[Ton]',
+      persons: [{ service: '[Ton]', person: { title: 'Alwin Friesen' } }],
+    },
+    serviceGroupNotes: [{ serviceGroupId: 3, note: 'Mikros 1–4, Monitor prüfen' }],
+  },
+  { id: 32, type: 'normal', title: 'Countdown', duration: 300 },
+  { id: 33, type: 'header', title: 'Lobpreis' },
+  { id: 34, type: 'normal', title: 'Begrüßung', duration: 300 },
+  { id: 35, type: 'song', title: 'Lied', duration: 300, song: { title: 'Halleluja' } },
+  { id: 36, type: 'normal', title: 'Predigt', duration: 1200, note: 'Thema: Psalm 23' },
+  { id: 37, type: 'normal', title: 'Segen', duration: 300 },
+];
+
+/**
  * **Der Ablauf des ersten Termins** (101) – zum Ansehen und, seit E6-3a, zum Bearbeiten; seit E6-6b auch 103
  * (`ABLAUF_103`). Die anderen Termine haben keinen („Noch kein Ablauf“, ChurchTools: 404). Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden,
  * `isBeforeEvent` für den Vorlauf, Zuständige aufgelöst; der Termin beginnt um 08:00 UTC. Die Uhrzeiten rechnet die
@@ -635,6 +676,8 @@ function ablaufDemo(
   tage = 4,
   anfang?: DemoPunkt[],
   naechsteIdAnfang = 50,
+  /** Die Live-Probe: Beginn als fester Zeitpunkt (ms) statt „08:00 UTC“, und wie viele Punkte davor liegen. */
+  probe?: { beginnMs: number; beginnPos: number },
 ) {
   type Punkt = DemoPunkt;
   let punkte: Punkt[] = anfang ?? [
@@ -694,12 +737,12 @@ function ablaufDemo(
       responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
     },
   ];
-  let beginnPos = 1;
+  let beginnPos = probe?.beginnPos ?? 1;
   let naechsteId = naechsteIdAnfang;
   const PFAD = `/api/events/${termin}/agenda`;
 
   function lesen(): unknown {
-    const beginn = Date.parse(zeit(tage, '08:00'));
+    const beginn = probe?.beginnMs ?? Date.parse(zeit(tage, '08:00'));
     const zeiten = new Map<number, string | null>();
     // Vorlauf rückwärts vom Beginn, danach vorwärts.
     let t = beginn;
@@ -838,6 +881,8 @@ function speicherDemo(fall: string) {
     { id: 41, shorty: 'dienstplaner-antworten-4', name: 'Antworten Musik' },
     // Personenliste (PL-1): Technik hat dafür eine Schublade – ohne Entwürfe, nur mit der Liste.
     { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },
+    // „Einstellungen“ (L4-2): die Betriebsart der Live-Ansicht – leer, es gilt der Standard „bis Beginn“.
+    { id: 43, shorty: 'dienstplaner-einstellungen', name: 'Einstellungen' },
   ];
   const meineAntworten = {
     art: 'dienstplaner-verfuegbarkeit',
@@ -1008,6 +1053,7 @@ function speicherDemo(fall: string) {
       ],
     ],
     [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
+    [43, []],
   ]);
   let naechste = 500;
   const ids = () => kategorien.map((k) => k.id);
@@ -1130,7 +1176,11 @@ export function demoStarten(fall: string): void {
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
   const speicher = speicherDemo(fall);
-  const ablaeufe = [ablaufDemo(fall), ablaufDemo(fall, 103, 11, ABLAUF_103, 80)];
+  const ablaeufe = [
+    ablaufDemo(fall),
+    ablaufDemo(fall, 103, 11, ABLAUF_103, 80),
+    ablaufDemo(fall, 107, 0, ABLAUF_107, 90, { beginnMs: LIVE_BEGINN, beginnPos: 2 }),
+  ];
   const mitDienstplanerRechten = (roh: unknown) => {
     const r = roh as { data: Record<string, unknown> };
     return { data: { ...r.data, dienstplaner: speicher.rechte() } };

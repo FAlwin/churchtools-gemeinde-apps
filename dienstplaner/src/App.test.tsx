@@ -36,6 +36,18 @@ vi.mock('./ladeBeiwerk', () => ({
   ladeLiedDaten: vi.fn(() => Promise.resolve(new Map())),
   autorVon: () => null,
 }));
+// „Einstellungen“ (L4-2): gelesen wird hier nichts aus ChurchTools.
+vi.mock('./ladeEinstellungen', () => ({
+  ladeEinstellungen: vi.fn(() =>
+    Promise.resolve({
+      betriebsart: 'bis-beginn',
+      gespeichert: null,
+      unlesbar: false,
+      fehler: null,
+    }),
+  ),
+  speichereEinstellungen: vi.fn(),
+}));
 const laden = vi.mocked(ladeStart);
 const termineLaden = vi.mocked(ladeTermine);
 
@@ -137,7 +149,8 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
       within(bereiche)
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Start', 'Dienste', 'Planen', 'Wann kann ich?']);
+      // „Einstellungen“ ist der letzte Reiter (R13) – für alle.
+    ).toEqual(['Start', 'Dienste', 'Planen', 'Wann kann ich?', 'Einstellungen']);
     // Im Kopf der Seite, eine Reiterzeile unter dem App-Namen – am Rechner (R4/E4).
     expect(bereiche.closest('header')).not.toBeNull();
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();
@@ -162,9 +175,31 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     laden.mockResolvedValue(start([3]));
     render(<App />);
     const leiste = await screen.findByRole('navigation', { name: 'Bereiche' });
-    expect(within(leiste).getAllByRole('button')).toHaveLength(4);
+    expect(within(leiste).getAllByRole('button')).toHaveLength(5);
     // Nicht im Kopf der Seite – dort stehen die Reiter nur am Rechner.
     expect(leiste.closest('header')).toBeNull();
+  });
+
+  it('„Einstellungen“: letzter Reiter, öffnet das Fenster – Planer dürfen ändern, andere nur ansehen (L4-2)', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    const planer = render(<App />);
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
+    const knoepfe = within(bereiche).getAllByRole('button');
+    expect(knoepfe[knoepfe.length - 1].textContent).toBe('Einstellungen');
+    fireEvent.click(knoepfe[knoepfe.length - 1]);
+    expect(await screen.findByRole('radiogroup', { name: 'Live-Ansicht – für alle' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeTruthy();
+    planer.unmount();
+
+    laden.mockResolvedValue(start([]));
+    render(<App />);
+    const b2 = await screen.findByRole('navigation', { name: 'Bereiche' });
+    fireEvent.click(within(b2).getByRole('button', { name: 'Einstellungen' }));
+    await screen.findByRole('radiogroup', { name: 'Live-Ansicht – für alle' });
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
+    for (const r of screen.getAllByRole('radio'))
+      expect((r as HTMLInputElement).disabled).toBe(true);
   });
 
   it('beim Laden und im Fehlerfall noch keine Reiter', async () => {

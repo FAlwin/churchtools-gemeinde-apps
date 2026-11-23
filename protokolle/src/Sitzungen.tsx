@@ -45,6 +45,7 @@ import { NaechsteSitzung } from './NaechsteSitzung';
 import { ProtokollNeu } from './ProtokollNeu';
 import { HinzufuegenMenue, type Option } from '@ui/bedienung/OptionWaehlen';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { darfSchreibenIn, istLeitungIn } from '@shared/protokolle/zugang';
 import styles from './Sitzungen.module.scss';
 
 // Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
@@ -125,8 +126,8 @@ export interface SitzungsAuswahl {
 /**
  * **Reiter „Sitzungen“** (Bauplan S3-2, Entwurf 7): je Gruppe „Kommend“ (Termine mit Besprechungsanfrage,
  * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen – einen
- * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1). Ohne Protokoll kann die Leitung es dort beginnen
- * (S5-1); danach öffnet es sich gleich im Editor. Die Leitung legt die nächste Sitzung fest – im Protokoll (Bereich
+ * Entwurf, wenn man schreiben darf (Leitung oder „Schreibt mit“, W16), im Editor (S4-1). Ohne Protokoll kann es dort
+ * beginnen, wer schreiben darf (S5-1, W16); danach öffnet es sich gleich im Editor. Die Leitung legt die nächste Sitzung fest – im Protokoll (Bereich
  * Termine) oder außerordentlich über „Neue Sitzung“ (S5-2, dasselbe Fenster) – und ändert oder sagt sie ab (K2b).
  * Bei mehreren Gruppen wählt man sie oben.
  */
@@ -147,7 +148,10 @@ export function Sitzungen({
   vollerName?: string;
   /** Name der Gemeinde – oben rechts auf dem PDF eines Protokolls (S6-3b). */
   gemeinde?: string | null;
-  /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort öffnet ein Entwurf im Editor (S4-1). */
+  /**
+   * Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort öffnet ein Entwurf im Editor (S4-1). Ob man auch
+   * Leitung ist, sagt erst die Einstellung der Gruppe (`istLeitungIn`, W16).
+   */
   schreibbar?: readonly number[];
   auswahl?: SitzungsAuswahl | null;
 }) {
@@ -241,22 +245,19 @@ export function Sitzungen({
     );
   }, [modul, gruppe]);
 
-  const darfSchreibenIn = (g: ProtokollGruppe) =>
-    g.protokolle !== null && schreibbar.includes(g.protokolle);
+  // W16: Schreiben (Leitung und „Schreibt mit“) und Leitung sind zwei Fragen – die Regel steht in `@shared/protokolle/zugang`.
+  // Schreiben: Editor, Protokoll beginnen/nachtragen/„Neues Protokoll“, Vorschläge übernehmen oder aufs nächste Mal.
+  // Leitung: Sitzung festlegen/bearbeiten, Freigeben (auch zurücknehmen), Löschen, Vorschläge ablehnen.
+  const darfSchreibenHier = (g: ProtokollGruppe) => darfSchreibenIn(g, schreibbar);
+  const istLeitung =
+    !!gruppe && zustand.art === 'fertig' && istLeitungIn(gruppe, schreibbar, zustand.daten.stufen);
 
   const alle =
     zustand.art === 'fertig' ? [...zustand.daten.kommend, ...zustand.daten.protokolle] : [];
-  const darfFestlegen =
-    !!gruppe &&
-    darfSchreibenIn(gruppe) &&
-    zustand.art === 'fertig' &&
-    zustand.daten.kalender !== null;
+  const darfFestlegen = istLeitung && zustand.art === 'fertig' && zustand.daten.kalender !== null;
   // Bearbeiten darf die Leitung, was nicht freigegeben ist und einen Termin oder ein Protokoll hat (K2b).
   const darfBearbeiten = (s: Sitzung) =>
-    !!gruppe &&
-    darfSchreibenIn(gruppe) &&
-    s.kopf?.status !== 'frei' &&
-    (s.termin !== null || s.kopf !== null);
+    istLeitung && s.kopf?.status !== 'frei' && (s.termin !== null || s.kopf !== null);
   // „Teilen / PDF“ (S6-3b): mit vollem Namen (sich selbst kennt man auch ohne Mitgliederliste) und der nächsten Sitzung.
   const teilenVon = (s: Sitzung): TeilenRahmen => ({
     gemeinde,
@@ -345,7 +346,8 @@ export function Sitzungen({
   const kommend = zustand.art === 'fertig' ? zustand.daten.kommend : [];
   const vorschlaege = zustand.art === 'fertig' ? zustand.vorschlaege : [];
   const direkt = zustand.art === 'fertig' && zustand.daten.punkte === 'direkt';
-  const leitung = !!gruppe && darfSchreibenIn(gruppe);
+  // Vorschläge (W16): übernehmen und aufs nächste Mal darf, wer schreibt; ablehnen nur die Leitung.
+  const schreibtHier = !!gruppe && darfSchreibenHier(gruppe);
   const vorschlagSetzen = (v: Vorschlag) =>
     setZustand((z) =>
       z.art !== 'fertig'
@@ -370,14 +372,16 @@ export function Sitzungen({
   const vorschlagAktionen = (s: Sitzung | null): VorschlagAktionen => ({
     aendern: (v) => setVorschlagFenster({ art: 'aendern', v }),
     zurueckziehen: (v) => vorschlagTun(v.id, (x) => zurueckziehen(x, ichV, jetzt())),
-    ...(leitung && s
+    ...(schreibtHier && s
       ? {
           uebernehmen: (v: Vorschlag) => vorschlagTun(v.id, (x) => annehmen(x, s, ichV, jetzt())),
           naechstesMal: (v: Vorschlag) =>
             vorschlagTun(v.id, (x) => aufsNaechsteMal(x, s, ichV, jetzt())),
         }
       : {}),
-    ...(leitung ? { ablehnen: (v: Vorschlag) => setVorschlagFenster({ art: 'ablehnen', v }) } : {}),
+    ...(istLeitung
+      ? { ablehnen: (v: Vorschlag) => setVorschlagFenster({ art: 'ablehnen', v }) }
+      : {}),
   });
   const offeneFuerZeile = (s: Sitzung) => offeneFuer(vorschlaege, s, kommend, heute, zone).length;
   const uebernommenFuerZeile = (s: Sitzung) =>
@@ -445,7 +449,7 @@ export function Sitzungen({
     offen?.kopf?.status === 'entwurf' &&
     zustand.art === 'fertig' &&
     gruppe.protokolle !== null &&
-    darfSchreibenIn(gruppe)
+    darfSchreibenHier(gruppe)
   )
     return (
       <Suspense fallback={<p className={styles.ruhig}>Editor wird geladen …</p>}>
@@ -467,6 +471,7 @@ export function Sitzungen({
           kommend={kommend}
           direkt={direkt}
           vollerName={vollerName}
+          leitung={istLeitung}
           onVorschlag={vorschlagSetzen}
           onFreigegeben={() => {
             // Neu laden und gleich wieder öffnen – jetzt zum Lesen, mit „freigegeben am … von …“.
@@ -474,7 +479,7 @@ export function Sitzungen({
             laden();
           }}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
-          onGeloescht={geloescht}
+          onGeloescht={istLeitung ? geloescht : undefined}
           onZurueck={(geaendert) => {
             setOffen(null);
             if (geaendert) laden();
@@ -494,7 +499,7 @@ export function Sitzungen({
       </Suspense>
     );
 
-  const darfSchreiben = darfSchreibenIn(gruppe);
+  const darfSchreiben = darfSchreibenHier(gruppe);
   /**
    * **Alles, was etwas hinzufügt, in EINEM grünen Knopf „Neu ⌄“** (B6, R3/E14) – vorher vier Knöpfe in der Kopfzeile von
    * „Kommend“, zwei davon grün. „Protokoll nachtragen“ ist seltener und steht hinter einer Linie. „Neue Sitzung“ braucht
@@ -577,12 +582,12 @@ export function Sitzungen({
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
           onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZuruecknehmen={
-            darfSchreiben && offen.kopf?.status === 'frei'
+            istLeitung && offen.kopf?.status === 'frei'
               ? () => setZuruecknehmen({ laeuft: false, fehler: null })
               : undefined
           }
           onLoeschen={
-            darfSchreiben && gruppe.protokolle !== null && loeschbar(offen.kopf?.status)
+            istLeitung && gruppe.protokolle !== null && loeschbar(offen.kopf?.status)
               ? () => setLoeschen(true)
               : undefined
           }
@@ -708,7 +713,7 @@ export function Sitzungen({
           {mOrt && (
             <VorschlaegeKarte
               gruppe={gruppe.id}
-              leitung={leitung}
+              leitung={istLeitung}
               liste={vorschlaege}
               kommend={kommend}
               heute={heute}
@@ -746,7 +751,7 @@ export function Sitzungen({
           {neu && (
             <ProtokollNeu
               modul={modul}
-              gruppen={gruppen.filter(darfSchreibenIn)}
+              gruppen={gruppen.filter(darfSchreibenHier)}
               start={gruppe.id}
               ich={ich}
               zeitzone={gemeindeZeitzone()}

@@ -10,6 +10,12 @@
  *   durchführen“ = 10111 – beide an die Leitung (Dienst- und Kleingruppen-Leiter haben sie schon über den Gruppentyp,
  *   andere Gruppentypen nicht).
  * - Vorlagen lesen nur Nutzende eingerichteter Gruppen (Alwin, 22.10.2026) → Recht an deren Rollen.
+ * - **„Schreibt mit“** (W16, Alwin 23.11.2026): Entwürfe schreiben wie die Leitung – also anlegen, ändern **und löschen** in
+ *   „Protokolle“ (Speichern legt Teile neu an und räumt alte weg, `modulRechteAus`) und gruppenintern „Gruppentreffen
+ *   durchführen“ (10111, sonst lässt sich die Anwesenheit nicht eintragen). Nicht: „Gruppentreffen pflegen“ (10124) und
+ *   Termine im Kalender. In ChurchTools sehen die Datenrechte darum aus wie bei der Leitung – was die Leitung zusätzlich
+ *   darf (Freigeben, Löschen, Sitzungen festlegen, Leitungsrechte bei To-Dos), entscheidet die Oberfläche über die Stufe
+ *   der eigenen Rolle (`./zugang`).
  *
  * **Was hier ausgerichtet wird:** die Rechte auf UNSERE Kategorien (vollständig: hinzufügen und entziehen).
  * **Zusatzrechte** (Kalender, 10119, Gruppentreffen) werden nur dann entzogen, wenn die Verwaltung sie **selbst gesetzt** hat –
@@ -17,6 +23,7 @@
  * wird nie gemerkt und darum nie entzogen.
  */
 
+import { ctId } from '../ct/ctId';
 import { modulRechtAus } from '../ct/gruppenart';
 import {
   datenRechteNummernAus,
@@ -25,15 +32,54 @@ import {
   rechteVergleichen,
   type DatenRechteNummern,
   type Recht,
+  type RolleRoh,
 } from '../ct/rollenRechte';
 
-export type Stufe = 'keine' | 'mitglied' | 'leitung';
+export type Stufe = 'keine' | 'mitglied' | 'schreibtMit' | 'leitung';
 
 export const STUFEN: { wert: Stufe; text: string }[] = [
   { wert: 'keine', text: 'Kein Zugriff' },
   { wert: 'mitglied', text: 'Lesen + eigene To-Dos' },
+  { wert: 'schreibtMit', text: 'Schreibt mit' },
   { wert: 'leitung', text: 'Leitung' },
 ];
+
+/** Darf diese Stufe Protokoll-Entwürfe schreiben? Leitung und „Schreibt mit“ (W16). */
+export function stufeSchreibt(stufe: Stufe): boolean {
+  return stufe === 'leitung' || stufe === 'schreibtMit';
+}
+
+/**
+ * Die Stufe einer Rolle in der Einstellung. `typ` = die Rolle als Rolle der Gruppenart (`groupTypeRoleId`) – so steht sie
+ * an der eigenen Mitgliedschaft (`/persons/{id}/groups`), daran erkennt die Oberfläche die eigene Stufe (W16). Fehlt bei
+ * Einstellungen von vor W16 (dann gab es noch kein „Schreibt mit“).
+ */
+export interface RollenStufe {
+  rolle: number;
+  stufe: Stufe;
+  typ?: number;
+}
+
+/**
+ * **Die Rollen für die Einstellung, mit `typ`** (W16) – aus den frisch gelesenen Rollen der Gruppe
+ * (`GET /groups/{id}/roles`: `id` = `group_role`, `groupTypeRoleId` = die Rolle an der Mitgliedschaft). Ein `typ`, der
+ * vorher in der Wahl stand, zählt nicht – nur, was ChurchTools jetzt sagt. Ohne lesbaren Typ bleibt die Rolle ohne.
+ */
+export function rollenMitTyp(
+  rollen: readonly { rolle: number; stufe: Stufe }[],
+  roh: readonly RolleRoh[] | null,
+): RollenStufe[] {
+  const typVon = new Map<number, number>();
+  for (const r of roh ?? []) {
+    const id = ctId(r.id);
+    const typ = ctId(r.groupTypeRoleId);
+    if (id !== null && typ !== null) typVon.set(id, typ);
+  }
+  return rollen.map(({ rolle, stufe }) => {
+    const typ = typVon.get(rolle);
+    return typ === undefined ? { rolle, stufe } : { rolle, stufe, typ };
+  });
+}
 
 /** Gruppenintern „versteckte Gruppe sehen“ (gemessen 16.10.2026; steht nicht in den Definitionen). */
 export const VERSTECKTE_GRUPPE_SEHEN = 10119;
@@ -88,12 +134,13 @@ export function sollRechte(e: Einrichtung, n: RechteNummern): Recht[] {
     // Mitarbeit: To-Dos abhaken, Notizen, Vorschläge – alle, die Zugriff haben. Kein „löschen“: wir löschen nie hart.
     add(rolle, n.datenAnlegen, mitarbeit);
     add(rolle, n.datenAendern, mitarbeit);
-    if (stufe === 'leitung') {
+    if (stufeSchreibt(stufe)) {
       add(rolle, n.datenAnlegen, protokolle);
       add(rolle, n.datenAendern, protokolle);
       add(rolle, n.datenLoeschen, protokolle); // alte Teile nach dem Speichern aufräumen (Bauplan 3.3)
-      // Anwesenheit eintragen und Gruppentreffen anlegen (S5-3).
-      add(rolle, GRUPPENTREFFEN_PFLEGEN, null);
+      // Anwesenheit eintragen und Gruppentreffen anlegen (S5-3): pflegen nur die Leitung, durchführen auch „Schreibt mit“
+      // (W16). Reihenfolge wie vor W16 – die Merkliste `vergeben` der Leitung bleibt damit gleich.
+      if (stufe === 'leitung') add(rolle, GRUPPENTREFFEN_PFLEGEN, null);
       add(rolle, GRUPPENTREFFEN_DURCHFUEHREN, null);
     }
     if (e.kalender !== null) {
@@ -201,8 +248,8 @@ export interface GruppenEinstellung {
   art: 'einstellung';
   fassung: 1;
   gruppe: number;
-  /** Stufe je Rolle (`group_role`-ID); fehlende Rollen gelten als „Kein Zugriff“. */
-  rollen: { rolle: number; stufe: Stufe }[];
+  /** Stufe je Rolle (`group_role`-ID, seit W16 mit `typ`); fehlende Rollen gelten als „Kein Zugriff“. */
+  rollen: RollenStufe[];
   punkte: PunkteVonMitgliedern;
   kalender: number | null;
   /**
@@ -220,7 +267,12 @@ export function istEinstellung(x: unknown): x is GruppenEinstellung {
     e.fassung === 1 &&
     typeof e.gruppe === 'number' &&
     Array.isArray(e.rollen) &&
-    e.rollen.every((r) => typeof r?.rolle === 'number' && STUFEN.some((s) => s.wert === r.stufe)) &&
+    e.rollen.every(
+      (r) =>
+        typeof r?.rolle === 'number' &&
+        STUFEN.some((s) => s.wert === r.stufe) &&
+        (r.typ === undefined || typeof r.typ === 'number'),
+    ) &&
     (e.punkte === 'vorschlagen' || e.punkte === 'direkt') &&
     (e.kalender === null || typeof e.kalender === 'number') &&
     (e.vergeben === undefined ||

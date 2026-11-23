@@ -318,6 +318,58 @@ describe('Suche (S3-4b)', () => {
     expect(wo()).toMatch(/in Arbeit/);
   });
 
+  it('„Schreibt mit“ (W16): schreibt in „Protokolle“, sieht „Jeder für sich“ aber wie ein Mitarbeiter', async () => {
+    const jeder = teilSetzen(
+      modusSetzen(
+        neueAufgabe({
+          id: 'j1',
+          gruppe: 11,
+          sitzung: 'weg',
+          text: 'Abwesenheiten eintragen',
+          wer: [1, 19, 23],
+          von: 1,
+          am: '2026-10-14T18:00:00Z',
+        }),
+        true,
+        1,
+        '2026-10-14T18:00:00Z',
+      ),
+      19,
+      true,
+      19,
+      '2026-10-15T18:00:00Z',
+    );
+    const als = [{ ...GRUPPEN[0], rolle: 8 }, ...GRUPPEN.slice(1)];
+    m.ladeUebersicht.mockResolvedValue([
+      {
+        ...UEBERSICHT[0],
+        gruppe: als[0],
+        sitzungen: {
+          ...UEBERSICHT[0].sitzungen,
+          stufen: [
+            { rolle: 1101, stufe: 'leitung' as const, typ: 9 },
+            { rolle: 1102, stufe: 'schreibtMit' as const, typ: 8 },
+          ],
+        },
+        aufgaben: [jeder],
+      },
+    ]);
+    render(
+      <Suche
+        modul={24}
+        gruppen={als}
+        begriff="abwesenheiten"
+        ich={1}
+        schreibbar={[60]}
+        onTreffer={onTreffer}
+      />,
+    );
+    await geladen('Treffer');
+    const wo = liste().find((z) => z?.includes('Abwesenheiten eintragen')) ?? '';
+    expect(wo).toMatch(/offen/);
+    expect(wo).not.toMatch(/in Arbeit/);
+  });
+
   it('vorübergehender Fehler: „Erneut versuchen“ – nicht „Noch keine Beschlüsse“', async () => {
     m.ladeUebersicht.mockRejectedValueOnce(new ApiError(503, 'weg'));
     zeigen();

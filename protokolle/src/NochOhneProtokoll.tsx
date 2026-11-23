@@ -11,7 +11,7 @@ import { koepfeAus, sitzungenOhneProtokoll } from './lesen';
 import styles from './Fruehere.module.scss';
 
 /**
- * **Block „Noch ohne Protokoll“** (v1.0.1, Entwurf `fruehere-treffen-v1`) – nur für die Leitung, über „Kommend“:
+ * **Block „Noch ohne Protokoll“** (v1.0.1, Entwurf `fruehere-treffen-v1`) – für alle, die schreiben dürfen (W16), über „Kommend“:
  * zurückliegende Sitzungen ohne Protokoll seit dem letzten freigegebenen (sonst 28 Tage), je mit „Protokoll beginnen“.
  * Leer → gar nichts. Wird **für sich** geladen: Scheitert es, steht hier ein Hinweis und der Rest der Seite bleibt
  * nutzbar (vorübergehend ist nicht leer – kein stilles Verschwinden).

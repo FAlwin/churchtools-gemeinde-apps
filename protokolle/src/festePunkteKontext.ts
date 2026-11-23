@@ -26,6 +26,11 @@ export interface FestePunkteWert {
   ich?: number;
   /** Den Haken eines To-Dos setzen (`hakenSchritt`) – nur im Editor; fehlt er, zeigt der Kreis nur an. */
   status?: (a: Aufgabe, schritt: HakenSchritt) => void;
+  /**
+   * Darf ich bei diesem To-Do den Haken setzen? (W16) Fehlt: ja (Leitung). Wer als „Schreibt mit“ im Editor ist, hakt nur ab,
+   * was auch ein Mitarbeiter darf (`toDoRechte`, W9) – die To-Dos anderer bleiben der Leitung.
+   */
+  darfHaken?: (a: Aufgabe) => boolean;
   /** Ein Protokoll im Fenster öffnen – fehlt im Fenster selbst (kein Fenster im Fenster). */
   oeffnen?: (s: Sitzung) => void;
   /** Die früheren Protokolle zur Wahl (`fruehereProtokolle`, K3b-2) – neueste zuerst. */

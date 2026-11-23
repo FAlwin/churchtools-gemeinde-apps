@@ -22,6 +22,7 @@ import {
   nameAusListe,
   hakenAnwenden,
   neueAufgabe,
+  toDoRechte,
   type Aufgabe,
   type HakenSchritt,
 } from '@shared/protokolle/aufgaben';
@@ -98,7 +99,7 @@ type Laden =
   | { art: 'bereit'; kopf: ProtokollKopf; dokument: Block[] };
 
 /**
- * **Ein Protokoll schreiben** (Bauplan S4-1, Entwurf 7) – für die Leitung bei einem Protokoll im Entwurf. Oben Titel und
+ * **Ein Protokoll schreiben** (Bauplan S4-1, Entwurf 7) – für Leitung und „Schreibt mit“ (W16) bei einem Protokoll im Entwurf. Oben Titel und
  * Speicherstand, darunter Werkzeugleiste, Blatt und die Bereiche (live aus dem Text).
  *
  * Entschieden 24.10.2026 (Alwin): automatisch speichern; die Sperre entsteht mit der ersten Änderung (wer nur
@@ -126,6 +127,7 @@ export function ProtokollSchreiben({
   kommend = [],
   direkt = false,
   vollerName = ich.name,
+  leitung,
   teilen,
   onVorschlag,
   onBearbeiten,
@@ -155,6 +157,12 @@ export function ProtokollSchreiben({
   direkt?: boolean;
   /** Vor- und Nachname für den Verlauf der Vorschläge. */
   vollerName?: string;
+  /**
+   * Leitung der Gruppe (W16, `istLeitungIn`) – sonst schreibt man als „Schreibt mit“: Entwurf, Anwesenheit, Mit KI füllen,
+   * Bausteine, Vorschläge übernehmen. Nur die Leitung gibt frei, löscht, lehnt Vorschläge ab und hakt in „Offene To-Dos“
+   * die To-Dos anderer ab (W9).
+   */
+  leitung: boolean;
   /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. Geteilt wird, was im Editor steht. */
   teilen?: TeilenRahmen;
   /** Ein Vorschlag hat sich hier geändert – die Liste dahinter zieht mit. */
@@ -361,6 +369,11 @@ export function ProtokollSchreiben({
         hakenAnwenden(x, schritt, schreiber.person, new Date().toISOString()),
       ),
     [todoAendern, schreiber.person],
+  );
+  // „Schreibt mit“ (W16): in „Offene To-Dos“ nur abhaken, was auch ein Mitarbeiter darf (W9) – die Leitungsrechte bleiben.
+  const darfHakenMitarbeit = useCallback(
+    (a: Aufgabe) => toDoRechte(a, { ich: schreiber.person, leitung: false }).haken,
+    [schreiber.person],
   );
   // Sich selbst kennt man auch, wenn die Mitgliederliste verborgen ist (S7-2a).
   const nameVon = useMemo(() => nameAusListe(mitglieder, schreiber), [mitglieder, schreiber]);
@@ -697,6 +710,7 @@ export function ProtokollSchreiben({
       zeitzone={zeitzone}
       name={nameVon}
       status={mOrt ? statusFest : undefined}
+      darfHaken={leitung ? undefined : darfHakenMitarbeit}
       ich={schreiber.person}
       onTreffenAnlegen={neuesTreffen}
       schreibt={z?.lage === 'schreibe'}
@@ -713,17 +727,19 @@ export function ProtokollSchreiben({
     </FestePunkteRahmen>
   );
 
-  // Freigeben darf, wer hier gerade schreiben kann (niemand sonst schreibt) – im Editor ist das immer die Leitung.
-  const darfFreigeben = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+  // Hier gerade schreiben kann, wer im Editor ist und niemand sonst schreibt.
+  const schreibtJetzt = laden.art === 'bereit' && (z?.lage === 'frei' || z?.lage === 'schreibe');
+  // Freigeben nur die Leitung (W16 – im Editor kann auch „Schreibt mit“ sein).
+  const darfFreigeben = leitung && schreibtJetzt;
   // Teilen (S6-3b): was im Editor steht, auch noch nicht Gespeichertes – beim Nur-Lesen das gelesene Protokoll.
   const teilenDokument =
     laden.art === 'bereit' ? dok : laden.art === 'lesen' ? laden.dokument : null;
   const darfTeilen = !!teilen && !!teilenDokument;
-  // Löschen (W6): wer das Protokoll hier schreibt, ist die Leitung; ob gerade jemand anderes schreibt, prüft das Löschen selbst.
-  const darfLoeschen = !!onGeloescht && loeschbar(sitzung.kopf?.status);
-  // Mit KI füllen (S8-2): wie Freigeben nur im Editor eines Entwurfs, wo man schreiben darf – und nicht in der Lese-Ansicht
-  // des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
-  const darfKi = darfFreigeben && !lesen;
+  // Löschen (W6): nur die Leitung; ob gerade jemand anderes schreibt, prüft das Löschen selbst.
+  const darfLoeschen = leitung && !!onGeloescht && loeschbar(sitzung.kopf?.status);
+  // Mit KI füllen (S8-2): nur im Editor eines Entwurfs, wo man gerade schreiben kann – auch „Schreibt mit“ (W16) – und
+  // nicht in der Lese-Ansicht des Editors (dort ist der Editor ausgeblendet, man sähe nicht, was hineinkommt).
+  const darfKi = schreibtJetzt && !lesen;
   const kiDokument = useCallback(() => editor.current?.dokument() ?? dok, [dok]);
   const kiUebernommen = useCallback(
     ({ anzahl, uebersprungen }: { anzahl: number; uebersprungen: number }) => {
@@ -764,7 +780,7 @@ export function ProtokollSchreiben({
           <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
-        {(onBearbeiten || darfFreigeben || darfTeilen || darfLoeschen) && (
+        {(onBearbeiten || darfFreigeben || darfKi || darfTeilen || darfLoeschen) && (
           <div className={ansicht.aktionen}>
             {darfFreigeben && (
               <KopfKnopf
@@ -997,7 +1013,8 @@ export function ProtokollSchreiben({
                   ),
                 ),
               )(),
-            ablehnen: setAblehnenFuer,
+            // Ablehnen nur die Leitung (W16) – übernehmen und aufs nächste Mal gehört zum Schreiben.
+            ...(leitung ? { ablehnen: setAblehnenFuer } : {}),
           }}
         />
       )}
@@ -1019,7 +1036,7 @@ export function ProtokollSchreiben({
           onClose={() => setFreigabe(null)}
         />
       )}
-      {ablehnenFuer && mOrt && (
+      {ablehnenFuer && mOrt && leitung && (
         <VorschlagAblehnen
           vorschlag={ablehnenFuer}
           onAblehnen={async (grund) => {

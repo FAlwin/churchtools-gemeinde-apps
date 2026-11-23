@@ -33,6 +33,7 @@ import { Etikett } from '@ui/bedienung/Etikett';
 import { ProtokollNeu } from './ProtokollNeu';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
+import { darfSchreibenIn, istLeitungIn } from '@shared/protokolle/zugang';
 import styles from './Startseite.module.scss';
 
 const LAGE: Record<ProtokollGruppe['lage'], { text: string; ton: 'gruen' | 'rot' }> = {
@@ -107,13 +108,9 @@ export function Startseite({
 }: StartseiteProps) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [neu, setNeu] = useState(false);
-  const schreibGruppen = gruppen.filter(
-    (g) => g.protokolle !== null && schreibbar.includes(g.protokolle),
-  );
+  // „Neues Protokoll“ darf, wer schreiben darf – Leitung oder „Schreibt mit“ (W16).
+  const schreibGruppen = gruppen.filter((g) => darfSchreibenIn(g, schreibbar));
   const heute = heuteImKalender();
-  // Bin ich in dieser Gruppe Leitung? Danach richtet sich, wie ein To-Do für mich steht (W10, `sichtFuer`).
-  const leitungIn = (g: ProtokollGruppe) =>
-    g.protokolle !== null && schreibbar.includes(g.protokolle);
 
   const laden = useCallback(() => {
     if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
@@ -132,6 +129,10 @@ export function Startseite({
   }, [zustand, onAufgaben]);
 
   const ue = zustand.art === 'fertig' ? zustand.uebersicht : [];
+  // Bin ich in dieser Gruppe Leitung? Danach richtet sich, wie ein To-Do für mich steht (W10, `sichtFuer`). Seit W16 nicht
+  // mehr „darf schreiben“: „Schreibt mit“ sieht To-Dos wie ein Mitarbeiter (`istLeitungIn`, Stufen aus der Einstellung).
+  const leitungIn = (g: ProtokollGruppe) =>
+    istLeitungIn(g, schreibbar, ue.find((u) => u.gruppe.id === g.id)?.sitzungen.stufen);
   const anstehend = naechsteSitzungen(
     ue.map((u) => ({ gruppe: u.gruppe, kommend: u.sitzungen.kommend })),
     heute,

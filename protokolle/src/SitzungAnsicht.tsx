@@ -66,7 +66,7 @@ export function SitzungAnsicht({
   naechste?: ReactNode;
   /** „Teilen / PDF“ (S6-3b) – fehlt es, gibt es den Knopf nicht. */
   teilen?: TeilenRahmen;
-  /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
+  /** Wer schreiben darf (S5-1, seit W16 auch „Schreibt mit“): Protokoll zu dieser Sitzung beginnen – fehlt sonst. */
   onBeginnen?: () => void;
   /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
   onBearbeiten?: () => void;

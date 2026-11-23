@@ -141,7 +141,7 @@ function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boo
   const wer = zustaendigeNamen(a, w.name ?? null);
   const kurz = zustaendigKurz(wer);
   const ueber = istUeberfaellig(a, w.heute);
-  const aendern = abhaken ? w.status : undefined;
+  const aendern = abhaken && (w.darfHaken?.(a) ?? true) ? w.status : undefined;
   return (
     <li className={styles.zeile}>
       <Haken a={a} ich={w.ich ?? 0} onSchritt={aendern ? (s) => aendern(a, s) : undefined} />

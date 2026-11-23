@@ -330,6 +330,16 @@ describe('Vorschläge (S5-4)', () => {
     expect((await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT)).punkte).toBe('direkt');
   });
 
+  it('die Stufen je Rolle kommen aus der Einstellung (W16) – ohne Einstellung `null`', async () => {
+    await einrichten(4);
+    expect((await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT)).stufen).toEqual([
+      { rolle: LEITER, stufe: 'leitung', typ: 16 },
+      { rolle: TEILNEHMER, stufe: 'mitglied', typ: 15 },
+    ]);
+    const leer = { id: 194, protokolle: null, mitarbeit: null };
+    expect((await ladeSitzungen(MODUL, leer, ZONE, JETZT)).stufen).toBeNull();
+  });
+
   it('ladeMitarbeit: To-Dos und Vorschläge mit EINEM Lesen; ladeAufgaben bleibt ohne Vorschläge', async () => {
     await einrichten(null);
     const a = neueAufgabe({

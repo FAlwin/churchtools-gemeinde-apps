@@ -29,6 +29,7 @@ export function FestePunkteRahmen({
   zeitzone,
   name,
   status,
+  darfHaken,
   ich,
   imFenster = false,
   schreibt = false,
@@ -46,6 +47,7 @@ export function FestePunkteRahmen({
   zeitzone: string;
   name?: FestePunkteWert['name'];
   status?: FestePunkteWert['status'];
+  darfHaken?: FestePunkteWert['darfHaken'];
   ich?: number;
   imFenster?: boolean;
   /** Dieses Fenster schreibt gerade (W16, `FestePunkteWert.schreibt`). */
@@ -78,6 +80,7 @@ export function FestePunkteRahmen({
       fruehere: fruehereProtokolle(protokolle, sitzung),
       name,
       status,
+      darfHaken,
       ich,
       oeffnen: imFenster ? undefined : setOffen,
       waehlen: imFenster ? undefined : (q, fertig) => setWahl({ ...q, fertig }),
@@ -97,6 +100,7 @@ export function FestePunkteRahmen({
       protokolle,
       name,
       status,
+      darfHaken,
       ich,
       imFenster,
       treffen,

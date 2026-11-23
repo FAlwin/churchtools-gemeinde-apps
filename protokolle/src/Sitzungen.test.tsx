@@ -728,3 +728,94 @@ describe('„Neu“ am Handy (R3)', () => {
     expect(knopf.className).not.toMatch(/plus/);
   });
 });
+
+/**
+ * **„Schreibt mit“** (W16): schreibt Entwürfe (Protokoll beginnen, nachtragen, „Neues Protokoll“, Vorschläge übernehmen),
+ * aber Sitzung festlegen/bearbeiten, Freigabe zurücknehmen, Löschen und Vorschläge ablehnen bleiben der Leitung. Erkannt
+ * an der eigenen Rolle (`rolle`) und den Stufen aus der Einstellung (`stufen`) – jeder Fall mit der Leitung als Gegenstück.
+ */
+describe('Schreibt mit (W16)', () => {
+  const ALS = (typ: number): ProtokollGruppe[] => [{ ...GRUPPEN[0], rolle: typ }, GRUPPEN[1]];
+  const STUFEN: L.GruppenSitzungen['stufen'] = [
+    { rolle: 1101, stufe: 'leitung', typ: 9 },
+    { rolle: 1102, stufe: 'schreibtMit', typ: 8 },
+  ];
+  const MITSCHREIBEN = ALS(8);
+  const LEITUNG = ALS(9);
+  const PETER = { person: 19, name: 'Peter Wiens' };
+  beforeEach(() => {
+    m.ladeSitzungen.mockResolvedValue({ ...DATEN, stufen: STUFEN });
+  });
+  const zeige = (gruppen: ProtokollGruppe[]) =>
+    render(<Sitzungen ich={ICH} modul={24} gruppen={gruppen} schreibbar={[60]} />);
+
+  it('„Neu ⌄“: Neues Protokoll, nachtragen und vorschlagen – „Neue Sitzung“ nur die Leitung', async () => {
+    const r = zeige(MITSCHREIBEN);
+    await screen.findByText('Klausur');
+    expect(await neuAngebot()).toEqual([
+      'Neues Protokoll',
+      'Punkt vorschlagen',
+      'Protokoll nachtragen',
+    ]);
+    r.unmount();
+    zeige(LEITUNG);
+    await screen.findByText('Klausur');
+    expect(await neuAngebot()).toContain('Neue Sitzung');
+  });
+
+  it('Sitzung ohne Protokoll: „Protokoll beginnen“ ja, „Bearbeiten“ nur die Leitung', async () => {
+    const r = zeige(MITSCHREIBEN);
+    fireEvent.click(await screen.findByText('Klausur'));
+    expect(await screen.findByRole('button', { name: /Protokoll beginnen/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Sitzung bearbeiten/ })).toBeNull();
+    r.unmount();
+    zeige(LEITUNG);
+    fireEvent.click(await screen.findByText('Klausur'));
+    expect(await screen.findByRole('button', { name: /Sitzung bearbeiten/ })).toBeTruthy();
+  });
+
+  it('freigegebenes Protokoll: weder „Freigabe zurücknehmen“ noch „Löschen“ – die Leitung hat beides', async () => {
+    const r = zeige(MITSCHREIBEN);
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    await screen.findByRole('button', { name: /Teilen/ });
+    expect(screen.queryByRole('button', { name: /Freigabe zurücknehmen/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Protokoll löschen/ })).toBeNull();
+    r.unmount();
+    zeige(LEITUNG);
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    expect(await screen.findByRole('button', { name: /Freigabe zurücknehmen/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Protokoll löschen/ })).toBeTruthy();
+  });
+
+  it('Vorschläge: übernehmen ja, ablehnen nur die Leitung', async () => {
+    const v = neuerVorschlag({
+      id: 'v1',
+      gruppe: 11,
+      titel: 'Thema v1',
+      text: '',
+      ziel: zielVon(KOMMEND),
+      ich: PETER,
+      am: '2026-11-01T10:00:00Z',
+    });
+    VS.stand.set('v1', v);
+    m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], todoVorschlaege: [], vorschlaege: [v] });
+    const karte = () => screen.findByRole('region', { name: 'Vorschläge' });
+    const r = zeige(MITSCHREIBEN);
+    let k = await karte();
+    fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
+    expect(within(k).getByRole('button', { name: 'Übernehmen' })).toBeTruthy();
+    expect(within(k).queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+    r.unmount();
+    zeige(LEITUNG);
+    k = await karte();
+    fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
+    expect(within(k).getByRole('button', { name: 'Ablehnen' })).toBeTruthy();
+  });
+
+  it('Einstellung ohne Stufen (von vor W16): wer schreibt, bleibt Leitung', async () => {
+    m.ladeSitzungen.mockResolvedValue({ ...DATEN, stufen: null });
+    zeige(MITSCHREIBEN);
+    await screen.findByText('Klausur');
+    expect(await neuAngebot()).toContain('Neue Sitzung');
+  });
+});

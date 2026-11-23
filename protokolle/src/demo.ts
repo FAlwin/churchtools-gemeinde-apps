@@ -29,6 +29,28 @@ import { plusTage } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
 import type { Block } from '@shared/protokolle/dokument';
+import { schnappschussWert } from '@shared/protokolle/anwesenheit';
+
+/**
+ * W16: `?demo=mitschreiben` – Alwin ist im Leitungsteam „Schreibt mit“ (Rolle 8); `?demo=mitglied` – liest den Entwurf, darf
+ * das Gruppentreffen aber nicht sehen (403) und bekommt die Anwesenheit aus dem Schnappschuss im Protokoll. In beiden hängt
+ * der Entwurf am Gruppentreffen 15.
+ */
+const MIT_TREFFEN = new Set(['mitschreiben', 'mitglied']);
+const SCHNAPPSCHUSS = schnappschussWert({
+  personen: [
+    { person: 1, name: 'Alwin Friesen', status: 'da' },
+    { person: 7, name: 'Johann Becker', status: 'da' },
+    { person: 19, name: 'Peter Wiens', status: 'weg' },
+    { person: 23, name: 'Daniel Schmidt', status: 'offen' },
+  ],
+});
+const mitSchnappschuss = (dok: readonly Block[]): Block[] =>
+  dok.map((b) =>
+    b.type === 'verweis' && b.props?.art === 'anwesenheit'
+      ? { ...b, props: { ...b.props, schnappschuss: SCHNAPPSCHUSS } }
+      : b,
+  );
 
 /**
  * Drei Protokolle des Leitungsteams (S3-2, S3-4b): zwei freigegebene (das echte BlockNote-Dokument aus S0 und eins
@@ -151,7 +173,14 @@ function protokollWerte(
       art: 'einstellung',
       fassung: 1,
       gruppe: 11,
-      rollen: [],
+      // W16: Stufen je Rolle mit `typ` (Rolle an der Mitgliedschaft) – `?demo=mitschreiben` liest daraus „Schreibt mit“.
+      rollen:
+        fall === 'mitschreiben'
+          ? [
+              { rolle: 1101, stufe: 'leitung', typ: 9 },
+              { rolle: 1102, stufe: 'schreibtMit', typ: 8 },
+            ]
+          : [],
       // `?demo=direkt`: Vorschläge landen von selbst im Protokoll (S5-4).
       punkte: fall === 'direkt' ? 'direkt' : 'vorschlagen',
       kalender: 4,
@@ -162,7 +191,8 @@ function protokollWerte(
     ['demo-sept', 'frei', '2026-09-09T17:00:00Z', september],
     ['demo-entwurf', 'entwurf', '2026-10-21T17:00:00Z', entwurf],
   ] as const) {
-    const t = teileBauen(dok, sitzung);
+    const mitTreffen = sitzung === 'demo-entwurf' && MIT_TREFFEN.has(fall);
+    const t = teileBauen(mitTreffen ? mitSchnappschuss(dok) : dok, sitzung);
     werte.push(
       ...t.werte,
       JSON.stringify({
@@ -174,7 +204,7 @@ function protokollWerte(
         beginn,
         // Der Entwurf hängt an einem Termin mit Zu- und Absagen (S5-3: Vorbelegung der Anwesenheit), noch ohne Treffen.
         termin: sitzung === 'demo-entwurf' ? { kalender: 4, id: 121 } : null,
-        treffen: null,
+        treffen: mitTreffen ? 15 : null,
         freigabe: status === 'frei' ? { von: 1, am: '2026-10-15T08:00:00Z' } : null,
         sperre:
           fall === 'gesperrt' && status === 'entwurf'
@@ -896,7 +926,15 @@ function antwort(
   if (pfad === '/api/persons/1/groups')
     return {
       status: 200,
-      data: fall === 'leer' ? [] : [mitglied(19, 'Technik-Team', 9), mitglied(7, 'Jugendleitung')],
+      data:
+        fall === 'leer'
+          ? []
+          : [
+              mitglied(19, 'Technik-Team', 9),
+              mitglied(7, 'Jugendleitung'),
+              // W16: als „Schreibt mit“ sichtbar Mitglied (mit 10119 sieht man die versteckte Gruppe).
+              ...(fall === 'mitschreiben' ? [mitglied(11, 'Leitungsteam', 8)] : []),
+            ],
     };
   if (pfad === '/api/groups')
     return {
@@ -990,6 +1028,9 @@ function antwort(
   }
   if (einTreffen && !einTreffen[2] && s.geloescht.has(Number(einTreffen[1])))
     return { status: 404, data: { message: 'weg' } };
+  // W16: ein Mitglied darf die Anwesenheit in ChurchTools nicht sehen (nur 10111/10124).
+  if (einTreffen && methode === 'GET' && fall === 'mitglied')
+    return { status: 403, data: { message: 'Forbidden', messageKey: 'error.forbidden.view' } };
   if (einTreffen && methode === 'GET') {
     const id = Number(einTreffen[1]);
     const stand = s.anwesenheit.get(id);

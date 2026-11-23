@@ -249,6 +249,30 @@ describe('Fester Punkt: der Haken im Editor (W8a)', () => {
     fireEvent.click(screen.getByRole('button', { name: /mein Teil/ }));
     expect(status).toHaveBeenCalledWith(JEDER, { art: 'teil', person: 1, fertig: true });
   });
+
+  it('„Schreibt mit“ (W16): wo `darfHaken` nein sagt, zeigt der Kreis nur an', () => {
+    const FREMD = aufgabe('Saal buchen', { wer: [7] });
+    const status = vi.fn();
+    render(
+      <FestePunkteRahmen
+        sitzung={HEUTE}
+        gruppe={194}
+        protokolle={[SEPT, ALT]}
+        teile={TEILE}
+        aufgaben={[OFFEN, FREMD]}
+        zeitzone="Europe/Berlin"
+        status={status}
+        darfHaken={(a) => a.wer.includes(1)}
+        ich={1}
+      >
+        <FesterPunkt art="offene-aufgaben" fest="" abhaken />
+      </FestePunkteRahmen>,
+    );
+    // Nur das eigene To-Do hat einen bedienbaren Haken.
+    expect(screen.getAllByRole('button', { name: /antippen zum Abhaken/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /antippen zum Abhaken/ }));
+    expect(status).toHaveBeenCalledWith(OFFEN, { art: 'status', neu: 'erledigt' });
+  });
 });
 
 /**

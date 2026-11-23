@@ -69,6 +69,33 @@ describe('gruppeEinrichten', () => {
     expect(vorlagen).toEqual(STANDARD_VORLAGEN.map((v) => v.name));
   });
 
+  it('„Schreibt mit“ (W16): schreibt in Protokolle, führt Gruppentreffen durch – pflegt sie nicht, kein Kalender bearbeiten; die Einstellung kennt die Rolle an der Mitgliedschaft', async () => {
+    const e = await gruppeEinrichten(MODUL, GRUPPE, {
+      ...WAHL,
+      rollen: [
+        { rolle: LEITER, stufe: 'leitung' },
+        { rolle: TEILNEHMER, stufe: 'schreibtMit' },
+      ],
+    });
+    const p = kat('protokolle-g194');
+    const r = von(TEILNEHMER);
+    expect(r).toEqual(
+      expect.arrayContaining([
+        schl(N.anl, p),
+        schl(N.aend, p),
+        schl(N.loe, p),
+        schl(GRUPPENTREFFEN_DURCHFUEHREN, null),
+      ]),
+    );
+    expect(r).not.toContain(schl(GRUPPENTREFFEN_PFLEGEN, null));
+    expect(r).not.toContain(schl(404, 4));
+    expect(e.rollen).toEqual([
+      { rolle: LEITER, stufe: 'leitung', typ: 16 },
+      { rolle: TEILNEHMER, stufe: 'schreibtMit', typ: 15 },
+    ]);
+    expect(einstellungen()).toEqual([e]);
+  });
+
   it('versteckte Gruppe: jede Rolle mit Zugriff bekommt „versteckte Gruppe sehen“ (10119)', async () => {
     await gruppeEinrichten(MODUL, { ...GRUPPE, versteckt: true }, WAHL);
     expect(von(TEILNEHMER)).toContain(schl(10119, null));

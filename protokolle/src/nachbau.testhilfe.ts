@@ -602,8 +602,21 @@ export function nachbauStarten(): Nachbau {
     if (/^\/groups\/\d+\/roles$/.test(pfad))
       return json(200, {
         data: [
-          { id: LEITER, nameTranslated: 'Leiter', isLeader: true, isActive: true },
-          { id: TEILNEHMER, nameTranslated: 'Teilnehmer', isLeader: false, isActive: true },
+          // `groupTypeRoleId` = die Rolle, wie sie an der Mitgliedschaft steht (W16: `typ` in der Einstellung).
+          {
+            id: LEITER,
+            nameTranslated: 'Leiter',
+            isLeader: true,
+            isActive: true,
+            groupTypeRoleId: 16,
+          },
+          {
+            id: TEILNEHMER,
+            nameTranslated: 'Teilnehmer',
+            isLeader: false,
+            isActive: true,
+            groupTypeRoleId: 15,
+          },
           { id: 9, nameTranslated: 'Alt', isActive: false },
         ],
       });

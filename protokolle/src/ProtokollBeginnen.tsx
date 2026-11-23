@@ -11,7 +11,7 @@ import { wannLang } from './anzeige';
 import styles from './ProtokollBeginnen.module.scss';
 
 /**
- * **Fenster „Protokoll beginnen“** (Bauplan S5-1, Entwurf 7) – für die Leitung bei einer Sitzung ohne Protokoll (oder
+ * **Fenster „Protokoll beginnen“** (Bauplan S5-1, Entwurf 7) – für alle, die schreiben dürfen (Leitung, „Schreibt mit“ – W16), bei einer Sitzung ohne Protokoll (oder
  * einer geplanten): eine **Vorlage**, **„Wie letztes Mal“** (Tagesordnung des letzten freigegebenen Protokolls) oder
  * **leer**. Danach öffnet sich das Protokoll im Editor. Hat inzwischen jemand anderes begonnen, sagt das Fenster das
  * und öffnet dessen Protokoll.

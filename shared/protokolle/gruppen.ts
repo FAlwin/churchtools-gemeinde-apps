@@ -23,6 +23,11 @@ export interface ProtokollGruppe {
   lage: 'eingerichtet' | 'unvollstaendig';
   protokolle: number | null;
   mitarbeit: number | null;
+  /**
+   * Die eigene Rolle in der Gruppe (`groupTypeRoleId` der aktiven Mitgliedschaft) – daran liest die Oberfläche die eigene
+   * Stufe aus der Einstellung (W16, `./zugang`). Fehlt, wenn man nicht (sichtbar) Mitglied ist.
+   */
+  rolle?: number | null;
 }
 
 /** Trenner im Namen einer Kategorie: „Protokolle · Leitungsteam“. */
@@ -57,12 +62,16 @@ export function protokollGruppen(
     return g;
   };
 
-  const aktiv = new Set(
-    aktiveMitgliedschaften(mitgliedschaften ? [...mitgliedschaften] : []).map((m) => m.groupId),
+  const aktiv = new Map(
+    aktiveMitgliedschaften(mitgliedschaften ? [...mitgliedschaften] : []).map((m) => [
+      m.groupId,
+      m.roleId,
+    ]),
   );
   for (const r of mitgliedschaften ?? []) {
     const id = Number(r.group?.domainIdentifier);
-    if (aktiv.has(id)) hole(id, typeof r.group?.title === 'string' ? r.group.title : '');
+    if (aktiv.has(id))
+      hole(id, typeof r.group?.title === 'string' ? r.group.title : '').rolle = aktiv.get(id);
   }
 
   // Bei gleichem Kürzel gilt die kleinste ID (wie `kategorieAusListe`).

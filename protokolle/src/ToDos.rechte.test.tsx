@@ -145,3 +145,43 @@ describe('To-Do-Übersicht: Mitglied (W9a)', () => {
     expect(within(zeile('Plakate')).getByRole('button', { name: 'Das mache ich' })).toBeTruthy();
   });
 });
+
+describe('To-Do-Übersicht: „Schreibt mit“ (W16)', () => {
+  // Schreibt in „Protokolle“ (schreibbar), die eigene Rolle steht in der Einstellung aber auf „Schreibt mit“.
+  const mitStufen = (rolle: number) => {
+    const [u] = uebersicht(ALLE);
+    vi.mocked(L.ladeUebersicht).mockResolvedValue([
+      {
+        ...u,
+        gruppe: { ...LT, rolle },
+        sitzungen: {
+          ...u.sitzungen,
+          stufen: [
+            { rolle: 1101, stufe: 'leitung', typ: 9 },
+            { rolle: 1102, stufe: 'schreibtMit', typ: 8 },
+          ],
+        },
+      },
+    ]);
+    return render(
+      <ToDos
+        modul={24}
+        ich={{ person: 1, name: 'Alwin' }}
+        gruppen={[{ ...LT, rolle }]}
+        schreibbar={[60]}
+        onSitzung={vi.fn()}
+      />,
+    );
+  };
+
+  it('hat die Leitungsrechte bei To-Dos nicht – sieht sie wie ein Mitglied; die Leitung wie bisher', async () => {
+    const r = mitStufen(8);
+    await screen.findByText('Plakate');
+    // Mitglied: „Das mache ich“ beim To-Do ohne Zuständigen (die Leitung teilt zu, statt es sich zu nehmen).
+    expect(within(zeile('Plakate')).getByRole('button', { name: 'Das mache ich' })).toBeTruthy();
+    r.unmount();
+    mitStufen(9);
+    await screen.findByText('Plakate');
+    expect(within(zeile('Plakate')).queryByRole('button', { name: 'Das mache ich' })).toBeNull();
+  });
+});

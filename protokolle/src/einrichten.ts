@@ -33,6 +33,7 @@ import {
 import {
   istEinstellung,
   rechteNummernAus,
+  rollenMitTyp,
   sollRechte,
   vergebenNachher,
   vergebenPruefen,
@@ -235,7 +236,8 @@ export async function gruppeEinrichten(
     art: 'einstellung',
     fassung: 1,
     gruppe: gruppe.id,
-    rollen: wahl.rollen,
+    // Mit der Rolle an der Mitgliedschaft (`typ`) – daran erkennt die Oberfläche später die eigene Stufe (W16).
+    rollen: rollenMitTyp(wahl.rollen, rollenRoh),
     punkte: wahl.punkte,
     kalender: wahl.kalender,
     vergeben: vergebenNachher(soll, plan.setzen, vergeben, nummern),

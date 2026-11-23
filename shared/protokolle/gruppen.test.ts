@@ -35,6 +35,24 @@ describe('protokollGruppen', () => {
     ]);
   });
 
+  it('merkt sich die eigene Rolle aus der aktiven Mitgliedschaft (W16) – ohne Mitgliedschaft keine', () => {
+    const g = protokollGruppen(
+      [
+        mit(7, 'Jugendleitung', { groupTypeRoleId: 9 }),
+        mit(19, 'Technik', { memberEndDate: '2026-01-01' }),
+      ],
+      [
+        { id: 70, shorty: kuerzelProtokolle(7), name: 'Protokolle · Jugendleitung' },
+        { id: 90, shorty: kuerzelProtokolle(19), name: 'Protokolle · Technik' },
+        { id: 60, shorty: kuerzelProtokolle(11), name: 'Protokolle · Leitungsteam' },
+      ],
+    );
+    const rolle = (id: number) => g.find((x) => x.id === id)?.rolle;
+    expect(rolle(7)).toBe(9);
+    expect(rolle(19)).toBeUndefined(); // beendet
+    expect(rolle(11)).toBeUndefined(); // nur aus den Kategorien (versteckt)
+  });
+
   it('ohne Mitarbeit-Kategorie: unvollständig', () => {
     const g = protokollGruppen(
       [mit(7, 'Jugendleitung')],

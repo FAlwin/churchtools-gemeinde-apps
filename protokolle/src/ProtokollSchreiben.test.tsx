@@ -29,6 +29,7 @@ import * as BS from './beitragSchreiben';
 import { Unklar } from '@ui/ct/fehler';
 import * as LO from './loeschen';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
+import type { FestePunkteWert } from './festePunkteKontext';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
 // Was der Editor über `einfuegen` bekam (S5-4) – es steht danach in seinem Dokument.
@@ -36,6 +37,8 @@ const E = vi.hoisted(() => ({
   einfuegen: vi.fn(),
   zusatz: [] as unknown[],
   ersetzt: [] as unknown[],
+  // Der Kontext der festen Punkte, wie die Blöcke ihn sehen (W16: `darfHaken`).
+  feste: null as FestePunkteWert | null,
 }));
 // Vorschläge in „Mitarbeit“: die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
 const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
@@ -135,6 +138,7 @@ vi.mock('./DokumentEditor', async () => {
     }) => {
       const k = useContext(AufgabenKontext);
       const feste = useContext(FestePunkteKontext);
+      E.feste = feste;
       useImperativeHandle(griff, () => ({
         dokument: () => [...MIT_AUFGABE, ...E.zusatz],
         ersetzen: (d: unknown) => E.ersetzt.push(d),
@@ -225,10 +229,10 @@ const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void, onGeloescht?: () 
     zeitzone: 'Europe/Berlin',
     onZurueck,
   };
-  const r = render(<ProtokollSchreiben {...props} ich={{ person: 1, name: 'Alwin' }} />);
+  const r = render(<ProtokollSchreiben leitung {...props} ich={{ person: 1, name: 'Alwin' }} />);
   // Die Liste dahinter zeichnet neu und reicht dabei neue Objekte herein – das darf den Editor nicht neu laden.
   const neuZeichnen = () =>
-    r.rerender(<ProtokollSchreiben {...props} ich={{ person: 1, name: 'Alwin' }} />);
+    r.rerender(<ProtokollSchreiben leitung {...props} ich={{ person: 1, name: 'Alwin' }} />);
   return { ...r, neuZeichnen };
 };
 
@@ -395,6 +399,7 @@ describe('ProtokollSchreiben', () => {
     const onZuSitzung = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -452,6 +457,7 @@ describe('ProtokollSchreiben', () => {
     const onZuSitzung = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -620,6 +626,7 @@ describe('Vorschläge beim Schreiben (S5-4)', () => {
   const zeigeMit = (direkt: boolean) =>
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZ}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -728,6 +735,7 @@ describe('Freigeben (S6-1)', () => {
   const zeigeFrei = (onFreigegeben = vi.fn()) => {
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={{ ...SITZUNG, kopf: MIT_TREFFEN }}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -978,6 +986,7 @@ describe('Teilen / PDF im Editor (S6-3b)', () => {
     vi.mocked(M.ladeGruppenMitglieder).mockClear();
     render(
       <ProtokollSchreiben
+        leitung
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
         gruppeId={194}
@@ -1021,6 +1030,7 @@ describe('Mit KI füllen (S8-2)', () => {
   const zeigeKi = () =>
     render(
       <ProtokollSchreiben
+        leitung
         onBearbeiten={vi.fn()}
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
@@ -1046,6 +1056,7 @@ describe('Mit KI füllen (S8-2)', () => {
     const onBearbeiten = vi.fn();
     render(
       <ProtokollSchreiben
+        leitung
         onBearbeiten={onBearbeiten}
         sitzung={SITZUNG}
         gruppe="Leitungsteam"
@@ -1319,5 +1330,92 @@ describe('ProtokollSchreiben – Mitlesen (W16)', () => {
     await warten(10_000);
     // Hätte der erste Abruf den Stand „b“ schon übernommen, gälte der Text jetzt als bekannt und käme nie an.
     expect(E.ersetzt).toEqual([DOK2]);
+  });
+});
+
+/**
+ * **„Schreibt mit“ im Editor** (W16): schreibt den Entwurf, füllt mit KI, übernimmt Vorschläge – aber kein Freigeben, kein
+ * Löschen, kein Ablehnen, und in „Offene To-Dos“ nur die Haken eines Mitarbeiters (W9). Jeweils mit der Leitung als Gegenstück.
+ */
+describe('Schreibt mit (W16)', () => {
+  const SITZ: Sitzung = { ...SITZUNG, termin: null, treffen: null, anfragen: [] };
+  const zeigeAls = (leitung: boolean) => {
+    const v = neuerVorschlag({
+      id: 'v1',
+      gruppe: 194,
+      titel: 'Thema v1',
+      text: '',
+      ziel: zielVon(SITZ),
+      ich: { person: 19, name: 'Peter Wiens' },
+      am: '2026-10-20T10:00:00Z',
+    });
+    VS.stand.set('v1', v);
+    vi.mocked(W.mitarbeitRoh).mockResolvedValueOnce([{ wert: 1, x: v }]);
+    return render(
+      <ProtokollSchreiben
+        leitung={leitung}
+        sitzung={SITZ}
+        gruppe="Leitungsteam"
+        gruppeId={194}
+        modul={24}
+        kategorie={62}
+        mitarbeit={65}
+        protokolle={[]}
+        teile={[]}
+        zeitzone="Europe/Berlin"
+        kommend={[SITZ]}
+        onGeloescht={vi.fn()}
+        onZurueck={vi.fn()}
+        ich={{ person: 1, name: 'Alwin' }}
+      />,
+    );
+  };
+
+  it('kein Freigeben und kein Löschen – „Mit KI füllen“ schon', async () => {
+    const r = zeigeAls(false);
+    expect(await screen.findByRole('button', { name: /Mit KI füllen/ })).toBeTruthy();
+    expect(screen.getByTestId('editor').textContent).toBe('bearbeitbar');
+    expect(screen.queryByRole('button', { name: 'Protokoll freigeben' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Protokoll löschen' })).toBeNull();
+    r.unmount();
+    zeigeAls(true);
+    expect(await screen.findByRole('button', { name: 'Protokoll freigeben' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Protokoll löschen' })).toBeTruthy();
+  });
+
+  it('Vorschläge: übernehmen und aufs nächste Mal ja, ablehnen nur die Leitung', async () => {
+    const aufklappen = async () =>
+      fireEvent.click(await screen.findByRole('button', { name: /Thema v1/ }));
+    const r = zeigeAls(false);
+    await aufklappen();
+    expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nächstes Mal' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ablehnen' })).toBeNull();
+    r.unmount();
+    zeigeAls(true);
+    await aufklappen();
+    expect(screen.getByRole('button', { name: 'Ablehnen' })).toBeTruthy();
+  });
+
+  it('„Offene To-Dos“: abhaken nur, was ein Mitarbeiter darf – die Leitung alles', async () => {
+    const fremd = neueAufgabe({
+      id: 'f',
+      gruppe: 194,
+      sitzung: 'alt',
+      text: 'Fremd',
+      von: 7,
+      am: '2026-10-01T10:00:00Z',
+    });
+    const eigen = { ...fremd, id: 'e', wer: [1] };
+    const anderer = { ...fremd, id: 'a', wer: [7] };
+    const darf = () => E.feste?.darfHaken;
+    const r = zeigeAls(false);
+    await screen.findByTestId('editor');
+    expect(darf()?.(eigen)).toBe(true);
+    expect(darf()?.(anderer)).toBe(false);
+    r.unmount();
+    zeigeAls(true);
+    await screen.findByTestId('editor');
+    expect(darf()).toBeUndefined(); // Leitung: alle
   });
 });

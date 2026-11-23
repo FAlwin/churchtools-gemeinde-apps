@@ -202,7 +202,7 @@
 // Titel Vorrang (3 : 2), Namen brechen rechtsbündig um; am Handy stehen sie unter dem Titel (Media Query unten).
 .punkt {
   display: grid;
-  grid-template-columns: 48px minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: 48px minmax(0, 3fr) minmax(0, 2fr) 56px;
   gap: 10px;
   align-items: baseline;
   padding: 6px 10px;
@@ -229,6 +229,25 @@
   font-size: 13px;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+// ± eines erledigten Punkts (A14): geplante minus gelaufene Dauer, ganz rechts in der ersten Zeile des Punkts.
+.delta {
+  grid-column: -2;
+  grid-row: 1;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.deltaPlus {
+  color: var(--green);
+}
+
+.deltaMinus {
+  color: var(--red);
 }
 
 // Info der eigenen Dienstgruppe unter dem Punkt – klein, unter Titel und Namen.
@@ -397,6 +416,67 @@
   }
 }
 
+// „Ende voraussichtlich“ und „Warum“ (A14) unter dem Zeitkonto: Plan-Ende minus Konto, dazu die drei größten Abweichungen.
+.prog {
+  width: 220px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.progEnde {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+
+  b {
+    color: var(--text);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Später als geplant: rot wie das Zeitkonto im Rückstand.
+  .progSpaeter {
+    color: var(--red);
+  }
+}
+
+.progPlan {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.warum {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--hair);
+  list-style: none;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  i {
+    flex: none;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+}
+
 // Handy hochkant: Restzeit klein neben „Jetzt“, die Liste darunter.
 @media (max-width: 759px) {
   .leiste {
@@ -416,9 +496,14 @@
   }
 
   .rechts {
-    flex-direction: row;
+    flex-flow: row wrap;
     order: -1;
     justify-content: flex-start;
+  }
+
+  .prog {
+    flex: 1 1 100%;
+    width: auto;
   }
 
   .ring {
@@ -444,7 +529,7 @@
   }
 
   .punkt {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     row-gap: 0;
   }
 
@@ -476,6 +561,18 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+// Hinweis nach einem Fehlklick (A19): kurz, leise, mit „Neu starten“ als blauem Wort.
+.fehlklick {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
 }
 
 .steuerFehler {

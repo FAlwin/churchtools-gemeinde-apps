@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import {
   sperreVon,
@@ -32,7 +32,11 @@ import { ProtokollSchreiben } from './ProtokollSchreiben';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
 // Was der Editor über `einfuegen` bekam (S5-4) – es steht danach in seinem Dokument.
-const E = vi.hoisted(() => ({ einfuegen: vi.fn(), zusatz: [] as unknown[] }));
+const E = vi.hoisted(() => ({
+  einfuegen: vi.fn(),
+  zusatz: [] as unknown[],
+  ersetzt: [] as unknown[],
+}));
 // Vorschläge in „Mitarbeit“: die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
 const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
 vi.mock('./vorschlaegeSchreiben', () => ({
@@ -133,7 +137,7 @@ vi.mock('./DokumentEditor', async () => {
       const feste = useContext(FestePunkteKontext);
       useImperativeHandle(griff, () => ({
         dokument: () => [...MIT_AUFGABE, ...E.zusatz],
-        ersetzen: () => undefined,
+        ersetzen: (d: unknown) => E.ersetzt.push(d),
         einfuegen: (b: unknown[], vor: string | null) => {
           E.einfuegen(b, vor);
           E.zusatz.push(...b);
@@ -231,6 +235,7 @@ const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void, onGeloescht?: () 
 beforeEach(() => {
   lesen.mockResolvedValue({ kopf: KOPF, dokument: DOK });
   E.zusatz.length = 0;
+  E.ersetzt.length = 0;
   VS.stand.clear();
 });
 
@@ -1198,5 +1203,101 @@ describe('Protokoll löschen im Editor (W6)', () => {
     await new Promise((x) => setTimeout(x, 30));
     expect(S.sperreFreigeben).not.toHaveBeenCalled();
     expect(S.speichern).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **Mitlesen im Editor** (W16): alle 10 s, solange jemand anderes schreibt oder niemand schreibt und man selbst nichts
+ * geändert hat – nie, solange man selbst schreibt; Pause bei verdecktem Fenster. Fake-Timer: Mit echten Timern bewiese
+ * ein Test nichts über den Takt.
+ */
+describe('ProtokollSchreiben – Mitlesen (W16)', () => {
+  let verdeckt = false;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    verdeckt = false;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => verdeckt });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  // Die Attrappen antworten sofort – es reicht, die anstehenden Versprechen abzuarbeiten.
+  const warten = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
+  const johann = () => sperreVon({ person: 7, name: 'Johann', fenster: 'j' }, new Date());
+  const DOK2 = [{ id: 'h2', type: 'heading', props: { level: 1 }, content: 'Neu', children: [] }];
+
+  it('jemand anderes schreibt: alle 10 s frisch gelesen, der neue Text kommt in denselben Editor', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    const editor = screen.getByTestId('editor');
+    expect(editor.textContent).toBe('nur lesen');
+    expect(lesen).toHaveBeenCalledTimes(1);
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(9_999);
+    expect(lesen).toHaveBeenCalledTimes(1);
+    await warten(1);
+    expect(lesen).toHaveBeenCalledTimes(2);
+    expect(E.ersetzt).toEqual([DOK2]);
+    // Derselbe Editor (nicht neu aufgebaut, kein „Wird geladen“) – sonst spränge die Seite nach oben.
+    expect(screen.getByTestId('editor')).toBe(editor);
+    expect(screen.getByText('Johann schreibt gerade.')).toBeTruthy();
+    expect(screen.getByText(/aktualisiert sich alle 10 Sekunden/)).toBeTruthy();
+    // Gleicher Stand beim nächsten Mal: nichts ersetzt.
+    await warten(10_000);
+    expect(lesen).toHaveBeenCalledTimes(3);
+    expect(E.ersetzt).toHaveLength(1);
+  });
+
+  it('Fenster verdeckt: kein Lesen – beim Zurückkommen sofort', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    verdeckt = true;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await warten(60_000);
+    expect(lesen).toHaveBeenCalledTimes(1);
+    verdeckt = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await warten();
+    expect(lesen).toHaveBeenCalledTimes(2);
+  });
+
+  it('niemand schreibt, man selbst hat nichts geändert: fängt jemand an, sieht man es von selbst', async () => {
+    zeige();
+    await warten();
+    expect(screen.getByTestId('editor').textContent).toBe('bearbeitbar');
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(10_000);
+    expect(lesen).toHaveBeenCalledTimes(2);
+    expect(E.ersetzt).toEqual([DOK2]);
+    expect(screen.getByText('Johann schreibt gerade.')).toBeTruthy();
+    expect(screen.getByTestId('editor').textContent).toBe('nur lesen');
+  });
+
+  it('man schreibt selbst: kein Mitlesen', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'x' } });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'y' } });
+    zeige();
+    await warten();
+    fireEvent.click(screen.getByText('tippen'));
+    await warten(5_000); // Sperre genommen und gespeichert
+    const bisher = lesen.mock.calls.length;
+    await warten(60_000);
+    expect(lesen).toHaveBeenCalledTimes(bisher);
+    expect(E.ersetzt).toHaveLength(0);
+  });
+
+  it('neuer Stand, aber gerade nicht vollständig lesbar: nichts übernommen – beim nächsten Mal schon', async () => {
+    lesen.mockResolvedValue({ kopf: { ...KOPF, sperre: johann() }, dokument: DOK });
+    zeige();
+    await warten();
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: null });
+    await warten(10_000);
+    expect(E.ersetzt).toHaveLength(0);
+    lesen.mockResolvedValue({ kopf: { ...KOPF, stand: 'b', sperre: johann() }, dokument: DOK2 });
+    await warten(10_000);
+    // Hätte der erste Abruf den Stand „b“ schon übernommen, gälte der Text jetzt als bekannt und käme nie an.
+    expect(E.ersetzt).toEqual([DOK2]);
   });
 });

@@ -569,6 +569,9 @@ export function Sitzungen({
           aufgaben={zustand.aufgaben}
           zeitzone={gemeindeZeitzone()}
           springeZu={zuPunkt}
+          mitlesen={
+            gruppe.protokolle !== null ? { modul, kategorie: gruppe.protokolle } : undefined
+          }
           naechste={naechsteVon(offen)}
           teilen={teilenVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}

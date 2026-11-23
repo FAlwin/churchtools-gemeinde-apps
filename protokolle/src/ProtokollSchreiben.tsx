@@ -86,11 +86,9 @@ import { beitragMoeglich, beitragSchritt } from './beitragSchreiben';
 import { sitzungsLink } from './reiter';
 import type { TreffenStand } from '@shared/protokolle/anwesenheit';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
+import { MITLESEN_MS, useMitlesen } from './useMitlesen';
 import ansicht from './SitzungAnsicht.module.scss';
 import styles from './ProtokollSchreiben.module.scss';
-
-/** So oft liest mit, wer gerade nicht schreiben kann. */
-export const MITLESEN_MS = 30_000;
 
 type Laden =
   | { art: 'laedt' }
@@ -392,31 +390,42 @@ export function ProtokollSchreiben({
     return () => window.removeEventListener('beforeunload', warnen);
   }, [z?.offen, z?.speichert]);
 
-  // Mitlesen, solange jemand anderes schreibt.
-  useEffect(() => {
-    if (z?.lage !== 'gesperrt') return;
-    const t = setInterval(() => {
-      const s = steuerung.current;
-      if (!s) return;
-      protokollLesen(ort).then(
-        ({ kopf, dokument }) => {
-          if (!kopf || kopf.status !== 'entwurf') return oeffnen();
-          // Eigene ungespeicherte Änderungen nicht überschreiben – die Person soll sie noch kopieren können; weiter geht
-          // es dann bewusst mit „Schreiben übernehmen“.
-          if (s.zustand.offen) return;
-          if (dokument && kopf.stand !== s.basisStand) {
-            editor.current?.ersetzen(dokument);
-            setDok(dokument);
-          }
-          const frei = sperreLage(kopf.sperre, schreiber, new Date()) !== 'fremd';
-          s.neuAufsetzen(kopf, frei ? 'frei' : 'gesperrt', frei ? null : kopf.sperre);
-          if (frei) setHinweis('Niemand schreibt mehr – du kannst jetzt schreiben.');
-        },
-        () => undefined,
-      ); // Mitlesen ist Beiwerk: beim nächsten Mal wieder
-    }, MITLESEN_MS);
-    return () => clearInterval(t);
-  }, [z?.lage, ort, schreiber, oeffnen]);
+  // Mitlesen (W16): alle `MITLESEN_MS`, solange jemand anderes schreibt – und auch, solange niemand schreibt und man selbst
+  // nichts geändert hat (sonst sähe man erst beim ersten Tippen, dass inzwischen jemand anderes angefangen hat). Wer selbst
+  // schreibt, liest nicht mit. Freigegeben oder weg: neu öffnen (dann nur lesen, kein Takt mehr).
+  const mitlesend =
+    laden.art === 'bereit' && (z?.lage === 'gesperrt' || (z?.lage === 'frei' && !z.offen));
+  useMitlesen(mitlesend, async () => {
+    const s = steuerung.current;
+    if (!s) return;
+    let frisch: Awaited<ReturnType<typeof protokollLesen>>;
+    try {
+      frisch = await protokollLesen(ort);
+    } catch {
+      return; // Mitlesen ist Beiwerk: beim nächsten Mal wieder
+    }
+    const { kopf, dokument } = frisch;
+    if (!kopf || kopf.status !== 'entwurf') return oeffnen();
+    const vorher = s.zustand.lage;
+    // Inzwischen schreibt man selbst – oder hat Ungespeichertes: Das nicht überschreiben (die Person soll es noch kopieren
+    // können; weiter geht es dann bewusst mit „Schreiben übernehmen“).
+    if ((vorher !== 'gesperrt' && vorher !== 'frei') || s.zustand.offen || s.zustand.speichert)
+      return;
+    const neuerStand = kopf.stand !== s.basisStand;
+    // Neuer Stand, aber der Text gerade nicht vollständig lesbar (mitten im Speichern): Nichts übernehmen – sonst stünde der
+    // neue Stand über dem alten Text, und ein eigenes Speichern danach überschriebe den fremden Text.
+    if (neuerStand && !dokument) return;
+    const frei = sperreLage(kopf.sperre, schreiber, new Date()) !== 'fremd';
+    if (vorher === 'frei' && frei && !neuerStand) return; // nichts Neues
+    if (neuerStand && dokument) {
+      // Ersetzen zählt nicht als Änderung und baut den Editor nicht neu auf – die Seite bleibt, wo sie ist.
+      editor.current?.ersetzen(dokument);
+      setDok(dokument);
+    }
+    s.neuAufsetzen(kopf, frei ? 'frei' : 'gesperrt', frei ? null : kopf.sperre);
+    if (frei && vorher === 'gesperrt')
+      setHinweis('Niemand schreibt mehr – du kannst jetzt schreiben.');
+  });
 
   const uebernehmen = () => {
     setBeschaeftigt(true);

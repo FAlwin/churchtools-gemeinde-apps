@@ -185,6 +185,11 @@ interface BearbeitenBasis<T extends AblaufZeile> {
    * mit den anderen zusammen – Punkte lassen sich in eine andere Spalte ziehen. Ohne Bereich ohne Wirkung.
    */
   ziehen?: { spalte: number; neuLaden: () => void };
+  /**
+   * „Ø 8:10“ je Punkt, leise unter der Dauer (Dienstplaner L4-4, A8): der Durchschnitt aus den bisherigen Terminen, damit man
+   * realistisch plant. `null` = für diesen Punkt nichts zu zeigen. Ohne diese Angabe zeigt die Liste nichts davon.
+   */
+  schnittText?: (punkt: T) => string | null;
 }
 
 /**
@@ -467,6 +472,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
             infoZellen={infoZellenFuer(item)}
             vorlage={vorlage}
             ohneStift={o.ohneStift}
+            schnitt={item.isHeader ? null : (o.schnittText?.(item) ?? null)}
             aktionen={zeilenAktionen(item, i)}
             {...(spalte !== undefined
               ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }

@@ -57,13 +57,13 @@ function speicher(anfang: Wechsel[] = []) {
       Promise.resolve(
         s.lesenGrund
           ? { ok: false, grund: s.lesenGrund }
-          : { ok: true, wechsel: [...s.wechsel], vorhanden: s.wechsel.length > 0 },
+          : { ok: true, wechsel: [...s.wechsel], ausnahmen: [], vorhanden: s.wechsel.length > 0 },
       ),
   );
   const schreiben = vi.fn((_t: number, neue: readonly Wechsel[]): Promise<VerlaufSchreiben> => {
     if (s.schreibenGrund) return Promise.resolve({ ok: false, grund: s.schreibenGrund });
     s.wechsel = zusammenfuehren(s.wechsel, neue);
-    return Promise.resolve({ ok: true, wechsel: [...s.wechsel] });
+    return Promise.resolve({ ok: true, wechsel: [...s.wechsel], ausnahmen: [] });
   });
   return { s, lesen, schreiben };
 }

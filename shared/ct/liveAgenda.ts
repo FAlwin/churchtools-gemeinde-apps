@@ -60,6 +60,11 @@ export interface LivePunkt {
   dauerSek: number;
   /** Lied ohne Dauer: hängt am vorigen Punkt und wird mit „Weiter“ übersprungen (wie in ChurchTools). */
   liedOhneDauer: boolean;
+  /**
+   * Der Punkt ist ein Lied (hat ein Lied aus ChurchTools, mit oder ohne Dauer) – für den Schnitt im Rückblick, in dem alle
+   * Lieder als „Lied“ zusammenzählen (L4-4, T5). Fehlt es (alte Stände), gilt der Punkt als kein Lied.
+   */
+  lied?: boolean;
   /** An diesem Termin weggelassen (Auge): wird übersprungen, zählt aber mit (gleiche Stelle wie ChurchTools). */
   weggelassen: boolean;
   /** Geplanter Beginn an diesem Termin (ms); `null` ohne Zeit oder wenn weggelassen. */
@@ -185,6 +190,7 @@ export function liveListe(items: readonly CtAgendaItem[], eventId: number): Live
         title: i.title,
         dauerSek,
         liedOhneDauer: dauerSek === 0 && !!i.song,
+        lied: !!i.song,
         weggelassen,
         planBeginn: beginn === null ? null : Date.parse(beginn),
         vorBeginn: i.isBeforeEvent === true,

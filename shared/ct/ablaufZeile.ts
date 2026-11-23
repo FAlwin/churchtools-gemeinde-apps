@@ -142,7 +142,8 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
 /** Das Minimum, das für die Bezeichnung nötig ist. */
 interface TitelQuelle {
   title: string;
-  song: { title: string } | null;
+  /** `null` oder fehlend: kein Lied (der rohe Punkt von ChurchTools lässt das Feld weg). */
+  song?: { title: string } | null;
 }
 
 export interface TitelTeile {

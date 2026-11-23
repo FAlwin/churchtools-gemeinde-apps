@@ -9,7 +9,12 @@ import {
 } from './liveAgenda';
 import {
   abweichungen,
+  ausgenommen,
+  ausnahmenEnthalten,
+  ausnahmenZusammenfuehren,
+  ausnahmeSetzen,
   enthaelt,
+  gelaufenJePunkt,
   FEHLKLICK_MS,
   hatWechsel,
   laeufeAus,
@@ -755,5 +760,128 @@ describe('nachzutragen – was ein offenes Gerät aus CT nachträgt', () => {
   it('nichts ohne Stand, ohne Stelle oder ohne switchdate', () => {
     expect(nachzutragen([], liste, null)).toBeNull();
     expect(nachzutragen([], liste, standVon(null, null))).toBeNull();
+  });
+});
+
+describe('Lied-Merkmal am Wechsel (L4-4, T5)', () => {
+  const MIT_LIED = liveListe(
+    [
+      { id: 1, title: 'Begrüßung', type: 'text', duration: 300 },
+      {
+        id: 2,
+        title: 'Halleluja',
+        type: 'song',
+        duration: 300,
+        song: { title: 'Halleluja', songId: 7, arrangementId: 8 },
+      },
+    ] as CtAgendaItem[],
+    EVENT,
+  );
+
+  it('der Wechsel auf ein Lied trägt `lied`, ein anderer Punkt nicht', () => {
+    expect(wechselAus(MIT_LIED, 2, T0).lied).toBe(true);
+    expect('lied' in wechselAus(MIT_LIED, 1, T0)).toBe(false);
+    expect('lied' in wechselAus(MIT_LIED, 3, T0)).toBe(false);
+  });
+
+  it('zusammenführen behält das Merkmal, auch wenn nur eine Seite es kennt', () => {
+    const alt = { ...wechselAus(MIT_LIED, 2, T0) };
+    delete alt.lied;
+    expect(zusammenfuehren([alt], [wechselAus(MIT_LIED, 2, T0)])[0].lied).toBe(true);
+    expect(zusammenfuehren([wechselAus(MIT_LIED, 2, T0)], [alt])[0].lied).toBe(true);
+  });
+
+  it('ein Stand ohne das Merkmal „enthält“ den Wechsel mit Merkmal noch nicht (er wird ergänzt)', () => {
+    const alt = { ...wechselAus(MIT_LIED, 2, T0) };
+    delete alt.lied;
+    expect(enthaelt([alt], [wechselAus(MIT_LIED, 2, T0)])).toBe(false);
+    expect(enthaelt([wechselAus(MIT_LIED, 2, T0)], [alt])).toBe(true);
+  });
+
+  it('der Lauf weiß, dass er ein Lied ist – auch nach einer Fehlklick-Rückkehr', () => {
+    const v = [
+      wechselAus(MIT_LIED, 2, T0),
+      wechselAus(MIT_LIED, 1, T0 + 300_000),
+      wechselAus(MIT_LIED, 2, T0 + 310_000),
+    ];
+    const { laeufe } = laeufeAus(v);
+    expect(laeufe).toHaveLength(1);
+    expect(laeufe[0]).toMatchObject({ fortgesetzt: true, lied: true });
+  });
+
+  it('ein normaler Punkt ist kein Lied', () => {
+    const { laeufe } = laeufeAus([
+      wechselAus(MIT_LIED, 1, T0),
+      wechselAus(MIT_LIED, 2, T0 + 60_000),
+    ]);
+    expect(laeufe.map((l) => l.lied)).toEqual([false, true]);
+  });
+});
+
+describe('gelaufenJePunkt – die eine Rechnung hinter ±, Rückblick und Ø', () => {
+  it('summiert die wirksamen Läufe je Punkt-ID, Fehlklick-Stopps zählen nicht', () => {
+    const v = [
+      wechselAus(liste, 1, T0),
+      wechselAus(liste, 2, T0 + 295_000),
+      wechselAus(liste, 1, T0 + 300_000), // Fehlklick: nach 5 s zurück
+      wechselAus(liste, 2, T0 + 400_000),
+    ];
+    const g = gelaufenJePunkt(laeufeAus(v).laeufe, T0 + 500_000);
+    expect(g.get(liste[0].id)).toEqual({ ms: 400_000, laeuft: false });
+    expect(g.get(liste[1].id)).toEqual({ ms: 100_000, laeuft: true });
+  });
+
+  it('`abweichungen` rechnet mit denselben Zahlen', () => {
+    const v = [wechselAus(liste, 1, T0), wechselAus(liste, 2, T0 + 400_000)];
+    const laeufe = laeufeAus(v).laeufe;
+    const g = gelaufenJePunkt(laeufe, T0 + 400_000);
+    const a = abweichungen(liste, laeufe, T0 + 400_000, 2);
+    expect(a.get(liste[0].id)?.sek).toBe(
+      Math.round(liste[0].dauerSek - g.get(liste[0].id)!.ms / 1000),
+    );
+  });
+});
+
+describe('Ausnahmen – aus dem Schnitt nehmen (A9)', () => {
+  it('nimmt einen Punkt oder den Termin heraus und wieder hinein', () => {
+    const a = ausnahmeSetzen(ausnahmeSetzen([], 101, true, 1000), null, true, 1001);
+    expect(ausgenommen(a)).toEqual({ termin: true, punkte: new Set([101]) });
+    const b = ausnahmeSetzen(ausnahmeSetzen(a, 101, false, 2000), null, false, 2001);
+    expect(ausgenommen(b)).toEqual({ termin: false, punkte: new Set() });
+  });
+
+  it('die Rücknahme gewinnt auch bei nachgehender Uhr (sie ist sicher neuer)', () => {
+    const aus = ausnahmeSetzen([], 101, true, 5000);
+    const zurueck = ausnahmeSetzen(aus, 101, false, 1000);
+    expect(zurueck.find((x) => x.punkt === 101)?.zeit).toBeGreaterThan(5000);
+    expect(ausgenommen(ausnahmenZusammenfuehren(aus, zurueck)).punkte.size).toBe(0);
+    expect(ausgenommen(ausnahmenZusammenfuehren(zurueck, aus)).punkte.size).toBe(0);
+  });
+
+  it('zusammenführen: zwei Geräte verlieren sich nichts – verschiedene Punkte bleiben beide', () => {
+    const a = ausnahmeSetzen([], 101, true, 1000);
+    const b = ausnahmeSetzen([], 102, true, 1000);
+    expect(ausgenommen(ausnahmenZusammenfuehren(a, b)).punkte).toEqual(new Set([101, 102]));
+  });
+
+  it('dieselbe Markierung zweimal ist keine Doppelung', () => {
+    const a = ausnahmeSetzen([], 101, true, 1000);
+    expect(ausnahmenZusammenfuehren(a, a)).toHaveLength(1);
+  });
+
+  it('bei gleichem Zeitpunkt gewinnt „heraus“', () => {
+    const aus = [{ punkt: 101, zeit: 1000, aus: true }];
+    const rein = [{ punkt: 101, zeit: 1000, aus: false }];
+    expect(ausgenommen(ausnahmenZusammenfuehren(rein, aus)).punkte.has(101)).toBe(true);
+    expect(ausgenommen(ausnahmenZusammenfuehren(aus, rein)).punkte.has(101)).toBe(true);
+  });
+
+  it('enthalten: eine neuere Markierung desselben Punkts genügt, eine ältere nicht', () => {
+    const neu = { punkt: 101, zeit: 2000, aus: false };
+    expect(ausnahmenEnthalten([{ punkt: 101, zeit: 3000, aus: true }], [neu])).toBe(true);
+    expect(ausnahmenEnthalten([{ punkt: 101, zeit: 1000, aus: true }], [neu])).toBe(false);
+    expect(ausnahmenEnthalten([], [neu])).toBe(false);
+    expect(ausnahmenEnthalten([neu], [neu])).toBe(true);
+    expect(ausnahmenEnthalten([], [])).toBe(true);
   });
 });

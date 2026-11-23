@@ -6,8 +6,16 @@
  * beim ersten Mal scheitern. Der Termin „Gottesdienst (Live-Probe)“ (107) beginnt immer in 2–3 Minuten nach dem Laden der
  * Seite – an ihm lassen sich in „Live“ die drei Betriebsarten (Reiter „Einstellungen“), das Zeitkonto sowie (L4-3) ±,
  * „Ende voraussichtlich“, „Warum“ und der Fehlklick-Hinweis ausprobieren (Weiter, gleich wieder Zurück);
- * die Seite neu laden setzt ihn zurück. Wird nie mitgebaut (siehe `main.tsx`).
+ * die Seite neu laden setzt ihn zurück. **Rückblick und Ø (L4-4):** Der Gottesdienst vor einer Woche (108, `#/termin/108`) hat einen
+ * fertigen Live-Verlauf – Karte „Rückblick“ mit eingeholt/überzogen und einer Zeile „nicht im Schnitt“ (die Gebetsgemeinschaft); die zwei
+ * Gottesdienste davor (109, 110) liefern nur ihren Verlauf für „Ø bisher“ (und das leise „Ø“ beim Ablauf bearbeiten, z. B. in 101).
+ * Wird nie mitgebaut (siehe `main.tsx`).
  */
+import { liveListe } from '@shared/ct/liveAgenda';
+import { ausnahmeSetzen, wechselAus, zusammenfuehren, type Wechsel } from '@shared/ct/liveVerlauf';
+import { verlaufText } from '@shared/dienstplan/liveVerlaufSpeicher';
+import type { CtAgendaItem } from '@shared/ct/typen';
+
 const PLANER = {
   view: true,
   'view servicegroup': [1, 3, 4],
@@ -136,6 +144,14 @@ const TERMINE = [
     // Zweite offene Anfrage an Alwin (Licht) – damit „Alle zusagen“ (E7-1) in der Demo erscheint.
     eventServices: [platz(6, null, null), platz(7, 1, 'Alwin'), platz(9, 19, 'Spike')],
   },
+  // Die Gottesdienste der letzten drei Wochen: 108 mit Ablauf und Rückblick, 109 und 110 nur mit ihrem Live-Verlauf (für „Ø bisher“).
+  ...[108, 109, 110].map((id, i) => ({
+    id,
+    name: 'Gottesdienst',
+    startDate: zeit(-7 * (i + 1), '08:00'),
+    endDate: zeit(-7 * (i + 1), '10:00'),
+    eventServices: [platz(6, 1, 'Alwin', true), platz(9, 19, 'Spike', true)],
+  })),
   {
     id: 104,
     name: 'Gemeindeversammlung',
@@ -628,6 +644,45 @@ type DemoPunkt = { id: number; duration?: number; ausgeblendet?: boolean } & Rec
 >;
 
 /**
+ * **Der Ablauf des Gottesdienstes vor einer Woche** (108, L4-4): wie ein richtiger Gottesdienst, mit Soundcheck davor,
+ * zwei Liedern und einer Gebetsgemeinschaft, die ewig dauerte (Ausreißer für „aus dem Schnitt nehmen“). Sein Live-Verlauf
+ * steht in `verlaufDemo`; 109 und 110 haben keinen Ablauf, nur den Verlauf.
+ */
+const ABLAUF_VERGANGEN: DemoPunkt[] = [
+  { id: 61, type: 'normal', title: 'Soundcheck', duration: 300 },
+  { id: 62, type: 'header', title: 'Lobpreis' },
+  { id: 63, type: 'normal', title: 'Begrüßung', duration: 600 },
+  { id: 64, type: 'song', title: 'Lied', duration: 240, song: { title: 'Halleluja' } },
+  { id: 65, type: 'song', title: 'Lied', duration: 240, song: { title: 'Treu' } },
+  { id: 66, type: 'normal', title: 'Gebetsgemeinschaft', duration: 300 },
+  { id: 67, type: 'header', title: 'Predigt' },
+  { id: 68, type: 'normal', title: 'Predigt', duration: 1800 },
+  { id: 69, type: 'normal', title: 'Segen', duration: 300 },
+];
+
+/**
+ * **Die Live-Verläufe der drei vergangenen Gottesdienste** (L4-4): je Punkt, wie lange er lief (Sekunden), in der Reihenfolge von
+ * `ABLAUF_VERGANGEN`. Die Wechsel entstehen mit den Erzeugern (`wechselAus`), der Wert mit `verlaufText` – wie ihn die App ablegt.
+ * 108 ist der mit Rückblick: Die Gebetsgemeinschaft lief 19:40 und ist **aus dem Schnitt genommen**.
+ */
+function verlaufDemo(terminId: number, tage: number, lauf: number[], ausnahmen = false): string {
+  const items = ABLAUF_VERGANGEN as unknown as CtAgendaItem[];
+  const liste = liveListe(items, terminId);
+  const beginn = Date.parse(zeit(tage, '08:00'));
+  // Der Soundcheck beginnt 20 s nach seinem Plan (5 Minuten vor dem Beginn), der Rest folgt Schlag auf Schlag.
+  let t = beginn - 300_000 + 20_000;
+  let wechsel: Wechsel[] = [];
+  lauf.forEach((sek, i) => {
+    wechsel = zusammenfuehren(wechsel, [wechselAus(liste, i + 1, t)]);
+    t += sek * 1000;
+  });
+  wechsel = zusammenfuehren(wechsel, [wechselAus(liste, liste.length + 1, t)]);
+  // Gebetsgemeinschaft (ID 66) aus dem Schnitt – nur im Termin mit Rückblick.
+  const aus = ausnahmen ? ausnahmeSetzen([], 66, true, beginn) : [];
+  return verlaufText(terminId, wechsel, aus) as string;
+}
+
+/**
  * **Der Ablauf des dritten Termins** (103, Gottesdienst eine Woche später) – seit E6-6b, damit sich in der Matrix ein
  * Punkt in einen anderen Termin ziehen lässt. Punkt-IDs eigene als in 101 (in ChurchTools sind sie überall eindeutig).
  */
@@ -884,7 +939,7 @@ function speicherDemo(fall: string) {
     { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },
     // „Einstellungen“ (L4-2): die Betriebsart der Live-Ansicht – leer, es gilt der Standard „bis Beginn“.
     { id: 43, shorty: 'dienstplaner-einstellungen', name: 'Einstellungen' },
-    // „Live-Verlauf“ (L4-3): die Wechsel der Live-Ansicht – leer; die Live-Probe (107) füllt ihn beim Klicken im Speicher, damit ±,
+    // „Live-Verlauf“ (L4-3): die Wechsel der Live-Ansicht – 108–110 sind gefüllt (Rückblick, Ø), die Live-Probe (107) füllt ihn beim Klicken im Speicher, damit ±,
     // „Ende voraussichtlich“, „Warum“ und der Fehlklick-Hinweis (Weiter, gleich wieder Zurück) zu sehen sind.
     { id: 44, shorty: 'dienstplaner-live-verlauf', name: 'Live-Verlauf' },
   ];
@@ -1058,7 +1113,27 @@ function speicherDemo(fall: string) {
     ],
     [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
     [43, []],
-    [44, []],
+    [
+      44,
+      [
+        // 108 (vor einer Woche): Begrüßung 2:40 eingeholt, Predigt 6:40 überzogen, Gebetsgemeinschaft 19:40 (aus dem Schnitt).
+        {
+          id: 440,
+          dataCategoryId: 44,
+          value: verlaufDemo(108, -7, [330, 440, 265, 250, 1180, 2200, 280], true),
+        },
+        {
+          id: 441,
+          dataCategoryId: 44,
+          value: verlaufDemo(109, -14, [300, 520, 230, 240, 330, 1900, 290]),
+        },
+        {
+          id: 442,
+          dataCategoryId: 44,
+          value: verlaufDemo(110, -21, [310, 560, 260, 250, 360, 1750, 300]),
+        },
+      ],
+    ],
   ]);
   let naechste = 500;
   const ids = () => kategorien.map((k) => k.id);
@@ -1185,6 +1260,8 @@ export function demoStarten(fall: string): void {
     ablaufDemo(fall),
     ablaufDemo(fall, 103, 11, ABLAUF_103, 80),
     ablaufDemo(fall, 107, 0, ABLAUF_107, 90, { beginnMs: LIVE_BEGINN, beginnPos: 2 }),
+    // Der Gottesdienst vor einer Woche mit fertigem Live-Verlauf (L4-4): Rückblick und „nicht im Schnitt“.
+    ablaufDemo(fall, 108, -7, ABLAUF_VERGANGEN, 120),
   ];
   const mitDienstplanerRechten = (roh: unknown) => {
     const r = roh as { data: Record<string, unknown> };

@@ -7,7 +7,7 @@ import { AblaufListe } from './AblaufListe';
 import { usePunktAnsicht } from './usePunktAnsicht';
 
 /**
- * **Der Punkt zum Ansehen** (B8, E16/E19/E20/E21): Fenster am iPad/Rechner, eigene Seite am Handy, derselbe Inhalt. Die
+ * **Der Punkt zum Ansehen** (B8, E16/E19/E20/E21, P1): überall eine eigene Seite (breit in Lesebreite, mit ← →), derselbe Inhalt. Die
  * Zeilen kommen aus dem echten `ablaufZeileAus`, damit der Test dieselben Regeln sieht wie die Apps.
  */
 afterEach(() => {
@@ -78,14 +78,14 @@ function Seite({
 
 const oeffne = (titel: string) => fireEvent.click(screen.getByRole('button', { name: titel }));
 
-describe('Einzelansicht – iPad/Rechner: ein Fenster', () => {
+describe('Einzelansicht – breit (iPad/Rechner): dieselbe Seite wie am Handy', () => {
   it('zeigt ALLE Infos des Punkts: Uhrzeit, Dauer, Zuständige, Bemerkung und die Infos je Gruppe (E21)', () => {
     handy(false);
     render(<Seite />);
     oeffne('„Begrüßung“ ansehen');
     const f = screen.getByRole('dialog', { name: 'Begrüßung' });
     const t = f.textContent ?? '';
-    expect(t).toContain('Position 3 von 3');
+    expect(t).toContain('Position 3/3');
     expect(t).toContain('10:04 – 10:07');
     expect(t).toContain('3 Minuten');
     expect(t).toContain('Ben Test');
@@ -97,9 +97,23 @@ describe('Einzelansicht – iPad/Rechner: ein Fenster', () => {
     expect(t).toContain('Technik');
     expect(t).toContain('Mikro 2 an');
     expect(t).not.toContain('Musik');
-    // Ein Ansehen-Fenster hat keine Fußzeile: nur das X.
-    expect(within(f).queryByRole('button', { name: 'Abbrechen' })).toBeNull();
-    expect(within(f).getByRole('button', { name: 'Fenster schließen' })).toBeTruthy();
+    // Eine Seite, kein Fenster: „‹ Ablauf“ statt X, Davor/Danach statt ‹ › oben.
+    expect(within(f).queryByRole('button', { name: 'Fenster schließen' })).toBeNull();
+    expect(within(f).getByRole('button', { name: /Ablauf/ })).toBeTruthy();
+    expect(within(f).getByRole('button', { name: 'Davor' })).toBeTruthy();
+    expect(within(f).queryByRole('button', { name: 'Voriger Punkt' })).toBeNull();
+  });
+
+  it('der Inhalt steht in Lesebreite (eigener Rahmen um Titel und Feldliste), die Leiste Davor/Danach daneben, nicht darin', () => {
+    handy(false);
+    render(<Seite />);
+    oeffne('„Begrüßung“ ansehen');
+    const f = screen.getByRole('dialog', { name: 'Begrüßung' });
+    const lese = f.querySelector('[class*="lesebreite"]');
+    expect(lese).toBeTruthy();
+    expect(within(lese as HTMLElement).getByRole('heading', { name: 'Begrüßung' })).toBeTruthy();
+    expect(within(lese as HTMLElement).getByTestId('punkt-inhalt')).toBeTruthy();
+    expect(within(lese as HTMLElement).queryByRole('button', { name: 'Davor' })).toBeNull();
   });
 
   it('das Lied: Karte mit Tonart und Tempo; Tipp führt zum Lied (und schließt die Ansicht)', () => {
@@ -114,39 +128,72 @@ describe('Einzelansicht – iPad/Rechner: ein Fenster', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('Position zählt nur Punkte, keine Überschriften – ‹ › blättern; am Rand ist der Pfeil gesperrt', () => {
+  it('Position zählt nur Punkte, keine Überschriften – Davor/Danach blättern; am Rand ist der Knopf gesperrt', () => {
     handy(false);
     render(<Seite />);
     oeffne('„Countdown“ ansehen');
-    // Erster Punkt: kein „Davor“.
-    expect(screen.getByRole('button', { name: 'Voriger Punkt' })).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Nächster Punkt' }));
+    expect(screen.getByRole('button', { name: 'Davor' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Danach' }));
     // Die Überschrift „Eventstart“ wird übersprungen: nach dem Countdown kommt das Lied.
     expect(screen.getByRole('dialog', { name: 'Lied – Halleluja' }).textContent).toContain(
-      'Position 2 von 3',
+      'Position 2/3',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Nächster Punkt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Danach' }));
     expect(screen.getByRole('dialog', { name: 'Begrüßung' })).toBeTruthy();
-    // Letzter Punkt: kein „Danach“.
-    expect(screen.getByRole('button', { name: 'Nächster Punkt' })).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Voriger Punkt' }));
+    expect(screen.getByRole('button', { name: 'Danach' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Davor' }));
     expect(screen.getByRole('dialog', { name: 'Lied – Halleluja' })).toBeTruthy();
-    // Blättern ist EIN Fenster, kein Stapel.
+    // Blättern ist EINE Seite, kein Stapel.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
-  it('Escape und X schließen', () => {
+  it('← → blättern wie Davor/Danach, am Rand tut die Taste nichts', () => {
+    handy(false);
+    render(<Seite />);
+    oeffne('„Countdown“ ansehen');
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(screen.getByRole('dialog', { name: 'Countdown' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Lied – Halleluja' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(screen.getByRole('dialog', { name: 'Lied – Halleluja' })).toBeTruthy();
+  });
+
+  it('← → blättern NICHT, solange der Fokus in einem Eingabefeld liegt (Cursor bewegen)', () => {
+    handy(false);
+    render(
+      <>
+        <input aria-label="Suche" />
+        <Seite />
+      </>,
+    );
+    oeffne('„Countdown“ ansehen');
+    const feld = screen.getByRole('textbox', { name: 'Suche' });
+    fireEvent.keyDown(feld, { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Countdown' })).toBeTruthy();
+    // Mit Umschalt/Befehl gehört die Taste dem Browser (Textauswahl, Verlauf).
+    fireEvent.keyDown(document, { key: 'ArrowRight', metaKey: true });
+    expect(screen.getByRole('dialog', { name: 'Countdown' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Lied – Halleluja' })).toBeTruthy();
+  });
+
+  it('Escape und „‹ Ablauf“ schließen', () => {
     handy(false);
     render(<Seite />);
     oeffne('„Begrüßung“ ansehen');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     oeffne('„Begrüßung“ ansehen');
-    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Ablauf/ }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('verschwindet der offene Punkt aus dem Stand, ist die Ansicht zu – kein Geisterfenster, kein Absturz', () => {
+  it('verschwindet der offene Punkt aus dem Stand, ist die Ansicht zu – keine Geisterseite, kein Absturz', () => {
     handy(false);
     const { rerender } = render(<Seite />);
     oeffne('„Begrüßung“ ansehen');
@@ -160,18 +207,16 @@ describe('Einzelansicht – iPad/Rechner: ein Fenster', () => {
     handy(false);
     const { rerender } = render(<Seite />);
     oeffne('„Begrüßung“ ansehen');
-    expect(screen.getByRole('dialog', { name: 'Begrüßung' }).textContent).toContain(
-      'Position 3 von 3',
-    );
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' }).textContent).toContain('Position 3/3');
     rerender(<Seite zeilen={ZEILEN.filter((z) => z.id !== 1)} />);
     const f = screen.getByRole('dialog', { name: 'Begrüßung' });
-    expect(f.textContent).toContain('Position 2 von 2');
+    expect(f.textContent).toContain('Position 2/2');
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 });
 
-describe('Einzelansicht – Handy: eine eigene Seite', () => {
-  it('Seite statt Fenster: „‹ Ablauf“, „Position 3/3“, derselbe Inhalt, Davor/Danach mit Zeit und Titel des Nachbarn', () => {
+describe('Einzelansicht – Handy: dieselbe Seite', () => {
+  it('„‹ Ablauf“, „Position 3/3“, derselbe Inhalt, Davor/Danach mit Zeit und Titel des Nachbarn', () => {
     handy(true);
     render(<Seite />);
     oeffne('„Begrüßung“ ansehen');

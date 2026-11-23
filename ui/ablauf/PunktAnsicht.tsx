@@ -1,20 +1,20 @@
 /**
- * **Ein Ablaufpunkt zum Ansehen** (Bauplan „Ruhige Bedienung“ B8, E16/E19/E20/E21 – wie die ChurchTools-App): „Position 3/10“
- * mit „Davor / Danach“ zum Weiterklicken, und **alle** Infos des Punkts: Uhrzeit, Dauer, Zuständige, Bemerkung, Lied und
- * die Infos je Dienstgruppe.
+ * **Ein Ablaufpunkt zum Ansehen** (Bauplan „Ruhige Bedienung“ B8, E16/E19/E20/E21; Alwin 22.11.2026 „P1“ – wie die
+ * ChurchTools-App): „Position 3/10“ mit „Davor / Danach“ zum Weiterklicken, und **alle** Infos des Punkts: Uhrzeit, Dauer,
+ * Zuständige, Bemerkung, Lied und die Infos je Dienstgruppe.
  *
- * **EIN Inhalt, zwei Hüllen** (E19): `PunktInhalt` ist dieselbe Liste in beiden. Am **Handy** steht sie auf einer eigenen
- * Seite (`PunktSeite`, wie in der App: oben „‹ Ablauf“ und „Position n/m“, unten Davor/Danach), am **iPad und Rechner** in
- * einem Fenster im Aussehen des Punkt-Fensters (`PunktAnsichtFenster`: gleicher Rahmen, ‹ › neben „Position n von m“, nur
- * lesend – ohne Fußzeile, geschlossen wird mit dem X).
+ * **Überall eine Seite** (`PunktSeite`, alle Breiten): oben „‹ Ablauf“ und „Position n/m“, der Titel groß, darunter
+ * `PunktInhalt` (die Feldliste), unten „Davor / Danach“. Auf breiten Bildschirmen steht der Inhalt in **Lesebreite**
+ * mittig, die Leiste unten geht über die ganze Breite; am Rechner blättern **← →**, Escape geht zurück. Das kleine Fenster
+ * in der Mitte (iPad/Rechner) gibt es nicht mehr.
  *
  * Bearbeiten bleibt beim `PunktFenster` (E18) – das hier ist nur das Ansehen. Der Hook `usePunktAnsicht` gibt der Liste
  * (`AblaufListe onPunkt`) ihr Ziel und den Aufrufern die Überlagerung.
  */
+import { useEffect } from 'react';
 import { itemLabel, zeitPlus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { InfoGruppe } from '@shared/types/index';
 import { Icon } from '../icons/icons';
-import { Sheet } from '../fenster/Sheet';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { useEscape } from '../bedienung/useEscape';
 import { Etikett } from '../bedienung/Etikett';
@@ -154,52 +154,20 @@ export function PunktInhalt({ punkt, infoGruppen = [], fotos = false, onLied }: 
   );
 }
 
-interface HuelleProps extends InhaltProps {
-  /** „Position 3 von 10“ – `onVorher`/`onNachher` fehlen am Rand der Liste (erster/letzter Punkt). */
+interface SeiteProps extends InhaltProps {
+  /** „Position 3/10“ – `onVorher`/`onNachher` fehlen am Rand der Liste (erster/letzter Punkt). */
   position: { nr: number; von: number; onVorher?: () => void; onNachher?: () => void };
   onClose: () => void;
-  /** `false` beim Weiterklicken: Das Fenster ersetzt das vorige, ohne neu einzublenden (wie im Punkt-Fenster). */
-  einblenden?: boolean;
+  /** Wohin „‹“ führt – „Ablauf“. */
+  zurueckLabel: string;
+  davor?: AblaufZeile;
+  danach?: AblaufZeile;
 }
 
-/** **Am iPad und Rechner:** ein Fenster im Aussehen des Punkt-Fensters – nur lesend, ohne Fußzeile. */
-export function PunktAnsichtFenster({
-  punkt,
-  position,
-  onClose,
-  einblenden,
-  ...inhalt
-}: HuelleProps) {
-  const zeit = punkt.weggelassen ? 'an diesem Termin weggelassen' : zeitText(punkt);
-  return (
-    <Sheet title={itemLabel(punkt)} onClose={onClose} mittel knoepfe={null} einblenden={einblenden}>
-      <div className={styles.position}>
-        <span className={styles.positionText}>
-          Position {position.nr} von {position.von}
-          {zeit && ` · ${zeit}`}
-        </span>
-        <span className={styles.blaettern}>
-          <button
-            type="button"
-            aria-label="Voriger Punkt"
-            disabled={!position.onVorher}
-            onClick={position.onVorher}
-          >
-            <Icon name="chev-left" size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Nächster Punkt"
-            disabled={!position.onNachher}
-            onClick={position.onNachher}
-          >
-            <Icon name="chev-right" size={18} />
-          </button>
-        </span>
-      </div>
-      <PunktInhalt punkt={punkt} {...inhalt} />
-    </Sheet>
-  );
+/** Liegt der Fokus in einem Feld, das Pfeiltasten selbst braucht (Cursor, Auswahl)? */
+function imEingabefeld(ziel: EventTarget | null): boolean {
+  if (!(ziel instanceof HTMLElement)) return false;
+  return ziel.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ziel.tagName);
 }
 
 /** Der Knopf „Davor“ / „Danach“ unten auf der Seite – mit Zeit und Titel des Nachbarn. */
@@ -236,16 +204,10 @@ function NachbarKnopf({
   );
 }
 
-interface SeiteProps extends HuelleProps {
-  /** Wohin „‹“ führt – „Ablauf“. */
-  zurueckLabel: string;
-  davor?: AblaufZeile;
-  danach?: AblaufZeile;
-}
-
 /**
- * **Am Handy:** eine eigene Seite wie in der ChurchTools-App – oben „‹ Ablauf“ und „Position 3/10“, der Titel groß, darunter
- * dieselbe Liste wie im Fenster, unten „Davor / Danach“ mit Zeit und Titel des Nachbarn.
+ * **Die Seite** (alle Breiten) wie in der ChurchTools-App – oben „‹ Ablauf“ und „Position 3/10“, der Titel groß, darunter
+ * die Feldliste, unten „Davor / Danach“ mit Zeit und Titel des Nachbarn. Breit: Inhalt in Lesebreite, **← →** blättern
+ * (nicht, solange der Fokus in einem Eingabefeld liegt), Escape geht zurück.
  */
 export function PunktSeite({
   punkt,
@@ -257,6 +219,20 @@ export function PunktSeite({
   ...inhalt
 }: SeiteProps) {
   useEscape(true, onClose);
+  const { onVorher, onNachher } = position;
+  useEffect(() => {
+    const taste = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (imEingabefeld(e.target)) return;
+      const weiter =
+        e.key === 'ArrowRight' ? onNachher : e.key === 'ArrowLeft' ? onVorher : undefined;
+      if (!weiter) return;
+      e.preventDefault();
+      weiter();
+    };
+    document.addEventListener('keydown', taste);
+    return () => document.removeEventListener('keydown', taste);
+  }, [onVorher, onNachher]);
   return (
     <BodyPortal>
       <div className={styles.seite} role="dialog" aria-modal="true" aria-label={itemLabel(punkt)}>
@@ -269,8 +245,10 @@ export function PunktSeite({
           </span>
         </div>
         <div className={styles.seitenInhalt}>
-          <h1 className={styles.seitenTitel}>{itemLabel(punkt)}</h1>
-          <PunktInhalt punkt={punkt} {...inhalt} />
+          <div className={styles.lesebreite}>
+            <h1 className={styles.seitenTitel}>{itemLabel(punkt)}</h1>
+            <PunktInhalt punkt={punkt} {...inhalt} />
+          </div>
         </div>
         <div className={styles.nachbarn}>
           <NachbarKnopf art="davor" nachbar={davor} onClick={position.onVorher} />

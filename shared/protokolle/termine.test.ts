@@ -5,6 +5,7 @@ import { teileBauen, type ProtokollKopf, type ProtokollTeil } from './speicher';
 import type { Sitzung } from './sitzungen';
 import {
   aehnlicherTermin,
+  beginnTagWechseln,
   eintragFehler,
   eintragVorbelegung,
   eintragZeitraum,
@@ -119,11 +120,29 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
     expect(eintragVorbelegung({ text: 'Heiligabend, 16 Uhr', datum: '2027-12-24' }, 4)).toEqual({
       kalender: 4,
       titel: 'Heiligabend',
+      untertitel: '',
+      intern: false,
       tag: '2027-12-24',
       ganztaegig: false,
       von: '16:00',
+      endTag: '2027-12-24',
       bis: '17:00',
+      art: 0,
+      frequenz: 1,
+      option: 4,
+      wiederBis: '',
+      weitere: [],
+      ausnahmen: [],
+      beschreibung: '',
+      link: '',
+      imAuftrag: null,
       ort: '',
+      ortStrasse: '',
+      ortPlz: '',
+      ortStadt: '',
+      ortZusatz: '',
+      tags: [],
+      informieren: true,
     });
   });
 
@@ -149,6 +168,43 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
     expect(eintragFehler({ ...gut, ganztaegig: true, von: '', bis: '' })).toBeNull();
   });
 
+  it('eintragFehler mehrtägig: das Ende darf am Folgetag früher in der Uhr liegen, aber nicht vor dem Beginn', () => {
+    const gut = eintragVorbelegung({ text: 'Freizeit, 18 Uhr', datum: '2027-07-02' }, 4);
+    expect(eintragFehler({ ...gut, endTag: '2027-07-04', bis: '10:00' })).toBeNull();
+    expect(eintragFehler({ ...gut, endTag: '2027-07-01' })).toMatch(/vor dem Beginn/);
+    expect(eintragFehler({ ...gut, endTag: '' })).toBeNull(); // leer = derselbe Tag
+    expect(eintragFehler({ ...gut, endTag: 'morgen' })).toMatch(/Enddatum/);
+    expect(eintragFehler({ ...gut, ganztaegig: true, endTag: '2027-07-01' })).toMatch(
+      /vor dem Beginn/,
+    );
+  });
+
+  it('eintragFehler bei einer Wiederholung: „Bis“ ist Pflicht (nur bei automatischen Arten), nicht vor dem Beginn', () => {
+    const gut = eintragVorbelegung({ text: 'Treffen, 19 Uhr', datum: '2027-03-17' }, 4);
+    expect(eintragFehler({ ...gut, art: 7, wiederBis: '' })).toMatch(/Bis/);
+    expect(eintragFehler({ ...gut, art: 7, wiederBis: '2027-03-16' })).toMatch(/Bis/);
+    expect(eintragFehler({ ...gut, art: 7, wiederBis: '2027-03-17' })).toBeNull();
+    expect(eintragFehler({ ...gut, art: 7, wiederBis: '2027-05-01', frequenz: 0 })).toMatch(/Alle/);
+    // Manuell und keine Wiederholung brauchen kein „Bis“.
+    expect(eintragFehler({ ...gut, art: 999, wiederBis: '' })).toBeNull();
+    expect(eintragFehler({ ...gut, art: 0, wiederBis: '' })).toBeNull();
+  });
+
+  it('beginnTagWechseln: das Ende zieht mit, ein späteres Ende bleibt; bei „nach Wochentag“ rechnet das Ordinal neu', () => {
+    const e = eintragVorbelegung({ text: 'Treffen, 19 Uhr', datum: '2027-03-17' }, 4);
+    expect(beginnTagWechseln(e, '2027-03-20')).toMatchObject({
+      tag: '2027-03-20',
+      endTag: '2027-03-20',
+    });
+    const lang = { ...e, endTag: '2027-03-25' };
+    expect(beginnTagWechseln(lang, '2027-03-20')).toMatchObject({ endTag: '2027-03-25' });
+    expect(beginnTagWechseln(lang, '2027-03-30')).toMatchObject({ endTag: '2027-03-30' });
+    expect(beginnTagWechseln({ ...e, art: 32, option: 3 }, '2027-03-30').option).toBe(5);
+    expect(beginnTagWechseln({ ...e, art: 7, option: 3 }, '2027-03-30').option).toBe(3);
+    // Ein angefangenes Datum (leer) bringt nichts durcheinander.
+    expect(beginnTagWechseln({ ...e, art: 32 }, '').option).toBe(e.option);
+  });
+
   it('Zeitraum ganztägig: nur der Tag, Ende = derselbe Tag (einschließlich)', () => {
     expect(
       eintragZeitraum(
@@ -156,6 +212,21 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
         'Europe/Berlin',
       ),
     ).toEqual({ beginn: '2027-04-24', ende: '2027-04-24' });
+  });
+
+  it('Zeitraum mehrtägig: ganztägig bis zum letzten Tag, mit Uhrzeit Ende am Endtag', () => {
+    expect(
+      eintragZeitraum(
+        { tag: '2027-07-02', endTag: '2027-07-04', ganztaegig: true, von: '', bis: '' },
+        'Europe/Berlin',
+      ),
+    ).toEqual({ beginn: '2027-07-02', ende: '2027-07-04' });
+    expect(
+      eintragZeitraum(
+        { tag: '2027-07-02', endTag: '2027-07-04', ganztaegig: false, von: '18:00', bis: '10:00' },
+        'Europe/Berlin',
+      ),
+    ).toEqual({ beginn: '2027-07-02T16:00:00Z', ende: '2027-07-04T08:00:00Z' });
   });
 
   it('Zeitraum mit Uhrzeit: UTC aus der Ortszeit der Gemeinde, im Winter und im Sommer', () => {

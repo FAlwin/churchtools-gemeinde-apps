@@ -15,8 +15,8 @@
  *
  * Wie überall: **vorher frisch lesen, nachher nachlesen** – ein `201` ist kein Beleg (Lehre vom 11.08.2026).
  *
- * **W3b-4 (Untergruppen)** ergänzt den Bereich, dem die Seite gehört, an der Stelle, an der entschieden wird, wer einreichen und
- * freigeben darf (`freigabe.ts`, `darfFreigeben`) – der Wert selbst bleibt, wie er ist.
+ * **Bereiche (W3b-4b):** Der Bereich, dem die Seite gehört, steht an der Seite (`Seite.bereich`), nicht im Status. Wer einreichen
+ * und freigeben darf, entscheidet `darfFreigeben` in `zugang.ts` je Bereich – der Wert selbst bleibt, wie er ist.
  */
 import { z } from 'zod';
 import {

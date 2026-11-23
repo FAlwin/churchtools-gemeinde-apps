@@ -56,6 +56,7 @@ describe('vorlagenAus', () => {
       tags: [3, 5],
       imAuftrag: 19,
       buchungen: [],
+      eventVorlage: null,
     });
   });
 

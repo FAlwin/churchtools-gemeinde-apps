@@ -146,6 +146,7 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
       vorlauf: 15,
       nachlauf: 15,
       buchungen: [],
+      events: {},
     });
   });
 

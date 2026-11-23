@@ -160,6 +160,7 @@ export function App() {
           tagsVerwalten={start.tagsVerwalten}
           ressourcenBuchen={start.ressourcenBuchen}
           ressourcenVerwalten={start.ressourcenVerwalten}
+          eventsAnlegen={start.eventsAnlegen}
           onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
         />
       )}

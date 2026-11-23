@@ -573,13 +573,13 @@ Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene ble
 „Mitarbeit“, nie wird hart gelöscht, und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
 
 **Das Fenster wie der ChurchTools-Kalender (W15-1, 23.11.2026):** Seit W15-1 baut „In Kalender eintragen“ den **Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** nach (Messung
-`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); die weiteren Reiter (Besprechungsanfragen, Anmeldung, Events) folgen in W15-3…5, **Ressourcen** gibt es seit W15-2 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
+`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); die weiteren Reiter (Besprechungsanfragen, Anmeldung) folgen in W15-4/5, **Ressourcen** gibt es seit W15-2 und **Events** seit W15-3 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
 einen gibt. **Links** die Spalte „Termin-Vorlagen <Kalender>“ (`GET /calendars/appointments/templates`, nur die des gewählten Kalenders; am Handy eine Auswahl oben), **rechts** Kalender, Titel, Untertitel,
 „Nur für eingeloggte Personen sichtbar“ (`isInternal`), Ganztägig, **Beginn/Ende** (Datum, Stunde, Minute – mehrtägig), **Wiederholungen** (`repeatId` 0/1/7/31/32/365/999; Monatlich nach Wochentag mit
 `repeatOption` 1–5 und 6 = letzter), **Bis** (`repeatUntil`) und **Alle x** (`repeatFrequency`), **Weitere Termine** (`additionals`), **Ausnahmen** (`exceptions`), Beschreibung, Link, Ort (`address`:
 `name`, `street`, `zip`, `city`, `addition`), Tags (Nummern; neue als Text nur mit „Termin-Tags verwalten“, `churchcal` „admin appointment tags“) und unten „Ersteller über Änderungen informieren“
 (`informOwner`, vorgehakt). **„Bis“-Vorgabe** (gemessen): Wechselt die Art von „Keine“ auf eine automatische, ist Bis = Beginn + `repeatId` Tage; zwischen zwei Arten bleibt es stehen; Manuell hat kein Bis.
-**Vorlage wählen** füllt alles außer dem Datum (Uhrzeit aus `startTime`, Ende = Beginn + `duration` Sekunden, Bis = Beginn + `repeatDuration` Sekunden); Buchungen der Vorlage kommen in die Tabelle des Reiters „Ressourcen“ (W15-2), Events und Anmeldung werden erst in W15-3/5 ausgewertet. **„Als Vorlage speichern“** (leiser Knopf; nur mit `churchcal` „edit calendar entry template“ für den Kalender) schickt `POST /calendars/appointments/templates`, legt
+**Vorlage wählen** füllt alles außer dem Datum (Uhrzeit aus `startTime`, Ende = Beginn + `duration` Sekunden, Bis = Beginn + `repeatDuration` Sekunden); Buchungen der Vorlage kommen in die Tabelle des Reiters „Ressourcen“ (W15-2), Events (W15-3, nur eine erkennbare `eventTemplateId`) und Anmeldung (W15-5). **„Als Vorlage speichern“** (leiser Knopf; nur mit `churchcal` „edit calendar entry template“ für den Kalender) schickt `POST /calendars/appointments/templates`, legt
 **keinen** Termin an und meldet „gespeichert“ erst, wenn die Vorlage in der neu gelesenen Liste steht. Der Ort geht als `address.name` an ChurchTools (`meetingAt` ist veraltet). Der Knopf heißt
 „Speichern“ (R1: nur dieser ist gefüllt). **Noch nicht dabei:** „Im Auftrag von“ (keine Personensuche zum Wiederverwenden; eine Vorlage mit `onBehalfOfPid` wird übernommen und mitgeschickt) und „Bild“ (braucht
 eine eigene Messung). Es gehen weiterhin keine Einladungen raus; „Ersteller informieren“ betrifft nur Mails an den Ersteller bei späteren Änderungen. Handtest TF-PROT-32.
@@ -595,6 +595,20 @@ Luft zu beiden Seiten) und sucht eine Buchung mit `base.appointment.id` = neuer 
 steht seine Meldung im Fenster, nichts ist halb angelegt. Bei „Nur verknüpfen“ wird nichts gebucht (Reiter gesperrt). Termin-Vorlagen tragen Buchungen im Altformat `{resource_id, minpre, minpost,
 status_id}` (Zahlen als Text): Anwenden → Tabelle (nur buchbare, Status ohne Recht 1), „Als Vorlage speichern“ schreibt dasselbe Format. Offen: Notiz je Buchung (die Schnittstelle kennt sie beim Anlegen
 nicht), `isAutoAccept` wird nicht ausgewertet.
+
+**Reiter „Events“ (W15-3, 23.11.2026):** Reiterleiste **Kalender · Events · Ressourcen** (Reihenfolge wie ChurchTools). Den Reiter gibt es nur, wenn `GET /permissions/global` → `churchservice` „edit
+events“ (Kalender-IDs) den **gewählten Kalender** enthält (`shared/ct/eventRechte.ts`; Kalender wechseln → Reiter kommt/geht, gesendet werden Events nur, wo das Recht gilt). Die Tabelle
+**Event-Datum | Eventvorlage** hat eine Zeile je Einzeltermin der Reihe (`shared/protokolle/terminReihe.ts` → `einzeltermine`, höchstens 200 mit Hinweis) und eine Auswahl der Eventvorlagen
+(`GET /eventtemplates`, nicht nach Kalender gefiltert wie in ChurchTools; **die Nummer 0 „Standard“ ist gültig** – `Eintrag.events` ist Tag → Nummer, ein fehlender Tag heißt „kein Event“).
+Eine Vorlage bei mehr als einer Zeile fragt „Soll die Vorlage für alle Termine übernommen werden?“ (`ConfirmDialog`; Bestätigen = alle, Abbrechen = nur diese). **Reihen-Regeln:** täglich/wöchentlich alle
+n Tage/Wochen bis „Bis“ (einschließlich); monatlich nach Datum am selben Tag (31. fehlt in kurzen Monaten → Monat fällt aus); monatlich nach Wochentag n-ter Wochentag (5. nur wenn vorhanden, 6 = letzter);
+jährlich gleicher Tag (29.02. nur in Schaltjahren); manuell = Beginn + weitere Termine; Ausnahmen fallen weg, weitere kommen dazu (sortiert, ohne Doppelte); der Beginn zählt immer mit (ungemessen:
+ob ChurchTools ihn bei „Monatlich nach Wochentag“ auch zählt, wenn er nicht zur Option passt). `terminRumpf` schreibt `events: [{startDate, eventTemplateId}]` nur für Zeilen mit Vorlage; **`startDate` =
+exakter UTC-Beginn des Einzeltermins** (`einzelterminBeginn`, Ortszeit → UTC mit der Zeitumstellung des Tages; ganztägig 00:00 Ortszeit, 10.02.2027 → `2027-02-09T23:00:00Z`, gemessen) – ChurchTools
+antwortet 422, wenn ein Datum nicht zur Reihe passt. **Erfolg ist kein Beleg:** Nach dem Anlegen liest `eventsNachlesen` `GET /events?from&to` (ein Tag Luft) und sucht je Zeile ein Event mit
+`appointmentId` = neuer Termin und gleichem `startDate`; fehlt eines, bleibt der Termin, der Vermerk entsteht, das Fenster nennt die Termine („bitte in ChurchTools anlegen“, eine gemeinsame Meldung
+mit den Buchungen – `hinweiseZusammen`); scheitert das Lesen, ist es „unklar“, nie „fehlt“. Bei „Nur verknüpfen“ gesperrt. Termin-Vorlagen: `events` hat ein ungemessenes Format – gelesen wird nur eine
+erkennbare `eventTemplateId` (in alle Zeilen); „Als Vorlage speichern“ schreibt keine Events. Termin löschen löscht seine Events mit (gemessen).
 
 Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
 eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in den Einstellungen.
@@ -629,6 +643,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   Rechte `vorlagenKalender`/`darfTagsVerwalten` in `shared/ct/kalenderRechte.ts` (über `start.ts` bis ins Fenster).
 - Ressourcen im Fenster (W15-2): Regeln `shared/protokolle/terminRessourcen.ts` (+ `terminRessourcenZeit.ts`), Rechte `shared/ct/ressourcenRechte.ts` (`buchbareRessourcen`,
   `verwaltbareRessourcen`), Lesen/Nachlesen `protokolle/src/buchungenLesen.ts`, Oberfläche `TerminRessourcen.tsx`; `Eintrag.vorlauf/nachlauf/buchungen`, `terminLegen` → `buchungen`.
+- Events im Fenster (W15-3): Reihe `shared/protokolle/terminReihe.ts`, Regeln `terminEvents.ts`, Recht `shared/ct/eventRechte.ts` (`eventKalender`), Lesen/Nachlesen `protokolle/src/eventsLesen.ts`,
+  Oberfläche `TerminEvents.tsx`; `Eintrag.events`, `TerminVorlage.eventVorlage`, `terminLegen` → `events`.
 - Bausteine (W12, Stil A „ruhig“): Beschluss, To-Do und Termin haben **keine Fläche**, nur einen 3-px-Farbrand links (grün, grau, blau; Etikett
   „BESCHLUSS“, Termin-Datum blau fett, To-Do mit Kreis). EINE Stelle für Editor und Lese-Ansicht: `ProtokollAnsicht.module.scss` (`.marke`,
   `.aufgabe`, `.beschluss`, `.termin`; `EditorBloecke.tsx` nimmt dieselben Klassen, `EditorBloecke.module.scss` macht Wer/Bis leise); PDF:

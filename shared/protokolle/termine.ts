@@ -162,6 +162,11 @@ export interface Eintrag extends Wiederholung {
   nachlauf: number;
   /** Die Buchungen (nur Ressourcen, die die Person buchen darf). */
   buchungen: Buchung[];
+  /**
+   * Reiter „Events“ (W15-3): je Einzeltermin der Reihe (Tag `JJJJ-MM-TT`) die gewählte Eventvorlage. Fehlt ein Tag, gibt es
+   * für ihn kein Event. **Die Nummer 0 („Standard“) ist gültig** – darum nie auf „leer“/falsy prüfen.
+   */
+  events: Record<string, number>;
 }
 
 /** Eine Stunde später, am selben Tag (nach 23:00 bleibt es 23:59 – ChurchTools-Termine hier enden nie am Folgetag). */
@@ -209,6 +214,7 @@ export function eintragVorbelegung(
     vorlauf: laufVorgabe(uhrzeit === null),
     nachlauf: laufVorgabe(uhrzeit === null),
     buchungen: [],
+    events: {},
   };
 }
 

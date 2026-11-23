@@ -52,6 +52,7 @@ export function Termine({
   tagsVerwalten = false,
   ressourcenBuchen = KEINE_RESSOURCEN,
   ressourcenVerwalten = KEINE_RESSOURCEN,
+  eventsAnlegen = KEINE_RESSOURCEN,
   onZeigen,
 }: {
   modul: number;
@@ -65,6 +66,8 @@ export function Termine({
   /** Ressourcen, die man buchen bzw. verwalten darf (W15-2) – Reiter „Ressourcen“ im Fenster. */
   ressourcenBuchen?: readonly number[];
   ressourcenVerwalten?: readonly number[];
+  /** Kalender, in denen man Events anlegen darf (W15-3) – Reiter „Events“ im Fenster. */
+  eventsAnlegen?: readonly number[];
   /** „Im Protokoll zeigen“: die Sitzung öffnen und zum Tagesordnungspunkt springen. */
   onZeigen: (gruppe: number, sitzung: string, punkt: string | null) => void;
 }) {
@@ -290,6 +293,7 @@ export function Termine({
           tagsVerwalten={tagsVerwalten}
           ressourcenBuchen={ressourcenBuchen}
           ressourcenVerwalten={ressourcenVerwalten}
+          eventsAnlegen={eventsAnlegen}
           ort={{ modul, kategorie: mitMitarbeit.gruppe.mitarbeit }}
           ich={ich.person}
           zeitzone={zeitzone}

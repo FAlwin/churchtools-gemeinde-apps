@@ -185,6 +185,114 @@ describe('terminLegen mit den Feldern des Reiters „Kalender“ (W15-1)', () =>
   });
 });
 
+/** Events (W15-3): Ein `201` ist kein Beleg – die Events werden nachgelesen. */
+describe('terminLegen mit Events', () => {
+  const REIHE = {
+    ...MIT_UHR,
+    art: WIEDERHOLUNG.woechentlich,
+    wiederBis: '2027-12-31',
+  };
+  const mitEvents = (events: Record<string, number>) => ({ ...REIHE, events });
+
+  it('alle da: der Rumpf trägt je gewählter Zeile ein Event mit dem exakten UTC-Beginn (Winterzeit), das Nachlesen findet sie', async () => {
+    const r = await terminLegen({
+      eintrag: mitEvents({ '2027-12-24': 3, '2027-12-31': 0 }),
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf?.events).toEqual([
+      { startDate: '2027-12-24T15:00:00Z', eventTemplateId: 3 },
+      { startDate: '2027-12-31T15:00:00Z', eventTemplateId: 0 },
+    ]);
+    expect(r.events).toEqual({ fehlend: [], unklar: false });
+    expect(ct.events.map((x) => x.appointmentId)).toEqual([r.id, r.id]);
+    expect(ct.eventsAnfrage).toBe('?from=2027-12-23&to=2028-01-01');
+  });
+
+  it('Sommerzeit: der Beginn jeder Zeile hat den Abstand ihres eigenen Tages', async () => {
+    await terminLegen({
+      eintrag: {
+        ...REIHE,
+        tag: '2027-03-23',
+        wiederBis: '2027-04-06',
+        events: { '2027-03-23': 1, '2027-03-30': 1 },
+      },
+      zeitzone: ZONE,
+    });
+    expect((ct.terminRumpf?.events as { startDate: string }[]).map((x) => x.startDate)).toEqual([
+      '2027-03-23T15:00:00Z',
+      '2027-03-30T14:00:00Z',
+    ]);
+  });
+
+  it('ohne gewählte Zeile: kein `events` im Rumpf, kein Nachlesen, kein `events` im Ergebnis', async () => {
+    const r = await terminLegen({ eintrag: mitEvents({}), zeitzone: ZONE });
+    expect(ct.terminRumpf).not.toHaveProperty('events');
+    expect(ct.eventsAnfrage).toBeNull();
+    expect(r.events).toBeUndefined();
+  });
+
+  it('ChurchTools sagt 201 und legt ein Event nicht an: genau dieser Tag fehlt – der Termin steht', async () => {
+    ct.eventsSchlucken.add('2027-12-31T15:00:00Z');
+    const r = await terminLegen({
+      eintrag: mitEvents({ '2027-12-24': 3, '2027-12-31': 3 }),
+      zeitzone: ZONE,
+    });
+    expect(r.events).toEqual({ fehlend: ['2027-12-31'], unklar: false });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('ein Event desselben Beginns an einem ANDEREN Termin zählt nicht', async () => {
+    ct.events.push({
+      id: 9001,
+      appointmentId: 9999,
+      startDate: '2027-12-24T15:00:00Z',
+      eventTemplateId: 1,
+    });
+    ct.eventsSchlucken.add('2027-12-24T15:00:00Z');
+    const r = await terminLegen({ eintrag: mitEvents({ '2027-12-24': 1 }), zeitzone: ZONE });
+    expect(r.events).toEqual({ fehlend: ['2027-12-24'], unklar: false });
+  });
+
+  it('Nachlesen scheitert: „unklar“, nicht „fehlt“ – der Termin steht trotzdem, nichts wird geworfen', async () => {
+    ct.eventsLesenFehler = true;
+    const r = await terminLegen({ eintrag: mitEvents({ '2027-12-24': 3 }), zeitzone: ZONE });
+    expect(r.events).toEqual({ fehlend: [], unklar: true });
+    expect(r.art).toBe('angelegt');
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('Buchungen und Events zusammen: beides wird nachgelesen', async () => {
+    const r = await terminLegen({
+      eintrag: {
+        ...mitEvents({ '2027-12-24': 3 }),
+        buchungen: [{ ressource: 1, vorlauf: 0, nachlauf: 0, status: 1, menge: 1 }],
+      },
+      zeitzone: ZONE,
+    });
+    expect(r.buchungen).toEqual({ fehlend: [], unklar: false });
+    expect(r.events).toEqual({ fehlend: [], unklar: false });
+  });
+
+  it('„Nur verknüpfen“: nichts wird angelegt, es gibt keine Events', async () => {
+    const r = await terminLegen({
+      eintrag: mitEvents({ '2027-12-24': 3 }),
+      zeitzone: ZONE,
+      verknuepfen: { id: 161, titel: 'Heiligabend', beginn: '2027-12-24T15:00:00Z' },
+    });
+    expect(r).toEqual({ art: 'verknuepft', id: 161 });
+    expect(posts()).toEqual([]);
+    expect(ct.events).toEqual([]);
+  });
+
+  it('ChurchTools lehnt das Anlegen ab (422): nichts wird nachgelesen, die Meldung geht weiter', async () => {
+    ct.terminFehler = { status: 422, angelegt: false };
+    await expect(
+      terminLegen({ eintrag: mitEvents({ '2027-12-24': 3 }), zeitzone: ZONE }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(ct.eventsAnfrage).toBeNull();
+  });
+});
+
 /** Ressourcen (W15-2): Ein `201` ist kein Beleg – die Buchungen werden nachgelesen. */
 describe('terminLegen mit Buchungen', () => {
   const buchung = (ressource: number, extra = {}) => ({

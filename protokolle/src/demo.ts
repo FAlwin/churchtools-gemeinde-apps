@@ -730,6 +730,8 @@ interface Speicher {
   vorlagen: Record<string, unknown>[];
   /** Ressourcen-Buchungen (W15-2) – von `POST …/appointments` angelegt, von `GET /bookings` gelesen. */
   buchungen: { resourceId: number; appointmentId: number }[];
+  /** Events (W15-3) – von `POST …/appointments` angelegt, von `GET /events` gelesen. */
+  events: { id: number; appointmentId: number; startDate: string; eventTemplateId: number }[];
 }
 
 /**
@@ -747,6 +749,12 @@ const DEMO_RESSOURCEN_TYPEN = [
   { id: 10, name: 'Raum', nameTranslated: 'Raum' },
   { id: 11, name: 'Gegenstand', nameTranslated: 'Gegenstand' },
   { id: 12, name: 'Fahrzeug', nameTranslated: 'Fahrzeug' },
+];
+
+/** Zwei Eventvorlagen für den Reiter „Events“ (W15-3) – die erste mit der Nummer 0, wie „Standard“ in ChurchTools (gemessen). */
+const DEMO_EVENTVORLAGEN = [
+  { id: 0, templateName: 'Standard', calendarId: 4 },
+  { id: 3, templateName: 'Gottesdienst mit Abendmahl', calendarId: 4 },
 ];
 
 /** Zwei Termin-Vorlagen für den Kalender „Gemeindeleitung“ (W15-1) – Formen wie gemessen (`messung-w15-0`). */
@@ -881,6 +889,7 @@ function speicherAnlegen(fall: string): Speicher {
     beitraege: [],
     vorlagen: [...DEMO_VORLAGEN],
     buchungen: [],
+    events: [],
   };
 }
 
@@ -951,6 +960,9 @@ function antwort(
           fall === 'mitglied'
             ? {}
             : { 'create bookings': [1, 2, 3, 4, 5], 'administer bookings': [1, 2] },
+        // W15-3: Events anlegen nur im Kalender 4 („Gemeindeleitung“), nicht im Kalender 2 – so zeigt die Demo, dass der Reiter
+        // „Events“ je gewähltem Kalender kommt und geht. Ein Mitglied darf keine.
+        churchservice: { 'edit events': fall === 'mitglied' ? [] : [4] },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
           'view custom data': [60, 61, 70, 80, 81, 5],
@@ -1025,6 +1037,23 @@ function antwort(
       return { status: 201, data: { id } };
     }
     return { status: 200, data: s.vorlagen };
+  }
+  if (pfad === '/api/eventtemplates') return { status: 200, data: DEMO_EVENTVORLAGEN };
+  if (pfad === '/api/events') {
+    const von = abfrage.get('from') ?? '';
+    const bis = abfrage.get('to') ?? '9999';
+    return {
+      status: 200,
+      data: s.events
+        .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
+        .map((x) => ({
+          id: x.id,
+          name: 'Event',
+          appointmentId: x.appointmentId,
+          startDate: x.startDate,
+          isCanceled: false,
+        })),
+    };
   }
   if (pfad === '/api/resources') return { status: 200, data: DEMO_RESSOURCEN };
   if (pfad === '/api/resourcetypes') return { status: 200, data: DEMO_RESSOURCEN_TYPEN };
@@ -1103,6 +1132,16 @@ function antwort(
     // Wie ChurchTools: Die Antwort enthält die Buchungen nicht – sie stehen erst in `GET /bookings`.
     for (const b of (rumpf.bookings as { resourceId: number }[] | undefined) ?? [])
       s.buchungen.push({ resourceId: Number(b.resourceId), appointmentId: id });
+    // Events (W15-3): wie ChurchTools nur mit der Antwort „201“ – gelesen wird `GET /events`.
+    for (const x of (rumpf.events as
+      | { startDate: string; eventTemplateId: number }[]
+      | undefined) ?? [])
+      s.events.push({
+        id: s.naechste++,
+        appointmentId: id,
+        startDate: x.startDate,
+        eventTemplateId: x.eventTemplateId,
+      });
     return { status: 201, data: { id } };
   }
   const termin = /^\/api\/calendars\/\d+\/appointments\/(\d+)$/.exec(pfad);

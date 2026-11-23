@@ -11,13 +11,16 @@
  * **Buchungen** (W15-2) stehen im Altformat `bookings: [{resource_id: "3", minpre: "150", minpost: "60", status_id: 1}]`
  * (Zahlen als Text, gemessen 23.11.2026): Beim Anwenden kommen sie in die Tabelle des Reiters „Ressourcen“ – nur Ressourcen,
  * die die Person buchen darf, der Status ohne Verwalten-Recht als „Wartet auf Bestätigung“ –, beim Speichern gehen sie im
- * selben Format wieder hinaus. Events und Anmeldung stehen auch in der Vorlage – sie werden erst in W15-3/5 ausgewertet
- * und hier **nicht** übernommen.
+ * selben Format wieder hinaus. **Events** (W15-3): Die Vorlage trägt „Stored service-planning event template selections“ in
+ * `events` – das Format ist **nicht gemessen**; erkennbar ist nur eine `eventTemplateId` (`eventVorlageAus`), die dann beim
+ * Anwenden in alle Zeilen des Reiters „Events“ kommt. Beim Speichern schreiben wir nichts dazu. Die Anmeldung steht auch in
+ * der Vorlage – sie wird erst in W15-5 ausgewertet und hier **nicht** übernommen.
  */
 import { plusTage } from '../ct/datum';
 import type { Eintrag } from './termine';
 import { eintragAdresse, type TerminAdresse } from './terminFelder';
 import { buchungenAufRechte, type Buchung } from './terminRessourcen';
+import { vorlageFuerAlle } from './terminEvents';
 import { bisVorgabe, istAutomatisch, ordinalAusDatum, WIEDERHOLUNG } from './terminWiederholung';
 
 const TAGSEKUNDEN = 86_400;
@@ -48,6 +51,8 @@ export interface TerminVorlage {
   imAuftrag: number | null;
   /** Gebuchte Ressourcen (aus dem Altformat `bookings`). */
   buchungen: Buchung[];
+  /** Die Eventvorlage, die `events` erkennbar nennt (W15-3) – `null`, wenn keine. **0 ist gültig.** */
+  eventVorlage: number | null;
 }
 
 const zahl = (x: unknown): number | null => {
@@ -95,6 +100,19 @@ function buchungenAus(roh: unknown): Buchung[] {
   });
 }
 
+/**
+ * Die Eventvorlage einer Termin-Vorlage: Das Format von `events` ist ungemessen – tolerant gelesen wird eine Liste, deren
+ * erster Eintrag mit einer ganzzahligen `eventTemplateId` (Zahl oder Text) sie nennt. Sonst `null` (ignoriert). Die Nummer
+ * 0 ist gültig und bleibt 0.
+ */
+function eventVorlageAus(roh: unknown): number | null {
+  for (const x of Array.isArray(roh) ? roh : []) {
+    const n = zahl(objekt(x)?.eventTemplateId);
+    if (n !== null && Number.isInteger(n) && n >= 0) return n;
+  }
+  return null;
+}
+
 /** Eine Vorlage aus der Antwort von ChurchTools – `null`, wenn Nummer, Kalender oder Titel fehlen. */
 function vorlageAus(roh: unknown): TerminVorlage | null {
   const o = objekt(roh);
@@ -128,6 +146,7 @@ function vorlageAus(roh: unknown): TerminVorlage | null {
     tags,
     imAuftrag: zahl(o.onBehalfOfPid),
     buchungen: buchungenAus(o.bookings),
+    eventVorlage: eventVorlageAus(o.events),
   };
 }
 
@@ -193,7 +212,7 @@ export function vorlageAnwenden(
     : plusSekunden(e.tag, von, v.dauer);
   const art = v.art;
   const automatisch = istAutomatisch(art);
-  return {
+  const neu: Eintrag = {
     ...e,
     titel: v.titel,
     untertitel: v.untertitel,
@@ -225,7 +244,10 @@ export function vorlageAnwenden(
     tags: v.tags,
     imAuftrag: v.imAuftrag,
     buchungen: buchungenAufRechte(v.buchungen, rechte.buchbar, rechte.verwaltbar),
+    events: {},
   };
+  // Events (W15-3): Nennt die Vorlage eine Eventvorlage, kommt sie in alle Zeilen der neuen Reihe (0 zählt!).
+  return v.eventVorlage === null ? neu : { ...neu, events: vorlageFuerAlle(neu, v.eventVorlage) };
 }
 
 /**

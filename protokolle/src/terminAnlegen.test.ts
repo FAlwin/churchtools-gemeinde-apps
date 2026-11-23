@@ -259,6 +259,36 @@ describe('terminRumpf aus dem Fenster (W15-1)', () => {
     });
   });
 
+  describe('Events (W15-3)', () => {
+    const rumpfMit = (events: { startDate: string; eventTemplateId: number }[] | undefined) =>
+      terminRumpf({ ...MIT_UHR, ...eintragZusatz(eintrag(), false), events });
+
+    it('ohne Events (oder eine leere Liste) kein `events`', () => {
+      expect(rumpfMit(undefined)).not.toHaveProperty('events');
+      expect(rumpfMit([])).not.toHaveProperty('events');
+      expect(rumpf(eintrag())).not.toHaveProperty('events');
+    });
+
+    it('je Zeile `startDate` und `eventTemplateId` – die Nummer 0 („Standard“) geht mit, sie ist nicht „leer“', () => {
+      expect(
+        rumpfMit([
+          { startDate: '2027-12-24T15:00:00Z', eventTemplateId: 0 },
+          { startDate: '2027-12-31T15:00:00Z', eventTemplateId: 7 },
+        ]).events,
+      ).toEqual([
+        { startDate: '2027-12-24T15:00:00Z', eventTemplateId: 0 },
+        { startDate: '2027-12-31T15:00:00Z', eventTemplateId: 7 },
+      ]);
+    });
+
+    it('der Rest der Zeile (Tag) geht nicht zu ChurchTools', () => {
+      const r = rumpfMit([
+        { startDate: '2027-12-24T15:00:00Z', eventTemplateId: 1, tag: '2027-12-24' } as never,
+      ]);
+      expect(JSON.stringify(r.events)).not.toMatch(/tag/);
+    });
+  });
+
   it('keine `meetingrequests` – das ist W15-4 (Besprechungsanfragen)', () => {
     expect(rumpf(eintrag())).not.toHaveProperty('meetingrequests');
   });

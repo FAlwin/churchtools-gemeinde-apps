@@ -17,6 +17,7 @@ import {
   schreibbareKalender,
   vorlagenKalender,
 } from '@shared/ct/kalenderRechte';
+import { eventKalender } from '@shared/ct/eventRechte';
 import { buchbareRessourcen, verwaltbareRessourcen } from '@shared/ct/ressourcenRechte';
 import { ctDaten } from '@ui/ct/verbindung';
 
@@ -45,6 +46,8 @@ export interface Start {
   ressourcenBuchen: number[];
   /** Ressourcen, bei denen man den Status einer Buchung setzen darf („administer bookings“). */
   ressourcenVerwalten: number[];
+  /** Kalender, in denen man Events anlegen darf (`churchservice` „edit events“, W15-3) – nur dort gibt es den Reiter „Events“. */
+  eventsAnlegen: number[];
 }
 
 export async function ladeStart(): Promise<Start> {
@@ -70,5 +73,6 @@ export async function ladeStart(): Promise<Start> {
     tagsVerwalten: darfTagsVerwalten(rechte),
     ressourcenBuchen: [...buchbareRessourcen(rechte)],
     ressourcenVerwalten: [...verwaltbareRessourcen(rechte)],
+    eventsAnlegen: [...eventKalender(rechte)],
   };
 }

@@ -4,6 +4,7 @@ import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
+import { itemLabel } from '@shared/ct/ablaufZeile';
 import { tagMonat } from '@shared/ct/datum';
 import { kontoText, liveListe, restText } from '@shared/ct/liveAgenda';
 import { ausnahmeSetzen, type Ausnahme } from '@shared/ct/liveVerlauf';
@@ -77,6 +78,11 @@ export function Rueckblick({
   const handy = useMedienAbfrage(HANDY_BREITE);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // Dieselbe Bezeichnung wie in der Live-Liste („Lied – Halleluja“): `itemLabel`, nicht nachgebaut.
+  const bezeichnung = useMemo(() => {
+    const nachId = new Map(items.map((i) => [i.id, itemLabel(i)]));
+    return (p: { id: number; title: string }) => nachId.get(p.id) ?? p.title;
+  }, [items]);
   const rb = useMemo(
     () => rueckblickAus(liveListe(items, terminId), verlauf),
     [items, terminId, verlauf],
@@ -153,7 +159,7 @@ export function Rueckblick({
         className={`${styles.zeile}${z.ausgenommen ? ` ${styles.raus}` : ''}`}
       >
         <span role="cell" className={styles.titel}>
-          <span className={styles.name}>{z.punkt.title}</span>
+          <span className={styles.name}>{bezeichnung(z.punkt)}</span>
           {z.ausgenommen && (
             <Etikett title="Dieser Punkt zählt nicht für „Ø bisher“.">nicht im Schnitt</Etikett>
           )}
@@ -180,7 +186,7 @@ export function Rueckblick({
           </span>
         )}
         <span role="cell" className={styles.menue}>
-          <MehrMenue optionen={menue} handy={handy} titel={`Mehr – ${z.punkt.title}`} />
+          <MehrMenue optionen={menue} handy={handy} titel={`Mehr – ${bezeichnung(z.punkt)}`} />
         </span>
       </div>
     );
@@ -227,7 +233,7 @@ export function Rueckblick({
           <div className={styles.chip}>
             Am meisten eingeholt
             <b>
-              {rb.eingeholt.punkt.title} <PlusMinus sek={rb.eingeholt.sek} />
+              {bezeichnung(rb.eingeholt.punkt)} <PlusMinus sek={rb.eingeholt.sek} />
             </b>
           </div>
         )}
@@ -235,7 +241,7 @@ export function Rueckblick({
           <div className={styles.chip}>
             Am meisten überzogen
             <b>
-              {rb.ueberzogen.punkt.title} <PlusMinus sek={rb.ueberzogen.sek} />
+              {bezeichnung(rb.ueberzogen.punkt)} <PlusMinus sek={rb.ueberzogen.sek} />
             </b>
           </div>
         )}

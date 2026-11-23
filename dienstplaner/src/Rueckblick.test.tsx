@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { HANDY_BREITE } from '@ui/bedienung/useMedienAbfrage';
+import { itemLabel } from '@shared/ct/ablaufZeile';
 import { endeStelle, liveListe } from '@shared/ct/liveAgenda';
 import { ausnahmeSetzen, wechselAus, zusammenfuehren, type Wechsel } from '@shared/ct/liveVerlauf';
 import { schnittAus, schnittSchluessel, type VerlaufTermin } from '@shared/ct/liveRueckblick';
@@ -147,7 +148,7 @@ describe('Rückblick – was die Karte zeigt (A6, A18)', () => {
       'Lobpreis',
       'Predigt',
     ]);
-    const lied = zeileVon('Lied');
+    const lied = zeileVon(itemLabel(ITEMS[2]));
     expect(lied.textContent).toContain('4:00'); // Plan
     expect(lied.textContent).toContain('4:10'); // gelaufen 250 s
     expect(lied.textContent).toContain(`${MINUS}0:10`);
@@ -179,6 +180,37 @@ describe('Rückblick – was die Karte zeigt (A6, A18)', () => {
     expect(z.textContent).toContain('Gelaufen 36:40');
     expect(z.textContent).toContain(`${MINUS}6:40`);
     expect(z.textContent).toMatch(/Ø bisher .*×/);
+  });
+});
+
+describe('Bezeichnung wie in der Live-Liste', () => {
+  it('Lieder heißen „Lied – Halleluja“ (itemLabel, nicht nachgebaut) – in der Zeile und im Menü-Titel', () => {
+    zeige();
+    const soll = itemLabel(ITEMS[2]);
+    expect(soll).toBe('Lied – Halleluja');
+    expect(within(zeileVon(soll)).getByRole('button', { name: `Mehr – ${soll}` })).toBeTruthy();
+    // Jede Zeile trägt genau die Bezeichnung des Erzeugers
+    for (const i of ITEMS.filter((x) => x.type !== 'header' && x.id !== 1)) {
+      expect(zeileVon(itemLabel(i))).toBeTruthy();
+    }
+  });
+
+  it('auch bei „am meisten eingeholt/überzogen“', () => {
+    const lang = [
+      [1, 0],
+      [2, 300],
+      [3, 300 + 1000],
+      [4, 300 + 1000 + 400],
+      [5, 300 + 1000 + 400 + 300],
+      [ENDE, 300 + 1000 + 400 + 300 + 1800],
+    ].reduce<Wechsel[]>(
+      (a, [st, sek]) => zusammenfuehren(a, [wechselAus(liste, st, T0 + sek * 1000)]),
+      [],
+    );
+    zeige({}, { wechsel: lang, ausnahmen: [] });
+    expect(screen.getByText('Am meisten überzogen').parentElement?.textContent).toContain(
+      itemLabel(ITEMS[2]),
+    );
   });
 });
 

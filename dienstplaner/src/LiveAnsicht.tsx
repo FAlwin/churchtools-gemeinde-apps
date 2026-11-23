@@ -6,7 +6,7 @@ import { NachbarKnopf } from '@ui/ablauf/NachbarKnopf';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
-import { itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { itemLabel, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { tagKurz } from '@shared/ct/datum';
 import {
   endeStelle,
@@ -348,9 +348,8 @@ export function LiveAnsicht({
   const teile = (p: LivePunkt) => {
     const z = zeileVon.get(p.id);
     if (!z) return { titel: p.title, wer: '', zeile: null };
-    const { title, songName } = itemTitleParts(z);
     return {
-      titel: songName ? `${title} – ${songName}` : title,
+      titel: itemLabel(z),
       wer: z.responsible.map((r) => r.label).join(', '),
       zeile: z,
     };

@@ -5,17 +5,18 @@
  * `TZ=Europe/Berlin`: gerechnet wird auf Kalendertagen in UTC, nie mit der Zeitzone des Geräts).
  *
  * - **Täglich / wöchentlich:** alle `frequenz` Tage bzw. Wochen ab dem Beginn bis „Bis“ (einschließlich).
- * - **Monatlich nach Datum:** jeder `frequenz`-te Monat am selben Tag; gibt es den Tag im Monat nicht (31.), fällt der
- *   Monat aus.
+ * - **Monatlich nach Datum / jährlich:** wie ChurchTools **Schritt für Schritt vom vorigen Termin** `frequenz` Monate bzw.
+ *   Jahre weiter – gibt es den Tag nicht, läuft er in den Folgemonat über, und von DORT geht es weiter (gemessen 23.11.2026:
+ *   31.01. → 03.03. → 03.04. → 03.05.; 29.02.2028 → 01.03.2029 → 01.03.2030 … → 01.03.2032, auch im Schaltjahr). Ein
+ *   „Monat fällt aus“ gibt es bei ChurchTools nicht – sonst lehnte es die Events dieser Tage mit 422 ab.
  * - **Monatlich nach Wochentag:** der n-te Wochentag des Monats (1–5; der fünfte nur, wenn es ihn gibt), 6 = der letzte.
  *   Der Wochentag ist der des Beginns.
- * - **Jährlich:** jedes `frequenz`-te Jahr am selben Tag (29.02. nur in Schaltjahren).
  * - **Manuell:** nur der Beginn und die weiteren Termine.
  * - Der Beginn selbst ist immer dabei (außer er ist eine Ausnahme); „Weitere Termine“ kommen dazu, „Ausnahmen“ fallen weg;
  *   sortiert, ohne Doppelte.
  *
- * Ungemessen (Test-Instanz, 23.11.2026): ob ChurchTools bei „Monatlich nach Wochentag“ den Beginn auch dann als Termin
- * zählt, wenn er nicht zur gewählten Option passt – hier zählt er immer mit.
+ * Gemessen 23.11.2026: Bei „Monatlich nach Wochentag“ zählt ChurchTools den Beginn mit, auch wenn er nicht zur gewählten
+ * Option passt (14.11.2026 = 2. Samstag, Option „1. Samstag“ → 14.11., 05.12., 02.01., 06.02.).
  */
 import { utcAus } from '../ct/zeit';
 import { istAutomatisch, ordinalAusDatum, WIEDERHOLUNG } from './terminWiederholung';
@@ -67,6 +68,8 @@ function automatisch(r: Reihe): { tage: string[]; gekappt: boolean } {
     if (tag >= r.tag && tag <= bis) tage.push(tag);
   };
   let gekappt = false;
+  // Monatlich nach Datum / jährlich: der vorige Termin, von dem aus ChurchTools weiterzählt (mit Überlauf).
+  let vorig = new Date(Date.UTC(j0, m0 - 1, t0));
   for (let i = 0; ; i++) {
     if (i >= MAX_KANDIDATEN) {
       gekappt = true;
@@ -78,23 +81,24 @@ function automatisch(r: Reihe): { tage: string[]; gekappt: boolean } {
       const tag = tagText(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
       if (tag > bis) break;
       dazu(tag);
-    } else if (r.art === WIEDERHOLUNG.jaehrlich) {
-      const j = j0 + i * f;
-      if (tagText(j, m0, 1) > bis) break;
-      if (t0 <= tageImMonat(j, m0)) dazu(tagText(j, m0, t0));
+    } else if (r.art === WIEDERHOLUNG.jaehrlich || r.art === WIEDERHOLUNG.monatlichDatum) {
+      const d = vorig;
+      const tag = tagText(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+      if (tag > bis) break;
+      dazu(tag);
+      vorig =
+        r.art === WIEDERHOLUNG.jaehrlich
+          ? new Date(Date.UTC(d.getUTCFullYear() + f, d.getUTCMonth(), d.getUTCDate()))
+          : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + f, d.getUTCDate()));
     } else {
-      // Monatlich: der i-te Schritt liegt `i * f` Monate nach dem Beginn.
+      // Monatlich nach Wochentag: der i-te Schritt liegt `i * f` Monate nach dem Beginn.
       const idx = m0 - 1 + i * f;
       const j = j0 + Math.floor(idx / 12);
       const mo = (idx % 12) + 1;
       if (tagText(j, mo, 1) > bis) break;
-      if (r.art === WIEDERHOLUNG.monatlichDatum) {
-        if (t0 <= tageImMonat(j, mo)) dazu(tagText(j, mo, t0));
-      } else {
-        const n = r.option >= 1 && r.option <= 6 ? r.option : ordinalAusDatum(r.tag);
-        const t = wochentagImMonat(j, mo, wochentag(j0, m0, t0), n);
-        if (t !== null) dazu(tagText(j, mo, t));
-      }
+      const n = r.option >= 1 && r.option <= 6 ? r.option : ordinalAusDatum(r.tag);
+      const t = wochentagImMonat(j, mo, wochentag(j0, m0, t0), n);
+      if (t !== null) dazu(tagText(j, mo, t));
     }
   }
   return { tage, gekappt };

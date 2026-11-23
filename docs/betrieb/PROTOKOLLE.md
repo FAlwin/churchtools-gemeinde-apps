@@ -601,9 +601,9 @@ events“ (Kalender-IDs) den **gewählten Kalender** enthält (`shared/ct/eventR
 **Event-Datum | Eventvorlage** hat eine Zeile je Einzeltermin der Reihe (`shared/protokolle/terminReihe.ts` → `einzeltermine`, höchstens 200 mit Hinweis) und eine Auswahl der Eventvorlagen
 (`GET /eventtemplates`, nicht nach Kalender gefiltert wie in ChurchTools; **die Nummer 0 „Standard“ ist gültig** – `Eintrag.events` ist Tag → Nummer, ein fehlender Tag heißt „kein Event“).
 Eine Vorlage bei mehr als einer Zeile fragt „Soll die Vorlage für alle Termine übernommen werden?“ (`ConfirmDialog`; Bestätigen = alle, Abbrechen = nur diese). **Reihen-Regeln:** täglich/wöchentlich alle
-n Tage/Wochen bis „Bis“ (einschließlich); monatlich nach Datum am selben Tag (31. fehlt in kurzen Monaten → Monat fällt aus); monatlich nach Wochentag n-ter Wochentag (5. nur wenn vorhanden, 6 = letzter);
-jährlich gleicher Tag (29.02. nur in Schaltjahren); manuell = Beginn + weitere Termine; Ausnahmen fallen weg, weitere kommen dazu (sortiert, ohne Doppelte); der Beginn zählt immer mit (ungemessen:
-ob ChurchTools ihn bei „Monatlich nach Wochentag“ auch zählt, wenn er nicht zur Option passt). `terminRumpf` schreibt `events: [{startDate, eventTemplateId}]` nur für Zeilen mit Vorlage; **`startDate` =
+n Tage/Wochen bis „Bis“ (einschließlich); monatlich nach Datum und jährlich wie ChurchTools **Schritt für Schritt vom vorigen Termin mit Überlauf** (31.01. → 03.03. → 03.04.;
+29.02.2028 → 01.03.2029 → 01.03.2030 …; gemessen 23.11.2026); monatlich nach Wochentag n-ter Wochentag (5. nur wenn vorhanden, 6 = letzter); manuell = Beginn + weitere Termine; Ausnahmen
+fallen weg, weitere kommen dazu (sortiert, ohne Doppelte); der Beginn zählt immer mit – auch bei „Monatlich nach Wochentag“, wenn er nicht zur Option passt (gemessen). `terminRumpf` schreibt `events: [{startDate, eventTemplateId}]` nur für Zeilen mit Vorlage; **`startDate` =
 exakter UTC-Beginn des Einzeltermins** (`einzelterminBeginn`, Ortszeit → UTC mit der Zeitumstellung des Tages; ganztägig 00:00 Ortszeit, 10.02.2027 → `2027-02-09T23:00:00Z`, gemessen) – ChurchTools
 antwortet 422, wenn ein Datum nicht zur Reihe passt. **Erfolg ist kein Beleg:** Nach dem Anlegen liest `eventsNachlesen` `GET /events?from&to` (ein Tag Luft) und sucht je Zeile ein Event mit
 `appointmentId` = neuer Termin und gleichem `startDate`; fehlt eines, bleibt der Termin, der Vermerk entsteht, das Fenster nennt die Termine („bitte in ChurchTools anlegen“, eine gemeinsame Meldung

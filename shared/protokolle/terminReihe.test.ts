@@ -59,13 +59,24 @@ describe('einzeltermine: Arten', () => {
     expect(tage({ wiederBis: '' })).toEqual(['2027-02-02']);
   });
 
-  it('monatlich nach Datum: am selben Tag; den 31. gibt es nicht in jedem Monat – dann fällt der Monat aus', () => {
+  it('monatlich nach Datum wie ChurchTools: Überlauf und von dort weiter (gemessen 23.11.2026, Test-Termin 480)', () => {
     expect(
       tage({ art: WIEDERHOLUNG.monatlichDatum, tag: '2027-01-31', wiederBis: '2027-06-30' }),
-    ).toEqual(['2027-01-31', '2027-03-31', '2027-05-31']);
+    ).toEqual(['2027-01-31', '2027-03-03', '2027-04-03', '2027-05-03', '2027-06-03']);
     expect(
       tage({ art: WIEDERHOLUNG.monatlichDatum, tag: '2027-01-15', wiederBis: '2027-04-15' }),
     ).toEqual(['2027-01-15', '2027-02-15', '2027-03-15', '2027-04-15']);
+  });
+
+  it('monatlich nach Wochentag: der Beginn zählt mit, auch wenn er nicht zur Option passt (gemessen 23.11.2026, 477)', () => {
+    expect(
+      tage({
+        art: WIEDERHOLUNG.monatlichWochentag,
+        tag: '2026-11-14',
+        option: 1,
+        wiederBis: '2027-02-28',
+      }),
+    ).toEqual(['2026-11-14', '2026-12-05', '2027-01-02', '2027-02-06']);
   });
 
   it('monatlich nach Datum, alle 2 Monate und über den Jahreswechsel', () => {
@@ -111,13 +122,13 @@ describe('einzeltermine: Arten', () => {
     ]);
   });
 
-  it('jährlich: gleicher Tag; der 29.02. nur in Schaltjahren', () => {
+  it('jährlich wie ChurchTools: 29.02. läuft in den 01.03. über und bleibt dort (gemessen 23.11.2026, Test-Termin 486)', () => {
     expect(
       tage({ art: WIEDERHOLUNG.jaehrlich, tag: '2027-05-01', wiederBis: '2029-05-01' }),
     ).toEqual(['2027-05-01', '2028-05-01', '2029-05-01']);
     expect(
-      tage({ art: WIEDERHOLUNG.jaehrlich, tag: '2028-02-29', wiederBis: '2036-12-31' }),
-    ).toEqual(['2028-02-29', '2032-02-29', '2036-02-29']);
+      tage({ art: WIEDERHOLUNG.jaehrlich, tag: '2028-02-29', wiederBis: '2032-12-31' }),
+    ).toEqual(['2028-02-29', '2029-03-01', '2030-03-01', '2031-03-01', '2032-03-01']);
     expect(
       tage({
         art: WIEDERHOLUNG.jaehrlich,

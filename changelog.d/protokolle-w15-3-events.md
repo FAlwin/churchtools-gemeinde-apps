@@ -6,7 +6,7 @@
   200 Termine gezeigt“) und je Zeile eine Auswahl der **Eventvorlagen** (leer = für diesen Termin kein Event; auch die Vorlage „Standard“ funktioniert). Wählst du bei mehreren Zeilen eine Vorlage, fragt das
   Fenster wie ChurchTools: **„Soll die Vorlage für alle Termine übernommen werden?“** – Bestätigen setzt sie in allen Zeilen, Abbrechen nur in dieser. Am Handy wird jede Zeile zur Karte.
 - **Ausnahmen, weitere Termine, Bis und Wiederholungsart** wirken auf die Zeilen: Die Erweiterung rechnet die Einzeltermine selbst aus (täglich, wöchentlich, monatlich nach Datum und nach Wochentag,
-  jährlich, manuell – ein 31. oder 29.02. fällt aus, wenn es ihn nicht gibt) und schickt für jedes Event den **genauen Beginn** des Einzeltermins mit, auch über die Zeitumstellung hinweg.
+  jährlich, manuell – wie ChurchTools: gibt es den 31. oder 29.02. nicht, rutscht der Termin in den Folgemonat, und es geht von dort weiter) und schickt für jedes Event den **genauen Beginn** des Einzeltermins mit, auch über die Zeitumstellung hinweg.
 - **Ehrlich nachgelesen:** Nach dem Speichern liest die Erweiterung die Events nach. Fehlt eines, bleibt der Termin stehen, der Vermerk im Protokoll entsteht trotzdem, und das Fenster nennt die Termine,
   für die du das Event in ChurchTools anlegen musst („Fertig“ schließt es). Fehlen Buchung und Event, steht beides in **einer** Meldung. Ließ sich das Nachlesen nicht erledigen, steht das
   ausdrücklich da – nicht als „fehlt“.

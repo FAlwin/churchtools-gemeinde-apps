@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eintragVorbelegung } from '@shared/protokolle/termine';
+import { artWechseln, WIEDERHOLUNG } from '@shared/protokolle/terminWiederholung';
 import { Unklar } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { nachbauEnde, nachbauStarten, type Nachbau } from './nachbau.testhilfe';
@@ -116,5 +117,70 @@ describe('terminLegen', () => {
       return r;
     });
     await expect(terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE })).rejects.toBeInstanceOf(Unklar);
+  });
+});
+
+describe('terminLegen mit den Feldern des Reiters „Kalender“ (W15-1)', () => {
+  it('der volle Eintrag geht als ein Rumpf an ChurchTools – Zeit in UTC, mehrtägig, Wiederholung, Ort, Tags', async () => {
+    const e = {
+      ...artWechseln(MIT_UHR, WIEDERHOLUNG.woechentlich),
+      untertitel: 'Familie',
+      beschreibung: 'Mit Krippenspiel',
+      link: 'https://ecg-donrath.de',
+      intern: true,
+      ort: 'Saal',
+      ortStadt: 'Lohmar',
+      tags: [3, 'Neu'],
+      weitere: ['2028-01-02'],
+      ausnahmen: ['2028-01-07'],
+      informieren: false,
+    };
+    await terminLegen({ eintrag: e, zeitzone: ZONE, neueTagsErlaubt: true });
+    expect(ct.terminRumpf).toEqual({
+      calendarId: 4,
+      title: 'Heiligabend',
+      startDate: '2027-12-24T15:00:00Z',
+      endDate: '2027-12-24T16:00:00Z',
+      isInternal: true,
+      subtitle: 'Familie',
+      description: 'Mit Krippenspiel',
+      link: 'https://ecg-donrath.de',
+      address: { name: 'Saal', city: 'Lohmar' },
+      repeatId: 7,
+      repeatFrequency: 1,
+      repeatUntil: e.wiederBis,
+      additionals: [{ date: '2028-01-02', isRepeated: false }],
+      exceptions: [{ date: '2028-01-07' }],
+      tags: [3, 'Neu'],
+      informOwner: false,
+    });
+  });
+
+  it('ohne „Tags verwalten“ fällt ein neuer Tag weg – sonst lehnte ChurchTools das ganze Anlegen ab', async () => {
+    await terminLegen({ eintrag: { ...MIT_UHR, tags: [3, 'Neu'] }, zeitzone: ZONE });
+    expect(ct.terminRumpf?.tags).toEqual([3]);
+  });
+
+  it('mehrtägig und ganztägig: Beginn- und Endtag, `allDay`', async () => {
+    await terminLegen({
+      eintrag: { ...GANZTAEGIG, endTag: '2027-04-26' },
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf).toMatchObject({
+      startDate: '2027-04-24',
+      endDate: '2027-04-26',
+      allDay: true,
+    });
+  });
+
+  it('mehrtägig mit Uhrzeit: Ende am Endtag', async () => {
+    await terminLegen({
+      eintrag: { ...MIT_UHR, von: '18:00', endTag: '2027-12-26', bis: '10:00' },
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf).toMatchObject({
+      startDate: '2027-12-24T17:00:00Z',
+      endDate: '2027-12-26T09:00:00Z',
+    });
   });
 });

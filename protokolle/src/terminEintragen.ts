@@ -19,6 +19,7 @@ import {
   type KalenderTermin,
 } from '@shared/protokolle/termine';
 import { minute } from '@shared/protokolle/sitzungen';
+import { eintragZusatz } from '@shared/protokolle/terminFelder';
 import { Unklar } from '@ui/ct/fehler';
 import { kalenderTermineAmTag, terminAnlegen, UNKLAR_OHNE_EINLADUNG } from './terminAnlegen';
 import { terminLaden } from './termin';
@@ -43,6 +44,8 @@ export async function terminLegen(q: {
   eintrag: Eintrag & { kalender: number };
   zeitzone: string;
   verknuepfen?: KalenderTermin | null;
+  /** Darf die Person neue Tags anlegen (`admin appointment tags`)? Sonst gehen Tags nur mit Nummer mit. */
+  neueTagsErlaubt?: boolean;
 }): Promise<{ art: 'angelegt' | 'verknuepft'; id: number }> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
@@ -55,7 +58,7 @@ export async function terminLegen(q: {
     ende: z.ende,
     zeitzone: q.zeitzone,
     ganztaegig: e.ganztaegig,
-    ort: e.ort,
+    ...eintragZusatz(e, q.neueTagsErlaubt === true),
     unklar: UNKLAR_OHNE_EINLADUNG,
   });
   try {

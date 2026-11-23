@@ -16,6 +16,7 @@
 import { tagAusIso } from '@shared/ct/zeit';
 import { terminPfad, type TerminRoh } from '@shared/ct/kalenderTermine';
 import { minute } from '@shared/protokolle/sitzungen';
+import type { TerminZusatz } from '@shared/protokolle/terminFelder';
 import { ApiError, Unklar } from '@ui/ct/fehler';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
 
@@ -63,7 +64,7 @@ async function terminSuchen(q: {
   return t?.base?.id ?? null;
 }
 
-export interface TerminAnlegenFrage {
+export interface TerminAnlegenFrage extends TerminZusatz {
   kalender: number;
   titel: string;
   /** UTC (`…Z`), bei `ganztaegig` der Tag `JJJJ-MM-TT`. */
@@ -73,8 +74,6 @@ export interface TerminAnlegenFrage {
   ganztaegig?: boolean;
   /** Mit Besprechungsanfrage (Sitzung) – fehlt es, geht keine Einladung raus (W14). */
   eingeladen?: readonly number[];
-  /** Ort (`address.meetingAt`) – leer lässt ihn weg. */
-  ort?: string;
   /** Meldung bei unklarer Antwort; Standard: `UNKLAR`. */
   unklar?: string;
 }
@@ -86,11 +85,32 @@ export function terminRumpf(q: TerminAnlegenFrage): Record<string, unknown> {
     title: q.titel,
     startDate: q.beginn,
     endDate: q.ende,
-    isInternal: false,
+    isInternal: q.intern ?? false,
+    ...(q.untertitel ? { subtitle: q.untertitel } : {}),
+    ...(q.beschreibung ? { description: q.beschreibung } : {}),
+    ...(q.link ? { link: q.link } : {}),
     // Ganztägig: reiner Tag UND `allDay` – die Anmeldungen haben `allDay` am gelesenen Termin gemessen
     // (`shared/anmeldung/termin.ts`); ohne das Feld könnte ChurchTools 0:00 Uhr annehmen.
     ...(q.ganztaegig ? { allDay: true } : {}),
-    ...(q.ort?.trim() ? { address: { meetingAt: q.ort.trim() } } : {}),
+    // Die Adresse heißt in ChurchTools `name` – `meetingAt` ist veraltet (gemessen 23.11.2026, W15-0).
+    ...(q.adresse && Object.keys(q.adresse).length ? { address: q.adresse } : {}),
+    ...(q.wiederholung
+      ? {
+          repeatId: q.wiederholung.art,
+          ...(q.wiederholung.frequenz !== undefined
+            ? { repeatFrequency: q.wiederholung.frequenz }
+            : {}),
+          ...(q.wiederholung.option !== undefined ? { repeatOption: q.wiederholung.option } : {}),
+          ...(q.wiederholung.bis ? { repeatUntil: q.wiederholung.bis } : {}),
+        }
+      : {}),
+    ...(q.weitere?.length
+      ? { additionals: q.weitere.map((date) => ({ date, isRepeated: false })) }
+      : {}),
+    ...(q.ausnahmen?.length ? { exceptions: q.ausnahmen.map((date) => ({ date })) } : {}),
+    ...(q.imAuftrag != null ? { onBehalfOfPid: q.imAuftrag } : {}),
+    ...(q.tags?.length ? { tags: q.tags } : {}),
+    ...(q.informieren !== undefined ? { informOwner: q.informieren } : {}),
     ...(q.eingeladen ? { meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })) } : {}),
   };
 }

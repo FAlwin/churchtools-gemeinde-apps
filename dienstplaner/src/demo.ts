@@ -673,10 +673,26 @@ function ablaufDemo(
       title: 'Predigt',
       duration: 1800,
       note: 'Thema: Psalm 23',
-      responsible: { text: 'Gastprediger' },
+      // Lange Namen (Live-Ansicht 2, L4-1): In der Liste darf der Titel nie von den Namen verdrängt werden.
+      responsible: {
+        text: '[Predigt]',
+        persons: [
+          { service: '[Predigt]', person: { title: 'Wilhelm-Friedrich Hartmann-Wiebe' } },
+          { service: '[Predigt]', person: { title: 'Selma Reger-Neumann' } },
+          { service: '[Predigt]', person: { title: 'Jonas Reimer' } },
+        ],
+      },
       serviceGroupNotes: [{ serviceGroupId: 3, note: 'Headset, Folien auf Beamer' }],
     },
     { id: 6, type: 'normal', title: 'Abkündigungen', duration: 300, ausgeblendet: true },
+    {
+      id: 7,
+      type: 'song',
+      title: 'Lied',
+      duration: 300,
+      song: { title: 'Denn er hat seinen Engeln befohlen über dir, dass sie dich behüten' },
+      responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
+    },
   ];
   let beginnPos = 1;
   let naechsteId = naechsteIdAnfang;

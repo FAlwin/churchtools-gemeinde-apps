@@ -22,6 +22,7 @@ import { ablaufBeginn, istWeggelassen } from './ablaufZeile';
 import { ctId } from './ctId';
 import type { Dienst } from './dienste';
 import type { CtAgendaItem } from './typen';
+import type { InfoGruppe } from '../types/index';
 
 /** Der Live-Stand, wie ChurchTools ihn liefert. */
 export interface LiveStand {
@@ -286,11 +287,15 @@ export function abweichungText(sek: number): string {
   return `${min} Min. ${sek > 0 ? 'später' : 'früher'}`;
 }
 
-/** Restzeit als „2:12“ – ist die Zeit um, mit Plus davor: „+0:45“ (läuft weiter, bis jemand weiterschaltet). */
+/**
+ * Restzeit als „2:12“ – ist die Zeit um, mit Minus davor: „−0:45“ (läuft weiter, bis jemand weiterschaltet). Das Vorzeichen
+ * ist überall dasselbe wie beim Zeitkonto: „−“ rot = Rückstand (Alwin, 23.11.2026, A5; vorher „+0:45“). Das Zeichen ist das
+ * echte Minus (U+2212), nicht der Bindestrich.
+ */
 export function restText(sek: number): string {
   const a = Math.abs(Math.round(sek));
   const text = `${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}`;
-  return sek < 0 ? `+${text}` : text;
+  return sek < 0 ? `−${text}` : text;
 }
 
 // ── Steuern ──────────────────────────────────────────────────────────────────
@@ -318,6 +323,39 @@ export function darfLiveSteuern(
     const dienst = ctId(p.serviceId);
     return dienst !== null && dienste.get(dienst)?.liveSteuern === true;
   });
+}
+
+/**
+ * **Die Dienstgruppen, in denen diese Person an diesem Termin eingeteilt ist** (Live-Ansicht 2, A16): gültiger Platz, Dienst
+ * mit bekannter Dienstgruppe – dieselbe Zählung der Plätze wie `darfLiveSteuern`. Ohne Angabe oder ohne Einteilung leer.
+ */
+export function eigeneDienstgruppen(
+  termin: { eventServices?: readonly LivePlatz[] | null },
+  dienste: ReadonlyMap<number, Pick<Dienst, 'dienstgruppeId'>>,
+  ichId: number | null,
+): number[] {
+  if (ichId === null) return [];
+  const ids = new Set<number>();
+  for (const p of termin.eventServices ?? []) {
+    if (p.isValid === false || ctId(p.personId) !== ichId) continue;
+    const dienst = ctId(p.serviceId);
+    const gruppe = dienst === null ? null : (dienste.get(dienst)?.dienstgruppeId ?? null);
+    if (gruppe !== null) ids.add(gruppe);
+  }
+  return [...ids];
+}
+
+/**
+ * **Welche Infos die Live-Ansicht zeigt** (A16): nur die der Dienstgruppen, in denen man an diesem Termin eingeteilt ist
+ * (`eigene`, aus `eigeneDienstgruppen`) – und die man sehen darf (`sichtbar`). Ist man nirgends eingeteilt, gilt wie
+ * bisher die Wahl unter „Spalten“ (`gewaehlt`). Eine Stelle für „Jetzt“ und die Liste.
+ */
+export function liveInfoGruppen(
+  eigene: readonly number[],
+  sichtbar: readonly InfoGruppe[],
+  gewaehlt: readonly InfoGruppe[],
+): readonly InfoGruppe[] {
+  return eigene.length > 0 ? sichtbar.filter((g) => eigene.includes(g.id)) : gewaehlt;
 }
 
 /** „Weiter“: nächster Punkt, Zusatzzeit zurück auf 0 (wie ChurchTools). */

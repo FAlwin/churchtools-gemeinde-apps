@@ -162,7 +162,8 @@ describe('LiveAnsicht', () => {
     expect(punkte.map((p) => p.textContent)).toEqual([
       '10:00Begrüßung',
       'Lied',
-      '10:05PredigtClara Test',
+      // Die Info der eigenen Dienstgruppe steht auch beim laufenden Punkt klein darunter (A16).
+      '10:05PredigtClara TestTechnik: Headset',
       '10:35Lied – Wie groß',
       '10:35Ansagen',
       '10:40Segen',
@@ -198,11 +199,11 @@ describe('LiveAnsicht', () => {
     expect(screen.queryByLabelText('Restzeit')).toBeNull();
   });
 
-  it('Zeit um: rot, „+1:45“ und „über der Zeit“', async () => {
+  it('Zeit um: rot, „−1:45“ (wie das Zeitkonto: Minus = Rückstand, A5) und „über der Zeit“', async () => {
     vi.setSystemTime(ms('2027-03-07T09:06:45Z'));
     zeige([{ stelle: 1, seit: '2027-03-07T09:00:00Z' }]);
     await fertig();
-    expect(restzeit()).toBe('+1:45über der Zeit');
+    expect(restzeit()).toBe('−1:45über der Zeit');
     expect(screen.getByLabelText('Restzeit').className).toMatch(/ueber/);
     // Kein Bogen mehr, nur die rote Spur (sonst stand oben ein blauer Punkt – Demo, 02.11.2026).
     expect(screen.getByLabelText('Restzeit').querySelectorAll('circle')).toHaveLength(1);
@@ -467,11 +468,12 @@ describe('LiveAnsicht – steuern (L3)', () => {
   it('läuft: Weiter überspringt Lieder ohne Dauer, Zurück den weggelassenen; ±1 Min als Gesamtwert', async () => {
     const { schreiben } = zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' });
     await fertig();
+    // Reihenfolge der Leiste unten: Zurück · −1 / +1 Min · Weiter.
     expect(knoepfe()).toEqual([
       'Zum vorigen Punkt',
-      'Zum nächsten Punkt',
       'Eine Minute weniger',
       'Eine Minute mehr',
+      'Zum nächsten Punkt',
     ]);
     await klick('Eine Minute mehr');
     expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 3, zusatzSek: 60 });
@@ -588,3 +590,222 @@ describe('LiveAnsicht – steuern (L3)', () => {
     expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Ansagen');
   });
 });
+
+/**
+ * **Live-Ansicht 2, Anzeige (L4-1)** – Alwin, 23.11.2026. Ein Ablauf mit Vorlauf (`isBeforeEvent`), einer Überschrift und
+ * Infos in zwei Dienstgruppen. Zeilen und Liste kommen aus den echten Erzeugern (`ablaufZeileAus`, `liveListe`).
+ */
+describe('LiveAnsicht – Anzeige (L4-1)', () => {
+  const VOR: CtAgendaItem[] = [
+    {
+      id: 901,
+      title: 'Soundcheck',
+      type: 'normal',
+      duration: 1200,
+      isBeforeEvent: true,
+      startTimes: { '216': '2027-03-07T08:40:00Z' },
+    },
+    {
+      id: 902,
+      title: 'Countdown',
+      type: 'normal',
+      duration: 300,
+      isBeforeEvent: true,
+      startTimes: { '216': '2027-03-07T08:55:00Z' },
+    },
+    {
+      id: 903,
+      title: 'Lobpreis',
+      type: 'header',
+      duration: 0,
+      isBeforeEvent: false,
+      startTimes: { '216': '2027-03-07T09:00:00Z' },
+    },
+    {
+      id: 904,
+      title: 'Begrüßung',
+      type: 'normal',
+      duration: 300,
+      isBeforeEvent: false,
+      startTimes: { '216': '2027-03-07T09:00:00Z' },
+      serviceGroupNotes: [{ serviceGroupId: 3, note: 'Mikro 2 an' }],
+    },
+    {
+      id: 905,
+      title: 'Lied',
+      type: 'normal',
+      duration: 240,
+      isBeforeEvent: false,
+      startTimes: { '216': '2027-03-07T09:05:00Z' },
+      serviceGroupNotes: [{ serviceGroupId: 4, note: 'Band leise' }],
+    },
+  ];
+  const TECHNIK = { id: 3, name: 'Technik' };
+  const MUSIK = { id: 4, name: 'Musik' };
+
+  function zeigeAblauf(
+    items: CtAgendaItem[],
+    o: {
+      stelle: number | null;
+      infoGruppen?: { id: number; name: string }[];
+      steuern?: boolean;
+      seit?: string;
+    },
+  ) {
+    const lesen = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        stand: stand(o.stelle, o.stelle === null ? null : (o.seit ?? '2027-03-07T09:07:00Z')),
+      } as const),
+    );
+    const schreiben = vi.fn(() => new Promise<never>(() => {}));
+    render(
+      <LiveAnsicht
+        titel="Gottesdienst"
+        tag="2027-03-07"
+        beginn="10:00"
+        terminId={T}
+        agendaId={126}
+        items={items}
+        zeilen={items.map((i) => ablaufZeileAus(i, T, 'Europe/Berlin'))}
+        infoGruppen={o.infoGruppen ?? [TECHNIK, MUSIK]}
+        zeitzone="Europe/Berlin"
+        onSchliessen={() => {}}
+        steuern={o.steuern ?? false}
+        lesen={lesen}
+        schreiben={schreiben}
+        ablaufLesen={() => Promise.resolve({ id: 126, items })}
+      />,
+    );
+    return { schreiben };
+  }
+
+  const liste = () => screen.getByRole('list', { name: 'Ablauf' });
+
+  it('Überschriften als Bänder, „Beginn 10:00“ an der Grenze – in der Reihenfolge des Ablaufs', async () => {
+    zeigeAblauf(VOR, { stelle: 3 });
+    await fertig();
+    expect(
+      Array.from(liste().children).map((li) =>
+        li.textContent?.replace(/Technik: .*|Musik: .*/, ''),
+      ),
+    ).toEqual([
+      '09:40Soundcheck',
+      '09:55Countdown',
+      'Beginn10:00',
+      'Lobpreis',
+      '10:00Begrüßung',
+      '10:05Lied',
+    ]);
+    // Die Überschrift ist eine Überschrift (für Vorlesegeräte), kein Listenpunkt.
+    expect(within(liste()).getByRole('heading', { name: 'Lobpreis' })).toBeTruthy();
+    expect(within(liste()).getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  it('ohne Vorlauf keine Beginn-Linie', async () => {
+    zeigeAblauf(ITEMS, { stelle: 3 });
+    await fertig();
+    expect(within(liste()).queryByText('Beginn')).toBeNull();
+  });
+
+  it('Anzeige ändert die Zählung nicht: Stelle 3 ist der dritte Punkt ohne Überschriften wie in ChurchTools (T6)', async () => {
+    zeigeAblauf(VOR, { stelle: 3 });
+    await fertig();
+    expect(within(jetztBereich()).getByRole('heading', { level: 2 }).textContent).toBe('Begrüßung');
+    const aktuell = within(liste())
+      .getAllByRole('listitem')
+      .filter((p) => p.getAttribute('aria-current') === 'step');
+    expect(aktuell).toHaveLength(1);
+    expect(aktuell[0].textContent).toMatch(/^10:00Begrüßung/);
+    // Die Punkte davor sind erledigt: Soundcheck und Countdown (Stelle 1 und 2).
+    expect(
+      within(liste())
+        .getAllByRole('listitem')
+        .filter((p) => /erledigt/.test(p.className))
+        .map((p) => p.textContent),
+    ).toEqual(['09:40Soundcheck', '09:55Countdown']);
+  });
+
+  it('Leiste unten: Zurück mit dem Titel des vorigen, Weiter mit dem Titel des nächsten Punkts; Weiter ist der gefüllte Knopf', async () => {
+    zeigeAblauf(VOR, { stelle: 3, steuern: true });
+    await fertig();
+    const leiste = screen.getByRole('group', { name: 'Live-Agenda steuern' });
+    const zurueck = within(leiste).getByRole('button', { name: 'Zum vorigen Punkt' });
+    const weiter = within(leiste).getByRole('button', { name: 'Zum nächsten Punkt' });
+    expect(zurueck.textContent).toBe('ZURÜCKCountdown');
+    expect(weiter.textContent).toBe('WEITERLied');
+    expect(weiter.className).toMatch(/haupt/);
+    expect(zurueck.className).not.toMatch(/haupt/);
+    // Nicht mehr in der rechten Spalte (dort bleiben Kreis und „Gesamt“).
+    expect(screen.getByLabelText('Restzeit').parentElement?.contains(leiste)).toBe(false);
+    // Die Leiste steht hinter dem Rumpf, ganz unten.
+    expect(leiste.previousElementSibling?.contains(liste())).toBe(true);
+    expect(leiste.nextElementSibling).toBeNull();
+  });
+
+  it('Leiste: am letzten Punkt heißt „Weiter“ Ende; vor dem ersten steht Zurück auf „Noch nicht gestartet“; vor dem Start nur „Starten“', async () => {
+    zeigeAblauf(VOR, { stelle: 5, steuern: true });
+    await fertig();
+    expect(knopfText('Zum nächsten Punkt')).toBe('WEITER');
+    cleanup();
+    zeigeAblauf(VOR, { stelle: 4, steuern: true });
+    await fertig();
+    expect(knopfText('Zum nächsten Punkt')).toBe('WEITEREnde');
+    cleanup();
+    zeigeAblauf(VOR, { stelle: 1, steuern: true });
+    await fertig();
+    expect(knopfText('Zum vorigen Punkt')).toBe('ZURÜCKNoch nicht gestartet');
+    cleanup();
+    vi.setSystemTime(ms('2027-03-07T08:30:00Z'));
+    zeigeAblauf(VOR, { stelle: null, steuern: true });
+    await fertig();
+    const leiste = screen.getByRole('group', { name: 'Live-Agenda steuern' });
+    expect(
+      within(leiste)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Live-Agenda starten']);
+  });
+
+  it('Leiste: ohne Steuer-Recht gibt es sie nicht', async () => {
+    zeigeAblauf(VOR, { stelle: 3, steuern: false });
+    await fertig();
+    expect(screen.queryByRole('group', { name: 'Live-Agenda steuern' })).toBeNull();
+  });
+
+  it('Weiter schreibt die Stelle nach der Zählung von ChurchTools (ohne Überschriften)', async () => {
+    const { schreiben } = zeigeAblauf(VOR, { stelle: 3, steuern: true });
+    await fertig();
+    fireEvent.click(screen.getByRole('button', { name: 'Zum nächsten Punkt' }));
+    await fertig();
+    expect(schreiben).toHaveBeenCalledWith(T, 126, { stelle: 4, zusatzSek: 0 });
+  });
+
+  it('Infos: groß unter „Jetzt“, klein in der Liste auch beim laufenden Punkt und bei kommenden – bei erledigten nicht', async () => {
+    zeigeAblauf(VOR, { stelle: 3 });
+    await fertig();
+    expect(within(jetztBereich()).getByText(/Mikro 2 an/).textContent).toBe('Technik: Mikro 2 an');
+    const zeilen = within(liste()).getAllByRole('listitem');
+    const begruessung = zeilen.find((z) => /Begrüßung/.test(z.textContent ?? ''))!;
+    const lied = zeilen.find((z) => /^10:05Lied/.test(z.textContent ?? ''))!;
+    expect(begruessung.textContent).toBe('10:00BegrüßungTechnik: Mikro 2 an');
+    expect(lied.textContent).toBe('10:05LiedMusik: Band leise');
+    cleanup();
+    // Eine Stelle weiter: Die Begrüßung ist erledigt, ihre Info steht nirgends mehr.
+    zeigeAblauf(VOR, { stelle: 4 });
+    await fertig();
+    expect(screen.queryByText(/Mikro 2 an/)).toBeNull();
+    expect(within(jetztBereich()).getByText(/Band leise/).textContent).toBe('Musik: Band leise');
+  });
+
+  it('Infos: nur die übergebenen Dienstgruppen – eine andere Gruppe erscheint weder groß noch klein', async () => {
+    zeigeAblauf(VOR, { stelle: 3, infoGruppen: [MUSIK] });
+    await fertig();
+    expect(screen.queryByText(/Mikro 2 an/)).toBeNull();
+    expect(screen.getByText(/Band leise/).textContent).toBe('Musik: Band leise');
+  });
+});
+
+function knopfText(name: string) {
+  return screen.getByRole('button', { name }).textContent;
+}

@@ -206,9 +206,11 @@
   list-style: none;
 }
 
+// Überlappung (Gottesdienst 22.11.2026): Die Namen hatten ihre volle Breite und drückten den Titel auf fast 0. Jetzt hat der
+// Titel Vorrang (3 : 2), Namen brechen rechtsbündig um; am Handy stehen sie unter dem Titel (Media Query unten).
 .punkt {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 3fr) minmax(0, 2fr);
   gap: 10px;
   align-items: baseline;
   padding: 6px 10px;
@@ -226,12 +228,54 @@
   align-items: baseline;
   gap: 6px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .werKlein {
+  min-width: 0;
   color: var(--text3);
   font-size: 13px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+// Info der eigenen Dienstgruppe unter dem Punkt – klein, unter Titel und Namen.
+.infoKlein {
+  grid-column: 2 / -1;
+  min-width: 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+
+  i {
+    color: var(--text3);
+    font-style: normal;
+    font-weight: 700;
+  }
+}
+
+// Überschrift des Ablaufs als leises Band – nur Anzeige, zählt nicht mit (T6).
+.band {
+  padding: 10px 10px 2px;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+// Grenze „Beginn hh:mm“ (`isBeforeEvent`): blaue Linie im Ablauf.
+.beginn {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 6px 10px 2px;
+  border-top: 1px solid var(--blue);
+  color: var(--blue-ink, var(--blue));
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .erledigt {
@@ -396,20 +440,40 @@
   .gesamt {
     width: auto;
   }
+
+  .punkt {
+    grid-template-columns: 44px minmax(0, 1fr);
+    row-gap: 0;
+  }
+
+  .werKlein {
+    grid-column: 2;
+    text-align: left;
+  }
 }
 
-// Steuern (L3): wie die Live-Agenda von ChurchTools unter dem Kreis – ‹ › und − +, „Weiter“ blau (Entwurf Variante A).
-// Die Knöpfe sind `KopfKnopf` (gemeinsamer Baustein, Höhe `--knopf-hoehe`); hier nur das Raster.
-.steuern {
+// Steuerleiste unten (A11) wie „Davor / Danach“ der Punkt-Ansicht (`PunktAnsicht.module.scss`): links „Zurück“ mit dem Titel
+// des vorigen Punkts, in der Mitte −1/+1 Min, rechts „Weiter“ – der eine gefüllte Knopf (R1). Über dem Home-Strich.
+.fuss {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  width: 220px;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px 20px max(10px, var(--unten-strich));
+  border-top: 1px solid var(--hair);
+  background: var(--surface2);
 }
 
 // Vor dem Start nur „Starten“ – über die ganze Breite.
-.einzeln {
-  grid-template-columns: 1fr;
+.nurStarten {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mitte {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .steuerFehler {
@@ -420,17 +484,8 @@
 }
 
 @media (max-width: 759px) {
-  .rechts {
-    flex-wrap: wrap;
-  }
-
-  .steuern {
-    order: 1;
-    grid-template-columns: repeat(4, 1fr);
-    width: 100%;
-  }
-
-  .einzeln {
-    grid-template-columns: 1fr;
+  .fuss {
+    gap: 6px;
+    padding: 8px 10px max(8px, var(--unten-strich));
   }
 }

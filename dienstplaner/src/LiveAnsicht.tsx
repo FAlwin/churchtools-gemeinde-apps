@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { NachbarKnopf } from '@ui/ablauf/NachbarKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { tagKurz } from '@shared/ct/datum';
 import {
   abweichungText,
+  endeStelle,
   liveLage,
   liveListe,
+  naechsteStelle,
   restText,
   stelleNachziehen,
+  vorigeStelle,
   weiterZiel,
   zurueckZiel,
   zusatzZiel,
@@ -75,6 +79,11 @@ type Schalten = 'weiter' | 'zurueck' | 'plus' | 'minus';
  * (`useLive`); die Regeln stehen in `shared/ct/liveAgenda.ts`. Solange niemand gestartet hat, folgt „Jetzt“ der Uhr.
  * Bildschirm bleibt an; Vollbild, wo der Browser es kann.
  *
+ * **Live-Ansicht 2, Anzeige** (L4-1, Alwin 23.11.2026): Titel haben in der Liste Vorrang vor den Namen (die brechen um, am
+ * Handy stehen sie unter dem Titel); Überschriften als leise Bänder und die Linie „Beginn“ an der Grenze `isBeforeEvent` –
+ * nur in der Anzeige, gezählt wird weiter exakt wie in ChurchTools (`liveListe`, T6); die Steuerknöpfe stehen als Leiste
+ * unten wie „Davor / Danach“ der Punkt-Ansicht (A11); `infoGruppen` sind schon die richtigen (A16, `liveInfoGruppen`).
+ *
  * **Steuern** (L3, Alwin 02.11.2026: „genau wie ChurchTools“): Wer an diesem Termin in einem Dienst mit „Live-Agenda
  * steuern“ eingeteilt ist (`steuern`), bekommt ‹ Zurück, Weiter ›, −1/+1 Min bzw. „Starten“ – ChurchTools selbst prüft
  * beim Speichern nichts. Vor jedem Schalten wird der Ablauf frisch gelesen: Hat er sich geändert, wird die Stelle
@@ -133,6 +142,7 @@ export function LiveAnsicht({
   const [beschaeftigt, setBeschaeftigt] = useState(false);
   const [steuerFehler, setSteuerFehler] = useState<LiveGrund | null>(null);
   const zeileVon = useMemo(() => new Map(zeilen.map((z) => [z.id, z])), [zeilen]);
+  const indexVon = useMemo(() => new Map(liste.map((p, i) => [p.id, i])), [liste]);
   // Gerechnet wird in der Uhr von ChurchTools, damit Restzeit und Abweichung auf allen Geräten gleich sind.
   const jetzt = live.jetzt - live.versatz;
   const lage = liveLage(liste, live.stand, jetzt);
@@ -214,6 +224,13 @@ export function LiveAnsicht({
     };
   };
 
+  /** Die Infos der Zeile in den Dienstgruppen, die gezeigt werden (`infoGruppen`) – mit Text, in Reihenfolge der Gruppen. */
+  const infosVon = (z: AblaufZeile | null) =>
+    infoGruppen.flatMap((g) => {
+      const text = z?.infos?.find((i) => i.gruppeId === g.id)?.text;
+      return text ? [{ gruppe: g.name, text }] : [];
+    });
+
   const jetztTeile = jetztPunkt ? teile(jetztPunkt) : null;
   const dann = lage.art === 'ende' ? null : lage.dann;
   const mit = lage.art === 'ende' ? [] : lage.mit;
@@ -236,6 +253,18 @@ export function LiveAnsicht({
       ? 'Ablauf vorbei'
       : (jetztTeile?.titel ??
         (lage.art === 'nach-plan' && lage.vorbei ? 'Laut Plan vorbei' : 'Noch nicht begonnen'));
+
+  // Die Leiste unten nennt den vorigen und den nächsten Punkt – dieselbe Reihenfolge wie `zurueckZiel`/`weiterZiel`.
+  const stelleJetzt = live.stand?.stelle ?? null;
+  const naechste = naechsteStelle(liste, stelleJetzt);
+  const vorige = vorigeStelle(liste, stelleJetzt);
+  const weiterTitel =
+    lage.art === 'ende'
+      ? ''
+      : naechste >= endeStelle(liste)
+        ? 'Ende'
+        : teile(liste[naechste - 1]).titel;
+  const zurueckTitel = vorige <= 0 ? 'Noch nicht gestartet' : teile(liste[vorige - 1]).titel;
 
   const standVon =
     live.gelesenUm !== null ? uhrzeit(live.gelesenUm - live.versatz, zeitzone) : null;
@@ -312,15 +341,11 @@ export function LiveAnsicht({
               {/* Die Notiz wie in der Live-Agenda von ChurchTools („Thema folgt“, Test-Instanz 02.11.2026). */}
               {jetztTeile?.zeile?.note && <p className={styles.notiz}>{jetztTeile.zeile.note}</p>}
               {jetztTeile?.wer && <p className={styles.wer}>{jetztTeile.wer}</p>}
-              {jetztTeile?.zeile &&
-                infoGruppen.map((g) => {
-                  const text = jetztTeile.zeile?.infos?.find((i) => i.gruppeId === g.id)?.text;
-                  return text ? (
-                    <p key={g.id} className={styles.info}>
-                      <i>{g.name}:</i> {text}
-                    </p>
-                  ) : null;
-                })}
+              {infosVon(jetztTeile?.zeile ?? null).map((x) => (
+                <p key={x.gruppe} className={styles.info}>
+                  <i>{x.gruppe}:</i> {x.text}
+                </p>
+              ))}
               {mit.length > 0 && (
                 <p className={styles.unter}>mit {mit.map((p) => teile(p).titel).join(', ')}</p>
               )}
@@ -344,7 +369,30 @@ export function LiveAnsicht({
             )}
 
             <ol className={styles.liste} aria-label="Ablauf">
-              {liste.map((p, i) => {
+              {items.map((item, n) => {
+                // Die Grenze „Beginn“: vor der ersten Zeile nach dem Vorlauf (`isBeforeEvent` wechselt von ja auf nein).
+                const grenze =
+                  n > 0 && items[n - 1].isBeforeEvent === true && item.isBeforeEvent !== true ? (
+                    <li key={`beginn-${item.id}`} className={styles.beginn} role="presentation">
+                      <span>Beginn</span>
+                      <span>{beginn}</span>
+                    </li>
+                  ) : null;
+                // Überschriften nur anzeigen – dieselbe Prüfung wie in `liveListe`, damit beides zusammenpasst.
+                if (item.type === 'header')
+                  return (
+                    <Fragment key={item.id}>
+                      {grenze}
+                      <li className={styles.band} role="presentation">
+                        <span role="heading" aria-level={3}>
+                          {item.title}
+                        </span>
+                      </li>
+                    </Fragment>
+                  );
+                const i = indexVon.get(item.id) ?? -1;
+                const p = liste[i];
+                if (!p) return null;
                 const t = teile(p);
                 const erledigt =
                   lage.art === 'ende' || (lage.art === 'laeuft' && i < lage.stelle - 1);
@@ -355,22 +403,31 @@ export function LiveAnsicht({
                 ]
                   .filter(Boolean)
                   .join(' ');
+                // Infos der eigenen Dienstgruppen klein darunter – auch beim laufenden Punkt, nicht bei erledigten (A16).
+                const infos = erledigt || p.weggelassen ? [] : infosVon(t.zeile);
                 return (
-                  <li
-                    key={p.id}
-                    ref={i === index ? aktuell : undefined}
-                    className={klasse}
-                    aria-current={i === index ? 'step' : undefined}
-                  >
-                    <span className={styles.zeit}>{t.zeile?.time ?? ''}</span>
-                    <span className={styles.titel}>
-                      {erledigt && !p.weggelassen && (
-                        <Icon name="check" size={14} className={styles.haken} />
-                      )}
-                      {t.titel}
-                    </span>
-                    <span className={styles.werKlein}>{t.wer}</span>
-                  </li>
+                  <Fragment key={p.id}>
+                    {grenze}
+                    <li
+                      ref={i === index ? aktuell : undefined}
+                      className={klasse}
+                      aria-current={i === index ? 'step' : undefined}
+                    >
+                      <span className={styles.zeit}>{t.zeile?.time ?? ''}</span>
+                      <span className={styles.titel}>
+                        {erledigt && !p.weggelassen && (
+                          <Icon name="check" size={14} className={styles.haken} />
+                        )}
+                        {t.titel}
+                      </span>
+                      <span className={styles.werKlein}>{t.wer}</span>
+                      {infos.map((x) => (
+                        <span key={x.gruppe} className={styles.infoKlein}>
+                          <i>{x.gruppe}:</i> {x.text}
+                        </span>
+                      ))}
+                    </li>
+                  </Fragment>
                 );
               })}
             </ol>
@@ -412,66 +469,6 @@ export function LiveAnsicht({
                 </div>
               </div>
             )}
-            {steuern && (
-              <div
-                className={`${styles.steuern}${lage.art === 'nach-plan' ? ` ${styles.einzeln}` : ''}`}
-                role="group"
-                aria-label="Live-Agenda steuern"
-              >
-                {lage.art === 'nach-plan' ? (
-                  <KopfKnopf
-                    onClick={() => void schalten('weiter')}
-                    label="Starten"
-                    title="Live-Agenda starten"
-                    symbol={<Icon name="play" size={16} />}
-                    haupt
-                    disabled={beschaeftigt}
-                  />
-                ) : (
-                  <>
-                    <KopfKnopf
-                      onClick={() => void schalten('zurueck')}
-                      label="Zurück"
-                      title="Zum vorigen Punkt"
-                      symbol={<Icon name="chev-left" size={16} />}
-                      disabled={beschaeftigt}
-                    />
-                    <KopfKnopf
-                      onClick={() => void schalten('weiter')}
-                      label="Weiter"
-                      title="Zum nächsten Punkt"
-                      symbol={<Icon name="chev-right" size={16} />}
-                      symbolHinten
-                      haupt
-                      disabled={beschaeftigt || lage.art === 'ende'}
-                    />
-                    {lage.art === 'laeuft' && (
-                      <>
-                        <KopfKnopf
-                          onClick={() => void schalten('minus')}
-                          label="1 Min"
-                          title="Eine Minute weniger"
-                          symbol={<Icon name="minus" size={16} />}
-                          disabled={beschaeftigt}
-                        />
-                        <KopfKnopf
-                          onClick={() => void schalten('plus')}
-                          label="1 Min"
-                          title="Eine Minute mehr"
-                          symbol={<Icon name="plus" size={16} />}
-                          disabled={beschaeftigt}
-                        />
-                      </>
-                    )}
-                  </>
-                )}
-                {steuerFehler && (
-                  <p className={styles.steuerFehler} role="alert">
-                    {steuerFehlerText(steuerFehler)}
-                  </p>
-                )}
-              </div>
-            )}
             {verspaetung !== null && (
               <div className={styles.gesamt}>
                 Gesamt
@@ -486,6 +483,72 @@ export function LiveAnsicht({
             )}
           </div>
         </div>
+
+        {steuern && (
+          <div
+            className={`${styles.fuss}${lage.art === 'nach-plan' ? ` ${styles.nurStarten}` : ''}`}
+            role="group"
+            aria-label="Live-Agenda steuern"
+          >
+            {lage.art === 'nach-plan' ? (
+              <KopfKnopf
+                onClick={() => void schalten('weiter')}
+                label="Starten"
+                title="Live-Agenda starten"
+                symbol={<Icon name="play" size={16} />}
+                haupt
+                disabled={beschaeftigt}
+              />
+            ) : (
+              <>
+                <NachbarKnopf
+                  richtung="davor"
+                  label="ZURÜCK"
+                  titel={zurueckTitel}
+                  onClick={() => void schalten('zurueck')}
+                  disabled={beschaeftigt}
+                  ariaLabel="Zum vorigen Punkt"
+                  hinweis={`Zum vorigen Punkt: ${zurueckTitel}`}
+                />
+                <div className={styles.mitte}>
+                  {lage.art === 'laeuft' && (
+                    <>
+                      <KopfKnopf
+                        onClick={() => void schalten('minus')}
+                        label="1 Min"
+                        title="Eine Minute weniger"
+                        symbol={<Icon name="minus" size={16} />}
+                        disabled={beschaeftigt}
+                      />
+                      <KopfKnopf
+                        onClick={() => void schalten('plus')}
+                        label="1 Min"
+                        title="Eine Minute mehr"
+                        symbol={<Icon name="plus" size={16} />}
+                        disabled={beschaeftigt}
+                      />
+                    </>
+                  )}
+                </div>
+                <NachbarKnopf
+                  richtung="danach"
+                  label="WEITER"
+                  titel={weiterTitel}
+                  onClick={() => void schalten('weiter')}
+                  disabled={beschaeftigt || lage.art === 'ende'}
+                  haupt
+                  ariaLabel="Zum nächsten Punkt"
+                  hinweis={`Zum nächsten Punkt: ${weiterTitel}`}
+                />
+              </>
+            )}
+            {steuerFehler && (
+              <p className={styles.steuerFehler} role="alert">
+                {steuerFehlerText(steuerFehler)}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </BodyPortal>
   );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { diensteAus } from '../ct/dienste';
+import { eigeneDienstgruppen } from '../ct/liveAgenda';
 import { dateienAus } from '../ct/terminDateien';
 import { planAus, planAusschnitt, platzAus, terminStand } from './plan';
 import type { RohTermin } from './termine';
@@ -155,6 +156,7 @@ describe('planAus', () => {
         ende: '2026-10-18T08:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
+        eigeneGruppen: [3],
         infos: '',
         dateien: [],
         kalender: null,
@@ -170,6 +172,7 @@ describe('planAus', () => {
         ende: '2026-10-25T09:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
+        eigeneGruppen: [],
         infos: '',
         dateien: [],
         kalender: null,
@@ -194,6 +197,34 @@ describe('planAus', () => {
     });
     // An 10 bin ich „Ton“ (Recht), an 11 ist „Ton“ Anna – dort nicht.
     expect(p.spalten.map((s) => [s.id, s.liveSteuern])).toEqual([
+      [10, true],
+      [11, false],
+    ]);
+  });
+
+  it('Infos in „Live“ (L4-1, A16): die Dienstgruppen, in denen ich an diesem Termin eingeteilt bin – Regel `eigeneDienstgruppen`', () => {
+    const dienste = diensteAus([
+      { id: 6, name: 'Ton', serviceGroupId: 3 },
+      { id: 7, name: 'Licht', serviceGroupId: 3 },
+      { id: 9, name: 'Gesang', serviceGroupId: 4 },
+      { id: 1, name: 'Predigt', serviceGroupId: 1 },
+    ]);
+    const p = planAus(roh, {
+      ichId: ICH,
+      dienste,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => true,
+      ganzSichtbar: () => true,
+    });
+    // Je Spalte das, was die Regel für denselben Roh-Termin sagt – nicht nachgerechnet.
+    expect(p.spalten.map((s) => s.eigeneGruppen)).toEqual(
+      [...roh]
+        .sort((a, b) => Date.parse(a.startDate) - Date.parse(b.startDate) || a.id - b.id)
+        .map((t) => eigeneDienstgruppen(t, dienste, ICH)),
+    );
+    // An 10 bin ich „Ton“ (Technik), an 11 in keinem Dienst.
+    expect(p.spalten.map((s) => [s.id, s.eigeneGruppen.length > 0])).toEqual([
       [10, true],
       [11, false],
     ]);
